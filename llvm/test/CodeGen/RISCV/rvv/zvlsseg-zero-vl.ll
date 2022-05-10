@@ -5,7 +5,7 @@
 ; Make sure we don't select a 0 vl to X0 in the custom isel handlers we use
 ; for these intrinsics.
 
-declare {<vscale x 16 x i16>,<vscale x 16 x i16>} @llvm.riscv.vlseg2.nxv16i16(i16* , i64)
+declare {<vscale x 16 x i16>,<vscale x 16 x i16>} @llvm.riscv.vlseg2.nxv16i16(<vscale x 16 x i16>,<vscale x 16 x i16>, i16*, i64)
 declare {<vscale x 16 x i16>,<vscale x 16 x i16>} @llvm.riscv.vlseg2.mask.nxv16i16(<vscale x 16 x i16>,<vscale x 16 x i16>, i16*, <vscale x 16 x i1>, i64, i64)
 
 define <vscale x 16 x i16> @test_vlseg2_mask_nxv16i16(i16* %base, <vscale x 16 x i1> %mask) {
@@ -17,14 +17,14 @@ define <vscale x 16 x i16> @test_vlseg2_mask_nxv16i16(i16* %base, <vscale x 16 x
 ; CHECK-NEXT:    vlseg2e16.v v4, (a0), v0.t
 ; CHECK-NEXT:    ret
 entry:
-  %0 = tail call {<vscale x 16 x i16>,<vscale x 16 x i16>} @llvm.riscv.vlseg2.nxv16i16(i16* %base, i64 0)
+  %0 = tail call {<vscale x 16 x i16>,<vscale x 16 x i16>} @llvm.riscv.vlseg2.nxv16i16(<vscale x 16 x i16> undef,<vscale x 16 x i16> undef, i16* %base, i64 0)
   %1 = extractvalue {<vscale x 16 x i16>,<vscale x 16 x i16>} %0, 0
   %2 = tail call {<vscale x 16 x i16>,<vscale x 16 x i16>} @llvm.riscv.vlseg2.mask.nxv16i16(<vscale x 16 x i16> %1,<vscale x 16 x i16> %1, i16* %base, <vscale x 16 x i1> %mask, i64 0, i64 1)
   %3 = extractvalue {<vscale x 16 x i16>,<vscale x 16 x i16>} %2, 1
   ret <vscale x 16 x i16> %3
 }
 
-declare {<vscale x 16 x i16>,<vscale x 16 x i16>} @llvm.riscv.vlsseg2.nxv16i16(i16*, i64, i64)
+declare {<vscale x 16 x i16>,<vscale x 16 x i16>} @llvm.riscv.vlsseg2.nxv16i16(<vscale x 16 x i16>,<vscale x 16 x i16>, i16*, i64, i64)
 declare {<vscale x 16 x i16>,<vscale x 16 x i16>} @llvm.riscv.vlsseg2.mask.nxv16i16(<vscale x 16 x i16>,<vscale x 16 x i16>, i16*, i64, <vscale x 16 x i1>, i64, i64)
 
 define <vscale x 16 x i16> @test_vlsseg2_mask_nxv16i16(i16* %base, i64 %offset, <vscale x 16 x i1> %mask) {
@@ -36,13 +36,13 @@ define <vscale x 16 x i16> @test_vlsseg2_mask_nxv16i16(i16* %base, i64 %offset, 
 ; CHECK-NEXT:    vlsseg2e16.v v4, (a0), a1, v0.t
 ; CHECK-NEXT:    ret
 entry:
-  %0 = tail call {<vscale x 16 x i16>,<vscale x 16 x i16>} @llvm.riscv.vlsseg2.nxv16i16(i16* %base, i64 %offset, i64 0)
+  %0 = tail call {<vscale x 16 x i16>,<vscale x 16 x i16>} @llvm.riscv.vlsseg2.nxv16i16(<vscale x 16 x i16> undef, <vscale x 16 x i16> undef, i16* %base, i64 %offset, i64 0)
   %1 = extractvalue {<vscale x 16 x i16>,<vscale x 16 x i16>} %0, 0
   %2 = tail call {<vscale x 16 x i16>,<vscale x 16 x i16>} @llvm.riscv.vlsseg2.mask.nxv16i16(<vscale x 16 x i16> %1,<vscale x 16 x i16> %1, i16* %base, i64 %offset, <vscale x 16 x i1> %mask, i64 0, i64 1)
   %3 = extractvalue {<vscale x 16 x i16>,<vscale x 16 x i16>} %2, 1
   ret <vscale x 16 x i16> %3
 }
-declare {<vscale x 16 x i16>,<vscale x 16 x i16>} @llvm.riscv.vloxseg2.nxv16i16.nxv16i16(i16*, <vscale x 16 x i16>, i64)
+declare {<vscale x 16 x i16>,<vscale x 16 x i16>} @llvm.riscv.vloxseg2.nxv16i16.nxv16i16(<vscale x 16 x i16>,<vscale x 16 x i16>, i16*, <vscale x 16 x i16>, i64)
 declare {<vscale x 16 x i16>,<vscale x 16 x i16>} @llvm.riscv.vloxseg2.mask.nxv16i16.nxv16i16(<vscale x 16 x i16>,<vscale x 16 x i16>, i16*, <vscale x 16 x i16>, <vscale x 16 x i1>, i64, i64)
 
 define <vscale x 16 x i16> @test_vloxseg2_mask_nxv16i16_nxv16i16(i16* %base, <vscale x 16 x i16> %index, <vscale x 16 x i1> %mask) {
@@ -55,14 +55,14 @@ define <vscale x 16 x i16> @test_vloxseg2_mask_nxv16i16_nxv16i16(i16* %base, <vs
 ; CHECK-NEXT:    vmv4r.v v8, v16
 ; CHECK-NEXT:    ret
 entry:
-  %0 = tail call {<vscale x 16 x i16>,<vscale x 16 x i16>} @llvm.riscv.vloxseg2.nxv16i16.nxv16i16(i16* %base, <vscale x 16 x i16> %index, i64 0)
+  %0 = tail call {<vscale x 16 x i16>,<vscale x 16 x i16>} @llvm.riscv.vloxseg2.nxv16i16.nxv16i16(<vscale x 16 x i16> undef, <vscale x 16 x i16> undef, i16* %base, <vscale x 16 x i16> %index, i64 0)
   %1 = extractvalue {<vscale x 16 x i16>,<vscale x 16 x i16>} %0, 0
   %2 = tail call {<vscale x 16 x i16>,<vscale x 16 x i16>} @llvm.riscv.vloxseg2.mask.nxv16i16.nxv16i16(<vscale x 16 x i16> %1,<vscale x 16 x i16> %1, i16* %base, <vscale x 16 x i16> %index, <vscale x 16 x i1> %mask, i64 0, i64 1)
   %3 = extractvalue {<vscale x 16 x i16>,<vscale x 16 x i16>} %2, 1
   ret <vscale x 16 x i16> %3
 }
 
-declare {<vscale x 16 x i16>,<vscale x 16 x i16>} @llvm.riscv.vluxseg2.nxv16i16.nxv16i16(i16*, <vscale x 16 x i16>, i64)
+declare {<vscale x 16 x i16>,<vscale x 16 x i16>} @llvm.riscv.vluxseg2.nxv16i16.nxv16i16(<vscale x 16 x i16>,<vscale x 16 x i16>, i16*, <vscale x 16 x i16>, i64)
 declare {<vscale x 16 x i16>,<vscale x 16 x i16>} @llvm.riscv.vluxseg2.mask.nxv16i16.nxv16i16(<vscale x 16 x i16>,<vscale x 16 x i16>, i16*, <vscale x 16 x i16>, <vscale x 16 x i1>, i64, i64)
 
 define <vscale x 16 x i16> @test_vluxseg2_mask_nxv16i16_nxv16i16(i16* %base, <vscale x 16 x i16> %index, <vscale x 16 x i1> %mask) {
@@ -75,14 +75,14 @@ define <vscale x 16 x i16> @test_vluxseg2_mask_nxv16i16_nxv16i16(i16* %base, <vs
 ; CHECK-NEXT:    vmv4r.v v8, v16
 ; CHECK-NEXT:    ret
 entry:
-  %0 = tail call {<vscale x 16 x i16>,<vscale x 16 x i16>} @llvm.riscv.vluxseg2.nxv16i16.nxv16i16(i16* %base, <vscale x 16 x i16> %index, i64 0)
+  %0 = tail call {<vscale x 16 x i16>,<vscale x 16 x i16>} @llvm.riscv.vluxseg2.nxv16i16.nxv16i16(<vscale x 16 x i16> undef, <vscale x 16 x i16> undef, i16* %base, <vscale x 16 x i16> %index, i64 0)
   %1 = extractvalue {<vscale x 16 x i16>,<vscale x 16 x i16>} %0, 0
   %2 = tail call {<vscale x 16 x i16>,<vscale x 16 x i16>} @llvm.riscv.vluxseg2.mask.nxv16i16.nxv16i16(<vscale x 16 x i16> %1,<vscale x 16 x i16> %1, i16* %base, <vscale x 16 x i16> %index, <vscale x 16 x i1> %mask, i64 0, i64 1)
   %3 = extractvalue {<vscale x 16 x i16>,<vscale x 16 x i16>} %2, 1
   ret <vscale x 16 x i16> %3
 }
 
-declare {<vscale x 16 x i16>,<vscale x 16 x i16>, i64} @llvm.riscv.vlseg2ff.nxv16i16(i16* , i64)
+declare {<vscale x 16 x i16>,<vscale x 16 x i16>, i64} @llvm.riscv.vlseg2ff.nxv16i16(<vscale x 16 x i16>,<vscale x 16 x i16>, i16* , i64)
 declare {<vscale x 16 x i16>,<vscale x 16 x i16>, i64} @llvm.riscv.vlseg2ff.mask.nxv16i16(<vscale x 16 x i16>,<vscale x 16 x i16>, i16*, <vscale x 16 x i1>, i64, i64)
 
 define <vscale x 16 x i16> @test_vlseg2ff_nxv16i16(i16* %base, i64* %outvl) {
@@ -94,7 +94,7 @@ define <vscale x 16 x i16> @test_vlseg2ff_nxv16i16(i16* %base, i64* %outvl) {
 ; CHECK-NEXT:    sd a0, 0(a1)
 ; CHECK-NEXT:    ret
 entry:
-  %0 = tail call {<vscale x 16 x i16>,<vscale x 16 x i16>, i64} @llvm.riscv.vlseg2ff.nxv16i16(i16* %base, i64 0)
+  %0 = tail call {<vscale x 16 x i16>,<vscale x 16 x i16>, i64} @llvm.riscv.vlseg2ff.nxv16i16(<vscale x 16 x i16> undef, <vscale x 16 x i16> undef, i16* %base, i64 0)
   %1 = extractvalue {<vscale x 16 x i16>,<vscale x 16 x i16>, i64} %0, 1
   %2 = extractvalue {<vscale x 16 x i16>,<vscale x 16 x i16>, i64} %0, 2
   store i64 %2, i64* %outvl

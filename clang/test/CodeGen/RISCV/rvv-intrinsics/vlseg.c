@@ -15,7 +15,7 @@
 
 // CHECK-RV32-LABEL: @test_vlseg2e8_v_i8mf8(
 // CHECK-RV32-NEXT:  entry:
-// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 1 x i8>, <vscale x 1 x i8> } @llvm.riscv.vlseg2.nxv1i8.i32(i8* [[BASE:%.*]], i32 [[VL:%.*]])
+// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 1 x i8>, <vscale x 1 x i8> } @llvm.riscv.vlseg2.nxv1i8.i32(<vscale x 1 x i8> undef, <vscale x 1 x i8> undef, i8* [[BASE:%.*]], i32 [[VL:%.*]])
 // CHECK-RV32-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 1 x i8>, <vscale x 1 x i8> } [[TMP0]], 0
 // CHECK-RV32-NEXT:    store <vscale x 1 x i8> [[TMP1]], <vscale x 1 x i8>* [[V0:%.*]], align 1
 // CHECK-RV32-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 1 x i8>, <vscale x 1 x i8> } [[TMP0]], 1
@@ -24,7 +24,7 @@
 //
 // CHECK-RV64-LABEL: @test_vlseg2e8_v_i8mf8(
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 1 x i8>, <vscale x 1 x i8> } @llvm.riscv.vlseg2.nxv1i8.i64(i8* [[BASE:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 1 x i8>, <vscale x 1 x i8> } @llvm.riscv.vlseg2.nxv1i8.i64(<vscale x 1 x i8> undef, <vscale x 1 x i8> undef, i8* [[BASE:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 1 x i8>, <vscale x 1 x i8> } [[TMP0]], 0
 // CHECK-RV64-NEXT:    store <vscale x 1 x i8> [[TMP1]], <vscale x 1 x i8>* [[V0:%.*]], align 1
 // CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 1 x i8>, <vscale x 1 x i8> } [[TMP0]], 1
@@ -37,7 +37,7 @@ void test_vlseg2e8_v_i8mf8 (vint8mf8_t *v0, vint8mf8_t *v1, const int8_t *base, 
 
 // CHECK-RV32-LABEL: @test_vlseg3e8_v_i8mf8(
 // CHECK-RV32-NEXT:  entry:
-// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8> } @llvm.riscv.vlseg3.nxv1i8.i32(i8* [[BASE:%.*]], i32 [[VL:%.*]])
+// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8> } @llvm.riscv.vlseg3.nxv1i8.i32(<vscale x 1 x i8> undef, <vscale x 1 x i8> undef, <vscale x 1 x i8> undef, i8* [[BASE:%.*]], i32 [[VL:%.*]])
 // CHECK-RV32-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8> } [[TMP0]], 0
 // CHECK-RV32-NEXT:    store <vscale x 1 x i8> [[TMP1]], <vscale x 1 x i8>* [[V0:%.*]], align 1
 // CHECK-RV32-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8> } [[TMP0]], 1
@@ -48,7 +48,7 @@ void test_vlseg2e8_v_i8mf8 (vint8mf8_t *v0, vint8mf8_t *v1, const int8_t *base, 
 //
 // CHECK-RV64-LABEL: @test_vlseg3e8_v_i8mf8(
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8> } @llvm.riscv.vlseg3.nxv1i8.i64(i8* [[BASE:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8> } @llvm.riscv.vlseg3.nxv1i8.i64(<vscale x 1 x i8> undef, <vscale x 1 x i8> undef, <vscale x 1 x i8> undef, i8* [[BASE:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8> } [[TMP0]], 0
 // CHECK-RV64-NEXT:    store <vscale x 1 x i8> [[TMP1]], <vscale x 1 x i8>* [[V0:%.*]], align 1
 // CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8> } [[TMP0]], 1
@@ -63,7 +63,7 @@ void test_vlseg3e8_v_i8mf8 (vint8mf8_t *v0, vint8mf8_t *v1, vint8mf8_t *v2, cons
 
 // CHECK-RV32-LABEL: @test_vlseg4e8_v_i8mf8(
 // CHECK-RV32-NEXT:  entry:
-// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8> } @llvm.riscv.vlseg4.nxv1i8.i32(i8* [[BASE:%.*]], i32 [[VL:%.*]])
+// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8> } @llvm.riscv.vlseg4.nxv1i8.i32(<vscale x 1 x i8> undef, <vscale x 1 x i8> undef, <vscale x 1 x i8> undef, <vscale x 1 x i8> undef, i8* [[BASE:%.*]], i32 [[VL:%.*]])
 // CHECK-RV32-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8> } [[TMP0]], 0
 // CHECK-RV32-NEXT:    store <vscale x 1 x i8> [[TMP1]], <vscale x 1 x i8>* [[V0:%.*]], align 1
 // CHECK-RV32-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8> } [[TMP0]], 1
@@ -76,7 +76,7 @@ void test_vlseg3e8_v_i8mf8 (vint8mf8_t *v0, vint8mf8_t *v1, vint8mf8_t *v2, cons
 //
 // CHECK-RV64-LABEL: @test_vlseg4e8_v_i8mf8(
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8> } @llvm.riscv.vlseg4.nxv1i8.i64(i8* [[BASE:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8> } @llvm.riscv.vlseg4.nxv1i8.i64(<vscale x 1 x i8> undef, <vscale x 1 x i8> undef, <vscale x 1 x i8> undef, <vscale x 1 x i8> undef, i8* [[BASE:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8> } [[TMP0]], 0
 // CHECK-RV64-NEXT:    store <vscale x 1 x i8> [[TMP1]], <vscale x 1 x i8>* [[V0:%.*]], align 1
 // CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8> } [[TMP0]], 1
@@ -93,7 +93,7 @@ void test_vlseg4e8_v_i8mf8 (vint8mf8_t *v0, vint8mf8_t *v1, vint8mf8_t *v2, vint
 
 // CHECK-RV32-LABEL: @test_vlseg5e8_v_i8mf8(
 // CHECK-RV32-NEXT:  entry:
-// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8> } @llvm.riscv.vlseg5.nxv1i8.i32(i8* [[BASE:%.*]], i32 [[VL:%.*]])
+// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8> } @llvm.riscv.vlseg5.nxv1i8.i32(<vscale x 1 x i8> undef, <vscale x 1 x i8> undef, <vscale x 1 x i8> undef, <vscale x 1 x i8> undef, <vscale x 1 x i8> undef, i8* [[BASE:%.*]], i32 [[VL:%.*]])
 // CHECK-RV32-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8> } [[TMP0]], 0
 // CHECK-RV32-NEXT:    store <vscale x 1 x i8> [[TMP1]], <vscale x 1 x i8>* [[V0:%.*]], align 1
 // CHECK-RV32-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8> } [[TMP0]], 1
@@ -108,7 +108,7 @@ void test_vlseg4e8_v_i8mf8 (vint8mf8_t *v0, vint8mf8_t *v1, vint8mf8_t *v2, vint
 //
 // CHECK-RV64-LABEL: @test_vlseg5e8_v_i8mf8(
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8> } @llvm.riscv.vlseg5.nxv1i8.i64(i8* [[BASE:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8> } @llvm.riscv.vlseg5.nxv1i8.i64(<vscale x 1 x i8> undef, <vscale x 1 x i8> undef, <vscale x 1 x i8> undef, <vscale x 1 x i8> undef, <vscale x 1 x i8> undef, i8* [[BASE:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8> } [[TMP0]], 0
 // CHECK-RV64-NEXT:    store <vscale x 1 x i8> [[TMP1]], <vscale x 1 x i8>* [[V0:%.*]], align 1
 // CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8> } [[TMP0]], 1
@@ -127,7 +127,7 @@ void test_vlseg5e8_v_i8mf8 (vint8mf8_t *v0, vint8mf8_t *v1, vint8mf8_t *v2, vint
 
 // CHECK-RV32-LABEL: @test_vlseg6e8_v_i8mf8(
 // CHECK-RV32-NEXT:  entry:
-// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8> } @llvm.riscv.vlseg6.nxv1i8.i32(i8* [[BASE:%.*]], i32 [[VL:%.*]])
+// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8> } @llvm.riscv.vlseg6.nxv1i8.i32(<vscale x 1 x i8> undef, <vscale x 1 x i8> undef, <vscale x 1 x i8> undef, <vscale x 1 x i8> undef, <vscale x 1 x i8> undef, <vscale x 1 x i8> undef, i8* [[BASE:%.*]], i32 [[VL:%.*]])
 // CHECK-RV32-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8> } [[TMP0]], 0
 // CHECK-RV32-NEXT:    store <vscale x 1 x i8> [[TMP1]], <vscale x 1 x i8>* [[V0:%.*]], align 1
 // CHECK-RV32-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8> } [[TMP0]], 1
@@ -144,7 +144,7 @@ void test_vlseg5e8_v_i8mf8 (vint8mf8_t *v0, vint8mf8_t *v1, vint8mf8_t *v2, vint
 //
 // CHECK-RV64-LABEL: @test_vlseg6e8_v_i8mf8(
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8> } @llvm.riscv.vlseg6.nxv1i8.i64(i8* [[BASE:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8> } @llvm.riscv.vlseg6.nxv1i8.i64(<vscale x 1 x i8> undef, <vscale x 1 x i8> undef, <vscale x 1 x i8> undef, <vscale x 1 x i8> undef, <vscale x 1 x i8> undef, <vscale x 1 x i8> undef, i8* [[BASE:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8> } [[TMP0]], 0
 // CHECK-RV64-NEXT:    store <vscale x 1 x i8> [[TMP1]], <vscale x 1 x i8>* [[V0:%.*]], align 1
 // CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8> } [[TMP0]], 1
@@ -165,7 +165,7 @@ void test_vlseg6e8_v_i8mf8 (vint8mf8_t *v0, vint8mf8_t *v1, vint8mf8_t *v2, vint
 
 // CHECK-RV32-LABEL: @test_vlseg7e8_v_i8mf8(
 // CHECK-RV32-NEXT:  entry:
-// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8> } @llvm.riscv.vlseg7.nxv1i8.i32(i8* [[BASE:%.*]], i32 [[VL:%.*]])
+// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8> } @llvm.riscv.vlseg7.nxv1i8.i32(<vscale x 1 x i8> undef, <vscale x 1 x i8> undef, <vscale x 1 x i8> undef, <vscale x 1 x i8> undef, <vscale x 1 x i8> undef, <vscale x 1 x i8> undef, <vscale x 1 x i8> undef, i8* [[BASE:%.*]], i32 [[VL:%.*]])
 // CHECK-RV32-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8> } [[TMP0]], 0
 // CHECK-RV32-NEXT:    store <vscale x 1 x i8> [[TMP1]], <vscale x 1 x i8>* [[V0:%.*]], align 1
 // CHECK-RV32-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8> } [[TMP0]], 1
@@ -184,7 +184,7 @@ void test_vlseg6e8_v_i8mf8 (vint8mf8_t *v0, vint8mf8_t *v1, vint8mf8_t *v2, vint
 //
 // CHECK-RV64-LABEL: @test_vlseg7e8_v_i8mf8(
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8> } @llvm.riscv.vlseg7.nxv1i8.i64(i8* [[BASE:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8> } @llvm.riscv.vlseg7.nxv1i8.i64(<vscale x 1 x i8> undef, <vscale x 1 x i8> undef, <vscale x 1 x i8> undef, <vscale x 1 x i8> undef, <vscale x 1 x i8> undef, <vscale x 1 x i8> undef, <vscale x 1 x i8> undef, i8* [[BASE:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8> } [[TMP0]], 0
 // CHECK-RV64-NEXT:    store <vscale x 1 x i8> [[TMP1]], <vscale x 1 x i8>* [[V0:%.*]], align 1
 // CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8> } [[TMP0]], 1
@@ -207,7 +207,7 @@ void test_vlseg7e8_v_i8mf8 (vint8mf8_t *v0, vint8mf8_t *v1, vint8mf8_t *v2, vint
 
 // CHECK-RV32-LABEL: @test_vlseg8e8_v_i8mf8(
 // CHECK-RV32-NEXT:  entry:
-// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8> } @llvm.riscv.vlseg8.nxv1i8.i32(i8* [[BASE:%.*]], i32 [[VL:%.*]])
+// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8> } @llvm.riscv.vlseg8.nxv1i8.i32(<vscale x 1 x i8> undef, <vscale x 1 x i8> undef, <vscale x 1 x i8> undef, <vscale x 1 x i8> undef, <vscale x 1 x i8> undef, <vscale x 1 x i8> undef, <vscale x 1 x i8> undef, <vscale x 1 x i8> undef, i8* [[BASE:%.*]], i32 [[VL:%.*]])
 // CHECK-RV32-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8> } [[TMP0]], 0
 // CHECK-RV32-NEXT:    store <vscale x 1 x i8> [[TMP1]], <vscale x 1 x i8>* [[V0:%.*]], align 1
 // CHECK-RV32-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8> } [[TMP0]], 1
@@ -228,7 +228,7 @@ void test_vlseg7e8_v_i8mf8 (vint8mf8_t *v0, vint8mf8_t *v1, vint8mf8_t *v2, vint
 //
 // CHECK-RV64-LABEL: @test_vlseg8e8_v_i8mf8(
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8> } @llvm.riscv.vlseg8.nxv1i8.i64(i8* [[BASE:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8> } @llvm.riscv.vlseg8.nxv1i8.i64(<vscale x 1 x i8> undef, <vscale x 1 x i8> undef, <vscale x 1 x i8> undef, <vscale x 1 x i8> undef, <vscale x 1 x i8> undef, <vscale x 1 x i8> undef, <vscale x 1 x i8> undef, <vscale x 1 x i8> undef, i8* [[BASE:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8> } [[TMP0]], 0
 // CHECK-RV64-NEXT:    store <vscale x 1 x i8> [[TMP1]], <vscale x 1 x i8>* [[V0:%.*]], align 1
 // CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8> } [[TMP0]], 1
@@ -253,7 +253,7 @@ void test_vlseg8e8_v_i8mf8 (vint8mf8_t *v0, vint8mf8_t *v1, vint8mf8_t *v2, vint
 
 // CHECK-RV32-LABEL: @test_vlseg2e8_v_i8mf4(
 // CHECK-RV32-NEXT:  entry:
-// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 2 x i8>, <vscale x 2 x i8> } @llvm.riscv.vlseg2.nxv2i8.i32(i8* [[BASE:%.*]], i32 [[VL:%.*]])
+// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 2 x i8>, <vscale x 2 x i8> } @llvm.riscv.vlseg2.nxv2i8.i32(<vscale x 2 x i8> undef, <vscale x 2 x i8> undef, i8* [[BASE:%.*]], i32 [[VL:%.*]])
 // CHECK-RV32-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 2 x i8>, <vscale x 2 x i8> } [[TMP0]], 0
 // CHECK-RV32-NEXT:    store <vscale x 2 x i8> [[TMP1]], <vscale x 2 x i8>* [[V0:%.*]], align 1
 // CHECK-RV32-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 2 x i8>, <vscale x 2 x i8> } [[TMP0]], 1
@@ -262,7 +262,7 @@ void test_vlseg8e8_v_i8mf8 (vint8mf8_t *v0, vint8mf8_t *v1, vint8mf8_t *v2, vint
 //
 // CHECK-RV64-LABEL: @test_vlseg2e8_v_i8mf4(
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 2 x i8>, <vscale x 2 x i8> } @llvm.riscv.vlseg2.nxv2i8.i64(i8* [[BASE:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 2 x i8>, <vscale x 2 x i8> } @llvm.riscv.vlseg2.nxv2i8.i64(<vscale x 2 x i8> undef, <vscale x 2 x i8> undef, i8* [[BASE:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 2 x i8>, <vscale x 2 x i8> } [[TMP0]], 0
 // CHECK-RV64-NEXT:    store <vscale x 2 x i8> [[TMP1]], <vscale x 2 x i8>* [[V0:%.*]], align 1
 // CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 2 x i8>, <vscale x 2 x i8> } [[TMP0]], 1
@@ -275,7 +275,7 @@ void test_vlseg2e8_v_i8mf4 (vint8mf4_t *v0, vint8mf4_t *v1, const int8_t *base, 
 
 // CHECK-RV32-LABEL: @test_vlseg3e8_v_i8mf4(
 // CHECK-RV32-NEXT:  entry:
-// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8> } @llvm.riscv.vlseg3.nxv2i8.i32(i8* [[BASE:%.*]], i32 [[VL:%.*]])
+// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8> } @llvm.riscv.vlseg3.nxv2i8.i32(<vscale x 2 x i8> undef, <vscale x 2 x i8> undef, <vscale x 2 x i8> undef, i8* [[BASE:%.*]], i32 [[VL:%.*]])
 // CHECK-RV32-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8> } [[TMP0]], 0
 // CHECK-RV32-NEXT:    store <vscale x 2 x i8> [[TMP1]], <vscale x 2 x i8>* [[V0:%.*]], align 1
 // CHECK-RV32-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8> } [[TMP0]], 1
@@ -286,7 +286,7 @@ void test_vlseg2e8_v_i8mf4 (vint8mf4_t *v0, vint8mf4_t *v1, const int8_t *base, 
 //
 // CHECK-RV64-LABEL: @test_vlseg3e8_v_i8mf4(
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8> } @llvm.riscv.vlseg3.nxv2i8.i64(i8* [[BASE:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8> } @llvm.riscv.vlseg3.nxv2i8.i64(<vscale x 2 x i8> undef, <vscale x 2 x i8> undef, <vscale x 2 x i8> undef, i8* [[BASE:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8> } [[TMP0]], 0
 // CHECK-RV64-NEXT:    store <vscale x 2 x i8> [[TMP1]], <vscale x 2 x i8>* [[V0:%.*]], align 1
 // CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8> } [[TMP0]], 1
@@ -301,7 +301,7 @@ void test_vlseg3e8_v_i8mf4 (vint8mf4_t *v0, vint8mf4_t *v1, vint8mf4_t *v2, cons
 
 // CHECK-RV32-LABEL: @test_vlseg4e8_v_i8mf4(
 // CHECK-RV32-NEXT:  entry:
-// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8> } @llvm.riscv.vlseg4.nxv2i8.i32(i8* [[BASE:%.*]], i32 [[VL:%.*]])
+// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8> } @llvm.riscv.vlseg4.nxv2i8.i32(<vscale x 2 x i8> undef, <vscale x 2 x i8> undef, <vscale x 2 x i8> undef, <vscale x 2 x i8> undef, i8* [[BASE:%.*]], i32 [[VL:%.*]])
 // CHECK-RV32-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8> } [[TMP0]], 0
 // CHECK-RV32-NEXT:    store <vscale x 2 x i8> [[TMP1]], <vscale x 2 x i8>* [[V0:%.*]], align 1
 // CHECK-RV32-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8> } [[TMP0]], 1
@@ -314,7 +314,7 @@ void test_vlseg3e8_v_i8mf4 (vint8mf4_t *v0, vint8mf4_t *v1, vint8mf4_t *v2, cons
 //
 // CHECK-RV64-LABEL: @test_vlseg4e8_v_i8mf4(
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8> } @llvm.riscv.vlseg4.nxv2i8.i64(i8* [[BASE:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8> } @llvm.riscv.vlseg4.nxv2i8.i64(<vscale x 2 x i8> undef, <vscale x 2 x i8> undef, <vscale x 2 x i8> undef, <vscale x 2 x i8> undef, i8* [[BASE:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8> } [[TMP0]], 0
 // CHECK-RV64-NEXT:    store <vscale x 2 x i8> [[TMP1]], <vscale x 2 x i8>* [[V0:%.*]], align 1
 // CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8> } [[TMP0]], 1
@@ -331,7 +331,7 @@ void test_vlseg4e8_v_i8mf4 (vint8mf4_t *v0, vint8mf4_t *v1, vint8mf4_t *v2, vint
 
 // CHECK-RV32-LABEL: @test_vlseg5e8_v_i8mf4(
 // CHECK-RV32-NEXT:  entry:
-// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8> } @llvm.riscv.vlseg5.nxv2i8.i32(i8* [[BASE:%.*]], i32 [[VL:%.*]])
+// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8> } @llvm.riscv.vlseg5.nxv2i8.i32(<vscale x 2 x i8> undef, <vscale x 2 x i8> undef, <vscale x 2 x i8> undef, <vscale x 2 x i8> undef, <vscale x 2 x i8> undef, i8* [[BASE:%.*]], i32 [[VL:%.*]])
 // CHECK-RV32-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8> } [[TMP0]], 0
 // CHECK-RV32-NEXT:    store <vscale x 2 x i8> [[TMP1]], <vscale x 2 x i8>* [[V0:%.*]], align 1
 // CHECK-RV32-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8> } [[TMP0]], 1
@@ -346,7 +346,7 @@ void test_vlseg4e8_v_i8mf4 (vint8mf4_t *v0, vint8mf4_t *v1, vint8mf4_t *v2, vint
 //
 // CHECK-RV64-LABEL: @test_vlseg5e8_v_i8mf4(
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8> } @llvm.riscv.vlseg5.nxv2i8.i64(i8* [[BASE:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8> } @llvm.riscv.vlseg5.nxv2i8.i64(<vscale x 2 x i8> undef, <vscale x 2 x i8> undef, <vscale x 2 x i8> undef, <vscale x 2 x i8> undef, <vscale x 2 x i8> undef, i8* [[BASE:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8> } [[TMP0]], 0
 // CHECK-RV64-NEXT:    store <vscale x 2 x i8> [[TMP1]], <vscale x 2 x i8>* [[V0:%.*]], align 1
 // CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8> } [[TMP0]], 1
@@ -365,7 +365,7 @@ void test_vlseg5e8_v_i8mf4 (vint8mf4_t *v0, vint8mf4_t *v1, vint8mf4_t *v2, vint
 
 // CHECK-RV32-LABEL: @test_vlseg6e8_v_i8mf4(
 // CHECK-RV32-NEXT:  entry:
-// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8> } @llvm.riscv.vlseg6.nxv2i8.i32(i8* [[BASE:%.*]], i32 [[VL:%.*]])
+// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8> } @llvm.riscv.vlseg6.nxv2i8.i32(<vscale x 2 x i8> undef, <vscale x 2 x i8> undef, <vscale x 2 x i8> undef, <vscale x 2 x i8> undef, <vscale x 2 x i8> undef, <vscale x 2 x i8> undef, i8* [[BASE:%.*]], i32 [[VL:%.*]])
 // CHECK-RV32-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8> } [[TMP0]], 0
 // CHECK-RV32-NEXT:    store <vscale x 2 x i8> [[TMP1]], <vscale x 2 x i8>* [[V0:%.*]], align 1
 // CHECK-RV32-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8> } [[TMP0]], 1
@@ -382,7 +382,7 @@ void test_vlseg5e8_v_i8mf4 (vint8mf4_t *v0, vint8mf4_t *v1, vint8mf4_t *v2, vint
 //
 // CHECK-RV64-LABEL: @test_vlseg6e8_v_i8mf4(
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8> } @llvm.riscv.vlseg6.nxv2i8.i64(i8* [[BASE:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8> } @llvm.riscv.vlseg6.nxv2i8.i64(<vscale x 2 x i8> undef, <vscale x 2 x i8> undef, <vscale x 2 x i8> undef, <vscale x 2 x i8> undef, <vscale x 2 x i8> undef, <vscale x 2 x i8> undef, i8* [[BASE:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8> } [[TMP0]], 0
 // CHECK-RV64-NEXT:    store <vscale x 2 x i8> [[TMP1]], <vscale x 2 x i8>* [[V0:%.*]], align 1
 // CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8> } [[TMP0]], 1
@@ -403,7 +403,7 @@ void test_vlseg6e8_v_i8mf4 (vint8mf4_t *v0, vint8mf4_t *v1, vint8mf4_t *v2, vint
 
 // CHECK-RV32-LABEL: @test_vlseg7e8_v_i8mf4(
 // CHECK-RV32-NEXT:  entry:
-// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8> } @llvm.riscv.vlseg7.nxv2i8.i32(i8* [[BASE:%.*]], i32 [[VL:%.*]])
+// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8> } @llvm.riscv.vlseg7.nxv2i8.i32(<vscale x 2 x i8> undef, <vscale x 2 x i8> undef, <vscale x 2 x i8> undef, <vscale x 2 x i8> undef, <vscale x 2 x i8> undef, <vscale x 2 x i8> undef, <vscale x 2 x i8> undef, i8* [[BASE:%.*]], i32 [[VL:%.*]])
 // CHECK-RV32-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8> } [[TMP0]], 0
 // CHECK-RV32-NEXT:    store <vscale x 2 x i8> [[TMP1]], <vscale x 2 x i8>* [[V0:%.*]], align 1
 // CHECK-RV32-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8> } [[TMP0]], 1
@@ -422,7 +422,7 @@ void test_vlseg6e8_v_i8mf4 (vint8mf4_t *v0, vint8mf4_t *v1, vint8mf4_t *v2, vint
 //
 // CHECK-RV64-LABEL: @test_vlseg7e8_v_i8mf4(
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8> } @llvm.riscv.vlseg7.nxv2i8.i64(i8* [[BASE:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8> } @llvm.riscv.vlseg7.nxv2i8.i64(<vscale x 2 x i8> undef, <vscale x 2 x i8> undef, <vscale x 2 x i8> undef, <vscale x 2 x i8> undef, <vscale x 2 x i8> undef, <vscale x 2 x i8> undef, <vscale x 2 x i8> undef, i8* [[BASE:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8> } [[TMP0]], 0
 // CHECK-RV64-NEXT:    store <vscale x 2 x i8> [[TMP1]], <vscale x 2 x i8>* [[V0:%.*]], align 1
 // CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8> } [[TMP0]], 1
@@ -445,7 +445,7 @@ void test_vlseg7e8_v_i8mf4 (vint8mf4_t *v0, vint8mf4_t *v1, vint8mf4_t *v2, vint
 
 // CHECK-RV32-LABEL: @test_vlseg8e8_v_i8mf4(
 // CHECK-RV32-NEXT:  entry:
-// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8> } @llvm.riscv.vlseg8.nxv2i8.i32(i8* [[BASE:%.*]], i32 [[VL:%.*]])
+// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8> } @llvm.riscv.vlseg8.nxv2i8.i32(<vscale x 2 x i8> undef, <vscale x 2 x i8> undef, <vscale x 2 x i8> undef, <vscale x 2 x i8> undef, <vscale x 2 x i8> undef, <vscale x 2 x i8> undef, <vscale x 2 x i8> undef, <vscale x 2 x i8> undef, i8* [[BASE:%.*]], i32 [[VL:%.*]])
 // CHECK-RV32-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8> } [[TMP0]], 0
 // CHECK-RV32-NEXT:    store <vscale x 2 x i8> [[TMP1]], <vscale x 2 x i8>* [[V0:%.*]], align 1
 // CHECK-RV32-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8> } [[TMP0]], 1
@@ -466,7 +466,7 @@ void test_vlseg7e8_v_i8mf4 (vint8mf4_t *v0, vint8mf4_t *v1, vint8mf4_t *v2, vint
 //
 // CHECK-RV64-LABEL: @test_vlseg8e8_v_i8mf4(
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8> } @llvm.riscv.vlseg8.nxv2i8.i64(i8* [[BASE:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8> } @llvm.riscv.vlseg8.nxv2i8.i64(<vscale x 2 x i8> undef, <vscale x 2 x i8> undef, <vscale x 2 x i8> undef, <vscale x 2 x i8> undef, <vscale x 2 x i8> undef, <vscale x 2 x i8> undef, <vscale x 2 x i8> undef, <vscale x 2 x i8> undef, i8* [[BASE:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8> } [[TMP0]], 0
 // CHECK-RV64-NEXT:    store <vscale x 2 x i8> [[TMP1]], <vscale x 2 x i8>* [[V0:%.*]], align 1
 // CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8> } [[TMP0]], 1
@@ -491,7 +491,7 @@ void test_vlseg8e8_v_i8mf4 (vint8mf4_t *v0, vint8mf4_t *v1, vint8mf4_t *v2, vint
 
 // CHECK-RV32-LABEL: @test_vlseg2e8_v_i8mf2(
 // CHECK-RV32-NEXT:  entry:
-// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 4 x i8>, <vscale x 4 x i8> } @llvm.riscv.vlseg2.nxv4i8.i32(i8* [[BASE:%.*]], i32 [[VL:%.*]])
+// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 4 x i8>, <vscale x 4 x i8> } @llvm.riscv.vlseg2.nxv4i8.i32(<vscale x 4 x i8> undef, <vscale x 4 x i8> undef, i8* [[BASE:%.*]], i32 [[VL:%.*]])
 // CHECK-RV32-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 4 x i8>, <vscale x 4 x i8> } [[TMP0]], 0
 // CHECK-RV32-NEXT:    store <vscale x 4 x i8> [[TMP1]], <vscale x 4 x i8>* [[V0:%.*]], align 1
 // CHECK-RV32-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 4 x i8>, <vscale x 4 x i8> } [[TMP0]], 1
@@ -500,7 +500,7 @@ void test_vlseg8e8_v_i8mf4 (vint8mf4_t *v0, vint8mf4_t *v1, vint8mf4_t *v2, vint
 //
 // CHECK-RV64-LABEL: @test_vlseg2e8_v_i8mf2(
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 4 x i8>, <vscale x 4 x i8> } @llvm.riscv.vlseg2.nxv4i8.i64(i8* [[BASE:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 4 x i8>, <vscale x 4 x i8> } @llvm.riscv.vlseg2.nxv4i8.i64(<vscale x 4 x i8> undef, <vscale x 4 x i8> undef, i8* [[BASE:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 4 x i8>, <vscale x 4 x i8> } [[TMP0]], 0
 // CHECK-RV64-NEXT:    store <vscale x 4 x i8> [[TMP1]], <vscale x 4 x i8>* [[V0:%.*]], align 1
 // CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 4 x i8>, <vscale x 4 x i8> } [[TMP0]], 1
@@ -513,7 +513,7 @@ void test_vlseg2e8_v_i8mf2 (vint8mf2_t *v0, vint8mf2_t *v1, const int8_t *base, 
 
 // CHECK-RV32-LABEL: @test_vlseg3e8_v_i8mf2(
 // CHECK-RV32-NEXT:  entry:
-// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8> } @llvm.riscv.vlseg3.nxv4i8.i32(i8* [[BASE:%.*]], i32 [[VL:%.*]])
+// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8> } @llvm.riscv.vlseg3.nxv4i8.i32(<vscale x 4 x i8> undef, <vscale x 4 x i8> undef, <vscale x 4 x i8> undef, i8* [[BASE:%.*]], i32 [[VL:%.*]])
 // CHECK-RV32-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8> } [[TMP0]], 0
 // CHECK-RV32-NEXT:    store <vscale x 4 x i8> [[TMP1]], <vscale x 4 x i8>* [[V0:%.*]], align 1
 // CHECK-RV32-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8> } [[TMP0]], 1
@@ -524,7 +524,7 @@ void test_vlseg2e8_v_i8mf2 (vint8mf2_t *v0, vint8mf2_t *v1, const int8_t *base, 
 //
 // CHECK-RV64-LABEL: @test_vlseg3e8_v_i8mf2(
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8> } @llvm.riscv.vlseg3.nxv4i8.i64(i8* [[BASE:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8> } @llvm.riscv.vlseg3.nxv4i8.i64(<vscale x 4 x i8> undef, <vscale x 4 x i8> undef, <vscale x 4 x i8> undef, i8* [[BASE:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8> } [[TMP0]], 0
 // CHECK-RV64-NEXT:    store <vscale x 4 x i8> [[TMP1]], <vscale x 4 x i8>* [[V0:%.*]], align 1
 // CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8> } [[TMP0]], 1
@@ -539,7 +539,7 @@ void test_vlseg3e8_v_i8mf2 (vint8mf2_t *v0, vint8mf2_t *v1, vint8mf2_t *v2, cons
 
 // CHECK-RV32-LABEL: @test_vlseg4e8_v_i8mf2(
 // CHECK-RV32-NEXT:  entry:
-// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8> } @llvm.riscv.vlseg4.nxv4i8.i32(i8* [[BASE:%.*]], i32 [[VL:%.*]])
+// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8> } @llvm.riscv.vlseg4.nxv4i8.i32(<vscale x 4 x i8> undef, <vscale x 4 x i8> undef, <vscale x 4 x i8> undef, <vscale x 4 x i8> undef, i8* [[BASE:%.*]], i32 [[VL:%.*]])
 // CHECK-RV32-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8> } [[TMP0]], 0
 // CHECK-RV32-NEXT:    store <vscale x 4 x i8> [[TMP1]], <vscale x 4 x i8>* [[V0:%.*]], align 1
 // CHECK-RV32-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8> } [[TMP0]], 1
@@ -552,7 +552,7 @@ void test_vlseg3e8_v_i8mf2 (vint8mf2_t *v0, vint8mf2_t *v1, vint8mf2_t *v2, cons
 //
 // CHECK-RV64-LABEL: @test_vlseg4e8_v_i8mf2(
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8> } @llvm.riscv.vlseg4.nxv4i8.i64(i8* [[BASE:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8> } @llvm.riscv.vlseg4.nxv4i8.i64(<vscale x 4 x i8> undef, <vscale x 4 x i8> undef, <vscale x 4 x i8> undef, <vscale x 4 x i8> undef, i8* [[BASE:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8> } [[TMP0]], 0
 // CHECK-RV64-NEXT:    store <vscale x 4 x i8> [[TMP1]], <vscale x 4 x i8>* [[V0:%.*]], align 1
 // CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8> } [[TMP0]], 1
@@ -569,7 +569,7 @@ void test_vlseg4e8_v_i8mf2 (vint8mf2_t *v0, vint8mf2_t *v1, vint8mf2_t *v2, vint
 
 // CHECK-RV32-LABEL: @test_vlseg5e8_v_i8mf2(
 // CHECK-RV32-NEXT:  entry:
-// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8> } @llvm.riscv.vlseg5.nxv4i8.i32(i8* [[BASE:%.*]], i32 [[VL:%.*]])
+// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8> } @llvm.riscv.vlseg5.nxv4i8.i32(<vscale x 4 x i8> undef, <vscale x 4 x i8> undef, <vscale x 4 x i8> undef, <vscale x 4 x i8> undef, <vscale x 4 x i8> undef, i8* [[BASE:%.*]], i32 [[VL:%.*]])
 // CHECK-RV32-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8> } [[TMP0]], 0
 // CHECK-RV32-NEXT:    store <vscale x 4 x i8> [[TMP1]], <vscale x 4 x i8>* [[V0:%.*]], align 1
 // CHECK-RV32-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8> } [[TMP0]], 1
@@ -584,7 +584,7 @@ void test_vlseg4e8_v_i8mf2 (vint8mf2_t *v0, vint8mf2_t *v1, vint8mf2_t *v2, vint
 //
 // CHECK-RV64-LABEL: @test_vlseg5e8_v_i8mf2(
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8> } @llvm.riscv.vlseg5.nxv4i8.i64(i8* [[BASE:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8> } @llvm.riscv.vlseg5.nxv4i8.i64(<vscale x 4 x i8> undef, <vscale x 4 x i8> undef, <vscale x 4 x i8> undef, <vscale x 4 x i8> undef, <vscale x 4 x i8> undef, i8* [[BASE:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8> } [[TMP0]], 0
 // CHECK-RV64-NEXT:    store <vscale x 4 x i8> [[TMP1]], <vscale x 4 x i8>* [[V0:%.*]], align 1
 // CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8> } [[TMP0]], 1
@@ -603,7 +603,7 @@ void test_vlseg5e8_v_i8mf2 (vint8mf2_t *v0, vint8mf2_t *v1, vint8mf2_t *v2, vint
 
 // CHECK-RV32-LABEL: @test_vlseg6e8_v_i8mf2(
 // CHECK-RV32-NEXT:  entry:
-// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8> } @llvm.riscv.vlseg6.nxv4i8.i32(i8* [[BASE:%.*]], i32 [[VL:%.*]])
+// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8> } @llvm.riscv.vlseg6.nxv4i8.i32(<vscale x 4 x i8> undef, <vscale x 4 x i8> undef, <vscale x 4 x i8> undef, <vscale x 4 x i8> undef, <vscale x 4 x i8> undef, <vscale x 4 x i8> undef, i8* [[BASE:%.*]], i32 [[VL:%.*]])
 // CHECK-RV32-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8> } [[TMP0]], 0
 // CHECK-RV32-NEXT:    store <vscale x 4 x i8> [[TMP1]], <vscale x 4 x i8>* [[V0:%.*]], align 1
 // CHECK-RV32-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8> } [[TMP0]], 1
@@ -620,7 +620,7 @@ void test_vlseg5e8_v_i8mf2 (vint8mf2_t *v0, vint8mf2_t *v1, vint8mf2_t *v2, vint
 //
 // CHECK-RV64-LABEL: @test_vlseg6e8_v_i8mf2(
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8> } @llvm.riscv.vlseg6.nxv4i8.i64(i8* [[BASE:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8> } @llvm.riscv.vlseg6.nxv4i8.i64(<vscale x 4 x i8> undef, <vscale x 4 x i8> undef, <vscale x 4 x i8> undef, <vscale x 4 x i8> undef, <vscale x 4 x i8> undef, <vscale x 4 x i8> undef, i8* [[BASE:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8> } [[TMP0]], 0
 // CHECK-RV64-NEXT:    store <vscale x 4 x i8> [[TMP1]], <vscale x 4 x i8>* [[V0:%.*]], align 1
 // CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8> } [[TMP0]], 1
@@ -641,7 +641,7 @@ void test_vlseg6e8_v_i8mf2 (vint8mf2_t *v0, vint8mf2_t *v1, vint8mf2_t *v2, vint
 
 // CHECK-RV32-LABEL: @test_vlseg7e8_v_i8mf2(
 // CHECK-RV32-NEXT:  entry:
-// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8> } @llvm.riscv.vlseg7.nxv4i8.i32(i8* [[BASE:%.*]], i32 [[VL:%.*]])
+// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8> } @llvm.riscv.vlseg7.nxv4i8.i32(<vscale x 4 x i8> undef, <vscale x 4 x i8> undef, <vscale x 4 x i8> undef, <vscale x 4 x i8> undef, <vscale x 4 x i8> undef, <vscale x 4 x i8> undef, <vscale x 4 x i8> undef, i8* [[BASE:%.*]], i32 [[VL:%.*]])
 // CHECK-RV32-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8> } [[TMP0]], 0
 // CHECK-RV32-NEXT:    store <vscale x 4 x i8> [[TMP1]], <vscale x 4 x i8>* [[V0:%.*]], align 1
 // CHECK-RV32-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8> } [[TMP0]], 1
@@ -660,7 +660,7 @@ void test_vlseg6e8_v_i8mf2 (vint8mf2_t *v0, vint8mf2_t *v1, vint8mf2_t *v2, vint
 //
 // CHECK-RV64-LABEL: @test_vlseg7e8_v_i8mf2(
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8> } @llvm.riscv.vlseg7.nxv4i8.i64(i8* [[BASE:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8> } @llvm.riscv.vlseg7.nxv4i8.i64(<vscale x 4 x i8> undef, <vscale x 4 x i8> undef, <vscale x 4 x i8> undef, <vscale x 4 x i8> undef, <vscale x 4 x i8> undef, <vscale x 4 x i8> undef, <vscale x 4 x i8> undef, i8* [[BASE:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8> } [[TMP0]], 0
 // CHECK-RV64-NEXT:    store <vscale x 4 x i8> [[TMP1]], <vscale x 4 x i8>* [[V0:%.*]], align 1
 // CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8> } [[TMP0]], 1
@@ -683,7 +683,7 @@ void test_vlseg7e8_v_i8mf2 (vint8mf2_t *v0, vint8mf2_t *v1, vint8mf2_t *v2, vint
 
 // CHECK-RV32-LABEL: @test_vlseg8e8_v_i8mf2(
 // CHECK-RV32-NEXT:  entry:
-// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8> } @llvm.riscv.vlseg8.nxv4i8.i32(i8* [[BASE:%.*]], i32 [[VL:%.*]])
+// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8> } @llvm.riscv.vlseg8.nxv4i8.i32(<vscale x 4 x i8> undef, <vscale x 4 x i8> undef, <vscale x 4 x i8> undef, <vscale x 4 x i8> undef, <vscale x 4 x i8> undef, <vscale x 4 x i8> undef, <vscale x 4 x i8> undef, <vscale x 4 x i8> undef, i8* [[BASE:%.*]], i32 [[VL:%.*]])
 // CHECK-RV32-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8> } [[TMP0]], 0
 // CHECK-RV32-NEXT:    store <vscale x 4 x i8> [[TMP1]], <vscale x 4 x i8>* [[V0:%.*]], align 1
 // CHECK-RV32-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8> } [[TMP0]], 1
@@ -704,7 +704,7 @@ void test_vlseg7e8_v_i8mf2 (vint8mf2_t *v0, vint8mf2_t *v1, vint8mf2_t *v2, vint
 //
 // CHECK-RV64-LABEL: @test_vlseg8e8_v_i8mf2(
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8> } @llvm.riscv.vlseg8.nxv4i8.i64(i8* [[BASE:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8> } @llvm.riscv.vlseg8.nxv4i8.i64(<vscale x 4 x i8> undef, <vscale x 4 x i8> undef, <vscale x 4 x i8> undef, <vscale x 4 x i8> undef, <vscale x 4 x i8> undef, <vscale x 4 x i8> undef, <vscale x 4 x i8> undef, <vscale x 4 x i8> undef, i8* [[BASE:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8> } [[TMP0]], 0
 // CHECK-RV64-NEXT:    store <vscale x 4 x i8> [[TMP1]], <vscale x 4 x i8>* [[V0:%.*]], align 1
 // CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8> } [[TMP0]], 1
@@ -729,7 +729,7 @@ void test_vlseg8e8_v_i8mf2 (vint8mf2_t *v0, vint8mf2_t *v1, vint8mf2_t *v2, vint
 
 // CHECK-RV32-LABEL: @test_vlseg2e8_v_i8m1(
 // CHECK-RV32-NEXT:  entry:
-// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 8 x i8>, <vscale x 8 x i8> } @llvm.riscv.vlseg2.nxv8i8.i32(i8* [[BASE:%.*]], i32 [[VL:%.*]])
+// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 8 x i8>, <vscale x 8 x i8> } @llvm.riscv.vlseg2.nxv8i8.i32(<vscale x 8 x i8> undef, <vscale x 8 x i8> undef, i8* [[BASE:%.*]], i32 [[VL:%.*]])
 // CHECK-RV32-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 8 x i8>, <vscale x 8 x i8> } [[TMP0]], 0
 // CHECK-RV32-NEXT:    store <vscale x 8 x i8> [[TMP1]], <vscale x 8 x i8>* [[V0:%.*]], align 1
 // CHECK-RV32-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 8 x i8>, <vscale x 8 x i8> } [[TMP0]], 1
@@ -738,7 +738,7 @@ void test_vlseg8e8_v_i8mf2 (vint8mf2_t *v0, vint8mf2_t *v1, vint8mf2_t *v2, vint
 //
 // CHECK-RV64-LABEL: @test_vlseg2e8_v_i8m1(
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 8 x i8>, <vscale x 8 x i8> } @llvm.riscv.vlseg2.nxv8i8.i64(i8* [[BASE:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 8 x i8>, <vscale x 8 x i8> } @llvm.riscv.vlseg2.nxv8i8.i64(<vscale x 8 x i8> undef, <vscale x 8 x i8> undef, i8* [[BASE:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 8 x i8>, <vscale x 8 x i8> } [[TMP0]], 0
 // CHECK-RV64-NEXT:    store <vscale x 8 x i8> [[TMP1]], <vscale x 8 x i8>* [[V0:%.*]], align 1
 // CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 8 x i8>, <vscale x 8 x i8> } [[TMP0]], 1
@@ -751,7 +751,7 @@ void test_vlseg2e8_v_i8m1 (vint8m1_t *v0, vint8m1_t *v1, const int8_t *base, siz
 
 // CHECK-RV32-LABEL: @test_vlseg3e8_v_i8m1(
 // CHECK-RV32-NEXT:  entry:
-// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8> } @llvm.riscv.vlseg3.nxv8i8.i32(i8* [[BASE:%.*]], i32 [[VL:%.*]])
+// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8> } @llvm.riscv.vlseg3.nxv8i8.i32(<vscale x 8 x i8> undef, <vscale x 8 x i8> undef, <vscale x 8 x i8> undef, i8* [[BASE:%.*]], i32 [[VL:%.*]])
 // CHECK-RV32-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8> } [[TMP0]], 0
 // CHECK-RV32-NEXT:    store <vscale x 8 x i8> [[TMP1]], <vscale x 8 x i8>* [[V0:%.*]], align 1
 // CHECK-RV32-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8> } [[TMP0]], 1
@@ -762,7 +762,7 @@ void test_vlseg2e8_v_i8m1 (vint8m1_t *v0, vint8m1_t *v1, const int8_t *base, siz
 //
 // CHECK-RV64-LABEL: @test_vlseg3e8_v_i8m1(
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8> } @llvm.riscv.vlseg3.nxv8i8.i64(i8* [[BASE:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8> } @llvm.riscv.vlseg3.nxv8i8.i64(<vscale x 8 x i8> undef, <vscale x 8 x i8> undef, <vscale x 8 x i8> undef, i8* [[BASE:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8> } [[TMP0]], 0
 // CHECK-RV64-NEXT:    store <vscale x 8 x i8> [[TMP1]], <vscale x 8 x i8>* [[V0:%.*]], align 1
 // CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8> } [[TMP0]], 1
@@ -777,7 +777,7 @@ void test_vlseg3e8_v_i8m1 (vint8m1_t *v0, vint8m1_t *v1, vint8m1_t *v2, const in
 
 // CHECK-RV32-LABEL: @test_vlseg4e8_v_i8m1(
 // CHECK-RV32-NEXT:  entry:
-// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8> } @llvm.riscv.vlseg4.nxv8i8.i32(i8* [[BASE:%.*]], i32 [[VL:%.*]])
+// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8> } @llvm.riscv.vlseg4.nxv8i8.i32(<vscale x 8 x i8> undef, <vscale x 8 x i8> undef, <vscale x 8 x i8> undef, <vscale x 8 x i8> undef, i8* [[BASE:%.*]], i32 [[VL:%.*]])
 // CHECK-RV32-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8> } [[TMP0]], 0
 // CHECK-RV32-NEXT:    store <vscale x 8 x i8> [[TMP1]], <vscale x 8 x i8>* [[V0:%.*]], align 1
 // CHECK-RV32-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8> } [[TMP0]], 1
@@ -790,7 +790,7 @@ void test_vlseg3e8_v_i8m1 (vint8m1_t *v0, vint8m1_t *v1, vint8m1_t *v2, const in
 //
 // CHECK-RV64-LABEL: @test_vlseg4e8_v_i8m1(
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8> } @llvm.riscv.vlseg4.nxv8i8.i64(i8* [[BASE:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8> } @llvm.riscv.vlseg4.nxv8i8.i64(<vscale x 8 x i8> undef, <vscale x 8 x i8> undef, <vscale x 8 x i8> undef, <vscale x 8 x i8> undef, i8* [[BASE:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8> } [[TMP0]], 0
 // CHECK-RV64-NEXT:    store <vscale x 8 x i8> [[TMP1]], <vscale x 8 x i8>* [[V0:%.*]], align 1
 // CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8> } [[TMP0]], 1
@@ -807,7 +807,7 @@ void test_vlseg4e8_v_i8m1 (vint8m1_t *v0, vint8m1_t *v1, vint8m1_t *v2, vint8m1_
 
 // CHECK-RV32-LABEL: @test_vlseg5e8_v_i8m1(
 // CHECK-RV32-NEXT:  entry:
-// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8> } @llvm.riscv.vlseg5.nxv8i8.i32(i8* [[BASE:%.*]], i32 [[VL:%.*]])
+// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8> } @llvm.riscv.vlseg5.nxv8i8.i32(<vscale x 8 x i8> undef, <vscale x 8 x i8> undef, <vscale x 8 x i8> undef, <vscale x 8 x i8> undef, <vscale x 8 x i8> undef, i8* [[BASE:%.*]], i32 [[VL:%.*]])
 // CHECK-RV32-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8> } [[TMP0]], 0
 // CHECK-RV32-NEXT:    store <vscale x 8 x i8> [[TMP1]], <vscale x 8 x i8>* [[V0:%.*]], align 1
 // CHECK-RV32-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8> } [[TMP0]], 1
@@ -822,7 +822,7 @@ void test_vlseg4e8_v_i8m1 (vint8m1_t *v0, vint8m1_t *v1, vint8m1_t *v2, vint8m1_
 //
 // CHECK-RV64-LABEL: @test_vlseg5e8_v_i8m1(
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8> } @llvm.riscv.vlseg5.nxv8i8.i64(i8* [[BASE:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8> } @llvm.riscv.vlseg5.nxv8i8.i64(<vscale x 8 x i8> undef, <vscale x 8 x i8> undef, <vscale x 8 x i8> undef, <vscale x 8 x i8> undef, <vscale x 8 x i8> undef, i8* [[BASE:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8> } [[TMP0]], 0
 // CHECK-RV64-NEXT:    store <vscale x 8 x i8> [[TMP1]], <vscale x 8 x i8>* [[V0:%.*]], align 1
 // CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8> } [[TMP0]], 1
@@ -841,7 +841,7 @@ void test_vlseg5e8_v_i8m1 (vint8m1_t *v0, vint8m1_t *v1, vint8m1_t *v2, vint8m1_
 
 // CHECK-RV32-LABEL: @test_vlseg6e8_v_i8m1(
 // CHECK-RV32-NEXT:  entry:
-// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8> } @llvm.riscv.vlseg6.nxv8i8.i32(i8* [[BASE:%.*]], i32 [[VL:%.*]])
+// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8> } @llvm.riscv.vlseg6.nxv8i8.i32(<vscale x 8 x i8> undef, <vscale x 8 x i8> undef, <vscale x 8 x i8> undef, <vscale x 8 x i8> undef, <vscale x 8 x i8> undef, <vscale x 8 x i8> undef, i8* [[BASE:%.*]], i32 [[VL:%.*]])
 // CHECK-RV32-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8> } [[TMP0]], 0
 // CHECK-RV32-NEXT:    store <vscale x 8 x i8> [[TMP1]], <vscale x 8 x i8>* [[V0:%.*]], align 1
 // CHECK-RV32-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8> } [[TMP0]], 1
@@ -858,7 +858,7 @@ void test_vlseg5e8_v_i8m1 (vint8m1_t *v0, vint8m1_t *v1, vint8m1_t *v2, vint8m1_
 //
 // CHECK-RV64-LABEL: @test_vlseg6e8_v_i8m1(
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8> } @llvm.riscv.vlseg6.nxv8i8.i64(i8* [[BASE:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8> } @llvm.riscv.vlseg6.nxv8i8.i64(<vscale x 8 x i8> undef, <vscale x 8 x i8> undef, <vscale x 8 x i8> undef, <vscale x 8 x i8> undef, <vscale x 8 x i8> undef, <vscale x 8 x i8> undef, i8* [[BASE:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8> } [[TMP0]], 0
 // CHECK-RV64-NEXT:    store <vscale x 8 x i8> [[TMP1]], <vscale x 8 x i8>* [[V0:%.*]], align 1
 // CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8> } [[TMP0]], 1
@@ -879,7 +879,7 @@ void test_vlseg6e8_v_i8m1 (vint8m1_t *v0, vint8m1_t *v1, vint8m1_t *v2, vint8m1_
 
 // CHECK-RV32-LABEL: @test_vlseg7e8_v_i8m1(
 // CHECK-RV32-NEXT:  entry:
-// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8> } @llvm.riscv.vlseg7.nxv8i8.i32(i8* [[BASE:%.*]], i32 [[VL:%.*]])
+// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8> } @llvm.riscv.vlseg7.nxv8i8.i32(<vscale x 8 x i8> undef, <vscale x 8 x i8> undef, <vscale x 8 x i8> undef, <vscale x 8 x i8> undef, <vscale x 8 x i8> undef, <vscale x 8 x i8> undef, <vscale x 8 x i8> undef, i8* [[BASE:%.*]], i32 [[VL:%.*]])
 // CHECK-RV32-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8> } [[TMP0]], 0
 // CHECK-RV32-NEXT:    store <vscale x 8 x i8> [[TMP1]], <vscale x 8 x i8>* [[V0:%.*]], align 1
 // CHECK-RV32-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8> } [[TMP0]], 1
@@ -898,7 +898,7 @@ void test_vlseg6e8_v_i8m1 (vint8m1_t *v0, vint8m1_t *v1, vint8m1_t *v2, vint8m1_
 //
 // CHECK-RV64-LABEL: @test_vlseg7e8_v_i8m1(
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8> } @llvm.riscv.vlseg7.nxv8i8.i64(i8* [[BASE:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8> } @llvm.riscv.vlseg7.nxv8i8.i64(<vscale x 8 x i8> undef, <vscale x 8 x i8> undef, <vscale x 8 x i8> undef, <vscale x 8 x i8> undef, <vscale x 8 x i8> undef, <vscale x 8 x i8> undef, <vscale x 8 x i8> undef, i8* [[BASE:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8> } [[TMP0]], 0
 // CHECK-RV64-NEXT:    store <vscale x 8 x i8> [[TMP1]], <vscale x 8 x i8>* [[V0:%.*]], align 1
 // CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8> } [[TMP0]], 1
@@ -921,7 +921,7 @@ void test_vlseg7e8_v_i8m1 (vint8m1_t *v0, vint8m1_t *v1, vint8m1_t *v2, vint8m1_
 
 // CHECK-RV32-LABEL: @test_vlseg8e8_v_i8m1(
 // CHECK-RV32-NEXT:  entry:
-// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8> } @llvm.riscv.vlseg8.nxv8i8.i32(i8* [[BASE:%.*]], i32 [[VL:%.*]])
+// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8> } @llvm.riscv.vlseg8.nxv8i8.i32(<vscale x 8 x i8> undef, <vscale x 8 x i8> undef, <vscale x 8 x i8> undef, <vscale x 8 x i8> undef, <vscale x 8 x i8> undef, <vscale x 8 x i8> undef, <vscale x 8 x i8> undef, <vscale x 8 x i8> undef, i8* [[BASE:%.*]], i32 [[VL:%.*]])
 // CHECK-RV32-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8> } [[TMP0]], 0
 // CHECK-RV32-NEXT:    store <vscale x 8 x i8> [[TMP1]], <vscale x 8 x i8>* [[V0:%.*]], align 1
 // CHECK-RV32-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8> } [[TMP0]], 1
@@ -942,7 +942,7 @@ void test_vlseg7e8_v_i8m1 (vint8m1_t *v0, vint8m1_t *v1, vint8m1_t *v2, vint8m1_
 //
 // CHECK-RV64-LABEL: @test_vlseg8e8_v_i8m1(
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8> } @llvm.riscv.vlseg8.nxv8i8.i64(i8* [[BASE:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8> } @llvm.riscv.vlseg8.nxv8i8.i64(<vscale x 8 x i8> undef, <vscale x 8 x i8> undef, <vscale x 8 x i8> undef, <vscale x 8 x i8> undef, <vscale x 8 x i8> undef, <vscale x 8 x i8> undef, <vscale x 8 x i8> undef, <vscale x 8 x i8> undef, i8* [[BASE:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8> } [[TMP0]], 0
 // CHECK-RV64-NEXT:    store <vscale x 8 x i8> [[TMP1]], <vscale x 8 x i8>* [[V0:%.*]], align 1
 // CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8> } [[TMP0]], 1
@@ -967,7 +967,7 @@ void test_vlseg8e8_v_i8m1 (vint8m1_t *v0, vint8m1_t *v1, vint8m1_t *v2, vint8m1_
 
 // CHECK-RV32-LABEL: @test_vlseg2e8_v_i8m2(
 // CHECK-RV32-NEXT:  entry:
-// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 16 x i8>, <vscale x 16 x i8> } @llvm.riscv.vlseg2.nxv16i8.i32(i8* [[BASE:%.*]], i32 [[VL:%.*]])
+// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 16 x i8>, <vscale x 16 x i8> } @llvm.riscv.vlseg2.nxv16i8.i32(<vscale x 16 x i8> undef, <vscale x 16 x i8> undef, i8* [[BASE:%.*]], i32 [[VL:%.*]])
 // CHECK-RV32-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 16 x i8>, <vscale x 16 x i8> } [[TMP0]], 0
 // CHECK-RV32-NEXT:    store <vscale x 16 x i8> [[TMP1]], <vscale x 16 x i8>* [[V0:%.*]], align 1
 // CHECK-RV32-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 16 x i8>, <vscale x 16 x i8> } [[TMP0]], 1
@@ -976,7 +976,7 @@ void test_vlseg8e8_v_i8m1 (vint8m1_t *v0, vint8m1_t *v1, vint8m1_t *v2, vint8m1_
 //
 // CHECK-RV64-LABEL: @test_vlseg2e8_v_i8m2(
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 16 x i8>, <vscale x 16 x i8> } @llvm.riscv.vlseg2.nxv16i8.i64(i8* [[BASE:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 16 x i8>, <vscale x 16 x i8> } @llvm.riscv.vlseg2.nxv16i8.i64(<vscale x 16 x i8> undef, <vscale x 16 x i8> undef, i8* [[BASE:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 16 x i8>, <vscale x 16 x i8> } [[TMP0]], 0
 // CHECK-RV64-NEXT:    store <vscale x 16 x i8> [[TMP1]], <vscale x 16 x i8>* [[V0:%.*]], align 1
 // CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 16 x i8>, <vscale x 16 x i8> } [[TMP0]], 1
@@ -989,7 +989,7 @@ void test_vlseg2e8_v_i8m2 (vint8m2_t *v0, vint8m2_t *v1, const int8_t *base, siz
 
 // CHECK-RV32-LABEL: @test_vlseg3e8_v_i8m2(
 // CHECK-RV32-NEXT:  entry:
-// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } @llvm.riscv.vlseg3.nxv16i8.i32(i8* [[BASE:%.*]], i32 [[VL:%.*]])
+// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } @llvm.riscv.vlseg3.nxv16i8.i32(<vscale x 16 x i8> undef, <vscale x 16 x i8> undef, <vscale x 16 x i8> undef, i8* [[BASE:%.*]], i32 [[VL:%.*]])
 // CHECK-RV32-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } [[TMP0]], 0
 // CHECK-RV32-NEXT:    store <vscale x 16 x i8> [[TMP1]], <vscale x 16 x i8>* [[V0:%.*]], align 1
 // CHECK-RV32-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } [[TMP0]], 1
@@ -1000,7 +1000,7 @@ void test_vlseg2e8_v_i8m2 (vint8m2_t *v0, vint8m2_t *v1, const int8_t *base, siz
 //
 // CHECK-RV64-LABEL: @test_vlseg3e8_v_i8m2(
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } @llvm.riscv.vlseg3.nxv16i8.i64(i8* [[BASE:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } @llvm.riscv.vlseg3.nxv16i8.i64(<vscale x 16 x i8> undef, <vscale x 16 x i8> undef, <vscale x 16 x i8> undef, i8* [[BASE:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } [[TMP0]], 0
 // CHECK-RV64-NEXT:    store <vscale x 16 x i8> [[TMP1]], <vscale x 16 x i8>* [[V0:%.*]], align 1
 // CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } [[TMP0]], 1
@@ -1015,7 +1015,7 @@ void test_vlseg3e8_v_i8m2 (vint8m2_t *v0, vint8m2_t *v1, vint8m2_t *v2, const in
 
 // CHECK-RV32-LABEL: @test_vlseg4e8_v_i8m2(
 // CHECK-RV32-NEXT:  entry:
-// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } @llvm.riscv.vlseg4.nxv16i8.i32(i8* [[BASE:%.*]], i32 [[VL:%.*]])
+// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } @llvm.riscv.vlseg4.nxv16i8.i32(<vscale x 16 x i8> undef, <vscale x 16 x i8> undef, <vscale x 16 x i8> undef, <vscale x 16 x i8> undef, i8* [[BASE:%.*]], i32 [[VL:%.*]])
 // CHECK-RV32-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } [[TMP0]], 0
 // CHECK-RV32-NEXT:    store <vscale x 16 x i8> [[TMP1]], <vscale x 16 x i8>* [[V0:%.*]], align 1
 // CHECK-RV32-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } [[TMP0]], 1
@@ -1028,7 +1028,7 @@ void test_vlseg3e8_v_i8m2 (vint8m2_t *v0, vint8m2_t *v1, vint8m2_t *v2, const in
 //
 // CHECK-RV64-LABEL: @test_vlseg4e8_v_i8m2(
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } @llvm.riscv.vlseg4.nxv16i8.i64(i8* [[BASE:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } @llvm.riscv.vlseg4.nxv16i8.i64(<vscale x 16 x i8> undef, <vscale x 16 x i8> undef, <vscale x 16 x i8> undef, <vscale x 16 x i8> undef, i8* [[BASE:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } [[TMP0]], 0
 // CHECK-RV64-NEXT:    store <vscale x 16 x i8> [[TMP1]], <vscale x 16 x i8>* [[V0:%.*]], align 1
 // CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } [[TMP0]], 1
@@ -1045,7 +1045,7 @@ void test_vlseg4e8_v_i8m2 (vint8m2_t *v0, vint8m2_t *v1, vint8m2_t *v2, vint8m2_
 
 // CHECK-RV32-LABEL: @test_vlseg2e8_v_i8m4(
 // CHECK-RV32-NEXT:  entry:
-// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 32 x i8>, <vscale x 32 x i8> } @llvm.riscv.vlseg2.nxv32i8.i32(i8* [[BASE:%.*]], i32 [[VL:%.*]])
+// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 32 x i8>, <vscale x 32 x i8> } @llvm.riscv.vlseg2.nxv32i8.i32(<vscale x 32 x i8> undef, <vscale x 32 x i8> undef, i8* [[BASE:%.*]], i32 [[VL:%.*]])
 // CHECK-RV32-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 32 x i8>, <vscale x 32 x i8> } [[TMP0]], 0
 // CHECK-RV32-NEXT:    store <vscale x 32 x i8> [[TMP1]], <vscale x 32 x i8>* [[V0:%.*]], align 1
 // CHECK-RV32-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 32 x i8>, <vscale x 32 x i8> } [[TMP0]], 1
@@ -1054,7 +1054,7 @@ void test_vlseg4e8_v_i8m2 (vint8m2_t *v0, vint8m2_t *v1, vint8m2_t *v2, vint8m2_
 //
 // CHECK-RV64-LABEL: @test_vlseg2e8_v_i8m4(
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 32 x i8>, <vscale x 32 x i8> } @llvm.riscv.vlseg2.nxv32i8.i64(i8* [[BASE:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 32 x i8>, <vscale x 32 x i8> } @llvm.riscv.vlseg2.nxv32i8.i64(<vscale x 32 x i8> undef, <vscale x 32 x i8> undef, i8* [[BASE:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 32 x i8>, <vscale x 32 x i8> } [[TMP0]], 0
 // CHECK-RV64-NEXT:    store <vscale x 32 x i8> [[TMP1]], <vscale x 32 x i8>* [[V0:%.*]], align 1
 // CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 32 x i8>, <vscale x 32 x i8> } [[TMP0]], 1
@@ -1067,7 +1067,7 @@ void test_vlseg2e8_v_i8m4 (vint8m4_t *v0, vint8m4_t *v1, const int8_t *base, siz
 
 // CHECK-RV32-LABEL: @test_vlseg2e16_v_i16mf4(
 // CHECK-RV32-NEXT:  entry:
-// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 1 x i16>, <vscale x 1 x i16> } @llvm.riscv.vlseg2.nxv1i16.i32(i16* [[BASE:%.*]], i32 [[VL:%.*]])
+// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 1 x i16>, <vscale x 1 x i16> } @llvm.riscv.vlseg2.nxv1i16.i32(<vscale x 1 x i16> undef, <vscale x 1 x i16> undef, i16* [[BASE:%.*]], i32 [[VL:%.*]])
 // CHECK-RV32-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 1 x i16>, <vscale x 1 x i16> } [[TMP0]], 0
 // CHECK-RV32-NEXT:    store <vscale x 1 x i16> [[TMP1]], <vscale x 1 x i16>* [[V0:%.*]], align 2
 // CHECK-RV32-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 1 x i16>, <vscale x 1 x i16> } [[TMP0]], 1
@@ -1076,7 +1076,7 @@ void test_vlseg2e8_v_i8m4 (vint8m4_t *v0, vint8m4_t *v1, const int8_t *base, siz
 //
 // CHECK-RV64-LABEL: @test_vlseg2e16_v_i16mf4(
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 1 x i16>, <vscale x 1 x i16> } @llvm.riscv.vlseg2.nxv1i16.i64(i16* [[BASE:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 1 x i16>, <vscale x 1 x i16> } @llvm.riscv.vlseg2.nxv1i16.i64(<vscale x 1 x i16> undef, <vscale x 1 x i16> undef, i16* [[BASE:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 1 x i16>, <vscale x 1 x i16> } [[TMP0]], 0
 // CHECK-RV64-NEXT:    store <vscale x 1 x i16> [[TMP1]], <vscale x 1 x i16>* [[V0:%.*]], align 2
 // CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 1 x i16>, <vscale x 1 x i16> } [[TMP0]], 1
@@ -1089,7 +1089,7 @@ void test_vlseg2e16_v_i16mf4 (vint16mf4_t *v0, vint16mf4_t *v1, const int16_t *b
 
 // CHECK-RV32-LABEL: @test_vlseg3e16_v_i16mf4(
 // CHECK-RV32-NEXT:  entry:
-// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16> } @llvm.riscv.vlseg3.nxv1i16.i32(i16* [[BASE:%.*]], i32 [[VL:%.*]])
+// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16> } @llvm.riscv.vlseg3.nxv1i16.i32(<vscale x 1 x i16> undef, <vscale x 1 x i16> undef, <vscale x 1 x i16> undef, i16* [[BASE:%.*]], i32 [[VL:%.*]])
 // CHECK-RV32-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16> } [[TMP0]], 0
 // CHECK-RV32-NEXT:    store <vscale x 1 x i16> [[TMP1]], <vscale x 1 x i16>* [[V0:%.*]], align 2
 // CHECK-RV32-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16> } [[TMP0]], 1
@@ -1100,7 +1100,7 @@ void test_vlseg2e16_v_i16mf4 (vint16mf4_t *v0, vint16mf4_t *v1, const int16_t *b
 //
 // CHECK-RV64-LABEL: @test_vlseg3e16_v_i16mf4(
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16> } @llvm.riscv.vlseg3.nxv1i16.i64(i16* [[BASE:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16> } @llvm.riscv.vlseg3.nxv1i16.i64(<vscale x 1 x i16> undef, <vscale x 1 x i16> undef, <vscale x 1 x i16> undef, i16* [[BASE:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16> } [[TMP0]], 0
 // CHECK-RV64-NEXT:    store <vscale x 1 x i16> [[TMP1]], <vscale x 1 x i16>* [[V0:%.*]], align 2
 // CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16> } [[TMP0]], 1
@@ -1115,7 +1115,7 @@ void test_vlseg3e16_v_i16mf4 (vint16mf4_t *v0, vint16mf4_t *v1, vint16mf4_t *v2,
 
 // CHECK-RV32-LABEL: @test_vlseg4e16_v_i16mf4(
 // CHECK-RV32-NEXT:  entry:
-// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16> } @llvm.riscv.vlseg4.nxv1i16.i32(i16* [[BASE:%.*]], i32 [[VL:%.*]])
+// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16> } @llvm.riscv.vlseg4.nxv1i16.i32(<vscale x 1 x i16> undef, <vscale x 1 x i16> undef, <vscale x 1 x i16> undef, <vscale x 1 x i16> undef, i16* [[BASE:%.*]], i32 [[VL:%.*]])
 // CHECK-RV32-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16> } [[TMP0]], 0
 // CHECK-RV32-NEXT:    store <vscale x 1 x i16> [[TMP1]], <vscale x 1 x i16>* [[V0:%.*]], align 2
 // CHECK-RV32-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16> } [[TMP0]], 1
@@ -1128,7 +1128,7 @@ void test_vlseg3e16_v_i16mf4 (vint16mf4_t *v0, vint16mf4_t *v1, vint16mf4_t *v2,
 //
 // CHECK-RV64-LABEL: @test_vlseg4e16_v_i16mf4(
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16> } @llvm.riscv.vlseg4.nxv1i16.i64(i16* [[BASE:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16> } @llvm.riscv.vlseg4.nxv1i16.i64(<vscale x 1 x i16> undef, <vscale x 1 x i16> undef, <vscale x 1 x i16> undef, <vscale x 1 x i16> undef, i16* [[BASE:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16> } [[TMP0]], 0
 // CHECK-RV64-NEXT:    store <vscale x 1 x i16> [[TMP1]], <vscale x 1 x i16>* [[V0:%.*]], align 2
 // CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16> } [[TMP0]], 1
@@ -1145,7 +1145,7 @@ void test_vlseg4e16_v_i16mf4 (vint16mf4_t *v0, vint16mf4_t *v1, vint16mf4_t *v2,
 
 // CHECK-RV32-LABEL: @test_vlseg5e16_v_i16mf4(
 // CHECK-RV32-NEXT:  entry:
-// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16> } @llvm.riscv.vlseg5.nxv1i16.i32(i16* [[BASE:%.*]], i32 [[VL:%.*]])
+// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16> } @llvm.riscv.vlseg5.nxv1i16.i32(<vscale x 1 x i16> undef, <vscale x 1 x i16> undef, <vscale x 1 x i16> undef, <vscale x 1 x i16> undef, <vscale x 1 x i16> undef, i16* [[BASE:%.*]], i32 [[VL:%.*]])
 // CHECK-RV32-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16> } [[TMP0]], 0
 // CHECK-RV32-NEXT:    store <vscale x 1 x i16> [[TMP1]], <vscale x 1 x i16>* [[V0:%.*]], align 2
 // CHECK-RV32-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16> } [[TMP0]], 1
@@ -1160,7 +1160,7 @@ void test_vlseg4e16_v_i16mf4 (vint16mf4_t *v0, vint16mf4_t *v1, vint16mf4_t *v2,
 //
 // CHECK-RV64-LABEL: @test_vlseg5e16_v_i16mf4(
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16> } @llvm.riscv.vlseg5.nxv1i16.i64(i16* [[BASE:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16> } @llvm.riscv.vlseg5.nxv1i16.i64(<vscale x 1 x i16> undef, <vscale x 1 x i16> undef, <vscale x 1 x i16> undef, <vscale x 1 x i16> undef, <vscale x 1 x i16> undef, i16* [[BASE:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16> } [[TMP0]], 0
 // CHECK-RV64-NEXT:    store <vscale x 1 x i16> [[TMP1]], <vscale x 1 x i16>* [[V0:%.*]], align 2
 // CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16> } [[TMP0]], 1
@@ -1179,7 +1179,7 @@ void test_vlseg5e16_v_i16mf4 (vint16mf4_t *v0, vint16mf4_t *v1, vint16mf4_t *v2,
 
 // CHECK-RV32-LABEL: @test_vlseg6e16_v_i16mf4(
 // CHECK-RV32-NEXT:  entry:
-// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16> } @llvm.riscv.vlseg6.nxv1i16.i32(i16* [[BASE:%.*]], i32 [[VL:%.*]])
+// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16> } @llvm.riscv.vlseg6.nxv1i16.i32(<vscale x 1 x i16> undef, <vscale x 1 x i16> undef, <vscale x 1 x i16> undef, <vscale x 1 x i16> undef, <vscale x 1 x i16> undef, <vscale x 1 x i16> undef, i16* [[BASE:%.*]], i32 [[VL:%.*]])
 // CHECK-RV32-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16> } [[TMP0]], 0
 // CHECK-RV32-NEXT:    store <vscale x 1 x i16> [[TMP1]], <vscale x 1 x i16>* [[V0:%.*]], align 2
 // CHECK-RV32-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16> } [[TMP0]], 1
@@ -1196,7 +1196,7 @@ void test_vlseg5e16_v_i16mf4 (vint16mf4_t *v0, vint16mf4_t *v1, vint16mf4_t *v2,
 //
 // CHECK-RV64-LABEL: @test_vlseg6e16_v_i16mf4(
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16> } @llvm.riscv.vlseg6.nxv1i16.i64(i16* [[BASE:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16> } @llvm.riscv.vlseg6.nxv1i16.i64(<vscale x 1 x i16> undef, <vscale x 1 x i16> undef, <vscale x 1 x i16> undef, <vscale x 1 x i16> undef, <vscale x 1 x i16> undef, <vscale x 1 x i16> undef, i16* [[BASE:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16> } [[TMP0]], 0
 // CHECK-RV64-NEXT:    store <vscale x 1 x i16> [[TMP1]], <vscale x 1 x i16>* [[V0:%.*]], align 2
 // CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16> } [[TMP0]], 1
@@ -1217,7 +1217,7 @@ void test_vlseg6e16_v_i16mf4 (vint16mf4_t *v0, vint16mf4_t *v1, vint16mf4_t *v2,
 
 // CHECK-RV32-LABEL: @test_vlseg7e16_v_i16mf4(
 // CHECK-RV32-NEXT:  entry:
-// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16> } @llvm.riscv.vlseg7.nxv1i16.i32(i16* [[BASE:%.*]], i32 [[VL:%.*]])
+// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16> } @llvm.riscv.vlseg7.nxv1i16.i32(<vscale x 1 x i16> undef, <vscale x 1 x i16> undef, <vscale x 1 x i16> undef, <vscale x 1 x i16> undef, <vscale x 1 x i16> undef, <vscale x 1 x i16> undef, <vscale x 1 x i16> undef, i16* [[BASE:%.*]], i32 [[VL:%.*]])
 // CHECK-RV32-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16> } [[TMP0]], 0
 // CHECK-RV32-NEXT:    store <vscale x 1 x i16> [[TMP1]], <vscale x 1 x i16>* [[V0:%.*]], align 2
 // CHECK-RV32-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16> } [[TMP0]], 1
@@ -1236,7 +1236,7 @@ void test_vlseg6e16_v_i16mf4 (vint16mf4_t *v0, vint16mf4_t *v1, vint16mf4_t *v2,
 //
 // CHECK-RV64-LABEL: @test_vlseg7e16_v_i16mf4(
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16> } @llvm.riscv.vlseg7.nxv1i16.i64(i16* [[BASE:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16> } @llvm.riscv.vlseg7.nxv1i16.i64(<vscale x 1 x i16> undef, <vscale x 1 x i16> undef, <vscale x 1 x i16> undef, <vscale x 1 x i16> undef, <vscale x 1 x i16> undef, <vscale x 1 x i16> undef, <vscale x 1 x i16> undef, i16* [[BASE:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16> } [[TMP0]], 0
 // CHECK-RV64-NEXT:    store <vscale x 1 x i16> [[TMP1]], <vscale x 1 x i16>* [[V0:%.*]], align 2
 // CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16> } [[TMP0]], 1
@@ -1259,7 +1259,7 @@ void test_vlseg7e16_v_i16mf4 (vint16mf4_t *v0, vint16mf4_t *v1, vint16mf4_t *v2,
 
 // CHECK-RV32-LABEL: @test_vlseg8e16_v_i16mf4(
 // CHECK-RV32-NEXT:  entry:
-// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16> } @llvm.riscv.vlseg8.nxv1i16.i32(i16* [[BASE:%.*]], i32 [[VL:%.*]])
+// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16> } @llvm.riscv.vlseg8.nxv1i16.i32(<vscale x 1 x i16> undef, <vscale x 1 x i16> undef, <vscale x 1 x i16> undef, <vscale x 1 x i16> undef, <vscale x 1 x i16> undef, <vscale x 1 x i16> undef, <vscale x 1 x i16> undef, <vscale x 1 x i16> undef, i16* [[BASE:%.*]], i32 [[VL:%.*]])
 // CHECK-RV32-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16> } [[TMP0]], 0
 // CHECK-RV32-NEXT:    store <vscale x 1 x i16> [[TMP1]], <vscale x 1 x i16>* [[V0:%.*]], align 2
 // CHECK-RV32-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16> } [[TMP0]], 1
@@ -1280,7 +1280,7 @@ void test_vlseg7e16_v_i16mf4 (vint16mf4_t *v0, vint16mf4_t *v1, vint16mf4_t *v2,
 //
 // CHECK-RV64-LABEL: @test_vlseg8e16_v_i16mf4(
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16> } @llvm.riscv.vlseg8.nxv1i16.i64(i16* [[BASE:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16> } @llvm.riscv.vlseg8.nxv1i16.i64(<vscale x 1 x i16> undef, <vscale x 1 x i16> undef, <vscale x 1 x i16> undef, <vscale x 1 x i16> undef, <vscale x 1 x i16> undef, <vscale x 1 x i16> undef, <vscale x 1 x i16> undef, <vscale x 1 x i16> undef, i16* [[BASE:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16> } [[TMP0]], 0
 // CHECK-RV64-NEXT:    store <vscale x 1 x i16> [[TMP1]], <vscale x 1 x i16>* [[V0:%.*]], align 2
 // CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16> } [[TMP0]], 1
@@ -1305,7 +1305,7 @@ void test_vlseg8e16_v_i16mf4 (vint16mf4_t *v0, vint16mf4_t *v1, vint16mf4_t *v2,
 
 // CHECK-RV32-LABEL: @test_vlseg2e16_v_i16mf2(
 // CHECK-RV32-NEXT:  entry:
-// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 2 x i16>, <vscale x 2 x i16> } @llvm.riscv.vlseg2.nxv2i16.i32(i16* [[BASE:%.*]], i32 [[VL:%.*]])
+// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 2 x i16>, <vscale x 2 x i16> } @llvm.riscv.vlseg2.nxv2i16.i32(<vscale x 2 x i16> undef, <vscale x 2 x i16> undef, i16* [[BASE:%.*]], i32 [[VL:%.*]])
 // CHECK-RV32-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 2 x i16>, <vscale x 2 x i16> } [[TMP0]], 0
 // CHECK-RV32-NEXT:    store <vscale x 2 x i16> [[TMP1]], <vscale x 2 x i16>* [[V0:%.*]], align 2
 // CHECK-RV32-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 2 x i16>, <vscale x 2 x i16> } [[TMP0]], 1
@@ -1314,7 +1314,7 @@ void test_vlseg8e16_v_i16mf4 (vint16mf4_t *v0, vint16mf4_t *v1, vint16mf4_t *v2,
 //
 // CHECK-RV64-LABEL: @test_vlseg2e16_v_i16mf2(
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 2 x i16>, <vscale x 2 x i16> } @llvm.riscv.vlseg2.nxv2i16.i64(i16* [[BASE:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 2 x i16>, <vscale x 2 x i16> } @llvm.riscv.vlseg2.nxv2i16.i64(<vscale x 2 x i16> undef, <vscale x 2 x i16> undef, i16* [[BASE:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 2 x i16>, <vscale x 2 x i16> } [[TMP0]], 0
 // CHECK-RV64-NEXT:    store <vscale x 2 x i16> [[TMP1]], <vscale x 2 x i16>* [[V0:%.*]], align 2
 // CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 2 x i16>, <vscale x 2 x i16> } [[TMP0]], 1
@@ -1327,7 +1327,7 @@ void test_vlseg2e16_v_i16mf2 (vint16mf2_t *v0, vint16mf2_t *v1, const int16_t *b
 
 // CHECK-RV32-LABEL: @test_vlseg3e16_v_i16mf2(
 // CHECK-RV32-NEXT:  entry:
-// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16> } @llvm.riscv.vlseg3.nxv2i16.i32(i16* [[BASE:%.*]], i32 [[VL:%.*]])
+// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16> } @llvm.riscv.vlseg3.nxv2i16.i32(<vscale x 2 x i16> undef, <vscale x 2 x i16> undef, <vscale x 2 x i16> undef, i16* [[BASE:%.*]], i32 [[VL:%.*]])
 // CHECK-RV32-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16> } [[TMP0]], 0
 // CHECK-RV32-NEXT:    store <vscale x 2 x i16> [[TMP1]], <vscale x 2 x i16>* [[V0:%.*]], align 2
 // CHECK-RV32-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16> } [[TMP0]], 1
@@ -1338,7 +1338,7 @@ void test_vlseg2e16_v_i16mf2 (vint16mf2_t *v0, vint16mf2_t *v1, const int16_t *b
 //
 // CHECK-RV64-LABEL: @test_vlseg3e16_v_i16mf2(
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16> } @llvm.riscv.vlseg3.nxv2i16.i64(i16* [[BASE:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16> } @llvm.riscv.vlseg3.nxv2i16.i64(<vscale x 2 x i16> undef, <vscale x 2 x i16> undef, <vscale x 2 x i16> undef, i16* [[BASE:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16> } [[TMP0]], 0
 // CHECK-RV64-NEXT:    store <vscale x 2 x i16> [[TMP1]], <vscale x 2 x i16>* [[V0:%.*]], align 2
 // CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16> } [[TMP0]], 1
@@ -1353,7 +1353,7 @@ void test_vlseg3e16_v_i16mf2 (vint16mf2_t *v0, vint16mf2_t *v1, vint16mf2_t *v2,
 
 // CHECK-RV32-LABEL: @test_vlseg4e16_v_i16mf2(
 // CHECK-RV32-NEXT:  entry:
-// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16> } @llvm.riscv.vlseg4.nxv2i16.i32(i16* [[BASE:%.*]], i32 [[VL:%.*]])
+// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16> } @llvm.riscv.vlseg4.nxv2i16.i32(<vscale x 2 x i16> undef, <vscale x 2 x i16> undef, <vscale x 2 x i16> undef, <vscale x 2 x i16> undef, i16* [[BASE:%.*]], i32 [[VL:%.*]])
 // CHECK-RV32-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16> } [[TMP0]], 0
 // CHECK-RV32-NEXT:    store <vscale x 2 x i16> [[TMP1]], <vscale x 2 x i16>* [[V0:%.*]], align 2
 // CHECK-RV32-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16> } [[TMP0]], 1
@@ -1366,7 +1366,7 @@ void test_vlseg3e16_v_i16mf2 (vint16mf2_t *v0, vint16mf2_t *v1, vint16mf2_t *v2,
 //
 // CHECK-RV64-LABEL: @test_vlseg4e16_v_i16mf2(
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16> } @llvm.riscv.vlseg4.nxv2i16.i64(i16* [[BASE:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16> } @llvm.riscv.vlseg4.nxv2i16.i64(<vscale x 2 x i16> undef, <vscale x 2 x i16> undef, <vscale x 2 x i16> undef, <vscale x 2 x i16> undef, i16* [[BASE:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16> } [[TMP0]], 0
 // CHECK-RV64-NEXT:    store <vscale x 2 x i16> [[TMP1]], <vscale x 2 x i16>* [[V0:%.*]], align 2
 // CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16> } [[TMP0]], 1
@@ -1383,7 +1383,7 @@ void test_vlseg4e16_v_i16mf2 (vint16mf2_t *v0, vint16mf2_t *v1, vint16mf2_t *v2,
 
 // CHECK-RV32-LABEL: @test_vlseg5e16_v_i16mf2(
 // CHECK-RV32-NEXT:  entry:
-// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16> } @llvm.riscv.vlseg5.nxv2i16.i32(i16* [[BASE:%.*]], i32 [[VL:%.*]])
+// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16> } @llvm.riscv.vlseg5.nxv2i16.i32(<vscale x 2 x i16> undef, <vscale x 2 x i16> undef, <vscale x 2 x i16> undef, <vscale x 2 x i16> undef, <vscale x 2 x i16> undef, i16* [[BASE:%.*]], i32 [[VL:%.*]])
 // CHECK-RV32-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16> } [[TMP0]], 0
 // CHECK-RV32-NEXT:    store <vscale x 2 x i16> [[TMP1]], <vscale x 2 x i16>* [[V0:%.*]], align 2
 // CHECK-RV32-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16> } [[TMP0]], 1
@@ -1398,7 +1398,7 @@ void test_vlseg4e16_v_i16mf2 (vint16mf2_t *v0, vint16mf2_t *v1, vint16mf2_t *v2,
 //
 // CHECK-RV64-LABEL: @test_vlseg5e16_v_i16mf2(
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16> } @llvm.riscv.vlseg5.nxv2i16.i64(i16* [[BASE:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16> } @llvm.riscv.vlseg5.nxv2i16.i64(<vscale x 2 x i16> undef, <vscale x 2 x i16> undef, <vscale x 2 x i16> undef, <vscale x 2 x i16> undef, <vscale x 2 x i16> undef, i16* [[BASE:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16> } [[TMP0]], 0
 // CHECK-RV64-NEXT:    store <vscale x 2 x i16> [[TMP1]], <vscale x 2 x i16>* [[V0:%.*]], align 2
 // CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16> } [[TMP0]], 1
@@ -1417,7 +1417,7 @@ void test_vlseg5e16_v_i16mf2 (vint16mf2_t *v0, vint16mf2_t *v1, vint16mf2_t *v2,
 
 // CHECK-RV32-LABEL: @test_vlseg6e16_v_i16mf2(
 // CHECK-RV32-NEXT:  entry:
-// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16> } @llvm.riscv.vlseg6.nxv2i16.i32(i16* [[BASE:%.*]], i32 [[VL:%.*]])
+// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16> } @llvm.riscv.vlseg6.nxv2i16.i32(<vscale x 2 x i16> undef, <vscale x 2 x i16> undef, <vscale x 2 x i16> undef, <vscale x 2 x i16> undef, <vscale x 2 x i16> undef, <vscale x 2 x i16> undef, i16* [[BASE:%.*]], i32 [[VL:%.*]])
 // CHECK-RV32-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16> } [[TMP0]], 0
 // CHECK-RV32-NEXT:    store <vscale x 2 x i16> [[TMP1]], <vscale x 2 x i16>* [[V0:%.*]], align 2
 // CHECK-RV32-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16> } [[TMP0]], 1
@@ -1434,7 +1434,7 @@ void test_vlseg5e16_v_i16mf2 (vint16mf2_t *v0, vint16mf2_t *v1, vint16mf2_t *v2,
 //
 // CHECK-RV64-LABEL: @test_vlseg6e16_v_i16mf2(
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16> } @llvm.riscv.vlseg6.nxv2i16.i64(i16* [[BASE:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16> } @llvm.riscv.vlseg6.nxv2i16.i64(<vscale x 2 x i16> undef, <vscale x 2 x i16> undef, <vscale x 2 x i16> undef, <vscale x 2 x i16> undef, <vscale x 2 x i16> undef, <vscale x 2 x i16> undef, i16* [[BASE:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16> } [[TMP0]], 0
 // CHECK-RV64-NEXT:    store <vscale x 2 x i16> [[TMP1]], <vscale x 2 x i16>* [[V0:%.*]], align 2
 // CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16> } [[TMP0]], 1
@@ -1455,7 +1455,7 @@ void test_vlseg6e16_v_i16mf2 (vint16mf2_t *v0, vint16mf2_t *v1, vint16mf2_t *v2,
 
 // CHECK-RV32-LABEL: @test_vlseg7e16_v_i16mf2(
 // CHECK-RV32-NEXT:  entry:
-// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16> } @llvm.riscv.vlseg7.nxv2i16.i32(i16* [[BASE:%.*]], i32 [[VL:%.*]])
+// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16> } @llvm.riscv.vlseg7.nxv2i16.i32(<vscale x 2 x i16> undef, <vscale x 2 x i16> undef, <vscale x 2 x i16> undef, <vscale x 2 x i16> undef, <vscale x 2 x i16> undef, <vscale x 2 x i16> undef, <vscale x 2 x i16> undef, i16* [[BASE:%.*]], i32 [[VL:%.*]])
 // CHECK-RV32-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16> } [[TMP0]], 0
 // CHECK-RV32-NEXT:    store <vscale x 2 x i16> [[TMP1]], <vscale x 2 x i16>* [[V0:%.*]], align 2
 // CHECK-RV32-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16> } [[TMP0]], 1
@@ -1474,7 +1474,7 @@ void test_vlseg6e16_v_i16mf2 (vint16mf2_t *v0, vint16mf2_t *v1, vint16mf2_t *v2,
 //
 // CHECK-RV64-LABEL: @test_vlseg7e16_v_i16mf2(
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16> } @llvm.riscv.vlseg7.nxv2i16.i64(i16* [[BASE:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16> } @llvm.riscv.vlseg7.nxv2i16.i64(<vscale x 2 x i16> undef, <vscale x 2 x i16> undef, <vscale x 2 x i16> undef, <vscale x 2 x i16> undef, <vscale x 2 x i16> undef, <vscale x 2 x i16> undef, <vscale x 2 x i16> undef, i16* [[BASE:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16> } [[TMP0]], 0
 // CHECK-RV64-NEXT:    store <vscale x 2 x i16> [[TMP1]], <vscale x 2 x i16>* [[V0:%.*]], align 2
 // CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16> } [[TMP0]], 1
@@ -1497,7 +1497,7 @@ void test_vlseg7e16_v_i16mf2 (vint16mf2_t *v0, vint16mf2_t *v1, vint16mf2_t *v2,
 
 // CHECK-RV32-LABEL: @test_vlseg8e16_v_i16mf2(
 // CHECK-RV32-NEXT:  entry:
-// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16> } @llvm.riscv.vlseg8.nxv2i16.i32(i16* [[BASE:%.*]], i32 [[VL:%.*]])
+// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16> } @llvm.riscv.vlseg8.nxv2i16.i32(<vscale x 2 x i16> undef, <vscale x 2 x i16> undef, <vscale x 2 x i16> undef, <vscale x 2 x i16> undef, <vscale x 2 x i16> undef, <vscale x 2 x i16> undef, <vscale x 2 x i16> undef, <vscale x 2 x i16> undef, i16* [[BASE:%.*]], i32 [[VL:%.*]])
 // CHECK-RV32-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16> } [[TMP0]], 0
 // CHECK-RV32-NEXT:    store <vscale x 2 x i16> [[TMP1]], <vscale x 2 x i16>* [[V0:%.*]], align 2
 // CHECK-RV32-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16> } [[TMP0]], 1
@@ -1518,7 +1518,7 @@ void test_vlseg7e16_v_i16mf2 (vint16mf2_t *v0, vint16mf2_t *v1, vint16mf2_t *v2,
 //
 // CHECK-RV64-LABEL: @test_vlseg8e16_v_i16mf2(
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16> } @llvm.riscv.vlseg8.nxv2i16.i64(i16* [[BASE:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16> } @llvm.riscv.vlseg8.nxv2i16.i64(<vscale x 2 x i16> undef, <vscale x 2 x i16> undef, <vscale x 2 x i16> undef, <vscale x 2 x i16> undef, <vscale x 2 x i16> undef, <vscale x 2 x i16> undef, <vscale x 2 x i16> undef, <vscale x 2 x i16> undef, i16* [[BASE:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16> } [[TMP0]], 0
 // CHECK-RV64-NEXT:    store <vscale x 2 x i16> [[TMP1]], <vscale x 2 x i16>* [[V0:%.*]], align 2
 // CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16> } [[TMP0]], 1
@@ -1543,7 +1543,7 @@ void test_vlseg8e16_v_i16mf2 (vint16mf2_t *v0, vint16mf2_t *v1, vint16mf2_t *v2,
 
 // CHECK-RV32-LABEL: @test_vlseg2e16_v_i16m1(
 // CHECK-RV32-NEXT:  entry:
-// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 4 x i16>, <vscale x 4 x i16> } @llvm.riscv.vlseg2.nxv4i16.i32(i16* [[BASE:%.*]], i32 [[VL:%.*]])
+// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 4 x i16>, <vscale x 4 x i16> } @llvm.riscv.vlseg2.nxv4i16.i32(<vscale x 4 x i16> undef, <vscale x 4 x i16> undef, i16* [[BASE:%.*]], i32 [[VL:%.*]])
 // CHECK-RV32-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 4 x i16>, <vscale x 4 x i16> } [[TMP0]], 0
 // CHECK-RV32-NEXT:    store <vscale x 4 x i16> [[TMP1]], <vscale x 4 x i16>* [[V0:%.*]], align 2
 // CHECK-RV32-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 4 x i16>, <vscale x 4 x i16> } [[TMP0]], 1
@@ -1552,7 +1552,7 @@ void test_vlseg8e16_v_i16mf2 (vint16mf2_t *v0, vint16mf2_t *v1, vint16mf2_t *v2,
 //
 // CHECK-RV64-LABEL: @test_vlseg2e16_v_i16m1(
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 4 x i16>, <vscale x 4 x i16> } @llvm.riscv.vlseg2.nxv4i16.i64(i16* [[BASE:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 4 x i16>, <vscale x 4 x i16> } @llvm.riscv.vlseg2.nxv4i16.i64(<vscale x 4 x i16> undef, <vscale x 4 x i16> undef, i16* [[BASE:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 4 x i16>, <vscale x 4 x i16> } [[TMP0]], 0
 // CHECK-RV64-NEXT:    store <vscale x 4 x i16> [[TMP1]], <vscale x 4 x i16>* [[V0:%.*]], align 2
 // CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 4 x i16>, <vscale x 4 x i16> } [[TMP0]], 1
@@ -1565,7 +1565,7 @@ void test_vlseg2e16_v_i16m1 (vint16m1_t *v0, vint16m1_t *v1, const int16_t *base
 
 // CHECK-RV32-LABEL: @test_vlseg3e16_v_i16m1(
 // CHECK-RV32-NEXT:  entry:
-// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16> } @llvm.riscv.vlseg3.nxv4i16.i32(i16* [[BASE:%.*]], i32 [[VL:%.*]])
+// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16> } @llvm.riscv.vlseg3.nxv4i16.i32(<vscale x 4 x i16> undef, <vscale x 4 x i16> undef, <vscale x 4 x i16> undef, i16* [[BASE:%.*]], i32 [[VL:%.*]])
 // CHECK-RV32-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16> } [[TMP0]], 0
 // CHECK-RV32-NEXT:    store <vscale x 4 x i16> [[TMP1]], <vscale x 4 x i16>* [[V0:%.*]], align 2
 // CHECK-RV32-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16> } [[TMP0]], 1
@@ -1576,7 +1576,7 @@ void test_vlseg2e16_v_i16m1 (vint16m1_t *v0, vint16m1_t *v1, const int16_t *base
 //
 // CHECK-RV64-LABEL: @test_vlseg3e16_v_i16m1(
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16> } @llvm.riscv.vlseg3.nxv4i16.i64(i16* [[BASE:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16> } @llvm.riscv.vlseg3.nxv4i16.i64(<vscale x 4 x i16> undef, <vscale x 4 x i16> undef, <vscale x 4 x i16> undef, i16* [[BASE:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16> } [[TMP0]], 0
 // CHECK-RV64-NEXT:    store <vscale x 4 x i16> [[TMP1]], <vscale x 4 x i16>* [[V0:%.*]], align 2
 // CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16> } [[TMP0]], 1
@@ -1591,7 +1591,7 @@ void test_vlseg3e16_v_i16m1 (vint16m1_t *v0, vint16m1_t *v1, vint16m1_t *v2, con
 
 // CHECK-RV32-LABEL: @test_vlseg4e16_v_i16m1(
 // CHECK-RV32-NEXT:  entry:
-// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16> } @llvm.riscv.vlseg4.nxv4i16.i32(i16* [[BASE:%.*]], i32 [[VL:%.*]])
+// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16> } @llvm.riscv.vlseg4.nxv4i16.i32(<vscale x 4 x i16> undef, <vscale x 4 x i16> undef, <vscale x 4 x i16> undef, <vscale x 4 x i16> undef, i16* [[BASE:%.*]], i32 [[VL:%.*]])
 // CHECK-RV32-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16> } [[TMP0]], 0
 // CHECK-RV32-NEXT:    store <vscale x 4 x i16> [[TMP1]], <vscale x 4 x i16>* [[V0:%.*]], align 2
 // CHECK-RV32-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16> } [[TMP0]], 1
@@ -1604,7 +1604,7 @@ void test_vlseg3e16_v_i16m1 (vint16m1_t *v0, vint16m1_t *v1, vint16m1_t *v2, con
 //
 // CHECK-RV64-LABEL: @test_vlseg4e16_v_i16m1(
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16> } @llvm.riscv.vlseg4.nxv4i16.i64(i16* [[BASE:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16> } @llvm.riscv.vlseg4.nxv4i16.i64(<vscale x 4 x i16> undef, <vscale x 4 x i16> undef, <vscale x 4 x i16> undef, <vscale x 4 x i16> undef, i16* [[BASE:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16> } [[TMP0]], 0
 // CHECK-RV64-NEXT:    store <vscale x 4 x i16> [[TMP1]], <vscale x 4 x i16>* [[V0:%.*]], align 2
 // CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16> } [[TMP0]], 1
@@ -1621,7 +1621,7 @@ void test_vlseg4e16_v_i16m1 (vint16m1_t *v0, vint16m1_t *v1, vint16m1_t *v2, vin
 
 // CHECK-RV32-LABEL: @test_vlseg5e16_v_i16m1(
 // CHECK-RV32-NEXT:  entry:
-// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16> } @llvm.riscv.vlseg5.nxv4i16.i32(i16* [[BASE:%.*]], i32 [[VL:%.*]])
+// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16> } @llvm.riscv.vlseg5.nxv4i16.i32(<vscale x 4 x i16> undef, <vscale x 4 x i16> undef, <vscale x 4 x i16> undef, <vscale x 4 x i16> undef, <vscale x 4 x i16> undef, i16* [[BASE:%.*]], i32 [[VL:%.*]])
 // CHECK-RV32-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16> } [[TMP0]], 0
 // CHECK-RV32-NEXT:    store <vscale x 4 x i16> [[TMP1]], <vscale x 4 x i16>* [[V0:%.*]], align 2
 // CHECK-RV32-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16> } [[TMP0]], 1
@@ -1636,7 +1636,7 @@ void test_vlseg4e16_v_i16m1 (vint16m1_t *v0, vint16m1_t *v1, vint16m1_t *v2, vin
 //
 // CHECK-RV64-LABEL: @test_vlseg5e16_v_i16m1(
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16> } @llvm.riscv.vlseg5.nxv4i16.i64(i16* [[BASE:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16> } @llvm.riscv.vlseg5.nxv4i16.i64(<vscale x 4 x i16> undef, <vscale x 4 x i16> undef, <vscale x 4 x i16> undef, <vscale x 4 x i16> undef, <vscale x 4 x i16> undef, i16* [[BASE:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16> } [[TMP0]], 0
 // CHECK-RV64-NEXT:    store <vscale x 4 x i16> [[TMP1]], <vscale x 4 x i16>* [[V0:%.*]], align 2
 // CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16> } [[TMP0]], 1
@@ -1655,7 +1655,7 @@ void test_vlseg5e16_v_i16m1 (vint16m1_t *v0, vint16m1_t *v1, vint16m1_t *v2, vin
 
 // CHECK-RV32-LABEL: @test_vlseg6e16_v_i16m1(
 // CHECK-RV32-NEXT:  entry:
-// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16> } @llvm.riscv.vlseg6.nxv4i16.i32(i16* [[BASE:%.*]], i32 [[VL:%.*]])
+// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16> } @llvm.riscv.vlseg6.nxv4i16.i32(<vscale x 4 x i16> undef, <vscale x 4 x i16> undef, <vscale x 4 x i16> undef, <vscale x 4 x i16> undef, <vscale x 4 x i16> undef, <vscale x 4 x i16> undef, i16* [[BASE:%.*]], i32 [[VL:%.*]])
 // CHECK-RV32-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16> } [[TMP0]], 0
 // CHECK-RV32-NEXT:    store <vscale x 4 x i16> [[TMP1]], <vscale x 4 x i16>* [[V0:%.*]], align 2
 // CHECK-RV32-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16> } [[TMP0]], 1
@@ -1672,7 +1672,7 @@ void test_vlseg5e16_v_i16m1 (vint16m1_t *v0, vint16m1_t *v1, vint16m1_t *v2, vin
 //
 // CHECK-RV64-LABEL: @test_vlseg6e16_v_i16m1(
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16> } @llvm.riscv.vlseg6.nxv4i16.i64(i16* [[BASE:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16> } @llvm.riscv.vlseg6.nxv4i16.i64(<vscale x 4 x i16> undef, <vscale x 4 x i16> undef, <vscale x 4 x i16> undef, <vscale x 4 x i16> undef, <vscale x 4 x i16> undef, <vscale x 4 x i16> undef, i16* [[BASE:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16> } [[TMP0]], 0
 // CHECK-RV64-NEXT:    store <vscale x 4 x i16> [[TMP1]], <vscale x 4 x i16>* [[V0:%.*]], align 2
 // CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16> } [[TMP0]], 1
@@ -1693,7 +1693,7 @@ void test_vlseg6e16_v_i16m1 (vint16m1_t *v0, vint16m1_t *v1, vint16m1_t *v2, vin
 
 // CHECK-RV32-LABEL: @test_vlseg7e16_v_i16m1(
 // CHECK-RV32-NEXT:  entry:
-// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16> } @llvm.riscv.vlseg7.nxv4i16.i32(i16* [[BASE:%.*]], i32 [[VL:%.*]])
+// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16> } @llvm.riscv.vlseg7.nxv4i16.i32(<vscale x 4 x i16> undef, <vscale x 4 x i16> undef, <vscale x 4 x i16> undef, <vscale x 4 x i16> undef, <vscale x 4 x i16> undef, <vscale x 4 x i16> undef, <vscale x 4 x i16> undef, i16* [[BASE:%.*]], i32 [[VL:%.*]])
 // CHECK-RV32-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16> } [[TMP0]], 0
 // CHECK-RV32-NEXT:    store <vscale x 4 x i16> [[TMP1]], <vscale x 4 x i16>* [[V0:%.*]], align 2
 // CHECK-RV32-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16> } [[TMP0]], 1
@@ -1712,7 +1712,7 @@ void test_vlseg6e16_v_i16m1 (vint16m1_t *v0, vint16m1_t *v1, vint16m1_t *v2, vin
 //
 // CHECK-RV64-LABEL: @test_vlseg7e16_v_i16m1(
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16> } @llvm.riscv.vlseg7.nxv4i16.i64(i16* [[BASE:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16> } @llvm.riscv.vlseg7.nxv4i16.i64(<vscale x 4 x i16> undef, <vscale x 4 x i16> undef, <vscale x 4 x i16> undef, <vscale x 4 x i16> undef, <vscale x 4 x i16> undef, <vscale x 4 x i16> undef, <vscale x 4 x i16> undef, i16* [[BASE:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16> } [[TMP0]], 0
 // CHECK-RV64-NEXT:    store <vscale x 4 x i16> [[TMP1]], <vscale x 4 x i16>* [[V0:%.*]], align 2
 // CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16> } [[TMP0]], 1
@@ -1735,7 +1735,7 @@ void test_vlseg7e16_v_i16m1 (vint16m1_t *v0, vint16m1_t *v1, vint16m1_t *v2, vin
 
 // CHECK-RV32-LABEL: @test_vlseg8e16_v_i16m1(
 // CHECK-RV32-NEXT:  entry:
-// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16> } @llvm.riscv.vlseg8.nxv4i16.i32(i16* [[BASE:%.*]], i32 [[VL:%.*]])
+// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16> } @llvm.riscv.vlseg8.nxv4i16.i32(<vscale x 4 x i16> undef, <vscale x 4 x i16> undef, <vscale x 4 x i16> undef, <vscale x 4 x i16> undef, <vscale x 4 x i16> undef, <vscale x 4 x i16> undef, <vscale x 4 x i16> undef, <vscale x 4 x i16> undef, i16* [[BASE:%.*]], i32 [[VL:%.*]])
 // CHECK-RV32-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16> } [[TMP0]], 0
 // CHECK-RV32-NEXT:    store <vscale x 4 x i16> [[TMP1]], <vscale x 4 x i16>* [[V0:%.*]], align 2
 // CHECK-RV32-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16> } [[TMP0]], 1
@@ -1756,7 +1756,7 @@ void test_vlseg7e16_v_i16m1 (vint16m1_t *v0, vint16m1_t *v1, vint16m1_t *v2, vin
 //
 // CHECK-RV64-LABEL: @test_vlseg8e16_v_i16m1(
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16> } @llvm.riscv.vlseg8.nxv4i16.i64(i16* [[BASE:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16> } @llvm.riscv.vlseg8.nxv4i16.i64(<vscale x 4 x i16> undef, <vscale x 4 x i16> undef, <vscale x 4 x i16> undef, <vscale x 4 x i16> undef, <vscale x 4 x i16> undef, <vscale x 4 x i16> undef, <vscale x 4 x i16> undef, <vscale x 4 x i16> undef, i16* [[BASE:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16> } [[TMP0]], 0
 // CHECK-RV64-NEXT:    store <vscale x 4 x i16> [[TMP1]], <vscale x 4 x i16>* [[V0:%.*]], align 2
 // CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16> } [[TMP0]], 1
@@ -1781,7 +1781,7 @@ void test_vlseg8e16_v_i16m1 (vint16m1_t *v0, vint16m1_t *v1, vint16m1_t *v2, vin
 
 // CHECK-RV32-LABEL: @test_vlseg2e16_v_i16m2(
 // CHECK-RV32-NEXT:  entry:
-// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 8 x i16>, <vscale x 8 x i16> } @llvm.riscv.vlseg2.nxv8i16.i32(i16* [[BASE:%.*]], i32 [[VL:%.*]])
+// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 8 x i16>, <vscale x 8 x i16> } @llvm.riscv.vlseg2.nxv8i16.i32(<vscale x 8 x i16> undef, <vscale x 8 x i16> undef, i16* [[BASE:%.*]], i32 [[VL:%.*]])
 // CHECK-RV32-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 8 x i16>, <vscale x 8 x i16> } [[TMP0]], 0
 // CHECK-RV32-NEXT:    store <vscale x 8 x i16> [[TMP1]], <vscale x 8 x i16>* [[V0:%.*]], align 2
 // CHECK-RV32-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 8 x i16>, <vscale x 8 x i16> } [[TMP0]], 1
@@ -1790,7 +1790,7 @@ void test_vlseg8e16_v_i16m1 (vint16m1_t *v0, vint16m1_t *v1, vint16m1_t *v2, vin
 //
 // CHECK-RV64-LABEL: @test_vlseg2e16_v_i16m2(
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 8 x i16>, <vscale x 8 x i16> } @llvm.riscv.vlseg2.nxv8i16.i64(i16* [[BASE:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 8 x i16>, <vscale x 8 x i16> } @llvm.riscv.vlseg2.nxv8i16.i64(<vscale x 8 x i16> undef, <vscale x 8 x i16> undef, i16* [[BASE:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 8 x i16>, <vscale x 8 x i16> } [[TMP0]], 0
 // CHECK-RV64-NEXT:    store <vscale x 8 x i16> [[TMP1]], <vscale x 8 x i16>* [[V0:%.*]], align 2
 // CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 8 x i16>, <vscale x 8 x i16> } [[TMP0]], 1
@@ -1803,7 +1803,7 @@ void test_vlseg2e16_v_i16m2 (vint16m2_t *v0, vint16m2_t *v1, const int16_t *base
 
 // CHECK-RV32-LABEL: @test_vlseg3e16_v_i16m2(
 // CHECK-RV32-NEXT:  entry:
-// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> } @llvm.riscv.vlseg3.nxv8i16.i32(i16* [[BASE:%.*]], i32 [[VL:%.*]])
+// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> } @llvm.riscv.vlseg3.nxv8i16.i32(<vscale x 8 x i16> undef, <vscale x 8 x i16> undef, <vscale x 8 x i16> undef, i16* [[BASE:%.*]], i32 [[VL:%.*]])
 // CHECK-RV32-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> } [[TMP0]], 0
 // CHECK-RV32-NEXT:    store <vscale x 8 x i16> [[TMP1]], <vscale x 8 x i16>* [[V0:%.*]], align 2
 // CHECK-RV32-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> } [[TMP0]], 1
@@ -1814,7 +1814,7 @@ void test_vlseg2e16_v_i16m2 (vint16m2_t *v0, vint16m2_t *v1, const int16_t *base
 //
 // CHECK-RV64-LABEL: @test_vlseg3e16_v_i16m2(
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> } @llvm.riscv.vlseg3.nxv8i16.i64(i16* [[BASE:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> } @llvm.riscv.vlseg3.nxv8i16.i64(<vscale x 8 x i16> undef, <vscale x 8 x i16> undef, <vscale x 8 x i16> undef, i16* [[BASE:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> } [[TMP0]], 0
 // CHECK-RV64-NEXT:    store <vscale x 8 x i16> [[TMP1]], <vscale x 8 x i16>* [[V0:%.*]], align 2
 // CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> } [[TMP0]], 1
@@ -1829,7 +1829,7 @@ void test_vlseg3e16_v_i16m2 (vint16m2_t *v0, vint16m2_t *v1, vint16m2_t *v2, con
 
 // CHECK-RV32-LABEL: @test_vlseg4e16_v_i16m2(
 // CHECK-RV32-NEXT:  entry:
-// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> } @llvm.riscv.vlseg4.nxv8i16.i32(i16* [[BASE:%.*]], i32 [[VL:%.*]])
+// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> } @llvm.riscv.vlseg4.nxv8i16.i32(<vscale x 8 x i16> undef, <vscale x 8 x i16> undef, <vscale x 8 x i16> undef, <vscale x 8 x i16> undef, i16* [[BASE:%.*]], i32 [[VL:%.*]])
 // CHECK-RV32-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> } [[TMP0]], 0
 // CHECK-RV32-NEXT:    store <vscale x 8 x i16> [[TMP1]], <vscale x 8 x i16>* [[V0:%.*]], align 2
 // CHECK-RV32-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> } [[TMP0]], 1
@@ -1842,7 +1842,7 @@ void test_vlseg3e16_v_i16m2 (vint16m2_t *v0, vint16m2_t *v1, vint16m2_t *v2, con
 //
 // CHECK-RV64-LABEL: @test_vlseg4e16_v_i16m2(
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> } @llvm.riscv.vlseg4.nxv8i16.i64(i16* [[BASE:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> } @llvm.riscv.vlseg4.nxv8i16.i64(<vscale x 8 x i16> undef, <vscale x 8 x i16> undef, <vscale x 8 x i16> undef, <vscale x 8 x i16> undef, i16* [[BASE:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> } [[TMP0]], 0
 // CHECK-RV64-NEXT:    store <vscale x 8 x i16> [[TMP1]], <vscale x 8 x i16>* [[V0:%.*]], align 2
 // CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> } [[TMP0]], 1
@@ -1859,7 +1859,7 @@ void test_vlseg4e16_v_i16m2 (vint16m2_t *v0, vint16m2_t *v1, vint16m2_t *v2, vin
 
 // CHECK-RV32-LABEL: @test_vlseg2e16_v_i16m4(
 // CHECK-RV32-NEXT:  entry:
-// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 16 x i16>, <vscale x 16 x i16> } @llvm.riscv.vlseg2.nxv16i16.i32(i16* [[BASE:%.*]], i32 [[VL:%.*]])
+// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 16 x i16>, <vscale x 16 x i16> } @llvm.riscv.vlseg2.nxv16i16.i32(<vscale x 16 x i16> undef, <vscale x 16 x i16> undef, i16* [[BASE:%.*]], i32 [[VL:%.*]])
 // CHECK-RV32-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 16 x i16>, <vscale x 16 x i16> } [[TMP0]], 0
 // CHECK-RV32-NEXT:    store <vscale x 16 x i16> [[TMP1]], <vscale x 16 x i16>* [[V0:%.*]], align 2
 // CHECK-RV32-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 16 x i16>, <vscale x 16 x i16> } [[TMP0]], 1
@@ -1868,7 +1868,7 @@ void test_vlseg4e16_v_i16m2 (vint16m2_t *v0, vint16m2_t *v1, vint16m2_t *v2, vin
 //
 // CHECK-RV64-LABEL: @test_vlseg2e16_v_i16m4(
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 16 x i16>, <vscale x 16 x i16> } @llvm.riscv.vlseg2.nxv16i16.i64(i16* [[BASE:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 16 x i16>, <vscale x 16 x i16> } @llvm.riscv.vlseg2.nxv16i16.i64(<vscale x 16 x i16> undef, <vscale x 16 x i16> undef, i16* [[BASE:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 16 x i16>, <vscale x 16 x i16> } [[TMP0]], 0
 // CHECK-RV64-NEXT:    store <vscale x 16 x i16> [[TMP1]], <vscale x 16 x i16>* [[V0:%.*]], align 2
 // CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 16 x i16>, <vscale x 16 x i16> } [[TMP0]], 1
@@ -1881,7 +1881,7 @@ void test_vlseg2e16_v_i16m4 (vint16m4_t *v0, vint16m4_t *v1, const int16_t *base
 
 // CHECK-RV32-LABEL: @test_vlseg2e32_v_i32mf2(
 // CHECK-RV32-NEXT:  entry:
-// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 1 x i32>, <vscale x 1 x i32> } @llvm.riscv.vlseg2.nxv1i32.i32(i32* [[BASE:%.*]], i32 [[VL:%.*]])
+// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 1 x i32>, <vscale x 1 x i32> } @llvm.riscv.vlseg2.nxv1i32.i32(<vscale x 1 x i32> undef, <vscale x 1 x i32> undef, i32* [[BASE:%.*]], i32 [[VL:%.*]])
 // CHECK-RV32-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 1 x i32>, <vscale x 1 x i32> } [[TMP0]], 0
 // CHECK-RV32-NEXT:    store <vscale x 1 x i32> [[TMP1]], <vscale x 1 x i32>* [[V0:%.*]], align 4
 // CHECK-RV32-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 1 x i32>, <vscale x 1 x i32> } [[TMP0]], 1
@@ -1890,7 +1890,7 @@ void test_vlseg2e16_v_i16m4 (vint16m4_t *v0, vint16m4_t *v1, const int16_t *base
 //
 // CHECK-RV64-LABEL: @test_vlseg2e32_v_i32mf2(
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 1 x i32>, <vscale x 1 x i32> } @llvm.riscv.vlseg2.nxv1i32.i64(i32* [[BASE:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 1 x i32>, <vscale x 1 x i32> } @llvm.riscv.vlseg2.nxv1i32.i64(<vscale x 1 x i32> undef, <vscale x 1 x i32> undef, i32* [[BASE:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 1 x i32>, <vscale x 1 x i32> } [[TMP0]], 0
 // CHECK-RV64-NEXT:    store <vscale x 1 x i32> [[TMP1]], <vscale x 1 x i32>* [[V0:%.*]], align 4
 // CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 1 x i32>, <vscale x 1 x i32> } [[TMP0]], 1
@@ -1903,7 +1903,7 @@ void test_vlseg2e32_v_i32mf2 (vint32mf2_t *v0, vint32mf2_t *v1, const int32_t *b
 
 // CHECK-RV32-LABEL: @test_vlseg3e32_v_i32mf2(
 // CHECK-RV32-NEXT:  entry:
-// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32> } @llvm.riscv.vlseg3.nxv1i32.i32(i32* [[BASE:%.*]], i32 [[VL:%.*]])
+// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32> } @llvm.riscv.vlseg3.nxv1i32.i32(<vscale x 1 x i32> undef, <vscale x 1 x i32> undef, <vscale x 1 x i32> undef, i32* [[BASE:%.*]], i32 [[VL:%.*]])
 // CHECK-RV32-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32> } [[TMP0]], 0
 // CHECK-RV32-NEXT:    store <vscale x 1 x i32> [[TMP1]], <vscale x 1 x i32>* [[V0:%.*]], align 4
 // CHECK-RV32-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32> } [[TMP0]], 1
@@ -1914,7 +1914,7 @@ void test_vlseg2e32_v_i32mf2 (vint32mf2_t *v0, vint32mf2_t *v1, const int32_t *b
 //
 // CHECK-RV64-LABEL: @test_vlseg3e32_v_i32mf2(
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32> } @llvm.riscv.vlseg3.nxv1i32.i64(i32* [[BASE:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32> } @llvm.riscv.vlseg3.nxv1i32.i64(<vscale x 1 x i32> undef, <vscale x 1 x i32> undef, <vscale x 1 x i32> undef, i32* [[BASE:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32> } [[TMP0]], 0
 // CHECK-RV64-NEXT:    store <vscale x 1 x i32> [[TMP1]], <vscale x 1 x i32>* [[V0:%.*]], align 4
 // CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32> } [[TMP0]], 1
@@ -1929,7 +1929,7 @@ void test_vlseg3e32_v_i32mf2 (vint32mf2_t *v0, vint32mf2_t *v1, vint32mf2_t *v2,
 
 // CHECK-RV32-LABEL: @test_vlseg4e32_v_i32mf2(
 // CHECK-RV32-NEXT:  entry:
-// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32> } @llvm.riscv.vlseg4.nxv1i32.i32(i32* [[BASE:%.*]], i32 [[VL:%.*]])
+// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32> } @llvm.riscv.vlseg4.nxv1i32.i32(<vscale x 1 x i32> undef, <vscale x 1 x i32> undef, <vscale x 1 x i32> undef, <vscale x 1 x i32> undef, i32* [[BASE:%.*]], i32 [[VL:%.*]])
 // CHECK-RV32-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32> } [[TMP0]], 0
 // CHECK-RV32-NEXT:    store <vscale x 1 x i32> [[TMP1]], <vscale x 1 x i32>* [[V0:%.*]], align 4
 // CHECK-RV32-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32> } [[TMP0]], 1
@@ -1942,7 +1942,7 @@ void test_vlseg3e32_v_i32mf2 (vint32mf2_t *v0, vint32mf2_t *v1, vint32mf2_t *v2,
 //
 // CHECK-RV64-LABEL: @test_vlseg4e32_v_i32mf2(
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32> } @llvm.riscv.vlseg4.nxv1i32.i64(i32* [[BASE:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32> } @llvm.riscv.vlseg4.nxv1i32.i64(<vscale x 1 x i32> undef, <vscale x 1 x i32> undef, <vscale x 1 x i32> undef, <vscale x 1 x i32> undef, i32* [[BASE:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32> } [[TMP0]], 0
 // CHECK-RV64-NEXT:    store <vscale x 1 x i32> [[TMP1]], <vscale x 1 x i32>* [[V0:%.*]], align 4
 // CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32> } [[TMP0]], 1
@@ -1959,7 +1959,7 @@ void test_vlseg4e32_v_i32mf2 (vint32mf2_t *v0, vint32mf2_t *v1, vint32mf2_t *v2,
 
 // CHECK-RV32-LABEL: @test_vlseg5e32_v_i32mf2(
 // CHECK-RV32-NEXT:  entry:
-// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32> } @llvm.riscv.vlseg5.nxv1i32.i32(i32* [[BASE:%.*]], i32 [[VL:%.*]])
+// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32> } @llvm.riscv.vlseg5.nxv1i32.i32(<vscale x 1 x i32> undef, <vscale x 1 x i32> undef, <vscale x 1 x i32> undef, <vscale x 1 x i32> undef, <vscale x 1 x i32> undef, i32* [[BASE:%.*]], i32 [[VL:%.*]])
 // CHECK-RV32-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32> } [[TMP0]], 0
 // CHECK-RV32-NEXT:    store <vscale x 1 x i32> [[TMP1]], <vscale x 1 x i32>* [[V0:%.*]], align 4
 // CHECK-RV32-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32> } [[TMP0]], 1
@@ -1974,7 +1974,7 @@ void test_vlseg4e32_v_i32mf2 (vint32mf2_t *v0, vint32mf2_t *v1, vint32mf2_t *v2,
 //
 // CHECK-RV64-LABEL: @test_vlseg5e32_v_i32mf2(
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32> } @llvm.riscv.vlseg5.nxv1i32.i64(i32* [[BASE:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32> } @llvm.riscv.vlseg5.nxv1i32.i64(<vscale x 1 x i32> undef, <vscale x 1 x i32> undef, <vscale x 1 x i32> undef, <vscale x 1 x i32> undef, <vscale x 1 x i32> undef, i32* [[BASE:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32> } [[TMP0]], 0
 // CHECK-RV64-NEXT:    store <vscale x 1 x i32> [[TMP1]], <vscale x 1 x i32>* [[V0:%.*]], align 4
 // CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32> } [[TMP0]], 1
@@ -1993,7 +1993,7 @@ void test_vlseg5e32_v_i32mf2 (vint32mf2_t *v0, vint32mf2_t *v1, vint32mf2_t *v2,
 
 // CHECK-RV32-LABEL: @test_vlseg6e32_v_i32mf2(
 // CHECK-RV32-NEXT:  entry:
-// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32> } @llvm.riscv.vlseg6.nxv1i32.i32(i32* [[BASE:%.*]], i32 [[VL:%.*]])
+// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32> } @llvm.riscv.vlseg6.nxv1i32.i32(<vscale x 1 x i32> undef, <vscale x 1 x i32> undef, <vscale x 1 x i32> undef, <vscale x 1 x i32> undef, <vscale x 1 x i32> undef, <vscale x 1 x i32> undef, i32* [[BASE:%.*]], i32 [[VL:%.*]])
 // CHECK-RV32-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32> } [[TMP0]], 0
 // CHECK-RV32-NEXT:    store <vscale x 1 x i32> [[TMP1]], <vscale x 1 x i32>* [[V0:%.*]], align 4
 // CHECK-RV32-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32> } [[TMP0]], 1
@@ -2010,7 +2010,7 @@ void test_vlseg5e32_v_i32mf2 (vint32mf2_t *v0, vint32mf2_t *v1, vint32mf2_t *v2,
 //
 // CHECK-RV64-LABEL: @test_vlseg6e32_v_i32mf2(
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32> } @llvm.riscv.vlseg6.nxv1i32.i64(i32* [[BASE:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32> } @llvm.riscv.vlseg6.nxv1i32.i64(<vscale x 1 x i32> undef, <vscale x 1 x i32> undef, <vscale x 1 x i32> undef, <vscale x 1 x i32> undef, <vscale x 1 x i32> undef, <vscale x 1 x i32> undef, i32* [[BASE:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32> } [[TMP0]], 0
 // CHECK-RV64-NEXT:    store <vscale x 1 x i32> [[TMP1]], <vscale x 1 x i32>* [[V0:%.*]], align 4
 // CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32> } [[TMP0]], 1
@@ -2031,7 +2031,7 @@ void test_vlseg6e32_v_i32mf2 (vint32mf2_t *v0, vint32mf2_t *v1, vint32mf2_t *v2,
 
 // CHECK-RV32-LABEL: @test_vlseg7e32_v_i32mf2(
 // CHECK-RV32-NEXT:  entry:
-// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32> } @llvm.riscv.vlseg7.nxv1i32.i32(i32* [[BASE:%.*]], i32 [[VL:%.*]])
+// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32> } @llvm.riscv.vlseg7.nxv1i32.i32(<vscale x 1 x i32> undef, <vscale x 1 x i32> undef, <vscale x 1 x i32> undef, <vscale x 1 x i32> undef, <vscale x 1 x i32> undef, <vscale x 1 x i32> undef, <vscale x 1 x i32> undef, i32* [[BASE:%.*]], i32 [[VL:%.*]])
 // CHECK-RV32-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32> } [[TMP0]], 0
 // CHECK-RV32-NEXT:    store <vscale x 1 x i32> [[TMP1]], <vscale x 1 x i32>* [[V0:%.*]], align 4
 // CHECK-RV32-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32> } [[TMP0]], 1
@@ -2050,7 +2050,7 @@ void test_vlseg6e32_v_i32mf2 (vint32mf2_t *v0, vint32mf2_t *v1, vint32mf2_t *v2,
 //
 // CHECK-RV64-LABEL: @test_vlseg7e32_v_i32mf2(
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32> } @llvm.riscv.vlseg7.nxv1i32.i64(i32* [[BASE:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32> } @llvm.riscv.vlseg7.nxv1i32.i64(<vscale x 1 x i32> undef, <vscale x 1 x i32> undef, <vscale x 1 x i32> undef, <vscale x 1 x i32> undef, <vscale x 1 x i32> undef, <vscale x 1 x i32> undef, <vscale x 1 x i32> undef, i32* [[BASE:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32> } [[TMP0]], 0
 // CHECK-RV64-NEXT:    store <vscale x 1 x i32> [[TMP1]], <vscale x 1 x i32>* [[V0:%.*]], align 4
 // CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32> } [[TMP0]], 1
@@ -2073,7 +2073,7 @@ void test_vlseg7e32_v_i32mf2 (vint32mf2_t *v0, vint32mf2_t *v1, vint32mf2_t *v2,
 
 // CHECK-RV32-LABEL: @test_vlseg8e32_v_i32mf2(
 // CHECK-RV32-NEXT:  entry:
-// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32> } @llvm.riscv.vlseg8.nxv1i32.i32(i32* [[BASE:%.*]], i32 [[VL:%.*]])
+// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32> } @llvm.riscv.vlseg8.nxv1i32.i32(<vscale x 1 x i32> undef, <vscale x 1 x i32> undef, <vscale x 1 x i32> undef, <vscale x 1 x i32> undef, <vscale x 1 x i32> undef, <vscale x 1 x i32> undef, <vscale x 1 x i32> undef, <vscale x 1 x i32> undef, i32* [[BASE:%.*]], i32 [[VL:%.*]])
 // CHECK-RV32-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32> } [[TMP0]], 0
 // CHECK-RV32-NEXT:    store <vscale x 1 x i32> [[TMP1]], <vscale x 1 x i32>* [[V0:%.*]], align 4
 // CHECK-RV32-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32> } [[TMP0]], 1
@@ -2094,7 +2094,7 @@ void test_vlseg7e32_v_i32mf2 (vint32mf2_t *v0, vint32mf2_t *v1, vint32mf2_t *v2,
 //
 // CHECK-RV64-LABEL: @test_vlseg8e32_v_i32mf2(
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32> } @llvm.riscv.vlseg8.nxv1i32.i64(i32* [[BASE:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32> } @llvm.riscv.vlseg8.nxv1i32.i64(<vscale x 1 x i32> undef, <vscale x 1 x i32> undef, <vscale x 1 x i32> undef, <vscale x 1 x i32> undef, <vscale x 1 x i32> undef, <vscale x 1 x i32> undef, <vscale x 1 x i32> undef, <vscale x 1 x i32> undef, i32* [[BASE:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32> } [[TMP0]], 0
 // CHECK-RV64-NEXT:    store <vscale x 1 x i32> [[TMP1]], <vscale x 1 x i32>* [[V0:%.*]], align 4
 // CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32> } [[TMP0]], 1
@@ -2119,7 +2119,7 @@ void test_vlseg8e32_v_i32mf2 (vint32mf2_t *v0, vint32mf2_t *v1, vint32mf2_t *v2,
 
 // CHECK-RV32-LABEL: @test_vlseg2e32_v_i32m1(
 // CHECK-RV32-NEXT:  entry:
-// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 2 x i32>, <vscale x 2 x i32> } @llvm.riscv.vlseg2.nxv2i32.i32(i32* [[BASE:%.*]], i32 [[VL:%.*]])
+// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 2 x i32>, <vscale x 2 x i32> } @llvm.riscv.vlseg2.nxv2i32.i32(<vscale x 2 x i32> undef, <vscale x 2 x i32> undef, i32* [[BASE:%.*]], i32 [[VL:%.*]])
 // CHECK-RV32-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 2 x i32>, <vscale x 2 x i32> } [[TMP0]], 0
 // CHECK-RV32-NEXT:    store <vscale x 2 x i32> [[TMP1]], <vscale x 2 x i32>* [[V0:%.*]], align 4
 // CHECK-RV32-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 2 x i32>, <vscale x 2 x i32> } [[TMP0]], 1
@@ -2128,7 +2128,7 @@ void test_vlseg8e32_v_i32mf2 (vint32mf2_t *v0, vint32mf2_t *v1, vint32mf2_t *v2,
 //
 // CHECK-RV64-LABEL: @test_vlseg2e32_v_i32m1(
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 2 x i32>, <vscale x 2 x i32> } @llvm.riscv.vlseg2.nxv2i32.i64(i32* [[BASE:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 2 x i32>, <vscale x 2 x i32> } @llvm.riscv.vlseg2.nxv2i32.i64(<vscale x 2 x i32> undef, <vscale x 2 x i32> undef, i32* [[BASE:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 2 x i32>, <vscale x 2 x i32> } [[TMP0]], 0
 // CHECK-RV64-NEXT:    store <vscale x 2 x i32> [[TMP1]], <vscale x 2 x i32>* [[V0:%.*]], align 4
 // CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 2 x i32>, <vscale x 2 x i32> } [[TMP0]], 1
@@ -2141,7 +2141,7 @@ void test_vlseg2e32_v_i32m1 (vint32m1_t *v0, vint32m1_t *v1, const int32_t *base
 
 // CHECK-RV32-LABEL: @test_vlseg3e32_v_i32m1(
 // CHECK-RV32-NEXT:  entry:
-// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32> } @llvm.riscv.vlseg3.nxv2i32.i32(i32* [[BASE:%.*]], i32 [[VL:%.*]])
+// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32> } @llvm.riscv.vlseg3.nxv2i32.i32(<vscale x 2 x i32> undef, <vscale x 2 x i32> undef, <vscale x 2 x i32> undef, i32* [[BASE:%.*]], i32 [[VL:%.*]])
 // CHECK-RV32-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32> } [[TMP0]], 0
 // CHECK-RV32-NEXT:    store <vscale x 2 x i32> [[TMP1]], <vscale x 2 x i32>* [[V0:%.*]], align 4
 // CHECK-RV32-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32> } [[TMP0]], 1
@@ -2152,7 +2152,7 @@ void test_vlseg2e32_v_i32m1 (vint32m1_t *v0, vint32m1_t *v1, const int32_t *base
 //
 // CHECK-RV64-LABEL: @test_vlseg3e32_v_i32m1(
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32> } @llvm.riscv.vlseg3.nxv2i32.i64(i32* [[BASE:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32> } @llvm.riscv.vlseg3.nxv2i32.i64(<vscale x 2 x i32> undef, <vscale x 2 x i32> undef, <vscale x 2 x i32> undef, i32* [[BASE:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32> } [[TMP0]], 0
 // CHECK-RV64-NEXT:    store <vscale x 2 x i32> [[TMP1]], <vscale x 2 x i32>* [[V0:%.*]], align 4
 // CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32> } [[TMP0]], 1
@@ -2167,7 +2167,7 @@ void test_vlseg3e32_v_i32m1 (vint32m1_t *v0, vint32m1_t *v1, vint32m1_t *v2, con
 
 // CHECK-RV32-LABEL: @test_vlseg4e32_v_i32m1(
 // CHECK-RV32-NEXT:  entry:
-// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32> } @llvm.riscv.vlseg4.nxv2i32.i32(i32* [[BASE:%.*]], i32 [[VL:%.*]])
+// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32> } @llvm.riscv.vlseg4.nxv2i32.i32(<vscale x 2 x i32> undef, <vscale x 2 x i32> undef, <vscale x 2 x i32> undef, <vscale x 2 x i32> undef, i32* [[BASE:%.*]], i32 [[VL:%.*]])
 // CHECK-RV32-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32> } [[TMP0]], 0
 // CHECK-RV32-NEXT:    store <vscale x 2 x i32> [[TMP1]], <vscale x 2 x i32>* [[V0:%.*]], align 4
 // CHECK-RV32-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32> } [[TMP0]], 1
@@ -2180,7 +2180,7 @@ void test_vlseg3e32_v_i32m1 (vint32m1_t *v0, vint32m1_t *v1, vint32m1_t *v2, con
 //
 // CHECK-RV64-LABEL: @test_vlseg4e32_v_i32m1(
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32> } @llvm.riscv.vlseg4.nxv2i32.i64(i32* [[BASE:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32> } @llvm.riscv.vlseg4.nxv2i32.i64(<vscale x 2 x i32> undef, <vscale x 2 x i32> undef, <vscale x 2 x i32> undef, <vscale x 2 x i32> undef, i32* [[BASE:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32> } [[TMP0]], 0
 // CHECK-RV64-NEXT:    store <vscale x 2 x i32> [[TMP1]], <vscale x 2 x i32>* [[V0:%.*]], align 4
 // CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32> } [[TMP0]], 1
@@ -2197,7 +2197,7 @@ void test_vlseg4e32_v_i32m1 (vint32m1_t *v0, vint32m1_t *v1, vint32m1_t *v2, vin
 
 // CHECK-RV32-LABEL: @test_vlseg5e32_v_i32m1(
 // CHECK-RV32-NEXT:  entry:
-// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32> } @llvm.riscv.vlseg5.nxv2i32.i32(i32* [[BASE:%.*]], i32 [[VL:%.*]])
+// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32> } @llvm.riscv.vlseg5.nxv2i32.i32(<vscale x 2 x i32> undef, <vscale x 2 x i32> undef, <vscale x 2 x i32> undef, <vscale x 2 x i32> undef, <vscale x 2 x i32> undef, i32* [[BASE:%.*]], i32 [[VL:%.*]])
 // CHECK-RV32-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32> } [[TMP0]], 0
 // CHECK-RV32-NEXT:    store <vscale x 2 x i32> [[TMP1]], <vscale x 2 x i32>* [[V0:%.*]], align 4
 // CHECK-RV32-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32> } [[TMP0]], 1
@@ -2212,7 +2212,7 @@ void test_vlseg4e32_v_i32m1 (vint32m1_t *v0, vint32m1_t *v1, vint32m1_t *v2, vin
 //
 // CHECK-RV64-LABEL: @test_vlseg5e32_v_i32m1(
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32> } @llvm.riscv.vlseg5.nxv2i32.i64(i32* [[BASE:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32> } @llvm.riscv.vlseg5.nxv2i32.i64(<vscale x 2 x i32> undef, <vscale x 2 x i32> undef, <vscale x 2 x i32> undef, <vscale x 2 x i32> undef, <vscale x 2 x i32> undef, i32* [[BASE:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32> } [[TMP0]], 0
 // CHECK-RV64-NEXT:    store <vscale x 2 x i32> [[TMP1]], <vscale x 2 x i32>* [[V0:%.*]], align 4
 // CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32> } [[TMP0]], 1
@@ -2231,7 +2231,7 @@ void test_vlseg5e32_v_i32m1 (vint32m1_t *v0, vint32m1_t *v1, vint32m1_t *v2, vin
 
 // CHECK-RV32-LABEL: @test_vlseg6e32_v_i32m1(
 // CHECK-RV32-NEXT:  entry:
-// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32> } @llvm.riscv.vlseg6.nxv2i32.i32(i32* [[BASE:%.*]], i32 [[VL:%.*]])
+// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32> } @llvm.riscv.vlseg6.nxv2i32.i32(<vscale x 2 x i32> undef, <vscale x 2 x i32> undef, <vscale x 2 x i32> undef, <vscale x 2 x i32> undef, <vscale x 2 x i32> undef, <vscale x 2 x i32> undef, i32* [[BASE:%.*]], i32 [[VL:%.*]])
 // CHECK-RV32-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32> } [[TMP0]], 0
 // CHECK-RV32-NEXT:    store <vscale x 2 x i32> [[TMP1]], <vscale x 2 x i32>* [[V0:%.*]], align 4
 // CHECK-RV32-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32> } [[TMP0]], 1
@@ -2248,7 +2248,7 @@ void test_vlseg5e32_v_i32m1 (vint32m1_t *v0, vint32m1_t *v1, vint32m1_t *v2, vin
 //
 // CHECK-RV64-LABEL: @test_vlseg6e32_v_i32m1(
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32> } @llvm.riscv.vlseg6.nxv2i32.i64(i32* [[BASE:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32> } @llvm.riscv.vlseg6.nxv2i32.i64(<vscale x 2 x i32> undef, <vscale x 2 x i32> undef, <vscale x 2 x i32> undef, <vscale x 2 x i32> undef, <vscale x 2 x i32> undef, <vscale x 2 x i32> undef, i32* [[BASE:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32> } [[TMP0]], 0
 // CHECK-RV64-NEXT:    store <vscale x 2 x i32> [[TMP1]], <vscale x 2 x i32>* [[V0:%.*]], align 4
 // CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32> } [[TMP0]], 1
@@ -2269,7 +2269,7 @@ void test_vlseg6e32_v_i32m1 (vint32m1_t *v0, vint32m1_t *v1, vint32m1_t *v2, vin
 
 // CHECK-RV32-LABEL: @test_vlseg7e32_v_i32m1(
 // CHECK-RV32-NEXT:  entry:
-// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32> } @llvm.riscv.vlseg7.nxv2i32.i32(i32* [[BASE:%.*]], i32 [[VL:%.*]])
+// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32> } @llvm.riscv.vlseg7.nxv2i32.i32(<vscale x 2 x i32> undef, <vscale x 2 x i32> undef, <vscale x 2 x i32> undef, <vscale x 2 x i32> undef, <vscale x 2 x i32> undef, <vscale x 2 x i32> undef, <vscale x 2 x i32> undef, i32* [[BASE:%.*]], i32 [[VL:%.*]])
 // CHECK-RV32-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32> } [[TMP0]], 0
 // CHECK-RV32-NEXT:    store <vscale x 2 x i32> [[TMP1]], <vscale x 2 x i32>* [[V0:%.*]], align 4
 // CHECK-RV32-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32> } [[TMP0]], 1
@@ -2288,7 +2288,7 @@ void test_vlseg6e32_v_i32m1 (vint32m1_t *v0, vint32m1_t *v1, vint32m1_t *v2, vin
 //
 // CHECK-RV64-LABEL: @test_vlseg7e32_v_i32m1(
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32> } @llvm.riscv.vlseg7.nxv2i32.i64(i32* [[BASE:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32> } @llvm.riscv.vlseg7.nxv2i32.i64(<vscale x 2 x i32> undef, <vscale x 2 x i32> undef, <vscale x 2 x i32> undef, <vscale x 2 x i32> undef, <vscale x 2 x i32> undef, <vscale x 2 x i32> undef, <vscale x 2 x i32> undef, i32* [[BASE:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32> } [[TMP0]], 0
 // CHECK-RV64-NEXT:    store <vscale x 2 x i32> [[TMP1]], <vscale x 2 x i32>* [[V0:%.*]], align 4
 // CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32> } [[TMP0]], 1
@@ -2311,7 +2311,7 @@ void test_vlseg7e32_v_i32m1 (vint32m1_t *v0, vint32m1_t *v1, vint32m1_t *v2, vin
 
 // CHECK-RV32-LABEL: @test_vlseg8e32_v_i32m1(
 // CHECK-RV32-NEXT:  entry:
-// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32> } @llvm.riscv.vlseg8.nxv2i32.i32(i32* [[BASE:%.*]], i32 [[VL:%.*]])
+// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32> } @llvm.riscv.vlseg8.nxv2i32.i32(<vscale x 2 x i32> undef, <vscale x 2 x i32> undef, <vscale x 2 x i32> undef, <vscale x 2 x i32> undef, <vscale x 2 x i32> undef, <vscale x 2 x i32> undef, <vscale x 2 x i32> undef, <vscale x 2 x i32> undef, i32* [[BASE:%.*]], i32 [[VL:%.*]])
 // CHECK-RV32-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32> } [[TMP0]], 0
 // CHECK-RV32-NEXT:    store <vscale x 2 x i32> [[TMP1]], <vscale x 2 x i32>* [[V0:%.*]], align 4
 // CHECK-RV32-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32> } [[TMP0]], 1
@@ -2332,7 +2332,7 @@ void test_vlseg7e32_v_i32m1 (vint32m1_t *v0, vint32m1_t *v1, vint32m1_t *v2, vin
 //
 // CHECK-RV64-LABEL: @test_vlseg8e32_v_i32m1(
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32> } @llvm.riscv.vlseg8.nxv2i32.i64(i32* [[BASE:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32> } @llvm.riscv.vlseg8.nxv2i32.i64(<vscale x 2 x i32> undef, <vscale x 2 x i32> undef, <vscale x 2 x i32> undef, <vscale x 2 x i32> undef, <vscale x 2 x i32> undef, <vscale x 2 x i32> undef, <vscale x 2 x i32> undef, <vscale x 2 x i32> undef, i32* [[BASE:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32> } [[TMP0]], 0
 // CHECK-RV64-NEXT:    store <vscale x 2 x i32> [[TMP1]], <vscale x 2 x i32>* [[V0:%.*]], align 4
 // CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32> } [[TMP0]], 1
@@ -2357,7 +2357,7 @@ void test_vlseg8e32_v_i32m1 (vint32m1_t *v0, vint32m1_t *v1, vint32m1_t *v2, vin
 
 // CHECK-RV32-LABEL: @test_vlseg2e32_v_i32m2(
 // CHECK-RV32-NEXT:  entry:
-// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 4 x i32>, <vscale x 4 x i32> } @llvm.riscv.vlseg2.nxv4i32.i32(i32* [[BASE:%.*]], i32 [[VL:%.*]])
+// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 4 x i32>, <vscale x 4 x i32> } @llvm.riscv.vlseg2.nxv4i32.i32(<vscale x 4 x i32> undef, <vscale x 4 x i32> undef, i32* [[BASE:%.*]], i32 [[VL:%.*]])
 // CHECK-RV32-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 4 x i32>, <vscale x 4 x i32> } [[TMP0]], 0
 // CHECK-RV32-NEXT:    store <vscale x 4 x i32> [[TMP1]], <vscale x 4 x i32>* [[V0:%.*]], align 4
 // CHECK-RV32-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 4 x i32>, <vscale x 4 x i32> } [[TMP0]], 1
@@ -2366,7 +2366,7 @@ void test_vlseg8e32_v_i32m1 (vint32m1_t *v0, vint32m1_t *v1, vint32m1_t *v2, vin
 //
 // CHECK-RV64-LABEL: @test_vlseg2e32_v_i32m2(
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 4 x i32>, <vscale x 4 x i32> } @llvm.riscv.vlseg2.nxv4i32.i64(i32* [[BASE:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 4 x i32>, <vscale x 4 x i32> } @llvm.riscv.vlseg2.nxv4i32.i64(<vscale x 4 x i32> undef, <vscale x 4 x i32> undef, i32* [[BASE:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 4 x i32>, <vscale x 4 x i32> } [[TMP0]], 0
 // CHECK-RV64-NEXT:    store <vscale x 4 x i32> [[TMP1]], <vscale x 4 x i32>* [[V0:%.*]], align 4
 // CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 4 x i32>, <vscale x 4 x i32> } [[TMP0]], 1
@@ -2379,7 +2379,7 @@ void test_vlseg2e32_v_i32m2 (vint32m2_t *v0, vint32m2_t *v1, const int32_t *base
 
 // CHECK-RV32-LABEL: @test_vlseg3e32_v_i32m2(
 // CHECK-RV32-NEXT:  entry:
-// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } @llvm.riscv.vlseg3.nxv4i32.i32(i32* [[BASE:%.*]], i32 [[VL:%.*]])
+// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } @llvm.riscv.vlseg3.nxv4i32.i32(<vscale x 4 x i32> undef, <vscale x 4 x i32> undef, <vscale x 4 x i32> undef, i32* [[BASE:%.*]], i32 [[VL:%.*]])
 // CHECK-RV32-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } [[TMP0]], 0
 // CHECK-RV32-NEXT:    store <vscale x 4 x i32> [[TMP1]], <vscale x 4 x i32>* [[V0:%.*]], align 4
 // CHECK-RV32-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } [[TMP0]], 1
@@ -2390,7 +2390,7 @@ void test_vlseg2e32_v_i32m2 (vint32m2_t *v0, vint32m2_t *v1, const int32_t *base
 //
 // CHECK-RV64-LABEL: @test_vlseg3e32_v_i32m2(
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } @llvm.riscv.vlseg3.nxv4i32.i64(i32* [[BASE:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } @llvm.riscv.vlseg3.nxv4i32.i64(<vscale x 4 x i32> undef, <vscale x 4 x i32> undef, <vscale x 4 x i32> undef, i32* [[BASE:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } [[TMP0]], 0
 // CHECK-RV64-NEXT:    store <vscale x 4 x i32> [[TMP1]], <vscale x 4 x i32>* [[V0:%.*]], align 4
 // CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } [[TMP0]], 1
@@ -2405,7 +2405,7 @@ void test_vlseg3e32_v_i32m2 (vint32m2_t *v0, vint32m2_t *v1, vint32m2_t *v2, con
 
 // CHECK-RV32-LABEL: @test_vlseg4e32_v_i32m2(
 // CHECK-RV32-NEXT:  entry:
-// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } @llvm.riscv.vlseg4.nxv4i32.i32(i32* [[BASE:%.*]], i32 [[VL:%.*]])
+// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } @llvm.riscv.vlseg4.nxv4i32.i32(<vscale x 4 x i32> undef, <vscale x 4 x i32> undef, <vscale x 4 x i32> undef, <vscale x 4 x i32> undef, i32* [[BASE:%.*]], i32 [[VL:%.*]])
 // CHECK-RV32-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } [[TMP0]], 0
 // CHECK-RV32-NEXT:    store <vscale x 4 x i32> [[TMP1]], <vscale x 4 x i32>* [[V0:%.*]], align 4
 // CHECK-RV32-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } [[TMP0]], 1
@@ -2418,7 +2418,7 @@ void test_vlseg3e32_v_i32m2 (vint32m2_t *v0, vint32m2_t *v1, vint32m2_t *v2, con
 //
 // CHECK-RV64-LABEL: @test_vlseg4e32_v_i32m2(
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } @llvm.riscv.vlseg4.nxv4i32.i64(i32* [[BASE:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } @llvm.riscv.vlseg4.nxv4i32.i64(<vscale x 4 x i32> undef, <vscale x 4 x i32> undef, <vscale x 4 x i32> undef, <vscale x 4 x i32> undef, i32* [[BASE:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } [[TMP0]], 0
 // CHECK-RV64-NEXT:    store <vscale x 4 x i32> [[TMP1]], <vscale x 4 x i32>* [[V0:%.*]], align 4
 // CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } [[TMP0]], 1
@@ -2435,7 +2435,7 @@ void test_vlseg4e32_v_i32m2 (vint32m2_t *v0, vint32m2_t *v1, vint32m2_t *v2, vin
 
 // CHECK-RV32-LABEL: @test_vlseg2e32_v_i32m4(
 // CHECK-RV32-NEXT:  entry:
-// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 8 x i32>, <vscale x 8 x i32> } @llvm.riscv.vlseg2.nxv8i32.i32(i32* [[BASE:%.*]], i32 [[VL:%.*]])
+// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 8 x i32>, <vscale x 8 x i32> } @llvm.riscv.vlseg2.nxv8i32.i32(<vscale x 8 x i32> undef, <vscale x 8 x i32> undef, i32* [[BASE:%.*]], i32 [[VL:%.*]])
 // CHECK-RV32-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 8 x i32>, <vscale x 8 x i32> } [[TMP0]], 0
 // CHECK-RV32-NEXT:    store <vscale x 8 x i32> [[TMP1]], <vscale x 8 x i32>* [[V0:%.*]], align 4
 // CHECK-RV32-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 8 x i32>, <vscale x 8 x i32> } [[TMP0]], 1
@@ -2444,7 +2444,7 @@ void test_vlseg4e32_v_i32m2 (vint32m2_t *v0, vint32m2_t *v1, vint32m2_t *v2, vin
 //
 // CHECK-RV64-LABEL: @test_vlseg2e32_v_i32m4(
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 8 x i32>, <vscale x 8 x i32> } @llvm.riscv.vlseg2.nxv8i32.i64(i32* [[BASE:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 8 x i32>, <vscale x 8 x i32> } @llvm.riscv.vlseg2.nxv8i32.i64(<vscale x 8 x i32> undef, <vscale x 8 x i32> undef, i32* [[BASE:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 8 x i32>, <vscale x 8 x i32> } [[TMP0]], 0
 // CHECK-RV64-NEXT:    store <vscale x 8 x i32> [[TMP1]], <vscale x 8 x i32>* [[V0:%.*]], align 4
 // CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 8 x i32>, <vscale x 8 x i32> } [[TMP0]], 1
@@ -2457,7 +2457,7 @@ void test_vlseg2e32_v_i32m4 (vint32m4_t *v0, vint32m4_t *v1, const int32_t *base
 
 // CHECK-RV32-LABEL: @test_vlseg2e64_v_i64m1(
 // CHECK-RV32-NEXT:  entry:
-// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 1 x i64>, <vscale x 1 x i64> } @llvm.riscv.vlseg2.nxv1i64.i32(i64* [[BASE:%.*]], i32 [[VL:%.*]])
+// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 1 x i64>, <vscale x 1 x i64> } @llvm.riscv.vlseg2.nxv1i64.i32(<vscale x 1 x i64> undef, <vscale x 1 x i64> undef, i64* [[BASE:%.*]], i32 [[VL:%.*]])
 // CHECK-RV32-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 1 x i64>, <vscale x 1 x i64> } [[TMP0]], 0
 // CHECK-RV32-NEXT:    store <vscale x 1 x i64> [[TMP1]], <vscale x 1 x i64>* [[V0:%.*]], align 8
 // CHECK-RV32-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 1 x i64>, <vscale x 1 x i64> } [[TMP0]], 1
@@ -2466,7 +2466,7 @@ void test_vlseg2e32_v_i32m4 (vint32m4_t *v0, vint32m4_t *v1, const int32_t *base
 //
 // CHECK-RV64-LABEL: @test_vlseg2e64_v_i64m1(
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 1 x i64>, <vscale x 1 x i64> } @llvm.riscv.vlseg2.nxv1i64.i64(i64* [[BASE:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 1 x i64>, <vscale x 1 x i64> } @llvm.riscv.vlseg2.nxv1i64.i64(<vscale x 1 x i64> undef, <vscale x 1 x i64> undef, i64* [[BASE:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 1 x i64>, <vscale x 1 x i64> } [[TMP0]], 0
 // CHECK-RV64-NEXT:    store <vscale x 1 x i64> [[TMP1]], <vscale x 1 x i64>* [[V0:%.*]], align 8
 // CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 1 x i64>, <vscale x 1 x i64> } [[TMP0]], 1
@@ -2479,7 +2479,7 @@ void test_vlseg2e64_v_i64m1 (vint64m1_t *v0, vint64m1_t *v1, const int64_t *base
 
 // CHECK-RV32-LABEL: @test_vlseg3e64_v_i64m1(
 // CHECK-RV32-NEXT:  entry:
-// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64> } @llvm.riscv.vlseg3.nxv1i64.i32(i64* [[BASE:%.*]], i32 [[VL:%.*]])
+// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64> } @llvm.riscv.vlseg3.nxv1i64.i32(<vscale x 1 x i64> undef, <vscale x 1 x i64> undef, <vscale x 1 x i64> undef, i64* [[BASE:%.*]], i32 [[VL:%.*]])
 // CHECK-RV32-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64> } [[TMP0]], 0
 // CHECK-RV32-NEXT:    store <vscale x 1 x i64> [[TMP1]], <vscale x 1 x i64>* [[V0:%.*]], align 8
 // CHECK-RV32-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64> } [[TMP0]], 1
@@ -2490,7 +2490,7 @@ void test_vlseg2e64_v_i64m1 (vint64m1_t *v0, vint64m1_t *v1, const int64_t *base
 //
 // CHECK-RV64-LABEL: @test_vlseg3e64_v_i64m1(
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64> } @llvm.riscv.vlseg3.nxv1i64.i64(i64* [[BASE:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64> } @llvm.riscv.vlseg3.nxv1i64.i64(<vscale x 1 x i64> undef, <vscale x 1 x i64> undef, <vscale x 1 x i64> undef, i64* [[BASE:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64> } [[TMP0]], 0
 // CHECK-RV64-NEXT:    store <vscale x 1 x i64> [[TMP1]], <vscale x 1 x i64>* [[V0:%.*]], align 8
 // CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64> } [[TMP0]], 1
@@ -2505,7 +2505,7 @@ void test_vlseg3e64_v_i64m1 (vint64m1_t *v0, vint64m1_t *v1, vint64m1_t *v2, con
 
 // CHECK-RV32-LABEL: @test_vlseg4e64_v_i64m1(
 // CHECK-RV32-NEXT:  entry:
-// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64> } @llvm.riscv.vlseg4.nxv1i64.i32(i64* [[BASE:%.*]], i32 [[VL:%.*]])
+// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64> } @llvm.riscv.vlseg4.nxv1i64.i32(<vscale x 1 x i64> undef, <vscale x 1 x i64> undef, <vscale x 1 x i64> undef, <vscale x 1 x i64> undef, i64* [[BASE:%.*]], i32 [[VL:%.*]])
 // CHECK-RV32-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64> } [[TMP0]], 0
 // CHECK-RV32-NEXT:    store <vscale x 1 x i64> [[TMP1]], <vscale x 1 x i64>* [[V0:%.*]], align 8
 // CHECK-RV32-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64> } [[TMP0]], 1
@@ -2518,7 +2518,7 @@ void test_vlseg3e64_v_i64m1 (vint64m1_t *v0, vint64m1_t *v1, vint64m1_t *v2, con
 //
 // CHECK-RV64-LABEL: @test_vlseg4e64_v_i64m1(
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64> } @llvm.riscv.vlseg4.nxv1i64.i64(i64* [[BASE:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64> } @llvm.riscv.vlseg4.nxv1i64.i64(<vscale x 1 x i64> undef, <vscale x 1 x i64> undef, <vscale x 1 x i64> undef, <vscale x 1 x i64> undef, i64* [[BASE:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64> } [[TMP0]], 0
 // CHECK-RV64-NEXT:    store <vscale x 1 x i64> [[TMP1]], <vscale x 1 x i64>* [[V0:%.*]], align 8
 // CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64> } [[TMP0]], 1
@@ -2535,7 +2535,7 @@ void test_vlseg4e64_v_i64m1 (vint64m1_t *v0, vint64m1_t *v1, vint64m1_t *v2, vin
 
 // CHECK-RV32-LABEL: @test_vlseg5e64_v_i64m1(
 // CHECK-RV32-NEXT:  entry:
-// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64> } @llvm.riscv.vlseg5.nxv1i64.i32(i64* [[BASE:%.*]], i32 [[VL:%.*]])
+// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64> } @llvm.riscv.vlseg5.nxv1i64.i32(<vscale x 1 x i64> undef, <vscale x 1 x i64> undef, <vscale x 1 x i64> undef, <vscale x 1 x i64> undef, <vscale x 1 x i64> undef, i64* [[BASE:%.*]], i32 [[VL:%.*]])
 // CHECK-RV32-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64> } [[TMP0]], 0
 // CHECK-RV32-NEXT:    store <vscale x 1 x i64> [[TMP1]], <vscale x 1 x i64>* [[V0:%.*]], align 8
 // CHECK-RV32-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64> } [[TMP0]], 1
@@ -2550,7 +2550,7 @@ void test_vlseg4e64_v_i64m1 (vint64m1_t *v0, vint64m1_t *v1, vint64m1_t *v2, vin
 //
 // CHECK-RV64-LABEL: @test_vlseg5e64_v_i64m1(
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64> } @llvm.riscv.vlseg5.nxv1i64.i64(i64* [[BASE:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64> } @llvm.riscv.vlseg5.nxv1i64.i64(<vscale x 1 x i64> undef, <vscale x 1 x i64> undef, <vscale x 1 x i64> undef, <vscale x 1 x i64> undef, <vscale x 1 x i64> undef, i64* [[BASE:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64> } [[TMP0]], 0
 // CHECK-RV64-NEXT:    store <vscale x 1 x i64> [[TMP1]], <vscale x 1 x i64>* [[V0:%.*]], align 8
 // CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64> } [[TMP0]], 1
@@ -2569,7 +2569,7 @@ void test_vlseg5e64_v_i64m1 (vint64m1_t *v0, vint64m1_t *v1, vint64m1_t *v2, vin
 
 // CHECK-RV32-LABEL: @test_vlseg6e64_v_i64m1(
 // CHECK-RV32-NEXT:  entry:
-// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64> } @llvm.riscv.vlseg6.nxv1i64.i32(i64* [[BASE:%.*]], i32 [[VL:%.*]])
+// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64> } @llvm.riscv.vlseg6.nxv1i64.i32(<vscale x 1 x i64> undef, <vscale x 1 x i64> undef, <vscale x 1 x i64> undef, <vscale x 1 x i64> undef, <vscale x 1 x i64> undef, <vscale x 1 x i64> undef, i64* [[BASE:%.*]], i32 [[VL:%.*]])
 // CHECK-RV32-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64> } [[TMP0]], 0
 // CHECK-RV32-NEXT:    store <vscale x 1 x i64> [[TMP1]], <vscale x 1 x i64>* [[V0:%.*]], align 8
 // CHECK-RV32-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64> } [[TMP0]], 1
@@ -2586,7 +2586,7 @@ void test_vlseg5e64_v_i64m1 (vint64m1_t *v0, vint64m1_t *v1, vint64m1_t *v2, vin
 //
 // CHECK-RV64-LABEL: @test_vlseg6e64_v_i64m1(
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64> } @llvm.riscv.vlseg6.nxv1i64.i64(i64* [[BASE:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64> } @llvm.riscv.vlseg6.nxv1i64.i64(<vscale x 1 x i64> undef, <vscale x 1 x i64> undef, <vscale x 1 x i64> undef, <vscale x 1 x i64> undef, <vscale x 1 x i64> undef, <vscale x 1 x i64> undef, i64* [[BASE:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64> } [[TMP0]], 0
 // CHECK-RV64-NEXT:    store <vscale x 1 x i64> [[TMP1]], <vscale x 1 x i64>* [[V0:%.*]], align 8
 // CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64> } [[TMP0]], 1
@@ -2607,7 +2607,7 @@ void test_vlseg6e64_v_i64m1 (vint64m1_t *v0, vint64m1_t *v1, vint64m1_t *v2, vin
 
 // CHECK-RV32-LABEL: @test_vlseg7e64_v_i64m1(
 // CHECK-RV32-NEXT:  entry:
-// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64> } @llvm.riscv.vlseg7.nxv1i64.i32(i64* [[BASE:%.*]], i32 [[VL:%.*]])
+// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64> } @llvm.riscv.vlseg7.nxv1i64.i32(<vscale x 1 x i64> undef, <vscale x 1 x i64> undef, <vscale x 1 x i64> undef, <vscale x 1 x i64> undef, <vscale x 1 x i64> undef, <vscale x 1 x i64> undef, <vscale x 1 x i64> undef, i64* [[BASE:%.*]], i32 [[VL:%.*]])
 // CHECK-RV32-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64> } [[TMP0]], 0
 // CHECK-RV32-NEXT:    store <vscale x 1 x i64> [[TMP1]], <vscale x 1 x i64>* [[V0:%.*]], align 8
 // CHECK-RV32-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64> } [[TMP0]], 1
@@ -2626,7 +2626,7 @@ void test_vlseg6e64_v_i64m1 (vint64m1_t *v0, vint64m1_t *v1, vint64m1_t *v2, vin
 //
 // CHECK-RV64-LABEL: @test_vlseg7e64_v_i64m1(
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64> } @llvm.riscv.vlseg7.nxv1i64.i64(i64* [[BASE:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64> } @llvm.riscv.vlseg7.nxv1i64.i64(<vscale x 1 x i64> undef, <vscale x 1 x i64> undef, <vscale x 1 x i64> undef, <vscale x 1 x i64> undef, <vscale x 1 x i64> undef, <vscale x 1 x i64> undef, <vscale x 1 x i64> undef, i64* [[BASE:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64> } [[TMP0]], 0
 // CHECK-RV64-NEXT:    store <vscale x 1 x i64> [[TMP1]], <vscale x 1 x i64>* [[V0:%.*]], align 8
 // CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64> } [[TMP0]], 1
@@ -2649,7 +2649,7 @@ void test_vlseg7e64_v_i64m1 (vint64m1_t *v0, vint64m1_t *v1, vint64m1_t *v2, vin
 
 // CHECK-RV32-LABEL: @test_vlseg8e64_v_i64m1(
 // CHECK-RV32-NEXT:  entry:
-// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64> } @llvm.riscv.vlseg8.nxv1i64.i32(i64* [[BASE:%.*]], i32 [[VL:%.*]])
+// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64> } @llvm.riscv.vlseg8.nxv1i64.i32(<vscale x 1 x i64> undef, <vscale x 1 x i64> undef, <vscale x 1 x i64> undef, <vscale x 1 x i64> undef, <vscale x 1 x i64> undef, <vscale x 1 x i64> undef, <vscale x 1 x i64> undef, <vscale x 1 x i64> undef, i64* [[BASE:%.*]], i32 [[VL:%.*]])
 // CHECK-RV32-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64> } [[TMP0]], 0
 // CHECK-RV32-NEXT:    store <vscale x 1 x i64> [[TMP1]], <vscale x 1 x i64>* [[V0:%.*]], align 8
 // CHECK-RV32-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64> } [[TMP0]], 1
@@ -2670,7 +2670,7 @@ void test_vlseg7e64_v_i64m1 (vint64m1_t *v0, vint64m1_t *v1, vint64m1_t *v2, vin
 //
 // CHECK-RV64-LABEL: @test_vlseg8e64_v_i64m1(
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64> } @llvm.riscv.vlseg8.nxv1i64.i64(i64* [[BASE:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64> } @llvm.riscv.vlseg8.nxv1i64.i64(<vscale x 1 x i64> undef, <vscale x 1 x i64> undef, <vscale x 1 x i64> undef, <vscale x 1 x i64> undef, <vscale x 1 x i64> undef, <vscale x 1 x i64> undef, <vscale x 1 x i64> undef, <vscale x 1 x i64> undef, i64* [[BASE:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64> } [[TMP0]], 0
 // CHECK-RV64-NEXT:    store <vscale x 1 x i64> [[TMP1]], <vscale x 1 x i64>* [[V0:%.*]], align 8
 // CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64> } [[TMP0]], 1
@@ -2695,7 +2695,7 @@ void test_vlseg8e64_v_i64m1 (vint64m1_t *v0, vint64m1_t *v1, vint64m1_t *v2, vin
 
 // CHECK-RV32-LABEL: @test_vlseg2e64_v_i64m2(
 // CHECK-RV32-NEXT:  entry:
-// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 2 x i64>, <vscale x 2 x i64> } @llvm.riscv.vlseg2.nxv2i64.i32(i64* [[BASE:%.*]], i32 [[VL:%.*]])
+// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 2 x i64>, <vscale x 2 x i64> } @llvm.riscv.vlseg2.nxv2i64.i32(<vscale x 2 x i64> undef, <vscale x 2 x i64> undef, i64* [[BASE:%.*]], i32 [[VL:%.*]])
 // CHECK-RV32-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 2 x i64>, <vscale x 2 x i64> } [[TMP0]], 0
 // CHECK-RV32-NEXT:    store <vscale x 2 x i64> [[TMP1]], <vscale x 2 x i64>* [[V0:%.*]], align 8
 // CHECK-RV32-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 2 x i64>, <vscale x 2 x i64> } [[TMP0]], 1
@@ -2704,7 +2704,7 @@ void test_vlseg8e64_v_i64m1 (vint64m1_t *v0, vint64m1_t *v1, vint64m1_t *v2, vin
 //
 // CHECK-RV64-LABEL: @test_vlseg2e64_v_i64m2(
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 2 x i64>, <vscale x 2 x i64> } @llvm.riscv.vlseg2.nxv2i64.i64(i64* [[BASE:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 2 x i64>, <vscale x 2 x i64> } @llvm.riscv.vlseg2.nxv2i64.i64(<vscale x 2 x i64> undef, <vscale x 2 x i64> undef, i64* [[BASE:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 2 x i64>, <vscale x 2 x i64> } [[TMP0]], 0
 // CHECK-RV64-NEXT:    store <vscale x 2 x i64> [[TMP1]], <vscale x 2 x i64>* [[V0:%.*]], align 8
 // CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 2 x i64>, <vscale x 2 x i64> } [[TMP0]], 1
@@ -2717,7 +2717,7 @@ void test_vlseg2e64_v_i64m2 (vint64m2_t *v0, vint64m2_t *v1, const int64_t *base
 
 // CHECK-RV32-LABEL: @test_vlseg3e64_v_i64m2(
 // CHECK-RV32-NEXT:  entry:
-// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64> } @llvm.riscv.vlseg3.nxv2i64.i32(i64* [[BASE:%.*]], i32 [[VL:%.*]])
+// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64> } @llvm.riscv.vlseg3.nxv2i64.i32(<vscale x 2 x i64> undef, <vscale x 2 x i64> undef, <vscale x 2 x i64> undef, i64* [[BASE:%.*]], i32 [[VL:%.*]])
 // CHECK-RV32-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64> } [[TMP0]], 0
 // CHECK-RV32-NEXT:    store <vscale x 2 x i64> [[TMP1]], <vscale x 2 x i64>* [[V0:%.*]], align 8
 // CHECK-RV32-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64> } [[TMP0]], 1
@@ -2728,7 +2728,7 @@ void test_vlseg2e64_v_i64m2 (vint64m2_t *v0, vint64m2_t *v1, const int64_t *base
 //
 // CHECK-RV64-LABEL: @test_vlseg3e64_v_i64m2(
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64> } @llvm.riscv.vlseg3.nxv2i64.i64(i64* [[BASE:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64> } @llvm.riscv.vlseg3.nxv2i64.i64(<vscale x 2 x i64> undef, <vscale x 2 x i64> undef, <vscale x 2 x i64> undef, i64* [[BASE:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64> } [[TMP0]], 0
 // CHECK-RV64-NEXT:    store <vscale x 2 x i64> [[TMP1]], <vscale x 2 x i64>* [[V0:%.*]], align 8
 // CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64> } [[TMP0]], 1
@@ -2743,7 +2743,7 @@ void test_vlseg3e64_v_i64m2 (vint64m2_t *v0, vint64m2_t *v1, vint64m2_t *v2, con
 
 // CHECK-RV32-LABEL: @test_vlseg4e64_v_i64m2(
 // CHECK-RV32-NEXT:  entry:
-// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64> } @llvm.riscv.vlseg4.nxv2i64.i32(i64* [[BASE:%.*]], i32 [[VL:%.*]])
+// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64> } @llvm.riscv.vlseg4.nxv2i64.i32(<vscale x 2 x i64> undef, <vscale x 2 x i64> undef, <vscale x 2 x i64> undef, <vscale x 2 x i64> undef, i64* [[BASE:%.*]], i32 [[VL:%.*]])
 // CHECK-RV32-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64> } [[TMP0]], 0
 // CHECK-RV32-NEXT:    store <vscale x 2 x i64> [[TMP1]], <vscale x 2 x i64>* [[V0:%.*]], align 8
 // CHECK-RV32-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64> } [[TMP0]], 1
@@ -2756,7 +2756,7 @@ void test_vlseg3e64_v_i64m2 (vint64m2_t *v0, vint64m2_t *v1, vint64m2_t *v2, con
 //
 // CHECK-RV64-LABEL: @test_vlseg4e64_v_i64m2(
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64> } @llvm.riscv.vlseg4.nxv2i64.i64(i64* [[BASE:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64> } @llvm.riscv.vlseg4.nxv2i64.i64(<vscale x 2 x i64> undef, <vscale x 2 x i64> undef, <vscale x 2 x i64> undef, <vscale x 2 x i64> undef, i64* [[BASE:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64> } [[TMP0]], 0
 // CHECK-RV64-NEXT:    store <vscale x 2 x i64> [[TMP1]], <vscale x 2 x i64>* [[V0:%.*]], align 8
 // CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64> } [[TMP0]], 1
@@ -2773,7 +2773,7 @@ void test_vlseg4e64_v_i64m2 (vint64m2_t *v0, vint64m2_t *v1, vint64m2_t *v2, vin
 
 // CHECK-RV32-LABEL: @test_vlseg2e64_v_i64m4(
 // CHECK-RV32-NEXT:  entry:
-// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 4 x i64>, <vscale x 4 x i64> } @llvm.riscv.vlseg2.nxv4i64.i32(i64* [[BASE:%.*]], i32 [[VL:%.*]])
+// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 4 x i64>, <vscale x 4 x i64> } @llvm.riscv.vlseg2.nxv4i64.i32(<vscale x 4 x i64> undef, <vscale x 4 x i64> undef, i64* [[BASE:%.*]], i32 [[VL:%.*]])
 // CHECK-RV32-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 4 x i64>, <vscale x 4 x i64> } [[TMP0]], 0
 // CHECK-RV32-NEXT:    store <vscale x 4 x i64> [[TMP1]], <vscale x 4 x i64>* [[V0:%.*]], align 8
 // CHECK-RV32-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 4 x i64>, <vscale x 4 x i64> } [[TMP0]], 1
@@ -2782,7 +2782,7 @@ void test_vlseg4e64_v_i64m2 (vint64m2_t *v0, vint64m2_t *v1, vint64m2_t *v2, vin
 //
 // CHECK-RV64-LABEL: @test_vlseg2e64_v_i64m4(
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 4 x i64>, <vscale x 4 x i64> } @llvm.riscv.vlseg2.nxv4i64.i64(i64* [[BASE:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 4 x i64>, <vscale x 4 x i64> } @llvm.riscv.vlseg2.nxv4i64.i64(<vscale x 4 x i64> undef, <vscale x 4 x i64> undef, i64* [[BASE:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 4 x i64>, <vscale x 4 x i64> } [[TMP0]], 0
 // CHECK-RV64-NEXT:    store <vscale x 4 x i64> [[TMP1]], <vscale x 4 x i64>* [[V0:%.*]], align 8
 // CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 4 x i64>, <vscale x 4 x i64> } [[TMP0]], 1
@@ -2795,7 +2795,7 @@ void test_vlseg2e64_v_i64m4 (vint64m4_t *v0, vint64m4_t *v1, const int64_t *base
 
 // CHECK-RV32-LABEL: @test_vlseg2e8_v_u8mf8(
 // CHECK-RV32-NEXT:  entry:
-// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 1 x i8>, <vscale x 1 x i8> } @llvm.riscv.vlseg2.nxv1i8.i32(i8* [[BASE:%.*]], i32 [[VL:%.*]])
+// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 1 x i8>, <vscale x 1 x i8> } @llvm.riscv.vlseg2.nxv1i8.i32(<vscale x 1 x i8> undef, <vscale x 1 x i8> undef, i8* [[BASE:%.*]], i32 [[VL:%.*]])
 // CHECK-RV32-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 1 x i8>, <vscale x 1 x i8> } [[TMP0]], 0
 // CHECK-RV32-NEXT:    store <vscale x 1 x i8> [[TMP1]], <vscale x 1 x i8>* [[V0:%.*]], align 1
 // CHECK-RV32-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 1 x i8>, <vscale x 1 x i8> } [[TMP0]], 1
@@ -2804,7 +2804,7 @@ void test_vlseg2e64_v_i64m4 (vint64m4_t *v0, vint64m4_t *v1, const int64_t *base
 //
 // CHECK-RV64-LABEL: @test_vlseg2e8_v_u8mf8(
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 1 x i8>, <vscale x 1 x i8> } @llvm.riscv.vlseg2.nxv1i8.i64(i8* [[BASE:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 1 x i8>, <vscale x 1 x i8> } @llvm.riscv.vlseg2.nxv1i8.i64(<vscale x 1 x i8> undef, <vscale x 1 x i8> undef, i8* [[BASE:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 1 x i8>, <vscale x 1 x i8> } [[TMP0]], 0
 // CHECK-RV64-NEXT:    store <vscale x 1 x i8> [[TMP1]], <vscale x 1 x i8>* [[V0:%.*]], align 1
 // CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 1 x i8>, <vscale x 1 x i8> } [[TMP0]], 1
@@ -2817,7 +2817,7 @@ void test_vlseg2e8_v_u8mf8 (vuint8mf8_t *v0, vuint8mf8_t *v1, const uint8_t *bas
 
 // CHECK-RV32-LABEL: @test_vlseg3e8_v_u8mf8(
 // CHECK-RV32-NEXT:  entry:
-// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8> } @llvm.riscv.vlseg3.nxv1i8.i32(i8* [[BASE:%.*]], i32 [[VL:%.*]])
+// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8> } @llvm.riscv.vlseg3.nxv1i8.i32(<vscale x 1 x i8> undef, <vscale x 1 x i8> undef, <vscale x 1 x i8> undef, i8* [[BASE:%.*]], i32 [[VL:%.*]])
 // CHECK-RV32-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8> } [[TMP0]], 0
 // CHECK-RV32-NEXT:    store <vscale x 1 x i8> [[TMP1]], <vscale x 1 x i8>* [[V0:%.*]], align 1
 // CHECK-RV32-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8> } [[TMP0]], 1
@@ -2828,7 +2828,7 @@ void test_vlseg2e8_v_u8mf8 (vuint8mf8_t *v0, vuint8mf8_t *v1, const uint8_t *bas
 //
 // CHECK-RV64-LABEL: @test_vlseg3e8_v_u8mf8(
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8> } @llvm.riscv.vlseg3.nxv1i8.i64(i8* [[BASE:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8> } @llvm.riscv.vlseg3.nxv1i8.i64(<vscale x 1 x i8> undef, <vscale x 1 x i8> undef, <vscale x 1 x i8> undef, i8* [[BASE:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8> } [[TMP0]], 0
 // CHECK-RV64-NEXT:    store <vscale x 1 x i8> [[TMP1]], <vscale x 1 x i8>* [[V0:%.*]], align 1
 // CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8> } [[TMP0]], 1
@@ -2843,7 +2843,7 @@ void test_vlseg3e8_v_u8mf8 (vuint8mf8_t *v0, vuint8mf8_t *v1, vuint8mf8_t *v2, c
 
 // CHECK-RV32-LABEL: @test_vlseg4e8_v_u8mf8(
 // CHECK-RV32-NEXT:  entry:
-// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8> } @llvm.riscv.vlseg4.nxv1i8.i32(i8* [[BASE:%.*]], i32 [[VL:%.*]])
+// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8> } @llvm.riscv.vlseg4.nxv1i8.i32(<vscale x 1 x i8> undef, <vscale x 1 x i8> undef, <vscale x 1 x i8> undef, <vscale x 1 x i8> undef, i8* [[BASE:%.*]], i32 [[VL:%.*]])
 // CHECK-RV32-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8> } [[TMP0]], 0
 // CHECK-RV32-NEXT:    store <vscale x 1 x i8> [[TMP1]], <vscale x 1 x i8>* [[V0:%.*]], align 1
 // CHECK-RV32-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8> } [[TMP0]], 1
@@ -2856,7 +2856,7 @@ void test_vlseg3e8_v_u8mf8 (vuint8mf8_t *v0, vuint8mf8_t *v1, vuint8mf8_t *v2, c
 //
 // CHECK-RV64-LABEL: @test_vlseg4e8_v_u8mf8(
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8> } @llvm.riscv.vlseg4.nxv1i8.i64(i8* [[BASE:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8> } @llvm.riscv.vlseg4.nxv1i8.i64(<vscale x 1 x i8> undef, <vscale x 1 x i8> undef, <vscale x 1 x i8> undef, <vscale x 1 x i8> undef, i8* [[BASE:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8> } [[TMP0]], 0
 // CHECK-RV64-NEXT:    store <vscale x 1 x i8> [[TMP1]], <vscale x 1 x i8>* [[V0:%.*]], align 1
 // CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8> } [[TMP0]], 1
@@ -2873,7 +2873,7 @@ void test_vlseg4e8_v_u8mf8 (vuint8mf8_t *v0, vuint8mf8_t *v1, vuint8mf8_t *v2, v
 
 // CHECK-RV32-LABEL: @test_vlseg5e8_v_u8mf8(
 // CHECK-RV32-NEXT:  entry:
-// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8> } @llvm.riscv.vlseg5.nxv1i8.i32(i8* [[BASE:%.*]], i32 [[VL:%.*]])
+// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8> } @llvm.riscv.vlseg5.nxv1i8.i32(<vscale x 1 x i8> undef, <vscale x 1 x i8> undef, <vscale x 1 x i8> undef, <vscale x 1 x i8> undef, <vscale x 1 x i8> undef, i8* [[BASE:%.*]], i32 [[VL:%.*]])
 // CHECK-RV32-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8> } [[TMP0]], 0
 // CHECK-RV32-NEXT:    store <vscale x 1 x i8> [[TMP1]], <vscale x 1 x i8>* [[V0:%.*]], align 1
 // CHECK-RV32-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8> } [[TMP0]], 1
@@ -2888,7 +2888,7 @@ void test_vlseg4e8_v_u8mf8 (vuint8mf8_t *v0, vuint8mf8_t *v1, vuint8mf8_t *v2, v
 //
 // CHECK-RV64-LABEL: @test_vlseg5e8_v_u8mf8(
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8> } @llvm.riscv.vlseg5.nxv1i8.i64(i8* [[BASE:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8> } @llvm.riscv.vlseg5.nxv1i8.i64(<vscale x 1 x i8> undef, <vscale x 1 x i8> undef, <vscale x 1 x i8> undef, <vscale x 1 x i8> undef, <vscale x 1 x i8> undef, i8* [[BASE:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8> } [[TMP0]], 0
 // CHECK-RV64-NEXT:    store <vscale x 1 x i8> [[TMP1]], <vscale x 1 x i8>* [[V0:%.*]], align 1
 // CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8> } [[TMP0]], 1
@@ -2907,7 +2907,7 @@ void test_vlseg5e8_v_u8mf8 (vuint8mf8_t *v0, vuint8mf8_t *v1, vuint8mf8_t *v2, v
 
 // CHECK-RV32-LABEL: @test_vlseg6e8_v_u8mf8(
 // CHECK-RV32-NEXT:  entry:
-// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8> } @llvm.riscv.vlseg6.nxv1i8.i32(i8* [[BASE:%.*]], i32 [[VL:%.*]])
+// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8> } @llvm.riscv.vlseg6.nxv1i8.i32(<vscale x 1 x i8> undef, <vscale x 1 x i8> undef, <vscale x 1 x i8> undef, <vscale x 1 x i8> undef, <vscale x 1 x i8> undef, <vscale x 1 x i8> undef, i8* [[BASE:%.*]], i32 [[VL:%.*]])
 // CHECK-RV32-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8> } [[TMP0]], 0
 // CHECK-RV32-NEXT:    store <vscale x 1 x i8> [[TMP1]], <vscale x 1 x i8>* [[V0:%.*]], align 1
 // CHECK-RV32-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8> } [[TMP0]], 1
@@ -2924,7 +2924,7 @@ void test_vlseg5e8_v_u8mf8 (vuint8mf8_t *v0, vuint8mf8_t *v1, vuint8mf8_t *v2, v
 //
 // CHECK-RV64-LABEL: @test_vlseg6e8_v_u8mf8(
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8> } @llvm.riscv.vlseg6.nxv1i8.i64(i8* [[BASE:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8> } @llvm.riscv.vlseg6.nxv1i8.i64(<vscale x 1 x i8> undef, <vscale x 1 x i8> undef, <vscale x 1 x i8> undef, <vscale x 1 x i8> undef, <vscale x 1 x i8> undef, <vscale x 1 x i8> undef, i8* [[BASE:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8> } [[TMP0]], 0
 // CHECK-RV64-NEXT:    store <vscale x 1 x i8> [[TMP1]], <vscale x 1 x i8>* [[V0:%.*]], align 1
 // CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8> } [[TMP0]], 1
@@ -2945,7 +2945,7 @@ void test_vlseg6e8_v_u8mf8 (vuint8mf8_t *v0, vuint8mf8_t *v1, vuint8mf8_t *v2, v
 
 // CHECK-RV32-LABEL: @test_vlseg7e8_v_u8mf8(
 // CHECK-RV32-NEXT:  entry:
-// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8> } @llvm.riscv.vlseg7.nxv1i8.i32(i8* [[BASE:%.*]], i32 [[VL:%.*]])
+// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8> } @llvm.riscv.vlseg7.nxv1i8.i32(<vscale x 1 x i8> undef, <vscale x 1 x i8> undef, <vscale x 1 x i8> undef, <vscale x 1 x i8> undef, <vscale x 1 x i8> undef, <vscale x 1 x i8> undef, <vscale x 1 x i8> undef, i8* [[BASE:%.*]], i32 [[VL:%.*]])
 // CHECK-RV32-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8> } [[TMP0]], 0
 // CHECK-RV32-NEXT:    store <vscale x 1 x i8> [[TMP1]], <vscale x 1 x i8>* [[V0:%.*]], align 1
 // CHECK-RV32-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8> } [[TMP0]], 1
@@ -2964,7 +2964,7 @@ void test_vlseg6e8_v_u8mf8 (vuint8mf8_t *v0, vuint8mf8_t *v1, vuint8mf8_t *v2, v
 //
 // CHECK-RV64-LABEL: @test_vlseg7e8_v_u8mf8(
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8> } @llvm.riscv.vlseg7.nxv1i8.i64(i8* [[BASE:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8> } @llvm.riscv.vlseg7.nxv1i8.i64(<vscale x 1 x i8> undef, <vscale x 1 x i8> undef, <vscale x 1 x i8> undef, <vscale x 1 x i8> undef, <vscale x 1 x i8> undef, <vscale x 1 x i8> undef, <vscale x 1 x i8> undef, i8* [[BASE:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8> } [[TMP0]], 0
 // CHECK-RV64-NEXT:    store <vscale x 1 x i8> [[TMP1]], <vscale x 1 x i8>* [[V0:%.*]], align 1
 // CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8> } [[TMP0]], 1
@@ -2987,7 +2987,7 @@ void test_vlseg7e8_v_u8mf8 (vuint8mf8_t *v0, vuint8mf8_t *v1, vuint8mf8_t *v2, v
 
 // CHECK-RV32-LABEL: @test_vlseg8e8_v_u8mf8(
 // CHECK-RV32-NEXT:  entry:
-// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8> } @llvm.riscv.vlseg8.nxv1i8.i32(i8* [[BASE:%.*]], i32 [[VL:%.*]])
+// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8> } @llvm.riscv.vlseg8.nxv1i8.i32(<vscale x 1 x i8> undef, <vscale x 1 x i8> undef, <vscale x 1 x i8> undef, <vscale x 1 x i8> undef, <vscale x 1 x i8> undef, <vscale x 1 x i8> undef, <vscale x 1 x i8> undef, <vscale x 1 x i8> undef, i8* [[BASE:%.*]], i32 [[VL:%.*]])
 // CHECK-RV32-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8> } [[TMP0]], 0
 // CHECK-RV32-NEXT:    store <vscale x 1 x i8> [[TMP1]], <vscale x 1 x i8>* [[V0:%.*]], align 1
 // CHECK-RV32-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8> } [[TMP0]], 1
@@ -3008,7 +3008,7 @@ void test_vlseg7e8_v_u8mf8 (vuint8mf8_t *v0, vuint8mf8_t *v1, vuint8mf8_t *v2, v
 //
 // CHECK-RV64-LABEL: @test_vlseg8e8_v_u8mf8(
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8> } @llvm.riscv.vlseg8.nxv1i8.i64(i8* [[BASE:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8> } @llvm.riscv.vlseg8.nxv1i8.i64(<vscale x 1 x i8> undef, <vscale x 1 x i8> undef, <vscale x 1 x i8> undef, <vscale x 1 x i8> undef, <vscale x 1 x i8> undef, <vscale x 1 x i8> undef, <vscale x 1 x i8> undef, <vscale x 1 x i8> undef, i8* [[BASE:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8> } [[TMP0]], 0
 // CHECK-RV64-NEXT:    store <vscale x 1 x i8> [[TMP1]], <vscale x 1 x i8>* [[V0:%.*]], align 1
 // CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8> } [[TMP0]], 1
@@ -3033,7 +3033,7 @@ void test_vlseg8e8_v_u8mf8 (vuint8mf8_t *v0, vuint8mf8_t *v1, vuint8mf8_t *v2, v
 
 // CHECK-RV32-LABEL: @test_vlseg2e8_v_u8mf4(
 // CHECK-RV32-NEXT:  entry:
-// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 2 x i8>, <vscale x 2 x i8> } @llvm.riscv.vlseg2.nxv2i8.i32(i8* [[BASE:%.*]], i32 [[VL:%.*]])
+// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 2 x i8>, <vscale x 2 x i8> } @llvm.riscv.vlseg2.nxv2i8.i32(<vscale x 2 x i8> undef, <vscale x 2 x i8> undef, i8* [[BASE:%.*]], i32 [[VL:%.*]])
 // CHECK-RV32-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 2 x i8>, <vscale x 2 x i8> } [[TMP0]], 0
 // CHECK-RV32-NEXT:    store <vscale x 2 x i8> [[TMP1]], <vscale x 2 x i8>* [[V0:%.*]], align 1
 // CHECK-RV32-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 2 x i8>, <vscale x 2 x i8> } [[TMP0]], 1
@@ -3042,7 +3042,7 @@ void test_vlseg8e8_v_u8mf8 (vuint8mf8_t *v0, vuint8mf8_t *v1, vuint8mf8_t *v2, v
 //
 // CHECK-RV64-LABEL: @test_vlseg2e8_v_u8mf4(
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 2 x i8>, <vscale x 2 x i8> } @llvm.riscv.vlseg2.nxv2i8.i64(i8* [[BASE:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 2 x i8>, <vscale x 2 x i8> } @llvm.riscv.vlseg2.nxv2i8.i64(<vscale x 2 x i8> undef, <vscale x 2 x i8> undef, i8* [[BASE:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 2 x i8>, <vscale x 2 x i8> } [[TMP0]], 0
 // CHECK-RV64-NEXT:    store <vscale x 2 x i8> [[TMP1]], <vscale x 2 x i8>* [[V0:%.*]], align 1
 // CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 2 x i8>, <vscale x 2 x i8> } [[TMP0]], 1
@@ -3055,7 +3055,7 @@ void test_vlseg2e8_v_u8mf4 (vuint8mf4_t *v0, vuint8mf4_t *v1, const uint8_t *bas
 
 // CHECK-RV32-LABEL: @test_vlseg3e8_v_u8mf4(
 // CHECK-RV32-NEXT:  entry:
-// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8> } @llvm.riscv.vlseg3.nxv2i8.i32(i8* [[BASE:%.*]], i32 [[VL:%.*]])
+// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8> } @llvm.riscv.vlseg3.nxv2i8.i32(<vscale x 2 x i8> undef, <vscale x 2 x i8> undef, <vscale x 2 x i8> undef, i8* [[BASE:%.*]], i32 [[VL:%.*]])
 // CHECK-RV32-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8> } [[TMP0]], 0
 // CHECK-RV32-NEXT:    store <vscale x 2 x i8> [[TMP1]], <vscale x 2 x i8>* [[V0:%.*]], align 1
 // CHECK-RV32-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8> } [[TMP0]], 1
@@ -3066,7 +3066,7 @@ void test_vlseg2e8_v_u8mf4 (vuint8mf4_t *v0, vuint8mf4_t *v1, const uint8_t *bas
 //
 // CHECK-RV64-LABEL: @test_vlseg3e8_v_u8mf4(
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8> } @llvm.riscv.vlseg3.nxv2i8.i64(i8* [[BASE:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8> } @llvm.riscv.vlseg3.nxv2i8.i64(<vscale x 2 x i8> undef, <vscale x 2 x i8> undef, <vscale x 2 x i8> undef, i8* [[BASE:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8> } [[TMP0]], 0
 // CHECK-RV64-NEXT:    store <vscale x 2 x i8> [[TMP1]], <vscale x 2 x i8>* [[V0:%.*]], align 1
 // CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8> } [[TMP0]], 1
@@ -3081,7 +3081,7 @@ void test_vlseg3e8_v_u8mf4 (vuint8mf4_t *v0, vuint8mf4_t *v1, vuint8mf4_t *v2, c
 
 // CHECK-RV32-LABEL: @test_vlseg4e8_v_u8mf4(
 // CHECK-RV32-NEXT:  entry:
-// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8> } @llvm.riscv.vlseg4.nxv2i8.i32(i8* [[BASE:%.*]], i32 [[VL:%.*]])
+// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8> } @llvm.riscv.vlseg4.nxv2i8.i32(<vscale x 2 x i8> undef, <vscale x 2 x i8> undef, <vscale x 2 x i8> undef, <vscale x 2 x i8> undef, i8* [[BASE:%.*]], i32 [[VL:%.*]])
 // CHECK-RV32-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8> } [[TMP0]], 0
 // CHECK-RV32-NEXT:    store <vscale x 2 x i8> [[TMP1]], <vscale x 2 x i8>* [[V0:%.*]], align 1
 // CHECK-RV32-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8> } [[TMP0]], 1
@@ -3094,7 +3094,7 @@ void test_vlseg3e8_v_u8mf4 (vuint8mf4_t *v0, vuint8mf4_t *v1, vuint8mf4_t *v2, c
 //
 // CHECK-RV64-LABEL: @test_vlseg4e8_v_u8mf4(
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8> } @llvm.riscv.vlseg4.nxv2i8.i64(i8* [[BASE:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8> } @llvm.riscv.vlseg4.nxv2i8.i64(<vscale x 2 x i8> undef, <vscale x 2 x i8> undef, <vscale x 2 x i8> undef, <vscale x 2 x i8> undef, i8* [[BASE:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8> } [[TMP0]], 0
 // CHECK-RV64-NEXT:    store <vscale x 2 x i8> [[TMP1]], <vscale x 2 x i8>* [[V0:%.*]], align 1
 // CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8> } [[TMP0]], 1
@@ -3111,7 +3111,7 @@ void test_vlseg4e8_v_u8mf4 (vuint8mf4_t *v0, vuint8mf4_t *v1, vuint8mf4_t *v2, v
 
 // CHECK-RV32-LABEL: @test_vlseg5e8_v_u8mf4(
 // CHECK-RV32-NEXT:  entry:
-// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8> } @llvm.riscv.vlseg5.nxv2i8.i32(i8* [[BASE:%.*]], i32 [[VL:%.*]])
+// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8> } @llvm.riscv.vlseg5.nxv2i8.i32(<vscale x 2 x i8> undef, <vscale x 2 x i8> undef, <vscale x 2 x i8> undef, <vscale x 2 x i8> undef, <vscale x 2 x i8> undef, i8* [[BASE:%.*]], i32 [[VL:%.*]])
 // CHECK-RV32-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8> } [[TMP0]], 0
 // CHECK-RV32-NEXT:    store <vscale x 2 x i8> [[TMP1]], <vscale x 2 x i8>* [[V0:%.*]], align 1
 // CHECK-RV32-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8> } [[TMP0]], 1
@@ -3126,7 +3126,7 @@ void test_vlseg4e8_v_u8mf4 (vuint8mf4_t *v0, vuint8mf4_t *v1, vuint8mf4_t *v2, v
 //
 // CHECK-RV64-LABEL: @test_vlseg5e8_v_u8mf4(
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8> } @llvm.riscv.vlseg5.nxv2i8.i64(i8* [[BASE:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8> } @llvm.riscv.vlseg5.nxv2i8.i64(<vscale x 2 x i8> undef, <vscale x 2 x i8> undef, <vscale x 2 x i8> undef, <vscale x 2 x i8> undef, <vscale x 2 x i8> undef, i8* [[BASE:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8> } [[TMP0]], 0
 // CHECK-RV64-NEXT:    store <vscale x 2 x i8> [[TMP1]], <vscale x 2 x i8>* [[V0:%.*]], align 1
 // CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8> } [[TMP0]], 1
@@ -3145,7 +3145,7 @@ void test_vlseg5e8_v_u8mf4 (vuint8mf4_t *v0, vuint8mf4_t *v1, vuint8mf4_t *v2, v
 
 // CHECK-RV32-LABEL: @test_vlseg6e8_v_u8mf4(
 // CHECK-RV32-NEXT:  entry:
-// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8> } @llvm.riscv.vlseg6.nxv2i8.i32(i8* [[BASE:%.*]], i32 [[VL:%.*]])
+// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8> } @llvm.riscv.vlseg6.nxv2i8.i32(<vscale x 2 x i8> undef, <vscale x 2 x i8> undef, <vscale x 2 x i8> undef, <vscale x 2 x i8> undef, <vscale x 2 x i8> undef, <vscale x 2 x i8> undef, i8* [[BASE:%.*]], i32 [[VL:%.*]])
 // CHECK-RV32-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8> } [[TMP0]], 0
 // CHECK-RV32-NEXT:    store <vscale x 2 x i8> [[TMP1]], <vscale x 2 x i8>* [[V0:%.*]], align 1
 // CHECK-RV32-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8> } [[TMP0]], 1
@@ -3162,7 +3162,7 @@ void test_vlseg5e8_v_u8mf4 (vuint8mf4_t *v0, vuint8mf4_t *v1, vuint8mf4_t *v2, v
 //
 // CHECK-RV64-LABEL: @test_vlseg6e8_v_u8mf4(
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8> } @llvm.riscv.vlseg6.nxv2i8.i64(i8* [[BASE:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8> } @llvm.riscv.vlseg6.nxv2i8.i64(<vscale x 2 x i8> undef, <vscale x 2 x i8> undef, <vscale x 2 x i8> undef, <vscale x 2 x i8> undef, <vscale x 2 x i8> undef, <vscale x 2 x i8> undef, i8* [[BASE:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8> } [[TMP0]], 0
 // CHECK-RV64-NEXT:    store <vscale x 2 x i8> [[TMP1]], <vscale x 2 x i8>* [[V0:%.*]], align 1
 // CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8> } [[TMP0]], 1
@@ -3183,7 +3183,7 @@ void test_vlseg6e8_v_u8mf4 (vuint8mf4_t *v0, vuint8mf4_t *v1, vuint8mf4_t *v2, v
 
 // CHECK-RV32-LABEL: @test_vlseg7e8_v_u8mf4(
 // CHECK-RV32-NEXT:  entry:
-// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8> } @llvm.riscv.vlseg7.nxv2i8.i32(i8* [[BASE:%.*]], i32 [[VL:%.*]])
+// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8> } @llvm.riscv.vlseg7.nxv2i8.i32(<vscale x 2 x i8> undef, <vscale x 2 x i8> undef, <vscale x 2 x i8> undef, <vscale x 2 x i8> undef, <vscale x 2 x i8> undef, <vscale x 2 x i8> undef, <vscale x 2 x i8> undef, i8* [[BASE:%.*]], i32 [[VL:%.*]])
 // CHECK-RV32-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8> } [[TMP0]], 0
 // CHECK-RV32-NEXT:    store <vscale x 2 x i8> [[TMP1]], <vscale x 2 x i8>* [[V0:%.*]], align 1
 // CHECK-RV32-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8> } [[TMP0]], 1
@@ -3202,7 +3202,7 @@ void test_vlseg6e8_v_u8mf4 (vuint8mf4_t *v0, vuint8mf4_t *v1, vuint8mf4_t *v2, v
 //
 // CHECK-RV64-LABEL: @test_vlseg7e8_v_u8mf4(
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8> } @llvm.riscv.vlseg7.nxv2i8.i64(i8* [[BASE:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8> } @llvm.riscv.vlseg7.nxv2i8.i64(<vscale x 2 x i8> undef, <vscale x 2 x i8> undef, <vscale x 2 x i8> undef, <vscale x 2 x i8> undef, <vscale x 2 x i8> undef, <vscale x 2 x i8> undef, <vscale x 2 x i8> undef, i8* [[BASE:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8> } [[TMP0]], 0
 // CHECK-RV64-NEXT:    store <vscale x 2 x i8> [[TMP1]], <vscale x 2 x i8>* [[V0:%.*]], align 1
 // CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8> } [[TMP0]], 1
@@ -3225,7 +3225,7 @@ void test_vlseg7e8_v_u8mf4 (vuint8mf4_t *v0, vuint8mf4_t *v1, vuint8mf4_t *v2, v
 
 // CHECK-RV32-LABEL: @test_vlseg8e8_v_u8mf4(
 // CHECK-RV32-NEXT:  entry:
-// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8> } @llvm.riscv.vlseg8.nxv2i8.i32(i8* [[BASE:%.*]], i32 [[VL:%.*]])
+// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8> } @llvm.riscv.vlseg8.nxv2i8.i32(<vscale x 2 x i8> undef, <vscale x 2 x i8> undef, <vscale x 2 x i8> undef, <vscale x 2 x i8> undef, <vscale x 2 x i8> undef, <vscale x 2 x i8> undef, <vscale x 2 x i8> undef, <vscale x 2 x i8> undef, i8* [[BASE:%.*]], i32 [[VL:%.*]])
 // CHECK-RV32-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8> } [[TMP0]], 0
 // CHECK-RV32-NEXT:    store <vscale x 2 x i8> [[TMP1]], <vscale x 2 x i8>* [[V0:%.*]], align 1
 // CHECK-RV32-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8> } [[TMP0]], 1
@@ -3246,7 +3246,7 @@ void test_vlseg7e8_v_u8mf4 (vuint8mf4_t *v0, vuint8mf4_t *v1, vuint8mf4_t *v2, v
 //
 // CHECK-RV64-LABEL: @test_vlseg8e8_v_u8mf4(
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8> } @llvm.riscv.vlseg8.nxv2i8.i64(i8* [[BASE:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8> } @llvm.riscv.vlseg8.nxv2i8.i64(<vscale x 2 x i8> undef, <vscale x 2 x i8> undef, <vscale x 2 x i8> undef, <vscale x 2 x i8> undef, <vscale x 2 x i8> undef, <vscale x 2 x i8> undef, <vscale x 2 x i8> undef, <vscale x 2 x i8> undef, i8* [[BASE:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8> } [[TMP0]], 0
 // CHECK-RV64-NEXT:    store <vscale x 2 x i8> [[TMP1]], <vscale x 2 x i8>* [[V0:%.*]], align 1
 // CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8> } [[TMP0]], 1
@@ -3271,7 +3271,7 @@ void test_vlseg8e8_v_u8mf4 (vuint8mf4_t *v0, vuint8mf4_t *v1, vuint8mf4_t *v2, v
 
 // CHECK-RV32-LABEL: @test_vlseg2e8_v_u8mf2(
 // CHECK-RV32-NEXT:  entry:
-// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 4 x i8>, <vscale x 4 x i8> } @llvm.riscv.vlseg2.nxv4i8.i32(i8* [[BASE:%.*]], i32 [[VL:%.*]])
+// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 4 x i8>, <vscale x 4 x i8> } @llvm.riscv.vlseg2.nxv4i8.i32(<vscale x 4 x i8> undef, <vscale x 4 x i8> undef, i8* [[BASE:%.*]], i32 [[VL:%.*]])
 // CHECK-RV32-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 4 x i8>, <vscale x 4 x i8> } [[TMP0]], 0
 // CHECK-RV32-NEXT:    store <vscale x 4 x i8> [[TMP1]], <vscale x 4 x i8>* [[V0:%.*]], align 1
 // CHECK-RV32-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 4 x i8>, <vscale x 4 x i8> } [[TMP0]], 1
@@ -3280,7 +3280,7 @@ void test_vlseg8e8_v_u8mf4 (vuint8mf4_t *v0, vuint8mf4_t *v1, vuint8mf4_t *v2, v
 //
 // CHECK-RV64-LABEL: @test_vlseg2e8_v_u8mf2(
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 4 x i8>, <vscale x 4 x i8> } @llvm.riscv.vlseg2.nxv4i8.i64(i8* [[BASE:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 4 x i8>, <vscale x 4 x i8> } @llvm.riscv.vlseg2.nxv4i8.i64(<vscale x 4 x i8> undef, <vscale x 4 x i8> undef, i8* [[BASE:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 4 x i8>, <vscale x 4 x i8> } [[TMP0]], 0
 // CHECK-RV64-NEXT:    store <vscale x 4 x i8> [[TMP1]], <vscale x 4 x i8>* [[V0:%.*]], align 1
 // CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 4 x i8>, <vscale x 4 x i8> } [[TMP0]], 1
@@ -3293,7 +3293,7 @@ void test_vlseg2e8_v_u8mf2 (vuint8mf2_t *v0, vuint8mf2_t *v1, const uint8_t *bas
 
 // CHECK-RV32-LABEL: @test_vlseg3e8_v_u8mf2(
 // CHECK-RV32-NEXT:  entry:
-// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8> } @llvm.riscv.vlseg3.nxv4i8.i32(i8* [[BASE:%.*]], i32 [[VL:%.*]])
+// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8> } @llvm.riscv.vlseg3.nxv4i8.i32(<vscale x 4 x i8> undef, <vscale x 4 x i8> undef, <vscale x 4 x i8> undef, i8* [[BASE:%.*]], i32 [[VL:%.*]])
 // CHECK-RV32-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8> } [[TMP0]], 0
 // CHECK-RV32-NEXT:    store <vscale x 4 x i8> [[TMP1]], <vscale x 4 x i8>* [[V0:%.*]], align 1
 // CHECK-RV32-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8> } [[TMP0]], 1
@@ -3304,7 +3304,7 @@ void test_vlseg2e8_v_u8mf2 (vuint8mf2_t *v0, vuint8mf2_t *v1, const uint8_t *bas
 //
 // CHECK-RV64-LABEL: @test_vlseg3e8_v_u8mf2(
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8> } @llvm.riscv.vlseg3.nxv4i8.i64(i8* [[BASE:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8> } @llvm.riscv.vlseg3.nxv4i8.i64(<vscale x 4 x i8> undef, <vscale x 4 x i8> undef, <vscale x 4 x i8> undef, i8* [[BASE:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8> } [[TMP0]], 0
 // CHECK-RV64-NEXT:    store <vscale x 4 x i8> [[TMP1]], <vscale x 4 x i8>* [[V0:%.*]], align 1
 // CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8> } [[TMP0]], 1
@@ -3319,7 +3319,7 @@ void test_vlseg3e8_v_u8mf2 (vuint8mf2_t *v0, vuint8mf2_t *v1, vuint8mf2_t *v2, c
 
 // CHECK-RV32-LABEL: @test_vlseg4e8_v_u8mf2(
 // CHECK-RV32-NEXT:  entry:
-// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8> } @llvm.riscv.vlseg4.nxv4i8.i32(i8* [[BASE:%.*]], i32 [[VL:%.*]])
+// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8> } @llvm.riscv.vlseg4.nxv4i8.i32(<vscale x 4 x i8> undef, <vscale x 4 x i8> undef, <vscale x 4 x i8> undef, <vscale x 4 x i8> undef, i8* [[BASE:%.*]], i32 [[VL:%.*]])
 // CHECK-RV32-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8> } [[TMP0]], 0
 // CHECK-RV32-NEXT:    store <vscale x 4 x i8> [[TMP1]], <vscale x 4 x i8>* [[V0:%.*]], align 1
 // CHECK-RV32-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8> } [[TMP0]], 1
@@ -3332,7 +3332,7 @@ void test_vlseg3e8_v_u8mf2 (vuint8mf2_t *v0, vuint8mf2_t *v1, vuint8mf2_t *v2, c
 //
 // CHECK-RV64-LABEL: @test_vlseg4e8_v_u8mf2(
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8> } @llvm.riscv.vlseg4.nxv4i8.i64(i8* [[BASE:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8> } @llvm.riscv.vlseg4.nxv4i8.i64(<vscale x 4 x i8> undef, <vscale x 4 x i8> undef, <vscale x 4 x i8> undef, <vscale x 4 x i8> undef, i8* [[BASE:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8> } [[TMP0]], 0
 // CHECK-RV64-NEXT:    store <vscale x 4 x i8> [[TMP1]], <vscale x 4 x i8>* [[V0:%.*]], align 1
 // CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8> } [[TMP0]], 1
@@ -3349,7 +3349,7 @@ void test_vlseg4e8_v_u8mf2 (vuint8mf2_t *v0, vuint8mf2_t *v1, vuint8mf2_t *v2, v
 
 // CHECK-RV32-LABEL: @test_vlseg5e8_v_u8mf2(
 // CHECK-RV32-NEXT:  entry:
-// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8> } @llvm.riscv.vlseg5.nxv4i8.i32(i8* [[BASE:%.*]], i32 [[VL:%.*]])
+// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8> } @llvm.riscv.vlseg5.nxv4i8.i32(<vscale x 4 x i8> undef, <vscale x 4 x i8> undef, <vscale x 4 x i8> undef, <vscale x 4 x i8> undef, <vscale x 4 x i8> undef, i8* [[BASE:%.*]], i32 [[VL:%.*]])
 // CHECK-RV32-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8> } [[TMP0]], 0
 // CHECK-RV32-NEXT:    store <vscale x 4 x i8> [[TMP1]], <vscale x 4 x i8>* [[V0:%.*]], align 1
 // CHECK-RV32-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8> } [[TMP0]], 1
@@ -3364,7 +3364,7 @@ void test_vlseg4e8_v_u8mf2 (vuint8mf2_t *v0, vuint8mf2_t *v1, vuint8mf2_t *v2, v
 //
 // CHECK-RV64-LABEL: @test_vlseg5e8_v_u8mf2(
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8> } @llvm.riscv.vlseg5.nxv4i8.i64(i8* [[BASE:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8> } @llvm.riscv.vlseg5.nxv4i8.i64(<vscale x 4 x i8> undef, <vscale x 4 x i8> undef, <vscale x 4 x i8> undef, <vscale x 4 x i8> undef, <vscale x 4 x i8> undef, i8* [[BASE:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8> } [[TMP0]], 0
 // CHECK-RV64-NEXT:    store <vscale x 4 x i8> [[TMP1]], <vscale x 4 x i8>* [[V0:%.*]], align 1
 // CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8> } [[TMP0]], 1
@@ -3383,7 +3383,7 @@ void test_vlseg5e8_v_u8mf2 (vuint8mf2_t *v0, vuint8mf2_t *v1, vuint8mf2_t *v2, v
 
 // CHECK-RV32-LABEL: @test_vlseg6e8_v_u8mf2(
 // CHECK-RV32-NEXT:  entry:
-// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8> } @llvm.riscv.vlseg6.nxv4i8.i32(i8* [[BASE:%.*]], i32 [[VL:%.*]])
+// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8> } @llvm.riscv.vlseg6.nxv4i8.i32(<vscale x 4 x i8> undef, <vscale x 4 x i8> undef, <vscale x 4 x i8> undef, <vscale x 4 x i8> undef, <vscale x 4 x i8> undef, <vscale x 4 x i8> undef, i8* [[BASE:%.*]], i32 [[VL:%.*]])
 // CHECK-RV32-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8> } [[TMP0]], 0
 // CHECK-RV32-NEXT:    store <vscale x 4 x i8> [[TMP1]], <vscale x 4 x i8>* [[V0:%.*]], align 1
 // CHECK-RV32-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8> } [[TMP0]], 1
@@ -3400,7 +3400,7 @@ void test_vlseg5e8_v_u8mf2 (vuint8mf2_t *v0, vuint8mf2_t *v1, vuint8mf2_t *v2, v
 //
 // CHECK-RV64-LABEL: @test_vlseg6e8_v_u8mf2(
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8> } @llvm.riscv.vlseg6.nxv4i8.i64(i8* [[BASE:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8> } @llvm.riscv.vlseg6.nxv4i8.i64(<vscale x 4 x i8> undef, <vscale x 4 x i8> undef, <vscale x 4 x i8> undef, <vscale x 4 x i8> undef, <vscale x 4 x i8> undef, <vscale x 4 x i8> undef, i8* [[BASE:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8> } [[TMP0]], 0
 // CHECK-RV64-NEXT:    store <vscale x 4 x i8> [[TMP1]], <vscale x 4 x i8>* [[V0:%.*]], align 1
 // CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8> } [[TMP0]], 1
@@ -3421,7 +3421,7 @@ void test_vlseg6e8_v_u8mf2 (vuint8mf2_t *v0, vuint8mf2_t *v1, vuint8mf2_t *v2, v
 
 // CHECK-RV32-LABEL: @test_vlseg7e8_v_u8mf2(
 // CHECK-RV32-NEXT:  entry:
-// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8> } @llvm.riscv.vlseg7.nxv4i8.i32(i8* [[BASE:%.*]], i32 [[VL:%.*]])
+// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8> } @llvm.riscv.vlseg7.nxv4i8.i32(<vscale x 4 x i8> undef, <vscale x 4 x i8> undef, <vscale x 4 x i8> undef, <vscale x 4 x i8> undef, <vscale x 4 x i8> undef, <vscale x 4 x i8> undef, <vscale x 4 x i8> undef, i8* [[BASE:%.*]], i32 [[VL:%.*]])
 // CHECK-RV32-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8> } [[TMP0]], 0
 // CHECK-RV32-NEXT:    store <vscale x 4 x i8> [[TMP1]], <vscale x 4 x i8>* [[V0:%.*]], align 1
 // CHECK-RV32-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8> } [[TMP0]], 1
@@ -3440,7 +3440,7 @@ void test_vlseg6e8_v_u8mf2 (vuint8mf2_t *v0, vuint8mf2_t *v1, vuint8mf2_t *v2, v
 //
 // CHECK-RV64-LABEL: @test_vlseg7e8_v_u8mf2(
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8> } @llvm.riscv.vlseg7.nxv4i8.i64(i8* [[BASE:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8> } @llvm.riscv.vlseg7.nxv4i8.i64(<vscale x 4 x i8> undef, <vscale x 4 x i8> undef, <vscale x 4 x i8> undef, <vscale x 4 x i8> undef, <vscale x 4 x i8> undef, <vscale x 4 x i8> undef, <vscale x 4 x i8> undef, i8* [[BASE:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8> } [[TMP0]], 0
 // CHECK-RV64-NEXT:    store <vscale x 4 x i8> [[TMP1]], <vscale x 4 x i8>* [[V0:%.*]], align 1
 // CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8> } [[TMP0]], 1
@@ -3463,7 +3463,7 @@ void test_vlseg7e8_v_u8mf2 (vuint8mf2_t *v0, vuint8mf2_t *v1, vuint8mf2_t *v2, v
 
 // CHECK-RV32-LABEL: @test_vlseg8e8_v_u8mf2(
 // CHECK-RV32-NEXT:  entry:
-// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8> } @llvm.riscv.vlseg8.nxv4i8.i32(i8* [[BASE:%.*]], i32 [[VL:%.*]])
+// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8> } @llvm.riscv.vlseg8.nxv4i8.i32(<vscale x 4 x i8> undef, <vscale x 4 x i8> undef, <vscale x 4 x i8> undef, <vscale x 4 x i8> undef, <vscale x 4 x i8> undef, <vscale x 4 x i8> undef, <vscale x 4 x i8> undef, <vscale x 4 x i8> undef, i8* [[BASE:%.*]], i32 [[VL:%.*]])
 // CHECK-RV32-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8> } [[TMP0]], 0
 // CHECK-RV32-NEXT:    store <vscale x 4 x i8> [[TMP1]], <vscale x 4 x i8>* [[V0:%.*]], align 1
 // CHECK-RV32-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8> } [[TMP0]], 1
@@ -3484,7 +3484,7 @@ void test_vlseg7e8_v_u8mf2 (vuint8mf2_t *v0, vuint8mf2_t *v1, vuint8mf2_t *v2, v
 //
 // CHECK-RV64-LABEL: @test_vlseg8e8_v_u8mf2(
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8> } @llvm.riscv.vlseg8.nxv4i8.i64(i8* [[BASE:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8> } @llvm.riscv.vlseg8.nxv4i8.i64(<vscale x 4 x i8> undef, <vscale x 4 x i8> undef, <vscale x 4 x i8> undef, <vscale x 4 x i8> undef, <vscale x 4 x i8> undef, <vscale x 4 x i8> undef, <vscale x 4 x i8> undef, <vscale x 4 x i8> undef, i8* [[BASE:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8> } [[TMP0]], 0
 // CHECK-RV64-NEXT:    store <vscale x 4 x i8> [[TMP1]], <vscale x 4 x i8>* [[V0:%.*]], align 1
 // CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8> } [[TMP0]], 1
@@ -3509,7 +3509,7 @@ void test_vlseg8e8_v_u8mf2 (vuint8mf2_t *v0, vuint8mf2_t *v1, vuint8mf2_t *v2, v
 
 // CHECK-RV32-LABEL: @test_vlseg2e8_v_u8m1(
 // CHECK-RV32-NEXT:  entry:
-// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 8 x i8>, <vscale x 8 x i8> } @llvm.riscv.vlseg2.nxv8i8.i32(i8* [[BASE:%.*]], i32 [[VL:%.*]])
+// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 8 x i8>, <vscale x 8 x i8> } @llvm.riscv.vlseg2.nxv8i8.i32(<vscale x 8 x i8> undef, <vscale x 8 x i8> undef, i8* [[BASE:%.*]], i32 [[VL:%.*]])
 // CHECK-RV32-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 8 x i8>, <vscale x 8 x i8> } [[TMP0]], 0
 // CHECK-RV32-NEXT:    store <vscale x 8 x i8> [[TMP1]], <vscale x 8 x i8>* [[V0:%.*]], align 1
 // CHECK-RV32-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 8 x i8>, <vscale x 8 x i8> } [[TMP0]], 1
@@ -3518,7 +3518,7 @@ void test_vlseg8e8_v_u8mf2 (vuint8mf2_t *v0, vuint8mf2_t *v1, vuint8mf2_t *v2, v
 //
 // CHECK-RV64-LABEL: @test_vlseg2e8_v_u8m1(
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 8 x i8>, <vscale x 8 x i8> } @llvm.riscv.vlseg2.nxv8i8.i64(i8* [[BASE:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 8 x i8>, <vscale x 8 x i8> } @llvm.riscv.vlseg2.nxv8i8.i64(<vscale x 8 x i8> undef, <vscale x 8 x i8> undef, i8* [[BASE:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 8 x i8>, <vscale x 8 x i8> } [[TMP0]], 0
 // CHECK-RV64-NEXT:    store <vscale x 8 x i8> [[TMP1]], <vscale x 8 x i8>* [[V0:%.*]], align 1
 // CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 8 x i8>, <vscale x 8 x i8> } [[TMP0]], 1
@@ -3531,7 +3531,7 @@ void test_vlseg2e8_v_u8m1 (vuint8m1_t *v0, vuint8m1_t *v1, const uint8_t *base, 
 
 // CHECK-RV32-LABEL: @test_vlseg3e8_v_u8m1(
 // CHECK-RV32-NEXT:  entry:
-// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8> } @llvm.riscv.vlseg3.nxv8i8.i32(i8* [[BASE:%.*]], i32 [[VL:%.*]])
+// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8> } @llvm.riscv.vlseg3.nxv8i8.i32(<vscale x 8 x i8> undef, <vscale x 8 x i8> undef, <vscale x 8 x i8> undef, i8* [[BASE:%.*]], i32 [[VL:%.*]])
 // CHECK-RV32-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8> } [[TMP0]], 0
 // CHECK-RV32-NEXT:    store <vscale x 8 x i8> [[TMP1]], <vscale x 8 x i8>* [[V0:%.*]], align 1
 // CHECK-RV32-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8> } [[TMP0]], 1
@@ -3542,7 +3542,7 @@ void test_vlseg2e8_v_u8m1 (vuint8m1_t *v0, vuint8m1_t *v1, const uint8_t *base, 
 //
 // CHECK-RV64-LABEL: @test_vlseg3e8_v_u8m1(
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8> } @llvm.riscv.vlseg3.nxv8i8.i64(i8* [[BASE:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8> } @llvm.riscv.vlseg3.nxv8i8.i64(<vscale x 8 x i8> undef, <vscale x 8 x i8> undef, <vscale x 8 x i8> undef, i8* [[BASE:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8> } [[TMP0]], 0
 // CHECK-RV64-NEXT:    store <vscale x 8 x i8> [[TMP1]], <vscale x 8 x i8>* [[V0:%.*]], align 1
 // CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8> } [[TMP0]], 1
@@ -3557,7 +3557,7 @@ void test_vlseg3e8_v_u8m1 (vuint8m1_t *v0, vuint8m1_t *v1, vuint8m1_t *v2, const
 
 // CHECK-RV32-LABEL: @test_vlseg4e8_v_u8m1(
 // CHECK-RV32-NEXT:  entry:
-// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8> } @llvm.riscv.vlseg4.nxv8i8.i32(i8* [[BASE:%.*]], i32 [[VL:%.*]])
+// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8> } @llvm.riscv.vlseg4.nxv8i8.i32(<vscale x 8 x i8> undef, <vscale x 8 x i8> undef, <vscale x 8 x i8> undef, <vscale x 8 x i8> undef, i8* [[BASE:%.*]], i32 [[VL:%.*]])
 // CHECK-RV32-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8> } [[TMP0]], 0
 // CHECK-RV32-NEXT:    store <vscale x 8 x i8> [[TMP1]], <vscale x 8 x i8>* [[V0:%.*]], align 1
 // CHECK-RV32-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8> } [[TMP0]], 1
@@ -3570,7 +3570,7 @@ void test_vlseg3e8_v_u8m1 (vuint8m1_t *v0, vuint8m1_t *v1, vuint8m1_t *v2, const
 //
 // CHECK-RV64-LABEL: @test_vlseg4e8_v_u8m1(
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8> } @llvm.riscv.vlseg4.nxv8i8.i64(i8* [[BASE:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8> } @llvm.riscv.vlseg4.nxv8i8.i64(<vscale x 8 x i8> undef, <vscale x 8 x i8> undef, <vscale x 8 x i8> undef, <vscale x 8 x i8> undef, i8* [[BASE:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8> } [[TMP0]], 0
 // CHECK-RV64-NEXT:    store <vscale x 8 x i8> [[TMP1]], <vscale x 8 x i8>* [[V0:%.*]], align 1
 // CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8> } [[TMP0]], 1
@@ -3587,7 +3587,7 @@ void test_vlseg4e8_v_u8m1 (vuint8m1_t *v0, vuint8m1_t *v1, vuint8m1_t *v2, vuint
 
 // CHECK-RV32-LABEL: @test_vlseg5e8_v_u8m1(
 // CHECK-RV32-NEXT:  entry:
-// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8> } @llvm.riscv.vlseg5.nxv8i8.i32(i8* [[BASE:%.*]], i32 [[VL:%.*]])
+// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8> } @llvm.riscv.vlseg5.nxv8i8.i32(<vscale x 8 x i8> undef, <vscale x 8 x i8> undef, <vscale x 8 x i8> undef, <vscale x 8 x i8> undef, <vscale x 8 x i8> undef, i8* [[BASE:%.*]], i32 [[VL:%.*]])
 // CHECK-RV32-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8> } [[TMP0]], 0
 // CHECK-RV32-NEXT:    store <vscale x 8 x i8> [[TMP1]], <vscale x 8 x i8>* [[V0:%.*]], align 1
 // CHECK-RV32-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8> } [[TMP0]], 1
@@ -3602,7 +3602,7 @@ void test_vlseg4e8_v_u8m1 (vuint8m1_t *v0, vuint8m1_t *v1, vuint8m1_t *v2, vuint
 //
 // CHECK-RV64-LABEL: @test_vlseg5e8_v_u8m1(
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8> } @llvm.riscv.vlseg5.nxv8i8.i64(i8* [[BASE:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8> } @llvm.riscv.vlseg5.nxv8i8.i64(<vscale x 8 x i8> undef, <vscale x 8 x i8> undef, <vscale x 8 x i8> undef, <vscale x 8 x i8> undef, <vscale x 8 x i8> undef, i8* [[BASE:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8> } [[TMP0]], 0
 // CHECK-RV64-NEXT:    store <vscale x 8 x i8> [[TMP1]], <vscale x 8 x i8>* [[V0:%.*]], align 1
 // CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8> } [[TMP0]], 1
@@ -3621,7 +3621,7 @@ void test_vlseg5e8_v_u8m1 (vuint8m1_t *v0, vuint8m1_t *v1, vuint8m1_t *v2, vuint
 
 // CHECK-RV32-LABEL: @test_vlseg6e8_v_u8m1(
 // CHECK-RV32-NEXT:  entry:
-// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8> } @llvm.riscv.vlseg6.nxv8i8.i32(i8* [[BASE:%.*]], i32 [[VL:%.*]])
+// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8> } @llvm.riscv.vlseg6.nxv8i8.i32(<vscale x 8 x i8> undef, <vscale x 8 x i8> undef, <vscale x 8 x i8> undef, <vscale x 8 x i8> undef, <vscale x 8 x i8> undef, <vscale x 8 x i8> undef, i8* [[BASE:%.*]], i32 [[VL:%.*]])
 // CHECK-RV32-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8> } [[TMP0]], 0
 // CHECK-RV32-NEXT:    store <vscale x 8 x i8> [[TMP1]], <vscale x 8 x i8>* [[V0:%.*]], align 1
 // CHECK-RV32-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8> } [[TMP0]], 1
@@ -3638,7 +3638,7 @@ void test_vlseg5e8_v_u8m1 (vuint8m1_t *v0, vuint8m1_t *v1, vuint8m1_t *v2, vuint
 //
 // CHECK-RV64-LABEL: @test_vlseg6e8_v_u8m1(
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8> } @llvm.riscv.vlseg6.nxv8i8.i64(i8* [[BASE:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8> } @llvm.riscv.vlseg6.nxv8i8.i64(<vscale x 8 x i8> undef, <vscale x 8 x i8> undef, <vscale x 8 x i8> undef, <vscale x 8 x i8> undef, <vscale x 8 x i8> undef, <vscale x 8 x i8> undef, i8* [[BASE:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8> } [[TMP0]], 0
 // CHECK-RV64-NEXT:    store <vscale x 8 x i8> [[TMP1]], <vscale x 8 x i8>* [[V0:%.*]], align 1
 // CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8> } [[TMP0]], 1
@@ -3659,7 +3659,7 @@ void test_vlseg6e8_v_u8m1 (vuint8m1_t *v0, vuint8m1_t *v1, vuint8m1_t *v2, vuint
 
 // CHECK-RV32-LABEL: @test_vlseg7e8_v_u8m1(
 // CHECK-RV32-NEXT:  entry:
-// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8> } @llvm.riscv.vlseg7.nxv8i8.i32(i8* [[BASE:%.*]], i32 [[VL:%.*]])
+// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8> } @llvm.riscv.vlseg7.nxv8i8.i32(<vscale x 8 x i8> undef, <vscale x 8 x i8> undef, <vscale x 8 x i8> undef, <vscale x 8 x i8> undef, <vscale x 8 x i8> undef, <vscale x 8 x i8> undef, <vscale x 8 x i8> undef, i8* [[BASE:%.*]], i32 [[VL:%.*]])
 // CHECK-RV32-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8> } [[TMP0]], 0
 // CHECK-RV32-NEXT:    store <vscale x 8 x i8> [[TMP1]], <vscale x 8 x i8>* [[V0:%.*]], align 1
 // CHECK-RV32-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8> } [[TMP0]], 1
@@ -3678,7 +3678,7 @@ void test_vlseg6e8_v_u8m1 (vuint8m1_t *v0, vuint8m1_t *v1, vuint8m1_t *v2, vuint
 //
 // CHECK-RV64-LABEL: @test_vlseg7e8_v_u8m1(
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8> } @llvm.riscv.vlseg7.nxv8i8.i64(i8* [[BASE:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8> } @llvm.riscv.vlseg7.nxv8i8.i64(<vscale x 8 x i8> undef, <vscale x 8 x i8> undef, <vscale x 8 x i8> undef, <vscale x 8 x i8> undef, <vscale x 8 x i8> undef, <vscale x 8 x i8> undef, <vscale x 8 x i8> undef, i8* [[BASE:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8> } [[TMP0]], 0
 // CHECK-RV64-NEXT:    store <vscale x 8 x i8> [[TMP1]], <vscale x 8 x i8>* [[V0:%.*]], align 1
 // CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8> } [[TMP0]], 1
@@ -3701,7 +3701,7 @@ void test_vlseg7e8_v_u8m1 (vuint8m1_t *v0, vuint8m1_t *v1, vuint8m1_t *v2, vuint
 
 // CHECK-RV32-LABEL: @test_vlseg8e8_v_u8m1(
 // CHECK-RV32-NEXT:  entry:
-// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8> } @llvm.riscv.vlseg8.nxv8i8.i32(i8* [[BASE:%.*]], i32 [[VL:%.*]])
+// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8> } @llvm.riscv.vlseg8.nxv8i8.i32(<vscale x 8 x i8> undef, <vscale x 8 x i8> undef, <vscale x 8 x i8> undef, <vscale x 8 x i8> undef, <vscale x 8 x i8> undef, <vscale x 8 x i8> undef, <vscale x 8 x i8> undef, <vscale x 8 x i8> undef, i8* [[BASE:%.*]], i32 [[VL:%.*]])
 // CHECK-RV32-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8> } [[TMP0]], 0
 // CHECK-RV32-NEXT:    store <vscale x 8 x i8> [[TMP1]], <vscale x 8 x i8>* [[V0:%.*]], align 1
 // CHECK-RV32-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8> } [[TMP0]], 1
@@ -3722,7 +3722,7 @@ void test_vlseg7e8_v_u8m1 (vuint8m1_t *v0, vuint8m1_t *v1, vuint8m1_t *v2, vuint
 //
 // CHECK-RV64-LABEL: @test_vlseg8e8_v_u8m1(
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8> } @llvm.riscv.vlseg8.nxv8i8.i64(i8* [[BASE:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8> } @llvm.riscv.vlseg8.nxv8i8.i64(<vscale x 8 x i8> undef, <vscale x 8 x i8> undef, <vscale x 8 x i8> undef, <vscale x 8 x i8> undef, <vscale x 8 x i8> undef, <vscale x 8 x i8> undef, <vscale x 8 x i8> undef, <vscale x 8 x i8> undef, i8* [[BASE:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8> } [[TMP0]], 0
 // CHECK-RV64-NEXT:    store <vscale x 8 x i8> [[TMP1]], <vscale x 8 x i8>* [[V0:%.*]], align 1
 // CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8> } [[TMP0]], 1
@@ -3747,7 +3747,7 @@ void test_vlseg8e8_v_u8m1 (vuint8m1_t *v0, vuint8m1_t *v1, vuint8m1_t *v2, vuint
 
 // CHECK-RV32-LABEL: @test_vlseg2e8_v_u8m2(
 // CHECK-RV32-NEXT:  entry:
-// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 16 x i8>, <vscale x 16 x i8> } @llvm.riscv.vlseg2.nxv16i8.i32(i8* [[BASE:%.*]], i32 [[VL:%.*]])
+// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 16 x i8>, <vscale x 16 x i8> } @llvm.riscv.vlseg2.nxv16i8.i32(<vscale x 16 x i8> undef, <vscale x 16 x i8> undef, i8* [[BASE:%.*]], i32 [[VL:%.*]])
 // CHECK-RV32-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 16 x i8>, <vscale x 16 x i8> } [[TMP0]], 0
 // CHECK-RV32-NEXT:    store <vscale x 16 x i8> [[TMP1]], <vscale x 16 x i8>* [[V0:%.*]], align 1
 // CHECK-RV32-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 16 x i8>, <vscale x 16 x i8> } [[TMP0]], 1
@@ -3756,7 +3756,7 @@ void test_vlseg8e8_v_u8m1 (vuint8m1_t *v0, vuint8m1_t *v1, vuint8m1_t *v2, vuint
 //
 // CHECK-RV64-LABEL: @test_vlseg2e8_v_u8m2(
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 16 x i8>, <vscale x 16 x i8> } @llvm.riscv.vlseg2.nxv16i8.i64(i8* [[BASE:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 16 x i8>, <vscale x 16 x i8> } @llvm.riscv.vlseg2.nxv16i8.i64(<vscale x 16 x i8> undef, <vscale x 16 x i8> undef, i8* [[BASE:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 16 x i8>, <vscale x 16 x i8> } [[TMP0]], 0
 // CHECK-RV64-NEXT:    store <vscale x 16 x i8> [[TMP1]], <vscale x 16 x i8>* [[V0:%.*]], align 1
 // CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 16 x i8>, <vscale x 16 x i8> } [[TMP0]], 1
@@ -3769,7 +3769,7 @@ void test_vlseg2e8_v_u8m2 (vuint8m2_t *v0, vuint8m2_t *v1, const uint8_t *base, 
 
 // CHECK-RV32-LABEL: @test_vlseg3e8_v_u8m2(
 // CHECK-RV32-NEXT:  entry:
-// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } @llvm.riscv.vlseg3.nxv16i8.i32(i8* [[BASE:%.*]], i32 [[VL:%.*]])
+// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } @llvm.riscv.vlseg3.nxv16i8.i32(<vscale x 16 x i8> undef, <vscale x 16 x i8> undef, <vscale x 16 x i8> undef, i8* [[BASE:%.*]], i32 [[VL:%.*]])
 // CHECK-RV32-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } [[TMP0]], 0
 // CHECK-RV32-NEXT:    store <vscale x 16 x i8> [[TMP1]], <vscale x 16 x i8>* [[V0:%.*]], align 1
 // CHECK-RV32-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } [[TMP0]], 1
@@ -3780,7 +3780,7 @@ void test_vlseg2e8_v_u8m2 (vuint8m2_t *v0, vuint8m2_t *v1, const uint8_t *base, 
 //
 // CHECK-RV64-LABEL: @test_vlseg3e8_v_u8m2(
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } @llvm.riscv.vlseg3.nxv16i8.i64(i8* [[BASE:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } @llvm.riscv.vlseg3.nxv16i8.i64(<vscale x 16 x i8> undef, <vscale x 16 x i8> undef, <vscale x 16 x i8> undef, i8* [[BASE:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } [[TMP0]], 0
 // CHECK-RV64-NEXT:    store <vscale x 16 x i8> [[TMP1]], <vscale x 16 x i8>* [[V0:%.*]], align 1
 // CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } [[TMP0]], 1
@@ -3795,7 +3795,7 @@ void test_vlseg3e8_v_u8m2 (vuint8m2_t *v0, vuint8m2_t *v1, vuint8m2_t *v2, const
 
 // CHECK-RV32-LABEL: @test_vlseg4e8_v_u8m2(
 // CHECK-RV32-NEXT:  entry:
-// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } @llvm.riscv.vlseg4.nxv16i8.i32(i8* [[BASE:%.*]], i32 [[VL:%.*]])
+// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } @llvm.riscv.vlseg4.nxv16i8.i32(<vscale x 16 x i8> undef, <vscale x 16 x i8> undef, <vscale x 16 x i8> undef, <vscale x 16 x i8> undef, i8* [[BASE:%.*]], i32 [[VL:%.*]])
 // CHECK-RV32-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } [[TMP0]], 0
 // CHECK-RV32-NEXT:    store <vscale x 16 x i8> [[TMP1]], <vscale x 16 x i8>* [[V0:%.*]], align 1
 // CHECK-RV32-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } [[TMP0]], 1
@@ -3808,7 +3808,7 @@ void test_vlseg3e8_v_u8m2 (vuint8m2_t *v0, vuint8m2_t *v1, vuint8m2_t *v2, const
 //
 // CHECK-RV64-LABEL: @test_vlseg4e8_v_u8m2(
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } @llvm.riscv.vlseg4.nxv16i8.i64(i8* [[BASE:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } @llvm.riscv.vlseg4.nxv16i8.i64(<vscale x 16 x i8> undef, <vscale x 16 x i8> undef, <vscale x 16 x i8> undef, <vscale x 16 x i8> undef, i8* [[BASE:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } [[TMP0]], 0
 // CHECK-RV64-NEXT:    store <vscale x 16 x i8> [[TMP1]], <vscale x 16 x i8>* [[V0:%.*]], align 1
 // CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } [[TMP0]], 1
@@ -3825,7 +3825,7 @@ void test_vlseg4e8_v_u8m2 (vuint8m2_t *v0, vuint8m2_t *v1, vuint8m2_t *v2, vuint
 
 // CHECK-RV32-LABEL: @test_vlseg2e8_v_u8m4(
 // CHECK-RV32-NEXT:  entry:
-// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 32 x i8>, <vscale x 32 x i8> } @llvm.riscv.vlseg2.nxv32i8.i32(i8* [[BASE:%.*]], i32 [[VL:%.*]])
+// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 32 x i8>, <vscale x 32 x i8> } @llvm.riscv.vlseg2.nxv32i8.i32(<vscale x 32 x i8> undef, <vscale x 32 x i8> undef, i8* [[BASE:%.*]], i32 [[VL:%.*]])
 // CHECK-RV32-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 32 x i8>, <vscale x 32 x i8> } [[TMP0]], 0
 // CHECK-RV32-NEXT:    store <vscale x 32 x i8> [[TMP1]], <vscale x 32 x i8>* [[V0:%.*]], align 1
 // CHECK-RV32-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 32 x i8>, <vscale x 32 x i8> } [[TMP0]], 1
@@ -3834,7 +3834,7 @@ void test_vlseg4e8_v_u8m2 (vuint8m2_t *v0, vuint8m2_t *v1, vuint8m2_t *v2, vuint
 //
 // CHECK-RV64-LABEL: @test_vlseg2e8_v_u8m4(
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 32 x i8>, <vscale x 32 x i8> } @llvm.riscv.vlseg2.nxv32i8.i64(i8* [[BASE:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 32 x i8>, <vscale x 32 x i8> } @llvm.riscv.vlseg2.nxv32i8.i64(<vscale x 32 x i8> undef, <vscale x 32 x i8> undef, i8* [[BASE:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 32 x i8>, <vscale x 32 x i8> } [[TMP0]], 0
 // CHECK-RV64-NEXT:    store <vscale x 32 x i8> [[TMP1]], <vscale x 32 x i8>* [[V0:%.*]], align 1
 // CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 32 x i8>, <vscale x 32 x i8> } [[TMP0]], 1
@@ -3847,7 +3847,7 @@ void test_vlseg2e8_v_u8m4 (vuint8m4_t *v0, vuint8m4_t *v1, const uint8_t *base, 
 
 // CHECK-RV32-LABEL: @test_vlseg2e16_v_u16mf4(
 // CHECK-RV32-NEXT:  entry:
-// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 1 x i16>, <vscale x 1 x i16> } @llvm.riscv.vlseg2.nxv1i16.i32(i16* [[BASE:%.*]], i32 [[VL:%.*]])
+// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 1 x i16>, <vscale x 1 x i16> } @llvm.riscv.vlseg2.nxv1i16.i32(<vscale x 1 x i16> undef, <vscale x 1 x i16> undef, i16* [[BASE:%.*]], i32 [[VL:%.*]])
 // CHECK-RV32-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 1 x i16>, <vscale x 1 x i16> } [[TMP0]], 0
 // CHECK-RV32-NEXT:    store <vscale x 1 x i16> [[TMP1]], <vscale x 1 x i16>* [[V0:%.*]], align 2
 // CHECK-RV32-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 1 x i16>, <vscale x 1 x i16> } [[TMP0]], 1
@@ -3856,7 +3856,7 @@ void test_vlseg2e8_v_u8m4 (vuint8m4_t *v0, vuint8m4_t *v1, const uint8_t *base, 
 //
 // CHECK-RV64-LABEL: @test_vlseg2e16_v_u16mf4(
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 1 x i16>, <vscale x 1 x i16> } @llvm.riscv.vlseg2.nxv1i16.i64(i16* [[BASE:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 1 x i16>, <vscale x 1 x i16> } @llvm.riscv.vlseg2.nxv1i16.i64(<vscale x 1 x i16> undef, <vscale x 1 x i16> undef, i16* [[BASE:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 1 x i16>, <vscale x 1 x i16> } [[TMP0]], 0
 // CHECK-RV64-NEXT:    store <vscale x 1 x i16> [[TMP1]], <vscale x 1 x i16>* [[V0:%.*]], align 2
 // CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 1 x i16>, <vscale x 1 x i16> } [[TMP0]], 1
@@ -3869,7 +3869,7 @@ void test_vlseg2e16_v_u16mf4 (vuint16mf4_t *v0, vuint16mf4_t *v1, const uint16_t
 
 // CHECK-RV32-LABEL: @test_vlseg3e16_v_u16mf4(
 // CHECK-RV32-NEXT:  entry:
-// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16> } @llvm.riscv.vlseg3.nxv1i16.i32(i16* [[BASE:%.*]], i32 [[VL:%.*]])
+// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16> } @llvm.riscv.vlseg3.nxv1i16.i32(<vscale x 1 x i16> undef, <vscale x 1 x i16> undef, <vscale x 1 x i16> undef, i16* [[BASE:%.*]], i32 [[VL:%.*]])
 // CHECK-RV32-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16> } [[TMP0]], 0
 // CHECK-RV32-NEXT:    store <vscale x 1 x i16> [[TMP1]], <vscale x 1 x i16>* [[V0:%.*]], align 2
 // CHECK-RV32-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16> } [[TMP0]], 1
@@ -3880,7 +3880,7 @@ void test_vlseg2e16_v_u16mf4 (vuint16mf4_t *v0, vuint16mf4_t *v1, const uint16_t
 //
 // CHECK-RV64-LABEL: @test_vlseg3e16_v_u16mf4(
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16> } @llvm.riscv.vlseg3.nxv1i16.i64(i16* [[BASE:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16> } @llvm.riscv.vlseg3.nxv1i16.i64(<vscale x 1 x i16> undef, <vscale x 1 x i16> undef, <vscale x 1 x i16> undef, i16* [[BASE:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16> } [[TMP0]], 0
 // CHECK-RV64-NEXT:    store <vscale x 1 x i16> [[TMP1]], <vscale x 1 x i16>* [[V0:%.*]], align 2
 // CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16> } [[TMP0]], 1
@@ -3895,7 +3895,7 @@ void test_vlseg3e16_v_u16mf4 (vuint16mf4_t *v0, vuint16mf4_t *v1, vuint16mf4_t *
 
 // CHECK-RV32-LABEL: @test_vlseg4e16_v_u16mf4(
 // CHECK-RV32-NEXT:  entry:
-// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16> } @llvm.riscv.vlseg4.nxv1i16.i32(i16* [[BASE:%.*]], i32 [[VL:%.*]])
+// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16> } @llvm.riscv.vlseg4.nxv1i16.i32(<vscale x 1 x i16> undef, <vscale x 1 x i16> undef, <vscale x 1 x i16> undef, <vscale x 1 x i16> undef, i16* [[BASE:%.*]], i32 [[VL:%.*]])
 // CHECK-RV32-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16> } [[TMP0]], 0
 // CHECK-RV32-NEXT:    store <vscale x 1 x i16> [[TMP1]], <vscale x 1 x i16>* [[V0:%.*]], align 2
 // CHECK-RV32-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16> } [[TMP0]], 1
@@ -3908,7 +3908,7 @@ void test_vlseg3e16_v_u16mf4 (vuint16mf4_t *v0, vuint16mf4_t *v1, vuint16mf4_t *
 //
 // CHECK-RV64-LABEL: @test_vlseg4e16_v_u16mf4(
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16> } @llvm.riscv.vlseg4.nxv1i16.i64(i16* [[BASE:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16> } @llvm.riscv.vlseg4.nxv1i16.i64(<vscale x 1 x i16> undef, <vscale x 1 x i16> undef, <vscale x 1 x i16> undef, <vscale x 1 x i16> undef, i16* [[BASE:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16> } [[TMP0]], 0
 // CHECK-RV64-NEXT:    store <vscale x 1 x i16> [[TMP1]], <vscale x 1 x i16>* [[V0:%.*]], align 2
 // CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16> } [[TMP0]], 1
@@ -3925,7 +3925,7 @@ void test_vlseg4e16_v_u16mf4 (vuint16mf4_t *v0, vuint16mf4_t *v1, vuint16mf4_t *
 
 // CHECK-RV32-LABEL: @test_vlseg5e16_v_u16mf4(
 // CHECK-RV32-NEXT:  entry:
-// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16> } @llvm.riscv.vlseg5.nxv1i16.i32(i16* [[BASE:%.*]], i32 [[VL:%.*]])
+// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16> } @llvm.riscv.vlseg5.nxv1i16.i32(<vscale x 1 x i16> undef, <vscale x 1 x i16> undef, <vscale x 1 x i16> undef, <vscale x 1 x i16> undef, <vscale x 1 x i16> undef, i16* [[BASE:%.*]], i32 [[VL:%.*]])
 // CHECK-RV32-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16> } [[TMP0]], 0
 // CHECK-RV32-NEXT:    store <vscale x 1 x i16> [[TMP1]], <vscale x 1 x i16>* [[V0:%.*]], align 2
 // CHECK-RV32-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16> } [[TMP0]], 1
@@ -3940,7 +3940,7 @@ void test_vlseg4e16_v_u16mf4 (vuint16mf4_t *v0, vuint16mf4_t *v1, vuint16mf4_t *
 //
 // CHECK-RV64-LABEL: @test_vlseg5e16_v_u16mf4(
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16> } @llvm.riscv.vlseg5.nxv1i16.i64(i16* [[BASE:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16> } @llvm.riscv.vlseg5.nxv1i16.i64(<vscale x 1 x i16> undef, <vscale x 1 x i16> undef, <vscale x 1 x i16> undef, <vscale x 1 x i16> undef, <vscale x 1 x i16> undef, i16* [[BASE:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16> } [[TMP0]], 0
 // CHECK-RV64-NEXT:    store <vscale x 1 x i16> [[TMP1]], <vscale x 1 x i16>* [[V0:%.*]], align 2
 // CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16> } [[TMP0]], 1
@@ -3959,7 +3959,7 @@ void test_vlseg5e16_v_u16mf4 (vuint16mf4_t *v0, vuint16mf4_t *v1, vuint16mf4_t *
 
 // CHECK-RV32-LABEL: @test_vlseg6e16_v_u16mf4(
 // CHECK-RV32-NEXT:  entry:
-// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16> } @llvm.riscv.vlseg6.nxv1i16.i32(i16* [[BASE:%.*]], i32 [[VL:%.*]])
+// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16> } @llvm.riscv.vlseg6.nxv1i16.i32(<vscale x 1 x i16> undef, <vscale x 1 x i16> undef, <vscale x 1 x i16> undef, <vscale x 1 x i16> undef, <vscale x 1 x i16> undef, <vscale x 1 x i16> undef, i16* [[BASE:%.*]], i32 [[VL:%.*]])
 // CHECK-RV32-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16> } [[TMP0]], 0
 // CHECK-RV32-NEXT:    store <vscale x 1 x i16> [[TMP1]], <vscale x 1 x i16>* [[V0:%.*]], align 2
 // CHECK-RV32-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16> } [[TMP0]], 1
@@ -3976,7 +3976,7 @@ void test_vlseg5e16_v_u16mf4 (vuint16mf4_t *v0, vuint16mf4_t *v1, vuint16mf4_t *
 //
 // CHECK-RV64-LABEL: @test_vlseg6e16_v_u16mf4(
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16> } @llvm.riscv.vlseg6.nxv1i16.i64(i16* [[BASE:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16> } @llvm.riscv.vlseg6.nxv1i16.i64(<vscale x 1 x i16> undef, <vscale x 1 x i16> undef, <vscale x 1 x i16> undef, <vscale x 1 x i16> undef, <vscale x 1 x i16> undef, <vscale x 1 x i16> undef, i16* [[BASE:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16> } [[TMP0]], 0
 // CHECK-RV64-NEXT:    store <vscale x 1 x i16> [[TMP1]], <vscale x 1 x i16>* [[V0:%.*]], align 2
 // CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16> } [[TMP0]], 1
@@ -3997,7 +3997,7 @@ void test_vlseg6e16_v_u16mf4 (vuint16mf4_t *v0, vuint16mf4_t *v1, vuint16mf4_t *
 
 // CHECK-RV32-LABEL: @test_vlseg7e16_v_u16mf4(
 // CHECK-RV32-NEXT:  entry:
-// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16> } @llvm.riscv.vlseg7.nxv1i16.i32(i16* [[BASE:%.*]], i32 [[VL:%.*]])
+// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16> } @llvm.riscv.vlseg7.nxv1i16.i32(<vscale x 1 x i16> undef, <vscale x 1 x i16> undef, <vscale x 1 x i16> undef, <vscale x 1 x i16> undef, <vscale x 1 x i16> undef, <vscale x 1 x i16> undef, <vscale x 1 x i16> undef, i16* [[BASE:%.*]], i32 [[VL:%.*]])
 // CHECK-RV32-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16> } [[TMP0]], 0
 // CHECK-RV32-NEXT:    store <vscale x 1 x i16> [[TMP1]], <vscale x 1 x i16>* [[V0:%.*]], align 2
 // CHECK-RV32-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16> } [[TMP0]], 1
@@ -4016,7 +4016,7 @@ void test_vlseg6e16_v_u16mf4 (vuint16mf4_t *v0, vuint16mf4_t *v1, vuint16mf4_t *
 //
 // CHECK-RV64-LABEL: @test_vlseg7e16_v_u16mf4(
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16> } @llvm.riscv.vlseg7.nxv1i16.i64(i16* [[BASE:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16> } @llvm.riscv.vlseg7.nxv1i16.i64(<vscale x 1 x i16> undef, <vscale x 1 x i16> undef, <vscale x 1 x i16> undef, <vscale x 1 x i16> undef, <vscale x 1 x i16> undef, <vscale x 1 x i16> undef, <vscale x 1 x i16> undef, i16* [[BASE:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16> } [[TMP0]], 0
 // CHECK-RV64-NEXT:    store <vscale x 1 x i16> [[TMP1]], <vscale x 1 x i16>* [[V0:%.*]], align 2
 // CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16> } [[TMP0]], 1
@@ -4039,7 +4039,7 @@ void test_vlseg7e16_v_u16mf4 (vuint16mf4_t *v0, vuint16mf4_t *v1, vuint16mf4_t *
 
 // CHECK-RV32-LABEL: @test_vlseg8e16_v_u16mf4(
 // CHECK-RV32-NEXT:  entry:
-// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16> } @llvm.riscv.vlseg8.nxv1i16.i32(i16* [[BASE:%.*]], i32 [[VL:%.*]])
+// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16> } @llvm.riscv.vlseg8.nxv1i16.i32(<vscale x 1 x i16> undef, <vscale x 1 x i16> undef, <vscale x 1 x i16> undef, <vscale x 1 x i16> undef, <vscale x 1 x i16> undef, <vscale x 1 x i16> undef, <vscale x 1 x i16> undef, <vscale x 1 x i16> undef, i16* [[BASE:%.*]], i32 [[VL:%.*]])
 // CHECK-RV32-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16> } [[TMP0]], 0
 // CHECK-RV32-NEXT:    store <vscale x 1 x i16> [[TMP1]], <vscale x 1 x i16>* [[V0:%.*]], align 2
 // CHECK-RV32-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16> } [[TMP0]], 1
@@ -4060,7 +4060,7 @@ void test_vlseg7e16_v_u16mf4 (vuint16mf4_t *v0, vuint16mf4_t *v1, vuint16mf4_t *
 //
 // CHECK-RV64-LABEL: @test_vlseg8e16_v_u16mf4(
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16> } @llvm.riscv.vlseg8.nxv1i16.i64(i16* [[BASE:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16> } @llvm.riscv.vlseg8.nxv1i16.i64(<vscale x 1 x i16> undef, <vscale x 1 x i16> undef, <vscale x 1 x i16> undef, <vscale x 1 x i16> undef, <vscale x 1 x i16> undef, <vscale x 1 x i16> undef, <vscale x 1 x i16> undef, <vscale x 1 x i16> undef, i16* [[BASE:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16> } [[TMP0]], 0
 // CHECK-RV64-NEXT:    store <vscale x 1 x i16> [[TMP1]], <vscale x 1 x i16>* [[V0:%.*]], align 2
 // CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16> } [[TMP0]], 1
@@ -4085,7 +4085,7 @@ void test_vlseg8e16_v_u16mf4 (vuint16mf4_t *v0, vuint16mf4_t *v1, vuint16mf4_t *
 
 // CHECK-RV32-LABEL: @test_vlseg2e16_v_u16mf2(
 // CHECK-RV32-NEXT:  entry:
-// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 2 x i16>, <vscale x 2 x i16> } @llvm.riscv.vlseg2.nxv2i16.i32(i16* [[BASE:%.*]], i32 [[VL:%.*]])
+// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 2 x i16>, <vscale x 2 x i16> } @llvm.riscv.vlseg2.nxv2i16.i32(<vscale x 2 x i16> undef, <vscale x 2 x i16> undef, i16* [[BASE:%.*]], i32 [[VL:%.*]])
 // CHECK-RV32-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 2 x i16>, <vscale x 2 x i16> } [[TMP0]], 0
 // CHECK-RV32-NEXT:    store <vscale x 2 x i16> [[TMP1]], <vscale x 2 x i16>* [[V0:%.*]], align 2
 // CHECK-RV32-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 2 x i16>, <vscale x 2 x i16> } [[TMP0]], 1
@@ -4094,7 +4094,7 @@ void test_vlseg8e16_v_u16mf4 (vuint16mf4_t *v0, vuint16mf4_t *v1, vuint16mf4_t *
 //
 // CHECK-RV64-LABEL: @test_vlseg2e16_v_u16mf2(
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 2 x i16>, <vscale x 2 x i16> } @llvm.riscv.vlseg2.nxv2i16.i64(i16* [[BASE:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 2 x i16>, <vscale x 2 x i16> } @llvm.riscv.vlseg2.nxv2i16.i64(<vscale x 2 x i16> undef, <vscale x 2 x i16> undef, i16* [[BASE:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 2 x i16>, <vscale x 2 x i16> } [[TMP0]], 0
 // CHECK-RV64-NEXT:    store <vscale x 2 x i16> [[TMP1]], <vscale x 2 x i16>* [[V0:%.*]], align 2
 // CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 2 x i16>, <vscale x 2 x i16> } [[TMP0]], 1
@@ -4107,7 +4107,7 @@ void test_vlseg2e16_v_u16mf2 (vuint16mf2_t *v0, vuint16mf2_t *v1, const uint16_t
 
 // CHECK-RV32-LABEL: @test_vlseg3e16_v_u16mf2(
 // CHECK-RV32-NEXT:  entry:
-// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16> } @llvm.riscv.vlseg3.nxv2i16.i32(i16* [[BASE:%.*]], i32 [[VL:%.*]])
+// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16> } @llvm.riscv.vlseg3.nxv2i16.i32(<vscale x 2 x i16> undef, <vscale x 2 x i16> undef, <vscale x 2 x i16> undef, i16* [[BASE:%.*]], i32 [[VL:%.*]])
 // CHECK-RV32-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16> } [[TMP0]], 0
 // CHECK-RV32-NEXT:    store <vscale x 2 x i16> [[TMP1]], <vscale x 2 x i16>* [[V0:%.*]], align 2
 // CHECK-RV32-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16> } [[TMP0]], 1
@@ -4118,7 +4118,7 @@ void test_vlseg2e16_v_u16mf2 (vuint16mf2_t *v0, vuint16mf2_t *v1, const uint16_t
 //
 // CHECK-RV64-LABEL: @test_vlseg3e16_v_u16mf2(
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16> } @llvm.riscv.vlseg3.nxv2i16.i64(i16* [[BASE:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16> } @llvm.riscv.vlseg3.nxv2i16.i64(<vscale x 2 x i16> undef, <vscale x 2 x i16> undef, <vscale x 2 x i16> undef, i16* [[BASE:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16> } [[TMP0]], 0
 // CHECK-RV64-NEXT:    store <vscale x 2 x i16> [[TMP1]], <vscale x 2 x i16>* [[V0:%.*]], align 2
 // CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16> } [[TMP0]], 1
@@ -4133,7 +4133,7 @@ void test_vlseg3e16_v_u16mf2 (vuint16mf2_t *v0, vuint16mf2_t *v1, vuint16mf2_t *
 
 // CHECK-RV32-LABEL: @test_vlseg4e16_v_u16mf2(
 // CHECK-RV32-NEXT:  entry:
-// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16> } @llvm.riscv.vlseg4.nxv2i16.i32(i16* [[BASE:%.*]], i32 [[VL:%.*]])
+// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16> } @llvm.riscv.vlseg4.nxv2i16.i32(<vscale x 2 x i16> undef, <vscale x 2 x i16> undef, <vscale x 2 x i16> undef, <vscale x 2 x i16> undef, i16* [[BASE:%.*]], i32 [[VL:%.*]])
 // CHECK-RV32-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16> } [[TMP0]], 0
 // CHECK-RV32-NEXT:    store <vscale x 2 x i16> [[TMP1]], <vscale x 2 x i16>* [[V0:%.*]], align 2
 // CHECK-RV32-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16> } [[TMP0]], 1
@@ -4146,7 +4146,7 @@ void test_vlseg3e16_v_u16mf2 (vuint16mf2_t *v0, vuint16mf2_t *v1, vuint16mf2_t *
 //
 // CHECK-RV64-LABEL: @test_vlseg4e16_v_u16mf2(
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16> } @llvm.riscv.vlseg4.nxv2i16.i64(i16* [[BASE:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16> } @llvm.riscv.vlseg4.nxv2i16.i64(<vscale x 2 x i16> undef, <vscale x 2 x i16> undef, <vscale x 2 x i16> undef, <vscale x 2 x i16> undef, i16* [[BASE:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16> } [[TMP0]], 0
 // CHECK-RV64-NEXT:    store <vscale x 2 x i16> [[TMP1]], <vscale x 2 x i16>* [[V0:%.*]], align 2
 // CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16> } [[TMP0]], 1
@@ -4163,7 +4163,7 @@ void test_vlseg4e16_v_u16mf2 (vuint16mf2_t *v0, vuint16mf2_t *v1, vuint16mf2_t *
 
 // CHECK-RV32-LABEL: @test_vlseg5e16_v_u16mf2(
 // CHECK-RV32-NEXT:  entry:
-// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16> } @llvm.riscv.vlseg5.nxv2i16.i32(i16* [[BASE:%.*]], i32 [[VL:%.*]])
+// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16> } @llvm.riscv.vlseg5.nxv2i16.i32(<vscale x 2 x i16> undef, <vscale x 2 x i16> undef, <vscale x 2 x i16> undef, <vscale x 2 x i16> undef, <vscale x 2 x i16> undef, i16* [[BASE:%.*]], i32 [[VL:%.*]])
 // CHECK-RV32-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16> } [[TMP0]], 0
 // CHECK-RV32-NEXT:    store <vscale x 2 x i16> [[TMP1]], <vscale x 2 x i16>* [[V0:%.*]], align 2
 // CHECK-RV32-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16> } [[TMP0]], 1
@@ -4178,7 +4178,7 @@ void test_vlseg4e16_v_u16mf2 (vuint16mf2_t *v0, vuint16mf2_t *v1, vuint16mf2_t *
 //
 // CHECK-RV64-LABEL: @test_vlseg5e16_v_u16mf2(
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16> } @llvm.riscv.vlseg5.nxv2i16.i64(i16* [[BASE:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16> } @llvm.riscv.vlseg5.nxv2i16.i64(<vscale x 2 x i16> undef, <vscale x 2 x i16> undef, <vscale x 2 x i16> undef, <vscale x 2 x i16> undef, <vscale x 2 x i16> undef, i16* [[BASE:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16> } [[TMP0]], 0
 // CHECK-RV64-NEXT:    store <vscale x 2 x i16> [[TMP1]], <vscale x 2 x i16>* [[V0:%.*]], align 2
 // CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16> } [[TMP0]], 1
@@ -4197,7 +4197,7 @@ void test_vlseg5e16_v_u16mf2 (vuint16mf2_t *v0, vuint16mf2_t *v1, vuint16mf2_t *
 
 // CHECK-RV32-LABEL: @test_vlseg6e16_v_u16mf2(
 // CHECK-RV32-NEXT:  entry:
-// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16> } @llvm.riscv.vlseg6.nxv2i16.i32(i16* [[BASE:%.*]], i32 [[VL:%.*]])
+// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16> } @llvm.riscv.vlseg6.nxv2i16.i32(<vscale x 2 x i16> undef, <vscale x 2 x i16> undef, <vscale x 2 x i16> undef, <vscale x 2 x i16> undef, <vscale x 2 x i16> undef, <vscale x 2 x i16> undef, i16* [[BASE:%.*]], i32 [[VL:%.*]])
 // CHECK-RV32-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16> } [[TMP0]], 0
 // CHECK-RV32-NEXT:    store <vscale x 2 x i16> [[TMP1]], <vscale x 2 x i16>* [[V0:%.*]], align 2
 // CHECK-RV32-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16> } [[TMP0]], 1
@@ -4214,7 +4214,7 @@ void test_vlseg5e16_v_u16mf2 (vuint16mf2_t *v0, vuint16mf2_t *v1, vuint16mf2_t *
 //
 // CHECK-RV64-LABEL: @test_vlseg6e16_v_u16mf2(
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16> } @llvm.riscv.vlseg6.nxv2i16.i64(i16* [[BASE:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16> } @llvm.riscv.vlseg6.nxv2i16.i64(<vscale x 2 x i16> undef, <vscale x 2 x i16> undef, <vscale x 2 x i16> undef, <vscale x 2 x i16> undef, <vscale x 2 x i16> undef, <vscale x 2 x i16> undef, i16* [[BASE:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16> } [[TMP0]], 0
 // CHECK-RV64-NEXT:    store <vscale x 2 x i16> [[TMP1]], <vscale x 2 x i16>* [[V0:%.*]], align 2
 // CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16> } [[TMP0]], 1
@@ -4235,7 +4235,7 @@ void test_vlseg6e16_v_u16mf2 (vuint16mf2_t *v0, vuint16mf2_t *v1, vuint16mf2_t *
 
 // CHECK-RV32-LABEL: @test_vlseg7e16_v_u16mf2(
 // CHECK-RV32-NEXT:  entry:
-// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16> } @llvm.riscv.vlseg7.nxv2i16.i32(i16* [[BASE:%.*]], i32 [[VL:%.*]])
+// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16> } @llvm.riscv.vlseg7.nxv2i16.i32(<vscale x 2 x i16> undef, <vscale x 2 x i16> undef, <vscale x 2 x i16> undef, <vscale x 2 x i16> undef, <vscale x 2 x i16> undef, <vscale x 2 x i16> undef, <vscale x 2 x i16> undef, i16* [[BASE:%.*]], i32 [[VL:%.*]])
 // CHECK-RV32-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16> } [[TMP0]], 0
 // CHECK-RV32-NEXT:    store <vscale x 2 x i16> [[TMP1]], <vscale x 2 x i16>* [[V0:%.*]], align 2
 // CHECK-RV32-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16> } [[TMP0]], 1
@@ -4254,7 +4254,7 @@ void test_vlseg6e16_v_u16mf2 (vuint16mf2_t *v0, vuint16mf2_t *v1, vuint16mf2_t *
 //
 // CHECK-RV64-LABEL: @test_vlseg7e16_v_u16mf2(
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16> } @llvm.riscv.vlseg7.nxv2i16.i64(i16* [[BASE:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16> } @llvm.riscv.vlseg7.nxv2i16.i64(<vscale x 2 x i16> undef, <vscale x 2 x i16> undef, <vscale x 2 x i16> undef, <vscale x 2 x i16> undef, <vscale x 2 x i16> undef, <vscale x 2 x i16> undef, <vscale x 2 x i16> undef, i16* [[BASE:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16> } [[TMP0]], 0
 // CHECK-RV64-NEXT:    store <vscale x 2 x i16> [[TMP1]], <vscale x 2 x i16>* [[V0:%.*]], align 2
 // CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16> } [[TMP0]], 1
@@ -4277,7 +4277,7 @@ void test_vlseg7e16_v_u16mf2 (vuint16mf2_t *v0, vuint16mf2_t *v1, vuint16mf2_t *
 
 // CHECK-RV32-LABEL: @test_vlseg8e16_v_u16mf2(
 // CHECK-RV32-NEXT:  entry:
-// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16> } @llvm.riscv.vlseg8.nxv2i16.i32(i16* [[BASE:%.*]], i32 [[VL:%.*]])
+// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16> } @llvm.riscv.vlseg8.nxv2i16.i32(<vscale x 2 x i16> undef, <vscale x 2 x i16> undef, <vscale x 2 x i16> undef, <vscale x 2 x i16> undef, <vscale x 2 x i16> undef, <vscale x 2 x i16> undef, <vscale x 2 x i16> undef, <vscale x 2 x i16> undef, i16* [[BASE:%.*]], i32 [[VL:%.*]])
 // CHECK-RV32-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16> } [[TMP0]], 0
 // CHECK-RV32-NEXT:    store <vscale x 2 x i16> [[TMP1]], <vscale x 2 x i16>* [[V0:%.*]], align 2
 // CHECK-RV32-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16> } [[TMP0]], 1
@@ -4298,7 +4298,7 @@ void test_vlseg7e16_v_u16mf2 (vuint16mf2_t *v0, vuint16mf2_t *v1, vuint16mf2_t *
 //
 // CHECK-RV64-LABEL: @test_vlseg8e16_v_u16mf2(
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16> } @llvm.riscv.vlseg8.nxv2i16.i64(i16* [[BASE:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16> } @llvm.riscv.vlseg8.nxv2i16.i64(<vscale x 2 x i16> undef, <vscale x 2 x i16> undef, <vscale x 2 x i16> undef, <vscale x 2 x i16> undef, <vscale x 2 x i16> undef, <vscale x 2 x i16> undef, <vscale x 2 x i16> undef, <vscale x 2 x i16> undef, i16* [[BASE:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16> } [[TMP0]], 0
 // CHECK-RV64-NEXT:    store <vscale x 2 x i16> [[TMP1]], <vscale x 2 x i16>* [[V0:%.*]], align 2
 // CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16> } [[TMP0]], 1
@@ -4323,7 +4323,7 @@ void test_vlseg8e16_v_u16mf2 (vuint16mf2_t *v0, vuint16mf2_t *v1, vuint16mf2_t *
 
 // CHECK-RV32-LABEL: @test_vlseg2e16_v_u16m1(
 // CHECK-RV32-NEXT:  entry:
-// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 4 x i16>, <vscale x 4 x i16> } @llvm.riscv.vlseg2.nxv4i16.i32(i16* [[BASE:%.*]], i32 [[VL:%.*]])
+// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 4 x i16>, <vscale x 4 x i16> } @llvm.riscv.vlseg2.nxv4i16.i32(<vscale x 4 x i16> undef, <vscale x 4 x i16> undef, i16* [[BASE:%.*]], i32 [[VL:%.*]])
 // CHECK-RV32-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 4 x i16>, <vscale x 4 x i16> } [[TMP0]], 0
 // CHECK-RV32-NEXT:    store <vscale x 4 x i16> [[TMP1]], <vscale x 4 x i16>* [[V0:%.*]], align 2
 // CHECK-RV32-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 4 x i16>, <vscale x 4 x i16> } [[TMP0]], 1
@@ -4332,7 +4332,7 @@ void test_vlseg8e16_v_u16mf2 (vuint16mf2_t *v0, vuint16mf2_t *v1, vuint16mf2_t *
 //
 // CHECK-RV64-LABEL: @test_vlseg2e16_v_u16m1(
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 4 x i16>, <vscale x 4 x i16> } @llvm.riscv.vlseg2.nxv4i16.i64(i16* [[BASE:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 4 x i16>, <vscale x 4 x i16> } @llvm.riscv.vlseg2.nxv4i16.i64(<vscale x 4 x i16> undef, <vscale x 4 x i16> undef, i16* [[BASE:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 4 x i16>, <vscale x 4 x i16> } [[TMP0]], 0
 // CHECK-RV64-NEXT:    store <vscale x 4 x i16> [[TMP1]], <vscale x 4 x i16>* [[V0:%.*]], align 2
 // CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 4 x i16>, <vscale x 4 x i16> } [[TMP0]], 1
@@ -4345,7 +4345,7 @@ void test_vlseg2e16_v_u16m1 (vuint16m1_t *v0, vuint16m1_t *v1, const uint16_t *b
 
 // CHECK-RV32-LABEL: @test_vlseg3e16_v_u16m1(
 // CHECK-RV32-NEXT:  entry:
-// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16> } @llvm.riscv.vlseg3.nxv4i16.i32(i16* [[BASE:%.*]], i32 [[VL:%.*]])
+// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16> } @llvm.riscv.vlseg3.nxv4i16.i32(<vscale x 4 x i16> undef, <vscale x 4 x i16> undef, <vscale x 4 x i16> undef, i16* [[BASE:%.*]], i32 [[VL:%.*]])
 // CHECK-RV32-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16> } [[TMP0]], 0
 // CHECK-RV32-NEXT:    store <vscale x 4 x i16> [[TMP1]], <vscale x 4 x i16>* [[V0:%.*]], align 2
 // CHECK-RV32-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16> } [[TMP0]], 1
@@ -4356,7 +4356,7 @@ void test_vlseg2e16_v_u16m1 (vuint16m1_t *v0, vuint16m1_t *v1, const uint16_t *b
 //
 // CHECK-RV64-LABEL: @test_vlseg3e16_v_u16m1(
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16> } @llvm.riscv.vlseg3.nxv4i16.i64(i16* [[BASE:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16> } @llvm.riscv.vlseg3.nxv4i16.i64(<vscale x 4 x i16> undef, <vscale x 4 x i16> undef, <vscale x 4 x i16> undef, i16* [[BASE:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16> } [[TMP0]], 0
 // CHECK-RV64-NEXT:    store <vscale x 4 x i16> [[TMP1]], <vscale x 4 x i16>* [[V0:%.*]], align 2
 // CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16> } [[TMP0]], 1
@@ -4371,7 +4371,7 @@ void test_vlseg3e16_v_u16m1 (vuint16m1_t *v0, vuint16m1_t *v1, vuint16m1_t *v2, 
 
 // CHECK-RV32-LABEL: @test_vlseg4e16_v_u16m1(
 // CHECK-RV32-NEXT:  entry:
-// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16> } @llvm.riscv.vlseg4.nxv4i16.i32(i16* [[BASE:%.*]], i32 [[VL:%.*]])
+// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16> } @llvm.riscv.vlseg4.nxv4i16.i32(<vscale x 4 x i16> undef, <vscale x 4 x i16> undef, <vscale x 4 x i16> undef, <vscale x 4 x i16> undef, i16* [[BASE:%.*]], i32 [[VL:%.*]])
 // CHECK-RV32-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16> } [[TMP0]], 0
 // CHECK-RV32-NEXT:    store <vscale x 4 x i16> [[TMP1]], <vscale x 4 x i16>* [[V0:%.*]], align 2
 // CHECK-RV32-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16> } [[TMP0]], 1
@@ -4384,7 +4384,7 @@ void test_vlseg3e16_v_u16m1 (vuint16m1_t *v0, vuint16m1_t *v1, vuint16m1_t *v2, 
 //
 // CHECK-RV64-LABEL: @test_vlseg4e16_v_u16m1(
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16> } @llvm.riscv.vlseg4.nxv4i16.i64(i16* [[BASE:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16> } @llvm.riscv.vlseg4.nxv4i16.i64(<vscale x 4 x i16> undef, <vscale x 4 x i16> undef, <vscale x 4 x i16> undef, <vscale x 4 x i16> undef, i16* [[BASE:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16> } [[TMP0]], 0
 // CHECK-RV64-NEXT:    store <vscale x 4 x i16> [[TMP1]], <vscale x 4 x i16>* [[V0:%.*]], align 2
 // CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16> } [[TMP0]], 1
@@ -4401,7 +4401,7 @@ void test_vlseg4e16_v_u16m1 (vuint16m1_t *v0, vuint16m1_t *v1, vuint16m1_t *v2, 
 
 // CHECK-RV32-LABEL: @test_vlseg5e16_v_u16m1(
 // CHECK-RV32-NEXT:  entry:
-// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16> } @llvm.riscv.vlseg5.nxv4i16.i32(i16* [[BASE:%.*]], i32 [[VL:%.*]])
+// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16> } @llvm.riscv.vlseg5.nxv4i16.i32(<vscale x 4 x i16> undef, <vscale x 4 x i16> undef, <vscale x 4 x i16> undef, <vscale x 4 x i16> undef, <vscale x 4 x i16> undef, i16* [[BASE:%.*]], i32 [[VL:%.*]])
 // CHECK-RV32-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16> } [[TMP0]], 0
 // CHECK-RV32-NEXT:    store <vscale x 4 x i16> [[TMP1]], <vscale x 4 x i16>* [[V0:%.*]], align 2
 // CHECK-RV32-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16> } [[TMP0]], 1
@@ -4416,7 +4416,7 @@ void test_vlseg4e16_v_u16m1 (vuint16m1_t *v0, vuint16m1_t *v1, vuint16m1_t *v2, 
 //
 // CHECK-RV64-LABEL: @test_vlseg5e16_v_u16m1(
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16> } @llvm.riscv.vlseg5.nxv4i16.i64(i16* [[BASE:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16> } @llvm.riscv.vlseg5.nxv4i16.i64(<vscale x 4 x i16> undef, <vscale x 4 x i16> undef, <vscale x 4 x i16> undef, <vscale x 4 x i16> undef, <vscale x 4 x i16> undef, i16* [[BASE:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16> } [[TMP0]], 0
 // CHECK-RV64-NEXT:    store <vscale x 4 x i16> [[TMP1]], <vscale x 4 x i16>* [[V0:%.*]], align 2
 // CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16> } [[TMP0]], 1
@@ -4435,7 +4435,7 @@ void test_vlseg5e16_v_u16m1 (vuint16m1_t *v0, vuint16m1_t *v1, vuint16m1_t *v2, 
 
 // CHECK-RV32-LABEL: @test_vlseg6e16_v_u16m1(
 // CHECK-RV32-NEXT:  entry:
-// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16> } @llvm.riscv.vlseg6.nxv4i16.i32(i16* [[BASE:%.*]], i32 [[VL:%.*]])
+// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16> } @llvm.riscv.vlseg6.nxv4i16.i32(<vscale x 4 x i16> undef, <vscale x 4 x i16> undef, <vscale x 4 x i16> undef, <vscale x 4 x i16> undef, <vscale x 4 x i16> undef, <vscale x 4 x i16> undef, i16* [[BASE:%.*]], i32 [[VL:%.*]])
 // CHECK-RV32-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16> } [[TMP0]], 0
 // CHECK-RV32-NEXT:    store <vscale x 4 x i16> [[TMP1]], <vscale x 4 x i16>* [[V0:%.*]], align 2
 // CHECK-RV32-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16> } [[TMP0]], 1
@@ -4452,7 +4452,7 @@ void test_vlseg5e16_v_u16m1 (vuint16m1_t *v0, vuint16m1_t *v1, vuint16m1_t *v2, 
 //
 // CHECK-RV64-LABEL: @test_vlseg6e16_v_u16m1(
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16> } @llvm.riscv.vlseg6.nxv4i16.i64(i16* [[BASE:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16> } @llvm.riscv.vlseg6.nxv4i16.i64(<vscale x 4 x i16> undef, <vscale x 4 x i16> undef, <vscale x 4 x i16> undef, <vscale x 4 x i16> undef, <vscale x 4 x i16> undef, <vscale x 4 x i16> undef, i16* [[BASE:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16> } [[TMP0]], 0
 // CHECK-RV64-NEXT:    store <vscale x 4 x i16> [[TMP1]], <vscale x 4 x i16>* [[V0:%.*]], align 2
 // CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16> } [[TMP0]], 1
@@ -4473,7 +4473,7 @@ void test_vlseg6e16_v_u16m1 (vuint16m1_t *v0, vuint16m1_t *v1, vuint16m1_t *v2, 
 
 // CHECK-RV32-LABEL: @test_vlseg7e16_v_u16m1(
 // CHECK-RV32-NEXT:  entry:
-// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16> } @llvm.riscv.vlseg7.nxv4i16.i32(i16* [[BASE:%.*]], i32 [[VL:%.*]])
+// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16> } @llvm.riscv.vlseg7.nxv4i16.i32(<vscale x 4 x i16> undef, <vscale x 4 x i16> undef, <vscale x 4 x i16> undef, <vscale x 4 x i16> undef, <vscale x 4 x i16> undef, <vscale x 4 x i16> undef, <vscale x 4 x i16> undef, i16* [[BASE:%.*]], i32 [[VL:%.*]])
 // CHECK-RV32-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16> } [[TMP0]], 0
 // CHECK-RV32-NEXT:    store <vscale x 4 x i16> [[TMP1]], <vscale x 4 x i16>* [[V0:%.*]], align 2
 // CHECK-RV32-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16> } [[TMP0]], 1
@@ -4492,7 +4492,7 @@ void test_vlseg6e16_v_u16m1 (vuint16m1_t *v0, vuint16m1_t *v1, vuint16m1_t *v2, 
 //
 // CHECK-RV64-LABEL: @test_vlseg7e16_v_u16m1(
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16> } @llvm.riscv.vlseg7.nxv4i16.i64(i16* [[BASE:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16> } @llvm.riscv.vlseg7.nxv4i16.i64(<vscale x 4 x i16> undef, <vscale x 4 x i16> undef, <vscale x 4 x i16> undef, <vscale x 4 x i16> undef, <vscale x 4 x i16> undef, <vscale x 4 x i16> undef, <vscale x 4 x i16> undef, i16* [[BASE:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16> } [[TMP0]], 0
 // CHECK-RV64-NEXT:    store <vscale x 4 x i16> [[TMP1]], <vscale x 4 x i16>* [[V0:%.*]], align 2
 // CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16> } [[TMP0]], 1
@@ -4515,7 +4515,7 @@ void test_vlseg7e16_v_u16m1 (vuint16m1_t *v0, vuint16m1_t *v1, vuint16m1_t *v2, 
 
 // CHECK-RV32-LABEL: @test_vlseg8e16_v_u16m1(
 // CHECK-RV32-NEXT:  entry:
-// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16> } @llvm.riscv.vlseg8.nxv4i16.i32(i16* [[BASE:%.*]], i32 [[VL:%.*]])
+// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16> } @llvm.riscv.vlseg8.nxv4i16.i32(<vscale x 4 x i16> undef, <vscale x 4 x i16> undef, <vscale x 4 x i16> undef, <vscale x 4 x i16> undef, <vscale x 4 x i16> undef, <vscale x 4 x i16> undef, <vscale x 4 x i16> undef, <vscale x 4 x i16> undef, i16* [[BASE:%.*]], i32 [[VL:%.*]])
 // CHECK-RV32-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16> } [[TMP0]], 0
 // CHECK-RV32-NEXT:    store <vscale x 4 x i16> [[TMP1]], <vscale x 4 x i16>* [[V0:%.*]], align 2
 // CHECK-RV32-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16> } [[TMP0]], 1
@@ -4536,7 +4536,7 @@ void test_vlseg7e16_v_u16m1 (vuint16m1_t *v0, vuint16m1_t *v1, vuint16m1_t *v2, 
 //
 // CHECK-RV64-LABEL: @test_vlseg8e16_v_u16m1(
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16> } @llvm.riscv.vlseg8.nxv4i16.i64(i16* [[BASE:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16> } @llvm.riscv.vlseg8.nxv4i16.i64(<vscale x 4 x i16> undef, <vscale x 4 x i16> undef, <vscale x 4 x i16> undef, <vscale x 4 x i16> undef, <vscale x 4 x i16> undef, <vscale x 4 x i16> undef, <vscale x 4 x i16> undef, <vscale x 4 x i16> undef, i16* [[BASE:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16> } [[TMP0]], 0
 // CHECK-RV64-NEXT:    store <vscale x 4 x i16> [[TMP1]], <vscale x 4 x i16>* [[V0:%.*]], align 2
 // CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16> } [[TMP0]], 1
@@ -4561,7 +4561,7 @@ void test_vlseg8e16_v_u16m1 (vuint16m1_t *v0, vuint16m1_t *v1, vuint16m1_t *v2, 
 
 // CHECK-RV32-LABEL: @test_vlseg2e16_v_u16m2(
 // CHECK-RV32-NEXT:  entry:
-// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 8 x i16>, <vscale x 8 x i16> } @llvm.riscv.vlseg2.nxv8i16.i32(i16* [[BASE:%.*]], i32 [[VL:%.*]])
+// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 8 x i16>, <vscale x 8 x i16> } @llvm.riscv.vlseg2.nxv8i16.i32(<vscale x 8 x i16> undef, <vscale x 8 x i16> undef, i16* [[BASE:%.*]], i32 [[VL:%.*]])
 // CHECK-RV32-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 8 x i16>, <vscale x 8 x i16> } [[TMP0]], 0
 // CHECK-RV32-NEXT:    store <vscale x 8 x i16> [[TMP1]], <vscale x 8 x i16>* [[V0:%.*]], align 2
 // CHECK-RV32-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 8 x i16>, <vscale x 8 x i16> } [[TMP0]], 1
@@ -4570,7 +4570,7 @@ void test_vlseg8e16_v_u16m1 (vuint16m1_t *v0, vuint16m1_t *v1, vuint16m1_t *v2, 
 //
 // CHECK-RV64-LABEL: @test_vlseg2e16_v_u16m2(
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 8 x i16>, <vscale x 8 x i16> } @llvm.riscv.vlseg2.nxv8i16.i64(i16* [[BASE:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 8 x i16>, <vscale x 8 x i16> } @llvm.riscv.vlseg2.nxv8i16.i64(<vscale x 8 x i16> undef, <vscale x 8 x i16> undef, i16* [[BASE:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 8 x i16>, <vscale x 8 x i16> } [[TMP0]], 0
 // CHECK-RV64-NEXT:    store <vscale x 8 x i16> [[TMP1]], <vscale x 8 x i16>* [[V0:%.*]], align 2
 // CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 8 x i16>, <vscale x 8 x i16> } [[TMP0]], 1
@@ -4583,7 +4583,7 @@ void test_vlseg2e16_v_u16m2 (vuint16m2_t *v0, vuint16m2_t *v1, const uint16_t *b
 
 // CHECK-RV32-LABEL: @test_vlseg3e16_v_u16m2(
 // CHECK-RV32-NEXT:  entry:
-// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> } @llvm.riscv.vlseg3.nxv8i16.i32(i16* [[BASE:%.*]], i32 [[VL:%.*]])
+// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> } @llvm.riscv.vlseg3.nxv8i16.i32(<vscale x 8 x i16> undef, <vscale x 8 x i16> undef, <vscale x 8 x i16> undef, i16* [[BASE:%.*]], i32 [[VL:%.*]])
 // CHECK-RV32-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> } [[TMP0]], 0
 // CHECK-RV32-NEXT:    store <vscale x 8 x i16> [[TMP1]], <vscale x 8 x i16>* [[V0:%.*]], align 2
 // CHECK-RV32-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> } [[TMP0]], 1
@@ -4594,7 +4594,7 @@ void test_vlseg2e16_v_u16m2 (vuint16m2_t *v0, vuint16m2_t *v1, const uint16_t *b
 //
 // CHECK-RV64-LABEL: @test_vlseg3e16_v_u16m2(
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> } @llvm.riscv.vlseg3.nxv8i16.i64(i16* [[BASE:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> } @llvm.riscv.vlseg3.nxv8i16.i64(<vscale x 8 x i16> undef, <vscale x 8 x i16> undef, <vscale x 8 x i16> undef, i16* [[BASE:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> } [[TMP0]], 0
 // CHECK-RV64-NEXT:    store <vscale x 8 x i16> [[TMP1]], <vscale x 8 x i16>* [[V0:%.*]], align 2
 // CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> } [[TMP0]], 1
@@ -4609,7 +4609,7 @@ void test_vlseg3e16_v_u16m2 (vuint16m2_t *v0, vuint16m2_t *v1, vuint16m2_t *v2, 
 
 // CHECK-RV32-LABEL: @test_vlseg4e16_v_u16m2(
 // CHECK-RV32-NEXT:  entry:
-// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> } @llvm.riscv.vlseg4.nxv8i16.i32(i16* [[BASE:%.*]], i32 [[VL:%.*]])
+// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> } @llvm.riscv.vlseg4.nxv8i16.i32(<vscale x 8 x i16> undef, <vscale x 8 x i16> undef, <vscale x 8 x i16> undef, <vscale x 8 x i16> undef, i16* [[BASE:%.*]], i32 [[VL:%.*]])
 // CHECK-RV32-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> } [[TMP0]], 0
 // CHECK-RV32-NEXT:    store <vscale x 8 x i16> [[TMP1]], <vscale x 8 x i16>* [[V0:%.*]], align 2
 // CHECK-RV32-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> } [[TMP0]], 1
@@ -4622,7 +4622,7 @@ void test_vlseg3e16_v_u16m2 (vuint16m2_t *v0, vuint16m2_t *v1, vuint16m2_t *v2, 
 //
 // CHECK-RV64-LABEL: @test_vlseg4e16_v_u16m2(
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> } @llvm.riscv.vlseg4.nxv8i16.i64(i16* [[BASE:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> } @llvm.riscv.vlseg4.nxv8i16.i64(<vscale x 8 x i16> undef, <vscale x 8 x i16> undef, <vscale x 8 x i16> undef, <vscale x 8 x i16> undef, i16* [[BASE:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> } [[TMP0]], 0
 // CHECK-RV64-NEXT:    store <vscale x 8 x i16> [[TMP1]], <vscale x 8 x i16>* [[V0:%.*]], align 2
 // CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> } [[TMP0]], 1
@@ -4639,7 +4639,7 @@ void test_vlseg4e16_v_u16m2 (vuint16m2_t *v0, vuint16m2_t *v1, vuint16m2_t *v2, 
 
 // CHECK-RV32-LABEL: @test_vlseg2e16_v_u16m4(
 // CHECK-RV32-NEXT:  entry:
-// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 16 x i16>, <vscale x 16 x i16> } @llvm.riscv.vlseg2.nxv16i16.i32(i16* [[BASE:%.*]], i32 [[VL:%.*]])
+// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 16 x i16>, <vscale x 16 x i16> } @llvm.riscv.vlseg2.nxv16i16.i32(<vscale x 16 x i16> undef, <vscale x 16 x i16> undef, i16* [[BASE:%.*]], i32 [[VL:%.*]])
 // CHECK-RV32-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 16 x i16>, <vscale x 16 x i16> } [[TMP0]], 0
 // CHECK-RV32-NEXT:    store <vscale x 16 x i16> [[TMP1]], <vscale x 16 x i16>* [[V0:%.*]], align 2
 // CHECK-RV32-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 16 x i16>, <vscale x 16 x i16> } [[TMP0]], 1
@@ -4648,7 +4648,7 @@ void test_vlseg4e16_v_u16m2 (vuint16m2_t *v0, vuint16m2_t *v1, vuint16m2_t *v2, 
 //
 // CHECK-RV64-LABEL: @test_vlseg2e16_v_u16m4(
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 16 x i16>, <vscale x 16 x i16> } @llvm.riscv.vlseg2.nxv16i16.i64(i16* [[BASE:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 16 x i16>, <vscale x 16 x i16> } @llvm.riscv.vlseg2.nxv16i16.i64(<vscale x 16 x i16> undef, <vscale x 16 x i16> undef, i16* [[BASE:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 16 x i16>, <vscale x 16 x i16> } [[TMP0]], 0
 // CHECK-RV64-NEXT:    store <vscale x 16 x i16> [[TMP1]], <vscale x 16 x i16>* [[V0:%.*]], align 2
 // CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 16 x i16>, <vscale x 16 x i16> } [[TMP0]], 1
@@ -4661,7 +4661,7 @@ void test_vlseg2e16_v_u16m4 (vuint16m4_t *v0, vuint16m4_t *v1, const uint16_t *b
 
 // CHECK-RV32-LABEL: @test_vlseg2e32_v_u32mf2(
 // CHECK-RV32-NEXT:  entry:
-// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 1 x i32>, <vscale x 1 x i32> } @llvm.riscv.vlseg2.nxv1i32.i32(i32* [[BASE:%.*]], i32 [[VL:%.*]])
+// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 1 x i32>, <vscale x 1 x i32> } @llvm.riscv.vlseg2.nxv1i32.i32(<vscale x 1 x i32> undef, <vscale x 1 x i32> undef, i32* [[BASE:%.*]], i32 [[VL:%.*]])
 // CHECK-RV32-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 1 x i32>, <vscale x 1 x i32> } [[TMP0]], 0
 // CHECK-RV32-NEXT:    store <vscale x 1 x i32> [[TMP1]], <vscale x 1 x i32>* [[V0:%.*]], align 4
 // CHECK-RV32-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 1 x i32>, <vscale x 1 x i32> } [[TMP0]], 1
@@ -4670,7 +4670,7 @@ void test_vlseg2e16_v_u16m4 (vuint16m4_t *v0, vuint16m4_t *v1, const uint16_t *b
 //
 // CHECK-RV64-LABEL: @test_vlseg2e32_v_u32mf2(
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 1 x i32>, <vscale x 1 x i32> } @llvm.riscv.vlseg2.nxv1i32.i64(i32* [[BASE:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 1 x i32>, <vscale x 1 x i32> } @llvm.riscv.vlseg2.nxv1i32.i64(<vscale x 1 x i32> undef, <vscale x 1 x i32> undef, i32* [[BASE:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 1 x i32>, <vscale x 1 x i32> } [[TMP0]], 0
 // CHECK-RV64-NEXT:    store <vscale x 1 x i32> [[TMP1]], <vscale x 1 x i32>* [[V0:%.*]], align 4
 // CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 1 x i32>, <vscale x 1 x i32> } [[TMP0]], 1
@@ -4683,7 +4683,7 @@ void test_vlseg2e32_v_u32mf2 (vuint32mf2_t *v0, vuint32mf2_t *v1, const uint32_t
 
 // CHECK-RV32-LABEL: @test_vlseg3e32_v_u32mf2(
 // CHECK-RV32-NEXT:  entry:
-// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32> } @llvm.riscv.vlseg3.nxv1i32.i32(i32* [[BASE:%.*]], i32 [[VL:%.*]])
+// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32> } @llvm.riscv.vlseg3.nxv1i32.i32(<vscale x 1 x i32> undef, <vscale x 1 x i32> undef, <vscale x 1 x i32> undef, i32* [[BASE:%.*]], i32 [[VL:%.*]])
 // CHECK-RV32-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32> } [[TMP0]], 0
 // CHECK-RV32-NEXT:    store <vscale x 1 x i32> [[TMP1]], <vscale x 1 x i32>* [[V0:%.*]], align 4
 // CHECK-RV32-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32> } [[TMP0]], 1
@@ -4694,7 +4694,7 @@ void test_vlseg2e32_v_u32mf2 (vuint32mf2_t *v0, vuint32mf2_t *v1, const uint32_t
 //
 // CHECK-RV64-LABEL: @test_vlseg3e32_v_u32mf2(
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32> } @llvm.riscv.vlseg3.nxv1i32.i64(i32* [[BASE:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32> } @llvm.riscv.vlseg3.nxv1i32.i64(<vscale x 1 x i32> undef, <vscale x 1 x i32> undef, <vscale x 1 x i32> undef, i32* [[BASE:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32> } [[TMP0]], 0
 // CHECK-RV64-NEXT:    store <vscale x 1 x i32> [[TMP1]], <vscale x 1 x i32>* [[V0:%.*]], align 4
 // CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32> } [[TMP0]], 1
@@ -4709,7 +4709,7 @@ void test_vlseg3e32_v_u32mf2 (vuint32mf2_t *v0, vuint32mf2_t *v1, vuint32mf2_t *
 
 // CHECK-RV32-LABEL: @test_vlseg4e32_v_u32mf2(
 // CHECK-RV32-NEXT:  entry:
-// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32> } @llvm.riscv.vlseg4.nxv1i32.i32(i32* [[BASE:%.*]], i32 [[VL:%.*]])
+// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32> } @llvm.riscv.vlseg4.nxv1i32.i32(<vscale x 1 x i32> undef, <vscale x 1 x i32> undef, <vscale x 1 x i32> undef, <vscale x 1 x i32> undef, i32* [[BASE:%.*]], i32 [[VL:%.*]])
 // CHECK-RV32-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32> } [[TMP0]], 0
 // CHECK-RV32-NEXT:    store <vscale x 1 x i32> [[TMP1]], <vscale x 1 x i32>* [[V0:%.*]], align 4
 // CHECK-RV32-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32> } [[TMP0]], 1
@@ -4722,7 +4722,7 @@ void test_vlseg3e32_v_u32mf2 (vuint32mf2_t *v0, vuint32mf2_t *v1, vuint32mf2_t *
 //
 // CHECK-RV64-LABEL: @test_vlseg4e32_v_u32mf2(
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32> } @llvm.riscv.vlseg4.nxv1i32.i64(i32* [[BASE:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32> } @llvm.riscv.vlseg4.nxv1i32.i64(<vscale x 1 x i32> undef, <vscale x 1 x i32> undef, <vscale x 1 x i32> undef, <vscale x 1 x i32> undef, i32* [[BASE:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32> } [[TMP0]], 0
 // CHECK-RV64-NEXT:    store <vscale x 1 x i32> [[TMP1]], <vscale x 1 x i32>* [[V0:%.*]], align 4
 // CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32> } [[TMP0]], 1
@@ -4739,7 +4739,7 @@ void test_vlseg4e32_v_u32mf2 (vuint32mf2_t *v0, vuint32mf2_t *v1, vuint32mf2_t *
 
 // CHECK-RV32-LABEL: @test_vlseg5e32_v_u32mf2(
 // CHECK-RV32-NEXT:  entry:
-// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32> } @llvm.riscv.vlseg5.nxv1i32.i32(i32* [[BASE:%.*]], i32 [[VL:%.*]])
+// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32> } @llvm.riscv.vlseg5.nxv1i32.i32(<vscale x 1 x i32> undef, <vscale x 1 x i32> undef, <vscale x 1 x i32> undef, <vscale x 1 x i32> undef, <vscale x 1 x i32> undef, i32* [[BASE:%.*]], i32 [[VL:%.*]])
 // CHECK-RV32-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32> } [[TMP0]], 0
 // CHECK-RV32-NEXT:    store <vscale x 1 x i32> [[TMP1]], <vscale x 1 x i32>* [[V0:%.*]], align 4
 // CHECK-RV32-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32> } [[TMP0]], 1
@@ -4754,7 +4754,7 @@ void test_vlseg4e32_v_u32mf2 (vuint32mf2_t *v0, vuint32mf2_t *v1, vuint32mf2_t *
 //
 // CHECK-RV64-LABEL: @test_vlseg5e32_v_u32mf2(
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32> } @llvm.riscv.vlseg5.nxv1i32.i64(i32* [[BASE:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32> } @llvm.riscv.vlseg5.nxv1i32.i64(<vscale x 1 x i32> undef, <vscale x 1 x i32> undef, <vscale x 1 x i32> undef, <vscale x 1 x i32> undef, <vscale x 1 x i32> undef, i32* [[BASE:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32> } [[TMP0]], 0
 // CHECK-RV64-NEXT:    store <vscale x 1 x i32> [[TMP1]], <vscale x 1 x i32>* [[V0:%.*]], align 4
 // CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32> } [[TMP0]], 1
@@ -4773,7 +4773,7 @@ void test_vlseg5e32_v_u32mf2 (vuint32mf2_t *v0, vuint32mf2_t *v1, vuint32mf2_t *
 
 // CHECK-RV32-LABEL: @test_vlseg6e32_v_u32mf2(
 // CHECK-RV32-NEXT:  entry:
-// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32> } @llvm.riscv.vlseg6.nxv1i32.i32(i32* [[BASE:%.*]], i32 [[VL:%.*]])
+// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32> } @llvm.riscv.vlseg6.nxv1i32.i32(<vscale x 1 x i32> undef, <vscale x 1 x i32> undef, <vscale x 1 x i32> undef, <vscale x 1 x i32> undef, <vscale x 1 x i32> undef, <vscale x 1 x i32> undef, i32* [[BASE:%.*]], i32 [[VL:%.*]])
 // CHECK-RV32-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32> } [[TMP0]], 0
 // CHECK-RV32-NEXT:    store <vscale x 1 x i32> [[TMP1]], <vscale x 1 x i32>* [[V0:%.*]], align 4
 // CHECK-RV32-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32> } [[TMP0]], 1
@@ -4790,7 +4790,7 @@ void test_vlseg5e32_v_u32mf2 (vuint32mf2_t *v0, vuint32mf2_t *v1, vuint32mf2_t *
 //
 // CHECK-RV64-LABEL: @test_vlseg6e32_v_u32mf2(
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32> } @llvm.riscv.vlseg6.nxv1i32.i64(i32* [[BASE:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32> } @llvm.riscv.vlseg6.nxv1i32.i64(<vscale x 1 x i32> undef, <vscale x 1 x i32> undef, <vscale x 1 x i32> undef, <vscale x 1 x i32> undef, <vscale x 1 x i32> undef, <vscale x 1 x i32> undef, i32* [[BASE:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32> } [[TMP0]], 0
 // CHECK-RV64-NEXT:    store <vscale x 1 x i32> [[TMP1]], <vscale x 1 x i32>* [[V0:%.*]], align 4
 // CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32> } [[TMP0]], 1
@@ -4811,7 +4811,7 @@ void test_vlseg6e32_v_u32mf2 (vuint32mf2_t *v0, vuint32mf2_t *v1, vuint32mf2_t *
 
 // CHECK-RV32-LABEL: @test_vlseg7e32_v_u32mf2(
 // CHECK-RV32-NEXT:  entry:
-// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32> } @llvm.riscv.vlseg7.nxv1i32.i32(i32* [[BASE:%.*]], i32 [[VL:%.*]])
+// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32> } @llvm.riscv.vlseg7.nxv1i32.i32(<vscale x 1 x i32> undef, <vscale x 1 x i32> undef, <vscale x 1 x i32> undef, <vscale x 1 x i32> undef, <vscale x 1 x i32> undef, <vscale x 1 x i32> undef, <vscale x 1 x i32> undef, i32* [[BASE:%.*]], i32 [[VL:%.*]])
 // CHECK-RV32-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32> } [[TMP0]], 0
 // CHECK-RV32-NEXT:    store <vscale x 1 x i32> [[TMP1]], <vscale x 1 x i32>* [[V0:%.*]], align 4
 // CHECK-RV32-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32> } [[TMP0]], 1
@@ -4830,7 +4830,7 @@ void test_vlseg6e32_v_u32mf2 (vuint32mf2_t *v0, vuint32mf2_t *v1, vuint32mf2_t *
 //
 // CHECK-RV64-LABEL: @test_vlseg7e32_v_u32mf2(
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32> } @llvm.riscv.vlseg7.nxv1i32.i64(i32* [[BASE:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32> } @llvm.riscv.vlseg7.nxv1i32.i64(<vscale x 1 x i32> undef, <vscale x 1 x i32> undef, <vscale x 1 x i32> undef, <vscale x 1 x i32> undef, <vscale x 1 x i32> undef, <vscale x 1 x i32> undef, <vscale x 1 x i32> undef, i32* [[BASE:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32> } [[TMP0]], 0
 // CHECK-RV64-NEXT:    store <vscale x 1 x i32> [[TMP1]], <vscale x 1 x i32>* [[V0:%.*]], align 4
 // CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32> } [[TMP0]], 1
@@ -4853,7 +4853,7 @@ void test_vlseg7e32_v_u32mf2 (vuint32mf2_t *v0, vuint32mf2_t *v1, vuint32mf2_t *
 
 // CHECK-RV32-LABEL: @test_vlseg8e32_v_u32mf2(
 // CHECK-RV32-NEXT:  entry:
-// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32> } @llvm.riscv.vlseg8.nxv1i32.i32(i32* [[BASE:%.*]], i32 [[VL:%.*]])
+// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32> } @llvm.riscv.vlseg8.nxv1i32.i32(<vscale x 1 x i32> undef, <vscale x 1 x i32> undef, <vscale x 1 x i32> undef, <vscale x 1 x i32> undef, <vscale x 1 x i32> undef, <vscale x 1 x i32> undef, <vscale x 1 x i32> undef, <vscale x 1 x i32> undef, i32* [[BASE:%.*]], i32 [[VL:%.*]])
 // CHECK-RV32-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32> } [[TMP0]], 0
 // CHECK-RV32-NEXT:    store <vscale x 1 x i32> [[TMP1]], <vscale x 1 x i32>* [[V0:%.*]], align 4
 // CHECK-RV32-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32> } [[TMP0]], 1
@@ -4874,7 +4874,7 @@ void test_vlseg7e32_v_u32mf2 (vuint32mf2_t *v0, vuint32mf2_t *v1, vuint32mf2_t *
 //
 // CHECK-RV64-LABEL: @test_vlseg8e32_v_u32mf2(
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32> } @llvm.riscv.vlseg8.nxv1i32.i64(i32* [[BASE:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32> } @llvm.riscv.vlseg8.nxv1i32.i64(<vscale x 1 x i32> undef, <vscale x 1 x i32> undef, <vscale x 1 x i32> undef, <vscale x 1 x i32> undef, <vscale x 1 x i32> undef, <vscale x 1 x i32> undef, <vscale x 1 x i32> undef, <vscale x 1 x i32> undef, i32* [[BASE:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32> } [[TMP0]], 0
 // CHECK-RV64-NEXT:    store <vscale x 1 x i32> [[TMP1]], <vscale x 1 x i32>* [[V0:%.*]], align 4
 // CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32> } [[TMP0]], 1
@@ -4899,7 +4899,7 @@ void test_vlseg8e32_v_u32mf2 (vuint32mf2_t *v0, vuint32mf2_t *v1, vuint32mf2_t *
 
 // CHECK-RV32-LABEL: @test_vlseg2e32_v_u32m1(
 // CHECK-RV32-NEXT:  entry:
-// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 2 x i32>, <vscale x 2 x i32> } @llvm.riscv.vlseg2.nxv2i32.i32(i32* [[BASE:%.*]], i32 [[VL:%.*]])
+// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 2 x i32>, <vscale x 2 x i32> } @llvm.riscv.vlseg2.nxv2i32.i32(<vscale x 2 x i32> undef, <vscale x 2 x i32> undef, i32* [[BASE:%.*]], i32 [[VL:%.*]])
 // CHECK-RV32-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 2 x i32>, <vscale x 2 x i32> } [[TMP0]], 0
 // CHECK-RV32-NEXT:    store <vscale x 2 x i32> [[TMP1]], <vscale x 2 x i32>* [[V0:%.*]], align 4
 // CHECK-RV32-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 2 x i32>, <vscale x 2 x i32> } [[TMP0]], 1
@@ -4908,7 +4908,7 @@ void test_vlseg8e32_v_u32mf2 (vuint32mf2_t *v0, vuint32mf2_t *v1, vuint32mf2_t *
 //
 // CHECK-RV64-LABEL: @test_vlseg2e32_v_u32m1(
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 2 x i32>, <vscale x 2 x i32> } @llvm.riscv.vlseg2.nxv2i32.i64(i32* [[BASE:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 2 x i32>, <vscale x 2 x i32> } @llvm.riscv.vlseg2.nxv2i32.i64(<vscale x 2 x i32> undef, <vscale x 2 x i32> undef, i32* [[BASE:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 2 x i32>, <vscale x 2 x i32> } [[TMP0]], 0
 // CHECK-RV64-NEXT:    store <vscale x 2 x i32> [[TMP1]], <vscale x 2 x i32>* [[V0:%.*]], align 4
 // CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 2 x i32>, <vscale x 2 x i32> } [[TMP0]], 1
@@ -4921,7 +4921,7 @@ void test_vlseg2e32_v_u32m1 (vuint32m1_t *v0, vuint32m1_t *v1, const uint32_t *b
 
 // CHECK-RV32-LABEL: @test_vlseg3e32_v_u32m1(
 // CHECK-RV32-NEXT:  entry:
-// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32> } @llvm.riscv.vlseg3.nxv2i32.i32(i32* [[BASE:%.*]], i32 [[VL:%.*]])
+// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32> } @llvm.riscv.vlseg3.nxv2i32.i32(<vscale x 2 x i32> undef, <vscale x 2 x i32> undef, <vscale x 2 x i32> undef, i32* [[BASE:%.*]], i32 [[VL:%.*]])
 // CHECK-RV32-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32> } [[TMP0]], 0
 // CHECK-RV32-NEXT:    store <vscale x 2 x i32> [[TMP1]], <vscale x 2 x i32>* [[V0:%.*]], align 4
 // CHECK-RV32-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32> } [[TMP0]], 1
@@ -4932,7 +4932,7 @@ void test_vlseg2e32_v_u32m1 (vuint32m1_t *v0, vuint32m1_t *v1, const uint32_t *b
 //
 // CHECK-RV64-LABEL: @test_vlseg3e32_v_u32m1(
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32> } @llvm.riscv.vlseg3.nxv2i32.i64(i32* [[BASE:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32> } @llvm.riscv.vlseg3.nxv2i32.i64(<vscale x 2 x i32> undef, <vscale x 2 x i32> undef, <vscale x 2 x i32> undef, i32* [[BASE:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32> } [[TMP0]], 0
 // CHECK-RV64-NEXT:    store <vscale x 2 x i32> [[TMP1]], <vscale x 2 x i32>* [[V0:%.*]], align 4
 // CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32> } [[TMP0]], 1
@@ -4947,7 +4947,7 @@ void test_vlseg3e32_v_u32m1 (vuint32m1_t *v0, vuint32m1_t *v1, vuint32m1_t *v2, 
 
 // CHECK-RV32-LABEL: @test_vlseg4e32_v_u32m1(
 // CHECK-RV32-NEXT:  entry:
-// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32> } @llvm.riscv.vlseg4.nxv2i32.i32(i32* [[BASE:%.*]], i32 [[VL:%.*]])
+// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32> } @llvm.riscv.vlseg4.nxv2i32.i32(<vscale x 2 x i32> undef, <vscale x 2 x i32> undef, <vscale x 2 x i32> undef, <vscale x 2 x i32> undef, i32* [[BASE:%.*]], i32 [[VL:%.*]])
 // CHECK-RV32-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32> } [[TMP0]], 0
 // CHECK-RV32-NEXT:    store <vscale x 2 x i32> [[TMP1]], <vscale x 2 x i32>* [[V0:%.*]], align 4
 // CHECK-RV32-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32> } [[TMP0]], 1
@@ -4960,7 +4960,7 @@ void test_vlseg3e32_v_u32m1 (vuint32m1_t *v0, vuint32m1_t *v1, vuint32m1_t *v2, 
 //
 // CHECK-RV64-LABEL: @test_vlseg4e32_v_u32m1(
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32> } @llvm.riscv.vlseg4.nxv2i32.i64(i32* [[BASE:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32> } @llvm.riscv.vlseg4.nxv2i32.i64(<vscale x 2 x i32> undef, <vscale x 2 x i32> undef, <vscale x 2 x i32> undef, <vscale x 2 x i32> undef, i32* [[BASE:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32> } [[TMP0]], 0
 // CHECK-RV64-NEXT:    store <vscale x 2 x i32> [[TMP1]], <vscale x 2 x i32>* [[V0:%.*]], align 4
 // CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32> } [[TMP0]], 1
@@ -4977,7 +4977,7 @@ void test_vlseg4e32_v_u32m1 (vuint32m1_t *v0, vuint32m1_t *v1, vuint32m1_t *v2, 
 
 // CHECK-RV32-LABEL: @test_vlseg5e32_v_u32m1(
 // CHECK-RV32-NEXT:  entry:
-// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32> } @llvm.riscv.vlseg5.nxv2i32.i32(i32* [[BASE:%.*]], i32 [[VL:%.*]])
+// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32> } @llvm.riscv.vlseg5.nxv2i32.i32(<vscale x 2 x i32> undef, <vscale x 2 x i32> undef, <vscale x 2 x i32> undef, <vscale x 2 x i32> undef, <vscale x 2 x i32> undef, i32* [[BASE:%.*]], i32 [[VL:%.*]])
 // CHECK-RV32-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32> } [[TMP0]], 0
 // CHECK-RV32-NEXT:    store <vscale x 2 x i32> [[TMP1]], <vscale x 2 x i32>* [[V0:%.*]], align 4
 // CHECK-RV32-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32> } [[TMP0]], 1
@@ -4992,7 +4992,7 @@ void test_vlseg4e32_v_u32m1 (vuint32m1_t *v0, vuint32m1_t *v1, vuint32m1_t *v2, 
 //
 // CHECK-RV64-LABEL: @test_vlseg5e32_v_u32m1(
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32> } @llvm.riscv.vlseg5.nxv2i32.i64(i32* [[BASE:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32> } @llvm.riscv.vlseg5.nxv2i32.i64(<vscale x 2 x i32> undef, <vscale x 2 x i32> undef, <vscale x 2 x i32> undef, <vscale x 2 x i32> undef, <vscale x 2 x i32> undef, i32* [[BASE:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32> } [[TMP0]], 0
 // CHECK-RV64-NEXT:    store <vscale x 2 x i32> [[TMP1]], <vscale x 2 x i32>* [[V0:%.*]], align 4
 // CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32> } [[TMP0]], 1
@@ -5011,7 +5011,7 @@ void test_vlseg5e32_v_u32m1 (vuint32m1_t *v0, vuint32m1_t *v1, vuint32m1_t *v2, 
 
 // CHECK-RV32-LABEL: @test_vlseg6e32_v_u32m1(
 // CHECK-RV32-NEXT:  entry:
-// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32> } @llvm.riscv.vlseg6.nxv2i32.i32(i32* [[BASE:%.*]], i32 [[VL:%.*]])
+// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32> } @llvm.riscv.vlseg6.nxv2i32.i32(<vscale x 2 x i32> undef, <vscale x 2 x i32> undef, <vscale x 2 x i32> undef, <vscale x 2 x i32> undef, <vscale x 2 x i32> undef, <vscale x 2 x i32> undef, i32* [[BASE:%.*]], i32 [[VL:%.*]])
 // CHECK-RV32-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32> } [[TMP0]], 0
 // CHECK-RV32-NEXT:    store <vscale x 2 x i32> [[TMP1]], <vscale x 2 x i32>* [[V0:%.*]], align 4
 // CHECK-RV32-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32> } [[TMP0]], 1
@@ -5028,7 +5028,7 @@ void test_vlseg5e32_v_u32m1 (vuint32m1_t *v0, vuint32m1_t *v1, vuint32m1_t *v2, 
 //
 // CHECK-RV64-LABEL: @test_vlseg6e32_v_u32m1(
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32> } @llvm.riscv.vlseg6.nxv2i32.i64(i32* [[BASE:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32> } @llvm.riscv.vlseg6.nxv2i32.i64(<vscale x 2 x i32> undef, <vscale x 2 x i32> undef, <vscale x 2 x i32> undef, <vscale x 2 x i32> undef, <vscale x 2 x i32> undef, <vscale x 2 x i32> undef, i32* [[BASE:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32> } [[TMP0]], 0
 // CHECK-RV64-NEXT:    store <vscale x 2 x i32> [[TMP1]], <vscale x 2 x i32>* [[V0:%.*]], align 4
 // CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32> } [[TMP0]], 1
@@ -5049,7 +5049,7 @@ void test_vlseg6e32_v_u32m1 (vuint32m1_t *v0, vuint32m1_t *v1, vuint32m1_t *v2, 
 
 // CHECK-RV32-LABEL: @test_vlseg7e32_v_u32m1(
 // CHECK-RV32-NEXT:  entry:
-// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32> } @llvm.riscv.vlseg7.nxv2i32.i32(i32* [[BASE:%.*]], i32 [[VL:%.*]])
+// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32> } @llvm.riscv.vlseg7.nxv2i32.i32(<vscale x 2 x i32> undef, <vscale x 2 x i32> undef, <vscale x 2 x i32> undef, <vscale x 2 x i32> undef, <vscale x 2 x i32> undef, <vscale x 2 x i32> undef, <vscale x 2 x i32> undef, i32* [[BASE:%.*]], i32 [[VL:%.*]])
 // CHECK-RV32-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32> } [[TMP0]], 0
 // CHECK-RV32-NEXT:    store <vscale x 2 x i32> [[TMP1]], <vscale x 2 x i32>* [[V0:%.*]], align 4
 // CHECK-RV32-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32> } [[TMP0]], 1
@@ -5068,7 +5068,7 @@ void test_vlseg6e32_v_u32m1 (vuint32m1_t *v0, vuint32m1_t *v1, vuint32m1_t *v2, 
 //
 // CHECK-RV64-LABEL: @test_vlseg7e32_v_u32m1(
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32> } @llvm.riscv.vlseg7.nxv2i32.i64(i32* [[BASE:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32> } @llvm.riscv.vlseg7.nxv2i32.i64(<vscale x 2 x i32> undef, <vscale x 2 x i32> undef, <vscale x 2 x i32> undef, <vscale x 2 x i32> undef, <vscale x 2 x i32> undef, <vscale x 2 x i32> undef, <vscale x 2 x i32> undef, i32* [[BASE:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32> } [[TMP0]], 0
 // CHECK-RV64-NEXT:    store <vscale x 2 x i32> [[TMP1]], <vscale x 2 x i32>* [[V0:%.*]], align 4
 // CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32> } [[TMP0]], 1
@@ -5091,7 +5091,7 @@ void test_vlseg7e32_v_u32m1 (vuint32m1_t *v0, vuint32m1_t *v1, vuint32m1_t *v2, 
 
 // CHECK-RV32-LABEL: @test_vlseg8e32_v_u32m1(
 // CHECK-RV32-NEXT:  entry:
-// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32> } @llvm.riscv.vlseg8.nxv2i32.i32(i32* [[BASE:%.*]], i32 [[VL:%.*]])
+// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32> } @llvm.riscv.vlseg8.nxv2i32.i32(<vscale x 2 x i32> undef, <vscale x 2 x i32> undef, <vscale x 2 x i32> undef, <vscale x 2 x i32> undef, <vscale x 2 x i32> undef, <vscale x 2 x i32> undef, <vscale x 2 x i32> undef, <vscale x 2 x i32> undef, i32* [[BASE:%.*]], i32 [[VL:%.*]])
 // CHECK-RV32-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32> } [[TMP0]], 0
 // CHECK-RV32-NEXT:    store <vscale x 2 x i32> [[TMP1]], <vscale x 2 x i32>* [[V0:%.*]], align 4
 // CHECK-RV32-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32> } [[TMP0]], 1
@@ -5112,7 +5112,7 @@ void test_vlseg7e32_v_u32m1 (vuint32m1_t *v0, vuint32m1_t *v1, vuint32m1_t *v2, 
 //
 // CHECK-RV64-LABEL: @test_vlseg8e32_v_u32m1(
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32> } @llvm.riscv.vlseg8.nxv2i32.i64(i32* [[BASE:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32> } @llvm.riscv.vlseg8.nxv2i32.i64(<vscale x 2 x i32> undef, <vscale x 2 x i32> undef, <vscale x 2 x i32> undef, <vscale x 2 x i32> undef, <vscale x 2 x i32> undef, <vscale x 2 x i32> undef, <vscale x 2 x i32> undef, <vscale x 2 x i32> undef, i32* [[BASE:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32> } [[TMP0]], 0
 // CHECK-RV64-NEXT:    store <vscale x 2 x i32> [[TMP1]], <vscale x 2 x i32>* [[V0:%.*]], align 4
 // CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32> } [[TMP0]], 1
@@ -5137,7 +5137,7 @@ void test_vlseg8e32_v_u32m1 (vuint32m1_t *v0, vuint32m1_t *v1, vuint32m1_t *v2, 
 
 // CHECK-RV32-LABEL: @test_vlseg2e32_v_u32m2(
 // CHECK-RV32-NEXT:  entry:
-// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 4 x i32>, <vscale x 4 x i32> } @llvm.riscv.vlseg2.nxv4i32.i32(i32* [[BASE:%.*]], i32 [[VL:%.*]])
+// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 4 x i32>, <vscale x 4 x i32> } @llvm.riscv.vlseg2.nxv4i32.i32(<vscale x 4 x i32> undef, <vscale x 4 x i32> undef, i32* [[BASE:%.*]], i32 [[VL:%.*]])
 // CHECK-RV32-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 4 x i32>, <vscale x 4 x i32> } [[TMP0]], 0
 // CHECK-RV32-NEXT:    store <vscale x 4 x i32> [[TMP1]], <vscale x 4 x i32>* [[V0:%.*]], align 4
 // CHECK-RV32-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 4 x i32>, <vscale x 4 x i32> } [[TMP0]], 1
@@ -5146,7 +5146,7 @@ void test_vlseg8e32_v_u32m1 (vuint32m1_t *v0, vuint32m1_t *v1, vuint32m1_t *v2, 
 //
 // CHECK-RV64-LABEL: @test_vlseg2e32_v_u32m2(
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 4 x i32>, <vscale x 4 x i32> } @llvm.riscv.vlseg2.nxv4i32.i64(i32* [[BASE:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 4 x i32>, <vscale x 4 x i32> } @llvm.riscv.vlseg2.nxv4i32.i64(<vscale x 4 x i32> undef, <vscale x 4 x i32> undef, i32* [[BASE:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 4 x i32>, <vscale x 4 x i32> } [[TMP0]], 0
 // CHECK-RV64-NEXT:    store <vscale x 4 x i32> [[TMP1]], <vscale x 4 x i32>* [[V0:%.*]], align 4
 // CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 4 x i32>, <vscale x 4 x i32> } [[TMP0]], 1
@@ -5159,7 +5159,7 @@ void test_vlseg2e32_v_u32m2 (vuint32m2_t *v0, vuint32m2_t *v1, const uint32_t *b
 
 // CHECK-RV32-LABEL: @test_vlseg3e32_v_u32m2(
 // CHECK-RV32-NEXT:  entry:
-// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } @llvm.riscv.vlseg3.nxv4i32.i32(i32* [[BASE:%.*]], i32 [[VL:%.*]])
+// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } @llvm.riscv.vlseg3.nxv4i32.i32(<vscale x 4 x i32> undef, <vscale x 4 x i32> undef, <vscale x 4 x i32> undef, i32* [[BASE:%.*]], i32 [[VL:%.*]])
 // CHECK-RV32-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } [[TMP0]], 0
 // CHECK-RV32-NEXT:    store <vscale x 4 x i32> [[TMP1]], <vscale x 4 x i32>* [[V0:%.*]], align 4
 // CHECK-RV32-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } [[TMP0]], 1
@@ -5170,7 +5170,7 @@ void test_vlseg2e32_v_u32m2 (vuint32m2_t *v0, vuint32m2_t *v1, const uint32_t *b
 //
 // CHECK-RV64-LABEL: @test_vlseg3e32_v_u32m2(
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } @llvm.riscv.vlseg3.nxv4i32.i64(i32* [[BASE:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } @llvm.riscv.vlseg3.nxv4i32.i64(<vscale x 4 x i32> undef, <vscale x 4 x i32> undef, <vscale x 4 x i32> undef, i32* [[BASE:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } [[TMP0]], 0
 // CHECK-RV64-NEXT:    store <vscale x 4 x i32> [[TMP1]], <vscale x 4 x i32>* [[V0:%.*]], align 4
 // CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } [[TMP0]], 1
@@ -5185,7 +5185,7 @@ void test_vlseg3e32_v_u32m2 (vuint32m2_t *v0, vuint32m2_t *v1, vuint32m2_t *v2, 
 
 // CHECK-RV32-LABEL: @test_vlseg4e32_v_u32m2(
 // CHECK-RV32-NEXT:  entry:
-// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } @llvm.riscv.vlseg4.nxv4i32.i32(i32* [[BASE:%.*]], i32 [[VL:%.*]])
+// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } @llvm.riscv.vlseg4.nxv4i32.i32(<vscale x 4 x i32> undef, <vscale x 4 x i32> undef, <vscale x 4 x i32> undef, <vscale x 4 x i32> undef, i32* [[BASE:%.*]], i32 [[VL:%.*]])
 // CHECK-RV32-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } [[TMP0]], 0
 // CHECK-RV32-NEXT:    store <vscale x 4 x i32> [[TMP1]], <vscale x 4 x i32>* [[V0:%.*]], align 4
 // CHECK-RV32-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } [[TMP0]], 1
@@ -5198,7 +5198,7 @@ void test_vlseg3e32_v_u32m2 (vuint32m2_t *v0, vuint32m2_t *v1, vuint32m2_t *v2, 
 //
 // CHECK-RV64-LABEL: @test_vlseg4e32_v_u32m2(
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } @llvm.riscv.vlseg4.nxv4i32.i64(i32* [[BASE:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } @llvm.riscv.vlseg4.nxv4i32.i64(<vscale x 4 x i32> undef, <vscale x 4 x i32> undef, <vscale x 4 x i32> undef, <vscale x 4 x i32> undef, i32* [[BASE:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } [[TMP0]], 0
 // CHECK-RV64-NEXT:    store <vscale x 4 x i32> [[TMP1]], <vscale x 4 x i32>* [[V0:%.*]], align 4
 // CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } [[TMP0]], 1
@@ -5215,7 +5215,7 @@ void test_vlseg4e32_v_u32m2 (vuint32m2_t *v0, vuint32m2_t *v1, vuint32m2_t *v2, 
 
 // CHECK-RV32-LABEL: @test_vlseg2e32_v_u32m4(
 // CHECK-RV32-NEXT:  entry:
-// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 8 x i32>, <vscale x 8 x i32> } @llvm.riscv.vlseg2.nxv8i32.i32(i32* [[BASE:%.*]], i32 [[VL:%.*]])
+// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 8 x i32>, <vscale x 8 x i32> } @llvm.riscv.vlseg2.nxv8i32.i32(<vscale x 8 x i32> undef, <vscale x 8 x i32> undef, i32* [[BASE:%.*]], i32 [[VL:%.*]])
 // CHECK-RV32-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 8 x i32>, <vscale x 8 x i32> } [[TMP0]], 0
 // CHECK-RV32-NEXT:    store <vscale x 8 x i32> [[TMP1]], <vscale x 8 x i32>* [[V0:%.*]], align 4
 // CHECK-RV32-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 8 x i32>, <vscale x 8 x i32> } [[TMP0]], 1
@@ -5224,7 +5224,7 @@ void test_vlseg4e32_v_u32m2 (vuint32m2_t *v0, vuint32m2_t *v1, vuint32m2_t *v2, 
 //
 // CHECK-RV64-LABEL: @test_vlseg2e32_v_u32m4(
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 8 x i32>, <vscale x 8 x i32> } @llvm.riscv.vlseg2.nxv8i32.i64(i32* [[BASE:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 8 x i32>, <vscale x 8 x i32> } @llvm.riscv.vlseg2.nxv8i32.i64(<vscale x 8 x i32> undef, <vscale x 8 x i32> undef, i32* [[BASE:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 8 x i32>, <vscale x 8 x i32> } [[TMP0]], 0
 // CHECK-RV64-NEXT:    store <vscale x 8 x i32> [[TMP1]], <vscale x 8 x i32>* [[V0:%.*]], align 4
 // CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 8 x i32>, <vscale x 8 x i32> } [[TMP0]], 1
@@ -5237,7 +5237,7 @@ void test_vlseg2e32_v_u32m4 (vuint32m4_t *v0, vuint32m4_t *v1, const uint32_t *b
 
 // CHECK-RV32-LABEL: @test_vlseg2e64_v_u64m1(
 // CHECK-RV32-NEXT:  entry:
-// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 1 x i64>, <vscale x 1 x i64> } @llvm.riscv.vlseg2.nxv1i64.i32(i64* [[BASE:%.*]], i32 [[VL:%.*]])
+// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 1 x i64>, <vscale x 1 x i64> } @llvm.riscv.vlseg2.nxv1i64.i32(<vscale x 1 x i64> undef, <vscale x 1 x i64> undef, i64* [[BASE:%.*]], i32 [[VL:%.*]])
 // CHECK-RV32-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 1 x i64>, <vscale x 1 x i64> } [[TMP0]], 0
 // CHECK-RV32-NEXT:    store <vscale x 1 x i64> [[TMP1]], <vscale x 1 x i64>* [[V0:%.*]], align 8
 // CHECK-RV32-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 1 x i64>, <vscale x 1 x i64> } [[TMP0]], 1
@@ -5246,7 +5246,7 @@ void test_vlseg2e32_v_u32m4 (vuint32m4_t *v0, vuint32m4_t *v1, const uint32_t *b
 //
 // CHECK-RV64-LABEL: @test_vlseg2e64_v_u64m1(
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 1 x i64>, <vscale x 1 x i64> } @llvm.riscv.vlseg2.nxv1i64.i64(i64* [[BASE:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 1 x i64>, <vscale x 1 x i64> } @llvm.riscv.vlseg2.nxv1i64.i64(<vscale x 1 x i64> undef, <vscale x 1 x i64> undef, i64* [[BASE:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 1 x i64>, <vscale x 1 x i64> } [[TMP0]], 0
 // CHECK-RV64-NEXT:    store <vscale x 1 x i64> [[TMP1]], <vscale x 1 x i64>* [[V0:%.*]], align 8
 // CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 1 x i64>, <vscale x 1 x i64> } [[TMP0]], 1
@@ -5259,7 +5259,7 @@ void test_vlseg2e64_v_u64m1 (vuint64m1_t *v0, vuint64m1_t *v1, const uint64_t *b
 
 // CHECK-RV32-LABEL: @test_vlseg3e64_v_u64m1(
 // CHECK-RV32-NEXT:  entry:
-// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64> } @llvm.riscv.vlseg3.nxv1i64.i32(i64* [[BASE:%.*]], i32 [[VL:%.*]])
+// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64> } @llvm.riscv.vlseg3.nxv1i64.i32(<vscale x 1 x i64> undef, <vscale x 1 x i64> undef, <vscale x 1 x i64> undef, i64* [[BASE:%.*]], i32 [[VL:%.*]])
 // CHECK-RV32-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64> } [[TMP0]], 0
 // CHECK-RV32-NEXT:    store <vscale x 1 x i64> [[TMP1]], <vscale x 1 x i64>* [[V0:%.*]], align 8
 // CHECK-RV32-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64> } [[TMP0]], 1
@@ -5270,7 +5270,7 @@ void test_vlseg2e64_v_u64m1 (vuint64m1_t *v0, vuint64m1_t *v1, const uint64_t *b
 //
 // CHECK-RV64-LABEL: @test_vlseg3e64_v_u64m1(
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64> } @llvm.riscv.vlseg3.nxv1i64.i64(i64* [[BASE:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64> } @llvm.riscv.vlseg3.nxv1i64.i64(<vscale x 1 x i64> undef, <vscale x 1 x i64> undef, <vscale x 1 x i64> undef, i64* [[BASE:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64> } [[TMP0]], 0
 // CHECK-RV64-NEXT:    store <vscale x 1 x i64> [[TMP1]], <vscale x 1 x i64>* [[V0:%.*]], align 8
 // CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64> } [[TMP0]], 1
@@ -5285,7 +5285,7 @@ void test_vlseg3e64_v_u64m1 (vuint64m1_t *v0, vuint64m1_t *v1, vuint64m1_t *v2, 
 
 // CHECK-RV32-LABEL: @test_vlseg4e64_v_u64m1(
 // CHECK-RV32-NEXT:  entry:
-// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64> } @llvm.riscv.vlseg4.nxv1i64.i32(i64* [[BASE:%.*]], i32 [[VL:%.*]])
+// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64> } @llvm.riscv.vlseg4.nxv1i64.i32(<vscale x 1 x i64> undef, <vscale x 1 x i64> undef, <vscale x 1 x i64> undef, <vscale x 1 x i64> undef, i64* [[BASE:%.*]], i32 [[VL:%.*]])
 // CHECK-RV32-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64> } [[TMP0]], 0
 // CHECK-RV32-NEXT:    store <vscale x 1 x i64> [[TMP1]], <vscale x 1 x i64>* [[V0:%.*]], align 8
 // CHECK-RV32-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64> } [[TMP0]], 1
@@ -5298,7 +5298,7 @@ void test_vlseg3e64_v_u64m1 (vuint64m1_t *v0, vuint64m1_t *v1, vuint64m1_t *v2, 
 //
 // CHECK-RV64-LABEL: @test_vlseg4e64_v_u64m1(
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64> } @llvm.riscv.vlseg4.nxv1i64.i64(i64* [[BASE:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64> } @llvm.riscv.vlseg4.nxv1i64.i64(<vscale x 1 x i64> undef, <vscale x 1 x i64> undef, <vscale x 1 x i64> undef, <vscale x 1 x i64> undef, i64* [[BASE:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64> } [[TMP0]], 0
 // CHECK-RV64-NEXT:    store <vscale x 1 x i64> [[TMP1]], <vscale x 1 x i64>* [[V0:%.*]], align 8
 // CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64> } [[TMP0]], 1
@@ -5315,7 +5315,7 @@ void test_vlseg4e64_v_u64m1 (vuint64m1_t *v0, vuint64m1_t *v1, vuint64m1_t *v2, 
 
 // CHECK-RV32-LABEL: @test_vlseg5e64_v_u64m1(
 // CHECK-RV32-NEXT:  entry:
-// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64> } @llvm.riscv.vlseg5.nxv1i64.i32(i64* [[BASE:%.*]], i32 [[VL:%.*]])
+// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64> } @llvm.riscv.vlseg5.nxv1i64.i32(<vscale x 1 x i64> undef, <vscale x 1 x i64> undef, <vscale x 1 x i64> undef, <vscale x 1 x i64> undef, <vscale x 1 x i64> undef, i64* [[BASE:%.*]], i32 [[VL:%.*]])
 // CHECK-RV32-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64> } [[TMP0]], 0
 // CHECK-RV32-NEXT:    store <vscale x 1 x i64> [[TMP1]], <vscale x 1 x i64>* [[V0:%.*]], align 8
 // CHECK-RV32-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64> } [[TMP0]], 1
@@ -5330,7 +5330,7 @@ void test_vlseg4e64_v_u64m1 (vuint64m1_t *v0, vuint64m1_t *v1, vuint64m1_t *v2, 
 //
 // CHECK-RV64-LABEL: @test_vlseg5e64_v_u64m1(
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64> } @llvm.riscv.vlseg5.nxv1i64.i64(i64* [[BASE:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64> } @llvm.riscv.vlseg5.nxv1i64.i64(<vscale x 1 x i64> undef, <vscale x 1 x i64> undef, <vscale x 1 x i64> undef, <vscale x 1 x i64> undef, <vscale x 1 x i64> undef, i64* [[BASE:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64> } [[TMP0]], 0
 // CHECK-RV64-NEXT:    store <vscale x 1 x i64> [[TMP1]], <vscale x 1 x i64>* [[V0:%.*]], align 8
 // CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64> } [[TMP0]], 1
@@ -5349,7 +5349,7 @@ void test_vlseg5e64_v_u64m1 (vuint64m1_t *v0, vuint64m1_t *v1, vuint64m1_t *v2, 
 
 // CHECK-RV32-LABEL: @test_vlseg6e64_v_u64m1(
 // CHECK-RV32-NEXT:  entry:
-// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64> } @llvm.riscv.vlseg6.nxv1i64.i32(i64* [[BASE:%.*]], i32 [[VL:%.*]])
+// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64> } @llvm.riscv.vlseg6.nxv1i64.i32(<vscale x 1 x i64> undef, <vscale x 1 x i64> undef, <vscale x 1 x i64> undef, <vscale x 1 x i64> undef, <vscale x 1 x i64> undef, <vscale x 1 x i64> undef, i64* [[BASE:%.*]], i32 [[VL:%.*]])
 // CHECK-RV32-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64> } [[TMP0]], 0
 // CHECK-RV32-NEXT:    store <vscale x 1 x i64> [[TMP1]], <vscale x 1 x i64>* [[V0:%.*]], align 8
 // CHECK-RV32-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64> } [[TMP0]], 1
@@ -5366,7 +5366,7 @@ void test_vlseg5e64_v_u64m1 (vuint64m1_t *v0, vuint64m1_t *v1, vuint64m1_t *v2, 
 //
 // CHECK-RV64-LABEL: @test_vlseg6e64_v_u64m1(
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64> } @llvm.riscv.vlseg6.nxv1i64.i64(i64* [[BASE:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64> } @llvm.riscv.vlseg6.nxv1i64.i64(<vscale x 1 x i64> undef, <vscale x 1 x i64> undef, <vscale x 1 x i64> undef, <vscale x 1 x i64> undef, <vscale x 1 x i64> undef, <vscale x 1 x i64> undef, i64* [[BASE:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64> } [[TMP0]], 0
 // CHECK-RV64-NEXT:    store <vscale x 1 x i64> [[TMP1]], <vscale x 1 x i64>* [[V0:%.*]], align 8
 // CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64> } [[TMP0]], 1
@@ -5387,7 +5387,7 @@ void test_vlseg6e64_v_u64m1 (vuint64m1_t *v0, vuint64m1_t *v1, vuint64m1_t *v2, 
 
 // CHECK-RV32-LABEL: @test_vlseg7e64_v_u64m1(
 // CHECK-RV32-NEXT:  entry:
-// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64> } @llvm.riscv.vlseg7.nxv1i64.i32(i64* [[BASE:%.*]], i32 [[VL:%.*]])
+// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64> } @llvm.riscv.vlseg7.nxv1i64.i32(<vscale x 1 x i64> undef, <vscale x 1 x i64> undef, <vscale x 1 x i64> undef, <vscale x 1 x i64> undef, <vscale x 1 x i64> undef, <vscale x 1 x i64> undef, <vscale x 1 x i64> undef, i64* [[BASE:%.*]], i32 [[VL:%.*]])
 // CHECK-RV32-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64> } [[TMP0]], 0
 // CHECK-RV32-NEXT:    store <vscale x 1 x i64> [[TMP1]], <vscale x 1 x i64>* [[V0:%.*]], align 8
 // CHECK-RV32-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64> } [[TMP0]], 1
@@ -5406,7 +5406,7 @@ void test_vlseg6e64_v_u64m1 (vuint64m1_t *v0, vuint64m1_t *v1, vuint64m1_t *v2, 
 //
 // CHECK-RV64-LABEL: @test_vlseg7e64_v_u64m1(
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64> } @llvm.riscv.vlseg7.nxv1i64.i64(i64* [[BASE:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64> } @llvm.riscv.vlseg7.nxv1i64.i64(<vscale x 1 x i64> undef, <vscale x 1 x i64> undef, <vscale x 1 x i64> undef, <vscale x 1 x i64> undef, <vscale x 1 x i64> undef, <vscale x 1 x i64> undef, <vscale x 1 x i64> undef, i64* [[BASE:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64> } [[TMP0]], 0
 // CHECK-RV64-NEXT:    store <vscale x 1 x i64> [[TMP1]], <vscale x 1 x i64>* [[V0:%.*]], align 8
 // CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64> } [[TMP0]], 1
@@ -5429,7 +5429,7 @@ void test_vlseg7e64_v_u64m1 (vuint64m1_t *v0, vuint64m1_t *v1, vuint64m1_t *v2, 
 
 // CHECK-RV32-LABEL: @test_vlseg8e64_v_u64m1(
 // CHECK-RV32-NEXT:  entry:
-// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64> } @llvm.riscv.vlseg8.nxv1i64.i32(i64* [[BASE:%.*]], i32 [[VL:%.*]])
+// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64> } @llvm.riscv.vlseg8.nxv1i64.i32(<vscale x 1 x i64> undef, <vscale x 1 x i64> undef, <vscale x 1 x i64> undef, <vscale x 1 x i64> undef, <vscale x 1 x i64> undef, <vscale x 1 x i64> undef, <vscale x 1 x i64> undef, <vscale x 1 x i64> undef, i64* [[BASE:%.*]], i32 [[VL:%.*]])
 // CHECK-RV32-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64> } [[TMP0]], 0
 // CHECK-RV32-NEXT:    store <vscale x 1 x i64> [[TMP1]], <vscale x 1 x i64>* [[V0:%.*]], align 8
 // CHECK-RV32-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64> } [[TMP0]], 1
@@ -5450,7 +5450,7 @@ void test_vlseg7e64_v_u64m1 (vuint64m1_t *v0, vuint64m1_t *v1, vuint64m1_t *v2, 
 //
 // CHECK-RV64-LABEL: @test_vlseg8e64_v_u64m1(
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64> } @llvm.riscv.vlseg8.nxv1i64.i64(i64* [[BASE:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64> } @llvm.riscv.vlseg8.nxv1i64.i64(<vscale x 1 x i64> undef, <vscale x 1 x i64> undef, <vscale x 1 x i64> undef, <vscale x 1 x i64> undef, <vscale x 1 x i64> undef, <vscale x 1 x i64> undef, <vscale x 1 x i64> undef, <vscale x 1 x i64> undef, i64* [[BASE:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64> } [[TMP0]], 0
 // CHECK-RV64-NEXT:    store <vscale x 1 x i64> [[TMP1]], <vscale x 1 x i64>* [[V0:%.*]], align 8
 // CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64> } [[TMP0]], 1
@@ -5475,7 +5475,7 @@ void test_vlseg8e64_v_u64m1 (vuint64m1_t *v0, vuint64m1_t *v1, vuint64m1_t *v2, 
 
 // CHECK-RV32-LABEL: @test_vlseg2e64_v_u64m2(
 // CHECK-RV32-NEXT:  entry:
-// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 2 x i64>, <vscale x 2 x i64> } @llvm.riscv.vlseg2.nxv2i64.i32(i64* [[BASE:%.*]], i32 [[VL:%.*]])
+// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 2 x i64>, <vscale x 2 x i64> } @llvm.riscv.vlseg2.nxv2i64.i32(<vscale x 2 x i64> undef, <vscale x 2 x i64> undef, i64* [[BASE:%.*]], i32 [[VL:%.*]])
 // CHECK-RV32-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 2 x i64>, <vscale x 2 x i64> } [[TMP0]], 0
 // CHECK-RV32-NEXT:    store <vscale x 2 x i64> [[TMP1]], <vscale x 2 x i64>* [[V0:%.*]], align 8
 // CHECK-RV32-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 2 x i64>, <vscale x 2 x i64> } [[TMP0]], 1
@@ -5484,7 +5484,7 @@ void test_vlseg8e64_v_u64m1 (vuint64m1_t *v0, vuint64m1_t *v1, vuint64m1_t *v2, 
 //
 // CHECK-RV64-LABEL: @test_vlseg2e64_v_u64m2(
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 2 x i64>, <vscale x 2 x i64> } @llvm.riscv.vlseg2.nxv2i64.i64(i64* [[BASE:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 2 x i64>, <vscale x 2 x i64> } @llvm.riscv.vlseg2.nxv2i64.i64(<vscale x 2 x i64> undef, <vscale x 2 x i64> undef, i64* [[BASE:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 2 x i64>, <vscale x 2 x i64> } [[TMP0]], 0
 // CHECK-RV64-NEXT:    store <vscale x 2 x i64> [[TMP1]], <vscale x 2 x i64>* [[V0:%.*]], align 8
 // CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 2 x i64>, <vscale x 2 x i64> } [[TMP0]], 1
@@ -5497,7 +5497,7 @@ void test_vlseg2e64_v_u64m2 (vuint64m2_t *v0, vuint64m2_t *v1, const uint64_t *b
 
 // CHECK-RV32-LABEL: @test_vlseg3e64_v_u64m2(
 // CHECK-RV32-NEXT:  entry:
-// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64> } @llvm.riscv.vlseg3.nxv2i64.i32(i64* [[BASE:%.*]], i32 [[VL:%.*]])
+// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64> } @llvm.riscv.vlseg3.nxv2i64.i32(<vscale x 2 x i64> undef, <vscale x 2 x i64> undef, <vscale x 2 x i64> undef, i64* [[BASE:%.*]], i32 [[VL:%.*]])
 // CHECK-RV32-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64> } [[TMP0]], 0
 // CHECK-RV32-NEXT:    store <vscale x 2 x i64> [[TMP1]], <vscale x 2 x i64>* [[V0:%.*]], align 8
 // CHECK-RV32-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64> } [[TMP0]], 1
@@ -5508,7 +5508,7 @@ void test_vlseg2e64_v_u64m2 (vuint64m2_t *v0, vuint64m2_t *v1, const uint64_t *b
 //
 // CHECK-RV64-LABEL: @test_vlseg3e64_v_u64m2(
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64> } @llvm.riscv.vlseg3.nxv2i64.i64(i64* [[BASE:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64> } @llvm.riscv.vlseg3.nxv2i64.i64(<vscale x 2 x i64> undef, <vscale x 2 x i64> undef, <vscale x 2 x i64> undef, i64* [[BASE:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64> } [[TMP0]], 0
 // CHECK-RV64-NEXT:    store <vscale x 2 x i64> [[TMP1]], <vscale x 2 x i64>* [[V0:%.*]], align 8
 // CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64> } [[TMP0]], 1
@@ -5523,7 +5523,7 @@ void test_vlseg3e64_v_u64m2 (vuint64m2_t *v0, vuint64m2_t *v1, vuint64m2_t *v2, 
 
 // CHECK-RV32-LABEL: @test_vlseg4e64_v_u64m2(
 // CHECK-RV32-NEXT:  entry:
-// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64> } @llvm.riscv.vlseg4.nxv2i64.i32(i64* [[BASE:%.*]], i32 [[VL:%.*]])
+// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64> } @llvm.riscv.vlseg4.nxv2i64.i32(<vscale x 2 x i64> undef, <vscale x 2 x i64> undef, <vscale x 2 x i64> undef, <vscale x 2 x i64> undef, i64* [[BASE:%.*]], i32 [[VL:%.*]])
 // CHECK-RV32-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64> } [[TMP0]], 0
 // CHECK-RV32-NEXT:    store <vscale x 2 x i64> [[TMP1]], <vscale x 2 x i64>* [[V0:%.*]], align 8
 // CHECK-RV32-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64> } [[TMP0]], 1
@@ -5536,7 +5536,7 @@ void test_vlseg3e64_v_u64m2 (vuint64m2_t *v0, vuint64m2_t *v1, vuint64m2_t *v2, 
 //
 // CHECK-RV64-LABEL: @test_vlseg4e64_v_u64m2(
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64> } @llvm.riscv.vlseg4.nxv2i64.i64(i64* [[BASE:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64> } @llvm.riscv.vlseg4.nxv2i64.i64(<vscale x 2 x i64> undef, <vscale x 2 x i64> undef, <vscale x 2 x i64> undef, <vscale x 2 x i64> undef, i64* [[BASE:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64> } [[TMP0]], 0
 // CHECK-RV64-NEXT:    store <vscale x 2 x i64> [[TMP1]], <vscale x 2 x i64>* [[V0:%.*]], align 8
 // CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64> } [[TMP0]], 1
@@ -5553,7 +5553,7 @@ void test_vlseg4e64_v_u64m2 (vuint64m2_t *v0, vuint64m2_t *v1, vuint64m2_t *v2, 
 
 // CHECK-RV32-LABEL: @test_vlseg2e64_v_u64m4(
 // CHECK-RV32-NEXT:  entry:
-// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 4 x i64>, <vscale x 4 x i64> } @llvm.riscv.vlseg2.nxv4i64.i32(i64* [[BASE:%.*]], i32 [[VL:%.*]])
+// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 4 x i64>, <vscale x 4 x i64> } @llvm.riscv.vlseg2.nxv4i64.i32(<vscale x 4 x i64> undef, <vscale x 4 x i64> undef, i64* [[BASE:%.*]], i32 [[VL:%.*]])
 // CHECK-RV32-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 4 x i64>, <vscale x 4 x i64> } [[TMP0]], 0
 // CHECK-RV32-NEXT:    store <vscale x 4 x i64> [[TMP1]], <vscale x 4 x i64>* [[V0:%.*]], align 8
 // CHECK-RV32-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 4 x i64>, <vscale x 4 x i64> } [[TMP0]], 1
@@ -5562,7 +5562,7 @@ void test_vlseg4e64_v_u64m2 (vuint64m2_t *v0, vuint64m2_t *v1, vuint64m2_t *v2, 
 //
 // CHECK-RV64-LABEL: @test_vlseg2e64_v_u64m4(
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 4 x i64>, <vscale x 4 x i64> } @llvm.riscv.vlseg2.nxv4i64.i64(i64* [[BASE:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 4 x i64>, <vscale x 4 x i64> } @llvm.riscv.vlseg2.nxv4i64.i64(<vscale x 4 x i64> undef, <vscale x 4 x i64> undef, i64* [[BASE:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 4 x i64>, <vscale x 4 x i64> } [[TMP0]], 0
 // CHECK-RV64-NEXT:    store <vscale x 4 x i64> [[TMP1]], <vscale x 4 x i64>* [[V0:%.*]], align 8
 // CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 4 x i64>, <vscale x 4 x i64> } [[TMP0]], 1
@@ -5575,7 +5575,7 @@ void test_vlseg2e64_v_u64m4 (vuint64m4_t *v0, vuint64m4_t *v1, const uint64_t *b
 
 // CHECK-RV32-LABEL: @test_vlseg2e32_v_f32mf2(
 // CHECK-RV32-NEXT:  entry:
-// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 1 x float>, <vscale x 1 x float> } @llvm.riscv.vlseg2.nxv1f32.i32(float* [[BASE:%.*]], i32 [[VL:%.*]])
+// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 1 x float>, <vscale x 1 x float> } @llvm.riscv.vlseg2.nxv1f32.i32(<vscale x 1 x float> undef, <vscale x 1 x float> undef, float* [[BASE:%.*]], i32 [[VL:%.*]])
 // CHECK-RV32-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 1 x float>, <vscale x 1 x float> } [[TMP0]], 0
 // CHECK-RV32-NEXT:    store <vscale x 1 x float> [[TMP1]], <vscale x 1 x float>* [[V0:%.*]], align 4
 // CHECK-RV32-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 1 x float>, <vscale x 1 x float> } [[TMP0]], 1
@@ -5584,7 +5584,7 @@ void test_vlseg2e64_v_u64m4 (vuint64m4_t *v0, vuint64m4_t *v1, const uint64_t *b
 //
 // CHECK-RV64-LABEL: @test_vlseg2e32_v_f32mf2(
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 1 x float>, <vscale x 1 x float> } @llvm.riscv.vlseg2.nxv1f32.i64(float* [[BASE:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 1 x float>, <vscale x 1 x float> } @llvm.riscv.vlseg2.nxv1f32.i64(<vscale x 1 x float> undef, <vscale x 1 x float> undef, float* [[BASE:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 1 x float>, <vscale x 1 x float> } [[TMP0]], 0
 // CHECK-RV64-NEXT:    store <vscale x 1 x float> [[TMP1]], <vscale x 1 x float>* [[V0:%.*]], align 4
 // CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 1 x float>, <vscale x 1 x float> } [[TMP0]], 1
@@ -5597,7 +5597,7 @@ void test_vlseg2e32_v_f32mf2 (vfloat32mf2_t *v0, vfloat32mf2_t *v1, const float 
 
 // CHECK-RV32-LABEL: @test_vlseg3e32_v_f32mf2(
 // CHECK-RV32-NEXT:  entry:
-// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float> } @llvm.riscv.vlseg3.nxv1f32.i32(float* [[BASE:%.*]], i32 [[VL:%.*]])
+// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float> } @llvm.riscv.vlseg3.nxv1f32.i32(<vscale x 1 x float> undef, <vscale x 1 x float> undef, <vscale x 1 x float> undef, float* [[BASE:%.*]], i32 [[VL:%.*]])
 // CHECK-RV32-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float> } [[TMP0]], 0
 // CHECK-RV32-NEXT:    store <vscale x 1 x float> [[TMP1]], <vscale x 1 x float>* [[V0:%.*]], align 4
 // CHECK-RV32-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float> } [[TMP0]], 1
@@ -5608,7 +5608,7 @@ void test_vlseg2e32_v_f32mf2 (vfloat32mf2_t *v0, vfloat32mf2_t *v1, const float 
 //
 // CHECK-RV64-LABEL: @test_vlseg3e32_v_f32mf2(
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float> } @llvm.riscv.vlseg3.nxv1f32.i64(float* [[BASE:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float> } @llvm.riscv.vlseg3.nxv1f32.i64(<vscale x 1 x float> undef, <vscale x 1 x float> undef, <vscale x 1 x float> undef, float* [[BASE:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float> } [[TMP0]], 0
 // CHECK-RV64-NEXT:    store <vscale x 1 x float> [[TMP1]], <vscale x 1 x float>* [[V0:%.*]], align 4
 // CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float> } [[TMP0]], 1
@@ -5623,7 +5623,7 @@ void test_vlseg3e32_v_f32mf2 (vfloat32mf2_t *v0, vfloat32mf2_t *v1, vfloat32mf2_
 
 // CHECK-RV32-LABEL: @test_vlseg4e32_v_f32mf2(
 // CHECK-RV32-NEXT:  entry:
-// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float> } @llvm.riscv.vlseg4.nxv1f32.i32(float* [[BASE:%.*]], i32 [[VL:%.*]])
+// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float> } @llvm.riscv.vlseg4.nxv1f32.i32(<vscale x 1 x float> undef, <vscale x 1 x float> undef, <vscale x 1 x float> undef, <vscale x 1 x float> undef, float* [[BASE:%.*]], i32 [[VL:%.*]])
 // CHECK-RV32-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float> } [[TMP0]], 0
 // CHECK-RV32-NEXT:    store <vscale x 1 x float> [[TMP1]], <vscale x 1 x float>* [[V0:%.*]], align 4
 // CHECK-RV32-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float> } [[TMP0]], 1
@@ -5636,7 +5636,7 @@ void test_vlseg3e32_v_f32mf2 (vfloat32mf2_t *v0, vfloat32mf2_t *v1, vfloat32mf2_
 //
 // CHECK-RV64-LABEL: @test_vlseg4e32_v_f32mf2(
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float> } @llvm.riscv.vlseg4.nxv1f32.i64(float* [[BASE:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float> } @llvm.riscv.vlseg4.nxv1f32.i64(<vscale x 1 x float> undef, <vscale x 1 x float> undef, <vscale x 1 x float> undef, <vscale x 1 x float> undef, float* [[BASE:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float> } [[TMP0]], 0
 // CHECK-RV64-NEXT:    store <vscale x 1 x float> [[TMP1]], <vscale x 1 x float>* [[V0:%.*]], align 4
 // CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float> } [[TMP0]], 1
@@ -5653,7 +5653,7 @@ void test_vlseg4e32_v_f32mf2 (vfloat32mf2_t *v0, vfloat32mf2_t *v1, vfloat32mf2_
 
 // CHECK-RV32-LABEL: @test_vlseg5e32_v_f32mf2(
 // CHECK-RV32-NEXT:  entry:
-// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float> } @llvm.riscv.vlseg5.nxv1f32.i32(float* [[BASE:%.*]], i32 [[VL:%.*]])
+// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float> } @llvm.riscv.vlseg5.nxv1f32.i32(<vscale x 1 x float> undef, <vscale x 1 x float> undef, <vscale x 1 x float> undef, <vscale x 1 x float> undef, <vscale x 1 x float> undef, float* [[BASE:%.*]], i32 [[VL:%.*]])
 // CHECK-RV32-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float> } [[TMP0]], 0
 // CHECK-RV32-NEXT:    store <vscale x 1 x float> [[TMP1]], <vscale x 1 x float>* [[V0:%.*]], align 4
 // CHECK-RV32-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float> } [[TMP0]], 1
@@ -5668,7 +5668,7 @@ void test_vlseg4e32_v_f32mf2 (vfloat32mf2_t *v0, vfloat32mf2_t *v1, vfloat32mf2_
 //
 // CHECK-RV64-LABEL: @test_vlseg5e32_v_f32mf2(
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float> } @llvm.riscv.vlseg5.nxv1f32.i64(float* [[BASE:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float> } @llvm.riscv.vlseg5.nxv1f32.i64(<vscale x 1 x float> undef, <vscale x 1 x float> undef, <vscale x 1 x float> undef, <vscale x 1 x float> undef, <vscale x 1 x float> undef, float* [[BASE:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float> } [[TMP0]], 0
 // CHECK-RV64-NEXT:    store <vscale x 1 x float> [[TMP1]], <vscale x 1 x float>* [[V0:%.*]], align 4
 // CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float> } [[TMP0]], 1
@@ -5687,7 +5687,7 @@ void test_vlseg5e32_v_f32mf2 (vfloat32mf2_t *v0, vfloat32mf2_t *v1, vfloat32mf2_
 
 // CHECK-RV32-LABEL: @test_vlseg6e32_v_f32mf2(
 // CHECK-RV32-NEXT:  entry:
-// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float> } @llvm.riscv.vlseg6.nxv1f32.i32(float* [[BASE:%.*]], i32 [[VL:%.*]])
+// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float> } @llvm.riscv.vlseg6.nxv1f32.i32(<vscale x 1 x float> undef, <vscale x 1 x float> undef, <vscale x 1 x float> undef, <vscale x 1 x float> undef, <vscale x 1 x float> undef, <vscale x 1 x float> undef, float* [[BASE:%.*]], i32 [[VL:%.*]])
 // CHECK-RV32-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float> } [[TMP0]], 0
 // CHECK-RV32-NEXT:    store <vscale x 1 x float> [[TMP1]], <vscale x 1 x float>* [[V0:%.*]], align 4
 // CHECK-RV32-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float> } [[TMP0]], 1
@@ -5704,7 +5704,7 @@ void test_vlseg5e32_v_f32mf2 (vfloat32mf2_t *v0, vfloat32mf2_t *v1, vfloat32mf2_
 //
 // CHECK-RV64-LABEL: @test_vlseg6e32_v_f32mf2(
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float> } @llvm.riscv.vlseg6.nxv1f32.i64(float* [[BASE:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float> } @llvm.riscv.vlseg6.nxv1f32.i64(<vscale x 1 x float> undef, <vscale x 1 x float> undef, <vscale x 1 x float> undef, <vscale x 1 x float> undef, <vscale x 1 x float> undef, <vscale x 1 x float> undef, float* [[BASE:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float> } [[TMP0]], 0
 // CHECK-RV64-NEXT:    store <vscale x 1 x float> [[TMP1]], <vscale x 1 x float>* [[V0:%.*]], align 4
 // CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float> } [[TMP0]], 1
@@ -5725,7 +5725,7 @@ void test_vlseg6e32_v_f32mf2 (vfloat32mf2_t *v0, vfloat32mf2_t *v1, vfloat32mf2_
 
 // CHECK-RV32-LABEL: @test_vlseg7e32_v_f32mf2(
 // CHECK-RV32-NEXT:  entry:
-// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float> } @llvm.riscv.vlseg7.nxv1f32.i32(float* [[BASE:%.*]], i32 [[VL:%.*]])
+// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float> } @llvm.riscv.vlseg7.nxv1f32.i32(<vscale x 1 x float> undef, <vscale x 1 x float> undef, <vscale x 1 x float> undef, <vscale x 1 x float> undef, <vscale x 1 x float> undef, <vscale x 1 x float> undef, <vscale x 1 x float> undef, float* [[BASE:%.*]], i32 [[VL:%.*]])
 // CHECK-RV32-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float> } [[TMP0]], 0
 // CHECK-RV32-NEXT:    store <vscale x 1 x float> [[TMP1]], <vscale x 1 x float>* [[V0:%.*]], align 4
 // CHECK-RV32-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float> } [[TMP0]], 1
@@ -5744,7 +5744,7 @@ void test_vlseg6e32_v_f32mf2 (vfloat32mf2_t *v0, vfloat32mf2_t *v1, vfloat32mf2_
 //
 // CHECK-RV64-LABEL: @test_vlseg7e32_v_f32mf2(
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float> } @llvm.riscv.vlseg7.nxv1f32.i64(float* [[BASE:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float> } @llvm.riscv.vlseg7.nxv1f32.i64(<vscale x 1 x float> undef, <vscale x 1 x float> undef, <vscale x 1 x float> undef, <vscale x 1 x float> undef, <vscale x 1 x float> undef, <vscale x 1 x float> undef, <vscale x 1 x float> undef, float* [[BASE:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float> } [[TMP0]], 0
 // CHECK-RV64-NEXT:    store <vscale x 1 x float> [[TMP1]], <vscale x 1 x float>* [[V0:%.*]], align 4
 // CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float> } [[TMP0]], 1
@@ -5767,7 +5767,7 @@ void test_vlseg7e32_v_f32mf2 (vfloat32mf2_t *v0, vfloat32mf2_t *v1, vfloat32mf2_
 
 // CHECK-RV32-LABEL: @test_vlseg8e32_v_f32mf2(
 // CHECK-RV32-NEXT:  entry:
-// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float> } @llvm.riscv.vlseg8.nxv1f32.i32(float* [[BASE:%.*]], i32 [[VL:%.*]])
+// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float> } @llvm.riscv.vlseg8.nxv1f32.i32(<vscale x 1 x float> undef, <vscale x 1 x float> undef, <vscale x 1 x float> undef, <vscale x 1 x float> undef, <vscale x 1 x float> undef, <vscale x 1 x float> undef, <vscale x 1 x float> undef, <vscale x 1 x float> undef, float* [[BASE:%.*]], i32 [[VL:%.*]])
 // CHECK-RV32-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float> } [[TMP0]], 0
 // CHECK-RV32-NEXT:    store <vscale x 1 x float> [[TMP1]], <vscale x 1 x float>* [[V0:%.*]], align 4
 // CHECK-RV32-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float> } [[TMP0]], 1
@@ -5788,7 +5788,7 @@ void test_vlseg7e32_v_f32mf2 (vfloat32mf2_t *v0, vfloat32mf2_t *v1, vfloat32mf2_
 //
 // CHECK-RV64-LABEL: @test_vlseg8e32_v_f32mf2(
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float> } @llvm.riscv.vlseg8.nxv1f32.i64(float* [[BASE:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float> } @llvm.riscv.vlseg8.nxv1f32.i64(<vscale x 1 x float> undef, <vscale x 1 x float> undef, <vscale x 1 x float> undef, <vscale x 1 x float> undef, <vscale x 1 x float> undef, <vscale x 1 x float> undef, <vscale x 1 x float> undef, <vscale x 1 x float> undef, float* [[BASE:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float> } [[TMP0]], 0
 // CHECK-RV64-NEXT:    store <vscale x 1 x float> [[TMP1]], <vscale x 1 x float>* [[V0:%.*]], align 4
 // CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float> } [[TMP0]], 1
@@ -5813,7 +5813,7 @@ void test_vlseg8e32_v_f32mf2 (vfloat32mf2_t *v0, vfloat32mf2_t *v1, vfloat32mf2_
 
 // CHECK-RV32-LABEL: @test_vlseg2e32_v_f32m1(
 // CHECK-RV32-NEXT:  entry:
-// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 2 x float>, <vscale x 2 x float> } @llvm.riscv.vlseg2.nxv2f32.i32(float* [[BASE:%.*]], i32 [[VL:%.*]])
+// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 2 x float>, <vscale x 2 x float> } @llvm.riscv.vlseg2.nxv2f32.i32(<vscale x 2 x float> undef, <vscale x 2 x float> undef, float* [[BASE:%.*]], i32 [[VL:%.*]])
 // CHECK-RV32-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 2 x float>, <vscale x 2 x float> } [[TMP0]], 0
 // CHECK-RV32-NEXT:    store <vscale x 2 x float> [[TMP1]], <vscale x 2 x float>* [[V0:%.*]], align 4
 // CHECK-RV32-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 2 x float>, <vscale x 2 x float> } [[TMP0]], 1
@@ -5822,7 +5822,7 @@ void test_vlseg8e32_v_f32mf2 (vfloat32mf2_t *v0, vfloat32mf2_t *v1, vfloat32mf2_
 //
 // CHECK-RV64-LABEL: @test_vlseg2e32_v_f32m1(
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 2 x float>, <vscale x 2 x float> } @llvm.riscv.vlseg2.nxv2f32.i64(float* [[BASE:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 2 x float>, <vscale x 2 x float> } @llvm.riscv.vlseg2.nxv2f32.i64(<vscale x 2 x float> undef, <vscale x 2 x float> undef, float* [[BASE:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 2 x float>, <vscale x 2 x float> } [[TMP0]], 0
 // CHECK-RV64-NEXT:    store <vscale x 2 x float> [[TMP1]], <vscale x 2 x float>* [[V0:%.*]], align 4
 // CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 2 x float>, <vscale x 2 x float> } [[TMP0]], 1
@@ -5835,7 +5835,7 @@ void test_vlseg2e32_v_f32m1 (vfloat32m1_t *v0, vfloat32m1_t *v1, const float *ba
 
 // CHECK-RV32-LABEL: @test_vlseg3e32_v_f32m1(
 // CHECK-RV32-NEXT:  entry:
-// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float> } @llvm.riscv.vlseg3.nxv2f32.i32(float* [[BASE:%.*]], i32 [[VL:%.*]])
+// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float> } @llvm.riscv.vlseg3.nxv2f32.i32(<vscale x 2 x float> undef, <vscale x 2 x float> undef, <vscale x 2 x float> undef, float* [[BASE:%.*]], i32 [[VL:%.*]])
 // CHECK-RV32-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float> } [[TMP0]], 0
 // CHECK-RV32-NEXT:    store <vscale x 2 x float> [[TMP1]], <vscale x 2 x float>* [[V0:%.*]], align 4
 // CHECK-RV32-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float> } [[TMP0]], 1
@@ -5846,7 +5846,7 @@ void test_vlseg2e32_v_f32m1 (vfloat32m1_t *v0, vfloat32m1_t *v1, const float *ba
 //
 // CHECK-RV64-LABEL: @test_vlseg3e32_v_f32m1(
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float> } @llvm.riscv.vlseg3.nxv2f32.i64(float* [[BASE:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float> } @llvm.riscv.vlseg3.nxv2f32.i64(<vscale x 2 x float> undef, <vscale x 2 x float> undef, <vscale x 2 x float> undef, float* [[BASE:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float> } [[TMP0]], 0
 // CHECK-RV64-NEXT:    store <vscale x 2 x float> [[TMP1]], <vscale x 2 x float>* [[V0:%.*]], align 4
 // CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float> } [[TMP0]], 1
@@ -5861,7 +5861,7 @@ void test_vlseg3e32_v_f32m1 (vfloat32m1_t *v0, vfloat32m1_t *v1, vfloat32m1_t *v
 
 // CHECK-RV32-LABEL: @test_vlseg4e32_v_f32m1(
 // CHECK-RV32-NEXT:  entry:
-// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float> } @llvm.riscv.vlseg4.nxv2f32.i32(float* [[BASE:%.*]], i32 [[VL:%.*]])
+// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float> } @llvm.riscv.vlseg4.nxv2f32.i32(<vscale x 2 x float> undef, <vscale x 2 x float> undef, <vscale x 2 x float> undef, <vscale x 2 x float> undef, float* [[BASE:%.*]], i32 [[VL:%.*]])
 // CHECK-RV32-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float> } [[TMP0]], 0
 // CHECK-RV32-NEXT:    store <vscale x 2 x float> [[TMP1]], <vscale x 2 x float>* [[V0:%.*]], align 4
 // CHECK-RV32-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float> } [[TMP0]], 1
@@ -5874,7 +5874,7 @@ void test_vlseg3e32_v_f32m1 (vfloat32m1_t *v0, vfloat32m1_t *v1, vfloat32m1_t *v
 //
 // CHECK-RV64-LABEL: @test_vlseg4e32_v_f32m1(
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float> } @llvm.riscv.vlseg4.nxv2f32.i64(float* [[BASE:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float> } @llvm.riscv.vlseg4.nxv2f32.i64(<vscale x 2 x float> undef, <vscale x 2 x float> undef, <vscale x 2 x float> undef, <vscale x 2 x float> undef, float* [[BASE:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float> } [[TMP0]], 0
 // CHECK-RV64-NEXT:    store <vscale x 2 x float> [[TMP1]], <vscale x 2 x float>* [[V0:%.*]], align 4
 // CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float> } [[TMP0]], 1
@@ -5891,7 +5891,7 @@ void test_vlseg4e32_v_f32m1 (vfloat32m1_t *v0, vfloat32m1_t *v1, vfloat32m1_t *v
 
 // CHECK-RV32-LABEL: @test_vlseg5e32_v_f32m1(
 // CHECK-RV32-NEXT:  entry:
-// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float> } @llvm.riscv.vlseg5.nxv2f32.i32(float* [[BASE:%.*]], i32 [[VL:%.*]])
+// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float> } @llvm.riscv.vlseg5.nxv2f32.i32(<vscale x 2 x float> undef, <vscale x 2 x float> undef, <vscale x 2 x float> undef, <vscale x 2 x float> undef, <vscale x 2 x float> undef, float* [[BASE:%.*]], i32 [[VL:%.*]])
 // CHECK-RV32-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float> } [[TMP0]], 0
 // CHECK-RV32-NEXT:    store <vscale x 2 x float> [[TMP1]], <vscale x 2 x float>* [[V0:%.*]], align 4
 // CHECK-RV32-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float> } [[TMP0]], 1
@@ -5906,7 +5906,7 @@ void test_vlseg4e32_v_f32m1 (vfloat32m1_t *v0, vfloat32m1_t *v1, vfloat32m1_t *v
 //
 // CHECK-RV64-LABEL: @test_vlseg5e32_v_f32m1(
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float> } @llvm.riscv.vlseg5.nxv2f32.i64(float* [[BASE:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float> } @llvm.riscv.vlseg5.nxv2f32.i64(<vscale x 2 x float> undef, <vscale x 2 x float> undef, <vscale x 2 x float> undef, <vscale x 2 x float> undef, <vscale x 2 x float> undef, float* [[BASE:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float> } [[TMP0]], 0
 // CHECK-RV64-NEXT:    store <vscale x 2 x float> [[TMP1]], <vscale x 2 x float>* [[V0:%.*]], align 4
 // CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float> } [[TMP0]], 1
@@ -5925,7 +5925,7 @@ void test_vlseg5e32_v_f32m1 (vfloat32m1_t *v0, vfloat32m1_t *v1, vfloat32m1_t *v
 
 // CHECK-RV32-LABEL: @test_vlseg6e32_v_f32m1(
 // CHECK-RV32-NEXT:  entry:
-// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float> } @llvm.riscv.vlseg6.nxv2f32.i32(float* [[BASE:%.*]], i32 [[VL:%.*]])
+// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float> } @llvm.riscv.vlseg6.nxv2f32.i32(<vscale x 2 x float> undef, <vscale x 2 x float> undef, <vscale x 2 x float> undef, <vscale x 2 x float> undef, <vscale x 2 x float> undef, <vscale x 2 x float> undef, float* [[BASE:%.*]], i32 [[VL:%.*]])
 // CHECK-RV32-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float> } [[TMP0]], 0
 // CHECK-RV32-NEXT:    store <vscale x 2 x float> [[TMP1]], <vscale x 2 x float>* [[V0:%.*]], align 4
 // CHECK-RV32-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float> } [[TMP0]], 1
@@ -5942,7 +5942,7 @@ void test_vlseg5e32_v_f32m1 (vfloat32m1_t *v0, vfloat32m1_t *v1, vfloat32m1_t *v
 //
 // CHECK-RV64-LABEL: @test_vlseg6e32_v_f32m1(
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float> } @llvm.riscv.vlseg6.nxv2f32.i64(float* [[BASE:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float> } @llvm.riscv.vlseg6.nxv2f32.i64(<vscale x 2 x float> undef, <vscale x 2 x float> undef, <vscale x 2 x float> undef, <vscale x 2 x float> undef, <vscale x 2 x float> undef, <vscale x 2 x float> undef, float* [[BASE:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float> } [[TMP0]], 0
 // CHECK-RV64-NEXT:    store <vscale x 2 x float> [[TMP1]], <vscale x 2 x float>* [[V0:%.*]], align 4
 // CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float> } [[TMP0]], 1
@@ -5963,7 +5963,7 @@ void test_vlseg6e32_v_f32m1 (vfloat32m1_t *v0, vfloat32m1_t *v1, vfloat32m1_t *v
 
 // CHECK-RV32-LABEL: @test_vlseg7e32_v_f32m1(
 // CHECK-RV32-NEXT:  entry:
-// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float> } @llvm.riscv.vlseg7.nxv2f32.i32(float* [[BASE:%.*]], i32 [[VL:%.*]])
+// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float> } @llvm.riscv.vlseg7.nxv2f32.i32(<vscale x 2 x float> undef, <vscale x 2 x float> undef, <vscale x 2 x float> undef, <vscale x 2 x float> undef, <vscale x 2 x float> undef, <vscale x 2 x float> undef, <vscale x 2 x float> undef, float* [[BASE:%.*]], i32 [[VL:%.*]])
 // CHECK-RV32-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float> } [[TMP0]], 0
 // CHECK-RV32-NEXT:    store <vscale x 2 x float> [[TMP1]], <vscale x 2 x float>* [[V0:%.*]], align 4
 // CHECK-RV32-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float> } [[TMP0]], 1
@@ -5982,7 +5982,7 @@ void test_vlseg6e32_v_f32m1 (vfloat32m1_t *v0, vfloat32m1_t *v1, vfloat32m1_t *v
 //
 // CHECK-RV64-LABEL: @test_vlseg7e32_v_f32m1(
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float> } @llvm.riscv.vlseg7.nxv2f32.i64(float* [[BASE:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float> } @llvm.riscv.vlseg7.nxv2f32.i64(<vscale x 2 x float> undef, <vscale x 2 x float> undef, <vscale x 2 x float> undef, <vscale x 2 x float> undef, <vscale x 2 x float> undef, <vscale x 2 x float> undef, <vscale x 2 x float> undef, float* [[BASE:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float> } [[TMP0]], 0
 // CHECK-RV64-NEXT:    store <vscale x 2 x float> [[TMP1]], <vscale x 2 x float>* [[V0:%.*]], align 4
 // CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float> } [[TMP0]], 1
@@ -6005,7 +6005,7 @@ void test_vlseg7e32_v_f32m1 (vfloat32m1_t *v0, vfloat32m1_t *v1, vfloat32m1_t *v
 
 // CHECK-RV32-LABEL: @test_vlseg8e32_v_f32m1(
 // CHECK-RV32-NEXT:  entry:
-// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float> } @llvm.riscv.vlseg8.nxv2f32.i32(float* [[BASE:%.*]], i32 [[VL:%.*]])
+// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float> } @llvm.riscv.vlseg8.nxv2f32.i32(<vscale x 2 x float> undef, <vscale x 2 x float> undef, <vscale x 2 x float> undef, <vscale x 2 x float> undef, <vscale x 2 x float> undef, <vscale x 2 x float> undef, <vscale x 2 x float> undef, <vscale x 2 x float> undef, float* [[BASE:%.*]], i32 [[VL:%.*]])
 // CHECK-RV32-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float> } [[TMP0]], 0
 // CHECK-RV32-NEXT:    store <vscale x 2 x float> [[TMP1]], <vscale x 2 x float>* [[V0:%.*]], align 4
 // CHECK-RV32-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float> } [[TMP0]], 1
@@ -6026,7 +6026,7 @@ void test_vlseg7e32_v_f32m1 (vfloat32m1_t *v0, vfloat32m1_t *v1, vfloat32m1_t *v
 //
 // CHECK-RV64-LABEL: @test_vlseg8e32_v_f32m1(
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float> } @llvm.riscv.vlseg8.nxv2f32.i64(float* [[BASE:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float> } @llvm.riscv.vlseg8.nxv2f32.i64(<vscale x 2 x float> undef, <vscale x 2 x float> undef, <vscale x 2 x float> undef, <vscale x 2 x float> undef, <vscale x 2 x float> undef, <vscale x 2 x float> undef, <vscale x 2 x float> undef, <vscale x 2 x float> undef, float* [[BASE:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float> } [[TMP0]], 0
 // CHECK-RV64-NEXT:    store <vscale x 2 x float> [[TMP1]], <vscale x 2 x float>* [[V0:%.*]], align 4
 // CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float> } [[TMP0]], 1
@@ -6051,7 +6051,7 @@ void test_vlseg8e32_v_f32m1 (vfloat32m1_t *v0, vfloat32m1_t *v1, vfloat32m1_t *v
 
 // CHECK-RV32-LABEL: @test_vlseg2e32_v_f32m2(
 // CHECK-RV32-NEXT:  entry:
-// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 4 x float>, <vscale x 4 x float> } @llvm.riscv.vlseg2.nxv4f32.i32(float* [[BASE:%.*]], i32 [[VL:%.*]])
+// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 4 x float>, <vscale x 4 x float> } @llvm.riscv.vlseg2.nxv4f32.i32(<vscale x 4 x float> undef, <vscale x 4 x float> undef, float* [[BASE:%.*]], i32 [[VL:%.*]])
 // CHECK-RV32-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 4 x float>, <vscale x 4 x float> } [[TMP0]], 0
 // CHECK-RV32-NEXT:    store <vscale x 4 x float> [[TMP1]], <vscale x 4 x float>* [[V0:%.*]], align 4
 // CHECK-RV32-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 4 x float>, <vscale x 4 x float> } [[TMP0]], 1
@@ -6060,7 +6060,7 @@ void test_vlseg8e32_v_f32m1 (vfloat32m1_t *v0, vfloat32m1_t *v1, vfloat32m1_t *v
 //
 // CHECK-RV64-LABEL: @test_vlseg2e32_v_f32m2(
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 4 x float>, <vscale x 4 x float> } @llvm.riscv.vlseg2.nxv4f32.i64(float* [[BASE:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 4 x float>, <vscale x 4 x float> } @llvm.riscv.vlseg2.nxv4f32.i64(<vscale x 4 x float> undef, <vscale x 4 x float> undef, float* [[BASE:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 4 x float>, <vscale x 4 x float> } [[TMP0]], 0
 // CHECK-RV64-NEXT:    store <vscale x 4 x float> [[TMP1]], <vscale x 4 x float>* [[V0:%.*]], align 4
 // CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 4 x float>, <vscale x 4 x float> } [[TMP0]], 1
@@ -6073,7 +6073,7 @@ void test_vlseg2e32_v_f32m2 (vfloat32m2_t *v0, vfloat32m2_t *v1, const float *ba
 
 // CHECK-RV32-LABEL: @test_vlseg3e32_v_f32m2(
 // CHECK-RV32-NEXT:  entry:
-// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float> } @llvm.riscv.vlseg3.nxv4f32.i32(float* [[BASE:%.*]], i32 [[VL:%.*]])
+// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float> } @llvm.riscv.vlseg3.nxv4f32.i32(<vscale x 4 x float> undef, <vscale x 4 x float> undef, <vscale x 4 x float> undef, float* [[BASE:%.*]], i32 [[VL:%.*]])
 // CHECK-RV32-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float> } [[TMP0]], 0
 // CHECK-RV32-NEXT:    store <vscale x 4 x float> [[TMP1]], <vscale x 4 x float>* [[V0:%.*]], align 4
 // CHECK-RV32-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float> } [[TMP0]], 1
@@ -6084,7 +6084,7 @@ void test_vlseg2e32_v_f32m2 (vfloat32m2_t *v0, vfloat32m2_t *v1, const float *ba
 //
 // CHECK-RV64-LABEL: @test_vlseg3e32_v_f32m2(
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float> } @llvm.riscv.vlseg3.nxv4f32.i64(float* [[BASE:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float> } @llvm.riscv.vlseg3.nxv4f32.i64(<vscale x 4 x float> undef, <vscale x 4 x float> undef, <vscale x 4 x float> undef, float* [[BASE:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float> } [[TMP0]], 0
 // CHECK-RV64-NEXT:    store <vscale x 4 x float> [[TMP1]], <vscale x 4 x float>* [[V0:%.*]], align 4
 // CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float> } [[TMP0]], 1
@@ -6099,7 +6099,7 @@ void test_vlseg3e32_v_f32m2 (vfloat32m2_t *v0, vfloat32m2_t *v1, vfloat32m2_t *v
 
 // CHECK-RV32-LABEL: @test_vlseg4e32_v_f32m2(
 // CHECK-RV32-NEXT:  entry:
-// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float> } @llvm.riscv.vlseg4.nxv4f32.i32(float* [[BASE:%.*]], i32 [[VL:%.*]])
+// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float> } @llvm.riscv.vlseg4.nxv4f32.i32(<vscale x 4 x float> undef, <vscale x 4 x float> undef, <vscale x 4 x float> undef, <vscale x 4 x float> undef, float* [[BASE:%.*]], i32 [[VL:%.*]])
 // CHECK-RV32-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float> } [[TMP0]], 0
 // CHECK-RV32-NEXT:    store <vscale x 4 x float> [[TMP1]], <vscale x 4 x float>* [[V0:%.*]], align 4
 // CHECK-RV32-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float> } [[TMP0]], 1
@@ -6112,7 +6112,7 @@ void test_vlseg3e32_v_f32m2 (vfloat32m2_t *v0, vfloat32m2_t *v1, vfloat32m2_t *v
 //
 // CHECK-RV64-LABEL: @test_vlseg4e32_v_f32m2(
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float> } @llvm.riscv.vlseg4.nxv4f32.i64(float* [[BASE:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float> } @llvm.riscv.vlseg4.nxv4f32.i64(<vscale x 4 x float> undef, <vscale x 4 x float> undef, <vscale x 4 x float> undef, <vscale x 4 x float> undef, float* [[BASE:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float> } [[TMP0]], 0
 // CHECK-RV64-NEXT:    store <vscale x 4 x float> [[TMP1]], <vscale x 4 x float>* [[V0:%.*]], align 4
 // CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float> } [[TMP0]], 1
@@ -6129,7 +6129,7 @@ void test_vlseg4e32_v_f32m2 (vfloat32m2_t *v0, vfloat32m2_t *v1, vfloat32m2_t *v
 
 // CHECK-RV32-LABEL: @test_vlseg2e32_v_f32m4(
 // CHECK-RV32-NEXT:  entry:
-// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 8 x float>, <vscale x 8 x float> } @llvm.riscv.vlseg2.nxv8f32.i32(float* [[BASE:%.*]], i32 [[VL:%.*]])
+// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 8 x float>, <vscale x 8 x float> } @llvm.riscv.vlseg2.nxv8f32.i32(<vscale x 8 x float> undef, <vscale x 8 x float> undef, float* [[BASE:%.*]], i32 [[VL:%.*]])
 // CHECK-RV32-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 8 x float>, <vscale x 8 x float> } [[TMP0]], 0
 // CHECK-RV32-NEXT:    store <vscale x 8 x float> [[TMP1]], <vscale x 8 x float>* [[V0:%.*]], align 4
 // CHECK-RV32-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 8 x float>, <vscale x 8 x float> } [[TMP0]], 1
@@ -6138,7 +6138,7 @@ void test_vlseg4e32_v_f32m2 (vfloat32m2_t *v0, vfloat32m2_t *v1, vfloat32m2_t *v
 //
 // CHECK-RV64-LABEL: @test_vlseg2e32_v_f32m4(
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 8 x float>, <vscale x 8 x float> } @llvm.riscv.vlseg2.nxv8f32.i64(float* [[BASE:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 8 x float>, <vscale x 8 x float> } @llvm.riscv.vlseg2.nxv8f32.i64(<vscale x 8 x float> undef, <vscale x 8 x float> undef, float* [[BASE:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 8 x float>, <vscale x 8 x float> } [[TMP0]], 0
 // CHECK-RV64-NEXT:    store <vscale x 8 x float> [[TMP1]], <vscale x 8 x float>* [[V0:%.*]], align 4
 // CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 8 x float>, <vscale x 8 x float> } [[TMP0]], 1
@@ -6151,7 +6151,7 @@ void test_vlseg2e32_v_f32m4 (vfloat32m4_t *v0, vfloat32m4_t *v1, const float *ba
 
 // CHECK-RV32-LABEL: @test_vlseg2e64_v_f64m1(
 // CHECK-RV32-NEXT:  entry:
-// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 1 x double>, <vscale x 1 x double> } @llvm.riscv.vlseg2.nxv1f64.i32(double* [[BASE:%.*]], i32 [[VL:%.*]])
+// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 1 x double>, <vscale x 1 x double> } @llvm.riscv.vlseg2.nxv1f64.i32(<vscale x 1 x double> undef, <vscale x 1 x double> undef, double* [[BASE:%.*]], i32 [[VL:%.*]])
 // CHECK-RV32-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 1 x double>, <vscale x 1 x double> } [[TMP0]], 0
 // CHECK-RV32-NEXT:    store <vscale x 1 x double> [[TMP1]], <vscale x 1 x double>* [[V0:%.*]], align 8
 // CHECK-RV32-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 1 x double>, <vscale x 1 x double> } [[TMP0]], 1
@@ -6160,7 +6160,7 @@ void test_vlseg2e32_v_f32m4 (vfloat32m4_t *v0, vfloat32m4_t *v1, const float *ba
 //
 // CHECK-RV64-LABEL: @test_vlseg2e64_v_f64m1(
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 1 x double>, <vscale x 1 x double> } @llvm.riscv.vlseg2.nxv1f64.i64(double* [[BASE:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 1 x double>, <vscale x 1 x double> } @llvm.riscv.vlseg2.nxv1f64.i64(<vscale x 1 x double> undef, <vscale x 1 x double> undef, double* [[BASE:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 1 x double>, <vscale x 1 x double> } [[TMP0]], 0
 // CHECK-RV64-NEXT:    store <vscale x 1 x double> [[TMP1]], <vscale x 1 x double>* [[V0:%.*]], align 8
 // CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 1 x double>, <vscale x 1 x double> } [[TMP0]], 1
@@ -6173,7 +6173,7 @@ void test_vlseg2e64_v_f64m1 (vfloat64m1_t *v0, vfloat64m1_t *v1, const double *b
 
 // CHECK-RV32-LABEL: @test_vlseg3e64_v_f64m1(
 // CHECK-RV32-NEXT:  entry:
-// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double> } @llvm.riscv.vlseg3.nxv1f64.i32(double* [[BASE:%.*]], i32 [[VL:%.*]])
+// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double> } @llvm.riscv.vlseg3.nxv1f64.i32(<vscale x 1 x double> undef, <vscale x 1 x double> undef, <vscale x 1 x double> undef, double* [[BASE:%.*]], i32 [[VL:%.*]])
 // CHECK-RV32-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double> } [[TMP0]], 0
 // CHECK-RV32-NEXT:    store <vscale x 1 x double> [[TMP1]], <vscale x 1 x double>* [[V0:%.*]], align 8
 // CHECK-RV32-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double> } [[TMP0]], 1
@@ -6184,7 +6184,7 @@ void test_vlseg2e64_v_f64m1 (vfloat64m1_t *v0, vfloat64m1_t *v1, const double *b
 //
 // CHECK-RV64-LABEL: @test_vlseg3e64_v_f64m1(
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double> } @llvm.riscv.vlseg3.nxv1f64.i64(double* [[BASE:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double> } @llvm.riscv.vlseg3.nxv1f64.i64(<vscale x 1 x double> undef, <vscale x 1 x double> undef, <vscale x 1 x double> undef, double* [[BASE:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double> } [[TMP0]], 0
 // CHECK-RV64-NEXT:    store <vscale x 1 x double> [[TMP1]], <vscale x 1 x double>* [[V0:%.*]], align 8
 // CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double> } [[TMP0]], 1
@@ -6199,7 +6199,7 @@ void test_vlseg3e64_v_f64m1 (vfloat64m1_t *v0, vfloat64m1_t *v1, vfloat64m1_t *v
 
 // CHECK-RV32-LABEL: @test_vlseg4e64_v_f64m1(
 // CHECK-RV32-NEXT:  entry:
-// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double> } @llvm.riscv.vlseg4.nxv1f64.i32(double* [[BASE:%.*]], i32 [[VL:%.*]])
+// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double> } @llvm.riscv.vlseg4.nxv1f64.i32(<vscale x 1 x double> undef, <vscale x 1 x double> undef, <vscale x 1 x double> undef, <vscale x 1 x double> undef, double* [[BASE:%.*]], i32 [[VL:%.*]])
 // CHECK-RV32-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double> } [[TMP0]], 0
 // CHECK-RV32-NEXT:    store <vscale x 1 x double> [[TMP1]], <vscale x 1 x double>* [[V0:%.*]], align 8
 // CHECK-RV32-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double> } [[TMP0]], 1
@@ -6212,7 +6212,7 @@ void test_vlseg3e64_v_f64m1 (vfloat64m1_t *v0, vfloat64m1_t *v1, vfloat64m1_t *v
 //
 // CHECK-RV64-LABEL: @test_vlseg4e64_v_f64m1(
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double> } @llvm.riscv.vlseg4.nxv1f64.i64(double* [[BASE:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double> } @llvm.riscv.vlseg4.nxv1f64.i64(<vscale x 1 x double> undef, <vscale x 1 x double> undef, <vscale x 1 x double> undef, <vscale x 1 x double> undef, double* [[BASE:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double> } [[TMP0]], 0
 // CHECK-RV64-NEXT:    store <vscale x 1 x double> [[TMP1]], <vscale x 1 x double>* [[V0:%.*]], align 8
 // CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double> } [[TMP0]], 1
@@ -6229,7 +6229,7 @@ void test_vlseg4e64_v_f64m1 (vfloat64m1_t *v0, vfloat64m1_t *v1, vfloat64m1_t *v
 
 // CHECK-RV32-LABEL: @test_vlseg5e64_v_f64m1(
 // CHECK-RV32-NEXT:  entry:
-// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double> } @llvm.riscv.vlseg5.nxv1f64.i32(double* [[BASE:%.*]], i32 [[VL:%.*]])
+// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double> } @llvm.riscv.vlseg5.nxv1f64.i32(<vscale x 1 x double> undef, <vscale x 1 x double> undef, <vscale x 1 x double> undef, <vscale x 1 x double> undef, <vscale x 1 x double> undef, double* [[BASE:%.*]], i32 [[VL:%.*]])
 // CHECK-RV32-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double> } [[TMP0]], 0
 // CHECK-RV32-NEXT:    store <vscale x 1 x double> [[TMP1]], <vscale x 1 x double>* [[V0:%.*]], align 8
 // CHECK-RV32-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double> } [[TMP0]], 1
@@ -6244,7 +6244,7 @@ void test_vlseg4e64_v_f64m1 (vfloat64m1_t *v0, vfloat64m1_t *v1, vfloat64m1_t *v
 //
 // CHECK-RV64-LABEL: @test_vlseg5e64_v_f64m1(
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double> } @llvm.riscv.vlseg5.nxv1f64.i64(double* [[BASE:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double> } @llvm.riscv.vlseg5.nxv1f64.i64(<vscale x 1 x double> undef, <vscale x 1 x double> undef, <vscale x 1 x double> undef, <vscale x 1 x double> undef, <vscale x 1 x double> undef, double* [[BASE:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double> } [[TMP0]], 0
 // CHECK-RV64-NEXT:    store <vscale x 1 x double> [[TMP1]], <vscale x 1 x double>* [[V0:%.*]], align 8
 // CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double> } [[TMP0]], 1
@@ -6263,7 +6263,7 @@ void test_vlseg5e64_v_f64m1 (vfloat64m1_t *v0, vfloat64m1_t *v1, vfloat64m1_t *v
 
 // CHECK-RV32-LABEL: @test_vlseg6e64_v_f64m1(
 // CHECK-RV32-NEXT:  entry:
-// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double> } @llvm.riscv.vlseg6.nxv1f64.i32(double* [[BASE:%.*]], i32 [[VL:%.*]])
+// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double> } @llvm.riscv.vlseg6.nxv1f64.i32(<vscale x 1 x double> undef, <vscale x 1 x double> undef, <vscale x 1 x double> undef, <vscale x 1 x double> undef, <vscale x 1 x double> undef, <vscale x 1 x double> undef, double* [[BASE:%.*]], i32 [[VL:%.*]])
 // CHECK-RV32-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double> } [[TMP0]], 0
 // CHECK-RV32-NEXT:    store <vscale x 1 x double> [[TMP1]], <vscale x 1 x double>* [[V0:%.*]], align 8
 // CHECK-RV32-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double> } [[TMP0]], 1
@@ -6280,7 +6280,7 @@ void test_vlseg5e64_v_f64m1 (vfloat64m1_t *v0, vfloat64m1_t *v1, vfloat64m1_t *v
 //
 // CHECK-RV64-LABEL: @test_vlseg6e64_v_f64m1(
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double> } @llvm.riscv.vlseg6.nxv1f64.i64(double* [[BASE:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double> } @llvm.riscv.vlseg6.nxv1f64.i64(<vscale x 1 x double> undef, <vscale x 1 x double> undef, <vscale x 1 x double> undef, <vscale x 1 x double> undef, <vscale x 1 x double> undef, <vscale x 1 x double> undef, double* [[BASE:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double> } [[TMP0]], 0
 // CHECK-RV64-NEXT:    store <vscale x 1 x double> [[TMP1]], <vscale x 1 x double>* [[V0:%.*]], align 8
 // CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double> } [[TMP0]], 1
@@ -6301,7 +6301,7 @@ void test_vlseg6e64_v_f64m1 (vfloat64m1_t *v0, vfloat64m1_t *v1, vfloat64m1_t *v
 
 // CHECK-RV32-LABEL: @test_vlseg7e64_v_f64m1(
 // CHECK-RV32-NEXT:  entry:
-// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double> } @llvm.riscv.vlseg7.nxv1f64.i32(double* [[BASE:%.*]], i32 [[VL:%.*]])
+// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double> } @llvm.riscv.vlseg7.nxv1f64.i32(<vscale x 1 x double> undef, <vscale x 1 x double> undef, <vscale x 1 x double> undef, <vscale x 1 x double> undef, <vscale x 1 x double> undef, <vscale x 1 x double> undef, <vscale x 1 x double> undef, double* [[BASE:%.*]], i32 [[VL:%.*]])
 // CHECK-RV32-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double> } [[TMP0]], 0
 // CHECK-RV32-NEXT:    store <vscale x 1 x double> [[TMP1]], <vscale x 1 x double>* [[V0:%.*]], align 8
 // CHECK-RV32-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double> } [[TMP0]], 1
@@ -6320,7 +6320,7 @@ void test_vlseg6e64_v_f64m1 (vfloat64m1_t *v0, vfloat64m1_t *v1, vfloat64m1_t *v
 //
 // CHECK-RV64-LABEL: @test_vlseg7e64_v_f64m1(
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double> } @llvm.riscv.vlseg7.nxv1f64.i64(double* [[BASE:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double> } @llvm.riscv.vlseg7.nxv1f64.i64(<vscale x 1 x double> undef, <vscale x 1 x double> undef, <vscale x 1 x double> undef, <vscale x 1 x double> undef, <vscale x 1 x double> undef, <vscale x 1 x double> undef, <vscale x 1 x double> undef, double* [[BASE:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double> } [[TMP0]], 0
 // CHECK-RV64-NEXT:    store <vscale x 1 x double> [[TMP1]], <vscale x 1 x double>* [[V0:%.*]], align 8
 // CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double> } [[TMP0]], 1
@@ -6343,7 +6343,7 @@ void test_vlseg7e64_v_f64m1 (vfloat64m1_t *v0, vfloat64m1_t *v1, vfloat64m1_t *v
 
 // CHECK-RV32-LABEL: @test_vlseg8e64_v_f64m1(
 // CHECK-RV32-NEXT:  entry:
-// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double> } @llvm.riscv.vlseg8.nxv1f64.i32(double* [[BASE:%.*]], i32 [[VL:%.*]])
+// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double> } @llvm.riscv.vlseg8.nxv1f64.i32(<vscale x 1 x double> undef, <vscale x 1 x double> undef, <vscale x 1 x double> undef, <vscale x 1 x double> undef, <vscale x 1 x double> undef, <vscale x 1 x double> undef, <vscale x 1 x double> undef, <vscale x 1 x double> undef, double* [[BASE:%.*]], i32 [[VL:%.*]])
 // CHECK-RV32-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double> } [[TMP0]], 0
 // CHECK-RV32-NEXT:    store <vscale x 1 x double> [[TMP1]], <vscale x 1 x double>* [[V0:%.*]], align 8
 // CHECK-RV32-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double> } [[TMP0]], 1
@@ -6364,7 +6364,7 @@ void test_vlseg7e64_v_f64m1 (vfloat64m1_t *v0, vfloat64m1_t *v1, vfloat64m1_t *v
 //
 // CHECK-RV64-LABEL: @test_vlseg8e64_v_f64m1(
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double> } @llvm.riscv.vlseg8.nxv1f64.i64(double* [[BASE:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double> } @llvm.riscv.vlseg8.nxv1f64.i64(<vscale x 1 x double> undef, <vscale x 1 x double> undef, <vscale x 1 x double> undef, <vscale x 1 x double> undef, <vscale x 1 x double> undef, <vscale x 1 x double> undef, <vscale x 1 x double> undef, <vscale x 1 x double> undef, double* [[BASE:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double> } [[TMP0]], 0
 // CHECK-RV64-NEXT:    store <vscale x 1 x double> [[TMP1]], <vscale x 1 x double>* [[V0:%.*]], align 8
 // CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double> } [[TMP0]], 1
@@ -6389,7 +6389,7 @@ void test_vlseg8e64_v_f64m1 (vfloat64m1_t *v0, vfloat64m1_t *v1, vfloat64m1_t *v
 
 // CHECK-RV32-LABEL: @test_vlseg2e64_v_f64m2(
 // CHECK-RV32-NEXT:  entry:
-// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 2 x double>, <vscale x 2 x double> } @llvm.riscv.vlseg2.nxv2f64.i32(double* [[BASE:%.*]], i32 [[VL:%.*]])
+// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 2 x double>, <vscale x 2 x double> } @llvm.riscv.vlseg2.nxv2f64.i32(<vscale x 2 x double> undef, <vscale x 2 x double> undef, double* [[BASE:%.*]], i32 [[VL:%.*]])
 // CHECK-RV32-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 2 x double>, <vscale x 2 x double> } [[TMP0]], 0
 // CHECK-RV32-NEXT:    store <vscale x 2 x double> [[TMP1]], <vscale x 2 x double>* [[V0:%.*]], align 8
 // CHECK-RV32-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 2 x double>, <vscale x 2 x double> } [[TMP0]], 1
@@ -6398,7 +6398,7 @@ void test_vlseg8e64_v_f64m1 (vfloat64m1_t *v0, vfloat64m1_t *v1, vfloat64m1_t *v
 //
 // CHECK-RV64-LABEL: @test_vlseg2e64_v_f64m2(
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 2 x double>, <vscale x 2 x double> } @llvm.riscv.vlseg2.nxv2f64.i64(double* [[BASE:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 2 x double>, <vscale x 2 x double> } @llvm.riscv.vlseg2.nxv2f64.i64(<vscale x 2 x double> undef, <vscale x 2 x double> undef, double* [[BASE:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 2 x double>, <vscale x 2 x double> } [[TMP0]], 0
 // CHECK-RV64-NEXT:    store <vscale x 2 x double> [[TMP1]], <vscale x 2 x double>* [[V0:%.*]], align 8
 // CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 2 x double>, <vscale x 2 x double> } [[TMP0]], 1
@@ -6411,7 +6411,7 @@ void test_vlseg2e64_v_f64m2 (vfloat64m2_t *v0, vfloat64m2_t *v1, const double *b
 
 // CHECK-RV32-LABEL: @test_vlseg3e64_v_f64m2(
 // CHECK-RV32-NEXT:  entry:
-// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double> } @llvm.riscv.vlseg3.nxv2f64.i32(double* [[BASE:%.*]], i32 [[VL:%.*]])
+// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double> } @llvm.riscv.vlseg3.nxv2f64.i32(<vscale x 2 x double> undef, <vscale x 2 x double> undef, <vscale x 2 x double> undef, double* [[BASE:%.*]], i32 [[VL:%.*]])
 // CHECK-RV32-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double> } [[TMP0]], 0
 // CHECK-RV32-NEXT:    store <vscale x 2 x double> [[TMP1]], <vscale x 2 x double>* [[V0:%.*]], align 8
 // CHECK-RV32-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double> } [[TMP0]], 1
@@ -6422,7 +6422,7 @@ void test_vlseg2e64_v_f64m2 (vfloat64m2_t *v0, vfloat64m2_t *v1, const double *b
 //
 // CHECK-RV64-LABEL: @test_vlseg3e64_v_f64m2(
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double> } @llvm.riscv.vlseg3.nxv2f64.i64(double* [[BASE:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double> } @llvm.riscv.vlseg3.nxv2f64.i64(<vscale x 2 x double> undef, <vscale x 2 x double> undef, <vscale x 2 x double> undef, double* [[BASE:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double> } [[TMP0]], 0
 // CHECK-RV64-NEXT:    store <vscale x 2 x double> [[TMP1]], <vscale x 2 x double>* [[V0:%.*]], align 8
 // CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double> } [[TMP0]], 1
@@ -6437,7 +6437,7 @@ void test_vlseg3e64_v_f64m2 (vfloat64m2_t *v0, vfloat64m2_t *v1, vfloat64m2_t *v
 
 // CHECK-RV32-LABEL: @test_vlseg4e64_v_f64m2(
 // CHECK-RV32-NEXT:  entry:
-// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double> } @llvm.riscv.vlseg4.nxv2f64.i32(double* [[BASE:%.*]], i32 [[VL:%.*]])
+// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double> } @llvm.riscv.vlseg4.nxv2f64.i32(<vscale x 2 x double> undef, <vscale x 2 x double> undef, <vscale x 2 x double> undef, <vscale x 2 x double> undef, double* [[BASE:%.*]], i32 [[VL:%.*]])
 // CHECK-RV32-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double> } [[TMP0]], 0
 // CHECK-RV32-NEXT:    store <vscale x 2 x double> [[TMP1]], <vscale x 2 x double>* [[V0:%.*]], align 8
 // CHECK-RV32-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double> } [[TMP0]], 1
@@ -6450,7 +6450,7 @@ void test_vlseg3e64_v_f64m2 (vfloat64m2_t *v0, vfloat64m2_t *v1, vfloat64m2_t *v
 //
 // CHECK-RV64-LABEL: @test_vlseg4e64_v_f64m2(
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double> } @llvm.riscv.vlseg4.nxv2f64.i64(double* [[BASE:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double> } @llvm.riscv.vlseg4.nxv2f64.i64(<vscale x 2 x double> undef, <vscale x 2 x double> undef, <vscale x 2 x double> undef, <vscale x 2 x double> undef, double* [[BASE:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double> } [[TMP0]], 0
 // CHECK-RV64-NEXT:    store <vscale x 2 x double> [[TMP1]], <vscale x 2 x double>* [[V0:%.*]], align 8
 // CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double> } [[TMP0]], 1
@@ -6467,7 +6467,7 @@ void test_vlseg4e64_v_f64m2 (vfloat64m2_t *v0, vfloat64m2_t *v1, vfloat64m2_t *v
 
 // CHECK-RV32-LABEL: @test_vlseg2e64_v_f64m4(
 // CHECK-RV32-NEXT:  entry:
-// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 4 x double>, <vscale x 4 x double> } @llvm.riscv.vlseg2.nxv4f64.i32(double* [[BASE:%.*]], i32 [[VL:%.*]])
+// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 4 x double>, <vscale x 4 x double> } @llvm.riscv.vlseg2.nxv4f64.i32(<vscale x 4 x double> undef, <vscale x 4 x double> undef, double* [[BASE:%.*]], i32 [[VL:%.*]])
 // CHECK-RV32-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 4 x double>, <vscale x 4 x double> } [[TMP0]], 0
 // CHECK-RV32-NEXT:    store <vscale x 4 x double> [[TMP1]], <vscale x 4 x double>* [[V0:%.*]], align 8
 // CHECK-RV32-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 4 x double>, <vscale x 4 x double> } [[TMP0]], 1
@@ -6476,7 +6476,7 @@ void test_vlseg4e64_v_f64m2 (vfloat64m2_t *v0, vfloat64m2_t *v1, vfloat64m2_t *v
 //
 // CHECK-RV64-LABEL: @test_vlseg2e64_v_f64m4(
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 4 x double>, <vscale x 4 x double> } @llvm.riscv.vlseg2.nxv4f64.i64(double* [[BASE:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 4 x double>, <vscale x 4 x double> } @llvm.riscv.vlseg2.nxv4f64.i64(<vscale x 4 x double> undef, <vscale x 4 x double> undef, double* [[BASE:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 4 x double>, <vscale x 4 x double> } [[TMP0]], 0
 // CHECK-RV64-NEXT:    store <vscale x 4 x double> [[TMP1]], <vscale x 4 x double>* [[V0:%.*]], align 8
 // CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 4 x double>, <vscale x 4 x double> } [[TMP0]], 1
@@ -6489,7 +6489,7 @@ void test_vlseg2e64_v_f64m4 (vfloat64m4_t *v0, vfloat64m4_t *v1, const double *b
 
 // CHECK-RV32-LABEL: @test_vlseg2e16_v_f16mf4(
 // CHECK-RV32-NEXT:  entry:
-// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 1 x half>, <vscale x 1 x half> } @llvm.riscv.vlseg2.nxv1f16.i32(half* [[BASE:%.*]], i32 [[VL:%.*]])
+// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 1 x half>, <vscale x 1 x half> } @llvm.riscv.vlseg2.nxv1f16.i32(<vscale x 1 x half> undef, <vscale x 1 x half> undef, half* [[BASE:%.*]], i32 [[VL:%.*]])
 // CHECK-RV32-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 1 x half>, <vscale x 1 x half> } [[TMP0]], 0
 // CHECK-RV32-NEXT:    store <vscale x 1 x half> [[TMP1]], <vscale x 1 x half>* [[V0:%.*]], align 2
 // CHECK-RV32-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 1 x half>, <vscale x 1 x half> } [[TMP0]], 1
@@ -6498,7 +6498,7 @@ void test_vlseg2e64_v_f64m4 (vfloat64m4_t *v0, vfloat64m4_t *v1, const double *b
 //
 // CHECK-RV64-LABEL: @test_vlseg2e16_v_f16mf4(
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 1 x half>, <vscale x 1 x half> } @llvm.riscv.vlseg2.nxv1f16.i64(half* [[BASE:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 1 x half>, <vscale x 1 x half> } @llvm.riscv.vlseg2.nxv1f16.i64(<vscale x 1 x half> undef, <vscale x 1 x half> undef, half* [[BASE:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 1 x half>, <vscale x 1 x half> } [[TMP0]], 0
 // CHECK-RV64-NEXT:    store <vscale x 1 x half> [[TMP1]], <vscale x 1 x half>* [[V0:%.*]], align 2
 // CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 1 x half>, <vscale x 1 x half> } [[TMP0]], 1
@@ -6511,7 +6511,7 @@ void test_vlseg2e16_v_f16mf4 (vfloat16mf4_t *v0, vfloat16mf4_t *v1, const _Float
 
 // CHECK-RV32-LABEL: @test_vlseg3e16_v_f16mf4(
 // CHECK-RV32-NEXT:  entry:
-// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half> } @llvm.riscv.vlseg3.nxv1f16.i32(half* [[BASE:%.*]], i32 [[VL:%.*]])
+// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half> } @llvm.riscv.vlseg3.nxv1f16.i32(<vscale x 1 x half> undef, <vscale x 1 x half> undef, <vscale x 1 x half> undef, half* [[BASE:%.*]], i32 [[VL:%.*]])
 // CHECK-RV32-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half> } [[TMP0]], 0
 // CHECK-RV32-NEXT:    store <vscale x 1 x half> [[TMP1]], <vscale x 1 x half>* [[V0:%.*]], align 2
 // CHECK-RV32-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half> } [[TMP0]], 1
@@ -6522,7 +6522,7 @@ void test_vlseg2e16_v_f16mf4 (vfloat16mf4_t *v0, vfloat16mf4_t *v1, const _Float
 //
 // CHECK-RV64-LABEL: @test_vlseg3e16_v_f16mf4(
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half> } @llvm.riscv.vlseg3.nxv1f16.i64(half* [[BASE:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half> } @llvm.riscv.vlseg3.nxv1f16.i64(<vscale x 1 x half> undef, <vscale x 1 x half> undef, <vscale x 1 x half> undef, half* [[BASE:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half> } [[TMP0]], 0
 // CHECK-RV64-NEXT:    store <vscale x 1 x half> [[TMP1]], <vscale x 1 x half>* [[V0:%.*]], align 2
 // CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half> } [[TMP0]], 1
@@ -6537,7 +6537,7 @@ void test_vlseg3e16_v_f16mf4 (vfloat16mf4_t *v0, vfloat16mf4_t *v1, vfloat16mf4_
 
 // CHECK-RV32-LABEL: @test_vlseg4e16_v_f16mf4(
 // CHECK-RV32-NEXT:  entry:
-// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half> } @llvm.riscv.vlseg4.nxv1f16.i32(half* [[BASE:%.*]], i32 [[VL:%.*]])
+// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half> } @llvm.riscv.vlseg4.nxv1f16.i32(<vscale x 1 x half> undef, <vscale x 1 x half> undef, <vscale x 1 x half> undef, <vscale x 1 x half> undef, half* [[BASE:%.*]], i32 [[VL:%.*]])
 // CHECK-RV32-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half> } [[TMP0]], 0
 // CHECK-RV32-NEXT:    store <vscale x 1 x half> [[TMP1]], <vscale x 1 x half>* [[V0:%.*]], align 2
 // CHECK-RV32-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half> } [[TMP0]], 1
@@ -6550,7 +6550,7 @@ void test_vlseg3e16_v_f16mf4 (vfloat16mf4_t *v0, vfloat16mf4_t *v1, vfloat16mf4_
 //
 // CHECK-RV64-LABEL: @test_vlseg4e16_v_f16mf4(
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half> } @llvm.riscv.vlseg4.nxv1f16.i64(half* [[BASE:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half> } @llvm.riscv.vlseg4.nxv1f16.i64(<vscale x 1 x half> undef, <vscale x 1 x half> undef, <vscale x 1 x half> undef, <vscale x 1 x half> undef, half* [[BASE:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half> } [[TMP0]], 0
 // CHECK-RV64-NEXT:    store <vscale x 1 x half> [[TMP1]], <vscale x 1 x half>* [[V0:%.*]], align 2
 // CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half> } [[TMP0]], 1
@@ -6567,7 +6567,7 @@ void test_vlseg4e16_v_f16mf4 (vfloat16mf4_t *v0, vfloat16mf4_t *v1, vfloat16mf4_
 
 // CHECK-RV32-LABEL: @test_vlseg5e16_v_f16mf4(
 // CHECK-RV32-NEXT:  entry:
-// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half> } @llvm.riscv.vlseg5.nxv1f16.i32(half* [[BASE:%.*]], i32 [[VL:%.*]])
+// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half> } @llvm.riscv.vlseg5.nxv1f16.i32(<vscale x 1 x half> undef, <vscale x 1 x half> undef, <vscale x 1 x half> undef, <vscale x 1 x half> undef, <vscale x 1 x half> undef, half* [[BASE:%.*]], i32 [[VL:%.*]])
 // CHECK-RV32-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half> } [[TMP0]], 0
 // CHECK-RV32-NEXT:    store <vscale x 1 x half> [[TMP1]], <vscale x 1 x half>* [[V0:%.*]], align 2
 // CHECK-RV32-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half> } [[TMP0]], 1
@@ -6582,7 +6582,7 @@ void test_vlseg4e16_v_f16mf4 (vfloat16mf4_t *v0, vfloat16mf4_t *v1, vfloat16mf4_
 //
 // CHECK-RV64-LABEL: @test_vlseg5e16_v_f16mf4(
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half> } @llvm.riscv.vlseg5.nxv1f16.i64(half* [[BASE:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half> } @llvm.riscv.vlseg5.nxv1f16.i64(<vscale x 1 x half> undef, <vscale x 1 x half> undef, <vscale x 1 x half> undef, <vscale x 1 x half> undef, <vscale x 1 x half> undef, half* [[BASE:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half> } [[TMP0]], 0
 // CHECK-RV64-NEXT:    store <vscale x 1 x half> [[TMP1]], <vscale x 1 x half>* [[V0:%.*]], align 2
 // CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half> } [[TMP0]], 1
@@ -6601,7 +6601,7 @@ void test_vlseg5e16_v_f16mf4 (vfloat16mf4_t *v0, vfloat16mf4_t *v1, vfloat16mf4_
 
 // CHECK-RV32-LABEL: @test_vlseg6e16_v_f16mf4(
 // CHECK-RV32-NEXT:  entry:
-// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half> } @llvm.riscv.vlseg6.nxv1f16.i32(half* [[BASE:%.*]], i32 [[VL:%.*]])
+// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half> } @llvm.riscv.vlseg6.nxv1f16.i32(<vscale x 1 x half> undef, <vscale x 1 x half> undef, <vscale x 1 x half> undef, <vscale x 1 x half> undef, <vscale x 1 x half> undef, <vscale x 1 x half> undef, half* [[BASE:%.*]], i32 [[VL:%.*]])
 // CHECK-RV32-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half> } [[TMP0]], 0
 // CHECK-RV32-NEXT:    store <vscale x 1 x half> [[TMP1]], <vscale x 1 x half>* [[V0:%.*]], align 2
 // CHECK-RV32-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half> } [[TMP0]], 1
@@ -6618,7 +6618,7 @@ void test_vlseg5e16_v_f16mf4 (vfloat16mf4_t *v0, vfloat16mf4_t *v1, vfloat16mf4_
 //
 // CHECK-RV64-LABEL: @test_vlseg6e16_v_f16mf4(
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half> } @llvm.riscv.vlseg6.nxv1f16.i64(half* [[BASE:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half> } @llvm.riscv.vlseg6.nxv1f16.i64(<vscale x 1 x half> undef, <vscale x 1 x half> undef, <vscale x 1 x half> undef, <vscale x 1 x half> undef, <vscale x 1 x half> undef, <vscale x 1 x half> undef, half* [[BASE:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half> } [[TMP0]], 0
 // CHECK-RV64-NEXT:    store <vscale x 1 x half> [[TMP1]], <vscale x 1 x half>* [[V0:%.*]], align 2
 // CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half> } [[TMP0]], 1
@@ -6639,7 +6639,7 @@ void test_vlseg6e16_v_f16mf4 (vfloat16mf4_t *v0, vfloat16mf4_t *v1, vfloat16mf4_
 
 // CHECK-RV32-LABEL: @test_vlseg7e16_v_f16mf4(
 // CHECK-RV32-NEXT:  entry:
-// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half> } @llvm.riscv.vlseg7.nxv1f16.i32(half* [[BASE:%.*]], i32 [[VL:%.*]])
+// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half> } @llvm.riscv.vlseg7.nxv1f16.i32(<vscale x 1 x half> undef, <vscale x 1 x half> undef, <vscale x 1 x half> undef, <vscale x 1 x half> undef, <vscale x 1 x half> undef, <vscale x 1 x half> undef, <vscale x 1 x half> undef, half* [[BASE:%.*]], i32 [[VL:%.*]])
 // CHECK-RV32-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half> } [[TMP0]], 0
 // CHECK-RV32-NEXT:    store <vscale x 1 x half> [[TMP1]], <vscale x 1 x half>* [[V0:%.*]], align 2
 // CHECK-RV32-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half> } [[TMP0]], 1
@@ -6658,7 +6658,7 @@ void test_vlseg6e16_v_f16mf4 (vfloat16mf4_t *v0, vfloat16mf4_t *v1, vfloat16mf4_
 //
 // CHECK-RV64-LABEL: @test_vlseg7e16_v_f16mf4(
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half> } @llvm.riscv.vlseg7.nxv1f16.i64(half* [[BASE:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half> } @llvm.riscv.vlseg7.nxv1f16.i64(<vscale x 1 x half> undef, <vscale x 1 x half> undef, <vscale x 1 x half> undef, <vscale x 1 x half> undef, <vscale x 1 x half> undef, <vscale x 1 x half> undef, <vscale x 1 x half> undef, half* [[BASE:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half> } [[TMP0]], 0
 // CHECK-RV64-NEXT:    store <vscale x 1 x half> [[TMP1]], <vscale x 1 x half>* [[V0:%.*]], align 2
 // CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half> } [[TMP0]], 1
@@ -6681,7 +6681,7 @@ void test_vlseg7e16_v_f16mf4 (vfloat16mf4_t *v0, vfloat16mf4_t *v1, vfloat16mf4_
 
 // CHECK-RV32-LABEL: @test_vlseg8e16_v_f16mf4(
 // CHECK-RV32-NEXT:  entry:
-// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half> } @llvm.riscv.vlseg8.nxv1f16.i32(half* [[BASE:%.*]], i32 [[VL:%.*]])
+// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half> } @llvm.riscv.vlseg8.nxv1f16.i32(<vscale x 1 x half> undef, <vscale x 1 x half> undef, <vscale x 1 x half> undef, <vscale x 1 x half> undef, <vscale x 1 x half> undef, <vscale x 1 x half> undef, <vscale x 1 x half> undef, <vscale x 1 x half> undef, half* [[BASE:%.*]], i32 [[VL:%.*]])
 // CHECK-RV32-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half> } [[TMP0]], 0
 // CHECK-RV32-NEXT:    store <vscale x 1 x half> [[TMP1]], <vscale x 1 x half>* [[V0:%.*]], align 2
 // CHECK-RV32-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half> } [[TMP0]], 1
@@ -6702,7 +6702,7 @@ void test_vlseg7e16_v_f16mf4 (vfloat16mf4_t *v0, vfloat16mf4_t *v1, vfloat16mf4_
 //
 // CHECK-RV64-LABEL: @test_vlseg8e16_v_f16mf4(
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half> } @llvm.riscv.vlseg8.nxv1f16.i64(half* [[BASE:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half> } @llvm.riscv.vlseg8.nxv1f16.i64(<vscale x 1 x half> undef, <vscale x 1 x half> undef, <vscale x 1 x half> undef, <vscale x 1 x half> undef, <vscale x 1 x half> undef, <vscale x 1 x half> undef, <vscale x 1 x half> undef, <vscale x 1 x half> undef, half* [[BASE:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half> } [[TMP0]], 0
 // CHECK-RV64-NEXT:    store <vscale x 1 x half> [[TMP1]], <vscale x 1 x half>* [[V0:%.*]], align 2
 // CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half> } [[TMP0]], 1
@@ -6727,7 +6727,7 @@ void test_vlseg8e16_v_f16mf4 (vfloat16mf4_t *v0, vfloat16mf4_t *v1, vfloat16mf4_
 
 // CHECK-RV32-LABEL: @test_vlseg2e16_v_f16mf2(
 // CHECK-RV32-NEXT:  entry:
-// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 2 x half>, <vscale x 2 x half> } @llvm.riscv.vlseg2.nxv2f16.i32(half* [[BASE:%.*]], i32 [[VL:%.*]])
+// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 2 x half>, <vscale x 2 x half> } @llvm.riscv.vlseg2.nxv2f16.i32(<vscale x 2 x half> undef, <vscale x 2 x half> undef, half* [[BASE:%.*]], i32 [[VL:%.*]])
 // CHECK-RV32-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 2 x half>, <vscale x 2 x half> } [[TMP0]], 0
 // CHECK-RV32-NEXT:    store <vscale x 2 x half> [[TMP1]], <vscale x 2 x half>* [[V0:%.*]], align 2
 // CHECK-RV32-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 2 x half>, <vscale x 2 x half> } [[TMP0]], 1
@@ -6736,7 +6736,7 @@ void test_vlseg8e16_v_f16mf4 (vfloat16mf4_t *v0, vfloat16mf4_t *v1, vfloat16mf4_
 //
 // CHECK-RV64-LABEL: @test_vlseg2e16_v_f16mf2(
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 2 x half>, <vscale x 2 x half> } @llvm.riscv.vlseg2.nxv2f16.i64(half* [[BASE:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 2 x half>, <vscale x 2 x half> } @llvm.riscv.vlseg2.nxv2f16.i64(<vscale x 2 x half> undef, <vscale x 2 x half> undef, half* [[BASE:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 2 x half>, <vscale x 2 x half> } [[TMP0]], 0
 // CHECK-RV64-NEXT:    store <vscale x 2 x half> [[TMP1]], <vscale x 2 x half>* [[V0:%.*]], align 2
 // CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 2 x half>, <vscale x 2 x half> } [[TMP0]], 1
@@ -6749,7 +6749,7 @@ void test_vlseg2e16_v_f16mf2 (vfloat16mf2_t *v0, vfloat16mf2_t *v1, const _Float
 
 // CHECK-RV32-LABEL: @test_vlseg3e16_v_f16mf2(
 // CHECK-RV32-NEXT:  entry:
-// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half> } @llvm.riscv.vlseg3.nxv2f16.i32(half* [[BASE:%.*]], i32 [[VL:%.*]])
+// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half> } @llvm.riscv.vlseg3.nxv2f16.i32(<vscale x 2 x half> undef, <vscale x 2 x half> undef, <vscale x 2 x half> undef, half* [[BASE:%.*]], i32 [[VL:%.*]])
 // CHECK-RV32-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half> } [[TMP0]], 0
 // CHECK-RV32-NEXT:    store <vscale x 2 x half> [[TMP1]], <vscale x 2 x half>* [[V0:%.*]], align 2
 // CHECK-RV32-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half> } [[TMP0]], 1
@@ -6760,7 +6760,7 @@ void test_vlseg2e16_v_f16mf2 (vfloat16mf2_t *v0, vfloat16mf2_t *v1, const _Float
 //
 // CHECK-RV64-LABEL: @test_vlseg3e16_v_f16mf2(
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half> } @llvm.riscv.vlseg3.nxv2f16.i64(half* [[BASE:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half> } @llvm.riscv.vlseg3.nxv2f16.i64(<vscale x 2 x half> undef, <vscale x 2 x half> undef, <vscale x 2 x half> undef, half* [[BASE:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half> } [[TMP0]], 0
 // CHECK-RV64-NEXT:    store <vscale x 2 x half> [[TMP1]], <vscale x 2 x half>* [[V0:%.*]], align 2
 // CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half> } [[TMP0]], 1
@@ -6775,7 +6775,7 @@ void test_vlseg3e16_v_f16mf2 (vfloat16mf2_t *v0, vfloat16mf2_t *v1, vfloat16mf2_
 
 // CHECK-RV32-LABEL: @test_vlseg4e16_v_f16mf2(
 // CHECK-RV32-NEXT:  entry:
-// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half> } @llvm.riscv.vlseg4.nxv2f16.i32(half* [[BASE:%.*]], i32 [[VL:%.*]])
+// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half> } @llvm.riscv.vlseg4.nxv2f16.i32(<vscale x 2 x half> undef, <vscale x 2 x half> undef, <vscale x 2 x half> undef, <vscale x 2 x half> undef, half* [[BASE:%.*]], i32 [[VL:%.*]])
 // CHECK-RV32-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half> } [[TMP0]], 0
 // CHECK-RV32-NEXT:    store <vscale x 2 x half> [[TMP1]], <vscale x 2 x half>* [[V0:%.*]], align 2
 // CHECK-RV32-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half> } [[TMP0]], 1
@@ -6788,7 +6788,7 @@ void test_vlseg3e16_v_f16mf2 (vfloat16mf2_t *v0, vfloat16mf2_t *v1, vfloat16mf2_
 //
 // CHECK-RV64-LABEL: @test_vlseg4e16_v_f16mf2(
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half> } @llvm.riscv.vlseg4.nxv2f16.i64(half* [[BASE:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half> } @llvm.riscv.vlseg4.nxv2f16.i64(<vscale x 2 x half> undef, <vscale x 2 x half> undef, <vscale x 2 x half> undef, <vscale x 2 x half> undef, half* [[BASE:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half> } [[TMP0]], 0
 // CHECK-RV64-NEXT:    store <vscale x 2 x half> [[TMP1]], <vscale x 2 x half>* [[V0:%.*]], align 2
 // CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half> } [[TMP0]], 1
@@ -6805,7 +6805,7 @@ void test_vlseg4e16_v_f16mf2 (vfloat16mf2_t *v0, vfloat16mf2_t *v1, vfloat16mf2_
 
 // CHECK-RV32-LABEL: @test_vlseg5e16_v_f16mf2(
 // CHECK-RV32-NEXT:  entry:
-// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half> } @llvm.riscv.vlseg5.nxv2f16.i32(half* [[BASE:%.*]], i32 [[VL:%.*]])
+// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half> } @llvm.riscv.vlseg5.nxv2f16.i32(<vscale x 2 x half> undef, <vscale x 2 x half> undef, <vscale x 2 x half> undef, <vscale x 2 x half> undef, <vscale x 2 x half> undef, half* [[BASE:%.*]], i32 [[VL:%.*]])
 // CHECK-RV32-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half> } [[TMP0]], 0
 // CHECK-RV32-NEXT:    store <vscale x 2 x half> [[TMP1]], <vscale x 2 x half>* [[V0:%.*]], align 2
 // CHECK-RV32-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half> } [[TMP0]], 1
@@ -6820,7 +6820,7 @@ void test_vlseg4e16_v_f16mf2 (vfloat16mf2_t *v0, vfloat16mf2_t *v1, vfloat16mf2_
 //
 // CHECK-RV64-LABEL: @test_vlseg5e16_v_f16mf2(
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half> } @llvm.riscv.vlseg5.nxv2f16.i64(half* [[BASE:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half> } @llvm.riscv.vlseg5.nxv2f16.i64(<vscale x 2 x half> undef, <vscale x 2 x half> undef, <vscale x 2 x half> undef, <vscale x 2 x half> undef, <vscale x 2 x half> undef, half* [[BASE:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half> } [[TMP0]], 0
 // CHECK-RV64-NEXT:    store <vscale x 2 x half> [[TMP1]], <vscale x 2 x half>* [[V0:%.*]], align 2
 // CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half> } [[TMP0]], 1
@@ -6839,7 +6839,7 @@ void test_vlseg5e16_v_f16mf2 (vfloat16mf2_t *v0, vfloat16mf2_t *v1, vfloat16mf2_
 
 // CHECK-RV32-LABEL: @test_vlseg6e16_v_f16mf2(
 // CHECK-RV32-NEXT:  entry:
-// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half> } @llvm.riscv.vlseg6.nxv2f16.i32(half* [[BASE:%.*]], i32 [[VL:%.*]])
+// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half> } @llvm.riscv.vlseg6.nxv2f16.i32(<vscale x 2 x half> undef, <vscale x 2 x half> undef, <vscale x 2 x half> undef, <vscale x 2 x half> undef, <vscale x 2 x half> undef, <vscale x 2 x half> undef, half* [[BASE:%.*]], i32 [[VL:%.*]])
 // CHECK-RV32-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half> } [[TMP0]], 0
 // CHECK-RV32-NEXT:    store <vscale x 2 x half> [[TMP1]], <vscale x 2 x half>* [[V0:%.*]], align 2
 // CHECK-RV32-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half> } [[TMP0]], 1
@@ -6856,7 +6856,7 @@ void test_vlseg5e16_v_f16mf2 (vfloat16mf2_t *v0, vfloat16mf2_t *v1, vfloat16mf2_
 //
 // CHECK-RV64-LABEL: @test_vlseg6e16_v_f16mf2(
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half> } @llvm.riscv.vlseg6.nxv2f16.i64(half* [[BASE:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half> } @llvm.riscv.vlseg6.nxv2f16.i64(<vscale x 2 x half> undef, <vscale x 2 x half> undef, <vscale x 2 x half> undef, <vscale x 2 x half> undef, <vscale x 2 x half> undef, <vscale x 2 x half> undef, half* [[BASE:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half> } [[TMP0]], 0
 // CHECK-RV64-NEXT:    store <vscale x 2 x half> [[TMP1]], <vscale x 2 x half>* [[V0:%.*]], align 2
 // CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half> } [[TMP0]], 1
@@ -6877,7 +6877,7 @@ void test_vlseg6e16_v_f16mf2 (vfloat16mf2_t *v0, vfloat16mf2_t *v1, vfloat16mf2_
 
 // CHECK-RV32-LABEL: @test_vlseg7e16_v_f16mf2(
 // CHECK-RV32-NEXT:  entry:
-// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half> } @llvm.riscv.vlseg7.nxv2f16.i32(half* [[BASE:%.*]], i32 [[VL:%.*]])
+// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half> } @llvm.riscv.vlseg7.nxv2f16.i32(<vscale x 2 x half> undef, <vscale x 2 x half> undef, <vscale x 2 x half> undef, <vscale x 2 x half> undef, <vscale x 2 x half> undef, <vscale x 2 x half> undef, <vscale x 2 x half> undef, half* [[BASE:%.*]], i32 [[VL:%.*]])
 // CHECK-RV32-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half> } [[TMP0]], 0
 // CHECK-RV32-NEXT:    store <vscale x 2 x half> [[TMP1]], <vscale x 2 x half>* [[V0:%.*]], align 2
 // CHECK-RV32-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half> } [[TMP0]], 1
@@ -6896,7 +6896,7 @@ void test_vlseg6e16_v_f16mf2 (vfloat16mf2_t *v0, vfloat16mf2_t *v1, vfloat16mf2_
 //
 // CHECK-RV64-LABEL: @test_vlseg7e16_v_f16mf2(
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half> } @llvm.riscv.vlseg7.nxv2f16.i64(half* [[BASE:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half> } @llvm.riscv.vlseg7.nxv2f16.i64(<vscale x 2 x half> undef, <vscale x 2 x half> undef, <vscale x 2 x half> undef, <vscale x 2 x half> undef, <vscale x 2 x half> undef, <vscale x 2 x half> undef, <vscale x 2 x half> undef, half* [[BASE:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half> } [[TMP0]], 0
 // CHECK-RV64-NEXT:    store <vscale x 2 x half> [[TMP1]], <vscale x 2 x half>* [[V0:%.*]], align 2
 // CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half> } [[TMP0]], 1
@@ -6919,7 +6919,7 @@ void test_vlseg7e16_v_f16mf2 (vfloat16mf2_t *v0, vfloat16mf2_t *v1, vfloat16mf2_
 
 // CHECK-RV32-LABEL: @test_vlseg8e16_v_f16mf2(
 // CHECK-RV32-NEXT:  entry:
-// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half> } @llvm.riscv.vlseg8.nxv2f16.i32(half* [[BASE:%.*]], i32 [[VL:%.*]])
+// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half> } @llvm.riscv.vlseg8.nxv2f16.i32(<vscale x 2 x half> undef, <vscale x 2 x half> undef, <vscale x 2 x half> undef, <vscale x 2 x half> undef, <vscale x 2 x half> undef, <vscale x 2 x half> undef, <vscale x 2 x half> undef, <vscale x 2 x half> undef, half* [[BASE:%.*]], i32 [[VL:%.*]])
 // CHECK-RV32-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half> } [[TMP0]], 0
 // CHECK-RV32-NEXT:    store <vscale x 2 x half> [[TMP1]], <vscale x 2 x half>* [[V0:%.*]], align 2
 // CHECK-RV32-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half> } [[TMP0]], 1
@@ -6940,7 +6940,7 @@ void test_vlseg7e16_v_f16mf2 (vfloat16mf2_t *v0, vfloat16mf2_t *v1, vfloat16mf2_
 //
 // CHECK-RV64-LABEL: @test_vlseg8e16_v_f16mf2(
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half> } @llvm.riscv.vlseg8.nxv2f16.i64(half* [[BASE:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half> } @llvm.riscv.vlseg8.nxv2f16.i64(<vscale x 2 x half> undef, <vscale x 2 x half> undef, <vscale x 2 x half> undef, <vscale x 2 x half> undef, <vscale x 2 x half> undef, <vscale x 2 x half> undef, <vscale x 2 x half> undef, <vscale x 2 x half> undef, half* [[BASE:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half> } [[TMP0]], 0
 // CHECK-RV64-NEXT:    store <vscale x 2 x half> [[TMP1]], <vscale x 2 x half>* [[V0:%.*]], align 2
 // CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half> } [[TMP0]], 1
@@ -6965,7 +6965,7 @@ void test_vlseg8e16_v_f16mf2 (vfloat16mf2_t *v0, vfloat16mf2_t *v1, vfloat16mf2_
 
 // CHECK-RV32-LABEL: @test_vlseg2e16_v_f16m1(
 // CHECK-RV32-NEXT:  entry:
-// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 4 x half>, <vscale x 4 x half> } @llvm.riscv.vlseg2.nxv4f16.i32(half* [[BASE:%.*]], i32 [[VL:%.*]])
+// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 4 x half>, <vscale x 4 x half> } @llvm.riscv.vlseg2.nxv4f16.i32(<vscale x 4 x half> undef, <vscale x 4 x half> undef, half* [[BASE:%.*]], i32 [[VL:%.*]])
 // CHECK-RV32-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 4 x half>, <vscale x 4 x half> } [[TMP0]], 0
 // CHECK-RV32-NEXT:    store <vscale x 4 x half> [[TMP1]], <vscale x 4 x half>* [[V0:%.*]], align 2
 // CHECK-RV32-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 4 x half>, <vscale x 4 x half> } [[TMP0]], 1
@@ -6974,7 +6974,7 @@ void test_vlseg8e16_v_f16mf2 (vfloat16mf2_t *v0, vfloat16mf2_t *v1, vfloat16mf2_
 //
 // CHECK-RV64-LABEL: @test_vlseg2e16_v_f16m1(
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 4 x half>, <vscale x 4 x half> } @llvm.riscv.vlseg2.nxv4f16.i64(half* [[BASE:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 4 x half>, <vscale x 4 x half> } @llvm.riscv.vlseg2.nxv4f16.i64(<vscale x 4 x half> undef, <vscale x 4 x half> undef, half* [[BASE:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 4 x half>, <vscale x 4 x half> } [[TMP0]], 0
 // CHECK-RV64-NEXT:    store <vscale x 4 x half> [[TMP1]], <vscale x 4 x half>* [[V0:%.*]], align 2
 // CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 4 x half>, <vscale x 4 x half> } [[TMP0]], 1
@@ -6987,7 +6987,7 @@ void test_vlseg2e16_v_f16m1 (vfloat16m1_t *v0, vfloat16m1_t *v1, const _Float16 
 
 // CHECK-RV32-LABEL: @test_vlseg3e16_v_f16m1(
 // CHECK-RV32-NEXT:  entry:
-// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half> } @llvm.riscv.vlseg3.nxv4f16.i32(half* [[BASE:%.*]], i32 [[VL:%.*]])
+// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half> } @llvm.riscv.vlseg3.nxv4f16.i32(<vscale x 4 x half> undef, <vscale x 4 x half> undef, <vscale x 4 x half> undef, half* [[BASE:%.*]], i32 [[VL:%.*]])
 // CHECK-RV32-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half> } [[TMP0]], 0
 // CHECK-RV32-NEXT:    store <vscale x 4 x half> [[TMP1]], <vscale x 4 x half>* [[V0:%.*]], align 2
 // CHECK-RV32-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half> } [[TMP0]], 1
@@ -6998,7 +6998,7 @@ void test_vlseg2e16_v_f16m1 (vfloat16m1_t *v0, vfloat16m1_t *v1, const _Float16 
 //
 // CHECK-RV64-LABEL: @test_vlseg3e16_v_f16m1(
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half> } @llvm.riscv.vlseg3.nxv4f16.i64(half* [[BASE:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half> } @llvm.riscv.vlseg3.nxv4f16.i64(<vscale x 4 x half> undef, <vscale x 4 x half> undef, <vscale x 4 x half> undef, half* [[BASE:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half> } [[TMP0]], 0
 // CHECK-RV64-NEXT:    store <vscale x 4 x half> [[TMP1]], <vscale x 4 x half>* [[V0:%.*]], align 2
 // CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half> } [[TMP0]], 1
@@ -7013,7 +7013,7 @@ void test_vlseg3e16_v_f16m1 (vfloat16m1_t *v0, vfloat16m1_t *v1, vfloat16m1_t *v
 
 // CHECK-RV32-LABEL: @test_vlseg4e16_v_f16m1(
 // CHECK-RV32-NEXT:  entry:
-// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half> } @llvm.riscv.vlseg4.nxv4f16.i32(half* [[BASE:%.*]], i32 [[VL:%.*]])
+// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half> } @llvm.riscv.vlseg4.nxv4f16.i32(<vscale x 4 x half> undef, <vscale x 4 x half> undef, <vscale x 4 x half> undef, <vscale x 4 x half> undef, half* [[BASE:%.*]], i32 [[VL:%.*]])
 // CHECK-RV32-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half> } [[TMP0]], 0
 // CHECK-RV32-NEXT:    store <vscale x 4 x half> [[TMP1]], <vscale x 4 x half>* [[V0:%.*]], align 2
 // CHECK-RV32-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half> } [[TMP0]], 1
@@ -7026,7 +7026,7 @@ void test_vlseg3e16_v_f16m1 (vfloat16m1_t *v0, vfloat16m1_t *v1, vfloat16m1_t *v
 //
 // CHECK-RV64-LABEL: @test_vlseg4e16_v_f16m1(
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half> } @llvm.riscv.vlseg4.nxv4f16.i64(half* [[BASE:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half> } @llvm.riscv.vlseg4.nxv4f16.i64(<vscale x 4 x half> undef, <vscale x 4 x half> undef, <vscale x 4 x half> undef, <vscale x 4 x half> undef, half* [[BASE:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half> } [[TMP0]], 0
 // CHECK-RV64-NEXT:    store <vscale x 4 x half> [[TMP1]], <vscale x 4 x half>* [[V0:%.*]], align 2
 // CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half> } [[TMP0]], 1
@@ -7043,7 +7043,7 @@ void test_vlseg4e16_v_f16m1 (vfloat16m1_t *v0, vfloat16m1_t *v1, vfloat16m1_t *v
 
 // CHECK-RV32-LABEL: @test_vlseg5e16_v_f16m1(
 // CHECK-RV32-NEXT:  entry:
-// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half> } @llvm.riscv.vlseg5.nxv4f16.i32(half* [[BASE:%.*]], i32 [[VL:%.*]])
+// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half> } @llvm.riscv.vlseg5.nxv4f16.i32(<vscale x 4 x half> undef, <vscale x 4 x half> undef, <vscale x 4 x half> undef, <vscale x 4 x half> undef, <vscale x 4 x half> undef, half* [[BASE:%.*]], i32 [[VL:%.*]])
 // CHECK-RV32-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half> } [[TMP0]], 0
 // CHECK-RV32-NEXT:    store <vscale x 4 x half> [[TMP1]], <vscale x 4 x half>* [[V0:%.*]], align 2
 // CHECK-RV32-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half> } [[TMP0]], 1
@@ -7058,7 +7058,7 @@ void test_vlseg4e16_v_f16m1 (vfloat16m1_t *v0, vfloat16m1_t *v1, vfloat16m1_t *v
 //
 // CHECK-RV64-LABEL: @test_vlseg5e16_v_f16m1(
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half> } @llvm.riscv.vlseg5.nxv4f16.i64(half* [[BASE:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half> } @llvm.riscv.vlseg5.nxv4f16.i64(<vscale x 4 x half> undef, <vscale x 4 x half> undef, <vscale x 4 x half> undef, <vscale x 4 x half> undef, <vscale x 4 x half> undef, half* [[BASE:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half> } [[TMP0]], 0
 // CHECK-RV64-NEXT:    store <vscale x 4 x half> [[TMP1]], <vscale x 4 x half>* [[V0:%.*]], align 2
 // CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half> } [[TMP0]], 1
@@ -7077,7 +7077,7 @@ void test_vlseg5e16_v_f16m1 (vfloat16m1_t *v0, vfloat16m1_t *v1, vfloat16m1_t *v
 
 // CHECK-RV32-LABEL: @test_vlseg6e16_v_f16m1(
 // CHECK-RV32-NEXT:  entry:
-// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half> } @llvm.riscv.vlseg6.nxv4f16.i32(half* [[BASE:%.*]], i32 [[VL:%.*]])
+// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half> } @llvm.riscv.vlseg6.nxv4f16.i32(<vscale x 4 x half> undef, <vscale x 4 x half> undef, <vscale x 4 x half> undef, <vscale x 4 x half> undef, <vscale x 4 x half> undef, <vscale x 4 x half> undef, half* [[BASE:%.*]], i32 [[VL:%.*]])
 // CHECK-RV32-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half> } [[TMP0]], 0
 // CHECK-RV32-NEXT:    store <vscale x 4 x half> [[TMP1]], <vscale x 4 x half>* [[V0:%.*]], align 2
 // CHECK-RV32-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half> } [[TMP0]], 1
@@ -7094,7 +7094,7 @@ void test_vlseg5e16_v_f16m1 (vfloat16m1_t *v0, vfloat16m1_t *v1, vfloat16m1_t *v
 //
 // CHECK-RV64-LABEL: @test_vlseg6e16_v_f16m1(
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half> } @llvm.riscv.vlseg6.nxv4f16.i64(half* [[BASE:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half> } @llvm.riscv.vlseg6.nxv4f16.i64(<vscale x 4 x half> undef, <vscale x 4 x half> undef, <vscale x 4 x half> undef, <vscale x 4 x half> undef, <vscale x 4 x half> undef, <vscale x 4 x half> undef, half* [[BASE:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half> } [[TMP0]], 0
 // CHECK-RV64-NEXT:    store <vscale x 4 x half> [[TMP1]], <vscale x 4 x half>* [[V0:%.*]], align 2
 // CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half> } [[TMP0]], 1
@@ -7115,7 +7115,7 @@ void test_vlseg6e16_v_f16m1 (vfloat16m1_t *v0, vfloat16m1_t *v1, vfloat16m1_t *v
 
 // CHECK-RV32-LABEL: @test_vlseg7e16_v_f16m1(
 // CHECK-RV32-NEXT:  entry:
-// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half> } @llvm.riscv.vlseg7.nxv4f16.i32(half* [[BASE:%.*]], i32 [[VL:%.*]])
+// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half> } @llvm.riscv.vlseg7.nxv4f16.i32(<vscale x 4 x half> undef, <vscale x 4 x half> undef, <vscale x 4 x half> undef, <vscale x 4 x half> undef, <vscale x 4 x half> undef, <vscale x 4 x half> undef, <vscale x 4 x half> undef, half* [[BASE:%.*]], i32 [[VL:%.*]])
 // CHECK-RV32-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half> } [[TMP0]], 0
 // CHECK-RV32-NEXT:    store <vscale x 4 x half> [[TMP1]], <vscale x 4 x half>* [[V0:%.*]], align 2
 // CHECK-RV32-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half> } [[TMP0]], 1
@@ -7134,7 +7134,7 @@ void test_vlseg6e16_v_f16m1 (vfloat16m1_t *v0, vfloat16m1_t *v1, vfloat16m1_t *v
 //
 // CHECK-RV64-LABEL: @test_vlseg7e16_v_f16m1(
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half> } @llvm.riscv.vlseg7.nxv4f16.i64(half* [[BASE:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half> } @llvm.riscv.vlseg7.nxv4f16.i64(<vscale x 4 x half> undef, <vscale x 4 x half> undef, <vscale x 4 x half> undef, <vscale x 4 x half> undef, <vscale x 4 x half> undef, <vscale x 4 x half> undef, <vscale x 4 x half> undef, half* [[BASE:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half> } [[TMP0]], 0
 // CHECK-RV64-NEXT:    store <vscale x 4 x half> [[TMP1]], <vscale x 4 x half>* [[V0:%.*]], align 2
 // CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half> } [[TMP0]], 1
@@ -7157,7 +7157,7 @@ void test_vlseg7e16_v_f16m1 (vfloat16m1_t *v0, vfloat16m1_t *v1, vfloat16m1_t *v
 
 // CHECK-RV32-LABEL: @test_vlseg8e16_v_f16m1(
 // CHECK-RV32-NEXT:  entry:
-// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half> } @llvm.riscv.vlseg8.nxv4f16.i32(half* [[BASE:%.*]], i32 [[VL:%.*]])
+// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half> } @llvm.riscv.vlseg8.nxv4f16.i32(<vscale x 4 x half> undef, <vscale x 4 x half> undef, <vscale x 4 x half> undef, <vscale x 4 x half> undef, <vscale x 4 x half> undef, <vscale x 4 x half> undef, <vscale x 4 x half> undef, <vscale x 4 x half> undef, half* [[BASE:%.*]], i32 [[VL:%.*]])
 // CHECK-RV32-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half> } [[TMP0]], 0
 // CHECK-RV32-NEXT:    store <vscale x 4 x half> [[TMP1]], <vscale x 4 x half>* [[V0:%.*]], align 2
 // CHECK-RV32-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half> } [[TMP0]], 1
@@ -7178,7 +7178,7 @@ void test_vlseg7e16_v_f16m1 (vfloat16m1_t *v0, vfloat16m1_t *v1, vfloat16m1_t *v
 //
 // CHECK-RV64-LABEL: @test_vlseg8e16_v_f16m1(
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half> } @llvm.riscv.vlseg8.nxv4f16.i64(half* [[BASE:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half> } @llvm.riscv.vlseg8.nxv4f16.i64(<vscale x 4 x half> undef, <vscale x 4 x half> undef, <vscale x 4 x half> undef, <vscale x 4 x half> undef, <vscale x 4 x half> undef, <vscale x 4 x half> undef, <vscale x 4 x half> undef, <vscale x 4 x half> undef, half* [[BASE:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half> } [[TMP0]], 0
 // CHECK-RV64-NEXT:    store <vscale x 4 x half> [[TMP1]], <vscale x 4 x half>* [[V0:%.*]], align 2
 // CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half> } [[TMP0]], 1
@@ -7203,7 +7203,7 @@ void test_vlseg8e16_v_f16m1 (vfloat16m1_t *v0, vfloat16m1_t *v1, vfloat16m1_t *v
 
 // CHECK-RV32-LABEL: @test_vlseg2e16_v_f16m2(
 // CHECK-RV32-NEXT:  entry:
-// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 8 x half>, <vscale x 8 x half> } @llvm.riscv.vlseg2.nxv8f16.i32(half* [[BASE:%.*]], i32 [[VL:%.*]])
+// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 8 x half>, <vscale x 8 x half> } @llvm.riscv.vlseg2.nxv8f16.i32(<vscale x 8 x half> undef, <vscale x 8 x half> undef, half* [[BASE:%.*]], i32 [[VL:%.*]])
 // CHECK-RV32-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 8 x half>, <vscale x 8 x half> } [[TMP0]], 0
 // CHECK-RV32-NEXT:    store <vscale x 8 x half> [[TMP1]], <vscale x 8 x half>* [[V0:%.*]], align 2
 // CHECK-RV32-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 8 x half>, <vscale x 8 x half> } [[TMP0]], 1
@@ -7212,7 +7212,7 @@ void test_vlseg8e16_v_f16m1 (vfloat16m1_t *v0, vfloat16m1_t *v1, vfloat16m1_t *v
 //
 // CHECK-RV64-LABEL: @test_vlseg2e16_v_f16m2(
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 8 x half>, <vscale x 8 x half> } @llvm.riscv.vlseg2.nxv8f16.i64(half* [[BASE:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 8 x half>, <vscale x 8 x half> } @llvm.riscv.vlseg2.nxv8f16.i64(<vscale x 8 x half> undef, <vscale x 8 x half> undef, half* [[BASE:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 8 x half>, <vscale x 8 x half> } [[TMP0]], 0
 // CHECK-RV64-NEXT:    store <vscale x 8 x half> [[TMP1]], <vscale x 8 x half>* [[V0:%.*]], align 2
 // CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 8 x half>, <vscale x 8 x half> } [[TMP0]], 1
@@ -7225,7 +7225,7 @@ void test_vlseg2e16_v_f16m2 (vfloat16m2_t *v0, vfloat16m2_t *v1, const _Float16 
 
 // CHECK-RV32-LABEL: @test_vlseg3e16_v_f16m2(
 // CHECK-RV32-NEXT:  entry:
-// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half> } @llvm.riscv.vlseg3.nxv8f16.i32(half* [[BASE:%.*]], i32 [[VL:%.*]])
+// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half> } @llvm.riscv.vlseg3.nxv8f16.i32(<vscale x 8 x half> undef, <vscale x 8 x half> undef, <vscale x 8 x half> undef, half* [[BASE:%.*]], i32 [[VL:%.*]])
 // CHECK-RV32-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half> } [[TMP0]], 0
 // CHECK-RV32-NEXT:    store <vscale x 8 x half> [[TMP1]], <vscale x 8 x half>* [[V0:%.*]], align 2
 // CHECK-RV32-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half> } [[TMP0]], 1
@@ -7236,7 +7236,7 @@ void test_vlseg2e16_v_f16m2 (vfloat16m2_t *v0, vfloat16m2_t *v1, const _Float16 
 //
 // CHECK-RV64-LABEL: @test_vlseg3e16_v_f16m2(
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half> } @llvm.riscv.vlseg3.nxv8f16.i64(half* [[BASE:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half> } @llvm.riscv.vlseg3.nxv8f16.i64(<vscale x 8 x half> undef, <vscale x 8 x half> undef, <vscale x 8 x half> undef, half* [[BASE:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half> } [[TMP0]], 0
 // CHECK-RV64-NEXT:    store <vscale x 8 x half> [[TMP1]], <vscale x 8 x half>* [[V0:%.*]], align 2
 // CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half> } [[TMP0]], 1
@@ -7251,7 +7251,7 @@ void test_vlseg3e16_v_f16m2 (vfloat16m2_t *v0, vfloat16m2_t *v1, vfloat16m2_t *v
 
 // CHECK-RV32-LABEL: @test_vlseg4e16_v_f16m2(
 // CHECK-RV32-NEXT:  entry:
-// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half> } @llvm.riscv.vlseg4.nxv8f16.i32(half* [[BASE:%.*]], i32 [[VL:%.*]])
+// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half> } @llvm.riscv.vlseg4.nxv8f16.i32(<vscale x 8 x half> undef, <vscale x 8 x half> undef, <vscale x 8 x half> undef, <vscale x 8 x half> undef, half* [[BASE:%.*]], i32 [[VL:%.*]])
 // CHECK-RV32-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half> } [[TMP0]], 0
 // CHECK-RV32-NEXT:    store <vscale x 8 x half> [[TMP1]], <vscale x 8 x half>* [[V0:%.*]], align 2
 // CHECK-RV32-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half> } [[TMP0]], 1
@@ -7264,7 +7264,7 @@ void test_vlseg3e16_v_f16m2 (vfloat16m2_t *v0, vfloat16m2_t *v1, vfloat16m2_t *v
 //
 // CHECK-RV64-LABEL: @test_vlseg4e16_v_f16m2(
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half> } @llvm.riscv.vlseg4.nxv8f16.i64(half* [[BASE:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half> } @llvm.riscv.vlseg4.nxv8f16.i64(<vscale x 8 x half> undef, <vscale x 8 x half> undef, <vscale x 8 x half> undef, <vscale x 8 x half> undef, half* [[BASE:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half> } [[TMP0]], 0
 // CHECK-RV64-NEXT:    store <vscale x 8 x half> [[TMP1]], <vscale x 8 x half>* [[V0:%.*]], align 2
 // CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half> } [[TMP0]], 1
@@ -7281,7 +7281,7 @@ void test_vlseg4e16_v_f16m2 (vfloat16m2_t *v0, vfloat16m2_t *v1, vfloat16m2_t *v
 
 // CHECK-RV32-LABEL: @test_vlseg2e16_v_f16m4(
 // CHECK-RV32-NEXT:  entry:
-// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 16 x half>, <vscale x 16 x half> } @llvm.riscv.vlseg2.nxv16f16.i32(half* [[BASE:%.*]], i32 [[VL:%.*]])
+// CHECK-RV32-NEXT:    [[TMP0:%.*]] = call { <vscale x 16 x half>, <vscale x 16 x half> } @llvm.riscv.vlseg2.nxv16f16.i32(<vscale x 16 x half> undef, <vscale x 16 x half> undef, half* [[BASE:%.*]], i32 [[VL:%.*]])
 // CHECK-RV32-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 16 x half>, <vscale x 16 x half> } [[TMP0]], 0
 // CHECK-RV32-NEXT:    store <vscale x 16 x half> [[TMP1]], <vscale x 16 x half>* [[V0:%.*]], align 2
 // CHECK-RV32-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 16 x half>, <vscale x 16 x half> } [[TMP0]], 1
@@ -7290,7 +7290,7 @@ void test_vlseg4e16_v_f16m2 (vfloat16m2_t *v0, vfloat16m2_t *v1, vfloat16m2_t *v
 //
 // CHECK-RV64-LABEL: @test_vlseg2e16_v_f16m4(
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 16 x half>, <vscale x 16 x half> } @llvm.riscv.vlseg2.nxv16f16.i64(half* [[BASE:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 16 x half>, <vscale x 16 x half> } @llvm.riscv.vlseg2.nxv16f16.i64(<vscale x 16 x half> undef, <vscale x 16 x half> undef, half* [[BASE:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 16 x half>, <vscale x 16 x half> } [[TMP0]], 0
 // CHECK-RV64-NEXT:    store <vscale x 16 x half> [[TMP1]], <vscale x 16 x half>* [[V0:%.*]], align 2
 // CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 16 x half>, <vscale x 16 x half> } [[TMP0]], 1

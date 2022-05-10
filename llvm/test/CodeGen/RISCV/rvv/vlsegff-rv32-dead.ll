@@ -2,7 +2,7 @@
 ; RUN: llc -mtriple=riscv32 -mattr=+zve64d,+f,+d,+zfh,+experimental-zvfh \
 ; RUN:     -verify-machineinstrs < %s | FileCheck %s
 
-declare {<vscale x 16 x i16>,<vscale x 16 x i16>, i32} @llvm.riscv.vlseg2ff.nxv16i16(i16* , i32)
+declare {<vscale x 16 x i16>,<vscale x 16 x i16>, i32} @llvm.riscv.vlseg2ff.nxv16i16(<vscale x 16 x i16>,<vscale x 16 x i16>, i16* , i32)
 declare {<vscale x 16 x i16>,<vscale x 16 x i16>, i32} @llvm.riscv.vlseg2ff.mask.nxv16i16(<vscale x 16 x i16>,<vscale x 16 x i16>, i16*, <vscale x 16 x i1>, i32, i32)
 
 define void @test_vlseg2ff_dead_value(i16* %base, i32 %vl, i32* %outvl) {
@@ -14,7 +14,7 @@ define void @test_vlseg2ff_dead_value(i16* %base, i32 %vl, i32* %outvl) {
 ; CHECK-NEXT:    sw a0, 0(a2)
 ; CHECK-NEXT:    ret
 entry:
-  %0 = tail call {<vscale x 16 x i16>,<vscale x 16 x i16>, i32} @llvm.riscv.vlseg2ff.nxv16i16(i16* %base, i32 %vl)
+  %0 = tail call {<vscale x 16 x i16>,<vscale x 16 x i16>, i32} @llvm.riscv.vlseg2ff.nxv16i16(<vscale x 16 x i16> undef, <vscale x 16 x i16> undef, i16* %base, i32 %vl)
   %1 = extractvalue {<vscale x 16 x i16>,<vscale x 16 x i16>, i32} %0, 2
   store i32 %1, i32* %outvl
   ret void
@@ -43,7 +43,7 @@ define <vscale x 16 x i16> @test_vlseg2ff_dead_vl(i16* %base, i32 %vl) {
 ; CHECK-NEXT:    vlseg2e16ff.v v4, (a0)
 ; CHECK-NEXT:    ret
 entry:
-  %0 = tail call {<vscale x 16 x i16>,<vscale x 16 x i16>, i32} @llvm.riscv.vlseg2ff.nxv16i16(i16* %base, i32 %vl)
+  %0 = tail call {<vscale x 16 x i16>,<vscale x 16 x i16>, i32} @llvm.riscv.vlseg2ff.nxv16i16(<vscale x 16 x i16> undef, <vscale x 16 x i16> undef, i16* %base, i32 %vl)
   %1 = extractvalue {<vscale x 16 x i16>,<vscale x 16 x i16>, i32} %0, 1
   ret <vscale x 16 x i16> %1
 }
@@ -68,7 +68,7 @@ define void @test_vlseg2ff_dead_all(i16* %base, i32 %vl) {
 ; CHECK-NEXT:    vlseg2e16ff.v v8, (a0)
 ; CHECK-NEXT:    ret
 entry:
-  tail call {<vscale x 16 x i16>,<vscale x 16 x i16>, i32} @llvm.riscv.vlseg2ff.nxv16i16(i16* %base, i32 %vl)
+  tail call {<vscale x 16 x i16>,<vscale x 16 x i16>, i32} @llvm.riscv.vlseg2ff.nxv16i16(<vscale x 16 x i16> undef, <vscale x 16 x i16> undef, i16* %base, i32 %vl)
   ret void
 }
 

@@ -873,14 +873,18 @@ multiclass RVVUnitStridedSegLoad<string op> {
             ManualCodegen = [{
     {
       // builtin: (val0 address, val1 address, ..., ptr, vl)
-      IntrinsicTypes = {ConvertType(E->getArg(0)->getType()->getPointeeType()),
-                        Ops[NF + 1]->getType()};
-      // intrinsic: (ptr, vl)
-      llvm::Value *Operands[] = {Ops[NF], Ops[NF + 1]};
+      ResultType = ConvertType(E->getArg(0)->getType()->getPointeeType());
+      IntrinsicTypes = {ResultType, Ops[NF + 1]->getType()};
+      // intrinsic: (passthru0, passthru1, ..., ptr, vl)
+      SmallVector<llvm::Value*, 10> Operands;
+      for (unsigned I = 0; I < NF; ++I)
+        Operands.push_back(llvm::UndefValue::get(ResultType));
+      Operands.push_back(Ops[NF]);
+      Operands.push_back(Ops[NF + 1]);
       llvm::Function *F = CGM.getIntrinsic(ID, IntrinsicTypes);
       llvm::Value *LoadValue = Builder.CreateCall(F, Operands, "");
       clang::CharUnits Align =
-          CGM.getNaturalPointeeTypeAlignment(E->getArg(0)->getType());
+          CGM.getNaturalPointeeTypeAlignment(E->getArg(NF)->getType());
       llvm::Value *V;
       for (unsigned I = 0; I < NF; ++I) {
         llvm::Value *Val = Builder.CreateExtractValue(LoadValue, {I});
@@ -944,10 +948,14 @@ multiclass RVVUnitStridedSegLoadFF<string op> {
             ManualCodegen = [{
     {
       // builtin: (val0 address, val1 address, ..., ptr, new_vl, vl)
-      IntrinsicTypes = {ConvertType(E->getArg(0)->getType()->getPointeeType()),
-                        Ops[NF + 2]->getType()};
-      // intrinsic: (ptr, vl)
-      llvm::Value *Operands[] = {Ops[NF], Ops[NF + 2]};
+      ResultType = ConvertType(E->getArg(0)->getType()->getPointeeType());
+      IntrinsicTypes = {ResultType, Ops[NF + 2]->getType()};
+      // intrinsic: (passthru0, passthru1, ..., ptr, vl)
+      SmallVector<llvm::Value*, 12> Operands;
+      for (unsigned I = 0; I < NF; ++I)
+        Operands.push_back(llvm::UndefValue::get(ResultType));
+      Operands.push_back(Ops[NF]);
+      Operands.push_back(Ops[NF + 2]);
       Value *NewVL = Ops[NF + 1];
       llvm::Function *F = CGM.getIntrinsic(ID, IntrinsicTypes);
       llvm::Value *LoadValue = Builder.CreateCall(F, Operands, "");
@@ -1019,10 +1027,15 @@ multiclass RVVStridedSegLoad<string op> {
             ManualCodegen = [{
     {
       // builtin: (val0 address, val1 address, ..., ptr, stride, vl)
-      IntrinsicTypes = {ConvertType(E->getArg(0)->getType()->getPointeeType()),
-                        Ops[NF + 2]->getType()};
-      // intrinsic: (ptr, stride, vl)
-      llvm::Value *Operands[] = {Ops[NF], Ops[NF + 1], Ops[NF + 2]};
+      ResultType = ConvertType(E->getArg(0)->getType()->getPointeeType());
+      IntrinsicTypes = {ResultType, Ops[NF + 2]->getType()};
+      // intrinsic: (passthru0, passthru1, ..., ptr, stride, vl)
+      SmallVector<llvm::Value*, 12> Operands;
+      for (unsigned I = 0; I < NF; ++I)
+        Operands.push_back(llvm::UndefValue::get(ResultType));
+      Operands.push_back(Ops[NF]);
+      Operands.push_back(Ops[NF + 1]);
+      Operands.push_back(Ops[NF + 2]);
       llvm::Function *F = CGM.getIntrinsic(ID, IntrinsicTypes);
       llvm::Value *LoadValue = Builder.CreateCall(F, Operands, "");
       clang::CharUnits Align =
@@ -1086,10 +1099,15 @@ multiclass RVVIndexedSegLoad<string op> {
             ManualCodegen = [{
     {
       // builtin: (val0 address, val1 address, ..., ptr, index, vl)
-      IntrinsicTypes = {ConvertType(E->getArg(0)->getType()->getPointeeType()),
-                        Ops[NF + 1]->getType(), Ops[NF + 2]->getType()};
-      // intrinsic: (ptr, index, vl)
-      llvm::Value *Operands[] = {Ops[NF], Ops[NF + 1], Ops[NF + 2]};
+      ResultType = ConvertType(E->getArg(0)->getType()->getPointeeType());
+      IntrinsicTypes = {ResultType, Ops[NF + 1]->getType(), Ops[NF + 2]->getType()};
+      // intrinsic: (passthru0, passthru1, ..., ptr, index, vl)
+      SmallVector<llvm::Value*, 12> Operands;
+      for (unsigned I = 0; I < NF; ++I)
+        Operands.push_back(llvm::UndefValue::get(ResultType));
+      Operands.push_back(Ops[NF]);
+      Operands.push_back(Ops[NF + 1]);
+      Operands.push_back(Ops[NF + 2]);
       llvm::Function *F = CGM.getIntrinsic(ID, IntrinsicTypes);
       llvm::Value *LoadValue = Builder.CreateCall(F, Operands, "");
       clang::CharUnits Align =
