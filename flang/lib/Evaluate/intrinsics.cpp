@@ -2393,7 +2393,7 @@ static bool ApplySpecificChecks(SpecificCall &call, FoldingContext &context) {
         context.messages().Say(at,
             "OPERATION= argument of REDUCE() must be a scalar function"_err_en_US);
       } else if (result->type().IsPolymorphic() ||
-          result->type() != *arrayType) {
+          !arrayType->IsTkCompatibleWith(result->type())) {
         ok = false;
         context.messages().Say(at,
             "OPERATION= argument of REDUCE() must have the same type as ARRAY="_err_en_US);
@@ -2418,7 +2418,7 @@ static bool ApplySpecificChecks(SpecificCall &call, FoldingContext &context) {
                     characteristics::DummyDataObject::Attr::Pointer) &&
                 data[j]->type.Rank() == 0 &&
                 !data[j]->type.type().IsPolymorphic() &&
-                data[j]->type.type() == *arrayType;
+                data[j]->type.type().IsTkCompatibleWith(*arrayType);
           }
           if (!ok) {
             context.messages().Say(at,
