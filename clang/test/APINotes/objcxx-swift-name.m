@@ -5,14 +5,14 @@
 #import <CXXInteropKit/CXXInteropKit.h>
 
 // CHECK: Dumping NSSomeClass:
-// CHECK-NEXT: ObjCInterfaceDecl {{.+}} imported in CxxInteropKit <undeserialized declarations> NSSomeClass
+// CHECK-NEXT: ObjCInterfaceDecl {{.+}} imported in CXXInteropKit <undeserialized declarations> NSSomeClass
 // CHECK-NEXT: SwiftNameAttr {{.+}} <<invalid sloc>> "SomeClass"
 
 // CHECK: Dumping NSSomeClass::didMoveToParentViewController::
-// CHECK-NEXT: ObjCMethodDecl {{.+}} imported in CxxInteropKit - didMoveToParentViewController: 'void'
+// CHECK-NEXT: ObjCMethodDecl {{.+}} imported in CXXInteropKit - didMoveToParentViewController: 'void'
 // CHECK-NEXT: ParmVarDecl
 // CHECK-NEXT: SwiftNameAttr {{.+}} <<invalid sloc>> "didMove(toParent:)"
 
 // CHECK: Dumping SomeClassRed:
-// CHECK-NEXT: EnumConstantDecl {{.+}} imported in CxxInteropKit SomeClassRed 'ColorEnum'
+// CHECK-NEXT: EnumConstantDecl {{.+}} imported in CXXInteropKit SomeClassRed 'ColorEnum'
 // CHECK-NEXT: SwiftNameAttr {{.+}} <<invalid sloc>> "red"
