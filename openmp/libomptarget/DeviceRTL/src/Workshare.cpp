@@ -139,6 +139,7 @@ template <typename T, typename ST> struct omptarget_nvptx_LoopSupport {
                        numberOfActiveOMPThreads);
         break;
       }
+      [[fallthrough]];
     } // note: if chunk <=0, use nochunk
     case kmp_sched_static_balanced_chunk: {
       if (chunk > 0) {
@@ -157,6 +158,7 @@ template <typename T, typename ST> struct omptarget_nvptx_LoopSupport {
           ub = oldUb;
         break;
       }
+      [[fallthrough]];
     } // note: if chunk <=0, use nochunk
     case kmp_sched_static_nochunk: {
       ForStaticNoChunk(lastiter, lb, ub, stride, chunk, gtid,
@@ -168,8 +170,9 @@ template <typename T, typename ST> struct omptarget_nvptx_LoopSupport {
         ForStaticChunk(lastiter, lb, ub, stride, chunk, omp_get_team_num(),
                        omp_get_num_teams());
         break;
-      } // note: if chunk <=0, use nochunk
-    }
+      }
+      [[fallthrough]];
+    } // note: if chunk <=0, use nochunk
     case kmp_sched_distr_static_nochunk: {
       ForStaticNoChunk(lastiter, lb, ub, stride, chunk, omp_get_team_num(),
                        omp_get_num_teams());
@@ -341,7 +344,7 @@ template <typename T, typename ST> struct omptarget_nvptx_LoopSupport {
     uint32_t change = utils::popc(active);
     __kmpc_impl_lanemask_t lane_mask_lt = mapping::lanemaskLT();
     unsigned int rank = utils::popc(active & lane_mask_lt);
-    uint64_t warp_res;
+    uint64_t warp_res = 0;
     if (rank == 0) {
       warp_res = atomic::add(&Cnt, change, __ATOMIC_SEQ_CST);
     }

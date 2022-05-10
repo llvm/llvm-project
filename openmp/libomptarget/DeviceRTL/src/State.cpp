@@ -298,14 +298,8 @@ uint32_t &lookupForModify32Impl(uint32_t ICVStateTy::*Var, IdentTy *Ident) {
   return ThreadStates[TId]->ICVState.*Var;
 }
 
-uint32_t &lookup32Impl(uint32_t ICVStateTy::*Var) {
-  uint32_t TId = mapping::getThreadIdInBlock();
-  if (OMP_UNLIKELY(config::mayUseThreadStates() && ThreadStates[TId]))
-    return ThreadStates[TId]->ICVState.*Var;
-  return TeamState.ICVState.*Var;
-}
-uint64_t &lookup64Impl(uint64_t ICVStateTy::*Var) {
-  uint64_t TId = mapping::getThreadIdInBlock();
+template <typename IntTy> IntTy &lookupImpl(IntTy ICVStateTy::*Var) {
+  IntTy TId = mapping::getThreadIdInBlock();
   if (OMP_UNLIKELY(config::mayUseThreadStates() && ThreadStates[TId]))
     return ThreadStates[TId]->ICVState.*Var;
   return TeamState.ICVState.*Var;
@@ -330,27 +324,27 @@ uint32_t &state::lookup32(ValueKind Kind, bool IsReadonly, IdentTy *Ident) {
   switch (Kind) {
   case state::VK_NThreads:
     if (IsReadonly)
-      return lookup32Impl(&ICVStateTy::NThreadsVar);
+      return lookupImpl<uint32_t>(&ICVStateTy::NThreadsVar);
     return lookupForModify32Impl(&ICVStateTy::NThreadsVar, Ident);
   case state::VK_Level:
     if (IsReadonly)
-      return lookup32Impl(&ICVStateTy::LevelVar);
+      return lookupImpl<uint32_t>(&ICVStateTy::LevelVar);
     return lookupForModify32Impl(&ICVStateTy::LevelVar, Ident);
   case state::VK_ActiveLevel:
     if (IsReadonly)
-      return lookup32Impl(&ICVStateTy::ActiveLevelVar);
+      return lookupImpl<uint32_t>(&ICVStateTy::ActiveLevelVar);
     return lookupForModify32Impl(&ICVStateTy::ActiveLevelVar, Ident);
   case state::VK_MaxActiveLevels:
     if (IsReadonly)
-      return lookup32Impl(&ICVStateTy::MaxActiveLevelsVar);
+      return lookupImpl<uint32_t>(&ICVStateTy::MaxActiveLevelsVar);
     return lookupForModify32Impl(&ICVStateTy::MaxActiveLevelsVar, Ident);
   case state::VK_RunSched:
     if (IsReadonly)
-      return lookup32Impl(&ICVStateTy::RunSchedVar);
+      return lookupImpl<uint32_t>(&ICVStateTy::RunSchedVar);
     return lookupForModify32Impl(&ICVStateTy::RunSchedVar, Ident);
   case state::VK_RunSchedChunk:
     if (IsReadonly)
-      return lookup32Impl(&ICVStateTy::RunSchedChunkVar);
+      return lookupImpl<uint32_t>(&ICVStateTy::RunSchedChunkVar);
     return lookupForModify32Impl(&ICVStateTy::RunSchedChunkVar, Ident);
   case state::VK_ParallelTeamSize:
     return TeamState.ParallelTeamSize;
