@@ -11,27 +11,25 @@ define void @_foo(double %p1, double %p2, double %p3) #0 {
 ; CHECK-NEXT:    [[TAB2:%.*]] = alloca [256 x i32], align 16
 ; CHECK-NEXT:    br label [[BB1:%.*]]
 ; CHECK:       bb1:
+; CHECK-NEXT:    [[MUL19:%.*]] = fmul double [[P1:%.*]], 1.638400e+04
 ; CHECK-NEXT:    [[MUL20:%.*]] = fmul double [[P3:%.*]], 1.638400e+04
 ; CHECK-NEXT:    [[ADD:%.*]] = fadd double [[MUL20]], 8.192000e+03
-; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <2 x double> poison, double [[P1:%.*]], i32 0
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x double> [[TMP0]], double [[P2:%.*]], i32 1
-; CHECK-NEXT:    [[TMP2:%.*]] = fmul <2 x double> [[TMP1]], <double 1.638400e+04, double 1.638400e+04>
-; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <2 x double> <double 0.000000e+00, double poison>, double [[ADD]], i32 1
+; CHECK-NEXT:    [[MUL21:%.*]] = fmul double [[P2:%.*]], 1.638400e+04
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[INDVARS_IV266:%.*]] = phi i64 [ 0, [[BB1]] ], [ [[INDVARS_IV_NEXT267:%.*]], [[FOR_BODY]] ]
-; CHECK-NEXT:    [[TMP4:%.*]] = phi <2 x double> [ [[TMP3]], [[BB1]] ], [ [[TMP7:%.*]], [[FOR_BODY]] ]
-; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <2 x double> [[TMP4]], i32 0
-; CHECK-NEXT:    [[VECINIT_I_I237:%.*]] = insertelement <2 x double> undef, double [[TMP5]], i32 0
+; CHECK-NEXT:    [[T_0259:%.*]] = phi double [ 0.000000e+00, [[BB1]] ], [ [[ADD27:%.*]], [[FOR_BODY]] ]
+; CHECK-NEXT:    [[P3_ADDR_0258:%.*]] = phi double [ [[ADD]], [[BB1]] ], [ [[ADD28:%.*]], [[FOR_BODY]] ]
+; CHECK-NEXT:    [[VECINIT_I_I237:%.*]] = insertelement <2 x double> undef, double [[T_0259]], i32 0
 ; CHECK-NEXT:    [[X13:%.*]] = tail call i32 @_xfn(<2 x double> [[VECINIT_I_I237]])
 ; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [256 x i32], [256 x i32]* [[TAB1]], i64 0, i64 [[INDVARS_IV266]]
 ; CHECK-NEXT:    store i32 [[X13]], i32* [[ARRAYIDX]], align 4, !tbaa [[TBAA0:![0-9]+]]
-; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <2 x double> [[TMP4]], i32 1
-; CHECK-NEXT:    [[VECINIT_I_I:%.*]] = insertelement <2 x double> undef, double [[TMP6]], i32 0
+; CHECK-NEXT:    [[VECINIT_I_I:%.*]] = insertelement <2 x double> undef, double [[P3_ADDR_0258]], i32 0
 ; CHECK-NEXT:    [[X14:%.*]] = tail call i32 @_xfn(<2 x double> [[VECINIT_I_I]])
 ; CHECK-NEXT:    [[ARRAYIDX26:%.*]] = getelementptr inbounds [256 x i32], [256 x i32]* [[TAB2]], i64 0, i64 [[INDVARS_IV266]]
 ; CHECK-NEXT:    store i32 [[X14]], i32* [[ARRAYIDX26]], align 4, !tbaa [[TBAA0]]
-; CHECK-NEXT:    [[TMP7]] = fadd <2 x double> [[TMP2]], [[TMP4]]
+; CHECK-NEXT:    [[ADD27]] = fadd double [[MUL19]], [[T_0259]]
+; CHECK-NEXT:    [[ADD28]] = fadd double [[MUL21]], [[P3_ADDR_0258]]
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT267]] = add nuw nsw i64 [[INDVARS_IV266]], 1
 ; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i64 [[INDVARS_IV_NEXT267]], 256
 ; CHECK-NEXT:    br i1 [[EXITCOND]], label [[RETURN:%.*]], label [[FOR_BODY]]
