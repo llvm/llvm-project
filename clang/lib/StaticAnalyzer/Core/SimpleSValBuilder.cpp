@@ -90,6 +90,9 @@ SVal SimpleSValBuilder::evalMinus(NonLoc val) {
   switch (val.getSubKind()) {
   case nonloc::ConcreteIntKind:
     return val.castAs<nonloc::ConcreteInt>().evalMinus(*this);
+  case nonloc::SymbolValKind:
+    return makeNonLoc(val.castAs<nonloc::SymbolVal>().getSymbol(), UO_Minus,
+                      val.getType(Context));
   default:
     return UnknownVal();
   }
@@ -99,6 +102,9 @@ SVal SimpleSValBuilder::evalComplement(NonLoc X) {
   switch (X.getSubKind()) {
   case nonloc::ConcreteIntKind:
     return X.castAs<nonloc::ConcreteInt>().evalComplement(*this);
+  case nonloc::SymbolValKind:
+    return makeNonLoc(X.castAs<nonloc::SymbolVal>().getSymbol(), UO_Not,
+                      X.getType(Context));
   default:
     return UnknownVal();
   }
@@ -1341,6 +1347,20 @@ SVal SimpleSValBuilder::simplifySValOnce(ProgramStateRef State, SVal V) {
 
       return cache(
           S, SVB.evalBinOp(State, S->getOpcode(), LHS, RHS, S->getType()));
+    }
+
+    // FIXME add VisitSymbolCast
+
+    SVal VisitUnarySymExpr(const UnarySymExpr *S) {
+      auto I = Cached.find(S);
+      if (I != Cached.end())
+        return I->second;
+      SVal Op = getConstOrVisit(S->getOperand());
+      if (isUnchanged(S->getOperand(), Op))
+        return skip(S);
+
+      return cache(
+          S, SVB.evalUnaryOp(State, S->getOpcode(), Op, S->getType()));
     }
 
     SVal VisitSymExpr(SymbolRef S) { return nonloc::SymbolVal(S); }

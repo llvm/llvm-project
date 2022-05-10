@@ -72,6 +72,7 @@ void test_3(S s) {
 void test_4(int x, int y) {
   int z;
   static int stat;
+  clang_analyzer_explain(-x);    // expected-warning-re{{{{^\- \(argument 'x'\)$}}}}
   clang_analyzer_explain(x + 1); // expected-warning-re{{{{^\(argument 'x'\) \+ 1$}}}}
   clang_analyzer_explain(1 + y); // expected-warning-re{{{{^\(argument 'y'\) \+ 1$}}}}
   clang_analyzer_explain(x + y); // expected-warning-re{{{{^\(argument 'x'\) \+ \(argument 'y'\)$}}}}
