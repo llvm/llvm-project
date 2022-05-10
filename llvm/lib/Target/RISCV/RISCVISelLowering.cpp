@@ -432,8 +432,8 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
         ISD::VP_REDUCE_OR,   ISD::VP_REDUCE_XOR,  ISD::VP_REDUCE_SMAX,
         ISD::VP_REDUCE_SMIN, ISD::VP_REDUCE_UMAX, ISD::VP_REDUCE_UMIN,
         ISD::VP_MERGE,       ISD::VP_SELECT,      ISD::VP_FPTOSI,
-        ISD::VP_FPTOUI,      ISD::VP_SETCC,       ISD::VP_SEXT,
-        ISD::VP_ZEXT,        ISD::VP_TRUNC};
+        ISD::VP_FPTOUI,      ISD::VP_SETCC,       ISD::VP_SIGN_EXTEND,
+        ISD::VP_ZERO_EXTEND, ISD::VP_TRUNCATE};
 
     static const unsigned FloatingPointVPOps[] = {
         ISD::VP_FADD,        ISD::VP_FSUB,
@@ -508,7 +508,7 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
       }
 
       setOperationAction(
-          {ISD::VP_FPTOSI, ISD::VP_FPTOUI, ISD::VP_TRUNC, ISD::VP_SETCC}, VT,
+          {ISD::VP_FPTOSI, ISD::VP_FPTOUI, ISD::VP_TRUNCATE, ISD::VP_SETCC}, VT,
           Custom);
     }
 
@@ -752,7 +752,7 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
                              VT, Custom);
 
           setOperationAction(
-              {ISD::VP_FPTOSI, ISD::VP_FPTOUI, ISD::VP_SETCC, ISD::VP_TRUNC},
+              {ISD::VP_FPTOSI, ISD::VP_FPTOUI, ISD::VP_SETCC, ISD::VP_TRUNCATE},
               VT, Custom);
           continue;
         }
@@ -3450,14 +3450,15 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
     return lowerVPOp(Op, DAG, RISCVISD::FNEG_VL);
   case ISD::VP_FMA:
     return lowerVPOp(Op, DAG, RISCVISD::FMA_VL);
-  case ISD::VP_SEXT:
-  case ISD::VP_ZEXT:
+  case ISD::VP_SIGN_EXTEND:
+  case ISD::VP_ZERO_EXTEND:
     if (Op.getOperand(0).getSimpleValueType().getVectorElementType() == MVT::i1)
       return lowerVPExtMaskOp(Op, DAG);
     return lowerVPOp(Op, DAG,
-                     Op.getOpcode() == ISD::VP_SEXT ? RISCVISD::VSEXT_VL
-                                                    : RISCVISD::VZEXT_VL);
-  case ISD::VP_TRUNC:
+                     Op.getOpcode() == ISD::VP_SIGN_EXTEND
+                         ? RISCVISD::VSEXT_VL
+                         : RISCVISD::VZEXT_VL);
+  case ISD::VP_TRUNCATE:
     return lowerVectorTruncLike(Op, DAG);
   case ISD::VP_FP_EXTEND:
   case ISD::VP_FP_ROUND:
@@ -4118,7 +4119,7 @@ SDValue RISCVTargetLowering::lowerFixedLengthVectorExtendToRVV(
 //   (vXi1 = trunc vXiN vec) -> (vXi1 = setcc (and vec, 1), 0, ne)
 SDValue RISCVTargetLowering::lowerVectorMaskTruncLike(SDValue Op,
                                                       SelectionDAG &DAG) const {
-  bool IsVPTrunc = Op.getOpcode() == ISD::VP_TRUNC;
+  bool IsVPTrunc = Op.getOpcode() == ISD::VP_TRUNCATE;
   SDLoc DL(Op);
   EVT MaskVT = Op.getValueType();
   // Only expect to custom-lower truncations to mask types
@@ -4169,7 +4170,7 @@ SDValue RISCVTargetLowering::lowerVectorMaskTruncLike(SDValue Op,
 
 SDValue RISCVTargetLowering::lowerVectorTruncLike(SDValue Op,
                                                   SelectionDAG &DAG) const {
-  bool IsVPTrunc = Op.getOpcode() == ISD::VP_TRUNC;
+  bool IsVPTrunc = Op.getOpcode() == ISD::VP_TRUNCATE;
   SDLoc DL(Op);
 
   MVT VT = Op.getSimpleValueType();
@@ -6067,8 +6068,8 @@ SDValue RISCVTargetLowering::lowerVPExtMaskOp(SDValue Op,
   SDValue ZeroSplat = DAG.getNode(RISCVISD::VMV_V_X_VL, DL, ContainerVT,
                                   DAG.getUNDEF(ContainerVT), Zero, VL);
 
-  SDValue SplatValue =
-      DAG.getConstant(Op.getOpcode() == ISD::VP_ZEXT ? 1 : -1, DL, XLenVT);
+  SDValue SplatValue = DAG.getConstant(
+      Op.getOpcode() == ISD::VP_ZERO_EXTEND ? 1 : -1, DL, XLenVT);
   SDValue Splat = DAG.getNode(RISCVISD::VMV_V_X_VL, DL, ContainerVT,
                               DAG.getUNDEF(ContainerVT), SplatValue, VL);
 
