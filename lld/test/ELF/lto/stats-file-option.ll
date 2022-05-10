@@ -1,4 +1,4 @@
-; REQUIRES: asserts
+; REQUIRES: asserts, x86
 
 ; RUN: llvm-as -o %t.bc %s
 
