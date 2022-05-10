@@ -15,6 +15,7 @@
 #include "RegAllocGreedy.h"
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/MLModelRunner.h"
+#include "llvm/Analysis/TensorSpec.h"
 #if defined(LLVM_HAVE_TF_AOT_REGALLOCEVICTMODEL) || defined(LLVM_HAVE_TF_API) 
 #include "llvm/Analysis/ModelUnderTrainingRunner.h"
 #include "llvm/Analysis/NoInferenceModelRunner.h"
@@ -320,14 +321,16 @@ private:
   mutable DenseMap<RegID, LIFeatureComponents> CachedFeatures;
 };
 
+#define _DECL_FEATURES(type, name, shape, _)                                   \
+  TensorSpec::createSpec<type>(#name, shape),
+
+static const std::vector<TensorSpec> InputFeatures{
+    {RA_EVICT_FEATURES_LIST(_DECL_FEATURES)},
+};
+#undef _DECL_FEATURES
 // ===================================
 // Release (AOT) - specifics
 // ===================================
-const std::array<std::string, FeatureIDs::FeatureCount> FeatureNames{
-#define _GETNAME(_, NAME, __, ___) #NAME,
-    RA_EVICT_FEATURES_LIST(_GETNAME)
-#undef _GETNAME
-};
 class ReleaseModeEvictionAdvisorAnalysis final
     : public RegAllocEvictionAdvisorAnalysis {
 public:
@@ -349,7 +352,7 @@ private:
   getAdvisor(const MachineFunction &MF, const RAGreedy &RA) override {
     if (!Runner)
       Runner = std::make_unique<ReleaseModeModelRunner<CompiledModelType>>(
-          MF.getFunction().getContext(), FeatureNames, DecisionName);
+          MF.getFunction().getContext(), InputFeatures, DecisionName);
     return std::make_unique<MLEvictAdvisor>(
         MF, RA, Runner.get(), getAnalysis<MachineBlockFrequencyInfo>(),
         getAnalysis<MachineLoopInfo>());
@@ -363,13 +366,6 @@ private:
 //
 // Features we log
 #ifdef LLVM_HAVE_TF_API
-#define _DECL_FEATURES(type, name, shape, _)                                   \
-  TensorSpec::createSpec<type>(#name, shape),
-
-static const std::vector<TensorSpec> InputFeatures{
-    {RA_EVICT_FEATURES_LIST(_DECL_FEATURES)},
-};
-#undef _DECL_FEATURES
 static const TensorSpec Output =
     TensorSpec::createSpec<int64_t>(DecisionName, {1});
 static const TensorSpec Reward = TensorSpec::createSpec<float>("reward", {1});

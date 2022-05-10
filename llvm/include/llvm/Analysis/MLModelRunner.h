@@ -10,6 +10,7 @@
 #ifndef LLVM_ANALYSIS_MLMODELRUNNER_H
 #define LLVM_ANALYSIS_MLMODELRUNNER_H
 
+#include "llvm/Analysis/TensorSpec.h"
 #include "llvm/IR/PassManager.h"
 
 namespace llvm {
@@ -41,7 +42,7 @@ public:
         getTensorUntyped(static_cast<size_t>(FeatureID)));
   }
 
-  virtual void *getTensorUntyped(size_t Index) = 0;
+  void *getTensorUntyped(size_t Index) { return InputBuffers[Index]; }
   const void *getTensorUntyped(size_t Index) const {
     return (const_cast<MLModelRunner *>(this))->getTensorUntyped(Index);
   }
@@ -50,13 +51,27 @@ public:
   Kind getKind() const { return Type; }
 
 protected:
-  MLModelRunner(LLVMContext &Ctx, Kind Type) : Ctx(Ctx), Type(Type) {
+  MLModelRunner(LLVMContext &Ctx, Kind Type, size_t NrInputs)
+      : Ctx(Ctx), Type(Type), InputBuffers(NrInputs) {
     assert(Type != Kind::Unknown);
   }
   virtual void *evaluateUntyped() = 0;
 
+  void setUpBufferForTensor(size_t Index, const TensorSpec &Spec,
+                            void *Buffer) {
+    if (!Buffer) {
+      OwnedBuffers.emplace_back(Spec.getTotalTensorBufferSize());
+      Buffer = OwnedBuffers.back().data();
+    }
+    InputBuffers[Index] = Buffer;
+  }
+
   LLVMContext &Ctx;
   const Kind Type;
+
+private:
+  std::vector<void *> InputBuffers;
+  std::vector<std::vector<char *>> OwnedBuffers;
 };
 } // namespace llvm
 

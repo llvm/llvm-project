@@ -11,6 +11,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm/Analysis/TensorSpec.h"
 #include "llvm/Config/config.h"
 #if defined(LLVM_HAVE_TF_API)
 
@@ -22,7 +23,7 @@ ModelUnderTrainingRunner::ModelUnderTrainingRunner(
     LLVMContext &Ctx, const std::string &ModelPath,
     const std::vector<TensorSpec> &InputSpecs,
     const std::vector<LoggedFeatureSpec> &OutputSpecs)
-    : MLModelRunner(Ctx, MLModelRunner::Kind::Development),
+    : MLModelRunner(Ctx, MLModelRunner::Kind::Development, InputSpecs.size()),
       OutputSpecs(OutputSpecs) {
   Evaluator = std::make_unique<TFModelEvaluator>(
       ModelPath, InputSpecs, [&](size_t I) { return OutputSpecs[I].Spec; },
@@ -31,6 +32,10 @@ ModelUnderTrainingRunner::ModelUnderTrainingRunner(
     Ctx.emitError("Failed to create saved model evaluator");
     Evaluator.reset();
     return;
+  }
+
+  for (size_t I = 0, E = InputSpecs.size(); I < E; ++I) {
+    setUpBufferForTensor(I, InputSpecs[I], Evaluator->getUntypedInput(I));
   }
 }
 
@@ -43,24 +48,31 @@ void *ModelUnderTrainingRunner::evaluateUntyped() {
   return LastEvaluationResult->getUntypedTensorValue(0);
 }
 
-void *ModelUnderTrainingRunner::getTensorUntyped(size_t Index) {
-  return Evaluator->getUntypedInput(Index);
+std::unique_ptr<ModelUnderTrainingRunner>
+ModelUnderTrainingRunner::createAndEnsureValid(
+    LLVMContext &Ctx, const std::string &ModelPath, StringRef DecisionName,
+    const std::vector<TensorSpec> &InputSpecs,
+    StringRef OutputSpecsPathOverride) {
+  if (auto MaybeOutputSpecs = loadOutputSpecs(Ctx, DecisionName, ModelPath,
+                                              OutputSpecsPathOverride))
+    return createAndEnsureValid(Ctx, ModelPath, DecisionName, InputSpecs,
+                                *MaybeOutputSpecs);
+  Ctx.emitError("Could not load the policy model from the provided path");
+  return nullptr;
 }
 
 std::unique_ptr<ModelUnderTrainingRunner>
 ModelUnderTrainingRunner::createAndEnsureValid(
     LLVMContext &Ctx, const std::string &ModelPath, StringRef DecisionName,
     const std::vector<TensorSpec> &InputSpecs,
-    StringRef OutputSpecsPathOverride) {
+    const std::vector<LoggedFeatureSpec> &OutputSpecs) {
   std::unique_ptr<ModelUnderTrainingRunner> MUTR;
-  if (auto MaybeOutputSpecs = loadOutputSpecs(Ctx, DecisionName, ModelPath,
-                                              OutputSpecsPathOverride))
-    MUTR.reset(new ModelUnderTrainingRunner(Ctx, ModelPath, InputSpecs,
-                                            *MaybeOutputSpecs));
+  MUTR.reset(
+      new ModelUnderTrainingRunner(Ctx, ModelPath, InputSpecs, OutputSpecs));
   if (MUTR && MUTR->isValid())
     return MUTR;
 
-  Ctx.emitError("Could not load the policy model from the provided path");
+  Ctx.emitError("Could not load or create model evaluator.");
   return nullptr;
 }
 
