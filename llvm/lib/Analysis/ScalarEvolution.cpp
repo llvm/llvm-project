@@ -4076,11 +4076,6 @@ ScalarEvolution::getSequentialMinMaxExpr(SCEVTypes Kind,
   assert(!Ops.empty() && "Cannot get empty (u|s)(min|max)!");
   if (Ops.size() == 1)
     return Ops[0];
-  if (Ops.size() == 2 &&
-      any_of(Ops, [](const SCEV *Op) { return isa<SCEVConstant>(Op); }))
-    return getMinMaxExpr(
-        SCEVSequentialMinMaxExpr::getEquivalentNonSequentialSCEVType(Kind),
-        Ops);
 #ifndef NDEBUG
   Type *ETy = getEffectiveSCEVType(Ops[0]->getType());
   for (unsigned i = 1, e = Ops.size(); i != e; ++i) {
@@ -4130,18 +4125,20 @@ ScalarEvolution::getSequentialMinMaxExpr(SCEVTypes Kind,
   }
 
   const SCEV *SaturationPoint;
+  ICmpInst::Predicate Pred;
   switch (Kind) {
   case scSequentialUMinExpr:
     SaturationPoint = getZero(Ops[0]->getType());
+    Pred = ICmpInst::ICMP_ULE;
     break;
   default:
     llvm_unreachable("Not a sequential min/max type.");
   }
 
-  // We can replace %x umin_seq %y with %x umin %y if either:
-  //  * %y being poison implies %x is also poison.
-  //  * %x cannot be the saturating value (e.g. zero for umin).
   for (unsigned i = 1, e = Ops.size(); i != e; ++i) {
+    // We can replace %x umin_seq %y with %x umin %y if either:
+    //  * %y being poison implies %x is also poison.
+    //  * %x cannot be the saturating value (e.g. zero for umin).
     if (::impliesPoison(Ops[i], Ops[i - 1]) ||
         isKnownViaNonRecursiveReasoning(ICmpInst::ICMP_NE, Ops[i - 1],
                                         SaturationPoint)) {
@@ -4149,6 +4146,12 @@ ScalarEvolution::getSequentialMinMaxExpr(SCEVTypes Kind,
       Ops[i - 1] = getMinMaxExpr(
           SCEVSequentialMinMaxExpr::getEquivalentNonSequentialSCEVType(Kind),
           SeqOps);
+      Ops.erase(Ops.begin() + i);
+      return getSequentialMinMaxExpr(Kind, Ops);
+    }
+    // Fold %x umin_seq %y to %x if %x ule %y.
+    // TODO: We might be able to prove the predicate for a later operand.
+    if (isKnownViaNonRecursiveReasoning(Pred, Ops[i - 1], Ops[i])) {
       Ops.erase(Ops.begin() + i);
       return getSequentialMinMaxExpr(Kind, Ops);
     }
