@@ -82,9 +82,8 @@ public:
   virtual bool haveEqualConstraints(ProgramStateRef S1,
                                     ProgramStateRef S2) const = 0;
 
-  virtual ProgramStateRef assume(ProgramStateRef state,
-                                 DefinedSVal Cond,
-                                 bool Assumption) = 0;
+  ProgramStateRef assume(ProgramStateRef state, DefinedSVal Cond,
+                         bool Assumption);
 
   using ProgramStatePair = std::pair<ProgramStateRef, ProgramStateRef>;
 
@@ -160,6 +159,9 @@ protected:
   /// Note that this flag allows the ConstraintManager to be re-entrant,
   /// but not thread-safe.
   bool NotifyAssumeClients = true;
+
+  virtual ProgramStateRef assumeInternal(ProgramStateRef state,
+                                         DefinedSVal Cond, bool Assumption) = 0;
 
   /// canReasonAbout - Not all ConstraintManagers can accurately reason about
   ///  all SVal values.  This method returns true if the ConstraintManager can
