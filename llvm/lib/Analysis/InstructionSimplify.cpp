@@ -2723,12 +2723,14 @@ computePointerICmp(CmpInst::Predicate Pred, Value *LHS, Value *RHS,
       uint64_t LHSSize, RHSSize;
       ObjectSizeOpts Opts;
       Opts.EvalMode = ObjectSizeOpts::Mode::Min;
-      auto *F = [](Value *V) {
+      auto *F = [](Value *V) -> Function * {
         if (auto *I = dyn_cast<Instruction>(V))
           return I->getFunction();
-        return cast<Argument>(V)->getParent();
+        if (auto *A = dyn_cast<Argument>(V))
+          return A->getParent();
+        return nullptr;
       }(LHS);
-      Opts.NullIsUnknownSize = NullPointerIsDefined(F);
+      Opts.NullIsUnknownSize = F ? NullPointerIsDefined(F) : true;
       if (getObjectSize(LHS, LHSSize, DL, TLI, Opts) &&
           getObjectSize(RHS, RHSSize, DL, TLI, Opts) &&
           !LHSOffset.isNegative() && !RHSOffset.isNegative() &&
