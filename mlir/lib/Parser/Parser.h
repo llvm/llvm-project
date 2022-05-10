@@ -68,16 +68,14 @@ public:
   //===--------------------------------------------------------------------===//
 
   /// Emit an error and return failure.
-  InFlightDiagnostic emitError(const Twine &message = {}) {
-    // If the error is to be emitted at EOF, move it back one character.
-    if (state.curToken.is(Token::eof)) {
-      return emitError(
-          SMLoc::getFromPointer(state.curToken.getLoc().getPointer() - 1),
-          message);
-    }
-    return emitError(state.curToken.getLoc(), message);
-  }
+  InFlightDiagnostic emitError(const Twine &message = {});
   InFlightDiagnostic emitError(SMLoc loc, const Twine &message = {});
+
+  /// Emit an error about a "wrong token".  If the current token is at the
+  /// start of a source line, this will apply heuristics to back up and report
+  /// the error at the end of the previous line, which is where the expected
+  /// token is supposed to be.
+  InFlightDiagnostic emitWrongTokenError(const Twine &message = {});
 
   /// Encode the specified source location information into an attribute for
   /// attachment to the IR.

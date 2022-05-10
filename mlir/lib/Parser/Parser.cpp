@@ -134,7 +134,7 @@ Parser::parseCommaSeparatedListUntil(Token::Kind rightToken,
   // Handle the empty case.
   if (getToken().is(rightToken)) {
     if (!allowEmptyList)
-      return emitError("expected list element");
+      return emitWrongTokenError("expected list element");
     consumeToken(rightToken);
     return success();
   }
@@ -147,6 +147,15 @@ Parser::parseCommaSeparatedListUntil(Token::Kind rightToken,
   return success();
 }
 
+InFlightDiagnostic Parser::emitError(const Twine &message) {
+  auto loc = state.curToken.getLoc();
+  if (state.curToken.isNot(Token::eof))
+    return emitError(loc, message);
+
+  // If the error is to be emitted at EOF, move it back one character.
+  return emitError(SMLoc::getFromPointer(loc.getPointer() - 1), message);
+}
+
 InFlightDiagnostic Parser::emitError(SMLoc loc, const Twine &message) {
   auto diag = mlir::emitError(getEncodedSourceLocation(loc), message);
 
@@ -157,13 +166,55 @@ InFlightDiagnostic Parser::emitError(SMLoc loc, const Twine &message) {
   return diag;
 }
 
+/// Emit an error about a "wrong token".  If the current token is at the
+/// start of a source line, this will apply heuristics to back up and report
+/// the error at the end of the previous line, which is where the expected
+/// token is supposed to be.
+InFlightDiagnostic Parser::emitWrongTokenError(const Twine &message) {
+  auto loc = state.curToken.getLoc();
+
+  // If the error is to be emitted at EOF, move it back one character.
+  if (state.curToken.is(Token::eof))
+    loc = SMLoc::getFromPointer(loc.getPointer() - 1);
+
+  // Determine if the token is at the start of the current line.
+  const char *bufferStart = state.lex.getBufferBegin();
+  const char *curPtr = loc.getPointer();
+
+  // Back up over entirely blank lines.
+  while (1) {
+    // Back up until we see a \n, but don't look past the buffer start.
+    curPtr = StringRef(bufferStart, curPtr - bufferStart).rtrim(" \t").end();
+
+    // For tokens with no preceding source line, just emit at the original
+    // location.
+    if (curPtr == bufferStart || curPtr[-1] != '\n')
+      return emitError(loc, message);
+
+    // Check to see if the preceding line has a comment on it.  We assume that a
+    // `//` is the start of a comment, which is mostly correct.
+    // TODO: This will do the wrong thing for // in a string literal.
+    --curPtr;
+    auto prevLine = StringRef(bufferStart, curPtr - bufferStart);
+    size_t newLineIndex = prevLine.rfind('\n');
+    if (newLineIndex != StringRef::npos)
+      prevLine = prevLine.drop_front(newLineIndex);
+    size_t commentStart = prevLine.find("//");
+    if (commentStart != StringRef::npos)
+      curPtr = prevLine.begin() + commentStart;
+
+    // Otherwise, we can move backwards at least this line.
+    loc = SMLoc::getFromPointer(curPtr);
+  }
+}
+
 /// Consume the specified token if present and return success.  On failure,
 /// output a diagnostic and return failure.
 ParseResult Parser::parseToken(Token::Kind expectedToken,
                                const Twine &message) {
   if (consumeIf(expectedToken))
     return success();
-  return emitError(message);
+  return emitWrongTokenError(message);
 }
 
 /// Parse an optional integer value from the stream.
@@ -872,23 +923,23 @@ ParseResult OperationParser::parseOperation() {
     // Parse the group of result ids.
     auto parseNextResult = [&]() -> ParseResult {
       // Parse the next result id.
-      if (!getToken().is(Token::percent_identifier))
-        return emitError("expected valid ssa identifier");
-
       Token nameTok = getToken();
-      consumeToken(Token::percent_identifier);
+      if (parseToken(Token::percent_identifier,
+                     "expected valid ssa identifier"))
+        return failure();
 
       // If the next token is a ':', we parse the expected result count.
       size_t expectedSubResults = 1;
       if (consumeIf(Token::colon)) {
         // Check that the next token is an integer.
         if (!getToken().is(Token::integer))
-          return emitError("expected integer number of results");
+          return emitWrongTokenError("expected integer number of results");
 
         // Check that number of results is > 0.
         auto val = getToken().getUInt64IntegerValue();
         if (!val.hasValue() || val.getValue() < 1)
-          return emitError("expected named operation to have atleast 1 result");
+          return emitError(
+              "expected named operation to have at least 1 result");
         consumeToken(Token::integer);
         expectedSubResults = *val;
       }
@@ -912,7 +963,7 @@ ParseResult OperationParser::parseOperation() {
   else if (nameTok.is(Token::string))
     op = parseGenericOperation();
   else
-    return emitError("expected operation name in quotes");
+    return emitWrongTokenError("expected operation name in quotes");
 
   // If parsing of the basic operation failed, then this whole thing fails.
   if (!op)
@@ -967,7 +1018,7 @@ ParseResult OperationParser::parseOperation() {
 ParseResult OperationParser::parseSuccessor(Block *&dest) {
   // Verify branch is identifier and get the matching block.
   if (!getToken().is(Token::caret_identifier))
-    return emitError("expected block name");
+    return emitWrongTokenError("expected block name");
   dest = getBlockNamed(getTokenSpelling(), getToken().getLoc());
   consumeToken();
   return success();
@@ -1296,8 +1347,6 @@ public:
                                Delimiter delimiter = Delimiter::None,
                                bool allowResultNumber = true,
                                int requiredOperandCount = -1) override {
-    auto startLoc = parser.getToken().getLoc();
-
     // The no-delimiter case has some special handling for better diagnostics.
     if (delimiter == Delimiter::None) {
       // parseCommaSeparatedList doesn't handle the missing case for "none",
@@ -1309,10 +1358,9 @@ public:
           return success();
 
         // Otherwise, try to produce a nice error message.
-        if (parser.getToken().is(Token::l_paren) ||
-            parser.getToken().is(Token::l_square))
-          return emitError(startLoc, "unexpected delimiter");
-        return emitError(startLoc, "invalid operand");
+        if (parser.getToken().isAny(Token::l_paren, Token::l_square))
+          return parser.emitError("unexpected delimiter");
+        return parser.emitWrongTokenError("expected operand");
       }
     }
 
@@ -1320,6 +1368,7 @@ public:
       return parseOperand(result.emplace_back(), allowResultNumber);
     };
 
+    auto startLoc = parser.getToken().getLoc();
     if (parseCommaSeparatedList(delimiter, parseOneOperand, " in operand list"))
       return failure();
 
