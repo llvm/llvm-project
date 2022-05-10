@@ -44,6 +44,7 @@ struct DOTGraphTraitsViewer
     : public PassInfoMixin<DOTGraphTraitsViewer<AnalysisT, IsSimple, GraphT,
                                                 AnalysisGraphTraitsT>> {
   DOTGraphTraitsViewer(StringRef GraphName) : Name(GraphName) {}
+  virtual ~DOTGraphTraitsViewer() {}
 
   /// Return true if this function should be processed.
   ///
@@ -98,6 +99,7 @@ struct DOTGraphTraitsPrinter
     : public PassInfoMixin<DOTGraphTraitsPrinter<AnalysisT, IsSimple, GraphT,
                                                  AnalysisGraphTraitsT>> {
   DOTGraphTraitsPrinter(StringRef GraphName) : Name(GraphName) {}
+  virtual ~DOTGraphTraitsPrinter() {}
 
   /// Return true if this function should be processed.
   ///
