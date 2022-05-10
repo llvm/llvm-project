@@ -108,8 +108,8 @@ function ifunc()
   entry ibadt4() result(alloc)
   !ERROR: Result of ENTRY is not compatible with result of containing function
   entry ibadt5() result(ptr)
+  !ERROR: Cannot call function 'isubr' like a subroutine
   call isubr
-  !ERROR: 'isubr' was previously called as a subroutine
   entry isubr()
   continue ! force transition to execution part
   entry implicit()
@@ -204,3 +204,11 @@ function inone
   !ERROR: No explicit type declared for 'implicitbad2'
   entry implicitbad2
 end
+
+module m5
+ contains
+  real function setBefore
+    ent = 1.0
+    entry ent
+  end function
+end module
