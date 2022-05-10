@@ -1236,6 +1236,7 @@ static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
         !IsStructurallyEquivalent(Context, Int1->getNumBitsExpr(),
                                   Int2->getNumBitsExpr()))
       return false;
+    break;
   }
   } // end switch
 
