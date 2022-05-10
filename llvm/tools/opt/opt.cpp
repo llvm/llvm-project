@@ -780,8 +780,9 @@ int main(int argc, char **argv) {
       errs() << "Cannot specify multiple -O#\n";
       return 1;
     }
-    if (NumOLevel > 0 && PassPipeline.getNumOccurrences() > 0) {
-      errs() << "Cannot specify -O# and --passes=, use "
+    if (NumOLevel > 0 &&
+        (PassPipeline.getNumOccurrences() > 0 || PassList.size() > 0)) {
+      errs() << "Cannot specify -O# and --passes=/--foo-pass, use "
                 "-passes='default<O#>,other-pass'\n";
       return 1;
     }
