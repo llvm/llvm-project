@@ -7,9 +7,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Dialect/SparseTensor/Utils/Merger.h"
-#include "mlir/Dialect/SparseTensor/IR/SparseTensor.h"
 #include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
 #include "mlir/Dialect/Math/IR/Math.h"
+#include "mlir/Dialect/SparseTensor/IR/SparseTensor.h"
 
 #include "mlir/IR/Operation.h"
 #include "llvm/Support/Debug.h"
@@ -572,15 +572,13 @@ unsigned Merger::buildLattices(unsigned e, unsigned i) {
       if (absentRegion.empty()) {
         // Simple mapping over existing values.
         return mapSet(kind, child0, Value(), unop);
-      } else {
-        // Use a disjunction with `unop` on the left and the absent value as an
-        // invariant on the right.
-        Block &absentBlock = absentRegion.front();
-        YieldOp absentYield = cast<YieldOp>(absentBlock.getTerminator());
-        Value absentVal = absentYield.result();
-        unsigned rhs = addExp(kInvariant, absentVal);
-        return takeDisj(kind, child0, buildLattices(rhs, i), unop);
-      }
+      } // Use a disjunction with `unop` on the left and the absent value as an
+      // invariant on the right.
+      Block &absentBlock = absentRegion.front();
+      YieldOp absentYield = cast<YieldOp>(absentBlock.getTerminator());
+      Value absentVal = absentYield.result();
+      unsigned rhs = addExp(kInvariant, absentVal);
+      return takeDisj(kind, child0, buildLattices(rhs, i), unop);
     }
   case kMulF:
   case kMulI:

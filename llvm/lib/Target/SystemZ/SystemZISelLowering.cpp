@@ -5647,7 +5647,7 @@ SDValue SystemZTargetLowering::lowerIS_FPCLASS(SDValue Op,
     TDCMask |= SystemZ::TDCMASK_ZERO_PLUS;
   if (Check & fcNegZero)
     TDCMask |= SystemZ::TDCMASK_ZERO_MINUS;
-  SDValue TDCMaskV = DAG.getConstant(TDCMask, DL, MVT::i32);
+  SDValue TDCMaskV = DAG.getConstant(TDCMask, DL, MVT::i64);
 
   SDValue Intr = DAG.getNode(SystemZISD::TDC, DL, ResultVT, Arg, TDCMaskV);
   return getCCResult(DAG, Intr);

@@ -1473,3 +1473,43 @@ define <2 x double> @add_sd_mask(<2 x double> %a, <2 x double> %b, <2 x double> 
   %8 = insertelement <2 x double> %a, double %7, i64 0
   ret <2 x double> %8
 }
+
+define float @PR26515(<4 x float> %0) nounwind {
+; X86-SSE-LABEL: PR26515:
+; X86-SSE:       # %bb.0:
+; X86-SSE-NEXT:    pushl %eax
+; X86-SSE-NEXT:    movaps %xmm0, %xmm1
+; X86-SSE-NEXT:    unpckhpd {{.*#+}} xmm1 = xmm1[1],xmm0[1]
+; X86-SSE-NEXT:    addss %xmm0, %xmm1
+; X86-SSE-NEXT:    movss %xmm1, (%esp)
+; X86-SSE-NEXT:    flds (%esp)
+; X86-SSE-NEXT:    popl %eax
+; X86-SSE-NEXT:    retl
+;
+; X86-AVX-LABEL: PR26515:
+; X86-AVX:       # %bb.0:
+; X86-AVX-NEXT:    pushl %eax
+; X86-AVX-NEXT:    vpermilpd {{.*#+}} xmm1 = xmm0[1,0]
+; X86-AVX-NEXT:    vaddss %xmm0, %xmm1, %xmm0
+; X86-AVX-NEXT:    vmovss %xmm0, (%esp)
+; X86-AVX-NEXT:    flds (%esp)
+; X86-AVX-NEXT:    popl %eax
+; X86-AVX-NEXT:    retl
+;
+; X64-SSE-LABEL: PR26515:
+; X64-SSE:       # %bb.0:
+; X64-SSE-NEXT:    movaps %xmm0, %xmm1
+; X64-SSE-NEXT:    unpckhpd {{.*#+}} xmm1 = xmm1[1],xmm0[1]
+; X64-SSE-NEXT:    addss %xmm1, %xmm0
+; X64-SSE-NEXT:    retq
+;
+; X64-AVX-LABEL: PR26515:
+; X64-AVX:       # %bb.0:
+; X64-AVX-NEXT:    vpermilpd {{.*#+}} xmm1 = xmm0[1,0]
+; X64-AVX-NEXT:    vaddss %xmm0, %xmm1, %xmm0
+; X64-AVX-NEXT:    retq
+  %2 = shufflevector <4 x float> %0, <4 x float> poison, <4 x i32> <i32 2, i32 undef, i32 undef, i32 undef>
+  %3 = fadd <4 x float> %2, %0
+  %4 = extractelement <4 x float> %3, i64 0
+  ret float %4
+}

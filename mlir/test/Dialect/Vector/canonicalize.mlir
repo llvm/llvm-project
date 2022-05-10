@@ -638,7 +638,7 @@ func.func @dont_fold_expand_collapse(%arg0: vector<1x1x64xf32>) -> vector<8x8xf3
 // CHECK-LABEL: func @fold_broadcast_shapecast
 //  CHECK-SAME: (%[[V:.+]]: vector<4xf32>)
 //       CHECK:   return %[[V]]
-func @fold_broadcast_shapecast(%arg0: vector<4xf32>) -> vector<4xf32> {
+func.func @fold_broadcast_shapecast(%arg0: vector<4xf32>) -> vector<4xf32> {
     %0 = vector.broadcast %arg0 : vector<4xf32> to vector<1x1x4xf32>
     %1 = vector.shape_cast %0 : vector<1x1x4xf32> to vector<4xf32>
     return %1 : vector<4xf32>
@@ -649,7 +649,7 @@ func @fold_broadcast_shapecast(%arg0: vector<4xf32>) -> vector<4xf32> {
 // CHECK-LABEL: func @dont_fold_broadcast_shapecast_scalar
 //       CHECK:   vector.broadcast
 //       CHECK:   vector.shape_cast
-func @dont_fold_broadcast_shapecast_scalar(%arg0: f32) -> vector<1xf32> {
+func.func @dont_fold_broadcast_shapecast_scalar(%arg0: f32) -> vector<1xf32> {
     %0 = vector.broadcast %arg0 : f32 to vector<1x1x1xf32>
     %1 = vector.shape_cast %0 : vector<1x1x1xf32> to vector<1xf32>
     return %1 : vector<1xf32>
@@ -660,7 +660,7 @@ func @dont_fold_broadcast_shapecast_scalar(%arg0: f32) -> vector<1xf32> {
 // CHECK-LABEL: func @dont_fold_broadcast_shapecast_diff_shape
 //       CHECK:   vector.broadcast
 //       CHECK:   vector.shape_cast
-func @dont_fold_broadcast_shapecast_diff_shape(%arg0: vector<4xf32>) -> vector<8xf32> {
+func.func @dont_fold_broadcast_shapecast_diff_shape(%arg0: vector<4xf32>) -> vector<8xf32> {
     %0 = vector.broadcast %arg0 : vector<4xf32> to vector<1x2x4xf32>
     %1 = vector.shape_cast %0 : vector<1x2x4xf32> to vector<8xf32>
     return %1 : vector<8xf32>
@@ -1568,7 +1568,7 @@ func.func @extract_element_splat_fold(%a : i32) -> i32 {
 //  CHECK-SAME: (%[[V:.+]]: vector<1xf32>)
 //       CHECK:   %[[S:.+]] = vector.extract %[[V]][0] : vector<1xf32>
 //       CHECK:   return %[[S]] : f32
-func @reduce_one_element_vector_extract(%a : vector<1xf32>) -> f32 {
+func.func @reduce_one_element_vector_extract(%a : vector<1xf32>) -> f32 {
   %s = vector.reduction <add>, %a : vector<1xf32> into f32
   return %s : f32
 }
@@ -1580,7 +1580,7 @@ func @reduce_one_element_vector_extract(%a : vector<1xf32>) -> f32 {
 //       CHECK:   %[[A:.+]] = vector.extract %[[V]][0] : vector<1xf32>
 //       CHECK:   %[[S:.+]] = arith.addf %[[A]], %arg1 : f32
 //       CHECK:   return %[[S]]
-func @reduce_one_element_vector_addf(%a : vector<1xf32>, %b: f32) -> f32 {
+func.func @reduce_one_element_vector_addf(%a : vector<1xf32>, %b: f32) -> f32 {
   %s = vector.reduction <add>, %a, %b : vector<1xf32> into f32
   return %s : f32
 }
@@ -1592,7 +1592,7 @@ func @reduce_one_element_vector_addf(%a : vector<1xf32>, %b: f32) -> f32 {
 //       CHECK:   %[[A:.+]] = vector.extract %[[V]][0] : vector<1xf32>
 //       CHECK:   %[[S:.+]] = arith.mulf %[[A]], %arg1 : f32
 //       CHECK:   return %[[S]]
-func @reduce_one_element_vector_mulf(%a : vector<1xf32>, %b: f32) -> f32 {
+func.func @reduce_one_element_vector_mulf(%a : vector<1xf32>, %b: f32) -> f32 {
   %s = vector.reduction <mul>, %a, %b : vector<1xf32> into f32
   return %s : f32
 }
@@ -1601,7 +1601,7 @@ func @reduce_one_element_vector_mulf(%a : vector<1xf32>, %b: f32) -> f32 {
 
 // CHECK-LABEL: func @dont_reduce_one_element_vector
 //       CHECK: vector.reduction
-func @dont_reduce_one_element_vector(%a : vector<4xf32>) -> f32 {
+func.func @dont_reduce_one_element_vector(%a : vector<4xf32>) -> f32 {
   %s = vector.reduction <add>, %a : vector<4xf32> into f32
   return %s : f32
 }

@@ -929,6 +929,9 @@ public:
   /// ExtractElement, ExtractValue), which can be part of the graph.
   Optional<OrdersType> findReusedOrderedScalars(const TreeEntry &TE);
 
+  /// Sort loads into increasing pointers offsets to allow greater clustering.
+  Optional<OrdersType> findPartiallyOrderedLoads(const TreeEntry &TE);
+
   /// Gets reordering data for the given tree entry. If the entry is vectorized
   /// - just return ReorderIndices, otherwise check if the scalars can be
   /// reordered and return the most optimal order.
@@ -3441,6 +3444,93 @@ BoUpSLP::findReusedOrderedScalars(const BoUpSLP::TreeEntry &TE) {
   return None;
 }
 
+bool clusterSortPtrAccesses(ArrayRef<Value *> VL, Type *ElemTy,
+                            const DataLayout &DL, ScalarEvolution &SE,
+                            SmallVectorImpl<unsigned> &SortedIndices) {
+  assert(llvm::all_of(
+             VL, [](const Value *V) { return V->getType()->isPointerTy(); }) &&
+         "Expected list of pointer operands.");
+  // Map from bases to a vector of (Ptr, Offset, OrigIdx), which we insert each
+  // Ptr into, sort and return the sorted indices with values next to one
+  // another.
+  MapVector<Value *, SmallVector<std::tuple<Value *, int, unsigned>>> Bases;
+  Bases[VL[0]].push_back(std::make_tuple(VL[0], 0U, 0U));
+
+  unsigned Cnt = 1;
+  for (Value *Ptr : VL.drop_front()) {
+    bool Found = any_of(Bases, [&](auto &Base) {
+      Optional<int> Diff =
+          getPointersDiff(ElemTy, Base.first, ElemTy, Ptr, DL, SE,
+                          /*StrictCheck=*/true);
+      if (!Diff)
+        return false;
+
+      Base.second.emplace_back(Ptr, *Diff, Cnt++);
+      return true;
+    });
+
+    if (!Found) {
+      // If we haven't found enough to usefully cluster, return early.
+      if (Bases.size() > VL.size() / 2 - 1)
+        return false;
+
+      // Not found already - add a new Base
+      Bases[Ptr].emplace_back(Ptr, 0, Cnt++);
+    }
+  }
+
+  // For each of the bases sort the pointers by Offset and check if any of the
+  // base become consecutively allocated.
+  bool AnyConsecutive = false;
+  for (auto &Base : Bases) {
+    auto &Vec = Base.second;
+    if (Vec.size() > 1) {
+      llvm::stable_sort(Vec, [](const std::tuple<Value *, int, unsigned> &X,
+                                const std::tuple<Value *, int, unsigned> &Y) {
+        return std::get<1>(X) < std::get<1>(Y);
+      });
+      int InitialOffset = std::get<1>(Vec[0]);
+      AnyConsecutive |= all_of(enumerate(Vec), [InitialOffset](auto &P) {
+        return std::get<1>(P.value()) == int(P.index()) + InitialOffset;
+      });
+    }
+  }
+
+  // Fill SortedIndices array only if it looks worth-while to sort the ptrs.
+  SortedIndices.clear();
+  if (!AnyConsecutive)
+    return false;
+
+  for (auto &Base : Bases) {
+    for (auto &T : Base.second)
+      SortedIndices.push_back(std::get<2>(T));
+  }
+
+  assert(SortedIndices.size() == VL.size() &&
+         "Expected SortedIndices to be the size of VL");
+  return true;
+}
+
+Optional<BoUpSLP::OrdersType>
+BoUpSLP::findPartiallyOrderedLoads(const BoUpSLP::TreeEntry &TE) {
+  assert(TE.State == TreeEntry::NeedToGather && "Expected gather node only.");
+  Type *ScalarTy = TE.Scalars[0]->getType();
+
+  SmallVector<Value *> Ptrs;
+  Ptrs.reserve(TE.Scalars.size());
+  for (Value *V : TE.Scalars) {
+    auto *L = dyn_cast<LoadInst>(V);
+    if (!L || !L->isSimple())
+      return None;
+    Ptrs.push_back(L->getPointerOperand());
+  }
+
+  BoUpSLP::OrdersType Order;
+  if (clusterSortPtrAccesses(Ptrs, ScalarTy, *DL, *SE, Order))
+    return Order;
+  return None;
+}
+
 Optional<BoUpSLP::OrdersType> BoUpSLP::getReorderingData(const TreeEntry &TE,
                                                          bool TopToBottom) {
   // No need to reorder if need to shuffle reuses, still need to shuffle the
@@ -3481,6 +3571,9 @@ Optional<BoUpSLP::OrdersType> BoUpSLP::getReorderingData(const TreeEntry &TE,
     }
     if (Optional<OrdersType> CurrentOrder = findReusedOrderedScalars(TE))
       return CurrentOrder;
+    if (TE.Scalars.size() >= 4)
+      if (Optional<OrdersType> Order = findPartiallyOrderedLoads(TE))
+        return Order;
   }
   return None;
 }
@@ -8528,11 +8621,8 @@ unsigned BoUpSLP::getVectorElementSize(Value *V) {
   // If V is a store, just return the width of the stored value (or value
   // truncated just before storing) without traversing the expression tree.
   // This is the common case.
-  if (auto *Store = dyn_cast<StoreInst>(V)) {
-    if (auto *Trunc = dyn_cast<TruncInst>(Store->getValueOperand()))
-      return DL->getTypeSizeInBits(Trunc->getSrcTy());
+  if (auto *Store = dyn_cast<StoreInst>(V))
     return DL->getTypeSizeInBits(Store->getValueOperand()->getType());
-  }
 
   if (auto *IEI = dyn_cast<InsertElementInst>(V))
     return getVectorElementSize(IEI->getOperand(1));
@@ -8966,11 +9056,10 @@ bool SLPVectorizerPass::runImpl(Function &F, ScalarEvolution *SE_,
 }
 
 bool SLPVectorizerPass::vectorizeStoreChain(ArrayRef<Value *> Chain, BoUpSLP &R,
-                                            unsigned Idx) {
+                                            unsigned Idx, unsigned MinVF) {
   LLVM_DEBUG(dbgs() << "SLP: Analyzing a store chain of length " << Chain.size()
                     << "\n");
   const unsigned Sz = R.getVectorElementSize(Chain[0]);
-  const unsigned MinVF = R.getMinVecRegSize() / Sz;
   unsigned VF = Chain.size();
 
   if (!isPowerOf2_32(Sz) || !isPowerOf2_32(VF) || VF < 2 || VF < MinVF)
@@ -9109,9 +9198,15 @@ bool SLPVectorizerPass::vectorizeStores(ArrayRef<StoreInst *> Stores,
     unsigned EltSize = R.getVectorElementSize(Operands[0]);
     unsigned MaxElts = llvm::PowerOf2Floor(MaxVecRegSize / EltSize);
 
-    unsigned MinVF = R.getMinVF(EltSize);
     unsigned MaxVF = std::min(R.getMaximumVF(EltSize, Instruction::Store),
                               MaxElts);
+    auto *Store = cast<StoreInst>(Operands[0]);
+    Type *StoreTy = Store->getValueOperand()->getType();
+    Type *ValueTy = StoreTy;
+    if (auto *Trunc = dyn_cast<TruncInst>(Store->getValueOperand()))
+      ValueTy = Trunc->getSrcTy();
+    unsigned MinVF = TTI->getStoreMinimumVF(
+        R.getMinVF(DL->getTypeSizeInBits(ValueTy)), StoreTy, ValueTy);
 
     // FIXME: Is division-by-2 the correct step? Should we assert that the
     // register size is a power-of-2?
@@ -9121,7 +9216,7 @@ bool SLPVectorizerPass::vectorizeStores(ArrayRef<StoreInst *> Stores,
         ArrayRef<Value *> Slice = makeArrayRef(Operands).slice(Cnt, Size);
         if (!VectorizedStores.count(Slice.front()) &&
             !VectorizedStores.count(Slice.back()) &&
-            vectorizeStoreChain(Slice, R, Cnt)) {
+            vectorizeStoreChain(Slice, R, Cnt, MinVF)) {
           // Mark the vectorized stores so that we don't vectorize them again.
           VectorizedStores.insert(Slice.begin(), Slice.end());
           Changed = true;

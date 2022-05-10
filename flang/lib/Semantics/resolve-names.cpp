@@ -612,6 +612,10 @@ public:
       return *symbol;
     } else {
       if (!CheckPossibleBadForwardRef(*symbol)) {
+        if (name.empty() && symbol->name().empty()) {
+          // report the error elsewhere
+          return *symbol;
+        }
         SayAlreadyDeclared(name, *symbol);
       }
       // replace the old symbol with a new one with correct details
@@ -837,6 +841,7 @@ private:
       const parser::LanguageBindingSpec * = nullptr);
   Symbol *GetSpecificFromGeneric(const parser::Name &);
   SubprogramDetails &PostSubprogramStmt(const parser::Name &);
+  void PostEntryStmt(const parser::EntryStmt &stmt);
 };
 
 class DeclarationVisitor : public ArraySpecVisitor,
@@ -3317,7 +3322,11 @@ SubprogramDetails &SubprogramVisitor::PostSubprogramStmt(
 }
 
 void SubprogramVisitor::Post(const parser::EntryStmt &stmt) {
-  auto attrs{EndAttrs()}; // needs to be called even if early return
+  PostEntryStmt(stmt);
+  EndAttrs();
+}
+
+void SubprogramVisitor::PostEntryStmt(const parser::EntryStmt &stmt) {
   Scope &inclusiveScope{InclusiveScope()};
   const Symbol *subprogram{inclusiveScope.symbol()};
   if (!subprogram) {
@@ -3431,8 +3440,8 @@ void SubprogramVisitor::Post(const parser::EntryStmt &stmt) {
   Symbol::Flag subpFlag{
       inFunction ? Symbol::Flag::Function : Symbol::Flag::Subroutine};
   Scope &outer{inclusiveScope.parent()}; // global or module scope
-  if (outer.IsModule() && !attrs.test(Attr::PRIVATE)) {
-    attrs.set(Attr::PUBLIC);
+  if (outer.IsModule() && attrs_ && !attrs_->test(Attr::PRIVATE)) {
+    attrs_->set(Attr::PUBLIC);
   }
   if (Symbol * extant{FindSymbol(outer, name)}) {
     if (!HandlePreviousCalls(name, *extant, subpFlag)) {
@@ -3446,7 +3455,7 @@ void SubprogramVisitor::Post(const parser::EntryStmt &stmt) {
     }
   }
 
-  Symbol *entrySymbol{&MakeSymbol(outer, name.source, attrs)};
+  Symbol *entrySymbol{&MakeSymbol(outer, name.source, GetAttrs())};
   if (auto *generic{entrySymbol->detailsIf<GenericDetails>()}) {
     CHECK(generic->specific());
     entrySymbol = generic->specific();
@@ -6562,9 +6571,10 @@ void DeclarationVisitor::Initialization(const parser::Name &name,
               // work better.
               ultimate.set(Symbol::Flag::InDataStmt);
             },
-            [&](const std::list<Indirection<parser::DataStmtValue>> &) {
+            [&](const std::list<Indirection<parser::DataStmtValue>> &values) {
               // Handled later in data-to-inits conversion
               ultimate.set(Symbol::Flag::InDataStmt);
+              Walk(values);
             },
         },
         init.u);

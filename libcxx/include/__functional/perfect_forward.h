@@ -34,9 +34,11 @@ private:
   tuple<_BoundArgs...> __bound_args_;
 
 public:
-  template <class... _Args, class = enable_if_t< is_constructible_v<tuple<_BoundArgs...>, _Args&&...>>>
+  template <class... _Args, class = enable_if_t<
+    is_constructible_v<tuple<_BoundArgs...>, _Args&&...>
+  >>
   explicit constexpr __perfect_forward_impl(_Args&&... __bound_args)
-      : __bound_args_(_VSTD::forward<_Args>(__bound_args)...) {}
+    : __bound_args_(_VSTD::forward<_Args>(__bound_args)...) {}
 
   __perfect_forward_impl(__perfect_forward_impl const&) = default;
   __perfect_forward_impl(__perfect_forward_impl&&) = default;
@@ -45,41 +47,37 @@ public:
   __perfect_forward_impl& operator=(__perfect_forward_impl&&) = default;
 
   template <class... _Args, class = enable_if_t<is_invocable_v<_Op, _BoundArgs&..., _Args...>>>
-  _LIBCPP_HIDE_FROM_ABI constexpr auto operator()(_Args&&... __args) & noexcept(
-      noexcept(_Op()(_VSTD::get<_Idx>(__bound_args_)..., _VSTD::forward<_Args>(__args)...)))
-      -> decltype(_Op()(_VSTD::get<_Idx>(__bound_args_)..., _VSTD::forward<_Args>(__args)...)) {
-    return _Op()(_VSTD::get<_Idx>(__bound_args_)..., _VSTD::forward<_Args>(__args)...);
-  }
+  _LIBCPP_HIDE_FROM_ABI constexpr auto operator()(_Args&&... __args) &
+    noexcept(noexcept(_Op()(_VSTD::get<_Idx>(__bound_args_)..., _VSTD::forward<_Args>(__args)...)))
+    -> decltype(      _Op()(_VSTD::get<_Idx>(__bound_args_)..., _VSTD::forward<_Args>(__args)...))
+    { return          _Op()(_VSTD::get<_Idx>(__bound_args_)..., _VSTD::forward<_Args>(__args)...); }
 
   template <class... _Args, class = enable_if_t<!is_invocable_v<_Op, _BoundArgs&..., _Args...>>>
   auto operator()(_Args&&...) & = delete;
 
   template <class... _Args, class = enable_if_t<is_invocable_v<_Op, _BoundArgs const&..., _Args...>>>
-  _LIBCPP_HIDE_FROM_ABI constexpr auto operator()(_Args&&... __args) const& noexcept(
-      noexcept(_Op()(_VSTD::get<_Idx>(__bound_args_)..., _VSTD::forward<_Args>(__args)...)))
-      -> decltype(_Op()(_VSTD::get<_Idx>(__bound_args_)..., _VSTD::forward<_Args>(__args)...)) {
-    return _Op()(_VSTD::get<_Idx>(__bound_args_)..., _VSTD::forward<_Args>(__args)...);
-  }
+  _LIBCPP_HIDE_FROM_ABI constexpr auto operator()(_Args&&... __args) const&
+    noexcept(noexcept(_Op()(_VSTD::get<_Idx>(__bound_args_)..., _VSTD::forward<_Args>(__args)...)))
+    -> decltype(      _Op()(_VSTD::get<_Idx>(__bound_args_)..., _VSTD::forward<_Args>(__args)...))
+    { return          _Op()(_VSTD::get<_Idx>(__bound_args_)..., _VSTD::forward<_Args>(__args)...); }
 
   template <class... _Args, class = enable_if_t<!is_invocable_v<_Op, _BoundArgs const&..., _Args...>>>
   auto operator()(_Args&&...) const& = delete;
 
   template <class... _Args, class = enable_if_t<is_invocable_v<_Op, _BoundArgs..., _Args...>>>
-  _LIBCPP_HIDE_FROM_ABI constexpr auto operator()(_Args&&... __args) && noexcept(
-      noexcept(_Op()(_VSTD::get<_Idx>(_VSTD::move(__bound_args_))..., _VSTD::forward<_Args>(__args)...)))
-      -> decltype(_Op()(_VSTD::get<_Idx>(_VSTD::move(__bound_args_))..., _VSTD::forward<_Args>(__args)...)) {
-    return _Op()(_VSTD::get<_Idx>(_VSTD::move(__bound_args_))..., _VSTD::forward<_Args>(__args)...);
-  }
+  _LIBCPP_HIDE_FROM_ABI constexpr auto operator()(_Args&&... __args) &&
+    noexcept(noexcept(_Op()(_VSTD::get<_Idx>(_VSTD::move(__bound_args_))..., _VSTD::forward<_Args>(__args)...)))
+    -> decltype(      _Op()(_VSTD::get<_Idx>(_VSTD::move(__bound_args_))..., _VSTD::forward<_Args>(__args)...))
+    { return          _Op()(_VSTD::get<_Idx>(_VSTD::move(__bound_args_))..., _VSTD::forward<_Args>(__args)...); }
 
   template <class... _Args, class = enable_if_t<!is_invocable_v<_Op, _BoundArgs..., _Args...>>>
   auto operator()(_Args&&...) && = delete;
 
   template <class... _Args, class = enable_if_t<is_invocable_v<_Op, _BoundArgs const..., _Args...>>>
-  _LIBCPP_HIDE_FROM_ABI constexpr auto operator()(_Args&&... __args) const&& noexcept(
-      noexcept(_Op()(_VSTD::get<_Idx>(_VSTD::move(__bound_args_))..., _VSTD::forward<_Args>(__args)...)))
-      -> decltype(_Op()(_VSTD::get<_Idx>(_VSTD::move(__bound_args_))..., _VSTD::forward<_Args>(__args)...)) {
-    return _Op()(_VSTD::get<_Idx>(_VSTD::move(__bound_args_))..., _VSTD::forward<_Args>(__args)...);
-  }
+  _LIBCPP_HIDE_FROM_ABI constexpr auto operator()(_Args&&... __args) const&&
+    noexcept(noexcept(_Op()(_VSTD::get<_Idx>(_VSTD::move(__bound_args_))..., _VSTD::forward<_Args>(__args)...)))
+    -> decltype(      _Op()(_VSTD::get<_Idx>(_VSTD::move(__bound_args_))..., _VSTD::forward<_Args>(__args)...))
+    { return          _Op()(_VSTD::get<_Idx>(_VSTD::move(__bound_args_))..., _VSTD::forward<_Args>(__args)...); }
 
   template <class... _Args, class = enable_if_t<!is_invocable_v<_Op, _BoundArgs const..., _Args...>>>
   auto operator()(_Args&&...) const&& = delete;

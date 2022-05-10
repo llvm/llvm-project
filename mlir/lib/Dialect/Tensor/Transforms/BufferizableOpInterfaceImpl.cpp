@@ -743,6 +743,54 @@ struct RankOpInterface
   }
 };
 
+/// Bufferization of tensor.reshape. Replace with memref.reshape.
+struct ReshapeOpInterface
+    : public BufferizableOpInterface::ExternalModel<ReshapeOpInterface,
+                                                    tensor::ReshapeOp> {
+  bool bufferizesToMemoryRead(Operation *op, OpOperand &opOperand,
+                              const AnalysisState &state) const {
+    if (&opOperand == &op->getOpOperand(1) /* shape */)
+      return true;
+    return false;
+  }
+
+  bool bufferizesToMemoryWrite(Operation *op, OpOperand &opOperand,
+                               const AnalysisState &state) const {
+    return false;
+  }
+
+  SmallVector<OpResult> getAliasingOpResult(Operation *op, OpOperand &opOperand,
+                                            const AnalysisState &state) const {
+    return {op->getOpResult(0)};
+  }
+
+  BufferRelation bufferRelation(Operation *op, OpResult opResult,
+                                const AnalysisState &state) const {
+    return BufferRelation::Equivalent;
+  }
+
+  LogicalResult bufferize(Operation *op, RewriterBase &rewriter,
+                          BufferizationState &state) const {
+    auto reshapeOp = cast<tensor::ReshapeOp>(op);
+    auto &srcOperand = reshapeOp->getOpOperand(0);
+    auto srcBuffer = state.getBuffer(rewriter, srcOperand);
+    if (failed(srcBuffer))
+      return failure();
+
+    auto &shapeOperand = reshapeOp->getOpOperand(1);
+    auto shapeBuffer = state.getBuffer(rewriter, shapeOperand);
+    if (failed(shapeBuffer))
+      return failure();
+
+    auto resultTensorType = reshapeOp.getResult().getType().cast<TensorType>();
+    auto resultMemRefType = getMemRefType(resultTensorType, state.getOptions());
+
+    replaceOpWithNewBufferizedOp<memref::ReshapeOp>(
+        rewriter, op, resultMemRefType, *srcBuffer, *shapeBuffer);
+    return success();
+  }
+};
+
 } // namespace
 } // namespace tensor
 } // namespace mlir
@@ -761,5 +809,6 @@ void mlir::tensor::registerBufferizableOpInterfaceExternalModels(
     InsertOp::attachInterface<InsertOpInterface>(*ctx);
     InsertSliceOp::attachInterface<InsertSliceOpInterface>(*ctx);
     RankOp::attachInterface<RankOpInterface>(*ctx);
+    ReshapeOp::attachInterface<ReshapeOpInterface>(*ctx);
   });
 }

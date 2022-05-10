@@ -3,7 +3,7 @@
 // RUN: tco %s | FileCheck %s
 
 // CHECK-LABEL: @f
-func @f(%a : i32) -> i32 {
+func.func @f(%a : i32) -> i32 {
    %1 = arith.constant 1 : i32
    %2 = arith.constant 42 : i32
 // CHECK: switch i32 %{{.*}}, label %{{.*}} [
@@ -19,7 +19,7 @@ func @f(%a : i32) -> i32 {
 }
 
 // CHECK-LABEL: @g
-func @g(%a : i32) -> i32 {
+func.func @g(%a : i32) -> i32 {
    %1 = arith.constant 1 : i32
    %2 = arith.constant 42 : i32
 
@@ -39,7 +39,7 @@ func @g(%a : i32) -> i32 {
 }
 
 // CHECK-LABEL: @h
-func @h(%a : i32) -> i32 {
+func.func @h(%a : i32) -> i32 {
    %1 = arith.constant 1 : i32
    %2 = arith.constant 42 : i32
    %b1 = arith.constant 4 : i32

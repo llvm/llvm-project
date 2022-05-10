@@ -24,20 +24,6 @@
 namespace clang {
 namespace clangd {
 
-/// A threadsafe flag that is initially clear.
-class Notification {
-public:
-  // Sets the flag. No-op if already set.
-  void notify();
-  // Blocks until flag is set.
-  void wait() const;
-
-private:
-  bool Notified = false;
-  mutable std::condition_variable CV;
-  mutable std::mutex Mu;
-};
-
 /// Limits the number of threads that can acquire the lock at the same time.
 class Semaphore {
 public:
@@ -99,6 +85,21 @@ LLVM_NODISCARD bool wait(std::unique_lock<std::mutex> &Lock,
   }
   return true;
 }
+
+/// A threadsafe flag that is initially clear.
+class Notification {
+public:
+  // Sets the flag. No-op if already set.
+  void notify();
+  // Blocks until flag is set.
+  void wait() const { (void)wait(Deadline::infinity()); }
+  LLVM_NODISCARD bool wait(Deadline D) const;
+
+private:
+  bool Notified = false;
+  mutable std::condition_variable CV;
+  mutable std::mutex Mu;
+};
 
 /// Runs tasks on separate (detached) threads and wait for all tasks to finish.
 /// Objects that need to spawn threads can own an AsyncTaskRunner to ensure they

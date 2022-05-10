@@ -9,6 +9,28 @@ if(LLVM_ENABLE_RUNTIMES STREQUAL "all" )
   set(LLVM_ENABLE_RUNTIMES ${LLVM_ALL_RUNTIMES})
 endif()
 
+# Some of the runtimes will conditionally use the compiler-rt sanitizers.
+# To make this work smoothly, we ensure that compiler-rt is added first in
+# the list of sub-projects. This allows other sub-projects to have checks
+# like `if(TARGET asan)` to enable building with asan.
+if (compiler-rt IN_LIST LLVM_ENABLE_RUNTIMES)
+  list(REMOVE_ITEM LLVM_ENABLE_RUNTIMES compiler-rt)
+  if(NOT DEFINED LLVM_BUILD_COMPILER_RT OR LLVM_BUILD_COMPILER_RT)
+    list(PREPEND LLVM_ENABLE_RUNTIMES compiler-rt)
+  endif()
+endif()
+
+# If both libc++ and libc++abi are being built, always configure libc++abi before libc++.
+# This allows libc++ to depend on targets set up by libc++abi when it needs to.
+if (libcxx IN_LIST LLVM_ENABLE_RUNTIMES AND libcxxabi IN_LIST LLVM_ENABLE_RUNTIMES)
+  list(FIND LLVM_ENABLE_RUNTIMES libcxx _libcxx_index)
+  list(FIND LLVM_ENABLE_RUNTIMES libcxxabi _libcxxabi_index)
+  if (_libcxx_index LESS _libcxxabi_index)
+    list(TRANSFORM LLVM_ENABLE_RUNTIMES REPLACE "^libcxx$" "libcxxabi" AT ${_libcxx_index})
+    list(TRANSFORM LLVM_ENABLE_RUNTIMES REPLACE "^libcxxabi$" "libcxx" AT ${_libcxxabi_index})
+  endif()
+endif()
+
 foreach(proj ${LLVM_ENABLE_RUNTIMES})
   set(proj_dir "${CMAKE_CURRENT_SOURCE_DIR}/../${proj}")
   if(IS_DIRECTORY ${proj_dir} AND EXISTS ${proj_dir}/CMakeLists.txt)
@@ -41,28 +63,6 @@ list(INSERT CMAKE_MODULE_PATH 0
 )
 
 set(LLVM_THIRD_PARTY_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../third-party")
-
-function(get_compiler_rt_path path)
-  foreach(entry ${runtimes})
-    get_filename_component(projName ${entry} NAME)
-    if("${projName}" MATCHES "compiler-rt")
-      set(${path} ${entry} PARENT_SCOPE)
-      return()
-    endif()
-  endforeach()
-endfunction()
-
-# Some of the runtimes will conditionally use the compiler-rt sanitizers
-# to make this work smoothly we ensure that compiler-rt is added first in
-# the list of sub-projects. This allows other sub-projects to have checks
-# like `if(TARGET asan)` to enable building with asan.
-get_compiler_rt_path(compiler_rt_path)
-if(compiler_rt_path)
-  list(REMOVE_ITEM runtimes ${compiler_rt_path})
-  if(NOT DEFINED LLVM_BUILD_COMPILER_RT OR LLVM_BUILD_COMPILER_RT)
-    list(INSERT runtimes 0 ${compiler_rt_path})
-  endif()
-endif()
 
 # If building standalone by pointing CMake at this runtimes directory,
 # LLVM_BINARY_DIR isn't set, find_package(LLVM) will fail and these
@@ -176,6 +176,8 @@ if(LLVM_INCLUDE_TESTS)
     set(LIT_ARGS_DEFAULT "${LIT_ARGS_DEFAULT} --no-progress-bar")
   endif()
   set(LLVM_LIT_ARGS "${LIT_ARGS_DEFAULT}" CACHE STRING "Default options for lit")
+
+  umbrella_lit_testsuite_begin(check-runtimes)
 endif()
 
 # llvm-libgcc incorporates both compiler-rt and libunwind as subprojects with very
@@ -200,36 +202,13 @@ endif()
 foreach(entry ${runtimes})
   get_filename_component(projName ${entry} NAME)
 
-  # Between each sub-project we want to cache and clear the LIT properties
-  set_property(GLOBAL PROPERTY LLVM_LIT_TESTSUITES)
-  set_property(GLOBAL PROPERTY LLVM_LIT_PARAMS)
-  set_property(GLOBAL PROPERTY LLVM_LIT_DEPENDS)
-  set_property(GLOBAL PROPERTY LLVM_LIT_EXTRA_ARGS)
-
   add_subdirectory(${entry} ${projName})
-
-  get_property(LLVM_LIT_TESTSUITES GLOBAL PROPERTY LLVM_LIT_TESTSUITES)
-  get_property(LLVM_LIT_PARAMS GLOBAL PROPERTY LLVM_LIT_PARAMS)
-  get_property(LLVM_LIT_DEPENDS GLOBAL PROPERTY LLVM_LIT_DEPENDS)
-  get_property(LLVM_LIT_EXTRA_ARGS GLOBAL PROPERTY LLVM_LIT_EXTRA_ARGS)
-
-  list(APPEND RUNTIMES_LIT_TESTSUITES ${LLVM_LIT_TESTSUITES})
-  list(APPEND RUNTIMES_LIT_PARAMS ${LLVM_LIT_PARAMS})
-  list(APPEND RUNTIMES_LIT_DEPENDS ${LLVM_LIT_DEPENDS})
-  list(APPEND RUNTIMES_LIT_EXTRA_ARGS ${LLVM_LIT_EXTRA_ARGS})
 endforeach()
 
 if(LLVM_INCLUDE_TESTS)
   # Add a global check rule now that all subdirectories have been traversed
   # and we know the total set of lit testsuites.
-  add_lit_target(check-runtimes
-    "Running all regression tests"
-    ${RUNTIMES_LIT_TESTSUITES}
-    PARAMS ${RUNTIMES_LIT_PARAMS}
-    DEPENDS ${RUNTIMES_LIT_DEPENDS}
-    ARGS ${RUNTIMES_LIT_EXTRA_ARGS}
-    )
-  add_custom_target(runtimes-test-depends DEPENDS ${RUNTIMES_LIT_DEPENDS})
+  umbrella_lit_testsuite_end(check-runtimes)
 
   if (NOT HAVE_LLVM_LIT)
     # If built by manually invoking cmake on this directory, we don't have

@@ -281,12 +281,25 @@ enum NodeType {
 
   /// Carry-using nodes for multiple precision addition and subtraction.
   /// These nodes take three operands: The first two are the normal lhs and
-  /// rhs to the add or sub, and the third is a boolean indicating if there
-  /// is an incoming carry. These nodes produce two results: the normal
-  /// result of the add or sub, and the output carry so they can be chained
-  /// together. The use of this opcode is preferable to adde/sube if the
-  /// target supports it, as the carry is a regular value rather than a
-  /// glue, which allows further optimisation.
+  /// rhs to the add or sub, and the third is a boolean value that is 1 if and
+  /// only if there is an incoming carry/borrow. These nodes produce two
+  /// results: the normal result of the add or sub, and a boolean value that is
+  /// 1 if and only if there is an outgoing carry/borrow.
+  ///
+  /// Care must be taken if these opcodes are lowered to hardware instructions
+  /// that use the inverse logic -- 0 if and only if there is an
+  /// incoming/outgoing carry/borrow.  In such cases, you must preserve the
+  /// semantics of these opcodes by inverting the incoming carry/borrow, feeding
+  /// it to the add/sub hardware instruction, and then inverting the outgoing
+  /// carry/borrow.
+  ///
+  /// The use of these opcodes is preferable to adde/sube if the target supports
+  /// it, as the carry is a regular value rather than a glue, which allows
+  /// further optimisation.
+  ///
+  /// These opcodes are different from [US]{ADD,SUB}O in that ADDCARRY/SUBCARRY
+  /// consume and produce a carry/borrow, whereas [US]{ADD,SUB}O produce an
+  /// overflow.
   ADDCARRY,
   SUBCARRY,
 
@@ -1357,6 +1370,26 @@ enum MemIndexType {
 };
 
 static const int LAST_MEM_INDEX_TYPE = UNSIGNED_UNSCALED + 1;
+
+inline bool isIndexTypeScaled(MemIndexType IndexType) {
+  return IndexType == SIGNED_SCALED || IndexType == UNSIGNED_SCALED;
+}
+
+inline bool isIndexTypeSigned(MemIndexType IndexType) {
+  return IndexType == SIGNED_SCALED || IndexType == SIGNED_UNSCALED;
+}
+
+inline MemIndexType getSignedIndexType(MemIndexType IndexType) {
+  return isIndexTypeScaled(IndexType) ? SIGNED_SCALED : SIGNED_UNSCALED;
+}
+
+inline MemIndexType getUnsignedIndexType(MemIndexType IndexType) {
+  return isIndexTypeScaled(IndexType) ? UNSIGNED_SCALED : UNSIGNED_UNSCALED;
+}
+
+inline MemIndexType getUnscaledIndexType(MemIndexType IndexType) {
+  return isIndexTypeSigned(IndexType) ? SIGNED_UNSCALED : UNSIGNED_UNSCALED;
+}
 
 //===--------------------------------------------------------------------===//
 /// LoadExtType enum - This enum defines the three variants of LOADEXT

@@ -43,6 +43,7 @@
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/Transforms/Instrumentation.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Utils/EscapeEnumerator.h"
 #include "llvm/Transforms/Utils/Local.h"
@@ -133,10 +134,8 @@ private:
   };
 
   void initialize(Module &M);
-  bool instrumentLoadOrStore(const InstructionInfo &II, const DataLayout &DL,
-                             const Function &F);
-  bool instrumentAtomic(Instruction *I, const DataLayout &DL,
-                        const Function &F);
+  bool instrumentLoadOrStore(const InstructionInfo &II, const DataLayout &DL);
+  bool instrumentAtomic(Instruction *I, const DataLayout &DL);
   bool instrumentMemIntrinsic(Instruction *I);
   void chooseInstructionsToInstrument(SmallVectorImpl<Instruction *> &Local,
                                       SmallVectorImpl<InstructionInfo> &All,
@@ -182,28 +181,6 @@ void insertModuleCtor(Module &M) {
       // time. Hook them into the global ctors list in that case:
       [&](Function *Ctor, FunctionCallee) { appendToGlobalCtors(M, Ctor, 0); });
 }
-
-// Use to ensure the inserted instrumentation has a DebugLocation; if none is
-// attached to the source instruction, try to use a DILocation with offset 0
-// scoped to surrounding function (if it has a DebugLocation).
-//
-// Some non-call instructions may be missing debug info, but when inserting
-// instrumentation calls, some builds (e.g. LTO) want calls to have debug info
-// if the enclosing function does.
-struct InstrumentationIRBuilder : IRBuilder<> {
-  static void ensureDebugInfo(IRBuilder<> &IRB, const Function &F) {
-    if (IRB.getCurrentDebugLocation())
-      return;
-    if (DISubprogram *SP = F.getSubprogram())
-      IRB.SetCurrentDebugLocation(DILocation::get(SP->getContext(), 0, 0, SP));
-  }
-
-  explicit InstrumentationIRBuilder(Instruction *I, const Function &F)
-      : IRBuilder<>(I) {
-    ensureDebugInfo(*this, F);
-  }
-};
-
 }  // namespace
 
 PreservedAnalyses ThreadSanitizerPass::run(Function &F,
@@ -514,7 +491,7 @@ static bool isTsanAtomic(const Instruction *I) {
 }
 
 void ThreadSanitizer::InsertRuntimeIgnores(Function &F) {
-  InstrumentationIRBuilder IRB(F.getEntryBlock().getFirstNonPHI(), F);
+  InstrumentationIRBuilder IRB(F.getEntryBlock().getFirstNonPHI());
   IRB.CreateCall(TsanIgnoreBegin);
   EscapeEnumerator EE(F, "tsan_ignore_cleanup", ClHandleCxxExceptions);
   while (IRBuilder<> *AtExit = EE.Next()) {
@@ -578,14 +555,14 @@ bool ThreadSanitizer::sanitizeFunction(Function &F,
   // Instrument memory accesses only if we want to report bugs in the function.
   if (ClInstrumentMemoryAccesses && SanitizeFunction)
     for (const auto &II : AllLoadsAndStores) {
-      Res |= instrumentLoadOrStore(II, DL, F);
+      Res |= instrumentLoadOrStore(II, DL);
     }
 
   // Instrument atomic memory accesses in any case (they can be used to
   // implement synchronization).
   if (ClInstrumentAtomics)
     for (auto Inst : AtomicAccesses) {
-      Res |= instrumentAtomic(Inst, DL, F);
+      Res |= instrumentAtomic(Inst, DL);
     }
 
   if (ClInstrumentMemIntrinsics && SanitizeFunction)
@@ -601,7 +578,7 @@ bool ThreadSanitizer::sanitizeFunction(Function &F,
 
   // Instrument function entry/exit points if there were instrumented accesses.
   if ((Res || HasCalls) && ClInstrumentFuncEntryExit) {
-    InstrumentationIRBuilder IRB(F.getEntryBlock().getFirstNonPHI(), F);
+    InstrumentationIRBuilder IRB(F.getEntryBlock().getFirstNonPHI());
     Value *ReturnAddress = IRB.CreateCall(
         Intrinsic::getDeclaration(F.getParent(), Intrinsic::returnaddress),
         IRB.getInt32(0));
@@ -618,9 +595,8 @@ bool ThreadSanitizer::sanitizeFunction(Function &F,
 }
 
 bool ThreadSanitizer::instrumentLoadOrStore(const InstructionInfo &II,
-                                            const DataLayout &DL,
-                                            const Function &F) {
-  InstrumentationIRBuilder IRB(II.Inst, F);
+                                            const DataLayout &DL) {
+  InstrumentationIRBuilder IRB(II.Inst);
   const bool IsWrite = isa<StoreInst>(*II.Inst);
   Value *Addr = IsWrite ? cast<StoreInst>(II.Inst)->getPointerOperand()
                         : cast<LoadInst>(II.Inst)->getPointerOperand();
@@ -748,9 +724,8 @@ bool ThreadSanitizer::instrumentMemIntrinsic(Instruction *I) {
 // The following page contains more background information:
 // http://www.hpl.hp.com/personal/Hans_Boehm/c++mm/
 
-bool ThreadSanitizer::instrumentAtomic(Instruction *I, const DataLayout &DL,
-                                       const Function &F) {
-  InstrumentationIRBuilder IRB(I, F);
+bool ThreadSanitizer::instrumentAtomic(Instruction *I, const DataLayout &DL) {
+  InstrumentationIRBuilder IRB(I);
   if (LoadInst *LI = dyn_cast<LoadInst>(I)) {
     Value *Addr = LI->getPointerOperand();
     Type *OrigTy = LI->getType();
