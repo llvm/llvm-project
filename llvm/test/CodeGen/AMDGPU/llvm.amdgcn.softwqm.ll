@@ -281,6 +281,42 @@ END:
   ret float %r
 }
 
+; Check that WQM is triggered for softwqm with demote.
+;
+define amdgpu_ps float @test_demote_1(i32 inreg %idx0, i32 inreg %idx1) {
+; CHECK-LABEL: test_demote_1:
+; CHECK:       ; %bb.0: ; %main_body
+; CHECK-NEXT:    s_mov_b64 s[2:3], exec
+; CHECK-NEXT:    v_mov_b32_e32 v0, s0
+; CHECK-NEXT:    buffer_load_dword v0, v0, s[0:3], 0 idxen
+; CHECK-NEXT:    v_mov_b32_e32 v1, s1
+; CHECK-NEXT:    buffer_load_dword v1, v1, s[0:3], 0 idxen
+; CHECK-NEXT:    s_waitcnt vmcnt(1)
+; CHECK-NEXT:    v_cmp_le_f32_e32 vcc, 0, v0
+; CHECK-NEXT:    s_xor_b64 s[0:1], vcc, exec
+; CHECK-NEXT:    s_andn2_b64 s[2:3], s[2:3], s[0:1]
+; CHECK-NEXT:    s_cbranch_scc0 .LBB8_2
+; CHECK-NEXT:  ; %bb.1: ; %main_body
+; CHECK-NEXT:    s_and_b64 exec, exec, s[2:3]
+; CHECK-NEXT:    s_waitcnt vmcnt(0)
+; CHECK-NEXT:    v_add_f32_e32 v0, v0, v1
+; CHECK-NEXT:    ; kill: def $vgpr0 killed $vgpr0 killed $exec killed $exec
+; CHECK-NEXT:    s_branch .LBB8_3
+; CHECK-NEXT:  .LBB8_2:
+; CHECK-NEXT:    s_mov_b64 exec, 0
+; CHECK-NEXT:    exp null off, off, off, off done vm
+; CHECK-NEXT:    s_endpgm
+; CHECK-NEXT:  .LBB8_3:
+main_body:
+  %src0 = call float @llvm.amdgcn.struct.buffer.load.f32(<4 x i32> undef, i32 %idx0, i32 0, i32 0, i32 0)
+  %src1 = call float @llvm.amdgcn.struct.buffer.load.f32(<4 x i32> undef, i32 %idx1, i32 0, i32 0, i32 0)
+  %c1 = fcmp oge float %src0, 0.0
+  call void @llvm.amdgcn.wqm.demote(i1 %c1)
+  %out = fadd float %src0, %src1
+  %out.0 = call float @llvm.amdgcn.softwqm.f32(float %out)
+  ret float %out.0
+}
+
 declare void @llvm.amdgcn.struct.buffer.store.f32(float, <4 x i32>, i32, i32, i32, i32 immarg) #2
 declare void @llvm.amdgcn.struct.buffer.store.v4f32(<4 x float>, <4 x i32>, i32, i32, i32, i32 immarg) #2
 declare float @llvm.amdgcn.struct.buffer.load.f32(<4 x i32>, i32, i32, i32, i32 immarg) #3
@@ -291,6 +327,7 @@ declare float @llvm.amdgcn.softwqm.f32(float) #3
 declare i32 @llvm.amdgcn.softwqm.i32(i32) #3
 declare float @llvm.amdgcn.strict.wwm.f32(float) #3
 declare float @llvm.amdgcn.wwm.f32(float) #3
+declare void @llvm.amdgcn.wqm.demote(i1) #1
 
 attributes #1 = { nounwind }
 attributes #2 = { nounwind readonly }
