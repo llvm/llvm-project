@@ -1,0 +1,4 @@
+RUN: clang-fuzzer-dictionary | FileCheck %s
+CHECK-DAG: or="or"
+CHECK-DAG: catch="catch"
+CHECK-DAG: rawstart="R\x22("
