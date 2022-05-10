@@ -305,8 +305,13 @@ static void hoistReadWrite(HoistableRead read, HoistableWrite write,
 
   // Rewrite `loop` with additional new yields.
   OpBuilder b(read.transferReadOp);
-  auto newForOp = cloneWithNewYields(b, forOp, read.transferReadOp.getVector(),
-                                     write.transferWriteOp.getVector());
+  NewYieldValueFn yieldFn = [&](OpBuilder &b, Location loc,
+                                ArrayRef<BlockArgument> newBBArgs) {
+    return SmallVector<Value>{write.transferWriteOp.getVector()};
+  };
+  auto newForOp = replaceLoopWithNewYields(
+      b, forOp, read.transferReadOp.getVector(), yieldFn);
+
   // Transfer write has been hoisted, need to update the vector and tensor
   // source. Replace the result of the loop to use the new tensor created
   // outside the loop.
@@ -397,10 +402,9 @@ void mlir::linalg::hoistRedundantVectorTransfers(func::FuncOp func) {
   while (changed) {
     changed = false;
     // First move loop invariant ops outside of their loop. This needs to be
-    // done before as we cannot move ops without interputing the function walk.
-    func.walk([&](LoopLikeOpInterface loopLike) {
-      moveLoopInvariantCode(loopLike);
-    });
+    // done before as we cannot move ops without interrupting the function walk.
+    func.walk(
+        [&](LoopLikeOpInterface loopLike) { moveLoopInvariantCode(loopLike); });
 
     func.walk([&](vector::TransferReadOp transferRead) {
       if (!transferRead.getShapedType().isa<MemRefType>())
@@ -492,13 +496,16 @@ void mlir::linalg::hoistRedundantVectorTransfers(func::FuncOp func) {
 
       // Rewrite `loop` with new yields by cloning and erase the original loop.
       OpBuilder b(transferRead);
-      auto newForOp = cloneWithNewYields(b, loop, transferRead.getVector(),
-                                         transferWrite.getVector());
+      NewYieldValueFn yieldFn = [&](OpBuilder &b, Location loc,
+                                    ArrayRef<BlockArgument> newBBArgs) {
+        return SmallVector<Value>{transferWrite.getVector()};
+      };
+      auto newForOp =
+          replaceLoopWithNewYields(b, loop, transferRead.getVector(), yieldFn);
 
-      // Transfer write has been hoisted, need to update the written value to
+      // Transfer write has been hoisted, need to update the written vector by
       // the value yielded by the newForOp.
-      transferWrite.getVector().replaceAllUsesWith(
-          newForOp.getResults().take_back()[0]);
+      transferWrite.getVectorMutable().assign(newForOp.getResults().back());
 
       changed = true;
       loop.erase();

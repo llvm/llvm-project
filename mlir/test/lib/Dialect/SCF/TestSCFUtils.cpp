@@ -34,12 +34,6 @@ struct TestSCFForUtilsPass
   explicit TestSCFForUtilsPass() = default;
   TestSCFForUtilsPass(const TestSCFForUtilsPass &pass) : PassWrapper(pass) {}
 
-  Option<bool> testCloneWithNewYields{
-      *this, "test-clone-with-new-yields",
-      llvm::cl::desc(
-          "Test cloning of a loop while returning additional yield values"),
-      llvm::cl::init(false)};
-
   Option<bool> testReplaceWithNewYields{
       *this, "test-replace-with-new-yields",
       llvm::cl::desc("Test replacing a loop with a new loop that returns new "
@@ -49,27 +43,6 @@ struct TestSCFForUtilsPass
   void runOnOperation() override {
     func::FuncOp func = getOperation();
     SmallVector<scf::ForOp, 4> toErase;
-
-    if (testCloneWithNewYields) {
-      func.walk([&](Operation *fakeRead) {
-        if (fakeRead->getName().getStringRef() != "fake_read")
-          return;
-        auto *fakeCompute = fakeRead->getResult(0).use_begin()->getOwner();
-        auto *fakeWrite = fakeCompute->getResult(0).use_begin()->getOwner();
-        auto loop = fakeRead->getParentOfType<scf::ForOp>();
-
-        OpBuilder b(loop);
-        loop.moveOutOfLoop(fakeRead);
-        fakeWrite->moveAfter(loop);
-        auto newLoop = cloneWithNewYields(b, loop, fakeRead->getResult(0),
-                                          fakeCompute->getResult(0));
-        fakeCompute->getResult(0).replaceAllUsesWith(
-            newLoop.getResults().take_back()[0]);
-        toErase.push_back(loop);
-      });
-      for (auto loop : llvm::reverse(toErase))
-        loop.erase();
-    }
 
     if (testReplaceWithNewYields) {
       func.walk([&](scf::ForOp forOp) {
