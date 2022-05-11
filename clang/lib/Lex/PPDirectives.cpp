@@ -1431,6 +1431,7 @@ void Preprocessor::HandleDigitDirective(Token &DigitTok) {
   // If the StrTok is "eod", then it wasn't present.  Otherwise, it must be a
   // string followed by eod.
   if (StrTok.is(tok::eod)) {
+    Diag(StrTok, diag::ext_pp_gnu_line_directive);
     // Treat this like "#line NN", which doesn't change file characteristics.
     FileKind = SourceMgr.getFileCharacteristic(DigitTok.getLocation());
   } else if (StrTok.isNot(tok::string_literal)) {
@@ -1458,6 +1459,9 @@ void Preprocessor::HandleDigitDirective(Token &DigitTok) {
     // If a filename was present, read any flags that are present.
     if (ReadLineMarkerFlags(IsFileEntry, IsFileExit, FileKind, *this))
       return;
+    if (!SourceMgr.isWrittenInBuiltinFile(DigitTok.getLocation()) &&
+        !SourceMgr.isWrittenInCommandLineFile(DigitTok.getLocation()))
+      Diag(StrTok, diag::ext_pp_gnu_line_directive);
 
     // Exiting to an empty string means pop to the including file, so leave
     // FilenameID as -1 in that case.

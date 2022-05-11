@@ -214,6 +214,9 @@ Improvements to Clang's diagnostics
   the ``-Wunreachable-code`` flag) which is enabled by default and warns the
   user about ``_Generic`` selection associations which are unreachable because
   the type specified is an array type or a qualified type.
+- Added the ``-Wgnu-line-marker`` diagnostic flag (grouped under the ``-Wgnu``
+  flag) which is a portability warning about use of GNU linemarker preprocessor
+  directives. Fixes `Issue 55067 <https://github.com/llvm/llvm-project/issues/55067>`_.
 
 Non-comprehensive list of changes in this release
 -------------------------------------------------

@@ -427,6 +427,10 @@ def note_macro_expansion_here : Note<"expansion of macro %0 requested here">;
 def ext_pp_opencl_variadic_macros : Extension<
   "variadic macros are a Clang extension in OpenCL">;
 
+def ext_pp_gnu_line_directive : Extension<
+  "this style of line directive is a GNU extension">,
+  InGroup<GNULineMarker>;
+
 def err_pp_invalid_directive : Error<"invalid preprocessing directive">;
 def err_pp_directive_required : Error<
   "%0 must be used within a preprocessing directive">;

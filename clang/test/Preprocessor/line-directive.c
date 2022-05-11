@@ -9,8 +9,8 @@
 # 20 "" 2
 
 // a push/pop before any other line control
-# 10 "enter-0" 1
-# 11 "" 2 // pop to main file
+# 10 "enter-0" 1 // expected-warning {{this style of line directive is a GNU extension}}
+# 11 "" 2 // pop to main file: expected-warning {{this style of line directive is a GNU extension}}
 #error MAIN7
 // expected-error@-1{{MAIN7}}
 
@@ -27,13 +27,15 @@
 #define A 42 "foo"
 #line A
 
-# 42
-# 42 "foo"
+# 42 // expected-warning {{this style of line directive is a GNU extension}}
+# 42 "foo" // expected-warning {{this style of line directive is a GNU extension}}
 # 42 "foo" 2 // expected-error {{invalid line marker flag '2': cannot pop empty include stack}}
+// The next two lines do not get diagnosed because they are considered to be
+// within the system header, where diagnostics are suppressed.
 # 42 "foo" 1 3  // enter
 # 42 "foo" 2 3  // exit
 # 42 "foo" 2 3 4 // expected-error {{invalid line marker flag '2': cannot pop empty include stack}}
-# 42 "foo" 3 4
+# 42 "foo" 3 4 // expected-warning {{this style of line directive is a GNU extension}}
 
 # 'a'            // expected-error {{invalid preprocessing directive}}
 # 42 'f'         // expected-error {{invalid filename for line marker directive}}
@@ -54,7 +56,7 @@
 
 // Verify that linemarker diddling of the system header flag works.
 
-# 192 "glomp.h" // not a system header.
+# 192 "glomp.h" // not a system header.: expected-warning {{this style of line directive is a GNU extension}}
 typedef int x;  // expected-note {{previous definition is here}}
 typedef int x;  // expected-warning {{redefinition of typedef 'x' is a C11 feature}}
 
@@ -97,7 +99,7 @@ typedef int q;  // original definition in system header, should not diagnose.
 #line 010  // expected-warning {{#line directive interprets number as decimal, not octal}}
 extern int array[__LINE__ == 10 ? 1:-1];
 
-# 020      // expected-warning {{GNU line marker directive interprets number as decimal, not octal}}
+# 020      // expected-warning {{GNU line marker directive interprets number as decimal, not octal}} expected-warning {{this style of line directive is a GNU extension}}
 extern int array_gnuline[__LINE__ == 20 ? 1:-1];
 
 /* PR3917 */
@@ -106,7 +108,7 @@ extern char array2[\
 _\
 _LINE__ == 42 ? 1: -1];  /* line marker is location of first _ */
 
-# 51
+# 51 // expected-warning {{this style of line directive is a GNU extension}}
 extern char array2_gnuline[\
 _\
 _LINE__ == 52 ? 1: -1];  /* line marker is location of first _ */
@@ -115,12 +117,12 @@ _LINE__ == 52 ? 1: -1];  /* line marker is location of first _ */
 #line 0 "line-directive.c" // expected-warning {{#line directive with zero argument is a GNU extension}}
 undefined t; // expected-error {{unknown type name 'undefined'}}
 
-# 115 "main"
-# 116 "enter-1" 1
-# 117 "enter-2" 1
-# 118 "" 2 // pop to enter-1
+# 115 "main" // expected-warning {{this style of line directive is a GNU extension}}
+# 116 "enter-1" 1 // expected-warning {{this style of line directive is a GNU extension}}
+# 117 "enter-2" 1 // expected-warning {{this style of line directive is a GNU extension}}
+# 118 "" 2 // pop to enter-1: expected-warning {{this style of line directive is a GNU extension}}
 #error ENTER1
 // expected-error@-1{{ENTER1}}
-# 121 "" 2 // pop to "main"
+# 121 "" 2 // pop to "main": expected-warning {{this style of line directive is a GNU extension}}
 #error MAIN2
 // expected-error@-1{{MAIN2}}
