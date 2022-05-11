@@ -536,11 +536,18 @@ extractFromArchive(const Archive &Library,
   // offloading code removed.
   Error Err = Error::success();
   for (auto Child : Library.children(Err)) {
-    auto ChildBufferRefOrErr = Child.getMemoryBufferRef();
-    if (!ChildBufferRefOrErr)
-      return ChildBufferRefOrErr.takeError();
+    auto ChildBufferOrErr = Child.getMemoryBufferRef();
+    if (!ChildBufferOrErr)
+      return ChildBufferOrErr.takeError();
     std::unique_ptr<MemoryBuffer> ChildBuffer =
-        MemoryBuffer::getMemBuffer(*ChildBufferRefOrErr, false);
+        MemoryBuffer::getMemBuffer(*ChildBufferOrErr, false);
+
+    // Check if the buffer has the required alignment.
+    if (!isAddrAligned(Align(OffloadBinary::getAlignment()),
+                       ChildBuffer->getBufferStart()))
+      ChildBuffer = MemoryBuffer::getMemBufferCopy(
+          ChildBufferOrErr->getBuffer(),
+          ChildBufferOrErr->getBufferIdentifier());
 
     auto FileOrErr = extractFromBuffer(std::move(ChildBuffer), DeviceFiles,
                                        /*IsLibrary*/ true);
