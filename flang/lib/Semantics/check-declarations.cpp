@@ -1857,7 +1857,9 @@ void CheckHelper::CheckGenericOps(const Scope &scope) {
 
 static const std::string *DefinesBindCName(const Symbol &symbol) {
   const auto *subp{symbol.detailsIf<SubprogramDetails>()};
-  if ((subp && !subp->isInterface()) || symbol.has<ObjectEntityDetails>()) {
+  if ((subp && !subp->isInterface() &&
+          ClassifyProcedure(symbol) != ProcedureDefinitionClass::Internal) ||
+      symbol.has<ObjectEntityDetails>()) {
     // Symbol defines data or entry point
     return symbol.GetBindName();
   } else {
