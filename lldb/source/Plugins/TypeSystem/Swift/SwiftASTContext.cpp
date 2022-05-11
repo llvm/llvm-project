@@ -8317,13 +8317,33 @@ bool SwiftASTContext::GetImplicitImports(
   return true;
 }
 
-void SwiftASTContext::LoadImplicitModules(TargetSP target,
-                                                 ProcessSP process) {
+void SwiftASTContext::LoadImplicitModules(TargetSP target, ProcessSP process,
+                                          ExecutionContextScope &exe_scope) {
   auto load_module = [&](ConstString module_name) {
     SourceModule module_info;
     module_info.path.push_back(module_name);
     Status err;
     LoadOneModule(module_info, *this, process, true, err);
+    if (err.Fail()) {
+      LOG_PRINTF(GetLog(LLDBLog::Types),
+                 "Could not load module %s implicitly, error: %s",
+                 module_name.GetCString(), err.AsCString());
+      return;
+    }
+
+    auto *persistent_expression_state =
+        target->GetSwiftPersistentExpressionState(exe_scope);
+    swift::ModuleDecl *module = GetModule(module_info, err);
+    if (err.Fail()) {
+      LOG_PRINTF(
+          GetLog(LLDBLog::Types),
+          "Could not add hand loaded module %s to persistent state, error: %s",
+          module_name.GetCString(), err.AsCString());
+      return;
+    }
+
+    persistent_expression_state->AddHandLoadedModule(
+        module_name, swift::ImportedModule(module));
   };
 
   load_module(ConstString(swift::SWIFT_STRING_PROCESSING_NAME));
