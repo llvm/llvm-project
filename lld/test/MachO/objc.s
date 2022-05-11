@@ -5,11 +5,12 @@
 # RUN: llvm-mc -filetype=obj -triple=x86_64-apple-darwin %t/has-objc-category.s -o %t/has-objc-category.o
 # RUN: llvm-mc -filetype=obj -triple=x86_64-apple-darwin %t/has-objc-symbol-and-category.s -o %t/has-objc-symbol-and-category.o
 # RUN: llvm-mc -filetype=obj -triple=x86_64-apple-darwin %t/has-swift.s -o %t/has-swift.o
+# RUN: llvm-mc -filetype=obj -triple=x86_64-apple-darwin %t/has-swift-proto.s -o %t/has-swift-proto.o
 # RUN: llvm-mc -filetype=obj -triple=x86_64-apple-darwin %t/no-objc.s -o %t/no-objc.o
 ## Make sure we don't mis-parse a 32-bit file as 64-bit
 # RUN: llvm-mc -filetype=obj -triple=armv7-apple-watchos %t/no-objc.s -o %t/wrong-arch.o
-# RUN: llvm-ar rcs %t/libHasSomeObjC.a %t/no-objc.o %t/has-objc-symbol.o %t/has-objc-category.o %t/has-swift.o %t/wrong-arch.o
-# RUN: llvm-ar rcs %t/libHasSomeObjC2.a %t/no-objc.o %t/has-objc-symbol-and-category.o %t/has-swift.o %t/wrong-arch.o
+# RUN: llvm-ar rcs %t/libHasSomeObjC.a %t/no-objc.o %t/has-objc-symbol.o %t/has-objc-category.o %t/has-swift.o %t/has-swift-proto.o %t/wrong-arch.o
+# RUN: llvm-ar rcs %t/libHasSomeObjC2.a %t/no-objc.o %t/has-objc-symbol-and-category.o %t/has-swift.o %t/has-swift-proto.o %t/wrong-arch.o
 
 # RUN: llvm-mc -filetype=obj -triple=x86_64-apple-darwin %t/test.s -o %t/test.o
 
@@ -19,19 +20,21 @@
 # RUN: %lld -lSystem %t/test.o -o %t/test -L%t -lHasSomeObjC2 -ObjC
 # RUN: llvm-objdump --section-headers --syms %t/test | FileCheck %s --check-prefix=OBJC
 
-# RUN: %lld -lSystem %t/test.o -o %t/test --start-lib %t/no-objc.o %t/has-objc-symbol.o %t/has-objc-category.o %t/has-swift.o %t/wrong-arch.o --end-lib -ObjC
+# RUN: %lld -lSystem %t/test.o -o %t/test --start-lib %t/no-objc.o %t/has-objc-symbol.o %t/has-objc-category.o %t/has-swift.o %t/has-swift-proto.o %t/wrong-arch.o --end-lib -ObjC
 # RUN: llvm-objdump --section-headers --syms %t/test | FileCheck %s --check-prefix=OBJC
 
 # OBJC:       Sections:
 # OBJC-NEXT:  Idx Name            Size   VMA  Type
 # OBJC-NEXT:    0 __text          {{.*}}      TEXT
 # OBJC-NEXT:    1 __swift         {{.*}}      DATA
-# OBJC-NEXT:    2 __objc_catlist  {{.*}}      DATA
-# OBJC-NEXT:    3 has_objc_symbol {{.*}}      DATA
+# OBJC-NEXT:    2 __swift5_fieldmd{{.*}}      DATA
+# OBJC-NEXT:    3 __objc_catlist  {{.*}}      DATA
+# OBJC-NEXT:    4 has_objc_symbol {{.*}}      DATA
 # OBJC-EMPTY:
 # OBJC-NEXT:  SYMBOL TABLE:
 # OBJC-DAG:   g     F __TEXT,__text _main
 # OBJC-DAG:   g     F __TEXT,__text _OBJC_CLASS_$_MyObject
+# OBJC-DAG:   g     O __TEXT,__swift5_fieldmd $s7somelib4Blah_pMF
 
 # RUN: %lld -lSystem %t/test.o -o %t/test -L%t -lHasSomeObjC
 # RUN: llvm-objdump --section-headers --syms %t/test | FileCheck %s --check-prefix=NO-OBJC
@@ -92,6 +95,11 @@ _has_dup:
 #--- has-swift.s
 .section __TEXT,__swift
 .quad 0x1234
+
+#--- has-swift-proto.s
+.section __TEXT,__swift5_fieldmd
+.globl $s7somelib4Blah_pMF
+$s7somelib4Blah_pMF:
 
 #--- no-objc.s
 ## This archive member should not be pulled in by -ObjC since it does not
