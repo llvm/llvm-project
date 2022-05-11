@@ -679,13 +679,6 @@ private:
     void __move_assign_alloc(__list_imp&, false_type)
         _NOEXCEPT
         {}
-
-    _LIBCPP_INLINE_VISIBILITY
-    void __invalidate_all_iterators() {
-#if _LIBCPP_DEBUG_LEVEL == 2
-      __get_db()->__invalidate_all(this);
-#endif
-    }
 };
 
 // Unlink nodes [__f, __l]
@@ -727,9 +720,7 @@ inline __list_imp<_Tp, _Alloc>::__list_imp(__node_allocator&& __a) _NOEXCEPT
 template <class _Tp, class _Alloc>
 __list_imp<_Tp, _Alloc>::~__list_imp() {
   clear();
-#if _LIBCPP_DEBUG_LEVEL == 2
-    __get_db()->__erase_c(this);
-#endif
+  std::__debug_db_erase_c(this);
 }
 
 template <class _Tp, class _Alloc>
@@ -750,7 +741,7 @@ __list_imp<_Tp, _Alloc>::clear() _NOEXCEPT
             __node_alloc_traits::destroy(__na, _VSTD::addressof(__np->__value_));
             __node_alloc_traits::deallocate(__na, __np, 1);
         }
-        __invalidate_all_iterators();
+        std::__debug_db_invalidate_all(this);
     }
 }
 
@@ -1373,9 +1364,7 @@ list<_Tp, _Alloc>::assign(_InpIter __f, _InpIter __l,
         insert(__e, __f, __l);
     else
         erase(__i, __e);
-#if _LIBCPP_DEBUG_LEVEL == 2
-      __get_db()->__invalidate_all(this);
-#endif
+    std::__debug_db_invalidate_all(this);
 }
 
 template <class _Tp, class _Alloc>
@@ -1390,9 +1379,7 @@ list<_Tp, _Alloc>::assign(size_type __n, const value_type& __x)
         insert(__e, __n, __x);
     else
         erase(__i, __e);
-#if _LIBCPP_DEBUG_LEVEL == 2
-      __get_db()->__invalidate_all(this);
-#endif
+    std::__debug_db_invalidate_all(this);
 }
 
 template <class _Tp, class _Alloc>
