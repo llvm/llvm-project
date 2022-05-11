@@ -213,6 +213,15 @@ def int_amdgcn_s_barrier : GCCBuiltin<"__builtin_amdgcn_s_barrier">,
 def int_amdgcn_wave_barrier : GCCBuiltin<"__builtin_amdgcn_wave_barrier">,
   Intrinsic<[], [], [IntrNoMem, IntrHasSideEffects, IntrConvergent, IntrWillReturn]>;
 
+// The 1st parameter is a mask for the types of instructions that may be allowed
+// to cross the SCHED_BARRIER during scheduling.
+//     MASK = 0: No instructions may be scheduled across SCHED_BARRIER.
+//     MASK = 1: Non-memory, non-side-effect producing instructions may be
+//               scheduled across SCHED_BARRIER, i.e. allow ALU instructions to pass.
+def int_amdgcn_sched_barrier : GCCBuiltin<"__builtin_amdgcn_sched_barrier">,
+  Intrinsic<[], [llvm_i32_ty], [ImmArg<ArgIndex<0>>, IntrNoMem,
+                                IntrHasSideEffects, IntrConvergent, IntrWillReturn]>;
+
 def int_amdgcn_s_waitcnt : GCCBuiltin<"__builtin_amdgcn_s_waitcnt">,
   Intrinsic<[], [llvm_i32_ty], [ImmArg<ArgIndex<0>>, IntrNoMem, IntrHasSideEffects, IntrWillReturn]>;
 

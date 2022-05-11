@@ -1773,6 +1773,7 @@ unsigned SIInstrInfo::getNumWaitStates(const MachineInstr &MI) {
   // hazard, even if one exist, won't really be visible. Should we handle it?
   case AMDGPU::SI_MASKED_UNREACHABLE:
   case AMDGPU::WAVE_BARRIER:
+  case AMDGPU::SCHED_BARRIER:
     return 0;
   }
 }
@@ -3488,6 +3489,9 @@ bool SIInstrInfo::isSchedulingBoundary(const MachineInstr &MI,
 
   // INLINEASM_BR can jump to another block
   if (MI.getOpcode() == TargetOpcode::INLINEASM_BR)
+    return true;
+
+  if (MI.getOpcode() == AMDGPU::SCHED_BARRIER && MI.getOperand(0).getImm() == 0)
     return true;
 
   // Target-independent instructions do not have an implicit-use of EXEC, even
