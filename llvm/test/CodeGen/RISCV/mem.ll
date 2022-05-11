@@ -238,6 +238,45 @@ define i32 @lw_sw_far_local(i32* %a, i32 %b)  {
   ret i32 %2
 }
 
+define i32 @lw_really_far_local(i32* %a)  {
+; RV32I-LABEL: lw_really_far_local:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    lui a1, 524288
+; RV32I-NEXT:    add a0, a0, a1
+; RV32I-NEXT:    lw a0, -2048(a0)
+; RV32I-NEXT:    ret
+  %1 = getelementptr inbounds i32, i32* %a, i32 536870400
+  %2 = load volatile i32, i32* %1
+  ret i32 %2
+}
+
+define void @st_really_far_local(i32* %a, i32 %b)  {
+; RV32I-LABEL: st_really_far_local:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    lui a2, 524288
+; RV32I-NEXT:    add a0, a0, a2
+; RV32I-NEXT:    sw a1, -2048(a0)
+; RV32I-NEXT:    ret
+  %1 = getelementptr inbounds i32, i32* %a, i32 536870400
+  store i32 %b, i32* %1
+  ret void
+}
+
+define i32 @lw_sw_really_far_local(i32* %a, i32 %b)  {
+; RV32I-LABEL: lw_sw_really_far_local:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    lui a2, 524288
+; RV32I-NEXT:    addi a2, a2, -2048
+; RV32I-NEXT:    add a2, a0, a2
+; RV32I-NEXT:    lw a0, 0(a2)
+; RV32I-NEXT:    sw a1, 0(a2)
+; RV32I-NEXT:    ret
+  %1 = getelementptr inbounds i32, i32* %a, i32 536870400
+  %2 = load volatile i32, i32* %1
+  store i32 %b, i32* %1
+  ret i32 %2
+}
+
 %struct.quux = type { i32, [0 x i8] }
 
 ; Make sure we don't remove the addi and fold the C from
