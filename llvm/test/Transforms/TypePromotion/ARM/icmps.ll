@@ -348,3 +348,16 @@ if.then:
 if.end:
   ret void
 }
+
+define i32 @degenerateicmp() {
+; CHECK-LABEL: @degenerateicmp(
+; CHECK-NEXT:    [[TMP1:%.*]] = sub i32 190, 0
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp ugt i32 225, [[TMP1]]
+; CHECK-NEXT:    [[TMP3:%.*]] = select i1 [[TMP2]], i32 1, i32 0
+; CHECK-NEXT:    ret i32 [[TMP3]]
+;
+  %1 = sub i8 -66, 0
+  %2 = icmp ugt i8 -31, %1
+  %3 = select i1 %2, i32 1, i32 0
+  ret i32 %3
+}

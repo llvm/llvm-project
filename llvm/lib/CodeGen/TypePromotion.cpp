@@ -484,7 +484,7 @@ void IRPromoter::PromoteTree() {
         continue;
 
       if (auto *Const = dyn_cast<ConstantInt>(Op)) {
-        Constant *NewConst = SafeWrap.contains(I)
+        Constant *NewConst = (SafeWrap.contains(I) && i == 1)
                                  ? ConstantExpr::getSExt(Const, ExtTy)
                                  : ConstantExpr::getZExt(Const, ExtTy);
         I->setOperand(i, NewConst);
