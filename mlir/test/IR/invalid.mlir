@@ -1675,3 +1675,19 @@ func.func @error_at_end_of_line() {
   // This is a comment and so is the thing above.
   return
 }
+
+// -----
+
+// This makes sure we emit an error at the end of the correct line, the : is
+// expected at the end of foo, not on the return line.
+// This shows that it backs up to before the comment.
+func.func @error_at_end_of_line() {
+  %0 = "foo"()  // expected-error {{expected ':' followed by operation type}}
+  return
+}
+
+// -----
+
+@foo   // expected-error {{expected operation name in quotes}}
+
+

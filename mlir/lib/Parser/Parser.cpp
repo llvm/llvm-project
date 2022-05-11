@@ -177,34 +177,46 @@ InFlightDiagnostic Parser::emitWrongTokenError(const Twine &message) {
   if (state.curToken.is(Token::eof))
     loc = SMLoc::getFromPointer(loc.getPointer() - 1);
 
+  // This is the location we were originally asked to report the error at.
+  auto originalLoc = loc;
+
   // Determine if the token is at the start of the current line.
   const char *bufferStart = state.lex.getBufferBegin();
   const char *curPtr = loc.getPointer();
 
+  // Use this StringRef to keep track of what we are going to back up through,
+  // it provides nicer string search functions etc.
+  StringRef startOfBuffer(bufferStart, curPtr - bufferStart);
+
   // Back up over entirely blank lines.
   while (1) {
     // Back up until we see a \n, but don't look past the buffer start.
-    curPtr = StringRef(bufferStart, curPtr - bufferStart).rtrim(" \t").end();
+    startOfBuffer = startOfBuffer.rtrim(" \t");
 
     // For tokens with no preceding source line, just emit at the original
     // location.
-    if (curPtr == bufferStart || curPtr[-1] != '\n')
-      return emitError(loc, message);
+    if (startOfBuffer.empty())
+      return emitError(originalLoc, message);
+
+    // If we found something that isn't the end of line, then we're done.
+    if (startOfBuffer.back() != '\n' && startOfBuffer.back() != '\r')
+      return emitError(SMLoc::getFromPointer(startOfBuffer.end()), message);
+
+    // Drop the \n so we emit the diagnostic at the end of the line.
+    startOfBuffer = startOfBuffer.drop_back();
 
     // Check to see if the preceding line has a comment on it.  We assume that a
     // `//` is the start of a comment, which is mostly correct.
     // TODO: This will do the wrong thing for // in a string literal.
-    --curPtr;
-    auto prevLine = StringRef(bufferStart, curPtr - bufferStart);
-    size_t newLineIndex = prevLine.rfind('\n');
+    auto prevLine = startOfBuffer;
+    size_t newLineIndex = prevLine.find_last_of("\n\r");
     if (newLineIndex != StringRef::npos)
       prevLine = prevLine.drop_front(newLineIndex);
+
+    // If we find a // in the current line, then emit the diagnostic before it.
     size_t commentStart = prevLine.find("//");
     if (commentStart != StringRef::npos)
-      curPtr = prevLine.begin() + commentStart;
-
-    // Otherwise, we can move backwards at least this line.
-    loc = SMLoc::getFromPointer(curPtr);
+      startOfBuffer = startOfBuffer.drop_back(prevLine.size() - commentStart);
   }
 }
 
