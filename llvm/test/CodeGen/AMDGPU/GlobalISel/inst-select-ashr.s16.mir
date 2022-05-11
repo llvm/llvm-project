@@ -9,6 +9,9 @@
 # RUN: llc -march=amdgcn -mcpu=gfx1010 -run-pass=instruction-select -global-isel-abort=2  -disable-gisel-legality-check -pass-remarks-missed='gisel*' -verify-machineinstrs %s -o - 2>%t | FileCheck -check-prefix=GFX10 %s
 # RUN: FileCheck --check-prefix=ERR %s < %t
 
+# RUN: llc -march=amdgcn -mcpu=gfx1100 -run-pass=instruction-select -global-isel-abort=2  -disable-gisel-legality-check -pass-remarks-missed='gisel*' -verify-machineinstrs %s -o - 2>%t | FileCheck -check-prefix=GFX10 %s
+# RUN: FileCheck --check-prefix=ERR %s < %t
+
 # ERR-NOT: remark
 # ERR: remark: <unknown>:0:0: cannot select: %4:sgpr(s16) = G_ASHR %2:sgpr, %3:sgpr(s16) (in function: ashr_s16_s16_ss)
 # ERR-NEXT: remark: <unknown>:0:0: cannot select: %3:vgpr(s16) = G_ASHR %2:vgpr, %1:vgpr(s32) (in function: ashr_s16_s32_vv)

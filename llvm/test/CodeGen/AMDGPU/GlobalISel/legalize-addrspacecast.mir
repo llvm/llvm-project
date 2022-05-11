@@ -3,6 +3,7 @@
 # RUN: llc -march=amdgcn -mcpu=gfx900 -O0 -run-pass=legalizer -o - %s  | FileCheck -check-prefix=GFX9 %s
 # RUN: llc -march=amdgcn -mcpu=tahiti -O0 -run-pass=legalizer -global-isel-abort=0 -o - %s  | FileCheck -check-prefix=SI %s
 # RUN: llc -march=amdgcn -mcpu=gfx1010 -O0 -run-pass=legalizer -o - %s  | FileCheck -check-prefix=GFX9 %s
+# RUN: llc -march=amdgcn -mcpu=gfx1100 -O0 -run-pass=legalizer -o - %s  | FileCheck -check-prefix=GFX9 %s
 
 ---
 name: test_addrspacecast_p0_to_p1
