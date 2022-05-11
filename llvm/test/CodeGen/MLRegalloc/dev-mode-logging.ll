@@ -28,7 +28,7 @@
 ; ML-NEXT:    value: 9
 ; NOML-NEXT:  value: 32
 ; CHECK-LABEL: key: \"reward\"
-; ML:   value: 37.73
-; NOML: value: 37.47
+; ML:   value: 36.90
+; NOML: value: 36.64
 ; CHECK-NEXT: feature_list
 ; CHECK-NEXT: key: \"start_bb_freq_by_max\"
