@@ -2180,7 +2180,8 @@ bool UnwrappedLineParser::parseBracedList(bool ContinueOnSemicolons,
       parseBracedList();
       break;
     case tok::less:
-      if (Style.Language == FormatStyle::LK_Proto) {
+      if (Style.Language == FormatStyle::LK_Proto ||
+          ClosingBraceKind == tok::greater) {
         nextToken();
         parseBracedList(/*ContinueOnSemicolons=*/false, /*IsEnum=*/false,
                         /*ClosingBraceKind=*/tok::greater);
@@ -3220,6 +3221,7 @@ void UnwrappedLineParser::parseConstraintExpression() {
       if (!FormatTok->is(tok::less))
         return;
 
+      nextToken();
       parseBracedList(/*ContinueOnSemicolons=*/false, /*IsEnum=*/false,
                       /*ClosingBraceKind=*/tok::greater);
       break;
@@ -3260,9 +3262,11 @@ void UnwrappedLineParser::parseConstraintExpression() {
 
       // Read identifier with optional template declaration.
       nextToken();
-      if (FormatTok->is(tok::less))
+      if (FormatTok->is(tok::less)) {
+        nextToken();
         parseBracedList(/*ContinueOnSemicolons=*/false, /*IsEnum=*/false,
                         /*ClosingBraceKind=*/tok::greater);
+      }
       break;
     }
   } while (!eof());
