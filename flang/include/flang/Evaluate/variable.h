@@ -353,6 +353,7 @@ public:
   ENUM_CLASS(Part, RE, IM)
   CLASS_BOILERPLATE(ComplexPart)
   ComplexPart(DataRef &&z, Part p) : complex_{std::move(z)}, part_{p} {}
+  DataRef &complex() { return complex_; }
   const DataRef &complex() const { return complex_; }
   Part part() const { return part_; }
   int Rank() const;
