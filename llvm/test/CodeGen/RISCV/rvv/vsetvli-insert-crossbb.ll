@@ -633,6 +633,184 @@ for.end:                                          ; preds = %for.body, %entry
   ret void
 }
 
+; A single vector store in the loop with VL controlled by VLMAX
+define void @vector_init_vlmax(i64 %N, double* %c) {
+; CHECK-LABEL: vector_init_vlmax:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    vsetvli a2, zero, e64, m1, ta, mu
+; CHECK-NEXT:    blez a0, .LBB12_3
+; CHECK-NEXT:  # %bb.1: # %for.body.preheader
+; CHECK-NEXT:    li a3, 0
+; CHECK-NEXT:    slli a4, a2, 3
+; CHECK-NEXT:    vmv.v.i v8, 0
+; CHECK-NEXT:  .LBB12_2: # %for.body
+; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
+; CHECK-NEXT:    vsetvli zero, a2, e64, m1, ta, mu
+; CHECK-NEXT:    vse64.v v8, (a1)
+; CHECK-NEXT:    add a3, a3, a2
+; CHECK-NEXT:    add a1, a1, a4
+; CHECK-NEXT:    blt a3, a0, .LBB12_2
+; CHECK-NEXT:  .LBB12_3: # %for.end
+; CHECK-NEXT:    ret
+entry:
+  %0 = tail call i64 @llvm.riscv.vsetvlimax.i64(i64 3, i64 0)
+  %cmp13 = icmp sgt i64 %N, 0
+  br i1 %cmp13, label %for.body, label %for.end
+
+for.body:                                         ; preds = %entry, %for.body
+  %i.014 = phi i64 [ %add, %for.body ], [ 0, %entry ]
+  %arrayidx2 = getelementptr inbounds double, double* %c, i64 %i.014
+  %addr = bitcast double* %arrayidx2 to <vscale x 1 x double>*
+  tail call void @llvm.riscv.vse.nxv1f64.i64(<vscale x 1 x double> zeroinitializer, <vscale x 1 x double>* %addr, i64 %0)
+  %add = add nuw nsw i64 %i.014, %0
+  %cmp = icmp slt i64 %add, %N
+  br i1 %cmp, label %for.body, label %for.end
+
+for.end:                                          ; preds = %for.body, %entry
+  ret void
+}
+
+; Same as above, but VL comes from user provided AVL value
+define void @vector_init_vsetvli_N(i64 %N, double* %c) {
+; CHECK-LABEL: vector_init_vsetvli_N:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    vsetvli a2, a0, e64, m1, ta, mu
+; CHECK-NEXT:    blez a0, .LBB13_3
+; CHECK-NEXT:  # %bb.1: # %for.body.preheader
+; CHECK-NEXT:    li a3, 0
+; CHECK-NEXT:    slli a4, a2, 3
+; CHECK-NEXT:    vsetvli a5, zero, e64, m1, ta, mu
+; CHECK-NEXT:    vmv.v.i v8, 0
+; CHECK-NEXT:  .LBB13_2: # %for.body
+; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
+; CHECK-NEXT:    vsetvli zero, a2, e64, m1, ta, mu
+; CHECK-NEXT:    vse64.v v8, (a1)
+; CHECK-NEXT:    add a3, a3, a2
+; CHECK-NEXT:    add a1, a1, a4
+; CHECK-NEXT:    blt a3, a0, .LBB13_2
+; CHECK-NEXT:  .LBB13_3: # %for.end
+; CHECK-NEXT:    ret
+entry:
+  %0 = tail call i64 @llvm.riscv.vsetvli(i64 %N, i64 3, i64 0)
+  %cmp13 = icmp sgt i64 %N, 0
+  br i1 %cmp13, label %for.body, label %for.end
+
+for.body:                                         ; preds = %entry, %for.body
+  %i.014 = phi i64 [ %add, %for.body ], [ 0, %entry ]
+  %arrayidx2 = getelementptr inbounds double, double* %c, i64 %i.014
+  %addr = bitcast double* %arrayidx2 to <vscale x 1 x double>*
+  tail call void @llvm.riscv.vse.nxv1f64.i64(<vscale x 1 x double> zeroinitializer, <vscale x 1 x double>* %addr, i64 %0)
+  %add = add nuw nsw i64 %i.014, %0
+  %cmp = icmp slt i64 %add, %N
+  br i1 %cmp, label %for.body, label %for.end
+
+for.end:                                          ; preds = %for.body, %entry
+  ret void
+}
+
+; Same as above, but VL is a hard coded constant (in the preheader)
+define void @vector_init_vsetvli_fv(i64 %N, double* %c) {
+; CHECK-LABEL: vector_init_vsetvli_fv:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    li a2, 0
+; CHECK-NEXT:    vsetivli a3, 4, e64, m1, ta, mu
+; CHECK-NEXT:    slli a4, a3, 3
+; CHECK-NEXT:    vsetvli a5, zero, e64, m1, ta, mu
+; CHECK-NEXT:    vmv.v.i v8, 0
+; CHECK-NEXT:  .LBB14_1: # %for.body
+; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
+; CHECK-NEXT:    vsetvli zero, a3, e64, m1, ta, mu
+; CHECK-NEXT:    vse64.v v8, (a1)
+; CHECK-NEXT:    add a2, a2, a3
+; CHECK-NEXT:    add a1, a1, a4
+; CHECK-NEXT:    blt a2, a0, .LBB14_1
+; CHECK-NEXT:  # %bb.2: # %for.end
+; CHECK-NEXT:    ret
+entry:
+  %0 = tail call i64 @llvm.riscv.vsetvli(i64 4, i64 3, i64 0)
+  br label %for.body
+
+for.body:                                         ; preds = %entry, %for.body
+  %i.014 = phi i64 [ %add, %for.body ], [ 0, %entry ]
+  %arrayidx2 = getelementptr inbounds double, double* %c, i64 %i.014
+  %addr = bitcast double* %arrayidx2 to <vscale x 1 x double>*
+  tail call void @llvm.riscv.vse.nxv1f64.i64(<vscale x 1 x double> zeroinitializer, <vscale x 1 x double>* %addr, i64 %0)
+  %add = add nuw nsw i64 %i.014, %0
+  %cmp = icmp slt i64 %add, %N
+  br i1 %cmp, label %for.body, label %for.end
+
+for.end:                                          ; preds = %for.body
+  ret void
+}
+
+; Same as above, but result of vsetvli in preheader isn't used, and
+; constant is repeated in loop
+define void @vector_init_vsetvli_fv2(i64 %N, double* %c) {
+; CHECK-LABEL: vector_init_vsetvli_fv2:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    li a2, 0
+; CHECK-NEXT:    vsetivli zero, 4, e64, m1, ta, mu
+; CHECK-NEXT:    vsetvli a3, zero, e64, m1, ta, mu
+; CHECK-NEXT:    vmv.v.i v8, 0
+; CHECK-NEXT:  .LBB15_1: # %for.body
+; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
+; CHECK-NEXT:    vsetivli zero, 4, e64, m1, ta, mu
+; CHECK-NEXT:    vse64.v v8, (a1)
+; CHECK-NEXT:    addi a2, a2, 4
+; CHECK-NEXT:    addi a1, a1, 32
+; CHECK-NEXT:    blt a2, a0, .LBB15_1
+; CHECK-NEXT:  # %bb.2: # %for.end
+; CHECK-NEXT:    ret
+entry:
+  tail call i64 @llvm.riscv.vsetvli(i64 4, i64 3, i64 0)
+  br label %for.body
+
+for.body:                                         ; preds = %entry, %for.body
+  %i.014 = phi i64 [ %add, %for.body ], [ 0, %entry ]
+  %arrayidx2 = getelementptr inbounds double, double* %c, i64 %i.014
+  %addr = bitcast double* %arrayidx2 to <vscale x 1 x double>*
+  tail call void @llvm.riscv.vse.nxv1f64.i64(<vscale x 1 x double> zeroinitializer, <vscale x 1 x double>* %addr, i64 4)
+  %add = add nuw nsw i64 %i.014, 4
+  %cmp = icmp slt i64 %add, %N
+  br i1 %cmp, label %for.body, label %for.end
+
+for.end:                                          ; preds = %for.body
+  ret void
+}
+
+; Same as above, but AVL is only specified on the store intrinsic
+; This case will require some form of hoisting or PRE
+define void @vector_init_vsetvli_fv3(i64 %N, double* %c) {
+; CHECK-LABEL: vector_init_vsetvli_fv3:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    li a2, 0
+; CHECK-NEXT:    vsetvli a3, zero, e64, m1, ta, mu
+; CHECK-NEXT:    vmv.v.i v8, 0
+; CHECK-NEXT:  .LBB16_1: # %for.body
+; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
+; CHECK-NEXT:    vsetivli zero, 4, e64, m1, ta, mu
+; CHECK-NEXT:    vse64.v v8, (a1)
+; CHECK-NEXT:    addi a2, a2, 4
+; CHECK-NEXT:    addi a1, a1, 32
+; CHECK-NEXT:    blt a2, a0, .LBB16_1
+; CHECK-NEXT:  # %bb.2: # %for.end
+; CHECK-NEXT:    ret
+entry:
+  br label %for.body
+
+for.body:                                         ; preds = %entry, %for.body
+  %i.014 = phi i64 [ %add, %for.body ], [ 0, %entry ]
+  %arrayidx2 = getelementptr inbounds double, double* %c, i64 %i.014
+  %addr = bitcast double* %arrayidx2 to <vscale x 1 x double>*
+  tail call void @llvm.riscv.vse.nxv1f64.i64(<vscale x 1 x double> zeroinitializer, <vscale x 1 x double>* %addr, i64 4)
+  %add = add nuw nsw i64 %i.014, 4
+  %cmp = icmp slt i64 %add, %N
+  br i1 %cmp, label %for.body, label %for.end
+
+for.end:                                          ; preds = %for.body
+  ret void
+}
+
 declare i64 @llvm.riscv.vsetvlimax.i64(i64, i64)
 declare <vscale x 1 x double> @llvm.riscv.vle.nxv1f64.i64(<vscale x 1 x double>, <vscale x 1 x double>* nocapture, i64)
 declare <vscale x 1 x double> @llvm.riscv.vfadd.nxv1f64.nxv1f64.i64(<vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double>, i64)
