@@ -882,7 +882,7 @@ func.func @type_alias_unknown(!unknown_alias) -> () { // expected-error {{undefi
 
 // -----
 
-!missing_type_alias = type // expected-error@+1 {{expected non-function type}}
+!missing_type_alias = type // expected-error {{expected non-function type}}
 
 // -----
 
@@ -1690,4 +1690,11 @@ func.func @error_at_end_of_line() {
 
 @foo   // expected-error {{expected operation name in quotes}}
 
+// -----
+
+func.func @func() {
+  %c0 = arith.constant  // expected-error {{expected attribute value}}
+
+  %x = arith.constant 1 : i32
+}
 
