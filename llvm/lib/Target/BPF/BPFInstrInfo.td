@@ -298,6 +298,7 @@ let isAsCheapAsAMove = 1 in {
 }
   defm MUL : ALU<BPF_MUL, "*=", mul>;
   defm DIV : ALU<BPF_DIV, "/=", udiv>;
+  defm MOD : ALU<BPF_MOD, "%=", urem>;
 }
 
 class NEG_RR<BPFOpClass Class, BPFArithOp Opc,
