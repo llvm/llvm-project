@@ -31,6 +31,7 @@ enum OffloadKind : uint16_t {
   OFK_OpenMP,
   OFK_Cuda,
   OFK_HIP,
+  OFK_LAST,
 };
 
 /// The type of contents the offloading image contains.
@@ -41,6 +42,7 @@ enum ImageKind : uint16_t {
   IMG_Cubin,
   IMG_Fatbinary,
   IMG_PTX,
+  IMG_LAST,
 };
 
 /// A simple binary serialization of an offloading file. We use this format to

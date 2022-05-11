@@ -166,12 +166,12 @@ static constexpr unsigned FatbinaryOffset = 0x50;
 
 /// Information for a device offloading file extracted from the host.
 struct DeviceFile {
-  DeviceFile(StringRef Kind, StringRef TheTriple, StringRef Arch,
+  DeviceFile(OffloadKind Kind, StringRef TheTriple, StringRef Arch,
              StringRef Filename, bool IsLibrary = false)
       : Kind(Kind), TheTriple(TheTriple), Arch(Arch), Filename(Filename),
         IsLibrary(IsLibrary) {}
 
-  std::string Kind;
+  OffloadKind Kind;
   std::string TheTriple;
   std::string Arch;
   std::string Filename;
@@ -183,15 +183,28 @@ namespace llvm {
 /// assume device files with matching architectures and triples but different
 /// offloading kinds should be handlded together, this may not be true in the
 /// future.
+
+// Provide DenseMapInfo for OffloadKind.
+template <> struct DenseMapInfo<OffloadKind> {
+  static inline OffloadKind getEmptyKey() { return OFK_LAST; }
+  static inline OffloadKind getTombstoneKey() {
+    return static_cast<OffloadKind>(OFK_LAST + 1);
+  }
+  static unsigned getHashValue(const OffloadKind &Val) { return Val * 37U; }
+
+  static bool isEqual(const OffloadKind &LHS, const OffloadKind &RHS) {
+    return LHS == RHS;
+  }
+};
 template <> struct DenseMapInfo<DeviceFile> {
   static DeviceFile getEmptyKey() {
-    return {DenseMapInfo<StringRef>::getEmptyKey(),
+    return {DenseMapInfo<OffloadKind>::getEmptyKey(),
             DenseMapInfo<StringRef>::getEmptyKey(),
             DenseMapInfo<StringRef>::getEmptyKey(),
             DenseMapInfo<StringRef>::getEmptyKey()};
   }
   static DeviceFile getTombstoneKey() {
-    return {DenseMapInfo<StringRef>::getTombstoneKey(),
+    return {DenseMapInfo<OffloadKind>::getTombstoneKey(),
             DenseMapInfo<StringRef>::getTombstoneKey(),
             DenseMapInfo<StringRef>::getTombstoneKey(),
             DenseMapInfo<StringRef>::getTombstoneKey()};
@@ -233,7 +246,7 @@ DeviceFile getBitcodeLibrary(StringRef LibraryStr) {
   auto DeviceAndPath = StringRef(LibraryStr).split('=');
   auto StringAndArch = DeviceAndPath.first.rsplit('-');
   auto KindAndTriple = StringAndArch.first.split('-');
-  return DeviceFile(KindAndTriple.first, KindAndTriple.second,
+  return DeviceFile(getOffloadKind(KindAndTriple.first), KindAndTriple.second,
                     StringAndArch.second, DeviceAndPath.second);
 }
 
@@ -364,8 +377,8 @@ Error extractOffloadFiles(StringRef Contents, StringRef Prefix,
     if (Error E = Output->commit())
       return E;
 
-    DeviceFiles.emplace_back(Kind, Binary.getTriple(), Binary.getArch(),
-                             TempFile, IsLibrary);
+    DeviceFiles.emplace_back(Binary.getOffloadKind(), Binary.getTriple(),
+                             Binary.getArch(), TempFile, IsLibrary);
 
     Offset += Binary.getSize();
   }
@@ -685,6 +698,39 @@ Expected<std::string> link(ArrayRef<std::string> InputFiles, Triple TheTriple,
     CmdArgs.push_back(Input);
 
   if (Error Err = executeCommands(*NvlinkPath, CmdArgs))
+    return std::move(Err);
+
+  return static_cast<std::string>(TempFile);
+}
+
+Expected<std::string> fatbinary(ArrayRef<StringRef> InputFiles,
+                                Triple TheTriple, ArrayRef<StringRef> Archs) {
+  // NVPTX uses the fatbinary program to bundle the linked images.
+  Expected<std::string> FatBinaryPath =
+      findProgram("fatbinary", {CudaBinaryPath});
+  if (!FatBinaryPath)
+    return FatBinaryPath.takeError();
+
+  // Create a new file to write the linked device image to.
+  SmallString<128> TempFile;
+  if (Error Err = createOutputFile(sys::path::filename(ExecutableName) +
+                                       "-device-" + TheTriple.getArchName(),
+                                   "fatbin", TempFile))
+    return std::move(Err);
+
+  BumpPtrAllocator Alloc;
+  StringSaver Saver(Alloc);
+
+  SmallVector<StringRef, 16> CmdArgs;
+  CmdArgs.push_back(*FatBinaryPath);
+  CmdArgs.push_back(TheTriple.isArch64Bit() ? "-64" : "-32");
+  CmdArgs.push_back("--create");
+  CmdArgs.push_back(TempFile);
+  for (const auto &FileAndArch : llvm::zip(InputFiles, Archs))
+    CmdArgs.push_back(Saver.save("--image=profile=" + std::get<1>(FileAndArch) +
+                                 ",file=" + std::get<0>(FileAndArch)));
+
+  if (Error Err = executeCommands(*FatBinaryPath, CmdArgs))
     return std::move(Err);
 
   return static_cast<std::string>(TempFile);
@@ -1133,15 +1179,18 @@ Error linkBitcodeFiles(SmallVectorImpl<std::string> &InputFiles,
 /// Runs the appropriate linking action on all the device files specified in \p
 /// DeviceFiles. The linked device images are returned in \p LinkedImages.
 Error linkDeviceFiles(ArrayRef<DeviceFile> DeviceFiles,
-                      SmallVectorImpl<std::string> &LinkedImages) {
-  // Get the list of inputs for a specific device.
+                      SmallVectorImpl<DeviceFile> &LinkedImages) {
+  // Get the list of inputs and active offload kinds for a specific device.
   DenseMap<DeviceFile, SmallVector<std::string, 4>> LinkerInputMap;
+  DenseMap<DeviceFile, DenseSet<OffloadKind>> ActiveOffloadKinds;
   SmallVector<DeviceFile, 4> LibraryFiles;
   for (auto &File : DeviceFiles) {
-    if (File.IsLibrary)
+    if (File.IsLibrary) {
       LibraryFiles.push_back(File);
-    else
+    } else {
       LinkerInputMap[File].push_back(File.Filename);
+      ActiveOffloadKinds[File].insert(File.Kind);
+    }
   }
 
   // Static libraries are loaded lazily as-needed, only add them if other files
@@ -1157,33 +1206,42 @@ Error linkDeviceFiles(ArrayRef<DeviceFile> DeviceFiles,
   for (auto &LinkerInput : LinkerInputMap) {
     DeviceFile &File = LinkerInput.getFirst();
     Triple TheTriple = Triple(File.TheTriple);
+    auto &LinkerInputFiles = LinkerInput.getSecond();
     bool WholeProgram = false;
 
     // Run LTO on any bitcode files and replace the input with the result.
-    if (Error Err = linkBitcodeFiles(LinkerInput.getSecond(), TheTriple,
-                                     File.Arch, WholeProgram))
+    if (Error Err = linkBitcodeFiles(LinkerInputFiles, TheTriple, File.Arch,
+                                     WholeProgram))
       return Err;
 
-    // If we are embedding bitcode for JIT, skip the final device linking.
     if (EmbedBitcode) {
-      assert(!LinkerInput.getSecond().empty() && "No bitcode image to embed");
-      LinkedImages.push_back(LinkerInput.getSecond().front());
+      // If we are embedding bitcode for JIT, skip the final device linking.
+      if (LinkerInputFiles.size() != 1 || !WholeProgram)
+        return createStringError(inconvertibleErrorCode(),
+                                 "Unable to embed bitcode image for JIT");
+      LinkedImages.emplace_back(OFK_OpenMP, TheTriple.getTriple(), File.Arch,
+                                LinkerInputFiles.front());
+      continue;
+    } else if (WholeProgram && TheTriple.isNVPTX()) {
+      // If we performed LTO on NVPTX and had whole program visibility, we can
+      // use CUDA in non-RDC mode.
+      if (LinkerInputFiles.size() != 1)
+        return createStringError(inconvertibleErrorCode(),
+                                 "Invalid number of inputs for non-RDC mode");
+      for (OffloadKind Kind : ActiveOffloadKinds[LinkerInput.getFirst()])
+        LinkedImages.emplace_back(Kind, TheTriple.getTriple(), File.Arch,
+                                  LinkerInputFiles.front());
       continue;
     }
 
-    // If we performed LTO on NVPTX and had whole program visibility, we can use
-    // CUDA in non-RDC mode.
-    if (WholeProgram && TheTriple.isNVPTX()) {
-      assert(!LinkerInput.getSecond().empty() && "No non-RDC image to embed");
-      LinkedImages.push_back(LinkerInput.getSecond().front());
-      continue;
-    }
-
-    auto ImageOrErr = linkDevice(LinkerInput.getSecond(), TheTriple, File.Arch);
+    auto ImageOrErr = linkDevice(LinkerInputFiles, TheTriple, File.Arch);
     if (!ImageOrErr)
       return ImageOrErr.takeError();
 
-    LinkedImages.push_back(*ImageOrErr);
+    // Create separate images for all the active offload kinds.
+    for (OffloadKind Kind : ActiveOffloadKinds[LinkerInput.getFirst()])
+      LinkedImages.emplace_back(Kind, TheTriple.getTriple(), File.Arch,
+                                *ImageOrErr);
   }
   return Error::success();
 }
@@ -1227,32 +1285,95 @@ Expected<std::string> compileModule(Module &M) {
   return static_cast<std::string>(ObjectFile);
 }
 
-/// Creates the object file containing the device image and runtime registration
-/// code from the device images stored in \p Images.
-Expected<std::string> wrapDeviceImages(ArrayRef<std::string> Images) {
+/// Load all of the OpenMP images into a buffer and pass it to the binary
+/// wrapping function to create the registration code in the module \p M.
+Error wrapOpenMPImages(Module &M, ArrayRef<DeviceFile> Images) {
   SmallVector<std::unique_ptr<MemoryBuffer>, 4> SavedBuffers;
   SmallVector<ArrayRef<char>, 4> ImagesToWrap;
-
-  for (StringRef ImageFilename : Images) {
+  for (const DeviceFile &File : Images) {
     llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>> ImageOrError =
-        llvm::MemoryBuffer::getFileOrSTDIN(ImageFilename);
+        llvm::MemoryBuffer::getFileOrSTDIN(File.Filename);
     if (std::error_code EC = ImageOrError.getError())
-      return createFileError(ImageFilename, EC);
+      return createFileError(File.Filename, EC);
     ImagesToWrap.emplace_back((*ImageOrError)->getBufferStart(),
                               (*ImageOrError)->getBufferSize());
     SavedBuffers.emplace_back(std::move(*ImageOrError));
   }
 
-  LLVMContext Context;
-  Module M("offload.wrapper.module", Context);
-  M.setTargetTriple(HostTriple);
-  if (Error Err = wrapBinaries(M, ImagesToWrap))
-    return std::move(Err);
+  if (Error Err = wrapOpenMPBinaries(M, ImagesToWrap))
+    return Err;
+  return Error::success();
+}
 
-  if (PrintWrappedModule)
-    llvm::errs() << M;
+/// Combine all of the CUDA images into a single fatbinary and pass it to the
+/// binary wrapping function to create the registration code in the module \p M.
+Error wrapCudaImages(Module &M, ArrayRef<DeviceFile> Images) {
+  SmallVector<StringRef, 4> InputFiles;
+  SmallVector<StringRef, 4> Architectures;
+  for (const DeviceFile &File : Images) {
+    InputFiles.push_back(File.Filename);
+    Architectures.push_back(File.Arch);
+  }
 
-  return compileModule(M);
+  // CUDA expects its embedded device images to be a fatbinary.
+  Triple TheTriple = Triple(Images.front().TheTriple);
+  auto FileOrErr = nvptx::fatbinary(InputFiles, TheTriple, Architectures);
+  if (!FileOrErr)
+    return FileOrErr.takeError();
+
+  llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>> ImageOrError =
+      llvm::MemoryBuffer::getFileOrSTDIN(*FileOrErr);
+  if (std::error_code EC = ImageOrError.getError())
+    return createFileError(*FileOrErr, EC);
+
+  auto ImageToWrap = ArrayRef<char>((*ImageOrError)->getBufferStart(),
+                                    (*ImageOrError)->getBufferSize());
+
+  if (Error Err = wrapCudaBinary(M, ImageToWrap))
+    return Err;
+  return Error::success();
+}
+
+/// Creates the object file containing the device image and runtime
+/// registration code from the device images stored in \p Images.
+Expected<SmallVector<std::string, 2>>
+wrapDeviceImages(ArrayRef<DeviceFile> Images) {
+  DenseMap<OffloadKind, SmallVector<DeviceFile, 2>> ImagesForKind;
+  for (const DeviceFile &Image : Images)
+    ImagesForKind[Image.Kind].push_back(Image);
+
+  SmallVector<std::string, 2> WrappedImages;
+  for (const auto &KindAndImages : ImagesForKind) {
+    LLVMContext Context;
+    Module M("offload.wrapper.module", Context);
+    M.setTargetTriple(HostTriple);
+
+    // Create registration code for the given offload kinds in the Module.
+    switch (KindAndImages.getFirst()) {
+    case OFK_OpenMP:
+      if (Error Err = wrapOpenMPImages(M, KindAndImages.getSecond()))
+        return std::move(Err);
+      break;
+    case OFK_Cuda:
+      if (Error Err = wrapCudaImages(M, KindAndImages.getSecond()))
+        return std::move(Err);
+      break;
+    default:
+      return createStringError(inconvertibleErrorCode(),
+                               getOffloadKindName(KindAndImages.getFirst()) +
+                                   " wrapping is not supported");
+    }
+
+    if (PrintWrappedModule)
+      llvm::errs() << M;
+
+    auto FileOrErr = compileModule(M);
+    if (!FileOrErr)
+      return FileOrErr.takeError();
+    WrappedImages.push_back(*FileOrErr);
+  }
+
+  return WrappedImages;
 }
 
 Optional<std::string> findFile(StringRef Dir, const Twine &Name) {
@@ -1383,7 +1504,7 @@ int main(int argc, const char **argv) {
     DeviceFiles.push_back(getBitcodeLibrary(LibraryStr));
 
   // Link the device images extracted from the linker input.
-  SmallVector<std::string, 16> LinkedImages;
+  SmallVector<DeviceFile, 4> LinkedImages;
   if (Error Err = linkDeviceFiles(DeviceFiles, LinkedImages))
     return reportError(std::move(Err));
 
@@ -1392,7 +1513,7 @@ int main(int argc, const char **argv) {
   auto FileOrErr = wrapDeviceImages(LinkedImages);
   if (!FileOrErr)
     return reportError(FileOrErr.takeError());
-  LinkerArgs.push_back(*FileOrErr);
+  LinkerArgs.append(*FileOrErr);
 
   // Run the host linking job.
   if (Error Err = runLinker(LinkerUserPath, LinkerArgs))
