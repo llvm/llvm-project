@@ -250,6 +250,7 @@ RegistryMaps::RegistryMaps() {
   REGISTER_MATCHER(forEachLambdaCapture);
   REGISTER_MATCHER(forEachOverridden);
   REGISTER_MATCHER(forEachSwitchCase);
+  REGISTER_MATCHER(forEachTemplateArgument);
   REGISTER_MATCHER(forField);
   REGISTER_MATCHER(forFunction);
   REGISTER_MATCHER(forStmt);

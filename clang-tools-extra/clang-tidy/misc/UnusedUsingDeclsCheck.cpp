@@ -18,26 +18,6 @@ namespace tidy {
 namespace misc {
 
 namespace {
-// FIXME: Move ASTMatcher library.
-AST_POLYMORPHIC_MATCHER_P(
-    forEachTemplateArgument,
-    AST_POLYMORPHIC_SUPPORTED_TYPES(ClassTemplateSpecializationDecl,
-                                    TemplateSpecializationType, FunctionDecl),
-    clang::ast_matchers::internal::Matcher<TemplateArgument>, InnerMatcher) {
-  ArrayRef<TemplateArgument> TemplateArgs =
-      clang::ast_matchers::internal::getTemplateSpecializationArgs(Node);
-  clang::ast_matchers::internal::BoundNodesTreeBuilder Result;
-  bool Matched = false;
-  for (const auto &Arg : TemplateArgs) {
-    clang::ast_matchers::internal::BoundNodesTreeBuilder ArgBuilder(*Builder);
-    if (InnerMatcher.matches(Arg, Finder, &ArgBuilder)) {
-      Matched = true;
-      Result.addMatch(ArgBuilder);
-    }
-  }
-  *Builder = std::move(Result);
-  return Matched;
-}
 
 AST_MATCHER_P(DeducedTemplateSpecializationType, refsToTemplatedDecl,
               clang::ast_matchers::internal::Matcher<NamedDecl>, DeclMatcher) {
