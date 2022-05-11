@@ -37,6 +37,11 @@ class RISCVGatherScatterLowering : public FunctionPass {
 
   SmallVector<WeakTrackingVH> MaybeDeadPHIs;
 
+  // Cache of the BasePtr and Stride determined from this GEP. When a GEP is
+  // used by multiple gathers/scatters, this allow us to reuse the scalar
+  // instructions we created for the first gather/scatter for the others.
+  DenseMap<GetElementPtrInst *, std::pair<Value *, Value *>> StridedAddrs;
+
 public:
   static char ID; // Pass identification, replacement for typeid
 
@@ -323,6 +328,10 @@ std::pair<Value *, Value *>
 RISCVGatherScatterLowering::determineBaseAndStride(GetElementPtrInst *GEP,
                                                    IRBuilder<> &Builder) {
 
+  auto I = StridedAddrs.find(GEP);
+  if (I != StridedAddrs.end())
+    return I->second;
+
   SmallVector<Value *, 2> Ops(GEP->operands());
 
   // Base pointer needs to be a scalar.
@@ -399,7 +408,9 @@ RISCVGatherScatterLowering::determineBaseAndStride(GetElementPtrInst *GEP,
   if (TypeScale != 1)
     Stride = Builder.CreateMul(Stride, ConstantInt::get(IntPtrTy, TypeScale));
 
-  return std::make_pair(BasePtr, Stride);
+  auto P = std::make_pair(BasePtr, Stride);
+  StridedAddrs[GEP] = P;
+  return P;
 }
 
 bool RISCVGatherScatterLowering::tryCreateStridedLoadStore(IntrinsicInst *II,
@@ -460,6 +471,8 @@ bool RISCVGatherScatterLowering::runOnFunction(Function &F) {
   TLI = ST->getTargetLowering();
   DL = &F.getParent()->getDataLayout();
   LI = &getAnalysis<LoopInfoWrapperPass>().getLoopInfo();
+
+  StridedAddrs.clear();
 
   SmallVector<IntrinsicInst *, 4> Gathers;
   SmallVector<IntrinsicInst *, 4> Scatters;
