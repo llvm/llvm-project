@@ -1,4 +1,10 @@
-// RUN: mlir-opt %s --sparse-tensor-conversion --canonicalize --cse | FileCheck %s
+// First use with `kViaCOO` for sparse2sparse conversion (the old way).
+// RUN: mlir-opt %s --sparse-tensor-conversion="s2s-strategy=1" \
+// RUN:    --canonicalize --cse | FileCheck %s
+//
+// Now again with `kAuto` (the new default).
+// RUN: mlir-opt %s --sparse-tensor-conversion="s2s-strategy=0" \
+// RUN:    --canonicalize --cse | FileCheck %s -check-prefix=CHECKAUTO
 
 #SparseVector = #sparse_tensor.encoding<{
   dimLevelType = ["compressed"]
@@ -210,6 +216,17 @@ func.func @sparse_convert_1d(%arg0: tensor<?xi32>) -> tensor<?xi32, #SparseVecto
 //       CHECK: %[[T:.*]] = call @newSparseTensor(%[[X]], %[[Y]], %[[Z]], %{{.*}}, %{{.*}}, %{{.*}}, %[[FromCOO]], %[[C]])
 //       CHECK: call @delSparseTensorCOOF32(%[[C]])
 //       CHECK: return %[[T]] : !llvm.ptr<i8>
+// CHECKAUTO-LABEL: func @sparse_convert_1d_ss(
+//  CHECKAUTO-SAME: %[[A:.*]]: !llvm.ptr<i8>)
+//   CHECKAUTO-DAG: %[[SparseToSparse:.*]] = arith.constant 3 : i32
+//   CHECKAUTO-DAG: %[[P:.*]] = memref.alloca() : memref<1xi8>
+//   CHECKAUTO-DAG: %[[Q:.*]] = memref.alloca() : memref<1xindex>
+//   CHECKAUTO-DAG: %[[R:.*]] = memref.alloca() : memref<1xindex>
+//   CHECKAUTO-DAG: %[[X:.*]] = memref.cast %[[P]] : memref<1xi8> to memref<?xi8>
+//   CHECKAUTO-DAG: %[[Y:.*]] = memref.cast %[[Q]] : memref<1xindex> to memref<?xindex>
+//   CHECKAUTO-DAG: %[[Z:.*]] = memref.cast %[[R]] : memref<1xindex> to memref<?xindex>
+//       CHECKAUTO: %[[T:.*]] = call @newSparseTensor(%[[X]], %[[Y]], %[[Z]], %{{.*}}, %{{.*}}, %{{.*}}, %[[SparseToSparse]], %[[A]])
+//       CHECKAUTO: return %[[T]] : !llvm.ptr<i8>
 func.func @sparse_convert_1d_ss(%arg0: tensor<?xf32, #SparseVector64>) -> tensor<?xf32, #SparseVector32> {
   %0 = sparse_tensor.convert %arg0 : tensor<?xf32, #SparseVector64> to tensor<?xf32, #SparseVector32>
   return %0 : tensor<?xf32, #SparseVector32>
