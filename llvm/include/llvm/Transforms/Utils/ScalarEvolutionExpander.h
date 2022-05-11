@@ -448,13 +448,8 @@ private:
   /// Determine the most "relevant" loop for the given SCEV.
   const Loop *getRelevantLoop(const SCEV *);
 
-  Value *expandSMaxExpr(const SCEVNAryExpr *S);
-
-  Value *expandUMaxExpr(const SCEVNAryExpr *S);
-
-  Value *expandSMinExpr(const SCEVNAryExpr *S);
-
-  Value *expandUMinExpr(const SCEVNAryExpr *S);
+  Value *expandMinMaxExpr(const SCEVNAryExpr *S, Intrinsic::ID IntrinID,
+                          Twine Name);
 
   Value *visitConstant(const SCEVConstant *S) { return S->getValue(); }
 
