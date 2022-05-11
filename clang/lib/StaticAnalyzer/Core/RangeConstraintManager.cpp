@@ -1443,30 +1443,35 @@ private:
     return RangeFactory.deletePoint(Domain, IntType.getZeroValue());
   }
 
-  // FIXME: Once SValBuilder supports unary minus, we should use SValBuilder to
-  //        obtain the negated symbolic expression instead of constructing the
-  //        symbol manually. This will allow us to support finding ranges of not
-  //        only negated SymSymExpr-type expressions, but also of other, simpler
-  //        expressions which we currently do not know how to negate.
   Optional<RangeSet> getRangeForNegatedSub(SymbolRef Sym) {
-    if (const SymSymExpr *SSE = dyn_cast<SymSymExpr>(Sym)) {
+    // Do not negate if the type cannot be meaningfully negated.
+    if (!Sym->getType()->isUnsignedIntegerOrEnumerationType() &&
+        !Sym->getType()->isSignedIntegerOrEnumerationType())
+      return llvm::None;
+
+    const RangeSet *NegatedRange = nullptr;
+    SymbolManager &SymMgr = State->getSymbolManager();
+    if (const auto *USE = dyn_cast<UnarySymExpr>(Sym)) {
+      if (USE->getOpcode() == UO_Minus) {
+        // Just get the operand when we negate a symbol that is already negated.
+        // -(-a) == a
+        NegatedRange = getConstraint(State, USE->getOperand());
+      }
+    } else if (const SymSymExpr *SSE = dyn_cast<SymSymExpr>(Sym)) {
       if (SSE->getOpcode() == BO_Sub) {
         QualType T = Sym->getType();
-
-        // Do not negate unsigned ranges
-        if (!T->isUnsignedIntegerOrEnumerationType() &&
-            !T->isSignedIntegerOrEnumerationType())
-          return llvm::None;
-
-        SymbolManager &SymMgr = State->getSymbolManager();
         SymbolRef NegatedSym =
             SymMgr.getSymSymExpr(SSE->getRHS(), BO_Sub, SSE->getLHS(), T);
-
-        if (const RangeSet *NegatedRange = getConstraint(State, NegatedSym)) {
-          return RangeFactory.negate(*NegatedRange);
-        }
+        NegatedRange = getConstraint(State, NegatedSym);
       }
+    } else {
+      SymbolRef NegatedSym =
+          SymMgr.getUnarySymExpr(Sym, UO_Minus, Sym->getType());
+      NegatedRange = getConstraint(State, NegatedSym);
     }
+
+    if (NegatedRange)
+      return RangeFactory.negate(*NegatedRange);
     return llvm::None;
   }
 
