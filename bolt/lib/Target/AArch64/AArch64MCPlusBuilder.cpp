@@ -655,12 +655,10 @@ public:
       getWrittenRegs(Instr, Regs);
 
       // Update register definitions after this point
-      int Idx = Regs.find_first();
-      while (Idx != -1) {
+      for (int Idx : Regs.set_bits()) {
         RegAliasTable[Idx] = &Instr;
         LLVM_DEBUG(dbgs() << "Setting reg " << Idx
                           << " def to current instr.\n");
-        Idx = Regs.find_next(Idx);
       }
 
       TerminatorSeen = isTerminator(Instr);

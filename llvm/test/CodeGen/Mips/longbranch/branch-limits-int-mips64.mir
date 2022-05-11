@@ -117,12 +117,12 @@ body:             |
   ; MIPS64: bb.0 (%ir-block.0):
   ; MIPS64:   successors: %bb.2(0x40000000), %bb.1(0x40000000)
   ; MIPS64:   BNE64 $a0_64, $zero_64, %bb.2, implicit-def $at {
-  ; MIPS64:     NOP
+  ; MIPS64:     $zero = SLL $zero, 0
   ; MIPS64:   }
   ; MIPS64: bb.1 (%ir-block.0):
   ; MIPS64:   successors: %bb.3(0x80000000)
   ; MIPS64:   J %bb.3, implicit-def $at {
-  ; MIPS64:     NOP
+  ; MIPS64:     $zero = SLL $zero, 0
   ; MIPS64:   }
   ; MIPS64: bb.2.iftrue:
   ; MIPS64:   INLINEASM &".space 131068", 1
@@ -137,7 +137,7 @@ body:             |
   ; PIC: bb.0 (%ir-block.0):
   ; PIC:   successors: %bb.3(0x40000000), %bb.1(0x40000000)
   ; PIC:   BNE64 $a0_64, $zero_64, %bb.3, implicit-def $at {
-  ; PIC:     NOP
+  ; PIC:     $zero = SLL $zero, 0
   ; PIC:   }
   ; PIC: bb.1 (%ir-block.0):
   ; PIC:   successors: %bb.2(0x80000000)
@@ -219,12 +219,12 @@ body:             |
   ; MIPS64: bb.0 (%ir-block.0):
   ; MIPS64:   successors: %bb.2(0x40000000), %bb.1(0x40000000)
   ; MIPS64:   BEQ64 $a0_64, $zero_64, %bb.2, implicit-def $at {
-  ; MIPS64:     NOP
+  ; MIPS64:     $zero = SLL $zero, 0
   ; MIPS64:   }
   ; MIPS64: bb.1 (%ir-block.0):
   ; MIPS64:   successors: %bb.3(0x80000000)
   ; MIPS64:   J %bb.3, implicit-def $at {
-  ; MIPS64:     NOP
+  ; MIPS64:     $zero = SLL $zero, 0
   ; MIPS64:   }
   ; MIPS64: bb.2.iftrue:
   ; MIPS64:   INLINEASM &".space 131068", 1
@@ -239,7 +239,7 @@ body:             |
   ; PIC: bb.0 (%ir-block.0):
   ; PIC:   successors: %bb.3(0x40000000), %bb.1(0x40000000)
   ; PIC:   BEQ64 $a0_64, $zero_64, %bb.3, implicit-def $at {
-  ; PIC:     NOP
+  ; PIC:     $zero = SLL $zero, 0
   ; PIC:   }
   ; PIC: bb.1 (%ir-block.0):
   ; PIC:   successors: %bb.2(0x80000000)
@@ -321,12 +321,12 @@ body:             |
   ; MIPS64: bb.0 (%ir-block.0):
   ; MIPS64:   successors: %bb.2(0x40000000), %bb.1(0x40000000)
   ; MIPS64:   BLTZ64 $a0_64, %bb.2, implicit-def $at {
-  ; MIPS64:     NOP
+  ; MIPS64:     $zero = SLL $zero, 0
   ; MIPS64:   }
   ; MIPS64: bb.1 (%ir-block.0):
   ; MIPS64:   successors: %bb.3(0x80000000)
   ; MIPS64:   J %bb.3, implicit-def $at {
-  ; MIPS64:     NOP
+  ; MIPS64:     $zero = SLL $zero, 0
   ; MIPS64:   }
   ; MIPS64: bb.2.iftrue:
   ; MIPS64:   INLINEASM &".space 131068", 1
@@ -341,7 +341,7 @@ body:             |
   ; PIC: bb.0 (%ir-block.0):
   ; PIC:   successors: %bb.3(0x40000000), %bb.1(0x40000000)
   ; PIC:   BLTZ64 $a0_64, %bb.3, implicit-def $at {
-  ; PIC:     NOP
+  ; PIC:     $zero = SLL $zero, 0
   ; PIC:   }
   ; PIC: bb.1 (%ir-block.0):
   ; PIC:   successors: %bb.2(0x80000000)
@@ -423,12 +423,12 @@ body:             |
   ; MIPS64: bb.0 (%ir-block.0):
   ; MIPS64:   successors: %bb.2(0x40000000), %bb.1(0x40000000)
   ; MIPS64:   BLEZ64 $a0_64, %bb.2, implicit-def $at {
-  ; MIPS64:     NOP
+  ; MIPS64:     $zero = SLL $zero, 0
   ; MIPS64:   }
   ; MIPS64: bb.1 (%ir-block.0):
   ; MIPS64:   successors: %bb.3(0x80000000)
   ; MIPS64:   J %bb.3, implicit-def $at {
-  ; MIPS64:     NOP
+  ; MIPS64:     $zero = SLL $zero, 0
   ; MIPS64:   }
   ; MIPS64: bb.2.iftrue:
   ; MIPS64:   INLINEASM &".space 131068", 1
@@ -443,7 +443,7 @@ body:             |
   ; PIC: bb.0 (%ir-block.0):
   ; PIC:   successors: %bb.3(0x40000000), %bb.1(0x40000000)
   ; PIC:   BLEZ64 $a0_64, %bb.3, implicit-def $at {
-  ; PIC:     NOP
+  ; PIC:     $zero = SLL $zero, 0
   ; PIC:   }
   ; PIC: bb.1 (%ir-block.0):
   ; PIC:   successors: %bb.2(0x80000000)
@@ -525,12 +525,12 @@ body:             |
   ; MIPS64: bb.0 (%ir-block.0):
   ; MIPS64:   successors: %bb.2(0x40000000), %bb.1(0x40000000)
   ; MIPS64:   BGTZ64 $a0_64, %bb.2, implicit-def $at {
-  ; MIPS64:     NOP
+  ; MIPS64:     $zero = SLL $zero, 0
   ; MIPS64:   }
   ; MIPS64: bb.1 (%ir-block.0):
   ; MIPS64:   successors: %bb.3(0x80000000)
   ; MIPS64:   J %bb.3, implicit-def $at {
-  ; MIPS64:     NOP
+  ; MIPS64:     $zero = SLL $zero, 0
   ; MIPS64:   }
   ; MIPS64: bb.2.iftrue:
   ; MIPS64:   INLINEASM &".space 131068", 1
@@ -545,7 +545,7 @@ body:             |
   ; PIC: bb.0 (%ir-block.0):
   ; PIC:   successors: %bb.3(0x40000000), %bb.1(0x40000000)
   ; PIC:   BGTZ64 $a0_64, %bb.3, implicit-def $at {
-  ; PIC:     NOP
+  ; PIC:     $zero = SLL $zero, 0
   ; PIC:   }
   ; PIC: bb.1 (%ir-block.0):
   ; PIC:   successors: %bb.2(0x80000000)
@@ -627,12 +627,12 @@ body:             |
   ; MIPS64: bb.0 (%ir-block.0):
   ; MIPS64:   successors: %bb.2(0x40000000), %bb.1(0x40000000)
   ; MIPS64:   BGEZ64 $a0_64, %bb.2, implicit-def $at {
-  ; MIPS64:     NOP
+  ; MIPS64:     $zero = SLL $zero, 0
   ; MIPS64:   }
   ; MIPS64: bb.1 (%ir-block.0):
   ; MIPS64:   successors: %bb.3(0x80000000)
   ; MIPS64:   J %bb.3, implicit-def $at {
-  ; MIPS64:     NOP
+  ; MIPS64:     $zero = SLL $zero, 0
   ; MIPS64:   }
   ; MIPS64: bb.2.iftrue:
   ; MIPS64:   INLINEASM &".space 131068", 1
@@ -647,7 +647,7 @@ body:             |
   ; PIC: bb.0 (%ir-block.0):
   ; PIC:   successors: %bb.3(0x40000000), %bb.1(0x40000000)
   ; PIC:   BGEZ64 $a0_64, %bb.3, implicit-def $at {
-  ; PIC:     NOP
+  ; PIC:     $zero = SLL $zero, 0
   ; PIC:   }
   ; PIC: bb.1 (%ir-block.0):
   ; PIC:   successors: %bb.2(0x80000000)
