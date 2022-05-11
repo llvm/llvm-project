@@ -14,14 +14,10 @@
 
 namespace llvm {
 namespace DXIL {
-// Enumeration for operations specified by DXIL
-enum class OpCode : unsigned {
-  Sin = 13, // returns sine(theta) for theta in radians.
-};
-// Groups for DXIL operations with equivalent function templates
-enum class OpCodeClass : unsigned {
-  Unary,
-};
+
+#define DXIL_OP_ENUM
+#include "DXILOperation.inc"
+#undef DXIL_OP_ENUM
 
 } // namespace DXIL
 } // namespace llvm
