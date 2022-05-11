@@ -100,6 +100,10 @@ int main(int argc, const char **argv) {
       }
     }
     std::unique_ptr<MemoryBuffer> Buffer = OffloadBinary::write(ImageBinary);
+    if (Buffer->getBufferSize() % OffloadBinary::getAlignment() != 0)
+      return reportError(
+          createStringError(inconvertibleErrorCode(),
+                            "Offload binary has invalid size alignment"));
     OS << Buffer->getBuffer();
   }
 

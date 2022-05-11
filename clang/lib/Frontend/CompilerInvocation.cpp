@@ -3739,28 +3739,7 @@ bool CompilerInvocation::ParseLangArgs(LangOptions &Opts, ArgList &Args,
     Opts.GNUCVersion = Major * 100 * 100 + Minor * 100 + Patch;
   }
 
-  // In AIX OS, the -mignore-xcoff-visibility is enable by default if there is
-  // no -fvisibility=* option.
-  // This is the reason why '-fvisibility' needs to be always generated:
-  // its absence implies '-mignore-xcoff-visibility'.
-  //
-  // Suppose the original cc1 command line does contain '-fvisibility default':
-  // '-mignore-xcoff-visibility' should not be implied.
-  // * If '-fvisibility' is not generated (as most options with default values
-  //   don't), its absence would imply '-mignore-xcoff-visibility'. This changes
-  //   the command line semantics.
-  // * If '-fvisibility' is generated regardless of its presence and value,
-  //   '-mignore-xcoff-visibility' won't be implied and the command line
-  //   semantics are kept intact.
-  //
-  // When the original cc1 command line does **not** contain '-fvisibility',
-  // '-mignore-xcoff-visibility' is implied. The generated command line will
-  // contain both '-fvisibility default' and '-mignore-xcoff-visibility' and
-  // subsequent calls to `CreateFromArgs`/`generateCC1CommandLine` will always
-  // produce the same arguments.
-
-  if (T.isOSAIX() && (Args.hasArg(OPT_mignore_xcoff_visibility) ||
-                      !Args.hasArg(OPT_fvisibility)))
+  if (T.isOSAIX() && (Args.hasArg(OPT_mignore_xcoff_visibility)))
     Opts.IgnoreXCOFFVisibility = 1;
 
   if (Args.hasArg(OPT_ftrapv)) {

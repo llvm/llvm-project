@@ -17,6 +17,7 @@
 
 #include "llvm/MC/MCDisassembler/MCDisassembler.h"
 #include "llvm/MC/MCInstrInfo.h"
+#include "llvm/MC/MCInst.h"
 #include "llvm/Support/DataExtractor.h"
 #include <memory>
 
@@ -57,8 +58,21 @@ public:
 
   MCOperand errOperand(unsigned V, const Twine& ErrMsg) const;
 
-  DecodeStatus tryDecodeInst(const uint8_t* Table, MCInst &MI, uint64_t Inst,
-                             uint64_t Address) const;
+  template <typename InsnType>
+  DecodeStatus tryDecodeInst(const uint8_t *Table, MCInst &MI, InsnType Inst,
+                             uint64_t Address) const {
+    assert(MI.getOpcode() == 0);
+    assert(MI.getNumOperands() == 0);
+    MCInst TmpInst;
+    HasLiteral = false;
+    const auto SavedBytes = Bytes;
+    if (decodeInstruction(Table, TmpInst, Inst, Address, this, STI)) {
+      MI = TmpInst;
+      return MCDisassembler::Success;
+    }
+    Bytes = SavedBytes;
+    return MCDisassembler::Fail;
+  }
 
   Optional<DecodeStatus> onSymbolStart(SymbolInfoTy &Symbol, uint64_t &Size,
                                        ArrayRef<uint8_t> Bytes,

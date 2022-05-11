@@ -12,6 +12,7 @@ add_llvm_target(DirectXCodeGen
   DXILOpLowering.cpp
   DXILPointerType.cpp
   DXILPrepare.cpp
+  DXILTranslateMetadata.cpp
   PointerTypeAnalysis.cpp
 
   LINK_COMPONENTS

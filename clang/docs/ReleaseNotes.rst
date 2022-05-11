@@ -298,6 +298,17 @@ Windows Support
   JustMyCode feature. Note, you may need to manually add ``/JMC`` as additional
   compile options in the Visual Studio since it currently assumes clang-cl does not support ``/JMC``.
 
+AIX Support
+-----------
+
+- The driver no longer adds ``-mignore-xcoff-visibility`` by default for AIX
+  targets when no other visibility command-line options are in effect, as
+  ignoring hidden visibility can silently have undesirable side effects (e.g
+  when libraries depend on visibility to hide non-ABI facing entities). The
+  ``-mignore-xcoff-visibility`` option can be manually specified on the
+  command-line to recover the previous behavior if desired.
+
+
 C Language Changes in Clang
 ---------------------------
 
