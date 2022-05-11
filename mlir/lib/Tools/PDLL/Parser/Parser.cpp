@@ -722,6 +722,18 @@ LogicalResult Parser::parseTdInclude(StringRef filename, llvm::SMRange fileLoc,
                                      SmallVectorImpl<ast::Decl *> &decls) {
   llvm::SourceMgr &parserSrcMgr = lexer.getSourceMgr();
 
+  // Use the source manager to open the file, but don't yet add it.
+  std::string includedFile;
+  llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>> includeBuffer =
+      parserSrcMgr.OpenIncludeFile(filename.str(), includedFile);
+  if (!includeBuffer)
+    return emitError(fileLoc, "unable to open include file `" + filename + "`");
+
+  // Setup the source manager for parsing the tablegen file.
+  llvm::SourceMgr tdSrcMgr;
+  tdSrcMgr.AddNewSourceBuffer(std::move(*includeBuffer), SMLoc());
+  tdSrcMgr.setIncludeDirs(parserSrcMgr.getIncludeDirs());
+
   // This class provides a context argument for the llvm::SourceMgr diagnostic
   // handler.
   struct DiagHandlerContext {
@@ -731,7 +743,7 @@ LogicalResult Parser::parseTdInclude(StringRef filename, llvm::SMRange fileLoc,
   } handlerContext{*this, filename, fileLoc};
 
   // Set the diagnostic handler for the tablegen source manager.
-  llvm::SrcMgr.setDiagHandler(
+  tdSrcMgr.setDiagHandler(
       [](const llvm::SMDiagnostic &diag, void *rawHandlerContext) {
         auto *ctx = reinterpret_cast<DiagHandlerContext *>(rawHandlerContext);
         (void)ctx->parser.emitError(
@@ -741,26 +753,18 @@ LogicalResult Parser::parseTdInclude(StringRef filename, llvm::SMRange fileLoc,
       },
       &handlerContext);
 
-  // Use the source manager to open the file, but don't yet add it.
-  std::string includedFile;
-  llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>> includeBuffer =
-      parserSrcMgr.OpenIncludeFile(filename.str(), includedFile);
-  if (!includeBuffer)
-    return emitError(fileLoc, "unable to open include file `" + filename + "`");
-
-  auto processFn = [&](llvm::RecordKeeper &records) {
-    processTdIncludeRecords(records, decls);
-
-    // After we are done processing, move all of the tablegen source buffers to
-    // the main parser source mgr. This allows for directly using source
-    // locations from the .td files without needing to remap them.
-    parserSrcMgr.takeSourceBuffersFrom(llvm::SrcMgr, fileLoc.End);
-    return false;
-  };
-  if (llvm::TableGenParseFile(std::move(*includeBuffer),
-                              parserSrcMgr.getIncludeDirs(), processFn))
+  // Parse the tablegen file.
+  llvm::RecordKeeper tdRecords;
+  if (llvm::TableGenParseFile(tdSrcMgr, tdRecords))
     return failure();
 
+  // Process the parsed records.
+  processTdIncludeRecords(tdRecords, decls);
+
+  // After we are done processing, move all of the tablegen source buffers to
+  // the main parser source mgr. This allows for directly using source locations
+  // from the .td files without needing to remap them.
+  parserSrcMgr.takeSourceBuffersFrom(tdSrcMgr, fileLoc.End);
   return success();
 }
 

@@ -9,6 +9,7 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/MemoryBuffer.h"
+#include "llvm/Support/SourceMgr.h"
 #include "llvm/TableGen/Parser.h"
 #include "llvm/TableGen/Record.h"
 #include "gmock/gmock.h"
@@ -24,16 +25,16 @@ TEST(Parser, SanityTest) {
     }
   )td";
 
-  auto ProcessFn = [&](const RecordKeeper &Records) {
-    Record *Foo = Records.getDef("Foo");
-    Optional<StringRef> Field = Foo->getValueAsOptionalString("strField");
-    EXPECT_TRUE(Field.hasValue());
-    EXPECT_EQ(Field.getValue(), "value");
-    return false;
-  };
+  SourceMgr SrcMgr;
+  SrcMgr.AddNewSourceBuffer(
+      MemoryBuffer::getMemBuffer(SimpleTdSource, "test_buffer"), SMLoc());
 
-  bool ProcessResult = TableGenParseFile(
-      MemoryBuffer::getMemBuffer(SimpleTdSource, "test_buffer"),
-      /*IncludeDirs=*/{}, ProcessFn);
+  RecordKeeper Records;
+  bool ProcessResult = TableGenParseFile(SrcMgr, Records);
   EXPECT_FALSE(ProcessResult);
+
+  Record *Foo = Records.getDef("Foo");
+  Optional<StringRef> Field = Foo->getValueAsOptionalString("strField");
+  EXPECT_TRUE(Field.hasValue());
+  EXPECT_EQ(Field.getValue(), "value");
 }
