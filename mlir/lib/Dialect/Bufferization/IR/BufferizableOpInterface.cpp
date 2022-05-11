@@ -327,8 +327,7 @@ BufferizationState::getBuffer(RewriterBase &rewriter, OpOperand &opOperand,
     // The copy happens right before the op that is bufferized.
     rewriter.setInsertionPoint(op);
   }
-  if (failed(
-          createMemCpy(rewriter, loc, operandBuffer, *resultBuffer, options)))
+  if (failed(options.createMemCpy(rewriter, loc, operandBuffer, *resultBuffer)))
     return failure();
 
   return resultBuffer;
@@ -418,26 +417,24 @@ bool AlwaysCopyAnalysisState::isTensorYielded(Value tensor) const {
 //===----------------------------------------------------------------------===//
 
 /// Create a memref allocation with the given type and dynamic extents.
-static FailureOr<Value> createAlloc(OpBuilder &b, Location loc, MemRefType type,
-                                    ValueRange dynShape,
-                                    const BufferizationOptions &options) {
-  if (options.allocationFn)
-    return (*options.allocationFn)(b, loc, type, dynShape,
-                                   options.bufferAlignment);
+FailureOr<Value> BufferizationOptions::createAlloc(OpBuilder &b, Location loc,
+                                                   MemRefType type,
+                                                   ValueRange dynShape) const {
+  if (allocationFn)
+    return (*allocationFn)(b, loc, type, dynShape, bufferAlignment);
 
   // Default bufferallocation via AllocOp.
   Value allocated = b.create<memref::AllocOp>(
-      loc, type, dynShape, b.getI64IntegerAttr(options.bufferAlignment));
+      loc, type, dynShape, b.getI64IntegerAttr(bufferAlignment));
   return allocated;
 }
 
 /// Creates a memref deallocation. The given memref buffer must have been
 /// allocated using `createAlloc`.
-LogicalResult
-bufferization::createDealloc(OpBuilder &b, Location loc, Value allocatedBuffer,
-                             const BufferizationOptions &options) {
-  if (options.deallocationFn)
-    return (*options.deallocationFn)(b, loc, allocatedBuffer);
+LogicalResult BufferizationOptions::createDealloc(OpBuilder &b, Location loc,
+                                                  Value allocatedBuffer) const {
+  if (deallocationFn)
+    return (*deallocationFn)(b, loc, allocatedBuffer);
 
   // Default buffer deallocation via DeallocOp.
   b.create<memref::DeallocOp>(loc, allocatedBuffer);
@@ -523,11 +520,10 @@ FailureOr<Value> BufferizationState::createAlloc(OpBuilder &b, Location loc,
 }
 
 /// Create a memory copy between two memref buffers.
-LogicalResult bufferization::createMemCpy(OpBuilder &b, Location loc,
-                                          Value from, Value to,
-                                          const BufferizationOptions &options) {
-  if (options.memCpyFn)
-    return (*options.memCpyFn)(b, loc, from, to);
+LogicalResult BufferizationOptions::createMemCpy(OpBuilder &b, Location loc,
+                                                 Value from, Value to) const {
+  if (memCpyFn)
+    return (*memCpyFn)(b, loc, from, to);
 
   b.create<memref::CopyOp>(loc, from, to);
   return success();
@@ -557,8 +553,8 @@ bufferization::createAllocDeallocOps(Operation *op,
     Block *block = allocaOp->getBlock();
     rewriter.setInsertionPoint(allocaOp);
     FailureOr<Value> alloc =
-        createAlloc(rewriter, allocaOp->getLoc(), allocaOp.getType(),
-                    allocaOp.dynamicSizes(), options);
+        options.createAlloc(rewriter, allocaOp->getLoc(), allocaOp.getType(),
+                            allocaOp.dynamicSizes());
     if (failed(alloc))
       return WalkResult::interrupt();
     rewriter.replaceOp(allocaOp, *alloc);
@@ -571,7 +567,7 @@ bufferization::createAllocDeallocOps(Operation *op,
 
     // Create dealloc.
     rewriter.setInsertionPoint(block->getTerminator());
-    if (failed(createDealloc(rewriter, alloc->getLoc(), *alloc, options)))
+    if (failed(options.createDealloc(rewriter, alloc->getLoc(), *alloc)))
       return WalkResult::interrupt();
 
     return WalkResult::advance();
