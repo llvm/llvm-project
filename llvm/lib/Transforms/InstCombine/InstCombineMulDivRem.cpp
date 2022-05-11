@@ -1493,11 +1493,13 @@ Instruction *InstCombinerImpl::visitURem(BinaryOperator &I) {
     return CastInst::CreateZExtOrBitCast(Cmp, Ty);
   }
 
-  // X urem C -> X < C ? X : X - C, where C >= signbit.
+  // Op0 urem C -> Op0 < C ? Op0 : Op0 - C, where C >= signbit.
+  // Op0 must be frozen because we are increasing its number of uses.
   if (match(Op1, m_Negative())) {
-    Value *Cmp = Builder.CreateICmpULT(Op0, Op1);
-    Value *Sub = Builder.CreateSub(Op0, Op1);
-    return SelectInst::Create(Cmp, Op0, Sub);
+    Value *F0 = Builder.CreateFreeze(Op0, Op0->getName() + ".fr");
+    Value *Cmp = Builder.CreateICmpULT(F0, Op1);
+    Value *Sub = Builder.CreateSub(F0, Op1);
+    return SelectInst::Create(Cmp, F0, Sub);
   }
 
   // If the divisor is a sext of a boolean, then the divisor must be max
