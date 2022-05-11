@@ -11506,7 +11506,9 @@ static std::string mangleVectorParameters(ArrayRef<ParamAttrTy> ParamAttrs) {
              ParamAttr.Kind == LinearUVal || ParamAttr.Kind == LinearVal) {
       // Don't print the step value if it is not present or if it is
       // equal to 1.
-      if (ParamAttr.StrideOrArg != 1)
+      if (ParamAttr.StrideOrArg < 0)
+        Out << 'n' << -ParamAttr.StrideOrArg;
+      else if (ParamAttr.StrideOrArg != 1)
         Out << ParamAttr.StrideOrArg;
     }
 
