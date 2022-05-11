@@ -6086,6 +6086,10 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
                        options::OPT_fno_openmp_extensions);
   }
 
+  // Forward the new driver to change offloading code generation.
+  if (Args.hasArg(options::OPT_offload_new_driver))
+    CmdArgs.push_back("--offload-new-driver");
+
   SanitizeArgs.addArgs(TC, Args, CmdArgs, InputType);
 
   const XRayArgs &XRay = TC.getXRayArgs();

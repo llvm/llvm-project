@@ -854,7 +854,6 @@ void RISCVFrameLowering::determineCalleeSaves(MachineFunction &MF,
 
 int64_t
 RISCVFrameLowering::assignRVVStackObjectOffsets(MachineFrameInfo &MFI) const {
-  int64_t Offset = 0;
   // Create a buffer of RVV objects to allocate.
   SmallVector<int, 8> ObjectsToAllocate;
   for (int I = 0, E = MFI.getObjectIndexEnd(); I != E; ++I) {
@@ -868,6 +867,7 @@ RISCVFrameLowering::assignRVVStackObjectOffsets(MachineFrameInfo &MFI) const {
   }
 
   // Allocate all RVV locals and spills
+  int64_t Offset = 0;
   for (int FI : ObjectsToAllocate) {
     // ObjectSize in bytes.
     int64_t ObjectSize = MFI.getObjectSize(FI);
