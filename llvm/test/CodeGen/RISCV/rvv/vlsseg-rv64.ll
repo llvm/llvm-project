@@ -10,7 +10,6 @@ define <vscale x 16 x i16> @test_vlsseg2_nxv16i16(i16* %base, i64 %offset, i64 %
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli zero, a2, e16, m4, ta, mu
 ; CHECK-NEXT:    vlsseg2e16.v v4, (a0), a1
-; CHECK-NEXT:    # kill: def $v8m4 killed $v8m4 killed $v4m4_v8m4
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call {<vscale x 16 x i16>,<vscale x 16 x i16>} @llvm.riscv.vlsseg2.nxv16i16(i16* %base, i64 %offset, i64 %vl)
@@ -25,7 +24,6 @@ define <vscale x 16 x i16> @test_vlsseg2_mask_nxv16i16(i16* %base, i64 %offset, 
 ; CHECK-NEXT:    vlsseg2e16.v v4, (a0), a1
 ; CHECK-NEXT:    vmv4r.v v8, v4
 ; CHECK-NEXT:    vlsseg2e16.v v4, (a0), a1, v0.t
-; CHECK-NEXT:    # kill: def $v8m4 killed $v8m4 killed $v4m4_v8m4
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call {<vscale x 16 x i16>,<vscale x 16 x i16>} @llvm.riscv.vlsseg2.nxv16i16(i16* %base, i64 %offset, i64 %vl)
@@ -43,7 +41,6 @@ define <vscale x 4 x i32> @test_vlsseg2_nxv4i32(i32* %base, i64 %offset, i64 %vl
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli zero, a2, e32, m2, ta, mu
 ; CHECK-NEXT:    vlsseg2e32.v v6, (a0), a1
-; CHECK-NEXT:    # kill: def $v8m2 killed $v8m2 killed $v6m2_v8m2
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call {<vscale x 4 x i32>,<vscale x 4 x i32>} @llvm.riscv.vlsseg2.nxv4i32(i32* %base, i64 %offset, i64 %vl)
@@ -58,7 +55,6 @@ define <vscale x 4 x i32> @test_vlsseg2_mask_nxv4i32(i32* %base, i64 %offset, i6
 ; CHECK-NEXT:    vlsseg2e32.v v6, (a0), a1
 ; CHECK-NEXT:    vmv2r.v v8, v6
 ; CHECK-NEXT:    vlsseg2e32.v v6, (a0), a1, v0.t
-; CHECK-NEXT:    # kill: def $v8m2 killed $v8m2 killed $v6m2_v8m2
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call {<vscale x 4 x i32>,<vscale x 4 x i32>} @llvm.riscv.vlsseg2.nxv4i32(i32* %base, i64 %offset, i64 %vl)
@@ -76,7 +72,6 @@ define <vscale x 4 x i32> @test_vlsseg3_nxv4i32(i32* %base, i64 %offset, i64 %vl
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli zero, a2, e32, m2, ta, mu
 ; CHECK-NEXT:    vlsseg3e32.v v6, (a0), a1
-; CHECK-NEXT:    # kill: def $v8m2 killed $v8m2 killed $v6m2_v8m2_v10m2
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call {<vscale x 4 x i32>,<vscale x 4 x i32>,<vscale x 4 x i32>} @llvm.riscv.vlsseg3.nxv4i32(i32* %base, i64 %offset, i64 %vl)
@@ -92,7 +87,6 @@ define <vscale x 4 x i32> @test_vlsseg3_mask_nxv4i32(i32* %base, i64 %offset, i6
 ; CHECK-NEXT:    vmv2r.v v8, v6
 ; CHECK-NEXT:    vmv2r.v v10, v6
 ; CHECK-NEXT:    vlsseg3e32.v v6, (a0), a1, v0.t
-; CHECK-NEXT:    # kill: def $v8m2 killed $v8m2 killed $v6m2_v8m2_v10m2
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call {<vscale x 4 x i32>,<vscale x 4 x i32>,<vscale x 4 x i32>} @llvm.riscv.vlsseg3.nxv4i32(i32* %base, i64 %offset, i64 %vl)
@@ -110,7 +104,6 @@ define <vscale x 4 x i32> @test_vlsseg4_nxv4i32(i32* %base, i64 %offset, i64 %vl
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli zero, a2, e32, m2, ta, mu
 ; CHECK-NEXT:    vlsseg4e32.v v6, (a0), a1
-; CHECK-NEXT:    # kill: def $v8m2 killed $v8m2 killed $v6m2_v8m2_v10m2_v12m2
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call {<vscale x 4 x i32>,<vscale x 4 x i32>,<vscale x 4 x i32>,<vscale x 4 x i32>} @llvm.riscv.vlsseg4.nxv4i32(i32* %base, i64 %offset, i64 %vl)
@@ -127,7 +120,6 @@ define <vscale x 4 x i32> @test_vlsseg4_mask_nxv4i32(i32* %base, i64 %offset, i6
 ; CHECK-NEXT:    vmv2r.v v10, v6
 ; CHECK-NEXT:    vmv2r.v v12, v6
 ; CHECK-NEXT:    vlsseg4e32.v v6, (a0), a1, v0.t
-; CHECK-NEXT:    # kill: def $v8m2 killed $v8m2 killed $v6m2_v8m2_v10m2_v12m2
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call {<vscale x 4 x i32>,<vscale x 4 x i32>,<vscale x 4 x i32>,<vscale x 4 x i32>} @llvm.riscv.vlsseg4.nxv4i32(i32* %base, i64 %offset, i64 %vl)
@@ -145,7 +137,6 @@ define <vscale x 16 x i8> @test_vlsseg2_nxv16i8(i8* %base, i64 %offset, i64 %vl)
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli zero, a2, e8, m2, ta, mu
 ; CHECK-NEXT:    vlsseg2e8.v v6, (a0), a1
-; CHECK-NEXT:    # kill: def $v8m2 killed $v8m2 killed $v6m2_v8m2
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call {<vscale x 16 x i8>,<vscale x 16 x i8>} @llvm.riscv.vlsseg2.nxv16i8(i8* %base, i64 %offset, i64 %vl)
@@ -160,7 +151,6 @@ define <vscale x 16 x i8> @test_vlsseg2_mask_nxv16i8(i8* %base, i64 %offset, i64
 ; CHECK-NEXT:    vlsseg2e8.v v6, (a0), a1
 ; CHECK-NEXT:    vmv2r.v v8, v6
 ; CHECK-NEXT:    vlsseg2e8.v v6, (a0), a1, v0.t
-; CHECK-NEXT:    # kill: def $v8m2 killed $v8m2 killed $v6m2_v8m2
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call {<vscale x 16 x i8>,<vscale x 16 x i8>} @llvm.riscv.vlsseg2.nxv16i8(i8* %base, i64 %offset, i64 %vl)
@@ -178,7 +168,6 @@ define <vscale x 16 x i8> @test_vlsseg3_nxv16i8(i8* %base, i64 %offset, i64 %vl)
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli zero, a2, e8, m2, ta, mu
 ; CHECK-NEXT:    vlsseg3e8.v v6, (a0), a1
-; CHECK-NEXT:    # kill: def $v8m2 killed $v8m2 killed $v6m2_v8m2_v10m2
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call {<vscale x 16 x i8>,<vscale x 16 x i8>,<vscale x 16 x i8>} @llvm.riscv.vlsseg3.nxv16i8(i8* %base, i64 %offset, i64 %vl)
@@ -194,7 +183,6 @@ define <vscale x 16 x i8> @test_vlsseg3_mask_nxv16i8(i8* %base, i64 %offset, i64
 ; CHECK-NEXT:    vmv2r.v v8, v6
 ; CHECK-NEXT:    vmv2r.v v10, v6
 ; CHECK-NEXT:    vlsseg3e8.v v6, (a0), a1, v0.t
-; CHECK-NEXT:    # kill: def $v8m2 killed $v8m2 killed $v6m2_v8m2_v10m2
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call {<vscale x 16 x i8>,<vscale x 16 x i8>,<vscale x 16 x i8>} @llvm.riscv.vlsseg3.nxv16i8(i8* %base, i64 %offset, i64 %vl)
@@ -212,7 +200,6 @@ define <vscale x 16 x i8> @test_vlsseg4_nxv16i8(i8* %base, i64 %offset, i64 %vl)
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli zero, a2, e8, m2, ta, mu
 ; CHECK-NEXT:    vlsseg4e8.v v6, (a0), a1
-; CHECK-NEXT:    # kill: def $v8m2 killed $v8m2 killed $v6m2_v8m2_v10m2_v12m2
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call {<vscale x 16 x i8>,<vscale x 16 x i8>,<vscale x 16 x i8>,<vscale x 16 x i8>} @llvm.riscv.vlsseg4.nxv16i8(i8* %base, i64 %offset, i64 %vl)
@@ -229,7 +216,6 @@ define <vscale x 16 x i8> @test_vlsseg4_mask_nxv16i8(i8* %base, i64 %offset, i64
 ; CHECK-NEXT:    vmv2r.v v10, v6
 ; CHECK-NEXT:    vmv2r.v v12, v6
 ; CHECK-NEXT:    vlsseg4e8.v v6, (a0), a1, v0.t
-; CHECK-NEXT:    # kill: def $v8m2 killed $v8m2 killed $v6m2_v8m2_v10m2_v12m2
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call {<vscale x 16 x i8>,<vscale x 16 x i8>,<vscale x 16 x i8>,<vscale x 16 x i8>} @llvm.riscv.vlsseg4.nxv16i8(i8* %base, i64 %offset, i64 %vl)
@@ -247,7 +233,6 @@ define <vscale x 1 x i64> @test_vlsseg2_nxv1i64(i64* %base, i64 %offset, i64 %vl
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli zero, a2, e64, m1, ta, mu
 ; CHECK-NEXT:    vlsseg2e64.v v7, (a0), a1
-; CHECK-NEXT:    # kill: def $v8 killed $v8 killed $v7_v8
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call {<vscale x 1 x i64>,<vscale x 1 x i64>} @llvm.riscv.vlsseg2.nxv1i64(i64* %base, i64 %offset, i64 %vl)
@@ -262,7 +247,6 @@ define <vscale x 1 x i64> @test_vlsseg2_mask_nxv1i64(i64* %base, i64 %offset, i6
 ; CHECK-NEXT:    vlsseg2e64.v v7, (a0), a1
 ; CHECK-NEXT:    vmv1r.v v8, v7
 ; CHECK-NEXT:    vlsseg2e64.v v7, (a0), a1, v0.t
-; CHECK-NEXT:    # kill: def $v8 killed $v8 killed $v7_v8
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call {<vscale x 1 x i64>,<vscale x 1 x i64>} @llvm.riscv.vlsseg2.nxv1i64(i64* %base, i64 %offset, i64 %vl)
@@ -280,7 +264,6 @@ define <vscale x 1 x i64> @test_vlsseg3_nxv1i64(i64* %base, i64 %offset, i64 %vl
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli zero, a2, e64, m1, ta, mu
 ; CHECK-NEXT:    vlsseg3e64.v v7, (a0), a1
-; CHECK-NEXT:    # kill: def $v8 killed $v8 killed $v7_v8_v9
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call {<vscale x 1 x i64>,<vscale x 1 x i64>,<vscale x 1 x i64>} @llvm.riscv.vlsseg3.nxv1i64(i64* %base, i64 %offset, i64 %vl)
@@ -296,7 +279,6 @@ define <vscale x 1 x i64> @test_vlsseg3_mask_nxv1i64(i64* %base, i64 %offset, i6
 ; CHECK-NEXT:    vmv1r.v v8, v7
 ; CHECK-NEXT:    vmv1r.v v9, v7
 ; CHECK-NEXT:    vlsseg3e64.v v7, (a0), a1, v0.t
-; CHECK-NEXT:    # kill: def $v8 killed $v8 killed $v7_v8_v9
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call {<vscale x 1 x i64>,<vscale x 1 x i64>,<vscale x 1 x i64>} @llvm.riscv.vlsseg3.nxv1i64(i64* %base, i64 %offset, i64 %vl)
@@ -314,7 +296,6 @@ define <vscale x 1 x i64> @test_vlsseg4_nxv1i64(i64* %base, i64 %offset, i64 %vl
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli zero, a2, e64, m1, ta, mu
 ; CHECK-NEXT:    vlsseg4e64.v v7, (a0), a1
-; CHECK-NEXT:    # kill: def $v8 killed $v8 killed $v7_v8_v9_v10
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call {<vscale x 1 x i64>,<vscale x 1 x i64>,<vscale x 1 x i64>,<vscale x 1 x i64>} @llvm.riscv.vlsseg4.nxv1i64(i64* %base, i64 %offset, i64 %vl)
@@ -331,7 +312,6 @@ define <vscale x 1 x i64> @test_vlsseg4_mask_nxv1i64(i64* %base, i64 %offset, i6
 ; CHECK-NEXT:    vmv1r.v v9, v7
 ; CHECK-NEXT:    vmv1r.v v10, v7
 ; CHECK-NEXT:    vlsseg4e64.v v7, (a0), a1, v0.t
-; CHECK-NEXT:    # kill: def $v8 killed $v8 killed $v7_v8_v9_v10
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call {<vscale x 1 x i64>,<vscale x 1 x i64>,<vscale x 1 x i64>,<vscale x 1 x i64>} @llvm.riscv.vlsseg4.nxv1i64(i64* %base, i64 %offset, i64 %vl)
@@ -349,7 +329,6 @@ define <vscale x 1 x i64> @test_vlsseg5_nxv1i64(i64* %base, i64 %offset, i64 %vl
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli zero, a2, e64, m1, ta, mu
 ; CHECK-NEXT:    vlsseg5e64.v v7, (a0), a1
-; CHECK-NEXT:    # kill: def $v8 killed $v8 killed $v7_v8_v9_v10_v11
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call {<vscale x 1 x i64>,<vscale x 1 x i64>,<vscale x 1 x i64>,<vscale x 1 x i64>,<vscale x 1 x i64>} @llvm.riscv.vlsseg5.nxv1i64(i64* %base, i64 %offset, i64 %vl)
@@ -367,7 +346,6 @@ define <vscale x 1 x i64> @test_vlsseg5_mask_nxv1i64(i64* %base, i64 %offset, i6
 ; CHECK-NEXT:    vmv1r.v v10, v7
 ; CHECK-NEXT:    vmv1r.v v11, v7
 ; CHECK-NEXT:    vlsseg5e64.v v7, (a0), a1, v0.t
-; CHECK-NEXT:    # kill: def $v8 killed $v8 killed $v7_v8_v9_v10_v11
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call {<vscale x 1 x i64>,<vscale x 1 x i64>,<vscale x 1 x i64>,<vscale x 1 x i64>,<vscale x 1 x i64>} @llvm.riscv.vlsseg5.nxv1i64(i64* %base, i64 %offset, i64 %vl)
@@ -385,7 +363,6 @@ define <vscale x 1 x i64> @test_vlsseg6_nxv1i64(i64* %base, i64 %offset, i64 %vl
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli zero, a2, e64, m1, ta, mu
 ; CHECK-NEXT:    vlsseg6e64.v v7, (a0), a1
-; CHECK-NEXT:    # kill: def $v8 killed $v8 killed $v7_v8_v9_v10_v11_v12
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call {<vscale x 1 x i64>,<vscale x 1 x i64>,<vscale x 1 x i64>,<vscale x 1 x i64>,<vscale x 1 x i64>,<vscale x 1 x i64>} @llvm.riscv.vlsseg6.nxv1i64(i64* %base, i64 %offset, i64 %vl)
@@ -404,7 +381,6 @@ define <vscale x 1 x i64> @test_vlsseg6_mask_nxv1i64(i64* %base, i64 %offset, i6
 ; CHECK-NEXT:    vmv1r.v v11, v7
 ; CHECK-NEXT:    vmv1r.v v12, v7
 ; CHECK-NEXT:    vlsseg6e64.v v7, (a0), a1, v0.t
-; CHECK-NEXT:    # kill: def $v8 killed $v8 killed $v7_v8_v9_v10_v11_v12
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call {<vscale x 1 x i64>,<vscale x 1 x i64>,<vscale x 1 x i64>,<vscale x 1 x i64>,<vscale x 1 x i64>,<vscale x 1 x i64>} @llvm.riscv.vlsseg6.nxv1i64(i64* %base, i64 %offset, i64 %vl)
@@ -422,7 +398,6 @@ define <vscale x 1 x i64> @test_vlsseg7_nxv1i64(i64* %base, i64 %offset, i64 %vl
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli zero, a2, e64, m1, ta, mu
 ; CHECK-NEXT:    vlsseg7e64.v v7, (a0), a1
-; CHECK-NEXT:    # kill: def $v8 killed $v8 killed $v7_v8_v9_v10_v11_v12_v13
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call {<vscale x 1 x i64>,<vscale x 1 x i64>,<vscale x 1 x i64>,<vscale x 1 x i64>,<vscale x 1 x i64>,<vscale x 1 x i64>,<vscale x 1 x i64>} @llvm.riscv.vlsseg7.nxv1i64(i64* %base, i64 %offset, i64 %vl)
@@ -442,7 +417,6 @@ define <vscale x 1 x i64> @test_vlsseg7_mask_nxv1i64(i64* %base, i64 %offset, i6
 ; CHECK-NEXT:    vmv1r.v v12, v7
 ; CHECK-NEXT:    vmv1r.v v13, v7
 ; CHECK-NEXT:    vlsseg7e64.v v7, (a0), a1, v0.t
-; CHECK-NEXT:    # kill: def $v8 killed $v8 killed $v7_v8_v9_v10_v11_v12_v13
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call {<vscale x 1 x i64>,<vscale x 1 x i64>,<vscale x 1 x i64>,<vscale x 1 x i64>,<vscale x 1 x i64>,<vscale x 1 x i64>,<vscale x 1 x i64>} @llvm.riscv.vlsseg7.nxv1i64(i64* %base, i64 %offset, i64 %vl)
@@ -460,7 +434,6 @@ define <vscale x 1 x i64> @test_vlsseg8_nxv1i64(i64* %base, i64 %offset, i64 %vl
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli zero, a2, e64, m1, ta, mu
 ; CHECK-NEXT:    vlsseg8e64.v v7, (a0), a1
-; CHECK-NEXT:    # kill: def $v8 killed $v8 killed $v7_v8_v9_v10_v11_v12_v13_v14
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call {<vscale x 1 x i64>,<vscale x 1 x i64>,<vscale x 1 x i64>,<vscale x 1 x i64>,<vscale x 1 x i64>,<vscale x 1 x i64>,<vscale x 1 x i64>,<vscale x 1 x i64>} @llvm.riscv.vlsseg8.nxv1i64(i64* %base, i64 %offset, i64 %vl)
@@ -481,7 +454,6 @@ define <vscale x 1 x i64> @test_vlsseg8_mask_nxv1i64(i64* %base, i64 %offset, i6
 ; CHECK-NEXT:    vmv1r.v v13, v7
 ; CHECK-NEXT:    vmv1r.v v14, v7
 ; CHECK-NEXT:    vlsseg8e64.v v7, (a0), a1, v0.t
-; CHECK-NEXT:    # kill: def $v8 killed $v8 killed $v7_v8_v9_v10_v11_v12_v13_v14
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call {<vscale x 1 x i64>,<vscale x 1 x i64>,<vscale x 1 x i64>,<vscale x 1 x i64>,<vscale x 1 x i64>,<vscale x 1 x i64>,<vscale x 1 x i64>,<vscale x 1 x i64>} @llvm.riscv.vlsseg8.nxv1i64(i64* %base, i64 %offset, i64 %vl)
@@ -499,7 +471,6 @@ define <vscale x 1 x i32> @test_vlsseg2_nxv1i32(i32* %base, i64 %offset, i64 %vl
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli zero, a2, e32, mf2, ta, mu
 ; CHECK-NEXT:    vlsseg2e32.v v7, (a0), a1
-; CHECK-NEXT:    # kill: def $v8 killed $v8 killed $v7_v8
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call {<vscale x 1 x i32>,<vscale x 1 x i32>} @llvm.riscv.vlsseg2.nxv1i32(i32* %base, i64 %offset, i64 %vl)
@@ -514,7 +485,6 @@ define <vscale x 1 x i32> @test_vlsseg2_mask_nxv1i32(i32* %base, i64 %offset, i6
 ; CHECK-NEXT:    vlsseg2e32.v v7, (a0), a1
 ; CHECK-NEXT:    vmv1r.v v8, v7
 ; CHECK-NEXT:    vlsseg2e32.v v7, (a0), a1, v0.t
-; CHECK-NEXT:    # kill: def $v8 killed $v8 killed $v7_v8
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call {<vscale x 1 x i32>,<vscale x 1 x i32>} @llvm.riscv.vlsseg2.nxv1i32(i32* %base, i64 %offset, i64 %vl)
@@ -532,7 +502,6 @@ define <vscale x 1 x i32> @test_vlsseg3_nxv1i32(i32* %base, i64 %offset, i64 %vl
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli zero, a2, e32, mf2, ta, mu
 ; CHECK-NEXT:    vlsseg3e32.v v7, (a0), a1
-; CHECK-NEXT:    # kill: def $v8 killed $v8 killed $v7_v8_v9
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call {<vscale x 1 x i32>,<vscale x 1 x i32>,<vscale x 1 x i32>} @llvm.riscv.vlsseg3.nxv1i32(i32* %base, i64 %offset, i64 %vl)
@@ -548,7 +517,6 @@ define <vscale x 1 x i32> @test_vlsseg3_mask_nxv1i32(i32* %base, i64 %offset, i6
 ; CHECK-NEXT:    vmv1r.v v8, v7
 ; CHECK-NEXT:    vmv1r.v v9, v7
 ; CHECK-NEXT:    vlsseg3e32.v v7, (a0), a1, v0.t
-; CHECK-NEXT:    # kill: def $v8 killed $v8 killed $v7_v8_v9
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call {<vscale x 1 x i32>,<vscale x 1 x i32>,<vscale x 1 x i32>} @llvm.riscv.vlsseg3.nxv1i32(i32* %base, i64 %offset, i64 %vl)
@@ -566,7 +534,6 @@ define <vscale x 1 x i32> @test_vlsseg4_nxv1i32(i32* %base, i64 %offset, i64 %vl
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli zero, a2, e32, mf2, ta, mu
 ; CHECK-NEXT:    vlsseg4e32.v v7, (a0), a1
-; CHECK-NEXT:    # kill: def $v8 killed $v8 killed $v7_v8_v9_v10
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call {<vscale x 1 x i32>,<vscale x 1 x i32>,<vscale x 1 x i32>,<vscale x 1 x i32>} @llvm.riscv.vlsseg4.nxv1i32(i32* %base, i64 %offset, i64 %vl)
@@ -583,7 +550,6 @@ define <vscale x 1 x i32> @test_vlsseg4_mask_nxv1i32(i32* %base, i64 %offset, i6
 ; CHECK-NEXT:    vmv1r.v v9, v7
 ; CHECK-NEXT:    vmv1r.v v10, v7
 ; CHECK-NEXT:    vlsseg4e32.v v7, (a0), a1, v0.t
-; CHECK-NEXT:    # kill: def $v8 killed $v8 killed $v7_v8_v9_v10
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call {<vscale x 1 x i32>,<vscale x 1 x i32>,<vscale x 1 x i32>,<vscale x 1 x i32>} @llvm.riscv.vlsseg4.nxv1i32(i32* %base, i64 %offset, i64 %vl)
@@ -601,7 +567,6 @@ define <vscale x 1 x i32> @test_vlsseg5_nxv1i32(i32* %base, i64 %offset, i64 %vl
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli zero, a2, e32, mf2, ta, mu
 ; CHECK-NEXT:    vlsseg5e32.v v7, (a0), a1
-; CHECK-NEXT:    # kill: def $v8 killed $v8 killed $v7_v8_v9_v10_v11
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call {<vscale x 1 x i32>,<vscale x 1 x i32>,<vscale x 1 x i32>,<vscale x 1 x i32>,<vscale x 1 x i32>} @llvm.riscv.vlsseg5.nxv1i32(i32* %base, i64 %offset, i64 %vl)
@@ -619,7 +584,6 @@ define <vscale x 1 x i32> @test_vlsseg5_mask_nxv1i32(i32* %base, i64 %offset, i6
 ; CHECK-NEXT:    vmv1r.v v10, v7
 ; CHECK-NEXT:    vmv1r.v v11, v7
 ; CHECK-NEXT:    vlsseg5e32.v v7, (a0), a1, v0.t
-; CHECK-NEXT:    # kill: def $v8 killed $v8 killed $v7_v8_v9_v10_v11
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call {<vscale x 1 x i32>,<vscale x 1 x i32>,<vscale x 1 x i32>,<vscale x 1 x i32>,<vscale x 1 x i32>} @llvm.riscv.vlsseg5.nxv1i32(i32* %base, i64 %offset, i64 %vl)
@@ -637,7 +601,6 @@ define <vscale x 1 x i32> @test_vlsseg6_nxv1i32(i32* %base, i64 %offset, i64 %vl
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli zero, a2, e32, mf2, ta, mu
 ; CHECK-NEXT:    vlsseg6e32.v v7, (a0), a1
-; CHECK-NEXT:    # kill: def $v8 killed $v8 killed $v7_v8_v9_v10_v11_v12
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call {<vscale x 1 x i32>,<vscale x 1 x i32>,<vscale x 1 x i32>,<vscale x 1 x i32>,<vscale x 1 x i32>,<vscale x 1 x i32>} @llvm.riscv.vlsseg6.nxv1i32(i32* %base, i64 %offset, i64 %vl)
@@ -656,7 +619,6 @@ define <vscale x 1 x i32> @test_vlsseg6_mask_nxv1i32(i32* %base, i64 %offset, i6
 ; CHECK-NEXT:    vmv1r.v v11, v7
 ; CHECK-NEXT:    vmv1r.v v12, v7
 ; CHECK-NEXT:    vlsseg6e32.v v7, (a0), a1, v0.t
-; CHECK-NEXT:    # kill: def $v8 killed $v8 killed $v7_v8_v9_v10_v11_v12
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call {<vscale x 1 x i32>,<vscale x 1 x i32>,<vscale x 1 x i32>,<vscale x 1 x i32>,<vscale x 1 x i32>,<vscale x 1 x i32>} @llvm.riscv.vlsseg6.nxv1i32(i32* %base, i64 %offset, i64 %vl)
@@ -674,7 +636,6 @@ define <vscale x 1 x i32> @test_vlsseg7_nxv1i32(i32* %base, i64 %offset, i64 %vl
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli zero, a2, e32, mf2, ta, mu
 ; CHECK-NEXT:    vlsseg7e32.v v7, (a0), a1
-; CHECK-NEXT:    # kill: def $v8 killed $v8 killed $v7_v8_v9_v10_v11_v12_v13
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call {<vscale x 1 x i32>,<vscale x 1 x i32>,<vscale x 1 x i32>,<vscale x 1 x i32>,<vscale x 1 x i32>,<vscale x 1 x i32>,<vscale x 1 x i32>} @llvm.riscv.vlsseg7.nxv1i32(i32* %base, i64 %offset, i64 %vl)
@@ -694,7 +655,6 @@ define <vscale x 1 x i32> @test_vlsseg7_mask_nxv1i32(i32* %base, i64 %offset, i6
 ; CHECK-NEXT:    vmv1r.v v12, v7
 ; CHECK-NEXT:    vmv1r.v v13, v7
 ; CHECK-NEXT:    vlsseg7e32.v v7, (a0), a1, v0.t
-; CHECK-NEXT:    # kill: def $v8 killed $v8 killed $v7_v8_v9_v10_v11_v12_v13
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call {<vscale x 1 x i32>,<vscale x 1 x i32>,<vscale x 1 x i32>,<vscale x 1 x i32>,<vscale x 1 x i32>,<vscale x 1 x i32>,<vscale x 1 x i32>} @llvm.riscv.vlsseg7.nxv1i32(i32* %base, i64 %offset, i64 %vl)
@@ -712,7 +672,6 @@ define <vscale x 1 x i32> @test_vlsseg8_nxv1i32(i32* %base, i64 %offset, i64 %vl
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli zero, a2, e32, mf2, ta, mu
 ; CHECK-NEXT:    vlsseg8e32.v v7, (a0), a1
-; CHECK-NEXT:    # kill: def $v8 killed $v8 killed $v7_v8_v9_v10_v11_v12_v13_v14
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call {<vscale x 1 x i32>,<vscale x 1 x i32>,<vscale x 1 x i32>,<vscale x 1 x i32>,<vscale x 1 x i32>,<vscale x 1 x i32>,<vscale x 1 x i32>,<vscale x 1 x i32>} @llvm.riscv.vlsseg8.nxv1i32(i32* %base, i64 %offset, i64 %vl)
@@ -733,7 +692,6 @@ define <vscale x 1 x i32> @test_vlsseg8_mask_nxv1i32(i32* %base, i64 %offset, i6
 ; CHECK-NEXT:    vmv1r.v v13, v7
 ; CHECK-NEXT:    vmv1r.v v14, v7
 ; CHECK-NEXT:    vlsseg8e32.v v7, (a0), a1, v0.t
-; CHECK-NEXT:    # kill: def $v8 killed $v8 killed $v7_v8_v9_v10_v11_v12_v13_v14
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call {<vscale x 1 x i32>,<vscale x 1 x i32>,<vscale x 1 x i32>,<vscale x 1 x i32>,<vscale x 1 x i32>,<vscale x 1 x i32>,<vscale x 1 x i32>,<vscale x 1 x i32>} @llvm.riscv.vlsseg8.nxv1i32(i32* %base, i64 %offset, i64 %vl)
@@ -751,7 +709,6 @@ define <vscale x 8 x i16> @test_vlsseg2_nxv8i16(i16* %base, i64 %offset, i64 %vl
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli zero, a2, e16, m2, ta, mu
 ; CHECK-NEXT:    vlsseg2e16.v v6, (a0), a1
-; CHECK-NEXT:    # kill: def $v8m2 killed $v8m2 killed $v6m2_v8m2
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call {<vscale x 8 x i16>,<vscale x 8 x i16>} @llvm.riscv.vlsseg2.nxv8i16(i16* %base, i64 %offset, i64 %vl)
@@ -766,7 +723,6 @@ define <vscale x 8 x i16> @test_vlsseg2_mask_nxv8i16(i16* %base, i64 %offset, i6
 ; CHECK-NEXT:    vlsseg2e16.v v6, (a0), a1
 ; CHECK-NEXT:    vmv2r.v v8, v6
 ; CHECK-NEXT:    vlsseg2e16.v v6, (a0), a1, v0.t
-; CHECK-NEXT:    # kill: def $v8m2 killed $v8m2 killed $v6m2_v8m2
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call {<vscale x 8 x i16>,<vscale x 8 x i16>} @llvm.riscv.vlsseg2.nxv8i16(i16* %base, i64 %offset, i64 %vl)
@@ -784,7 +740,6 @@ define <vscale x 8 x i16> @test_vlsseg3_nxv8i16(i16* %base, i64 %offset, i64 %vl
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli zero, a2, e16, m2, ta, mu
 ; CHECK-NEXT:    vlsseg3e16.v v6, (a0), a1
-; CHECK-NEXT:    # kill: def $v8m2 killed $v8m2 killed $v6m2_v8m2_v10m2
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call {<vscale x 8 x i16>,<vscale x 8 x i16>,<vscale x 8 x i16>} @llvm.riscv.vlsseg3.nxv8i16(i16* %base, i64 %offset, i64 %vl)
@@ -800,7 +755,6 @@ define <vscale x 8 x i16> @test_vlsseg3_mask_nxv8i16(i16* %base, i64 %offset, i6
 ; CHECK-NEXT:    vmv2r.v v8, v6
 ; CHECK-NEXT:    vmv2r.v v10, v6
 ; CHECK-NEXT:    vlsseg3e16.v v6, (a0), a1, v0.t
-; CHECK-NEXT:    # kill: def $v8m2 killed $v8m2 killed $v6m2_v8m2_v10m2
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call {<vscale x 8 x i16>,<vscale x 8 x i16>,<vscale x 8 x i16>} @llvm.riscv.vlsseg3.nxv8i16(i16* %base, i64 %offset, i64 %vl)
@@ -818,7 +772,6 @@ define <vscale x 8 x i16> @test_vlsseg4_nxv8i16(i16* %base, i64 %offset, i64 %vl
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli zero, a2, e16, m2, ta, mu
 ; CHECK-NEXT:    vlsseg4e16.v v6, (a0), a1
-; CHECK-NEXT:    # kill: def $v8m2 killed $v8m2 killed $v6m2_v8m2_v10m2_v12m2
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call {<vscale x 8 x i16>,<vscale x 8 x i16>,<vscale x 8 x i16>,<vscale x 8 x i16>} @llvm.riscv.vlsseg4.nxv8i16(i16* %base, i64 %offset, i64 %vl)
@@ -835,7 +788,6 @@ define <vscale x 8 x i16> @test_vlsseg4_mask_nxv8i16(i16* %base, i64 %offset, i6
 ; CHECK-NEXT:    vmv2r.v v10, v6
 ; CHECK-NEXT:    vmv2r.v v12, v6
 ; CHECK-NEXT:    vlsseg4e16.v v6, (a0), a1, v0.t
-; CHECK-NEXT:    # kill: def $v8m2 killed $v8m2 killed $v6m2_v8m2_v10m2_v12m2
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call {<vscale x 8 x i16>,<vscale x 8 x i16>,<vscale x 8 x i16>,<vscale x 8 x i16>} @llvm.riscv.vlsseg4.nxv8i16(i16* %base, i64 %offset, i64 %vl)
@@ -853,7 +805,6 @@ define <vscale x 4 x i8> @test_vlsseg2_nxv4i8(i8* %base, i64 %offset, i64 %vl) {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli zero, a2, e8, mf2, ta, mu
 ; CHECK-NEXT:    vlsseg2e8.v v7, (a0), a1
-; CHECK-NEXT:    # kill: def $v8 killed $v8 killed $v7_v8
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call {<vscale x 4 x i8>,<vscale x 4 x i8>} @llvm.riscv.vlsseg2.nxv4i8(i8* %base, i64 %offset, i64 %vl)
@@ -868,7 +819,6 @@ define <vscale x 4 x i8> @test_vlsseg2_mask_nxv4i8(i8* %base, i64 %offset, i64 %
 ; CHECK-NEXT:    vlsseg2e8.v v7, (a0), a1
 ; CHECK-NEXT:    vmv1r.v v8, v7
 ; CHECK-NEXT:    vlsseg2e8.v v7, (a0), a1, v0.t
-; CHECK-NEXT:    # kill: def $v8 killed $v8 killed $v7_v8
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call {<vscale x 4 x i8>,<vscale x 4 x i8>} @llvm.riscv.vlsseg2.nxv4i8(i8* %base, i64 %offset, i64 %vl)
@@ -886,7 +836,6 @@ define <vscale x 4 x i8> @test_vlsseg3_nxv4i8(i8* %base, i64 %offset, i64 %vl) {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli zero, a2, e8, mf2, ta, mu
 ; CHECK-NEXT:    vlsseg3e8.v v7, (a0), a1
-; CHECK-NEXT:    # kill: def $v8 killed $v8 killed $v7_v8_v9
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call {<vscale x 4 x i8>,<vscale x 4 x i8>,<vscale x 4 x i8>} @llvm.riscv.vlsseg3.nxv4i8(i8* %base, i64 %offset, i64 %vl)
@@ -902,7 +851,6 @@ define <vscale x 4 x i8> @test_vlsseg3_mask_nxv4i8(i8* %base, i64 %offset, i64 %
 ; CHECK-NEXT:    vmv1r.v v8, v7
 ; CHECK-NEXT:    vmv1r.v v9, v7
 ; CHECK-NEXT:    vlsseg3e8.v v7, (a0), a1, v0.t
-; CHECK-NEXT:    # kill: def $v8 killed $v8 killed $v7_v8_v9
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call {<vscale x 4 x i8>,<vscale x 4 x i8>,<vscale x 4 x i8>} @llvm.riscv.vlsseg3.nxv4i8(i8* %base, i64 %offset, i64 %vl)
@@ -920,7 +868,6 @@ define <vscale x 4 x i8> @test_vlsseg4_nxv4i8(i8* %base, i64 %offset, i64 %vl) {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli zero, a2, e8, mf2, ta, mu
 ; CHECK-NEXT:    vlsseg4e8.v v7, (a0), a1
-; CHECK-NEXT:    # kill: def $v8 killed $v8 killed $v7_v8_v9_v10
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call {<vscale x 4 x i8>,<vscale x 4 x i8>,<vscale x 4 x i8>,<vscale x 4 x i8>} @llvm.riscv.vlsseg4.nxv4i8(i8* %base, i64 %offset, i64 %vl)
@@ -937,7 +884,6 @@ define <vscale x 4 x i8> @test_vlsseg4_mask_nxv4i8(i8* %base, i64 %offset, i64 %
 ; CHECK-NEXT:    vmv1r.v v9, v7
 ; CHECK-NEXT:    vmv1r.v v10, v7
 ; CHECK-NEXT:    vlsseg4e8.v v7, (a0), a1, v0.t
-; CHECK-NEXT:    # kill: def $v8 killed $v8 killed $v7_v8_v9_v10
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call {<vscale x 4 x i8>,<vscale x 4 x i8>,<vscale x 4 x i8>,<vscale x 4 x i8>} @llvm.riscv.vlsseg4.nxv4i8(i8* %base, i64 %offset, i64 %vl)
@@ -955,7 +901,6 @@ define <vscale x 4 x i8> @test_vlsseg5_nxv4i8(i8* %base, i64 %offset, i64 %vl) {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli zero, a2, e8, mf2, ta, mu
 ; CHECK-NEXT:    vlsseg5e8.v v7, (a0), a1
-; CHECK-NEXT:    # kill: def $v8 killed $v8 killed $v7_v8_v9_v10_v11
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call {<vscale x 4 x i8>,<vscale x 4 x i8>,<vscale x 4 x i8>,<vscale x 4 x i8>,<vscale x 4 x i8>} @llvm.riscv.vlsseg5.nxv4i8(i8* %base, i64 %offset, i64 %vl)
@@ -973,7 +918,6 @@ define <vscale x 4 x i8> @test_vlsseg5_mask_nxv4i8(i8* %base, i64 %offset, i64 %
 ; CHECK-NEXT:    vmv1r.v v10, v7
 ; CHECK-NEXT:    vmv1r.v v11, v7
 ; CHECK-NEXT:    vlsseg5e8.v v7, (a0), a1, v0.t
-; CHECK-NEXT:    # kill: def $v8 killed $v8 killed $v7_v8_v9_v10_v11
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call {<vscale x 4 x i8>,<vscale x 4 x i8>,<vscale x 4 x i8>,<vscale x 4 x i8>,<vscale x 4 x i8>} @llvm.riscv.vlsseg5.nxv4i8(i8* %base, i64 %offset, i64 %vl)
@@ -991,7 +935,6 @@ define <vscale x 4 x i8> @test_vlsseg6_nxv4i8(i8* %base, i64 %offset, i64 %vl) {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli zero, a2, e8, mf2, ta, mu
 ; CHECK-NEXT:    vlsseg6e8.v v7, (a0), a1
-; CHECK-NEXT:    # kill: def $v8 killed $v8 killed $v7_v8_v9_v10_v11_v12
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call {<vscale x 4 x i8>,<vscale x 4 x i8>,<vscale x 4 x i8>,<vscale x 4 x i8>,<vscale x 4 x i8>,<vscale x 4 x i8>} @llvm.riscv.vlsseg6.nxv4i8(i8* %base, i64 %offset, i64 %vl)
@@ -1010,7 +953,6 @@ define <vscale x 4 x i8> @test_vlsseg6_mask_nxv4i8(i8* %base, i64 %offset, i64 %
 ; CHECK-NEXT:    vmv1r.v v11, v7
 ; CHECK-NEXT:    vmv1r.v v12, v7
 ; CHECK-NEXT:    vlsseg6e8.v v7, (a0), a1, v0.t
-; CHECK-NEXT:    # kill: def $v8 killed $v8 killed $v7_v8_v9_v10_v11_v12
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call {<vscale x 4 x i8>,<vscale x 4 x i8>,<vscale x 4 x i8>,<vscale x 4 x i8>,<vscale x 4 x i8>,<vscale x 4 x i8>} @llvm.riscv.vlsseg6.nxv4i8(i8* %base, i64 %offset, i64 %vl)
@@ -1028,7 +970,6 @@ define <vscale x 4 x i8> @test_vlsseg7_nxv4i8(i8* %base, i64 %offset, i64 %vl) {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli zero, a2, e8, mf2, ta, mu
 ; CHECK-NEXT:    vlsseg7e8.v v7, (a0), a1
-; CHECK-NEXT:    # kill: def $v8 killed $v8 killed $v7_v8_v9_v10_v11_v12_v13
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call {<vscale x 4 x i8>,<vscale x 4 x i8>,<vscale x 4 x i8>,<vscale x 4 x i8>,<vscale x 4 x i8>,<vscale x 4 x i8>,<vscale x 4 x i8>} @llvm.riscv.vlsseg7.nxv4i8(i8* %base, i64 %offset, i64 %vl)
@@ -1048,7 +989,6 @@ define <vscale x 4 x i8> @test_vlsseg7_mask_nxv4i8(i8* %base, i64 %offset, i64 %
 ; CHECK-NEXT:    vmv1r.v v12, v7
 ; CHECK-NEXT:    vmv1r.v v13, v7
 ; CHECK-NEXT:    vlsseg7e8.v v7, (a0), a1, v0.t
-; CHECK-NEXT:    # kill: def $v8 killed $v8 killed $v7_v8_v9_v10_v11_v12_v13
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call {<vscale x 4 x i8>,<vscale x 4 x i8>,<vscale x 4 x i8>,<vscale x 4 x i8>,<vscale x 4 x i8>,<vscale x 4 x i8>,<vscale x 4 x i8>} @llvm.riscv.vlsseg7.nxv4i8(i8* %base, i64 %offset, i64 %vl)
@@ -1066,7 +1006,6 @@ define <vscale x 4 x i8> @test_vlsseg8_nxv4i8(i8* %base, i64 %offset, i64 %vl) {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli zero, a2, e8, mf2, ta, mu
 ; CHECK-NEXT:    vlsseg8e8.v v7, (a0), a1
-; CHECK-NEXT:    # kill: def $v8 killed $v8 killed $v7_v8_v9_v10_v11_v12_v13_v14
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call {<vscale x 4 x i8>,<vscale x 4 x i8>,<vscale x 4 x i8>,<vscale x 4 x i8>,<vscale x 4 x i8>,<vscale x 4 x i8>,<vscale x 4 x i8>,<vscale x 4 x i8>} @llvm.riscv.vlsseg8.nxv4i8(i8* %base, i64 %offset, i64 %vl)
@@ -1087,7 +1026,6 @@ define <vscale x 4 x i8> @test_vlsseg8_mask_nxv4i8(i8* %base, i64 %offset, i64 %
 ; CHECK-NEXT:    vmv1r.v v13, v7
 ; CHECK-NEXT:    vmv1r.v v14, v7
 ; CHECK-NEXT:    vlsseg8e8.v v7, (a0), a1, v0.t
-; CHECK-NEXT:    # kill: def $v8 killed $v8 killed $v7_v8_v9_v10_v11_v12_v13_v14
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call {<vscale x 4 x i8>,<vscale x 4 x i8>,<vscale x 4 x i8>,<vscale x 4 x i8>,<vscale x 4 x i8>,<vscale x 4 x i8>,<vscale x 4 x i8>,<vscale x 4 x i8>} @llvm.riscv.vlsseg8.nxv4i8(i8* %base, i64 %offset, i64 %vl)
@@ -1105,7 +1043,6 @@ define <vscale x 1 x i16> @test_vlsseg2_nxv1i16(i16* %base, i64 %offset, i64 %vl
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli zero, a2, e16, mf4, ta, mu
 ; CHECK-NEXT:    vlsseg2e16.v v7, (a0), a1
-; CHECK-NEXT:    # kill: def $v8 killed $v8 killed $v7_v8
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call {<vscale x 1 x i16>,<vscale x 1 x i16>} @llvm.riscv.vlsseg2.nxv1i16(i16* %base, i64 %offset, i64 %vl)
@@ -1120,7 +1057,6 @@ define <vscale x 1 x i16> @test_vlsseg2_mask_nxv1i16(i16* %base, i64 %offset, i6
 ; CHECK-NEXT:    vlsseg2e16.v v7, (a0), a1
 ; CHECK-NEXT:    vmv1r.v v8, v7
 ; CHECK-NEXT:    vlsseg2e16.v v7, (a0), a1, v0.t
-; CHECK-NEXT:    # kill: def $v8 killed $v8 killed $v7_v8
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call {<vscale x 1 x i16>,<vscale x 1 x i16>} @llvm.riscv.vlsseg2.nxv1i16(i16* %base, i64 %offset, i64 %vl)
@@ -1138,7 +1074,6 @@ define <vscale x 1 x i16> @test_vlsseg3_nxv1i16(i16* %base, i64 %offset, i64 %vl
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli zero, a2, e16, mf4, ta, mu
 ; CHECK-NEXT:    vlsseg3e16.v v7, (a0), a1
-; CHECK-NEXT:    # kill: def $v8 killed $v8 killed $v7_v8_v9
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call {<vscale x 1 x i16>,<vscale x 1 x i16>,<vscale x 1 x i16>} @llvm.riscv.vlsseg3.nxv1i16(i16* %base, i64 %offset, i64 %vl)
@@ -1154,7 +1089,6 @@ define <vscale x 1 x i16> @test_vlsseg3_mask_nxv1i16(i16* %base, i64 %offset, i6
 ; CHECK-NEXT:    vmv1r.v v8, v7
 ; CHECK-NEXT:    vmv1r.v v9, v7
 ; CHECK-NEXT:    vlsseg3e16.v v7, (a0), a1, v0.t
-; CHECK-NEXT:    # kill: def $v8 killed $v8 killed $v7_v8_v9
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call {<vscale x 1 x i16>,<vscale x 1 x i16>,<vscale x 1 x i16>} @llvm.riscv.vlsseg3.nxv1i16(i16* %base, i64 %offset, i64 %vl)
@@ -1172,7 +1106,6 @@ define <vscale x 1 x i16> @test_vlsseg4_nxv1i16(i16* %base, i64 %offset, i64 %vl
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli zero, a2, e16, mf4, ta, mu
 ; CHECK-NEXT:    vlsseg4e16.v v7, (a0), a1
-; CHECK-NEXT:    # kill: def $v8 killed $v8 killed $v7_v8_v9_v10
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call {<vscale x 1 x i16>,<vscale x 1 x i16>,<vscale x 1 x i16>,<vscale x 1 x i16>} @llvm.riscv.vlsseg4.nxv1i16(i16* %base, i64 %offset, i64 %vl)
@@ -1189,7 +1122,6 @@ define <vscale x 1 x i16> @test_vlsseg4_mask_nxv1i16(i16* %base, i64 %offset, i6
 ; CHECK-NEXT:    vmv1r.v v9, v7
 ; CHECK-NEXT:    vmv1r.v v10, v7
 ; CHECK-NEXT:    vlsseg4e16.v v7, (a0), a1, v0.t
-; CHECK-NEXT:    # kill: def $v8 killed $v8 killed $v7_v8_v9_v10
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call {<vscale x 1 x i16>,<vscale x 1 x i16>,<vscale x 1 x i16>,<vscale x 1 x i16>} @llvm.riscv.vlsseg4.nxv1i16(i16* %base, i64 %offset, i64 %vl)
@@ -1207,7 +1139,6 @@ define <vscale x 1 x i16> @test_vlsseg5_nxv1i16(i16* %base, i64 %offset, i64 %vl
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli zero, a2, e16, mf4, ta, mu
 ; CHECK-NEXT:    vlsseg5e16.v v7, (a0), a1
-; CHECK-NEXT:    # kill: def $v8 killed $v8 killed $v7_v8_v9_v10_v11
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call {<vscale x 1 x i16>,<vscale x 1 x i16>,<vscale x 1 x i16>,<vscale x 1 x i16>,<vscale x 1 x i16>} @llvm.riscv.vlsseg5.nxv1i16(i16* %base, i64 %offset, i64 %vl)
@@ -1225,7 +1156,6 @@ define <vscale x 1 x i16> @test_vlsseg5_mask_nxv1i16(i16* %base, i64 %offset, i6
 ; CHECK-NEXT:    vmv1r.v v10, v7
 ; CHECK-NEXT:    vmv1r.v v11, v7
 ; CHECK-NEXT:    vlsseg5e16.v v7, (a0), a1, v0.t
-; CHECK-NEXT:    # kill: def $v8 killed $v8 killed $v7_v8_v9_v10_v11
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call {<vscale x 1 x i16>,<vscale x 1 x i16>,<vscale x 1 x i16>,<vscale x 1 x i16>,<vscale x 1 x i16>} @llvm.riscv.vlsseg5.nxv1i16(i16* %base, i64 %offset, i64 %vl)
@@ -1243,7 +1173,6 @@ define <vscale x 1 x i16> @test_vlsseg6_nxv1i16(i16* %base, i64 %offset, i64 %vl
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli zero, a2, e16, mf4, ta, mu
 ; CHECK-NEXT:    vlsseg6e16.v v7, (a0), a1
-; CHECK-NEXT:    # kill: def $v8 killed $v8 killed $v7_v8_v9_v10_v11_v12
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call {<vscale x 1 x i16>,<vscale x 1 x i16>,<vscale x 1 x i16>,<vscale x 1 x i16>,<vscale x 1 x i16>,<vscale x 1 x i16>} @llvm.riscv.vlsseg6.nxv1i16(i16* %base, i64 %offset, i64 %vl)
@@ -1262,7 +1191,6 @@ define <vscale x 1 x i16> @test_vlsseg6_mask_nxv1i16(i16* %base, i64 %offset, i6
 ; CHECK-NEXT:    vmv1r.v v11, v7
 ; CHECK-NEXT:    vmv1r.v v12, v7
 ; CHECK-NEXT:    vlsseg6e16.v v7, (a0), a1, v0.t
-; CHECK-NEXT:    # kill: def $v8 killed $v8 killed $v7_v8_v9_v10_v11_v12
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call {<vscale x 1 x i16>,<vscale x 1 x i16>,<vscale x 1 x i16>,<vscale x 1 x i16>,<vscale x 1 x i16>,<vscale x 1 x i16>} @llvm.riscv.vlsseg6.nxv1i16(i16* %base, i64 %offset, i64 %vl)
@@ -1280,7 +1208,6 @@ define <vscale x 1 x i16> @test_vlsseg7_nxv1i16(i16* %base, i64 %offset, i64 %vl
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli zero, a2, e16, mf4, ta, mu
 ; CHECK-NEXT:    vlsseg7e16.v v7, (a0), a1
-; CHECK-NEXT:    # kill: def $v8 killed $v8 killed $v7_v8_v9_v10_v11_v12_v13
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call {<vscale x 1 x i16>,<vscale x 1 x i16>,<vscale x 1 x i16>,<vscale x 1 x i16>,<vscale x 1 x i16>,<vscale x 1 x i16>,<vscale x 1 x i16>} @llvm.riscv.vlsseg7.nxv1i16(i16* %base, i64 %offset, i64 %vl)
@@ -1300,7 +1227,6 @@ define <vscale x 1 x i16> @test_vlsseg7_mask_nxv1i16(i16* %base, i64 %offset, i6
 ; CHECK-NEXT:    vmv1r.v v12, v7
 ; CHECK-NEXT:    vmv1r.v v13, v7
 ; CHECK-NEXT:    vlsseg7e16.v v7, (a0), a1, v0.t
-; CHECK-NEXT:    # kill: def $v8 killed $v8 killed $v7_v8_v9_v10_v11_v12_v13
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call {<vscale x 1 x i16>,<vscale x 1 x i16>,<vscale x 1 x i16>,<vscale x 1 x i16>,<vscale x 1 x i16>,<vscale x 1 x i16>,<vscale x 1 x i16>} @llvm.riscv.vlsseg7.nxv1i16(i16* %base, i64 %offset, i64 %vl)
@@ -1318,7 +1244,6 @@ define <vscale x 1 x i16> @test_vlsseg8_nxv1i16(i16* %base, i64 %offset, i64 %vl
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli zero, a2, e16, mf4, ta, mu
 ; CHECK-NEXT:    vlsseg8e16.v v7, (a0), a1
-; CHECK-NEXT:    # kill: def $v8 killed $v8 killed $v7_v8_v9_v10_v11_v12_v13_v14
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call {<vscale x 1 x i16>,<vscale x 1 x i16>,<vscale x 1 x i16>,<vscale x 1 x i16>,<vscale x 1 x i16>,<vscale x 1 x i16>,<vscale x 1 x i16>,<vscale x 1 x i16>} @llvm.riscv.vlsseg8.nxv1i16(i16* %base, i64 %offset, i64 %vl)
@@ -1339,7 +1264,6 @@ define <vscale x 1 x i16> @test_vlsseg8_mask_nxv1i16(i16* %base, i64 %offset, i6
 ; CHECK-NEXT:    vmv1r.v v13, v7
 ; CHECK-NEXT:    vmv1r.v v14, v7
 ; CHECK-NEXT:    vlsseg8e16.v v7, (a0), a1, v0.t
-; CHECK-NEXT:    # kill: def $v8 killed $v8 killed $v7_v8_v9_v10_v11_v12_v13_v14
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call {<vscale x 1 x i16>,<vscale x 1 x i16>,<vscale x 1 x i16>,<vscale x 1 x i16>,<vscale x 1 x i16>,<vscale x 1 x i16>,<vscale x 1 x i16>,<vscale x 1 x i16>} @llvm.riscv.vlsseg8.nxv1i16(i16* %base, i64 %offset, i64 %vl)
@@ -1357,7 +1281,6 @@ define <vscale x 2 x i32> @test_vlsseg2_nxv2i32(i32* %base, i64 %offset, i64 %vl
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli zero, a2, e32, m1, ta, mu
 ; CHECK-NEXT:    vlsseg2e32.v v7, (a0), a1
-; CHECK-NEXT:    # kill: def $v8 killed $v8 killed $v7_v8
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call {<vscale x 2 x i32>,<vscale x 2 x i32>} @llvm.riscv.vlsseg2.nxv2i32(i32* %base, i64 %offset, i64 %vl)
@@ -1372,7 +1295,6 @@ define <vscale x 2 x i32> @test_vlsseg2_mask_nxv2i32(i32* %base, i64 %offset, i6
 ; CHECK-NEXT:    vlsseg2e32.v v7, (a0), a1
 ; CHECK-NEXT:    vmv1r.v v8, v7
 ; CHECK-NEXT:    vlsseg2e32.v v7, (a0), a1, v0.t
-; CHECK-NEXT:    # kill: def $v8 killed $v8 killed $v7_v8
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call {<vscale x 2 x i32>,<vscale x 2 x i32>} @llvm.riscv.vlsseg2.nxv2i32(i32* %base, i64 %offset, i64 %vl)
@@ -1390,7 +1312,6 @@ define <vscale x 2 x i32> @test_vlsseg3_nxv2i32(i32* %base, i64 %offset, i64 %vl
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli zero, a2, e32, m1, ta, mu
 ; CHECK-NEXT:    vlsseg3e32.v v7, (a0), a1
-; CHECK-NEXT:    # kill: def $v8 killed $v8 killed $v7_v8_v9
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call {<vscale x 2 x i32>,<vscale x 2 x i32>,<vscale x 2 x i32>} @llvm.riscv.vlsseg3.nxv2i32(i32* %base, i64 %offset, i64 %vl)
@@ -1406,7 +1327,6 @@ define <vscale x 2 x i32> @test_vlsseg3_mask_nxv2i32(i32* %base, i64 %offset, i6
 ; CHECK-NEXT:    vmv1r.v v8, v7
 ; CHECK-NEXT:    vmv1r.v v9, v7
 ; CHECK-NEXT:    vlsseg3e32.v v7, (a0), a1, v0.t
-; CHECK-NEXT:    # kill: def $v8 killed $v8 killed $v7_v8_v9
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call {<vscale x 2 x i32>,<vscale x 2 x i32>,<vscale x 2 x i32>} @llvm.riscv.vlsseg3.nxv2i32(i32* %base, i64 %offset, i64 %vl)
@@ -1424,7 +1344,6 @@ define <vscale x 2 x i32> @test_vlsseg4_nxv2i32(i32* %base, i64 %offset, i64 %vl
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli zero, a2, e32, m1, ta, mu
 ; CHECK-NEXT:    vlsseg4e32.v v7, (a0), a1
-; CHECK-NEXT:    # kill: def $v8 killed $v8 killed $v7_v8_v9_v10
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call {<vscale x 2 x i32>,<vscale x 2 x i32>,<vscale x 2 x i32>,<vscale x 2 x i32>} @llvm.riscv.vlsseg4.nxv2i32(i32* %base, i64 %offset, i64 %vl)
@@ -1441,7 +1360,6 @@ define <vscale x 2 x i32> @test_vlsseg4_mask_nxv2i32(i32* %base, i64 %offset, i6
 ; CHECK-NEXT:    vmv1r.v v9, v7
 ; CHECK-NEXT:    vmv1r.v v10, v7
 ; CHECK-NEXT:    vlsseg4e32.v v7, (a0), a1, v0.t
-; CHECK-NEXT:    # kill: def $v8 killed $v8 killed $v7_v8_v9_v10
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call {<vscale x 2 x i32>,<vscale x 2 x i32>,<vscale x 2 x i32>,<vscale x 2 x i32>} @llvm.riscv.vlsseg4.nxv2i32(i32* %base, i64 %offset, i64 %vl)
@@ -1459,7 +1377,6 @@ define <vscale x 2 x i32> @test_vlsseg5_nxv2i32(i32* %base, i64 %offset, i64 %vl
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli zero, a2, e32, m1, ta, mu
 ; CHECK-NEXT:    vlsseg5e32.v v7, (a0), a1
-; CHECK-NEXT:    # kill: def $v8 killed $v8 killed $v7_v8_v9_v10_v11
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call {<vscale x 2 x i32>,<vscale x 2 x i32>,<vscale x 2 x i32>,<vscale x 2 x i32>,<vscale x 2 x i32>} @llvm.riscv.vlsseg5.nxv2i32(i32* %base, i64 %offset, i64 %vl)
@@ -1477,7 +1394,6 @@ define <vscale x 2 x i32> @test_vlsseg5_mask_nxv2i32(i32* %base, i64 %offset, i6
 ; CHECK-NEXT:    vmv1r.v v10, v7
 ; CHECK-NEXT:    vmv1r.v v11, v7
 ; CHECK-NEXT:    vlsseg5e32.v v7, (a0), a1, v0.t
-; CHECK-NEXT:    # kill: def $v8 killed $v8 killed $v7_v8_v9_v10_v11
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call {<vscale x 2 x i32>,<vscale x 2 x i32>,<vscale x 2 x i32>,<vscale x 2 x i32>,<vscale x 2 x i32>} @llvm.riscv.vlsseg5.nxv2i32(i32* %base, i64 %offset, i64 %vl)
@@ -1495,7 +1411,6 @@ define <vscale x 2 x i32> @test_vlsseg6_nxv2i32(i32* %base, i64 %offset, i64 %vl
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli zero, a2, e32, m1, ta, mu
 ; CHECK-NEXT:    vlsseg6e32.v v7, (a0), a1
-; CHECK-NEXT:    # kill: def $v8 killed $v8 killed $v7_v8_v9_v10_v11_v12
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call {<vscale x 2 x i32>,<vscale x 2 x i32>,<vscale x 2 x i32>,<vscale x 2 x i32>,<vscale x 2 x i32>,<vscale x 2 x i32>} @llvm.riscv.vlsseg6.nxv2i32(i32* %base, i64 %offset, i64 %vl)
@@ -1514,7 +1429,6 @@ define <vscale x 2 x i32> @test_vlsseg6_mask_nxv2i32(i32* %base, i64 %offset, i6
 ; CHECK-NEXT:    vmv1r.v v11, v7
 ; CHECK-NEXT:    vmv1r.v v12, v7
 ; CHECK-NEXT:    vlsseg6e32.v v7, (a0), a1, v0.t
-; CHECK-NEXT:    # kill: def $v8 killed $v8 killed $v7_v8_v9_v10_v11_v12
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call {<vscale x 2 x i32>,<vscale x 2 x i32>,<vscale x 2 x i32>,<vscale x 2 x i32>,<vscale x 2 x i32>,<vscale x 2 x i32>} @llvm.riscv.vlsseg6.nxv2i32(i32* %base, i64 %offset, i64 %vl)
@@ -1532,7 +1446,6 @@ define <vscale x 2 x i32> @test_vlsseg7_nxv2i32(i32* %base, i64 %offset, i64 %vl
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli zero, a2, e32, m1, ta, mu
 ; CHECK-NEXT:    vlsseg7e32.v v7, (a0), a1
-; CHECK-NEXT:    # kill: def $v8 killed $v8 killed $v7_v8_v9_v10_v11_v12_v13
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call {<vscale x 2 x i32>,<vscale x 2 x i32>,<vscale x 2 x i32>,<vscale x 2 x i32>,<vscale x 2 x i32>,<vscale x 2 x i32>,<vscale x 2 x i32>} @llvm.riscv.vlsseg7.nxv2i32(i32* %base, i64 %offset, i64 %vl)
@@ -1552,7 +1465,6 @@ define <vscale x 2 x i32> @test_vlsseg7_mask_nxv2i32(i32* %base, i64 %offset, i6
 ; CHECK-NEXT:    vmv1r.v v12, v7
 ; CHECK-NEXT:    vmv1r.v v13, v7
 ; CHECK-NEXT:    vlsseg7e32.v v7, (a0), a1, v0.t
-; CHECK-NEXT:    # kill: def $v8 killed $v8 killed $v7_v8_v9_v10_v11_v12_v13
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call {<vscale x 2 x i32>,<vscale x 2 x i32>,<vscale x 2 x i32>,<vscale x 2 x i32>,<vscale x 2 x i32>,<vscale x 2 x i32>,<vscale x 2 x i32>} @llvm.riscv.vlsseg7.nxv2i32(i32* %base, i64 %offset, i64 %vl)
@@ -1570,7 +1482,6 @@ define <vscale x 2 x i32> @test_vlsseg8_nxv2i32(i32* %base, i64 %offset, i64 %vl
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli zero, a2, e32, m1, ta, mu
 ; CHECK-NEXT:    vlsseg8e32.v v7, (a0), a1
-; CHECK-NEXT:    # kill: def $v8 killed $v8 killed $v7_v8_v9_v10_v11_v12_v13_v14
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call {<vscale x 2 x i32>,<vscale x 2 x i32>,<vscale x 2 x i32>,<vscale x 2 x i32>,<vscale x 2 x i32>,<vscale x 2 x i32>,<vscale x 2 x i32>,<vscale x 2 x i32>} @llvm.riscv.vlsseg8.nxv2i32(i32* %base, i64 %offset, i64 %vl)
@@ -1591,7 +1502,6 @@ define <vscale x 2 x i32> @test_vlsseg8_mask_nxv2i32(i32* %base, i64 %offset, i6
 ; CHECK-NEXT:    vmv1r.v v13, v7
 ; CHECK-NEXT:    vmv1r.v v14, v7
 ; CHECK-NEXT:    vlsseg8e32.v v7, (a0), a1, v0.t
-; CHECK-NEXT:    # kill: def $v8 killed $v8 killed $v7_v8_v9_v10_v11_v12_v13_v14
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call {<vscale x 2 x i32>,<vscale x 2 x i32>,<vscale x 2 x i32>,<vscale x 2 x i32>,<vscale x 2 x i32>,<vscale x 2 x i32>,<vscale x 2 x i32>,<vscale x 2 x i32>} @llvm.riscv.vlsseg8.nxv2i32(i32* %base, i64 %offset, i64 %vl)
@@ -1609,7 +1519,6 @@ define <vscale x 8 x i8> @test_vlsseg2_nxv8i8(i8* %base, i64 %offset, i64 %vl) {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli zero, a2, e8, m1, ta, mu
 ; CHECK-NEXT:    vlsseg2e8.v v7, (a0), a1
-; CHECK-NEXT:    # kill: def $v8 killed $v8 killed $v7_v8
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call {<vscale x 8 x i8>,<vscale x 8 x i8>} @llvm.riscv.vlsseg2.nxv8i8(i8* %base, i64 %offset, i64 %vl)
@@ -1624,7 +1533,6 @@ define <vscale x 8 x i8> @test_vlsseg2_mask_nxv8i8(i8* %base, i64 %offset, i64 %
 ; CHECK-NEXT:    vlsseg2e8.v v7, (a0), a1
 ; CHECK-NEXT:    vmv1r.v v8, v7
 ; CHECK-NEXT:    vlsseg2e8.v v7, (a0), a1, v0.t
-; CHECK-NEXT:    # kill: def $v8 killed $v8 killed $v7_v8
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call {<vscale x 8 x i8>,<vscale x 8 x i8>} @llvm.riscv.vlsseg2.nxv8i8(i8* %base, i64 %offset, i64 %vl)
@@ -1642,7 +1550,6 @@ define <vscale x 8 x i8> @test_vlsseg3_nxv8i8(i8* %base, i64 %offset, i64 %vl) {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli zero, a2, e8, m1, ta, mu
 ; CHECK-NEXT:    vlsseg3e8.v v7, (a0), a1
-; CHECK-NEXT:    # kill: def $v8 killed $v8 killed $v7_v8_v9
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call {<vscale x 8 x i8>,<vscale x 8 x i8>,<vscale x 8 x i8>} @llvm.riscv.vlsseg3.nxv8i8(i8* %base, i64 %offset, i64 %vl)
@@ -1658,7 +1565,6 @@ define <vscale x 8 x i8> @test_vlsseg3_mask_nxv8i8(i8* %base, i64 %offset, i64 %
 ; CHECK-NEXT:    vmv1r.v v8, v7
 ; CHECK-NEXT:    vmv1r.v v9, v7
 ; CHECK-NEXT:    vlsseg3e8.v v7, (a0), a1, v0.t
-; CHECK-NEXT:    # kill: def $v8 killed $v8 killed $v7_v8_v9
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call {<vscale x 8 x i8>,<vscale x 8 x i8>,<vscale x 8 x i8>} @llvm.riscv.vlsseg3.nxv8i8(i8* %base, i64 %offset, i64 %vl)
@@ -1676,7 +1582,6 @@ define <vscale x 8 x i8> @test_vlsseg4_nxv8i8(i8* %base, i64 %offset, i64 %vl) {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli zero, a2, e8, m1, ta, mu
 ; CHECK-NEXT:    vlsseg4e8.v v7, (a0), a1
-; CHECK-NEXT:    # kill: def $v8 killed $v8 killed $v7_v8_v9_v10
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call {<vscale x 8 x i8>,<vscale x 8 x i8>,<vscale x 8 x i8>,<vscale x 8 x i8>} @llvm.riscv.vlsseg4.nxv8i8(i8* %base, i64 %offset, i64 %vl)
@@ -1693,7 +1598,6 @@ define <vscale x 8 x i8> @test_vlsseg4_mask_nxv8i8(i8* %base, i64 %offset, i64 %
 ; CHECK-NEXT:    vmv1r.v v9, v7
 ; CHECK-NEXT:    vmv1r.v v10, v7
 ; CHECK-NEXT:    vlsseg4e8.v v7, (a0), a1, v0.t
-; CHECK-NEXT:    # kill: def $v8 killed $v8 killed $v7_v8_v9_v10
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call {<vscale x 8 x i8>,<vscale x 8 x i8>,<vscale x 8 x i8>,<vscale x 8 x i8>} @llvm.riscv.vlsseg4.nxv8i8(i8* %base, i64 %offset, i64 %vl)
@@ -1711,7 +1615,6 @@ define <vscale x 8 x i8> @test_vlsseg5_nxv8i8(i8* %base, i64 %offset, i64 %vl) {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli zero, a2, e8, m1, ta, mu
 ; CHECK-NEXT:    vlsseg5e8.v v7, (a0), a1
-; CHECK-NEXT:    # kill: def $v8 killed $v8 killed $v7_v8_v9_v10_v11
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call {<vscale x 8 x i8>,<vscale x 8 x i8>,<vscale x 8 x i8>,<vscale x 8 x i8>,<vscale x 8 x i8>} @llvm.riscv.vlsseg5.nxv8i8(i8* %base, i64 %offset, i64 %vl)
@@ -1729,7 +1632,6 @@ define <vscale x 8 x i8> @test_vlsseg5_mask_nxv8i8(i8* %base, i64 %offset, i64 %
 ; CHECK-NEXT:    vmv1r.v v10, v7
 ; CHECK-NEXT:    vmv1r.v v11, v7
 ; CHECK-NEXT:    vlsseg5e8.v v7, (a0), a1, v0.t
-; CHECK-NEXT:    # kill: def $v8 killed $v8 killed $v7_v8_v9_v10_v11
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call {<vscale x 8 x i8>,<vscale x 8 x i8>,<vscale x 8 x i8>,<vscale x 8 x i8>,<vscale x 8 x i8>} @llvm.riscv.vlsseg5.nxv8i8(i8* %base, i64 %offset, i64 %vl)
@@ -1747,7 +1649,6 @@ define <vscale x 8 x i8> @test_vlsseg6_nxv8i8(i8* %base, i64 %offset, i64 %vl) {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli zero, a2, e8, m1, ta, mu
 ; CHECK-NEXT:    vlsseg6e8.v v7, (a0), a1
-; CHECK-NEXT:    # kill: def $v8 killed $v8 killed $v7_v8_v9_v10_v11_v12
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call {<vscale x 8 x i8>,<vscale x 8 x i8>,<vscale x 8 x i8>,<vscale x 8 x i8>,<vscale x 8 x i8>,<vscale x 8 x i8>} @llvm.riscv.vlsseg6.nxv8i8(i8* %base, i64 %offset, i64 %vl)
@@ -1766,7 +1667,6 @@ define <vscale x 8 x i8> @test_vlsseg6_mask_nxv8i8(i8* %base, i64 %offset, i64 %
 ; CHECK-NEXT:    vmv1r.v v11, v7
 ; CHECK-NEXT:    vmv1r.v v12, v7
 ; CHECK-NEXT:    vlsseg6e8.v v7, (a0), a1, v0.t
-; CHECK-NEXT:    # kill: def $v8 killed $v8 killed $v7_v8_v9_v10_v11_v12
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call {<vscale x 8 x i8>,<vscale x 8 x i8>,<vscale x 8 x i8>,<vscale x 8 x i8>,<vscale x 8 x i8>,<vscale x 8 x i8>} @llvm.riscv.vlsseg6.nxv8i8(i8* %base, i64 %offset, i64 %vl)
@@ -1784,7 +1684,6 @@ define <vscale x 8 x i8> @test_vlsseg7_nxv8i8(i8* %base, i64 %offset, i64 %vl) {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli zero, a2, e8, m1, ta, mu
 ; CHECK-NEXT:    vlsseg7e8.v v7, (a0), a1
-; CHECK-NEXT:    # kill: def $v8 killed $v8 killed $v7_v8_v9_v10_v11_v12_v13
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call {<vscale x 8 x i8>,<vscale x 8 x i8>,<vscale x 8 x i8>,<vscale x 8 x i8>,<vscale x 8 x i8>,<vscale x 8 x i8>,<vscale x 8 x i8>} @llvm.riscv.vlsseg7.nxv8i8(i8* %base, i64 %offset, i64 %vl)
@@ -1804,7 +1703,6 @@ define <vscale x 8 x i8> @test_vlsseg7_mask_nxv8i8(i8* %base, i64 %offset, i64 %
 ; CHECK-NEXT:    vmv1r.v v12, v7
 ; CHECK-NEXT:    vmv1r.v v13, v7
 ; CHECK-NEXT:    vlsseg7e8.v v7, (a0), a1, v0.t
-; CHECK-NEXT:    # kill: def $v8 killed $v8 killed $v7_v8_v9_v10_v11_v12_v13
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call {<vscale x 8 x i8>,<vscale x 8 x i8>,<vscale x 8 x i8>,<vscale x 8 x i8>,<vscale x 8 x i8>,<vscale x 8 x i8>,<vscale x 8 x i8>} @llvm.riscv.vlsseg7.nxv8i8(i8* %base, i64 %offset, i64 %vl)
@@ -1822,7 +1720,6 @@ define <vscale x 8 x i8> @test_vlsseg8_nxv8i8(i8* %base, i64 %offset, i64 %vl) {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli zero, a2, e8, m1, ta, mu
 ; CHECK-NEXT:    vlsseg8e8.v v7, (a0), a1
-; CHECK-NEXT:    # kill: def $v8 killed $v8 killed $v7_v8_v9_v10_v11_v12_v13_v14
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call {<vscale x 8 x i8>,<vscale x 8 x i8>,<vscale x 8 x i8>,<vscale x 8 x i8>,<vscale x 8 x i8>,<vscale x 8 x i8>,<vscale x 8 x i8>,<vscale x 8 x i8>} @llvm.riscv.vlsseg8.nxv8i8(i8* %base, i64 %offset, i64 %vl)
@@ -1843,7 +1740,6 @@ define <vscale x 8 x i8> @test_vlsseg8_mask_nxv8i8(i8* %base, i64 %offset, i64 %
 ; CHECK-NEXT:    vmv1r.v v13, v7
 ; CHECK-NEXT:    vmv1r.v v14, v7
 ; CHECK-NEXT:    vlsseg8e8.v v7, (a0), a1, v0.t
-; CHECK-NEXT:    # kill: def $v8 killed $v8 killed $v7_v8_v9_v10_v11_v12_v13_v14
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call {<vscale x 8 x i8>,<vscale x 8 x i8>,<vscale x 8 x i8>,<vscale x 8 x i8>,<vscale x 8 x i8>,<vscale x 8 x i8>,<vscale x 8 x i8>,<vscale x 8 x i8>} @llvm.riscv.vlsseg8.nxv8i8(i8* %base, i64 %offset, i64 %vl)
@@ -1861,7 +1757,6 @@ define <vscale x 4 x i64> @test_vlsseg2_nxv4i64(i64* %base, i64 %offset, i64 %vl
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli zero, a2, e64, m4, ta, mu
 ; CHECK-NEXT:    vlsseg2e64.v v4, (a0), a1
-; CHECK-NEXT:    # kill: def $v8m4 killed $v8m4 killed $v4m4_v8m4
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call {<vscale x 4 x i64>,<vscale x 4 x i64>} @llvm.riscv.vlsseg2.nxv4i64(i64* %base, i64 %offset, i64 %vl)
@@ -1876,7 +1771,6 @@ define <vscale x 4 x i64> @test_vlsseg2_mask_nxv4i64(i64* %base, i64 %offset, i6
 ; CHECK-NEXT:    vlsseg2e64.v v4, (a0), a1
 ; CHECK-NEXT:    vmv4r.v v8, v4
 ; CHECK-NEXT:    vlsseg2e64.v v4, (a0), a1, v0.t
-; CHECK-NEXT:    # kill: def $v8m4 killed $v8m4 killed $v4m4_v8m4
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call {<vscale x 4 x i64>,<vscale x 4 x i64>} @llvm.riscv.vlsseg2.nxv4i64(i64* %base, i64 %offset, i64 %vl)
@@ -1894,7 +1788,6 @@ define <vscale x 4 x i16> @test_vlsseg2_nxv4i16(i16* %base, i64 %offset, i64 %vl
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli zero, a2, e16, m1, ta, mu
 ; CHECK-NEXT:    vlsseg2e16.v v7, (a0), a1
-; CHECK-NEXT:    # kill: def $v8 killed $v8 killed $v7_v8
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call {<vscale x 4 x i16>,<vscale x 4 x i16>} @llvm.riscv.vlsseg2.nxv4i16(i16* %base, i64 %offset, i64 %vl)
@@ -1909,7 +1802,6 @@ define <vscale x 4 x i16> @test_vlsseg2_mask_nxv4i16(i16* %base, i64 %offset, i6
 ; CHECK-NEXT:    vlsseg2e16.v v7, (a0), a1
 ; CHECK-NEXT:    vmv1r.v v8, v7
 ; CHECK-NEXT:    vlsseg2e16.v v7, (a0), a1, v0.t
-; CHECK-NEXT:    # kill: def $v8 killed $v8 killed $v7_v8
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call {<vscale x 4 x i16>,<vscale x 4 x i16>} @llvm.riscv.vlsseg2.nxv4i16(i16* %base, i64 %offset, i64 %vl)
@@ -1927,7 +1819,6 @@ define <vscale x 4 x i16> @test_vlsseg3_nxv4i16(i16* %base, i64 %offset, i64 %vl
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli zero, a2, e16, m1, ta, mu
 ; CHECK-NEXT:    vlsseg3e16.v v7, (a0), a1
-; CHECK-NEXT:    # kill: def $v8 killed $v8 killed $v7_v8_v9
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call {<vscale x 4 x i16>,<vscale x 4 x i16>,<vscale x 4 x i16>} @llvm.riscv.vlsseg3.nxv4i16(i16* %base, i64 %offset, i64 %vl)
@@ -1943,7 +1834,6 @@ define <vscale x 4 x i16> @test_vlsseg3_mask_nxv4i16(i16* %base, i64 %offset, i6
 ; CHECK-NEXT:    vmv1r.v v8, v7
 ; CHECK-NEXT:    vmv1r.v v9, v7
 ; CHECK-NEXT:    vlsseg3e16.v v7, (a0), a1, v0.t
-; CHECK-NEXT:    # kill: def $v8 killed $v8 killed $v7_v8_v9
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call {<vscale x 4 x i16>,<vscale x 4 x i16>,<vscale x 4 x i16>} @llvm.riscv.vlsseg3.nxv4i16(i16* %base, i64 %offset, i64 %vl)
@@ -1961,7 +1851,6 @@ define <vscale x 4 x i16> @test_vlsseg4_nxv4i16(i16* %base, i64 %offset, i64 %vl
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli zero, a2, e16, m1, ta, mu
 ; CHECK-NEXT:    vlsseg4e16.v v7, (a0), a1
-; CHECK-NEXT:    # kill: def $v8 killed $v8 killed $v7_v8_v9_v10
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call {<vscale x 4 x i16>,<vscale x 4 x i16>,<vscale x 4 x i16>,<vscale x 4 x i16>} @llvm.riscv.vlsseg4.nxv4i16(i16* %base, i64 %offset, i64 %vl)
@@ -1978,7 +1867,6 @@ define <vscale x 4 x i16> @test_vlsseg4_mask_nxv4i16(i16* %base, i64 %offset, i6
 ; CHECK-NEXT:    vmv1r.v v9, v7
 ; CHECK-NEXT:    vmv1r.v v10, v7
 ; CHECK-NEXT:    vlsseg4e16.v v7, (a0), a1, v0.t
-; CHECK-NEXT:    # kill: def $v8 killed $v8 killed $v7_v8_v9_v10
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call {<vscale x 4 x i16>,<vscale x 4 x i16>,<vscale x 4 x i16>,<vscale x 4 x i16>} @llvm.riscv.vlsseg4.nxv4i16(i16* %base, i64 %offset, i64 %vl)
@@ -1996,7 +1884,6 @@ define <vscale x 4 x i16> @test_vlsseg5_nxv4i16(i16* %base, i64 %offset, i64 %vl
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli zero, a2, e16, m1, ta, mu
 ; CHECK-NEXT:    vlsseg5e16.v v7, (a0), a1
-; CHECK-NEXT:    # kill: def $v8 killed $v8 killed $v7_v8_v9_v10_v11
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call {<vscale x 4 x i16>,<vscale x 4 x i16>,<vscale x 4 x i16>,<vscale x 4 x i16>,<vscale x 4 x i16>} @llvm.riscv.vlsseg5.nxv4i16(i16* %base, i64 %offset, i64 %vl)
@@ -2014,7 +1901,6 @@ define <vscale x 4 x i16> @test_vlsseg5_mask_nxv4i16(i16* %base, i64 %offset, i6
 ; CHECK-NEXT:    vmv1r.v v10, v7
 ; CHECK-NEXT:    vmv1r.v v11, v7
 ; CHECK-NEXT:    vlsseg5e16.v v7, (a0), a1, v0.t
-; CHECK-NEXT:    # kill: def $v8 killed $v8 killed $v7_v8_v9_v10_v11
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call {<vscale x 4 x i16>,<vscale x 4 x i16>,<vscale x 4 x i16>,<vscale x 4 x i16>,<vscale x 4 x i16>} @llvm.riscv.vlsseg5.nxv4i16(i16* %base, i64 %offset, i64 %vl)
@@ -2032,7 +1918,6 @@ define <vscale x 4 x i16> @test_vlsseg6_nxv4i16(i16* %base, i64 %offset, i64 %vl
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli zero, a2, e16, m1, ta, mu
 ; CHECK-NEXT:    vlsseg6e16.v v7, (a0), a1
-; CHECK-NEXT:    # kill: def $v8 killed $v8 killed $v7_v8_v9_v10_v11_v12
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call {<vscale x 4 x i16>,<vscale x 4 x i16>,<vscale x 4 x i16>,<vscale x 4 x i16>,<vscale x 4 x i16>,<vscale x 4 x i16>} @llvm.riscv.vlsseg6.nxv4i16(i16* %base, i64 %offset, i64 %vl)
@@ -2051,7 +1936,6 @@ define <vscale x 4 x i16> @test_vlsseg6_mask_nxv4i16(i16* %base, i64 %offset, i6
 ; CHECK-NEXT:    vmv1r.v v11, v7
 ; CHECK-NEXT:    vmv1r.v v12, v7
 ; CHECK-NEXT:    vlsseg6e16.v v7, (a0), a1, v0.t
-; CHECK-NEXT:    # kill: def $v8 killed $v8 killed $v7_v8_v9_v10_v11_v12
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call {<vscale x 4 x i16>,<vscale x 4 x i16>,<vscale x 4 x i16>,<vscale x 4 x i16>,<vscale x 4 x i16>,<vscale x 4 x i16>} @llvm.riscv.vlsseg6.nxv4i16(i16* %base, i64 %offset, i64 %vl)
@@ -2069,7 +1953,6 @@ define <vscale x 4 x i16> @test_vlsseg7_nxv4i16(i16* %base, i64 %offset, i64 %vl
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli zero, a2, e16, m1, ta, mu
 ; CHECK-NEXT:    vlsseg7e16.v v7, (a0), a1
-; CHECK-NEXT:    # kill: def $v8 killed $v8 killed $v7_v8_v9_v10_v11_v12_v13
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call {<vscale x 4 x i16>,<vscale x 4 x i16>,<vscale x 4 x i16>,<vscale x 4 x i16>,<vscale x 4 x i16>,<vscale x 4 x i16>,<vscale x 4 x i16>} @llvm.riscv.vlsseg7.nxv4i16(i16* %base, i64 %offset, i64 %vl)
@@ -2089,7 +1972,6 @@ define <vscale x 4 x i16> @test_vlsseg7_mask_nxv4i16(i16* %base, i64 %offset, i6
 ; CHECK-NEXT:    vmv1r.v v12, v7
 ; CHECK-NEXT:    vmv1r.v v13, v7
 ; CHECK-NEXT:    vlsseg7e16.v v7, (a0), a1, v0.t
-; CHECK-NEXT:    # kill: def $v8 killed $v8 killed $v7_v8_v9_v10_v11_v12_v13
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call {<vscale x 4 x i16>,<vscale x 4 x i16>,<vscale x 4 x i16>,<vscale x 4 x i16>,<vscale x 4 x i16>,<vscale x 4 x i16>,<vscale x 4 x i16>} @llvm.riscv.vlsseg7.nxv4i16(i16* %base, i64 %offset, i64 %vl)
@@ -2107,7 +1989,6 @@ define <vscale x 4 x i16> @test_vlsseg8_nxv4i16(i16* %base, i64 %offset, i64 %vl
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli zero, a2, e16, m1, ta, mu
 ; CHECK-NEXT:    vlsseg8e16.v v7, (a0), a1
-; CHECK-NEXT:    # kill: def $v8 killed $v8 killed $v7_v8_v9_v10_v11_v12_v13_v14
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call {<vscale x 4 x i16>,<vscale x 4 x i16>,<vscale x 4 x i16>,<vscale x 4 x i16>,<vscale x 4 x i16>,<vscale x 4 x i16>,<vscale x 4 x i16>,<vscale x 4 x i16>} @llvm.riscv.vlsseg8.nxv4i16(i16* %base, i64 %offset, i64 %vl)
@@ -2128,7 +2009,6 @@ define <vscale x 4 x i16> @test_vlsseg8_mask_nxv4i16(i16* %base, i64 %offset, i6
 ; CHECK-NEXT:    vmv1r.v v13, v7
 ; CHECK-NEXT:    vmv1r.v v14, v7
 ; CHECK-NEXT:    vlsseg8e16.v v7, (a0), a1, v0.t
-; CHECK-NEXT:    # kill: def $v8 killed $v8 killed $v7_v8_v9_v10_v11_v12_v13_v14
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call {<vscale x 4 x i16>,<vscale x 4 x i16>,<vscale x 4 x i16>,<vscale x 4 x i16>,<vscale x 4 x i16>,<vscale x 4 x i16>,<vscale x 4 x i16>,<vscale x 4 x i16>} @llvm.riscv.vlsseg8.nxv4i16(i16* %base, i64 %offset, i64 %vl)
@@ -2146,7 +2026,6 @@ define <vscale x 1 x i8> @test_vlsseg2_nxv1i8(i8* %base, i64 %offset, i64 %vl) {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli zero, a2, e8, mf8, ta, mu
 ; CHECK-NEXT:    vlsseg2e8.v v7, (a0), a1
-; CHECK-NEXT:    # kill: def $v8 killed $v8 killed $v7_v8
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call {<vscale x 1 x i8>,<vscale x 1 x i8>} @llvm.riscv.vlsseg2.nxv1i8(i8* %base, i64 %offset, i64 %vl)
@@ -2161,7 +2040,6 @@ define <vscale x 1 x i8> @test_vlsseg2_mask_nxv1i8(i8* %base, i64 %offset, i64 %
 ; CHECK-NEXT:    vlsseg2e8.v v7, (a0), a1
 ; CHECK-NEXT:    vmv1r.v v8, v7
 ; CHECK-NEXT:    vlsseg2e8.v v7, (a0), a1, v0.t
-; CHECK-NEXT:    # kill: def $v8 killed $v8 killed $v7_v8
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call {<vscale x 1 x i8>,<vscale x 1 x i8>} @llvm.riscv.vlsseg2.nxv1i8(i8* %base, i64 %offset, i64 %vl)
@@ -2179,7 +2057,6 @@ define <vscale x 1 x i8> @test_vlsseg3_nxv1i8(i8* %base, i64 %offset, i64 %vl) {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli zero, a2, e8, mf8, ta, mu
 ; CHECK-NEXT:    vlsseg3e8.v v7, (a0), a1
-; CHECK-NEXT:    # kill: def $v8 killed $v8 killed $v7_v8_v9
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call {<vscale x 1 x i8>,<vscale x 1 x i8>,<vscale x 1 x i8>} @llvm.riscv.vlsseg3.nxv1i8(i8* %base, i64 %offset, i64 %vl)
@@ -2195,7 +2072,6 @@ define <vscale x 1 x i8> @test_vlsseg3_mask_nxv1i8(i8* %base, i64 %offset, i64 %
 ; CHECK-NEXT:    vmv1r.v v8, v7
 ; CHECK-NEXT:    vmv1r.v v9, v7
 ; CHECK-NEXT:    vlsseg3e8.v v7, (a0), a1, v0.t
-; CHECK-NEXT:    # kill: def $v8 killed $v8 killed $v7_v8_v9
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call {<vscale x 1 x i8>,<vscale x 1 x i8>,<vscale x 1 x i8>} @llvm.riscv.vlsseg3.nxv1i8(i8* %base, i64 %offset, i64 %vl)
@@ -2213,7 +2089,6 @@ define <vscale x 1 x i8> @test_vlsseg4_nxv1i8(i8* %base, i64 %offset, i64 %vl) {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli zero, a2, e8, mf8, ta, mu
 ; CHECK-NEXT:    vlsseg4e8.v v7, (a0), a1
-; CHECK-NEXT:    # kill: def $v8 killed $v8 killed $v7_v8_v9_v10
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call {<vscale x 1 x i8>,<vscale x 1 x i8>,<vscale x 1 x i8>,<vscale x 1 x i8>} @llvm.riscv.vlsseg4.nxv1i8(i8* %base, i64 %offset, i64 %vl)
@@ -2230,7 +2105,6 @@ define <vscale x 1 x i8> @test_vlsseg4_mask_nxv1i8(i8* %base, i64 %offset, i64 %
 ; CHECK-NEXT:    vmv1r.v v9, v7
 ; CHECK-NEXT:    vmv1r.v v10, v7
 ; CHECK-NEXT:    vlsseg4e8.v v7, (a0), a1, v0.t
-; CHECK-NEXT:    # kill: def $v8 killed $v8 killed $v7_v8_v9_v10
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call {<vscale x 1 x i8>,<vscale x 1 x i8>,<vscale x 1 x i8>,<vscale x 1 x i8>} @llvm.riscv.vlsseg4.nxv1i8(i8* %base, i64 %offset, i64 %vl)
@@ -2248,7 +2122,6 @@ define <vscale x 1 x i8> @test_vlsseg5_nxv1i8(i8* %base, i64 %offset, i64 %vl) {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli zero, a2, e8, mf8, ta, mu
 ; CHECK-NEXT:    vlsseg5e8.v v7, (a0), a1
-; CHECK-NEXT:    # kill: def $v8 killed $v8 killed $v7_v8_v9_v10_v11
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call {<vscale x 1 x i8>,<vscale x 1 x i8>,<vscale x 1 x i8>,<vscale x 1 x i8>,<vscale x 1 x i8>} @llvm.riscv.vlsseg5.nxv1i8(i8* %base, i64 %offset, i64 %vl)
@@ -2266,7 +2139,6 @@ define <vscale x 1 x i8> @test_vlsseg5_mask_nxv1i8(i8* %base, i64 %offset, i64 %
 ; CHECK-NEXT:    vmv1r.v v10, v7
 ; CHECK-NEXT:    vmv1r.v v11, v7
 ; CHECK-NEXT:    vlsseg5e8.v v7, (a0), a1, v0.t
-; CHECK-NEXT:    # kill: def $v8 killed $v8 killed $v7_v8_v9_v10_v11
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call {<vscale x 1 x i8>,<vscale x 1 x i8>,<vscale x 1 x i8>,<vscale x 1 x i8>,<vscale x 1 x i8>} @llvm.riscv.vlsseg5.nxv1i8(i8* %base, i64 %offset, i64 %vl)
@@ -2284,7 +2156,6 @@ define <vscale x 1 x i8> @test_vlsseg6_nxv1i8(i8* %base, i64 %offset, i64 %vl) {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli zero, a2, e8, mf8, ta, mu
 ; CHECK-NEXT:    vlsseg6e8.v v7, (a0), a1
-; CHECK-NEXT:    # kill: def $v8 killed $v8 killed $v7_v8_v9_v10_v11_v12
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call {<vscale x 1 x i8>,<vscale x 1 x i8>,<vscale x 1 x i8>,<vscale x 1 x i8>,<vscale x 1 x i8>,<vscale x 1 x i8>} @llvm.riscv.vlsseg6.nxv1i8(i8* %base, i64 %offset, i64 %vl)
@@ -2303,7 +2174,6 @@ define <vscale x 1 x i8> @test_vlsseg6_mask_nxv1i8(i8* %base, i64 %offset, i64 %
 ; CHECK-NEXT:    vmv1r.v v11, v7
 ; CHECK-NEXT:    vmv1r.v v12, v7
 ; CHECK-NEXT:    vlsseg6e8.v v7, (a0), a1, v0.t
-; CHECK-NEXT:    # kill: def $v8 killed $v8 killed $v7_v8_v9_v10_v11_v12
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call {<vscale x 1 x i8>,<vscale x 1 x i8>,<vscale x 1 x i8>,<vscale x 1 x i8>,<vscale x 1 x i8>,<vscale x 1 x i8>} @llvm.riscv.vlsseg6.nxv1i8(i8* %base, i64 %offset, i64 %vl)
@@ -2321,7 +2191,6 @@ define <vscale x 1 x i8> @test_vlsseg7_nxv1i8(i8* %base, i64 %offset, i64 %vl) {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli zero, a2, e8, mf8, ta, mu
 ; CHECK-NEXT:    vlsseg7e8.v v7, (a0), a1
-; CHECK-NEXT:    # kill: def $v8 killed $v8 killed $v7_v8_v9_v10_v11_v12_v13
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call {<vscale x 1 x i8>,<vscale x 1 x i8>,<vscale x 1 x i8>,<vscale x 1 x i8>,<vscale x 1 x i8>,<vscale x 1 x i8>,<vscale x 1 x i8>} @llvm.riscv.vlsseg7.nxv1i8(i8* %base, i64 %offset, i64 %vl)
@@ -2341,7 +2210,6 @@ define <vscale x 1 x i8> @test_vlsseg7_mask_nxv1i8(i8* %base, i64 %offset, i64 %
 ; CHECK-NEXT:    vmv1r.v v12, v7
 ; CHECK-NEXT:    vmv1r.v v13, v7
 ; CHECK-NEXT:    vlsseg7e8.v v7, (a0), a1, v0.t
-; CHECK-NEXT:    # kill: def $v8 killed $v8 killed $v7_v8_v9_v10_v11_v12_v13
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call {<vscale x 1 x i8>,<vscale x 1 x i8>,<vscale x 1 x i8>,<vscale x 1 x i8>,<vscale x 1 x i8>,<vscale x 1 x i8>,<vscale x 1 x i8>} @llvm.riscv.vlsseg7.nxv1i8(i8* %base, i64 %offset, i64 %vl)
@@ -2359,7 +2227,6 @@ define <vscale x 1 x i8> @test_vlsseg8_nxv1i8(i8* %base, i64 %offset, i64 %vl) {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli zero, a2, e8, mf8, ta, mu
 ; CHECK-NEXT:    vlsseg8e8.v v7, (a0), a1
-; CHECK-NEXT:    # kill: def $v8 killed $v8 killed $v7_v8_v9_v10_v11_v12_v13_v14
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call {<vscale x 1 x i8>,<vscale x 1 x i8>,<vscale x 1 x i8>,<vscale x 1 x i8>,<vscale x 1 x i8>,<vscale x 1 x i8>,<vscale x 1 x i8>,<vscale x 1 x i8>} @llvm.riscv.vlsseg8.nxv1i8(i8* %base, i64 %offset, i64 %vl)
@@ -2380,7 +2247,6 @@ define <vscale x 1 x i8> @test_vlsseg8_mask_nxv1i8(i8* %base, i64 %offset, i64 %
 ; CHECK-NEXT:    vmv1r.v v13, v7
 ; CHECK-NEXT:    vmv1r.v v14, v7
 ; CHECK-NEXT:    vlsseg8e8.v v7, (a0), a1, v0.t
-; CHECK-NEXT:    # kill: def $v8 killed $v8 killed $v7_v8_v9_v10_v11_v12_v13_v14
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call {<vscale x 1 x i8>,<vscale x 1 x i8>,<vscale x 1 x i8>,<vscale x 1 x i8>,<vscale x 1 x i8>,<vscale x 1 x i8>,<vscale x 1 x i8>,<vscale x 1 x i8>} @llvm.riscv.vlsseg8.nxv1i8(i8* %base, i64 %offset, i64 %vl)
@@ -2398,7 +2264,6 @@ define <vscale x 2 x i8> @test_vlsseg2_nxv2i8(i8* %base, i64 %offset, i64 %vl) {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli zero, a2, e8, mf4, ta, mu
 ; CHECK-NEXT:    vlsseg2e8.v v7, (a0), a1
-; CHECK-NEXT:    # kill: def $v8 killed $v8 killed $v7_v8
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call {<vscale x 2 x i8>,<vscale x 2 x i8>} @llvm.riscv.vlsseg2.nxv2i8(i8* %base, i64 %offset, i64 %vl)
@@ -2413,7 +2278,6 @@ define <vscale x 2 x i8> @test_vlsseg2_mask_nxv2i8(i8* %base, i64 %offset, i64 %
 ; CHECK-NEXT:    vlsseg2e8.v v7, (a0), a1
 ; CHECK-NEXT:    vmv1r.v v8, v7
 ; CHECK-NEXT:    vlsseg2e8.v v7, (a0), a1, v0.t
-; CHECK-NEXT:    # kill: def $v8 killed $v8 killed $v7_v8
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call {<vscale x 2 x i8>,<vscale x 2 x i8>} @llvm.riscv.vlsseg2.nxv2i8(i8* %base, i64 %offset, i64 %vl)
@@ -2431,7 +2295,6 @@ define <vscale x 2 x i8> @test_vlsseg3_nxv2i8(i8* %base, i64 %offset, i64 %vl) {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli zero, a2, e8, mf4, ta, mu
 ; CHECK-NEXT:    vlsseg3e8.v v7, (a0), a1
-; CHECK-NEXT:    # kill: def $v8 killed $v8 killed $v7_v8_v9
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call {<vscale x 2 x i8>,<vscale x 2 x i8>,<vscale x 2 x i8>} @llvm.riscv.vlsseg3.nxv2i8(i8* %base, i64 %offset, i64 %vl)
@@ -2447,7 +2310,6 @@ define <vscale x 2 x i8> @test_vlsseg3_mask_nxv2i8(i8* %base, i64 %offset, i64 %
 ; CHECK-NEXT:    vmv1r.v v8, v7
 ; CHECK-NEXT:    vmv1r.v v9, v7
 ; CHECK-NEXT:    vlsseg3e8.v v7, (a0), a1, v0.t
-; CHECK-NEXT:    # kill: def $v8 killed $v8 killed $v7_v8_v9
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call {<vscale x 2 x i8>,<vscale x 2 x i8>,<vscale x 2 x i8>} @llvm.riscv.vlsseg3.nxv2i8(i8* %base, i64 %offset, i64 %vl)
@@ -2465,7 +2327,6 @@ define <vscale x 2 x i8> @test_vlsseg4_nxv2i8(i8* %base, i64 %offset, i64 %vl) {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli zero, a2, e8, mf4, ta, mu
 ; CHECK-NEXT:    vlsseg4e8.v v7, (a0), a1
-; CHECK-NEXT:    # kill: def $v8 killed $v8 killed $v7_v8_v9_v10
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call {<vscale x 2 x i8>,<vscale x 2 x i8>,<vscale x 2 x i8>,<vscale x 2 x i8>} @llvm.riscv.vlsseg4.nxv2i8(i8* %base, i64 %offset, i64 %vl)
@@ -2482,7 +2343,6 @@ define <vscale x 2 x i8> @test_vlsseg4_mask_nxv2i8(i8* %base, i64 %offset, i64 %
 ; CHECK-NEXT:    vmv1r.v v9, v7
 ; CHECK-NEXT:    vmv1r.v v10, v7
 ; CHECK-NEXT:    vlsseg4e8.v v7, (a0), a1, v0.t
-; CHECK-NEXT:    # kill: def $v8 killed $v8 killed $v7_v8_v9_v10
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call {<vscale x 2 x i8>,<vscale x 2 x i8>,<vscale x 2 x i8>,<vscale x 2 x i8>} @llvm.riscv.vlsseg4.nxv2i8(i8* %base, i64 %offset, i64 %vl)
@@ -2500,7 +2360,6 @@ define <vscale x 2 x i8> @test_vlsseg5_nxv2i8(i8* %base, i64 %offset, i64 %vl) {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli zero, a2, e8, mf4, ta, mu
 ; CHECK-NEXT:    vlsseg5e8.v v7, (a0), a1
-; CHECK-NEXT:    # kill: def $v8 killed $v8 killed $v7_v8_v9_v10_v11
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call {<vscale x 2 x i8>,<vscale x 2 x i8>,<vscale x 2 x i8>,<vscale x 2 x i8>,<vscale x 2 x i8>} @llvm.riscv.vlsseg5.nxv2i8(i8* %base, i64 %offset, i64 %vl)
@@ -2518,7 +2377,6 @@ define <vscale x 2 x i8> @test_vlsseg5_mask_nxv2i8(i8* %base, i64 %offset, i64 %
 ; CHECK-NEXT:    vmv1r.v v10, v7
 ; CHECK-NEXT:    vmv1r.v v11, v7
 ; CHECK-NEXT:    vlsseg5e8.v v7, (a0), a1, v0.t
-; CHECK-NEXT:    # kill: def $v8 killed $v8 killed $v7_v8_v9_v10_v11
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call {<vscale x 2 x i8>,<vscale x 2 x i8>,<vscale x 2 x i8>,<vscale x 2 x i8>,<vscale x 2 x i8>} @llvm.riscv.vlsseg5.nxv2i8(i8* %base, i64 %offset, i64 %vl)
@@ -2536,7 +2394,6 @@ define <vscale x 2 x i8> @test_vlsseg6_nxv2i8(i8* %base, i64 %offset, i64 %vl) {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli zero, a2, e8, mf4, ta, mu
 ; CHECK-NEXT:    vlsseg6e8.v v7, (a0), a1
-; CHECK-NEXT:    # kill: def $v8 killed $v8 killed $v7_v8_v9_v10_v11_v12
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call {<vscale x 2 x i8>,<vscale x 2 x i8>,<vscale x 2 x i8>,<vscale x 2 x i8>,<vscale x 2 x i8>,<vscale x 2 x i8>} @llvm.riscv.vlsseg6.nxv2i8(i8* %base, i64 %offset, i64 %vl)
@@ -2555,7 +2412,6 @@ define <vscale x 2 x i8> @test_vlsseg6_mask_nxv2i8(i8* %base, i64 %offset, i64 %
 ; CHECK-NEXT:    vmv1r.v v11, v7
 ; CHECK-NEXT:    vmv1r.v v12, v7
 ; CHECK-NEXT:    vlsseg6e8.v v7, (a0), a1, v0.t
-; CHECK-NEXT:    # kill: def $v8 killed $v8 killed $v7_v8_v9_v10_v11_v12
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call {<vscale x 2 x i8>,<vscale x 2 x i8>,<vscale x 2 x i8>,<vscale x 2 x i8>,<vscale x 2 x i8>,<vscale x 2 x i8>} @llvm.riscv.vlsseg6.nxv2i8(i8* %base, i64 %offset, i64 %vl)
@@ -2573,7 +2429,6 @@ define <vscale x 2 x i8> @test_vlsseg7_nxv2i8(i8* %base, i64 %offset, i64 %vl) {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli zero, a2, e8, mf4, ta, mu
 ; CHECK-NEXT:    vlsseg7e8.v v7, (a0), a1
-; CHECK-NEXT:    # kill: def $v8 killed $v8 killed $v7_v8_v9_v10_v11_v12_v13
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call {<vscale x 2 x i8>,<vscale x 2 x i8>,<vscale x 2 x i8>,<vscale x 2 x i8>,<vscale x 2 x i8>,<vscale x 2 x i8>,<vscale x 2 x i8>} @llvm.riscv.vlsseg7.nxv2i8(i8* %base, i64 %offset, i64 %vl)
@@ -2593,7 +2448,6 @@ define <vscale x 2 x i8> @test_vlsseg7_mask_nxv2i8(i8* %base, i64 %offset, i64 %
 ; CHECK-NEXT:    vmv1r.v v12, v7
 ; CHECK-NEXT:    vmv1r.v v13, v7
 ; CHECK-NEXT:    vlsseg7e8.v v7, (a0), a1, v0.t
-; CHECK-NEXT:    # kill: def $v8 killed $v8 killed $v7_v8_v9_v10_v11_v12_v13
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call {<vscale x 2 x i8>,<vscale x 2 x i8>,<vscale x 2 x i8>,<vscale x 2 x i8>,<vscale x 2 x i8>,<vscale x 2 x i8>,<vscale x 2 x i8>} @llvm.riscv.vlsseg7.nxv2i8(i8* %base, i64 %offset, i64 %vl)
@@ -2611,7 +2465,6 @@ define <vscale x 2 x i8> @test_vlsseg8_nxv2i8(i8* %base, i64 %offset, i64 %vl) {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli zero, a2, e8, mf4, ta, mu
 ; CHECK-NEXT:    vlsseg8e8.v v7, (a0), a1
-; CHECK-NEXT:    # kill: def $v8 killed $v8 killed $v7_v8_v9_v10_v11_v12_v13_v14
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call {<vscale x 2 x i8>,<vscale x 2 x i8>,<vscale x 2 x i8>,<vscale x 2 x i8>,<vscale x 2 x i8>,<vscale x 2 x i8>,<vscale x 2 x i8>,<vscale x 2 x i8>} @llvm.riscv.vlsseg8.nxv2i8(i8* %base, i64 %offset, i64 %vl)
@@ -2632,7 +2485,6 @@ define <vscale x 2 x i8> @test_vlsseg8_mask_nxv2i8(i8* %base, i64 %offset, i64 %
 ; CHECK-NEXT:    vmv1r.v v13, v7
 ; CHECK-NEXT:    vmv1r.v v14, v7
 ; CHECK-NEXT:    vlsseg8e8.v v7, (a0), a1, v0.t
-; CHECK-NEXT:    # kill: def $v8 killed $v8 killed $v7_v8_v9_v10_v11_v12_v13_v14
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call {<vscale x 2 x i8>,<vscale x 2 x i8>,<vscale x 2 x i8>,<vscale x 2 x i8>,<vscale x 2 x i8>,<vscale x 2 x i8>,<vscale x 2 x i8>,<vscale x 2 x i8>} @llvm.riscv.vlsseg8.nxv2i8(i8* %base, i64 %offset, i64 %vl)
@@ -2650,7 +2502,6 @@ define <vscale x 8 x i32> @test_vlsseg2_nxv8i32(i32* %base, i64 %offset, i64 %vl
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli zero, a2, e32, m4, ta, mu
 ; CHECK-NEXT:    vlsseg2e32.v v4, (a0), a1
-; CHECK-NEXT:    # kill: def $v8m4 killed $v8m4 killed $v4m4_v8m4
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call {<vscale x 8 x i32>,<vscale x 8 x i32>} @llvm.riscv.vlsseg2.nxv8i32(i32* %base, i64 %offset, i64 %vl)
@@ -2665,7 +2516,6 @@ define <vscale x 8 x i32> @test_vlsseg2_mask_nxv8i32(i32* %base, i64 %offset, i6
 ; CHECK-NEXT:    vlsseg2e32.v v4, (a0), a1
 ; CHECK-NEXT:    vmv4r.v v8, v4
 ; CHECK-NEXT:    vlsseg2e32.v v4, (a0), a1, v0.t
-; CHECK-NEXT:    # kill: def $v8m4 killed $v8m4 killed $v4m4_v8m4
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call {<vscale x 8 x i32>,<vscale x 8 x i32>} @llvm.riscv.vlsseg2.nxv8i32(i32* %base, i64 %offset, i64 %vl)
@@ -2683,7 +2533,6 @@ define <vscale x 32 x i8> @test_vlsseg2_nxv32i8(i8* %base, i64 %offset, i64 %vl)
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli zero, a2, e8, m4, ta, mu
 ; CHECK-NEXT:    vlsseg2e8.v v4, (a0), a1
-; CHECK-NEXT:    # kill: def $v8m4 killed $v8m4 killed $v4m4_v8m4
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call {<vscale x 32 x i8>,<vscale x 32 x i8>} @llvm.riscv.vlsseg2.nxv32i8(i8* %base, i64 %offset, i64 %vl)
@@ -2698,7 +2547,6 @@ define <vscale x 32 x i8> @test_vlsseg2_mask_nxv32i8(i8* %base, i64 %offset, i64
 ; CHECK-NEXT:    vlsseg2e8.v v4, (a0), a1
 ; CHECK-NEXT:    vmv4r.v v8, v4
 ; CHECK-NEXT:    vlsseg2e8.v v4, (a0), a1, v0.t
-; CHECK-NEXT:    # kill: def $v8m4 killed $v8m4 killed $v4m4_v8m4
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call {<vscale x 32 x i8>,<vscale x 32 x i8>} @llvm.riscv.vlsseg2.nxv32i8(i8* %base, i64 %offset, i64 %vl)
@@ -2716,7 +2564,6 @@ define <vscale x 2 x i16> @test_vlsseg2_nxv2i16(i16* %base, i64 %offset, i64 %vl
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli zero, a2, e16, mf2, ta, mu
 ; CHECK-NEXT:    vlsseg2e16.v v7, (a0), a1
-; CHECK-NEXT:    # kill: def $v8 killed $v8 killed $v7_v8
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call {<vscale x 2 x i16>,<vscale x 2 x i16>} @llvm.riscv.vlsseg2.nxv2i16(i16* %base, i64 %offset, i64 %vl)
@@ -2731,7 +2578,6 @@ define <vscale x 2 x i16> @test_vlsseg2_mask_nxv2i16(i16* %base, i64 %offset, i6
 ; CHECK-NEXT:    vlsseg2e16.v v7, (a0), a1
 ; CHECK-NEXT:    vmv1r.v v8, v7
 ; CHECK-NEXT:    vlsseg2e16.v v7, (a0), a1, v0.t
-; CHECK-NEXT:    # kill: def $v8 killed $v8 killed $v7_v8
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call {<vscale x 2 x i16>,<vscale x 2 x i16>} @llvm.riscv.vlsseg2.nxv2i16(i16* %base, i64 %offset, i64 %vl)
@@ -2749,7 +2595,6 @@ define <vscale x 2 x i16> @test_vlsseg3_nxv2i16(i16* %base, i64 %offset, i64 %vl
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli zero, a2, e16, mf2, ta, mu
 ; CHECK-NEXT:    vlsseg3e16.v v7, (a0), a1
-; CHECK-NEXT:    # kill: def $v8 killed $v8 killed $v7_v8_v9
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call {<vscale x 2 x i16>,<vscale x 2 x i16>,<vscale x 2 x i16>} @llvm.riscv.vlsseg3.nxv2i16(i16* %base, i64 %offset, i64 %vl)
@@ -2765,7 +2610,6 @@ define <vscale x 2 x i16> @test_vlsseg3_mask_nxv2i16(i16* %base, i64 %offset, i6
 ; CHECK-NEXT:    vmv1r.v v8, v7
 ; CHECK-NEXT:    vmv1r.v v9, v7
 ; CHECK-NEXT:    vlsseg3e16.v v7, (a0), a1, v0.t
-; CHECK-NEXT:    # kill: def $v8 killed $v8 killed $v7_v8_v9
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call {<vscale x 2 x i16>,<vscale x 2 x i16>,<vscale x 2 x i16>} @llvm.riscv.vlsseg3.nxv2i16(i16* %base, i64 %offset, i64 %vl)
@@ -2783,7 +2627,6 @@ define <vscale x 2 x i16> @test_vlsseg4_nxv2i16(i16* %base, i64 %offset, i64 %vl
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli zero, a2, e16, mf2, ta, mu
 ; CHECK-NEXT:    vlsseg4e16.v v7, (a0), a1
-; CHECK-NEXT:    # kill: def $v8 killed $v8 killed $v7_v8_v9_v10
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call {<vscale x 2 x i16>,<vscale x 2 x i16>,<vscale x 2 x i16>,<vscale x 2 x i16>} @llvm.riscv.vlsseg4.nxv2i16(i16* %base, i64 %offset, i64 %vl)
@@ -2800,7 +2643,6 @@ define <vscale x 2 x i16> @test_vlsseg4_mask_nxv2i16(i16* %base, i64 %offset, i6
 ; CHECK-NEXT:    vmv1r.v v9, v7
 ; CHECK-NEXT:    vmv1r.v v10, v7
 ; CHECK-NEXT:    vlsseg4e16.v v7, (a0), a1, v0.t
-; CHECK-NEXT:    # kill: def $v8 killed $v8 killed $v7_v8_v9_v10
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call {<vscale x 2 x i16>,<vscale x 2 x i16>,<vscale x 2 x i16>,<vscale x 2 x i16>} @llvm.riscv.vlsseg4.nxv2i16(i16* %base, i64 %offset, i64 %vl)
@@ -2818,7 +2660,6 @@ define <vscale x 2 x i16> @test_vlsseg5_nxv2i16(i16* %base, i64 %offset, i64 %vl
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli zero, a2, e16, mf2, ta, mu
 ; CHECK-NEXT:    vlsseg5e16.v v7, (a0), a1
-; CHECK-NEXT:    # kill: def $v8 killed $v8 killed $v7_v8_v9_v10_v11
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call {<vscale x 2 x i16>,<vscale x 2 x i16>,<vscale x 2 x i16>,<vscale x 2 x i16>,<vscale x 2 x i16>} @llvm.riscv.vlsseg5.nxv2i16(i16* %base, i64 %offset, i64 %vl)
@@ -2836,7 +2677,6 @@ define <vscale x 2 x i16> @test_vlsseg5_mask_nxv2i16(i16* %base, i64 %offset, i6
 ; CHECK-NEXT:    vmv1r.v v10, v7
 ; CHECK-NEXT:    vmv1r.v v11, v7
 ; CHECK-NEXT:    vlsseg5e16.v v7, (a0), a1, v0.t
-; CHECK-NEXT:    # kill: def $v8 killed $v8 killed $v7_v8_v9_v10_v11
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call {<vscale x 2 x i16>,<vscale x 2 x i16>,<vscale x 2 x i16>,<vscale x 2 x i16>,<vscale x 2 x i16>} @llvm.riscv.vlsseg5.nxv2i16(i16* %base, i64 %offset, i64 %vl)
@@ -2854,7 +2694,6 @@ define <vscale x 2 x i16> @test_vlsseg6_nxv2i16(i16* %base, i64 %offset, i64 %vl
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli zero, a2, e16, mf2, ta, mu
 ; CHECK-NEXT:    vlsseg6e16.v v7, (a0), a1
-; CHECK-NEXT:    # kill: def $v8 killed $v8 killed $v7_v8_v9_v10_v11_v12
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call {<vscale x 2 x i16>,<vscale x 2 x i16>,<vscale x 2 x i16>,<vscale x 2 x i16>,<vscale x 2 x i16>,<vscale x 2 x i16>} @llvm.riscv.vlsseg6.nxv2i16(i16* %base, i64 %offset, i64 %vl)
@@ -2873,7 +2712,6 @@ define <vscale x 2 x i16> @test_vlsseg6_mask_nxv2i16(i16* %base, i64 %offset, i6
 ; CHECK-NEXT:    vmv1r.v v11, v7
 ; CHECK-NEXT:    vmv1r.v v12, v7
 ; CHECK-NEXT:    vlsseg6e16.v v7, (a0), a1, v0.t
-; CHECK-NEXT:    # kill: def $v8 killed $v8 killed $v7_v8_v9_v10_v11_v12
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call {<vscale x 2 x i16>,<vscale x 2 x i16>,<vscale x 2 x i16>,<vscale x 2 x i16>,<vscale x 2 x i16>,<vscale x 2 x i16>} @llvm.riscv.vlsseg6.nxv2i16(i16* %base, i64 %offset, i64 %vl)
@@ -2891,7 +2729,6 @@ define <vscale x 2 x i16> @test_vlsseg7_nxv2i16(i16* %base, i64 %offset, i64 %vl
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli zero, a2, e16, mf2, ta, mu
 ; CHECK-NEXT:    vlsseg7e16.v v7, (a0), a1
-; CHECK-NEXT:    # kill: def $v8 killed $v8 killed $v7_v8_v9_v10_v11_v12_v13
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call {<vscale x 2 x i16>,<vscale x 2 x i16>,<vscale x 2 x i16>,<vscale x 2 x i16>,<vscale x 2 x i16>,<vscale x 2 x i16>,<vscale x 2 x i16>} @llvm.riscv.vlsseg7.nxv2i16(i16* %base, i64 %offset, i64 %vl)
@@ -2911,7 +2748,6 @@ define <vscale x 2 x i16> @test_vlsseg7_mask_nxv2i16(i16* %base, i64 %offset, i6
 ; CHECK-NEXT:    vmv1r.v v12, v7
 ; CHECK-NEXT:    vmv1r.v v13, v7
 ; CHECK-NEXT:    vlsseg7e16.v v7, (a0), a1, v0.t
-; CHECK-NEXT:    # kill: def $v8 killed $v8 killed $v7_v8_v9_v10_v11_v12_v13
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call {<vscale x 2 x i16>,<vscale x 2 x i16>,<vscale x 2 x i16>,<vscale x 2 x i16>,<vscale x 2 x i16>,<vscale x 2 x i16>,<vscale x 2 x i16>} @llvm.riscv.vlsseg7.nxv2i16(i16* %base, i64 %offset, i64 %vl)
@@ -2929,7 +2765,6 @@ define <vscale x 2 x i16> @test_vlsseg8_nxv2i16(i16* %base, i64 %offset, i64 %vl
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli zero, a2, e16, mf2, ta, mu
 ; CHECK-NEXT:    vlsseg8e16.v v7, (a0), a1
-; CHECK-NEXT:    # kill: def $v8 killed $v8 killed $v7_v8_v9_v10_v11_v12_v13_v14
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call {<vscale x 2 x i16>,<vscale x 2 x i16>,<vscale x 2 x i16>,<vscale x 2 x i16>,<vscale x 2 x i16>,<vscale x 2 x i16>,<vscale x 2 x i16>,<vscale x 2 x i16>} @llvm.riscv.vlsseg8.nxv2i16(i16* %base, i64 %offset, i64 %vl)
@@ -2950,7 +2785,6 @@ define <vscale x 2 x i16> @test_vlsseg8_mask_nxv2i16(i16* %base, i64 %offset, i6
 ; CHECK-NEXT:    vmv1r.v v13, v7
 ; CHECK-NEXT:    vmv1r.v v14, v7
 ; CHECK-NEXT:    vlsseg8e16.v v7, (a0), a1, v0.t
-; CHECK-NEXT:    # kill: def $v8 killed $v8 killed $v7_v8_v9_v10_v11_v12_v13_v14
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call {<vscale x 2 x i16>,<vscale x 2 x i16>,<vscale x 2 x i16>,<vscale x 2 x i16>,<vscale x 2 x i16>,<vscale x 2 x i16>,<vscale x 2 x i16>,<vscale x 2 x i16>} @llvm.riscv.vlsseg8.nxv2i16(i16* %base, i64 %offset, i64 %vl)
@@ -2968,7 +2802,6 @@ define <vscale x 2 x i64> @test_vlsseg2_nxv2i64(i64* %base, i64 %offset, i64 %vl
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli zero, a2, e64, m2, ta, mu
 ; CHECK-NEXT:    vlsseg2e64.v v6, (a0), a1
-; CHECK-NEXT:    # kill: def $v8m2 killed $v8m2 killed $v6m2_v8m2
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call {<vscale x 2 x i64>,<vscale x 2 x i64>} @llvm.riscv.vlsseg2.nxv2i64(i64* %base, i64 %offset, i64 %vl)
@@ -2983,7 +2816,6 @@ define <vscale x 2 x i64> @test_vlsseg2_mask_nxv2i64(i64* %base, i64 %offset, i6
 ; CHECK-NEXT:    vlsseg2e64.v v6, (a0), a1
 ; CHECK-NEXT:    vmv2r.v v8, v6
 ; CHECK-NEXT:    vlsseg2e64.v v6, (a0), a1, v0.t
-; CHECK-NEXT:    # kill: def $v8m2 killed $v8m2 killed $v6m2_v8m2
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call {<vscale x 2 x i64>,<vscale x 2 x i64>} @llvm.riscv.vlsseg2.nxv2i64(i64* %base, i64 %offset, i64 %vl)
@@ -3001,7 +2833,6 @@ define <vscale x 2 x i64> @test_vlsseg3_nxv2i64(i64* %base, i64 %offset, i64 %vl
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli zero, a2, e64, m2, ta, mu
 ; CHECK-NEXT:    vlsseg3e64.v v6, (a0), a1
-; CHECK-NEXT:    # kill: def $v8m2 killed $v8m2 killed $v6m2_v8m2_v10m2
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call {<vscale x 2 x i64>,<vscale x 2 x i64>,<vscale x 2 x i64>} @llvm.riscv.vlsseg3.nxv2i64(i64* %base, i64 %offset, i64 %vl)
@@ -3017,7 +2848,6 @@ define <vscale x 2 x i64> @test_vlsseg3_mask_nxv2i64(i64* %base, i64 %offset, i6
 ; CHECK-NEXT:    vmv2r.v v8, v6
 ; CHECK-NEXT:    vmv2r.v v10, v6
 ; CHECK-NEXT:    vlsseg3e64.v v6, (a0), a1, v0.t
-; CHECK-NEXT:    # kill: def $v8m2 killed $v8m2 killed $v6m2_v8m2_v10m2
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call {<vscale x 2 x i64>,<vscale x 2 x i64>,<vscale x 2 x i64>} @llvm.riscv.vlsseg3.nxv2i64(i64* %base, i64 %offset, i64 %vl)
@@ -3035,7 +2865,6 @@ define <vscale x 2 x i64> @test_vlsseg4_nxv2i64(i64* %base, i64 %offset, i64 %vl
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli zero, a2, e64, m2, ta, mu
 ; CHECK-NEXT:    vlsseg4e64.v v6, (a0), a1
-; CHECK-NEXT:    # kill: def $v8m2 killed $v8m2 killed $v6m2_v8m2_v10m2_v12m2
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call {<vscale x 2 x i64>,<vscale x 2 x i64>,<vscale x 2 x i64>,<vscale x 2 x i64>} @llvm.riscv.vlsseg4.nxv2i64(i64* %base, i64 %offset, i64 %vl)
@@ -3052,7 +2881,6 @@ define <vscale x 2 x i64> @test_vlsseg4_mask_nxv2i64(i64* %base, i64 %offset, i6
 ; CHECK-NEXT:    vmv2r.v v10, v6
 ; CHECK-NEXT:    vmv2r.v v12, v6
 ; CHECK-NEXT:    vlsseg4e64.v v6, (a0), a1, v0.t
-; CHECK-NEXT:    # kill: def $v8m2 killed $v8m2 killed $v6m2_v8m2_v10m2_v12m2
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call {<vscale x 2 x i64>,<vscale x 2 x i64>,<vscale x 2 x i64>,<vscale x 2 x i64>} @llvm.riscv.vlsseg4.nxv2i64(i64* %base, i64 %offset, i64 %vl)
@@ -3070,7 +2898,6 @@ define <vscale x 16 x half> @test_vlsseg2_nxv16f16(half* %base, i64 %offset, i64
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli zero, a2, e16, m4, ta, mu
 ; CHECK-NEXT:    vlsseg2e16.v v4, (a0), a1
-; CHECK-NEXT:    # kill: def $v8m4 killed $v8m4 killed $v4m4_v8m4
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call {<vscale x 16 x half>,<vscale x 16 x half>} @llvm.riscv.vlsseg2.nxv16f16(half* %base, i64 %offset, i64 %vl)
@@ -3085,7 +2912,6 @@ define <vscale x 16 x half> @test_vlsseg2_mask_nxv16f16(half* %base, i64 %offset
 ; CHECK-NEXT:    vlsseg2e16.v v4, (a0), a1
 ; CHECK-NEXT:    vmv4r.v v8, v4
 ; CHECK-NEXT:    vlsseg2e16.v v4, (a0), a1, v0.t
-; CHECK-NEXT:    # kill: def $v8m4 killed $v8m4 killed $v4m4_v8m4
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call {<vscale x 16 x half>,<vscale x 16 x half>} @llvm.riscv.vlsseg2.nxv16f16(half* %base, i64 %offset, i64 %vl)
@@ -3103,7 +2929,6 @@ define <vscale x 4 x double> @test_vlsseg2_nxv4f64(double* %base, i64 %offset, i
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli zero, a2, e64, m4, ta, mu
 ; CHECK-NEXT:    vlsseg2e64.v v4, (a0), a1
-; CHECK-NEXT:    # kill: def $v8m4 killed $v8m4 killed $v4m4_v8m4
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call {<vscale x 4 x double>,<vscale x 4 x double>} @llvm.riscv.vlsseg2.nxv4f64(double* %base, i64 %offset, i64 %vl)
@@ -3118,7 +2943,6 @@ define <vscale x 4 x double> @test_vlsseg2_mask_nxv4f64(double* %base, i64 %offs
 ; CHECK-NEXT:    vlsseg2e64.v v4, (a0), a1
 ; CHECK-NEXT:    vmv4r.v v8, v4
 ; CHECK-NEXT:    vlsseg2e64.v v4, (a0), a1, v0.t
-; CHECK-NEXT:    # kill: def $v8m4 killed $v8m4 killed $v4m4_v8m4
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call {<vscale x 4 x double>,<vscale x 4 x double>} @llvm.riscv.vlsseg2.nxv4f64(double* %base, i64 %offset, i64 %vl)
@@ -3136,7 +2960,6 @@ define <vscale x 1 x double> @test_vlsseg2_nxv1f64(double* %base, i64 %offset, i
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli zero, a2, e64, m1, ta, mu
 ; CHECK-NEXT:    vlsseg2e64.v v7, (a0), a1
-; CHECK-NEXT:    # kill: def $v8 killed $v8 killed $v7_v8
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call {<vscale x 1 x double>,<vscale x 1 x double>} @llvm.riscv.vlsseg2.nxv1f64(double* %base, i64 %offset, i64 %vl)
@@ -3151,7 +2974,6 @@ define <vscale x 1 x double> @test_vlsseg2_mask_nxv1f64(double* %base, i64 %offs
 ; CHECK-NEXT:    vlsseg2e64.v v7, (a0), a1
 ; CHECK-NEXT:    vmv1r.v v8, v7
 ; CHECK-NEXT:    vlsseg2e64.v v7, (a0), a1, v0.t
-; CHECK-NEXT:    # kill: def $v8 killed $v8 killed $v7_v8
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call {<vscale x 1 x double>,<vscale x 1 x double>} @llvm.riscv.vlsseg2.nxv1f64(double* %base, i64 %offset, i64 %vl)
@@ -3169,7 +2991,6 @@ define <vscale x 1 x double> @test_vlsseg3_nxv1f64(double* %base, i64 %offset, i
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli zero, a2, e64, m1, ta, mu
 ; CHECK-NEXT:    vlsseg3e64.v v7, (a0), a1
-; CHECK-NEXT:    # kill: def $v8 killed $v8 killed $v7_v8_v9
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call {<vscale x 1 x double>,<vscale x 1 x double>,<vscale x 1 x double>} @llvm.riscv.vlsseg3.nxv1f64(double* %base, i64 %offset, i64 %vl)
@@ -3185,7 +3006,6 @@ define <vscale x 1 x double> @test_vlsseg3_mask_nxv1f64(double* %base, i64 %offs
 ; CHECK-NEXT:    vmv1r.v v8, v7
 ; CHECK-NEXT:    vmv1r.v v9, v7
 ; CHECK-NEXT:    vlsseg3e64.v v7, (a0), a1, v0.t
-; CHECK-NEXT:    # kill: def $v8 killed $v8 killed $v7_v8_v9
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call {<vscale x 1 x double>,<vscale x 1 x double>,<vscale x 1 x double>} @llvm.riscv.vlsseg3.nxv1f64(double* %base, i64 %offset, i64 %vl)
@@ -3203,7 +3023,6 @@ define <vscale x 1 x double> @test_vlsseg4_nxv1f64(double* %base, i64 %offset, i
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli zero, a2, e64, m1, ta, mu
 ; CHECK-NEXT:    vlsseg4e64.v v7, (a0), a1
-; CHECK-NEXT:    # kill: def $v8 killed $v8 killed $v7_v8_v9_v10
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call {<vscale x 1 x double>,<vscale x 1 x double>,<vscale x 1 x double>,<vscale x 1 x double>} @llvm.riscv.vlsseg4.nxv1f64(double* %base, i64 %offset, i64 %vl)
@@ -3220,7 +3039,6 @@ define <vscale x 1 x double> @test_vlsseg4_mask_nxv1f64(double* %base, i64 %offs
 ; CHECK-NEXT:    vmv1r.v v9, v7
 ; CHECK-NEXT:    vmv1r.v v10, v7
 ; CHECK-NEXT:    vlsseg4e64.v v7, (a0), a1, v0.t
-; CHECK-NEXT:    # kill: def $v8 killed $v8 killed $v7_v8_v9_v10
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call {<vscale x 1 x double>,<vscale x 1 x double>,<vscale x 1 x double>,<vscale x 1 x double>} @llvm.riscv.vlsseg4.nxv1f64(double* %base, i64 %offset, i64 %vl)
@@ -3238,7 +3056,6 @@ define <vscale x 1 x double> @test_vlsseg5_nxv1f64(double* %base, i64 %offset, i
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli zero, a2, e64, m1, ta, mu
 ; CHECK-NEXT:    vlsseg5e64.v v7, (a0), a1
-; CHECK-NEXT:    # kill: def $v8 killed $v8 killed $v7_v8_v9_v10_v11
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call {<vscale x 1 x double>,<vscale x 1 x double>,<vscale x 1 x double>,<vscale x 1 x double>,<vscale x 1 x double>} @llvm.riscv.vlsseg5.nxv1f64(double* %base, i64 %offset, i64 %vl)
@@ -3256,7 +3073,6 @@ define <vscale x 1 x double> @test_vlsseg5_mask_nxv1f64(double* %base, i64 %offs
 ; CHECK-NEXT:    vmv1r.v v10, v7
 ; CHECK-NEXT:    vmv1r.v v11, v7
 ; CHECK-NEXT:    vlsseg5e64.v v7, (a0), a1, v0.t
-; CHECK-NEXT:    # kill: def $v8 killed $v8 killed $v7_v8_v9_v10_v11
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call {<vscale x 1 x double>,<vscale x 1 x double>,<vscale x 1 x double>,<vscale x 1 x double>,<vscale x 1 x double>} @llvm.riscv.vlsseg5.nxv1f64(double* %base, i64 %offset, i64 %vl)
@@ -3274,7 +3090,6 @@ define <vscale x 1 x double> @test_vlsseg6_nxv1f64(double* %base, i64 %offset, i
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli zero, a2, e64, m1, ta, mu
 ; CHECK-NEXT:    vlsseg6e64.v v7, (a0), a1
-; CHECK-NEXT:    # kill: def $v8 killed $v8 killed $v7_v8_v9_v10_v11_v12
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call {<vscale x 1 x double>,<vscale x 1 x double>,<vscale x 1 x double>,<vscale x 1 x double>,<vscale x 1 x double>,<vscale x 1 x double>} @llvm.riscv.vlsseg6.nxv1f64(double* %base, i64 %offset, i64 %vl)
@@ -3293,7 +3108,6 @@ define <vscale x 1 x double> @test_vlsseg6_mask_nxv1f64(double* %base, i64 %offs
 ; CHECK-NEXT:    vmv1r.v v11, v7
 ; CHECK-NEXT:    vmv1r.v v12, v7
 ; CHECK-NEXT:    vlsseg6e64.v v7, (a0), a1, v0.t
-; CHECK-NEXT:    # kill: def $v8 killed $v8 killed $v7_v8_v9_v10_v11_v12
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call {<vscale x 1 x double>,<vscale x 1 x double>,<vscale x 1 x double>,<vscale x 1 x double>,<vscale x 1 x double>,<vscale x 1 x double>} @llvm.riscv.vlsseg6.nxv1f64(double* %base, i64 %offset, i64 %vl)
@@ -3311,7 +3125,6 @@ define <vscale x 1 x double> @test_vlsseg7_nxv1f64(double* %base, i64 %offset, i
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli zero, a2, e64, m1, ta, mu
 ; CHECK-NEXT:    vlsseg7e64.v v7, (a0), a1
-; CHECK-NEXT:    # kill: def $v8 killed $v8 killed $v7_v8_v9_v10_v11_v12_v13
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call {<vscale x 1 x double>,<vscale x 1 x double>,<vscale x 1 x double>,<vscale x 1 x double>,<vscale x 1 x double>,<vscale x 1 x double>,<vscale x 1 x double>} @llvm.riscv.vlsseg7.nxv1f64(double* %base, i64 %offset, i64 %vl)
@@ -3331,7 +3144,6 @@ define <vscale x 1 x double> @test_vlsseg7_mask_nxv1f64(double* %base, i64 %offs
 ; CHECK-NEXT:    vmv1r.v v12, v7
 ; CHECK-NEXT:    vmv1r.v v13, v7
 ; CHECK-NEXT:    vlsseg7e64.v v7, (a0), a1, v0.t
-; CHECK-NEXT:    # kill: def $v8 killed $v8 killed $v7_v8_v9_v10_v11_v12_v13
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call {<vscale x 1 x double>,<vscale x 1 x double>,<vscale x 1 x double>,<vscale x 1 x double>,<vscale x 1 x double>,<vscale x 1 x double>,<vscale x 1 x double>} @llvm.riscv.vlsseg7.nxv1f64(double* %base, i64 %offset, i64 %vl)
@@ -3349,7 +3161,6 @@ define <vscale x 1 x double> @test_vlsseg8_nxv1f64(double* %base, i64 %offset, i
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli zero, a2, e64, m1, ta, mu
 ; CHECK-NEXT:    vlsseg8e64.v v7, (a0), a1
-; CHECK-NEXT:    # kill: def $v8 killed $v8 killed $v7_v8_v9_v10_v11_v12_v13_v14
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call {<vscale x 1 x double>,<vscale x 1 x double>,<vscale x 1 x double>,<vscale x 1 x double>,<vscale x 1 x double>,<vscale x 1 x double>,<vscale x 1 x double>,<vscale x 1 x double>} @llvm.riscv.vlsseg8.nxv1f64(double* %base, i64 %offset, i64 %vl)
@@ -3370,7 +3181,6 @@ define <vscale x 1 x double> @test_vlsseg8_mask_nxv1f64(double* %base, i64 %offs
 ; CHECK-NEXT:    vmv1r.v v13, v7
 ; CHECK-NEXT:    vmv1r.v v14, v7
 ; CHECK-NEXT:    vlsseg8e64.v v7, (a0), a1, v0.t
-; CHECK-NEXT:    # kill: def $v8 killed $v8 killed $v7_v8_v9_v10_v11_v12_v13_v14
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call {<vscale x 1 x double>,<vscale x 1 x double>,<vscale x 1 x double>,<vscale x 1 x double>,<vscale x 1 x double>,<vscale x 1 x double>,<vscale x 1 x double>,<vscale x 1 x double>} @llvm.riscv.vlsseg8.nxv1f64(double* %base, i64 %offset, i64 %vl)
@@ -3388,7 +3198,6 @@ define <vscale x 2 x float> @test_vlsseg2_nxv2f32(float* %base, i64 %offset, i64
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli zero, a2, e32, m1, ta, mu
 ; CHECK-NEXT:    vlsseg2e32.v v7, (a0), a1
-; CHECK-NEXT:    # kill: def $v8 killed $v8 killed $v7_v8
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call {<vscale x 2 x float>,<vscale x 2 x float>} @llvm.riscv.vlsseg2.nxv2f32(float* %base, i64 %offset, i64 %vl)
@@ -3403,7 +3212,6 @@ define <vscale x 2 x float> @test_vlsseg2_mask_nxv2f32(float* %base, i64 %offset
 ; CHECK-NEXT:    vlsseg2e32.v v7, (a0), a1
 ; CHECK-NEXT:    vmv1r.v v8, v7
 ; CHECK-NEXT:    vlsseg2e32.v v7, (a0), a1, v0.t
-; CHECK-NEXT:    # kill: def $v8 killed $v8 killed $v7_v8
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call {<vscale x 2 x float>,<vscale x 2 x float>} @llvm.riscv.vlsseg2.nxv2f32(float* %base, i64 %offset, i64 %vl)
@@ -3421,7 +3229,6 @@ define <vscale x 2 x float> @test_vlsseg3_nxv2f32(float* %base, i64 %offset, i64
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli zero, a2, e32, m1, ta, mu
 ; CHECK-NEXT:    vlsseg3e32.v v7, (a0), a1
-; CHECK-NEXT:    # kill: def $v8 killed $v8 killed $v7_v8_v9
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call {<vscale x 2 x float>,<vscale x 2 x float>,<vscale x 2 x float>} @llvm.riscv.vlsseg3.nxv2f32(float* %base, i64 %offset, i64 %vl)
@@ -3437,7 +3244,6 @@ define <vscale x 2 x float> @test_vlsseg3_mask_nxv2f32(float* %base, i64 %offset
 ; CHECK-NEXT:    vmv1r.v v8, v7
 ; CHECK-NEXT:    vmv1r.v v9, v7
 ; CHECK-NEXT:    vlsseg3e32.v v7, (a0), a1, v0.t
-; CHECK-NEXT:    # kill: def $v8 killed $v8 killed $v7_v8_v9
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call {<vscale x 2 x float>,<vscale x 2 x float>,<vscale x 2 x float>} @llvm.riscv.vlsseg3.nxv2f32(float* %base, i64 %offset, i64 %vl)
@@ -3455,7 +3261,6 @@ define <vscale x 2 x float> @test_vlsseg4_nxv2f32(float* %base, i64 %offset, i64
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli zero, a2, e32, m1, ta, mu
 ; CHECK-NEXT:    vlsseg4e32.v v7, (a0), a1
-; CHECK-NEXT:    # kill: def $v8 killed $v8 killed $v7_v8_v9_v10
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call {<vscale x 2 x float>,<vscale x 2 x float>,<vscale x 2 x float>,<vscale x 2 x float>} @llvm.riscv.vlsseg4.nxv2f32(float* %base, i64 %offset, i64 %vl)
@@ -3472,7 +3277,6 @@ define <vscale x 2 x float> @test_vlsseg4_mask_nxv2f32(float* %base, i64 %offset
 ; CHECK-NEXT:    vmv1r.v v9, v7
 ; CHECK-NEXT:    vmv1r.v v10, v7
 ; CHECK-NEXT:    vlsseg4e32.v v7, (a0), a1, v0.t
-; CHECK-NEXT:    # kill: def $v8 killed $v8 killed $v7_v8_v9_v10
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call {<vscale x 2 x float>,<vscale x 2 x float>,<vscale x 2 x float>,<vscale x 2 x float>} @llvm.riscv.vlsseg4.nxv2f32(float* %base, i64 %offset, i64 %vl)
@@ -3490,7 +3294,6 @@ define <vscale x 2 x float> @test_vlsseg5_nxv2f32(float* %base, i64 %offset, i64
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli zero, a2, e32, m1, ta, mu
 ; CHECK-NEXT:    vlsseg5e32.v v7, (a0), a1
-; CHECK-NEXT:    # kill: def $v8 killed $v8 killed $v7_v8_v9_v10_v11
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call {<vscale x 2 x float>,<vscale x 2 x float>,<vscale x 2 x float>,<vscale x 2 x float>,<vscale x 2 x float>} @llvm.riscv.vlsseg5.nxv2f32(float* %base, i64 %offset, i64 %vl)
@@ -3508,7 +3311,6 @@ define <vscale x 2 x float> @test_vlsseg5_mask_nxv2f32(float* %base, i64 %offset
 ; CHECK-NEXT:    vmv1r.v v10, v7
 ; CHECK-NEXT:    vmv1r.v v11, v7
 ; CHECK-NEXT:    vlsseg5e32.v v7, (a0), a1, v0.t
-; CHECK-NEXT:    # kill: def $v8 killed $v8 killed $v7_v8_v9_v10_v11
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call {<vscale x 2 x float>,<vscale x 2 x float>,<vscale x 2 x float>,<vscale x 2 x float>,<vscale x 2 x float>} @llvm.riscv.vlsseg5.nxv2f32(float* %base, i64 %offset, i64 %vl)
@@ -3526,7 +3328,6 @@ define <vscale x 2 x float> @test_vlsseg6_nxv2f32(float* %base, i64 %offset, i64
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli zero, a2, e32, m1, ta, mu
 ; CHECK-NEXT:    vlsseg6e32.v v7, (a0), a1
-; CHECK-NEXT:    # kill: def $v8 killed $v8 killed $v7_v8_v9_v10_v11_v12
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call {<vscale x 2 x float>,<vscale x 2 x float>,<vscale x 2 x float>,<vscale x 2 x float>,<vscale x 2 x float>,<vscale x 2 x float>} @llvm.riscv.vlsseg6.nxv2f32(float* %base, i64 %offset, i64 %vl)
@@ -3545,7 +3346,6 @@ define <vscale x 2 x float> @test_vlsseg6_mask_nxv2f32(float* %base, i64 %offset
 ; CHECK-NEXT:    vmv1r.v v11, v7
 ; CHECK-NEXT:    vmv1r.v v12, v7
 ; CHECK-NEXT:    vlsseg6e32.v v7, (a0), a1, v0.t
-; CHECK-NEXT:    # kill: def $v8 killed $v8 killed $v7_v8_v9_v10_v11_v12
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call {<vscale x 2 x float>,<vscale x 2 x float>,<vscale x 2 x float>,<vscale x 2 x float>,<vscale x 2 x float>,<vscale x 2 x float>} @llvm.riscv.vlsseg6.nxv2f32(float* %base, i64 %offset, i64 %vl)
@@ -3563,7 +3363,6 @@ define <vscale x 2 x float> @test_vlsseg7_nxv2f32(float* %base, i64 %offset, i64
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli zero, a2, e32, m1, ta, mu
 ; CHECK-NEXT:    vlsseg7e32.v v7, (a0), a1
-; CHECK-NEXT:    # kill: def $v8 killed $v8 killed $v7_v8_v9_v10_v11_v12_v13
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call {<vscale x 2 x float>,<vscale x 2 x float>,<vscale x 2 x float>,<vscale x 2 x float>,<vscale x 2 x float>,<vscale x 2 x float>,<vscale x 2 x float>} @llvm.riscv.vlsseg7.nxv2f32(float* %base, i64 %offset, i64 %vl)
@@ -3583,7 +3382,6 @@ define <vscale x 2 x float> @test_vlsseg7_mask_nxv2f32(float* %base, i64 %offset
 ; CHECK-NEXT:    vmv1r.v v12, v7
 ; CHECK-NEXT:    vmv1r.v v13, v7
 ; CHECK-NEXT:    vlsseg7e32.v v7, (a0), a1, v0.t
-; CHECK-NEXT:    # kill: def $v8 killed $v8 killed $v7_v8_v9_v10_v11_v12_v13
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call {<vscale x 2 x float>,<vscale x 2 x float>,<vscale x 2 x float>,<vscale x 2 x float>,<vscale x 2 x float>,<vscale x 2 x float>,<vscale x 2 x float>} @llvm.riscv.vlsseg7.nxv2f32(float* %base, i64 %offset, i64 %vl)
@@ -3601,7 +3399,6 @@ define <vscale x 2 x float> @test_vlsseg8_nxv2f32(float* %base, i64 %offset, i64
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli zero, a2, e32, m1, ta, mu
 ; CHECK-NEXT:    vlsseg8e32.v v7, (a0), a1
-; CHECK-NEXT:    # kill: def $v8 killed $v8 killed $v7_v8_v9_v10_v11_v12_v13_v14
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call {<vscale x 2 x float>,<vscale x 2 x float>,<vscale x 2 x float>,<vscale x 2 x float>,<vscale x 2 x float>,<vscale x 2 x float>,<vscale x 2 x float>,<vscale x 2 x float>} @llvm.riscv.vlsseg8.nxv2f32(float* %base, i64 %offset, i64 %vl)
@@ -3622,7 +3419,6 @@ define <vscale x 2 x float> @test_vlsseg8_mask_nxv2f32(float* %base, i64 %offset
 ; CHECK-NEXT:    vmv1r.v v13, v7
 ; CHECK-NEXT:    vmv1r.v v14, v7
 ; CHECK-NEXT:    vlsseg8e32.v v7, (a0), a1, v0.t
-; CHECK-NEXT:    # kill: def $v8 killed $v8 killed $v7_v8_v9_v10_v11_v12_v13_v14
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call {<vscale x 2 x float>,<vscale x 2 x float>,<vscale x 2 x float>,<vscale x 2 x float>,<vscale x 2 x float>,<vscale x 2 x float>,<vscale x 2 x float>,<vscale x 2 x float>} @llvm.riscv.vlsseg8.nxv2f32(float* %base, i64 %offset, i64 %vl)
@@ -3640,7 +3436,6 @@ define <vscale x 1 x half> @test_vlsseg2_nxv1f16(half* %base, i64 %offset, i64 %
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli zero, a2, e16, mf4, ta, mu
 ; CHECK-NEXT:    vlsseg2e16.v v7, (a0), a1
-; CHECK-NEXT:    # kill: def $v8 killed $v8 killed $v7_v8
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call {<vscale x 1 x half>,<vscale x 1 x half>} @llvm.riscv.vlsseg2.nxv1f16(half* %base, i64 %offset, i64 %vl)
@@ -3655,7 +3450,6 @@ define <vscale x 1 x half> @test_vlsseg2_mask_nxv1f16(half* %base, i64 %offset, 
 ; CHECK-NEXT:    vlsseg2e16.v v7, (a0), a1
 ; CHECK-NEXT:    vmv1r.v v8, v7
 ; CHECK-NEXT:    vlsseg2e16.v v7, (a0), a1, v0.t
-; CHECK-NEXT:    # kill: def $v8 killed $v8 killed $v7_v8
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call {<vscale x 1 x half>,<vscale x 1 x half>} @llvm.riscv.vlsseg2.nxv1f16(half* %base, i64 %offset, i64 %vl)
@@ -3673,7 +3467,6 @@ define <vscale x 1 x half> @test_vlsseg3_nxv1f16(half* %base, i64 %offset, i64 %
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli zero, a2, e16, mf4, ta, mu
 ; CHECK-NEXT:    vlsseg3e16.v v7, (a0), a1
-; CHECK-NEXT:    # kill: def $v8 killed $v8 killed $v7_v8_v9
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call {<vscale x 1 x half>,<vscale x 1 x half>,<vscale x 1 x half>} @llvm.riscv.vlsseg3.nxv1f16(half* %base, i64 %offset, i64 %vl)
@@ -3689,7 +3482,6 @@ define <vscale x 1 x half> @test_vlsseg3_mask_nxv1f16(half* %base, i64 %offset, 
 ; CHECK-NEXT:    vmv1r.v v8, v7
 ; CHECK-NEXT:    vmv1r.v v9, v7
 ; CHECK-NEXT:    vlsseg3e16.v v7, (a0), a1, v0.t
-; CHECK-NEXT:    # kill: def $v8 killed $v8 killed $v7_v8_v9
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call {<vscale x 1 x half>,<vscale x 1 x half>,<vscale x 1 x half>} @llvm.riscv.vlsseg3.nxv1f16(half* %base, i64 %offset, i64 %vl)
@@ -3707,7 +3499,6 @@ define <vscale x 1 x half> @test_vlsseg4_nxv1f16(half* %base, i64 %offset, i64 %
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli zero, a2, e16, mf4, ta, mu
 ; CHECK-NEXT:    vlsseg4e16.v v7, (a0), a1
-; CHECK-NEXT:    # kill: def $v8 killed $v8 killed $v7_v8_v9_v10
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call {<vscale x 1 x half>,<vscale x 1 x half>,<vscale x 1 x half>,<vscale x 1 x half>} @llvm.riscv.vlsseg4.nxv1f16(half* %base, i64 %offset, i64 %vl)
@@ -3724,7 +3515,6 @@ define <vscale x 1 x half> @test_vlsseg4_mask_nxv1f16(half* %base, i64 %offset, 
 ; CHECK-NEXT:    vmv1r.v v9, v7
 ; CHECK-NEXT:    vmv1r.v v10, v7
 ; CHECK-NEXT:    vlsseg4e16.v v7, (a0), a1, v0.t
-; CHECK-NEXT:    # kill: def $v8 killed $v8 killed $v7_v8_v9_v10
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call {<vscale x 1 x half>,<vscale x 1 x half>,<vscale x 1 x half>,<vscale x 1 x half>} @llvm.riscv.vlsseg4.nxv1f16(half* %base, i64 %offset, i64 %vl)
@@ -3742,7 +3532,6 @@ define <vscale x 1 x half> @test_vlsseg5_nxv1f16(half* %base, i64 %offset, i64 %
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli zero, a2, e16, mf4, ta, mu
 ; CHECK-NEXT:    vlsseg5e16.v v7, (a0), a1
-; CHECK-NEXT:    # kill: def $v8 killed $v8 killed $v7_v8_v9_v10_v11
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call {<vscale x 1 x half>,<vscale x 1 x half>,<vscale x 1 x half>,<vscale x 1 x half>,<vscale x 1 x half>} @llvm.riscv.vlsseg5.nxv1f16(half* %base, i64 %offset, i64 %vl)
@@ -3760,7 +3549,6 @@ define <vscale x 1 x half> @test_vlsseg5_mask_nxv1f16(half* %base, i64 %offset, 
 ; CHECK-NEXT:    vmv1r.v v10, v7
 ; CHECK-NEXT:    vmv1r.v v11, v7
 ; CHECK-NEXT:    vlsseg5e16.v v7, (a0), a1, v0.t
-; CHECK-NEXT:    # kill: def $v8 killed $v8 killed $v7_v8_v9_v10_v11
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call {<vscale x 1 x half>,<vscale x 1 x half>,<vscale x 1 x half>,<vscale x 1 x half>,<vscale x 1 x half>} @llvm.riscv.vlsseg5.nxv1f16(half* %base, i64 %offset, i64 %vl)
@@ -3778,7 +3566,6 @@ define <vscale x 1 x half> @test_vlsseg6_nxv1f16(half* %base, i64 %offset, i64 %
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli zero, a2, e16, mf4, ta, mu
 ; CHECK-NEXT:    vlsseg6e16.v v7, (a0), a1
-; CHECK-NEXT:    # kill: def $v8 killed $v8 killed $v7_v8_v9_v10_v11_v12
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call {<vscale x 1 x half>,<vscale x 1 x half>,<vscale x 1 x half>,<vscale x 1 x half>,<vscale x 1 x half>,<vscale x 1 x half>} @llvm.riscv.vlsseg6.nxv1f16(half* %base, i64 %offset, i64 %vl)
@@ -3797,7 +3584,6 @@ define <vscale x 1 x half> @test_vlsseg6_mask_nxv1f16(half* %base, i64 %offset, 
 ; CHECK-NEXT:    vmv1r.v v11, v7
 ; CHECK-NEXT:    vmv1r.v v12, v7
 ; CHECK-NEXT:    vlsseg6e16.v v7, (a0), a1, v0.t
-; CHECK-NEXT:    # kill: def $v8 killed $v8 killed $v7_v8_v9_v10_v11_v12
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call {<vscale x 1 x half>,<vscale x 1 x half>,<vscale x 1 x half>,<vscale x 1 x half>,<vscale x 1 x half>,<vscale x 1 x half>} @llvm.riscv.vlsseg6.nxv1f16(half* %base, i64 %offset, i64 %vl)
@@ -3815,7 +3601,6 @@ define <vscale x 1 x half> @test_vlsseg7_nxv1f16(half* %base, i64 %offset, i64 %
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli zero, a2, e16, mf4, ta, mu
 ; CHECK-NEXT:    vlsseg7e16.v v7, (a0), a1
-; CHECK-NEXT:    # kill: def $v8 killed $v8 killed $v7_v8_v9_v10_v11_v12_v13
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call {<vscale x 1 x half>,<vscale x 1 x half>,<vscale x 1 x half>,<vscale x 1 x half>,<vscale x 1 x half>,<vscale x 1 x half>,<vscale x 1 x half>} @llvm.riscv.vlsseg7.nxv1f16(half* %base, i64 %offset, i64 %vl)
@@ -3835,7 +3620,6 @@ define <vscale x 1 x half> @test_vlsseg7_mask_nxv1f16(half* %base, i64 %offset, 
 ; CHECK-NEXT:    vmv1r.v v12, v7
 ; CHECK-NEXT:    vmv1r.v v13, v7
 ; CHECK-NEXT:    vlsseg7e16.v v7, (a0), a1, v0.t
-; CHECK-NEXT:    # kill: def $v8 killed $v8 killed $v7_v8_v9_v10_v11_v12_v13
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call {<vscale x 1 x half>,<vscale x 1 x half>,<vscale x 1 x half>,<vscale x 1 x half>,<vscale x 1 x half>,<vscale x 1 x half>,<vscale x 1 x half>} @llvm.riscv.vlsseg7.nxv1f16(half* %base, i64 %offset, i64 %vl)
@@ -3853,7 +3637,6 @@ define <vscale x 1 x half> @test_vlsseg8_nxv1f16(half* %base, i64 %offset, i64 %
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli zero, a2, e16, mf4, ta, mu
 ; CHECK-NEXT:    vlsseg8e16.v v7, (a0), a1
-; CHECK-NEXT:    # kill: def $v8 killed $v8 killed $v7_v8_v9_v10_v11_v12_v13_v14
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call {<vscale x 1 x half>,<vscale x 1 x half>,<vscale x 1 x half>,<vscale x 1 x half>,<vscale x 1 x half>,<vscale x 1 x half>,<vscale x 1 x half>,<vscale x 1 x half>} @llvm.riscv.vlsseg8.nxv1f16(half* %base, i64 %offset, i64 %vl)
@@ -3874,7 +3657,6 @@ define <vscale x 1 x half> @test_vlsseg8_mask_nxv1f16(half* %base, i64 %offset, 
 ; CHECK-NEXT:    vmv1r.v v13, v7
 ; CHECK-NEXT:    vmv1r.v v14, v7
 ; CHECK-NEXT:    vlsseg8e16.v v7, (a0), a1, v0.t
-; CHECK-NEXT:    # kill: def $v8 killed $v8 killed $v7_v8_v9_v10_v11_v12_v13_v14
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call {<vscale x 1 x half>,<vscale x 1 x half>,<vscale x 1 x half>,<vscale x 1 x half>,<vscale x 1 x half>,<vscale x 1 x half>,<vscale x 1 x half>,<vscale x 1 x half>} @llvm.riscv.vlsseg8.nxv1f16(half* %base, i64 %offset, i64 %vl)
@@ -3892,7 +3674,6 @@ define <vscale x 1 x float> @test_vlsseg2_nxv1f32(float* %base, i64 %offset, i64
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli zero, a2, e32, mf2, ta, mu
 ; CHECK-NEXT:    vlsseg2e32.v v7, (a0), a1
-; CHECK-NEXT:    # kill: def $v8 killed $v8 killed $v7_v8
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call {<vscale x 1 x float>,<vscale x 1 x float>} @llvm.riscv.vlsseg2.nxv1f32(float* %base, i64 %offset, i64 %vl)
@@ -3907,7 +3688,6 @@ define <vscale x 1 x float> @test_vlsseg2_mask_nxv1f32(float* %base, i64 %offset
 ; CHECK-NEXT:    vlsseg2e32.v v7, (a0), a1
 ; CHECK-NEXT:    vmv1r.v v8, v7
 ; CHECK-NEXT:    vlsseg2e32.v v7, (a0), a1, v0.t
-; CHECK-NEXT:    # kill: def $v8 killed $v8 killed $v7_v8
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call {<vscale x 1 x float>,<vscale x 1 x float>} @llvm.riscv.vlsseg2.nxv1f32(float* %base, i64 %offset, i64 %vl)
@@ -3925,7 +3705,6 @@ define <vscale x 1 x float> @test_vlsseg3_nxv1f32(float* %base, i64 %offset, i64
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli zero, a2, e32, mf2, ta, mu
 ; CHECK-NEXT:    vlsseg3e32.v v7, (a0), a1
-; CHECK-NEXT:    # kill: def $v8 killed $v8 killed $v7_v8_v9
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call {<vscale x 1 x float>,<vscale x 1 x float>,<vscale x 1 x float>} @llvm.riscv.vlsseg3.nxv1f32(float* %base, i64 %offset, i64 %vl)
@@ -3941,7 +3720,6 @@ define <vscale x 1 x float> @test_vlsseg3_mask_nxv1f32(float* %base, i64 %offset
 ; CHECK-NEXT:    vmv1r.v v8, v7
 ; CHECK-NEXT:    vmv1r.v v9, v7
 ; CHECK-NEXT:    vlsseg3e32.v v7, (a0), a1, v0.t
-; CHECK-NEXT:    # kill: def $v8 killed $v8 killed $v7_v8_v9
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call {<vscale x 1 x float>,<vscale x 1 x float>,<vscale x 1 x float>} @llvm.riscv.vlsseg3.nxv1f32(float* %base, i64 %offset, i64 %vl)
@@ -3959,7 +3737,6 @@ define <vscale x 1 x float> @test_vlsseg4_nxv1f32(float* %base, i64 %offset, i64
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli zero, a2, e32, mf2, ta, mu
 ; CHECK-NEXT:    vlsseg4e32.v v7, (a0), a1
-; CHECK-NEXT:    # kill: def $v8 killed $v8 killed $v7_v8_v9_v10
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call {<vscale x 1 x float>,<vscale x 1 x float>,<vscale x 1 x float>,<vscale x 1 x float>} @llvm.riscv.vlsseg4.nxv1f32(float* %base, i64 %offset, i64 %vl)
@@ -3976,7 +3753,6 @@ define <vscale x 1 x float> @test_vlsseg4_mask_nxv1f32(float* %base, i64 %offset
 ; CHECK-NEXT:    vmv1r.v v9, v7
 ; CHECK-NEXT:    vmv1r.v v10, v7
 ; CHECK-NEXT:    vlsseg4e32.v v7, (a0), a1, v0.t
-; CHECK-NEXT:    # kill: def $v8 killed $v8 killed $v7_v8_v9_v10
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call {<vscale x 1 x float>,<vscale x 1 x float>,<vscale x 1 x float>,<vscale x 1 x float>} @llvm.riscv.vlsseg4.nxv1f32(float* %base, i64 %offset, i64 %vl)
@@ -3994,7 +3770,6 @@ define <vscale x 1 x float> @test_vlsseg5_nxv1f32(float* %base, i64 %offset, i64
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli zero, a2, e32, mf2, ta, mu
 ; CHECK-NEXT:    vlsseg5e32.v v7, (a0), a1
-; CHECK-NEXT:    # kill: def $v8 killed $v8 killed $v7_v8_v9_v10_v11
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call {<vscale x 1 x float>,<vscale x 1 x float>,<vscale x 1 x float>,<vscale x 1 x float>,<vscale x 1 x float>} @llvm.riscv.vlsseg5.nxv1f32(float* %base, i64 %offset, i64 %vl)
@@ -4012,7 +3787,6 @@ define <vscale x 1 x float> @test_vlsseg5_mask_nxv1f32(float* %base, i64 %offset
 ; CHECK-NEXT:    vmv1r.v v10, v7
 ; CHECK-NEXT:    vmv1r.v v11, v7
 ; CHECK-NEXT:    vlsseg5e32.v v7, (a0), a1, v0.t
-; CHECK-NEXT:    # kill: def $v8 killed $v8 killed $v7_v8_v9_v10_v11
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call {<vscale x 1 x float>,<vscale x 1 x float>,<vscale x 1 x float>,<vscale x 1 x float>,<vscale x 1 x float>} @llvm.riscv.vlsseg5.nxv1f32(float* %base, i64 %offset, i64 %vl)
@@ -4030,7 +3804,6 @@ define <vscale x 1 x float> @test_vlsseg6_nxv1f32(float* %base, i64 %offset, i64
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli zero, a2, e32, mf2, ta, mu
 ; CHECK-NEXT:    vlsseg6e32.v v7, (a0), a1
-; CHECK-NEXT:    # kill: def $v8 killed $v8 killed $v7_v8_v9_v10_v11_v12
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call {<vscale x 1 x float>,<vscale x 1 x float>,<vscale x 1 x float>,<vscale x 1 x float>,<vscale x 1 x float>,<vscale x 1 x float>} @llvm.riscv.vlsseg6.nxv1f32(float* %base, i64 %offset, i64 %vl)
@@ -4049,7 +3822,6 @@ define <vscale x 1 x float> @test_vlsseg6_mask_nxv1f32(float* %base, i64 %offset
 ; CHECK-NEXT:    vmv1r.v v11, v7
 ; CHECK-NEXT:    vmv1r.v v12, v7
 ; CHECK-NEXT:    vlsseg6e32.v v7, (a0), a1, v0.t
-; CHECK-NEXT:    # kill: def $v8 killed $v8 killed $v7_v8_v9_v10_v11_v12
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call {<vscale x 1 x float>,<vscale x 1 x float>,<vscale x 1 x float>,<vscale x 1 x float>,<vscale x 1 x float>,<vscale x 1 x float>} @llvm.riscv.vlsseg6.nxv1f32(float* %base, i64 %offset, i64 %vl)
@@ -4067,7 +3839,6 @@ define <vscale x 1 x float> @test_vlsseg7_nxv1f32(float* %base, i64 %offset, i64
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli zero, a2, e32, mf2, ta, mu
 ; CHECK-NEXT:    vlsseg7e32.v v7, (a0), a1
-; CHECK-NEXT:    # kill: def $v8 killed $v8 killed $v7_v8_v9_v10_v11_v12_v13
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call {<vscale x 1 x float>,<vscale x 1 x float>,<vscale x 1 x float>,<vscale x 1 x float>,<vscale x 1 x float>,<vscale x 1 x float>,<vscale x 1 x float>} @llvm.riscv.vlsseg7.nxv1f32(float* %base, i64 %offset, i64 %vl)
@@ -4087,7 +3858,6 @@ define <vscale x 1 x float> @test_vlsseg7_mask_nxv1f32(float* %base, i64 %offset
 ; CHECK-NEXT:    vmv1r.v v12, v7
 ; CHECK-NEXT:    vmv1r.v v13, v7
 ; CHECK-NEXT:    vlsseg7e32.v v7, (a0), a1, v0.t
-; CHECK-NEXT:    # kill: def $v8 killed $v8 killed $v7_v8_v9_v10_v11_v12_v13
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call {<vscale x 1 x float>,<vscale x 1 x float>,<vscale x 1 x float>,<vscale x 1 x float>,<vscale x 1 x float>,<vscale x 1 x float>,<vscale x 1 x float>} @llvm.riscv.vlsseg7.nxv1f32(float* %base, i64 %offset, i64 %vl)
@@ -4105,7 +3875,6 @@ define <vscale x 1 x float> @test_vlsseg8_nxv1f32(float* %base, i64 %offset, i64
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli zero, a2, e32, mf2, ta, mu
 ; CHECK-NEXT:    vlsseg8e32.v v7, (a0), a1
-; CHECK-NEXT:    # kill: def $v8 killed $v8 killed $v7_v8_v9_v10_v11_v12_v13_v14
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call {<vscale x 1 x float>,<vscale x 1 x float>,<vscale x 1 x float>,<vscale x 1 x float>,<vscale x 1 x float>,<vscale x 1 x float>,<vscale x 1 x float>,<vscale x 1 x float>} @llvm.riscv.vlsseg8.nxv1f32(float* %base, i64 %offset, i64 %vl)
@@ -4126,7 +3895,6 @@ define <vscale x 1 x float> @test_vlsseg8_mask_nxv1f32(float* %base, i64 %offset
 ; CHECK-NEXT:    vmv1r.v v13, v7
 ; CHECK-NEXT:    vmv1r.v v14, v7
 ; CHECK-NEXT:    vlsseg8e32.v v7, (a0), a1, v0.t
-; CHECK-NEXT:    # kill: def $v8 killed $v8 killed $v7_v8_v9_v10_v11_v12_v13_v14
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call {<vscale x 1 x float>,<vscale x 1 x float>,<vscale x 1 x float>,<vscale x 1 x float>,<vscale x 1 x float>,<vscale x 1 x float>,<vscale x 1 x float>,<vscale x 1 x float>} @llvm.riscv.vlsseg8.nxv1f32(float* %base, i64 %offset, i64 %vl)
@@ -4144,7 +3912,6 @@ define <vscale x 8 x half> @test_vlsseg2_nxv8f16(half* %base, i64 %offset, i64 %
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli zero, a2, e16, m2, ta, mu
 ; CHECK-NEXT:    vlsseg2e16.v v6, (a0), a1
-; CHECK-NEXT:    # kill: def $v8m2 killed $v8m2 killed $v6m2_v8m2
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call {<vscale x 8 x half>,<vscale x 8 x half>} @llvm.riscv.vlsseg2.nxv8f16(half* %base, i64 %offset, i64 %vl)
@@ -4159,7 +3926,6 @@ define <vscale x 8 x half> @test_vlsseg2_mask_nxv8f16(half* %base, i64 %offset, 
 ; CHECK-NEXT:    vlsseg2e16.v v6, (a0), a1
 ; CHECK-NEXT:    vmv2r.v v8, v6
 ; CHECK-NEXT:    vlsseg2e16.v v6, (a0), a1, v0.t
-; CHECK-NEXT:    # kill: def $v8m2 killed $v8m2 killed $v6m2_v8m2
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call {<vscale x 8 x half>,<vscale x 8 x half>} @llvm.riscv.vlsseg2.nxv8f16(half* %base, i64 %offset, i64 %vl)
@@ -4177,7 +3943,6 @@ define <vscale x 8 x half> @test_vlsseg3_nxv8f16(half* %base, i64 %offset, i64 %
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli zero, a2, e16, m2, ta, mu
 ; CHECK-NEXT:    vlsseg3e16.v v6, (a0), a1
-; CHECK-NEXT:    # kill: def $v8m2 killed $v8m2 killed $v6m2_v8m2_v10m2
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call {<vscale x 8 x half>,<vscale x 8 x half>,<vscale x 8 x half>} @llvm.riscv.vlsseg3.nxv8f16(half* %base, i64 %offset, i64 %vl)
@@ -4193,7 +3958,6 @@ define <vscale x 8 x half> @test_vlsseg3_mask_nxv8f16(half* %base, i64 %offset, 
 ; CHECK-NEXT:    vmv2r.v v8, v6
 ; CHECK-NEXT:    vmv2r.v v10, v6
 ; CHECK-NEXT:    vlsseg3e16.v v6, (a0), a1, v0.t
-; CHECK-NEXT:    # kill: def $v8m2 killed $v8m2 killed $v6m2_v8m2_v10m2
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call {<vscale x 8 x half>,<vscale x 8 x half>,<vscale x 8 x half>} @llvm.riscv.vlsseg3.nxv8f16(half* %base, i64 %offset, i64 %vl)
@@ -4211,7 +3975,6 @@ define <vscale x 8 x half> @test_vlsseg4_nxv8f16(half* %base, i64 %offset, i64 %
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli zero, a2, e16, m2, ta, mu
 ; CHECK-NEXT:    vlsseg4e16.v v6, (a0), a1
-; CHECK-NEXT:    # kill: def $v8m2 killed $v8m2 killed $v6m2_v8m2_v10m2_v12m2
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call {<vscale x 8 x half>,<vscale x 8 x half>,<vscale x 8 x half>,<vscale x 8 x half>} @llvm.riscv.vlsseg4.nxv8f16(half* %base, i64 %offset, i64 %vl)
@@ -4228,7 +3991,6 @@ define <vscale x 8 x half> @test_vlsseg4_mask_nxv8f16(half* %base, i64 %offset, 
 ; CHECK-NEXT:    vmv2r.v v10, v6
 ; CHECK-NEXT:    vmv2r.v v12, v6
 ; CHECK-NEXT:    vlsseg4e16.v v6, (a0), a1, v0.t
-; CHECK-NEXT:    # kill: def $v8m2 killed $v8m2 killed $v6m2_v8m2_v10m2_v12m2
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call {<vscale x 8 x half>,<vscale x 8 x half>,<vscale x 8 x half>,<vscale x 8 x half>} @llvm.riscv.vlsseg4.nxv8f16(half* %base, i64 %offset, i64 %vl)
@@ -4246,7 +4008,6 @@ define <vscale x 8 x float> @test_vlsseg2_nxv8f32(float* %base, i64 %offset, i64
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli zero, a2, e32, m4, ta, mu
 ; CHECK-NEXT:    vlsseg2e32.v v4, (a0), a1
-; CHECK-NEXT:    # kill: def $v8m4 killed $v8m4 killed $v4m4_v8m4
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call {<vscale x 8 x float>,<vscale x 8 x float>} @llvm.riscv.vlsseg2.nxv8f32(float* %base, i64 %offset, i64 %vl)
@@ -4261,7 +4022,6 @@ define <vscale x 8 x float> @test_vlsseg2_mask_nxv8f32(float* %base, i64 %offset
 ; CHECK-NEXT:    vlsseg2e32.v v4, (a0), a1
 ; CHECK-NEXT:    vmv4r.v v8, v4
 ; CHECK-NEXT:    vlsseg2e32.v v4, (a0), a1, v0.t
-; CHECK-NEXT:    # kill: def $v8m4 killed $v8m4 killed $v4m4_v8m4
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call {<vscale x 8 x float>,<vscale x 8 x float>} @llvm.riscv.vlsseg2.nxv8f32(float* %base, i64 %offset, i64 %vl)
@@ -4279,7 +4039,6 @@ define <vscale x 2 x double> @test_vlsseg2_nxv2f64(double* %base, i64 %offset, i
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli zero, a2, e64, m2, ta, mu
 ; CHECK-NEXT:    vlsseg2e64.v v6, (a0), a1
-; CHECK-NEXT:    # kill: def $v8m2 killed $v8m2 killed $v6m2_v8m2
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call {<vscale x 2 x double>,<vscale x 2 x double>} @llvm.riscv.vlsseg2.nxv2f64(double* %base, i64 %offset, i64 %vl)
@@ -4294,7 +4053,6 @@ define <vscale x 2 x double> @test_vlsseg2_mask_nxv2f64(double* %base, i64 %offs
 ; CHECK-NEXT:    vlsseg2e64.v v6, (a0), a1
 ; CHECK-NEXT:    vmv2r.v v8, v6
 ; CHECK-NEXT:    vlsseg2e64.v v6, (a0), a1, v0.t
-; CHECK-NEXT:    # kill: def $v8m2 killed $v8m2 killed $v6m2_v8m2
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call {<vscale x 2 x double>,<vscale x 2 x double>} @llvm.riscv.vlsseg2.nxv2f64(double* %base, i64 %offset, i64 %vl)
@@ -4312,7 +4070,6 @@ define <vscale x 2 x double> @test_vlsseg3_nxv2f64(double* %base, i64 %offset, i
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli zero, a2, e64, m2, ta, mu
 ; CHECK-NEXT:    vlsseg3e64.v v6, (a0), a1
-; CHECK-NEXT:    # kill: def $v8m2 killed $v8m2 killed $v6m2_v8m2_v10m2
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call {<vscale x 2 x double>,<vscale x 2 x double>,<vscale x 2 x double>} @llvm.riscv.vlsseg3.nxv2f64(double* %base, i64 %offset, i64 %vl)
@@ -4328,7 +4085,6 @@ define <vscale x 2 x double> @test_vlsseg3_mask_nxv2f64(double* %base, i64 %offs
 ; CHECK-NEXT:    vmv2r.v v8, v6
 ; CHECK-NEXT:    vmv2r.v v10, v6
 ; CHECK-NEXT:    vlsseg3e64.v v6, (a0), a1, v0.t
-; CHECK-NEXT:    # kill: def $v8m2 killed $v8m2 killed $v6m2_v8m2_v10m2
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call {<vscale x 2 x double>,<vscale x 2 x double>,<vscale x 2 x double>} @llvm.riscv.vlsseg3.nxv2f64(double* %base, i64 %offset, i64 %vl)
@@ -4346,7 +4102,6 @@ define <vscale x 2 x double> @test_vlsseg4_nxv2f64(double* %base, i64 %offset, i
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli zero, a2, e64, m2, ta, mu
 ; CHECK-NEXT:    vlsseg4e64.v v6, (a0), a1
-; CHECK-NEXT:    # kill: def $v8m2 killed $v8m2 killed $v6m2_v8m2_v10m2_v12m2
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call {<vscale x 2 x double>,<vscale x 2 x double>,<vscale x 2 x double>,<vscale x 2 x double>} @llvm.riscv.vlsseg4.nxv2f64(double* %base, i64 %offset, i64 %vl)
@@ -4363,7 +4118,6 @@ define <vscale x 2 x double> @test_vlsseg4_mask_nxv2f64(double* %base, i64 %offs
 ; CHECK-NEXT:    vmv2r.v v10, v6
 ; CHECK-NEXT:    vmv2r.v v12, v6
 ; CHECK-NEXT:    vlsseg4e64.v v6, (a0), a1, v0.t
-; CHECK-NEXT:    # kill: def $v8m2 killed $v8m2 killed $v6m2_v8m2_v10m2_v12m2
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call {<vscale x 2 x double>,<vscale x 2 x double>,<vscale x 2 x double>,<vscale x 2 x double>} @llvm.riscv.vlsseg4.nxv2f64(double* %base, i64 %offset, i64 %vl)
@@ -4381,7 +4135,6 @@ define <vscale x 4 x half> @test_vlsseg2_nxv4f16(half* %base, i64 %offset, i64 %
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli zero, a2, e16, m1, ta, mu
 ; CHECK-NEXT:    vlsseg2e16.v v7, (a0), a1
-; CHECK-NEXT:    # kill: def $v8 killed $v8 killed $v7_v8
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call {<vscale x 4 x half>,<vscale x 4 x half>} @llvm.riscv.vlsseg2.nxv4f16(half* %base, i64 %offset, i64 %vl)
@@ -4396,7 +4149,6 @@ define <vscale x 4 x half> @test_vlsseg2_mask_nxv4f16(half* %base, i64 %offset, 
 ; CHECK-NEXT:    vlsseg2e16.v v7, (a0), a1
 ; CHECK-NEXT:    vmv1r.v v8, v7
 ; CHECK-NEXT:    vlsseg2e16.v v7, (a0), a1, v0.t
-; CHECK-NEXT:    # kill: def $v8 killed $v8 killed $v7_v8
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call {<vscale x 4 x half>,<vscale x 4 x half>} @llvm.riscv.vlsseg2.nxv4f16(half* %base, i64 %offset, i64 %vl)
@@ -4414,7 +4166,6 @@ define <vscale x 4 x half> @test_vlsseg3_nxv4f16(half* %base, i64 %offset, i64 %
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli zero, a2, e16, m1, ta, mu
 ; CHECK-NEXT:    vlsseg3e16.v v7, (a0), a1
-; CHECK-NEXT:    # kill: def $v8 killed $v8 killed $v7_v8_v9
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call {<vscale x 4 x half>,<vscale x 4 x half>,<vscale x 4 x half>} @llvm.riscv.vlsseg3.nxv4f16(half* %base, i64 %offset, i64 %vl)
@@ -4430,7 +4181,6 @@ define <vscale x 4 x half> @test_vlsseg3_mask_nxv4f16(half* %base, i64 %offset, 
 ; CHECK-NEXT:    vmv1r.v v8, v7
 ; CHECK-NEXT:    vmv1r.v v9, v7
 ; CHECK-NEXT:    vlsseg3e16.v v7, (a0), a1, v0.t
-; CHECK-NEXT:    # kill: def $v8 killed $v8 killed $v7_v8_v9
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call {<vscale x 4 x half>,<vscale x 4 x half>,<vscale x 4 x half>} @llvm.riscv.vlsseg3.nxv4f16(half* %base, i64 %offset, i64 %vl)
@@ -4448,7 +4198,6 @@ define <vscale x 4 x half> @test_vlsseg4_nxv4f16(half* %base, i64 %offset, i64 %
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli zero, a2, e16, m1, ta, mu
 ; CHECK-NEXT:    vlsseg4e16.v v7, (a0), a1
-; CHECK-NEXT:    # kill: def $v8 killed $v8 killed $v7_v8_v9_v10
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call {<vscale x 4 x half>,<vscale x 4 x half>,<vscale x 4 x half>,<vscale x 4 x half>} @llvm.riscv.vlsseg4.nxv4f16(half* %base, i64 %offset, i64 %vl)
@@ -4465,7 +4214,6 @@ define <vscale x 4 x half> @test_vlsseg4_mask_nxv4f16(half* %base, i64 %offset, 
 ; CHECK-NEXT:    vmv1r.v v9, v7
 ; CHECK-NEXT:    vmv1r.v v10, v7
 ; CHECK-NEXT:    vlsseg4e16.v v7, (a0), a1, v0.t
-; CHECK-NEXT:    # kill: def $v8 killed $v8 killed $v7_v8_v9_v10
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call {<vscale x 4 x half>,<vscale x 4 x half>,<vscale x 4 x half>,<vscale x 4 x half>} @llvm.riscv.vlsseg4.nxv4f16(half* %base, i64 %offset, i64 %vl)
@@ -4483,7 +4231,6 @@ define <vscale x 4 x half> @test_vlsseg5_nxv4f16(half* %base, i64 %offset, i64 %
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli zero, a2, e16, m1, ta, mu
 ; CHECK-NEXT:    vlsseg5e16.v v7, (a0), a1
-; CHECK-NEXT:    # kill: def $v8 killed $v8 killed $v7_v8_v9_v10_v11
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call {<vscale x 4 x half>,<vscale x 4 x half>,<vscale x 4 x half>,<vscale x 4 x half>,<vscale x 4 x half>} @llvm.riscv.vlsseg5.nxv4f16(half* %base, i64 %offset, i64 %vl)
@@ -4501,7 +4248,6 @@ define <vscale x 4 x half> @test_vlsseg5_mask_nxv4f16(half* %base, i64 %offset, 
 ; CHECK-NEXT:    vmv1r.v v10, v7
 ; CHECK-NEXT:    vmv1r.v v11, v7
 ; CHECK-NEXT:    vlsseg5e16.v v7, (a0), a1, v0.t
-; CHECK-NEXT:    # kill: def $v8 killed $v8 killed $v7_v8_v9_v10_v11
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call {<vscale x 4 x half>,<vscale x 4 x half>,<vscale x 4 x half>,<vscale x 4 x half>,<vscale x 4 x half>} @llvm.riscv.vlsseg5.nxv4f16(half* %base, i64 %offset, i64 %vl)
@@ -4519,7 +4265,6 @@ define <vscale x 4 x half> @test_vlsseg6_nxv4f16(half* %base, i64 %offset, i64 %
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli zero, a2, e16, m1, ta, mu
 ; CHECK-NEXT:    vlsseg6e16.v v7, (a0), a1
-; CHECK-NEXT:    # kill: def $v8 killed $v8 killed $v7_v8_v9_v10_v11_v12
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call {<vscale x 4 x half>,<vscale x 4 x half>,<vscale x 4 x half>,<vscale x 4 x half>,<vscale x 4 x half>,<vscale x 4 x half>} @llvm.riscv.vlsseg6.nxv4f16(half* %base, i64 %offset, i64 %vl)
@@ -4538,7 +4283,6 @@ define <vscale x 4 x half> @test_vlsseg6_mask_nxv4f16(half* %base, i64 %offset, 
 ; CHECK-NEXT:    vmv1r.v v11, v7
 ; CHECK-NEXT:    vmv1r.v v12, v7
 ; CHECK-NEXT:    vlsseg6e16.v v7, (a0), a1, v0.t
-; CHECK-NEXT:    # kill: def $v8 killed $v8 killed $v7_v8_v9_v10_v11_v12
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call {<vscale x 4 x half>,<vscale x 4 x half>,<vscale x 4 x half>,<vscale x 4 x half>,<vscale x 4 x half>,<vscale x 4 x half>} @llvm.riscv.vlsseg6.nxv4f16(half* %base, i64 %offset, i64 %vl)
@@ -4556,7 +4300,6 @@ define <vscale x 4 x half> @test_vlsseg7_nxv4f16(half* %base, i64 %offset, i64 %
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli zero, a2, e16, m1, ta, mu
 ; CHECK-NEXT:    vlsseg7e16.v v7, (a0), a1
-; CHECK-NEXT:    # kill: def $v8 killed $v8 killed $v7_v8_v9_v10_v11_v12_v13
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call {<vscale x 4 x half>,<vscale x 4 x half>,<vscale x 4 x half>,<vscale x 4 x half>,<vscale x 4 x half>,<vscale x 4 x half>,<vscale x 4 x half>} @llvm.riscv.vlsseg7.nxv4f16(half* %base, i64 %offset, i64 %vl)
@@ -4576,7 +4319,6 @@ define <vscale x 4 x half> @test_vlsseg7_mask_nxv4f16(half* %base, i64 %offset, 
 ; CHECK-NEXT:    vmv1r.v v12, v7
 ; CHECK-NEXT:    vmv1r.v v13, v7
 ; CHECK-NEXT:    vlsseg7e16.v v7, (a0), a1, v0.t
-; CHECK-NEXT:    # kill: def $v8 killed $v8 killed $v7_v8_v9_v10_v11_v12_v13
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call {<vscale x 4 x half>,<vscale x 4 x half>,<vscale x 4 x half>,<vscale x 4 x half>,<vscale x 4 x half>,<vscale x 4 x half>,<vscale x 4 x half>} @llvm.riscv.vlsseg7.nxv4f16(half* %base, i64 %offset, i64 %vl)
@@ -4594,7 +4336,6 @@ define <vscale x 4 x half> @test_vlsseg8_nxv4f16(half* %base, i64 %offset, i64 %
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli zero, a2, e16, m1, ta, mu
 ; CHECK-NEXT:    vlsseg8e16.v v7, (a0), a1
-; CHECK-NEXT:    # kill: def $v8 killed $v8 killed $v7_v8_v9_v10_v11_v12_v13_v14
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call {<vscale x 4 x half>,<vscale x 4 x half>,<vscale x 4 x half>,<vscale x 4 x half>,<vscale x 4 x half>,<vscale x 4 x half>,<vscale x 4 x half>,<vscale x 4 x half>} @llvm.riscv.vlsseg8.nxv4f16(half* %base, i64 %offset, i64 %vl)
@@ -4615,7 +4356,6 @@ define <vscale x 4 x half> @test_vlsseg8_mask_nxv4f16(half* %base, i64 %offset, 
 ; CHECK-NEXT:    vmv1r.v v13, v7
 ; CHECK-NEXT:    vmv1r.v v14, v7
 ; CHECK-NEXT:    vlsseg8e16.v v7, (a0), a1, v0.t
-; CHECK-NEXT:    # kill: def $v8 killed $v8 killed $v7_v8_v9_v10_v11_v12_v13_v14
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call {<vscale x 4 x half>,<vscale x 4 x half>,<vscale x 4 x half>,<vscale x 4 x half>,<vscale x 4 x half>,<vscale x 4 x half>,<vscale x 4 x half>,<vscale x 4 x half>} @llvm.riscv.vlsseg8.nxv4f16(half* %base, i64 %offset, i64 %vl)
@@ -4633,7 +4373,6 @@ define <vscale x 2 x half> @test_vlsseg2_nxv2f16(half* %base, i64 %offset, i64 %
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli zero, a2, e16, mf2, ta, mu
 ; CHECK-NEXT:    vlsseg2e16.v v7, (a0), a1
-; CHECK-NEXT:    # kill: def $v8 killed $v8 killed $v7_v8
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call {<vscale x 2 x half>,<vscale x 2 x half>} @llvm.riscv.vlsseg2.nxv2f16(half* %base, i64 %offset, i64 %vl)
@@ -4648,7 +4387,6 @@ define <vscale x 2 x half> @test_vlsseg2_mask_nxv2f16(half* %base, i64 %offset, 
 ; CHECK-NEXT:    vlsseg2e16.v v7, (a0), a1
 ; CHECK-NEXT:    vmv1r.v v8, v7
 ; CHECK-NEXT:    vlsseg2e16.v v7, (a0), a1, v0.t
-; CHECK-NEXT:    # kill: def $v8 killed $v8 killed $v7_v8
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call {<vscale x 2 x half>,<vscale x 2 x half>} @llvm.riscv.vlsseg2.nxv2f16(half* %base, i64 %offset, i64 %vl)
@@ -4666,7 +4404,6 @@ define <vscale x 2 x half> @test_vlsseg3_nxv2f16(half* %base, i64 %offset, i64 %
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli zero, a2, e16, mf2, ta, mu
 ; CHECK-NEXT:    vlsseg3e16.v v7, (a0), a1
-; CHECK-NEXT:    # kill: def $v8 killed $v8 killed $v7_v8_v9
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call {<vscale x 2 x half>,<vscale x 2 x half>,<vscale x 2 x half>} @llvm.riscv.vlsseg3.nxv2f16(half* %base, i64 %offset, i64 %vl)
@@ -4682,7 +4419,6 @@ define <vscale x 2 x half> @test_vlsseg3_mask_nxv2f16(half* %base, i64 %offset, 
 ; CHECK-NEXT:    vmv1r.v v8, v7
 ; CHECK-NEXT:    vmv1r.v v9, v7
 ; CHECK-NEXT:    vlsseg3e16.v v7, (a0), a1, v0.t
-; CHECK-NEXT:    # kill: def $v8 killed $v8 killed $v7_v8_v9
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call {<vscale x 2 x half>,<vscale x 2 x half>,<vscale x 2 x half>} @llvm.riscv.vlsseg3.nxv2f16(half* %base, i64 %offset, i64 %vl)
@@ -4700,7 +4436,6 @@ define <vscale x 2 x half> @test_vlsseg4_nxv2f16(half* %base, i64 %offset, i64 %
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli zero, a2, e16, mf2, ta, mu
 ; CHECK-NEXT:    vlsseg4e16.v v7, (a0), a1
-; CHECK-NEXT:    # kill: def $v8 killed $v8 killed $v7_v8_v9_v10
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call {<vscale x 2 x half>,<vscale x 2 x half>,<vscale x 2 x half>,<vscale x 2 x half>} @llvm.riscv.vlsseg4.nxv2f16(half* %base, i64 %offset, i64 %vl)
@@ -4717,7 +4452,6 @@ define <vscale x 2 x half> @test_vlsseg4_mask_nxv2f16(half* %base, i64 %offset, 
 ; CHECK-NEXT:    vmv1r.v v9, v7
 ; CHECK-NEXT:    vmv1r.v v10, v7
 ; CHECK-NEXT:    vlsseg4e16.v v7, (a0), a1, v0.t
-; CHECK-NEXT:    # kill: def $v8 killed $v8 killed $v7_v8_v9_v10
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call {<vscale x 2 x half>,<vscale x 2 x half>,<vscale x 2 x half>,<vscale x 2 x half>} @llvm.riscv.vlsseg4.nxv2f16(half* %base, i64 %offset, i64 %vl)
@@ -4735,7 +4469,6 @@ define <vscale x 2 x half> @test_vlsseg5_nxv2f16(half* %base, i64 %offset, i64 %
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli zero, a2, e16, mf2, ta, mu
 ; CHECK-NEXT:    vlsseg5e16.v v7, (a0), a1
-; CHECK-NEXT:    # kill: def $v8 killed $v8 killed $v7_v8_v9_v10_v11
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call {<vscale x 2 x half>,<vscale x 2 x half>,<vscale x 2 x half>,<vscale x 2 x half>,<vscale x 2 x half>} @llvm.riscv.vlsseg5.nxv2f16(half* %base, i64 %offset, i64 %vl)
@@ -4753,7 +4486,6 @@ define <vscale x 2 x half> @test_vlsseg5_mask_nxv2f16(half* %base, i64 %offset, 
 ; CHECK-NEXT:    vmv1r.v v10, v7
 ; CHECK-NEXT:    vmv1r.v v11, v7
 ; CHECK-NEXT:    vlsseg5e16.v v7, (a0), a1, v0.t
-; CHECK-NEXT:    # kill: def $v8 killed $v8 killed $v7_v8_v9_v10_v11
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call {<vscale x 2 x half>,<vscale x 2 x half>,<vscale x 2 x half>,<vscale x 2 x half>,<vscale x 2 x half>} @llvm.riscv.vlsseg5.nxv2f16(half* %base, i64 %offset, i64 %vl)
@@ -4771,7 +4503,6 @@ define <vscale x 2 x half> @test_vlsseg6_nxv2f16(half* %base, i64 %offset, i64 %
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli zero, a2, e16, mf2, ta, mu
 ; CHECK-NEXT:    vlsseg6e16.v v7, (a0), a1
-; CHECK-NEXT:    # kill: def $v8 killed $v8 killed $v7_v8_v9_v10_v11_v12
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call {<vscale x 2 x half>,<vscale x 2 x half>,<vscale x 2 x half>,<vscale x 2 x half>,<vscale x 2 x half>,<vscale x 2 x half>} @llvm.riscv.vlsseg6.nxv2f16(half* %base, i64 %offset, i64 %vl)
@@ -4790,7 +4521,6 @@ define <vscale x 2 x half> @test_vlsseg6_mask_nxv2f16(half* %base, i64 %offset, 
 ; CHECK-NEXT:    vmv1r.v v11, v7
 ; CHECK-NEXT:    vmv1r.v v12, v7
 ; CHECK-NEXT:    vlsseg6e16.v v7, (a0), a1, v0.t
-; CHECK-NEXT:    # kill: def $v8 killed $v8 killed $v7_v8_v9_v10_v11_v12
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call {<vscale x 2 x half>,<vscale x 2 x half>,<vscale x 2 x half>,<vscale x 2 x half>,<vscale x 2 x half>,<vscale x 2 x half>} @llvm.riscv.vlsseg6.nxv2f16(half* %base, i64 %offset, i64 %vl)
@@ -4808,7 +4538,6 @@ define <vscale x 2 x half> @test_vlsseg7_nxv2f16(half* %base, i64 %offset, i64 %
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli zero, a2, e16, mf2, ta, mu
 ; CHECK-NEXT:    vlsseg7e16.v v7, (a0), a1
-; CHECK-NEXT:    # kill: def $v8 killed $v8 killed $v7_v8_v9_v10_v11_v12_v13
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call {<vscale x 2 x half>,<vscale x 2 x half>,<vscale x 2 x half>,<vscale x 2 x half>,<vscale x 2 x half>,<vscale x 2 x half>,<vscale x 2 x half>} @llvm.riscv.vlsseg7.nxv2f16(half* %base, i64 %offset, i64 %vl)
@@ -4828,7 +4557,6 @@ define <vscale x 2 x half> @test_vlsseg7_mask_nxv2f16(half* %base, i64 %offset, 
 ; CHECK-NEXT:    vmv1r.v v12, v7
 ; CHECK-NEXT:    vmv1r.v v13, v7
 ; CHECK-NEXT:    vlsseg7e16.v v7, (a0), a1, v0.t
-; CHECK-NEXT:    # kill: def $v8 killed $v8 killed $v7_v8_v9_v10_v11_v12_v13
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call {<vscale x 2 x half>,<vscale x 2 x half>,<vscale x 2 x half>,<vscale x 2 x half>,<vscale x 2 x half>,<vscale x 2 x half>,<vscale x 2 x half>} @llvm.riscv.vlsseg7.nxv2f16(half* %base, i64 %offset, i64 %vl)
@@ -4846,7 +4574,6 @@ define <vscale x 2 x half> @test_vlsseg8_nxv2f16(half* %base, i64 %offset, i64 %
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli zero, a2, e16, mf2, ta, mu
 ; CHECK-NEXT:    vlsseg8e16.v v7, (a0), a1
-; CHECK-NEXT:    # kill: def $v8 killed $v8 killed $v7_v8_v9_v10_v11_v12_v13_v14
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call {<vscale x 2 x half>,<vscale x 2 x half>,<vscale x 2 x half>,<vscale x 2 x half>,<vscale x 2 x half>,<vscale x 2 x half>,<vscale x 2 x half>,<vscale x 2 x half>} @llvm.riscv.vlsseg8.nxv2f16(half* %base, i64 %offset, i64 %vl)
@@ -4867,7 +4594,6 @@ define <vscale x 2 x half> @test_vlsseg8_mask_nxv2f16(half* %base, i64 %offset, 
 ; CHECK-NEXT:    vmv1r.v v13, v7
 ; CHECK-NEXT:    vmv1r.v v14, v7
 ; CHECK-NEXT:    vlsseg8e16.v v7, (a0), a1, v0.t
-; CHECK-NEXT:    # kill: def $v8 killed $v8 killed $v7_v8_v9_v10_v11_v12_v13_v14
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call {<vscale x 2 x half>,<vscale x 2 x half>,<vscale x 2 x half>,<vscale x 2 x half>,<vscale x 2 x half>,<vscale x 2 x half>,<vscale x 2 x half>,<vscale x 2 x half>} @llvm.riscv.vlsseg8.nxv2f16(half* %base, i64 %offset, i64 %vl)
@@ -4885,7 +4611,6 @@ define <vscale x 4 x float> @test_vlsseg2_nxv4f32(float* %base, i64 %offset, i64
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli zero, a2, e32, m2, ta, mu
 ; CHECK-NEXT:    vlsseg2e32.v v6, (a0), a1
-; CHECK-NEXT:    # kill: def $v8m2 killed $v8m2 killed $v6m2_v8m2
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call {<vscale x 4 x float>,<vscale x 4 x float>} @llvm.riscv.vlsseg2.nxv4f32(float* %base, i64 %offset, i64 %vl)
@@ -4900,7 +4625,6 @@ define <vscale x 4 x float> @test_vlsseg2_mask_nxv4f32(float* %base, i64 %offset
 ; CHECK-NEXT:    vlsseg2e32.v v6, (a0), a1
 ; CHECK-NEXT:    vmv2r.v v8, v6
 ; CHECK-NEXT:    vlsseg2e32.v v6, (a0), a1, v0.t
-; CHECK-NEXT:    # kill: def $v8m2 killed $v8m2 killed $v6m2_v8m2
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call {<vscale x 4 x float>,<vscale x 4 x float>} @llvm.riscv.vlsseg2.nxv4f32(float* %base, i64 %offset, i64 %vl)
@@ -4918,7 +4642,6 @@ define <vscale x 4 x float> @test_vlsseg3_nxv4f32(float* %base, i64 %offset, i64
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli zero, a2, e32, m2, ta, mu
 ; CHECK-NEXT:    vlsseg3e32.v v6, (a0), a1
-; CHECK-NEXT:    # kill: def $v8m2 killed $v8m2 killed $v6m2_v8m2_v10m2
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call {<vscale x 4 x float>,<vscale x 4 x float>,<vscale x 4 x float>} @llvm.riscv.vlsseg3.nxv4f32(float* %base, i64 %offset, i64 %vl)
@@ -4934,7 +4657,6 @@ define <vscale x 4 x float> @test_vlsseg3_mask_nxv4f32(float* %base, i64 %offset
 ; CHECK-NEXT:    vmv2r.v v8, v6
 ; CHECK-NEXT:    vmv2r.v v10, v6
 ; CHECK-NEXT:    vlsseg3e32.v v6, (a0), a1, v0.t
-; CHECK-NEXT:    # kill: def $v8m2 killed $v8m2 killed $v6m2_v8m2_v10m2
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call {<vscale x 4 x float>,<vscale x 4 x float>,<vscale x 4 x float>} @llvm.riscv.vlsseg3.nxv4f32(float* %base, i64 %offset, i64 %vl)
@@ -4952,7 +4674,6 @@ define <vscale x 4 x float> @test_vlsseg4_nxv4f32(float* %base, i64 %offset, i64
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli zero, a2, e32, m2, ta, mu
 ; CHECK-NEXT:    vlsseg4e32.v v6, (a0), a1
-; CHECK-NEXT:    # kill: def $v8m2 killed $v8m2 killed $v6m2_v8m2_v10m2_v12m2
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call {<vscale x 4 x float>,<vscale x 4 x float>,<vscale x 4 x float>,<vscale x 4 x float>} @llvm.riscv.vlsseg4.nxv4f32(float* %base, i64 %offset, i64 %vl)
@@ -4969,7 +4690,6 @@ define <vscale x 4 x float> @test_vlsseg4_mask_nxv4f32(float* %base, i64 %offset
 ; CHECK-NEXT:    vmv2r.v v10, v6
 ; CHECK-NEXT:    vmv2r.v v12, v6
 ; CHECK-NEXT:    vlsseg4e32.v v6, (a0), a1, v0.t
-; CHECK-NEXT:    # kill: def $v8m2 killed $v8m2 killed $v6m2_v8m2_v10m2_v12m2
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call {<vscale x 4 x float>,<vscale x 4 x float>,<vscale x 4 x float>,<vscale x 4 x float>} @llvm.riscv.vlsseg4.nxv4f32(float* %base, i64 %offset, i64 %vl)

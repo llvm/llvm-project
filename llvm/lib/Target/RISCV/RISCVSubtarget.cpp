@@ -28,6 +28,9 @@ using namespace llvm;
 #define GET_SUBTARGETINFO_CTOR
 #include "RISCVGenSubtargetInfo.inc"
 
+static cl::opt<bool> EnableSubRegLiveness("riscv-enable-subreg-liveness",
+                                          cl::init(false), cl::Hidden);
+
 static cl::opt<int> RVVVectorBitsMax(
     "riscv-v-vector-bits-max",
     cl::desc("Assume V extension vector registers are at most this big, "
@@ -195,4 +198,12 @@ unsigned RISCVSubtarget::getMaxLMULForFixedLengthVectors() const {
 
 bool RISCVSubtarget::useRVVForFixedLengthVectors() const {
   return hasVInstructions() && getMinRVVVectorSizeInBits() != 0;
+}
+
+bool RISCVSubtarget::enableSubRegLiveness() const {
+  if (EnableSubRegLiveness.getNumOccurrences())
+    return EnableSubRegLiveness;
+  // Enable subregister liveness for RVV to better handle LMUL>1 and segment
+  // load/store.
+  return hasVInstructions();
 }

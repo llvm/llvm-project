@@ -39,24 +39,22 @@ define <4 x double> @interleave_v2f64(<2 x double> %x, <2 x double> %y) {
 ; RV32-V128-LABEL: interleave_v2f64:
 ; RV32-V128:       # %bb.0:
 ; RV32-V128-NEXT:    vmv1r.v v12, v9
-; RV32-V128-NEXT:    # kill: def $v8 killed $v8 def $v8m2
 ; RV32-V128-NEXT:    vsetivli zero, 4, e16, mf2, ta, mu
-; RV32-V128-NEXT:    vid.v v10
-; RV32-V128-NEXT:    vsrl.vi v14, v10, 1
+; RV32-V128-NEXT:    vid.v v9
+; RV32-V128-NEXT:    vsrl.vi v9, v9, 1
 ; RV32-V128-NEXT:    vsetvli zero, zero, e64, m2, ta, mu
-; RV32-V128-NEXT:    vrgatherei16.vv v10, v8, v14
+; RV32-V128-NEXT:    vrgatherei16.vv v10, v8, v9
 ; RV32-V128-NEXT:    li a0, 10
 ; RV32-V128-NEXT:    vsetivli zero, 1, e8, mf8, ta, mu
 ; RV32-V128-NEXT:    vmv.s.x v0, a0
 ; RV32-V128-NEXT:    vsetivli zero, 4, e64, m2, ta, mu
-; RV32-V128-NEXT:    vrgatherei16.vv v10, v12, v14, v0.t
+; RV32-V128-NEXT:    vrgatherei16.vv v10, v12, v9, v0.t
 ; RV32-V128-NEXT:    vmv.v.v v8, v10
 ; RV32-V128-NEXT:    ret
 ;
 ; RV64-V128-LABEL: interleave_v2f64:
 ; RV64-V128:       # %bb.0:
 ; RV64-V128-NEXT:    vmv1r.v v12, v9
-; RV64-V128-NEXT:    # kill: def $v8 killed $v8 def $v8m2
 ; RV64-V128-NEXT:    vsetivli zero, 4, e64, m2, ta, mu
 ; RV64-V128-NEXT:    vid.v v10
 ; RV64-V128-NEXT:    vsrl.vi v14, v10, 1
@@ -277,9 +275,9 @@ define <64 x float> @interleave_v32f32(<32 x float> %x, <32 x float> %y) {
 ; RV32-V128-NEXT:    vsetvli zero, a1, e32, m8, ta, mu
 ; RV32-V128-NEXT:    vle32.v v0, (a0)
 ; RV32-V128-NEXT:    vmv8r.v v24, v8
-; RV32-V128-NEXT:    addi a0, sp, 16
-; RV32-V128-NEXT:    vs8r.v v8, (a0) # Unknown-size Folded Spill
 ; RV32-V128-NEXT:    vrgather.vv v8, v24, v0
+; RV32-V128-NEXT:    addi a0, sp, 16
+; RV32-V128-NEXT:    vs8r.v v24, (a0) # Unknown-size Folded Spill
 ; RV32-V128-NEXT:    lui a0, %hi(.LCPI10_1)
 ; RV32-V128-NEXT:    addi a0, a0, %lo(.LCPI10_1)
 ; RV32-V128-NEXT:    vle32.v v24, (a0)
@@ -327,9 +325,9 @@ define <64 x float> @interleave_v32f32(<32 x float> %x, <32 x float> %y) {
 ; RV64-V128-NEXT:    vsetvli zero, a1, e32, m8, ta, mu
 ; RV64-V128-NEXT:    vle32.v v0, (a0)
 ; RV64-V128-NEXT:    vmv8r.v v24, v8
-; RV64-V128-NEXT:    addi a0, sp, 16
-; RV64-V128-NEXT:    vs8r.v v8, (a0) # Unknown-size Folded Spill
 ; RV64-V128-NEXT:    vrgather.vv v8, v24, v0
+; RV64-V128-NEXT:    addi a0, sp, 16
+; RV64-V128-NEXT:    vs8r.v v24, (a0) # Unknown-size Folded Spill
 ; RV64-V128-NEXT:    lui a0, %hi(.LCPI10_1)
 ; RV64-V128-NEXT:    addi a0, a0, %lo(.LCPI10_1)
 ; RV64-V128-NEXT:    vle32.v v24, (a0)
