@@ -64,42 +64,42 @@ int main(int argc, char *argv[]) {
   test("_Znwm", "operator new(unsigned long)");
   test("_ZNSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEaSERKS4_",
        "std::__cxx11::basic_string<char, std::char_traits<char>, "
-       "std::allocator<char> >::operator=(std::__cxx11::basic_string<char, "
-       "std::char_traits<char>, std::allocator<char> > const&)");
+       "std::allocator<char>>::operator=(std::__cxx11::basic_string<char, "
+       "std::char_traits<char>, std::allocator<char>> const&)");
   test("_ZSt29_Rb_tree_insert_and_rebalancebPSt18_Rb_tree_node_baseS0_RS_",
        "std::_Rb_tree_insert_and_rebalance(bool, std::_Rb_tree_node_base*, "
        "std::_Rb_tree_node_base*, std::_Rb_tree_node_base&)");
   test("_ZSt17__throw_bad_allocv", "std::__throw_bad_alloc()");
   test("_ZNSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEED2Ev",
        "std::__cxx11::basic_string<char, std::char_traits<char>, "
-       "std::allocator<char> >::~basic_string()");
+       "std::allocator<char>>::~basic_string()");
   test("_ZNSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEED1Ev",
        "std::__cxx11::basic_string<char, std::char_traits<char>, "
-       "std::allocator<char> >::~basic_string()");
+       "std::allocator<char>>::~basic_string()");
   test("_ZSt18_Rb_tree_incrementPSt18_Rb_tree_node_base",
        "std::_Rb_tree_increment(std::_Rb_tree_node_base*)");
   test("_ZNSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEC2Ev",
        "std::__cxx11::basic_string<char, std::char_traits<char>, "
-       "std::allocator<char> >::basic_string()");
+       "std::allocator<char>>::basic_string()");
   test("_ZStlsIcSt11char_traitsIcESaIcEERSt13basic_ostreamIT_T0_ES7_RKNSt7__"
        "cxx1112basic_stringIS4_S5_T1_EE",
-       "std::basic_ostream<char, std::char_traits<char> >& std::operator<<"
-       "<char, std::char_traits<char>, std::allocator<char> "
-       ">(std::basic_ostream<char, std::char_traits<char> >&, "
+       "std::basic_ostream<char, std::char_traits<char>>& std::operator<<"
+       "<char, std::char_traits<char>, std::allocator<char>"
+       ">(std::basic_ostream<char, std::char_traits<char>>&, "
        "std::__cxx11::basic_string<char, std::char_traits<char>, "
-       "std::allocator<char> > const&)");
+       "std::allocator<char>> const&)");
   test("_ZdlPv", "operator delete(void*)");
   test("_ZStlsISt11char_traitsIcEERSt13basic_ostreamIcT_ES5_PKc",
-       "std::basic_ostream<char, std::char_traits<char> >& std::operator<<"
-       "<std::char_traits<char> >(std::basic_ostream<char, "
-       "std::char_traits<char> >&, char const*)");
+       "std::basic_ostream<char, std::char_traits<char>>& std::operator<<"
+       "<std::char_traits<char>>(std::basic_ostream<char, "
+       "std::char_traits<char>>&, char const*)");
   test("_ZdlPvm", "operator delete(void*, unsigned long)");
   test("_ZSt18_Rb_tree_decrementPSt18_Rb_tree_node_base",
        "std::_Rb_tree_decrement(std::_Rb_tree_node_base*)");
   test("_ZNSaIcED1Ev", "std::allocator<char>::~allocator()");
   test("_ZNSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEC1EPKcRKS3_",
        "std::__cxx11::basic_string<char, std::char_traits<char>, "
-       "std::allocator<char> >::basic_string(char const*, std::allocator<char> "
+       "std::allocator<char>>::basic_string(char const*, std::allocator<char> "
        "const&)");
   test("_ZNSt8ios_base4InitC1Ev", "std::ios_base::Init::Init()");
   test("_ZNSolsEi", "std::ostream::operator<<(int)");
