@@ -1,15 +1,15 @@
 // REQUIRES: system-windows
-// RUN: %clang -E -fno-file-reproducible -ffile-prefix-map=%p=A:\UNLIKELY_PATH\empty -c -o - %s | FileCheck %s
-// RUN: %clang -E -fno-file-reproducible -fmacro-prefix-map=%p=A:\UNLIKELY_PATH\empty -c -o - %s | FileCheck %s
-// RUN: %clang -E -fno-file-reproducible -fmacro-prefix-map=%p=A:\UNLIKELY_PATH=empty -c -o - %s | FileCheck %s -check-prefix CHECK-EVIL
-// RUN: %clang -E -fno-file-reproducible -fmacro-prefix-map=%p/iNPUTS\=A:\UNLIKELY_PATH_INC\ -fmacro-prefix-map=%p/=A:\UNLIKELY_PATH_BASE\ -c -o - %s | FileCheck %s -check-prefix CHECK-CASE
-// RUN: %clang -E -fno-file-reproducible -fmacro-prefix-map=%p\= -c -o - %s | FileCheck %s --check-prefix CHECK-REMOVE
+// RUN: %clang -E -fno-file-reproducible -target x86_64-pc-win32 -ffile-prefix-map=%p=A:\UNLIKELY_PATH\empty -c -o - %s | FileCheck %s
+// RUN: %clang -E -fno-file-reproducible -target x86_64-pc-win32 -fmacro-prefix-map=%p=A:\UNLIKELY_PATH\empty -c -o - %s | FileCheck %s
+// RUN: %clang -E -fno-file-reproducible -target x86_64-pc-win32 -fmacro-prefix-map=%p=A:\UNLIKELY_PATH=empty -c -o - %s | FileCheck %s -check-prefix CHECK-EVIL
+// RUN: %clang -E -fno-file-reproducible -target x86_64-pc-win32 -fmacro-prefix-map=%p/iNPUTS\=A:\UNLIKELY_PATH_INC\ -fmacro-prefix-map=%p/=A:\UNLIKELY_PATH_BASE\ -c -o - %s | FileCheck %s -check-prefix CHECK-CASE
+// RUN: %clang -E -fno-file-reproducible -target x86_64-pc-win32 -fmacro-prefix-map=%p\= -c -o - %s | FileCheck %s --check-prefix CHECK-REMOVE
 
-// RUN: %clang -E -ffile-prefix-map=%p=A:\UNLIKELY_PATH\empty -c -o - %s | FileCheck %s --check-prefix CHECK-REPRODUCIBLE
-// RUN: %clang -E -fmacro-prefix-map=%p=A:\UNLIKELY_PATH\empty -c -o - %s | FileCheck %s --check-prefix CHECK-REPRODUCIBLE
-// RUN: %clang -E -fmacro-prefix-map=%p=A:\UNLIKELY_PATH=empty -c -o - %s | FileCheck %s -check-prefix CHECK-EVIL-REPRODUCIBLE
-// RUN: %clang -E -fmacro-prefix-map=%p/iNPUTS\=A:\UNLIKELY_PATH_INC\ -fmacro-prefix-map=%p/=A:\UNLIKELY_PATH_BASE\ -c -o - %s | FileCheck %s -check-prefix CHECK-CASE-REPRODUCIBLE
-// RUN: %clang -E -fmacro-prefix-map=%p\= -c -o - %s | FileCheck %s --check-prefix CHECK-REMOVE-REPRODUCIBLE
+// RUN: %clang -E -target x86_64-pc-win32 -ffile-prefix-map=%p=A:\UNLIKELY_PATH\empty -c -o - %s | FileCheck %s --check-prefix CHECK-REPRODUCIBLE
+// RUN: %clang -E -target x86_64-pc-win32 -fmacro-prefix-map=%p=A:\UNLIKELY_PATH\empty -c -o - %s | FileCheck %s --check-prefix CHECK-REPRODUCIBLE
+// RUN: %clang -E -target x86_64-pc-win32 -fmacro-prefix-map=%p=A:\UNLIKELY_PATH=empty -c -o - %s | FileCheck %s -check-prefix CHECK-EVIL-REPRODUCIBLE
+// RUN: %clang -E -target x86_64-pc-win32 -fmacro-prefix-map=%p/iNPUTS\=A:\UNLIKELY_PATH_INC\ -fmacro-prefix-map=%p/=A:\UNLIKELY_PATH_BASE\ -c -o - %s | FileCheck %s -check-prefix CHECK-CASE-REPRODUCIBLE
+// RUN: %clang -E -target x86_64-pc-win32 -fmacro-prefix-map=%p\= -c -o - %s | FileCheck %s --check-prefix CHECK-REMOVE-REPRODUCIBLE
 
 // RUN: %clang -E -target x86_64-pc-linux-gnu -fmacro-prefix-map=%p\= -c -o - %s | FileCheck %s --check-prefix CHECK-REMOVE
 // RUN: %clang -E -target x86_64-pc-linux-gnu -ffile-prefix-map=%p\= -c -o - %s | FileCheck %s --check-prefix CHECK-REMOVE
