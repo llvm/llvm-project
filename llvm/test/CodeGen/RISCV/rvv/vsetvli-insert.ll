@@ -281,10 +281,9 @@ entry:
 define <vscale x 1 x double> @test15(i64 %avl, <vscale x 1 x double> %a, <vscale x 1 x double> %b) nounwind {
 ; CHECK-LABEL: test15:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a0, a0, e64, m1, ta, mu
-; CHECK-NEXT:    vfadd.vv v8, v8, v9
-; CHECK-NEXT:    vfadd.vv v8, v8, v9
 ; CHECK-NEXT:    vsetvli zero, a0, e64, m1, ta, mu
+; CHECK-NEXT:    vfadd.vv v8, v8, v9
+; CHECK-NEXT:    vfadd.vv v8, v8, v9
 ; CHECK-NEXT:    ret
 entry:
   %vsetvli = tail call i64 @llvm.riscv.vsetvli(i64 %avl, i64 2, i64 7)
@@ -354,12 +353,12 @@ entry:
 define <vscale x 1 x double> @test18(<vscale x 1 x double> %a, double %b) nounwind {
 ; CHECK-LABEL: test18:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetivli a0, 6, e64, m1, tu, mu
+; CHECK-NEXT:    vsetivli zero, 6, e64, m1, tu, mu
 ; CHECK-NEXT:    vmv1r.v v9, v8
 ; CHECK-NEXT:    vfmv.s.f v9, fa0
-; CHECK-NEXT:    vsetvli zero, a0, e64, m1, ta, mu
+; CHECK-NEXT:    vsetvli zero, zero, e64, m1, ta, mu
 ; CHECK-NEXT:    vfadd.vv v8, v8, v8
-; CHECK-NEXT:    vsetivli zero, 1, e64, m1, tu, mu
+; CHECK-NEXT:    vsetvli zero, zero, e64, m1, tu, mu
 ; CHECK-NEXT:    vfmv.s.f v8, fa0
 ; CHECK-NEXT:    vsetvli a0, zero, e64, m1, ta, mu
 ; CHECK-NEXT:    vfadd.vv v8, v9, v8
