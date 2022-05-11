@@ -1160,13 +1160,15 @@ void RISCVInsertVSETVLI::emitVSETVLIs(MachineBasicBlock &MBB) {
           // with current VL/VTYPE.
           bool NeedInsertVSETVLI = true;
           if (PrevVSETVLIMI) {
-            bool HasSameAVL =
-                CurInfo.hasSameAVL(NewInfo) ||
-                (NewInfo.hasAVLReg() && NewInfo.getAVLReg().isVirtual() &&
-                 NewInfo.getAVLReg() == PrevVSETVLIMI->getOperand(0).getReg());
             // If these two VSETVLI have the same AVL and the same VLMAX,
             // we could merge these two VSETVLI.
-            if (HasSameAVL && CurInfo.hasSameVLMAX(NewInfo)) {
+            // TODO: If we remove this, we get a `vsetvli x0, x0, vtype'
+            // here.  We could simply let this be emitted, then remove
+            // the unused vsetvlis in a post-pass.
+            if (CurInfo.hasSameAVL(NewInfo) && CurInfo.hasSameVLMAX(NewInfo)) {
+              // WARNING: For correctness, it is essential the contents of VL
+              // and VTYPE stay the same after MI.  This greatly limits the
+              // mutation we can legally do here.
               PrevVSETVLIMI->getOperand(2).setImm(NewInfo.encodeVTYPE());
               NeedInsertVSETVLI = false;
             }
@@ -1248,6 +1250,32 @@ void RISCVInsertVSETVLI::doLocalPrepass(MachineBasicBlock &MBB) {
     }
 
     if (RISCVII::hasSEWOp(TSFlags)) {
+      if (RISCVII::hasVLOp(TSFlags)) {
+        const auto Require = computeInfoForInstr(MI, TSFlags, MRI);
+        // If the AVL is the result of a previous vsetvli which has the
+        // same AVL and VLMAX as our current state, we can reuse the AVL
+        // from the current state for the new one.  This allows us to
+        // generate 'vsetvli x0, x0, vtype" or possible skip the transition
+        // entirely.
+        if (!CurInfo.isUnknown() && Require.hasAVLReg() &&
+            Require.getAVLReg().isVirtual()) {
+          if (MachineInstr *DefMI = MRI->getVRegDef(Require.getAVLReg())) {
+            if (isVectorConfigInstr(*DefMI)) {
+              VSETVLIInfo DefInfo = getInfoForVSETVLI(*DefMI);
+              if (DefInfo.hasSameAVL(CurInfo) &&
+                  DefInfo.hasSameVLMAX(CurInfo)) {
+                MachineOperand &VLOp = MI.getOperand(getVLOpNum(MI));
+                if (CurInfo.hasAVLImm())
+                  VLOp.ChangeToImmediate(CurInfo.getAVLImm());
+                else
+                  VLOp.ChangeToRegister(CurInfo.getAVLReg(), /*IsDef*/ false);
+                CurInfo = computeInfoForInstr(MI, TSFlags, MRI);
+                continue;
+              }
+            }
+          }
+        }
+      }
       CurInfo = computeInfoForInstr(MI, TSFlags, MRI);
       continue;
     }
