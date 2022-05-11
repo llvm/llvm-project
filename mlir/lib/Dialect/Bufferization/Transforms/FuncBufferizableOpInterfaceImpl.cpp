@@ -495,7 +495,7 @@ struct FuncOpInterface
           // Note: This copy will fold away. It must be inserted here to ensure
           // that `returnVal` still has at least one use and does not fold away.
           if (failed(
-                  createMemCpy(rewriter, loc, toMemrefOp, equivBbArg, options)))
+                  options.createMemCpy(rewriter, loc, toMemrefOp, equivBbArg)))
             return funcOp->emitError("could not generate copy for bbArg");
           continue;
         }
