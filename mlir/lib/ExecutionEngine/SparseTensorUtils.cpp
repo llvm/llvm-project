@@ -112,7 +112,7 @@ assertPermutedSizesMatchShape(const std::vector<uint64_t> &sizes, uint64_t rank,
 /// vector since that (1) reduces the per-element memory footprint, and
 /// (2) centralizes the memory reservation and (re)allocation to one place.
 template <typename V>
-struct Element {
+struct Element final {
   Element(uint64_t *ind, V val) : indices(ind), value(val){};
   uint64_t *indices; // pointer into shared index pool
   V value;
@@ -131,7 +131,7 @@ using ElementConsumer =
 /// by indices before passing it back to the client (most packed storage
 /// formats require the elements to appear in lexicographic index order).
 template <typename V>
-struct SparseTensorCOO {
+struct SparseTensorCOO final {
 public:
   SparseTensorCOO(const std::vector<uint64_t> &szs, uint64_t capacity)
       : sizes(szs) {
@@ -424,7 +424,7 @@ class SparseTensorEnumerator;
 /// a convenient "one-size-fits-all" solution that simply takes an input tensor
 /// and annotations to implement all required setup in a general manner.
 template <typename P, typename I, typename V>
-class SparseTensorStorage : public SparseTensorStorageBase {
+class SparseTensorStorage final : public SparseTensorStorageBase {
   /// Private constructor to share code between the other constructors.
   /// Beware that the object is not necessarily guaranteed to be in a
   /// valid state after this constructor alone; e.g., `isCompressedDim(d)`
@@ -491,21 +491,21 @@ public:
                       const DimLevelType *sparsity,
                       const SparseTensorStorageBase &tensor);
 
-  ~SparseTensorStorage() override = default;
+  ~SparseTensorStorage() final override = default;
 
   /// Partially specialize these getter methods based on template types.
-  void getPointers(std::vector<P> **out, uint64_t d) override {
+  void getPointers(std::vector<P> **out, uint64_t d) final override {
     assert(d < getRank());
     *out = &pointers[d];
   }
-  void getIndices(std::vector<I> **out, uint64_t d) override {
+  void getIndices(std::vector<I> **out, uint64_t d) final override {
     assert(d < getRank());
     *out = &indices[d];
   }
-  void getValues(std::vector<V> **out) override { *out = &values; }
+  void getValues(std::vector<V> **out) final override { *out = &values; }
 
   /// Partially specialize lexicographical insertions based on template types.
-  void lexInsert(const uint64_t *cursor, V val) override {
+  void lexInsert(const uint64_t *cursor, V val) final override {
     // First, wrap up pending insertion path.
     uint64_t diff = 0;
     uint64_t top = 0;
@@ -522,7 +522,7 @@ public:
   /// Note that this method resets the values/filled-switch array back
   /// to all-zero/false while only iterating over the nonzero elements.
   void expInsert(uint64_t *cursor, V *values, bool *filled, uint64_t *added,
-                 uint64_t count) override {
+                 uint64_t count) final override {
     if (count == 0)
       return;
     // Sort.
@@ -548,7 +548,7 @@ public:
   }
 
   /// Finalizes lexicographic insertions.
-  void endInsert() override {
+  void endInsert() final override {
     if (values.empty())
       finalizeSegment(0);
     else
@@ -556,7 +556,7 @@ public:
   }
 
   void newEnumerator(SparseTensorEnumeratorBase<V> **out, uint64_t rank,
-                     const uint64_t *perm) const override {
+                     const uint64_t *perm) const final override {
     *out = new SparseTensorEnumerator<P, I, V>(*this, rank, perm);
   }
 
@@ -940,7 +940,7 @@ private:
 /// N.B., this class stores references to the parameters passed to
 /// the constructor; thus, objects of this class must not outlive
 /// those parameters.
-class SparseTensorNNZ {
+class SparseTensorNNZ final {
 public:
   /// Allocate the statistics structure for the desired sizes and
   /// sparsity (in the target tensor's storage-order).  This constructor
