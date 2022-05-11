@@ -764,9 +764,8 @@ public:
   // CompilerInstance::getImplicitImportInfo, instead of loading these
   // modules manually. However, we currently don't have  access to a
   // CompilerInstance, which is why this function is needed.
-  void LoadImplicitModules(lldb::TargetSP target,
-                                          lldb::ProcessSP process);
-
+  void LoadImplicitModules(lldb::TargetSP target, lldb::ProcessSP process,
+                           ExecutionContextScope &exe_scope);
   /// Cache the user's imports from a SourceFile in a given execution scope such
   /// that they are carried over into future expression evaluations.
   static bool CacheUserImports(SwiftASTContext &swift_ast_context,
