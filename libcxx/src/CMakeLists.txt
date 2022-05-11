@@ -219,6 +219,9 @@ if (LIBCXX_ENABLE_SHARED)
   cxx_set_common_defines(cxx_shared)
 
   # Link against LLVM libunwind
+  # Note that we do need to link against libunwind directly to ensure that the correct
+  # dependencies are recorded when creating a linker script.
+  # TODO: Look into modifying the linker script creation to recursively consider interface libraries
   if (LIBCXXABI_USE_LLVM_UNWINDER)
     if (NOT LIBCXXABI_STATICALLY_LINK_UNWINDER_IN_SHARED_LIBRARY AND (TARGET unwind_shared OR HAVE_LIBUNWIND))
       target_link_libraries(cxx_shared PUBLIC unwind_shared)
@@ -231,11 +234,7 @@ if (LIBCXX_ENABLE_SHARED)
 
   # Link against libc++abi
   if (LIBCXX_STATICALLY_LINK_ABI_IN_SHARED_LIBRARY)
-    if (APPLE)
-      target_link_libraries(cxx_shared PRIVATE "-Wl,-force_load" "$<TARGET_LINKER_FILE:libcxx-abi-static>")
-    else()
-      target_link_libraries(cxx_shared PRIVATE "-Wl,--whole-archive,-Bstatic" "$<TARGET_LINKER_FILE:libcxx-abi-static>" "-Wl,-Bdynamic,--no-whole-archive")
-    endif()
+    target_link_libraries(cxx_shared PRIVATE libcxx-abi-shared-objects)
   else()
     target_link_libraries(cxx_shared PUBLIC libcxx-abi-shared)
   endif()
@@ -293,13 +292,6 @@ if (LIBCXX_ENABLE_STATIC)
   cxx_add_common_build_flags(cxx_static)
   cxx_set_common_defines(cxx_static)
 
-  if (LIBCXXABI_USE_LLVM_UNWINDER)
-    # If we intend to use the just-built unwinder, add a dependency so that it
-    # gets built, even if we technically aren't going to link it in at this
-    # stage.
-    add_dependencies(cxx_static unwind)
-  endif()
-
   if (LIBCXX_HERMETIC_STATIC_LIBRARY)
     # If the hermetic library doesn't define the operator new/delete functions
     # then its code shouldn't declare them with hidden visibility.  They might
@@ -314,22 +306,7 @@ if (LIBCXX_ENABLE_STATIC)
   list(APPEND LIBCXX_BUILD_TARGETS "cxx_static")
   # Attempt to merge the libc++.a archive and the ABI library archive into one.
   if (LIBCXX_STATICALLY_LINK_ABI_IN_STATIC_LIBRARY)
-    if (APPLE)
-      set(MERGE_ARCHIVES_LIBTOOL "--use-libtool" "--libtool" "${CMAKE_LIBTOOL}")
-    endif()
-    add_custom_command(TARGET cxx_static POST_BUILD
-    COMMAND
-      ${Python3_EXECUTABLE} ${LIBCXX_SOURCE_DIR}/utils/merge_archives.py
-    ARGS
-      -o $<TARGET_LINKER_FILE:cxx_static>
-      --ar "${CMAKE_AR}"
-      ${MERGE_ARCHIVES_LIBTOOL}
-      "$<TARGET_LINKER_FILE:cxx_static>"
-      "$<TARGET_LINKER_FILE:libcxx-abi-static>"
-      ""
-    WORKING_DIRECTORY ${LIBCXX_BUILD_DIR}
-    DEPENDS ${MERGE_ARCHIVES_ABI_TARGET}
-    )
+    target_link_libraries(cxx_static PRIVATE libcxx-abi-static-objects)
   endif()
 endif()
 

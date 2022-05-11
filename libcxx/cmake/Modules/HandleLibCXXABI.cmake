@@ -6,6 +6,14 @@
 #                       headers of the selected ABI library.
 # - libcxx-abi-shared: A target representing the selected shared ABI library.
 # - libcxx-abi-static: A target representing the selected static ABI library.
+#
+# Furthermore, some ABI libraries also define the following target:
+# - libcxx-abi-shared-objects: An object library representing a set of object files
+#                              constituting the ABI library, suitable for bundling
+#                              into a shared library.
+# - libcxx-abi-static-objects: An object library representing a set of object files
+#                              constituting the ABI library, suitable for bundling
+#                              into a static library.
 #===============================================================================
 
 include(GNUInstallDirs)
@@ -109,6 +117,14 @@ elseif ("${LIBCXX_CXX_ABI}" STREQUAL "libcxxabi")
 
   if (TARGET cxxabi_static)
     add_library(libcxx-abi-static ALIAS cxxabi_static)
+  endif()
+
+  if (TARGET cxxabi_shared_objects)
+    add_library(libcxx-abi-shared-objects ALIAS cxxabi_shared_objects)
+  endif()
+
+  if (TARGET cxxabi_static_objects)
+    add_library(libcxx-abi-static-objects ALIAS cxxabi_static_objects)
   endif()
 
 # Link against a system-provided libc++abi
