@@ -15,7 +15,7 @@ func.func @undef() -> () {
 // -----
 
 func.func @undef() -> () {
-  // expected-error @+2{{expected non-function type}}
+  // expected-error @+1{{expected non-function type}}
   %0 = spv.Undef :
   spv.Return
 }

@@ -43,7 +43,7 @@ func.func @exp(%arg0 : f32, %arg1 : f32) -> () {
 // -----
 
 func.func @exp(%arg0 : i32) -> () {
-  // expected-error @+2 {{expected non-function type}}
+  // expected-error @+1 {{expected non-function type}}
   %2 = spv.OCL.exp %arg0 :
   return
 }
@@ -99,7 +99,7 @@ func.func @fabs(%arg0 : f32, %arg1 : f32) -> () {
 // -----
 
 func.func @fabs(%arg0 : i32) -> () {
-  // expected-error @+2 {{expected non-function type}}
+  // expected-error @+1 {{expected non-function type}}
   %2 = spv.OCL.fabs %arg0 :
   return
 }
@@ -161,7 +161,7 @@ func.func @sabs(%arg0 : i32, %arg1 : i32) -> () {
 // -----
 
 func.func @sabs(%arg0 : i32) -> () {
-  // expected-error @+2 {{expected non-function type}}
+  // expected-error @+1 {{expected non-function type}}
   %2 = spv.OCL.s_abs %arg0 :
   return
 }

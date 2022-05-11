@@ -236,12 +236,10 @@ AffineExpr AffineParser::parseParentheticalExpr() {
   if (parseToken(Token::l_paren, "expected '('"))
     return nullptr;
   if (getToken().is(Token::r_paren))
-    return (emitError("no expression inside parentheses"), nullptr);
+    return emitError("no expression inside parentheses"), nullptr;
 
   auto expr = parseAffineExpr();
-  if (!expr)
-    return nullptr;
-  if (parseToken(Token::r_paren, "expected ')'"))
+  if (!expr || parseToken(Token::r_paren, "expected ')'"))
     return nullptr;
 
   return expr;
@@ -261,7 +259,7 @@ AffineExpr AffineParser::parseNegateExpression(AffineExpr lhs) {
   if (!operand)
     // Extra error message although parseAffineOperandExpr would have
     // complained. Leads to a better diagnostic.
-    return (emitError("missing operand of negation"), nullptr);
+    return emitError("missing operand of negation"), nullptr;
   return (-1) * operand;
 }
 
@@ -270,7 +268,7 @@ AffineExpr AffineParser::parseNegateExpression(AffineExpr lhs) {
 ///   affine-expr ::= bare-id
 AffineExpr AffineParser::parseBareIdExpr() {
   if (getToken().isNot(Token::bare_identifier))
-    return (emitError("expected bare identifier"), nullptr);
+    return emitWrongTokenError("expected bare identifier"), nullptr;
 
   StringRef sRef = getTokenSpelling();
   for (auto entry : dimsAndSymbols) {
@@ -280,15 +278,15 @@ AffineExpr AffineParser::parseBareIdExpr() {
     }
   }
 
-  return (emitError("use of undeclared identifier"), nullptr);
+  return emitWrongTokenError("use of undeclared identifier"), nullptr;
 }
 
 /// Parse an SSA id which may appear in an affine expression.
 AffineExpr AffineParser::parseSSAIdExpr(bool isSymbol) {
   if (!allowParsingSSAIds)
-    return (emitError("unexpected ssa identifier"), nullptr);
+    return emitWrongTokenError("unexpected ssa identifier"), nullptr;
   if (getToken().isNot(Token::percent_identifier))
-    return (emitError("expected ssa identifier"), nullptr);
+    return emitWrongTokenError("expected ssa identifier"), nullptr;
   auto name = getTokenSpelling();
   // Check if we already parsed this SSA id.
   for (auto entry : dimsAndSymbols) {
@@ -299,7 +297,7 @@ AffineExpr AffineParser::parseSSAIdExpr(bool isSymbol) {
   }
   // Parse the SSA id and add an AffineDim/SymbolExpr to represent it.
   if (parseElement(isSymbol))
-    return (emitError("failed to parse ssa identifier"), nullptr);
+    return nullptr;
   auto idExpr = isSymbol
                     ? getAffineSymbolExpr(numSymbolOperands++, getContext())
                     : getAffineDimExpr(numDimOperands++, getContext());
@@ -325,7 +323,7 @@ AffineExpr AffineParser::parseSymbolSSAIdExpr() {
 AffineExpr AffineParser::parseIntegerExpr() {
   auto val = getToken().getUInt64IntegerValue();
   if (!val.hasValue() || (int64_t)val.getValue() < 0)
-    return (emitError("constant too large for index"), nullptr);
+    return emitError("constant too large for index"), nullptr;
 
   consumeToken(Token::integer);
   return builder.getAffineConstantExpr((int64_t)val.getValue());
@@ -459,7 +457,7 @@ AffineExpr AffineParser::parseAffineExpr() {
 /// dimensional/symbolic identifier.
 ParseResult AffineParser::parseIdentifierDefinition(AffineExpr idExpr) {
   if (getToken().isNot(Token::bare_identifier))
-    return emitError("expected bare identifier");
+    return emitWrongTokenError("expected bare identifier");
 
   auto name = getTokenSpelling();
   for (auto entry : dimsAndSymbols) {
@@ -520,9 +518,9 @@ ParseResult AffineParser::parseAffineMapOrIntegerSetInline(AffineMap &map,
   // be parsing an integer set attribute or an affine map attribute.
   bool isArrow = getToken().is(Token::arrow);
   bool isColon = getToken().is(Token::colon);
-  if (!isArrow && !isColon) {
-    return emitError("expected '->' or ':'");
-  }
+  if (!isArrow && !isColon)
+    return emitWrongTokenError("expected '->' or ':'");
+
   if (isArrow) {
     parseToken(Token::arrow, "expected '->' or '['");
     map = parseAffineMapRange(numDims, numSymbols);
@@ -616,7 +614,7 @@ AffineExpr AffineParser::parseAffineConstraint(bool *isEq) {
       *isEq = false;
       return expr;
     }
-    return (emitError("expected '0' after '>='"), nullptr);
+    return emitError("expected '0' after '>='"), nullptr;
   }
 
   if (consumeIf(Token::equal) && consumeIf(Token::equal) &&
@@ -627,11 +625,11 @@ AffineExpr AffineParser::parseAffineConstraint(bool *isEq) {
       *isEq = true;
       return expr;
     }
-    return (emitError("expected '0' after '=='"), nullptr);
+    return emitError("expected '0' after '=='"), nullptr;
   }
 
-  return (emitError("expected '== 0' or '>= 0' at end of affine constraint"),
-          nullptr);
+  return emitError("expected '== 0' or '>= 0' at end of affine constraint"),
+         nullptr;
 }
 
 /// Parse the constraints that are part of an integer set definition.

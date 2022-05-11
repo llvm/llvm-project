@@ -43,7 +43,7 @@ func.func @exp(%arg0 : f32, %arg1 : f32) -> () {
 // -----
 
 func.func @exp(%arg0 : i32) -> () {
-  // expected-error @+2 {{expected non-function type}}
+  // expected-error @+1 {{expected non-function type}}
   %2 = spv.GLSL.Exp %arg0 :
   return
 }

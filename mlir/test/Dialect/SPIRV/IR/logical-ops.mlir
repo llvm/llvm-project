@@ -99,7 +99,7 @@ func.func @logicalBinary(%arg0 : i1, %arg1 : i1)
 
 func.func @logicalBinary(%arg0 : i1, %arg1 : i1)
 {
-  // expected-error @+2 {{expected non-function type}}
+  // expected-error @+1 {{expected non-function type}}
   %0 = spv.LogicalAnd %arg0, %arg1 :
   return
 }
@@ -148,7 +148,7 @@ func.func @logicalUnary(%arg0 : i1)
 
 func.func @logicalUnary(%arg0 : i1)
 {
-  // expected-error @+2 {{expected non-function type}}
+  // expected-error @+1 {{expected non-function type}}
   %0 = spv.LogicalNot %arg0 :
   return
 }
