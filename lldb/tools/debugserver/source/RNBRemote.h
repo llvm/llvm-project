@@ -110,6 +110,7 @@ public:
     start_noack_mode,                              // 'QStartNoAckMode'
     prefix_reg_packets_with_tid,        // 'QPrefixRegisterPacketsWithThreadID
     set_logging_mode,                   // 'QSetLogging:'
+    set_ignored_exceptions,             // 'QSetIgnoredExceptions'           
     set_max_packet_size,                // 'QSetMaxPacketSize:'
     set_max_payload_size,               // 'QSetMaxPayloadSize:'
     set_environment_variable,           // 'QEnvironment:'
@@ -197,6 +198,7 @@ public:
   rnb_err_t HandlePacket_QStartNoAckMode(const char *p);
   rnb_err_t HandlePacket_QThreadSuffixSupported(const char *p);
   rnb_err_t HandlePacket_QSetLogging(const char *p);
+  rnb_err_t HandlePacket_QSetIgnoredExceptions(const char *p);
   rnb_err_t HandlePacket_QSetDisableASLR(const char *p);
   rnb_err_t HandlePacket_QSetSTDIO(const char *p);
   rnb_err_t HandlePacket_QSetWorkingDir(const char *p);
