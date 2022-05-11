@@ -413,9 +413,7 @@ public:
     ~vector()
     {
       __annotate_delete();
-#if _LIBCPP_DEBUG_LEVEL == 2
-      __get_db()->__erase_c(this);
-#endif
+      std::__debug_db_erase_c(this);
 
       if (this->__begin_ != nullptr)
       {
@@ -1206,9 +1204,7 @@ vector<_Tp, _Allocator>::vector(vector&& __x)
     : __end_cap_(nullptr, _VSTD::move(__x.__alloc()))
 {
     _VSTD::__debug_db_insert_c(this);
-#if _LIBCPP_DEBUG_LEVEL == 2
-    __get_db()->swap(this, _VSTD::addressof(__x));
-#endif
+    std::__debug_db_swap(this, std::addressof(__x));
     this->__begin_ = __x.__begin_;
     this->__end_ = __x.__end_;
     this->__end_cap() = __x.__end_cap();
@@ -1227,9 +1223,7 @@ vector<_Tp, _Allocator>::vector(vector&& __x, const __type_identity_t<allocator_
         this->__end_ = __x.__end_;
         this->__end_cap() = __x.__end_cap();
         __x.__begin_ = __x.__end_ = __x.__end_cap() = nullptr;
-#if _LIBCPP_DEBUG_LEVEL == 2
-        __get_db()->swap(this, _VSTD::addressof(__x));
-#endif
+        std::__debug_db_swap(this, std::addressof(__x));
     }
     else
     {
@@ -1299,9 +1293,7 @@ vector<_Tp, _Allocator>::__move_assign(vector& __c, true_type)
     this->__end_ = __c.__end_;
     this->__end_cap() = __c.__end_cap();
     __c.__begin_ = __c.__end_ = __c.__end_cap() = nullptr;
-#if _LIBCPP_DEBUG_LEVEL == 2
-    __get_db()->swap(this, _VSTD::addressof(__c));
-#endif
+    std::__debug_db_swap(this, std::addressof(__c));
 }
 
 #endif // !_LIBCPP_CXX03_LANG
@@ -1946,9 +1938,7 @@ vector<_Tp, _Allocator>::swap(vector& __x)
     _VSTD::swap(this->__end_cap(), __x.__end_cap());
     _VSTD::__swap_allocator(this->__alloc(), __x.__alloc(),
         integral_constant<bool,__alloc_traits::propagate_on_container_swap::value>());
-#if _LIBCPP_DEBUG_LEVEL == 2
-    __get_db()->swap(this, _VSTD::addressof(__x));
-#endif
+    std::__debug_db_swap(this, std::addressof(__x));
 }
 
 template <class _Tp, class _Allocator>
@@ -2011,11 +2001,8 @@ inline _LIBCPP_INLINE_VISIBILITY
 void
 vector<_Tp, _Allocator>::__invalidate_all_iterators()
 {
-#if _LIBCPP_DEBUG_LEVEL == 2
-    __get_db()->__invalidate_all(this);
-#endif
+    std::__debug_db_invalidate_all(this);
 }
-
 
 template <class _Tp, class _Allocator>
 inline _LIBCPP_INLINE_VISIBILITY

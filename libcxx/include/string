@@ -1865,10 +1865,7 @@ inline _LIBCPP_CONSTEXPR_AFTER_CXX17
 void
 basic_string<_CharT, _Traits, _Allocator>::__invalidate_all_iterators()
 {
-#if _LIBCPP_DEBUG_LEVEL == 2
-    if (!__libcpp_is_constant_evaluated())
-        __get_db()->__invalidate_all(this);
-#endif
+    std::__debug_db_invalidate_all(this);
 }
 
 template <class _CharT, class _Traits, class _Allocator>
@@ -2077,10 +2074,8 @@ basic_string<_CharT, _Traits, _Allocator>::basic_string(basic_string&& __str)
 {
     __str.__default_init();
     std::__debug_db_insert_c(this);
-#if _LIBCPP_DEBUG_LEVEL == 2
-    if (!__libcpp_is_constant_evaluated() && __is_long())
-        __get_db()->swap(this, &__str);
-#endif
+    if (__is_long())
+        std::__debug_db_swap(this, &__str);
 }
 
 template <class _CharT, class _Traits, class _Allocator>
@@ -2101,10 +2096,8 @@ basic_string<_CharT, _Traits, _Allocator>::basic_string(basic_string&& __str, co
         __str.__default_init();
     }
     std::__debug_db_insert_c(this);
-#if _LIBCPP_DEBUG_LEVEL == 2
-    if (!__libcpp_is_constant_evaluated() && __is_long())
-        __get_db()->swap(this, &__str);
-#endif
+    if (__is_long())
+        std::__debug_db_swap(this, &__str);
 }
 
 #endif // _LIBCPP_CXX03_LANG
@@ -2342,10 +2335,7 @@ template <class _CharT, class _Traits, class _Allocator>
 _LIBCPP_CONSTEXPR_AFTER_CXX17
 basic_string<_CharT, _Traits, _Allocator>::~basic_string()
 {
-#if _LIBCPP_DEBUG_LEVEL == 2
-    if (!__libcpp_is_constant_evaluated())
-        __get_db()->__erase_c(this);
-#endif
+    std::__debug_db_erase_c(this);
     if (__is_long())
         __alloc_traits::deallocate(__alloc(), __get_long_pointer(), __get_long_cap());
 }
@@ -3600,15 +3590,12 @@ basic_string<_CharT, _Traits, _Allocator>::swap(basic_string& __str)
                     __is_nothrow_swappable<allocator_type>::value)
 #endif
 {
-#if _LIBCPP_DEBUG_LEVEL == 2
-    if (!__libcpp_is_constant_evaluated()) {
-        if (!__is_long())
-            __get_db()->__invalidate_all(this);
-        if (!__str.__is_long())
-            __get_db()->__invalidate_all(&__str);
-        __get_db()->swap(this, &__str);
-    }
-#endif
+    if (!__is_long())
+        std::__debug_db_invalidate_all(this);
+    if (!__str.__is_long())
+        std::__debug_db_invalidate_all(&__str);
+    std::__debug_db_swap(this, &__str);
+
     _LIBCPP_ASSERT(
         __alloc_traits::propagate_on_container_swap::value ||
         __alloc_traits::is_always_equal::value ||
