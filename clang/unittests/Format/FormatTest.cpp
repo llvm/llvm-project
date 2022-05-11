@@ -24114,6 +24114,12 @@ TEST_F(FormatTest, Concepts) {
   verifyFormat("template <class T, class T2>\n"
                "concept Same = __is_same_as<T, T2>;");
 
+  verifyFormat(
+      "template <class _InIt, class _OutIt>\n"
+      "concept _Can_reread_dest =\n"
+      "    std::forward_iterator<_OutIt> &&\n"
+      "    std::same_as<std::iter_value_t<_InIt>, std::iter_value_t<_OutIt>>;");
+
   auto Style = getLLVMStyle();
   Style.BreakBeforeConceptDeclarations = FormatStyle::BBCDS_Allowed;
 
