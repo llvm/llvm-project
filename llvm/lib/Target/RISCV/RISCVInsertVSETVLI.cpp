@@ -544,23 +544,11 @@ static bool isScalarMoveInstr(const MachineInstr &MI) {
 }
 
 static unsigned getVLOpNum(const MachineInstr &MI) {
-  const uint64_t TSFlags = MI.getDesc().TSFlags;
-  // This method is only called if we expect to have a VL operand, and all
-  // instructions with VL also have SEW.
-  assert(RISCVII::hasSEWOp(TSFlags) && RISCVII::hasVLOp(TSFlags));
-  unsigned Offset = 2;
-  if (RISCVII::hasVecPolicyOp(TSFlags))
-    Offset = 3;
-  return MI.getNumExplicitOperands() - Offset;
+  return RISCVII::getVLOpNum(MI.getDesc());
 }
 
 static unsigned getSEWOpNum(const MachineInstr &MI) {
-  const uint64_t TSFlags = MI.getDesc().TSFlags;
-  assert(RISCVII::hasSEWOp(TSFlags));
-  unsigned Offset = 1;
-  if (RISCVII::hasVecPolicyOp(TSFlags))
-    Offset = 2;
-  return MI.getNumExplicitOperands() - Offset;
+  return RISCVII::getSEWOpNum(MI.getDesc());
 }
 
 static VSETVLIInfo computeInfoForInstr(const MachineInstr &MI, uint64_t TSFlags,
@@ -572,7 +560,7 @@ static VSETVLIInfo computeInfoForInstr(const MachineInstr &MI, uint64_t TSFlags,
   // destination is tied to a source. Unless the source is undef. In that case
   // the user would have some control over the policy values.
   bool TailAgnostic = true;
-  bool UsesMaskPolicy = RISCVII::UsesMaskPolicy(TSFlags);
+  bool UsesMaskPolicy = RISCVII::usesMaskPolicy(TSFlags);
   // FIXME: Could we look at the above or below instructions to choose the
   // matched mask policy to reduce vsetvli instructions? Default mask policy is
   // agnostic if instructions use mask policy, otherwise is undisturbed. Because
