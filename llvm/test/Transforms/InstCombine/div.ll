@@ -13,8 +13,8 @@ define i32 @test1(i32 %A) {
 
 define i32 @test2(i32 %A) {
 ; CHECK-LABEL: @test2(
-; CHECK-NEXT:    [[B:%.*]] = lshr i32 [[A:%.*]], 3
-; CHECK-NEXT:    ret i32 [[B]]
+; CHECK-NEXT:    [[B1:%.*]] = lshr i32 [[A:%.*]], 3
+; CHECK-NEXT:    ret i32 [[B1]]
 ;
   %B = udiv i32 %A, 8
   ret i32 %B
@@ -205,9 +205,9 @@ define <2 x i1> @test9vec(<2 x i8> %A) {
 
 define i32 @test10(i32 %X, i1 %C) {
 ; CHECK-LABEL: @test10(
-; CHECK-NEXT:    [[R_V:%.*]] = select i1 [[C:%.*]], i32 6, i32 3
-; CHECK-NEXT:    [[R:%.*]] = lshr i32 [[X:%.*]], [[R_V]]
-; CHECK-NEXT:    ret i32 [[R]]
+; CHECK-NEXT:    [[TMP1:%.*]] = select i1 [[C:%.*]], i32 6, i32 3
+; CHECK-NEXT:    [[R1:%.*]] = lshr i32 [[X:%.*]], [[TMP1]]
+; CHECK-NEXT:    ret i32 [[R1]]
 ;
   %V = select i1 %C, i32 64, i32 8
   %R = udiv i32 %X, %V
@@ -216,9 +216,9 @@ define i32 @test10(i32 %X, i1 %C) {
 
 define i32 @test11(i32 %X, i1 %C) {
 ; CHECK-LABEL: @test11(
-; CHECK-NEXT:    [[B_V:%.*]] = select i1 [[C:%.*]], i32 10, i32 5
-; CHECK-NEXT:    [[B:%.*]] = lshr i32 [[X:%.*]], [[B_V]]
-; CHECK-NEXT:    ret i32 [[B]]
+; CHECK-NEXT:    [[TMP1:%.*]] = select i1 [[C:%.*]], i32 10, i32 5
+; CHECK-NEXT:    [[B1:%.*]] = lshr i32 [[X:%.*]], [[TMP1]]
+; CHECK-NEXT:    ret i32 [[B1]]
 ;
   %A = select i1 %C, i32 1024, i32 32
   %B = udiv i32 %X, %A
@@ -255,8 +255,8 @@ define i32 @test14(i8 %x) {
 define i32 @test15(i32 %a, i32 %b) {
 ; CHECK-LABEL: @test15(
 ; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[B:%.*]], -2
-; CHECK-NEXT:    [[DIV2:%.*]] = lshr i32 [[A:%.*]], [[TMP1]]
-; CHECK-NEXT:    ret i32 [[DIV2]]
+; CHECK-NEXT:    [[DIV21:%.*]] = lshr i32 [[A:%.*]], [[TMP1]]
+; CHECK-NEXT:    ret i32 [[DIV21]]
 ;
   %shl = shl i32 1, %b
   %div = lshr i32 %shl, 2
@@ -348,8 +348,8 @@ define i32 @test23(i32 %a) {
 
 define i32 @test24(i32 %a) {
 ; CHECK-LABEL: @test24(
-; CHECK-NEXT:    [[DIV:%.*]] = lshr i32 [[A:%.*]], 2
-; CHECK-NEXT:    ret i32 [[DIV]]
+; CHECK-NEXT:    [[DIV1:%.*]] = lshr i32 [[A:%.*]], 2
+; CHECK-NEXT:    ret i32 [[DIV1]]
 ;
   %mul = mul nuw i32 %a, 3
   %div = udiv i32 %mul, 12
@@ -579,8 +579,8 @@ define <2 x i32> @test35vec(<2 x i32> %A) {
 define i32 @test36(i32 %A) {
 ; CHECK-LABEL: @test36(
 ; CHECK-NEXT:    [[AND:%.*]] = and i32 [[A:%.*]], 2147483647
-; CHECK-NEXT:    [[MUL:%.*]] = lshr exact i32 [[AND]], [[A]]
-; CHECK-NEXT:    ret i32 [[MUL]]
+; CHECK-NEXT:    [[MUL1:%.*]] = lshr exact i32 [[AND]], [[A]]
+; CHECK-NEXT:    ret i32 [[MUL1]]
 ;
   %and = and i32 %A, 2147483647
   %shl = shl nsw i32 1, %A
@@ -591,8 +591,8 @@ define i32 @test36(i32 %A) {
 define <2 x i32> @test36vec(<2 x i32> %A) {
 ; CHECK-LABEL: @test36vec(
 ; CHECK-NEXT:    [[AND:%.*]] = and <2 x i32> [[A:%.*]], <i32 2147483647, i32 2147483647>
-; CHECK-NEXT:    [[MUL:%.*]] = lshr exact <2 x i32> [[AND]], [[A]]
-; CHECK-NEXT:    ret <2 x i32> [[MUL]]
+; CHECK-NEXT:    [[MUL1:%.*]] = lshr exact <2 x i32> [[AND]], [[A]]
+; CHECK-NEXT:    ret <2 x i32> [[MUL1]]
 ;
   %and = and <2 x i32> %A, <i32 2147483647, i32 2147483647>
   %shl = shl nsw <2 x i32> <i32 1, i32 1>, %A
