@@ -212,9 +212,7 @@ void dumpFunction(const BinaryFunction &BF) {
 
       // Analyze symbol references (data, functions) from the instruction.
       bool IsCall = BC.MIB->isCall(Instr);
-      for (unsigned I = 0, E = MCPlus::getNumPrimeOperands(Instr); I != E;
-           ++I) {
-        MCOperand Operand = Instr.getOperand(I);
+      for (const MCOperand &Operand : MCPlus::primeOperands(Instr)) {
         if (Operand.isExpr() &&
             Operand.getExpr()->getKind() == MCExpr::SymbolRef) {
           std::pair<const MCSymbol *, uint64_t> TSI =

@@ -619,11 +619,10 @@ public:
 
     auto addInstrOperands = [&](const MCInst &Instr) {
       // Update Uses table
-      for (unsigned OpNum = 0, OpEnd = MCPlus::getNumPrimeOperands(Instr);
-           OpNum != OpEnd; ++OpNum) {
-        if (!Instr.getOperand(OpNum).isReg())
+      for (const MCOperand &Operand : MCPlus::primeOperands(Instr)) {
+        if (!Operand.isReg())
           continue;
-        unsigned Reg = Instr.getOperand(OpNum).getReg();
+        unsigned Reg = Operand.getReg();
         MCInst *AliasInst = RegAliasTable[Reg];
         Uses[&Instr].push_back(AliasInst);
         LLVM_DEBUG({

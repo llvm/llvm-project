@@ -47,8 +47,7 @@ void RegReAssign::swap(BinaryFunction &Function, MCPhysReg A, MCPhysReg B) {
   // Regular instructions
   for (BinaryBasicBlock &BB : Function) {
     for (MCInst &Inst : BB) {
-      for (int I = 0, E = MCPlus::getNumPrimeOperands(Inst); I != E; ++I) {
-        MCOperand &Operand = Inst.getOperand(I);
+      for (MCOperand &Operand : MCPlus::primeOperands(Inst)) {
         if (!Operand.isReg())
           continue;
 
