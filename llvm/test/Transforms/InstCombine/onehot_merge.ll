@@ -775,8 +775,8 @@ define i1 @foo1_and_extra_use_shl2_logical(i32 %k, i32 %c1, i32 %c2, i32* %p) {
 ; CHECK-LABEL: @foo1_and_extra_use_shl2_logical(
 ; CHECK-NEXT:    [[T0:%.*]] = shl i32 1, [[C1:%.*]]
 ; CHECK-NEXT:    [[T1:%.*]] = shl i32 1, [[C2:%.*]]
-; CHECK-NEXT:    store i32 [[T1]], i32* [[P:%.*]], align 4
 ; CHECK-NEXT:    [[TMP1:%.*]] = freeze i32 [[T1]]
+; CHECK-NEXT:    store i32 [[TMP1]], i32* [[P:%.*]], align 4
 ; CHECK-NEXT:    [[TMP2:%.*]] = or i32 [[T0]], [[TMP1]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = and i32 [[TMP2]], [[K:%.*]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = icmp ne i32 [[TMP3]], [[TMP2]]
@@ -820,9 +820,9 @@ define i1 @foo1_and_extra_use_and2_logical(i32 %k, i32 %c1, i32 %c2, i32* %p) {
 ; CHECK-LABEL: @foo1_and_extra_use_and2_logical(
 ; CHECK-NEXT:    [[T0:%.*]] = shl i32 1, [[C1:%.*]]
 ; CHECK-NEXT:    [[T1:%.*]] = shl i32 1, [[C2:%.*]]
-; CHECK-NEXT:    [[T4:%.*]] = and i32 [[T1]], [[K:%.*]]
-; CHECK-NEXT:    store i32 [[T4]], i32* [[P:%.*]], align 4
 ; CHECK-NEXT:    [[TMP1:%.*]] = freeze i32 [[T1]]
+; CHECK-NEXT:    [[T4:%.*]] = and i32 [[TMP1]], [[K:%.*]]
+; CHECK-NEXT:    store i32 [[T4]], i32* [[P:%.*]], align 4
 ; CHECK-NEXT:    [[TMP2:%.*]] = or i32 [[T0]], [[TMP1]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = and i32 [[TMP2]], [[K]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = icmp ne i32 [[TMP3]], [[TMP2]]
@@ -867,10 +867,10 @@ define i1 @foo1_and_extra_use_cmp2_logical(i32 %k, i32 %c1, i32 %c2, i1* %p) {
 ; CHECK-LABEL: @foo1_and_extra_use_cmp2_logical(
 ; CHECK-NEXT:    [[T0:%.*]] = shl i32 1, [[C1:%.*]]
 ; CHECK-NEXT:    [[T1:%.*]] = shl i32 1, [[C2:%.*]]
-; CHECK-NEXT:    [[T4:%.*]] = and i32 [[T1]], [[K:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = freeze i32 [[T1]]
+; CHECK-NEXT:    [[T4:%.*]] = and i32 [[TMP1]], [[K:%.*]]
 ; CHECK-NEXT:    [[T5:%.*]] = icmp eq i32 [[T4]], 0
 ; CHECK-NEXT:    store i1 [[T5]], i1* [[P:%.*]], align 1
-; CHECK-NEXT:    [[TMP1:%.*]] = freeze i32 [[T1]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = or i32 [[T0]], [[TMP1]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = and i32 [[TMP2]], [[K]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = icmp ne i32 [[TMP3]], [[TMP2]]
