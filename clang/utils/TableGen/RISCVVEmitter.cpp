@@ -32,9 +32,6 @@ namespace {
 class RVVEmitter {
 private:
   RecordKeeper &Records;
-  // Concat BasicType, LMUL and Proto as key
-  StringMap<RVVType> LegalTypes;
-  StringSet<> IllegalTypes;
 
 public:
   RVVEmitter(RecordKeeper &R) : Records(R) {}
@@ -48,20 +45,11 @@ public:
   /// Emit all the information needed to map builtin -> LLVM IR intrinsic.
   void createCodeGen(raw_ostream &o);
 
-  std::string getSuffixStr(char Type, int Log2LMUL, StringRef Prototypes);
-
 private:
   /// Create all intrinsics and add them to \p Out
   void createRVVIntrinsics(std::vector<std::unique_ptr<RVVIntrinsic>> &Out);
   /// Print HeaderCode in RVVHeader Record to \p Out
   void printHeaderCode(raw_ostream &OS);
-  /// Compute output and input types by applying different config (basic type
-  /// and LMUL with type transformers). It also record result of type in legal
-  /// or illegal set to avoid compute the  same config again. The result maybe
-  /// have illegal RVVType.
-  Optional<RVVTypes> computeTypes(BasicType BT, int Log2LMUL, unsigned NF,
-                                  ArrayRef<std::string> PrototypeSeq);
-  Optional<RVVTypePtr> computeType(BasicType BT, int Log2LMUL, StringRef Proto);
 
   /// Emit Acrh predecessor definitions and body, assume the element of Defs are
   /// sorted by extension.
@@ -73,13 +61,38 @@ private:
   // non-empty string.
   bool emitMacroRestrictionStr(RISCVPredefinedMacroT PredefinedMacros,
                                raw_ostream &o);
-  // Slice Prototypes string into sub prototype string and process each sub
-  // prototype string individually in the Handler.
-  void parsePrototypes(StringRef Prototypes,
-                       std::function<void(StringRef)> Handler);
 };
 
 } // namespace
+
+static BasicType ParseBasicType(char c) {
+  switch (c) {
+  case 'c':
+    return BasicType::Int8;
+    break;
+  case 's':
+    return BasicType::Int16;
+    break;
+  case 'i':
+    return BasicType::Int32;
+    break;
+  case 'l':
+    return BasicType::Int64;
+    break;
+  case 'x':
+    return BasicType::Float16;
+    break;
+  case 'f':
+    return BasicType::Float32;
+    break;
+  case 'd':
+    return BasicType::Float64;
+    break;
+
+  default:
+    return BasicType::Unknown;
+  }
+}
 
 void emitCodeGenSwitchBody(const RVVIntrinsic *RVVI, raw_ostream &OS) {
   if (!RVVI->getIRName().empty())
@@ -202,24 +215,31 @@ void RVVEmitter::createHeader(raw_ostream &OS) {
   constexpr int Log2LMULs[] = {-3, -2, -1, 0, 1, 2, 3};
   // Print RVV boolean types.
   for (int Log2LMUL : Log2LMULs) {
-    auto T = computeType('c', Log2LMUL, "m");
+    auto T = RVVType::computeType(BasicType::Int8, Log2LMUL,
+                                  PrototypeDescriptor::Mask);
     if (T.hasValue())
       printType(T.getValue());
   }
   // Print RVV int/float types.
   for (char I : StringRef("csil")) {
+    BasicType BT = ParseBasicType(I);
     for (int Log2LMUL : Log2LMULs) {
-      auto T = computeType(I, Log2LMUL, "v");
+      auto T = RVVType::computeType(BT, Log2LMUL, PrototypeDescriptor::Vector);
       if (T.hasValue()) {
         printType(T.getValue());
-        auto UT = computeType(I, Log2LMUL, "Uv");
+        auto UT = RVVType::computeType(
+            BT, Log2LMUL,
+            PrototypeDescriptor(BaseTypeModifier::Vector,
+                                VectorTypeModifier::NoModifier,
+                                TypeModifier::UnsignedInteger));
         printType(UT.getValue());
       }
     }
   }
   OS << "#if defined(__riscv_zvfh)\n";
   for (int Log2LMUL : Log2LMULs) {
-    auto T = computeType('x', Log2LMUL, "v");
+    auto T = RVVType::computeType(BasicType::Float16, Log2LMUL,
+                                  PrototypeDescriptor::Vector);
     if (T.hasValue())
       printType(T.getValue());
   }
@@ -227,7 +247,8 @@ void RVVEmitter::createHeader(raw_ostream &OS) {
 
   OS << "#if defined(__riscv_f)\n";
   for (int Log2LMUL : Log2LMULs) {
-    auto T = computeType('f', Log2LMUL, "v");
+    auto T = RVVType::computeType(BasicType::Float32, Log2LMUL,
+                                  PrototypeDescriptor::Vector);
     if (T.hasValue())
       printType(T.getValue());
   }
@@ -235,7 +256,8 @@ void RVVEmitter::createHeader(raw_ostream &OS) {
 
   OS << "#if defined(__riscv_d)\n";
   for (int Log2LMUL : Log2LMULs) {
-    auto T = computeType('d', Log2LMUL, "v");
+    auto T = RVVType::computeType(BasicType::Float64, Log2LMUL,
+                                  PrototypeDescriptor::Vector);
     if (T.hasValue())
       printType(T.getValue());
   }
@@ -359,32 +381,6 @@ void RVVEmitter::createCodeGen(raw_ostream &OS) {
   OS << "\n";
 }
 
-void RVVEmitter::parsePrototypes(StringRef Prototypes,
-                                 std::function<void(StringRef)> Handler) {
-  const StringRef Primaries("evwqom0ztul");
-  while (!Prototypes.empty()) {
-    size_t Idx = 0;
-    // Skip over complex prototype because it could contain primitive type
-    // character.
-    if (Prototypes[0] == '(')
-      Idx = Prototypes.find_first_of(')');
-    Idx = Prototypes.find_first_of(Primaries, Idx);
-    assert(Idx != StringRef::npos);
-    Handler(Prototypes.slice(0, Idx + 1));
-    Prototypes = Prototypes.drop_front(Idx + 1);
-  }
-}
-
-std::string RVVEmitter::getSuffixStr(char Type, int Log2LMUL,
-                                     StringRef Prototypes) {
-  SmallVector<std::string> SuffixStrs;
-  parsePrototypes(Prototypes, [&](StringRef Proto) {
-    auto T = computeType(Type, Log2LMUL, Proto);
-    SuffixStrs.push_back(T.getValue()->getShortStr());
-  });
-  return join(SuffixStrs, "_");
-}
-
 void RVVEmitter::createRVVIntrinsics(
     std::vector<std::unique_ptr<RVVIntrinsic>> &Out) {
   std::vector<Record *> RV = Records.getAllDerivedDefinitions("RVVBuiltin");
@@ -419,13 +415,15 @@ void RVVEmitter::createRVVIntrinsics(
 
     // Parse prototype and create a list of primitive type with transformers
     // (operand) in ProtoSeq. ProtoSeq[0] is output operand.
-    SmallVector<std::string> ProtoSeq;
-    parsePrototypes(Prototypes, [&ProtoSeq](StringRef Proto) {
-      ProtoSeq.push_back(Proto.str());
-    });
+    SmallVector<PrototypeDescriptor> ProtoSeq = parsePrototypes(Prototypes);
+
+    SmallVector<PrototypeDescriptor> SuffixProtoSeq =
+        parsePrototypes(SuffixProto);
+    SmallVector<PrototypeDescriptor> MangledSuffixProtoSeq =
+        parsePrototypes(MangledSuffixProto);
 
     // Compute Builtin types
-    SmallVector<std::string> ProtoMaskSeq = ProtoSeq;
+    SmallVector<PrototypeDescriptor> ProtoMaskSeq = ProtoSeq;
     if (HasMasked) {
       // If HasMaskedOffOperand, insert result type as first input operand.
       if (HasMaskedOffOperand) {
@@ -436,10 +434,10 @@ void RVVEmitter::createRVVIntrinsics(
           // (void, op0 address, op1 address, ...)
           // to
           // (void, op0 address, op1 address, ..., maskedoff0, maskedoff1, ...)
+          PrototypeDescriptor MaskoffType = ProtoSeq[1];
+          MaskoffType.TM &= ~static_cast<uint8_t>(TypeModifier::Pointer);
           for (unsigned I = 0; I < NF; ++I)
-            ProtoMaskSeq.insert(
-                ProtoMaskSeq.begin() + NF + 1,
-                ProtoSeq[1].substr(1)); // Use substr(1) to skip '*'
+            ProtoMaskSeq.insert(ProtoMaskSeq.begin() + NF + 1, MaskoffType);
         }
       }
       if (HasMaskedOffOperand && NF > 1) {
@@ -448,28 +446,34 @@ void RVVEmitter::createRVVIntrinsics(
         // to
         // (void, op0 address, op1 address, ..., mask, maskedoff0, maskedoff1,
         // ...)
-        ProtoMaskSeq.insert(ProtoMaskSeq.begin() + NF + 1, "m");
+        ProtoMaskSeq.insert(ProtoMaskSeq.begin() + NF + 1,
+                            PrototypeDescriptor::Mask);
       } else {
-        // If HasMasked, insert 'm' as first input operand.
-        ProtoMaskSeq.insert(ProtoMaskSeq.begin() + 1, "m");
+        // If HasMasked, insert PrototypeDescriptor:Mask as first input operand.
+        ProtoMaskSeq.insert(ProtoMaskSeq.begin() + 1,
+                            PrototypeDescriptor::Mask);
       }
     }
-    // If HasVL, append 'z' to last operand
+    // If HasVL, append PrototypeDescriptor:VL to last operand
     if (HasVL) {
-      ProtoSeq.push_back("z");
-      ProtoMaskSeq.push_back("z");
+      ProtoSeq.push_back(PrototypeDescriptor::VL);
+      ProtoMaskSeq.push_back(PrototypeDescriptor::VL);
     }
 
     // Create Intrinsics for each type and LMUL.
     for (char I : TypeRange) {
       for (int Log2LMUL : Log2LMULList) {
-        Optional<RVVTypes> Types = computeTypes(I, Log2LMUL, NF, ProtoSeq);
+        BasicType BT = ParseBasicType(I);
+        Optional<RVVTypes> Types =
+            RVVType::computeTypes(BT, Log2LMUL, NF, ProtoSeq);
         // Ignored to create new intrinsic if there are any illegal types.
         if (!Types.hasValue())
           continue;
 
-        auto SuffixStr = getSuffixStr(I, Log2LMUL, SuffixProto);
-        auto MangledSuffixStr = getSuffixStr(I, Log2LMUL, MangledSuffixProto);
+        auto SuffixStr =
+            RVVIntrinsic::getSuffixStr(BT, Log2LMUL, SuffixProtoSeq);
+        auto MangledSuffixStr =
+            RVVIntrinsic::getSuffixStr(BT, Log2LMUL, MangledSuffixProtoSeq);
         // Create a unmasked intrinsic
         Out.push_back(std::make_unique<RVVIntrinsic>(
             Name, SuffixStr, MangledName, MangledSuffixStr, IRName,
@@ -480,7 +484,7 @@ void RVVEmitter::createRVVIntrinsics(
         if (HasMasked) {
           // Create a masked intrinsic
           Optional<RVVTypes> MaskTypes =
-              computeTypes(I, Log2LMUL, NF, ProtoMaskSeq);
+              RVVType::computeTypes(BT, Log2LMUL, NF, ProtoMaskSeq);
           Out.push_back(std::make_unique<RVVIntrinsic>(
               Name, SuffixStr, MangledName, MangledSuffixStr, MaskedIRName,
               /*IsMasked=*/true, HasMaskedOffOperand, HasVL, MaskedPolicy,
@@ -499,45 +503,6 @@ void RVVEmitter::printHeaderCode(raw_ostream &OS) {
     StringRef HeaderCodeStr = R->getValueAsString("HeaderCode");
     OS << HeaderCodeStr.str();
   }
-}
-
-Optional<RVVTypes>
-RVVEmitter::computeTypes(BasicType BT, int Log2LMUL, unsigned NF,
-                         ArrayRef<std::string> PrototypeSeq) {
-  // LMUL x NF must be less than or equal to 8.
-  if ((Log2LMUL >= 1) && (1 << Log2LMUL) * NF > 8)
-    return llvm::None;
-
-  RVVTypes Types;
-  for (const std::string &Proto : PrototypeSeq) {
-    auto T = computeType(BT, Log2LMUL, Proto);
-    if (!T.hasValue())
-      return llvm::None;
-    // Record legal type index
-    Types.push_back(T.getValue());
-  }
-  return Types;
-}
-
-Optional<RVVTypePtr> RVVEmitter::computeType(BasicType BT, int Log2LMUL,
-                                             StringRef Proto) {
-  std::string Idx = Twine(Twine(BT) + Twine(Log2LMUL) + Proto).str();
-  // Search first
-  auto It = LegalTypes.find(Idx);
-  if (It != LegalTypes.end())
-    return &(It->second);
-  if (IllegalTypes.count(Idx))
-    return llvm::None;
-  // Compute type and record the result.
-  RVVType T(BT, Log2LMUL, Proto);
-  if (T.isValid()) {
-    // Record legal type index and value.
-    LegalTypes.insert({Idx, T});
-    return &(LegalTypes[Idx]);
-  }
-  // Record illegal type index.
-  IllegalTypes.insert(Idx);
-  return llvm::None;
 }
 
 void RVVEmitter::emitArchMacroAndBody(
