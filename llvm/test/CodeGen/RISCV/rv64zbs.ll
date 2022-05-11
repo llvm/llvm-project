@@ -338,8 +338,8 @@ define signext i32 @bext_i32(i32 signext %a, i32 signext %b) nounwind {
 ;
 ; RV64ZBS-LABEL: bext_i32:
 ; RV64ZBS:       # %bb.0:
-; RV64ZBS-NEXT:    srlw a0, a0, a1
-; RV64ZBS-NEXT:    andi a0, a0, 1
+; RV64ZBS-NEXT:    andi a1, a1, 31
+; RV64ZBS-NEXT:    bext a0, a0, a1
 ; RV64ZBS-NEXT:    ret
   %and = and i32 %b, 31
   %shr = lshr i32 %a, %and
@@ -356,8 +356,7 @@ define signext i32 @bext_i32_no_mask(i32 signext %a, i32 signext %b) nounwind {
 ;
 ; RV64ZBS-LABEL: bext_i32_no_mask:
 ; RV64ZBS:       # %bb.0:
-; RV64ZBS-NEXT:    srlw a0, a0, a1
-; RV64ZBS-NEXT:    andi a0, a0, 1
+; RV64ZBS-NEXT:    bext a0, a0, a1
 ; RV64ZBS-NEXT:    ret
   %shr = lshr i32 %a, %b
   %and1 = and i32 %shr, 1
