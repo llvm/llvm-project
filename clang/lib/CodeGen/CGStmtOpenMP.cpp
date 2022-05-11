@@ -5007,7 +5007,6 @@ void CodeGenFunction::EmitOMPTargetTaskBasedDirective(
       }
     }
     // Privatize all private variables except for in_reduction items.
-    //(void)Scope.Privatize();
     CGF.processInReduction(S,Data,CGF,CS,Scope);
     if (InputInfo.NumberOfTargetItems > 0) {
       InputInfo.BasePointersArray = CGF.Builder.CreateConstArrayGEP(
@@ -5038,7 +5037,6 @@ void CodeGenFunction::EmitOMPTargetTaskBasedDirective(
     IntegerLiteral IfCond(getContext(), TrueOrFalse,
                         getContext().getIntTypeForBitwidth(32, /*Signed=*/0),
                         SourceLocation());
-
     CGM.getOpenMPRuntime().emitTaskCall(*this, S.getBeginLoc(), S, OutlinedFn,
                                       SharedsTy, CapturedStruct, &IfCond, Data);
     return;
@@ -5059,7 +5057,6 @@ void CodeGenFunction::processInReduction(const OMPExecutableDirective &S,
     llvm::Value *ReductionsPtr = CGF.Builder.CreateLoad(
         CGF.GetAddrOfLocalVar(CS->getCapturedDecl()->getParam(4)));
     for (unsigned Cnt = 0, E = Data.ReductionVars.size(); Cnt < E; ++Cnt) {
-
       RedCG.emitSharedOrigLValue(CGF, Cnt);
       RedCG.emitAggregateType(CGF, Cnt);
       // FIXME: This must removed once the runtime library is fixed.
@@ -5067,7 +5064,6 @@ void CodeGenFunction::processInReduction(const OMPExecutableDirective &S,
       // initializer/combiner/finalizer.
       CGF.CGM.getOpenMPRuntime().emitTaskReductionFixups(CGF, S.getBeginLoc(),
                                                          RedCG, Cnt);
-
       Address Replacement = CGF.CGM.getOpenMPRuntime().getTaskReductionItem(
           CGF, S.getBeginLoc(), ReductionsPtr, RedCG.getSharedLValue(Cnt));
       Replacement =
@@ -5102,7 +5098,6 @@ void CodeGenFunction::processInReduction(const OMPExecutableDirective &S,
       std::advance(ITD, 1);
     }
   }
-
   OMPPrivateScope InRedScope(CGF);
   if (!InRedVars.empty()) {
     ReductionCodeGen RedCG(InRedVars, InRedVars, InRedPrivs, InRedOps);
