@@ -49,9 +49,10 @@ define <4 x i32> @test_v4i32_one_undef(<4 x i32> %a0) {
 
 define <4 x i32> @test_v4i32_negconstsplat(<4 x i32> %a0) {
 ; CHECK-LABEL: @test_v4i32_negconstsplat(
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp ult <4 x i32> [[A0:%.*]], <i32 -3, i32 -3, i32 -3, i32 -3>
-; CHECK-NEXT:    [[TMP2:%.*]] = add <4 x i32> [[A0]], <i32 3, i32 3, i32 3, i32 3>
-; CHECK-NEXT:    [[TMP3:%.*]] = select <4 x i1> [[TMP1]], <4 x i32> [[A0]], <4 x i32> [[TMP2]]
+; CHECK-NEXT:    [[A0_FR:%.*]] = freeze <4 x i32> [[A0:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ult <4 x i32> [[A0_FR]], <i32 -3, i32 -3, i32 -3, i32 -3>
+; CHECK-NEXT:    [[TMP2:%.*]] = add <4 x i32> [[A0_FR]], <i32 3, i32 3, i32 3, i32 3>
+; CHECK-NEXT:    [[TMP3:%.*]] = select <4 x i1> [[TMP1]], <4 x i32> [[A0_FR]], <4 x i32> [[TMP2]]
 ; CHECK-NEXT:    ret <4 x i32> [[TMP3]]
 ;
   %1 = urem <4 x i32> %a0, <i32 -3, i32 -3, i32 -3, i32 -3>
@@ -60,9 +61,10 @@ define <4 x i32> @test_v4i32_negconstsplat(<4 x i32> %a0) {
 
 define <4 x i32> @test_v4i32_negconst(<4 x i32> %a0) {
 ; CHECK-LABEL: @test_v4i32_negconst(
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp ult <4 x i32> [[A0:%.*]], <i32 -3, i32 -5, i32 -7, i32 -9>
-; CHECK-NEXT:    [[TMP2:%.*]] = add <4 x i32> [[A0]], <i32 3, i32 5, i32 7, i32 9>
-; CHECK-NEXT:    [[TMP3:%.*]] = select <4 x i1> [[TMP1]], <4 x i32> [[A0]], <4 x i32> [[TMP2]]
+; CHECK-NEXT:    [[A0_FR:%.*]] = freeze <4 x i32> [[A0:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ult <4 x i32> [[A0_FR]], <i32 -3, i32 -5, i32 -7, i32 -9>
+; CHECK-NEXT:    [[TMP2:%.*]] = add <4 x i32> [[A0_FR]], <i32 3, i32 5, i32 7, i32 9>
+; CHECK-NEXT:    [[TMP3:%.*]] = select <4 x i1> [[TMP1]], <4 x i32> [[A0_FR]], <4 x i32> [[TMP2]]
 ; CHECK-NEXT:    ret <4 x i32> [[TMP3]]
 ;
   %1 = urem <4 x i32> %a0, <i32 -3, i32 -5, i32 -7, i32 -9>
