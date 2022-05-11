@@ -1,5 +1,5 @@
 // RUN: %clang_cc1 -fsyntax-only -verify=cuda %s
-// RUN: %clang_cc1 -fsyntax-only -verify=cuda -pedantic %s
+// RUN: %clang_cc1 -fsyntax-only -verify=pedantic -pedantic %s
 // RUN: %clang_cc1 -fsyntax-only -verify=cpp -x c++ %s
 
 // cuda-no-diagnostics
@@ -14,6 +14,6 @@ __attribute__((__noinline__)) void fun3() { }
 __noinline__ void fun5() {}
 
 #undef __noinline__
-#10 "cuda.h" 3
+#10 "cuda.h" 3 // pedantic-warning {{this style of line directive is a GNU extension}}
 #define __noinline__ __attribute__((__noinline__))
 __noinline__ void fun6() {}
