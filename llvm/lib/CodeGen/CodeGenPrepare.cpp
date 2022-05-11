@@ -7037,9 +7037,13 @@ bool CodeGenPrepare::optimizeSwitchPhiConstants(SwitchInst *SI) {
   // change the code to:
   //   switch(x) { case 42: phi(x, ...) }
 
+  Value *Condition = SI->getCondition();
+  // Avoid endless loop in degenerate case.
+  if (isa<ConstantInt>(*Condition))
+    return false;
+
   bool Changed = false;
   BasicBlock *SwitchBB = SI->getParent();
-  Value *Condition = SI->getCondition();
   Type *ConditionType = Condition->getType();
 
   for (const SwitchInst::CaseHandle &Case : SI->cases()) {
