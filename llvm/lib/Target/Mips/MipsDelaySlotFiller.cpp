@@ -677,7 +677,7 @@ bool MipsDelaySlotFiller::runOnMachineBasicBlock(MachineBasicBlock &MBB) {
     // Bundle the NOP to the instruction with the delay slot.
     LLVM_DEBUG(dbgs() << DEBUG_TYPE << ": could not fill delay slot for ";
                I->dump());
-    BuildMI(MBB, std::next(I), I->getDebugLoc(), TII->get(Mips::NOP));
+    TII->insertNop(MBB, std::next(I), I->getDebugLoc());
     MIBundleBuilder(MBB, I, std::next(I, 2));
     ++FilledSlots;
     Changed = true;
