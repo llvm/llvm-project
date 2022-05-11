@@ -1787,7 +1787,6 @@ private:
       return *this;
     }
 
-    _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_AFTER_CXX17 void __invalidate_all_iterators();
     _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_AFTER_CXX17 void __invalidate_iterators_past(size_type);
 
     template<class _Tp>
@@ -1859,14 +1858,6 @@ template<class _CharT,
 basic_string(basic_string_view<_CharT, _Traits>, _Sz, _Sz, const _Allocator& = _Allocator())
   -> basic_string<_CharT, _Traits, _Allocator>;
 #endif
-
-template <class _CharT, class _Traits, class _Allocator>
-inline _LIBCPP_CONSTEXPR_AFTER_CXX17
-void
-basic_string<_CharT, _Traits, _Allocator>::__invalidate_all_iterators()
-{
-    std::__debug_db_invalidate_all(this);
-}
 
 template <class _CharT, class _Traits, class _Allocator>
 inline _LIBCPP_CONSTEXPR_AFTER_CXX17
@@ -2357,7 +2348,7 @@ basic_string<_CharT, _Traits, _Allocator>::__grow_by_and_replace
     auto __allocation = std::__allocate_at_least(__alloc(), __cap + 1);
     pointer __p = __allocation.ptr;
     __begin_lifetime(__p, __allocation.count);
-    __invalidate_all_iterators();
+    std::__debug_db_invalidate_all(this);
     if (__n_copy != 0)
         traits_type::copy(std::__to_address(__p),
                           std::__to_address(__old_p), __n_copy);
@@ -2392,7 +2383,7 @@ basic_string<_CharT, _Traits, _Allocator>::__grow_by(size_type __old_cap, size_t
     auto __allocation = std::__allocate_at_least(__alloc(), __cap + 1);
     pointer __p = __allocation.ptr;
     __begin_lifetime(__p, __allocation.count);
-    __invalidate_all_iterators();
+    std::__debug_db_invalidate_all(this);
     if (__n_copy != 0)
         traits_type::copy(std::__to_address(__p),
                           std::__to_address(__old_p), __n_copy);
@@ -3330,7 +3321,7 @@ inline _LIBCPP_CONSTEXPR_AFTER_CXX17
 void
 basic_string<_CharT, _Traits, _Allocator>::clear() _NOEXCEPT
 {
-    __invalidate_all_iterators();
+    std::__debug_db_invalidate_all(this);
     if (__is_long())
     {
         traits_type::assign(*__get_long_pointer(), value_type());
@@ -3481,7 +3472,7 @@ basic_string<_CharT, _Traits, _Allocator>::__shrink_or_extend(size_type __target
     }
     else
         __set_short_size(__sz);
-    __invalidate_all_iterators();
+    std::__debug_db_invalidate_all(this);
 }
 
 template <class _CharT, class _Traits, class _Allocator>

@@ -679,11 +679,6 @@ private:
     void __move_assign_alloc(__list_imp&, false_type)
         _NOEXCEPT
         {}
-
-    _LIBCPP_INLINE_VISIBILITY
-    void __invalidate_all_iterators() {
-        std::__debug_db_invalidate_all(this);
-    }
 };
 
 // Unlink nodes [__f, __l]
@@ -746,7 +741,7 @@ __list_imp<_Tp, _Alloc>::clear() _NOEXCEPT
             __node_alloc_traits::destroy(__na, _VSTD::addressof(__np->__value_));
             __node_alloc_traits::deallocate(__na, __np, 1);
         }
-        __invalidate_all_iterators();
+        std::__debug_db_invalidate_all(this);
     }
 }
 
