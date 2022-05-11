@@ -372,6 +372,7 @@ def FI_ri
   let Inst{47-32} = 0;
   let Inst{31-0} = 0;
   let BPFClass = BPF_LD;
+  bit isPseudo = true;
 }
 
 def LD_pseudo
