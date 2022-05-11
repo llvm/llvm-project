@@ -15,8 +15,4 @@ add_subdirectory(TableGen)
 add_subdirectory(Target)
 add_subdirectory(Tools)
 add_subdirectory(Transforms)
-
-# Only enable the ExecutionEngine if the native target is configured in.
-if(TARGET ${LLVM_NATIVE_ARCH})
-  add_subdirectory(ExecutionEngine)
-endif()
+add_subdirectory(ExecutionEngine)
