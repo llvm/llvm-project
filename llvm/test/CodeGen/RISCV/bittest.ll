@@ -211,3 +211,228 @@ define i64 @bittest_63_i64(i64 %a) nounwind {
   %and = and i64 %not, 1
   ret i64 %and
 }
+
+; Make sure we use (andi (srl X, Y), 1) or bext.
+define i1 @bittest_constant_by_var_shr_i32(i32 signext %b) nounwind {
+; RV32I-LABEL: bittest_constant_by_var_shr_i32:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    lui a1, 301408
+; RV32I-NEXT:    addi a1, a1, 722
+; RV32I-NEXT:    srl a0, a1, a0
+; RV32I-NEXT:    andi a0, a0, 1
+; RV32I-NEXT:    ret
+;
+; RV64I-LABEL: bittest_constant_by_var_shr_i32:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    lui a1, 301408
+; RV64I-NEXT:    addiw a1, a1, 722
+; RV64I-NEXT:    srlw a0, a1, a0
+; RV64I-NEXT:    andi a0, a0, 1
+; RV64I-NEXT:    ret
+;
+; RV32ZBS-LABEL: bittest_constant_by_var_shr_i32:
+; RV32ZBS:       # %bb.0:
+; RV32ZBS-NEXT:    lui a1, 301408
+; RV32ZBS-NEXT:    addi a1, a1, 722
+; RV32ZBS-NEXT:    bext a0, a1, a0
+; RV32ZBS-NEXT:    ret
+;
+; RV64ZBS-LABEL: bittest_constant_by_var_shr_i32:
+; RV64ZBS:       # %bb.0:
+; RV64ZBS-NEXT:    lui a1, 301408
+; RV64ZBS-NEXT:    addiw a1, a1, 722
+; RV64ZBS-NEXT:    bext a0, a1, a0
+; RV64ZBS-NEXT:    ret
+  %shl = lshr i32 1234567890, %b
+  %and = and i32 %shl, 1
+  %cmp = icmp ne i32 %and, 0
+  ret i1 %cmp
+}
+
+; Make sure we use (andi (srl X, Y), 1) or bext.
+define i1 @bittest_constant_by_var_shl_i32(i32 signext %b) nounwind {
+; RV32I-LABEL: bittest_constant_by_var_shl_i32:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    lui a1, 301408
+; RV32I-NEXT:    addi a1, a1, 722
+; RV32I-NEXT:    srl a0, a1, a0
+; RV32I-NEXT:    andi a0, a0, 1
+; RV32I-NEXT:    ret
+;
+; RV64I-LABEL: bittest_constant_by_var_shl_i32:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    lui a1, 301408
+; RV64I-NEXT:    addiw a1, a1, 722
+; RV64I-NEXT:    srlw a0, a1, a0
+; RV64I-NEXT:    andi a0, a0, 1
+; RV64I-NEXT:    ret
+;
+; RV32ZBS-LABEL: bittest_constant_by_var_shl_i32:
+; RV32ZBS:       # %bb.0:
+; RV32ZBS-NEXT:    lui a1, 301408
+; RV32ZBS-NEXT:    addi a1, a1, 722
+; RV32ZBS-NEXT:    bext a0, a1, a0
+; RV32ZBS-NEXT:    ret
+;
+; RV64ZBS-LABEL: bittest_constant_by_var_shl_i32:
+; RV64ZBS:       # %bb.0:
+; RV64ZBS-NEXT:    lui a1, 301408
+; RV64ZBS-NEXT:    addiw a1, a1, 722
+; RV64ZBS-NEXT:    bext a0, a1, a0
+; RV64ZBS-NEXT:    ret
+  %shl = shl i32 1, %b
+  %and = and i32 %shl, 1234567890
+  %cmp = icmp ne i32 %and, 0
+  ret i1 %cmp
+}
+
+; Make sure we use (andi (srl X, Y), 1) or bext.
+define i1 @bittest_constant_by_var_shr_i64(i64 %b) nounwind {
+; RV32-LABEL: bittest_constant_by_var_shr_i64:
+; RV32:       # %bb.0:
+; RV32-NEXT:    addi a1, a0, -32
+; RV32-NEXT:    bltz a1, .LBB12_2
+; RV32-NEXT:  # %bb.1:
+; RV32-NEXT:    andi a0, zero, 1
+; RV32-NEXT:    ret
+; RV32-NEXT:  .LBB12_2:
+; RV32-NEXT:    lui a1, 301408
+; RV32-NEXT:    addi a1, a1, 722
+; RV32-NEXT:    srl a0, a1, a0
+; RV32-NEXT:    andi a0, a0, 1
+; RV32-NEXT:    ret
+;
+; RV64I-LABEL: bittest_constant_by_var_shr_i64:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    lui a1, 301408
+; RV64I-NEXT:    addiw a1, a1, 722
+; RV64I-NEXT:    srl a0, a1, a0
+; RV64I-NEXT:    andi a0, a0, 1
+; RV64I-NEXT:    ret
+;
+; RV64ZBS-LABEL: bittest_constant_by_var_shr_i64:
+; RV64ZBS:       # %bb.0:
+; RV64ZBS-NEXT:    lui a1, 301408
+; RV64ZBS-NEXT:    addiw a1, a1, 722
+; RV64ZBS-NEXT:    bext a0, a1, a0
+; RV64ZBS-NEXT:    ret
+  %shl = lshr i64 1234567890, %b
+  %and = and i64 %shl, 1
+  %cmp = icmp ne i64 %and, 0
+  ret i1 %cmp
+}
+
+; Make sure we use (andi (srl X, Y), 1) or bext.
+define i1 @bittest_constant_by_var_shl_i64(i64 %b) nounwind {
+; RV32-LABEL: bittest_constant_by_var_shl_i64:
+; RV32:       # %bb.0:
+; RV32-NEXT:    addi a1, a0, -32
+; RV32-NEXT:    bltz a1, .LBB13_2
+; RV32-NEXT:  # %bb.1:
+; RV32-NEXT:    andi a0, zero, 1
+; RV32-NEXT:    ret
+; RV32-NEXT:  .LBB13_2:
+; RV32-NEXT:    lui a1, 301408
+; RV32-NEXT:    addi a1, a1, 722
+; RV32-NEXT:    srl a0, a1, a0
+; RV32-NEXT:    andi a0, a0, 1
+; RV32-NEXT:    ret
+;
+; RV64I-LABEL: bittest_constant_by_var_shl_i64:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    lui a1, 301408
+; RV64I-NEXT:    addiw a1, a1, 722
+; RV64I-NEXT:    srl a0, a1, a0
+; RV64I-NEXT:    andi a0, a0, 1
+; RV64I-NEXT:    ret
+;
+; RV64ZBS-LABEL: bittest_constant_by_var_shl_i64:
+; RV64ZBS:       # %bb.0:
+; RV64ZBS-NEXT:    lui a1, 301408
+; RV64ZBS-NEXT:    addiw a1, a1, 722
+; RV64ZBS-NEXT:    bext a0, a1, a0
+; RV64ZBS-NEXT:    ret
+  %shl = shl i64 1, %b
+  %and = and i64 %shl, 1234567890
+  %cmp = icmp ne i64 %and, 0
+  ret i1 %cmp
+}
+
+; We want to use (andi (srl X, Y), 1) or bext before the beqz.
+define void @bittest_switch(i32 signext %0) {
+; RV32I-LABEL: bittest_switch:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    li a1, 31
+; RV32I-NEXT:    bltu a1, a0, .LBB14_3
+; RV32I-NEXT:  # %bb.1:
+; RV32I-NEXT:    lui a1, 524291
+; RV32I-NEXT:    addi a1, a1, 768
+; RV32I-NEXT:    srl a0, a1, a0
+; RV32I-NEXT:    andi a0, a0, 1
+; RV32I-NEXT:    beqz a0, .LBB14_3
+; RV32I-NEXT:  # %bb.2:
+; RV32I-NEXT:    tail bar@plt
+; RV32I-NEXT:  .LBB14_3:
+; RV32I-NEXT:    ret
+;
+; RV64I-LABEL: bittest_switch:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    li a1, 31
+; RV64I-NEXT:    bltu a1, a0, .LBB14_3
+; RV64I-NEXT:  # %bb.1:
+; RV64I-NEXT:    lui a1, 2048
+; RV64I-NEXT:    addiw a1, a1, 51
+; RV64I-NEXT:    slli a1, a1, 8
+; RV64I-NEXT:    srl a0, a1, a0
+; RV64I-NEXT:    andi a0, a0, 1
+; RV64I-NEXT:    beqz a0, .LBB14_3
+; RV64I-NEXT:  # %bb.2:
+; RV64I-NEXT:    tail bar@plt
+; RV64I-NEXT:  .LBB14_3:
+; RV64I-NEXT:    ret
+;
+; RV32ZBS-LABEL: bittest_switch:
+; RV32ZBS:       # %bb.0:
+; RV32ZBS-NEXT:    li a1, 31
+; RV32ZBS-NEXT:    bltu a1, a0, .LBB14_3
+; RV32ZBS-NEXT:  # %bb.1:
+; RV32ZBS-NEXT:    lui a1, 524291
+; RV32ZBS-NEXT:    addi a1, a1, 768
+; RV32ZBS-NEXT:    bext a0, a1, a0
+; RV32ZBS-NEXT:    beqz a0, .LBB14_3
+; RV32ZBS-NEXT:  # %bb.2:
+; RV32ZBS-NEXT:    tail bar@plt
+; RV32ZBS-NEXT:  .LBB14_3:
+; RV32ZBS-NEXT:    ret
+;
+; RV64ZBS-LABEL: bittest_switch:
+; RV64ZBS:       # %bb.0:
+; RV64ZBS-NEXT:    li a1, 31
+; RV64ZBS-NEXT:    bltu a1, a0, .LBB14_3
+; RV64ZBS-NEXT:  # %bb.1:
+; RV64ZBS-NEXT:    lui a1, 2048
+; RV64ZBS-NEXT:    addiw a1, a1, 51
+; RV64ZBS-NEXT:    slli a1, a1, 8
+; RV64ZBS-NEXT:    bext a0, a1, a0
+; RV64ZBS-NEXT:    beqz a0, .LBB14_3
+; RV64ZBS-NEXT:  # %bb.2:
+; RV64ZBS-NEXT:    tail bar@plt
+; RV64ZBS-NEXT:  .LBB14_3:
+; RV64ZBS-NEXT:    ret
+  switch i32 %0, label %3 [
+    i32 8, label %2
+    i32 9, label %2
+    i32 12, label %2
+    i32 13, label %2
+    i32 31, label %2
+  ]
+
+2:
+  tail call void @bar()
+  br label %3
+
+3:
+  ret void
+}
+
+declare void @bar()

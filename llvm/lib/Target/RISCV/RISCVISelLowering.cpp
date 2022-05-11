@@ -1114,6 +1114,30 @@ bool RISCVTargetLowering::hasBitTest(SDValue X, SDValue Y) const {
   return C && C->getAPIntValue().ule(10);
 }
 
+bool RISCVTargetLowering::
+    shouldProduceAndByConstByHoistingConstFromShiftsLHSOfAnd(
+        SDValue X, ConstantSDNode *XC, ConstantSDNode *CC, SDValue Y,
+        unsigned OldShiftOpcode, unsigned NewShiftOpcode,
+        SelectionDAG &DAG) const {
+  // One interesting pattern that we'd want to form is 'bit extract':
+  //   ((1 >> Y) & 1) ==/!= 0
+  // But we also need to be careful not to try to reverse that fold.
+
+  // Is this '((1 >> Y) & 1)'?
+  if (XC && OldShiftOpcode == ISD::SRL && XC->isOne())
+    return false; // Keep the 'bit extract' pattern.
+
+  // Will this be '((1 >> Y) & 1)' after the transform?
+  if (NewShiftOpcode == ISD::SRL && CC->isOne())
+    return true; // Do form the 'bit extract' pattern.
+
+  // If 'X' is a constant, and we transform, then we will immediately
+  // try to undo the fold, thus causing endless combine loop.
+  // So only do the transform if X is not a constant. This matches the default
+  // implementation of this function.
+  return !XC;
+}
+
 /// Check if sinking \p I's operands to I's basic block is profitable, because
 /// the operands can be folded into a target instruction, e.g.
 /// splats of scalars can fold into vector instructions.
