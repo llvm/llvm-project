@@ -405,8 +405,8 @@ normal input. Also produce a carry output in addition to the normal result.
 G_UMULH, G_SMULH
 ^^^^^^^^^^^^^^^^
 
-Multiply two numbers at twice the incoming bit width (signed) and return
-the high half of the result.
+Multiply two numbers at twice the incoming bit width (unsigned or signed) and
+return the high half of the result.
 
 .. code-block:: none
 

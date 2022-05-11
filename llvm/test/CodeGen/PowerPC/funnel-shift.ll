@@ -250,7 +250,7 @@ define i37 @fshl_i37(i37 %x, i37 %y, i37 %z) {
 ; CHECK32_32-NEXT:    mr 29, 5
 ; CHECK32_32-NEXT:    stw 30, 24(1) # 4-byte Folded Spill
 ; CHECK32_32-NEXT:    mr 30, 6
-; CHECK32_32-NEXT:    mr 3, 7
+; CHECK32_32-NEXT:    clrlwi 3, 7, 27
 ; CHECK32_32-NEXT:    mr 4, 8
 ; CHECK32_32-NEXT:    li 5, 0
 ; CHECK32_32-NEXT:    li 6, 37
@@ -299,7 +299,7 @@ define i37 @fshl_i37(i37 %x, i37 %y, i37 %z) {
 ; CHECK32_64-NEXT:    .cfi_offset r30, -8
 ; CHECK32_64-NEXT:    stw 27, 12(1) # 4-byte Folded Spill
 ; CHECK32_64-NEXT:    mr 27, 3
-; CHECK32_64-NEXT:    mr 3, 7
+; CHECK32_64-NEXT:    clrlwi 3, 7, 27
 ; CHECK32_64-NEXT:    stw 28, 16(1) # 4-byte Folded Spill
 ; CHECK32_64-NEXT:    mr 28, 4
 ; CHECK32_64-NEXT:    mr 4, 8
@@ -353,12 +353,13 @@ define i37 @fshl_i37(i37 %x, i37 %y, i37 %z) {
 ; CHECK64-LABEL: fshl_i37:
 ; CHECK64:       # %bb.0:
 ; CHECK64-NEXT:    lis 6, 28339
-; CHECK64-NEXT:    sldi 4, 4, 27
+; CHECK64-NEXT:    clrldi 7, 5, 27
 ; CHECK64-NEXT:    ori 6, 6, 58451
+; CHECK64-NEXT:    sldi 4, 4, 27
 ; CHECK64-NEXT:    rldic 6, 6, 33, 0
 ; CHECK64-NEXT:    oris 6, 6, 3542
 ; CHECK64-NEXT:    ori 6, 6, 31883
-; CHECK64-NEXT:    mulhdu 6, 5, 6
+; CHECK64-NEXT:    mulhdu 6, 7, 6
 ; CHECK64-NEXT:    rldicl 6, 6, 59, 5
 ; CHECK64-NEXT:    mulli 6, 6, 37
 ; CHECK64-NEXT:    sub 5, 5, 6
@@ -549,7 +550,7 @@ define i37 @fshr_i37(i37 %x, i37 %y, i37 %z) {
 ; CHECK32_32-NEXT:    mr 29, 5
 ; CHECK32_32-NEXT:    stw 30, 24(1) # 4-byte Folded Spill
 ; CHECK32_32-NEXT:    mr 30, 6
-; CHECK32_32-NEXT:    mr 3, 7
+; CHECK32_32-NEXT:    clrlwi 3, 7, 27
 ; CHECK32_32-NEXT:    mr 4, 8
 ; CHECK32_32-NEXT:    li 5, 0
 ; CHECK32_32-NEXT:    li 6, 37
@@ -599,7 +600,7 @@ define i37 @fshr_i37(i37 %x, i37 %y, i37 %z) {
 ; CHECK32_64-NEXT:    .cfi_offset r30, -8
 ; CHECK32_64-NEXT:    stw 27, 12(1) # 4-byte Folded Spill
 ; CHECK32_64-NEXT:    mr 27, 3
-; CHECK32_64-NEXT:    mr 3, 7
+; CHECK32_64-NEXT:    clrlwi 3, 7, 27
 ; CHECK32_64-NEXT:    stw 28, 16(1) # 4-byte Folded Spill
 ; CHECK32_64-NEXT:    mr 28, 4
 ; CHECK32_64-NEXT:    mr 4, 8
@@ -649,12 +650,13 @@ define i37 @fshr_i37(i37 %x, i37 %y, i37 %z) {
 ; CHECK64-LABEL: fshr_i37:
 ; CHECK64:       # %bb.0:
 ; CHECK64-NEXT:    lis 6, 28339
-; CHECK64-NEXT:    sldi 4, 4, 27
+; CHECK64-NEXT:    clrldi 7, 5, 27
 ; CHECK64-NEXT:    ori 6, 6, 58451
+; CHECK64-NEXT:    sldi 4, 4, 27
 ; CHECK64-NEXT:    rldic 6, 6, 33, 0
 ; CHECK64-NEXT:    oris 6, 6, 3542
 ; CHECK64-NEXT:    ori 6, 6, 31883
-; CHECK64-NEXT:    mulhdu 6, 5, 6
+; CHECK64-NEXT:    mulhdu 6, 7, 6
 ; CHECK64-NEXT:    rldicl 6, 6, 59, 5
 ; CHECK64-NEXT:    mulli 6, 6, 37
 ; CHECK64-NEXT:    sub 5, 5, 6

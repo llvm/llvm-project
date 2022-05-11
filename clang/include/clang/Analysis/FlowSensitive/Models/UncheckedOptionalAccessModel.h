@@ -49,6 +49,9 @@ public:
   UncheckedOptionalAccessModel(
       ASTContext &AstContext, UncheckedOptionalAccessModelOptions Options = {});
 
+  /// Returns a matcher for the optional classes covered by this model.
+  static ast_matchers::DeclarationMatcher optionalClassDecl();
+
   static SourceLocationsLattice initialElement() {
     return SourceLocationsLattice();
   }

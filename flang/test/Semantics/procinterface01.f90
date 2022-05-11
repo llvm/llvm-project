@@ -4,6 +4,8 @@
 
 !DEF: /module1 Module
 module module1
+ !DEF:/module1/abstract2 ABSTRACT, POINTER, PUBLIC (Subroutine) Subprogram
+ pointer :: abstract2
  abstract interface
   !DEF: /module1/abstract1 ABSTRACT, PUBLIC (Function) Subprogram REAL(4)
   !DEF: /module1/abstract1/x INTENT(IN) ObjectEntity REAL(4)
@@ -11,7 +13,15 @@ module module1
    !REF: /module1/abstract1/x
    real, intent(in) :: x
   end function abstract1
+  !REF:/module1/abstract2
+  subroutine abstract2
+  end subroutine
+  !DEF:/module1/abstract3 ABSTRACT, POINTER, PUBLIC (Subroutine) Subprogram
+  subroutine abstract3
+  end subroutine
  end interface
+ !REF:/module1/abstract3
+ pointer :: abstract3
 
  interface
   !DEF: /module1/explicit1 EXTERNAL, PUBLIC (Function) Subprogram REAL(4)

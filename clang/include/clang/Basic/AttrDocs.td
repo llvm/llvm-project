@@ -538,6 +538,10 @@ spellings of the attribute are not supported on statements. If a statement is
 marked ``[[clang::noinline]]`` and contains calls, those calls inside the
 statement will not be inlined by the compiler.
 
+``__noinline__`` can be used as a keyword in CUDA/HIP languages. This is to
+avoid diagnostics due to usage of ``__attribute__((__noinline__))``
+with ``__noinline__`` defined as a macro as ``__attribute__((noinline))``.
+
 .. code-block:: c
 
   int example(void) {

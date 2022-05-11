@@ -270,5 +270,8 @@ EXTENSION(cxx_attributes_on_using_declarations, LangOpts.CPlusPlus11)
 
 FEATURE(cxx_abi_relative_vtable, LangOpts.CPlusPlus && LangOpts.RelativeCXXABIVTables)
 
+// CUDA/HIP Features
+FEATURE(cuda_noinline_keyword, LangOpts.CUDA)
+
 #undef EXTENSION
 #undef FEATURE

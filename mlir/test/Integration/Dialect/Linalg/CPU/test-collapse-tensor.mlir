@@ -12,7 +12,7 @@ func.func @main() {
   %dynamic = tensor.cast %const: tensor<2x2x3x2xf32> to tensor<2x?x?x?xf32>
   %collapsed = call @collapse_dynamic_shape(%dynamic) : (tensor<2x?x?x?xf32>) -> (tensor<2x?x?xf32>)
   %unranked = tensor.cast %collapsed: tensor<2x?x?xf32> to tensor<*xf32>
-  call @print_memref_f32(%unranked) : (tensor<*xf32>) -> ()
+  call @printMemrefF32(%unranked) : (tensor<*xf32>) -> ()
   //      CHECK: Unranked Memref base@ = {{0x[-9a-f]*}}
   // CHECK-SAME: rank = 3 offset = 0 sizes = [2, 6, 2] strides = [12, 2, 1] data =
   // CHECK-NEXT{LITERAL}: [[[-3.9058,    0.9072],
@@ -30,7 +30,7 @@ func.func @main() {
   return
 }
 
-func.func private @print_memref_f32(%ptr : tensor<*xf32>)
+func.func private @printMemrefF32(%ptr : tensor<*xf32>)
 
 func.func @collapse_dynamic_shape(%arg0 : tensor<2x?x?x?xf32>) -> tensor<2x?x?xf32> {
   %0 = tensor.collapse_shape %arg0 [[0], [1, 2], [3]]: tensor<2x?x?x?xf32> into tensor<2x?x?xf32>

@@ -76,7 +76,7 @@ void recordRemoval(const DeclStmt &Stmt, ASTContext &Context,
 }
 
 AST_MATCHER_FUNCTION_P(StatementMatcher, isConstRefReturningMethodCall,
-                       std::vector<std::string>, ExcludedContainerTypes) {
+                       std::vector<StringRef>, ExcludedContainerTypes) {
   // Match method call expressions where the `this` argument is only used as
   // const, this will be checked in `check()` part. This returned const
   // reference is highly likely to outlive the local const reference of the
@@ -110,7 +110,7 @@ AST_MATCHER_FUNCTION(StatementMatcher, isConstRefReturningFunctionCall) {
 }
 
 AST_MATCHER_FUNCTION_P(StatementMatcher, initializerReturnsReferenceToConst,
-                       std::vector<std::string>, ExcludedContainerTypes) {
+                       std::vector<StringRef>, ExcludedContainerTypes) {
   auto OldVarDeclRef =
       declRefExpr(to(varDecl(hasLocalStorage()).bind(OldVarDeclId)));
   return expr(
@@ -135,7 +135,7 @@ AST_MATCHER_FUNCTION_P(StatementMatcher, initializerReturnsReferenceToConst,
 // object arg or variable that is referenced is immutable as well.
 static bool isInitializingVariableImmutable(
     const VarDecl &InitializingVar, const Stmt &BlockStmt, ASTContext &Context,
-    const std::vector<std::string> &ExcludedContainerTypes) {
+    const std::vector<StringRef> &ExcludedContainerTypes) {
   if (!isOnlyUsedAsConst(InitializingVar, BlockStmt, Context))
     return false;
 

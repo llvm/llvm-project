@@ -82,36 +82,17 @@ public:
   virtual bool haveEqualConstraints(ProgramStateRef S1,
                                     ProgramStateRef S2) const = 0;
 
-  virtual ProgramStateRef assume(ProgramStateRef state,
-                                 DefinedSVal Cond,
-                                 bool Assumption) = 0;
+  ProgramStateRef assume(ProgramStateRef state, DefinedSVal Cond,
+                         bool Assumption);
 
   using ProgramStatePair = std::pair<ProgramStateRef, ProgramStateRef>;
 
   /// Returns a pair of states (StTrue, StFalse) where the given condition is
   /// assumed to be true or false, respectively.
-  ProgramStatePair assumeDual(ProgramStateRef State, DefinedSVal Cond) {
-    ProgramStateRef StTrue = assume(State, Cond, true);
-
-    // If StTrue is infeasible, asserting the falseness of Cond is unnecessary
-    // because the existing constraints already establish this.
-    if (!StTrue) {
-#ifdef EXPENSIVE_CHECKS
-      assert(assume(State, Cond, false) && "System is over constrained.");
-#endif
-      return ProgramStatePair((ProgramStateRef)nullptr, State);
-    }
-
-    ProgramStateRef StFalse = assume(State, Cond, false);
-    if (!StFalse) {
-      // We are careful to return the original state, /not/ StTrue,
-      // because we want to avoid having callers generate a new node
-      // in the ExplodedGraph.
-      return ProgramStatePair(State, (ProgramStateRef)nullptr);
-    }
-
-    return ProgramStatePair(StTrue, StFalse);
-  }
+  /// (Note that these two states might be equal if the parent state turns out
+  /// to be infeasible. This may happen if the underlying constraint solver is
+  /// not perfectly precise and this may happen very rarely.)
+  ProgramStatePair assumeDual(ProgramStateRef State, DefinedSVal Cond);
 
   virtual ProgramStateRef assumeInclusiveRange(ProgramStateRef State,
                                                NonLoc Value,
@@ -178,6 +159,9 @@ protected:
   /// Note that this flag allows the ConstraintManager to be re-entrant,
   /// but not thread-safe.
   bool NotifyAssumeClients = true;
+
+  virtual ProgramStateRef assumeInternal(ProgramStateRef state,
+                                         DefinedSVal Cond, bool Assumption) = 0;
 
   /// canReasonAbout - Not all ConstraintManagers can accurately reason about
   ///  all SVal values.  This method returns true if the ConstraintManager can

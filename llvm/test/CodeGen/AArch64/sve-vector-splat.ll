@@ -587,5 +587,18 @@ define <vscale x 2 x double> @splat_nxv2f64_imm_out_of_range() {
   ret <vscale x 2 x double> %2
 }
 
+; Splat for predicates
+; This guards optimizations that rely on splats of 1 being generated as a ptrue
+
+define <vscale x 2 x i1> @sve_splat_i1_allactive() {
+; CHECK-LABEL: sve_splat_i1_allactive:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    ret
+  %ins = insertelement <vscale x 2 x i1> undef, i1 1, i32 0
+  %splat = shufflevector <vscale x 2 x i1> %ins, <vscale x 2 x i1> undef, <vscale x 2 x i32> zeroinitializer
+  ret <vscale x 2 x i1> %splat
+}
+
 ; +bf16 is required for the bfloat version.
 attributes #0 = { "target-features"="+sve,+bf16" }

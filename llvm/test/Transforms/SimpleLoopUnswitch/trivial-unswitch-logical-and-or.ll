@@ -8,20 +8,15 @@ declare void @some_func()
 define void @test_select_logical_and_or_with_and_1(i1 noundef %cond1, i1 noundef %cond2) {
 ; CHECK-LABEL: @test_select_logical_and_or_with_and_1(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = or i1 [[COND2:%.*]], [[COND1:%.*]]
-; CHECK-NEXT:    br i1 [[TMP0]], label [[EXIT_SPLIT:%.*]], label [[ENTRY_SPLIT:%.*]]
-; CHECK:       entry.split:
 ; CHECK-NEXT:    br label [[LOOP_HEADER:%.*]]
 ; CHECK:       loop.header:
-; CHECK-NEXT:    [[COND_AND1:%.*]] = and i1 false, false
+; CHECK-NEXT:    [[COND_AND1:%.*]] = and i1 [[COND2:%.*]], [[COND1:%.*]]
 ; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[COND_AND1]], i1 true, i1 false
 ; CHECK-NEXT:    br i1 [[SEL]], label [[EXIT:%.*]], label [[LOOP_LATCH:%.*]]
 ; CHECK:       loop.latch:
 ; CHECK-NEXT:    call void @some_func()
 ; CHECK-NEXT:    br label [[LOOP_HEADER]]
 ; CHECK:       exit:
-; CHECK-NEXT:    br label [[EXIT_SPLIT]]
-; CHECK:       exit.split:
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -114,20 +109,15 @@ exit:
 define void @test_select_logical_and_or_with_or_2(i1 noundef %cond1, i1 noundef %cond2) {
 ; CHECK-LABEL: @test_select_logical_and_or_with_or_2(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = and i1 [[COND2:%.*]], [[COND1:%.*]]
-; CHECK-NEXT:    br i1 [[TMP0]], label [[ENTRY_SPLIT:%.*]], label [[EXIT_SPLIT:%.*]]
-; CHECK:       entry.split:
 ; CHECK-NEXT:    br label [[LOOP_HEADER:%.*]]
 ; CHECK:       loop.header:
-; CHECK-NEXT:    [[COND_AND1:%.*]] = or i1 true, true
+; CHECK-NEXT:    [[COND_AND1:%.*]] = or i1 [[COND2:%.*]], [[COND1:%.*]]
 ; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[COND_AND1]], i1 true, i1 false
 ; CHECK-NEXT:    br i1 [[SEL]], label [[LOOP_LATCH:%.*]], label [[EXIT:%.*]]
 ; CHECK:       loop.latch:
 ; CHECK-NEXT:    call void @some_func()
 ; CHECK-NEXT:    br label [[LOOP_HEADER]]
 ; CHECK:       exit:
-; CHECK-NEXT:    br label [[EXIT_SPLIT]]
-; CHECK:       exit.split:
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -147,8 +137,6 @@ exit:
 }
 
 ; Check that loop unswitch looks through a combination of or and select instructions.
-; Note that cond6 can be unswitched because `select i1 %cond_or5, i1 true, i1 false` is
-; both logical-or and logical-and.
 define i32 @test_partial_condition_unswitch_or_select(i32* %var, i1 %cond1, i1 %cond2, i1 %cond3, i1 %cond4, i1 %cond5, i1 %cond6) {
 ; CHECK-LABEL: @test_partial_condition_unswitch_or_select(
 ; CHECK-NEXT:  entry:
@@ -161,9 +149,6 @@ define i32 @test_partial_condition_unswitch_or_select(i32* %var, i1 %cond1, i1 %
 ; CHECK-NEXT:    [[TMP2:%.*]] = or i1 [[TMP1]], [[COND1_FR]]
 ; CHECK-NEXT:    br i1 [[TMP2]], label [[LOOP_EXIT_SPLIT:%.*]], label [[ENTRY_SPLIT:%.*]]
 ; CHECK:       entry.split:
-; CHECK-NEXT:    [[COND6_FR:%.*]] = freeze i1 [[COND6:%.*]]
-; CHECK-NEXT:    br i1 [[COND6_FR]], label [[LOOP_EXIT_SPLIT1:%.*]], label [[ENTRY_SPLIT_SPLIT:%.*]]
-; CHECK:       entry.split.split:
 ; CHECK-NEXT:    br label [[LOOP_BEGIN:%.*]]
 ; CHECK:       loop_begin:
 ; CHECK-NEXT:    [[VAR_VAL:%.*]] = load i32, i32* [[VAR:%.*]], align 4
@@ -172,7 +157,7 @@ define i32 @test_partial_condition_unswitch_or_select(i32* %var, i1 %cond1, i1 %
 ; CHECK-NEXT:    [[COND_OR2:%.*]] = or i1 false, false
 ; CHECK-NEXT:    [[COND_OR3:%.*]] = or i1 [[COND_OR1]], [[COND_OR2]]
 ; CHECK-NEXT:    [[COND_XOR1:%.*]] = xor i1 [[COND5:%.*]], [[VAR_COND]]
-; CHECK-NEXT:    [[COND_AND1:%.*]] = and i1 false, [[VAR_COND]]
+; CHECK-NEXT:    [[COND_AND1:%.*]] = and i1 [[COND6:%.*]], [[VAR_COND]]
 ; CHECK-NEXT:    [[COND_OR4:%.*]] = or i1 [[COND_XOR1]], [[COND_AND1]]
 ; CHECK-NEXT:    [[COND_OR5:%.*]] = select i1 [[COND_OR3]], i1 true, i1 [[COND_OR4]]
 ; CHECK-NEXT:    [[COND_OR6:%.*]] = select i1 [[COND_OR5]], i1 true, i1 false
@@ -181,8 +166,6 @@ define i32 @test_partial_condition_unswitch_or_select(i32* %var, i1 %cond1, i1 %
 ; CHECK-NEXT:    call void @some_func() #[[ATTR0:[0-9]+]]
 ; CHECK-NEXT:    br label [[LOOP_BEGIN]]
 ; CHECK:       loop_exit:
-; CHECK-NEXT:    br label [[LOOP_EXIT_SPLIT1]]
-; CHECK:       loop_exit.split1:
 ; CHECK-NEXT:    br label [[LOOP_EXIT_SPLIT]]
 ; CHECK:       loop_exit.split:
 ; CHECK-NEXT:    ret i32 0
@@ -211,6 +194,8 @@ loop_exit:
   ret i32 0
 }
 
+; Same as test_partial_condition_unswitch_or_select, but with arguments marked
+; as noundef.
 define i32 @test_partial_condition_unswitch_or_select_noundef(i32* noundef %var, i1 noundef %cond1, i1 noundef %cond2, i1 noundef %cond3, i1 noundef %cond4, i1 noundef %cond5, i1 noundef %cond6) {
 ; CHECK-LABEL: @test_partial_condition_unswitch_or_select_noundef(
 ; CHECK-NEXT:  entry:
@@ -219,8 +204,6 @@ define i32 @test_partial_condition_unswitch_or_select_noundef(i32* noundef %var,
 ; CHECK-NEXT:    [[TMP2:%.*]] = or i1 [[TMP1]], [[COND1:%.*]]
 ; CHECK-NEXT:    br i1 [[TMP2]], label [[LOOP_EXIT_SPLIT:%.*]], label [[ENTRY_SPLIT:%.*]]
 ; CHECK:       entry.split:
-; CHECK-NEXT:    br i1 [[COND6:%.*]], label [[LOOP_EXIT_SPLIT1:%.*]], label [[ENTRY_SPLIT_SPLIT:%.*]]
-; CHECK:       entry.split.split:
 ; CHECK-NEXT:    br label [[LOOP_BEGIN:%.*]]
 ; CHECK:       loop_begin:
 ; CHECK-NEXT:    [[VAR_VAL:%.*]] = load i32, i32* [[VAR:%.*]], align 4
@@ -229,7 +212,7 @@ define i32 @test_partial_condition_unswitch_or_select_noundef(i32* noundef %var,
 ; CHECK-NEXT:    [[COND_OR2:%.*]] = or i1 false, false
 ; CHECK-NEXT:    [[COND_OR3:%.*]] = or i1 [[COND_OR1]], [[COND_OR2]]
 ; CHECK-NEXT:    [[COND_XOR1:%.*]] = xor i1 [[COND5:%.*]], [[VAR_COND]]
-; CHECK-NEXT:    [[COND_AND1:%.*]] = and i1 false, [[VAR_COND]]
+; CHECK-NEXT:    [[COND_AND1:%.*]] = and i1 [[COND6:%.*]], [[VAR_COND]]
 ; CHECK-NEXT:    [[COND_OR4:%.*]] = or i1 [[COND_XOR1]], [[COND_AND1]]
 ; CHECK-NEXT:    [[COND_OR5:%.*]] = select i1 [[COND_OR3]], i1 true, i1 [[COND_OR4]]
 ; CHECK-NEXT:    [[COND_OR6:%.*]] = select i1 [[COND_OR5]], i1 true, i1 false
@@ -238,8 +221,6 @@ define i32 @test_partial_condition_unswitch_or_select_noundef(i32* noundef %var,
 ; CHECK-NEXT:    call void @some_func() #[[ATTR0]]
 ; CHECK-NEXT:    br label [[LOOP_BEGIN]]
 ; CHECK:       loop_exit:
-; CHECK-NEXT:    br label [[LOOP_EXIT_SPLIT1]]
-; CHECK:       loop_exit.split1:
 ; CHECK-NEXT:    br label [[LOOP_EXIT_SPLIT]]
 ; CHECK:       loop_exit.split:
 ; CHECK-NEXT:    ret i32 0

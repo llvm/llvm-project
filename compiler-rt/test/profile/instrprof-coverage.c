@@ -1,3 +1,4 @@
+// XFAIL: aix
 // RUN: %clang_pgogen -mllvm -pgo-function-entry-coverage %s -o %t.out
 // RUN: env LLVM_PROFILE_FILE=%t.profraw %run %t.out
 // RUN: llvm-profdata merge -o %t.profdata %t.profraw

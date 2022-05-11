@@ -49,10 +49,10 @@ public:
                            Preprocessor *ModuleExpanderPP) override;
   void storeOptions(ClangTidyOptions::OptionMap &Opts) override;
 
-  const std::string &getMacroName() const { return MacroName; }
+  const StringRef &getMacroName() const { return MacroName; }
 
 private:
-  const std::string MacroName;
+  const StringRef MacroName;
 };
 
 } // namespace modernize

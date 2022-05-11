@@ -158,7 +158,7 @@ func.func @block_arg_no_type() {
 
 func.func @block_arg_no_close_paren() {
 ^bb42:
-  cf.br ^bb2( // expected-error@+1 {{expected ':'}}
+  cf.br ^bb2( // expected-error {{expected ':'}}
   return
 }
 
@@ -245,7 +245,7 @@ func.func @malformed_for_to() {
 
 func.func @incomplete_for() {
   affine.for %i = 1 to 10 step 2
-}        // expected-error {{expected '{' to begin a region}}
+}        // expected-error @-1 {{expected '{' to begin a region}}
 
 // -----
 
@@ -261,7 +261,7 @@ func.func @reference_to_iv_in_bound() {
 // -----
 
 func.func @nonconstant_step(%1 : i32) {
-  affine.for %2 = 1 to 5 step %1 { // expected-error {{expected non-function type}}
+  affine.for %2 = 1 to 5 step %1 { // expected-error {{expected attribute value}}
 
 // -----
 
@@ -618,7 +618,7 @@ func.func @large_bound() {
 // -----
 
 func.func @max_in_upper_bound(%N : index) {
-  affine.for %i = 1 to max affine_map<(i)->(N, 100)> { //expected-error {{expected non-function type}}
+  affine.for %i = 1 to max affine_map<(i)->(N, 100)> { //expected-error {{expected attribute value}}
   }
   return
 }
@@ -826,7 +826,7 @@ func.func @mixed_named_arguments(f32,
 func.func @f(f32) {
 ^bb0(%a : f32):
   %18 = arith.cmpi slt, %idx, %idx : index
-  tensor<42 x index  // expected-error {{custom op 'tensor' is unknown}}
+  tensor<42 x index  // expected-error {{custom op 'func.tensor' is unknown}}
   return
 }
 
@@ -1099,7 +1099,7 @@ func.func @multi_result_missing_count() {
 // -----
 
 func.func @multi_result_zero_count() {
-  // expected-error@+1 {{expected named operation to have atleast 1 result}}
+  // expected-error@+1 {{expected named operation to have at least 1 result}}
   %0:0 = "foo" () : () -> (i32, i32)
   return
 }
@@ -1651,6 +1651,43 @@ func.func @foo() {} // expected-error {{expected non-empty function body}}
 
 // -----
 
-// expected-error@+2 {{expected ']'}}
+// expected-error@+1 {{expected ']'}}
 "f"() { b = [@m:
+
+// -----
+
+// This makes sure we emit an error at the end of the correct line, the : is
+// expected at the end of foo, not on the return line.
+func.func @error_at_end_of_line() {
+  // expected-error@+1 {{expected ':' followed by operation type}}
+  %0 = "foo"() 
+  return
+}
+
+// -----
+
+// This makes sure we emit an error at the end of the correct line, the : is
+// expected at the end of foo, not on the return line.
+func.func @error_at_end_of_line() {
+  %0 = "foo"() 
+  // expected-error@-1 {{expected ':' followed by operation type}}
+
+  // This is a comment and so is the thing above.
+  return
+}
+
+// -----
+
+// This makes sure we emit an error at the end of the correct line, the : is
+// expected at the end of foo, not on the return line.
+// This shows that it backs up to before the comment.
+func.func @error_at_end_of_line() {
+  %0 = "foo"()  // expected-error {{expected ':' followed by operation type}}
+  return
+}
+
+// -----
+
+@foo   // expected-error {{expected operation name in quotes}}
+
 

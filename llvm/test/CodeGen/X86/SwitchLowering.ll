@@ -18,11 +18,11 @@ define i8* @FindChar(i8* %CurPtr) {
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    movzbl (%esi,%edi), %eax
 ; CHECK-NEXT:    incl %edi
-; CHECK-NEXT:    cmpb $120, %al
+; CHECK-NEXT:    cmpl $120, %eax
 ; CHECK-NEXT:    je .LBB0_3
 ; CHECK-NEXT:  # %bb.2: # %bb
 ; CHECK-NEXT:    # in Loop: Header=BB0_1 Depth=1
-; CHECK-NEXT:    testb %al, %al
+; CHECK-NEXT:    testl %eax, %eax
 ; CHECK-NEXT:    jne .LBB0_1
 ; CHECK-NEXT:  .LBB0_3: # %bb7
 ; CHECK-NEXT:    movzbl %al, %eax

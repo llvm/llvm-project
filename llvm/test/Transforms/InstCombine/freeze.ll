@@ -160,6 +160,7 @@ define void @freeze_dominated_uses_test1(i32 %v) {
 define void @freeze_dominated_uses_test2(i32 %v) {
 ; CHECK-LABEL: @freeze_dominated_uses_test2(
 ; CHECK-NEXT:  entry:
+; CHECK-NEXT:    call void @use_i32(i32 0)
 ; CHECK-NEXT:    call void @use_i32(i32 [[V:%.*]])
 ; CHECK-NEXT:    [[COND:%.*]] = icmp eq i32 [[V]], 0
 ; CHECK-NEXT:    br i1 [[COND]], label [[BB0:%.*]], label [[BB1:%.*]]
@@ -175,6 +176,7 @@ define void @freeze_dominated_uses_test2(i32 %v) {
 ; CHECK-NEXT:    ret void
 ;
 entry:
+  call void @use_i32(i32 0)
   call void @use_i32(i32 %v)
   %cond = icmp eq i32 %v, 0
   br i1 %cond, label %bb0, label %bb1
@@ -228,6 +230,110 @@ end:
   ret void
 }
 
+declare i32 @get_i32()
+
+define i32 @freeze_use_in_different_branches(i1 %c, i32 %x) {
+; CHECK-LABEL: @freeze_use_in_different_branches(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br i1 [[C:%.*]], label [[IF:%.*]], label [[ELSE:%.*]]
+; CHECK:       if:
+; CHECK-NEXT:    call void @use_i32(i32 [[X:%.*]])
+; CHECK-NEXT:    ret i32 0
+; CHECK:       else:
+; CHECK-NEXT:    call void @use_i32(i32 [[X]])
+; CHECK-NEXT:    [[FR:%.*]] = freeze i32 [[X]]
+; CHECK-NEXT:    call void @use_i32(i32 [[FR]])
+; CHECK-NEXT:    ret i32 1
+;
+entry:
+  br i1 %c, label %if, label %else
+
+if:
+  call void @use_i32(i32 %x)
+  ret i32 0
+
+else:
+  call void @use_i32(i32 %x)
+  %fr = freeze i32 %x
+  call void @use_i32(i32 %fr)
+  ret i32 1
+}
+
+define i32 @freeze_phi_use(i1 %c, i32 %x) {
+; CHECK-LABEL: @freeze_phi_use(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br i1 [[C:%.*]], label [[IF:%.*]], label [[JOIN:%.*]]
+; CHECK:       if:
+; CHECK-NEXT:    br label [[JOIN]]
+; CHECK:       join:
+; CHECK-NEXT:    [[PHI:%.*]] = phi i32 [ [[X:%.*]], [[IF]] ], [ 0, [[ENTRY:%.*]] ]
+; CHECK-NEXT:    [[FR:%.*]] = freeze i32 [[X]]
+; CHECK-NEXT:    call void @use_i32(i32 [[FR]])
+; CHECK-NEXT:    ret i32 [[PHI]]
+;
+entry:
+  br i1 %c, label %if, label %join
+
+if:
+  br label %join
+
+join:
+  %phi = phi i32 [ %x, %if ], [ 0, %entry ]
+  %fr = freeze i32 %x
+  call void @use_i32(i32 %fr)
+  ret i32 %phi
+}
+
+define i32 @freeze_invoke_phi(i1 %c) personality i8* undef {
+; CHECK-LABEL: @freeze_invoke_phi(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[RET:%.*]] = invoke i32 @get_i32()
+; CHECK-NEXT:    to label [[INVOKE_CONT:%.*]] unwind label [[INVOKE_UNWIND:%.*]]
+; CHECK:       invoke.cont:
+; CHECK-NEXT:    [[PHI:%.*]] = phi i32 [ [[RET]], [[ENTRY:%.*]] ], [ 0, [[INVOKE_CONT]] ]
+; CHECK-NEXT:    [[FR:%.*]] = freeze i32 [[RET]]
+; CHECK-NEXT:    call void @use_i32(i32 [[FR]])
+; CHECK-NEXT:    call void @use_i32(i32 [[PHI]])
+; CHECK-NEXT:    br label [[INVOKE_CONT]]
+; CHECK:       invoke.unwind:
+; CHECK-NEXT:    [[TMP0:%.*]] = landingpad i8
+; CHECK-NEXT:    cleanup
+; CHECK-NEXT:    unreachable
+;
+entry:
+  %ret = invoke i32 @get_i32()
+  to label %invoke.cont unwind label %invoke.unwind
+
+invoke.cont:
+  %phi = phi i32 [ %ret, %entry ], [ 0, %invoke.cont ]
+  %fr = freeze i32 %ret
+  call void @use_i32(i32 %fr)
+  call void @use_i32(i32 %phi)
+  br label %invoke.cont
+
+invoke.unwind:
+  landingpad i8 cleanup
+  unreachable
+}
+
+define i1 @combine_and_after_freezing_uses(i32 %x) {
+; CHECK-LABEL: @combine_and_after_freezing_uses(
+; CHECK-NEXT:    [[AND1:%.*]] = and i32 [[X:%.*]], 4
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp ne i32 [[AND1]], 0
+; CHECK-NEXT:    [[X_FR:%.*]] = freeze i32 [[X]]
+; CHECK-NEXT:    [[AND2:%.*]] = and i32 [[X_FR]], 11
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp eq i32 [[AND2]], 11
+; CHECK-NEXT:    [[AND:%.*]] = and i1 [[CMP1]], [[CMP2]]
+; CHECK-NEXT:    ret i1 [[AND]]
+;
+  %and1 = and i32 %x, 4
+  %cmp1 = icmp ne i32 %and1, 0
+  %x.fr = freeze i32 %x
+  %and2 = and i32 %x.fr, 11
+  %cmp2 = icmp eq i32 %and2, 11
+  %and = and i1 %cmp1, %cmp2
+  ret i1 %and
+}
 
 define i32 @propagate_drop_flags_add(i32 %arg) {
 ; CHECK-LABEL: @propagate_drop_flags_add(

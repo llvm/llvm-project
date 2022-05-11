@@ -62,25 +62,25 @@ define void @vf4(<4 x i16>* %in.vecptr0, <4 x i16>* %in.vecptr1, <4 x i16>* %in.
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    movq {{.*#+}} xmm0 = mem[0],zero
 ; SSE-NEXT:    movq {{.*#+}} xmm1 = mem[0],zero
-; SSE-NEXT:    punpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm1[0]
-; SSE-NEXT:    movq {{.*#+}} xmm1 = mem[0],zero
-; SSE-NEXT:    pshufd {{.*#+}} xmm2 = xmm1[0,0,0,0]
+; SSE-NEXT:    movq {{.*#+}} xmm2 = mem[0],zero
+; SSE-NEXT:    punpcklqdq {{.*#+}} xmm2 = xmm2[0],xmm1[0]
+; SSE-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[0,0,0,0]
 ; SSE-NEXT:    movdqa {{.*#+}} xmm3 = [65535,65535,0,65535,65535,0,65535,65535]
-; SSE-NEXT:    pshufhw {{.*#+}} xmm4 = xmm0[0,1,2,3,6,5,4,7]
+; SSE-NEXT:    pshufhw {{.*#+}} xmm4 = xmm2[0,1,2,3,6,5,4,7]
 ; SSE-NEXT:    pshufd {{.*#+}} xmm4 = xmm4[0,3,2,1]
 ; SSE-NEXT:    pshuflw {{.*#+}} xmm4 = xmm4[0,2,2,1,4,5,6,7]
 ; SSE-NEXT:    pshufhw {{.*#+}} xmm4 = xmm4[0,1,2,3,5,5,6,4]
 ; SSE-NEXT:    pand %xmm3, %xmm4
-; SSE-NEXT:    pandn %xmm2, %xmm3
+; SSE-NEXT:    pandn %xmm1, %xmm3
 ; SSE-NEXT:    por %xmm4, %xmm3
-; SSE-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[1,1,1,1]
-; SSE-NEXT:    movdqa {{.*#+}} xmm2 = [0,65535,65535,0,65535,65535,65535,65535]
-; SSE-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[3,1,2,3]
-; SSE-NEXT:    pshuflw {{.*#+}} xmm0 = xmm0[0,3,1,3,4,5,6,7]
-; SSE-NEXT:    pand %xmm2, %xmm0
-; SSE-NEXT:    pandn %xmm1, %xmm2
-; SSE-NEXT:    por %xmm0, %xmm2
-; SSE-NEXT:    movq %xmm2, 16(%rcx)
+; SSE-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[1,1,1,1]
+; SSE-NEXT:    movdqa {{.*#+}} xmm1 = [0,65535,65535,0,65535,65535,65535,65535]
+; SSE-NEXT:    pshufd {{.*#+}} xmm2 = xmm2[3,1,2,3]
+; SSE-NEXT:    pshuflw {{.*#+}} xmm2 = xmm2[0,3,1,3,4,5,6,7]
+; SSE-NEXT:    pand %xmm1, %xmm2
+; SSE-NEXT:    pandn %xmm0, %xmm1
+; SSE-NEXT:    por %xmm2, %xmm1
+; SSE-NEXT:    movq %xmm1, 16(%rcx)
 ; SSE-NEXT:    movdqa %xmm3, (%rcx)
 ; SSE-NEXT:    retq
 ;
@@ -88,15 +88,15 @@ define void @vf4(<4 x i16>* %in.vecptr0, <4 x i16>* %in.vecptr1, <4 x i16>* %in.
 ; AVX1:       # %bb.0:
 ; AVX1-NEXT:    vmovq {{.*#+}} xmm0 = mem[0],zero
 ; AVX1-NEXT:    vmovq {{.*#+}} xmm1 = mem[0],zero
-; AVX1-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm1[0]
-; AVX1-NEXT:    vmovq {{.*#+}} xmm1 = mem[0],zero
-; AVX1-NEXT:    vpshufd {{.*#+}} xmm2 = xmm0[3,1,2,3]
+; AVX1-NEXT:    vmovq {{.*#+}} xmm2 = mem[0],zero
+; AVX1-NEXT:    vpunpcklqdq {{.*#+}} xmm1 = xmm2[0],xmm1[0]
+; AVX1-NEXT:    vpshufd {{.*#+}} xmm2 = xmm1[3,1,2,3]
 ; AVX1-NEXT:    vpshuflw {{.*#+}} xmm2 = xmm2[0,3,1,3,4,5,6,7]
-; AVX1-NEXT:    vpshufd {{.*#+}} xmm3 = xmm1[1,1,1,1]
+; AVX1-NEXT:    vpshufd {{.*#+}} xmm3 = xmm0[1,1,1,1]
 ; AVX1-NEXT:    vpblendw {{.*#+}} xmm2 = xmm3[0],xmm2[1,2],xmm3[3],xmm2[4,5,6,7]
-; AVX1-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[0,1,8,9,u,u,2,3,10,11,u,u,4,5,12,13]
-; AVX1-NEXT:    vpshufd {{.*#+}} xmm1 = xmm1[0,0,0,0]
-; AVX1-NEXT:    vpblendw {{.*#+}} xmm0 = xmm0[0,1],xmm1[2],xmm0[3,4],xmm1[5],xmm0[6,7]
+; AVX1-NEXT:    vpshufb {{.*#+}} xmm1 = xmm1[0,1,8,9,u,u,2,3,10,11,u,u,4,5,12,13]
+; AVX1-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,0,0,0]
+; AVX1-NEXT:    vpblendw {{.*#+}} xmm0 = xmm1[0,1],xmm0[2],xmm1[3,4],xmm0[5],xmm1[6,7]
 ; AVX1-NEXT:    vmovdqa %xmm0, (%rcx)
 ; AVX1-NEXT:    vmovq %xmm2, 16(%rcx)
 ; AVX1-NEXT:    retq
@@ -105,9 +105,9 @@ define void @vf4(<4 x i16>* %in.vecptr0, <4 x i16>* %in.vecptr1, <4 x i16>* %in.
 ; AVX2:       # %bb.0:
 ; AVX2-NEXT:    vmovq {{.*#+}} xmm0 = mem[0],zero
 ; AVX2-NEXT:    vmovq {{.*#+}} xmm1 = mem[0],zero
-; AVX2-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm1[0]
-; AVX2-NEXT:    vmovq {{.*#+}} xmm1 = mem[0],zero
-; AVX2-NEXT:    vinserti128 $1, %xmm1, %ymm0, %ymm0
+; AVX2-NEXT:    vmovq {{.*#+}} xmm2 = mem[0],zero
+; AVX2-NEXT:    vpunpcklqdq {{.*#+}} xmm1 = xmm2[0],xmm1[0]
+; AVX2-NEXT:    vinserti128 $1, %xmm0, %ymm1, %ymm0
 ; AVX2-NEXT:    vpshufb {{.*#+}} ymm1 = ymm0[0,1,8,9],zero,zero,ymm0[2,3,10,11],zero,zero,ymm0[4,5,12,13,20,21],zero,zero,zero,zero,ymm0[22,23],zero,zero,zero,zero,zero,zero,zero,zero
 ; AVX2-NEXT:    vpermq {{.*#+}} ymm0 = ymm0[2,3,0,1]
 ; AVX2-NEXT:    vpshufb {{.*#+}} ymm0 = zero,zero,zero,zero,ymm0[0,1],zero,zero,zero,zero,ymm0[2,3],zero,zero,zero,zero,zero,zero,ymm0[22,23,30,31],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
@@ -122,9 +122,9 @@ define void @vf4(<4 x i16>* %in.vecptr0, <4 x i16>* %in.vecptr1, <4 x i16>* %in.
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    vmovq {{.*#+}} xmm0 = mem[0],zero
 ; AVX512-NEXT:    vmovq {{.*#+}} xmm1 = mem[0],zero
-; AVX512-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm1[0]
-; AVX512-NEXT:    vmovq {{.*#+}} xmm1 = mem[0],zero
-; AVX512-NEXT:    vinserti128 $1, %xmm1, %ymm0, %ymm0
+; AVX512-NEXT:    vmovq {{.*#+}} xmm2 = mem[0],zero
+; AVX512-NEXT:    vpunpcklqdq {{.*#+}} xmm1 = xmm2[0],xmm1[0]
+; AVX512-NEXT:    vinserti128 $1, %xmm0, %ymm1, %ymm0
 ; AVX512-NEXT:    vmovdqa {{.*#+}} ymm1 = <0,4,8,1,5,9,2,6,10,3,7,11,u,u,u,u>
 ; AVX512-NEXT:    vpermw %ymm0, %ymm1, %ymm0
 ; AVX512-NEXT:    vextracti128 $1, %ymm0, %xmm1

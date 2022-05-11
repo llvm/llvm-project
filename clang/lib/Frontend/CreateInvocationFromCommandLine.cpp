@@ -48,6 +48,7 @@ clang::createInvocation(ArrayRef<const char *> ArgList,
 
   // Don't check that inputs exist, they may have been remapped.
   TheDriver.setCheckInputsExist(false);
+  TheDriver.setProbePrecompiled(Opts.ProbePrecompiled);
 
   std::unique_ptr<driver::Compilation> C(TheDriver.BuildCompilation(Args));
   if (!C)
@@ -102,13 +103,4 @@ clang::createInvocation(ArrayRef<const char *> ArgList,
       !Opts.RecoverOnError)
     return nullptr;
   return CI;
-}
-
-std::unique_ptr<CompilerInvocation> clang::createInvocationFromCommandLine(
-    ArrayRef<const char *> Args, IntrusiveRefCntPtr<DiagnosticsEngine> Diags,
-    IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS, bool ShouldRecoverOnErrors,
-    std::vector<std::string> *CC1Args) {
-  return createInvocation(
-      Args,
-      CreateInvocationOptions{Diags, VFS, ShouldRecoverOnErrors, CC1Args});
 }

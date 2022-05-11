@@ -211,7 +211,7 @@ func.func @nested_region(
   // CHECK-NEXT: val_8
   // CHECK-NEXT:    %1 = arith.addi
   // CHECK-NEXT:    scf.for
-  // CHECK:         // return %1
+  // CHECK:         // func.return %1
   // CHECK: EndLiveness
   %0 = arith.addi %arg3, %arg4 : i32
   %1 = arith.addi %arg4, %arg5 : i32
@@ -245,7 +245,7 @@ func.func @nested_region2(
   // CHECK-NEXT: val_8
   // CHECK-NEXT:    %1 = arith.addi
   // CHECK-NEXT:    scf.for
-  // CHECK:         // return %1
+  // CHECK:         // func.return %1
   // CHECK: EndLiveness
   %arg0 : index, %arg1 : index, %arg2 : index,
   %arg3 : i32, %arg4 : i32, %arg5 : i32,

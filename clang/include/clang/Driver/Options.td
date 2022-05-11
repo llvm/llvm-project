@@ -3995,9 +3995,9 @@ defm openmp_implicit_rpath: BoolFOption<"openmp-implicit-rpath",
   NegFlag<SetFalse>>;
 def r : Flag<["-"], "r">, Flags<[LinkerInput,NoArgumentUnused]>,
         Group<Link_Group>;
-def save_temps_EQ : Joined<["-", "--"], "save-temps=">, Flags<[CC1Option, NoXarchOption]>,
+def save_temps_EQ : Joined<["-", "--"], "save-temps=">, Flags<[CC1Option, FlangOption, NoXarchOption]>,
   HelpText<"Save intermediate compilation results.">;
-def save_temps : Flag<["-", "--"], "save-temps">, Flags<[NoXarchOption]>,
+def save_temps : Flag<["-", "--"], "save-temps">, Flags<[FlangOption, NoXarchOption]>,
   Alias<save_temps_EQ>, AliasArgs<["cwd"]>,
   HelpText<"Save intermediate compilation results">;
 def save_stats_EQ : Joined<["-", "--"], "save-stats=">, Flags<[NoXarchOption]>,
@@ -4125,7 +4125,7 @@ def y : Joined<["-"], "y">;
 
 defm integrated_as : BoolFOption<"integrated-as",
   CodeGenOpts<"DisableIntegratedAS">, DefaultFalse,
-  NegFlag<SetTrue, [CC1Option], "Disable">, PosFlag<SetFalse, [], "Enable">,
+  NegFlag<SetTrue, [CC1Option, FlangOption], "Disable">, PosFlag<SetFalse, [], "Enable">,
   BothFlags<[], " the integrated assembler">>;
 
 def fintegrated_cc1 : Flag<["-"], "fintegrated-cc1">,
@@ -4137,7 +4137,7 @@ def fno_integrated_cc1 : Flag<["-"], "fno-integrated-cc1">,
 
 def : Flag<["-"], "integrated-as">, Alias<fintegrated_as>, Flags<[NoXarchOption]>;
 def : Flag<["-"], "no-integrated-as">, Alias<fno_integrated_as>,
-      Flags<[CC1Option, NoXarchOption]>;
+      Flags<[CC1Option, FlangOption, NoXarchOption]>;
 
 def working_directory : JoinedOrSeparate<["-"], "working-directory">, Flags<[CC1Option]>,
   HelpText<"Resolve file paths relative to the specified directory">,
@@ -5656,10 +5656,6 @@ def ftest_module_file_extension_EQ :
            "The argument is parsed as blockname:major:minor:hashed:user info">;
 def fconcepts_ts : Flag<["-"], "fconcepts-ts">,
   HelpText<"Enable C++ Extensions for Concepts. (deprecated - use -std=c++2a)">;
-def fno_concept_satisfaction_caching : Flag<["-"],
-                                            "fno-concept-satisfaction-caching">,
-  HelpText<"Disable satisfaction caching for C++2a Concepts.">,
-  MarshallingInfoNegativeFlag<LangOpts<"ConceptSatisfactionCaching">>;
 
 defm recovery_ast : BoolOption<"f", "recovery-ast",
   LangOpts<"RecoveryAST">, DefaultTrue,
@@ -6736,6 +6732,8 @@ def _SLASH_ZW : CLJoined<"ZW">;
 
 def dxc_Group : OptionGroup<"<clang-dxc options>">, Flags<[DXCOption]>,
   HelpText<"dxc compatibility options">;
+class DXCFlag<string name> : Option<["/", "-"], name, KIND_FLAG>,
+  Group<dxc_Group>, Flags<[DXCOption, NoXarchOption]>;
 class DXCJoinedOrSeparate<string name> : Option<["/", "-"], name,
   KIND_JOINED_OR_SEPARATE>, Group<dxc_Group>, Flags<[DXCOption, NoXarchOption]>;
 
@@ -6760,3 +6758,7 @@ def target_profile : DXCJoinedOrSeparate<"T">, MetaVarName<"<profile>">,
          "lib_6_3, lib_6_4, lib_6_5, lib_6_6, lib_6_7, lib_6_x,"
          "ms_6_5, ms_6_6, ms_6_7,"
          "as_6_5, as_6_6, as_6_7">;
+def emit_pristine_llvm : DXCFlag<"emit-pristine-llvm">,
+  HelpText<"Emit pristine LLVM IR from the frontend by not running any LLVM passes at all."
+           "Same as -S + -emit-llvm + -disable-llvm-passes.">;
+def fcgl : DXCFlag<"fcgl">, Alias<emit_pristine_llvm>;

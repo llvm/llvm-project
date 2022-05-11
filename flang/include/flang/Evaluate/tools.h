@@ -219,16 +219,22 @@ auto UnwrapConvertedExpr(B &x) -> common::Constify<A, B> * {
   } else if constexpr (std::is_same_v<Ty, Expr<SomeType>>) {
     return common::visit(
         [](auto &x) { return UnwrapConvertedExpr<A>(x); }, x.u);
-  } else if constexpr (!common::HasMember<A, TypelessExpression>) {
-    using Result = ResultType<A>;
-    if constexpr (std::is_same_v<Ty, Expr<Result>> ||
-        std::is_same_v<Ty, Expr<SomeKind<Result::category>>>) {
+  } else {
+    using DesiredResult = ResultType<A>;
+    if constexpr (std::is_same_v<Ty, Expr<DesiredResult>> ||
+        std::is_same_v<Ty, Expr<SomeKind<DesiredResult::category>>>) {
       return common::visit(
           [](auto &x) { return UnwrapConvertedExpr<A>(x); }, x.u);
-    } else if constexpr (std::is_same_v<Ty, Parentheses<Result>> ||
-        std::is_same_v<Ty, Convert<Result, Result::category>>) {
-      return common::visit(
-          [](auto &x) { return UnwrapConvertedExpr<A>(x); }, x.left().u);
+    } else {
+      using ThisResult = ResultType<B>;
+      if constexpr (std::is_same_v<Ty, Expr<ThisResult>>) {
+        return common::visit(
+            [](auto &x) { return UnwrapConvertedExpr<A>(x); }, x.u);
+      } else if constexpr (std::is_same_v<Ty, Parentheses<ThisResult>> ||
+          std::is_same_v<Ty, Convert<ThisResult, DesiredResult::category>>) {
+        return common::visit(
+            [](auto &x) { return UnwrapConvertedExpr<A>(x); }, x.left().u);
+      }
     }
   }
   return nullptr;

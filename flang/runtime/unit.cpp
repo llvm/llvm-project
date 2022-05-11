@@ -569,6 +569,9 @@ void ExternalFileUnit::BackspaceRecord(IoErrorHandler &handler) {
     if (IsAfterEndfile()) {
       // BACKSPACE after explicit ENDFILE
       currentRecordNumber = *endfileRecordNumber;
+    } else if (leftTabLimit) {
+      // BACKSPACE after non-advancing I/O
+      leftTabLimit.reset();
     } else {
       DoImpliedEndfile(handler);
       if (frameOffsetInFile_ + recordOffsetInFrame_ > 0) {

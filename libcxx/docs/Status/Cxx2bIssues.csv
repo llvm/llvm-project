@@ -107,7 +107,7 @@
 `3293 <https://wg21.link/LWG3293>`__,"``move_iterator operator+()`` has incorrect constraints","October 2021","|Complete|","15.0","|ranges|"
 `3361 <https://wg21.link/LWG3361>`__,"``safe_range<SomeRange&>`` case","October 2021","|Nothing To Do|","","|ranges|"
 `3392 <https://wg21.link/LWG3392>`__,"``ranges::distance()`` cannot be used on a move-only iterator with a sized sentinel","October 2021","|Complete|","14.0","|ranges|"
-`3407 <https://wg21.link/LWG3407>`__,"Some problems with the wording changes of P1739R4","October 2021","","","|ranges|"
+`3407 <https://wg21.link/LWG3407>`__,"Some problems with the wording changes of P1739R4","October 2021","|Complete|","15.0","|ranges|"
 `3422 <https://wg21.link/LWG3422>`__,"Issues of ``seed_seq``'s constructors","October 2021","|Complete|","14.0"
 `3470 <https://wg21.link/LWG3470>`__,"``convertible-to-non-slicing`` seems to reject valid case","October 2021","|Complete|","14.0","|ranges|"
 `3480 <https://wg21.link/LWG3480>`__,"``directory_iterator`` and ``recursive_directory_iterator`` are not C++20 ranges","October 2021","|Complete|","14.0","|ranges|"

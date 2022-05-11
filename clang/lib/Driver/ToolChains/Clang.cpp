@@ -1364,7 +1364,8 @@ void Clang::AddPreprocessingOptions(Compilation &C, const JobAction &JA,
 
   bool RenderedImplicitInclude = false;
   for (const Arg *A : Args.filtered(options::OPT_clang_i_Group)) {
-    if (A->getOption().matches(options::OPT_include)) {
+    if (A->getOption().matches(options::OPT_include) &&
+        D.getProbePrecompiled()) {
       // Handling of gcc-style gch precompiled headers.
       bool IsFirstImplicitInclude = !RenderedImplicitInclude;
       RenderedImplicitInclude = true;
@@ -1375,12 +1376,12 @@ void Clang::AddPreprocessingOptions(Compilation &C, const JobAction &JA,
       // so that replace_extension does the right thing.
       P += ".dummy";
       llvm::sys::path::replace_extension(P, "pch");
-      if (llvm::sys::fs::exists(P))
+      if (D.getVFS().exists(P))
         FoundPCH = true;
 
       if (!FoundPCH) {
         llvm::sys::path::replace_extension(P, "gch");
-        if (llvm::sys::fs::exists(P)) {
+        if (D.getVFS().exists(P)) {
           FoundPCH = true;
         }
       }
@@ -3470,7 +3471,9 @@ static void RenderOpenCLOptions(const ArgList &Args, ArgStringList &CmdArgs,
 
 static void RenderHLSLOptions(const ArgList &Args, ArgStringList &CmdArgs,
                               types::ID InputType) {
-  const unsigned ForwardedArguments[] = {options::OPT_dxil_validator_version};
+  const unsigned ForwardedArguments[] = {options::OPT_dxil_validator_version,
+                                         options::OPT_S, options::OPT_emit_llvm,
+                                         options::OPT_disable_llvm_passes};
 
   for (const auto &Arg : ForwardedArguments)
     if (const auto *A = Args.getLastArg(Arg))
@@ -4402,8 +4405,10 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
       (JA.isHostOffloading(Action::OFK_OpenMP) &&
        Args.hasFlag(options::OPT_fopenmp_new_driver,
                     options::OPT_no_offload_new_driver, true)) ||
-      Args.hasFlag(options::OPT_offload_new_driver,
-                   options::OPT_no_offload_new_driver, false);
+      (JA.isHostOffloading(C.getActiveOffloadKinds()) &&
+       Args.hasFlag(options::OPT_offload_new_driver,
+                    options::OPT_no_offload_new_driver, false));
+
   bool IsUsingLTO = D.isUsingLTO(IsDeviceOffloadAction);
   auto LTOMode = D.getLTOMode(IsDeviceOffloadAction);
 
@@ -7003,20 +7008,13 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   // For all the host OpenMP offloading compile jobs we need to pass the targets
   // information using -fopenmp-targets= option.
   if (JA.isHostOffloading(Action::OFK_OpenMP)) {
-    SmallString<128> TargetInfo("-fopenmp-targets=");
+    SmallString<128> Targets("-fopenmp-targets=");
 
-    Arg *Tgts = Args.getLastArg(options::OPT_fopenmp_targets_EQ);
-    assert(Tgts && Tgts->getNumValues() &&
-           "OpenMP offloading has to have targets specified.");
-    for (unsigned i = 0; i < Tgts->getNumValues(); ++i) {
-      if (i)
-        TargetInfo += ',';
-      // We need to get the string from the triple because it may be not exactly
-      // the same as the one we get directly from the arguments.
-      llvm::Triple T(Tgts->getValue(i));
-      TargetInfo += T.getTriple();
-    }
-    CmdArgs.push_back(Args.MakeArgString(TargetInfo.str()));
+    SmallVector<std::string, 4> Triples;
+    auto TCRange = C.getOffloadToolChains<Action::OFK_OpenMP>();
+    std::transform(TCRange.first, TCRange.second, std::back_inserter(Triples),
+                   [](auto TC) { return TC.second->getTripleString(); });
+    CmdArgs.push_back(Args.MakeArgString(Targets + llvm::join(Triples, ",")));
   }
 
   bool VirtualFunctionElimination =
