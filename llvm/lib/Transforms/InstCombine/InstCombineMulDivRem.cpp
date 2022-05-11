@@ -849,12 +849,13 @@ Instruction *InstCombinerImpl::commonIDivTransforms(BinaryOperator &I) {
   if (match(Op0, m_One())) {
     assert(!Ty->isIntOrIntVectorTy(1) && "i1 divide not removed?");
     if (IsSigned) {
-      // If Op1 is 0 then it's undefined behaviour, if Op1 is 1 then the
-      // result is one, if Op1 is -1 then the result is minus one, otherwise
-      // it's zero.
-      Value *Inc = Builder.CreateAdd(Op1, Op0);
+      // 1 / 0 --> undef ; 1 / 1 --> 1 ; 1 / -1 --> -1 ; 1 / anything else --> 0
+      // (Op1 + 1) u< 3 ? Op1 : 0
+      // Op1 must be frozen because we are increasing its number of uses.
+      Value *F1 = Builder.CreateFreeze(Op1, Op1->getName() + ".fr");
+      Value *Inc = Builder.CreateAdd(F1, Op0);
       Value *Cmp = Builder.CreateICmpULT(Inc, ConstantInt::get(Ty, 3));
-      return SelectInst::Create(Cmp, Op1, ConstantInt::get(Ty, 0));
+      return SelectInst::Create(Cmp, F1, ConstantInt::get(Ty, 0));
     } else {
       // If Op1 is 0 then it's undefined behaviour. If Op1 is 1 then the
       // result is one, otherwise it's zero.

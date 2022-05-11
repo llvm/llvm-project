@@ -296,9 +296,10 @@ define <2 x i32> @test19vec(<2 x i32> %x) {
 
 define i32 @test20(i32 %x) {
 ; CHECK-LABEL: @test20(
-; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[X:%.*]], 1
+; CHECK-NEXT:    [[X_FR:%.*]] = freeze i32 [[X:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[X_FR]], 1
 ; CHECK-NEXT:    [[TMP2:%.*]] = icmp ult i32 [[TMP1]], 3
-; CHECK-NEXT:    [[A:%.*]] = select i1 [[TMP2]], i32 [[X]], i32 0
+; CHECK-NEXT:    [[A:%.*]] = select i1 [[TMP2]], i32 [[X_FR]], i32 0
 ; CHECK-NEXT:    ret i32 [[A]]
 ;
   %A = sdiv i32 1, %x
@@ -307,9 +308,10 @@ define i32 @test20(i32 %x) {
 
 define <2 x i32> @test20vec(<2 x i32> %x) {
 ; CHECK-LABEL: @test20vec(
-; CHECK-NEXT:    [[TMP1:%.*]] = add <2 x i32> [[X:%.*]], <i32 1, i32 1>
+; CHECK-NEXT:    [[X_FR:%.*]] = freeze <2 x i32> [[X:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = add <2 x i32> [[X_FR]], <i32 1, i32 1>
 ; CHECK-NEXT:    [[TMP2:%.*]] = icmp ult <2 x i32> [[TMP1]], <i32 3, i32 3>
-; CHECK-NEXT:    [[A:%.*]] = select <2 x i1> [[TMP2]], <2 x i32> [[X]], <2 x i32> zeroinitializer
+; CHECK-NEXT:    [[A:%.*]] = select <2 x i1> [[TMP2]], <2 x i32> [[X_FR]], <2 x i32> zeroinitializer
 ; CHECK-NEXT:    ret <2 x i32> [[A]]
 ;
   %A = sdiv <2 x i32> <i32 1, i32 1>, %x
@@ -723,9 +725,10 @@ define <2 x i8> @PR34841(<2 x i8> %x) {
 
 define i8 @div_factor_signed(i8 %x, i8 %y) {
 ; CHECK-LABEL: @div_factor_signed(
-; CHECK-NEXT:    [[TMP1:%.*]] = add i8 [[Y:%.*]], 1
+; CHECK-NEXT:    [[Y_FR:%.*]] = freeze i8 [[Y:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = add i8 [[Y_FR]], 1
 ; CHECK-NEXT:    [[TMP2:%.*]] = icmp ult i8 [[TMP1]], 3
-; CHECK-NEXT:    [[R:%.*]] = select i1 [[TMP2]], i8 [[Y]], i8 0
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[TMP2]], i8 [[Y_FR]], i8 0
 ; CHECK-NEXT:    ret i8 [[R]]
 ;
   %a = mul nsw i8 %x, %y
@@ -737,9 +740,10 @@ define i8 @div_factor_signed(i8 %x, i8 %y) {
 
 define <2 x i8> @div_factor_signed_vec(<2 x i8> %x, <2 x i8> %y) {
 ; CHECK-LABEL: @div_factor_signed_vec(
-; CHECK-NEXT:    [[TMP1:%.*]] = add <2 x i8> [[Y:%.*]], <i8 1, i8 1>
+; CHECK-NEXT:    [[Y_FR:%.*]] = freeze <2 x i8> [[Y:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = add <2 x i8> [[Y_FR]], <i8 1, i8 1>
 ; CHECK-NEXT:    [[TMP2:%.*]] = icmp ult <2 x i8> [[TMP1]], <i8 3, i8 3>
-; CHECK-NEXT:    [[R:%.*]] = select <2 x i1> [[TMP2]], <2 x i8> [[Y]], <2 x i8> zeroinitializer
+; CHECK-NEXT:    [[R:%.*]] = select <2 x i1> [[TMP2]], <2 x i8> [[Y_FR]], <2 x i8> zeroinitializer
 ; CHECK-NEXT:    ret <2 x i8> [[R]]
 ;
   %a = mul nsw <2 x i8> %y, %x
@@ -1303,7 +1307,8 @@ define i32 @udiv_select_of_constants_divisor(i1 %b, i32 %x) {
 
 define i1 @sdiv_one_icmpeq_one(i32 %x) {
 ; CHECK-LABEL: @sdiv_one_icmpeq_one(
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i32 [[X:%.*]], 1
+; CHECK-NEXT:    [[X_FR:%.*]] = freeze i32 [[X:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i32 [[X_FR]], 1
 ; CHECK-NEXT:    ret i1 [[TMP1]]
 ;
   %A = sdiv i32 1, %x
@@ -1313,7 +1318,8 @@ define i1 @sdiv_one_icmpeq_one(i32 %x) {
 
 define i1 @sdiv_one_icmpeq_negone(i32 %x) {
 ; CHECK-LABEL: @sdiv_one_icmpeq_negone(
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i32 [[X:%.*]], -1
+; CHECK-NEXT:    [[X_FR:%.*]] = freeze i32 [[X:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i32 [[X_FR]], -1
 ; CHECK-NEXT:    ret i1 [[TMP1]]
 ;
   %A = sdiv i32 1, %x
