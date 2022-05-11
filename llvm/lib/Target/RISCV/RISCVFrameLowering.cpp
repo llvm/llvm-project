@@ -282,8 +282,8 @@ void RISCVFrameLowering::adjustReg(MachineBasicBlock &MBB,
         .setMIFlag(Flag);
   } else {
     unsigned Opc = RISCV::ADD;
-    bool isSub = Val < 0;
-    if (isSub) {
+    bool IsSub = Val < 0;
+    if (IsSub) {
       Val = -Val;
       Opc = RISCV::SUB;
     }
