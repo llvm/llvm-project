@@ -14,17 +14,18 @@ define void @rotate_with_external_users(double *%A, double *%ptr) {
 ; CHECK-NEXT:    [[LD:%.*]] = load double, double* undef, align 8
 ; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <2 x double> poison, double [[LD]], i32 0
 ; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x double> [[TMP0]], double [[LD]], i32 1
-; CHECK-NEXT:    [[TMP2:%.*]] = fadd <2 x double> [[TMP1]], <double 2.200000e+00, double 1.100000e+00>
-; CHECK-NEXT:    [[TMP3:%.*]] = fmul <2 x double> [[TMP2]], <double 2.200000e+00, double 1.100000e+00>
+; CHECK-NEXT:    [[TMP2:%.*]] = fadd <2 x double> [[TMP1]], <double 1.100000e+00, double 2.200000e+00>
+; CHECK-NEXT:    [[TMP3:%.*]] = fmul <2 x double> [[TMP2]], <double 1.100000e+00, double 2.200000e+00>
 ; CHECK-NEXT:    [[PTRA1:%.*]] = getelementptr inbounds double, double* [[A:%.*]], i64 0
+; CHECK-NEXT:    [[SHUFFLE:%.*]] = shufflevector <2 x double> [[TMP3]], <2 x double> poison, <2 x i32> <i32 1, i32 0>
 ; CHECK-NEXT:    [[TMP4:%.*]] = bitcast double* [[PTRA1]] to <2 x double>*
-; CHECK-NEXT:    store <2 x double> [[TMP3]], <2 x double>* [[TMP4]], align 8
+; CHECK-NEXT:    store <2 x double> [[SHUFFLE]], <2 x double>* [[TMP4]], align 8
 ; CHECK-NEXT:    br label [[BB2:%.*]]
 ; CHECK:       bb2:
-; CHECK-NEXT:    [[TMP5:%.*]] = fadd <2 x double> [[TMP3]], <double 4.400000e+00, double 3.300000e+00>
+; CHECK-NEXT:    [[TMP5:%.*]] = fadd <2 x double> [[TMP3]], <double 3.300000e+00, double 4.400000e+00>
 ; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <2 x double> [[TMP5]], i32 0
 ; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <2 x double> [[TMP5]], i32 1
-; CHECK-NEXT:    [[SEED:%.*]] = fcmp ogt double [[TMP7]], [[TMP6]]
+; CHECK-NEXT:    [[SEED:%.*]] = fcmp ogt double [[TMP6]], [[TMP7]]
 ; CHECK-NEXT:    ret void
 ;
 bb1:
