@@ -7021,7 +7021,7 @@ bool CodeGenPrepare::optimizeSwitchType(SwitchInst *SI) {
   ExtInst->setDebugLoc(SI->getDebugLoc());
   SI->setCondition(ExtInst);
   for (auto Case : SI->cases()) {
-    APInt NarrowConst = Case.getCaseValue()->getValue();
+    const APInt &NarrowConst = Case.getCaseValue()->getValue();
     APInt WideConst = (ExtType == Instruction::ZExt) ?
                       NarrowConst.zext(RegWidth) : NarrowConst.sext(RegWidth);
     Case.setValue(ConstantInt::get(Context, WideConst));
