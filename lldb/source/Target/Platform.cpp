@@ -1945,6 +1945,10 @@ CompilerType Platform::GetSiginfoType(const llvm::Triple& triple) {
   return CompilerType();
 }
 
+Args Platform::GetExtraStartupCommands() {
+  return {};
+}
+
 PlatformSP PlatformList::GetOrCreate(llvm::StringRef name) {
   std::lock_guard<std::recursive_mutex> guard(m_mutex);
   for (const PlatformSP &platform_sp : m_platforms) {

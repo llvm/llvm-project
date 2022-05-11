@@ -352,7 +352,7 @@ nub_process_t DNBProcessLaunch(
     pid_t pid = processSP->LaunchForDebug(
         path, argv, envp, working_directory, stdin_path, stdout_path,
         stderr_path, no_stdio, ctx->LaunchFlavor(), disable_aslr, event_data,
-        ctx->GetUnmaskSignals(), launch_err);
+        ctx->GetIgnoredExceptions(), launch_err);
     if (err_str) {
       *err_str = '\0';
       if (launch_err.Fail()) {
@@ -412,7 +412,8 @@ nub_process_t DNBProcessGetPIDByName(const char *name) {
 }
 
 nub_process_t DNBProcessAttachByName(const char *name, struct timespec *timeout,
-                                     bool unmask_signals, char *err_str,
+                                     const RNBContext::IgnoredExceptions 
+                                             &ignored_exceptions, char *err_str,
                                      size_t err_len) {
   if (err_str && err_len > 0)
     err_str[0] = '\0';
@@ -434,11 +435,13 @@ nub_process_t DNBProcessAttachByName(const char *name, struct timespec *timeout,
   }
 
   return DNBProcessAttach(matching_proc_infos[0].kp_proc.p_pid, timeout,
-                          unmask_signals, err_str, err_len);
+                          ignored_exceptions, err_str, err_len);
 }
 
 nub_process_t DNBProcessAttach(nub_process_t attach_pid,
-                               struct timespec *timeout, bool unmask_signals,
+                               struct timespec *timeout, 
+                               const RNBContext::IgnoredExceptions 
+                                       &ignored_exceptions,
                                char *err_str, size_t err_len) {
   if (err_str && err_len > 0)
     err_str[0] = '\0';
@@ -487,7 +490,8 @@ nub_process_t DNBProcessAttach(nub_process_t attach_pid,
     DNBLogThreadedIf(LOG_PROCESS, "(DebugNub) attaching to pid %d...",
                      attach_pid);
     pid =
-        processSP->AttachForDebug(attach_pid, unmask_signals, err_str, err_len);
+        processSP->AttachForDebug(attach_pid, ignored_exceptions, err_str, 
+                                  err_len);
 
     if (pid != INVALID_NUB_PROCESS) {
       bool res = AddProcessToMap(pid, processSP);
@@ -782,7 +786,8 @@ DNBProcessAttachWait(RNBContext *ctx, const char *waitfor_process_name,
     DNBLogThreadedIf(LOG_PROCESS, "Attaching to %s with pid %i...\n",
                      waitfor_process_name, waitfor_pid);
     waitfor_pid = DNBProcessAttach(waitfor_pid, timeout_abstime,
-                                   ctx->GetUnmaskSignals(), err_str, err_len);
+                                   ctx->GetIgnoredExceptions(), err_str, 
+                                   err_len);
   }
 
   bool success = waitfor_pid != INVALID_NUB_PROCESS;

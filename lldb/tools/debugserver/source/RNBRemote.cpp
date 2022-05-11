@@ -394,9 +394,12 @@ void RNBRemote::CreatePacketTable() {
                      "'G', 'p', and 'P') support having the thread ID appended "
                      "to the end of the command"));
   t.push_back(Packet(set_logging_mode, &RNBRemote::HandlePacket_QSetLogging,
-                     NULL, "QSetLogging:", "Check if register packets ('g', "
-                                           "'G', 'p', and 'P' support having "
-                                           "the thread ID prefix"));
+                     NULL, "QSetLogging:", "Turn on log channels in debugserver"));
+  t.push_back(Packet(set_ignored_exceptions, &RNBRemote::HandlePacket_QSetIgnoredExceptions,
+                     NULL, "QSetIgnoredExceptions:", "Set the exception types "
+                                           "debugserver won't wait for, allowing "
+                                           "them to be turned into the equivalent "
+                                           "BSD signals by the normal means."));
   t.push_back(Packet(
       set_max_packet_size, &RNBRemote::HandlePacket_QSetMaxPacketSize, NULL,
       "QSetMaxPacketSize:",
@@ -2210,6 +2213,37 @@ rnb_err_t set_logging(const char *p) {
   return rnb_success;
 }
 
+rnb_err_t RNBRemote::HandlePacket_QSetIgnoredExceptions(const char *p) {
+  // We can't set the ignored exceptions if we have a running process:
+  if (m_ctx.HasValidProcessID())
+    return SendPacket("E35");
+
+  p += sizeof("QSetIgnoredExceptions:") - 1;
+  bool success = true;
+  while(1) {
+    const char *bar  = strchr(p, '|');
+    if (bar == nullptr) {
+      success = m_ctx.AddIgnoredException(p);
+      break;
+    } else {
+      std::string exc_str(p, bar - p);
+      if (exc_str.empty()) {
+        success = false;
+        break;
+      }
+
+      success = m_ctx.AddIgnoredException(exc_str.c_str());
+      if (!success)
+        break;
+      p = bar + 1;
+    }
+  }
+  if (success)
+    return SendPacket("OK");
+  else
+    return SendPacket("E36");
+}
+
 rnb_err_t RNBRemote::HandlePacket_QThreadSuffixSupported(const char *p) {
   m_thread_suffix_supported = true;
   return SendPacket("OK");
@@ -3791,8 +3825,8 @@ rnb_err_t RNBRemote::HandlePacket_v(const char *p) {
              "'%s'",
              getpid(), attach_name.c_str());
       attach_pid = DNBProcessAttachByName(attach_name.c_str(), NULL,
-                                          Context().GetUnmaskSignals(), err_str,
-                                          sizeof(err_str));
+                                          Context().GetIgnoredExceptions(), 
+                                          err_str, sizeof(err_str));
 
     } else if (strstr(p, "vAttach;") == p) {
       p += strlen("vAttach;");
@@ -3806,7 +3840,8 @@ rnb_err_t RNBRemote::HandlePacket_v(const char *p) {
         DNBLog("[LaunchAttach] START %d vAttach to pid %d", getpid(),
                pid_attaching_to);
         attach_pid = DNBProcessAttach(pid_attaching_to, &attach_timeout_abstime,
-                                      false, err_str, sizeof(err_str));
+                                      m_ctx.GetIgnoredExceptions(), 
+                                      err_str, sizeof(err_str));
       }
     } else {
       return HandlePacket_UNIMPLEMENTED(p);
