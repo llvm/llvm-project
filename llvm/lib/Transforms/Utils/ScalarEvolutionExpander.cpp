@@ -1671,11 +1671,16 @@ Value *SCEVExpander::visitSignExtendExpr(const SCEVSignExtendExpr *S) {
 }
 
 Value *SCEVExpander::expandMinMaxExpr(const SCEVNAryExpr *S,
-                                      Intrinsic::ID IntrinID, Twine Name) {
+                                      Intrinsic::ID IntrinID, Twine Name,
+                                      bool IsSequential) {
   Value *LHS = expand(S->getOperand(S->getNumOperands() - 1));
   Type *Ty = LHS->getType();
+  if (IsSequential)
+    LHS = Builder.CreateFreeze(LHS);
   for (int i = S->getNumOperands() - 2; i >= 0; --i) {
     Value *RHS = expandCodeForImpl(S->getOperand(i), Ty, false);
+    if (IsSequential && i != 0)
+      RHS = Builder.CreateFreeze(RHS);
     Value *Sel;
     if (Ty->isIntegerTy())
       Sel = Builder.CreateIntrinsic(IntrinID, {Ty}, {LHS, RHS},
@@ -1707,21 +1712,7 @@ Value *SCEVExpander::visitUMinExpr(const SCEVUMinExpr *S) {
 }
 
 Value *SCEVExpander::visitSequentialUMinExpr(const SCEVSequentialUMinExpr *S) {
-  SmallVector<Value *> Ops;
-  for (const SCEV *Op : S->operands())
-    Ops.emplace_back(expand(Op));
-
-  Value *SaturationPoint =
-      MinMaxIntrinsic::getSaturationPoint(Intrinsic::umin, S->getType());
-
-  SmallVector<Value *> OpIsZero;
-  for (Value *Op : ArrayRef<Value *>(Ops).drop_back())
-    OpIsZero.emplace_back(Builder.CreateICmpEQ(Op, SaturationPoint));
-
-  Value *AnyOpIsZero = Builder.CreateLogicalOr(OpIsZero);
-
-  Value *NaiveUMin = expandMinMaxExpr(S, Intrinsic::umin, "umin");
-  return Builder.CreateSelect(AnyOpIsZero, SaturationPoint, NaiveUMin);
+  return expandMinMaxExpr(S, Intrinsic::umin, "umin", /*IsSequential*/true);
 }
 
 Value *SCEVExpander::expandCodeForImpl(const SCEV *SH, Type *Ty,
