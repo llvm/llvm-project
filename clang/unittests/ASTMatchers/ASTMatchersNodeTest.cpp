@@ -735,6 +735,17 @@ TEST_P(ASTMatchersTest, ParmVarDecl) {
   EXPECT_TRUE(notMatches("void f();", parmVarDecl()));
 }
 
+TEST_P(ASTMatchersTest, StaticAssertDecl) {
+  if (!GetParam().isCXX11OrLater())
+    return;
+
+  EXPECT_TRUE(matches("static_assert(true, \"\");", staticAssertDecl()));
+  EXPECT_TRUE(
+      notMatches("constexpr bool staticassert(bool B, const char *M) "
+                 "{ return true; };\n void f() { staticassert(true, \"\"); }",
+                 staticAssertDecl()));
+}
+
 TEST_P(ASTMatchersTest, Matcher_ConstructorCall) {
   if (!GetParam().isCXX()) {
     return;
