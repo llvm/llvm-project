@@ -1507,7 +1507,9 @@ public:
   bool onlyFirstLaneUsed(const VPValue *Op) const override {
     assert(is_contained(operands(), Op) &&
            "Op must be an operand of the recipe");
-    return Op == getAddr();
+    return Op == getAddr() && all_of(getStoredValues(), [Op](VPValue *StoredV) {
+             return Op != StoredV;
+           });
   }
 };
 
