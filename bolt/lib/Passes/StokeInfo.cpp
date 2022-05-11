@@ -35,12 +35,10 @@ namespace bolt {
 
 void getRegNameFromBitVec(const BinaryContext &BC, const BitVector &RegV,
                           std::set<std::string> *NameVec = nullptr) {
-  int RegIdx = RegV.find_first();
-  while (RegIdx != -1) {
+  for (int RegIdx : RegV.set_bits()) {
     LLVM_DEBUG(dbgs() << BC.MRI->getName(RegIdx) << " ");
     if (NameVec)
       NameVec->insert(std::string(BC.MRI->getName(RegIdx)));
-    RegIdx = RegV.find_next(RegIdx);
   }
   LLVM_DEBUG(dbgs() << "\n");
 }
