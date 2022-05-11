@@ -1335,6 +1335,7 @@ static unsigned getDwarfCC(CallingConv CC) {
     return llvm::dwarf::DW_CC_LLVM_X86_64SysV;
   case CC_AAPCS:
   case CC_AArch64VectorCall:
+  case CC_AArch64SVEPCS:
     return llvm::dwarf::DW_CC_LLVM_AAPCS;
   case CC_AAPCS_VFP:
     return llvm::dwarf::DW_CC_LLVM_AAPCS_VFP;
