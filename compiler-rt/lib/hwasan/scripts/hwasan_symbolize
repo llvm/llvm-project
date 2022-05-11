@@ -268,7 +268,7 @@ class Symbolizer:
           except FileNotFoundError:
             continue
           except Exception as e:
-            print("Failed to parse {}: {}".format(filename, e))
+            print("Failed to parse {}: {}".format(filename, e), file=sys.stderr)
             continue
           if bid is not None:
             self.__index[bid] = filename
