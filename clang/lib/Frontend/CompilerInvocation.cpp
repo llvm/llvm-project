@@ -3541,6 +3541,11 @@ void CompilerInvocation::GenerateLangArgs(const LangOptions &Opts,
   else
     GenerateArg(Args, OPT_fno_experimental_relative_cxx_abi_vtables, SA);
 
+  if (Opts.UseTargetPathSeparator)
+    GenerateArg(Args, OPT_ffile_reproducible, SA);
+  else
+    GenerateArg(Args, OPT_fno_file_reproducible, SA);
+
   for (const auto &MP : Opts.MacroPrefixMap)
     GenerateArg(Args, OPT_fmacro_prefix_map_EQ, MP.first + "=" + MP.second, SA);
 
@@ -4071,6 +4076,12 @@ bool CompilerInvocation::ParseLangArgs(LangOptions &Opts, ArgList &Args,
     Opts.MacroPrefixMap.insert(
         {std::string(Split.first), std::string(Split.second)});
   }
+
+  Opts.UseTargetPathSeparator =
+      !Args.getLastArg(OPT_fno_file_reproducible) &&
+      (Args.getLastArg(OPT_ffile_compilation_dir_EQ) ||
+       Args.getLastArg(OPT_fmacro_prefix_map_EQ) ||
+       Args.getLastArg(OPT_ffile_reproducible));
 
   // Error if -mvscale-min is unbounded.
   if (Arg *A = Args.getLastArg(options::OPT_mvscale_min_EQ)) {

@@ -452,6 +452,14 @@ public:
   /// The seed used by the randomize structure layout feature.
   std::string RandstructSeed;
 
+  /// Indicates whether the __FILE__ macro should use the target's
+  /// platform-specific file separator or whether it should use the build
+  /// environment's platform-specific file separator.
+  ///
+  /// The plaform-specific path separator is the backslash(\) for Windows and
+  /// forward slash (/) elsewhere.
+  bool UseTargetPathSeparator = false;
+
   LangOptions();
 
   /// Set language defaults for the given input language and
@@ -577,7 +585,7 @@ public:
   bool isSYCL() const { return SYCLIsDevice || SYCLIsHost; }
 
   /// Remap path prefix according to -fmacro-prefix-path option.
-  void remapPathPrefix(SmallString<256> &Path) const;
+  void remapPathPrefix(SmallVectorImpl<char> &Path) const;
 };
 
 /// Floating point control options
