@@ -839,8 +839,8 @@ void PEI::calculateFrameObjectOffsets(MachineFunction &MF) {
   // Adjust 'Offset' to point to the end of last fixed sized preallocated
   // object.
   for (int i = MFI.getObjectIndexBegin(); i != 0; ++i) {
-    if (MFI.getStackID(i) !=
-        TargetStackID::Default) // Only allocate objects on the default stack.
+    // Only allocate objects on the default stack.
+    if (MFI.getStackID(i) != TargetStackID::Default)
       continue;
 
     int64_t FixedOff;
@@ -971,8 +971,8 @@ void PEI::calculateFrameObjectOffsets(MachineFunction &MF) {
         continue;
       if (StackProtectorFI == (int)i || EHRegNodeFrameIndex == (int)i)
         continue;
-      if (MFI.getStackID(i) !=
-          TargetStackID::Default) // Only allocate objects on the default stack.
+      // Only allocate objects on the default stack.
+      if (MFI.getStackID(i) != TargetStackID::Default)
         continue;
 
       switch (MFI.getObjectSSPLayout(i)) {
@@ -1025,8 +1025,8 @@ void PEI::calculateFrameObjectOffsets(MachineFunction &MF) {
       continue;
     if (ProtectedObjs.count(i))
       continue;
-    if (MFI.getStackID(i) !=
-        TargetStackID::Default) // Only allocate objects on the default stack.
+    // Only allocate objects on the default stack.
+    if (MFI.getStackID(i) != TargetStackID::Default)
       continue;
 
     // Add the objects that we need to allocate to our working set.
