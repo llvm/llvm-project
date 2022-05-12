@@ -723,17 +723,6 @@ RegionKind SSACFGRegionOp::getRegionKind(unsigned index) {
 // Test GraphRegionOp
 //===----------------------------------------------------------------------===//
 
-ParseResult GraphRegionOp::parse(OpAsmParser &parser, OperationState &result) {
-  // Parse the body region, and reuse the operand info as the argument info.
-  Region *body = result.addRegion();
-  return parser.parseRegion(*body, /*arguments=*/{}, /*argTypes=*/{});
-}
-
-void GraphRegionOp::print(OpAsmPrinter &p) {
-  p << "test.graph_region ";
-  p.printRegion(getRegion(), /*printEntryBlockArgs=*/false);
-}
-
 RegionKind GraphRegionOp::getRegionKind(unsigned index) {
   return RegionKind::Graph;
 }
