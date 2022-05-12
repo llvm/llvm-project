@@ -93,10 +93,10 @@ static void demangling_unexpected_handler()
 
 static constexpr std::terminate_handler default_terminate_handler = demangling_terminate_handler;
 static constexpr std::terminate_handler default_unexpected_handler = demangling_unexpected_handler;
-#else
+#else // !LIBCXXABI_SILENT_TERMINATE
 static constexpr std::terminate_handler default_terminate_handler = ::abort;
 static constexpr std::terminate_handler default_unexpected_handler = std::terminate;
-#endif
+#endif // !LIBCXXABI_SILENT_TERMINATE
 
 //
 // Global variables that hold the pointers to the current handler
