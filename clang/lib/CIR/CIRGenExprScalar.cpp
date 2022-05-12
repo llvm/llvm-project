@@ -511,8 +511,10 @@ public:
   /// type, both of which are CIR scalar types.
   /// TODO: do we need ScalarConversionOpts here? Should be done in another
   /// pass.
-  mlir::Value buildScalarConversion(mlir::Value Src, QualType SrcType,
-                                    QualType DstType, SourceLocation Loc) {
+  mlir::Value
+  buildScalarConversion(mlir::Value Src, QualType SrcType, QualType DstType,
+                        SourceLocation Loc,
+                        ScalarConversionOpts Opts = ScalarConversionOpts()) {
     if (SrcType->isFixedPointType()) {
       assert(0 && "not implemented");
     } else if (DstType->isFixedPointType()) {
