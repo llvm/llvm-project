@@ -9,8 +9,10 @@
 #ifndef liblldb_IntelPTMultiCoreTrace_H_
 #define liblldb_IntelPTMultiCoreTrace_H_
 
+#include "IntelPTProcessTrace.h"
 #include "IntelPTSingleBufferTrace.h"
 
+#include "lldb/Host/common/NativeProcessProtocol.h"
 #include "lldb/Utility/TraceIntelPTGDBRemotePackets.h"
 #include "lldb/lldb-types.h"
 
@@ -21,21 +23,22 @@
 namespace lldb_private {
 namespace process_linux {
 
-class IntelPTMultiCoreTrace;
-using IntelPTMultiCoreTraceUP = std::unique_ptr<IntelPTMultiCoreTrace>;
-
-class IntelPTMultiCoreTrace {
+class IntelPTMultiCoreTrace : public IntelPTProcessTrace {
 public:
   /// Start tracing all CPU cores.
   ///
   /// \param[in] request
   ///   Intel PT configuration parameters.
   ///
+  /// \param[in] process
+  ///   The process being debugged.
+  ///
   /// \return
   ///   An \a IntelPTMultiCoreTrace instance if tracing was successful, or
   ///   an \a llvm::Error otherwise.
-  static llvm::Expected<IntelPTMultiCoreTraceUP>
-  StartOnAllCores(const TraceIntelPTStartRequest &request);
+  static llvm::Expected<IntelPTProcessTraceUP>
+  StartOnAllCores(const TraceIntelPTStartRequest &request,
+                  NativeProcessProtocol &process);
 
   /// Execute the provided callback on each core that is being traced.
   ///
@@ -48,27 +51,34 @@ public:
                                       IntelPTSingleBufferTrace &core_trace)>
                        callback);
 
-  /// This method should be invoked as early as possible whenever the process
-  /// resumes or stops so that intel-pt collection is not enabled when
-  /// the process is not running. This is done to prevent polluting the core
-  /// traces with executions of unrelated processes, which increases the data
-  /// loss of the target process, given that core traces don't filter by
-  /// process.
-  /// A possible way to avoid this is to use CR3 filtering, which is equivalent
-  /// to process filtering, but the perf_event API doesn't support it.
-  void OnProcessStateChanged(lldb::StateType state);
+  void OnProcessStateChanged(lldb::StateType state) override;
+
+  TraceGetStateResponse GetState() override;
+
+  bool TracesThread(lldb::tid_t tid) const override;
+
+  llvm::Error TraceStart(lldb::tid_t tid) override;
+
+  llvm::Error TraceStop(lldb::tid_t tid) override;
+
+  llvm::Expected<std::vector<uint8_t>>
+  GetBinaryData(const TraceGetBinaryDataRequest &request) override;
 
 private:
   IntelPTMultiCoreTrace(
       llvm::DenseMap<lldb::core_id_t, IntelPTSingleBufferTraceUP>
-          &&traces_per_core)
-      : m_traces_per_core(std::move(traces_per_core)) {}
+          &&traces_per_core,
+      NativeProcessProtocol &process)
+      : m_traces_per_core(std::move(traces_per_core)), m_process(process) {}
 
   llvm::DenseMap<lldb::core_id_t, IntelPTSingleBufferTraceUP> m_traces_per_core;
 
   /// The initial state is stopped because tracing can only start when the
   /// process is paused.
   lldb::StateType m_process_state = lldb::StateType::eStateStopped;
+
+  /// The target process.
+  NativeProcessProtocol &m_process;
 };
 
 } // namespace process_linux

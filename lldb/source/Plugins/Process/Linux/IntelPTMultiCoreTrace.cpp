@@ -33,8 +33,9 @@ static Error IncludePerfEventParanoidMessageInError(Error &&error) {
       toString(std::move(error)).c_str());
 }
 
-Expected<IntelPTMultiCoreTraceUP> IntelPTMultiCoreTrace::StartOnAllCores(
-    const TraceIntelPTStartRequest &request) {
+Expected<IntelPTProcessTraceUP>
+IntelPTMultiCoreTrace::StartOnAllCores(const TraceIntelPTStartRequest &request,
+                                       NativeProcessProtocol &process) {
   Expected<ArrayRef<core_id_t>> core_ids = GetAvailableLogicalCoreIDs();
   if (!core_ids)
     return core_ids.takeError();
@@ -55,7 +56,8 @@ Expected<IntelPTMultiCoreTraceUP> IntelPTMultiCoreTrace::StartOnAllCores(
       return IncludePerfEventParanoidMessageInError(core_trace.takeError());
   }
 
-  return IntelPTMultiCoreTraceUP(new IntelPTMultiCoreTrace(std::move(buffers)));
+  return IntelPTProcessTraceUP(
+      new IntelPTMultiCoreTrace(std::move(buffers), process));
 }
 
 void IntelPTMultiCoreTrace::ForEachCore(
@@ -93,4 +95,43 @@ void IntelPTMultiCoreTrace::OnProcessStateChanged(lldb::StateType state) {
   default:
     break;
   }
+}
+
+TraceGetStateResponse IntelPTMultiCoreTrace::GetState() {
+  TraceGetStateResponse state;
+
+  for (size_t i = 0; m_process.GetThreadAtIndex(i); i++)
+    state.traced_threads.push_back(
+        TraceThreadState{m_process.GetThreadAtIndex(i)->GetID(), {}});
+
+  state.cores.emplace();
+  ForEachCore([&](lldb::core_id_t core_id,
+                  const IntelPTSingleBufferTrace &core_trace) {
+    state.cores->push_back(
+        {core_id,
+         {{IntelPTDataKinds::kTraceBuffer, core_trace.GetTraceBufferSize()}}});
+  });
+
+  return state;
+}
+
+bool IntelPTMultiCoreTrace::TracesThread(lldb::tid_t tid) const {
+  // All the process' threads are being traced automatically.
+  return (bool)m_process.GetThreadByID(tid);
+}
+
+llvm::Error IntelPTMultiCoreTrace::TraceStart(lldb::tid_t tid) {
+  // This instance is already tracing all threads automatically.
+  return llvm::Error::success();
+}
+
+Error IntelPTMultiCoreTrace::TraceStop(lldb::tid_t tid) {
+  return createStringError(inconvertibleErrorCode(),
+                           "Can't stop tracing an individual thread when "
+                           "per-core process tracing is enabled.");
+}
+
+Expected<std::vector<uint8_t>>
+IntelPTMultiCoreTrace::GetBinaryData(const TraceGetBinaryDataRequest &request) {
+  return createStringError(inconvertibleErrorCode(), "Unimplemented");
 }

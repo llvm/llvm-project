@@ -189,7 +189,7 @@ class TestTraceStartStopMultipleThreads(TraceIntelPTTestCaseBase):
         # We can't support tracing per thread is per core is enabled.
         self.traceStartThread(
             error="True",
-            substrs=["Process currently traced with per-core tracing. Stop process tracing first"])
+            substrs=["Thread with tid ", "is currently traced"])
 
         # We can't stop individual thread when per core is enabled.
         self.traceStopThread(error="True",

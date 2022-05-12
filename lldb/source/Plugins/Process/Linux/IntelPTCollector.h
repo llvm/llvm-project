@@ -69,26 +69,14 @@ private:
   llvm::Error TraceStart(lldb::tid_t tid,
                          const TraceIntelPTStartRequest &request);
 
-  llvm::Expected<IntelPTSingleBufferTrace &> GetTracedThread(lldb::tid_t tid);
-
-  bool IsProcessTracingEnabled() const;
-
-  void ClearProcessTracing();
-
+  /// The target process.
   NativeProcessProtocol &m_process;
   /// Threads traced due to "thread tracing"
   IntelPTThreadTraceCollection m_thread_traces;
 
-  /// Only one of the following "process tracing" handlers can be active at a
-  /// given time.
-  ///
-  /// \{
-  /// Threads traced due to per-thread "process tracing".  This might be \b
-  /// nullptr.
-  IntelPTPerThreadProcessTraceUP m_per_thread_process_trace_up;
-  /// Cores traced due to per-core "process tracing".  This might be \b nullptr.
-  IntelPTMultiCoreTraceUP m_per_core_process_trace_up;
-  /// \}
+  /// Only one instance of "process trace" can be active at a given time.
+  /// It might be \b nullptr.
+  IntelPTProcessTraceUP m_process_trace_up;
 
   /// TSC to wall time conversion.
   TraceTscConversionUP m_tsc_conversion;

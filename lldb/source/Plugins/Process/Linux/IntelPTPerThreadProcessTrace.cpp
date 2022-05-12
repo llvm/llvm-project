@@ -35,6 +35,35 @@ Error IntelPTPerThreadProcessTrace::TraceStart(lldb::tid_t tid) {
   return m_thread_traces.TraceStart(tid, m_tracing_params);
 }
 
-IntelPTThreadTraceCollection &IntelPTPerThreadProcessTrace::GetThreadTraces() {
-  return m_thread_traces;
+TraceGetStateResponse IntelPTPerThreadProcessTrace::GetState() {
+  TraceGetStateResponse state;
+  m_thread_traces.ForEachThread(
+      [&](lldb::tid_t tid, const IntelPTSingleBufferTrace &thread_trace) {
+        state.traced_threads.push_back({tid,
+                                        {{IntelPTDataKinds::kTraceBuffer,
+                                          thread_trace.GetTraceBufferSize()}}});
+      });
+  return state;
+}
+
+Expected<std::vector<uint8_t>> IntelPTPerThreadProcessTrace::GetBinaryData(
+    const TraceGetBinaryDataRequest &request) {
+  if (Expected<IntelPTSingleBufferTrace &> trace =
+          m_thread_traces.GetTracedThread(*request.tid))
+    return trace->GetTraceBuffer(request.offset, request.size);
+  else
+    return trace.takeError();
+}
+
+Expected<IntelPTProcessTraceUP>
+IntelPTPerThreadProcessTrace::Start(const TraceIntelPTStartRequest &request,
+                                    ArrayRef<lldb::tid_t> current_tids) {
+  IntelPTProcessTraceUP trace(new IntelPTPerThreadProcessTrace(request));
+
+  Error error = Error::success();
+  for (lldb::tid_t tid : current_tids)
+    error = joinErrors(std::move(error), trace->TraceStart(tid));
+  if (error)
+    return std::move(error);
+  return trace;
 }
