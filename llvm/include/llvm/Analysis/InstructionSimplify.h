@@ -299,11 +299,16 @@ Value *SimplifyBinOp(unsigned Opcode, Value *LHS, Value *RHS, FastMathFlags FMF,
                      const SimplifyQuery &Q);
 
 /// Given a callsite, fold the result or return null.
-///
-/// \note A call with declared side effect may be simplified into a value
-/// without such. It happens if simplification code deduces that side effect
-/// is actually absent.
 Value *SimplifyCall(CallBase *Call, const SimplifyQuery &Q);
+
+/// Given a constrained FP intrinsic call, tries to compute its simplified
+/// version. Returns a simplified result or null.
+///
+/// This function provides an additional contract: it guarantees that if
+/// simplification succeeds that the intrinsic is side effect free. As a result,
+/// successful simplification can be used to delete the intrinsic not just
+/// replace its result.
+Value *SimplifyConstrainedFPCall(CallBase *Call, const SimplifyQuery &Q);
 
 /// Given an operand for a Freeze, see if we can fold the result.
 /// If not, this returns null.

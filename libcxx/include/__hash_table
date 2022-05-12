@@ -1512,9 +1512,7 @@ __hash_table<_Tp, _Hash, _Equal, _Alloc>::~__hash_table()
 #endif
 
     __deallocate_node(__p1_.first().__next_);
-#if _LIBCPP_DEBUG_LEVEL == 2
-    __get_db()->__erase_c(this);
-#endif
+    std::__debug_db_erase_c(this);
 }
 
 template <class _Tp, class _Hash, class _Equal, class _Alloc>
@@ -1617,9 +1615,7 @@ __hash_table<_Tp, _Hash, _Equal, _Alloc>::__move_assign(
         __u.__p1_.first().__next_ = nullptr;
         __u.size() = 0;
     }
-#if _LIBCPP_DEBUG_LEVEL == 2
-    __get_db()->swap(this, _VSTD::addressof(__u));
-#endif
+    std::__debug_db_swap(this, std::addressof(__u));
 }
 
 template <class _Tp, class _Hash, class _Equal, class _Alloc>
@@ -2321,9 +2317,7 @@ template <class _Tp, class _Hash, class _Equal, class _Alloc>
 void
 __hash_table<_Tp, _Hash, _Equal, _Alloc>::__rehash(size_type __nbc)
 {
-#if _LIBCPP_DEBUG_LEVEL == 2
-    __get_db()->__invalidate_all(this);
-#endif
+    std::__debug_db_invalidate_all(this);
     __pointer_allocator& __npa = __bucket_list_.get_deleter().__alloc();
     __bucket_list_.reset(__nbc > 0 ?
                       __pointer_alloc_traits::allocate(__npa, __nbc) : nullptr);
@@ -2729,9 +2723,7 @@ __hash_table<_Tp, _Hash, _Equal, _Alloc>::swap(__hash_table& __u)
     if (__u.size() > 0)
         __u.__bucket_list_[__constrain_hash(__u.__p1_.first().__next_->__hash(), __u.bucket_count())] =
             __u.__p1_.first().__ptr();
-#if _LIBCPP_DEBUG_LEVEL == 2
-    __get_db()->swap(this, _VSTD::addressof(__u));
-#endif
+    std::__debug_db_swap(this, std::addressof(__u));
 }
 
 template <class _Tp, class _Hash, class _Equal, class _Alloc>

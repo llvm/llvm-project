@@ -198,6 +198,7 @@ set(LIBCXXABI_TEST_CONFIG "${CMAKE_CURRENT_SOURCE_DIR}/test/lit.site.cfg.in" CAC
 if (NOT IS_ABSOLUTE "${LIBCXXABI_TEST_CONFIG}")
   set(LIBCXXABI_TEST_CONFIG "${CMAKE_CURRENT_SOURCE_DIR}/test/configs/${LIBCXXABI_TEST_CONFIG}")
 endif()
+message(STATUS "Using libc++abi testing configuration: ${LIBCXXABI_TEST_CONFIG}")
 set(LIBCXXABI_TEST_PARAMS "" CACHE STRING
     "A list of parameters to run the Lit test suite with.")
 

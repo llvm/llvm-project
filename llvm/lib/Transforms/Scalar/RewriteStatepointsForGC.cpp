@@ -560,6 +560,9 @@ static BaseDefiningValueResult findBaseDefiningValue(Value *I) {
     // The base of this GEP is the base
     return findBaseDefiningValue(GEP->getPointerOperand());
 
+  if (auto *Freeze = dyn_cast<FreezeInst>(I))
+    return findBaseDefiningValue(Freeze->getOperand(0));
+
   if (IntrinsicInst *II = dyn_cast<IntrinsicInst>(I)) {
     switch (II->getIntrinsicID()) {
     default:
@@ -632,7 +635,7 @@ static BaseDefiningValueResult findBaseDefiningValue(Value *I) {
   // derived pointers (each with it's own base potentially).  It's the job of
   // the caller to resolve these.
   assert((isa<SelectInst>(I) || isa<PHINode>(I)) &&
-         "missing instruction case in findBaseDefiningValing");
+         "missing instruction case in findBaseDefiningValue");
   return BaseDefiningValueResult(I, IsKnownBase);
 }
 

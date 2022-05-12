@@ -14,6 +14,7 @@
 #include "llvm/DebugInfo/DWARF/DWARFAcceleratorTable.h"
 #include "llvm/DebugInfo/DWARF/DWARFAddressRange.h"
 #include "llvm/DebugInfo/DWARF/DWARFDie.h"
+#include "llvm/DebugInfo/DWARF/DWARFUnitIndex.h"
 #include <cstdint>
 #include <map>
 #include <set>
@@ -155,6 +156,10 @@ private:
   /// \returns The number of errors that occurred during verification.
   unsigned verifyUnitSection(const DWARFSection &S);
   unsigned verifyUnits(const DWARFUnitVector &Units);
+
+  unsigned verifyIndexes(const DWARFObject &DObj);
+  unsigned verifyIndex(StringRef Name, DWARFSectionKind SectionKind,
+                       StringRef Index);
 
   /// Verifies that a call site entry is nested within a subprogram with a
   /// DW_AT_call attribute.
@@ -299,6 +304,24 @@ public:
   ///
   /// \returns true if all sections verify successfully, false otherwise.
   bool handleDebugInfo();
+
+  /// Verify the information in the .debug_cu_index section.
+  ///
+  /// Any errors are reported to the stream that was this object was
+  /// constructed with.
+  ///
+  /// \returns true if the .debug_cu_index verifies successfully, false
+  /// otherwise.
+  bool handleDebugCUIndex();
+
+  /// Verify the information in the .debug_tu_index section.
+  ///
+  /// Any errors are reported to the stream that was this object was
+  /// constructed with.
+  ///
+  /// \returns true if the .debug_tu_index verifies successfully, false
+  /// otherwise.
+  bool handleDebugTUIndex();
 
   /// Verify the information in the .debug_line section.
   ///

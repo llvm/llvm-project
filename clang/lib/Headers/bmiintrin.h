@@ -68,7 +68,7 @@ __tzcnt_u32(unsigned int __X)
 static __inline__ int __RELAXED_FN_ATTRS
 _mm_tzcnt_32(unsigned int __X)
 {
-  return __builtin_ia32_tzcnt_u32(__X);
+  return (int)__builtin_ia32_tzcnt_u32(__X);
 }
 
 #define _tzcnt_u32(a)     (__tzcnt_u32((a)))
@@ -106,7 +106,7 @@ __tzcnt_u64(unsigned long long __X)
 static __inline__ long long __RELAXED_FN_ATTRS
 _mm_tzcnt_64(unsigned long long __X)
 {
-  return __builtin_ia32_tzcnt_u64(__X);
+  return (long long)__builtin_ia32_tzcnt_u64(__X);
 }
 
 #define _tzcnt_u64(a)     (__tzcnt_u64((a)))

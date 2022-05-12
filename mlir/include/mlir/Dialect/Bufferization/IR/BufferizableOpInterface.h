@@ -93,6 +93,15 @@ struct BufferizationOptions {
         0, (allowDialectInFilterImpl<DialectTs>(), 0)...};
   }
 
+  /// Deny the given dialects in the filter.
+  ///
+  /// This function adds one or multiple DENY filters.
+  template <typename... DialectTs> void denyDialectInFilter() {
+    // FIXME: In c++17 this can be simplified by using 'fold expressions'.
+    (void)std::initializer_list<int>{
+        0, (denyDialectInFilterImpl<DialectTs>(), 0)...};
+  }
+
   /// Allow the given dialect in the filter.
   ///
   /// This function adds an ALLOW filter.
@@ -112,6 +121,15 @@ struct BufferizationOptions {
     // FIXME: In c++17 this can be simplified by using 'fold expressions'.
     (void)std::initializer_list<int>{
         0, (allowOperationInFilterImpl<OpTys>(), 0)...};
+  }
+
+  /// Deny the given ops in the filter.
+  ///
+  /// This function adds one or multiple DENY filters.
+  template <typename... OpTys> void denyOperationInFilter() {
+    // FIXME: In c++17 this can be simplified by using 'fold expressions'.
+    (void)std::initializer_list<int>{
+        0, (denyOperationInFilterImpl<OpTys>(), 0)...};
   }
 
   /// Allow the given op in the filter.
@@ -161,6 +179,19 @@ struct BufferizationOptions {
   Optional<DeallocationFn> deallocationFn;
   Optional<MemCpyFn> memCpyFn;
 
+  /// Create a memref allocation with the given type and dynamic extents.
+  FailureOr<Value> createAlloc(OpBuilder &b, Location loc, MemRefType type,
+                               ValueRange dynShape) const;
+
+  /// Creates a memref deallocation. The given memref buffer must have been
+  /// allocated using `createAlloc`.
+  LogicalResult createDealloc(OpBuilder &b, Location loc,
+                              Value allocatedBuffer) const;
+
+  /// Creates a memcpy between two given buffers.
+  LogicalResult createMemCpy(OpBuilder &b, Location loc, Value from,
+                             Value to) const;
+
   /// Specifies whether not bufferizable ops are allowed in the input. If so,
   /// bufferization.to_memref and bufferization.to_tensor ops are inserted at
   /// the boundaries.
@@ -189,6 +220,10 @@ struct BufferizationOptions {
   /// If set to `true`, the IR is annotated with details about RaW conflicts.
   /// For debugging only. Should be used together with `testAnalysisOnly`.
   bool printConflicts = false;
+
+  /// If set to `true`, buffers that are returned from functions are replaced
+  /// with buffer "out" parameters. At the call site, new buffers are allocated.
+  bool promoteBufferResultsToOutParams = false;
 
   /// If set to `true`, an `getAliasingOpResult` will return the corresponding
   /// "out"/"dest" OpOperand for every op that has the notion of an "out"/"dest"
@@ -236,10 +271,20 @@ private:
     allowDialectInFilter(DialectT::getDialectNamespace());
   }
 
+  /// Deny a dialect.
+  template <typename DialectT> void denyDialectInFilterImpl() {
+    denyDialectInFilter(DialectT::getDialectNamespace());
+  }
+
   /// Allow an op.
   template <typename OpTy>
   void allowOperationInFilterImpl() {
     allowOperationInFilter(OpTy::getOperationName());
+  }
+
+  /// Deny an op.
+  template <typename OpTy> void denyOperationInFilterImpl() {
+    denyOperationInFilter(OpTy::getOperationName());
   }
 };
 
@@ -337,6 +382,9 @@ public:
   /// Return true if `v1` and `v2` bufferize to equivalent buffers.
   virtual bool areEquivalentBufferizedValues(Value v1, Value v2) const = 0;
 
+  /// Return `true` if the given tensor has undefined contents.
+  virtual bool hasUndefinedContents(OpOperand *opOperand) const = 0;
+
   /// Return true if the given tensor (or an aliasing tensor) is yielded from
   /// the containing block. Also include all aliasing tensors in the same block.
   ///
@@ -409,6 +457,9 @@ public:
 
   /// Return true if `v1` and `v2` bufferize to equivalent buffers.
   bool areEquivalentBufferizedValues(Value v1, Value v2) const override;
+
+  /// Return `true` if the given tensor has undefined contents.
+  bool hasUndefinedContents(OpOperand *opOperand) const override;
 
   /// Return true if the given tensor (or an aliasing tensor) is yielded from
   /// the containing block. Also include all aliasing tensors in the same block.
@@ -507,15 +558,6 @@ BaseMemRefType getMemRefType(TensorType tensorType,
                              const BufferizationOptions &options,
                              MemRefLayoutAttrInterface layout = {},
                              Attribute memorySpace = {});
-
-/// Creates a memref deallocation. The given memref buffer must have been
-/// allocated using `createAlloc`.
-LogicalResult createDealloc(OpBuilder &b, Location loc, Value allocatedBuffer,
-                            const BufferizationOptions &options);
-
-/// Creates a memcpy between two given buffers.
-LogicalResult createMemCpy(OpBuilder &b, Location loc, Value from, Value to,
-                           const BufferizationOptions &options);
 
 /// Try to hoist all new buffer allocations until the next hoisting barrier.
 LogicalResult hoistBufferAllocations(Operation *op,

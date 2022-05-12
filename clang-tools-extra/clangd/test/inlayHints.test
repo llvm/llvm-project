@@ -39,6 +39,29 @@
 # CHECK-NEXT:  ]
 # CHECK-NEXT:}
 ---
+{"jsonrpc":"2.0","id":2,"method":"textDocument/inlayHint","params":{
+  "textDocument":{"uri":"test:///main.cpp"},
+  "range":{
+    "start": {"line":1,"character":0},
+    "end": {"line":2,"character":0}
+  }
+}}
+#      CHECK:  "id": 2,
+# CHECK-NEXT:  "jsonrpc": "2.0",
+# CHECK-NEXT:  "result": [
+# CHECK-NEXT:    {
+# CHECK-NEXT:      "kind": 2,
+# CHECK-NEXT:      "label": "bar:",
+# CHECK-NEXT:      "paddingLeft": false,
+# CHECK-NEXT:      "paddingRight": true,
+# CHECK-NEXT:      "position": {
+# CHECK-NEXT:        "character": 12,
+# CHECK-NEXT:        "line": 1
+# CHECK-NEXT:      }
+# CHECK-NEXT:    }
+# CHECK-NEXT:  ]
+# CHECK-NEXT:}
+---
 {"jsonrpc":"2.0","id":100,"method":"shutdown"}
 ---
 {"jsonrpc":"2.0","method":"exit"}

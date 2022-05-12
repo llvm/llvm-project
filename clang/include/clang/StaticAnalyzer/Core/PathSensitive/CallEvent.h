@@ -1276,7 +1276,7 @@ public:
   getCaller(const StackFrameContext *CalleeCtx, ProgramStateRef State);
 
   /// Gets a call event for a function call, Objective-C method call,
-  /// or a 'new' call.
+  /// a 'new', or a 'delete' call.
   CallEventRef<>
   getCall(const Stmt *S, ProgramStateRef State,
           const LocationContext *LC);

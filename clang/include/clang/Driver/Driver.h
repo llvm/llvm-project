@@ -271,6 +271,9 @@ private:
   /// Whether to check that input files exist when constructing compilation
   /// jobs.
   unsigned CheckInputsExist : 1;
+  /// Whether to probe for PCH files on disk, in order to upgrade
+  /// -include foo.h to -include-pch foo.h.pch.
+  unsigned ProbePrecompiled : 1;
 
 public:
   /// Force clang to emit reproducer for driver invocation. This is enabled
@@ -296,6 +299,11 @@ private:
   /// created targeting that triple. The driver owns all the ToolChain objects
   /// stored in it, and will clean them up when torn down.
   mutable llvm::StringMap<std::unique_ptr<ToolChain>> ToolChains;
+
+  /// Cache of known offloading architectures for the ToolChain already derived.
+  /// This should only be modified when we first initialize the offloading
+  /// toolchains.
+  llvm::DenseMap<const ToolChain *, llvm::DenseSet<llvm::StringRef>> KnownArchs;
 
 private:
   /// TranslateInputArgs - Create a new derived argument list from the input
@@ -356,6 +364,9 @@ public:
   bool getCheckInputsExist() const { return CheckInputsExist; }
 
   void setCheckInputsExist(bool Value) { CheckInputsExist = Value; }
+
+  bool getProbePrecompiled() const { return ProbePrecompiled; }
+  void setProbePrecompiled(bool Value) { ProbePrecompiled = Value; }
 
   void setTargetAndMode(const ParsedClangName &TM) { ClangNameParts = TM; }
 
@@ -449,6 +460,13 @@ public:
                                  llvm::opt::DerivedArgList &Args,
                                  const InputTy &Input,
                                  Action *HostAction) const;
+
+  /// Returns the set of bound architectures active for this offload kind.
+  /// If there are no bound architctures we return a set containing only the
+  /// empty string.
+  llvm::DenseSet<StringRef>
+  getOffloadArchs(Compilation &C, const llvm::opt::DerivedArgList &Args,
+                  Action::OffloadKind Kind, const ToolChain *TC) const;
 
   /// Check that the file referenced by Value exists. If it doesn't,
   /// issue a diagnostic and return false.

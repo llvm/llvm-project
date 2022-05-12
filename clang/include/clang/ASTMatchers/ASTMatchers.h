@@ -2523,7 +2523,7 @@ extern const internal::VariadicDynCastAllOfMatcher<Stmt, OpaqueValueExpr>
 /// Matches a C++ static_assert declaration.
 ///
 /// Example:
-///   staticAssertExpr()
+///   staticAssertDecl()
 /// matches
 ///   static_assert(sizeof(S) == sizeof(int))
 /// in

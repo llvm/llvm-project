@@ -122,6 +122,8 @@ protected:
 
   ProfiledBinary *Binary = nullptr;
 
+  std::unique_ptr<ProfileSummary> Summary;
+
   // Used by SampleProfileWriter
   SampleProfileMap ProfileMap;
 

@@ -74,6 +74,7 @@ public:
     OffloadBundlingJobClass,
     OffloadUnbundlingJobClass,
     OffloadWrapperJobClass,
+    OffloadPackagerJobClass,
     LinkerWrapperJobClass,
     StaticLibJobClass,
 
@@ -666,6 +667,17 @@ public:
 
   static bool classof(const Action *A) {
     return A->getKind() == OffloadWrapperJobClass;
+  }
+};
+
+class OffloadPackagerJobAction : public JobAction {
+  void anchor() override;
+
+public:
+  OffloadPackagerJobAction(ActionList &Inputs, types::ID Type);
+
+  static bool classof(const Action *A) {
+    return A->getKind() == OffloadPackagerJobClass;
   }
 };
 

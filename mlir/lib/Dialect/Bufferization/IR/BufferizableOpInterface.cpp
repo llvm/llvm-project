@@ -78,9 +78,12 @@ bool BufferizationOptions::isOpAllowed(Operation *op) const {
 
 BufferizableOpInterface
 BufferizationOptions::dynCastBufferizableOp(Operation *op) const {
-  if (isOpAllowed(op))
-    return dyn_cast<BufferizableOpInterface>(op);
-  return nullptr;
+  auto bufferizableOp = dyn_cast<BufferizableOpInterface>(op);
+  if (!bufferizableOp)
+    return nullptr;
+  if (!isOpAllowed(op))
+    return nullptr;
+  return bufferizableOp;
 }
 
 BufferizableOpInterface
@@ -114,7 +117,7 @@ static void setInsertionPointAfter(OpBuilder &b, Value value) {
 SmallVector<OpOperand *>
 AnalysisState::getAliasingOpOperand(OpResult result) const {
   if (Operation *op = result.getDefiningOp())
-    if (auto bufferizableOp = dyn_cast<BufferizableOpInterface>(op))
+    if (auto bufferizableOp = getOptions().dynCastBufferizableOp(op))
       return bufferizableOp.getAliasingOpOperand(result, *this);
   return {};
 }
@@ -124,7 +127,7 @@ AnalysisState::getAliasingOpOperand(OpResult result) const {
 SmallVector<OpResult>
 AnalysisState::getAliasingOpResult(OpOperand &opOperand) const {
   if (auto bufferizableOp =
-          dyn_cast<BufferizableOpInterface>(opOperand.getOwner()))
+          getOptions().dynCastBufferizableOp(opOperand.getOwner()))
     return bufferizableOp.getAliasingOpResult(opOperand, *this);
   return {};
 }
@@ -133,7 +136,7 @@ AnalysisState::getAliasingOpResult(OpOperand &opOperand) const {
 /// op is not bufferizable.
 bool AnalysisState::bufferizesToMemoryRead(OpOperand &opOperand) const {
   if (auto bufferizableOp =
-          dyn_cast<BufferizableOpInterface>(opOperand.getOwner()))
+          getOptions().dynCastBufferizableOp(opOperand.getOwner()))
     return bufferizableOp.bufferizesToMemoryRead(opOperand, *this);
 
   // Unknown op that returns a tensor. The inplace analysis does not support it.
@@ -145,7 +148,7 @@ bool AnalysisState::bufferizesToMemoryRead(OpOperand &opOperand) const {
 /// `true` if the op is not bufferizable.
 bool AnalysisState::bufferizesToMemoryWrite(OpOperand &opOperand) const {
   if (auto bufferizableOp =
-          dyn_cast<BufferizableOpInterface>(opOperand.getOwner()))
+          getOptions().dynCastBufferizableOp(opOperand.getOwner()))
     return bufferizableOp.bufferizesToMemoryWrite(opOperand, *this);
 
   // Unknown op that returns a tensor. The inplace analysis does not support it.
@@ -157,7 +160,7 @@ bool AnalysisState::bufferizesToMemoryWrite(OpOperand &opOperand) const {
 /// alias. Return false if the op is not bufferizable.
 bool AnalysisState::bufferizesToAliasOnly(OpOperand &opOperand) const {
   if (auto bufferizableOp =
-          dyn_cast<BufferizableOpInterface>(opOperand.getOwner()))
+          getOptions().dynCastBufferizableOp(opOperand.getOwner()))
     return bufferizableOp.bufferizesToAliasOnly(opOperand, *this);
 
   // Unknown op that returns a tensor. The inplace analysis does not support it.
@@ -303,18 +306,8 @@ BufferizationState::getBuffer(RewriterBase &rewriter, OpOperand &opOperand,
       rewriter, loc, operandBuffer, dealloc && getOptions().createDeallocs);
   if (failed(resultBuffer))
     return failure();
-  // Do not copy if the last preceding writes of `operand` are ops that do
-  // not write (skipping ops that merely create aliases). E.g., InitTensorOp.
-  // Note: If `findLastPrecedingWrite` reaches the end of the reverse SSA
-  // use-def chain, it returns that value, regardless of whether it is a
-  // memory write or not.
-  SetVector<Value> lastWrites = analysisState.findLastPrecedingWrite(operand);
-  if (llvm::none_of(lastWrites, [&](Value lastWrite) {
-        if (auto bufferizableOp = options.dynCastBufferizableOp(lastWrite))
-          return bufferizableOp.isMemoryWrite(lastWrite.cast<OpResult>(),
-                                              analysisState);
-        return true;
-      }))
+  // Do not copy the buffer if its contents are undefined.
+  if (analysisState.hasUndefinedContents(&opOperand))
     return resultBuffer;
   // Do not copy if the copied data is never read.
   if (!aliasingOpResults.empty() &&
@@ -334,8 +327,7 @@ BufferizationState::getBuffer(RewriterBase &rewriter, OpOperand &opOperand,
     // The copy happens right before the op that is bufferized.
     rewriter.setInsertionPoint(op);
   }
-  if (failed(
-          createMemCpy(rewriter, loc, operandBuffer, *resultBuffer, options)))
+  if (failed(options.createMemCpy(rewriter, loc, operandBuffer, *resultBuffer)))
     return failure();
 
   return resultBuffer;
@@ -407,6 +399,12 @@ bool AlwaysCopyAnalysisState::areEquivalentBufferizedValues(Value v1,
   return false;
 }
 
+/// Return `true` if the given tensor has undefined contents.
+bool AlwaysCopyAnalysisState::hasUndefinedContents(OpOperand *opOperand) const {
+  // There is no analysis, so the conservative answer is "false".
+  return false;
+}
+
 /// Return true if the given tensor (or an aliasing tensor) is yielded from
 /// the containing block. Also include all aliasing tensors in the same block.
 bool AlwaysCopyAnalysisState::isTensorYielded(Value tensor) const {
@@ -419,26 +417,24 @@ bool AlwaysCopyAnalysisState::isTensorYielded(Value tensor) const {
 //===----------------------------------------------------------------------===//
 
 /// Create a memref allocation with the given type and dynamic extents.
-static FailureOr<Value> createAlloc(OpBuilder &b, Location loc, MemRefType type,
-                                    ValueRange dynShape,
-                                    const BufferizationOptions &options) {
-  if (options.allocationFn)
-    return (*options.allocationFn)(b, loc, type, dynShape,
-                                   options.bufferAlignment);
+FailureOr<Value> BufferizationOptions::createAlloc(OpBuilder &b, Location loc,
+                                                   MemRefType type,
+                                                   ValueRange dynShape) const {
+  if (allocationFn)
+    return (*allocationFn)(b, loc, type, dynShape, bufferAlignment);
 
   // Default bufferallocation via AllocOp.
   Value allocated = b.create<memref::AllocOp>(
-      loc, type, dynShape, b.getI64IntegerAttr(options.bufferAlignment));
+      loc, type, dynShape, b.getI64IntegerAttr(bufferAlignment));
   return allocated;
 }
 
 /// Creates a memref deallocation. The given memref buffer must have been
 /// allocated using `createAlloc`.
-LogicalResult
-bufferization::createDealloc(OpBuilder &b, Location loc, Value allocatedBuffer,
-                             const BufferizationOptions &options) {
-  if (options.deallocationFn)
-    return (*options.deallocationFn)(b, loc, allocatedBuffer);
+LogicalResult BufferizationOptions::createDealloc(OpBuilder &b, Location loc,
+                                                  Value allocatedBuffer) const {
+  if (deallocationFn)
+    return (*deallocationFn)(b, loc, allocatedBuffer);
 
   // Default buffer deallocation via DeallocOp.
   b.create<memref::DeallocOp>(loc, allocatedBuffer);
@@ -524,11 +520,10 @@ FailureOr<Value> BufferizationState::createAlloc(OpBuilder &b, Location loc,
 }
 
 /// Create a memory copy between two memref buffers.
-LogicalResult bufferization::createMemCpy(OpBuilder &b, Location loc,
-                                          Value from, Value to,
-                                          const BufferizationOptions &options) {
-  if (options.memCpyFn)
-    return (*options.memCpyFn)(b, loc, from, to);
+LogicalResult BufferizationOptions::createMemCpy(OpBuilder &b, Location loc,
+                                                 Value from, Value to) const {
+  if (memCpyFn)
+    return (*memCpyFn)(b, loc, from, to);
 
   b.create<memref::CopyOp>(loc, from, to);
   return success();
@@ -558,8 +553,8 @@ bufferization::createAllocDeallocOps(Operation *op,
     Block *block = allocaOp->getBlock();
     rewriter.setInsertionPoint(allocaOp);
     FailureOr<Value> alloc =
-        createAlloc(rewriter, allocaOp->getLoc(), allocaOp.getType(),
-                    allocaOp.dynamicSizes(), options);
+        options.createAlloc(rewriter, allocaOp->getLoc(), allocaOp.getType(),
+                            allocaOp.dynamicSizes());
     if (failed(alloc))
       return WalkResult::interrupt();
     rewriter.replaceOp(allocaOp, *alloc);
@@ -572,7 +567,7 @@ bufferization::createAllocDeallocOps(Operation *op,
 
     // Create dealloc.
     rewriter.setInsertionPoint(block->getTerminator());
-    if (failed(createDealloc(rewriter, alloc->getLoc(), *alloc, options)))
+    if (failed(options.createDealloc(rewriter, alloc->getLoc(), *alloc)))
       return WalkResult::interrupt();
 
     return WalkResult::advance();

@@ -971,7 +971,7 @@ static bool checkTypeParamListConsistency(Sema &S,
   return false;
 }
 
-Decl *Sema::ActOnStartClassInterface(
+ObjCInterfaceDecl *Sema::ActOnStartClassInterface(
     Scope *S, SourceLocation AtInterfaceLoc, IdentifierInfo *ClassName,
     SourceLocation ClassLoc, ObjCTypeParamList *typeParamList,
     IdentifierInfo *SuperName, SourceLocation SuperLoc,
@@ -1100,7 +1100,8 @@ Decl *Sema::ActOnStartClassInterface(
   }
 
   CheckObjCDeclScope(IDecl);
-  return ActOnObjCContainerStartDefinition(IDecl);
+  ActOnObjCContainerStartDefinition(IDecl);
+  return IDecl;
 }
 
 /// ActOnTypedefedProtocols - this action finds protocol list as part of the
@@ -1208,7 +1209,7 @@ bool Sema::CheckForwardProtocolDeclarationForCircularDependency(
   return res;
 }
 
-Decl *Sema::ActOnStartProtocolInterface(
+ObjCProtocolDecl *Sema::ActOnStartProtocolInterface(
     SourceLocation AtProtoInterfaceLoc, IdentifierInfo *ProtocolName,
     SourceLocation ProtocolLoc, Decl *const *ProtoRefs, unsigned NumProtoRefs,
     const SourceLocation *ProtoLocs, SourceLocation EndProtoLoc,
@@ -1272,7 +1273,8 @@ Decl *Sema::ActOnStartProtocolInterface(
   }
 
   CheckObjCDeclScope(PDecl);
-  return ActOnObjCContainerStartDefinition(PDecl);
+  ActOnObjCContainerStartDefinition(PDecl);
+  return PDecl;
 }
 
 static bool NestedProtocolHasNoDefinition(ObjCProtocolDecl *PDecl,
@@ -1799,7 +1801,7 @@ Sema::ActOnForwardProtocolDeclaration(SourceLocation AtProtocolLoc,
   return BuildDeclaratorGroup(DeclsInGroup);
 }
 
-Decl *Sema::ActOnStartCategoryInterface(
+ObjCCategoryDecl *Sema::ActOnStartCategoryInterface(
     SourceLocation AtInterfaceLoc, IdentifierInfo *ClassName,
     SourceLocation ClassLoc, ObjCTypeParamList *typeParamList,
     IdentifierInfo *CategoryName, SourceLocation CategoryLoc,
@@ -1826,7 +1828,8 @@ Decl *Sema::ActOnStartCategoryInterface(
 
     if (!IDecl)
       Diag(ClassLoc, diag::err_undef_interface) << ClassName;
-    return ActOnObjCContainerStartDefinition(CDecl);
+    ActOnObjCContainerStartDefinition(CDecl);
+    return CDecl;
   }
 
   if (!CategoryName && IDecl->getImplementation()) {
@@ -1889,17 +1892,17 @@ Decl *Sema::ActOnStartCategoryInterface(
   }
 
   CheckObjCDeclScope(CDecl);
-  return ActOnObjCContainerStartDefinition(CDecl);
+  ActOnObjCContainerStartDefinition(CDecl);
+  return CDecl;
 }
 
 /// ActOnStartCategoryImplementation - Perform semantic checks on the
 /// category implementation declaration and build an ObjCCategoryImplDecl
 /// object.
-Decl *Sema::ActOnStartCategoryImplementation(
-                      SourceLocation AtCatImplLoc,
-                      IdentifierInfo *ClassName, SourceLocation ClassLoc,
-                      IdentifierInfo *CatName, SourceLocation CatLoc,
-                      const ParsedAttributesView &Attrs) {
+ObjCCategoryImplDecl *Sema::ActOnStartCategoryImplementation(
+    SourceLocation AtCatImplLoc, IdentifierInfo *ClassName,
+    SourceLocation ClassLoc, IdentifierInfo *CatName, SourceLocation CatLoc,
+    const ParsedAttributesView &Attrs) {
   ObjCInterfaceDecl *IDecl = getObjCInterfaceDecl(ClassName, ClassLoc, true);
   ObjCCategoryDecl *CatIDecl = nullptr;
   if (IDecl && IDecl->hasDefinition()) {
@@ -1958,15 +1961,14 @@ Decl *Sema::ActOnStartCategoryImplementation(
   }
 
   CheckObjCDeclScope(CDecl);
-  return ActOnObjCContainerStartDefinition(CDecl);
+  ActOnObjCContainerStartDefinition(CDecl);
+  return CDecl;
 }
 
-Decl *Sema::ActOnStartClassImplementation(
-                      SourceLocation AtClassImplLoc,
-                      IdentifierInfo *ClassName, SourceLocation ClassLoc,
-                      IdentifierInfo *SuperClassname,
-                      SourceLocation SuperClassLoc,
-                      const ParsedAttributesView &Attrs) {
+ObjCImplementationDecl *Sema::ActOnStartClassImplementation(
+    SourceLocation AtClassImplLoc, IdentifierInfo *ClassName,
+    SourceLocation ClassLoc, IdentifierInfo *SuperClassname,
+    SourceLocation SuperClassLoc, const ParsedAttributesView &Attrs) {
   ObjCInterfaceDecl *IDecl = nullptr;
   // Check for another declaration kind with the same name.
   NamedDecl *PrevDecl
@@ -2063,8 +2065,10 @@ Decl *Sema::ActOnStartClassImplementation(
   ProcessDeclAttributeList(TUScope, IMPDecl, Attrs);
   AddPragmaAttributes(TUScope, IMPDecl);
 
-  if (CheckObjCDeclScope(IMPDecl))
-    return ActOnObjCContainerStartDefinition(IMPDecl);
+  if (CheckObjCDeclScope(IMPDecl)) {
+    ActOnObjCContainerStartDefinition(IMPDecl);
+    return IMPDecl;
+  }
 
   // Check that there is no duplicate implementation of this class.
   if (IDecl->getImplementation()) {
@@ -2090,7 +2094,8 @@ Decl *Sema::ActOnStartClassImplementation(
       << IDecl->getSuperClass()->getDeclName();
   }
 
-  return ActOnObjCContainerStartDefinition(IMPDecl);
+  ActOnObjCContainerStartDefinition(IMPDecl);
+  return IMPDecl;
 }
 
 Sema::DeclGroupPtrTy

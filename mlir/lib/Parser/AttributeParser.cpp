@@ -114,7 +114,8 @@ Attribute Parser::parseAttribute(Type type) {
     if (getToken().is(Token::floatliteral))
       return parseFloatAttr(type, /*isNegative=*/true);
 
-    return (emitError("expected constant integer or floating point value"),
+    return (emitWrongTokenError(
+                "expected constant integer or floating point value"),
             nullptr);
   }
 
@@ -206,10 +207,13 @@ Attribute Parser::parseAttribute(Type type) {
     return builder.getUnitAttr();
 
   default:
-    // Parse a type attribute.
-    if (Type type = parseType())
-      return TypeAttr::get(type);
-    return nullptr;
+    // Parse a type attribute. We parse `Optional` here to allow for providing a
+    // better error message.
+    Type type;
+    OptionalParseResult result = parseOptionalType(type);
+    if (!result.hasValue())
+      return emitWrongTokenError("expected attribute value"), Attribute();
+    return failed(*result) ? Attribute() : TypeAttr::get(type);
   }
 }
 
@@ -272,7 +276,7 @@ ParseResult Parser::parseAttributeDict(NamedAttrList &attributes) {
              getToken().isKeyword())
       nameId = builder.getStringAttr(getTokenSpelling());
     else
-      return emitError("expected attribute name");
+      return emitWrongTokenError("expected attribute name");
 
     if (nameId->size() == 0)
       return emitError("expected valid attribute name");

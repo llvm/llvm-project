@@ -62,7 +62,6 @@
 
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/SetVector.h"
-#include "llvm/Support/ThreadPool.h"
 
 #include <memory>
 #include <mutex>
@@ -1624,17 +1623,6 @@ void Target::NotifyModulesRemoved(lldb_private::ModuleList &module_list) {
 void Target::ModulesDidLoad(ModuleList &module_list) {
   const size_t num_images = module_list.GetSize();
   if (m_valid && num_images) {
-    if (GetPreloadSymbols()) {
-      // Try to preload symbols in parallel.
-      llvm::ThreadPoolTaskGroup task_group(Debugger::GetThreadPool());
-      auto preload_symbols_fn = [&](size_t idx) {
-        ModuleSP module_sp(module_list.GetModuleAtIndex(idx));
-        module_sp->PreloadSymbols();
-      };
-      for (size_t idx = 0; idx < num_images; ++idx)
-        task_group.async(preload_symbols_fn, idx);
-      task_group.wait();
-    }
     for (size_t idx = 0; idx < num_images; ++idx) {
       ModuleSP module_sp(module_list.GetModuleAtIndex(idx));
       LoadScriptingResourceForModule(module_sp, this);
@@ -2181,6 +2169,11 @@ ModuleSP Target::GetOrCreateModule(const ModuleSpec &module_spec, bool notify,
             return true;
           });
         }
+
+        // Preload symbols outside of any lock, so hopefully we can do this for
+        // each library in parallel.
+        if (GetPreloadSymbols())
+          module_sp->PreloadSymbols();
 
         llvm::SmallVector<ModuleSP, 1> replaced_modules;
         for (ModuleSP &old_module_sp : old_modules) {

@@ -4240,7 +4240,7 @@ let hasSideEffects = 0, mayLoad = 0, mayStore = 0, isCodeGenOnly = 1 in {
 
 let hasSideEffects = 0, mayLoad = 0, mayStore = 0, isCodeGenOnly = 1,
     Uses = [VL] in
-def PseudoReadVL : Pseudo<(outs GPR:$rd), (ins), []>;
+def PseudoReadVL : Pseudo<(outs GPR:$rd), (ins ixlenimm:$vtype), []>;
 
 let hasSideEffects = 0, mayLoad = 0, mayStore = 1, isCodeGenOnly = 1 in {
   def PseudoVSPILL_M1 : VPseudo<VS1R_V, V_M1, (outs), (ins VR:$rs1, GPR:$rs2)>;

@@ -559,3 +559,24 @@
 // RUN: %clang --target=riscv32-unknown-elf -march=rv32ifdzve64d -### %s -c 2>&1 | \
 // RUN:   FileCheck -check-prefix=RV32-ZVE64D-GOOD %s
 // RV32-ZVE64D-GOOD: "-target-feature" "+zve64d"
+
+// RUN: %clang --target=riscv32-unknown-elf -march=rv32izfinx -### %s \
+// RUN: -fsyntax-only 2>&1 | FileCheck -check-prefix=RV32-ZFINX-GOOD %s
+// RV32-ZFINX-GOOD: "-target-feature" "+zfinx"
+
+// RUN: %clang --target=riscv32-unknown-elf -march=rv32izdinx -### %s \
+// RUN: -fsyntax-only 2>&1 | FileCheck -check-prefix=RV32-ZDINX-GOOD %s
+// RV32-ZDINX-GOOD: "-target-feature" "+zdinx"
+
+// RUN: %clang --target=riscv32-unknown-elf -march=rv32izhinxmin -### %s \
+// RUN: -fsyntax-only 2>&1 | FileCheck -check-prefix=RV32-ZHINXMIN-GOOD %s
+// RV32-ZHINXMIN-GOOD: "-target-feature" "+zhinxmin"
+
+// RUN: %clang --target=riscv32-unknown-elf -march=rv32izhinx1p0 -### %s \
+// RUN: -fsyntax-only 2>&1 | FileCheck -check-prefix=RV32-ZHINX-GOOD %s
+// RV32-ZHINX-GOOD: "-target-feature" "+zhinx"
+
+// RUN: %clang --target=riscv32-unknown-elf -march=rv32izhinx0p1 -### %s \
+// RUN: -fsyntax-only 2>&1 | FileCheck -check-prefix=RV32-ZHINX-BADVERS %s
+// RV32-ZHINX-BADVERS: error: invalid arch name 'rv32izhinx0p1'
+// RV32-ZHINX-BADVERS: unsupported version number 0.1 for extension 'zhinx'

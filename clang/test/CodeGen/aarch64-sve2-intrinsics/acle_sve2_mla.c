@@ -3,7 +3,6 @@
 // RUN: %clang_cc1 -triple aarch64-none-linux-gnu -target-feature +sve2 -fallow-half-arguments-and-returns -S -O1 -Werror -Wall -emit-llvm -o - -x c++ %s | FileCheck %s -check-prefix=CPP-CHECK
 // RUN: %clang_cc1 -DSVE_OVERLOADED_FORMS -triple aarch64-none-linux-gnu -target-feature +sve2 -fallow-half-arguments-and-returns -S -O1 -Werror -Wall -emit-llvm -o - %s | FileCheck %s
 // RUN: %clang_cc1 -DSVE_OVERLOADED_FORMS -triple aarch64-none-linux-gnu -target-feature +sve2 -fallow-half-arguments-and-returns -S -O1 -Werror -Wall -emit-llvm -o - -x c++ %s | FileCheck %s -check-prefix=CPP-CHECK
-// RUN: %clang_cc1 -triple aarch64-none-linux-gnu -target-feature +sve -fallow-half-arguments-and-returns -fsyntax-only -Wno-error=implicit-function-declaration -verify -verify-ignore-unexpected=error -verify-ignore-unexpected=note %s
 
 // REQUIRES: aarch64-registered-target
 
@@ -28,7 +27,6 @@
 //
 svint16_t test_svmla_lane_s16(svint16_t op1, svint16_t op2, svint16_t op3)
 {
-  // expected-warning@+1 {{call to undeclared function 'svmla_lane_s16'; ISO C99 and later do not support implicit function declarations}}
   return SVE_ACLE_FUNC(svmla_lane,_s16,,)(op1, op2, op3, 0);
 }
 
@@ -44,7 +42,6 @@ svint16_t test_svmla_lane_s16(svint16_t op1, svint16_t op2, svint16_t op3)
 //
 svint16_t test_svmla_lane_s16_1(svint16_t op1, svint16_t op2, svint16_t op3)
 {
-  // expected-warning@+1 {{call to undeclared function 'svmla_lane_s16'; ISO C99 and later do not support implicit function declarations}}
   return SVE_ACLE_FUNC(svmla_lane,_s16,,)(op1, op2, op3, 7);
 }
 
@@ -60,7 +57,6 @@ svint16_t test_svmla_lane_s16_1(svint16_t op1, svint16_t op2, svint16_t op3)
 //
 svint32_t test_svmla_lane_s32(svint32_t op1, svint32_t op2, svint32_t op3)
 {
-  // expected-warning@+1 {{call to undeclared function 'svmla_lane_s32'; ISO C99 and later do not support implicit function declarations}}
   return SVE_ACLE_FUNC(svmla_lane,_s32,,)(op1, op2, op3, 0);
 }
 
@@ -76,7 +72,6 @@ svint32_t test_svmla_lane_s32(svint32_t op1, svint32_t op2, svint32_t op3)
 //
 svint32_t test_svmla_lane_s32_1(svint32_t op1, svint32_t op2, svint32_t op3)
 {
-  // expected-warning@+1 {{call to undeclared function 'svmla_lane_s32'; ISO C99 and later do not support implicit function declarations}}
   return SVE_ACLE_FUNC(svmla_lane,_s32,,)(op1, op2, op3, 3);
 }
 
@@ -92,7 +87,6 @@ svint32_t test_svmla_lane_s32_1(svint32_t op1, svint32_t op2, svint32_t op3)
 //
 svint64_t test_svmla_lane_s64(svint64_t op1, svint64_t op2, svint64_t op3)
 {
-  // expected-warning@+1 {{call to undeclared function 'svmla_lane_s64'; ISO C99 and later do not support implicit function declarations}}
   return SVE_ACLE_FUNC(svmla_lane,_s64,,)(op1, op2, op3, 0);
 }
 
@@ -108,7 +102,6 @@ svint64_t test_svmla_lane_s64(svint64_t op1, svint64_t op2, svint64_t op3)
 //
 svint64_t test_svmla_lane_s64_1(svint64_t op1, svint64_t op2, svint64_t op3)
 {
-  // expected-warning@+1 {{call to undeclared function 'svmla_lane_s64'; ISO C99 and later do not support implicit function declarations}}
   return SVE_ACLE_FUNC(svmla_lane,_s64,,)(op1, op2, op3, 1);
 }
 
@@ -124,7 +117,6 @@ svint64_t test_svmla_lane_s64_1(svint64_t op1, svint64_t op2, svint64_t op3)
 //
 svuint16_t test_svmla_lane_u16(svuint16_t op1, svuint16_t op2, svuint16_t op3)
 {
-  // expected-warning@+1 {{call to undeclared function 'svmla_lane_u16'; ISO C99 and later do not support implicit function declarations}}
   return SVE_ACLE_FUNC(svmla_lane,_u16,,)(op1, op2, op3, 0);
 }
 
@@ -140,7 +132,6 @@ svuint16_t test_svmla_lane_u16(svuint16_t op1, svuint16_t op2, svuint16_t op3)
 //
 svuint16_t test_svmla_lane_u16_1(svuint16_t op1, svuint16_t op2, svuint16_t op3)
 {
-  // expected-warning@+1 {{call to undeclared function 'svmla_lane_u16'; ISO C99 and later do not support implicit function declarations}}
   return SVE_ACLE_FUNC(svmla_lane,_u16,,)(op1, op2, op3, 7);
 }
 
@@ -156,7 +147,6 @@ svuint16_t test_svmla_lane_u16_1(svuint16_t op1, svuint16_t op2, svuint16_t op3)
 //
 svuint32_t test_svmla_lane_u32_1(svuint32_t op1, svuint32_t op2, svuint32_t op3)
 {
-  // expected-warning@+1 {{call to undeclared function 'svmla_lane_u32'; ISO C99 and later do not support implicit function declarations}}
   return SVE_ACLE_FUNC(svmla_lane,_u32,,)(op1, op2, op3, 3);
 }
 
@@ -172,7 +162,6 @@ svuint32_t test_svmla_lane_u32_1(svuint32_t op1, svuint32_t op2, svuint32_t op3)
 //
 svuint64_t test_svmla_lane_u64(svuint64_t op1, svuint64_t op2, svuint64_t op3)
 {
-  // expected-warning@+1 {{call to undeclared function 'svmla_lane_u64'; ISO C99 and later do not support implicit function declarations}}
   return SVE_ACLE_FUNC(svmla_lane,_u64,,)(op1, op2, op3, 0);
 }
 
@@ -188,6 +177,5 @@ svuint64_t test_svmla_lane_u64(svuint64_t op1, svuint64_t op2, svuint64_t op3)
 //
 svuint64_t test_svmla_lane_u64_1(svuint64_t op1, svuint64_t op2, svuint64_t op3)
 {
-  // expected-warning@+1 {{call to undeclared function 'svmla_lane_u64'; ISO C99 and later do not support implicit function declarations}}
   return SVE_ACLE_FUNC(svmla_lane,_u64,,)(op1, op2, op3, 1);
 }

@@ -1884,7 +1884,7 @@ path path::lexically_relative(const path& base) const {
   if (ElemCount == 0 && (PP.atEnd() || *PP == PATHSTR("")))
     return PATHSTR(".");
 
-  // return a path constructed with 'n' dot-dot elements, followed by the the
+  // return a path constructed with 'n' dot-dot elements, followed by the
   // elements of '*this' after the mismatch.
   path Result;
   // FIXME: Reserve enough room in Result that it won't have to re-allocate.

@@ -2,7 +2,7 @@
 
 // CHECK: unsupported combination of coordinate operands
 
-func @test_coordinate_of(%arr : !fir.ref<!fir.array<2 x i32>>, %arg1: index) {
+func.func @test_coordinate_of(%arr : !fir.ref<!fir.array<2 x i32>>, %arg1: index) {
   %2 = fir.coordinate_of %arr, %arg1, %arg1 : (!fir.ref<!fir.array<2 x i32>>, index, index) -> !fir.ref<i32>
   return
 }

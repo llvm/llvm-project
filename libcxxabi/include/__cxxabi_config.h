@@ -97,4 +97,10 @@
 #  define _LIBCXXABI_NO_EXCEPTIONS
 #endif
 
+#if defined(_WIN32)
+#define _LIBCXXABI_DTOR_FUNC __thiscall
+#else
+#define _LIBCXXABI_DTOR_FUNC
+#endif
+
 #endif // ____CXXABI_CONFIG_H

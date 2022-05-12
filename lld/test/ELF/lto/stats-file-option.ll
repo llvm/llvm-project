@@ -1,9 +1,9 @@
-; REQUIRES: asserts
+; REQUIRES: asserts, x86
 
 ; RUN: llvm-as -o %t.bc %s
 
 ;; Try to save statistics to file.
-; RUN: ld.lld --stats-file=%t2.stats -m elf_x86_64 -r -o %t.o %t.bc
+; RUN: ld.lld --plugin-opt=stats-file=%t2.stats -m elf_x86_64 -r -o %t.o %t.bc
 ; RUN: FileCheck --input-file=%t2.stats %s
 
 ; CHECK: {

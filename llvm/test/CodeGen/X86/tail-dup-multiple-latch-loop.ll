@@ -139,11 +139,10 @@ define i32 @interp_switch(i8* nocapture readonly %0, i32 %1) {
 ; CHECK-NEXT:    .p2align 4, 0x90
 ; CHECK-NEXT:  .LBB1_1: # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    movzbl (%rdi), %ecx
-; CHECK-NEXT:    decb %cl
-; CHECK-NEXT:    cmpb $5, %cl
+; CHECK-NEXT:    decl %ecx
+; CHECK-NEXT:    cmpl $5, %ecx
 ; CHECK-NEXT:    ja .LBB1_9
 ; CHECK-NEXT:  # %bb.2: # in Loop: Header=BB1_1 Depth=1
-; CHECK-NEXT:    movzbl %cl, %ecx
 ; CHECK-NEXT:    jmpq *.LJTI1_0(,%rcx,8)
 ; CHECK-NEXT:  .LBB1_3: # in Loop: Header=BB1_1 Depth=1
 ; CHECK-NEXT:    incl %eax

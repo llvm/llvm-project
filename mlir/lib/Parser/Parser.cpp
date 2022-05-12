@@ -134,7 +134,7 @@ Parser::parseCommaSeparatedListUntil(Token::Kind rightToken,
   // Handle the empty case.
   if (getToken().is(rightToken)) {
     if (!allowEmptyList)
-      return emitError("expected list element");
+      return emitWrongTokenError("expected list element");
     consumeToken(rightToken);
     return success();
   }
@@ -147,6 +147,15 @@ Parser::parseCommaSeparatedListUntil(Token::Kind rightToken,
   return success();
 }
 
+InFlightDiagnostic Parser::emitError(const Twine &message) {
+  auto loc = state.curToken.getLoc();
+  if (state.curToken.isNot(Token::eof))
+    return emitError(loc, message);
+
+  // If the error is to be emitted at EOF, move it back one character.
+  return emitError(SMLoc::getFromPointer(loc.getPointer() - 1), message);
+}
+
 InFlightDiagnostic Parser::emitError(SMLoc loc, const Twine &message) {
   auto diag = mlir::emitError(getEncodedSourceLocation(loc), message);
 
@@ -157,13 +166,67 @@ InFlightDiagnostic Parser::emitError(SMLoc loc, const Twine &message) {
   return diag;
 }
 
+/// Emit an error about a "wrong token".  If the current token is at the
+/// start of a source line, this will apply heuristics to back up and report
+/// the error at the end of the previous line, which is where the expected
+/// token is supposed to be.
+InFlightDiagnostic Parser::emitWrongTokenError(const Twine &message) {
+  auto loc = state.curToken.getLoc();
+
+  // If the error is to be emitted at EOF, move it back one character.
+  if (state.curToken.is(Token::eof))
+    loc = SMLoc::getFromPointer(loc.getPointer() - 1);
+
+  // This is the location we were originally asked to report the error at.
+  auto originalLoc = loc;
+
+  // Determine if the token is at the start of the current line.
+  const char *bufferStart = state.lex.getBufferBegin();
+  const char *curPtr = loc.getPointer();
+
+  // Use this StringRef to keep track of what we are going to back up through,
+  // it provides nicer string search functions etc.
+  StringRef startOfBuffer(bufferStart, curPtr - bufferStart);
+
+  // Back up over entirely blank lines.
+  while (1) {
+    // Back up until we see a \n, but don't look past the buffer start.
+    startOfBuffer = startOfBuffer.rtrim(" \t");
+
+    // For tokens with no preceding source line, just emit at the original
+    // location.
+    if (startOfBuffer.empty())
+      return emitError(originalLoc, message);
+
+    // If we found something that isn't the end of line, then we're done.
+    if (startOfBuffer.back() != '\n' && startOfBuffer.back() != '\r')
+      return emitError(SMLoc::getFromPointer(startOfBuffer.end()), message);
+
+    // Drop the \n so we emit the diagnostic at the end of the line.
+    startOfBuffer = startOfBuffer.drop_back();
+
+    // Check to see if the preceding line has a comment on it.  We assume that a
+    // `//` is the start of a comment, which is mostly correct.
+    // TODO: This will do the wrong thing for // in a string literal.
+    auto prevLine = startOfBuffer;
+    size_t newLineIndex = prevLine.find_last_of("\n\r");
+    if (newLineIndex != StringRef::npos)
+      prevLine = prevLine.drop_front(newLineIndex);
+
+    // If we find a // in the current line, then emit the diagnostic before it.
+    size_t commentStart = prevLine.find("//");
+    if (commentStart != StringRef::npos)
+      startOfBuffer = startOfBuffer.drop_back(prevLine.size() - commentStart);
+  }
+}
+
 /// Consume the specified token if present and return success.  On failure,
 /// output a diagnostic and return failure.
 ParseResult Parser::parseToken(Token::Kind expectedToken,
                                const Twine &message) {
   if (consumeIf(expectedToken))
     return success();
-  return emitError(message);
+  return emitWrongTokenError(message);
 }
 
 /// Parse an optional integer value from the stream.
@@ -872,23 +935,23 @@ ParseResult OperationParser::parseOperation() {
     // Parse the group of result ids.
     auto parseNextResult = [&]() -> ParseResult {
       // Parse the next result id.
-      if (!getToken().is(Token::percent_identifier))
-        return emitError("expected valid ssa identifier");
-
       Token nameTok = getToken();
-      consumeToken(Token::percent_identifier);
+      if (parseToken(Token::percent_identifier,
+                     "expected valid ssa identifier"))
+        return failure();
 
       // If the next token is a ':', we parse the expected result count.
       size_t expectedSubResults = 1;
       if (consumeIf(Token::colon)) {
         // Check that the next token is an integer.
         if (!getToken().is(Token::integer))
-          return emitError("expected integer number of results");
+          return emitWrongTokenError("expected integer number of results");
 
         // Check that number of results is > 0.
         auto val = getToken().getUInt64IntegerValue();
         if (!val.hasValue() || val.getValue() < 1)
-          return emitError("expected named operation to have atleast 1 result");
+          return emitError(
+              "expected named operation to have at least 1 result");
         consumeToken(Token::integer);
         expectedSubResults = *val;
       }
@@ -912,7 +975,7 @@ ParseResult OperationParser::parseOperation() {
   else if (nameTok.is(Token::string))
     op = parseGenericOperation();
   else
-    return emitError("expected operation name in quotes");
+    return emitWrongTokenError("expected operation name in quotes");
 
   // If parsing of the basic operation failed, then this whole thing fails.
   if (!op)
@@ -967,7 +1030,7 @@ ParseResult OperationParser::parseOperation() {
 ParseResult OperationParser::parseSuccessor(Block *&dest) {
   // Verify branch is identifier and get the matching block.
   if (!getToken().is(Token::caret_identifier))
-    return emitError("expected block name");
+    return emitWrongTokenError("expected block name");
   dest = getBlockNamed(getTokenSpelling(), getToken().getLoc());
   consumeToken();
   return success();
@@ -1296,8 +1359,6 @@ public:
                                Delimiter delimiter = Delimiter::None,
                                bool allowResultNumber = true,
                                int requiredOperandCount = -1) override {
-    auto startLoc = parser.getToken().getLoc();
-
     // The no-delimiter case has some special handling for better diagnostics.
     if (delimiter == Delimiter::None) {
       // parseCommaSeparatedList doesn't handle the missing case for "none",
@@ -1309,10 +1370,9 @@ public:
           return success();
 
         // Otherwise, try to produce a nice error message.
-        if (parser.getToken().is(Token::l_paren) ||
-            parser.getToken().is(Token::l_square))
-          return emitError(startLoc, "unexpected delimiter");
-        return emitError(startLoc, "invalid operand");
+        if (parser.getToken().isAny(Token::l_paren, Token::l_square))
+          return parser.emitError("unexpected delimiter");
+        return parser.emitWrongTokenError("expected operand");
       }
     }
 
@@ -1320,6 +1380,7 @@ public:
       return parseOperand(result.emplace_back(), allowResultNumber);
     };
 
+    auto startLoc = parser.getToken().getLoc();
     if (parseCommaSeparatedList(delimiter, parseOneOperand, " in operand list"))
       return failure();
 
@@ -1580,57 +1641,38 @@ FailureOr<OperationName> OperationParser::parseCustomOperationName() {
   std::string opName = getTokenSpelling().str();
   if (opName.empty())
     return (emitError("empty operation name is invalid"), failure());
-
   consumeToken();
 
+  // Check to see if this operation name is already registered.
   Optional<RegisteredOperationName> opInfo =
       RegisteredOperationName::lookup(opName, getContext());
-  StringRef defaultDialect = getState().defaultDialectStack.back();
-  Dialect *dialect = nullptr;
-  if (opInfo) {
-    dialect = &opInfo->getDialect();
-  } else {
-    if (StringRef(opName).contains('.')) {
-      // This op has a dialect, we try to check if we can register it in the
-      // context on the fly.
-      StringRef dialectName = StringRef(opName).split('.').first;
-      dialect = getContext()->getLoadedDialect(dialectName);
-      if (!dialect && (dialect = getContext()->getOrLoadDialect(dialectName)))
-        opInfo = RegisteredOperationName::lookup(opName, getContext());
-    } else {
-      // If the operation name has no namespace prefix we lookup the current
-      // default dialect (set through OpAsmOpInterface).
-      opInfo = RegisteredOperationName::lookup(
-          Twine(defaultDialect + "." + opName).str(), getContext());
-      // FIXME: Remove this in favor of using default dialects.
-      if (!opInfo && getContext()->getOrLoadDialect("func")) {
-        opInfo = RegisteredOperationName::lookup(Twine("func." + opName).str(),
-                                                 getContext());
-      }
-      if (opInfo) {
-        dialect = &opInfo->getDialect();
-        opName = opInfo->getStringRef().str();
-      } else if (!defaultDialect.empty()) {
-        dialect = getContext()->getOrLoadDialect(defaultDialect);
-        opName = (defaultDialect + "." + opName).str();
-      }
-    }
+  if (opInfo)
+    return *opInfo;
+
+  // If the operation doesn't have a dialect prefix try using the default
+  // dialect.
+  auto opNameSplit = StringRef(opName).split('.');
+  StringRef dialectName = opNameSplit.first;
+  if (opNameSplit.second.empty()) {
+    dialectName = getState().defaultDialectStack.back();
+    opName = (dialectName + "." + opName).str();
   }
 
+  // Try to load the dialect before returning the operation name to make sure
+  // the operation has a chance to be registered.
+  getContext()->getOrLoadDialect(dialectName);
   return OperationName(opName, getContext());
 }
 
 Operation *
 OperationParser::parseCustomOperation(ArrayRef<ResultRecord> resultIDs) {
   SMLoc opLoc = getToken().getLoc();
+  StringRef originalOpName = getTokenSpelling();
 
   FailureOr<OperationName> opNameInfo = parseCustomOperationName();
   if (failed(opNameInfo))
     return nullptr;
-
   StringRef opName = opNameInfo->getStringRef();
-  Dialect *dialect = opNameInfo->getDialect();
-  Optional<RegisteredOperationName> opInfo = opNameInfo->getRegisteredInfo();
 
   // This is the actual hook for the custom op parsing, usually implemented by
   // the op itself (`Op::parse()`). We retrieve it either from the
@@ -1639,7 +1681,7 @@ OperationParser::parseCustomOperation(ArrayRef<ResultRecord> resultIDs) {
   bool isIsolatedFromAbove = false;
 
   StringRef defaultDialect = "";
-  if (opInfo) {
+  if (auto opInfo = opNameInfo->getRegisteredInfo()) {
     parseAssemblyFn = opInfo->getParseAssemblyFn();
     isIsolatedFromAbove = opInfo->hasTrait<OpTrait::IsIsolatedFromAbove>();
     auto *iface = opInfo->getInterface<OpAsmOpInterface>();
@@ -1647,10 +1689,13 @@ OperationParser::parseCustomOperation(ArrayRef<ResultRecord> resultIDs) {
       defaultDialect = iface->getDefaultDialect();
   } else {
     Optional<Dialect::ParseOpHook> dialectHook;
-    if (dialect)
+    if (Dialect *dialect = opNameInfo->getDialect())
       dialectHook = dialect->getParseOperationHook(opName);
     if (!dialectHook.hasValue()) {
-      emitError(opLoc) << "custom op '" << opName << "' is unknown";
+      InFlightDiagnostic diag =
+          emitError(opLoc) << "custom op '" << originalOpName << "' is unknown";
+      if (originalOpName != opName)
+        diag << " (tried '" << opName << "' as well)";
       return nullptr;
     }
     parseAssemblyFn = *dialectHook;
