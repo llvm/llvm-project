@@ -40,11 +40,12 @@ class CIR_Op<string mnemonic, list<Trait> traits = []> :
 // The enumaration value isn't in sync with clang.
 def CK_IntegralToBoolean : I32EnumAttrCase<"int_to_bool", 1>;
 def CK_ArrayToPointerDecay : I32EnumAttrCase<"array_to_ptrdecay", 2>;
+def CK_IntegralCast : I32EnumAttrCase<"integral", 3>;
 
 def CastKind : I32EnumAttr<
     "CastKind",
     "cast kind",
-    [CK_IntegralToBoolean, CK_ArrayToPointerDecay]> {
+    [CK_IntegralToBoolean, CK_ArrayToPointerDecay, CK_IntegralCast]> {
   let cppNamespace = "::mlir::cir";
 }
 
