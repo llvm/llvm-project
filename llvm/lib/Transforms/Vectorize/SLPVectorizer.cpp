@@ -4202,11 +4202,10 @@ bool BoUpSLP::CanFormVector(const SmallVector<StoreInst *, 4> &StoresVec,
     return Offset1 < Offset2;
   });
 
-  // Check if the stores are consecutive by checking if last-first == size-1.
-  int LastOffset = StoreOffsetVec.back().second;
-  int FirstOffset = StoreOffsetVec.front().second;
-  if (LastOffset - FirstOffset != (int)StoreOffsetVec.size() - 1)
-    return false;
+  // Check if the stores are consecutive by checking if their difference is 1.
+  for (unsigned Idx : seq<unsigned>(1, StoreOffsetVec.size()))
+    if (StoreOffsetVec[Idx].second != StoreOffsetVec[Idx-1].second + 1)
+      return false;
 
   // Calculate the shuffle indices according to their offset against the sorted
   // StoreOffsetVec.

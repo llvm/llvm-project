@@ -126,3 +126,32 @@ case_13:
 default:
   ret void
 }
+
+define void @switch_phi_const_degenerate() {
+; CHECK-LABEL: @switch_phi_const_degenerate(
+; CHECK-NEXT:  bb0:
+; CHECK-NEXT:    br i1 undef, label [[CASE_42:%.*]], label [[BB1:%.*]]
+; CHECK:       bb1:
+; CHECK-NEXT:    br label [[CASE_42]]
+; CHECK:       case_42:
+; CHECK-NEXT:    [[X:%.*]] = phi i32 [ 0, [[BB0:%.*]] ], [ 42, [[BB1]] ]
+; CHECK-NEXT:    store volatile i32 [[X]], i32* @effect, align 4
+; CHECK-NEXT:    ret void
+;
+bb0:
+  br i1 undef, label %case_42, label %bb1
+
+bb1:
+  switch i32 42, label %unreachable [
+  i32 42, label %case_42
+  ]
+
+case_42:
+  ; We should not end up in an endless loop 42 with the switch condition 42.
+  %x = phi i32 [0, %bb0], [42, %bb1]
+  store volatile i32 %x, i32* @effect, align 4
+  ret void
+
+unreachable:
+  unreachable
+}

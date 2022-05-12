@@ -474,12 +474,12 @@ LogicalResult mlir::loopUnrollByFactor(
     // Update uses of loop results.
     auto results = forOp.getResults();
     auto epilogueResults = epilogueForOp.getResults();
-    auto epilogueIterOperands = epilogueForOp.getIterOperands();
 
-    for (auto e : llvm::zip(results, epilogueResults, epilogueIterOperands)) {
+    for (auto e : llvm::zip(results, epilogueResults)) {
       std::get<0>(e).replaceAllUsesWith(std::get<1>(e));
-      epilogueForOp->replaceUsesOfWith(std::get<2>(e), std::get<0>(e));
     }
+    epilogueForOp->setOperands(epilogueForOp.getNumControlOperands(),
+                               epilogueForOp.getNumIterOperands(), results);
     (void)promoteIfSingleIteration(epilogueForOp);
   }
 

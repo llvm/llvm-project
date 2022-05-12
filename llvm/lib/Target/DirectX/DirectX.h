@@ -30,6 +30,11 @@ void initializeDXILOpLoweringLegacyPass(PassRegistry &);
 /// Pass to lowering LLVM intrinsic call to DXIL op function call.
 ModulePass *createDXILOpLoweringLegacyPass();
 
+/// Initializer for DXILTranslateMetadata.
+void initializeDXILTranslateMetadataPass(PassRegistry &);
+
+/// Pass to emit metadata for DXIL.
+ModulePass *createDXILTranslateMetadataPass();
 } // namespace llvm
 
 #endif // LLVM_LIB_TARGET_DIRECTX_DIRECTX_H

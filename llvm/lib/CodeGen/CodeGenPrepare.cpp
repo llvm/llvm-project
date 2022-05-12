@@ -7021,7 +7021,7 @@ bool CodeGenPrepare::optimizeSwitchType(SwitchInst *SI) {
   ExtInst->setDebugLoc(SI->getDebugLoc());
   SI->setCondition(ExtInst);
   for (auto Case : SI->cases()) {
-    APInt NarrowConst = Case.getCaseValue()->getValue();
+    const APInt &NarrowConst = Case.getCaseValue()->getValue();
     APInt WideConst = (ExtType == Instruction::ZExt) ?
                       NarrowConst.zext(RegWidth) : NarrowConst.sext(RegWidth);
     Case.setValue(ConstantInt::get(Context, WideConst));
@@ -7037,9 +7037,13 @@ bool CodeGenPrepare::optimizeSwitchPhiConstants(SwitchInst *SI) {
   // change the code to:
   //   switch(x) { case 42: phi(x, ...) }
 
+  Value *Condition = SI->getCondition();
+  // Avoid endless loop in degenerate case.
+  if (isa<ConstantInt>(*Condition))
+    return false;
+
   bool Changed = false;
   BasicBlock *SwitchBB = SI->getParent();
-  Value *Condition = SI->getCondition();
   Type *ConditionType = Condition->getType();
 
   for (const SwitchInst::CaseHandle &Case : SI->cases()) {

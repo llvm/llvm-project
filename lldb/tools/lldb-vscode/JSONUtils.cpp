@@ -9,6 +9,7 @@
 #include <algorithm>
 #include <iomanip>
 #include <sstream>
+#include <string.h>
 
 #include "llvm/ADT/Optional.h"
 #include "llvm/Support/FormatAdapters.h"
@@ -1024,7 +1025,37 @@ llvm::json::Value CreateVariable(lldb::SBValue v, int64_t variablesReference,
   if (format_hex)
     v.SetFormat(lldb::eFormatHex);
   SetValueForKey(v, object, "value");
-  auto type_cstr = v.GetType().GetDisplayTypeName();
+  auto type_obj = v.GetType();
+  auto type_cstr = type_obj.GetDisplayTypeName();
+  // If we have a type with many many children, we would like to be able to
+  // give a hint to the IDE that the type has indexed children so that the
+  // request can be broken up in grabbing only a few children at a time. We want
+  // to be careful and only call "v.GetNumChildren()" if we have an array type
+  // or if we have a synthetic child provider. We don't want to call
+  // "v.GetNumChildren()" on all objects as class, struct and union types don't
+  // need to be completed if they are never expanded. So we want to avoid
+  // calling this to only cases where we it makes sense to keep performance high
+  // during normal debugging.
+
+  // If we have an array type, say that it is indexed and provide the number of
+  // children in case we have a huge array. If we don't do this, then we might
+  // take a while to produce all children at onces which can delay your debug
+  // session.
+  const bool is_array = type_obj.IsArrayType();
+  const bool is_synthetic = v.IsSynthetic();
+  if (is_array || is_synthetic) {
+    const auto num_children = v.GetNumChildren();
+    if (is_array) {
+      object.try_emplace("indexedVariables", num_children);
+    } else {
+      // If a type has a synthetic child provider, then the SBType of "v" won't
+      // tell us anything about what might be displayed. So we can check if the
+      // first child's name is "[0]" and then we can say it is indexed.
+      const char *first_child_name = v.GetChildAtIndex(0).GetName();
+      if (first_child_name && strcmp(first_child_name, "[0]") == 0)
+        object.try_emplace("indexedVariables", num_children);
+    }
+  }
   EmplaceSafeString(object, "type", type_cstr ? type_cstr : NO_TYPENAME);
   if (varID != INT64_MAX)
     object.try_emplace("id", varID);

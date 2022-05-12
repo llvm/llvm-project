@@ -544,23 +544,11 @@ static bool isScalarMoveInstr(const MachineInstr &MI) {
 }
 
 static unsigned getVLOpNum(const MachineInstr &MI) {
-  const uint64_t TSFlags = MI.getDesc().TSFlags;
-  // This method is only called if we expect to have a VL operand, and all
-  // instructions with VL also have SEW.
-  assert(RISCVII::hasSEWOp(TSFlags) && RISCVII::hasVLOp(TSFlags));
-  unsigned Offset = 2;
-  if (RISCVII::hasVecPolicyOp(TSFlags))
-    Offset = 3;
-  return MI.getNumExplicitOperands() - Offset;
+  return RISCVII::getVLOpNum(MI.getDesc());
 }
 
 static unsigned getSEWOpNum(const MachineInstr &MI) {
-  const uint64_t TSFlags = MI.getDesc().TSFlags;
-  assert(RISCVII::hasSEWOp(TSFlags));
-  unsigned Offset = 1;
-  if (RISCVII::hasVecPolicyOp(TSFlags))
-    Offset = 2;
-  return MI.getNumExplicitOperands() - Offset;
+  return RISCVII::getSEWOpNum(MI.getDesc());
 }
 
 static VSETVLIInfo computeInfoForInstr(const MachineInstr &MI, uint64_t TSFlags,
@@ -572,7 +560,7 @@ static VSETVLIInfo computeInfoForInstr(const MachineInstr &MI, uint64_t TSFlags,
   // destination is tied to a source. Unless the source is undef. In that case
   // the user would have some control over the policy values.
   bool TailAgnostic = true;
-  bool UsesMaskPolicy = RISCVII::UsesMaskPolicy(TSFlags);
+  bool UsesMaskPolicy = RISCVII::usesMaskPolicy(TSFlags);
   // FIXME: Could we look at the above or below instructions to choose the
   // matched mask policy to reduce vsetvli instructions? Default mask policy is
   // agnostic if instructions use mask policy, otherwise is undisturbed. Because
@@ -1160,13 +1148,15 @@ void RISCVInsertVSETVLI::emitVSETVLIs(MachineBasicBlock &MBB) {
           // with current VL/VTYPE.
           bool NeedInsertVSETVLI = true;
           if (PrevVSETVLIMI) {
-            bool HasSameAVL =
-                CurInfo.hasSameAVL(NewInfo) ||
-                (NewInfo.hasAVLReg() && NewInfo.getAVLReg().isVirtual() &&
-                 NewInfo.getAVLReg() == PrevVSETVLIMI->getOperand(0).getReg());
             // If these two VSETVLI have the same AVL and the same VLMAX,
             // we could merge these two VSETVLI.
-            if (HasSameAVL && CurInfo.hasSameVLMAX(NewInfo)) {
+            // TODO: If we remove this, we get a `vsetvli x0, x0, vtype'
+            // here.  We could simply let this be emitted, then remove
+            // the unused vsetvlis in a post-pass.
+            if (CurInfo.hasSameAVL(NewInfo) && CurInfo.hasSameVLMAX(NewInfo)) {
+              // WARNING: For correctness, it is essential the contents of VL
+              // and VTYPE stay the same after MI.  This greatly limits the
+              // mutation we can legally do here.
               PrevVSETVLIMI->getOperand(2).setImm(NewInfo.encodeVTYPE());
               NeedInsertVSETVLI = false;
             }
@@ -1248,6 +1238,32 @@ void RISCVInsertVSETVLI::doLocalPrepass(MachineBasicBlock &MBB) {
     }
 
     if (RISCVII::hasSEWOp(TSFlags)) {
+      if (RISCVII::hasVLOp(TSFlags)) {
+        const auto Require = computeInfoForInstr(MI, TSFlags, MRI);
+        // If the AVL is the result of a previous vsetvli which has the
+        // same AVL and VLMAX as our current state, we can reuse the AVL
+        // from the current state for the new one.  This allows us to
+        // generate 'vsetvli x0, x0, vtype" or possible skip the transition
+        // entirely.
+        if (!CurInfo.isUnknown() && Require.hasAVLReg() &&
+            Require.getAVLReg().isVirtual()) {
+          if (MachineInstr *DefMI = MRI->getVRegDef(Require.getAVLReg())) {
+            if (isVectorConfigInstr(*DefMI)) {
+              VSETVLIInfo DefInfo = getInfoForVSETVLI(*DefMI);
+              if (DefInfo.hasSameAVL(CurInfo) &&
+                  DefInfo.hasSameVLMAX(CurInfo)) {
+                MachineOperand &VLOp = MI.getOperand(getVLOpNum(MI));
+                if (CurInfo.hasAVLImm())
+                  VLOp.ChangeToImmediate(CurInfo.getAVLImm());
+                else
+                  VLOp.ChangeToRegister(CurInfo.getAVLReg(), /*IsDef*/ false);
+                CurInfo = computeInfoForInstr(MI, TSFlags, MRI);
+                continue;
+              }
+            }
+          }
+        }
+      }
       CurInfo = computeInfoForInstr(MI, TSFlags, MRI);
       continue;
     }

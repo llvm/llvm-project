@@ -960,6 +960,19 @@ def LinalgStructuredInterface : OpInterface<"LinalgOp"> {
     >,
     InterfaceMethod<
       /*desc=*/[{
+        Checks if the given operands can be dropped, and the remaining
+        operands can still compute the bounds of the op.
+      }],
+      /*retTy=*/"bool",
+      /*methodName=*/"canOpOperandsBeDropped",
+      /*args=*/(ins "ArrayRef<OpOperand *>":$droppedOperands),
+      /*methodBody=*/"",
+      /*defaultImplementation=*/[{
+        return detail::canOpOperandsBeDroppedImpl($_op, droppedOperands);
+      }]
+    >,
+    InterfaceMethod<
+      /*desc=*/[{
         Return the range of position in the result of the affine map
         computed by getLoopsToShapesMap() which correspond to the
         AffineExprs used to access the outputs of the operation.

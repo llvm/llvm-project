@@ -4151,7 +4151,7 @@ static SDValue lowerConvertToSVBool(SDValue Op, SelectionDAG &DAG) {
     }
   }
 
-  // Splat vectors of 1 will generate ptrue instructions
+  // Splat vectors of one will generate ptrue instructions
   if (ISD::isConstantSplatVectorAllOnes(InOp.getNode()))
     return Reinterpret;
 

@@ -1563,8 +1563,8 @@ std::optional<SpecificCall> IntrinsicInterface::Match(
           // (A previous error message for UBOUND will take precedence
           // over this one, as this error is caught by the second entry
           // for UBOUND.)
-          if (std::optional<Shape> shape{GetShape(context, *arg)}) {
-            if (!shape->empty() && !shape->back().has_value()) {
+          if (const Symbol * argSym{GetLastSymbol(*arg)}) {
+            if (semantics::IsAssumedSizeArray(*argSym)) {
               if (strcmp(name, "shape") == 0) {
                 messages.Say(arg->sourceLocation(),
                     "The '%s=' argument to the intrinsic function '%s' may not be assumed-size"_err_en_US,

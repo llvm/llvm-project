@@ -117,7 +117,7 @@ static void setInsertionPointAfter(OpBuilder &b, Value value) {
 SmallVector<OpOperand *>
 AnalysisState::getAliasingOpOperand(OpResult result) const {
   if (Operation *op = result.getDefiningOp())
-    if (auto bufferizableOp = dyn_cast<BufferizableOpInterface>(op))
+    if (auto bufferizableOp = getOptions().dynCastBufferizableOp(op))
       return bufferizableOp.getAliasingOpOperand(result, *this);
   return {};
 }
@@ -127,7 +127,7 @@ AnalysisState::getAliasingOpOperand(OpResult result) const {
 SmallVector<OpResult>
 AnalysisState::getAliasingOpResult(OpOperand &opOperand) const {
   if (auto bufferizableOp =
-          dyn_cast<BufferizableOpInterface>(opOperand.getOwner()))
+          getOptions().dynCastBufferizableOp(opOperand.getOwner()))
     return bufferizableOp.getAliasingOpResult(opOperand, *this);
   return {};
 }
@@ -136,7 +136,7 @@ AnalysisState::getAliasingOpResult(OpOperand &opOperand) const {
 /// op is not bufferizable.
 bool AnalysisState::bufferizesToMemoryRead(OpOperand &opOperand) const {
   if (auto bufferizableOp =
-          dyn_cast<BufferizableOpInterface>(opOperand.getOwner()))
+          getOptions().dynCastBufferizableOp(opOperand.getOwner()))
     return bufferizableOp.bufferizesToMemoryRead(opOperand, *this);
 
   // Unknown op that returns a tensor. The inplace analysis does not support it.
@@ -148,7 +148,7 @@ bool AnalysisState::bufferizesToMemoryRead(OpOperand &opOperand) const {
 /// `true` if the op is not bufferizable.
 bool AnalysisState::bufferizesToMemoryWrite(OpOperand &opOperand) const {
   if (auto bufferizableOp =
-          dyn_cast<BufferizableOpInterface>(opOperand.getOwner()))
+          getOptions().dynCastBufferizableOp(opOperand.getOwner()))
     return bufferizableOp.bufferizesToMemoryWrite(opOperand, *this);
 
   // Unknown op that returns a tensor. The inplace analysis does not support it.
@@ -160,7 +160,7 @@ bool AnalysisState::bufferizesToMemoryWrite(OpOperand &opOperand) const {
 /// alias. Return false if the op is not bufferizable.
 bool AnalysisState::bufferizesToAliasOnly(OpOperand &opOperand) const {
   if (auto bufferizableOp =
-          dyn_cast<BufferizableOpInterface>(opOperand.getOwner()))
+          getOptions().dynCastBufferizableOp(opOperand.getOwner()))
     return bufferizableOp.bufferizesToAliasOnly(opOperand, *this);
 
   // Unknown op that returns a tensor. The inplace analysis does not support it.
