@@ -22,6 +22,9 @@ struct UnimplementedFeature {
   static bool buildTypeCheck() { return false; }
   static bool tbaa() { return false; }
   static bool cleanups() { return false; }
+  // This is for whether or not we've implemented a cir::VectorType
+  // corresponding to `llvm::VectorType`
+  static bool cirVectorType() { return false; }
 };
 } // namespace cir
 
