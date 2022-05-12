@@ -10,6 +10,7 @@
 //===----------------------------------------------------------------------===//
 
 #include <exception>
+#include <memory>
 #include <stdlib.h>
 #include "abort_message.h"
 #include "cxxabi.h"
@@ -21,6 +22,18 @@
 #if !defined(LIBCXXABI_SILENT_TERMINATE)
 
 static constinit const char* cause = "uncaught";
+
+#ifndef _LIBCXXABI_NO_EXCEPTIONS
+// Demangle the given string, or return the string as-is in case of an error.
+static std::unique_ptr<char const, void (*)(char const*)> demangle(char const* str)
+{
+#if !defined(LIBCXXABI_NON_DEMANGLING_TERMINATE)
+    if (const char* result = __cxxabiv1::__cxa_demangle(str, nullptr, nullptr, nullptr))
+        return {result, [](char const* p) { std::free(const_cast<char*>(p)); }};
+#endif
+    return {str, [](char const*) { /* nothing to free */ }};
+}
+#endif
 
 __attribute__((noreturn))
 static void demangling_terminate_handler()
@@ -45,17 +58,7 @@ static void demangling_terminate_handler()
                         exception_header + 1;
                 const __shim_type_info* thrown_type =
                     static_cast<const __shim_type_info*>(exception_header->exceptionType);
-#if !defined(LIBCXXABI_NON_DEMANGLING_TERMINATE)
-                // Try to get demangled name of thrown_type
-                int status;
-                char buf[1024];
-                size_t len = sizeof(buf);
-                const char* name = __cxa_demangle(thrown_type->name(), buf, &len, &status);
-                if (status != 0)
-                    name = thrown_type->name();
-#else
-                const char* name = thrown_type->name();
-#endif
+                auto name = demangle(thrown_type->name());
                 // If the uncaught exception can be caught with std::exception&
                 const __shim_type_info* catch_type =
                     static_cast<const __shim_type_info*>(&typeid(std::exception));
@@ -64,12 +67,12 @@ static void demangling_terminate_handler()
                     // Include the what() message from the exception
                     const std::exception* e = static_cast<const std::exception*>(thrown_object);
                     abort_message("terminating due to %s exception of type %s: %s",
-                                  cause, name, e->what());
+                                  cause, name.get(), e->what());
                 }
                 else
                     // Else just note that we're terminating due to an exception
                     abort_message("terminating due to %s exception of type %s",
-                                   cause, name);
+                                   cause, name.get());
             }
             else
                 // Else we're terminating due to a foreign exception
