@@ -1101,6 +1101,7 @@ DenseElementsAttr DenseIntOrFPElementsAttr::getRawComplex(ShapedType type,
       dataEltSize / 2, isInt, isSigned));
 
   int64_t numElements = data.size() / dataEltSize;
+  (void)numElements;
   assert(numElements == 1 || numElements == type.getNumElements());
   return getRaw(type, data);
 }
