@@ -286,22 +286,22 @@ define fastcc void @c_expand_expr_stmt(%union.tree_node* %expr) nounwind {
 ; CHECK-NEXT:    testb %bl, %bl
 ; CHECK-NEXT:  .LBB3_10: # %bb2.i3
 ; CHECK-NEXT:    movq 8(%rax), %rax
-; CHECK-NEXT:    movb 16(%rax), %cl
+; CHECK-NEXT:    movzbl 16(%rax), %ecx
 ; CHECK-NEXT:    xorl %eax, %eax
-; CHECK-NEXT:    cmpb $23, %cl
+; CHECK-NEXT:    cmpl $23, %ecx
 ; CHECK-NEXT:    je .LBB3_16
 ; CHECK-NEXT:  # %bb.11: # %bb2.i3
-; CHECK-NEXT:    cmpb $16, %cl
+; CHECK-NEXT:    cmpl $16, %ecx
 ; CHECK-NEXT:    je .LBB3_16
 ; CHECK-NEXT:    jmp .LBB3_9
 ; CHECK-NEXT:  .LBB3_13: # %bb2.i.i2
 ; CHECK-NEXT:    movq 8(%rax), %rax
-; CHECK-NEXT:    movb 16(%rax), %cl
+; CHECK-NEXT:    movzbl 16(%rax), %ecx
 ; CHECK-NEXT:    xorl %eax, %eax
-; CHECK-NEXT:    cmpb $16, %cl
+; CHECK-NEXT:    cmpl $16, %ecx
 ; CHECK-NEXT:    je .LBB3_16
 ; CHECK-NEXT:  # %bb.14: # %bb2.i.i2
-; CHECK-NEXT:    cmpb $23, %cl
+; CHECK-NEXT:    cmpl $23, %ecx
 ; CHECK-NEXT:    je .LBB3_16
 ; CHECK-NEXT:    jmp .LBB3_9
 entry:

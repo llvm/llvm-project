@@ -36,57 +36,66 @@ struct LoopParams {
 };
 } // namespace
 
-scf::ForOp mlir::cloneWithNewYields(OpBuilder &b, scf::ForOp loop,
-                                    ValueRange newIterOperands,
-                                    ValueRange newYieldedValues,
-                                    bool replaceLoopResults) {
-  assert(newIterOperands.size() == newYieldedValues.size() &&
-         "newIterOperands must be of the same size as newYieldedValues");
-
+scf::ForOp mlir::replaceLoopWithNewYields(OpBuilder &builder, scf::ForOp loop,
+                                          ValueRange newIterOperands,
+                                          NewYieldValueFn newYieldValuesFn) {
   // Create a new loop before the existing one, with the extra operands.
-  OpBuilder::InsertionGuard g(b);
-  b.setInsertionPoint(loop);
-  auto operands = llvm::to_vector<4>(loop.getIterOperands());
+  OpBuilder::InsertionGuard g(builder);
+  builder.setInsertionPoint(loop);
+  auto operands = llvm::to_vector(loop.getIterOperands());
   operands.append(newIterOperands.begin(), newIterOperands.end());
-  scf::ForOp newLoop =
-      b.create<scf::ForOp>(loop.getLoc(), loop.getLowerBound(),
-                           loop.getUpperBound(), loop.getStep(), operands);
+  scf::ForOp newLoop = builder.create<scf::ForOp>(
+      loop.getLoc(), loop.getLowerBound(), loop.getUpperBound(), loop.getStep(),
+      operands, [](OpBuilder &, Location, Value, ValueRange) {});
 
-  auto &loopBody = *loop.getBody();
-  auto &newLoopBody = *newLoop.getBody();
-  // Clone / erase the yield inside the original loop to both:
-  //   1. augment its operands with the newYieldedValues.
-  //   2. automatically apply the BlockAndValueMapping on its operand
-  auto yield = cast<scf::YieldOp>(loopBody.getTerminator());
-  b.setInsertionPoint(yield);
-  auto yieldOperands = llvm::to_vector<4>(yield.getOperands());
-  yieldOperands.append(newYieldedValues.begin(), newYieldedValues.end());
-  auto newYield = b.create<scf::YieldOp>(yield.getLoc(), yieldOperands);
+  Block *loopBody = loop.getBody();
+  Block *newLoopBody = newLoop.getBody();
 
-  // Clone the loop body with remaps.
-  BlockAndValueMapping bvm;
-  // a. remap the induction variable.
-  bvm.map(loop.getInductionVar(), newLoop.getInductionVar());
-  // b. remap the BB args.
-  bvm.map(loopBody.getArguments(),
-          newLoopBody.getArguments().take_front(loopBody.getNumArguments()));
-  // c. remap the iter args.
-  bvm.map(newIterOperands,
-          newLoop.getRegionIterArgs().take_back(newIterOperands.size()));
-  b.setInsertionPointToStart(&newLoopBody);
-  // Skip the original yield terminator which does not have enough operands.
-  for (auto &o : loopBody.without_terminator())
-    b.clone(o, bvm);
+  // Move the body of the original loop to the new loop.
+  newLoopBody->getOperations().splice(newLoopBody->end(),
+                                      loopBody->getOperations());
 
-  // Replace `loop`'s results if requested.
-  if (replaceLoopResults) {
-    for (auto it : llvm::zip(loop.getResults(), newLoop.getResults().take_front(
-                                                    loop.getNumResults())))
-      std::get<0>(it).replaceAllUsesWith(std::get<1>(it));
+  // Generate the new yield values to use by using the callback and append the
+  // yield values to the scf.yield operation.
+  auto yield = cast<scf::YieldOp>(newLoopBody->getTerminator());
+  ArrayRef<BlockArgument> newBBArgs =
+      newLoopBody->getArguments().take_back(newIterOperands.size());
+  {
+    OpBuilder::InsertionGuard g(builder);
+    builder.setInsertionPoint(yield);
+    SmallVector<Value> newYieldedValues =
+        newYieldValuesFn(builder, loop.getLoc(), newBBArgs);
+    assert(newIterOperands.size() == newYieldedValues.size() &&
+           "expected as many new yield values as new iter operands");
+    yield.getResultsMutable().append(newYieldedValues);
   }
 
-  // TODO: this is unsafe in the context of a PatternRewrite.
-  newYield.erase();
+  // Remap the BlockArguments from the original loop to the new loop
+  // BlockArguments.
+  ArrayRef<BlockArgument> bbArgs = loopBody->getArguments();
+  for (auto it :
+       llvm::zip(bbArgs, newLoopBody->getArguments().take_front(bbArgs.size())))
+    std::get<0>(it).replaceAllUsesWith(std::get<1>(it));
+
+  // Replace all uses of `newIterOperands` with the corresponding basic block
+  // arguments.
+  for (auto it : llvm::zip(newIterOperands, newBBArgs)) {
+    std::get<0>(it).replaceUsesWithIf(std::get<1>(it), [&](OpOperand &use) {
+      Operation *user = use.getOwner();
+      return newLoop->isProperAncestor(user);
+    });
+  }
+
+  // Replace all uses of the original loop with corresponding values from the
+  // new loop.
+  loop.replaceAllUsesWith(
+      newLoop.getResults().take_front(loop.getNumResults()));
+
+  // Add a fake yield to the original loop body that just returns the
+  // BlockArguments corresponding to the iter_args. This makes it a no-op loop.
+  // The loop is dead. The caller is expected to erase it.
+  builder.setInsertionPointToEnd(loopBody);
+  builder.create<scf::YieldOp>(loop->getLoc(), loop.getRegionIterArgs());
 
   return newLoop;
 }

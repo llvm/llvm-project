@@ -2275,6 +2275,54 @@ static Instruction *foldFNegShuffle(ShuffleVectorInst &Shuf,
   return nullptr;
 }
 
+/// Canonicalize casts after shuffle.
+static Instruction *foldCastShuffle(ShuffleVectorInst &Shuf,
+                                    InstCombiner::BuilderTy &Builder) {
+  // Do we have 2 matching cast operands?
+  auto *Cast0 = dyn_cast<CastInst>(Shuf.getOperand(0));
+  auto *Cast1 = dyn_cast<CastInst>(Shuf.getOperand(1));
+  if (!Cast0 || !Cast1 || Cast0->getOpcode() != Cast1->getOpcode() ||
+      Cast0->getSrcTy() != Cast1->getSrcTy())
+    return nullptr;
+
+  // TODO: Allow other opcodes? That would require easing the type restrictions
+  //       below here.
+  CastInst::CastOps CastOpcode = Cast0->getOpcode();
+  switch (CastOpcode) {
+  case Instruction::FPToSI:
+  case Instruction::FPToUI:
+  case Instruction::SIToFP:
+  case Instruction::UIToFP:
+    break;
+  default:
+    return nullptr;
+  }
+
+  VectorType *ShufTy = Shuf.getType();
+  VectorType *ShufOpTy = cast<VectorType>(Shuf.getOperand(0)->getType());
+  VectorType *CastSrcTy = cast<VectorType>(Cast0->getSrcTy());
+
+  // TODO: Allow length-changing shuffles?
+  if (ShufTy != ShufOpTy)
+    return nullptr;
+
+  // TODO: Allow element-size-changing casts?
+  assert(isa<FixedVectorType>(CastSrcTy) && isa<FixedVectorType>(ShufOpTy) &&
+         "Expected fixed vector operands for casts and binary shuffle");
+  if (CastSrcTy->getPrimitiveSizeInBits() != ShufOpTy->getPrimitiveSizeInBits())
+    return nullptr;
+
+  // At least one of the operands must have only one use (the shuffle).
+  if (!Cast0->hasOneUse() && !Cast1->hasOneUse())
+    return nullptr;
+
+  // shuffle (cast X), (cast Y), Mask --> cast (shuffle X, Y, Mask)
+  Value *X = Cast0->getOperand(0);
+  Value *Y = Cast1->getOperand(0);
+  Value *NewShuf = Builder.CreateShuffleVector(X, Y, Shuf.getShuffleMask());
+  return CastInst::Create(CastOpcode, NewShuf, ShufTy);
+}
+
 /// Try to fold an extract subvector operation.
 static Instruction *foldIdentityExtractShuffle(ShuffleVectorInst &Shuf) {
   Value *Op0 = Shuf.getOperand(0), *Op1 = Shuf.getOperand(1);
@@ -2571,6 +2619,9 @@ Instruction *InstCombinerImpl::visitShuffleVectorInst(ShuffleVectorInst &SVI) {
     return I;
 
   if (Instruction *I = foldFNegShuffle(SVI, Builder))
+    return I;
+
+  if (Instruction *I = foldCastShuffle(SVI, Builder))
     return I;
 
   APInt UndefElts(VWidth, 0);

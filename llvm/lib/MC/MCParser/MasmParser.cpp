@@ -976,6 +976,8 @@ private:
   bool parseDirectiveEnds(StringRef Name, SMLoc NameLoc);
   bool parseDirectiveNestedEnds();
 
+  bool parseDirectiveExtern();
+
   /// Parse a directive like ".globl" which accepts a single symbol (which
   /// should be a label or an external).
   bool parseDirectiveSymbolAttribute(MCSymbolAttr Attr);
@@ -2405,8 +2407,7 @@ bool MasmParser::parseStatement(ParseStatementInfo &Info,
     case DK_ORG:
       return parseDirectiveOrg();
     case DK_EXTERN:
-      eatToEndOfStatement(); // .extern is the default, ignore it.
-      return false;
+      return parseDirectiveExtern();
     case DK_PUBLIC:
       return parseDirectiveSymbolAttribute(MCSA_Global);
     case DK_COMM:
@@ -6016,6 +6017,37 @@ bool MasmParser::parseDirectivePurgeMacro(SMLoc DirectiveLoc) {
     parseOptionalToken(AsmToken::EndOfStatement);
   }
 
+  return false;
+}
+
+bool MasmParser::parseDirectiveExtern() {
+  // .extern is the default - but we still need to take any provided type info.
+  auto parseOp = [&]() -> bool {
+    StringRef Name;
+    SMLoc NameLoc = getTok().getLoc();
+    if (parseIdentifier(Name))
+      return Error(NameLoc, "expected name");
+    if (parseToken(AsmToken::Colon))
+      return true;
+
+    StringRef TypeName;
+    SMLoc TypeLoc = getTok().getLoc();
+    if (parseIdentifier(TypeName))
+      return Error(TypeLoc, "expected type");
+    AsmTypeInfo Type;
+    if (lookUpType(TypeName, Type))
+      return Error(TypeLoc, "unrecognized type");
+    KnownType[Name.lower()] = Type;
+
+    MCSymbol *Sym = getContext().getOrCreateSymbol(Name);
+    Sym->setExternal(true);
+    getStreamer().emitSymbolAttribute(Sym, MCSA_Extern);
+
+    return false;
+  };
+
+  if (parseMany(parseOp))
+    return addErrorSuffix(" in directive 'extern'");
   return false;
 }
 

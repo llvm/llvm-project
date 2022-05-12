@@ -11404,13 +11404,21 @@ void CGOpenMPRuntime::emitTargetDataStandAloneCall(
 
 namespace {
   /// Kind of parameter in a function with 'declare simd' directive.
-  enum ParamKindTy { LinearWithVarStride, Linear, Uniform, Vector };
-  /// Attribute set of the parameter.
-  struct ParamAttrTy {
-    ParamKindTy Kind = Vector;
-    llvm::APSInt StrideOrArg;
-    llvm::APSInt Alignment;
-  };
+enum ParamKindTy {
+  LinearWithVarStride,
+  Linear,
+  LinearRef,
+  LinearUVal,
+  LinearVal,
+  Uniform,
+  Vector,
+};
+/// Attribute set of the parameter.
+struct ParamAttrTy {
+  ParamKindTy Kind = Vector;
+  llvm::APSInt StrideOrArg;
+  llvm::APSInt Alignment;
+};
 } // namespace
 
 static unsigned evaluateCDTSize(const FunctionDecl *FD,
@@ -11465,6 +11473,51 @@ static unsigned evaluateCDTSize(const FunctionDecl *FD,
   return C.getTypeSize(CDT);
 }
 
+/// Mangle the parameter part of the vector function name according to
+/// their OpenMP classification. The mangling function is defined in
+/// section 4.5 of the AAVFABI(2021Q1).
+static std::string mangleVectorParameters(ArrayRef<ParamAttrTy> ParamAttrs) {
+  SmallString<256> Buffer;
+  llvm::raw_svector_ostream Out(Buffer);
+  for (const auto &ParamAttr : ParamAttrs) {
+    switch (ParamAttr.Kind) {
+    case LinearWithVarStride:
+      Out << "ls" << ParamAttr.StrideOrArg;
+      break;
+    case Linear:
+      Out << 'l';
+      break;
+    case LinearRef:
+      Out << 'R';
+      break;
+    case LinearUVal:
+      Out << 'U';
+      break;
+    case LinearVal:
+      Out << 'L';
+      break;
+    case Uniform:
+      Out << 'u';
+      break;
+    case Vector:
+      Out << 'v';
+      break;
+    }
+    if (ParamAttr.Kind == Linear || ParamAttr.Kind == LinearRef ||
+        ParamAttr.Kind == LinearUVal || ParamAttr.Kind == LinearVal) {
+      // Don't print the step value if it is not present or if it is
+      // equal to 1.
+      if (ParamAttr.StrideOrArg != 1)
+        Out << ParamAttr.StrideOrArg;
+    }
+
+    if (!!ParamAttr.Alignment)
+      Out << 'a' << ParamAttr.Alignment;
+  }
+
+  return std::string(Out.str());
+}
+
 static void
 emitX86DeclareSimdFunction(const FunctionDecl *FD, llvm::Function *Fn,
                            const llvm::APSInt &VLENVal,
@@ -11513,26 +11566,7 @@ emitX86DeclareSimdFunction(const FunctionDecl *FD, llvm::Function *Fn,
       } else {
         Out << VLENVal;
       }
-      for (const ParamAttrTy &ParamAttr : ParamAttrs) {
-        switch (ParamAttr.Kind){
-        case LinearWithVarStride:
-          Out << 's' << ParamAttr.StrideOrArg;
-          break;
-        case Linear:
-          Out << 'l';
-          if (ParamAttr.StrideOrArg != 1)
-            Out << ParamAttr.StrideOrArg;
-          break;
-        case Uniform:
-          Out << 'u';
-          break;
-        case Vector:
-          Out << 'v';
-          break;
-        }
-        if (!!ParamAttr.Alignment)
-          Out << 'a' << ParamAttr.Alignment;
-      }
+      Out << mangleVectorParameters(ParamAttrs);
       Out << '_' << Fn->getName();
       Fn->addFnAttr(Out.str());
     }
@@ -11643,39 +11677,6 @@ getNDSWDS(const FunctionDecl *FD, ArrayRef<ParamAttrTy> ParamAttrs) {
   return std::make_tuple(*std::min_element(std::begin(Sizes), std::end(Sizes)),
                          *std::max_element(std::begin(Sizes), std::end(Sizes)),
                          OutputBecomesInput);
-}
-
-/// Mangle the parameter part of the vector function name according to
-/// their OpenMP classification. The mangling function is defined in
-/// section 3.5 of the AAVFABI.
-static std::string mangleVectorParameters(ArrayRef<ParamAttrTy> ParamAttrs) {
-  SmallString<256> Buffer;
-  llvm::raw_svector_ostream Out(Buffer);
-  for (const auto &ParamAttr : ParamAttrs) {
-    switch (ParamAttr.Kind) {
-    case LinearWithVarStride:
-      Out << "ls" << ParamAttr.StrideOrArg;
-      break;
-    case Linear:
-      Out << 'l';
-      // Don't print the step value if it is not present or if it is
-      // equal to 1.
-      if (ParamAttr.StrideOrArg != 1)
-        Out << ParamAttr.StrideOrArg;
-      break;
-    case Uniform:
-      Out << 'u';
-      break;
-    case Vector:
-      Out << 'v';
-      break;
-    }
-
-    if (!!ParamAttr.Alignment)
-      Out << 'a' << ParamAttr.Alignment;
-  }
-
-  return std::string(Out.str());
 }
 
 // Function used to add the attribute. The parameter `VLEN` is
@@ -11898,14 +11899,20 @@ void CGOpenMPRuntime::emitDeclareSimdFunction(const FunctionDecl *FD,
       }
       // Mark linear parameters.
       auto *SI = Attr->steps_begin();
+      auto *MI = Attr->modifiers_begin();
       for (const Expr *E : Attr->linears()) {
         E = E->IgnoreParenImpCasts();
         unsigned Pos;
+        bool IsReferenceType = false;
         // Rescaling factor needed to compute the linear parameter
         // value in the mangled name.
         unsigned PtrRescalingFactor = 1;
         if (isa<CXXThisExpr>(E)) {
           Pos = ParamPositions[FD];
+          auto *P = cast<PointerType>(E->getType());
+          PtrRescalingFactor = CGM.getContext()
+                                   .getTypeSizeInChars(P->getPointeeType())
+                                   .getQuantity();
         } else {
           const auto *PVD = cast<ParmVarDecl>(cast<DeclRefExpr>(E)->getDecl())
                                 ->getCanonicalDecl();
@@ -11916,9 +11923,23 @@ void CGOpenMPRuntime::emitDeclareSimdFunction(const FunctionDecl *FD,
             PtrRescalingFactor = CGM.getContext()
                                      .getTypeSizeInChars(P->getPointeeType())
                                      .getQuantity();
+          else if (PVD->getType()->isReferenceType()) {
+            IsReferenceType = true;
+            PtrRescalingFactor =
+                CGM.getContext()
+                    .getTypeSizeInChars(PVD->getType().getNonReferenceType())
+                    .getQuantity();
+          }
         }
         ParamAttrTy &ParamAttr = ParamAttrs[Pos];
-        ParamAttr.Kind = Linear;
+        if (*MI == OMPC_LINEAR_ref)
+          ParamAttr.Kind = LinearRef;
+        else if (*MI == OMPC_LINEAR_uval)
+          ParamAttr.Kind = LinearUVal;
+        else if (IsReferenceType)
+          ParamAttr.Kind = LinearVal;
+        else
+          ParamAttr.Kind = Linear;
         // Assuming a stride of 1, for `linear` without modifiers.
         ParamAttr.StrideOrArg = llvm::APSInt::getUnsigned(1);
         if (*SI) {
@@ -11942,9 +11963,10 @@ void CGOpenMPRuntime::emitDeclareSimdFunction(const FunctionDecl *FD,
         // If we are using a linear clause on a pointer, we need to
         // rescale the value of linear_step with the byte size of the
         // pointee type.
-        if (Linear == ParamAttr.Kind)
+        if (ParamAttr.Kind == Linear || ParamAttr.Kind == LinearRef)
           ParamAttr.StrideOrArg = ParamAttr.StrideOrArg * PtrRescalingFactor;
         ++SI;
+        ++MI;
       }
       llvm::APSInt VLENVal;
       SourceLocation ExprLoc;
