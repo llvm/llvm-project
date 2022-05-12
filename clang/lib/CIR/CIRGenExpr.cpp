@@ -189,7 +189,7 @@ void CIRGenFunction::buildStoreOfScalar(mlir::Value Value, Address Addr,
   assert(Addr.getPointer() && "expected pointer to exist");
   auto SrcAlloca =
       dyn_cast_or_null<mlir::cir::AllocaOp>(Addr.getPointer().getDefiningOp());
-  if (InitDecl) {
+  if (InitDecl && SrcAlloca) {
     InitStyle IS;
     const VarDecl *VD = dyn_cast_or_null<VarDecl>(InitDecl);
     assert(VD && "VarDecl expected");
@@ -210,8 +210,10 @@ void CIRGenFunction::buildStoreOfScalar(mlir::Value Value, Address Addr,
       SrcAlloca.setInitAttr(InitStyleAttr::get(builder.getContext(), IS));
     }
   }
+
   assert(currSrcLoc && "must pass in source location");
   builder.create<mlir::cir::StoreOp>(*currSrcLoc, Value, Addr.getPointer());
+
   if (isNontemporal) {
     llvm_unreachable("NYI");
   }
