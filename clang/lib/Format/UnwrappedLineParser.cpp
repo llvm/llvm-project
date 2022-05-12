@@ -14,6 +14,7 @@
 
 #include "UnwrappedLineParser.h"
 #include "FormatToken.h"
+#include "TokenAnnotator.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
@@ -460,6 +461,7 @@ bool UnwrappedLineParser::precededByCommentOrPPDirective() const {
   return Previous && Previous->is(tok::comment) &&
          (Previous->IsMultiline || Previous->NewlinesBefore > 0);
 }
+
 /// \brief Parses a level, that is ???.
 /// \param HasOpeningBrace If that level is started by an opening brace.
 /// \param CanContainBracedList If the content can contain (at any level) a
@@ -751,6 +753,50 @@ size_t UnwrappedLineParser::computePPHash() const {
   return h;
 }
 
+// Checks whether \p ParsedLine might fit on a single line. We must clone the
+// tokens of \p ParsedLine before running the token annotator on it so that we
+// can restore them afterward.
+bool UnwrappedLineParser::mightFitOnOneLine(UnwrappedLine &ParsedLine) const {
+  const auto ColumnLimit = Style.ColumnLimit;
+  if (ColumnLimit == 0)
+    return true;
+
+  auto &Tokens = ParsedLine.Tokens;
+  assert(!Tokens.empty());
+  const auto *LastToken = Tokens.back().Tok;
+  assert(LastToken);
+
+  SmallVector<UnwrappedLineNode> SavedTokens(Tokens.size());
+
+  int Index = 0;
+  for (const auto &Token : Tokens) {
+    assert(Token.Tok);
+    auto &SavedToken = SavedTokens[Index++];
+    SavedToken.Tok = new FormatToken;
+    SavedToken.Tok->copyFrom(*Token.Tok);
+    SavedToken.Children = std::move(Token.Children);
+  }
+
+  AnnotatedLine Line(ParsedLine);
+  assert(Line.Last == LastToken);
+
+  TokenAnnotator Annotator(Style, Keywords);
+  Annotator.annotate(Line);
+  Annotator.calculateFormattingInformation(Line);
+
+  const int Length = LastToken->TotalLength;
+
+  Index = 0;
+  for (auto &Token : Tokens) {
+    const auto &SavedToken = SavedTokens[Index++];
+    Token.Tok->copyFrom(*SavedToken.Tok);
+    Token.Children = std::move(SavedToken.Children);
+    delete SavedToken.Tok;
+  }
+
+  return Line.Level * Style.IndentWidth + Length <= ColumnLimit;
+}
+
 UnwrappedLineParser::IfStmtKind
 UnwrappedLineParser::parseBlock(bool MustBeDeclaration, unsigned AddLevels,
                                 bool MunchSemi, bool UnindentWhitesmithsBraces,
@@ -813,8 +859,11 @@ UnwrappedLineParser::parseBlock(bool MustBeDeclaration, unsigned AddLevels,
     const FormatToken *Previous = Tokens->getPreviousToken();
     assert(Previous);
     if (Previous->isNot(tok::r_brace) || Previous->Optional) {
-      Tok->MatchingParen = FormatTok;
-      FormatTok->MatchingParen = Tok;
+      assert(!CurrentLines->empty());
+      if (mightFitOnOneLine(CurrentLines->back())) {
+        Tok->MatchingParen = FormatTok;
+        FormatTok->MatchingParen = Tok;
+      }
     }
   }
 
