@@ -532,11 +532,9 @@ FindMatchingEpilog(const std::vector<WinEH::Instruction>& EpilogInstrs,
 
     bool Match = true;
     for (unsigned i = 0; i < Instrs.size(); ++i)
-      if (Instrs[i].Operation != EpilogInstrs[i].Operation ||
-          Instrs[i].Offset != EpilogInstrs[i].Offset ||
-          Instrs[i].Register != EpilogInstrs[i].Register) {
-         Match = false;
-         break;
+      if (Instrs[i] != EpilogInstrs[i]) {
+        Match = false;
+        break;
       }
 
     if (Match)
