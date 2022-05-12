@@ -99,7 +99,8 @@ void VirtualUnwinder::unwindLinear(UnwindState &State, uint64_t Repeat) {
     return;
   }
 
-  if (Target > End) {
+  if (!isValidFallThroughRange(Binary->virtualAddrToOffset(Target),
+                               Binary->virtualAddrToOffset(End), Binary)) {
     // Skip unwinding the rest of LBR trace when a bogus range is seen.
     State.setInvalid();
     return;
@@ -581,7 +582,6 @@ bool PerfScriptReader::extractLBRStack(TraceStream &TraceIt,
     if (!SrcIsInternal && !DstIsInternal)
       continue;
 
-    // TODO: filter out buggy duplicate branches on Skylake
     LBRStack.emplace_back(LBREntry(Src, Dst));
   }
   TraceIt.advance();
@@ -878,7 +878,7 @@ void PerfScriptReader::computeCounterFromLBR(const PerfSample *Sample,
     // LBR and FROM of next LBR.
     uint64_t StartOffset = TargetOffset;
     if (Binary->offsetIsCode(StartOffset) && Binary->offsetIsCode(EndOffeset) &&
-        StartOffset <= EndOffeset)
+        isValidFallThroughRange(StartOffset, EndOffeset, Binary))
       Counter.recordRangeCount(StartOffset, EndOffeset, Repeat);
     EndOffeset = SourceOffset;
   }
@@ -1124,7 +1124,7 @@ void PerfScriptReader::warnInvalidRange() {
   const char *RangeCrossFuncMsg =
       "Fall through range should not cross function boundaries, likely due to "
       "profile and binary mismatch.";
-  const char *BogusRangeMsg = "Range start is after range end.";
+  const char *BogusRangeMsg = "Range start is after or too far from range end.";
 
   uint64_t TotalRangeNum = 0;
   uint64_t InstNotBoundary = 0;
@@ -1155,7 +1155,7 @@ void PerfScriptReader::warnInvalidRange() {
       WarnInvalidRange(StartOffset, EndOffset, RangeCrossFuncMsg);
     }
 
-    if (StartOffset > EndOffset) {
+    if (!isValidFallThroughRange(StartOffset, EndOffset, Binary)) {
       BogusRange += I.second;
       WarnInvalidRange(StartOffset, EndOffset, BogusRangeMsg);
     }
@@ -1172,7 +1172,8 @@ void PerfScriptReader::warnInvalidRange() {
       "of samples are from ranges that do cross function boundaries.");
   emitWarningSummary(
       BogusRange, TotalRangeNum,
-      "of samples are from ranges that have range start after range end.");
+      "of samples are from ranges that have range start after or too far from "
+      "range end acrossing the unconditinal jmp.");
 }
 
 void PerfScriptReader::parsePerfTraces() {

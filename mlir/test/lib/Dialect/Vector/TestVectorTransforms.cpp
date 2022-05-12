@@ -11,12 +11,14 @@
 #include "mlir/Analysis/SliceAnalysis.h"
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
+#include "mlir/Dialect/GPU/GPUDialect.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Dialect/Linalg/IR/Linalg.h"
 #include "mlir/Dialect/Linalg/Passes.h"
 #include "mlir/Dialect/Linalg/Transforms/Transforms.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/SCF/SCF.h"
+#include "mlir/Dialect/Vector/Transforms/VectorDistribution.h"
 #include "mlir/Dialect/Vector/Transforms/VectorTransforms.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Pass/PassManager.h"
@@ -700,6 +702,90 @@ struct TestVectorScanLowering
   }
 };
 
+/// Allocate shared memory for a single warp to test lowering of
+/// WarpExecuteOnLane0Op.
+static Value allocateGlobalSharedMemory(Location loc, OpBuilder &builder,
+                                        WarpExecuteOnLane0Op warpOp,
+                                        Type type) {
+  static constexpr int64_t kSharedMemorySpace = 3;
+  // Compute type of shared memory buffer.
+  MemRefType memrefType;
+  if (auto vectorType = type.dyn_cast<VectorType>()) {
+    memrefType =
+        MemRefType::get(vectorType.getShape(), vectorType.getElementType(), {},
+                        kSharedMemorySpace);
+  } else {
+    memrefType = MemRefType::get({1}, type, {}, kSharedMemorySpace);
+  }
+
+  // Get symbol table holding all shared memory globals.
+  ModuleOp moduleOp = warpOp->getParentOfType<ModuleOp>();
+  SymbolTable symbolTable(moduleOp);
+
+  // Create a pretty name.
+  SmallString<64> buf;
+  llvm::raw_svector_ostream os(buf);
+  interleave(memrefType.getShape(), os, "x");
+  os << "x" << memrefType.getElementType();
+  std::string symbolName = (Twine("__shared_") + os.str()).str();
+
+  auto ip = builder.saveInsertionPoint();
+  builder.setInsertionPoint(moduleOp);
+  auto global = builder.create<memref::GlobalOp>(
+      loc,
+      /*sym_name=*/symbolName,
+      /*sym_visibility=*/builder.getStringAttr("private"),
+      /*type=*/memrefType,
+      /*initial_value=*/Attribute(),
+      /*constant=*/false,
+      /*alignment=*/IntegerAttr());
+  symbolTable.insert(global);
+  // The symbol table inserts at the end of the module, but globals are a bit
+  // nicer if they are at the beginning.
+  global->moveBefore(&moduleOp.front());
+
+  builder.restoreInsertionPoint(ip);
+  return builder.create<memref::GetGlobalOp>(loc, memrefType, symbolName);
+}
+
+struct TestVectorDistribution
+    : public PassWrapper<TestVectorDistribution, OperationPass<func::FuncOp>> {
+  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(TestVectorDistribution)
+
+  void getDependentDialects(DialectRegistry &registry) const override {
+    registry.insert<scf::SCFDialect, memref::MemRefDialect, gpu::GPUDialect>();
+  }
+
+  StringRef getArgument() const final { return "test-vector-warp-distribute"; }
+  StringRef getDescription() const final {
+    return "Test vector warp distribute transformation and lowering patterns";
+  }
+  TestVectorDistribution() = default;
+  TestVectorDistribution(const TestVectorDistribution &pass)
+      : PassWrapper(pass) {}
+
+  Option<bool> warpOpToSCF{
+      *this, "rewrite-warp-ops-to-scf-if",
+      llvm::cl::desc("Lower vector.warp_execute_on_lane0 to scf.if op"),
+      llvm::cl::init(false)};
+
+  void runOnOperation() override {
+    RewritePatternSet patterns(&getContext());
+    WarpExecuteOnLane0LoweringOptions options;
+    options.warpAllocationFn = allocateGlobalSharedMemory;
+    options.warpSyncronizationFn = [](Location loc, OpBuilder &builder,
+                                      WarpExecuteOnLane0Op warpOp) {
+      builder.create<gpu::BarrierOp>(loc);
+    };
+    // Test on one pattern in isolation.
+    if (warpOpToSCF) {
+      populateWarpExecuteOnLane0OpToScfForPattern(patterns, options);
+      (void)applyPatternsAndFoldGreedily(getOperation(), std::move(patterns));
+      return;
+    }
+  }
+};
+
 } // namespace
 
 namespace mlir {
@@ -736,6 +822,8 @@ void registerTestVectorLowerings() {
   PassRegistration<TestFlattenVectorTransferPatterns>();
 
   PassRegistration<TestVectorScanLowering>();
+
+  PassRegistration<TestVectorDistribution>();
 }
 } // namespace test
 } // namespace mlir

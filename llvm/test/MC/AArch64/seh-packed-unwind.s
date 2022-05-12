@@ -91,10 +91,10 @@
 // CHECK-NEXT:     FrameSize: 112
 // CHECK-NEXT:     Prologue [
 // CHECK-NEXT:       sub sp, sp, #32
-// CHECK-NEXT:       stp x6, x7, [sp, #56]
-// CHECK-NEXT:       stp x4, x5, [sp, #40]
-// CHECK-NEXT:       stp x2, x3, [sp, #24]
-// CHECK-NEXT:       stp x0, x1, [sp, #8]
+// CHECK-NEXT:       stp x6, x7, [sp, #64]
+// CHECK-NEXT:       stp x4, x5, [sp, #48]
+// CHECK-NEXT:       stp x2, x3, [sp, #32]
+// CHECK-NEXT:       stp x0, x1, [sp, #16]
 // CHECK-NEXT:       str x19, [sp, #-80]!
 // CHECK-NEXT:       end
 // CHECK-NEXT:     ]
@@ -445,13 +445,13 @@ func5:
     .seh_proc func5
     str x19, [sp, #-80]!
     .seh_save_reg_x x19, 80
-    stp x0,  x1,  [sp, #8]
+    stp x0,  x1,  [sp, #16]
     .seh_nop
-    stp x2,  x3,  [sp, #24]
+    stp x2,  x3,  [sp, #32]
     .seh_nop
-    stp x4,  x5,  [sp, #40]
+    stp x4,  x5,  [sp, #48]
     .seh_nop
-    stp x6,  x7,  [sp, #56]
+    stp x6,  x7,  [sp, #64]
     .seh_nop
     sub sp,  sp,  #32
     .seh_stackalloc 32

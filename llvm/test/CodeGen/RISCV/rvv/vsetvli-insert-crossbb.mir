@@ -674,12 +674,10 @@ body:             |
   ; CHECK-NEXT:   [[PseudoVADD_VX_M1_:%[0-9]+]]:vr = PseudoVADD_VX_M1 [[PseudoVID_V_M1_]], [[PHI]], -1, 6 /* e64 */, implicit $vl, implicit $vtype
   ; CHECK-NEXT:   [[MUL:%[0-9]+]]:gpr = MUL [[PHI]], [[SRLI]]
   ; CHECK-NEXT:   [[ADD:%[0-9]+]]:gpr = ADD [[COPY]], [[MUL]]
-  ; FIXME: We insert a SEW=32,LMUL=1/2 VSETVLI here but no SEW=64,LMUL=1
-  ; VSETVLI before the VADD above. This misconfigures the VADD in the case that
-  ; the loop takes its backedge.
   ; CHECK-NEXT:   dead $x0 = PseudoVSETVLIX0 killed $x0, 87 /* e32, mf2, ta, mu */, implicit-def $vl, implicit-def $vtype, implicit $vl
   ; CHECK-NEXT:   PseudoVSE32_V_MF2 killed [[PseudoVADD_VX_M1_]], killed [[ADD]], -1, 5 /* e32 */, implicit $vl, implicit $vtype
   ; CHECK-NEXT:   [[ADDI:%[0-9]+]]:gpr = ADDI [[PHI]], 1
+  ; CHECK-NEXT:   dead $x0 = PseudoVSETVLIX0 killed $x0, 88 /* e64, m1, ta, mu */, implicit-def $vl, implicit-def $vtype, implicit $vl
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.2:
   ; CHECK-NEXT:   successors: %bb.1(0x40000000), %bb.3(0x40000000)
