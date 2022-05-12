@@ -37,7 +37,7 @@ std::unique_ptr<InlineAdvisor>
 llvm::getReleaseModeAdvisor(Module &M, ModuleAnalysisManager &MAM) {
   auto AOTRunner =
       std::make_unique<ReleaseModeModelRunner<llvm::InlinerSizeModel>>(
-          M.getContext(), FeatureNameMap, DecisionName);
+          M.getContext(), FeatureMap, DecisionName);
   return std::make_unique<MLInlineAdvisor>(M, MAM, std::move(AOTRunner));
 }
 #endif
@@ -51,14 +51,14 @@ static cl::opt<float> SizeIncreaseThreshold(
     cl::init(2.0));
 
 // clang-format off
-const std::array<std::string, NumberOfFeatures> llvm::FeatureNameMap{
+const std::array<TensorSpec, NumberOfFeatures> llvm::FeatureMap{
+#define POPULATE_NAMES(_, NAME) TensorSpec::createSpec<int64_t>(NAME, {1} ),
 // InlineCost features - these must come first
-#define POPULATE_NAMES(INDEX_NAME, NAME) NAME,
   INLINE_COST_FEATURE_ITERATOR(POPULATE_NAMES)
 #undef POPULATE_NAMES
 
 // Non-cost features
-#define POPULATE_NAMES(INDEX_NAME, NAME, COMMENT) NAME,
+#define POPULATE_NAMES(_, NAME, __) TensorSpec::createSpec<int64_t>(NAME, {1} ),
   INLINE_FEATURE_ITERATOR(POPULATE_NAMES)
 #undef POPULATE_NAMES
 };
@@ -364,7 +364,7 @@ void MLInlineAdvice::reportContextForRemark(
   using namespace ore;
   OR << NV("Callee", Callee->getName());
   for (size_t I = 0; I < NumberOfFeatures; ++I)
-    OR << NV(FeatureNameMap[I],
+    OR << NV(FeatureMap[I].name(),
              *getAdvisor()->getModelRunner().getTensor<int64_t>(I));
   OR << NV("ShouldInline", isInliningRecommended());
 }

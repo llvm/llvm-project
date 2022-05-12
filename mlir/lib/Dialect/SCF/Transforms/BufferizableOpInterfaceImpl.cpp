@@ -363,8 +363,8 @@ static Value getYieldedBuffer(RewriterBase &rewriter, Value tensor,
   // TODO: We should rollback, but for now just assume that this always
   // succeeds.
   assert(yieldedAlloc.hasValue() && "could not create alloc");
-  LogicalResult copyStatus = bufferization::createMemCpy(
-      rewriter, tensor.getLoc(), yieldedVal, *yieldedAlloc, state.getOptions());
+  LogicalResult copyStatus = state.getOptions().createMemCpy(
+      rewriter, tensor.getLoc(), yieldedVal, *yieldedAlloc);
   (void)copyStatus;
   assert(succeeded(copyStatus) && "could not create memcpy");
 

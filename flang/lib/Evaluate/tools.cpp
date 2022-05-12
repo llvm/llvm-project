@@ -238,6 +238,16 @@ Expr<SomeReal> GetComplexPart(const Expr<SomeComplex> &z, bool isImaginary) {
       z.u);
 }
 
+Expr<SomeReal> GetComplexPart(Expr<SomeComplex> &&z, bool isImaginary) {
+  return common::visit(
+      [&](auto &&zk) {
+        static constexpr int kind{ResultType<decltype(zk)>::kind};
+        return AsCategoryExpr(
+            ComplexComponent<kind>{isImaginary, std::move(zk)});
+      },
+      z.u);
+}
+
 // Convert REAL to COMPLEX of the same kind. Preserving the real operand kind
 // and then applying complex operand promotion rules allows the result to have
 // the highest precision of REAL and COMPLEX operands as required by Fortran
@@ -1266,7 +1276,8 @@ const Symbol *FindCommonBlockContaining(const Symbol &original) {
 
 bool IsProcedurePointer(const Symbol &original) {
   const Symbol &symbol{GetAssociationRoot(original)};
-  return symbol.has<ProcEntityDetails>() && IsPointer(symbol);
+  return IsPointer(symbol) &&
+      (symbol.has<ProcEntityDetails>() || symbol.has<SubprogramDetails>());
 }
 
 // 3.11 automatic data object

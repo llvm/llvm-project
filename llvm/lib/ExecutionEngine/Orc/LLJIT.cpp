@@ -524,7 +524,7 @@ GlobalCtorDtorScraper::operator()(ThreadSafeModule TSM,
       llvm::sort(InitsOrDeInits,
                  [](const std::pair<Function *, unsigned> &LHS,
                     const std::pair<Function *, unsigned> &RHS) {
-                   return LHS.first < RHS.first;
+                   return LHS.second < RHS.second;
                  });
 
       auto *InitOrDeInitFuncEntryBlock =

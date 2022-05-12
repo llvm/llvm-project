@@ -51,8 +51,7 @@ define i32 @test.signed.add.1(i32* %array, i32 %length, i32 %init) {
 ; CHECK-NEXT:    br i1 [[UPPER]], label [[LOOP_PREHEADER:%.*]], label [[EXIT:%.*]]
 ; CHECK:       loop.preheader:
 ; CHECK-NEXT:    [[TMP0:%.*]] = add i32 [[INIT]], 1
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp sgt i32 [[LENGTH]], [[TMP0]]
-; CHECK-NEXT:    [[SMAX:%.*]] = select i1 [[TMP1]], i32 [[LENGTH]], i32 [[TMP0]]
+; CHECK-NEXT:    [[SMAX:%.*]] = call i32 @llvm.smax.i32(i32 [[LENGTH]], i32 [[TMP0]])
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[CIV:%.*]] = phi i32 [ [[CIV_INC:%.*]], [[LATCH:%.*]] ], [ [[INIT]], [[LOOP_PREHEADER]] ]

@@ -3610,8 +3610,8 @@ size_t BinaryFunction::computeHash(bool UseDFS,
         Opcode = Opcode >> 8;
       }
 
-      for (unsigned I = 0, E = MCPlus::getNumPrimeOperands(Inst); I != E; ++I)
-        HashString.append(OperandHashFunc(Inst.getOperand(I)));
+      for (const MCOperand &Op : MCPlus::primeOperands(Inst))
+        HashString.append(OperandHashFunc(Op));
     }
   }
 

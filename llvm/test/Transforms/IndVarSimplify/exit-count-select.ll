@@ -4,15 +4,14 @@
 define i32 @logical_and_2ops(i32 %n, i32 %m) {
 ; CHECK-LABEL: @logical_and_2ops(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = icmp ult i32 [[M:%.*]], [[N:%.*]]
-; CHECK-NEXT:    [[UMIN:%.*]] = select i1 [[TMP0]], i32 [[M]], i32 [[N]]
+; CHECK-NEXT:    [[UMIN:%.*]] = call i32 @llvm.umin.i32(i32 [[M:%.*]], i32 [[N:%.*]])
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    br i1 false, label [[LOOP]], label [[EXIT:%.*]]
 ; CHECK:       exit:
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i32 [[N]], 0
-; CHECK-NEXT:    [[TMP2:%.*]] = select i1 [[TMP1]], i32 0, i32 [[UMIN]]
-; CHECK-NEXT:    ret i32 [[TMP2]]
+; CHECK-NEXT:    [[TMP0:%.*]] = icmp eq i32 [[N]], 0
+; CHECK-NEXT:    [[TMP1:%.*]] = select i1 [[TMP0]], i32 0, i32 [[UMIN]]
+; CHECK-NEXT:    ret i32 [[TMP1]]
 ;
 entry:
   br label %loop
@@ -30,15 +29,14 @@ exit:
 define i32 @logical_or_2ops(i32 %n, i32 %m) {
 ; CHECK-LABEL: @logical_or_2ops(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = icmp ult i32 [[M:%.*]], [[N:%.*]]
-; CHECK-NEXT:    [[UMIN:%.*]] = select i1 [[TMP0]], i32 [[M]], i32 [[N]]
+; CHECK-NEXT:    [[UMIN:%.*]] = call i32 @llvm.umin.i32(i32 [[M:%.*]], i32 [[N:%.*]])
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    br i1 true, label [[EXIT:%.*]], label [[LOOP]]
 ; CHECK:       exit:
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i32 [[N]], 0
-; CHECK-NEXT:    [[TMP2:%.*]] = select i1 [[TMP1]], i32 0, i32 [[UMIN]]
-; CHECK-NEXT:    ret i32 [[TMP2]]
+; CHECK-NEXT:    [[TMP0:%.*]] = icmp eq i32 [[N]], 0
+; CHECK-NEXT:    [[TMP1:%.*]] = select i1 [[TMP0]], i32 0, i32 [[UMIN]]
+; CHECK-NEXT:    ret i32 [[TMP1]]
 ;
 entry:
   br label %loop
@@ -57,18 +55,16 @@ define i32 @logical_and_3ops(i32 %n, i32 %m, i32 %k) {
 ; CHECK-LABEL: @logical_and_3ops(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = icmp eq i32 [[M:%.*]], 0
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp ult i32 [[K:%.*]], [[M]]
-; CHECK-NEXT:    [[UMIN:%.*]] = select i1 [[TMP1]], i32 [[K]], i32 [[M]]
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp ult i32 [[UMIN]], [[N:%.*]]
-; CHECK-NEXT:    [[UMIN1:%.*]] = select i1 [[TMP2]], i32 [[UMIN]], i32 [[N]]
+; CHECK-NEXT:    [[UMIN:%.*]] = call i32 @llvm.umin.i32(i32 [[K:%.*]], i32 [[M]])
+; CHECK-NEXT:    [[UMIN1:%.*]] = call i32 @llvm.umin.i32(i32 [[UMIN]], i32 [[N:%.*]])
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    br i1 false, label [[LOOP]], label [[EXIT:%.*]]
 ; CHECK:       exit:
-; CHECK-NEXT:    [[TMP3:%.*]] = icmp eq i32 [[N]], 0
-; CHECK-NEXT:    [[TMP4:%.*]] = select i1 [[TMP3]], i1 true, i1 [[TMP0]]
-; CHECK-NEXT:    [[TMP5:%.*]] = select i1 [[TMP4]], i32 0, i32 [[UMIN1]]
-; CHECK-NEXT:    ret i32 [[TMP5]]
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i32 [[N]], 0
+; CHECK-NEXT:    [[TMP2:%.*]] = select i1 [[TMP1]], i1 true, i1 [[TMP0]]
+; CHECK-NEXT:    [[TMP3:%.*]] = select i1 [[TMP2]], i32 0, i32 [[UMIN1]]
+; CHECK-NEXT:    ret i32 [[TMP3]]
 ;
 entry:
   br label %loop
@@ -89,18 +85,16 @@ define i32 @logical_or_3ops(i32 %n, i32 %m, i32 %k) {
 ; CHECK-LABEL: @logical_or_3ops(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = icmp eq i32 [[M:%.*]], 0
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp ult i32 [[K:%.*]], [[M]]
-; CHECK-NEXT:    [[UMIN:%.*]] = select i1 [[TMP1]], i32 [[K]], i32 [[M]]
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp ult i32 [[UMIN]], [[N:%.*]]
-; CHECK-NEXT:    [[UMIN1:%.*]] = select i1 [[TMP2]], i32 [[UMIN]], i32 [[N]]
+; CHECK-NEXT:    [[UMIN:%.*]] = call i32 @llvm.umin.i32(i32 [[K:%.*]], i32 [[M]])
+; CHECK-NEXT:    [[UMIN1:%.*]] = call i32 @llvm.umin.i32(i32 [[UMIN]], i32 [[N:%.*]])
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    br i1 true, label [[EXIT:%.*]], label [[LOOP]]
 ; CHECK:       exit:
-; CHECK-NEXT:    [[TMP3:%.*]] = icmp eq i32 [[N]], 0
-; CHECK-NEXT:    [[TMP4:%.*]] = select i1 [[TMP3]], i1 true, i1 [[TMP0]]
-; CHECK-NEXT:    [[TMP5:%.*]] = select i1 [[TMP4]], i32 0, i32 [[UMIN1]]
-; CHECK-NEXT:    ret i32 [[TMP5]]
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i32 [[N]], 0
+; CHECK-NEXT:    [[TMP2:%.*]] = select i1 [[TMP1]], i1 true, i1 [[TMP0]]
+; CHECK-NEXT:    [[TMP3:%.*]] = select i1 [[TMP2]], i32 0, i32 [[UMIN1]]
+; CHECK-NEXT:    ret i32 [[TMP3]]
 ;
 entry:
   br label %loop

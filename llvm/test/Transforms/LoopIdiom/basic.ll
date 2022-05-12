@@ -1226,13 +1226,12 @@ define void @loop_with_memcpy_stride16(i8* %Src, i64 %Size) {
 ; CHECK-LABEL: @loop_with_memcpy_stride16(
 ; CHECK-NEXT:  bb.nph:
 ; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, i8* [[SRC:%.*]], i64 16
-; CHECK-NEXT:    [[TMP0:%.*]] = icmp sgt i64 [[SIZE:%.*]], 16
-; CHECK-NEXT:    [[SMAX:%.*]] = select i1 [[TMP0]], i64 [[SIZE]], i64 16
-; CHECK-NEXT:    [[TMP1:%.*]] = add nsw i64 [[SMAX]], -1
-; CHECK-NEXT:    [[TMP2:%.*]] = lshr i64 [[TMP1]], 4
-; CHECK-NEXT:    [[TMP3:%.*]] = shl nuw nsw i64 [[TMP2]], 4
-; CHECK-NEXT:    [[TMP4:%.*]] = add nuw i64 [[TMP3]], 16
-; CHECK-NEXT:    call void @llvm.memmove.p0i8.p0i8.i64(i8* align 1 [[SRC]], i8* align 1 [[SCEVGEP]], i64 [[TMP4]], i1 false)
+; CHECK-NEXT:    [[SMAX:%.*]] = call i64 @llvm.smax.i64(i64 [[SIZE:%.*]], i64 16)
+; CHECK-NEXT:    [[TMP0:%.*]] = add nsw i64 [[SMAX]], -1
+; CHECK-NEXT:    [[TMP1:%.*]] = lshr i64 [[TMP0]], 4
+; CHECK-NEXT:    [[TMP2:%.*]] = shl nuw nsw i64 [[TMP1]], 4
+; CHECK-NEXT:    [[TMP3:%.*]] = add nuw i64 [[TMP2]], 16
+; CHECK-NEXT:    call void @llvm.memmove.p0i8.p0i8.i64(i8* align 1 [[SRC]], i8* align 1 [[SCEVGEP]], i64 [[TMP3]], i1 false)
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[INDVAR:%.*]] = phi i64 [ [[STEP:%.*]], [[FOR_BODY]] ], [ 0, [[BB_NPH:%.*]] ]

@@ -9,15 +9,13 @@ define i32 @test1(i32* %array, i32 %length, i32 %n, i1 %cond_0) {
 ; CHECK-LABEL: @test1(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[WIDENABLE_COND:%.*]] = call i1 @llvm.experimental.widenable.condition()
-; CHECK-NEXT:    [[TMP0:%.*]] = icmp ugt i32 [[N:%.*]], 1
-; CHECK-NEXT:    [[UMAX:%.*]] = select i1 [[TMP0]], i32 [[N]], i32 1
-; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[UMAX]], -1
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp ult i32 [[LENGTH:%.*]], [[TMP1]]
-; CHECK-NEXT:    [[UMIN:%.*]] = select i1 [[TMP2]], i32 [[LENGTH]], i32 [[TMP1]]
-; CHECK-NEXT:    [[TMP3:%.*]] = icmp ugt i32 [[LENGTH]], [[UMIN]]
-; CHECK-NEXT:    [[TMP4:%.*]] = freeze i1 [[TMP3]]
-; CHECK-NEXT:    [[TMP5:%.*]] = and i1 [[TMP4]], [[COND_0:%.*]]
-; CHECK-NEXT:    [[EXIPLICIT_GUARD_COND:%.*]] = and i1 [[TMP5]], [[WIDENABLE_COND]]
+; CHECK-NEXT:    [[UMAX:%.*]] = call i32 @llvm.umax.i32(i32 [[N:%.*]], i32 1)
+; CHECK-NEXT:    [[TMP0:%.*]] = add i32 [[UMAX]], -1
+; CHECK-NEXT:    [[UMIN:%.*]] = call i32 @llvm.umin.i32(i32 [[LENGTH:%.*]], i32 [[TMP0]])
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ugt i32 [[LENGTH]], [[UMIN]]
+; CHECK-NEXT:    [[TMP2:%.*]] = freeze i1 [[TMP1]]
+; CHECK-NEXT:    [[TMP3:%.*]] = and i1 [[TMP2]], [[COND_0:%.*]]
+; CHECK-NEXT:    [[EXIPLICIT_GUARD_COND:%.*]] = and i1 [[TMP3]], [[WIDENABLE_COND]]
 ; CHECK-NEXT:    br i1 [[EXIPLICIT_GUARD_COND]], label [[LOOP_PREHEADER:%.*]], label [[DEOPT:%.*]], !prof !0
 ; CHECK:       deopt:
 ; CHECK-NEXT:    [[DEOPTRET:%.*]] = call i32 (...) @llvm.experimental.deoptimize.i32() [ "deopt"() ]
@@ -38,7 +36,7 @@ define i32 @test1(i32* %array, i32 %length, i32 %n, i1 %cond_0) {
 ; CHECK-NEXT:    [[I_I64:%.*]] = zext i32 [[I]] to i64
 ; CHECK-NEXT:    [[ARRAY_I_PTR:%.*]] = getelementptr inbounds i32, i32* [[ARRAY:%.*]], i64 [[I_I64]]
 ; CHECK-NEXT:    [[ARRAY_I:%.*]] = load i32, i32* [[ARRAY_I_PTR]], align 4
-; CHECK-NEXT:    store i32 0, i32* [[ARRAY_I_PTR]]
+; CHECK-NEXT:    store i32 0, i32* [[ARRAY_I_PTR]], align 4
 ; CHECK-NEXT:    [[LOOP_ACC_NEXT]] = add i32 [[LOOP_ACC]], [[ARRAY_I]]
 ; CHECK-NEXT:    [[I_NEXT]] = add nuw i32 [[I]], 1
 ; CHECK-NEXT:    [[CONTINUE:%.*]] = icmp ult i32 [[I_NEXT]], [[N]]
@@ -92,15 +90,13 @@ define i32 @test_non_canonical(i32* %array, i32 %length, i1 %cond_0) {
 ; CHECK-LABEL: @test_non_canonical(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[WIDENABLE_COND:%.*]] = call i1 @llvm.experimental.widenable.condition()
-; CHECK-NEXT:    [[TMP0:%.*]] = icmp ugt i32 [[LENGTH:%.*]], 1
-; CHECK-NEXT:    [[UMAX:%.*]] = select i1 [[TMP0]], i32 [[LENGTH]], i32 1
-; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[UMAX]], -1
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp ult i32 [[LENGTH]], [[TMP1]]
-; CHECK-NEXT:    [[UMIN:%.*]] = select i1 [[TMP2]], i32 [[LENGTH]], i32 [[TMP1]]
-; CHECK-NEXT:    [[TMP3:%.*]] = icmp ugt i32 [[LENGTH]], [[UMIN]]
-; CHECK-NEXT:    [[TMP4:%.*]] = freeze i1 [[TMP3]]
-; CHECK-NEXT:    [[TMP5:%.*]] = and i1 [[TMP4]], [[COND_0:%.*]]
-; CHECK-NEXT:    [[EXIPLICIT_GUARD_COND:%.*]] = and i1 [[TMP5]], [[WIDENABLE_COND]]
+; CHECK-NEXT:    [[UMAX:%.*]] = call i32 @llvm.umax.i32(i32 [[LENGTH:%.*]], i32 1)
+; CHECK-NEXT:    [[TMP0:%.*]] = add i32 [[UMAX]], -1
+; CHECK-NEXT:    [[UMIN:%.*]] = call i32 @llvm.umin.i32(i32 [[LENGTH]], i32 [[TMP0]])
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ugt i32 [[LENGTH]], [[UMIN]]
+; CHECK-NEXT:    [[TMP2:%.*]] = freeze i1 [[TMP1]]
+; CHECK-NEXT:    [[TMP3:%.*]] = and i1 [[TMP2]], [[COND_0:%.*]]
+; CHECK-NEXT:    [[EXIPLICIT_GUARD_COND:%.*]] = and i1 [[TMP3]], [[WIDENABLE_COND]]
 ; CHECK-NEXT:    br i1 [[EXIPLICIT_GUARD_COND]], label [[LOOP_PREHEADER:%.*]], label [[DEOPT:%.*]], !prof !0
 ; CHECK:       deopt:
 ; CHECK-NEXT:    [[DEOPTRET:%.*]] = call i32 (...) @llvm.experimental.deoptimize.i32() [ "deopt"() ]
@@ -121,7 +117,7 @@ define i32 @test_non_canonical(i32* %array, i32 %length, i1 %cond_0) {
 ; CHECK-NEXT:    [[I_I64:%.*]] = zext i32 [[I]] to i64
 ; CHECK-NEXT:    [[ARRAY_I_PTR:%.*]] = getelementptr inbounds i32, i32* [[ARRAY:%.*]], i64 [[I_I64]]
 ; CHECK-NEXT:    [[ARRAY_I:%.*]] = load i32, i32* [[ARRAY_I_PTR]], align 4
-; CHECK-NEXT:    store i32 0, i32* [[ARRAY_I_PTR]]
+; CHECK-NEXT:    store i32 0, i32* [[ARRAY_I_PTR]], align 4
 ; CHECK-NEXT:    [[LOOP_ACC_NEXT]] = add i32 [[LOOP_ACC]], [[ARRAY_I]]
 ; CHECK-NEXT:    [[I_NEXT]] = add nuw i32 [[I]], 1
 ; CHECK-NEXT:    [[CONTINUE:%.*]] = icmp ult i32 [[I_NEXT]], [[LENGTH]]
@@ -174,20 +170,17 @@ define i32 @test_two_range_checks(i32* %array, i32 %length.1, i32 %length.2, i32
 ; CHECK-LABEL: @test_two_range_checks(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[WIDENABLE_COND:%.*]] = call i1 @llvm.experimental.widenable.condition()
-; CHECK-NEXT:    [[TMP0:%.*]] = icmp ult i32 [[LENGTH_2:%.*]], [[LENGTH_1:%.*]]
-; CHECK-NEXT:    [[UMIN:%.*]] = select i1 [[TMP0]], i32 [[LENGTH_2]], i32 [[LENGTH_1]]
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp ugt i32 [[N:%.*]], 1
-; CHECK-NEXT:    [[UMAX:%.*]] = select i1 [[TMP1]], i32 [[N]], i32 1
-; CHECK-NEXT:    [[TMP2:%.*]] = add i32 [[UMAX]], -1
-; CHECK-NEXT:    [[TMP3:%.*]] = icmp ult i32 [[UMIN]], [[TMP2]]
-; CHECK-NEXT:    [[UMIN1:%.*]] = select i1 [[TMP3]], i32 [[UMIN]], i32 [[TMP2]]
-; CHECK-NEXT:    [[TMP4:%.*]] = icmp ugt i32 [[LENGTH_1]], [[UMIN1]]
+; CHECK-NEXT:    [[UMIN:%.*]] = call i32 @llvm.umin.i32(i32 [[LENGTH_2:%.*]], i32 [[LENGTH_1:%.*]])
+; CHECK-NEXT:    [[UMAX:%.*]] = call i32 @llvm.umax.i32(i32 [[N:%.*]], i32 1)
+; CHECK-NEXT:    [[TMP0:%.*]] = add i32 [[UMAX]], -1
+; CHECK-NEXT:    [[UMIN1:%.*]] = call i32 @llvm.umin.i32(i32 [[UMIN]], i32 [[TMP0]])
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ugt i32 [[LENGTH_1]], [[UMIN1]]
+; CHECK-NEXT:    [[TMP2:%.*]] = freeze i1 [[TMP1]]
+; CHECK-NEXT:    [[TMP3:%.*]] = and i1 [[TMP2]], [[COND_0:%.*]]
+; CHECK-NEXT:    [[TMP4:%.*]] = icmp ugt i32 [[LENGTH_2]], [[UMIN1]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = freeze i1 [[TMP4]]
-; CHECK-NEXT:    [[TMP6:%.*]] = and i1 [[TMP5]], [[COND_0:%.*]]
-; CHECK-NEXT:    [[TMP7:%.*]] = icmp ugt i32 [[LENGTH_2]], [[UMIN1]]
-; CHECK-NEXT:    [[TMP8:%.*]] = freeze i1 [[TMP7]]
-; CHECK-NEXT:    [[TMP9:%.*]] = and i1 [[TMP8]], [[TMP6]]
-; CHECK-NEXT:    [[EXIPLICIT_GUARD_COND:%.*]] = and i1 [[TMP9]], [[WIDENABLE_COND]]
+; CHECK-NEXT:    [[TMP6:%.*]] = and i1 [[TMP5]], [[TMP3]]
+; CHECK-NEXT:    [[EXIPLICIT_GUARD_COND:%.*]] = and i1 [[TMP6]], [[WIDENABLE_COND]]
 ; CHECK-NEXT:    br i1 [[EXIPLICIT_GUARD_COND]], label [[LOOP_PREHEADER:%.*]], label [[DEOPT:%.*]], !prof !0
 ; CHECK:       deopt:
 ; CHECK-NEXT:    [[DEOPTRET:%.*]] = call i32 (...) @llvm.experimental.deoptimize.i32() [ "deopt"() ]
@@ -215,7 +208,7 @@ define i32 @test_two_range_checks(i32* %array, i32 %length.1, i32 %length.2, i32
 ; CHECK-NEXT:    [[I_I64:%.*]] = zext i32 [[I]] to i64
 ; CHECK-NEXT:    [[ARRAY_I_PTR:%.*]] = getelementptr inbounds i32, i32* [[ARRAY:%.*]], i64 [[I_I64]]
 ; CHECK-NEXT:    [[ARRAY_I:%.*]] = load i32, i32* [[ARRAY_I_PTR]], align 4
-; CHECK-NEXT:    store i32 0, i32* [[ARRAY_I_PTR]]
+; CHECK-NEXT:    store i32 0, i32* [[ARRAY_I_PTR]], align 4
 ; CHECK-NEXT:    [[LOOP_ACC_NEXT]] = add i32 [[LOOP_ACC]], [[ARRAY_I]]
 ; CHECK-NEXT:    [[I_NEXT]] = add nuw i32 [[I]], 1
 ; CHECK-NEXT:    [[CONTINUE:%.*]] = icmp ult i32 [[I_NEXT]], [[N]]
@@ -289,7 +282,7 @@ define i32 @test_unanalyzeable_exit(i32* %array, i32 %length, i32 %n, i1 %cond_0
 ; CHECK-NEXT:    [[LOOP_ACC:%.*]] = phi i32 [ [[LOOP_ACC_NEXT:%.*]], [[GUARDED2:%.*]] ], [ 0, [[LOOP_PREHEADER]] ]
 ; CHECK-NEXT:    [[I:%.*]] = phi i32 [ [[I_NEXT:%.*]], [[GUARDED2]] ], [ 0, [[LOOP_PREHEADER]] ]
 ; CHECK-NEXT:    call void @unknown()
-; CHECK-NEXT:    [[VOL:%.*]] = load volatile i32, i32* @G
+; CHECK-NEXT:    [[VOL:%.*]] = load volatile i32, i32* @G, align 4
 ; CHECK-NEXT:    [[UNKNOWN:%.*]] = icmp eq i32 [[VOL]], 0
 ; CHECK-NEXT:    br i1 [[UNKNOWN]], label [[GUARDED2]], label [[DEOPT3:%.*]], !prof !0
 ; CHECK:       deopt3:
@@ -300,7 +293,7 @@ define i32 @test_unanalyzeable_exit(i32* %array, i32 %length, i32 %n, i1 %cond_0
 ; CHECK-NEXT:    [[I_I64:%.*]] = zext i32 [[I]] to i64
 ; CHECK-NEXT:    [[ARRAY_I_PTR:%.*]] = getelementptr inbounds i32, i32* [[ARRAY:%.*]], i64 [[I_I64]]
 ; CHECK-NEXT:    [[ARRAY_I:%.*]] = load i32, i32* [[ARRAY_I_PTR]], align 4
-; CHECK-NEXT:    store i32 0, i32* [[ARRAY_I_PTR]]
+; CHECK-NEXT:    store i32 0, i32* [[ARRAY_I_PTR]], align 4
 ; CHECK-NEXT:    [[LOOP_ACC_NEXT]] = add i32 [[LOOP_ACC]], [[ARRAY_I]]
 ; CHECK-NEXT:    [[I_NEXT]] = add nuw i32 [[I]], 1
 ; CHECK-NEXT:    [[CONTINUE:%.*]] = icmp ult i32 [[I_NEXT]], [[N:%.*]]
@@ -353,15 +346,13 @@ define i32 @test_unanalyzeable_exit2(i32* %array, i32 %length, i32 %n, i1 %cond_
 ; CHECK-LABEL: @test_unanalyzeable_exit2(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[WIDENABLE_COND:%.*]] = call i1 @llvm.experimental.widenable.condition()
-; CHECK-NEXT:    [[TMP0:%.*]] = icmp ugt i32 [[N:%.*]], 1
-; CHECK-NEXT:    [[UMAX:%.*]] = select i1 [[TMP0]], i32 [[N]], i32 1
-; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[UMAX]], -1
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp ult i32 [[LENGTH:%.*]], [[TMP1]]
-; CHECK-NEXT:    [[UMIN:%.*]] = select i1 [[TMP2]], i32 [[LENGTH]], i32 [[TMP1]]
-; CHECK-NEXT:    [[TMP3:%.*]] = icmp ugt i32 [[LENGTH]], [[UMIN]]
-; CHECK-NEXT:    [[TMP4:%.*]] = freeze i1 [[TMP3]]
-; CHECK-NEXT:    [[TMP5:%.*]] = and i1 [[TMP4]], [[COND_0:%.*]]
-; CHECK-NEXT:    [[EXIPLICIT_GUARD_COND:%.*]] = and i1 [[TMP5]], [[WIDENABLE_COND]]
+; CHECK-NEXT:    [[UMAX:%.*]] = call i32 @llvm.umax.i32(i32 [[N:%.*]], i32 1)
+; CHECK-NEXT:    [[TMP0:%.*]] = add i32 [[UMAX]], -1
+; CHECK-NEXT:    [[UMIN:%.*]] = call i32 @llvm.umin.i32(i32 [[LENGTH:%.*]], i32 [[TMP0]])
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ugt i32 [[LENGTH]], [[UMIN]]
+; CHECK-NEXT:    [[TMP2:%.*]] = freeze i1 [[TMP1]]
+; CHECK-NEXT:    [[TMP3:%.*]] = and i1 [[TMP2]], [[COND_0:%.*]]
+; CHECK-NEXT:    [[EXIPLICIT_GUARD_COND:%.*]] = and i1 [[TMP3]], [[WIDENABLE_COND]]
 ; CHECK-NEXT:    br i1 [[EXIPLICIT_GUARD_COND]], label [[LOOP_PREHEADER:%.*]], label [[DEOPT:%.*]], !prof !0
 ; CHECK:       deopt:
 ; CHECK-NEXT:    [[DEOPTRET:%.*]] = call i32 (...) @llvm.experimental.deoptimize.i32() [ "deopt"() ]
@@ -379,7 +370,7 @@ define i32 @test_unanalyzeable_exit2(i32* %array, i32 %length, i32 %n, i1 %cond_
 ; CHECK-NEXT:    [[DEOPTRET2:%.*]] = call i32 (...) @llvm.experimental.deoptimize.i32() [ "deopt"() ]
 ; CHECK-NEXT:    ret i32 [[DEOPTRET2]]
 ; CHECK:       guarded:
-; CHECK-NEXT:    [[VOL:%.*]] = load volatile i32, i32* @G
+; CHECK-NEXT:    [[VOL:%.*]] = load volatile i32, i32* @G, align 4
 ; CHECK-NEXT:    [[UNKNOWN:%.*]] = icmp eq i32 [[VOL]], 0
 ; CHECK-NEXT:    br i1 [[UNKNOWN]], label [[GUARDED2]], label [[DEOPT3:%.*]], !prof !0
 ; CHECK:       deopt3:
@@ -390,7 +381,7 @@ define i32 @test_unanalyzeable_exit2(i32* %array, i32 %length, i32 %n, i1 %cond_
 ; CHECK-NEXT:    [[I_I64:%.*]] = zext i32 [[I]] to i64
 ; CHECK-NEXT:    [[ARRAY_I_PTR:%.*]] = getelementptr inbounds i32, i32* [[ARRAY:%.*]], i64 [[I_I64]]
 ; CHECK-NEXT:    [[ARRAY_I:%.*]] = load i32, i32* [[ARRAY_I_PTR]], align 4
-; CHECK-NEXT:    store i32 0, i32* [[ARRAY_I_PTR]]
+; CHECK-NEXT:    store i32 0, i32* [[ARRAY_I_PTR]], align 4
 ; CHECK-NEXT:    [[LOOP_ACC_NEXT]] = add i32 [[LOOP_ACC]], [[ARRAY_I]]
 ; CHECK-NEXT:    [[I_NEXT]] = add nuw i32 [[I]], 1
 ; CHECK-NEXT:    [[CONTINUE:%.*]] = icmp ult i32 [[I_NEXT]], [[N]]
@@ -474,10 +465,10 @@ define i32 @test_unanalyzeable_latch(i32* %array, i32 %length, i32 %n, i1 %cond_
 ; CHECK-NEXT:    [[I_I64:%.*]] = zext i32 [[I]] to i64
 ; CHECK-NEXT:    [[ARRAY_I_PTR:%.*]] = getelementptr inbounds i32, i32* [[ARRAY:%.*]], i64 [[I_I64]]
 ; CHECK-NEXT:    [[ARRAY_I:%.*]] = load i32, i32* [[ARRAY_I_PTR]], align 4
-; CHECK-NEXT:    store i32 0, i32* [[ARRAY_I_PTR]]
+; CHECK-NEXT:    store i32 0, i32* [[ARRAY_I_PTR]], align 4
 ; CHECK-NEXT:    [[LOOP_ACC_NEXT]] = add i32 [[LOOP_ACC]], [[ARRAY_I]]
 ; CHECK-NEXT:    [[I_NEXT]] = add nuw i32 [[I]], 1
-; CHECK-NEXT:    [[VOL:%.*]] = load volatile i32, i32* @G
+; CHECK-NEXT:    [[VOL:%.*]] = load volatile i32, i32* @G, align 4
 ; CHECK-NEXT:    [[UNKNOWN:%.*]] = icmp eq i32 [[VOL]], 0
 ; CHECK-NEXT:    br i1 [[UNKNOWN]], label [[LOOP]], label [[EXIT:%.*]]
 ; CHECK:       exit:
@@ -552,7 +543,7 @@ define i32 @provably_taken(i32* %array, i1 %cond_0) {
 ; CHECK-NEXT:    [[I_I64:%.*]] = zext i32 [[I]] to i64
 ; CHECK-NEXT:    [[ARRAY_I_PTR:%.*]] = getelementptr inbounds i32, i32* [[ARRAY:%.*]], i64 [[I_I64]]
 ; CHECK-NEXT:    [[ARRAY_I:%.*]] = load i32, i32* [[ARRAY_I_PTR]], align 4
-; CHECK-NEXT:    store i32 0, i32* [[ARRAY_I_PTR]]
+; CHECK-NEXT:    store i32 0, i32* [[ARRAY_I_PTR]], align 4
 ; CHECK-NEXT:    [[LOOP_ACC_NEXT]] = add i32 [[LOOP_ACC]], [[ARRAY_I]]
 ; CHECK-NEXT:    [[I_NEXT]] = add nuw i32 [[I]], 1
 ; CHECK-NEXT:    [[CONTINUE:%.*]] = icmp ult i32 [[I_NEXT]], 200
@@ -627,7 +618,7 @@ define i32 @provably_not_taken(i32* %array, i1 %cond_0) {
 ; CHECK-NEXT:    [[I_I64:%.*]] = zext i32 [[I]] to i64
 ; CHECK-NEXT:    [[ARRAY_I_PTR:%.*]] = getelementptr inbounds i32, i32* [[ARRAY:%.*]], i64 [[I_I64]]
 ; CHECK-NEXT:    [[ARRAY_I:%.*]] = load i32, i32* [[ARRAY_I_PTR]], align 4
-; CHECK-NEXT:    store i32 0, i32* [[ARRAY_I_PTR]]
+; CHECK-NEXT:    store i32 0, i32* [[ARRAY_I_PTR]], align 4
 ; CHECK-NEXT:    [[LOOP_ACC_NEXT]] = add i32 [[LOOP_ACC]], [[ARRAY_I]]
 ; CHECK-NEXT:    [[I_NEXT]] = add nuw i32 [[I]], 1
 ; CHECK-NEXT:    [[CONTINUE:%.*]] = icmp ult i32 [[I_NEXT]], 200
@@ -682,15 +673,13 @@ define i32 @unswitch_exit_form(i32* %array, i32 %length, i32 %n, i1 %cond_0) {
 ; CHECK-LABEL: @unswitch_exit_form(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[WIDENABLE_COND:%.*]] = call i1 @llvm.experimental.widenable.condition()
-; CHECK-NEXT:    [[TMP0:%.*]] = icmp ugt i32 [[N:%.*]], 1
-; CHECK-NEXT:    [[UMAX:%.*]] = select i1 [[TMP0]], i32 [[N]], i32 1
-; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[UMAX]], -1
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp ult i32 [[LENGTH:%.*]], [[TMP1]]
-; CHECK-NEXT:    [[UMIN:%.*]] = select i1 [[TMP2]], i32 [[LENGTH]], i32 [[TMP1]]
-; CHECK-NEXT:    [[TMP3:%.*]] = icmp ugt i32 [[LENGTH]], [[UMIN]]
-; CHECK-NEXT:    [[TMP4:%.*]] = freeze i1 [[TMP3]]
-; CHECK-NEXT:    [[TMP5:%.*]] = and i1 [[TMP4]], [[COND_0:%.*]]
-; CHECK-NEXT:    [[EXIPLICIT_GUARD_COND:%.*]] = and i1 [[TMP5]], [[WIDENABLE_COND]]
+; CHECK-NEXT:    [[UMAX:%.*]] = call i32 @llvm.umax.i32(i32 [[N:%.*]], i32 1)
+; CHECK-NEXT:    [[TMP0:%.*]] = add i32 [[UMAX]], -1
+; CHECK-NEXT:    [[UMIN:%.*]] = call i32 @llvm.umin.i32(i32 [[LENGTH:%.*]], i32 [[TMP0]])
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ugt i32 [[LENGTH]], [[UMIN]]
+; CHECK-NEXT:    [[TMP2:%.*]] = freeze i1 [[TMP1]]
+; CHECK-NEXT:    [[TMP3:%.*]] = and i1 [[TMP2]], [[COND_0:%.*]]
+; CHECK-NEXT:    [[EXIPLICIT_GUARD_COND:%.*]] = and i1 [[TMP3]], [[WIDENABLE_COND]]
 ; CHECK-NEXT:    br i1 [[EXIPLICIT_GUARD_COND]], label [[LOOP_PREHEADER:%.*]], label [[DEOPT:%.*]], !prof !0
 ; CHECK:       deopt.loopexit:
 ; CHECK-NEXT:    br label [[DEOPT]]
@@ -713,7 +702,7 @@ define i32 @unswitch_exit_form(i32* %array, i32 %length, i32 %n, i1 %cond_0) {
 ; CHECK-NEXT:    [[I_I64:%.*]] = zext i32 [[I]] to i64
 ; CHECK-NEXT:    [[ARRAY_I_PTR:%.*]] = getelementptr inbounds i32, i32* [[ARRAY:%.*]], i64 [[I_I64]]
 ; CHECK-NEXT:    [[ARRAY_I:%.*]] = load i32, i32* [[ARRAY_I_PTR]], align 4
-; CHECK-NEXT:    store i32 0, i32* [[ARRAY_I_PTR]]
+; CHECK-NEXT:    store i32 0, i32* [[ARRAY_I_PTR]], align 4
 ; CHECK-NEXT:    [[LOOP_ACC_NEXT]] = add i32 [[LOOP_ACC]], [[ARRAY_I]]
 ; CHECK-NEXT:    [[I_NEXT]] = add nuw i32 [[I]], 1
 ; CHECK-NEXT:    [[CONTINUE:%.*]] = icmp ult i32 [[I_NEXT]], [[N]]
@@ -767,15 +756,13 @@ define i32 @swapped_wb(i32* %array, i32 %length, i32 %n, i1 %cond_0) {
 ; CHECK-LABEL: @swapped_wb(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[WIDENABLE_COND:%.*]] = call i1 @llvm.experimental.widenable.condition()
-; CHECK-NEXT:    [[TMP0:%.*]] = icmp ugt i32 [[N:%.*]], 1
-; CHECK-NEXT:    [[UMAX:%.*]] = select i1 [[TMP0]], i32 [[N]], i32 1
-; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[UMAX]], -1
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp ult i32 [[LENGTH:%.*]], [[TMP1]]
-; CHECK-NEXT:    [[UMIN:%.*]] = select i1 [[TMP2]], i32 [[LENGTH]], i32 [[TMP1]]
-; CHECK-NEXT:    [[TMP3:%.*]] = icmp ugt i32 [[LENGTH]], [[UMIN]]
-; CHECK-NEXT:    [[TMP4:%.*]] = freeze i1 [[TMP3]]
-; CHECK-NEXT:    [[TMP5:%.*]] = and i1 [[TMP4]], [[COND_0:%.*]]
-; CHECK-NEXT:    [[EXIPLICIT_GUARD_COND:%.*]] = and i1 [[WIDENABLE_COND]], [[TMP5]]
+; CHECK-NEXT:    [[UMAX:%.*]] = call i32 @llvm.umax.i32(i32 [[N:%.*]], i32 1)
+; CHECK-NEXT:    [[TMP0:%.*]] = add i32 [[UMAX]], -1
+; CHECK-NEXT:    [[UMIN:%.*]] = call i32 @llvm.umin.i32(i32 [[LENGTH:%.*]], i32 [[TMP0]])
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ugt i32 [[LENGTH]], [[UMIN]]
+; CHECK-NEXT:    [[TMP2:%.*]] = freeze i1 [[TMP1]]
+; CHECK-NEXT:    [[TMP3:%.*]] = and i1 [[TMP2]], [[COND_0:%.*]]
+; CHECK-NEXT:    [[EXIPLICIT_GUARD_COND:%.*]] = and i1 [[WIDENABLE_COND]], [[TMP3]]
 ; CHECK-NEXT:    br i1 [[EXIPLICIT_GUARD_COND]], label [[LOOP_PREHEADER:%.*]], label [[DEOPT:%.*]], !prof !0
 ; CHECK:       deopt:
 ; CHECK-NEXT:    [[DEOPTRET:%.*]] = call i32 (...) @llvm.experimental.deoptimize.i32() [ "deopt"() ]
@@ -796,7 +783,7 @@ define i32 @swapped_wb(i32* %array, i32 %length, i32 %n, i1 %cond_0) {
 ; CHECK-NEXT:    [[I_I64:%.*]] = zext i32 [[I]] to i64
 ; CHECK-NEXT:    [[ARRAY_I_PTR:%.*]] = getelementptr inbounds i32, i32* [[ARRAY:%.*]], i64 [[I_I64]]
 ; CHECK-NEXT:    [[ARRAY_I:%.*]] = load i32, i32* [[ARRAY_I_PTR]], align 4
-; CHECK-NEXT:    store i32 0, i32* [[ARRAY_I_PTR]]
+; CHECK-NEXT:    store i32 0, i32* [[ARRAY_I_PTR]], align 4
 ; CHECK-NEXT:    [[LOOP_ACC_NEXT]] = add i32 [[LOOP_ACC]], [[ARRAY_I]]
 ; CHECK-NEXT:    [[I_NEXT]] = add nuw i32 [[I]], 1
 ; CHECK-NEXT:    [[CONTINUE:%.*]] = icmp ult i32 [[I_NEXT]], [[N]]
@@ -847,16 +834,14 @@ exit:
 define i32 @trivial_wb(i32* %array, i32 %length, i32 %n) {
 ; CHECK-LABEL: @trivial_wb(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = icmp ugt i32 [[N:%.*]], 1
-; CHECK-NEXT:    [[UMAX:%.*]] = select i1 [[TMP0]], i32 [[N]], i32 1
-; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[UMAX]], -1
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp ult i32 [[LENGTH:%.*]], [[TMP1]]
-; CHECK-NEXT:    [[UMIN:%.*]] = select i1 [[TMP2]], i32 [[LENGTH]], i32 [[TMP1]]
-; CHECK-NEXT:    [[TMP3:%.*]] = icmp ugt i32 [[LENGTH]], [[UMIN]]
-; CHECK-NEXT:    [[TMP4:%.*]] = freeze i1 [[TMP3]]
+; CHECK-NEXT:    [[UMAX:%.*]] = call i32 @llvm.umax.i32(i32 [[N:%.*]], i32 1)
+; CHECK-NEXT:    [[TMP0:%.*]] = add i32 [[UMAX]], -1
+; CHECK-NEXT:    [[UMIN:%.*]] = call i32 @llvm.umin.i32(i32 [[LENGTH:%.*]], i32 [[TMP0]])
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ugt i32 [[LENGTH]], [[UMIN]]
+; CHECK-NEXT:    [[TMP2:%.*]] = freeze i1 [[TMP1]]
 ; CHECK-NEXT:    [[WIDENABLE_COND:%.*]] = call i1 @llvm.experimental.widenable.condition()
-; CHECK-NEXT:    [[TMP5:%.*]] = and i1 [[TMP4]], [[WIDENABLE_COND]]
-; CHECK-NEXT:    br i1 [[TMP5]], label [[LOOP_PREHEADER:%.*]], label [[DEOPT:%.*]], !prof !0
+; CHECK-NEXT:    [[TMP3:%.*]] = and i1 [[TMP2]], [[WIDENABLE_COND]]
+; CHECK-NEXT:    br i1 [[TMP3]], label [[LOOP_PREHEADER:%.*]], label [[DEOPT:%.*]], !prof !0
 ; CHECK:       deopt:
 ; CHECK-NEXT:    [[DEOPTRET:%.*]] = call i32 (...) @llvm.experimental.deoptimize.i32() [ "deopt"() ]
 ; CHECK-NEXT:    ret i32 [[DEOPTRET]]
@@ -876,7 +861,7 @@ define i32 @trivial_wb(i32* %array, i32 %length, i32 %n) {
 ; CHECK-NEXT:    [[I_I64:%.*]] = zext i32 [[I]] to i64
 ; CHECK-NEXT:    [[ARRAY_I_PTR:%.*]] = getelementptr inbounds i32, i32* [[ARRAY:%.*]], i64 [[I_I64]]
 ; CHECK-NEXT:    [[ARRAY_I:%.*]] = load i32, i32* [[ARRAY_I_PTR]], align 4
-; CHECK-NEXT:    store i32 0, i32* [[ARRAY_I_PTR]]
+; CHECK-NEXT:    store i32 0, i32* [[ARRAY_I_PTR]], align 4
 ; CHECK-NEXT:    [[LOOP_ACC_NEXT]] = add i32 [[LOOP_ACC]], [[ARRAY_I]]
 ; CHECK-NEXT:    [[I_NEXT]] = add nuw i32 [[I]], 1
 ; CHECK-NEXT:    [[CONTINUE:%.*]] = icmp ult i32 [[I_NEXT]], [[N]]
@@ -950,7 +935,7 @@ define i32 @todo_unconditional_latch(i32* %array, i32 %length, i1 %cond_0) {
 ; CHECK-NEXT:    [[I_I64:%.*]] = zext i32 [[I]] to i64
 ; CHECK-NEXT:    [[ARRAY_I_PTR:%.*]] = getelementptr inbounds i32, i32* [[ARRAY:%.*]], i64 [[I_I64]]
 ; CHECK-NEXT:    [[ARRAY_I:%.*]] = load i32, i32* [[ARRAY_I_PTR]], align 4
-; CHECK-NEXT:    store i32 0, i32* [[ARRAY_I_PTR]]
+; CHECK-NEXT:    store i32 0, i32* [[ARRAY_I_PTR]], align 4
 ; CHECK-NEXT:    [[LOOP_ACC_NEXT]] = add i32 [[LOOP_ACC]], [[ARRAY_I]]
 ; CHECK-NEXT:    [[I_NEXT]] = add nuw i32 [[I]], 1
 ; CHECK-NEXT:    br label [[LOOP]]
@@ -998,18 +983,16 @@ define i32 @wb_in_loop(i32* %array, i32 %length, i32 %n, i1 %cond_0) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[WIDENABLE_COND:%.*]] = call i1 @llvm.experimental.widenable.condition()
 ; CHECK-NEXT:    [[WC2:%.*]] = call i1 @llvm.experimental.widenable.condition()
-; CHECK-NEXT:    [[TMP0:%.*]] = icmp ugt i32 [[N:%.*]], 1
-; CHECK-NEXT:    [[UMAX:%.*]] = select i1 [[TMP0]], i32 [[N]], i32 1
-; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[UMAX]], -1
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp ult i32 [[LENGTH:%.*]], [[TMP1]]
-; CHECK-NEXT:    [[UMIN:%.*]] = select i1 [[TMP2]], i32 [[LENGTH]], i32 [[TMP1]]
-; CHECK-NEXT:    [[TMP3:%.*]] = icmp ugt i32 [[LENGTH]], [[UMIN]]
-; CHECK-NEXT:    [[TMP4:%.*]] = freeze i1 [[TMP3]]
-; CHECK-NEXT:    [[TMP5:%.*]] = and i1 [[TMP4]], [[COND_0:%.*]]
-; CHECK-NEXT:    [[TMP6:%.*]] = icmp ugt i32 [[LENGTH]], [[UMIN]]
-; CHECK-NEXT:    [[TMP7:%.*]] = freeze i1 [[TMP6]]
-; CHECK-NEXT:    [[TMP8:%.*]] = and i1 [[TMP7]], [[TMP5]]
-; CHECK-NEXT:    [[EXIPLICIT_GUARD_COND:%.*]] = and i1 [[TMP8]], [[WIDENABLE_COND]]
+; CHECK-NEXT:    [[UMAX:%.*]] = call i32 @llvm.umax.i32(i32 [[N:%.*]], i32 1)
+; CHECK-NEXT:    [[TMP0:%.*]] = add i32 [[UMAX]], -1
+; CHECK-NEXT:    [[UMIN:%.*]] = call i32 @llvm.umin.i32(i32 [[LENGTH:%.*]], i32 [[TMP0]])
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ugt i32 [[LENGTH]], [[UMIN]]
+; CHECK-NEXT:    [[TMP2:%.*]] = freeze i1 [[TMP1]]
+; CHECK-NEXT:    [[TMP3:%.*]] = and i1 [[TMP2]], [[COND_0:%.*]]
+; CHECK-NEXT:    [[TMP4:%.*]] = icmp ugt i32 [[LENGTH]], [[UMIN]]
+; CHECK-NEXT:    [[TMP5:%.*]] = freeze i1 [[TMP4]]
+; CHECK-NEXT:    [[TMP6:%.*]] = and i1 [[TMP5]], [[TMP3]]
+; CHECK-NEXT:    [[EXIPLICIT_GUARD_COND:%.*]] = and i1 [[TMP6]], [[WIDENABLE_COND]]
 ; CHECK-NEXT:    br i1 [[EXIPLICIT_GUARD_COND]], label [[LOOP_PREHEADER:%.*]], label [[DEOPT:%.*]], !prof !0
 ; CHECK:       deopt:
 ; CHECK-NEXT:    [[DEOPTRET:%.*]] = call i32 (...) @llvm.experimental.deoptimize.i32() [ "deopt"() ]
@@ -1039,7 +1022,7 @@ define i32 @wb_in_loop(i32* %array, i32 %length, i32 %n, i1 %cond_0) {
 ; CHECK-NEXT:    [[I_I64:%.*]] = zext i32 [[I]] to i64
 ; CHECK-NEXT:    [[ARRAY_I_PTR:%.*]] = getelementptr inbounds i32, i32* [[ARRAY:%.*]], i64 [[I_I64]]
 ; CHECK-NEXT:    [[ARRAY_I:%.*]] = load i32, i32* [[ARRAY_I_PTR]], align 4
-; CHECK-NEXT:    store i32 0, i32* [[ARRAY_I_PTR]]
+; CHECK-NEXT:    store i32 0, i32* [[ARRAY_I_PTR]], align 4
 ; CHECK-NEXT:    [[LOOP_ACC_NEXT]] = add i32 [[LOOP_ACC]], [[ARRAY_I]]
 ; CHECK-NEXT:    [[I_NEXT]] = add nuw i32 [[I]], 1
 ; CHECK-NEXT:    [[CONTINUE:%.*]] = icmp ult i32 [[I_NEXT]], [[N]]

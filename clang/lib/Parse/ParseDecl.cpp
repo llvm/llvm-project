@@ -897,6 +897,15 @@ void Parser::ParseOpenCLKernelAttributes(ParsedAttributes &attrs) {
   }
 }
 
+void Parser::ParseCUDAFunctionAttributes(ParsedAttributes &attrs) {
+  while (Tok.is(tok::kw___noinline__)) {
+    IdentifierInfo *AttrName = Tok.getIdentifierInfo();
+    SourceLocation AttrNameLoc = ConsumeToken();
+    attrs.addNew(AttrName, AttrNameLoc, nullptr, AttrNameLoc, nullptr, 0,
+                 ParsedAttr::AS_Keyword);
+  }
+}
+
 void Parser::ParseOpenCLQualifiers(ParsedAttributes &Attrs) {
   IdentifierInfo *AttrName = Tok.getIdentifierInfo();
   SourceLocation AttrNameLoc = Tok.getLocation();
@@ -3688,6 +3697,11 @@ void Parser::ParseDeclarationSpecifiers(DeclSpec &DS,
     // OpenCL single token adornments.
     case tok::kw___kernel:
       ParseOpenCLKernelAttributes(DS.getAttributes());
+      continue;
+
+    // CUDA/HIP single token adornments.
+    case tok::kw___noinline__:
+      ParseCUDAFunctionAttributes(DS.getAttributes());
       continue;
 
     // Nullability type specifiers.

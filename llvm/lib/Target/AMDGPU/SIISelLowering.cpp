@@ -10691,7 +10691,14 @@ static SDValue getMad64_32(SelectionDAG &DAG, const SDLoc &SL,
   return DAG.getNode(ISD::TRUNCATE, SL, VT, Mad);
 }
 
-// Fold (add (mul x, y), z) --> (mad_[iu]64_[iu]32 x, y, z).
+// Fold (add (mul x, y), z) --> (mad_[iu]64_[iu]32 x, y, z) plus high
+// multiplies, if any.
+//
+// Full 64-bit multiplies that feed into an addition are lowered here instead
+// of using the generic expansion. The generic expansion ends up with
+// a tree of ADD nodes that prevents us from using the "add" part of the
+// MAD instruction. The expansion produced here results in a chain of ADDs
+// instead of a tree.
 SDValue SITargetLowering::tryFoldToMad64_32(SDNode *N,
                                             DAGCombinerInfo &DCI) const {
   assert(N->getOpcode() == ISD::ADD);
@@ -10705,6 +10712,11 @@ SDValue SITargetLowering::tryFoldToMad64_32(SDNode *N,
   if (VT.isVector())
     return SDValue();
 
+  // S_MUL_HI_[IU]32 was added in gfx9, which allows us to keep the overall
+  // result in scalar registers for uniform values.
+  if (!N->isDivergent() && Subtarget->hasSMulHi())
+    return SDValue();
+
   unsigned NumBits = VT.getScalarSizeInBits();
   if (NumBits <= 32 || NumBits > 64)
     return SDValue();
@@ -10714,27 +10726,96 @@ SDValue SITargetLowering::tryFoldToMad64_32(SDNode *N,
     std::swap(LHS, RHS);
   }
 
+  // Avoid the fold if it would unduly increase the number of multiplies due to
+  // multiple uses, except on hardware with full-rate multiply-add (which is
+  // part of full-rate 64-bit ops).
+  if (!Subtarget->hasFullRate64Ops()) {
+    unsigned NumUsers = 0;
+    for (SDNode *Use : LHS->uses()) {
+      // There is a use that does not feed into addition, so the multiply can't
+      // be removed. We prefer MUL + ADD + ADDC over MAD + MUL.
+      if (Use->getOpcode() != ISD::ADD)
+        return SDValue();
+
+      // We prefer 2xMAD over MUL + 2xADD + 2xADDC (code density), and prefer
+      // MUL + 3xADD + 3xADDC over 3xMAD.
+      ++NumUsers;
+      if (NumUsers >= 3)
+        return SDValue();
+    }
+  }
+
   SDValue MulLHS = LHS.getOperand(0);
   SDValue MulRHS = LHS.getOperand(1);
   SDValue AddRHS = RHS;
 
-  // TODO: Maybe restrict if SGPR inputs.
-  if (numBitsUnsigned(MulLHS, DAG) <= 32 &&
-      numBitsUnsigned(MulRHS, DAG) <= 32) {
-    MulLHS = DAG.getZExtOrTrunc(MulLHS, SL, MVT::i32);
-    MulRHS = DAG.getZExtOrTrunc(MulRHS, SL, MVT::i32);
-    AddRHS = DAG.getZExtOrTrunc(AddRHS, SL, MVT::i64);
-    return getMad64_32(DAG, SL, VT, MulLHS, MulRHS, AddRHS, false);
+  // Always check whether operands are small unsigned values, since that
+  // knowledge is useful in more cases. Check for small signed values only if
+  // doing so can unlock a shorter code sequence.
+  bool MulLHSUnsigned32 = numBitsUnsigned(MulLHS, DAG) <= 32;
+  bool MulRHSUnsigned32 = numBitsUnsigned(MulRHS, DAG) <= 32;
+
+  bool MulSignedLo = false;
+  if (!MulLHSUnsigned32 || !MulRHSUnsigned32) {
+    MulSignedLo = numBitsSigned(MulLHS, DAG) <= 32 &&
+                  numBitsSigned(MulRHS, DAG) <= 32;
   }
 
-  if (numBitsSigned(MulLHS, DAG) <= 32 && numBitsSigned(MulRHS, DAG) <= 32) {
-    MulLHS = DAG.getSExtOrTrunc(MulLHS, SL, MVT::i32);
-    MulRHS = DAG.getSExtOrTrunc(MulRHS, SL, MVT::i32);
-    AddRHS = DAG.getSExtOrTrunc(AddRHS, SL, MVT::i64);
-    return getMad64_32(DAG, SL, VT, MulLHS, MulRHS, AddRHS, true);
+  // The operands and final result all have the same number of bits. If
+  // operands need to be extended, they can be extended with garbage. The
+  // resulting garbage in the high bits of the mad_[iu]64_[iu]32 result is
+  // truncated away in the end.
+  if (VT != MVT::i64) {
+    MulLHS = DAG.getNode(ISD::ANY_EXTEND, SL, MVT::i64, MulLHS);
+    MulRHS = DAG.getNode(ISD::ANY_EXTEND, SL, MVT::i64, MulRHS);
+    AddRHS = DAG.getNode(ISD::ANY_EXTEND, SL, MVT::i64, AddRHS);
   }
 
-  return SDValue();
+  // The basic code generated is conceptually straightforward. Pseudo code:
+  //
+  //   accum = mad_64_32 lhs.lo, rhs.lo, accum
+  //   accum.hi = add (mul lhs.hi, rhs.lo), accum.hi
+  //   accum.hi = add (mul lhs.lo, rhs.hi), accum.hi
+  //
+  // The second and third lines are optional, depending on whether the factors
+  // are {sign,zero}-extended or not.
+  //
+  // The actual DAG is noisier than the pseudo code, but only due to
+  // instructions that disassemble values into low and high parts, and
+  // assemble the final result.
+  SDValue Zero = DAG.getConstant(0, SL, MVT::i32);
+  SDValue One = DAG.getConstant(1, SL, MVT::i32);
+
+  auto MulLHSLo = DAG.getNode(ISD::TRUNCATE, SL, MVT::i32, MulLHS);
+  auto MulRHSLo = DAG.getNode(ISD::TRUNCATE, SL, MVT::i32, MulRHS);
+  SDValue Accum =
+      getMad64_32(DAG, SL, MVT::i64, MulLHSLo, MulRHSLo, AddRHS, MulSignedLo);
+
+  if (!MulSignedLo && (!MulLHSUnsigned32 || !MulRHSUnsigned32)) {
+    auto AccumLo = DAG.getNode(ISD::EXTRACT_ELEMENT, SL, MVT::i32, Accum, Zero);
+    auto AccumHi = DAG.getNode(ISD::EXTRACT_ELEMENT, SL, MVT::i32, Accum, One);
+
+    if (!MulLHSUnsigned32) {
+      auto MulLHSHi =
+          DAG.getNode(ISD::EXTRACT_ELEMENT, SL, MVT::i32, MulLHS, One);
+      SDValue MulHi = DAG.getNode(ISD::MUL, SL, MVT::i32, MulLHSHi, MulRHSLo);
+      AccumHi = DAG.getNode(ISD::ADD, SL, MVT::i32, MulHi, AccumHi);
+    }
+
+    if (!MulRHSUnsigned32) {
+      auto MulRHSHi =
+          DAG.getNode(ISD::EXTRACT_ELEMENT, SL, MVT::i32, MulRHS, One);
+      SDValue MulHi = DAG.getNode(ISD::MUL, SL, MVT::i32, MulLHSLo, MulRHSHi);
+      AccumHi = DAG.getNode(ISD::ADD, SL, MVT::i32, MulHi, AccumHi);
+    }
+
+    Accum = DAG.getBuildVector(MVT::v2i32, SL, {AccumLo, AccumHi});
+    Accum = DAG.getBitcast(MVT::i64, Accum);
+  }
+
+  if (VT != MVT::i64)
+    Accum = DAG.getNode(ISD::TRUNCATE, SL, VT, Accum);
+  return Accum;
 }
 
 SDValue SITargetLowering::performAddCombine(SDNode *N,

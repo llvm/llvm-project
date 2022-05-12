@@ -23,12 +23,10 @@ define void @test_01(i32* %arr, i32* %a_len_ptr) #0 {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[LEN:%.*]] = load i32, i32* [[A_LEN_PTR:%.*]], align 4, !range [[RNG0:![0-9]+]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = add nsw i32 [[LEN]], -13
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp slt i32 [[TMP0]], 101
-; CHECK-NEXT:    [[SMIN:%.*]] = select i1 [[TMP1]], i32 [[TMP0]], i32 101
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp sgt i32 [[SMIN]], 0
-; CHECK-NEXT:    [[EXIT_MAINLOOP_AT:%.*]] = select i1 [[TMP2]], i32 [[SMIN]], i32 0
-; CHECK-NEXT:    [[TMP3:%.*]] = icmp slt i32 0, [[EXIT_MAINLOOP_AT]]
-; CHECK-NEXT:    br i1 [[TMP3]], label [[LOOP_PREHEADER:%.*]], label [[MAIN_PSEUDO_EXIT:%.*]]
+; CHECK-NEXT:    [[SMIN:%.*]] = call i32 @llvm.smin.i32(i32 [[TMP0]], i32 101)
+; CHECK-NEXT:    [[EXIT_MAINLOOP_AT:%.*]] = call i32 @llvm.smax.i32(i32 [[SMIN]], i32 0)
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp slt i32 0, [[EXIT_MAINLOOP_AT]]
+; CHECK-NEXT:    br i1 [[TMP1]], label [[LOOP_PREHEADER:%.*]], label [[MAIN_PSEUDO_EXIT:%.*]]
 ; CHECK:       loop.preheader:
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
@@ -41,12 +39,12 @@ define void @test_01(i32* %arr, i32* %a_len_ptr) #0 {
 ; CHECK-NEXT:    [[ADDR:%.*]] = getelementptr i32, i32* [[ARR:%.*]], i32 [[IDX]]
 ; CHECK-NEXT:    store i32 0, i32* [[ADDR]], align 4
 ; CHECK-NEXT:    [[NEXT:%.*]] = icmp slt i32 [[IDX_NEXT]], 101
-; CHECK-NEXT:    [[TMP4:%.*]] = icmp slt i32 [[IDX_NEXT]], [[EXIT_MAINLOOP_AT]]
-; CHECK-NEXT:    br i1 [[TMP4]], label [[LOOP]], label [[MAIN_EXIT_SELECTOR:%.*]]
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp slt i32 [[IDX_NEXT]], [[EXIT_MAINLOOP_AT]]
+; CHECK-NEXT:    br i1 [[TMP2]], label [[LOOP]], label [[MAIN_EXIT_SELECTOR:%.*]]
 ; CHECK:       main.exit.selector:
 ; CHECK-NEXT:    [[IDX_NEXT_LCSSA:%.*]] = phi i32 [ [[IDX_NEXT]], [[IN_BOUNDS]] ]
-; CHECK-NEXT:    [[TMP5:%.*]] = icmp slt i32 [[IDX_NEXT_LCSSA]], 101
-; CHECK-NEXT:    br i1 [[TMP5]], label [[MAIN_PSEUDO_EXIT]], label [[EXIT:%.*]]
+; CHECK-NEXT:    [[TMP3:%.*]] = icmp slt i32 [[IDX_NEXT_LCSSA]], 101
+; CHECK-NEXT:    br i1 [[TMP3]], label [[MAIN_PSEUDO_EXIT]], label [[EXIT:%.*]]
 ; CHECK:       main.pseudo.exit:
 ; CHECK-NEXT:    [[IDX_COPY:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[IDX_NEXT_LCSSA]], [[MAIN_EXIT_SELECTOR]] ]
 ; CHECK-NEXT:    [[INDVAR_END:%.*]] = phi i32 [ 0, [[ENTRY]] ], [ [[IDX_NEXT_LCSSA]], [[MAIN_EXIT_SELECTOR]] ]
@@ -121,17 +119,15 @@ define void @test_02(i32* %arr, i32* %a_len_ptr) #0 {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[LEN:%.*]] = load i32, i32* [[A_LEN_PTR:%.*]], align 4, !range [[RNG0]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = add nuw nsw i32 [[LEN]], -2147483647
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp sgt i32 [[TMP0]], -13
-; CHECK-NEXT:    [[SMAX:%.*]] = select i1 [[TMP1]], i32 [[TMP0]], i32 -13
-; CHECK-NEXT:    [[TMP2:%.*]] = sub i32 [[LEN]], [[SMAX]]
-; CHECK-NEXT:    [[TMP3:%.*]] = icmp slt i32 [[TMP2]], 101
-; CHECK-NEXT:    [[EXIT_MAINLOOP_AT:%.*]] = select i1 [[TMP3]], i32 [[TMP2]], i32 101
+; CHECK-NEXT:    [[SMAX:%.*]] = call i32 @llvm.smax.i32(i32 [[TMP0]], i32 -13)
+; CHECK-NEXT:    [[TMP1:%.*]] = sub i32 [[LEN]], [[SMAX]]
+; CHECK-NEXT:    [[EXIT_MAINLOOP_AT:%.*]] = call i32 @llvm.smin.i32(i32 [[TMP1]], i32 101)
 ; CHECK-NEXT:    br i1 true, label [[LOOP_PRELOOP_PREHEADER:%.*]], label [[PRELOOP_PSEUDO_EXIT:%.*]]
 ; CHECK:       loop.preloop.preheader:
 ; CHECK-NEXT:    br label [[LOOP_PRELOOP:%.*]]
 ; CHECK:       mainloop:
-; CHECK-NEXT:    [[TMP4:%.*]] = icmp slt i32 [[INDVAR_END:%.*]], [[EXIT_MAINLOOP_AT]]
-; CHECK-NEXT:    br i1 [[TMP4]], label [[LOOP_PREHEADER:%.*]], label [[MAIN_PSEUDO_EXIT:%.*]]
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp slt i32 [[INDVAR_END:%.*]], [[EXIT_MAINLOOP_AT]]
+; CHECK-NEXT:    br i1 [[TMP2]], label [[LOOP_PREHEADER:%.*]], label [[MAIN_PSEUDO_EXIT:%.*]]
 ; CHECK:       loop.preheader:
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
@@ -144,12 +140,12 @@ define void @test_02(i32* %arr, i32* %a_len_ptr) #0 {
 ; CHECK-NEXT:    [[ADDR:%.*]] = getelementptr i32, i32* [[ARR:%.*]], i32 [[IDX]]
 ; CHECK-NEXT:    store i32 0, i32* [[ADDR]], align 4
 ; CHECK-NEXT:    [[NEXT:%.*]] = icmp slt i32 [[IDX_NEXT]], 101
-; CHECK-NEXT:    [[TMP5:%.*]] = icmp slt i32 [[IDX_NEXT]], [[EXIT_MAINLOOP_AT]]
-; CHECK-NEXT:    br i1 [[TMP5]], label [[LOOP]], label [[MAIN_EXIT_SELECTOR:%.*]]
+; CHECK-NEXT:    [[TMP3:%.*]] = icmp slt i32 [[IDX_NEXT]], [[EXIT_MAINLOOP_AT]]
+; CHECK-NEXT:    br i1 [[TMP3]], label [[LOOP]], label [[MAIN_EXIT_SELECTOR:%.*]]
 ; CHECK:       main.exit.selector:
 ; CHECK-NEXT:    [[IDX_NEXT_LCSSA:%.*]] = phi i32 [ [[IDX_NEXT]], [[IN_BOUNDS]] ]
-; CHECK-NEXT:    [[TMP6:%.*]] = icmp slt i32 [[IDX_NEXT_LCSSA]], 101
-; CHECK-NEXT:    br i1 [[TMP6]], label [[MAIN_PSEUDO_EXIT]], label [[EXIT:%.*]]
+; CHECK-NEXT:    [[TMP4:%.*]] = icmp slt i32 [[IDX_NEXT_LCSSA]], 101
+; CHECK-NEXT:    br i1 [[TMP4]], label [[MAIN_PSEUDO_EXIT]], label [[EXIT:%.*]]
 ; CHECK:       main.pseudo.exit:
 ; CHECK-NEXT:    [[IDX_COPY:%.*]] = phi i32 [ [[IDX_PRELOOP_COPY]], [[MAINLOOP:%.*]] ], [ [[IDX_NEXT_LCSSA]], [[MAIN_EXIT_SELECTOR]] ]
 ; CHECK-NEXT:    [[INDVAR_END1:%.*]] = phi i32 [ [[INDVAR_END]], [[MAINLOOP]] ], [ [[IDX_NEXT_LCSSA]], [[MAIN_EXIT_SELECTOR]] ]
@@ -176,12 +172,12 @@ define void @test_02(i32* %arr, i32* %a_len_ptr) #0 {
 ; CHECK-NEXT:    [[ADDR_PRELOOP:%.*]] = getelementptr i32, i32* [[ARR]], i32 [[IDX_PRELOOP]]
 ; CHECK-NEXT:    store i32 0, i32* [[ADDR_PRELOOP]], align 4
 ; CHECK-NEXT:    [[NEXT_PRELOOP:%.*]] = icmp slt i32 [[IDX_NEXT_PRELOOP]], 101
-; CHECK-NEXT:    [[TMP7:%.*]] = icmp slt i32 [[IDX_NEXT_PRELOOP]], 13
-; CHECK-NEXT:    br i1 [[TMP7]], label [[LOOP_PRELOOP]], label [[PRELOOP_EXIT_SELECTOR:%.*]], !llvm.loop [[LOOP7:![0-9]+]], !irce.loop.clone !6
+; CHECK-NEXT:    [[TMP5:%.*]] = icmp slt i32 [[IDX_NEXT_PRELOOP]], 13
+; CHECK-NEXT:    br i1 [[TMP5]], label [[LOOP_PRELOOP]], label [[PRELOOP_EXIT_SELECTOR:%.*]], !llvm.loop [[LOOP7:![0-9]+]], !irce.loop.clone !6
 ; CHECK:       preloop.exit.selector:
 ; CHECK-NEXT:    [[IDX_NEXT_PRELOOP_LCSSA:%.*]] = phi i32 [ [[IDX_NEXT_PRELOOP]], [[IN_BOUNDS_PRELOOP]] ]
-; CHECK-NEXT:    [[TMP8:%.*]] = icmp slt i32 [[IDX_NEXT_PRELOOP_LCSSA]], 101
-; CHECK-NEXT:    br i1 [[TMP8]], label [[PRELOOP_PSEUDO_EXIT]], label [[EXIT]]
+; CHECK-NEXT:    [[TMP6:%.*]] = icmp slt i32 [[IDX_NEXT_PRELOOP_LCSSA]], 101
+; CHECK-NEXT:    br i1 [[TMP6]], label [[PRELOOP_PSEUDO_EXIT]], label [[EXIT]]
 ; CHECK:       preloop.pseudo.exit:
 ; CHECK-NEXT:    [[IDX_PRELOOP_COPY]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[IDX_NEXT_PRELOOP_LCSSA]], [[PRELOOP_EXIT_SELECTOR]] ]
 ; CHECK-NEXT:    [[INDVAR_END]] = phi i32 [ 0, [[ENTRY]] ], [ [[IDX_NEXT_PRELOOP_LCSSA]], [[PRELOOP_EXIT_SELECTOR]] ]
@@ -245,13 +241,11 @@ define void @test_03(i32* %arr, i32* %a_len_ptr) #0 {
 ; CHECK-LABEL: @test_03(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[LEN:%.*]] = load i32, i32* [[A_LEN_PTR:%.*]], align 4, !range [[RNG0]]
-; CHECK-NEXT:    [[TMP0:%.*]] = icmp slt i32 [[LEN]], 13
-; CHECK-NEXT:    [[SMIN:%.*]] = select i1 [[TMP0]], i32 [[LEN]], i32 13
-; CHECK-NEXT:    [[TMP1:%.*]] = sub i32 [[LEN]], [[SMIN]]
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp ult i32 [[TMP1]], 101
-; CHECK-NEXT:    [[EXIT_MAINLOOP_AT:%.*]] = select i1 [[TMP2]], i32 [[TMP1]], i32 101
-; CHECK-NEXT:    [[TMP3:%.*]] = icmp ult i32 0, [[EXIT_MAINLOOP_AT]]
-; CHECK-NEXT:    br i1 [[TMP3]], label [[LOOP_PREHEADER:%.*]], label [[MAIN_PSEUDO_EXIT:%.*]]
+; CHECK-NEXT:    [[SMIN:%.*]] = call i32 @llvm.smin.i32(i32 [[LEN]], i32 13)
+; CHECK-NEXT:    [[TMP0:%.*]] = sub i32 [[LEN]], [[SMIN]]
+; CHECK-NEXT:    [[EXIT_MAINLOOP_AT:%.*]] = call i32 @llvm.umin.i32(i32 [[TMP0]], i32 101)
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ult i32 0, [[EXIT_MAINLOOP_AT]]
+; CHECK-NEXT:    br i1 [[TMP1]], label [[LOOP_PREHEADER:%.*]], label [[MAIN_PSEUDO_EXIT:%.*]]
 ; CHECK:       loop.preheader:
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
@@ -264,12 +258,12 @@ define void @test_03(i32* %arr, i32* %a_len_ptr) #0 {
 ; CHECK-NEXT:    [[ADDR:%.*]] = getelementptr i32, i32* [[ARR:%.*]], i32 [[IDX]]
 ; CHECK-NEXT:    store i32 0, i32* [[ADDR]], align 4
 ; CHECK-NEXT:    [[NEXT:%.*]] = icmp ult i32 [[IDX_NEXT]], 101
-; CHECK-NEXT:    [[TMP4:%.*]] = icmp ult i32 [[IDX_NEXT]], [[EXIT_MAINLOOP_AT]]
-; CHECK-NEXT:    br i1 [[TMP4]], label [[LOOP]], label [[MAIN_EXIT_SELECTOR:%.*]]
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp ult i32 [[IDX_NEXT]], [[EXIT_MAINLOOP_AT]]
+; CHECK-NEXT:    br i1 [[TMP2]], label [[LOOP]], label [[MAIN_EXIT_SELECTOR:%.*]]
 ; CHECK:       main.exit.selector:
 ; CHECK-NEXT:    [[IDX_NEXT_LCSSA:%.*]] = phi i32 [ [[IDX_NEXT]], [[IN_BOUNDS]] ]
-; CHECK-NEXT:    [[TMP5:%.*]] = icmp ult i32 [[IDX_NEXT_LCSSA]], 101
-; CHECK-NEXT:    br i1 [[TMP5]], label [[MAIN_PSEUDO_EXIT]], label [[EXIT:%.*]]
+; CHECK-NEXT:    [[TMP3:%.*]] = icmp ult i32 [[IDX_NEXT_LCSSA]], 101
+; CHECK-NEXT:    br i1 [[TMP3]], label [[MAIN_PSEUDO_EXIT]], label [[EXIT:%.*]]
 ; CHECK:       main.pseudo.exit:
 ; CHECK-NEXT:    [[IDX_COPY:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[IDX_NEXT_LCSSA]], [[MAIN_EXIT_SELECTOR]] ]
 ; CHECK-NEXT:    [[INDVAR_END:%.*]] = phi i32 [ 0, [[ENTRY]] ], [ [[IDX_NEXT_LCSSA]], [[MAIN_EXIT_SELECTOR]] ]
@@ -344,14 +338,13 @@ define void @test_04(i32* %arr, i32* %a_len_ptr) #0 {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[LEN:%.*]] = load i32, i32* [[A_LEN_PTR:%.*]], align 4, !range [[RNG0]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = add nuw i32 [[LEN]], 13
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp ult i32 [[TMP0]], 101
-; CHECK-NEXT:    [[EXIT_MAINLOOP_AT:%.*]] = select i1 [[TMP1]], i32 [[TMP0]], i32 101
+; CHECK-NEXT:    [[EXIT_MAINLOOP_AT:%.*]] = call i32 @llvm.umin.i32(i32 [[TMP0]], i32 101)
 ; CHECK-NEXT:    br i1 true, label [[LOOP_PRELOOP_PREHEADER:%.*]], label [[PRELOOP_PSEUDO_EXIT:%.*]]
 ; CHECK:       loop.preloop.preheader:
 ; CHECK-NEXT:    br label [[LOOP_PRELOOP:%.*]]
 ; CHECK:       mainloop:
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp ult i32 [[INDVAR_END:%.*]], [[EXIT_MAINLOOP_AT]]
-; CHECK-NEXT:    br i1 [[TMP2]], label [[LOOP_PREHEADER:%.*]], label [[MAIN_PSEUDO_EXIT:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ult i32 [[INDVAR_END:%.*]], [[EXIT_MAINLOOP_AT]]
+; CHECK-NEXT:    br i1 [[TMP1]], label [[LOOP_PREHEADER:%.*]], label [[MAIN_PSEUDO_EXIT:%.*]]
 ; CHECK:       loop.preheader:
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
@@ -364,12 +357,12 @@ define void @test_04(i32* %arr, i32* %a_len_ptr) #0 {
 ; CHECK-NEXT:    [[ADDR:%.*]] = getelementptr i32, i32* [[ARR:%.*]], i32 [[IDX]]
 ; CHECK-NEXT:    store i32 0, i32* [[ADDR]], align 4
 ; CHECK-NEXT:    [[NEXT:%.*]] = icmp ult i32 [[IDX_NEXT]], 101
-; CHECK-NEXT:    [[TMP3:%.*]] = icmp ult i32 [[IDX_NEXT]], [[EXIT_MAINLOOP_AT]]
-; CHECK-NEXT:    br i1 [[TMP3]], label [[LOOP]], label [[MAIN_EXIT_SELECTOR:%.*]]
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp ult i32 [[IDX_NEXT]], [[EXIT_MAINLOOP_AT]]
+; CHECK-NEXT:    br i1 [[TMP2]], label [[LOOP]], label [[MAIN_EXIT_SELECTOR:%.*]]
 ; CHECK:       main.exit.selector:
 ; CHECK-NEXT:    [[IDX_NEXT_LCSSA:%.*]] = phi i32 [ [[IDX_NEXT]], [[IN_BOUNDS]] ]
-; CHECK-NEXT:    [[TMP4:%.*]] = icmp ult i32 [[IDX_NEXT_LCSSA]], 101
-; CHECK-NEXT:    br i1 [[TMP4]], label [[MAIN_PSEUDO_EXIT]], label [[EXIT:%.*]]
+; CHECK-NEXT:    [[TMP3:%.*]] = icmp ult i32 [[IDX_NEXT_LCSSA]], 101
+; CHECK-NEXT:    br i1 [[TMP3]], label [[MAIN_PSEUDO_EXIT]], label [[EXIT:%.*]]
 ; CHECK:       main.pseudo.exit:
 ; CHECK-NEXT:    [[IDX_COPY:%.*]] = phi i32 [ [[IDX_PRELOOP_COPY]], [[MAINLOOP:%.*]] ], [ [[IDX_NEXT_LCSSA]], [[MAIN_EXIT_SELECTOR]] ]
 ; CHECK-NEXT:    [[INDVAR_END1:%.*]] = phi i32 [ [[INDVAR_END]], [[MAINLOOP]] ], [ [[IDX_NEXT_LCSSA]], [[MAIN_EXIT_SELECTOR]] ]
@@ -396,12 +389,12 @@ define void @test_04(i32* %arr, i32* %a_len_ptr) #0 {
 ; CHECK-NEXT:    [[ADDR_PRELOOP:%.*]] = getelementptr i32, i32* [[ARR]], i32 [[IDX_PRELOOP]]
 ; CHECK-NEXT:    store i32 0, i32* [[ADDR_PRELOOP]], align 4
 ; CHECK-NEXT:    [[NEXT_PRELOOP:%.*]] = icmp ult i32 [[IDX_NEXT_PRELOOP]], 101
-; CHECK-NEXT:    [[TMP5:%.*]] = icmp ult i32 [[IDX_NEXT_PRELOOP]], 13
-; CHECK-NEXT:    br i1 [[TMP5]], label [[LOOP_PRELOOP]], label [[PRELOOP_EXIT_SELECTOR:%.*]], !llvm.loop [[LOOP10:![0-9]+]], !irce.loop.clone !6
+; CHECK-NEXT:    [[TMP4:%.*]] = icmp ult i32 [[IDX_NEXT_PRELOOP]], 13
+; CHECK-NEXT:    br i1 [[TMP4]], label [[LOOP_PRELOOP]], label [[PRELOOP_EXIT_SELECTOR:%.*]], !llvm.loop [[LOOP10:![0-9]+]], !irce.loop.clone !6
 ; CHECK:       preloop.exit.selector:
 ; CHECK-NEXT:    [[IDX_NEXT_PRELOOP_LCSSA:%.*]] = phi i32 [ [[IDX_NEXT_PRELOOP]], [[IN_BOUNDS_PRELOOP]] ]
-; CHECK-NEXT:    [[TMP6:%.*]] = icmp ult i32 [[IDX_NEXT_PRELOOP_LCSSA]], 101
-; CHECK-NEXT:    br i1 [[TMP6]], label [[PRELOOP_PSEUDO_EXIT]], label [[EXIT]]
+; CHECK-NEXT:    [[TMP5:%.*]] = icmp ult i32 [[IDX_NEXT_PRELOOP_LCSSA]], 101
+; CHECK-NEXT:    br i1 [[TMP5]], label [[PRELOOP_PSEUDO_EXIT]], label [[EXIT]]
 ; CHECK:       preloop.pseudo.exit:
 ; CHECK-NEXT:    [[IDX_PRELOOP_COPY]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[IDX_NEXT_PRELOOP_LCSSA]], [[PRELOOP_EXIT_SELECTOR]] ]
 ; CHECK-NEXT:    [[INDVAR_END]] = phi i32 [ 0, [[ENTRY]] ], [ [[IDX_NEXT_PRELOOP_LCSSA]], [[PRELOOP_EXIT_SELECTOR]] ]
@@ -451,12 +444,10 @@ define void @test_05(i32* %arr, i32* %a_len_ptr) #0 {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[LEN:%.*]] = load i32, i32* [[A_LEN_PTR:%.*]], align 4, !range [[RNG0]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = add nsw i32 [[LEN]], -13
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp slt i32 [[TMP0]], 101
-; CHECK-NEXT:    [[SMIN:%.*]] = select i1 [[TMP1]], i32 [[TMP0]], i32 101
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp sgt i32 [[SMIN]], 0
-; CHECK-NEXT:    [[EXIT_MAINLOOP_AT:%.*]] = select i1 [[TMP2]], i32 [[SMIN]], i32 0
-; CHECK-NEXT:    [[TMP3:%.*]] = icmp slt i32 0, [[EXIT_MAINLOOP_AT]]
-; CHECK-NEXT:    br i1 [[TMP3]], label [[LOOP_PREHEADER:%.*]], label [[MAIN_PSEUDO_EXIT:%.*]]
+; CHECK-NEXT:    [[SMIN:%.*]] = call i32 @llvm.smin.i32(i32 [[TMP0]], i32 101)
+; CHECK-NEXT:    [[EXIT_MAINLOOP_AT:%.*]] = call i32 @llvm.smax.i32(i32 [[SMIN]], i32 0)
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp slt i32 0, [[EXIT_MAINLOOP_AT]]
+; CHECK-NEXT:    br i1 [[TMP1]], label [[LOOP_PREHEADER:%.*]], label [[MAIN_PSEUDO_EXIT:%.*]]
 ; CHECK:       loop.preheader:
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
@@ -469,12 +460,12 @@ define void @test_05(i32* %arr, i32* %a_len_ptr) #0 {
 ; CHECK-NEXT:    [[ADDR:%.*]] = getelementptr i32, i32* [[ARR:%.*]], i32 [[IDX]]
 ; CHECK-NEXT:    store i32 0, i32* [[ADDR]], align 4
 ; CHECK-NEXT:    [[NEXT:%.*]] = icmp slt i32 [[IDX_NEXT]], 101
-; CHECK-NEXT:    [[TMP4:%.*]] = icmp slt i32 [[IDX_NEXT]], [[EXIT_MAINLOOP_AT]]
-; CHECK-NEXT:    br i1 [[TMP4]], label [[LOOP]], label [[MAIN_EXIT_SELECTOR:%.*]]
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp slt i32 [[IDX_NEXT]], [[EXIT_MAINLOOP_AT]]
+; CHECK-NEXT:    br i1 [[TMP2]], label [[LOOP]], label [[MAIN_EXIT_SELECTOR:%.*]]
 ; CHECK:       main.exit.selector:
 ; CHECK-NEXT:    [[IDX_NEXT_LCSSA:%.*]] = phi i32 [ [[IDX_NEXT]], [[IN_BOUNDS]] ]
-; CHECK-NEXT:    [[TMP5:%.*]] = icmp slt i32 [[IDX_NEXT_LCSSA]], 101
-; CHECK-NEXT:    br i1 [[TMP5]], label [[MAIN_PSEUDO_EXIT]], label [[EXIT:%.*]]
+; CHECK-NEXT:    [[TMP3:%.*]] = icmp slt i32 [[IDX_NEXT_LCSSA]], 101
+; CHECK-NEXT:    br i1 [[TMP3]], label [[MAIN_PSEUDO_EXIT]], label [[EXIT:%.*]]
 ; CHECK:       main.pseudo.exit:
 ; CHECK-NEXT:    [[IDX_COPY:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[IDX_NEXT_LCSSA]], [[MAIN_EXIT_SELECTOR]] ]
 ; CHECK-NEXT:    [[INDVAR_END:%.*]] = phi i32 [ 0, [[ENTRY]] ], [ [[IDX_NEXT_LCSSA]], [[MAIN_EXIT_SELECTOR]] ]
@@ -534,17 +525,15 @@ define void @test_06(i32* %arr, i32* %a_len_ptr) #0 {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[LEN:%.*]] = load i32, i32* [[A_LEN_PTR:%.*]], align 4, !range [[RNG0]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = add nuw nsw i32 [[LEN]], -2147483647
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp sgt i32 [[TMP0]], -13
-; CHECK-NEXT:    [[SMAX:%.*]] = select i1 [[TMP1]], i32 [[TMP0]], i32 -13
-; CHECK-NEXT:    [[TMP2:%.*]] = sub i32 [[LEN]], [[SMAX]]
-; CHECK-NEXT:    [[TMP3:%.*]] = icmp slt i32 [[TMP2]], 101
-; CHECK-NEXT:    [[EXIT_MAINLOOP_AT:%.*]] = select i1 [[TMP3]], i32 [[TMP2]], i32 101
+; CHECK-NEXT:    [[SMAX:%.*]] = call i32 @llvm.smax.i32(i32 [[TMP0]], i32 -13)
+; CHECK-NEXT:    [[TMP1:%.*]] = sub i32 [[LEN]], [[SMAX]]
+; CHECK-NEXT:    [[EXIT_MAINLOOP_AT:%.*]] = call i32 @llvm.smin.i32(i32 [[TMP1]], i32 101)
 ; CHECK-NEXT:    br i1 true, label [[LOOP_PRELOOP_PREHEADER:%.*]], label [[PRELOOP_PSEUDO_EXIT:%.*]]
 ; CHECK:       loop.preloop.preheader:
 ; CHECK-NEXT:    br label [[LOOP_PRELOOP:%.*]]
 ; CHECK:       mainloop:
-; CHECK-NEXT:    [[TMP4:%.*]] = icmp slt i32 [[INDVAR_END:%.*]], [[EXIT_MAINLOOP_AT]]
-; CHECK-NEXT:    br i1 [[TMP4]], label [[LOOP_PREHEADER:%.*]], label [[MAIN_PSEUDO_EXIT:%.*]]
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp slt i32 [[INDVAR_END:%.*]], [[EXIT_MAINLOOP_AT]]
+; CHECK-NEXT:    br i1 [[TMP2]], label [[LOOP_PREHEADER:%.*]], label [[MAIN_PSEUDO_EXIT:%.*]]
 ; CHECK:       loop.preheader:
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
@@ -557,12 +546,12 @@ define void @test_06(i32* %arr, i32* %a_len_ptr) #0 {
 ; CHECK-NEXT:    [[ADDR:%.*]] = getelementptr i32, i32* [[ARR:%.*]], i32 [[IDX]]
 ; CHECK-NEXT:    store i32 0, i32* [[ADDR]], align 4
 ; CHECK-NEXT:    [[NEXT:%.*]] = icmp slt i32 [[IDX_NEXT]], 101
-; CHECK-NEXT:    [[TMP5:%.*]] = icmp slt i32 [[IDX_NEXT]], [[EXIT_MAINLOOP_AT]]
-; CHECK-NEXT:    br i1 [[TMP5]], label [[LOOP]], label [[MAIN_EXIT_SELECTOR:%.*]]
+; CHECK-NEXT:    [[TMP3:%.*]] = icmp slt i32 [[IDX_NEXT]], [[EXIT_MAINLOOP_AT]]
+; CHECK-NEXT:    br i1 [[TMP3]], label [[LOOP]], label [[MAIN_EXIT_SELECTOR:%.*]]
 ; CHECK:       main.exit.selector:
 ; CHECK-NEXT:    [[IDX_NEXT_LCSSA:%.*]] = phi i32 [ [[IDX_NEXT]], [[IN_BOUNDS]] ]
-; CHECK-NEXT:    [[TMP6:%.*]] = icmp slt i32 [[IDX_NEXT_LCSSA]], 101
-; CHECK-NEXT:    br i1 [[TMP6]], label [[MAIN_PSEUDO_EXIT]], label [[EXIT:%.*]]
+; CHECK-NEXT:    [[TMP4:%.*]] = icmp slt i32 [[IDX_NEXT_LCSSA]], 101
+; CHECK-NEXT:    br i1 [[TMP4]], label [[MAIN_PSEUDO_EXIT]], label [[EXIT:%.*]]
 ; CHECK:       main.pseudo.exit:
 ; CHECK-NEXT:    [[IDX_COPY:%.*]] = phi i32 [ [[IDX_PRELOOP_COPY]], [[MAINLOOP:%.*]] ], [ [[IDX_NEXT_LCSSA]], [[MAIN_EXIT_SELECTOR]] ]
 ; CHECK-NEXT:    [[INDVAR_END1:%.*]] = phi i32 [ [[INDVAR_END]], [[MAINLOOP]] ], [ [[IDX_NEXT_LCSSA]], [[MAIN_EXIT_SELECTOR]] ]
@@ -589,12 +578,12 @@ define void @test_06(i32* %arr, i32* %a_len_ptr) #0 {
 ; CHECK-NEXT:    [[ADDR_PRELOOP:%.*]] = getelementptr i32, i32* [[ARR]], i32 [[IDX_PRELOOP]]
 ; CHECK-NEXT:    store i32 0, i32* [[ADDR_PRELOOP]], align 4
 ; CHECK-NEXT:    [[NEXT_PRELOOP:%.*]] = icmp slt i32 [[IDX_NEXT_PRELOOP]], 101
-; CHECK-NEXT:    [[TMP7:%.*]] = icmp slt i32 [[IDX_NEXT_PRELOOP]], 13
-; CHECK-NEXT:    br i1 [[TMP7]], label [[LOOP_PRELOOP]], label [[PRELOOP_EXIT_SELECTOR:%.*]], !llvm.loop [[LOOP13:![0-9]+]], !irce.loop.clone !6
+; CHECK-NEXT:    [[TMP5:%.*]] = icmp slt i32 [[IDX_NEXT_PRELOOP]], 13
+; CHECK-NEXT:    br i1 [[TMP5]], label [[LOOP_PRELOOP]], label [[PRELOOP_EXIT_SELECTOR:%.*]], !llvm.loop [[LOOP13:![0-9]+]], !irce.loop.clone !6
 ; CHECK:       preloop.exit.selector:
 ; CHECK-NEXT:    [[IDX_NEXT_PRELOOP_LCSSA:%.*]] = phi i32 [ [[IDX_NEXT_PRELOOP]], [[IN_BOUNDS_PRELOOP]] ]
-; CHECK-NEXT:    [[TMP8:%.*]] = icmp slt i32 [[IDX_NEXT_PRELOOP_LCSSA]], 101
-; CHECK-NEXT:    br i1 [[TMP8]], label [[PRELOOP_PSEUDO_EXIT]], label [[EXIT]]
+; CHECK-NEXT:    [[TMP6:%.*]] = icmp slt i32 [[IDX_NEXT_PRELOOP_LCSSA]], 101
+; CHECK-NEXT:    br i1 [[TMP6]], label [[PRELOOP_PSEUDO_EXIT]], label [[EXIT]]
 ; CHECK:       preloop.pseudo.exit:
 ; CHECK-NEXT:    [[IDX_PRELOOP_COPY]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[IDX_NEXT_PRELOOP_LCSSA]], [[PRELOOP_EXIT_SELECTOR]] ]
 ; CHECK-NEXT:    [[INDVAR_END]] = phi i32 [ 0, [[ENTRY]] ], [ [[IDX_NEXT_PRELOOP_LCSSA]], [[PRELOOP_EXIT_SELECTOR]] ]
@@ -643,13 +632,11 @@ define void @test_07(i32* %arr, i32* %a_len_ptr) #0 {
 ; CHECK-LABEL: @test_07(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[LEN:%.*]] = load i32, i32* [[A_LEN_PTR:%.*]], align 4, !range [[RNG0]]
-; CHECK-NEXT:    [[TMP0:%.*]] = icmp slt i32 [[LEN]], 13
-; CHECK-NEXT:    [[SMIN:%.*]] = select i1 [[TMP0]], i32 [[LEN]], i32 13
-; CHECK-NEXT:    [[TMP1:%.*]] = sub i32 [[LEN]], [[SMIN]]
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp ult i32 [[TMP1]], 101
-; CHECK-NEXT:    [[EXIT_MAINLOOP_AT:%.*]] = select i1 [[TMP2]], i32 [[TMP1]], i32 101
-; CHECK-NEXT:    [[TMP3:%.*]] = icmp ult i32 0, [[EXIT_MAINLOOP_AT]]
-; CHECK-NEXT:    br i1 [[TMP3]], label [[LOOP_PREHEADER:%.*]], label [[MAIN_PSEUDO_EXIT:%.*]]
+; CHECK-NEXT:    [[SMIN:%.*]] = call i32 @llvm.smin.i32(i32 [[LEN]], i32 13)
+; CHECK-NEXT:    [[TMP0:%.*]] = sub i32 [[LEN]], [[SMIN]]
+; CHECK-NEXT:    [[EXIT_MAINLOOP_AT:%.*]] = call i32 @llvm.umin.i32(i32 [[TMP0]], i32 101)
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ult i32 0, [[EXIT_MAINLOOP_AT]]
+; CHECK-NEXT:    br i1 [[TMP1]], label [[LOOP_PREHEADER:%.*]], label [[MAIN_PSEUDO_EXIT:%.*]]
 ; CHECK:       loop.preheader:
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
@@ -662,12 +649,12 @@ define void @test_07(i32* %arr, i32* %a_len_ptr) #0 {
 ; CHECK-NEXT:    [[ADDR:%.*]] = getelementptr i32, i32* [[ARR:%.*]], i32 [[IDX]]
 ; CHECK-NEXT:    store i32 0, i32* [[ADDR]], align 4
 ; CHECK-NEXT:    [[NEXT:%.*]] = icmp ult i32 [[IDX_NEXT]], 101
-; CHECK-NEXT:    [[TMP4:%.*]] = icmp ult i32 [[IDX_NEXT]], [[EXIT_MAINLOOP_AT]]
-; CHECK-NEXT:    br i1 [[TMP4]], label [[LOOP]], label [[MAIN_EXIT_SELECTOR:%.*]]
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp ult i32 [[IDX_NEXT]], [[EXIT_MAINLOOP_AT]]
+; CHECK-NEXT:    br i1 [[TMP2]], label [[LOOP]], label [[MAIN_EXIT_SELECTOR:%.*]]
 ; CHECK:       main.exit.selector:
 ; CHECK-NEXT:    [[IDX_NEXT_LCSSA:%.*]] = phi i32 [ [[IDX_NEXT]], [[IN_BOUNDS]] ]
-; CHECK-NEXT:    [[TMP5:%.*]] = icmp ult i32 [[IDX_NEXT_LCSSA]], 101
-; CHECK-NEXT:    br i1 [[TMP5]], label [[MAIN_PSEUDO_EXIT]], label [[EXIT:%.*]]
+; CHECK-NEXT:    [[TMP3:%.*]] = icmp ult i32 [[IDX_NEXT_LCSSA]], 101
+; CHECK-NEXT:    br i1 [[TMP3]], label [[MAIN_PSEUDO_EXIT]], label [[EXIT:%.*]]
 ; CHECK:       main.pseudo.exit:
 ; CHECK-NEXT:    [[IDX_COPY:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[IDX_NEXT_LCSSA]], [[MAIN_EXIT_SELECTOR]] ]
 ; CHECK-NEXT:    [[INDVAR_END:%.*]] = phi i32 [ 0, [[ENTRY]] ], [ [[IDX_NEXT_LCSSA]], [[MAIN_EXIT_SELECTOR]] ]
@@ -727,14 +714,13 @@ define void @test_08(i32* %arr, i32* %a_len_ptr) #0 {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[LEN:%.*]] = load i32, i32* [[A_LEN_PTR:%.*]], align 4, !range [[RNG0]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = add nuw i32 [[LEN]], 13
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp ult i32 [[TMP0]], 101
-; CHECK-NEXT:    [[EXIT_MAINLOOP_AT:%.*]] = select i1 [[TMP1]], i32 [[TMP0]], i32 101
+; CHECK-NEXT:    [[EXIT_MAINLOOP_AT:%.*]] = call i32 @llvm.umin.i32(i32 [[TMP0]], i32 101)
 ; CHECK-NEXT:    br i1 true, label [[LOOP_PRELOOP_PREHEADER:%.*]], label [[PRELOOP_PSEUDO_EXIT:%.*]]
 ; CHECK:       loop.preloop.preheader:
 ; CHECK-NEXT:    br label [[LOOP_PRELOOP:%.*]]
 ; CHECK:       mainloop:
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp ult i32 [[INDVAR_END:%.*]], [[EXIT_MAINLOOP_AT]]
-; CHECK-NEXT:    br i1 [[TMP2]], label [[LOOP_PREHEADER:%.*]], label [[MAIN_PSEUDO_EXIT:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ult i32 [[INDVAR_END:%.*]], [[EXIT_MAINLOOP_AT]]
+; CHECK-NEXT:    br i1 [[TMP1]], label [[LOOP_PREHEADER:%.*]], label [[MAIN_PSEUDO_EXIT:%.*]]
 ; CHECK:       loop.preheader:
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
@@ -747,12 +733,12 @@ define void @test_08(i32* %arr, i32* %a_len_ptr) #0 {
 ; CHECK-NEXT:    [[ADDR:%.*]] = getelementptr i32, i32* [[ARR:%.*]], i32 [[IDX]]
 ; CHECK-NEXT:    store i32 0, i32* [[ADDR]], align 4
 ; CHECK-NEXT:    [[NEXT:%.*]] = icmp ult i32 [[IDX_NEXT]], 101
-; CHECK-NEXT:    [[TMP3:%.*]] = icmp ult i32 [[IDX_NEXT]], [[EXIT_MAINLOOP_AT]]
-; CHECK-NEXT:    br i1 [[TMP3]], label [[LOOP]], label [[MAIN_EXIT_SELECTOR:%.*]]
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp ult i32 [[IDX_NEXT]], [[EXIT_MAINLOOP_AT]]
+; CHECK-NEXT:    br i1 [[TMP2]], label [[LOOP]], label [[MAIN_EXIT_SELECTOR:%.*]]
 ; CHECK:       main.exit.selector:
 ; CHECK-NEXT:    [[IDX_NEXT_LCSSA:%.*]] = phi i32 [ [[IDX_NEXT]], [[IN_BOUNDS]] ]
-; CHECK-NEXT:    [[TMP4:%.*]] = icmp ult i32 [[IDX_NEXT_LCSSA]], 101
-; CHECK-NEXT:    br i1 [[TMP4]], label [[MAIN_PSEUDO_EXIT]], label [[EXIT:%.*]]
+; CHECK-NEXT:    [[TMP3:%.*]] = icmp ult i32 [[IDX_NEXT_LCSSA]], 101
+; CHECK-NEXT:    br i1 [[TMP3]], label [[MAIN_PSEUDO_EXIT]], label [[EXIT:%.*]]
 ; CHECK:       main.pseudo.exit:
 ; CHECK-NEXT:    [[IDX_COPY:%.*]] = phi i32 [ [[IDX_PRELOOP_COPY]], [[MAINLOOP:%.*]] ], [ [[IDX_NEXT_LCSSA]], [[MAIN_EXIT_SELECTOR]] ]
 ; CHECK-NEXT:    [[INDVAR_END1:%.*]] = phi i32 [ [[INDVAR_END]], [[MAINLOOP]] ], [ [[IDX_NEXT_LCSSA]], [[MAIN_EXIT_SELECTOR]] ]
@@ -779,12 +765,12 @@ define void @test_08(i32* %arr, i32* %a_len_ptr) #0 {
 ; CHECK-NEXT:    [[ADDR_PRELOOP:%.*]] = getelementptr i32, i32* [[ARR]], i32 [[IDX_PRELOOP]]
 ; CHECK-NEXT:    store i32 0, i32* [[ADDR_PRELOOP]], align 4
 ; CHECK-NEXT:    [[NEXT_PRELOOP:%.*]] = icmp ult i32 [[IDX_NEXT_PRELOOP]], 101
-; CHECK-NEXT:    [[TMP5:%.*]] = icmp ult i32 [[IDX_NEXT_PRELOOP]], 13
-; CHECK-NEXT:    br i1 [[TMP5]], label [[LOOP_PRELOOP]], label [[PRELOOP_EXIT_SELECTOR:%.*]], !llvm.loop [[LOOP16:![0-9]+]], !irce.loop.clone !6
+; CHECK-NEXT:    [[TMP4:%.*]] = icmp ult i32 [[IDX_NEXT_PRELOOP]], 13
+; CHECK-NEXT:    br i1 [[TMP4]], label [[LOOP_PRELOOP]], label [[PRELOOP_EXIT_SELECTOR:%.*]], !llvm.loop [[LOOP16:![0-9]+]], !irce.loop.clone !6
 ; CHECK:       preloop.exit.selector:
 ; CHECK-NEXT:    [[IDX_NEXT_PRELOOP_LCSSA:%.*]] = phi i32 [ [[IDX_NEXT_PRELOOP]], [[IN_BOUNDS_PRELOOP]] ]
-; CHECK-NEXT:    [[TMP6:%.*]] = icmp ult i32 [[IDX_NEXT_PRELOOP_LCSSA]], 101
-; CHECK-NEXT:    br i1 [[TMP6]], label [[PRELOOP_PSEUDO_EXIT]], label [[EXIT]]
+; CHECK-NEXT:    [[TMP5:%.*]] = icmp ult i32 [[IDX_NEXT_PRELOOP_LCSSA]], 101
+; CHECK-NEXT:    br i1 [[TMP5]], label [[PRELOOP_PSEUDO_EXIT]], label [[EXIT]]
 ; CHECK:       preloop.pseudo.exit:
 ; CHECK-NEXT:    [[IDX_PRELOOP_COPY]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[IDX_NEXT_PRELOOP_LCSSA]], [[PRELOOP_EXIT_SELECTOR]] ]
 ; CHECK-NEXT:    [[INDVAR_END]] = phi i32 [ 0, [[ENTRY]] ], [ [[IDX_NEXT_PRELOOP_LCSSA]], [[PRELOOP_EXIT_SELECTOR]] ]

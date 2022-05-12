@@ -179,7 +179,7 @@ define void @bitreverse_v2i64(<2 x i64>* %x, <2 x i64>* %y) {
 ; RV32-NEXT:    lui a4, 4080
 ; RV32-NEXT:    vand.vx v10, v10, a4
 ; RV32-NEXT:    li a5, 5
-; RV32-NEXT:    vsetivli zero, 1, e8, mf8, ta, mu
+; RV32-NEXT:    vsetvli zero, zero, e8, mf8, ta, mu
 ; RV32-NEXT:    vmv.s.x v0, a5
 ; RV32-NEXT:    vsetivli zero, 4, e32, m1, ta, mu
 ; RV32-NEXT:    vmv.v.i v11, 0
@@ -871,7 +871,7 @@ define void @bitreverse_v4i64(<4 x i64>* %x, <4 x i64>* %y) {
 ; LMULMAX1-RV32-NEXT:    lui a5, 4080
 ; LMULMAX1-RV32-NEXT:    vand.vx v11, v9, a5
 ; LMULMAX1-RV32-NEXT:    li a6, 5
-; LMULMAX1-RV32-NEXT:    vsetivli zero, 1, e8, mf8, ta, mu
+; LMULMAX1-RV32-NEXT:    vsetvli zero, zero, e8, mf8, ta, mu
 ; LMULMAX1-RV32-NEXT:    vmv.s.x v0, a6
 ; LMULMAX1-RV32-NEXT:    vsetivli zero, 4, e32, m1, ta, mu
 ; LMULMAX1-RV32-NEXT:    vmv.v.i v9, 0

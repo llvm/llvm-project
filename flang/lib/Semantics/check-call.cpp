@@ -635,7 +635,9 @@ static void CheckProcedureArg(evaluate::ActualArgument &arg,
               dummyName);
         }
       } else if (IsNullPointer(*expr)) {
-        if (!dummyIsPointer) {
+        if (!dummyIsPointer &&
+            !dummy.attrs.test(
+                characteristics::DummyProcedure::Attr::Optional)) {
           messages.Say(
               "Actual argument associated with procedure %s is a null pointer"_err_en_US,
               dummyName);

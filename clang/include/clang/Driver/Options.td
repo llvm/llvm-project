@@ -1518,6 +1518,14 @@ def : Flag<["-"], "fextended-identifiers">, Group<clang_ignored_f_Group>;
 def : Flag<["-"], "fno-extended-identifiers">, Group<f_Group>, Flags<[Unsupported]>;
 def fhosted : Flag<["-"], "fhosted">, Group<f_Group>;
 def fdenormal_fp_math_EQ : Joined<["-"], "fdenormal-fp-math=">, Group<f_Group>, Flags<[CC1Option]>;
+def ffile_reproducible : Flag<["-"], "ffile-reproducible">, Group<f_Group>,
+  Flags<[CoreOption, CC1Option]>,
+  HelpText<"Use the target's platform-specific path separator character when "
+           "expanding the __FILE__ macro">;
+def fno_file_reproducible : Flag<["-"], "fno-file-reproducible">,
+  Group<f_Group>, Flags<[CoreOption, CC1Option]>,
+  HelpText<"Use the host's platform-specific path separator character when "
+           "expanding the __FILE__ macro">;
 def ffp_eval_method_EQ : Joined<["-"], "ffp-eval-method=">, Group<f_Group>, Flags<[CC1Option]>,
   HelpText<"Specifies the evaluation method to use for floating-point arithmetic.">,
   Values<"source,double,extended">, NormalizedValuesScope<"LangOptions">,
@@ -2543,9 +2551,9 @@ defm openmp_optimistic_collapse : BoolFOption<"openmp-optimistic-collapse",
   PosFlag<SetTrue, [CC1Option]>, NegFlag<SetFalse>, BothFlags<[NoArgumentUnused, HelpHidden]>>;
 def static_openmp: Flag<["-"], "static-openmp">,
   HelpText<"Use the static host OpenMP runtime while linking.">;
-def offload_new_driver : Flag<["--"], "offload-new-driver">, Flags<[CC1Option]>, Group<Action_Group>,
-  HelpText<"Use the new driver for offloading compilation.">;
-def no_offload_new_driver : Flag<["--"], "no-offload-new-driver">, Flags<[CC1Option]>, Group<Action_Group>,
+def offload_new_driver : Flag<["--"], "offload-new-driver">, Flags<[CC1Option]>, Group<f_Group>,
+  MarshallingInfoFlag<LangOpts<"OffloadingNewDriver">>, HelpText<"Use the new driver for offloading compilation.">;
+def no_offload_new_driver : Flag<["--"], "no-offload-new-driver">, Flags<[CC1Option]>, Group<f_Group>,
   HelpText<"Don't Use the new driver for offloading compilation.">;
 def offload_device_only : Flag<["--"], "offload-device-only">,
   HelpText<"Only compile for the offloading device.">;
@@ -2560,7 +2568,7 @@ def cuda_host_only : Flag<["--"], "cuda-host-only">, Alias<offload_host_only>,
 def cuda_compile_host_device : Flag<["--"], "cuda-compile-host-device">, Alias<offload_host_device>,
   HelpText<"Compile CUDA code for both host and device (default). Has no "
            "effect on non-CUDA compilations.">;
-def fopenmp_new_driver : Flag<["-"], "fopenmp-new-driver">, Flags<[CC1Option]>, Group<Action_Group>,
+def fopenmp_new_driver : Flag<["-"], "fopenmp-new-driver">, Flags<[CC1Option]>, Group<f_Group>,
   HelpText<"Use the new driver for OpenMP offloading.">;
 def fno_openmp_new_driver : Flag<["-"], "fno-openmp-new-driver">, Flags<[CC1Option]>, Group<Action_Group>,
   Alias<no_offload_new_driver>, HelpText<"Don't use the new driver for OpenMP offloading.">;
@@ -3026,10 +3034,12 @@ def fcoverage_prefix_map_EQ
     HelpText<"remap file source paths in coverage mapping">;
 def ffile_prefix_map_EQ
   : Joined<["-"], "ffile-prefix-map=">, Group<f_Group>,
-    HelpText<"remap file source paths in debug info, predefined preprocessor macros and __builtin_FILE()">;
+    HelpText<"remap file source paths in debug info, predefined preprocessor "
+             "macros and __builtin_FILE(). Implies -ffile-reproducible.">;
 def fmacro_prefix_map_EQ
   : Joined<["-"], "fmacro-prefix-map=">, Group<f_Group>, Flags<[CC1Option]>,
-    HelpText<"remap file source paths in predefined preprocessor macros and __builtin_FILE()">;
+    HelpText<"remap file source paths in predefined preprocessor macros and "
+             "__builtin_FILE(). Implies -ffile-reproducible.">;
 defm force_dwarf_frame : BoolFOption<"force-dwarf-frame",
   CodeGenOpts<"ForceDwarfFrameSection">, DefaultFalse,
   PosFlag<SetTrue, [CC1Option], "Always emit a debug frame section">, NegFlag<SetFalse>>;
@@ -6089,9 +6099,7 @@ def stack_protector_buffer_size : Separate<["-"], "stack-protector-buffer-size">
   MarshallingInfoInt<CodeGenOpts<"SSPBufferSize">, "8">;
 def fvisibility : Separate<["-"], "fvisibility">,
   HelpText<"Default type and symbol visibility">,
-  MarshallingInfoVisibility<LangOpts<"ValueVisibilityMode">, "DefaultVisibility">,
-  // Always emitting because of the relation to `-mignore-xcoff-visibility`.
-  AlwaysEmit;
+  MarshallingInfoVisibility<LangOpts<"ValueVisibilityMode">, "DefaultVisibility">;
 def ftype_visibility : Separate<["-"], "ftype-visibility">,
   HelpText<"Default type visibility">,
   MarshallingInfoVisibility<LangOpts<"TypeVisibilityMode">, fvisibility.KeyPath>;

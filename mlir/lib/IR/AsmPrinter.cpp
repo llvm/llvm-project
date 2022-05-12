@@ -38,6 +38,7 @@
 #include "llvm/ADT/StringSet.h"
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/Debug.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/Regex.h"
 #include "llvm/Support/SaveAndRestore.h"
@@ -47,6 +48,8 @@
 
 using namespace mlir;
 using namespace mlir::detail;
+
+#define DEBUG_TYPE "mlir-asm-printer"
 
 void OperationName::print(raw_ostream &os) const { os << getStringRef(); }
 
@@ -1313,14 +1316,28 @@ static OpPrintingFlags verifyOpAndAdjustFlags(Operation *op,
       printerFlags.shouldAssumeVerified())
     return printerFlags;
 
+  LLVM_DEBUG(llvm::dbgs() << DEBUG_TYPE << ": Verifying operation: "
+                          << op->getName() << "\n");
+
   // Ignore errors emitted by the verifier. We check the thread id to avoid
   // consuming other threads' errors.
   auto parentThreadId = llvm::get_threadid();
-  ScopedDiagnosticHandler diagHandler(op->getContext(), [&](Diagnostic &) {
-    return success(parentThreadId == llvm::get_threadid());
+  ScopedDiagnosticHandler diagHandler(op->getContext(), [&](Diagnostic &diag) {
+    if (parentThreadId == llvm::get_threadid()) {
+      LLVM_DEBUG({
+        diag.print(llvm::dbgs());
+        llvm::dbgs() << "\n";
+      });
+      return success();
+    }
+    return failure();
   });
-  if (failed(verify(op)))
+  if (failed(verify(op))) {
+    LLVM_DEBUG(llvm::dbgs()
+               << DEBUG_TYPE << ": '" << op->getName()
+               << "' failed to verify and will be printed in generic form\n");
     printerFlags.printGenericOpForm();
+  }
 
   return printerFlags;
 }

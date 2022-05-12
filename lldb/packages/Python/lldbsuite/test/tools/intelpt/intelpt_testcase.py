@@ -45,37 +45,38 @@ class TraceIntelPTTestCaseBase(TestBase):
         else:
             self.assertSuccess(sberror)
 
-    def createConfiguration(self, threadBufferSize=None,
+    def createConfiguration(self, traceBufferSize=None,
                             processBufferSizeLimit=None, enableTsc=False,
-                            psbPeriod=None):
+                            psbPeriod=None, perCoreTracing=False):
         obj = {}
         if processBufferSizeLimit is not None:
             obj["processBufferSizeLimit"] = processBufferSizeLimit
-        if threadBufferSize is not None:
-            obj["threadBufferSize"] = threadBufferSize
+        if traceBufferSize is not None:
+            obj["traceBufferSize"] = traceBufferSize
         if psbPeriod is not None:
             obj["psbPeriod"] = psbPeriod
         obj["enableTsc"] = enableTsc
+        obj["perCoreTracing"] = perCoreTracing
 
         configuration = lldb.SBStructuredData()
         configuration.SetFromJSON(json.dumps(obj))
         return configuration
 
     def traceStartThread(self, thread=None, error=False, substrs=None,
-                         threadBufferSize=None, enableTsc=False, psbPeriod=None):
+                         traceBufferSize=None, enableTsc=False, psbPeriod=None):
         if self.USE_SB_API:
             trace = self.getTraceOrCreate()
             thread = thread if thread is not None else self.thread()
             configuration = self.createConfiguration(
-                threadBufferSize=threadBufferSize, enableTsc=enableTsc,
+                traceBufferSize=traceBufferSize, enableTsc=enableTsc,
                 psbPeriod=psbPeriod)
             self.assertSBError(trace.Start(thread, configuration), error)
         else:
             command = "thread trace start"
             if thread is not None:
                 command += " " + str(thread.GetIndexID())
-            if threadBufferSize is not None:
-                command += " -s " + str(threadBufferSize)
+            if traceBufferSize is not None:
+                command += " -s " + str(traceBufferSize)
             if enableTsc:
                 command += " --tsc"
             if psbPeriod is not None:
@@ -83,12 +84,13 @@ class TraceIntelPTTestCaseBase(TestBase):
             self.expect(command, error=error, substrs=substrs)
 
     def traceStartProcess(self, processBufferSizeLimit=None, error=False,
-                          substrs=None, enableTsc=False, psbPeriod=None):
+                          substrs=None, enableTsc=False, psbPeriod=None,
+                          perCoreTracing=False):
         if self.USE_SB_API:
             trace = self.getTraceOrCreate()
             configuration = self.createConfiguration(
                 processBufferSizeLimit=processBufferSizeLimit, enableTsc=enableTsc,
-                psbPeriod=psbPeriod)
+                psbPeriod=psbPeriod, perCoreTracing=perCoreTracing)
             self.assertSBError(trace.Start(configuration), error=error)
         else:
             command = "process trace start"
@@ -98,6 +100,8 @@ class TraceIntelPTTestCaseBase(TestBase):
                 command += " --tsc"
             if psbPeriod is not None:
                 command += " --psb-period " + str(psbPeriod)
+            if perCoreTracing:
+                command += " --per-core-tracing"
             self.expect(command, error=error, substrs=substrs)
 
     def traceStopProcess(self):

@@ -47,8 +47,7 @@ define void @test2(i64 %arg) {
 ; CHECK-NEXT:    [[E5:%.*]] = call i64 @llvm.umin.i64(i64 [[E4]], i64 16384)
 ; CHECK-NEXT:    [[E6:%.*]] = icmp ugt i64 [[E5]], 0
 ; CHECK-NEXT:    [[E7:%.*]] = sub i64 undef, 0
-; CHECK-NEXT:    [[TMP0:%.*]] = icmp ult i64 [[E5]], [[E7]]
-; CHECK-NEXT:    [[E10_NARY:%.*]] = select i1 [[TMP0]], i64 [[E5]], i64 [[E7]]
+; CHECK-NEXT:    [[E10_NARY:%.*]] = call i64 @llvm.umin.i64(i64 [[E5]], i64 [[E7]])
 ; CHECK-NEXT:    unreachable
 ;
 bb:
@@ -81,8 +80,7 @@ define i32 @nary_infinite_loop_minmax(i32 %d0, i32 %d1, i32 %d2, i32 %d3) {
 ; CHECK-NEXT:    [[SEL2:%.*]] = select i1 [[CMP2]], i32 [[SEL1]], i32 [[SEL0]]
 ; CHECK-NEXT:    [[CMP3:%.*]] = icmp slt i32 [[D3]], [[D0]]
 ; CHECK-NEXT:    [[SEL3:%.*]] = select i1 [[CMP3]], i32 [[D0]], i32 [[D3]]
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp sgt i32 [[SEL0]], [[SEL3]]
-; CHECK-NEXT:    [[SEL5_NARY:%.*]] = select i1 [[TMP1]], i32 [[SEL0]], i32 [[SEL3]]
+; CHECK-NEXT:    [[SEL5_NARY:%.*]] = call i32 @llvm.smax.i32(i32 [[SEL0]], i32 [[SEL3]])
 ; CHECK-NEXT:    ret i32 [[SEL5_NARY]]
 ;
   %cmp0 = icmp slt i32 %d2, %d1

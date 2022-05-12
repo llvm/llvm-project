@@ -147,10 +147,9 @@ define void @looperVarTBAAStruct(double* nocapture noalias %out, double* nocaptu
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[OUT1:%.*]] = bitcast double* [[OUT:%.*]] to i8*
 ; CHECK-NEXT:    [[IN2:%.*]] = bitcast double* [[IN:%.*]] to i8*
-; CHECK-NEXT:    [[TMP0:%.*]] = icmp ugt i64 [[LEN:%.*]], 1
-; CHECK-NEXT:    [[UMAX:%.*]] = select i1 [[TMP0]], i64 [[LEN]], i64 1
-; CHECK-NEXT:    [[TMP1:%.*]] = shl nuw i64 [[UMAX]], 3
-; CHECK-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 8 [[OUT1]], i8* align 8 [[IN2]], i64 [[TMP1]], i1 false)
+; CHECK-NEXT:    [[UMAX:%.*]] = call i64 @llvm.umax.i64(i64 [[LEN:%.*]], i64 1)
+; CHECK-NEXT:    [[TMP0:%.*]] = shl nuw i64 [[UMAX]], 3
+; CHECK-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 8 [[OUT1]], i8* align 8 [[IN2]], i64 [[TMP0]], i1 false)
 ; CHECK-NEXT:    br label [[FOR_BODY4:%.*]]
 ; CHECK:       for.body4:
 ; CHECK-NEXT:    [[J_020:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[INC:%.*]], [[FOR_BODY4]] ]

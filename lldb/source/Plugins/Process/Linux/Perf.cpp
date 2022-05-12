@@ -8,6 +8,7 @@
 
 #include "Perf.h"
 
+#include "Plugins/Process/POSIX/ProcessPOSIXLog.h"
 #include "lldb/Host/linux/Support.h"
 
 #include "llvm/Support/FormatVariadic.h"
@@ -21,6 +22,54 @@
 using namespace lldb_private;
 using namespace process_linux;
 using namespace llvm;
+
+void lldb_private::process_linux::ReadCyclicBuffer(
+    llvm::MutableArrayRef<uint8_t> &dst, llvm::ArrayRef<uint8_t> src,
+    size_t src_cyc_index, size_t offset) {
+
+  Log *log = GetLog(POSIXLog::Trace);
+
+  if (dst.empty() || src.empty()) {
+    dst = dst.drop_back(dst.size());
+    return;
+  }
+
+  if (dst.data() == nullptr || src.data() == nullptr) {
+    dst = dst.drop_back(dst.size());
+    return;
+  }
+
+  if (src_cyc_index > src.size()) {
+    dst = dst.drop_back(dst.size());
+    return;
+  }
+
+  if (offset >= src.size()) {
+    LLDB_LOG(log, "Too Big offset ");
+    dst = dst.drop_back(dst.size());
+    return;
+  }
+
+  llvm::SmallVector<ArrayRef<uint8_t>, 2> parts = {
+      src.slice(src_cyc_index), src.take_front(src_cyc_index)};
+
+  if (offset > parts[0].size()) {
+    parts[1] = parts[1].slice(offset - parts[0].size());
+    parts[0] = parts[0].drop_back(parts[0].size());
+  } else if (offset == parts[0].size()) {
+    parts[0] = parts[0].drop_back(parts[0].size());
+  } else {
+    parts[0] = parts[0].slice(offset);
+  }
+  auto next = dst.begin();
+  auto bytes_left = dst.size();
+  for (auto part : parts) {
+    size_t chunk_size = std::min(part.size(), bytes_left);
+    next = std::copy_n(part.begin(), chunk_size, next);
+    bytes_left -= chunk_size;
+  }
+  dst = dst.drop_back(bytes_left);
+}
 
 Expected<LinuxPerfZeroTscConversion>
 lldb_private::process_linux::LoadPerfTscConversionParameters() {

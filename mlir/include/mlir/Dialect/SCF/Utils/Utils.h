@@ -37,29 +37,24 @@ class ForOp;
 class ParallelOp;
 } // namespace scf
 
-/// Create a clone of `loop` with `newIterOperands` added as new initialization
-/// values and `newYieldedValues` added as new yielded values. The returned
-/// ForOp has `newYieldedValues.size()` new result values.  The `loop` induction
-/// variable and `newIterOperands` are remapped to the new induction variable
-/// and the new entry block arguments respectively.
-///
-/// Additionally, if `replaceLoopResults` is true, all uses of
-/// `loop.getResults()` are replaced with the first `loop.getNumResults()`
-/// return values respectively. This additional replacement is provided as a
-/// convenience to update the consumers of `loop`, in the case e.g. when `loop`
-/// is soon to be deleted.
-///
-/// Return the cloned loop.
-///
-/// This convenience function is useful to factorize common mechanisms related
-/// to hoisting roundtrips to memory into yields. It does not perform any
-/// legality checks.
-///
-/// Prerequisite: `newYieldedValues.size() == newYieldedValues.size()`.
-scf::ForOp cloneWithNewYields(OpBuilder &b, scf::ForOp loop,
-                              ValueRange newIterOperands,
-                              ValueRange newYieldedValues,
-                              bool replaceLoopResults = true);
+/// Replace the `loop` with `newIterOperands` added as new initialization
+/// values. `newYieldValuesFn` is a callback that can be used to specify
+/// the additional values to be yielded by the loop. The number of
+/// values returned by the callback should match the number of new
+/// initialization values. This function
+/// - Moves (i.e. doesnt clone) operations from the `loop` to the newly created
+///   loop
+/// - Replaces the uses of `loop` with the new loop.
+/// - `loop` isnt erased, but is left in a "no-op" state where the body of the
+///   loop just yields the basic block arguments that correspond to the
+///   initialization values of a loop. The loop is dead after this method.
+/// - All uses of the `newIterOperands` within the generated new loop
+///   are replaced with the corresponding `BlockArgument` in the loop body.
+using NewYieldValueFn = std::function<SmallVector<Value>(
+    OpBuilder &b, Location loc, ArrayRef<BlockArgument> newBBArgs)>;
+scf::ForOp replaceLoopWithNewYields(OpBuilder &builder, scf::ForOp loop,
+                                    ValueRange newIterOperands,
+                                    NewYieldValueFn newYieldValuesFn);
 
 /// Outline a region with a single block into a new FuncOp.
 /// Assumes the FuncOp result types is the type of the yielded operands of the

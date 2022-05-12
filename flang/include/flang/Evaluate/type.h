@@ -461,7 +461,6 @@ int SelectedRealKind(
 #define EXPAND_FOR_EACH_CHARACTER_KIND(M, P, S) M(P, S, 1) M(P, S, 2) M(P, S, 4)
 #define EXPAND_FOR_EACH_LOGICAL_KIND(M, P, S) \
   M(P, S, 1) M(P, S, 2) M(P, S, 4) M(P, S, 8)
-#define TEMPLATE_INSTANTIATION(P, S, ARG) P<ARG> S;
 
 #define FOR_EACH_INTEGER_KIND_HELP(PREFIX, SUFFIX, K) \
   PREFIX<Type<TypeCategory::Integer, K>> SUFFIX;

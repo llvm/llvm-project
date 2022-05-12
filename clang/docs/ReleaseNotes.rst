@@ -210,6 +210,13 @@ Improvements to Clang's diagnostics
 - ``-Wenum-conversion`` now warns on converting a signed enum of one type to an
   unsigned enum of a different type (or vice versa) rather than
   ``-Wsign-conversion``.
+- Added the ``-Wunreachable-code-generic-assoc`` diagnostic flag (grouped under
+  the ``-Wunreachable-code`` flag) which is enabled by default and warns the
+  user about ``_Generic`` selection associations which are unreachable because
+  the type specified is an array type or a qualified type.
+- Added the ``-Wgnu-line-marker`` diagnostic flag (grouped under the ``-Wgnu``
+  flag) which is a portability warning about use of GNU linemarker preprocessor
+  directives. Fixes `Issue 55067 <https://github.com/llvm/llvm-project/issues/55067>`_.
 
 Non-comprehensive list of changes in this release
 -------------------------------------------------
@@ -291,6 +298,17 @@ Windows Support
   JustMyCode feature. Note, you may need to manually add ``/JMC`` as additional
   compile options in the Visual Studio since it currently assumes clang-cl does not support ``/JMC``.
 
+AIX Support
+-----------
+
+- The driver no longer adds ``-mignore-xcoff-visibility`` by default for AIX
+  targets when no other visibility command-line options are in effect, as
+  ignoring hidden visibility can silently have undesirable side effects (e.g
+  when libraries depend on visibility to hide non-ABI facing entities). The
+  ``-mignore-xcoff-visibility`` option can be manually specified on the
+  command-line to recover the previous behavior if desired.
+
+
 C Language Changes in Clang
 ---------------------------
 
@@ -347,8 +365,11 @@ C++2b Feature Support
 - Implemented `P0849R8: auto(x): decay-copy in the language <https://wg21.link/P0849R8>`_.
 - Implemented `P2242R3: Non-literal variables (and labels and gotos) in constexpr functions	<https://wg21.link/P2242R3>`_.
 
-CUDA Language Changes in Clang
-------------------------------
+CUDA/HIP Language Changes in Clang
+----------------------------------
+
+- Added `__noinline__` as a keyword to avoid diagnostics due to usage of
+  `__attribute__((__noinline__))` in CUDA/HIP programs.
 
 Objective-C Language Changes in Clang
 -------------------------------------

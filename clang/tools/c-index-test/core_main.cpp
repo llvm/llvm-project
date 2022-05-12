@@ -223,6 +223,7 @@ static bool printSourceSymbols(const char *Executable,
     Diags(CompilerInstance::createDiagnostics(new DiagnosticOptions));
   CreateInvocationOptions CIOpts;
   CIOpts.Diags = Diags;
+  CIOpts.ProbePrecompiled = true; // FIXME: historical default. Needed?
   auto CInvok = createInvocation(ArgsWithProgName, std::move(CIOpts));
   if (!CInvok)
     return true;

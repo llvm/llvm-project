@@ -74,6 +74,8 @@ public:
   size_t getElementCount() const { return ElementCount; }
   /// Get the size, in bytes, of one element.
   size_t getElementByteSize() const { return ElementSize; }
+  /// Get the total size of a memory buffer needed to store the whole tensor.
+  size_t getTotalTensorBufferSize() const { return ElementCount * ElementSize; }
 
   template <typename T> bool isElementType() const {
     return getDataType<T>() == Type;

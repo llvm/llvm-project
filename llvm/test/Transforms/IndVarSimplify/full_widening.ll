@@ -7,8 +7,7 @@ target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f3
 define i32 @test_01(double* %p, double %x, i32* %np, i32* %mp, i32 %k) {
 ; CHECK-LABEL: @test_01(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = icmp sgt i32 [[K:%.*]], 1
-; CHECK-NEXT:    [[SMAX:%.*]] = select i1 [[TMP0]], i32 [[K]], i32 1
+; CHECK-NEXT:    [[SMAX:%.*]] = call i32 @llvm.smax.i32(i32 [[K:%.*]], i32 1)
 ; CHECK-NEXT:    [[WIDE_TRIP_COUNT:%.*]] = zext i32 [[SMAX]] to i64
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:

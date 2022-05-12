@@ -889,7 +889,8 @@ Instruction *InstCombinerImpl::foldGEPICmp(GEPOperator *GEPLHS, Value *RHS,
     if (PtrBase != GEPRHS->getOperand(0)) {
       bool IndicesTheSame =
           GEPLHS->getNumOperands() == GEPRHS->getNumOperands() &&
-          GEPLHS->getType() == GEPRHS->getType() &&
+          GEPLHS->getPointerOperand()->getType() ==
+              GEPRHS->getPointerOperand()->getType() &&
           GEPLHS->getSourceElementType() == GEPRHS->getSourceElementType();
       if (IndicesTheSame)
         for (unsigned i = 1, e = GEPLHS->getNumOperands(); i != e; ++i)

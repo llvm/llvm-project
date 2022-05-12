@@ -7,8 +7,7 @@ define float @ashr_expansion_valid(i64 %x, float* %ptr) {
 ; CHECK-LABEL: @ashr_expansion_valid(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[BOUND:%.*]] = ashr i64 [[X:%.*]], 4
-; CHECK-NEXT:    [[TMP0:%.*]] = icmp ugt i64 [[BOUND]], 1
-; CHECK-NEXT:    [[UMAX:%.*]] = select i1 [[TMP0]], i64 [[BOUND]], i64 1
+; CHECK-NEXT:    [[UMAX:%.*]] = call i64 @llvm.umax.i64(i64 [[BOUND]], i64 1)
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[LOOP]] ]
@@ -51,8 +50,7 @@ define float @ashr_equivalent_expansion(i64 %x, float* %ptr) {
 ; CHECK-NEXT:    [[T0:%.*]] = call i64 @llvm.smax.i64(i64 [[X]], i64 -1)
 ; CHECK-NEXT:    [[T1:%.*]] = call i64 @llvm.smin.i64(i64 [[T0]], i64 1)
 ; CHECK-NEXT:    [[BOUND:%.*]] = mul i64 [[DIV]], [[T1]]
-; CHECK-NEXT:    [[TMP0:%.*]] = icmp ugt i64 [[BOUND]], 1
-; CHECK-NEXT:    [[UMAX:%.*]] = select i1 [[TMP0]], i64 [[BOUND]], i64 1
+; CHECK-NEXT:    [[UMAX:%.*]] = call i64 @llvm.umax.i64(i64 [[BOUND]], i64 1)
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[LOOP]] ]
@@ -100,8 +98,7 @@ define float @no_ashr_due_to_missing_exact_udiv(i64 %x, float* %ptr) {
 ; CHECK-NEXT:    [[T0:%.*]] = call i64 @llvm.smax.i64(i64 [[X]], i64 -1)
 ; CHECK-NEXT:    [[T1:%.*]] = call i64 @llvm.smin.i64(i64 [[T0]], i64 1)
 ; CHECK-NEXT:    [[BOUND:%.*]] = mul i64 [[DIV]], [[T1]]
-; CHECK-NEXT:    [[TMP0:%.*]] = icmp ugt i64 [[BOUND]], 1
-; CHECK-NEXT:    [[UMAX:%.*]] = select i1 [[TMP0]], i64 [[BOUND]], i64 1
+; CHECK-NEXT:    [[UMAX:%.*]] = call i64 @llvm.umax.i64(i64 [[BOUND]], i64 1)
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[LOOP]] ]
@@ -149,8 +146,7 @@ define float @no_ashr_due_to_different_ops(i64 %x, i64 %y, float* %ptr) {
 ; CHECK-NEXT:    [[T0:%.*]] = call i64 @llvm.smax.i64(i64 [[Y:%.*]], i64 -1)
 ; CHECK-NEXT:    [[T1:%.*]] = call i64 @llvm.smin.i64(i64 [[T0]], i64 1)
 ; CHECK-NEXT:    [[BOUND:%.*]] = mul i64 [[DIV]], [[T1]]
-; CHECK-NEXT:    [[TMP0:%.*]] = icmp ugt i64 [[BOUND]], 1
-; CHECK-NEXT:    [[UMAX:%.*]] = select i1 [[TMP0]], i64 [[BOUND]], i64 1
+; CHECK-NEXT:    [[UMAX:%.*]] = call i64 @llvm.umax.i64(i64 [[BOUND]], i64 1)
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[LOOP]] ]

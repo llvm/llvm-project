@@ -413,9 +413,7 @@ public:
     ~vector()
     {
       __annotate_delete();
-#if _LIBCPP_DEBUG_LEVEL == 2
-      __get_db()->__erase_c(this);
-#endif
+      std::__debug_db_erase_c(this);
 
       if (this->__begin_ != nullptr)
       {
@@ -641,7 +639,7 @@ public:
         size_type __old_size = size();
         __clear();
         __annotate_shrink(__old_size);
-        __invalidate_all_iterators();
+        std::__debug_db_invalidate_all(this);
     }
 
     void resize(size_type __sz);
@@ -672,7 +670,6 @@ private:
     __compressed_pair<pointer, allocator_type> __end_cap_ =
         __compressed_pair<pointer, allocator_type>(nullptr, __default_init_tag());
 
-    _LIBCPP_INLINE_VISIBILITY void __invalidate_all_iterators();
     _LIBCPP_INLINE_VISIBILITY void __invalidate_iterators_past(pointer __new_last);
 
 
@@ -925,7 +922,7 @@ vector<_Tp, _Allocator>::__swap_out_circular_buffer(__split_buffer<value_type, a
     _VSTD::swap(this->__end_cap(), __v.__end_cap());
     __v.__first_ = __v.__begin_;
     __annotate_new(size());
-    __invalidate_all_iterators();
+    std::__debug_db_invalidate_all(this);
 }
 
 template <class _Tp, class _Allocator>
@@ -941,7 +938,7 @@ vector<_Tp, _Allocator>::__swap_out_circular_buffer(__split_buffer<value_type, a
     _VSTD::swap(this->__end_cap(), __v.__end_cap());
     __v.__first_ = __v.__begin_;
     __annotate_new(size());
-    __invalidate_all_iterators();
+    std::__debug_db_invalidate_all(this);
     return __r;
 }
 
@@ -1206,9 +1203,7 @@ vector<_Tp, _Allocator>::vector(vector&& __x)
     : __end_cap_(nullptr, _VSTD::move(__x.__alloc()))
 {
     _VSTD::__debug_db_insert_c(this);
-#if _LIBCPP_DEBUG_LEVEL == 2
-    __get_db()->swap(this, _VSTD::addressof(__x));
-#endif
+    std::__debug_db_swap(this, std::addressof(__x));
     this->__begin_ = __x.__begin_;
     this->__end_ = __x.__end_;
     this->__end_cap() = __x.__end_cap();
@@ -1227,9 +1222,7 @@ vector<_Tp, _Allocator>::vector(vector&& __x, const __type_identity_t<allocator_
         this->__end_ = __x.__end_;
         this->__end_cap() = __x.__end_cap();
         __x.__begin_ = __x.__end_ = __x.__end_cap() = nullptr;
-#if _LIBCPP_DEBUG_LEVEL == 2
-        __get_db()->swap(this, _VSTD::addressof(__x));
-#endif
+        std::__debug_db_swap(this, std::addressof(__x));
     }
     else
     {
@@ -1299,9 +1292,7 @@ vector<_Tp, _Allocator>::__move_assign(vector& __c, true_type)
     this->__end_ = __c.__end_;
     this->__end_cap() = __c.__end_cap();
     __c.__begin_ = __c.__end_ = __c.__end_cap() = nullptr;
-#if _LIBCPP_DEBUG_LEVEL == 2
-    __get_db()->swap(this, _VSTD::addressof(__c));
-#endif
+    std::__debug_db_swap(this, std::addressof(__c));
 }
 
 #endif // !_LIBCPP_CXX03_LANG
@@ -1372,7 +1363,7 @@ vector<_Tp, _Allocator>::assign(_ForwardIterator __first, _ForwardIterator __las
         __vallocate(__recommend(__new_size));
         __construct_at_end(__first, __last, __new_size);
     }
-    __invalidate_all_iterators();
+    std::__debug_db_invalidate_all(this);
 }
 
 template <class _Tp, class _Allocator>
@@ -1394,7 +1385,7 @@ vector<_Tp, _Allocator>::assign(size_type __n, const_reference __u)
         __vallocate(__recommend(static_cast<size_type>(__n)));
         __construct_at_end(__n, __u);
     }
-    __invalidate_all_iterators();
+    std::__debug_db_invalidate_all(this);
 }
 
 template <class _Tp, class _Allocator>
@@ -1946,9 +1937,7 @@ vector<_Tp, _Allocator>::swap(vector& __x)
     _VSTD::swap(this->__end_cap(), __x.__end_cap());
     _VSTD::__swap_allocator(this->__alloc(), __x.__alloc(),
         integral_constant<bool,__alloc_traits::propagate_on_container_swap::value>());
-#if _LIBCPP_DEBUG_LEVEL == 2
-    __get_db()->swap(this, _VSTD::addressof(__x));
-#endif
+    std::__debug_db_swap(this, std::addressof(__x));
 }
 
 template <class _Tp, class _Allocator>
@@ -2005,17 +1994,6 @@ vector<_Tp, _Allocator>::__subscriptable(const const_iterator* __i, ptrdiff_t __
 }
 
 #endif // _LIBCPP_DEBUG_LEVEL == 2
-
-template <class _Tp, class _Allocator>
-inline _LIBCPP_INLINE_VISIBILITY
-void
-vector<_Tp, _Allocator>::__invalidate_all_iterators()
-{
-#if _LIBCPP_DEBUG_LEVEL == 2
-    __get_db()->__invalidate_all(this);
-#endif
-}
-
 
 template <class _Tp, class _Allocator>
 inline _LIBCPP_INLINE_VISIBILITY
@@ -2340,7 +2318,6 @@ private:
     //  Precondition:  __n > 0
     //  Postcondition:  capacity() >= __n
     //  Postcondition:  size() == 0
-    _LIBCPP_INLINE_VISIBILITY void __invalidate_all_iterators();
     _LIBCPP_HIDE_FROM_ABI void __vallocate(size_type __n) {
         if (__n > max_size())
             __throw_length_error();
@@ -2431,20 +2408,13 @@ private:
 };
 
 template <class _Allocator>
-inline _LIBCPP_INLINE_VISIBILITY
-void
-vector<bool, _Allocator>::__invalidate_all_iterators()
-{
-}
-
-template <class _Allocator>
 void
 vector<bool, _Allocator>::__vdeallocate() _NOEXCEPT
 {
     if (this->__begin_ != nullptr)
     {
         __storage_traits::deallocate(this->__alloc(), this->__begin_, __cap());
-        __invalidate_all_iterators();
+        std::__debug_db_invalidate_all(this);
         this->__begin_ = nullptr;
         this->__size_ = this->__cap() = 0;
     }
@@ -2617,7 +2587,7 @@ vector<bool, _Allocator>::vector(_InputIterator __first, _InputIterator __last,
     {
         if (__begin_ != nullptr)
             __storage_traits::deallocate(__alloc(), __begin_, __cap());
-        __invalidate_all_iterators();
+        std::__debug_db_invalidate_all(this);
         throw;
     }
 #endif // _LIBCPP_NO_EXCEPTIONS
@@ -2644,7 +2614,7 @@ vector<bool, _Allocator>::vector(_InputIterator __first, _InputIterator __last, 
     {
         if (__begin_ != nullptr)
             __storage_traits::deallocate(__alloc(), __begin_, __cap());
-        __invalidate_all_iterators();
+        std::__debug_db_invalidate_all(this);
         throw;
     }
 #endif // _LIBCPP_NO_EXCEPTIONS
@@ -2719,7 +2689,7 @@ vector<bool, _Allocator>::~vector()
 {
     if (__begin_ != nullptr)
         __storage_traits::deallocate(__alloc(), __begin_, __cap());
-    __invalidate_all_iterators();
+    std::__debug_db_invalidate_all(this);
 }
 
 template <class _Allocator>
@@ -2863,7 +2833,7 @@ vector<bool, _Allocator>::assign(size_type __n, const value_type& __x)
         }
         _VSTD::fill_n(begin(), __n, __x);
     }
-  __invalidate_all_iterators();
+    std::__debug_db_invalidate_all(this);
 }
 
 template <class _Allocator>
@@ -2917,7 +2887,7 @@ vector<bool, _Allocator>::reserve(size_type __n)
         __v.__vallocate(__n);
         __v.__construct_at_end(this->begin(), this->end());
         swap(__v);
-        __invalidate_all_iterators();
+        std::__debug_db_invalidate_all(this);
     }
 }
 

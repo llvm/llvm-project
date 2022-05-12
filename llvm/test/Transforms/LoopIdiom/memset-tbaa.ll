@@ -97,10 +97,9 @@ define dso_local void @adjacent_store_memset(%struct.A* nocapture %a, i64 %len) 
 ; CHECK-LABEL: @adjacent_store_memset(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[A1:%.*]] = bitcast %struct.A* [[A:%.*]] to i8*
-; CHECK-NEXT:    [[TMP0:%.*]] = icmp ugt i64 [[LEN:%.*]], 1
-; CHECK-NEXT:    [[UMAX:%.*]] = select i1 [[TMP0]], i64 [[LEN]], i64 1
-; CHECK-NEXT:    [[TMP1:%.*]] = shl nuw i64 [[UMAX]], 4
-; CHECK-NEXT:    call void @llvm.memset.p0i8.i64(i8* align 8 [[A1]], i8 0, i64 [[TMP1]], i1 false), !tbaa [[TBAA8:![0-9]+]]
+; CHECK-NEXT:    [[UMAX:%.*]] = call i64 @llvm.umax.i64(i64 [[LEN:%.*]], i64 1)
+; CHECK-NEXT:    [[TMP0:%.*]] = shl nuw i64 [[UMAX]], 4
+; CHECK-NEXT:    call void @llvm.memset.p0i8.i64(i8* align 8 [[A1]], i8 0, i64 [[TMP0]], i1 false), !tbaa [[TBAA8:![0-9]+]]
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.cond.cleanup:
 ; CHECK-NEXT:    ret void

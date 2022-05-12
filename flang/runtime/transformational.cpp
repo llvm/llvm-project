@@ -106,7 +106,7 @@ static void DefaultInitialize(
           static_cast<char32_t>(' '));
       break;
     default:
-      terminator.Crash("EOSHIFT: bad CHARACTER kind %d", kind);
+      terminator.Crash("not yet implemented: EOSHIFT: CHARACTER kind %d", kind);
     }
   } else {
     std::memset(result.raw().base_addr, 0, bytes);

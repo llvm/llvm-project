@@ -12,7 +12,7 @@
 `P1523R1 <https://wg21.link/P1523R1>`__,Views And Size Types,,
 `P1638R1 <https://wg21.link/P1638R1>`__,basic_istream_view::iterator Should Not Be Copyable,,
 `P1716R3 <https://wg21.link/P1716R3>`__,Range Comparison Algorithms Are Over-Constrained,,
-`P1739R4 <https://wg21.link/P1739R4>`__,Avoiding Template Bloat For Ranges,,
+`P1739R4 <https://wg21.link/P1739R4>`__,Avoiding Template Bloat For Ranges,|Complete|,15.0
 `P1862R1 <https://wg21.link/P1862R1>`__,Range Adaptors For Non-Copyable Iterators,,
 `P1870R1 <https://wg21.link/P1870R1>`__,safe_range,,
 `P1871R1 <https://wg21.link/P1871R1>`__,disable_sized_sentinel_for,|Complete|,14.0

@@ -129,8 +129,7 @@ define void @slt_non_constant_rhs_no_mustprogress(i16 %n.raw) {
 ; CHECK-LABEL: @slt_non_constant_rhs_no_mustprogress(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[N:%.*]] = and i16 [[N_RAW:%.*]], 255
-; CHECK-NEXT:    [[TMP0:%.*]] = icmp sgt i16 [[N]], 1
-; CHECK-NEXT:    [[SMAX:%.*]] = select i1 [[TMP0]], i16 [[N]], i16 1
+; CHECK-NEXT:    [[SMAX:%.*]] = call i16 @llvm.smax.i16(i16 [[N]], i16 1)
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i16 [ [[INDVARS_IV_NEXT:%.*]], [[FOR_BODY]] ], [ 0, [[ENTRY:%.*]] ]
@@ -935,16 +934,15 @@ define i16 @ult_multiuse_profit(i16 %n.raw, i8 %start) mustprogress {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = add i8 [[START:%.*]], 1
 ; CHECK-NEXT:    [[TMP1:%.*]] = zext i8 [[TMP0]] to i16
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp ugt i16 [[TMP1]], 254
-; CHECK-NEXT:    [[TMP3:%.*]] = trunc i16 254 to i8
+; CHECK-NEXT:    [[TMP2:%.*]] = trunc i16 254 to i8
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i8 [ [[IV_NEXT:%.*]], [[FOR_BODY]] ], [ [[START]], [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    [[IV_NEXT]] = add i8 [[IV]], 1
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i8 [[IV_NEXT]], [[TMP3]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i8 [[IV_NEXT]], [[TMP2]]
 ; CHECK-NEXT:    br i1 [[CMP]], label [[FOR_BODY]], label [[FOR_END:%.*]]
 ; CHECK:       for.end:
-; CHECK-NEXT:    [[UMAX:%.*]] = select i1 [[TMP2]], i16 [[TMP1]], i16 254
+; CHECK-NEXT:    [[UMAX:%.*]] = call i16 @llvm.umax.i16(i16 [[TMP1]], i16 254)
 ; CHECK-NEXT:    ret i16 [[UMAX]]
 ;
 entry:
@@ -996,8 +994,7 @@ define void @slt_restricted_rhs(i16 %n.raw) mustprogress {
 ; CHECK-LABEL: @slt_restricted_rhs(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[N:%.*]] = and i16 [[N_RAW:%.*]], 255
-; CHECK-NEXT:    [[TMP0:%.*]] = icmp sgt i16 [[N]], 1
-; CHECK-NEXT:    [[SMAX:%.*]] = select i1 [[TMP0]], i16 [[N]], i16 1
+; CHECK-NEXT:    [[SMAX:%.*]] = call i16 @llvm.smax.i16(i16 [[N]], i16 1)
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i16 [ [[INDVARS_IV_NEXT:%.*]], [[FOR_BODY]] ], [ 0, [[ENTRY:%.*]] ]

@@ -61,10 +61,8 @@ define void @umax_variable_split_loop_bound_and_exit_cond_inc_with_sgt(i64 %a, i
 ; CHECK-NEXT:    [[B:%.*]] = call i64 @llvm.umax.i64(i64 [[A:%.*]], i64 1)
 ; CHECK-NEXT:    br label [[LOOP_PH_SPLIT:%.*]]
 ; CHECK:       loop.ph.split:
-; CHECK-NEXT:    [[TMP0:%.*]] = icmp sgt i64 [[N:%.*]], 0
-; CHECK-NEXT:    [[SMAX:%.*]] = select i1 [[TMP0]], i64 [[N]], i64 0
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp slt i64 [[SMAX]], [[B]]
-; CHECK-NEXT:    [[NEW_BOUND:%.*]] = select i1 [[TMP1]], i64 [[SMAX]], i64 [[B]]
+; CHECK-NEXT:    [[SMAX:%.*]] = call i64 @llvm.smax.i64(i64 [[N:%.*]], i64 0)
+; CHECK-NEXT:    [[NEW_BOUND:%.*]] = call i64 @llvm.smin.i64(i64 [[SMAX]], i64 [[B]])
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[INC:%.*]], [[FOR_INC:%.*]] ], [ 0, [[LOOP_PH_SPLIT]] ]
@@ -84,8 +82,8 @@ define void @umax_variable_split_loop_bound_and_exit_cond_inc_with_sgt(i64 %a, i
 ; CHECK-NEXT:    br i1 [[COND]], label [[LOOP_PH_SPLIT_SPLIT:%.*]], label [[LOOP]]
 ; CHECK:       loop.ph.split.split:
 ; CHECK-NEXT:    [[IV_LCSSA:%.*]] = phi i64 [ [[INC]], [[FOR_INC]] ]
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp ne i64 [[IV_LCSSA]], [[N]]
-; CHECK-NEXT:    br i1 [[TMP2]], label [[LOOP_SPLIT_PREHEADER:%.*]], label [[EXIT:%.*]]
+; CHECK-NEXT:    [[TMP0:%.*]] = icmp ne i64 [[IV_LCSSA]], [[N]]
+; CHECK-NEXT:    br i1 [[TMP0]], label [[LOOP_SPLIT_PREHEADER:%.*]], label [[EXIT:%.*]]
 ; CHECK:       loop.split.preheader:
 ; CHECK-NEXT:    br label [[LOOP_SPLIT:%.*]]
 ; CHECK:       loop.split:
@@ -144,10 +142,8 @@ define void @constant_split_loop_bound_and_exit_cond_inc_with_sgt(i64* noalias %
 ; CHECK-NEXT:  loop.ph:
 ; CHECK-NEXT:    br label [[LOOP_PH_SPLIT:%.*]]
 ; CHECK:       loop.ph.split:
-; CHECK-NEXT:    [[TMP0:%.*]] = icmp sgt i64 [[N:%.*]], 0
-; CHECK-NEXT:    [[SMAX:%.*]] = select i1 [[TMP0]], i64 [[N]], i64 0
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp slt i64 [[SMAX]], 10
-; CHECK-NEXT:    [[NEW_BOUND:%.*]] = select i1 [[TMP1]], i64 [[SMAX]], i64 10
+; CHECK-NEXT:    [[SMAX:%.*]] = call i64 @llvm.smax.i64(i64 [[N:%.*]], i64 0)
+; CHECK-NEXT:    [[NEW_BOUND:%.*]] = call i64 @llvm.smin.i64(i64 [[SMAX]], i64 10)
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[INC:%.*]], [[FOR_INC:%.*]] ], [ 0, [[LOOP_PH_SPLIT]] ]
@@ -167,8 +163,8 @@ define void @constant_split_loop_bound_and_exit_cond_inc_with_sgt(i64* noalias %
 ; CHECK-NEXT:    br i1 [[COND]], label [[LOOP_PH_SPLIT_SPLIT:%.*]], label [[LOOP]]
 ; CHECK:       loop.ph.split.split:
 ; CHECK-NEXT:    [[IV_LCSSA:%.*]] = phi i64 [ [[INC]], [[FOR_INC]] ]
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp ne i64 [[IV_LCSSA]], [[N]]
-; CHECK-NEXT:    br i1 [[TMP2]], label [[LOOP_SPLIT_PREHEADER:%.*]], label [[EXIT:%.*]]
+; CHECK-NEXT:    [[TMP0:%.*]] = icmp ne i64 [[IV_LCSSA]], [[N]]
+; CHECK-NEXT:    br i1 [[TMP0]], label [[LOOP_SPLIT_PREHEADER:%.*]], label [[EXIT:%.*]]
 ; CHECK:       loop.split.preheader:
 ; CHECK-NEXT:    br label [[LOOP_SPLIT:%.*]]
 ; CHECK:       loop.split:
@@ -275,8 +271,7 @@ define void @constant_split_loop_bound_and_exit_cond_inc_with_eq(i64* noalias %s
 ; CHECK-NEXT:    br label [[LOOP_PH_SPLIT:%.*]]
 ; CHECK:       loop.ph.split:
 ; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[N:%.*]], -1
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp ult i64 [[TMP0]], 10
-; CHECK-NEXT:    [[NEW_BOUND:%.*]] = select i1 [[TMP1]], i64 [[TMP0]], i64 10
+; CHECK-NEXT:    [[NEW_BOUND:%.*]] = call i64 @llvm.umin.i64(i64 [[TMP0]], i64 10)
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[INC:%.*]], [[FOR_INC:%.*]] ], [ 0, [[LOOP_PH_SPLIT]] ]
@@ -296,8 +291,8 @@ define void @constant_split_loop_bound_and_exit_cond_inc_with_eq(i64* noalias %s
 ; CHECK-NEXT:    br i1 [[COND]], label [[LOOP_PH_SPLIT_SPLIT:%.*]], label [[LOOP]]
 ; CHECK:       loop.ph.split.split:
 ; CHECK-NEXT:    [[IV_LCSSA:%.*]] = phi i64 [ [[INC]], [[FOR_INC]] ]
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp ne i64 [[IV_LCSSA]], [[N]]
-; CHECK-NEXT:    br i1 [[TMP2]], label [[LOOP_SPLIT_PREHEADER:%.*]], label [[EXIT:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ne i64 [[IV_LCSSA]], [[N]]
+; CHECK-NEXT:    br i1 [[TMP1]], label [[LOOP_SPLIT_PREHEADER:%.*]], label [[EXIT:%.*]]
 ; CHECK:       loop.split.preheader:
 ; CHECK-NEXT:    br label [[LOOP_SPLIT:%.*]]
 ; CHECK:       loop.split:
@@ -403,11 +398,9 @@ define void @constant_split_loop_bound_and_exit_cond_inc_with_sge(i64* noalias %
 ; CHECK-NEXT:  loop.ph:
 ; CHECK-NEXT:    br label [[LOOP_PH_SPLIT:%.*]]
 ; CHECK:       loop.ph.split:
-; CHECK-NEXT:    [[TMP0:%.*]] = icmp sgt i64 [[N:%.*]], 1
-; CHECK-NEXT:    [[SMAX:%.*]] = select i1 [[TMP0]], i64 [[N]], i64 1
-; CHECK-NEXT:    [[TMP1:%.*]] = add nsw i64 [[SMAX]], -1
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp slt i64 [[TMP1]], 10
-; CHECK-NEXT:    [[NEW_BOUND:%.*]] = select i1 [[TMP2]], i64 [[TMP1]], i64 10
+; CHECK-NEXT:    [[SMAX:%.*]] = call i64 @llvm.smax.i64(i64 [[N:%.*]], i64 1)
+; CHECK-NEXT:    [[TMP0:%.*]] = add nsw i64 [[SMAX]], -1
+; CHECK-NEXT:    [[NEW_BOUND:%.*]] = call i64 @llvm.smin.i64(i64 [[TMP0]], i64 10)
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[INC:%.*]], [[FOR_INC:%.*]] ], [ 0, [[LOOP_PH_SPLIT]] ]
@@ -427,8 +420,8 @@ define void @constant_split_loop_bound_and_exit_cond_inc_with_sge(i64* noalias %
 ; CHECK-NEXT:    br i1 [[COND]], label [[LOOP_PH_SPLIT_SPLIT:%.*]], label [[LOOP]]
 ; CHECK:       loop.ph.split.split:
 ; CHECK-NEXT:    [[IV_LCSSA:%.*]] = phi i64 [ [[INC]], [[FOR_INC]] ]
-; CHECK-NEXT:    [[TMP3:%.*]] = icmp ne i64 [[IV_LCSSA]], [[N]]
-; CHECK-NEXT:    br i1 [[TMP3]], label [[LOOP_SPLIT_PREHEADER:%.*]], label [[EXIT:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ne i64 [[IV_LCSSA]], [[N]]
+; CHECK-NEXT:    br i1 [[TMP1]], label [[LOOP_SPLIT_PREHEADER:%.*]], label [[EXIT:%.*]]
 ; CHECK:       loop.split.preheader:
 ; CHECK-NEXT:    br label [[LOOP_SPLIT:%.*]]
 ; CHECK:       loop.split:
@@ -534,11 +527,9 @@ define void @constant_split_loop_bound_and_exit_cond_inc_with_step_is_not_one(i6
 ; CHECK-NEXT:  loop.ph:
 ; CHECK-NEXT:    br label [[LOOP_PH_SPLIT:%.*]]
 ; CHECK:       loop.ph.split:
-; CHECK-NEXT:    [[TMP0:%.*]] = icmp sgt i64 [[N:%.*]], 1
-; CHECK-NEXT:    [[SMAX:%.*]] = select i1 [[TMP0]], i64 [[N]], i64 1
-; CHECK-NEXT:    [[TMP1:%.*]] = lshr i64 [[SMAX]], 1
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp slt i64 [[TMP1]], 10
-; CHECK-NEXT:    [[NEW_BOUND:%.*]] = select i1 [[TMP2]], i64 [[TMP1]], i64 10
+; CHECK-NEXT:    [[SMAX:%.*]] = call i64 @llvm.smax.i64(i64 [[N:%.*]], i64 1)
+; CHECK-NEXT:    [[TMP0:%.*]] = lshr i64 [[SMAX]], 1
+; CHECK-NEXT:    [[NEW_BOUND:%.*]] = call i64 @llvm.smin.i64(i64 [[TMP0]], i64 10)
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[INC:%.*]], [[FOR_INC:%.*]] ], [ 0, [[LOOP_PH_SPLIT]] ]
@@ -558,8 +549,8 @@ define void @constant_split_loop_bound_and_exit_cond_inc_with_step_is_not_one(i6
 ; CHECK-NEXT:    br i1 [[COND]], label [[LOOP_PH_SPLIT_SPLIT:%.*]], label [[LOOP]]
 ; CHECK:       loop.ph.split.split:
 ; CHECK-NEXT:    [[IV_LCSSA:%.*]] = phi i64 [ [[INC]], [[FOR_INC]] ]
-; CHECK-NEXT:    [[TMP3:%.*]] = icmp ne i64 [[IV_LCSSA]], [[N]]
-; CHECK-NEXT:    br i1 [[TMP3]], label [[LOOP_SPLIT_PREHEADER:%.*]], label [[EXIT:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ne i64 [[IV_LCSSA]], [[N]]
+; CHECK-NEXT:    br i1 [[TMP1]], label [[LOOP_SPLIT_PREHEADER:%.*]], label [[EXIT:%.*]]
 ; CHECK:       loop.split.preheader:
 ; CHECK-NEXT:    br label [[LOOP_SPLIT:%.*]]
 ; CHECK:       loop.split:
@@ -886,10 +877,8 @@ define void @constant_split_loop_bound_and_exit_cond_inc_with_sgt_and_is_not_sce
 ; CHECK-NEXT:  loop.ph:
 ; CHECK-NEXT:    br label [[LOOP_PH_SPLIT:%.*]]
 ; CHECK:       loop.ph.split:
-; CHECK-NEXT:    [[TMP0:%.*]] = icmp sgt i64 [[N:%.*]], 0
-; CHECK-NEXT:    [[SMAX:%.*]] = select i1 [[TMP0]], i64 [[N]], i64 0
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp slt i64 [[SMAX]], 10
-; CHECK-NEXT:    [[NEW_BOUND:%.*]] = select i1 [[TMP1]], i64 [[SMAX]], i64 10
+; CHECK-NEXT:    [[SMAX:%.*]] = call i64 @llvm.smax.i64(i64 [[N:%.*]], i64 0)
+; CHECK-NEXT:    [[NEW_BOUND:%.*]] = call i64 @llvm.smin.i64(i64 [[SMAX]], i64 10)
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[IS_NOT_SCEVABLE_PHI:%.*]] = phi double [ 1.000000e+00, [[FOR_INC:%.*]] ], [ 2.000000e+00, [[LOOP_PH_SPLIT]] ]
@@ -911,8 +900,8 @@ define void @constant_split_loop_bound_and_exit_cond_inc_with_sgt_and_is_not_sce
 ; CHECK:       loop.ph.split.split:
 ; CHECK-NEXT:    [[IS_NOT_SCEVABLE_PHI_LCSSA:%.*]] = phi double [ 1.000000e+00, [[FOR_INC]] ]
 ; CHECK-NEXT:    [[IV_LCSSA:%.*]] = phi i64 [ [[INC]], [[FOR_INC]] ]
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp ne i64 [[IV_LCSSA]], [[N]]
-; CHECK-NEXT:    br i1 [[TMP2]], label [[LOOP_SPLIT_PREHEADER:%.*]], label [[EXIT:%.*]]
+; CHECK-NEXT:    [[TMP0:%.*]] = icmp ne i64 [[IV_LCSSA]], [[N]]
+; CHECK-NEXT:    br i1 [[TMP0]], label [[LOOP_SPLIT_PREHEADER:%.*]], label [[EXIT:%.*]]
 ; CHECK:       loop.split.preheader:
 ; CHECK-NEXT:    br label [[LOOP_SPLIT:%.*]]
 ; CHECK:       loop.split:
