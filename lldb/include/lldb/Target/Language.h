@@ -217,6 +217,17 @@ public:
                                         std::string &prefix,
                                         std::string &suffix);
 
+  // When looking up functions, we take a user provided string which may be a
+  // partial match to the full demangled name and compare it to the actual
+  // demangled name to see if it matches as much as the user specified.  An
+  // example of this is if the user provided A::my_function, but the
+  // symbol was really B::A::my_function.  We want that to be
+  // a match.  But we wouldn't want this to match AnotherA::my_function.  The
+  // user is specifying a truncated path, not a truncated set of characters.
+  // This function does a language-aware comparison for those purposes.
+  virtual bool DemangledNameContainsPath(llvm::StringRef path, 
+                                         ConstString demangled) const;
+
   // if a language has a custom format for printing variable declarations that
   // it wants LLDB to honor it should return an appropriate closure here
   virtual DumpValueObjectOptions::DeclPrintingHelper GetDeclPrintingHelper();

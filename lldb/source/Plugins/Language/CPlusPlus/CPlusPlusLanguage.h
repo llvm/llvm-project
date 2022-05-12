@@ -55,6 +55,8 @@ public:
     llvm::StringRef GetArguments();
 
     llvm::StringRef GetQualifiers();
+    
+    bool ContainsPath(llvm::StringRef path);
 
   protected:
     void Parse();
@@ -105,6 +107,9 @@ public:
   static llvm::StringRef GetPluginNameStatic() { return "cplusplus"; }
 
   bool SymbolNameFitsToLanguage(Mangled mangled) const override;
+  
+  bool DemangledNameContainsPath(llvm::StringRef path, 
+                                 ConstString demangled) const override;
 
   ConstString
   GetDemangledFunctionNameWithoutArguments(Mangled mangled) const override;

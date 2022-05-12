@@ -98,7 +98,7 @@ class TestIndirectFunctions(TestBase):
         # make sure we are again in out target function.
         break_reexported = target.BreakpointCreateByName(
             "reexport_to_indirect")
-        self.assertTrue(break_reexported, VALID_BREAKPOINT)
+        self.assertEqual(break_reexported.GetNumLocations(), 1, VALID_BREAKPOINT)
 
         # Now continue should take us to the second call through the indirect
         # symbol:
