@@ -434,8 +434,23 @@ Address CIRGenFunction::LoadCXXThisAddress() {
 
 void CIRGenFunction::buildInitializerForField(FieldDecl *Field, LValue LHS,
                                               Expr *Init) {
-  llvm_unreachable("NYI");
   QualType FieldType = Field->getType();
+  switch (getEvaluationKind(FieldType)) {
+  case TEK_Scalar:
+    if (LHS.isSimple()) {
+      buildExprAsInit(Init, Field, LHS, false);
+    } else {
+      llvm_unreachable("NYI");
+    }
+    break;
+  case TEK_Complex:
+    llvm_unreachable("NYI");
+    break;
+  case TEK_Aggregate: {
+    llvm_unreachable("NYI");
+    break;
+  }
+  }
 
   // Ensure that we destroy this object if an exception is thrown later in the
   // constructor.
