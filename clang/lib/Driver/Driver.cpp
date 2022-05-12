@@ -903,7 +903,6 @@ void Driver::CreateOffloadingDeviceToolChains(Compilation &C,
                                                 *HostTC, OFK);
     assert(HIPTC && "Could not create offloading device tool chain.");
     C.addOffloadDeviceToolChain(HIPTC, OFK);
-#if 1 //<<<<<<< HEAD
   } else {
     //
     // OpenMP
@@ -1056,94 +1055,6 @@ void Driver::CreateOffloadingDeviceToolChains(Compilation &C,
           return;
         }
 
-#else //=======
-  }
-
-  //
-  // OpenMP
-  //
-  // We need to generate an OpenMP toolchain if the user specified targets with
-  // the -fopenmp-targets option or used --offload-arch with OpenMP enabled.
-  bool IsOpenMPOffloading =
-      C.getInputArgs().hasFlag(options::OPT_fopenmp, options::OPT_fopenmp_EQ,
-                               options::OPT_fno_openmp, false) &&
-      (C.getInputArgs().hasArg(options::OPT_fopenmp_targets_EQ) ||
-       C.getInputArgs().hasArg(options::OPT_offload_arch_EQ));
-  if (IsOpenMPOffloading) {
-    // We expect that -fopenmp-targets is always used in conjunction with the
-    // option -fopenmp specifying a valid runtime with offloading support, i.e.
-    // libomp or libiomp.
-    OpenMPRuntimeKind RuntimeKind = getOpenMPRuntime(C.getInputArgs());
-    if (RuntimeKind != OMPRT_OMP && RuntimeKind != OMPRT_IOMP5) {
-      Diag(clang::diag::err_drv_expecting_fopenmp_with_fopenmp_targets);
-      return;
-    }
-
-    llvm::StringMap<llvm::DenseSet<StringRef>> DerivedArchs;
-    llvm::StringMap<StringRef> FoundNormalizedTriples;
-    llvm::SmallVector<StringRef, 4> OpenMPTriples;
-
-    // If the user specified -fopenmp-targets= we create a toolchain for each
-    // valid triple. Otherwise, if only --offload-arch= was specified we instead
-    // attempt to derive the appropriate toolchains from the arguments.
-    if (Arg *OpenMPTargets =
-            C.getInputArgs().getLastArg(options::OPT_fopenmp_targets_EQ)) {
-      if (OpenMPTargets && !OpenMPTargets->getNumValues()) {
-        Diag(clang::diag::warn_drv_empty_joined_argument)
-            << OpenMPTargets->getAsString(C.getInputArgs());
-        return;
-      }
-      llvm::copy(OpenMPTargets->getValues(), std::back_inserter(OpenMPTriples));
-    } else if (C.getInputArgs().hasArg(options::OPT_offload_arch_EQ) &&
-               !IsHIP && !IsCuda) {
-      const ToolChain *HostTC = C.getSingleOffloadToolChain<Action::OFK_Host>();
-      auto AMDTriple = getHIPOffloadTargetTriple(*this, C.getInputArgs());
-      auto NVPTXTriple = getNVIDIAOffloadTargetTriple(*this, C.getInputArgs(),
-                                                      HostTC->getTriple());
-
-      // Attempt to deduce the offloading triple from the set of architectures.
-      // We can only correctly deduce NVPTX / AMDGPU triples currently.
-      llvm::DenseSet<StringRef> Archs =
-          getOffloadArchs(C, C.getArgs(), Action::OFK_OpenMP, nullptr);
-      for (StringRef Arch : Archs) {
-        if (NVPTXTriple && IsNVIDIAGpuArch(StringToCudaArch(
-                               getProcessorFromTargetID(*NVPTXTriple, Arch)))) {
-          DerivedArchs[NVPTXTriple->getTriple()].insert(Arch);
-        } else if (AMDTriple &&
-                   IsAMDGpuArch(StringToCudaArch(
-                       getProcessorFromTargetID(*AMDTriple, Arch)))) {
-          DerivedArchs[AMDTriple->getTriple()].insert(Arch);
-        } else {
-          Diag(clang::diag::err_drv_failed_to_deduce_target_from_arch) << Arch;
-          return;
-        }
-      }
-
-      for (const auto &TripleAndArchs : DerivedArchs)
-        OpenMPTriples.push_back(TripleAndArchs.first());
-    }
-
-    for (StringRef Val : OpenMPTriples) {
-      llvm::Triple TT(ToolChain::getOpenMPTriple(Val));
-      std::string NormalizedName = TT.normalize();
-
-      // Make sure we don't have a duplicate triple.
-      auto Duplicate = FoundNormalizedTriples.find(NormalizedName);
-      if (Duplicate != FoundNormalizedTriples.end()) {
-        Diag(clang::diag::warn_drv_omp_offload_target_duplicate)
-            << Val << Duplicate->second;
-        continue;
-      }
-
-      // Store the current triple so that we can check for duplicates in the
-      // following iterations.
-      FoundNormalizedTriples[NormalizedName] = Val;
-
-      // If the specified target is invalid, emit a diagnostic.
-      if (TT.getArch() == llvm::Triple::UnknownArch)
-        Diag(clang::diag::err_drv_invalid_omp_target) << Val;
-      else {
-#endif //>>>>>>> be768164a7837bcb87cb6409731d23dc2c00dcfe
         const ToolChain *TC;
         // Device toolchains have to be selected differently. They pair host
         // and device in their implementation.
@@ -1151,7 +1062,6 @@ void Driver::CreateOffloadingDeviceToolChains(Compilation &C,
           const ToolChain *HostTC =
               C.getSingleOffloadToolChain<Action::OFK_Host>();
           assert(HostTC && "Host toolchain should be always defined.");
-#if 1 //<<<<<<< HEAD
           auto &DeviceTC = ToolChains[NormalizedName + "/" +
                                       HostTC->getTriple().normalize()];
           if (!DeviceTC) {
@@ -1174,32 +1084,6 @@ void Driver::CreateOffloadingDeviceToolChains(Compilation &C,
         C.addOffloadDeviceToolChain(TC, Action::OFK_OpenMP);
       } // end foreach openmp target
     }   // end has openmp offload targets
-#else //=======
-          auto &DeviceTC =
-              ToolChains[TT.str() + "/" + HostTC->getTriple().normalize()];
-          if (!DeviceTC) {
-            if (TT.isNVPTX())
-              DeviceTC = std::make_unique<toolchains::CudaToolChain>(
-                  *this, TT, *HostTC, C.getInputArgs(), Action::OFK_OpenMP);
-            else if (TT.isAMDGCN())
-              DeviceTC = std::make_unique<toolchains::AMDGPUOpenMPToolChain>(
-                  *this, TT, *HostTC, C.getInputArgs());
-            else
-              assert(DeviceTC && "Device toolchain not defined.");
-          }
-
-          TC = DeviceTC.get();
-        } else
-          TC = &getToolChain(C.getInputArgs(), TT);
-        C.addOffloadDeviceToolChain(TC, Action::OFK_OpenMP);
-        if (DerivedArchs.find(TT.getTriple()) != DerivedArchs.end())
-          KnownArchs[TC] = DerivedArchs[TT.getTriple()];
-      }
-    }
-  } else if (C.getInputArgs().hasArg(options::OPT_fopenmp_targets_EQ)) {
-    Diag(clang::diag::err_drv_expecting_fopenmp_with_fopenmp_targets);
-    return;
-#endif //>>>>>>> be768164a7837bcb87cb6409731d23dc2c00dcfe
   }
 
   //
