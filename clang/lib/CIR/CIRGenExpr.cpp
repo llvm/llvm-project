@@ -177,9 +177,12 @@ void CIRGenFunction::buildStoreOfScalar(mlir::Value Value, Address Addr,
                                         LValueBaseInfo BaseInfo,
                                         const Decl *InitDecl,
                                         bool isNontemporal) {
-  // TODO: PreserveVec3Type
-  // TODO: LValueIsSuitableForInlineAtomic ?
-  // TODO: TBAA
+  if (!CGM.getCodeGenOpts().PreserveVec3Type) {
+    if (Ty->isVectorType()) {
+      llvm_unreachable("NYI");
+    }
+  }
+
   Value = buildToMemory(Value, Ty);
 
   if (Ty->isAtomicType()) {
