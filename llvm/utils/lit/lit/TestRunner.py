@@ -57,12 +57,20 @@ class ShellEnvironment(object):
 
     """Mutable shell environment containing things like CWD and env vars.
 
-    Environment variables are not implemented, but cwd tracking is.
+    Environment variables are not implemented, but cwd tracking is. In addition,
+    we maintain a dir stack for pushd/popd.
     """
 
     def __init__(self, cwd, env):
         self.cwd = cwd
         self.env = dict(env)
+        self.dirStack = []
+
+    def change_dir(self, newdir):
+        if os.path.isabs(newdir):
+            self.cwd = newdir
+        else:
+            self.cwd = os.path.realpath(os.path.join(self.cwd, newdir))
 
 class TimeoutHelper(object):
     """
@@ -275,15 +283,28 @@ def updateEnv(env, args):
 def executeBuiltinCd(cmd, shenv):
     """executeBuiltinCd - Change the current directory."""
     if len(cmd.args) != 2:
-        raise InternalShellError("'cd' supports only one argument")
-    newdir = cmd.args[1]
+        raise InternalShellError(cmd, "'cd' supports only one argument")
     # Update the cwd in the parent environment.
-    if os.path.isabs(newdir):
-        shenv.cwd = newdir
-    else:
-        shenv.cwd = os.path.realpath(os.path.join(shenv.cwd, newdir))
+    shenv.change_dir(cmd.args[1])
     # The cd builtin always succeeds. If the directory does not exist, the
     # following Popen calls will fail instead.
+    return ShellCommandResult(cmd, "", "", 0, False)
+
+def executeBuiltinPushd(cmd, shenv):
+    """executeBuiltinPushd - Change the current dir and save the old."""
+    if len(cmd.args) != 2:
+        raise InternalShellError(cmd, "'pushd' supports only one argument")
+    shenv.dirStack.append(shenv.cwd)
+    shenv.change_dir(cmd.args[1])
+    return ShellCommandResult(cmd, "", "", 0, False)
+
+def executeBuiltinPopd(cmd, shenv):
+    """executeBuiltinPopd - Restore a previously saved working directory."""
+    if len(cmd.args) != 1:
+        raise InternalShellError(cmd, "'popd' does not support arguments")
+    if not shenv.dirStack:
+        raise InternalShellError(cmd, "popd: directory stack empty")
+    shenv.cwd = shenv.dirStack.pop()
     return ShellCommandResult(cmd, "", "", 0, False)
 
 def executeBuiltinExport(cmd, shenv):
@@ -629,6 +650,8 @@ def _executeShCmd(cmd, shenv, results, timeoutHelper):
                        'export': executeBuiltinExport,
                        'echo': executeBuiltinEcho,
                        'mkdir': executeBuiltinMkdir,
+                       'popd': executeBuiltinPopd,
+                       'pushd': executeBuiltinPushd,
                        'rm': executeBuiltinRm,
                        ':': executeBuiltinColon}
     # To avoid deadlock, we use a single stderr stream for piped
