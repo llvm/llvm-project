@@ -1787,16 +1787,19 @@ void DWARFLinker::patchLineTableForUnit(CompileUnit &Unit,
 
 void DWARFLinker::emitAcceleratorEntriesForUnit(CompileUnit &Unit) {
   switch (Options.TheAccelTableKind) {
-  case AccelTableKind::Apple:
+  case DwarfLinkerAccelTableKind::None:
+    // Nothing to do.
+    break;
+  case DwarfLinkerAccelTableKind::Apple:
     emitAppleAcceleratorEntriesForUnit(Unit);
     break;
-  case AccelTableKind::Dwarf:
+  case DwarfLinkerAccelTableKind::Dwarf:
     emitDwarfAcceleratorEntriesForUnit(Unit);
     break;
-  case AccelTableKind::Pub:
+  case DwarfLinkerAccelTableKind::Pub:
     emitPubAcceleratorEntriesForUnit(Unit);
     break;
-  case AccelTableKind::Default:
+  case DwarfLinkerAccelTableKind::Default:
     llvm_unreachable("The default must be updated to a concrete value.");
     break;
   }
@@ -2215,7 +2218,7 @@ uint64_t DWARFLinker::DIECloner::cloneAllCompileUnits(
 }
 
 void DWARFLinker::updateAccelKind(DWARFContext &Dwarf) {
-  if (Options.TheAccelTableKind != AccelTableKind::Default)
+  if (Options.TheAccelTableKind != DwarfLinkerAccelTableKind::Default)
     return;
 
   auto &DwarfObj = Dwarf.getDWARFObj();
@@ -2341,11 +2344,11 @@ bool DWARFLinker::link() {
   // would affect the decision. However, as they're built with the same
   // compiler and flags, it is safe to assume that they will follow the
   // decision made here.
-  if (Options.TheAccelTableKind == AccelTableKind::Default) {
+  if (Options.TheAccelTableKind == DwarfLinkerAccelTableKind::Default) {
     if (AtLeastOneDwarfAccelTable && !AtLeastOneAppleAccelTable)
-      Options.TheAccelTableKind = AccelTableKind::Dwarf;
+      Options.TheAccelTableKind = DwarfLinkerAccelTableKind::Dwarf;
     else
-      Options.TheAccelTableKind = AccelTableKind::Apple;
+      Options.TheAccelTableKind = DwarfLinkerAccelTableKind::Apple;
   }
 
   for (LinkContext &OptContext : ObjectContexts) {
@@ -2524,19 +2527,22 @@ bool DWARFLinker::link() {
       TheDwarfEmitter->emitAbbrevs(Abbreviations, MaxDwarfVersion);
       TheDwarfEmitter->emitStrings(OffsetsStringPool);
       switch (Options.TheAccelTableKind) {
-      case AccelTableKind::Apple:
+      case DwarfLinkerAccelTableKind::None:
+        // Nothing to do.
+        break;
+      case DwarfLinkerAccelTableKind::Apple:
         TheDwarfEmitter->emitAppleNames(AppleNames);
         TheDwarfEmitter->emitAppleNamespaces(AppleNamespaces);
         TheDwarfEmitter->emitAppleTypes(AppleTypes);
         TheDwarfEmitter->emitAppleObjc(AppleObjc);
         break;
-      case AccelTableKind::Dwarf:
+      case DwarfLinkerAccelTableKind::Dwarf:
         TheDwarfEmitter->emitDebugNames(DebugNames);
         break;
-      case AccelTableKind::Pub:
+      case DwarfLinkerAccelTableKind::Pub:
         // Already emitted by emitPubAcceleratorEntriesForUnit.
         break;
-      case AccelTableKind::Default:
+      case DwarfLinkerAccelTableKind::Default:
         llvm_unreachable("Default should have already been resolved.");
         break;
       }

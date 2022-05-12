@@ -29,7 +29,8 @@ template <typename T> class SmallVectorImpl;
 enum class DwarfLinkerClient { Dsymutil, LLD, General };
 
 /// The kind of accelerator tables we should emit.
-enum class AccelTableKind {
+enum class DwarfLinkerAccelTableKind : uint8_t {
+  None,
   Apple,   ///< .apple_names, .apple_namespaces, .apple_types, .apple_objc.
   Dwarf,   ///< DWARF v5 .debug_names.
   Default, ///< Dwarf for DWARF5 or later, Apple otherwise.
@@ -293,7 +294,7 @@ public:
   void setNumThreads(unsigned NumThreads) { Options.Threads = NumThreads; }
 
   /// Set kind of accelerator tables to be generated.
-  void setAccelTableKind(AccelTableKind Kind) {
+  void setAccelTableKind(DwarfLinkerAccelTableKind Kind) {
     Options.TheAccelTableKind = Kind;
   }
 
@@ -804,7 +805,8 @@ private:
     unsigned Threads = 1;
 
     /// The accelerator table kind
-    AccelTableKind TheAccelTableKind = AccelTableKind::Default;
+    DwarfLinkerAccelTableKind TheAccelTableKind =
+        DwarfLinkerAccelTableKind::Default;
 
     /// Prepend path for the clang modules.
     std::string PrependPath;
