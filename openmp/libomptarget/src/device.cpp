@@ -285,25 +285,22 @@ TargetPointerResultTy DeviceTy::getTargetPointer(
     // In addition to the mapping rules above, the close map modifier forces the
     // mapping of the variable to the device.
     if (Size) {
-      if (!PM->RTLs.NoUSMMapChecks) {
-        // When allocating under unified_shared_memory, amdgpu plugin
-	// can optimize memory access latency by registering allocated
-	// memory as coarse_grain
-	if (HstPtrBegin && RTL->set_coarse_grain_mem_region)
-	  RTL->set_coarse_grain_mem_region(HstPtrBegin, Size);
+      // When allocating under unified_shared_memory, amdgpu plugin
+      // can optimize memory access latency by registering allocated
+      // memory as coarse_grain
+      if (HstPtrBegin && RTL->set_coarse_grain_mem_region)
+        RTL->set_coarse_grain_mem_region(HstPtrBegin, Size);
 
-	// even under unified_shared_memory need to check for correctness of
-	// use of map clauses. device pointer is same as host ptr in this case
-        Entry =
-            HDTTMap
-                ->emplace(new HostDataToTargetTy(
-		(uintptr_t)HstPtrBase,
-                (uintptr_t)HstPtrBegin,
-                (uintptr_t)HstPtrBegin + Size,
-                (uintptr_t)HstPtrBegin,
-                HasHoldModifier, HstPtrName, /*IsInf=*/true,
-                /*IsUSMAlloc=*/true))
-                .first->HDTT;
+      if (!PM->RTLs.NoUSMMapChecks) {
+        // even under unified_shared_memory need to check for correctness of
+        // use of map clauses. device pointer is same as host ptr in this case
+        Entry = HDTTMap
+                    ->emplace(new HostDataToTargetTy(
+                        (uintptr_t)HstPtrBase, (uintptr_t)HstPtrBegin,
+                        (uintptr_t)HstPtrBegin + Size, (uintptr_t)HstPtrBegin,
+                        HasHoldModifier, HstPtrName, /*IsInf=*/true,
+                        /*IsUSMAlloc=*/true))
+                    .first->HDTT;
       }
       DP("Return HstPtrBegin " DPxMOD " Size=%" PRId64 " for unified shared "
          "memory\n",

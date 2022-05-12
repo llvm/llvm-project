@@ -146,8 +146,8 @@ struct RTLsTy {
   int64_t RequiresFlags = OMP_REQ_UNDEFINED;
 
   // Set by OMPX_DISABLE_MAPS environment variable.
-  // When active, maps are ignored by the runtime
-  bool NoUSMMapChecks = false;
+  // When active (default value), maps are ignored by the runtime
+  bool NoUSMMapChecks = true;
 
   explicit RTLsTy() = default;
 
