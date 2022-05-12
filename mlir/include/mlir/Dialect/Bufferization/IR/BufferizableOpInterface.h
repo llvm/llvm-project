@@ -221,6 +221,10 @@ struct BufferizationOptions {
   /// For debugging only. Should be used together with `testAnalysisOnly`.
   bool printConflicts = false;
 
+  /// If set to `true`, buffers that are returned from functions are replaced
+  /// with buffer "out" parameters. At the call site, new buffers are allocated.
+  bool promoteBufferResultsToOutParams = false;
+
   /// If set to `true`, an `getAliasingOpResult` will return the corresponding
   /// "out"/"dest" OpOperand for every op that has the notion of an "out"/"dest"
   /// operand. I.e., the aliasing OpOperand of the i-th tensor OpResult is
