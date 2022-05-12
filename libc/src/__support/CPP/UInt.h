@@ -9,7 +9,7 @@
 #ifndef LLVM_LIBC_UTILS_CPP_UINT_H
 #define LLVM_LIBC_UTILS_CPP_UINT_H
 
-#include "src/__support/CPP/Array.h"
+#include "Array.h"
 
 #include <stddef.h> // For size_t
 #include <stdint.h>
