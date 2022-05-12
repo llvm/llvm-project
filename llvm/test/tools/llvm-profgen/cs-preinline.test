@@ -78,7 +78,7 @@
 ; CHECK-PREINL-NEST-NEXT: 65526: 14
 ; CHECK-PREINL-NEST-NEXT: 3.1: bar:84
 ; CHECK-PREINL-NEST-NEXT:  1: 14
-; CHECK-PREINL-NEST-NEXT:  !Attributes: 7
+; CHECK-PREINL-NEST-NEXT:  !Attributes: 3
 
 
 ; CHECK-PREINL-FLAG: ProfileSummarySection {{.*}} Flags: {{{.*}}preInlined}
