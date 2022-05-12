@@ -49,3 +49,63 @@ bb2:
   %seed = fcmp ogt double %add3, %add4
   ret void
 }
+
+; This checks that non-consecutive external users are skipped.
+define void @non_consecutive_external_users(double *%A, double *%ptr) {
+; CHECK-LABEL: @non_consecutive_external_users(
+; CHECK-NEXT:  bb1:
+; CHECK-NEXT:    [[LD:%.*]] = load double, double* undef, align 8
+; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <4 x double> poison, double [[LD]], i32 0
+; CHECK-NEXT:    [[SHUFFLE:%.*]] = shufflevector <4 x double> [[TMP0]], <4 x double> poison, <4 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP1:%.*]] = fadd <4 x double> [[SHUFFLE]], <double 1.100000e+00, double 2.200000e+00, double 3.300000e+00, double 4.400000e+00>
+; CHECK-NEXT:    [[TMP2:%.*]] = fadd <4 x double> [[TMP1]], <double 1.100000e+00, double 2.200000e+00, double 3.300000e+00, double 4.400000e+00>
+; CHECK-NEXT:    [[TMP3:%.*]] = fmul <4 x double> [[TMP2]], <double 1.100000e+00, double 2.200000e+00, double 3.300000e+00, double 4.400000e+00>
+; CHECK-NEXT:    [[PTRA1:%.*]] = getelementptr inbounds double, double* [[A:%.*]], i64 0
+; CHECK-NEXT:    [[PTRA4:%.*]] = getelementptr inbounds double, double* [[A]], i64 3
+; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <4 x double> [[TMP3]], i32 3
+; CHECK-NEXT:    store double [[TMP4]], double* [[PTRA1]], align 8
+; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <4 x double> [[TMP3]], i32 2
+; CHECK-NEXT:    store double [[TMP5]], double* [[PTRA1]], align 8
+; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <4 x double> [[TMP3]], i32 1
+; CHECK-NEXT:    store double [[TMP6]], double* [[PTRA4]], align 8
+; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <4 x double> [[TMP3]], i32 0
+; CHECK-NEXT:    store double [[TMP7]], double* [[PTRA4]], align 8
+; CHECK-NEXT:    br label [[SEED_LOOP:%.*]]
+; CHECK:       seed_loop:
+; CHECK-NEXT:    [[TMP8:%.*]] = phi <4 x double> [ [[TMP3]], [[BB1:%.*]] ], [ zeroinitializer, [[SEED_LOOP]] ]
+; CHECK-NEXT:    br label [[SEED_LOOP]]
+;
+bb1:
+  %ld = load double, double* undef
+
+  %add5 = fadd double %ld, 1.1
+  %add6 = fadd double %ld, 2.2
+  %add7 = fadd double %ld, 3.3
+  %add8 = fadd double %ld, 4.4
+
+  %add1 = fadd double %add5, 1.1
+  %add2 = fadd double %add6, 2.2
+  %add3 = fadd double %add7, 3.3
+  %add4 = fadd double %add8, 4.4
+
+  %mul1 = fmul double %add1, 1.1
+  %mul2 = fmul double %add2, 2.2
+  %mul3 = fmul double %add3, 3.3
+  %mul4 = fmul double %add4, 4.4
+
+  ; External non-consecutive stores.
+  %ptrA1 = getelementptr inbounds double, double* %A, i64 0
+  %ptrA4 = getelementptr inbounds double, double* %A, i64 3
+  store double %mul4, double *%ptrA1
+  store double %mul3, double *%ptrA1
+  store double %mul2, double *%ptrA4
+  store double %mul1, double *%ptrA4
+  br label %seed_loop
+
+seed_loop:
+  %phi1 = phi double [ %mul1, %bb1 ], [ 0.0, %seed_loop ]
+  %phi2 = phi double [ %mul2, %bb1 ], [ 0.0, %seed_loop ]
+  %phi3 = phi double [ %mul3, %bb1 ], [ 0.0, %seed_loop ]
+  %phi4 = phi double [ %mul4, %bb1 ], [ 0.0, %seed_loop ]
+  br label %seed_loop
+}
