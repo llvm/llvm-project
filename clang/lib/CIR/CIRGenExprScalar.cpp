@@ -625,6 +625,12 @@ public:
       llvm_unreachable("NYI");
     }
 
+    if (Opts.EmitImplicitIntegerTruncationChecks)
+      llvm_unreachable("NYI");
+
+    if (Opts.EmitImplicitIntegerSignChangeChecks)
+      llvm_unreachable("NYI");
+
     return Res;
   }
 
