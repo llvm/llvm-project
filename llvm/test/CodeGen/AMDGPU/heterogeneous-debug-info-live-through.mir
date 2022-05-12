@@ -1,0 +1,203 @@
+# RUN: llc -O0 -x mir -start-after=livedebugvalues -filetype=obj < %s > %t.o
+# RUN: ld.lld -shared %t.o -o %t.so
+# RUN: llvm-dwarfdump %t.so | FileCheck %s
+
+# Confirm we emit a non-loclist location when the same lifetime is "live
+# through" the entire function, even when there are meta instructions preceding
+# the DBG_DEF for the lifetime in some blocks. For example, with two "live
+# through" variables one DBG_DEF must precede the other in each block.
+
+# CHECK: DW_TAG_subprogram
+# CHECK:   DW_AT_name      ("live_through")
+# CHECK:   DW_TAG_variable
+# CHECK:     DW_AT_location        (DW_OP_regx 0x40, {{.*}})
+# CHECK:     DW_AT_name    ("x")
+# CHECK:   DW_TAG_variable
+# CHECK:     DW_AT_location        (DW_OP_regx 0x40, {{.*}})
+# CHECK:     DW_AT_name    ("y")
+
+# Also confirm that we correctly fall back to the complete loclist when there
+# is no DBG_DEF in the prologue, or when there are non-meta instructions which
+# prevent coalescing.
+
+# CHECK: DW_TAG_subprogram
+# CHECK:   DW_AT_name      ("not_live_through")
+# CHECK:   DW_TAG_variable
+# CHECK:     DW_AT_location        (0x[[#%x,]]:
+# CHECK-NEXT:  [0x[[#%x,]], 0x[[#%x,]]): DW_OP_regx 0x40, {{.*}}
+# CHECK-NEXT:  [0x[[#%x,]], 0x[[#%x,]]): DW_OP_regx 0x40, {{.*}})
+# CHECK:     DW_AT_name    ("x")
+# CHECK:   DW_TAG_variable
+# CHECK:     DW_AT_location        (0x[[#%x,]]:
+# CHECK-NEXT:  [0x[[#%x,]], 0x[[#%x,]]): DW_OP_regx 0x40, {{.*}})
+# CHECK:     DW_AT_name    ("y")
+
+--- |
+  ; ModuleID = '<stdin>'
+  source_filename = "-"
+  target datalayout = "e-p:64:64-p1:64:64-p2:32:32-p3:32:32-p4:64:64-p5:32:32-p6:32:32-i64:64-v16:16-v24:32-v32:32-v48:64-v96:128-v192:256-v256:256-v512:512-v1024:1024-v2048:2048-n32:64-S32-A5-G1-ni:7"
+  target triple = "amdgcn-amd-amdhsa"
+  
+  ; Function Attrs: convergent mustprogress noinline nounwind optnone
+  define dso_local void @_Z12live_throughv() #0 !dbg !5 {
+  entry:
+    %x = alloca i32, align 4, addrspace(5)
+    %y = alloca i32, align 4, addrspace(5)
+    %x.ascast = addrspacecast ptr addrspace(5) %x to ptr
+    %y.ascast = addrspacecast ptr addrspace(5) %y to ptr
+    call void @llvm.dbg.def(metadata !12, metadata ptr addrspace(5) %x), !dbg !13
+    call void @llvm.dbg.def(metadata !14, metadata ptr addrspace(5) %y), !dbg !15
+    ret void, !dbg !16
+  }
+  
+  ; Function Attrs: nocallback nofree nosync nounwind readnone speculatable willreturn
+  declare void @llvm.dbg.def(metadata, metadata) #1
+  
+  ; Function Attrs: convergent mustprogress noinline nounwind optnone
+  define dso_local void @_Z16not_live_throughv() #0 !dbg !17 {
+  entry:
+    %x = alloca i32, align 4, addrspace(5)
+    %y = alloca i32, align 4, addrspace(5)
+    %x.ascast = addrspacecast ptr addrspace(5) %x to ptr
+    %y.ascast = addrspacecast ptr addrspace(5) %y to ptr
+    call void @llvm.dbg.def(metadata !21, metadata ptr addrspace(5) %x), !dbg !22
+    call void @llvm.dbg.def(metadata !23, metadata ptr addrspace(5) %y), !dbg !24
+    ret void, !dbg !25
+  }
+  
+  ; Function Attrs: convergent nounwind willreturn
+  declare { i1, i64 } @llvm.amdgcn.if.i64(i1) #2
+  
+  ; Function Attrs: convergent nounwind willreturn
+  declare { i1, i64 } @llvm.amdgcn.else.i64.i64(i64) #2
+  
+  ; Function Attrs: convergent nounwind readnone willreturn
+  declare i64 @llvm.amdgcn.if.break.i64(i1, i64) #3
+  
+  ; Function Attrs: convergent nounwind willreturn
+  declare i1 @llvm.amdgcn.loop.i64(i64) #2
+  
+  ; Function Attrs: convergent nounwind willreturn
+  declare void @llvm.amdgcn.end.cf.i64(i64) #2
+  
+  attributes #0 = { convergent mustprogress noinline nounwind optnone "amdgpu-stack-objects" "frame-pointer"="none" "min-legal-vector-width"="0" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="gfx900" "target-features"="+16-bit-insts,+ci-insts,+dpp,+flat-address-space,+gfx8-insts,+gfx9-insts,+s-memrealtime,+s-memtime-inst" "uniform-work-group-size"="false" }
+  attributes #1 = { nocallback nofree nosync nounwind readnone speculatable willreturn }
+  attributes #2 = { convergent nounwind willreturn }
+  attributes #3 = { convergent nounwind readnone willreturn }
+  
+  !llvm.dbg.cu = !{!0}
+  !llvm.module.flags = !{!2, !3}
+  !llvm.ident = !{!4}
+  
+  !0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus_14, file: !1, producer: "clang version 15.0.0 (ssh://slinder1@gerrit-git.amd.com:29418/lightning/ec/llvm-project e8b7a25d33efbb106d50970951fe8f76217f2fe8)", isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug, splitDebugInlining: false, nameTableKind: None)
+  !1 = !DIFile(filename: "<stdin>", directory: "/home/slinder1/llvm-project/amd-stg-open")
+  !2 = !{i32 2, !"Debug Info Version", i32 4}
+  !3 = !{i32 1, !"wchar_size", i32 4}
+  !4 = !{!"clang version 15.0.0 (ssh://slinder1@gerrit-git.amd.com:29418/lightning/ec/llvm-project e8b7a25d33efbb106d50970951fe8f76217f2fe8)"}
+  !5 = distinct !DISubprogram(name: "live_through", linkageName: "_Z12live_throughv", scope: !1, file: !1, line: 1, type: !6, scopeLine: 1, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition, unit: !0, retainedNodes: !8)
+  !6 = !DISubroutineType(types: !7)
+  !7 = !{null}
+  !8 = !{!9, !11}
+  !9 = !DILocalVariable(name: "x", scope: !5, file: !1, line: 1, type: !10)
+  !10 = !DIBasicType(name: "int", size: 32, encoding: DW_ATE_signed)
+  !11 = !DILocalVariable(name: "y", scope: !5, file: !1, line: 1, type: !10)
+  !12 = distinct !DILifetime(object: !9, location: !DIExpr(DIOpReferrer(i32), DIOpConstant(i32 6), DIOpShr(), DIOpReinterpret(ptr addrspace(5)), DIOpDeref(i32), DIOpConstant(i32 0), DIOpByteOffset(i32)))
+  !13 = !DILocation(line: 1, column: 51, scope: !5)
+  !14 = distinct !DILifetime(object: !11, location: !DIExpr(DIOpReferrer(i32), DIOpConstant(i32 6), DIOpShr(), DIOpReinterpret(ptr addrspace(5)), DIOpDeref(i32), DIOpConstant(i32 4), DIOpByteOffset(i32)))
+  !15 = !DILocation(line: 1, column: 54, scope: !5)
+  !16 = !DILocation(line: 1, column: 57, scope: !5)
+  !17 = distinct !DISubprogram(name: "not_live_through", linkageName: "_Z16not_live_throughv", scope: !1, file: !1, line: 1, type: !6, scopeLine: 1, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition, unit: !0, retainedNodes: !18)
+  !18 = !{!19, !20}
+  !19 = !DILocalVariable(name: "x", scope: !17, file: !1, line: 1, type: !10)
+  !20 = !DILocalVariable(name: "y", scope: !17, file: !1, line: 1, type: !10)
+  !21 = distinct !DILifetime(object: !19, location: !DIExpr(DIOpReferrer(i32), DIOpConstant(i32 6), DIOpShr(), DIOpReinterpret(ptr addrspace(5)), DIOpDeref(i32), DIOpConstant(i32 0), DIOpByteOffset(i32)))
+  !22 = !DILocation(line: 1, column: 113, scope: !17)
+  !23 = distinct !DILifetime(object: !20, location: !DIExpr(DIOpReferrer(i32), DIOpConstant(i32 6), DIOpShr(), DIOpReinterpret(ptr addrspace(5)), DIOpDeref(i32), DIOpConstant(i32 4), DIOpByteOffset(i32)))
+  !24 = !DILocation(line: 1, column: 116, scope: !17)
+  !25 = !DILocation(line: 1, column: 119, scope: !17)
+
+...
+---
+name:            _Z12live_throughv
+alignment:       1
+tracksRegLiveness: true
+frameInfo:
+  stackSize:       12
+  maxAlignment:    4
+  maxCallFrameSize: 0
+  localFrameSize:  8
+stack:
+  - { id: 0, name: x, size: 4, alignment: 4, local-offset: 0 }
+  - { id: 1, name: y, offset: 4, size: 4, alignment: 4, local-offset: 4 }
+  - { id: 2, offset: 8, size: 4, alignment: 4 }
+machineFunctionInfo:
+  maxKernArgAlign: 1
+  scratchRSrcReg:  '$sgpr0_sgpr1_sgpr2_sgpr3'
+  frameOffsetReg:  '$sgpr33'
+  stackPtrOffsetReg: '$sgpr32'
+  argumentInfo:
+    privateSegmentBuffer: { reg: '$sgpr0_sgpr1_sgpr2_sgpr3' }
+    dispatchPtr:     { reg: '$sgpr4_sgpr5' }
+    queuePtr:        { reg: '$sgpr6_sgpr7' }
+    dispatchID:      { reg: '$sgpr10_sgpr11' }
+    workGroupIDX:    { reg: '$sgpr12' }
+    workGroupIDY:    { reg: '$sgpr13' }
+    workGroupIDZ:    { reg: '$sgpr14' }
+    implicitArgPtr:  { reg: '$sgpr8_sgpr9' }
+    workItemIDX:     { reg: '$vgpr31', mask: 1023 }
+    workItemIDY:     { reg: '$vgpr31', mask: 1047552 }
+    workItemIDZ:     { reg: '$vgpr31', mask: 1072693248 }
+  occupancy:       10
+body:             |
+  bb.0.entry:
+    DBG_DEF !12, $sgpr32, debug-location !13
+    DBG_DEF !14, $sgpr32, debug-location !15
+    S_BRANCH %bb.1
+  bb.1:
+    DBG_DEF !12, $sgpr32, debug-location !13
+    DBG_DEF !14, $sgpr32, debug-location !15
+    S_SETPC_B64_return undef $sgpr30_sgpr31, debug-location !16
+
+...
+---
+name:            _Z16not_live_throughv
+alignment:       1
+tracksRegLiveness: true
+frameInfo:
+  stackSize:       12
+  maxAlignment:    4
+  maxCallFrameSize: 0
+  localFrameSize:  8
+stack:
+  - { id: 0, name: x, size: 4, alignment: 4, local-offset: 0 }
+  - { id: 1, name: y, offset: 4, size: 4, alignment: 4, local-offset: 4 }
+  - { id: 2, offset: 8, size: 4, alignment: 4 }
+machineFunctionInfo:
+  maxKernArgAlign: 1
+  scratchRSrcReg:  '$sgpr0_sgpr1_sgpr2_sgpr3'
+  frameOffsetReg:  '$sgpr33'
+  stackPtrOffsetReg: '$sgpr32'
+  argumentInfo:
+    privateSegmentBuffer: { reg: '$sgpr0_sgpr1_sgpr2_sgpr3' }
+    dispatchPtr:     { reg: '$sgpr4_sgpr5' }
+    queuePtr:        { reg: '$sgpr6_sgpr7' }
+    dispatchID:      { reg: '$sgpr10_sgpr11' }
+    workGroupIDX:    { reg: '$sgpr12' }
+    workGroupIDY:    { reg: '$sgpr13' }
+    workGroupIDZ:    { reg: '$sgpr14' }
+    implicitArgPtr:  { reg: '$sgpr8_sgpr9' }
+    workItemIDX:     { reg: '$vgpr31', mask: 1023 }
+    workItemIDY:     { reg: '$vgpr31', mask: 1047552 }
+    workItemIDZ:     { reg: '$vgpr31', mask: 1072693248 }
+  occupancy:       10
+body:             |
+  bb.0.entry:
+    DBG_DEF !21, $sgpr32, debug-location !24
+    S_BRANCH %bb.1
+  bb.1:
+    DBG_DEF !23, $sgpr32, debug-location !22
+    S_NOP 1
+    DBG_DEF !21, $sgpr32, debug-location !24
+    S_SETPC_B64_return undef $sgpr30_sgpr31, debug-location !25
+
+...

@@ -114,6 +114,11 @@ struct DbgDefProxy {
 // FIXME(KZHURAVL): Write documentation for DbgVariable.
 class DbgVariable : public DbgEntity {
 protected:
+  /// Index of the entry list in DebugLocs.
+  unsigned DebugLocListIndex = ~0u;
+  /// DW_OP_LLVM_tag_offset value from DebugLocs.
+  Optional<uint8_t> DebugLocListTagOffset;
+
   // FIXME(KZHURAVL): Move FrameIndexExpr and getFrameIndexExprs into
   // OldDbgVariable.
   struct FrameIndexExpr {
@@ -158,10 +163,10 @@ public:
   virtual void initializeDbgValue(DbgValueLoc Value) = 0;
   virtual void initializeDbgValue(const MachineInstr *DbgValue) = 0;
   virtual const DIExpression *getSingleExpression() const = 0;
-  virtual void setDebugLocListIndex(unsigned O) = 0;
-  virtual unsigned getDebugLocListIndex() const = 0;
-  virtual void setDebugLocListTagOffset(uint8_t O) = 0;
-  virtual Optional<uint8_t> getDebugLocListTagOffset() const = 0;
+  void setDebugLocListIndex(unsigned O) { DebugLocListIndex = O; }
+  unsigned getDebugLocListIndex() const { return DebugLocListIndex; }
+  void setDebugLocListTagOffset(uint8_t O) { DebugLocListTagOffset = O; }
+  Optional<uint8_t> getDebugLocListTagOffset() const { return DebugLocListTagOffset; }
   virtual const DbgValueLoc *getValueLoc() const = 0;
   virtual ArrayRef<FrameIndexExpr> getFrameIndexExprs() const = 0;
   virtual bool hasFrameIndexExprs() const = 0;
@@ -197,11 +202,6 @@ public:
 ///
 /// Variables that have been optimized out use none of these fields.
 class OldDbgVariable : public DbgVariable {
-  /// Index of the entry list in DebugLocs.
-  unsigned DebugLocListIndex = ~0u;
-  /// DW_OP_LLVM_tag_offset value from DebugLocs.
-  Optional<uint8_t> DebugLocListTagOffset;
-
   /// Single value location description.
   std::unique_ptr<DbgValueLoc> ValueLoc = nullptr;
 
@@ -248,10 +248,6 @@ public:
     return FrameIndexExprs.size() ? FrameIndexExprs[0].Expr : nullptr;
   }
 
-  void setDebugLocListIndex(unsigned O) override { DebugLocListIndex = O; }
-  unsigned getDebugLocListIndex() const override { return DebugLocListIndex; }
-  void setDebugLocListTagOffset(uint8_t O) override { DebugLocListTagOffset = O; }
-  Optional<uint8_t> getDebugLocListTagOffset() const override { return DebugLocListTagOffset; }
   const DbgValueLoc *getValueLoc() const override { return ValueLoc.get(); }
   /// Get the FI entries, sorted by fragment offset.
   ArrayRef<FrameIndexExpr> getFrameIndexExprs() const override;
@@ -286,6 +282,7 @@ public:
 //===----------------------------------------------------------------------===//
 // FIXME(KZHURAVL): Write documentation for NewDbgVariable.
 class NewDbgVariable : public DbgVariable {
+  /// Records DbgDef referrers.
   mutable SmallVector<DbgDefProxy, 1> DbgDefProxies;
 
 public:
@@ -303,18 +300,6 @@ public:
   }
   const DIExpression *getSingleExpression() const override {
     llvm_unreachable("NewDbgVariable::getSingleExpression is not supported");
-  }
-  void setDebugLocListIndex(unsigned O) override {
-    llvm_unreachable("NewDbgVariable::setDebugLocListIndex is not supported");
-  }
-  unsigned getDebugLocListIndex() const override {
-    return ~0u; // FIXME(KZHURAVL).
-  }
-  void setDebugLocListTagOffset(uint8_t O) override {
-    llvm_unreachable("NewDbgVariable::setDebugLocListTagOffset is not supported");
-  }
-  Optional<uint8_t> getDebugLocListTagOffset() const override {
-    llvm_unreachable("NewDbgVariable::getDebugLocListTagOffset is not supported");
   }
   const DbgValueLoc *getValueLoc() const override {
     return nullptr; // FIXME(KZHURAVL).

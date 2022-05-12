@@ -437,9 +437,8 @@ public:
   }
 };
 
-// FIXME(KZHURAVL): Write documentation for DIEDwarfExprAST.
-class DIEDwarfExprAST final {
-private:
+class DwarfExprAST {
+protected:
   class Node {
   private:
     DIOp::Variant Element;
@@ -498,7 +497,6 @@ private:
   // Only present when in a function context.
   const TargetRegisterInfo *TRI;
   DwarfCompileUnit &CU;
-  DIELoc &OutDIE;
   const DILifetime &Lifetime;
   // An `Optional<MachineOperand>` where `nullptr` represents `None`.
   // Only present when in a function context.
@@ -507,8 +505,7 @@ private:
   // Only present and applicable as part of an optimization for DIFragments
   // which refer to global variable fragments.
   const DenseMap<DIFragment *, const GlobalVariable *> *GVFragmentMap;
-  std::unique_ptr<DIEDwarfExprAST::Node> Root;
-
+  std::unique_ptr<DwarfExprAST::Node> Root;
   // FIXME(KZHURAVL): This is a temporary boolean variable that indicates
   // whether the lowering of this expression is supported or not. If the
   // lowering is supported, then a valid DIE is returned, otherwise an empty
@@ -517,58 +514,120 @@ private:
   bool IsImplemented = true;
 
   void buildDIExprAST();
-  void traverseAndLower(DIEDwarfExprAST::Node *OpNode);
-  void lower(DIEDwarfExprAST::Node *OpNode);
+  void traverseAndLower(DwarfExprAST::Node *OpNode);
+  void lower(DwarfExprAST::Node *OpNode);
   /// Attempt to perform the optimization of inlining the expression of a global
   /// value DIFragment, referenced through a DIOpArg.
   ///
   /// \returns true if the optimization was performed successfully, false if it
   /// is not applicable.
   bool tryInlineArgObject(DIObject *ArgObject);
-  void lowerDIOpArg(DIEDwarfExprAST::Node *OpNode);
-  void lowerDIOpConstant(DIEDwarfExprAST::Node *OpNode);
-  void lowerDIOpPushLane(DIEDwarfExprAST::Node *OpNode);
-  void lowerDIOpReferrer(DIEDwarfExprAST::Node *OpNode);
-  void lowerDIOpTypeObject(DIEDwarfExprAST::Node *OpNode);
-  void lowerDIOpAddrOf(DIEDwarfExprAST::Node *OpNode);
-  void lowerDIOpConvert(DIEDwarfExprAST::Node *OpNode);
-  void lowerDIOpDeref(DIEDwarfExprAST::Node *OpNode);
-  void lowerDIOpExtend(DIEDwarfExprAST::Node *OpNode);
-  void lowerDIOpRead(DIEDwarfExprAST::Node *OpNode);
-  void lowerDIOpReinterpret(DIEDwarfExprAST::Node *OpNode);
-  void lowerDIOpAdd(DIEDwarfExprAST::Node *OpNode);
-  void lowerDIOpBitOffset(DIEDwarfExprAST::Node *OpNode);
-  void lowerDIOpByteOffset(DIEDwarfExprAST::Node *OpNode);
-  void lowerDIOpDiv(DIEDwarfExprAST::Node *OpNode);
-  void lowerDIOpMul(DIEDwarfExprAST::Node *OpNode);
-  void lowerDIOpShl(DIEDwarfExprAST::Node *OpNode);
-  void lowerDIOpShr(DIEDwarfExprAST::Node *OpNode);
-  void lowerDIOpSub(DIEDwarfExprAST::Node *OpNode);
-  void lowerDIOpSelect(DIEDwarfExprAST::Node *OpNode);
-  void lowerDIOpComposite(DIEDwarfExprAST::Node *OpNode);
+  void lowerDIOpArg(DwarfExprAST::Node *OpNode);
+  void lowerDIOpConstant(DwarfExprAST::Node *OpNode);
+  void lowerDIOpPushLane(DwarfExprAST::Node *OpNode);
+  void lowerDIOpReferrer(DwarfExprAST::Node *OpNode);
+  void lowerDIOpTypeObject(DwarfExprAST::Node *OpNode);
+  void lowerDIOpAddrOf(DwarfExprAST::Node *OpNode);
+  void lowerDIOpConvert(DwarfExprAST::Node *OpNode);
+  void lowerDIOpDeref(DwarfExprAST::Node *OpNode);
+  void lowerDIOpExtend(DwarfExprAST::Node *OpNode);
+  void lowerDIOpRead(DwarfExprAST::Node *OpNode);
+  void lowerDIOpReinterpret(DwarfExprAST::Node *OpNode);
+  void lowerDIOpAdd(DwarfExprAST::Node *OpNode);
+  void lowerDIOpBitOffset(DwarfExprAST::Node *OpNode);
+  void lowerDIOpByteOffset(DwarfExprAST::Node *OpNode);
+  void lowerDIOpDiv(DwarfExprAST::Node *OpNode);
+  void lowerDIOpMul(DwarfExprAST::Node *OpNode);
+  void lowerDIOpShl(DwarfExprAST::Node *OpNode);
+  void lowerDIOpShr(DwarfExprAST::Node *OpNode);
+  void lowerDIOpSub(DwarfExprAST::Node *OpNode);
+  void lowerDIOpSelect(DwarfExprAST::Node *OpNode);
+  void lowerDIOpComposite(DwarfExprAST::Node *OpNode);
 
-  void lowerBitOrByteOffset(DIEDwarfExprAST::Node *OpNode);
-  void lowerMathOp(DIEDwarfExprAST::Node *OpNode);
-  void readToValue(DIEDwarfExprAST::Node *OpNode, bool NeedsSwap);
+  void lowerBitOrByteOffset(DwarfExprAST::Node *OpNode);
+  void lowerMathOp(DwarfExprAST::Node *OpNode);
+  void readToValue(DwarfExprAST::Node *OpNode, bool NeedsSwap);
 
   void emitReg(int32_t DwarfReg, const char *Comment = nullptr);
   void emitSigned(int64_t SignedValue);
   void emitUnsigned(uint64_t UnsignedValue);
+  virtual void emitDwarfData1(uint8_t Data1Value) = 0;
+  virtual void emitDwarfOp(uint8_t DwarfOpValue,
+                           const char *Comment = nullptr) = 0;
+  virtual void emitDwarfSigned(int64_t SignedValue) = 0;
+  virtual void emitDwarfUnsigned(uint64_t UnsignedValue) = 0;
+  virtual void emitDwarfAddr(const MCSymbol *Sym) = 0;
+
+public:
+  DwarfExprAST(
+      const AsmPrinter &AP, const TargetRegisterInfo *TRI, DwarfCompileUnit &CU,
+      const DILifetime &Lifetime, const MachineOperand *Referrer,
+      const DenseMap<DIFragment *, const GlobalVariable *> *GVFragmentMap)
+      : AP(AP), TRI(TRI), CU(CU), Lifetime(Lifetime), Referrer(Referrer),
+        GVFragmentMap(GVFragmentMap) {
+    buildDIExprAST();
+  }
+  virtual ~DwarfExprAST() {}
+};
+
+class DebugLocDwarfExprAST final : DwarfExprAST {
+  BufferByteStreamer &OutBS;
+
+  ByteStreamer &getActiveStreamer();
+
+  void emitDwarfData1(uint8_t Data1Value) override;
+  void emitDwarfOp(uint8_t DwarfOpValue, const char *Comment = nullptr) override;
+  void emitDwarfSigned(int64_t SignedValue) override;
+  void emitDwarfUnsigned(uint64_t UnsignedValue) override;
+  void emitDwarfAddr(const MCSymbol *Sym) override;
+
+  DebugLocDwarfExprAST(
+      const AsmPrinter &AP, const TargetRegisterInfo *TRI, DwarfCompileUnit &CU,
+      BufferByteStreamer &BS, const DILifetime &Lifetime,
+      const MachineOperand *Referrer,
+      const DenseMap<DIFragment *, const GlobalVariable *> *GVFragmentMap)
+      : DwarfExprAST(AP, TRI, CU, Lifetime, Referrer, GVFragmentMap),
+        OutBS(BS) {}
+
+  public:
+  DebugLocDwarfExprAST(const AsmPrinter &AP, const TargetRegisterInfo &TRI,
+                       DwarfCompileUnit &CU, BufferByteStreamer &BS,
+                       const DILifetime &Lifetime,
+                       const MachineOperand &Referrer)
+      : DebugLocDwarfExprAST(AP, &TRI, CU, BS, Lifetime, &Referrer, nullptr) {}
+  DebugLocDwarfExprAST(
+      const AsmPrinter &AP, DwarfCompileUnit &CU, BufferByteStreamer &BS,
+      const DILifetime &Lifetime,
+      const DenseMap<DIFragment *, const GlobalVariable *> &GVFragmentMap)
+      : DebugLocDwarfExprAST(AP, nullptr, CU, BS, Lifetime, nullptr,
+                             &GVFragmentMap) {}
+  DebugLocDwarfExprAST(const DebugLocDwarfExprAST &) = delete;
+  ~DebugLocDwarfExprAST() {}
+
+  bool finalize() {
+    traverseAndLower(Root.get());
+    return IsImplemented;
+  }
+};
+
+// FIXME(KZHURAVL): Write documentation for DIEDwarfExprAST.
+class DIEDwarfExprAST final : DwarfExprAST {
+  DIELoc &OutDIE;
 
   DIELoc &getActiveDIE();
-  void emitDwarfData1(uint8_t Data1Value);
-  void emitDwarfOp(uint8_t DwarfOpValue, const char *Comment = nullptr);
-  void emitDwarfSigned(int64_t SignedValue);
-  void emitDwarfUnsigned(uint64_t UnsignedValue);
+
+  void emitDwarfData1(uint8_t Data1Value) override;
+  void emitDwarfOp(uint8_t DwarfOpValue, const char *Comment = nullptr) override;
+  void emitDwarfSigned(int64_t SignedValue) override;
+  void emitDwarfUnsigned(uint64_t UnsignedValue) override;
+  void emitDwarfAddr(const MCSymbol *Sym) override;
 
   DIEDwarfExprAST(
       const AsmPrinter &AP, const TargetRegisterInfo *TRI, DwarfCompileUnit &CU,
       DIELoc &DIE, const DILifetime &Lifetime, const MachineOperand *Referrer,
       const DenseMap<DIFragment *, const GlobalVariable *> *GVFragmentMap)
-      : AP(AP), TRI(TRI), CU(CU), OutDIE(DIE), Lifetime(Lifetime),
-        Referrer(Referrer), GVFragmentMap(GVFragmentMap) {
-    buildDIExprAST();
-  }
+      : DwarfExprAST(AP, TRI, CU, Lifetime, Referrer, GVFragmentMap),
+        OutDIE(DIE) {}
 
 public:
   DIEDwarfExprAST(const AsmPrinter &AP, const TargetRegisterInfo &TRI,
@@ -582,6 +641,7 @@ public:
       : DIEDwarfExprAST(AP, nullptr, CU, DIE, Lifetime, nullptr,
                         &GVFragmentMap) {}
   DIEDwarfExprAST(const DIEDwarfExprAST &) = delete;
+  ~DIEDwarfExprAST() {}
 
   DIELoc *finalize() {
     traverseAndLower(Root.get());

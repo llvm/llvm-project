@@ -1539,62 +1539,11 @@ void DwarfDebug::ensureAbstractEntityIsCreatedIfScoped(DwarfCompileUnit &CU,
     CU.createAbstractEntity(Node, Scope);
 }
 
-// Collect variable information from MF.
-void DwarfDebug::collectVariableInfoFromMF(
-    DwarfCompileUnit &TheCU, DenseSet<InlinedEntity> &Processed) {
-  SmallDenseMap<InlinedEntity, DbgVariable *> MFVars;
-  LLVM_DEBUG(dbgs() << "DwarfDebug: collecting variables from MF\n");
-  for (const auto &MBB : *Asm->MF) {
-    for (const auto &MI : MBB) {
-      if (!MI.isDebugDef()) {
-        continue;
-      }
-
-      LLVM_DEBUG(dbgs() << "Processing instruction: " << MI);
-
-      // FIXME(KZHURAVL): This is fine at -O0. Need to handle DIFragment and
-      // DIGlobalVariable at other optimization levels.
-      const DILifetime *LT = MI.getDebugLifetime();
-      const DILocalVariable *LV = dyn_cast<DILocalVariable>(LT->getObject());
-      assert(LV && "DILifetime's object is not DILocalVariable");
-
-      InlinedEntity Var(LV, nullptr);
-      Processed.insert(Var);
-      LexicalScope *Scope = MI.getDebugLoc().get() ?
-          LScopes.findLexicalScope(MI.getDebugLoc().get()) :
-          LScopes.findLexicalScope(LV->getScope());
-
-      // If variable scope is not found then skip this variable.
-      if (!Scope) {
-        LLVM_DEBUG(dbgs() << "Dropping debug info for " << LV->getName()
-                          << ", no variable scope found\n");
-        continue;
-      }
-
-      ensureAbstractEntityIsCreatedIfScoped(TheCU, Var.first, Scope->getScopeNode());
-      auto RegVar = std::make_unique<NewDbgVariable>(
-                        cast<DILocalVariable>(Var.first), Var.second);
-      RegVar->initializeDbgDefProxy(*LT, MI.getDebugReferrer());
-      LLVM_DEBUG(dbgs() << "Created DbgVariable for " << LV->getName()
-                        << "\n");
-
-      if (DbgVariable *DbgVar = MFVars.lookup(Var))
-        DbgVar->addMMIEntry(*RegVar);
-      else if (InfoHolder.addScopeVariable(Scope, RegVar.get())) {
-        MFVars.insert({Var, RegVar.get()});
-        ConcreteEntities.push_back(std::move(RegVar));
-      }
-    }
-  }
-}
-
 // Collect variable information from the side table maintained by MF.
 void DwarfDebug::collectVariableInfoFromMFTable(
     DwarfCompileUnit &TheCU, DenseSet<InlinedEntity> &Processed) {
-  if (isHeterogeneousDebug(*Asm->MF->getFunction().getParent())) {
-    collectVariableInfoFromMF(TheCU, Processed);
+  if (isHeterogeneousDebug(*Asm->MF->getFunction().getParent()))
     return;
-  }
 
   SmallDenseMap<InlinedEntity, DbgVariable *> MFVars;
   LLVM_DEBUG(dbgs() << "DwarfDebug: collecting variables from MF side table\n");
@@ -1899,9 +1848,13 @@ DbgEntity *DwarfDebug::createConcreteEntity(DwarfCompileUnit &TheCU,
                                             const MCSymbol *Sym) {
   ensureAbstractEntityIsCreatedIfScoped(TheCU, Node, Scope.getScopeNode());
   if (isa<const DILocalVariable>(Node)) {
-    ConcreteEntities.push_back(
-        std::make_unique<OldDbgVariable>(cast<const DILocalVariable>(Node),
-                                       Location));
+    if (isHeterogeneousDebug(*Asm->MF->getFunction().getParent())) {
+      ConcreteEntities.push_back(std::make_unique<NewDbgVariable>(
+          cast<const DILocalVariable>(Node), Location));
+    } else {
+      ConcreteEntities.push_back(std::make_unique<OldDbgVariable>(
+          cast<const DILocalVariable>(Node), Location));
+    }
     InfoHolder.addScopeVariable(&Scope,
         cast<DbgVariable>(ConcreteEntities.back().get()));
   } else if (isa<const DILabel>(Node)) {
@@ -1966,7 +1919,7 @@ void DwarfDebug::collectEntityInfo(DwarfCompileUnit &TheCU,
       }
     }
 
-    // Do not emit location lists if .debug_loc secton is disabled.
+    // Do not emit location lists if .debug_loc section is disabled.
     if (!useLocSection())
       continue;
 
@@ -1994,6 +1947,68 @@ void DwarfDebug::collectEntityInfo(DwarfCompileUnit &TheCU,
     // Finalize the entry by lowering it into a DWARF bytestream.
     for (auto &Entry : Entries)
       Entry.finalize(*Asm, List, BT, TheCU);
+  }
+
+  for (const auto &I : DbgDefKills) {
+    const DILifetime *LT = I.first;
+    auto &Entries = I.second;
+    assert(!Entries.empty());
+    auto &MI = *Entries.back().getBegin();
+    LLVM_DEBUG(dbgs() << "Processing instruction: " << MI);
+
+    // FIXME(KZHURAVL): This is fine at -O0. Need to handle DIFragment and
+    // DIGlobalVariable at other optimization levels.
+    const DILocalVariable *LocalVar =
+        dyn_cast<DILocalVariable>(LT->getObject());
+    assert(LocalVar && "DILifetime's object is not DILocalVariable");
+
+    LexicalScope *Scope = MI.getDebugLoc().get()
+                              ? LScopes.findLexicalScope(MI.getDebugLoc().get())
+                              : LScopes.findLexicalScope(LocalVar->getScope());
+
+    // If variable scope is not found then skip this variable.
+    if (!Scope) {
+      LLVM_DEBUG(dbgs() << "Dropping debug info for " << LocalVar->getName()
+                        << ", no variable scope found\n");
+      continue;
+    }
+    InlinedEntity Var(LocalVar, nullptr);
+    Processed.insert(Var);
+    DbgVariable *RegVar = cast<DbgVariable>(
+        createConcreteEntity(TheCU, *Scope, LocalVar, nullptr));
+
+    // FIXME: I'm not certain this is how we want to handle this, but the idea
+    // is to try to avoid loclist when we have DEFs in the prologue which are
+    // live out of the function. Should this also confirm there are no non-meta
+    // instructions preceding the DEF?
+    if (Entries.size() == 1 && Entries[0].isLiveThroughFunction()) {
+      RegVar->initializeDbgDefProxy(*LT, MI.getDebugReferrer());
+      LLVM_DEBUG(dbgs() << "Created DbgVariable for " << LocalVar->getName()
+                        << "\n");
+      continue;
+    }
+
+    // Do not emit location lists if .debug_loc secton is disabled.
+    if (!useLocSection())
+      continue;
+
+    // Handle multiple DBG_VALUE instructions describing one variable.
+    DebugLocStream::ListBuilder List(DebugLocs, TheCU, *Asm, *RegVar,
+                                     *Entries.front().getBegin());
+    for (auto &Entry : Entries) {
+      auto &MI = *Entry.getBegin();
+      // FIXME: Handle when this spans multiple sections
+      const MCSymbol *Begin = getLabelAfterInsn(Entry.getBegin());
+      const MCSymbol *End = getLabelAfterInsn(Entry.getEnd());
+      DebugLocStream::EntryBuilder LocStreamEntry(List, Begin, End);
+      BufferByteStreamer Streamer = LocStreamEntry.getStreamer();
+      const TargetRegisterInfo &TRI =
+          *Asm->MF->getSubtarget().getRegisterInfo();
+      DebugLocDwarfExprAST ExprAST(*Asm, TRI, TheCU, Streamer,
+                                   *MI.getDebugLifetime(),
+                                   MI.getDebugReferrer());
+      ExprAST.finalize();
+    }
   }
 
   // For each InlinedEntity collected from DBG_LABEL instructions, convert to

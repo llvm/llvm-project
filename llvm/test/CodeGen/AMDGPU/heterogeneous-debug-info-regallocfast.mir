@@ -1,0 +1,1236 @@
+# RUN: llc -O0 -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 -verify-machineinstrs -start-after=regallocfast %s -o - | FileCheck --check-prefixes=ASM %s
+# RUN: llc -O0 -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 -verify-machineinstrs -start-after=regallocfast %s -o - -filetype=obj | llvm-objdump -d - | FileCheck --check-prefixes=DISASM %s
+# RUN: llc -O0 -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 -verify-machineinstrs -start-after=regallocfast %s -o - -filetype=obj | llvm-dwarfdump --debug-loc - | FileCheck --check-prefixes=DWARF %s
+
+--- |
+  target triple = "amdgcn-amd-amdhsa"
+
+  ; Function Attrs: nocallback nofree nosync nounwind readnone speculatable willreturn
+  declare void @llvm.dbg.def(metadata, metadata) #0
+
+  ; Function Attrs: nocallback nofree nosync nounwind readnone speculatable willreturn
+  declare void @llvm.dbg.kill(metadata) #0
+
+  ; Function Attrs: convergent mustprogress noinline nounwind optnone
+  define dso_local i32 @single_block_referrer_live_until_terminator() #1 !dbg !5 {
+  entry:
+    %0 = call i32 asm sideeffect "S_NOP 1 ; def $0", "=r"()
+    call void @llvm.dbg.def(metadata !8, metadata i32 %0)
+    call void asm sideeffect "S_NOP 1", ""()
+    call void asm sideeffect "S_NOP 1", ""()
+    ret i32 %0, !dbg !11
+  }
+
+  ; Function Attrs: convergent mustprogress noinline nounwind optnone
+  define dso_local i32 @single_block_referrer_live_until_kill() #1 !dbg !12 {
+  entry:
+    %0 = call i32 asm sideeffect "S_NOP 1 ; def $0", "=r"()
+    call void @llvm.dbg.def(metadata !13, metadata i32 %0)
+    call void asm sideeffect "S_NOP 1", ""()
+    call void @llvm.dbg.kill(metadata !13)
+    call void asm sideeffect "S_NOP 1", ""()
+    ret i32 %0, !dbg !15
+  }
+
+  ; Function Attrs: convergent mustprogress noinline nounwind optnone
+  define dso_local void @single_block_dangling_referrer_live_until_terminator() #1 !dbg !16 {
+  entry:
+    %0 = call i32 asm sideeffect "S_NOP 1 ; def $0", "=r"()
+    call void asm sideeffect "S_NOP 1", ""()
+    call void asm sideeffect "S_NOP 1 ; use $0", "r"(i32 %0)
+    call void asm sideeffect "S_NOP 1", ""()
+    call void @llvm.dbg.def(metadata !17, metadata i32 %0)
+    call void asm sideeffect "S_NOP 1", ""()
+    ret void, !dbg !19
+  }
+
+  ; Function Attrs: convergent mustprogress noinline nounwind optnone
+  define dso_local void @single_block_dangling_referrer_live_until_kill() #1 !dbg !20 {
+  entry:
+    %0 = call i32 asm sideeffect "S_NOP 1 ; def $0", "=r"()
+    call void asm sideeffect "S_NOP 1", ""()
+    call void asm sideeffect "S_NOP 1 ; use $0", "r"(i32 %0)
+    call void asm sideeffect "S_NOP 1", ""()
+    call void @llvm.dbg.def(metadata !21, metadata i32 %0)
+    call void asm sideeffect "S_NOP 1", ""()
+    call void @llvm.dbg.kill(metadata !21)
+    call void asm sideeffect "S_NOP 1", ""()
+    ret void, !dbg !23
+  }
+
+  ; Function Attrs: convergent mustprogress noinline nounwind optnone
+  define dso_local void @single_block_dangling_referrer_live_until_clobber() #1 !dbg !24 {
+  entry:
+    %0 = call i32 asm sideeffect "S_NOP 1 ; def $0", "=r"()
+    call void asm sideeffect "S_NOP 1", ""()
+    call void asm sideeffect "S_NOP 1 ; use $0", "r"(i32 %0)
+    call void asm sideeffect "S_NOP 1", ""()
+    call void @llvm.dbg.def(metadata !25, metadata i32 %0)
+    call void asm sideeffect "S_NOP 1", ""()
+    call void asm sideeffect "S_NOP 1 ; clobber s4", "~{s4}"()
+    call void asm sideeffect "S_NOP 1", ""()
+    ret void, !dbg !27
+  }
+
+  ; Function Attrs: convergent mustprogress noinline nounwind optnone
+  define dso_local void @multi_block_dangling_referrer_kill_before() #1 !dbg !28 {
+  entry:
+    call void @llvm.dbg.kill(metadata !29)
+    br label %def
+
+  def:                                              ; preds = %entry
+    %0 = call i32 asm sideeffect "S_NOP 1 ; def $0", "=r"()
+    call void asm sideeffect "S_NOP 1 ; use $0", "r"(i32 %0)
+    call void @llvm.dbg.def(metadata !29, metadata i32 %0)
+    br label %exit
+
+  exit:                                             ; preds = %def
+    ret void, !dbg !31
+  }
+
+  ; Function Attrs: convergent mustprogress noinline nounwind optnone
+  define dso_local void @multi_block_dangling_referrer_kill_after() #1 !dbg !32 {
+  entry:
+    br label %def
+
+  def:                                              ; preds = %entry
+    %0 = call i32 asm sideeffect "S_NOP 1 ; def $0", "=r"()
+    call void asm sideeffect "S_NOP 1 ; use $0", "r"(i32 %0)
+    call void @llvm.dbg.def(metadata !33, metadata i32 %0)
+    br label %exit
+
+  exit:                                             ; preds = %def
+    call void @llvm.dbg.kill(metadata !33)
+    ret void, !dbg !35
+  }
+
+  ; Function Attrs: convergent mustprogress noinline nounwind optnone
+  define dso_local void @drop_dangling_with_kill_before() #1 !dbg !36 {
+  entry:
+    call void @llvm.dbg.kill(metadata !37)
+    br label %def
+
+  def:                                              ; preds = %entry
+    %0 = call i32 asm sideeffect "S_NOP 1 ; def $0", "=r"()
+    call void asm sideeffect "S_NOP 1 ; use $0", "r"(i32 %0)
+    call void asm sideeffect "S_NOP 1 ; clobber s4", "~{s4}"()
+    call void @llvm.dbg.def(metadata !37, metadata i32 %0)
+    br label %exit
+
+  exit:                                             ; preds = %def
+    ret void, !dbg !39
+  }
+
+  ; Function Attrs: convergent mustprogress noinline nounwind optnone
+  define dso_local void @drop_dangling_with_kill_after() #1 !dbg !40 {
+  entry:
+    br label %def
+
+  def:                                              ; preds = %entry
+    %0 = call i32 asm sideeffect "S_NOP 1 ; def $0", "=r"()
+    call void asm sideeffect "S_NOP 1 ; use $0", "r"(i32 %0)
+    call void asm sideeffect "S_NOP 1 ; clobber s4", "~{s4}"()
+    call void @llvm.dbg.def(metadata !41, metadata i32 %0)
+    br label %exit
+
+  exit:                                             ; preds = %def
+    call void @llvm.dbg.kill(metadata !41)
+    ret void, !dbg !43
+  }
+
+  ; Function Attrs: convergent mustprogress noinline nounwind optnone
+  define dso_local void @drop_dangling_without_kill() #1 !dbg !44 {
+  entry:
+    %0 = call i32 asm sideeffect "S_NOP 1 ; def $0", "=r"()
+    call void asm sideeffect "S_NOP 1 ; use $0", "r"(i32 %0)
+    call void asm sideeffect "S_NOP 1 ; clobber s4", "~{s4}"()
+    call void @llvm.dbg.def(metadata !45, metadata i32 %0)
+    ret void, !dbg !47
+  }
+
+  ; Function Attrs: convergent nounwind willreturn
+  declare { i1, i64 } @llvm.amdgcn.if.i64(i1) #2
+
+  ; Function Attrs: convergent nounwind willreturn
+  declare { i1, i64 } @llvm.amdgcn.else.i64.i64(i64) #2
+
+  ; Function Attrs: convergent nounwind readnone willreturn
+  declare i64 @llvm.amdgcn.if.break.i64(i1, i64) #3
+
+  ; Function Attrs: convergent nounwind willreturn
+  declare i1 @llvm.amdgcn.loop.i64(i64) #2
+
+  ; Function Attrs: convergent nounwind willreturn
+  declare void @llvm.amdgcn.end.cf.i64(i64) #2
+
+  attributes #0 = { nocallback nofree nosync nounwind readnone speculatable willreturn "target-cpu"="gfx900" }
+  attributes #1 = { convergent mustprogress noinline nounwind optnone "frame-pointer"="none" "min-legal-vector-width"="0" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="gfx900" "target-features"="+16-bit-insts,+ci-insts,+dpp,+flat-address-space,+gfx8-insts,+gfx9-insts,+s-memrealtime,+s-memtime-inst" "uniform-work-group-size"="false" }
+  attributes #2 = { convergent nounwind willreturn }
+  attributes #3 = { convergent nounwind readnone willreturn }
+
+  !llvm.dbg.cu = !{!0}
+  !llvm.module.flags = !{!2, !3}
+  !llvm.ident = !{!4}
+
+  !0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus_14, file: !1, producer: "clang version 15.0.0 (ssh://slinder1@gerrit-git.amd.com:29418/lightning/ec/llvm-project 279c53d1096f0d6c96f4f3060357c56eaa921587)", isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug, splitDebugInlining: false, nameTableKind: None)
+  !1 = !DIFile(filename: "<stdin>", directory: "/home/slinder1/llvm-project/amd-stg-open")
+  !2 = !{i32 2, !"Debug Info Version", i32 4}
+  !3 = !{i32 1, !"wchar_size", i32 4}
+  !4 = !{!"clang version 15.0.0 (ssh://slinder1@gerrit-git.amd.com:29418/lightning/ec/llvm-project 279c53d1096f0d6c96f4f3060357c56eaa921587)"}
+  !5 = distinct !DISubprogram(scope: null, type: !6, spFlags: DISPFlagDefinition, unit: !0)
+  !6 = !DISubroutineType(types: !7)
+  !7 = !{}
+  !8 = distinct !DILifetime(object: !9, location: !DIExpr(DIOpReferrer(i32)))
+  !9 = !DILocalVariable(scope: !5, type: !10)
+  !10 = !DIBasicType(name: "int", size: 32, encoding: DW_ATE_signed)
+  !11 = !DILocation(line: 1, column: 35, scope: !5)
+  !12 = distinct !DISubprogram(scope: null, type: !6, spFlags: DISPFlagDefinition, unit: !0)
+  !13 = distinct !DILifetime(object: !14, location: !DIExpr(DIOpReferrer(i32)))
+  !14 = !DILocalVariable(scope: !12, type: !10)
+  !15 = !DILocation(line: 1, column: 35, scope: !12)
+  !16 = distinct !DISubprogram(scope: null, type: !6, spFlags: DISPFlagDefinition, unit: !0)
+  !17 = distinct !DILifetime(object: !18, location: !DIExpr(DIOpReferrer(i32)))
+  !18 = !DILocalVariable(scope: !16, type: !10)
+  !19 = !DILocation(line: 1, column: 35, scope: !16)
+  !20 = distinct !DISubprogram(scope: null, type: !6, spFlags: DISPFlagDefinition, unit: !0)
+  !21 = distinct !DILifetime(object: !22, location: !DIExpr(DIOpReferrer(i32)))
+  !22 = !DILocalVariable(scope: !20, type: !10)
+  !23 = !DILocation(line: 1, column: 35, scope: !20)
+  !24 = distinct !DISubprogram(scope: null, type: !6, spFlags: DISPFlagDefinition, unit: !0)
+  !25 = distinct !DILifetime(object: !26, location: !DIExpr(DIOpReferrer(i32)))
+  !26 = !DILocalVariable(scope: !24, type: !10)
+  !27 = !DILocation(line: 1, column: 35, scope: !24)
+  !28 = distinct !DISubprogram(scope: null, type: !6, spFlags: DISPFlagDefinition, unit: !0)
+  !29 = distinct !DILifetime(object: !30, location: !DIExpr(DIOpReferrer(i32)))
+  !30 = !DILocalVariable(scope: !28, type: !10)
+  !31 = !DILocation(line: 1, column: 35, scope: !28)
+  !32 = distinct !DISubprogram(scope: null, type: !6, spFlags: DISPFlagDefinition, unit: !0)
+  !33 = distinct !DILifetime(object: !34, location: !DIExpr(DIOpReferrer(i32)))
+  !34 = !DILocalVariable(scope: !32, type: !10)
+  !35 = !DILocation(line: 1, column: 35, scope: !32)
+  !36 = distinct !DISubprogram(scope: null, type: !6, spFlags: DISPFlagDefinition, unit: !0)
+  !37 = distinct !DILifetime(object: !38, location: !DIExpr(DIOpReferrer(i32)))
+  !38 = !DILocalVariable(scope: !36, type: !10)
+  !39 = !DILocation(line: 1, column: 35, scope: !36)
+  !40 = distinct !DISubprogram(scope: null, type: !6, spFlags: DISPFlagDefinition, unit: !0)
+  !41 = distinct !DILifetime(object: !42, location: !DIExpr(DIOpReferrer(i32)))
+  !42 = !DILocalVariable(scope: !40, type: !10)
+  !43 = !DILocation(line: 1, column: 35, scope: !40)
+  !44 = distinct !DISubprogram(scope: null, type: !6, spFlags: DISPFlagDefinition, unit: !0)
+  !45 = distinct !DILifetime(object: !46, location: !DIExpr(DIOpReferrer(i32)))
+  !46 = !DILocalVariable(scope: !44, type: !10)
+  !47 = !DILocation(line: 1, column: 35, scope: !44)
+
+...
+---
+name:            single_block_referrer_live_until_terminator
+alignment:       1
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: sgpr_64 }
+  - { id: 1, class: sgpr_64 }
+  - { id: 2, class: sgpr_64 }
+  - { id: 3, class: sgpr_64 }
+  - { id: 4, class: sgpr_32 }
+  - { id: 5, class: sgpr_32 }
+  - { id: 6, class: sgpr_32 }
+  - { id: 7, class: sreg_32 }
+frameInfo:
+  maxAlignment:    1
+machineFunctionInfo:
+  maxKernArgAlign: 1
+  scratchRSrcReg:  '$sgpr0_sgpr1_sgpr2_sgpr3'
+  frameOffsetReg:  '$sgpr33'
+  stackPtrOffsetReg: '$sgpr32'
+  returnsVoid:     false
+  argumentInfo:
+    privateSegmentBuffer: { reg: '$sgpr0_sgpr1_sgpr2_sgpr3' }
+    dispatchPtr:     { reg: '$sgpr4_sgpr5' }
+    queuePtr:        { reg: '$sgpr6_sgpr7' }
+    dispatchID:      { reg: '$sgpr10_sgpr11' }
+    workGroupIDX:    { reg: '$sgpr12' }
+    workGroupIDY:    { reg: '$sgpr13' }
+    workGroupIDZ:    { reg: '$sgpr14' }
+    implicitArgPtr:  { reg: '$sgpr8_sgpr9' }
+    workItemIDX:     { reg: '$vgpr31', mask: 1023 }
+    workItemIDY:     { reg: '$vgpr31', mask: 1047552 }
+    workItemIDZ:     { reg: '$vgpr31', mask: 1072693248 }
+  occupancy:       10
+body:             |
+  ; ASM-LABEL: single_block_referrer_live_until_terminator:
+  ; ASM:       .Lfunc_begin0:
+  ; ASM-NEXT:    .file 1 "<stdin>"
+  ; ASM-NEXT:    .loc 1 0 0 ; :0:0
+  ; ASM-NEXT:    .cfi_sections .debug_frame
+  ; ASM-NEXT:    .cfi_startproc
+  ; ASM-NEXT:  ; %bb.0: ; %entry
+  ; ASM-NEXT:    .cfi_llvm_def_aspace_cfa 64, 0, 6
+  ; ASM-NEXT:    .cfi_escape 0x10, 0x10, 0x08, 0x90, 0x3e, 0x93, 0x04, 0x90, 0x3f, 0x93, 0x04 ;
+  ; ASM-NEXT:    .cfi_undefined 2560
+  ; ASM-NEXT:    .cfi_undefined 36
+  ; ASM-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+  ; ASM-NEXT:    ;;#ASMSTART
+  ; ASM-NEXT:    ; def s4
+  ; ASM-NEXT:    ;;#ASMEND
+  ; ASM-NEXT:  .Ltmp0:
+  ; ASM-NEXT:    ;;#ASMSTART
+  ; ASM-NEXT:    S_NOP 1
+  ; ASM-NEXT:    ;;#ASMEND
+  ; ASM-NEXT:    ;;#ASMSTART
+  ; ASM-NEXT:    S_NOP 1
+  ; ASM-NEXT:    ;;#ASMEND
+  ; ASM-NEXT:  .Ltmp1:
+  ; ASM-NEXT:    .loc 1 1 35 prologue_end ; :1:35
+  ; ASM-NEXT:    v_mov_b32_e32 v0, s4
+  ; ASM-NEXT:  .Ltmp2:
+  ; ASM-NEXT:    s_setpc_b64 s[30:31]
+  ; ASM-NEXT:  .Ltmp3:
+  bb.0.entry:
+    INLINEASM &"S_NOP 1 ; def $0", 1 /* sideeffect attdialect */, 1966090 /* regdef:SReg_32 */, def renamable $sgpr4
+    DBG_DEF !8, renamable $sgpr4
+    INLINEASM &"S_NOP 1", 1 /* sideeffect attdialect */
+    INLINEASM &"S_NOP 1", 1 /* sideeffect attdialect */
+    $vgpr0 = COPY killed renamable $sgpr4, debug-location !11
+    DBG_KILL !8
+    SI_RETURN implicit killed $vgpr0, debug-location !11
+
+...
+---
+name:            single_block_referrer_live_until_kill
+alignment:       1
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: sgpr_64 }
+  - { id: 1, class: sgpr_64 }
+  - { id: 2, class: sgpr_64 }
+  - { id: 3, class: sgpr_64 }
+  - { id: 4, class: sgpr_32 }
+  - { id: 5, class: sgpr_32 }
+  - { id: 6, class: sgpr_32 }
+  - { id: 7, class: sreg_32 }
+frameInfo:
+  maxAlignment:    1
+machineFunctionInfo:
+  maxKernArgAlign: 1
+  scratchRSrcReg:  '$sgpr0_sgpr1_sgpr2_sgpr3'
+  frameOffsetReg:  '$sgpr33'
+  stackPtrOffsetReg: '$sgpr32'
+  returnsVoid:     false
+  argumentInfo:
+    privateSegmentBuffer: { reg: '$sgpr0_sgpr1_sgpr2_sgpr3' }
+    dispatchPtr:     { reg: '$sgpr4_sgpr5' }
+    queuePtr:        { reg: '$sgpr6_sgpr7' }
+    dispatchID:      { reg: '$sgpr10_sgpr11' }
+    workGroupIDX:    { reg: '$sgpr12' }
+    workGroupIDY:    { reg: '$sgpr13' }
+    workGroupIDZ:    { reg: '$sgpr14' }
+    implicitArgPtr:  { reg: '$sgpr8_sgpr9' }
+    workItemIDX:     { reg: '$vgpr31', mask: 1023 }
+    workItemIDY:     { reg: '$vgpr31', mask: 1047552 }
+    workItemIDZ:     { reg: '$vgpr31', mask: 1072693248 }
+  occupancy:       10
+body:             |
+  ; ASM-LABEL: single_block_referrer_live_until_kill:
+  ; ASM:       .Lfunc_begin1:
+  ; ASM-NEXT:    .loc 1 0 0 ; :0:0
+  ; ASM-NEXT:    .cfi_startproc
+  ; ASM-NEXT:  ; %bb.0: ; %entry
+  ; ASM-NEXT:    .cfi_llvm_def_aspace_cfa 64, 0, 6
+  ; ASM-NEXT:    .cfi_escape 0x10, 0x10, 0x08, 0x90, 0x3e, 0x93, 0x04, 0x90, 0x3f, 0x93, 0x04 ;
+  ; ASM-NEXT:    .cfi_undefined 2560
+  ; ASM-NEXT:    .cfi_undefined 36
+  ; ASM-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+  ; ASM-NEXT:    ;;#ASMSTART
+  ; ASM-NEXT:    ; def s4
+  ; ASM-NEXT:    ;;#ASMEND
+  ; ASM-NEXT:  .Ltmp4:
+  ; ASM-NEXT:    ;;#ASMSTART
+  ; ASM-NEXT:    S_NOP 1
+  ; ASM-NEXT:    ;;#ASMEND
+  ; ASM-NEXT:  .Ltmp5:
+  ; ASM-NEXT:    ;;#ASMSTART
+  ; ASM-NEXT:    S_NOP 1
+  ; ASM-NEXT:    ;;#ASMEND
+  ; ASM-NEXT:  .Ltmp6:
+  ; ASM-NEXT:    .loc 1 1 35 prologue_end ; :1:35
+  ; ASM-NEXT:    v_mov_b32_e32 v0, s4
+  ; ASM-NEXT:    s_setpc_b64 s[30:31]
+  ; ASM-NEXT:  .Ltmp7:
+  bb.0.entry:
+    INLINEASM &"S_NOP 1 ; def $0", 1 /* sideeffect attdialect */, 1966090 /* regdef:SReg_32 */, def renamable $sgpr4
+    DBG_DEF !13, renamable $sgpr4
+    INLINEASM &"S_NOP 1", 1 /* sideeffect attdialect */
+    DBG_KILL !13
+    INLINEASM &"S_NOP 1", 1 /* sideeffect attdialect */
+    $vgpr0 = COPY killed renamable $sgpr4, debug-location !15
+    SI_RETURN implicit killed $vgpr0, debug-location !15
+
+...
+---
+name:            single_block_dangling_referrer_live_until_terminator
+alignment:       1
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: sgpr_64 }
+  - { id: 1, class: sgpr_64 }
+  - { id: 2, class: sgpr_64 }
+  - { id: 3, class: sgpr_64 }
+  - { id: 4, class: sgpr_32 }
+  - { id: 5, class: sgpr_32 }
+  - { id: 6, class: sgpr_32 }
+  - { id: 7, class: sreg_32 }
+  - { id: 8, class: sreg_32 }
+frameInfo:
+  maxAlignment:    1
+machineFunctionInfo:
+  maxKernArgAlign: 1
+  scratchRSrcReg:  '$sgpr0_sgpr1_sgpr2_sgpr3'
+  frameOffsetReg:  '$sgpr33'
+  stackPtrOffsetReg: '$sgpr32'
+  argumentInfo:
+    privateSegmentBuffer: { reg: '$sgpr0_sgpr1_sgpr2_sgpr3' }
+    dispatchPtr:     { reg: '$sgpr4_sgpr5' }
+    queuePtr:        { reg: '$sgpr6_sgpr7' }
+    dispatchID:      { reg: '$sgpr10_sgpr11' }
+    workGroupIDX:    { reg: '$sgpr12' }
+    workGroupIDY:    { reg: '$sgpr13' }
+    workGroupIDZ:    { reg: '$sgpr14' }
+    implicitArgPtr:  { reg: '$sgpr8_sgpr9' }
+    workItemIDX:     { reg: '$vgpr31', mask: 1023 }
+    workItemIDY:     { reg: '$vgpr31', mask: 1047552 }
+    workItemIDZ:     { reg: '$vgpr31', mask: 1072693248 }
+  occupancy:       10
+body:             |
+  ; ASM-LABEL: single_block_dangling_referrer_live_until_terminator:
+  ; ASM:       .Lfunc_begin2:
+  ; ASM-NEXT:    .loc 1 0 0 ; :0:0
+  ; ASM-NEXT:    .cfi_startproc
+  ; ASM-NEXT:  ; %bb.0: ; %entry
+  ; ASM-NEXT:    .cfi_llvm_def_aspace_cfa 64, 0, 6
+  ; ASM-NEXT:    .cfi_escape 0x10, 0x10, 0x08, 0x90, 0x3e, 0x93, 0x04, 0x90, 0x3f, 0x93, 0x04 ;
+  ; ASM-NEXT:    .cfi_undefined 36
+  ; ASM-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+  ; ASM-NEXT:    ;;#ASMSTART
+  ; ASM-NEXT:    ; def s4
+  ; ASM-NEXT:    ;;#ASMEND
+  ; ASM-NEXT:    ;;#ASMSTART
+  ; ASM-NEXT:    S_NOP 1
+  ; ASM-NEXT:    ;;#ASMEND
+  ; ASM-NEXT:    ;;#ASMSTART
+  ; ASM-NEXT:    ; use s4
+  ; ASM-NEXT:    ;;#ASMEND
+  ; ASM-NEXT:    ;;#ASMSTART
+  ; ASM-NEXT:    S_NOP 1
+  ; ASM-NEXT:    ;;#ASMEND
+  ; ASM-NEXT:  .Ltmp8:
+  ; ASM-NEXT:    ;;#ASMSTART
+  ; ASM-NEXT:    S_NOP 1
+  ; ASM-NEXT:    ;;#ASMEND
+  ; ASM-NEXT:  .Ltmp9:
+  ; ASM-NEXT:    .loc 1 1 35 prologue_end ; :1:35
+  ; ASM-NEXT:    s_setpc_b64 s[30:31]
+  ; ASM-NEXT:  .Ltmp10:
+  bb.0.entry:
+    INLINEASM &"S_NOP 1 ; def $0", 1 /* sideeffect attdialect */, 1966090 /* regdef:SReg_32 */, def renamable $sgpr4
+    INLINEASM &"S_NOP 1", 1 /* sideeffect attdialect */
+    INLINEASM &"S_NOP 1 ; use $0", 1 /* sideeffect attdialect */, 1966089 /* reguse:SReg_32 */, killed renamable $sgpr4
+    INLINEASM &"S_NOP 1", 1 /* sideeffect attdialect */
+    DBG_DEF !17, renamable $sgpr4
+    INLINEASM &"S_NOP 1", 1 /* sideeffect attdialect */
+    DBG_KILL !17
+    SI_RETURN debug-location !19
+
+...
+---
+name:            single_block_dangling_referrer_live_until_kill
+alignment:       1
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: sgpr_64 }
+  - { id: 1, class: sgpr_64 }
+  - { id: 2, class: sgpr_64 }
+  - { id: 3, class: sgpr_64 }
+  - { id: 4, class: sgpr_32 }
+  - { id: 5, class: sgpr_32 }
+  - { id: 6, class: sgpr_32 }
+  - { id: 7, class: sreg_32 }
+  - { id: 8, class: sreg_32 }
+frameInfo:
+  maxAlignment:    1
+machineFunctionInfo:
+  maxKernArgAlign: 1
+  scratchRSrcReg:  '$sgpr0_sgpr1_sgpr2_sgpr3'
+  frameOffsetReg:  '$sgpr33'
+  stackPtrOffsetReg: '$sgpr32'
+  argumentInfo:
+    privateSegmentBuffer: { reg: '$sgpr0_sgpr1_sgpr2_sgpr3' }
+    dispatchPtr:     { reg: '$sgpr4_sgpr5' }
+    queuePtr:        { reg: '$sgpr6_sgpr7' }
+    dispatchID:      { reg: '$sgpr10_sgpr11' }
+    workGroupIDX:    { reg: '$sgpr12' }
+    workGroupIDY:    { reg: '$sgpr13' }
+    workGroupIDZ:    { reg: '$sgpr14' }
+    implicitArgPtr:  { reg: '$sgpr8_sgpr9' }
+    workItemIDX:     { reg: '$vgpr31', mask: 1023 }
+    workItemIDY:     { reg: '$vgpr31', mask: 1047552 }
+    workItemIDZ:     { reg: '$vgpr31', mask: 1072693248 }
+  occupancy:       10
+body:             |
+  ; ASM-LABEL: single_block_dangling_referrer_live_until_kill:
+  ; ASM:       .Lfunc_begin3:
+  ; ASM-NEXT:    .loc 1 0 0 ; :0:0
+  ; ASM-NEXT:    .cfi_startproc
+  ; ASM-NEXT:  ; %bb.0: ; %entry
+  ; ASM-NEXT:    .cfi_llvm_def_aspace_cfa 64, 0, 6
+  ; ASM-NEXT:    .cfi_escape 0x10, 0x10, 0x08, 0x90, 0x3e, 0x93, 0x04, 0x90, 0x3f, 0x93, 0x04 ;
+  ; ASM-NEXT:    .cfi_undefined 36
+  ; ASM-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+  ; ASM-NEXT:    ;;#ASMSTART
+  ; ASM-NEXT:    ; def s4
+  ; ASM-NEXT:    ;;#ASMEND
+  ; ASM-NEXT:    ;;#ASMSTART
+  ; ASM-NEXT:    S_NOP 1
+  ; ASM-NEXT:    ;;#ASMEND
+  ; ASM-NEXT:    ;;#ASMSTART
+  ; ASM-NEXT:    ; use s4
+  ; ASM-NEXT:    ;;#ASMEND
+  ; ASM-NEXT:    ;;#ASMSTART
+  ; ASM-NEXT:    S_NOP 1
+  ; ASM-NEXT:    ;;#ASMEND
+  ; ASM-NEXT:  .Ltmp11:
+  ; ASM-NEXT:    ;;#ASMSTART
+  ; ASM-NEXT:    S_NOP 1
+  ; ASM-NEXT:    ;;#ASMEND
+  ; ASM-NEXT:  .Ltmp12:
+  ; ASM-NEXT:    ;;#ASMSTART
+  ; ASM-NEXT:    S_NOP 1
+  ; ASM-NEXT:    ;;#ASMEND
+  ; ASM-NEXT:  .Ltmp13:
+  ; ASM-NEXT:    .loc 1 1 35 prologue_end ; :1:35
+  ; ASM-NEXT:    s_setpc_b64 s[30:31]
+  ; ASM-NEXT:  .Ltmp14:
+  bb.0.entry:
+    INLINEASM &"S_NOP 1 ; def $0", 1 /* sideeffect attdialect */, 1966090 /* regdef:SReg_32 */, def renamable $sgpr4
+    INLINEASM &"S_NOP 1", 1 /* sideeffect attdialect */
+    INLINEASM &"S_NOP 1 ; use $0", 1 /* sideeffect attdialect */, 1966089 /* reguse:SReg_32 */, killed renamable $sgpr4
+    INLINEASM &"S_NOP 1", 1 /* sideeffect attdialect */
+    DBG_DEF !21, renamable $sgpr4
+    INLINEASM &"S_NOP 1", 1 /* sideeffect attdialect */
+    DBG_KILL !21
+    INLINEASM &"S_NOP 1", 1 /* sideeffect attdialect */
+    SI_RETURN debug-location !23
+
+...
+---
+name:            single_block_dangling_referrer_live_until_clobber
+alignment:       1
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: sgpr_64 }
+  - { id: 1, class: sgpr_64 }
+  - { id: 2, class: sgpr_64 }
+  - { id: 3, class: sgpr_64 }
+  - { id: 4, class: sgpr_32 }
+  - { id: 5, class: sgpr_32 }
+  - { id: 6, class: sgpr_32 }
+  - { id: 7, class: sreg_32 }
+  - { id: 8, class: sreg_32 }
+frameInfo:
+  maxAlignment:    1
+machineFunctionInfo:
+  maxKernArgAlign: 1
+  scratchRSrcReg:  '$sgpr0_sgpr1_sgpr2_sgpr3'
+  frameOffsetReg:  '$sgpr33'
+  stackPtrOffsetReg: '$sgpr32'
+  argumentInfo:
+    privateSegmentBuffer: { reg: '$sgpr0_sgpr1_sgpr2_sgpr3' }
+    dispatchPtr:     { reg: '$sgpr4_sgpr5' }
+    queuePtr:        { reg: '$sgpr6_sgpr7' }
+    dispatchID:      { reg: '$sgpr10_sgpr11' }
+    workGroupIDX:    { reg: '$sgpr12' }
+    workGroupIDY:    { reg: '$sgpr13' }
+    workGroupIDZ:    { reg: '$sgpr14' }
+    implicitArgPtr:  { reg: '$sgpr8_sgpr9' }
+    workItemIDX:     { reg: '$vgpr31', mask: 1023 }
+    workItemIDY:     { reg: '$vgpr31', mask: 1047552 }
+    workItemIDZ:     { reg: '$vgpr31', mask: 1072693248 }
+  occupancy:       10
+body:             |
+  ; ASM-LABEL: single_block_dangling_referrer_live_until_clobber:
+  ; ASM:       .Lfunc_begin4:
+  ; ASM-NEXT:    .loc 1 0 0 ; :0:0
+  ; ASM-NEXT:    .cfi_startproc
+  ; ASM-NEXT:  ; %bb.0: ; %entry
+  ; ASM-NEXT:    .cfi_llvm_def_aspace_cfa 64, 0, 6
+  ; ASM-NEXT:    .cfi_escape 0x10, 0x10, 0x08, 0x90, 0x3e, 0x93, 0x04, 0x90, 0x3f, 0x93, 0x04 ;
+  ; ASM-NEXT:    .cfi_undefined 36
+  ; ASM-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+  ; ASM-NEXT:    ;;#ASMSTART
+  ; ASM-NEXT:    ; def s4
+  ; ASM-NEXT:    ;;#ASMEND
+  ; ASM-NEXT:    ;;#ASMSTART
+  ; ASM-NEXT:    S_NOP 1
+  ; ASM-NEXT:    ;;#ASMEND
+  ; ASM-NEXT:    ;;#ASMSTART
+  ; ASM-NEXT:    ; use s4
+  ; ASM-NEXT:    ;;#ASMEND
+  ; ASM-NEXT:    ;;#ASMSTART
+  ; ASM-NEXT:    S_NOP 1
+  ; ASM-NEXT:    ;;#ASMEND
+  ; ASM-NEXT:  .Ltmp15:
+  ; ASM-NEXT:    ;;#ASMSTART
+  ; ASM-NEXT:    S_NOP 1
+  ; ASM-NEXT:    ;;#ASMEND
+  ; ASM-NEXT:    ;;#ASMSTART
+  ; ASM-NEXT:    ; clobber s4
+  ; ASM-NEXT:    ;;#ASMEND
+  ; ASM-NEXT:  .Ltmp16:
+  ; ASM-NEXT:    ;;#ASMSTART
+  ; ASM-NEXT:    S_NOP 1
+  ; ASM-NEXT:    ;;#ASMEND
+  ; ASM-NEXT:  .Ltmp17:
+  ; ASM-NEXT:    .loc 1 1 35 prologue_end ; :1:35
+  ; ASM-NEXT:    s_setpc_b64 s[30:31]
+  ; ASM-NEXT:  .Ltmp18:
+  bb.0.entry:
+    INLINEASM &"S_NOP 1 ; def $0", 1 /* sideeffect attdialect */, 1966090 /* regdef:SReg_32 */, def renamable $sgpr4
+    INLINEASM &"S_NOP 1", 1 /* sideeffect attdialect */
+    INLINEASM &"S_NOP 1 ; use $0", 1 /* sideeffect attdialect */, 1966089 /* reguse:SReg_32 */, killed renamable $sgpr4
+    INLINEASM &"S_NOP 1", 1 /* sideeffect attdialect */
+    DBG_DEF !25, renamable $sgpr4
+    INLINEASM &"S_NOP 1", 1 /* sideeffect attdialect */
+    INLINEASM &"S_NOP 1 ; clobber s4", 1 /* sideeffect attdialect */, 12 /* clobber */, implicit-def dead early-clobber $sgpr4
+    DBG_KILL !25
+    INLINEASM &"S_NOP 1", 1 /* sideeffect attdialect */
+    SI_RETURN debug-location !27
+
+...
+---
+name:            multi_block_dangling_referrer_kill_before
+alignment:       1
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: sgpr_64 }
+  - { id: 1, class: sgpr_64 }
+  - { id: 2, class: sgpr_64 }
+  - { id: 3, class: sgpr_64 }
+  - { id: 4, class: sgpr_32 }
+  - { id: 5, class: sgpr_32 }
+  - { id: 6, class: sgpr_32 }
+  - { id: 7, class: sreg_32 }
+  - { id: 8, class: sreg_32 }
+frameInfo:
+  maxAlignment:    1
+machineFunctionInfo:
+  maxKernArgAlign: 1
+  scratchRSrcReg:  '$sgpr0_sgpr1_sgpr2_sgpr3'
+  frameOffsetReg:  '$sgpr33'
+  stackPtrOffsetReg: '$sgpr32'
+  argumentInfo:
+    privateSegmentBuffer: { reg: '$sgpr0_sgpr1_sgpr2_sgpr3' }
+    dispatchPtr:     { reg: '$sgpr4_sgpr5' }
+    queuePtr:        { reg: '$sgpr6_sgpr7' }
+    dispatchID:      { reg: '$sgpr10_sgpr11' }
+    workGroupIDX:    { reg: '$sgpr12' }
+    workGroupIDY:    { reg: '$sgpr13' }
+    workGroupIDZ:    { reg: '$sgpr14' }
+    implicitArgPtr:  { reg: '$sgpr8_sgpr9' }
+    workItemIDX:     { reg: '$vgpr31', mask: 1023 }
+    workItemIDY:     { reg: '$vgpr31', mask: 1047552 }
+    workItemIDZ:     { reg: '$vgpr31', mask: 1072693248 }
+  occupancy:       10
+body:             |
+  ; ASM-LABEL: multi_block_dangling_referrer_kill_before:
+  ; ASM:       .Lfunc_begin5:
+  ; ASM-NEXT:    .loc 1 0 0 ; :0:0
+  ; ASM-NEXT:    .cfi_startproc
+  ; ASM-NEXT:  ; %bb.0: ; %entry
+  ; ASM-NEXT:    .cfi_llvm_def_aspace_cfa 64, 0, 6
+  ; ASM-NEXT:    .cfi_escape 0x10, 0x10, 0x08, 0x90, 0x3e, 0x93, 0x04, 0x90, 0x3f, 0x93, 0x04 ;
+  ; ASM-NEXT:    .cfi_undefined 36
+  ; ASM-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+  ; ASM-NEXT:  ; %bb.1: ; %def
+  ; ASM-NEXT:    ;;#ASMSTART
+  ; ASM-NEXT:    ; def s4
+  ; ASM-NEXT:    ;;#ASMEND
+  ; ASM-NEXT:    ;;#ASMSTART
+  ; ASM-NEXT:    ; use s4
+  ; ASM-NEXT:    ;;#ASMEND
+  ; ASM-NEXT:  .Ltmp19:
+  ; ASM-NEXT:  ; %bb.2: ; %exit
+  ; ASM-NEXT:    .loc 1 1 35 prologue_end ; :1:35
+  ; ASM-NEXT:    s_setpc_b64 s[30:31]
+  ; ASM-NEXT:  .Ltmp20:
+  bb.0.entry:
+    S_BRANCH %bb.1
+
+  bb.1.def:
+    INLINEASM &"S_NOP 1 ; def $0", 1 /* sideeffect attdialect */, 1966090 /* regdef:SReg_32 */, def renamable $sgpr4
+    INLINEASM &"S_NOP 1 ; use $0", 1 /* sideeffect attdialect */, 1966089 /* reguse:SReg_32 */, killed renamable $sgpr4
+    DBG_DEF !29, renamable $sgpr4
+    DBG_KILL !29
+    S_BRANCH %bb.2
+
+  bb.2.exit:
+    SI_RETURN debug-location !31
+
+...
+---
+name:            multi_block_dangling_referrer_kill_after
+alignment:       1
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: sgpr_64 }
+  - { id: 1, class: sgpr_64 }
+  - { id: 2, class: sgpr_64 }
+  - { id: 3, class: sgpr_64 }
+  - { id: 4, class: sgpr_32 }
+  - { id: 5, class: sgpr_32 }
+  - { id: 6, class: sgpr_32 }
+  - { id: 7, class: sreg_32 }
+  - { id: 8, class: sreg_32 }
+frameInfo:
+  maxAlignment:    1
+machineFunctionInfo:
+  maxKernArgAlign: 1
+  scratchRSrcReg:  '$sgpr0_sgpr1_sgpr2_sgpr3'
+  frameOffsetReg:  '$sgpr33'
+  stackPtrOffsetReg: '$sgpr32'
+  argumentInfo:
+    privateSegmentBuffer: { reg: '$sgpr0_sgpr1_sgpr2_sgpr3' }
+    dispatchPtr:     { reg: '$sgpr4_sgpr5' }
+    queuePtr:        { reg: '$sgpr6_sgpr7' }
+    dispatchID:      { reg: '$sgpr10_sgpr11' }
+    workGroupIDX:    { reg: '$sgpr12' }
+    workGroupIDY:    { reg: '$sgpr13' }
+    workGroupIDZ:    { reg: '$sgpr14' }
+    implicitArgPtr:  { reg: '$sgpr8_sgpr9' }
+    workItemIDX:     { reg: '$vgpr31', mask: 1023 }
+    workItemIDY:     { reg: '$vgpr31', mask: 1047552 }
+    workItemIDZ:     { reg: '$vgpr31', mask: 1072693248 }
+  occupancy:       10
+body:             |
+  ; ASM-LABEL: multi_block_dangling_referrer_kill_after:
+  ; ASM:       .Lfunc_begin6:
+  ; ASM-NEXT:    .loc 1 0 0 ; :0:0
+  ; ASM-NEXT:    .cfi_startproc
+  ; ASM-NEXT:  ; %bb.0: ; %entry
+  ; ASM-NEXT:    .cfi_llvm_def_aspace_cfa 64, 0, 6
+  ; ASM-NEXT:    .cfi_escape 0x10, 0x10, 0x08, 0x90, 0x3e, 0x93, 0x04, 0x90, 0x3f, 0x93, 0x04 ;
+  ; ASM-NEXT:    .cfi_undefined 36
+  ; ASM-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+  ; ASM-NEXT:  ; %bb.1: ; %def
+  ; ASM-NEXT:    ;;#ASMSTART
+  ; ASM-NEXT:    ; def s4
+  ; ASM-NEXT:    ;;#ASMEND
+  ; ASM-NEXT:    ;;#ASMSTART
+  ; ASM-NEXT:    ; use s4
+  ; ASM-NEXT:    ;;#ASMEND
+  ; ASM-NEXT:  .Ltmp21:
+  ; ASM-NEXT:  ; %bb.2: ; %exit
+  ; ASM-NEXT:    .loc 1 1 35 prologue_end ; :1:35
+  ; ASM-NEXT:    s_setpc_b64 s[30:31]
+  ; ASM-NEXT:  .Ltmp22:
+  bb.0.entry:
+    S_BRANCH %bb.1
+
+  bb.1.def:
+    INLINEASM &"S_NOP 1 ; def $0", 1 /* sideeffect attdialect */, 1966090 /* regdef:SReg_32 */, def renamable $sgpr4
+    INLINEASM &"S_NOP 1 ; use $0", 1 /* sideeffect attdialect */, 1966089 /* reguse:SReg_32 */, killed renamable $sgpr4
+    DBG_DEF !33, renamable $sgpr4
+    DBG_KILL !33
+    S_BRANCH %bb.2
+
+  bb.2.exit:
+    SI_RETURN debug-location !35
+
+...
+---
+name:            drop_dangling_with_kill_before
+alignment:       1
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: sgpr_64 }
+  - { id: 1, class: sgpr_64 }
+  - { id: 2, class: sgpr_64 }
+  - { id: 3, class: sgpr_64 }
+  - { id: 4, class: sgpr_32 }
+  - { id: 5, class: sgpr_32 }
+  - { id: 6, class: sgpr_32 }
+  - { id: 7, class: sreg_32 }
+  - { id: 8, class: sreg_32 }
+frameInfo:
+  maxAlignment:    1
+machineFunctionInfo:
+  maxKernArgAlign: 1
+  scratchRSrcReg:  '$sgpr0_sgpr1_sgpr2_sgpr3'
+  frameOffsetReg:  '$sgpr33'
+  stackPtrOffsetReg: '$sgpr32'
+  argumentInfo:
+    privateSegmentBuffer: { reg: '$sgpr0_sgpr1_sgpr2_sgpr3' }
+    dispatchPtr:     { reg: '$sgpr4_sgpr5' }
+    queuePtr:        { reg: '$sgpr6_sgpr7' }
+    dispatchID:      { reg: '$sgpr10_sgpr11' }
+    workGroupIDX:    { reg: '$sgpr12' }
+    workGroupIDY:    { reg: '$sgpr13' }
+    workGroupIDZ:    { reg: '$sgpr14' }
+    implicitArgPtr:  { reg: '$sgpr8_sgpr9' }
+    workItemIDX:     { reg: '$vgpr31', mask: 1023 }
+    workItemIDY:     { reg: '$vgpr31', mask: 1047552 }
+    workItemIDZ:     { reg: '$vgpr31', mask: 1072693248 }
+  occupancy:       10
+body:             |
+  ; ASM-LABEL: drop_dangling_with_kill_before:
+  ; ASM:       .Lfunc_begin7:
+  ; ASM-NEXT:    .loc 1 0 0 ; :0:0
+  ; ASM-NEXT:    .cfi_startproc
+  ; ASM-NEXT:  ; %bb.0: ; %entry
+  ; ASM-NEXT:    .cfi_llvm_def_aspace_cfa 64, 0, 6
+  ; ASM-NEXT:    .cfi_escape 0x10, 0x10, 0x08, 0x90, 0x3e, 0x93, 0x04, 0x90, 0x3f, 0x93, 0x04 ;
+  ; ASM-NEXT:    .cfi_undefined 36
+  ; ASM-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+  ; ASM-NEXT:  ; %bb.1: ; %def
+  ; ASM-NEXT:    ;;#ASMSTART
+  ; ASM-NEXT:    ; def s4
+  ; ASM-NEXT:    ;;#ASMEND
+  ; ASM-NEXT:    ;;#ASMSTART
+  ; ASM-NEXT:    ; use s4
+  ; ASM-NEXT:    ;;#ASMEND
+  ; ASM-NEXT:    ;;#ASMSTART
+  ; ASM-NEXT:    ; clobber s4
+  ; ASM-NEXT:    ;;#ASMEND
+  ; ASM-NEXT:  ; %bb.2: ; %exit
+  ; ASM-NEXT:  .Ltmp23:
+  ; ASM-NEXT:    .loc 1 1 35 prologue_end ; :1:35
+  ; ASM-NEXT:    s_setpc_b64 s[30:31]
+  ; ASM-NEXT:  .Ltmp24:
+  bb.0.entry:
+    S_BRANCH %bb.1
+
+  bb.1.def:
+    INLINEASM &"S_NOP 1 ; def $0", 1 /* sideeffect attdialect */, 1966090 /* regdef:SReg_32 */, def renamable $sgpr4
+    INLINEASM &"S_NOP 1 ; use $0", 1 /* sideeffect attdialect */, 1966089 /* reguse:SReg_32 */, killed renamable $sgpr4
+    INLINEASM &"S_NOP 1 ; clobber s4", 1 /* sideeffect attdialect */, 12 /* clobber */, implicit-def dead early-clobber $sgpr4
+    S_BRANCH %bb.2
+
+  bb.2.exit:
+    SI_RETURN debug-location !39
+
+...
+---
+name:            drop_dangling_with_kill_after
+alignment:       1
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: sgpr_64 }
+  - { id: 1, class: sgpr_64 }
+  - { id: 2, class: sgpr_64 }
+  - { id: 3, class: sgpr_64 }
+  - { id: 4, class: sgpr_32 }
+  - { id: 5, class: sgpr_32 }
+  - { id: 6, class: sgpr_32 }
+  - { id: 7, class: sreg_32 }
+  - { id: 8, class: sreg_32 }
+frameInfo:
+  maxAlignment:    1
+machineFunctionInfo:
+  maxKernArgAlign: 1
+  scratchRSrcReg:  '$sgpr0_sgpr1_sgpr2_sgpr3'
+  frameOffsetReg:  '$sgpr33'
+  stackPtrOffsetReg: '$sgpr32'
+  argumentInfo:
+    privateSegmentBuffer: { reg: '$sgpr0_sgpr1_sgpr2_sgpr3' }
+    dispatchPtr:     { reg: '$sgpr4_sgpr5' }
+    queuePtr:        { reg: '$sgpr6_sgpr7' }
+    dispatchID:      { reg: '$sgpr10_sgpr11' }
+    workGroupIDX:    { reg: '$sgpr12' }
+    workGroupIDY:    { reg: '$sgpr13' }
+    workGroupIDZ:    { reg: '$sgpr14' }
+    implicitArgPtr:  { reg: '$sgpr8_sgpr9' }
+    workItemIDX:     { reg: '$vgpr31', mask: 1023 }
+    workItemIDY:     { reg: '$vgpr31', mask: 1047552 }
+    workItemIDZ:     { reg: '$vgpr31', mask: 1072693248 }
+  occupancy:       10
+body:             |
+  ; ASM-LABEL: drop_dangling_with_kill_after:
+  ; ASM:       .Lfunc_begin8:
+  ; ASM-NEXT:    .loc 1 0 0 ; :0:0
+  ; ASM-NEXT:    .cfi_startproc
+  ; ASM-NEXT:  ; %bb.0: ; %entry
+  ; ASM-NEXT:    .cfi_llvm_def_aspace_cfa 64, 0, 6
+  ; ASM-NEXT:    .cfi_escape 0x10, 0x10, 0x08, 0x90, 0x3e, 0x93, 0x04, 0x90, 0x3f, 0x93, 0x04 ;
+  ; ASM-NEXT:    .cfi_undefined 36
+  ; ASM-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+  ; ASM-NEXT:  ; %bb.1: ; %def
+  ; ASM-NEXT:    ;;#ASMSTART
+  ; ASM-NEXT:    ; def s4
+  ; ASM-NEXT:    ;;#ASMEND
+  ; ASM-NEXT:    ;;#ASMSTART
+  ; ASM-NEXT:    ; use s4
+  ; ASM-NEXT:    ;;#ASMEND
+  ; ASM-NEXT:    ;;#ASMSTART
+  ; ASM-NEXT:    ; clobber s4
+  ; ASM-NEXT:    ;;#ASMEND
+  ; ASM-NEXT:  ; %bb.2: ; %exit
+  ; ASM-NEXT:  .Ltmp25:
+  ; ASM-NEXT:    .loc 1 1 35 prologue_end ; :1:35
+  ; ASM-NEXT:    s_setpc_b64 s[30:31]
+  ; ASM-NEXT:  .Ltmp26:
+  bb.0.entry:
+    S_BRANCH %bb.1
+
+  bb.1.def:
+    INLINEASM &"S_NOP 1 ; def $0", 1 /* sideeffect attdialect */, 1966090 /* regdef:SReg_32 */, def renamable $sgpr4
+    INLINEASM &"S_NOP 1 ; use $0", 1 /* sideeffect attdialect */, 1966089 /* reguse:SReg_32 */, killed renamable $sgpr4
+    INLINEASM &"S_NOP 1 ; clobber s4", 1 /* sideeffect attdialect */, 12 /* clobber */, implicit-def dead early-clobber $sgpr4
+    S_BRANCH %bb.2
+
+  bb.2.exit:
+    SI_RETURN debug-location !43
+
+...
+---
+name:            drop_dangling_without_kill
+alignment:       1
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: sgpr_64 }
+  - { id: 1, class: sgpr_64 }
+  - { id: 2, class: sgpr_64 }
+  - { id: 3, class: sgpr_64 }
+  - { id: 4, class: sgpr_32 }
+  - { id: 5, class: sgpr_32 }
+  - { id: 6, class: sgpr_32 }
+  - { id: 7, class: sreg_32 }
+  - { id: 8, class: sreg_32 }
+frameInfo:
+  maxAlignment:    1
+machineFunctionInfo:
+  maxKernArgAlign: 1
+  scratchRSrcReg:  '$sgpr0_sgpr1_sgpr2_sgpr3'
+  frameOffsetReg:  '$sgpr33'
+  stackPtrOffsetReg: '$sgpr32'
+  argumentInfo:
+    privateSegmentBuffer: { reg: '$sgpr0_sgpr1_sgpr2_sgpr3' }
+    dispatchPtr:     { reg: '$sgpr4_sgpr5' }
+    queuePtr:        { reg: '$sgpr6_sgpr7' }
+    dispatchID:      { reg: '$sgpr10_sgpr11' }
+    workGroupIDX:    { reg: '$sgpr12' }
+    workGroupIDY:    { reg: '$sgpr13' }
+    workGroupIDZ:    { reg: '$sgpr14' }
+    implicitArgPtr:  { reg: '$sgpr8_sgpr9' }
+    workItemIDX:     { reg: '$vgpr31', mask: 1023 }
+    workItemIDY:     { reg: '$vgpr31', mask: 1047552 }
+    workItemIDZ:     { reg: '$vgpr31', mask: 1072693248 }
+  occupancy:       10
+body:             |
+  ; ASM-LABEL: drop_dangling_without_kill:
+  ; ASM:       .Lfunc_begin9:
+  ; ASM-NEXT:    .loc 1 0 0 ; :0:0
+  ; ASM-NEXT:    .cfi_startproc
+  ; ASM-NEXT:  ; %bb.0: ; %entry
+  ; ASM-NEXT:    .cfi_llvm_def_aspace_cfa 64, 0, 6
+  ; ASM-NEXT:    .cfi_escape 0x10, 0x10, 0x08, 0x90, 0x3e, 0x93, 0x04, 0x90, 0x3f, 0x93, 0x04 ;
+  ; ASM-NEXT:    .cfi_undefined 36
+  ; ASM-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+  ; ASM-NEXT:    ;;#ASMSTART
+  ; ASM-NEXT:    ; def s4
+  ; ASM-NEXT:    ;;#ASMEND
+  ; ASM-NEXT:    ;;#ASMSTART
+  ; ASM-NEXT:    ; use s4
+  ; ASM-NEXT:    ;;#ASMEND
+  ; ASM-NEXT:    ;;#ASMSTART
+  ; ASM-NEXT:    ; clobber s4
+  ; ASM-NEXT:    ;;#ASMEND
+  ; ASM-NEXT:  .Ltmp27:
+  ; ASM-NEXT:    .loc 1 1 35 prologue_end ; :1:35
+  ; ASM-NEXT:    s_setpc_b64 s[30:31]
+  ; ASM-NEXT:  .Ltmp28:
+  bb.0.entry:
+    INLINEASM &"S_NOP 1 ; def $0", 1 /* sideeffect attdialect */, 1966090 /* regdef:SReg_32 */, def renamable $sgpr4
+    INLINEASM &"S_NOP 1 ; use $0", 1 /* sideeffect attdialect */, 1966089 /* reguse:SReg_32 */, killed renamable $sgpr4
+    INLINEASM &"S_NOP 1 ; clobber s4", 1 /* sideeffect attdialect */, 12 /* clobber */, implicit-def dead early-clobber $sgpr4
+    SI_RETURN debug-location !47
+
+...
+# ASM:         .section        .debug_loc
+# ASM-NEXT: .Ldebug_loc0:
+# ASM-NEXT:         .quad   .Ltmp0-.Lfunc_begin0
+# ASM-NEXT:         .quad   .Ltmp2-.Lfunc_begin0
+# ASM-NEXT:         .short  2                               ; Loc expr size
+# ASM-NEXT:         .byte   144                             ; DW_OP_regx
+# ASM-NEXT:         .byte   36                              ; 36
+# ASM-NEXT:         .quad   0
+# ASM-NEXT:         .quad   0
+# ASM-NEXT: .Ldebug_loc1:
+# ASM-NEXT:         .quad   .Ltmp4-.Lfunc_begin0
+# ASM-NEXT:         .quad   .Ltmp5-.Lfunc_begin0
+# ASM-NEXT:         .short  2                               ; Loc expr size
+# ASM-NEXT:         .byte   144                             ; DW_OP_regx
+# ASM-NEXT:         .byte   36                              ; 36
+# ASM-NEXT:         .quad   0
+# ASM-NEXT:         .quad   0
+# ASM-NEXT: .Ldebug_loc2:
+# ASM-NEXT:         .quad   .Ltmp8-.Lfunc_begin0
+# ASM-NEXT:         .quad   .Ltmp9-.Lfunc_begin0
+# ASM-NEXT:         .short  2                               ; Loc expr size
+# ASM-NEXT:         .byte   144                             ; DW_OP_regx
+# ASM-NEXT:         .byte   36                              ; 36
+# ASM-NEXT:         .quad   0
+# ASM-NEXT:         .quad   0
+# ASM-NEXT: .Ldebug_loc3:
+# ASM-NEXT:         .quad   .Ltmp11-.Lfunc_begin0
+# ASM-NEXT:         .quad   .Ltmp12-.Lfunc_begin0
+# ASM-NEXT:         .short  2                               ; Loc expr size
+# ASM-NEXT:         .byte   144                             ; DW_OP_regx
+# ASM-NEXT:         .byte   36                              ; 36
+# ASM-NEXT:         .quad   0
+# ASM-NEXT:         .quad   0
+# ASM-NEXT: .Ldebug_loc4:
+# ASM-NEXT:         .quad   .Ltmp15-.Lfunc_begin0
+# ASM-NEXT:         .quad   .Ltmp16-.Lfunc_begin0
+# ASM-NEXT:         .short  2                               ; Loc expr size
+# ASM-NEXT:         .byte   144                             ; DW_OP_regx
+# ASM-NEXT:         .byte   36                              ; 36
+# ASM-NEXT:         .quad   0
+# ASM-NEXT:         .quad   0
+# ASM-NEXT: .Ldebug_loc5:
+# ASM-NEXT:         .quad   .Ltmp19-.Lfunc_begin0
+# ASM-NEXT:         .quad   .Ltmp19-.Lfunc_begin0
+# ASM-NEXT:         .short  2                               ; Loc expr size
+# ASM-NEXT:         .byte   144                             ; DW_OP_regx
+# ASM-NEXT:         .byte   36                              ; 36
+# ASM-NEXT:         .quad   0
+# ASM-NEXT:         .quad   0
+# ASM-NEXT: .Ldebug_loc6:
+# ASM-NEXT:         .quad   .Ltmp21-.Lfunc_begin0
+# ASM-NEXT:         .quad   .Ltmp21-.Lfunc_begin0
+# ASM-NEXT:         .short  2                               ; Loc expr size
+# ASM-NEXT:         .byte   144                             ; DW_OP_regx
+# ASM-NEXT:         .byte   36                              ; 36
+# ASM-NEXT:         .quad   0
+# ASM-NEXT:         .quad   0
+
+# ASM:         .section        .debug_info
+# ASM-NEXT: .Lcu_begin0:
+# ASM-NEXT:         .long   .Ldebug_info_end0-.Ldebug_info_start0 ; Length of Unit
+# ASM-NEXT: .Ldebug_info_start0:
+# ASM-NEXT:         .short  4                               ; DWARF version number
+# ASM-NEXT:         .long   .debug_abbrev                   ; Offset Into Abbrev. Section
+# ASM-NEXT:         .byte   8                               ; Address Size (in bytes)
+# ASM-NEXT:         .byte   1                               ; Abbrev [1] 0xb:0x111 DW_TAG_compile_unit
+# ASM-NEXT:         .long   .Linfo_string0                  ; DW_AT_producer
+# ASM-NEXT:         .short  33                              ; DW_AT_language
+# ASM-NEXT:         .long   .Linfo_string1                  ; DW_AT_name
+# ASM-NEXT:         .long   .Lline_table_start0             ; DW_AT_stmt_list
+# ASM-NEXT:         .long   .Linfo_string2                  ; DW_AT_comp_dir
+# ASM-NEXT:         .long   .Linfo_string3                  ; DW_AT_LLVM_augmentation
+# ASM-NEXT:         .quad   .Lfunc_begin0                   ; DW_AT_low_pc
+# ASM-NEXT:         .long   .Lfunc_end9-.Lfunc_begin0       ; DW_AT_high_pc
+# ASM-NEXT:         .byte   2                               ; Abbrev [2] 0x2e:0x1a DW_TAG_subprogram
+# ASM-NEXT:         .quad   .Lfunc_begin0                   ; DW_AT_low_pc
+# ASM-NEXT:         .long   .Lfunc_end0-.Lfunc_begin0       ; DW_AT_high_pc
+# ASM-NEXT:         .byte   2                               ; DW_AT_frame_base
+# ASM-NEXT:         .byte   144
+# ASM-NEXT:         .byte   64
+# ASM-NEXT:                                         ; DW_AT_external
+# ASM-NEXT:         .byte   3                               ; Abbrev [3] 0x3e:0x9 DW_TAG_variable
+# ASM-NEXT:         .long   .Ldebug_loc0                    ; DW_AT_location
+# ASM-NEXT:         .long   276                             ; DW_AT_type
+# ASM-NEXT:         .byte   0                               ; End Of Children Mark
+# ASM-NEXT:         .byte   2                               ; Abbrev [2] 0x48:0x1a DW_TAG_subprogram
+# ASM-NEXT:         .quad   .Lfunc_begin1                   ; DW_AT_low_pc
+# ASM-NEXT:         .long   .Lfunc_end1-.Lfunc_begin1       ; DW_AT_high_pc
+# ASM-NEXT:         .byte   2                               ; DW_AT_frame_base
+# ASM-NEXT:         .byte   144
+# ASM-NEXT:         .byte   64
+# ASM-NEXT:                                         ; DW_AT_external
+# ASM-NEXT:         .byte   3                               ; Abbrev [3] 0x58:0x9 DW_TAG_variable
+# ASM-NEXT:         .long   .Ldebug_loc1                    ; DW_AT_location
+# ASM-NEXT:         .long   276                             ; DW_AT_type
+# ASM-NEXT:         .byte   0                               ; End Of Children Mark
+# ASM-NEXT:         .byte   2                               ; Abbrev [2] 0x62:0x1a DW_TAG_subprogram
+# ASM-NEXT:         .quad   .Lfunc_begin2                   ; DW_AT_low_pc
+# ASM-NEXT:         .long   .Lfunc_end2-.Lfunc_begin2       ; DW_AT_high_pc
+# ASM-NEXT:         .byte   2                               ; DW_AT_frame_base
+# ASM-NEXT:         .byte   144
+# ASM-NEXT:         .byte   64
+# ASM-NEXT:                                         ; DW_AT_external
+# ASM-NEXT:         .byte   3                               ; Abbrev [3] 0x72:0x9 DW_TAG_variable
+# ASM-NEXT:         .long   .Ldebug_loc2                    ; DW_AT_location
+# ASM-NEXT:         .long   276                             ; DW_AT_type
+# ASM-NEXT:         .byte   0                               ; End Of Children Mark
+# ASM-NEXT:         .byte   2                               ; Abbrev [2] 0x7c:0x1a DW_TAG_subprogram
+# ASM-NEXT:         .quad   .Lfunc_begin3                   ; DW_AT_low_pc
+# ASM-NEXT:         .long   .Lfunc_end3-.Lfunc_begin3       ; DW_AT_high_pc
+# ASM-NEXT:         .byte   2                               ; DW_AT_frame_base
+# ASM-NEXT:         .byte   144
+# ASM-NEXT:         .byte   64
+# ASM-NEXT:                                         ; DW_AT_external
+# ASM-NEXT:         .byte   3                               ; Abbrev [3] 0x8c:0x9 DW_TAG_variable
+# ASM-NEXT:         .long   .Ldebug_loc3                    ; DW_AT_location
+# ASM-NEXT:         .long   276                             ; DW_AT_type
+# ASM-NEXT:         .byte   0                               ; End Of Children Mark
+# ASM-NEXT:         .byte   2                               ; Abbrev [2] 0x96:0x1a DW_TAG_subprogram
+# ASM-NEXT:         .quad   .Lfunc_begin4                   ; DW_AT_low_pc
+# ASM-NEXT:         .long   .Lfunc_end4-.Lfunc_begin4       ; DW_AT_high_pc
+# ASM-NEXT:         .byte   2                               ; DW_AT_frame_base
+# ASM-NEXT:         .byte   144
+# ASM-NEXT:         .byte   64
+# ASM-NEXT:                                         ; DW_AT_external
+# ASM-NEXT:         .byte   3                               ; Abbrev [3] 0xa6:0x9 DW_TAG_variable
+# ASM-NEXT:         .long   .Ldebug_loc4                    ; DW_AT_location
+# ASM-NEXT:         .long   276                             ; DW_AT_type
+# ASM-NEXT:         .byte   0                               ; End Of Children Mark
+# ASM-NEXT:         .byte   2                               ; Abbrev [2] 0xb0:0x1a DW_TAG_subprogram
+# ASM-NEXT:         .quad   .Lfunc_begin5                   ; DW_AT_low_pc
+# ASM-NEXT:         .long   .Lfunc_end5-.Lfunc_begin5       ; DW_AT_high_pc
+# ASM-NEXT:         .byte   2                               ; DW_AT_frame_base
+# ASM-NEXT:         .byte   144
+# ASM-NEXT:         .byte   64
+# ASM-NEXT:                                         ; DW_AT_external
+# ASM-NEXT:         .byte   3                               ; Abbrev [3] 0xc0:0x9 DW_TAG_variable
+# ASM-NEXT:         .long   .Ldebug_loc5                    ; DW_AT_location
+# ASM-NEXT:         .long   276                             ; DW_AT_type
+# ASM-NEXT:         .byte   0                               ; End Of Children Mark
+# ASM-NEXT:         .byte   2                               ; Abbrev [2] 0xca:0x1a DW_TAG_subprogram
+# ASM-NEXT:         .quad   .Lfunc_begin6                   ; DW_AT_low_pc
+# ASM-NEXT:         .long   .Lfunc_end6-.Lfunc_begin6       ; DW_AT_high_pc
+# ASM-NEXT:         .byte   2                               ; DW_AT_frame_base
+# ASM-NEXT:         .byte   144
+# ASM-NEXT:         .byte   64
+# ASM-NEXT:                                         ; DW_AT_external
+# ASM-NEXT:         .byte   3                               ; Abbrev [3] 0xda:0x9 DW_TAG_variable
+# ASM-NEXT:         .long   .Ldebug_loc6                    ; DW_AT_location
+# ASM-NEXT:         .long   276                             ; DW_AT_type
+# ASM-NEXT:         .byte   0                               ; End Of Children Mark
+# ASM-NEXT:         .byte   4                               ; Abbrev [4] 0xe4:0x10 DW_TAG_subprogram
+# ASM-NEXT:         .quad   .Lfunc_begin7                   ; DW_AT_low_pc
+# ASM-NEXT:         .long   .Lfunc_end7-.Lfunc_begin7       ; DW_AT_high_pc
+# ASM-NEXT:         .byte   2                               ; DW_AT_frame_base
+# ASM-NEXT:         .byte   144
+# ASM-NEXT:         .byte   64
+# ASM-NEXT:                                         ; DW_AT_external
+# ASM-NEXT:         .byte   4                               ; Abbrev [4] 0xf4:0x10 DW_TAG_subprogram
+# ASM-NEXT:         .quad   .Lfunc_begin8                   ; DW_AT_low_pc
+# ASM-NEXT:         .long   .Lfunc_end8-.Lfunc_begin8       ; DW_AT_high_pc
+# ASM-NEXT:         .byte   2                               ; DW_AT_frame_base
+# ASM-NEXT:         .byte   144
+# ASM-NEXT:         .byte   64
+# ASM-NEXT:                                         ; DW_AT_external
+# ASM-NEXT:         .byte   4                               ; Abbrev [4] 0x104:0x10 DW_TAG_subprogram
+# ASM-NEXT:         .quad   .Lfunc_begin9                   ; DW_AT_low_pc
+# ASM-NEXT:         .long   .Lfunc_end9-.Lfunc_begin9       ; DW_AT_high_pc
+# ASM-NEXT:         .byte   2                               ; DW_AT_frame_base
+# ASM-NEXT:         .byte   144
+# ASM-NEXT:         .byte   64
+# ASM-NEXT:                                         ; DW_AT_external
+# ASM-NEXT:         .byte   5                               ; Abbrev [5] 0x114:0x7 DW_TAG_base_type
+# ASM-NEXT:         .long   .Linfo_string4                  ; DW_AT_name
+# ASM-NEXT:         .byte   5                               ; DW_AT_encoding
+# ASM-NEXT:         .byte   4                               ; DW_AT_byte_size
+# ASM-NEXT:         .byte   0                               ; End Of Children Mark
+# ASM-NEXT: .Ldebug_info_end0:
+
+# DWARF: .debug_loc contents:
+# DWARF-NEXT: 0x00000000:
+# DWARF-NEXT:             (0x0000000000000008, 0x0000000000000014): DW_OP_regx SGPR4_LO16
+# DWARF-EMPTY:
+# DWARF-NEXT: 0x00000024:
+# DWARF-NEXT:             (0x0000000000000020, 0x0000000000000024): DW_OP_regx SGPR4_LO16
+# DWARF-EMPTY:
+# DWARF-NEXT: 0x00000048:
+# DWARF-NEXT:             (0x0000000000000044, 0x0000000000000048): DW_OP_regx SGPR4_LO16
+# DWARF-EMPTY:
+# DWARF-NEXT: 0x0000006c:
+# DWARF-NEXT:             (0x0000000000000060, 0x0000000000000064): DW_OP_regx SGPR4_LO16
+# DWARF-EMPTY:
+# DWARF-NEXT: 0x00000090:
+# DWARF-NEXT:             (0x0000000000000080, 0x0000000000000088): DW_OP_regx SGPR4_LO16
+# DWARF-EMPTY:
+# DWARF-NEXT: 0x000000b4:
+# DWARF-NEXT:             (0x000000000000009c, 0x000000000000009c): DW_OP_regx SGPR4_LO16
+# DWARF-EMPTY:
+# DWARF-NEXT: 0x000000d8:
+# DWARF-NEXT:             (0x00000000000000ac, 0x00000000000000ac): DW_OP_regx SGPR4_LO16
+
+# DISASM: Disassembly of section .text:
+# DISASM-EMPTY:
+# DISASM-NEXT: 0000000000000000 <single_block_referrer_live_until_terminator$local>:
+# DISASM-NEXT:         s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)                    // 000000000000: BF8C0000
+# DISASM-NEXT:         s_nop 1                                                    // 000000000004: BF800001
+# DISASM-NEXT:         s_nop 1                                                    // 000000000008: BF800001
+# DISASM-NEXT:         s_nop 1                                                    // 00000000000C: BF800001
+# DISASM-NEXT:         v_mov_b32_e32 v0, s4                                       // 000000000010: 7E000204
+# DISASM-NEXT:         s_setpc_b64 s[30:31]                                       // 000000000014: BE801D1E
+# DISASM-EMPTY:
+# DISASM-NEXT: 0000000000000018 <single_block_referrer_live_until_kill$local>:
+# DISASM-NEXT:         s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)                    // 000000000018: BF8C0000
+# DISASM-NEXT:         s_nop 1                                                    // 00000000001C: BF800001
+# DISASM-NEXT:         s_nop 1                                                    // 000000000020: BF800001
+# DISASM-NEXT:         s_nop 1                                                    // 000000000024: BF800001
+# DISASM-NEXT:         v_mov_b32_e32 v0, s4                                       // 000000000028: 7E000204
+# DISASM-NEXT:         s_setpc_b64 s[30:31]                                       // 00000000002C: BE801D1E
+# DISASM-EMPTY:
+# DISASM-NEXT: 0000000000000030 <single_block_dangling_referrer_live_until_terminator$local>:
+# DISASM-NEXT:         s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)                    // 000000000030: BF8C0000
+# DISASM-NEXT:         s_nop 1                                                    // 000000000034: BF800001
+# DISASM-NEXT:         s_nop 1                                                    // 000000000038: BF800001
+# DISASM-NEXT:         s_nop 1                                                    // 00000000003C: BF800001
+# DISASM-NEXT:         s_nop 1                                                    // 000000000040: BF800001
+# DISASM-NEXT:         s_nop 1                                                    // 000000000044: BF800001
+# DISASM-NEXT:         s_setpc_b64 s[30:31]                                       // 000000000048: BE801D1E
+# DISASM-EMPTY:
+# DISASM-NEXT: 000000000000004c <single_block_dangling_referrer_live_until_kill$local>:
+# DISASM-NEXT:         s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)                    // 00000000004C: BF8C0000
+# DISASM-NEXT:         s_nop 1                                                    // 000000000050: BF800001
+# DISASM-NEXT:         s_nop 1                                                    // 000000000054: BF800001
+# DISASM-NEXT:         s_nop 1                                                    // 000000000058: BF800001
+# DISASM-NEXT:         s_nop 1                                                    // 00000000005C: BF800001
+# DISASM-NEXT:         s_nop 1                                                    // 000000000060: BF800001
+# DISASM-NEXT:         s_nop 1                                                    // 000000000064: BF800001
+# DISASM-NEXT:         s_setpc_b64 s[30:31]                                       // 000000000068: BE801D1E
+# DISASM-EMPTY:
+# DISASM-NEXT: 000000000000006c <single_block_dangling_referrer_live_until_clobber$local>:
+# DISASM-NEXT:         s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)                    // 00000000006C: BF8C0000
+# DISASM-NEXT:         s_nop 1                                                    // 000000000070: BF800001
+# DISASM-NEXT:         s_nop 1                                                    // 000000000074: BF800001
+# DISASM-NEXT:         s_nop 1                                                    // 000000000078: BF800001
+# DISASM-NEXT:         s_nop 1                                                    // 00000000007C: BF800001
+# DISASM-NEXT:         s_nop 1                                                    // 000000000080: BF800001
+# DISASM-NEXT:         s_nop 1                                                    // 000000000084: BF800001
+# DISASM-NEXT:         s_nop 1                                                    // 000000000088: BF800001
+# DISASM-NEXT:         s_setpc_b64 s[30:31]                                       // 00000000008C: BE801D1E
+# DISASM-EMPTY:
+# DISASM-NEXT: 0000000000000090 <multi_block_dangling_referrer_kill_before$local>:
+# DISASM-NEXT:         s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)                    // 000000000090: BF8C0000
+# DISASM-NEXT:         s_nop 1                                                    // 000000000094: BF800001
+# DISASM-NEXT:         s_nop 1                                                    // 000000000098: BF800001
+# DISASM-NEXT:         s_setpc_b64 s[30:31]                                       // 00000000009C: BE801D1E
+# DISASM-EMPTY:
+# DISASM-NEXT: 00000000000000a0 <multi_block_dangling_referrer_kill_after$local>:
+# DISASM-NEXT:         s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)                    // 0000000000A0: BF8C0000
+# DISASM-NEXT:         s_nop 1                                                    // 0000000000A4: BF800001
+# DISASM-NEXT:         s_nop 1                                                    // 0000000000A8: BF800001
+# DISASM-NEXT:         s_setpc_b64 s[30:31]                                       // 0000000000AC: BE801D1E
+# DISASM-EMPTY:
+# DISASM-NEXT: 00000000000000b0 <drop_dangling_with_kill_before$local>:
+# DISASM-NEXT:         s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)                    // 0000000000B0: BF8C0000
+# DISASM-NEXT:         s_nop 1                                                    // 0000000000B4: BF800001
+# DISASM-NEXT:         s_nop 1                                                    // 0000000000B8: BF800001
+# DISASM-NEXT:         s_nop 1                                                    // 0000000000BC: BF800001
+# DISASM-NEXT:         s_setpc_b64 s[30:31]                                       // 0000000000C0: BE801D1E
+# DISASM-EMPTY:
+# DISASM-NEXT: 00000000000000c4 <drop_dangling_with_kill_after$local>:
+# DISASM-NEXT:         s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)                    // 0000000000C4: BF8C0000
+# DISASM-NEXT:         s_nop 1                                                    // 0000000000C8: BF800001
+# DISASM-NEXT:         s_nop 1                                                    // 0000000000CC: BF800001
+# DISASM-NEXT:         s_nop 1                                                    // 0000000000D0: BF800001
+# DISASM-NEXT:         s_setpc_b64 s[30:31]                                       // 0000000000D4: BE801D1E
+# DISASM-EMPTY:
+# DISASM-NEXT: 00000000000000d8 <drop_dangling_without_kill$local>:
+# DISASM-NEXT:         s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)                    // 0000000000D8: BF8C0000
+# DISASM-NEXT:         s_nop 1                                                    // 0000000000DC: BF800001
+# DISASM-NEXT:         s_nop 1                                                    // 0000000000E0: BF800001
+# DISASM-NEXT:         s_nop 1                                                    // 0000000000E4: BF800001
+# DISASM-NEXT:         s_setpc_b64 s[30:31]                                       // 0000000000E8: BE801D1E

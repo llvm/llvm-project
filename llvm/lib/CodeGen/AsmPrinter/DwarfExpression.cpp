@@ -751,7 +751,7 @@ static bool isUnsigned(const ConstantInt *CI) {
   return (CI->getType()->getSignBit() & CI->getSExtValue()) == 0;
 }
 
-size_t DIEDwarfExprAST::Node::getChildrenCount() const {
+size_t DwarfExprAST::Node::getChildrenCount() const {
   return visit<size_t>(
       makeVisitor(
           [](DIOp::Arg) { return 0; }, [](DIOp::Constant) { return 0; },
@@ -767,12 +767,12 @@ size_t DIEDwarfExprAST::Node::getChildrenCount() const {
           [](DIOp::Composite) -> size_t {
             // FIXME(KZHURAVL): Handle DIOp::Composite.
             llvm_unreachable("DIOp::Composite is not handled in "
-                             "DIEDwarfExprAST::Node::getChildrenCount");
+                             "DwarfExprAST::Node::getChildrenCount");
           }),
       Element);
 }
 
-Optional<uint8_t> DIEDwarfExprAST::Node::getEquivalentDwarfOp() const {
+Optional<uint8_t> DwarfExprAST::Node::getEquivalentDwarfOp() const {
   return visit<Optional<uint8_t>>(
       makeVisitor(
           [](DIOp::Arg) { return None; }, [](DIOp::Constant) { return None; },
@@ -796,12 +796,12 @@ Optional<uint8_t> DIEDwarfExprAST::Node::getEquivalentDwarfOp() const {
       Element);
 }
 
-void DIEDwarfExprAST::buildDIExprAST() {
-  std::stack<std::unique_ptr<DIEDwarfExprAST::Node>> Operands;
+void DwarfExprAST::buildDIExprAST() {
+  std::stack<std::unique_ptr<DwarfExprAST::Node>> Operands;
 
   for (const auto &Op : Lifetime.getLocation()->builder()) {
-    std::unique_ptr<DIEDwarfExprAST::Node> OpNode =
-        std::make_unique<DIEDwarfExprAST::Node>(Op);
+    std::unique_ptr<DwarfExprAST::Node> OpNode =
+        std::make_unique<DwarfExprAST::Node>(Op);
     size_t OpChildrenCount = OpNode->getChildrenCount();
     if (OpChildrenCount == 0) {
       Operands.push(std::move(OpNode));
@@ -819,7 +819,7 @@ void DIEDwarfExprAST::buildDIExprAST() {
   Root = std::move(Operands.top());
 }
 
-void DIEDwarfExprAST::traverseAndLower(DIEDwarfExprAST::Node *OpNode) {
+void DwarfExprAST::traverseAndLower(DwarfExprAST::Node *OpNode) {
   if (!OpNode || !IsImplemented) {
     return;
   }
@@ -836,7 +836,7 @@ void DIEDwarfExprAST::traverseAndLower(DIEDwarfExprAST::Node *OpNode) {
   lower(OpNode);
 }
 
-void DIEDwarfExprAST::lower(DIEDwarfExprAST::Node *OpNode) {
+void DwarfExprAST::lower(DwarfExprAST::Node *OpNode) {
   visit(makeVisitor([&](DIOp::Arg) { lowerDIOpArg(OpNode); },
                     [&](DIOp::Constant) { lowerDIOpConstant(OpNode); },
                     [&](DIOp::PushLane) { lowerDIOpPushLane(OpNode); },
@@ -861,7 +861,7 @@ void DIEDwarfExprAST::lower(DIEDwarfExprAST::Node *OpNode) {
         OpNode->getElement());
 }
 
-bool DIEDwarfExprAST::tryInlineArgObject(DIObject *ArgObject) {
+bool DwarfExprAST::tryInlineArgObject(DIObject *ArgObject) {
   if (!GVFragmentMap)
     return false;
   auto *Fragment = dyn_cast<DIFragment>(ArgObject);
@@ -874,12 +874,12 @@ bool DIEDwarfExprAST::tryInlineArgObject(DIObject *ArgObject) {
   const MCSymbol *Sym = AP.getSymbol(Global);
   CU.getDwarfDebug().addArangeLabel(SymbolCU(&CU, Sym));
   emitDwarfOp(dwarf::DW_OP_addr);
-  CU.addLabel(getActiveDIE(), dwarf::DW_FORM_addr, Sym);
+  emitDwarfAddr(Sym);
   emitDwarfOp(dwarf::DW_OP_stack_value);
   return true;
 }
 
-void DIEDwarfExprAST::lowerDIOpArg(DIEDwarfExprAST::Node *OpNode) {
+void DwarfExprAST::lowerDIOpArg(DwarfExprAST::Node *OpNode) {
   const DIOp::Variant &Element = OpNode->getElement();
   assert(Element.holdsAlternative<DIOp::Arg>() &&
          "Expected DIOp::Arg, but got something else");
@@ -899,7 +899,7 @@ void DIEDwarfExprAST::lowerDIOpArg(DIEDwarfExprAST::Node *OpNode) {
   IsImplemented = false;
 }
 
-void DIEDwarfExprAST::lowerDIOpConstant(DIEDwarfExprAST::Node *OpNode) {
+void DwarfExprAST::lowerDIOpConstant(DwarfExprAST::Node *OpNode) {
   const DIOp::Variant &Element = OpNode->getElement();
   assert(Element.holdsAlternative<DIOp::Constant>() &&
          "Expected DIOp::Constant, but got something else");
@@ -926,11 +926,11 @@ void DIEDwarfExprAST::lowerDIOpConstant(DIEDwarfExprAST::Node *OpNode) {
   OpNode->setResultType(IntLiteralValue->getType());
 }
 
-void DIEDwarfExprAST::lowerDIOpPushLane(DIEDwarfExprAST::Node *OpNode) {
+void DwarfExprAST::lowerDIOpPushLane(DwarfExprAST::Node *OpNode) {
   IsImplemented = false;
 }
 
-void DIEDwarfExprAST::lowerDIOpReferrer(DIEDwarfExprAST::Node *OpNode) {
+void DwarfExprAST::lowerDIOpReferrer(DwarfExprAST::Node *OpNode) {
   const DIOp::Variant &Element = OpNode->getElement();
   assert(Element.holdsAlternative<DIOp::Referrer>() &&
          "Expected DIOp::Referrer, but got something else");
@@ -957,19 +957,19 @@ void DIEDwarfExprAST::lowerDIOpReferrer(DIEDwarfExprAST::Node *OpNode) {
   OpNode->setResultType(Element.get<DIOp::Referrer>().getResultType());
 }
 
-void DIEDwarfExprAST::lowerDIOpTypeObject(DIEDwarfExprAST::Node *OpNode) {
+void DwarfExprAST::lowerDIOpTypeObject(DwarfExprAST::Node *OpNode) {
   IsImplemented = false;
 }
 
-void DIEDwarfExprAST::lowerDIOpAddrOf(DIEDwarfExprAST::Node *OpNode) {
+void DwarfExprAST::lowerDIOpAddrOf(DwarfExprAST::Node *OpNode) {
   IsImplemented = false;
 }
 
-void DIEDwarfExprAST::lowerDIOpConvert(DIEDwarfExprAST::Node *OpNode) {
+void DwarfExprAST::lowerDIOpConvert(DwarfExprAST::Node *OpNode) {
   IsImplemented = false;
 }
 
-void DIEDwarfExprAST::lowerDIOpDeref(DIEDwarfExprAST::Node *OpNode) {
+void DwarfExprAST::lowerDIOpDeref(DwarfExprAST::Node *OpNode) {
   const DIOp::Variant &Element = OpNode->getElement();
   assert(Element.holdsAlternative<DIOp::Deref>() &&
          "Expected DIOp::Deref, but got something else");
@@ -1012,15 +1012,15 @@ void DIEDwarfExprAST::lowerDIOpDeref(DIEDwarfExprAST::Node *OpNode) {
   OpNode->setResultType(Element.get<DIOp::Deref>().getResultType());
 }
 
-void DIEDwarfExprAST::lowerDIOpExtend(DIEDwarfExprAST::Node *OpNode) {
+void DwarfExprAST::lowerDIOpExtend(DwarfExprAST::Node *OpNode) {
   IsImplemented = false;
 }
 
-void DIEDwarfExprAST::lowerDIOpRead(DIEDwarfExprAST::Node *OpNode) {
+void DwarfExprAST::lowerDIOpRead(DwarfExprAST::Node *OpNode) {
   IsImplemented = false;
 }
 
-void DIEDwarfExprAST::lowerDIOpReinterpret(DIEDwarfExprAST::Node *OpNode) {
+void DwarfExprAST::lowerDIOpReinterpret(DwarfExprAST::Node *OpNode) {
   const DIOp::Variant &Element = OpNode->getElement();
   assert(Element.holdsAlternative<DIOp::Reinterpret>() &&
          "Expected DIOp::Reinterpret, but got something else");
@@ -1031,63 +1031,63 @@ void DIEDwarfExprAST::lowerDIOpReinterpret(DIEDwarfExprAST::Node *OpNode) {
   OpNode->setResultType(Element.get<DIOp::Reinterpret>().getResultType());
 }
 
-void DIEDwarfExprAST::lowerDIOpAdd(DIEDwarfExprAST::Node *OpNode) {
+void DwarfExprAST::lowerDIOpAdd(DwarfExprAST::Node *OpNode) {
   assert(OpNode->getElement().holdsAlternative<DIOp::Add>() &&
          "Expected DIOp::Add, but got something else");
   lowerMathOp(OpNode);
 }
 
-void DIEDwarfExprAST::lowerDIOpBitOffset(DIEDwarfExprAST::Node *OpNode) {
+void DwarfExprAST::lowerDIOpBitOffset(DwarfExprAST::Node *OpNode) {
   assert(OpNode->getElement().holdsAlternative<DIOp::BitOffset>() &&
          "Expected DIOp::BitOffset, but got something else");
   lowerBitOrByteOffset(OpNode);
 }
 
-void DIEDwarfExprAST::lowerDIOpByteOffset(DIEDwarfExprAST::Node *OpNode) {
+void DwarfExprAST::lowerDIOpByteOffset(DwarfExprAST::Node *OpNode) {
   assert(OpNode->getElement().holdsAlternative<DIOp::ByteOffset>() &&
          "Expected DIOp::ByteOffset, but got something else");
   lowerBitOrByteOffset(OpNode);
 }
 
-void DIEDwarfExprAST::lowerDIOpDiv(DIEDwarfExprAST::Node *OpNode) {
+void DwarfExprAST::lowerDIOpDiv(DwarfExprAST::Node *OpNode) {
   assert(OpNode->getElement().holdsAlternative<DIOp::Div>() &&
          "Expected DIOp::Div, but got something else");
   lowerMathOp(OpNode);
 }
 
-void DIEDwarfExprAST::lowerDIOpMul(DIEDwarfExprAST::Node *OpNode) {
+void DwarfExprAST::lowerDIOpMul(DwarfExprAST::Node *OpNode) {
   assert(OpNode->getElement().holdsAlternative<DIOp::Mul>() &&
          "Expected DIOp::Mul, but got something else");
   lowerMathOp(OpNode);
 }
 
-void DIEDwarfExprAST::lowerDIOpShl(DIEDwarfExprAST::Node *OpNode) {
+void DwarfExprAST::lowerDIOpShl(DwarfExprAST::Node *OpNode) {
   assert(OpNode->getElement().holdsAlternative<DIOp::Shl>() &&
          "Expected DIOp::Shl, but got something else");
   lowerMathOp(OpNode);
 }
 
-void DIEDwarfExprAST::lowerDIOpShr(DIEDwarfExprAST::Node *OpNode) {
+void DwarfExprAST::lowerDIOpShr(DwarfExprAST::Node *OpNode) {
   assert(OpNode->getElement().holdsAlternative<DIOp::Shr>() &&
          "Expected DIOp::Shr, but got something else");
   lowerMathOp(OpNode);
 }
 
-void DIEDwarfExprAST::lowerDIOpSub(DIEDwarfExprAST::Node *OpNode) {
+void DwarfExprAST::lowerDIOpSub(DwarfExprAST::Node *OpNode) {
   assert(OpNode->getElement().holdsAlternative<DIOp::Sub>() &&
          "Expected DIOp::Sub, but got something else");
   lowerMathOp(OpNode);
 }
 
-void DIEDwarfExprAST::lowerDIOpSelect(DIEDwarfExprAST::Node *OpNode) {
+void DwarfExprAST::lowerDIOpSelect(DwarfExprAST::Node *OpNode) {
   IsImplemented = false;
 }
 
-void DIEDwarfExprAST::lowerDIOpComposite(DIEDwarfExprAST::Node *OpNode) {
+void DwarfExprAST::lowerDIOpComposite(DwarfExprAST::Node *OpNode) {
   IsImplemented = false;
 }
 
-void DIEDwarfExprAST::lowerBitOrByteOffset(DIEDwarfExprAST::Node *OpNode) {
+void DwarfExprAST::lowerBitOrByteOffset(DwarfExprAST::Node *OpNode) {
   const DIOp::Variant &Element = OpNode->getElement();
   assert((Element.holdsAlternative<DIOp::BitOffset>() ||
              Element.holdsAlternative<DIOp::ByteOffset>()) &&
@@ -1110,7 +1110,7 @@ void DIEDwarfExprAST::lowerBitOrByteOffset(DIEDwarfExprAST::Node *OpNode) {
   }
 }
 
-void DIEDwarfExprAST::lowerMathOp(DIEDwarfExprAST::Node *OpNode) {
+void DwarfExprAST::lowerMathOp(DwarfExprAST::Node *OpNode) {
   assert((OpNode->getElement().holdsAlternative<DIOp::Add>() ||
              OpNode->getElement().holdsAlternative<DIOp::Div>() ||
              OpNode->getElement().holdsAlternative<DIOp::Mul>() ||
@@ -1140,7 +1140,7 @@ void DIEDwarfExprAST::lowerMathOp(DIEDwarfExprAST::Node *OpNode) {
   OpNode->setResultType(OpNode->getChildren()[0]->getResultType());
 }
 
-void DIEDwarfExprAST::readToValue(DIEDwarfExprAST::Node *OpNode,
+void DwarfExprAST::readToValue(DwarfExprAST::Node *OpNode,
                                   bool NeedsSwap) {
   uint64_t PrimitiveSizeInBits =
       OpNode->getResultType()->getPrimitiveSizeInBits();
@@ -1156,7 +1156,7 @@ void DIEDwarfExprAST::readToValue(DIEDwarfExprAST::Node *OpNode,
   }
 }
 
-void DIEDwarfExprAST::emitReg(int32_t DwarfReg, const char *Comment) {
+void DwarfExprAST::emitReg(int32_t DwarfReg, const char *Comment) {
   assert(DwarfReg >= 0 && "Invalid dwarf register number");
 
   if (DwarfReg < 32) {
@@ -1167,12 +1167,12 @@ void DIEDwarfExprAST::emitReg(int32_t DwarfReg, const char *Comment) {
   }
 }
 
-void DIEDwarfExprAST::emitSigned(int64_t SignedValue) {
+void DwarfExprAST::emitSigned(int64_t SignedValue) {
   emitDwarfOp(dwarf::DW_OP_consts);
   emitDwarfSigned(SignedValue);
 }
 
-void DIEDwarfExprAST::emitUnsigned(uint64_t UnsignedValue) {
+void DwarfExprAST::emitUnsigned(uint64_t UnsignedValue) {
   if (UnsignedValue < 32) {
     emitDwarfOp(dwarf::DW_OP_lit0 + UnsignedValue);
   } else if (UnsignedValue == std::numeric_limits<uint64_t>::max()) {
@@ -1184,6 +1184,36 @@ void DIEDwarfExprAST::emitUnsigned(uint64_t UnsignedValue) {
     emitDwarfOp(dwarf::DW_OP_constu);
     emitDwarfUnsigned(UnsignedValue);
   }
+}
+
+ByteStreamer &DebugLocDwarfExprAST::getActiveStreamer() {
+  return OutBS;
+}
+
+void DebugLocDwarfExprAST::emitDwarfData1(uint8_t Data1Value) {
+  getActiveStreamer().emitInt8(Data1Value, Twine(Data1Value));
+}
+
+void DebugLocDwarfExprAST::emitDwarfOp(uint8_t DwarfOpValue, const char *Comment) {
+  getActiveStreamer().emitInt8(
+      DwarfOpValue, Comment ? Twine(Comment) + " " +
+                                  dwarf::OperationEncodingString(DwarfOpValue)
+                            : dwarf::OperationEncodingString(DwarfOpValue));
+}
+
+void DebugLocDwarfExprAST::emitDwarfSigned(int64_t SignedValue) {
+  getActiveStreamer().emitSLEB128(SignedValue, Twine(SignedValue));
+}
+
+void DebugLocDwarfExprAST::emitDwarfUnsigned(uint64_t UnsignedValue) {
+  getActiveStreamer().emitULEB128(UnsignedValue, Twine(UnsignedValue));
+}
+
+void DebugLocDwarfExprAST::emitDwarfAddr(const MCSymbol *Sym) {
+  // FIXME: I'm not sure how to handle IsImplemented when using
+  // BufferByteStreamer; it isn't obvious how to "discard" only the result of
+  // the current expr.
+  IsImplemented = false;
 }
 
 DIELoc &DIEDwarfExprAST::getActiveDIE() {
@@ -1204,4 +1234,8 @@ void DIEDwarfExprAST::emitDwarfSigned(int64_t SignedValue) {
 
 void DIEDwarfExprAST::emitDwarfUnsigned(uint64_t UnsignedValue) {
   CU.addUInt(getActiveDIE(), dwarf::DW_FORM_udata, UnsignedValue);
+}
+
+void DIEDwarfExprAST::emitDwarfAddr(const MCSymbol *Sym) {
+  CU.addLabel(getActiveDIE(), dwarf::DW_FORM_addr, Sym);
 }
