@@ -1189,11 +1189,11 @@ bool Decoder::dumpPackedARM64Entry(const object::COFFObjectFile &COFF,
     SW.startLine() << format("sub sp, sp, #%d\n", LocSZ);
   }
   if (RF.H()) {
-    SW.startLine() << format("stp x6, x7, [sp, #%d]\n", IntSZ + FpSZ + 48);
-    SW.startLine() << format("stp x4, x5, [sp, #%d]\n", IntSZ + FpSZ + 32);
-    SW.startLine() << format("stp x2, x3, [sp, #%d]\n", IntSZ + FpSZ + 16);
+    SW.startLine() << format("stp x6, x7, [sp, #%d]\n", SavSZ - 16);
+    SW.startLine() << format("stp x4, x5, [sp, #%d]\n", SavSZ - 32);
+    SW.startLine() << format("stp x2, x3, [sp, #%d]\n", SavSZ - 48);
     if (RF.RegI() > 0 || RF.RegF() > 0 || RF.CR() == 1) {
-      SW.startLine() << format("stp x0, x1, [sp, #%d]\n", IntSZ + FpSZ);
+      SW.startLine() << format("stp x0, x1, [sp, #%d]\n", SavSZ - 64);
     } else {
       // This case isn't documented; if neither RegI nor RegF nor CR=1
       // have decremented the stack pointer by SavSZ, we need to do it here

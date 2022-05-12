@@ -87,10 +87,10 @@
 // CHECK-NEXT:     FrameSize: 112
 // CHECK-NEXT:     Prologue [
 // CHECK-NEXT:       sub sp, sp, #32
-// CHECK-NEXT:       stp x6, x7, [sp, #56]
-// CHECK-NEXT:       stp x4, x5, [sp, #40]
-// CHECK-NEXT:       stp x2, x3, [sp, #24]
-// CHECK-NEXT:       stp x0, x1, [sp, #8]
+// CHECK-NEXT:       stp x6, x7, [sp, #64]
+// CHECK-NEXT:       stp x4, x5, [sp, #48]
+// CHECK-NEXT:       stp x2, x3, [sp, #32]
+// CHECK-NEXT:       stp x0, x1, [sp, #16]
 // CHECK-NEXT:       str x19, [sp, #-80]!
 // CHECK-NEXT:       end
 // CHECK-NEXT:     ]
@@ -267,10 +267,10 @@
 // CHECK-NEXT:     FrameSize: 112
 // CHECK-NEXT:     Prologue [
 // CHECK-NEXT:       sub sp, sp, #32
-// CHECK-NEXT:       stp x6, x7, [sp, #56]
-// CHECK-NEXT:       stp x4, x5, [sp, #40]
-// CHECK-NEXT:       stp x2, x3, [sp, #24]
-// CHECK-NEXT:       stp x0, x1, [sp, #8]
+// CHECK-NEXT:       stp x6, x7, [sp, #64]
+// CHECK-NEXT:       stp x4, x5, [sp, #48]
+// CHECK-NEXT:       stp x2, x3, [sp, #32]
+// CHECK-NEXT:       stp x0, x1, [sp, #16]
 // CHECK-NEXT:       str lr, [sp, #-80]!
 // CHECK-NEXT:       end
 // CHECK-NEXT:     ]
