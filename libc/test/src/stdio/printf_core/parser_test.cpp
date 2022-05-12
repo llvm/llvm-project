@@ -53,6 +53,7 @@ TEST(LlvmLibcPrintfParserTest, EvalRaw) {
   expected.raw_string = str;
 
   ASSERT_FORMAT_EQ(expected, format_arr[0]);
+  // TODO: add checks that the format_arr after the last one has length 0
 }
 
 TEST(LlvmLibcPrintfParserTest, EvalSimple) {

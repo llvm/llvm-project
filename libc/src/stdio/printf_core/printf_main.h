@@ -21,7 +21,7 @@ namespace __llvm_libc {
 namespace printf_core {
 
 int printf_main(Writer *writer, const char *__restrict str,
-                internal::ArgList args) {
+                internal::ArgList &args) {
   Parser parser(str, args);
 
   for (FormatSection cur_section = parser.get_next_section();

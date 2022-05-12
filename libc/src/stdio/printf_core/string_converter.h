@@ -14,7 +14,7 @@
 namespace __llvm_libc {
 namespace printf_core {
 
-void convert_string(Writer *writer, FormatSection to_conv) {
+void convert_string(Writer *writer, const FormatSection &to_conv) {
   int string_len = 0;
 
   for (char *cur_str = reinterpret_cast<char *>(to_conv.conv_val_ptr);
