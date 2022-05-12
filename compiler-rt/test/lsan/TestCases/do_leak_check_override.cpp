@@ -1,10 +1,9 @@
 // Test for __lsan_do_leak_check(). We test it by making the leak check run
 // before global destructors, which also tests compatibility with HeapChecker's
 // "normal" mode (LSan runs in "strict" mode by default).
-// RUN: LSAN_BASE="use_stacks=0:use_registers=0"
 // RUN: %clangxx_lsan %s -o %t
-// RUN: %env_lsan_opts=$LSAN_BASE not %run %t 2>&1 | FileCheck --check-prefix=CHECK-strict %s
-// RUN: %env_lsan_opts=$LSAN_BASE not %run %t foo 2>&1 | FileCheck --check-prefix=CHECK-normal %s
+// RUN: %env_lsan_opts=use_stacks=0:use_registers=0 not %run %t 2>&1 | FileCheck --check-prefix=CHECK-strict %s
+// RUN: %env_lsan_opts=use_stacks=0:use_registers=0 not %run %t foo 2>&1 | FileCheck --check-prefix=CHECK-normal %s
 
 // Investigate why LeakyGlobal leak does show
 // UNSUPPORTED: arm-linux || armhf-linux

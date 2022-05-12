@@ -3,7 +3,7 @@
 // Test `fir.end` conversion to llvm.
 // Not implemented yet.
 
-func @end_test() {
+func.func @end_test() {
 // CHECK: not yet implemented fir.end codegen
   "fir.end"() : () -> ()
 }

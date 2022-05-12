@@ -1,5 +1,5 @@
 set(LLVM_LINK_COMPONENTS
-  FuzzMutate
+  FuzzerCLI
   Support
   )
 

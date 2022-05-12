@@ -148,7 +148,7 @@ static ParseResult parseOperationOpAttributes(
   Builder &builder = p.getBuilder();
   SmallVector<Attribute, 4> attrNames;
   if (succeeded(p.parseOptionalLBrace())) {
-    do {
+    auto parseOperands = [&]() {
       StringAttr nameAttr;
       OpAsmParser::UnresolvedOperand operand;
       if (p.parseAttribute(nameAttr) || p.parseEqual() ||
@@ -156,8 +156,9 @@ static ParseResult parseOperationOpAttributes(
         return failure();
       attrNames.push_back(nameAttr);
       attrOperands.push_back(operand);
-    } while (succeeded(p.parseOptionalComma()));
-    if (p.parseRBrace())
+      return success();
+    };
+    if (p.parseCommaSeparatedList(parseOperands) || p.parseRBrace())
       return failure();
   }
   attrNamesAttr = builder.getArrayAttr(attrNames);

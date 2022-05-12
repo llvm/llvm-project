@@ -1381,8 +1381,6 @@ public:
     ScopedOverride<unsigned> LT(OB.GtIsGt, 0);
     OB += "<";
     Params.printWithComma(OB);
-    if (OB.back() == '>')
-      OB += " ";
     OB += ">";
   }
 };
@@ -1545,16 +1543,16 @@ public:
       break;
     case SpecialSubKind::string:
       OB += "std::basic_string<char, std::char_traits<char>, "
-            "std::allocator<char> >";
+            "std::allocator<char>>";
       break;
     case SpecialSubKind::istream:
-      OB += "std::basic_istream<char, std::char_traits<char> >";
+      OB += "std::basic_istream<char, std::char_traits<char>>";
       break;
     case SpecialSubKind::ostream:
-      OB += "std::basic_ostream<char, std::char_traits<char> >";
+      OB += "std::basic_ostream<char, std::char_traits<char>>";
       break;
     case SpecialSubKind::iostream:
-      OB += "std::basic_iostream<char, std::char_traits<char> >";
+      OB += "std::basic_iostream<char, std::char_traits<char>>";
       break;
     }
   }
@@ -1903,8 +1901,6 @@ public:
       ScopedOverride<unsigned> LT(OB.GtIsGt, 0);
       OB += "<";
       To->printLeft(OB);
-      if (OB.back() == '>')
-        OB += " ";
       OB += ">";
     }
     OB.printOpen();

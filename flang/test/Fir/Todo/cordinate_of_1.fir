@@ -4,7 +4,7 @@
 // `fir.len_param_index` is not implemented yet, that's the error that's
 // currently being generated (this error is generated before trying to convert
 // `fir.coordinate_of`)
-func @coordinate_box_derived_with_fir_len(%arg0: !fir.box<!fir.type<derived_2{len1:i32}>>) {
+func.func @coordinate_box_derived_with_fir_len(%arg0: !fir.box<!fir.type<derived_2{len1:i32}>>) {
 // CHECK: not yet implemented fir.len_param_index codegen
   %e = fir.len_param_index len1, !fir.type<derived_2{len1:i32}>
   %q = fir.coordinate_of %arg0, %e : (!fir.box<!fir.type<derived_2{len1:i32}>>, !fir.len) -> !fir.ref<i32>

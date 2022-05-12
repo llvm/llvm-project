@@ -388,11 +388,10 @@ namespace ranges {
       { return          ranges::iota_view(std::forward<_Start>(__start)); }
 
     template <class _Start, class _BoundSentinel>
-    _LIBCPP_HIDE_FROM_ABI constexpr auto operator()(_Start&& __start, _BoundSentinel&& __bound_sentinel) const noexcept(
-        noexcept(ranges::iota_view(std::forward<_Start>(__start), std::forward<_BoundSentinel>(__bound_sentinel))))
-        -> decltype(ranges::iota_view(std::forward<_Start>(__start), std::forward<_BoundSentinel>(__bound_sentinel))) {
-      return ranges::iota_view(std::forward<_Start>(__start), std::forward<_BoundSentinel>(__bound_sentinel));
-    }
+    _LIBCPP_HIDE_FROM_ABI constexpr auto operator()(_Start&& __start, _BoundSentinel&& __bound_sentinel) const
+      noexcept(noexcept(ranges::iota_view(std::forward<_Start>(__start), std::forward<_BoundSentinel>(__bound_sentinel))))
+      -> decltype(      ranges::iota_view(std::forward<_Start>(__start), std::forward<_BoundSentinel>(__bound_sentinel)))
+      { return          ranges::iota_view(std::forward<_Start>(__start), std::forward<_BoundSentinel>(__bound_sentinel)); }
   };
 } // namespace __iota
 

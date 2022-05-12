@@ -125,7 +125,10 @@ public:
       Diags->setClient(new IgnoringDiagConsumer);
     std::vector<const char *> Args = {"tok-test", "-std=c++03", "-fsyntax-only",
                                       FileName};
-    auto CI = createInvocationFromCommandLine(Args, Diags, FS);
+    CreateInvocationOptions CIOpts;
+    CIOpts.Diags = Diags;
+    CIOpts.VFS = FS;
+    auto CI = createInvocation(Args, std::move(CIOpts));
     assert(CI);
     CI->getFrontendOpts().DisableFree = false;
     CI->getPreprocessorOpts().addRemappedFile(

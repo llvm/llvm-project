@@ -3483,7 +3483,9 @@ static void RenderOpenCLOptions(const ArgList &Args, ArgStringList &CmdArgs,
 
 static void RenderHLSLOptions(const ArgList &Args, ArgStringList &CmdArgs,
                               types::ID InputType) {
-  const unsigned ForwardedArguments[] = {options::OPT_dxil_validator_version};
+  const unsigned ForwardedArguments[] = {options::OPT_dxil_validator_version,
+                                         options::OPT_S, options::OPT_emit_llvm,
+                                         options::OPT_disable_llvm_passes};
 
   for (const auto &Arg : ForwardedArguments)
     if (const auto *A = Args.getLastArg(Arg))
@@ -7056,6 +7058,7 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   // For all the host OpenMP offloading compile jobs we need to pass the targets
   // information using `-fopenmp-targets=` option.
   if (JA.isHostOffloading(Action::OFK_OpenMP)) {
+#if 1 //<<<<<<< HEAD
     SmallString<128> TargetInfo("-fopenmp-targets=");
 
     Arg *Tgts = Args.getLastArg(options::OPT_fopenmp_targets_EQ);
@@ -7083,6 +7086,15 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
               `-fopenmp-targets=` format, or `--offload-arch=` flag");
     }
     CmdArgs.push_back(Args.MakeArgString(TargetInfo.str()));
+#else //=======
+    SmallString<128> Targets("-fopenmp-targets=");
+
+    SmallVector<std::string, 4> Triples;
+    auto TCRange = C.getOffloadToolChains<Action::OFK_OpenMP>();
+    std::transform(TCRange.first, TCRange.second, std::back_inserter(Triples),
+                   [](auto TC) { return TC.second->getTripleString(); });
+    CmdArgs.push_back(Args.MakeArgString(Targets + llvm::join(Triples, ",")));
+#endif //>>>>>>> be768164a7837bcb87cb6409731d23dc2c00dcfe
   }
 
   bool VirtualFunctionElimination =

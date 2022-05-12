@@ -4,6 +4,15 @@ include(GNUInstallDirs)
 option(CLANG_TIDY_ENABLE_STATIC_ANALYZER
   "Include static analyzer checks in clang-tidy" ON)
 
+if(CLANG_INCLUDE_TESTS)
+  umbrella_lit_testsuite_begin(check-clang-tools)
+
+  option(CLANG_TOOLS_TEST_USE_VG "Run Clang tools' tests under Valgrind" OFF)
+  if(CLANG_TOOLS_TEST_USE_VG)
+    set_property(GLOBAL APPEND PROPERTY LLVM_CLANG_TOOLS_LIT_EXTRA_ARGS "--vg")
+  endif()
+endif()
+
 add_subdirectory(clang-apply-replacements)
 add_subdirectory(clang-reorder-fields)
 add_subdirectory(modularize)

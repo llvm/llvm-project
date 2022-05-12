@@ -11,27 +11,23 @@ define fastcc void @LzmaDec_DecodeReal2(%struct.CLzmaDec.1.28.55.82.103.124.145.
 ; CHECK-LABEL: @LzmaDec_DecodeReal2(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[RANGE20_I:%.*]] = getelementptr inbounds [[STRUCT_CLZMADEC_1_28_55_82_103_124_145_166_181_196_229_259_334:%.*]], %struct.CLzmaDec.1.28.55.82.103.124.145.166.181.196.229.259.334* [[P:%.*]], i64 0, i32 4
-; CHECK-NEXT:    [[CODE21_I:%.*]] = getelementptr inbounds [[STRUCT_CLZMADEC_1_28_55_82_103_124_145_166_181_196_229_259_334]], %struct.CLzmaDec.1.28.55.82.103.124.145.166.181.196.229.259.334* [[P]], i64 0, i32 5
 ; CHECK-NEXT:    br label [[DO_BODY66_I:%.*]]
 ; CHECK:       do.body66.i:
-; CHECK-NEXT:    [[RANGE_2_I:%.*]] = phi i32 [ [[RANGE_4_I:%.*]], [[DO_COND_I:%.*]] ], [ undef, [[ENTRY:%.*]] ]
-; CHECK-NEXT:    [[CODE_2_I:%.*]] = phi i32 [ [[CODE_4_I:%.*]], [[DO_COND_I]] ], [ undef, [[ENTRY]] ]
-; CHECK-NEXT:    [[DOTRANGE_2_I:%.*]] = select i1 undef, i32 undef, i32 [[RANGE_2_I]]
-; CHECK-NEXT:    [[DOTCODE_2_I:%.*]] = select i1 undef, i32 undef, i32 [[CODE_2_I]]
+; CHECK-NEXT:    [[TMP0:%.*]] = phi <2 x i32> [ [[TMP5:%.*]], [[DO_COND_I:%.*]] ], [ undef, [[ENTRY:%.*]] ]
+; CHECK-NEXT:    [[TMP1:%.*]] = select <2 x i1> undef, <2 x i32> undef, <2 x i32> [[TMP0]]
+; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <2 x i32> [[TMP1]], i32 1
+; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <2 x i32> <i32 undef, i32 poison>, i32 [[TMP2]], i32 1
 ; CHECK-NEXT:    br i1 undef, label [[DO_COND_I]], label [[IF_ELSE_I:%.*]]
 ; CHECK:       if.else.i:
-; CHECK-NEXT:    [[SUB91_I:%.*]] = sub i32 [[DOTRANGE_2_I]], undef
-; CHECK-NEXT:    [[SUB92_I:%.*]] = sub i32 [[DOTCODE_2_I]], undef
+; CHECK-NEXT:    [[TMP4:%.*]] = sub <2 x i32> [[TMP1]], undef
 ; CHECK-NEXT:    br label [[DO_COND_I]]
 ; CHECK:       do.cond.i:
-; CHECK-NEXT:    [[RANGE_4_I]] = phi i32 [ [[SUB91_I]], [[IF_ELSE_I]] ], [ undef, [[DO_BODY66_I]] ]
-; CHECK-NEXT:    [[CODE_4_I]] = phi i32 [ [[SUB92_I]], [[IF_ELSE_I]] ], [ [[DOTCODE_2_I]], [[DO_BODY66_I]] ]
+; CHECK-NEXT:    [[TMP5]] = phi <2 x i32> [ [[TMP4]], [[IF_ELSE_I]] ], [ [[TMP3]], [[DO_BODY66_I]] ]
 ; CHECK-NEXT:    br i1 undef, label [[DO_BODY66_I]], label [[DO_END1006_I:%.*]]
 ; CHECK:       do.end1006.i:
-; CHECK-NEXT:    [[DOTRANGE_4_I:%.*]] = select i1 undef, i32 undef, i32 [[RANGE_4_I]]
-; CHECK-NEXT:    [[DOTCODE_4_I:%.*]] = select i1 undef, i32 undef, i32 [[CODE_4_I]]
-; CHECK-NEXT:    store i32 [[DOTRANGE_4_I]], i32* [[RANGE20_I]], align 4
-; CHECK-NEXT:    store i32 [[DOTCODE_4_I]], i32* [[CODE21_I]], align 4
+; CHECK-NEXT:    [[TMP6:%.*]] = select <2 x i1> undef, <2 x i32> undef, <2 x i32> [[TMP5]]
+; CHECK-NEXT:    [[TMP7:%.*]] = bitcast i32* [[RANGE20_I]] to <2 x i32>*
+; CHECK-NEXT:    store <2 x i32> [[TMP6]], <2 x i32>* [[TMP7]], align 4
 ; CHECK-NEXT:    ret void
 ;
 entry:

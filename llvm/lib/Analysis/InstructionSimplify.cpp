@@ -6230,6 +6230,15 @@ Value *llvm::SimplifyCall(CallBase *Call, const SimplifyQuery &Q) {
   return nullptr;
 }
 
+Value *llvm::SimplifyConstrainedFPCall(CallBase *Call, const SimplifyQuery &Q) {
+  assert(isa<ConstrainedFPIntrinsic>(Call));
+  if (Value *V = tryConstantFoldCall(Call, Q))
+    return V;
+  if (Value *Ret = simplifyIntrinsic(Call, Q))
+    return Ret;
+  return nullptr;
+}
+
 /// Given operands for a Freeze, see if we can fold the result.
 static Value *SimplifyFreezeInst(Value *Op0, const SimplifyQuery &Q) {
   // Use a utility function defined in ValueTracking.

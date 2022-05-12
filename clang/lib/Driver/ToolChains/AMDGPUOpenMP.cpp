@@ -577,6 +577,7 @@ llvm::opt::DerivedArgList *AMDGPUOpenMPToolChain::TranslateArgs(
         DAL->append(A);
     }
 
+#if 1 //<<<<<<< HEAD
     std::string Arch = DAL->getLastArgValue(options::OPT_march_EQ).str();
     if (Arch.empty()) {
       Arch = getTargetID(); // arch may have come from --Offload-Arch=
@@ -586,6 +587,12 @@ llvm::opt::DerivedArgList *AMDGPUOpenMPToolChain::TranslateArgs(
     }
     if (Arch.empty()) {
       checkSystemForAMDGPU(Args, *this, Arch);
+#else //=======
+    if (!DAL->hasArg(options::OPT_march_EQ)) {
+      std::string Arch = BoundArch.str();
+      if (BoundArch.empty())
+        checkSystemForAMDGPU(Args, *this, Arch);
+#endif //>>>>>>> be768164a7837bcb87cb6409731d23dc2c00dcfe
       DAL->AddJoinedArg(nullptr, Opts.getOption(options::OPT_march_EQ), Arch);
     }
 

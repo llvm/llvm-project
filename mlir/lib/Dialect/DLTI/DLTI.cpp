@@ -286,14 +286,11 @@ DataLayoutSpecAttr DataLayoutSpecAttr::parse(AsmParser &parser) {
     return get(parser.getContext(), {});
 
   SmallVector<DataLayoutEntryInterface> entries;
-  do {
-    entries.emplace_back();
-    if (failed(parser.parseAttribute(entries.back())))
-      return {};
-  } while (succeeded(parser.parseOptionalComma()));
-
-  if (failed(parser.parseGreater()))
+  if (parser.parseCommaSeparatedList(
+          [&]() { return parser.parseAttribute(entries.emplace_back()); }) ||
+      parser.parseGreater())
     return {};
+
   return getChecked([&] { return parser.emitError(parser.getNameLoc()); },
                     parser.getContext(), entries);
 }

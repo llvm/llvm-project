@@ -872,13 +872,18 @@ CudaToolChain::TranslateArgs(const llvm::opt::DerivedArgList &Args,
       if (!llvm::is_contained(*DAL, A))
         DAL->append(A);
 
+#if 1 //<<<<<<< HEAD
     StringRef Arch = DAL->getLastArgValue(options::OPT_march_EQ);
     if (Arch.empty())
       Arch = getProcessorFromTargetID(this->getTriple(), this->getTargetID());
 
     if (Arch.empty())
+#else //=======
+    if (!DAL->hasArg(options::OPT_march_EQ))
+#endif //>>>>>>> be768164a7837bcb87cb6409731d23dc2c00dcfe
       DAL->AddJoinedArg(nullptr, Opts.getOption(options::OPT_march_EQ),
-                        CLANG_OPENMP_NVPTX_DEFAULT_ARCH);
+                        !BoundArch.empty() ? BoundArch
+                                           : CLANG_OPENMP_NVPTX_DEFAULT_ARCH);
 
     return DAL;
   }
