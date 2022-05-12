@@ -6,17 +6,17 @@
 define i8 @add_i8(i8 %a) nounwind {
 ; VERBOSE-LABEL: add_i8:
 ; VERBOSE:       # %bb.0:
-; VERBOSE-NEXT:    movb {{[0-9]+}}(%esp), %al # <MCInst #1804 MOV8rm
-; VERBOSE-NEXT:    # <MCOperand Reg:2>
-; VERBOSE-NEXT:    # <MCOperand Reg:33>
+; VERBOSE-NEXT:    movb {{[0-9]+}}(%esp), %al # <MCInst #[[#MCINST1804:]] MOV8rm
+; VERBOSE-NEXT:    # <MCOperand Reg:[[#MCREG2:]]>
+; VERBOSE-NEXT:    # <MCOperand Reg:[[#MCREG33:]]>
 ; VERBOSE-NEXT:    # <MCOperand Imm:1>
-; VERBOSE-NEXT:    # <MCOperand Reg:0>
+; VERBOSE-NEXT:    # <MCOperand Reg:[[#MCREG0:]]>
 ; VERBOSE-NEXT:    # <MCOperand Imm:4>
-; VERBOSE-NEXT:    # <MCOperand Reg:0>>
-; VERBOSE-NEXT:    addb $2, %al # <MCInst #400 ADD8i8
+; VERBOSE-NEXT:    # <MCOperand Reg:[[#MCREG0]]>>
+; VERBOSE-NEXT:    addb $2, %al # <MCInst #[[#MCINST400:]] ADD8i8
 ; VERBOSE-NEXT:    # <MCOperand Imm:2>>
-; VERBOSE-NEXT:    retl # <MCInst #2560 RET32
-; VERBOSE-NEXT:    # <MCOperand Reg:2>>
+; VERBOSE-NEXT:    retl # <MCInst #[[#MCINST2560:]] RET32
+; VERBOSE-NEXT:    # <MCOperand Reg:[[#MCREG2]]>>
 ;
 ; CHECK-LABEL: add_i8:
 ; CHECK:       # %bb.0:
@@ -30,19 +30,19 @@ define i8 @add_i8(i8 %a) nounwind {
 define i32 @add_i32(i32 %a) nounwind {
 ; VERBOSE-LABEL: add_i32:
 ; VERBOSE:       # %bb.0:
-; VERBOSE-NEXT:    movl {{[0-9]+}}(%esp), %eax # <MCInst #1768 MOV32rm
-; VERBOSE-NEXT:    # <MCOperand Reg:22>
-; VERBOSE-NEXT:    # <MCOperand Reg:33>
+; VERBOSE-NEXT:    movl {{[0-9]+}}(%esp), %eax # <MCInst #[[#MCINST1768:]] MOV32rm
+; VERBOSE-NEXT:    # <MCOperand Reg:[[#MCREG22:]]>
+; VERBOSE-NEXT:    # <MCOperand Reg:[[#MCREG33]]>
 ; VERBOSE-NEXT:    # <MCOperand Imm:1>
-; VERBOSE-NEXT:    # <MCOperand Reg:0>
+; VERBOSE-NEXT:    # <MCOperand Reg:[[#MCREG0]]>
 ; VERBOSE-NEXT:    # <MCOperand Imm:4>
-; VERBOSE-NEXT:    # <MCOperand Reg:0>>
-; VERBOSE-NEXT:    addl $2, %eax # <MCInst #387 ADD32ri8
-; VERBOSE-NEXT:    # <MCOperand Reg:22>
-; VERBOSE-NEXT:    # <MCOperand Reg:22>
+; VERBOSE-NEXT:    # <MCOperand Reg:[[#MCREG0]]>>
+; VERBOSE-NEXT:    addl $2, %eax # <MCInst #[[#MCINST387:]] ADD32ri8
+; VERBOSE-NEXT:    # <MCOperand Reg:[[#MCREG22]]>
+; VERBOSE-NEXT:    # <MCOperand Reg:[[#MCREG22]]>
 ; VERBOSE-NEXT:    # <MCOperand Imm:2>>
-; VERBOSE-NEXT:    retl # <MCInst #2560 RET32
-; VERBOSE-NEXT:    # <MCOperand Reg:22>>
+; VERBOSE-NEXT:    retl # <MCInst #[[#MCINST2560]] RET32
+; VERBOSE-NEXT:    # <MCOperand Reg:[[#MCREG22]]>>
 ;
 ; CHECK-LABEL: add_i32:
 ; CHECK:       # %bb.0:

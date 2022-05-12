@@ -423,9 +423,8 @@ def scrub_asm_nvptx(asm, args):
   asm = common.SCRUB_TRAILING_WHITESPACE_RE.sub(r'', asm)
   return asm
 
-
 # Returns a tuple of a scrub function and a function regex. Scrub function is
-# used to alter function body in some way, for example, remove traling spaces.
+# used to alter function body in some way, for example, remove trailing spaces.
 # Function regex is used to match function name, body, etc. in raw llc output.
 def get_run_handler(triple):
   target_handlers = {
@@ -482,10 +481,9 @@ def get_run_handler(triple):
 ##### Generator of assembly CHECK lines
 
 def add_checks(output_lines, comment_marker, prefix_list, func_dict,
-                   func_name, is_filtered):
+               func_name, global_vars_seen_dict, is_filtered):
   # Label format is based on ASM string.
   check_label_format = '{} %s-LABEL: %s%s%s'.format(comment_marker)
-  global_vars_seen_dict = {}
   common.add_checks(output_lines, comment_marker, prefix_list, func_dict,
                     func_name, check_label_format, True, False,
-                    global_vars_seen_dict, is_filtered = is_filtered)
+                    global_vars_seen_dict, is_filtered=is_filtered)
