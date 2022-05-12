@@ -51,8 +51,8 @@ func.func @print_3d() {
 
 func.func private @printMemrefF32(memref<*xf32>) attributes { llvm.emit_c_interface }
 
-!vector_type_C = type vector<4x4xf32>
-!matrix_type_CC = type memref<1x1x!vector_type_C>
+!vector_type_C = vector<4x4xf32>
+!matrix_type_CC = memref<1x1x!vector_type_C>
 func.func @vector_splat_2d() {
   %c0 = arith.constant 0 : index
   %f10 = arith.constant 10.0 : f32

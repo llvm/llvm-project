@@ -37,13 +37,13 @@ func.func @dot(%arg0: memref<?xf32, offset: ?, strides: [1]>,
   library_call = "external_outerproduct_matmul"
 }
 
-!vector_type_A = type vector<4xf32>
-!vector_type_B = type vector<4xf32>
-!vector_type_C = type vector<4x4xf32>
+!vector_type_A = vector<4xf32>
+!vector_type_B = vector<4xf32>
+!vector_type_C = vector<4x4xf32>
 
-!matrix_type_A = type memref<?x?x!vector_type_A>
-!matrix_type_B = type memref<?x?x!vector_type_B>
-!matrix_type_C = type memref<?x?x!vector_type_C>
+!matrix_type_A = memref<?x?x!vector_type_A>
+!matrix_type_B = memref<?x?x!vector_type_B>
+!matrix_type_C = memref<?x?x!vector_type_C>
 
 func.func @matmul_vec_impl(%A: !matrix_type_A, %B: !matrix_type_B, %C: !matrix_type_C) {
   linalg.generic #matmul_trait

@@ -4,7 +4,7 @@
 // Missing derived type descriptor pointers are replaced by null pointers.
 // RUN: tco --ignore-missing-type-desc -o - %s | FileCheck %s
 
-!some_freestyle_type = type !fir.type<some_not_mangled_type{j:i32}>
+!some_freestyle_type = !fir.type<some_not_mangled_type{j:i32}>
 
 func.func private @bar(!fir.box<!some_freestyle_type>)
 

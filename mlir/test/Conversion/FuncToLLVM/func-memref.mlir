@@ -101,7 +101,7 @@ func.func @check_scalar_func_call(%in : f32) {
 
 // -----
 
-!base_type = type memref<64xi32, 201>
+!base_type = memref<64xi32, 201>
 
 // CHECK-LABEL: func @loop_carried
 // BAREPTR-LABEL: func @loop_carried

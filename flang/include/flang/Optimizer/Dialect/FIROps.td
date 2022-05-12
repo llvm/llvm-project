@@ -2576,7 +2576,7 @@ def fir_GenTypeDescOp : fir_OneResultOp<"gentypedesc", [NoSideEffect]> {
     is `!fir.tdesc<T>`.
 
     ```mlir
-      !T = type !fir.type<T{...}>
+      !T = !fir.type<T{...}>
       %t = fir.gentypedesc !T  // returns value of !fir.tdesc<!T>
     ```
   }];

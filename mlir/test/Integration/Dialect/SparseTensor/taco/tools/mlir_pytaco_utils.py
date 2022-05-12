@@ -247,7 +247,7 @@ def _get_create_sparse_tensor_kernel(
 
   # Return the MLIR text kernel.
   return f"""
-!Ptr = type !llvm.ptr<i8>
+!Ptr = !llvm.ptr<i8>
 #enc = #sparse_tensor.encoding<{{
   dimLevelType = [ {sparsity} ]
 }}>
@@ -323,7 +323,7 @@ def _get_output_sparse_tensor_kernel(
 
   # Return the MLIR text kernel.
   return f"""
-!Ptr = type !llvm.ptr<i8>
+!Ptr = !llvm.ptr<i8>
 #enc = #sparse_tensor.encoding<{{
   dimLevelType = [ {sparsity} ]
 }}>

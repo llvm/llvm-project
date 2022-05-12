@@ -161,9 +161,9 @@ module.exports = grammar({
                              choice($.type, $.type_list_parens)),
 
     // Type aliases
-    //   type-alias-def ::= '!' alias-name '=' 'type' type
+    //   type-alias-def ::= '!' alias-name '=' type
     //   type-alias ::= '!' alias-name
-    type_alias_def : $ => seq('!', $.alias_name, '=', 'type', $.type),
+    type_alias_def : $ => seq('!', $.alias_name, '=', $.type),
     type_alias : $ => seq('!', $.alias_name),
 
     // Dialect Types

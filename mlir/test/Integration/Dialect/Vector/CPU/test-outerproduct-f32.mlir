@@ -3,15 +3,15 @@
 // RUN:   -shared-libs=%mlir_integration_test_dir/libmlir_c_runner_utils%shlibext | \
 // RUN: FileCheck %s
 
-!vector_type_A = type vector<8xf32>
-!vector_type_B = type vector<8xf32>
-!vector_type_C = type vector<8x8xf32>
+!vector_type_A = vector<8xf32>
+!vector_type_B = vector<8xf32>
+!vector_type_C = vector<8x8xf32>
 
-!vector_type_X = type vector<2xf32>
-!vector_type_Y = type vector<3xf32>
-!vector_type_Z = type vector<2x3xf32>
+!vector_type_X = vector<2xf32>
+!vector_type_Y = vector<3xf32>
+!vector_type_Z = vector<2x3xf32>
 
-!vector_type_R = type vector<7xf32>
+!vector_type_R = vector<7xf32>
 
 func.func @vector_outerproduct_splat_8x8(%fa: f32, %fb: f32, %fc: f32) -> !vector_type_C {
   %a = vector.splat %fa: !vector_type_A

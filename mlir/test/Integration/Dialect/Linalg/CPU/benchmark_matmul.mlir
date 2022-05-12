@@ -15,12 +15,12 @@
 // RUN: tee -a /dev/stderr | FileCheck %s
 
 
-!elem_type_a = type f32
-!elem_type_b = type f32
-!elem_type_c = type f32
-!row_major_A = type memref<${M}x${K}x!elem_type_a>
-!row_major_B = type memref<${K}x${N}x!elem_type_b>
-!row_major_C = type memref<${M}x${N}x!elem_type_c>
+!elem_type_a = f32
+!elem_type_b = f32
+!elem_type_c = f32
+!row_major_A = memref<${M}x${K}x!elem_type_a>
+!row_major_B = memref<${K}x${N}x!elem_type_b>
+!row_major_C = memref<${M}x${N}x!elem_type_c>
 
 func.func @matmul(%a: !row_major_A, %b: !row_major_B, %c: !row_major_C)
 // TODO: activate manually for now.

@@ -657,7 +657,7 @@ function-type ::= (type | type-list-parens) `->` (type | type-list-parens)
 ### Type Aliases
 
 ```
-type-alias-def ::= '!' alias-name '=' 'type' type
+type-alias-def ::= '!' alias-name '=' type
 type-alias ::= '!' alias-name
 ```
 
@@ -669,7 +669,7 @@ names are reserved for [dialect types](#dialect-types).
 Example:
 
 ```mlir
-!avx_m128 = type vector<4 x f32>
+!avx_m128 = vector<4 x f32>
 
 // Using the original type.
 "foo"(%x) : vector<4 x f32> -> ()

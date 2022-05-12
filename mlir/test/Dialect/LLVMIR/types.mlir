@@ -197,10 +197,10 @@ func.func @ptr_elem_interface(%arg0: !llvm.ptr<!test.smpla>) {
 // DialectAsmPrinter to have a mechanism for querying the presence and
 // usability of an alias outside of its `printType` method.
 
-!baz = type i64
-!qux = type !llvm.struct<(!baz)>
+!baz = i64
+!qux = !llvm.struct<(!baz)>
 
-!rec = type !llvm.struct<"a", (ptr<struct<"a">>)>
+!rec = !llvm.struct<"a", (ptr<struct<"a">>)>
 
 // CHECK: aliases
 llvm.func @aliases() {
