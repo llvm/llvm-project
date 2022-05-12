@@ -13,6 +13,7 @@
 #include "src/__support/arg_list.h"
 
 #include "src/__support/CPP/Bit.h"
+#include "src/__support/FPUtil/FPBits.h"
 #include "src/__support/ctype_utils.h"
 #include "src/__support/str_to_integer.h"
 
@@ -120,6 +121,7 @@ FormatSection Parser::get_next_section() {
         break;
       }
       break;
+      // TODO(michaelrj): add a flag to disable float point values here
     case ('f'):
     case ('F'):
     case ('e'):
@@ -132,7 +134,7 @@ FormatSection Parser::get_next_section() {
         section.conv_val_raw =
             bit_cast<uint64_t>(GET_ARG_VAL_SIMPLEST(double, conv_index));
       else
-        section.conv_val_raw = bit_cast<__uint128_t>(
+        section.conv_val_raw = bit_cast<fputil::FPBits<long double>::UIntType>(
             GET_ARG_VAL_SIMPLEST(long double, conv_index));
       break;
     case ('n'):
@@ -335,6 +337,7 @@ Parser::TypeDesc Parser::get_type_desc(size_t index) {
           break;
         }
         break;
+      // TODO(michaelrj): add a flag to disable float point values here
       case ('f'):
       case ('F'):
       case ('e'):
@@ -388,6 +391,7 @@ void Parser::args_to_index(size_t index) {
       args_cur.next_var<uint32_t>();
     else if (cur_type_desc == TYPE_DESC<uint64_t>)
       args_cur.next_var<uint64_t>();
+    // TODO(michaelrj): add a flag to disable float point values here
     // Floating point numbers are stored separately from the other arguments.
     else if (cur_type_desc == TYPE_DESC<double>)
       args_cur.next_var<double>();

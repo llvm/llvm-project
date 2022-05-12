@@ -37,3 +37,17 @@ add_object_library(
   DEPENDS
     libc.src.string.memory_utils.memset_implementation
 )
+
+add_object_library(
+  converter
+  SRCS
+    converter.cpp
+  HDRS
+    converter.h
+    converter_atlas.h
+    string_converter.h
+    char_converter.h
+  DEPENDS
+    .writer
+    .core_structs
+)
