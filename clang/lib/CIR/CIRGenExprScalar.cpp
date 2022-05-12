@@ -44,6 +44,10 @@ public:
     return I;
   }
 
+  //===--------------------------------------------------------------------===//
+  //                            Visitor Methods
+  //===--------------------------------------------------------------------===//
+
   mlir::Value Visit(Expr *E) {
     return StmtVisitor<ScalarExprEmitter, mlir::Value>::Visit(E);
   }
