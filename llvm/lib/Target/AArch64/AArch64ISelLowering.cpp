@@ -15512,6 +15512,23 @@ static SDValue foldOverflowCheck(SDNode *Op, SelectionDAG &DAG, bool IsAdd) {
                      CsetOp.getOperand(3));
 }
 
+// (ADC x 0 cond) => (CINC x HS cond)
+static SDValue foldADCToCINC(SDNode *N, SelectionDAG &DAG) {
+  SDValue LHS = N->getOperand(0);
+  SDValue RHS = N->getOperand(1);
+  SDValue Cond = N->getOperand(2);
+
+  if (!isNullConstant(RHS))
+    return SDValue();
+
+  EVT VT = N->getValueType(0);
+  SDLoc DL(N);
+
+  // (CINC x cc cond) <=> (CSINC x x !cc cond)
+  SDValue CC = DAG.getConstant(AArch64CC::LO, DL, MVT::i32);
+  return DAG.getNode(AArch64ISD::CSINC, DL, VT, LHS, LHS, CC, Cond);
+}
+
 static SDValue performAddSubCombine(SDNode *N,
                                     TargetLowering::DAGCombinerInfo &DCI,
                                     SelectionDAG &DAG) {
@@ -18721,7 +18738,9 @@ SDValue AArch64TargetLowering::PerformDAGCombine(SDNode *N,
   case AArch64ISD::ANDS:
     return performFlagSettingCombine(N, DCI, ISD::AND);
   case AArch64ISD::ADC:
-    return foldOverflowCheck(N, DAG, /* IsAdd */ true);
+    if (auto R = foldOverflowCheck(N, DAG, /* IsAdd */ true))
+      return R;
+    return foldADCToCINC(N, DAG);
   case AArch64ISD::SBC:
     return foldOverflowCheck(N, DAG, /* IsAdd */ false);
   case AArch64ISD::ADCS:

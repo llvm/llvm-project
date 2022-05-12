@@ -30,13 +30,13 @@ define i128 @test_imm(i128 %a) {
 ; CHECK-LE-LABEL: test_imm:
 ; CHECK-LE:       ; %bb.0:
 ; CHECK-LE-NEXT:    adds x0, x0, #12
-; CHECK-LE-NEXT:    adc x1, x1, xzr
+; CHECK-LE-NEXT:    cinc x1, x1, hs
 ; CHECK-LE-NEXT:    ret
 ;
 ; CHECK-BE-LABEL: test_imm:
 ; CHECK-BE:       // %bb.0:
 ; CHECK-BE-NEXT:    adds x1, x1, #12
-; CHECK-BE-NEXT:    adc x0, x0, xzr
+; CHECK-BE-NEXT:    cinc x0, x0, hs
 ; CHECK-BE-NEXT:    ret
 
   %val = add i128 %a, 12

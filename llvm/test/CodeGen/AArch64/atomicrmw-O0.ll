@@ -219,8 +219,7 @@ define i128 @test_rmw_add_128(i128* %dst)   {
 ; NOLSE-NEXT:    ldr x8, [sp, #32] // 8-byte Folded Reload
 ; NOLSE-NEXT:    ldr x13, [sp, #24] // 8-byte Folded Reload
 ; NOLSE-NEXT:    adds x14, x8, #1
-; NOLSE-NEXT:    mov x9, xzr
-; NOLSE-NEXT:    adc x15, x11, x9
+; NOLSE-NEXT:    cinc x15, x11, hs
 ; NOLSE-NEXT:  .LBB4_2: // %atomicrmw.start
 ; NOLSE-NEXT:    // Parent Loop BB4_1 Depth=1
 ; NOLSE-NEXT:    // => This Inner Loop Header: Depth=2
@@ -271,14 +270,13 @@ define i128 @test_rmw_add_128(i128* %dst)   {
 ; LSE-NEXT:    ldr x10, [sp, #72] // 8-byte Folded Reload
 ; LSE-NEXT:    ldr x8, [sp, #64] // 8-byte Folded Reload
 ; LSE-NEXT:    ldr x9, [sp, #56] // 8-byte Folded Reload
-; LSE-NEXT:    adds x2, x8, #1
-; LSE-NEXT:    mov x11, xzr
-; LSE-NEXT:    adc x11, x10, x11
-; LSE-NEXT:    // kill: def $x2 killed $x2 def $x2_x3
-; LSE-NEXT:    mov x3, x11
 ; LSE-NEXT:    mov x0, x8
 ; LSE-NEXT:    mov x1, x10
 ; LSE-NEXT:    stp x0, x1, [sp, #8] // 16-byte Folded Spill
+; LSE-NEXT:    adds x2, x8, #1
+; LSE-NEXT:    cinc x11, x10, hs
+; LSE-NEXT:    // kill: def $x2 killed $x2 def $x2_x3
+; LSE-NEXT:    mov x3, x11
 ; LSE-NEXT:    caspal x0, x1, x2, x3, [x9]
 ; LSE-NEXT:    stp x0, x1, [sp, #24] // 16-byte Folded Spill
 ; LSE-NEXT:    mov x9, x1
