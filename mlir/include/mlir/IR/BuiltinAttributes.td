@@ -237,7 +237,7 @@ def Builtin_DenseIntOrFPElementsAttr : Builtin_Attr<
     /// element type of 'type'. 'type' must be a vector or tensor with static
     /// shape.
     ///
-    /// If the `values` array only has a single element, then this  constructs
+    /// If the `values` array only has a single element, then this constructs
     /// splat of that value.
     static DenseElementsAttr getRaw(ShapedType type, size_t storageWidth,
                                     ArrayRef<APFloat> values);
@@ -246,7 +246,7 @@ def Builtin_DenseIntOrFPElementsAttr : Builtin_Attr<
     /// Each APInt value is expected to have the same bitwidth as the element
     /// type of 'type'. 'type' must be a vector or tensor with static shape.
     ///
-    /// If the `values` array only has a single element, then this  constructs
+    /// If the `values` array only has a single element, then this constructs
     /// splat of that value.
     static DenseElementsAttr getRaw(ShapedType type, size_t storageWidth,
                                     ArrayRef<APInt> values);
@@ -254,7 +254,7 @@ def Builtin_DenseIntOrFPElementsAttr : Builtin_Attr<
     /// Get or create a new dense elements attribute instance with the given raw
     /// data buffer. 'type' must be a vector or tensor with static shape.
     ///
-    /// If the `values` array only has a single element, then this  constructs
+    /// If the `values` array only has a single element, then this constructs
     /// splat of that value.
     static DenseElementsAttr getRaw(ShapedType type, ArrayRef<char> data);
 
@@ -315,7 +315,7 @@ def Builtin_DenseStringElementsAttr : Builtin_Attr<
   let builders = [
     AttrBuilderWithInferredContext<(ins "ShapedType":$type,
                                         "ArrayRef<StringRef>":$values), [{
-      return $_get(type.getContext(), type, values, 
+      return $_get(type.getContext(), type, values,
                    /* isSplat */(values.size() == 1));
     }]>,
   ];
