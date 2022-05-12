@@ -108,6 +108,10 @@ public:
           EmitImplicitIntegerSignChangeChecks(
               SanOpts.has(SanitizerKind::ImplicitIntegerSignChange)) {}
   };
+  mlir::Value buildScalarCast(mlir::Value Src, QualType SrcType,
+                              QualType DstType, mlir::Type SrcTy,
+                              mlir::Type DstTy, ScalarConversionOpts Opts);
+
   // Emit code for an explicit or implicit cast.  Implicit
   // casts have to handle a more broad range of conversions than explicit
   // casts, as they handle things like function to ptr-to-function decay
@@ -175,6 +179,7 @@ public:
           CGF.getLoc(E->getExprLoc()), Ty,
           mlir::cir::NullAttr::get(Builder.getContext(), Ty));
     }
+
     case CK_NullToMemberPointer:
       llvm_unreachable("NYI");
     case CK_ReinterpretMemberPointer:
@@ -615,7 +620,6 @@ public:
       assert(0 && "not implemented");
 
     // Finally, we have the arithmetic types: real int/float.
-    assert(0 && "not implemented");
     mlir::Value Res = nullptr;
     mlir::Type ResTy = DstTy;
 
@@ -633,7 +637,8 @@ public:
       llvm_unreachable("NYI");
     }
 
-    // TODO: Res = EmitScalarCast(Src, SrcType, DstType, SrcTy, DstTy, Opts);
+    Res = buildScalarCast(Src, SrcType, DstType, SrcTy, DstTy, Opts);
+
     if (DstTy != ResTy) {
       llvm_unreachable("NYI");
     }
@@ -714,3 +719,46 @@ mlir::Value ScalarExprEmitter::VisitInitListExpr(InitListExpr *E) {
   return Visit(E->getInit(0));
 }
 
+mlir::Value ScalarExprEmitter::buildScalarCast(
+    mlir::Value Src, QualType SrcType, QualType DstType, mlir::Type SrcTy,
+    mlir::Type DstTy, ScalarConversionOpts Opts) {
+  // The Element types determine the type of cast to perform.
+  mlir::Type SrcElementTy;
+  mlir::Type DstElementTy;
+  QualType SrcElementType;
+  QualType DstElementType;
+  if (SrcType->isMatrixType() || DstType->isMatrixType()) {
+    llvm_unreachable("NYI");
+  } else {
+    assert(!SrcType->isMatrixType() && !DstType->isMatrixType() &&
+           "cannot cast between matrix and non-matrix types");
+    SrcElementTy = SrcTy;
+    DstElementTy = DstTy;
+    SrcElementType = SrcType;
+    DstElementType = DstType;
+  }
+
+  if (SrcElementTy.isa<mlir::IntegerType>()) {
+    bool InputSigned = SrcElementType->isSignedIntegerOrEnumerationType();
+    if (SrcElementType->isBooleanType() && Opts.TreatBooleanAsSigned) {
+      llvm_unreachable("NYI");
+    }
+
+    if (DstElementTy.isa<mlir::IntegerType>())
+      return Builder.create<mlir::cir::CastOp>(
+          Src.getLoc(), DstTy, mlir::cir::CastKind::integral, Src);
+    if (InputSigned)
+      llvm_unreachable("NYI");
+
+    llvm_unreachable("NYI");
+  }
+
+  if (DstElementTy.isa<mlir::IntegerType>()) {
+    llvm_unreachable("NYI");
+  }
+
+  // if (DstElementTy.getTypeID() < SrcElementTy.getTypeID())
+  //   llvm_unreachable("NYI");
+
+  llvm_unreachable("NYI");
+}
