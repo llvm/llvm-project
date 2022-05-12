@@ -1748,28 +1748,28 @@ define <2 x i64> @uabd_i32(<2 x i32> %a, <2 x i32> %b) {
 define <2 x i128> @uabd_i64(<2 x i64> %a, <2 x i64> %b) {
 ; CHECK-LABEL: uabd_i64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    fmov x9, d0
-; CHECK-NEXT:    fmov x11, d1
 ; CHECK-NEXT:    mov.d x8, v0[1]
+; CHECK-NEXT:    fmov x9, d0
 ; CHECK-NEXT:    mov.d x10, v1[1]
+; CHECK-NEXT:    fmov x11, d1
 ; CHECK-NEXT:    asr x12, x9, #63
 ; CHECK-NEXT:    asr x13, x11, #63
 ; CHECK-NEXT:    subs x9, x9, x11
-; CHECK-NEXT:    sbcs x11, x12, x13
+; CHECK-NEXT:    sbc x11, x12, x13
 ; CHECK-NEXT:    asr x12, x8, #63
 ; CHECK-NEXT:    asr x13, x10, #63
 ; CHECK-NEXT:    subs x8, x8, x10
-; CHECK-NEXT:    sbcs x10, x12, x13
-; CHECK-NEXT:    asr x13, x11, #63
-; CHECK-NEXT:    asr x12, x10, #63
-; CHECK-NEXT:    eor x8, x8, x12
-; CHECK-NEXT:    eor x10, x10, x12
-; CHECK-NEXT:    subs x2, x8, x12
-; CHECK-NEXT:    eor x8, x9, x13
-; CHECK-NEXT:    sbcs x3, x10, x12
-; CHECK-NEXT:    eor x9, x11, x13
-; CHECK-NEXT:    subs x8, x8, x13
-; CHECK-NEXT:    sbcs x1, x9, x13
+; CHECK-NEXT:    sbc x10, x12, x13
+; CHECK-NEXT:    asr x12, x11, #63
+; CHECK-NEXT:    asr x13, x10, #63
+; CHECK-NEXT:    eor x9, x9, x12
+; CHECK-NEXT:    eor x8, x8, x13
+; CHECK-NEXT:    eor x10, x10, x13
+; CHECK-NEXT:    subs x2, x8, x13
+; CHECK-NEXT:    sbc x3, x10, x13
+; CHECK-NEXT:    subs x8, x9, x12
+; CHECK-NEXT:    eor x9, x11, x12
+; CHECK-NEXT:    sbc x1, x9, x12
 ; CHECK-NEXT:    fmov d0, x8
 ; CHECK-NEXT:    mov.d v0[1], x1
 ; CHECK-NEXT:    fmov x0, d0
