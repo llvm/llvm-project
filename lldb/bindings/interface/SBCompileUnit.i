@@ -67,6 +67,22 @@ public:
     lldb::SBLineEntry
     GetLineEntryAtIndex (uint32_t idx) const;
 
+    %feature("docstring", "
+     Get the index for a provided line entry in this compile unit.
+
+     @param[in] line_entry
+        The SBLineEntry object for which we are looking for the index.
+
+     @param[in] exact
+        An optional boolean defaulting to false that ensures that the provided
+        line entry has a perfect match in the compile unit.
+
+     @return
+        The index of the user-provided line entry. UINT32_MAX if the line entry
+        was not found in the compile unit.") GetIndexForLineEntry;
+    uint32_t
+    GetIndexForLineEntry (lldb::SBLineEntry &line_entry, bool exact = false) const;
+
     uint32_t
     FindLineEntryIndex (uint32_t start_idx,
                         uint32_t line,
