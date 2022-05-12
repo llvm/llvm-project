@@ -49,6 +49,29 @@ func.func @generalize_matmul_tensor(%A : tensor<16x8xf32>, %B: tensor<8x32xf32>,
 
 // -----
 
+func.func @generalize_matmul_tensor_complex(%A : tensor<16x8xcomplex<f32>>,
+                                            %B: tensor<8x32xcomplex<f32>>,
+                                            %C: tensor<16x32xcomplex<f32>>)
+          -> tensor<16x32xcomplex<f32>> {
+  %0 = linalg.matmul ins(%A, %B: tensor<16x8xcomplex<f32>>, tensor<8x32xcomplex<f32>>)
+                    outs(%C: tensor<16x32xcomplex<f32>>) -> tensor<16x32xcomplex<f32>>
+  return %0: tensor<16x32xcomplex<f32>>
+}
+
+// CHECK: func @generalize_matmul_tensor_complex
+
+// CHECK: linalg.generic
+// CHECK-SAME:  ins(%{{.+}}, %{{.+}} : tensor<16x8xcomplex<f32>>, tensor<8x32xcomplex<f32>>)
+// CHECK-SAME: outs(%{{.+}} : tensor<16x32xcomplex<f32>>)
+
+// CHECK:      ^{{.*}}(%[[A_ARG:.+]]: complex<f32>, %[[B_ARG:.+]]: complex<f32>, %[[C_ARG:.+]]: complex<f32>)
+// CHECK-NEXT:   %[[MUL:.+]] = complex.mul %[[A_ARG]], %[[B_ARG]] : complex<f32>
+// CHECK-NEXT:   %[[ADD:.+]] = complex.add %[[C_ARG]], %[[MUL]] : complex<f32>
+// CHECK-NEXT:   linalg.yield %[[ADD]] : complex<f32>
+// CHECK-NEXT: -> tensor<16x32xcomplex<f32>>
+
+// -----
+
 func.func @depthwise_conv_2d_nhwc_hwcm(%input: memref<2x4x5x2xf32>, %filter: memref<2x2x2x3xf32>, %output: memref<2x3x4x2x3xf32>) {
   linalg.depthwise_conv_2d_nhwc_hwcm
      { dilations = dense<1> : tensor<2xi64>, strides = dense<1> : tensor<2xi64> }
