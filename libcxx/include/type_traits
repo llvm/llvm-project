@@ -536,10 +536,6 @@ struct _MetaBase<true> {
   using _SelectImpl _LIBCPP_NODEBUG = _Tp;
   template <template <class...> class _FirstFn, template <class...> class, class ..._Args>
   using _SelectApplyImpl _LIBCPP_NODEBUG = _FirstFn<_Args...>;
-  template <class _First, class...>
-  using _FirstImpl _LIBCPP_NODEBUG = _First;
-  template <class, class _Second, class...>
-  using _SecondImpl _LIBCPP_NODEBUG = _Second;
   template <class _Result, class _First, class ..._Rest>
   using _OrImpl _LIBCPP_NODEBUG = typename _MetaBase<_First::value != true && sizeof...(_Rest) != 0>::template _OrImpl<_First, _Rest...>;
 };
@@ -557,10 +553,6 @@ template <bool _Cond, class _IfRes, class _ElseRes>
 using _If _LIBCPP_NODEBUG = typename _MetaBase<_Cond>::template _SelectImpl<_IfRes, _ElseRes>;
 template <class ..._Rest>
 using _Or _LIBCPP_NODEBUG = typename _MetaBase< sizeof...(_Rest) != 0 >::template _OrImpl<false_type, _Rest...>;
-template <class ..._Args>
-using _FirstType _LIBCPP_NODEBUG = typename _MetaBase<(sizeof...(_Args) >= 1)>::template _FirstImpl<_Args...>;
-template <class ..._Args>
-using _SecondType _LIBCPP_NODEBUG = typename _MetaBase<(sizeof...(_Args) >= 2)>::template _SecondImpl<_Args...>;
 
 template <class ...> using __expand_to_true = true_type;
 template <class ..._Pred>
@@ -1697,10 +1689,8 @@ using _IsCharLikeType = _And<is_standard_layout<_CharT>, is_trivial<_CharT> >;
 template<class _Tp>
 using __make_const_lvalue_ref = const typename remove_reference<_Tp>::type&;
 
-#if _LIBCPP_STD_VER > 17
 template<bool _Const, class _Tp>
-using __maybe_const = conditional_t<_Const, const _Tp, _Tp>;
-#endif // _LIBCPP_STD_VER > 17
+using __maybe_const = typename conditional<_Const, const _Tp, _Tp>::type;
 
 _LIBCPP_END_NAMESPACE_STD
 
