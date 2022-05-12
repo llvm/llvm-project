@@ -74,7 +74,7 @@ body:             |
   ; R6:   successors: %bb.2(0x50000000), %bb.1(0x30000000)
   ; R6:   $f0 = CMP_EQ_D killed $d12_64, killed $d14_64
   ; R6:   BC1NEZ $d0_64, %bb.2 {
-  ; R6:     NOP
+  ; R6:     $zero = SLL $zero, 0
   ; R6:   }
   ; R6: bb.1.entry:
   ; R6:   successors: %bb.3(0x80000000)
@@ -93,7 +93,7 @@ body:             |
   ; PIC:   successors: %bb.3(0x50000000), %bb.1(0x30000000)
   ; PIC:   $f0 = CMP_EQ_D killed $d12_64, killed $d14_64
   ; PIC:   BC1NEZ $d0_64, %bb.3 {
-  ; PIC:     NOP
+  ; PIC:     $zero = SLL $zero, 0
   ; PIC:   }
   ; PIC: bb.1.entry:
   ; PIC:   successors: %bb.2(0x80000000)
@@ -174,7 +174,7 @@ body:             |
   ; R6:   successors: %bb.2(0x50000000), %bb.1(0x30000000)
   ; R6:   $f0 = CMP_EQ_D killed $d12_64, killed $d14_64
   ; R6:   BC1EQZ $d0_64, %bb.2 {
-  ; R6:     NOP
+  ; R6:     $zero = SLL $zero, 0
   ; R6:   }
   ; R6: bb.1.entry:
   ; R6:   successors: %bb.3(0x80000000)
@@ -193,7 +193,7 @@ body:             |
   ; PIC:   successors: %bb.3(0x50000000), %bb.1(0x30000000)
   ; PIC:   $f0 = CMP_EQ_D killed $d12_64, killed $d14_64
   ; PIC:   BC1EQZ $d0_64, %bb.3 {
-  ; PIC:     NOP
+  ; PIC:     $zero = SLL $zero, 0
   ; PIC:   }
   ; PIC: bb.1.entry:
   ; PIC:   successors: %bb.2(0x80000000)

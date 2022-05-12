@@ -730,7 +730,7 @@ static bool canPaddingBeAccessed(Argument *Arg) {
     Value *V = WorkList.pop_back_val();
     if (isa<GetElementPtrInst>(V) || isa<PHINode>(V)) {
       if (PtrValues.insert(V).second)
-        llvm::append_range(WorkList, V->users());
+        append_range(WorkList, V->users());
     } else if (StoreInst *Store = dyn_cast<StoreInst>(V)) {
       Stores.push_back(Store);
     } else if (!isa<LoadInst>(V)) {
@@ -848,9 +848,23 @@ promoteArguments(Function *F, function_ref<AAResults &(Function &F)> AARGetter,
       }
     }
 
-    // If this is a byval argument, and if the aggregate type is small, just
-    // pass the elements, which is always safe, if the passed value is densely
-    // packed or if we can prove the padding bytes are never accessed.
+    // If we can promote the pointer to its value.
+    SmallVector<OffsetAndArgPart, 4> ArgParts;
+    if (findArgParts(PtrArg, DL, AAR, MaxElements, IsRecursive, ArgParts)) {
+      SmallVector<Type *, 4> Types;
+      for (const auto &Pair : ArgParts)
+        Types.push_back(Pair.second.Ty);
+
+      if (areTypesABICompatible(Types, *F, TTI)) {
+        ArgsToPromote.insert({PtrArg, std::move(ArgParts)});
+        continue;
+      }
+    }
+
+    // Otherwise, if this is a byval argument, and if the aggregate type is
+    // small, just pass the elements, which is always safe, if the passed value
+    // is densely packed or if we can prove the padding bytes are never
+    // accessed.
     //
     // Only handle arguments with specified alignment; if it's unspecified, the
     // actual alignment of the argument is target-specific.
@@ -859,43 +873,32 @@ promoteArguments(Function *F, function_ref<AAResults &(Function &F)> AARGetter,
         ByValTy && PtrArg->getParamAlign() &&
         (ArgumentPromotionPass::isDenselyPacked(ByValTy, DL) ||
          !canPaddingBeAccessed(PtrArg));
-    if (IsSafeToPromote) {
-      if (StructType *STy = dyn_cast<StructType>(ByValTy)) {
-        if (MaxElements > 0 && STy->getNumElements() > MaxElements) {
-          LLVM_DEBUG(dbgs() << "ArgPromotion disables promoting argument '"
-                            << PtrArg->getName()
-                            << "' because it would require adding more"
-                            << " than " << MaxElements
-                            << " arguments to the function.\n");
-          continue;
-        }
-
-        SmallVector<Type *, 4> Types;
-        append_range(Types, STy->elements());
-
-        // If all the elements are single-value types, we can promote it.
-        bool AllSimple =
-            all_of(Types, [](Type *Ty) { return Ty->isSingleValueType(); });
-
-        // Safe to transform, don't even bother trying to "promote" it.
-        // Passing the elements as a scalar will allow sroa to hack on
-        // the new alloca we introduce.
-        if (AllSimple && areTypesABICompatible(Types, *F, TTI)) {
-          ByValArgsToTransform.insert(PtrArg);
-          continue;
-        }
-      }
+    if (!IsSafeToPromote) {
+      LLVM_DEBUG(dbgs() << "ArgPromotion disables passing the elements of"
+                        << " the argument '" << PtrArg->getName()
+                        << "' because it is not safe.\n");
+      continue;
     }
-
-    // Otherwise, see if we can promote the pointer to its value.
-    SmallVector<OffsetAndArgPart, 4> ArgParts;
-    if (findArgParts(PtrArg, DL, AAR, MaxElements, IsRecursive, ArgParts)) {
+    if (StructType *STy = dyn_cast<StructType>(ByValTy)) {
+      if (MaxElements > 0 && STy->getNumElements() > MaxElements) {
+        LLVM_DEBUG(dbgs() << "ArgPromotion disables passing the elements of"
+                          << " the argument '" << PtrArg->getName()
+                          << "' because it would require adding more"
+                          << " than " << MaxElements
+                          << " arguments to the function.\n");
+        continue;
+      }
       SmallVector<Type *, 4> Types;
-      for (const auto &Pair : ArgParts)
-        Types.push_back(Pair.second.Ty);
+      append_range(Types, STy->elements());
 
-      if (areTypesABICompatible(Types, *F, TTI))
-        ArgsToPromote.insert({PtrArg, std::move(ArgParts)});
+      // If all the elements are single-value types, we can promote it.
+      bool AllSimple =
+          all_of(Types, [](Type *Ty) { return Ty->isSingleValueType(); });
+
+      // Safe to transform. Passing the elements as a scalar will allow sroa to
+      // hack on the new alloca we introduce.
+      if (AllSimple && areTypesABICompatible(Types, *F, TTI))
+        ByValArgsToTransform.insert(PtrArg);
     }
   }
 

@@ -187,10 +187,7 @@ public:
 
   /// Returns a range to iterate over the LiteralElements.
   auto getLiteralElements() const {
-    // The use of std::function is unfortunate but necessary here. Lambda
-    // functions cannot be copied but std::function can be copied. This copy
-    // constructor is used in llvm::zip.
-    std::function<LiteralElement *(FormatElement * el)>
+    function_ref<LiteralElement *(FormatElement * el)>
         literalElementCastConverter =
             [](FormatElement *el) { return cast<LiteralElement>(el); };
     return llvm::map_range(literalElements, literalElementCastConverter);

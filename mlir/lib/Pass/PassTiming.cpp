@@ -52,7 +52,7 @@ struct PassTiming : public PassInstrumentation {
   // Pipeline
   //===--------------------------------------------------------------------===//
 
-  void runBeforePipeline(StringAttr name,
+  void runBeforePipeline(Optional<OperationName> name,
                          const PipelineParentInfo &parentInfo) override {
     auto tid = llvm::get_threadid();
     auto &activeTimers = activeThreadTimers[tid];
@@ -68,12 +68,17 @@ struct PassTiming : public PassInstrumentation {
     } else {
       parentScope = &activeTimers.back();
     }
-    activeTimers.push_back(parentScope->nest(name.getAsOpaquePointer(), [name] {
-      return ("'" + name.strref() + "' Pipeline").str();
+
+    // Use nullptr to anchor op-agnostic pipelines, otherwise use the name of
+    // the operation.
+    const void *timerId = name ? name->getAsOpaquePointer() : nullptr;
+    activeTimers.push_back(parentScope->nest(timerId, [name] {
+      return ("'" + (name ? name->getStringRef() : "any") + "' Pipeline").str();
     }));
   }
 
-  void runAfterPipeline(StringAttr, const PipelineParentInfo &) override {
+  void runAfterPipeline(Optional<OperationName>,
+                        const PipelineParentInfo &) override {
     auto &activeTimers = activeThreadTimers[llvm::get_threadid()];
     assert(!activeTimers.empty() && "expected active timer");
     activeTimers.pop_back();

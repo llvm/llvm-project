@@ -24,6 +24,29 @@ namespace a {
     c::~c() {}
 }
 
+namespace aa {
+    class cc {
+    public:
+        cc();
+        ~cc();
+        void func1() 
+        {
+            puts (__PRETTY_FUNCTION__);
+        }
+        void func2() 
+        {
+            puts (__PRETTY_FUNCTION__);
+        }
+        void func3() 
+        {
+            puts (__PRETTY_FUNCTION__);
+        }
+    };
+
+    cc::cc() {}
+    cc::~cc() {}
+}
+
 namespace b {
     class c {
     public:
@@ -62,11 +85,15 @@ namespace c {
 int main (int argc, char const *argv[])
 {
     a::c ac;
+    aa::cc aac;
     b::c bc;
     c::d cd;
     ac.func1();
     ac.func2();
     ac.func3();
+    aac.func1();
+    aac.func2();
+    aac.func3();
     bc.func1();
     bc.func3();
     cd.func2();

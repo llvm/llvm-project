@@ -224,8 +224,7 @@ void RegReAssign::aggressivePassOverFunction(BinaryFunction &Function) {
   // analysis passes
   bool Bail = true;
   int64_t LowScoreClassic = std::numeric_limits<int64_t>::max();
-  for (int J = ClassicRegs.find_first(); J != -1;
-       J = ClassicRegs.find_next(J)) {
+  for (int J : ClassicRegs.set_bits()) {
     if (RegScore[J] <= 0)
       continue;
     Bail = false;
@@ -239,7 +238,7 @@ void RegReAssign::aggressivePassOverFunction(BinaryFunction &Function) {
   Extended &= GPRegs;
   Bail = true;
   int64_t HighScoreExtended = 0;
-  for (int J = Extended.find_first(); J != -1; J = Extended.find_next(J)) {
+  for (int J : Extended.set_bits()) {
     if (RegScore[J] <= 0)
       continue;
     Bail = false;
@@ -326,8 +325,7 @@ bool RegReAssign::conservativePassOverFunction(BinaryFunction &Function) {
   // Try swapping R12, R13, R14 or R15 with RBX (we work with all callee-saved
   // regs except RBP)
   MCPhysReg Candidate = 0;
-  for (int J = ExtendedCSR.find_first(); J != -1;
-       J = ExtendedCSR.find_next(J))
+  for (int J : ExtendedCSR.set_bits())
     if (RegScore[J] > RegScore[Candidate])
       Candidate = J;
 
@@ -337,7 +335,7 @@ bool RegReAssign::conservativePassOverFunction(BinaryFunction &Function) {
   // Check if our classic callee-saved reg (RBX is the only one) has lower
   // score / utilization rate
   MCPhysReg RBX = 0;
-  for (int I = ClassicCSR.find_first(); I != -1; I = ClassicCSR.find_next(I)) {
+  for (int I : ClassicCSR.set_bits()) {
     int64_t ScoreRBX = RegScore[I];
     if (ScoreRBX <= 0)
       continue;

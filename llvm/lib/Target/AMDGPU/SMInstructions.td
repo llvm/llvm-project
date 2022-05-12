@@ -110,10 +110,11 @@ class SM_Load_Pseudo <string opName, dag outs, dag ins, string asmOps, list<dag>
   let has_dlc = 1;
 }
 
-class SM_Store_Pseudo <string opName, dag ins, string asmOps, list<dag> pattern = []>
-  : SM_Pseudo<opName, (outs), ins, asmOps, pattern> {
-  RegisterClass BaseClass;
-  RegisterClass SrcClass;
+class SM_Store_Pseudo <string opName, RegisterClass baseClass,
+                       RegisterClass srcClass, dag ins, string asmOps>
+  : SM_Pseudo<opName, (outs), ins, asmOps, []> {
+  RegisterClass BaseClass = baseClass;
+  RegisterClass SrcClass = srcClass;
   let mayLoad = 0;
   let mayStore = 1;
   let has_glc = 1;
@@ -177,22 +178,27 @@ multiclass SM_Pseudo_Loads<string opName,
 multiclass SM_Pseudo_Stores<string opName,
                            RegisterClass baseClass,
                            RegisterClass srcClass> {
-  def _IMM  : SM_Store_Pseudo <opName,
+  def _IMM : SM_Store_Pseudo <opName, baseClass, srcClass,
     (ins srcClass:$sdata, baseClass:$sbase, i32imm:$offset, CPol:$cpol),
-    " $sdata, $sbase, $offset$cpol", []> {
+    " $sdata, $sbase, $offset$cpol"> {
     let has_offset = 1;
-    let BaseClass = baseClass;
-    let SrcClass = srcClass;
     let PseudoInstr = opName # "_IMM";
   }
 
-  def _SGPR  : SM_Store_Pseudo <opName,
+  def _SGPR : SM_Store_Pseudo <opName, baseClass, srcClass,
     (ins srcClass:$sdata, baseClass:$sbase, SReg_32:$soffset, CPol:$cpol),
-    " $sdata, $sbase, $soffset$cpol", []> {
+    " $sdata, $sbase, $soffset$cpol"> {
     let has_soffset = 1;
-    let BaseClass = baseClass;
-    let SrcClass = srcClass;
     let PseudoInstr = opName # "_SGPR";
+  }
+
+  def _SGPR_IMM : SM_Store_Pseudo <opName, baseClass, srcClass,
+    (ins srcClass:$sdata, baseClass:$sbase, SReg_32:$soffset, i32imm:$offset,
+     CPol:$cpol),
+    " $sdata, $sbase, $soffset$offset$cpol"> {
+    let has_offset = 1;
+    let has_soffset = 1;
+    let PseudoInstr = opName # "_SGPR_IMM";
   }
 }
 
@@ -947,6 +953,11 @@ multiclass SM_Real_Stores_gfx10<bits<8> op, string ps,
 
   def _SGPR_gfx10 : SMEM_Real_Store_gfx10 <op, sgprPs> {
     let InOperandList = (ins sgprPs.SrcClass:$sdata, sgprPs.BaseClass:$sbase, SReg_32:$soffset, CPol:$cpol);
+  }
+
+  def _SGPR_IMM_gfx10 : SMEM_Real_Store_gfx10 <op, !cast<SM_Store_Pseudo>(ps#_SGPR_IMM)> {
+    let InOperandList = (ins sgprPs.SrcClass:$sdata, sgprPs.BaseClass:$sbase,
+                             SReg_32:$soffset, smem_offset_mod:$offset, CPol:$cpol);
   }
 }
 

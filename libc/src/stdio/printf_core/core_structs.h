@@ -10,6 +10,7 @@
 #define LLVM_LIBC_SRC_STDIO_PRINTF_CORE_CORE_STRUCTS_H
 
 #include "src/__support/CPP/StringView.h"
+#include "src/__support/FPUtil/FPBits.h"
 
 #include <inttypes.h>
 #include <stddef.h>
@@ -45,7 +46,8 @@ struct FormatSection {
   int min_width = 0;
   int precision = -1;
 
-  __uint128_t conv_val_raw; // Needs to be large enough to hold a long double.
+  // Needs to be large enough to hold a long double.
+  fputil::FPBits<long double>::UIntType conv_val_raw;
   void *conv_val_ptr;
 
   char conv_name;

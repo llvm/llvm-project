@@ -2184,6 +2184,29 @@ private:
                                              const DataLayout &DL,
                                              ScalarEvolution &SE,
                                              const BoUpSLP &R);
+
+  /// Helper for `findExternalStoreUsersReorderIndices()`. It iterates over the
+  /// users of \p TE and collects the stores. It returns the map from the store
+  /// pointers to the collected stores.
+  DenseMap<Value *, SmallVector<StoreInst *, 4>>
+  collectUserStores(const BoUpSLP::TreeEntry *TE) const;
+
+  /// Helper for `findExternalStoreUsersReorderIndices()`. It checks if the
+  /// stores in \p StoresVec can for a vector instruction. If so it returns true
+  /// and populates \p ReorderIndices with the shuffle indices of the the stores
+  /// when compared to the sorted vector.
+  bool CanFormVector(const SmallVector<StoreInst *, 4> &StoresVec,
+                     OrdersType &ReorderIndices) const;
+
+  /// Iterates through the users of \p TE, looking for scalar stores that can be
+  /// potentially vectorized in a future SLP-tree. If found, it keeps track of
+  /// their order and builds an order index vector for each store bundle. It
+  /// returns all these order vectors found.
+  /// We run this after the tree has formed, otherwise we may come across user
+  /// instructions that are not yet in the tree.
+  SmallVector<OrdersType, 1>
+  findExternalStoreUsersReorderIndices(TreeEntry *TE) const;
+
   struct TreeEntry {
     using VecTreeTy = SmallVector<std::unique_ptr<TreeEntry>, 8>;
     TreeEntry(VecTreeTy &Container) : Container(Container) {}
@@ -3584,11 +3607,25 @@ void BoUpSLP::reorderTopToBottom() {
   // ExtractElement gather nodes which can be vectorized and need to handle
   // their ordering.
   DenseMap<const TreeEntry *, OrdersType> GathersToOrders;
+
+  // Maps a TreeEntry to the reorder indices of external users.
+  DenseMap<const TreeEntry *, SmallVector<OrdersType, 1>>
+      ExternalUserReorderMap;
   // Find all reorderable nodes with the given VF.
   // Currently the are vectorized stores,loads,extracts + some gathering of
   // extracts.
-  for_each(VectorizableTree, [this, &VFToOrderedEntries, &GathersToOrders](
+  for_each(VectorizableTree, [this, &VFToOrderedEntries, &GathersToOrders,
+                              &ExternalUserReorderMap](
                                  const std::unique_ptr<TreeEntry> &TE) {
+    // Look for external users that will probably be vectorized.
+    SmallVector<OrdersType, 1> ExternalUserReorderIndices =
+        findExternalStoreUsersReorderIndices(TE.get());
+    if (!ExternalUserReorderIndices.empty()) {
+      VFToOrderedEntries[TE->Scalars.size()].insert(TE.get());
+      ExternalUserReorderMap.try_emplace(TE.get(),
+                                         std::move(ExternalUserReorderIndices));
+    }
+
     if (Optional<OrdersType> CurrentOrder =
             getReorderingData(*TE, /*TopToBottom=*/true)) {
       // Do not include ordering for nodes used in the alt opcode vectorization,
@@ -3643,10 +3680,23 @@ void BoUpSLP::reorderTopToBottom() {
         continue;
       // Count number of orders uses.
       const auto &Order = [OpTE, &GathersToOrders]() -> const OrdersType & {
-        if (OpTE->State == TreeEntry::NeedToGather)
-          return GathersToOrders.find(OpTE)->second;
+        if (OpTE->State == TreeEntry::NeedToGather) {
+          auto It = GathersToOrders.find(OpTE);
+          if (It != GathersToOrders.end())
+            return It->second;
+        }
         return OpTE->ReorderIndices;
       }();
+      // First consider the order of the external scalar users.
+      auto It = ExternalUserReorderMap.find(OpTE);
+      if (It != ExternalUserReorderMap.end()) {
+        const auto &ExternalUserReorderIndices = It->second;
+        for (const OrdersType &ExtOrder : ExternalUserReorderIndices)
+          ++OrdersUses.insert(std::make_pair(ExtOrder, 0)).first->second;
+        // No other useful reorder data in this entry.
+        if (Order.empty())
+          continue;
+      }
       // Stores actually store the mask, not the order, need to invert.
       if (OpTE->State == TreeEntry::Vectorize && !OpTE->isAltShuffle() &&
           OpTE->getOpcode() == Instruction::Store && !Order.empty()) {
@@ -4076,6 +4126,151 @@ void BoUpSLP::buildExternalUses(
       }
     }
   }
+}
+
+DenseMap<Value *, SmallVector<StoreInst *, 4>>
+BoUpSLP::collectUserStores(const BoUpSLP::TreeEntry *TE) const {
+  DenseMap<Value *, SmallVector<StoreInst *, 4>> PtrToStoresMap;
+  for (unsigned Lane : seq<unsigned>(0, TE->Scalars.size())) {
+    Value *V = TE->Scalars[Lane];
+    // To save compilation time we don't visit if we have too many users.
+    static constexpr unsigned UsersLimit = 4;
+    if (V->hasNUsesOrMore(UsersLimit))
+      break;
+
+    // Collect stores per pointer object.
+    for (User *U : V->users()) {
+      auto *SI = dyn_cast<StoreInst>(U);
+      if (SI == nullptr || !SI->isSimple() ||
+          !isValidElementType(SI->getValueOperand()->getType()))
+        continue;
+      // Skip entry if already
+      if (getTreeEntry(U))
+        continue;
+
+      Value *Ptr = getUnderlyingObject(SI->getPointerOperand());
+      auto &StoresVec = PtrToStoresMap[Ptr];
+      // For now just keep one store per pointer object per lane.
+      // TODO: Extend this to support multiple stores per pointer per lane
+      if (StoresVec.size() > Lane)
+        continue;
+      // Skip if in different BBs.
+      if (!StoresVec.empty() &&
+          SI->getParent() != StoresVec.back()->getParent())
+        continue;
+      // Make sure that the stores are of the same type.
+      if (!StoresVec.empty() &&
+          SI->getValueOperand()->getType() !=
+              StoresVec.back()->getValueOperand()->getType())
+        continue;
+      StoresVec.push_back(SI);
+    }
+  }
+  return PtrToStoresMap;
+}
+
+bool BoUpSLP::CanFormVector(const SmallVector<StoreInst *, 4> &StoresVec,
+                            OrdersType &ReorderIndices) const {
+  // We check whether the stores in StoreVec can form a vector by sorting them
+  // and checking whether they are consecutive.
+
+  // To avoid calling getPointersDiff() while sorting we create a vector of
+  // pairs {store, offset from first} and sort this instead.
+  SmallVector<std::pair<StoreInst *, int>, 4> StoreOffsetVec(StoresVec.size());
+  StoreInst *S0 = StoresVec[0];
+  StoreOffsetVec[0] = {S0, 0};
+  Type *S0Ty = S0->getValueOperand()->getType();
+  Value *S0Ptr = S0->getPointerOperand();
+  for (unsigned Idx : seq<unsigned>(1, StoresVec.size())) {
+    StoreInst *SI = StoresVec[Idx];
+    Optional<int> Diff =
+        getPointersDiff(S0Ty, S0Ptr, SI->getValueOperand()->getType(),
+                        SI->getPointerOperand(), *DL, *SE,
+                        /*StrictCheck=*/true);
+    // We failed to compare the pointers so just abandon this StoresVec.
+    if (!Diff)
+      return false;
+    StoreOffsetVec[Idx] = {StoresVec[Idx], *Diff};
+  }
+
+  // Sort the vector based on the pointers. We create a copy because we may
+  // need the original later for calculating the reorder (shuffle) indices.
+  stable_sort(StoreOffsetVec, [](const std::pair<StoreInst *, int> &Pair1,
+                                 const std::pair<StoreInst *, int> &Pair2) {
+    int Offset1 = Pair1.second;
+    int Offset2 = Pair2.second;
+    return Offset1 < Offset2;
+  });
+
+  // Check if the stores are consecutive by checking if their difference is 1.
+  for (unsigned Idx : seq<unsigned>(1, StoreOffsetVec.size()))
+    if (StoreOffsetVec[Idx].second != StoreOffsetVec[Idx-1].second + 1)
+      return false;
+
+  // Calculate the shuffle indices according to their offset against the sorted
+  // StoreOffsetVec.
+  ReorderIndices.reserve(StoresVec.size());
+  for (StoreInst *SI : StoresVec) {
+    unsigned Idx = find_if(StoreOffsetVec,
+                           [SI](const std::pair<StoreInst *, int> &Pair) {
+                             return Pair.first == SI;
+                           }) -
+                   StoreOffsetVec.begin();
+    ReorderIndices.push_back(Idx);
+  }
+  // Identity order (e.g., {0,1,2,3}) is modeled as an empty OrdersType in
+  // reorderTopToBottom() and reorderBottomToTop(), so we are following the
+  // same convention here.
+  auto IsIdentityOrder = [](const OrdersType &Order) {
+    for (unsigned Idx : seq<unsigned>(0, Order.size()))
+      if (Idx != Order[Idx])
+        return false;
+    return true;
+  };
+  if (IsIdentityOrder(ReorderIndices))
+    ReorderIndices.clear();
+
+  return true;
+}
+
+#ifndef NDEBUG
+LLVM_DUMP_METHOD static void dumpOrder(const BoUpSLP::OrdersType &Order) {
+  for (unsigned Idx : Order)
+    dbgs() << Idx << ", ";
+  dbgs() << "\n";
+}
+#endif
+
+SmallVector<BoUpSLP::OrdersType, 1>
+BoUpSLP::findExternalStoreUsersReorderIndices(TreeEntry *TE) const {
+  unsigned NumLanes = TE->Scalars.size();
+
+  DenseMap<Value *, SmallVector<StoreInst *, 4>> PtrToStoresMap =
+      collectUserStores(TE);
+
+  // Holds the reorder indices for each candidate store vector that is a user of
+  // the current TreeEntry.
+  SmallVector<OrdersType, 1> ExternalReorderIndices;
+
+  // Now inspect the stores collected per pointer and look for vectorization
+  // candidates. For each candidate calculate the reorder index vector and push
+  // it into `ExternalReorderIndices`
+  for (const auto &Pair : PtrToStoresMap) {
+    auto &StoresVec = Pair.second;
+    // If we have fewer than NumLanes stores, then we can't form a vector.
+    if (StoresVec.size() != NumLanes)
+      continue;
+
+    // If the stores are not consecutive then abandon this StoresVec.
+    OrdersType ReorderIndices;
+    if (!CanFormVector(StoresVec, ReorderIndices))
+      continue;
+
+    // We now know that the scalars in StoresVec can form a vector instruction,
+    // so set the reorder indices.
+    ExternalReorderIndices.push_back(ReorderIndices);
+  }
+  return ExternalReorderIndices;
 }
 
 void BoUpSLP::buildTree(ArrayRef<Value *> Roots,

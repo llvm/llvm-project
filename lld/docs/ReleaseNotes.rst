@@ -29,6 +29,10 @@ ELF Improvements
 * ``-z pack-relative-relocs`` is now available to support ``DT_RELR`` for glibc 2.36+.
   (`D120701 <https://reviews.llvm.org/D120701>`_)
 * ``--no-fortran-common`` (pre 12.0.0 behavior) is now the default.
+* The end of ``PT_GNU_RELRO`` is now aligned by ``max-page-size`` instead of ``common-page-size``.
+  This matches GNU ld from 2.39 onwards. If the system page size is larger than ``common-page-size``,
+  the previous choice may make a partial page not protected by RELRO.
+  (`D125410 <https://reviews.llvm.org/D125410>`_)
 
 Breaking changes
 ----------------

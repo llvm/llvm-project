@@ -201,6 +201,7 @@ class MSHIPNumberingContext : public MicrosoftNumberingContext {
   std::unique_ptr<MangleNumberingContext> DeviceCtx;
 
 public:
+  using MicrosoftNumberingContext::getManglingNumber;
   MSHIPNumberingContext(MangleContext *DeviceMangler) {
     DeviceCtx = createItaniumNumberingContext(DeviceMangler);
   }
