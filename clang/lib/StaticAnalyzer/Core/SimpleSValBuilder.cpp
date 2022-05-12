@@ -104,6 +104,23 @@ SVal SimpleSValBuilder::evalComplement(NonLoc X) {
   }
 }
 
+// Checks if the negation the value and flipping sign preserve
+// the semantics on the operation in the resultType
+static bool isNegationValuePreserving(const llvm::APSInt &Value,
+                                      APSIntType ResultType) {
+  const unsigned ValueBits = Value.getSignificantBits();
+  if (ValueBits == ResultType.getBitWidth()) {
+    // The value is the lowest negative value that is representable
+    // in signed integer with bitWith of result type. The
+    // negation is representable if resultType is unsigned.
+    return ResultType.isUnsigned();
+  }
+
+  // If resultType bitWith is higher that number of bits required
+  // to represent RHS, the sign flip produce same value.
+  return ValueBits < ResultType.getBitWidth();
+}
+
 //===----------------------------------------------------------------------===//
 // Transfer function for binary operators.
 //===----------------------------------------------------------------------===//
@@ -196,6 +213,17 @@ SVal SimpleSValBuilder::MakeSymIntVal(const SymExpr *LHS,
       // (For the opposite case, the value is already unsigned.)
       if (RHS.isSigned() && !SymbolType->isSignedIntegerOrEnumerationType())
         ConvertedRHS = &BasicVals.Convert(SymbolType, RHS);
+    }
+  } else if (BinaryOperator::isAdditiveOp(op) && RHS.isNegative()) {
+    // Change a+(-N) into a-N, and a-(-N) into a+N
+    // Adjust addition/subtraction of negative value, to
+    // subtraction/addition of the negated value.
+    APSIntType resultIntTy = BasicVals.getAPSIntType(resultTy);
+    if (isNegationValuePreserving(RHS, resultIntTy)) {
+      ConvertedRHS = &BasicVals.getValue(-resultIntTy.convert(RHS));
+      op = (op == BO_Add) ? BO_Sub : BO_Add;
+    } else {
+      ConvertedRHS = &BasicVals.Convert(resultTy, RHS);
     }
   } else
     ConvertedRHS = &BasicVals.Convert(resultTy, RHS);
@@ -636,16 +664,26 @@ SVal SimpleSValBuilder::evalBinOpNN(ProgramStateRef state,
               const llvm::APSInt &first = IntType.convert(symIntExpr->getRHS());
               const llvm::APSInt &second = IntType.convert(*RHSValue);
 
+              // If the op and lop agrees, then we just need to
+              // sum the constants. Otherwise, we change to operation
+              // type if substraction would produce negative value
+              // (and cause overflow for unsigned integers),
+              // as consequence x+1U-10 produces x-9U, instead
+              // of x+4294967287U, that would be produced without this
+              // additional check.
               const llvm::APSInt *newRHS;
-              if (lop == op)
+              if (lop == op) {
                 newRHS = BasicVals.evalAPSInt(BO_Add, first, second);
-              else
+              } else if (first >= second) {
                 newRHS = BasicVals.evalAPSInt(BO_Sub, first, second);
+                op = lop;
+              } else {
+                newRHS = BasicVals.evalAPSInt(BO_Sub, second, first);
+              }
 
               assert(newRHS && "Invalid operation despite common type!");
               rhs = nonloc::ConcreteInt(*newRHS);
               lhs = nonloc::SymbolVal(symIntExpr->getLHS());
-              op = lop;
               continue;
             }
           }
