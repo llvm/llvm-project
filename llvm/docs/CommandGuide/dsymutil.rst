@@ -21,7 +21,7 @@ OPTIONS
 .. option:: --accelerator=<accelerator type>
 
  Specify the desired type of accelerator table. Valid options are 'Apple',
- 'Dwarf' and 'Default'.
+ 'Dwarf', 'Default' and 'None'.
 
 .. option:: --arch <arch>
 
