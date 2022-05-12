@@ -38,12 +38,16 @@ buildDefaultRegistryFn(const PassAllocatorFunction &allocator) {
              function_ref<LogicalResult(const Twine &)> errorHandler) {
     std::unique_ptr<Pass> pass = allocator();
     LogicalResult result = pass->initializeOptions(options);
-    if ((pm.getNesting() == OpPassManager::Nesting::Explicit) &&
-        pass->getOpName() && *pass->getOpName() != pm.getOpName())
+
+    Optional<StringRef> pmOpName = pm.getOpName();
+    Optional<StringRef> passOpName = pass->getOpName();
+    if ((pm.getNesting() == OpPassManager::Nesting::Explicit) && pmOpName &&
+        passOpName && *pmOpName != *passOpName) {
       return errorHandler(llvm::Twine("Can't add pass '") + pass->getName() +
                           "' restricted to '" + *pass->getOpName() +
                           "' on a PassManager intended to run on '" +
-                          pm.getOpName() + "', did you intend to nest?");
+                          pm.getOpAnchorName() + "', did you intend to nest?");
+    }
     pm.addPass(std::move(pass));
     return result;
   };
