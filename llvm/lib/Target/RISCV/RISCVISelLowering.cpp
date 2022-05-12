@@ -307,8 +307,7 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
       setOperationAction(NT, MVT::f16, Legal);
     setOperationAction(ISD::STRICT_FP_ROUND, MVT::f16, Legal);
     setOperationAction(ISD::STRICT_FP_EXTEND, MVT::f32, Legal);
-    for (auto CC : FPCCToExpand)
-      setCondCodeAction(CC, MVT::f16, Expand);
+    setCondCodeAction(FPCCToExpand, MVT::f16, Expand);
     setOperationAction(ISD::SELECT_CC, MVT::f16, Expand);
     setOperationAction(ISD::SELECT, MVT::f16, Custom);
     setOperationAction(ISD::BR_CC, MVT::f16, Expand);
@@ -331,8 +330,7 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
   if (Subtarget.hasStdExtF()) {
     for (auto NT : FPLegalNodeTypes)
       setOperationAction(NT, MVT::f32, Legal);
-    for (auto CC : FPCCToExpand)
-      setCondCodeAction(CC, MVT::f32, Expand);
+    setCondCodeAction(FPCCToExpand, MVT::f32, Expand);
     setOperationAction(ISD::SELECT_CC, MVT::f32, Expand);
     setOperationAction(ISD::SELECT, MVT::f32, Custom);
     setOperationAction(ISD::BR_CC, MVT::f32, Expand);
@@ -350,8 +348,7 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
       setOperationAction(NT, MVT::f64, Legal);
     setOperationAction(ISD::STRICT_FP_ROUND, MVT::f32, Legal);
     setOperationAction(ISD::STRICT_FP_EXTEND, MVT::f64, Legal);
-    for (auto CC : FPCCToExpand)
-      setCondCodeAction(CC, MVT::f64, Expand);
+    setCondCodeAction(FPCCToExpand, MVT::f64, Expand);
     setOperationAction(ISD::SELECT_CC, MVT::f64, Expand);
     setOperationAction(ISD::SELECT, MVT::f64, Custom);
     setOperationAction(ISD::BR_CC, MVT::f64, Expand);
@@ -568,8 +565,7 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
                           ISD::VECREDUCE_UMAX, ISD::VECREDUCE_UMIN},
                          VT, Custom);
 
-      for (unsigned VPOpc : IntegerVPOps)
-        setOperationAction(VPOpc, VT, Custom);
+      setOperationAction(IntegerVPOps, VT, Custom);
 
       setOperationAction({ISD::LOAD, ISD::STORE}, VT, Custom);
 
@@ -636,8 +632,7 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
       setOperationAction({ISD::INSERT_VECTOR_ELT, ISD::EXTRACT_VECTOR_ELT}, VT,
                          Custom);
       // Expand various condition codes (explained above).
-      for (auto CC : VFPCCToExpand)
-        setCondCodeAction(CC, VT, Expand);
+      setCondCodeAction(VFPCCToExpand, VT, Expand);
 
       setOperationAction({ISD::FMINNUM, ISD::FMAXNUM}, VT, Legal);
 
@@ -668,8 +663,7 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
 
       setOperationAction({ISD::VECTOR_REVERSE, ISD::VECTOR_SPLICE}, VT, Custom);
 
-      for (unsigned VPOpc : FloatingPointVPOps)
-        setOperationAction(VPOpc, VT, Custom);
+      setOperationAction(FloatingPointVPOps, VT, Custom);
     };
 
     // Sets common extload/truncstore actions on RVV floating-point vector
@@ -806,8 +800,7 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
                             ISD::VECREDUCE_UMIN},
                            VT, Custom);
 
-        for (unsigned VPOpc : IntegerVPOps)
-          setOperationAction(VPOpc, VT, Custom);
+        setOperationAction(IntegerVPOps, VT, Custom);
 
         // Lower CTLZ_ZERO_UNDEF and CTTZ_ZERO_UNDEF if we have a floating point
         // type that can represent the value exactly.
@@ -873,8 +866,7 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
                             ISD::VECREDUCE_FMIN, ISD::VECREDUCE_FMAX},
                            VT, Custom);
 
-        for (unsigned VPOpc : FloatingPointVPOps)
-          setOperationAction(VPOpc, VT, Custom);
+        setOperationAction(FloatingPointVPOps, VT, Custom);
       }
 
       // Custom-legalize bitcasts from fixed-length vectors to scalar types.
