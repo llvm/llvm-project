@@ -139,6 +139,9 @@ Bug Fixes
 - Fixed a crash when the ``__bf16`` type is used such that its size or
   alignment is calculated on a target which does not support that type. This
   fixes `Issue 50171 <https://github.com/llvm/llvm-project/issues/50171>`_.
+- Fixed a false positive diagnostic about an unevaluated expression having no
+  side effects when the expression is of VLA type and is an operand of the
+  ``sizeof`` operator. Fixes `Issue 48010 <https://github.com/llvm/llvm-project/issues/48010>`_.
 
 Improvements to Clang's diagnostics
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -222,6 +225,10 @@ Modified Compiler Flags
 
 Removed Compiler Flags
 -------------------------
+- Removed the ``-fno-concept-satisfaction-caching`` flag. The flag was added
+  at the time when the draft of C++20 standard did not permit caching of
+  atomic constraints. The final standard permits such caching, see
+  `WG21 P2104R0 <http://wg21.link/p2104r0>`_.
 
 New Pragmas in Clang
 --------------------

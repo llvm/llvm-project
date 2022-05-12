@@ -729,17 +729,11 @@ public:
     return HasAtomicFaddRtnInsts || HasAtomicFaddNoRtnInsts;
   }
 
-  bool hasAtomicFaddRtnInsts() const {
-    return HasAtomicFaddRtnInsts;
-  }
+  bool hasAtomicFaddRtnInsts() const { return HasAtomicFaddRtnInsts; }
 
-  bool hasAtomicFaddNoRtnInsts() const {
-    return HasAtomicFaddNoRtnInsts;
-  }
+  bool hasAtomicFaddNoRtnInsts() const { return HasAtomicFaddNoRtnInsts; }
 
-  bool hasAtomicPkFaddNoRtnInsts() const {
-    return HasAtomicPkFaddNoRtnInsts;
-  }
+  bool hasAtomicPkFaddNoRtnInsts() const { return HasAtomicPkFaddNoRtnInsts; }
 
   bool hasNoSdstCMPX() const {
     return HasNoSdstCMPX;
