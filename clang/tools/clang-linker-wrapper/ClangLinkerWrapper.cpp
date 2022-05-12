@@ -63,11 +63,6 @@ enum DebugKind {
 static cl::OptionCategory
     ClangLinkerWrapperCategory("clang-linker-wrapper options");
 
-static cl::opt<bool> StripSections(
-    "strip-sections", cl::ZeroOrMore,
-    cl::desc("Strip offloading sections from the host object file."),
-    cl::init(false), cl::cat(ClangLinkerWrapperCategory));
-
 static cl::opt<std::string> LinkerUserPath("linker-path", cl::Required,
                                            cl::desc("Path of linker binary"),
                                            cl::cat(ClangLinkerWrapperCategory));
@@ -221,10 +216,9 @@ template <> struct DenseMapInfo<DeviceFile> {
 
 namespace {
 
-Expected<Optional<std::string>>
-extractFromBuffer(std::unique_ptr<MemoryBuffer> Buffer,
-                  SmallVectorImpl<DeviceFile> &DeviceFiles,
-                  bool IsLibrary = false);
+Error extractFromBuffer(std::unique_ptr<MemoryBuffer> Buffer,
+                        SmallVectorImpl<DeviceFile> &DeviceFiles,
+                        bool IsLibrary = false);
 
 void printCommands(ArrayRef<StringRef> CmdArgs) {
   if (CmdArgs.empty())
@@ -307,35 +301,6 @@ void PrintVersion(raw_ostream &OS) {
   OS << clang::getClangToolFullVersion("clang-linker-wrapper") << '\n';
 }
 
-void removeFromCompilerUsed(Module &M, GlobalValue &Value) {
-  GlobalVariable *GV = M.getGlobalVariable("llvm.compiler.used");
-  Type *Int8PtrTy = Type::getInt8PtrTy(M.getContext());
-  Constant *ValueToRemove =
-      ConstantExpr::getPointerBitCastOrAddrSpaceCast(&Value, Int8PtrTy);
-  SmallPtrSet<Constant *, 16> InitAsSet;
-  SmallVector<Constant *, 16> Init;
-  if (GV) {
-    if (GV->hasInitializer()) {
-      auto *CA = cast<ConstantArray>(GV->getInitializer());
-      for (auto &Op : CA->operands()) {
-        Constant *C = cast_or_null<Constant>(Op);
-        if (C != ValueToRemove && InitAsSet.insert(C).second)
-          Init.push_back(C);
-      }
-    }
-    GV->eraseFromParent();
-  }
-
-  if (Init.empty())
-    return;
-
-  ArrayType *ATy = ArrayType::get(Int8PtrTy, Init.size());
-  GV = new llvm::GlobalVariable(M, ATy, false, GlobalValue::AppendingLinkage,
-                                ConstantArray::get(ATy, Init),
-                                "llvm.compiler.used");
-  GV->setSection("llvm.metadata");
-}
-
 /// Attempts to extract all the embedded device images contained inside the
 /// buffer \p Contents. The buffer is expected to contain a valid offloading
 /// binary format.
@@ -386,13 +351,10 @@ Error extractOffloadFiles(StringRef Contents, StringRef Prefix,
   return Error::success();
 }
 
-Expected<Optional<std::string>>
-extractFromBinary(const ObjectFile &Obj,
-                  SmallVectorImpl<DeviceFile> &DeviceFiles,
-                  bool IsLibrary = false) {
-  StringRef Extension = sys::path::extension(Obj.getFileName()).drop_front();
+Error extractFromBinary(const ObjectFile &Obj,
+                        SmallVectorImpl<DeviceFile> &DeviceFiles,
+                        bool IsLibrary = false) {
   StringRef Prefix = sys::path::stem(Obj.getFileName());
-  SmallVector<StringRef, 4> ToBeStripped;
 
   // Extract offloading binaries from sections with the name `.llvm.offloading`.
   for (const SectionRef &Sec : Obj.sections()) {
@@ -406,68 +368,15 @@ extractFromBinary(const ObjectFile &Obj,
 
     if (Error Err =
             extractOffloadFiles(*Contents, Prefix, DeviceFiles, IsLibrary))
-      return std::move(Err);
-
-    ToBeStripped.push_back(*Name);
+      return Err;
   }
 
-  if (ToBeStripped.empty() || !StripSections)
-    return None;
-
-  // If the object file to strip doesn't exist we need to write it so we can
-  // pass it to llvm-strip.
-  SmallString<128> StripFile = Obj.getFileName();
-  if (!sys::fs::exists(StripFile)) {
-    SmallString<128> TempFile;
-    if (Error Err = createOutputFile(
-            sys::path::stem(StripFile),
-            sys::path::extension(StripFile).drop_front(), TempFile))
-      return std::move(Err);
-
-    auto Contents = Obj.getMemoryBufferRef().getBuffer();
-    Expected<std::unique_ptr<FileOutputBuffer>> OutputOrErr =
-        FileOutputBuffer::create(TempFile, Contents.size());
-    if (!OutputOrErr)
-      return OutputOrErr.takeError();
-    std::unique_ptr<FileOutputBuffer> Output = std::move(*OutputOrErr);
-    std::copy(Contents.begin(), Contents.end(), Output->getBufferStart());
-    if (Error E = Output->commit())
-      return std::move(E);
-    StripFile = TempFile;
-  }
-
-  // We will use llvm-strip to remove the now unneeded section containing the
-  // offloading code.
-  Expected<std::string> StripPath =
-      findProgram("llvm-strip", {getMainExecutable("llvm-strip")});
-  if (!StripPath)
-    return StripPath.takeError();
-
-  SmallString<128> TempFile;
-  if (Error Err = createOutputFile(Prefix + "-host", Extension, TempFile))
-    return std::move(Err);
-
-  SmallVector<StringRef, 8> StripArgs;
-  StripArgs.push_back(*StripPath);
-  StripArgs.push_back("--no-strip-all");
-  StripArgs.push_back(StripFile);
-  for (auto &Section : ToBeStripped) {
-    StripArgs.push_back("--remove-section");
-    StripArgs.push_back(Section);
-  }
-  StripArgs.push_back("-o");
-  StripArgs.push_back(TempFile);
-
-  if (Error Err = executeCommands(*StripPath, StripArgs))
-    return std::move(Err);
-
-  return static_cast<std::string>(TempFile);
+  return Error::success();
 }
 
-Expected<Optional<std::string>>
-extractFromBitcode(std::unique_ptr<MemoryBuffer> Buffer,
-                   SmallVectorImpl<DeviceFile> &DeviceFiles,
-                   bool IsLibrary = false) {
+Error extractFromBitcode(std::unique_ptr<MemoryBuffer> Buffer,
+                         SmallVectorImpl<DeviceFile> &DeviceFiles,
+                         bool IsLibrary = false) {
   LLVMContext Context;
   SMDiagnostic Err;
   std::unique_ptr<Module> M = getLazyIRModule(std::move(Buffer), Err, Context);
@@ -475,11 +384,8 @@ extractFromBitcode(std::unique_ptr<MemoryBuffer> Buffer,
     return createStringError(inconvertibleErrorCode(),
                              "Failed to create module");
 
-  StringRef Extension = sys::path::extension(M->getName()).drop_front();
   StringRef Prefix =
       sys::path::stem(M->getName()).take_until([](char C) { return C == '-'; });
-
-  SmallVector<GlobalVariable *, 4> ToBeDeleted;
 
   // Extract offloading data from globals with the `.llvm.offloading` section
   // name.
@@ -495,45 +401,15 @@ extractFromBitcode(std::unique_ptr<MemoryBuffer> Buffer,
 
     if (Error Err =
             extractOffloadFiles(Contents, Prefix, DeviceFiles, IsLibrary))
-      return std::move(Err);
-
-    ToBeDeleted.push_back(&GV);
+      return Err;
   }
 
-  if (ToBeDeleted.empty() || !StripSections)
-    return None;
-
-  // We need to materialize the lazy module before we make any changes.
-  if (Error Err = M->materializeAll())
-    return std::move(Err);
-
-  // Remove the global from the module and write it to a new file.
-  for (GlobalVariable *GV : ToBeDeleted) {
-    removeFromCompilerUsed(*M, *GV);
-    GV->eraseFromParent();
-  }
-
-  SmallString<128> TempFile;
-  if (Error Err = createOutputFile(Prefix + "-host", Extension, TempFile))
-    return std::move(Err);
-
-  std::error_code EC;
-  raw_fd_ostream HostOutput(TempFile, EC, sys::fs::OF_None);
-  if (EC)
-    return createFileError(TempFile, EC);
-  WriteBitcodeToFile(*M, HostOutput);
-  return static_cast<std::string>(TempFile);
+  return Error::success();
 }
 
-Expected<Optional<std::string>>
-extractFromArchive(const Archive &Library,
-                   SmallVectorImpl<DeviceFile> &DeviceFiles) {
-  bool NewMembers = false;
-  SmallVector<NewArchiveMember, 8> Members;
-
+Error extractFromArchive(const Archive &Library,
+                         SmallVectorImpl<DeviceFile> &DeviceFiles) {
   // Try to extract device code from each file stored in the static archive.
-  // Save the stripped archive members to create a new host archive with the
-  // offloading code removed.
   Error Err = Error::success();
   for (auto Child : Library.children(Err)) {
     auto ChildBufferOrErr = Child.getMemoryBufferRef();
@@ -549,60 +425,21 @@ extractFromArchive(const Archive &Library,
           ChildBufferOrErr->getBuffer(),
           ChildBufferOrErr->getBufferIdentifier());
 
-    auto FileOrErr = extractFromBuffer(std::move(ChildBuffer), DeviceFiles,
-                                       /*IsLibrary*/ true);
-    if (!FileOrErr)
-      return FileOrErr.takeError();
-
-    // If we created a new stripped host file, use it to create a new archive
-    // member, otherwise use the old member.
-    if (!FileOrErr->hasValue()) {
-      Expected<NewArchiveMember> NewMember =
-          NewArchiveMember::getOldMember(Child, true);
-      if (!NewMember)
-        return NewMember.takeError();
-      Members.push_back(std::move(*NewMember));
-    } else {
-      Expected<NewArchiveMember> NewMember =
-          NewArchiveMember::getFile(**FileOrErr, true);
-      if (!NewMember)
-        return NewMember.takeError();
-      Members.push_back(std::move(*NewMember));
-      NewMembers = true;
-
-      // We no longer need the stripped file, remove it.
-      if (std::error_code EC = sys::fs::remove(**FileOrErr))
-        return createFileError(**FileOrErr, EC);
-    }
+    if (Error Err = extractFromBuffer(std::move(ChildBuffer), DeviceFiles,
+                                      /*IsLibrary*/ true))
+      return Err;
   }
 
   if (Err)
-    return std::move(Err);
-
-  if (!NewMembers || !StripSections)
-    return None;
-
-  // Create a new static library using the stripped host files.
-  SmallString<128> TempFile;
-  StringRef Prefix = sys::path::stem(Library.getFileName());
-  if (Error Err = createOutputFile(Prefix + "-host", "a", TempFile))
-    return std::move(Err);
-
-  std::unique_ptr<MemoryBuffer> Buffer =
-      MemoryBuffer::getMemBuffer(Library.getMemoryBufferRef(), false);
-  if (Error Err = writeArchive(TempFile, Members, true, Library.kind(), true,
-                               Library.isThin(), std::move(Buffer)))
-    return std::move(Err);
-
-  return static_cast<std::string>(TempFile);
+    return Err;
+  return Error::success();
 }
 
 /// Extracts embedded device offloading code from a memory \p Buffer to a list
-/// of \p DeviceFiles. If device code was extracted a new file with the embedded
-/// device code stripped from the buffer will be returned.
-Expected<Optional<std::string>>
-extractFromBuffer(std::unique_ptr<MemoryBuffer> Buffer,
-                  SmallVectorImpl<DeviceFile> &DeviceFiles, bool IsLibrary) {
+/// of \p DeviceFiles.
+Error extractFromBuffer(std::unique_ptr<MemoryBuffer> Buffer,
+                        SmallVectorImpl<DeviceFile> &DeviceFiles,
+                        bool IsLibrary) {
   file_magic Type = identify_magic(Buffer->getBuffer());
   switch (Type) {
   case file_magic::bitcode:
@@ -624,7 +461,7 @@ extractFromBuffer(std::unique_ptr<MemoryBuffer> Buffer,
     return extractFromArchive(*LibFile->get(), DeviceFiles);
   }
   default:
-    return None;
+    return Error::success();
   }
 }
 
@@ -1229,7 +1066,8 @@ Error linkDeviceFiles(ArrayRef<DeviceFile> DeviceFiles,
       LinkedImages.emplace_back(OFK_OpenMP, TheTriple.getTriple(), File.Arch,
                                 LinkerInputFiles.front());
       continue;
-    } else if (WholeProgram && TheTriple.isNVPTX()) {
+    }
+    if (WholeProgram && TheTriple.isNVPTX()) {
       // If we performed LTO on NVPTX and had whole program visibility, we can
       // use CUDA in non-RDC mode.
       if (LinkerInputFiles.size() != 1)
@@ -1477,8 +1315,7 @@ int main(int argc, const char **argv) {
       LibraryPaths.push_back(Arg.drop_front(2));
   }
 
-  // Try to extract device code from the linker input and replace the linker
-  // input with a new file that has the device section stripped.
+  // Try to extract device code from the linker input.
   SmallVector<DeviceFile, 4> DeviceFiles;
   for (std::string &Arg : LinkerArgs) {
     if (Arg == ExecutableName)
@@ -1495,14 +1332,8 @@ int main(int argc, const char **argv) {
       if (std::error_code EC = BufferOrErr.getError())
         return reportError(createFileError(Filename, EC));
 
-      auto NewFileOrErr =
-          extractFromBuffer(std::move(*BufferOrErr), DeviceFiles);
-
-      if (!NewFileOrErr)
-        return reportError(NewFileOrErr.takeError());
-
-      if (NewFileOrErr->hasValue())
-        Arg = **NewFileOrErr;
+      if (Error Err = extractFromBuffer(std::move(*BufferOrErr), DeviceFiles))
+        return reportError(std::move(Err));
     }
   }
 
@@ -1524,7 +1355,7 @@ int main(int argc, const char **argv) {
   // We need to insert the new files next to the old ones to make sure they're
   // linked with the same libraries / arguments.
   if (!FileOrErr->empty()) {
-    auto FirstInput = std::next(llvm::find_if(LinkerArgs, [](StringRef Str) {
+    auto *FirstInput = std::next(llvm::find_if(LinkerArgs, [](StringRef Str) {
       return sys::fs::exists(Str) && !sys::fs::is_directory(Str) &&
              Str != ExecutableName;
     }));
