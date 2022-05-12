@@ -1,6 +1,6 @@
-// RUN: %clang_cc1 %s -Eonly -verify -Wno-all -pedantic -std=c++20
-// RUN: %clang_cc1 %s -Eonly -verify -Wno-all -pedantic -std=c++11
-// RUN: %clang_cc1 -x c %s -Eonly -verify -Wno-all -pedantic -std=c99
+// RUN: %clang_cc1 %s -Eonly -verify -Wno-all -Wno-c++2b-extensions -pedantic -std=c++20
+// RUN: %clang_cc1 %s -Eonly -verify -Wno-all -Wno-c++2b-extensions -pedantic -std=c++11
+// RUN: %clang_cc1 -x c %s -Eonly -verify -Wno-all -Wno-c2x-extensions -pedantic -std=c99
 
 //expected-error@+1{{missing '('}}
 #define V1(...) __VA_OPT__  
