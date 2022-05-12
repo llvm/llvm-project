@@ -27,11 +27,22 @@ namespace {
 class ScalarExprEmitter : public StmtVisitor<ScalarExprEmitter, mlir::Value> {
   CIRGenFunction &CGF;
   mlir::OpBuilder &Builder;
+  bool IgnoreResultAssign;
 
 public:
   ScalarExprEmitter(CIRGenFunction &cgf, mlir::OpBuilder &builder,
                     bool ira = false)
-      : CGF(cgf), Builder(builder) {}
+      : CGF(cgf), Builder(builder), IgnoreResultAssign(ira) {}
+
+  //===--------------------------------------------------------------------===//
+  //                               Utilities
+  //===--------------------------------------------------------------------===//
+
+  bool TestAndClearIgnoreResultAssign() {
+    bool I = IgnoreResultAssign;
+    IgnoreResultAssign = false;
+    return I;
+  }
 
   mlir::Value Visit(Expr *E) {
     return StmtVisitor<ScalarExprEmitter, mlir::Value>::Visit(E);
@@ -93,6 +104,12 @@ public:
     Expr *E = CE->getSubExpr();
     QualType DestTy = CE->getType();
     CastKind Kind = CE->getCastKind();
+
+    // These cases are generally not written to ignore the result of evaluating
+    // their sub-expressions, so we clear this now.
+    bool Ignored = TestAndClearIgnoreResultAssign();
+    (void)Ignored;
+
     // Since almost all cast kinds apply to scalars, this switch doesn't have a
     // default case, so the compiler will warn on a missing case. The cases are
     // in the same order as in the CastKind enum.
