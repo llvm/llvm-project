@@ -181,8 +181,9 @@ void CIRGenFunction::buildStoreOfScalar(mlir::Value Value, Address Addr,
   // TODO: LValueIsSuitableForInlineAtomic ?
   // TODO: TBAA
   Value = buildToMemory(Value, Ty);
-  if (Ty->isAtomicType() || isNontemporal) {
-    assert(0 && "not implemented");
+
+  if (Ty->isAtomicType()) {
+    llvm_unreachable("NYI");
   }
 
   // Update the alloca with more info on initialization.
