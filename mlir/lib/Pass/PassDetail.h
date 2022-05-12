@@ -29,8 +29,16 @@ public:
   void runOnOperation(bool verifyPasses);
   void runOnOperation() override;
 
-  /// Merge the current pass adaptor into given 'rhs'.
-  void mergeInto(OpToOpPassAdaptor &rhs);
+  /// Try to merge the current pass adaptor into 'rhs'. This will try to append
+  /// the pass managers of this adaptor into those within `rhs`, or return
+  /// failure if merging isn't possible. The main situation in which merging is
+  /// not possible is if one of the adaptors has an `any` pipeline that is not
+  /// compatible with a pass manager in the other adaptor. For example, if this
+  /// adaptor has a `func.func` pipeline and `rhs` has an `any` pipeline that
+  /// operates on FunctionOpInterface. In this situation the pipelines have a
+  /// conflict (they both want to run on the same operations), so we can't
+  /// merge.
+  LogicalResult tryMergeInto(MLIRContext *ctx, OpToOpPassAdaptor &rhs);
 
   /// Returns the pass managers held by this adaptor.
   MutableArrayRef<OpPassManager> getPassManagers() { return mgrs; }
@@ -66,9 +74,8 @@ private:
   /// parent pass manager, and is used to initialize any dynamic pass pipelines
   /// run by the given passes.
   static LogicalResult runPipeline(
-      iterator_range<OpPassManager::pass_iterator> passes, Operation *op,
-      AnalysisManager am, bool verifyPasses, unsigned parentInitGeneration,
-      PassInstrumentor *instrumentor = nullptr,
+      OpPassManager &pm, Operation *op, AnalysisManager am, bool verifyPasses,
+      unsigned parentInitGeneration, PassInstrumentor *instrumentor = nullptr,
       const PassInstrumentation::PipelineParentInfo *parentInfo = nullptr);
 
   /// A set of adaptors to run.

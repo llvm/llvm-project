@@ -24,9 +24,9 @@ following restrictions; any noncompliance will lead to problematic behavior in
 multithreaded and other advanced scenarios:
 
 *   Must not modify any state referenced or relied upon outside the current
-    being operated on. This includes adding or removing operations from the
-    parent block, changing the attributes(depending on the contract of the
-    current operation)/operands/results/successors of the current operation.
+    operation being operated on. This includes adding or removing operations
+    from the parent block, changing the attributes(depending on the contract
+    of the current operation)/operands/results/successors of the current operation.
 *   Must not modify the state of another operation not nested within the current
     operation being operated on.
     *   Other threads may be operating on these operations simultaneously.
@@ -46,62 +46,16 @@ multithreaded and other advanced scenarios:
     *   Multiple instances of the pass may be created by the pass manager to
         process operations in parallel.
 
-When creating an operation pass, there are two different types to choose from
-depending on the usage scenario:
+### Op-Agnostic Operation Passes
 
-### OperationPass : Op-Specific
+By default, an operation pass is `op-agnostic`, meaning that it operates on the
+operation type of the pass manager that it is added to. This means a pass may operate
+on many different types of operations. Agnostic passes should be written such that
+they do not make assumptions on the operation they run on. Examples of this type of pass are
+[Canonicalization](Pass.md/-canonicalize-canonicalize-operations)
+[Common Sub-Expression Elimination](Passes.md/#-cse-eliminate-common-sub-expressions).
 
-An `op-specific` operation pass operates explicitly on a given operation type.
-This operation type must adhere to the restrictions set by the pass manager for
-pass execution.
-
-To define an op-specific operation pass, a derived class must adhere to the
-following:
-
-*   Inherit from the CRTP class `OperationPass` and provide the operation type
-    as an additional template parameter.
-*   Override the virtual `void runOnOperation()` method.
-
-A simple pass may look like:
-
-```c++
-namespace {
-/// Here we utilize the CRTP `PassWrapper` utility class to provide some
-/// necessary utility hooks. This is only necessary for passes defined directly
-/// in C++. Passes defined declaratively use a cleaner mechanism for providing
-/// these utilities.
-struct MyFunctionPass : public PassWrapper<MyFunctionPass,
-                                           OperationPass<func::FuncOp>> {
-  void runOnOperation() override {
-    // Get the current func::FuncOp operation being operated on.
-    func::FuncOp f = getOperation();
-
-    // Walk the operations within the function.
-    f.walk([](Operation *inst) {
-      ....
-    });
-  }
-};
-} // namespace
-
-/// Register this pass so that it can be built via from a textual pass pipeline.
-/// (Pass registration is discussed more below)
-void registerMyPass() {
-  PassRegistration<MyFunctionPass>();
-}
-```
-
-### OperationPass : Op-Agnostic
-
-An `op-agnostic` pass operates on the operation type of the pass manager that it
-is added to. This means that passes of this type may operate on several
-different operation types. Passes of this type are generally written generically
-using operation [interfaces](Interfaces.md) and [traits](Traits.md). Examples of
-this type of pass are
-[Common Sub-Expression Elimination](Passes.md/#-cse-eliminate-common-sub-expressions)
-and [Inlining](Passes.md/#-inline-inline-function-calls).
-
-To create an operation pass, a derived class must adhere to the following:
+To create an agnostic operation pass, a derived class must adhere to the following:
 
 *   Inherit from the CRTP class `OperationPass`.
 *   Override the virtual `void runOnOperation()` method.
@@ -118,6 +72,108 @@ struct MyOperationPass : public PassWrapper<MyOperationPass, OperationPass<>> {
     // Get the current operation being operated on.
     Operation *op = getOperation();
     ...
+  }
+};
+```
+
+### Filtered Operation Pass
+
+If a pass needs to constrain its execution to specific types or classes of operations,
+additional filtering may be applied on top. This transforms a once `agnostic` pass into
+one more specific to a certain context. There are various ways in which to filter the
+execution of a pass, and different contexts in which filtering may apply:
+
+### Operation Pass: Static Schedule Filtering
+
+Static filtering allows for applying additional constraints on the operation types a
+pass may be scheduled on. This type of filtering generally allows for building more
+constrained passes that can only be scheduled on operations that satisfy the necessary
+constraints. For example, this allows for specifying passes that only run on operations
+of a certain, those that provide a certain interface, trait, or some other constraint that
+applies to all instances of that operation type. Below is an example of a pass that only
+permits scheduling on operations that implement `FunctionOpInterface`:
+
+```c++
+struct MyFunctionPass : ... {
+  /// This method is used to provide additional static filtering, and returns if the
+  /// pass may be scheduled on the given operation type.
+  bool canScheduleOn(RegisteredOperationName opInfo) const override {
+    return opInfo.hasInterface<FunctionOpInterface>();
+  }
+
+  void runOnOperation() {
+    // Here we can freely cast to FunctionOpInterface, because our `canScheduleOn` ensures
+    // that our pass is only executed on operations implementing that interface.
+    FunctionOpInterface op = cast<FunctionOpInterface>(getOperation()); 
+  }
+};
+```
+
+When a pass with static filtering is added to an [`op-specific` pass manager](#oppassmanager),
+it asserts that the operation type of the pass manager satisfies the static constraints of the
+pass. When added to an [`op-agnostic` pass manager](#oppassmanager), that pass manager, and all
+passes contained within, inherits the static constraints of the pass. For example, if the pass
+filters on `FunctionOpInterface`, as in the `MyFunctionPass` example above, only operations that
+implement `FunctionOpInterface` will be considered when executing **any** passes within the pass
+manager. This invariant is important to keep in mind, as each pass added to an `op-agnostic` pass
+manager further constrains the operations that may be scheduled on it. Consider the following example:
+
+```mlir
+func.func @foo() {
+  // ...
+  return
+}
+
+module @someModule {
+  // ...
+}
+```
+
+If we were to apply the op-agnostic pipeline, `any(cse,my-function-pass)`, to the above MLIR snippet
+it would only run on the `foo` function operation. This is because the `my-function-pass` has a
+static filtering constraint to only schedule on operations implementing `FunctionOpInterface`. Remember
+that this constraint is inherited by the entire pass manager, so we never consider `someModule` for
+any of the passes, including `cse` which normally can be scheduled on any operation.
+
+#### Operation Pass: Static Filtering By Op Type
+
+In the above section, we detailed a general mechanism for statically filtering the types of operations
+that a pass may be scheduled on. Sugar is provided on top of that mechanism to simplify the definition
+of passes that are restricted to scheduling on a single operation type. In these cases, a pass simply
+needs to provide the type of operation to the `OperationPass` base class. This will automatically
+instill filtering on that operation type:
+
+```c++
+/// Here we utilize the CRTP `PassWrapper` utility class to provide some
+/// necessary utility hooks. This is only necessary for passes defined directly
+/// in C++. Passes defined declaratively use a cleaner mechanism for providing
+/// these utilities.
+struct MyFunctionPass : public PassWrapper<MyOperationPass, OperationPass<func::FuncOp>> {
+  void runOnOperation() {
+    // Get the current operation being operated on.
+    func::FuncOp op = getOperation();
+  }
+};
+```
+
+#### Operation Pass: Static Filtering By Interface
+
+In the above section, we detailed a general mechanism for statically filtering the types of operations
+that a pass may be scheduled on. Sugar is provided on top of that mechanism to simplify the definition
+of passes that are restricted to scheduling on a specific operation interface. In these cases, a pass
+simply needs to inherit from the `InterfacePass` base class. This class is similar to `OperationPass`,
+but expects the type of interface to operate on. This will automatically instill filtering on that
+interface type:
+
+```c++
+/// Here we utilize the CRTP `PassWrapper` utility class to provide some
+/// necessary utility hooks. This is only necessary for passes defined directly
+/// in C++. Passes defined declaratively use a cleaner mechanism for providing
+/// these utilities.
+struct MyFunctionPass : public PassWrapper<MyOperationPass, InterfacePass<FunctionOpInterface>> {
+  void runOnOperation() {
+    // Get the current operation being operated on.
+    FunctionOpInterface op = getOperation();
   }
 };
 ```
@@ -293,27 +349,28 @@ used to schedule passes to run at a specific level of nesting. The top-level
 
 ### OpPassManager
 
-An `OpPassManager` is essentially a collection of passes to execute on an
-operation of a specific type. This operation type must adhere to the following
-requirement:
+An `OpPassManager` is essentially a collection of passes anchored to execute on
+operations at a given level of nesting. A pass manager may be `op-specific`
+(anchored on a specific operation type), or `op-agnostic` (not restricted to any
+specific operation, and executed on any viable operation type). Operation types that
+anchor pass managers must adhere to the following requirement:
 
 *   Must be registered and marked
     [`IsolatedFromAbove`](Traits.md/#isolatedfromabove).
 
-    *   Passes are expected to not modify operations at or above the current
+    *   Passes are expected not to modify operations at or above the current
         operation being processed. If the operation is not isolated, it may
         inadvertently modify or traverse the SSA use-list of an operation it is
         not supposed to.
 
-Passes can be added to a pass manager via `addPass`. The pass must either be an
-`op-specific` pass operating on the same operation type as `OpPassManager`, or
-an `op-agnostic` pass.
+Passes can be added to a pass manager via `addPass`.
 
 An `OpPassManager` is generally created by explicitly nesting a pipeline within
-another existing `OpPassManager` via the `nest<>` method. This method takes the
-operation type that the nested pass manager will operate on. At the top-level, a
-`PassManager` acts as an `OpPassManager`. Nesting in this sense, corresponds to
-the [structural](Tutorials/UnderstandingTheIRStructure.md) nesting within
+another existing `OpPassManager` via the `nest<OpT>` or `nestAny` methods. The
+former method takes the operation type that the nested pass manager will operate on.
+The latter method nests an `op-agnostic` pass manager, that may run on any viable
+operation type. Nesting in this sense, corresponds to the
+[structural](Tutorials/UnderstandingTheIRStructure.md) nesting within
 [Regions](LangRef.md/#regions) of the IR.
 
 For example, the following `.mlir`:
@@ -331,9 +388,9 @@ module {
 Has the nesting structure of:
 
 ```
-`module`
+`builtin.module`
   `spv.module`
-    `function`
+    `spv.func`
 ```
 
 Below is an example of constructing a pipeline that operates on the above
@@ -359,6 +416,12 @@ nestedModulePM.addPass(std::make_unique<MySPIRVModulePass>());
 OpPassManager &nestedFunctionPM = nestedModulePM.nest<func::FuncOp>();
 nestedFunctionPM.addPass(std::make_unique<MyFunctionPass>());
 
+// Nest an op-agnostic pass manager. This will operate on any viable
+// operation, e.g. func.func, spv.func, spv.module, builtin.module, etc.
+OpPassManager &nestedAnyPM = nestedModulePM.nestAny();
+nestedFunctionPM.addPass(createCanonicalizePass());
+nestedFunctionPM.addPass(createCSEPass());
+
 // Run the pass manager on the top-level module.
 ModuleOp m = ...;
 if (failed(pm.run(m)))
@@ -374,6 +437,9 @@ OpPassManager<ModuleOp>
     MySPIRVModulePass
     OpPassManager<func::FuncOp>
       MyFunctionPass
+    OpPassManager<>
+      Canonicalizer
+      CSE
 ```
 
 These pipelines are then run over a single operation at a time. This means that,
@@ -652,14 +718,17 @@ defined as a series of names, each of which may in itself recursively contain a
 nested pipeline description. The syntax for this specification is as follows:
 
 ```ebnf
-pipeline          ::= op-name `(` pipeline-element (`,` pipeline-element)* `)`
+pipeline          ::= op-anchor `(` pipeline-element (`,` pipeline-element)* `)`
 pipeline-element  ::= pipeline | (pass-name | pass-pipeline-name) options?
 options           ::= '{' (key ('=' value)?)+ '}'
 ```
 
-*   `op-name`
-    *   This corresponds to the mnemonic name of an operation to run passes on,
-        e.g. `func.func` or `builtin.module`.
+*   `op-anchor`
+    *   This corresponds to the mnemonic name that anchors the execution of the
+        pass manager. This is either the name of an operation to run passes on,
+        e.g. `func.func` or `builtin.module`, or `any`, for op-agnostic pass
+        managers that execute on any viable operation (i.e. any operation that
+        can be used to anchor a pass manager).
 *   `pass-name` | `pass-pipeline-name`
     *   This corresponds to the argument of a registered pass or pass pipeline,
         e.g. `cse` or `canonicalize`.
@@ -678,7 +747,11 @@ $ mlir-opt foo.mlir -cse -canonicalize -convert-func-to-llvm='use-bare-ptr-memre
 Can also be specified as (via the `-pass-pipeline` flag):
 
 ```shell
+# Anchor the cse and canonicalize passes on the `func.func` operation.
 $ mlir-opt foo.mlir -pass-pipeline='func.func(cse,canonicalize),convert-func-to-llvm{use-bare-ptr-memref-call-conv=1}'
+
+# Anchor the cse and canonicalize passes on "any" viable root operation.
+$ mlir-opt foo.mlir -pass-pipeline='any(cse,canonicalize),convert-func-to-llvm{use-bare-ptr-memref-call-conv=1}'
 ```
 
 In order to support round-tripping a pass to the textual representation using
