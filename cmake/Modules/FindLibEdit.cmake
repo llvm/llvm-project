@@ -62,3 +62,9 @@ else()
   mark_as_advanced(LibEdit_INCLUDE_DIRS LibEdit_LIBRARIES)
 endif()
 
+if (LibEdit_FOUND AND NOT TARGET LibEdit::LibEdit)
+  add_library(LibEdit::LibEdit UNKNOWN IMPORTED)
+  set_target_properties(LibEdit::LibEdit PROPERTIES
+                        IMPORTED_LOCATION ${LibEdit_LIBRARIES}
+                        INTERFACE_INCLUDE_DIRECTORIES ${LibEdit_INCLUDE_DIRS})
+endif()
