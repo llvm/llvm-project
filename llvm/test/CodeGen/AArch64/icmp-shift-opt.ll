@@ -11,7 +11,7 @@ define i128 @opt_setcc_lt_power_of_2(i128 %a) nounwind {
 ; CHECK-NEXT:  .LBB0_1: // %loop
 ; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    adds x0, x0, #1
-; CHECK-NEXT:    adcs x1, x1, xzr
+; CHECK-NEXT:    adc x1, x1, xzr
 ; CHECK-NEXT:    orr x8, x1, x0, lsr #60
 ; CHECK-NEXT:    cbnz x8, .LBB0_1
 ; CHECK-NEXT:  // %bb.2: // %exit

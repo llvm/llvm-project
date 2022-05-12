@@ -23,7 +23,7 @@ define i128 @u128_add(i128 %x, i128 %y) {
 ; CHECK-LABEL: u128_add:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    adds x0, x0, x2
-; CHECK-NEXT:    adcs x1, x1, x3
+; CHECK-NEXT:    adc x1, x1, x3
 ; CHECK-NEXT:    ret
   %1 = add i128 %x, %y
   ret i128 %1
@@ -81,7 +81,7 @@ define i128 @u128_sub(i128 %x, i128 %y) {
 ; CHECK-LABEL: u128_sub:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    subs x0, x0, x2
-; CHECK-NEXT:    sbcs x1, x1, x3
+; CHECK-NEXT:    sbc x1, x1, x3
 ; CHECK-NEXT:    ret
   %1 = sub i128 %x, %y
   ret i128 %1
@@ -139,7 +139,7 @@ define i128 @i128_add(i128 %x, i128 %y) {
 ; CHECK-LABEL: i128_add:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    adds x0, x0, x2
-; CHECK-NEXT:    adcs x1, x1, x3
+; CHECK-NEXT:    adc x1, x1, x3
 ; CHECK-NEXT:    ret
   %1 = add i128 %x, %y
   ret i128 %1
@@ -199,7 +199,7 @@ define i128 @i128_sub(i128 %x, i128 %y) {
 ; CHECK-LABEL: i128_sub:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    subs x0, x0, x2
-; CHECK-NEXT:    sbcs x1, x1, x3
+; CHECK-NEXT:    sbc x1, x1, x3
 ; CHECK-NEXT:    ret
   %1 = sub i128 %x, %y
   ret i128 %1

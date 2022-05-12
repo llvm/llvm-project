@@ -6,17 +6,17 @@ define i128 @test_simple(i128 %a, i128 %b, i128 %c) {
 ; CHECK-LE-LABEL: test_simple:
 ; CHECK-LE:       ; %bb.0:
 ; CHECK-LE-NEXT:    adds x8, x0, x2
-; CHECK-LE-NEXT:    adcs x9, x1, x3
+; CHECK-LE-NEXT:    adc x9, x1, x3
 ; CHECK-LE-NEXT:    subs x0, x8, x4
-; CHECK-LE-NEXT:    sbcs x1, x9, x5
+; CHECK-LE-NEXT:    sbc x1, x9, x5
 ; CHECK-LE-NEXT:    ret
 ;
 ; CHECK-BE-LABEL: test_simple:
 ; CHECK-BE:       // %bb.0:
 ; CHECK-BE-NEXT:    adds x8, x1, x3
-; CHECK-BE-NEXT:    adcs x9, x0, x2
+; CHECK-BE-NEXT:    adc x9, x0, x2
 ; CHECK-BE-NEXT:    subs x1, x8, x5
-; CHECK-BE-NEXT:    sbcs x0, x9, x4
+; CHECK-BE-NEXT:    sbc x0, x9, x4
 ; CHECK-BE-NEXT:    ret
 
   %valadd = add i128 %a, %b
@@ -30,13 +30,13 @@ define i128 @test_imm(i128 %a) {
 ; CHECK-LE-LABEL: test_imm:
 ; CHECK-LE:       ; %bb.0:
 ; CHECK-LE-NEXT:    adds x0, x0, #12
-; CHECK-LE-NEXT:    adcs x1, x1, xzr
+; CHECK-LE-NEXT:    adc x1, x1, xzr
 ; CHECK-LE-NEXT:    ret
 ;
 ; CHECK-BE-LABEL: test_imm:
 ; CHECK-BE:       // %bb.0:
 ; CHECK-BE-NEXT:    adds x1, x1, #12
-; CHECK-BE-NEXT:    adcs x0, x0, xzr
+; CHECK-BE-NEXT:    adc x0, x0, xzr
 ; CHECK-BE-NEXT:    ret
 
   %val = add i128 %a, 12
@@ -49,14 +49,14 @@ define i128 @test_shifted(i128 %a, i128 %b) {
 ; CHECK-LE:       ; %bb.0:
 ; CHECK-LE-NEXT:    extr x8, x3, x2, #19
 ; CHECK-LE-NEXT:    adds x0, x0, x2, lsl #45
-; CHECK-LE-NEXT:    adcs x1, x1, x8
+; CHECK-LE-NEXT:    adc x1, x1, x8
 ; CHECK-LE-NEXT:    ret
 ;
 ; CHECK-BE-LABEL: test_shifted:
 ; CHECK-BE:       // %bb.0:
 ; CHECK-BE-NEXT:    extr x8, x2, x3, #19
 ; CHECK-BE-NEXT:    adds x1, x1, x3, lsl #45
-; CHECK-BE-NEXT:    adcs x0, x0, x8
+; CHECK-BE-NEXT:    adc x0, x0, x8
 ; CHECK-BE-NEXT:    ret
 
   %rhs = shl i128 %b, 45
@@ -74,7 +74,7 @@ define i128 @test_extended(i128 %a, i16 %b) {
 ; CHECK-LE-NEXT:    adds x0, x0, w2, sxth #3
 ; CHECK-LE-NEXT:    asr x9, x8, #63
 ; CHECK-LE-NEXT:    extr x8, x9, x8, #61
-; CHECK-LE-NEXT:    adcs x1, x1, x8
+; CHECK-LE-NEXT:    adc x1, x1, x8
 ; CHECK-LE-NEXT:    ret
 ;
 ; CHECK-BE-LABEL: test_extended:
@@ -84,7 +84,7 @@ define i128 @test_extended(i128 %a, i16 %b) {
 ; CHECK-BE-NEXT:    adds x1, x1, w2, sxth #3
 ; CHECK-BE-NEXT:    asr x9, x8, #63
 ; CHECK-BE-NEXT:    extr x8, x9, x8, #61
-; CHECK-BE-NEXT:    adcs x0, x0, x8
+; CHECK-BE-NEXT:    adc x0, x0, x8
 ; CHECK-BE-NEXT:    ret
 
   %ext = sext i16 %b to i128
