@@ -606,7 +606,13 @@ public:
     mlir::Value Res = nullptr;
     mlir::Type ResTy = DstTy;
 
-    // TODO: implement CGF.SanOpts.has(SanitizerKind::FloatCastOverflow)
+    // An overflowing conversion has undefined behavior if eitehr the source
+    // type or the destination type is a floating-point type. However, we
+    // consider the range of representable values for all floating-point types
+    // to be [-inf,+inf], so no overflow can ever happen when the destination
+    // type is a floating-point type.
+    if (CGF.SanOpts.has(SanitizerKind::FloatCastOverflow))
+      llvm_unreachable("NYI");
 
     // Cast to half through float if half isn't a native type.
     if (DstType->isHalfType() &&
