@@ -1,3 +1,15 @@
+//===--- CIRGenExprScalar.cpp - Emit CIR Code for Scalar Exprs ------------===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+//
+// This contains code to emit Expr nodes with scalar CIR types as CIR code.
+//
+//===----------------------------------------------------------------------===//
+
 #include "CIRGenFunction.h"
 #include "CIRGenModule.h"
 
