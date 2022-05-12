@@ -51,6 +51,25 @@ TEST_F(AArch64GISelMITest, MatchIntConstantRegister) {
   EXPECT_EQ(Src0->VReg, MIBCst.getReg(0));
 }
 
+TEST_F(AArch64GISelMITest, MatchIntConstantSplat) {
+  setUp();
+  if (!TM)
+    return;
+
+  LLT s64 = LLT::scalar(64);
+  LLT v4s64 = LLT::fixed_vector(4, s64);
+
+  MachineInstrBuilder FortyTwoSplat =
+      B.buildSplatVector(v4s64, B.buildConstant(s64, 42));
+  int64_t Cst;
+  EXPECT_TRUE(mi_match(FortyTwoSplat.getReg(0), *MRI, m_ICstOrSplat(Cst)));
+  EXPECT_EQ(Cst, 42);
+
+  MachineInstrBuilder NonConstantSplat =
+      B.buildBuildVector(v4s64, {Copies[0], Copies[0], Copies[0], Copies[0]});
+  EXPECT_FALSE(mi_match(NonConstantSplat.getReg(0), *MRI, m_ICstOrSplat(Cst)));
+}
+
 TEST_F(AArch64GISelMITest, MachineInstrPtrBind) {
   setUp();
   if (!TM)

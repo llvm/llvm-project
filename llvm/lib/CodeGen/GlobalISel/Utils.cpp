@@ -1071,13 +1071,36 @@ bool llvm::isBuildVectorConstantSplat(const MachineInstr &MI,
                                     AllowUndef);
 }
 
-Optional<int64_t>
-llvm::getBuildVectorConstantSplat(const MachineInstr &MI,
-                                  const MachineRegisterInfo &MRI) {
+Optional<APInt> llvm::getIConstantSplatVal(const Register Reg,
+                                           const MachineRegisterInfo &MRI) {
   if (auto SplatValAndReg =
-          getAnyConstantSplat(MI.getOperand(0).getReg(), MRI, false))
+          getAnyConstantSplat(Reg, MRI, /* AllowUndef */ false)) {
+    Optional<ValueAndVReg> ValAndVReg =
+        getIConstantVRegValWithLookThrough(SplatValAndReg->VReg, MRI);
+    return ValAndVReg->Value;
+  }
+
+  return None;
+}
+
+Optional<APInt> getIConstantSplatVal(const MachineInstr &MI,
+                                     const MachineRegisterInfo &MRI) {
+  return getIConstantSplatVal(MI.getOperand(0).getReg(), MRI);
+}
+
+Optional<int64_t>
+llvm::getIConstantSplatSExtVal(const Register Reg,
+                               const MachineRegisterInfo &MRI) {
+  if (auto SplatValAndReg =
+          getAnyConstantSplat(Reg, MRI, /* AllowUndef */ false))
     return getIConstantVRegSExtVal(SplatValAndReg->VReg, MRI);
   return None;
+}
+
+Optional<int64_t>
+llvm::getIConstantSplatSExtVal(const MachineInstr &MI,
+                               const MachineRegisterInfo &MRI) {
+  return getIConstantSplatSExtVal(MI.getOperand(0).getReg(), MRI);
 }
 
 Optional<FPValueAndVReg> llvm::getFConstantSplat(Register VReg,
@@ -1105,7 +1128,7 @@ Optional<RegOrConstant> llvm::getVectorSplat(const MachineInstr &MI,
   unsigned Opc = MI.getOpcode();
   if (!isBuildVectorOp(Opc))
     return None;
-  if (auto Splat = getBuildVectorConstantSplat(MI, MRI))
+  if (auto Splat = getIConstantSplatSExtVal(MI, MRI))
     return RegOrConstant(*Splat);
   auto Reg = MI.getOperand(1).getReg();
   if (any_of(make_range(MI.operands_begin() + 2, MI.operands_end()),
@@ -1176,7 +1199,7 @@ llvm::isConstantOrConstantSplatVector(MachineInstr &MI,
   Register Def = MI.getOperand(0).getReg();
   if (auto C = getIConstantVRegValWithLookThrough(Def, MRI))
     return C->Value;
-  auto MaybeCst = getBuildVectorConstantSplat(MI, MRI);
+  auto MaybeCst = getIConstantSplatSExtVal(MI, MRI);
   if (!MaybeCst)
     return None;
   const unsigned ScalarSize = MRI.getType(Def).getScalarSizeInBits();

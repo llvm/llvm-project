@@ -143,13 +143,9 @@ body: |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: %a:_(<2 x s32>) = COPY $vgpr0_vgpr1
     ; CHECK-NEXT: %b:_(<2 x s32>) = COPY $vgpr2_vgpr3
-    ; CHECK-NEXT: %scalar_amt0:_(s32) = G_CONSTANT i32 20
-    ; CHECK-NEXT: %amt0:_(<2 x s32>) = G_BUILD_VECTOR %scalar_amt0(s32), %scalar_amt0(s32)
     ; CHECK-NEXT: %scalar_amt1:_(s32) = G_CONSTANT i32 12
     ; CHECK-NEXT: %amt1:_(<2 x s32>) = G_BUILD_VECTOR %scalar_amt1(s32), %scalar_amt1(s32)
-    ; CHECK-NEXT: %shl:_(<2 x s32>) = G_SHL %a, %amt0(<2 x s32>)
-    ; CHECK-NEXT: %lshr:_(<2 x s32>) = G_LSHR %b, %amt1(<2 x s32>)
-    ; CHECK-NEXT: %or:_(<2 x s32>) = G_OR %shl, %lshr
+    ; CHECK-NEXT: %or:_(<2 x s32>) = G_FSHR %a, %b, %amt1(<2 x s32>)
     ; CHECK-NEXT: $vgpr4_vgpr5 = COPY %or(<2 x s32>)
     %a:_(<2 x s32>) = COPY $vgpr0_vgpr1
     %b:_(<2 x s32>) = COPY $vgpr2_vgpr3
