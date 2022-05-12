@@ -10,7 +10,7 @@
 #define LLVM_CLANG_TOOLING_DEPENDENCYSCANNING_DEPENDENCYSCANNINGFILESYSTEM_H
 
 #include "clang/Basic/LLVM.h"
-#include "clang/Lex/PreprocessorExcludedConditionalDirectiveSkipMapping.h"
+#include "clang/Lex/DependencyDirectivesScanner.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/Support/Allocator.h"
@@ -22,24 +22,26 @@ namespace clang {
 namespace tooling {
 namespace dependencies {
 
-/// Original and minimized contents of a cached file entry. Single instance can
+using DependencyDirectivesTy =
+    SmallVector<dependency_directives_scan::Directive, 20>;
+
+/// Contents and directive tokens of a cached file entry. Single instance can
 /// be shared between multiple entries.
 struct CachedFileContents {
-  CachedFileContents(std::unique_ptr<llvm::MemoryBuffer> Original)
-      : Original(std::move(Original)), MinimizedAccess(nullptr) {}
+  CachedFileContents(std::unique_ptr<llvm::MemoryBuffer> Contents)
+      : Original(std::move(Contents)), DepDirectives(nullptr) {}
 
   /// Owning storage for the original contents.
   std::unique_ptr<llvm::MemoryBuffer> Original;
 
   /// The mutex that must be locked before mutating directive tokens.
   std::mutex ValueLock;
-  /// Owning storage for the minimized contents.
-  std::unique_ptr<llvm::MemoryBuffer> MinimizedStorage;
+  SmallVector<dependency_directives_scan::Token, 10> DepDirectiveTokens;
   /// Accessor to the directive tokens that's atomic to avoid data races.
-  std::atomic<llvm::MemoryBuffer *> MinimizedAccess;
-  /// Skipped range mapping of the minimized contents.
-  /// This is initialized iff `MinimizedAccess != nullptr`.
-  PreprocessorSkippedRangeMapping PPSkippedRangeMapping;
+  /// \p CachedFileContents has ownership of the pointer.
+  std::atomic<const Optional<DependencyDirectivesTy> *> DepDirectives;
+
+  ~CachedFileContents() { delete DepDirectives.load(); }
 };
 
 /// An in-memory representation of a file system entity that is of interest to
@@ -86,13 +88,17 @@ public:
 
   /// \returns The scanned preprocessor directive tokens of the file that are
   /// used to speed up preprocessing, if available.
-  StringRef getDirectiveTokens() const {
+  Optional<ArrayRef<dependency_directives_scan::Directive>>
+  getDirectiveTokens() const {
     assert(!isError() && "error");
-    assert(!MaybeStat->isDirectory() && "not a file");
+    assert(!isDirectory() && "not a file");
     assert(Contents && "contents not initialized");
-    llvm::MemoryBuffer *Buffer = Contents->MinimizedAccess.load();
-    assert(Buffer && "not minimized");
-    return Buffer->getBuffer();
+    if (auto *Directives = Contents->DepDirectives.load()) {
+      if (Directives->hasValue())
+        return ArrayRef<dependency_directives_scan::Directive>(
+            Directives->getValue());
+    }
+    return None;
   }
 
   /// \returns The error.
@@ -109,15 +115,6 @@ public:
   llvm::sys::fs::UniqueID getUniqueID() const {
     assert(!isError() && "error");
     return MaybeStat->getUniqueID();
-  }
-
-  /// \returns The mapping between location -> distance that is used to speed up
-  /// the block skipping in the preprocessor.
-  const PreprocessorSkippedRangeMapping &getPPSkippedRangeMapping() const {
-    assert(!isError() && "error");
-    assert(!isDirectory() && "not a file");
-    assert(Contents && "contents not initialized");
-    return Contents->PPSkippedRangeMapping;
   }
 
   /// \returns The data structure holding both contents and directive tokens.
@@ -237,10 +234,6 @@ public:
 /// If the underlying entry is an opened file, this wrapper returns the file
 /// contents and the scanned preprocessor directives.
 class EntryRef {
-  /// For entry that is an opened file, this bit signifies whether its contents
-  /// are minimized.
-  bool Minimized;
-
   /// The filename used to access this entry.
   std::string Filename;
 
@@ -248,8 +241,8 @@ class EntryRef {
   const CachedFileSystemEntry &Entry;
 
 public:
-  EntryRef(bool Minimized, StringRef Name, const CachedFileSystemEntry &Entry)
-      : Minimized(Minimized), Filename(Name), Entry(Entry) {}
+  EntryRef(StringRef Name, const CachedFileSystemEntry &Entry)
+      : Filename(Name), Entry(Entry) {}
 
   llvm::vfs::Status getStatus() const {
     llvm::vfs::Status Stat = Entry.getStatus();
@@ -268,12 +261,11 @@ public:
     return *this;
   }
 
-  StringRef getContents() const {
-    return Minimized ? Entry.getDirectiveTokens() : Entry.getOriginalContents();
-  }
+  StringRef getContents() const { return Entry.getOriginalContents(); }
 
-  const PreprocessorSkippedRangeMapping *getPPSkippedRangeMapping() const {
-    return Minimized ? &Entry.getPPSkippedRangeMapping() : nullptr;
+  Optional<ArrayRef<dependency_directives_scan::Directive>>
+  getDirectiveTokens() const {
+    return Entry.getDirectiveTokens();
   }
 };
 
@@ -290,23 +282,12 @@ class DependencyScanningWorkerFilesystem : public llvm::vfs::ProxyFileSystem {
 public:
   DependencyScanningWorkerFilesystem(
       DependencyScanningFilesystemSharedCache &SharedCache,
-      IntrusiveRefCntPtr<llvm::vfs::FileSystem> FS,
-      ExcludedPreprocessorDirectiveSkipMapping &PPSkipMappings)
-      : ProxyFileSystem(std::move(FS)), SharedCache(SharedCache),
-        PPSkipMappings(PPSkipMappings) {}
+      IntrusiveRefCntPtr<llvm::vfs::FileSystem> FS)
+      : ProxyFileSystem(std::move(FS)), SharedCache(SharedCache) {}
 
   llvm::ErrorOr<llvm::vfs::Status> status(const Twine &Path) override;
   llvm::ErrorOr<std::unique_ptr<llvm::vfs::File>>
   openFileForRead(const Twine &Path) override;
-
-  /// Disable directives scanning of the given file.
-  void disableDirectivesScanning(StringRef Filename);
-  /// Enable directives scanning of all files.
-  void enableDirectivesScanningOfAllFiles() { NotToBeScanned.clear(); }
-
-private:
-  /// Check whether the file should be scanned for preprocessor directives.
-  bool shouldScanForDirectives(StringRef Filename, llvm::sys::fs::UniqueID UID);
 
   /// Returns entry for the given filename.
   ///
@@ -315,6 +296,10 @@ private:
   llvm::ErrorOr<EntryRef>
   getOrCreateFileSystemEntry(StringRef Filename,
                              bool DisableDirectivesScanning = false);
+
+private:
+  /// Check whether the file should be scanned for preprocessor directives.
+  bool shouldScanForDirectives(StringRef Filename);
 
   /// For a filename that's not yet associated with any entry in the caches,
   /// uses the underlying filesystem to either look up the entry based in the
@@ -396,12 +381,6 @@ private:
   /// The local cache is used by the worker thread to cache file system queries
   /// locally instead of querying the global cache every time.
   DependencyScanningFilesystemLocalCache LocalCache;
-  /// The mapping structure which records information about the
-  /// excluded conditional directive skip mappings that are used by the
-  /// currently active preprocessor.
-  ExcludedPreprocessorDirectiveSkipMapping &PPSkipMappings;
-  /// The set of files that should not be scanned for PP directives.
-  llvm::DenseSet<llvm::sys::fs::UniqueID> NotToBeScanned;
 };
 
 } // end namespace dependencies

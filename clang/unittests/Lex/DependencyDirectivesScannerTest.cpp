@@ -14,39 +14,58 @@ using namespace llvm;
 using namespace clang;
 using namespace clang::dependency_directives_scan;
 
-static bool minimizeSourceToDependencyDirectives(StringRef Input,
-                                                 SmallVectorImpl<char> &Out) {
-  SmallVector<dependency_directives_scan::Directive, 32> Directives;
-  return scanSourceForDependencyDirectives(Input, Out, Directives);
+static bool minimizeSourceToDependencyDirectives(
+    StringRef Input, SmallVectorImpl<char> &Out,
+    SmallVectorImpl<dependency_directives_scan::Token> &Tokens,
+    SmallVectorImpl<Directive> &Directives) {
+  Out.clear();
+  Tokens.clear();
+  Directives.clear();
+  if (scanSourceForDependencyDirectives(Input, Tokens, Directives))
+    return true;
+
+  raw_svector_ostream OS(Out);
+  printDependencyDirectivesAsSource(Input, Directives, OS);
+  if (!Out.empty() && Out.back() != '\n')
+    Out.push_back('\n');
+  Out.push_back('\0');
+  Out.pop_back();
+
+  return false;
 }
 
-static bool
-minimizeSourceToDependencyDirectives(StringRef Input,
-                                     SmallVectorImpl<char> &Out,
-                                     SmallVectorImpl<Directive> &Directives) {
-  return scanSourceForDependencyDirectives(Input, Out, Directives);
+static bool minimizeSourceToDependencyDirectives(StringRef Input,
+                                                 SmallVectorImpl<char> &Out) {
+  SmallVector<dependency_directives_scan::Token, 16> Tokens;
+  SmallVector<Directive, 32> Directives;
+  return minimizeSourceToDependencyDirectives(Input, Out, Tokens, Directives);
 }
 
 namespace {
 
 TEST(MinimizeSourceToDependencyDirectivesTest, Empty) {
   SmallVector<char, 128> Out;
+  SmallVector<dependency_directives_scan::Token, 4> Tokens;
   SmallVector<Directive, 4> Directives;
 
-  ASSERT_FALSE(minimizeSourceToDependencyDirectives("", Out, Directives));
+  ASSERT_FALSE(
+      minimizeSourceToDependencyDirectives("", Out, Tokens, Directives));
   EXPECT_TRUE(Out.empty());
+  EXPECT_TRUE(Tokens.empty());
   ASSERT_EQ(1u, Directives.size());
   ASSERT_EQ(pp_eof, Directives.back().Kind);
 
-  ASSERT_FALSE(
-      minimizeSourceToDependencyDirectives("abc def\nxyz", Out, Directives));
+  ASSERT_FALSE(minimizeSourceToDependencyDirectives("abc def\nxyz", Out, Tokens,
+                                                    Directives));
   EXPECT_TRUE(Out.empty());
+  EXPECT_TRUE(Tokens.empty());
   ASSERT_EQ(1u, Directives.size());
   ASSERT_EQ(pp_eof, Directives.back().Kind);
 }
 
-TEST(MinimizeSourceToDependencyDirectivesTest, AllDirectives) {
+TEST(MinimizeSourceToDependencyDirectivesTest, AllTokens) {
   SmallVector<char, 128> Out;
+  SmallVector<dependency_directives_scan::Token, 4> Tokens;
   SmallVector<Directive, 4> Directives;
 
   ASSERT_FALSE(
@@ -71,7 +90,7 @@ TEST(MinimizeSourceToDependencyDirectivesTest, AllDirectives) {
                                            "#pragma include_alias(<A>, <B>)\n"
                                            "export module m;\n"
                                            "import m;\n",
-                                           Out, Directives));
+                                           Out, Tokens, Directives));
   EXPECT_EQ(pp_define, Directives[0].Kind);
   EXPECT_EQ(pp_undef, Directives[1].Kind);
   EXPECT_EQ(pp_endif, Directives[2].Kind);
@@ -91,19 +110,28 @@ TEST(MinimizeSourceToDependencyDirectivesTest, AllDirectives) {
   EXPECT_EQ(pp_pragma_push_macro, Directives[16].Kind);
   EXPECT_EQ(pp_pragma_pop_macro, Directives[17].Kind);
   EXPECT_EQ(pp_pragma_include_alias, Directives[18].Kind);
-  EXPECT_EQ(cxx_export_decl, Directives[19].Kind);
-  EXPECT_EQ(cxx_module_decl, Directives[20].Kind);
-  EXPECT_EQ(cxx_import_decl, Directives[21].Kind);
-  EXPECT_EQ(pp_eof, Directives[22].Kind);
+  EXPECT_EQ(cxx_export_module_decl, Directives[19].Kind);
+  EXPECT_EQ(cxx_import_decl, Directives[20].Kind);
+  EXPECT_EQ(pp_eof, Directives[21].Kind);
+}
+
+TEST(MinimizeSourceToDependencyDirectivesTest, EmptyHash) {
+  SmallVector<char, 128> Out;
+
+  ASSERT_FALSE(
+      minimizeSourceToDependencyDirectives("#\n#define MACRO a\n", Out));
+  EXPECT_STREQ("#define MACRO a\n", Out.data());
 }
 
 TEST(MinimizeSourceToDependencyDirectivesTest, Define) {
   SmallVector<char, 128> Out;
+  SmallVector<dependency_directives_scan::Token, 4> Tokens;
   SmallVector<Directive, 4> Directives;
 
-  ASSERT_FALSE(
-      minimizeSourceToDependencyDirectives("#define MACRO", Out, Directives));
+  ASSERT_FALSE(minimizeSourceToDependencyDirectives("#define MACRO", Out,
+                                                    Tokens, Directives));
   EXPECT_STREQ("#define MACRO\n", Out.data());
+  ASSERT_EQ(4u, Tokens.size());
   ASSERT_EQ(2u, Directives.size());
   ASSERT_EQ(pp_define, Directives.front().Kind);
 }
@@ -144,25 +172,25 @@ TEST(MinimizeSourceToDependencyDirectivesTest, DefineMacroArguments) {
 
   ASSERT_FALSE(minimizeSourceToDependencyDirectives(
       "#define MACRO   con  tent   ", Out));
-  EXPECT_STREQ("#define MACRO con  tent\n", Out.data());
+  EXPECT_STREQ("#define MACRO con tent\n", Out.data());
 
   ASSERT_FALSE(minimizeSourceToDependencyDirectives(
       "#define MACRO()   con  tent   ", Out));
-  EXPECT_STREQ("#define MACRO() con  tent\n", Out.data());
+  EXPECT_STREQ("#define MACRO() con tent\n", Out.data());
 }
 
 TEST(MinimizeSourceToDependencyDirectivesTest, DefineInvalidMacroArguments) {
   SmallVector<char, 128> Out;
 
   ASSERT_FALSE(minimizeSourceToDependencyDirectives("#define MACRO((a))", Out));
-  EXPECT_STREQ("#define MACRO(/* invalid */\n", Out.data());
+  EXPECT_STREQ("#define MACRO((a))\n", Out.data());
 
   ASSERT_FALSE(minimizeSourceToDependencyDirectives("#define MACRO(", Out));
-  EXPECT_STREQ("#define MACRO(/* invalid */\n", Out.data());
+  EXPECT_STREQ("#define MACRO(\n", Out.data());
 
   ASSERT_FALSE(
       minimizeSourceToDependencyDirectives("#define MACRO(a * b)", Out));
-  EXPECT_STREQ("#define MACRO(/* invalid */\n", Out.data());
+  EXPECT_STREQ("#define MACRO(a*b)\n", Out.data());
 }
 
 TEST(MinimizeSourceToDependencyDirectivesTest, DefineHorizontalWhitespace) {
@@ -170,19 +198,19 @@ TEST(MinimizeSourceToDependencyDirectivesTest, DefineHorizontalWhitespace) {
 
   ASSERT_FALSE(minimizeSourceToDependencyDirectives(
       "#define MACRO(\t)\tcon \t tent\t", Out));
-  EXPECT_STREQ("#define MACRO() con \t tent\n", Out.data());
+  EXPECT_STREQ("#define MACRO() con tent\n", Out.data());
 
   ASSERT_FALSE(minimizeSourceToDependencyDirectives(
       "#define MACRO(\f)\fcon \f tent\f", Out));
-  EXPECT_STREQ("#define MACRO() con \f tent\n", Out.data());
+  EXPECT_STREQ("#define MACRO() con tent\n", Out.data());
 
   ASSERT_FALSE(minimizeSourceToDependencyDirectives(
       "#define MACRO(\v)\vcon \v tent\v", Out));
-  EXPECT_STREQ("#define MACRO() con \v tent\n", Out.data());
+  EXPECT_STREQ("#define MACRO() con tent\n", Out.data());
 
   ASSERT_FALSE(minimizeSourceToDependencyDirectives(
       "#define MACRO \t\v\f\v\t con\f\t\vtent\v\f \v", Out));
-  EXPECT_STREQ("#define MACRO con\f\t\vtent\n", Out.data());
+  EXPECT_STREQ("#define MACRO con tent\n", Out.data());
 }
 
 TEST(MinimizeSourceToDependencyDirectivesTest, DefineMultilineArgs) {
@@ -255,25 +283,27 @@ TEST(MinimizeSourceToDependencyDirectivesTest,
 TEST(MinimizeSourceToDependencyDirectivesTest, DefineNumber) {
   SmallVector<char, 128> Out;
 
-  ASSERT_TRUE(minimizeSourceToDependencyDirectives("#define 0\n", Out));
+  ASSERT_FALSE(minimizeSourceToDependencyDirectives("#define 0\n", Out));
 }
 
 TEST(MinimizeSourceToDependencyDirectivesTest, DefineNoName) {
   SmallVector<char, 128> Out;
 
-  ASSERT_TRUE(minimizeSourceToDependencyDirectives("#define &\n", Out));
+  ASSERT_FALSE(minimizeSourceToDependencyDirectives("#define &\n", Out));
 }
 
 TEST(MinimizeSourceToDependencyDirectivesTest, DefineNoWhitespace) {
   SmallVector<char, 128> Out;
 
   ASSERT_FALSE(minimizeSourceToDependencyDirectives("#define AND&\n", Out));
-  EXPECT_STREQ("#define AND &\n", Out.data());
+  EXPECT_STREQ("#define AND&\n", Out.data());
 
   ASSERT_FALSE(minimizeSourceToDependencyDirectives("#define AND\\\n"
                                                     "&\n",
                                                     Out));
-  EXPECT_STREQ("#define AND &\n", Out.data());
+  EXPECT_STREQ("#define AND\\\n"
+               "&\n",
+               Out.data());
 }
 
 TEST(MinimizeSourceToDependencyDirectivesTest, MultilineComment) {
@@ -301,6 +331,14 @@ TEST(MinimizeSourceToDependencyDirectivesTest, MultilineCommentInStrings) {
   EXPECT_STREQ("#define MACRO1 \"/*\"\n"
                "#define MACRO2 \"*/\"\n",
                Out.data());
+}
+
+TEST(MinimizeSourceToDependencyDirectivesTest, CommentSlashSlashStar) {
+  SmallVector<char, 128> Out;
+
+  ASSERT_FALSE(minimizeSourceToDependencyDirectives(
+      "#define MACRO 1 //* blah */\n", Out));
+  EXPECT_STREQ("#define MACRO 1\n", Out.data());
 }
 
 TEST(MinimizeSourceToDependencyDirectivesTest, Ifdef) {
@@ -481,6 +519,9 @@ TEST(MinimizeSourceToDependencyDirectivesTest, Include) {
   ASSERT_FALSE(
       minimizeSourceToDependencyDirectives("#__include_macros <A>\n", Out));
   EXPECT_STREQ("#__include_macros <A>\n", Out.data());
+
+  ASSERT_FALSE(minimizeSourceToDependencyDirectives("#include MACRO\n", Out));
+  EXPECT_STREQ("#include MACRO\n", Out.data());
 }
 
 TEST(MinimizeSourceToDependencyDirectivesTest, AtImport) {
@@ -507,8 +548,9 @@ TEST(MinimizeSourceToDependencyDirectivesTest, AtImportFailures) {
   SmallVector<char, 128> Out;
 
   ASSERT_TRUE(minimizeSourceToDependencyDirectives("@import A\n", Out));
-  ASSERT_TRUE(minimizeSourceToDependencyDirectives("@import MACRO(A);\n", Out));
-  ASSERT_TRUE(minimizeSourceToDependencyDirectives("@import \" \";\n", Out));
+  ASSERT_FALSE(
+      minimizeSourceToDependencyDirectives("@import MACRO(A);\n", Out));
+  ASSERT_FALSE(minimizeSourceToDependencyDirectives("@import \" \";\n", Out));
 }
 
 TEST(MinimizeSourceToDependencyDirectivesTest, RawStringLiteral) {
@@ -559,7 +601,8 @@ TEST(MinimizeSourceToDependencyDirectivesTest, SplitIdentifier) {
                                                     "#define GUARD\n"
                                                     "#endif\n",
                                                     Out));
-  EXPECT_STREQ("#ifndef GUARD\n"
+  EXPECT_STREQ("#if\\\n"
+               "ndef GUARD\n"
                "#define GUARD\n"
                "#endif\n",
                Out.data());
@@ -567,12 +610,16 @@ TEST(MinimizeSourceToDependencyDirectivesTest, SplitIdentifier) {
   ASSERT_FALSE(minimizeSourceToDependencyDirectives("#define GUA\\\n"
                                                     "RD\n",
                                                     Out));
-  EXPECT_STREQ("#define GUARD\n", Out.data());
+  EXPECT_STREQ("#define GUA\\\n"
+               "RD\n",
+               Out.data());
 
   ASSERT_FALSE(minimizeSourceToDependencyDirectives("#define GUA\\\r"
                                                     "RD\n",
                                                     Out));
-  EXPECT_STREQ("#define GUARD\n", Out.data());
+  EXPECT_STREQ("#define GUA\\\r"
+               "RD\n",
+               Out.data());
 
   ASSERT_FALSE(minimizeSourceToDependencyDirectives("#define GUA\\\n"
                                                     "           RD\n",
@@ -588,7 +635,10 @@ TEST(MinimizeSourceToDependencyDirectivesTest,
                                                     "2 + \\\t\n"
                                                     "3\n",
                                                     Out));
-  EXPECT_STREQ("#define A 1 + 2 + 3\n", Out.data());
+  EXPECT_STREQ("#define A 1+\\  \n"
+               "2+\\\t\n"
+               "3\n",
+               Out.data());
 }
 
 TEST(MinimizeSourceToDependencyDirectivesTest, PoundWarningAndError) {
@@ -682,6 +732,7 @@ int z = 128'78;
 
 TEST(MinimizeSourceToDependencyDirectivesTest, PragmaOnce) {
   SmallVector<char, 128> Out;
+  SmallVector<dependency_directives_scan::Token, 4> Tokens;
   SmallVector<Directive, 4> Directives;
 
   StringRef Source = R"(// comment
@@ -689,7 +740,8 @@ TEST(MinimizeSourceToDependencyDirectivesTest, PragmaOnce) {
 // another comment
 #include <test.h>
 )";
-  ASSERT_FALSE(minimizeSourceToDependencyDirectives(Source, Out, Directives));
+  ASSERT_FALSE(
+      minimizeSourceToDependencyDirectives(Source, Out, Tokens, Directives));
   EXPECT_STREQ("#pragma once\n#include <test.h>\n", Out.data());
   ASSERT_EQ(Directives.size(), 3u);
   EXPECT_EQ(Directives[0].Kind, dependency_directives_scan::pp_pragma_once);
@@ -700,7 +752,7 @@ TEST(MinimizeSourceToDependencyDirectivesTest, PragmaOnce) {
     #include <test.h>
     )";
   ASSERT_FALSE(minimizeSourceToDependencyDirectives(Source, Out));
-  EXPECT_STREQ("#pragma once\n#include <test.h>\n", Out.data());
+  EXPECT_STREQ("#pragma once extra tokens\n#include <test.h>\n", Out.data());
 }
 
 TEST(MinimizeSourceToDependencyDirectivesTest,
@@ -755,11 +807,12 @@ TEST(MinimizeSourceToDependencyDirectivesTest,
 
   Source = "#define X \"\\ \r\nx\n#include <x>\n";
   ASSERT_FALSE(minimizeSourceToDependencyDirectives(Source, Out));
-  EXPECT_STREQ("#define X \"\\ \r\nx\n#include <x>\n", Out.data());
+  EXPECT_STREQ("#define X\"\\ \r\nx\n#include <x>\n", Out.data());
 }
 
 TEST(MinimizeSourceToDependencyDirectivesTest, CxxModules) {
   SmallVector<char, 128> Out;
+  SmallVector<dependency_directives_scan::Token, 4> Tokens;
   SmallVector<Directive, 4> Directives;
 
   StringRef Source = R"(
@@ -789,81 +842,17 @@ ort \
       import f(->a = 3);
     }
     )";
-  ASSERT_FALSE(minimizeSourceToDependencyDirectives(Source, Out, Directives));
-  EXPECT_STREQ("#include \"textual-header.h\"\nexport module m;\n"
-               "export import :l [[rename]];\n"
-               "import <<= 3;\nimport a b d e d e f e;\n"
-               "import foo [[no_unique_address]];\nimport foo();\n"
-               "import f(:sefse);\nimport f(->a = 3);\n",
+  ASSERT_FALSE(
+      minimizeSourceToDependencyDirectives(Source, Out, Tokens, Directives));
+  EXPECT_STREQ("#include \"textual-header.h\"\nexport module m;"
+               "exp\\\nort import:l[[rename]];"
+               "import<<=3;import a b d e d e f e;"
+               "import foo[[no_unique_address]];import foo();"
+               "import f(:sefse);import f(->a=3);\n",
                Out.data());
-  ASSERT_EQ(Directives.size(), 12u);
-  EXPECT_EQ(Directives[0].Kind, dependency_directives_scan::pp_include);
-  EXPECT_EQ(Directives[2].Kind, dependency_directives_scan::cxx_module_decl);
-}
-
-TEST(MinimizeSourceToDependencyDirectivesTest, SkippedPPRangesBasic) {
-  SmallString<128> Out;
-  SmallVector<Directive, 32> Directives;
-  StringRef Source = "#ifndef GUARD\n"
-                     "#define GUARD\n"
-                     "void foo();\n"
-                     "#endif\n";
-  ASSERT_FALSE(minimizeSourceToDependencyDirectives(Source, Out, Directives));
-  SmallVector<SkippedRange, 4> Ranges;
-  ASSERT_FALSE(computeSkippedRanges(Directives, Ranges));
-  EXPECT_EQ(Ranges.size(), 1u);
-  EXPECT_EQ(Ranges[0].Offset, 0);
-  EXPECT_EQ(Ranges[0].Length, (int)Out.find("#endif"));
-}
-
-TEST(MinimizeSourceToDependencyDirectivesTest, SkippedPPRangesBasicElifdef) {
-  SmallString<128> Out;
-  SmallVector<Directive, 32> Directives;
-  StringRef Source = "#ifdef BLAH\n"
-                     "void skip();\n"
-                     "#elifdef BLAM\n"
-                     "void skip();\n"
-                     "#elifndef GUARD\n"
-                     "#define GUARD\n"
-                     "void foo();\n"
-                     "#endif\n";
-  ASSERT_FALSE(minimizeSourceToDependencyDirectives(Source, Out, Directives));
-  SmallVector<SkippedRange, 4> Ranges;
-  ASSERT_FALSE(computeSkippedRanges(Directives, Ranges));
-  EXPECT_EQ(Ranges.size(), 3u);
-  EXPECT_EQ(Ranges[0].Offset, 0);
-  EXPECT_EQ(Ranges[0].Length, (int)Out.find("#elifdef"));
-  EXPECT_EQ(Ranges[1].Offset, (int)Out.find("#elifdef"));
-  EXPECT_EQ(Ranges[1].Offset + Ranges[1].Length, (int)Out.find("#elifndef"));
-  EXPECT_EQ(Ranges[2].Offset, (int)Out.find("#elifndef"));
-  EXPECT_EQ(Ranges[2].Offset + Ranges[2].Length, (int)Out.rfind("#endif"));
-}
-
-TEST(MinimizeSourceToDependencyDirectivesTest, SkippedPPRangesNested) {
-  SmallString<128> Out;
-  SmallVector<Directive, 32> Directives;
-  StringRef Source = "#ifndef GUARD\n"
-                     "#define GUARD\n"
-                     "#if FOO\n"
-                     "#include hello\n"
-                     "#elif BAR\n"
-                     "#include bye\n"
-                     "#endif\n"
-                     "#else\n"
-                     "#include nothing\n"
-                     "#endif\n";
-  ASSERT_FALSE(minimizeSourceToDependencyDirectives(Source, Out, Directives));
-  SmallVector<SkippedRange, 4> Ranges;
-  ASSERT_FALSE(computeSkippedRanges(Directives, Ranges));
-  EXPECT_EQ(Ranges.size(), 4u);
-  EXPECT_EQ(Ranges[0].Offset, (int)Out.find("#if FOO"));
-  EXPECT_EQ(Ranges[0].Offset + Ranges[0].Length, (int)Out.find("#elif"));
-  EXPECT_EQ(Ranges[1].Offset, (int)Out.find("#elif BAR"));
-  EXPECT_EQ(Ranges[1].Offset + Ranges[1].Length, (int)Out.find("#endif"));
-  EXPECT_EQ(Ranges[2].Offset, 0);
-  EXPECT_EQ(Ranges[2].Length, (int)Out.find("#else"));
-  EXPECT_EQ(Ranges[3].Offset, (int)Out.find("#else"));
-  EXPECT_EQ(Ranges[3].Offset + Ranges[3].Length, (int)Out.rfind("#endif"));
+  ASSERT_EQ(Directives.size(), 10u);
+  EXPECT_EQ(Directives[0].Kind, pp_include);
+  EXPECT_EQ(Directives[1].Kind, cxx_export_module_decl);
 }
 
 } // end anonymous namespace

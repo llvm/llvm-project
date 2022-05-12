@@ -13,7 +13,6 @@
 #include "clang/Basic/FileManager.h"
 #include "clang/Basic/LLVM.h"
 #include "clang/Frontend/PCHContainerOperations.h"
-#include "clang/Lex/PreprocessorExcludedConditionalDirectiveSkipMapping.h"
 #include "clang/Tooling/DependencyScanning/DependencyScanningService.h"
 #include "clang/Tooling/DependencyScanning/ModuleDepCollector.h"
 #include "llvm/Support/Error.h"
@@ -73,7 +72,6 @@ public:
 
 private:
   std::shared_ptr<PCHContainerOperations> PCHContainerOps;
-  ExcludedPreprocessorDirectiveSkipMapping PPSkipMappings;
 
   /// The physical filesystem overlaid by `InMemoryFS`.
   llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> RealFS;
