@@ -12,6 +12,7 @@
 
 #include "CIRGenCXXABI.h"
 #include "CIRGenFunction.h"
+#include "UnimplementedFeatureGuarding.h"
 
 #include "clang/AST/RecordLayout.h"
 
@@ -434,6 +435,14 @@ Address CIRGenFunction::LoadCXXThisAddress() {
 void CIRGenFunction::buildInitializerForField(FieldDecl *Field, LValue LHS,
                                               Expr *Init) {
   llvm_unreachable("NYI");
+  QualType FieldType = Field->getType();
+
+  // Ensure that we destroy this object if an exception is thrown later in the
+  // constructor.
+  QualType::DestructionKind dtorKind = FieldType.isDestructedType();
+  (void)dtorKind;
+  if (UnimplementedFeature::cleanups())
+    llvm_unreachable("NYI");
 }
 
 void CIRGenFunction::buildDelegateCXXConstructorCall(
