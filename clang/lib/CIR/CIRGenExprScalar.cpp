@@ -230,6 +230,16 @@ public:
     case CK_IntegralToFixedPoint:
       llvm_unreachable("NYI");
 
+    case CK_IntegralCast: {
+      ScalarConversionOpts Opts;
+      if (auto *ICE = dyn_cast<ImplicitCastExpr>(CE)) {
+        if (!ICE->isPartOfExplicitCast())
+          Opts = ScalarConversionOpts(CGF.SanOpts);
+      }
+      return buildScalarConversion(Visit(E), E->getType(), DestTy,
+                                   CE->getExprLoc(), Opts);
+    }
+
     case CK_IntegralToFloating:
       llvm_unreachable("NYI");
     case CK_FloatingToIntegral:
