@@ -2015,7 +2015,7 @@ bool SampleProfileLoader::doInitialization(Module &M,
                               ProfileInlineReplayScope,
                               ProfileInlineReplayFallback,
                               {ProfileInlineReplayFormat}},
-        /*EmitRemarks=*/false);
+        /*EmitRemarks=*/false, InlineContext{LTOPhase, InlinePass::ReplaySampleProfileInliner});
   }
 
   // Apply tweaks if context-sensitive or probe-based profile is available.
