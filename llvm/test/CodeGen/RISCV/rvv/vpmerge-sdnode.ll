@@ -180,6 +180,43 @@ define <vscale x 4 x i8> @vpmerge_vi_nxv4i8(<vscale x 4 x i8> %vb, <vscale x 4 x
   ret <vscale x 4 x i8> %v
 }
 
+declare <vscale x 8 x i7> @llvm.vp.merge.nxv8i7(<vscale x 8 x i1>, <vscale x 8 x i7>, <vscale x 8 x i7>, i32)
+
+define <vscale x 8 x i7> @vpmerge_vv_nxv8i7(<vscale x 8 x i7> %va, <vscale x 8 x i7> %vb, <vscale x 8 x i1> %m, i32 zeroext %evl) {
+; CHECK-LABEL: vpmerge_vv_nxv8i7:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli zero, a0, e8, m1, tu, mu
+; CHECK-NEXT:    vmerge.vvm v9, v9, v8, v0
+; CHECK-NEXT:    vmv1r.v v8, v9
+; CHECK-NEXT:    ret
+  %v = call <vscale x 8 x i7> @llvm.vp.merge.nxv8i7(<vscale x 8 x i1> %m, <vscale x 8 x i7> %va, <vscale x 8 x i7> %vb, i32 %evl)
+  ret <vscale x 8 x i7> %v
+}
+
+define <vscale x 8 x i7> @vpmerge_vx_nxv8i7(i7 %a, <vscale x 8 x i7> %vb, <vscale x 8 x i1> %m, i32 zeroext %evl) {
+; CHECK-LABEL: vpmerge_vx_nxv8i7:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli zero, a1, e8, m1, tu, mu
+; CHECK-NEXT:    vmerge.vxm v8, v8, a0, v0
+; CHECK-NEXT:    ret
+  %elt.head = insertelement <vscale x 8 x i7> poison, i7 %a, i32 0
+  %va = shufflevector <vscale x 8 x i7> %elt.head, <vscale x 8 x i7> poison, <vscale x 8 x i32> zeroinitializer
+  %v = call <vscale x 8 x i7> @llvm.vp.merge.nxv8i7(<vscale x 8 x i1> %m, <vscale x 8 x i7> %va, <vscale x 8 x i7> %vb, i32 %evl)
+  ret <vscale x 8 x i7> %v
+}
+
+define <vscale x 8 x i7> @vpmerge_vi_nxv8i7(<vscale x 8 x i7> %vb, <vscale x 8 x i1> %m, i32 zeroext %evl) {
+; CHECK-LABEL: vpmerge_vi_nxv8i7:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli zero, a0, e8, m1, tu, mu
+; CHECK-NEXT:    vmerge.vim v8, v8, 2, v0
+; CHECK-NEXT:    ret
+  %elt.head = insertelement <vscale x 8 x i7> poison, i7 2, i32 0
+  %va = shufflevector <vscale x 8 x i7> %elt.head, <vscale x 8 x i7> poison, <vscale x 8 x i32> zeroinitializer
+  %v = call <vscale x 8 x i7> @llvm.vp.merge.nxv8i7(<vscale x 8 x i1> %m, <vscale x 8 x i7> %va, <vscale x 8 x i7> %vb, i32 %evl)
+  ret <vscale x 8 x i7> %v
+}
+
 declare <vscale x 8 x i8> @llvm.vp.merge.nxv8i8(<vscale x 8 x i1>, <vscale x 8 x i8>, <vscale x 8 x i8>, i32)
 
 define <vscale x 8 x i8> @vpmerge_vv_nxv8i8(<vscale x 8 x i8> %va, <vscale x 8 x i8> %vb, <vscale x 8 x i1> %m, i32 zeroext %evl) {
@@ -360,10 +397,10 @@ define <vscale x 128 x i8> @vpmerge_vv_nxv128i8(<vscale x 128 x i8> %va, <vscale
 ; RV32-NEXT:    addi a2, sp, 16
 ; RV32-NEXT:    vs8r.v v8, (a2) # Unknown-size Folded Spill
 ; RV32-NEXT:    li a2, 0
-; RV32-NEXT:    bltu a3, a4, .LBB25_2
+; RV32-NEXT:    bltu a3, a4, .LBB28_2
 ; RV32-NEXT:  # %bb.1:
 ; RV32-NEXT:    mv a2, a4
-; RV32-NEXT:  .LBB25_2:
+; RV32-NEXT:  .LBB28_2:
 ; RV32-NEXT:    vl8r.v v8, (a0)
 ; RV32-NEXT:    vsetvli zero, a2, e8, m8, tu, mu
 ; RV32-NEXT:    vmv1r.v v0, v2
@@ -378,10 +415,10 @@ define <vscale x 128 x i8> @vpmerge_vv_nxv128i8(<vscale x 128 x i8> %va, <vscale
 ; RV32-NEXT:    addi a0, a0, 16
 ; RV32-NEXT:    vl8re8.v v16, (a0) # Unknown-size Folded Reload
 ; RV32-NEXT:    vmerge.vvm v16, v16, v24, v0
-; RV32-NEXT:    bltu a3, a1, .LBB25_4
+; RV32-NEXT:    bltu a3, a1, .LBB28_4
 ; RV32-NEXT:  # %bb.3:
 ; RV32-NEXT:    mv a3, a1
-; RV32-NEXT:  .LBB25_4:
+; RV32-NEXT:  .LBB28_4:
 ; RV32-NEXT:    vsetvli zero, a3, e8, m8, tu, mu
 ; RV32-NEXT:    vmv1r.v v0, v1
 ; RV32-NEXT:    addi a0, sp, 16
@@ -412,18 +449,18 @@ define <vscale x 128 x i8> @vpmerge_vv_nxv128i8(<vscale x 128 x i8> %va, <vscale
 ; RV64-NEXT:    addi a2, sp, 16
 ; RV64-NEXT:    vs8r.v v8, (a2) # Unknown-size Folded Spill
 ; RV64-NEXT:    li a2, 0
-; RV64-NEXT:    bltu a3, a4, .LBB25_2
+; RV64-NEXT:    bltu a3, a4, .LBB28_2
 ; RV64-NEXT:  # %bb.1:
 ; RV64-NEXT:    mv a2, a4
-; RV64-NEXT:  .LBB25_2:
+; RV64-NEXT:  .LBB28_2:
 ; RV64-NEXT:    vl8r.v v8, (a0)
 ; RV64-NEXT:    vsetvli zero, a2, e8, m8, tu, mu
 ; RV64-NEXT:    vmv1r.v v0, v2
 ; RV64-NEXT:    vmerge.vvm v24, v24, v16, v0
-; RV64-NEXT:    bltu a3, a1, .LBB25_4
+; RV64-NEXT:    bltu a3, a1, .LBB28_4
 ; RV64-NEXT:  # %bb.3:
 ; RV64-NEXT:    mv a3, a1
-; RV64-NEXT:  .LBB25_4:
+; RV64-NEXT:  .LBB28_4:
 ; RV64-NEXT:    vsetvli zero, a3, e8, m8, tu, mu
 ; RV64-NEXT:    vmv1r.v v0, v1
 ; RV64-NEXT:    addi a0, sp, 16
@@ -445,20 +482,20 @@ define <vscale x 128 x i8> @vpmerge_vx_nxv128i8(i8 %a, <vscale x 128 x i8> %vb, 
 ; CHECK-NEXT:    csrr a3, vlenb
 ; CHECK-NEXT:    slli a3, a3, 3
 ; CHECK-NEXT:    mv a4, a2
-; CHECK-NEXT:    bltu a2, a3, .LBB26_2
+; CHECK-NEXT:    bltu a2, a3, .LBB29_2
 ; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    mv a4, a3
-; CHECK-NEXT:  .LBB26_2:
+; CHECK-NEXT:  .LBB29_2:
 ; CHECK-NEXT:    li a5, 0
 ; CHECK-NEXT:    vsetvli a6, zero, e8, m8, ta, mu
 ; CHECK-NEXT:    vlm.v v24, (a1)
 ; CHECK-NEXT:    vsetvli zero, a4, e8, m8, tu, mu
 ; CHECK-NEXT:    sub a1, a2, a3
 ; CHECK-NEXT:    vmerge.vxm v8, v8, a0, v0
-; CHECK-NEXT:    bltu a2, a1, .LBB26_4
+; CHECK-NEXT:    bltu a2, a1, .LBB29_4
 ; CHECK-NEXT:  # %bb.3:
 ; CHECK-NEXT:    mv a5, a1
-; CHECK-NEXT:  .LBB26_4:
+; CHECK-NEXT:  .LBB29_4:
 ; CHECK-NEXT:    vsetvli zero, a5, e8, m8, tu, mu
 ; CHECK-NEXT:    vmv1r.v v0, v24
 ; CHECK-NEXT:    vmerge.vxm v16, v16, a0, v0
@@ -475,20 +512,20 @@ define <vscale x 128 x i8> @vpmerge_vi_nxv128i8(<vscale x 128 x i8> %vb, <vscale
 ; CHECK-NEXT:    csrr a2, vlenb
 ; CHECK-NEXT:    slli a2, a2, 3
 ; CHECK-NEXT:    mv a3, a1
-; CHECK-NEXT:    bltu a1, a2, .LBB27_2
+; CHECK-NEXT:    bltu a1, a2, .LBB30_2
 ; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    mv a3, a2
-; CHECK-NEXT:  .LBB27_2:
+; CHECK-NEXT:  .LBB30_2:
 ; CHECK-NEXT:    li a4, 0
 ; CHECK-NEXT:    vsetvli a5, zero, e8, m8, ta, mu
 ; CHECK-NEXT:    vlm.v v24, (a0)
 ; CHECK-NEXT:    vsetvli zero, a3, e8, m8, tu, mu
 ; CHECK-NEXT:    sub a0, a1, a2
 ; CHECK-NEXT:    vmerge.vim v8, v8, 2, v0
-; CHECK-NEXT:    bltu a1, a0, .LBB27_4
+; CHECK-NEXT:    bltu a1, a0, .LBB30_4
 ; CHECK-NEXT:  # %bb.3:
 ; CHECK-NEXT:    mv a4, a0
-; CHECK-NEXT:  .LBB27_4:
+; CHECK-NEXT:  .LBB30_4:
 ; CHECK-NEXT:    vsetvli zero, a4, e8, m8, tu, mu
 ; CHECK-NEXT:    vmv1r.v v0, v24
 ; CHECK-NEXT:    vmerge.vim v16, v16, 2, v0
