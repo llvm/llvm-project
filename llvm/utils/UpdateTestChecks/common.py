@@ -606,6 +606,49 @@ class NamelessValue:
     self.global_ir_rhs_regexp = global_ir_rhs_regexp
     self.is_before_functions = is_before_functions
 
+  # Return true if this kind of IR value is "local", basically if it matches '%{{.*}}'.
+  def is_local_def_ir_value_match(self, match):
+    return self.ir_prefix == '%'
+
+  # Return true if this kind of IR value is "global", basically if it matches '#{{.*}}'.
+  def is_global_scope_ir_value_match(self, match):
+    return self.global_ir_prefix is not None
+
+  # Return the IR prefix and check prefix we use for this kind or IR value,
+  # e.g., (%, TMP) for locals.
+  def get_ir_prefix_from_ir_value_match(self, match):
+    if self.ir_prefix and match.group(0).strip().startswith(self.ir_prefix):
+      return self.ir_prefix, self.check_prefix
+    return self.global_ir_prefix, self.check_prefix
+
+  # Return the IR regexp we use for this kind or IR value, e.g., [\w.-]+? for locals
+  def get_ir_regex_from_ir_value_re_match(self, match):
+    # for backwards compatibility we check locals with '.*'
+    if self.is_local_def_ir_value_match(match):
+      return '.*'
+    if self.ir_prefix and match.group(0).strip().startswith(self.ir_prefix):
+      return self.ir_regexp
+    return self.global_ir_prefix_regexp
+
+  # Create a FileCheck variable from regex.
+  def get_value_definition(self, var, match):
+    # for backwards compatibility we check locals with '.*'
+    varname = get_value_name(var, self.check_prefix)
+    prefix = self.get_ir_prefix_from_ir_value_match(match)[0]
+    regex = self.get_ir_regex_from_ir_value_re_match(match)
+    if self.is_local_def_ir_value_match(match):
+      return '[[' + varname + ':' + prefix + regex + ']]'
+    return prefix + '[[' + varname + ':' + regex + ']]'
+
+  # Use a FileCheck variable.
+  def get_value_use(self, var, match, var_prefix=None):
+    if var_prefix is None:
+      var_prefix = self.check_prefix
+    if self.is_local_def_ir_value_match(match):
+      return '[[' + get_value_name(var, var_prefix) + ']]'
+    prefix = self.get_ir_prefix_from_ir_value_match(match)[0]
+    return prefix + '[[' + get_value_name(var, var_prefix) + ']]'
+
 # Description of the different "unnamed" values we match in the IR, e.g.,
 # (local) ssa values, (debug) metadata, etc.
 nameless_values = [
@@ -673,41 +716,8 @@ def get_idx_from_ir_value_match(match):
 def get_name_from_ir_value_match(match):
   return match.group(get_idx_from_ir_value_match(match) + first_nameless_group_in_ir_value_match)
 
-# Return the nameless prefix we use for this kind or IR value, see also
-# get_idx_from_ir_value_match
-def get_nameless_check_prefix_from_ir_value_match(match):
-  return nameless_values[get_idx_from_ir_value_match(match)].check_prefix
-
-# Return the IR prefix and check prefix we use for this kind or IR value, e.g., (%, TMP) for locals,
-# see also get_idx_from_ir_value_match
-def get_ir_prefix_from_ir_value_match(match):
-  idx = get_idx_from_ir_value_match(match)
-  if nameless_values[idx].ir_prefix and match.group(0).strip().startswith(nameless_values[idx].ir_prefix):
-    return nameless_values[idx].ir_prefix, nameless_values[idx].check_prefix
-  return nameless_values[idx].global_ir_prefix, nameless_values[idx].check_prefix
-
-def get_check_key_from_ir_value_match(match):
-  idx = get_idx_from_ir_value_match(match)
-  return nameless_values[idx].check_key
-
-# Return the IR regexp we use for this kind or IR value, e.g., [\w.-]+? for locals,
-# see also get_idx_from_ir_value_match
-def get_ir_prefix_from_ir_value_re_match(match):
-  # for backwards compatibility we check locals with '.*'
-  if is_local_def_ir_value_match(match):
-    return '.*'
-  idx = get_idx_from_ir_value_match(match)
-  if nameless_values[idx].ir_prefix and match.group(0).strip().startswith(nameless_values[idx].ir_prefix):
-    return nameless_values[idx].ir_regexp
-  return nameless_values[idx].global_ir_prefix_regexp
-
-# Return true if this kind of IR value is "local", basically if it matches '%{{.*}}'.
-def is_local_def_ir_value_match(match):
-  return nameless_values[get_idx_from_ir_value_match(match)].ir_prefix == '%'
-
-# Return true if this kind of IR value is "global", basically if it matches '#{{.*}}'.
-def is_global_scope_ir_value_match(match):
-  return nameless_values[get_idx_from_ir_value_match(match)].global_ir_prefix is not None
+def get_nameless_value_from_match(match, nameless_values) -> NamelessValue:
+  return nameless_values[get_idx_from_ir_value_match(match)]
 
 # Return true if var clashes with the scripted FileCheck check_prefix.
 def may_clash_with_default_check_prefix_name(check_prefix, var):
@@ -728,46 +738,30 @@ def get_value_name(var, check_prefix):
   var = var.replace('-', '_')
   return var.upper()
 
-# Create a FileCheck variable from regex.
-def get_value_definition(var, match):
-  # for backwards compatibility we check locals with '.*'
-  if is_local_def_ir_value_match(match):
-    return '[[' + get_value_name(var, get_nameless_check_prefix_from_ir_value_match(match)) + ':' + \
-            get_ir_prefix_from_ir_value_match(match)[0] + get_ir_prefix_from_ir_value_re_match(match) + ']]'
-  prefix = get_ir_prefix_from_ir_value_match(match)[0]
-  return prefix + '[[' + get_value_name(var, get_nameless_check_prefix_from_ir_value_match(match)) + ':' + get_ir_prefix_from_ir_value_re_match(match) + ']]'
-
-# Use a FileCheck variable.
-def get_value_use(var, match, check_prefix):
-  if is_local_def_ir_value_match(match):
-    return '[[' + get_value_name(var, check_prefix) + ']]'
-  prefix = get_ir_prefix_from_ir_value_match(match)[0]
-  return prefix + '[[' + get_value_name(var, check_prefix) + ']]'
-
-# Replace IR value defs and uses with FileCheck variables.
 def generalize_check_lines(lines, is_analyze, vars_seen, global_vars_seen):
   # This gets called for each match that occurs in
   # a line. We transform variables we haven't seen
   # into defs, and variables we have seen into uses.
   def transform_line_vars(match):
-    pre, check = get_ir_prefix_from_ir_value_match(match)
     var = get_name_from_ir_value_match(match)
-    for nameless_value in nameless_values:
-      if may_clash_with_default_check_prefix_name(nameless_value.check_prefix, var):
-        warn("Change IR value name '%s' or use --prefix-filecheck-ir-name to prevent possible conflict"
-             " with scripted FileCheck name." % (var,))
-    key = (var, get_check_key_from_ir_value_match(match))
-    is_local_def = is_local_def_ir_value_match(match)
+    nameless_value = get_nameless_value_from_match(match, nameless_values)
+    if may_clash_with_default_check_prefix_name(nameless_value.check_prefix, var):
+      warn("Change IR value name '%s' or use --prefix-filecheck-ir-name to prevent possible conflict"
+           " with scripted FileCheck name." % (var,))
+    key = (var, nameless_value.check_key)
+    is_local_def = nameless_value.is_local_def_ir_value_match(match)
     if is_local_def and key in vars_seen:
-      rv = get_value_use(var, match, get_nameless_check_prefix_from_ir_value_match(match))
+      rv = nameless_value.get_value_use(var, match)
     elif not is_local_def and key in global_vars_seen:
-      rv = get_value_use(var, match, global_vars_seen[key])
+      # We could have seen a different prefix for the global variables first,
+      # ensure we use that one instead of the prefix for the current match.
+      rv = nameless_value.get_value_use(var, match, global_vars_seen[key])
     else:
       if is_local_def:
         vars_seen.add(key)
       else:
-        global_vars_seen[key] = get_nameless_check_prefix_from_ir_value_match(match)
-      rv = get_value_definition(var, match)
+        global_vars_seen[key] = nameless_value.check_prefix
+      rv = nameless_value.get_value_definition(var, match)
     # re.sub replaces the entire regex match
     # with whatever you return, so we have
     # to make sure to hand it back everything
