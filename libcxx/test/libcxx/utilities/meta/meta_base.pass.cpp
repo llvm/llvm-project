@@ -79,13 +79,6 @@ void test_is_valid_trait() {
   static_assert(!std::_IsValidExpansion<FuncCallable, MemberTest, void*>::value, "");
 }
 
-void test_first_and_second_type() {
-  ASSERT_SAME_TYPE(std::_FirstType<int, long, void*>, int);
-  ASSERT_SAME_TYPE(std::_FirstType<char>, char);
-  ASSERT_SAME_TYPE(std::_SecondType<char, long>, long);
-  ASSERT_SAME_TYPE(std::_SecondType<long long, int, void*>, int);
-}
-
 int main(int, char**) {
   return 0;
 }
