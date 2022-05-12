@@ -30,8 +30,9 @@ define <2 x i32> @sdiv2_vec(<2 x i32> %x) {
 
 define i32 @sdiv3(i32 %x) {
 ; CHECK-LABEL: @sdiv3(
-; CHECK-NEXT:    [[TMP1:%.*]] = srem i32 [[X:%.*]], 3
-; CHECK-NEXT:    [[Z:%.*]] = sub i32 [[X]], [[TMP1]]
+; CHECK-NEXT:    [[X_FR:%.*]] = freeze i32 [[X:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = srem i32 [[X_FR]], 3
+; CHECK-NEXT:    [[Z:%.*]] = sub i32 [[X_FR]], [[TMP1]]
 ; CHECK-NEXT:    ret i32 [[Z]]
 ;
   %y = sdiv i32 %x, 3
@@ -50,8 +51,9 @@ define i32 @sdiv4(i32 %x) {
 
 define i32 @sdiv5(i32 %x) {
 ; CHECK-LABEL: @sdiv5(
-; CHECK-NEXT:    [[TMP1:%.*]] = srem i32 [[X:%.*]], 3
-; CHECK-NEXT:    [[Z:%.*]] = sub i32 [[TMP1]], [[X]]
+; CHECK-NEXT:    [[X_FR:%.*]] = freeze i32 [[X:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = srem i32 [[X_FR]], 3
+; CHECK-NEXT:    [[Z:%.*]] = sub i32 [[TMP1]], [[X_FR]]
 ; CHECK-NEXT:    ret i32 [[Z]]
 ;
   %y = sdiv i32 %x, 3
@@ -80,8 +82,8 @@ define i32 @udiv1(i32 %x, i32 %w) {
 
 define i32 @udiv2(i32 %x, i32 %w) {
 ; CHECK-LABEL: @udiv2(
-; CHECK-NEXT:    [[Z:%.*]] = lshr exact i32 [[X:%.*]], [[W:%.*]]
-; CHECK-NEXT:    ret i32 [[Z]]
+; CHECK-NEXT:    [[Z1:%.*]] = lshr exact i32 [[X:%.*]], [[W:%.*]]
+; CHECK-NEXT:    ret i32 [[Z1]]
 ;
   %y = shl i32 1, %w
   %z = udiv exact i32 %x, %y

@@ -217,6 +217,14 @@ Improvements to Clang's diagnostics
 - Added the ``-Wgnu-line-marker`` diagnostic flag (grouped under the ``-Wgnu``
   flag) which is a portability warning about use of GNU linemarker preprocessor
   directives. Fixes `Issue 55067 <https://github.com/llvm/llvm-project/issues/55067>`_.
+- Using ``#elifdef`` and ``#elifndef`` that are incompatible with C/C++
+  standards before C2x/C++2b are now warned via ``-pedantic``. Additionally,
+  on such language mode, ``-Wpre-c2x-compat`` and ``-Wpre-c++2b-compat``
+  diagnostic flags report a compatibility issue.
+  Fixes `Issue 55306 <https://github.com/llvm/llvm-project/issues/55306>`_.
+- Clang now checks for stack resource exhaustion when recursively parsing
+  declarators in order to give a diagnostic before we run out of stack space.
+  This fixes `Issue 51642 <https://github.com/llvm/llvm-project/issues/51642>`_.
 
 Non-comprehensive list of changes in this release
 -------------------------------------------------

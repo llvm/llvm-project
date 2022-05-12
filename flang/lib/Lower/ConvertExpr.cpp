@@ -2786,7 +2786,8 @@ public:
       mlir::Value zero = builder.createIntegerConstant(loc, len.getType(), 0);
       len = builder.create<mlir::arith::SelectOp>(loc, isPresent, len, zero);
       mlir::Value temp = builder.createTemporary(
-          loc, type, /*name=*/{}, /*shape=*/{}, mlir::ValueRange{len},
+          loc, type, /*name=*/{},
+          /*shape=*/{}, mlir::ValueRange{len},
           llvm::ArrayRef<mlir::NamedAttribute>{
               Fortran::lower::getAdaptToByRefAttr(builder)});
       return fir::CharBoxValue{temp, len};
@@ -4112,6 +4113,7 @@ private:
     return adjustedArrayElementType(pathTy);
   }
 
+  /// Lower rhs of an array expression.
   ExtValue lowerArrayExpression(const Fortran::lower::SomeExpr &exp) {
     mlir::Type resTy = converter.genType(exp);
     return std::visit(
@@ -4325,9 +4327,10 @@ private:
       // Adjust indices for any shift of the origin of the array.
       llvm::SmallVector<mlir::Value> indices = fir::factory::originateIndices(
           loc, *builder, tmp.getType(), shape, iters.iterVec());
-      auto addr = builder->create<fir::ArrayCoorOp>(
-          loc, eleRefTy, tmp, shape, /*slice=*/mlir::Value{}, indices,
-          /*typeParams=*/llvm::None);
+      auto addr =
+          builder->create<fir::ArrayCoorOp>(loc, eleRefTy, tmp, shape,
+                                            /*slice=*/mlir::Value{}, indices,
+                                            /*typeParams=*/llvm::None);
       auto load = builder->create<fir::LoadOp>(loc, addr);
       return builder->createConvert(loc, i1Ty, load);
     };
@@ -5080,9 +5083,15 @@ private:
   template <typename A>
   CC genarr(const Fortran::evaluate::Expr<A> &x) {
     LLVM_DEBUG(Fortran::lower::DumpEvaluateExpr::dump(llvm::dbgs(), x));
-    if (isArray(x) || explicitSpaceIsActive() ||
+    if (isArray(x) || (explicitSpaceIsActive() && isLeftHandSide()) ||
         isElementalProcWithArrayArgs(x))
       return std::visit([&](const auto &e) { return genarr(e); }, x.u);
+    if (explicitSpaceIsActive()) {
+      assert(!isArray(x) && !isLeftHandSide());
+      auto cc = std::visit([&](const auto &e) { return genarr(e); }, x.u);
+      auto result = cc(IterationSpace{});
+      return [=](IterSpace) { return result; };
+    }
     return genScalarAndForwardValue(x);
   }
 
@@ -5320,7 +5329,7 @@ private:
 
   template <typename A>
   CC genarr(const Fortran::evaluate::Constant<A> &x) {
-    if (/*explicitSpaceIsActive() &&*/ x.Rank() == 0)
+    if (x.Rank() == 0)
       return genScalarAndForwardValue(x);
     mlir::Location loc = getLoc();
     mlir::IndexType idxTy = builder.getIndexType();
@@ -6966,9 +6975,10 @@ private:
           if (components.hasExtendCoorRef())
             TODO(loc, "need to adjust typeparameter(s) to reflect the final "
                       "component");
-          mlir::Value embox = builder.create<fir::EmboxOp>(
-              loc, boxTy, ptrAddr, /*shape=*/mlir::Value{},
-              /*slice=*/mlir::Value{}, typeParams);
+          mlir::Value embox =
+              builder.create<fir::EmboxOp>(loc, boxTy, ptrAddr,
+                                           /*shape=*/mlir::Value{},
+                                           /*slice=*/mlir::Value{}, typeParams);
           return arrayLoadExtValue(builder, loc, load, iters.iterVec(), embox);
         }
       }
@@ -7181,6 +7191,12 @@ private:
   // ???: Do we still need this?
   inline bool isCustomCopyInCopyOut() {
     return semant == ConstituentSemantics::CustomCopyInCopyOut;
+  }
+
+  /// Are we lowering in a left-hand side context?
+  inline bool isLeftHandSide() {
+    return isCopyInCopyOut() || isProjectedCopyInCopyOut() ||
+           isCustomCopyInCopyOut();
   }
 
   /// Array appears in a context where it must be boxed.
