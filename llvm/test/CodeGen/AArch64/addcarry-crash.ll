@@ -9,7 +9,7 @@ define i64 @foo(i64* nocapture readonly %ptr, i64 %a, i64 %b, i64 %c) local_unna
 ; CHECK-NEXT:    lsr x9, x1, #32
 ; CHECK-NEXT:    cmn x3, x2
 ; CHECK-NEXT:    mul x8, x8, x9
-; CHECK-NEXT:    adc x0, x8, xzr
+; CHECK-NEXT:    cinc x0, x8, hs
 ; CHECK-NEXT:    ret
 entry:
   %0 = lshr i64 %a, 32
