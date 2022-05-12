@@ -180,3 +180,12 @@ fadd.d $fa0, $fa0, $fa0
 ## Using floating point registers when integer registers are expected
 sll.w $a0, $a0, $fa0
 # CHECK: :[[#@LINE-1]]:18: error: invalid operand for instruction
+
+## msbw < lsbw
+# CHECK: :[[#@LINE+1]]:21: error: msb is less than lsb
+bstrins.w $a0, $a0, 1, 2
+# CHECK:            ^~~~
+
+# CHECK: :[[#@LINE+1]]:22: error: msb is less than lsb
+bstrpick.w $a0, $a0, 30, 31
+# CHECK:             ^~~~~~
