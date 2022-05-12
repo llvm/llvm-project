@@ -489,7 +489,7 @@ void IRPromoter::PromoteTree() {
                                  : ConstantExpr::getZExt(Const, ExtTy);
         I->setOperand(i, NewConst);
       } else if (isa<UndefValue>(Op))
-        I->setOperand(i, UndefValue::get(ExtTy));
+        I->setOperand(i, ConstantInt::get(ExtTy, 0));
     }
 
     // Mutate the result type, unless this is an icmp or switch.
