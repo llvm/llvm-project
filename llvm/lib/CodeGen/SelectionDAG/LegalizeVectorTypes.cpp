@@ -983,6 +983,7 @@ void DAGTypeLegalizer::SplitVectorResult(SDNode *N, unsigned ResNo) {
     SplitVecRes_Gather(cast<MemSDNode>(N), Lo, Hi, /*SplitSETCC*/ true);
     break;
   case ISD::SETCC:
+  case ISD::VP_SETCC:
     SplitVecRes_SETCC(N, Lo, Hi);
     break;
   case ISD::VECTOR_REVERSE:
@@ -2108,8 +2109,20 @@ void DAGTypeLegalizer::SplitVecRes_SETCC(SDNode *N, SDValue &Lo, SDValue &Hi) {
   else
     std::tie(RL, RH) = DAG.SplitVectorOperand(N, 1);
 
-  Lo = DAG.getNode(N->getOpcode(), DL, LoVT, LL, RL, N->getOperand(2));
-  Hi = DAG.getNode(N->getOpcode(), DL, HiVT, LH, RH, N->getOperand(2));
+  if (N->getOpcode() == ISD::SETCC) {
+    Lo = DAG.getNode(N->getOpcode(), DL, LoVT, LL, RL, N->getOperand(2));
+    Hi = DAG.getNode(N->getOpcode(), DL, HiVT, LH, RH, N->getOperand(2));
+  } else {
+    assert(N->getOpcode() == ISD::VP_SETCC && "Expected VP_SETCC opcode");
+    SDValue MaskLo, MaskHi, EVLLo, EVLHi;
+    std::tie(MaskLo, MaskHi) = SplitMask(N->getOperand(3));
+    std::tie(EVLLo, EVLHi) =
+        DAG.SplitEVL(N->getOperand(4), N->getValueType(0), DL);
+    Lo = DAG.getNode(N->getOpcode(), DL, LoVT, LL, RL, N->getOperand(2), MaskLo,
+                     EVLLo);
+    Hi = DAG.getNode(N->getOpcode(), DL, HiVT, LH, RH, N->getOperand(2), MaskHi,
+                     EVLHi);
+  }
 }
 
 void DAGTypeLegalizer::SplitVecRes_UnaryOp(SDNode *N, SDValue &Lo,
@@ -2644,6 +2657,7 @@ bool DAGTypeLegalizer::SplitVectorOperand(SDNode *N, unsigned OpNo) {
     report_fatal_error("Do not know how to split this operator's "
                        "operand!\n");
 
+  case ISD::VP_SETCC:
   case ISD::SETCC:             Res = SplitVecOp_VSETCC(N); break;
   case ISD::BITCAST:           Res = SplitVecOp_BITCAST(N); break;
   case ISD::EXTRACT_SUBVECTOR: Res = SplitVecOp_EXTRACT_SUBVECTOR(N); break;
@@ -3478,8 +3492,20 @@ SDValue DAGTypeLegalizer::SplitVecOp_VSETCC(SDNode *N) {
   EVT PartResVT = EVT::getVectorVT(Context, MVT::i1, PartEltCnt);
   EVT WideResVT = EVT::getVectorVT(Context, MVT::i1, PartEltCnt*2);
 
-  LoRes = DAG.getNode(ISD::SETCC, DL, PartResVT, Lo0, Lo1, N->getOperand(2));
-  HiRes = DAG.getNode(ISD::SETCC, DL, PartResVT, Hi0, Hi1, N->getOperand(2));
+  if (N->getOpcode() == ISD::SETCC) {
+    LoRes = DAG.getNode(ISD::SETCC, DL, PartResVT, Lo0, Lo1, N->getOperand(2));
+    HiRes = DAG.getNode(ISD::SETCC, DL, PartResVT, Hi0, Hi1, N->getOperand(2));
+  } else {
+    assert(N->getOpcode() == ISD::VP_SETCC && "Expected VP_SETCC opcode");
+    SDValue MaskLo, MaskHi, EVLLo, EVLHi;
+    std::tie(MaskLo, MaskHi) = SplitMask(N->getOperand(3));
+    std::tie(EVLLo, EVLHi) =
+        DAG.SplitEVL(N->getOperand(4), N->getValueType(0), DL);
+    LoRes = DAG.getNode(ISD::VP_SETCC, DL, PartResVT, Lo0, Lo1,
+                        N->getOperand(2), MaskLo, EVLLo);
+    HiRes = DAG.getNode(ISD::VP_SETCC, DL, PartResVT, Hi0, Hi1,
+                        N->getOperand(2), MaskHi, EVLHi);
+  }
   SDValue Con = DAG.getNode(ISD::CONCAT_VECTORS, DL, WideResVT, LoRes, HiRes);
 
   EVT OpVT = N->getOperand(0).getValueType();
@@ -3585,6 +3611,7 @@ void DAGTypeLegalizer::WidenVectorResult(SDNode *N, unsigned ResNo) {
     Res = WidenVecRes_Select(N);
     break;
   case ISD::SELECT_CC:         Res = WidenVecRes_SELECT_CC(N); break;
+  case ISD::VP_SETCC:
   case ISD::SETCC:             Res = WidenVecRes_SETCC(N); break;
   case ISD::UNDEF:             Res = WidenVecRes_UNDEF(N); break;
   case ISD::VECTOR_SHUFFLE:
@@ -5248,8 +5275,14 @@ SDValue DAGTypeLegalizer::WidenVecRes_SETCC(SDNode *N) {
          InOp2.getValueType() == WidenInVT &&
          "Input not widened to expected type!");
   (void)WidenInVT;
-  return DAG.getNode(ISD::SETCC, SDLoc(N),
-                     WidenVT, InOp1, InOp2, N->getOperand(2));
+  if (N->getOpcode() == ISD::VP_SETCC) {
+    SDValue Mask =
+        GetWidenedMask(N->getOperand(3), WidenVT.getVectorElementCount());
+    return DAG.getNode(ISD::VP_SETCC, SDLoc(N), WidenVT, InOp1, InOp2,
+                       N->getOperand(2), Mask, N->getOperand(4));
+  }
+  return DAG.getNode(ISD::SETCC, SDLoc(N), WidenVT, InOp1, InOp2,
+                     N->getOperand(2));
 }
 
 SDValue DAGTypeLegalizer::WidenVecRes_STRICT_FSETCC(SDNode *N) {
