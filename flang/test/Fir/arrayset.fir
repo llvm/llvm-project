@@ -1,7 +1,7 @@
 // RUN: tco %s | FileCheck %s
 
 // CHECK-LABEL: define void @x([10 x float]* %0)
-func @x(%arr : !fir.ref<!fir.array<10xf32>>) {
+func.func @x(%arr : !fir.ref<!fir.array<10xf32>>) {
   %1 = arith.constant 0 : index
   %2 = arith.constant 9 : index
   %stepvar = arith.constant 1 : index
@@ -21,4 +21,4 @@ func @x(%arr : !fir.ref<!fir.array<10xf32>>) {
   return
 }
 
-func private @y(!fir.box<!fir.array<10xf32>>) -> ()
+func.func private @y(!fir.box<!fir.array<10xf32>>) -> ()

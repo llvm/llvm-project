@@ -300,16 +300,29 @@ TFModelEvaluatorImpl::TFModelEvaluatorImpl(
     errs() << TF_Message(Status.get());
     invalidate();
   }
+  size_t NrSupported = 0;
   for (size_t I = 0; I < InputSpecs.size(); ++I) {
     auto &InputSpec = InputSpecs[I];
     InputFeed[I] = {
         TF_GraphOperationByName(Graph.get(), (InputSpec.name()).c_str()),
         InputSpec.port()};
+    if (!InputFeed[I].oper) {
+      continue;
+    }
+    if (NrSupported++ != I) {
+      errs()
+          << "Unsupported features must be placed at the end of the InputSpecs";
+      invalidate();
+      return;
+    }
     if (!checkReportAndInvalidate(InputFeed[I], InputSpec))
       return;
     initInput(I, static_cast<TF_DataType>(getTFTypeIndex(InputSpec.type())),
               InputSpec.shape());
   }
+  InputFeed.resize(NrSupported);
+  Input.resize(NrSupported);
+
   for (size_t I = 0; I < OutputSpecsSize; ++I) {
     auto OutputSpec = GetOutputSpecs(I);
     OutputFeed[I] = {
@@ -387,7 +400,9 @@ void TFModelEvaluatorImpl::initInput(size_t Index, TF_DataType Type,
 }
 
 void *TFModelEvaluator::getUntypedInput(size_t Index) {
-  return TF_TensorData(Impl->getInput()[Index]);
+  if (Index < Impl->getInput().size())
+    return TF_TensorData(Impl->getInput()[Index]);
+  return nullptr;
 }
 
 TFModelEvaluator::EvaluationResult::EvaluationResult(

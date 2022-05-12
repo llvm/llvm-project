@@ -90,7 +90,7 @@ func.func @logicalBinary2(%arg0 : vector<4xi1>, %arg1 : vector<4xi1>)
 
 func.func @logicalBinary(%arg0 : i1, %arg1 : i1)
 {
-  // expected-error @+2 {{expected ':'}}
+  // expected-error @+1 {{expected ':'}}
   %0 = spv.LogicalAnd %arg0, %arg1
   return
 }
@@ -139,7 +139,7 @@ func.func @logicalUnary2(%arg0 : vector<4xi1>)
 
 func.func @logicalUnary(%arg0 : i1)
 {
-  // expected-error @+2 {{expected ':'}}
+  // expected-error @+1 {{expected ':'}}
   %0 = spv.LogicalNot %arg0
   return
 }
@@ -230,7 +230,7 @@ func.func @select_op_vec_condn_vec(%arg0: vector<3xi1>) -> () {
 func.func @select_op(%arg0: i1) -> () {
   %0 = spv.Constant 2 : i32
   %1 = spv.Constant 3 : i32
-  // expected-error @+2 {{expected ','}}
+  // expected-error @+1 {{expected ','}}
   %2 = spv.Select %arg0, %0, %1 : i1
   return
 }

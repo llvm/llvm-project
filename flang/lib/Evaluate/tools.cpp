@@ -1266,7 +1266,8 @@ const Symbol *FindCommonBlockContaining(const Symbol &original) {
 
 bool IsProcedurePointer(const Symbol &original) {
   const Symbol &symbol{GetAssociationRoot(original)};
-  return symbol.has<ProcEntityDetails>() && IsPointer(symbol);
+  return IsPointer(symbol) &&
+      (symbol.has<ProcEntityDetails>() || symbol.has<SubprogramDetails>());
 }
 
 // 3.11 automatic data object

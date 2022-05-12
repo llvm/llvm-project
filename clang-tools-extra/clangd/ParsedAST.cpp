@@ -480,10 +480,7 @@ ParsedAST::build(llvm::StringRef Filename, const ParseInputs &Inputs,
     CTContext->setASTContext(&Clang->getASTContext());
     CTContext->setCurrentFile(Filename);
     CTContext->setSelfContainedDiags(true);
-    CTChecks = CTFactories.createChecks(CTContext.getPointer());
-    llvm::erase_if(CTChecks, [&](const auto &Check) {
-      return !Check->isLanguageVersionSupported(CTContext->getLangOpts());
-    });
+    CTChecks = CTFactories.createChecksForLanguage(CTContext.getPointer());
     Preprocessor *PP = &Clang->getPreprocessor();
     for (const auto &Check : CTChecks) {
       Check->registerPPCallbacks(Clang->getSourceManager(), PP, PP);

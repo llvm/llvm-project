@@ -1088,12 +1088,11 @@ def : InstRW<[WriteMicrocoded], (instregex "VPGATHER(Q|D)(Q|D)(Y?)rm")>;
 
 // HADD, HSUB PS/PD
 // PHADD|PHSUB (S) W/D.
-def : SchedAlias<WritePHAdd,    ZnWriteMicrocoded>;
-def : SchedAlias<WritePHAddLd,  ZnWriteMicrocoded>;
-def : SchedAlias<WritePHAddX,   ZnWriteMicrocoded>;
-def : SchedAlias<WritePHAddXLd, ZnWriteMicrocoded>;
-def : SchedAlias<WritePHAddY,   ZnWriteMicrocoded>;
-def : SchedAlias<WritePHAddYLd, ZnWriteMicrocoded>;
+defm : ZnWriteResFpuPair<WriteFHAdd, [], 7>;
+defm : ZnWriteResFpuPair<WriteFHAddY, [], 7>;
+defm : ZnWriteResFpuPair<WritePHAdd, [], 3>;
+defm : ZnWriteResFpuPair<WritePHAddX, [], 3>;
+defm : ZnWriteResFpuPair<WritePHAddY, [], 3>;
 
 // PCMPGTQ.
 def ZnWritePCMPGTQr : SchedWriteRes<[ZnFPU03]>;
@@ -1432,12 +1431,6 @@ def ZnWriteSHA256RNDS2Ld : SchedWriteRes<[ZnAGU, ZnFPU1]> {
 def : InstRW<[ZnWriteSHA256RNDS2Ld], (instrs SHA256RNDS2rm)>;
 
 //-- Arithmetic instructions --//
-
-// HADD, HSUB PS/PD
-def : SchedAlias<WriteFHAdd,    ZnWriteMicrocoded>;
-def : SchedAlias<WriteFHAddLd,  ZnWriteMicrocoded>;
-def : SchedAlias<WriteFHAddY,   ZnWriteMicrocoded>;
-def : SchedAlias<WriteFHAddYLd, ZnWriteMicrocoded>;
 
 // VDIVPS.
 // TODO - convert to ZnWriteResFpuPair

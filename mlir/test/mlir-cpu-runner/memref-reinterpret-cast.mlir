@@ -3,7 +3,7 @@
 // RUN: -shared-libs=%mlir_runner_utils_dir/libmlir_runner_utils%shlibext,%mlir_runner_utils_dir/libmlir_c_runner_utils%shlibext \
 // RUN: | FileCheck %s
 
-func.func private @print_memref_f32(memref<*xf32>) attributes { llvm.emit_c_interface }
+func.func private @printMemrefF32(memref<*xf32>) attributes { llvm.emit_c_interface }
 
 func.func @main() -> () {
   %c0 = arith.constant 0 : index
@@ -21,7 +21,7 @@ func.func @main() -> () {
     memref.store %val_f32, %input[%i, %j] : memref<2x3xf32>
   }
   %unranked_input = memref.cast %input : memref<2x3xf32> to memref<*xf32>
-  call @print_memref_f32(%unranked_input) : (memref<*xf32>) -> ()
+  call @printMemrefF32(%unranked_input) : (memref<*xf32>) -> ()
   // CHECK: rank = 2 offset = 0 sizes = [2, 3] strides = [3, 1]
   // CHECK-NEXT: [0,   1,   2]
   // CHECK-NEXT: [3,   4,   5]
@@ -42,7 +42,7 @@ func.func @cast_ranked_memref_to_static_shape(%input : memref<2x3xf32>) {
 
   %unranked_output = memref.cast %output
       : memref<6x1xf32> to memref<*xf32>
-  call @print_memref_f32(%unranked_output) : (memref<*xf32>) -> ()
+  call @printMemrefF32(%unranked_output) : (memref<*xf32>) -> ()
   // CHECK: rank = 2 offset = 0 sizes = [6, 1] strides = [1, 1] data =
   // CHECK-NEXT: [0],
   // CHECK-NEXT: [1],
@@ -63,7 +63,7 @@ func.func @cast_ranked_memref_to_dynamic_shape(%input : memref<2x3xf32>) {
 
   %unranked_output = memref.cast %output
       : memref<?x?xf32, offset: ?, strides: [?, ?]> to memref<*xf32>
-  call @print_memref_f32(%unranked_output) : (memref<*xf32>) -> ()
+  call @printMemrefF32(%unranked_output) : (memref<*xf32>) -> ()
   // CHECK: rank = 2 offset = 0 sizes = [1, 6] strides = [6, 1] data =
   // CHECK-NEXT: [0,   1,   2,   3,   4,   5]
   return
@@ -77,7 +77,7 @@ func.func @cast_unranked_memref_to_static_shape(%input : memref<2x3xf32>) {
 
   %unranked_output = memref.cast %output
       : memref<6x1xf32> to memref<*xf32>
-  call @print_memref_f32(%unranked_output) : (memref<*xf32>) -> ()
+  call @printMemrefF32(%unranked_output) : (memref<*xf32>) -> ()
   // CHECK: rank = 2 offset = 0 sizes = [6, 1] strides = [1, 1] data =
   // CHECK-NEXT: [0],
   // CHECK-NEXT: [1],
@@ -99,7 +99,7 @@ func.func @cast_unranked_memref_to_dynamic_shape(%input : memref<2x3xf32>) {
 
   %unranked_output = memref.cast %output
       : memref<?x?xf32, offset: ?, strides: [?, ?]> to memref<*xf32>
-  call @print_memref_f32(%unranked_output) : (memref<*xf32>) -> ()
+  call @printMemrefF32(%unranked_output) : (memref<*xf32>) -> ()
   // CHECK: rank = 2 offset = 0 sizes = [1, 6] strides = [6, 1] data =
   // CHECK-NEXT: [0,   1,   2,   3,   4,   5]
   return

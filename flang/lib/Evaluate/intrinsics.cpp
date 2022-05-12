@@ -725,7 +725,8 @@ static const IntrinsicInterface genericIntrinsicFunction[]{
     {"shifta", {{"i", SameInt}, {"shift", AnyInt}}, SameInt},
     {"shiftl", {{"i", SameInt}, {"shift", AnyInt}}, SameInt},
     {"shiftr", {{"i", SameInt}, {"shift", AnyInt}}, SameInt},
-    {"sign", {{"a", SameIntOrReal}, {"b", SameIntOrReal}}, SameIntOrReal},
+    {"sign", {{"a", SameInt}, {"b", AnyInt}}, SameInt},
+    {"sign", {{"a", SameReal}, {"b", AnyReal}}, SameReal},
     {"sin", {{"x", SameFloating}}, SameFloating},
     {"sind", {{"x", SameFloating}}, SameFloating},
     {"sinh", {{"x", SameFloating}}, SameFloating},
@@ -1015,7 +1016,7 @@ static const SpecificIntrinsicInterface specificIntrinsicFunction[]{
          TypePattern{IntType, KindCode::exactKind, 8}},
         "abs"},
     {{"len", {{"string", DefaultChar, Rank::anyOrAssumedRank}}, DefaultInt,
-        Rank::scalar}},
+        Rank::scalar, IntrinsicClass::inquiryFunction}},
     {{"lge", {{"string_a", DefaultChar}, {"string_b", DefaultChar}},
          DefaultLogical},
         "lge", true},
@@ -2392,7 +2393,7 @@ static bool ApplySpecificChecks(SpecificCall &call, FoldingContext &context) {
         context.messages().Say(at,
             "OPERATION= argument of REDUCE() must be a scalar function"_err_en_US);
       } else if (result->type().IsPolymorphic() ||
-          result->type() != *arrayType) {
+          !arrayType->IsTkCompatibleWith(result->type())) {
         ok = false;
         context.messages().Say(at,
             "OPERATION= argument of REDUCE() must have the same type as ARRAY="_err_en_US);
@@ -2417,7 +2418,7 @@ static bool ApplySpecificChecks(SpecificCall &call, FoldingContext &context) {
                     characteristics::DummyDataObject::Attr::Pointer) &&
                 data[j]->type.Rank() == 0 &&
                 !data[j]->type.type().IsPolymorphic() &&
-                data[j]->type.type() == *arrayType;
+                data[j]->type.type().IsTkCompatibleWith(*arrayType);
           }
           if (!ok) {
             context.messages().Say(at,

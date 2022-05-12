@@ -23,7 +23,7 @@ func.func private @test_ugly_attr_parser_dispatch() -> () attributes {
 
 func.func private @test_ugly_attr_missing_parameter() -> () attributes {
   // expected-error@+2 {{failed to parse TestAttrUgly parameter 'attr'}}
-  // expected-error@+1 {{expected non-function type}}
+  // expected-error@+1 {{expected attribute value}}
   attr = #test<"attr_ugly begin">
 }
 
@@ -97,7 +97,7 @@ func.func private @test_struct_not_enough_values() -> () attributes {
 // -----
 
 func.func private @test_parse_param_after_struct() -> () attributes {
-  // expected-error@+2 {{expected non-function type}}
+  // expected-error@+2 {{expected attribute value}}
   // expected-error@+1 {{failed to parse TestAttrWithFormat parameter 'three'}}
   attr = #test.attr_with_format<42 : two = "foo", four = [1, 2, 3] : >
 }

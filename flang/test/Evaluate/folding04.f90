@@ -32,6 +32,9 @@ module real_tests
   !WARN: warning: invalid argument on intrinsic function
   real(4), parameter :: nan_r4_acos5 = acos(r4_pinf)
   TEST_ISNAN(nan_r4_acos5)
+  !WARN: warning: second argument to MOD must not be zero
+  real(4), parameter :: nan_r4_mod = mod(3.5, 0.)
+  TEST_ISNAN(nan_r4_mod)
 
   !WARN: warning: overflow on intrinsic function
   logical, parameter :: test_exp_overflow = exp(256._4).EQ.r4_pinf

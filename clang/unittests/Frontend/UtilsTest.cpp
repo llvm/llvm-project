@@ -48,18 +48,20 @@ TEST(BuildCompilerInvocationTest, ProbePrecompiled) {
   llvm::IntrusiveRefCntPtr<DiagnosticsEngine> CommandLineDiagsEngine =
       clang::CompilerInstance::createDiagnostics(new DiagnosticOptions, &D,
                                                  false);
-  // Default: ProbePrecompiled is true.
-  std::unique_ptr<CompilerInvocation> CI = createInvocationFromCommandLine(
-      Args, CommandLineDiagsEngine, FS, false, nullptr);
-  ASSERT_TRUE(CI);
-  EXPECT_THAT(CI->getPreprocessorOpts().Includes, ElementsAre());
-  EXPECT_EQ(CI->getPreprocessorOpts().ImplicitPCHInclude, "foo.h.pch");
-
-  CI = createInvocationFromCommandLine(Args, CommandLineDiagsEngine, FS, false,
-                                       nullptr, /*ProbePrecompiled=*/false);
+  // Default: ProbePrecompiled=false
+  CreateInvocationOptions CIOpts;
+  CIOpts.Diags = CommandLineDiagsEngine;
+  CIOpts.VFS = FS;
+  std::unique_ptr<CompilerInvocation> CI = createInvocation(Args, CIOpts);
   ASSERT_TRUE(CI);
   EXPECT_THAT(CI->getPreprocessorOpts().Includes, ElementsAre("foo.h"));
   EXPECT_EQ(CI->getPreprocessorOpts().ImplicitPCHInclude, "");
+
+  CIOpts.ProbePrecompiled = true;
+  CI = createInvocation(Args, CIOpts);
+  ASSERT_TRUE(CI);
+  EXPECT_THAT(CI->getPreprocessorOpts().Includes, ElementsAre());
+  EXPECT_EQ(CI->getPreprocessorOpts().ImplicitPCHInclude, "foo.h.pch");
 }
 
 } // namespace

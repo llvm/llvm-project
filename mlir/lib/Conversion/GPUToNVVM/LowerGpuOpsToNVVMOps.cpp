@@ -164,7 +164,8 @@ struct GPUAsyncCopyLowering
     int64_t sizeInBytes =
         (dstMemrefType.getElementTypeBitWidth() / 8) * numElements;
     rewriter.create<NVVM::CpAsyncOp>(loc, dstPtr, scrPtr,
-                                     rewriter.getI32IntegerAttr(sizeInBytes));
+                                     rewriter.getI32IntegerAttr(sizeInBytes),
+                                     /*bypassL1=*/UnitAttr());
 
     // Drop the result token.
     Value zero = rewriter.create<LLVM::ConstantOp>(

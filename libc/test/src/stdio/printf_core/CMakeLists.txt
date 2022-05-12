@@ -7,9 +7,9 @@ add_libc_unittest(
   DEPENDS
     libc.src.stdio.printf_core.parser
     libc.src.__support.arg_list
+  LINK_LIBRARIES
+    LibcPrintfHelpers
 )
-
-target_link_libraries(libc.test.src.stdio.printf_core.parser_test PRIVATE LibcPrintfHelpers)
 
 add_libc_unittest(
   string_writer_test

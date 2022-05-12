@@ -2,7 +2,7 @@
 
 // Test that all load-store chains are removed
 
-func @load_store_chain_removal(%arg0: !fir.ref<!fir.array<60xi32>>, %arg1: !fir.ref<!fir.array<60xi32>>, %arg2: !fir.ref<!fir.array<60xi32>>) {
+func.func @load_store_chain_removal(%arg0: !fir.ref<!fir.array<60xi32>>, %arg1: !fir.ref<!fir.array<60xi32>>, %arg2: !fir.ref<!fir.array<60xi32>>) {
   %c1_i64 = arith.constant 1 : i64
   %c60 = arith.constant 60 : index
   %c0 = arith.constant 0 : index

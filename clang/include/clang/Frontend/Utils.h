@@ -206,7 +206,7 @@ struct CreateInvocationOptions {
   /// This is used to replace -include with -include-pch in the cc1 args.
   /// FIXME: ProbePrecompiled=true is a poor, historical default.
   /// It misbehaves if the PCH file is from GCC, has the wrong version, etc.
-  bool ProbePrecompiled = true;
+  bool ProbePrecompiled = false;
   /// If set, the target is populated with the cc1 args produced by the driver.
   /// This may be populated even if createInvocation returns nullptr.
   std::vector<std::string> *CC1Args = nullptr;
@@ -233,15 +233,6 @@ struct CreateInvocationOptions {
 std::unique_ptr<CompilerInvocation>
 createInvocation(ArrayRef<const char *> Args,
                  CreateInvocationOptions Opts = {});
-
-/// Deprecated version of createInvocation with individual optional args.
-std::unique_ptr<CompilerInvocation> createInvocationFromCommandLine(
-    ArrayRef<const char *> Args,
-    IntrusiveRefCntPtr<DiagnosticsEngine> Diags =
-        IntrusiveRefCntPtr<DiagnosticsEngine>(),
-    IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS = nullptr,
-    bool ShouldRecoverOnErrors = false,
-    std::vector<std::string> *CC1Args = nullptr, bool ProbePrecompiled = true);
 
 } // namespace clang
 

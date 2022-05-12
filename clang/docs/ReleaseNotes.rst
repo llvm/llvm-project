@@ -69,7 +69,7 @@ Major New Features
       Randomizing structure layout is a C-only feature.
 
 Bug Fixes
-------------------
+---------
 - ``CXXNewExpr::getArraySize()`` previously returned a ``llvm::Optional``
   wrapping a ``nullptr`` when the ``CXXNewExpr`` did not have an array
   size expression. This was fixed and ``::getArraySize()`` will now always
@@ -77,17 +77,19 @@ Bug Fixes
   This fixes `Issue 53742 <https://github.com/llvm/llvm-project/issues/53742>`_.
 - We now ignore full expressions when traversing cast subexpressions. This
   fixes `Issue 53044 <https://github.com/llvm/llvm-project/issues/53044>`_.
-- Allow `-Wno-gnu` to silence GNU extension diagnostics for pointer arithmetic
-  diagnostics. Fixes `Issue 54444 <https://github.com/llvm/llvm-project/issues/54444>`_.
-- Placeholder constraints, as in `Concept auto x = f();`, were not checked when modifiers
-  like ``auto&`` or ``auto**`` were added. These constraints are now checked.
+- Allow ``-Wno-gnu`` to silence GNU extension diagnostics for pointer
+  arithmetic diagnostics. Fixes `Issue 54444
+  <https://github.com/llvm/llvm-project/issues/54444>`_.
+- Placeholder constraints, as in ``Concept auto x = f();``, were not checked
+  when modifiers like ``auto&`` or ``auto**`` were added. These constraints are
+  now checked.
   This fixes  `Issue 53911 <https://github.com/llvm/llvm-project/issues/53911>`_
   and  `Issue 54443 <https://github.com/llvm/llvm-project/issues/54443>`_.
 - Previously invalid member variables with template parameters would crash clang.
   Now fixed by setting identifiers for them.
   This fixes `Issue 28475 (PR28101) <https://github.com/llvm/llvm-project/issues/28475>`_.
-- Now allow the `restrict` and `_Atomic` qualifiers to be used in conjunction
-  with `__auto_type` to match the behavior in GCC. This fixes
+- Now allow the ``restrict`` and ``_Atomic`` qualifiers to be used in
+  conjunction with ``__auto_type`` to match the behavior in GCC. This fixes
   `Issue 53652 <https://github.com/llvm/llvm-project/issues/53652>`_.
 - No longer crash when specifying a variably-modified parameter type in a
   function with the ``naked`` attribute. This fixes
@@ -101,7 +103,7 @@ Bug Fixes
   `Issue 48742 <https://github.com/llvm/llvm-project/issues/48742>`_.
 - Improved the diagnostic when accessing a member of an atomic structure or
   union object in C; was previously an unhelpful error, but now issues a
-  `-Watomic-access` warning which defaults to an error. Fixes
+  ``-Watomic-access`` warning which defaults to an error. Fixes
   `Issue 54563 <https://github.com/llvm/llvm-project/issues/54563>`_.
 - Unevaluated lambdas in dependant contexts no longer result in clang crashing.
   This fixes Issues `50376 <https://github.com/llvm/llvm-project/issues/50376>`_,
@@ -142,6 +144,11 @@ Bug Fixes
 - Fixed a false positive diagnostic about an unevaluated expression having no
   side effects when the expression is of VLA type and is an operand of the
   ``sizeof`` operator. Fixes `Issue 48010 <https://github.com/llvm/llvm-project/issues/48010>`_.
+- Fixed a false positive diagnostic about scoped enumerations being a C++11
+  extension in C mode. A scoped enumeration's enumerators cannot be named in C
+  because there is no way to fully qualify the enumerator name, so this
+  "extension" was unintentional and useless. This fixes
+  `Issue 42372 <https://github.com/llvm/llvm-project/issues/42372>`_.
 
 Improvements to Clang's diagnostics
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -197,14 +204,35 @@ Improvements to Clang's diagnostics
   ``-Wimplicit-int``.
 - ``-Wmisexpect`` warns when the branch weights collected during profiling
   conflict with those added by ``llvm.expect``.
+- ``-Wthread-safety-analysis`` now considers overloaded compound assignment and
+  increment/decrement operators as writing to their first argument, thus
+  requiring an exclusive lock if the argument is guarded.
+- ``-Wenum-conversion`` now warns on converting a signed enum of one type to an
+  unsigned enum of a different type (or vice versa) rather than
+  ``-Wsign-conversion``.
+- Added the ``-Wunreachable-code-generic-assoc`` diagnostic flag (grouped under
+  the ``-Wunreachable-code`` flag) which is enabled by default and warns the
+  user about ``_Generic`` selection associations which are unreachable because
+  the type specified is an array type or a qualified type.
 
 Non-comprehensive list of changes in this release
 -------------------------------------------------
+
 - Improve __builtin_dump_struct:
+
   - Support bitfields in struct and union.
-  - Improve the dump format, dump both bitwidth(if its a bitfield) and field value.
-  - Remove anonymous tag locations.
-  - Beautify dump format, add indent for nested struct and struct members.
+  - Improve the dump format, dump both bitwidth(if its a bitfield) and field
+    value.
+  - Remove anonymous tag locations and flatten anonymous struct members.
+  - Beautify dump format, add indent for struct members.
+  - Support passing additional arguments to the formatting function, allowing
+    use with ``fprintf`` and similar formatting functions.
+  - Support use within constant evaluation in C++, if a ``constexpr``
+    formatting function is provided.
+  - Support formatting of base classes in C++.
+  - Support calling a formatting function template in C++, which can provide
+    custom formatting for non-aggregate types.
+
 - Previously disabled sanitizer options now enabled by default:
   - ASAN_OPTIONS=detect_stack_use_after_return=1 (only on Linux).
   - MSAN_OPTIONS=poison_in_dtor=1.
@@ -238,7 +266,7 @@ New Pragmas in Clang
 Attribute Changes in Clang
 --------------------------
 
-- Added support for parameter pack expansion in `clang::annotate`.
+- Added support for parameter pack expansion in ``clang::annotate``.
 
 - The ``overloadable`` attribute can now be written in all of the syntactic
   locations a declaration attribute may appear.
@@ -277,7 +305,7 @@ C2x Feature Support
 - Implemented `WG14 N2935 Make false and true first-class language features <http://www.open-std.org/jtc1/sc22/wg14/www/docs/n2935.pdf>`_.
 - Implemented `WG14 N2763 Adding a fundamental type for N-bit integers <http://www.open-std.org/jtc1/sc22/wg14/www/docs/n2763.pdf>`_.
 - Implemented `WG14 N2775 Literal suffixes for bit-precise integers <http://www.open-std.org/jtc1/sc22/wg14/www/docs/n2775.pdf>`_.
-- Implemented the `*_WIDTH` macros to complete support for
+- Implemented the ``*_WIDTH`` macros to complete support for
   `WG14 N2412 Two's complement sign representation for C2x <https://www9.open-std.org/jtc1/sc22/wg14/www/docs/n2412.pdf>`_.
 - Implemented `WG14 N2418 Adding the u8 character prefix <http://www.open-std.org/jtc1/sc22/wg14/www/docs/n2418.pdf>`_.
 - Removed support for implicit function declarations. This was a C89 feature
@@ -306,7 +334,8 @@ C++20 Feature Support
   it is called through a template instantiation. This fixes
   `Issue 54578 <https://github.com/llvm/llvm-project/issues/54578>`_.
 
-- Implemented `__builtin_source_location()` which enables library support for std::source_location.
+- Implemented ``__builtin_source_location()``, which enables library support
+  for ``std::source_location``.
 
 - The mangling scheme for C++20 modules has incompatibly changed. The
   initial mangling was discovered not to be reversible, and the weak
@@ -361,11 +390,11 @@ Floating Point Support in Clang
 Internal API Changes
 --------------------
 
-- Added a new attribute flag `AcceptsExprPack` that when set allows expression
-  pack expansions in the parsed arguments of the corresponding attribute.
-  Additionally it introduces delaying of attribute arguments, adding common
-  handling for creating attributes that cannot be fully initialized prior to
-  template instantiation.
+- Added a new attribute flag ``AcceptsExprPack`` that when set allows
+  expression pack expansions in the parsed arguments of the corresponding
+  attribute. Additionally it introduces delaying of attribute arguments, adding
+  common handling for creating attributes that cannot be fully initialized
+  prior to template instantiation.
 
 Build System Changes
 --------------------
@@ -403,7 +432,10 @@ libclang
 Static Analyzer
 ---------------
 
-- ...
+- Added a new checker ``alpha.unix.cstring.UninitializedRead`` this will check for uninitialized reads
+  from common memory copy/manipulation functions such as ``memcpy``, ``mempcpy``, ``memmove``, ``memcmp``, `
+  `strcmp``, ``strncmp``, ``strcpy``, ``strlen``, ``strsep`` and many more. Although 
+  this checker currently is in list of alpha checkers due to a false positive.
 
 .. _release-notes-ubsan:
 

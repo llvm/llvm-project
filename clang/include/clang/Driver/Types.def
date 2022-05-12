@@ -77,7 +77,7 @@ TYPE("c++-module-cpp-output",    PP_CXXModule, INVALID,         "iim",    phases
 TYPE("ada",                      Ada,          INVALID,         nullptr,  phases::Compile, phases::Backend, phases::Assemble, phases::Link)
 TYPE("assembler",                PP_Asm,       INVALID,         "s",      phases::Assemble, phases::Link)
 TYPE("assembler-with-cpp",       Asm,          PP_Asm,          "S",      phases::Preprocess, phases::Assemble, phases::Link)
-TYPE("f95",                      PP_Fortran,   INVALID,         nullptr,  phases::Compile, phases::Backend, phases::Assemble, phases::Link)
+TYPE("f95",                      PP_Fortran,   INVALID,         "i",      phases::Compile, phases::Backend, phases::Assemble, phases::Link)
 TYPE("f95-cpp-input",            Fortran,      PP_Fortran,      nullptr,  phases::Preprocess, phases::Compile, phases::Backend, phases::Assemble, phases::Link)
 TYPE("java",                     Java,         INVALID,         nullptr,  phases::Compile, phases::Backend, phases::Assemble, phases::Link)
 

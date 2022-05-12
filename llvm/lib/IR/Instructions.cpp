@@ -2216,7 +2216,13 @@ bool ShuffleVectorInst::isIdentityMask(ArrayRef<int> Mask) {
 bool ShuffleVectorInst::isReverseMask(ArrayRef<int> Mask) {
   if (!isSingleSourceMask(Mask))
     return false;
-  for (int i = 0, NumElts = Mask.size(); i < NumElts; ++i) {
+
+  // The number of elements in the mask must be at least 2.
+  int NumElts = Mask.size();
+  if (NumElts < 2)
+    return false;
+
+  for (int i = 0; i < NumElts; ++i) {
     if (Mask[i] == -1)
       continue;
     if (Mask[i] != (NumElts - 1 - i) && Mask[i] != (NumElts + NumElts - 1 - i))

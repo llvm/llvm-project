@@ -6,10 +6,10 @@
 //     call bar(x(5, 6:80:3))
 //   end subroutine
 
-func private @bar1(!fir.box<!fir.array<?xf32>>)
+func.func private @bar1(!fir.box<!fir.array<?xf32>>)
 // CHECK-LABEL: define void @test_rebox_1(
 // CHECK-SAME: { float*, i64, i32, i8, i8, i8, i8, [2 x [3 x i64]] }* %[[INBOX:.*]])
-func @test_rebox_1(%arg0: !fir.box<!fir.array<?x?xf32>>) {
+func.func @test_rebox_1(%arg0: !fir.box<!fir.array<?x?xf32>>) {
   // CHECK: %[[OUTBOX_ALLOC:.*]] = alloca { float*, i64, i32, i8, i8, i8, i8, [1 x [3 x i64]] }
   %c2 = arith.constant 2 : index
   %c3 = arith.constant 3 : index
@@ -49,10 +49,10 @@ func @test_rebox_1(%arg0: !fir.box<!fir.array<?x?xf32>>) {
 //     call bar(x(4:30:1, 4:30:1))
 //   end subroutine
 
-func private @bar_rebox_test2(!fir.box<!fir.array<?x?x!fir.char<1,?>>>)
+func.func private @bar_rebox_test2(!fir.box<!fir.array<?x?x!fir.char<1,?>>>)
 // CHECK-LABEL: define void @test_rebox_2(
 // CHECK-SAME: { i8*, i64, i32, i8, i8, i8, i8, [2 x [3 x i64]] }* %[[INBOX:.*]])
-func @test_rebox_2(%arg0: !fir.box<!fir.array<?x?x!fir.char<1,?>>>) {
+func.func @test_rebox_2(%arg0: !fir.box<!fir.array<?x?x!fir.char<1,?>>>) {
   %c1 = arith.constant 1 : index
   %c4 = arith.constant 4 : index
   %c30 = arith.constant 30 : index
@@ -76,10 +76,10 @@ func @test_rebox_2(%arg0: !fir.box<!fir.array<?x?x!fir.char<1,?>>>) {
 //     call bar(p)
 //   end subroutine
 
-func private @bar_rebox_test3(!fir.box<!fir.array<?x?x?xf32>>)
+func.func private @bar_rebox_test3(!fir.box<!fir.array<?x?x?xf32>>)
 // CHECK-LABEL: define void @test_rebox_3(
 // CHECK-SAME: { float*, i64, i32, i8, i8, i8, i8, [1 x [3 x i64]] }* %[[INBOX:.*]])
-func @test_rebox_3(%arg0: !fir.box<!fir.array<?xf32>>) {
+func.func @test_rebox_3(%arg0: !fir.box<!fir.array<?xf32>>) {
   // CHECK: %[[OUTBOX_ALLOC:.*]] = alloca { float*, i64, i32, i8, i8, i8, i8, [3 x [3 x i64]] }
   %c2 = arith.constant 2 : index
   %c3 = arith.constant 3 : index
@@ -115,7 +115,7 @@ func @test_rebox_3(%arg0: !fir.box<!fir.array<?xf32>>) {
 
 // CHECK-LABEL: define void @test_rebox_4(
 // CHECK-SAME: { i8*, i64, i32, i8, i8, i8, i8, [1 x [3 x i64]] }* %[[INPUT:.*]])
-func @test_rebox_4(%arg0: !fir.box<!fir.array<?x!fir.char<1,?>>>) {
+func.func @test_rebox_4(%arg0: !fir.box<!fir.array<?x!fir.char<1,?>>>) {
   // CHECK: %[[NEWBOX_STORAGE:.*]] = alloca { [10 x i8]*, i64, i32, i8, i8, i8, i8, [1 x [3 x i64]] }
   // CHECK: %[[EXTENT_GEP:.*]] = getelementptr {{{.*}}}, { i8*, i64, i32, i8, i8, i8, i8, [1 x [3 x i64]] }* %[[INPUT]], i32 0, i32 7, i64 0, i32 1
   // CHECK: %[[EXTENT:.*]] = load i64, i64* %[[EXTENT_GEP]]
@@ -134,4 +134,4 @@ func @test_rebox_4(%arg0: !fir.box<!fir.array<?x!fir.char<1,?>>>) {
   fir.call @bar_test_rebox_4(%1) : (!fir.box<!fir.ptr<!fir.array<?x!fir.char<1,10>>>>) -> ()
   return
 }
-func private @bar_test_rebox_4(!fir.box<!fir.ptr<!fir.array<?x!fir.char<1,10>>>>)
+func.func private @bar_test_rebox_4(!fir.box<!fir.ptr<!fir.array<?x!fir.char<1,10>>>>)

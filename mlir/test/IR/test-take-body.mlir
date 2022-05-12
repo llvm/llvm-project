@@ -1,6 +1,6 @@
 // RUN: mlir-opt -allow-unregistered-dialect %s --test-take-body -split-input-file
 
-func @foo() {
+func.func @foo() {
   %0 = "test.foo"() : () -> i32
   cf.br ^header
 	
@@ -12,7 +12,7 @@ func @foo() {
   cf.br ^header
 }
 
-func private @bar() {
+func.func private @bar() {
   return
 }
 

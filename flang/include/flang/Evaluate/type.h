@@ -186,6 +186,11 @@ public:
   // relation.  Kind type parameters must match.
   bool IsTkCompatibleWith(const DynamicType &) const;
 
+  // EXTENDS_TYPE_OF (16.9.76); ignores type parameter values
+  std::optional<bool> ExtendsTypeOf(const DynamicType &) const;
+  // SAME_TYPE_AS (16.9.165); ignores type parameter values
+  std::optional<bool> SameTypeAs(const DynamicType &) const;
+
   // Result will be missing when a symbol is absent or
   // has an erroneous type, e.g., REAL(KIND=666).
   static std::optional<DynamicType> From(const semantics::DeclTypeSpec &);

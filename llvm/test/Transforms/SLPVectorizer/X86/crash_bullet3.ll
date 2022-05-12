@@ -24,34 +24,29 @@ define void @_ZN11HullLibrary15CleanupVerticesEjPK9btVector3jRjPS0_fRS0_(%class.
 ; CHECK:       for.body233:
 ; CHECK-NEXT:    br i1 undef, label [[FOR_BODY233]], label [[FOR_END271]]
 ; CHECK:       for.end271:
-; CHECK-NEXT:    [[TMP0:%.*]] = phi float [ 0x47EFFFFFE0000000, [[FOR_END227]] ], [ undef, [[FOR_BODY233]] ]
-; CHECK-NEXT:    [[TMP1:%.*]] = phi float [ 0x47EFFFFFE0000000, [[FOR_END227]] ], [ undef, [[FOR_BODY233]] ]
-; CHECK-NEXT:    [[SUB275:%.*]] = fsub float undef, [[TMP1]]
-; CHECK-NEXT:    [[SUB279:%.*]] = fsub float undef, [[TMP0]]
+; CHECK-NEXT:    [[TMP0:%.*]] = phi <2 x float> [ <float 0x47EFFFFFE0000000, float 0x47EFFFFFE0000000>, [[FOR_END227]] ], [ undef, [[FOR_BODY233]] ]
+; CHECK-NEXT:    [[TMP1:%.*]] = fsub <2 x float> undef, [[TMP0]]
 ; CHECK-NEXT:    br i1 undef, label [[IF_THEN291:%.*]], label [[RETURN]]
 ; CHECK:       if.then291:
-; CHECK-NEXT:    [[MUL292:%.*]] = fmul float [[SUB275]], 5.000000e-01
-; CHECK-NEXT:    [[ADD294:%.*]] = fadd float [[TMP1]], [[MUL292]]
-; CHECK-NEXT:    [[MUL295:%.*]] = fmul float [[SUB279]], 5.000000e-01
-; CHECK-NEXT:    [[ADD297:%.*]] = fadd float [[TMP0]], [[MUL295]]
+; CHECK-NEXT:    [[TMP2:%.*]] = fmul <2 x float> [[TMP1]], <float 5.000000e-01, float 5.000000e-01>
+; CHECK-NEXT:    [[TMP3:%.*]] = fadd <2 x float> [[TMP0]], [[TMP2]]
 ; CHECK-NEXT:    br i1 undef, label [[IF_END332:%.*]], label [[IF_ELSE319:%.*]]
 ; CHECK:       if.else319:
 ; CHECK-NEXT:    br i1 undef, label [[IF_THEN325:%.*]], label [[IF_END327:%.*]]
 ; CHECK:       if.then325:
 ; CHECK-NEXT:    br label [[IF_END327]]
 ; CHECK:       if.end327:
+; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <2 x float> [[TMP1]], i32 0
+; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <2 x float> <float poison, float undef>, float [[TMP4]], i32 0
 ; CHECK-NEXT:    br i1 undef, label [[IF_THEN329:%.*]], label [[IF_END332]]
 ; CHECK:       if.then329:
 ; CHECK-NEXT:    br label [[IF_END332]]
 ; CHECK:       if.end332:
-; CHECK-NEXT:    [[DX272_1:%.*]] = phi float [ [[SUB275]], [[IF_THEN329]] ], [ [[SUB275]], [[IF_END327]] ], [ 0x3F847AE140000000, [[IF_THEN291]] ]
-; CHECK-NEXT:    [[DY276_1:%.*]] = phi float [ undef, [[IF_THEN329]] ], [ undef, [[IF_END327]] ], [ 0x3F847AE140000000, [[IF_THEN291]] ]
-; CHECK-NEXT:    [[SUB334:%.*]] = fsub float [[ADD294]], [[DX272_1]]
-; CHECK-NEXT:    [[SUB338:%.*]] = fsub float [[ADD297]], [[DY276_1]]
+; CHECK-NEXT:    [[TMP6:%.*]] = phi <2 x float> [ [[TMP5]], [[IF_THEN329]] ], [ [[TMP5]], [[IF_END327]] ], [ <float 0x3F847AE140000000, float 0x3F847AE140000000>, [[IF_THEN291]] ]
+; CHECK-NEXT:    [[TMP7:%.*]] = fsub <2 x float> [[TMP3]], [[TMP6]]
 ; CHECK-NEXT:    [[ARRAYIDX_I_I606:%.*]] = getelementptr inbounds [[CLASS_BTVECTOR3_23_221_463_485_507_573_595_683_727_749_815_837_991_1585_1607_1629_1651_1849_2047_2069_2091_2113:%.*]], %class.btVector3.23.221.463.485.507.573.595.683.727.749.815.837.991.1585.1607.1629.1651.1849.2047.2069.2091.2113* [[VERTICES:%.*]], i64 0, i32 0, i64 0
-; CHECK-NEXT:    store float [[SUB334]], float* [[ARRAYIDX_I_I606]], align 4
-; CHECK-NEXT:    [[ARRAYIDX3_I607:%.*]] = getelementptr inbounds [[CLASS_BTVECTOR3_23_221_463_485_507_573_595_683_727_749_815_837_991_1585_1607_1629_1651_1849_2047_2069_2091_2113]], %class.btVector3.23.221.463.485.507.573.595.683.727.749.815.837.991.1585.1607.1629.1651.1849.2047.2069.2091.2113* [[VERTICES]], i64 0, i32 0, i64 1
-; CHECK-NEXT:    store float [[SUB338]], float* [[ARRAYIDX3_I607]], align 4
+; CHECK-NEXT:    [[TMP8:%.*]] = bitcast float* [[ARRAYIDX_I_I606]] to <2 x float>*
+; CHECK-NEXT:    store <2 x float> [[TMP7]], <2 x float>* [[TMP8]], align 4
 ; CHECK-NEXT:    br label [[RETURN]]
 ; CHECK:       return:
 ; CHECK-NEXT:    ret void

@@ -6,7 +6,7 @@
 #map1 = affine_map<()[s0] -> (s0 + 1)>
 #map2 = affine_map<(d0)[s0, s1, s2] -> (d0 * s2 - s0)>
 module  {
-  func @calc(%arg0: !fir.ref<!fir.array<?xf32>>, %arg1: !fir.ref<!fir.array<?xf32>>, %arg2: !fir.ref<!fir.array<?xf32>>) {
+  func.func @calc(%arg0: !fir.ref<!fir.array<?xf32>>, %arg1: !fir.ref<!fir.array<?xf32>>, %arg2: !fir.ref<!fir.array<?xf32>>) {
     %c1 = arith.constant 1 : index
     %c100 = arith.constant 100 : index
     %0 = fir.shape %c100 : (index) -> !fir.shape<1>

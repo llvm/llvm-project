@@ -3,7 +3,7 @@
 // RUN: -shared-libs=%mlir_runner_utils_dir/libmlir_runner_utils%shlibext,%mlir_runner_utils_dir/libmlir_c_runner_utils%shlibext \
 // RUN: | FileCheck %s
 
-func.func private @print_memref_f32(memref<*xf32>) attributes { llvm.emit_c_interface }
+func.func private @printMemrefF32(memref<*xf32>) attributes { llvm.emit_c_interface }
 
 func.func @main() -> () {
   %c0 = arith.constant 0 : index
@@ -22,7 +22,7 @@ func.func @main() -> () {
     memref.store %val_f32, %input[%i, %j] : memref<2x3xf32>
   }
   %unranked_input = memref.cast %input : memref<2x3xf32> to memref<*xf32>
-  call @print_memref_f32(%unranked_input) : (memref<*xf32>) -> ()
+  call @printMemrefF32(%unranked_input) : (memref<*xf32>) -> ()
   // CHECK: rank = 2 offset = 0 sizes = [2, 3] strides = [3, 1]
   // CHECK-NEXT: [0,   1,   2]
   // CHECK-NEXT: [3,   4,   5]
@@ -30,7 +30,7 @@ func.func @main() -> () {
   %copy = memref.alloc() : memref<2x3xf32>
   memref.copy %input, %copy : memref<2x3xf32> to memref<2x3xf32>
   %unranked_copy = memref.cast %copy : memref<2x3xf32> to memref<*xf32>
-  call @print_memref_f32(%unranked_copy) : (memref<*xf32>) -> ()
+  call @printMemrefF32(%unranked_copy) : (memref<*xf32>) -> ()
   // CHECK: rank = 2 offset = 0 sizes = [2, 3] strides = [3, 1]
   // CHECK-NEXT: [0,   1,   2]
   // CHECK-NEXT: [3,   4,   5]
@@ -40,7 +40,7 @@ func.func @main() -> () {
     : memref<3x2xf32> to memref<2x3xf32, offset: 0, strides: [1, 2]>
   memref.copy %input, %copy_two_casted : memref<2x3xf32> to memref<2x3xf32, offset: 0, strides: [1, 2]>
   %unranked_copy_two = memref.cast %copy_two : memref<3x2xf32> to memref<*xf32>
-  call @print_memref_f32(%unranked_copy_two) : (memref<*xf32>) -> ()
+  call @printMemrefF32(%unranked_copy_two) : (memref<*xf32>) -> ()
   // CHECK: rank = 2 offset = 0 sizes = [3, 2] strides = [2, 1]
   // CHECK-NEXT: [0,   3]
   // CHECK-NEXT: [1,   4]
@@ -62,7 +62,7 @@ func.func @main() -> () {
   %scalar_copy = memref.alloc() : memref<f32>
   memref.copy %scalar, %scalar_copy : memref<f32> to memref<f32>
   %unranked_scalar_copy = memref.cast %scalar_copy : memref<f32> to memref<*xf32>
-  call @print_memref_f32(%unranked_scalar_copy) : (memref<*xf32>) -> ()
+  call @printMemrefF32(%unranked_scalar_copy) : (memref<*xf32>) -> ()
   // CHECK: rank = 0 offset = 0 sizes = [] strides = []
   // CHECK-NEXT [42]
 
