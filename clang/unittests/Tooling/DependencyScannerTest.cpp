@@ -204,53 +204,5 @@ TEST(DependencyScanner, ScanDepsReuseFilemanagerHasInclude) {
   EXPECT_EQ(convert_to_slash(Deps[5]), "/root/symlink.h");
 }
 
-namespace dependencies {
-TEST(DependencyScanningFilesystem, IgnoredFilesAreCachedSeparately1) {
-  auto VFS = llvm::makeIntrusiveRefCnt<llvm::vfs::InMemoryFileSystem>();
-  VFS->addFile("/mod.h", 0,
-               llvm::MemoryBuffer::getMemBuffer("#include <foo.h>\n"
-                                                "// hi there!\n"));
-
-  DependencyScanningFilesystemSharedCache SharedCache;
-  ExcludedPreprocessorDirectiveSkipMapping Mappings;
-  DependencyScanningWorkerFilesystem DepFS(SharedCache, VFS, Mappings);
-
-  DepFS.enableDirectivesScanningOfAllFiles(); // Let's be explicit for clarity.
-  auto StatusMinimized0 = DepFS.status("/mod.h");
-  DepFS.disableDirectivesScanning("/mod.h");
-  auto StatusFull1 = DepFS.status("/mod.h");
-
-  EXPECT_TRUE(StatusMinimized0);
-  EXPECT_TRUE(StatusFull1);
-  EXPECT_EQ(StatusMinimized0->getSize(), 17u);
-  EXPECT_EQ(StatusFull1->getSize(), 30u);
-  EXPECT_EQ(StatusMinimized0->getName(), StringRef("/mod.h"));
-  EXPECT_EQ(StatusFull1->getName(), StringRef("/mod.h"));
-}
-
-TEST(DependencyScanningFilesystem, IgnoredFilesAreCachedSeparately2) {
-  auto VFS = llvm::makeIntrusiveRefCnt<llvm::vfs::InMemoryFileSystem>();
-  VFS->addFile("/mod.h", 0,
-               llvm::MemoryBuffer::getMemBuffer("#include <foo.h>\n"
-                                                "// hi there!\n"));
-
-  DependencyScanningFilesystemSharedCache SharedCache;
-  ExcludedPreprocessorDirectiveSkipMapping Mappings;
-  DependencyScanningWorkerFilesystem DepFS(SharedCache, VFS, Mappings);
-
-  DepFS.disableDirectivesScanning("/mod.h");
-  auto StatusFull0 = DepFS.status("/mod.h");
-  DepFS.enableDirectivesScanningOfAllFiles();
-  auto StatusMinimized1 = DepFS.status("/mod.h");
-
-  EXPECT_TRUE(StatusFull0);
-  EXPECT_TRUE(StatusMinimized1);
-  EXPECT_EQ(StatusFull0->getSize(), 30u);
-  EXPECT_EQ(StatusMinimized1->getSize(), 17u);
-  EXPECT_EQ(StatusFull0->getName(), StringRef("/mod.h"));
-  EXPECT_EQ(StatusMinimized1->getName(), StringRef("/mod.h"));
-}
-
-} // end namespace dependencies
 } // end namespace tooling
 } // end namespace clang

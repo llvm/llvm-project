@@ -18,83 +18,127 @@
 #include "clang/Basic/CharInfo.h"
 #include "clang/Basic/Diagnostic.h"
 #include "clang/Lex/LexDiagnostic.h"
+#include "clang/Lex/Lexer.h"
+#include "llvm/ADT/ScopeExit.h"
+#include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringSwitch.h"
-#include "llvm/Support/MemoryBuffer.h"
 
-using namespace llvm;
 using namespace clang;
 using namespace clang::dependency_directives_scan;
+using namespace llvm;
 
 namespace {
 
-struct Scanner {
-  /// Minimized output.
-  SmallVectorImpl<char> &Out;
-  /// The known tokens encountered during the minimization.
-  SmallVectorImpl<Directive> &Directives;
+struct DirectiveWithTokens {
+  DirectiveKind Kind;
+  unsigned NumTokens;
 
-  Scanner(SmallVectorImpl<char> &Out, SmallVectorImpl<Directive> &Directives,
-          StringRef Input, DiagnosticsEngine *Diags,
-          SourceLocation InputSourceLoc)
-      : Out(Out), Directives(Directives), Input(Input), Diags(Diags),
-        InputSourceLoc(InputSourceLoc) {}
+  DirectiveWithTokens(DirectiveKind Kind, unsigned NumTokens)
+      : Kind(Kind), NumTokens(NumTokens) {}
+};
+
+/// Does an efficient "scan" of the sources to detect the presence of
+/// preprocessor (or module import) directives and collects the raw lexed tokens
+/// for those directives so that the \p Lexer can "replay" them when the file is
+/// included.
+///
+/// Note that the behavior of the raw lexer is affected by the language mode,
+/// while at this point we want to do a scan and collect tokens once,
+/// irrespective of the language mode that the file will get included in. To
+/// compensate for that the \p Lexer, while "replaying", will adjust a token
+/// where appropriate, when it could affect the preprocessor's state.
+/// For example in a directive like
+///
+/// \code
+///   #if __has_cpp_attribute(clang::fallthrough)
+/// \endcode
+///
+/// The preprocessor needs to see '::' as 'tok::coloncolon' instead of 2
+/// 'tok::colon'. The \p Lexer will adjust if it sees consecutive 'tok::colon'
+/// while in C++ mode.
+struct Scanner {
+  Scanner(StringRef Input,
+          SmallVectorImpl<dependency_directives_scan::Token> &Tokens,
+          DiagnosticsEngine *Diags, SourceLocation InputSourceLoc)
+      : Input(Input), Tokens(Tokens), Diags(Diags),
+        InputSourceLoc(InputSourceLoc), LangOpts(getLangOptsForDepScanning()),
+        TheLexer(InputSourceLoc, LangOpts, Input.begin(), Input.begin(),
+                 Input.end()) {}
+
+  static LangOptions getLangOptsForDepScanning() {
+    LangOptions LangOpts;
+    // Set the lexer to use 'tok::at' for '@', instead of 'tok::unknown'.
+    LangOpts.ObjC = true;
+    LangOpts.LineComment = true;
+    return LangOpts;
+  }
 
   /// Lex the provided source and emit the directive tokens.
   ///
   /// \returns True on error.
-  bool scan();
+  bool scan(SmallVectorImpl<Directive> &Directives);
 
 private:
-  struct IdInfo {
-    const char *Last;
-    StringRef Name;
-  };
+  /// Lexes next token and advances \p First and the \p Lexer.
+  LLVM_NODISCARD dependency_directives_scan::Token &
+  lexToken(const char *&First, const char *const End);
 
-  /// Lex an identifier.
+  dependency_directives_scan::Token &lexIncludeFilename(const char *&First,
+                                                        const char *const End);
+
+  /// Lexes next token and if it is identifier returns its string, otherwise
+  /// it skips the current line and returns \p None.
   ///
-  /// \pre First points at a valid identifier head.
-  LLVM_NODISCARD IdInfo lexIdentifier(const char *First, const char *const End);
-  LLVM_NODISCARD bool isNextIdentifier(StringRef Id, const char *&First,
-                                       const char *const End);
+  /// In any case (whatever the token kind) \p First and the \p Lexer will
+  /// advance beyond the token.
+  LLVM_NODISCARD Optional<StringRef>
+  tryLexIdentifierOrSkipLine(const char *&First, const char *const End);
+
+  /// Used when it is certain that next token is an identifier.
+  LLVM_NODISCARD StringRef lexIdentifier(const char *&First,
+                                         const char *const End);
+
+  /// Lexes next token and returns true iff it is an identifier that matches \p
+  /// Id, otherwise it skips the current line and returns false.
+  ///
+  /// In any case (whatever the token kind) \p First and the \p Lexer will
+  /// advance beyond the token.
+  LLVM_NODISCARD bool isNextIdentifierOrSkipLine(StringRef Id,
+                                                 const char *&First,
+                                                 const char *const End);
+
   LLVM_NODISCARD bool scanImpl(const char *First, const char *const End);
   LLVM_NODISCARD bool lexPPLine(const char *&First, const char *const End);
   LLVM_NODISCARD bool lexAt(const char *&First, const char *const End);
   LLVM_NODISCARD bool lexModule(const char *&First, const char *const End);
-  LLVM_NODISCARD bool lexDefine(const char *&First, const char *const End);
+  LLVM_NODISCARD bool lexDefine(const char *HashLoc, const char *&First,
+                                const char *const End);
   LLVM_NODISCARD bool lexPragma(const char *&First, const char *const End);
   LLVM_NODISCARD bool lexEndif(const char *&First, const char *const End);
-  LLVM_NODISCARD bool lexDefault(DirectiveKind Kind, StringRef Directive,
-                                 const char *&First, const char *const End);
-  Directive &pushDirective(DirectiveKind K) {
-    Directives.emplace_back(K, Out.size());
-    return Directives.back();
+  LLVM_NODISCARD bool lexDefault(DirectiveKind Kind, const char *&First,
+                                 const char *const End);
+  LLVM_NODISCARD bool lexModuleDirectiveBody(DirectiveKind Kind,
+                                             const char *&First,
+                                             const char *const End);
+  void lexPPDirectiveBody(const char *&First, const char *const End);
+
+  DirectiveWithTokens &pushDirective(DirectiveKind Kind) {
+    Tokens.append(CurDirToks);
+    DirsWithToks.emplace_back(Kind, CurDirToks.size());
+    CurDirToks.clear();
+    return DirsWithToks.back();
   }
   void popDirective() {
-    Out.resize(Directives.back().Offset);
-    Directives.pop_back();
+    Tokens.pop_back_n(DirsWithToks.pop_back_val().NumTokens);
   }
   DirectiveKind topDirective() const {
-    return Directives.empty() ? pp_none : Directives.back().Kind;
+    return DirsWithToks.empty() ? pp_none : DirsWithToks.back().Kind;
   }
 
-  Scanner &put(char Byte) {
-    Out.push_back(Byte);
-    return *this;
+  unsigned getOffsetAt(const char *CurPtr) const {
+    return CurPtr - Input.data();
   }
-  Scanner &append(StringRef S) { return append(S.begin(), S.end()); }
-  Scanner &append(const char *First, const char *Last) {
-    Out.append(First, Last);
-    return *this;
-  }
-
-  void printToNewline(const char *&First, const char *const End);
-  void printAdjacentModuleNameParts(const char *&First, const char *const End);
-  LLVM_NODISCARD bool printAtImportBody(const char *&First,
-                                        const char *const End);
-  void printDirectiveBody(const char *&First, const char *const End);
-  void printAdjacentMacroArgs(const char *&First, const char *const End);
-  LLVM_NODISCARD bool printMacroArgs(const char *&First, const char *const End);
 
   /// Reports a diagnostic if the diagnostic engine is provided. Always returns
   /// true at the end.
@@ -102,8 +146,20 @@ private:
 
   StringMap<char> SplitIds;
   StringRef Input;
+  SmallVectorImpl<dependency_directives_scan::Token> &Tokens;
   DiagnosticsEngine *Diags;
   SourceLocation InputSourceLoc;
+
+  /// Keeps track of the tokens for the currently lexed directive. Once a
+  /// directive is fully lexed and "committed" then the tokens get appended to
+  /// \p Tokens and \p CurDirToks is cleared for the next directive.
+  SmallVector<dependency_directives_scan::Token, 32> CurDirToks;
+  /// The directives that were lexed along with the number of tokens that each
+  /// directive contains. The tokens of all the directives are kept in \p Tokens
+  /// vector, in the same order as the directives order in \p DirsWithToks.
+  SmallVector<DirectiveWithTokens, 64> DirsWithToks;
+  LangOptions LangOpts;
+  Lexer TheLexer;
 };
 
 } // end anonymous namespace
@@ -112,7 +168,7 @@ bool Scanner::reportError(const char *CurPtr, unsigned Err) {
   if (!Diags)
     return true;
   assert(CurPtr >= Input.data() && "invalid buffer ptr");
-  Diags->Report(InputSourceLoc.getLocWithOffset(CurPtr - Input.data()), Err);
+  Diags->Report(InputSourceLoc.getLocWithOffset(getOffsetAt(CurPtr)), Err);
   return true;
 }
 
@@ -265,30 +321,6 @@ static void skipToNewlineRaw(const char *&First, const char *const End) {
   }
 }
 
-static const char *findLastNonSpace(const char *First, const char *Last) {
-  assert(First <= Last);
-  while (First != Last && isHorizontalWhitespace(Last[-1]))
-    --Last;
-  return Last;
-}
-
-static const char *findLastNonSpaceNonBackslash(const char *First,
-                                                const char *Last) {
-  assert(First <= Last);
-  while (First != Last &&
-         (isHorizontalWhitespace(Last[-1]) || Last[-1] == '\\'))
-    --Last;
-  return Last;
-}
-
-static const char *findFirstTrailingSpace(const char *First, const char *Last) {
-  const char *LastNonSpace = findLastNonSpace(First, Last);
-  if (Last == LastNonSpace)
-    return Last;
-  assert(isHorizontalWhitespace(LastNonSpace[0]));
-  return LastNonSpace + 1;
-}
-
 static void skipLineComment(const char *&First, const char *const End) {
   assert(First[0] == '/' && First[1] == '/');
   First += 2;
@@ -396,67 +428,6 @@ static void skipDirective(StringRef Name, const char *&First,
     skipLine(First, End);
 }
 
-void Scanner::printToNewline(const char *&First, const char *const End) {
-  while (First != End && !isVerticalWhitespace(*First)) {
-    const char *Last = First;
-    do {
-      // Iterate over strings correctly to avoid comments and newlines.
-      if (*Last == '"' || *Last == '\'' ||
-          (*Last == '<' &&
-           (topDirective() == pp_include || topDirective() == pp_import))) {
-        if (LLVM_UNLIKELY(isRawStringLiteral(First, Last)))
-          skipRawString(Last, End);
-        else
-          skipString(Last, End);
-        continue;
-      }
-      if (*Last != '/' || End - Last < 2) {
-        ++Last;
-        continue; // Gather the rest up to print verbatim.
-      }
-
-      if (Last[1] != '/' && Last[1] != '*') {
-        ++Last;
-        continue;
-      }
-
-      // Deal with "//..." and "/*...*/".
-      append(First, findFirstTrailingSpace(First, Last));
-      First = Last;
-
-      if (Last[1] == '/') {
-        skipLineComment(First, End);
-        return;
-      }
-
-      put(' ');
-      skipBlockComment(First, End);
-      skipOverSpaces(First, End);
-      Last = First;
-    } while (Last != End && !isVerticalWhitespace(*Last));
-
-    // Print out the string.
-    const char *LastBeforeTrailingSpace = findLastNonSpace(First, Last);
-    if (Last == End || LastBeforeTrailingSpace == First ||
-        LastBeforeTrailingSpace[-1] != '\\') {
-      append(First, LastBeforeTrailingSpace);
-      First = Last;
-      skipNewline(First, End);
-      return;
-    }
-
-    // Print up to the last character that's not a whitespace or backslash.
-    // Then print exactly one space, which matters when tokens are separated by
-    // a line continuation.
-    append(First, findLastNonSpaceNonBackslash(First, Last));
-    put(' ');
-
-    First = Last;
-    skipNewline(First, End);
-    skipOverSpaces(First, End);
-  }
-}
-
 static void skipWhitespace(const char *&First, const char *const End) {
   for (;;) {
     assert(First <= End);
@@ -489,176 +460,134 @@ static void skipWhitespace(const char *&First, const char *const End) {
   }
 }
 
-void Scanner::printAdjacentModuleNameParts(const char *&First,
-                                           const char *const End) {
-  // Skip over parts of the body.
-  const char *Last = First;
-  do
-    ++Last;
-  while (Last != End && (isAsciiIdentifierContinue(*Last) || *Last == '.'));
-  append(First, Last);
-  First = Last;
-}
-
-bool Scanner::printAtImportBody(const char *&First, const char *const End) {
-  for (;;) {
-    skipWhitespace(First, End);
-    if (First == End)
-      return true;
-
-    if (isVerticalWhitespace(*First)) {
-      skipNewline(First, End);
-      continue;
-    }
-
-    // Found a semicolon.
-    if (*First == ';') {
-      put(*First++).put('\n');
-      return false;
-    }
-
-    // Don't handle macro expansions inside @import for now.
-    if (!isAsciiIdentifierContinue(*First) && *First != '.')
-      return true;
-
-    printAdjacentModuleNameParts(First, End);
-  }
-}
-
-void Scanner::printDirectiveBody(const char *&First, const char *const End) {
-  skipWhitespace(First, End); // Skip initial whitespace.
-  printToNewline(First, End);
-  while (Out.back() == ' ')
-    Out.pop_back();
-  put('\n');
-}
-
-LLVM_NODISCARD static const char *lexRawIdentifier(const char *First,
-                                                   const char *const End) {
-  assert(isAsciiIdentifierContinue(*First) && "invalid identifer");
-  const char *Last = First + 1;
-  while (Last != End && isAsciiIdentifierContinue(*Last))
-    ++Last;
-  return Last;
-}
-
-LLVM_NODISCARD static const char *
-getIdentifierContinuation(const char *First, const char *const End) {
-  if (End - First < 3 || First[0] != '\\' || !isVerticalWhitespace(First[1]))
-    return nullptr;
-
-  ++First;
-  skipNewline(First, End);
-  if (First == End)
-    return nullptr;
-  return isAsciiIdentifierContinue(First[0]) ? First : nullptr;
-}
-
-Scanner::IdInfo Scanner::lexIdentifier(const char *First,
-                                       const char *const End) {
-  const char *Last = lexRawIdentifier(First, End);
-  const char *Next = getIdentifierContinuation(Last, End);
-  if (LLVM_LIKELY(!Next))
-    return IdInfo{Last, StringRef(First, Last - First)};
-
-  // Slow path, where identifiers are split over lines.
-  SmallVector<char, 64> Id(First, Last);
-  while (Next) {
-    Last = lexRawIdentifier(Next, End);
-    Id.append(Next, Last);
-    Next = getIdentifierContinuation(Last, End);
-  }
-  return IdInfo{
-      Last,
-      SplitIds.try_emplace(StringRef(Id.begin(), Id.size()), 0).first->first()};
-}
-
-void Scanner::printAdjacentMacroArgs(const char *&First,
+bool Scanner::lexModuleDirectiveBody(DirectiveKind Kind, const char *&First,
                                      const char *const End) {
-  // Skip over parts of the body.
-  const char *Last = First;
-  do
-    ++Last;
-  while (Last != End &&
-         (isAsciiIdentifierContinue(*Last) || *Last == '.' || *Last == ','));
-  append(First, Last);
-  First = Last;
-}
-
-bool Scanner::printMacroArgs(const char *&First, const char *const End) {
-  assert(*First == '(');
-  put(*First++);
+  const char *DirectiveLoc = Input.data() + CurDirToks.front().Offset;
   for (;;) {
-    skipWhitespace(First, End);
-    if (First == End)
-      return true;
-
-    if (*First == ')') {
-      put(*First++);
-      return false;
-    }
-
-    // This is intentionally fairly liberal.
-    if (!(isAsciiIdentifierContinue(*First) || *First == '.' || *First == ','))
-      return true;
-
-    printAdjacentMacroArgs(First, End);
+    const dependency_directives_scan::Token &Tok = lexToken(First, End);
+    if (Tok.is(tok::eof))
+      return reportError(
+          DirectiveLoc,
+          diag::err_dep_source_scanner_missing_semi_after_at_import);
+    if (Tok.is(tok::semi))
+      break;
   }
-}
-
-/// Looks for an identifier starting from Last.
-///
-/// Updates "First" to just past the next identifier, if any.  Returns true iff
-/// the identifier matches "Id".
-bool Scanner::isNextIdentifier(StringRef Id, const char *&First,
-                               const char *const End) {
-  skipWhitespace(First, End);
-  if (First == End || !isAsciiIdentifierStart(*First))
-    return false;
-
-  IdInfo FoundId = lexIdentifier(First, End);
-  First = FoundId.Last;
-  return FoundId.Name == Id;
-}
-
-bool Scanner::lexAt(const char *&First, const char *const End) {
-  // Handle "@import".
-  const char *ImportLoc = First++;
-  if (!isNextIdentifier("import", First, End)) {
-    skipLine(First, End);
-    return false;
-  }
-  pushDirective(decl_at_import);
-  append("@import ");
-  if (printAtImportBody(First, End))
-    return reportError(
-        ImportLoc, diag::err_dep_source_scanner_missing_semi_after_at_import);
+  pushDirective(Kind);
   skipWhitespace(First, End);
   if (First == End)
     return false;
   if (!isVerticalWhitespace(*First))
     return reportError(
-        ImportLoc, diag::err_dep_source_scanner_unexpected_tokens_at_import);
+        DirectiveLoc, diag::err_dep_source_scanner_unexpected_tokens_at_import);
   skipNewline(First, End);
   return false;
 }
 
-bool Scanner::lexModule(const char *&First, const char *const End) {
-  IdInfo Id = lexIdentifier(First, End);
-  First = Id.Last;
-  bool Export = false;
-  if (Id.Name == "export") {
-    Export = true;
-    skipWhitespace(First, End);
-    if (!isAsciiIdentifierContinue(*First)) {
+dependency_directives_scan::Token &Scanner::lexToken(const char *&First,
+                                                     const char *const End) {
+  clang::Token Tok;
+  TheLexer.LexFromRawLexer(Tok);
+  First = Input.data() + TheLexer.getCurrentBufferOffset();
+  assert(First <= End);
+
+  unsigned Offset = TheLexer.getCurrentBufferOffset() - Tok.getLength();
+  CurDirToks.emplace_back(Offset, Tok.getLength(), Tok.getKind(),
+                          Tok.getFlags());
+  return CurDirToks.back();
+}
+
+dependency_directives_scan::Token &
+Scanner::lexIncludeFilename(const char *&First, const char *const End) {
+  clang::Token Tok;
+  TheLexer.LexIncludeFilename(Tok);
+  First = Input.data() + TheLexer.getCurrentBufferOffset();
+  assert(First <= End);
+
+  unsigned Offset = TheLexer.getCurrentBufferOffset() - Tok.getLength();
+  CurDirToks.emplace_back(Offset, Tok.getLength(), Tok.getKind(),
+                          Tok.getFlags());
+  return CurDirToks.back();
+}
+
+void Scanner::lexPPDirectiveBody(const char *&First, const char *const End) {
+  while (true) {
+    const dependency_directives_scan::Token &Tok = lexToken(First, End);
+    if (Tok.is(tok::eod))
+      break;
+  }
+}
+
+LLVM_NODISCARD Optional<StringRef>
+Scanner::tryLexIdentifierOrSkipLine(const char *&First, const char *const End) {
+  const dependency_directives_scan::Token &Tok = lexToken(First, End);
+  if (Tok.isNot(tok::raw_identifier)) {
+    if (!Tok.is(tok::eod))
       skipLine(First, End);
-      return false;
-    }
-    Id = lexIdentifier(First, End);
-    First = Id.Last;
+    return None;
   }
 
-  if (Id.Name != "module" && Id.Name != "import") {
+  bool NeedsCleaning = Tok.Flags & clang::Token::NeedsCleaning;
+  if (LLVM_LIKELY(!NeedsCleaning))
+    return Input.slice(Tok.Offset, Tok.getEnd());
+
+  SmallString<64> Spelling;
+  Spelling.resize(Tok.Length);
+
+  unsigned SpellingLength = 0;
+  const char *BufPtr = Input.begin() + Tok.Offset;
+  const char *AfterIdent = Input.begin() + Tok.getEnd();
+  while (BufPtr < AfterIdent) {
+    unsigned Size;
+    Spelling[SpellingLength++] =
+        Lexer::getCharAndSizeNoWarn(BufPtr, Size, LangOpts);
+    BufPtr += Size;
+  }
+
+  return SplitIds.try_emplace(StringRef(Spelling.begin(), SpellingLength), 0)
+      .first->first();
+}
+
+StringRef Scanner::lexIdentifier(const char *&First, const char *const End) {
+  Optional<StringRef> Id = tryLexIdentifierOrSkipLine(First, End);
+  assert(Id.hasValue() && "expected identifier token");
+  return Id.getValue();
+}
+
+bool Scanner::isNextIdentifierOrSkipLine(StringRef Id, const char *&First,
+                                         const char *const End) {
+  if (Optional<StringRef> FoundId = tryLexIdentifierOrSkipLine(First, End)) {
+    if (*FoundId == Id)
+      return true;
+    skipLine(First, End);
+  }
+  return false;
+}
+
+bool Scanner::lexAt(const char *&First, const char *const End) {
+  // Handle "@import".
+
+  // Lex '@'.
+  const dependency_directives_scan::Token &AtTok = lexToken(First, End);
+  assert(AtTok.is(tok::at));
+  (void)AtTok;
+
+  if (!isNextIdentifierOrSkipLine("import", First, End))
+    return false;
+  return lexModuleDirectiveBody(decl_at_import, First, End);
+}
+
+bool Scanner::lexModule(const char *&First, const char *const End) {
+  StringRef Id = lexIdentifier(First, End);
+  bool Export = false;
+  if (Id == "export") {
+    Export = true;
+    Optional<StringRef> NextId = tryLexIdentifierOrSkipLine(First, End);
+    if (!NextId)
+      return false;
+    Id = *NextId;
+  }
+
+  if (Id != "module" && Id != "import") {
     skipLine(First, End);
     return false;
   }
@@ -680,114 +609,51 @@ bool Scanner::lexModule(const char *&First, const char *const End) {
     }
   }
 
-  if (Export) {
-    pushDirective(cxx_export_decl);
-    append("export ");
-  }
+  TheLexer.seek(getOffsetAt(First), /*IsAtStartOfLine*/ false);
 
-  if (Id.Name == "module")
-    pushDirective(cxx_module_decl);
+  DirectiveKind Kind;
+  if (Id == "module")
+    Kind = Export ? cxx_export_module_decl : cxx_module_decl;
   else
-    pushDirective(cxx_import_decl);
-  append(Id.Name);
-  append(" ");
-  printToNewline(First, End);
-  append("\n");
-  return false;
-}
+    Kind = Export ? cxx_export_import_decl : cxx_import_decl;
 
-bool Scanner::lexDefine(const char *&First, const char *const End) {
-  pushDirective(pp_define);
-  append("#define ");
-  skipWhitespace(First, End);
-
-  if (!isAsciiIdentifierStart(*First))
-    return reportError(First, diag::err_pp_macro_not_identifier);
-
-  IdInfo Id = lexIdentifier(First, End);
-  const char *Last = Id.Last;
-  append(Id.Name);
-  if (Last == End)
-    return false;
-  if (*Last == '(') {
-    size_t Size = Out.size();
-    if (printMacroArgs(Last, End)) {
-      // Be robust to bad macro arguments, since they can show up in disabled
-      // code.
-      Out.resize(Size);
-      append("(/* invalid */\n");
-      skipLine(Last, End);
-      return false;
-    }
-  }
-  skipWhitespace(Last, End);
-  if (Last == End)
-    return false;
-  if (!isVerticalWhitespace(*Last))
-    put(' ');
-  printDirectiveBody(Last, End);
-  First = Last;
-  return false;
+  return lexModuleDirectiveBody(Kind, First, End);
 }
 
 bool Scanner::lexPragma(const char *&First, const char *const End) {
-  // #pragma.
-  skipWhitespace(First, End);
-  if (First == End || !isAsciiIdentifierStart(*First))
+  Optional<StringRef> FoundId = tryLexIdentifierOrSkipLine(First, End);
+  if (!FoundId)
     return false;
 
-  IdInfo FoundId = lexIdentifier(First, End);
-  First = FoundId.Last;
-  if (FoundId.Name == "once") {
-    // #pragma once
-    skipLine(First, End);
-    pushDirective(pp_pragma_once);
-    append("#pragma once\n");
-    return false;
-  }
-  if (FoundId.Name == "push_macro") {
-    // #pragma push_macro
-    pushDirective(pp_pragma_push_macro);
-    append("#pragma push_macro");
-    printDirectiveBody(First, End);
-    return false;
-  }
-  if (FoundId.Name == "pop_macro") {
-    // #pragma pop_macro
-    pushDirective(pp_pragma_pop_macro);
-    append("#pragma pop_macro");
-    printDirectiveBody(First, End);
-    return false;
-  }
-  if (FoundId.Name == "include_alias") {
-    // #pragma include_alias
-    pushDirective(pp_pragma_include_alias);
-    append("#pragma include_alias");
-    printDirectiveBody(First, End);
+  StringRef Id = FoundId.getValue();
+  auto Kind = llvm::StringSwitch<DirectiveKind>(Id)
+                  .Case("once", pp_pragma_once)
+                  .Case("push_macro", pp_pragma_push_macro)
+                  .Case("pop_macro", pp_pragma_pop_macro)
+                  .Case("include_alias", pp_pragma_include_alias)
+                  .Default(pp_none);
+  if (Kind != pp_none) {
+    lexPPDirectiveBody(First, End);
+    pushDirective(Kind);
     return false;
   }
 
-  if (FoundId.Name != "clang") {
+  if (Id != "clang") {
     skipLine(First, End);
     return false;
   }
 
   // #pragma clang.
-  if (!isNextIdentifier("module", First, End)) {
-    skipLine(First, End);
+  if (!isNextIdentifierOrSkipLine("module", First, End))
     return false;
-  }
 
   // #pragma clang module.
-  if (!isNextIdentifier("import", First, End)) {
-    skipLine(First, End);
+  if (!isNextIdentifierOrSkipLine("import", First, End))
     return false;
-  }
 
   // #pragma clang module import.
+  lexPPDirectiveBody(First, End);
   pushDirective(pp_pragma_import);
-  append("#pragma clang module import ");
-  printDirectiveBody(First, End);
   return false;
 }
 
@@ -808,14 +674,13 @@ bool Scanner::lexEndif(const char *&First, const char *const End) {
     return false;
   }
 
-  return lexDefault(pp_endif, "endif", First, End);
+  return lexDefault(pp_endif, First, End);
 }
 
-bool Scanner::lexDefault(DirectiveKind Kind, StringRef Directive,
-                         const char *&First, const char *const End) {
+bool Scanner::lexDefault(DirectiveKind Kind, const char *&First,
+                         const char *const End) {
+  lexPPDirectiveBody(First, End);
   pushDirective(Kind);
-  put('#').append(Directive).put(' ');
-  printDirectiveBody(First, End);
   return false;
 }
 
@@ -845,6 +710,14 @@ bool Scanner::lexPPLine(const char *&First, const char *const End) {
     return false;
   }
 
+  TheLexer.seek(getOffsetAt(First), /*IsAtStartOfLine*/ true);
+
+  auto ScEx1 = make_scope_exit([&]() {
+    /// Clear Scanner's CurDirToks before returning, in case we didn't push a
+    /// new directive.
+    CurDirToks.clear();
+  });
+
   // Handle "@import".
   if (*First == '@')
     return lexAt(First, End);
@@ -853,25 +726,26 @@ bool Scanner::lexPPLine(const char *&First, const char *const End) {
     return lexModule(First, End);
 
   // Handle preprocessing directives.
-  ++First; // Skip over '#'.
-  skipWhitespace(First, End);
 
-  if (First == End)
-    return reportError(First, diag::err_pp_expected_eol);
+  TheLexer.setParsingPreprocessorDirective(true);
+  auto ScEx2 = make_scope_exit(
+      [&]() { TheLexer.setParsingPreprocessorDirective(false); });
 
-  if (!isAsciiIdentifierStart(*First)) {
-    skipLine(First, End);
+  // Lex '#'.
+  const dependency_directives_scan::Token &HashTok = lexToken(First, End);
+  assert(HashTok.is(tok::hash));
+  (void)HashTok;
+
+  Optional<StringRef> FoundId = tryLexIdentifierOrSkipLine(First, End);
+  if (!FoundId)
     return false;
-  }
 
-  // Figure out the token.
-  IdInfo Id = lexIdentifier(First, End);
-  First = Id.Last;
+  StringRef Id = FoundId.getValue();
 
-  if (Id.Name == "pragma")
+  if (Id == "pragma")
     return lexPragma(First, End);
 
-  auto Kind = llvm::StringSwitch<DirectiveKind>(Id.Name)
+  auto Kind = llvm::StringSwitch<DirectiveKind>(Id)
                   .Case("include", pp_include)
                   .Case("__include_macros", pp___include_macros)
                   .Case("define", pp_define)
@@ -888,18 +762,26 @@ bool Scanner::lexPPLine(const char *&First, const char *const End) {
                   .Case("endif", pp_endif)
                   .Default(pp_none);
   if (Kind == pp_none) {
-    skipDirective(Id.Name, First, End);
+    skipDirective(Id, First, End);
     return false;
   }
 
   if (Kind == pp_endif)
     return lexEndif(First, End);
 
-  if (Kind == pp_define)
-    return lexDefine(First, End);
+  switch (Kind) {
+  case pp_include:
+  case pp___include_macros:
+  case pp_include_next:
+  case pp_import:
+    lexIncludeFilename(First, End);
+    break;
+  default:
+    break;
+  }
 
   // Everything else.
-  return lexDefault(Kind, Id.Name, First, End);
+  return lexDefault(Kind, First, End);
 }
 
 static void skipUTF8ByteOrderMark(const char *&First, const char *const End) {
@@ -916,78 +798,65 @@ bool Scanner::scanImpl(const char *First, const char *const End) {
   return false;
 }
 
-bool Scanner::scan() {
+bool Scanner::scan(SmallVectorImpl<Directive> &Directives) {
   bool Error = scanImpl(Input.begin(), Input.end());
 
   if (!Error) {
-    // Add a trailing newline and an EOF on success.
-    if (!Out.empty() && Out.back() != '\n')
-      Out.push_back('\n');
+    // Add an EOF on success.
     pushDirective(pp_eof);
   }
 
-  // Null-terminate the output. This way the memory buffer that's passed to
-  // Clang will not have to worry about the terminating '\0'.
-  Out.push_back(0);
-  Out.pop_back();
+  ArrayRef<dependency_directives_scan::Token> RemainingTokens = Tokens;
+  for (const DirectiveWithTokens &DirWithToks : DirsWithToks) {
+    assert(RemainingTokens.size() >= DirWithToks.NumTokens);
+    Directives.emplace_back(DirWithToks.Kind,
+                            RemainingTokens.take_front(DirWithToks.NumTokens));
+    RemainingTokens = RemainingTokens.drop_front(DirWithToks.NumTokens);
+  }
+  assert(RemainingTokens.empty());
+
   return Error;
 }
 
-bool clang::dependency_directives_scan::computeSkippedRanges(
-    ArrayRef<Directive> Input, llvm::SmallVectorImpl<SkippedRange> &Range) {
-  struct IfElseDirective {
-    enum DirectiveKind {
-      If,  // if/ifdef/ifndef
-      Else // elif/elifdef/elifndef, else
-    };
-    int Offset;
-    DirectiveKind Kind;
-  };
-  llvm::SmallVector<IfElseDirective, 32> Offsets;
-  for (const Directive &T : Input) {
-    switch (T.Kind) {
-    case pp_if:
-    case pp_ifdef:
-    case pp_ifndef:
-      Offsets.push_back({T.Offset, IfElseDirective::If});
-      break;
-
-    case pp_elif:
-    case pp_elifdef:
-    case pp_elifndef:
-    case pp_else: {
-      if (Offsets.empty())
-        return true;
-      int PreviousOffset = Offsets.back().Offset;
-      Range.push_back({PreviousOffset, T.Offset - PreviousOffset});
-      Offsets.push_back({T.Offset, IfElseDirective::Else});
-      break;
-    }
-
-    case pp_endif: {
-      if (Offsets.empty())
-        return true;
-      int PreviousOffset = Offsets.back().Offset;
-      Range.push_back({PreviousOffset, T.Offset - PreviousOffset});
-      do {
-        IfElseDirective::DirectiveKind Kind = Offsets.pop_back_val().Kind;
-        if (Kind == IfElseDirective::If)
-          break;
-      } while (!Offsets.empty());
-      break;
-    }
-    default:
-      break;
-    }
-  }
-  return false;
-}
-
 bool clang::scanSourceForDependencyDirectives(
-    StringRef Input, SmallVectorImpl<char> &Output,
+    StringRef Input, SmallVectorImpl<dependency_directives_scan::Token> &Tokens,
     SmallVectorImpl<Directive> &Directives, DiagnosticsEngine *Diags,
     SourceLocation InputSourceLoc) {
-  Output.clear();
-  Directives.clear();
-  return Scanner(Output, Directives, Input, Diags, InputSourceLoc).scan();
+  return Scanner(Input, Tokens, Diags, InputSourceLoc).scan(Directives);
+}
+
+void clang::printDependencyDirectivesAsSource(
+    StringRef Source,
+    ArrayRef<dependency_directives_scan::Directive> Directives,
+    llvm::raw_ostream &OS) {
+  // Add a space separator where it is convenient for testing purposes.
+  auto needsSpaceSeparator =
+      [](tok::TokenKind Prev,
+         const dependency_directives_scan::Token &Tok) -> bool {
+    if (Prev == Tok.Kind)
+      return !Tok.isOneOf(tok::l_paren, tok::r_paren, tok::l_square,
+                          tok::r_square);
+    if (Prev == tok::raw_identifier &&
+        Tok.isOneOf(tok::hash, tok::numeric_constant, tok::string_literal,
+                    tok::char_constant, tok::header_name))
+      return true;
+    if (Prev == tok::r_paren &&
+        Tok.isOneOf(tok::raw_identifier, tok::hash, tok::string_literal,
+                    tok::char_constant, tok::unknown))
+      return true;
+    if (Prev == tok::comma &&
+        Tok.isOneOf(tok::l_paren, tok::string_literal, tok::less))
+      return true;
+    return false;
+  };
+
+  for (const dependency_directives_scan::Directive &Directive : Directives) {
+    Optional<tok::TokenKind> PrevTokenKind;
+    for (const dependency_directives_scan::Token &Tok : Directive.Tokens) {
+      if (PrevTokenKind && needsSpaceSeparator(*PrevTokenKind, Tok))
+        OS << ' ';
+      PrevTokenKind = Tok.Kind;
+      OS << Source.slice(Tok.Offset, Tok.getEnd());
+    }
+  }
 }

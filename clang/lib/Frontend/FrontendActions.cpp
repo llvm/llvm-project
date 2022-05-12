@@ -1157,10 +1157,10 @@ void PrintDependencyDirectivesSourceMinimizerAction::ExecuteAction() {
   SourceManager &SM = CI.getPreprocessor().getSourceManager();
   llvm::MemoryBufferRef FromFile = SM.getBufferOrFake(SM.getMainFileID());
 
-  llvm::SmallString<1024> Output;
+  llvm::SmallVector<dependency_directives_scan::Token, 16> Tokens;
   llvm::SmallVector<dependency_directives_scan::Directive, 32> Directives;
   if (scanSourceForDependencyDirectives(
-          FromFile.getBuffer(), Output, Directives, &CI.getDiagnostics(),
+          FromFile.getBuffer(), Tokens, Directives, &CI.getDiagnostics(),
           SM.getLocForStartOfFile(SM.getMainFileID()))) {
     assert(CI.getDiagnostics().hasErrorOccurred() &&
            "no errors reported for failure");
@@ -1179,7 +1179,8 @@ void PrintDependencyDirectivesSourceMinimizerAction::ExecuteAction() {
     }
     return;
   }
-  llvm::outs() << Output;
+  printDependencyDirectivesAsSource(FromFile.getBuffer(), Directives,
+                                    llvm::outs());
 }
 
 void GetDependenciesByModuleNameAction::ExecuteAction() {

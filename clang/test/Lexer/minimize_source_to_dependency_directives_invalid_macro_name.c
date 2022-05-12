@@ -1,3 +1,4 @@
-// RUN: %clang_cc1 -verify -print-dependency-directives-minimized-source %s 2>&1
+// RUN: %clang_cc1 -print-dependency-directives-minimized-source %s 2>&1 | FileCheck %s
 
-#define 0 0 // expected-error {{macro name must be an identifier}}
+#define 0 0
+// CHECK: #define 0 0

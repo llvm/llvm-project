@@ -226,13 +226,11 @@ Lexer *Lexer::Create_PragmaLexer(SourceLocation SpellingLoc,
   return L;
 }
 
-bool Lexer::skipOver(unsigned NumBytes) {
-  IsAtPhysicalStartOfLine = true;
-  IsAtStartOfLine = true;
-  if ((BufferPtr + NumBytes) > BufferEnd)
-    return true;
-  BufferPtr += NumBytes;
-  return false;
+void Lexer::seek(unsigned Offset, bool IsAtStartOfLine) {
+  this->IsAtPhysicalStartOfLine = IsAtStartOfLine;
+  this->IsAtStartOfLine = IsAtStartOfLine;
+  assert((BufferStart + Offset) <= BufferEnd);
+  BufferPtr = BufferStart + Offset;
 }
 
 template <typename T> static void StringifyImpl(T &Str, char Quote) {
@@ -2939,6 +2937,13 @@ bool Lexer::LexEndOfFile(Token &Result, const char *CurPtr) {
 unsigned Lexer::isNextPPTokenLParen() {
   assert(!LexingRawMode && "How can we expand a macro from a skipping buffer?");
 
+  if (isDependencyDirectivesLexer()) {
+    if (NextDepDirectiveTokenIndex == DepDirectives.front().Tokens.size())
+      return 2;
+    return DepDirectives.front().Tokens[NextDepDirectiveTokenIndex].is(
+        tok::l_paren);
+  }
+
   // Switch to 'skipping' mode.  This will ensure that we can lex a token
   // without emitting diagnostics, disables macro expansion, and will cause EOF
   // to return an EOF token instead of popping the include stack.
@@ -3281,6 +3286,8 @@ void Lexer::PropagateLineStartLeadingSpaceInfo(Token &Result) {
 }
 
 bool Lexer::Lex(Token &Result) {
+  assert(!isDependencyDirectivesLexer());
+
   // Start a new token.
   Result.startToken();
 
@@ -4100,5 +4107,131 @@ HandleDirective:
   }
 
   // We parsed the directive; lex a token with the new state.
+  return false;
+}
+
+const char *Lexer::convertDependencyDirectiveToken(
+    const dependency_directives_scan::Token &DDTok, Token &Result) {
+  const char *TokPtr = BufferStart + DDTok.Offset;
+  Result.startToken();
+  Result.setLocation(getSourceLocation(TokPtr));
+  Result.setKind(DDTok.Kind);
+  Result.setFlag((Token::TokenFlags)DDTok.Flags);
+  Result.setLength(DDTok.Length);
+  BufferPtr = TokPtr + DDTok.Length;
+  return TokPtr;
+}
+
+bool Lexer::LexDependencyDirectiveToken(Token &Result) {
+  assert(isDependencyDirectivesLexer());
+
+  using namespace dependency_directives_scan;
+
+  while (NextDepDirectiveTokenIndex == DepDirectives.front().Tokens.size()) {
+    if (DepDirectives.front().Kind == pp_eof)
+      return LexEndOfFile(Result, BufferEnd);
+    NextDepDirectiveTokenIndex = 0;
+    DepDirectives = DepDirectives.drop_front();
+  }
+
+  const dependency_directives_scan::Token &DDTok =
+      DepDirectives.front().Tokens[NextDepDirectiveTokenIndex++];
+
+  const char *TokPtr = convertDependencyDirectiveToken(DDTok, Result);
+
+  if (Result.is(tok::hash) && Result.isAtStartOfLine()) {
+    PP->HandleDirective(Result);
+    return false;
+  }
+  if (Result.is(tok::raw_identifier)) {
+    Result.setRawIdentifierData(TokPtr);
+    if (!isLexingRawMode()) {
+      IdentifierInfo *II = PP->LookUpIdentifierInfo(Result);
+      if (II->isHandleIdentifierCase())
+        return PP->HandleIdentifier(Result);
+    }
+    return true;
+  }
+  if (Result.isLiteral()) {
+    Result.setLiteralData(TokPtr);
+    return true;
+  }
+  if (Result.is(tok::colon) &&
+      (LangOpts.CPlusPlus || LangOpts.DoubleSquareBracketAttributes)) {
+    // Convert consecutive colons to 'tok::coloncolon'.
+    if (*BufferPtr == ':') {
+      assert(DepDirectives.front().Tokens[NextDepDirectiveTokenIndex].is(
+          tok::colon));
+      ++NextDepDirectiveTokenIndex;
+      Result.setKind(tok::coloncolon);
+    }
+    return true;
+  }
+  if (Result.is(tok::eod))
+    ParsingPreprocessorDirective = false;
+
+  return true;
+}
+
+bool Lexer::LexDependencyDirectiveTokenWhileSkipping(Token &Result) {
+  assert(isDependencyDirectivesLexer());
+
+  using namespace dependency_directives_scan;
+
+  bool Stop = false;
+  unsigned NestedIfs = 0;
+  do {
+    DepDirectives = DepDirectives.drop_front();
+    switch (DepDirectives.front().Kind) {
+    case pp_none:
+      llvm_unreachable("unexpected 'pp_none'");
+    case pp_include:
+    case pp___include_macros:
+    case pp_define:
+    case pp_undef:
+    case pp_import:
+    case pp_pragma_import:
+    case pp_pragma_once:
+    case pp_pragma_push_macro:
+    case pp_pragma_pop_macro:
+    case pp_pragma_include_alias:
+    case pp_include_next:
+    case decl_at_import:
+    case cxx_module_decl:
+    case cxx_import_decl:
+    case cxx_export_module_decl:
+    case cxx_export_import_decl:
+      break;
+    case pp_if:
+    case pp_ifdef:
+    case pp_ifndef:
+      ++NestedIfs;
+      break;
+    case pp_elif:
+    case pp_elifdef:
+    case pp_elifndef:
+    case pp_else:
+      if (!NestedIfs) {
+        Stop = true;
+      }
+      break;
+    case pp_endif:
+      if (!NestedIfs) {
+        Stop = true;
+      } else {
+        --NestedIfs;
+      }
+      break;
+    case pp_eof:
+      return LexEndOfFile(Result, BufferEnd);
+    }
+  } while (!Stop);
+
+  const dependency_directives_scan::Token &DDTok =
+      DepDirectives.front().Tokens.front();
+  assert(DDTok.is(tok::hash));
+  NextDepDirectiveTokenIndex = 1;
+
+  convertDependencyDirectiveToken(DDTok, Result);
   return false;
 }

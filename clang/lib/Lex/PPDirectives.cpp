@@ -443,41 +443,6 @@ SourceLocation Preprocessor::CheckEndOfDirective(const char *DirType,
   return DiscardUntilEndOfDirective().getEnd();
 }
 
-Optional<unsigned> Preprocessor::getSkippedRangeForExcludedConditionalBlock(
-    SourceLocation HashLoc) {
-  if (!ExcludedConditionalDirectiveSkipMappings)
-    return None;
-  if (!HashLoc.isFileID())
-    return None;
-
-  std::pair<FileID, unsigned> HashFileOffset =
-      SourceMgr.getDecomposedLoc(HashLoc);
-  Optional<llvm::MemoryBufferRef> Buf =
-      SourceMgr.getBufferOrNone(HashFileOffset.first);
-  if (!Buf)
-    return None;
-  auto It =
-      ExcludedConditionalDirectiveSkipMappings->find(Buf->getBufferStart());
-  if (It == ExcludedConditionalDirectiveSkipMappings->end())
-    return None;
-
-  const PreprocessorSkippedRangeMapping &SkippedRanges = *It->getSecond();
-  // Check if the offset of '#' is mapped in the skipped ranges.
-  auto MappingIt = SkippedRanges.find(HashFileOffset.second);
-  if (MappingIt == SkippedRanges.end())
-    return None;
-
-  unsigned BytesToSkip = MappingIt->getSecond();
-  unsigned CurLexerBufferOffset = CurLexer->getCurrentBufferOffset();
-  assert(CurLexerBufferOffset >= HashFileOffset.second &&
-         "lexer is before the hash?");
-  // Take into account the fact that the lexer has already advanced, so the
-  // number of bytes to skip must be adjusted.
-  unsigned LengthDiff = CurLexerBufferOffset - HashFileOffset.second;
-  assert(BytesToSkip >= LengthDiff && "lexer is after the skipped range?");
-  return BytesToSkip - LengthDiff;
-}
-
 void Preprocessor::SuggestTypoedDirective(const Token &Tok,
                                           StringRef Directive,
                                           const SourceLocation &EndLoc) const {
@@ -527,36 +492,42 @@ void Preprocessor::SkipExcludedConditionalBlock(SourceLocation HashTokenLoc,
   // disabling warnings, etc.
   CurPPLexer->LexingRawMode = true;
   Token Tok;
-  if (auto SkipLength =
-          getSkippedRangeForExcludedConditionalBlock(HashTokenLoc)) {
-    // Skip to the next '#endif' / '#else' / '#elif'.
-    CurLexer->skipOver(*SkipLength);
-  }
   SourceLocation endLoc;
   while (true) {
-    CurLexer->Lex(Tok);
+    if (CurLexer->isDependencyDirectivesLexer()) {
+      CurLexer->LexDependencyDirectiveTokenWhileSkipping(Tok);
+    } else {
+      while (true) {
+        CurLexer->Lex(Tok);
 
-    if (Tok.is(tok::code_completion)) {
-      setCodeCompletionReached();
-      if (CodeComplete)
-        CodeComplete->CodeCompleteInConditionalExclusion();
-      continue;
+        if (Tok.is(tok::code_completion)) {
+          setCodeCompletionReached();
+          if (CodeComplete)
+            CodeComplete->CodeCompleteInConditionalExclusion();
+          continue;
+        }
+
+        // If this is the end of the buffer, we have an error.
+        if (Tok.is(tok::eof)) {
+          // We don't emit errors for unterminated conditionals here,
+          // Lexer::LexEndOfFile can do that properly.
+          // Just return and let the caller lex after this #include.
+          if (PreambleConditionalStack.isRecording())
+            PreambleConditionalStack.SkipInfo.emplace(HashTokenLoc, IfTokenLoc,
+                                                      FoundNonSkipPortion,
+                                                      FoundElse, ElseLoc);
+          break;
+        }
+
+        // If this token is not a preprocessor directive, just skip it.
+        if (Tok.isNot(tok::hash) || !Tok.isAtStartOfLine())
+          continue;
+
+        break;
+      }
     }
-
-    // If this is the end of the buffer, we have an error.
-    if (Tok.is(tok::eof)) {
-      // We don't emit errors for unterminated conditionals here,
-      // Lexer::LexEndOfFile can do that properly.
-      // Just return and let the caller lex after this #include.
-      if (PreambleConditionalStack.isRecording())
-        PreambleConditionalStack.SkipInfo.emplace(
-            HashTokenLoc, IfTokenLoc, FoundNonSkipPortion, FoundElse, ElseLoc);
+    if (Tok.is(tok::eof))
       break;
-    }
-
-    // If this token is not a preprocessor directive, just skip it.
-    if (Tok.isNot(tok::hash) || !Tok.isAtStartOfLine())
-      continue;
 
     // We just parsed a # character at the start of a line, so we're in
     // directive mode.  Tell the lexer this so any newlines we see will be

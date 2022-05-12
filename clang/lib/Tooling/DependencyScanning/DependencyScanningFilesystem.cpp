@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/Tooling/DependencyScanning/DependencyScanningFilesystem.h"
-#include "clang/Lex/DependencyDirectivesScanner.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/SmallVectorMemoryBuffer.h"
 #include "llvm/Support/Threading.h"
@@ -44,64 +43,41 @@ DependencyScanningWorkerFilesystem::readFile(StringRef Filename) {
 EntryRef DependencyScanningWorkerFilesystem::scanForDirectivesIfNecessary(
     const CachedFileSystemEntry &Entry, StringRef Filename, bool Disable) {
   if (Entry.isError() || Entry.isDirectory() || Disable ||
-      !shouldScanForDirectives(Filename, Entry.getUniqueID()))
-    return EntryRef(/*Minimized=*/false, Filename, Entry);
+      !shouldScanForDirectives(Filename))
+    return EntryRef(Filename, Entry);
 
   CachedFileContents *Contents = Entry.getCachedContents();
   assert(Contents && "contents not initialized");
 
   // Double-checked locking.
-  if (Contents->MinimizedAccess.load())
-    return EntryRef(/*Minimized=*/true, Filename, Entry);
+  if (Contents->DepDirectives.load())
+    return EntryRef(Filename, Entry);
 
   std::lock_guard<std::mutex> GuardLock(Contents->ValueLock);
 
   // Double-checked locking.
-  if (Contents->MinimizedAccess.load())
-    return EntryRef(/*Minimized=*/true, Filename, Entry);
+  if (Contents->DepDirectives.load())
+    return EntryRef(Filename, Entry);
 
-  llvm::SmallString<1024> MinimizedFileContents;
-  // Minimize the file down to directives that might affect the dependencies.
-  SmallVector<dependency_directives_scan::Directive, 64> Tokens;
+  SmallVector<dependency_directives_scan::Directive, 64> Directives;
+  // Scan the file for preprocessor directives that might affect the
+  // dependencies.
   if (scanSourceForDependencyDirectives(Contents->Original->getBuffer(),
-                                        MinimizedFileContents, Tokens)) {
+                                        Contents->DepDirectiveTokens,
+                                        Directives)) {
+    Contents->DepDirectiveTokens.clear();
     // FIXME: Propagate the diagnostic if desired by the client.
-    // Use the original file if the minimization failed.
-    Contents->MinimizedStorage =
-        llvm::MemoryBuffer::getMemBuffer(*Contents->Original);
-    Contents->MinimizedAccess.store(Contents->MinimizedStorage.get());
-    return EntryRef(/*Minimized=*/true, Filename, Entry);
+    Contents->DepDirectives.store(new Optional<DependencyDirectivesTy>());
+    return EntryRef(Filename, Entry);
   }
 
-  // The contents produced by the minimizer must be null terminated.
-  assert(MinimizedFileContents.data()[MinimizedFileContents.size()] == '\0' &&
-         "not null terminated contents");
-
-  // Compute the skipped PP ranges that speedup skipping over inactive
-  // preprocessor blocks.
-  llvm::SmallVector<dependency_directives_scan::SkippedRange, 32> SkippedRanges;
-  dependency_directives_scan::computeSkippedRanges(Tokens, SkippedRanges);
-  PreprocessorSkippedRangeMapping Mapping;
-  for (const auto &Range : SkippedRanges) {
-    if (Range.Length < 16) {
-      // Ignore small ranges as non-profitable.
-      // FIXME: This is a heuristic, its worth investigating the tradeoffs
-      // when it should be applied.
-      continue;
-    }
-    Mapping[Range.Offset] = Range.Length;
-  }
-  Contents->PPSkippedRangeMapping = std::move(Mapping);
-
-  Contents->MinimizedStorage = std::make_unique<llvm::SmallVectorMemoryBuffer>(
-      std::move(MinimizedFileContents));
-  // This function performed double-checked locking using `MinimizedAccess`.
-  // Assigning it must be the last thing this function does. If we were to
-  // assign it before `PPSkippedRangeMapping`, other threads may skip the
-  // critical section (`MinimizedAccess != nullptr`) and access the mappings
-  // that are about to be initialized, leading to a data race.
-  Contents->MinimizedAccess.store(Contents->MinimizedStorage.get());
-  return EntryRef(/*Minimized=*/true, Filename, Entry);
+  // This function performed double-checked locking using `DepDirectives`.
+  // Assigning it must be the last thing this function does, otherwise other
+  // threads may skip the
+  // critical section (`DepDirectives != nullptr`), leading to a data race.
+  Contents->DepDirectives.store(
+      new Optional<DependencyDirectivesTy>(std::move(Directives)));
+  return EntryRef(Filename, Entry);
 }
 
 DependencyScanningFilesystemSharedCache::
@@ -208,19 +184,9 @@ static bool shouldCacheStatFailures(StringRef Filename) {
   return shouldScanForDirectivesBasedOnExtension(Filename);
 }
 
-void DependencyScanningWorkerFilesystem::disableDirectivesScanning(
-    StringRef Filename) {
-  // Since we're not done setting up `NotToBeScanned` yet, we need to disable
-  // directive scanning explicitly.
-  if (llvm::ErrorOr<EntryRef> Result = getOrCreateFileSystemEntry(
-          Filename, /*DisableDirectivesScanning=*/true))
-    NotToBeScanned.insert(Result->getStatus().getUniqueID());
-}
-
 bool DependencyScanningWorkerFilesystem::shouldScanForDirectives(
-    StringRef Filename, llvm::sys::fs::UniqueID UID) {
-  return shouldScanForDirectivesBasedOnExtension(Filename) &&
-         !NotToBeScanned.contains(UID);
+    StringRef Filename) {
+  return shouldScanForDirectivesBasedOnExtension(Filename);
 }
 
 const CachedFileSystemEntry &
@@ -307,9 +273,7 @@ public:
               llvm::vfs::Status Stat)
       : Buffer(std::move(Buffer)), Stat(std::move(Stat)) {}
 
-  static llvm::ErrorOr<std::unique_ptr<llvm::vfs::File>>
-  create(EntryRef Entry,
-         ExcludedPreprocessorDirectiveSkipMapping &PPSkipMappings);
+  static llvm::ErrorOr<std::unique_ptr<llvm::vfs::File>> create(EntryRef Entry);
 
   llvm::ErrorOr<llvm::vfs::Status> status() override { return Stat; }
 
@@ -329,8 +293,7 @@ private:
 } // end anonymous namespace
 
 llvm::ErrorOr<std::unique_ptr<llvm::vfs::File>>
-DepScanFile::create(EntryRef Entry,
-                    ExcludedPreprocessorDirectiveSkipMapping &PPSkipMappings) {
+DepScanFile::create(EntryRef Entry) {
   assert(!Entry.isError() && "error");
 
   if (Entry.isDirectory())
@@ -341,10 +304,6 @@ DepScanFile::create(EntryRef Entry,
                                        Entry.getStatus().getName(),
                                        /*RequiresNullTerminator=*/false),
       Entry.getStatus());
-
-  const auto *EntrySkipMappings = Entry.getPPSkippedRangeMapping();
-  if (EntrySkipMappings && !EntrySkipMappings->empty())
-    PPSkipMappings[Result->Buffer->getBufferStart()] = EntrySkipMappings;
 
   return llvm::ErrorOr<std::unique_ptr<llvm::vfs::File>>(
       std::unique_ptr<llvm::vfs::File>(std::move(Result)));
@@ -358,5 +317,5 @@ DependencyScanningWorkerFilesystem::openFileForRead(const Twine &Path) {
   llvm::ErrorOr<EntryRef> Result = getOrCreateFileSystemEntry(Filename);
   if (!Result)
     return Result.getError();
-  return DepScanFile::create(Result.get(), PPSkipMappings);
+  return DepScanFile::create(Result.get());
 }
