@@ -264,6 +264,9 @@ def OneShotBufferize : Pass<"one-shot-bufferize", "ModuleOp"> {
             /*default=*/"false",
            "Test only: Annotate IR with RaW conflicts. Requires "
            "test-analysis-only.">,
+    Option<"promoteBufferResultsToOutParams",
+           "promote-buffer-results-to-out-params", "bool", /*default=*/"false",
+           "Replace returned buffers (that were not dropped) with out params.">,
   ];
   let constructor = "mlir::bufferization::createOneShotBufferizePass()";
 }
