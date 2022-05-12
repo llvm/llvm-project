@@ -1,4 +1,4 @@
-//===- DependencyDirectivesSourceMinimizer.cpp -  -------------------------===//
+//===- DependencyDirectivesScanner.cpp ------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -7,14 +7,14 @@
 //===----------------------------------------------------------------------===//
 ///
 /// \file
-/// This is the implementation for minimizing header and source files to the
+/// This is the interface for scanning header and source files to get the
 /// minimum necessary preprocessor directives for evaluating includes. It
 /// reduces the source down to #define, #include, #import, @import, and any
 /// conditional preprocessor logic that contains one of those.
 ///
 //===----------------------------------------------------------------------===//
 
-#include "clang/Lex/DependencyDirectivesSourceMinimizer.h"
+#include "clang/Lex/DependencyDirectivesScanner.h"
 #include "clang/Basic/CharInfo.h"
 #include "clang/Basic/Diagnostic.h"
 #include "clang/Lex/LexDiagnostic.h"
@@ -24,26 +24,26 @@
 
 using namespace llvm;
 using namespace clang;
-using namespace clang::minimize_source_to_dependency_directives;
+using namespace clang::dependency_directives_scan;
 
 namespace {
 
-struct Minimizer {
+struct Scanner {
   /// Minimized output.
   SmallVectorImpl<char> &Out;
   /// The known tokens encountered during the minimization.
-  SmallVectorImpl<Token> &Tokens;
+  SmallVectorImpl<Directive> &Directives;
 
-  Minimizer(SmallVectorImpl<char> &Out, SmallVectorImpl<Token> &Tokens,
-            StringRef Input, DiagnosticsEngine *Diags,
-            SourceLocation InputSourceLoc)
-      : Out(Out), Tokens(Tokens), Input(Input), Diags(Diags),
+  Scanner(SmallVectorImpl<char> &Out, SmallVectorImpl<Directive> &Directives,
+          StringRef Input, DiagnosticsEngine *Diags,
+          SourceLocation InputSourceLoc)
+      : Out(Out), Directives(Directives), Input(Input), Diags(Diags),
         InputSourceLoc(InputSourceLoc) {}
 
-  /// Lex the provided source and emit the minimized output.
+  /// Lex the provided source and emit the directive tokens.
   ///
   /// \returns True on error.
-  bool minimize();
+  bool scan();
 
 private:
   struct IdInfo {
@@ -57,31 +57,33 @@ private:
   LLVM_NODISCARD IdInfo lexIdentifier(const char *First, const char *const End);
   LLVM_NODISCARD bool isNextIdentifier(StringRef Id, const char *&First,
                                        const char *const End);
-  LLVM_NODISCARD bool minimizeImpl(const char *First, const char *const End);
+  LLVM_NODISCARD bool scanImpl(const char *First, const char *const End);
   LLVM_NODISCARD bool lexPPLine(const char *&First, const char *const End);
   LLVM_NODISCARD bool lexAt(const char *&First, const char *const End);
   LLVM_NODISCARD bool lexModule(const char *&First, const char *const End);
   LLVM_NODISCARD bool lexDefine(const char *&First, const char *const End);
   LLVM_NODISCARD bool lexPragma(const char *&First, const char *const End);
   LLVM_NODISCARD bool lexEndif(const char *&First, const char *const End);
-  LLVM_NODISCARD bool lexDefault(TokenKind Kind, StringRef Directive,
+  LLVM_NODISCARD bool lexDefault(DirectiveKind Kind, StringRef Directive,
                                  const char *&First, const char *const End);
-  Token &makeToken(TokenKind K) {
-    Tokens.emplace_back(K, Out.size());
-    return Tokens.back();
+  Directive &pushDirective(DirectiveKind K) {
+    Directives.emplace_back(K, Out.size());
+    return Directives.back();
   }
-  void popToken() {
-    Out.resize(Tokens.back().Offset);
-    Tokens.pop_back();
+  void popDirective() {
+    Out.resize(Directives.back().Offset);
+    Directives.pop_back();
   }
-  TokenKind top() const { return Tokens.empty() ? pp_none : Tokens.back().K; }
+  DirectiveKind topDirective() const {
+    return Directives.empty() ? pp_none : Directives.back().Kind;
+  }
 
-  Minimizer &put(char Byte) {
+  Scanner &put(char Byte) {
     Out.push_back(Byte);
     return *this;
   }
-  Minimizer &append(StringRef S) { return append(S.begin(), S.end()); }
-  Minimizer &append(const char *First, const char *Last) {
+  Scanner &append(StringRef S) { return append(S.begin(), S.end()); }
+  Scanner &append(const char *First, const char *Last) {
     Out.append(First, Last);
     return *this;
   }
@@ -106,7 +108,7 @@ private:
 
 } // end anonymous namespace
 
-bool Minimizer::reportError(const char *CurPtr, unsigned Err) {
+bool Scanner::reportError(const char *CurPtr, unsigned Err) {
   if (!Diags)
     return true;
   assert(CurPtr >= Input.data() && "invalid buffer ptr");
@@ -279,8 +281,7 @@ static const char *findLastNonSpaceNonBackslash(const char *First,
   return Last;
 }
 
-static const char *findFirstTrailingSpace(const char *First,
-                                          const char *Last) {
+static const char *findFirstTrailingSpace(const char *First, const char *Last) {
   const char *LastNonSpace = findLastNonSpace(First, Last);
   if (Last == LastNonSpace)
     return Last;
@@ -395,13 +396,14 @@ static void skipDirective(StringRef Name, const char *&First,
     skipLine(First, End);
 }
 
-void Minimizer::printToNewline(const char *&First, const char *const End) {
+void Scanner::printToNewline(const char *&First, const char *const End) {
   while (First != End && !isVerticalWhitespace(*First)) {
     const char *Last = First;
     do {
       // Iterate over strings correctly to avoid comments and newlines.
       if (*Last == '"' || *Last == '\'' ||
-          (*Last == '<' && (top() == pp_include || top() == pp_import))) {
+          (*Last == '<' &&
+           (topDirective() == pp_include || topDirective() == pp_import))) {
         if (LLVM_UNLIKELY(isRawStringLiteral(First, Last)))
           skipRawString(Last, End);
         else
@@ -487,8 +489,8 @@ static void skipWhitespace(const char *&First, const char *const End) {
   }
 }
 
-void Minimizer::printAdjacentModuleNameParts(const char *&First,
-                                             const char *const End) {
+void Scanner::printAdjacentModuleNameParts(const char *&First,
+                                           const char *const End) {
   // Skip over parts of the body.
   const char *Last = First;
   do
@@ -498,7 +500,7 @@ void Minimizer::printAdjacentModuleNameParts(const char *&First,
   First = Last;
 }
 
-bool Minimizer::printAtImportBody(const char *&First, const char *const End) {
+bool Scanner::printAtImportBody(const char *&First, const char *const End) {
   for (;;) {
     skipWhitespace(First, End);
     if (First == End)
@@ -523,7 +525,7 @@ bool Minimizer::printAtImportBody(const char *&First, const char *const End) {
   }
 }
 
-void Minimizer::printDirectiveBody(const char *&First, const char *const End) {
+void Scanner::printDirectiveBody(const char *&First, const char *const End) {
   skipWhitespace(First, End); // Skip initial whitespace.
   printToNewline(First, End);
   while (Out.back() == ' ')
@@ -552,8 +554,8 @@ getIdentifierContinuation(const char *First, const char *const End) {
   return isAsciiIdentifierContinue(First[0]) ? First : nullptr;
 }
 
-Minimizer::IdInfo Minimizer::lexIdentifier(const char *First,
-                                           const char *const End) {
+Scanner::IdInfo Scanner::lexIdentifier(const char *First,
+                                       const char *const End) {
   const char *Last = lexRawIdentifier(First, End);
   const char *Next = getIdentifierContinuation(Last, End);
   if (LLVM_LIKELY(!Next))
@@ -571,8 +573,8 @@ Minimizer::IdInfo Minimizer::lexIdentifier(const char *First,
       SplitIds.try_emplace(StringRef(Id.begin(), Id.size()), 0).first->first()};
 }
 
-void Minimizer::printAdjacentMacroArgs(const char *&First,
-                                       const char *const End) {
+void Scanner::printAdjacentMacroArgs(const char *&First,
+                                     const char *const End) {
   // Skip over parts of the body.
   const char *Last = First;
   do
@@ -583,7 +585,7 @@ void Minimizer::printAdjacentMacroArgs(const char *&First,
   First = Last;
 }
 
-bool Minimizer::printMacroArgs(const char *&First, const char *const End) {
+bool Scanner::printMacroArgs(const char *&First, const char *const End) {
   assert(*First == '(');
   put(*First++);
   for (;;) {
@@ -608,8 +610,8 @@ bool Minimizer::printMacroArgs(const char *&First, const char *const End) {
 ///
 /// Updates "First" to just past the next identifier, if any.  Returns true iff
 /// the identifier matches "Id".
-bool Minimizer::isNextIdentifier(StringRef Id, const char *&First,
-                                 const char *const End) {
+bool Scanner::isNextIdentifier(StringRef Id, const char *&First,
+                               const char *const End) {
   skipWhitespace(First, End);
   if (First == End || !isAsciiIdentifierStart(*First))
     return false;
@@ -619,29 +621,29 @@ bool Minimizer::isNextIdentifier(StringRef Id, const char *&First,
   return FoundId.Name == Id;
 }
 
-bool Minimizer::lexAt(const char *&First, const char *const End) {
+bool Scanner::lexAt(const char *&First, const char *const End) {
   // Handle "@import".
   const char *ImportLoc = First++;
   if (!isNextIdentifier("import", First, End)) {
     skipLine(First, End);
     return false;
   }
-  makeToken(decl_at_import);
+  pushDirective(decl_at_import);
   append("@import ");
   if (printAtImportBody(First, End))
     return reportError(
-        ImportLoc, diag::err_dep_source_minimizer_missing_sema_after_at_import);
+        ImportLoc, diag::err_dep_source_scanner_missing_semi_after_at_import);
   skipWhitespace(First, End);
   if (First == End)
     return false;
   if (!isVerticalWhitespace(*First))
     return reportError(
-        ImportLoc, diag::err_dep_source_minimizer_unexpected_tokens_at_import);
+        ImportLoc, diag::err_dep_source_scanner_unexpected_tokens_at_import);
   skipNewline(First, End);
   return false;
 }
 
-bool Minimizer::lexModule(const char *&First, const char *const End) {
+bool Scanner::lexModule(const char *&First, const char *const End) {
   IdInfo Id = lexIdentifier(First, End);
   First = Id.Last;
   bool Export = false;
@@ -679,14 +681,14 @@ bool Minimizer::lexModule(const char *&First, const char *const End) {
   }
 
   if (Export) {
-    makeToken(cxx_export_decl);
+    pushDirective(cxx_export_decl);
     append("export ");
   }
 
   if (Id.Name == "module")
-    makeToken(cxx_module_decl);
+    pushDirective(cxx_module_decl);
   else
-    makeToken(cxx_import_decl);
+    pushDirective(cxx_import_decl);
   append(Id.Name);
   append(" ");
   printToNewline(First, End);
@@ -694,8 +696,8 @@ bool Minimizer::lexModule(const char *&First, const char *const End) {
   return false;
 }
 
-bool Minimizer::lexDefine(const char *&First, const char *const End) {
-  makeToken(pp_define);
+bool Scanner::lexDefine(const char *&First, const char *const End) {
+  pushDirective(pp_define);
   append("#define ");
   skipWhitespace(First, End);
 
@@ -728,7 +730,7 @@ bool Minimizer::lexDefine(const char *&First, const char *const End) {
   return false;
 }
 
-bool Minimizer::lexPragma(const char *&First, const char *const End) {
+bool Scanner::lexPragma(const char *&First, const char *const End) {
   // #pragma.
   skipWhitespace(First, End);
   if (First == End || !isAsciiIdentifierStart(*First))
@@ -739,27 +741,27 @@ bool Minimizer::lexPragma(const char *&First, const char *const End) {
   if (FoundId.Name == "once") {
     // #pragma once
     skipLine(First, End);
-    makeToken(pp_pragma_once);
+    pushDirective(pp_pragma_once);
     append("#pragma once\n");
     return false;
   }
   if (FoundId.Name == "push_macro") {
     // #pragma push_macro
-    makeToken(pp_pragma_push_macro);
+    pushDirective(pp_pragma_push_macro);
     append("#pragma push_macro");
     printDirectiveBody(First, End);
     return false;
   }
   if (FoundId.Name == "pop_macro") {
     // #pragma pop_macro
-    makeToken(pp_pragma_pop_macro);
+    pushDirective(pp_pragma_pop_macro);
     append("#pragma pop_macro");
     printDirectiveBody(First, End);
     return false;
   }
   if (FoundId.Name == "include_alias") {
     // #pragma include_alias
-    makeToken(pp_pragma_include_alias);
+    pushDirective(pp_pragma_include_alias);
     append("#pragma include_alias");
     printDirectiveBody(First, End);
     return false;
@@ -783,16 +785,16 @@ bool Minimizer::lexPragma(const char *&First, const char *const End) {
   }
 
   // #pragma clang module import.
-  makeToken(pp_pragma_import);
+  pushDirective(pp_pragma_import);
   append("#pragma clang module import ");
   printDirectiveBody(First, End);
   return false;
 }
 
-bool Minimizer::lexEndif(const char *&First, const char *const End) {
+bool Scanner::lexEndif(const char *&First, const char *const End) {
   // Strip out "#else" if it's empty.
-  if (top() == pp_else)
-    popToken();
+  if (topDirective() == pp_else)
+    popDirective();
 
   // If "#ifdef" is empty, strip it and skip the "#endif".
   //
@@ -800,8 +802,8 @@ bool Minimizer::lexEndif(const char *&First, const char *const End) {
   // we can skip empty `#if` and `#elif` blocks as well after scanning for a
   // literal __has_include in the condition.  Even without that rule we could
   // drop the tokens if we scan for identifiers in the condition and find none.
-  if (top() == pp_ifdef || top() == pp_ifndef) {
-    popToken();
+  if (topDirective() == pp_ifdef || topDirective() == pp_ifndef) {
+    popDirective();
     skipLine(First, End);
     return false;
   }
@@ -809,9 +811,9 @@ bool Minimizer::lexEndif(const char *&First, const char *const End) {
   return lexDefault(pp_endif, "endif", First, End);
 }
 
-bool Minimizer::lexDefault(TokenKind Kind, StringRef Directive,
-                           const char *&First, const char *const End) {
-  makeToken(Kind);
+bool Scanner::lexDefault(DirectiveKind Kind, StringRef Directive,
+                         const char *&First, const char *const End) {
+  pushDirective(Kind);
   put('#').append(Directive).put(' ');
   printDirectiveBody(First, End);
   return false;
@@ -829,7 +831,7 @@ static bool isStartOfRelevantLine(char First) {
   return false;
 }
 
-bool Minimizer::lexPPLine(const char *&First, const char *const End) {
+bool Scanner::lexPPLine(const char *&First, const char *const End) {
   assert(First != End);
 
   skipWhitespace(First, End);
@@ -869,7 +871,7 @@ bool Minimizer::lexPPLine(const char *&First, const char *const End) {
   if (Id.Name == "pragma")
     return lexPragma(First, End);
 
-  auto Kind = llvm::StringSwitch<TokenKind>(Id.Name)
+  auto Kind = llvm::StringSwitch<DirectiveKind>(Id.Name)
                   .Case("include", pp_include)
                   .Case("__include_macros", pp___include_macros)
                   .Case("define", pp_define)
@@ -906,7 +908,7 @@ static void skipUTF8ByteOrderMark(const char *&First, const char *const End) {
     First += 3;
 }
 
-bool Minimizer::minimizeImpl(const char *First, const char *const End) {
+bool Scanner::scanImpl(const char *First, const char *const End) {
   skipUTF8ByteOrderMark(First, End);
   while (First != End)
     if (lexPPLine(First, End))
@@ -914,14 +916,14 @@ bool Minimizer::minimizeImpl(const char *First, const char *const End) {
   return false;
 }
 
-bool Minimizer::minimize() {
-  bool Error = minimizeImpl(Input.begin(), Input.end());
+bool Scanner::scan() {
+  bool Error = scanImpl(Input.begin(), Input.end());
 
   if (!Error) {
     // Add a trailing newline and an EOF on success.
     if (!Out.empty() && Out.back() != '\n')
       Out.push_back('\n');
-    makeToken(pp_eof);
+    pushDirective(pp_eof);
   }
 
   // Null-terminate the output. This way the memory buffer that's passed to
@@ -931,9 +933,9 @@ bool Minimizer::minimize() {
   return Error;
 }
 
-bool clang::minimize_source_to_dependency_directives::computeSkippedRanges(
-    ArrayRef<Token> Input, llvm::SmallVectorImpl<SkippedRange> &Range) {
-  struct Directive {
+bool clang::dependency_directives_scan::computeSkippedRanges(
+    ArrayRef<Directive> Input, llvm::SmallVectorImpl<SkippedRange> &Range) {
+  struct IfElseDirective {
     enum DirectiveKind {
       If,  // if/ifdef/ifndef
       Else // elif/elifdef/elifndef, else
@@ -941,13 +943,13 @@ bool clang::minimize_source_to_dependency_directives::computeSkippedRanges(
     int Offset;
     DirectiveKind Kind;
   };
-  llvm::SmallVector<Directive, 32> Offsets;
-  for (const Token &T : Input) {
-    switch (T.K) {
+  llvm::SmallVector<IfElseDirective, 32> Offsets;
+  for (const Directive &T : Input) {
+    switch (T.Kind) {
     case pp_if:
     case pp_ifdef:
     case pp_ifndef:
-      Offsets.push_back({T.Offset, Directive::If});
+      Offsets.push_back({T.Offset, IfElseDirective::If});
       break;
 
     case pp_elif:
@@ -958,7 +960,7 @@ bool clang::minimize_source_to_dependency_directives::computeSkippedRanges(
         return true;
       int PreviousOffset = Offsets.back().Offset;
       Range.push_back({PreviousOffset, T.Offset - PreviousOffset});
-      Offsets.push_back({T.Offset, Directive::Else});
+      Offsets.push_back({T.Offset, IfElseDirective::Else});
       break;
     }
 
@@ -968,8 +970,8 @@ bool clang::minimize_source_to_dependency_directives::computeSkippedRanges(
       int PreviousOffset = Offsets.back().Offset;
       Range.push_back({PreviousOffset, T.Offset - PreviousOffset});
       do {
-        Directive::DirectiveKind Kind = Offsets.pop_back_val().Kind;
-        if (Kind == Directive::If)
+        IfElseDirective::DirectiveKind Kind = Offsets.pop_back_val().Kind;
+        if (Kind == IfElseDirective::If)
           break;
       } while (!Offsets.empty());
       break;
@@ -981,11 +983,11 @@ bool clang::minimize_source_to_dependency_directives::computeSkippedRanges(
   return false;
 }
 
-bool clang::minimizeSourceToDependencyDirectives(
+bool clang::scanSourceForDependencyDirectives(
     StringRef Input, SmallVectorImpl<char> &Output,
-    SmallVectorImpl<Token> &Tokens, DiagnosticsEngine *Diags,
+    SmallVectorImpl<Directive> &Directives, DiagnosticsEngine *Diags,
     SourceLocation InputSourceLoc) {
   Output.clear();
-  Tokens.clear();
-  return Minimizer(Output, Tokens, Input, Diags, InputSourceLoc).minimize();
+  Directives.clear();
+  return Scanner(Output, Directives, Input, Diags, InputSourceLoc).scan();
 }
