@@ -236,19 +236,27 @@ def Builtin_DenseIntOrFPElementsAttr : Builtin_Attr<
     /// values. Each APFloat value is expected to have the same bitwidth as the
     /// element type of 'type'. 'type' must be a vector or tensor with static
     /// shape.
+    ///
+    /// If the `values` array only has a single element, then this  constructs
+    /// splat of that value.
     static DenseElementsAttr getRaw(ShapedType type, size_t storageWidth,
-                                    ArrayRef<APFloat> values, bool isSplat);
+                                    ArrayRef<APFloat> values);
 
     /// Constructs a dense elements attribute from an array of raw APInt values.
     /// Each APInt value is expected to have the same bitwidth as the element
     /// type of 'type'. 'type' must be a vector or tensor with static shape.
+    ///
+    /// If the `values` array only has a single element, then this  constructs
+    /// splat of that value.
     static DenseElementsAttr getRaw(ShapedType type, size_t storageWidth,
-                                    ArrayRef<APInt> values, bool isSplat);
+                                    ArrayRef<APInt> values);
 
     /// Get or create a new dense elements attribute instance with the given raw
     /// data buffer. 'type' must be a vector or tensor with static shape.
-    static DenseElementsAttr getRaw(ShapedType type, ArrayRef<char> data,
-                                    bool isSplat);
+    ///
+    /// If the `values` array only has a single element, then this  constructs
+    /// splat of that value.
+    static DenseElementsAttr getRaw(ShapedType type, ArrayRef<char> data);
 
     /// Overload of the raw 'get' method that asserts that the given type is of
     /// complex type. This method is used to verify type invariants that the
@@ -264,7 +272,6 @@ def Builtin_DenseIntOrFPElementsAttr : Builtin_Attr<
                                               ArrayRef<char> data,
                                               int64_t dataEltSize, bool isInt,
                                               bool isSigned);
-
   public:
   }];
   let genAccessors = 0;
@@ -308,7 +315,7 @@ def Builtin_DenseStringElementsAttr : Builtin_Attr<
   let builders = [
     AttrBuilderWithInferredContext<(ins "ShapedType":$type,
                                         "ArrayRef<StringRef>":$values), [{
-      return $_get(type.getContext(), type, values,
+      return $_get(type.getContext(), type, values, 
                    /* isSplat */(values.size() == 1));
     }]>,
   ];
