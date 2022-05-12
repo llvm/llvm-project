@@ -5,6 +5,7 @@
 
 #include "clang/AST/GlobalDecl.h"
 
+#include "mlir/Dialect/CIR/IR/CIRDialect.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/IR/Value.h"
 
@@ -26,6 +27,28 @@ static mlir::FuncOp buildFunctionDeclPointer(CIRGenModule &CGM, GlobalDecl GD) {
 static Address buildPreserveStructAccess(CIRGenFunction &CGF, LValue base,
                                          Address addr, const FieldDecl *field) {
   llvm_unreachable("NYI");
+}
+
+/// Get the address of a zero-sized field within a record. The resulting address
+/// doesn't necessarily have the right type.
+static Address buildAddrOfFieldStorage(CIRGenFunction &CGF, Address Base,
+                                       const FieldDecl *field) {
+  if (field->isZeroSize(CGF.getContext()))
+    llvm_unreachable("NYI");
+
+  auto loc = CGF.getLoc(field->getLocation());
+
+  auto fieldType = CGF.convertType(field->getType());
+  auto fieldPtr =
+      mlir::cir::PointerType::get(CGF.getBuilder().getContext(), fieldType);
+  auto sea = CGF.getBuilder().create<mlir::cir::StructElementAddr>(
+      loc, fieldPtr, CGF.CXXThisValue->getOperand(0), field->getName());
+
+  // TODO: We could get the alignment from the CIRGenRecordLayout, but given the
+  // member name based lookup of the member here we probably shouldn't be. We'll
+  // have to consider this later.
+  auto addr = Address(sea->getResult(0), CharUnits::One());
+  return addr;
 }
 
 LValue CIRGenFunction::buildLValueForField(LValue base,
@@ -68,7 +91,7 @@ LValue CIRGenFunction::buildLValueForField(LValue base,
   } else {
     if (!IsInPreservedAIRegion &&
         (!getDebugInfo() || !rec->hasAttr<BPFPreserveAccessIndexAttr>()))
-      llvm_unreachable("NYI");
+      addr = buildAddrOfFieldStorage(*this, addr, field);
     else
       // Remember the original struct field index
       addr = buildPreserveStructAccess(*this, base, addr, field);
@@ -82,7 +105,9 @@ LValue CIRGenFunction::buildLValueForField(LValue base,
   // Make sure that the address is pointing to the right type. This is critical
   // for both unions and structs. A union needs a bitcast, a struct element will
   // need a bitcast if the CIR type laid out doesn't match the desired type.
-  llvm_unreachable("NYI");
+  // TODO(CIR): CodeGen requires a bitcast here for unions or for structs where
+  // the LLVM type doesn't match the desired type. No idea when the latter might
+  // occur, though.
 
   if (field->hasAttr<AnnotateAttr>())
     llvm_unreachable("NYI");
