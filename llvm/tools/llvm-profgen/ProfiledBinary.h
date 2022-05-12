@@ -239,6 +239,8 @@ class ProfiledBinary {
   std::unordered_set<uint64_t> CallOffsets;
   // A set of return instruction offsets. Used by virtual unwinding.
   std::unordered_set<uint64_t> RetOffsets;
+  // An ordered set of unconditional branch instruction offsets.
+  std::set<uint64_t> UncondBranchOffsets;
   // A set of branch instruction offsets.
   std::unordered_set<uint64_t> BranchOffsets;
 
@@ -393,6 +395,13 @@ public:
   bool offsetIsTransfer(uint64_t Offset) {
     return BranchOffsets.count(Offset) || RetOffsets.count(Offset) ||
            CallOffsets.count(Offset);
+  }
+
+  bool rangeCrossUncondBranch(uint64_t Start, uint64_t End) {
+    if (Start >= End)
+      return false;
+    auto R = UncondBranchOffsets.lower_bound(Start);
+    return R != UncondBranchOffsets.end() && *R < End;
   }
 
   uint64_t getAddressforIndex(uint64_t Index) const {
