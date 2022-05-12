@@ -68,6 +68,3 @@ add_dependencies(lldbInterpreter
   LLDBInterpreterPropertiesGen
   LLDBInterpreterPropertiesEnumGen)
 
-if (LLDB_ENABLE_LIBEDIT)
-  target_include_directories(lldbInterpreter PRIVATE ${LibEdit_INCLUDE_DIRS})
-endif()

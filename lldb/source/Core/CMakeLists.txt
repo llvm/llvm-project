@@ -103,10 +103,6 @@ add_dependencies(lldbCore
 # TODO: Remove once we have better layering
 set_target_properties(lldbCore PROPERTIES LINK_INTERFACE_MULTIPLICITY 5)
 
-if (LLDB_ENABLE_LIBEDIT)
-  target_include_directories(lldbCore PRIVATE ${LibEdit_INCLUDE_DIRS})
-endif()
-
 if (LLDB_ENABLE_CURSES)
   target_include_directories(lldbCore PRIVATE ${CURSES_INCLUDE_DIRS})
 endif()
