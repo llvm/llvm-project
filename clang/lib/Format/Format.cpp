@@ -1898,8 +1898,9 @@ private:
         assert(Token->isOneOf(tok::l_brace, tok::r_brace));
         assert(Token->Next || Token == Line->Last);
         const auto Start =
-            Token == Line->Last || (Token->Next->is(tok::kw_else) &&
-                                    Token->Next->NewlinesBefore > 0)
+            Token == Line->Last ||
+                    (Token->Next->isOneOf(tok::kw_else, tok::comment) &&
+                     Token->Next->NewlinesBefore > 0)
                 ? Token->WhitespaceRange.getBegin()
                 : Token->Tok.getLocation();
         const auto Range =
