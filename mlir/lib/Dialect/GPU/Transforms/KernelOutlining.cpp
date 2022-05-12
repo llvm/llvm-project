@@ -274,8 +274,8 @@ public:
   }
 
   GpuKernelOutliningPass(const GpuKernelOutliningPass &other)
-      : dataLayoutSpec(other.dataLayoutSpec) {
-    dataLayoutStr = other.dataLayoutStr;
+      : GpuKernelOutliningBase(other), dataLayoutSpec(other.dataLayoutSpec) {
+    dataLayoutStr = other.dataLayoutStr.getValue();
   }
 
   LogicalResult initialize(MLIRContext *context) override {
