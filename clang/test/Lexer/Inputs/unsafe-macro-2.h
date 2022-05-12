@@ -40,6 +40,7 @@ const int z = UNSAFE_MACRO_2;
 #ifdef baz
 #elifdef UNSAFE_MACRO
 // expected-warning@-1{{macro 'UNSAFE_MACRO' has been marked as unsafe for use in headers: Don't use this!}}
+// expected-warning@-2{{use of a '#elifdef' directive is a C2x extension}}
 #endif
 
 // Test that we diagnose on #elifndef.
@@ -47,6 +48,7 @@ const int z = UNSAFE_MACRO_2;
 #elifndef UNSAFE_MACRO
 #endif
 // expected-warning@-2{{macro 'UNSAFE_MACRO' has been marked as unsafe for use in headers: Don't use this!}}
+// expected-warning@-3{{use of a '#elifndef' directive is a C2x extension}}
 
 // FIXME: These cases are currently not handled because clang doesn't expand
 // conditions on skipped #elif* blocks. See the FIXME notes in
@@ -55,12 +57,14 @@ const int z = UNSAFE_MACRO_2;
 #define frobble
 
 #ifdef frobble
-// not-expected-warning@+1{{macro 'UNSAFE_MACRO' has been marked as unsafe for use in headers: Don't use this!}}
+// not-expected-warning@+2{{macro 'UNSAFE_MACRO' has been marked as unsafe for use in headers: Don't use this!}}
+// expected-warning@+1{{use of a '#elifndef' directive is a C2x extension}}
 #elifndef UNSAFE_MACRO
 #endif
 
 #ifdef frobble
-// not-expected-warning@+1{{macro 'UNSAFE_MACRO' has been marked as unsafe for use in headers: Don't use this!}}
+// not-expected-warning@+2{{macro 'UNSAFE_MACRO' has been marked as unsafe for use in headers: Don't use this!}}
+// expected-warning@+1{{use of a '#elifdef' directive is a C2x extension}}
 #elifdef UNSAFE_MACRO
 #endif
 
