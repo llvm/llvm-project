@@ -717,11 +717,10 @@ DenseElementsAttr TensorLiteralParser::getHexAttr(SMLoc loc,
     MutableArrayRef<char> convRawData(outDataVec);
     DenseIntOrFPElementsAttr::convertEndianOfArrayRefForBEmachine(
         rawData, convRawData, type);
-    return DenseElementsAttr::getFromRawBuffer(type, convRawData,
-                                               detectedSplat);
+    return DenseElementsAttr::getFromRawBuffer(type, convRawData);
   }
 
-  return DenseElementsAttr::getFromRawBuffer(type, rawData, detectedSplat);
+  return DenseElementsAttr::getFromRawBuffer(type, rawData);
 }
 
 ParseResult TensorLiteralParser::parseElement() {
