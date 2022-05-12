@@ -298,11 +298,9 @@ TEST(CastingTest, unique_dyn_cast) {
   ASSERT_EQ(OrigD, D.get());
   ASSERT_EQ(nullptr, NewB);
 
-  // Converting between unrelated types should fail.  The original value should
-  // remain unchanged and it should return nullptr.
-  //
-  // Note that this is a very contrived test - most of the time we want a cast
-  // like this to emit a compiler error.
+  // This is a very contrived test, casting between completely unrelated types
+  // should generally fail to compile. See the classof shenanigans we have in
+  // the definition of `foo` above.
   auto F = unique_dyn_cast<foo>(D);
   ASSERT_EQ(nullptr, F);
   ASSERT_EQ(OrigD, D.get());
@@ -317,6 +315,9 @@ TEST(CastingTest, unique_dyn_cast) {
   auto B3 = unique_dyn_cast<base>(newb());
   EXPECT_NE(nullptr, B3);
 
+  // This is a very contrived test, casting between completely unrelated types
+  // should generally fail to compile. See the classof shenanigans we have in
+  // the definition of `foo` above.
   auto F2 = unique_dyn_cast<foo>(newb());
   EXPECT_EQ(nullptr, F2);
 }
