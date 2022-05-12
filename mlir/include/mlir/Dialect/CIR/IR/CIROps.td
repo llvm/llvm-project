@@ -914,4 +914,30 @@ def GlobalOp : CIR_Op<"global", [Symbol]> {
   let hasVerifier = 1;
 }
 
+def StructElementAddr : CIR_Op<"struct_element_addr"> {
+  let summary = "get the address of a member of a struct";
+  let description = [{
+    The `cir.struct_element_addr` operaration gets the address of a particular
+    named member from the input struct.
+
+    Example:
+    ```mlir
+    !22struct2EBar22 = type !cir.struct<"struct.Bar", i32, i8>
+    ...
+    %0 = cir.alloca !22struct2EBar22, cir.ptr <!22struct2EBar22>
+    ...
+    %1 = cir.struct_element_addr %0, "Bar.a"
+    %2 = cir.load %1 : cir.ptr <int>, int
+    WIP
+    ```
+  }];
+
+  let arguments = (ins
+    Arg<CIR_PointerType, "the address to load from", [MemRead]>:$struct_addr,
+    StrAttr:$member_name);
+
+  let results = (outs Res<CIR_PointerType, "">:$result);
+}
+
 #endif // MLIR_CIR_DIALECT_CIR_OPS
+
