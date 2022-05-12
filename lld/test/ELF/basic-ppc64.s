@@ -336,7 +336,7 @@
 // CHECK-NEXT:    VirtualAddress: 0x20238
 // CHECK-NEXT:    PhysicalAddress: 0x20238
 // CHECK-NEXT:    FileSize: 96
-// CHECK-NEXT:    MemSize: 3528
+// CHECK-NEXT:    MemSize: 64968
 // CHECK-NEXT:    Flags [ (0x4)
 // CHECK-NEXT:      PF_R (0x4)
 // CHECK-NEXT:    ]
