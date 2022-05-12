@@ -21,12 +21,18 @@ define internal void @test_byval(%struct.pair* byval(%struct.pair) align 4 %P) {
 ; CHECK-LABEL: define {{[^@]+}}@test_byval
 ; CHECK-SAME: (i32 [[P_0:%.*]], i32 [[P_1:%.*]]) {
 ; CHECK-NEXT:    [[P:%.*]] = alloca [[STRUCT_PAIR:%.*]], align 4
-; CHECK-NEXT:    [[DOT0:%.*]] = getelementptr [[STRUCT_PAIR]], %struct.pair* [[P]], i32 0, i32 0
+; CHECK-NEXT:    [[DOT0:%.*]] = getelementptr [[STRUCT_PAIR]], [[STRUCT_PAIR]]* [[P]], i32 0, i32 0
 ; CHECK-NEXT:    store i32 [[P_0]], i32* [[DOT0]], align 4
-; CHECK-NEXT:    [[DOT1:%.*]] = getelementptr [[STRUCT_PAIR]], %struct.pair* [[P]], i32 0, i32 1
+; CHECK-NEXT:    [[DOT1:%.*]] = getelementptr [[STRUCT_PAIR]], [[STRUCT_PAIR]]* [[P]], i32 0, i32 1
 ; CHECK-NEXT:    store i32 [[P_1]], i32* [[DOT1]], align 4
+; CHECK-NEXT:    [[SINK:%.*]] = alloca i32*, align 8
+; CHECK-NEXT:    [[DOT2:%.*]] = getelementptr [[STRUCT_PAIR]], [[STRUCT_PAIR]]* [[P]], i32 0, i32 0
+; CHECK-NEXT:    store i32* [[DOT2]], i32** [[SINK]], align 8
 ; CHECK-NEXT:    ret void
 ;
+  %1 = alloca i32*, align 8
+  %2 = getelementptr %struct.pair, %struct.pair* %P, i32 0, i32 0
+  store i32* %2, i32** %1, align 8 ; to protect from "usual" promotion
   ret void
 }
 
