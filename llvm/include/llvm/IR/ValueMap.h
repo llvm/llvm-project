@@ -141,7 +141,7 @@ public:
   size_type size() const { return Map.size(); }
 
   /// Grow the map so that it has at least Size buckets. Does not shrink
-  void resize(size_t Size) { Map.resize(Size); }
+  void reserve(size_t Size) { Map.reserve(Size); }
 
   void clear() {
     Map.clear();
