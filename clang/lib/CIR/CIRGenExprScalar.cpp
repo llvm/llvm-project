@@ -93,11 +93,50 @@ public:
     Expr *E = CE->getSubExpr();
     QualType DestTy = CE->getType();
     CastKind Kind = CE->getCastKind();
+    // Since almost all cast kinds apply to scalars, this switch doesn't have a
+    // default case, so the compiler will warn on a missing case. The cases are
+    // in the same order as in the CastKind enum.
     switch (Kind) {
-    case CK_LValueToRValue:
-      assert(CGF.getContext().hasSameUnqualifiedType(E->getType(), DestTy));
-      assert(E->isGLValue() && "lvalue-to-rvalue applied to r-value!");
-      return Visit(const_cast<Expr *>(E));
+    case clang::CK_Dependent:
+      llvm_unreachable("dependent cast kind in CIR gen!");
+    case clang::CK_BuiltinFnToFnPtr:
+      llvm_unreachable("builtin functions are handled elsewhere");
+
+    case CK_LValueBitCast:
+      llvm_unreachable("NYI");
+    case CK_ObjCObjectLValueCast:
+      llvm_unreachable("NYI");
+    case CK_LValueToRValueBitCast:
+      llvm_unreachable("NYI");
+    case CK_CPointerToObjCPointerCast:
+      llvm_unreachable("NYI");
+    case CK_BlockPointerToObjCPointerCast:
+      llvm_unreachable("NYI");
+    case CK_AnyPointerToBlockPointerCast:
+      llvm_unreachable("NYI");
+    case CK_BitCast:
+      llvm_unreachable("NYI");
+    case CK_AddressSpaceConversion:
+      llvm_unreachable("NYI");
+    case CK_AtomicToNonAtomic:
+      llvm_unreachable("NYI");
+    case CK_NonAtomicToAtomic:
+      llvm_unreachable("NYI");
+    case CK_UserDefinedConversion:
+      llvm_unreachable("NYI");
+    case CK_NoOp:
+      llvm_unreachable("NYI");
+    case CK_BaseToDerived:
+      llvm_unreachable("NYI");
+    case CK_DerivedToBase:
+      llvm_unreachable("NYI");
+    case CK_Dynamic:
+      llvm_unreachable("NYI");
+    case CK_ArrayToPointerDecay:
+      llvm_unreachable("NYI");
+    case CK_FunctionToPointerDecay:
+      llvm_unreachable("NYI");
+
     case CK_NullToPointer: {
       // FIXME: use MustVisitNullValue(E) and evaluate expr.
       // Note that DestTy is used as the MLIR type instead of a custom
@@ -107,16 +146,105 @@ public:
           CGF.getLoc(E->getExprLoc()), Ty,
           mlir::cir::NullAttr::get(Builder.getContext(), Ty));
     }
+    case CK_NullToMemberPointer:
+      llvm_unreachable("NYI");
+    case CK_ReinterpretMemberPointer:
+      llvm_unreachable("NYI");
+    case CK_BaseToDerivedMemberPointer:
+      llvm_unreachable("NYI");
+    case CK_DerivedToBaseMemberPointer:
+      llvm_unreachable("NYI");
+    case CK_ARCProduceObject:
+      llvm_unreachable("NYI");
+    case CK_ARCConsumeObject:
+      llvm_unreachable("NYI");
+    case CK_ARCReclaimReturnedObject:
+      llvm_unreachable("NYI");
+    case CK_ARCExtendBlockObject:
+      llvm_unreachable("NYI");
+    case CK_CopyAndAutoreleaseBlockObject:
+      llvm_unreachable("NYI");
+    case CK_FloatingRealToComplex:
+      llvm_unreachable("NYI");
+    case CK_FloatingComplexCast:
+      llvm_unreachable("NYI");
+    case CK_IntegralComplexToFloatingComplex:
+      llvm_unreachable("NYI");
+    case CK_FloatingComplexToIntegralComplex:
+      llvm_unreachable("NYI");
+    case CK_ConstructorConversion:
+      llvm_unreachable("NYI");
+    case CK_ToUnion:
+      llvm_unreachable("NYI");
+
+    case CK_LValueToRValue:
+      assert(CGF.getContext().hasSameUnqualifiedType(E->getType(), DestTy));
+      assert(E->isGLValue() && "lvalue-to-rvalue applied to r-value!");
+      return Visit(const_cast<Expr *>(E));
+
+    case CK_IntegralToPointer:
+      llvm_unreachable("NYI");
+    case CK_PointerToIntegral:
+      llvm_unreachable("NYI");
+    case CK_ToVoid:
+      llvm_unreachable("NYI");
+    case CK_MatrixCast:
+      llvm_unreachable("NYI");
+    case CK_VectorSplat:
+      llvm_unreachable("NYI");
+    case CK_FixedPointCast:
+      llvm_unreachable("NYI");
+    case CK_FixedPointToBoolean:
+      llvm_unreachable("NYI");
+    case CK_FixedPointToIntegral:
+      llvm_unreachable("NYI");
+    case CK_IntegralToFixedPoint:
+      llvm_unreachable("NYI");
+
+    case CK_IntegralToFloating:
+      llvm_unreachable("NYI");
+    case CK_FloatingToIntegral:
+      llvm_unreachable("NYI");
+    case CK_FloatingCast:
+      llvm_unreachable("NYI");
+    case CK_FixedPointToFloating:
+      llvm_unreachable("NYI");
+    case CK_FloatingToFixedPoint:
+      llvm_unreachable("NYI");
+    case CK_BooleanToSignedIntegral:
+      llvm_unreachable("NYI");
+
     case CK_IntegralToBoolean: {
       return buildIntToBoolConversion(Visit(E),
                                       CGF.getLoc(CE->getSourceRange()));
     }
+
+    case CK_PointerToBoolean:
+      llvm_unreachable("NYI");
+    case CK_FloatingToBoolean:
+      llvm_unreachable("NYI");
+    case CK_MemberPointerToBoolean:
+      llvm_unreachable("NYI");
+    case CK_FloatingComplexToReal:
+      llvm_unreachable("NYI");
+    case CK_IntegralComplexToReal:
+      llvm_unreachable("NYI");
+    case CK_FloatingComplexToBoolean:
+      llvm_unreachable("NYI");
+    case CK_IntegralComplexToBoolean:
+      llvm_unreachable("NYI");
+    case CK_ZeroToOCLOpaqueType:
+      llvm_unreachable("NYI");
+    case CK_IntToOCLSampler:
+      llvm_unreachable("NYI");
+
     default:
       emitError(CGF.getLoc(CE->getExprLoc()), "cast kind not implemented: '")
           << CE->getCastKindName() << "'";
-      assert(0 && "not implemented");
       return nullptr;
-    }
+    } // end of switch
+
+    llvm_unreachable("unknown scalar cast");
   }
 
   mlir::Value VisitCallExpr(const CallExpr *E) {
