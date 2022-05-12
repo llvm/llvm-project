@@ -48,6 +48,11 @@ public:
     return StmtVisitor<ScalarExprEmitter, mlir::Value>::Visit(E);
   }
 
+  mlir::Value VisitStmt(Stmt *S) {
+    S->dump(llvm::errs(), CGF.getContext());
+    llvm_unreachable("Stmt can't have complex result type!");
+  }
+
   /// Emits the address of the l-value, then loads and returns the result.
   mlir::Value buildLoadOfLValue(const Expr *E) {
     LValue LV = CGF.buildLValue(E);
