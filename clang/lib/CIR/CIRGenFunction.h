@@ -719,8 +719,10 @@ public:
   /// \param init the initializing expression
   /// \param D the object to act as if we're initializing
   /// \param lvalue the lvalue to initialize
+  /// \param capturedByInit true if \p D is a __block variable whose address is
+  /// potentially changed by the initializer
   void buildExprAsInit(const clang::Expr *init, const clang::ValueDecl *D,
-                       LValue lvalue);
+                       LValue lvalue, bool capturedByInit = false);
 
   /// Emit code and set up symbol table for a variable declaration with auto,
   /// register, or no storage class specifier. These turn into simple stack

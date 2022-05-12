@@ -218,7 +218,10 @@ void CIRGenFunction::buildScalarInit(const Expr *init, const ValueDecl *D,
 }
 
 void CIRGenFunction::buildExprAsInit(const Expr *init, const ValueDecl *D,
-                                     LValue lvalue) {
+                                     LValue lvalue, bool capturedByInit) {
+  if (capturedByInit)
+    llvm_unreachable("NYI");
+
   QualType type = D->getType();
 
   if (type->isReferenceType()) {
