@@ -66,6 +66,25 @@ public:
     return buildLoadOfLValue(E);
   }
 
+  // Emit a conversion from the specified type to the specified destination
+  // type, both of which are CIR scalar types.
+  struct ScalarConversionOpts {
+    bool TreatBooleanAsSigned;
+    bool EmitImplicitIntegerTruncationChecks;
+    bool EmitImplicitIntegerSignChangeChecks;
+
+    ScalarConversionOpts()
+        : TreatBooleanAsSigned(false),
+          EmitImplicitIntegerTruncationChecks(false),
+          EmitImplicitIntegerSignChangeChecks(false) {}
+
+    ScalarConversionOpts(clang::SanitizerSet SanOpts)
+        : TreatBooleanAsSigned(false),
+          EmitImplicitIntegerTruncationChecks(
+              SanOpts.hasOneOf(SanitizerKind::ImplicitIntegerTruncation)),
+          EmitImplicitIntegerSignChangeChecks(
+              SanOpts.has(SanitizerKind::ImplicitIntegerSignChange)) {}
+  };
   // Emit code for an explicit or implicit cast.  Implicit
   // casts have to handle a more broad range of conversions than explicit
   // casts, as they handle things like function to ptr-to-function decay
