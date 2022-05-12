@@ -331,7 +331,7 @@ ConstString Mangled::GetDemangledName(// BEGIN SWIFT
     else if (mangling_scheme == eManglingSchemeNone &&
                !m_mangled.GetMangledCounterpart(m_demangled) &&
                SwiftLanguageRuntime::IsSwiftMangledName(m_mangled.GetStringRef())) {
-      Log *log = lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_DEMANGLE);
+      Log *log = GetLog(LLDBLog::Demangle);
       if (log)
         log->Printf("demangle swift: %s", mangled_name);
       std::string demangled(SwiftLanguageRuntime::DemangleSymbolAsString(

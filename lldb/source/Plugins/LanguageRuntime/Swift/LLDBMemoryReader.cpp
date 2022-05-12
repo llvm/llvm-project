@@ -3,7 +3,6 @@
 #include "lldb/Core/Section.h"
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
-#include "lldb/Utility/Logging.h"
 
 #include "llvm/Support/MathExtras.h"
 #include "swift/Demangling/Demangle.h"
