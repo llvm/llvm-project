@@ -168,7 +168,7 @@ LogicalResult CastOp::verify() {
   }
   }
 
-  return success();
+  llvm_unreachable("Unknown CastOp kind?");
 }
 
 //===----------------------------------------------------------------------===//
