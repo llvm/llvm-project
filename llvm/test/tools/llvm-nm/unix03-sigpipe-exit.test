@@ -1,0 +1,17 @@
+# Test that when nm tries to write to a closed stdout it will finish with
+# a non-zero exit code and an error message on stderr.
+# This is required for UNIX03 conformance.
+
+# UNSUPPORTED: system-windows
+
+# RUN: not %python %s llvm-nm llvm-nm 2>&1 | FileCheck %s
+# CHECK: error: write on a pipe with no reader
+
+import subprocess
+import sys
+
+with subprocess.Popen([sys.argv[1], sys.argv[2]], stdout=subprocess.PIPE) as process:
+  # Read single byte and immediately close pipe to trigger SIGPIPE.
+  process.stdout.read(1)
+  process.stdout.close()
+sys.exit(process.returncode)
