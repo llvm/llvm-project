@@ -46,13 +46,13 @@ module {
 // going to overlap with op-specific pipelines.
 // GENERIC_MERGE_CHECK:      Pipeline Collection : ['builtin.module', 'any']
 // GENERIC_MERGE_CHECK-NEXT:   'any' Pipeline
-// GENERIC_MERGE_CHECK-NEXT:     (anonymous namespace)::TestInterfacePass
+// GENERIC_MERGE_CHECK-NEXT:     TestInterfacePass
 // GENERIC_MERGE_CHECK-NEXT:   'builtin.module' Pipeline
-// GENERIC_MERGE_CHECK-NEXT:     (anonymous namespace)::TestModulePass
+// GENERIC_MERGE_CHECK-NEXT:     TestModulePass
 // GENERIC_MERGE_CHECK-NEXT: 'any' Pipeline
-// GENERIC_MERGE_CHECK-NEXT:   (anonymous namespace)::TestInterfacePass
+// GENERIC_MERGE_CHECK-NEXT:   TestInterfacePass
 // GENERIC_MERGE_CHECK-NEXT: 'func.func' Pipeline
-// GENERIC_MERGE_CHECK-NEXT:   (anonymous namespace)::TestFunctionPass
+// GENERIC_MERGE_CHECK-NEXT:   TestFunctionPass
 // GENERIC_MERGE_CHECK-NEXT: 'any' Pipeline
 // GENERIC_MERGE_CHECK-NEXT:   Canonicalizer
 // GENERIC_MERGE_CHECK-NEXT: 'func.func' Pipeline
