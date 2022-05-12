@@ -537,6 +537,56 @@ define <vscale x 1 x i1> @icmp_sle_vi_swap_nxv1i8(<vscale x 1 x i8> %va, <vscale
   ret <vscale x 1 x i1> %v
 }
 
+declare <vscale x 8 x i1> @llvm.vp.icmp.nxv8i7(<vscale x 8 x i7>, <vscale x 8 x i7>, metadata, <vscale x 8 x i1>, i32)
+
+define <vscale x 8 x i1> @icmp_eq_vv_nxv8i7(<vscale x 8 x i7> %va, <vscale x 8 x i7> %vb, <vscale x 8 x i1> %m, i32 zeroext %evl) {
+; CHECK-LABEL: icmp_eq_vv_nxv8i7:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    li a1, 127
+; CHECK-NEXT:    vsetvli a2, zero, e8, m1, ta, mu
+; CHECK-NEXT:    vand.vx v9, v9, a1
+; CHECK-NEXT:    vand.vx v8, v8, a1
+; CHECK-NEXT:    vsetvli zero, a0, e8, m1, ta, ma
+; CHECK-NEXT:    vmseq.vv v0, v8, v9, v0.t
+; CHECK-NEXT:    ret
+  %v = call <vscale x 8 x i1> @llvm.vp.icmp.nxv8i7(<vscale x 8 x i7> %va, <vscale x 8 x i7> %vb, metadata !"eq", <vscale x 8 x i1> %m, i32 %evl)
+  ret <vscale x 8 x i1> %v
+}
+
+define <vscale x 8 x i1> @icmp_eq_vx_nxv8i7(<vscale x 8 x i7> %va, i7 %b, <vscale x 8 x i1> %m, i32 zeroext %evl) {
+; CHECK-LABEL: icmp_eq_vx_nxv8i7:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    li a2, 127
+; CHECK-NEXT:    vsetvli a3, zero, e8, m1, ta, mu
+; CHECK-NEXT:    vand.vx v8, v8, a2
+; CHECK-NEXT:    vmv.v.x v9, a0
+; CHECK-NEXT:    vand.vx v9, v9, a2
+; CHECK-NEXT:    vsetvli zero, a1, e8, m1, ta, ma
+; CHECK-NEXT:    vmseq.vv v0, v8, v9, v0.t
+; CHECK-NEXT:    ret
+  %elt.head = insertelement <vscale x 8 x i7> poison, i7 %b, i32 0
+  %vb = shufflevector <vscale x 8 x i7> %elt.head, <vscale x 8 x i7> poison, <vscale x 8 x i32> zeroinitializer
+  %v = call <vscale x 8 x i1> @llvm.vp.icmp.nxv8i7(<vscale x 8 x i7> %va, <vscale x 8 x i7> %vb, metadata !"eq", <vscale x 8 x i1> %m, i32 %evl)
+  ret <vscale x 8 x i1> %v
+}
+
+define <vscale x 8 x i1> @icmp_eq_vx_swap_nxv8i7(<vscale x 8 x i7> %va, i7 %b, <vscale x 8 x i1> %m, i32 zeroext %evl) {
+; CHECK-LABEL: icmp_eq_vx_swap_nxv8i7:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    li a2, 127
+; CHECK-NEXT:    vsetvli a3, zero, e8, m1, ta, mu
+; CHECK-NEXT:    vand.vx v8, v8, a2
+; CHECK-NEXT:    vmv.v.x v9, a0
+; CHECK-NEXT:    vand.vx v9, v9, a2
+; CHECK-NEXT:    vsetvli zero, a1, e8, m1, ta, ma
+; CHECK-NEXT:    vmseq.vv v0, v9, v8, v0.t
+; CHECK-NEXT:    ret
+  %elt.head = insertelement <vscale x 8 x i7> poison, i7 %b, i32 0
+  %vb = shufflevector <vscale x 8 x i7> %elt.head, <vscale x 8 x i7> poison, <vscale x 8 x i32> zeroinitializer
+  %v = call <vscale x 8 x i1> @llvm.vp.icmp.nxv8i7(<vscale x 8 x i7> %vb, <vscale x 8 x i7> %va, metadata !"eq", <vscale x 8 x i1> %m, i32 %evl)
+  ret <vscale x 8 x i1> %v
+}
+
 declare <vscale x 8 x i1> @llvm.vp.icmp.nxv8i8(<vscale x 8 x i8>, <vscale x 8 x i8>, metadata, <vscale x 8 x i1>, i32)
 
 define <vscale x 8 x i1> @icmp_eq_vv_nxv8i8(<vscale x 8 x i8> %va, <vscale x 8 x i8> %vb, <vscale x 8 x i1> %m, i32 zeroext %evl) {
