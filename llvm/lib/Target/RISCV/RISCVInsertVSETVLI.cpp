@@ -1176,16 +1176,19 @@ void RISCVInsertVSETVLI::emitVSETVLIs(MachineBasicBlock &MBB) {
       CurInfo = VSETVLIInfo::getUnknown();
       PrevVSETVLIMI = nullptr;
     }
+  }
 
-    // If we reach the end of the block and our current info doesn't match the
-    // expected info, insert a vsetvli to correct.
-    if (!UseStrictAsserts && MI.isTerminator()) {
-      const VSETVLIInfo &ExitInfo = BlockInfo[MBB.getNumber()].Exit;
-      if (CurInfo.isValid() && ExitInfo.isValid() && !ExitInfo.isUnknown() &&
-          CurInfo != ExitInfo) {
-        insertVSETVLI(MBB, MI, ExitInfo, CurInfo);
-        CurInfo = ExitInfo;
-      }
+  // If we reach the end of the block and our current info doesn't match the
+  // expected info, insert a vsetvli to correct.
+  if (!UseStrictAsserts) {
+    const VSETVLIInfo &ExitInfo = BlockInfo[MBB.getNumber()].Exit;
+    if (CurInfo.isValid() && ExitInfo.isValid() && !ExitInfo.isUnknown() &&
+        CurInfo != ExitInfo) {
+      // Note there's an implicit assumption here that terminators never use
+      // or modify VL or VTYPE.  Also, fallthrough will return end().
+      auto InsertPt = MBB.getFirstTerminator().getInstrIterator();
+      insertVSETVLI(MBB, InsertPt, MBB.findDebugLoc(InsertPt), ExitInfo, CurInfo);
+      CurInfo = ExitInfo;
     }
   }
 
