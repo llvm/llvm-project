@@ -24,6 +24,20 @@ using namespace mlir::linalg;
 #include "mlir/Dialect/Linalg/IR/LinalgInterfaces.cpp.inc"
 
 //===----------------------------------------------------------------------===//
+// Interface utility functions
+//===----------------------------------------------------------------------===//
+bool linalg::detail::canOpOperandsBeDroppedImpl(
+    linalg::LinalgOp linalgOp, ArrayRef<OpOperand *> droppedOperands) {
+  SmallVector<AffineMap> indexingMaps;
+  for (auto opOperand : linalgOp.getInputAndOutputOperands()) {
+    if (llvm::is_contained(droppedOperands, opOperand))
+      continue;
+    indexingMaps.push_back(linalgOp.getTiedIndexingMap(opOperand));
+  }
+  return inversePermutation(concatAffineMaps(indexingMaps)) != AffineMap();
+}
+
+//===----------------------------------------------------------------------===//
 // ContractionOpInterface implementation
 //===----------------------------------------------------------------------===//
 
