@@ -2890,6 +2890,7 @@ ASTReader::ReadControlBlock(ModuleFile &F,
 
     case ORIGINAL_PCH_DIR:
       F.OriginalDir = std::string(Blob);
+      ResolveImportedPath(F, F.OriginalDir);
       break;
 
     case MODULE_NAME:
