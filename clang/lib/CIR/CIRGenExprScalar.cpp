@@ -29,7 +29,8 @@ class ScalarExprEmitter : public StmtVisitor<ScalarExprEmitter, mlir::Value> {
   mlir::OpBuilder &Builder;
 
 public:
-  ScalarExprEmitter(CIRGenFunction &cgf, mlir::OpBuilder &builder)
+  ScalarExprEmitter(CIRGenFunction &cgf, mlir::OpBuilder &builder,
+                    bool ira = false)
       : CGF(cgf), Builder(builder) {}
 
   mlir::Value Visit(Expr *E) {
