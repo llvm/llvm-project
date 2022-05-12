@@ -93,6 +93,15 @@ struct BufferizationOptions {
         0, (allowDialectInFilterImpl<DialectTs>(), 0)...};
   }
 
+  /// Deny the given dialects in the filter.
+  ///
+  /// This function adds one or multiple DENY filters.
+  template <typename... DialectTs> void denyDialectInFilter() {
+    // FIXME: In c++17 this can be simplified by using 'fold expressions'.
+    (void)std::initializer_list<int>{
+        0, (denyDialectInFilterImpl<DialectTs>(), 0)...};
+  }
+
   /// Allow the given dialect in the filter.
   ///
   /// This function adds an ALLOW filter.
@@ -112,6 +121,15 @@ struct BufferizationOptions {
     // FIXME: In c++17 this can be simplified by using 'fold expressions'.
     (void)std::initializer_list<int>{
         0, (allowOperationInFilterImpl<OpTys>(), 0)...};
+  }
+
+  /// Deny the given ops in the filter.
+  ///
+  /// This function adds one or multiple DENY filters.
+  template <typename... OpTys> void denyOperationInFilter() {
+    // FIXME: In c++17 this can be simplified by using 'fold expressions'.
+    (void)std::initializer_list<int>{
+        0, (denyOperationInFilterImpl<OpTys>(), 0)...};
   }
 
   /// Allow the given op in the filter.
@@ -203,6 +221,10 @@ struct BufferizationOptions {
   /// For debugging only. Should be used together with `testAnalysisOnly`.
   bool printConflicts = false;
 
+  /// If set to `true`, buffers that are returned from functions are replaced
+  /// with buffer "out" parameters. At the call site, new buffers are allocated.
+  bool promoteBufferResultsToOutParams = false;
+
   /// If set to `true`, an `getAliasingOpResult` will return the corresponding
   /// "out"/"dest" OpOperand for every op that has the notion of an "out"/"dest"
   /// operand. I.e., the aliasing OpOperand of the i-th tensor OpResult is
@@ -249,10 +271,20 @@ private:
     allowDialectInFilter(DialectT::getDialectNamespace());
   }
 
+  /// Deny a dialect.
+  template <typename DialectT> void denyDialectInFilterImpl() {
+    denyDialectInFilter(DialectT::getDialectNamespace());
+  }
+
   /// Allow an op.
   template <typename OpTy>
   void allowOperationInFilterImpl() {
     allowOperationInFilter(OpTy::getOperationName());
+  }
+
+  /// Deny an op.
+  template <typename OpTy> void denyOperationInFilterImpl() {
+    denyOperationInFilter(OpTy::getOperationName());
   }
 };
 

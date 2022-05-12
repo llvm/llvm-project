@@ -122,20 +122,25 @@ static LogicalResult updateCalls(ModuleOp module) {
   return failure(didFail);
 }
 
+LogicalResult
+mlir::bufferization::promoteBufferResultsToOutParams(ModuleOp module) {
+  for (auto func : module.getOps<func::FuncOp>()) {
+    SmallVector<BlockArgument, 6> appendedEntryArgs;
+    updateFuncOp(func, appendedEntryArgs);
+    if (func.isExternal())
+      continue;
+    updateReturnOps(func, appendedEntryArgs);
+  }
+  if (failed(updateCalls(module)))
+    return failure();
+  return success();
+}
+
 namespace {
 struct BufferResultsToOutParamsPass
     : BufferResultsToOutParamsBase<BufferResultsToOutParamsPass> {
   void runOnOperation() override {
-    ModuleOp module = getOperation();
-
-    for (auto func : module.getOps<func::FuncOp>()) {
-      SmallVector<BlockArgument, 6> appendedEntryArgs;
-      updateFuncOp(func, appendedEntryArgs);
-      if (func.isExternal())
-        continue;
-      updateReturnOps(func, appendedEntryArgs);
-    }
-    if (failed(updateCalls(module)))
+    if (failed(bufferization::promoteBufferResultsToOutParams(getOperation())))
       return signalPassFailure();
   }
 };
