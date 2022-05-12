@@ -40,9 +40,10 @@ define i64 @rem_unsigned(i64 %x1, i64 %y2) {
 
 define i8 @big_divisor(i8 %x) {
 ; CHECK-LABEL: @big_divisor(
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp ult i8 [[X:%.*]], -127
-; CHECK-NEXT:    [[TMP2:%.*]] = add i8 [[X]], 127
-; CHECK-NEXT:    [[REM:%.*]] = select i1 [[TMP1]], i8 [[X]], i8 [[TMP2]]
+; CHECK-NEXT:    [[X_FR:%.*]] = freeze i8 [[X:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ult i8 [[X_FR]], -127
+; CHECK-NEXT:    [[TMP2:%.*]] = add i8 [[X_FR]], 127
+; CHECK-NEXT:    [[REM:%.*]] = select i1 [[TMP1]], i8 [[X_FR]], i8 [[TMP2]]
 ; CHECK-NEXT:    ret i8 [[REM]]
 ;
   %rem = urem i8 %x, 129
@@ -51,8 +52,9 @@ define i8 @big_divisor(i8 %x) {
 
 define i5 @biggest_divisor(i5 %x) {
 ; CHECK-LABEL: @biggest_divisor(
-; CHECK-NEXT:    [[DOTNOT:%.*]] = icmp eq i5 [[X:%.*]], -1
-; CHECK-NEXT:    [[REM:%.*]] = select i1 [[DOTNOT]], i5 0, i5 [[X]]
+; CHECK-NEXT:    [[X_FR:%.*]] = freeze i5 [[X:%.*]]
+; CHECK-NEXT:    [[DOTNOT:%.*]] = icmp eq i5 [[X_FR]], -1
+; CHECK-NEXT:    [[REM:%.*]] = select i1 [[DOTNOT]], i5 0, i5 [[X_FR]]
 ; CHECK-NEXT:    ret i5 [[REM]]
 ;
   %rem = urem i5 %x, -1
@@ -83,9 +85,10 @@ define <2 x i8> @urem_with_sext_bool_divisor_vec(<2 x i1> %x, <2 x i8> %y) {
 
 define <2 x i4> @big_divisor_vec(<2 x i4> %x) {
 ; CHECK-LABEL: @big_divisor_vec(
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp ult <2 x i4> [[X:%.*]], <i4 -3, i4 -3>
-; CHECK-NEXT:    [[TMP2:%.*]] = add <2 x i4> [[X]], <i4 3, i4 3>
-; CHECK-NEXT:    [[REM:%.*]] = select <2 x i1> [[TMP1]], <2 x i4> [[X]], <2 x i4> [[TMP2]]
+; CHECK-NEXT:    [[X_FR:%.*]] = freeze <2 x i4> [[X:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ult <2 x i4> [[X_FR]], <i4 -3, i4 -3>
+; CHECK-NEXT:    [[TMP2:%.*]] = add <2 x i4> [[X_FR]], <i4 3, i4 3>
+; CHECK-NEXT:    [[REM:%.*]] = select <2 x i1> [[TMP1]], <2 x i4> [[X_FR]], <2 x i4> [[TMP2]]
 ; CHECK-NEXT:    ret <2 x i4> [[REM]]
 ;
   %rem = urem <2 x i4> %x, <i4 13, i4 13>

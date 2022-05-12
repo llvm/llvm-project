@@ -1,5 +1,6 @@
 set(CLANG_PSEUDO_TEST_DEPS
   clang-pseudo
+  clang-pseudo-fuzzer
   ClangPseudoTests
   )
 

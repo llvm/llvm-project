@@ -43,6 +43,8 @@ class LoongArchAsmParser : public MCTargetAsmParser {
                                uint64_t &ErrorInfo,
                                bool MatchingInlineAsm) override;
 
+  unsigned checkTargetMatchPredicate(MCInst &Inst) override;
+
   unsigned validateTargetOperandClass(MCParsedAsmOperand &Op,
                                       unsigned Kind) override;
 
@@ -66,6 +68,7 @@ class LoongArchAsmParser : public MCTargetAsmParser {
 public:
   enum LoongArchMatchResultTy {
     Match_Dummy = FIRST_TARGET_MATCH_RESULT_TY,
+    Match_RequiresMsbNotLessThanLsb,
 #define GET_OPERAND_DIAGNOSTIC_TYPES
 #include "LoongArchGenAsmMatcher.inc"
 #undef GET_OPERAND_DIAGNOSTIC_TYPES
@@ -369,6 +372,32 @@ bool LoongArchAsmParser::processInstruction(MCInst &Inst, SMLoc IDLoc,
   return false;
 }
 
+unsigned LoongArchAsmParser::checkTargetMatchPredicate(MCInst &Inst) {
+  switch (Inst.getOpcode()) {
+  default:
+    break;
+  case LoongArch::BSTRINS_W:
+  case LoongArch::BSTRINS_D:
+  case LoongArch::BSTRPICK_W:
+  case LoongArch::BSTRPICK_D: {
+    unsigned Opc = Inst.getOpcode();
+    const signed Msb =
+        (Opc == LoongArch::BSTRINS_W || Opc == LoongArch::BSTRINS_D)
+            ? Inst.getOperand(3).getImm()
+            : Inst.getOperand(2).getImm();
+    const signed Lsb =
+        (Opc == LoongArch::BSTRINS_W || Opc == LoongArch::BSTRINS_D)
+            ? Inst.getOperand(4).getImm()
+            : Inst.getOperand(3).getImm();
+    if (Msb < Lsb)
+      return Match_RequiresMsbNotLessThanLsb;
+    return Match_Success;
+  }
+  }
+
+  return Match_Success;
+}
+
 unsigned
 LoongArchAsmParser::validateTargetOperandClass(MCParsedAsmOperand &AsmOp,
                                                unsigned Kind) {
@@ -455,6 +484,11 @@ bool LoongArchAsmParser::MatchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
   switch (Result) {
   default:
     break;
+  case Match_RequiresMsbNotLessThanLsb: {
+    SMLoc ErrorStart = Operands[3]->getStartLoc();
+    return Error(ErrorStart, "msb is less than lsb",
+                 SMRange(ErrorStart, Operands[4]->getEndLoc()));
+  }
   case Match_InvalidUImm2:
     return generateImmOutOfRangeError(Operands, ErrorInfo, /*Lower=*/0,
                                       /*Upper=*/(1 << 2) - 1);

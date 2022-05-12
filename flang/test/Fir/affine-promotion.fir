@@ -5,7 +5,7 @@
 !arr_d1 = type !fir.ref<!fir.array<?xf32>>
 #arr_len = affine_map<()[j1,k1] -> (k1 - j1 + 1)>
 
-func @loop_with_load_and_store(%a1: !arr_d1, %a2: !arr_d1, %a3: !arr_d1) {
+func.func @loop_with_load_and_store(%a1: !arr_d1, %a2: !arr_d1, %a3: !arr_d1) {
   %c1 = arith.constant 1 : index
   %c0 = arith.constant 0 : index
   %len = arith.constant 100 : index
@@ -78,7 +78,7 @@ func @loop_with_load_and_store(%a1: !arr_d1, %a2: !arr_d1, %a3: !arr_d1) {
 !arr_d1 = type !fir.ref<!fir.array<?xf32>>
 #arr_len = affine_map<()[j1,k1] -> (k1 - j1 + 1)>
 
-func @loop_with_if(%a: !arr_d1, %v: f32) {
+func.func @loop_with_if(%a: !arr_d1, %v: f32) {
   %c0 = arith.constant 0 : index
   %c1 = arith.constant 1 : index
   %c2 = arith.constant 2 : index

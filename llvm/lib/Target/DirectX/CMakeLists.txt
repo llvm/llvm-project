@@ -9,8 +9,10 @@ add_public_tablegen_target(DirectXCommonTableGen)
 add_llvm_target(DirectXCodeGen
   DirectXSubtarget.cpp
   DirectXTargetMachine.cpp
+  DXILOpLowering.cpp
   DXILPointerType.cpp
   DXILPrepare.cpp
+  DXILTranslateMetadata.cpp
   PointerTypeAnalysis.cpp
 
   LINK_COMPONENTS

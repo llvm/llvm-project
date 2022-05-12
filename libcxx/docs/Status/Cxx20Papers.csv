@@ -168,7 +168,7 @@
 "`P1115R3 <https://wg21.link/P1115R3>`__","LWG","Improving the Return Value of Erase-Like Algorithms II: Free erase/erase if","Prague","|Complete|","11.0"
 "`P1243R4 <https://wg21.link/P1243R4>`__","LWG","Rangify New Algorithms","Prague","* *",""
 "`P1460R1 <https://wg21.link/P1460R1>`__","LWG","Mandating the Standard Library: Clause 20 - Utilities library","Prague","* *",""
-"`P1739R4 <https://wg21.link/P1739R4>`__","LWG","Avoid template bloat for safe_ranges in combination with ""subrange-y"" view adaptors","Prague","* *",""
+"`P1739R4 <https://wg21.link/P1739R4>`__","LWG","Avoid template bloat for safe_ranges in combination with ""subrange-y"" view adaptors","Prague","|Complete|","15.0"
 "`P1831R1 <https://wg21.link/P1831R1>`__","LWG","Deprecating volatile: library","Prague","* *",""
 "`P1868R2 <https://wg21.link/P1868R2>`__","LWG","width: clarifying units of width and precision in std::format","Prague","|Complete|","14.0"
 "`P1908R1 <https://wg21.link/P1908R1>`__","CWG","Reserving Attribute Namespaces for Future Use","Prague","* *",""

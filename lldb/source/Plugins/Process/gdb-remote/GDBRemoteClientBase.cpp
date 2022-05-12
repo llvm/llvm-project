@@ -347,7 +347,7 @@ GDBRemoteClientBase::Lock::Lock(GDBRemoteClientBase &comm,
 }
 
 void GDBRemoteClientBase::Lock::SyncWithContinueThread() {
-  Log *log = GetLog(GDBRLog::Process);
+  Log *log = GetLog(GDBRLog::Process|GDBRLog::Packets);
   std::unique_lock<std::mutex> lock(m_comm.m_mutex);
   if (m_comm.m_is_running && m_interrupt_timeout == std::chrono::seconds(0))
     return; // We were asked to avoid interrupting the sender. Lock is not

@@ -336,6 +336,18 @@ define <4 x i32> @combine_vec_urem_by_shl_pow2b(<4 x i32> %x, <4 x i32> %y) {
   ret <4 x i32> %2
 }
 
+; FIXME: PR55271 - urem(undef, 3) != undef
+; Use PSLLI intrinsic to postpone the undef creation until after urem-by-constant expansion
+define <4 x i32> @combine_vec_urem_undef_by_3(<4 x i32> %in) {
+; CHECK-LABEL: combine_vec_urem_undef_by_3:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    retq
+  %x = call <4 x i32> @llvm.x86.sse2.pslli.d(<4 x i32> undef, i32 0)
+  %y = urem <4 x i32> %x, <i32 3, i32 3, i32 3, i32 3>
+  ret <4 x i32> %y
+}
+declare <4 x i32> @llvm.x86.sse2.pslli.d(<4 x i32>, i32)
+
 define i1 @bool_urem(i1 %x, i1 %y) {
 ; CHECK-LABEL: bool_urem:
 ; CHECK:       # %bb.0:

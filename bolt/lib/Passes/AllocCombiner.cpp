@@ -44,11 +44,9 @@ bool isIndifferentToSP(const MCInst &Inst, const BinaryContext &BC) {
       II.hasImplicitUseOfPhysReg(BC.MIB->getStackPointer()))
     return false;
 
-  for (int I = 0, E = MCPlus::getNumPrimeOperands(Inst); I != E; ++I) {
-    const MCOperand &Operand = Inst.getOperand(I);
+  for (const MCOperand &Operand : MCPlus::primeOperands(Inst))
     if (Operand.isReg() && Operand.getReg() == BC.MIB->getStackPointer())
       return false;
-  }
   return true;
 }
 

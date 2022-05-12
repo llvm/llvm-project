@@ -164,7 +164,7 @@ program selectCaseProg
 
 end program
 
-program test_overlap
+subroutine test_overlap
   integer :: i
   !OK: these cases do not overlap
   select case(i)
@@ -178,7 +178,7 @@ program test_overlap
   end select
 end
 
-program test_overflow
+subroutine test_overflow
   integer :: j
   select case(1_1)
   case (127)

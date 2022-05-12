@@ -658,7 +658,6 @@ feature_test_macros = [ add_version_header(x) for x in [
     "name": "__cpp_lib_stdatomic_h",
     "values": { "c++2b": 202011 },
     "headers": ["stdatomic.h"],
-    "unimplemented": True,
   }, {
     "name": "__cpp_lib_string_contains",
     "values": { "c++2b": 202011 },
@@ -780,7 +779,8 @@ lit_markup = {
   "regex": ["UNSUPPORTED: libcpp-has-no-localization"],
   "semaphore": ["UNSUPPORTED: libcpp-has-no-threads"],
   "shared_mutex": ["UNSUPPORTED: libcpp-has-no-threads"],
-  "thread": ["UNSUPPORTED: libcpp-has-no-threads"]
+  "stdatomic.h": ["UNSUPPORTED: libcpp-has-no-threads"],
+  "thread": ["UNSUPPORTED: libcpp-has-no-threads"],
 }
 
 def get_std_dialects():

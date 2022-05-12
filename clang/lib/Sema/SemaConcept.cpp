@@ -317,10 +317,8 @@ bool Sema::CheckConstraintSatisfaction(
     OutSatisfaction.IsSatisfied = true;
     return false;
   }
-
-  bool ShouldCache = LangOpts.ConceptSatisfactionCaching && Template;
-  if (!ShouldCache) {
-    return ::CheckConstraintSatisfaction(*this, Template, ConstraintExprs,
+  if (!Template) {
+    return ::CheckConstraintSatisfaction(*this, nullptr, ConstraintExprs,
                                          TemplateArgs, TemplateIDRange,
                                          OutSatisfaction);
   }
@@ -341,7 +339,7 @@ bool Sema::CheckConstraintSatisfaction(
   OutSatisfaction = *Satisfaction;
   // We cannot use InsertPos here because CheckConstraintSatisfaction might have
   // invalidated it.
-  // FIXME: this leaks memory, we should allocate in the arena instead.
+  // Note that entries of SatisfactionCache are deleted in Sema's destructor.
   SatisfactionCache.InsertNode(Satisfaction.release());
   return false;
 }

@@ -1073,7 +1073,8 @@ MaybeExpr ExpressionAnalyzer::Analyze(const parser::StructureComponent &sc) {
     MiscKind kind{details->kind()};
     if (kind == MiscKind::ComplexPartRe || kind == MiscKind::ComplexPartIm) {
       if (auto *zExpr{std::get_if<Expr<SomeComplex>>(&base->u)}) {
-        if (std::optional<DataRef> dataRef{ExtractDataRef(std::move(*zExpr))}) {
+        if (std::optional<DataRef> dataRef{ExtractDataRef(*zExpr)}) {
+          // Represent %RE/%IM as a designator
           Expr<SomeReal> realExpr{common::visit(
               [&](const auto &z) {
                 using PartType = typename ResultType<decltype(z)>::Part;
@@ -3227,12 +3228,10 @@ void ArgumentAnalyzer::Analyze(
             actual = ActualArgument(label.v);
           },
           [&](const parser::ActualArg::PercentRef &) {
-            context_.Say(
-                "not yet implemented: %REF() intrinsic for arguments"_err_en_US);
+            context_.Say("%REF() intrinsic for arguments"_todo_en_US);
           },
           [&](const parser::ActualArg::PercentVal &) {
-            context_.Say(
-                "not yet implemetned: %VAL() intrinsic for arguments"_err_en_US);
+            context_.Say("%VAL() intrinsic for arguments"_todo_en_US);
           },
       },
       std::get<parser::ActualArg>(arg.t).u);

@@ -14,14 +14,15 @@ define void @fn9(i32* %a1, i32 %a2, i32 %a3, i32 %a4, i32 %a5, i32 %a6, i32 %a7,
 ; CHECK-NEXT:    stp w6, w5, [sp, #36]
 ; CHECK-NEXT:    str w7, [sp, #32]
 ; CHECK-NEXT:    str w8, [x0]
-; CHECK-NEXT:    ldr w9, [sp, #72]
-; CHECK-NEXT:    ldr w8, [sp, #80]
-; CHECK-NEXT:    stp w8, w9, [sp, #16]
 ; CHECK-NEXT:    add x8, sp, #72
-; CHECK-NEXT:    add x8, x8, #24
+; CHECK-NEXT:    add x8, x8, #8
+; CHECK-NEXT:    ldr w9, [sp, #72]
+; CHECK-NEXT:    str w9, [sp, #20]
+; CHECK-NEXT:    ldr w9, [x8], #8
+; CHECK-NEXT:    str w9, [sp, #16]
+; CHECK-NEXT:    ldr w9, [x8], #8
 ; CHECK-NEXT:    str x8, [sp, #24]
-; CHECK-NEXT:    ldr w8, [sp, #88]
-; CHECK-NEXT:    str w8, [sp, #12]
+; CHECK-NEXT:    str w9, [sp, #12]
 ; CHECK-NEXT:    add sp, sp, #64
 ; CHECK-NEXT:    ret
   %1 = alloca i32, align 4

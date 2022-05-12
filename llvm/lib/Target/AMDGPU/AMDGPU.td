@@ -370,7 +370,7 @@ def Feature16BitInsts : SubtargetFeature<"16-bit-insts",
 def FeatureTrue16BitInsts : SubtargetFeature<"true16",
   "HasTrue16BitInsts",
   "true",
-  "True 16 bit operand instructions"
+  "True 16-bit operand instructions"
 >;
 
 def FeatureVOP3P : SubtargetFeature<"vop3p",

@@ -9,7 +9,7 @@
 // RUN:   -shared-libs=%mlir_integration_test_dir/libmlir_runner_utils%shlibext \
 // RUN: | FileCheck %s
 
-func.func private @print_memref_f32(memref<*xf32>)
+func.func private @printMemrefF32(memref<*xf32>)
 
 // Creates and returns 3-D buffer of size (%s1, %s2, %s3) filled with the value %f
 func.func @alloc_3d_filled_f32(%s1 : index, %s2 : index, %s3 : index, %f : f32) -> memref<?x?x?xf32> {
@@ -41,7 +41,7 @@ func.func @main() {
   memref.store %f10, %in3D[%c0, %c0, %c3] : memref<?x?x?xf32>
   call @conv_3d(%in3D, %filter3D, %out3D) : (memref<?x?x?xf32>, memref<?x?x?xf32>, memref<?x?x?xf32>) -> ()
   %out3D_ = memref.cast %out3D : memref<?x?x?xf32> to memref<*xf32>
-  call @print_memref_f32(%out3D_): (memref<*xf32>) -> ()
+  call @printMemrefF32(%out3D_): (memref<*xf32>) -> ()
 
   memref.dealloc %filter3D : memref<?x?x?xf32>
   memref.dealloc %in3D : memref<?x?x?xf32>

@@ -3,6 +3,7 @@
 ; RUN: llc -ppc-asm-full-reg-names -verify-machineinstrs < %s -mtriple=ppc32--     -mcpu=pwr7  | FileCheck %s --check-prefixes=X32,PWR7_32
 ; RUN: llc -ppc-asm-full-reg-names -verify-machineinstrs < %s -mtriple=powerpc64-- -mcpu=ppc64 | FileCheck %s --check-prefixes=X64
 ; RUN: llc -ppc-asm-full-reg-names -verify-machineinstrs < %s -mtriple=powerpc64-- -mcpu=pwr7  | FileCheck %s --check-prefixes=PWR7_64
+; RUN: llc -ppc-asm-full-reg-names -verify-machineinstrs < %s -mtriple=powerpc64-- -mcpu=a2    | FileCheck %s --check-prefixes=A2_64
 
 
 define void @STWBRX(i32 %i, i8* %ptr, i32 %off) {
@@ -22,6 +23,12 @@ define void @STWBRX(i32 %i, i8* %ptr, i32 %off) {
 ; PWR7_64-NEXT:    extsw r5, r5
 ; PWR7_64-NEXT:    stwbrx r3, r4, r5
 ; PWR7_64-NEXT:    blr
+;
+; A2_64-LABEL: STWBRX:
+; A2_64:       # %bb.0:
+; A2_64-NEXT:    extsw r5, r5
+; A2_64-NEXT:    stwbrx r3, r4, r5
+; A2_64-NEXT:    blr
   %tmp1 = getelementptr i8, i8* %ptr, i32 %off
   %tmp1.upgrd.1 = bitcast i8* %tmp1 to i32*
   %tmp13 = tail call i32 @llvm.bswap.i32( i32 %i )
@@ -46,6 +53,12 @@ define i32 @LWBRX(i8* %ptr, i32 %off) {
 ; PWR7_64-NEXT:    extsw r4, r4
 ; PWR7_64-NEXT:    lwbrx r3, r3, r4
 ; PWR7_64-NEXT:    blr
+;
+; A2_64-LABEL: LWBRX:
+; A2_64:       # %bb.0:
+; A2_64-NEXT:    extsw r4, r4
+; A2_64-NEXT:    lwbrx r3, r3, r4
+; A2_64-NEXT:    blr
   %tmp1 = getelementptr i8, i8* %ptr, i32 %off
   %tmp1.upgrd.2 = bitcast i8* %tmp1 to i32*
   %tmp = load i32, i32* %tmp1.upgrd.2
@@ -70,6 +83,12 @@ define void @STHBRX(i16 %s, i8* %ptr, i32 %off) {
 ; PWR7_64-NEXT:    extsw r5, r5
 ; PWR7_64-NEXT:    sthbrx r3, r4, r5
 ; PWR7_64-NEXT:    blr
+;
+; A2_64-LABEL: STHBRX:
+; A2_64:       # %bb.0:
+; A2_64-NEXT:    extsw r5, r5
+; A2_64-NEXT:    sthbrx r3, r4, r5
+; A2_64-NEXT:    blr
   %tmp1 = getelementptr i8, i8* %ptr, i32 %off
   %tmp1.upgrd.3 = bitcast i8* %tmp1 to i16*
   %tmp5 = call i16 @llvm.bswap.i16( i16 %s )
@@ -94,6 +113,12 @@ define i16 @LHBRX(i8* %ptr, i32 %off) {
 ; PWR7_64-NEXT:    extsw r4, r4
 ; PWR7_64-NEXT:    lhbrx r3, r3, r4
 ; PWR7_64-NEXT:    blr
+;
+; A2_64-LABEL: LHBRX:
+; A2_64:       # %bb.0:
+; A2_64-NEXT:    extsw r4, r4
+; A2_64-NEXT:    lhbrx r3, r3, r4
+; A2_64-NEXT:    blr
   %tmp1 = getelementptr i8, i8* %ptr, i32 %off
   %tmp1.upgrd.4 = bitcast i8* %tmp1 to i16*
   %tmp = load i16, i16* %tmp1.upgrd.4
@@ -133,6 +158,11 @@ define void @STDBRX(i64 %i, i8* %ptr, i64 %off) {
 ; PWR7_64:       # %bb.0:
 ; PWR7_64-NEXT:    stdbrx r3, r4, r5
 ; PWR7_64-NEXT:    blr
+;
+; A2_64-LABEL: STDBRX:
+; A2_64:       # %bb.0:
+; A2_64-NEXT:    stdbrx r3, r4, r5
+; A2_64-NEXT:    blr
   %tmp1 = getelementptr i8, i8* %ptr, i64 %off
   %tmp1.upgrd.1 = bitcast i8* %tmp1 to i64*
   %tmp13 = tail call i64 @llvm.bswap.i64( i64 %i )
@@ -163,6 +193,11 @@ define i64 @LDBRX(i8* %ptr, i64 %off) {
 ; PWR7_64:       # %bb.0:
 ; PWR7_64-NEXT:    ldbrx r3, r3, r4
 ; PWR7_64-NEXT:    blr
+;
+; A2_64-LABEL: LDBRX:
+; A2_64:       # %bb.0:
+; A2_64-NEXT:    ldbrx r3, r3, r4
+; A2_64-NEXT:    blr
   %tmp1 = getelementptr i8, i8* %ptr, i64 %off
   %tmp1.upgrd.2 = bitcast i8* %tmp1 to i64*
   %tmp = load i64, i64* %tmp1.upgrd.2

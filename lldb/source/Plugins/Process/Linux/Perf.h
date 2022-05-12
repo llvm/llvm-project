@@ -74,6 +74,24 @@ using MmapUP = std::unique_ptr<void, resource_handle::MmapDeleter>;
 
 } // namespace resource_handle
 
+/// Read data from a cyclic buffer
+///
+/// \param[in] [out] buf
+///     Destination buffer, the buffer will be truncated to written size.
+///
+/// \param[in] src
+///     Source buffer which must be a cyclic buffer.
+///
+/// \param[in] src_cyc_index
+///     The index pointer (start of the valid data in the cyclic
+///     buffer).
+///
+/// \param[in] offset
+///     The offset to begin reading the data in the cyclic buffer.
+void ReadCyclicBuffer(llvm::MutableArrayRef<uint8_t> &dst,
+                      llvm::ArrayRef<uint8_t> src, size_t src_cyc_index,
+                      size_t offset);
+
 /// Thin wrapper of the perf_event_open API.
 ///
 /// Exposes the metadata page and data and aux buffers of a perf event.

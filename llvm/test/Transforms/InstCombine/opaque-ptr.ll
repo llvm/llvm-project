@@ -334,6 +334,19 @@ define i1 @compare_geps_same_indices_different_types(ptr %a, ptr %b, i64 %idx) {
   ret i1 %c
 }
 
+define <4 x i1> @compare_geps_same_indices_scalar_vector_base_mismatch(ptr %ptr, <4 x ptr> %ptrs) {
+; CHECK-LABEL: @compare_geps_same_indices_scalar_vector_base_mismatch(
+; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr i16, <4 x ptr> [[PTRS:%.*]], <4 x i64> <i64 1, i64 2, i64 3, i64 4>
+; CHECK-NEXT:    [[GEP2:%.*]] = getelementptr i16, ptr [[PTR:%.*]], <4 x i64> <i64 1, i64 2, i64 3, i64 4>
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq <4 x ptr> [[GEP1]], [[GEP2]]
+; CHECK-NEXT:    ret <4 x i1> [[CMP]]
+;
+  %gep1 = getelementptr i16, <4 x ptr> %ptrs, <4 x i64> <i64 1, i64 2, i64 3, i64 4>
+  %gep2 = getelementptr i16, ptr %ptr, <4 x i64> <i64 1, i64 2, i64 3, i64 4>
+  %cmp = icmp eq <4 x ptr> %gep1, %gep2
+  ret <4 x i1> %cmp
+}
+
 define ptr @indexed_compare(ptr %A, i64 %offset) {
 ; CHECK-LABEL: @indexed_compare(
 ; CHECK-NEXT:  entry:
