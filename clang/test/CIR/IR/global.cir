@@ -1,10 +1,12 @@
 // RUN: cir-tool %s | FileCheck %s
 
 module {
-  cir.global @a : i32 = 3
+  cir.global @a = 3 : i32
+  cir.global @rgb = #cir.cst_array<[0 : i8, -23 : i8, 33 : i8]> : !cir.array<i8 x 3>
   func.func @use_global() {
     cir.return
   }
 }
 
-// CHECK: cir.global @a : i32 = 3
+// CHECK: cir.global @a = 3 : i32
+// CHECK: cir.global @rgb = #cir.cst_array<[0 : i8, -23 : i8, 33 : i8]> : !cir.array<i8 x 3>

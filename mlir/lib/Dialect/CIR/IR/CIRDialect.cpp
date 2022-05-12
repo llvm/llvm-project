@@ -88,6 +88,11 @@ static LogicalResult checkConstantTypes(mlir::Operation *op, mlir::Type opType,
     return success();
   }
 
+  if (attrType.isa<mlir::cir::CstArrayAttr>()) {
+    // CstArrayAttr is already verified to bing with cir.array type.
+    return success();
+  }
+
   assert(attrType.isa<TypedAttr>() && "What else could we be looking at here?");
   return op->emitOpError("cannot have value of type ")
          << attrType.cast<TypedAttr>().getType();
@@ -101,16 +106,9 @@ LogicalResult ConstantOp::verify() {
 }
 
 static ParseResult parseConstantValue(OpAsmParser &parser,
-                                      mlir::Attribute &valueAttr,
-                                      mlir::Type ty = {}) {
-  if (succeeded(parser.parseOptionalKeyword("nullptr"))) {
-    valueAttr = UnitAttr::get(parser.getContext());
-    return success();
-  }
-
+                                      mlir::Attribute &valueAttr) {
   NamedAttrList attr;
-
-  if (parser.parseAttribute(valueAttr, ty, "value", attr).failed()) {
+  if (parser.parseAttribute(valueAttr, "value", attr).failed()) {
     return parser.emitError(parser.getCurrentLocation(),
                             "expected constant attribute to match type");
   }
@@ -120,12 +118,8 @@ static ParseResult parseConstantValue(OpAsmParser &parser,
 
 // FIXME: create a CIRCstAttr and hide this away for both global
 // initialization and cir.cst operation.
-static void printConstant(OpAsmPrinter &p, Attribute value,
-                          bool omitType = false) {
-  if (omitType)
-    p.printAttributeWithoutType(value);
-  else
-    p.printAttribute(value);
+static void printConstant(OpAsmPrinter &p, Attribute value) {
+  p.printAttribute(value);
 }
 
 static void printConstantValue(OpAsmPrinter &p, cir::ConstantOp op,
@@ -893,10 +887,12 @@ LogicalResult LoopOp::verify() {
 static void printGlobalOpTypeAndInitialValue(OpAsmPrinter &p, GlobalOp op,
                                              TypeAttr type,
                                              Attribute initAttr) {
-  p << type;
   if (!op.isDeclaration()) {
-    p << " = ";
-    printConstant(p, initAttr, /*omitType=*/true);
+    p << "= ";
+    // This also prints the type...
+    printConstant(p, initAttr);
+  } else {
+    p << type;
   }
 }
 
@@ -904,15 +900,26 @@ static ParseResult
 parseGlobalOpTypeAndInitialValue(OpAsmParser &parser, TypeAttr &typeAttr,
                                  Attribute &initialValueAttr) {
   Type type;
-  if (parser.parseType(type))
-    return failure();
-  typeAttr = TypeAttr::get(type);
-
-  if (parser.parseOptionalEqual().failed())
+  if (parser.parseOptionalEqual().failed()) {
+    // Absence of equal means a declaration, so we need to parse the type.
+    //  cir.global @a : i32
+    if (parser.parseColonType(type))
+      return failure();
+    typeAttr = TypeAttr::get(type);
     return success();
+  }
 
-  if (parseConstantValue(parser, initialValueAttr, type).failed())
+  // Parse constant with initializer, examples:
+  //  cir.global @y = 3.400000e+00 : f32
+  //  cir.global @rgb  = #cir.cst_array<[...] : !cir.array<i8 x 3>>
+  Attribute attr;
+  if (parseConstantValue(parser, attr).failed())
     return failure();
+
+  assert(attr.isa<mlir::TypedAttr>() &&
+         "Non-typed attrs shouldn't appear here.");
+  initialValueAttr = attr.cast<mlir::TypedAttr>();
+  typeAttr = TypeAttr::get(attr.cast<mlir::TypedAttr>().getType());
 
   return success();
 }
