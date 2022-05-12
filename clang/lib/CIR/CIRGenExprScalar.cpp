@@ -617,12 +617,12 @@ public:
     // Cast to half through float if half isn't a native type.
     if (DstType->isHalfType() &&
         !CGF.getContext().getLangOpts().NativeHalfType) {
-      assert(0 && "not implemented");
+      llvm_unreachable("NYI");
     }
 
     // TODO: Res = EmitScalarCast(Src, SrcType, DstType, SrcTy, DstTy, Opts);
     if (DstTy != ResTy) {
-      assert(0 && "not implemented");
+      llvm_unreachable("NYI");
     }
 
     return Res;
