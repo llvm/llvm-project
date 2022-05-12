@@ -67,6 +67,10 @@ public:
   std::vector<std::unique_ptr<ClangTidyCheck>>
   createChecks(ClangTidyContext *Context);
 
+  /// Create instances of checks that are enabled for the current Language.
+  std::vector<std::unique_ptr<ClangTidyCheck>>
+  createChecksForLanguage(ClangTidyContext *Context);
+
   typedef llvm::StringMap<CheckFactory> FactoryMap;
   FactoryMap::const_iterator begin() const { return Factories.begin(); }
   FactoryMap::const_iterator end() const { return Factories.end(); }

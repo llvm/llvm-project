@@ -183,7 +183,10 @@ def memri : Operand<iPTR> {
 }
 
 // Address operand for `SP+imm` used by STD{W}SPQRr
-def memspi : Operand<iPTR> { let MIOperandInfo = (ops GPRSP, i16imm); }
+def memspi : Operand<iPTR> {
+  let MIOperandInfo = (ops GPRSP, i16imm);
+  let PrintMethod = "printMemspi";
+}
 
 def relbrtarget_7 : Operand<OtherVT> {
   let PrintMethod = "printPCRelImm";

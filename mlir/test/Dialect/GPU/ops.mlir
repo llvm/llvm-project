@@ -31,7 +31,7 @@ module attributes {gpu.container_module} {
   }
 
   // CHECK-LABEL:func @launch_async(%{{.*}}: index, %{{.*}}: index) {
-  func @launch_async(%blk : index, %thrd : index) {
+  func.func @launch_async(%blk : index, %thrd : index) {
     // CHECK: gpu.launch async [%{{.+}}] blocks(%{{.*}}, %{{.*}}, %{{.*}}) in (%{{.*}} = %{{.*}}, %{{.*}} = %{{.*}}, %{{.*}} = %{{.*}}) threads(%{{.*}}, %{{.*}}, %{{.*}}) in (%{{.*}} = %{{.*}}, %{{.*}} = %{{.*}}, %{{.*}} = %{{.*}})
     %t = gpu.wait async
     %name = gpu.launch async [%t] blocks(%arg0, %arg1, %arg2) in (%grid_x = %blk, %grid_y = %blk, %grid_z = %blk)
@@ -42,7 +42,7 @@ module attributes {gpu.container_module} {
   }
 
   // CHECK-LABEL:func @launch_async_no_deps(%{{.*}}: index, %{{.*}}: index) {
-  func @launch_async_no_deps(%blk : index, %thrd : index) {
+  func.func @launch_async_no_deps(%blk : index, %thrd : index) {
     // CHECK: %{{.*}} = gpu.launch async blocks(%{{.*}}, %{{.*}}, %{{.*}}) in (%{{.*}} = %{{.*}}, %{{.*}} = %{{.*}}, %{{.*}} = %{{.*}}) threads(%{{.*}}, %{{.*}}, %{{.*}}) in (%{{.*}} = %{{.*}}, %{{.*}} = %{{.*}}, %{{.*}} = %{{.*}})
     %t0 = gpu.launch async blocks(%arg0, %arg1, %arg2) in (%grid_x = %blk, %grid_y = %blk, %grid_z = %blk)
                threads(%arg3, %arg4, %arg5) in (%block_x = %thrd, %block_y = %thrd, %block_z = %thrd) {
@@ -274,18 +274,6 @@ module attributes {gpu.container_module} {
     %2 = gpu.subgroup_mma_elementwise addf %1, %1 : (!gpu.mma_matrix<16x16xf32, "COp">, !gpu.mma_matrix<16x16xf32, "COp">) -> !gpu.mma_matrix<16x16xf32, "COp">
     // CHECK: gpu.subgroup_mma_elementwise maxf %{{.*}}, %{{.*}} : (!gpu.mma_matrix<16x16xf32, "COp">, !gpu.mma_matrix<16x16xf32, "COp">) -> !gpu.mma_matrix<16x16xf32, "COp">
     %3 = gpu.subgroup_mma_elementwise maxf %2, %1 : (!gpu.mma_matrix<16x16xf32, "COp">, !gpu.mma_matrix<16x16xf32, "COp">) -> !gpu.mma_matrix<16x16xf32, "COp">
-    return
-  }
-
-  func.func @async_cp(%dst : memref<2x7x5xf32, 3>, %src : memref<4x5xf32>){
-    // CHECK-LABEL: func @async_cp
-    %c0 = arith.constant 0 : index
-    // CHECK: gpu.device_async_copy %{{.*}}[{{.*}}, {{.*}}], %{{.*}}[{{.*}}, {{.*}}, {{.*}}], 4 : memref<4x5xf32> to memref<2x7x5xf32, 3>
-    %0 = gpu.device_async_copy %src[%c0, %c0], %dst[%c0, %c0, %c0], 4 : memref<4x5xf32> to memref<2x7x5xf32, 3>
-    // CHECK: %{{.*}} = gpu.device_async_create_group
-    %token = gpu.device_async_create_group %0
-    // CHECK: gpu.device_async_wait %{{.*}} {numGroups = 1 : i32}
-    gpu.device_async_wait %token {numGroups = 1 : i32}
     return
   }
 

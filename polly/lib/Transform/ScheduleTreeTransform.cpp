@@ -1185,7 +1185,7 @@ isl::schedule_node polly::applyRegisterTiling(isl::schedule_node Node,
 
 /// Find statements and sub-loops in (possibly nested) sequences.
 static void
-collectFussionableStmts(isl::schedule_node Node,
+collectFissionableStmts(isl::schedule_node Node,
                         SmallVectorImpl<isl::schedule_node> &ScheduleStmts) {
   if (isBand(Node) || isLeaf(Node)) {
     ScheduleStmts.push_back(Node);
@@ -1195,7 +1195,7 @@ collectFussionableStmts(isl::schedule_node Node,
   if (Node.has_children()) {
     isl::schedule_node C = Node.first_child();
     while (true) {
-      collectFussionableStmts(C, ScheduleStmts);
+      collectFissionableStmts(C, ScheduleStmts);
       if (!C.has_next_sibling())
         break;
       C = C.next_sibling();
@@ -1209,7 +1209,7 @@ isl::schedule polly::applyMaxFission(isl::schedule_node BandToFission) {
   isl::schedule_node BandBody = BandToFission.child(0);
 
   SmallVector<isl::schedule_node> FissionableStmts;
-  collectFussionableStmts(BandBody, FissionableStmts);
+  collectFissionableStmts(BandBody, FissionableStmts);
   size_t N = FissionableStmts.size();
 
   // Collect the domain for each of the statements that will get their own loop.

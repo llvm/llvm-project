@@ -36,8 +36,8 @@ public:
 
   /// Ensures that the DefinedSVal conditional is expressed as a NonLoc by
   /// creating boolean casts to handle Loc's.
-  ProgramStateRef assume(ProgramStateRef State, DefinedSVal Cond,
-                         bool Assumption) override;
+  ProgramStateRef assumeInternal(ProgramStateRef State, DefinedSVal Cond,
+                                 bool Assumption) override;
 
   ProgramStateRef assumeInclusiveRange(ProgramStateRef State, NonLoc Value,
                                        const llvm::APSInt &From,

@@ -807,7 +807,7 @@ TEST_F(BinaryStreamTest, StreamWriterIntegerArrays) {
   }
 }
 
-TEST_F(BinaryStreamTest, StringWriterStrings) {
+TEST_F(BinaryStreamTest, StreamWriterStrings) {
   StringRef Strings[] = {"First", "Second", "Third", "Fourth"};
 
   size_t Length = 0;
@@ -829,6 +829,47 @@ TEST_F(BinaryStreamTest, StringWriterStrings) {
     }
     EXPECT_EQ(makeArrayRef(Strings), makeArrayRef(InStrings));
   }
+}
+
+TEST_F(BinaryStreamTest, StreamWriterPadToAlignment) {
+  // This test may seem excessive but it is checking for past bugs and corner
+  // cases by making sure that the stream is allowed to grow and that
+  // both multiple pad chunks and single chunk extensions work.
+  AppendingBinaryByteStream Stream(support::little);
+  BinaryStreamWriter Writer(Stream);
+
+  // Offset 0: '0'
+  EXPECT_THAT_ERROR(Writer.writeInteger('0'), Succeeded());
+  // Offset 1..110: 0
+  EXPECT_THAT_ERROR(Writer.padToAlignment(111), Succeeded());
+  // Offset 111: '*'
+  EXPECT_THAT_ERROR(Writer.writeInteger('*'), Succeeded());
+  // Offset 112..120: 0
+  EXPECT_THAT_ERROR(Writer.padToAlignment(11), Succeeded());
+
+  BinaryStreamReader Reader(Stream);
+  char c;
+  // Offset 0
+  EXPECT_THAT_ERROR(Reader.readInteger<char>(c), Succeeded());
+  EXPECT_EQ('0', c);
+  // Offset 1..110
+  for (int i = 0; i < 110; ++i) {
+    char c;
+    EXPECT_THAT_ERROR(Reader.readInteger<char>(c), Succeeded());
+    EXPECT_EQ('\0', c);
+  }
+  // Offset 111
+  EXPECT_THAT_ERROR(Reader.readInteger<char>(c), Succeeded());
+  EXPECT_EQ('*', c);
+  // Offset 112..120
+  for (int i = 0; i < 9; ++i) {
+    char c;
+    EXPECT_THAT_ERROR(Reader.readInteger<char>(c), Succeeded());
+    EXPECT_EQ('\0', c);
+  }
+
+  // EOF.
+  EXPECT_THAT_ERROR(Reader.readInteger<char>(c), Failed());
 }
 
 TEST_F(BinaryStreamTest, StreamWriterAppend) {

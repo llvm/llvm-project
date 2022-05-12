@@ -94,7 +94,7 @@ const Scope *FindPureProcedureContaining(const Scope &start) {
 static bool MightBeSameDerivedType(
     const std::optional<evaluate::DynamicType> &lhsType,
     const std::optional<evaluate::DynamicType> &rhsType) {
-  return lhsType && rhsType && rhsType->IsTkCompatibleWith(*lhsType);
+  return lhsType && rhsType && lhsType->IsTkCompatibleWith(*rhsType);
 }
 
 Tristate IsDefinedAssignment(
@@ -248,11 +248,6 @@ bool IsStmtFunctionResult(const Symbol &symbol) {
 
 bool IsPointerDummy(const Symbol &symbol) {
   return IsPointer(symbol) && IsDummy(symbol);
-}
-
-// proc-name
-bool IsProcName(const Symbol &symbol) {
-  return symbol.GetUltimate().has<ProcEntityDetails>();
 }
 
 bool IsBindCProcedure(const Symbol &symbol) {

@@ -15,6 +15,12 @@ subroutine s01(elem, subr)
       !ERROR: A dummy procedure may not be ELEMENTAL
       procedure(elem) :: dummy
     end subroutine
+    subroutine optionalsubr(dummy)
+      procedure(sin), optional :: dummy
+    end subroutine
+    subroutine ptrsubr(dummy)
+      procedure(sin), pointer, intent(in) :: dummy
+    end subroutine
   end interface
   intrinsic :: cos
   call subr(cos) ! not an error
@@ -22,6 +28,8 @@ subroutine s01(elem, subr)
   call subr(elem) ! C1533
   !ERROR: Actual argument associated with procedure dummy argument 'dummy=' is a null pointer
   call subr(null())
+  call optionalsubr(null()) ! ok
+  call ptrsubr(null()) ! ok
   !ERROR: Actual argument associated with procedure dummy argument 'dummy=' is typeless
   call subr(B"1010")
 end subroutine
@@ -110,7 +118,7 @@ contains
   end
 end
 
-program p04
+subroutine p04
   implicit none
   !ERROR: No explicit type declared for 'index'
   call s1(index)

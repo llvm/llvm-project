@@ -31,6 +31,19 @@
 namespace clang {
 namespace dataflow {
 
+/// Skip past nodes that the CFG does not emit. These nodes are invisible to
+/// flow-sensitive analysis, and should be ignored as they will effectively not
+/// exist.
+///
+///   * `ParenExpr` - The CFG takes the operator precedence into account, but
+///   otherwise omits the node afterwards.
+///
+///   * `ExprWithCleanups` - The CFG will generate the appropriate calls to
+///   destructors and then omit the node.
+///
+const Expr &ignoreCFGOmittedNodes(const Expr &E);
+const Stmt &ignoreCFGOmittedNodes(const Stmt &S);
+
 /// Owns objects that encompass the state of a program and stores context that
 /// is used during dataflow analysis.
 class DataflowAnalysisContext {
@@ -95,14 +108,15 @@ public:
   ///
   ///  `E` must not be assigned a storage location.
   void setStorageLocation(const Expr &E, StorageLocation &Loc) {
-    assert(ExprToLoc.find(&E) == ExprToLoc.end());
-    ExprToLoc[&E] = &Loc;
+    const Expr &CanonE = ignoreCFGOmittedNodes(E);
+    assert(ExprToLoc.find(&CanonE) == ExprToLoc.end());
+    ExprToLoc[&CanonE] = &Loc;
   }
 
   /// Returns the storage location assigned to `E` or null if `E` has no
   /// assigned storage location.
   StorageLocation *getStorageLocation(const Expr &E) const {
-    auto It = ExprToLoc.find(&E);
+    auto It = ExprToLoc.find(&ignoreCFGOmittedNodes(E));
     return It == ExprToLoc.end() ? nullptr : It->second;
   }
 

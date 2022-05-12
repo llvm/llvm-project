@@ -1449,8 +1449,8 @@ public:
 
   /// Build and insert \p Res = G_SUB \p Op0, \p Op1
   ///
-  /// G_SUB sets \p Res to the sum of integer parameters \p Op0 and \p Op1,
-  /// truncated to their width.
+  /// G_SUB sets \p Res to the difference of integer parameters \p Op0 and
+  /// \p Op1, truncated to their width.
   ///
   /// \pre setBasicBlock or setMI must have been called.
   /// \pre \p Res, \p Op0 and \p Op1 must be generic virtual registers
@@ -1466,7 +1466,7 @@ public:
 
   /// Build and insert \p Res = G_MUL \p Op0, \p Op1
   ///
-  /// G_MUL sets \p Res to the sum of integer parameters \p Op0 and \p Op1,
+  /// G_MUL sets \p Res to the product of integer parameters \p Op0 and \p Op1,
   /// truncated to their width.
   ///
   /// \pre setBasicBlock or setMI must have been called.

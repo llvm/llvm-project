@@ -13,6 +13,7 @@
 #include "TestWorkspace.h"
 #include "XRefs.h"
 #include "support/Context.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/Support/ScopedPrinter.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
@@ -53,8 +54,11 @@ struct ExpectedHint {
 };
 
 MATCHER_P2(HintMatcher, Expected, Code, llvm::to_string(Expected)) {
-  if (arg.label != Expected.Label) {
-    *result_listener << "label is " << arg.label;
+  llvm::StringRef ExpectedView(Expected.Label);
+  if (arg.label != ExpectedView.trim(" ") ||
+      arg.paddingLeft != ExpectedView.startswith(" ") ||
+      arg.paddingRight != ExpectedView.endswith(" ")) {
+    *result_listener << "label is '" << arg.label << "'";
     return false;
   }
   if (arg.range != Code.range(Expected.RangeName)) {
@@ -99,14 +103,14 @@ template <typename... ExpectedHints>
 void assertParameterHints(llvm::StringRef AnnotatedSource,
                           ExpectedHints... Expected) {
   ignore(Expected.Side = Left...);
-  assertHints(InlayHintKind::ParameterHint, AnnotatedSource, Expected...);
+  assertHints(InlayHintKind::Parameter, AnnotatedSource, Expected...);
 }
 
 template <typename... ExpectedHints>
 void assertTypeHints(llvm::StringRef AnnotatedSource,
                      ExpectedHints... Expected) {
   ignore(Expected.Side = Right...);
-  assertHints(InlayHintKind::TypeHint, AnnotatedSource, Expected...);
+  assertHints(InlayHintKind::Type, AnnotatedSource, Expected...);
 }
 
 template <typename... ExpectedHints>
@@ -115,7 +119,7 @@ void assertDesignatorHints(llvm::StringRef AnnotatedSource,
   Config Cfg;
   Cfg.InlayHints.Designators = true;
   WithContextValue WithCfg(Config::Key, std::move(Cfg));
-  assertHints(InlayHintKind::DesignatorHint, AnnotatedSource, Expected...);
+  assertHints(InlayHintKind::Designator, AnnotatedSource, Expected...);
 }
 
 TEST(ParameterHints, Smoke) {
@@ -570,7 +574,7 @@ TEST(ParameterHints, IncludeAtNonGlobalScope) {
   ASSERT_TRUE(bool(AST));
 
   // Ensure the hint for the call in foo.inc is NOT materialized in foo.cc.
-  EXPECT_EQ(hintsOfKind(*AST, InlayHintKind::ParameterHint).size(), 0u);
+  EXPECT_EQ(hintsOfKind(*AST, InlayHintKind::Parameter).size(), 0u);
 }
 
 TEST(TypeHints, Smoke) {
@@ -809,6 +813,16 @@ TEST(TypeHints, SinglyInstantiatedTemplate) {
     int m = x<void*, char, float>(nullptr, 'c', 2.0, 2);
   )cpp",
                   ExpectedHint{": void *", "a"});
+}
+
+TEST(TypeHints, Aliased) {
+  // Check that we don't crash for functions without a FunctionTypeLoc.
+  // https://github.com/clangd/clangd/issues/1140
+  TestTU TU = TestTU::withCode("void foo(void){} extern typeof(foo) foo;");
+  TU.ExtraArgs.push_back("-xc");
+  auto AST = TU.build();
+
+  EXPECT_THAT(hintsOfKind(AST, InlayHintKind::Type), IsEmpty());
 }
 
 TEST(DesignatorHints, Basic) {

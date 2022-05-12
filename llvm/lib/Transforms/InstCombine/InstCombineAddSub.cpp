@@ -2015,11 +2015,10 @@ Instruction *InstCombinerImpl::visitSub(BinaryOperator &I) {
     }
   }
 
-  {
-    // sub(add(X,Y), s/umin(X,Y)) --> s/umax(X,Y)
-    // sub(add(X,Y), s/umax(X,Y)) --> s/umin(X,Y)
-    // TODO: generalize to sub(add(Z,Y),umin(X,Y)) --> add(Z,usub.sat(Y,X))?
-    if (auto *II = dyn_cast<MinMaxIntrinsic>(Op1)) {
+  if (auto *II = dyn_cast<MinMaxIntrinsic>(Op1)) {
+    {
+      // sub(add(X,Y), s/umin(X,Y)) --> s/umax(X,Y)
+      // sub(add(X,Y), s/umax(X,Y)) --> s/umin(X,Y)
       Value *X = II->getLHS();
       Value *Y = II->getRHS();
       if (match(Op0, m_c_Add(m_Specific(X), m_Specific(Y))) &&
@@ -2027,6 +2026,19 @@ Instruction *InstCombinerImpl::visitSub(BinaryOperator &I) {
         Intrinsic::ID InvID = getInverseMinMaxIntrinsic(II->getIntrinsicID());
         Value *InvMaxMin = Builder.CreateBinaryIntrinsic(InvID, X, Y);
         return replaceInstUsesWith(I, InvMaxMin);
+      }
+    }
+
+    {
+      // sub(add(X,Y),umin(Y,Z)) --> add(X,usub.sat(Y,Z))
+      // sub(add(X,Z),umin(Y,Z)) --> add(X,usub.sat(Y,Z))
+      Value *X, *Y, *Z;
+      if (match(Op1, m_OneUse(m_UMin(m_Value(Y), m_Value(Z)))) &&
+          (match(Op0, m_OneUse(m_c_Add(m_Specific(Y), m_Value(X)))) ||
+           match(Op0, m_OneUse(m_c_Add(m_Specific(Z), m_Value(X)))))) {
+        Value *USub =
+            Builder.CreateIntrinsic(Intrinsic::usub_sat, I.getType(), {Y, Z});
+        return BinaryOperator::CreateAdd(X, USub);
       }
     }
   }

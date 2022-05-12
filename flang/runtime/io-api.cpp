@@ -1176,7 +1176,7 @@ bool IONAME(InputCharacter)(
 }
 
 bool IONAME(InputAscii)(Cookie cookie, char *x, std::size_t length) {
-  return IONAME(InputCharacter(cookie, x, length, 1));
+  return IONAME(InputCharacter)(cookie, x, length, 1);
 }
 
 bool IONAME(OutputLogical)(Cookie cookie, bool truth) {

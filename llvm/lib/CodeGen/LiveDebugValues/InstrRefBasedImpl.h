@@ -196,7 +196,7 @@ public:
 };
 
 /// Meta qualifiers for a value. Pair of whatever expression is used to qualify
-/// the the value, and Boolean of whether or not it's indirect.
+/// the value, and Boolean of whether or not it's indirect.
 class DbgValueProperties {
 public:
   DbgValueProperties(const DIExpression *DIExpr, bool Indirect)

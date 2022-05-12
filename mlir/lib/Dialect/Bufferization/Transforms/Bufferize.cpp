@@ -179,6 +179,7 @@ struct OneShotBufferizePass
       opt.printConflicts = printConflicts;
       opt.testAnalysisOnly = testAnalysisOnly;
       opt.bufferizeFunctionBoundaries = bufferizeFunctionBoundaries;
+      opt.promoteBufferResultsToOutParams = promoteBufferResultsToOutParams;
 
       BufferizationOptions::OpFilterEntry::FilterFn filterFn =
           [&](Operation *op) {
@@ -263,17 +264,29 @@ bufferization::finalizeBuffers(Operation *op,
   if (failed(hoistBufferAllocations(op, options)))
     return failure();
 
-  // Deallocate buffers that escape block boundaries ("leaking buffers") with
-  // the buffer deallocation pass.
-  bool hasLeakingAlloc = false;
+  // Create allocation ops for "leaking buffers", i.e., buffer allocations that
+  // escape block boundaries. If there are no leaking allocs, `hasLeakingAllocs`
+  // is set to `false`.
+  bool hasLeakingAllocs = false;
   if (failed(createAllocDeallocOps(op, options, /*onlyLeakingAllocs=*/true,
-                                   &hasLeakingAlloc)))
-    return failure();
-  if (options.createDeallocs && hasLeakingAlloc &&
-      failed(deallocateBuffers(op)))
+                                   &hasLeakingAllocs)))
     return failure();
 
-  // Deallocate all remaining buffers at the end of the block.
+  if (hasLeakingAllocs) {
+    // Promote returned buffers to "out" parameters.
+    // TODO: Pass options to support custom dealloc ops.
+    if (options.promoteBufferResultsToOutParams && isa<ModuleOp>(op) &&
+        failed(promoteBufferResultsToOutParams(cast<ModuleOp>(op))))
+      return failure();
+
+    // Create deallocation ops for all "leaking buffers" and all buffer
+    // allocations that were added during the above promotion process.
+    // TODO: Pass options to support custom dealloc ops.
+    if (options.createDeallocs && failed(deallocateBuffers(op)))
+      return failure();
+  }
+
+  // Deallocate all remaining buffers at the end of their parent blocks.
   if (failed(createAllocDeallocOps(op, options)))
     return failure();
 
@@ -302,14 +315,16 @@ class BufferizationRewriter : public IRRewriter {
 public:
   BufferizationRewriter(MLIRContext *ctx, DenseSet<Operation *> &erasedOps,
                         DenseSet<Operation *> &toMemrefOps,
-                        SmallVector<Operation *> &worklist)
+                        const BufferizationOptions &options)
       : IRRewriter(ctx), erasedOps(erasedOps), toMemrefOps(toMemrefOps),
-        worklist(worklist) {}
+        options(options) {}
 
 protected:
   void notifyOperationRemoved(Operation *op) override {
     IRRewriter::notifyOperationRemoved(op);
     erasedOps.insert(op);
+    // Erase if present.
+    toMemrefOps.erase(op);
   }
 
   void notifyOperationInserted(Operation *op) override {
@@ -325,9 +340,10 @@ protected:
     if (isa<ToTensorOp>(op))
       return;
 
-    // A new bufferizable op was inserted. Add it to the worklist.
-    if (hasTensorSemantics(op))
-      worklist.push_back(op);
+    // Adding new bufferizable ops is not allowed during bufferization. Such ops
+    // would not be analyzed and can lead to surprising behavior.
+    assert((!hasTensorSemantics(op) || !options.isOpAllowed(op)) &&
+           "creating new tensor ops is not allowed during bufferization");
   }
 
 private:
@@ -337,8 +353,8 @@ private:
   /// A set of all to_memref ops.
   DenseSet<Operation *> &toMemrefOps;
 
-  /// The list of bufferizable ops.
-  SmallVector<Operation *> &worklist;
+  /// The bufferization options.
+  const BufferizationOptions &options;
 };
 } // namespace
 
@@ -373,18 +389,18 @@ bufferization::bufferizeOp(Operation *op,
 
   // Bufferize all ops.
   BufferizationRewriter rewriter(op->getContext(), erasedOps, toMemrefOps,
-                                 worklist);
+                                 bufferizationState.getOptions());
   for (unsigned i = 0; i < worklist.size(); ++i) {
     Operation *op = worklist[i];
     // Skip ops that were erased.
     if (erasedOps.contains(op))
       continue;
-    // Skip ops that are not bufferizable.
-    auto bufferizableOp = dyn_cast<BufferizableOpInterface>(op);
+    // Skip ops that are not bufferizable or not allowed.
+    auto bufferizableOp = options.dynCastBufferizableOp(op);
     if (!bufferizableOp)
       continue;
-    // Continue ops that are not allowed.
-    if (!options.isOpAllowed(op))
+    // Skip ops that no longer have tensor semantics.
+    if (!hasTensorSemantics(op))
       continue;
     // Bufferize the op.
     rewriter.setInsertionPoint(op);
@@ -393,8 +409,6 @@ bufferization::bufferizeOp(Operation *op,
 
   // Fold all to_memref(to_tensor(x)) pairs.
   for (Operation *op : toMemrefOps) {
-    if (erasedOps.contains(op))
-      continue;
     rewriter.setInsertionPoint(op);
     (void)bufferization::foldToMemrefToTensorPair(rewriter,
                                                   cast<ToMemrefOp>(op));

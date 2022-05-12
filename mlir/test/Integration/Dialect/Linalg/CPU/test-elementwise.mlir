@@ -13,11 +13,11 @@ func.func @main() {
 
   %addf = arith.addf %a, %b : tensor<3xf32>
   %addf_unranked = tensor.cast %addf : tensor<3xf32> to tensor<*xf32>
-  call @print_memref_f32(%addf_unranked) : (tensor<*xf32>) -> ()
+  call @printMemrefF32(%addf_unranked) : (tensor<*xf32>) -> ()
   // CHECK: Unranked Memref base@ = {{.*}} rank = 1 offset = 0 sizes = [3] strides = [1] data =
   // CHECK-NEXT: [11,  22,  33]
 
   return
 }
 
-func.func private @print_memref_f32(%ptr : tensor<*xf32>)
+func.func private @printMemrefF32(%ptr : tensor<*xf32>)

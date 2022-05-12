@@ -412,7 +412,7 @@ func.func @disallowed_case7_fail() {
 //===----------------------------------------------------------------------===//
 
 // CHECK-LABEL: func @allowed_cases_pass
-func @allowed_cases_pass() {
+func.func @allowed_cases_pass() {
   // CHECK: test.op_with_bit_enum <read,write>
   "test.op_with_bit_enum"() {value = #test.bit_enum<read, write>} : () -> ()
   // CHECK: test.op_with_bit_enum <read,execute>
@@ -423,7 +423,7 @@ func @allowed_cases_pass() {
 // -----
 
 // CHECK-LABEL: func @allowed_cases_pass
-func @allowed_cases_pass() {
+func.func @allowed_cases_pass() {
   // CHECK: test.op_with_bit_enum_vbar <user|group>
   "test.op_with_bit_enum_vbar"() {
     value = #test.bit_enum_vbar<user|group>
@@ -435,7 +435,7 @@ func @allowed_cases_pass() {
 
 // -----
 
-func @disallowed_case_sticky_fail() {
+func.func @disallowed_case_sticky_fail() {
   // expected-error@+2 {{expected test::TestBitEnum to be one of: read, write, execute}}
   // expected-error@+1 {{failed to parse TestBitEnumAttr}}
   "test.op_with_bit_enum"() {value = #test.bit_enum<sticky>} : () -> ()

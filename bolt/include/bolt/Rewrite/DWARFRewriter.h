@@ -48,12 +48,22 @@ class DWARFRewriter {
   /// Does not do de-duplication.
   std::unique_ptr<DebugStrWriter> StrWriter;
 
+  /// Stores and serializes information that will be put in to the
+  /// .debug_str_offsets DWARF section.
+  std::unique_ptr<DebugStrOffsetsWriter> StrOffstsWriter;
+
   /// .debug_abbrev section writer for the main binary.
   std::unique_ptr<DebugAbbrevWriter> AbbrevWriter;
 
   using LocWriters = std::map<uint64_t, std::unique_ptr<DebugLocWriter>>;
   /// Use a separate location list writer for each compilation unit
   LocWriters LocListWritersByCU;
+
+  using RangeListsDWOWriers =
+      std::unordered_map<uint64_t,
+                         std::unique_ptr<DebugRangeListsSectionWriter>>;
+  /// Store Rangelists writer for each DWO CU.
+  RangeListsDWOWriers RangeListsWritersByCU;
 
   using DebugAbbrevDWOWriters =
       std::unordered_map<uint64_t, std::unique_ptr<DebugAbbrevWriter>>;
@@ -166,6 +176,14 @@ class DWARFRewriter {
 
     return static_cast<Patcher *>(Iter->second.get());
   }
+
+  /// Adds a \p Str to .debug_str section.
+  /// Uses \p AttrInfoVal to either update entry in a DIE for legacy DWARF using
+  /// \p DebugInfoPatcher, or for DWARF5 update an index in .debug_str_offsets
+  /// for this contribution of \p Unit.
+  void addStringHelper(DebugInfoBinaryPatcher &DebugInfoPatcher,
+                       const DWARFUnit &Unit, const AttrInfo &AttrInfoVal,
+                       StringRef Str);
 
 public:
   DWARFRewriter(BinaryContext &BC) : BC(BC) {}

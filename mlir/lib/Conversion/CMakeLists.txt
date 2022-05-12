@@ -1,4 +1,5 @@
 add_subdirectory(AffineToStandard)
+add_subdirectory(AMDGPUToROCDL)
 add_subdirectory(ArithmeticToLLVM)
 add_subdirectory(ArithmeticToSPIRV)
 add_subdirectory(ArmNeon2dToIntr)

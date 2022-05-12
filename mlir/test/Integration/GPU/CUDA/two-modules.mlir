@@ -29,8 +29,8 @@ func.func @main() {
     memref.store %t0, %dst[%tx] : memref<?xi32>
     gpu.terminator
   }
-  call @print_memref_i32(%cast_dst) : (memref<*xi32>) -> ()
+  call @printMemrefI32(%cast_dst) : (memref<*xi32>) -> ()
   return
 }
 
-func.func private @print_memref_i32(%memref : memref<*xi32>)
+func.func private @printMemrefI32(%memref : memref<*xi32>)
