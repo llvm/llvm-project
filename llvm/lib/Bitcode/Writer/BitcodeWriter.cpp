@@ -3402,35 +3402,29 @@ void ModuleBitcodeWriter::writeFunction(
     }
 
     if (BlockAddress *BA = BlockAddress::lookup(&BB)) {
-      SmallVector<Value *, 16> BlockAddressUsersStack { BA };
-      SmallPtrSet<Value *, 16> BlockAddressUsersVisited { BA };
-
-      while (!BlockAddressUsersStack.empty()) {
-        Value *V = BlockAddressUsersStack.pop_back_val();
-
+      SmallVector<Value *> Worklist{BA};
+      SmallPtrSet<Value *, 8> Visited{BA};
+      while (!Worklist.empty()) {
+        Value *V = Worklist.pop_back_val();
         for (User *U : V->users()) {
-          if ((isa<ConstantAggregate>(U) || isa<ConstantExpr>(U)) &&
-              !BlockAddressUsersVisited.contains(U)) {
-            BlockAddressUsersStack.push_back(U);
-            BlockAddressUsersVisited.insert(U);
-          }
-
           if (auto *I = dyn_cast<Instruction>(U)) {
-            Function *P = I->getParent()->getParent();
+            Function *P = I->getFunction();
             if (P != &F)
               BlockAddressUsers.insert(P);
-          }
+          } else if (isa<Constant>(U) && !isa<GlobalValue>(U) &&
+                     Visited.insert(U).second)
+            Worklist.push_back(U);
         }
       }
     }
   }
 
   if (!BlockAddressUsers.empty()) {
-    SmallVector<uint64_t, 4> Record;
-    Record.reserve(BlockAddressUsers.size());
-    for (Function *F : BlockAddressUsers)
-      Record.push_back(VE.getValueID(F));
-    Stream.EmitRecord(bitc::FUNC_CODE_BLOCKADDR_USERS, Record);
+    Vals.resize(BlockAddressUsers.size());
+    for (auto I : llvm::enumerate(BlockAddressUsers))
+      Vals[I.index()] = VE.getValueID(I.value());
+    Stream.EmitRecord(bitc::FUNC_CODE_BLOCKADDR_USERS, Vals);
+    Vals.clear();
   }
 
   // Emit names for all the instructions etc.
