@@ -1027,17 +1027,13 @@ public:
     return getGeneration() >= GFX11;
   }
 
-  bool hasVALUTransUseHazard() const {
-    return getGeneration() >= GFX11;
-  }
+  bool hasVALUTransUseHazard() const { return getGeneration() >= GFX11; }
 
   /// Return if operations acting on VGPR tuples require even alignment.
   bool needsAlignedVGPRs() const { return GFX90AInsts; }
 
   /// Return true if the target has the S_PACK_HL_B32_B16 instruction.
-  bool hasSPackHL() const {
-    return GFX11Insts;
-  }
+  bool hasSPackHL() const { return GFX11Insts; }
 
   /// Return true if the target's EXP instruction has the COMPR flag, which
   /// affects the meaning of the EN (enable) bits.

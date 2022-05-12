@@ -145,8 +145,6 @@ static void clusterNeighboringMFMAs(llvm::ArrayRef<SUnit *> MFMASUnits,
 void MFMAClusterDAGMutation::apply(ScheduleDAGInstrs *DAGInstrs) {
   const GCNSubtarget &ST = DAGInstrs->MF.getSubtarget<GCNSubtarget>();
   TII = ST.getInstrInfo();
-  const SIMachineFunctionInfo *MFI =
-      DAGInstrs->MF.getInfo<SIMachineFunctionInfo>();
   if (!ST.hasMAIInsts())
     return;
   DAG = static_cast<ScheduleDAGMI *>(DAGInstrs);

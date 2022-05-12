@@ -19,6 +19,7 @@
 #include "llvm/ADT/None.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
@@ -3365,7 +3366,7 @@ void ModuleBitcodeWriter::writeFunction(
   bool NeedsMetadataAttachment = F.hasMetadata();
 
   DILocation *LastDL = nullptr;
-  SmallPtrSet<Function *, 4> BlockAddressUsers;
+  SmallSetVector<Function *, 4> BlockAddressUsers;
 
   // Finally, emit all the instructions, in order.
   for (const BasicBlock &BB : F) {
@@ -3401,11 +3402,24 @@ void ModuleBitcodeWriter::writeFunction(
     }
 
     if (BlockAddress *BA = BlockAddress::lookup(&BB)) {
-      for (User *U : BA->users()) {
-        if (auto *I = dyn_cast<Instruction>(U)) {
-          Function *P = I->getParent()->getParent();
-          if (P != &F)
-            BlockAddressUsers.insert(P);
+      SmallVector<Value *, 16> BlockAddressUsersStack { BA };
+      SmallPtrSet<Value *, 16> BlockAddressUsersVisited { BA };
+
+      while (!BlockAddressUsersStack.empty()) {
+        Value *V = BlockAddressUsersStack.pop_back_val();
+
+        for (User *U : V->users()) {
+          if ((isa<ConstantAggregate>(U) || isa<ConstantExpr>(U)) &&
+              !BlockAddressUsersVisited.contains(U)) {
+            BlockAddressUsersStack.push_back(U);
+            BlockAddressUsersVisited.insert(U);
+          }
+
+          if (auto *I = dyn_cast<Instruction>(U)) {
+            Function *P = I->getParent()->getParent();
+            if (P != &F)
+              BlockAddressUsers.insert(P);
+          }
         }
       }
     }

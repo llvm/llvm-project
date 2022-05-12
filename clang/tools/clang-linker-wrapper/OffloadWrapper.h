@@ -1,4 +1,4 @@
-//===- OffloadWrapper.h -------------------------------------------*- C++ -*-===//
+//===- OffloadWrapper.h --r-------------------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -12,9 +12,13 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/IR/Module.h"
 
-/// Wrap the input device images into the module \p M as global symbols and
+/// Wraps the input device images into the module \p M as global symbols and
 /// registers the images with the OpenMP Offloading runtime libomptarget.
-llvm::Error wrapBinaries(llvm::Module &M,
-                         llvm::ArrayRef<llvm::ArrayRef<char>> Images);
+llvm::Error wrapOpenMPBinaries(llvm::Module &M,
+                               llvm::ArrayRef<llvm::ArrayRef<char>> Images);
+
+/// Wraps the input fatbinary image into the module \p M as global symbols and
+/// registers the images with the CUDA runtime.
+llvm::Error wrapCudaBinary(llvm::Module &M, llvm::ArrayRef<char> Images);
 
 #endif

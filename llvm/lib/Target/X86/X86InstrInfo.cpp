@@ -1049,11 +1049,12 @@ static bool findRedundantFlagInstr(MachineInstr &CmpInstr,
     // in the `AND` and `TEST` operation; signed bit is not known for `AND`,
     // and is known to be 0 as a result of `TEST64rr`.
     //
-    // FIXME: As opposed to poisoning the SF bit direclty, consider peeking into
-    // the AND instruction and using the static information to guide peephole optimization if possible.
-    // For example, it's possible to fold a conditional move into a copy
-    // if the relevant EFLAG bits could be deduced from an immediate operand of and operation.
-    // 
+    // FIXME: As opposed to poisoning the SF bit directly, consider peeking into
+    // the AND instruction and using the static information to guide peephole
+    // optimization if possible. For example, it's possible to fold a
+    // conditional move into a copy if the relevant EFLAG bits could be deduced
+    // from an immediate operand of and operation.
+    //
     NoSignFlag = true;
     // ClearsOverflowFlag is true for AND operation (no surprise).
     ClearsOverflowFlag = true;
