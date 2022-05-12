@@ -20140,22 +20140,23 @@ SDValue AArch64TargetLowering::LowerFixedLengthVectorLoadToSVE(
     MemVT = MemVT.changeTypeToInteger();
   }
 
-  auto NewLoad = DAG.getMaskedLoad(
+  SDValue NewLoad = DAG.getMaskedLoad(
       LoadVT, DL, Load->getChain(), Load->getBasePtr(), Load->getOffset(), Pg,
       DAG.getUNDEF(LoadVT), MemVT, Load->getMemOperand(),
       Load->getAddressingMode(), Load->getExtensionType());
 
+  SDValue Result = NewLoad;
   if (VT.isFloatingPoint() && Load->getExtensionType() == ISD::EXTLOAD) {
     EVT ExtendVT = ContainerVT.changeVectorElementType(
         Load->getMemoryVT().getVectorElementType());
 
-    NewLoad = getSVESafeBitCast(ExtendVT, NewLoad, DAG);
-    NewLoad = DAG.getNode(AArch64ISD::FP_EXTEND_MERGE_PASSTHRU, DL, ContainerVT,
-                          Pg, NewLoad, DAG.getUNDEF(ContainerVT));
+    Result = getSVESafeBitCast(ExtendVT, Result, DAG);
+    Result = DAG.getNode(AArch64ISD::FP_EXTEND_MERGE_PASSTHRU, DL, ContainerVT,
+                         Pg, Result, DAG.getUNDEF(ContainerVT));
   }
 
-  auto Result = convertFromScalableVector(DAG, VT, NewLoad);
-  SDValue MergedValues[2] = {Result, Load->getChain()};
+  Result = convertFromScalableVector(DAG, VT, Result);
+  SDValue MergedValues[2] = {Result, NewLoad.getValue(1)};
   return DAG.getMergeValues(MergedValues, DL);
 }
 
@@ -20203,19 +20204,20 @@ SDValue AArch64TargetLowering::LowerFixedLengthVectorMLoadToSVE(
       IsPassThruZeroOrUndef = true;
   }
 
-  auto NewLoad = DAG.getMaskedLoad(
+  SDValue NewLoad = DAG.getMaskedLoad(
       ContainerVT, DL, Load->getChain(), Load->getBasePtr(), Load->getOffset(),
       Mask, PassThru, Load->getMemoryVT(), Load->getMemOperand(),
       Load->getAddressingMode(), Load->getExtensionType());
 
+  SDValue Result = NewLoad;
   if (!IsPassThruZeroOrUndef) {
     SDValue OldPassThru =
         convertToScalableVector(DAG, ContainerVT, Load->getPassThru());
-    NewLoad = DAG.getSelect(DL, ContainerVT, Mask, NewLoad, OldPassThru);
+    Result = DAG.getSelect(DL, ContainerVT, Mask, Result, OldPassThru);
   }
 
-  auto Result = convertFromScalableVector(DAG, VT, NewLoad);
-  SDValue MergedValues[2] = {Result, Load->getChain()};
+  Result = convertFromScalableVector(DAG, VT, Result);
+  SDValue MergedValues[2] = {Result, NewLoad.getValue(1)};
   return DAG.getMergeValues(MergedValues, DL);
 }
 

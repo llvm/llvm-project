@@ -180,14 +180,14 @@ exit:                                             ; preds = %if.end
 define i16 @phi_multiple_undefs(i16 zeroext %arg) {
 ; CHECK-LABEL: phi_multiple_undefs:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    mov w8, #1
-; CHECK-NEXT:    // implicit-def: $w9
+; CHECK-NEXT:    mov w8, wzr
+; CHECK-NEXT:    mov w9, #1
 ; CHECK-NEXT:  .LBB4_1: // %loop
 ; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    cmp w9, #128
-; CHECK-NEXT:    cinc w10, w8, lo
-; CHECK-NEXT:    add w9, w9, w10
-; CHECK-NEXT:    cmp w9, #253
+; CHECK-NEXT:    cmp w8, #128
+; CHECK-NEXT:    cinc w10, w9, lo
+; CHECK-NEXT:    add w8, w8, w10
+; CHECK-NEXT:    cmp w8, #253
 ; CHECK-NEXT:    b.lo .LBB4_1
 ; CHECK-NEXT:  // %bb.2: // %exit
 ; CHECK-NEXT:    ret
