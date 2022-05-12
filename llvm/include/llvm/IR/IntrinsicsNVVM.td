@@ -558,7 +558,7 @@ class SHFL_INFO<bit sync, string mode, string type, bit return_pred> {
 let TargetPrefix = "nvvm" in {
   def int_nvvm_prmt : GCCBuiltin<"__nvvm_prmt">,
       DefaultAttrsIntrinsic<[llvm_i32_ty], [llvm_i32_ty, llvm_i32_ty, llvm_i32_ty],
-        [IntrNoMem, Commutative]>;
+        [IntrNoMem, IntrSpeculatable]>;
 
 //
 // Min Max
