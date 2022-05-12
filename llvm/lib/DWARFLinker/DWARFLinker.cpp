@@ -440,8 +440,7 @@ unsigned DWARFLinker::shouldKeepVariableDIE(AddressesMap &RelocMgr,
   // if the variable has a valid relocation, so that the DIEInfo is filled.
   // However, we don't want a static variable in a function to force us to keep
   // the enclosing function, unless requested explicitly.
-  const bool HasLiveMemoryLocation =
-      RelocMgr.hasLiveMemoryLocation(DIE, MyInfo);
+  const bool HasLiveMemoryLocation = RelocMgr.isLiveVariable(DIE, MyInfo);
   if (!HasLiveMemoryLocation || ((Flags & TF_InFunctionScope) &&
                                  !LLVM_UNLIKELY(Options.KeepFunctionForStatic)))
     return Flags;
@@ -470,7 +469,7 @@ unsigned DWARFLinker::shouldKeepSubprogramDIE(
     return Flags;
 
   assert(LowPc.hasValue() && "low_pc attribute is not an address.");
-  if (!RelocMgr.hasLiveAddressRange(DIE, MyInfo))
+  if (!RelocMgr.isLiveSubprogram(DIE, MyInfo))
     return Flags;
 
   if (Options.Verbose) {
@@ -1385,8 +1384,7 @@ DIE *DWARFLinker::DIECloner::cloneDIE(const DWARFDie &InputDIE,
       DWARFDataExtractor(DIECopy, Data.isLittleEndian(), Data.getAddressSize());
 
   // Modify the copy with relocated addresses.
-  if (ObjFile.Addresses->areRelocationsResolved() &&
-      ObjFile.Addresses->applyValidRelocs(DIECopy, Offset,
+  if (ObjFile.Addresses->applyValidRelocs(DIECopy, Offset,
                                           Data.isLittleEndian())) {
     // If we applied relocations, we store the value of high_pc that was
     // potentially stored in the input DIE. If high_pc is an address
