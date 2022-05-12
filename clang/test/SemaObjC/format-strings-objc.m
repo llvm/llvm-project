@@ -60,8 +60,23 @@ void check_nslog(unsigned k) {
 }
 
 // Check type validation
-extern void NSLog2(int format, ...) __attribute__((format(__NSString__, 1, 2))); // expected-error {{format argument not an NSString}}
-extern void CFStringCreateWithFormat2(int *format, ...) __attribute__((format(CFString, 1, 2))); // expected-error {{format argument not a CFString}}
+extern void NSLog2(int format, ...) __attribute__((format(__NSString__, 1, 2))); // expected-error {{format argument not a string type}}
+extern void CFStringCreateWithFormat2(int *format, ...) __attribute__((format(CFString, 1, 2))); // expected-error {{format argument not a string type}}
+
+// Check interoperability of strings
+extern void NSLog3(const char *, ...) __attribute__((format(__NSString__, 1, 2)));
+extern void CFStringCreateWithFormat3(CFStringRef, ...) __attribute__((format(__NSString__, 1, 2)));
+extern void printf2(NSString *format, ...) __attribute__((format(printf, 1, 2)));
+
+extern NSString *CStringToNSString(const char *) __attribute__((format_arg(1)));
+
+void NSLog3(const char *fmt, ...) {
+  NSString *const nsFmt = CStringToNSString(fmt);
+  va_list ap;
+  va_start(ap, fmt);
+  NSLogv(nsFmt, ap);
+  va_end(ap);
+}
 
 // <rdar://problem/7068334> - Catch use of long long with int arguments.
 void rdar_7068334(void) {
