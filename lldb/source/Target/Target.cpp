@@ -2589,7 +2589,7 @@ Target::CreateUtilityFunction(std::string expression, std::string name,
 #ifdef LLDB_ENABLE_SWIFT
 llvm::Optional<SwiftScratchContextReader> Target::GetSwiftScratchContext(
     Status &error, ExecutionContextScope &exe_scope, bool create_on_demand) {
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_TARGET));
+  Log *log = GetLog(LLDBLog::Target);
   LLDB_SCOPED_TIMER();
 
   Module *lldb_module = nullptr;

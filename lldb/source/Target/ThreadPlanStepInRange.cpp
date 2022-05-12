@@ -316,7 +316,7 @@ void ThreadPlanStepInRange::SetDefaultFlagValue(uint32_t new_value) {
 
 bool ThreadPlanStepInRange::StepInDeepBreakpointExplainsStop(
     lldb::StopInfoSP stop_info_sp) {
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_STEP));
+  Log *log = GetLog(LLDBLog::Step);
   size_t num_step_in_deep_bps = m_step_in_deep_bps.size();
   if (num_step_in_deep_bps == 0)
     return false;
@@ -461,7 +461,7 @@ bool ThreadPlanStepInRange::DefaultShouldStopHereCallback(
 bool ThreadPlanStepInRange::DefaultShouldStopHereImpl(Flags &flags,
                                                       bool should_stop_here) {
   StackFrame *frame = GetThread().GetStackFrameAtIndex(0).get();
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_STEP));
+  Log *log = GetLog(LLDBLog::Step);
 
   if (m_step_into_target) {
     SymbolContext sc = frame->GetSymbolContext(

@@ -77,50 +77,6 @@ template <> Log::Channel &lldb_private::LogChannelFor<LLDBLog>() {
   return g_log_channel;
 }
 
-#ifdef LLDB_ENABLE_SWIFT
-
-static constexpr Log::Category g_swift_categories[] = {
-  {{"health"}, {"log all messages related to lldb Swift operational health"}, SwiftLog::Health},
-};
-
-static Log::Channel g_swift_log_channel(g_swift_categories, SwiftLog::Health);
-
-template <> Log::Channel &lldb_private::LogChannelFor<SwiftLog>() {
-  return g_swift_log_channel;
-}
-
-static std::string g_swift_log_buffer;
-
-#endif
-
 void lldb_private::InitializeLldbChannel() {
   Log::Register("lldb", g_log_channel);
-#ifdef LLDB_ENABLE_SWIFT
-  Log::Register("swift", g_swift_log_channel);
-
-  llvm::raw_null_ostream error_stream;
-  Log::EnableLogChannel(
-      std::make_shared<llvm::raw_string_ostream>(g_swift_log_buffer),
-      LLDB_LOG_OPTION_THREADSAFE, "swift", {"health"}, error_stream);
-#endif
 }
-
-Log *lldb_private::GetLogIfAllCategoriesSet(LLDBLog mask) {
-  return GetLog(mask);
-}
-
-Log *lldb_private::GetLogIfAnyCategoriesSet(LLDBLog mask) {
-  return GetLog(mask);
-}
-
-#ifdef LLDB_ENABLE_SWIFT
-
-Log *lldb_private::GetSwiftHealthLog() {
-  return GetLog(SwiftLog::Health);
-}
-
-llvm::StringRef lldb_private::GetSwiftHealthLogData() {
-  return g_swift_log_buffer;
-}
-
-#endif
