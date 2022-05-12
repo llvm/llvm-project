@@ -12,6 +12,7 @@
 
 #include "CIRGenFunction.h"
 #include "CIRGenModule.h"
+#include "UnimplementedFeatureGuarding.h"
 
 #include "clang/AST/StmtVisitor.h"
 
@@ -56,6 +57,8 @@ public:
     S->dump(llvm::errs(), CGF.getContext());
     llvm_unreachable("Stmt can't have complex result type!");
   }
+
+  mlir::Value VisitInitListExpr(InitListExpr *E);
 
   /// Emits the address of the l-value, then loads and returns the result.
   mlir::Value buildLoadOfLValue(const Expr *E) {
@@ -680,3 +683,24 @@ bool CIRGenFunction::ConstantFoldsToSimpleInteger(const Expr *Cond,
   ResultBool = ResultInt.getBoolValue();
   return true;
 }
+
+mlir::Value ScalarExprEmitter::VisitInitListExpr(InitListExpr *E) {
+  bool Ignore = TestAndClearIgnoreResultAssign();
+  (void)Ignore;
+  assert(Ignore == false && "init list ignored");
+  unsigned NumInitElements = E->getNumInits();
+
+  if (E->hadArrayRangeDesignator())
+    llvm_unreachable("NYI");
+
+  if (UnimplementedFeature::cirVectorType())
+    llvm_unreachable("NYI");
+
+  if (NumInitElements == 0) {
+    // C++11 value-initialization for the scalar.
+    llvm_unreachable("NYI");
+  }
+
+  return Visit(E->getInit(0));
+}
+
