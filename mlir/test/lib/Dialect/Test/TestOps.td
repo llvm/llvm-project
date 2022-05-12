@@ -1790,7 +1790,7 @@ def GraphRegionOp : TEST_Op<"graph_region",  [
   }];
 
   let regions = (region AnyRegion:$region);
-  let hasCustomAssemblyFormat = 1;
+  let assemblyFormat = "attr-dict-with-keyword $region";
 }
 
 def AffineScopeOp : TEST_Op<"affine_scope", [AffineScope]> {
