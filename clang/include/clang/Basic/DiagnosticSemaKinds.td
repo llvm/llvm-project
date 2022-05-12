@@ -11245,6 +11245,9 @@ def warn_always_inline_coroutine : Warning<
   "this coroutine may be split into pieces; not every piece is guaranteed to be inlined"
   >,
   InGroup<AlwaysInlineCoroutine>;
+def err_coroutine_unusable_new : Error<
+  "'operator new' provided by %0 is not usable with the function signature of %1"
+>;
 } // end of coroutines issue category
 
 let CategoryName = "Documentation Issue" in {
