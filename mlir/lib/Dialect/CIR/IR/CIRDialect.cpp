@@ -970,6 +970,33 @@ mlir::OpTrait::impl::verifySameFirstOperandAndResultType(Operation *op) {
 }
 
 //===----------------------------------------------------------------------===//
+// CIR attributes
+//===----------------------------------------------------------------------===//
+
+LogicalResult mlir::cir::CstArrayAttr::verify(
+    ::llvm::function_ref<::mlir::InFlightDiagnostic()> emitError,
+    ::mlir::Type type, ArrayAttr value) {
+  // Make sure both number of elements and subelement types match type.
+  mlir::cir::ArrayType at = type.cast<mlir::cir::ArrayType>();
+  if (at.getSize() != value.size())
+    return emitError() << "cst array size should match type size";
+  LogicalResult eltTypeCheck = success();
+  value.walkImmediateSubElements(
+      [&](Attribute attr) {
+        // Once we find a mismatch, stop there.
+        if (eltTypeCheck.failed())
+          return;
+        auto typedAttr = attr.dyn_cast<TypedAttr>();
+        if (!typedAttr || typedAttr.getType() != at.getEltType()) {
+          eltTypeCheck = failure();
+          emitError() << "cst array element should match array element type";
+        }
+      },
+      [&](Type type) {});
+  return eltTypeCheck;
+}
+
+//===----------------------------------------------------------------------===//
 // TableGen'd op method definitions
 //===----------------------------------------------------------------------===//
 

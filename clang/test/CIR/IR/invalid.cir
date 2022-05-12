@@ -149,3 +149,15 @@ func.func @b0() {
   }
   cir.return
 }
+
+// -----
+
+module {
+  cir.global @a = #cir.cst_array<[0 : i8, -23 : i8, 33 : i8]> : !cir.array<i32 x 3> // expected-error {{cst array element should match array element type}}
+} // expected-error {{expected constant attribute to match type}}
+
+// -----
+
+module {
+  cir.global @a = #cir.cst_array<[0 : i8, -23 : i8, 33 : i8]> : !cir.array<i8 x 4> // expected-error {{cst array size should match type size}}
+} // expected-error {{expected constant attribute to match type}}
