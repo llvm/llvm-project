@@ -222,8 +222,6 @@ CIRGenTypes::computeRecordLayout(const RecordDecl *D,
     }
   }
 
-  assert(!builder.isPacked && "Packed structs NYI");
-
   Ty = mlir::cir::StructType::get(&getMLIRContext(), builder.fieldTypes,
                                   identifier);
 
@@ -246,8 +244,6 @@ CIRGenTypes::computeRecordLayout(const RecordDecl *D,
   }
 
   // TODO: implement verification
-
-  assert(!builder.isPacked && "Packed structs NYI");
 
   return RL;
 }
