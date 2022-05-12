@@ -6,14 +6,15 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file defines the isa<X>(), cast<X>(), dyn_cast<X>(), cast_or_null<X>(),
-// and dyn_cast_or_null<X>() templates.
+// This file defines the isa<X>(), cast<X>(), dyn_cast<X>(),
+// cast_if_present<X>(), and dyn_cast_if_present<X>() templates.
 //
 //===----------------------------------------------------------------------===//
 
 #ifndef LLVM_SUPPORT_CASTING_H
 #define LLVM_SUPPORT_CASTING_H
 
+#include "llvm/ADT/Optional.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/type_traits.h"
 #include <cassert>
@@ -23,43 +24,47 @@
 namespace llvm {
 
 //===----------------------------------------------------------------------===//
-//                          isa<x> Support Templates
+// simplify_type
 //===----------------------------------------------------------------------===//
 
-// Define a template that can be specialized by smart pointers to reflect the
-// fact that they are automatically dereferenced, and are not involved with the
-// template selection process...  the default implementation is a noop.
-//
-template<typename From> struct simplify_type {
+/// Define a template that can be specialized by smart pointers to reflect the
+/// fact that they are automatically dereferenced, and are not involved with the
+/// template selection process...  the default implementation is a noop.
+// TODO: rename this and/or replace it with other cast traits.
+template <typename From> struct simplify_type {
   using SimpleType = From; // The real type this represents...
 
   // An accessor to get the real value...
   static SimpleType &getSimplifiedValue(From &Val) { return Val; }
 };
 
-template<typename From> struct simplify_type<const From> {
+template <typename From> struct simplify_type<const From> {
   using NonConstSimpleType = typename simplify_type<From>::SimpleType;
-  using SimpleType =
-      typename add_const_past_pointer<NonConstSimpleType>::type;
+  using SimpleType = typename add_const_past_pointer<NonConstSimpleType>::type;
   using RetType =
       typename add_lvalue_reference_if_not_pointer<SimpleType>::type;
 
-  static RetType getSimplifiedValue(const From& Val) {
-    return simplify_type<From>::getSimplifiedValue(const_cast<From&>(Val));
+  static RetType getSimplifiedValue(const From &Val) {
+    return simplify_type<From>::getSimplifiedValue(const_cast<From &>(Val));
   }
 };
+
+// TODO: add this namespace once everyone is switched to using the new
+//       interface.
+// namespace detail {
+
+//===----------------------------------------------------------------------===//
+// isa_impl
+//===----------------------------------------------------------------------===//
 
 // The core of the implementation of isa<X> is here; To and From should be
 // the names of classes.  This template can be specialized to customize the
 // implementation of isa<> without rewriting it from scratch.
-template <typename To, typename From, typename Enabler = void>
-struct isa_impl {
-  static inline bool doit(const From &Val) {
-    return To::classof(&Val);
-  }
+template <typename To, typename From, typename Enabler = void> struct isa_impl {
+  static inline bool doit(const From &Val) { return To::classof(&Val); }
 };
 
-/// Always allow upcasts, and perform no dynamic check for them.
+// Always allow upcasts, and perform no dynamic check for them.
 template <typename To, typename From>
 struct isa_impl<To, From, std::enable_if_t<std::is_base_of<To, From>::value>> {
   static inline bool doit(const From &) { return true; }
@@ -85,103 +90,78 @@ struct isa_impl_cl<To, const std::unique_ptr<From>> {
   }
 };
 
-template <typename To, typename From> struct isa_impl_cl<To, From*> {
+template <typename To, typename From> struct isa_impl_cl<To, From *> {
   static inline bool doit(const From *Val) {
     assert(Val && "isa<> used on a null pointer");
     return isa_impl<To, From>::doit(*Val);
   }
 };
 
-template <typename To, typename From> struct isa_impl_cl<To, From*const> {
+template <typename To, typename From> struct isa_impl_cl<To, From *const> {
   static inline bool doit(const From *Val) {
     assert(Val && "isa<> used on a null pointer");
     return isa_impl<To, From>::doit(*Val);
   }
 };
 
-template <typename To, typename From> struct isa_impl_cl<To, const From*> {
+template <typename To, typename From> struct isa_impl_cl<To, const From *> {
   static inline bool doit(const From *Val) {
     assert(Val && "isa<> used on a null pointer");
     return isa_impl<To, From>::doit(*Val);
   }
 };
 
-template <typename To, typename From> struct isa_impl_cl<To, const From*const> {
+template <typename To, typename From>
+struct isa_impl_cl<To, const From *const> {
   static inline bool doit(const From *Val) {
     assert(Val && "isa<> used on a null pointer");
     return isa_impl<To, From>::doit(*Val);
   }
 };
 
-template<typename To, typename From, typename SimpleFrom>
+template <typename To, typename From, typename SimpleFrom>
 struct isa_impl_wrap {
   // When From != SimplifiedType, we can simplify the type some more by using
   // the simplify_type template.
   static bool doit(const From &Val) {
     return isa_impl_wrap<To, SimpleFrom,
-      typename simplify_type<SimpleFrom>::SimpleType>::doit(
-                          simplify_type<const From>::getSimplifiedValue(Val));
+                         typename simplify_type<SimpleFrom>::SimpleType>::
+        doit(simplify_type<const From>::getSimplifiedValue(Val));
   }
 };
 
-template<typename To, typename FromTy>
+template <typename To, typename FromTy>
 struct isa_impl_wrap<To, FromTy, FromTy> {
   // When From == SimpleType, we are as simple as we are going to get.
   static bool doit(const FromTy &Val) {
-    return isa_impl_cl<To,FromTy>::doit(Val);
+    return isa_impl_cl<To, FromTy>::doit(Val);
   }
 };
 
-// isa<X> - Return true if the parameter to the template is an instance of one
-// of the template type arguments.  Used like this:
-//
-//  if (isa<Type>(myVal)) { ... }
-//  if (isa<Type0, Type1, Type2>(myVal)) { ... }
-//
-template <class X, class Y> LLVM_NODISCARD inline bool isa(const Y &Val) {
-  return isa_impl_wrap<X, const Y,
-                       typename simplify_type<const Y>::SimpleType>::doit(Val);
-}
-
-template <typename First, typename Second, typename... Rest, typename Y>
-LLVM_NODISCARD inline bool isa(const Y &Val) {
-  return isa<First>(Val) || isa<Second, Rest...>(Val);
-}
-
-// isa_and_nonnull<X> - Functionally identical to isa, except that a null value
-// is accepted.
-//
-template <typename... X, class Y>
-LLVM_NODISCARD inline bool isa_and_nonnull(const Y &Val) {
-  if (!Val)
-    return false;
-  return isa<X...>(Val);
-}
-
 //===----------------------------------------------------------------------===//
-//                          cast<x> Support Templates
+// cast_retty + cast_retty_impl
 //===----------------------------------------------------------------------===//
 
-template<class To, class From> struct cast_retty;
+template <class To, class From> struct cast_retty;
 
 // Calculate what type the 'cast' function should return, based on a requested
 // type of To and a source type of From.
-template<class To, class From> struct cast_retty_impl {
-  using ret_type = To &;       // Normal case, return Ty&
+template <class To, class From> struct cast_retty_impl {
+  using ret_type = To &; // Normal case, return Ty&
 };
-template<class To, class From> struct cast_retty_impl<To, const From> {
+template <class To, class From> struct cast_retty_impl<To, const From> {
   using ret_type = const To &; // Normal case, return Ty&
 };
 
-template<class To, class From> struct cast_retty_impl<To, From*> {
-  using ret_type = To *;       // Pointer arg case, return Ty*
+template <class To, class From> struct cast_retty_impl<To, From *> {
+  using ret_type = To *; // Pointer arg case, return Ty*
 };
 
-template<class To, class From> struct cast_retty_impl<To, const From*> {
+template <class To, class From> struct cast_retty_impl<To, const From *> {
   using ret_type = const To *; // Constant pointer arg case, return const Ty*
 };
 
-template<class To, class From> struct cast_retty_impl<To, const From*const> {
+template <class To, class From> struct cast_retty_impl<To, const From *const> {
   using ret_type = const To *; // Constant pointer arg case, return const Ty*
 };
 
@@ -195,187 +175,598 @@ public:
   using ret_type = std::unique_ptr<ResultType>;
 };
 
-template<class To, class From, class SimpleFrom>
-struct cast_retty_wrap {
+template <class To, class From, class SimpleFrom> struct cast_retty_wrap {
   // When the simplified type and the from type are not the same, use the type
   // simplifier to reduce the type, then reuse cast_retty_impl to get the
   // resultant type.
   using ret_type = typename cast_retty<To, SimpleFrom>::ret_type;
 };
 
-template<class To, class FromTy>
-struct cast_retty_wrap<To, FromTy, FromTy> {
+template <class To, class FromTy> struct cast_retty_wrap<To, FromTy, FromTy> {
   // When the simplified type is equal to the from type, use it directly.
-  using ret_type = typename cast_retty_impl<To,FromTy>::ret_type;
+  using ret_type = typename cast_retty_impl<To, FromTy>::ret_type;
 };
 
-template<class To, class From>
-struct cast_retty {
+template <class To, class From> struct cast_retty {
   using ret_type = typename cast_retty_wrap<
       To, From, typename simplify_type<From>::SimpleType>::ret_type;
 };
 
+//===----------------------------------------------------------------------===//
+// cast_convert_val
+//===----------------------------------------------------------------------===//
+
 // Ensure the non-simple values are converted using the simplify_type template
 // that may be specialized by smart pointers...
 //
-template<class To, class From, class SimpleFrom> struct cast_convert_val {
+template <class To, class From, class SimpleFrom> struct cast_convert_val {
   // This is not a simple type, use the template to simplify it...
-  static typename cast_retty<To, From>::ret_type doit(From &Val) {
+  static typename cast_retty<To, From>::ret_type doit(const From &Val) {
     return cast_convert_val<To, SimpleFrom,
-      typename simplify_type<SimpleFrom>::SimpleType>::doit(
-                          simplify_type<From>::getSimplifiedValue(Val));
+                            typename simplify_type<SimpleFrom>::SimpleType>::
+        doit(simplify_type<From>::getSimplifiedValue(const_cast<From &>(Val)));
   }
 };
 
-template<class To, class FromTy> struct cast_convert_val<To,FromTy,FromTy> {
+template <class To, class FromTy> struct cast_convert_val<To, FromTy, FromTy> {
   // This _is_ a simple type, just cast it.
   static typename cast_retty<To, FromTy>::ret_type doit(const FromTy &Val) {
-    typename cast_retty<To, FromTy>::ret_type Res2
-     = (typename cast_retty<To, FromTy>::ret_type)const_cast<FromTy&>(Val);
+    typename cast_retty<To, FromTy>::ret_type Res2 =
+        (typename cast_retty<To, FromTy>::ret_type) const_cast<FromTy &>(Val);
     return Res2;
   }
 };
+
+//===----------------------------------------------------------------------===//
+// is_simple_type
+//===----------------------------------------------------------------------===//
 
 template <class X> struct is_simple_type {
   static const bool value =
       std::is_same<X, typename simplify_type<X>::SimpleType>::value;
 };
 
-// cast<X> - Return the argument parameter cast to the specified type.  This
-// casting operator asserts that the type is correct, so it does not return null
-// on failure.  It does not allow a null argument (use cast_or_null for that).
-// It is typically used like this:
-//
-//  cast<Instruction>(myVal)->getParent()
-//
+// } // namespace detail
+
+//===----------------------------------------------------------------------===//
+// CastIsPossible
+//===----------------------------------------------------------------------===//
+
+/// This struct provides a way to check if a given cast is possible. It provides
+/// a static function called isPossible that is used to check if a cast can be
+/// performed. It should be overridden like this:
+///
+/// template<> struct CastIsPossible<foo, bar> {
+///   static inline bool isPossible(const bar &b) {
+///     return bar.isFoo();
+///   }
+/// };
+template <typename To, typename From, typename Enable = void>
+struct CastIsPossible {
+  static inline bool isPossible(const From &f) {
+    return isa_impl_wrap<
+        To, const From,
+        typename simplify_type<const From>::SimpleType>::doit(f);
+  }
+};
+
+// Needed for optional unwrapping. This could be implemented with isa_impl, but
+// we want to implement things in the new method and move old implementations
+// over. In fact, some of the isa_impl templates should be moved over to
+// CastIsPossible.
+template <typename To, typename From>
+struct CastIsPossible<To, Optional<From>> {
+  static inline bool isPossible(const Optional<From> &f) {
+    assert(f.hasValue() && "CastIsPossible::isPossible called on a nullopt!");
+    return isa_impl_wrap<
+        To, const From,
+        typename simplify_type<const From>::SimpleType>::doit(*f);
+  }
+};
+
+/// Upcasting (from derived to base) and casting from a type to itself should
+/// always be possible.
+template <typename To, typename From>
+struct CastIsPossible<To, From,
+                      std::enable_if_t<std::is_base_of<To, From>::value>> {
+  static inline bool isPossible(const From &f) { return true; }
+};
+
+//===----------------------------------------------------------------------===//
+// Cast traits
+//===----------------------------------------------------------------------===//
+
+/// All of these cast traits are meant to be implementations for useful casts
+/// that users may want to use that are outside the standard behavior. An
+/// example of how to use a special cast called `CastTrait` is:
+///
+/// template<> struct CastInfo<foo, bar> : public CastTrait<foo, bar> {};
+///
+/// Essentially, if your use case falls directly into one of the use cases
+/// supported by a given cast trait, simply inherit your special CastInfo
+/// directly from one of these to avoid having to reimplement the boilerplate
+/// `isPossible/castFailed/doCast/doCastIfPossible`. A cast trait can also
+/// provide a subset of those functions.
+
+/// This cast trait just provides castFailed for the specified `To` type to make
+/// CastInfo specializations more declarative. In order to use this, the target
+/// result type must be `To` and `To` must be constructible from `nullptr`.
+template <typename To> struct NullableValueCastFailed {
+  static To castFailed() { return To(nullptr); }
+};
+
+/// This cast trait just provides the default implementation of doCastIfPossible
+/// to make CastInfo specializations more declarative. The `Derived` template
+/// parameter *must* be provided for forwarding castFailed and doCast.
+template <typename To, typename From, typename Derived>
+struct DefaultDoCastIfPossible {
+  static To doCastIfPossible(From f) {
+    if (!Derived::isPossible(f))
+      return Derived::castFailed();
+    return Derived::doCast(f);
+  }
+};
+
+namespace detail {
+/// A helper to derive the type to use with `Self` for cast traits, when the
+/// provided CRTP derived type is allowed to be void.
+template <typename OptionalDerived, typename Default>
+using SelfType = std::conditional_t<std::is_same<OptionalDerived, void>::value,
+                                    Default, OptionalDerived>;
+} // namespace detail
+
+/// This cast trait provides casting for the specific case of casting to a
+/// value-typed object from a pointer-typed object. Note that `To` must be
+/// nullable/constructible from a pointer to `From` to use this cast.
+template <typename To, typename From, typename Derived = void>
+struct ValueFromPointerCast
+    : public CastIsPossible<To, From *>,
+      public NullableValueCastFailed<To>,
+      public DefaultDoCastIfPossible<
+          To, From *,
+          detail::SelfType<Derived, ValueFromPointerCast<To, From>>> {
+  static inline To doCast(From *f) { return To(f); }
+};
+
+/// This cast trait provides std::unique_ptr casting. It has the semantics of
+/// moving the contents of the input unique_ptr into the output unique_ptr
+/// during the cast. It's also a good example of how to implement a move-only
+/// cast.
+template <typename To, typename From, typename Derived = void>
+struct UniquePtrCast : public CastIsPossible<To, From *> {
+  using Self = detail::SelfType<Derived, UniquePtrCast<To, From>>;
+  using CastResultType = std::unique_ptr<
+      std::remove_reference_t<typename cast_retty<To, From>::ret_type>>;
+
+  static inline CastResultType doCast(std::unique_ptr<From> &&f) {
+    return CastResultType((typename CastResultType::element_type *)f.release());
+  }
+
+  static inline CastResultType castFailed() { return CastResultType(nullptr); }
+
+  static inline CastResultType doCastIfPossible(std::unique_ptr<From> &&f) {
+    if (!Self::isPossible(f))
+      return castFailed();
+    return doCast(f);
+  }
+};
+
+/// This cast trait provides Optional<T> casting. This means that if you have a
+/// value type, you can cast it to another value type and have dyn_cast return
+/// an Optional<T>.
+template <typename To, typename From, typename Derived = void>
+struct OptionalValueCast
+    : public CastIsPossible<To, From>,
+      public DefaultDoCastIfPossible<
+          Optional<To>, From,
+          detail::SelfType<Derived, OptionalValueCast<To, From>>> {
+  static inline Optional<To> castFailed() { return Optional<To>{}; }
+
+  static inline Optional<To> doCast(const From &f) { return To(f); }
+};
+
+/// Provides a cast trait that strips `const` from types to make it easier to
+/// implement a const-version of a non-const cast. It just removes boilerplate
+/// and reduces the amount of code you as the user need to implement. You can
+/// use it like this:
+///
+/// template<> struct CastInfo<foo, bar> {
+///   ...verbose implementation...
+/// };
+///
+/// template<> struct CastInfo<foo, const bar> : public
+///        ConstStrippingForwardingCast<foo, const bar, CastInfo<foo, bar>> {};
+///
+template <typename To, typename From, typename ForwardTo>
+struct ConstStrippingForwardingCast {
+  // Remove the pointer if it exists, then we can get rid of consts/volatiles.
+  using DecayedFrom = std::remove_cv_t<std::remove_pointer_t<From>>;
+  // Now if it's a pointer, add it back. Otherwise, we want a ref.
+  using NonConstFrom = std::conditional_t<std::is_pointer<From>::value,
+                                          DecayedFrom *, DecayedFrom &>;
+
+  static inline bool isPossible(const From &f) {
+    return ForwardTo::isPossible(const_cast<NonConstFrom>(f));
+  }
+
+  static inline decltype(auto) castFailed() { return ForwardTo::castFailed(); }
+
+  static inline decltype(auto) doCast(const From &f) {
+    return ForwardTo::doCast(const_cast<NonConstFrom>(f));
+  }
+
+  static inline decltype(auto) doCastIfPossible(const From &f) {
+    return ForwardTo::doCastIfPossible(const_cast<NonConstFrom>(f));
+  }
+};
+
+//===----------------------------------------------------------------------===//
+// CastInfo
+//===----------------------------------------------------------------------===//
+
+/// This struct provides a method for customizing the way a cast is performed.
+/// It inherits from CastIsPossible, to support the case of declaring many
+/// CastIsPossible specializations without having to specialize the full
+/// CastInfo.
+///
+/// In order to specialize different behaviors, specify different functions in
+/// your CastInfo specialization.
+/// For isa<> customization, provide:
+///
+///   `static bool isPossible(const From &f)`
+///
+/// For cast<> customization, provide:
+///
+///  `static To doCast(const From &f)`
+///
+/// For dyn_cast<> and the *_if_present<> variants' customization, provide:
+///
+///  `static To castFailed()` and `static To doCastIfPossible(const From &f)`
+///
+/// Your specialization might look something like this:
+///
+///  template<> struct CastInfo<foo, bar> : public CastIsPossible<foo, bar> {
+///    static inline foo doCast(const bar &b) {
+///      return foo(const_cast<bar &>(b));
+///    }
+///    static inline foo castFailed() { return foo(); }
+///    static inline foo doCastIfPossible(const bar &b) {
+///      if (!CastInfo<foo, bar>::isPossible(b))
+///        return castFailed();
+///      return doCast(b);
+///    }
+///  };
+
+// The default implementations of CastInfo don't use cast traits for now because
+// we need to specify types all over the place due to the current expected
+// casting behavior and the way cast_retty works. New use cases can and should
+// take advantage of the cast traits whenever possible!
+
+template <typename To, typename From, typename Enable = void>
+struct CastInfo : public CastIsPossible<To, From> {
+  using Self = CastInfo<To, From, Enable>;
+
+  using CastReturnType = typename cast_retty<To, From>::ret_type;
+
+  static inline CastReturnType doCast(From &f) {
+    return cast_convert_val<To, From,
+                            typename simplify_type<From>::SimpleType>::doit(f);
+  }
+
+  // This assumes that you can construct the cast return type from `nullptr`.
+  // This is largely to support legacy use cases - if you don't want this
+  // behavior you should specialize CastInfo for your use case.
+  //
+  // FIXME: fix legacy use cases to specialize CastInfo so we can remove these
+  //        two - they don't really belong here, as it doesn't make sense to
+  //        have a fallible reference-to-reference cast if the type isn't
+  //        constructible from nullptr, which doesn't really happen in LLVM
+  //        outside of MLIR (which is a separate use case in itself).
+  static inline CastReturnType castFailed() { return CastReturnType(nullptr); }
+
+  static inline CastReturnType doCastIfPossible(From &f) {
+    if (!Self::isPossible(f))
+      return castFailed();
+    return doCast(f);
+  }
+};
+
+/// Provides a CastInfo partial specialization for pointers. This version *does*
+/// provide castFailed and doCastIfPossible because for pointers, a fallible
+/// cast is trivial - just return nullptr.
+template <typename To, typename From>
+struct CastInfo<To, From *, std::enable_if_t<is_simple_type<From>::value>>
+    : public CastIsPossible<To, From *> {
+  using Self = CastInfo<To, From *>;
+
+  using CastReturnType = typename cast_retty<To, From *>::ret_type;
+
+  static inline CastReturnType doCast(From *f) {
+    // We know it is a simple type, so we can just do cast_convert_val.
+    return cast_convert_val<To, From *, From *>::doit(f);
+  }
+
+  static inline CastReturnType castFailed() { return CastReturnType(nullptr); }
+
+  static inline CastReturnType doCastIfPossible(From *f) {
+    if (!Self::isPossible(f))
+      return castFailed();
+    return doCast(f);
+  }
+};
+
+/// This struct provides an overload for CastInfo where From has simplify_type
+/// defined. This simply forwards to the appropriate CastInfo with the
+/// simplified type/value, so you don't have to implement both.
+template <typename To, typename From>
+struct CastInfo<To, From, std::enable_if_t<!is_simple_type<From>::value>> {
+  using Self = CastInfo<To, From>;
+  using SimpleFrom = typename simplify_type<From>::SimpleType;
+  using SimplifiedSelf = CastInfo<To, SimpleFrom>;
+
+  static inline bool isPossible(From &f) {
+    return SimplifiedSelf::isPossible(
+        simplify_type<From>::getSimplifiedValue(f));
+  }
+
+  static inline decltype(auto) doCast(From &f) {
+    return SimplifiedSelf::doCast(simplify_type<From>::getSimplifiedValue(f));
+  }
+
+  static inline decltype(auto) castFailed() {
+    return SimplifiedSelf::castFailed();
+  }
+
+  static inline decltype(auto) doCastIfPossible(From &f) {
+    return SimplifiedSelf::doCastIfPossible(
+        simplify_type<From>::getSimplifiedValue(f));
+  }
+};
+
+//===----------------------------------------------------------------------===//
+// Pre-specialized CastInfo
+//===----------------------------------------------------------------------===//
+
+/// Provide a CastInfo specialized for std::unique_ptr.
+template <typename To, typename From>
+struct CastInfo<To, std::unique_ptr<From>> : public UniquePtrCast<To, From> {};
+
+/// Provide a CastInfo specialized for Optional<From>. It's assumed that if the
+/// input is Optional<From> that the output can be Optional<To>. If that's not
+/// the case, specialize CastInfo for your use case.
+template <typename To, typename From>
+struct CastInfo<To, Optional<From>> : public OptionalValueCast<To, From> {};
+
+/// isa<X> - Return true if the parameter to the template is an instance of one
+/// of the template type arguments.  Used like this:
+///
+///  if (isa<Type>(myVal)) { ... }
+///  if (isa<Type0, Type1, Type2>(myVal)) { ... }
+template <typename To, typename From>
+LLVM_NODISCARD inline bool isa(const From &Val) {
+  return CastInfo<To, const From>::isPossible(Val);
+}
+
+template <typename First, typename Second, typename... Rest, typename From>
+LLVM_NODISCARD inline bool isa(const From &Val) {
+  return isa<First>(Val) || isa<Second, Rest...>(Val);
+}
+
+/// cast<X> - Return the argument parameter cast to the specified type.  This
+/// casting operator asserts that the type is correct, so it does not return
+/// null on failure.  It does not allow a null argument (use cast_if_present for
+/// that). It is typically used like this:
+///
+///  cast<Instruction>(myVal)->getParent()
+
+template <typename To, typename From>
+LLVM_NODISCARD inline decltype(auto) cast(const From &Val) {
+  return CastInfo<To, const From>::doCast(Val);
+}
+
+template <typename To, typename From>
+LLVM_NODISCARD inline decltype(auto) cast(From &Val) {
+  return CastInfo<To, From>::doCast(Val);
+}
+
+template <typename To, typename From>
+LLVM_NODISCARD inline decltype(auto) cast(From *Val) {
+  return CastInfo<To, From *>::doCast(Val);
+}
+
+template <typename To, typename From>
+LLVM_NODISCARD inline decltype(auto) cast(std::unique_ptr<From> &&Val) {
+  return CastInfo<To, std::unique_ptr<From>>::doCast(std::move(Val));
+}
+
+/// dyn_cast<X> - Return the argument parameter cast to the specified type. This
+/// casting operator returns null if the argument is of the wrong type, so it
+/// can be used to test for a type as well as cast if successful. The value
+/// passed in must be present, if not, use dyn_cast_if_present. This should be
+/// used in the context of an if statement like this:
+///
+///  if (const Instruction *I = dyn_cast<Instruction>(myVal)) { ... }
+
+template <typename To, typename From>
+LLVM_NODISCARD inline decltype(auto) dyn_cast(const From &Val) {
+  return CastInfo<To, const From>::doCastIfPossible(Val);
+}
+
+template <typename To, typename From>
+LLVM_NODISCARD inline decltype(auto) dyn_cast(From &Val) {
+  return CastInfo<To, From>::doCastIfPossible(Val);
+}
+
+template <typename To, typename From>
+LLVM_NODISCARD inline decltype(auto) dyn_cast(From *Val) {
+  return CastInfo<To, From *>::doCastIfPossible(Val);
+}
+
+template <typename To, typename From>
+LLVM_NODISCARD inline decltype(auto) dyn_cast(std::unique_ptr<From> &&Val) {
+  return CastInfo<To, std::unique_ptr<From>>::doCastIfPossible(std::move(Val));
+}
+
+//===----------------------------------------------------------------------===//
+// ValueIsPresent
+//===----------------------------------------------------------------------===//
+
+template <typename T>
+constexpr bool IsNullable = std::is_pointer<T>::value ||
+                            std::is_constructible<T, std::nullptr_t>::value;
+
+/// ValueIsPresent provides a way to check if a value is, well, present. For
+/// pointers, this is the equivalent of checking against nullptr, for
+/// Optionals this is the equivalent of checking hasValue(). It also
+/// provides a method for unwrapping a value (think dereferencing a
+/// pointer).
+
+// Generic values can't *not* be present.
+template <typename T, typename Enable = void> struct ValueIsPresent {
+  using UnwrappedType = T;
+  static inline bool isPresent(const T &t) { return true; }
+  static inline decltype(auto) unwrapValue(T &t) { return t; }
+};
+
+// Optional provides its own way to check if something is present.
+template <typename T> struct ValueIsPresent<Optional<T>> {
+  using UnwrappedType = T;
+  static inline bool isPresent(const Optional<T> &t) { return t.hasValue(); }
+  static inline decltype(auto) unwrapValue(Optional<T> &t) {
+    return t.getValue();
+  }
+};
+
+// If something is "nullable" then we just compare it to nullptr to see if it
+// exists.
+template <typename T>
+struct ValueIsPresent<T, std::enable_if_t<IsNullable<T>>> {
+  using UnwrappedType = T;
+  static inline bool isPresent(const T &t) { return t != nullptr; }
+  static inline decltype(auto) unwrapValue(T &t) { return t; }
+};
+
+namespace detail {
+// Convenience function we can use to check if a value is present. Because of
+// simplify_type, we have to call it on the simplified type for now.
+template <typename T> inline bool isPresent(const T &t) {
+  return ValueIsPresent<typename simplify_type<T>::SimpleType>::isPresent(
+      simplify_type<T>::getSimplifiedValue(const_cast<T &>(t)));
+}
+
+// Convenience function we can use to unwrap a value.
+template <typename T> inline decltype(auto) unwrapValue(T &t) {
+  return ValueIsPresent<T>::unwrapValue(t);
+}
+} // namespace detail
+
+/// isa_and_present<X> - Functionally identical to isa, except that a null value
+/// is accepted.
+template <typename... X, class Y>
+LLVM_NODISCARD inline bool isa_and_present(const Y &Val) {
+  if (!detail::isPresent(Val))
+    return false;
+  return isa<X...>(Val);
+}
+
+template <typename... X, class Y>
+LLVM_NODISCARD inline bool isa_and_nonnull(const Y &Val) {
+  return isa_and_present<X...>(Val);
+}
+
+/// cast_if_present<X> - Functionally identical to cast, except that a null
+/// value is accepted.
 template <class X, class Y>
-inline std::enable_if_t<!is_simple_type<Y>::value,
-                        typename cast_retty<X, const Y>::ret_type>
-cast(const Y &Val) {
-  assert(isa<X>(Val) && "cast<Ty>() argument of incompatible type!");
-  return cast_convert_val<
-      X, const Y, typename simplify_type<const Y>::SimpleType>::doit(Val);
+LLVM_NODISCARD inline auto cast_if_present(const Y &Val) {
+  if (!detail::isPresent(Val))
+    return CastInfo<X, const Y>::castFailed();
+  assert(isa<X>(Val) && "cast_if_present<Ty>() argument of incompatible type!");
+  return cast<X>(detail::unwrapValue(Val));
+}
+
+template <class X, class Y> LLVM_NODISCARD inline auto cast_if_present(Y &Val) {
+  if (!detail::isPresent(Val))
+    return CastInfo<X, Y>::castFailed();
+  assert(isa<X>(Val) && "cast_if_present<Ty>() argument of incompatible type!");
+  return cast<X>(detail::unwrapValue(Val));
+}
+
+template <class X, class Y> LLVM_NODISCARD inline auto cast_if_present(Y *Val) {
+  if (!detail::isPresent(Val))
+    return CastInfo<X, Y *>::castFailed();
+  assert(isa<X>(Val) && "cast_if_present<Ty>() argument of incompatible type!");
+  return cast<X>(detail::unwrapValue(Val));
 }
 
 template <class X, class Y>
-inline typename cast_retty<X, Y>::ret_type cast(Y &Val) {
-  assert(isa<X>(Val) && "cast<Ty>() argument of incompatible type!");
-  return cast_convert_val<X, Y,
-                          typename simplify_type<Y>::SimpleType>::doit(Val);
+LLVM_NODISCARD inline auto cast_if_present(std::unique_ptr<Y> &&Val) {
+  if (!detail::isPresent(Val))
+    return UniquePtrCast<X, Y>::castFailed();
+  return UniquePtrCast<X, Y>::doCast(std::move(Val));
 }
 
-template <class X, class Y>
-inline typename cast_retty<X, Y *>::ret_type cast(Y *Val) {
-  assert(isa<X>(Val) && "cast<Ty>() argument of incompatible type!");
-  return cast_convert_val<X, Y*,
-                          typename simplify_type<Y*>::SimpleType>::doit(Val);
+// Provide a forwarding from cast_or_null to cast_if_present for current
+// users. This is deprecated and will be removed in a future patch, use
+// cast_if_present instead.
+template <class X, class Y> auto cast_or_null(const Y &Val) {
+  return cast_if_present<X>(Val);
 }
 
-template <class X, class Y>
-inline typename cast_retty<X, std::unique_ptr<Y>>::ret_type
-cast(std::unique_ptr<Y> &&Val) {
-  assert(isa<X>(Val.get()) && "cast<Ty>() argument of incompatible type!");
-  using ret_type = typename cast_retty<X, std::unique_ptr<Y>>::ret_type;
-  return ret_type(
-      cast_convert_val<X, Y *, typename simplify_type<Y *>::SimpleType>::doit(
-          Val.release()));
+template <class X, class Y> auto cast_or_null(Y &Val) {
+  return cast_if_present<X>(Val);
 }
 
-// cast_or_null<X> - Functionally identical to cast, except that a null value is
-// accepted.
-//
-template <class X, class Y>
-LLVM_NODISCARD inline std::enable_if_t<
-    !is_simple_type<Y>::value, typename cast_retty<X, const Y>::ret_type>
-cast_or_null(const Y &Val) {
-  if (!Val)
-    return nullptr;
-  assert(isa<X>(Val) && "cast_or_null<Ty>() argument of incompatible type!");
-  return cast<X>(Val);
+template <class X, class Y> auto cast_or_null(Y *Val) {
+  return cast_if_present<X>(Val);
 }
 
-template <class X, class Y>
-LLVM_NODISCARD inline std::enable_if_t<!is_simple_type<Y>::value,
-                                       typename cast_retty<X, Y>::ret_type>
-cast_or_null(Y &Val) {
-  if (!Val)
-    return nullptr;
-  assert(isa<X>(Val) && "cast_or_null<Ty>() argument of incompatible type!");
-  return cast<X>(Val);
+template <class X, class Y> auto cast_or_null(std::unique_ptr<Y> &&Val) {
+  return cast_if_present<X>(std::move(Val));
 }
 
-template <class X, class Y>
-LLVM_NODISCARD inline typename cast_retty<X, Y *>::ret_type
-cast_or_null(Y *Val) {
-  if (!Val) return nullptr;
-  assert(isa<X>(Val) && "cast_or_null<Ty>() argument of incompatible type!");
-  return cast<X>(Val);
+/// dyn_cast_if_present<X> - Functionally identical to dyn_cast, except that a
+/// null (or none in the case of optionals) value is accepted.
+template <class X, class Y> auto dyn_cast_if_present(const Y &Val) {
+  if (!detail::isPresent(Val))
+    return CastInfo<X, const Y>::castFailed();
+  return CastInfo<X, const Y>::doCastIfPossible(detail::unwrapValue(Val));
 }
 
-template <class X, class Y>
-inline typename cast_retty<X, std::unique_ptr<Y>>::ret_type
-cast_or_null(std::unique_ptr<Y> &&Val) {
-  if (!Val)
-    return nullptr;
-  return cast<X>(std::move(Val));
+template <class X, class Y> auto dyn_cast_if_present(Y &Val) {
+  if (!detail::isPresent(Val))
+    return CastInfo<X, Y>::castFailed();
+  return CastInfo<X, Y>::doCastIfPossible(detail::unwrapValue(Val));
 }
 
-// dyn_cast<X> - Return the argument parameter cast to the specified type.  This
-// casting operator returns null if the argument is of the wrong type, so it can
-// be used to test for a type as well as cast if successful.  This should be
-// used in the context of an if statement like this:
-//
-//  if (const Instruction *I = dyn_cast<Instruction>(myVal)) { ... }
-//
-
-template <class X, class Y>
-LLVM_NODISCARD inline std::enable_if_t<
-    !is_simple_type<Y>::value, typename cast_retty<X, const Y>::ret_type>
-dyn_cast(const Y &Val) {
-  return isa<X>(Val) ? cast<X>(Val) : nullptr;
+template <class X, class Y> auto dyn_cast_if_present(Y *Val) {
+  if (!detail::isPresent(Val))
+    return CastInfo<X, Y *>::castFailed();
+  return CastInfo<X, Y *>::doCastIfPossible(detail::unwrapValue(Val));
 }
 
-template <class X, class Y>
-LLVM_NODISCARD inline typename cast_retty<X, Y>::ret_type dyn_cast(Y &Val) {
-  return isa<X>(Val) ? cast<X>(Val) : nullptr;
+// Forwards to dyn_cast_if_present to avoid breaking current users. This is
+// deprecated and will be removed in a future patch, use
+// cast_if_present instead.
+template <class X, class Y> auto dyn_cast_or_null(const Y &Val) {
+  return dyn_cast_if_present<X>(Val);
 }
 
-template <class X, class Y>
-LLVM_NODISCARD inline typename cast_retty<X, Y *>::ret_type dyn_cast(Y *Val) {
-  return isa<X>(Val) ? cast<X>(Val) : nullptr;
+template <class X, class Y> auto dyn_cast_or_null(Y &Val) {
+  return dyn_cast_if_present<X>(Val);
 }
 
-// dyn_cast_or_null<X> - Functionally identical to dyn_cast, except that a null
-// value is accepted.
-//
-template <class X, class Y>
-LLVM_NODISCARD inline std::enable_if_t<
-    !is_simple_type<Y>::value, typename cast_retty<X, const Y>::ret_type>
-dyn_cast_or_null(const Y &Val) {
-  return (Val && isa<X>(Val)) ? cast<X>(Val) : nullptr;
+template <class X, class Y> auto dyn_cast_or_null(Y *Val) {
+  return dyn_cast_if_present<X>(Val);
 }
 
+/// unique_dyn_cast<X> - Given a unique_ptr<Y>, try to return a unique_ptr<X>,
+/// taking ownership of the input pointer iff isa<X>(Val) is true.  If the
+/// cast is successful, From refers to nullptr on exit and the casted value
+/// is returned.  If the cast is unsuccessful, the function returns nullptr
+/// and From is unchanged.
 template <class X, class Y>
-LLVM_NODISCARD inline std::enable_if_t<!is_simple_type<Y>::value,
-                                       typename cast_retty<X, Y>::ret_type>
-dyn_cast_or_null(Y &Val) {
-  return (Val && isa<X>(Val)) ? cast<X>(Val) : nullptr;
-}
-
-template <class X, class Y>
-LLVM_NODISCARD inline typename cast_retty<X, Y *>::ret_type
-dyn_cast_or_null(Y *Val) {
-  return (Val && isa<X>(Val)) ? cast<X>(Val) : nullptr;
-}
-
-// unique_dyn_cast<X> - Given a unique_ptr<Y>, try to return a unique_ptr<X>,
-// taking ownership of the input pointer iff isa<X>(Val) is true.  If the
-// cast is successful, From refers to nullptr on exit and the casted value
-// is returned.  If the cast is unsuccessful, the function returns nullptr
-// and From is unchanged.
-template <class X, class Y>
-LLVM_NODISCARD inline auto unique_dyn_cast(std::unique_ptr<Y> &Val)
-    -> decltype(cast<X>(Val)) {
+LLVM_NODISCARD inline typename CastInfo<X, std::unique_ptr<Y>>::CastResultType
+unique_dyn_cast(std::unique_ptr<Y> &Val) {
   if (!isa<X>(Val))
     return nullptr;
   return cast<X>(std::move(Val));
@@ -386,11 +777,11 @@ LLVM_NODISCARD inline auto unique_dyn_cast(std::unique_ptr<Y> &&Val) {
   return unique_dyn_cast<X, Y>(Val);
 }
 
-// dyn_cast_or_null<X> - Functionally identical to unique_dyn_cast, except that
-// a null value is accepted.
+// unique_dyn_cast_or_null<X> - Functionally identical to unique_dyn_cast,
+// except that a null value is accepted.
 template <class X, class Y>
-LLVM_NODISCARD inline auto unique_dyn_cast_or_null(std::unique_ptr<Y> &Val)
-    -> decltype(cast<X>(Val)) {
+LLVM_NODISCARD inline typename CastInfo<X, std::unique_ptr<Y>>::CastResultType
+unique_dyn_cast_or_null(std::unique_ptr<Y> &Val) {
   if (!Val)
     return nullptr;
   return unique_dyn_cast<X, Y>(Val);
