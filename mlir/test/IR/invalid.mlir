@@ -277,6 +277,13 @@ func.func @non_operation() {
 
 // -----
 
+func.func @non_operation() {
+  // expected-error@+1 {{custom op 'asd' is unknown (tried 'func.asd' as well)}}
+  asd
+}
+
+// -----
+
 func.func @invalid_if_conditional2() {
   affine.for %i = 1 to 10 {
     affine.if affine_set<(i)[N] : (i >= )>  // expected-error {{expected '== 0' or '>= 0' at end of affine constraint}}
@@ -826,7 +833,7 @@ func.func @mixed_named_arguments(f32,
 func.func @f(f32) {
 ^bb0(%a : f32):
   %18 = arith.cmpi slt, %idx, %idx : index
-  tensor<42 x index  // expected-error {{custom op 'func.tensor' is unknown}}
+  tensor<42 x index  // expected-error {{custom op 'tensor' is unknown (tried 'func.tensor' as well)}}
   return
 }
 
