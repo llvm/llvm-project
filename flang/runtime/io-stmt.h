@@ -582,7 +582,7 @@ private:
   CloseStatus status_{CloseStatus::Keep};
 };
 
-// For CLOSE(bad unit) and INQUIRE(unconnected unit)
+// For CLOSE(bad unit), WAIT(bad unit, ID=nonzero) and INQUIRE(unconnected unit)
 class NoUnitIoStatementState : public IoStatementBase {
 public:
   IoStatementState &ioStatementState() { return ioStatementState_; }

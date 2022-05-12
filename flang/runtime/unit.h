@@ -124,7 +124,8 @@ private:
 
   Lock lock_;
 
-  // When an I/O statement is in progress on this unit, holds its state.
+  // When a synchronous I/O statement is in progress on this unit, holds its
+  // state.
   std::variant<std::monostate, OpenStatementState, CloseStatementState,
       ExternalFormattedIoStatementState<Direction::Output>,
       ExternalFormattedIoStatementState<Direction::Input>,

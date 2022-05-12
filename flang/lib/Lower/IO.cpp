@@ -75,8 +75,7 @@ static constexpr std::tuple<
     mkIOKey(BeginInternalFormattedInput), mkIOKey(BeginExternalListOutput),
     mkIOKey(BeginExternalListInput), mkIOKey(BeginExternalFormattedOutput),
     mkIOKey(BeginExternalFormattedInput), mkIOKey(BeginUnformattedOutput),
-    mkIOKey(BeginUnformattedInput), mkIOKey(BeginAsynchronousOutput),
-    mkIOKey(BeginAsynchronousInput), mkIOKey(BeginWait), mkIOKey(BeginWaitAll),
+    mkIOKey(BeginUnformattedInput), mkIOKey(BeginWait), mkIOKey(BeginWaitAll),
     mkIOKey(BeginClose), mkIOKey(BeginFlush), mkIOKey(BeginBackspace),
     mkIOKey(BeginEndfile), mkIOKey(BeginRewind), mkIOKey(BeginOpenUnit),
     mkIOKey(BeginOpenNewUnit), mkIOKey(BeginInquireUnit),
@@ -1784,8 +1783,6 @@ getBeginDataTransferFunc(mlir::Location loc, fir::FirOpBuilder &builder,
                          bool isFormatted, bool isListOrNml, bool isInternal,
                          bool isInternalWithDesc, bool isAsync) {
   if constexpr (isInput) {
-    if (isAsync)
-      return getIORuntimeFunc<mkIOKey(BeginAsynchronousInput)>(loc, builder);
     if (isFormatted || isListOrNml) {
       if (isInternal) {
         if (isInternalWithDesc) {
@@ -1808,8 +1805,6 @@ getBeginDataTransferFunc(mlir::Location loc, fir::FirOpBuilder &builder,
     }
     return getIORuntimeFunc<mkIOKey(BeginUnformattedInput)>(loc, builder);
   } else {
-    if (isAsync)
-      return getIORuntimeFunc<mkIOKey(BeginAsynchronousOutput)>(loc, builder);
     if (isFormatted || isListOrNml) {
       if (isInternal) {
         if (isInternalWithDesc) {
@@ -1873,12 +1868,9 @@ void genBeginDataTransferCallArgs(
           getDefaultScratch(builder, loc, ioFuncTy.getInput(ioArgs.size())));
       ioArgs.push_back( // buffer length
           getDefaultScratchLen(builder, loc, ioFuncTy.getInput(ioArgs.size())));
-    } else if (isAsync) { // unit; REC; buffer and length
-      ioArgs.push_back(getIOUnit(converter, loc, stmt,
-                                 ioFuncTy.getInput(ioArgs.size()), csi,
-                                 stmtCtx));
-      TODO(loc, "asynchronous");
     } else { // external IO - maybe explicit format; unit
+      if (isAsync)
+        TODO(loc, "asynchronous");
       maybeGetFormatArgs();
       ioArgs.push_back(getIOUnit(converter, loc, stmt,
                                  ioFuncTy.getInput(ioArgs.size()), csi,
