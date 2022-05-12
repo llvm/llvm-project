@@ -586,6 +586,7 @@ cc_library(
         "//mlir:Affine",
         "//mlir:Analysis",
         "//mlir:FuncDialect",
+        "//mlir:GPUDialect",
         "//mlir:LLVMDialect",
         "//mlir:LinalgOps",
         "//mlir:LinalgTransforms",
