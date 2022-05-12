@@ -143,6 +143,12 @@ public:
   /// file.
   unsigned ModuleMapFileHomeIsCwd : 1;
 
+  /// Set the base path of a built module file to be the current working
+  /// directory. This is useful for sharing module files across machines
+  /// that build with different paths without having to rewrite all
+  /// modulemap files to have working directory relative paths.
+  unsigned ModuleFileHomeIsCwd : 1;
+
   /// Also search for prebuilt implicit modules in the prebuilt module cache
   /// path.
   unsigned EnablePrebuiltImplicitModules : 1;
@@ -222,9 +228,9 @@ public:
   HeaderSearchOptions(StringRef _Sysroot = "/")
       : Sysroot(_Sysroot), ModuleFormat("raw"), DisableModuleHash(false),
         ImplicitModuleMaps(false), ModuleMapFileHomeIsCwd(false),
-        EnablePrebuiltImplicitModules(false), UseBuiltinIncludes(true),
-        UseStandardSystemIncludes(true), UseStandardCXXIncludes(true),
-        UseLibcxx(false), Verbose(false),
+        ModuleFileHomeIsCwd(false), EnablePrebuiltImplicitModules(false),
+        UseBuiltinIncludes(true), UseStandardSystemIncludes(true),
+        UseStandardCXXIncludes(true), UseLibcxx(false), Verbose(false),
         ModulesValidateOncePerBuildSession(false),
         ModulesValidateSystemHeaders(false),
         ValidateASTInputFilesContent(false), UseDebugInfo(false),

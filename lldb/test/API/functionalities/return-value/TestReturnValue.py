@@ -237,7 +237,7 @@ class ReturnValueTestCase(TestBase):
 
         # Set the breakpoint, run to it, finish out.
         bkpt = self.target.BreakpointCreateByName(func_name)
-        self.assertTrue(bkpt.GetNumResolvedLocations() > 0)
+        self.assertTrue(bkpt.GetNumResolvedLocations() > 0, "Got wrong number of locations for {0}".format(func_name))
 
         self.process.Continue()
 

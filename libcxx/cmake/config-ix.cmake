@@ -13,9 +13,6 @@ include(CheckCSourceCompiles)
 # built libunwind isn't installed yet). For those cases, it'd be good to
 # link with --uwnindlib=none. Check if that option works.
 llvm_check_compiler_linker_flag(C "--unwindlib=none" CXX_SUPPORTS_UNWINDLIB_EQ_NONE_FLAG)
-if (CXX_SUPPORTS_UNWINDLIB_EQ_NONE_FLAG)
-  set(CMAKE_REQUIRED_FLAGS "${CMAKE_REQUIRED_FLAGS} --unwindlib=none")
-endif()
 
 if(WIN32 AND NOT MINGW)
   # NOTE(compnerd) this is technically a lie, there is msvcrt, but for now, lets

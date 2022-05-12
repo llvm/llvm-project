@@ -406,8 +406,8 @@ static Error getExtensionVersion(StringRef Ext, StringRef In, unsigned &Major,
       if (!MinorStr.empty())
         Error += "." + MinorStr.str();
       Error += " for experimental extension '" + Ext.str() +
-               "'(this compiler supports " + utostr(SupportedVers.Major) + "." +
-               utostr(SupportedVers.Minor) + ")";
+               "' (this compiler supports " + utostr(SupportedVers.Major) +
+               "." + utostr(SupportedVers.Minor) + ")";
       return createStringError(errc::invalid_argument, Error);
     }
     return Error::success();
