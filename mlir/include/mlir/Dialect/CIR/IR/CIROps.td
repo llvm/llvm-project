@@ -892,7 +892,7 @@ def GlobalOp : CIR_Op<"global", [Symbol]> {
   let assemblyFormat = [{
        ($sym_visibility^)?
        (`constant` $constant^)?
-       $sym_name `:`
+       $sym_name
        custom<GlobalOpTypeAndInitialValue>($sym_type, $initial_value)
        attr-dict
   }];

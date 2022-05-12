@@ -86,24 +86,24 @@ public:
   //     initializer or to propagate to another context; for example,
   //     side effects, or emitting an initialization that requires a
   //     reference to its current location.
-  mlir::Attribute emitForMemory(mlir::TypedAttr C, QualType T) {
+  mlir::Attribute emitForMemory(mlir::Attribute C, QualType T) {
     return emitForMemory(CGM, C, T);
   }
 
   // static llvm::Constant *emitNullForMemory(CodeGenModule &CGM, QualType T);
-  static mlir::Attribute emitForMemory(CIRGenModule &CGM, mlir::TypedAttr C,
+  static mlir::Attribute emitForMemory(CIRGenModule &CGM, mlir::Attribute C,
                                        clang::QualType T);
 
   // These are private helper routines of the constant emitter that
   // can't actually be private because things are split out into helper
   // functions and classes.
 
-  mlir::TypedAttr tryEmitPrivateForVarInit(const VarDecl &D);
+  mlir::Attribute tryEmitPrivateForVarInit(const VarDecl &D);
   mlir::TypedAttr tryEmitPrivate(const Expr *E, QualType T);
   mlir::TypedAttr tryEmitPrivateForMemory(const Expr *E, QualType T);
 
-  mlir::TypedAttr tryEmitPrivate(const APValue &value, QualType T);
-  mlir::TypedAttr tryEmitPrivateForMemory(const APValue &value, QualType T);
+  mlir::Attribute tryEmitPrivate(const APValue &value, QualType T);
+  mlir::Attribute tryEmitPrivateForMemory(const APValue &value, QualType T);
 
 private:
   void initializeNonAbstract(clang::LangAS destAS) {
