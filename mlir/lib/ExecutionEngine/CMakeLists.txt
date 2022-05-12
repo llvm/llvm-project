@@ -13,16 +13,6 @@ set(LLVM_OPTIONAL_SOURCES
   JitRunner.cpp
   )
 
-if(LLVM_USE_INTEL_JITEVENTS)
-  set(LLVM_JIT_LISTENER_LIB
-      IntelJITEvents)
-endif(LLVM_USE_INTEL_JITEVENTS)
-
-if(LLVM_USE_PERF)
-  set(LLVM_JIT_LISTENER_LIB
-      PerfJITEvents)
-endif(LLVM_USE_PERF)
-
 # Use a separate library for OptUtils, to avoid pulling in the entire JIT and
 # codegen infrastructure. Unlike MLIRExecutionEngine, this is part of
 # libMLIR.so.
@@ -47,6 +37,21 @@ add_mlir_library(MLIRExecutionEngineUtils
   IPO
   Passes
   )
+
+# Only enable the ExecutionEngine if the native target is configured in.
+if(NOT TARGET ${LLVM_NATIVE_ARCH})
+  return()
+endif()
+
+if(LLVM_USE_INTEL_JITEVENTS)
+  set(LLVM_JIT_LISTENER_LIB
+      IntelJITEvents)
+endif(LLVM_USE_INTEL_JITEVENTS)
+
+if(LLVM_USE_PERF)
+  set(LLVM_JIT_LISTENER_LIB
+      PerfJITEvents)
+endif(LLVM_USE_PERF)
 
 add_mlir_library(MLIRExecutionEngine
   ExecutionEngine.cpp
