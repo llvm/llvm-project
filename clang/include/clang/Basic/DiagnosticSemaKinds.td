@@ -3165,7 +3165,7 @@ def err_format_strftime_third_parameter : Error<
   "strftime format attribute requires 3rd parameter to be 0">;
 def err_format_attribute_requires_variadic : Error<
   "format attribute requires variadic function">;
-def err_format_attribute_not : Error<"format argument not %0">;
+def err_format_attribute_not : Error<"format argument not a string type">;
 def err_format_attribute_result_not : Error<"function does not return %0">;
 def err_format_attribute_implicit_this_format_string : Error<
   "format attribute cannot specify the implicit this argument as the format "
