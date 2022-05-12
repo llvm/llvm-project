@@ -706,6 +706,7 @@ static void reportFastISelFailure(MachineFunction &MF,
     report_fatal_error(Twine(R.getMsg()));
 
   ORE.emit(R);
+  LLVM_DEBUG(dbgs() << R.getMsg() << "\n");
 }
 
 void SelectionDAGISel::SelectBasicBlock(BasicBlock::const_iterator Begin,
@@ -1524,6 +1525,8 @@ void SelectionDAGISel::SelectAllBasicBlocks(const Function &Fn) {
               BeforeInst->hasOneUse() &&
               FastIS->tryToFoldLoad(cast<LoadInst>(BeforeInst), Inst)) {
             // If we succeeded, don't re-select the load.
+            LLVM_DEBUG(dbgs()
+                       << "FastISel folded load: " << *BeforeInst << "\n");
             BI = std::next(BasicBlock::const_iterator(BeforeInst));
             --NumFastIselRemaining;
             ++NumFastIselSuccess;

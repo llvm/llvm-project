@@ -8,20 +8,18 @@ define void @f(i256* nocapture %a, i256* nocapture %b, i256* nocapture %cc, i256
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    ldp x9, x8, [x2]
 ; CHECK-NEXT:    ldp x11, x10, [x3]
+; CHECK-NEXT:    ldp x13, x12, [x2, #16]
+; CHECK-NEXT:    ldp x14, x15, [x3, #16]
 ; CHECK-NEXT:    adds x9, x9, x11
-; CHECK-NEXT:    ldp x12, x11, [x2, #16]
 ; CHECK-NEXT:    adcs x8, x8, x10
-; CHECK-NEXT:    ldp x13, x10, [x3, #16]
-; CHECK-NEXT:    adcs x12, x12, x13
-; CHECK-NEXT:    mrs x13, NZCV
-; CHECK-NEXT:    adcs x14, x11, x10
-; CHECK-NEXT:    orr x11, x11, #0x100
-; CHECK-NEXT:    msr NZCV, x13
+; CHECK-NEXT:    adcs x10, x13, x14
+; CHECK-NEXT:    adc x11, x12, x15
+; CHECK-NEXT:    orr x12, x12, #0x100
+; CHECK-NEXT:    adc x12, x12, x15
 ; CHECK-NEXT:    stp x9, x8, [x0]
-; CHECK-NEXT:    adcs x10, x11, x10
-; CHECK-NEXT:    stp x12, x14, [x0, #16]
+; CHECK-NEXT:    stp x10, x11, [x0, #16]
+; CHECK-NEXT:    stp x10, x12, [x1, #16]
 ; CHECK-NEXT:    stp x9, x8, [x1]
-; CHECK-NEXT:    stp x12, x10, [x1, #16]
 ; CHECK-NEXT:    ret
 entry:
   %c = load i256, i256* %cc

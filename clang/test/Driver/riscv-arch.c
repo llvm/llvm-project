@@ -425,8 +425,7 @@
 // RUN: %clang --target=riscv32-unknown-elf -march=rv32izbt0p1 -menable-experimental-extensions -### %s \
 // RUN: -fsyntax-only 2>&1 | FileCheck -check-prefix=RV32-EXPERIMENTAL-BADVERS %s
 // RV32-EXPERIMENTAL-BADVERS: error: invalid arch name 'rv32izbt0p1'
-// RV32-EXPERIMENTAL-BADVERS: unsupported version number 0.1 for experimental extension
-// RV32-EXPERIMENTAL-BADVERS: 'zbt'(this compiler supports 0.93)
+// RV32-EXPERIMENTAL-BADVERS: unsupported version number 0.1 for experimental extension 'zbt' (this compiler supports 0.93)
 
 // RUN: %clang --target=riscv32-unknown-elf -march=rv32izbt0p93 -menable-experimental-extensions -### %s \
 // RUN: -fsyntax-only 2>&1 | FileCheck -check-prefix=RV32-EXPERIMENTAL-GOODVERS %s

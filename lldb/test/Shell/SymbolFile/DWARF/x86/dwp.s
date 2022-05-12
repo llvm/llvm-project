@@ -10,7 +10,7 @@
 # CHECK: (INT3) A = 3
 
 # CHECK-LABEL: image lookup -v -n F1
-# CHECK: CompileUnit: id = {0x00000001}, file = "1.c", language = "<not loaded>"
+# CHECK: CompileUnit: id = {0x00000001}, file = "1.c", language = "unknown"
 # CHECK: Function: {{.*}}, name = "F1", range = [0x0000000000000001-0x0000000000000002)
 # CHECK: Variable: {{.*}}, name = "x", type = "int", valid ranges = <block>, location = [0x0000000000000001, 0x0000000000000002) -> DW_OP_reg1 RDX
 

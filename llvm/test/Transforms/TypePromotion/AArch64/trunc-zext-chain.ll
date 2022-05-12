@@ -140,7 +140,7 @@ define i32 @with_undef() {
 ; CHECK:       bb3:
 ; CHECK-NEXT:    [[VAR4:%.*]] = phi i64 [ [[VAR33:%.*]], [[BB31:%.*]] ], [ undef, [[BB:%.*]] ]
 ; CHECK-NEXT:    [[VAR5:%.*]] = phi %struct.wobble* [ [[VAR38:%.*]], [[BB31]] ], [ [[VAR]], [[BB]] ]
-; CHECK-NEXT:    [[VAR6:%.*]] = phi i32 [ [[VAR32:%.*]], [[BB31]] ], [ undef, [[BB]] ]
+; CHECK-NEXT:    [[VAR6:%.*]] = phi i32 [ [[VAR32:%.*]], [[BB31]] ], [ 0, [[BB]] ]
 ; CHECK-NEXT:    [[VAR7:%.*]] = icmp eq %struct.wobble* [[VAR5]], null
 ; CHECK-NEXT:    br i1 [[VAR7]], label [[BB8:%.*]], label [[BB9:%.*]]
 ; CHECK:       bb8:

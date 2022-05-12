@@ -734,6 +734,7 @@ LogicalResult InlinerPass::initializeOptions(StringRef options) {
     return failure();
 
   // Initialize the default pipeline builder to use the option string.
+  // TODO: Use a generic pass manager for default pipelines, and remove this.
   if (!defaultPipelineStr.empty()) {
     std::string defaultPipelineCopy = defaultPipelineStr;
     defaultPipeline = [=](OpPassManager &pm) {
@@ -747,7 +748,7 @@ LogicalResult InlinerPass::initializeOptions(StringRef options) {
   llvm::StringMap<OpPassManager> pipelines;
   for (OpPassManager pipeline : opPipelineList)
     if (!pipeline.empty())
-      pipelines.try_emplace(pipeline.getOpName(), pipeline);
+      pipelines.try_emplace(pipeline.getOpAnchorName(), pipeline);
   opPipelines.assign({std::move(pipelines)});
 
   return success();

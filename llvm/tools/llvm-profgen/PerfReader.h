@@ -210,6 +210,17 @@ using AggregatedCounter =
 
 using SampleVector = SmallVector<std::tuple<uint64_t, uint64_t, uint64_t>, 16>;
 
+inline bool isValidFallThroughRange(uint64_t Start, uint64_t End,
+                                    ProfiledBinary *Binary) {
+  // Start bigger than End is considered invalid.
+  // LBR ranges cross the unconditional jmp are also assumed invalid.
+  // It's found that perf data may contain duplicate LBR entries that could form
+  // a range that does not reflect real execution flow on some Intel targets,
+  // e.g. Skylake. Such ranges are ususally very long. Exclude them since there
+  // cannot be a linear execution range that spans over unconditional jmp.
+  return Start <= End && !Binary->rangeCrossUncondBranch(Start, End);
+}
+
 // The state for the unwinder, it doesn't hold the data but only keep the
 // pointer/index of the data, While unwinding, the CallStack is changed
 // dynamicially and will be recorded as the context of the sample
