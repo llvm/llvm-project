@@ -51,6 +51,7 @@ module std [system] {
       export *
     }
     module stdatomic_h {
+      requires cplusplus23
       header "stdatomic.h"
       export *
     }
