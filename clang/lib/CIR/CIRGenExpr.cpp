@@ -212,6 +212,12 @@ void CIRGenFunction::buildStoreOfScalar(mlir::Value Value, Address Addr,
   }
   assert(currSrcLoc && "must pass in source location");
   builder.create<mlir::cir::StoreOp>(*currSrcLoc, Value, Addr.getPointer());
+  if (isNontemporal) {
+    llvm_unreachable("NYI");
+  }
+
+  if (UnimplementedFeature::tbaa())
+    llvm_unreachable("NYI");
 }
 
 void CIRGenFunction::buldStoreThroughLValue(RValue Src, LValue Dst,
