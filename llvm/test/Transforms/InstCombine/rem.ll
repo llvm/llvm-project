@@ -5,7 +5,8 @@ declare void @use(i32)
 
 define i64 @rem_signed(i64 %x1, i64 %y2) {
 ; CHECK-LABEL: @rem_signed(
-; CHECK-NEXT:    [[TMP1:%.*]] = srem i64 [[X1:%.*]], [[Y2:%.*]]
+; CHECK-NEXT:    [[X1_FR:%.*]] = freeze i64 [[X1:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = srem i64 [[X1_FR]], [[Y2:%.*]]
 ; CHECK-NEXT:    ret i64 [[TMP1]]
 ;
   %r = sdiv i64 %x1, %y2
@@ -16,7 +17,8 @@ define i64 @rem_signed(i64 %x1, i64 %y2) {
 
 define <4 x i32> @rem_signed_vec(<4 x i32> %t, <4 x i32> %u) {
 ; CHECK-LABEL: @rem_signed_vec(
-; CHECK-NEXT:    [[TMP1:%.*]] = srem <4 x i32> [[T:%.*]], [[U:%.*]]
+; CHECK-NEXT:    [[T_FR:%.*]] = freeze <4 x i32> [[T:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = srem <4 x i32> [[T_FR]], [[U:%.*]]
 ; CHECK-NEXT:    ret <4 x i32> [[TMP1]]
 ;
   %k = sdiv <4 x i32> %t, %u
@@ -27,7 +29,8 @@ define <4 x i32> @rem_signed_vec(<4 x i32> %t, <4 x i32> %u) {
 
 define i64 @rem_unsigned(i64 %x1, i64 %y2) {
 ; CHECK-LABEL: @rem_unsigned(
-; CHECK-NEXT:    [[TMP1:%.*]] = urem i64 [[X1:%.*]], [[Y2:%.*]]
+; CHECK-NEXT:    [[X1_FR:%.*]] = freeze i64 [[X1:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = urem i64 [[X1_FR]], [[Y2:%.*]]
 ; CHECK-NEXT:    ret i64 [[TMP1]]
 ;
   %r = udiv i64 %x1, %y2
@@ -97,7 +100,8 @@ define <2 x i4> @big_divisor_vec(<2 x i4> %x) {
 
 define i8 @urem1(i8 %x, i8 %y) {
 ; CHECK-LABEL: @urem1(
-; CHECK-NEXT:    [[TMP1:%.*]] = urem i8 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[X_FR:%.*]] = freeze i8 [[X:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = urem i8 [[X_FR]], [[Y:%.*]]
 ; CHECK-NEXT:    ret i8 [[TMP1]]
 ;
   %A = udiv i8 %x, %y
@@ -108,7 +112,8 @@ define i8 @urem1(i8 %x, i8 %y) {
 
 define i8 @srem1(i8 %x, i8 %y) {
 ; CHECK-LABEL: @srem1(
-; CHECK-NEXT:    [[TMP1:%.*]] = srem i8 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[X_FR:%.*]] = freeze i8 [[X:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = srem i8 [[X_FR]], [[Y:%.*]]
 ; CHECK-NEXT:    ret i8 [[TMP1]]
 ;
   %A = sdiv i8 %x, %y
@@ -119,7 +124,8 @@ define i8 @srem1(i8 %x, i8 %y) {
 
 define i8 @urem2(i8 %x, i8 %y) {
 ; CHECK-LABEL: @urem2(
-; CHECK-NEXT:    [[TMP1:%.*]] = urem i8 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[X_FR:%.*]] = freeze i8 [[X:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = urem i8 [[X_FR]], [[Y:%.*]]
 ; CHECK-NEXT:    [[C:%.*]] = sub i8 0, [[TMP1]]
 ; CHECK-NEXT:    ret i8 [[C]]
 ;
@@ -131,9 +137,10 @@ define i8 @urem2(i8 %x, i8 %y) {
 
 define i8 @urem3(i8 %x) {
 ; CHECK-LABEL: @urem3(
-; CHECK-NEXT:    [[TMP1:%.*]] = urem i8 [[X:%.*]], 3
-; CHECK-NEXT:    [[B_NEG:%.*]] = sub i8 [[X]], [[TMP1]]
-; CHECK-NEXT:    [[C:%.*]] = add i8 [[B_NEG]], [[X]]
+; CHECK-NEXT:    [[X_FR:%.*]] = freeze i8 [[X:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = urem i8 [[X_FR]], 3
+; CHECK-NEXT:    [[B_NEG:%.*]] = sub i8 [[X_FR]], [[TMP1]]
+; CHECK-NEXT:    [[C:%.*]] = add i8 [[B_NEG]], [[X_FR]]
 ; CHECK-NEXT:    ret i8 [[C]]
 ;
   %A = udiv i8 %x, 3
@@ -146,7 +153,8 @@ define i8 @urem3(i8 %x) {
 
 define i32 @sdiv_mul_sdiv(i32 %x, i32 %y) {
 ; CHECK-LABEL: @sdiv_mul_sdiv(
-; CHECK-NEXT:    [[R:%.*]] = sdiv i32 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[X_FR:%.*]] = freeze i32 [[X:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = sdiv i32 [[X_FR]], [[Y:%.*]]
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %div = sdiv i32 %x, %y
@@ -159,7 +167,8 @@ define i32 @sdiv_mul_sdiv(i32 %x, i32 %y) {
 
 define i32 @udiv_mul_udiv(i32 %x, i32 %y) {
 ; CHECK-LABEL: @udiv_mul_udiv(
-; CHECK-NEXT:    [[R:%.*]] = udiv i32 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[X_FR:%.*]] = freeze i32 [[X:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = udiv i32 [[X_FR]], [[Y:%.*]]
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %div = udiv i32 %x, %y

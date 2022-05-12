@@ -292,10 +292,12 @@ Instruction *InstCombinerImpl::visitMul(BinaryOperator &I) {
 
       auto RemOpc = Div->getOpcode() == Instruction::UDiv ? Instruction::URem
                                                           : Instruction::SRem;
-      Value *Rem = Builder.CreateBinOp(RemOpc, X, DivOp1);
+      // X must be frozen because we are increasing its number of uses.
+      Value *XFreeze = Builder.CreateFreeze(X, X->getName() + ".fr");
+      Value *Rem = Builder.CreateBinOp(RemOpc, XFreeze, DivOp1);
       if (DivOp1 == Y)
-        return BinaryOperator::CreateSub(X, Rem);
-      return BinaryOperator::CreateSub(Rem, X);
+        return BinaryOperator::CreateSub(XFreeze, Rem);
+      return BinaryOperator::CreateSub(Rem, XFreeze);
     }
   }
 
