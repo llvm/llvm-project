@@ -11,7 +11,10 @@
 // CHECK: call void @llvm.dbg.declare(metadata i8** %.block_descriptor.addr,
 // CHECK-SAME:                        metadata !DIExpression())
 // CHECK-OPT-NOT: alloca
-// CHECK-OPT: call void @llvm.dbg.value(metadata i8* %.block_descriptor,
+// Since the block address is not used anywhere in this function,
+// the optimizer (DeadArgElim) has replaced all the false uses
+// (i.e., metadata users) with undef.
+// CHECK-OPT: call void @llvm.dbg.value(metadata i8* undef,
 // CHECK-OPT-SAME:                      metadata !DIExpression())
 void f(void) {
   a(^{
