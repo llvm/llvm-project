@@ -50,7 +50,6 @@ private:
   void printOffen(const MCInst *MI, unsigned OpNo, raw_ostream &O);
   void printIdxen(const MCInst *MI, unsigned OpNo, raw_ostream &O);
   void printAddr64(const MCInst *MI, unsigned OpNo, raw_ostream &O);
-  void printMBUFOffset(const MCInst *MI, unsigned OpNo, raw_ostream &O);
   void printOffset(const MCInst *MI, unsigned OpNo, const MCSubtargetInfo &STI,
                    raw_ostream &O);
   void printFlatOffset(const MCInst *MI, unsigned OpNo, const MCSubtargetInfo &STI,
