@@ -736,7 +736,8 @@ DenseElementsAttr DenseElementsAttr::get(ShapedType type,
       setBit(buff.data(), i, values[i]);
     }
 
-    if (isSplat) { // special encoding for splat.
+    // Splat of bool is encoded as a byte with all-ones in it.
+    if (isSplat) {
       buff.resize(1);
       buff[0] = values[0] ? -1 : 0;
     }
