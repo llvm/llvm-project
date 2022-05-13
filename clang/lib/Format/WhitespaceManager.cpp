@@ -432,6 +432,7 @@ AlignTokenSequence(const FormatStyle &Style, unsigned Start, unsigned End,
            --Previous) {
         Changes[Previous + 1].Spaces -= Shift;
         Changes[Previous].Spaces += Shift;
+        Changes[Previous].StartOfTokenColumn += Shift;
       }
     }
   }

@@ -14161,6 +14161,21 @@ TEST_F(FormatTest, ConfigurableUseOfTab) {
                "int bbbbbbbb; // x\n",
                Tab);
 
+  FormatStyle TabAlignment = Tab;
+  TabAlignment.AlignConsecutiveDeclarations.Enabled = true;
+  TabAlignment.PointerAlignment = FormatStyle::PAS_Left;
+  verifyFormat("unsigned long long big;\n"
+               "char*\t\t   ptr;",
+               TabAlignment);
+  TabAlignment.PointerAlignment = FormatStyle::PAS_Middle;
+  verifyFormat("unsigned long long big;\n"
+               "char *\t\t   ptr;",
+               TabAlignment);
+  TabAlignment.PointerAlignment = FormatStyle::PAS_Right;
+  verifyFormat("unsigned long long big;\n"
+               "char\t\t  *ptr;",
+               TabAlignment);
+
   Tab.TabWidth = 4;
   Tab.IndentWidth = 8;
   verifyFormat("class TabWidth4Indent8 {\n"
@@ -14202,6 +14217,26 @@ TEST_F(FormatTest, ConfigurableUseOfTab) {
                    " \t \t in multiple lines\t\n"
                    " \t  */",
                    Tab));
+
+  TabAlignment.UseTab = FormatStyle::UT_ForIndentation;
+  TabAlignment.PointerAlignment = FormatStyle::PAS_Left;
+  verifyFormat("void f() {\n"
+               "\tunsigned long long big;\n"
+               "\tchar*              ptr;\n"
+               "}",
+               TabAlignment);
+  TabAlignment.PointerAlignment = FormatStyle::PAS_Middle;
+  verifyFormat("void f() {\n"
+               "\tunsigned long long big;\n"
+               "\tchar *             ptr;\n"
+               "}",
+               TabAlignment);
+  TabAlignment.PointerAlignment = FormatStyle::PAS_Right;
+  verifyFormat("void f() {\n"
+               "\tunsigned long long big;\n"
+               "\tchar              *ptr;\n"
+               "}",
+               TabAlignment);
 
   Tab.UseTab = FormatStyle::UT_ForIndentation;
   verifyFormat("{\n"
