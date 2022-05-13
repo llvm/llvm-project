@@ -540,7 +540,8 @@ parseGEPIndices(OpAsmParser &parser,
                 SmallVectorImpl<OpAsmParser::UnresolvedOperand> &indices,
                 DenseIntElementsAttr &structIndices) {
   SmallVector<int32_t> constantIndices;
-  parser.parseCommaSeparatedList([&]() -> ParseResult {
+
+  auto idxParser = [&]() -> ParseResult {
     int32_t constantIndex;
     OptionalParseResult parsedInteger =
         parser.parseOptionalInteger(constantIndex);
@@ -553,7 +554,9 @@ parseGEPIndices(OpAsmParser &parser,
 
     constantIndices.push_back(LLVM::GEPOp::kDynamicIndex);
     return parser.parseOperand(indices.emplace_back());
-  });
+  };
+  if (parser.parseCommaSeparatedList(idxParser))
+    return failure();
 
   structIndices = parser.getBuilder().getI32TensorAttr(constantIndices);
   return success();

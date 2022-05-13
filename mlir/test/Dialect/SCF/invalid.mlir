@@ -199,7 +199,7 @@ func.func @parallel_more_results_than_reduces(
 
 func.func @parallel_more_results_than_initial_values(
     %arg0 : index, %arg1: index, %arg2: index) {
-  // expected-error@+1 {{expects number of results: 1 to be the same as number of initial values: 0}}
+  // expected-error@+1 {{'scf.parallel' 0 operands present, but expected 1}}
   %res = scf.parallel (%i0) = (%arg0) to (%arg1) step (%arg2) -> f32 {
     scf.reduce(%arg0) : index {
       ^bb0(%lhs: index, %rhs: index):

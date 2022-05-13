@@ -50,9 +50,11 @@ public:
       : Parser(state), allowParsingSSAIds(allowParsingSSAIds),
         parseElement(parseElement) {}
 
-  AffineMap parseAffineMapRange(unsigned numDims, unsigned numSymbols);
+  ParseResult parseAffineMapRange(unsigned numDims, unsigned numSymbols,
+                                  AffineMap &result);
   ParseResult parseAffineMapOrIntegerSetInline(AffineMap &map, IntegerSet &set);
-  IntegerSet parseIntegerSetConstraints(unsigned numDims, unsigned numSymbols);
+  ParseResult parseIntegerSetConstraints(unsigned numDims, unsigned numSymbols,
+                                         IntegerSet &result);
   ParseResult parseAffineMapOfSSAIds(AffineMap &map,
                                      OpAsmParser::Delimiter delimiter);
   ParseResult parseAffineExprOfSSAIds(AffineExpr &expr);
@@ -510,29 +512,15 @@ ParseResult AffineParser::parseAffineMapOrIntegerSetInline(AffineMap &map,
   unsigned numDims = 0, numSymbols = 0;
 
   // List of dimensional and optional symbol identifiers.
-  if (parseDimAndOptionalSymbolIdList(numDims, numSymbols)) {
-    return failure();
-  }
-
-  // This is needed for parsing attributes as we wouldn't know whether we would
-  // be parsing an integer set attribute or an affine map attribute.
-  bool isArrow = getToken().is(Token::arrow);
-  bool isColon = getToken().is(Token::colon);
-  if (!isArrow && !isColon)
-    return emitWrongTokenError("expected '->' or ':'");
-
-  if (isArrow) {
-    parseToken(Token::arrow, "expected '->' or '['");
-    map = parseAffineMapRange(numDims, numSymbols);
-    return map ? success() : failure();
-  }
-  if (parseToken(Token::colon, "expected ':' or '['"))
+  if (parseDimAndOptionalSymbolIdList(numDims, numSymbols))
     return failure();
 
-  if ((set = parseIntegerSetConstraints(numDims, numSymbols)))
-    return success();
+  if (consumeIf(Token::arrow))
+    return parseAffineMapRange(numDims, numSymbols, map);
 
-  return failure();
+  if (parseToken(Token::colon, "expected '->' or '['"))
+    return failure();
+  return parseIntegerSetConstraints(numDims, numSymbols, set);
 }
 
 /// Parse an AffineMap where the dim and symbol identifiers are SSA ids.
@@ -572,8 +560,9 @@ ParseResult AffineParser::parseAffineExprOfSSAIds(AffineExpr &expr) {
 ///
 ///  multi-dim-affine-expr ::= `(` `)`
 ///  multi-dim-affine-expr ::= `(` affine-expr (`,` affine-expr)* `)`
-AffineMap AffineParser::parseAffineMapRange(unsigned numDims,
-                                            unsigned numSymbols) {
+ParseResult AffineParser::parseAffineMapRange(unsigned numDims,
+                                              unsigned numSymbols,
+                                              AffineMap &result) {
   SmallVector<AffineExpr, 4> exprs;
   auto parseElt = [&]() -> ParseResult {
     auto elt = parseAffineExpr();
@@ -588,10 +577,11 @@ AffineMap AffineParser::parseAffineMapRange(unsigned numDims,
   //                         | `(` affine-expr (`,` affine-expr)* `)`
   if (parseCommaSeparatedList(Delimiter::Paren, parseElt,
                               " in affine map range"))
-    return AffineMap();
+    return failure();
 
   // Parsed a valid affine map.
-  return AffineMap::get(numDims, numSymbols, exprs, getContext());
+  result = AffineMap::get(numDims, numSymbols, exprs, getContext());
+  return success();
 }
 
 /// Parse an affine constraint.
@@ -639,8 +629,9 @@ AffineExpr AffineParser::parseAffineConstraint(bool *isEq) {
 ///  affine-constraint-conjunction ::= affine-constraint (`,`
 ///                                       affine-constraint)*
 ///
-IntegerSet AffineParser::parseIntegerSetConstraints(unsigned numDims,
-                                                    unsigned numSymbols) {
+ParseResult AffineParser::parseIntegerSetConstraints(unsigned numDims,
+                                                     unsigned numSymbols,
+                                                     IntegerSet &result) {
   SmallVector<AffineExpr, 4> constraints;
   SmallVector<bool, 4> isEqs;
   auto parseElt = [&]() -> ParseResult {
@@ -657,17 +648,19 @@ IntegerSet AffineParser::parseIntegerSetConstraints(unsigned numDims,
   // Parse a list of affine constraints (comma-separated).
   if (parseCommaSeparatedList(Delimiter::Paren, parseElt,
                               " in integer set constraint list"))
-    return IntegerSet();
+    return failure();
 
   // If no constraints were parsed, then treat this as a degenerate 'true' case.
   if (constraints.empty()) {
     /* 0 == 0 */
     auto zero = getAffineConstantExpr(0, getContext());
-    return IntegerSet::get(numDims, numSymbols, zero, true);
+    result = IntegerSet::get(numDims, numSymbols, zero, true);
+    return success();
   }
 
   // Parsed a valid integer set.
-  return IntegerSet::get(numDims, numSymbols, constraints, isEqs);
+  result = IntegerSet::get(numDims, numSymbols, constraints, isEqs);
+  return success();
 }
 
 //===----------------------------------------------------------------------===//

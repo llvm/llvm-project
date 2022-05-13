@@ -210,17 +210,15 @@ ParseResult ExecuteOp::parse(OpAsmParser &parser, OperationState &result) {
 
   // Parse the types of results returned from the async execute op.
   SmallVector<Type, 4> resultTypes;
-  if (parser.parseOptionalArrowTypeList(resultTypes))
-    return failure();
-
-  // Async execute first result is always a completion token.
-  parser.addTypeToList(tokenTy, result.types);
-  parser.addTypesToList(resultTypes, result.types);
-
-  // Parse operation attributes.
   NamedAttrList attrs;
-  if (parser.parseOptionalAttrDictWithKeyword(attrs))
+  if (parser.parseOptionalArrowTypeList(resultTypes) ||
+      // Async execute first result is always a completion token.
+      parser.addTypeToList(tokenTy, result.types) ||
+      parser.addTypesToList(resultTypes, result.types) ||
+      // Parse operation attributes.
+      parser.parseOptionalAttrDictWithKeyword(attrs))
     return failure();
+
   result.addAttributes(attrs);
 
   // Parse asynchronous region.

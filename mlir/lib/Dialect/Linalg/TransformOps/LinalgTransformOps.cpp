@@ -118,11 +118,9 @@ ParseResult transform::TileOp::parse(OpAsmParser &parser,
                                      OperationState &result) {
   StringRef sizesAttrName = TileOp::getSizesAttrName(result.name).getValue();
   OpAsmParser::UnresolvedOperand targetOperand;
-  SMLoc opLoc;
-  parser.getCurrentLocation(&opLoc);
-  if (parser.parseOperand(targetOperand))
-    return parser.emitError(opLoc, "expected 'target' operand");
-  if (parser.parseOptionalAttrDict(result.attributes))
+  SMLoc opLoc = parser.getCurrentLocation();
+  if (parser.parseOperand(targetOperand) ||
+      parser.parseOptionalAttrDict(result.attributes))
     return failure();
   Attribute sizesAttr = result.attributes.get(sizesAttrName);
   if (!sizesAttr)

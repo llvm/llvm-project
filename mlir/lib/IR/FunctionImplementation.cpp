@@ -170,7 +170,7 @@ ParseResult mlir::function_interface_impl::parseFunctionOp(
   auto &builder = parser.getBuilder();
 
   // Parse visibility.
-  impl::parseOptionalVisibilityKeyword(parser, result.attributes);
+  (void)impl::parseOptionalVisibilityKeyword(parser, result.attributes);
 
   // Parse the name as a symbol.
   StringAttr nameAttr;
