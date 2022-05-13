@@ -387,6 +387,13 @@ public:
     return SortCallTargets(CallTargets);
   }
 
+  uint64_t getCallTargetSum() const {
+    uint64_t Sum = 0;
+    for (const auto &I : CallTargets)
+      Sum += I.second;
+    return Sum;
+  }
+
   /// Sort call targets in descending order of call frequency.
   static const SortedCallTargetSet SortCallTargets(const CallTargetMap &Targets) {
     SortedCallTargetSet SortedTargets;
@@ -777,6 +784,19 @@ public:
     SampleRecord S;
     S.addSamples(Num, Weight);
     return BodySamples[LineLocation(Index, 0)].merge(S, Weight);
+  }
+
+  // Accumulate all call target samples to update the body samples.
+  void updateCallsiteSamples() {
+    for (auto &I : BodySamples) {
+      uint64_t TargetSamples = I.second.getCallTargetSum();
+      // It's possible that the body sample count can be greater than the call
+      // target sum. E.g, if some call targets are external targets, they won't
+      // be considered valid call targets, but the body sample count which is
+      // from lbr ranges can actually include them.
+      if (TargetSamples > I.second.getSamples())
+        I.second.addSamples(TargetSamples - I.second.getSamples());
+    }
   }
 
   // Accumulate all body samples to set total samples.

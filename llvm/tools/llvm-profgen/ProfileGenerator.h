@@ -100,7 +100,12 @@ protected:
   void updateBodySamplesforFunctionProfile(FunctionSamples &FunctionProfile,
                                            const SampleContextFrame &LeafLoc,
                                            uint64_t Count);
+
+  void updateFunctionSamples();
+
   void updateTotalSamples();
+
+  void updateCallsiteSamples();
 
   StringRef getCalleeNameForOffset(uint64_t TargetOffset);
 

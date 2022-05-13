@@ -11,7 +11,7 @@
 ;CHECK:  0: 0
 ;CHECK:  1: 0
 ;CHECK:  2: 19
-;CHECK:  3: 19 bar:21
+;CHECK:  3: 21 bar:21
 ;CHECK:  4: 0
 ;CHECK:  5: 0
 ;CHECK: bar:926:21
