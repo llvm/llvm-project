@@ -66,6 +66,12 @@
 # RUN:   dir1/lib1.a dir2/lib2.a
 # RUN: llvm-objdump -s 10 | FileCheck --check-prefix=SECONDFIRST %s
 
+## () can appear in a quoted filename pattern.
+# RUN: cp dir1/lib1.a 'lib1().a'
+# RUN: echo 'SECTIONS{.foo :{ KEEP(*dir2*(.foo)) KEEP("lib1().a"(.foo)) }}' > 11.t
+# RUN: ld.lld -o 11 -T 11.t --whole-archive 'lib1().a' dir2/lib2.a
+# RUN: llvm-objdump -s 11 | FileCheck --check-prefix=SECONDFIRST %s
+
 #--- tx.s
 .global _start
 _start:
