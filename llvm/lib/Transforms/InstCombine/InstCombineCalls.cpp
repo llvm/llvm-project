@@ -1242,7 +1242,7 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
   // actually absent. To detect this case, call SimplifyConstrainedFPCall. If it
   // returns a replacement, the call may be removed.
   if (CI.use_empty() && isa<ConstrainedFPIntrinsic>(CI)) {
-    if (Value *V = SimplifyConstrainedFPCall(&CI, SQ.getWithInstruction(&CI)))
+    if (SimplifyConstrainedFPCall(&CI, SQ.getWithInstruction(&CI)))
       return eraseInstFromFunction(CI);
   }
 
