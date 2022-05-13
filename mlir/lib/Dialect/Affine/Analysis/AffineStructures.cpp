@@ -349,7 +349,8 @@ static bool LLVM_ATTRIBUTE_UNUSED areIdsUnique(
     return true;
 
   SmallPtrSet<Value, 8> uniqueIds;
-  ArrayRef<Optional<Value>> maybeValues = cst.getMaybeValues();
+  ArrayRef<Optional<Value>> maybeValues =
+      cst.getMaybeValues().slice(start, end - start);
   for (Optional<Value> val : maybeValues) {
     if (val.hasValue() && !uniqueIds.insert(val.getValue()).second)
       return false;
