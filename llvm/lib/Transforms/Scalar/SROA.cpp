@@ -3474,19 +3474,13 @@ private:
 
     Type *Ty = GEPI.getSourceElementType();
     Value *True = Sel->getTrueValue();
-    Value *NTrue =
-        IsInBounds
-            ? IRB.CreateInBoundsGEP(Ty, True, Index,
-                                    True->getName() + ".sroa.gep")
-            : IRB.CreateGEP(Ty, True, Index, True->getName() + ".sroa.gep");
+    Value *NTrue = IRB.CreateGEP(Ty, True, Index, True->getName() + ".sroa.gep",
+                                 IsInBounds);
 
     Value *False = Sel->getFalseValue();
 
-    Value *NFalse =
-        IsInBounds
-            ? IRB.CreateInBoundsGEP(Ty, False, Index,
-                                    False->getName() + ".sroa.gep")
-            : IRB.CreateGEP(Ty, False, Index, False->getName() + ".sroa.gep");
+    Value *NFalse = IRB.CreateGEP(Ty, False, Index,
+                                  False->getName() + ".sroa.gep", IsInBounds);
 
     Value *NSel = IRB.CreateSelect(Sel->getCondition(), NTrue, NFalse,
                                    Sel->getName() + ".sroa.sel");
@@ -3540,10 +3534,8 @@ private:
 
         IRB.SetInsertPoint(In->getParent(), std::next(In->getIterator()));
         Type *Ty = GEPI.getSourceElementType();
-        NewVal = IsInBounds ? IRB.CreateInBoundsGEP(Ty, In, Index,
-                                                    In->getName() + ".sroa.gep")
-                            : IRB.CreateGEP(Ty, In, Index,
-                                            In->getName() + ".sroa.gep");
+        NewVal = IRB.CreateGEP(Ty, In, Index, In->getName() + ".sroa.gep",
+                               IsInBounds);
       }
       NewPN->addIncoming(NewVal, B);
     }
