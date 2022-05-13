@@ -639,7 +639,7 @@ void NVPTX::getNVPTXTargetFeatures(const Driver &D, const llvm::Triple &Triple,
                                    Optional<clang::CudaVersion> Version) {
   if (Args.hasArg(options::OPT_cuda_feature_EQ)) {
     StringRef PtxFeature =
-        Args.getAllArgValues(options::OPT_cuda_feature_EQ).back();
+        Args.getLastArgValue(options::OPT_cuda_feature_EQ, "+ptx42");
     Features.push_back(Args.MakeArgString(PtxFeature));
     return;
   } else if (!Version) {
