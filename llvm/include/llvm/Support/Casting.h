@@ -408,6 +408,29 @@ struct ConstStrippingForwardingCast {
   }
 };
 
+/// Provides a cast trait that uses a defined pointer to pointer cast as a base
+/// for reference-to-reference casts. Note that it does not provide castFailed
+/// and doCastIfPossible because a pointer-to-pointer cast would likely just
+/// return `nullptr` which could cause nullptr dereference. You can use it like
+/// this:
+///
+///   template <> struct CastInfo<foo, bar *> { ... verbose implementation... };
+///
+///   template <>
+///   struct CastInfo<foo, bar>
+///       : public ForwardToPointerCast<foo, bar, CastInfo<foo, bar *>> {};
+///
+template <typename To, typename From, typename ForwardTo>
+struct ForwardToPointerCast {
+  static inline bool isPossible(const From &f) {
+    return ForwardTo::isPossible(&f);
+  }
+
+  static inline decltype(auto) doCast(const From &f) {
+    return *ForwardTo::doCast(&f);
+  }
+};
+
 //===----------------------------------------------------------------------===//
 // CastInfo
 //===----------------------------------------------------------------------===//
