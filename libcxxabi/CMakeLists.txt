@@ -1,9 +1,5 @@
 # See www/CMake.html for instructions on how to build libcxxabi with CMake.
 
-if (NOT IS_DIRECTORY "${CMAKE_CURRENT_LIST_DIR}/../libcxx")
-  message(FATAL_ERROR "libc++abi now requires being built in a monorepo layout with libcxx available")
-endif()
-
 #===============================================================================
 # Setup Project
 #===============================================================================
@@ -27,48 +23,7 @@ set(LIBCXXABI_BINARY_DIR  ${CMAKE_CURRENT_BINARY_DIR})
 set(LIBCXXABI_LIBCXX_PATH "${CMAKE_CURRENT_LIST_DIR}/../libcxx" CACHE PATH
         "Specify path to libc++ source.")
 
-if (CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR OR LIBCXXABI_STANDALONE_BUILD)
-  message(FATAL_ERROR "The Standalone build has been deprecated since LLVM 14, and it is not supported anymore. "
-                      "Please use one of the ways described at https://libcxx.llvm.org/BuildingLibcxx.html for "
-                      "building libc++abi.")
-
-  project(libcxxabi CXX C)
-
-  set(PACKAGE_NAME libcxxabi)
-  set(PACKAGE_VERSION 11.0.0git)
-  set(PACKAGE_STRING "${PACKAGE_NAME} ${PACKAGE_VERSION}")
-  set(PACKAGE_BUGREPORT "llvm-bugs@lists.llvm.org")
-
-  set(LIBCXXABI_STANDALONE_BUILD TRUE)
-
-  # In a standalone build, we don't have llvm to automatically generate the
-  # llvm-lit script for us.  So we need to provide an explicit directory that
-  # the configurator should write the script into.
-  set(LLVM_LIT_OUTPUT_DIR "${LIBCXXABI_BINARY_DIR}/bin")
-endif()
-
-# Must go below project(..)
 include(GNUInstallDirs)
-
-if (LIBCXXABI_STANDALONE_BUILD)
-  # Find the LLVM sources and simulate LLVM CMake options.
-  include(HandleOutOfTreeLLVM)
-
-  find_package(Python3 COMPONENTS Interpreter)
-  if(NOT Python3_Interpreter_FOUND)
-    message(WARNING "Python3 not found, using python2 as a fallback")
-    find_package(Python2 COMPONENTS Interpreter REQUIRED)
-    if(Python2_VERSION VERSION_LESS 2.7)
-      message(SEND_ERROR "Python 2.7 or newer is required")
-    endif()
-
-    # Treat python2 as python3
-    add_executable(Python3::Interpreter IMPORTED)
-    set_target_properties(Python3::Interpreter PROPERTIES
-      IMPORTED_LOCATION ${Python2_EXECUTABLE})
-    set(Python3_EXECUTABLE ${Python2_EXECUTABLE})
-  endif()
-endif()
 
 # Require out of source build.
 include(MacroEnsureOutOfSourceBuild)
@@ -138,11 +93,9 @@ result in the library being named libc++abi.x.y.dylib, along with the \
 usual symlinks pointing to that.")
 
 # Default to building a shared library so that the default options still test
-# the libc++abi that is being built. There are two problems with testing a
-# static libc++abi. In the case of a standalone build, the tests will link the
-# system's libc++, which might not have been built against our libc++abi. In the
-# case of an in tree build, libc++ will prefer a dynamic libc++abi from the
-# system over a static libc++abi from the output directory.
+# the libc++abi that is being built. The problem with testing a static libc++abi
+# is that libc++ will prefer a dynamic libc++abi from the system over a static
+# libc++abi from the output directory.
 option(LIBCXXABI_ENABLE_SHARED "Build libc++abi as a shared library." ON)
 option(LIBCXXABI_ENABLE_STATIC "Build libc++abi as a static library." ON)
 
@@ -171,23 +124,10 @@ if (NOT LIBCXXABI_ENABLE_SHARED AND NOT LIBCXXABI_ENABLE_STATIC)
   message(FATAL_ERROR "libc++abi must be built as either a shared or static library.")
 endif()
 
-# TODO: This is a workaround for the fact that Standalone builds can't use
-# targets from the other runtimes (so the cxx-headers target doesn't exist).
+# TODO: Remove this, which shouldn't be necessary since we know we're being built
+#       side-by-side with libc++.
 set(LIBCXXABI_LIBCXX_INCLUDES "" CACHE PATH
     "Specify path to libc++ includes.")
-if (LIBCXXABI_STANDALONE_BUILD)
-  if (NOT IS_DIRECTORY ${LIBCXXABI_LIBCXX_INCLUDES})
-    message(FATAL_ERROR
-      "LIBCXXABI_LIBCXX_INCLUDES=${LIBCXXABI_LIBCXX_INCLUDES} is not a valid directory. "
-      "Please provide the path to where the libc++ headers have been installed.")
-  endif()
-  add_library(cxx-headers INTERFACE)
-  if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "MSVC" OR "${CMAKE_CXX_SIMULATE_ID}" STREQUAL "MSVC")
-    target_compile_options(cxx-headers INTERFACE /I "${LIBCXXABI_LIBCXX_INCLUDES}")
-  else()
-    target_compile_options(cxx-headers INTERFACE -I "${LIBCXXABI_LIBCXX_INCLUDES}")
-  endif()
-endif()
 
 option(LIBCXXABI_HERMETIC_STATIC_LIBRARY
   "Do not export any symbols from the static library." OFF)
@@ -241,8 +181,7 @@ set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${LIBCXXABI_LIBRARY_DIR})
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${LIBCXXABI_LIBRARY_DIR})
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${LIBCXXABI_LIBRARY_DIR})
 
-# By default, for non-standalone builds, libcxx and libcxxabi share a library
-# directory.
+# By default, libcxx and libcxxabi share a library directory.
 if (NOT LIBCXXABI_LIBCXX_LIBRARY_PATH)
   set(LIBCXXABI_LIBCXX_LIBRARY_PATH "${LIBCXXABI_LIBRARY_DIR}" CACHE PATH
       "The path to libc++ library." FORCE)

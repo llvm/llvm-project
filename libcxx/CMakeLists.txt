@@ -1,10 +1,6 @@
 # See https://libcxx.llvm.org/docs/BuildingLibcxx.html for instructions on how
 # to build libcxx with CMake.
 
-if (NOT IS_DIRECTORY "${CMAKE_CURRENT_LIST_DIR}/../libcxxabi")
-  message(FATAL_ERROR "libc++ now requires being built in a monorepo layout with libcxxabi available")
-endif()
-
 #===============================================================================
 # Setup Project
 #===============================================================================
@@ -26,36 +22,7 @@ set(LIBCXX_SOURCE_DIR  ${CMAKE_CURRENT_SOURCE_DIR})
 set(LIBCXX_BINARY_DIR  ${CMAKE_CURRENT_BINARY_DIR})
 set(LIBCXX_BINARY_INCLUDE_DIR "${LIBCXX_BINARY_DIR}/include/c++build")
 
-if (CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR OR LIBCXX_STANDALONE_BUILD)
-  message(FATAL_ERROR "The Standalone build has been deprecated since LLVM 14, and it is not supported anymore. "
-                      "Please use one of the ways described at https://libcxx.llvm.org/BuildingLibcxx.html for "
-                      "building libc++.")
-  project(libcxx CXX C)
-
-  set(PACKAGE_NAME libcxx)
-  set(PACKAGE_VERSION 15.0.0git)
-  set(PACKAGE_STRING "${PACKAGE_NAME} ${PACKAGE_VERSION}")
-  set(PACKAGE_BUGREPORT "llvm-bugs@lists.llvm.org")
-
-  # In a standalone build, we don't have llvm to automatically generate the
-  # llvm-lit script for us.  So we need to provide an explicit directory that
-  # the configurator should write the script into.
-  set(LIBCXX_STANDALONE_BUILD TRUE)
-  set(LLVM_LIT_OUTPUT_DIR "${LIBCXX_BINARY_DIR}/bin")
-endif()
-
-# Must go below project(..)
 include(GNUInstallDirs)
-
-if (LIBCXX_STANDALONE_BUILD)
-  # Find the LLVM sources and simulate LLVM CMake options.
-  include(HandleOutOfTreeLLVM)
-
-  find_package(Python3 COMPONENTS Interpreter)
-  if(NOT Python3_Interpreter_FOUND)
-    message(SEND_ERROR "Python3 not found. Python3 is required")
-  endif()
-endif()
 
 # Require out of source build.
 include(MacroEnsureOutOfSourceBuild)
@@ -524,11 +491,10 @@ endif()
 
 include(HandleLibCXXABI) # Setup the ABI library flags
 
-if (NOT LIBCXX_STANDALONE_BUILD)
-  # Remove flags that may have snuck in.
-  remove_flags(-DNDEBUG -UNDEBUG -D_DEBUG
-               -lc++abi)
-endif()
+# Remove flags that may have snuck in.
+# TODO: This shouldn't be necessary anymore since we don't support the Project
+#       build anymore, so the rest of LLVM can't pollute our flags.
+remove_flags(-DNDEBUG -UNDEBUG -D_DEBUG -lc++abi)
 remove_flags(--stdlib=libc++ -stdlib=libc++ --stdlib=libstdc++ -stdlib=libstdc++)
 
 # FIXME: Remove all debug flags and flags that change which Windows
@@ -754,16 +720,7 @@ function(get_sanitizer_flags OUT_VAR  USE_SANITIZER)
   set(${OUT_VAR} "${SANITIZER_FLAGS}" PARENT_SCOPE)
 endfunction()
 
-# Configure for sanitizers. If LIBCXX_STANDALONE_BUILD then we have to do
-# the flag translation ourselves. Othewise LLVM's CMakeList.txt will handle it.
-if (LIBCXX_STANDALONE_BUILD)
-  set(LLVM_USE_SANITIZER "" CACHE STRING
-      "Define the sanitizer used to build the library and tests")
-endif()
 get_sanitizer_flags(SANITIZER_FLAGS "${LLVM_USE_SANITIZER}")
-if (LIBCXX_STANDALONE_BUILD AND SANITIZER_FLAGS)
-  add_flags(${SANITIZER_FLAGS})
-endif()
 
 # Link system libraries =======================================================
 function(cxx_link_system_libraries target)
@@ -979,15 +936,6 @@ endif()
 if (LIBCXX_INCLUDE_TESTS)
   add_subdirectory(test)
   add_subdirectory(lib/abi)
-  if (LIBCXX_STANDALONE_BUILD)
-    include(AddLLVM) # for get_llvm_lit_path
-    # Make sure the llvm-lit script is generated into the bin directory, and
-    # do it after adding all tests, since the generated script will only work
-    # correctly discovered tests against test locations from the source tree
-    # that have already been discovered.
-    add_subdirectory(${LLVM_MAIN_SRC_DIR}/utils/llvm-lit
-                     ${CMAKE_CURRENT_BINARY_DIR}/llvm-lit)
-  endif()
 endif()
 
 if (LIBCXX_INCLUDE_DOCS)
