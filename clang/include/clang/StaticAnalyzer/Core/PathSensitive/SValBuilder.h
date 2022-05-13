@@ -106,7 +106,7 @@ protected:
   /// \param CastTy -- QualType, which `V` shall be cast to.
   /// \return SVal with simplified cast expression.
   /// \note: Currently only support integral casts.
-  SVal simplifySymbolCast(nonloc::SymbolVal V, QualType CastTy);
+  nonloc::SymbolVal simplifySymbolCast(nonloc::SymbolVal V, QualType CastTy);
 
 public:
   SValBuilder(llvm::BumpPtrAllocator &alloc, ASTContext &context,
@@ -340,17 +340,19 @@ public:
     return nonloc::LocAsInteger(BasicVals.getPersistentSValWithData(loc, bits));
   }
 
-  NonLoc makeNonLoc(const SymExpr *lhs, BinaryOperator::Opcode op,
-                    const llvm::APSInt& rhs, QualType type);
+  nonloc::SymbolVal makeNonLoc(const SymExpr *lhs, BinaryOperator::Opcode op,
+                               const llvm::APSInt &rhs, QualType type);
 
-  NonLoc makeNonLoc(const llvm::APSInt& rhs, BinaryOperator::Opcode op,
-                    const SymExpr *lhs, QualType type);
+  nonloc::SymbolVal makeNonLoc(const llvm::APSInt &rhs,
+                               BinaryOperator::Opcode op, const SymExpr *lhs,
+                               QualType type);
 
-  NonLoc makeNonLoc(const SymExpr *lhs, BinaryOperator::Opcode op,
-                    const SymExpr *rhs, QualType type);
+  nonloc::SymbolVal makeNonLoc(const SymExpr *lhs, BinaryOperator::Opcode op,
+                               const SymExpr *rhs, QualType type);
 
   /// Create a NonLoc value for cast.
-  NonLoc makeNonLoc(const SymExpr *operand, QualType fromTy, QualType toTy);
+  nonloc::SymbolVal makeNonLoc(const SymExpr *operand, QualType fromTy,
+                               QualType toTy);
 
   nonloc::ConcreteInt makeTruthVal(bool b, QualType type) {
     return nonloc::ConcreteInt(BasicVals.getTruthValue(b, type));
@@ -363,7 +365,7 @@ public:
   /// Create NULL pointer, with proper pointer bit-width for given address
   /// space.
   /// \param type pointer type.
-  Loc makeNullWithType(QualType type) {
+  loc::ConcreteInt makeNullWithType(QualType type) {
     // We cannot use the `isAnyPointerType()`.
     assert((type->isPointerType() || type->isObjCObjectPointerType() ||
             type->isBlockPointerType() || type->isNullPtrType() ||
@@ -379,19 +381,19 @@ public:
     return loc::ConcreteInt(BasicVals.getZeroWithTypeSize(type));
   }
 
-  Loc makeLoc(SymbolRef sym) {
+  loc::MemRegionVal makeLoc(SymbolRef sym) {
     return loc::MemRegionVal(MemMgr.getSymbolicRegion(sym));
   }
 
-  Loc makeLoc(const MemRegion* region) {
+  loc::MemRegionVal makeLoc(const MemRegion *region) {
     return loc::MemRegionVal(region);
   }
 
-  Loc makeLoc(const AddrLabelExpr *expr) {
+  loc::GotoLabel makeLoc(const AddrLabelExpr *expr) {
     return loc::GotoLabel(expr->getLabel());
   }
 
-  Loc makeLoc(const llvm::APSInt& integer) {
+  loc::ConcreteInt makeLoc(const llvm::APSInt &integer) {
     return loc::ConcreteInt(BasicVals.getValue(integer));
   }
 
@@ -402,7 +404,7 @@ public:
   /// Make an SVal that represents the given symbol. This follows the convention
   /// of representing Loc-type symbols (symbolic pointers and references)
   /// as Loc values wrapping the symbol rather than as plain symbol values.
-  SVal makeSymbolVal(SymbolRef Sym) {
+  DefinedSVal makeSymbolVal(SymbolRef Sym) {
     if (Loc::isLocType(Sym->getType()))
       return makeLoc(Sym);
     return nonloc::SymbolVal(Sym);

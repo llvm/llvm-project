@@ -3382,7 +3382,7 @@ void AffineParallelOp::print(OpAsmPrinter &p) {
 /// unique operands. Also populates `replacements with affine expressions of
 /// `kind` that can be used to update affine maps previously accepting a
 /// `operands` to accept `uniqueOperands` instead.
-static void deduplicateAndResolveOperands(
+static ParseResult deduplicateAndResolveOperands(
     OpAsmParser &parser,
     ArrayRef<SmallVector<OpAsmParser::UnresolvedOperand>> operands,
     SmallVectorImpl<Value> &uniqueOperands,
@@ -3393,7 +3393,8 @@ static void deduplicateAndResolveOperands(
   Type indexType = parser.getBuilder().getIndexType();
   for (const auto &list : operands) {
     SmallVector<Value> valueOperands;
-    parser.resolveOperands(list, indexType, valueOperands);
+    if (parser.resolveOperands(list, indexType, valueOperands))
+      return failure();
     for (Value operand : valueOperands) {
       unsigned pos = std::distance(uniqueOperands.begin(),
                                    llvm::find(uniqueOperands, operand));
@@ -3405,6 +3406,7 @@ static void deduplicateAndResolveOperands(
               : getAffineSymbolExpr(pos, parser.getContext()));
     }
   }
+  return success();
 }
 
 namespace {
@@ -3502,10 +3504,11 @@ static ParseResult parseAffineMapWithMinMax(OpAsmParser &parser,
   // Deduplicate map operands.
   SmallVector<Value> dimOperands, symOperands;
   SmallVector<AffineExpr> dimRplacements, symRepacements;
-  deduplicateAndResolveOperands(parser, flatDimOperands, dimOperands,
-                                dimRplacements, AffineExprKind::DimId);
-  deduplicateAndResolveOperands(parser, flatSymOperands, symOperands,
-                                symRepacements, AffineExprKind::SymbolId);
+  if (deduplicateAndResolveOperands(parser, flatDimOperands, dimOperands,
+                                    dimRplacements, AffineExprKind::DimId) ||
+      deduplicateAndResolveOperands(parser, flatSymOperands, symOperands,
+                                    symRepacements, AffineExprKind::SymbolId))
+    return failure();
 
   result.operands.append(dimOperands.begin(), dimOperands.end());
   result.operands.append(symOperands.begin(), symOperands.end());

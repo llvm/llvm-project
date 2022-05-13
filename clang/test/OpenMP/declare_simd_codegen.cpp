@@ -97,6 +97,28 @@ void f(int (&g)[]) {
   foo(c, p);
 }
 
+struct A {
+  #pragma omp declare simd linear(a:X)
+  template<int X, typename T>
+  T infunc(T a) { return a * 2; }
+
+  template<int Y, typename U>
+  U outfunc(U *a);
+};
+
+#pragma omp declare simd linear(a:Y)
+template<int Y, typename U>
+U A::outfunc(U *a) { return *a * 2; }
+
+void test_member_template()
+{
+  struct A a;
+  int i = 32;
+  float f = 1.0;
+  int t = a.infunc<8, int>(i);
+  float u = a.outfunc<4, float>(&f);
+}
+
 #pragma omp declare simd
 #pragma omp declare simd notinbranch aligned(a : 32)
 int bar(VV v, float *a) { return 0; }
@@ -173,6 +195,8 @@ double Six(int a, float *b, int &c, int *&d, char e, char *f, short g) {
 // CHECK-DAG: define {{.+}}@_ZN3TVVILi16EfE6taddpfEPfRS1_(
 // CHECK-DAG: define {{.+}}@_ZN3TVVILi16EfE4taddEi(
 // CHECK-DAG: define {{.+}}@_Z3fooILi64EEvRAT__iRPf(
+// CHECK-DAG: define {{.+}}@_ZN1A6infuncILi8EiEET0_S1_
+// CHECK-DAG: define {{.+}}@_ZN1A7outfuncILi4EfEET0_PS1_
 // CHECK-DAG: define {{.+}}@_Z3bar2VVPf(
 // CHECK-DAG: define {{.+}}@_Z3baz2VVPi(
 // CHECK-DAG: define {{.+}}@_Z3bay2VVRPd(
@@ -309,6 +333,24 @@ double Six(int a, float *b, int &c, int *&d, char e, char *f, short g) {
 // CHECK-DAG: "_ZGVdN64va128U64__Z3fooILi64EEvRAT__iRPf"
 // CHECK-DAG: "_ZGVeM64va128U64__Z3fooILi64EEvRAT__iRPf"
 // CHECK-DAG: "_ZGVeN64va128U64__Z3fooILi64EEvRAT__iRPf"
+
+// CHECK-DAG: "_ZGVbM4vl8__ZN1A6infuncILi8EiEET0_S1_"
+// CHECK-DAG: "_ZGVbN4vl8__ZN1A6infuncILi8EiEET0_S1_"
+// CHECK-DAG: "_ZGVcM8vl8__ZN1A6infuncILi8EiEET0_S1_"
+// CHECK-DAG: "_ZGVcN8vl8__ZN1A6infuncILi8EiEET0_S1_"
+// CHECK-DAG: "_ZGVdM8vl8__ZN1A6infuncILi8EiEET0_S1_"
+// CHECK-DAG: "_ZGVdN8vl8__ZN1A6infuncILi8EiEET0_S1_"
+// CHECK-DAG: "_ZGVeM16vl8__ZN1A6infuncILi8EiEET0_S1_"
+// CHECK-DAG: "_ZGVeN16vl8__ZN1A6infuncILi8EiEET0_S1_"
+
+// CHECK-DAG: "_ZGVbM4vl16__ZN1A7outfuncILi4EfEET0_PS1_"
+// CHECK-DAG: "_ZGVbN4vl16__ZN1A7outfuncILi4EfEET0_PS1_"
+// CHECK-DAG: "_ZGVcM8vl16__ZN1A7outfuncILi4EfEET0_PS1_"
+// CHECK-DAG: "_ZGVcN8vl16__ZN1A7outfuncILi4EfEET0_PS1_"
+// CHECK-DAG: "_ZGVdM8vl16__ZN1A7outfuncILi4EfEET0_PS1_"
+// CHECK-DAG: "_ZGVdN8vl16__ZN1A7outfuncILi4EfEET0_PS1_"
+// CHECK-DAG: "_ZGVeM16vl16__ZN1A7outfuncILi4EfEET0_PS1_"
+// CHECK-DAG: "_ZGVeN16vl16__ZN1A7outfuncILi4EfEET0_PS1_"
 
 // CHECK-DAG: "_ZGVbM4vv__Z3bar2VVPf"
 // CHECK-DAG: "_ZGVbN4vv__Z3bar2VVPf"
