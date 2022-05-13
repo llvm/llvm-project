@@ -5,6 +5,7 @@ void *memset(void *dest, int c, unsigned long n) { return 0; }
 int printf(const char *format, ...) { return 0; }
 void exit(int status) {}
 int puts(const char *s) { return 0; }
+int rand(void) { return 0; }
 
 void *__gxx_personality_v0;
 void *__cxa_allocate_exception;

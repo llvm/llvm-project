@@ -6,7 +6,7 @@ RUN: yaml2obj %p/Inputs/go_dwarf.yaml &> %t.exe
 RUN: llvm-bolt %t.exe -o %t.bolt -update-debug-sections
 
 # Check the original binary values.
-RUN: llvm-dwarfdump -debug-info %t.exe |& \
+RUN: llvm-dwarfdump -debug-info %t.exe 2>&1 | \
 RUN:   FileCheck %s -check-prefix=CHECKORIG
 
 CHECKORIG:         DW_TAG_compile_unit
@@ -30,7 +30,7 @@ CHECKORIG-NEXT:        DW_AT_high_pc   (0x0000000000000684)
 
 
 # Check the bolted binary.
-RUN: llvm-dwarfdump -debug-info %t.bolt |& FileCheck %s
+RUN: llvm-dwarfdump -debug-info %t.bolt 2>&1 | FileCheck %s
 
 CHECK:         DW_TAG_compile_unit
 CHECK-NEXT:        DW_AT_producer

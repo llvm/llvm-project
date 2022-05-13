@@ -1,5 +1,4 @@
-#include <stdio.h>
-#include <stdlib.h>
+#include "stub.h"
 
 int total = 0;
 
