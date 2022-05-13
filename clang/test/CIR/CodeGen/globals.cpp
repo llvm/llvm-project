@@ -9,6 +9,7 @@ float y = 3.4;
 double w = 4.3;
 char x = '3';
 unsigned char rgb[3] = {0, 233, 33};
+char alpha[4] = "abc";
 
 // CHECK: module  {
 // CHECK-NEXT: cir.global @a = 3 : i32
@@ -17,3 +18,4 @@ unsigned char rgb[3] = {0, 233, 33};
 // CHECK-NEXT: cir.global @w = 4.300000e+00 : f64
 // CHECK-NEXT: cir.global @x = 51 : i8
 // CHECK-NEXT: cir.global @rgb = #cir.cst_array<[0 : i8, -23 : i8, 33 : i8]> : !cir.array<i8 x 3>
+// CHECK-NEXT: cir.global @alpha = #cir.cst_array<[97 : i8, 98 : i8, 99 : i8, 0 : i8]> : !cir.array<i8 x 4>
