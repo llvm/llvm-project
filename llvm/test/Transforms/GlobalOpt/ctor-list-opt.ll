@@ -1,7 +1,8 @@
 ; RUN: opt < %s -passes=globalopt -S | FileCheck %s
 ; CHECK-NOT: CTOR
 %ini = type { i32, void()*, i8* }
-@llvm.global_ctors = appending global [11 x %ini] [
+@llvm.global_ctors = appending global [15 x %ini] [
+	%ini { i32 65534, void ()* @CTOR1, i8* null },
 	%ini { i32 65535, void ()* @CTOR1, i8* null },
 	%ini { i32 65535, void ()* @CTOR1, i8* null },
 	%ini { i32 65535, void ()* @CTOR2, i8* null },
@@ -12,6 +13,9 @@
 	%ini { i32 65535, void ()* @CTOR7, i8* null },
 	%ini { i32 65535, void ()* @CTOR8, i8* null },
 	%ini { i32 65535, void ()* @CTOR9, i8* null },
+	%ini { i32 65536, void ()* @CTOR10_EXTERNAL, i8* null },
+	%ini { i32 65536, void ()* @CTOR11, i8* null },
+	%ini { i32 65537, void ()* @CTOR12, i8* null },
 	%ini { i32 2147483647, void ()* null, i8* null }
 ]
 
@@ -112,4 +116,17 @@ entry:
   %3 = bitcast %struct.B* @GV1 to i8***
   store i8** getelementptr inbounds ([3 x i8*], [3 x i8*]* @GV2, i64 1, i64 0), i8*** %3
   ret void
+}
+
+; CHECK: CTOR10_EXTERNAL
+declare external void @CTOR10_EXTERNAL();
+
+; CHECK-NOT: CTOR11
+define internal void @CTOR11() {
+	ret void
+}
+
+; CHECK: CTOR12
+define internal void @CTOR12() {
+	ret void
 }
