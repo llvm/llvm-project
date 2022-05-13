@@ -598,6 +598,7 @@ void DebugLoclistWriter::finalizeDWARF5(uint64_t SectionOffset,
 
     assert(Patch.Index == DebugLoclistWriter::InvalidIndex ||
            Patch.Index == Index++ && "Gap in LocList Index Array.");
+    (void)Index;
 
     std::vector<uint64_t> OffsetsArray;
     for (const DebugLocationEntry &Entry : Patch.LocList) {
