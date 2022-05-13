@@ -1,4 +1,3 @@
-XFAIL: system-aix
 # Note: many of these tests depend on relative paths, so we have to cd to a
 # test directory first.
 RUN: mkdir -p %t && cd %t
@@ -28,7 +27,7 @@ DISPLAY-NOT-FOUND: 'a/foo.txt' was not found
 
 # Deleting will fail with P because the members exist as foo.txt, not a/foo.txt.
 RUN: rm -f del1.a
-RUN: llvm-ar rcS del1.a foo.txt
+RUN: llvm-ar rcS --format=gnu del1.a foo.txt
 RUN: llvm-ar dP del1.a a/foo.txt
 RUN: llvm-ar t del1.a a/foo.txt | FileCheck %s --check-prefix=DISPLAY-FOUND --match-full-lines
 RUN: llvm-ar d del1.a a/foo.txt

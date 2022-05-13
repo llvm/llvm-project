@@ -56,7 +56,7 @@ Symbols:
 # RUN: yaml2obj --docnum=2 -DFLAG=0x1DF %s -o %t_xcoff32.o
 # RUN: yaml2obj --docnum=2 -DFLAG=0x1F7 %s -o %t_xcoff64.o
 # RUN: rm -f %t.a
-# RUN: llvm-ar --format=gnu -q -c %t.a %t_xcoff32.o %t_xcoff64.o
+# RUN: llvm-ar -q -c %t.a %t_xcoff32.o %t_xcoff64.o
 
 # RUN: llvm-nm --format=just-symbols -X32 %t_xcoff32.o | \
 # RUN:   FileCheck --check-prefixes=XCOFF32 %s --implicit-check-not={{.}}

@@ -5,21 +5,21 @@
 
 ## Case 1: Empty archive. No output expected.
 # RUN: rm -f %t1.a
-# RUN: llvm-ar --format=gnu rc %t1.a
+# RUN: llvm-ar rc --format=gnu %t1.a
 
 # RUN: llvm-size -B %t1.a | count 0
 # RUN: llvm-size -A %t1.a | count 0
 
 ## Case 2: Single member.
 # RUN: rm -f %t2.a
-# RUN: llvm-ar --format=gnu rc %t2.a %t1
+# RUN: llvm-ar rc %t2.a %t1
 
 # RUN: llvm-size -B %t2.a | FileCheck %s -DARCHIVE=%t2.a --check-prefix=BERKELEY-1
 # RUN: llvm-size -A %t2.a | FileCheck %s -DARCHIVE=%t2.a --check-prefix=SYSV-1
 
 ## Case 3: Multiple members.
 # RUN: rm -f %t3.a
-# RUN: llvm-ar --format=gnu rc %t3.a %t1 %t2
+# RUN: llvm-ar rc %t3.a %t1 %t2
 
 # RUN: llvm-size -B %t3.a | FileCheck %s -DARCHIVE=%t3.a --check-prefixes=BERKELEY-1,BERKELEY-2
 # RUN: llvm-size -A %t3.a | FileCheck %s -DARCHIVE=%t3.a --check-prefixes=SYSV-1,SYSV-2

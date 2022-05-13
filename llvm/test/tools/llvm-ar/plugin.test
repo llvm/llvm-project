@@ -1,4 +1,3 @@
-# XFAIL: system-aix
 ## Test that --plugin is ignored.
 
 # RUN: rm -f %t.a

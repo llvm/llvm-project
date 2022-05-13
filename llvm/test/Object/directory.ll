@@ -1,5 +1,3 @@
-; XFAIL: system-aix
-
 ;RUN: rm -rf %t && mkdir -p %t
 ;RUN: not llvm-ar r %t/test.a . 2>&1 | FileCheck -DMSG=%errc_EISDIR %s
 ;CHECK: .: [[MSG]]

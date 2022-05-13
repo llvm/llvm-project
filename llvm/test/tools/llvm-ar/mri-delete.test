@@ -1,4 +1,3 @@
-XFAIL: system-aix
 RUN: yaml2obj %S/Inputs/elf.yaml -o %t.o
 RUN: rm -f %t.ar
 

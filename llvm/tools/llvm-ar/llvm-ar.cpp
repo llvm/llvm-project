@@ -82,6 +82,7 @@ static void printArHelp(StringRef ToolName) {
     =gnu                -   gnu
     =darwin             -   darwin
     =bsd                -   bsd
+    =aix                -   aix (big archive)
   --plugin=<string>     - ignored for compatibility
   -h --help             - display this help and exit
   --rsp-quoting         - quoting style for response files
@@ -187,7 +188,7 @@ static SmallVector<const char *, 256> PositionalArgs;
 static bool MRI;
 
 namespace {
-enum Format { Default, GNU, BSD, DARWIN, Unknown };
+enum Format { Default, GNU, BSD, DARWIN, BIGARCHIVE, Unknown };
 }
 
 static Format FormatType = Default;
@@ -950,8 +951,6 @@ static void performWriteOperation(ArchiveOperation Operation,
     else
       Kind = !NewMembers.empty() ? getKindFromMember(NewMembers.front())
                                  : getDefaultForHost();
-    if (Kind == object::Archive::K_AIXBIG)
-      fail("big archive writer operation on AIX not yet supported");
     break;
   case GNU:
     Kind = object::Archive::K_GNU;
@@ -965,6 +964,11 @@ static void performWriteOperation(ArchiveOperation Operation,
     if (Thin)
       fail("only the gnu format has a thin mode");
     Kind = object::Archive::K_DARWIN;
+    break;
+  case BIGARCHIVE:
+    if (Thin)
+      fail("only the gnu format has a thin mode");
+    Kind = object::Archive::K_AIXBIG;
     break;
   case Unknown:
     llvm_unreachable("");
@@ -1237,6 +1241,7 @@ static int ar_main(int argc, char **argv) {
                        .Case("gnu", GNU)
                        .Case("darwin", DARWIN)
                        .Case("bsd", BSD)
+                       .Case("bigarchive", BIGARCHIVE)
                        .Default(Unknown);
       if (FormatType == Unknown)
         fail(std::string("Invalid format ") + Match);

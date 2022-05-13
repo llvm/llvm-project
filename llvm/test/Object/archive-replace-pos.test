@@ -1,5 +1,3 @@
-XFAIL: system-aix
-
 Test adding a member to a particular position
 
 RUN: touch %t.foo

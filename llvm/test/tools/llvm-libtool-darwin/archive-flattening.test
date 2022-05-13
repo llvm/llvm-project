@@ -1,4 +1,3 @@
-# XFAIL: system-aix
 ## This test checks that an archive is flattened correctly.
 
 # RUN: yaml2obj %S/Inputs/input1.yaml -o %t-input1.o
