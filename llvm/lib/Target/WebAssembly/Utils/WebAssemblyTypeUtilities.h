@@ -80,6 +80,10 @@ inline bool isRefType(const Type *Ty) {
   return isFuncrefType(Ty) || isExternrefType(Ty);
 }
 
+inline bool isRefType(wasm::ValType Type) {
+  return Type == wasm::ValType::EXTERNREF || Type == wasm::ValType::FUNCREF;
+}
+
 // Convert StringRef to ValType / HealType / BlockType
 
 Optional<wasm::ValType> parseType(StringRef Type);

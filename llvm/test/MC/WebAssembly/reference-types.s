@@ -1,6 +1,16 @@
 # RUN: llvm-mc -show-encoding -triple=wasm32-unknown-unknown -mattr=+reference-types < %s | FileCheck %s
 # RUN: llvm-mc -show-encoding -triple=wasm64-unknown-unknown -mattr=+reference-types < %s | FileCheck %s
 
+# CHECK-LABEL:ref_is_null:
+# CHECK: ref.is_null     # encoding: [0xd1]
+ref_is_null:
+  .functype ref_is_null () -> (i32, i32)
+  ref.null_extern
+  ref.is_null
+  ref.null_func
+  ref.is_null
+  end_function
+
 # CHECK-LABEL: ref_null_test:
 # CHECK: ref.null_func   # encoding: [0xd0,0x70]
 # CHECK: ref.null_extern # encoding: [0xd0,0x6f]
