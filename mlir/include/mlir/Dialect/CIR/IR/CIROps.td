@@ -891,6 +891,7 @@ def GlobalOp : CIR_Op<"global", [Symbol]> {
   let arguments = (ins SymbolNameAttr:$sym_name,
                        OptionalAttr<StrAttr>:$sym_visibility,
                        TypeAttr:$sym_type,
+                       // Note this can also be a FlatSymbolRefAttr
                        OptionalAttr<AnyAttr>:$initial_value,
                        UnitAttr:$constant,
                        OptionalAttr<I64Attr>:$alignment);

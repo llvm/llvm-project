@@ -173,6 +173,15 @@ public:
   getAddrOfGlobalVar(const VarDecl *D, std::optional<mlir::Type> Ty,
                      ForDefinition_t IsForDefinition = NotForDefinition);
 
+  llvm::DenseMap<mlir::Attribute, mlir::cir::GlobalOp> ConstantStringMap;
+
+  /// Return a constant array for the given string.
+  mlir::Attribute getConstantArrayFromStringLiteral(const StringLiteral *E);
+
+  /// Return a pointer to a constant array for the given string literal.
+  ConstantAddress getAddrOfConstantStringFromLiteral(const StringLiteral *S,
+                                                     StringRef Name = ".str");
+
   // TODO: this obviously overlaps with
   const TargetCIRGenInfo &getTargetCIRGenInfo();
 
