@@ -189,6 +189,14 @@ int test_multiple_returns3(int);
 int test_multiple_returns4(int);
 
 
+/// expected-warning@+1 {{empty paragraph passed to '\retval' command}}
+/// \retval 0
+int test_retval_no_paragraph();
+
+/// \retval 0 Everything is fine.
+int test_retval_fine();
+
+
 // expected-warning@+1 {{'\param' command used in a comment that is not attached to a function declaration}}
 /// \param a Blah blah.
 int test_param1_backslash;

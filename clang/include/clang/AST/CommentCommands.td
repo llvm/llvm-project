@@ -154,7 +154,7 @@ def Post       : BlockCommand<"post">;
 def Pre        : BlockCommand<"pre">;
 def Remark     : BlockCommand<"remark">;
 def Remarks    : BlockCommand<"remarks">;
-def Retval     : BlockCommand<"retval">;
+def Retval     : BlockCommand<"retval"> { let NumArgs = 1; }
 def Sa         : BlockCommand<"sa">;
 def See        : BlockCommand<"see">;
 def Since      : BlockCommand<"since">;
@@ -162,7 +162,7 @@ def Test       : BlockCommand<"test">;
 def Todo       : BlockCommand<"todo">;
 def Version    : BlockCommand<"version">;
 def Warning    : BlockCommand<"warning">;
-def XRefItem   : BlockCommand<"xrefitem">;
+def XRefItem   : BlockCommand<"xrefitem"> { let NumArgs = 3; }
 // HeaderDoc commands
 def Abstract      : BlockCommand<"abstract"> { let IsBriefCommand = 1; }
 def ClassDesign   : RecordLikeDetailCommand<"classdesign">;
