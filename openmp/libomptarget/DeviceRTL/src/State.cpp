@@ -520,6 +520,8 @@ int omp_get_num_teams(void) { return mapping::getNumberOfBlocks(); }
 int omp_get_team_num() { return mapping::getBlockId(); }
 
 int omp_get_initial_device(void) { return -1; }
+
+int omp_is_initial_device(void) { return 0; }
 }
 
 extern "C" {
