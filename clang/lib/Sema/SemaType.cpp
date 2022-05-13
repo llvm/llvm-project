@@ -5575,8 +5575,10 @@ static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
         const DeclaratorChunk::FunctionTypeInfo &FTI = DeclType.Fun;
         // We suppress the warning when there's no LParen location, as this
         // indicates the declaration was an implicit declaration, which gets
-        // warned about separately via -Wimplicit-function-declaration.
-        if (FTI.NumParams == 0 && !FTI.isVariadic && FTI.getLParenLoc().isValid())
+        // warned about separately via -Wimplicit-function-declaration. We also
+        // suppress the warning when we know the function has a prototype.
+        if (!FTI.hasPrototype && FTI.NumParams == 0 && !FTI.isVariadic &&
+            FTI.getLParenLoc().isValid())
           S.Diag(DeclType.Loc, diag::warn_strict_prototypes)
               << IsBlock
               << FixItHint::CreateInsertion(FTI.getRParenLoc(), "void");
