@@ -462,6 +462,12 @@ let RegAltNameIndices = [ABIRegAltName] in {
                DwarfRegNum<[!add(4096, SysRegVLENB.Encoding)]>;
 }
 
+def VCSR : RegisterClass<"RISCV", [XLenVT], 32,
+                          (add VTYPE, VL, VLENB)> {
+  let RegInfos = XLenRI;
+}
+
+
 foreach m = [1, 2, 4] in {
   foreach n = NFList<m>.L in {
     def "VN" # n # "M" # m # "NoV0": RegisterTuples<
