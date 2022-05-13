@@ -203,10 +203,10 @@ MachineInstrBuilder CSEMIRBuilder::buildInstr(unsigned Opc,
 
     if (SrcTy.isVector()) {
       // Try to constant fold vector constants.
-      Register VecCst = ConstantFoldVectorBinop(
-          Opc, SrcOps[0].getReg(), SrcOps[1].getReg(), *getMRI(), *this);
-      if (VecCst)
-        return buildCopy(DstOps[0], VecCst);
+      SmallVector<APInt> VecCst = ConstantFoldVectorBinop(
+          Opc, SrcOps[0].getReg(), SrcOps[1].getReg(), *getMRI());
+      if (!VecCst.empty())
+        return buildBuildVectorConstant(DstOps[0], VecCst);
       break;
     }
 
