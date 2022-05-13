@@ -32,7 +32,7 @@ define i32 @sdiv3(i32 %x) {
 ; CHECK-LABEL: @sdiv3(
 ; CHECK-NEXT:    [[X_FR:%.*]] = freeze i32 [[X:%.*]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = srem i32 [[X_FR]], 3
-; CHECK-NEXT:    [[Z:%.*]] = sub i32 [[X_FR]], [[TMP1]]
+; CHECK-NEXT:    [[Z:%.*]] = sub nsw i32 [[X_FR]], [[TMP1]]
 ; CHECK-NEXT:    ret i32 [[Z]]
 ;
   %y = sdiv i32 %x, 3

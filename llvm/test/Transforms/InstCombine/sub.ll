@@ -1705,7 +1705,7 @@ define i32 @pr51584(i32 %a, i32 %b) {
 define i8 @sub_srem(i8 noundef %x, i8 %y) {
 ; CHECK-LABEL: @sub_srem(
 ; CHECK-NEXT:    [[REM:%.*]] = srem i8 [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    [[SUB:%.*]] = sub i8 [[X]], [[REM]]
+; CHECK-NEXT:    [[SUB:%.*]] = sub nsw i8 [[X]], [[REM]]
 ; CHECK-NEXT:    ret i8 [[SUB]]
 ;
   %rem = srem i8 %x, %y
@@ -1716,7 +1716,7 @@ define i8 @sub_srem(i8 noundef %x, i8 %y) {
 define <2 x i5> @sub_urem(<2 x i5> noundef %x, <2 x i5> %y) {
 ; CHECK-LABEL: @sub_urem(
 ; CHECK-NEXT:    [[REM:%.*]] = urem <2 x i5> [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    [[SUB:%.*]] = sub <2 x i5> [[X]], [[REM]]
+; CHECK-NEXT:    [[SUB:%.*]] = sub nuw <2 x i5> [[X]], [[REM]]
 ; CHECK-NEXT:    ret <2 x i5> [[SUB]]
 ;
   %rem = urem <2 x i5> %x, %y
