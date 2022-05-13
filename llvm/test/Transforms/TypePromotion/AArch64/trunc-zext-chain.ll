@@ -4,49 +4,33 @@
 target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
 
 %struct.bar = type { %struct.foo }
-%struct.foo = type { %struct.wobble*, %struct.quux, %struct.eggs }
+%struct.foo = type { %struct.wobble* }
 %struct.wobble = type { %struct.zot* }
 %struct.zot = type <{ %struct.wobble, %struct.zot*, %struct.wobble*, i8, [7 x i8] }>
-%struct.quux = type { %struct.quux.0 }
-%struct.quux.0 = type { %struct.wobble }
-%struct.eggs = type { %struct.widget }
-%struct.widget = type { i64 }
 
 @global = external global %struct.bar, align 8
 
-declare void @quux(i64)
-
-define i32 @zext_trunc_i8_i16_i32_i64() {
+define i64 @zext_trunc_i8_i16_i32_i64() {
 ; CHECK-LABEL: @zext_trunc_i8_i16_i32_i64(
-; CHECK-NEXT:  bb:
+; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[VAR:%.*]] = load %struct.wobble*, %struct.wobble** getelementptr inbounds ([[STRUCT_BAR:%.*]], %struct.bar* @global, i64 0, i32 0, i32 0), align 8
-; CHECK-NEXT:    [[VAR1:%.*]] = icmp eq %struct.wobble* [[VAR]], getelementptr inbounds ([[STRUCT_BAR]], %struct.bar* @global, i64 0, i32 0, i32 1, i32 0, i32 0)
-; CHECK-NEXT:    br i1 [[VAR1]], label [[BB2:%.*]], label [[BB3:%.*]]
-; CHECK:       bb2:
-; CHECK-NEXT:    ret i32 0
-; CHECK:       bb3:
-; CHECK-NEXT:    [[VAR4:%.*]] = phi i64 [ [[VAR33:%.*]], [[BB31:%.*]] ], [ 0, [[BB:%.*]] ]
-; CHECK-NEXT:    [[VAR5:%.*]] = phi %struct.wobble* [ [[VAR38:%.*]], [[BB31]] ], [ [[VAR]], [[BB]] ]
-; CHECK-NEXT:    [[VAR6:%.*]] = phi i32 [ [[VAR32:%.*]], [[BB31]] ], [ 0, [[BB]] ]
-; CHECK-NEXT:    [[VAR7:%.*]] = icmp eq %struct.wobble* [[VAR5]], null
-; CHECK-NEXT:    br i1 [[VAR7]], label [[BB8:%.*]], label [[BB9:%.*]]
-; CHECK:       bb8:
-; CHECK-NEXT:    ret i32 0
-; CHECK:       bb9:
-; CHECK-NEXT:    [[VAR10:%.*]] = getelementptr inbounds [[STRUCT_WOBBLE:%.*]], %struct.wobble* [[VAR5]], i64 8
-; CHECK-NEXT:    [[VAR11:%.*]] = bitcast %struct.wobble* [[VAR10]] to i8*
-; CHECK-NEXT:    [[VAR12:%.*]] = load i8, i8* [[VAR11]], align 8
-; CHECK-NEXT:    [[VAR13:%.*]] = icmp eq i8 [[VAR12]], 0
-; CHECK-NEXT:    br i1 [[VAR13]], label [[BB14:%.*]], label [[BB31]]
-; CHECK:       bb14:
-; CHECK-NEXT:    [[VAR15:%.*]] = getelementptr inbounds [[STRUCT_WOBBLE]], %struct.wobble* [[VAR5]], i64 9
+; CHECK-NEXT:    br label [[PREHEADER:%.*]]
+; CHECK:       preheader:
+; CHECK-NEXT:    br label [[HEADER:%.*]]
+; CHECK:       header:
+; CHECK-NEXT:    [[VAR4:%.*]] = phi i64 [ [[VAR30:%.*]], [[LATCH:%.*]] ], [ 0, [[PREHEADER]] ]
+; CHECK-NEXT:    [[VAR5:%.*]] = phi %struct.wobble* [ [[VAR38:%.*]], [[LATCH]] ], [ [[VAR]], [[PREHEADER]] ]
+; CHECK-NEXT:    [[VAR6:%.*]] = phi i32 [ [[VAR21:%.*]], [[LATCH]] ], [ 0, [[PREHEADER]] ]
+; CHECK-NEXT:    br label [[MIDBLOCK:%.*]]
+; CHECK:       midblock:
+; CHECK-NEXT:    [[VAR15:%.*]] = getelementptr inbounds [[STRUCT_WOBBLE:%.*]], %struct.wobble* [[VAR5]], i64 9
 ; CHECK-NEXT:    [[VAR16:%.*]] = bitcast %struct.wobble* [[VAR15]] to i16*
 ; CHECK-NEXT:    [[VAR17:%.*]] = load i16, i16* [[VAR16]], align 8
 ; CHECK-NEXT:    [[TMP0:%.*]] = zext i16 [[VAR17]] to i32
 ; CHECK-NEXT:    [[VAR18:%.*]] = icmp eq i32 [[TMP0]], 0
 ; CHECK-NEXT:    [[VAR19:%.*]] = lshr i32 [[TMP0]], 8
 ; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[VAR19]], 255
-; CHECK-NEXT:    [[VAR21:%.*]] = select i1 [[VAR18]], i32 [[VAR6]], i32 [[TMP1]]
+; CHECK-NEXT:    [[VAR21]] = select i1 [[VAR18]], i32 [[VAR6]], i32 [[TMP1]]
 ; CHECK-NEXT:    [[VAR23:%.*]] = shl nuw i32 [[VAR21]], 8
 ; CHECK-NEXT:    [[VAR24:%.*]] = and i32 [[TMP0]], 255
 ; CHECK-NEXT:    [[VAR25:%.*]] = or i32 [[VAR23]], [[VAR24]]
@@ -55,47 +39,32 @@ define i32 @zext_trunc_i8_i16_i32_i64() {
 ; CHECK-NEXT:    [[VAR27:%.*]] = zext i16 [[TMP2]] to i64
 ; CHECK-NEXT:    [[VAR28:%.*]] = and i64 [[VAR4]], -4294967296
 ; CHECK-NEXT:    [[VAR29:%.*]] = or i64 [[VAR26]], [[VAR28]]
-; CHECK-NEXT:    [[VAR30:%.*]] = or i64 [[VAR29]], [[VAR27]]
-; CHECK-NEXT:    call void @quux(i64 [[VAR30]])
-; CHECK-NEXT:    br label [[BB31]]
-; CHECK:       bb31:
-; CHECK-NEXT:    [[VAR32]] = phi i32 [ [[VAR6]], [[BB9]] ], [ [[VAR21]], [[BB14]] ]
-; CHECK-NEXT:    [[VAR33]] = phi i64 [ [[VAR4]], [[BB9]] ], [ [[VAR30]], [[BB14]] ]
+; CHECK-NEXT:    [[VAR30]] = or i64 [[VAR29]], [[VAR27]]
+; CHECK-NEXT:    br label [[LATCH]]
+; CHECK:       latch:
 ; CHECK-NEXT:    [[VAR34:%.*]] = getelementptr inbounds [[STRUCT_WOBBLE]], %struct.wobble* [[VAR5]], i64 1, i32 0
 ; CHECK-NEXT:    [[VAR35:%.*]] = load %struct.zot*, %struct.zot** [[VAR34]], align 8
 ; CHECK-NEXT:    [[VAR36:%.*]] = icmp eq %struct.zot* [[VAR35]], null
 ; CHECK-NEXT:    [[VAR37:%.*]] = getelementptr inbounds [[STRUCT_ZOT:%.*]], %struct.zot* [[VAR35]], i64 0, i32 2
 ; CHECK-NEXT:    [[VAR38]] = load %struct.wobble*, %struct.wobble** [[VAR37]], align 8
-; CHECK-NEXT:    br i1 [[VAR36]], label [[BB32:%.*]], label [[BB3]]
-; CHECK:       bb32:
-; CHECK-NEXT:    ret i32 1
+; CHECK-NEXT:    br i1 [[VAR36]], label [[EXIT:%.*]], label [[HEADER]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret i64 [[VAR30]]
 ;
-bb:
+entry:
   %var = load %struct.wobble*, %struct.wobble** getelementptr inbounds (%struct.bar, %struct.bar* @global, i64 0, i32 0, i32 0), align 8
-  %var1 = icmp eq %struct.wobble* %var, getelementptr inbounds (%struct.bar, %struct.bar* @global, i64 0, i32 0, i32 1, i32 0, i32 0)
-  br i1 %var1, label %bb2, label %bb3
+  br label %preheader
 
-bb2:                                              ; preds = %bb63, %bb
-  ret i32 0
+preheader:
+  br label %header
 
-bb3:                                              ; preds = %bb63, %bb
-  %var4 = phi i64 [ %var33, %bb31 ], [ 0, %bb ]
-  %var5 = phi %struct.wobble* [ %var38, %bb31 ], [ %var, %bb ]
-  %var6 = phi i8 [ %var32, %bb31 ], [ 0, %bb ]
-  %var7 = icmp eq %struct.wobble* %var5, null
-  br i1 %var7, label %bb8, label %bb9
+header:                                              ; preds = %bb63, %bb
+  %var4 = phi i64 [ %var30, %latch ], [ 0, %preheader ]
+  %var5 = phi %struct.wobble* [ %var38, %latch ], [ %var, %preheader ]
+  %var6 = phi i8 [ %var21, %latch ], [ 0, %preheader ]
+  br label %midblock
 
-bb8:                                              ; preds = %bb3
-  ret i32 0
-
-bb9:                                              ; preds = %bb3
-  %var10 = getelementptr inbounds %struct.wobble, %struct.wobble* %var5, i64 8
-  %var11 = bitcast %struct.wobble* %var10 to i8*
-  %var12 = load i8, i8* %var11, align 8
-  %var13 = icmp eq i8 %var12, 0
-  br i1 %var13, label %bb14, label %bb31
-
-bb14:                                             ; preds = %bb9
+midblock:                                             ; preds = %bb9
   %var15 = getelementptr inbounds %struct.wobble, %struct.wobble* %var5, i64 9
   %var16 = bitcast %struct.wobble* %var15 to i16*
   %var17 = load i16, i16* %var16, align 8
@@ -112,54 +81,41 @@ bb14:                                             ; preds = %bb9
   %var28 = and i64 %var4, -4294967296
   %var29 = or i64 %var26, %var28
   %var30 = or i64 %var29, %var27
-  call void @quux(i64 %var30)
-  br label %bb31
+  br label %latch
 
-bb31:                                             ; preds = %bb14, %bb9
-  %var32 = phi i8 [ %var6, %bb9 ], [ %var21, %bb14 ]
-  %var33 = phi i64 [ %var4, %bb9 ], [ %var30, %bb14 ]
+latch:                                             ; preds = %bb14, %bb9
   %var34 = getelementptr inbounds %struct.wobble, %struct.wobble* %var5, i64 1, i32 0
   %var35 = load %struct.zot*, %struct.zot** %var34, align 8
   %var36 = icmp eq %struct.zot* %var35, null
   %var37 = getelementptr inbounds %struct.zot, %struct.zot* %var35, i64 0, i32 2
   %var38 = load %struct.wobble*, %struct.wobble** %var37, align 8
-  br i1 %var36, label %bb32, label %bb3
+  br i1 %var36, label %exit, label %header
 
-bb32:
-  ret i32 1
+exit:
+  ret i64 %var30
 }
 
-define i32 @with_undef() {
+define i64 @with_undef() {
 ; CHECK-LABEL: @with_undef(
-; CHECK-NEXT:  bb:
+; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[VAR:%.*]] = load %struct.wobble*, %struct.wobble** getelementptr inbounds ([[STRUCT_BAR:%.*]], %struct.bar* @global, i64 0, i32 0, i32 0), align 8
-; CHECK-NEXT:    [[VAR1:%.*]] = icmp eq %struct.wobble* [[VAR]], getelementptr inbounds ([[STRUCT_BAR]], %struct.bar* @global, i64 0, i32 0, i32 1, i32 0, i32 0)
-; CHECK-NEXT:    br i1 [[VAR1]], label [[BB2:%.*]], label [[BB3:%.*]]
-; CHECK:       bb2:
-; CHECK-NEXT:    ret i32 0
-; CHECK:       bb3:
-; CHECK-NEXT:    [[VAR4:%.*]] = phi i64 [ [[VAR33:%.*]], [[BB31:%.*]] ], [ undef, [[BB:%.*]] ]
-; CHECK-NEXT:    [[VAR5:%.*]] = phi %struct.wobble* [ [[VAR38:%.*]], [[BB31]] ], [ [[VAR]], [[BB]] ]
-; CHECK-NEXT:    [[VAR6:%.*]] = phi i32 [ [[VAR32:%.*]], [[BB31]] ], [ 0, [[BB]] ]
-; CHECK-NEXT:    [[VAR7:%.*]] = icmp eq %struct.wobble* [[VAR5]], null
-; CHECK-NEXT:    br i1 [[VAR7]], label [[BB8:%.*]], label [[BB9:%.*]]
-; CHECK:       bb8:
-; CHECK-NEXT:    ret i32 0
-; CHECK:       bb9:
-; CHECK-NEXT:    [[VAR10:%.*]] = getelementptr inbounds [[STRUCT_WOBBLE:%.*]], %struct.wobble* [[VAR5]], i64 8
-; CHECK-NEXT:    [[VAR11:%.*]] = bitcast %struct.wobble* [[VAR10]] to i8*
-; CHECK-NEXT:    [[VAR12:%.*]] = load i8, i8* [[VAR11]], align 8
-; CHECK-NEXT:    [[VAR13:%.*]] = icmp eq i8 [[VAR12]], 0
-; CHECK-NEXT:    br i1 [[VAR13]], label [[BB14:%.*]], label [[BB31]]
-; CHECK:       bb14:
-; CHECK-NEXT:    [[VAR15:%.*]] = getelementptr inbounds [[STRUCT_WOBBLE]], %struct.wobble* [[VAR5]], i64 9
+; CHECK-NEXT:    br label [[PREHEADER:%.*]]
+; CHECK:       preheader:
+; CHECK-NEXT:    br label [[HEADER:%.*]]
+; CHECK:       header:
+; CHECK-NEXT:    [[VAR4:%.*]] = phi i64 [ [[VAR30:%.*]], [[LATCH:%.*]] ], [ undef, [[PREHEADER]] ]
+; CHECK-NEXT:    [[VAR5:%.*]] = phi %struct.wobble* [ [[VAR38:%.*]], [[LATCH]] ], [ [[VAR]], [[PREHEADER]] ]
+; CHECK-NEXT:    [[VAR6:%.*]] = phi i32 [ [[VAR21:%.*]], [[LATCH]] ], [ 0, [[PREHEADER]] ]
+; CHECK-NEXT:    br label [[MIDBLOCK:%.*]]
+; CHECK:       midblock:
+; CHECK-NEXT:    [[VAR15:%.*]] = getelementptr inbounds [[STRUCT_WOBBLE:%.*]], %struct.wobble* [[VAR5]], i64 9
 ; CHECK-NEXT:    [[VAR16:%.*]] = bitcast %struct.wobble* [[VAR15]] to i16*
 ; CHECK-NEXT:    [[VAR17:%.*]] = load i16, i16* [[VAR16]], align 8
 ; CHECK-NEXT:    [[TMP0:%.*]] = zext i16 [[VAR17]] to i32
 ; CHECK-NEXT:    [[VAR18:%.*]] = icmp eq i32 [[TMP0]], 0
 ; CHECK-NEXT:    [[VAR19:%.*]] = lshr i32 [[TMP0]], 8
 ; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[VAR19]], 255
-; CHECK-NEXT:    [[VAR21:%.*]] = select i1 [[VAR18]], i32 [[VAR6]], i32 [[TMP1]]
+; CHECK-NEXT:    [[VAR21]] = select i1 [[VAR18]], i32 [[VAR6]], i32 [[TMP1]]
 ; CHECK-NEXT:    [[VAR23:%.*]] = shl nuw i32 [[VAR21]], 8
 ; CHECK-NEXT:    [[VAR24:%.*]] = and i32 [[TMP0]], 255
 ; CHECK-NEXT:    [[VAR25:%.*]] = or i32 [[VAR23]], [[VAR24]]
@@ -168,47 +124,32 @@ define i32 @with_undef() {
 ; CHECK-NEXT:    [[VAR27:%.*]] = zext i16 [[TMP2]] to i64
 ; CHECK-NEXT:    [[VAR28:%.*]] = and i64 [[VAR4]], -4294967296
 ; CHECK-NEXT:    [[VAR29:%.*]] = or i64 [[VAR26]], [[VAR28]]
-; CHECK-NEXT:    [[VAR30:%.*]] = or i64 [[VAR29]], [[VAR27]]
-; CHECK-NEXT:    call void @quux(i64 [[VAR30]])
-; CHECK-NEXT:    br label [[BB31]]
-; CHECK:       bb31:
-; CHECK-NEXT:    [[VAR32]] = phi i32 [ [[VAR6]], [[BB9]] ], [ [[VAR21]], [[BB14]] ]
-; CHECK-NEXT:    [[VAR33]] = phi i64 [ [[VAR4]], [[BB9]] ], [ [[VAR30]], [[BB14]] ]
+; CHECK-NEXT:    [[VAR30]] = or i64 [[VAR29]], [[VAR27]]
+; CHECK-NEXT:    br label [[LATCH]]
+; CHECK:       latch:
 ; CHECK-NEXT:    [[VAR34:%.*]] = getelementptr inbounds [[STRUCT_WOBBLE]], %struct.wobble* [[VAR5]], i64 1, i32 0
 ; CHECK-NEXT:    [[VAR35:%.*]] = load %struct.zot*, %struct.zot** [[VAR34]], align 8
 ; CHECK-NEXT:    [[VAR36:%.*]] = icmp eq %struct.zot* [[VAR35]], null
 ; CHECK-NEXT:    [[VAR37:%.*]] = getelementptr inbounds [[STRUCT_ZOT:%.*]], %struct.zot* [[VAR35]], i64 0, i32 2
 ; CHECK-NEXT:    [[VAR38]] = load %struct.wobble*, %struct.wobble** [[VAR37]], align 8
-; CHECK-NEXT:    br i1 [[VAR36]], label [[BB32:%.*]], label [[BB3]]
-; CHECK:       bb32:
-; CHECK-NEXT:    ret i32 1
+; CHECK-NEXT:    br i1 [[VAR36]], label [[EXIT:%.*]], label [[HEADER]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret i64 [[VAR30]]
 ;
-bb:
+entry:
   %var = load %struct.wobble*, %struct.wobble** getelementptr inbounds (%struct.bar, %struct.bar* @global, i64 0, i32 0, i32 0), align 8
-  %var1 = icmp eq %struct.wobble* %var, getelementptr inbounds (%struct.bar, %struct.bar* @global, i64 0, i32 0, i32 1, i32 0, i32 0)
-  br i1 %var1, label %bb2, label %bb3
+  br label %preheader
 
-bb2:                                              ; preds = %bb63, %bb
-  ret i32 0
+preheader:
+  br label %header
 
-bb3:                                              ; preds = %bb63, %bb
-  %var4 = phi i64 [ %var33, %bb31 ], [ undef, %bb ]
-  %var5 = phi %struct.wobble* [ %var38, %bb31 ], [ %var, %bb ]
-  %var6 = phi i8 [ %var32, %bb31 ], [ undef, %bb ]
-  %var7 = icmp eq %struct.wobble* %var5, null
-  br i1 %var7, label %bb8, label %bb9
+header:                                              ; preds = %bb63, %bb
+  %var4 = phi i64 [ %var30, %latch ], [ undef, %preheader ]
+  %var5 = phi %struct.wobble* [ %var38, %latch ], [ %var, %preheader ]
+  %var6 = phi i8 [ %var21, %latch ], [ undef, %preheader ]
+  br label %midblock
 
-bb8:                                              ; preds = %bb3
-  ret i32 0
-
-bb9:                                              ; preds = %bb3
-  %var10 = getelementptr inbounds %struct.wobble, %struct.wobble* %var5, i64 8
-  %var11 = bitcast %struct.wobble* %var10 to i8*
-  %var12 = load i8, i8* %var11, align 8
-  %var13 = icmp eq i8 %var12, 0
-  br i1 %var13, label %bb14, label %bb31
-
-bb14:                                             ; preds = %bb9
+midblock:                                             ; preds = %bb9
   %var15 = getelementptr inbounds %struct.wobble, %struct.wobble* %var5, i64 9
   %var16 = bitcast %struct.wobble* %var15 to i16*
   %var17 = load i16, i16* %var16, align 8
@@ -225,19 +166,16 @@ bb14:                                             ; preds = %bb9
   %var28 = and i64 %var4, -4294967296
   %var29 = or i64 %var26, %var28
   %var30 = or i64 %var29, %var27
-  call void @quux(i64 %var30)
-  br label %bb31
+  br label %latch
 
-bb31:                                             ; preds = %bb14, %bb9
-  %var32 = phi i8 [ %var6, %bb9 ], [ %var21, %bb14 ]
-  %var33 = phi i64 [ %var4, %bb9 ], [ %var30, %bb14 ]
+latch:                                             ; preds = %bb14, %bb9
   %var34 = getelementptr inbounds %struct.wobble, %struct.wobble* %var5, i64 1, i32 0
   %var35 = load %struct.zot*, %struct.zot** %var34, align 8
   %var36 = icmp eq %struct.zot* %var35, null
   %var37 = getelementptr inbounds %struct.zot, %struct.zot* %var35, i64 0, i32 2
   %var38 = load %struct.wobble*, %struct.wobble** %var37, align 8
-  br i1 %var36, label %bb32, label %bb3
+  br i1 %var36, label %exit, label %header
 
-bb32:
-  ret i32 1
+exit:
+  ret i64 %var30
 }
