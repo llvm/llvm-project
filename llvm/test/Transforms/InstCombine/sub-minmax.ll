@@ -762,9 +762,7 @@ define i8 @diff_add_use_umin_use(i8 %x, i8 %y) {
   ret i8 %s
 }
 
-;
-; TODO: sub(add(X,Y),umin(Y,Z)) --> add(X,usubsat(Y,Z))
-;
+; sub(add(X,Y),umin(Y,Z)) --> add(X,usubsat(Y,Z))
 
 define i8 @sub_add_umin(i8 %x, i8 %y, i8 %z) {
 ; CHECK-LABEL: define {{[^@]+}}@sub_add_umin
@@ -782,7 +780,7 @@ define i8 @sub_add_umin(i8 %x, i8 %y, i8 %z) {
 define i8 @sub_add_umin_commute_umin(i8 %x, i8 %y, i8 %z) {
 ; CHECK-LABEL: define {{[^@]+}}@sub_add_umin_commute_umin
 ; CHECK-SAME: (i8 [[X:%.*]], i8 [[Y:%.*]], i8 [[Z:%.*]]) {
-; CHECK-NEXT:    [[TMP1:%.*]] = call i8 @llvm.usub.sat.i8(i8 [[Z]], i8 [[Y]])
+; CHECK-NEXT:    [[TMP1:%.*]] = call i8 @llvm.usub.sat.i8(i8 [[Y]], i8 [[Z]])
 ; CHECK-NEXT:    [[S:%.*]] = add i8 [[TMP1]], [[X]]
 ; CHECK-NEXT:    ret i8 [[S]]
 ;
@@ -808,7 +806,7 @@ define i8 @sub_add_umin_commute_add(i8 %x, i8 %y, i8 %z) {
 define i8 @sub_add_umin_commute_add_umin(i8 %x, i8 %y, i8 %z) {
 ; CHECK-LABEL: define {{[^@]+}}@sub_add_umin_commute_add_umin
 ; CHECK-SAME: (i8 [[X:%.*]], i8 [[Y:%.*]], i8 [[Z:%.*]]) {
-; CHECK-NEXT:    [[TMP1:%.*]] = call i8 @llvm.usub.sat.i8(i8 [[Z]], i8 [[Y]])
+; CHECK-NEXT:    [[TMP1:%.*]] = call i8 @llvm.usub.sat.i8(i8 [[Y]], i8 [[Z]])
 ; CHECK-NEXT:    [[S:%.*]] = add i8 [[TMP1]], [[X]]
 ; CHECK-NEXT:    ret i8 [[S]]
 ;

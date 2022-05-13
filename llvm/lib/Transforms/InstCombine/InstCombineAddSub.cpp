@@ -2031,14 +2031,17 @@ Instruction *InstCombinerImpl::visitSub(BinaryOperator &I) {
 
     {
       // sub(add(X,Y),umin(Y,Z)) --> add(X,usub.sat(Y,Z))
-      // sub(add(X,Z),umin(Y,Z)) --> add(X,usub.sat(Y,Z))
+      // sub(add(X,Z),umin(Y,Z)) --> add(X,usub.sat(Z,Y))
       Value *X, *Y, *Z;
-      if (match(Op1, m_OneUse(m_UMin(m_Value(Y), m_Value(Z)))) &&
-          (match(Op0, m_OneUse(m_c_Add(m_Specific(Y), m_Value(X)))) ||
-           match(Op0, m_OneUse(m_c_Add(m_Specific(Z), m_Value(X)))))) {
-        Value *USub =
-            Builder.CreateIntrinsic(Intrinsic::usub_sat, I.getType(), {Y, Z});
-        return BinaryOperator::CreateAdd(X, USub);
+      if (match(Op1, m_OneUse(m_UMin(m_Value(Y), m_Value(Z))))) {
+        if (match(Op0, m_OneUse(m_c_Add(m_Specific(Y), m_Value(X)))))
+          return BinaryOperator::CreateAdd(
+              X, Builder.CreateIntrinsic(Intrinsic::usub_sat, I.getType(),
+                                         {Y, Z}));
+        if (match(Op0, m_OneUse(m_c_Add(m_Specific(Z), m_Value(X)))))
+          return BinaryOperator::CreateAdd(
+              X, Builder.CreateIntrinsic(Intrinsic::usub_sat, I.getType(),
+                                         {Z, Y}));
       }
     }
   }
