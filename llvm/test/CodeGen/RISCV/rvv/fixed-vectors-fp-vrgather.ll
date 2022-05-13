@@ -54,19 +54,19 @@ define void @gather_const_v2f64(<2 x double>* %x) {
 define void @gather_const_v64f16(<64 x half>* %x) {
 ; LMULMAX8-LABEL: gather_const_v64f16:
 ; LMULMAX8:       # %bb.0:
-; LMULMAX8-NEXT:    addi a1, a0, 94
-; LMULMAX8-NEXT:    li a2, 64
-; LMULMAX8-NEXT:    vsetvli zero, a2, e16, m8, ta, mu
-; LMULMAX8-NEXT:    vlse16.v v8, (a1), zero
+; LMULMAX8-NEXT:    li a1, 64
+; LMULMAX8-NEXT:    addi a2, a0, 94
+; LMULMAX8-NEXT:    vsetvli zero, a1, e16, m8, ta, mu
+; LMULMAX8-NEXT:    vlse16.v v8, (a2), zero
 ; LMULMAX8-NEXT:    vse16.v v8, (a0)
 ; LMULMAX8-NEXT:    ret
 ;
 ; LMULMAX1-LABEL: gather_const_v64f16:
 ; LMULMAX1:       # %bb.0:
-; LMULMAX1-NEXT:    addi a1, a0, 16
-; LMULMAX1-NEXT:    addi a2, a0, 48
-; LMULMAX1-NEXT:    addi a3, a0, 32
-; LMULMAX1-NEXT:    addi a4, a0, 80
+; LMULMAX1-NEXT:    addi a1, a0, 80
+; LMULMAX1-NEXT:    addi a2, a0, 16
+; LMULMAX1-NEXT:    addi a3, a0, 48
+; LMULMAX1-NEXT:    addi a4, a0, 32
 ; LMULMAX1-NEXT:    addi a5, a0, 94
 ; LMULMAX1-NEXT:    vsetivli zero, 8, e16, m1, ta, mu
 ; LMULMAX1-NEXT:    vlse16.v v8, (a5), zero
@@ -76,11 +76,11 @@ define void @gather_const_v64f16(<64 x half>* %x) {
 ; LMULMAX1-NEXT:    vse16.v v8, (a7)
 ; LMULMAX1-NEXT:    vse16.v v8, (a6)
 ; LMULMAX1-NEXT:    vse16.v v8, (a5)
+; LMULMAX1-NEXT:    vse16.v v8, (a1)
 ; LMULMAX1-NEXT:    vse16.v v8, (a4)
 ; LMULMAX1-NEXT:    vse16.v v8, (a3)
-; LMULMAX1-NEXT:    vse16.v v8, (a2)
 ; LMULMAX1-NEXT:    vse16.v v8, (a0)
-; LMULMAX1-NEXT:    vse16.v v8, (a1)
+; LMULMAX1-NEXT:    vse16.v v8, (a2)
 ; LMULMAX1-NEXT:    ret
   %a = load <64 x half>, <64 x half>* %x
   %b = extractelement <64 x half> %a, i32 47
@@ -93,33 +93,33 @@ define void @gather_const_v64f16(<64 x half>* %x) {
 define void @gather_const_v32f32(<32 x float>* %x) {
 ; LMULMAX8-LABEL: gather_const_v32f32:
 ; LMULMAX8:       # %bb.0:
-; LMULMAX8-NEXT:    addi a1, a0, 68
-; LMULMAX8-NEXT:    li a2, 32
-; LMULMAX8-NEXT:    vsetvli zero, a2, e32, m8, ta, mu
-; LMULMAX8-NEXT:    vlse32.v v8, (a1), zero
+; LMULMAX8-NEXT:    li a1, 32
+; LMULMAX8-NEXT:    addi a2, a0, 68
+; LMULMAX8-NEXT:    vsetvli zero, a1, e32, m8, ta, mu
+; LMULMAX8-NEXT:    vlse32.v v8, (a2), zero
 ; LMULMAX8-NEXT:    vse32.v v8, (a0)
 ; LMULMAX8-NEXT:    ret
 ;
 ; LMULMAX1-LABEL: gather_const_v32f32:
 ; LMULMAX1:       # %bb.0:
-; LMULMAX1-NEXT:    addi a1, a0, 16
-; LMULMAX1-NEXT:    addi a2, a0, 48
-; LMULMAX1-NEXT:    addi a3, a0, 32
-; LMULMAX1-NEXT:    addi a4, a0, 80
+; LMULMAX1-NEXT:    addi a1, a0, 64
+; LMULMAX1-NEXT:    addi a2, a0, 16
+; LMULMAX1-NEXT:    addi a3, a0, 48
+; LMULMAX1-NEXT:    addi a4, a0, 32
 ; LMULMAX1-NEXT:    addi a5, a0, 68
 ; LMULMAX1-NEXT:    vsetivli zero, 4, e32, m1, ta, mu
 ; LMULMAX1-NEXT:    vlse32.v v8, (a5), zero
-; LMULMAX1-NEXT:    addi a5, a0, 64
+; LMULMAX1-NEXT:    addi a5, a0, 80
 ; LMULMAX1-NEXT:    addi a6, a0, 112
 ; LMULMAX1-NEXT:    addi a7, a0, 96
 ; LMULMAX1-NEXT:    vse32.v v8, (a7)
 ; LMULMAX1-NEXT:    vse32.v v8, (a6)
+; LMULMAX1-NEXT:    vse32.v v8, (a1)
 ; LMULMAX1-NEXT:    vse32.v v8, (a5)
 ; LMULMAX1-NEXT:    vse32.v v8, (a4)
 ; LMULMAX1-NEXT:    vse32.v v8, (a3)
-; LMULMAX1-NEXT:    vse32.v v8, (a2)
 ; LMULMAX1-NEXT:    vse32.v v8, (a0)
-; LMULMAX1-NEXT:    vse32.v v8, (a1)
+; LMULMAX1-NEXT:    vse32.v v8, (a2)
 ; LMULMAX1-NEXT:    ret
   %a = load <32 x float>, <32 x float>* %x
   %b = extractelement <32 x float> %a, i32 17
@@ -140,23 +140,23 @@ define void @gather_const_v16f64(<16 x double>* %x) {
 ;
 ; LMULMAX1-LABEL: gather_const_v16f64:
 ; LMULMAX1:       # %bb.0:
-; LMULMAX1-NEXT:    addi a1, a0, 16
-; LMULMAX1-NEXT:    addi a2, a0, 48
-; LMULMAX1-NEXT:    addi a3, a0, 32
-; LMULMAX1-NEXT:    addi a4, a0, 80
+; LMULMAX1-NEXT:    addi a1, a0, 80
+; LMULMAX1-NEXT:    addi a2, a0, 16
+; LMULMAX1-NEXT:    addi a3, a0, 48
+; LMULMAX1-NEXT:    addi a4, a0, 32
 ; LMULMAX1-NEXT:    vsetivli zero, 2, e64, m1, ta, mu
-; LMULMAX1-NEXT:    vlse64.v v8, (a4), zero
+; LMULMAX1-NEXT:    vlse64.v v8, (a1), zero
 ; LMULMAX1-NEXT:    addi a5, a0, 64
 ; LMULMAX1-NEXT:    addi a6, a0, 112
 ; LMULMAX1-NEXT:    addi a7, a0, 96
 ; LMULMAX1-NEXT:    vse64.v v8, (a7)
 ; LMULMAX1-NEXT:    vse64.v v8, (a6)
 ; LMULMAX1-NEXT:    vse64.v v8, (a5)
+; LMULMAX1-NEXT:    vse64.v v8, (a1)
 ; LMULMAX1-NEXT:    vse64.v v8, (a4)
 ; LMULMAX1-NEXT:    vse64.v v8, (a3)
-; LMULMAX1-NEXT:    vse64.v v8, (a2)
 ; LMULMAX1-NEXT:    vse64.v v8, (a0)
-; LMULMAX1-NEXT:    vse64.v v8, (a1)
+; LMULMAX1-NEXT:    vse64.v v8, (a2)
 ; LMULMAX1-NEXT:    ret
   %a = load <16 x double>, <16 x double>* %x
   %b = extractelement <16 x double> %a, i32 10

@@ -11,12 +11,12 @@ define void @do.memmove() nounwind {
 ; CHECK-NEXT:    addi a0, a0, %lo(c)
 ; CHECK-NEXT:    vsetivli zero, 2, e64, m1, ta, mu
 ; CHECK-NEXT:    vle64.v v8, (a0)
+; CHECK-NEXT:    addi a1, a0, 16
+; CHECK-NEXT:    vle64.v v9, (a1)
 ; CHECK-NEXT:    addi a1, a0, 8
 ; CHECK-NEXT:    vse64.v v8, (a1)
-; CHECK-NEXT:    addi a1, a0, 16
-; CHECK-NEXT:    vle64.v v8, (a1)
 ; CHECK-NEXT:    addi a0, a0, 24
-; CHECK-NEXT:    vse64.v v8, (a0)
+; CHECK-NEXT:    vse64.v v9, (a0)
 ; CHECK-NEXT:    ret
 entry:
   ; this thing is "__builtin_memmove(&c[1], &c[0], sizeof(c[0]) * 4);"
