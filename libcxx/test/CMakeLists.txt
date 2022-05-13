@@ -17,7 +17,9 @@ set(LIBCXX_TEST_COMPILER_FLAGS "" CACHE STRING
 # The tests shouldn't link to any ABI library when it has been linked into
 # libc++ statically or via a linker script.
 if (LIBCXX_ENABLE_STATIC_ABI_LIBRARY OR LIBCXX_ENABLE_ABI_LINKER_SCRIPT)
-  set(LIBCXX_CXX_ABI_LIBNAME "none")
+  set(LIBCXX_CXXABI_FOR_TESTS "none")
+else()
+  set(LIBCXX_CXXABI_FOR_TESTS "${LIBCXX_CXX_ABI}")
 endif()
 
 # The tests shouldn't link to libunwind if we have a linker script which

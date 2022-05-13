@@ -156,11 +156,6 @@ if(NOT LIBCXX_INSTALL_LIBRARY)
   set(exclude_from_all EXCLUDE_FROM_ALL)
 endif()
 
-# If LIBCXX_CXX_ABI_LIBRARY_PATH is defined we want to add it to the search path.
-add_link_flags_if(LIBCXX_CXX_ABI_LIBRARY_PATH
-                  "${CMAKE_LIBRARY_PATH_FLAG}${LIBCXX_CXX_ABI_LIBRARY_PATH}")
-
-
 if (LIBCXX_GENERATE_COVERAGE AND NOT LIBCXX_COVERAGE_LIBRARY)
   find_compiler_rt_library(profile LIBCXX_COVERAGE_LIBRARY)
 endif()
@@ -197,10 +192,6 @@ if (LIBCXX_ENABLE_PARALLEL_ALGORITHMS AND NOT TARGET pstl::ParallelSTL)
 endif()
 
 function(cxx_set_common_defines name)
-  if(LIBCXX_CXX_ABI_HEADER_TARGET)
-    add_dependencies(${name} ${LIBCXX_CXX_ABI_HEADER_TARGET})
-  endif()
-
   if (LIBCXX_ENABLE_PARALLEL_ALGORITHMS)
     target_link_libraries(${name} PUBLIC pstl::ParallelSTL)
   endif()
@@ -241,19 +232,18 @@ if (LIBCXX_ENABLE_SHARED)
   # Link against libc++abi
   if (LIBCXX_STATICALLY_LINK_ABI_IN_SHARED_LIBRARY)
     if (APPLE)
-      target_link_libraries(cxx_shared PRIVATE "-Wl,-force_load" "${LIBCXX_CXX_STATIC_ABI_LIBRARY}")
+      target_link_libraries(cxx_shared PRIVATE "-Wl,-force_load" "$<TARGET_LINKER_FILE:libcxx-abi-static>")
     else()
-      target_link_libraries(cxx_shared PRIVATE "-Wl,--whole-archive,-Bstatic" "${LIBCXX_CXX_STATIC_ABI_LIBRARY}" "-Wl,-Bdynamic,--no-whole-archive")
+      target_link_libraries(cxx_shared PRIVATE "-Wl,--whole-archive,-Bstatic" "$<TARGET_LINKER_FILE:libcxx-abi-static>" "-Wl,-Bdynamic,--no-whole-archive")
     endif()
   else()
-    target_link_libraries(cxx_shared PUBLIC "${LIBCXX_CXX_SHARED_ABI_LIBRARY}")
+    target_link_libraries(cxx_shared PUBLIC libcxx-abi-shared)
   endif()
 
   # Maybe re-export symbols from libc++abi
   # In particular, we don't re-export the symbols if libc++abi is merged statically
   # into libc++ because in that case there's no dylib to re-export from.
-  if (APPLE AND (LIBCXX_CXX_ABI_LIBNAME STREQUAL "libcxxabi" OR
-                 LIBCXX_CXX_ABI_LIBNAME STREQUAL "default")
+  if (APPLE AND LIBCXX_CXX_ABI STREQUAL "libcxxabi"
             AND NOT DEFINED LIBCXX_OSX_REEXPORT_LIBCXXABI_SYMBOLS
             AND NOT LIBCXX_STATICALLY_LINK_ABI_IN_SHARED_LIBRARY)
     set(LIBCXX_OSX_REEXPORT_LIBCXXABI_SYMBOLS ON)
@@ -292,7 +282,8 @@ if (LIBCXX_ENABLE_STATIC)
   add_library(cxx_static STATIC ${exclude_from_all} ${LIBCXX_SOURCES} ${LIBCXX_HEADERS})
   target_include_directories(cxx_static PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
   target_link_libraries(cxx_static PUBLIC cxx-headers
-                                   PRIVATE ${LIBCXX_LIBRARIES})
+                                   PRIVATE ${LIBCXX_LIBRARIES}
+                                   PRIVATE libcxx-abi-static)
   set_target_properties(cxx_static
     PROPERTIES
       COMPILE_FLAGS "${LIBCXX_COMPILE_FLAGS}"
@@ -323,19 +314,6 @@ if (LIBCXX_ENABLE_STATIC)
   list(APPEND LIBCXX_BUILD_TARGETS "cxx_static")
   # Attempt to merge the libc++.a archive and the ABI library archive into one.
   if (LIBCXX_STATICALLY_LINK_ABI_IN_STATIC_LIBRARY)
-    set(MERGE_ARCHIVES_SEARCH_PATHS "")
-    if (LIBCXX_CXX_ABI_LIBRARY_PATH)
-      set(MERGE_ARCHIVES_SEARCH_PATHS "-L${LIBCXX_CXX_ABI_LIBRARY_PATH}")
-    endif()
-    if (TARGET "${LIBCXX_CXX_STATIC_ABI_LIBRARY}" OR HAVE_LIBCXXABI)
-      set(MERGE_ARCHIVES_ABI_TARGET "$<TARGET_LINKER_FILE:${LIBCXX_CXX_STATIC_ABI_LIBRARY}>")
-    else()
-      set(MERGE_ARCHIVES_ABI_TARGET
-        "${CMAKE_STATIC_LIBRARY_PREFIX}${LIBCXX_CXX_STATIC_ABI_LIBRARY}${CMAKE_STATIC_LIBRARY_SUFFIX}")
-      if (LIBCXX_CXX_ABI_LIBRARY_PATH)
-        set(MERGE_ARCHIVES_ABI_TARGET "${LIBCXX_CXX_ABI_LIBRARY_PATH}/${MERGE_ARCHIVES_ABI_TARGET}")
-      endif ()
-    endif()
     if (APPLE)
       set(MERGE_ARCHIVES_LIBTOOL "--use-libtool" "--libtool" "${CMAKE_LIBTOOL}")
     endif()
@@ -347,8 +325,8 @@ if (LIBCXX_ENABLE_STATIC)
       --ar "${CMAKE_AR}"
       ${MERGE_ARCHIVES_LIBTOOL}
       "$<TARGET_LINKER_FILE:cxx_static>"
-      "${MERGE_ARCHIVES_ABI_TARGET}"
-      "${MERGE_ARCHIVES_SEARCH_PATHS}"
+      "$<TARGET_LINKER_FILE:libcxx-abi-static>"
+      ""
     WORKING_DIRECTORY ${LIBCXX_BUILD_DIR}
     DEPENDS ${MERGE_ARCHIVES_ABI_TARGET}
     )
