@@ -497,16 +497,10 @@ public:
   }
 
   child_range children() {
-    if (!getOperand())
-      return child_range(SubStmts + SubStmt::PromiseCall,
-                         SubStmts + SubStmt::Count);
     return child_range(SubStmts, SubStmts + SubStmt::Count);
   }
 
   const_child_range children() const {
-    if (!getOperand())
-      return const_child_range(SubStmts + SubStmt::PromiseCall,
-                               SubStmts + SubStmt::Count);
     return const_child_range(SubStmts, SubStmts + SubStmt::Count);
   }
 
