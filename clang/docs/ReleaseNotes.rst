@@ -347,6 +347,8 @@ C++ Language Changes in Clang
   template parameter, to conform to the Itanium C++ ABI and be compatible with
   GCC. This breaks binary compatibility with code compiled with earlier versions
   of clang; use the ``-fclang-abi-compat=14`` option to get the old mangling.
+- Preprocessor character literals with a ``u8`` prefix are now correctly treated as
+  unsigned character literals. This fixes `Issue 54886 <https://github.com/llvm/llvm-project/issues/54886>`_.
 
 C++20 Feature Support
 ^^^^^^^^^^^^^^^^^^^^^
