@@ -2,7 +2,7 @@
 ; RUN: llc -mtriple=riscv64 -mattr=+f,+m,+zfh,+experimental-zvfh \
 ; RUN:   -riscv-enable-subreg-liveness=false < %s | FileCheck %s
 ; RUN: llc -mtriple=riscv64 -mattr=+f,+m,+zfh,+experimental-zvfh < %s \
-; RUN:   | FileCheck %s --check-prefix=SUBREGLIVENESS
+; RUN:   -riscv-enable-subreg-liveness=true| FileCheck %s --check-prefix=SUBREGLIVENESS
 
 ; This testcase failed to compile after
 ; c46aab01c002b7a04135b8b7f1f52d8c9ae23a58, which was reverted.
