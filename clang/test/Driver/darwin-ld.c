@@ -185,7 +185,7 @@
 // LINK_TVOS_KEXT: libclang_rt.cc_kext_tvos.a
 // LINK_TVOS_KEXT: libclang_rt.tvos.a
 
-// RUN: %clang -target x86-64-apple-driverkit19.0 -mlinker-version=400 -resource-dir=%S/Inputs/resource_dir -### %t.o 2> %t.log
+// RUN: %clang -target x86-64-apple-driverkit19.0 -fuse-ld= -mlinker-version=400 -resource-dir=%S/Inputs/resource_dir -### %t.o 2> %t.log
 // RUN: FileCheck -check-prefix=LINK_DRIVERKIT %s < %t.log
 // LINK_DRIVERKIT: {{ld(.exe)?"}}
 // LINK_DRIVERKIT: -driverkit_version_min

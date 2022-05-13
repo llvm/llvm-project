@@ -6,11 +6,11 @@
 // RUN: %clang -target x86_64-apple-driverkit19 -isysroot %t.sdk -mlinker-version=520 -### %t.o 2>&1 \
 // RUN:   | FileCheck --check-prefix=MISSING-SDK-JSON-WORKAROUND %s
 
-// RUN: %clang -target arm64-apple-driverkit19 -isysroot %S/Inputs/MacOSX10.14.sdk -mlinker-version=520 -### %t.o 2>&1 \
+// RUN: %clang -target arm64-apple-driverkit19 -isysroot %S/Inputs/MacOSX10.14.sdk -fuse-ld= -mlinker-version=520 -### %t.o 2>&1 \
 // RUN:   | FileCheck --check-prefix=ARM64_NEW %s
-// RUN: %clang -target arm64-apple-driverkit19 -isysroot %S/Inputs/MacOSX10.14.sdk -mlinker-version=400 -### %t.o 2>&1 \
+// RUN: %clang -target arm64-apple-driverkit19 -isysroot %S/Inputs/MacOSX10.14.sdk -fuse-ld= -mlinker-version=400 -### %t.o 2>&1 \
 // RUN:   | FileCheck --check-prefix=ARM64_OLD %s
-// RUN: %clang -target arm64e-apple-driverkit19 -isysroot %S/Inputs/MacOSX10.14.sdk -mlinker-version=520 -### %t.o 2>&1 \
+// RUN: %clang -target arm64e-apple-driverkit19 -isysroot %S/Inputs/MacOSX10.14.sdk -fuse-ld= -mlinker-version=520 -### %t.o 2>&1 \
 // RUN:   | FileCheck --check-prefix=ARM64_NEW %s
 
 // CHECK: "-platform_version" "driverkit" "10.15.0" "10.14"
