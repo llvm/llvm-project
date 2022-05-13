@@ -172,7 +172,7 @@ static Optional<int> findPreviousSpillSlot(const Value *Val,
     const auto &RelocationMap =
         Builder.FuncInfo.StatepointRelocationMaps[Relocate->getStatepoint()];
 
-    auto It = RelocationMap.find(Relocate->getDerivedPtr());
+    auto It = RelocationMap.find(Relocate);
     if (It == RelocationMap.end())
       return None;
 
@@ -953,7 +953,7 @@ SDValue SelectionDAGBuilder::LowerAsSTATEPOINT(
       if (Relocate->getParent() != StatepointInstr->getParent())
         ExportFromCurrentBlock(V);
     }
-    RelocationMap[V] = Record;
+    RelocationMap[Relocate] = Record;
   }
 
   
@@ -1231,7 +1231,7 @@ void SelectionDAGBuilder::visitGCRelocate(const GCRelocateInst &Relocate) {
   const Value *DerivedPtr = Relocate.getDerivedPtr();
   auto &RelocationMap =
     FuncInfo.StatepointRelocationMaps[Relocate.getStatepoint()];
-  auto SlotIt = RelocationMap.find(DerivedPtr);
+  auto SlotIt = RelocationMap.find(&Relocate);
   assert(SlotIt != RelocationMap.end() && "Relocating not lowered gc value");
   const RecordType &Record = SlotIt->second;
 
