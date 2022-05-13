@@ -266,6 +266,51 @@ static bool warnByDefaultOnWrongCase(StringRef Include) {
     .Default(false);
 }
 
+/// Find a similar string in `Candidates`.
+///
+/// \param LHS a string for a similar string in `Candidates`
+///
+/// \param Candidates the candidates to find a similar string.
+///
+/// \returns a similar string if exists. If no similar string exists,
+/// returns None.
+static Optional<StringRef> findSimilarStr(
+    StringRef LHS, const std::vector<StringRef> &Candidates) {
+  // We need to check if `Candidates` has the exact case-insensitive string
+  // because the Levenshtein distance match does not care about it.
+  for (StringRef C : Candidates) {
+    if (LHS.equals_insensitive(C)) {
+      return C;
+    }
+  }
+
+  // Keep going with the Levenshtein distance match.
+  // If the LHS size is less than 3, use the LHS size minus 1 and if not,
+  // use the LHS size divided by 3.
+  size_t Length = LHS.size();
+  size_t MaxDist = Length < 3 ? Length - 1 : Length / 3;
+
+  Optional<std::pair<StringRef, size_t>> SimilarStr = None;
+  for (StringRef C : Candidates) {
+    size_t CurDist = LHS.edit_distance(C, true);
+    if (CurDist <= MaxDist) {
+      if (!SimilarStr.hasValue()) {
+        // The first similar string found.
+        SimilarStr = {C, CurDist};
+      } else if (CurDist < SimilarStr->second) {
+        // More similar string found.
+        SimilarStr = {C, CurDist};
+      }
+    }
+  }
+
+  if (SimilarStr.hasValue()) {
+    return SimilarStr->first;
+  } else {
+    return None;
+  }
+}
+
 bool Preprocessor::CheckMacroName(Token &MacroNameTok, MacroUse isDefineUndef,
                                   bool *ShadowFlag) {
   // Missing macro name?
@@ -433,6 +478,25 @@ Optional<unsigned> Preprocessor::getSkippedRangeForExcludedConditionalBlock(
   return BytesToSkip - LengthDiff;
 }
 
+void Preprocessor::SuggestTypoedDirective(const Token &Tok,
+                                          StringRef Directive,
+                                          const SourceLocation &EndLoc) const {
+  std::vector<StringRef> Candidates = {
+      "if", "ifdef", "ifndef", "elif", "else", "endif"
+  };
+  if (LangOpts.C2x || LangOpts.CPlusPlus2b)
+    Candidates.insert(Candidates.end(), {"elifdef", "elifndef"});
+
+  if (Optional<StringRef> Sugg = findSimilarStr(Directive, Candidates)) {
+    CharSourceRange DirectiveRange =
+        CharSourceRange::getCharRange(Tok.getLocation(), EndLoc);
+    std::string SuggValue = Sugg.getValue().str();
+
+    auto Hint = FixItHint::CreateReplacement(DirectiveRange, "#" + SuggValue);
+    Diag(Tok, diag::warn_pp_invalid_directive) << 1 << SuggValue << Hint;
+  }
+}
+
 /// SkipExcludedConditionalBlock - We just read a \#if or related directive and
 /// decided that the subsequent tokens are in the \#if'd out portion of the
 /// file.  Lex the rest of the file, until we see an \#endif.  If
@@ -556,6 +620,8 @@ void Preprocessor::SkipExcludedConditionalBlock(SourceLocation HashTokenLoc,
         CurPPLexer->pushConditionalLevel(Tok.getLocation(), /*wasskipping*/true,
                                        /*foundnonskip*/false,
                                        /*foundelse*/false);
+      } else {
+        SuggestTypoedDirective(Tok, Directive, endLoc);
       }
     } else if (Directive[0] == 'e') {
       StringRef Sub = Directive.substr(1);
@@ -716,7 +782,11 @@ void Preprocessor::SkipExcludedConditionalBlock(SourceLocation HashTokenLoc,
             break;
           }
         }
+      } else {
+        SuggestTypoedDirective(Tok, Directive, endLoc);
       }
+    } else {
+      SuggestTypoedDirective(Tok, Directive, endLoc);
     }
 
     CurPPLexer->ParsingPreprocessorDirective = false;
@@ -1193,7 +1263,8 @@ void Preprocessor::HandleDirective(Token &Result) {
   }
 
   // If we reached here, the preprocessing token is not valid!
-  Diag(Result, diag::err_pp_invalid_directive);
+  // Start suggesting if a similar directive found.
+  Diag(Result, diag::err_pp_invalid_directive) << 0;
 
   // Read the rest of the PP line.
   DiscardUntilEndOfDirective();
