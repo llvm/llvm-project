@@ -1744,9 +1744,8 @@ public:
 
   bool convertCallToIndirectCall(MCInst &Inst, const MCSymbol *TargetLocation,
                                  MCContext *Ctx) override {
-    bool IsTailCall = isTailCall(Inst);
     assert((Inst.getOpcode() == X86::CALL64pcrel32 ||
-            (Inst.getOpcode() == X86::JMP_4 && IsTailCall)) &&
+            (Inst.getOpcode() == X86::JMP_4 && isTailCall(Inst))) &&
            "64-bit direct (tail) call instruction expected");
     const auto NewOpcode =
         (Inst.getOpcode() == X86::CALL64pcrel32) ? X86::CALL64m : X86::JMP32m;

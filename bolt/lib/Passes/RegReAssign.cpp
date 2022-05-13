@@ -349,6 +349,7 @@ bool RegReAssign::conservativePassOverFunction(BinaryFunction &Function) {
 
   LLVM_DEBUG(dbgs() << "\n ** Swapping " << BC.MRI->getName(RBX) << " with "
                     << BC.MRI->getName(Candidate) << "\n\n");
+  (void)BC;
   swap(Function, RBX, Candidate);
   FuncsChanged.insert(&Function);
   return true;
