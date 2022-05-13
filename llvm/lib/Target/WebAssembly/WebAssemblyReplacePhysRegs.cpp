@@ -72,9 +72,6 @@ bool WebAssemblyReplacePhysRegs::runOnMachineFunction(MachineFunction &MF) {
 
   assert(!mustPreserveAnalysisID(LiveIntervalsID) &&
          "LiveIntervals shouldn't be active yet!");
-  // We don't preserve SSA or liveness.
-  MRI.leaveSSA();
-  MRI.invalidateLiveness();
 
   for (unsigned PReg = WebAssembly::NoRegister + 1;
        PReg < WebAssembly::NUM_TARGET_REGS; ++PReg) {

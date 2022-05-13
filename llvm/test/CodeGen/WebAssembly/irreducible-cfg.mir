@@ -32,6 +32,8 @@ body: |
     %0:i32 = CONST_I32 100, implicit-def $arguments
     BR_IF %bb.2, %0:i32, implicit-def $arguments
   ; CHECK: bb.0.pred0:
+    ; CHECK:      %1:i32 = IMPLICIT_DEF
+    ; CHECK-NEXT: %0:i32 = IMPLICIT_DEF
     ; CHECK:      BR_IF %bb.2, %0, implicit-def $arguments
 
   bb.1.pred1:
