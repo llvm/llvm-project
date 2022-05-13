@@ -1099,6 +1099,9 @@ bool SIInsertWaitcnts::generateWaitcntInstBefore(
         unsigned AS = Memop->getAddrSpace();
         if (AS != AMDGPUAS::LOCAL_ADDRESS && AS != AMDGPUAS::FLAT_ADDRESS)
           continue;
+        // No need to wait before load from VMEM to LDS.
+        if (mayWriteLDSThroughDMA(MI))
+          continue;
         unsigned RegNo = SQ_MAX_PGM_VGPRS + EXTRA_VGPR_LDS;
         // VM_CNT is only relevant to vgpr or LDS.
         ScoreBrackets.determineWait(
