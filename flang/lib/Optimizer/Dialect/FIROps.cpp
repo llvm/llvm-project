@@ -914,9 +914,9 @@ mlir::ParseResult fir::CoordinateOp::parse(mlir::OpAsmParser &parser,
   if (parser.parseOptionalAttrDict(result.attributes) ||
       parser.parseColonType(funcTy) ||
       parser.resolveOperands(allOperands, funcTy.getInputs(), loc,
-                             result.operands))
+                             result.operands) ||
+      parser.addTypesToList(funcTy.getResults(), result.types))
     return mlir::failure();
-  parser.addTypesToList(funcTy.getResults(), result.types);
   result.addAttribute("baseType", mlir::TypeAttr::get(funcTy.getInput(0)));
   return mlir::success();
 }

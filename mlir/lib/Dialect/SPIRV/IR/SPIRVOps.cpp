@@ -3112,15 +3112,15 @@ void spirv::ModuleOp::build(OpBuilder &builder, OperationState &state,
 
 ParseResult spirv::ModuleOp::parse(OpAsmParser &parser, OperationState &state) {
   Region *body = state.addRegion();
-  StringAttr nameAttr;
-  spirv::AddressingModel addrModel;
-  spirv::MemoryModel memoryModel;
 
   // If the name is present, parse it.
+  StringAttr nameAttr;
   (void)parser.parseOptionalSymbolName(
       nameAttr, mlir::SymbolTable::getSymbolAttrName(), state.attributes);
 
   // Parse attributes
+  spirv::AddressingModel addrModel;
+  spirv::MemoryModel memoryModel;
   if (::parseEnumKeywordAttr(addrModel, parser, state) ||
       ::parseEnumKeywordAttr(memoryModel, parser, state))
     return failure();
