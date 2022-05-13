@@ -3484,8 +3484,13 @@ bool IRTranslator::runOnMachineFunction(MachineFunction &CurMF) {
         return false;
       }
 
-      if (!finalizeBasicBlock(*BB, MBB))
+      if (!finalizeBasicBlock(*BB, MBB)) {
+        OptimizationRemarkMissed R("gisel-irtranslator", "GISelFailure",
+                                   BB->getTerminator()->getDebugLoc(), BB);
+        R << "unable to translate basic block";
+        reportTranslationError(*MF, *TPC, *ORE, R);
         return false;
+      }
     }
 #ifndef NDEBUG
     WrapperObserver.removeObserver(&Verifier);
