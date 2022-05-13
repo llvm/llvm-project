@@ -1290,7 +1290,7 @@ tools::ParsePICArgs(const ToolChain &ToolChain, const ArgList &Args) {
   // generation, independent of the argument order.
   if (KernelOrKext &&
       ((!EffectiveTriple.isiOS() || EffectiveTriple.isOSVersionLT(6)) &&
-       !EffectiveTriple.isWatchOS()))
+       !EffectiveTriple.isWatchOS() && !EffectiveTriple.isDriverKit()))
     PIC = PIE = false;
 
   if (Arg *A = Args.getLastArg(options::OPT_mdynamic_no_pic)) {

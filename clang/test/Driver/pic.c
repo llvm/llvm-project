@@ -231,6 +231,8 @@
 // RUN:   | FileCheck %s --check-prefix=CHECK-NO-STATIC
 // RUN: %clang -c %s -target armv7k-apple-watchos1 -fapple-kext -### 2>&1 \
 // RUN:   | FileCheck %s --check-prefix=CHECK-PIC2
+// RUN: %clang -c %s -target x86_64-apple-driverkit -fapple-kext -### 2>&1 \
+// RUN:   | FileCheck %s --check-prefix=CHECK-PIC2
 // RUN: %clang -c %s -target armv7-apple-ios5 -fapple-kext -### 2>&1 \
 // RUN:   | FileCheck %s --check-prefix=CHECK-NO-PIC
 // RUN: %clang -c %s -target armv7-apple-ios6 -fapple-kext -static -### 2>&1 \

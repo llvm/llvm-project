@@ -299,7 +299,8 @@ public:
     IPhoneOS,
     TvOS,
     WatchOS,
-    LastDarwinPlatform = WatchOS
+    DriverKit,
+    LastDarwinPlatform = DriverKit
   };
   enum DarwinEnvironmentKind {
     NativeEnvironment,
@@ -349,7 +350,7 @@ public:
 
   bool isKernelStatic() const override {
     return (!(isTargetIPhoneOS() && !isIPhoneOSVersionLT(6, 0)) &&
-            !isTargetWatchOS());
+            !isTargetWatchOS() && !isTargetDriverKit());
   }
 
   void addProfileRTLibs(const llvm::opt::ArgList &Args,
@@ -433,6 +434,11 @@ public:
   bool isTargetWatchOSBased() const {
     assert(TargetInitialized && "Target not initialized!");
     return TargetPlatform == WatchOS;
+  }
+
+  bool isTargetDriverKit() const {
+    assert(TargetInitialized && "Target not initialized!");
+    return TargetPlatform == DriverKit;
   }
 
   bool isTargetMacCatalyst() const {
@@ -544,7 +550,7 @@ public:
   GetDefaultStackProtectorLevel(bool KernelOrKext) const override {
     // Stack protectors default to on for user code on 10.5,
     // and for everything in 10.6 and beyond
-    if (isTargetIOSBased() || isTargetWatchOSBased())
+    if (isTargetIOSBased() || isTargetWatchOSBased() || isTargetDriverKit())
       return LangOptions::SSPOn;
     else if (isTargetMacOSBased() && !isMacosxVersionLT(10, 6))
       return LangOptions::SSPOn;

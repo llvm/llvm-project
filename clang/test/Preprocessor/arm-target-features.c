@@ -834,6 +834,9 @@
 // CHECK-V82A: #define __ARM_FEATURE_QRDMX 1
 // CHECK-V82A: #define __ARM_FP 0xe
 
+// RUN: %clang -target armv7-apple-driverkit21.0 -x c %s -dM -E -o - | FileCheck -match-full-lines --check-prefix=CHECK-DRIVERKIT %s
+// CHECK-DRIVERKIT-NOT: #define __ARM_PCS_VFP 1
+
 // RUN: %clang -target armv8.3a-none-none-eabi -x c -E -dM %s -o - | FileCheck -match-full-lines --check-prefix=CHECK-V83A %s
 // CHECK-V83A: #define __ARM_ARCH 8
 // CHECK-V83A: #define __ARM_ARCH_8_3A__ 1

@@ -108,6 +108,8 @@ public:
         this->TLSSupported = !Triple.isOSVersionLT(2);
       else
         this->TLSSupported = !Triple.isOSVersionLT(3);
+    } else if (Triple.isDriverKit()) {
+      // No TLS on DriverKit.
     }
 
     this->MCountName = "\01mcount";
