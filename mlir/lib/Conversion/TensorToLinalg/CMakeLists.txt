@@ -13,6 +13,7 @@ add_mlir_conversion_library(MLIRTensorToLinalg
   MLIRIR
   MLIRPass
   MLIRLinalg
+  MLIRLinalgTransforms
   MLIRSupport
   MLIRTransformUtils
   MLIRTensor
