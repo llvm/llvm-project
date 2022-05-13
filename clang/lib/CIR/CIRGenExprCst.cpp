@@ -283,6 +283,18 @@ public:
 //                             ConstantEmitter
 //===----------------------------------------------------------------------===//
 
+mlir::Attribute ConstantEmitter::validateAndPopAbstract(mlir::Attribute C,
+                                                        AbstractState saved) {
+  Abstract = saved.OldValue;
+
+  assert(saved.OldPlaceholdersSize == PlaceholderAddresses.size() &&
+         "created a placeholder while doing an abstract emission?");
+
+  // No validation necessary for now.
+  // No cleanup to do for now.
+  return C;
+}
+
 mlir::Attribute ConstantEmitter::tryEmitForInitializer(const VarDecl &D) {
   initializeNonAbstract(D.getType().getAddressSpace());
   return markIfFailed(tryEmitPrivateForVarInit(D));
@@ -345,6 +357,20 @@ mlir::Attribute ConstantEmitter::tryEmitPrivateForVarInit(const VarDecl &D) {
   return {};
 }
 
+mlir::Attribute ConstantEmitter::tryEmitAbstract(const APValue &value,
+                                                 QualType destType) {
+  auto state = pushAbstract();
+  auto C = tryEmitPrivate(value, destType);
+  return validateAndPopAbstract(C, state);
+}
+
+mlir::Attribute ConstantEmitter::tryEmitAbstractForMemory(const APValue &value,
+                                                          QualType destType) {
+  auto nonMemoryDestType = getNonMemoryType(CGM, destType);
+  auto C = tryEmitAbstract(value, nonMemoryDestType);
+  return (C ? emitForMemory(C, destType) : nullptr);
+}
+
 mlir::Attribute ConstantEmitter::tryEmitPrivateForMemory(const APValue &value,
                                                          QualType destType) {
   auto nonMemoryDestType = getNonMemoryType(CGM, destType);
@@ -381,21 +407,22 @@ static mlir::Attribute
 buildArrayConstant(CIRGenModule &CGM, mlir::Type DesiredType,
                    mlir::Type CommonElementType, unsigned ArrayBound,
                    SmallVectorImpl<mlir::TypedAttr> &Elements,
-                   mlir::Attribute Filler) {
-  auto isFillerNullVal = [&](mlir::Attribute f) {
-    // TODO(cir): introduce a CIR type for null and check for the
-    // attribute type here. For now assume the filler isn't null.
-    if (!f)
+                   mlir::TypedAttr Filler) {
+  auto isNullValue = [&](mlir::Attribute f) {
+    // TODO(cir): introduce char type in CIR and check for that instead.
+    auto intVal = f.dyn_cast_or_null<mlir::IntegerAttr>();
+    assert(intVal && "not implemented");
+    if (intVal.getInt() == 0)
       return true;
     return false;
   };
 
   // Figure out how long the initial prefix of non-zero elements is.
   unsigned NonzeroLength = ArrayBound;
-  if (Elements.size() < NonzeroLength && isFillerNullVal(Filler))
+  if (Elements.size() < NonzeroLength && isNullValue(Filler))
     NonzeroLength = Elements.size();
   if (NonzeroLength == Elements.size()) {
-    while (NonzeroLength > 0 && isFillerNullVal(Elements[NonzeroLength - 1]))
+    while (NonzeroLength > 0 && isNullValue(Elements[NonzeroLength - 1]))
       --NonzeroLength;
   }
 
@@ -414,7 +441,9 @@ buildArrayConstant(CIRGenModule &CGM, mlir::Type DesiredType,
     // zeroinitializer). Use DesiredType to get the element type.
   } else if (Elements.size() != ArrayBound) {
     // Otherwise pad to the right size with the filler if necessary.
-    assert(0 && "NYE");
+    Elements.resize(ArrayBound, Filler);
+    if (Filler.getType() != CommonElementType)
+      CommonElementType = {};
   }
 
   // If all elements have the same type, just emit an array constant.
@@ -462,22 +491,27 @@ mlir::Attribute ConstantEmitter::tryEmitPrivate(const APValue &Value,
     const ArrayType *ArrayTy = CGM.getASTContext().getAsArrayType(DestType);
     unsigned NumElements = Value.getArraySize();
     unsigned NumInitElts = Value.getArrayInitializedElts();
-    auto isFillerNullVal = [&](mlir::Attribute f) {
-      // TODO(cir): introduce a CIR type for null and check for the
-      // attribute type here. For now assume that if there's a filler,
-      // it's a null one.
-      return true;
+    auto isNullValue = [&](mlir::Attribute f) {
+      // TODO(cir): introduce char type in CIR and check for that instead.
+      auto intVal = f.dyn_cast_or_null<mlir::IntegerAttr>();
+      assert(intVal && "not implemented");
+      if (intVal.getInt() == 0)
+        return true;
+      return false;
     };
 
     // Emit array filler, if there is one.
     mlir::Attribute Filler;
     if (Value.hasArrayFiller()) {
-      assert(0 && "NYI");
+      Filler = tryEmitAbstractForMemory(Value.getArrayFiller(),
+                                        ArrayTy->getElementType());
+      if (!Filler)
+        return {};
     }
 
     // Emit initializer elements.
     SmallVector<mlir::TypedAttr, 16> Elts;
-    if (Filler && isFillerNullVal(Filler))
+    if (Filler && isNullValue(Filler))
       Elts.reserve(NumInitElts + 1);
     else
       Elts.reserve(NumElements);
@@ -487,7 +521,7 @@ mlir::Attribute ConstantEmitter::tryEmitPrivate(const APValue &Value,
       auto C = tryEmitPrivateForMemory(Value.getArrayInitializedElt(I),
                                        ArrayTy->getElementType());
       if (!C)
-        return nullptr;
+        return {};
 
       assert(C.isa<mlir::TypedAttr>() && "This should always be a TypedAttr.");
       auto CTyped = C.cast<mlir::TypedAttr>();
@@ -503,8 +537,13 @@ mlir::Attribute ConstantEmitter::tryEmitPrivate(const APValue &Value,
     }
 
     auto Desired = CGM.getTypes().ConvertType(DestType);
+
+    auto typedFiller = llvm::dyn_cast_or_null<mlir::TypedAttr>(Filler);
+    if (Filler && !typedFiller)
+      llvm_unreachable("this should always be typed");
+
     return buildArrayConstant(CGM, Desired, CommonElementType, NumElements,
-                              Elts, Filler);
+                              Elts, typedFiller);
   }
   case APValue::LValue:
   case APValue::FixedPoint:
