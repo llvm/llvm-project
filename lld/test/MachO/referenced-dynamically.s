@@ -26,7 +26,7 @@
 _main:
   ret
 
-## .private_extern maches what PrettyStackTrace.cpp does, but it makes
+## .private_extern matches what PrettyStackTrace.cpp does, but it makes
 ## the ReferencedDynamically pointless: https://reviews.llvm.org/D27683#2763729
 .private_extern ___crashreporter_info__
 .globl ___crashreporter_info__

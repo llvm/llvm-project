@@ -11,7 +11,7 @@
 # 2) Summary encodings from the input object will match
 #    those from the linked output
 #
-# 3) Encodings & symbols from the intput object will match
+# 3) Encodings & symbols from the input object will match
 #    those from the linked output
 
 # RUN: %python %S/tools/generate-cfi-funcs.py --seed=johnnyapple >%t.s
