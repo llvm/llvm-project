@@ -65,7 +65,7 @@ entry:
 
 define dso_local void @callFunc() {
 ; CHECK-LABEL: callFunc:
-; CHECK:    b otherFunc
+; CHECK:    b.w otherFunc
 entry:
   tail call void @otherFunc()
   ret void
