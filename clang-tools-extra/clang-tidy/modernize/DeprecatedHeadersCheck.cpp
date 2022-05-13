@@ -7,23 +7,37 @@
 //===----------------------------------------------------------------------===//
 
 #include "DeprecatedHeadersCheck.h"
+#include "clang/AST/RecursiveASTVisitor.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Lex/PPCallbacks.h"
 #include "clang/Lex/Preprocessor.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringSet.h"
 
+#include <algorithm>
 #include <vector>
 
 namespace clang {
 namespace tidy {
 namespace modernize {
+namespace detail {
+bool operator<(const IncludeMarker &LHS, const IncludeMarker &RHS) {
+  return LHS.DecomposedDiagLoc < RHS.DecomposedDiagLoc;
+}
+bool operator<(const IncludeMarker &LHS,
+               const std::pair<FileID, unsigned> &RHS) {
+  return LHS.DecomposedDiagLoc < RHS;
+}
+bool operator<(const std::pair<FileID, unsigned> &LHS,
+               const IncludeMarker &RHS) {
+  return LHS < RHS.DecomposedDiagLoc;
+}
 
-namespace {
 class IncludeModernizePPCallbacks : public PPCallbacks {
 public:
-  explicit IncludeModernizePPCallbacks(ClangTidyCheck &Check,
-                                       LangOptions LangOpts);
+  explicit IncludeModernizePPCallbacks(DeprecatedHeadersCheck &Check,
+                                       LangOptions LangOpts,
+                                       const SourceManager &SM);
 
   void InclusionDirective(SourceLocation HashLoc, const Token &IncludeTok,
                           StringRef FileName, bool IsAngled,
@@ -33,22 +47,98 @@ public:
                           SrcMgr::CharacteristicKind FileType) override;
 
 private:
-  ClangTidyCheck &Check;
+  DeprecatedHeadersCheck &Check;
   LangOptions LangOpts;
   llvm::StringMap<std::string> CStyledHeaderToCxx;
   llvm::StringSet<> DeleteHeaders;
+  const SourceManager &SM;
 };
-} // namespace
+
+class ExternCRefutationVisitor
+    : public RecursiveASTVisitor<ExternCRefutationVisitor> {
+  std::vector<IncludeMarker> &IncludesToBeProcessed;
+  const SourceManager &SM;
+
+public:
+  ExternCRefutationVisitor(std::vector<IncludeMarker> &IncludesToBeProcessed,
+                           SourceManager &SM)
+      : IncludesToBeProcessed(IncludesToBeProcessed), SM(SM) {}
+  bool shouldWalkTypesOfTypeLocs() const { return false; }
+  bool shouldVisitLambdaBody() const { return false; }
+
+  bool VisitLinkageSpecDecl(LinkageSpecDecl *LinkSpecDecl) const {
+    if (LinkSpecDecl->getLanguage() != LinkageSpecDecl::lang_c ||
+        !LinkSpecDecl->hasBraces())
+      return true;
+
+    auto ExternCBlockBegin =
+        SM.getDecomposedExpansionLoc(LinkSpecDecl->getBeginLoc());
+    auto ExternCBlockEnd =
+        SM.getDecomposedExpansionLoc(LinkSpecDecl->getEndLoc());
+
+    auto Begin = IncludesToBeProcessed.begin();
+    auto End = IncludesToBeProcessed.end();
+    auto Low = std::lower_bound(Begin, End, ExternCBlockBegin);
+    auto Up = std::upper_bound(Low, End, ExternCBlockEnd);
+    IncludesToBeProcessed.erase(Low, Up);
+    return true;
+  }
+};
+} // namespace detail
 
 void DeprecatedHeadersCheck::registerPPCallbacks(
     const SourceManager &SM, Preprocessor *PP, Preprocessor *ModuleExpanderPP) {
-    PP->addPPCallbacks(
-        ::std::make_unique<IncludeModernizePPCallbacks>(*this, getLangOpts()));
+  PP->addPPCallbacks(::std::make_unique<detail::IncludeModernizePPCallbacks>(
+      *this, getLangOpts(), PP->getSourceManager()));
+}
+void DeprecatedHeadersCheck::registerMatchers(
+    ast_matchers::MatchFinder *Finder) {
+  // Even though the checker operates on a "preprocessor" level, we still need
+  // to act on a "TranslationUnit" to acquire the AST where we can walk each
+  // Decl and look for `extern "C"` blocks where we will suppress the report we
+  // collected during the preprocessing phase.
+  // The `onStartOfTranslationUnit()` won't suffice, since we need some handle
+  // to the `ASTContext`.
+  Finder->addMatcher(ast_matchers::translationUnitDecl().bind("TU"), this);
 }
 
-IncludeModernizePPCallbacks::IncludeModernizePPCallbacks(ClangTidyCheck &Check,
-                                                         LangOptions LangOpts)
-    : Check(Check), LangOpts(LangOpts) {
+void DeprecatedHeadersCheck::onEndOfTranslationUnit() {
+  IncludesToBeProcessed.clear();
+}
+
+void DeprecatedHeadersCheck::check(
+    const ast_matchers::MatchFinder::MatchResult &Result) {
+  SourceManager &SM = Result.Context->getSourceManager();
+  using detail::IncludeMarker;
+
+  llvm::sort(IncludesToBeProcessed);
+
+  // Suppress includes wrapped by `extern "C" { ... }` blocks.
+  detail::ExternCRefutationVisitor Visitor(IncludesToBeProcessed, SM);
+  Visitor.TraverseAST(*Result.Context);
+
+  // Emit all the remaining reports.
+  for (const IncludeMarker &Entry : IncludesToBeProcessed) {
+    SourceLocation DiagLoc = SM.getComposedLoc(Entry.DecomposedDiagLoc.first,
+                                               Entry.DecomposedDiagLoc.second);
+    if (Entry.Replacement.empty()) {
+      diag(DiagLoc, "including '%0' has no effect in C++; consider removing it")
+          << Entry.FileName << FixItHint::CreateRemoval(Entry.ReplacementRange);
+    } else {
+      diag(DiagLoc, "inclusion of deprecated C++ header "
+                    "'%0'; consider using '%1' instead")
+          << Entry.FileName << Entry.Replacement
+          << FixItHint::CreateReplacement(
+                 Entry.ReplacementRange,
+                 (llvm::Twine("<") + Entry.Replacement + ">").str());
+    }
+  }
+}
+
+detail::IncludeModernizePPCallbacks::IncludeModernizePPCallbacks(
+    DeprecatedHeadersCheck &Check, LangOptions LangOpts,
+    const SourceManager &SM)
+    : Check(Check), LangOpts(LangOpts), SM(SM) {
   for (const auto &KeyValue :
        std::vector<std::pair<llvm::StringRef, std::string>>(
            {{"assert.h", "cassert"},
@@ -89,7 +179,7 @@ IncludeModernizePPCallbacks::IncludeModernizePPCallbacks(ClangTidyCheck &Check,
   }
 }
 
-void IncludeModernizePPCallbacks::InclusionDirective(
+void detail::IncludeModernizePPCallbacks::InclusionDirective(
     SourceLocation HashLoc, const Token &IncludeTok, StringRef FileName,
     bool IsAngled, CharSourceRange FilenameRange, Optional<FileEntryRef> File,
     StringRef SearchPath, StringRef RelativePath, const Module *Imported,
@@ -101,19 +191,16 @@ void IncludeModernizePPCallbacks::InclusionDirective(
   // 1. Insert std prefix for every such symbol occurrence.
   // 2. Insert `using namespace std;` to the beginning of TU.
   // 3. Do nothing and let the user deal with the migration himself.
+  std::pair<FileID, unsigned> DiagLoc =
+      SM.getDecomposedExpansionLoc(FilenameRange.getBegin());
   if (CStyledHeaderToCxx.count(FileName) != 0) {
-    std::string Replacement =
-        (llvm::Twine("<") + CStyledHeaderToCxx[FileName] + ">").str();
-    Check.diag(FilenameRange.getBegin(), "inclusion of deprecated C++ header "
-                                         "'%0'; consider using '%1' instead")
-        << FileName << CStyledHeaderToCxx[FileName]
-        << FixItHint::CreateReplacement(FilenameRange.getAsRange(),
-                                        Replacement);
+    Check.IncludesToBeProcessed.push_back(
+        IncludeMarker{CStyledHeaderToCxx[FileName], FileName,
+                      FilenameRange.getAsRange(), DiagLoc});
   } else if (DeleteHeaders.count(FileName) != 0) {
-    Check.diag(FilenameRange.getBegin(),
-               "including '%0' has no effect in C++; consider removing it")
-        << FileName << FixItHint::CreateRemoval(
-                           SourceRange(HashLoc, FilenameRange.getEnd()));
+    Check.IncludesToBeProcessed.push_back(
+        IncludeMarker{std::string{}, FileName,
+                      SourceRange{HashLoc, FilenameRange.getEnd()}, DiagLoc});
   }
 }
 
