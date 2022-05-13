@@ -21,7 +21,7 @@
 #  cmake -G Ninja ^
 #       -DTOOLCHAIN_TARGET_TRIPLE=aarch64-unknown-linux-gnu ^
 #       -DTOOLCHAIN_TARGET_SYSROOTFS=<path-to-develop-arm-linux-root-fs> ^
-#       -DTOOLCHAIN_SHARED_LIBS=OFF ^ 
+#       -DTOOLCHAIN_SHARED_LIBS=OFF ^
 #       -DCMAKE_INSTALL_PREFIX=../install ^
 #       -DCMAKE_CXX_FLAGS="-D__OPTIMIZE__" ^
 #       -DREMOTE_TEST_HOST="<hostname>" ^
@@ -205,7 +205,7 @@ set(RUNTIMES_${TOOLCHAIN_TARGET_TRIPLE}_COMPILER_RT_CXX_LIBRARY                 
 # The compiler-rt tests disable the clang configuration files during the execution by setting CLANG_NO_DEFAULT_CONFIG=1
 # and drops out the --sysroot from there. Provide it explicity via the test flags here if target sysroot has been specified.
 set(RUNTIMES_${TOOLCHAIN_TARGET_TRIPLE}_COMPILER_RT_TEST_COMPILER_CFLAGS          "--stdlib=libc++ ${sysroot_flags}" CACHE STRING "")
-  
+
 set(RUNTIMES_${TOOLCHAIN_TARGET_TRIPLE}_LIBUNWIND_USE_COMPILER_RT                 ON CACHE BOOL "")
 set(RUNTIMES_${TOOLCHAIN_TARGET_TRIPLE}_LIBUNWIND_ENABLE_SHARED                   ${TOOLCHAIN_SHARED_LIBS} CACHE BOOL "")
 
@@ -218,10 +218,12 @@ set(RUNTIMES_${TOOLCHAIN_TARGET_TRIPLE}_LIBCXXABI_ENABLE_SHARED                 
 set(RUNTIMES_${TOOLCHAIN_TARGET_TRIPLE}_LIBCXX_USE_COMPILER_RT                    ON CACHE BOOL "")
 set(RUNTIMES_${TOOLCHAIN_TARGET_TRIPLE}_LIBCXX_ENABLE_SHARED                      ${TOOLCHAIN_SHARED_LIBS} CACHE BOOL "")
 set(RUNTIMES_${TOOLCHAIN_TARGET_TRIPLE}_LIBCXX_ABI_VERSION                        ${LIBCXX_ABI_VERSION} CACHE STRING "")
-set(RUNTIMES_${TOOLCHAIN_TARGET_TRIPLE}_LIBCXX_CXX_ABI                            "libcxxabi" CACHE STRING "")    #!!!
+if (TOOLCHAIN_USE_STATIC_LIBS)
+  set(RUNTIMES_${TOOLCHAIN_TARGET_TRIPLE}_LIBCXX_CXX_ABI                          "merged-libcxxabi" CACHE STRING "")
+else()
+  set(RUNTIMES_${TOOLCHAIN_TARGET_TRIPLE}_LIBCXX_CXX_ABI                          "libcxxabi" CACHE STRING "")
+endif()
 set(RUNTIMES_${TOOLCHAIN_TARGET_TRIPLE}_LIBCXX_ENABLE_NEW_DELETE_DEFINITIONS      ON CACHE BOOL "")
-# Merge libc++ and libc++abi libraries into the single libc++ library file.
-set(RUNTIMES_${TOOLCHAIN_TARGET_TRIPLE}_LIBCXX_ENABLE_STATIC_ABI_LIBRARY          ${TOOLCHAIN_USE_STATIC_LIBS} CACHE BOOL "")
 # Forcely disable the libc++ benchmarks on Windows build hosts
 # (current benchmark test configuration does not support the cross builds there).
 if (WIN32)

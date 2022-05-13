@@ -190,6 +190,21 @@ if (CMAKE_POSITION_INDEPENDENT_CODE OR NOT DEFINED CMAKE_POSITION_INDEPENDENT_CO
 endif()
 target_compile_options(cxxabi_shared_objects PRIVATE "${LIBCXXABI_ADDITIONAL_COMPILE_FLAGS}")
 
+add_library(cxxabi_shared_for_merging STATIC EXCLUDE_FROM_ALL)
+target_link_libraries(cxxabi_shared_for_merging
+  PUBLIC cxxabi_shared_objects
+  PRIVATE ${LIBCXXABI_LIBRARIES})
+set_target_properties(cxxabi_shared_for_merging
+  PROPERTIES
+    OUTPUT_NAME "${LIBCXXABI_STATIC_OUTPUT_NAME}-for-merging"
+  )
+if (LIBCXXABI_USE_LLVM_UNWINDER)
+  if (LIBCXXABI_STATICALLY_LINK_UNWINDER_IN_SHARED_LIBRARY OR
+      (DEFINED LIBUNWIND_ENABLE_SHARED AND NOT LIBUNWIND_ENABLE_SHARED))
+    target_sources(cxxabi_shared_for_merging PUBLIC $<TARGET_OBJECTS:unwind_shared_objects>)
+  endif()
+endif()
+
 add_library(cxxabi_shared SHARED)
 set_target_properties(cxxabi_shared
   PROPERTIES
