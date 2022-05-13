@@ -2219,6 +2219,15 @@ static Value *SimplifyAndInst(Value *Op0, Value *Op1, const SimplifyQuery &Q,
       match(Op1, m_c_Xor(m_Specific(Or), m_Specific(Y))))
     return Constant::getNullValue(Op0->getType());
 
+  if (Op0->getType()->isIntOrIntVectorTy(1)) {
+    // Op0&Op1 -> Op0 where Op0 implies Op1
+    if (isImpliedCondition(Op0, Op1, Q.DL).getValueOr(false))
+      return Op0;
+    // Op0&Op1 -> Op1 where Op1 implies Op0
+    if (isImpliedCondition(Op1, Op0, Q.DL).getValueOr(false))
+      return Op1;
+  }
+
   return nullptr;
 }
 
@@ -2450,6 +2459,15 @@ static Value *SimplifyOrInst(Value *Op0, Value *Op1, const SimplifyQuery &Q,
   if (isa<PHINode>(Op0) || isa<PHINode>(Op1))
     if (Value *V = ThreadBinOpOverPHI(Instruction::Or, Op0, Op1, Q, MaxRecurse))
       return V;
+
+  if (Op0->getType()->isIntOrIntVectorTy(1)) {
+    // Op0|Op1 -> Op1 where Op0 implies Op1
+    if (isImpliedCondition(Op0, Op1, Q.DL).getValueOr(false))
+      return Op1;
+    // Op0|Op1 -> Op0 where Op1 implies Op0
+    if (isImpliedCondition(Op1, Op0, Q.DL).getValueOr(false))
+      return Op0;
+  }
 
   return nullptr;
 }

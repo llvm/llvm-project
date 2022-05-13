@@ -1214,9 +1214,7 @@ define <2 x i1> @ult_ule_vec(<2 x i8> %a, <2 x i8> %b) {
 define i1 @ult_uge_swap(i8 %a, i8 %b) {
 ; CHECK-LABEL: @ult_uge_swap(
 ; CHECK-NEXT:    [[CMP1:%.*]] = icmp ult i8 [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    [[CMP2:%.*]] = icmp uge i8 [[B]], [[A]]
-; CHECK-NEXT:    [[AND:%.*]] = and i1 [[CMP1]], [[CMP2]]
-; CHECK-NEXT:    ret i1 [[AND]]
+; CHECK-NEXT:    ret i1 [[CMP1]]
 ;
   %cmp1 = icmp ult i8 %a, %b
   %cmp2 = icmp uge i8 %b, %a
