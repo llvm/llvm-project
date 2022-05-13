@@ -9469,11 +9469,8 @@ void VPWidenGEPRecipe::execute(VPTransformState &State) {
 
       // Create the new GEP. Note that this GEP may be a scalar if VF == 1,
       // but it should be a vector, otherwise.
-      auto *NewGEP = IsInBounds
-                         ? State.Builder.CreateInBoundsGEP(
-                               GEP->getSourceElementType(), Ptr, Indices)
-                         : State.Builder.CreateGEP(GEP->getSourceElementType(),
-                                                   Ptr, Indices);
+      auto *NewGEP = State.Builder.CreateGEP(GEP->getSourceElementType(), Ptr,
+                                             Indices, "", IsInBounds);
       assert((State.VF.isScalar() || NewGEP->getType()->isVectorTy()) &&
              "NewGEP is not a pointer vector");
       State.set(this, NewGEP, Part);

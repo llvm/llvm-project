@@ -195,7 +195,7 @@ define void @PR51485(<2 x i64> %v) {
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[SL1:%.*]] = shl nuw nsw <2 x i64> [[V:%.*]], <i64 7, i64 7>
-; CHECK-NEXT:    [[E6:%.*]] = getelementptr inbounds i8, i8* getelementptr (i8, i8* bitcast (void (<2 x i64>)* @PR51485 to i8*), i64 80), <2 x i64> [[SL1]]
+; CHECK-NEXT:    [[E6:%.*]] = getelementptr inbounds i8, i8* getelementptr inbounds (i8, i8* bitcast (void (<2 x i64>)* @PR51485 to i8*), i64 80), <2 x i64> [[SL1]]
 ; CHECK-NEXT:    call void @blackhole(<2 x i8*> [[E6]])
 ; CHECK-NEXT:    br label [[LOOP]]
 ;
