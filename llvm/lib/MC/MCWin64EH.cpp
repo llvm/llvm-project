@@ -614,23 +614,32 @@ static int checkPackedEpilog(MCStreamer &streamer, WinEH::FrameInfo *info,
   const std::vector<WinEH::Instruction> &Epilog =
       info->EpilogMap.begin()->second;
 
-  // Can pack if the epilog is a subset of the prolog but not vice versa
-  if (Epilog.size() > info->Instructions.size())
-    return -1;
-
-  // Check that the epilog actually is a perfect match for the end (backwrds)
-  // of the prolog.
-  for (int I = Epilog.size() - 1; I >= 0; I--) {
-    if (info->Instructions[I] != Epilog[Epilog.size() - 1 - I])
-      return -1;
-  }
-
   // Check that the epilog actually is at the very end of the function,
   // otherwise it can't be packed.
   uint32_t DistanceFromEnd = (uint32_t)GetAbsDifference(
       streamer, info->FuncletOrFuncEnd, info->EpilogMap.begin()->first);
   if (DistanceFromEnd / 4 != Epilog.size())
     return -1;
+
+  int RetVal = -1;
+  // Even if we don't end up sharing opcodes with the prolog, we can still
+  // write the offset as a packed offset, if the single epilog is located at
+  // the end of the function and the offset (pointing after the prolog) fits
+  // as a packed offset.
+  if (PrologCodeBytes <= 31 &&
+      PrologCodeBytes + ARM64CountOfUnwindCodes(Epilog) <= 124)
+    RetVal = PrologCodeBytes;
+
+  // Can pack if the epilog is a subset of the prolog but not vice versa
+  if (Epilog.size() > info->Instructions.size())
+    return RetVal;
+
+  // Check that the epilog actually is a perfect match for the end (backwrds)
+  // of the prolog.
+  for (int I = Epilog.size() - 1; I >= 0; I--) {
+    if (info->Instructions[I] != Epilog[Epilog.size() - 1 - I])
+      return RetVal;
+  }
 
   int Offset = Epilog.size() == info->Instructions.size()
                    ? 0
@@ -642,8 +651,10 @@ static int checkPackedEpilog(MCStreamer &streamer, WinEH::FrameInfo *info,
   // unclear whether the epilog count in the extension word can be taken
   // as packed epilog offset.
   if (Offset > 31 || PrologCodeBytes > 124)
-    return -1;
+    return RetVal;
 
+  // As we choose to express the epilog as part of the prolog, remove the
+  // epilog from the map, so we don't try to emit its opcodes.
   info->EpilogMap.clear();
   return Offset;
 }
@@ -952,8 +963,9 @@ static void ARM64EmitUnwindInfo(MCStreamer &streamer, WinEH::FrameInfo *info,
 
   int PackedEpilogOffset = checkPackedEpilog(streamer, info, PrologCodeBytes);
 
-  if (PackedEpilogOffset >= 0 && !info->HandlesExceptions &&
-      FuncLength <= 0x7ff && TryPacked) {
+  if (PackedEpilogOffset >= 0 &&
+      uint32_t(PackedEpilogOffset) < PrologCodeBytes &&
+      !info->HandlesExceptions && FuncLength <= 0x7ff && TryPacked) {
     // Matching prolog/epilog and no exception handlers; check if the
     // prolog matches the patterns that can be described by the packed
     // format.
@@ -1025,17 +1037,19 @@ static void ARM64EmitUnwindInfo(MCStreamer &streamer, WinEH::FrameInfo *info,
     streamer.emitInt32(row2);
   }
 
-  // Epilog Start Index, Epilog Start Offset
-  for (auto &I : EpilogInfo) {
-    MCSymbol *EpilogStart = I.first;
-    uint32_t EpilogIndex = I.second;
-    uint32_t EpilogOffset =
-        (uint32_t)GetAbsDifference(streamer, EpilogStart, info->Begin);
-    if (EpilogOffset)
-      EpilogOffset /= 4;
-    uint32_t row3 = EpilogOffset;
-    row3 |= (EpilogIndex & 0x3FF) << 22;
-    streamer.emitInt32(row3);
+  if (PackedEpilogOffset < 0) {
+    // Epilog Start Index, Epilog Start Offset
+    for (auto &I : EpilogInfo) {
+      MCSymbol *EpilogStart = I.first;
+      uint32_t EpilogIndex = I.second;
+      uint32_t EpilogOffset =
+          (uint32_t)GetAbsDifference(streamer, EpilogStart, info->Begin);
+      if (EpilogOffset)
+        EpilogOffset /= 4;
+      uint32_t row3 = EpilogOffset;
+      row3 |= (EpilogIndex & 0x3FF) << 22;
+      streamer.emitInt32(row3);
+    }
   }
 
   // Emit prolog unwind instructions (in reverse order).
