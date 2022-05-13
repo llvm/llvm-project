@@ -102,6 +102,12 @@ public:
   /// Returns a vector containing a symbol version for each dynamic symbol.
   /// Returns an empty vector if version sections do not exist.
   Expected<std::vector<VersionEntry>> readDynsymVersions() const;
+
+  /// Returns a vector of all BB address maps in the object file. When
+  // `TextSectionIndex` is specified, only returns the BB address maps
+  // corresponding to the section with that index.
+  Expected<std::vector<BBAddrMap>>
+  readBBAddrMap(Optional<unsigned> TextSectionIndex = None) const;
 };
 
 class ELFSectionRef : public SectionRef {
