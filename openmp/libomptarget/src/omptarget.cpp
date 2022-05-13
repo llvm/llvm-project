@@ -375,17 +375,6 @@ void *targetAllocExplicit(size_t size, int device_num, int kind,
   DeviceTy &Device = *PM->Devices[device_num];
   rc = Device.allocData(size, nullptr, kind);
 
-  if (rc && Device.RTL->set_coarse_grain_mem_region &&
-      (PM->RTLs.RequiresFlags & OMP_REQ_UNIFIED_SHARED_MEMORY))
-    Device.RTL->set_coarse_grain_mem_region(rc, size);
-
-  // omp_target_alloc used in unified_shared_memory context:
-  // - allocate device memory on device_num
-  // - make allocated device memory accessible from all devices
-  if (rc && (PM->RTLs.RequiresFlags & OMP_REQ_UNIFIED_SHARED_MEMORY) &&
-      kind == TARGET_ALLOC_DEFAULT && Device.RTL->enable_access_to_all_agents)
-    Device.RTL->enable_access_to_all_agents(rc, device_num);
-
   DP("%s returns device ptr " DPxMOD "\n", name, DPxPTR(rc));
   return rc;
 }
