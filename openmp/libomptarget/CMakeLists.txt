@@ -70,7 +70,6 @@ if(LIBOMPTARGET_ENABLE_DEBUG)
 endif()
 
 set(LIBOMPTARGET_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/include)
-include_directories(${LIBOMPTARGET_INCLUDE_DIR})
 
 # Build target agnostic offloading library.
 set(LIBOMPTARGET_SRC_DIR ${CMAKE_CURRENT_SOURCE_DIR}/src)

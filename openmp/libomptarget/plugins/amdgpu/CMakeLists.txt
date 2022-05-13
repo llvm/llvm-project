@@ -43,10 +43,6 @@ if(CMAKE_BUILD_TYPE MATCHES Debug)
   add_definitions(-DDEBUG)
 endif()
 
-include_directories(
-  ${CMAKE_CURRENT_SOURCE_DIR}/impl
-)
-
 set(LIBOMPTARGET_DLOPEN_LIBHSA OFF)
 option(LIBOMPTARGET_FORCE_DLOPEN_LIBHSA "Build with dlopened libhsa" ${LIBOMPTARGET_DLOPEN_LIBHSA})
 
@@ -86,6 +82,13 @@ if(CMAKE_SYSTEM_NAME MATCHES "FreeBSD")
 else()
   set(LDFLAGS_UNDEFINED "-Wl,-z,defs")
 endif()
+
+target_include_directories(
+  omptarget.rtl.amdgpu
+  PRIVATE
+  ${LIBOMPTARGET_INCLUDE_DIR}
+  ${CMAKE_CURRENT_SOURCE_DIR}/impl
+)
 
 target_link_libraries(
   omptarget.rtl.amdgpu
