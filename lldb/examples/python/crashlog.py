@@ -26,8 +26,8 @@
 #   PYTHONPATH=/path/to/LLDB.framework/Resources/Python ./crashlog.py ~/Library/Logs/DiagnosticReports/a.crash
 #----------------------------------------------------------------------
 
-from __future__ import print_function
 import cmd
+import concurrent.futures
 import contextlib
 import datetime
 import glob
@@ -41,8 +41,12 @@ import shlex
 import string
 import subprocess
 import sys
+import threading
 import time
 import uuid
+
+
+print_lock = threading.RLock()
 
 try:
     # First try for LLDB in case PYTHONPATH is already correctly setup.
@@ -267,7 +271,8 @@ class CrashLog(symbolication.Symbolicator):
             self.resolved = True
             uuid_str = self.get_normalized_uuid_string()
             if self.show_symbol_progress():
-                print('Getting symbols for %s %s...\n' % (uuid_str, self.path), end=' ')
+                with print_lock:
+                    print('Getting symbols for %s %s...' % (uuid_str, self.path))
             if os.path.exists(self.dsymForUUIDBinary):
                 dsym_for_uuid_command = '%s %s' % (
                     self.dsymForUUIDBinary, uuid_str)
@@ -276,7 +281,8 @@ class CrashLog(symbolication.Symbolicator):
                     try:
                         plist_root = read_plist(s)
                     except:
-                        print(("Got exception: ", sys.exc_info()[1], " handling dsymForUUID output: \n", s))
+                        with print_lock:
+                            print(("Got exception: ", sys.exc_info()[1], " handling dsymForUUID output: \n", s))
                         raise
                     if plist_root:
                         plist = plist_root[uuid_str]
@@ -304,7 +310,8 @@ class CrashLog(symbolication.Symbolicator):
                         if not os.path.exists(dwarf_dir):
                             # Not a dSYM bundle, probably an Xcode archive.
                             continue
-                        print('falling back to binary inside "%s"' % dsym)
+                        with print_lock:
+                            print('falling back to binary inside "%s"' % dsym)
                         self.symfile = dsym
                         for filename in os.listdir(dwarf_dir):
                            self.path = os.path.join(dwarf_dir, filename)
@@ -317,7 +324,8 @@ class CrashLog(symbolication.Symbolicator):
                     pass
             if (self.resolved_path and os.path.exists(self.resolved_path)) or (
                     self.path and os.path.exists(self.path)):
-                print('Resolved symbols for %s %s...\n' % (uuid_str, self.path), end=' ')
+                with print_lock:
+                    print('Resolved symbols for %s %s...' % (uuid_str, self.path))
                 return True
             else:
                 self.unavailable = True
@@ -976,9 +984,16 @@ def SymbolicateCrashLog(crash_log, options):
                 else:
                     print('error: can\'t find image for identifier "%s"' % ident)
 
-    for image in images_to_load:
-        if image not in loaded_images:
-            err = image.add_module(target)
+    futures = []
+    with concurrent.futures.ThreadPoolExecutor() as executor:
+        def add_module(image, target):
+            return image, image.add_module(target)
+
+        for image in images_to_load:
+            futures.append(executor.submit(add_module, image=image, target=target))
+
+        for future in concurrent.futures.as_completed(futures):
+            image, err = future.result()
             if err:
                 print(err)
             else:
