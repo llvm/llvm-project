@@ -45,3 +45,5 @@ intercept setjmp, _ZN14__interception11real_setjmpE
 intercept _setjmp, _ZN14__interception12real__setjmpE
 intercept sigsetjmp, _ZN14__interception14real_sigsetjmpE
 intercept __sigsetjmp, _ZN14__interception16real___sigsetjmpE
+
+NO_EXEC_STACK_DIRECTIVE

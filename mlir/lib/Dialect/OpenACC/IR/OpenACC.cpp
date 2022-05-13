@@ -154,8 +154,9 @@ static OptionalParseResult parseOptionalOperandAndType(OpAsmParser &parser,
 static OptionalParseResult parserOptionalOperandAndTypeWithPrefix(
     OpAsmParser &parser, OperationState &result, StringRef prefixKeyword) {
   if (succeeded(parser.parseOptionalKeyword(prefixKeyword))) {
-    parser.parseEqual();
-    return parseOperandAndType(parser, result);
+    if (parser.parseEqual() || parseOperandAndType(parser, result))
+      return failure();
+    return success();
   }
   return llvm::None;
 }
@@ -532,12 +533,14 @@ ParseResult LoopOp::parse(OpAsmParser &parser, OperationState &result) {
         parser, result, LoopOp::getGangNumKeyword());
     if (gangNum.hasValue() && failed(*gangNum))
       return failure();
-    parser.parseOptionalComma();
+    // FIXME: Comma should require subsequent operands.
+    (void)parser.parseOptionalComma();
     gangStatic = parserOptionalOperandAndTypeWithPrefix(
         parser, result, LoopOp::getGangStaticKeyword());
     if (gangStatic.hasValue() && failed(*gangStatic))
       return failure();
-    parser.parseOptionalComma();
+    // FIXME: Why allow optional last commas?
+    (void)parser.parseOptionalComma();
     if (failed(parser.parseRParen()))
       return failure();
   }

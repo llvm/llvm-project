@@ -1,4 +1,3 @@
-# XFAIL: system-aix
 ## This test creates a thin archive that contains a thin archive, a regular
 ## archive, and a file.
 ##

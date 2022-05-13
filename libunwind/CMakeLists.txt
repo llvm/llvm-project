@@ -1,7 +1,3 @@
-if (NOT IS_DIRECTORY "${CMAKE_CURRENT_LIST_DIR}/../libcxx")
-  message(FATAL_ERROR "libunwind requires being built in a monorepo layout with libcxx available")
-endif()
-
 #===============================================================================
 # Setup Project
 #===============================================================================
@@ -23,40 +19,7 @@ set(LIBUNWIND_BINARY_DIR  ${CMAKE_CURRENT_BINARY_DIR})
 set(LIBUNWIND_LIBCXX_PATH "${CMAKE_CURRENT_LIST_DIR}/../libcxx" CACHE PATH
         "Specify path to libc++ source.")
 
-if (CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR OR LIBUNWIND_STANDALONE_BUILD)
-  message(FATAL_ERROR "The Standalone build has been deprecated since LLVM 14, and it is not supported anymore. "
-                      "Please use one of the ways described at https://libcxx.llvm.org/BuildingLibcxx.html for "
-                      "building libunwind.")
-
-  # We may have an incomplete toolchain - do language support tests without
-  # linking.
-  include(EnableLanguageNolink)
-  project(libunwind LANGUAGES NONE)
-
-  set(PACKAGE_NAME libunwind)
-  set(PACKAGE_VERSION 15.0.0git)
-  set(PACKAGE_STRING "${PACKAGE_NAME} ${PACKAGE_VERSION}")
-  set(PACKAGE_BUGREPORT "llvm-bugs@lists.llvm.org")
-
-  set(LIBUNWIND_STANDALONE_BUILD TRUE)
-endif()
-
-# Must go below project(..)
 include(GNUInstallDirs)
-
-if(LIBUNWIND_STANDALONE_BUILD)
-  llvm_enable_language_nolink(C CXX ASM)
-
-  # Find the LLVM sources and simulate LLVM CMake options.
-  include(HandleOutOfTreeLLVM)
-
-  # In a standalone build, we don't have llvm to automatically generate the
-  # llvm-lit script for us.  So we need to provide an explicit directory that
-  # the configurator should write the script into.
-  set(LLVM_LIT_OUTPUT_DIR "${LIBUNWIND_BINARY_DIR}/bin")
-else()
-  set(LLVM_LIT "${CMAKE_SOURCE_DIR}/utils/lit/lit.py")
-endif()
 
 #===============================================================================
 # Setup CMake Options

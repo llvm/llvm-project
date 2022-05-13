@@ -2032,15 +2032,13 @@ ParseResult ParallelOp::parse(OpAsmParser &parser, OperationState &result) {
                                 static_cast<int32_t>(initVals.size())}));
 
   // Parse attributes.
-  if (parser.parseOptionalAttrDict(result.attributes))
+  if (parser.parseOptionalAttrDict(result.attributes) ||
+      parser.resolveOperands(initVals, result.types, parser.getNameLoc(),
+                             result.operands))
     return failure();
 
-  if (!initVals.empty())
-    parser.resolveOperands(initVals, result.types, parser.getNameLoc(),
-                           result.operands);
   // Add a terminator if none was parsed.
   ForOp::ensureTerminator(*body, builder, result.location);
-
   return success();
 }
 

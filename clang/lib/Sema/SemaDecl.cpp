@@ -9632,15 +9632,11 @@ Sema::ActOnFunctionDeclarator(Scope *S, Declarator &D, DeclContext *DC,
     }
 
     if (isFriend) {
-      // In MSVC mode for older versions of the standard, friend function
-      // declarations behave as declarations
-      bool PerformFriendInjection =
-          getLangOpts().MSVCCompat && !getLangOpts().CPlusPlus20;
       if (FunctionTemplate) {
-        FunctionTemplate->setObjectOfFriendDecl(PerformFriendInjection);
+        FunctionTemplate->setObjectOfFriendDecl();
         FunctionTemplate->setAccess(AS_public);
       }
-      NewFD->setObjectOfFriendDecl(PerformFriendInjection);
+      NewFD->setObjectOfFriendDecl();
       NewFD->setAccess(AS_public);
     }
 
@@ -10218,10 +10214,12 @@ Sema::ActOnFunctionDeclarator(Scope *S, Declarator &D, DeclContext *DC,
   // marking the function.
   AddCFAuditedAttribute(NewFD);
 
-  // If this is a function definition, check if we have to apply optnone due to
-  // a pragma.
-  if(D.isFunctionDefinition())
+  // If this is a function definition, check if we have to apply any
+  // attributes (i.e. optnone and no_builtin) due to a pragma.
+  if (D.isFunctionDefinition()) {
     AddRangeBasedOptnone(NewFD);
+    AddImplicitMSFunctionNoBuiltinAttr(NewFD);
+  }
 
   // If this is the first declaration of an extern C variable, update
   // the map of such variables.
