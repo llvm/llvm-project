@@ -241,3 +241,22 @@ add_custom_target(omptarget.devicertl.amdgpu)
 foreach(mcpu ${amdgpu_mcpus})
   compileDeviceRTLLibrary(${mcpu} amdgpu -target amdgcn-amd-amdhsa -D__AMDGCN__ -nogpulib)
 endforeach()
+
+# Set the flags to build the device runtime from clang.
+set(clang_lib_flags -fopenmp -fopenmp-cuda-mode -foffload-lto -fvisibility=hidden -mllvm -openmp-opt-disable -nogpulib -nostdinc -DSHARED_SCRATCHPAD_SIZE=512)
+foreach(arch ${nvptx_sm_list})
+  set(clang_lib_flags ${clang_lib_flags} --offload-arch=sm_${arch})
+endforeach()
+foreach(arch ${amdgpu_mcpus})
+  set(clang_lib_flags ${clang_lib_flags} --offload-arch=${arch})
+endforeach()
+
+# Build the static library version of the device runtime.
+add_library(omptarget.devicertl STATIC)
+target_compile_features(omptarget.devicertl PRIVATE cxx_std_17)
+target_include_directories(omptarget.devicertl PRIVATE ${include_directory} ${devicertl_base_directory}/../include)
+target_compile_options(omptarget.devicertl PRIVATE ${clang_lib_flags})
+
+install(TARGETS omptarget.devicertl ARCHIVE DESTINATION ${OPENMP_INSTALL_LIBDIR})
+
+add_subdirectory(src)
