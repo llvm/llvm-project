@@ -1,6 +1,6 @@
 # Check that llvm-bolt detects bad profile data and aborts
 
 RUN: %clang %S/Inputs/icf-jump-tables.c -o %t
-RUN: not llvm-bolt %t -o %t.bolt -data %t |& FileCheck %s
+RUN: not llvm-bolt %t -o %t.bolt -data %t 2>&1 | FileCheck %s
 
 CHECK: no valid profile data found
