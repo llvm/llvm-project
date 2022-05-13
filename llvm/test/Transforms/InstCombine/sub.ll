@@ -1182,8 +1182,8 @@ define i64 @test61([100 x [100 x i8]]* %foo, i64 %i, i64 %j) {
 
 define i32 @test62(i32 %A) {
 ; CHECK-LABEL: @test62(
-; CHECK-NEXT:    [[B_NEG:%.*]] = mul i32 [[A:%.*]], -2
-; CHECK-NEXT:    [[C:%.*]] = add i32 [[B_NEG]], 2
+; CHECK-NEXT:    [[DOTNEG:%.*]] = mul i32 [[A:%.*]], -2
+; CHECK-NEXT:    [[C:%.*]] = add i32 [[DOTNEG]], 2
 ; CHECK-NEXT:    ret i32 [[C]]
 ;
   %B = sub i32 1, %A
@@ -1193,8 +1193,8 @@ define i32 @test62(i32 %A) {
 
 define <2 x i32> @test62vec(<2 x i32> %A) {
 ; CHECK-LABEL: @test62vec(
-; CHECK-NEXT:    [[B_NEG:%.*]] = mul <2 x i32> [[A:%.*]], <i32 -2, i32 -2>
-; CHECK-NEXT:    [[C:%.*]] = add <2 x i32> [[B_NEG]], <i32 2, i32 2>
+; CHECK-NEXT:    [[DOTNEG:%.*]] = mul <2 x i32> [[A:%.*]], <i32 -2, i32 -2>
+; CHECK-NEXT:    [[C:%.*]] = add <2 x i32> [[DOTNEG]], <i32 2, i32 2>
 ; CHECK-NEXT:    ret <2 x i32> [[C]]
 ;
   %B = sub <2 x i32> <i32 1, i32 1>, %A
@@ -1204,8 +1204,8 @@ define <2 x i32> @test62vec(<2 x i32> %A) {
 
 define i32 @test63(i32 %A) {
 ; CHECK-LABEL: @test63(
-; CHECK-NEXT:    [[B_NEG_NEG:%.*]] = shl i32 [[A:%.*]], 1
-; CHECK-NEXT:    ret i32 [[B_NEG_NEG]]
+; CHECK-NEXT:    [[DOTNEG_NEG:%.*]] = shl i32 [[A:%.*]], 1
+; CHECK-NEXT:    ret i32 [[DOTNEG_NEG]]
 ;
   %B = sub i32 1, %A
   %C = shl i32 %B, 1
@@ -1215,8 +1215,8 @@ define i32 @test63(i32 %A) {
 
 define <2 x i32> @test63vec(<2 x i32> %A) {
 ; CHECK-LABEL: @test63vec(
-; CHECK-NEXT:    [[B_NEG_NEG:%.*]] = shl <2 x i32> [[A:%.*]], <i32 1, i32 1>
-; CHECK-NEXT:    ret <2 x i32> [[B_NEG_NEG]]
+; CHECK-NEXT:    [[DOTNEG_NEG:%.*]] = shl <2 x i32> [[A:%.*]], <i32 1, i32 1>
+; CHECK-NEXT:    ret <2 x i32> [[DOTNEG_NEG]]
 ;
   %B = sub <2 x i32> <i32 1, i32 1>, %A
   %C = shl <2 x i32> %B, <i32 1, i32 1>
@@ -1700,4 +1700,26 @@ define i32 @pr51584(i32 %a, i32 %b) {
   %add = add nsw i32 11, %b
   %sub1 = sub i32 %sub, %add
   ret i32 %sub1
+}
+
+define i8 @sub_srem(i8 noundef %x, i8 %y) {
+; CHECK-LABEL: @sub_srem(
+; CHECK-NEXT:    [[REM:%.*]] = srem i8 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[SUB:%.*]] = sub i8 [[X]], [[REM]]
+; CHECK-NEXT:    ret i8 [[SUB]]
+;
+  %rem = srem i8 %x, %y
+  %sub = sub i8 %x, %rem
+  ret i8 %sub
+}
+
+define <2 x i5> @sub_urem(<2 x i5> noundef %x, <2 x i5> %y) {
+; CHECK-LABEL: @sub_urem(
+; CHECK-NEXT:    [[REM:%.*]] = urem <2 x i5> [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[SUB:%.*]] = sub <2 x i5> [[X]], [[REM]]
+; CHECK-NEXT:    ret <2 x i5> [[SUB]]
+;
+  %rem = urem <2 x i5> %x, %y
+  %sub = sub <2 x i5> %x, %rem
+  ret <2 x i5> %sub
 }
