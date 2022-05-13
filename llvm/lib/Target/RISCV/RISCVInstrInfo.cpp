@@ -265,11 +265,11 @@ void RISCVInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
   }
 
   // Handle copy from csr
-  // TODO: Handle sysreg lookup generically and remove vlenb restriction.
-  if (RISCV::VCSRRegClass.contains(SrcReg) && SrcReg == RISCV::VLENB &&
+  if (RISCV::VCSRRegClass.contains(SrcReg) &&
       RISCV::GPRRegClass.contains(DstReg)) {
+    const TargetRegisterInfo &TRI = *STI.getRegisterInfo();
     BuildMI(MBB, MBBI, DL, get(RISCV::CSRRS), DstReg)
-      .addImm(RISCVSysReg::lookupSysRegByName("VLENB")->Encoding)
+      .addImm(RISCVSysReg::lookupSysRegByName(TRI.getName(SrcReg))->Encoding)
       .addReg(RISCV::X0);
     return;
   }
