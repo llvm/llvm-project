@@ -45,29 +45,10 @@ using namespace lldb;
 using namespace lldb_private;
 using namespace lldb_private::dwarf;
 
-static lldb::addr_t
-ReadAddressFromDebugAddrSection(const DWARFUnit *dwarf_cu,
-                                uint32_t index) {
-  uint32_t index_size = dwarf_cu->GetAddressByteSize();
-  dw_offset_t addr_base = dwarf_cu->GetAddrBase();
-  lldb::offset_t offset = addr_base + index * index_size;
-  const DWARFDataExtractor &data =
-      dwarf_cu->GetSymbolFileDWARF().GetDWARFContext().getOrLoadAddrData();
-  if (data.ValidOffsetForDataOfSize(offset, index_size))
-    return data.GetMaxU64_unchecked(&offset, index_size);
-  return LLDB_INVALID_ADDRESS;
-}
-
 // DWARFExpression constructor
-DWARFExpression::DWARFExpression() : m_module_wp(), m_data() {}
+DWARFExpression::DWARFExpression() : m_data() {}
 
-DWARFExpression::DWARFExpression(lldb::ModuleSP module_sp,
-                                 const DataExtractor &data,
-                                 const DWARFUnit *dwarf_cu)
-    : m_module_wp(), m_data(data), m_dwarf_cu(dwarf_cu) {
-  if (module_sp)
-    m_module_wp = module_sp;
-}
+DWARFExpression::DWARFExpression(const DataExtractor &data) : m_data(data) {}
 
 // Destructor
 DWARFExpression::~DWARFExpression() = default;
@@ -86,71 +67,19 @@ void DWARFExpression::UpdateValue(uint64_t const_value,
   m_data.SetAddressByteSize(addr_byte_size);
 }
 
-void DWARFExpression::DumpLocation(Stream *s, const DataExtractor &data,
-                                   lldb::DescriptionLevel level,
+void DWARFExpression::DumpLocation(Stream *s, lldb::DescriptionLevel level,
                                    ABI *abi) const {
-  llvm::DWARFExpression(data.GetAsLLVM(), data.GetAddressByteSize())
+  llvm::DWARFExpression(m_data.GetAsLLVM(), m_data.GetAddressByteSize())
       .print(s->AsRawOstream(), llvm::DIDumpOptions(),
              abi ? &abi->GetMCRegisterInfo() : nullptr, nullptr);
 }
 
-void DWARFExpression::SetLocationListAddresses(addr_t cu_file_addr,
-                                               addr_t func_file_addr) {
-  m_loclist_addresses = LoclistAddresses{cu_file_addr, func_file_addr};
-}
-
-int DWARFExpression::GetRegisterKind() { return m_reg_kind; }
+RegisterKind DWARFExpression::GetRegisterKind() const { return m_reg_kind; }
 
 void DWARFExpression::SetRegisterKind(RegisterKind reg_kind) {
   m_reg_kind = reg_kind;
 }
 
-bool DWARFExpression::IsLocationList() const {
-  return bool(m_loclist_addresses);
-}
-
-namespace {
-/// Implement enough of the DWARFObject interface in order to be able to call
-/// DWARFLocationTable::dumpLocationList. We don't have access to a real
-/// DWARFObject here because DWARFExpression is used in non-DWARF scenarios too.
-class DummyDWARFObject final: public llvm::DWARFObject {
-public:
-  DummyDWARFObject(bool IsLittleEndian) : IsLittleEndian(IsLittleEndian) {}
-
-  bool isLittleEndian() const override { return IsLittleEndian; }
-
-  llvm::Optional<llvm::RelocAddrEntry> find(const llvm::DWARFSection &Sec,
-                                            uint64_t Pos) const override {
-    return llvm::None;
-  }
-private:
-  bool IsLittleEndian;
-};
-}
-
-void DWARFExpression::GetDescription(Stream *s, lldb::DescriptionLevel level,
-                                     ABI *abi) const {
-  if (IsLocationList()) {
-    // We have a location list
-    lldb::offset_t offset = 0;
-    std::unique_ptr<llvm::DWARFLocationTable> loctable_up =
-        m_dwarf_cu->GetLocationTable(m_data);
-
-    llvm::MCRegisterInfo *MRI = abi ? &abi->GetMCRegisterInfo() : nullptr;
-    llvm::DIDumpOptions DumpOpts;
-    DumpOpts.RecoverableErrorHandler = [&](llvm::Error E) {
-      s->AsRawOstream() << "error: " << toString(std::move(E));
-    };
-    loctable_up->dumpLocationList(
-        &offset, s->AsRawOstream(),
-        llvm::object::SectionedAddress{m_loclist_addresses->cu_file_addr}, MRI,
-        DummyDWARFObject(m_data.GetByteOrder() == eByteOrderLittle), nullptr,
-        DumpOpts, s->GetIndentLevel() + 2);
-  } else {
-    // We have a normal location that contains DW_OP location opcodes
-    DumpLocation(s, m_data, level, abi);
-  }
-}
 
 static bool ReadRegisterValueAsScalar(RegisterContext *reg_ctx,
                                       lldb::RegisterKind reg_kind,
@@ -409,11 +338,10 @@ static offset_t GetOpcodeDataSize(const DataExtractor &data,
   return LLDB_INVALID_OFFSET;
 }
 
-lldb::addr_t DWARFExpression::GetLocation_DW_OP_addr(uint32_t op_addr_idx,
+lldb::addr_t DWARFExpression::GetLocation_DW_OP_addr(const DWARFUnit *dwarf_cu,
+                                                     uint32_t op_addr_idx,
                                                      bool &error) const {
   error = false;
-  if (IsLocationList())
-    return LLDB_INVALID_ADDRESS;
   lldb::offset_t offset = 0;
   uint32_t curr_op_addr_idx = 0;
   while (m_data.ValidOffset(offset)) {
@@ -423,19 +351,18 @@ lldb::addr_t DWARFExpression::GetLocation_DW_OP_addr(uint32_t op_addr_idx,
       const lldb::addr_t op_file_addr = m_data.GetAddress(&offset);
       if (curr_op_addr_idx == op_addr_idx)
         return op_file_addr;
-      else
-        ++curr_op_addr_idx;
+      ++curr_op_addr_idx;
     } else if (op == DW_OP_GNU_addr_index || op == DW_OP_addrx) {
       uint64_t index = m_data.GetULEB128(&offset);
       if (curr_op_addr_idx == op_addr_idx) {
-        if (!m_dwarf_cu) {
+        if (!dwarf_cu) {
           error = true;
           break;
         }
 
-        return ReadAddressFromDebugAddrSection(m_dwarf_cu, index);
-      } else
-        ++curr_op_addr_idx;
+        return dwarf_cu->ReadAddressFromDebugAddrSection(index);
+      }
+      ++curr_op_addr_idx;
     } else {
       const offset_t op_arg_size = GetOpcodeDataSize(m_data, offset, op);
       if (op_arg_size == LLDB_INVALID_OFFSET) {
@@ -449,8 +376,6 @@ lldb::addr_t DWARFExpression::GetLocation_DW_OP_addr(uint32_t op_addr_idx,
 }
 
 bool DWARFExpression::Update_DW_OP_addr(lldb::addr_t file_addr) {
-  if (IsLocationList())
-    return false;
   lldb::offset_t offset = 0;
   while (m_data.ValidOffset(offset)) {
     const uint8_t op = m_data.GetU8(&offset);
@@ -487,11 +412,6 @@ bool DWARFExpression::Update_DW_OP_addr(lldb::addr_t file_addr) {
 }
 
 bool DWARFExpression::ContainsThreadLocalStorage() const {
-  // We are assuming for now that any thread local variable will not have a
-  // location list. This has been true for all thread local variables we have
-  // seen so far produced by any compiler.
-  if (IsLocationList())
-    return false;
   lldb::offset_t offset = 0;
   while (m_data.ValidOffset(offset)) {
     const uint8_t op = m_data.GetU8(&offset);
@@ -501,27 +421,18 @@ bool DWARFExpression::ContainsThreadLocalStorage() const {
     const offset_t op_arg_size = GetOpcodeDataSize(m_data, offset, op);
     if (op_arg_size == LLDB_INVALID_OFFSET)
       return false;
-    else
-      offset += op_arg_size;
+    offset += op_arg_size;
   }
   return false;
 }
 bool DWARFExpression::LinkThreadLocalStorage(
-    lldb::ModuleSP new_module_sp,
     std::function<lldb::addr_t(lldb::addr_t file_addr)> const
         &link_address_callback) {
-  // We are assuming for now that any thread local variable will not have a
-  // location list. This has been true for all thread local variables we have
-  // seen so far produced by any compiler.
-  if (IsLocationList())
-    return false;
-
   const uint32_t addr_byte_size = m_data.GetAddressByteSize();
   // We have to make a copy of the data as we don't know if this data is from a
   // read only memory mapped buffer, so we duplicate all of the data first,
   // then modify it, and if all goes well, we then replace the data for this
   // expression.
-
   // Make en encoder that contains a copy of the location expression data so we
   // can write the address into the buffer using the correct byte order.
   DataEncoder encoder(m_data.GetDataStart(), m_data.GetByteSize(),
@@ -593,40 +504,8 @@ bool DWARFExpression::LinkThreadLocalStorage(
     }
   }
 
-  // If we linked the TLS address correctly, update the module so that when the
-  // expression is evaluated it can resolve the file address to a load address
-  // and read the
-  // TLS data
-  m_module_wp = new_module_sp;
   m_data.SetData(encoder.GetDataBuffer());
   return true;
-}
-
-bool DWARFExpression::LocationListContainsAddress(addr_t func_load_addr,
-                                                  lldb::addr_t addr) const {
-  if (func_load_addr == LLDB_INVALID_ADDRESS || addr == LLDB_INVALID_ADDRESS)
-    return false;
-
-  if (!IsLocationList())
-    return false;
-
-  return GetLocationExpression(func_load_addr, addr) != llvm::None;
-}
-
-bool DWARFExpression::DumpLocationForAddress(Stream *s,
-                                             lldb::DescriptionLevel level,
-                                             addr_t func_load_addr,
-                                             addr_t address, ABI *abi) {
-  if (!IsLocationList()) {
-    DumpLocation(s, m_data, level, abi);
-    return true;
-  }
-  if (llvm::Optional<DataExtractor> expr =
-          GetLocationExpression(func_load_addr, address)) {
-    DumpLocation(s, *expr, level, abi);
-    return true;
-  }
-  return false;
 }
 
 static bool Evaluate_DW_OP_entry_value(std::vector<Value> &stack,
@@ -824,10 +703,9 @@ static bool Evaluate_DW_OP_entry_value(std::vector<Value> &stack,
   // TODO: Add support for DW_OP_push_object_address within a DW_OP_entry_value
   // subexpresion whenever llvm does.
   Value result;
-  const DWARFExpression &param_expr = matched_param->LocationInCaller;
+  const DWARFExpressionList &param_expr = matched_param->LocationInCaller;
   if (!param_expr.Evaluate(&parent_exe_ctx,
                            parent_frame->GetRegisterContext().get(),
-                           /*loclist_base_load_addr=*/LLDB_INVALID_ADDRESS,
                            /*initial_value_ptr=*/nullptr,
                            /*object_address_ptr=*/nullptr, result, error_ptr)) {
     LLDB_LOG(log,
@@ -837,63 +715,6 @@ static bool Evaluate_DW_OP_entry_value(std::vector<Value> &stack,
 
   stack.push_back(result);
   return true;
-}
-
-bool DWARFExpression::Evaluate(ExecutionContextScope *exe_scope,
-                               lldb::addr_t loclist_base_load_addr,
-                               const Value *initial_value_ptr,
-                               const Value *object_address_ptr, Value &result,
-                               Status *error_ptr) const {
-  ExecutionContext exe_ctx(exe_scope);
-  return Evaluate(&exe_ctx, nullptr, loclist_base_load_addr, initial_value_ptr,
-                  object_address_ptr, result, error_ptr);
-}
-
-bool DWARFExpression::Evaluate(ExecutionContext *exe_ctx,
-                               RegisterContext *reg_ctx,
-                               lldb::addr_t func_load_addr,
-                               const Value *initial_value_ptr,
-                               const Value *object_address_ptr, Value &result,
-                               Status *error_ptr) const {
-  ModuleSP module_sp = m_module_wp.lock();
-
-  if (IsLocationList()) {
-    Address pc;
-    StackFrame *frame = nullptr;
-    if (!reg_ctx || !reg_ctx->GetPCForSymbolication(pc)) {
-      frame = exe_ctx->GetFramePtr();
-      if (!frame)
-        return false;
-      RegisterContextSP reg_ctx_sp = frame->GetRegisterContext();
-      if (!reg_ctx_sp)
-        return false;
-      reg_ctx_sp->GetPCForSymbolication(pc);
-    }
-
-    if (func_load_addr != LLDB_INVALID_ADDRESS) {
-      if (!pc.IsValid()) {
-        if (error_ptr)
-          error_ptr->SetErrorString("Invalid PC in frame.");
-        return false;
-      }
-
-      Target *target = exe_ctx->GetTargetPtr();
-      if (llvm::Optional<DataExtractor> expr = GetLocationExpression(
-              func_load_addr, pc.GetLoadAddress(target))) {
-        return DWARFExpression::Evaluate(
-            exe_ctx, reg_ctx, module_sp, *expr, m_dwarf_cu, m_reg_kind,
-            initial_value_ptr, object_address_ptr, result, error_ptr);
-      }
-    }
-    if (error_ptr)
-      error_ptr->SetErrorString("variable not available");
-    return false;
-  }
-
-  // Not a location list, just a single expression.
-  return DWARFExpression::Evaluate(exe_ctx, reg_ctx, module_sp, m_data,
-                                   m_dwarf_cu, m_reg_kind, initial_value_ptr,
-                                   object_address_ptr, result, error_ptr);
 }
 
 namespace {
@@ -2670,7 +2491,7 @@ bool DWARFExpression::Evaluate(
         return false;
       }
       uint64_t index = opcodes.GetULEB128(&offset);
-      lldb::addr_t value = ReadAddressFromDebugAddrSection(dwarf_cu, index);
+      lldb::addr_t value = dwarf_cu->ReadAddressFromDebugAddrSection(index);
       stack.push_back(Scalar(value));
       stack.back().SetValueType(Value::ValueType::FileAddress);
     } break;
@@ -2690,7 +2511,7 @@ bool DWARFExpression::Evaluate(
         return false;
       }
       uint64_t index = opcodes.GetULEB128(&offset);
-      lldb::addr_t value = ReadAddressFromDebugAddrSection(dwarf_cu, index);
+      lldb::addr_t value = dwarf_cu->ReadAddressFromDebugAddrSection(index);
       stack.push_back(Scalar(value));
     } break;
 
@@ -2743,61 +2564,16 @@ bool DWARFExpression::Evaluate(
   return true; // Return true on success
 }
 
-static DataExtractor ToDataExtractor(const llvm::DWARFLocationExpression &loc,
-                                     ByteOrder byte_order, uint32_t addr_size) {
-  auto buffer_sp =
-      std::make_shared<DataBufferHeap>(loc.Expr.data(), loc.Expr.size());
-  return DataExtractor(buffer_sp, byte_order, addr_size);
-}
-
-bool DWARFExpression::DumpLocations(Stream *s, lldb::DescriptionLevel level,
-                                    addr_t load_function_start, addr_t addr,
-                                    ABI *abi) {
-  if (!IsLocationList()) {
-    DumpLocation(s, m_data, level, abi);
-    return true;
-  }
-  bool dump_all = addr == LLDB_INVALID_ADDRESS;
-  llvm::ListSeparator separator;
-  auto callback = [&](llvm::DWARFLocationExpression loc) -> bool {
-    if (loc.Range &&
-        (dump_all || (loc.Range->LowPC <= addr && addr < loc.Range->HighPC))) {
-      uint32_t addr_size = m_data.GetAddressByteSize();
-      DataExtractor data = ToDataExtractor(loc, m_data.GetByteOrder(),
-                                           m_data.GetAddressByteSize());
-      s->AsRawOstream() << separator;
-      s->PutCString("[");
-      s->AsRawOstream() << llvm::format_hex(loc.Range->LowPC,
-                                            2 + 2 * addr_size);
-      s->PutCString(", ");
-      s->AsRawOstream() << llvm::format_hex(loc.Range->HighPC,
-                                            2 + 2 * addr_size);
-      s->PutCString(") -> ");
-      DumpLocation(s, data, level, abi);
-      return dump_all;
-    }
-    return true;
-  };
-  if (!GetLocationExpressions(load_function_start, callback))
-    return false;
-  return true;
-}
-
-bool DWARFExpression::GetLocationExpressions(
-    addr_t load_function_start,
-    llvm::function_ref<bool(llvm::DWARFLocationExpression)> callback) const {
-  if (load_function_start == LLDB_INVALID_ADDRESS)
-    return false;
-
-  Log *log = GetLog(LLDBLog::Expressions);
-
+bool DWARFExpression::ParseDWARFLocationList(
+    const DWARFUnit *dwarf_cu, const DataExtractor &data,
+    DWARFExpressionList *location_list) {
+  location_list->Clear();
   std::unique_ptr<llvm::DWARFLocationTable> loctable_up =
-      m_dwarf_cu->GetLocationTable(m_data);
-
-  uint64_t offset = 0;
+      dwarf_cu->GetLocationTable(data);
+  Log *log = GetLog(LLDBLog::Expressions);
   auto lookup_addr =
       [&](uint32_t index) -> llvm::Optional<llvm::object::SectionedAddress> {
-    addr_t address = ReadAddressFromDebugAddrSection(m_dwarf_cu, index);
+    addr_t address = dwarf_cu->ReadAddressFromDebugAddrSection(index);
     if (address == LLDB_INVALID_ADDRESS)
       return llvm::None;
     return llvm::object::SectionedAddress{address};
@@ -2807,18 +2583,17 @@ bool DWARFExpression::GetLocationExpressions(
       LLDB_LOG_ERROR(log, loc.takeError(), "{0}");
       return true;
     }
-    if (loc->Range) {
-      // This relocates low_pc and high_pc by adding the difference between the
-      // function file address, and the actual address it is loaded in memory.
-      addr_t slide = load_function_start - m_loclist_addresses->func_file_addr;
-      loc->Range->LowPC += slide;
-      loc->Range->HighPC += slide;
-    }
-    return callback(*loc);
+    auto buffer_sp =
+        std::make_shared<DataBufferHeap>(loc->Expr.data(), loc->Expr.size());
+    DWARFExpression expr = DWARFExpression(DataExtractor(
+        buffer_sp, data.GetByteOrder(), data.GetAddressByteSize()));
+    location_list->AddExpression(loc->Range->LowPC, loc->Range->HighPC, expr);
+    return true;
   };
   llvm::Error error = loctable_up->visitAbsoluteLocationList(
-      offset, llvm::object::SectionedAddress{m_loclist_addresses->cu_file_addr},
+      0, llvm::object::SectionedAddress{dwarf_cu->GetBaseAddress()},
       lookup_addr, process_list);
+  location_list->Sort();
   if (error) {
     LLDB_LOG_ERROR(log, std::move(error), "{0}");
     return false;
@@ -2826,23 +2601,8 @@ bool DWARFExpression::GetLocationExpressions(
   return true;
 }
 
-llvm::Optional<DataExtractor>
-DWARFExpression::GetLocationExpression(addr_t load_function_start,
-                                       addr_t addr) const {
-  llvm::Optional<DataExtractor> data;
-  auto callback = [&](llvm::DWARFLocationExpression loc) {
-    if (loc.Range && loc.Range->LowPC <= addr && addr < loc.Range->HighPC) {
-      data = ToDataExtractor(loc, m_data.GetByteOrder(),
-                             m_data.GetAddressByteSize());
-    }
-    return !data;
-  };
-  GetLocationExpressions(load_function_start, callback);
-  return data;
-}
-
-bool DWARFExpression::MatchesOperand(StackFrame &frame,
-                                     const Instruction::Operand &operand) {
+bool DWARFExpression::MatchesOperand(
+    StackFrame &frame, const Instruction::Operand &operand) const {
   using namespace OperandMatchers;
 
   RegisterContextSP reg_ctx_sp = frame.GetRegisterContext();
@@ -2850,28 +2610,7 @@ bool DWARFExpression::MatchesOperand(StackFrame &frame,
     return false;
   }
 
-  DataExtractor opcodes;
-  if (IsLocationList()) {
-    SymbolContext sc = frame.GetSymbolContext(eSymbolContextFunction);
-    if (!sc.function)
-      return false;
-
-    addr_t load_function_start =
-        sc.function->GetAddressRange().GetBaseAddress().GetFileAddress();
-    if (load_function_start == LLDB_INVALID_ADDRESS)
-      return false;
-
-    addr_t pc = frame.GetFrameCodeAddressForSymbolication().GetLoadAddress(
-        frame.CalculateTarget().get());
-
-    if (llvm::Optional<DataExtractor> expr =
-            GetLocationExpression(load_function_start, pc))
-      opcodes = std::move(*expr);
-    else
-      return false;
-  } else
-    opcodes = m_data;
-
+  DataExtractor opcodes(m_data);
 
   lldb::offset_t op_offset = 0;
   uint8_t opcode = opcodes.GetU8(&op_offset);
@@ -2879,7 +2618,7 @@ bool DWARFExpression::MatchesOperand(StackFrame &frame,
   if (opcode == DW_OP_fbreg) {
     int64_t offset = opcodes.GetSLEB128(&op_offset);
 
-    DWARFExpression *fb_expr = frame.GetFrameBaseExpression(nullptr);
+    DWARFExpressionList *fb_expr = frame.GetFrameBaseExpression(nullptr);
     if (!fb_expr) {
       return false;
     }

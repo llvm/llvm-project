@@ -12,7 +12,7 @@
 #include "lldb/Core/AddressRange.h"
 #include "lldb/Core/Declaration.h"
 #include "lldb/Core/Mangled.h"
-#include "lldb/Expression/DWARFExpression.h"
+#include "lldb/Expression/DWARFExpressionList.h"
 #include "lldb/Symbol/Block.h"
 #include "lldb/Utility/UserID.h"
 #include "llvm/ADT/ArrayRef.h"
@@ -253,8 +253,8 @@ class Function;
 /// Represent the locations of a parameter at a call site, both in the caller
 /// and in the callee.
 struct CallSiteParameter {
-  DWARFExpression LocationInCallee;
-  DWARFExpression LocationInCaller;
+  DWARFExpressionList LocationInCallee;
+  DWARFExpressionList LocationInCaller;
 };
 
 /// A vector of \c CallSiteParameter.
@@ -370,7 +370,7 @@ class IndirectCallEdge : public CallEdge {
 public:
   /// Construct a call edge using a DWARFExpression to identify the callee, and
   /// a return PC within the calling function to identify a specific call site.
-  IndirectCallEdge(DWARFExpression call_target, AddrType caller_address_type,
+  IndirectCallEdge(DWARFExpressionList call_target, AddrType caller_address_type,
                    lldb::addr_t caller_address, bool is_tail_call,
                    CallSiteParameterArray &&parameters)
       : CallEdge(caller_address_type, caller_address, is_tail_call,
@@ -383,7 +383,7 @@ private:
   // Used to describe an indirect call.
   //
   // Specifies the location of the callee address in the calling frame.
-  DWARFExpression call_target;
+  DWARFExpressionList call_target;
 };
 
 /// \class Function Function.h "lldb/Symbol/Function.h"
@@ -521,13 +521,13 @@ public:
   /// \return
   ///     A location expression that describes the function frame
   ///     base.
-  DWARFExpression &GetFrameBaseExpression() { return m_frame_base; }
+  DWARFExpressionList &GetFrameBaseExpression() { return m_frame_base; }
 
   /// Get const accessor for the frame base location.
   ///
   /// \return
   ///     A const compile unit object pointer.
-  const DWARFExpression &GetFrameBaseExpression() const { return m_frame_base; }
+  const DWARFExpressionList &GetFrameBaseExpression() const { return m_frame_base; }
 
   ConstString GetName() const;
 
@@ -659,7 +659,7 @@ protected:
 
   /// The frame base expression for variables that are relative to the frame
   /// pointer.
-  DWARFExpression m_frame_base;
+  DWARFExpressionList m_frame_base;
 
   Flags m_flags;
 
