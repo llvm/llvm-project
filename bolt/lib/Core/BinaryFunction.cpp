@@ -688,6 +688,7 @@ std::string mutateDWARFExpressionTargetReg(const MCCFIInstruction &Instr,
   assert((Opcode == dwarf::DW_CFA_expression ||
           Opcode == dwarf::DW_CFA_val_expression) &&
          "invalid DWARF expression CFI");
+  (void)Opcode;
   const uint8_t *const Start =
       reinterpret_cast<const uint8_t *>(ExprBytes.drop_front(1).data());
   const uint8_t *const End =
@@ -1097,7 +1098,6 @@ bool BinaryFunction::disassemble() {
   auto handleExternalReference = [&](MCInst &Instruction, uint64_t Size,
                                      uint64_t Offset, uint64_t TargetAddress,
                                      bool &IsCall) -> MCSymbol * {
-    const bool IsCondBranch = MIB->isConditionalBranch(Instruction);
     const uint64_t AbsoluteInstrAddr = getAddress() + Offset;
     MCSymbol *TargetSymbol = nullptr;
     InterproceduralReferences.insert(TargetAddress);
@@ -1115,7 +1115,8 @@ bool BinaryFunction::disassemble() {
     // treated as calls.
     if (!IsCall) {
       if (!MIB->convertJmpToTailCall(Instruction)) {
-        assert(IsCondBranch && "unknown tail call instruction");
+        assert(MIB->isConditionalBranch(Instruction) &&
+               "unknown tail call instruction");
         if (opts::Verbosity >= 2) {
           errs() << "BOLT-WARNING: conditional tail call detected in "
                  << "function " << *this << " at 0x"

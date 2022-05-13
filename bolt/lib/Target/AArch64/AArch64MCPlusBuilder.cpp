@@ -763,6 +763,7 @@ public:
     assert(Adrp->getOperand(1).isImm() && "Unexpected adrp operand");
     bool Ret = evaluateMemOperandTarget(*Adrp, Base, AdrpPC, InstSize);
     assert(Ret && "Failed to evaluate adrp");
+    (void)Ret;
 
     return Base + Offset;
   }
