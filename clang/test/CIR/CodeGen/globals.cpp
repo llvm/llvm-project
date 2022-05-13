@@ -17,5 +17,5 @@ char alpha[4] = "abc";
 // CHECK-NEXT: cir.global @y = 3.400000e+00 : f32
 // CHECK-NEXT: cir.global @w = 4.300000e+00 : f64
 // CHECK-NEXT: cir.global @x = 51 : i8
-// CHECK-NEXT: cir.global @rgb = #cir.cst_array<[0 : i8, -23 : i8, 33 : i8]> : !cir.array<i8 x 3>
-// CHECK-NEXT: cir.global @alpha = #cir.cst_array<[97 : i8, 98 : i8, 99 : i8, 0 : i8]> : !cir.array<i8 x 4>
+// CHECK-NEXT: cir.global @rgb = #cir.cst_array<[0 : i8, -23 : i8, 33 : i8] : !cir.array<i8 x 3>>
+// CHECK-NEXT: cir.global @alpha = #cir.cst_array<[97 : i8, 98 : i8, 99 : i8, 0 : i8] : !cir.array<i8 x 4>>
