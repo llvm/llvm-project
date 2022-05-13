@@ -2487,6 +2487,7 @@ cc_library(
         ":SCFToStandard",
         ":SPIRVToLLVM",
         ":ShapeToStandard",
+        ":TensorToLinalg",
         ":TensorToSPIRV",
         ":TosaToArith",
         ":TosaToLinalg",
@@ -4676,6 +4677,36 @@ cc_library(
         "//llvm:Support",
     ],
 )
+
+cc_library(
+    name = "TensorToLinalg",
+    srcs = glob([
+        "lib/Conversion/TensorToLinalg/*.cpp",
+        "lib/Conversion/TensorToLinalg/*.h",
+    ]) + [":ConversionPassDetail"],
+    hdrs = glob([
+        "include/mlir/Conversion/TensorToLinalg/*.h",
+    ]),
+    includes = [
+        "include",
+        "lib/Conversion/TensorToLinalg",
+    ],
+    deps = [
+        ":ArithmeticDialect",
+        ":ConversionPassIncGen",
+        ":FuncDialect",
+        ":IR",
+        ":LinalgOps",
+        ":LinalgTransforms",
+        ":Pass",
+        ":Support",
+        ":TensorDialect",
+        ":Transforms",
+        ":VectorOps",
+        "//llvm:Support",
+    ],
+)
+
 
 cc_library(
     name = "TensorToSPIRV",

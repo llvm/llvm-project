@@ -709,6 +709,20 @@ def ConvertSPIRVToLLVM : Pass<"convert-spirv-to-llvm", "ModuleOp"> {
 }
 
 //===----------------------------------------------------------------------===//
+// TensorToLinalg
+//===----------------------------------------------------------------------===//
+
+def ConvertTensorToLinalg : Pass<"convert-tensor-to-linalg", "ModuleOp"> {
+  let summary = "Convert some Tensor dialect ops to Linalg dialect";
+  let constructor = "mlir::createConvertTensorToLinalgPass()";
+  let dependentDialects = [
+    "arith::ArithmeticDialect",
+    "linalg::LinalgDialect",
+  ];
+}
+
+
+//===----------------------------------------------------------------------===//
 // TensorToSPIRV
 //===----------------------------------------------------------------------===//
 
