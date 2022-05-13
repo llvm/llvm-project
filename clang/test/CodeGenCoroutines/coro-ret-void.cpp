@@ -8,6 +8,7 @@ struct coro1 {
     std::suspend_never initial_suspend();
     std::suspend_never final_suspend() noexcept;
     void return_void();
+    void unhandled_exception() noexcept;
   };
 };
 
@@ -39,6 +40,7 @@ struct coro2 {
     std::suspend_never initial_suspend();
     std::suspend_never final_suspend() noexcept;
     void return_value(int);
+    void unhandled_exception() noexcept;
   };
 };
 

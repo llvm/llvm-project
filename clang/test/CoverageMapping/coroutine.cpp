@@ -30,6 +30,7 @@ struct std::coroutine_traits<int, int> {
     int get_return_object();
     suspend_always initial_suspend();
     suspend_always final_suspend() noexcept;
+    void unhandled_exception() noexcept;
     void return_value(int);
   };
 };
