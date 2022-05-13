@@ -13,6 +13,7 @@
 #ifndef LLVM_LIB_TARGET_AARCH64_MCTARGETDESC_AARCH64MCTARGETDESC_H
 #define LLVM_LIB_TARGET_AARCH64_MCTARGETDESC_AARCH64MCTARGETDESC_H
 
+#include "llvm/MC/MCInstrDesc.h"
 #include "llvm/Support/DataTypes.h"
 
 #include <memory>
@@ -63,6 +64,12 @@ void initLLVMToCVRegMapping(MCRegisterInfo *MRI);
 bool isQForm(const MCInst &MI, const MCInstrInfo *MCII);
 bool isFpOrNEON(const MCInst &MI, const MCInstrInfo *MCII);
 }
+
+namespace AArch64 {
+enum OperandType {
+  OPERAND_IMPLICIT_IMM_0 = MCOI::OPERAND_FIRST_TARGET,
+};
+} // namespace AArch64
 
 } // End llvm namespace
 

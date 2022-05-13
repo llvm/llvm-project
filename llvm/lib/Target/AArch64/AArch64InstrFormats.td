@@ -1278,8 +1278,12 @@ def VectorIndexHOperand : AsmVectorIndex<0, 7>;
 def VectorIndexSOperand : AsmVectorIndex<0, 3>;
 def VectorIndexDOperand : AsmVectorIndex<0, 1>;
 
-defm VectorIndex0 : VectorIndex<i64, VectorIndex0Operand,
+let OperandNamespace = "AArch64" in {
+  let OperandType = "OPERAND_IMPLICIT_IMM_0" in {
+    defm VectorIndex0 : VectorIndex<i64, VectorIndex0Operand,
                                 [{ return ((uint64_t)Imm) == 0; }]>;
+  }
+}
 defm VectorIndex1 : VectorIndex<i64, VectorIndex1Operand,
                                 [{ return ((uint64_t)Imm) == 1; }]>;
 defm VectorIndexB : VectorIndex<i64, VectorIndexBOperand,
@@ -1329,6 +1333,8 @@ def sme_elm_idx0_0 : Operand<i64>, ImmLeaf<i64, [{
 }]> {
   let ParserMatchClass = Imm0_0Operand;
   let PrintMethod = "printMatrixIndex";
+  let OperandNamespace = "AArch64";
+  let OperandType = "OPERAND_IMPLICIT_IMM_0";
 }
 def sme_elm_idx0_1 : Operand<i64>, ImmLeaf<i64, [{
   return ((uint64_t)Imm) <= 1;
