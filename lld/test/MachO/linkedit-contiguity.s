@@ -1,7 +1,7 @@
 # REQUIRES: x86
 # RUN: rm -rf %t; split-file %s %t
 
-## codesign requires that each setion in __LINKEDIT ends where the next one
+## codesign requires that each section in __LINKEDIT ends where the next one
 ## starts. This test enforces that invariant.
 ## It also checks that the last section in __LINKEDIT covers the last byte of
 ## the segment.
