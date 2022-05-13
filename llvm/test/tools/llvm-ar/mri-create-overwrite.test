@@ -1,0 +1,70 @@
+## Show that CREATE/CREATETHIN overwrite existing files appropriately.
+
+# RUN: rm -rf %t
+# RUN: split-file %s %t
+# RUN: cd %t
+
+## Show that an existing file that is not an archive is overwritten by CREATE.
+# RUN: touch test.a
+# RUN: llvm-ar -M < create.mri
+# RUN: FileCheck --input-file=test.a %s --check-prefixes=ARCH,TWO
+
+## Show that an existing file that is not an archive is overwritten by CREATETHIN.
+# RUN: rm -f test.a
+# RUN: touch test.a
+# RUN: llvm-ar -M < createthin.mri
+# RUN: FileCheck --input-file=test.a %s --check-prefixes=THIN,TWO
+
+## Show that an existing regular archive is overwritten by CREATE.
+# RUN: rm -f test.a
+# RUN: llvm-ar cr test.a 1.txt
+# RUN: llvm-ar -M < create.mri
+# RUN: llvm-ar tv test.a
+# RUN: FileCheck --input-file=test.a %s --check-prefixes=ARCH,TWO --implicit-check-not=1.txt
+
+## Show that an existing regular archive is overwritten by CREATETHIN.
+# RUN: rm -f test.a
+# RUN: llvm-ar cr test.a 1.txt
+# RUN: llvm-ar -M < createthin.mri
+# RUN: FileCheck --input-file=test.a %s --check-prefixes=THIN,TWO --implicit-check-not=1.txt
+
+## Show that an existing thin archive is overwritten by CREATE.
+# RUN: rm -f test.a
+# RUN: llvm-ar crT test.a 1.txt
+# RUN: llvm-ar -M < create.mri
+# RUN: FileCheck --input-file=test.a %s --check-prefixes=ARCH,TWO --implicit-check-not=1.txt
+
+## Show that an existing thin archive is overwritten by CREATETHIN.
+# RUN: rm -f test.a
+# RUN: llvm-ar crT test.a 1.txt
+# RUN: llvm-ar -M < createthin.mri
+# RUN: FileCheck --input-file=test.a %s --check-prefixes=THIN,TWO --implicit-check-not=1.txt
+
+## Show that the output is not overwritten without a SAVE.
+# RUN: rm -f test.a
+# RUN: llvm-ar crT test.a 1.txt
+# RUN: llvm-ar -M < nosave.mri
+# RUN: FileCheck --input-file=test.a %s --check-prefixes=THIN,ONE --implicit-check-not=2.txt
+
+# ARCH: !<arch>
+# THIN: !<thin>
+# ONE:  1.txt
+# TWO:  2.txt
+
+#--- 1.txt
+
+#--- 2.txt
+
+#--- create.mri
+CREATE test.a
+ADDMOD 2.txt
+SAVE
+
+#--- createthin.mri
+CREATETHIN test.a
+ADDMOD 2.txt
+SAVE
+
+#--- nosave.mri
+CREATE test.a
+ADDMOD 2.txt
