@@ -456,47 +456,18 @@ struct CastInfo : public CastIsPossible<To, From> {
 
   using CastReturnType = typename cast_retty<To, From>::ret_type;
 
-  static inline CastReturnType doCast(From &f) {
-    return cast_convert_val<To, From,
-                            typename simplify_type<From>::SimpleType>::doit(f);
+  static inline CastReturnType doCast(const From &f) {
+    return cast_convert_val<
+        To, From,
+        typename simplify_type<From>::SimpleType>::doit(const_cast<From &>(f));
   }
 
   // This assumes that you can construct the cast return type from `nullptr`.
   // This is largely to support legacy use cases - if you don't want this
   // behavior you should specialize CastInfo for your use case.
-  //
-  // FIXME: fix legacy use cases to specialize CastInfo so we can remove these
-  //        two - they don't really belong here, as it doesn't make sense to
-  //        have a fallible reference-to-reference cast if the type isn't
-  //        constructible from nullptr, which doesn't really happen in LLVM
-  //        outside of MLIR (which is a separate use case in itself).
   static inline CastReturnType castFailed() { return CastReturnType(nullptr); }
 
-  static inline CastReturnType doCastIfPossible(From &f) {
-    if (!Self::isPossible(f))
-      return castFailed();
-    return doCast(f);
-  }
-};
-
-/// Provides a CastInfo partial specialization for pointers. This version *does*
-/// provide castFailed and doCastIfPossible because for pointers, a fallible
-/// cast is trivial - just return nullptr.
-template <typename To, typename From>
-struct CastInfo<To, From *, std::enable_if_t<is_simple_type<From>::value>>
-    : public CastIsPossible<To, From *> {
-  using Self = CastInfo<To, From *>;
-
-  using CastReturnType = typename cast_retty<To, From *>::ret_type;
-
-  static inline CastReturnType doCast(From *f) {
-    // We know it is a simple type, so we can just do cast_convert_val.
-    return cast_convert_val<To, From *, From *>::doit(f);
-  }
-
-  static inline CastReturnType castFailed() { return CastReturnType(nullptr); }
-
-  static inline CastReturnType doCastIfPossible(From *f) {
+  static inline CastReturnType doCastIfPossible(const From &f) {
     if (!Self::isPossible(f))
       return castFailed();
     return doCast(f);
