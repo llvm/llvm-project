@@ -4,16 +4,16 @@
 # RUN: llvm-as %p/Inputs/armv7-ios.ll -o %t-ir-armv7.o
 # RUN: llvm-as %p/Inputs/x64-osx.ll -o %t-ir-x86_64.o
 
-# RUN: llvm-ar --format=gnu cr %t.empty.a
+# RUN: llvm-ar cr --format=gnu %t.empty.a
 # RUN: not llvm-lipo %t.empty.a -create -output /dev/null 2>&1 | FileCheck --check-prefix=EMPTY-ARCHIVE %s
 
-# RUN: llvm-ar --format=gnu cr %t.different_architectures.a %t-i386.o %t-x86_64.o
+# RUN: llvm-ar cr %t.different_architectures.a %t-i386.o %t-x86_64.o
 # RUN: not llvm-lipo %t.different_architectures.a -create -output /dev/null 2>&1 | FileCheck --check-prefix=ARCHIVE-WITH-DIFFERENT-ARCHS %s
 
-# RUN: llvm-ar --format=gnu cr %t.contains_fat_binary.a %t-universal.o 
+# RUN: llvm-ar cr %t.contains_fat_binary.a %t-universal.o 
 # RUN: not llvm-lipo %t.contains_fat_binary.a -create -output /dev/null 2>&1 | FileCheck --check-prefix=ARCHIVE-WITH-FAT-BINARY %s
 
-# RUN: llvm-ar --format=gnu cr %t-i386-lib.a %t-i386.o
+# RUN: llvm-ar cr %t-i386-lib.a %t-i386.o
 # RUN: llvm-lipo %t-i386-lib.a %t-x86_64.o -create -output %t-i386-x86_64-universal.o
 # RUN: llvm-lipo %t-i386-x86_64-universal.o -info | FileCheck --check-prefix=INFO-i386-x86_64 %s
 # RUN: llvm-lipo %t-i386-x86_64-universal.o -thin i386 -output %t-extracted-i386-lib.a
@@ -21,18 +21,18 @@
 # RUN: llvm-lipo %t-i386-x86_64-universal.o -thin x86_64 -output %t-extracted-x86_64.o
 # RUN: cmp %t-extracted-x86_64.o %t-x86_64.o
 
-# RUN: llvm-ar --format=gnu cr %t-ir-armv7-lib.a %t-ir-armv7.o
+# RUN: llvm-ar cr %t-ir-armv7-lib.a %t-ir-armv7.o
 # RUN: llvm-lipo %t-ir-armv7-lib.a %t-ir-x86_64.o -create -output %t-ir-armv7-x86_64-universal.o
 # RUN: llvm-lipo %t-ir-armv7-x86_64-universal.o -thin armv7 -output %t-ir-extracted-armv7-lib.a
 # RUN: cmp %t-ir-extracted-armv7-lib.a %t-ir-armv7-lib.a
 # RUN: llvm-lipo %t-ir-armv7-x86_64-universal.o -thin x86_64 -output %t-ir-extracted-x86_64.o
 # RUN: cmp %t-ir-extracted-x86_64.o %t-ir-x86_64.o
 
-# RUN: llvm-ar --format=gnu cr %t.different_types0.a %t-i386.o %t-ir-x86_64.o
+# RUN: llvm-ar cr %t.different_types0.a %t-i386.o %t-ir-x86_64.o
 # RUN: not llvm-lipo -create %t.different_types0.a -output /dev/null 2>&1 | FileCheck --check-prefix=ARCHIVE-WITH-MACHO-AND-IR %s
-# RUN: llvm-ar --format=gnu cr %t.different_types1.a %t-ir-x86_64.o %t-i386.o 
+# RUN: llvm-ar cr %t.different_types1.a %t-ir-x86_64.o %t-i386.o 
 # RUN: not llvm-lipo -create %t.different_types1.a -output /dev/null 2>&1 | FileCheck --check-prefix=ARCHIVE-WITH-IR-AND-MACHO %s
-# RUN: llvm-ar --format=gnu cr %t.different_architectures_ir.a %t-ir-x86_64.o %t-ir-armv7.o
+# RUN: llvm-ar cr %t.different_architectures_ir.a %t-ir-x86_64.o %t-ir-armv7.o
 # RUN: not llvm-lipo -create %t.different_architectures_ir.a -output /dev/null 2>&1 | FileCheck --check-prefix=ARCHIVE-WITH-DIFFERENT-ARCHS %s
 
 # EMPTY-ARCHIVE: empty archive

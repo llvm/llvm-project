@@ -16,6 +16,9 @@ add_llvm_tool(llvm-omp-device-info llvm-omp-device-info.cpp)
 
 llvm_update_compile_flags(llvm-omp-device-info)
 
+target_include_directories(llvm-omp-device-info PRIVATE
+  ${LIBOMPTARGET_INCLUDE_DIR}
+)
 target_link_libraries(llvm-omp-device-info PRIVATE
   omp
   omptarget

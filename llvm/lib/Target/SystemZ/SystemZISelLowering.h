@@ -457,6 +457,12 @@ public:
   bool allowsMisalignedMemoryAccesses(EVT VT, unsigned AS, Align Alignment,
                                       MachineMemOperand::Flags Flags,
                                       bool *Fast) const override;
+  bool
+  findOptimalMemOpLowering(std::vector<EVT> &MemOps, unsigned Limit,
+                           const MemOp &Op, unsigned DstAS, unsigned SrcAS,
+                           const AttributeList &FuncAttributes) const override;
+  EVT getOptimalMemOpType(const MemOp &Op,
+                          const AttributeList &FuncAttributes) const override;
   bool isTruncateFree(Type *, Type *) const override;
   bool isTruncateFree(EVT, EVT) const override;
 
@@ -466,6 +472,8 @@ public:
     // users of the math result.
     return VT == MVT::i32 || VT == MVT::i64;
   }
+
+  bool shouldConsiderGEPOffsetSplit() const override { return true; }
 
   const char *getTargetNodeName(unsigned Opcode) const override;
   std::pair<unsigned, const TargetRegisterClass *>
@@ -767,12 +775,15 @@ private:
   APInt SplatUndef;          // Bits correspoding to undef operands of the BVN.
   unsigned SplatBitSize = 0;
   bool isFP128 = false;
-
 public:
   unsigned Opcode = 0;
   SmallVector<unsigned, 2> OpVals;
   MVT VecVT;
-  SystemZVectorConstantInfo(APFloat FPImm);
+  SystemZVectorConstantInfo(APInt IntImm);
+  SystemZVectorConstantInfo(APFloat FPImm)
+      : SystemZVectorConstantInfo(FPImm.bitcastToAPInt()) {
+    isFP128 = (&FPImm.getSemantics() == &APFloat::IEEEquad());
+  }
   SystemZVectorConstantInfo(BuildVectorSDNode *BVN);
   bool isVectorConstantLegal(const SystemZSubtarget &Subtarget);
 };

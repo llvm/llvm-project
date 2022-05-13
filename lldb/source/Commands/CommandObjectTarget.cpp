@@ -358,10 +358,29 @@ protected:
                 return false;
               }
             } else {
-              // make up a local file
-              result.AppendError("remote --> local transfer without local "
+              // If the remote file exists, we can debug reading that out of
+              // memory.  If the platform is already connected to an lldb-server
+              // then we can at least check the file exists remotely.  Otherwise
+              // we'll just have to trust that it will be there when we do
+              // process connect.
+              // I don't do this for the host platform because it seems odd to
+              // support supplying a remote file but no local file for a local
+              // debug session.
+              if (platform_sp->IsHost()) {
+                result.AppendError("Supply a local file, not a remote file, "
+                                   "when debugging on the host.");
+                return false;
+              }
+              if (platform_sp->IsConnected() && !platform_sp->GetFileExists(remote_file)) {
+                result.AppendError("remote --> local transfer without local "
                                  "path is not implemented yet");
-              return false;
+                return false;
+              }
+              // Since there's only a remote file, we need to set the executable
+              // file spec to the remote one.
+              ProcessLaunchInfo launch_info = target_sp->GetProcessLaunchInfo();
+              launch_info.SetExecutableFile(FileSpec(remote_file), true);
+              target_sp->SetProcessLaunchInfo(launch_info);
             }
           }
         } else {

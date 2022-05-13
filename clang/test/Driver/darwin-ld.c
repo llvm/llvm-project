@@ -185,6 +185,15 @@
 // LINK_TVOS_KEXT: libclang_rt.cc_kext_tvos.a
 // LINK_TVOS_KEXT: libclang_rt.tvos.a
 
+// RUN: %clang -target x86-64-apple-driverkit19.0 -mlinker-version=400 -resource-dir=%S/Inputs/resource_dir -### %t.o 2> %t.log
+// RUN: FileCheck -check-prefix=LINK_DRIVERKIT %s < %t.log
+// LINK_DRIVERKIT: {{ld(.exe)?"}}
+// LINK_DRIVERKIT: -driverkit_version_min
+// LINK_DRIVERKIT-NOT: crt
+// LINK_DRIVERKIT-NOT: lgcc_s.1
+// LINK_DRIVERKIT-NOT: lSystem
+// LINK_DRIVERKIT: libclang_rt.driverkit.a
+
 // RUN: %clang -target armv7k-apple-watchos2.0 -fuse-ld= -mlinker-version=400 -mwatchos-version-min=2.0 -resource-dir=%S/Inputs/resource_dir -### %t.o 2> %t.log
 // RUN: FileCheck -check-prefix=LINK_WATCHOS_ARM %s < %t.log
 // LINK_WATCHOS_ARM: {{ld(.exe)?"}}

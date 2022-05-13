@@ -56,7 +56,7 @@ namespace {
 
 /// Return true if the function name can change across compilations.
 bool hasVolatileName(const BinaryFunction &BF) {
-  for (const StringRef Name : BF.getNames())
+  for (const StringRef &Name : BF.getNames())
     if (getLTOCommonName(Name))
       return true;
 

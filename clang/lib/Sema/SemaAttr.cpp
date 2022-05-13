@@ -1065,6 +1065,16 @@ void Sema::ActOnPragmaOptimize(bool On, SourceLocation PragmaLoc) {
     OptimizeOffPragmaLocation = PragmaLoc;
 }
 
+void Sema::ActOnPragmaMSFunction(
+    SourceLocation Loc, const llvm::SmallVectorImpl<StringRef> &NoBuiltins) {
+  if (!CurContext->getRedeclContext()->isFileContext()) {
+    Diag(Loc, diag::err_pragma_expected_file_scope) << "function";
+    return;
+  }
+
+  MSFunctionNoBuiltins.insert(NoBuiltins.begin(), NoBuiltins.end());
+}
+
 void Sema::AddRangeBasedOptnone(FunctionDecl *FD) {
   // In the future, check other pragmas if they're implemented (e.g. pragma
   // optimize 0 will probably map to this functionality too).
@@ -1084,6 +1094,13 @@ void Sema::AddOptnoneAttributeIfNoConflicts(FunctionDecl *FD,
     FD->addAttr(OptimizeNoneAttr::CreateImplicit(Context, Loc));
   if (!FD->hasAttr<NoInlineAttr>())
     FD->addAttr(NoInlineAttr::CreateImplicit(Context, Loc));
+}
+
+void Sema::AddImplicitMSFunctionNoBuiltinAttr(FunctionDecl *FD) {
+  SmallVector<StringRef> V(MSFunctionNoBuiltins.begin(),
+                           MSFunctionNoBuiltins.end());
+  if (!MSFunctionNoBuiltins.empty())
+    FD->addAttr(NoBuiltinAttr::CreateImplicit(Context, V.data(), V.size()));
 }
 
 typedef std::vector<std::pair<unsigned, SourceLocation> > VisStack;
