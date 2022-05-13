@@ -32,3 +32,6 @@
 // BINDINGS-DEVICE: # "nvptx64-nvidia-cuda" - "clang", inputs: ["[[INPUT:.+]]"], output: "[[PTX:.+]]"
 // BINDINGS-DEVICE: # "nvptx64-nvidia-cuda" - "NVPTX::Assembler", inputs: ["[[PTX]]"], output: "[[CUBIN:.+]]"
 // BINDINGS-DEVICE: # "nvptx64-nvidia-cuda" - "NVPTX::Linker", inputs: ["[[CUBIN]]", "[[PTX]]"], output: "{{.*}}.fatbin"
+
+// RUN: %clang -### -target x86_64-linux-gnu -nocudalib --cuda-feature=+ptx61 --offload-arch=sm_70 %s 2>&1 | FileCheck -check-prefix MANUAL-FEATURE %s
+// MANUAL-FEATURE: -cc1{{.*}}-target-feature{{.*}}+ptx61

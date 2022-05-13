@@ -637,7 +637,12 @@ void NVPTX::getNVPTXTargetFeatures(const Driver &D, const llvm::Triple &Triple,
                                    const llvm::opt::ArgList &Args,
                                    std::vector<StringRef> &Features,
                                    Optional<clang::CudaVersion> Version) {
-  if (!Version) {
+  if (Args.hasArg(options::OPT_cuda_feature_EQ)) {
+    StringRef PtxFeature =
+        Args.getAllArgValues(options::OPT_cuda_feature_EQ).back();
+    Features.push_back(Args.MakeArgString(PtxFeature));
+    return;
+  } else if (!Version) {
     CudaInstallationDetector CudaInstallation(D, Triple, Args);
     Version = CudaInstallation.version();
   }
