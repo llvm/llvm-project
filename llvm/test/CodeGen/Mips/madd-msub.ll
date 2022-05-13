@@ -507,3 +507,79 @@ entry:
 
   ret i32 %sub
 }
+
+define i64 @msub5(i32 %a, i32 %b, i32 %c) {
+; 32-LABEL: msub5:
+; 32:       # %bb.0: # %entry
+; 32-NEXT:    mult $5, $4
+; 32-NEXT:    mfhi $1
+; 32-NEXT:    mflo $3
+; 32-NEXT:    sltu $2, $3, $6
+; 32-NEXT:    sra $4, $6, 31
+; 32-NEXT:    subu $1, $1, $4
+; 32-NEXT:    subu $2, $1, $2
+; 32-NEXT:    jr $ra
+; 32-NEXT:    subu $3, $3, $6
+;
+; 32R6-LABEL: msub5:
+; 32R6:       # %bb.0: # %entry
+; 32R6-NEXT:    mul $1, $5, $4
+; 32R6-NEXT:    sltu $2, $1, $6
+; 32R6-NEXT:    muh $3, $5, $4
+; 32R6-NEXT:    sra $4, $6, 31
+; 32R6-NEXT:    subu $3, $3, $4
+; 32R6-NEXT:    subu $2, $3, $2
+; 32R6-NEXT:    jr $ra
+; 32R6-NEXT:    subu $3, $1, $6
+;
+; DSP-LABEL: msub5:
+; DSP:       # %bb.0: # %entry
+; DSP-NEXT:    mult $ac0, $5, $4
+; DSP-NEXT:    mfhi $1, $ac0
+; DSP-NEXT:    mflo $3, $ac0
+; DSP-NEXT:    sltu $2, $3, $6
+; DSP-NEXT:    sra $4, $6, 31
+; DSP-NEXT:    subu $1, $1, $4
+; DSP-NEXT:    subu $2, $1, $2
+; DSP-NEXT:    jr $ra
+; DSP-NEXT:    subu $3, $3, $6
+;
+; 64-LABEL: msub5:
+; 64:       # %bb.0: # %entry
+; 64-NEXT:    sll $1, $4, 0
+; 64-NEXT:    sll $2, $5, 0
+; 64-NEXT:    dmult $2, $1
+; 64-NEXT:    mflo $1
+; 64-NEXT:    sll $2, $6, 0
+; 64-NEXT:    jr $ra
+; 64-NEXT:    dsubu $2, $1, $2
+;
+; 64R6-LABEL: msub5:
+; 64R6:       # %bb.0: # %entry
+; 64R6-NEXT:    sll $1, $4, 0
+; 64R6-NEXT:    sll $2, $5, 0
+; 64R6-NEXT:    dmul $1, $2, $1
+; 64R6-NEXT:    sll $2, $6, 0
+; 64R6-NEXT:    jr $ra
+; 64R6-NEXT:    dsubu $2, $1, $2
+;
+; 16-LABEL: msub5:
+; 16:       # %bb.0: # %entry
+; 16-NEXT:    mult $5, $4
+; 16-NEXT:    mflo $2
+; 16-NEXT:    mfhi $4
+; 16-NEXT:    subu $3, $2, $6
+; 16-NEXT:    sltu $2, $6
+; 16-NEXT:    move $2, $24
+; 16-NEXT:    sra $5, $6, 31
+; 16-NEXT:    subu $4, $4, $5
+; 16-NEXT:    subu $2, $4, $2
+; 16-NEXT:    jrc $ra
+entry:
+  %conv = sext i32 %a to i64
+  %conv3 = sext i32 %b to i64
+  %conv4 = sext i32 %c to i64
+  %mul = mul nsw i64 %conv3, %conv
+  %sub = sub nsw i64 %mul, %conv4
+  ret i64 %sub
+}
