@@ -2436,7 +2436,7 @@ SDValue DAGCombiner::visitADDLike(SDNode *N) {
     // equivalent to (add x, c0).
     // Fold (add (xor x, c0), c1) -> (add x, (c0 + c1)) if (xor x, c0) is
     // equivalent to (add x, c0).
-    if (isADDLike(N0, DAG) && 
+    if (isADDLike(N0, DAG) &&
         isConstantOrConstantVector(N0.getOperand(1), /* NoOpaque */ true)) {
       if (SDValue Add0 = DAG.FoldConstantArithmetic(ISD::ADD, DL, VT,
                                                     {N1, N0.getOperand(1)}))
@@ -2518,7 +2518,7 @@ SDValue DAGCombiner::visitADDLike(SDNode *N) {
                        N1.getOperand(1));
 
   // fold (A-B)+(C-D) to (A+C)-(B+D) when A or C is constant
-  if (N0.getOpcode() == ISD::SUB && N1.getOpcode() == ISD::SUB && 
+  if (N0.getOpcode() == ISD::SUB && N1.getOpcode() == ISD::SUB &&
       N0->hasOneUse() && N1->hasOneUse()) {
     SDValue N00 = N0.getOperand(0);
     SDValue N01 = N0.getOperand(1);
@@ -8766,7 +8766,7 @@ SDValue DAGCombiner::visitRotate(SDNode *N) {
       bool SameSide = (N->getOpcode() == NextOp);
       unsigned CombineOp = SameSide ? ISD::ADD : ISD::SUB;
       SDValue BitsizeC = DAG.getConstant(Bitsize, dl, ShiftVT);
-      SDValue Norm1 = DAG.FoldConstantArithmetic(ISD::UREM, dl, ShiftVT, 
+      SDValue Norm1 = DAG.FoldConstantArithmetic(ISD::UREM, dl, ShiftVT,
                                                  {N1, BitsizeC});
       SDValue Norm2 = DAG.FoldConstantArithmetic(ISD::UREM, dl, ShiftVT,
                                                  {N0.getOperand(1), BitsizeC});
@@ -10484,7 +10484,8 @@ bool refineIndexType(SDValue &Index, ISD::MemIndexType &IndexType,
       IndexType = ISD::getUnsignedIndexType(IndexType);
       Index = Op;
       return true;
-    } else if (ISD::isIndexTypeSigned(IndexType)) {
+    }
+    if (ISD::isIndexTypeSigned(IndexType)) {
       IndexType = ISD::getUnsignedIndexType(IndexType);
       return true;
     }
@@ -12022,10 +12023,10 @@ SDValue DAGCombiner::visitSIGN_EXTEND(SDNode *N) {
         // Return SDValue here as the xor should have already been replaced in
         // this sext.
         return SDValue();
-      } else {
-        // Return a new sext with the new xor.
-        return DAG.getNode(ISD::SIGN_EXTEND, DL, VT, NewXor);
       }
+
+      // Return a new sext with the new xor.
+      return DAG.getNode(ISD::SIGN_EXTEND, DL, VT, NewXor);
     }
 
     SDValue Zext = DAG.getNode(ISD::ZERO_EXTEND, DL, VT, N0.getOperand(0));
@@ -15235,7 +15236,7 @@ SDValue DAGCombiner::visitFREM(SDNode *N) {
   // fold (frem c1, c2) -> fmod(c1,c2)
   if (SDValue C = DAG.FoldConstantArithmetic(ISD::FREM, SDLoc(N), VT, {N0, N1}))
     return C;
-  
+
   if (SDValue NewSel = foldBinOpIntoSelect(N))
     return NewSel;
 
@@ -17782,7 +17783,9 @@ bool DAGCombiner::mergeStoresOfConstantsOrVecElts(
             if (isa<ConstantFPSDNode>(Val)) {
               // Not clear how to truncate FP values.
               return false;
-            } else if (auto *C = dyn_cast<ConstantSDNode>(Val))
+            }
+
+            if (auto *C = dyn_cast<ConstantSDNode>(Val))
               Val = DAG.getConstant(C->getAPIntValue()
                                         .zextOrTrunc(Val.getValueSizeInBits())
                                         .zextOrTrunc(ElementSizeBits),
