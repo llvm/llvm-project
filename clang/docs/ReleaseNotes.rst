@@ -225,6 +225,13 @@ Improvements to Clang's diagnostics
 - Clang now checks for stack resource exhaustion when recursively parsing
   declarators in order to give a diagnostic before we run out of stack space.
   This fixes `Issue 51642 <https://github.com/llvm/llvm-project/issues/51642>`_.
+- Unknown preprocessor directives in a skipped conditional block are now given
+  a typo correction suggestion if the given directive is sufficiently similar
+  to another preprocessor conditional directive. For example, if ``#esle``
+  appears in a skipped block, we will warn about the unknown directive and
+  suggest ``#else`` as an alternative. ``#elifdef`` and ``#elifndef`` are only
+  suggested when in C2x or C++2b mode. Fixes
+  `Issue 51598 <https://github.com/llvm/llvm-project/issues/51598>`_.
 
 Non-comprehensive list of changes in this release
 -------------------------------------------------
