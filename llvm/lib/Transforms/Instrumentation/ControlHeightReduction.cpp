@@ -1962,28 +1962,19 @@ void CHR::fixupSelect(SelectInst *SI, CHRScope *Scope,
 // A helper for fixupBranch/fixupSelect. Add a branch condition to the merged
 // condition.
 void CHR::addToMergedCondition(bool IsTrueBiased, Value *Cond,
-                               Instruction *BranchOrSelect,
-                               CHRScope *Scope,
-                               IRBuilder<> &IRB,
-                               Value *&MergedCondition) {
-  if (IsTrueBiased) {
-    MergedCondition = IRB.CreateAnd(MergedCondition, Cond);
-  } else {
+                               Instruction *BranchOrSelect, CHRScope *Scope,
+                               IRBuilder<> &IRB, Value *&MergedCondition) {
+  if (!IsTrueBiased) {
     // If Cond is an icmp and all users of V except for BranchOrSelect is a
     // branch, negate the icmp predicate and swap the branch targets and avoid
     // inserting an Xor to negate Cond.
-    bool Done = false;
-    if (auto *ICmp = dyn_cast<ICmpInst>(Cond))
-      if (negateICmpIfUsedByBranchOrSelectOnly(ICmp, BranchOrSelect, Scope)) {
-        MergedCondition = IRB.CreateAnd(MergedCondition, Cond);
-        Done = true;
-      }
-    if (!Done) {
-      Value *Negate = IRB.CreateXor(
-          ConstantInt::getTrue(F.getContext()), Cond);
-      MergedCondition = IRB.CreateAnd(MergedCondition, Negate);
-    }
+    auto *ICmp = dyn_cast<ICmpInst>(Cond);
+    if (!ICmp ||
+        !negateICmpIfUsedByBranchOrSelectOnly(ICmp, BranchOrSelect, Scope))
+      Cond = IRB.CreateXor(ConstantInt::getTrue(F.getContext()), Cond);
   }
+
+  MergedCondition = IRB.CreateAnd(MergedCondition, Cond);
 }
 
 void CHR::transformScopes(SmallVectorImpl<CHRScope *> &CHRScopes) {
