@@ -201,6 +201,27 @@ void g(int k) {}
 #pragma clang diagnostic pop
 #pragma intrinsic(asdf) // expected-warning {{'asdf' is not a recognized builtin; consider including <intrin.h>}}
 
+// Test pragma function
+#pragma function(memset)                 // no-warning
+#pragma function(memcpy, strlen, strlen) // no-warning
+#pragma function()                       // no-warning
+#pragma function(asdf)                   // expected-warning {{'asdf' is not a recognized builtin; consider including <intrin.h>}}
+#pragma function(main)                   // expected-warning {{'main' is not a recognized builtin; consider including <intrin.h>}}
+#pragma function(                        // expected-warning {{missing ')' after}}
+#pragma function(int)                    // expected-warning {{missing ')' after}}
+#pragma function(strcmp) asdf            // expected-warning {{extra tokens at end}}
+
+#define __INTRIN_H       // there should be no notes after defining __INTRIN_H
+#pragma function(asdf)   // expected-warning-re {{'asdf' is not a recognized builtin{{$}}}}
+#pragma function(memset) // no-warning
+#undef __INTRIN_H
+#pragma function(asdf) // expected-warning {{'asdf' is not a recognized builtin; consider including <intrin.h>}}
+
+// MSVC accepts this, but we decide to reject it based on the MS docs saying the pragma must appear at the global level
+void pragma_function_foo() {
+#pragma function(memset) // expected-error {{'#pragma function' can only appear at file scope}}
+}
+
 #pragma optimize          // expected-warning{{missing '(' after '#pragma optimize'}}
 #pragma optimize(         // expected-warning{{expected string literal in '#pragma optimize'}}
 #pragma optimize(a        // expected-warning{{expected string literal in '#pragma optimize'}}
