@@ -419,7 +419,7 @@ void BinaryFunction::print(raw_ostream &OS, std::string Annotation,
   if (AllNames.size() > 1) {
     OS << "\n  All names   : ";
     const char *Sep = "";
-    for (const StringRef Name : AllNames) {
+    for (const StringRef &Name : AllNames) {
       OS << Sep << Name;
       Sep = "\n                ";
     }

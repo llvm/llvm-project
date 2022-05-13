@@ -219,7 +219,7 @@ class RewriteInstanceDiff {
       const BinaryFunction &Function = BFI.second;
       const double Score = getNormalizedScore(Function, RI1);
       LargestBin1.insert(std::make_pair<>(Score, &Function));
-      for (const StringRef Name : Function.getNames()) {
+      for (const StringRef &Name : Function.getNames()) {
         if (Optional<StringRef> OptionalLTOName = getLTOCommonName(Name))
           LTOName = *OptionalLTOName;
         NameLookup[Name] = &Function;
@@ -239,7 +239,7 @@ class RewriteInstanceDiff {
       const BinaryFunction &Function = BFI.second;
       const double Score = getNormalizedScore(Function, RI2);
       LargestBin2.insert(std::make_pair<>(Score, &Function));
-      for (const StringRef Name : Function.getNames()) {
+      for (const StringRef &Name : Function.getNames()) {
         if (Optional<StringRef> OptionalLTOName = getLTOCommonName(Name))
           LTOName = *OptionalLTOName;
       }
@@ -261,7 +261,7 @@ class RewriteInstanceDiff {
       const BinaryFunction &Function2 = BFI2.second;
       StringRef LTOName;
       bool Match = false;
-      for (const StringRef Name : Function2.getNames()) {
+      for (const StringRef &Name : Function2.getNames()) {
         auto Iter = NameLookup.find(Name);
         if (Optional<StringRef> OptionalLTOName = getLTOCommonName(Name))
           LTOName = *OptionalLTOName;
