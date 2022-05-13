@@ -235,6 +235,12 @@ def binop_left_undef_to_zero: GICombineRule<
          [{ return Helper.matchOperandIsUndef(*${root}, 1); }]),
   (apply [{ Helper.replaceInstWithConstant(*${root}, 0); }])>;
 
+def binop_right_undef_to_undef: GICombineRule<
+  (defs root:$root),
+  (match (wip_match_opcode G_SHL, G_ASHR, G_LSHR):$root,
+         [{ return Helper.matchOperandIsUndef(*${root}, 2); }]),
+  (apply [{ Helper.replaceInstWithUndef(*${root}); }])>;
+
 // Instructions where if any source operand is undef, the instruction can be
 // replaced with undef.
 def propagate_undef_any_op: GICombineRule<
@@ -889,6 +895,7 @@ def combine_fsub_fpext_fneg_fmul_to_fmad_or_fma: GICombineRule<
 def undef_combines : GICombineGroup<[undef_to_fp_zero, undef_to_int_zero,
                                      undef_to_negative_one,
                                      binop_left_undef_to_zero,
+                                     binop_right_undef_to_undef,
                                      propagate_undef_any_op,
                                      propagate_undef_all_ops,
                                      propagate_undef_shuffle_mask,
