@@ -130,7 +130,8 @@ parseCommonStructuredOpParts(OpAsmParser &parser, OperationState &result,
   SmallVector<OpAsmParser::UnresolvedOperand, 4> inputsOperands,
       outputsOperands;
 
-  parser.parseOptionalAttrDict(result.attributes);
+  if (parser.parseOptionalAttrDict(result.attributes))
+    return failure();
 
   if (succeeded(parser.parseOptionalKeyword("ins"))) {
     if (parser.parseLParen())
