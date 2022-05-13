@@ -17,7 +17,7 @@ void foo() { // expected-warning {{a function declaration without a prototype is
   // FIXME: this should say "a block declaration" instead, but block literal
   // expressions do not track their full declarator information, so we don't
   // know it's a block when diagnosing.
-  void (^block2)(void) = ^void() { // expected-warning {{a function declaration without a prototype is deprecated in all versions of C}}
+  void (^block2)(void) = ^void() {
   };
   void (^block3)(void) = ^ { // no warning
   };
