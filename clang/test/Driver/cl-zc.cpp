@@ -47,7 +47,7 @@
 // RUN: %clang_cl /c -### /Zc:wchar_t -- %s 2>&1 | FileCheck -check-prefix=WCHAR_T-ON %s
 // WCHAR_T-ON-NOT: argument unused during compilation
 // RUN: %clang_cl /c -### /Zc:wchar_t- -- %s 2>&1 | FileCheck -check-prefix=WCHAR_T-OFF %s
-// WCHAR_T-OFF: argument unused during compilation
+// WCHAR_T-OFF: "-fno-wchar"
 
 // RUN: %clang_cl /c -### /Zc:auto -- %s 2>&1 | FileCheck -check-prefix=AUTO-ON %s
 // AUTO-ON-NOT: argument unused during compilation

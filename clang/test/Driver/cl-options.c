@@ -404,7 +404,6 @@
 // RUN:    /Zc:inline \
 // RUN:    /Zc:rvalueCast \
 // RUN:    /Zc:ternary \
-// RUN:    /Zc:wchar_t \
 // RUN:    /ZH:MD5 \
 // RUN:    /ZH:SHA1 \
 // RUN:    /ZH:SHA_256 \
