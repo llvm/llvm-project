@@ -17,7 +17,7 @@
 
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
 
-if ! git diff --name-only HEAD~1 | grep -q -E "libcxx/|libcxxabi/|libunwind/|runtimes/|cmake/"; then
+if ! git diff --name-only HEAD~1 | grep -q -E "^libcxx/|^libcxxabi/|^libunwind/|^runtimes/|^cmake/"; then
   # libcxx/, libcxxabi/, libunwind/, runtimes/ or cmake/ are not affected
   exit 0
 fi

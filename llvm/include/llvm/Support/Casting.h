@@ -209,11 +209,19 @@ template <class To, class From, class SimpleFrom> struct cast_convert_val {
 };
 
 template <class To, class FromTy> struct cast_convert_val<To, FromTy, FromTy> {
-  // This _is_ a simple type, just cast it.
+  // If it's a reference, switch to a pointer to do the cast and then deref it.
   static typename cast_retty<To, FromTy>::ret_type doit(const FromTy &Val) {
-    typename cast_retty<To, FromTy>::ret_type Res2 =
-        (typename cast_retty<To, FromTy>::ret_type) const_cast<FromTy &>(Val);
-    return Res2;
+    return *(std::remove_reference_t<typename cast_retty<To, FromTy>::ret_type>
+                 *)&const_cast<FromTy &>(Val);
+  }
+};
+
+template <class To, class FromTy>
+struct cast_convert_val<To, FromTy *, FromTy *> {
+  // If it's a pointer, we can use c-style casting directly.
+  static typename cast_retty<To, FromTy *>::ret_type doit(const FromTy *Val) {
+    return (typename cast_retty<To, FromTy *>::ret_type) const_cast<FromTy *>(
+        Val);
   }
 };
 

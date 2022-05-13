@@ -16,7 +16,7 @@ EMPTY: '{{.*}}.empty': The file was not recognized as a valid object file
 
 # Test that unrecognised files in archives are ignored.
 RUN: rm -f %t.a
-RUN: llvm-ar --format=gnu rc %t.a %t.empty
+RUN: llvm-ar rc %t.a %t.empty
 RUN: llvm-readobj --all %t.a 2>&1 | FileCheck --check-prefix=NO-OUTPUT --allow-empty %s
 NO-OUTPUT-NOT: {{.}}
 

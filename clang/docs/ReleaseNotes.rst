@@ -225,6 +225,13 @@ Improvements to Clang's diagnostics
 - Clang now checks for stack resource exhaustion when recursively parsing
   declarators in order to give a diagnostic before we run out of stack space.
   This fixes `Issue 51642 <https://github.com/llvm/llvm-project/issues/51642>`_.
+- Unknown preprocessor directives in a skipped conditional block are now given
+  a typo correction suggestion if the given directive is sufficiently similar
+  to another preprocessor conditional directive. For example, if ``#esle``
+  appears in a skipped block, we will warn about the unknown directive and
+  suggest ``#else`` as an alternative. ``#elifdef`` and ``#elifndef`` are only
+  suggested when in C2x or C++2b mode. Fixes
+  `Issue 51598 <https://github.com/llvm/llvm-project/issues/51598>`_.
 
 Non-comprehensive list of changes in this release
 -------------------------------------------------
@@ -271,6 +278,9 @@ Removed Compiler Flags
 
 New Pragmas in Clang
 --------------------
+- Added support for MSVC's ``#pragma function``, which tells the compiler to
+  generate calls to functions listed in the pragma instead of using the
+  builtins.
 
 - ...
 
@@ -347,6 +357,8 @@ C++ Language Changes in Clang
   template parameter, to conform to the Itanium C++ ABI and be compatible with
   GCC. This breaks binary compatibility with code compiled with earlier versions
   of clang; use the ``-fclang-abi-compat=14`` option to get the old mangling.
+- Preprocessor character literals with a ``u8`` prefix are now correctly treated as
+  unsigned character literals. This fixes `Issue 54886 <https://github.com/llvm/llvm-project/issues/54886>`_.
 
 C++20 Feature Support
 ^^^^^^^^^^^^^^^^^^^^^
@@ -433,7 +445,10 @@ Build System Changes
 AST Matchers
 ------------
 
-- Expanded ``isInline`` narrowing matcher to support c++17 inline variables.
+- Expanded ``isInline`` narrowing matcher to support C++17 inline variables.
+
+- Added ``forEachTemplateArgument`` matcher which creates a match every
+  time a ``templateArgument`` matches the matcher supplied to it.
 
 clang-format
 ------------

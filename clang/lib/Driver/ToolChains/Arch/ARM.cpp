@@ -320,6 +320,7 @@ arm::FloatABI arm::getDefaultFloatABI(const llvm::Triple &Triple) {
   case llvm::Triple::MacOSX:
   case llvm::Triple::IOS:
   case llvm::Triple::TvOS:
+  case llvm::Triple::DriverKit:
     // Darwin defaults to "softfp" for v6 and v7.
     if (Triple.isWatchABI())
       return FloatABI::Hard;
@@ -731,6 +732,16 @@ fp16_fml_fallthrough:
       Features.push_back("+fix-cmse-cve-2021-35465");
     else
       Features.push_back("-fix-cmse-cve-2021-35465");
+  }
+
+  // This also handles the -m(no-)fix-cortex-a72-1655431 arguments via aliases.
+  if (Arg *A = Args.getLastArg(options::OPT_mfix_cortex_a57_aes_1742098,
+                               options::OPT_mno_fix_cortex_a57_aes_1742098)) {
+    if (A->getOption().matches(options::OPT_mfix_cortex_a57_aes_1742098)) {
+      Features.push_back("+fix-cortex-a57-aes-1742098");
+    } else {
+      Features.push_back("-fix-cortex-a57-aes-1742098");
+    }
   }
 
   // Look for the last occurrence of -mlong-calls or -mno-long-calls. If
