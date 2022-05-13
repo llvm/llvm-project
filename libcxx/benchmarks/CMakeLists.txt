@@ -3,12 +3,6 @@ if (CMAKE_VERSION VERSION_LESS 3.17)
   return()
 endif()
 
-if (LIBCXX_STANDALONE_BUILD)
-  message(WARNING "The libc++ benchmarks are not available in a standalone build. Please migrate to an official build "
-                  "as documented in https://libcxx.llvm.org/BuildingLibcxx.html.")
-  return()
-endif()
-
 include(ExternalProject)
 include(CheckCXXCompilerFlag)
 
