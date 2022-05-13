@@ -913,14 +913,14 @@ parseGlobalOpTypeAndInitialValue(OpAsmParser &parser, TypeAttr &typeAttr,
   // Parse constant with initializer, examples:
   //  cir.global @y = 3.400000e+00 : f32
   //  cir.global @rgb  = #cir.cst_array<[...] : !cir.array<i8 x 3>>
-  Attribute attr;
-  if (parseConstantValue(parser, attr).failed())
+  if (parseConstantValue(parser, initialValueAttr).failed())
     return failure();
 
-  assert(attr.isa<mlir::TypedAttr>() &&
+  assert(initialValueAttr.isa<mlir::TypedAttr>() &&
          "Non-typed attrs shouldn't appear here.");
-  initialValueAttr = attr.cast<mlir::TypedAttr>();
-  typeAttr = TypeAttr::get(attr.cast<mlir::TypedAttr>().getType());
+  auto typedAttr = initialValueAttr.cast<mlir::TypedAttr>();
+
+  typeAttr = TypeAttr::get(typedAttr.getType());
 
   return success();
 }
@@ -1078,8 +1078,8 @@ LogicalResult mlir::cir::CstArrayAttr::verify(
   // Parse literal '>'
   if (parser.parseGreater())
     return {};
-  return parser.getChecked<CstArrayAttr>(
-      loc, parser.getContext(), resultTy.value(), resultVal.value());
+  return parser.getChecked<CstArrayAttr>(loc, parser.getContext(),
+                                         resultTy.value(), resultVal.value());
 }
 
 void CstArrayAttr::print(::mlir::AsmPrinter &printer) const {

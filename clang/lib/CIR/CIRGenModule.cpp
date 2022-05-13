@@ -812,6 +812,60 @@ void CIRGenModule::buildGlobalDefinition(GlobalDecl GD, mlir::Operation *Op) {
   llvm_unreachable("Invalid argument to buildGlobalDefinition()");
 }
 
+mlir::Attribute
+CIRGenModule::getConstantArrayFromStringLiteral(const StringLiteral *E) {
+  assert(!E->getType()->isPointerType() && "Strings are always arrays");
+
+  // Don't emit it as the address of the string, emit the string data itself
+  // as an inline array.
+  if (E->getCharByteWidth() == 1) {
+    SmallString<64> Str(E->getString());
+
+    // Resize the string to the right size, which is indicated by its type.
+    const ConstantArrayType *CAT = astCtx.getAsConstantArrayType(E->getType());
+    auto finalSize = CAT->getSize().getZExtValue();
+    Str.resize(finalSize);
+
+    auto eltTy = getTypes().ConvertType(CAT->getElementType());
+    auto cstArray = mlir::cir::CstArrayAttr::get(
+        mlir::cir::ArrayType::get(builder.getContext(), eltTy, finalSize),
+        mlir::StringAttr::get(builder.getContext(), Str));
+    cstArray.dump();
+    return cstArray;
+  }
+
+  assert(0 && "not implemented");
+  return {};
+}
+
+/// Return a pointer to a constant array for the given string literal.
+ConstantAddress
+CIRGenModule::getAddrOfConstantStringFromLiteral(const StringLiteral *S,
+                                                 StringRef Name) {
+  mlir::Attribute C = getConstantArrayFromStringLiteral(S);
+  mlir::cir::GlobalOp Entry;
+  if (!getLangOpts().WritableStrings) {
+    if (ConstantStringMap.count(C))
+      assert(0 && "not implemented");
+  }
+
+  SmallString<256> MangledNameBuffer;
+  StringRef GlobalVariableName;
+
+  // Mangle the string literal if that's how the ABI merges duplicate strings.
+  // Don't do it if they are writable, since we don't want writes in one TU to
+  // affect strings in another.
+  if (getCXXABI().getMangleContext().shouldMangleStringLiteral(S) &&
+      !getLangOpts().WritableStrings) {
+    assert(0 && "not implemented");
+  } else {
+    GlobalVariableName = Name;
+  }
+
+  assert(0 && "not implemented");
+  return ConstantAddress::invalid();
+}
+
 // Emit code for a single top level declaration.
 void CIRGenModule::buildTopLevelDecl(Decl *decl) {
   // Ignore dependent declarations
