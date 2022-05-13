@@ -62,6 +62,12 @@ int Test_InlineCommandComment;
 // CHECK:      VarDecl{{.*}}Test_InlineCommandComment
 // CHECK:        InlineCommandComment{{.*}} Name="c" RenderMonospaced Arg[0]="Aaa"
 
+/// \n Aaa
+int Test_InlineCommandComment_NoArgs;
+// CHECK:      VarDecl{{.*}}Test_InlineCommandComment_NoArgs
+// CHECK:        InlineCommandComment{{.*}} Name="n" RenderNormal
+// CHECK-NEXT:   TextComment{{.*}} Text=" Aaa"
+
 /// \anchor Aaa
 int Test_InlineCommandCommentAnchor;
 // CHECK:      VarDecl{{.*}}Test_InlineCommandComment
