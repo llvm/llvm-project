@@ -15,6 +15,22 @@ namespace clang {
 namespace tidy {
 namespace modernize {
 
+namespace detail {
+class IncludeModernizePPCallbacks;
+class ExternCRefutationVisitor;
+struct IncludeMarker {
+  std::string Replacement;
+  StringRef FileName;
+  SourceRange ReplacementRange;
+  std::pair<FileID, unsigned> DecomposedDiagLoc;
+};
+bool operator<(const IncludeMarker &LHS, const IncludeMarker &RHS);
+bool operator<(const IncludeMarker &LHS,
+               const std::pair<FileID, unsigned> &RHS);
+bool operator<(const std::pair<FileID, unsigned> &LHS,
+               const IncludeMarker &RHS);
+} // namespace detail
+
 /// This check replaces deprecated C library headers with their C++ STL
 /// alternatives.
 ///
@@ -41,6 +57,14 @@ public:
   }
   void registerPPCallbacks(const SourceManager &SM, Preprocessor *PP,
                            Preprocessor *ModuleExpanderPP) override;
+  void registerMatchers(ast_matchers::MatchFinder *Finder) override;
+  void onEndOfTranslationUnit() override;
+  void check(const ast_matchers::MatchFinder::MatchResult &Result) override;
+
+private:
+  friend class detail::IncludeModernizePPCallbacks;
+  friend class detail::ExternCRefutationVisitor;
+  std::vector<detail::IncludeMarker> IncludesToBeProcessed;
 };
 
 } // namespace modernize
