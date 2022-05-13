@@ -10,6 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "Address.h"
 #include "CIRGenCstEmitter.h"
 #include "CIRGenFunction.h"
 #include "CIRGenModule.h"
