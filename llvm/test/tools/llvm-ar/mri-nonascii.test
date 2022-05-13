@@ -1,4 +1,3 @@
-XFAIL: system-aix
 ﻿# Test non-ascii archive members
 
 RUN: rm -rf %t && mkdir -p %t/extracted

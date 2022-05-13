@@ -430,8 +430,10 @@ def ext_pp_opencl_variadic_macros : Extension<
 def ext_pp_gnu_line_directive : Extension<
   "this style of line directive is a GNU extension">,
   InGroup<GNULineMarker>;
-
-def err_pp_invalid_directive : Error<"invalid preprocessing directive">;
+def err_pp_invalid_directive : Error<
+  "invalid preprocessing directive%select{|, did you mean '#%1'?}0">;
+def warn_pp_invalid_directive : Warning<
+  err_pp_invalid_directive.Text>, InGroup<DiagGroup<"unknown-directives">>;
 def err_pp_directive_required : Error<
   "%0 must be used within a preprocessing directive">;
 def err_pp_file_not_found : Error<"'%0' file not found">, DefaultFatal;

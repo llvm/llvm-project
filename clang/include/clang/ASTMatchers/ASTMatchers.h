@@ -5011,6 +5011,49 @@ AST_POLYMORPHIC_MATCHER_P(parameterCountIs,
   return Node.getNumParams() == N;
 }
 
+/// Matches classTemplateSpecialization, templateSpecializationType and
+/// functionDecl nodes where the template argument matches the inner matcher.
+/// This matcher may produce multiple matches.
+///
+/// Given
+/// \code
+///   template <typename T, unsigned N, unsigned M>
+///   struct Matrix {};
+///
+///   constexpr unsigned R = 2;
+///   Matrix<int, R * 2, R * 4> M;
+///
+///   template <typename T, typename U>
+///   void f(T&& t, U&& u) {}
+///
+///   bool B = false;
+///   f(R, B);
+/// \endcode
+/// templateSpecializationType(forEachTemplateArgument(isExpr(expr())))
+///   matches twice, with expr() matching 'R * 2' and 'R * 4'
+/// functionDecl(forEachTemplateArgument(refersToType(builtinType())))
+///   matches the specialization f<unsigned, bool> twice, for 'unsigned'
+///   and 'bool'
+AST_POLYMORPHIC_MATCHER_P(
+    forEachTemplateArgument,
+    AST_POLYMORPHIC_SUPPORTED_TYPES(ClassTemplateSpecializationDecl,
+                                    TemplateSpecializationType, FunctionDecl),
+    clang::ast_matchers::internal::Matcher<TemplateArgument>, InnerMatcher) {
+  ArrayRef<TemplateArgument> TemplateArgs =
+      clang::ast_matchers::internal::getTemplateSpecializationArgs(Node);
+  clang::ast_matchers::internal::BoundNodesTreeBuilder Result;
+  bool Matched = false;
+  for (const auto &Arg : TemplateArgs) {
+    clang::ast_matchers::internal::BoundNodesTreeBuilder ArgBuilder(*Builder);
+    if (InnerMatcher.matches(Arg, Finder, &ArgBuilder)) {
+      Matched = true;
+      Result.addMatch(ArgBuilder);
+    }
+  }
+  *Builder = std::move(Result);
+  return Matched;
+}
+
 /// Matches \c FunctionDecls that have a noreturn attribute.
 ///
 /// Given

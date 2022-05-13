@@ -755,6 +755,9 @@ public:
   /// optimizations are currently "on", this is set to an invalid location.
   SourceLocation OptimizeOffPragmaLocation;
 
+  /// Set of no-builtin functions listed by \#pragma function.
+  llvm::SmallSetVector<StringRef, 4> MSFunctionNoBuiltins;
+
   /// Flag indicating if Sema is building a recovery call expression.
   ///
   /// This flag is used to avoid building recovery call expressions
@@ -10322,6 +10325,11 @@ public:
   /// Called on well formed \#pragma clang optimize.
   void ActOnPragmaOptimize(bool On, SourceLocation PragmaLoc);
 
+  /// Call on well formed \#pragma function.
+  void
+  ActOnPragmaMSFunction(SourceLocation Loc,
+                        const llvm::SmallVectorImpl<StringRef> &NoBuiltins);
+
   /// Get the location for the currently active "\#pragma clang optimize
   /// off". If this location is invalid, then the state of the pragma is "on".
   SourceLocation getOptimizeOffPragmaLocation() const {
@@ -10337,6 +10345,11 @@ public:
   /// are no conflicts; Loc represents the location causing the 'optnone'
   /// attribute to be added (usually because of a pragma).
   void AddOptnoneAttributeIfNoConflicts(FunctionDecl *FD, SourceLocation Loc);
+
+  /// Only called on function definitions; if there is a pragma in scope
+  /// with the effect of a range-based no_builtin, consider marking the function
+  /// with attribute no_builtin.
+  void AddImplicitMSFunctionNoBuiltinAttr(FunctionDecl *FD);
 
   /// AddAlignedAttr - Adds an aligned attribute to a particular declaration.
   void AddAlignedAttr(Decl *D, const AttributeCommonInfo &CI, Expr *E,

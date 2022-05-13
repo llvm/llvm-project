@@ -38,6 +38,8 @@
 // RUN: %clang -target armv7k-apple-watchos2.0 -### %s 2>&1 | FileCheck %s -check-prefix=SSP_WATCHOS
 // RUN: %clang -ffreestanding -target armv7k-apple-watchos2.0 -### %s 2>&1 | FileCheck %s -check-prefix=SSP_WATCHOS
 // SSP_WATCHOS: "-stack-protector" "1"
+// RUN: %clang -target x86_64-apple-driverkit19.0 -### %s 2>&1 | FileCheck %s -check-prefix=SSP_DRIVERKIT
+// SSP_DRIVERKIT: "-stack-protector" "1"
 // RUN: %clang -target arm64-apple-ios8.0.0 -### %s 2>&1 | FileCheck %s -check-prefix=SSP_IOS
 // RUN: %clang -ffreestanding -target arm64-apple-ios8.0.0 -### %s 2>&1 | FileCheck %s -check-prefix=SSP_IOS
 // SSP_IOS: "-stack-protector" "1"
