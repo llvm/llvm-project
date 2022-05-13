@@ -40,6 +40,7 @@ class ExprInspectionChecker
   void analyzerNumTimesReached(const CallExpr *CE, CheckerContext &C) const;
   void analyzerCrash(const CallExpr *CE, CheckerContext &C) const;
   void analyzerWarnOnDeadSymbol(const CallExpr *CE, CheckerContext &C) const;
+  void analyzerDumpSValType(const CallExpr *CE, CheckerContext &C) const;
   void analyzerDump(const CallExpr *CE, CheckerContext &C) const;
   void analyzerExplain(const CallExpr *CE, CheckerContext &C) const;
   void analyzerPrintState(const CallExpr *CE, CheckerContext &C) const;
@@ -98,6 +99,8 @@ bool ExprInspectionChecker::evalCall(const CallEvent &Call,
                 &ExprInspectionChecker::analyzerDumpExtent)
           .Case("clang_analyzer_dumpElementCount",
                 &ExprInspectionChecker::analyzerDumpElementCount)
+          .StartsWith("clang_analyzer_dumpSvalType",
+                      &ExprInspectionChecker::analyzerDumpSValType)
           .StartsWith("clang_analyzer_dump",
                       &ExprInspectionChecker::analyzerDump)
           .Case("clang_analyzer_getExtent",
@@ -253,6 +256,16 @@ void ExprInspectionChecker::analyzerExplain(const CallExpr *CE,
   SVal V = C.getSVal(Arg);
   SValExplainer Ex(C.getASTContext());
   reportBug(Ex.Visit(V), C);
+}
+
+void ExprInspectionChecker::analyzerDumpSValType(const CallExpr *CE,
+                                                 CheckerContext &C) const {
+  const Expr *Arg = getArgExpr(CE, C);
+  if (!Arg)
+    return;
+
+  QualType Ty = C.getSVal(Arg).getType(C.getASTContext());
+  reportBug(Ty.getAsString(), C);
 }
 
 void ExprInspectionChecker::analyzerDump(const CallExpr *CE,
