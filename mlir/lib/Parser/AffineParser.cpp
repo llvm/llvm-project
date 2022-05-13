@@ -518,7 +518,7 @@ ParseResult AffineParser::parseAffineMapOrIntegerSetInline(AffineMap &map,
   if (consumeIf(Token::arrow))
     return parseAffineMapRange(numDims, numSymbols, map);
 
-  if (parseToken(Token::colon, "expected '->' or '['"))
+  if (parseToken(Token::colon, "expected '->' or ':'"))
     return failure();
   return parseIntegerSetConstraints(numDims, numSymbols, set);
 }
