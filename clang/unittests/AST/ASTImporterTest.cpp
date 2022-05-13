@@ -2658,10 +2658,7 @@ TEST_P(ImportFriendFunctions, Lookup) {
       getTuDecl("struct X { friend void f(); };", Lang_CXX03, "input0.cc");
   auto *FromD = FirstDeclMatcher<FunctionDecl>().match(FromTU, FunctionPattern);
   ASSERT_TRUE(FromD->isInIdentifierNamespace(Decl::IDNS_OrdinaryFriend));
-  // Before CXX20, MSVC treats friend function declarations as function
-  // declarations
-  ASSERT_EQ(FromTU->getLangOpts().MSVCCompat,
-            FromD->isInIdentifierNamespace(Decl::IDNS_Ordinary));
+  ASSERT_FALSE(FromD->isInIdentifierNamespace(Decl::IDNS_Ordinary));
   {
     auto FromName = FromD->getDeclName();
     auto *Class = FirstDeclMatcher<CXXRecordDecl>().match(FromTU, ClassPattern);
@@ -2705,10 +2702,7 @@ TEST_P(ImportFriendFunctions, LookupWithProtoAfter) {
   auto *FromNormal =
       LastDeclMatcher<FunctionDecl>().match(FromTU, FunctionPattern);
   ASSERT_TRUE(FromFriend->isInIdentifierNamespace(Decl::IDNS_OrdinaryFriend));
-  // Before CXX20, MSVC treats friend function declarations as function
-  // declarations
-  ASSERT_EQ(FromTU->getLangOpts().MSVCCompat,
-            FromFriend->isInIdentifierNamespace(Decl::IDNS_Ordinary));
+  ASSERT_FALSE(FromFriend->isInIdentifierNamespace(Decl::IDNS_Ordinary));
   ASSERT_FALSE(FromNormal->isInIdentifierNamespace(Decl::IDNS_OrdinaryFriend));
   ASSERT_TRUE(FromNormal->isInIdentifierNamespace(Decl::IDNS_Ordinary));
 
@@ -2799,10 +2793,7 @@ TEST_P(ImportFriendFunctions, ImportFriendChangesLookup) {
 
   ASSERT_TRUE(FromNormalF->isInIdentifierNamespace(Decl::IDNS_Ordinary));
   ASSERT_FALSE(FromNormalF->isInIdentifierNamespace(Decl::IDNS_OrdinaryFriend));
-  // Before CXX20, MSVC treats friend function declarations as function
-  // declarations
-  ASSERT_EQ(FromFriendTU->getLangOpts().MSVCCompat,
-            FromFriendF->isInIdentifierNamespace(Decl::IDNS_Ordinary));
+  ASSERT_FALSE(FromFriendF->isInIdentifierNamespace(Decl::IDNS_Ordinary));
   ASSERT_TRUE(FromFriendF->isInIdentifierNamespace(Decl::IDNS_OrdinaryFriend));
   auto LookupRes = FromNormalTU->noload_lookup(FromNormalName);
   ASSERT_TRUE(LookupRes.isSingleResult());
