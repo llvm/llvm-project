@@ -737,11 +737,11 @@ static void inversePermutation(ArrayRef<unsigned> Indices,
 
 /// \returns inserting index of InsertElement or InsertValue instruction,
 /// using Offset as base offset for index.
-static Optional<unsigned> getInsertIndex(Value *InsertInst,
+static Optional<unsigned> getInsertIndex(const Value *InsertInst,
                                          unsigned Offset = 0) {
   int Index = Offset;
-  if (auto *IE = dyn_cast<InsertElementInst>(InsertInst)) {
-    if (auto *CI = dyn_cast<ConstantInt>(IE->getOperand(2))) {
+  if (const auto *IE = dyn_cast<InsertElementInst>(InsertInst)) {
+    if (const auto *CI = dyn_cast<ConstantInt>(IE->getOperand(2))) {
       auto *VT = cast<FixedVectorType>(IE->getType());
       if (CI->getValue().uge(VT->getNumElements()))
         return None;
@@ -752,13 +752,13 @@ static Optional<unsigned> getInsertIndex(Value *InsertInst,
     return None;
   }
 
-  auto *IV = cast<InsertValueInst>(InsertInst);
+  const auto *IV = cast<InsertValueInst>(InsertInst);
   Type *CurrentType = IV->getType();
   for (unsigned I : IV->indices()) {
-    if (auto *ST = dyn_cast<StructType>(CurrentType)) {
+    if (const auto *ST = dyn_cast<StructType>(CurrentType)) {
       Index *= ST->getNumElements();
       CurrentType = ST->getElementType(I);
-    } else if (auto *AT = dyn_cast<ArrayType>(CurrentType)) {
+    } else if (const auto *AT = dyn_cast<ArrayType>(CurrentType)) {
       Index *= AT->getNumElements();
       CurrentType = AT->getElementType();
     } else {
@@ -6556,6 +6556,8 @@ static bool areTwoInsertFromSameBuildVector(InsertElementInst *VU,
     return false;
   auto *IE1 = VU;
   auto *IE2 = V;
+  unsigned Idx1 = *getInsertIndex(IE1);
+  unsigned Idx2 = *getInsertIndex(IE2);
   // Go through the vector operand of insertelement instructions trying to find
   // either VU as the original vector for IE2 or V as the original vector for
   // IE1.
@@ -6563,13 +6565,15 @@ static bool areTwoInsertFromSameBuildVector(InsertElementInst *VU,
     if (IE2 == VU || IE1 == V)
       return true;
     if (IE1) {
-      if (IE1 != VU && !IE1->hasOneUse())
+      if ((IE1 != VU && !IE1->hasOneUse()) ||
+          getInsertIndex(IE1).getValueOr(Idx2) == Idx2)
         IE1 = nullptr;
       else
         IE1 = dyn_cast<InsertElementInst>(IE1->getOperand(0));
     }
     if (IE2) {
-      if (IE2 != V && !IE2->hasOneUse())
+      if ((IE2 != V && !IE2->hasOneUse()) ||
+          getInsertIndex(IE2).getValueOr(Idx1) == Idx1)
         IE2 = nullptr;
       else
         IE2 = dyn_cast<InsertElementInst>(IE2->getOperand(0));
@@ -6586,6 +6590,8 @@ static bool isFirstInsertElement(const InsertElementInst *IE1,
   const auto *I2 = IE2;
   const InsertElementInst *PrevI1;
   const InsertElementInst *PrevI2;
+  unsigned Idx1 = *getInsertIndex(IE1);
+  unsigned Idx2 = *getInsertIndex(IE2);
   do {
     if (I2 == IE1)
       return true;
@@ -6593,9 +6599,11 @@ static bool isFirstInsertElement(const InsertElementInst *IE1,
       return false;
     PrevI1 = I1;
     PrevI2 = I2;
-    if (I1 && (I1 == IE1 || I1->hasOneUse()))
+    if (I1 && (I1 == IE1 || I1->hasOneUse()) &&
+        getInsertIndex(I1).getValueOr(Idx2) != Idx2)
       I1 = dyn_cast<InsertElementInst>(I1->getOperand(0));
-    if (I2 && (I2 == IE2 || I2->hasOneUse()))
+    if (I2 && ((I2 == IE2 || I2->hasOneUse())) &&
+        getInsertIndex(I2).getValueOr(Idx1) != Idx1)
       I2 = dyn_cast<InsertElementInst>(I2->getOperand(0));
   } while ((I1 && PrevI1 != I1) || (I2 && PrevI2 != I2));
   llvm_unreachable("Two different buildvectors not expected.");
@@ -6764,7 +6772,9 @@ InstructionCost BoUpSLP::getTreeCost(ArrayRef<Value *> VectorizedVals) {
             // Find the insertvector, vectorized in tree, if any.
             Value *Base = VU;
             while (auto *IEBase = dyn_cast<InsertElementInst>(Base)) {
-              if (IEBase != EU.User && !IEBase->hasOneUse())
+              if (IEBase != EU.User &&
+                  (!IEBase->hasOneUse() ||
+                   getInsertIndex(IEBase).getValueOr(*InsertIdx) == *InsertIdx))
                 break;
               // Build the mask for the vectorized insertelement instructions.
               if (const TreeEntry *E = getTreeEntry(IEBase)) {
