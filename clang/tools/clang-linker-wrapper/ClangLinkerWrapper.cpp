@@ -162,15 +162,13 @@ static constexpr unsigned FatbinaryOffset = 0x50;
 /// Information for a device offloading file extracted from the host.
 struct DeviceFile {
   DeviceFile(OffloadKind Kind, StringRef TheTriple, StringRef Arch,
-             StringRef Filename, bool IsLibrary = false)
-      : Kind(Kind), TheTriple(TheTriple), Arch(Arch), Filename(Filename),
-        IsLibrary(IsLibrary) {}
+             StringRef Filename)
+      : Kind(Kind), TheTriple(TheTriple), Arch(Arch), Filename(Filename) {}
 
   OffloadKind Kind;
   std::string TheTriple;
   std::string Arch;
   std::string Filename;
-  bool IsLibrary;
 };
 
 namespace llvm {
@@ -217,8 +215,7 @@ template <> struct DenseMapInfo<DeviceFile> {
 namespace {
 
 Error extractFromBuffer(std::unique_ptr<MemoryBuffer> Buffer,
-                        SmallVectorImpl<DeviceFile> &DeviceFiles,
-                        bool IsLibrary = false);
+                        SmallVectorImpl<DeviceFile> &DeviceFiles);
 
 void printCommands(ArrayRef<StringRef> CmdArgs) {
   if (CmdArgs.empty())
@@ -305,8 +302,7 @@ void PrintVersion(raw_ostream &OS) {
 /// buffer \p Contents. The buffer is expected to contain a valid offloading
 /// binary format.
 Error extractOffloadFiles(StringRef Contents, StringRef Prefix,
-                          SmallVectorImpl<DeviceFile> &DeviceFiles,
-                          bool IsLibrary = false) {
+                          SmallVectorImpl<DeviceFile> &DeviceFiles) {
   uint64_t Offset = 0;
   // There could be multiple offloading binaries stored at this section.
   while (Offset < Contents.size()) {
@@ -343,7 +339,7 @@ Error extractOffloadFiles(StringRef Contents, StringRef Prefix,
       return E;
 
     DeviceFiles.emplace_back(Binary.getOffloadKind(), Binary.getTriple(),
-                             Binary.getArch(), TempFile, IsLibrary);
+                             Binary.getArch(), TempFile);
 
     Offset += Binary.getSize();
   }
@@ -352,8 +348,7 @@ Error extractOffloadFiles(StringRef Contents, StringRef Prefix,
 }
 
 Error extractFromBinary(const ObjectFile &Obj,
-                        SmallVectorImpl<DeviceFile> &DeviceFiles,
-                        bool IsLibrary = false) {
+                        SmallVectorImpl<DeviceFile> &DeviceFiles) {
   StringRef Prefix = sys::path::stem(Obj.getFileName());
 
   // Extract offloading binaries from sections with the name `.llvm.offloading`.
@@ -366,8 +361,7 @@ Error extractFromBinary(const ObjectFile &Obj,
     if (!Contents)
       return Contents.takeError();
 
-    if (Error Err =
-            extractOffloadFiles(*Contents, Prefix, DeviceFiles, IsLibrary))
+    if (Error Err = extractOffloadFiles(*Contents, Prefix, DeviceFiles))
       return Err;
   }
 
@@ -375,8 +369,7 @@ Error extractFromBinary(const ObjectFile &Obj,
 }
 
 Error extractFromBitcode(std::unique_ptr<MemoryBuffer> Buffer,
-                         SmallVectorImpl<DeviceFile> &DeviceFiles,
-                         bool IsLibrary = false) {
+                         SmallVectorImpl<DeviceFile> &DeviceFiles) {
   LLVMContext Context;
   SMDiagnostic Err;
   std::unique_ptr<Module> M = getLazyIRModule(std::move(Buffer), Err, Context);
@@ -399,8 +392,7 @@ Error extractFromBitcode(std::unique_ptr<MemoryBuffer> Buffer,
 
     StringRef Contents = CDS->getAsString();
 
-    if (Error Err =
-            extractOffloadFiles(Contents, Prefix, DeviceFiles, IsLibrary))
+    if (Error Err = extractOffloadFiles(Contents, Prefix, DeviceFiles))
       return Err;
   }
 
@@ -425,8 +417,7 @@ Error extractFromArchive(const Archive &Library,
           ChildBufferOrErr->getBuffer(),
           ChildBufferOrErr->getBufferIdentifier());
 
-    if (Error Err = extractFromBuffer(std::move(ChildBuffer), DeviceFiles,
-                                      /*IsLibrary*/ true))
+    if (Error Err = extractFromBuffer(std::move(ChildBuffer), DeviceFiles))
       return Err;
   }
 
@@ -438,12 +429,11 @@ Error extractFromArchive(const Archive &Library,
 /// Extracts embedded device offloading code from a memory \p Buffer to a list
 /// of \p DeviceFiles.
 Error extractFromBuffer(std::unique_ptr<MemoryBuffer> Buffer,
-                        SmallVectorImpl<DeviceFile> &DeviceFiles,
-                        bool IsLibrary) {
+                        SmallVectorImpl<DeviceFile> &DeviceFiles) {
   file_magic Type = identify_magic(Buffer->getBuffer());
   switch (Type) {
   case file_magic::bitcode:
-    return extractFromBitcode(std::move(Buffer), DeviceFiles, IsLibrary);
+    return extractFromBitcode(std::move(Buffer), DeviceFiles);
   case file_magic::elf_relocatable:
   case file_magic::macho_object:
   case file_magic::coff_object: {
@@ -451,7 +441,7 @@ Error extractFromBuffer(std::unique_ptr<MemoryBuffer> Buffer,
         ObjectFile::createObjectFile(*Buffer, Type);
     if (!ObjFile)
       return ObjFile.takeError();
-    return extractFromBinary(*ObjFile->get(), DeviceFiles, IsLibrary);
+    return extractFromBinary(*ObjFile->get(), DeviceFiles);
   }
   case file_magic::archive: {
     Expected<std::unique_ptr<llvm::object::Archive>> LibFile =
@@ -1023,18 +1013,14 @@ Error linkBitcodeFiles(SmallVectorImpl<std::string> &InputFiles,
 /// Runs the appropriate linking action on all the device files specified in \p
 /// DeviceFiles. The linked device images are returned in \p LinkedImages.
 Error linkDeviceFiles(ArrayRef<DeviceFile> DeviceFiles,
+                      ArrayRef<DeviceFile> LibraryFiles,
                       SmallVectorImpl<DeviceFile> &LinkedImages) {
   // Get the list of inputs and active offload kinds for a specific device.
   DenseMap<DeviceFile, SmallVector<std::string, 4>> LinkerInputMap;
   DenseMap<DeviceFile, DenseSet<OffloadKind>> ActiveOffloadKinds;
-  SmallVector<DeviceFile, 4> LibraryFiles;
   for (auto &File : DeviceFiles) {
-    if (File.IsLibrary) {
-      LibraryFiles.push_back(File);
-    } else {
-      LinkerInputMap[File].push_back(File.Filename);
-      ActiveOffloadKinds[File].insert(File.Kind);
-    }
+    LinkerInputMap[File].push_back(File.Filename);
+    ActiveOffloadKinds[File].insert(File.Kind);
   }
 
   // Static libraries are loaded lazily as-needed, only add them if other files
@@ -1317,20 +1303,26 @@ int main(int argc, const char **argv) {
 
   // Try to extract device code from the linker input.
   SmallVector<DeviceFile, 4> DeviceFiles;
-  for (std::string &Arg : LinkerArgs) {
+  SmallVector<DeviceFile, 4> LibraryFiles;
+  for (StringRef Arg : LinkerArgs) {
     if (Arg == ExecutableName)
       continue;
 
-    // Search for static libraries in the library link path.
-    std::string Filename = Arg;
-    if (Optional<std::string> Library = searchLibrary(Arg, LibraryPaths))
-      Filename = *Library;
-
-    if (sys::fs::exists(Filename) && !sys::fs::is_directory(Filename)) {
+    // Search the inpuot argument for embedded device files if it is a static
+    // library or regular input file.
+    if (Optional<std::string> Library = searchLibrary(Arg, LibraryPaths)) {
       ErrorOr<std::unique_ptr<MemoryBuffer>> BufferOrErr =
-          MemoryBuffer::getFileOrSTDIN(Filename);
+          MemoryBuffer::getFileOrSTDIN(*Library);
       if (std::error_code EC = BufferOrErr.getError())
-        return reportError(createFileError(Filename, EC));
+        return reportError(createFileError(*Library, EC));
+
+      if (Error Err = extractFromBuffer(std::move(*BufferOrErr), LibraryFiles))
+        return reportError(std::move(Err));
+    } else if (sys::fs::exists(Arg) && !sys::fs::is_directory(Arg)) {
+      ErrorOr<std::unique_ptr<MemoryBuffer>> BufferOrErr =
+          MemoryBuffer::getFileOrSTDIN(Arg);
+      if (std::error_code EC = BufferOrErr.getError())
+        return reportError(createFileError(Arg, EC));
 
       if (Error Err = extractFromBuffer(std::move(*BufferOrErr), DeviceFiles))
         return reportError(std::move(Err));
@@ -1343,7 +1335,7 @@ int main(int argc, const char **argv) {
 
   // Link the device images extracted from the linker input.
   SmallVector<DeviceFile, 4> LinkedImages;
-  if (Error Err = linkDeviceFiles(DeviceFiles, LinkedImages))
+  if (Error Err = linkDeviceFiles(DeviceFiles, LibraryFiles, LinkedImages))
     return reportError(std::move(Err));
 
   // Wrap each linked device image into a linkable host binary and add it to the
