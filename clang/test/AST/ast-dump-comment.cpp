@@ -32,6 +32,13 @@ int Test_BlockCommandComment;
 // CHECK-NEXT:     ParagraphComment
 // CHECK-NEXT:       TextComment{{.*}} Text=" Aaa"
 
+/// \retval 42 Aaa
+int Test_BlockCommandComment_WithArgs();
+// CHECK:      FunctionDecl{{.*}}Test_BlockCommandComment_WithArgs
+// CHECK:        BlockCommandComment{{.*}} Name="retval" Arg[0]="42"
+// CHECK-NEXT:     ParagraphComment
+// CHECK-NEXT:       TextComment{{.*}} Text=" Aaa"
+
 /// \param Aaa xxx
 /// \param [in,out] Bbb yyy
 void Test_ParamCommandComment(int Aaa, int Bbb);
