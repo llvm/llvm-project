@@ -1261,22 +1261,16 @@ public:
   /// extended, truncated, or left alone to make it that width.
   APInt zextOrTrunc(unsigned width) const;
 
-  /// Truncate to width
-  ///
-  /// Make this APInt have the bit width given by \p width. The value is
-  /// truncated or left alone to make it that width.
+  /// Truncate this APInt if necessary to ensure that its bit width is <= \p
+  /// width.
   APInt truncOrSelf(unsigned width) const;
 
-  /// Sign extend or truncate to width
-  ///
-  /// Make this APInt have the bit width given by \p width. The value is sign
-  /// extended, or left alone to make it that width.
+  /// Sign-extend this APInt if necessary to ensure that its bit width is >= \p
+  /// width.
   APInt sextOrSelf(unsigned width) const;
 
-  /// Zero extend or truncate to width
-  ///
-  /// Make this APInt have the bit width given by \p width. The value is zero
-  /// extended, or left alone to make it that width.
+  /// Zero-extend this APInt if necessary to ensure that its bit width is >= \p
+  /// width.
   APInt zextOrSelf(unsigned width) const;
 
   /// @}
