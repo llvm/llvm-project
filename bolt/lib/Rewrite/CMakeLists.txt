@@ -1,9 +1,4 @@
 set(LLVM_LINK_COMPONENTS
-  BOLTCore
-  BOLTPasses
-  BOLTProfile
-  BOLTRuntimeLibs
-  BOLTUtils
   DebugInfoDWARF
   DWP
   ExecutionEngine
@@ -12,13 +7,21 @@ set(LLVM_LINK_COMPONENTS
   Support
   )
 
+set(TARGET_LINK_LIBRARIES
+  LLVMBOLTCore
+  LLVMBOLTPasses
+  LLVMBOLTProfile
+  LLVMBOLTRuntimeLibs
+  LLVMBOLTUtils
+  )
+
 if ("AArch64" IN_LIST LLVM_TARGETS_TO_BUILD)
-  list(APPEND LLVM_LINK_COMPONENTS BOLTTargetAArch64)
+  list(APPEND TARGET_LINK_LIBRARIES LLVMBOLTTargetAArch64)
   set(BOLT_AArch64 On)
 endif()
 
 if ("X86" IN_LIST LLVM_TARGETS_TO_BUILD)
-  list(APPEND LLVM_LINK_COMPONENTS BOLTTargetX86)
+  list(APPEND TARGET_LINK_LIBRARIES LLVMBOLTTargetX86)
   set(BOLT_X64 On)
 endif()
 
@@ -32,6 +35,11 @@ add_llvm_library(LLVMBOLTRewrite
 
   LINK_LIBS
   ${LLVM_PTHREAD_LIB}
+  )
+
+target_link_libraries(LLVMBOLTRewrite
+  PRIVATE
+  ${TARGET_LINK_LIBRARIES}
   )
 
 if (DEFINED BOLT_AArch64)

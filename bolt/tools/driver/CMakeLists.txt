@@ -1,8 +1,5 @@
 set(LLVM_LINK_COMPONENTS
   ${LLVM_TARGETS_TO_BUILD}
-  BOLTProfile
-  BOLTRewrite
-  BOLTUtils
   MC
   Object
   Support
@@ -19,6 +16,13 @@ add_llvm_tool(llvm-bolt
 
   DEPENDS
   ${BOLT_DRIVER_DEPS}
+  )
+
+target_link_libraries(llvm-bolt
+  PRIVATE
+  LLVMBOLTProfile
+  LLVMBOLTRewrite
+  LLVMBOLTUtils
   )
 
 add_llvm_tool_symlink(perf2bolt llvm-bolt)
