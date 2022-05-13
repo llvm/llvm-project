@@ -178,6 +178,7 @@ public:
   iterator_range<const_entry_iterator> entries() const {
     return llvm::make_range(Entries.begin(), Entries.end());
   }
+  //@}
 
   Printable printEntries(const ContextT &Ctx) const {
     return Printable([this, &Ctx](raw_ostream &Out) {
