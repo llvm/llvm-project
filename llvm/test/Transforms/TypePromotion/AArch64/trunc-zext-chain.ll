@@ -35,8 +35,7 @@ define i64 @zext_trunc_i8_i16_i32_i64() {
 ; CHECK-NEXT:    [[VAR24:%.*]] = and i32 [[TMP0]], 255
 ; CHECK-NEXT:    [[VAR25:%.*]] = or i32 [[VAR23]], [[VAR24]]
 ; CHECK-NEXT:    [[VAR26:%.*]] = select i1 [[VAR18]], i64 0, i64 65536
-; CHECK-NEXT:    [[TMP2:%.*]] = trunc i32 [[VAR25]] to i16
-; CHECK-NEXT:    [[VAR27:%.*]] = zext i16 [[TMP2]] to i64
+; CHECK-NEXT:    [[VAR27:%.*]] = zext i32 [[VAR25]] to i64
 ; CHECK-NEXT:    [[VAR28:%.*]] = and i64 [[VAR4]], -4294967296
 ; CHECK-NEXT:    [[VAR29:%.*]] = or i64 [[VAR26]], [[VAR28]]
 ; CHECK-NEXT:    [[VAR30]] = or i64 [[VAR29]], [[VAR27]]
@@ -120,8 +119,7 @@ define i64 @with_undef() {
 ; CHECK-NEXT:    [[VAR24:%.*]] = and i32 [[TMP0]], 255
 ; CHECK-NEXT:    [[VAR25:%.*]] = or i32 [[VAR23]], [[VAR24]]
 ; CHECK-NEXT:    [[VAR26:%.*]] = select i1 [[VAR18]], i64 0, i64 65536
-; CHECK-NEXT:    [[TMP2:%.*]] = trunc i32 [[VAR25]] to i16
-; CHECK-NEXT:    [[VAR27:%.*]] = zext i16 [[TMP2]] to i64
+; CHECK-NEXT:    [[VAR27:%.*]] = zext i32 [[VAR25]] to i64
 ; CHECK-NEXT:    [[VAR28:%.*]] = and i64 [[VAR4]], -4294967296
 ; CHECK-NEXT:    [[VAR29:%.*]] = or i64 [[VAR26]], [[VAR28]]
 ; CHECK-NEXT:    [[VAR30]] = or i64 [[VAR29]], [[VAR27]]
