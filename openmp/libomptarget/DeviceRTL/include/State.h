@@ -15,7 +15,7 @@
 #include "Debug.h"
 #include "Types.h"
 
-#pragma omp declare target
+#pragma omp begin declare target device_type(nohost)
 
 namespace _OMP {
 

@@ -13,10 +13,14 @@
 
 #include "Debug.h"
 
-#pragma omp declare target
+#pragma omp begin declare target device_type(nohost)
 
 namespace _OMP {
 namespace impl {
+
+double getWTick();
+
+double getWTime();
 
 /// AMDGCN Implementation
 ///

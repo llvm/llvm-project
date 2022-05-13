@@ -15,7 +15,7 @@
 #include "Types.h"
 #include "Utils.h"
 
-#pragma omp declare target
+#pragma omp begin declare target device_type(nohost)
 
 #include "llvm/Frontend/OpenMP/OMPGridValues.h"
 
@@ -23,6 +23,23 @@ using namespace _OMP;
 
 namespace _OMP {
 namespace impl {
+
+// Forward declarations defined to be defined for AMDGCN and NVPTX.
+const llvm::omp::GV &getGridValue();
+uint32_t getGridDim(uint32_t n, uint16_t d);
+uint32_t getWorkgroupDim(uint32_t group_id, uint32_t grid_size,
+                         uint16_t group_size);
+uint32_t getNumHardwareThreadsInBlock();
+LaneMaskTy activemask();
+LaneMaskTy lanemaskLT();
+LaneMaskTy lanemaskGT();
+uint32_t getThreadIdInWarp();
+uint32_t getThreadIdInBlock();
+uint32_t getKernelSize();
+uint32_t getBlockId();
+uint32_t getNumberOfBlocks();
+uint32_t getWarpId();
+uint32_t getNumberOfWarpsInBlock();
 
 /// AMDGCN Implementation
 ///
