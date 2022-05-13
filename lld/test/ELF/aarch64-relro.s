@@ -8,7 +8,7 @@
 # CHECK-NEXT: VirtualAddress: 0x220190
 # CHECK-NEXT: PhysicalAddress:
 # CHECK-NEXT: FileSize:
-# CHECK-NEXT: MemSize: 65136
+# CHECK-NEXT: MemSize: 3696
 
 .section .data.rel.ro,"aw",%progbits
 .byte 1
