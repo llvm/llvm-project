@@ -265,7 +265,7 @@ public:
   Optional<unsigned> buildTensorExpFromLinalg(linalg::GenericOp op);
 
   /// Rebuilds SSA format from a tensor expression.
-  Value buildExp(PatternRewriter &rewriter, Location loc, unsigned e, Value v0,
+  Value buildExp(RewriterBase &rewriter, Location loc, unsigned e, Value v0,
                  Value v1);
 
 private:

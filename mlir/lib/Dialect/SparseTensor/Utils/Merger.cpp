@@ -825,8 +825,8 @@ Optional<unsigned> Merger::buildTensorExp(linalg::GenericOp op, Value v) {
   return None;
 }
 
-static Value insertYieldOp(PatternRewriter &rewriter, Location loc,
-                           Region &region, ValueRange vals) {
+static Value insertYieldOp(RewriterBase &rewriter, Location loc, Region &region,
+                           ValueRange vals) {
   // Make a clone of overlap region.
   Region tmpRegion;
   BlockAndValueMapping mapper;
@@ -842,7 +842,7 @@ static Value insertYieldOp(PatternRewriter &rewriter, Location loc,
   return val;
 }
 
-static Value buildUnaryPresent(PatternRewriter &rewriter, Location loc,
+static Value buildUnaryPresent(RewriterBase &rewriter, Location loc,
                                Operation *op, Value v0) {
   if (!v0)
     // Empty input value must be propagated.
@@ -856,7 +856,7 @@ static Value buildUnaryPresent(PatternRewriter &rewriter, Location loc,
   return insertYieldOp(rewriter, loc, presentRegion, {v0});
 }
 
-static Value buildBinaryOverlap(PatternRewriter &rewriter, Location loc,
+static Value buildBinaryOverlap(RewriterBase &rewriter, Location loc,
                                 Operation *op, Value v0, Value v1) {
   if (!v0 || !v1)
     // Empty input values must be propagated.
@@ -870,7 +870,7 @@ static Value buildBinaryOverlap(PatternRewriter &rewriter, Location loc,
   return insertYieldOp(rewriter, loc, overlapRegion, {v0, v1});
 }
 
-Value Merger::buildExp(PatternRewriter &rewriter, Location loc, unsigned e,
+Value Merger::buildExp(RewriterBase &rewriter, Location loc, unsigned e,
                        Value v0, Value v1) {
   switch (tensorExps[e].kind) {
   case kTensor:

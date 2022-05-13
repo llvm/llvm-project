@@ -43,8 +43,8 @@ enum class EmitCInterface : bool { Off = false, On = true };
 
 /// Returns the equivalent of `void*` for opaque arguments to the
 /// execution engine.
-static Type getOpaquePointerType(PatternRewriter &rewriter) {
-  return LLVM::LLVMPointerType::get(rewriter.getI8Type());
+static Type getOpaquePointerType(OpBuilder &builder) {
+  return LLVM::LLVMPointerType::get(builder.getI8Type());
 }
 
 /// Returns a function reference (first hit also inserts into module). Sets
@@ -81,9 +81,8 @@ static func::CallOp createFuncCall(OpBuilder &builder, Operation *op,
 
 /// Replaces the `op` with  a `CallOp` to the function reference returned
 /// by `getFunc()`.
-static func::CallOp replaceOpWithFuncCall(PatternRewriter &rewriter,
-                                          Operation *op, StringRef name,
-                                          TypeRange resultType,
+static func::CallOp replaceOpWithFuncCall(RewriterBase &rewriter, Operation *op,
+                                          StringRef name, TypeRange resultType,
                                           ValueRange operands,
                                           EmitCInterface emitCInterface) {
   auto fn = getFunc(op, name, resultType, operands, emitCInterface);
@@ -92,7 +91,7 @@ static func::CallOp replaceOpWithFuncCall(PatternRewriter &rewriter,
 }
 
 /// Generates dimension size call.
-static Value genDimSizeCall(ConversionPatternRewriter &rewriter, Operation *op,
+static Value genDimSizeCall(OpBuilder &builder, Operation *op,
                             SparseTensorEncodingAttr &enc, Value src,
                             int64_t idx) {
   // Permute the index according to an optional dimension ordering.
@@ -100,72 +99,67 @@ static Value genDimSizeCall(ConversionPatternRewriter &rewriter, Operation *op,
     idx = p.getPermutedPosition(idx);
   // Generate the call.
   StringRef name = "sparseDimSize";
-  SmallVector<Value, 2> params{src, constantIndex(rewriter, op->getLoc(), idx)};
-  Type iTp = rewriter.getIndexType();
-  return createFuncCall(rewriter, op, name, iTp, params, EmitCInterface::Off)
+  SmallVector<Value, 2> params{src, constantIndex(builder, op->getLoc(), idx)};
+  Type iTp = builder.getIndexType();
+  return createFuncCall(builder, op, name, iTp, params, EmitCInterface::Off)
       .getResult(0);
 }
 
 /// Generates a call into the "swiss army knife" method of the sparse runtime
 /// support library for materializing sparse tensors into the computation.
-static Value genNewCall(ConversionPatternRewriter &rewriter, Operation *op,
+static Value genNewCall(OpBuilder &builder, Operation *op,
                         ArrayRef<Value> params) {
   StringRef name = "newSparseTensor";
-  Type pTp = getOpaquePointerType(rewriter);
-  return createFuncCall(rewriter, op, name, pTp, params, EmitCInterface::On)
+  Type pTp = getOpaquePointerType(builder);
+  return createFuncCall(builder, op, name, pTp, params, EmitCInterface::On)
       .getResult(0);
 }
 
 /// Populates given sizes array from type.
-static void sizesFromType(ConversionPatternRewriter &rewriter,
-                          SmallVector<Value, 4> &sizes, Location loc,
-                          ShapedType stp) {
+static void sizesFromType(OpBuilder &builder, SmallVector<Value, 4> &sizes,
+                          Location loc, ShapedType stp) {
   auto shape = stp.getShape();
   for (unsigned i = 0, rank = stp.getRank(); i < rank; i++) {
     uint64_t s = shape[i] == ShapedType::kDynamicSize ? 0 : shape[i];
-    sizes.push_back(constantIndex(rewriter, loc, s));
+    sizes.push_back(constantIndex(builder, loc, s));
   }
 }
 
 /// Populates given sizes array from source.
-static void sizesFromSrc(ConversionPatternRewriter &rewriter,
-                         SmallVector<Value, 4> &sizes, Location loc,
-                         Value src) {
+static void sizesFromSrc(OpBuilder &builder, SmallVector<Value, 4> &sizes,
+                         Location loc, Value src) {
   unsigned rank = src.getType().cast<ShapedType>().getRank();
   for (unsigned i = 0; i < rank; i++)
-    sizes.push_back(linalg::createOrFoldDimOp(rewriter, loc, src, i));
+    sizes.push_back(linalg::createOrFoldDimOp(builder, loc, src, i));
 }
 
 /// Populates given sizes array from type (for static sizes) and from
 /// an already converted into opague pointer source (for dynamic sizes).
-static void sizesFromPtr(ConversionPatternRewriter &rewriter,
-                         SmallVector<Value, 4> &sizes, Operation *op,
-                         SparseTensorEncodingAttr &enc, ShapedType stp,
-                         Value src) {
+static void sizesFromPtr(OpBuilder &builder, SmallVector<Value, 4> &sizes,
+                         Operation *op, SparseTensorEncodingAttr &enc,
+                         ShapedType stp, Value src) {
   Location loc = op->getLoc();
   auto shape = stp.getShape();
   for (unsigned i = 0, rank = stp.getRank(); i < rank; i++)
     if (shape[i] == ShapedType::kDynamicSize)
-      sizes.push_back(genDimSizeCall(rewriter, op, enc, src, i));
+      sizes.push_back(genDimSizeCall(builder, op, enc, src, i));
     else
-      sizes.push_back(constantIndex(rewriter, loc, shape[i]));
+      sizes.push_back(constantIndex(builder, loc, shape[i]));
 }
 
 /// Generates an uninitialized temporary buffer of the given size and
 /// type, but returns it as type `memref<? x $tp>` (rather than as type
 /// `memref<$sz x $tp>`).
-static Value genAlloca(ConversionPatternRewriter &rewriter, Location loc,
-                       Value sz, Type tp) {
+static Value genAlloca(OpBuilder &builder, Location loc, Value sz, Type tp) {
   auto memTp = MemRefType::get({ShapedType::kDynamicSize}, tp);
-  return rewriter.create<memref::AllocaOp>(loc, memTp, ValueRange{sz});
+  return builder.create<memref::AllocaOp>(loc, memTp, ValueRange{sz});
 }
 
 /// Generates an uninitialized buffer of the given size and type,
 /// but returns it as type `memref<? x $tp>` (rather than as type
 /// `memref<$sz x $tp>`). Unlike temporary buffers on the stack,
 /// this buffer must be explicitly deallocated by client.
-static Value genAlloc(ConversionPatternRewriter &rewriter, Location loc,
-                      Value sz, Type tp) {
+static Value genAlloc(RewriterBase &rewriter, Location loc, Value sz, Type tp) {
   auto memTp = MemRefType::get({ShapedType::kDynamicSize}, tp);
   return rewriter.create<memref::AllocOp>(loc, memTp, ValueRange{sz});
 }
@@ -173,27 +167,24 @@ static Value genAlloc(ConversionPatternRewriter &rewriter, Location loc,
 /// Generates an uninitialized temporary buffer of the given size and
 /// type, but returns it as type `memref<? x $tp>` (rather than as type
 /// `memref<$sz x $tp>`).
-static Value genAlloca(ConversionPatternRewriter &rewriter, Location loc,
-                       unsigned sz, Type tp) {
-  return genAlloca(rewriter, loc, constantIndex(rewriter, loc, sz), tp);
+static Value genAlloca(OpBuilder &builder, Location loc, unsigned sz, Type tp) {
+  return genAlloca(builder, loc, constantIndex(builder, loc, sz), tp);
 }
 
 /// Generates an uninitialized temporary buffer with room for one value
 /// of the given type, and returns the `memref<$tp>`.
-static Value genAllocaScalar(ConversionPatternRewriter &rewriter, Location loc,
-                             Type tp) {
-  return rewriter.create<memref::AllocaOp>(loc, MemRefType::get({}, tp));
+static Value genAllocaScalar(OpBuilder &builder, Location loc, Type tp) {
+  return builder.create<memref::AllocaOp>(loc, MemRefType::get({}, tp));
 }
 
 /// Generates a temporary buffer of the given type and given contents.
-static Value genBuffer(ConversionPatternRewriter &rewriter, Location loc,
-                       ValueRange values) {
+static Value genBuffer(OpBuilder &builder, Location loc, ValueRange values) {
   unsigned sz = values.size();
   assert(sz >= 1);
-  Value buffer = genAlloca(rewriter, loc, sz, values[0].getType());
+  Value buffer = genAlloca(builder, loc, sz, values[0].getType());
   for (unsigned i = 0; i < sz; i++) {
-    Value idx = constantIndex(rewriter, loc, i);
-    rewriter.create<memref::StoreOp>(loc, values[i], buffer, idx);
+    Value idx = constantIndex(builder, loc, i);
+    builder.create<memref::StoreOp>(loc, values[i], buffer, idx);
   }
   return buffer;
 }
@@ -201,43 +192,43 @@ static Value genBuffer(ConversionPatternRewriter &rewriter, Location loc,
 /// Populates parameters required to call the "swiss army knife" method of the
 /// sparse runtime support library for materializing sparse tensors into the
 /// computation.
-static void newParams(ConversionPatternRewriter &rewriter,
-                      SmallVector<Value, 8> &params, Operation *op,
-                      ShapedType stp, SparseTensorEncodingAttr &enc,
-                      Action action, ValueRange szs, Value ptr = Value()) {
+static void newParams(OpBuilder &builder, SmallVector<Value, 8> &params,
+                      Operation *op, ShapedType stp,
+                      SparseTensorEncodingAttr &enc, Action action,
+                      ValueRange szs, Value ptr = Value()) {
   Location loc = op->getLoc();
   ArrayRef<SparseTensorEncodingAttr::DimLevelType> dlt = enc.getDimLevelType();
   unsigned sz = dlt.size();
   // Sparsity annotations.
   SmallVector<Value, 4> attrs;
   for (unsigned i = 0; i < sz; i++)
-    attrs.push_back(constantDimLevelTypeEncoding(rewriter, loc, dlt[i]));
-  params.push_back(genBuffer(rewriter, loc, attrs));
+    attrs.push_back(constantDimLevelTypeEncoding(builder, loc, dlt[i]));
+  params.push_back(genBuffer(builder, loc, attrs));
   // Dimension sizes array of the enveloping tensor. Useful for either
   // verification of external data, or for construction of internal data.
-  params.push_back(genBuffer(rewriter, loc, szs));
+  params.push_back(genBuffer(builder, loc, szs));
   // Dimension order permutation array. This is the "identity" permutation by
   // default, or otherwise the "reverse" permutation of a given ordering, so
   // that indices can be mapped quickly to the right position.
   SmallVector<Value, 4> rev(sz);
   if (AffineMap p = enc.getDimOrdering()) {
     for (unsigned i = 0; i < sz; i++)
-      rev[p.getDimPosition(i)] = constantIndex(rewriter, loc, i);
+      rev[p.getDimPosition(i)] = constantIndex(builder, loc, i);
   } else {
     for (unsigned i = 0; i < sz; i++)
-      rev[i] = constantIndex(rewriter, loc, i);
+      rev[i] = constantIndex(builder, loc, i);
   }
-  params.push_back(genBuffer(rewriter, loc, rev));
+  params.push_back(genBuffer(builder, loc, rev));
   // Secondary and primary types encoding.
   Type elemTp = stp.getElementType();
-  params.push_back(constantPointerTypeEncoding(rewriter, loc, enc));
-  params.push_back(constantIndexTypeEncoding(rewriter, loc, enc));
-  params.push_back(constantPrimaryTypeEncoding(rewriter, loc, elemTp));
+  params.push_back(constantPointerTypeEncoding(builder, loc, enc));
+  params.push_back(constantIndexTypeEncoding(builder, loc, enc));
+  params.push_back(constantPrimaryTypeEncoding(builder, loc, elemTp));
   // User action.
-  params.push_back(constantAction(rewriter, loc, action));
+  params.push_back(constantAction(builder, loc, action));
   // Payload pointer.
   if (!ptr)
-    ptr = rewriter.create<LLVM::NullOp>(loc, getOpaquePointerType(rewriter));
+    ptr = builder.create<LLVM::NullOp>(loc, getOpaquePointerType(builder));
   params.push_back(ptr);
 }
 
@@ -248,17 +239,16 @@ static void newParams(ConversionPatternRewriter &rewriter,
 /// addEltX call generated after is inside the if-then branch.
 ///    if (tensor[ivs]!=0) {
 ///      ind = ivs
-static Value genIndexAndValueForDense(ConversionPatternRewriter &rewriter,
-                                      Location loc, Value tensor, Value ind,
-                                      ValueRange ivs) {
-  Value val = rewriter.create<tensor::ExtractOp>(loc, tensor, ivs);
-  Value cond = genIsNonzero(rewriter, loc, val);
-  scf::IfOp ifOp = rewriter.create<scf::IfOp>(loc, cond, /*else*/ false);
-  rewriter.setInsertionPointToStart(&ifOp.getThenRegion().front());
+static Value genIndexAndValueForDense(OpBuilder &builder, Location loc,
+                                      Value tensor, Value ind, ValueRange ivs) {
+  Value val = builder.create<tensor::ExtractOp>(loc, tensor, ivs);
+  Value cond = genIsNonzero(builder, loc, val);
+  scf::IfOp ifOp = builder.create<scf::IfOp>(loc, cond, /*else*/ false);
+  builder.setInsertionPointToStart(&ifOp.getThenRegion().front());
   unsigned i = 0;
   for (auto iv : ivs) {
-    Value idx = constantIndex(rewriter, loc, i++);
-    rewriter.create<memref::StoreOp>(loc, iv, ind, idx);
+    Value idx = constantIndex(builder, loc, i++);
+    builder.create<memref::StoreOp>(loc, iv, ind, idx);
   }
   return val;
 }
@@ -276,40 +266,38 @@ static void genDelCOOCall(OpBuilder &builder, Operation *op, Type elemTp,
 ///   val = a[i1,..,ik];
 ///   if val != 0
 ///     t->add(val, [i1,..,ik], [p1,..,pk]);
-static void genAddEltCall(ConversionPatternRewriter &rewriter, Operation *op,
-                          Type eltType, Value ptr, Value val, Value ind,
-                          Value perm) {
+static void genAddEltCall(OpBuilder &builder, Operation *op, Type eltType,
+                          Value ptr, Value val, Value ind, Value perm) {
   SmallString<9> name{"addElt", primaryTypeFunctionSuffix(eltType)};
   SmallVector<Value, 4> params{ptr, val, ind, perm};
-  Type pTp = getOpaquePointerType(rewriter);
-  createFuncCall(rewriter, op, name, pTp, params, EmitCInterface::On);
+  Type pTp = getOpaquePointerType(builder);
+  createFuncCall(builder, op, name, pTp, params, EmitCInterface::On);
 }
 
 /// Generates a call to `iter->getNext()`.  If there is a next element,
 /// then it is copied into the out-parameters `ind` and `elemPtr`,
 /// and the return value is true.  If there isn't a next element, then
 /// the memory for `iter` is freed and the return value is false.
-static Value genGetNextCall(ConversionPatternRewriter &rewriter, Operation *op,
-                            Value iter, Value ind, Value elemPtr) {
+static Value genGetNextCall(OpBuilder &builder, Operation *op, Value iter,
+                            Value ind, Value elemPtr) {
   Type elemTp = elemPtr.getType().cast<ShapedType>().getElementType();
   SmallString<10> name{"getNext", primaryTypeFunctionSuffix(elemTp)};
   SmallVector<Value, 3> params{iter, ind, elemPtr};
-  Type i1 = rewriter.getI1Type();
-  return createFuncCall(rewriter, op, name, i1, params, EmitCInterface::On)
+  Type i1 = builder.getI1Type();
+  return createFuncCall(builder, op, name, i1, params, EmitCInterface::On)
       .getResult(0);
 }
 
 /// If the tensor is a sparse constant, generates and returns the pair of
 /// the constants for the indices and the values.
 static Optional<std::pair<Value, Value>>
-genSplitSparseConstant(ConversionPatternRewriter &rewriter, Location loc,
-                       Value tensor) {
+genSplitSparseConstant(OpBuilder &builder, Location loc, Value tensor) {
   if (auto constOp = tensor.getDefiningOp<arith::ConstantOp>()) {
     if (auto attr = constOp.getValue().dyn_cast<SparseElementsAttr>()) {
       DenseElementsAttr indicesAttr = attr.getIndices();
-      Value indices = rewriter.create<arith::ConstantOp>(loc, indicesAttr);
+      Value indices = builder.create<arith::ConstantOp>(loc, indicesAttr);
       DenseElementsAttr valuesAttr = attr.getValues();
-      Value values = rewriter.create<arith::ConstantOp>(loc, valuesAttr);
+      Value values = builder.create<arith::ConstantOp>(loc, valuesAttr);
       return std::make_pair(indices, values);
     }
   }
@@ -318,26 +306,24 @@ genSplitSparseConstant(ConversionPatternRewriter &rewriter, Location loc,
 
 /// Generates the code to copy the index at indices[ivs] to ind, and return
 /// the value at value[ivs].
-static Value genIndexAndValueForSparse(ConversionPatternRewriter &rewriter,
-                                       Location loc, Value indices,
-                                       Value values, Value ind, ValueRange ivs,
-                                       unsigned rank) {
+static Value genIndexAndValueForSparse(OpBuilder &builder, Location loc,
+                                       Value indices, Value values, Value ind,
+                                       ValueRange ivs, unsigned rank) {
   for (unsigned i = 0; i < rank; i++) {
-    Value idx = constantIndex(rewriter, loc, i);
-    Value val = rewriter.create<tensor::ExtractOp>(loc, indices,
-                                                   ValueRange{ivs[0], idx});
-    val =
-        rewriter.create<arith::IndexCastOp>(loc, rewriter.getIndexType(), val);
-    rewriter.create<memref::StoreOp>(loc, val, ind, idx);
+    Value idx = constantIndex(builder, loc, i);
+    Value val = builder.create<tensor::ExtractOp>(loc, indices,
+                                                  ValueRange{ivs[0], idx});
+    val = builder.create<arith::IndexCastOp>(loc, builder.getIndexType(), val);
+    builder.create<memref::StoreOp>(loc, val, ind, idx);
   }
-  return rewriter.create<tensor::ExtractOp>(loc, values, ivs[0]);
+  return builder.create<tensor::ExtractOp>(loc, values, ivs[0]);
 }
 
 /// Generates code to allocate a tensor of the given type, and zero
 /// initialize it.  If the tensor type has any dynamic sizes, then the
 /// `sizes` parameter should be as filled by sizesFromPtr(); that way
 /// we can reuse the genDimSizeCall() results generated by sizesFromPtr().
-static Value allocDenseTensor(ConversionPatternRewriter &rewriter, Location loc,
+static Value allocDenseTensor(OpBuilder &builder, Location loc,
                               RankedTensorType tensorTp, ValueRange sizes) {
   Type elemTp = tensorTp.getElementType();
   auto shape = tensorTp.getShape();
@@ -347,27 +333,26 @@ static Value allocDenseTensor(ConversionPatternRewriter &rewriter, Location loc,
     if (shape[i] == ShapedType::kDynamicSize)
       dynamicSizes.push_back(sizes[i]);
   }
-  Value mem = rewriter.create<memref::AllocOp>(loc, memTp, dynamicSizes);
-  Value zero = constantZero(rewriter, loc, elemTp);
-  rewriter.create<linalg::FillOp>(loc, ValueRange{zero}, ValueRange{mem});
+  Value mem = builder.create<memref::AllocOp>(loc, memTp, dynamicSizes);
+  Value zero = constantZero(builder, loc, elemTp);
+  builder.create<linalg::FillOp>(loc, ValueRange{zero}, ValueRange{mem});
   return mem;
 }
 
 /// Inserts the element returned by genGetNextCall(_, ind, elemPtr) into
 /// the tensor created by allocDenseTensor().  The `rank` is the rank
 /// of the `tensor` and the length of `ind`.
-static void insertScalarIntoDenseTensor(ConversionPatternRewriter &rewriter,
-                                        Location loc, Value elemPtr,
-                                        Value tensor, unsigned rank,
-                                        Value ind) {
+static void insertScalarIntoDenseTensor(OpBuilder &builder, Location loc,
+                                        Value elemPtr, Value tensor,
+                                        unsigned rank, Value ind) {
   SmallVector<Value, 4> ivs;
   ivs.reserve(rank);
   for (unsigned i = 0; i < rank; i++) {
-    Value idx = constantIndex(rewriter, loc, i);
-    ivs.push_back(rewriter.create<memref::LoadOp>(loc, ind, idx));
+    Value idx = constantIndex(builder, loc, i);
+    ivs.push_back(builder.create<memref::LoadOp>(loc, ind, idx));
   }
-  Value elemV = rewriter.create<memref::LoadOp>(loc, elemPtr);
-  rewriter.create<memref::StoreOp>(loc, elemV, tensor, ivs);
+  Value elemV = builder.create<memref::LoadOp>(loc, elemPtr);
+  builder.create<memref::StoreOp>(loc, elemV, tensor, ivs);
 }
 
 //===----------------------------------------------------------------------===//
