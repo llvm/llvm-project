@@ -105,9 +105,9 @@ int main() {
 // CHECK: main
 // Ignore TSan background thread.
 // CHECK: THREAD_CREATE
-// CHECK: THREAD_CREATE    [[CHILD:0x[0-9a-f]+]], self: [[MAIN:0x[0-9a-f]+]], name: n/a
+// CHECK: THREAD_CREATE    [[CHILD:0x[0-9a-f]+]]
 // CHECK: THREAD_START     [[CHILD]], self: [[CHILD]], name: n/a
 // CHECK: Hello from pthread
 // CHECK: THREAD_TERMINATE [[CHILD]], self: [[CHILD]], name: child thread
-// CHECK: THREAD_DESTROY   [[CHILD]], self: [[MAIN]]
+// CHECK: THREAD_DESTROY   [[CHILD]]
 // CHECK: Done.
