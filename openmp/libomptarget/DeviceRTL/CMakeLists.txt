@@ -243,7 +243,7 @@ foreach(mcpu ${amdgpu_mcpus})
 endforeach()
 
 # Set the flags to build the device runtime from clang.
-set(clang_lib_flags -fopenmp -fopenmp-cuda-mode -foffload-lto -fvisibility=hidden -mllvm -openmp-opt-disable -nogpulib -nostdinc -DSHARED_SCRATCHPAD_SIZE=512)
+set(clang_lib_flags -fopenmp -fopenmp-cuda-mode -foffload-lto -fvisibility=hidden -Xopenmp-target=nvptx64-nvidia-cuda --cuda-feature=+ptx61 -mllvm -openmp-opt-disable -nocudalib -nogpulib -nostdinc -DSHARED_SCRATCHPAD_SIZE=512)
 foreach(arch ${nvptx_sm_list})
   set(clang_lib_flags ${clang_lib_flags} --offload-arch=sm_${arch})
 endforeach()
