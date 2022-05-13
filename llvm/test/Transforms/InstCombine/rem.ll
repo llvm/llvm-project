@@ -139,7 +139,7 @@ define i8 @urem3(i8 %x) {
 ; CHECK-LABEL: @urem3(
 ; CHECK-NEXT:    [[X_FR:%.*]] = freeze i8 [[X:%.*]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = urem i8 [[X_FR]], 3
-; CHECK-NEXT:    [[B_NEG:%.*]] = sub i8 [[X_FR]], [[TMP1]]
+; CHECK-NEXT:    [[B_NEG:%.*]] = sub nuw i8 [[X_FR]], [[TMP1]]
 ; CHECK-NEXT:    [[C:%.*]] = add i8 [[B_NEG]], [[X_FR]]
 ; CHECK-NEXT:    ret i8 [[C]]
 ;

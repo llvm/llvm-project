@@ -116,7 +116,7 @@ define i32 @not_match_overflow(i32 %x) {
 ; CHECK-NEXT:    [[X_FR:%.*]] = freeze i32 [[X:%.*]]
 ; CHECK-NEXT:    [[T:%.*]] = urem i32 [[X_FR]], 299
 ; CHECK-NEXT:    [[TMP1:%.*]] = urem i32 [[X_FR]], 299
-; CHECK-NEXT:    [[T3:%.*]] = sub i32 [[X_FR]], [[TMP1]]
+; CHECK-NEXT:    [[T3:%.*]] = sub nuw i32 [[X_FR]], [[TMP1]]
 ; CHECK-NEXT:    [[T4:%.*]] = add i32 [[T]], [[T3]]
 ; CHECK-NEXT:    ret i32 [[T4]]
 ;
