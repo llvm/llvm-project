@@ -64,7 +64,7 @@ TEST(NoInferenceModelRunner, AccessTensors) {
               std::vector<int64_t>{1, 2, 3, 4, 5, 6, 7, 8, 9, 10}.data(),
               10 * sizeof(int64_t));
   std::memcpy(NIMR.getTensor<float>(2),
-              std::vector<float>{0.1, 0.2, 0.3, 0.4, 0.5}.data(),
+              std::vector<float>{0.1f, 0.2f, 0.3f, 0.4f, 0.5f}.data(),
               5 * sizeof(float));
   ASSERT_EQ(NIMR.getTensor<int64_t>(0)[0], 1);
   ASSERT_EQ(NIMR.getTensor<int64_t>(1)[8], 9);
