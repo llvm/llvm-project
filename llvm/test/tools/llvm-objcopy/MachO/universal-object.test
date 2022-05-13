@@ -14,7 +14,7 @@
 
 ## Case 2: copy a universal object file containing an archive.
 # RUN: rm -f %t.archive.i386
-# RUN: llvm-ar --format=gnu cr %t.archive.i386 %t.i386
+# RUN: llvm-ar cr %t.archive.i386 %t.i386
 # RUN: llvm-lipo %t.archive.i386 %t.x86_64 -create -output %t.universal.containing.archive
 # RUN: llvm-objcopy %t.universal.containing.archive %t.universal.containing.archive.copy
 # RUN: llvm-lipo %t.universal.containing.archive.copy -archs | FileCheck --check-prefix=VERIFY_ARCHS %s
@@ -24,7 +24,7 @@
 # RUN: cmp %t.x86_64 %t.archive.x86_64.copy
 
 ## Case 3: copy an archive containing a universal object.
-# RUN: llvm-ar --format=gnu cr %t.archive.containing.universal %t.universal
+# RUN: llvm-ar cr %t.archive.containing.universal %t.universal
 # RUN: llvm-objcopy %t.archive.containing.universal %t.archive.containing.universal.copy
 
 ## Case 4: try to copy a universal object file contaning a bitcode slice.
@@ -34,7 +34,7 @@
 # RUN:  | FileCheck --check-prefix=UNSUPPORTED_UNIVERSAL_OBJECT %s
 
 ## Case 5: try to copy an archive containing an unsupported universal object.
-# RUN: llvm-ar --format=gnu cr %t.archive.universal.bitcode %t.universal.containing.bitcode
+# RUN: llvm-ar cr %t.archive.universal.bitcode %t.universal.containing.bitcode
 # RUN: not llvm-objcopy %t.archive.universal.bitcode %t.archive.universal.bitcode.copy 2>&1 \
 # RUN:  | FileCheck --check-prefix=UNSUPPORTED_UNIVERSAL_OBJECT %s
 

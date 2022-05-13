@@ -1,4 +1,3 @@
-# XFAIL: system-aix
 ## llvm-ar should be able to consume response files.
 
 # RUN: echo 'contents' > %t.txt

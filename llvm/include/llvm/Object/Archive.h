@@ -391,6 +391,7 @@ private:
 };
 
 class BigArchive : public Archive {
+public:
   /// Fixed-Length Header.
   struct FixLenHdr {
     char Magic[sizeof(BigArchiveMagic) - 1]; ///< Big archive magic string.

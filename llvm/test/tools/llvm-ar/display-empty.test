@@ -1,10 +1,9 @@
-# XFAIL: system-aix
 ## Test Display of empty archives.
 
 # RUN: rm -rf %t && mkdir -p %t
 
 ## Display empty archive:
-# RUN: llvm-ar cr %t/empty.a
+# RUN: llvm-ar cr --format=gnu %t/empty.a
 # RUN: llvm-ar tv %t/empty.a 2>&1 | count 0
 
 ## Display empty thin archive:
