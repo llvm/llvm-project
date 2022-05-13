@@ -1284,12 +1284,15 @@ def S_SETPRIO : SOPP_Pseudo <"s_setprio", (ins i16imm:$simm16), "$simm16",
 }
 
 let Uses = [EXEC, M0] in {
-// FIXME: Should this be mayLoad+mayStore?
 def S_SENDMSG : SOPP_Pseudo <"s_sendmsg" , (ins SendMsgImm:$simm16), "$simm16",
-  [(int_amdgcn_s_sendmsg (i32 timm:$simm16), M0)]>;
+  [(int_amdgcn_s_sendmsg (i32 timm:$simm16), M0)]> {
+  let hasSideEffects = 1;
+}
 
 def S_SENDMSGHALT : SOPP_Pseudo <"s_sendmsghalt" , (ins SendMsgImm:$simm16), "$simm16",
-  [(int_amdgcn_s_sendmsghalt (i32 timm:$simm16), M0)]>;
+  [(int_amdgcn_s_sendmsghalt (i32 timm:$simm16), M0)]> {
+  let hasSideEffects = 1;
+}
 
 } // End Uses = [EXEC, M0]
 
