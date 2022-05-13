@@ -951,6 +951,28 @@ void GlobalOp::build(OpBuilder &odsBuilder, OperationState &odsState,
 }
 
 //===----------------------------------------------------------------------===//
+// GetGlobalOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult
+GetGlobalOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
+  // Verify that the result type underlying pointer type matches the type of the
+  // referenced cir.global op.
+  auto global =
+      symbolTable.lookupNearestSymbolFrom<GlobalOp>(*this, getNameAttr());
+  if (!global)
+    return emitOpError("'")
+           << getName() << "' does not reference a valid cir.global";
+
+  auto resultType = getAddr().getType().dyn_cast<PointerType>();
+  if (!resultType || global.getSymType() != resultType.getPointee())
+    return emitOpError("result type pointee type '")
+           << resultType.getPointee() << "' does not match type "
+           << global.getSymType() << " of the global @" << getName();
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
 // CIR defined traits
 //===----------------------------------------------------------------------===//
 

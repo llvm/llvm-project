@@ -219,6 +219,8 @@ def AllocaOp : CIR_Op<"alloca", [
     bool isPointerType() { return getAllocaType().isa<::mlir::cir::PointerType>(); }
   }];
 
+  // FIXME: we should not be printing `cir.ptr` below, that should come
+  // from the pointer type directly.
   let assemblyFormat = [{
     $allocaType `,` `cir.ptr` type($addr) `,` `[` $name `,` $init `]` attr-dict
   }];
@@ -257,6 +259,8 @@ def LoadOp : CIR_Op<"load", [
                            [MemRead]>:$addr, UnitAttr:$isDeref);
   let results = (outs AnyType:$result);
 
+  // FIXME: we should not be printing `cir.ptr` below, that should come
+  // from the pointer type directly.
   let assemblyFormat = [{
     (`deref` $isDeref^)? $addr `:` `cir.ptr` type($addr) `,`
                                    type($result) attr-dict
@@ -288,6 +292,8 @@ def StoreOp : CIR_Op<"store", [
                        Arg<CIR_PointerType, "the address to store the value",
                            [MemWrite]>:$addr);
 
+  // FIXME: we should not be printing `cir.ptr` below, that should come
+  // from the pointer type directly.
   let assemblyFormat =
       "$value `,` $addr attr-dict `:` type($value) `,` `cir.ptr` type($addr)";
 }
@@ -912,6 +918,37 @@ def GlobalOp : CIR_Op<"global", [Symbol]> {
   ];
 
   let hasVerifier = 1;
+}
+
+//===----------------------------------------------------------------------===//
+// GetGlobalOp
+//===----------------------------------------------------------------------===//
+
+def GetGlobalOp : CIR_Op<"get_global",
+    [Pure, DeclareOpInterfaceMethods<SymbolUserOpInterface>]> {
+  let summary = "get the memref pointing to a global variable";
+  let description = [{
+     The `cir.get_global` operation retrieves the address pointing to a
+     named global variable. If the global variable is marked constant, writing
+     to the resulting address (such as through a `cir.store` operation) is
+     undefined. Resulting type must always be a !cir.ptr<...> type.
+
+     Example:
+
+     ```mlir
+     %x = cir.get_global @foo : !cir.ptr<i32>
+     ```
+  }];
+
+  let arguments = (ins FlatSymbolRefAttr:$name);
+  let results = (outs Res<CIR_PointerType, "", []>:$addr);
+
+  // FIXME: we should not be printing `cir.ptr` below, that should come
+  // from the pointer type directly.
+  let assemblyFormat = "$name `:` `cir.ptr` type($addr) attr-dict";
+
+  // `GetGlobalOp` is fully verified by its traits.
+  let hasVerifier = 0;
 }
 
 def StructElementAddr : CIR_Op<"struct_element_addr"> {
