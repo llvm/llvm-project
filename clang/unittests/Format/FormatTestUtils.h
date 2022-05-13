@@ -53,10 +53,9 @@ inline std::string messUp(llvm::StringRef Code) {
   std::string WithoutWhitespace;
   if (MessedUp[0] != ' ')
     WithoutWhitespace.push_back(MessedUp[0]);
-  for (unsigned i = 1, e = MessedUp.size(); i != e; ++i) {
+  for (unsigned i = 1, e = MessedUp.size(); i != e; ++i)
     if (MessedUp[i] != ' ' || MessedUp[i - 1] != ' ')
       WithoutWhitespace.push_back(MessedUp[i]);
-  }
   return WithoutWhitespace;
 }
 
