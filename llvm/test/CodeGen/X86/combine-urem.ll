@@ -58,6 +58,23 @@ define <4 x i32> @combine_vec_urem_by_negone(<4 x i32> %x) {
   ret <4 x i32> %1
 }
 
+; Use PSLLI intrinsic to postpone the undef creation until after urem-by-constant expansion
+
+define <4 x i32> @combine_vec_urem_undef_by_negone(<4 x i32> %in) {
+; SSE-LABEL: combine_vec_urem_undef_by_negone:
+; SSE:       # %bb.0:
+; SSE-NEXT:    xorps %xmm0, %xmm0
+; SSE-NEXT:    retq
+;
+; AVX-LABEL: combine_vec_urem_undef_by_negone:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vxorps %xmm0, %xmm0, %xmm0
+; AVX-NEXT:    retq
+  %x = call <4 x i32> @llvm.x86.sse2.pslli.d(<4 x i32> undef, i32 0)
+  %y = urem <4 x i32> %x, <i32 -1, i32 -1, i32 -1, i32 -1>
+  ret <4 x i32> %y
+}
+
 ; fold (urem x, INT_MIN) -> (and x, ~INT_MIN)
 define i32 @combine_urem_by_minsigned(i32 %x) {
 ; CHECK-LABEL: combine_urem_by_minsigned:
