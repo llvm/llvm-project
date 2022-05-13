@@ -13,6 +13,7 @@ class TestCppIncompleteTypeMembers(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
 
+    @skipIfDarwin
     def test(self):
         self.build()
         lldbutil.run_to_source_breakpoint(self, "// break here",
