@@ -1736,19 +1736,6 @@ public:
     return Insert(GetElementPtrInst::CreateInBounds(Ty, Ptr, IdxList), Name);
   }
 
-  Value *CreateGEP(Type *Ty, Value *Ptr, Value *Idx, const Twine &Name = "") {
-    if (auto *V = Folder.FoldGEP(Ty, Ptr, {Idx}, /*IsInBounds=*/false))
-      return V;
-    return Insert(GetElementPtrInst::Create(Ty, Ptr, Idx), Name);
-  }
-
-  Value *CreateInBoundsGEP(Type *Ty, Value *Ptr, Value *Idx,
-                           const Twine &Name = "") {
-    if (auto *V = Folder.FoldGEP(Ty, Ptr, {Idx}, /*IsInBounds=*/true))
-      return V;
-    return Insert(GetElementPtrInst::CreateInBounds(Ty, Ptr, Idx), Name);
-  }
-
   Value *CreateConstGEP1_32(Type *Ty, Value *Ptr, unsigned Idx0,
                             const Twine &Name = "") {
     Value *Idx = ConstantInt::get(Type::getInt32Ty(Context), Idx0);
