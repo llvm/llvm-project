@@ -441,6 +441,13 @@ LogicalResult BufferizationOptions::createDealloc(OpBuilder &b, Location loc,
   return success();
 }
 
+static MemRefType getContiguousMemRefType(ShapedType shapedType,
+                                          Attribute memorySpace = {}) {
+  MemRefLayoutAttrInterface layout = {};
+  return MemRefType::get(shapedType.getShape(), shapedType.getElementType(),
+                         layout, memorySpace);
+}
+
 /// Compute the type of the `memref` to use for allocating the buffer for
 /// `shapedValue`. Also returns (by reference in `dynShape`), the value for the
 /// dynamic dimensions in the returned `memref` type.
@@ -642,13 +649,6 @@ bool bufferization::isFunctionArgument(Value value) {
   if (!bbArg)
     return false;
   return isa<func::FuncOp>(bbArg.getOwner()->getParentOp());
-}
-
-MemRefType bufferization::getContiguousMemRefType(ShapedType shapedType,
-                                                  Attribute memorySpace) {
-  MemRefLayoutAttrInterface layout = {};
-  return MemRefType::get(shapedType.getShape(), shapedType.getElementType(),
-                         layout, memorySpace);
 }
 
 BaseMemRefType bufferization::getMemRefType(TensorType tensorType,

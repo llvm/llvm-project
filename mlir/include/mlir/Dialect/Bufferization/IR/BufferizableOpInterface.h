@@ -546,11 +546,6 @@ OpTy replaceOpWithNewBufferizedOp(RewriterBase &rewriter, Operation *op,
   return newOp;
 }
 
-/// Return a contiguous MemRefType (i.e. with canonical/empty layout map)
-/// with the same shape as `shapedType` and specified `addressSpace`.
-MemRefType getContiguousMemRefType(ShapedType shapedType,
-                                   Attribute memorySpace = {});
-
 /// Return a MemRefType to which the `tensorType` can be bufferized in a
 /// composable fashion. The layout must be the most dynamic possible and
 /// canonicalize away once bufferization is finished.
