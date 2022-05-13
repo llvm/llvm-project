@@ -170,11 +170,6 @@ Changes in existing checks
   <clang-tidy/checks/misc-redundant-expression>` involving assignments in
   conditions. This fixes `Issue 35853 <https://github.com/llvm/llvm-project/issues/35853>`_.
 
-- Fixed a false positive in :doc:`modernize-deprecated-headers
-  <clang-tidy/checks/modernize-deprecated-headers>` involving including
-  C header files from C++ files wrapped by ``extern "C" { ... }`` blocks.
-  Such includes will be ignored by now.
-
 - Improved :doc:`performance-inefficient-vector-operation
   <clang-tidy/checks/performance-inefficient-vector-operation>` to work when
   the vector is a member of a structure.
