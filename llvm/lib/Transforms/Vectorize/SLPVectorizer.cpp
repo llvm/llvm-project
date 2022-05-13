@@ -2016,11 +2016,13 @@ public:
   /// for a pair which have highest score deemed to have best chance to form
   /// root of profitable tree to vectorize. Return None if no candidate scored
   /// above the LookAheadHeuristics::ScoreFail.
+  /// \param Limit Lower limit of the cost, considered to be good enough score.
   Optional<int>
-  findBestRootPair(ArrayRef<std::pair<Value *, Value *>> Candidates) {
+  findBestRootPair(ArrayRef<std::pair<Value *, Value *>> Candidates,
+                   int Limit = LookAheadHeuristics::ScoreFail) {
     LookAheadHeuristics LookAhead(*DL, *SE, *this, /*NumLanes=*/2,
                                   RootLookAheadMaxDepth);
-    int BestScore = LookAheadHeuristics::ScoreFail;
+    int BestScore = Limit;
     Optional<int> Index = None;
     for (int I : seq<int>(0, Candidates.size())) {
       int Score = LookAhead.getScoreAtLevelRec(Candidates[I].first,
@@ -4524,10 +4526,64 @@ void BoUpSLP::buildTree_rec(ArrayRef<Value *> VL, unsigned Depth,
   // If all of the operands are identical or constant we have a simple solution.
   // If we deal with insert/extract instructions, they all must have constant
   // indices, otherwise we should gather them, not try to vectorize.
+  // If alternate op node with 2 elements with gathered operands - do not
+  // vectorize.
+  auto &&NotProfitableForVectorization = [&S, this,
+                                          Depth](ArrayRef<Value *> VL) {
+    if (!S.getOpcode() || !S.isAltShuffle() || VL.size() > 2)
+      return false;
+    if (VectorizableTree.size() < MinTreeSize)
+      return false;
+    if (Depth >= RecursionMaxDepth - 1)
+      return true;
+    // Check if all operands are extracts, part of vector node or can build a
+    // regular vectorize node.
+    SmallVector<unsigned, 2> InstsCount(VL.size(), 0);
+    for (Value *V : VL) {
+      auto *I = cast<Instruction>(V);
+      InstsCount.push_back(count_if(I->operand_values(), [](Value *Op) {
+        return isa<Instruction>(Op) || isVectorLikeInstWithConstOps(Op);
+      }));
+    }
+    bool IsCommutative = isCommutative(S.MainOp) || isCommutative(S.AltOp);
+    if ((IsCommutative &&
+         std::accumulate(InstsCount.begin(), InstsCount.end(), 0) < 2) ||
+        (!IsCommutative &&
+         all_of(InstsCount, [](unsigned ICnt) { return ICnt < 2; })))
+      return true;
+    assert(VL.size() == 2 && "Expected only 2 alternate op instructions.");
+    SmallVector<SmallVector<std::pair<Value *, Value *>>> Candidates;
+    auto *I1 = cast<Instruction>(VL.front());
+    auto *I2 = cast<Instruction>(VL.back());
+    for (int Op = 0, E = S.MainOp->getNumOperands(); Op < E; ++Op)
+      Candidates.emplace_back().emplace_back(I1->getOperand(Op),
+                                             I2->getOperand(Op));
+    if (count_if(
+            Candidates, [this](ArrayRef<std::pair<Value *, Value *>> Cand) {
+              return findBestRootPair(Cand, LookAheadHeuristics::ScoreSplat);
+            }) >= S.MainOp->getNumOperands() / 2)
+      return false;
+    if (S.MainOp->getNumOperands() > 2)
+      return true;
+    if (IsCommutative) {
+      // Check permuted operands.
+      Candidates.clear();
+      for (int Op = 0, E = S.MainOp->getNumOperands(); Op < E; ++Op)
+        Candidates.emplace_back().emplace_back(I1->getOperand(Op),
+                                               I2->getOperand((Op + 1) % E));
+      if (any_of(
+              Candidates, [this](ArrayRef<std::pair<Value *, Value *>> Cand) {
+                return findBestRootPair(Cand, LookAheadHeuristics::ScoreSplat);
+              }))
+        return false;
+    }
+    return true;
+  };
   if (allConstant(VL) || isSplat(VL) || !allSameBlock(VL) || !S.getOpcode() ||
       (isa<InsertElementInst, ExtractValueInst, ExtractElementInst>(S.MainOp) &&
-       !all_of(VL, isVectorLikeInstWithConstOps))) {
-    LLVM_DEBUG(dbgs() << "SLP: Gathering due to C,S,B,O. \n");
+       !all_of(VL, isVectorLikeInstWithConstOps)) ||
+      NotProfitableForVectorization(VL)) {
+    LLVM_DEBUG(dbgs() << "SLP: Gathering due to C,S,B,O, small shuffle. \n");
     if (TryToFindDuplicates(S))
       newTreeEntry(VL, None /*not vectorized*/, S, UserTreeIdx,
                    ReuseShuffleIndicies);
