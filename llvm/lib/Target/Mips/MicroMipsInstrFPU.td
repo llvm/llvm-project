@@ -278,17 +278,31 @@ let DecoderNamespace = "MicroMips" in {
 }
 
 let DecoderNamespace = "MicroMips",  DecoderMethod = "DecodeFMemMMR2" in {
-  def LDC1_MM : MMRel, LW_FT<"ldc1", AFGR64Opnd, mem_mm_16, II_LDC1, load>,
-                LW_FM_MM<0x2f>, ISA_MICROMIPS, FGR_32 {
+  def LDC1_MM_D32 : MMRel, LW_FT<"ldc1", AFGR64Opnd, mem_mm_16, II_LDC1, load>,
+                    LW_FM_MM<0x2f>, ISA_MICROMIPS, FGR_32 {
     let BaseOpcode = "LDC132";
   }
-  def SDC1_MM : MMRel, SW_FT<"sdc1", AFGR64Opnd, mem_mm_16, II_SDC1, store>,
-                LW_FM_MM<0x2e>, ISA_MICROMIPS, FGR_32;
+  def SDC1_MM_D32 : MMRel, SW_FT<"sdc1", AFGR64Opnd, mem_mm_16, II_SDC1, store>,
+                    LW_FM_MM<0x2e>, ISA_MICROMIPS, FGR_32 {
+    let BaseOpcode = "SDC164";
+  }
   def LWC1_MM : MMRel, LW_FT<"lwc1", FGR32Opnd, mem_mm_16, II_LWC1, load>,
                 LW_FM_MM<0x27>, ISA_MICROMIPS;
   def SWC1_MM : MMRel, SW_FT<"swc1", FGR32Opnd, mem_mm_16, II_SWC1, store>,
                 LW_FM_MM<0x26>, ISA_MICROMIPS;
 }
+
+let DecoderNamespace = "Mips64", DecoderMethod = "DecodeFMemMMR2" in {
+  def LDC1_MM_D64 : MMRel, LW_FT<"ldc1", FGR64Opnd, mem_mm_16, II_LDC1, load>,
+                    LW_FM_MM<0x2f>, ISA_MICROMIPS, FGR_64 {
+    let BaseOpcode = "LDC164";
+  }
+  def SDC1_MM_D64 : MMRel, SW_FT<"sdc1", FGR64Opnd, mem_mm_16, II_SDC1, store>,
+                    LW_FM_MM<0x2e>, ISA_MICROMIPS, FGR_64 {
+    let BaseOpcode = "SDC164";
+  }
+}
+
 
 multiclass C_COND_MM<string TypeStr, RegisterOperand RC, bits<2> fmt,
                      InstrItinClass itin> {
@@ -400,8 +414,10 @@ let AdditionalPredicates = [NoNaNsFPMath, HasMadd4,
 
 // Patterns for loads/stores with a reg+imm operand.
 let AddedComplexity = 40 in {
-  def : LoadRegImmPat<LDC1_MM, f64, load>, ISA_MICROMIPS, FGR_32;
-  def : StoreRegImmPat<SDC1_MM, f64>, ISA_MICROMIPS, FGR_32;
+  def : LoadRegImmPat<LDC1_MM_D32, f64, load>, ISA_MICROMIPS, FGR_32;
+  def : StoreRegImmPat<SDC1_MM_D32, f64>, ISA_MICROMIPS, FGR_32;
+  def : LoadRegImmPat<LDC1_MM_D64, f64, load>, ISA_MICROMIPS, FGR_64;
+  def : StoreRegImmPat<SDC1_MM_D64, f64>, ISA_MICROMIPS, FGR_64;
   def : LoadRegImmPat<LWC1_MM, f32, load>, ISA_MICROMIPS;
   def : StoreRegImmPat<SWC1_MM, f32>, ISA_MICROMIPS;
 }
