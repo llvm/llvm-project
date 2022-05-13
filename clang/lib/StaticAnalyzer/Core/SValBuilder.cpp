@@ -74,8 +74,10 @@ DefinedOrUnknownSVal SValBuilder::makeZeroVal(QualType type) {
   return UnknownVal();
 }
 
-NonLoc SValBuilder::makeNonLoc(const SymExpr *lhs, BinaryOperator::Opcode op,
-                                const llvm::APSInt& rhs, QualType type) {
+nonloc::SymbolVal SValBuilder::makeNonLoc(const SymExpr *lhs,
+                                          BinaryOperator::Opcode op,
+                                          const llvm::APSInt &rhs,
+                                          QualType type) {
   // The Environment ensures we always get a persistent APSInt in
   // BasicValueFactory, so we don't need to get the APSInt from
   // BasicValueFactory again.
@@ -84,23 +86,24 @@ NonLoc SValBuilder::makeNonLoc(const SymExpr *lhs, BinaryOperator::Opcode op,
   return nonloc::SymbolVal(SymMgr.getSymIntExpr(lhs, op, rhs, type));
 }
 
-NonLoc SValBuilder::makeNonLoc(const llvm::APSInt& lhs,
-                               BinaryOperator::Opcode op, const SymExpr *rhs,
-                               QualType type) {
+nonloc::SymbolVal SValBuilder::makeNonLoc(const llvm::APSInt &lhs,
+                                          BinaryOperator::Opcode op,
+                                          const SymExpr *rhs, QualType type) {
   assert(rhs);
   assert(!Loc::isLocType(type));
   return nonloc::SymbolVal(SymMgr.getIntSymExpr(lhs, op, rhs, type));
 }
 
-NonLoc SValBuilder::makeNonLoc(const SymExpr *lhs, BinaryOperator::Opcode op,
-                               const SymExpr *rhs, QualType type) {
+nonloc::SymbolVal SValBuilder::makeNonLoc(const SymExpr *lhs,
+                                          BinaryOperator::Opcode op,
+                                          const SymExpr *rhs, QualType type) {
   assert(lhs && rhs);
   assert(!Loc::isLocType(type));
   return nonloc::SymbolVal(SymMgr.getSymSymExpr(lhs, op, rhs, type));
 }
 
-NonLoc SValBuilder::makeNonLoc(const SymExpr *operand,
-                               QualType fromTy, QualType toTy) {
+nonloc::SymbolVal SValBuilder::makeNonLoc(const SymExpr *operand,
+                                          QualType fromTy, QualType toTy) {
   assert(operand);
   assert(!Loc::isLocType(toTy));
   return nonloc::SymbolVal(SymMgr.getCastSymbol(operand, fromTy, toTy));
@@ -563,8 +566,7 @@ SVal SValBuilder::evalIntegralCast(ProgramStateRef state, SVal val,
   std::tie(IsNotTruncated, IsTruncated) = state->assume(CompVal);
   if (!IsNotTruncated && IsTruncated) {
     // Symbol is truncated so we evaluate it as a cast.
-    NonLoc CastVal = makeNonLoc(se, originalTy, castTy);
-    return CastVal;
+    return makeNonLoc(se, originalTy, castTy);
   }
   return evalCast(val, castTy, originalTy);
 }
@@ -1009,7 +1011,7 @@ SVal SValBuilder::evalCastSubKind(nonloc::PointerToMember V, QualType CastTy,
   return V;
 }
 
-SVal clang::ento::SValBuilder::simplifySymbolCast(nonloc::SymbolVal V,
+nonloc::SymbolVal SValBuilder::simplifySymbolCast(nonloc::SymbolVal V,
                                                   QualType CastTy) {
   // We use seven conditions to recognize a simplification case.
   // For the clarity let `CastTy` be `C`, SE->getType() - `T`, root type - `R`,
