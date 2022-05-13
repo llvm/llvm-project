@@ -278,6 +278,9 @@ Removed Compiler Flags
 
 New Pragmas in Clang
 --------------------
+- Added support for MSVC's ``#pragma function``, which tells the compiler to
+  generate calls to functions listed in the pragma instead of using the
+  builtins.
 
 - ...
 
