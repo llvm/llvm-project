@@ -79,9 +79,9 @@ public:
 
      @return
         The index of the user-provided line entry. UINT32_MAX if the line entry
-        was not found in the compile unit.") GetIndexForLineEntry;
+        was not found in the compile unit.") FindLineEntryIndex;
     uint32_t
-    GetIndexForLineEntry (lldb::SBLineEntry &line_entry, bool exact = false) const;
+    FindLineEntryIndex (lldb::SBLineEntry &line_entry, bool exact = false) const;
 
     uint32_t
     FindLineEntryIndex (uint32_t start_idx,

@@ -77,8 +77,8 @@ SBLineEntry SBCompileUnit::GetLineEntryAtIndex(uint32_t idx) const {
   return sb_line_entry;
 }
 
-uint32_t SBCompileUnit::GetIndexForLineEntry(lldb::SBLineEntry &line_entry,
-                                             bool exact) const {
+uint32_t SBCompileUnit::FindLineEntryIndex(lldb::SBLineEntry &line_entry,
+                                           bool exact) const {
   LLDB_INSTRUMENT_VA(this, line_entry, exact);
 
   if (!m_opaque_ptr || !line_entry.IsValid())
