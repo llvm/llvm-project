@@ -1030,3 +1030,57 @@ define <2 x i64> @test_x86_pclmulqdq(<2 x i64> %a0, <2 x i64> %a1) {
   ret <2 x i64> %res
 }
 declare <2 x i64> @llvm.x86.pclmulqdq(<2 x i64>, <2 x i64>, i8) nounwind readnone
+
+
+define <4 x double> @test_mm256_castpd128_pd256_freeze(<2 x double> %a0) nounwind {
+; AVX-LABEL: test_mm256_castpd128_pd256_freeze:
+; AVX:       # %bb.0:
+; AVX-NEXT:    # kill: def $xmm0 killed $xmm0 def $ymm0
+; AVX-NEXT:    vinsertf128 $1, %xmm0, %ymm0, %ymm0 # encoding: [0xc4,0xe3,0x7d,0x18,0xc0,0x01]
+; AVX-NEXT:    ret{{[l|q]}} # encoding: [0xc3]
+;
+; AVX512VL-LABEL: test_mm256_castpd128_pd256_freeze:
+; AVX512VL:       # %bb.0:
+; AVX512VL-NEXT:    # kill: def $xmm0 killed $xmm0 def $ymm0
+; AVX512VL-NEXT:    vinsertf128 $1, %xmm0, %ymm0, %ymm0 # EVEX TO VEX Compression encoding: [0xc4,0xe3,0x7d,0x18,0xc0,0x01]
+; AVX512VL-NEXT:    ret{{[l|q]}} # encoding: [0xc3]
+  %a1 = freeze <2 x double> undef
+  %res = shufflevector <2 x double> %a0, <2 x double> %a1, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  ret <4 x double> %res
+}
+
+
+define <8 x float> @test_mm256_castps128_ps256_freeze(<4 x float> %a0) nounwind {
+; AVX-LABEL: test_mm256_castps128_ps256_freeze:
+; AVX:       # %bb.0:
+; AVX-NEXT:    # kill: def $xmm0 killed $xmm0 def $ymm0
+; AVX-NEXT:    vinsertf128 $1, %xmm0, %ymm0, %ymm0 # encoding: [0xc4,0xe3,0x7d,0x18,0xc0,0x01]
+; AVX-NEXT:    ret{{[l|q]}} # encoding: [0xc3]
+;
+; AVX512VL-LABEL: test_mm256_castps128_ps256_freeze:
+; AVX512VL:       # %bb.0:
+; AVX512VL-NEXT:    # kill: def $xmm0 killed $xmm0 def $ymm0
+; AVX512VL-NEXT:    vinsertf128 $1, %xmm0, %ymm0, %ymm0 # EVEX TO VEX Compression encoding: [0xc4,0xe3,0x7d,0x18,0xc0,0x01]
+; AVX512VL-NEXT:    ret{{[l|q]}} # encoding: [0xc3]
+  %a1 = freeze <4 x float> undef
+  %res = shufflevector <4 x float> %a0, <4 x float> %a1, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+  ret <8 x float> %res
+}
+
+
+define <4 x i64> @test_mm256_castsi128_si256_freeze(<2 x i64> %a0) nounwind {
+; AVX-LABEL: test_mm256_castsi128_si256_freeze:
+; AVX:       # %bb.0:
+; AVX-NEXT:    # kill: def $xmm0 killed $xmm0 def $ymm0
+; AVX-NEXT:    vinsertf128 $1, %xmm0, %ymm0, %ymm0 # encoding: [0xc4,0xe3,0x7d,0x18,0xc0,0x01]
+; AVX-NEXT:    ret{{[l|q]}} # encoding: [0xc3]
+;
+; AVX512VL-LABEL: test_mm256_castsi128_si256_freeze:
+; AVX512VL:       # %bb.0:
+; AVX512VL-NEXT:    # kill: def $xmm0 killed $xmm0 def $ymm0
+; AVX512VL-NEXT:    vinsertf128 $1, %xmm0, %ymm0, %ymm0 # EVEX TO VEX Compression encoding: [0xc4,0xe3,0x7d,0x18,0xc0,0x01]
+; AVX512VL-NEXT:    ret{{[l|q]}} # encoding: [0xc3]
+  %a1 = freeze <2 x i64> undef
+  %res = shufflevector <2 x i64> %a0, <2 x i64> %a1, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  ret <4 x i64> %res
+}
