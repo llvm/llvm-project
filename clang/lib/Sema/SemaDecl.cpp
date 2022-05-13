@@ -9632,15 +9632,11 @@ Sema::ActOnFunctionDeclarator(Scope *S, Declarator &D, DeclContext *DC,
     }
 
     if (isFriend) {
-      // In MSVC mode for older versions of the standard, friend function
-      // declarations behave as declarations
-      bool PerformFriendInjection =
-          getLangOpts().MSVCCompat && !getLangOpts().CPlusPlus20;
       if (FunctionTemplate) {
-        FunctionTemplate->setObjectOfFriendDecl(PerformFriendInjection);
+        FunctionTemplate->setObjectOfFriendDecl();
         FunctionTemplate->setAccess(AS_public);
       }
-      NewFD->setObjectOfFriendDecl(PerformFriendInjection);
+      NewFD->setObjectOfFriendDecl();
       NewFD->setAccess(AS_public);
     }
 
