@@ -2238,6 +2238,16 @@ private:
   /// Return true if an error occurs parsing the arg list.
   bool ReadMacroParameterList(MacroInfo *MI, Token& LastTok);
 
+  /// Provide a suggestion for a typoed directive. If there is no typo, then
+  /// just skip suggesting.
+  ///
+  /// \param Tok - Token that represents the directive
+  /// \param Directive - String reference for the directive name
+  /// \param EndLoc - End location for fixit
+  void SuggestTypoedDirective(const Token &Tok,
+                              StringRef Directive,
+                              const SourceLocation &EndLoc) const;
+
   /// We just read a \#if or related directive and decided that the
   /// subsequent tokens are in the \#if'd out portion of the
   /// file.  Lex the rest of the file, until we see an \#endif.  If \p
