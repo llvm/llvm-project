@@ -6,6 +6,8 @@ ifdef rax
 else
   extern fn_ref_extern : dword
 endif
+
+extern fn_proc_extern : proc
 extern fn_ref_extern_word : word
 
 .data
@@ -248,3 +250,31 @@ else
   ; CHECK-32: call word ptr [fn_ref_extern_word]
   ; CHECK-32-NEXT: jmp word ptr [fn_ref_extern_word]
 endif
+
+t23:
+call fn_proc_extern
+jmp fn_proc_extern
+; CHECK-LABEL: t23:
+; CHECK: call fn_proc_extern
+
+t24:
+call [fn_proc_extern]
+jmp [fn_proc_extern]
+; CHECK-LABEL: t24:
+; CHECK: call fn_proc_extern
+
+t25:
+; CHECK-LABEL: t25:
+ifdef rax
+  call qword ptr [fn_ref_extern]
+  jmp qword ptr [fn_ref_extern]
+  ; CHECK-64: call qword ptr [rip + fn_ref_extern]
+  ; CHECK-64: jmp qword ptr [rip + fn_ref_extern]
+else
+  call dword ptr [fn_ref_extern]
+  jmp dword ptr [fn_ref_extern]
+  ; CHECK-32: call dword ptr [fn_ref_extern]
+  ; CHECK-32: jmp dword ptr [fn_ref_extern]
+endif
+
+end
