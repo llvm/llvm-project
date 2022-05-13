@@ -158,52 +158,52 @@ void __kmpc_parallel_51(IdentTy *ident, int32_t, int32_t if_expr,
       break;
     case 16:
       GlobalArgs[15] = args[15];
-      // FALLTHROUGH
+      [[fallthrough]];
     case 15:
       GlobalArgs[14] = args[14];
-      // FALLTHROUGH
+      [[fallthrough]];
     case 14:
       GlobalArgs[13] = args[13];
-      // FALLTHROUGH
+      [[fallthrough]];
     case 13:
       GlobalArgs[12] = args[12];
-      // FALLTHROUGH
+      [[fallthrough]];
     case 12:
       GlobalArgs[11] = args[11];
-      // FALLTHROUGH
+      [[fallthrough]];
     case 11:
       GlobalArgs[10] = args[10];
-      // FALLTHROUGH
+      [[fallthrough]];
     case 10:
       GlobalArgs[9] = args[9];
-      // FALLTHROUGH
+      [[fallthrough]];
     case 9:
       GlobalArgs[8] = args[8];
-      // FALLTHROUGH
+      [[fallthrough]];
     case 8:
       GlobalArgs[7] = args[7];
-      // FALLTHROUGH
+      [[fallthrough]];
     case 7:
       GlobalArgs[6] = args[6];
-      // FALLTHROUGH
+      [[fallthrough]];
     case 6:
       GlobalArgs[5] = args[5];
-      // FALLTHROUGH
+      [[fallthrough]];
     case 5:
       GlobalArgs[4] = args[4];
-      // FALLTHROUGH
+      [[fallthrough]];
     case 4:
       GlobalArgs[3] = args[3];
-      // FALLTHROUGH
+      [[fallthrough]];
     case 3:
       GlobalArgs[2] = args[2];
-      // FALLTHROUGH
+      [[fallthrough]];
     case 2:
       GlobalArgs[1] = args[1];
-      // FALLTHROUGH
+      [[fallthrough]];
     case 1:
       GlobalArgs[0] = args[0];
-      // FALLTHROUGH
+      [[fallthrough]];
     case 0:
       break;
     }

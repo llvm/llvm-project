@@ -46,7 +46,7 @@ uint32_t getNumberOfWarpsInBlock();
 ///{
 #pragma omp begin declare variant match(device = {arch(amdgcn)})
 
-static const llvm::omp::GV &getGridValue() {
+const llvm::omp::GV &getGridValue() {
   return llvm::omp::getAMDGPUGridValues<__AMDGCN_WAVEFRONT_SIZE>();
 }
 
@@ -121,9 +121,7 @@ uint32_t getNumHardwareThreadsInBlock() {
   return __nvvm_read_ptx_sreg_ntid_x();
 }
 
-static const llvm::omp::GV &getGridValue() {
-  return llvm::omp::NVPTXGridValues;
-}
+const llvm::omp::GV &getGridValue() { return llvm::omp::NVPTXGridValues; }
 
 LaneMaskTy activemask() {
   unsigned int Mask;

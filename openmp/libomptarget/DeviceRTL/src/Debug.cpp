@@ -38,7 +38,7 @@ int32_t omp_vprintf(const char *Format, void *Arguments, uint32_t);
     device = {arch(nvptx, nvptx64)}, implementation = {extension(match_any)})
 int32_t vprintf(const char *, void *);
 namespace impl {
-static int32_t omp_vprintf(const char *Format, void *Arguments, uint32_t) {
+int32_t omp_vprintf(const char *Format, void *Arguments, uint32_t) {
   return vprintf(Format, Arguments);
 }
 } // namespace impl
@@ -47,7 +47,7 @@ static int32_t omp_vprintf(const char *Format, void *Arguments, uint32_t) {
 // We do not have a vprintf implementation for AMD GPU yet so we use a stub.
 #pragma omp begin declare variant match(device = {arch(amdgcn)})
 namespace impl {
-static int32_t omp_vprintf(const char *Format, void *Arguments, uint32_t) {
+int32_t omp_vprintf(const char *Format, void *Arguments, uint32_t) {
   return -1;
 }
 } // namespace impl
