@@ -31,6 +31,7 @@ class Command<string name> {
 }
 
 class InlineCommand<string name> : Command<name> {
+  let NumArgs = 1;
   let IsInlineCommand = 1;
 }
 
@@ -86,6 +87,7 @@ def C      : InlineCommand<"c">;
 def P      : InlineCommand<"p">;
 def A      : InlineCommand<"a">;
 def E      : InlineCommand<"e">;
+def N      : InlineCommand<"n"> { let NumArgs = 0; }
 def Em     : InlineCommand<"em">;
 def Emoji  : InlineCommand<"emoji">;
 

@@ -289,22 +289,19 @@ void Parser::parseTParamCommandArgs(TParamCommandComment *TPC,
                                      Arg.getText());
 }
 
-void Parser::parseBlockCommandArgs(BlockCommandComment *BC,
-                                   TextTokenRetokenizer &Retokenizer,
-                                   unsigned NumArgs) {
-  typedef BlockCommandComment::Argument Argument;
-  Argument *Args =
-      new (Allocator.Allocate<Argument>(NumArgs)) Argument[NumArgs];
+ArrayRef<Comment::Argument>
+Parser::parseCommandArgs(TextTokenRetokenizer &Retokenizer, unsigned NumArgs) {
+  auto *Args = new (Allocator.Allocate<Comment::Argument>(NumArgs))
+      Comment::Argument[NumArgs];
   unsigned ParsedArgs = 0;
   Token Arg;
   while (ParsedArgs < NumArgs && Retokenizer.lexWord(Arg)) {
-    Args[ParsedArgs] = Argument(SourceRange(Arg.getLocation(),
-                                            Arg.getEndLocation()),
-                                Arg.getText());
+    Args[ParsedArgs] = Comment::Argument{
+        SourceRange(Arg.getLocation(), Arg.getEndLocation()), Arg.getText()};
     ParsedArgs++;
   }
 
-  S.actOnBlockCommandArgs(BC, llvm::makeArrayRef(Args, ParsedArgs));
+  return llvm::makeArrayRef(Args, ParsedArgs);
 }
 
 BlockCommandComment *Parser::parseBlockCommand() {
@@ -360,7 +357,7 @@ BlockCommandComment *Parser::parseBlockCommand() {
     else if (TPC)
       parseTParamCommandArgs(TPC, Retokenizer);
     else
-      parseBlockCommandArgs(BC, Retokenizer, Info->NumArgs);
+      S.actOnBlockCommandArgs(BC, parseCommandArgs(Retokenizer, Info->NumArgs));
 
     Retokenizer.putBackLeftoverTokens();
   }
@@ -401,32 +398,24 @@ BlockCommandComment *Parser::parseBlockCommand() {
 
 InlineCommandComment *Parser::parseInlineCommand() {
   assert(Tok.is(tok::backslash_command) || Tok.is(tok::at_command));
+  const CommandInfo *Info = Traits.getCommandInfo(Tok.getCommandID());
 
   const Token CommandTok = Tok;
   consumeToken();
 
   TextTokenRetokenizer Retokenizer(Allocator, *this);
+  ArrayRef<Comment::Argument> Args =
+      parseCommandArgs(Retokenizer, Info->NumArgs);
 
-  Token ArgTok;
-  bool ArgTokValid = Retokenizer.lexWord(ArgTok);
+  InlineCommandComment *IC = S.actOnInlineCommand(
+      CommandTok.getLocation(), CommandTok.getEndLocation(),
+      CommandTok.getCommandID(), Args);
 
-  InlineCommandComment *IC;
-  if (ArgTokValid) {
-    IC = S.actOnInlineCommand(CommandTok.getLocation(),
-                              CommandTok.getEndLocation(),
-                              CommandTok.getCommandID(),
-                              ArgTok.getLocation(),
-                              ArgTok.getEndLocation(),
-                              ArgTok.getText());
-  } else {
-    IC = S.actOnInlineCommand(CommandTok.getLocation(),
-                              CommandTok.getEndLocation(),
-                              CommandTok.getCommandID());
-
+  if (Args.size() < Info->NumArgs) {
     Diag(CommandTok.getEndLocation().getLocWithOffset(1),
-         diag::warn_doc_inline_contents_no_argument)
-        << CommandTok.is(tok::at_command)
-        << Traits.getCommandInfo(CommandTok.getCommandID())->Name
+         diag::warn_doc_inline_command_not_enough_arguments)
+        << CommandTok.is(tok::at_command) << Info->Name << Args.size()
+        << Info->NumArgs
         << SourceRange(CommandTok.getLocation(), CommandTok.getEndLocation());
   }
 
