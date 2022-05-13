@@ -107,6 +107,7 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeARMTarget() {
   initializeMVEGatherScatterLoweringPass(Registry);
   initializeARMSLSHardeningPass(Registry);
   initializeMVELaneInterleavingPass(Registry);
+  initializeARMFixCortexA57AES1742098Pass(Registry);
 }
 
 static std::unique_ptr<TargetLoweringObjectFile> createTLOF(const Triple &TT) {
@@ -580,8 +581,20 @@ void ARMPassConfig::addPreEmitPass() {
 }
 
 void ARMPassConfig::addPreEmitPass2() {
+  // Inserts fixup instructions before unsafe AES operations. Instructions may
+  // be inserted at the start of blocks and at within blocks so this pass has to
+  // come before those below.
+  addPass(createARMFixCortexA57AES1742098Pass());
+  // Inserts BTIs at the start of functions and indirectly-called basic blocks,
+  // so passes cannot add to the start of basic blocks once this has run.
   addPass(createARMBranchTargetsPass());
+  // Inserts Constant Islands. Block sizes cannot be increased after this point,
+  // as this may push the branch ranges and load offsets of accessing constant
+  // pools out of range..
   addPass(createARMConstantIslandPass());
+  // Finalises Low-Overhead Loops. This replaces pseudo instructions with real
+  // instructions, but the pseudos all have conservative sizes so that block
+  // sizes will only be decreased by this pass.
   addPass(createARMLowOverheadLoopsPass());
 
   if (TM->getTargetTriple().isOSWindows()) {
