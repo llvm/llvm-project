@@ -14,9 +14,6 @@ void foo() { // expected-warning {{a function declaration without a prototype is
   void (^block)() = // expected-warning {{a block declaration without a prototype is deprecated}}
                     ^void(int arg) { // no warning
   };
-  // FIXME: this should say "a block declaration" instead, but block literal
-  // expressions do not track their full declarator information, so we don't
-  // know it's a block when diagnosing.
   void (^block2)(void) = ^void() {
   };
   void (^block3)(void) = ^ { // no warning
