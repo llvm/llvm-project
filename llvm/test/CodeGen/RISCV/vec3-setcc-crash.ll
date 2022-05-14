@@ -12,30 +12,27 @@ define void @vec3_setcc_crash(<3 x i8>* %in, <3 x i8>* %out) {
 ; RV32-LABEL: vec3_setcc_crash:
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    lw a0, 0(a0)
-; RV32-NEXT:    lui a2, 16
-; RV32-NEXT:    addi a2, a2, -256
-; RV32-NEXT:    and a2, a0, a2
-; RV32-NEXT:    slli a3, a2, 16
+; RV32-NEXT:    slli a2, a0, 8
+; RV32-NEXT:    slli a3, a0, 24
+; RV32-NEXT:    slli a4, a0, 16
+; RV32-NEXT:    srai a5, a4, 24
 ; RV32-NEXT:    srai a3, a3, 24
-; RV32-NEXT:    slli a4, a0, 24
-; RV32-NEXT:    srai a6, a4, 24
-; RV32-NEXT:    slli a4, a0, 8
-; RV32-NEXT:    mv a5, a0
-; RV32-NEXT:    bgtz a6, .LBB0_2
+; RV32-NEXT:    bgtz a5, .LBB0_2
 ; RV32-NEXT:  # %bb.1:
 ; RV32-NEXT:    li a5, 0
+; RV32-NEXT:    j .LBB0_3
 ; RV32-NEXT:  .LBB0_2:
-; RV32-NEXT:    srai a4, a4, 24
-; RV32-NEXT:    andi a5, a5, 255
-; RV32-NEXT:    bgtz a3, .LBB0_4
-; RV32-NEXT:  # %bb.3:
-; RV32-NEXT:    li a2, 0
-; RV32-NEXT:    j .LBB0_5
-; RV32-NEXT:  .LBB0_4:
-; RV32-NEXT:    srli a2, a2, 8
+; RV32-NEXT:    srli a5, a4, 24
+; RV32-NEXT:  .LBB0_3:
+; RV32-NEXT:    srai a4, a2, 24
+; RV32-NEXT:    slli a2, a5, 8
+; RV32-NEXT:    mv a5, a0
+; RV32-NEXT:    bgtz a3, .LBB0_5
+; RV32-NEXT:  # %bb.4:
+; RV32-NEXT:    li a5, 0
 ; RV32-NEXT:  .LBB0_5:
-; RV32-NEXT:    slli a2, a2, 8
-; RV32-NEXT:    or a2, a5, a2
+; RV32-NEXT:    andi a3, a5, 255
+; RV32-NEXT:    or a2, a3, a2
 ; RV32-NEXT:    bgtz a4, .LBB0_7
 ; RV32-NEXT:  # %bb.6:
 ; RV32-NEXT:    li a0, 0
@@ -50,30 +47,27 @@ define void @vec3_setcc_crash(<3 x i8>* %in, <3 x i8>* %out) {
 ; RV64-LABEL: vec3_setcc_crash:
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    lwu a0, 0(a0)
-; RV64-NEXT:    lui a2, 16
-; RV64-NEXT:    addiw a2, a2, -256
-; RV64-NEXT:    and a2, a0, a2
-; RV64-NEXT:    slli a3, a2, 48
+; RV64-NEXT:    slli a2, a0, 40
+; RV64-NEXT:    slli a3, a0, 56
+; RV64-NEXT:    slli a4, a0, 48
+; RV64-NEXT:    srai a5, a4, 56
 ; RV64-NEXT:    srai a3, a3, 56
-; RV64-NEXT:    slli a4, a0, 56
-; RV64-NEXT:    srai a6, a4, 56
-; RV64-NEXT:    slli a4, a0, 40
-; RV64-NEXT:    mv a5, a0
-; RV64-NEXT:    bgtz a6, .LBB0_2
+; RV64-NEXT:    bgtz a5, .LBB0_2
 ; RV64-NEXT:  # %bb.1:
 ; RV64-NEXT:    li a5, 0
+; RV64-NEXT:    j .LBB0_3
 ; RV64-NEXT:  .LBB0_2:
-; RV64-NEXT:    srai a4, a4, 56
-; RV64-NEXT:    andi a5, a5, 255
-; RV64-NEXT:    bgtz a3, .LBB0_4
-; RV64-NEXT:  # %bb.3:
-; RV64-NEXT:    li a2, 0
-; RV64-NEXT:    j .LBB0_5
-; RV64-NEXT:  .LBB0_4:
-; RV64-NEXT:    srli a2, a2, 8
+; RV64-NEXT:    srli a5, a4, 56
+; RV64-NEXT:  .LBB0_3:
+; RV64-NEXT:    srai a4, a2, 56
+; RV64-NEXT:    slli a2, a5, 8
+; RV64-NEXT:    mv a5, a0
+; RV64-NEXT:    bgtz a3, .LBB0_5
+; RV64-NEXT:  # %bb.4:
+; RV64-NEXT:    li a5, 0
 ; RV64-NEXT:  .LBB0_5:
-; RV64-NEXT:    slli a2, a2, 8
-; RV64-NEXT:    or a2, a5, a2
+; RV64-NEXT:    andi a3, a5, 255
+; RV64-NEXT:    or a2, a3, a2
 ; RV64-NEXT:    bgtz a4, .LBB0_7
 ; RV64-NEXT:  # %bb.6:
 ; RV64-NEXT:    li a0, 0

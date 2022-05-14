@@ -1671,6 +1671,16 @@ bool TargetLowering::SimplifyDemandedBits(
       // low bits known zero.
       Known.Zero.setLowBits(ShAmt);
 
+      // Attempt to avoid multi-use ops if we don't need anything from them.
+      if (!InDemandedMask.isAllOnesValue() || !DemandedElts.isAllOnesValue()) {
+        SDValue DemandedOp0 = SimplifyMultipleUseDemandedBits(
+            Op0, InDemandedMask, DemandedElts, TLO.DAG, Depth + 1);
+        if (DemandedOp0) {
+          SDValue NewOp = TLO.DAG.getNode(ISD::SHL, dl, VT, DemandedOp0, Op1);
+          return TLO.CombineTo(Op, NewOp);
+        }
+      }
+
       // Try shrinking the operation as long as the shift amount will still be
       // in range.
       if ((ShAmt < DemandedBits.getActiveBits()) &&

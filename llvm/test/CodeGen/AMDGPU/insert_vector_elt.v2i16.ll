@@ -1605,10 +1605,10 @@ define amdgpu_kernel void @v_insertelement_v4i16_dynamic_vgpr(<4 x i16> addrspac
 ; VI-NEXT:    flat_load_dwordx2 v[0:1], v[0:1]
 ; VI-NEXT:    s_mov_b64 s[2:3], 0xffff
 ; VI-NEXT:    v_mov_b32_e32 v3, s1
-; VI-NEXT:    s_and_b32 s1, s4, s2
+; VI-NEXT:    s_lshl_b32 s1, s4, 16
+; VI-NEXT:    s_and_b32 s4, s4, s2
 ; VI-NEXT:    v_add_u32_e32 v2, vcc, s0, v2
-; VI-NEXT:    s_lshl_b32 s0, s1, 16
-; VI-NEXT:    s_or_b32 s0, s1, s0
+; VI-NEXT:    s_or_b32 s0, s4, s1
 ; VI-NEXT:    v_addc_u32_e32 v3, vcc, 0, v3, vcc
 ; VI-NEXT:    v_lshlrev_b32_e32 v4, 4, v4
 ; VI-NEXT:    v_lshlrev_b64 v[4:5], v4, s[2:3]
@@ -1690,11 +1690,11 @@ define amdgpu_kernel void @v_insertelement_v4f16_dynamic_sgpr(<4 x half> addrspa
 ; VI-NEXT:    s_mov_b64 s[2:3], 0xffff
 ; VI-NEXT:    v_mov_b32_e32 v3, s1
 ; VI-NEXT:    s_lshl_b32 s1, s5, 4
+; VI-NEXT:    s_lshl_b32 s5, s4, 16
 ; VI-NEXT:    s_and_b32 s4, s4, s2
 ; VI-NEXT:    v_add_u32_e32 v2, vcc, s0, v2
 ; VI-NEXT:    s_lshl_b64 s[0:1], s[2:3], s1
-; VI-NEXT:    s_lshl_b32 s2, s4, 16
-; VI-NEXT:    s_or_b32 s2, s4, s2
+; VI-NEXT:    s_or_b32 s2, s4, s5
 ; VI-NEXT:    v_mov_b32_e32 v4, s2
 ; VI-NEXT:    v_mov_b32_e32 v5, s2
 ; VI-NEXT:    v_addc_u32_e32 v3, vcc, 0, v3, vcc
