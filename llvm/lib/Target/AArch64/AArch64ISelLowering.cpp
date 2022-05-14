@@ -14540,24 +14540,34 @@ static SDValue performANDCombine(SDNode *N,
                                  TargetLowering::DAGCombinerInfo &DCI) {
   SelectionDAG &DAG = DCI.DAG;
   SDValue LHS = N->getOperand(0);
+  SDValue RHS = N->getOperand(1);
   EVT VT = N->getValueType(0);
 
   if (SDValue R = performANDORCSELCombine(N, DAG))
     return R;
 
-  if (!VT.isVector() || !DAG.getTargetLoweringInfo().isTypeLegal(VT))
+  if (!DAG.getTargetLoweringInfo().isTypeLegal(VT))
     return SDValue();
+
+  // Although NEON has no EORV instruction, when only the least significant bit
+  // is required the operation is synonymous with ADDV.
+  if (LHS.getOpcode() == ISD::VECREDUCE_XOR && isOneConstant(RHS) &&
+      LHS.getOperand(0).getValueType().isFixedLengthVector() &&
+      LHS.hasOneUse()) {
+    SDLoc DL(N);
+    SDValue ADDV = DAG.getNode(ISD::VECREDUCE_ADD, DL, VT, LHS.getOperand(0));
+    return DAG.getNode(ISD::AND, DL, VT, ADDV, RHS);
+  }
 
   if (VT.isScalableVector())
     return performSVEAndCombine(N, DCI);
 
   // The combining code below works only for NEON vectors. In particular, it
   // does not work for SVE when dealing with vectors wider than 128 bits.
-  if (!(VT.is64BitVector() || VT.is128BitVector()))
+  if (!VT.is64BitVector() && !VT.is128BitVector())
     return SDValue();
 
-  BuildVectorSDNode *BVN =
-      dyn_cast<BuildVectorSDNode>(N->getOperand(1).getNode());
+  BuildVectorSDNode *BVN = dyn_cast<BuildVectorSDNode>(RHS.getNode());
   if (!BVN)
     return SDValue();
 
