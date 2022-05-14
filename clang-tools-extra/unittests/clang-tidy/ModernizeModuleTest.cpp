@@ -48,6 +48,11 @@ namespace {
 struct Param {
   bool Matched;
   const char *Text;
+
+  friend std::ostream &operator<<(std::ostream &Str, const Param &Value) {
+    return Str << "Matched: " << std::boolalpha << Value.Matched << ", Text: '"
+               << Value.Text << "'";
+  }
 };
 
 class MatcherTest : public ::testing::TestWithParam<Param> {};
