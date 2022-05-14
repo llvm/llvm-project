@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/Basic/LangStandard.h"
+#include "clang/Config/config.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/ADT/Triple.h"
 #include "llvm/Support/ErrorHandling.h"
