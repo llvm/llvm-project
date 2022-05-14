@@ -139,6 +139,7 @@ def main():
       builder.process_run_line(function_re, scrubber, raw_tool_output, prefixes, True)
 
     func_dict = builder.finish_and_get_func_dict()
+    global_vars_seen_dict = {}
 
     is_in_function = False
     is_in_function_start = False
@@ -169,6 +170,7 @@ def main():
                                output_type.add_checks(my_output_lines,
                                                   check_indent + ';',
                                                   prefixes, func_dict, func,
+                                                  global_vars_seen_dict,
                                                   is_filtered=builder.is_filtered()))
     else:
       for input_info in ti.iterlines(output_lines):
@@ -185,8 +187,8 @@ def main():
 
           # Print out the various check lines here.
           output_type.add_checks(output_lines, check_indent + ';', run_list,
-                             func_dict, func_name,
-                             is_filtered=builder.is_filtered())
+                                 func_dict, func_name, global_vars_seen_dict,
+                                 is_filtered=builder.is_filtered())
           is_in_function_start = False
 
         if is_in_function:
