@@ -248,6 +248,10 @@ struct Write : public Effect::Base<Write> {};
 // SideEffect Utilities
 //===----------------------------------------------------------------------===//
 
+/// Returns true if this operation only has the given effect on `value`.
+template <typename EffectTy>
+bool hasSingleEffect(Operation *op, Value value);
+
 /// Return true if the given operation is unused, and has no side effects on
 /// memory that prevent erasing.
 bool isOpTriviallyDead(Operation *op);

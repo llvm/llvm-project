@@ -24,6 +24,7 @@
 #include "mlir/IR/OpImplementation.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/IR/TypeUtilities.h"
+#include "mlir/Interfaces/SideEffectInterfaces.h"
 #include "mlir/Transforms/InliningUtils.h"
 #include "llvm/ADT/TypeSwitch.h"
 
@@ -1103,6 +1104,48 @@ LogicalResult MemcpyOp::verify() {
     return emitOpError("arguments have incompatible shape");
 
   return success();
+}
+
+namespace {
+
+/// Erases a common case of copy ops where a destination value is used only by
+/// the copy op, alloc and dealloc ops.
+struct EraseTrivialCopyOp : public OpRewritePattern<MemcpyOp> {
+  using OpRewritePattern<MemcpyOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(MemcpyOp op,
+                                PatternRewriter &rewriter) const override {
+    Value dest = op.dst();
+    Operation *destDefOp = dest.getDefiningOp();
+    // `dest` must be defined by an op having Allocate memory effect in order to
+    // perform the folding.
+    if (!destDefOp ||
+        !hasSingleEffect<MemoryEffects::Allocate>(destDefOp, dest))
+      return failure();
+    // We can erase `op` iff `dest` has no other use apart from its
+    // use by `op` and dealloc ops.
+    if (llvm::any_of(dest.getUsers(), [op, dest](Operation *user) {
+          return user != op &&
+                 !hasSingleEffect<MemoryEffects::Free>(user, dest);
+        }))
+      return failure();
+    // We can perform the folding if and only if op has a single async
+    // dependency and produces an async token as result, or if it does not have
+    // any async dependency and does not produce any async token result.
+    if (op.asyncDependencies().size() > 1 ||
+        ((op.asyncDependencies().empty() && op.asyncToken()) ||
+         (!op.asyncDependencies().empty() && !op.asyncToken())))
+      return failure();
+    rewriter.replaceOp(op, op.asyncDependencies());
+    return success();
+  }
+};
+
+} // end anonymous namespace
+
+void MemcpyOp::getCanonicalizationPatterns(RewritePatternSet &results,
+                                           MLIRContext *context) {
+  results.add<EraseTrivialCopyOp>(context);
 }
 
 //===----------------------------------------------------------------------===//
