@@ -257,8 +257,7 @@ void mergeLegacyProfiles(const cl::list<std::string> &Filenames) {
             Filename,
             "cannot mix profile collected in BOLT and non-BOLT deployments");
       BoltedCollection = true;
-      if (!First)
-        Buf = Buf.drop_front(17);
+      Buf = Buf.drop_front(17);
     } else {
       if (BoltedCollection)
         report_error(
@@ -282,6 +281,8 @@ void mergeLegacyProfiles(const cl::list<std::string> &Filenames) {
     First = false;
   }
 
+  if (BoltedCollection)
+    outs() << "boltedcollection\n";
   for (const auto &Entry : Entries)
     outs() << Entry.getKey() << " " << Entry.getValue() << "\n";
 
