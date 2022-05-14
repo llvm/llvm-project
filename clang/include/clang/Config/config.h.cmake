@@ -16,9 +16,21 @@
 
 /* Default C/ObjC standard to use. */
 #cmakedefine CLANG_DEFAULT_STD_C LangStandard::lang_${CLANG_DEFAULT_STD_C}
+/* Always #define something so that missing the config.h #include at use sites
+ * becomes a compile error.
+ */
+#ifndef CLANG_DEFAULT_STD_C
+#define CLANG_DEFAULT_STD_C LangStandard::lang_unspecified
+#endif
 
 /* Default C++/ObjC++ standard to use. */
 #cmakedefine CLANG_DEFAULT_STD_CXX LangStandard::lang_${CLANG_DEFAULT_STD_CXX}
+/* Always #define something so that missing the config.h #include at use sites
+ * becomes a compile error.
+ */
+#ifndef CLANG_DEFAULT_STD_CXX
+#define CLANG_DEFAULT_STD_CXX LangStandard::lang_unspecified
+#endif
 
 /* Default C++ stdlib to use. */
 #define CLANG_DEFAULT_CXX_STDLIB "${CLANG_DEFAULT_CXX_STDLIB}"
