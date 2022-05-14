@@ -809,12 +809,15 @@ bool DenseElementsAttr::isValidRawBuffer(ShapedType type,
                                          bool &detectedSplat) {
   size_t storageWidth = getDenseElementStorageWidth(type.getElementType());
   size_t rawBufferWidth = rawBuffer.size() * CHAR_BIT;
+  int64_t numElements = type.getNumElements();
+
+  // The initializer is always a splat if the result type has a single element.
+  detectedSplat = numElements == 1;
 
   // Storage width of 1 is special as it is packed by the bit.
   if (storageWidth == 1) {
     // Check for a splat, or a buffer equal to the number of elements which
     // consists of either all 0's or all 1's.
-    detectedSplat = false;
     if (rawBuffer.size() == 1) {
       auto rawByte = static_cast<uint8_t>(rawBuffer[0]);
       if (rawByte == 0 || rawByte == 0xff) {
@@ -822,12 +825,20 @@ bool DenseElementsAttr::isValidRawBuffer(ShapedType type,
         return true;
       }
     }
-    return rawBufferWidth == llvm::alignTo<8>(type.getNumElements());
+
+    // This is a valid non-splat buffer if it has the right size.
+    return rawBufferWidth == llvm::alignTo<8>(numElements);
   }
-  // All other types are 8-bit aligned.
-  if ((detectedSplat = rawBufferWidth == storageWidth))
+
+  // All other types are 8-bit aligned, so we can just check the buffer width
+  // to know if only a single initializer element was passed in.
+  if (rawBufferWidth == storageWidth) {
+    detectedSplat = true;
     return true;
-  return rawBufferWidth == (storageWidth * type.getNumElements());
+  }
+
+  // The raw buffer is valid if it has the right size.
+  return rawBufferWidth == storageWidth * numElements;
 }
 
 /// Check the information for a C++ data type, check if this type is valid for
