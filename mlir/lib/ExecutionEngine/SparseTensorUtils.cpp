@@ -21,6 +21,7 @@
 
 #include <algorithm>
 #include <cassert>
+#include <complex>
 #include <cctype>
 #include <cinttypes>
 #include <cstdio>
@@ -32,6 +33,9 @@
 #include <limits>
 #include <numeric>
 #include <vector>
+
+using complex64 = std::complex<double>;
+using complex32 = std::complex<float>;
 
 //===----------------------------------------------------------------------===//
 //
@@ -287,6 +291,8 @@ public:
   virtual void getValues(std::vector<int32_t> **) { fatal("vali32"); }
   virtual void getValues(std::vector<int16_t> **) { fatal("vali16"); }
   virtual void getValues(std::vector<int8_t> **) { fatal("vali8"); }
+  virtual void getValues(std::vector<complex64> **) { fatal("valc64"); }
+  virtual void getValues(std::vector<complex32> **) { fatal("valc32"); }
 
   /// Element-wise insertion in lexicographic index order.
   virtual void lexInsert(const uint64_t *, double) { fatal("insf64"); }
@@ -295,6 +301,8 @@ public:
   virtual void lexInsert(const uint64_t *, int32_t) { fatal("insi32"); }
   virtual void lexInsert(const uint64_t *, int16_t) { fatal("ins16"); }
   virtual void lexInsert(const uint64_t *, int8_t) { fatal("insi8"); }
+  virtual void lexInsert(const uint64_t *, complex64) { fatal("insc64"); }
+  virtual void lexInsert(const uint64_t *, complex32) { fatal("insc32"); }
 
   /// Expanded insertion.
   virtual void expInsert(uint64_t *, double *, bool *, uint64_t *, uint64_t) {
@@ -314,6 +322,14 @@ public:
   }
   virtual void expInsert(uint64_t *, int8_t *, bool *, uint64_t *, uint64_t) {
     fatal("expi8");
+  }
+  virtual void expInsert(uint64_t *, complex64 *, bool *, uint64_t *,
+                         uint64_t) {
+    fatal("expc64");
+  }
+  virtual void expInsert(uint64_t *, complex32 *, bool *, uint64_t *,
+                         uint64_t) {
+    fatal("expc32");
   }
 
   /// Finishes insertion.
@@ -898,7 +914,7 @@ static SparseTensorCOO<V> *openSparseTensorCOO(char *filename, uint64_t rank,
            "dimension size mismatch");
   SparseTensorCOO<V> *tensor =
       SparseTensorCOO<V>::newSparseTensorCOO(rank, idata + 2, perm, nnz);
-  //  Read all nonzero elements.
+  // Read all nonzero elements.
   std::vector<uint64_t> indices(rank);
   for (uint64_t k = 0; k < nnz; k++) {
     if (!fgets(line, kColWidth, file)) {
@@ -1006,6 +1022,7 @@ template <typename V>
 static void fromMLIRSparseTensor(void *tensor, uint64_t *pRank, uint64_t *pNse,
                                  uint64_t **pShape, V **pValues,
                                  uint64_t **pIndices) {
+  assert(tensor);
   auto sparseTensor =
       static_cast<SparseTensorStorage<uint64_t, uint64_t, V> *>(tensor);
   uint64_t rank = sparseTensor->getRank();
@@ -1293,6 +1310,10 @@ _mlir_ciface_newSparseTensor(StridedMemRefType<DimLevelType, 1> *aref, // NOLINT
   CASE_SECSAME(OverheadType::kU8, PrimaryType::kI16, uint8_t, int16_t);
   CASE_SECSAME(OverheadType::kU8, PrimaryType::kI8, uint8_t, int8_t);
 
+  // Complex matrices with wide overhead.
+  CASE_SECSAME(OverheadType::kU64, PrimaryType::kC64, uint64_t, complex64);
+  CASE_SECSAME(OverheadType::kU64, PrimaryType::kC32, uint64_t, complex32);
+
   // Unsupported case (add above if needed).
   fputs("unsupported combination of types\n", stderr);
   exit(1);
@@ -1319,6 +1340,8 @@ IMPL_SPARSEVALUES(sparseValuesI64, int64_t, getValues)
 IMPL_SPARSEVALUES(sparseValuesI32, int32_t, getValues)
 IMPL_SPARSEVALUES(sparseValuesI16, int16_t, getValues)
 IMPL_SPARSEVALUES(sparseValuesI8, int8_t, getValues)
+IMPL_SPARSEVALUES(sparseValuesC64, complex64, getValues)
+IMPL_SPARSEVALUES(sparseValuesC32, complex32, getValues)
 
 /// Helper to add value to coordinate scheme, one per value type.
 IMPL_ADDELT(addEltF64, double)
@@ -1327,6 +1350,17 @@ IMPL_ADDELT(addEltI64, int64_t)
 IMPL_ADDELT(addEltI32, int32_t)
 IMPL_ADDELT(addEltI16, int16_t)
 IMPL_ADDELT(addEltI8, int8_t)
+IMPL_ADDELT(addEltC64, complex64)
+IMPL_ADDELT(addEltC32ABI, complex32)
+// Make prototype explicit to accept the !llvm.struct<(f32, f32)> without
+// any padding (which seem to happen for complex32 when passed as scalar;
+// all other cases, e.g. pointer to array, work as expected).
+// TODO: cleaner way to avoid ABI padding problem?
+void *_mlir_ciface_addEltC32(void *tensor, float r, float i,
+                             StridedMemRefType<index_type, 1> *iref,
+                             StridedMemRefType<index_type, 1> *pref) {
+  return _mlir_ciface_addEltC32ABI(tensor, complex32(r, i), iref, pref);
+}
 
 /// Helper to enumerate elements of coordinate scheme, one per value type.
 IMPL_GETNEXT(getNextF64, double)
@@ -1335,6 +1369,8 @@ IMPL_GETNEXT(getNextI64, int64_t)
 IMPL_GETNEXT(getNextI32, int32_t)
 IMPL_GETNEXT(getNextI16, int16_t)
 IMPL_GETNEXT(getNextI8, int8_t)
+IMPL_GETNEXT(getNextC64, complex64)
+IMPL_GETNEXT(getNextC32, complex32)
 
 /// Insert elements in lexicographical index order, one per value type.
 IMPL_LEXINSERT(lexInsertF64, double)
@@ -1343,6 +1379,17 @@ IMPL_LEXINSERT(lexInsertI64, int64_t)
 IMPL_LEXINSERT(lexInsertI32, int32_t)
 IMPL_LEXINSERT(lexInsertI16, int16_t)
 IMPL_LEXINSERT(lexInsertI8, int8_t)
+IMPL_LEXINSERT(lexInsertC64, complex64)
+IMPL_LEXINSERT(lexInsertC32ABI, complex32)
+// Make prototype explicit to accept the !llvm.struct<(f32, f32)> without
+// any padding (which seem to happen for complex32 when passed as scalar;
+// all other cases, e.g. pointer to array, work as expected).
+// TODO: cleaner way to avoid ABI padding problem?
+void _mlir_ciface_lexInsertC32(void *tensor,
+                               StridedMemRefType<index_type, 1> *cref, float r,
+                               float i) {
+  _mlir_ciface_lexInsertC32ABI(tensor, cref, complex32(r, i));
+}
 
 /// Insert using expansion, one per value type.
 IMPL_EXPINSERT(expInsertF64, double)
@@ -1351,6 +1398,8 @@ IMPL_EXPINSERT(expInsertI64, int64_t)
 IMPL_EXPINSERT(expInsertI32, int32_t)
 IMPL_EXPINSERT(expInsertI16, int16_t)
 IMPL_EXPINSERT(expInsertI8, int8_t)
+IMPL_EXPINSERT(expInsertC64, complex64)
+IMPL_EXPINSERT(expInsertC32, complex32)
 
 #undef CASE
 #undef IMPL_SPARSEVALUES
@@ -1378,6 +1427,12 @@ void outSparseTensorI16(void *tensor, void *dest, bool sort) {
 }
 void outSparseTensorI8(void *tensor, void *dest, bool sort) {
   return outSparseTensor<int8_t>(tensor, dest, sort);
+}
+void outSparseTensorC64(void *tensor, void *dest, bool sort) {
+  return outSparseTensor<complex64>(tensor, dest, sort);
+}
+void outSparseTensorC32(void *tensor, void *dest, bool sort) {
+  return outSparseTensor<complex32>(tensor, dest, sort);
 }
 
 //===----------------------------------------------------------------------===//
@@ -1428,6 +1483,8 @@ IMPL_DELCOO(I64, int64_t)
 IMPL_DELCOO(I32, int32_t)
 IMPL_DELCOO(I16, int16_t)
 IMPL_DELCOO(I8, int8_t)
+IMPL_DELCOO(C64, complex64)
+IMPL_DELCOO(C32, complex32)
 #undef IMPL_DELCOO
 
 /// Initializes sparse tensor from a COO-flavored format expressed using C-style
@@ -1489,6 +1546,18 @@ void *convertToMLIRSparseTensorI8(uint64_t rank, uint64_t nse, uint64_t *shape,
   return toMLIRSparseTensor<int8_t>(rank, nse, shape, values, indices, perm,
                                     sparse);
 }
+void *convertToMLIRSparseTensorC64(uint64_t rank, uint64_t nse, uint64_t *shape,
+                                   complex64 *values, uint64_t *indices,
+                                   uint64_t *perm, uint8_t *sparse) {
+  return toMLIRSparseTensor<complex64>(rank, nse, shape, values, indices, perm,
+                                       sparse);
+}
+void *convertToMLIRSparseTensorC32(uint64_t rank, uint64_t nse, uint64_t *shape,
+                                   complex32 *values, uint64_t *indices,
+                                   uint64_t *perm, uint8_t *sparse) {
+  return toMLIRSparseTensor<complex32>(rank, nse, shape, values, indices, perm,
+                                       sparse);
+}
 
 /// Converts a sparse tensor to COO-flavored format expressed using C-style
 /// data structures. The expected output parameters are pointers for these
@@ -1539,6 +1608,18 @@ void convertFromMLIRSparseTensorI8(void *tensor, uint64_t *pRank,
                                    uint64_t *pNse, uint64_t **pShape,
                                    int8_t **pValues, uint64_t **pIndices) {
   fromMLIRSparseTensor<int8_t>(tensor, pRank, pNse, pShape, pValues, pIndices);
+}
+void convertFromMLIRSparseTensorC64(void *tensor, uint64_t *pRank,
+                                    uint64_t *pNse, uint64_t **pShape,
+                                    complex64 **pValues, uint64_t **pIndices) {
+  fromMLIRSparseTensor<complex64>(tensor, pRank, pNse, pShape, pValues,
+                                  pIndices);
+}
+void convertFromMLIRSparseTensorC32(void *tensor, uint64_t *pRank,
+                                    uint64_t *pNse, uint64_t **pShape,
+                                    complex32 **pValues, uint64_t **pIndices) {
+  fromMLIRSparseTensor<complex32>(tensor, pRank, pNse, pShape, pValues,
+                                  pIndices);
 }
 
 } // extern "C"

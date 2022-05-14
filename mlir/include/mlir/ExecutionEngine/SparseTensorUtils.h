@@ -42,7 +42,9 @@ enum class PrimaryType : uint32_t {
   kI64 = 3,
   kI32 = 4,
   kI16 = 5,
-  kI8 = 6
+  kI8 = 6,
+  kC64 = 7,
+  kC32 = 8
 };
 
 /// The actions performed by @newSparseTensor.

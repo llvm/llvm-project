@@ -8,6 +8,7 @@
 
 #include "mlir/Dialect/SparseTensor/Utils/Merger.h"
 #include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
+#include "mlir/Dialect/Complex/IR/Complex.h"
 #include "mlir/Dialect/Math/IR/Math.h"
 #include "mlir/Dialect/SparseTensor/IR/SparseTensor.h"
 
@@ -303,6 +304,7 @@ bool Merger::isSingleCondition(unsigned t, unsigned e) const {
     assert(isInvariant(tensorExps[e].children.e1));
     return isSingleCondition(t, tensorExps[e].children.e0);
   case kMulF:
+  case kMulC:
   case kMulI:
   case kAndI:
     if (isSingleCondition(t, tensorExps[e].children.e0))
@@ -312,6 +314,7 @@ bool Merger::isSingleCondition(unsigned t, unsigned e) const {
       return isInvariant(tensorExps[e].children.e0);
     return false;
   case kAddF:
+  case kAddC:
   case kAddI:
     return isSingleCondition(t, tensorExps[e].children.e0) &&
            isSingleCondition(t, tensorExps[e].children.e1);
@@ -371,21 +374,18 @@ static const char *kindToOpSymbol(Kind kind) {
   case kUnary:
     return "unary";
   case kMulF:
-    return "*";
+  case kMulC:
   case kMulI:
     return "*";
   case kDivF:
-    return "/";
   case kDivS:
-    return "/";
   case kDivU:
     return "/";
   case kAddF:
-    return "+";
+  case kAddC:
   case kAddI:
     return "+";
   case kSubF:
-    return "-";
   case kSubI:
     return "-";
   case kAndI:
@@ -581,6 +581,7 @@ unsigned Merger::buildLattices(unsigned e, unsigned i) {
       return takeDisj(kind, child0, buildLattices(rhs, i), unop);
     }
   case kMulF:
+  case kMulC:
   case kMulI:
   case kAndI:
     // A multiplicative operation only needs to be performed
@@ -590,6 +591,8 @@ unsigned Merger::buildLattices(unsigned e, unsigned i) {
     //  ---+---+---+
     //  !x | 0 | 0 |
     //   x | 0 |x*y|
+    //
+    // Note even here, 0*NaN=NaN and 0*Inf=NaN, but that is ignored.
     return takeConj(kind, // take binary conjunction
                     buildLattices(tensorExps[e].children.e0, i),
                     buildLattices(tensorExps[e].children.e1, i));
@@ -614,6 +617,7 @@ unsigned Merger::buildLattices(unsigned e, unsigned i) {
                     buildLattices(tensorExps[e].children.e0, i),
                     buildLattices(tensorExps[e].children.e1, i));
   case kAddF:
+  case kAddC:
   case kAddI:
   case kSubF:
   case kSubI:
@@ -789,6 +793,8 @@ Optional<unsigned> Merger::buildTensorExp(linalg::GenericOp op, Value v) {
       unsigned e1 = y.getValue();
       if (isa<arith::MulFOp>(def))
         return addExp(kMulF, e0, e1);
+      if (isa<complex::MulOp>(def))
+        return addExp(kMulC, e0, e1);
       if (isa<arith::MulIOp>(def))
         return addExp(kMulI, e0, e1);
       if (isa<arith::DivFOp>(def) && !maybeZero(e1))
@@ -799,6 +805,8 @@ Optional<unsigned> Merger::buildTensorExp(linalg::GenericOp op, Value v) {
         return addExp(kDivU, e0, e1);
       if (isa<arith::AddFOp>(def))
         return addExp(kAddF, e0, e1);
+      if (isa<complex::AddOp>(def))
+        return addExp(kAddC, e0, e1);
       if (isa<arith::AddIOp>(def))
         return addExp(kAddI, e0, e1);
       if (isa<arith::SubFOp>(def))
@@ -927,6 +935,8 @@ Value Merger::buildExp(RewriterBase &rewriter, Location loc, unsigned e,
   // Binary ops.
   case kMulF:
     return rewriter.create<arith::MulFOp>(loc, v0, v1);
+  case kMulC:
+    return rewriter.create<complex::MulOp>(loc, v0, v1);
   case kMulI:
     return rewriter.create<arith::MulIOp>(loc, v0, v1);
   case kDivF:
@@ -937,6 +947,8 @@ Value Merger::buildExp(RewriterBase &rewriter, Location loc, unsigned e,
     return rewriter.create<arith::DivUIOp>(loc, v0, v1);
   case kAddF:
     return rewriter.create<arith::AddFOp>(loc, v0, v1);
+  case kAddC:
+    return rewriter.create<complex::AddOp>(loc, v0, v1);
   case kAddI:
     return rewriter.create<arith::AddIOp>(loc, v0, v1);
   case kSubF:

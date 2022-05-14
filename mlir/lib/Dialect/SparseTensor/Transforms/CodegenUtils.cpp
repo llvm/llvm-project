@@ -111,6 +111,13 @@ PrimaryType mlir::sparse_tensor::primaryTypeEncoding(Type elemTp) {
     return PrimaryType::kI16;
   if (elemTp.isInteger(8))
     return PrimaryType::kI8;
+  if (auto complexTp = elemTp.dyn_cast<ComplexType>()) {
+    auto complexEltTp = complexTp.getElementType();
+    if (complexEltTp.isF64())
+      return PrimaryType::kC64;
+    if (complexEltTp.isF32())
+      return PrimaryType::kC32;
+  }
   llvm_unreachable("Unknown primary type");
 }
 
@@ -128,6 +135,10 @@ StringRef mlir::sparse_tensor::primaryTypeFunctionSuffix(PrimaryType pt) {
     return "I16";
   case PrimaryType::kI8:
     return "I8";
+  case PrimaryType::kC64:
+    return "C64";
+  case PrimaryType::kC32:
+    return "C32";
   }
   llvm_unreachable("Unknown PrimaryType");
 }
