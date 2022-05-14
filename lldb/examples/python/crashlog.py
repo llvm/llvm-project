@@ -925,10 +925,7 @@ class Symbolicate:
         pass
 
     def __call__(self, debugger, command, exe_ctx, result):
-        try:
-            SymbolicateCrashLogs(debugger, shlex.split(command))
-        except Exception as e:
-            result.PutCString("error: python exception: %s" % e)
+        SymbolicateCrashLogs(debugger, shlex.split(command))
 
     def get_short_help(self):
         return "Symbolicate one or more darwin crash log files."
@@ -1020,11 +1017,7 @@ def load_crashlog_in_scripted_process(debugger, crash_log_file, options):
     if not os.path.exists(crashlog_path):
         result.PutCString("error: crashlog file %s does not exist" % crashlog_path)
 
-    try:
-        crashlog = CrashLogParser().parse(debugger, crashlog_path, False)
-    except Exception as e:
-        result.PutCString("error: python exception: %s" % e)
-        return
+    crashlog = CrashLogParser().parse(debugger, crashlog_path, False)
 
     if debugger.GetNumTargets() > 0:
         target = debugger.GetTargetAtIndex(0)
