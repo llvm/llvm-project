@@ -597,7 +597,8 @@ SCRUB_IR_COMMENT_RE = re.compile(r'\s*;.*')
 
 class NamelessValue:
   def __init__(self, check_prefix, check_key, ir_prefix, global_ir_prefix, global_ir_prefix_regexp,
-               ir_regexp, global_ir_rhs_regexp, is_before_functions, is_number=False):
+               ir_regexp, global_ir_rhs_regexp, is_before_functions, *,
+               is_number=False, replace_number_with_counter=False):
     self.check_prefix = check_prefix
     self.check_key = check_key
     self.ir_prefix = ir_prefix
@@ -607,6 +608,10 @@ class NamelessValue:
     self.global_ir_rhs_regexp = global_ir_rhs_regexp
     self.is_before_functions = is_before_functions
     self.is_number = is_number
+    # Some variable numbers (e.g. MCINST1234) will change based on unrelated
+    # modifications to LLVM, replace those with an incrementing counter.
+    self.replace_number_with_counter = replace_number_with_counter
+    self.variable_mapping = {}
 
   # Return true if this kind of IR value is "local", basically if it matches '%{{.*}}'.
   def is_local_def_ir_value_match(self, match):
@@ -632,10 +637,33 @@ class NamelessValue:
       return self.ir_regexp
     return self.global_ir_prefix_regexp
 
+  # Create a FileCheck variable name based on an IR name.
+  def get_value_name(self, var: str, check_prefix: str):
+    var = var.replace('!', '')
+    if self.replace_number_with_counter:
+      assert var.isdigit(), var
+      replacement = self.variable_mapping.get(var, None)
+      if replacement is None:
+        # Replace variable with an incrementing counter
+        replacement = str(len(self.variable_mapping) + 1)
+        self.variable_mapping[var] = replacement
+      var = replacement
+    # This is a nameless value, prepend check_prefix.
+    if var.isdigit():
+      var = check_prefix + var
+    else:
+      # This is a named value that clashes with the check_prefix, prepend with
+      # _prefix_filecheck_ir_name, if it has been defined.
+      if may_clash_with_default_check_prefix_name(check_prefix, var) and _prefix_filecheck_ir_name:
+        var = _prefix_filecheck_ir_name + var
+    var = var.replace('.', '_')
+    var = var.replace('-', '_')
+    return var.upper()
+
   # Create a FileCheck variable from regex.
   def get_value_definition(self, var, match):
     # for backwards compatibility we check locals with '.*'
-    varname = get_value_name(var, self.check_prefix)
+    varname = self.get_value_name(var, self.check_prefix)
     prefix = self.get_ir_prefix_from_ir_value_match(match)[0]
     if self.is_number:
       regex = ''  # always capture a number in the default format
@@ -653,9 +681,9 @@ class NamelessValue:
       var_prefix = self.check_prefix
     capture_start = '[[#' if self.is_number else '[['
     if self.is_local_def_ir_value_match(match):
-      return capture_start + get_value_name(var, var_prefix) + ']]'
+      return capture_start + self.get_value_name(var, var_prefix) + ']]'
     prefix = self.get_ir_prefix_from_ir_value_match(match)[0]
-    return prefix + capture_start + get_value_name(var, var_prefix) + ']]'
+    return prefix + capture_start + self.get_value_name(var, var_prefix) + ']]'
 
 # Description of the different "unnamed" values we match in the IR, e.g.,
 # (local) ssa values, (debug) metadata, etc.
@@ -675,8 +703,10 @@ ir_nameless_values = [
 ]
 
 asm_nameless_values = [
- NamelessValue(r'MCINST', 'Inst#', None, '<MCInst #', r'\d+', None, r'.+', False, True),
- NamelessValue(r'MCREG',  'Reg:', None, '<MCOperand Reg:', r'\d+', None, r'.+', False, True),
+ NamelessValue(r'MCINST', 'Inst#', None, '<MCInst #', r'\d+', None, r'.+',
+               False, is_number=True, replace_number_with_counter=True),
+ NamelessValue(r'MCREG',  'Reg:', None, '<MCOperand Reg:', r'\d+', None, r'.+',
+               False, is_number=True, replace_number_with_counter=True),
 ]
 
 def createOrRegexp(old, new):
@@ -744,21 +774,6 @@ def get_nameless_value_from_match(match, nameless_values) -> NamelessValue:
 # Return true if var clashes with the scripted FileCheck check_prefix.
 def may_clash_with_default_check_prefix_name(check_prefix, var):
   return check_prefix and re.match(r'^' + check_prefix + r'[0-9]+?$', var, re.IGNORECASE)
-
-# Create a FileCheck variable name based on an IR name.
-def get_value_name(var, check_prefix):
-  var = var.replace('!', '')
-  # This is a nameless value, prepend check_prefix.
-  if var.isdigit():
-    var = check_prefix + var
-  else:
-    # This is a named value that clashes with the check_prefix, prepend with _prefix_filecheck_ir_name,
-    # if it has been defined.
-    if may_clash_with_default_check_prefix_name(check_prefix, var) and _prefix_filecheck_ir_name:
-      var = _prefix_filecheck_ir_name + var
-  var = var.replace('.', '_')
-  var = var.replace('-', '_')
-  return var.upper()
 
 def generalize_check_lines_common(lines, is_analyze, vars_seen,
                                   global_vars_seen, nameless_values,
