@@ -291,6 +291,13 @@ class DialectType<Dialect d, Pred condition, string descr = "",
 class Variadic<Type type> : TypeConstraint<type.predicate, type.summary,
                                            type.cppClassName> {
   Type baseType = type;
+  int minSize = 0;
+}
+
+// A variadic type constraint of at least N types. It expands to N or more of
+// the base type.
+class VariadicAtLeast<int N, Type type> : Variadic<type> {
+  let minSize = N;
 }
 
 // A nested variadic type constraint. It expands to zero or more variadic ranges
