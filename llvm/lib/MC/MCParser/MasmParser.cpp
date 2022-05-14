@@ -6034,10 +6034,12 @@ bool MasmParser::parseDirectiveExtern() {
     SMLoc TypeLoc = getTok().getLoc();
     if (parseIdentifier(TypeName))
       return Error(TypeLoc, "expected type");
-    AsmTypeInfo Type;
-    if (lookUpType(TypeName, Type))
-      return Error(TypeLoc, "unrecognized type");
-    KnownType[Name.lower()] = Type;
+    if (!TypeName.equals_insensitive("proc")) {
+      AsmTypeInfo Type;
+      if (lookUpType(TypeName, Type))
+        return Error(TypeLoc, "unrecognized type");
+      KnownType[Name.lower()] = Type;
+    }
 
     MCSymbol *Sym = getContext().getOrCreateSymbol(Name);
     Sym->setExternal(true);
