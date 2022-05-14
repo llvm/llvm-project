@@ -414,7 +414,7 @@ InlineCommandComment *Parser::parseInlineCommand() {
   if (Args.size() < Info->NumArgs) {
     Diag(CommandTok.getEndLocation().getLocWithOffset(1),
          diag::warn_doc_inline_command_not_enough_arguments)
-        << CommandTok.is(tok::at_command) << Info->Name << (uint64_t)Args.size()
+        << CommandTok.is(tok::at_command) << Info->Name << Args.size()
         << Info->NumArgs
         << SourceRange(CommandTok.getLocation(), CommandTok.getEndLocation());
   }
