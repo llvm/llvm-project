@@ -306,8 +306,8 @@ ParseResult MmaOp::parse(OpAsmParser &parser, OperationState &result) {
   }
 
   Type resultType;
-  parser.parseArrow();
-  parser.parseType(resultType);
+  if (parser.parseArrow() || parser.parseType(resultType))
+    return failure();
   frags[3].elemtype = inferOperandMMAType(resultType, /*isAccum=*/true);
 
   std::array<StringRef, 2> names{"multiplicandAPtxType",

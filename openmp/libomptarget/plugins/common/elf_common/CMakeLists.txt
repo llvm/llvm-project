@@ -30,3 +30,4 @@ target_link_libraries(elf_common INTERFACE ${OPENMP_PTHREAD_LIB})
 target_include_directories(elf_common INTERFACE ${CMAKE_CURRENT_SOURCE_DIR})
 include_directories(${LIBOMPTARGET_LLVM_INCLUDE_DIRS})
 
+target_include_directories(elf_common PRIVATE ${LIBOMPTARGET_INCLUDE_DIR})

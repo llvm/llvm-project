@@ -6,5 +6,6 @@ void *memset(void *dest, int c, unsigned long n);
 int printf(const char *format, ...);
 void exit(int status);
 int puts(const char *s);
+int rand(void);
 
 #endif

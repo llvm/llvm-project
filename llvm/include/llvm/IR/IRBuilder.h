@@ -1723,17 +1723,18 @@ public:
   }
 
   Value *CreateGEP(Type *Ty, Value *Ptr, ArrayRef<Value *> IdxList,
-                   const Twine &Name = "") {
-    if (auto *V = Folder.FoldGEP(Ty, Ptr, IdxList, /*IsInBounds=*/false))
+                   const Twine &Name = "", bool IsInBounds = false) {
+    if (auto *V = Folder.FoldGEP(Ty, Ptr, IdxList, IsInBounds))
       return V;
-    return Insert(GetElementPtrInst::Create(Ty, Ptr, IdxList), Name);
+    return Insert(IsInBounds
+                      ? GetElementPtrInst::CreateInBounds(Ty, Ptr, IdxList)
+                      : GetElementPtrInst::Create(Ty, Ptr, IdxList),
+                  Name);
   }
 
   Value *CreateInBoundsGEP(Type *Ty, Value *Ptr, ArrayRef<Value *> IdxList,
                            const Twine &Name = "") {
-    if (auto *V = Folder.FoldGEP(Ty, Ptr, IdxList, /*IsInBounds=*/true))
-      return V;
-    return Insert(GetElementPtrInst::CreateInBounds(Ty, Ptr, IdxList), Name);
+    return CreateGEP(Ty, Ptr, IdxList, Name, /* IsInBounds */ true);
   }
 
   Value *CreateConstGEP1_32(Type *Ty, Value *Ptr, unsigned Idx0,

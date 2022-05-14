@@ -3,11 +3,8 @@
 
 define i1 @or_implied(i8 %x, i1 %c) {
 ; CHECK-LABEL: @or_implied(
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[X:%.*]], 0
-; CHECK-NEXT:    [[CMP2:%.*]] = icmp ne i8 [[X]], 1
-; CHECK-NEXT:    [[AND:%.*]] = and i1 [[CMP]], [[C:%.*]]
-; CHECK-NEXT:    [[OR:%.*]] = or i1 [[AND]], [[CMP2]]
-; CHECK-NEXT:    ret i1 [[OR]]
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp ne i8 [[X:%.*]], 1
+; CHECK-NEXT:    ret i1 [[CMP2]]
 ;
   %cmp = icmp eq i8 %x, 0
   %cmp2 = icmp ne i8 %x, 1
@@ -18,11 +15,8 @@ define i1 @or_implied(i8 %x, i1 %c) {
 
 define i1 @or_implied_comm1(i8 %x, i1 %c) {
 ; CHECK-LABEL: @or_implied_comm1(
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[X:%.*]], 0
-; CHECK-NEXT:    [[CMP2:%.*]] = icmp ne i8 [[X]], 1
-; CHECK-NEXT:    [[AND:%.*]] = and i1 [[CMP]], [[C:%.*]]
-; CHECK-NEXT:    [[OR:%.*]] = or i1 [[CMP2]], [[AND]]
-; CHECK-NEXT:    ret i1 [[OR]]
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp ne i8 [[X:%.*]], 1
+; CHECK-NEXT:    ret i1 [[CMP2]]
 ;
   %cmp = icmp eq i8 %x, 0
   %cmp2 = icmp ne i8 %x, 1
@@ -33,11 +27,8 @@ define i1 @or_implied_comm1(i8 %x, i1 %c) {
 
 define i1 @or_implied_comm2(i8 %x, i1 %c) {
 ; CHECK-LABEL: @or_implied_comm2(
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[X:%.*]], 0
-; CHECK-NEXT:    [[CMP2:%.*]] = icmp ne i8 [[X]], 1
-; CHECK-NEXT:    [[AND:%.*]] = and i1 [[C:%.*]], [[CMP]]
-; CHECK-NEXT:    [[OR:%.*]] = or i1 [[AND]], [[CMP2]]
-; CHECK-NEXT:    ret i1 [[OR]]
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp ne i8 [[X:%.*]], 1
+; CHECK-NEXT:    ret i1 [[CMP2]]
 ;
   %cmp = icmp eq i8 %x, 0
   %cmp2 = icmp ne i8 %x, 1
@@ -48,11 +39,8 @@ define i1 @or_implied_comm2(i8 %x, i1 %c) {
 
 define i1 @or_implied_comm3(i8 %x, i1 %c) {
 ; CHECK-LABEL: @or_implied_comm3(
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[X:%.*]], 0
-; CHECK-NEXT:    [[CMP2:%.*]] = icmp ne i8 [[X]], 1
-; CHECK-NEXT:    [[AND:%.*]] = and i1 [[C:%.*]], [[CMP]]
-; CHECK-NEXT:    [[OR:%.*]] = or i1 [[CMP2]], [[AND]]
-; CHECK-NEXT:    ret i1 [[OR]]
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp ne i8 [[X:%.*]], 1
+; CHECK-NEXT:    ret i1 [[CMP2]]
 ;
   %cmp = icmp eq i8 %x, 0
   %cmp2 = icmp ne i8 %x, 1

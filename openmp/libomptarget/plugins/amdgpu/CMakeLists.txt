@@ -47,10 +47,6 @@ if(CMAKE_BUILD_TYPE MATCHES Debug)
   add_definitions(-DDEBUG)
 endif()
 
-include_directories(
-  ${CMAKE_CURRENT_SOURCE_DIR}/impl
-)
-
 set(LIBOMPTARGET_DLOPEN_LIBHSA OFF)
 option(LIBOMPTARGET_FORCE_DLOPEN_LIBHSA "Build with dlopened libhsa" ${LIBOMPTARGET_DLOPEN_LIBHSA})
 
@@ -101,6 +97,13 @@ else()
     INSTALL_RPATH ${CMAKE_INSTALL_RPATH}
     BUILD_RPATH ${CMAKE_INSTALL_RPATH})
 endif()
+
+target_include_directories(
+  omptarget.rtl.amdgpu
+  PRIVATE
+  ${LIBOMPTARGET_INCLUDE_DIR}
+  ${CMAKE_CURRENT_SOURCE_DIR}/impl
+)
 
 target_link_libraries(
   omptarget.rtl.amdgpu
