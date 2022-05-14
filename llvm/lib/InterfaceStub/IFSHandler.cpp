@@ -118,12 +118,11 @@ template <> struct MappingTraits<IFSSymbol> {
     IO.mapRequired("Type", Symbol.Type);
     // The need for symbol size depends on the symbol type.
     if (Symbol.Type == IFSSymbolType::NoType) {
-      // Either Size is None, so we are reading it in, or it is non 0 so we
-      // should emit it.
-      if (!Symbol.Size || *Symbol.Size)
-        IO.mapOptional("Size", Symbol.Size, (uint64_t)0);
-    } else if (Symbol.Type != IFSSymbolType::Func) {
-      IO.mapOptional("Size", Symbol.Size);
+      IO.mapOptional("Size", Symbol.Size, (uint64_t)0);
+    } else if (Symbol.Type == IFSSymbolType::Func) {
+      Symbol.Size = 0;
+    } else {
+      IO.mapRequired("Size", Symbol.Size);
     }
     IO.mapOptional("Undefined", Symbol.Undefined, false);
     IO.mapOptional("Weak", Symbol.Weak, false);
