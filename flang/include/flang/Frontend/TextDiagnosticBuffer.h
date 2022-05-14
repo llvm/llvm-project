@@ -11,9 +11,13 @@
 // Pretty-printing is not supported.
 //
 //===----------------------------------------------------------------------===//
+//
+// Coding style: https://mlir.llvm.org/getting_started/DeveloperGuide/
+//
+//===----------------------------------------------------------------------===//
 
-#ifndef LLVM_FLANG_FRONTEND_TEXTDIAGNOSTICBUFFER_H
-#define LLVM_FLANG_FRONTEND_TEXTDIAGNOSTICBUFFER_H
+#ifndef FORTRAN_FRONTEND_TEXTDIAGNOSTICBUFFER_H
+#define FORTRAN_FRONTEND_TEXTDIAGNOSTICBUFFER_H
 
 #include "clang/Basic/Diagnostic.h"
 #include "clang/Basic/SourceLocation.h"
@@ -31,22 +35,22 @@ public:
       std::vector<std::pair<clang::DiagnosticsEngine::Level, size_t>>;
 
 private:
-  DiagList errors_, warnings_, remarks_, notes_;
+  DiagList errors, warnings, remarks, notes;
 
   /// All diagnostics in the order in which they were generated. That order
   /// likely doesn't correspond to user input order, but at least it keeps
   /// notes in the right places. Each pair is a diagnostic level and an index
   /// into the corresponding DiagList above.
-  DiagnosticsLevelAndIndexPairs all_;
+  DiagnosticsLevelAndIndexPairs all;
 
 public:
   void HandleDiagnostic(clang::DiagnosticsEngine::Level diagLevel,
       const clang::Diagnostic &info) override;
 
   /// Flush the buffered diagnostics to a given diagnostic engine.
-  void FlushDiagnostics(clang::DiagnosticsEngine &diags) const;
+  void flushDiagnostics(clang::DiagnosticsEngine &diags) const;
 };
 
 } // namespace Fortran::frontend
 
-#endif // LLVM_CLANG_FRONTEND_TEXTDIAGNOSTICBUFFER_H
+#endif // FORTRAN_FRONTEND_TEXTDIAGNOSTICBUFFER_H

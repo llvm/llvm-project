@@ -5,6 +5,10 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+//
+// Coding style: https://mlir.llvm.org/getting_started/DeveloperGuide/
+//
+//===----------------------------------------------------------------------===//
 
 #include "flang/Frontend/CompilerInstance.h"
 #include "flang/Common/Fortran-features.h"
@@ -22,33 +26,32 @@
 using namespace Fortran::frontend;
 
 CompilerInstance::CompilerInstance()
-    : invocation_(new CompilerInvocation()),
-      allSources_(new Fortran::parser::AllSources()),
-      allCookedSources_(new Fortran::parser::AllCookedSources(*allSources_)),
-      parsing_(new Fortran::parser::Parsing(*allCookedSources_)) {
+    : invocation(new CompilerInvocation()),
+      allSources(new Fortran::parser::AllSources()),
+      allCookedSources(new Fortran::parser::AllCookedSources(*allSources)),
+      parsing(new Fortran::parser::Parsing(*allCookedSources)) {
   // TODO: This is a good default during development, but ultimately we should
   // give the user the opportunity to specify this.
-  allSources_->set_encoding(Fortran::parser::Encoding::UTF_8);
+  allSources->set_encoding(Fortran::parser::Encoding::UTF_8);
 }
 
 CompilerInstance::~CompilerInstance() {
-  assert(outputFiles_.empty() && "Still output files in flight?");
+  assert(outputFiles.empty() && "Still output files in flight?");
 }
 
-void CompilerInstance::set_invocation(
+void CompilerInstance::setInvocation(
     std::shared_ptr<CompilerInvocation> value) {
-  invocation_ = std::move(value);
+  invocation = std::move(value);
 }
 
-void CompilerInstance::set_semaOutputStream(raw_ostream &Value) {
-  ownedSemaOutputStream_.release();
-  semaOutputStream_ = &Value;
+void CompilerInstance::setSemaOutputStream(raw_ostream &value) {
+  ownedSemaOutputStream.release();
+  semaOutputStream = &value;
 }
 
-void CompilerInstance::set_semaOutputStream(
-    std::unique_ptr<raw_ostream> Value) {
-  ownedSemaOutputStream_.swap(Value);
-  semaOutputStream_ = ownedSemaOutputStream_.get();
+void CompilerInstance::setSemaOutputStream(std::unique_ptr<raw_ostream> value) {
+  ownedSemaOutputStream.swap(value);
+  semaOutputStream = ownedSemaOutputStream.get();
 }
 
 // Helper method to generate the path of the output file. The following logic
@@ -59,8 +62,9 @@ void CompilerInstance::set_semaOutputStream(
 //    the input file (i.e. inputFilename + extension)
 // 3. If the output file is not specified and the input file is `-`, then set
 //    the output file to `-` as well.
-static std::string GetOutputFilePath(llvm::StringRef outputFilename,
-    llvm::StringRef inputFilename, llvm::StringRef extension) {
+static std::string getOutputFilePath(llvm::StringRef outputFilename,
+                                     llvm::StringRef inputFilename,
+                                     llvm::StringRef extension) {
 
   // Output filename _is_ specified. Just use that.
   if (!outputFilename.empty())
@@ -78,35 +82,35 @@ static std::string GetOutputFilePath(llvm::StringRef outputFilename,
 }
 
 std::unique_ptr<llvm::raw_pwrite_stream>
-CompilerInstance::CreateDefaultOutputFile(
-    bool binary, llvm::StringRef baseName, llvm::StringRef extension) {
+CompilerInstance::createDefaultOutputFile(bool binary, llvm::StringRef baseName,
+                                          llvm::StringRef extension) {
 
   // Get the path of the output file
   std::string outputFilePath =
-      GetOutputFilePath(frontendOpts().outputFile, baseName, extension);
+      getOutputFilePath(getFrontendOpts().outputFile, baseName, extension);
 
   // Create the output file
   llvm::Expected<std::unique_ptr<llvm::raw_pwrite_stream>> os =
-      CreateOutputFileImpl(outputFilePath, binary);
+      createOutputFileImpl(outputFilePath, binary);
 
   // If successful, add the file to the list of tracked output files and
   // return.
   if (os) {
-    outputFiles_.emplace_back(OutputFile(outputFilePath));
+    outputFiles.emplace_back(OutputFile(outputFilePath));
     return std::move(*os);
   }
 
   // If unsuccessful, issue an error and return Null
-  unsigned DiagID = diagnostics().getCustomDiagID(
+  unsigned diagID = getDiagnostics().getCustomDiagID(
       clang::DiagnosticsEngine::Error, "unable to open output file '%0': '%1'");
-  diagnostics().Report(DiagID)
+  getDiagnostics().Report(diagID)
       << outputFilePath << llvm::errorToErrorCode(os.takeError()).message();
   return nullptr;
 }
 
 llvm::Expected<std::unique_ptr<llvm::raw_pwrite_stream>>
-CompilerInstance::CreateOutputFileImpl(
-    llvm::StringRef outputFilePath, bool binary) {
+CompilerInstance::createOutputFileImpl(llvm::StringRef outputFilePath,
+                                       bool binary) {
 
   // Creates the file descriptor for the output file
   std::unique_ptr<llvm::raw_fd_ostream> os;
@@ -128,47 +132,48 @@ CompilerInstance::CreateOutputFileImpl(
   return std::make_unique<llvm::buffer_unique_ostream>(std::move(os));
 }
 
-void CompilerInstance::ClearOutputFiles(bool eraseFiles) {
-  for (OutputFile &of : outputFiles_)
-    if (!of.filename_.empty() && eraseFiles)
-      llvm::sys::fs::remove(of.filename_);
+void CompilerInstance::clearOutputFiles(bool eraseFiles) {
+  for (OutputFile &of : outputFiles)
+    if (!of.filename.empty() && eraseFiles)
+      llvm::sys::fs::remove(of.filename);
 
-  outputFiles_.clear();
+  outputFiles.clear();
 }
 
-bool CompilerInstance::ExecuteAction(FrontendAction &act) {
-  auto &invoc = this->invocation();
+bool CompilerInstance::executeAction(FrontendAction &act) {
+  auto &invoc = this->getInvocation();
 
   // Set some sane defaults for the frontend.
-  invoc.SetDefaultFortranOpts();
+  invoc.setDefaultFortranOpts();
   // Update the fortran options based on user-based input.
-  invoc.SetFortranOpts();
+  invoc.setFortranOpts();
   // Set the encoding to read all input files in based on user input.
-  allSources_->set_encoding(invoc.fortranOpts().encoding);
+  allSources->set_encoding(invoc.getFortranOpts().encoding);
   // Create the semantics context and set semantic options.
-  invoc.SetSemanticsOpts(*this->allCookedSources_);
+  invoc.setSemanticsOpts(*this->allCookedSources);
 
   // Run the frontend action `act` for every input file.
-  for (const FrontendInputFile &fif : frontendOpts().inputs) {
-    if (act.BeginSourceFile(*this, fif)) {
-      if (llvm::Error err = act.Execute()) {
+  for (const FrontendInputFile &fif : getFrontendOpts().inputs) {
+    if (act.beginSourceFile(*this, fif)) {
+      if (llvm::Error err = act.execute()) {
         consumeError(std::move(err));
       }
-      act.EndSourceFile();
+      act.endSourceFile();
     }
   }
-  return !diagnostics().getClient()->getNumErrors();
+  return !getDiagnostics().getClient()->getNumErrors();
 }
 
-void CompilerInstance::CreateDiagnostics(
-    clang::DiagnosticConsumer *client, bool shouldOwnClient) {
-  diagnostics_ =
-      CreateDiagnostics(&GetDiagnosticOpts(), client, shouldOwnClient);
+void CompilerInstance::createDiagnostics(clang::DiagnosticConsumer *client,
+                                         bool shouldOwnClient) {
+  diagnostics =
+      createDiagnostics(&getDiagnosticOpts(), client, shouldOwnClient);
 }
 
 clang::IntrusiveRefCntPtr<clang::DiagnosticsEngine>
-CompilerInstance::CreateDiagnostics(clang::DiagnosticOptions *opts,
-    clang::DiagnosticConsumer *client, bool shouldOwnClient) {
+CompilerInstance::createDiagnostics(clang::DiagnosticOptions *opts,
+                                    clang::DiagnosticConsumer *client,
+                                    bool shouldOwnClient) {
   clang::IntrusiveRefCntPtr<clang::DiagnosticIDs> diagID(
       new clang::DiagnosticIDs());
   clang::IntrusiveRefCntPtr<clang::DiagnosticsEngine> diags(

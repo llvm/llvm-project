@@ -11,9 +11,13 @@
 //
 // TODO: If expanding, consider sharing the implementation with Clang.
 //===----------------------------------------------------------------------===//
+//
+// Coding style: https://mlir.llvm.org/getting_started/DeveloperGuide/
+//
+//===----------------------------------------------------------------------===//
 
-#ifndef LLVM_FLANG_FRONTEND_TEXTDIAGNOSTIC_H
-#define LLVM_FLANG_FRONTEND_TEXTDIAGNOSTIC_H
+#ifndef FORTRAN_FRONTEND_TEXTDIAGNOSTIC_H
+#define FORTRAN_FRONTEND_TEXTDIAGNOSTIC_H
 
 #include "clang/Basic/Diagnostic.h"
 #include "llvm/ADT/IntrusiveRefCntPtr.h"
@@ -46,8 +50,9 @@ public:
   /// \param os Where the message is printed
   /// \param level The diagnostic level (e.g. error or warning)
   /// \param showColors Enable colorizing of the message.
-  static void PrintDiagnosticLevel(llvm::raw_ostream &os,
-      clang::DiagnosticsEngine::Level level, bool showColors);
+  static void printDiagnosticLevel(llvm::raw_ostream &os,
+                                   clang::DiagnosticsEngine::Level level,
+                                   bool showColors);
 
   /// Pretty-print a diagnostic message to a llvm::raw_ostream.
   ///
@@ -61,8 +66,8 @@ public:
   /// \param isSupplemental true if this is a continuation note diagnostic
   /// \param message The text actually printed
   /// \param showColors Enable colorizing of the message.
-  static void PrintDiagnosticMessage(llvm::raw_ostream &os, bool isSupplemental,
-      llvm::StringRef message, bool showColors);
+  static void printDiagnosticMessage(llvm::raw_ostream &os, bool isSupplemental,
+                                     llvm::StringRef message, bool showColors);
 };
 
 } // namespace Fortran::frontend

@@ -5,8 +5,13 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-#ifndef LLVM_FLANG_FRONTEND_COMPILERINSTANCE_H
-#define LLVM_FLANG_FRONTEND_COMPILERINSTANCE_H
+//
+// Coding style: https://mlir.llvm.org/getting_started/DeveloperGuide/
+//
+//===----------------------------------------------------------------------===//
+
+#ifndef FORTRAN_FRONTEND_COMPILERINSTANCE_H
+#define FORTRAN_FRONTEND_COMPILERINSTANCE_H
 
 #include "flang/Frontend/CompilerInvocation.h"
 #include "flang/Frontend/FrontendAction.h"
@@ -37,43 +42,43 @@ namespace Fortran::frontend {
 class CompilerInstance {
 
   /// The options used in this compiler instance.
-  std::shared_ptr<CompilerInvocation> invocation_;
+  std::shared_ptr<CompilerInvocation> invocation;
 
   /// Flang file  manager.
-  std::shared_ptr<Fortran::parser::AllSources> allSources_;
+  std::shared_ptr<Fortran::parser::AllSources> allSources;
 
-  std::shared_ptr<Fortran::parser::AllCookedSources> allCookedSources_;
+  std::shared_ptr<Fortran::parser::AllCookedSources> allCookedSources;
 
-  std::shared_ptr<Fortran::parser::Parsing> parsing_;
+  std::shared_ptr<Fortran::parser::Parsing> parsing;
 
-  std::unique_ptr<Fortran::semantics::Semantics> semantics_;
+  std::unique_ptr<Fortran::semantics::Semantics> semantics;
 
-  std::unique_ptr<Fortran::semantics::RuntimeDerivedTypeTables> rtTyTables_;
+  std::unique_ptr<Fortran::semantics::RuntimeDerivedTypeTables> rtTyTables;
 
   /// The stream for diagnostics from Semantics
-  llvm::raw_ostream *semaOutputStream_ = &llvm::errs();
+  llvm::raw_ostream *semaOutputStream = &llvm::errs();
 
   /// The stream for diagnostics from Semantics if owned, otherwise nullptr.
-  std::unique_ptr<llvm::raw_ostream> ownedSemaOutputStream_;
+  std::unique_ptr<llvm::raw_ostream> ownedSemaOutputStream;
 
   /// The diagnostics engine instance.
-  llvm::IntrusiveRefCntPtr<clang::DiagnosticsEngine> diagnostics_;
+  llvm::IntrusiveRefCntPtr<clang::DiagnosticsEngine> diagnostics;
 
   /// Holds information about the output file.
   struct OutputFile {
-    std::string filename_;
+    std::string filename;
     OutputFile(std::string inputFilename)
-        : filename_(std::move(inputFilename)) {}
+        : filename(std::move(inputFilename)) {}
   };
 
   /// The list of active output files.
-  std::list<OutputFile> outputFiles_;
+  std::list<OutputFile> outputFiles;
 
   /// Holds the output stream provided by the user. Normally, users of
   /// CompilerInstance will call CreateOutputFile to obtain/create an output
   /// stream. If they want to provide their own output stream, this field will
   /// facilitate this. It is optional and will normally be just a nullptr.
-  std::unique_ptr<llvm::raw_pwrite_stream> outputStream_;
+  std::unique_ptr<llvm::raw_pwrite_stream> outputStream;
 
 public:
   explicit CompilerInstance();
@@ -83,26 +88,26 @@ public:
   /// @name Compiler Invocation
   /// {
 
-  CompilerInvocation &invocation() {
-    assert(invocation_ && "Compiler instance has no invocation!");
-    return *invocation_;
+  CompilerInvocation &getInvocation() {
+    assert(invocation && "Compiler instance has no invocation!");
+    return *invocation;
   };
 
   /// Replace the current invocation.
-  void set_invocation(std::shared_ptr<CompilerInvocation> value);
+  void setInvocation(std::shared_ptr<CompilerInvocation> value);
 
   /// }
   /// @name File manager
   /// {
 
   /// Return the current allSources.
-  Fortran::parser::AllSources &allSources() const { return *allSources_; }
+  Fortran::parser::AllSources &getAllSources() const { return *allSources; }
 
-  bool HasAllSources() const { return allSources_ != nullptr; }
+  bool hasAllSources() const { return allSources != nullptr; }
 
-  parser::AllCookedSources &allCookedSources() {
-    assert(allCookedSources_ && "Compiler instance has no AllCookedSources!");
-    return *allCookedSources_;
+  parser::AllCookedSources &getAllCookedSources() {
+    assert(allCookedSources && "Compiler instance has no AllCookedSources!");
+    return *allCookedSources;
   };
 
   /// }
@@ -110,36 +115,38 @@ public:
   /// {
 
   /// Return parsing to be used by Actions.
-  Fortran::parser::Parsing &parsing() const { return *parsing_; }
+  Fortran::parser::Parsing &getParsing() const { return *parsing; }
 
   /// }
   /// @name Semantic analysis
   /// {
 
   /// Replace the current stream for verbose output.
-  void set_semaOutputStream(llvm::raw_ostream &Value);
+  void setSemaOutputStream(llvm::raw_ostream &value);
 
   /// Replace the current stream for verbose output.
-  void set_semaOutputStream(std::unique_ptr<llvm::raw_ostream> Value);
+  void setSemaOutputStream(std::unique_ptr<llvm::raw_ostream> value);
 
   /// Get the current stream for verbose output.
-  llvm::raw_ostream &semaOutputStream() { return *semaOutputStream_; }
+  llvm::raw_ostream &getSemaOutputStream() { return *semaOutputStream; }
 
-  Fortran::semantics::Semantics &semantics() { return *semantics_; }
-  const Fortran::semantics::Semantics &semantics() const { return *semantics_; }
+  Fortran::semantics::Semantics &getSemantics() { return *semantics; }
+  const Fortran::semantics::Semantics &getSemantics() const {
+    return *semantics;
+  }
 
-  void SetSemantics(std::unique_ptr<Fortran::semantics::Semantics> semantics) {
-    semantics_ = std::move(semantics);
+  void setSemantics(std::unique_ptr<Fortran::semantics::Semantics> sema) {
+    semantics = std::move(sema);
   }
 
   void setRtTyTables(
       std::unique_ptr<Fortran::semantics::RuntimeDerivedTypeTables> tables) {
-    rtTyTables_ = std::move(tables);
+    rtTyTables = std::move(tables);
   }
 
   Fortran::semantics::RuntimeDerivedTypeTables &getRtTyTables() {
-    assert(rtTyTables_ && "Missing runtime derived type tables!");
-    return *rtTyTables_;
+    assert(rtTyTables && "Missing runtime derived type tables!");
+    return *rtTyTables;
   }
 
   /// }
@@ -150,47 +157,47 @@ public:
   /// CompilerInvocation object.
   /// \param act - The action to execute.
   /// \return - True on success.
-  bool ExecuteAction(FrontendAction &act);
+  bool executeAction(FrontendAction &act);
 
   /// }
   /// @name Forwarding Methods
   /// {
 
-  clang::DiagnosticOptions &GetDiagnosticOpts() {
-    return invocation_->GetDiagnosticOpts();
+  clang::DiagnosticOptions &getDiagnosticOpts() {
+    return invocation->getDiagnosticOpts();
   }
-  const clang::DiagnosticOptions &GetDiagnosticOpts() const {
-    return invocation_->GetDiagnosticOpts();
+  const clang::DiagnosticOptions &getDiagnosticOpts() const {
+    return invocation->getDiagnosticOpts();
   }
 
-  FrontendOptions &frontendOpts() { return invocation_->frontendOpts(); }
-  const FrontendOptions &frontendOpts() const {
-    return invocation_->frontendOpts();
+  FrontendOptions &getFrontendOpts() { return invocation->getFrontendOpts(); }
+  const FrontendOptions &getFrontendOpts() const {
+    return invocation->getFrontendOpts();
   }
 
   PreprocessorOptions &preprocessorOpts() {
-    return invocation_->preprocessorOpts();
+    return invocation->getPreprocessorOpts();
   }
   const PreprocessorOptions &preprocessorOpts() const {
-    return invocation_->preprocessorOpts();
+    return invocation->getPreprocessorOpts();
   }
 
   /// }
   /// @name Diagnostics Engine
   /// {
 
-  bool HasDiagnostics() const { return diagnostics_ != nullptr; }
+  bool hasDiagnostics() const { return diagnostics != nullptr; }
 
   /// Get the current diagnostics engine.
-  clang::DiagnosticsEngine &diagnostics() const {
-    assert(diagnostics_ && "Compiler instance has no diagnostics!");
-    return *diagnostics_;
+  clang::DiagnosticsEngine &getDiagnostics() const {
+    assert(diagnostics && "Compiler instance has no diagnostics!");
+    return *diagnostics;
   }
 
-  clang::DiagnosticConsumer &GetDiagnosticClient() const {
-    assert(diagnostics_ && diagnostics_->getClient() &&
-        "Compiler instance has no diagnostic client!");
-    return *diagnostics_->getClient();
+  clang::DiagnosticConsumer &getDiagnosticClient() const {
+    assert(diagnostics && diagnostics->getClient() &&
+           "Compiler instance has no diagnostic client!");
+    return *diagnostics->getClient();
   }
 
   /// {
@@ -198,7 +205,7 @@ public:
   /// {
 
   /// Clear the output file list.
-  void ClearOutputFiles(bool eraseFiles);
+  void clearOutputFiles(bool eraseFiles);
 
   /// Create the default output file (based on the invocation's options) and
   /// add it to the list of tracked output files. If the name of the output
@@ -211,9 +218,9 @@ public:
   /// \param extension  The extension to use for output names derived from
   ///                   \p baseInput.
   /// \return           Null on error, ostream for the output file otherwise
-  std::unique_ptr<llvm::raw_pwrite_stream> CreateDefaultOutputFile(
-      bool binary = true, llvm::StringRef baseInput = "",
-      llvm::StringRef extension = "");
+  std::unique_ptr<llvm::raw_pwrite_stream>
+  createDefaultOutputFile(bool binary = true, llvm::StringRef baseInput = "",
+                          llvm::StringRef extension = "");
 
 private:
   /// Create a new output file
@@ -221,8 +228,8 @@ private:
   /// \param outputPath   The path to the output file.
   /// \param binary       The mode to open the file in.
   /// \return             Null on error, ostream for the output file otherwise
-  llvm::Expected<std::unique_ptr<llvm::raw_pwrite_stream>> CreateOutputFileImpl(
-      llvm::StringRef outputPath, bool binary);
+  llvm::Expected<std::unique_ptr<llvm::raw_pwrite_stream>>
+  createOutputFileImpl(llvm::StringRef outputPath, bool binary);
 
 public:
   /// }
@@ -244,33 +251,34 @@ public:
   /// DiagnosticsEngine object.
   ///
   /// \return The new object on success, or null on failure.
-  static clang::IntrusiveRefCntPtr<clang::DiagnosticsEngine> CreateDiagnostics(
-      clang::DiagnosticOptions *opts,
-      clang::DiagnosticConsumer *client = nullptr, bool shouldOwnClient = true);
-  void CreateDiagnostics(
-      clang::DiagnosticConsumer *client = nullptr, bool shouldOwnClient = true);
+  static clang::IntrusiveRefCntPtr<clang::DiagnosticsEngine>
+  createDiagnostics(clang::DiagnosticOptions *opts,
+                    clang::DiagnosticConsumer *client = nullptr,
+                    bool shouldOwnClient = true);
+  void createDiagnostics(clang::DiagnosticConsumer *client = nullptr,
+                         bool shouldOwnClient = true);
 
   /// }
   /// @name Output Stream Methods
   /// {
-  void set_outputStream(std::unique_ptr<llvm::raw_pwrite_stream> outStream) {
-    outputStream_ = std::move(outStream);
+  void setOutputStream(std::unique_ptr<llvm::raw_pwrite_stream> outStream) {
+    outputStream = std::move(outStream);
   }
 
-  bool IsOutputStreamNull() { return (outputStream_ == nullptr); }
+  bool isOutputStreamNull() { return (outputStream == nullptr); }
 
   // Allow the frontend compiler to write in the output stream.
-  void WriteOutputStream(const std::string &message) {
-    *outputStream_ << message;
+  void writeOutputStream(const std::string &message) {
+    *outputStream << message;
   }
 
   /// Get the user specified output stream.
-  llvm::raw_pwrite_stream &GetOutputStream() {
-    assert(outputStream_ &&
-        "Compiler instance has no user-specified output stream!");
-    return *outputStream_;
+  llvm::raw_pwrite_stream &getOutputStream() {
+    assert(outputStream &&
+           "Compiler instance has no user-specified output stream!");
+    return *outputStream;
   }
 };
 
 } // end namespace Fortran::frontend
-#endif // LLVM_FLANG_FRONTEND_COMPILERINSTANCE_H
+#endif // FORTRAN_FRONTEND_COMPILERINSTANCE_H
