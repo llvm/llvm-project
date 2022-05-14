@@ -3021,57 +3021,7 @@ Instruction *InstCombinerImpl::foldICmpInstWithConstant(ICmpInst &Cmp) {
     return nullptr;
 
   if (auto *BO = dyn_cast<BinaryOperator>(Cmp.getOperand(0))) {
-    switch (BO->getOpcode()) {
-    case Instruction::Xor:
-      if (Instruction *I = foldICmpXorConstant(Cmp, BO, *C))
-        return I;
-      break;
-    case Instruction::And:
-      if (Instruction *I = foldICmpAndConstant(Cmp, BO, *C))
-        return I;
-      break;
-    case Instruction::Or:
-      if (Instruction *I = foldICmpOrConstant(Cmp, BO, *C))
-        return I;
-      break;
-    case Instruction::Mul:
-      if (Instruction *I = foldICmpMulConstant(Cmp, BO, *C))
-        return I;
-      break;
-    case Instruction::Shl:
-      if (Instruction *I = foldICmpShlConstant(Cmp, BO, *C))
-        return I;
-      break;
-    case Instruction::LShr:
-    case Instruction::AShr:
-      if (Instruction *I = foldICmpShrConstant(Cmp, BO, *C))
-        return I;
-      break;
-    case Instruction::SRem:
-      if (Instruction *I = foldICmpSRemConstant(Cmp, BO, *C))
-        return I;
-      break;
-    case Instruction::UDiv:
-      if (Instruction *I = foldICmpUDivConstant(Cmp, BO, *C))
-        return I;
-      LLVM_FALLTHROUGH;
-    case Instruction::SDiv:
-      if (Instruction *I = foldICmpDivConstant(Cmp, BO, *C))
-        return I;
-      break;
-    case Instruction::Sub:
-      if (Instruction *I = foldICmpSubConstant(Cmp, BO, *C))
-        return I;
-      break;
-    case Instruction::Add:
-      if (Instruction *I = foldICmpAddConstant(Cmp, BO, *C))
-        return I;
-      break;
-    default:
-      break;
-    }
-    // TODO: These folds could be refactored to be part of the above calls.
-    if (Instruction *I = foldICmpBinOpEqualityWithConstant(Cmp, BO, *C))
+    if (Instruction *I = foldICmpBinOpWithConstant(Cmp, BO, *C))
       return I;
   }
 
@@ -3326,6 +3276,64 @@ static Instruction *foldICmpIntrinsicWithIntrinsic(ICmpInst &Cmp) {
   }
 
   return nullptr;
+}
+
+/// Fold an icmp with BinaryOp and constant operand: icmp Pred BO, C.
+Instruction *InstCombinerImpl::foldICmpBinOpWithConstant(ICmpInst &Cmp,
+                                                         BinaryOperator *BO,
+                                                         const APInt &C) {
+  switch (BO->getOpcode()) {
+  case Instruction::Xor:
+    if (Instruction *I = foldICmpXorConstant(Cmp, BO, C))
+      return I;
+    break;
+  case Instruction::And:
+    if (Instruction *I = foldICmpAndConstant(Cmp, BO, C))
+      return I;
+    break;
+  case Instruction::Or:
+    if (Instruction *I = foldICmpOrConstant(Cmp, BO, C))
+      return I;
+    break;
+  case Instruction::Mul:
+    if (Instruction *I = foldICmpMulConstant(Cmp, BO, C))
+      return I;
+    break;
+  case Instruction::Shl:
+    if (Instruction *I = foldICmpShlConstant(Cmp, BO, C))
+      return I;
+    break;
+  case Instruction::LShr:
+  case Instruction::AShr:
+    if (Instruction *I = foldICmpShrConstant(Cmp, BO, C))
+      return I;
+    break;
+  case Instruction::SRem:
+    if (Instruction *I = foldICmpSRemConstant(Cmp, BO, C))
+      return I;
+    break;
+  case Instruction::UDiv:
+    if (Instruction *I = foldICmpUDivConstant(Cmp, BO, C))
+      return I;
+    LLVM_FALLTHROUGH;
+  case Instruction::SDiv:
+    if (Instruction *I = foldICmpDivConstant(Cmp, BO, C))
+      return I;
+    break;
+  case Instruction::Sub:
+    if (Instruction *I = foldICmpSubConstant(Cmp, BO, C))
+      return I;
+    break;
+  case Instruction::Add:
+    if (Instruction *I = foldICmpAddConstant(Cmp, BO, C))
+      return I;
+    break;
+  default:
+    break;
+  }
+
+  // TODO: These folds could be refactored to be part of the above calls.
+  return foldICmpBinOpEqualityWithConstant(Cmp, BO, C);
 }
 
 /// Fold an icmp with LLVM intrinsic and constant operand: icmp Pred II, C.
