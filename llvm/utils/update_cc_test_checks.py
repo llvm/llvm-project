@@ -349,7 +349,7 @@ def main():
         else:
           asm.add_checks(my_output_lines, '//',
                              prefixes,
-                             func_dict, func,
+                             func_dict, func, global_vars_seen_dict,
                              is_filtered=builder.is_filtered())
 
       if ti.args.check_globals:
