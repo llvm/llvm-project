@@ -26,11 +26,9 @@
 #   PYTHONPATH=/path/to/LLDB.framework/Resources/Python ./crashlog.py ~/Library/Logs/DiagnosticReports/a.crash
 #----------------------------------------------------------------------
 
-import cmd
 import concurrent.futures
 import contextlib
 import datetime
-import glob
 import json
 import optparse
 import os
@@ -526,10 +524,10 @@ class JSONCrashLogParser:
             thread.frames.append(self.crashlog.Frame(idx, pc, frame_offset))
 
             # on arm64 systems, if it jump through a null function pointer,
-            # we end up at address 0 and the crash reporter unwinder 
-            # misses the frame that actually faulted.  
-            # But $lr can tell us where the last BL/BLR instruction used 
-            # was at, so insert that address as the caller stack frame.  
+            # we end up at address 0 and the crash reporter unwinder
+            # misses the frame that actually faulted.
+            # But $lr can tell us where the last BL/BLR instruction used
+            # was at, so insert that address as the caller stack frame.
             if idx == 0 and pc == 0 and "lr" in thread.registers:
                 pc = thread.registers["lr"]
                 for image in self.data['usedImages']:
