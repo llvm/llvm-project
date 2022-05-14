@@ -88,7 +88,7 @@ Region *getAffineScope(Operation *op);
 // of striding).
 class AffineDmaStartOp
     : public Op<AffineDmaStartOp, OpTrait::MemRefsNormalizable,
-                OpTrait::VariadicOperands, OpTrait::ZeroResult,
+                OpTrait::VariadicOperands, OpTrait::ZeroResults,
                 OpTrait::OpInvariants, AffineMapAccessInterface::Trait> {
 public:
   using Op::Op;
@@ -281,7 +281,7 @@ public:
 //
 class AffineDmaWaitOp
     : public Op<AffineDmaWaitOp, OpTrait::MemRefsNormalizable,
-                OpTrait::VariadicOperands, OpTrait::ZeroResult,
+                OpTrait::VariadicOperands, OpTrait::ZeroResults,
                 OpTrait::OpInvariants, AffineMapAccessInterface::Trait> {
 public:
   using Op::Op;

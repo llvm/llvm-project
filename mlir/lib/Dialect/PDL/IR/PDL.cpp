@@ -216,7 +216,7 @@ static LogicalResult verifyResultTypesAreInferrable(OperationOp op,
     // should cover many cases in which the user intended to infer the results
     // of an operation, but it isn't actually possible.
     bool expectedAtLeastOneResult =
-        !opName->hasTrait<OpTrait::ZeroResult>() &&
+        !opName->hasTrait<OpTrait::ZeroResults>() &&
         !opName->hasTrait<OpTrait::VariadicResults>();
     if (expectedAtLeastOneResult) {
       return op

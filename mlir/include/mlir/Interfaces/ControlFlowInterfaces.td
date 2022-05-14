@@ -198,7 +198,7 @@ def RegionBranchOpInterface : OpInterface<"RegionBranchOpInterface"> {
   ];
 
   let verify = [{
-    static_assert(!ConcreteOp::template hasTrait<OpTrait::ZeroRegion>(),
+    static_assert(!ConcreteOp::template hasTrait<OpTrait::ZeroRegions>(),
                   "expected operation to have non-zero regions");
     return detail::verifyTypesAlongControlFlowEdges($_op);
   }];
@@ -259,9 +259,9 @@ def RegionBranchTerminatorOpInterface :
   let verify = [{
     static_assert(ConcreteOp::template hasTrait<OpTrait::IsTerminator>(),
                   "expected operation to be a terminator");
-    static_assert(ConcreteOp::template hasTrait<OpTrait::ZeroResult>(),
+    static_assert(ConcreteOp::template hasTrait<OpTrait::ZeroResults>(),
                   "expected operation to have zero results");
-    static_assert(ConcreteOp::template hasTrait<OpTrait::ZeroSuccessor>(),
+    static_assert(ConcreteOp::template hasTrait<OpTrait::ZeroSuccessors>(),
                   "expected operation to have zero successors");
     return success();
   }];
