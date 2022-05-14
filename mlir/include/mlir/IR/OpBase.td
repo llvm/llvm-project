@@ -294,12 +294,6 @@ class Variadic<Type type> : TypeConstraint<type.predicate, type.summary,
   int minSize = 0;
 }
 
-// A variadic type constraint of at least N types. It expands to N or more of
-// the base type.
-class VariadicAtLeast<int N, Type type> : Variadic<type> {
-  let minSize = N;
-}
-
 // A nested variadic type constraint. It expands to zero or more variadic ranges
 // of the base type. This class is used for supporting variadic operands and
 // results. `variadicSegmentAttrName` should correspond to the name of an
