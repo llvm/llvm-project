@@ -6859,11 +6859,10 @@ SDValue DAGCombiner::visitOR(SDNode *N) {
       return DAG.getAllOnesConstant(SDLoc(N), N1.getValueType());
 
     // fold (or (shuf A, V_0, MA), (shuf B, V_0, MB)) -> (shuf A, B, Mask)
-    // Do this only if the resulting shuffle is legal.
-    if (isa<ShuffleVectorSDNode>(N0) &&
-        isa<ShuffleVectorSDNode>(N1) &&
-        // Avoid folding a node with illegal type.
-        TLI.isTypeLegal(VT)) {
+    // Do this only if the resulting type / shuffle is legal.
+    auto *SV0 = dyn_cast<ShuffleVectorSDNode>(N0);
+    auto *SV1 = dyn_cast<ShuffleVectorSDNode>(N1);
+    if (SV0 && SV1 && TLI.isTypeLegal(VT)) {
       bool ZeroN00 = ISD::isBuildVectorAllZeros(N0.getOperand(0).getNode());
       bool ZeroN01 = ISD::isBuildVectorAllZeros(N0.getOperand(1).getNode());
       bool ZeroN10 = ISD::isBuildVectorAllZeros(N1.getOperand(0).getNode());
@@ -6872,11 +6871,9 @@ SDValue DAGCombiner::visitOR(SDNode *N) {
       if ((ZeroN00 != ZeroN01) && (ZeroN10 != ZeroN11)) {
         assert((!ZeroN00 || !ZeroN01) && "Both inputs zero!");
         assert((!ZeroN10 || !ZeroN11) && "Both inputs zero!");
-        const ShuffleVectorSDNode *SV0 = cast<ShuffleVectorSDNode>(N0);
-        const ShuffleVectorSDNode *SV1 = cast<ShuffleVectorSDNode>(N1);
         bool CanFold = true;
         int NumElts = VT.getVectorNumElements();
-        SmallVector<int, 4> Mask(NumElts);
+        SmallVector<int, 4> Mask(NumElts, -1);
 
         for (int i = 0; i != NumElts; ++i) {
           int M0 = SV0->getMaskElt(i);
@@ -6888,10 +6885,8 @@ SDValue DAGCombiner::visitOR(SDNode *N) {
 
           // If one element is zero and the otherside is undef, keep undef.
           // This also handles the case that both are undef.
-          if ((M0Zero && M1 < 0) || (M1Zero && M0 < 0)) {
-            Mask[i] = -1;
+          if ((M0Zero && M1 < 0) || (M1Zero && M0 < 0))
             continue;
-          }
 
           // Make sure only one of the elements is zero.
           if (M0Zero == M1Zero) {
