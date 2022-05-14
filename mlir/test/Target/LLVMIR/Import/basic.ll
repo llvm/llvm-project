@@ -541,3 +541,34 @@ def: ; pred: bb3, bbs
   call void @g(i32 %v2)
   ret void
 }
+
+; Insert/ExtractValue
+; CHECK-LABEL: llvm.func @insert_extract_value_struct
+define float @insert_extract_value_struct({{i32},{float, double}}* %p) {
+  ; CHECK: %[[C0:.+]] = llvm.mlir.constant(2.000000e+00 : f64)
+  ; CHECK: %[[VT:.+]] = llvm.load %{{.+}}
+  %t = load {{i32},{float, double}}, {{i32},{float, double}}* %p
+  ; CHECK: %[[EV:.+]] = llvm.extractvalue %[[VT]][1 : i32, 0 : i32] :
+  ; CHECK-SAME: !llvm.struct<(struct<(i32)>, struct<(f32, f64)>)>
+  %s = extractvalue {{i32},{float, double}} %t, 1, 0
+  ; CHECK: %[[IV:.+]] = llvm.insertvalue %[[C0]], %[[VT]][1 : i32, 1 : i32] :
+  ; CHECK-SAME: !llvm.struct<(struct<(i32)>, struct<(f32, f64)>)>
+  %r = insertvalue {{i32},{float, double}} %t, double 2.0, 1, 1
+  ; CHECK: llvm.store %[[IV]], %{{.+}}
+  store {{i32},{float, double}} %r, {{i32},{float, double}}* %p
+  ; CHECK: llvm.return %[[EV]]
+  ret float %s
+}
+
+; CHECK-LABEL: llvm.func @insert_extract_value_array
+define void @insert_extract_value_array([4 x [4 x i8]] %x1) {
+  ; CHECK: %[[C0:.+]] = llvm.mlir.constant(0 : i8)
+  ; CHECK: llvm.insertvalue %[[C0]], %{{.+}}[0 : i32, 0 : i32] : !llvm.array<4 x array<4 x i8>>
+  %res1 = insertvalue [4 x [4 x i8 ]] %x1, i8 0, 0, 0
+  ; CHECK: llvm.extractvalue %{{.+}}[1 : i32] : !llvm.array<4 x array<4 x i8>>
+  %res2 = extractvalue [4 x [4 x i8 ]] %x1, 1
+  ; CHECK: llvm.extractvalue %{{.+}}[0 : i32, 1 : i32] : !llvm.array<4 x array<4 x i8>>
+  %res3 = extractvalue [4 x [4 x i8 ]] %x1, 0, 1
+  ret void
+}
+
