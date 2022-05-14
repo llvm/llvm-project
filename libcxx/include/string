@@ -672,6 +672,7 @@ public:
     typedef std::reverse_iterator<const_iterator>        const_reverse_iterator;
 
 private:
+    static_assert(CHAR_BIT == 8, "This implementation assumes that one byte contains 8 bits");
 
 #ifdef _LIBCPP_ABI_ALTERNATE_STRING_LAYOUT
 
@@ -689,14 +690,13 @@ private:
     struct __short
     {
         value_type __data_[__min_cap];
-        unsigned char __padding[sizeof(value_type) - 1];
-        unsigned char __size_ : 7;
-        unsigned char __is_long_ : 1;
+        unsigned char __padding_[sizeof(value_type) - 1];
+        size_type __size_ : 7;
+        size_type __is_long_ : 1;
     };
 
 // The __endian_factor is required because the field we use to store the size
-// (either size_type or unsigned char depending on long/short) has one fewer
-// bit than it would if it were not a bitfield.
+// has one fewer bit than it would if it were not a bitfield.
 //
 // If the LSB is used to store the short-flag in the short string representation,
 // we have to multiply the size by two when it is stored and divide it by two when
@@ -735,14 +735,9 @@ private:
 
     struct __short
     {
-        union
-        {
-            struct {
-                unsigned char __is_long_ : 1;
-                unsigned char __size_ : 7;
-            };
-            value_type __lx;
-        };
+        size_type __is_long_ : 1;
+        size_type __size_ : 7;
+        char __padding_[sizeof(value_type) - 1];
         value_type __data_[__min_cap];
     };
 
