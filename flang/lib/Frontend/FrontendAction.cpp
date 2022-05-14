@@ -5,6 +5,10 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+//
+// Coding style: https://mlir.llvm.org/getting_started/DeveloperGuide/
+//
+//===----------------------------------------------------------------------===//
 
 #include "flang/Frontend/FrontendAction.h"
 #include "flang/Frontend/CompilerInstance.h"
@@ -19,110 +23,111 @@ using namespace Fortran::frontend;
 
 LLVM_INSTANTIATE_REGISTRY(FrontendPluginRegistry)
 
-void FrontendAction::set_currentInput(const FrontendInputFile &currentInput) {
-  this->currentInput_ = currentInput;
+void FrontendAction::setCurrentInput(const FrontendInputFile &input) {
+  this->currentInput = input;
 }
 
 // Call this method if BeginSourceFile fails.
 // Deallocate compiler instance, input and output descriptors
-static void BeginSourceFileCleanUp(FrontendAction &fa, CompilerInstance &ci) {
-  ci.ClearOutputFiles(/*EraseFiles=*/true);
-  fa.set_currentInput(FrontendInputFile());
-  fa.set_instance(nullptr);
+static void beginSourceFileCleanUp(FrontendAction &fa, CompilerInstance &ci) {
+  ci.clearOutputFiles(/*EraseFiles=*/true);
+  fa.setCurrentInput(FrontendInputFile());
+  fa.setInstance(nullptr);
 }
 
-bool FrontendAction::BeginSourceFile(
-    CompilerInstance &ci, const FrontendInputFile &realInput) {
+bool FrontendAction::beginSourceFile(CompilerInstance &ci,
+                                     const FrontendInputFile &realInput) {
 
   FrontendInputFile input(realInput);
 
   // Return immediately if the input file does not exist or is not a file. Note
   // that we cannot check this for input from stdin.
-  if (input.file() != "-") {
-    if (!llvm::sys::fs::is_regular_file(input.file())) {
+  if (input.getFile() != "-") {
+    if (!llvm::sys::fs::is_regular_file(input.getFile())) {
       // Create an diagnostic ID to report
       unsigned diagID;
-      if (llvm::vfs::getRealFileSystem()->exists(input.file())) {
-        ci.diagnostics().Report(clang::diag::err_fe_error_reading)
-            << input.file();
-        diagID = ci.diagnostics().getCustomDiagID(
+      if (llvm::vfs::getRealFileSystem()->exists(input.getFile())) {
+        ci.getDiagnostics().Report(clang::diag::err_fe_error_reading)
+            << input.getFile();
+        diagID = ci.getDiagnostics().getCustomDiagID(
             clang::DiagnosticsEngine::Error, "%0 is not a regular file");
       } else {
-        diagID = ci.diagnostics().getCustomDiagID(
+        diagID = ci.getDiagnostics().getCustomDiagID(
             clang::DiagnosticsEngine::Error, "%0 does not exist");
       }
 
       // Report the diagnostic and return
-      ci.diagnostics().Report(diagID) << input.file();
-      BeginSourceFileCleanUp(*this, ci);
+      ci.getDiagnostics().Report(diagID) << input.getFile();
+      beginSourceFileCleanUp(*this, ci);
       return false;
     }
   }
 
-  assert(!instance_ && "Already processing a source file!");
-  assert(!realInput.IsEmpty() && "Unexpected empty filename!");
-  set_currentInput(realInput);
-  set_instance(&ci);
+  assert(!instance && "Already processing a source file!");
+  assert(!realInput.isEmpty() && "Unexpected empty filename!");
+  setCurrentInput(realInput);
+  setInstance(&ci);
 
-  if (!ci.HasAllSources()) {
-    BeginSourceFileCleanUp(*this, ci);
+  if (!ci.hasAllSources()) {
+    beginSourceFileCleanUp(*this, ci);
     return false;
   }
 
-  auto &invoc = ci.invocation();
+  auto &invoc = ci.getInvocation();
 
   // Include command-line and predefined preprocessor macros. Use either:
   //  * `-cpp/-nocpp`, or
   //  * the file extension (if the user didn't express any preference)
   // to decide whether to include them or not.
-  if ((invoc.preprocessorOpts().macrosFlag == PPMacrosFlag::Include) ||
-      (invoc.preprocessorOpts().macrosFlag == PPMacrosFlag::Unknown &&
-          currentInput().MustBePreprocessed())) {
-    invoc.SetDefaultPredefinitions();
-    invoc.CollectMacroDefinitions();
+  if ((invoc.getPreprocessorOpts().macrosFlag == PPMacrosFlag::Include) ||
+      (invoc.getPreprocessorOpts().macrosFlag == PPMacrosFlag::Unknown &&
+       getCurrentInput().getMustBePreprocessed())) {
+    invoc.setDefaultPredefinitions();
+    invoc.collectMacroDefinitions();
   }
 
   // Decide between fixed and free form (if the user didn't express any
   // preference, use the file extension to decide)
-  if (invoc.frontendOpts().fortranForm == FortranForm::Unknown) {
-    invoc.fortranOpts().isFixedForm = currentInput().IsFixedForm();
+  if (invoc.getFrontendOpts().fortranForm == FortranForm::Unknown) {
+    invoc.getFortranOpts().isFixedForm = getCurrentInput().getIsFixedForm();
   }
 
-  if (!BeginSourceFileAction()) {
-    BeginSourceFileCleanUp(*this, ci);
+  if (!beginSourceFileAction()) {
+    beginSourceFileCleanUp(*this, ci);
     return false;
   }
 
   return true;
 }
 
-bool FrontendAction::ShouldEraseOutputFiles() {
-  return instance().diagnostics().hasErrorOccurred();
+bool FrontendAction::shouldEraseOutputFiles() {
+  return getInstance().getDiagnostics().hasErrorOccurred();
 }
 
-llvm::Error FrontendAction::Execute() {
-  ExecuteAction();
+llvm::Error FrontendAction::execute() {
+  executeAction();
 
   return llvm::Error::success();
 }
 
-void FrontendAction::EndSourceFile() {
-  CompilerInstance &ci = instance();
+void FrontendAction::endSourceFile() {
+  CompilerInstance &ci = getInstance();
 
   // Cleanup the output streams, and erase the output files if instructed by the
   // FrontendAction.
-  ci.ClearOutputFiles(/*EraseFiles=*/ShouldEraseOutputFiles());
+  ci.clearOutputFiles(/*EraseFiles=*/shouldEraseOutputFiles());
 
-  set_instance(nullptr);
-  set_currentInput(FrontendInputFile());
+  setInstance(nullptr);
+  setCurrentInput(FrontendInputFile());
 }
 
-bool FrontendAction::RunPrescan() {
-  CompilerInstance &ci = this->instance();
-  std::string currentInputPath{GetCurrentFileOrBufferName()};
-  Fortran::parser::Options parserOptions = ci.invocation().fortranOpts();
+bool FrontendAction::runPrescan() {
+  CompilerInstance &ci = this->getInstance();
+  std::string currentInputPath{getCurrentFileOrBufferName()};
+  Fortran::parser::Options parserOptions = ci.getInvocation().getFortranOpts();
 
-  if (ci.invocation().frontendOpts().fortranForm == FortranForm::Unknown) {
+  if (ci.getInvocation().getFrontendOpts().fortranForm ==
+      FortranForm::Unknown) {
     // Switch between fixed and free form format based on the input file
     // extension.
     //
@@ -130,41 +135,41 @@ bool FrontendAction::RunPrescan() {
     // method (i.e. before processing any specific input files). However, we
     // can't decide between fixed and free form based on the file extension
     // earlier than this.
-    parserOptions.isFixedForm = currentInput().IsFixedForm();
+    parserOptions.isFixedForm = getCurrentInput().getIsFixedForm();
   }
 
   // Prescan. In case of failure, report and return.
-  ci.parsing().Prescan(currentInputPath, parserOptions);
+  ci.getParsing().Prescan(currentInputPath, parserOptions);
 
   return !reportFatalScanningErrors();
 }
 
-bool FrontendAction::RunParse() {
-  CompilerInstance &ci = this->instance();
+bool FrontendAction::runParse() {
+  CompilerInstance &ci = this->getInstance();
 
   // Parse. In case of failure, report and return.
-  ci.parsing().Parse(llvm::outs());
+  ci.getParsing().Parse(llvm::outs());
 
   if (reportFatalParsingErrors()) {
     return false;
   }
 
-  // Report the diagnostics from parsing
-  ci.parsing().messages().Emit(llvm::errs(), ci.allCookedSources());
+  // Report the diagnostics from getParsing
+  ci.getParsing().messages().Emit(llvm::errs(), ci.getAllCookedSources());
 
   return true;
 }
 
-bool FrontendAction::RunSemanticChecks() {
-  CompilerInstance &ci = this->instance();
-  std::optional<parser::Program> &parseTree{ci.parsing().parseTree()};
+bool FrontendAction::runSemanticChecks() {
+  CompilerInstance &ci = this->getInstance();
+  std::optional<parser::Program> &parseTree{ci.getParsing().parseTree()};
   assert(parseTree && "Cannot run semantic checks without a parse tree!");
 
   // Prepare semantics
-  ci.SetSemantics(std::make_unique<Fortran::semantics::Semantics>(
-      ci.invocation().semanticsContext(), *parseTree,
-      ci.invocation().debugModuleDir()));
-  auto &semantics = ci.semantics();
+  ci.setSemantics(std::make_unique<Fortran::semantics::Semantics>(
+      ci.getInvocation().getSemanticsContext(), *parseTree,
+      ci.getInvocation().getDebugModuleDir()));
+  auto &semantics = ci.getSemantics();
 
   // Run semantic checks
   semantics.Perform();
@@ -174,16 +179,16 @@ bool FrontendAction::RunSemanticChecks() {
   }
 
   // Report the diagnostics from the semantic checks
-  semantics.EmitMessages(ci.semaOutputStream());
+  semantics.EmitMessages(ci.getSemaOutputStream());
 
   return true;
 }
 
-bool FrontendAction::GenerateRtTypeTables() {
-  instance().setRtTyTables(
+bool FrontendAction::generateRtTypeTables() {
+  getInstance().setRtTyTables(
       std::make_unique<Fortran::semantics::RuntimeDerivedTypeTables>(
           BuildRuntimeDerivedTypeTables(
-              instance().invocation().semanticsContext())));
+              getInstance().getInvocation().getSemanticsContext())));
 
   // The runtime derived type information table builder may find additional
   // semantic errors. Report them.
@@ -196,28 +201,28 @@ bool FrontendAction::GenerateRtTypeTables() {
 
 template <unsigned N>
 bool FrontendAction::reportFatalErrors(const char (&message)[N]) {
-  if (!instance_->parsing().messages().empty() &&
-      (instance_->invocation().warnAsErr() ||
-          instance_->parsing().messages().AnyFatalError())) {
-    const unsigned diagID = instance_->diagnostics().getCustomDiagID(
+  if (!instance->getParsing().messages().empty() &&
+      (instance->getInvocation().getWarnAsErr() ||
+       instance->getParsing().messages().AnyFatalError())) {
+    const unsigned diagID = instance->getDiagnostics().getCustomDiagID(
         clang::DiagnosticsEngine::Error, message);
-    instance_->diagnostics().Report(diagID) << GetCurrentFileOrBufferName();
-    instance_->parsing().messages().Emit(
-        llvm::errs(), instance_->allCookedSources());
+    instance->getDiagnostics().Report(diagID) << getCurrentFileOrBufferName();
+    instance->getParsing().messages().Emit(llvm::errs(),
+                                           instance->getAllCookedSources());
     return true;
   }
   return false;
 }
 
 bool FrontendAction::reportFatalSemanticErrors() {
-  auto &diags = instance_->diagnostics();
-  auto &sema = instance_->semantics();
+  auto &diags = instance->getDiagnostics();
+  auto &sema = instance->getSemantics();
 
-  if (instance_->semantics().AnyFatalError()) {
-    unsigned DiagID = diags.getCustomDiagID(
-        clang::DiagnosticsEngine::Error, "Semantic errors in %0");
-    diags.Report(DiagID) << GetCurrentFileOrBufferName();
-    sema.EmitMessages(instance_->semaOutputStream());
+  if (instance->getSemantics().AnyFatalError()) {
+    unsigned diagID = diags.getCustomDiagID(clang::DiagnosticsEngine::Error,
+                                            "Semantic errors in %0");
+    diags.Report(diagID) << getCurrentFileOrBufferName();
+    sema.EmitMessages(instance->getSemaOutputStream());
 
     return true;
   }

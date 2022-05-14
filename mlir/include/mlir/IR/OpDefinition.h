@@ -269,11 +269,11 @@ LogicalResult verifyAtLeastNOperands(Operation *op, unsigned numOperands);
 LogicalResult verifyOperandsAreFloatLike(Operation *op);
 LogicalResult verifyOperandsAreSignlessIntegerLike(Operation *op);
 LogicalResult verifySameTypeOperands(Operation *op);
-LogicalResult verifyZeroRegion(Operation *op);
+LogicalResult verifyZeroRegions(Operation *op);
 LogicalResult verifyOneRegion(Operation *op);
 LogicalResult verifyNRegions(Operation *op, unsigned numRegions);
 LogicalResult verifyAtLeastNRegions(Operation *op, unsigned numRegions);
-LogicalResult verifyZeroResult(Operation *op);
+LogicalResult verifyZeroResults(Operation *op);
 LogicalResult verifyOneResult(Operation *op);
 LogicalResult verifyNResults(Operation *op, unsigned numOperands);
 LogicalResult verifyAtLeastNResults(Operation *op, unsigned numOperands);
@@ -286,7 +286,7 @@ LogicalResult verifyResultsAreBoolLike(Operation *op);
 LogicalResult verifyResultsAreFloatLike(Operation *op);
 LogicalResult verifyResultsAreSignlessIntegerLike(Operation *op);
 LogicalResult verifyIsTerminator(Operation *op);
-LogicalResult verifyZeroSuccessor(Operation *op);
+LogicalResult verifyZeroSuccessors(Operation *op);
 LogicalResult verifyOneSuccessor(Operation *op);
 LogicalResult verifyNSuccessors(Operation *op, unsigned numSuccessors);
 LogicalResult verifyAtLeastNSuccessors(Operation *op, unsigned numSuccessors);
@@ -447,10 +447,10 @@ class VariadicOperands
 /// This class provides verification for ops that are known to have zero
 /// regions.
 template <typename ConcreteType>
-class ZeroRegion : public TraitBase<ConcreteType, ZeroRegion> {
+class ZeroRegions : public TraitBase<ConcreteType, ZeroRegions> {
 public:
   static LogicalResult verifyTrait(Operation *op) {
-    return impl::verifyZeroRegion(op);
+    return impl::verifyZeroRegions(op);
   }
 };
 
@@ -500,7 +500,7 @@ public:
 template <unsigned N>
 class NRegions {
 public:
-  static_assert(N > 1, "use ZeroRegion/OneRegion for N < 2");
+  static_assert(N > 1, "use ZeroRegions/OneRegion for N < 2");
 
   template <typename ConcreteType>
   class Impl
@@ -539,10 +539,10 @@ class VariadicRegions
 /// This class provides return value APIs for ops that are known to have
 /// zero results.
 template <typename ConcreteType>
-class ZeroResult : public TraitBase<ConcreteType, ZeroResult> {
+class ZeroResults : public TraitBase<ConcreteType, ZeroResults> {
 public:
   static LogicalResult verifyTrait(Operation *op) {
-    return impl::verifyZeroResult(op);
+    return impl::verifyZeroResults(op);
   }
 };
 
@@ -648,7 +648,7 @@ public:
 template <unsigned N>
 class NResults {
 public:
-  static_assert(N > 1, "use ZeroResult/OneResult for N < 2");
+  static_assert(N > 1, "use ZeroResults/OneResult for N < 2");
 
   template <typename ConcreteType>
   class Impl
@@ -704,10 +704,10 @@ public:
 /// This class provides verification for ops that are known to have zero
 /// successors.
 template <typename ConcreteType>
-class ZeroSuccessor : public TraitBase<ConcreteType, ZeroSuccessor> {
+class ZeroSuccessors : public TraitBase<ConcreteType, ZeroSuccessors> {
 public:
   static LogicalResult verifyTrait(Operation *op) {
-    return impl::verifyZeroSuccessor(op);
+    return impl::verifyZeroSuccessors(op);
   }
 };
 
@@ -760,7 +760,7 @@ public:
 template <unsigned N>
 class NSuccessors {
 public:
-  static_assert(N > 1, "use ZeroSuccessor/OneSuccessor for N < 2");
+  static_assert(N > 1, "use ZeroSuccessors/OneSuccessor for N < 2");
 
   template <typename ConcreteType>
   class Impl : public detail::MultiSuccessorTraitBase<ConcreteType,
@@ -1211,7 +1211,7 @@ template <typename ConcreteType>
 class AffineScope : public TraitBase<ConcreteType, AffineScope> {
 public:
   static LogicalResult verifyTrait(Operation *op) {
-    static_assert(!ConcreteType::template hasTrait<ZeroRegion>(),
+    static_assert(!ConcreteType::template hasTrait<ZeroRegions>(),
                   "expected operation to have one or more regions");
     return success();
   }
@@ -1227,7 +1227,7 @@ class AutomaticAllocationScope
     : public TraitBase<ConcreteType, AutomaticAllocationScope> {
 public:
   static LogicalResult verifyTrait(Operation *op) {
-    static_assert(!ConcreteType::template hasTrait<ZeroRegion>(),
+    static_assert(!ConcreteType::template hasTrait<ZeroRegions>(),
                   "expected operation to have one or more regions");
     return success();
   }

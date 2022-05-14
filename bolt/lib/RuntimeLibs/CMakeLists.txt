@@ -1,7 +1,4 @@
 set(LLVM_LINK_COMPONENTS
-  BOLTCore
-  BOLTPasses
-  BOLTUtils
   BinaryFormat
   MC
   Object
@@ -13,4 +10,11 @@ add_llvm_library(LLVMBOLTRuntimeLibs
   RuntimeLibrary.cpp
   HugifyRuntimeLibrary.cpp
   InstrumentationRuntimeLibrary.cpp
+  )
+
+target_link_libraries(LLVMBOLTRuntimeLibs
+  PRIVATE
+  LLVMBOLTCore
+  LLVMBOLTPasses
+  LLVMBOLTUtils
   )

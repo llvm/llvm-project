@@ -37,7 +37,7 @@ class CompileUnitAPITestCase(TestBase):
         main_cu = sc_list.compile_units[0]
         self.assertTrue(main_cu.IsValid(), "Main executable CU is not valid")
 
-        self.assertEqual(main_cu.GetIndexForLineEntry(line_entry, True),
+        self.assertEqual(main_cu.FindLineEntryIndex(line_entry, True),
                          main_cu.FindLineEntryIndex(0, line_entry.GetLine(),
                                    line_entry.GetFileSpec(), True))
 
