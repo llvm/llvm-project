@@ -53,7 +53,7 @@ struct IFSSymbol {
   IFSSymbol() = default;
   explicit IFSSymbol(std::string SymbolName) : Name(std::move(SymbolName)) {}
   std::string Name;
-  Optional<uint64_t> Size;
+  uint64_t Size;
   IFSSymbolType Type;
   bool Undefined;
   bool Weak;

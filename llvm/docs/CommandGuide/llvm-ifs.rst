@@ -194,13 +194,6 @@ OPTIONS
  When this flag is set, llvm-ifs will only write the output file if it does not
  already exist or the content will be different from the existing file.
 
-.. option:: --strip-size
-
- When this flag is set, llvm-ifs will remove the size field from the output ifs
- file. This is useful for shared objects that only intend to be linked against
- position independent code which doesn't need copy relocations, or where the size
- of an object is not a useful part of the abi to track.
-
 EXIT STATUS
 -----------
 
