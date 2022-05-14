@@ -2397,51 +2397,43 @@ SDValue DAGCombiner::visitADDLike(SDNode *N) {
   if (isNullConstant(N1))
     return N0;
 
-  if (isConstantOrConstantVector(N1, /* NoOpaque */ true)) {
+  if (N0.getOpcode() == ISD::SUB) {
+    SDValue N00 = N0.getOperand(0);
+    SDValue N01 = N0.getOperand(1);
+
     // fold ((A-c1)+c2) -> (A+(c2-c1))
-    if (N0.getOpcode() == ISD::SUB &&
-        isConstantOrConstantVector(N0.getOperand(1), /* NoOpaque */ true)) {
-      SDValue Sub =
-          DAG.FoldConstantArithmetic(ISD::SUB, DL, VT, {N1, N0.getOperand(1)});
-      assert(Sub && "Constant folding failed");
+    if (SDValue Sub = DAG.FoldConstantArithmetic(ISD::SUB, DL, VT, {N1, N01}))
       return DAG.getNode(ISD::ADD, DL, VT, N0.getOperand(0), Sub);
-    }
 
     // fold ((c1-A)+c2) -> (c1+c2)-A
-    if (N0.getOpcode() == ISD::SUB &&
-        isConstantOrConstantVector(N0.getOperand(0), /* NoOpaque */ true)) {
-      SDValue Add =
-          DAG.FoldConstantArithmetic(ISD::ADD, DL, VT, {N1, N0.getOperand(0)});
-      assert(Add && "Constant folding failed");
+    if (SDValue Add = DAG.FoldConstantArithmetic(ISD::ADD, DL, VT, {N1, N00}))
       return DAG.getNode(ISD::SUB, DL, VT, Add, N0.getOperand(1));
-    }
+  }
 
-    // add (sext i1 X), 1 -> zext (not i1 X)
-    // We don't transform this pattern:
-    //   add (zext i1 X), -1 -> sext (not i1 X)
-    // because most (?) targets generate better code for the zext form.
-    if (N0.getOpcode() == ISD::SIGN_EXTEND && N0.hasOneUse() &&
-        isOneOrOneSplat(N1)) {
-      SDValue X = N0.getOperand(0);
-      if ((!LegalOperations ||
-           (TLI.isOperationLegal(ISD::XOR, X.getValueType()) &&
-            TLI.isOperationLegal(ISD::ZERO_EXTEND, VT))) &&
-          X.getScalarValueSizeInBits() == 1) {
-        SDValue Not = DAG.getNOT(DL, X, X.getValueType());
-        return DAG.getNode(ISD::ZERO_EXTEND, DL, VT, Not);
-      }
+  // add (sext i1 X), 1 -> zext (not i1 X)
+  // We don't transform this pattern:
+  //   add (zext i1 X), -1 -> sext (not i1 X)
+  // because most (?) targets generate better code for the zext form.
+  if (N0.getOpcode() == ISD::SIGN_EXTEND && N0.hasOneUse() &&
+      isOneOrOneSplat(N1)) {
+    SDValue X = N0.getOperand(0);
+    if ((!LegalOperations ||
+         (TLI.isOperationLegal(ISD::XOR, X.getValueType()) &&
+          TLI.isOperationLegal(ISD::ZERO_EXTEND, VT))) &&
+        X.getScalarValueSizeInBits() == 1) {
+      SDValue Not = DAG.getNOT(DL, X, X.getValueType());
+      return DAG.getNode(ISD::ZERO_EXTEND, DL, VT, Not);
     }
+  }
 
-    // Fold (add (or x, c0), c1) -> (add x, (c0 + c1)) if (or x, c0) is
-    // equivalent to (add x, c0).
-    // Fold (add (xor x, c0), c1) -> (add x, (c0 + c1)) if (xor x, c0) is
-    // equivalent to (add x, c0).
-    if (isADDLike(N0, DAG) &&
-        isConstantOrConstantVector(N0.getOperand(1), /* NoOpaque */ true)) {
-      if (SDValue Add0 = DAG.FoldConstantArithmetic(ISD::ADD, DL, VT,
-                                                    {N1, N0.getOperand(1)}))
-        return DAG.getNode(ISD::ADD, DL, VT, N0.getOperand(0), Add0);
-    }
+  // Fold (add (or x, c0), c1) -> (add x, (c0 + c1))
+  // iff (or x, c0) is equivalent to (add x, c0).
+  // Fold (add (xor x, c0), c1) -> (add x, (c0 + c1))
+  // iff (xor x, c0) is equivalent to (add x, c0).
+  if (isADDLike(N0, DAG)) {
+    SDValue N01 = N0.getOperand(1);
+    if (SDValue Add = DAG.FoldConstantArithmetic(ISD::ADD, DL, VT, {N1, N01}))
+      return DAG.getNode(ISD::ADD, DL, VT, N0.getOperand(0), Add);
   }
 
   if (SDValue NewSel = foldBinOpIntoSelect(N))
