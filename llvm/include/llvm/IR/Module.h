@@ -58,9 +58,9 @@ class VersionTuple;
 /// other modules) this module depends on, a symbol table, and various data
 /// about the target's characteristics.
 ///
-/// A module maintains a GlobalValRefMap object that is used to hold all
+/// A module maintains a GlobalList object that is used to hold all
 /// constant references to global variables in the module.  When a global
-/// variable is destroyed, it should have no entries in the GlobalValueRefMap.
+/// variable is destroyed, it should have no entries in the GlobalList.
 /// The main container class for the LLVM Intermediate Representation.
 class LLVM_EXTERNAL_VISIBILITY Module {
   /// @name Types And Enumerations
