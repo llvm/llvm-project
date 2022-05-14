@@ -107,6 +107,10 @@ cl::opt<bool>
 cl::opt<bool> StripNeededLibs("strip-needed",
                               cl::desc("Strip needed libs from output"),
                               cl::cat(IfsCategory));
+cl::opt<bool> StripSize("strip-size",
+                        cl::desc("Remove object size from the output"),
+                        cl::cat(IfsCategory));
+
 cl::list<std::string>
     ExcludeSyms("exclude",
                 cl::desc("Remove symbols which match the pattern. Can be "
@@ -431,6 +435,10 @@ int main(int argc, char *argv[]) {
 
   if (Error E = filterIFSSyms(Stub, StripUndefined, ExcludeSyms))
     fatalError(std::move(E));
+
+  if (StripSize)
+    for (IFSSymbol &Sym : Stub.Symbols)
+      Sym.Size.reset();
 
   if (OutputELFFilePath.getNumOccurrences() == 0 &&
       OutputIFSFilePath.getNumOccurrences() == 0 &&
