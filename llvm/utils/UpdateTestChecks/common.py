@@ -3,6 +3,7 @@ from __future__ import print_function
 import argparse
 import copy
 import glob
+import itertools
 import os
 import re
 import subprocess
@@ -596,7 +597,8 @@ SCRUB_IR_COMMENT_RE = re.compile(r'\s*;.*')
 
 class NamelessValue:
   def __init__(self, check_prefix, check_key, ir_prefix, global_ir_prefix, global_ir_prefix_regexp,
-               ir_regexp, global_ir_rhs_regexp, is_before_functions):
+               ir_regexp, global_ir_rhs_regexp, is_before_functions, *,
+               is_number=False, replace_number_with_counter=False):
     self.check_prefix = check_prefix
     self.check_key = check_key
     self.ir_prefix = ir_prefix
@@ -605,10 +607,87 @@ class NamelessValue:
     self.ir_regexp = ir_regexp
     self.global_ir_rhs_regexp = global_ir_rhs_regexp
     self.is_before_functions = is_before_functions
+    self.is_number = is_number
+    # Some variable numbers (e.g. MCINST1234) will change based on unrelated
+    # modifications to LLVM, replace those with an incrementing counter.
+    self.replace_number_with_counter = replace_number_with_counter
+    self.variable_mapping = {}
+
+  # Return true if this kind of IR value is "local", basically if it matches '%{{.*}}'.
+  def is_local_def_ir_value_match(self, match):
+    return self.ir_prefix == '%'
+
+  # Return true if this kind of IR value is "global", basically if it matches '#{{.*}}'.
+  def is_global_scope_ir_value_match(self, match):
+    return self.global_ir_prefix is not None
+
+  # Return the IR prefix and check prefix we use for this kind or IR value,
+  # e.g., (%, TMP) for locals.
+  def get_ir_prefix_from_ir_value_match(self, match):
+    if self.ir_prefix and match.group(0).strip().startswith(self.ir_prefix):
+      return self.ir_prefix, self.check_prefix
+    return self.global_ir_prefix, self.check_prefix
+
+  # Return the IR regexp we use for this kind or IR value, e.g., [\w.-]+? for locals
+  def get_ir_regex_from_ir_value_re_match(self, match):
+    # for backwards compatibility we check locals with '.*'
+    if self.is_local_def_ir_value_match(match):
+      return '.*'
+    if self.ir_prefix and match.group(0).strip().startswith(self.ir_prefix):
+      return self.ir_regexp
+    return self.global_ir_prefix_regexp
+
+  # Create a FileCheck variable name based on an IR name.
+  def get_value_name(self, var: str, check_prefix: str):
+    var = var.replace('!', '')
+    if self.replace_number_with_counter:
+      assert var.isdigit(), var
+      replacement = self.variable_mapping.get(var, None)
+      if replacement is None:
+        # Replace variable with an incrementing counter
+        replacement = str(len(self.variable_mapping) + 1)
+        self.variable_mapping[var] = replacement
+      var = replacement
+    # This is a nameless value, prepend check_prefix.
+    if var.isdigit():
+      var = check_prefix + var
+    else:
+      # This is a named value that clashes with the check_prefix, prepend with
+      # _prefix_filecheck_ir_name, if it has been defined.
+      if may_clash_with_default_check_prefix_name(check_prefix, var) and _prefix_filecheck_ir_name:
+        var = _prefix_filecheck_ir_name + var
+    var = var.replace('.', '_')
+    var = var.replace('-', '_')
+    return var.upper()
+
+  # Create a FileCheck variable from regex.
+  def get_value_definition(self, var, match):
+    # for backwards compatibility we check locals with '.*'
+    varname = self.get_value_name(var, self.check_prefix)
+    prefix = self.get_ir_prefix_from_ir_value_match(match)[0]
+    if self.is_number:
+      regex = ''  # always capture a number in the default format
+      capture_start = '[[#'
+    else:
+      regex = self.get_ir_regex_from_ir_value_re_match(match)
+      capture_start = '[['
+    if self.is_local_def_ir_value_match(match):
+      return capture_start + varname + ':' + prefix + regex + ']]'
+    return prefix + capture_start + varname + ':' + regex + ']]'
+
+  # Use a FileCheck variable.
+  def get_value_use(self, var, match, var_prefix=None):
+    if var_prefix is None:
+      var_prefix = self.check_prefix
+    capture_start = '[[#' if self.is_number else '[['
+    if self.is_local_def_ir_value_match(match):
+      return capture_start + self.get_value_name(var, var_prefix) + ']]'
+    prefix = self.get_ir_prefix_from_ir_value_match(match)[0]
+    return prefix + capture_start + self.get_value_name(var, var_prefix) + ']]'
 
 # Description of the different "unnamed" values we match in the IR, e.g.,
 # (local) ssa values, (debug) metadata, etc.
-nameless_values = [
+ir_nameless_values = [
     NamelessValue(r'TMP'  , '%' , r'%'           , None            , None                   , r'[\w$.-]+?' , None                 , False) ,
     NamelessValue(r'ATTR' , '#' , r'#'           , None            , None                   , r'[0-9]+'    , None                 , False) ,
     NamelessValue(r'ATTR' , '#' , None           , r'attributes #' , r'[0-9]+'              , None         , r'{[^}]*}'           , False) ,
@@ -621,6 +700,13 @@ nameless_values = [
     NamelessValue(r'LOOP' , '!' , r'!llvm.loop ' , None            , None                   , r'![0-9]+'   , None                 , False) ,
     NamelessValue(r'META' , '!' , r'metadata '   , None            , None                   , r'![0-9]+'   , None                 , False) ,
     NamelessValue(r'META' , '!' , None           , r''             , r'![0-9]+'             , None         , r'(?:distinct |)!.*' , False) ,
+]
+
+asm_nameless_values = [
+ NamelessValue(r'MCINST', 'Inst#', None, '<MCInst #', r'\d+', None, r'.+',
+               False, is_number=True, replace_number_with_counter=True),
+ NamelessValue(r'MCREG',  'Reg:', None, '<MCOperand Reg:', r'\d+', None, r'.+',
+               False, is_number=True, replace_number_with_counter=True),
 ]
 
 def createOrRegexp(old, new):
@@ -641,7 +727,7 @@ def createPrefixMatch(prefix_str, prefix_re):
 # other locations will need adjustment as well.
 IR_VALUE_REGEXP_PREFIX = r'(\s*)'
 IR_VALUE_REGEXP_STRING = r''
-for nameless_value in nameless_values:
+for nameless_value in ir_nameless_values:
   lcl_match = createPrefixMatch(nameless_value.ir_prefix, nameless_value.ir_regexp)
   glb_match = createPrefixMatch(nameless_value.global_ir_prefix, nameless_value.global_ir_prefix_regexp)
   assert((lcl_match or glb_match) and not (lcl_match and glb_match))
@@ -651,6 +737,15 @@ for nameless_value in nameless_values:
     IR_VALUE_REGEXP_STRING = createOrRegexp(IR_VALUE_REGEXP_STRING, '^' + glb_match)
 IR_VALUE_REGEXP_SUFFIX = r'([,\s\(\)]|\Z)'
 IR_VALUE_RE = re.compile(IR_VALUE_REGEXP_PREFIX + r'(' + IR_VALUE_REGEXP_STRING + r')' + IR_VALUE_REGEXP_SUFFIX)
+
+# Build the regexp that matches an "ASM value" (currently only for --asm-show-inst comments).
+ASM_VALUE_REGEXP_STRING = ''
+for nameless_value in asm_nameless_values:
+  glb_match = createPrefixMatch(nameless_value.global_ir_prefix, nameless_value.global_ir_prefix_regexp)
+  assert not nameless_value.ir_prefix and not nameless_value.ir_regexp
+  ASM_VALUE_REGEXP_STRING = createOrRegexp(ASM_VALUE_REGEXP_STRING, glb_match)
+ASM_VALUE_REGEXP_SUFFIX = r'([>\s]|\Z)'
+ASM_VALUE_RE = re.compile(r'((?:#|//)\s*)' + '(' + ASM_VALUE_REGEXP_STRING + ')' + ASM_VALUE_REGEXP_SUFFIX)
 
 # The entire match is group 0, the prefix has one group (=1), the entire
 # IR_VALUE_REGEXP_STRING is one group (=2), and then the nameless values start.
@@ -673,101 +768,39 @@ def get_idx_from_ir_value_match(match):
 def get_name_from_ir_value_match(match):
   return match.group(get_idx_from_ir_value_match(match) + first_nameless_group_in_ir_value_match)
 
-# Return the nameless prefix we use for this kind or IR value, see also
-# get_idx_from_ir_value_match
-def get_nameless_check_prefix_from_ir_value_match(match):
-  return nameless_values[get_idx_from_ir_value_match(match)].check_prefix
-
-# Return the IR prefix and check prefix we use for this kind or IR value, e.g., (%, TMP) for locals,
-# see also get_idx_from_ir_value_match
-def get_ir_prefix_from_ir_value_match(match):
-  idx = get_idx_from_ir_value_match(match)
-  if nameless_values[idx].ir_prefix and match.group(0).strip().startswith(nameless_values[idx].ir_prefix):
-    return nameless_values[idx].ir_prefix, nameless_values[idx].check_prefix
-  return nameless_values[idx].global_ir_prefix, nameless_values[idx].check_prefix
-
-def get_check_key_from_ir_value_match(match):
-  idx = get_idx_from_ir_value_match(match)
-  return nameless_values[idx].check_key
-
-# Return the IR regexp we use for this kind or IR value, e.g., [\w.-]+? for locals,
-# see also get_idx_from_ir_value_match
-def get_ir_prefix_from_ir_value_re_match(match):
-  # for backwards compatibility we check locals with '.*'
-  if is_local_def_ir_value_match(match):
-    return '.*'
-  idx = get_idx_from_ir_value_match(match)
-  if nameless_values[idx].ir_prefix and match.group(0).strip().startswith(nameless_values[idx].ir_prefix):
-    return nameless_values[idx].ir_regexp
-  return nameless_values[idx].global_ir_prefix_regexp
-
-# Return true if this kind of IR value is "local", basically if it matches '%{{.*}}'.
-def is_local_def_ir_value_match(match):
-  return nameless_values[get_idx_from_ir_value_match(match)].ir_prefix == '%'
-
-# Return true if this kind of IR value is "global", basically if it matches '#{{.*}}'.
-def is_global_scope_ir_value_match(match):
-  return nameless_values[get_idx_from_ir_value_match(match)].global_ir_prefix is not None
+def get_nameless_value_from_match(match, nameless_values) -> NamelessValue:
+  return nameless_values[get_idx_from_ir_value_match(match)]
 
 # Return true if var clashes with the scripted FileCheck check_prefix.
 def may_clash_with_default_check_prefix_name(check_prefix, var):
   return check_prefix and re.match(r'^' + check_prefix + r'[0-9]+?$', var, re.IGNORECASE)
 
-# Create a FileCheck variable name based on an IR name.
-def get_value_name(var, check_prefix):
-  var = var.replace('!', '')
-  # This is a nameless value, prepend check_prefix.
-  if var.isdigit():
-    var = check_prefix + var
-  else:
-    # This is a named value that clashes with the check_prefix, prepend with _prefix_filecheck_ir_name,
-    # if it has been defined.
-    if may_clash_with_default_check_prefix_name(check_prefix, var) and _prefix_filecheck_ir_name:
-      var = _prefix_filecheck_ir_name + var
-  var = var.replace('.', '_')
-  var = var.replace('-', '_')
-  return var.upper()
-
-# Create a FileCheck variable from regex.
-def get_value_definition(var, match):
-  # for backwards compatibility we check locals with '.*'
-  if is_local_def_ir_value_match(match):
-    return '[[' + get_value_name(var, get_nameless_check_prefix_from_ir_value_match(match)) + ':' + \
-            get_ir_prefix_from_ir_value_match(match)[0] + get_ir_prefix_from_ir_value_re_match(match) + ']]'
-  prefix = get_ir_prefix_from_ir_value_match(match)[0]
-  return prefix + '[[' + get_value_name(var, get_nameless_check_prefix_from_ir_value_match(match)) + ':' + get_ir_prefix_from_ir_value_re_match(match) + ']]'
-
-# Use a FileCheck variable.
-def get_value_use(var, match, check_prefix):
-  if is_local_def_ir_value_match(match):
-    return '[[' + get_value_name(var, check_prefix) + ']]'
-  prefix = get_ir_prefix_from_ir_value_match(match)[0]
-  return prefix + '[[' + get_value_name(var, check_prefix) + ']]'
-
-# Replace IR value defs and uses with FileCheck variables.
-def generalize_check_lines(lines, is_analyze, vars_seen, global_vars_seen):
+def generalize_check_lines_common(lines, is_analyze, vars_seen,
+                                  global_vars_seen, nameless_values,
+                                  nameless_value_regex, is_asm):
   # This gets called for each match that occurs in
   # a line. We transform variables we haven't seen
   # into defs, and variables we have seen into uses.
   def transform_line_vars(match):
-    pre, check = get_ir_prefix_from_ir_value_match(match)
     var = get_name_from_ir_value_match(match)
-    for nameless_value in nameless_values:
-      if may_clash_with_default_check_prefix_name(nameless_value.check_prefix, var):
-        warn("Change IR value name '%s' or use --prefix-filecheck-ir-name to prevent possible conflict"
-             " with scripted FileCheck name." % (var,))
-    key = (var, get_check_key_from_ir_value_match(match))
-    is_local_def = is_local_def_ir_value_match(match)
+    nameless_value = get_nameless_value_from_match(match, nameless_values)
+    if may_clash_with_default_check_prefix_name(nameless_value.check_prefix, var):
+      warn("Change IR value name '%s' or use --prefix-filecheck-ir-name to prevent possible conflict"
+           " with scripted FileCheck name." % (var,))
+    key = (var, nameless_value.check_key)
+    is_local_def = nameless_value.is_local_def_ir_value_match(match)
     if is_local_def and key in vars_seen:
-      rv = get_value_use(var, match, get_nameless_check_prefix_from_ir_value_match(match))
+      rv = nameless_value.get_value_use(var, match)
     elif not is_local_def and key in global_vars_seen:
-      rv = get_value_use(var, match, global_vars_seen[key])
+      # We could have seen a different prefix for the global variables first,
+      # ensure we use that one instead of the prefix for the current match.
+      rv = nameless_value.get_value_use(var, match, global_vars_seen[key])
     else:
       if is_local_def:
         vars_seen.add(key)
       else:
-        global_vars_seen[key] = get_nameless_check_prefix_from_ir_value_match(match)
-      rv = get_value_definition(var, match)
+        global_vars_seen[key] = nameless_value.check_prefix
+      rv = nameless_value.get_value_definition(var, match)
     # re.sub replaces the entire regex match
     # with whatever you return, so we have
     # to make sure to hand it back everything
@@ -777,26 +810,38 @@ def generalize_check_lines(lines, is_analyze, vars_seen, global_vars_seen):
   lines_with_def = []
 
   for i, line in enumerate(lines):
-    # An IR variable named '%.' matches the FileCheck regex string.
-    line = line.replace('%.', '%dot')
-    for regex in _global_hex_value_regex:
-      if re.match('^@' + regex + ' = ', line):
-        line = re.sub(r'\bi([0-9]+) ([0-9]+)',
-            lambda m : 'i' + m.group(1) + ' [[#' + hex(int(m.group(2))) + ']]',
-            line)
-        break
-    # Ignore any comments, since the check lines will too.
-    scrubbed_line = SCRUB_IR_COMMENT_RE.sub(r'', line)
-    lines[i] = scrubbed_line
-    if not is_analyze:
+    if not is_asm:
+      # An IR variable named '%.' matches the FileCheck regex string.
+      line = line.replace('%.', '%dot')
+      for regex in _global_hex_value_regex:
+        if re.match('^@' + regex + ' = ', line):
+          line = re.sub(r'\bi([0-9]+) ([0-9]+)',
+              lambda m : 'i' + m.group(1) + ' [[#' + hex(int(m.group(2))) + ']]',
+              line)
+          break
+      # Ignore any comments, since the check lines will too.
+      scrubbed_line = SCRUB_IR_COMMENT_RE.sub(r'', line)
+      lines[i] = scrubbed_line
+    if is_asm or not is_analyze:
       # It can happen that two matches are back-to-back and for some reason sub
       # will not replace both of them. For now we work around this by
       # substituting until there is no more match.
       changed = True
       while changed:
-        (lines[i], changed) = IR_VALUE_RE.subn(transform_line_vars, lines[i], count=1)
+        (lines[i], changed) = nameless_value_regex.subn(transform_line_vars,
+                                                        lines[i], count=1)
   return lines
 
+# Replace IR value defs and uses with FileCheck variables.
+def generalize_check_lines(lines, is_analyze, vars_seen, global_vars_seen):
+  return generalize_check_lines_common(lines, is_analyze, vars_seen,
+                                       global_vars_seen, ir_nameless_values,
+                                       IR_VALUE_RE, False)
+
+def generalize_asm_check_lines(lines, vars_seen, global_vars_seen):
+  return generalize_check_lines_common(lines, False, vars_seen,
+                                       global_vars_seen, asm_nameless_values,
+                                       ASM_VALUE_RE, True)
 
 def add_checks(output_lines, comment_marker, prefix_list, func_dict, func_name, check_label_format, is_backend, is_analyze, global_vars_seen_dict, is_filtered):
   # prefix_exclusions are prefixes we cannot use to print the function because it doesn't exist in run lines that use these prefixes as well.
@@ -849,7 +894,8 @@ def add_checks(output_lines, comment_marker, prefix_list, func_dict, func_name, 
       if attrs:
         output_lines.append('%s %s: Function Attrs: %s' % (comment_marker, checkprefix, attrs))
       args_and_sig = str(func_dict[checkprefix][func_name].args_and_sig)
-      args_and_sig = generalize_check_lines([args_and_sig], is_analyze, vars_seen, global_vars_seen)[0]
+      if args_and_sig:
+        args_and_sig = generalize_check_lines([args_and_sig], is_analyze, vars_seen, global_vars_seen)[0]
       func_name_separator = func_dict[checkprefix][func_name].func_name_separator
       if '[[' in args_and_sig:
         output_lines.append(check_label_format % (checkprefix, func_name, '', func_name_separator))
@@ -870,13 +916,19 @@ def add_checks(output_lines, comment_marker, prefix_list, func_dict, func_name, 
           body_start = 0
         else:
           output_lines.append('%s %s:       %s' % (comment_marker, checkprefix, func_body[0]))
-        for func_line in func_body[body_start:]:
+        func_lines = generalize_asm_check_lines(func_body[body_start:],
+                                                vars_seen, global_vars_seen)
+        for func_line in func_lines:
           if func_line.strip() == '':
             output_lines.append('%s %s-EMPTY:' % (comment_marker, checkprefix))
           else:
             check_suffix = '-NEXT' if not is_filtered else ''
             output_lines.append('%s %s%s:  %s' % (comment_marker, checkprefix,
                                                   check_suffix, func_line))
+        # Remember new global variables we have not seen before
+        for key in global_vars_seen:
+          if key not in global_vars_seen_before:
+            global_vars_seen_dict[checkprefix][key] = global_vars_seen[key]
         break
 
       # For IR output, change all defs to FileCheck variables, so we're immune
@@ -917,7 +969,7 @@ def add_checks(output_lines, comment_marker, prefix_list, func_dict, func_name, 
       # line of code in the test function.
       output_lines.append(comment_marker)
 
-      # Remembe new global variables we have not seen before
+      # Remember new global variables we have not seen before
       for key in global_vars_seen:
         if key not in global_vars_seen_before:
           global_vars_seen_dict[checkprefix][key] = global_vars_seen[key]
@@ -941,7 +993,7 @@ def add_analyze_checks(output_lines, comment_marker, prefix_list, func_dict, fun
              is_filtered)
 
 def build_global_values_dictionary(glob_val_dict, raw_tool_output, prefixes):
-  for nameless_value in nameless_values:
+  for nameless_value in itertools.chain(ir_nameless_values, asm_nameless_values):
     if nameless_value.global_ir_prefix is None:
       continue
 
@@ -969,7 +1021,7 @@ def build_global_values_dictionary(glob_val_dict, raw_tool_output, prefixes):
 
 def add_global_checks(glob_val_dict, comment_marker, prefix_list, output_lines, global_vars_seen_dict, is_analyze, is_before_functions):
   printed_prefixes = set()
-  for nameless_value in nameless_values:
+  for nameless_value in ir_nameless_values:
     if nameless_value.global_ir_prefix is None:
       continue
     if nameless_value.is_before_functions != is_before_functions:

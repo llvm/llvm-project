@@ -9,6 +9,10 @@
 // This is a concrete diagnostic client, which buffers the diagnostic messages.
 //
 //===----------------------------------------------------------------------===//
+//
+// Coding style: https://mlir.llvm.org/getting_started/DeveloperGuide/
+//
+//===----------------------------------------------------------------------===//
 
 #include "flang/Frontend/TextDiagnosticBuffer.h"
 #include "clang/Basic/Diagnostic.h"
@@ -30,44 +34,44 @@ void TextDiagnosticBuffer::HandleDiagnostic(
   default:
     llvm_unreachable("Diagnostic not handled during diagnostic buffering!");
   case clang::DiagnosticsEngine::Note:
-    all_.emplace_back(level, notes_.size());
-    notes_.emplace_back(info.getLocation(), std::string(buf.str()));
+    all.emplace_back(level, notes.size());
+    notes.emplace_back(info.getLocation(), std::string(buf.str()));
     break;
   case clang::DiagnosticsEngine::Warning:
-    all_.emplace_back(level, warnings_.size());
-    warnings_.emplace_back(info.getLocation(), std::string(buf.str()));
+    all.emplace_back(level, warnings.size());
+    warnings.emplace_back(info.getLocation(), std::string(buf.str()));
     break;
   case clang::DiagnosticsEngine::Remark:
-    all_.emplace_back(level, remarks_.size());
-    remarks_.emplace_back(info.getLocation(), std::string(buf.str()));
+    all.emplace_back(level, remarks.size());
+    remarks.emplace_back(info.getLocation(), std::string(buf.str()));
     break;
   case clang::DiagnosticsEngine::Error:
   case clang::DiagnosticsEngine::Fatal:
-    all_.emplace_back(level, errors_.size());
-    errors_.emplace_back(info.getLocation(), std::string(buf.str()));
+    all.emplace_back(level, errors.size());
+    errors.emplace_back(info.getLocation(), std::string(buf.str()));
     break;
   }
 }
 
-void TextDiagnosticBuffer::FlushDiagnostics(
-    clang::DiagnosticsEngine &Diags) const {
-  for (const auto &i : all_) {
-    auto Diag = Diags.Report(Diags.getCustomDiagID(i.first, "%0"));
+void TextDiagnosticBuffer::flushDiagnostics(
+    clang::DiagnosticsEngine &diags) const {
+  for (const auto &i : all) {
+    auto diag = diags.Report(diags.getCustomDiagID(i.first, "%0"));
     switch (i.first) {
     default:
       llvm_unreachable("Diagnostic not handled during diagnostic flushing!");
     case clang::DiagnosticsEngine::Note:
-      Diag << notes_[i.second].second;
+      diag << notes[i.second].second;
       break;
     case clang::DiagnosticsEngine::Warning:
-      Diag << warnings_[i.second].second;
+      diag << warnings[i.second].second;
       break;
     case clang::DiagnosticsEngine::Remark:
-      Diag << remarks_[i.second].second;
+      diag << remarks[i.second].second;
       break;
     case clang::DiagnosticsEngine::Error:
     case clang::DiagnosticsEngine::Fatal:
-      Diag << errors_[i.second].second;
+      diag << errors[i.second].second;
       break;
     }
   }

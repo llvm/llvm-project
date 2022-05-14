@@ -46,6 +46,19 @@ New Features
 
 - Implemented P0980R1 (Making ``std::string`` constexpr)
 
+- Marked the following papers as "Complete" (note that some of those might have
+  been implemented in a previous release but not marked as such):
+
+    - P1207R4 (Movability of Single-pass Iterators);
+    - P1474R1 (Helpful pointers for ``ContiguousIterator``);
+    - P1522R1 (Iterator Difference Type and Integer Overflow);
+    - P1523R1 (Views and Size Types);
+    - P1456R1 (Move-only views);
+    - P1870R1 (``forwarding-range`` is too subtle);
+    - P1878R1 (Constraining Readable Types);
+    - P1970R2 (Consistency for ``size()`` functions: Add ``ranges::ssize``);
+    - P1983R0 (Wording for GB301, US296, US292, US291, and US283).
+
 - `pop_heap` now uses an algorithm known as "bottom-up heapsort" or
   "heapsort with bounce" to reduce the number of comparisons, and rearranges
   elements using move-assignment instead of `swap`.
