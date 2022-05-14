@@ -928,8 +928,41 @@ class MDNode : public Metadata {
   friend class LLVMContextImpl;
   friend class DIArgList;
 
-  unsigned NumOperands;
-  unsigned NumUnresolved;
+  /// The header that is coallocated with an MDNode, along with the operands.
+  /// It is located immediately before the main body of the node. The operands
+  /// are in turn located immediately before the header.
+  struct Header {
+    unsigned NumOperands;
+    unsigned NumUnresolved = 0;
+
+    static constexpr size_t getOpSize(unsigned NumOps) {
+      return sizeof(MDOperand) * NumOps;
+    }
+    static constexpr size_t getAllocSize(unsigned NumOps) {
+      return getOpSize(NumOps) + sizeof(Header);
+    }
+    void *getAllocation() {
+      return reinterpret_cast<char *>(this + 1) -
+             alignTo(getAllocSize(NumOperands), alignof(uint64_t));
+    }
+
+    explicit Header(unsigned NumOperands);
+    ~Header();
+    MutableArrayRef<MDOperand> operands() {
+      return makeMutableArrayRef(
+          reinterpret_cast<MDOperand *>(this) - NumOperands, NumOperands);
+    }
+    ArrayRef<MDOperand> operands() const {
+      return makeArrayRef(
+          reinterpret_cast<const MDOperand *>(this) - NumOperands, NumOperands);
+    }
+  };
+
+  Header &getHeader() { return *(reinterpret_cast<Header *>(this) - 1); }
+
+  const Header &getHeader() const {
+    return *(reinterpret_cast<const Header *>(this) - 1);
+  }
 
   ContextAndReplaceableUses Context;
 
@@ -938,7 +971,7 @@ protected:
          ArrayRef<Metadata *> Ops1, ArrayRef<Metadata *> Ops2 = None);
   ~MDNode() = default;
 
-  void *operator new(size_t Size, unsigned NumOps);
+  void *operator new(size_t Size, unsigned NumOps, StorageType Storage);
   void operator delete(void *Mem);
 
   /// Required by std, but never called.
@@ -953,8 +986,8 @@ protected:
 
   void dropAllReferences();
 
-  MDOperand *mutable_begin() { return mutable_end() - NumOperands; }
-  MDOperand *mutable_end() { return reinterpret_cast<MDOperand *>(this); }
+  MDOperand *mutable_begin() { return getHeader().operands().begin(); }
+  MDOperand *mutable_end() { return getHeader().operands().end(); }
 
   using mutable_op_range = iterator_range<MDOperand *>;
 
@@ -1000,7 +1033,7 @@ public:
   /// As forward declarations are resolved, their containers should get
   /// resolved automatically.  However, if this (or one of its operands) is
   /// involved in a cycle, \a resolveCycles() needs to be called explicitly.
-  bool isResolved() const { return !isTemporary() && !NumUnresolved; }
+  bool isResolved() const { return !isTemporary() && !getNumUnresolved(); }
 
   bool isUniqued() const { return Storage == Uniqued; }
   bool isDistinct() const { return Storage == Distinct; }
@@ -1094,6 +1127,9 @@ protected:
   /// Sets the operand directly, without worrying about uniquing.
   void setOperand(unsigned I, Metadata *New);
 
+  unsigned getNumUnresolved() const { return getHeader().NumUnresolved; }
+
+  void setNumUnresolved(unsigned N) { getHeader().NumUnresolved = N; }
   void storeDistinctInContext();
   template <class T, class StoreT>
   static T *storeImpl(T *N, StorageType Storage, StoreT &Store);
@@ -1155,12 +1191,12 @@ public:
   op_range operands() const { return op_range(op_begin(), op_end()); }
 
   const MDOperand &getOperand(unsigned I) const {
-    assert(I < NumOperands && "Out of range");
-    return op_begin()[I];
+    assert(I < getNumOperands() && "Out of range");
+    return getHeader().operands()[I];
   }
 
   /// Return number of MDNode operands.
-  unsigned getNumOperands() const { return NumOperands; }
+  unsigned getNumOperands() const { return getHeader().NumOperands; }
 
   /// Methods for support type inquiry through isa, cast, and dyn_cast:
   static bool classof(const Metadata *MD) {
