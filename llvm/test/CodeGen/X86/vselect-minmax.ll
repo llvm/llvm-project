@@ -10283,3 +10283,130 @@ entry:
   %sel = select <2 x i1> %cmp, <2 x i64> %b, <2 x i64> %a
   ret <2 x i64> %sel
 }
+
+; FIXME: comparisons for smin/smax patterns can be reused
+define <8 x i64> @concat_smin_smax(<4 x i64> %a0, <4 x i64> %a1) {
+; SSE2-LABEL: concat_smin_smax:
+; SSE2:       # %bb.0:
+; SSE2-NEXT:    movdqa %xmm0, %xmm8
+; SSE2-NEXT:    movdqa {{.*#+}} xmm11 = [2147483648,2147483648]
+; SSE2-NEXT:    movdqa %xmm0, %xmm6
+; SSE2-NEXT:    pxor %xmm11, %xmm6
+; SSE2-NEXT:    movdqa %xmm2, %xmm9
+; SSE2-NEXT:    pxor %xmm11, %xmm9
+; SSE2-NEXT:    movdqa %xmm9, %xmm0
+; SSE2-NEXT:    pcmpgtd %xmm6, %xmm0
+; SSE2-NEXT:    pshufd {{.*#+}} xmm4 = xmm0[0,0,2,2]
+; SSE2-NEXT:    movdqa %xmm9, %xmm5
+; SSE2-NEXT:    pcmpeqd %xmm6, %xmm5
+; SSE2-NEXT:    pshufd {{.*#+}} xmm10 = xmm5[1,1,3,3]
+; SSE2-NEXT:    pand %xmm10, %xmm4
+; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[1,1,3,3]
+; SSE2-NEXT:    por %xmm4, %xmm0
+; SSE2-NEXT:    movdqa %xmm8, %xmm4
+; SSE2-NEXT:    pand %xmm0, %xmm4
+; SSE2-NEXT:    pandn %xmm2, %xmm0
+; SSE2-NEXT:    por %xmm4, %xmm0
+; SSE2-NEXT:    movdqa %xmm1, %xmm4
+; SSE2-NEXT:    pxor %xmm11, %xmm4
+; SSE2-NEXT:    pxor %xmm3, %xmm11
+; SSE2-NEXT:    movdqa %xmm11, %xmm5
+; SSE2-NEXT:    pcmpgtd %xmm4, %xmm5
+; SSE2-NEXT:    pshufd {{.*#+}} xmm12 = xmm5[0,0,2,2]
+; SSE2-NEXT:    movdqa %xmm11, %xmm7
+; SSE2-NEXT:    pcmpeqd %xmm4, %xmm7
+; SSE2-NEXT:    pshufd {{.*#+}} xmm13 = xmm7[1,1,3,3]
+; SSE2-NEXT:    pand %xmm13, %xmm12
+; SSE2-NEXT:    pshufd {{.*#+}} xmm5 = xmm5[1,1,3,3]
+; SSE2-NEXT:    por %xmm12, %xmm5
+; SSE2-NEXT:    movdqa %xmm1, %xmm7
+; SSE2-NEXT:    pand %xmm5, %xmm7
+; SSE2-NEXT:    pandn %xmm3, %xmm5
+; SSE2-NEXT:    por %xmm7, %xmm5
+; SSE2-NEXT:    pcmpgtd %xmm9, %xmm6
+; SSE2-NEXT:    pshufd {{.*#+}} xmm7 = xmm6[0,0,2,2]
+; SSE2-NEXT:    pand %xmm10, %xmm7
+; SSE2-NEXT:    pshufd {{.*#+}} xmm6 = xmm6[1,1,3,3]
+; SSE2-NEXT:    por %xmm7, %xmm6
+; SSE2-NEXT:    pand %xmm6, %xmm8
+; SSE2-NEXT:    pandn %xmm2, %xmm6
+; SSE2-NEXT:    por %xmm8, %xmm6
+; SSE2-NEXT:    pcmpgtd %xmm11, %xmm4
+; SSE2-NEXT:    pshufd {{.*#+}} xmm2 = xmm4[0,0,2,2]
+; SSE2-NEXT:    pand %xmm13, %xmm2
+; SSE2-NEXT:    pshufd {{.*#+}} xmm4 = xmm4[1,1,3,3]
+; SSE2-NEXT:    por %xmm2, %xmm4
+; SSE2-NEXT:    pand %xmm4, %xmm1
+; SSE2-NEXT:    pandn %xmm3, %xmm4
+; SSE2-NEXT:    por %xmm1, %xmm4
+; SSE2-NEXT:    movdqa %xmm5, %xmm1
+; SSE2-NEXT:    movdqa %xmm6, %xmm2
+; SSE2-NEXT:    movdqa %xmm4, %xmm3
+; SSE2-NEXT:    retq
+;
+; SSE4-LABEL: concat_smin_smax:
+; SSE4:       # %bb.0:
+; SSE4-NEXT:    movdqa %xmm0, %xmm4
+; SSE4-NEXT:    movdqa %xmm2, %xmm0
+; SSE4-NEXT:    pcmpgtq %xmm4, %xmm0
+; SSE4-NEXT:    movdqa %xmm2, %xmm5
+; SSE4-NEXT:    blendvpd %xmm0, %xmm4, %xmm5
+; SSE4-NEXT:    movdqa %xmm3, %xmm0
+; SSE4-NEXT:    pcmpgtq %xmm1, %xmm0
+; SSE4-NEXT:    movdqa %xmm3, %xmm6
+; SSE4-NEXT:    blendvpd %xmm0, %xmm1, %xmm6
+; SSE4-NEXT:    movdqa %xmm4, %xmm0
+; SSE4-NEXT:    pcmpgtq %xmm2, %xmm0
+; SSE4-NEXT:    blendvpd %xmm0, %xmm4, %xmm2
+; SSE4-NEXT:    movdqa %xmm1, %xmm0
+; SSE4-NEXT:    pcmpgtq %xmm3, %xmm0
+; SSE4-NEXT:    blendvpd %xmm0, %xmm1, %xmm3
+; SSE4-NEXT:    movapd %xmm5, %xmm0
+; SSE4-NEXT:    movapd %xmm6, %xmm1
+; SSE4-NEXT:    retq
+;
+; AVX1-LABEL: concat_smin_smax:
+; AVX1:       # %bb.0:
+; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm3
+; AVX1-NEXT:    vextractf128 $1, %ymm1, %xmm4
+; AVX1-NEXT:    vpcmpgtq %xmm3, %xmm4, %xmm2
+; AVX1-NEXT:    vpcmpgtq %xmm0, %xmm1, %xmm5
+; AVX1-NEXT:    vinsertf128 $1, %xmm2, %ymm5, %ymm2
+; AVX1-NEXT:    vblendvpd %ymm2, %ymm0, %ymm1, %ymm2
+; AVX1-NEXT:    vpcmpgtq %xmm4, %xmm3, %xmm3
+; AVX1-NEXT:    vpcmpgtq %xmm1, %xmm0, %xmm4
+; AVX1-NEXT:    vinsertf128 $1, %xmm3, %ymm4, %ymm3
+; AVX1-NEXT:    vblendvpd %ymm3, %ymm0, %ymm1, %ymm1
+; AVX1-NEXT:    vmovapd %ymm2, %ymm0
+; AVX1-NEXT:    retq
+;
+; AVX2-LABEL: concat_smin_smax:
+; AVX2:       # %bb.0:
+; AVX2-NEXT:    vpcmpgtq %ymm0, %ymm1, %ymm2
+; AVX2-NEXT:    vblendvpd %ymm2, %ymm0, %ymm1, %ymm2
+; AVX2-NEXT:    vpcmpgtq %ymm1, %ymm0, %ymm3
+; AVX2-NEXT:    vblendvpd %ymm3, %ymm0, %ymm1, %ymm1
+; AVX2-NEXT:    vmovapd %ymm2, %ymm0
+; AVX2-NEXT:    retq
+;
+; AVX512F-LABEL: concat_smin_smax:
+; AVX512F:       # %bb.0:
+; AVX512F-NEXT:    # kill: def $ymm1 killed $ymm1 def $zmm1
+; AVX512F-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
+; AVX512F-NEXT:    vpminsq %zmm1, %zmm0, %zmm2
+; AVX512F-NEXT:    vpmaxsq %zmm1, %zmm0, %zmm0
+; AVX512F-NEXT:    vinserti64x4 $1, %ymm0, %zmm2, %zmm0
+; AVX512F-NEXT:    retq
+;
+; AVX512BW-LABEL: concat_smin_smax:
+; AVX512BW:       # %bb.0:
+; AVX512BW-NEXT:    vpminsq %ymm1, %ymm0, %ymm2
+; AVX512BW-NEXT:    vpmaxsq %ymm1, %ymm0, %ymm0
+; AVX512BW-NEXT:    vinserti64x4 $1, %ymm0, %zmm2, %zmm0
+; AVX512BW-NEXT:    retq
+  %cmp = icmp slt <4 x i64> %a0, %a1
+  %min = select <4 x i1> %cmp, <4 x i64> %a0, <4 x i64> %a1
+  %max = select <4 x i1> %cmp, <4 x i64> %a1, <4 x i64> %a0
+  %res = shufflevector <4 x i64> %min, <4 x i64> %max, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+  ret <8 x i64> %res
+}
