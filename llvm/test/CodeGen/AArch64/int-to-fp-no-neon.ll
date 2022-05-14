@@ -4,14 +4,20 @@
 ; RUN: llc -mtriple=aarch64 -mattr=+neon,+fullfp16 < %s | FileCheck %s --check-prefixes=CHECK,NEON-ENABLED
 ; RUN: llc -mtriple=aarch64 -mattr=-neon,+fullfp16 < %s | FileCheck %s --check-prefixes=CHECK,NEON-DISABLED
 ;; Emit an object file so that verifyPredicates is called (it is not used for ASM output).
-; RUNTODO: llc -mtriple=aarch64 -mattr=-neon,+fullfp16 -o /dev/null %s --asm-show-inst -filetype=obj
+; RUN: llc -mtriple=aarch64 -mattr=-neon,+fullfp16 -o /dev/null %s --asm-show-inst -filetype=obj
 
 define double @ui8_to_double(i8* %i, float* %f) {
-; CHECK-LABEL: ui8_to_double:
-; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    ldr b0, [x0]
-; CHECK-NEXT:    ucvtf d0, d0
-; CHECK-NEXT:    ret
+; NEON-ENABLED-LABEL: ui8_to_double:
+; NEON-ENABLED:       // %bb.0: // %entry
+; NEON-ENABLED-NEXT:    ldr b0, [x0]
+; NEON-ENABLED-NEXT:    ucvtf d0, d0
+; NEON-ENABLED-NEXT:    ret
+;
+; NEON-DISABLED-LABEL: ui8_to_double:
+; NEON-DISABLED:       // %bb.0: // %entry
+; NEON-DISABLED-NEXT:    ldrb w8, [x0]
+; NEON-DISABLED-NEXT:    ucvtf d0, w8
+; NEON-DISABLED-NEXT:    ret
 entry:
   %ld = load i8, i8* %i, align 1
   %conv = uitofp i8 %ld to double
@@ -19,11 +25,17 @@ entry:
 }
 
 define float @ui8_to_float(i8* %i, float* %f) {
-; CHECK-LABEL: ui8_to_float:
-; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    ldr b0, [x0]
-; CHECK-NEXT:    ucvtf s0, s0
-; CHECK-NEXT:    ret
+; NEON-ENABLED-LABEL: ui8_to_float:
+; NEON-ENABLED:       // %bb.0: // %entry
+; NEON-ENABLED-NEXT:    ldr b0, [x0]
+; NEON-ENABLED-NEXT:    ucvtf s0, s0
+; NEON-ENABLED-NEXT:    ret
+;
+; NEON-DISABLED-LABEL: ui8_to_float:
+; NEON-DISABLED:       // %bb.0: // %entry
+; NEON-DISABLED-NEXT:    ldrb w8, [x0]
+; NEON-DISABLED-NEXT:    ucvtf s0, w8
+; NEON-DISABLED-NEXT:    ret
 entry:
   %ld = load i8, i8* %i, align 1
   %conv = uitofp i8 %ld to float
@@ -43,11 +55,17 @@ entry:
 }
 
 define double @ui16_to_double(i16* %i, float* %f) {
-; CHECK-LABEL: ui16_to_double:
-; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    ldr h0, [x0]
-; CHECK-NEXT:    ucvtf d0, d0
-; CHECK-NEXT:    ret
+; NEON-ENABLED-LABEL: ui16_to_double:
+; NEON-ENABLED:       // %bb.0: // %entry
+; NEON-ENABLED-NEXT:    ldr h0, [x0]
+; NEON-ENABLED-NEXT:    ucvtf d0, d0
+; NEON-ENABLED-NEXT:    ret
+;
+; NEON-DISABLED-LABEL: ui16_to_double:
+; NEON-DISABLED:       // %bb.0: // %entry
+; NEON-DISABLED-NEXT:    ldrh w8, [x0]
+; NEON-DISABLED-NEXT:    ucvtf d0, w8
+; NEON-DISABLED-NEXT:    ret
 entry:
   %ld = load i16, i16* %i, align 1
   %conv = uitofp i16 %ld to double
@@ -55,11 +73,17 @@ entry:
 }
 
 define float @ui16_to_float(i16* %i, float* %f) {
-; CHECK-LABEL: ui16_to_float:
-; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    ldr h0, [x0]
-; CHECK-NEXT:    ucvtf s0, s0
-; CHECK-NEXT:    ret
+; NEON-ENABLED-LABEL: ui16_to_float:
+; NEON-ENABLED:       // %bb.0: // %entry
+; NEON-ENABLED-NEXT:    ldr h0, [x0]
+; NEON-ENABLED-NEXT:    ucvtf s0, s0
+; NEON-ENABLED-NEXT:    ret
+;
+; NEON-DISABLED-LABEL: ui16_to_float:
+; NEON-DISABLED:       // %bb.0: // %entry
+; NEON-DISABLED-NEXT:    ldrh w8, [x0]
+; NEON-DISABLED-NEXT:    ucvtf s0, w8
+; NEON-DISABLED-NEXT:    ret
 entry:
   %ld = load i16, i16* %i, align 1
   %conv = uitofp i16 %ld to float
@@ -79,11 +103,17 @@ entry:
 }
 
 define double @ui32_to_double(i32* %i, float* %f) {
-; CHECK-LABEL: ui32_to_double:
-; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    ldr s0, [x0]
-; CHECK-NEXT:    ucvtf d0, d0
-; CHECK-NEXT:    ret
+; NEON-ENABLED-LABEL: ui32_to_double:
+; NEON-ENABLED:       // %bb.0: // %entry
+; NEON-ENABLED-NEXT:    ldr s0, [x0]
+; NEON-ENABLED-NEXT:    ucvtf d0, d0
+; NEON-ENABLED-NEXT:    ret
+;
+; NEON-DISABLED-LABEL: ui32_to_double:
+; NEON-DISABLED:       // %bb.0: // %entry
+; NEON-DISABLED-NEXT:    ldr w8, [x0]
+; NEON-DISABLED-NEXT:    ucvtf d0, w8
+; NEON-DISABLED-NEXT:    ret
 entry:
   %ld = load i32, i32* %i, align 1
   %conv = uitofp i32 %ld to double
@@ -212,12 +242,18 @@ entry:
 }
 
 define float @si16_to_float(i16* %i, float* %f) {
-; CHECK-LABEL: si16_to_float:
-; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    ldr h0, [x0]
-; CHECK-NEXT:    sshll v0.4s, v0.4h, #0
-; CHECK-NEXT:    scvtf s0, s0
-; CHECK-NEXT:    ret
+; NEON-ENABLED-LABEL: si16_to_float:
+; NEON-ENABLED:       // %bb.0: // %entry
+; NEON-ENABLED-NEXT:    ldr h0, [x0]
+; NEON-ENABLED-NEXT:    sshll v0.4s, v0.4h, #0
+; NEON-ENABLED-NEXT:    scvtf s0, s0
+; NEON-ENABLED-NEXT:    ret
+;
+; NEON-DISABLED-LABEL: si16_to_float:
+; NEON-DISABLED:       // %bb.0: // %entry
+; NEON-DISABLED-NEXT:    ldrsh w8, [x0]
+; NEON-DISABLED-NEXT:    scvtf s0, w8
+; NEON-DISABLED-NEXT:    ret
 entry:
   %ld = load i16, i16* %i, align 1
   %conv = sitofp i16 %ld to float
@@ -237,12 +273,18 @@ entry:
 }
 
 define double @si32_to_double(i32* %i, float* %f) {
-; CHECK-LABEL: si32_to_double:
-; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    ldr s0, [x0]
-; CHECK-NEXT:    sshll v0.2d, v0.2s, #0
-; CHECK-NEXT:    scvtf d0, d0
-; CHECK-NEXT:    ret
+; NEON-ENABLED-LABEL: si32_to_double:
+; NEON-ENABLED:       // %bb.0: // %entry
+; NEON-ENABLED-NEXT:    ldr s0, [x0]
+; NEON-ENABLED-NEXT:    sshll v0.2d, v0.2s, #0
+; NEON-ENABLED-NEXT:    scvtf d0, d0
+; NEON-ENABLED-NEXT:    ret
+;
+; NEON-DISABLED-LABEL: si32_to_double:
+; NEON-DISABLED:       // %bb.0: // %entry
+; NEON-DISABLED-NEXT:    ldr w8, [x0]
+; NEON-DISABLED-NEXT:    scvtf d0, w8
+; NEON-DISABLED-NEXT:    ret
 entry:
   %ld = load i32, i32* %i, align 1
   %conv = sitofp i32 %ld to double
