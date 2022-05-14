@@ -206,9 +206,3 @@ INSTANTIATE_TEST_SUITE_P(TokenExpressionParserTests, MatcherTest,
 } // namespace test
 } // namespace tidy
 } // namespace clang
-
-std::ostream &operator<<(std::ostream &Str,
-                         const clang::tidy::test::Param &Value) {
-  return Str << "Matched: " << std::boolalpha << Value.Matched << ", Text: '"
-             << Value.Text << "'";
-}

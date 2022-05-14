@@ -90,6 +90,33 @@ static bool wouldOpBeTriviallyDeadImpl(Operation *rootOp) {
   return true;
 }
 
+template <typename EffectTy>
+bool mlir::hasSingleEffect(Operation *op, Value value) {
+  auto memOp = dyn_cast<MemoryEffectOpInterface>(op);
+  if (!memOp)
+    return false;
+  SmallVector<SideEffects::EffectInstance<MemoryEffects::Effect>, 4> effects;
+  memOp.getEffects(effects);
+  bool doesOpOnlyHaveSingleEffectOnVal = false;
+  // Iterate through `effects` and check if and only if effect of type
+  // `EffectTy` is present.
+  for (auto &effect : effects) {
+    if (effect.getValue() == value && isa<EffectTy>(effect.getEffect()))
+      doesOpOnlyHaveSingleEffectOnVal = true;
+    if (effect.getValue() == value && !isa<EffectTy>(effect.getEffect())) {
+      doesOpOnlyHaveSingleEffectOnVal = false;
+      break;
+    }
+  }
+  return doesOpOnlyHaveSingleEffectOnVal;
+}
+
+template bool mlir::hasSingleEffect<MemoryEffects::Allocate>(Operation *,
+                                                             Value);
+template bool mlir::hasSingleEffect<MemoryEffects::Free>(Operation *, Value);
+template bool mlir::hasSingleEffect<MemoryEffects::Write>(Operation *, Value);
+template bool mlir::hasSingleEffect<MemoryEffects::Read>(Operation *, Value);
+
 bool mlir::wouldOpBeTriviallyDead(Operation *op) {
   if (op->mightHaveTrait<OpTrait::IsTerminator>())
     return false;
