@@ -3477,44 +3477,31 @@ SDValue DAGCombiner::visitSUB(SDNode *N) {
     return N0.getOperand(0);
 
   // fold (A+C1)-C2 -> A+(C1-C2)
-  if (N0.getOpcode() == ISD::ADD &&
-      isConstantOrConstantVector(N1, /* NoOpaques */ true) &&
-      isConstantOrConstantVector(N0.getOperand(1), /* NoOpaques */ true)) {
-    SDValue NewC =
-        DAG.FoldConstantArithmetic(ISD::SUB, DL, VT, {N0.getOperand(1), N1});
-    assert(NewC && "Constant folding failed");
-    return DAG.getNode(ISD::ADD, DL, VT, N0.getOperand(0), NewC);
+  if (N0.getOpcode() == ISD::ADD) {
+    SDValue N01 = N0.getOperand(1);
+    if (SDValue NewC = DAG.FoldConstantArithmetic(ISD::SUB, DL, VT, {N01, N1}))
+      return DAG.getNode(ISD::ADD, DL, VT, N0.getOperand(0), NewC);
   }
 
   // fold C2-(A+C1) -> (C2-C1)-A
   if (N1.getOpcode() == ISD::ADD) {
     SDValue N11 = N1.getOperand(1);
-    if (isConstantOrConstantVector(N0, /* NoOpaques */ true) &&
-        isConstantOrConstantVector(N11, /* NoOpaques */ true)) {
-      SDValue NewC = DAG.FoldConstantArithmetic(ISD::SUB, DL, VT, {N0, N11});
-      assert(NewC && "Constant folding failed");
+    if (SDValue NewC = DAG.FoldConstantArithmetic(ISD::SUB, DL, VT, {N0, N11}))
       return DAG.getNode(ISD::SUB, DL, VT, NewC, N1.getOperand(0));
-    }
   }
 
   // fold (A-C1)-C2 -> A-(C1+C2)
-  if (N0.getOpcode() == ISD::SUB &&
-      isConstantOrConstantVector(N1, /* NoOpaques */ true) &&
-      isConstantOrConstantVector(N0.getOperand(1), /* NoOpaques */ true)) {
-    SDValue NewC =
-        DAG.FoldConstantArithmetic(ISD::ADD, DL, VT, {N0.getOperand(1), N1});
-    assert(NewC && "Constant folding failed");
-    return DAG.getNode(ISD::SUB, DL, VT, N0.getOperand(0), NewC);
+  if (N0.getOpcode() == ISD::SUB) {
+    SDValue N01 = N0.getOperand(1);
+    if (SDValue NewC = DAG.FoldConstantArithmetic(ISD::ADD, DL, VT, {N01, N1}))
+      return DAG.getNode(ISD::SUB, DL, VT, N0.getOperand(0), NewC);
   }
 
   // fold (c1-A)-c2 -> (c1-c2)-A
-  if (N0.getOpcode() == ISD::SUB &&
-      isConstantOrConstantVector(N1, /* NoOpaques */ true) &&
-      isConstantOrConstantVector(N0.getOperand(0), /* NoOpaques */ true)) {
-    SDValue NewC =
-        DAG.FoldConstantArithmetic(ISD::SUB, DL, VT, {N0.getOperand(0), N1});
-    assert(NewC && "Constant folding failed");
-    return DAG.getNode(ISD::SUB, DL, VT, NewC, N0.getOperand(1));
+  if (N0.getOpcode() == ISD::SUB) {
+    SDValue N00 = N0.getOperand(0);
+    if (SDValue NewC = DAG.FoldConstantArithmetic(ISD::SUB, DL, VT, {N00, N1}))
+      return DAG.getNode(ISD::SUB, DL, VT, NewC, N0.getOperand(1));
   }
 
   // fold ((A+(B+or-C))-B) -> A+or-C
@@ -4032,11 +4019,10 @@ SDValue DAGCombiner::visitMUL(SDNode *N) {
   }
 
   // (mul (shl X, c1), c2) -> (mul X, c2 << c1)
-  if (N0.getOpcode() == ISD::SHL &&
-      isConstantOrConstantVector(N1, /* NoOpaques */ true) &&
-      isConstantOrConstantVector(N0.getOperand(1), /* NoOpaques */ true)) {
-    SDValue C3 = DAG.getNode(ISD::SHL, SDLoc(N), VT, N1, N0.getOperand(1));
-    if (isConstantOrConstantVector(C3))
+  if (N0.getOpcode() == ISD::SHL) {
+    SDValue N01 = N0.getOperand(1);
+    if (SDValue C3 =
+            DAG.FoldConstantArithmetic(ISD::SHL, SDLoc(N), VT, {N1, N01}))
       return DAG.getNode(ISD::MUL, SDLoc(N), VT, N0.getOperand(0), C3);
   }
 
@@ -9024,11 +9010,10 @@ SDValue DAGCombiner::visitSHL(SDNode *N) {
   }
 
   // fold (shl (mul x, c1), c2) -> (mul x, c1 << c2)
-  if (N0.getOpcode() == ISD::MUL && N0->hasOneUse() &&
-      isConstantOrConstantVector(N1, /* No Opaques */ true) &&
-      isConstantOrConstantVector(N0.getOperand(1), /* No Opaques */ true)) {
-    SDValue Shl = DAG.getNode(ISD::SHL, SDLoc(N1), VT, N0.getOperand(1), N1);
-    if (isConstantOrConstantVector(Shl))
+  if (N0.getOpcode() == ISD::MUL && N0->hasOneUse()) {
+    SDValue N01 = N0.getOperand(1);
+    if (SDValue Shl =
+            DAG.FoldConstantArithmetic(ISD::SHL, SDLoc(N1), VT, {N01, N1}))
       return DAG.getNode(ISD::MUL, SDLoc(N), VT, N0.getOperand(0), Shl);
   }
 
