@@ -43,12 +43,15 @@ namespace format {
   TYPE(ConflictAlternative)                                                    \
   TYPE(ConflictEnd)                                                            \
   TYPE(ConflictStart)                                                          \
+  /* l_brace of if/for/while */                                                \
+  TYPE(ControlStatementLBrace)                                                 \
   TYPE(CppCastLParen)                                                          \
   TYPE(CtorInitializerColon)                                                   \
   TYPE(CtorInitializerComma)                                                   \
   TYPE(DesignatedInitializerLSquare)                                           \
   TYPE(DesignatedInitializerPeriod)                                            \
   TYPE(DictLiteral)                                                            \
+  TYPE(ElseLBrace)                                                             \
   TYPE(EnumLBrace)                                                             \
   TYPE(FatArrow)                                                               \
   TYPE(ForEachMacro)                                                           \
