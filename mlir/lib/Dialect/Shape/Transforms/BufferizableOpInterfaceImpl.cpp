@@ -66,6 +66,7 @@ struct AssumingOpInterface
     SmallVector<Type> newResultTypes;
     for (Type type : assumingOp->getResultTypes()) {
       if (auto tensorType = type.dyn_cast<TensorType>()) {
+        // TODO: Infer the result type instead of computing it.
         newResultTypes.push_back(getMemRefType(tensorType, state.getOptions()));
       } else {
         newResultTypes.push_back(type);

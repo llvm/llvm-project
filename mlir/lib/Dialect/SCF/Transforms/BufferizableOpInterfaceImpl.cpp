@@ -79,6 +79,7 @@ struct ExecuteRegionOpInterface
     SmallVector<Type> newResultTypes;
     for (Type type : executeRegionOp->getResultTypes()) {
       if (auto tensorType = type.dyn_cast<TensorType>()) {
+        // TODO: Infer the result type instead of computing it.
         newResultTypes.push_back(getMemRefType(tensorType, state.getOptions()));
       } else {
         newResultTypes.push_back(type);
@@ -188,6 +189,7 @@ struct IfOpInterface
     SmallVector<Type> newTypes;
     for (Type returnType : ifOp->getResultTypes()) {
       if (auto tensorType = returnType.dyn_cast<TensorType>()) {
+        // TODO: Infer the result type instead of computing it.
         newTypes.push_back(getMemRefType(tensorType, state.getOptions()));
       } else {
         newTypes.push_back(returnType);
