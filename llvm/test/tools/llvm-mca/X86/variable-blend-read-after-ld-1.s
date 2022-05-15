@@ -90,12 +90,12 @@ vblendvps %xmm1, (%rdi), %xmm2, %xmm3
 # ZNVER1:       Dispatch Width:    4
 # ZNVER1-NEXT:  uOps Per Cycle:    0.18
 # ZNVER1-NEXT:  IPC:               0.18
-# ZNVER1-NEXT:  Block RThroughput: 1.0
+# ZNVER1-NEXT:  Block RThroughput: 0.5
 
 # ZNVER2:       Dispatch Width:    4
 # ZNVER2-NEXT:  uOps Per Cycle:    0.18
 # ZNVER2-NEXT:  IPC:               0.18
-# ZNVER2-NEXT:  Block RThroughput: 1.0
+# ZNVER2-NEXT:  Block RThroughput: 0.5
 
 # BDVER2:       Timeline view:
 # BDVER2-NEXT:  Index     0123456789
