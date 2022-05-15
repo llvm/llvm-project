@@ -10,6 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "DialectGenUtilities.h"
 #include "mlir/TableGen/Class.h"
 #include "mlir/TableGen/CodeGenHelpers.h"
 #include "mlir/TableGen/Format.h"
@@ -55,12 +56,15 @@ filterForDialect(ArrayRef<llvm::Record *> records, Dialect &dialect) {
           DialectFilterIterator(records.end(), records.end(), filterFn)};
 }
 
-static Optional<Dialect>
-findSelectedDialect(ArrayRef<const llvm::Record *> dialectDefs) {
-  // Select the dialect to gen for.
-  if (dialectDefs.size() == 1 && selectedDialect.getNumOccurrences() == 0) {
-    return Dialect(dialectDefs.front());
+Optional<Dialect> tblgen::findDialectToGenerate(ArrayRef<Dialect> dialects) {
+  if (dialects.empty()) {
+    llvm::errs() << "no dialect was found\n";
+    return llvm::None;
   }
+
+  // Select the dialect to gen for.
+  if (dialects.size() == 1 && selectedDialect.getNumOccurrences() == 0)
+    return dialects.front();
 
   if (selectedDialect.getNumOccurrences() == 0) {
     llvm::errs() << "when more than 1 dialect is present, one must be selected "
@@ -68,15 +72,14 @@ findSelectedDialect(ArrayRef<const llvm::Record *> dialectDefs) {
     return llvm::None;
   }
 
-  const auto *dialectIt =
-      llvm::find_if(dialectDefs, [](const llvm::Record *def) {
-        return Dialect(def).getName() == selectedDialect;
-      });
-  if (dialectIt == dialectDefs.end()) {
+  const auto *dialectIt = llvm::find_if(dialects, [](const Dialect &dialect) {
+    return dialect.getName() == selectedDialect;
+  });
+  if (dialectIt == dialects.end()) {
     llvm::errs() << "selected dialect with '-dialect' does not exist\n";
     return llvm::None;
   }
-  return Dialect(*dialectIt);
+  return *dialectIt;
 }
 
 //===----------------------------------------------------------------------===//
@@ -235,7 +238,8 @@ static bool emitDialectDecls(const llvm::RecordKeeper &recordKeeper,
   if (dialectDefs.empty())
     return false;
 
-  Optional<Dialect> dialect = findSelectedDialect(dialectDefs);
+  SmallVector<Dialect> dialects(dialectDefs.begin(), dialectDefs.end());
+  Optional<Dialect> dialect = findDialectToGenerate(dialects);
   if (!dialect)
     return true;
   auto attrDefs = recordKeeper.getAllDerivedDefinitions("DialectAttr");
@@ -308,7 +312,8 @@ static bool emitDialectDefs(const llvm::RecordKeeper &recordKeeper,
   if (dialectDefs.empty())
     return false;
 
-  Optional<Dialect> dialect = findSelectedDialect(dialectDefs);
+  SmallVector<Dialect> dialects(dialectDefs.begin(), dialectDefs.end());
+  Optional<Dialect> dialect = findDialectToGenerate(dialects);
   if (!dialect)
     return true;
   emitDialectDef(*dialect, os);
