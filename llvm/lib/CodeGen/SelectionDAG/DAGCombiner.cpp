@@ -6418,9 +6418,9 @@ SDValue DAGCombiner::MatchBSwapHWordLow(SDNode *N, SDValue N0, SDValue N1,
   bool LookPassAnd0 = false;
   bool LookPassAnd1 = false;
   if (N0.getOpcode() == ISD::AND && N0.getOperand(0).getOpcode() == ISD::SRL)
-      std::swap(N0, N1);
+    std::swap(N0, N1);
   if (N1.getOpcode() == ISD::AND && N1.getOperand(0).getOpcode() == ISD::SHL)
-      std::swap(N0, N1);
+    std::swap(N0, N1);
   if (N0.getOpcode() == ISD::AND) {
     if (!N0->hasOneUse())
       return SDValue();
