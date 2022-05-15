@@ -71,14 +71,16 @@ static void addCmdArgs(const ArgList &Args, ArgStringList &CmdArgs,
 		       bool noPrefix=false) {
   if (checkOnly)
     return;
-  if (noPrefix)
+  if (isLLD) {
+    const Twine Str = "-plugin-opt=";
+    CmdArgs.push_back(Args.MakeArgString(Str + Arg));
+  } else if (noPrefix) {
     CmdArgs.push_back(Arg);
-  else if (!isLLD) {
+  } else if (!isLLD) {
     CmdArgs.push_back("-mllvm");
     CmdArgs.push_back(Arg);
   } else {
-    const Twine Str = "-plugin-opt=";
-    CmdArgs.push_back(Args.MakeArgString(Str + Arg));
+    // Nothing, isLLD and !isLLD make this dead patch
   }
 }
 
@@ -141,7 +143,7 @@ static bool checkForPropOpts(const ToolChain &TC, const Driver &D,
   if (Arg *A = Args.getLastArg(options::OPT_fstruct_layout_EQ)) {
     StringRef Val = A->getValue();
     addCmdArgs(Args, CmdArgs, isLLD, checkOnly,
-               Args.MakeArgString("-struct-layout=" + Val), !isLLD);
+               Args.MakeArgString("-struct-layout=" + Val), isLLD);
     ClosedToolChainNeeded = true;
   }
 
@@ -160,7 +162,7 @@ static bool checkForPropOpts(const ToolChain &TC, const Driver &D,
   }
   if (Args.hasFlag(options::OPT_farray_remap, options::OPT_fno_array_remap,
                    false)) {
-    addCmdArgs(Args, CmdArgs, isLLD, checkOnly, "-remap-arrays", !isLLD);
+    addCmdArgs(Args, CmdArgs, isLLD, checkOnly, "-remap-arrays", isLLD);
     addCmdArgs(Args, CmdArgs, isLLD, checkOnly, "-simplifycfg-no-storesink");
     ClosedToolChainNeeded = true;
   }
@@ -230,7 +232,7 @@ static bool checkForPropOpts(const ToolChain &TC, const Driver &D,
     StringRef Val = A->getValue();
     addCmdArgs(Args, CmdArgs, isLLD, checkOnly,
                Args.MakeArgString("-struct-peel-mem-block-size=" + Val),
-	       !isLLD);
+	       isLLD);
     ClosedToolChainNeeded = true;
   } else if (Arg *A = Args.getLastArg(options::OPT_march_EQ)) {
     if (ClosedToolChainNeeded && HasAltPath) {
@@ -243,7 +245,7 @@ static bool checkForPropOpts(const ToolChain &TC, const Driver &D,
         addCmdArgs(Args, CmdArgs, isLLD, checkOnly,
                    Args.MakeArgString(
                        "-struct-peel-mem-block-size=" ZNVER1_MEMBLOCK_SIZE),
-		   !isLLD);
+		   isLLD);
         ClosedToolChainNeeded = true;
       }
       if (MArch == "znver2" || (MArch == "native" && CPU == "znver2")) {
@@ -251,7 +253,7 @@ static bool checkForPropOpts(const ToolChain &TC, const Driver &D,
         addCmdArgs(Args, CmdArgs, isLLD, checkOnly,
                    Args.MakeArgString(
                        "-struct-peel-mem-block-size=" ZNVER2_MEMBLOCK_SIZE),
-		   !isLLD);
+		   isLLD);
         ClosedToolChainNeeded = true;
       }
       if (MArch == "znver3" || (MArch == "native" && CPU == "znver3")) {
@@ -259,7 +261,7 @@ static bool checkForPropOpts(const ToolChain &TC, const Driver &D,
         addCmdArgs(Args, CmdArgs, isLLD, checkOnly,
                    Args.MakeArgString(
                        "-struct-peel-mem-block-size=" ZNVER2_MEMBLOCK_SIZE),
-		   !isLLD);
+		   isLLD);
         addCmdArgs(Args, CmdArgs, isLLD, checkOnly,
                    Args.MakeArgString("-x86-convert-cmpmr-to-cmprm"));
         ClosedToolChainNeeded = true;
@@ -305,7 +307,7 @@ static bool checkForPropOpts(const ToolChain &TC, const Driver &D,
   if (Args.hasFlag(options::OPT_flv_function_specialization,
                    options::OPT_fno_lv_function_specialization, false)) {
     addCmdArgs(Args, CmdArgs, isLLD, checkOnly,
-               "-lv-function-specialization", !isLLD);
+               "-lv-function-specialization", isLLD);
     if (!isLLD)
       addCmdArgs(Args, CmdArgs, isLLD, checkOnly, "-delay-vectorization-to-lto");
     ClosedToolChainNeeded = true;
