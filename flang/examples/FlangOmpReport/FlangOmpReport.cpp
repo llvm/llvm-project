@@ -49,7 +49,7 @@ template <> struct MappingTraits<LogRecord> {
 } // namespace llvm
 
 class FlangOmpReport : public PluginParseTreeAction {
-  void ExecuteAction() override {
+  void executeAction() override {
     // Prepare the parse tree and the visitor
     Parsing &parsing = getParsing();
     OpenMPCounterVisitor visitor;

@@ -65,7 +65,7 @@ class PrintFunctionNamesAction : public PluginParseTreeAction {
     bool isInSubprogram_{false};
   };
 
-  void ExecuteAction() override {
+  void executeAction() override {
     ParseTreeVisitor visitor;
     Fortran::parser::Walk(getParsing().parseTree(), visitor);
 
