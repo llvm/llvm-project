@@ -81,6 +81,7 @@
 # define __bound NASTY_MACRO
 # define __deallocate NASTY_MACRO
 # define __deref NASTY_MACRO
+# define __format_string NASTY_MACRO
 # define __full NASTY_MACRO
 # define __in NASTY_MACRO
 # define __inout NASTY_MACRO
