@@ -25379,6 +25379,25 @@ TEST_F(FormatTest, RemoveBraces) {
                "}",
                Style);
 
+  verifyFormat("if consteval {\n"
+               "  f();\n"
+               "} else {\n"
+               "  g();\n"
+               "}",
+               Style);
+
+  verifyFormat("if not consteval {\n"
+               "  f();\n"
+               "} else if (a) {\n"
+               "  g();\n"
+               "}",
+               Style);
+
+  verifyFormat("if !consteval {\n"
+               "  g();\n"
+               "}",
+               Style);
+
   Style.ColumnLimit = 65;
 
   verifyFormat("if (condition) {\n"
