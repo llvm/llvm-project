@@ -647,7 +647,7 @@ Let ``VT`` be a vector type and ``ET`` the element type of ``VT``.
                                          is a NaN, return the other argument. If both arguments are
                                          NaNs, fmax() return a NaN.
  ET __builtin_reduce_add(VT a)           \+                                                               integer and floating point types
- ET __builtin_reduce_mul(VT a)           *                                                                integer and floating point types
+ ET __builtin_reduce_mul(VT a)           \*                                                               integer and floating point types
  ET __builtin_reduce_and(VT a)           &                                                                integer types
  ET __builtin_reduce_or(VT a)            \|                                                               integer types
  ET __builtin_reduce_xor(VT a)           ^                                                                integer types
