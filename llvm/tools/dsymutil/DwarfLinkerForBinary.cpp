@@ -941,7 +941,7 @@ getAttributeOffsets(const DWARFAbbreviationDeclaration *Abbrev, unsigned Idx,
   return std::make_pair(Offset, End);
 }
 
-bool DwarfLinkerForBinary::AddressManager::hasLiveMemoryLocation(
+bool DwarfLinkerForBinary::AddressManager::isLiveVariable(
     const DWARFDie &DIE, CompileUnit::DIEInfo &MyInfo) {
   const auto *Abbrev = DIE.getAbbreviationDeclarationPtr();
 
@@ -960,7 +960,7 @@ bool DwarfLinkerForBinary::AddressManager::hasLiveMemoryLocation(
                               LocationEndOffset, MyInfo);
 }
 
-bool DwarfLinkerForBinary::AddressManager::hasLiveAddressRange(
+bool DwarfLinkerForBinary::AddressManager::isLiveSubprogram(
     const DWARFDie &DIE, CompileUnit::DIEInfo &MyInfo) {
   const auto *Abbrev = DIE.getAbbreviationDeclarationPtr();
 
@@ -1010,7 +1010,6 @@ DwarfLinkerForBinary::AddressManager::relocate(const ValidReloc &Reloc) const {
 /// \returns whether any reloc has been applied.
 bool DwarfLinkerForBinary::AddressManager::applyValidRelocs(
     MutableArrayRef<char> Data, uint64_t BaseOffset, bool IsLittleEndian) {
-  assert(areRelocationsResolved());
   std::vector<ValidReloc> Relocs = getRelocations(
       ValidDebugInfoRelocs, BaseOffset, BaseOffset + Data.size());
 
