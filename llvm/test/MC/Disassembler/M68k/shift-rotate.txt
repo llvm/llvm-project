@@ -1,7 +1,4 @@
 # RUN: llvm-mc -disassemble -triple m68k %s | FileCheck %s
-# Disable this particular test until migration to the new code emitter is
-# finished.
-# XFAIL: *
 
 # CHECK: lsl.l #5, %d1
 0xeb 0x89
