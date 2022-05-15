@@ -16672,9 +16672,7 @@ static SDValue lowerShuffleAsLanePermuteAndShuffle(
   // otherwise we're (probably) better off doing a split.
   if (VT == MVT::v4f64 &&
       !all_of(Mask, [LaneSize](int M) { return M < LaneSize; }))
-    if (SDValue V =
-            lowerShuffleAsLanePermuteAndSHUFP(DL, VT, V1, V2, Mask, DAG))
-      return V;
+    return lowerShuffleAsLanePermuteAndSHUFP(DL, VT, V1, V2, Mask, DAG);
 
   // If there are only inputs from one 128-bit lane, splitting will in fact be
   // less expensive. The flags track whether the given lane contains an element
@@ -17602,9 +17600,7 @@ static SDValue lowerV4F64Shuffle(const SDLoc &DL, ArrayRef<int> Mask,
       !all_of(Mask, [](int M) { return M < 2 || (4 <= M && M < 6); }) &&
       (V1.getOpcode() != ISD::BUILD_VECTOR) &&
       (V2.getOpcode() != ISD::BUILD_VECTOR))
-    if (SDValue Op = lowerShuffleAsLanePermuteAndSHUFP(DL, MVT::v4f64, V1, V2,
-                                                       Mask, DAG))
-      return Op;
+    return lowerShuffleAsLanePermuteAndSHUFP(DL, MVT::v4f64, V1, V2, Mask, DAG);
 
   // If we have one input in place, then we can permute the other input and
   // blend the result.
