@@ -1433,8 +1433,17 @@ void VPReplicateRecipe::print(raw_ostream &O, const Twine &Indent,
     printAsOperand(O, SlotTracker);
     O << " = ";
   }
-  O << Instruction::getOpcodeName(getUnderlyingInstr()->getOpcode()) << " ";
-  printOperands(O, SlotTracker);
+  if (auto *CB = dyn_cast<CallBase>(getUnderlyingInstr())) {
+    O << "call @" << CB->getCalledFunction()->getName() << "(";
+    interleaveComma(make_range(op_begin(), op_begin() + (getNumOperands() - 1)),
+                    O, [&O, &SlotTracker](VPValue *Op) {
+                      Op->printAsOperand(O, SlotTracker);
+                    });
+    O << ")";
+  } else {
+    O << Instruction::getOpcodeName(getUnderlyingInstr()->getOpcode()) << " ";
+    printOperands(O, SlotTracker);
+  }
 
   if (AlsoPack)
     O << " (S->V)";
