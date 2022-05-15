@@ -391,6 +391,7 @@ void ARMFixCortexA57AES1742098::analyzeMF(
 
   assert(FixupLocsForFn.size() <= MaxAllowedFixups &&
          "Inserted too many fixups for this function.");
+  (void)MaxAllowedFixups;
 }
 
 void ARMFixCortexA57AES1742098::insertAESFixup(
