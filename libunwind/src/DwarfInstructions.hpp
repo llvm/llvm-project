@@ -72,10 +72,6 @@ private:
     assert(0 && "getCFA(): unknown location");
     __builtin_unreachable();
   }
-#if defined(_LIBUNWIND_TARGET_AARCH64)
-  static bool getRA_SIGN_STATE(A &addressSpace, R registers, pint_t cfa,
-                               PrologInfo &prolog);
-#endif
 };
 
 template <typename R>
@@ -170,21 +166,6 @@ v128 DwarfInstructions<A, R>::getSavedVectorRegister(
   }
   _LIBUNWIND_ABORT("unsupported restore location for vector register");
 }
-#if defined(_LIBUNWIND_TARGET_AARCH64)
-template <typename A, typename R>
-bool DwarfInstructions<A, R>::getRA_SIGN_STATE(A &addressSpace, R registers,
-                                               pint_t cfa, PrologInfo &prolog) {
-  pint_t raSignState;
-  auto regloc = prolog.savedRegisters[UNW_AARCH64_RA_SIGN_STATE];
-  if (regloc.location == CFI_Parser<A>::kRegisterUnused)
-    raSignState = static_cast<pint_t>(regloc.value);
-  else
-    raSignState = getSavedRegister(addressSpace, registers, cfa, regloc);
-
-  // Only bit[0] is meaningful.
-  return raSignState & 0x01;
-}
-#endif
 
 template <typename A, typename R>
 int DwarfInstructions<A, R>::stepWithDwarf(A &addressSpace, pint_t pc,
@@ -254,7 +235,7 @@ int DwarfInstructions<A, R>::stepWithDwarf(A &addressSpace, pint_t pc,
       // restored. autia1716 is used instead of autia as autia1716 assembles
       // to a NOP on pre-v8.3a architectures.
       if ((R::getArch() == REGISTERS_ARM64) &&
-          getRA_SIGN_STATE(addressSpace, registers, cfa, prolog) &&
+          prolog.savedRegisters[UNW_AARCH64_RA_SIGN_STATE].value &&
           returnAddress != 0) {
 #if !defined(_LIBUNWIND_IS_NATIVE_ONLY)
         return UNW_ECROSSRASIGNING;
