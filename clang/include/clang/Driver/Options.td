@@ -6557,6 +6557,10 @@ def _SLASH_permissive : CLFlag<"permissive">,
   HelpText<"Enable some non conforming code to compile">;
 def _SLASH_permissive_ : CLFlag<"permissive-">,
   HelpText<"Disable non conforming code from compiling (default)">;
+def _SLASH_d1nodatetime : CLFlag<"d1nodatetime">,
+  HelpText<"d1nodatetime">;
+def _SLASH_d1import_no_registry : CLFlag<"d1import_no_registry">,
+  HelpText<"d1import_no_registry">;
 def _SLASH_Tc : CLCompileJoinedOrSeparate<"Tc">,
   HelpText<"Treat <file> as C source file">, MetaVarName<"<file>">;
 def _SLASH_TC : CLCompileFlag<"TC">, HelpText<"Treat all source files as C">;
