@@ -618,6 +618,127 @@ void CodeGenModule::EmitCXXThreadLocalInitFunc() {
   CXXThreadLocals.clear();
 }
 
+/* Build the initializer for a C++20 module:
+   This is arranged to be run only once regardless of how many times the module
+   might be included transitively.  This arranged by using a control variable.
+
+   First we call any initializers for imported modules.
+   We then call initializers for the Global Module Fragment (if present)
+   We then call initializers for the current module.
+   We then call initializers for the Private Module Fragment (if present)
+*/
+
+void CodeGenModule::EmitCXXModuleInitFunc(Module *Primary) {
+  while (!CXXGlobalInits.empty() && !CXXGlobalInits.back())
+    CXXGlobalInits.pop_back();
+
+  // We create the function, even if it is empty, since an importer of this
+  // module will refer to it unconditionally (for the current implementation
+  // there is no way for the importer to know that an importee does not need
+  // an initializer to be run).
+
+  // Module initializers for imported modules are emitted first.
+  // Collect the modules that we import
+  SmallVector<Module *> AllImports;
+  // Ones that we export
+  for (auto I : Primary->Exports)
+    AllImports.push_back(I.getPointer());
+  // Ones that we only import.
+  for (Module *M : Primary->Imports)
+    AllImports.push_back(M);
+
+  SmallVector<llvm::Function *, 8> ModuleInits;
+  for (Module *M : AllImports) {
+    llvm::FunctionType *FTy = llvm::FunctionType::get(VoidTy, false);
+    SmallString<256> FnName;
+    {
+      llvm::raw_svector_ostream Out(FnName);
+      cast<ItaniumMangleContext>(getCXXABI().getMangleContext())
+          .mangleModuleInitializer(M, Out);
+    }
+    assert(!GetGlobalValue(FnName.str()) &&
+           "We should only have one use of the initializer call");
+    llvm::Function *Fn = llvm::Function::Create(
+        FTy, llvm::Function::ExternalLinkage, FnName.str(), &getModule());
+    ModuleInits.push_back(Fn);
+  }
+  AllImports.clear();
+
+  // Add any initializers with specified priority; this uses the same  approach
+  // as EmitCXXGlobalInitFunc().
+  if (!PrioritizedCXXGlobalInits.empty()) {
+    SmallVector<llvm::Function *, 8> LocalCXXGlobalInits;
+    llvm::array_pod_sort(PrioritizedCXXGlobalInits.begin(),
+                         PrioritizedCXXGlobalInits.end());
+    for (SmallVectorImpl<GlobalInitData>::iterator
+             I = PrioritizedCXXGlobalInits.begin(),
+             E = PrioritizedCXXGlobalInits.end();
+         I != E;) {
+      SmallVectorImpl<GlobalInitData>::iterator PrioE =
+          std::upper_bound(I + 1, E, *I, GlobalInitPriorityCmp());
+
+      for (; I < PrioE; ++I)
+        ModuleInits.push_back(I->second);
+    }
+    PrioritizedCXXGlobalInits.clear();
+  }
+
+  // Now append the ones without specified priority.
+  for (auto F : CXXGlobalInits)
+    ModuleInits.push_back(F);
+  CXXGlobalInits.clear();
+
+  llvm::FunctionType *FTy = llvm::FunctionType::get(VoidTy, false);
+  const CGFunctionInfo &FI = getTypes().arrangeNullaryFunction();
+
+  // We now build the initializer for this module, which has a mangled name
+  // as per the Itanium ABI .  The action of the initializer is guarded so that
+  // each init is run just once (even though a module might be imported
+  // multiple times via nested use).
+  llvm::Function *Fn;
+  llvm::GlobalVariable *Guard = nullptr;
+  {
+    SmallString<256> InitFnName;
+    llvm::raw_svector_ostream Out(InitFnName);
+    cast<ItaniumMangleContext>(getCXXABI().getMangleContext())
+        .mangleModuleInitializer(Primary, Out);
+    Fn = CreateGlobalInitOrCleanUpFunction(
+        FTy, llvm::Twine(InitFnName), FI, SourceLocation(), false,
+        llvm::GlobalVariable::ExternalLinkage);
+
+    Guard = new llvm::GlobalVariable(getModule(), Int8Ty, /*isConstant=*/false,
+                                     llvm::GlobalVariable::InternalLinkage,
+                                     llvm::ConstantInt::get(Int8Ty, 0),
+                                     InitFnName.str() + "__in_chrg");
+  }
+  CharUnits GuardAlign = CharUnits::One();
+  Guard->setAlignment(GuardAlign.getAsAlign());
+
+  CodeGenFunction(*this).GenerateCXXGlobalInitFunc(
+      Fn, ModuleInits, ConstantAddress(Guard, Int8Ty, GuardAlign));
+  // We allow for the case that a module object is added to  a linked binary
+  // without a specific call to the the initializer.  This also ensure that
+  // implementation partition initializers are called when the partition
+  // is not imported as an interface.
+  AddGlobalCtor(Fn);
+
+  // See the comment in EmitCXXGlobalInitFunc about OpenCL global init
+  // functions.
+  if (getLangOpts().OpenCL) {
+    GenKernelArgMetadata(Fn);
+    Fn->setCallingConv(llvm::CallingConv::SPIR_KERNEL);
+  }
+
+  assert(!getLangOpts().CUDA || !getLangOpts().CUDAIsDevice ||
+         getLangOpts().GPUAllowDeviceInit);
+  if (getLangOpts().HIP && getLangOpts().CUDAIsDevice) {
+    Fn->setCallingConv(llvm::CallingConv::AMDGPU_KERNEL);
+    Fn->addFnAttr("device-init");
+  }
+
+  ModuleInits.clear();
+}
+
 static SmallString<128> getTransformedFileName(llvm::Module &M) {
   SmallString<128> FileName = llvm::sys::path::filename(M.getName());
 
@@ -650,7 +771,26 @@ CodeGenModule::EmitCXXGlobalInitFunc() {
   while (!CXXGlobalInits.empty() && !CXXGlobalInits.back())
     CXXGlobalInits.pop_back();
 
-  if (CXXGlobalInits.empty() && PrioritizedCXXGlobalInits.empty())
+  // When we import C++20 modules, we must run their initializers first.
+  SmallVector<llvm::Function *, 8> ModuleInits;
+  if (CXX20ModuleInits)
+    for (Module *M : ImportedModules) {
+      llvm::FunctionType *FTy = llvm::FunctionType::get(VoidTy, false);
+      SmallString<256> FnName;
+      {
+        llvm::raw_svector_ostream Out(FnName);
+        cast<ItaniumMangleContext>(getCXXABI().getMangleContext())
+            .mangleModuleInitializer(M, Out);
+      }
+      assert(!GetGlobalValue(FnName.str()) &&
+             "We should only have one use of the initializer call");
+      llvm::Function *Fn = llvm::Function::Create(
+          FTy, llvm::Function::ExternalLinkage, FnName.str(), &getModule());
+      ModuleInits.push_back(Fn);
+    }
+
+  if (ModuleInits.empty() && CXXGlobalInits.empty() &&
+      PrioritizedCXXGlobalInits.empty())
     return;
 
   llvm::FunctionType *FTy = llvm::FunctionType::get(VoidTy, false);
@@ -676,6 +816,13 @@ CodeGenModule::EmitCXXGlobalInitFunc() {
       llvm::Function *Fn = CreateGlobalInitOrCleanUpFunction(
           FTy, "_GLOBAL__I_" + getPrioritySuffix(Priority), FI);
 
+      // Prepend the module inits to the highest priority set.
+      if (!ModuleInits.empty()) {
+        for (auto F : ModuleInits)
+          LocalCXXGlobalInits.push_back(F);
+        ModuleInits.clear();
+      }
+
       for (; I < PrioE; ++I)
         LocalCXXGlobalInits.push_back(I->second);
 
@@ -685,17 +832,33 @@ CodeGenModule::EmitCXXGlobalInitFunc() {
     PrioritizedCXXGlobalInits.clear();
   }
 
-  if (getCXXABI().useSinitAndSterm() && CXXGlobalInits.empty())
+  if (getCXXABI().useSinitAndSterm() && ModuleInits.empty() &&
+      CXXGlobalInits.empty())
     return;
+
+  for (auto F : CXXGlobalInits)
+    ModuleInits.push_back(F);
+  CXXGlobalInits.clear();
 
   // Include the filename in the symbol name. Including "sub_" matches gcc
   // and makes sure these symbols appear lexicographically behind the symbols
   // with priority emitted above.
-  llvm::Function *Fn = CreateGlobalInitOrCleanUpFunction(
-      FTy, llvm::Twine("_GLOBAL__sub_I_", getTransformedFileName(getModule())),
-      FI);
+  llvm::Function *Fn;
+  if (CXX20ModuleInits && getContext().getModuleForCodeGen()) {
+    SmallString<256> InitFnName;
+    llvm::raw_svector_ostream Out(InitFnName);
+    cast<ItaniumMangleContext>(getCXXABI().getMangleContext())
+        .mangleModuleInitializer(getContext().getModuleForCodeGen(), Out);
+    Fn = CreateGlobalInitOrCleanUpFunction(
+        FTy, llvm::Twine(InitFnName), FI, SourceLocation(), false,
+        llvm::GlobalVariable::ExternalLinkage);
+  } else
+    Fn = CreateGlobalInitOrCleanUpFunction(
+        FTy,
+        llvm::Twine("_GLOBAL__sub_I_", getTransformedFileName(getModule())),
+        FI);
 
-  CodeGenFunction(*this).GenerateCXXGlobalInitFunc(Fn, CXXGlobalInits);
+  CodeGenFunction(*this).GenerateCXXGlobalInitFunc(Fn, ModuleInits);
   AddGlobalCtor(Fn);
 
   // In OpenCL global init functions must be converted to kernels in order to
@@ -718,7 +881,7 @@ CodeGenModule::EmitCXXGlobalInitFunc() {
     Fn->addFnAttr("device-init");
   }
 
-  CXXGlobalInits.clear();
+  ModuleInits.clear();
 }
 
 void CodeGenModule::EmitCXXGlobalCleanUpFunc() {
