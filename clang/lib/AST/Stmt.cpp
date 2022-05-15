@@ -363,10 +363,9 @@ int64_t Stmt::getID(const ASTContext &Context) const {
 
 CompoundStmt::CompoundStmt(ArrayRef<Stmt *> Stmts, SourceLocation LB,
                            SourceLocation RB)
-    : Stmt(CompoundStmtClass), RBraceLoc(RB) {
+    : Stmt(CompoundStmtClass), LBraceLoc(LB), RBraceLoc(RB) {
   CompoundStmtBits.NumStmts = Stmts.size();
   setStmts(Stmts);
-  CompoundStmtBits.LBraceLoc = LB;
 }
 
 void CompoundStmt::setStmts(ArrayRef<Stmt *> Stmts) {

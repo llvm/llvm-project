@@ -128,10 +128,7 @@ protected:
 
     unsigned : NumStmtBits;
 
-    unsigned NumStmts : 32 - NumStmtBits;
-
-    /// The location of the opening "{".
-    SourceLocation LBraceLoc;
+    unsigned NumStmts;
   };
 
   class LabelStmtBitfields {
@@ -1406,7 +1403,10 @@ class CompoundStmt final : public Stmt,
   friend class ASTStmtReader;
   friend TrailingObjects;
 
-  /// The location of the closing "}". LBraceLoc is stored in CompoundStmtBits.
+  /// The location of the opening "{".
+  SourceLocation LBraceLoc;
+
+  /// The location of the closing "}".
   SourceLocation RBraceLoc;
 
   CompoundStmt(ArrayRef<Stmt *> Stmts, SourceLocation LB, SourceLocation RB);
@@ -1420,9 +1420,8 @@ public:
 
   // Build an empty compound statement with a location.
   explicit CompoundStmt(SourceLocation Loc)
-      : Stmt(CompoundStmtClass), RBraceLoc(Loc) {
+      : Stmt(CompoundStmtClass), LBraceLoc(Loc), RBraceLoc(Loc) {
     CompoundStmtBits.NumStmts = 0;
-    CompoundStmtBits.LBraceLoc = Loc;
   }
 
   // Build an empty compound statement.
@@ -1505,10 +1504,10 @@ public:
     return const_cast<CompoundStmt *>(this)->getStmtExprResult();
   }
 
-  SourceLocation getBeginLoc() const { return CompoundStmtBits.LBraceLoc; }
+  SourceLocation getBeginLoc() const { return LBraceLoc; }
   SourceLocation getEndLoc() const { return RBraceLoc; }
 
-  SourceLocation getLBracLoc() const { return CompoundStmtBits.LBraceLoc; }
+  SourceLocation getLBracLoc() const { return LBraceLoc; }
   SourceLocation getRBracLoc() const { return RBraceLoc; }
 
   static bool classof(const Stmt *T) {
