@@ -189,7 +189,7 @@ InFlightDiagnostic Parser::emitWrongTokenError(const Twine &message) {
   StringRef startOfBuffer(bufferStart, curPtr - bufferStart);
 
   // Back up over entirely blank lines.
-  while (1) {
+  while (true) {
     // Back up until we see a \n, but don't look past the buffer start.
     startOfBuffer = startOfBuffer.rtrim(" \t");
 
