@@ -103,10 +103,11 @@ static void runGLRParse(benchmark::State &State) {
   clang::LangOptions LangOpts = genericLangOpts();
   LRTable Table = clang::pseudo::LRTable::buildSLR(*G);
   TokenStream ParseableStream = parseableTokenStream();
+  SymbolID StartSymbol = *G->findNonterminal("translation-unit");
   for (auto _ : State) {
     pseudo::ForestArena Forest;
     pseudo::GSS GSS;
-    glrParse(ParseableStream, ParseParams{*G, Table, Forest, GSS});
+    glrParse(ParseableStream, ParseParams{*G, Table, Forest, GSS}, StartSymbol);
   }
   State.SetBytesProcessed(static_cast<uint64_t>(State.iterations()) *
                           SourceText->size());
@@ -116,10 +117,12 @@ BENCHMARK(runGLRParse);
 static void runParseOverall(benchmark::State &State) {
   clang::LangOptions LangOpts = genericLangOpts();
   LRTable Table = clang::pseudo::LRTable::buildSLR(*G);
+  SymbolID StartSymbol = *G->findNonterminal("translation-unit");
   for (auto _ : State) {
     pseudo::ForestArena Forest;
     pseudo::GSS GSS;
-    glrParse(parseableTokenStream(), ParseParams{*G, Table, Forest, GSS});
+    glrParse(parseableTokenStream(), ParseParams{*G, Table, Forest, GSS},
+             StartSymbol);
   }
   State.SetBytesProcessed(static_cast<uint64_t>(State.iterations()) *
                           SourceText->size());

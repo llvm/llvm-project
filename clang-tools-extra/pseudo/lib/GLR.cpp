@@ -36,8 +36,8 @@ llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, const GSS::Node &N) {
   return OS;
 }
 
-const ForestNode &glrParse(const TokenStream &Tokens,
-                           const ParseParams &Params) {
+const ForestNode &glrParse(const TokenStream &Tokens, const ParseParams &Params,
+                           SymbolID StartSymbol) {
   llvm::ArrayRef<ForestNode> Terminals = Params.Forest.createTerminals(Tokens);
   auto &G = Params.G;
   auto &GSS = Params.GSStack;
@@ -61,9 +61,9 @@ const ForestNode &glrParse(const TokenStream &Tokens,
       }
     }
   };
-
   std::vector<const GSS::Node *> NewHeads = {
-      GSS.addNode(/*State=*/0, /*ForestNode*/ nullptr, {})};
+      GSS.addNode(/*State=*/Params.Table.getStartState(StartSymbol),
+                  /*ForestNode=*/nullptr, {})};
   for (const ForestNode &Terminal : Terminals) {
     LLVM_DEBUG(llvm::dbgs() << llvm::formatv("Next token {0} (id={1})\n",
                                              G.symbolName(Terminal.symbol()),
@@ -101,11 +101,7 @@ const ForestNode &glrParse(const TokenStream &Tokens,
     return *PendingAccept.front().Head->Payload;
   }
   // We failed to parse the input, returning an opaque forest node for recovery.
-  auto RulesForStart = G.rulesFor(G.startSymbol());
-  // FIXME: support multiple start symbols.
-  assert(RulesForStart.size() == 1 && RulesForStart.front().Size == 1 &&
-         "start symbol _ must have exactly one rule");
-  return Params.Forest.createOpaque(RulesForStart.front().Sequence[0], 0);
+  return Params.Forest.createOpaque(StartSymbol, /*Token::Index=*/0);
 }
 
 // Apply all pending shift actions.
