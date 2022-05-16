@@ -173,6 +173,8 @@ END-SCRIPT
 #include <__bits> // expected-error@*:* {{use of private header from outside its module: '__bits'}}
 #include <__charconv/chars_format.h> // expected-error@*:* {{use of private header from outside its module: '__charconv/chars_format.h'}}
 #include <__charconv/from_chars_result.h> // expected-error@*:* {{use of private header from outside its module: '__charconv/from_chars_result.h'}}
+#include <__charconv/tables.h> // expected-error@*:* {{use of private header from outside its module: '__charconv/tables.h'}}
+#include <__charconv/to_chars_base_10.h> // expected-error@*:* {{use of private header from outside its module: '__charconv/to_chars_base_10.h'}}
 #include <__charconv/to_chars_result.h> // expected-error@*:* {{use of private header from outside its module: '__charconv/to_chars_result.h'}}
 #include <__chrono/calendar.h> // expected-error@*:* {{use of private header from outside its module: '__chrono/calendar.h'}}
 #include <__chrono/convert_to_timespec.h> // expected-error@*:* {{use of private header from outside its module: '__chrono/convert_to_timespec.h'}}
