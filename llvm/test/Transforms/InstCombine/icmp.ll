@@ -27,9 +27,9 @@ define <2 x i32> @test1vec(<2 x i32> %X) {
 
 define i32 @test2(i32 %X) {
 ; CHECK-LABEL: @test2(
-; CHECK-NEXT:    [[A:%.*]] = icmp sgt i32 [[X:%.*]], -1
-; CHECK-NEXT:    [[B:%.*]] = zext i1 [[A]] to i32
-; CHECK-NEXT:    ret i32 [[B]]
+; CHECK-NEXT:    [[TMP1:%.*]] = xor i32 [[X:%.*]], -1
+; CHECK-NEXT:    [[X_LOBIT_NOT:%.*]] = lshr i32 [[TMP1]], 31
+; CHECK-NEXT:    ret i32 [[X_LOBIT_NOT]]
 ;
   %a = icmp ult i32 %X, -2147483648
   %b = zext i1 %a to i32
@@ -38,9 +38,9 @@ define i32 @test2(i32 %X) {
 
 define <2 x i32> @test2vec(<2 x i32> %X) {
 ; CHECK-LABEL: @test2vec(
-; CHECK-NEXT:    [[A:%.*]] = icmp sgt <2 x i32> [[X:%.*]], <i32 -1, i32 -1>
-; CHECK-NEXT:    [[B:%.*]] = zext <2 x i1> [[A]] to <2 x i32>
-; CHECK-NEXT:    ret <2 x i32> [[B]]
+; CHECK-NEXT:    [[TMP1:%.*]] = xor <2 x i32> [[X:%.*]], <i32 -1, i32 -1>
+; CHECK-NEXT:    [[X_LOBIT_NOT:%.*]] = lshr <2 x i32> [[TMP1]], <i32 31, i32 31>
+; CHECK-NEXT:    ret <2 x i32> [[X_LOBIT_NOT]]
 ;
   %a = icmp ult <2 x i32> %X, <i32 -2147483648, i32 -2147483648>
   %b = zext <2 x i1> %a to <2 x i32>

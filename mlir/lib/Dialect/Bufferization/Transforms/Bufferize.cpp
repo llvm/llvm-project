@@ -416,7 +416,8 @@ bufferization::bufferizeOp(Operation *op,
       continue;
     // Bufferize the op.
     rewriter.setInsertionPoint(op);
-    (void)bufferizableOp.bufferize(rewriter, bufferizationState);
+    if (failed(bufferizableOp.bufferize(rewriter, bufferizationState)))
+      return op->emitError("failed to bufferize op");
   }
 
   // Fold all to_memref(to_tensor(x)) pairs.

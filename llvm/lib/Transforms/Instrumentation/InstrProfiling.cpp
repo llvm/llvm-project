@@ -209,6 +209,18 @@ public:
       Value *Addr = cast<StoreInst>(Store)->getPointerOperand();
       Type *Ty = LiveInValue->getType();
       IRBuilder<> Builder(InsertPos);
+      if (auto *AddrInst = dyn_cast_or_null<IntToPtrInst>(Addr)) {
+        // If isRuntimeCounterRelocationEnabled() is true then the address of
+        // the store instruction is computed with two instructions in
+        // InstrProfiling::getCounterAddress(). We need to copy those
+        // instructions to this block to compute Addr correctly.
+        // %BiasAdd = add i64 ptrtoint <__profc_>, <__llvm_profile_counter_bias>
+        // %Addr = inttoptr i64 %BiasAdd to i64*
+        auto *OrigBiasInst = dyn_cast<BinaryOperator>(AddrInst->getOperand(0));
+        assert(OrigBiasInst->getOpcode() == Instruction::BinaryOps::Add);
+        Value *BiasInst = Builder.Insert(OrigBiasInst->clone());
+        Addr = Builder.CreateIntToPtr(BiasInst, Ty->getPointerTo());
+      }
       if (AtomicCounterUpdatePromoted)
         // automic update currently can only be promoted across the current
         // loop, not the whole loop nest.
