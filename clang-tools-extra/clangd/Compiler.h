@@ -39,7 +39,7 @@ public:
 
 // Options to run clang e.g. when parsing AST.
 struct ParseOptions {
-  // (empty at present, formerly controlled recovery AST, include-fixer etc)
+  bool PreambleParseForwardingFunctions = false;
 };
 
 /// Information required to run clang, e.g. to parse AST or do code completion.

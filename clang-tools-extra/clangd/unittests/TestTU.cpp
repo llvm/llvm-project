@@ -109,6 +109,7 @@ TestTU::preamble(PreambleParsedCallback PreambleCallback) const {
 ParsedAST TestTU::build() const {
   MockFS FS;
   auto Inputs = inputs(FS);
+  Inputs.Opts = ParseOpts;
   StoreDiags Diags;
   auto CI = buildCompilerInvocation(Inputs, Diags);
   assert(CI && "Failed to build compilation invocation.");

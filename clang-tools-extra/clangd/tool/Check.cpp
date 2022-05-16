@@ -128,6 +128,8 @@ public:
     Inputs.CompileCommand = Cmd;
     Inputs.TFS = &TFS;
     Inputs.ClangTidyProvider = Opts.ClangTidyProvider;
+    Inputs.Opts.PreambleParseForwardingFunctions =
+        Opts.PreambleParseForwardingFunctions;
     if (Contents.hasValue()) {
       Inputs.Contents = *Contents;
       log("Imaginary source file contents:\n{0}", Inputs.Contents);

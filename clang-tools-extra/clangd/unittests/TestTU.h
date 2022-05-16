@@ -66,6 +66,9 @@ struct TestTU {
   // Simulate a header guard of the header (using an #import directive).
   bool ImplicitHeaderGuard = true;
 
+  // Parse options pass on to the ParseInputs
+  ParseOptions ParseOpts = {};
+
   // Whether to use overlay the TestFS over the real filesystem. This is
   // required for use of implicit modules.where the module file is written to
   // disk and later read back.

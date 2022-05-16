@@ -389,12 +389,38 @@ TEST(DiagnosticTest, MakeUnique) {
     namespace std {
     // These mocks aren't quite right - we omit unique_ptr for simplicity.
     // forward is included to show its body is not needed to get the diagnostic.
-    template <typename T> T&& forward(T& t) { return static_cast<T&&>(t); }
+    template <typename T> T&& forward(T& t);
     template <typename T, typename... A> T* make_unique(A&&... args) {
        return new T(std::forward<A>(args)...);
     }
     }
   )cpp";
+  EXPECT_THAT(*TU.build().getDiagnostics(),
+              UnorderedElementsAre(
+                  Diag(Main.range(),
+                       "in template: "
+                       "no matching constructor for initialization of 'S'")));
+}
+
+TEST(DiagnosticTest, MakeShared) {
+  // We usually miss diagnostics from header functions as we don't parse them.
+  // std::make_shared is only parsed when --parse-forwarding-functions is set
+  Annotations Main(R"cpp(
+    struct S { S(char*); };
+    auto x = std::[[make_shared]]<S>(42); // error-ok
+  )cpp");
+  TestTU TU = TestTU::withCode(Main.code());
+  TU.HeaderCode = R"cpp(
+    namespace std {
+    // These mocks aren't quite right - we omit shared_ptr for simplicity.
+    // forward is included to show its body is not needed to get the diagnostic.
+    template <typename T> T&& forward(T& t);
+    template <typename T, typename... A> T* make_shared(A&&... args) {
+       return new T(std::forward<A>(args)...);
+    }
+    }
+  )cpp";
+  TU.ParseOpts.PreambleParseForwardingFunctions = true;
   EXPECT_THAT(*TU.build().getDiagnostics(),
               UnorderedElementsAre(
                   Diag(Main.range(),
