@@ -486,13 +486,20 @@ entry:
 }
 
 define float @sfct2(i16* nocapture %sp0) {
-; CHECK-LABEL: sfct2:
-; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    ldr h0, [x0, #2]
-; CHECK-NEXT:    sshll v0.4s, v0.4h, #0
-; CHECK-NEXT:    scvtf s0, s0
-; CHECK-NEXT:    fmul s0, s0, s0
-; CHECK-NEXT:    ret
+; CHECK-CYC-LABEL: sfct2:
+; CHECK-CYC:       // %bb.0: // %entry
+; CHECK-CYC-NEXT:    ldr h0, [x0, #2]
+; CHECK-CYC-NEXT:    sshll v0.4s, v0.4h, #0
+; CHECK-CYC-NEXT:    scvtf s0, s0
+; CHECK-CYC-NEXT:    fmul s0, s0, s0
+; CHECK-CYC-NEXT:    ret
+;
+; CHECK-A57-LABEL: sfct2:
+; CHECK-A57:       // %bb.0: // %entry
+; CHECK-A57-NEXT:    ldrsh w8, [x0, #2]
+; CHECK-A57-NEXT:    scvtf s0, w8
+; CHECK-A57-NEXT:    fmul s0, s0, s0
+; CHECK-A57-NEXT:    ret
 entry:
   %addr = getelementptr i16, i16* %sp0, i64 1
   %pix_sp0.0.copyload = load i16, i16* %addr, align 1
@@ -558,13 +565,20 @@ entry:
 }
 
 define float @sfct6(i16* nocapture %sp0, i64 %offset) {
-; CHECK-LABEL: sfct6:
-; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    ldr h0, [x0, x1, lsl #1]
-; CHECK-NEXT:    sshll v0.4s, v0.4h, #0
-; CHECK-NEXT:    scvtf s0, s0
-; CHECK-NEXT:    fmul s0, s0, s0
-; CHECK-NEXT:    ret
+; CHECK-CYC-LABEL: sfct6:
+; CHECK-CYC:       // %bb.0: // %entry
+; CHECK-CYC-NEXT:    ldr h0, [x0, x1, lsl #1]
+; CHECK-CYC-NEXT:    sshll v0.4s, v0.4h, #0
+; CHECK-CYC-NEXT:    scvtf s0, s0
+; CHECK-CYC-NEXT:    fmul s0, s0, s0
+; CHECK-CYC-NEXT:    ret
+;
+; CHECK-A57-LABEL: sfct6:
+; CHECK-A57:       // %bb.0: // %entry
+; CHECK-A57-NEXT:    ldrsh w8, [x0, x1, lsl #1]
+; CHECK-A57-NEXT:    scvtf s0, w8
+; CHECK-A57-NEXT:    fmul s0, s0, s0
+; CHECK-A57-NEXT:    ret
 entry:
   %addr = getelementptr i16, i16* %sp0, i64 %offset
   %pix_sp0.0.copyload = load i16, i16* %addr, align 1
@@ -645,13 +659,20 @@ entry:
 }
 
 define double @sfct11(i32* nocapture %sp0) {
-; CHECK-LABEL: sfct11:
-; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    ldr s0, [x0, #4]
-; CHECK-NEXT:    sshll v0.2d, v0.2s, #0
-; CHECK-NEXT:    scvtf d0, d0
-; CHECK-NEXT:    fmul d0, d0, d0
-; CHECK-NEXT:    ret
+; CHECK-CYC-LABEL: sfct11:
+; CHECK-CYC:       // %bb.0: // %entry
+; CHECK-CYC-NEXT:    ldr s0, [x0, #4]
+; CHECK-CYC-NEXT:    sshll v0.2d, v0.2s, #0
+; CHECK-CYC-NEXT:    scvtf d0, d0
+; CHECK-CYC-NEXT:    fmul d0, d0, d0
+; CHECK-CYC-NEXT:    ret
+;
+; CHECK-A57-LABEL: sfct11:
+; CHECK-A57:       // %bb.0: // %entry
+; CHECK-A57-NEXT:    ldr w8, [x0, #4]
+; CHECK-A57-NEXT:    scvtf d0, w8
+; CHECK-A57-NEXT:    fmul d0, d0, d0
+; CHECK-A57-NEXT:    ret
 entry:
   %addr = getelementptr i32, i32* %sp0, i64 1
   %pix_sp0.0.copyload = load i32, i32* %addr, align 1
@@ -716,13 +737,20 @@ entry:
 }
 
 define double @sfct15(i32* nocapture %sp0, i64 %offset) {
-; CHECK-LABEL: sfct15:
-; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    ldr s0, [x0, x1, lsl #2]
-; CHECK-NEXT:    sshll v0.2d, v0.2s, #0
-; CHECK-NEXT:    scvtf d0, d0
-; CHECK-NEXT:    fmul d0, d0, d0
-; CHECK-NEXT:    ret
+; CHECK-CYC-LABEL: sfct15:
+; CHECK-CYC:       // %bb.0: // %entry
+; CHECK-CYC-NEXT:    ldr s0, [x0, x1, lsl #2]
+; CHECK-CYC-NEXT:    sshll v0.2d, v0.2s, #0
+; CHECK-CYC-NEXT:    scvtf d0, d0
+; CHECK-CYC-NEXT:    fmul d0, d0, d0
+; CHECK-CYC-NEXT:    ret
+;
+; CHECK-A57-LABEL: sfct15:
+; CHECK-A57:       // %bb.0: // %entry
+; CHECK-A57-NEXT:    ldr w8, [x0, x1, lsl #2]
+; CHECK-A57-NEXT:    scvtf d0, w8
+; CHECK-A57-NEXT:    fmul d0, d0, d0
+; CHECK-A57-NEXT:    ret
 entry:
   %addr = getelementptr i32, i32* %sp0, i64 %offset
   %pix_sp0.0.copyload = load i32, i32* %addr, align 1
@@ -774,13 +802,20 @@ entry:
 }
 
 define float @sfct18(i16* nocapture %sp0) {
-; CHECK-LABEL: sfct18:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldur h0, [x0, #1]
-; CHECK-NEXT:    sshll v0.4s, v0.4h, #0
-; CHECK-NEXT:    scvtf s0, s0
-; CHECK-NEXT:    fmul s0, s0, s0
-; CHECK-NEXT:    ret
+; CHECK-CYC-LABEL: sfct18:
+; CHECK-CYC:       // %bb.0:
+; CHECK-CYC-NEXT:    ldur h0, [x0, #1]
+; CHECK-CYC-NEXT:    sshll v0.4s, v0.4h, #0
+; CHECK-CYC-NEXT:    scvtf s0, s0
+; CHECK-CYC-NEXT:    fmul s0, s0, s0
+; CHECK-CYC-NEXT:    ret
+;
+; CHECK-A57-LABEL: sfct18:
+; CHECK-A57:       // %bb.0:
+; CHECK-A57-NEXT:    ldursh w8, [x0, #1]
+; CHECK-A57-NEXT:    scvtf s0, w8
+; CHECK-A57-NEXT:    fmul s0, s0, s0
+; CHECK-A57-NEXT:    ret
   %bitcast = ptrtoint i16* %sp0 to i64
   %add = add i64 %bitcast, 1
   %addr = inttoptr i64 %add to i16*
@@ -868,13 +903,20 @@ define double @sfct22(i16* nocapture %sp0) {
 }
 
 define double @sfct23(i32* nocapture %sp0) {
-; CHECK-LABEL: sfct23:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldur s0, [x0, #1]
-; CHECK-NEXT:    sshll v0.2d, v0.2s, #0
-; CHECK-NEXT:    scvtf d0, d0
-; CHECK-NEXT:    fmul d0, d0, d0
-; CHECK-NEXT:    ret
+; CHECK-CYC-LABEL: sfct23:
+; CHECK-CYC:       // %bb.0:
+; CHECK-CYC-NEXT:    ldur s0, [x0, #1]
+; CHECK-CYC-NEXT:    sshll v0.2d, v0.2s, #0
+; CHECK-CYC-NEXT:    scvtf d0, d0
+; CHECK-CYC-NEXT:    fmul d0, d0, d0
+; CHECK-CYC-NEXT:    ret
+;
+; CHECK-A57-LABEL: sfct23:
+; CHECK-A57:       // %bb.0:
+; CHECK-A57-NEXT:    ldur w8, [x0, #1]
+; CHECK-A57-NEXT:    scvtf d0, w8
+; CHECK-A57-NEXT:    fmul d0, d0, d0
+; CHECK-A57-NEXT:    ret
   %bitcast = ptrtoint i32* %sp0 to i64
   %add = add i64 %bitcast, 1
   %addr = inttoptr i64 %add to i32*
