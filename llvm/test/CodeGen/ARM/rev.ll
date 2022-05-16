@@ -181,3 +181,16 @@ entry:
   %conv3 = call i16 @llvm.bswap.i16(i16 %v)
   ret i16 %conv3
 }
+
+define i32 @pr55484(i32 %0) {
+; CHECK-LABEL: pr55484:
+; CHECK:       @ %bb.0:
+; CHECK-NEXT:    revsh r0, r0
+; CHECK-NEXT:    bx lr
+  %2 = lshr i32 %0, 8
+  %3 = shl i32 %0, 8
+  %4 = or i32 %2, %3
+  %5 = trunc i32 %4 to i16
+  %6 = sext i16 %5 to i32
+  ret i32 %6
+}
