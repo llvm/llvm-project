@@ -272,13 +272,13 @@ define <2 x i32> @v_urem_v2i32_oddk_denom(<2 x i32> %num) {
 ; GISEL-NEXT:    v_sub_i32_e32 v0, vcc, v0, v4
 ; GISEL-NEXT:    v_sub_i32_e32 v1, vcc, v1, v3
 ; GISEL-NEXT:    v_subrev_i32_e32 v3, vcc, s4, v0
-; GISEL-NEXT:    v_sub_i32_e32 v4, vcc, v1, v2
+; GISEL-NEXT:    v_subrev_i32_e32 v4, vcc, 0x12d8fb, v1
 ; GISEL-NEXT:    v_cmp_le_u32_e32 vcc, s4, v0
 ; GISEL-NEXT:    v_cndmask_b32_e32 v0, v0, v3, vcc
 ; GISEL-NEXT:    v_cmp_ge_u32_e32 vcc, v1, v2
 ; GISEL-NEXT:    v_cndmask_b32_e32 v1, v1, v4, vcc
 ; GISEL-NEXT:    v_subrev_i32_e32 v3, vcc, s4, v0
-; GISEL-NEXT:    v_sub_i32_e32 v4, vcc, v1, v2
+; GISEL-NEXT:    v_subrev_i32_e32 v4, vcc, 0x12d8fb, v1
 ; GISEL-NEXT:    v_cmp_le_u32_e32 vcc, s4, v0
 ; GISEL-NEXT:    v_cndmask_b32_e32 v0, v0, v3, vcc
 ; GISEL-NEXT:    v_cmp_ge_u32_e32 vcc, v1, v2

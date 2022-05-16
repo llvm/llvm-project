@@ -1492,14 +1492,12 @@ define amdgpu_kernel void @v_cttz_i32_sel_ne_bitwidth(i32 addrspace(1)* noalias 
 ; GFX10-GISEL-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
 ; GFX10-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX10-GISEL-NEXT:    global_load_ushort v1, v0, s[2:3]
-; GFX10-GISEL-NEXT:    s_waitcnt_depctr 0xffe3
-; GFX10-GISEL-NEXT:    s_mov_b32 s2, 0xffff
 ; GFX10-GISEL-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-GISEL-NEXT:    v_or_b32_e32 v2, 0x10000, v1
 ; GFX10-GISEL-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 0, v1
 ; GFX10-GISEL-NEXT:    v_ffbl_b32_e32 v2, v2
-; GFX10-GISEL-NEXT:    v_and_b32_e32 v2, s2, v2
-; GFX10-GISEL-NEXT:    v_cndmask_b32_e64 v1, v2, s2, vcc_lo
+; GFX10-GISEL-NEXT:    v_and_b32_e32 v2, 0xffff, v2
+; GFX10-GISEL-NEXT:    v_cndmask_b32_e64 v1, v2, 0xffff, vcc_lo
 ; GFX10-GISEL-NEXT:    global_store_short v0, v1, s[0:1]
 ; GFX10-GISEL-NEXT:    s_endpgm
   %val = load i16, i16 addrspace(1)* %valptr
@@ -1595,18 +1593,17 @@ define amdgpu_kernel void @v_cttz_i7_sel_eq_neg1(i7 addrspace(1)* noalias %out, 
 ; GFX10-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX10-GISEL-NEXT:    v_mov_b32_e32 v1, s2
 ; GFX10-GISEL-NEXT:    v_mov_b32_e32 v2, s3
-; GFX10-GISEL-NEXT:    s_movk_i32 s2, 0x7f
 ; GFX10-GISEL-NEXT:    v_add_co_u32 v0, vcc_lo, v1, v0
 ; GFX10-GISEL-NEXT:    v_add_co_ci_u32_e32 v1, vcc_lo, v2, v3, vcc_lo
 ; GFX10-GISEL-NEXT:    global_load_ubyte v0, v[0:1], off
 ; GFX10-GISEL-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-GISEL-NEXT:    v_or_b32_e32 v1, 0x80, v0
-; GFX10-GISEL-NEXT:    v_and_b32_e32 v0, s2, v0
+; GFX10-GISEL-NEXT:    v_and_b32_e32 v0, 0x7f, v0
 ; GFX10-GISEL-NEXT:    v_ffbl_b32_e32 v1, v1
 ; GFX10-GISEL-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 0, v0
 ; GFX10-GISEL-NEXT:    v_cndmask_b32_e64 v0, v1, 0x7f, vcc_lo
 ; GFX10-GISEL-NEXT:    v_mov_b32_e32 v1, 0
-; GFX10-GISEL-NEXT:    v_and_b32_e32 v0, s2, v0
+; GFX10-GISEL-NEXT:    v_and_b32_e32 v0, 0x7f, v0
 ; GFX10-GISEL-NEXT:    global_store_byte v1, v0, s[0:1]
 ; GFX10-GISEL-NEXT:    s_endpgm
   %tid = call i32 @llvm.amdgcn.workitem.id.x()

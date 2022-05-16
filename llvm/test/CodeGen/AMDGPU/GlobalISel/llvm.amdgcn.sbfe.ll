@@ -752,14 +752,13 @@ define amdgpu_kernel void @bfe_8_bfe_8(i32 addrspace(1)* %out, i32 addrspace(1)*
 ; GFX6-LABEL: bfe_8_bfe_8:
 ; GFX6:       ; %bb.0:
 ; GFX6-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x2
-; GFX6-NEXT:    s_mov_b32 s4, 0x80000
 ; GFX6-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX6-NEXT:    s_load_dword s3, s[2:3], 0x0
 ; GFX6-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x0
 ; GFX6-NEXT:    s_mov_b32 s2, -1
 ; GFX6-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX6-NEXT:    s_bfe_i32 s3, s3, s4
-; GFX6-NEXT:    s_bfe_i32 s3, s3, s4
+; GFX6-NEXT:    s_bfe_i32 s3, s3, 0x80000
+; GFX6-NEXT:    s_bfe_i32 s3, s3, 0x80000
 ; GFX6-NEXT:    v_mov_b32_e32 v0, s3
 ; GFX6-NEXT:    s_mov_b32 s3, 0xf000
 ; GFX6-NEXT:    buffer_store_dword v0, off, s[0:3], 0

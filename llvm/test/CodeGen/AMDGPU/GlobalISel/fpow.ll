@@ -473,9 +473,8 @@ define <2 x half> @v_pow_v2f16_fneg_lhs_rhs(<2 x half> %x, <2 x half> %y) {
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX10-NEXT:    s_mov_b32 s4, 0x80008000
-; GFX10-NEXT:    v_xor_b32_e32 v0, s4, v0
-; GFX10-NEXT:    v_xor_b32_e32 v1, s4, v1
+; GFX10-NEXT:    v_xor_b32_e32 v0, 0x80008000, v0
+; GFX10-NEXT:    v_xor_b32_e32 v1, 0x80008000, v1
 ; GFX10-NEXT:    v_log_f16_e32 v2, v0
 ; GFX10-NEXT:    v_log_f16_sdwa v0, v0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1
 ; GFX10-NEXT:    v_cvt_f32_f16_e32 v3, v1

@@ -226,7 +226,6 @@ define amdgpu_vs i32 @load_i32_hifffffff0(i32 addrspace(6)* inreg %p) #4 {
 
 ; GCN-LABEL: {{^}}load_sampler
 ; GCN: v_readfirstlane_b32
-; GCN-NEXT: v_readfirstlane_b32
 ; SI: s_nop
 ; GCN: s_load_dwordx8
 ; GCN-NEXT: s_load_dwordx4
@@ -260,7 +259,6 @@ main_body:
 
 ; GCN-LABEL: {{^}}load_sampler_nouniform
 ; GCN: v_readfirstlane_b32
-; GCN-NEXT: v_readfirstlane_b32
 ; SI: s_nop
 ; GCN: s_load_dwordx8
 ; GCN-NEXT: s_load_dwordx4

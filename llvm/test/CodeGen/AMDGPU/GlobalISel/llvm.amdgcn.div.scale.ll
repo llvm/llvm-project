@@ -1261,10 +1261,9 @@ define amdgpu_kernel void @test_div_scale_f32_undef_val_val(float addrspace(1)* 
 ; GFX10-LABEL: test_div_scale_f32_undef_val_val:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
-; GFX10-NEXT:    v_mov_b32_e32 v0, 0x41000000
 ; GFX10-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX10-NEXT:    v_div_scale_f32 v0, s2, v0, v0, s0
+; GFX10-NEXT:    v_div_scale_f32 v0, s2, 0x41000000, 0x41000000, s0
 ; GFX10-NEXT:    global_store_dword v1, v0, s[0:1]
 ; GFX10-NEXT:    s_endpgm
   %result = call { float, i1 } @llvm.amdgcn.div.scale.f32(float undef, float 8.0, i1 false)

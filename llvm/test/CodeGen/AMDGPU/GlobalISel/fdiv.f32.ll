@@ -901,19 +901,17 @@ define <2 x float> @v_fdiv_v2f32_ulp25(<2 x float> %a, <2 x float> %b) {
 ; GFX10-FLUSH:       ; %bb.0:
 ; GFX10-FLUSH-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX10-FLUSH-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX10-FLUSH-NEXT:    s_mov_b32 s4, 0x6f800000
-; GFX10-FLUSH-NEXT:    s_mov_b32 s5, 0x2f800000
-; GFX10-FLUSH-NEXT:    v_cmp_gt_f32_e64 s6, |v2|, s4
-; GFX10-FLUSH-NEXT:    v_cmp_gt_f32_e64 s4, |v3|, s4
-; GFX10-FLUSH-NEXT:    v_cndmask_b32_e64 v4, 1.0, s5, s6
-; GFX10-FLUSH-NEXT:    v_cndmask_b32_e64 v5, 1.0, s5, s4
+; GFX10-FLUSH-NEXT:    v_cmp_lt_f32_e64 s4, 0x6f800000, |v2|
+; GFX10-FLUSH-NEXT:    v_cndmask_b32_e64 v4, 1.0, 0x2f800000, s4
+; GFX10-FLUSH-NEXT:    v_cmp_lt_f32_e64 s4, 0x6f800000, |v3|
 ; GFX10-FLUSH-NEXT:    v_mul_f32_e32 v2, v2, v4
-; GFX10-FLUSH-NEXT:    v_mul_f32_e32 v3, v3, v5
+; GFX10-FLUSH-NEXT:    v_cndmask_b32_e64 v5, 1.0, 0x2f800000, s4
 ; GFX10-FLUSH-NEXT:    v_rcp_f32_e32 v2, v2
+; GFX10-FLUSH-NEXT:    v_mul_f32_e32 v3, v3, v5
 ; GFX10-FLUSH-NEXT:    v_rcp_f32_e32 v3, v3
 ; GFX10-FLUSH-NEXT:    v_mul_f32_e32 v0, v0, v2
-; GFX10-FLUSH-NEXT:    v_mul_f32_e32 v1, v1, v3
 ; GFX10-FLUSH-NEXT:    v_mul_f32_e32 v0, v4, v0
+; GFX10-FLUSH-NEXT:    v_mul_f32_e32 v1, v1, v3
 ; GFX10-FLUSH-NEXT:    v_mul_f32_e32 v1, v5, v1
 ; GFX10-FLUSH-NEXT:    s_setpc_b64 s[30:31]
   %fdiv = fdiv <2 x float> %a, %b, !fpmath !0
@@ -1334,19 +1332,17 @@ define <2 x float> @v_rcp_v2f32_ulp25(<2 x float> %x) {
 ; GFX10-IEEE:       ; %bb.0:
 ; GFX10-IEEE-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX10-IEEE-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX10-IEEE-NEXT:    s_mov_b32 s4, 0x6f800000
-; GFX10-IEEE-NEXT:    s_mov_b32 s5, 0x2f800000
-; GFX10-IEEE-NEXT:    v_cmp_gt_f32_e64 s6, |v0|, s4
-; GFX10-IEEE-NEXT:    v_cmp_gt_f32_e64 s4, |v1|, s4
-; GFX10-IEEE-NEXT:    v_cndmask_b32_e64 v2, 1.0, s5, s6
-; GFX10-IEEE-NEXT:    v_cndmask_b32_e64 v3, 1.0, s5, s4
+; GFX10-IEEE-NEXT:    v_cmp_lt_f32_e64 s4, 0x6f800000, |v0|
+; GFX10-IEEE-NEXT:    v_cndmask_b32_e64 v2, 1.0, 0x2f800000, s4
+; GFX10-IEEE-NEXT:    v_cmp_lt_f32_e64 s4, 0x6f800000, |v1|
 ; GFX10-IEEE-NEXT:    v_mul_f32_e32 v0, v0, v2
-; GFX10-IEEE-NEXT:    v_mul_f32_e32 v1, v1, v3
+; GFX10-IEEE-NEXT:    v_cndmask_b32_e64 v3, 1.0, 0x2f800000, s4
 ; GFX10-IEEE-NEXT:    v_rcp_f32_e32 v0, v0
+; GFX10-IEEE-NEXT:    v_mul_f32_e32 v1, v1, v3
 ; GFX10-IEEE-NEXT:    v_rcp_f32_e32 v1, v1
 ; GFX10-IEEE-NEXT:    v_mul_f32_e32 v0, 1.0, v0
-; GFX10-IEEE-NEXT:    v_mul_f32_e32 v1, 1.0, v1
 ; GFX10-IEEE-NEXT:    v_mul_f32_e32 v0, v2, v0
+; GFX10-IEEE-NEXT:    v_mul_f32_e32 v1, 1.0, v1
 ; GFX10-IEEE-NEXT:    v_mul_f32_e32 v1, v3, v1
 ; GFX10-IEEE-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -1492,19 +1488,17 @@ define <2 x float> @v_fdiv_v2f32_arcp_ulp25(<2 x float> %a, <2 x float> %b) {
 ; GFX10-FLUSH:       ; %bb.0:
 ; GFX10-FLUSH-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX10-FLUSH-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX10-FLUSH-NEXT:    s_mov_b32 s4, 0x6f800000
-; GFX10-FLUSH-NEXT:    s_mov_b32 s5, 0x2f800000
-; GFX10-FLUSH-NEXT:    v_cmp_gt_f32_e64 s6, |v2|, s4
-; GFX10-FLUSH-NEXT:    v_cmp_gt_f32_e64 s4, |v3|, s4
-; GFX10-FLUSH-NEXT:    v_cndmask_b32_e64 v4, 1.0, s5, s6
-; GFX10-FLUSH-NEXT:    v_cndmask_b32_e64 v5, 1.0, s5, s4
+; GFX10-FLUSH-NEXT:    v_cmp_lt_f32_e64 s4, 0x6f800000, |v2|
+; GFX10-FLUSH-NEXT:    v_cndmask_b32_e64 v4, 1.0, 0x2f800000, s4
+; GFX10-FLUSH-NEXT:    v_cmp_lt_f32_e64 s4, 0x6f800000, |v3|
 ; GFX10-FLUSH-NEXT:    v_mul_f32_e32 v2, v2, v4
-; GFX10-FLUSH-NEXT:    v_mul_f32_e32 v3, v3, v5
+; GFX10-FLUSH-NEXT:    v_cndmask_b32_e64 v5, 1.0, 0x2f800000, s4
 ; GFX10-FLUSH-NEXT:    v_rcp_f32_e32 v2, v2
+; GFX10-FLUSH-NEXT:    v_mul_f32_e32 v3, v3, v5
 ; GFX10-FLUSH-NEXT:    v_rcp_f32_e32 v3, v3
 ; GFX10-FLUSH-NEXT:    v_mul_f32_e32 v0, v0, v2
-; GFX10-FLUSH-NEXT:    v_mul_f32_e32 v1, v1, v3
 ; GFX10-FLUSH-NEXT:    v_mul_f32_e32 v0, v4, v0
+; GFX10-FLUSH-NEXT:    v_mul_f32_e32 v1, v1, v3
 ; GFX10-FLUSH-NEXT:    v_mul_f32_e32 v1, v5, v1
 ; GFX10-FLUSH-NEXT:    s_setpc_b64 s[30:31]
   %fdiv = fdiv arcp <2 x float> %a, %b, !fpmath !0

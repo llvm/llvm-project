@@ -113,10 +113,9 @@ define amdgpu_vs <4 x float> @test_v4f16_to_v4f32_sub_ext_neg_mul(<4 x half> %x,
 ;
 ; GFX10-DENORM-LABEL: test_v4f16_to_v4f32_sub_ext_neg_mul:
 ; GFX10-DENORM:       ; %bb.0: ; %entry
-; GFX10-DENORM-NEXT:    s_mov_b32 s0, 0x80008000
+; GFX10-DENORM-NEXT:    v_xor_b32_e32 v2, 0x80008000, v2
+; GFX10-DENORM-NEXT:    v_xor_b32_e32 v3, 0x80008000, v3
 ; GFX10-DENORM-NEXT:    v_cvt_f32_f16_e32 v8, v0
-; GFX10-DENORM-NEXT:    v_xor_b32_e32 v2, s0, v2
-; GFX10-DENORM-NEXT:    v_xor_b32_e32 v3, s0, v3
 ; GFX10-DENORM-NEXT:    v_cvt_f32_f16_sdwa v9, v0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1
 ; GFX10-DENORM-NEXT:    v_cvt_f32_f16_e32 v10, v1
 ; GFX10-DENORM-NEXT:    v_cvt_f32_f16_sdwa v11, v1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1
@@ -155,10 +154,9 @@ define amdgpu_vs <4 x float> @test_v4f16_to_v4f32_sub_neg_ext_mul(<4 x half> %x,
 ;
 ; GFX10-DENORM-LABEL: test_v4f16_to_v4f32_sub_neg_ext_mul:
 ; GFX10-DENORM:       ; %bb.0: ; %entry
-; GFX10-DENORM-NEXT:    s_mov_b32 s0, 0x80008000
+; GFX10-DENORM-NEXT:    v_xor_b32_e32 v2, 0x80008000, v2
+; GFX10-DENORM-NEXT:    v_xor_b32_e32 v3, 0x80008000, v3
 ; GFX10-DENORM-NEXT:    v_cvt_f32_f16_e32 v8, v0
-; GFX10-DENORM-NEXT:    v_xor_b32_e32 v2, s0, v2
-; GFX10-DENORM-NEXT:    v_xor_b32_e32 v3, s0, v3
 ; GFX10-DENORM-NEXT:    v_cvt_f32_f16_sdwa v9, v0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1
 ; GFX10-DENORM-NEXT:    v_cvt_f32_f16_e32 v10, v1
 ; GFX10-DENORM-NEXT:    v_cvt_f32_f16_sdwa v11, v1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1
@@ -198,10 +196,9 @@ define amdgpu_vs <4 x float> @test_v4f16_to_v4f32_sub_ext_neg_mul2(<4 x float> %
 ;
 ; GFX10-DENORM-LABEL: test_v4f16_to_v4f32_sub_ext_neg_mul2:
 ; GFX10-DENORM:       ; %bb.0: ; %entry
-; GFX10-DENORM-NEXT:    s_mov_b32 s0, 0x80008000
+; GFX10-DENORM-NEXT:    v_xor_b32_e32 v6, 0x80008000, v6
+; GFX10-DENORM-NEXT:    v_xor_b32_e32 v7, 0x80008000, v7
 ; GFX10-DENORM-NEXT:    v_cvt_f32_f16_e32 v8, v4
-; GFX10-DENORM-NEXT:    v_xor_b32_e32 v6, s0, v6
-; GFX10-DENORM-NEXT:    v_xor_b32_e32 v7, s0, v7
 ; GFX10-DENORM-NEXT:    v_cvt_f32_f16_sdwa v4, v4 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1
 ; GFX10-DENORM-NEXT:    v_cvt_f32_f16_e32 v9, v5
 ; GFX10-DENORM-NEXT:    v_cvt_f32_f16_sdwa v5, v5 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1
@@ -240,10 +237,9 @@ define amdgpu_vs <4 x float> @test_v4f16_to_v4f32_sub_neg_ext_mul2(<4 x float> %
 ;
 ; GFX10-DENORM-LABEL: test_v4f16_to_v4f32_sub_neg_ext_mul2:
 ; GFX10-DENORM:       ; %bb.0: ; %entry
-; GFX10-DENORM-NEXT:    s_mov_b32 s0, 0x80008000
+; GFX10-DENORM-NEXT:    v_xor_b32_e32 v6, 0x80008000, v6
+; GFX10-DENORM-NEXT:    v_xor_b32_e32 v7, 0x80008000, v7
 ; GFX10-DENORM-NEXT:    v_cvt_f32_f16_e32 v8, v4
-; GFX10-DENORM-NEXT:    v_xor_b32_e32 v6, s0, v6
-; GFX10-DENORM-NEXT:    v_xor_b32_e32 v7, s0, v7
 ; GFX10-DENORM-NEXT:    v_cvt_f32_f16_sdwa v4, v4 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1
 ; GFX10-DENORM-NEXT:    v_cvt_f32_f16_e32 v9, v5
 ; GFX10-DENORM-NEXT:    v_cvt_f32_f16_sdwa v5, v5 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1

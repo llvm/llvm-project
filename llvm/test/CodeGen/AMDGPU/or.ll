@@ -80,8 +80,8 @@ define amdgpu_kernel void @scalar_or_literal_i64(i64 addrspace(1)* %out, [8 x i3
 ; SI-DAG: s_movk_i32 s[[K_LO:[0-9]+]], 0x3039
 ; SI: s_or_b64 s{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, s[[[K_LO]]:[[K_HI]]]
 
-; SI: s_add_u32 s{{[0-9]+}}, s{{[0-9]+}}, s[[K_LO]]
-; SI: s_addc_u32 s{{[0-9]+}}, s{{[0-9]+}}, s[[K_HI]]
+; SI: s_add_u32 s{{[0-9]+}}, s{{[0-9]+}}, 0x3039
+; SI: s_addc_u32 s{{[0-9]+}}, s{{[0-9]+}}, 0xf237b
 define amdgpu_kernel void @scalar_or_literal_multi_use_i64(i64 addrspace(1)* %out, [8 x i32], i64 %a, [8 x i32], i64 %b) {
   %or = or i64 %a, 4261135838621753
   store i64 %or, i64 addrspace(1)* %out

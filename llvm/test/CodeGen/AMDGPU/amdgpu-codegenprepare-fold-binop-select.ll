@@ -150,7 +150,7 @@ define i32 @select_sdiv_lhs_opaque_const0_i32(i1 %cond) {
 ; GCN-NEXT:    v_mul_hi_u32 v2, v2, s4
 ; GCN-NEXT:    v_mul_lo_u32 v3, v2, v0
 ; GCN-NEXT:    v_add_u32_e32 v4, vcc, 1, v2
-; GCN-NEXT:    v_sub_u32_e32 v3, vcc, s4, v3
+; GCN-NEXT:    v_sub_u32_e32 v3, vcc, 0xf4240, v3
 ; GCN-NEXT:    v_cmp_ge_u32_e32 vcc, v3, v0
 ; GCN-NEXT:    v_cndmask_b32_e32 v2, v2, v4, vcc
 ; GCN-NEXT:    v_sub_u32_e64 v4, s[4:5], v3, v0
@@ -232,7 +232,7 @@ define i32 @select_sdiv_lhs_opaque_const1_i32(i1 %cond) {
 ; GCN-NEXT:    v_mul_hi_u32 v2, v2, s4
 ; GCN-NEXT:    v_mul_lo_u32 v3, v2, v0
 ; GCN-NEXT:    v_add_u32_e32 v4, vcc, 1, v2
-; GCN-NEXT:    v_sub_u32_e32 v3, vcc, s4, v3
+; GCN-NEXT:    v_sub_u32_e32 v3, vcc, 0xf4240, v3
 ; GCN-NEXT:    v_cmp_ge_u32_e32 vcc, v3, v0
 ; GCN-NEXT:    v_cndmask_b32_e32 v2, v2, v4, vcc
 ; GCN-NEXT:    v_sub_u32_e64 v4, s[4:5], v3, v0

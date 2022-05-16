@@ -98,33 +98,32 @@ define amdgpu_kernel void @store_lds_v3i32_align1(<3 x i32> addrspace(3)* %out, 
 ; GFX7:       ; %bb.0:
 ; GFX7-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x4
 ; GFX7-NEXT:    s_load_dword s0, s[0:1], 0x0
-; GFX7-NEXT:    s_mov_b32 s1, 0x80008
 ; GFX7-NEXT:    s_mov_b32 m0, -1
 ; GFX7-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX7-NEXT:    s_bfe_u32 s3, s4, s1
+; GFX7-NEXT:    s_bfe_u32 s2, s4, 0x80008
 ; GFX7-NEXT:    v_mov_b32_e32 v0, s4
 ; GFX7-NEXT:    v_mov_b32_e32 v1, s0
-; GFX7-NEXT:    s_lshr_b32 s2, s4, 16
+; GFX7-NEXT:    s_lshr_b32 s1, s4, 16
 ; GFX7-NEXT:    ds_write_b8 v1, v0
-; GFX7-NEXT:    v_mov_b32_e32 v0, s3
+; GFX7-NEXT:    v_mov_b32_e32 v0, s2
 ; GFX7-NEXT:    ds_write_b8 v1, v0 offset:1
 ; GFX7-NEXT:    s_lshr_b32 s0, s4, 24
-; GFX7-NEXT:    v_mov_b32_e32 v0, s2
+; GFX7-NEXT:    v_mov_b32_e32 v0, s1
 ; GFX7-NEXT:    ds_write_b8 v1, v0 offset:2
 ; GFX7-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX7-NEXT:    ds_write_b8 v1, v0 offset:3
-; GFX7-NEXT:    s_bfe_u32 s2, s5, s1
+; GFX7-NEXT:    s_bfe_u32 s1, s5, 0x80008
 ; GFX7-NEXT:    v_mov_b32_e32 v0, s5
 ; GFX7-NEXT:    s_lshr_b32 s0, s5, 16
 ; GFX7-NEXT:    ds_write_b8 v1, v0 offset:4
-; GFX7-NEXT:    v_mov_b32_e32 v0, s2
+; GFX7-NEXT:    v_mov_b32_e32 v0, s1
 ; GFX7-NEXT:    ds_write_b8 v1, v0 offset:5
-; GFX7-NEXT:    s_lshr_b32 s2, s5, 24
+; GFX7-NEXT:    s_lshr_b32 s1, s5, 24
 ; GFX7-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX7-NEXT:    ds_write_b8 v1, v0 offset:6
-; GFX7-NEXT:    v_mov_b32_e32 v0, s2
+; GFX7-NEXT:    v_mov_b32_e32 v0, s1
 ; GFX7-NEXT:    ds_write_b8 v1, v0 offset:7
-; GFX7-NEXT:    s_bfe_u32 s1, s6, s1
+; GFX7-NEXT:    s_bfe_u32 s1, s6, 0x80008
 ; GFX7-NEXT:    v_mov_b32_e32 v0, s6
 ; GFX7-NEXT:    s_lshr_b32 s0, s6, 16
 ; GFX7-NEXT:    ds_write_b8 v1, v0 offset:8

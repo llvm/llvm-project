@@ -5,7 +5,7 @@
 ; CHECK-LABEL: _Z11test_kernelPii:
 ; CHECK: s_mul_i32
 ; CHECK: s_sub_i32
-; CHECK: s_and_b32 [[S1:s[0-9]+]], {{s[0-9]+}}, {{s[0-9]+}}
+; CHECK: s_and_b32 [[S1:s[0-9]+]], {{s[0-9]+}}, 0xffff
 ; CHECK: s_add_i32 [[S2:s[0-9]+]], {{s[0-9]+}}, [[S1]]
 ; CHECK: s_or_b32 {{s[0-9]+}}, [[S2]], 0xc0
 

@@ -16,11 +16,9 @@ define amdgpu_kernel void @s_addk_i32_k0(i32 addrspace(1)* %out, i32 %b) {
   ret void
 }
 
-; FIXME: This should be folded with any number of uses.
 ; SI-LABEL: {{^}}s_addk_i32_k0_x2:
-; SI: s_movk_i32 [[K:s[0-9]+]], 0x41
-; SI-DAG: s_add_i32 {{s[0-9]+}}, {{s[0-9]+}}, [[K]]
-; SI-DAG: s_add_i32 {{s[0-9]+}}, {{s[0-9]+}}, [[K]]
+; SI-DAG: s_addk_i32 {{s[0-9]+}}, 0x41
+; SI-DAG: s_addk_i32 {{s[0-9]+}}, 0x41
 ; SI: s_endpgm
 define amdgpu_kernel void @s_addk_i32_k0_x2(i32 addrspace(1)* %out0, i32 addrspace(1)* %out1, i32 %a, i32 %b) {
   %add0 = add i32 %a, 65

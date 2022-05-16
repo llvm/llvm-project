@@ -325,10 +325,8 @@ define amdgpu_kernel void @v_test_global_nnans_med3_f32_pat0_srcmod012(float add
 ; GFX10-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-NEXT:    global_load_dword v3, v0, s[6:7] glc dlc
 ; GFX10-NEXT:    s_waitcnt vmcnt(0)
-; GFX10-NEXT:    s_waitcnt_depctr 0xffe3
-; GFX10-NEXT:    s_mov_b32 s2, 0x80000000
-; GFX10-NEXT:    v_sub_f32_e32 v1, s2, v1
-; GFX10-NEXT:    v_sub_f32_e64 v3, s2, |v3|
+; GFX10-NEXT:    v_sub_f32_e32 v1, 0x80000000, v1
+; GFX10-NEXT:    v_sub_f32_e64 v3, 0x80000000, |v3|
 ; GFX10-NEXT:    v_med3_f32 v1, v1, |v2|, v3
 ; GFX10-NEXT:    global_store_dword v0, v1, s[0:1]
 ; GFX10-NEXT:    s_endpgm
@@ -447,11 +445,9 @@ define amdgpu_kernel void @v_test_global_nnans_med3_f32_pat0_negabs012(float add
 ; GFX10-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-NEXT:    global_load_dword v3, v0, s[6:7] glc dlc
 ; GFX10-NEXT:    s_waitcnt vmcnt(0)
-; GFX10-NEXT:    s_waitcnt_depctr 0xffe3
-; GFX10-NEXT:    s_mov_b32 s2, 0x80000000
-; GFX10-NEXT:    v_sub_f32_e64 v1, s2, |v1|
-; GFX10-NEXT:    v_sub_f32_e64 v2, s2, |v2|
-; GFX10-NEXT:    v_sub_f32_e64 v3, s2, |v3|
+; GFX10-NEXT:    v_sub_f32_e64 v1, 0x80000000, |v1|
+; GFX10-NEXT:    v_sub_f32_e64 v2, 0x80000000, |v2|
+; GFX10-NEXT:    v_sub_f32_e64 v3, 0x80000000, |v3|
 ; GFX10-NEXT:    v_med3_f32 v1, v1, v2, v3
 ; GFX10-NEXT:    global_store_dword v0, v1, s[0:1]
 ; GFX10-NEXT:    s_endpgm

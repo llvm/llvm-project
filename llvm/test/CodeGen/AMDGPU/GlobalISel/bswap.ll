@@ -111,9 +111,8 @@ define amdgpu_ps <2 x i32> @s_bswap_v2i32(<2 x i32> inreg %src) {
 ;
 ; GFX10-LABEL: s_bswap_v2i32:
 ; GFX10:       ; %bb.0:
-; GFX10-NEXT:    s_mov_b32 s2, 0x10203
-; GFX10-NEXT:    v_perm_b32 v0, 0, s0, s2
-; GFX10-NEXT:    v_perm_b32 v1, 0, s1, s2
+; GFX10-NEXT:    v_perm_b32 v0, 0, s0, 0x10203
+; GFX10-NEXT:    v_perm_b32 v1, 0, s1, 0x10203
 ; GFX10-NEXT:    v_readfirstlane_b32 s0, v0
 ; GFX10-NEXT:    v_readfirstlane_b32 s1, v1
 ; GFX10-NEXT:    ; return to shader part epilog
@@ -154,9 +153,8 @@ define <2 x i32> @v_bswap_v2i32(<2 x i32> %src) {
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX10-NEXT:    s_mov_b32 s4, 0x10203
-; GFX10-NEXT:    v_perm_b32 v0, 0, v0, s4
-; GFX10-NEXT:    v_perm_b32 v1, 0, v1, s4
+; GFX10-NEXT:    v_perm_b32 v0, 0, v0, 0x10203
+; GFX10-NEXT:    v_perm_b32 v1, 0, v1, 0x10203
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
   %bswap = call <2 x i32> @llvm.bswap.v2i32(<2 x i32> %src)
   ret <2 x i32> %bswap
@@ -200,9 +198,8 @@ define amdgpu_ps i64 @s_bswap_i64(i64 inreg %src) {
 ;
 ; GFX10-LABEL: s_bswap_i64:
 ; GFX10:       ; %bb.0:
-; GFX10-NEXT:    s_mov_b32 s2, 0x10203
-; GFX10-NEXT:    v_perm_b32 v0, 0, s1, s2
-; GFX10-NEXT:    v_perm_b32 v1, 0, s0, s2
+; GFX10-NEXT:    v_perm_b32 v0, 0, s1, 0x10203
+; GFX10-NEXT:    v_perm_b32 v1, 0, s0, 0x10203
 ; GFX10-NEXT:    v_readfirstlane_b32 s0, v0
 ; GFX10-NEXT:    v_readfirstlane_b32 s1, v1
 ; GFX10-NEXT:    ; return to shader part epilog
@@ -246,9 +243,8 @@ define i64 @v_bswap_i64(i64 %src) {
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX10-NEXT:    s_mov_b32 s4, 0x10203
-; GFX10-NEXT:    v_perm_b32 v2, 0, v1, s4
-; GFX10-NEXT:    v_perm_b32 v1, 0, v0, s4
+; GFX10-NEXT:    v_perm_b32 v2, 0, v1, 0x10203
+; GFX10-NEXT:    v_perm_b32 v1, 0, v0, 0x10203
 ; GFX10-NEXT:    v_mov_b32_e32 v0, v2
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
   %bswap = call i64 @llvm.bswap.i64(i64 %src)
@@ -313,11 +309,10 @@ define amdgpu_ps <2 x i64> @s_bswap_v2i64(<2 x i64> inreg %src) {
 ;
 ; GFX10-LABEL: s_bswap_v2i64:
 ; GFX10:       ; %bb.0:
-; GFX10-NEXT:    s_mov_b32 s4, 0x10203
-; GFX10-NEXT:    v_perm_b32 v0, 0, s1, s4
-; GFX10-NEXT:    v_perm_b32 v1, 0, s0, s4
-; GFX10-NEXT:    v_perm_b32 v2, 0, s3, s4
-; GFX10-NEXT:    v_perm_b32 v3, 0, s2, s4
+; GFX10-NEXT:    v_perm_b32 v0, 0, s1, 0x10203
+; GFX10-NEXT:    v_perm_b32 v1, 0, s0, 0x10203
+; GFX10-NEXT:    v_perm_b32 v2, 0, s3, 0x10203
+; GFX10-NEXT:    v_perm_b32 v3, 0, s2, 0x10203
 ; GFX10-NEXT:    v_readfirstlane_b32 s0, v0
 ; GFX10-NEXT:    v_readfirstlane_b32 s1, v1
 ; GFX10-NEXT:    v_readfirstlane_b32 s2, v2
@@ -376,11 +371,10 @@ define <2 x i64> @v_bswap_v2i64(<2 x i64> %src) {
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX10-NEXT:    s_mov_b32 s4, 0x10203
-; GFX10-NEXT:    v_perm_b32 v4, 0, v1, s4
-; GFX10-NEXT:    v_perm_b32 v5, 0, v3, s4
-; GFX10-NEXT:    v_perm_b32 v1, 0, v0, s4
-; GFX10-NEXT:    v_perm_b32 v3, 0, v2, s4
+; GFX10-NEXT:    v_perm_b32 v4, 0, v1, 0x10203
+; GFX10-NEXT:    v_perm_b32 v5, 0, v3, 0x10203
+; GFX10-NEXT:    v_perm_b32 v1, 0, v0, 0x10203
+; GFX10-NEXT:    v_perm_b32 v3, 0, v2, 0x10203
 ; GFX10-NEXT:    v_mov_b32_e32 v0, v4
 ; GFX10-NEXT:    v_mov_b32_e32 v2, v5
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
@@ -457,12 +451,11 @@ define i16 @v_bswap_i16(i16 %src) {
 define amdgpu_ps i32 @s_bswap_v2i16(<2 x i16> inreg %src) {
 ; GFX7-LABEL: s_bswap_v2i16:
 ; GFX7:       ; %bb.0:
-; GFX7-NEXT:    s_mov_b32 s3, 0x80008
 ; GFX7-NEXT:    s_lshl_b32 s2, s0, 8
-; GFX7-NEXT:    s_bfe_u32 s0, s0, s3
+; GFX7-NEXT:    s_bfe_u32 s0, s0, 0x80008
 ; GFX7-NEXT:    s_or_b32 s0, s0, s2
 ; GFX7-NEXT:    s_lshl_b32 s2, s1, 8
-; GFX7-NEXT:    s_bfe_u32 s1, s1, s3
+; GFX7-NEXT:    s_bfe_u32 s1, s1, 0x80008
 ; GFX7-NEXT:    s_or_b32 s1, s1, s2
 ; GFX7-NEXT:    s_bfe_u32 s1, s1, 0x100000
 ; GFX7-NEXT:    s_bfe_u32 s0, s0, 0x100000
@@ -647,9 +640,8 @@ define i64 @v_bswap_i48(i64 %src) {
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX10-NEXT:    s_mov_b32 s4, 0x10203
-; GFX10-NEXT:    v_perm_b32 v1, 0, v1, s4
-; GFX10-NEXT:    v_perm_b32 v2, 0, v0, s4
+; GFX10-NEXT:    v_perm_b32 v1, 0, v1, 0x10203
+; GFX10-NEXT:    v_perm_b32 v2, 0, v0, 0x10203
 ; GFX10-NEXT:    v_lshrrev_b64 v[0:1], 16, v[1:2]
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
   %trunc = trunc i64 %src to i48

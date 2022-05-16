@@ -35,10 +35,9 @@ main_body:
 ; GCN-LABEL: {{^}}tbuffer_store_d16_xyz:
 ; GCN-DAG: s_load_dwordx2 s[[[S_DATA_0:[0-9]+]]:[[S_DATA_1:[0-9]+]]], s{{\[[0-9]+:[0-9]+\]}},
 
-; UNPACKED-DAG: s_mov_b32 [[K:s[0-9]+]], 0xffff{{$}}
 ; UNPACKED-DAG: s_lshr_b32 [[SHR0:s[0-9]+]], s[[S_DATA_0]], 16
-; UNPACKED-DAG: s_and_b32 [[MASKED0:s[0-9]+]], s[[S_DATA_0]], [[K]]
-; UNPACKED-DAG: s_and_b32 [[MASKED1:s[0-9]+]], s[[S_DATA_1]], [[K]]
+; UNPACKED-DAG: s_and_b32 [[MASKED0:s[0-9]+]], s[[S_DATA_0]], 0xffff{{$}}
+; UNPACKED-DAG: s_and_b32 [[MASKED1:s[0-9]+]], s[[S_DATA_1]], 0xffff{{$}}
 
 ; UNPACKED-DAG: v_mov_b32_e32 v[[LO:[0-9]+]], [[MASKED0]]
 ; UNPACKED-DAG: v_mov_b32_e32 v[[HI:[0-9]+]], [[MASKED1]]
@@ -60,11 +59,10 @@ main_body:
 ; GCN-LABEL: {{^}}tbuffer_store_d16_xyzw:
 ; GCN-DAG: s_load_dwordx2 s[[[S_DATA_0:[0-9]+]]:[[S_DATA_1:[0-9]+]]], s{{\[[0-9]+:[0-9]+\]}},
 
-; UNPACKED-DAG: s_mov_b32 [[K:s[0-9]+]], 0xffff{{$}}
 ; UNPACKED-DAG: s_lshr_b32 [[SHR0:s[0-9]+]], s[[S_DATA_0]], 16
-; UNPACKED-DAG: s_and_b32 [[MASKED0:s[0-9]+]], s[[S_DATA_0]], [[K]]
+; UNPACKED-DAG: s_and_b32 [[MASKED0:s[0-9]+]], s[[S_DATA_0]], 0xffff{{$}}
 ; UNPACKED-DAG: s_lshr_b32 [[SHR1:s[0-9]+]], s[[S_DATA_1]], 16
-; UNPACKED-DAG: s_and_b32 [[MASKED1:s[0-9]+]], s[[S_DATA_1]], [[K]]
+; UNPACKED-DAG: s_and_b32 [[MASKED1:s[0-9]+]], s[[S_DATA_1]], 0xffff{{$}}
 
 ; UNPACKED-DAG: v_mov_b32_e32 v[[LO:[0-9]+]], [[MASKED0]]
 ; UNPACKED-DAG: v_mov_b32_e32 v[[HI:[0-9]+]], [[SHR1]]

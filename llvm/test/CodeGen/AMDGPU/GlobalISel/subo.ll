@@ -967,7 +967,7 @@ define amdgpu_ps i16 @usubo_i16_sv(i16 inreg %a, i16 %b) {
 ; GFX7-LABEL: usubo_i16_sv:
 ; GFX7:       ; %bb.0:
 ; GFX7-NEXT:    s_mov_b32 s1, 0xffff
-; GFX7-NEXT:    s_and_b32 s0, s0, s1
+; GFX7-NEXT:    s_and_b32 s0, s0, 0xffff
 ; GFX7-NEXT:    v_and_b32_e32 v0, s1, v0
 ; GFX7-NEXT:    v_sub_i32_e32 v0, vcc, s0, v0
 ; GFX7-NEXT:    v_and_b32_e32 v1, s1, v0
@@ -980,7 +980,7 @@ define amdgpu_ps i16 @usubo_i16_sv(i16 inreg %a, i16 %b) {
 ; GFX8-LABEL: usubo_i16_sv:
 ; GFX8:       ; %bb.0:
 ; GFX8-NEXT:    s_mov_b32 s1, 0xffff
-; GFX8-NEXT:    s_and_b32 s0, s0, s1
+; GFX8-NEXT:    s_and_b32 s0, s0, 0xffff
 ; GFX8-NEXT:    v_and_b32_e32 v0, s1, v0
 ; GFX8-NEXT:    v_sub_u32_e32 v0, vcc, s0, v0
 ; GFX8-NEXT:    v_and_b32_e32 v1, s1, v0
@@ -992,8 +992,7 @@ define amdgpu_ps i16 @usubo_i16_sv(i16 inreg %a, i16 %b) {
 ;
 ; GFX9-LABEL: usubo_i16_sv:
 ; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_mov_b32 s1, 0xffff
-; GFX9-NEXT:    s_and_b32 s0, s0, s1
+; GFX9-NEXT:    s_and_b32 s0, s0, 0xffff
 ; GFX9-NEXT:    v_sub_u32_sdwa v0, s0, v0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_0
 ; GFX9-NEXT:    v_cmp_ne_u32_sdwa s[0:1], v0, v0 src0_sel:DWORD src1_sel:WORD_0
 ; GFX9-NEXT:    v_cndmask_b32_e64 v1, 0, 1, s[0:1]

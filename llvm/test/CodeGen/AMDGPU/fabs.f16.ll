@@ -42,9 +42,8 @@ define amdgpu_kernel void @s_fabs_v2f16(<2 x half> addrspace(1)* %out, <2 x half
 ; CI: s_load_dwordx2 s[[[LO:[0-9]+]]:[[HI:[0-9]+]]], s{{\[[0-9]+:[0-9]+\]}}, 0x2
 ; GFX89: s_load_dwordx2 s[[[LO:[0-9]+]]:[[HI:[0-9]+]]], s{{\[[0-9]+:[0-9]+\]}}, 0x8
 
-; GCN: s_mov_b32 [[MASK:s[0-9]+]], 0x7fff7fff
-; GCN-DAG: s_and_b32 s{{[0-9]+}}, s[[LO]], [[MASK]]
-; GCN-DAG: s_and_b32 s{{[0-9]+}}, s[[HI]], [[MASK]]
+; GCN-DAG: s_and_b32 s{{[0-9]+}}, s[[LO]], 0x7fff7fff
+; GCN-DAG: s_and_b32 s{{[0-9]+}}, s[[HI]], 0x7fff7fff
 ; GCN: {{flat|global}}_store_dwordx2
 define amdgpu_kernel void @s_fabs_v4f16(<4 x half> addrspace(1)* %out, <4 x half> %in) {
   %fabs = call <4 x half> @llvm.fabs.v4f16(<4 x half> %in)

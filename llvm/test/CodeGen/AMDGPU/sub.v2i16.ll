@@ -626,7 +626,7 @@ define amdgpu_kernel void @v_test_sub_v2i16_zext_to_v2i64(<2 x i64> addrspace(1)
 ; GFX10-NEXT:    s_mov_b32 s6, -1
 ; GFX10-NEXT:    v_pk_sub_i16 v2, v1, v2
 ; GFX10-NEXT:    v_mov_b32_e32 v1, 0
-; GFX10-NEXT:    v_and_b32_e32 v0, v3, v2
+; GFX10-NEXT:    v_and_b32_e32 v0, 0xffff, v2
 ; GFX10-NEXT:    v_and_b32_sdwa v2, v3, v2 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_1
 ; GFX10-NEXT:    v_mov_b32_e32 v3, v1
 ; GFX10-NEXT:    buffer_store_dwordx4 v[0:3], off, s[4:7], 0

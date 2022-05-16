@@ -2355,7 +2355,6 @@ define amdgpu_kernel void @udot8_acc16_vecMul(<8 x i4> addrspace(1)* %src1,
 ; GFX10-DL-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x24
 ; GFX10-DL-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
 ; GFX10-DL-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x34
-; GFX10-DL-NEXT:    v_mov_b32_e32 v4, 0xffff
 ; GFX10-DL-NEXT:    s_mov_b32 s8, SCRATCH_RSRC_DWORD0
 ; GFX10-DL-NEXT:    s_mov_b32 s9, SCRATCH_RSRC_DWORD1
 ; GFX10-DL-NEXT:    s_mov_b32 s10, -1
@@ -2369,49 +2368,49 @@ define amdgpu_kernel void @udot8_acc16_vecMul(<8 x i4> addrspace(1)* %src1,
 ; GFX10-DL-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX10-DL-NEXT:    global_load_ushort v3, v0, s[0:1]
 ; GFX10-DL-NEXT:    s_waitcnt vmcnt(2)
-; GFX10-DL-NEXT:    v_and_b32_e32 v7, 15, v1
+; GFX10-DL-NEXT:    v_and_b32_e32 v6, 15, v1
 ; GFX10-DL-NEXT:    s_waitcnt vmcnt(1)
-; GFX10-DL-NEXT:    v_and_b32_e32 v6, 15, v2
-; GFX10-DL-NEXT:    v_bfe_u32 v5, v1, 4, 4
-; GFX10-DL-NEXT:    v_bfe_u32 v10, v2, 4, 4
-; GFX10-DL-NEXT:    v_bfe_u32 v9, v1, 8, 4
-; GFX10-DL-NEXT:    v_and_b32_e32 v7, v4, v7
-; GFX10-DL-NEXT:    v_and_b32_e32 v6, v4, v6
-; GFX10-DL-NEXT:    v_bfe_u32 v13, v2, 8, 4
-; GFX10-DL-NEXT:    v_bfe_u32 v8, v1, 12, 4
-; GFX10-DL-NEXT:    v_and_b32_e32 v9, v4, v9
-; GFX10-DL-NEXT:    v_lshl_or_b32 v5, v5, 16, v7
-; GFX10-DL-NEXT:    v_lshl_or_b32 v6, v10, 16, v6
-; GFX10-DL-NEXT:    v_bfe_u32 v10, v2, 12, 4
-; GFX10-DL-NEXT:    v_and_b32_e32 v13, v4, v13
-; GFX10-DL-NEXT:    v_bfe_u32 v12, v1, 16, 4
-; GFX10-DL-NEXT:    v_lshl_or_b32 v8, v8, 16, v9
-; GFX10-DL-NEXT:    v_pk_mul_lo_u16 v5, v5, v6
-; GFX10-DL-NEXT:    v_bfe_u32 v6, v2, 16, 4
-; GFX10-DL-NEXT:    v_lshl_or_b32 v10, v10, 16, v13
-; GFX10-DL-NEXT:    v_bfe_u32 v11, v1, 20, 4
-; GFX10-DL-NEXT:    v_and_b32_e32 v12, v4, v12
-; GFX10-DL-NEXT:    v_lshrrev_b32_e32 v9, 16, v5
+; GFX10-DL-NEXT:    v_and_b32_e32 v5, 15, v2
+; GFX10-DL-NEXT:    v_bfe_u32 v4, v1, 4, 4
+; GFX10-DL-NEXT:    v_bfe_u32 v9, v2, 4, 4
+; GFX10-DL-NEXT:    v_bfe_u32 v8, v1, 8, 4
+; GFX10-DL-NEXT:    v_and_b32_e32 v6, 0xffff, v6
+; GFX10-DL-NEXT:    v_and_b32_e32 v5, 0xffff, v5
+; GFX10-DL-NEXT:    v_bfe_u32 v12, v2, 8, 4
+; GFX10-DL-NEXT:    v_bfe_u32 v7, v1, 12, 4
+; GFX10-DL-NEXT:    v_and_b32_e32 v8, 0xffff, v8
+; GFX10-DL-NEXT:    v_lshl_or_b32 v4, v4, 16, v6
+; GFX10-DL-NEXT:    v_lshl_or_b32 v5, v9, 16, v5
+; GFX10-DL-NEXT:    v_bfe_u32 v9, v2, 12, 4
+; GFX10-DL-NEXT:    v_and_b32_e32 v12, 0xffff, v12
+; GFX10-DL-NEXT:    v_bfe_u32 v11, v1, 16, 4
+; GFX10-DL-NEXT:    v_lshl_or_b32 v7, v7, 16, v8
+; GFX10-DL-NEXT:    v_pk_mul_lo_u16 v4, v4, v5
+; GFX10-DL-NEXT:    v_bfe_u32 v5, v2, 16, 4
+; GFX10-DL-NEXT:    v_lshl_or_b32 v9, v9, 16, v12
+; GFX10-DL-NEXT:    v_bfe_u32 v10, v1, 20, 4
+; GFX10-DL-NEXT:    v_and_b32_e32 v11, 0xffff, v11
+; GFX10-DL-NEXT:    v_lshrrev_b32_e32 v8, 16, v4
 ; GFX10-DL-NEXT:    s_waitcnt vmcnt(0)
-; GFX10-DL-NEXT:    v_add_nc_u16 v3, v5, v3
-; GFX10-DL-NEXT:    v_bfe_u32 v5, v2, 20, 4
-; GFX10-DL-NEXT:    v_and_b32_e32 v6, v4, v6
-; GFX10-DL-NEXT:    v_pk_mul_lo_u16 v8, v8, v10
-; GFX10-DL-NEXT:    v_lshrrev_b32_e32 v7, 28, v1
-; GFX10-DL-NEXT:    v_add_nc_u16 v3, v3, v9
-; GFX10-DL-NEXT:    v_bfe_u32 v1, v1, 24, 4
-; GFX10-DL-NEXT:    v_bfe_u32 v9, v2, 24, 4
-; GFX10-DL-NEXT:    v_lshl_or_b32 v5, v5, 16, v6
-; GFX10-DL-NEXT:    v_lshl_or_b32 v6, v11, 16, v12
-; GFX10-DL-NEXT:    v_lshrrev_b32_e32 v10, 16, v8
+; GFX10-DL-NEXT:    v_add_nc_u16 v3, v4, v3
+; GFX10-DL-NEXT:    v_bfe_u32 v4, v2, 20, 4
+; GFX10-DL-NEXT:    v_and_b32_e32 v5, 0xffff, v5
+; GFX10-DL-NEXT:    v_pk_mul_lo_u16 v7, v7, v9
+; GFX10-DL-NEXT:    v_lshrrev_b32_e32 v6, 28, v1
 ; GFX10-DL-NEXT:    v_add_nc_u16 v3, v3, v8
+; GFX10-DL-NEXT:    v_bfe_u32 v1, v1, 24, 4
+; GFX10-DL-NEXT:    v_bfe_u32 v8, v2, 24, 4
+; GFX10-DL-NEXT:    v_lshl_or_b32 v4, v4, 16, v5
+; GFX10-DL-NEXT:    v_lshl_or_b32 v5, v10, 16, v11
+; GFX10-DL-NEXT:    v_lshrrev_b32_e32 v9, 16, v7
+; GFX10-DL-NEXT:    v_add_nc_u16 v3, v3, v7
 ; GFX10-DL-NEXT:    v_lshrrev_b32_e32 v2, 28, v2
-; GFX10-DL-NEXT:    v_and_b32_e32 v8, v4, v9
-; GFX10-DL-NEXT:    v_and_b32_e32 v1, v4, v1
-; GFX10-DL-NEXT:    v_pk_mul_lo_u16 v4, v6, v5
-; GFX10-DL-NEXT:    v_add_nc_u16 v3, v3, v10
-; GFX10-DL-NEXT:    v_lshl_or_b32 v2, v2, 16, v8
-; GFX10-DL-NEXT:    v_lshl_or_b32 v1, v7, 16, v1
+; GFX10-DL-NEXT:    v_and_b32_e32 v7, 0xffff, v8
+; GFX10-DL-NEXT:    v_and_b32_e32 v1, 0xffff, v1
+; GFX10-DL-NEXT:    v_pk_mul_lo_u16 v4, v5, v4
+; GFX10-DL-NEXT:    v_add_nc_u16 v3, v3, v9
+; GFX10-DL-NEXT:    v_lshl_or_b32 v2, v2, 16, v7
+; GFX10-DL-NEXT:    v_lshl_or_b32 v1, v6, 16, v1
 ; GFX10-DL-NEXT:    v_lshrrev_b32_e32 v5, 16, v4
 ; GFX10-DL-NEXT:    v_add_nc_u16 v3, v3, v4
 ; GFX10-DL-NEXT:    v_pk_mul_lo_u16 v1, v1, v2
@@ -3112,7 +3111,6 @@ define amdgpu_kernel void @udot8_acc4_vecMul(<8 x i4> addrspace(1)* %src1,
 ; GFX10-DL-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x24
 ; GFX10-DL-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
 ; GFX10-DL-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x34
-; GFX10-DL-NEXT:    v_mov_b32_e32 v4, 0xffff
 ; GFX10-DL-NEXT:    s_mov_b32 s8, SCRATCH_RSRC_DWORD0
 ; GFX10-DL-NEXT:    s_mov_b32 s9, SCRATCH_RSRC_DWORD1
 ; GFX10-DL-NEXT:    s_mov_b32 s10, -1
@@ -3126,49 +3124,49 @@ define amdgpu_kernel void @udot8_acc4_vecMul(<8 x i4> addrspace(1)* %src1,
 ; GFX10-DL-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX10-DL-NEXT:    global_load_ubyte v3, v0, s[0:1]
 ; GFX10-DL-NEXT:    s_waitcnt vmcnt(2)
-; GFX10-DL-NEXT:    v_and_b32_e32 v7, 15, v1
+; GFX10-DL-NEXT:    v_and_b32_e32 v6, 15, v1
 ; GFX10-DL-NEXT:    s_waitcnt vmcnt(1)
-; GFX10-DL-NEXT:    v_and_b32_e32 v6, 15, v2
-; GFX10-DL-NEXT:    v_bfe_u32 v5, v1, 4, 4
-; GFX10-DL-NEXT:    v_bfe_u32 v10, v2, 4, 4
-; GFX10-DL-NEXT:    v_bfe_u32 v9, v1, 8, 4
-; GFX10-DL-NEXT:    v_and_b32_e32 v7, v4, v7
-; GFX10-DL-NEXT:    v_and_b32_e32 v6, v4, v6
-; GFX10-DL-NEXT:    v_bfe_u32 v13, v2, 8, 4
-; GFX10-DL-NEXT:    v_bfe_u32 v8, v1, 12, 4
-; GFX10-DL-NEXT:    v_and_b32_e32 v9, v4, v9
-; GFX10-DL-NEXT:    v_lshl_or_b32 v5, v5, 16, v7
-; GFX10-DL-NEXT:    v_lshl_or_b32 v6, v10, 16, v6
-; GFX10-DL-NEXT:    v_bfe_u32 v10, v2, 12, 4
-; GFX10-DL-NEXT:    v_and_b32_e32 v13, v4, v13
-; GFX10-DL-NEXT:    v_bfe_u32 v12, v1, 16, 4
-; GFX10-DL-NEXT:    v_lshl_or_b32 v8, v8, 16, v9
-; GFX10-DL-NEXT:    v_pk_mul_lo_u16 v5, v5, v6
-; GFX10-DL-NEXT:    v_bfe_u32 v6, v2, 16, 4
-; GFX10-DL-NEXT:    v_lshl_or_b32 v10, v10, 16, v13
-; GFX10-DL-NEXT:    v_bfe_u32 v11, v1, 20, 4
-; GFX10-DL-NEXT:    v_and_b32_e32 v12, v4, v12
-; GFX10-DL-NEXT:    v_lshrrev_b32_e32 v9, 16, v5
+; GFX10-DL-NEXT:    v_and_b32_e32 v5, 15, v2
+; GFX10-DL-NEXT:    v_bfe_u32 v4, v1, 4, 4
+; GFX10-DL-NEXT:    v_bfe_u32 v9, v2, 4, 4
+; GFX10-DL-NEXT:    v_bfe_u32 v8, v1, 8, 4
+; GFX10-DL-NEXT:    v_and_b32_e32 v6, 0xffff, v6
+; GFX10-DL-NEXT:    v_and_b32_e32 v5, 0xffff, v5
+; GFX10-DL-NEXT:    v_bfe_u32 v12, v2, 8, 4
+; GFX10-DL-NEXT:    v_bfe_u32 v7, v1, 12, 4
+; GFX10-DL-NEXT:    v_and_b32_e32 v8, 0xffff, v8
+; GFX10-DL-NEXT:    v_lshl_or_b32 v4, v4, 16, v6
+; GFX10-DL-NEXT:    v_lshl_or_b32 v5, v9, 16, v5
+; GFX10-DL-NEXT:    v_bfe_u32 v9, v2, 12, 4
+; GFX10-DL-NEXT:    v_and_b32_e32 v12, 0xffff, v12
+; GFX10-DL-NEXT:    v_bfe_u32 v11, v1, 16, 4
+; GFX10-DL-NEXT:    v_lshl_or_b32 v7, v7, 16, v8
+; GFX10-DL-NEXT:    v_pk_mul_lo_u16 v4, v4, v5
+; GFX10-DL-NEXT:    v_bfe_u32 v5, v2, 16, 4
+; GFX10-DL-NEXT:    v_lshl_or_b32 v9, v9, 16, v12
+; GFX10-DL-NEXT:    v_bfe_u32 v10, v1, 20, 4
+; GFX10-DL-NEXT:    v_and_b32_e32 v11, 0xffff, v11
+; GFX10-DL-NEXT:    v_lshrrev_b32_e32 v8, 16, v4
 ; GFX10-DL-NEXT:    s_waitcnt vmcnt(0)
-; GFX10-DL-NEXT:    v_add_nc_u16 v3, v5, v3
-; GFX10-DL-NEXT:    v_bfe_u32 v5, v2, 20, 4
-; GFX10-DL-NEXT:    v_and_b32_e32 v6, v4, v6
-; GFX10-DL-NEXT:    v_pk_mul_lo_u16 v8, v8, v10
-; GFX10-DL-NEXT:    v_lshrrev_b32_e32 v7, 28, v1
-; GFX10-DL-NEXT:    v_add_nc_u16 v3, v3, v9
-; GFX10-DL-NEXT:    v_bfe_u32 v1, v1, 24, 4
-; GFX10-DL-NEXT:    v_bfe_u32 v9, v2, 24, 4
-; GFX10-DL-NEXT:    v_lshl_or_b32 v5, v5, 16, v6
-; GFX10-DL-NEXT:    v_lshl_or_b32 v6, v11, 16, v12
-; GFX10-DL-NEXT:    v_lshrrev_b32_e32 v10, 16, v8
+; GFX10-DL-NEXT:    v_add_nc_u16 v3, v4, v3
+; GFX10-DL-NEXT:    v_bfe_u32 v4, v2, 20, 4
+; GFX10-DL-NEXT:    v_and_b32_e32 v5, 0xffff, v5
+; GFX10-DL-NEXT:    v_pk_mul_lo_u16 v7, v7, v9
+; GFX10-DL-NEXT:    v_lshrrev_b32_e32 v6, 28, v1
 ; GFX10-DL-NEXT:    v_add_nc_u16 v3, v3, v8
+; GFX10-DL-NEXT:    v_bfe_u32 v1, v1, 24, 4
+; GFX10-DL-NEXT:    v_bfe_u32 v8, v2, 24, 4
+; GFX10-DL-NEXT:    v_lshl_or_b32 v4, v4, 16, v5
+; GFX10-DL-NEXT:    v_lshl_or_b32 v5, v10, 16, v11
+; GFX10-DL-NEXT:    v_lshrrev_b32_e32 v9, 16, v7
+; GFX10-DL-NEXT:    v_add_nc_u16 v3, v3, v7
 ; GFX10-DL-NEXT:    v_lshrrev_b32_e32 v2, 28, v2
-; GFX10-DL-NEXT:    v_and_b32_e32 v8, v4, v9
-; GFX10-DL-NEXT:    v_and_b32_e32 v1, v4, v1
-; GFX10-DL-NEXT:    v_pk_mul_lo_u16 v4, v6, v5
-; GFX10-DL-NEXT:    v_add_nc_u16 v3, v3, v10
-; GFX10-DL-NEXT:    v_lshl_or_b32 v2, v2, 16, v8
-; GFX10-DL-NEXT:    v_lshl_or_b32 v1, v7, 16, v1
+; GFX10-DL-NEXT:    v_and_b32_e32 v7, 0xffff, v8
+; GFX10-DL-NEXT:    v_and_b32_e32 v1, 0xffff, v1
+; GFX10-DL-NEXT:    v_pk_mul_lo_u16 v4, v5, v4
+; GFX10-DL-NEXT:    v_add_nc_u16 v3, v3, v9
+; GFX10-DL-NEXT:    v_lshl_or_b32 v2, v2, 16, v7
+; GFX10-DL-NEXT:    v_lshl_or_b32 v1, v6, 16, v1
 ; GFX10-DL-NEXT:    v_lshrrev_b32_e32 v5, 16, v4
 ; GFX10-DL-NEXT:    v_add_nc_u16 v3, v3, v4
 ; GFX10-DL-NEXT:    v_pk_mul_lo_u16 v1, v1, v2

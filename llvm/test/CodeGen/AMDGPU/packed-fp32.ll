@@ -565,8 +565,7 @@ define amdgpu_kernel void @fneg_v2f32_vec(<2 x float> addrspace(1)* %a) {
 }
 
 ; GCN-LABEL: {{^}}fneg_v2f32_scalar:
-; GCN:         s_brev_b32 [[SIGN:s[0-9]+]], 1
-; GCN-COUNT-2: s_xor_b32 s{{[0-9]+}}, s{{[0-9]+}}, [[SIGN]]
+; GCN-COUNT-2: s_xor_b32 s{{[0-9]+}}, s{{[0-9]+}}, 0x80000000
 define amdgpu_kernel void @fneg_v2f32_scalar(<2 x float> addrspace(1)* %a, <2 x float> %x) {
   %fneg = fsub <2 x float> <float -0.0, float -0.0>, %x
   store <2 x float> %fneg, <2 x float> addrspace(1)* %a, align 8
