@@ -9,6 +9,11 @@
 ; RUN:     FileCheck --check-prefix=CHECK-64 %s
 
 ; RUN: opt < %s -passes='asan-pipeline' -S \
+; RUN:     -mtriple=aarch64-unknown-freebsd \
+; RUN:     -data-layout="e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128" | \
+; RUN:     FileCheck --check-prefix=CHECK-AARCH64 %s
+
+; RUN: opt < %s -passes='asan-pipeline' -S \
 ; RUN:     -mtriple=mips64-unknown-freebsd \
 ; RUN:     -data-layout="E-m:e-i64:64-n32:64-S128" | \
 ; RUN:     FileCheck --check-prefix=CHECK-MIPS64 %s
@@ -32,6 +37,13 @@ entry:
 ; CHECK-64: lshr {{.*}} 3
 ; CHECK-64-NEXT: {{70368744177664}}
 ; CHECK-64: ret
+
+; CHECK-AARCH64: @read_4_bytes
+; CHECK-AARCH64-NOT: ret
+; Check for ASAN's Offset for 64-bit (2^47 or 0x800000000000)
+; CHECK-AARCH64: lshr {{.*}} 3
+; CHECK-AARCH64-NEXT: {{140737488355328}}
+; CHECK-AARCH64: ret
 
 ; CHECK-MIPS64: @read_4_bytes
 ; CHECK-MIPS64-NOT: ret
