@@ -242,6 +242,13 @@ foreach(mcpu ${amdgpu_mcpus})
   compileDeviceRTLLibrary(${mcpu} amdgpu -target amdgcn-amd-amdhsa -D__AMDGCN__ -nogpulib)
 endforeach()
 
+set(LIBOMPTARGET_LLVM_VERSION "${LLVM_VERSION_MAJOR}.${LLVM_VERSION_MINOR}.${LLVM_VERSION_PATCH}")
+if(NOT (CMAKE_CXX_COMPILER_ID MATCHES "[Cc]lang" AND CMAKE_CXX_COMPILER_VERSION VERSION_EQUAL LIBOMPTARGET_LLVM_VERSION))
+  libomptarget_say("Not building static library, CMake compiler '${CMAKE_CXX_COMPILER_ID} ${CMAKE_CXX_COMPILER_VERSION}' is not 'Clang ${LIBOMPTARGET_LLVM_VERSION}'.")
+  libomptarget_say("  Use the 'LLVM_ENABLE_RUNTIMES=openmp' option instead")
+  return()
+endif()
+
 # Set the flags to build the device runtime from clang.
 set(clang_lib_flags -fopenmp -fopenmp-cuda-mode -foffload-lto -fvisibility=hidden -Xopenmp-target=nvptx64-nvidia-cuda --cuda-feature=+ptx61 -mllvm -openmp-opt-disable -nocudalib -nogpulib -nostdinc -DSHARED_SCRATCHPAD_SIZE=512)
 foreach(arch ${nvptx_sm_list})
