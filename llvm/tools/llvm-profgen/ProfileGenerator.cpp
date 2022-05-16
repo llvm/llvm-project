@@ -381,13 +381,24 @@ void ProfileGeneratorBase::updateBodySamplesforFunctionProfile(
 }
 
 void ProfileGeneratorBase::updateTotalSamples() {
-  if (!UpdateTotalSamples)
-    return;
-
   for (auto &Item : ProfileMap) {
     FunctionSamples &FunctionProfile = Item.second;
     FunctionProfile.updateTotalSamples();
   }
+}
+
+void ProfileGeneratorBase::updateCallsiteSamples() {
+  for (auto &Item : ProfileMap) {
+    FunctionSamples &FunctionProfile = Item.second;
+    FunctionProfile.updateCallsiteSamples();
+  }
+}
+
+void ProfileGeneratorBase::updateFunctionSamples() {
+  updateCallsiteSamples();
+
+  if (UpdateTotalSamples)
+    updateTotalSamples();
 }
 
 void ProfileGeneratorBase::collectProfiledFunctions() {
@@ -491,7 +502,7 @@ void ProfileGenerator::generateLineNumBasedProfile() {
   // Fill in boundary sample counts as well as call site samples for calls
   populateBoundarySamplesForAllFunctions(SC.BranchCounter);
 
-  updateTotalSamples();
+  updateFunctionSamples();
 }
 
 void ProfileGenerator::generateProbeBasedProfile() {
@@ -505,7 +516,7 @@ void ProfileGenerator::generateProbeBasedProfile() {
   // Fill in boundary sample counts as well as call site samples for calls
   populateBoundarySamplesWithProbesForAllFunctions(SC.BranchCounter);
 
-  updateTotalSamples();
+  updateFunctionSamples();
 }
 
 void ProfileGenerator::populateBodySamplesWithProbesForAllFunctions(
@@ -785,7 +796,7 @@ void CSProfileGenerator::generateLineNumBasedProfile() {
   // body sample.
   populateInferredFunctionSamples();
 
-  updateTotalSamples();
+  updateFunctionSamples();
 }
 
 void CSProfileGenerator::populateBodySamplesForFunction(
