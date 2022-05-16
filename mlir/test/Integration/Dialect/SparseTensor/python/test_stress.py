@@ -186,11 +186,17 @@ def main():
     vec = 0
     vl = 1
     e = False
+    # Disable direct sparse2sparse conversion, because it doubles the time!
+    # TODO: While direct s2s is far too slow for per-commit testing,
+    # we should have some framework ensure that we run this test with
+    # `s2s=0` on a regular basis, to ensure that it does continue to work.
+    s2s = 1
     sparsification_options = (
         f'parallelization-strategy={par} '
         f'vectorization-strategy={vec} '
         f'vl={vl} '
-        f'enable-simd-index32={e}')
+        f'enable-simd-index32={e} '
+        f's2s-strategy={s2s}')
     compiler = sparse_compiler.SparseCompiler(
         options=sparsification_options, opt_level=0, shared_libs=[support_lib])
     f64 = ir.F64Type.get()
