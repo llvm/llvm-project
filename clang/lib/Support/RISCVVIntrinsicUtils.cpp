@@ -788,8 +788,6 @@ void RVVType::applyFixedLog2LMUL(int Log2LMUL, enum FixedLMULType Type) {
       return;
     }
     break;
-  default:
-    llvm_unreachable("Unknown FixedLMULType??");
   }
 
   // Update new LMUL
