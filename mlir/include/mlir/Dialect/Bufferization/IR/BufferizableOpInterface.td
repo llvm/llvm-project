@@ -216,6 +216,13 @@ def BufferizableOpInterface : OpInterface<"BufferizableOpInterface"> {
 
           This method will never be called on ops that do not have at least one
           tensor operand/result.
+
+          The return value of this method indicates whether there was an error
+          while bufferizing this op (such as failing to create a new buffer
+          allocation op). The bufferization driver immediately stops bufferizing
+          the input IR and returns `failure` in that case. If this op is
+          expected to survive bufferization, `success` should be returned
+          (together with `allow-unknown-ops` enabled).
         }],
         /*retType=*/"LogicalResult",
         /*methodName=*/"bufferize",

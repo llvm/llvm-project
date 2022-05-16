@@ -133,7 +133,7 @@ def Bufferization_ToTensorOp : Bufferization_Op<"to_tensor", [
       // DCE away. In case of partial bufferization, to_memref(to_tensor(x))
       // constructs may be left over. These are folded by the canonicalizer or
       // FinalizingBufferize.
-      return failure();
+      return success();
     }
 
     bool isWritable(Value value, const AnalysisState &state) const {

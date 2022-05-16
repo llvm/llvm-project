@@ -389,7 +389,7 @@ struct ReturnOpInterface
 #endif // NDEBUG
 
     // ReturnOps are bufferized as part of FuncOps.
-    return failure();
+    return success();
   }
 };
 

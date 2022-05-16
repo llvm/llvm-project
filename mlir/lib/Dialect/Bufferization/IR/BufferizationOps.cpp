@@ -354,7 +354,10 @@ void ToMemrefOp::getCanonicalizationPatterns(RewritePatternSet &results,
 LogicalResult ToMemrefOp::bufferize(RewriterBase &rewriter,
                                     BufferizationState &state) {
   // Fold to_memref(to_tensor(x)) to x. Insert a cast if necessary.
-  return foldToMemrefToTensorPair(rewriter, *this);
+  (void)foldToMemrefToTensorPair(rewriter, *this);
+  // Note: The return value of `bufferize` indicates whether there was an error
+  // or not. (And not whether the pattern matched or not.)
+  return success();
 }
 
 Optional<Operation *> CloneOp::buildDealloc(OpBuilder &builder, Value alloc) {
