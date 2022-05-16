@@ -16,8 +16,7 @@ define i32 @simple_cse() {
 ; CHECK-LABEL: simple_cse:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    csrr a0, vlenb
-; CHECK-NEXT:    csrr a1, vlenb
-; CHECK-NEXT:    sub a0, a0, a1
+; CHECK-NEXT:    sub a0, a0, a0
 ; CHECK-NEXT:    ret
 entry:
   %v1 = call i32 @llvm.read_register.i32(metadata !0)
