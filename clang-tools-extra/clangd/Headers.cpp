@@ -164,7 +164,7 @@ public:
       if (!Text.startswith(IWYUPragmaExport) &&
           !Text.startswith(IWYUPragmaBeginExports))
         return false;
-      Out->HasIWYUPragmas.insert(
+      Out->HasIWYUExport.insert(
           *Out->getID(SM.getFileEntryForID(SM.getFileID(Range.getBegin()))));
     }
     return false;
