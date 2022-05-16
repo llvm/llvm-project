@@ -985,6 +985,8 @@ bool RISCVInsertVSETVLI::computeVLVTYPEChanges(const MachineBasicBlock &MBB) {
 
   // Initial exit state is whatever change we found in the block.
   BBInfo.Exit = BBInfo.Change;
+  LLVM_DEBUG(dbgs() << "Initial exit state of " << printMBBReference(MBB)
+                    << " is " << BBInfo.Exit << "\n");
 
   return HadVectorOp;
 }
