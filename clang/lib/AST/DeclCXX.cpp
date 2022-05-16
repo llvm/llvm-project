@@ -2968,8 +2968,10 @@ UsingShadowDecl::UsingShadowDecl(Kind K, ASTContext &C, DeclContext *DC,
                                  BaseUsingDecl *Introducer, NamedDecl *Target)
     : NamedDecl(K, DC, Loc, Name), redeclarable_base(C),
       UsingOrNextShadow(Introducer) {
-  if (Target)
+  if (Target) {
+    assert(!isa<UsingShadowDecl>(Target));
     setTargetDecl(Target);
+  }
   setImplicit();
 }
 
