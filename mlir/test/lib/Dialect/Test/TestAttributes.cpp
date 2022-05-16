@@ -28,21 +28,6 @@ using namespace mlir;
 using namespace test;
 
 //===----------------------------------------------------------------------===//
-// AttrWithSelfTypeParamAttr
-//===----------------------------------------------------------------------===//
-
-Attribute AttrWithSelfTypeParamAttr::parse(AsmParser &parser, Type type) {
-  Type selfType;
-  if (parser.parseType(selfType))
-    return Attribute();
-  return get(parser.getContext(), selfType);
-}
-
-void AttrWithSelfTypeParamAttr::print(AsmPrinter &printer) const {
-  printer << " " << getType();
-}
-
-//===----------------------------------------------------------------------===//
 // AttrWithTypeBuilderAttr
 //===----------------------------------------------------------------------===//
 
