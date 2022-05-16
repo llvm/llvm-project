@@ -145,6 +145,10 @@ public:
     return !NonSelfContained.contains(ID);
   }
 
+  bool hasIWYUExport(HeaderID ID) const {
+    return HasIWYUPragmas.contains(ID);
+  }
+
   // Return all transitively reachable files.
   llvm::ArrayRef<std::string> allHeaders() const { return RealPathNames; }
 
@@ -185,6 +189,9 @@ private:
   // Contains HeaderIDs of all non self-contained entries in the
   // IncludeStructure.
   llvm::DenseSet<HeaderID> NonSelfContained;
+  // Contains a set of headers that have either "IWYU pragma: export" or "IWYU
+  // pragma: begin_exports".
+  llvm::DenseSet<HeaderID> HasIWYUPragmas;
 };
 
 // Calculates insertion edit for including a new header in a file.
