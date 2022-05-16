@@ -497,6 +497,14 @@ opt<bool> UseDirtyHeaders{"use-dirty-headers", cat(Misc),
                           Hidden,
                           init(ClangdServer::Options().UseDirtyHeaders)};
 
+opt<bool> PreambleParseForwardingFunctions{
+    "parse-forwarding-functions",
+    cat(Misc),
+    desc("Parse all emplace-like functions in included headers"),
+    Hidden,
+    init(ParseOptions().PreambleParseForwardingFunctions),
+};
+
 #if defined(__GLIBC__) && CLANGD_MALLOC_TRIM
 opt<bool> EnableMallocTrim{
     "malloc-trim",
@@ -934,6 +942,7 @@ clangd accepts flags on the commandline, and in the CLANGD_FLAGS environment var
     Opts.ClangTidyProvider = ClangTidyOptProvider;
   }
   Opts.UseDirtyHeaders = UseDirtyHeaders;
+  Opts.PreambleParseForwardingFunctions = PreambleParseForwardingFunctions;
   Opts.QueryDriverGlobs = std::move(QueryDriverGlobs);
   Opts.TweakFilter = [&](const Tweak &T) {
     if (T.hidden() && !HiddenFeatures)

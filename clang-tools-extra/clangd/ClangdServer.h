@@ -164,6 +164,9 @@ public:
     /// If true, use the dirty buffer contents when building Preambles.
     bool UseDirtyHeaders = false;
 
+    // If true, parse emplace-like functions in the preamble.
+    bool PreambleParseForwardingFunctions = false;
+
     explicit operator TUScheduler::Options() const;
   };
   // Sensible default options for use in tests.
@@ -415,6 +418,8 @@ private:
   TidyProviderRef ClangTidyProvider;
 
   bool UseDirtyHeaders = false;
+
+  bool PreambleParseForwardingFunctions = false;
 
   // GUARDED_BY(CachedCompletionFuzzyFindRequestMutex)
   llvm::StringMap<llvm::Optional<FuzzyFindRequest>>
