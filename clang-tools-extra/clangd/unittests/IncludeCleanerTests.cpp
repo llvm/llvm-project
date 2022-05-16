@@ -544,8 +544,7 @@ TEST(IncludeCleaner, IWYUPragmas) {
   EXPECT_TRUE(
       ReferencedFiles.User.contains(AST.getSourceManager().getMainFileID()));
   EXPECT_THAT(AST.getDiagnostics(), llvm::ValueIs(IsEmpty()));
-  auto Unused = computeUnusedIncludes(AST);
-  EXPECT_THAT(Unused, IsEmpty());
+  EXPECT_THAT(computeUnusedIncludes(AST), IsEmpty());
 }
 
 TEST(IncludeCleaner, RecursiveInclusion) {
@@ -576,8 +575,34 @@ TEST(IncludeCleaner, RecursiveInclusion) {
       findReferencedLocations(AST), AST.getIncludeStructure(),
       AST.getCanonicalIncludes(), AST.getSourceManager());
   EXPECT_THAT(AST.getDiagnostics(), llvm::ValueIs(IsEmpty()));
-  auto Unused = computeUnusedIncludes(AST);
-  EXPECT_THAT(Unused, IsEmpty());
+  EXPECT_THAT(computeUnusedIncludes(AST), IsEmpty());
+}
+
+TEST(IncludeCleaner, IWYUPragmaExport) {
+  TestTU TU;
+  TU.Code = R"cpp(
+    #include "foo.h"
+    )cpp";
+  TU.AdditionalFiles["foo.h"] = R"cpp(
+    #ifndef FOO_H
+    #define FOO_H
+
+    #include "bar.h" // IWYU pragma: export
+
+    #endif
+  )cpp";
+  TU.AdditionalFiles["bar.h"] = guard(R"cpp(
+    void bar() {}
+  )cpp");
+  ParsedAST AST = TU.build();
+
+  auto ReferencedFiles = findReferencedFiles(
+      findReferencedLocations(AST), AST.getIncludeStructure(),
+      AST.getCanonicalIncludes(), AST.getSourceManager());
+  EXPECT_THAT(AST.getDiagnostics(), llvm::ValueIs(IsEmpty()));
+  // FIXME: This is not correct: foo.h is unused but is not diagnosed as such
+  // because we ignore headers with IWYU export pragmas for now.
+  EXPECT_THAT(computeUnusedIncludes(AST), IsEmpty());
 }
 
 } // namespace
