@@ -244,6 +244,15 @@ public:
   SmallVector<Instruction *, 4> getInstructionsForAccess(Value *Ptr,
                                                          bool isWrite) const;
 
+  /// Return the program order indices for the access location (Ptr, IsWrite).
+  /// Returns an empty ArrayRef if there are no accesses for the location.
+  ArrayRef<unsigned> getOrderForAccess(Value *Ptr, bool IsWrite) const {
+    auto I = Accesses.find({Ptr, IsWrite});
+    if (I != Accesses.end())
+      return I->second;
+    return {};
+  }
+
 private:
   /// A wrapper around ScalarEvolution, used to add runtime SCEV checks, and
   /// applies dynamic knowledge to simplify SCEV expressions and convert them
@@ -359,6 +368,16 @@ typedef std::pair<const RuntimeCheckingPtrGroup *,
                   const RuntimeCheckingPtrGroup *>
     RuntimePointerCheck;
 
+struct PointerDiffInfo {
+  const SCEV *SrcStart;
+  const SCEV *SinkStart;
+  unsigned AccessSize;
+
+  PointerDiffInfo(const SCEV *SrcStart, const SCEV *SinkStart,
+                  unsigned AccessSize)
+      : SrcStart(SrcStart), SinkStart(SinkStart), AccessSize(AccessSize) {}
+};
+
 /// Holds information about the memory runtime legality checks to verify
 /// that a group of pointers do not overlap.
 class RuntimePointerChecking {
@@ -392,7 +411,8 @@ public:
           AliasSetId(AliasSetId), Expr(Expr) {}
   };
 
-  RuntimePointerChecking(ScalarEvolution *SE) : SE(SE) {}
+  RuntimePointerChecking(MemoryDepChecker &DC, ScalarEvolution *SE)
+      : DC(DC), SE(SE) {}
 
   /// Reset the state of the pointer runtime information.
   void reset() {
@@ -418,9 +438,21 @@ public:
   void generateChecks(MemoryDepChecker::DepCandidates &DepCands,
                       bool UseDependencies);
 
-  /// Returns the checks that generateChecks created.
+  /// Returns the checks that generateChecks created. They can be used to ensure
+  /// no read/write accesses overlap across all loop iterations.
   const SmallVectorImpl<RuntimePointerCheck> &getChecks() const {
     return Checks;
+  }
+
+  // Returns an optional list of (pointer-difference expressions, access size)
+  // pairs that can be used to prove that there are no vectorization-preventing
+  // dependencies at runtime. There are is a vectorization-preventing dependency
+  // if any pointer-difference is <u VF * InterleaveCount * access size. Returns
+  // None if pointer-difference checks cannot be used.
+  Optional<ArrayRef<PointerDiffInfo>> getDiffChecks() const {
+    if (!CanUseDiffCheck)
+      return None;
+    return {DiffChecks};
   }
 
   /// Decide if we need to add a check between two groups of pointers,
@@ -477,7 +509,15 @@ private:
                    bool UseDependencies);
 
   /// Generate the checks and return them.
-  SmallVector<RuntimePointerCheck, 4> generateChecks() const;
+  SmallVector<RuntimePointerCheck, 4> generateChecks();
+
+  /// Try to create add a new (pointer-difference, access size) pair to
+  /// DiffCheck for checking groups \p CGI and \p CGJ. If pointer-difference
+  /// checks cannot be used for the groups, set CanUseDiffCheck to false.
+  void tryToCreateDiffCheck(const RuntimeCheckingPtrGroup &CGI,
+                            const RuntimeCheckingPtrGroup &CGJ);
+
+  MemoryDepChecker &DC;
 
   /// Holds a pointer to the ScalarEvolution analysis.
   ScalarEvolution *SE;
@@ -485,6 +525,13 @@ private:
   /// Set of run-time checks required to establish independence of
   /// otherwise may-aliasing pointers in the loop.
   SmallVector<RuntimePointerCheck, 4> Checks;
+
+  /// Flag indicating if pointer-difference checks can be used
+  bool CanUseDiffCheck = true;
+
+  /// A list of (pointer-difference, access size) pairs that can be used to
+  /// prove that there are no vectorization-preventing dependencies.
+  SmallVector<PointerDiffInfo> DiffChecks;
 };
 
 /// Drive the analysis of memory accesses in the loop

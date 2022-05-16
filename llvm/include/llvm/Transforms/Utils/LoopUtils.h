@@ -14,6 +14,7 @@
 #define LLVM_TRANSFORMS_UTILS_LOOPUTILS_H
 
 #include "llvm/Analysis/IVDescriptors.h"
+#include "llvm/Analysis/LoopAccessAnalysis.h"
 #include "llvm/Transforms/Utils/ValueMapper.h"
 
 namespace llvm {
@@ -498,6 +499,12 @@ Value *
 addRuntimeChecks(Instruction *Loc, Loop *TheLoop,
                  const SmallVectorImpl<RuntimePointerCheck> &PointerChecks,
                  SCEVExpander &Expander);
+
+Value *
+addDiffRuntimeChecks(Instruction *Loc, Loop *TheLoop,
+                     ArrayRef<PointerDiffInfo> Checks, SCEVExpander &Expander,
+                     function_ref<Value *(IRBuilderBase &, unsigned)> GetVF,
+                     unsigned IC);
 
 /// Struct to hold information about a partially invariant condition.
 struct IVConditionInfo {

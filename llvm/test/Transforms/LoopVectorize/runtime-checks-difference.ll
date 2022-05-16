@@ -6,19 +6,14 @@ target datalayout = "e-m:e-i64:64-i128:128-n32:64-S128"
 define void @same_step_and_size(i32* %a, i32* %b, i64 %n) {
 ; CHECK-LABEL: @same_step_and_size(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[B1:%.*]] = bitcast i32* [[B:%.*]] to i8*
-; CHECK-NEXT:    [[A3:%.*]] = bitcast i32* [[A:%.*]] to i8*
+; CHECK-NEXT:    [[A2:%.*]] = ptrtoint i32* [[A:%.*]] to i64
+; CHECK-NEXT:    [[B1:%.*]] = ptrtoint i32* [[B:%.*]] to i64
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N:%.*]], 4
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %scalar.ph, label %vector.memcheck
 ; CHECK:       vector.memcheck:
-; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr i32, i32* [[B]], i64 [[N]]
-; CHECK-NEXT:    [[SCEVGEP2:%.*]] = bitcast i32* [[SCEVGEP]] to i8*
-; CHECK-NEXT:    [[SCEVGEP4:%.*]] = getelementptr i32, i32* [[A]], i64 [[N]]
-; CHECK-NEXT:    [[SCEVGEP45:%.*]] = bitcast i32* [[SCEVGEP4]] to i8*
-; CHECK-NEXT:    [[BOUND0:%.*]] = icmp ult i8* [[B1]], [[SCEVGEP45]]
-; CHECK-NEXT:    [[BOUND1:%.*]] = icmp ult i8* [[A3]], [[SCEVGEP2]]
-; CHECK-NEXT:    [[FOUND_CONFLICT:%.*]] = and i1 [[BOUND0]], [[BOUND1]]
-; CHECK-NEXT:    br i1 [[FOUND_CONFLICT]], label %scalar.ph, label %vector.ph
+; CHECK-NEXT:    [[TMP0:%.*]] = sub i64 [[B1]], [[A2]]
+; CHECK-NEXT:    [[DIFF_CHECK:%.*]] = icmp ult i64 [[TMP0]], 16
+; CHECK-NEXT:    br i1 [[DIFF_CHECK]], label %scalar.ph, label %vector.ph
 ;
 entry:
   br label %loop
@@ -41,19 +36,14 @@ exit:
 define void @same_step_and_size_no_dominance_between_accesses(i32* %a, i32* %b, i64 %n, i64 %x) {
 ; CHECK-LABEL: @same_step_and_size_no_dominance_between_accesses(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[B1:%.*]] = bitcast i32* [[B:%.*]] to i8*
-; CHECK-NEXT:    [[A3:%.*]] = bitcast i32* [[A:%.*]] to i8*
+; CHECK-NEXT:    [[B2:%.*]] = ptrtoint i32* [[B:%.*]] to i64
+; CHECK-NEXT:    [[A1:%.*]] = ptrtoint i32* [[A:%.*]] to i64
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N:%.*]], 4
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %scalar.ph, label %vector.memcheck
 ; CHECK:       vector.memcheck:
-; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr i32, i32* [[B]], i64 [[N]]
-; CHECK-NEXT:    [[SCEVGEP2:%.*]] = bitcast i32* [[SCEVGEP]] to i8*
-; CHECK-NEXT:    [[SCEVGEP4:%.*]] = getelementptr i32, i32* [[A]], i64 [[N]]
-; CHECK-NEXT:    [[SCEVGEP45:%.*]] = bitcast i32* [[SCEVGEP4]] to i8*
-; CHECK-NEXT:    [[BOUND0:%.*]] = icmp ult i8* [[B1]], [[SCEVGEP45]]
-; CHECK-NEXT:    [[BOUND1:%.*]] = icmp ult i8* [[A3]], [[SCEVGEP2]]
-; CHECK-NEXT:    [[FOUND_CONFLICT:%.*]] = and i1 [[BOUND0]], [[BOUND1]]
-; CHECK-NEXT:    br i1 [[FOUND_CONFLICT]], label %scalar.ph, label %vector.ph
+; CHECK-NEXT:    [[TMP0:%.*]] = sub i64 [[A1]], [[B2]]
+; CHECK-NEXT:    [[DIFF_CHECK:%.*]] = icmp ult i64 [[TMP0]], 16
+; CHECK-NEXT:    br i1 [[DIFF_CHECK]], label %scalar.ph, label %vector.ph
 ;
 entry:
   br label %loop
@@ -121,20 +111,15 @@ exit:
 define void @steps_match_but_different_access_sizes_1([2 x i16]* %a, i32* %b, i64 %n) {
 ; CHECK-LABEL: @steps_match_but_different_access_sizes_1(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[B1:%.*]] = bitcast i32* [[B:%.*]] to i8*
+; CHECK-NEXT:    [[A2:%.*]] = ptrtoint [2 x i16]* [[A:%.*]] to i64
+; CHECK-NEXT:    [[B1:%.*]] = ptrtoint i32* [[B:%.*]] to i64
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N:%.*]], 4
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %scalar.ph, label %vector.memcheck
 ; CHECK:       vector.memcheck:
-; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr i32, i32* [[B]], i64 [[N]]
-; CHECK-NEXT:    [[SCEVGEP2:%.*]] = bitcast i32* [[SCEVGEP]] to i8*
-; CHECK-NEXT:    [[SCEVGEP3:%.*]] = getelementptr [2 x i16], [2 x i16]* [[A:%.*]], i64 0, i64 1
-; CHECK-NEXT:    [[SCEVGEP34:%.*]] = bitcast i16* [[SCEVGEP3]] to i8*
-; CHECK-NEXT:    [[SCEVGEP5:%.*]] = getelementptr [2 x i16], [2 x i16]* [[A]], i64 [[N]], i64 0
-; CHECK-NEXT:    [[SCEVGEP56:%.*]] = bitcast i16* [[SCEVGEP5]] to i8*
-; CHECK-NEXT:    [[BOUND0:%.*]] = icmp ult i8* [[B1]], [[SCEVGEP56]]
-; CHECK-NEXT:    [[BOUND1:%.*]] = icmp ult i8* [[SCEVGEP34]], [[SCEVGEP2]]
-; CHECK-NEXT:    [[FOUND_CONFLICT:%.*]] = and i1 [[BOUND0]], [[BOUND1]]
-; CHECK-NEXT:    br i1 [[FOUND_CONFLICT]], label %scalar.ph, label %vector.ph
+; CHECK-NEXT:    [[TMP0:%.*]] = add nuw i64 [[A2]], 2
+; CHECK-NEXT:    [[TMP1:%.*]] = sub i64 [[B1]], [[TMP0]]
+; CHECK-NEXT:    [[DIFF_CHECK:%.*]] = icmp ult i64 [[TMP1]], 16
+; CHECK-NEXT:    br i1 [[DIFF_CHECK]], label %scalar.ph, label %vector.ph
 ;
 entry:
   br label %loop
@@ -160,20 +145,15 @@ exit:
 define void @steps_match_but_different_access_sizes_2([2 x i16]* %a, i32* %b, i64 %n) {
 ; CHECK-LABEL: @steps_match_but_different_access_sizes_2(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[B4:%.*]] = bitcast i32* [[B:%.*]] to i8*
+; CHECK-NEXT:    [[B2:%.*]] = ptrtoint i32* [[B:%.*]] to i64
+; CHECK-NEXT:    [[A1:%.*]] = ptrtoint [2 x i16]* [[A:%.*]] to i64
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N:%.*]], 4
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %scalar.ph, label %vector.memcheck
 ; CHECK:       vector.memcheck:
-; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr [2 x i16], [2 x i16]* [[A:%.*]], i64 0, i64 1
-; CHECK-NEXT:    [[SCEVGEP1:%.*]] = bitcast i16* [[SCEVGEP]] to i8*
-; CHECK-NEXT:    [[SCEVGEP2:%.*]] = getelementptr [2 x i16], [2 x i16]* [[A]], i64 [[N]], i64 0
-; CHECK-NEXT:    [[SCEVGEP23:%.*]] = bitcast i16* [[SCEVGEP2]] to i8*
-; CHECK-NEXT:    [[SCEVGEP5:%.*]] = getelementptr i32, i32* [[B]], i64 [[N]]
-; CHECK-NEXT:    [[SCEVGEP56:%.*]] = bitcast i32* [[SCEVGEP5]] to i8*
-; CHECK-NEXT:    [[BOUND0:%.*]] = icmp ult i8* [[SCEVGEP1]], [[SCEVGEP56]]
-; CHECK-NEXT:    [[BOUND1:%.*]] = icmp ult i8* [[B4]], [[SCEVGEP23]]
-; CHECK-NEXT:    [[FOUND_CONFLICT:%.*]] = and i1 [[BOUND0]], [[BOUND1]]
-; CHECK-NEXT:    br i1 [[FOUND_CONFLICT]], label %scalar.ph, label %vector.ph
+; CHECK-NEXT:    [[TMP0:%.*]] = add nuw i64 [[A1]], 2
+; CHECK-NEXT:    [[TMP1:%.*]] = sub i64 [[TMP0]], [[B2]]
+; CHECK-NEXT:    [[DIFF_CHECK:%.*]] = icmp ult i64 [[TMP1]], 16
+; CHECK-NEXT:    br i1 [[DIFF_CHECK]], label %scalar.ph, label %vector.ph
 ;
 entry:
   br label %loop
