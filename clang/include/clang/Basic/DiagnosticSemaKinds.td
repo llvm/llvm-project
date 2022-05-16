@@ -990,6 +990,8 @@ def err_super_in_lambda_unsupported : Error<
 
 def err_pragma_expected_file_scope : Error<
   "'#pragma %0' can only appear at file scope">;
+def err_pragma_alloc_text_c_linkage: Error<
+  "'#pragma alloc_text' is applicable only to functions with C linkage">;
 
 def warn_pragma_unused_undeclared_var : Warning<
   "undeclared variable %0 used as an argument for '#pragma unused'">,
