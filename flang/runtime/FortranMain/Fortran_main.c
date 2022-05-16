@@ -10,7 +10,7 @@
 #include "flang/Runtime/stop.h"
 
 /* main entry into PROGRAM */
-void _QQmain();
+void _QQmain(void);
 
 /* C main stub */
 int main(int argc, const char *argv[], const char *envp[]) {
