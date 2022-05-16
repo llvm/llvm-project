@@ -39,6 +39,7 @@
 #include "clang/Basic/TokenKinds.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseSet.h"
+#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/StringRef.h"
 #include <cstdint>
 #include <vector>
@@ -117,8 +118,8 @@ public:
   static std::unique_ptr<Grammar> parseBNF(llvm::StringRef BNF,
                                            std::vector<std::string> &Diags);
 
-  // Returns the SymbolID of the start symbol '_'.
-  SymbolID startSymbol() const { return StartSymbol; };
+  // Returns the SymbolID of the symbol '_'.
+  SymbolID underscore() const { return Underscore; };
 
   // Returns all rules of the given nonterminal symbol.
   llvm::ArrayRef<Rule> rulesFor(SymbolID SID) const;
@@ -127,6 +128,9 @@ public:
   // Gets symbol (terminal or nonterminal) name.
   // Terminals have names like "," (kw_comma) or "OPERATOR" (kw_operator).
   llvm::StringRef symbolName(SymbolID) const;
+
+  // Lookup the SymbolID of the nonterminal symbol by Name.
+  llvm::Optional<SymbolID> findNonterminal(llvm::StringRef Name) const;
 
   // Dumps the whole grammar.
   std::string dump() const;
@@ -139,8 +143,9 @@ public:
 
 private:
   std::unique_ptr<GrammarTable> T;
-  // The start symbol '_' of the augmented grammar.
-  SymbolID StartSymbol;
+  // The symbol ID of '_'. (In the LR literature, this is the start symbol of
+  // the augmented grammar.)
+  SymbolID Underscore;
 };
 // For each nonterminal X, computes the set of terminals that begin strings
 // derived from X. (Known as FIRST sets in grammar-based parsers).
