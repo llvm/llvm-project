@@ -135,8 +135,8 @@ define amdgpu_kernel void @madak_inline_imm_f32(float addrspace(1)* noalias %out
 ; GCN-DAG:      {{buffer|flat|global}}_load_dword{{(_addtid)?}} [[VA:v[0-9]+]]
 ; GCN-NOT:      v_madak_f32
 ; GFX6_8_9:     v_mac_f32_e32 [[VK]], [[SB]], [[VA]]
-; GFX10-MAD:    v_mad_f32 v{{[0-9]+}}, [[VA]], [[SB]], 0x41200000
-; GFX10-FMA:    v_fma_f32 v{{[0-9]+}}, [[VA]], [[SB]], 0x41200000
+; GFX10-MAD:    v_madak_f32 v{{[0-9]+}}, [[SB]], [[VA]], 0x41200000
+; GFX10-FMA:    v_fmaak_f32 v{{[0-9]+}}, [[SB]], [[VA]], 0x41200000
 ; GFX940-FMA:   v_fmac_f32_e32 v{{[0-9]+}}, [[SB]], [[VA]]
 define amdgpu_kernel void @s_v_madak_f32(float addrspace(1)* noalias %out, float addrspace(1)* noalias %in.a, float %b) #0 {
   %tid = tail call i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
