@@ -149,6 +149,12 @@ SymbolVendorMacOSX::CreateInstance(const lldb::ModuleSP &module_sp,
           ObjectFile::FindPlugin(module_sp, &dsym_fspec, 0,
                                  FileSystem::Instance().GetByteSize(dsym_fspec),
                                  dsym_file_data_sp, dsym_file_data_offset);
+      // Important to save the dSYM FileSpec so we don't call
+      // Symbols::LocateExecutableSymbolFile a second time while trying to
+      // add the symbol ObjectFile to this Module.
+      if (dsym_objfile_sp && !module_sp->GetSymbolFileFileSpec()) {
+        module_sp->SetSymbolFileFileSpec(dsym_fspec);
+      }
       if (UUIDsMatch(module_sp.get(), dsym_objfile_sp.get(), feedback_strm)) {
         // We need a XML parser if we hope to parse a plist...
         if (XMLDocument::XMLEnabled()) {
