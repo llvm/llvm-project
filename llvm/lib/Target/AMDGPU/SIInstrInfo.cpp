@@ -2900,18 +2900,15 @@ unsigned SIInstrInfo::getAddressSpaceForPseudoSourceKind(
   return AMDGPUAS::FLAT_ADDRESS;
 }
 
-static void removeModOperands(MachineInstr &MI) {
-  unsigned Opc = MI.getOpcode();
-  int Src0ModIdx = AMDGPU::getNamedOperandIdx(Opc,
-                                              AMDGPU::OpName::src0_modifiers);
-  int Src1ModIdx = AMDGPU::getNamedOperandIdx(Opc,
-                                              AMDGPU::OpName::src1_modifiers);
-  int Src2ModIdx = AMDGPU::getNamedOperandIdx(Opc,
-                                              AMDGPU::OpName::src2_modifiers);
+static constexpr unsigned ModifierOpNames[] = {
+    AMDGPU::OpName::src0_modifiers, AMDGPU::OpName::src1_modifiers,
+    AMDGPU::OpName::src2_modifiers, AMDGPU::OpName::clamp,
+    AMDGPU::OpName::omod};
 
-  MI.removeOperand(Src2ModIdx);
-  MI.removeOperand(Src1ModIdx);
-  MI.removeOperand(Src0ModIdx);
+void SIInstrInfo::removeModOperands(MachineInstr &MI) const {
+  unsigned Opc = MI.getOpcode();
+  for (unsigned Name : reverse(ModifierOpNames))
+    MI.removeOperand(AMDGPU::getNamedOperandIdx(Opc, Name));
 }
 
 bool SIInstrInfo::FoldImmediate(MachineInstr &UseMI, MachineInstr &DefMI,
@@ -3024,12 +3021,6 @@ bool SIInstrInfo::FoldImmediate(MachineInstr &UseMI, MachineInstr &DefMI,
       // FIXME: This would be a lot easier if we could return a new instruction
       // instead of having to modify in place.
 
-      // Remove these first since they are at the end.
-      UseMI.removeOperand(
-          AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::omod));
-      UseMI.removeOperand(
-          AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::clamp));
-
       Register Src1Reg = Src1->getReg();
       unsigned Src1SubReg = Src1->getSubReg();
       Src0->setReg(Src1Reg);
@@ -3106,12 +3097,6 @@ bool SIInstrInfo::FoldImmediate(MachineInstr &UseMI, MachineInstr &DefMI,
 
       // FIXME: This would be a lot easier if we could return a new instruction
       // instead of having to modify in place.
-
-      // Remove these first since they are at the end.
-      UseMI.removeOperand(
-          AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::omod));
-      UseMI.removeOperand(
-          AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::clamp));
 
       if (Opc == AMDGPU::V_MAC_F32_e64 ||
           Opc == AMDGPU::V_MAC_F16_e64 ||
@@ -3787,11 +3772,8 @@ bool SIInstrInfo::hasModifiersSet(const MachineInstr &MI,
 }
 
 bool SIInstrInfo::hasAnyModifiersSet(const MachineInstr &MI) const {
-  return hasModifiersSet(MI, AMDGPU::OpName::src0_modifiers) ||
-         hasModifiersSet(MI, AMDGPU::OpName::src1_modifiers) ||
-         hasModifiersSet(MI, AMDGPU::OpName::src2_modifiers) ||
-         hasModifiersSet(MI, AMDGPU::OpName::clamp) ||
-         hasModifiersSet(MI, AMDGPU::OpName::omod);
+  return any_of(ModifierOpNames,
+                [&](unsigned Name) { return hasModifiersSet(MI, Name); });
 }
 
 bool SIInstrInfo::canShrink(const MachineInstr &MI,

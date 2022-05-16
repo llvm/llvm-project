@@ -337,6 +337,8 @@ public:
 
   static bool isFoldableCopy(const MachineInstr &MI);
 
+  void removeModOperands(MachineInstr &MI) const;
+
   bool FoldImmediate(MachineInstr &UseMI, MachineInstr &DefMI, Register Reg,
                      MachineRegisterInfo *MRI) const final;
 
