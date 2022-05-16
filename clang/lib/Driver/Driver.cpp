@@ -4377,9 +4377,11 @@ Action *Driver::BuildOffloadingActions(Compilation &C,
       Mode && Mode->getOption().matches(options::OPT_offload_device_only);
 
   // Don't build offloading actions if explicitly disabled or we do not have a
-  // compile action to embed it in. If preprocessing only ignore embedding.
-  if (HostOnly || !(isa<CompileJobAction>(HostAction) ||
-                    getFinalPhase(Args) == phases::Preprocess))
+  // valid source input and compile action to embed it in. If preprocessing only
+  // ignore embedding.
+  if (HostOnly || !types::isSrcFile(Input.first) ||
+      !(isa<CompileJobAction>(HostAction) ||
+        getFinalPhase(Args) == phases::Preprocess))
     return HostAction;
 
   ActionList OffloadActions;
