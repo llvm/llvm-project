@@ -388,21 +388,15 @@ static bool PrintOption(const OptionDefinition &opt_def,
   return true;
 }
 
-void Options::GenerateOptionUsage(Stream &strm, CommandObject *cmd,
+void Options::GenerateOptionUsage(Stream &strm, CommandObject &cmd,
                                   uint32_t screen_width) {
-  const bool only_print_args = cmd->IsDashDashCommand();
+  const bool only_print_args = cmd.IsDashDashCommand();
 
   auto opt_defs = GetDefinitions();
   const uint32_t save_indent_level = strm.GetIndentLevel();
-  llvm::StringRef name;
-
+  llvm::StringRef name = cmd.GetCommandName();
   StreamString arguments_str;
-
-  if (cmd) {
-    name = cmd->GetCommandName();
-    cmd->GetFormattedCommandArguments(arguments_str);
-  } else
-    name = "";
+  cmd.GetFormattedCommandArguments(arguments_str);
 
   const uint32_t num_options = NumCommandOptions();
   if (num_options == 0)
@@ -432,8 +426,7 @@ void Options::GenerateOptionUsage(Stream &strm, CommandObject *cmd,
 
       // Different option sets may require different args.
       StreamString args_str;
-      if (cmd)
-        cmd->GetFormattedCommandArguments(args_str, opt_set_mask);
+      cmd.GetFormattedCommandArguments(args_str, opt_set_mask);
 
       // First go through and print all options that take no arguments as a
       // single string. If a command has "-a" "-b" and "-c", this will show up
@@ -482,7 +475,7 @@ void Options::GenerateOptionUsage(Stream &strm, CommandObject *cmd,
       }
 
       if (args_str.GetSize() > 0) {
-        if (cmd->WantsRawCommandString() && !only_print_args)
+        if (cmd.WantsRawCommandString() && !only_print_args)
           strm.Printf(" --");
 
         strm << " " << args_str.GetString();
@@ -492,7 +485,7 @@ void Options::GenerateOptionUsage(Stream &strm, CommandObject *cmd,
     }
   }
 
-  if (cmd && (only_print_args || cmd->WantsRawCommandString()) &&
+  if ((only_print_args || cmd.WantsRawCommandString()) &&
       arguments_str.GetSize() > 0) {
     if (!only_print_args)
       strm.PutChar('\n');

@@ -15008,33 +15008,34 @@ static SDValue tryCombineFixedPointConvert(SDNode *N,
 
   // Check the operand and see if it originates from a lane extract.
   SDValue Op1 = N->getOperand(1);
-  if (Op1.getOpcode() == ISD::EXTRACT_VECTOR_ELT) {
-    // Yep, no additional predication needed. Perform the transform.
-    SDValue IID = N->getOperand(0);
-    SDValue Shift = N->getOperand(2);
-    SDValue Vec = Op1.getOperand(0);
-    SDValue Lane = Op1.getOperand(1);
-    EVT ResTy = N->getValueType(0);
-    EVT VecResTy;
-    SDLoc DL(N);
+  if (Op1.getOpcode() != ISD::EXTRACT_VECTOR_ELT)
+    return SDValue();
 
-    // The vector width should be 128 bits by the time we get here, even
-    // if it started as 64 bits (the extract_vector handling will have
-    // done so).
-    assert(Vec.getValueSizeInBits() == 128 &&
-           "unexpected vector size on extract_vector_elt!");
-    if (Vec.getValueType() == MVT::v4i32)
-      VecResTy = MVT::v4f32;
-    else if (Vec.getValueType() == MVT::v2i64)
-      VecResTy = MVT::v2f64;
-    else
-      llvm_unreachable("unexpected vector type!");
+  // Yep, no additional predication needed. Perform the transform.
+  SDValue IID = N->getOperand(0);
+  SDValue Shift = N->getOperand(2);
+  SDValue Vec = Op1.getOperand(0);
+  SDValue Lane = Op1.getOperand(1);
+  EVT ResTy = N->getValueType(0);
+  EVT VecResTy;
+  SDLoc DL(N);
 
-    SDValue Convert =
-        DAG.getNode(ISD::INTRINSIC_WO_CHAIN, DL, VecResTy, IID, Vec, Shift);
-    return DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, ResTy, Convert, Lane);
-  }
-  return SDValue();
+  // The vector width should be 128 bits by the time we get here, even
+  // if it started as 64 bits (the extract_vector handling will have
+  // done so). Bail if it is not.
+  if (Vec.getValueSizeInBits() != 128)
+    return SDValue();
+
+  if (Vec.getValueType() == MVT::v4i32)
+    VecResTy = MVT::v4f32;
+  else if (Vec.getValueType() == MVT::v2i64)
+    VecResTy = MVT::v2f64;
+  else
+    llvm_unreachable("unexpected vector type!");
+
+  SDValue Convert =
+      DAG.getNode(ISD::INTRINSIC_WO_CHAIN, DL, VecResTy, IID, Vec, Shift);
+  return DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, ResTy, Convert, Lane);
 }
 
 // AArch64 high-vector "long" operations are formed by performing the non-high
