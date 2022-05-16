@@ -2151,11 +2151,11 @@ Instruction *InstCombinerImpl::visitSub(BinaryOperator &I) {
     // B = ashr i32 A, 31 ; smear the sign bit
     // sub (xor A, B), B  ; flip bits if negative and subtract -1 (add 1)
     // --> (A < 0) ? -A : A
-    Value *Cmp = Builder.CreateICmpSLT(A, ConstantInt::getNullValue(Ty));
+    Value *IsNeg = Builder.CreateIsNeg(A);
     // Copy the nuw/nsw flags from the sub to the negate.
-    Value *Neg = Builder.CreateNeg(A, "", I.hasNoUnsignedWrap(),
-                                   I.hasNoSignedWrap());
-    return SelectInst::Create(Cmp, Neg, A);
+    Value *NegA = Builder.CreateNeg(A, "", I.hasNoUnsignedWrap(),
+                                    I.hasNoSignedWrap());
+    return SelectInst::Create(IsNeg, NegA, A);
   }
 
   // If we are subtracting a low-bit masked subset of some value from an add

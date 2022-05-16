@@ -2398,7 +2398,7 @@ Value *LibCallSimplifier::optimizeAbs(CallInst *CI, IRBuilderBase &B) {
   // abs(x) -> x <s 0 ? -x : x
   // The negation has 'nsw' because abs of INT_MIN is undefined.
   Value *X = CI->getArgOperand(0);
-  Value *IsNeg = B.CreateICmpSLT(X, Constant::getNullValue(X->getType()));
+  Value *IsNeg = B.CreateIsNeg(X);
   Value *NegX = B.CreateNSWNeg(X, "neg");
   return B.CreateSelect(IsNeg, NegX, X);
 }

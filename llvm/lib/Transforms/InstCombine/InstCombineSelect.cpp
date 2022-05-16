@@ -1619,8 +1619,7 @@ Instruction *InstCombinerImpl::foldSelectInstWithICmp(SelectInst &SI,
       ICI->hasOneUse()) {
     InstCombiner::BuilderTy::InsertPointGuard Guard(Builder);
     Builder.SetInsertPoint(&SI);
-    Value *IsNeg = Builder.CreateICmpSLT(
-        CmpLHS, ConstantInt::getNullValue(CmpLHS->getType()), ICI->getName());
+    Value *IsNeg = Builder.CreateIsNeg(CmpLHS, ICI->getName());
     replaceOperand(SI, 0, IsNeg);
     SI.swapValues();
     SI.swapProfMetadata();

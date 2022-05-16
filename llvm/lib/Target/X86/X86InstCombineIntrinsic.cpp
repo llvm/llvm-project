@@ -520,11 +520,10 @@ static Value *simplifyX86movmsk(const IntrinsicInst &II,
   // %int = bitcast <16 x i1> %cmp to i16
   // %res = zext i16 %int to i32
   unsigned NumElts = ArgTy->getNumElements();
-  Type *IntegerVecTy = VectorType::getInteger(ArgTy);
   Type *IntegerTy = Builder.getIntNTy(NumElts);
 
-  Value *Res = Builder.CreateBitCast(Arg, IntegerVecTy);
-  Res = Builder.CreateICmpSLT(Res, Constant::getNullValue(IntegerVecTy));
+  Value *Res = Builder.CreateBitCast(Arg, VectorType::getInteger(ArgTy));
+  Res = Builder.CreateIsNeg(Res);
   Res = Builder.CreateBitCast(Res, IntegerTy);
   Res = Builder.CreateZExtOrTrunc(Res, ResTy);
   return Res;
