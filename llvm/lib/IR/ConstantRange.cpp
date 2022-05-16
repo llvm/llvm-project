@@ -75,6 +75,24 @@ ConstantRange ConstantRange::fromKnownBits(const KnownBits &Known,
   return ConstantRange(Lower, Upper + 1);
 }
 
+KnownBits ConstantRange::toKnownBits() const {
+  // TODO: We could return conflicting known bits here, but consumers are
+  // likely not prepared for that.
+  if (isEmptySet())
+    return KnownBits(getBitWidth());
+
+  // We can only retain the top bits that are the same between min and max.
+  APInt Min = getUnsignedMin();
+  APInt Max = getUnsignedMax();
+  KnownBits Known = KnownBits::makeConstant(Min);
+  if (Optional<unsigned> DifferentBit =
+          APIntOps::GetMostSignificantDifferentBit(Min, Max)) {
+    Known.Zero.clearLowBits(*DifferentBit + 1);
+    Known.One.clearLowBits(*DifferentBit + 1);
+  }
+  return Known;
+}
+
 ConstantRange ConstantRange::makeAllowedICmpRegion(CmpInst::Predicate Pred,
                                                    const ConstantRange &CR) {
   if (CR.isEmptySet())
