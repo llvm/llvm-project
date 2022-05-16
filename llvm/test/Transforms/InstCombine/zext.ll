@@ -449,3 +449,57 @@ define i32 @zext_or_masked_bit_test_uses(i32 %a, i32 %b, i32 %x) {
   %z = zext i1 %or to i32
   ret i32 %z
 }
+
+define i32 @notneg_zext_wider(i8 %x) {
+; CHECK-LABEL: @notneg_zext_wider(
+; CHECK-NEXT:    [[TMP1:%.*]] = xor i8 [[X:%.*]], -1
+; CHECK-NEXT:    [[TMP2:%.*]] = lshr i8 [[TMP1]], 7
+; CHECK-NEXT:    [[DOTNOT:%.*]] = zext i8 [[TMP2]] to i32
+; CHECK-NEXT:    ret i32 [[DOTNOT]]
+;
+  %cmp = icmp sgt i8 %x, -1
+  %r = zext i1 %cmp to i32
+  ret i32 %r
+}
+
+define <2 x i8> @notneg_zext_narrower(<2 x i32> %x) {
+; CHECK-LABEL: @notneg_zext_narrower(
+; CHECK-NEXT:    [[X_LOBIT:%.*]] = lshr <2 x i32> [[X:%.*]], <i32 31, i32 31>
+; CHECK-NEXT:    [[TMP1:%.*]] = trunc <2 x i32> [[X_LOBIT]] to <2 x i8>
+; CHECK-NEXT:    [[DOTNOT:%.*]] = xor <2 x i8> [[TMP1]], <i8 1, i8 1>
+; CHECK-NEXT:    ret <2 x i8> [[DOTNOT]]
+;
+  %cmp = icmp sgt <2 x i32> %x, <i32 -1, i32 -1>
+  %r = zext <2 x i1> %cmp to <2 x i8>
+  ret <2 x i8> %r
+}
+
+define i32 @notneg_zext_wider_use(i8 %x) {
+; CHECK-LABEL: @notneg_zext_wider_use(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i8 [[X:%.*]], -1
+; CHECK-NEXT:    call void @use1(i1 [[CMP]])
+; CHECK-NEXT:    [[TMP1:%.*]] = xor i8 [[X]], -1
+; CHECK-NEXT:    [[TMP2:%.*]] = lshr i8 [[TMP1]], 7
+; CHECK-NEXT:    [[DOTNOT:%.*]] = zext i8 [[TMP2]] to i32
+; CHECK-NEXT:    ret i32 [[DOTNOT]]
+;
+  %cmp = icmp sgt i8 %x, -1
+  call void @use1(i1 %cmp)
+  %r = zext i1 %cmp to i32
+  ret i32 %r
+}
+
+define i8 @notneg_zext_narrower_use(i32 %x) {
+; CHECK-LABEL: @notneg_zext_narrower_use(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i32 [[X:%.*]], -1
+; CHECK-NEXT:    call void @use1(i1 [[CMP]])
+; CHECK-NEXT:    [[X_LOBIT:%.*]] = lshr i32 [[X]], 31
+; CHECK-NEXT:    [[TMP1:%.*]] = trunc i32 [[X_LOBIT]] to i8
+; CHECK-NEXT:    [[DOTNOT:%.*]] = xor i8 [[TMP1]], 1
+; CHECK-NEXT:    ret i8 [[DOTNOT]]
+;
+  %cmp = icmp sgt i32 %x, -1
+  call void @use1(i1 %cmp)
+  %r = zext i1 %cmp to i8
+  ret i8 %r
+}
