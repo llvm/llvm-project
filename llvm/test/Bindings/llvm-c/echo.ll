@@ -1,6 +1,10 @@
 ; RUN: llvm-as < %s | llvm-dis > %t.orig
 ; RUN: llvm-as < %s | llvm-c-test --echo > %t.echo
 ; RUN: diff -w %t.orig %t.echo
+;
+; RUN: llvm-as -opaque-pointers < %s | llvm-dis -opaque-pointers > %t.orig_opaque
+; RUN: llvm-as -opaque-pointers < %s | llvm-c-test --echo --opaque-pointers > %t.echo_opaque
+; RUN: diff -w %t.orig_opaque %t.echo_opaque
 
 source_filename = "/test/Bindings/echo.ll"
 target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"
@@ -237,10 +241,9 @@ declare void @llvm.lifetime.end.p0i8(i64, i8*)
 define void @test_intrinsics() {
 entry:
   %sp = call i8* @llvm.stacksave()
-  %x = alloca i32, align 4
-  %0 = bitcast i32* %x to i8*
-  call void @llvm.lifetime.start.p0i8(i64 4, i8* %0)
-  call void @llvm.lifetime.end.p0i8(i64 4, i8* %0)
+  %0 = alloca i8, align 1
+  call void @llvm.lifetime.start.p0i8(i64 1, i8* %0)
+  call void @llvm.lifetime.end.p0i8(i64 1, i8* %0)
   call void @llvm.stackrestore(i8* %sp)
   ret void
 }

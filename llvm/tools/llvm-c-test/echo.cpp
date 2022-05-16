@@ -138,10 +138,11 @@ struct TypeCloner {
           LLVMGetArrayLength(Src)
         );
       case LLVMPointerTypeKind:
-        return LLVMPointerType(
-          Clone(LLVMGetElementType(Src)),
-          LLVMGetPointerAddressSpace(Src)
-        );
+        if (LLVMPointerTypeIsOpaque(Src))
+          return LLVMPointerTypeInContext(Ctx, LLVMGetPointerAddressSpace(Src));
+        else
+          return LLVMPointerType(Clone(LLVMGetElementType(Src)),
+                                 LLVMGetPointerAddressSpace(Src));
       case LLVMVectorTypeKind:
         return LLVMVectorType(
           Clone(LLVMGetElementType(Src)),
@@ -997,7 +998,7 @@ static void declare_symbols(LLVMModuleRef Src, LLVMModuleRef M) {
     const char *Name = LLVMGetValueName2(Cur, &NameLen);
     if (LLVMGetNamedGlobal(M, Name))
       report_fatal_error("GlobalVariable already cloned");
-    LLVMAddGlobal(M, LLVMGetElementType(TypeCloner(M).Clone(Cur)), Name);
+    LLVMAddGlobal(M, TypeCloner(M).Clone(LLVMGlobalGetValueType(Cur)), Name);
 
     Next = LLVMGetNextGlobal(Cur);
     if (Next == nullptr) {
@@ -1029,7 +1030,8 @@ FunDecl:
     const char *Name = LLVMGetValueName2(Cur, &NameLen);
     if (LLVMGetNamedFunction(M, Name))
       report_fatal_error("Function already cloned");
-    auto Ty = LLVMGetElementType(TypeCloner(M).Clone(Cur));
+    LLVMTypeRef Ty = TypeCloner(M).Clone(LLVMGlobalGetValueType(Cur));
+
     auto F = LLVMAddFunction(M, Name, Ty);
 
     // Copy attributes
@@ -1390,7 +1392,7 @@ NamedMDClone:
   }
 }
 
-int llvm_echo(void) {
+int llvm_echo(bool OpaquePointers) {
   LLVMEnablePrettyStackTrace();
 
   LLVMModuleRef Src = llvm_load_module(false, true);
@@ -1399,6 +1401,8 @@ int llvm_echo(void) {
   size_t ModuleIdentLen;
   const char *ModuleName = LLVMGetModuleIdentifier(Src, &ModuleIdentLen);
   LLVMContextRef Ctx = LLVMContextCreate();
+  if (OpaquePointers)
+    LLVMContextSetOpaquePointers(Ctx, true);
   LLVMModuleRef M = LLVMModuleCreateWithNameInContext(ModuleName, Ctx);
 
   LLVMSetSourceFileName(M, SourceFileName, SourceFileLen);

@@ -115,6 +115,10 @@ void LLVMContextSetDiscardValueNames(LLVMContextRef C, LLVMBool Discard) {
   unwrap(C)->setDiscardValueNames(Discard);
 }
 
+void LLVMContextSetOpaquePointers(LLVMContextRef C, LLVMBool OpaquePointers) {
+  unwrap(C)->setOpaquePointers(OpaquePointers);
+}
+
 void LLVMContextDispose(LLVMContextRef C) {
   delete unwrap(C);
 }
@@ -788,6 +792,10 @@ LLVMTypeRef LLVMPointerType(LLVMTypeRef ElementType, unsigned AddressSpace) {
   return wrap(PointerType::get(unwrap(ElementType), AddressSpace));
 }
 
+LLVMBool LLVMPointerTypeIsOpaque(LLVMTypeRef Ty) {
+  return unwrap(Ty)->isOpaquePointerTy();
+}
+
 LLVMTypeRef LLVMVectorType(LLVMTypeRef ElementType, unsigned ElementCount) {
   return wrap(FixedVectorType::get(unwrap(ElementType), ElementCount));
 }
@@ -823,6 +831,10 @@ unsigned LLVMGetVectorSize(LLVMTypeRef VectorTy) {
 }
 
 /*--.. Operations on other types ...........................................--*/
+
+LLVMTypeRef LLVMPointerTypeInContext(LLVMContextRef C, unsigned AddressSpace) {
+  return wrap(PointerType::get(*unwrap(C), AddressSpace));
+}
 
 LLVMTypeRef LLVMVoidTypeInContext(LLVMContextRef C)  {
   return wrap(Type::getVoidTy(*unwrap(C)));
