@@ -30,7 +30,7 @@ using namespace mlir::linalg;
 bool linalg::detail::canOpOperandsBeDroppedImpl(
     linalg::LinalgOp linalgOp, ArrayRef<OpOperand *> droppedOperands) {
   SmallVector<AffineMap> indexingMaps;
-  for (auto opOperand : linalgOp.getInputAndOutputOperands()) {
+  for (auto *opOperand : linalgOp.getInputAndOutputOperands()) {
     if (llvm::is_contained(droppedOperands, opOperand))
       continue;
     indexingMaps.push_back(linalgOp.getTiedIndexingMap(opOperand));
