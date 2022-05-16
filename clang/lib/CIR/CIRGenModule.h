@@ -15,6 +15,7 @@
 
 #include "CIRGenTypes.h"
 #include "CIRGenValue.h"
+#include "UnimplementedFeatureGuarding.h"
 
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/StmtVisitor.h"

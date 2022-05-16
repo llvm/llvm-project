@@ -25,6 +25,15 @@ struct UnimplementedFeature {
   // This is for whether or not we've implemented a cir::VectorType
   // corresponding to `llvm::VectorType`
   static bool cirVectorType() { return false; }
+
+  // CIR still unware of address space
+  static bool addressSpace() { return false; }
+
+  // Unhandled global information.
+  static bool unnamedAddr() { return false; }
+  static bool isWeakForLinker() { return false; }
+  static bool setDSOLocal() { return false; }
+  static bool threadLocal() { return false; }
 };
 } // namespace cir
 
