@@ -120,5 +120,16 @@ llvm::ArrayRef<LRTable::Action> LRTable::find(StateID Src, SymbolID ID) const {
                             /*length=*/End - Start);
 }
 
+LRTable::StateID LRTable::getStartState(SymbolID Target) const {
+  assert(llvm::is_sorted(StartStates) && "StartStates must be sorted!");
+  auto It = llvm::partition_point(
+      StartStates, [Target](const std::pair<SymbolID, StateID> &X) {
+        return X.first < Target;
+      });
+  assert(It != StartStates.end() && It->first == Target &&
+         "target symbol doesn't have a start state!");
+  return It->second;
+}
+
 } // namespace pseudo
 } // namespace clang

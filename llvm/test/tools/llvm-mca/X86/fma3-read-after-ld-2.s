@@ -47,7 +47,7 @@ vfmadd213ps (%rdi), %xmm1, %xmm2
 # ZNVER1:       Dispatch Width:    4
 # ZNVER1-NEXT:  uOps Per Cycle:    0.13
 # ZNVER1-NEXT:  IPC:               0.13
-# ZNVER1-NEXT:  Block RThroughput: 1.0
+# ZNVER1-NEXT:  Block RThroughput: 0.5
 
 # ALL:          Timeline view:
 
