@@ -2,34 +2,27 @@
 cmake_minimum_required(VERSION 3.13.4)
 project(Runtimes C CXX ASM)
 
-set(LLVM_ALL_RUNTIMES "compiler-rt;libc;libcxx;libcxxabi;libunwind;openmp")
+# Add path for custom and the LLVM build's modules to the CMake module path.
+set(LLVM_COMMON_CMAKE_UTILS "${CMAKE_CURRENT_SOURCE_DIR}/../cmake")
+list(INSERT CMAKE_MODULE_PATH 0
+  "${CMAKE_CURRENT_SOURCE_DIR}/cmake"
+  "${CMAKE_CURRENT_SOURCE_DIR}/cmake/modules"
+  "${LLVM_COMMON_CMAKE_UTILS}"
+  "${LLVM_COMMON_CMAKE_UTILS}/Modules"
+  "${CMAKE_CURRENT_SOURCE_DIR}/../llvm/cmake"
+  "${CMAKE_CURRENT_SOURCE_DIR}/../llvm/cmake/modules"
+)
+
+# We order libraries to mirror roughly how they are layered, except that compiler-rt can depend
+# on libc++, so we put it after.
+set(LLVM_ALL_RUNTIMES "libc;libunwind;libcxxabi;libcxx;compiler-rt;openmp")
 set(LLVM_ENABLE_RUNTIMES "" CACHE STRING
   "Semicolon-separated list of runtimes to build (${LLVM_ALL_RUNTIMES}), or \"all\".")
 if(LLVM_ENABLE_RUNTIMES STREQUAL "all" )
   set(LLVM_ENABLE_RUNTIMES ${LLVM_ALL_RUNTIMES})
 endif()
-
-# Some of the runtimes will conditionally use the compiler-rt sanitizers.
-# To make this work smoothly, we ensure that compiler-rt is added first in
-# the list of sub-projects. This allows other sub-projects to have checks
-# like `if(TARGET asan)` to enable building with asan.
-if (compiler-rt IN_LIST LLVM_ENABLE_RUNTIMES)
-  list(REMOVE_ITEM LLVM_ENABLE_RUNTIMES compiler-rt)
-  if(NOT DEFINED LLVM_BUILD_COMPILER_RT OR LLVM_BUILD_COMPILER_RT)
-    list(PREPEND LLVM_ENABLE_RUNTIMES compiler-rt)
-  endif()
-endif()
-
-# If both libc++ and libc++abi are being built, always configure libc++abi before libc++.
-# This allows libc++ to depend on targets set up by libc++abi when it needs to.
-if (libcxx IN_LIST LLVM_ENABLE_RUNTIMES AND libcxxabi IN_LIST LLVM_ENABLE_RUNTIMES)
-  list(FIND LLVM_ENABLE_RUNTIMES libcxx _libcxx_index)
-  list(FIND LLVM_ENABLE_RUNTIMES libcxxabi _libcxxabi_index)
-  if (_libcxx_index LESS _libcxxabi_index)
-    list(TRANSFORM LLVM_ENABLE_RUNTIMES REPLACE "^libcxx$" "libcxxabi" AT ${_libcxx_index})
-    list(TRANSFORM LLVM_ENABLE_RUNTIMES REPLACE "^libcxxabi$" "libcxx" AT ${_libcxxabi_index})
-  endif()
-endif()
+include(SortSubset)
+sort_subset("${LLVM_ALL_RUNTIMES}" "${LLVM_ENABLE_RUNTIMES}" LLVM_ENABLE_RUNTIMES)
 
 foreach(proj ${LLVM_ENABLE_RUNTIMES})
   set(proj_dir "${CMAKE_CURRENT_SOURCE_DIR}/../${proj}")
@@ -49,18 +42,6 @@ endfunction()
 
 find_package(LLVM PATHS "${LLVM_BINARY_DIR}" NO_DEFAULT_PATH NO_CMAKE_FIND_ROOT_PATH)
 find_package(Clang PATHS "${LLVM_BINARY_DIR}" NO_DEFAULT_PATH NO_CMAKE_FIND_ROOT_PATH)
-
-set(LLVM_COMMON_CMAKE_UTILS "${CMAKE_CURRENT_SOURCE_DIR}/../cmake")
-
-# Add path for custom and the LLVM build's modules to the CMake module path.
-list(INSERT CMAKE_MODULE_PATH 0
-  "${CMAKE_CURRENT_SOURCE_DIR}/cmake"
-  "${CMAKE_CURRENT_SOURCE_DIR}/cmake/modules"
-  "${LLVM_COMMON_CMAKE_UTILS}"
-  "${LLVM_COMMON_CMAKE_UTILS}/Modules"
-  "${CMAKE_CURRENT_SOURCE_DIR}/../llvm/cmake"
-  "${CMAKE_CURRENT_SOURCE_DIR}/../llvm/cmake/modules"
-)
 
 set(LLVM_THIRD_PARTY_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../third-party")
 
