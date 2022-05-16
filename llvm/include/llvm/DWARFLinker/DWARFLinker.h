@@ -63,28 +63,21 @@ class AddressesMap {
 public:
   virtual ~AddressesMap();
 
-  /// Returns true if represented addresses are from linked file.
-  /// Returns false if represented addresses are from not-linked
-  /// object file.
-  virtual bool areRelocationsResolved() const = 0;
-
   /// Checks that there are valid relocations against a .debug_info
   /// section.
   virtual bool hasValidRelocs() = 0;
 
-  /// Checks that the specified DIE has a DW_AT_Location attribute
-  /// that references into a live code section.
-  ///
+  /// Checks that the specified variable \p DIE references live code section.
+  /// Allowed kind of input die: DW_TAG_variable, DW_TAG_constant.
   /// \returns true and sets Info.InDebugMap if it is the case.
-  virtual bool hasLiveMemoryLocation(const DWARFDie &DIE,
-                                     CompileUnit::DIEInfo &Info) = 0;
+  virtual bool isLiveVariable(const DWARFDie &DIE,
+                              CompileUnit::DIEInfo &Info) = 0;
 
-  /// Checks that the specified DIE has a DW_AT_Low_pc attribute
-  /// that references into a live code section.
-  ///
+  /// Checks that the specified subprogram \p DIE references live code section.
+  /// Allowed kind of input die: DW_TAG_subprogram, DW_TAG_label.
   /// \returns true and sets Info.InDebugMap if it is the case.
-  virtual bool hasLiveAddressRange(const DWARFDie &DIE,
-                                   CompileUnit::DIEInfo &Info) = 0;
+  virtual bool isLiveSubprogram(const DWARFDie &DIE,
+                                CompileUnit::DIEInfo &Info) = 0;
 
   /// Apply the valid relocations to the buffer \p Data, taking into
   /// account that Data is at \p BaseOffset in the .debug_info section.
