@@ -24,13 +24,7 @@ Rule::Rule(SymbolID Target, llvm::ArrayRef<SymbolID> Sequence)
 }
 
 Grammar::Grammar(std::unique_ptr<GrammarTable> Table) : T(std::move(Table)) {
-  // start symbol is named _, binary search it.
-  auto It = llvm::partition_point(
-      T->Nonterminals,
-      [](const GrammarTable::Nonterminal &X) { return X.Name < "_"; });
-  assert(It != T->Nonterminals.end() && It->Name == "_" &&
-         "symbol _ must exist in the grammar!");
-  StartSymbol = It - T->Nonterminals.begin();
+  Underscore = *findNonterminal("_");
 }
 
 llvm::ArrayRef<Rule> Grammar::rulesFor(SymbolID SID) const {
@@ -49,6 +43,15 @@ llvm::StringRef Grammar::symbolName(SymbolID SID) const {
   if (isToken(SID))
     return T->Terminals[symbolToToken(SID)];
   return T->Nonterminals[SID].Name;
+}
+
+llvm::Optional<SymbolID> Grammar::findNonterminal(llvm::StringRef Name) const {
+  auto It = llvm::partition_point(
+      T->Nonterminals,
+      [&](const GrammarTable::Nonterminal &X) { return X.Name < Name; });
+  if (It != T->Nonterminals.end() && It->Name == Name)
+    return It - T->Nonterminals.begin();
+  return llvm::None;
 }
 
 std::string Grammar::dumpRule(RuleID RID) const {
@@ -132,8 +135,9 @@ std::vector<llvm::DenseSet<SymbolID>> followSets(const Grammar &G) {
   // is completed at a fixed point where there is no more new symbols can be
   // added to any of the follow sets.
   //
-  // Rule 1: add endmarker to the FOLLOW(S), where S is the start symbol.
-  FollowSets[G.startSymbol()].insert(tokenSymbol(tok::eof));
+  // Rule 1: add endmarker to the FOLLOW(S), where S is the start symbol of the
+  // augmented grammar, in our case it is '_'.
+  FollowSets[G.underscore()].insert(tokenSymbol(tok::eof));
   bool Changed = true;
   while (Changed) {
     Changed = false;

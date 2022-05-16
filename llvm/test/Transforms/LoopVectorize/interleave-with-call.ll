@@ -12,7 +12,7 @@
 ; CHECK-NEXT:   vector.body:
 ; CHECK-NEXT:     EMIT vp<[[CAN_IV:%.+]]> = CANONICAL-INDUCTION
 ; CHECK-NEXT:     vp<[[IV_STEPS:%.]]>    = SCALAR-STEPS vp<[[CAN_IV]]>, ir<%start>, ir<1>
-; CHECK-NEXT:     CLONE ir<%min> = call vp<[[IV_STEPS]]>, ir<65535>, ir<@llvm.smin.i32>
+; CHECK-NEXT:     CLONE ir<%min> = call @llvm.smin.i32(vp<[[IV_STEPS]]>, ir<65535>)
 ; CHECK-NEXT:     CLONE ir<%arrayidx> = getelementptr ir<%dst>, vp<[[IV_STEPS]]>
 ; CHECK-NEXT:     CLONE store ir<%min>, ir<%arrayidx>
 ; CHECK-NEXT:     EMIT vp<[[INC:%.+]]> = VF * UF +(nuw)  vp<[[CAN_IV]]>
