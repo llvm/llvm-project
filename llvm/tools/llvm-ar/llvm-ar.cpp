@@ -1139,7 +1139,7 @@ static void runMRIScript() {
   // Nothing to do if not saved.
   if (Saved)
     performOperation(ReplaceOrInsert, /*OldArchive=*/nullptr,
-                     /*OldArchiveBuf=*/ nullptr, &NewMembers);
+                     /*OldArchiveBuf=*/nullptr, &NewMembers);
   exit(0);
 }
 
