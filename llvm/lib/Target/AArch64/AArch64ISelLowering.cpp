@@ -4703,7 +4703,6 @@ SDValue AArch64TargetLowering::LowerMGATHER(SDValue Op,
     Scale = DAG.getTargetConstant(1, DL, Scale.getValueType());
 
     SDValue Ops[] = {Chain, PassThru, Mask, BasePtr, Index, Scale};
-    IndexType = getUnscaledIndexType(IndexType);
     return DAG.getMaskedGather(MGT->getVTList(), MemVT, DL, Ops,
                                MGT->getMemOperand(), IndexType, ExtType);
   }
@@ -4802,7 +4801,6 @@ SDValue AArch64TargetLowering::LowerMSCATTER(SDValue Op,
     Scale = DAG.getTargetConstant(1, DL, Scale.getValueType());
 
     SDValue Ops[] = {Chain, StoreVal, Mask, BasePtr, Index, Scale};
-    IndexType = getUnscaledIndexType(IndexType);
     return DAG.getMaskedScatter(MSC->getVTList(), MemVT, DL, Ops,
                                 MSC->getMemOperand(), IndexType,
                                 MSC->isTruncatingStore());
