@@ -70,6 +70,11 @@
 // CHECK-NVIDIA-AMDGPU: "x86_64-unknown-linux-gnu" - "clang", inputs: ["[[HOST_BC]]", "[[BINARY]]"], output: "[[HOST_OBJ:.+]]"
 // CHECK-NVIDIA-AMDGPU: "x86_64-unknown-linux-gnu" - "Offload::Linker", inputs: ["[[HOST_OBJ]]"], output: "a.out"
 
+// RUN:   %clang -x ir -### --target=x86_64-unknown-linux-gnu -ccc-print-bindings -fopenmp --offload-arch=sm_52 -nogpulib %s 2>&1 | FileCheck %s --check-prefix=CHECK-IR
+
+// CHECK-IR: "x86_64-unknown-linux-gnu" - "clang", inputs: ["[[INPUT_IR:.+]]"], output: "[[OBJECT:.+]]"
+// CHECK-IR: "x86_64-unknown-linux-gnu" - "Offload::Linker", inputs: ["[[OBJECT]]"], output: "a.out"
+
 // RUN:   %clang -### --target=x86_64-unknown-linux-gnu -emit-llvm -S -fopenmp -fopenmp-targets=nvptx64-nvidia-cuda -Xopenmp-target=nvptx64-nvidia-cuda -march=sm_52 -nogpulib %s 2>&1 | FileCheck %s --check-prefix=CHECK-EMIT-LLVM-IR
 // CHECK-EMIT-LLVM-IR: "-cc1"{{.*}}"-triple" "nvptx64-nvidia-cuda"{{.*}}"-emit-llvm"
 
