@@ -74,8 +74,8 @@ struct CountOpLowering : public ConvertOpToLLVMPattern<MathOp> {
         [&](Type llvm1DVectorTy, ValueRange operands) {
           LLVM::ConstantOp zero =
               rewriter.create<LLVM::ConstantOp>(loc, boolType, boolZero);
-          return rewriter.replaceOpWithNewOp<LLVMOp>(op, llvm1DVectorTy,
-                                                     operands[0], zero);
+          return rewriter.create<LLVMOp>(loc, llvm1DVectorTy, operands[0],
+                                         zero);
         },
         rewriter);
   }
