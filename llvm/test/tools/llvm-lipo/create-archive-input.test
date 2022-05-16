@@ -4,7 +4,7 @@
 # RUN: llvm-as %p/Inputs/armv7-ios.ll -o %t-ir-armv7.o
 # RUN: llvm-as %p/Inputs/x64-osx.ll -o %t-ir-x86_64.o
 
-# RUN: llvm-ar cr --format=gnu %t.empty.a
+# RUN: llvm-ar cr %t.empty.a
 # RUN: not llvm-lipo %t.empty.a -create -output /dev/null 2>&1 | FileCheck --check-prefix=EMPTY-ARCHIVE %s
 
 # RUN: llvm-ar cr %t.different_architectures.a %t-i386.o %t-x86_64.o
