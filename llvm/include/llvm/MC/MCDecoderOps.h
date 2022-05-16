@@ -1,14 +1,14 @@
-//===-- llvm/MC/MCFixedLenDisassembler.h - Decoder driver -------*- C++ -*-===//
+//===------------ llvm/MC/MCDecoderOps.h - Decoder driver -------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-// Fixed length disassembler decoder state machine driver.
+// Disassembler decoder state machine driver.
 //===----------------------------------------------------------------------===//
-#ifndef LLVM_MC_MCFIXEDLENDISASSEMBLER_H
-#define LLVM_MC_MCFIXEDLENDISASSEMBLER_H
+#ifndef LLVM_MC_MCDECODEROPS_H
+#define LLVM_MC_MCDECODEROPS_H
 
 namespace llvm {
 

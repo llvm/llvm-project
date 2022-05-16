@@ -187,10 +187,17 @@ LRGraph LRGraph::buildLR0(const Grammar &G) {
       return States[ID];
     }
 
+    void addStartState(SymbolID Sym, StateID State) {
+      StartStates.push_back({Sym, State});
+    }
+
     LRGraph build() && {
       States.shrink_to_fit();
       Edges.shrink_to_fit();
-      return LRGraph(std::move(States), std::move(Edges));
+      llvm::sort(StartStates);
+      StartStates.shrink_to_fit();
+      return LRGraph(std::move(States), std::move(Edges),
+                     std::move(StartStates));
     }
 
   private:
@@ -199,16 +206,22 @@ LRGraph LRGraph::buildLR0(const Grammar &G) {
     std::vector<State> States;
     std::vector<Edge> Edges;
     const Grammar &G;
+    std::vector<std::pair<SymbolID, StateID>> StartStates;
   } Builder(G);
 
   std::vector<StateID> PendingStates;
   // Initialize states with the start symbol.
-  auto RRange = G.table().Nonterminals[G.startSymbol()].RuleRange;
+  auto RRange = G.table().Nonterminals[G.underscore()].RuleRange;
   for (RuleID RID = RRange.Start; RID < RRange.End; ++RID) {
     auto StartState = std::vector<Item>{Item::start(RID, G)};
     auto Result = Builder.insert(std::move(StartState));
     assert(Result.second && "State must be new");
     PendingStates.push_back(Result.first);
+
+    const Rule &StartRule = G.lookupRule(RID);
+    assert(StartRule.Size == 1 &&
+           "Start rule must have exactly one symbol in its body!");
+    Builder.addStartState(StartRule.seq().front(), Result.first);
   }
 
   while (!PendingStates.empty()) {

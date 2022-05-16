@@ -1701,11 +1701,10 @@ ScalarEvolution::getZeroExtendExpr(const SCEV *Op, Type *Ty, unsigned Depth) {
             // Cache knowledge of AR NUW, which is propagated to this AddRec.
             setNoWrapFlags(const_cast<SCEVAddRecExpr *>(AR), SCEV::FlagNUW);
             // Return the expression with the addrec on the outside.
-            return getAddRecExpr(
-                getExtendAddRecStart<SCEVZeroExtendExpr>(AR, Ty, this,
-                                                         Depth + 1),
-                getZeroExtendExpr(Step, Ty, Depth + 1), L,
-                AR->getNoWrapFlags());
+            return getAddRecExpr(getExtendAddRecStart<SCEVZeroExtendExpr>(
+                                     AR, Ty, this, Depth + 1),
+                                 getZeroExtendExpr(Step, Ty, Depth + 1), L,
+                                 AR->getNoWrapFlags());
           }
           // Similar to above, only this time treat the step value as signed.
           // This covers loops that count down.
@@ -1720,11 +1719,10 @@ ScalarEvolution::getZeroExtendExpr(const SCEV *Op, Type *Ty, unsigned Depth) {
             // Negative step causes unsigned wrap, but it still can't self-wrap.
             setNoWrapFlags(const_cast<SCEVAddRecExpr *>(AR), SCEV::FlagNW);
             // Return the expression with the addrec on the outside.
-            return getAddRecExpr(
-                getExtendAddRecStart<SCEVZeroExtendExpr>(AR, Ty, this,
-                                                         Depth + 1),
-                getSignExtendExpr(Step, Ty, Depth + 1), L,
-                AR->getNoWrapFlags());
+            return getAddRecExpr(getExtendAddRecStart<SCEVZeroExtendExpr>(
+                                     AR, Ty, this, Depth + 1),
+                                 getSignExtendExpr(Step, Ty, Depth + 1), L,
+                                 AR->getNoWrapFlags());
           }
         }
       }
@@ -1747,10 +1745,8 @@ ScalarEvolution::getZeroExtendExpr(const SCEV *Op, Type *Ty, unsigned Depth) {
           // it's one of two issue possible causes for a change which was
           // reverted.  Be conservative for the moment.
           return getAddRecExpr(
-                getExtendAddRecStart<SCEVZeroExtendExpr>(AR, Ty, this,
-                                                         Depth + 1),
-                getZeroExtendExpr(Step, Ty, Depth + 1), L,
-                AR->getNoWrapFlags());
+              getExtendAddRecStart<SCEVZeroExtendExpr>(AR, Ty, this, Depth + 1),
+              getZeroExtendExpr(Step, Ty, Depth + 1), L, AR->getNoWrapFlags());
         }
         
         // For a negative step, we can extend the operands iff doing so only
@@ -1765,11 +1761,10 @@ ScalarEvolution::getZeroExtendExpr(const SCEV *Op, Type *Ty, unsigned Depth) {
             // still can't self-wrap.
             setNoWrapFlags(const_cast<SCEVAddRecExpr *>(AR), SCEV::FlagNW);
             // Return the expression with the addrec on the outside.
-            return getAddRecExpr(
-                getExtendAddRecStart<SCEVZeroExtendExpr>(AR, Ty, this,
-                                                         Depth + 1),
-                getSignExtendExpr(Step, Ty, Depth + 1), L,
-                AR->getNoWrapFlags());
+            return getAddRecExpr(getExtendAddRecStart<SCEVZeroExtendExpr>(
+                                     AR, Ty, this, Depth + 1),
+                                 getSignExtendExpr(Step, Ty, Depth + 1), L,
+                                 AR->getNoWrapFlags());
           }
         }
       }
@@ -2043,11 +2038,10 @@ ScalarEvolution::getSignExtendExpr(const SCEV *Op, Type *Ty, unsigned Depth) {
             // Cache knowledge of AR NSW, which is propagated to this AddRec.
             setNoWrapFlags(const_cast<SCEVAddRecExpr *>(AR), SCEV::FlagNSW);
             // Return the expression with the addrec on the outside.
-            return getAddRecExpr(
-                getExtendAddRecStart<SCEVSignExtendExpr>(AR, Ty, this,
-                                                         Depth + 1),
-                getSignExtendExpr(Step, Ty, Depth + 1), L,
-                AR->getNoWrapFlags());
+            return getAddRecExpr(getExtendAddRecStart<SCEVSignExtendExpr>(
+                                     AR, Ty, this, Depth + 1),
+                                 getSignExtendExpr(Step, Ty, Depth + 1), L,
+                                 AR->getNoWrapFlags());
           }
           // Similar to above, only this time treat the step value as unsigned.
           // This covers loops that count up with an unsigned step.
@@ -2069,11 +2063,10 @@ ScalarEvolution::getSignExtendExpr(const SCEV *Op, Type *Ty, unsigned Depth) {
             setNoWrapFlags(const_cast<SCEVAddRecExpr *>(AR), SCEV::FlagNW);
 
             // Return the expression with the addrec on the outside.
-            return getAddRecExpr(
-                getExtendAddRecStart<SCEVSignExtendExpr>(AR, Ty, this,
-                                                         Depth + 1),
-                getZeroExtendExpr(Step, Ty, Depth + 1), L,
-                AR->getNoWrapFlags());
+            return getAddRecExpr(getExtendAddRecStart<SCEVSignExtendExpr>(
+                                     AR, Ty, this, Depth + 1),
+                                 getZeroExtendExpr(Step, Ty, Depth + 1), L,
+                                 AR->getNoWrapFlags());
           }
         }
       }

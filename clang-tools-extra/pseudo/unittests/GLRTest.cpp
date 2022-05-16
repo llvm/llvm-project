@@ -344,7 +344,8 @@ TEST_F(GLRTest, PerfectForestNodeSharing) {
   const TokenStream &Tokens = cook(lex("{ abc", LOptions), LOptions);
   auto LRTable = LRTable::buildSLR(*G);
 
-  const ForestNode &Parsed = glrParse(Tokens, {*G, LRTable, Arena, GSStack});
+  const ForestNode &Parsed =
+      glrParse(Tokens, {*G, LRTable, Arena, GSStack}, id("test"));
   // Verify that there is no duplicated sequence node of `expr := IDENTIFIER`
   // in the forest, see the `#1` and `=#1` in the dump string.
   EXPECT_EQ(Parsed.dumpRecursive(*G),
@@ -381,7 +382,8 @@ TEST_F(GLRTest, GLRReduceOrder) {
   const TokenStream &Tokens = cook(lex("IDENTIFIER", LOptions), LOptions);
   auto LRTable = LRTable::buildSLR(*G);
 
-  const ForestNode &Parsed = glrParse(Tokens, {*G, LRTable, Arena, GSStack});
+  const ForestNode &Parsed =
+      glrParse(Tokens, {*G, LRTable, Arena, GSStack}, id("test"));
   EXPECT_EQ(Parsed.dumpRecursive(*G),
             "[  0, end) test := <ambiguous>\n"
             "[  0, end) ├─test := IDENTIFIER\n"

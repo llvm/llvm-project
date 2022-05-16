@@ -13,7 +13,7 @@ define void @splat_ones_v1i1(<1 x i1>* %x) {
 ; CHECK-NEXT:    vmerge.vim v8, v8, 1, v0
 ; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, mu
 ; CHECK-NEXT:    vmv.v.i v9, 0
-; CHECK-NEXT:    vsetivli zero, 1, e8, mf2, ta, mu
+; CHECK-NEXT:    vsetivli zero, 1, e8, mf2, tu, mu
 ; CHECK-NEXT:    vslideup.vi v9, v8, 0
 ; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, mu
 ; CHECK-NEXT:    vmsne.vi v8, v9, 0
@@ -32,7 +32,7 @@ define void @splat_zeros_v2i1(<2 x i1>* %x) {
 ; CHECK-NEXT:    vmerge.vim v8, v8, 1, v0
 ; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, mu
 ; CHECK-NEXT:    vmv.v.i v9, 0
-; CHECK-NEXT:    vsetivli zero, 2, e8, mf2, ta, mu
+; CHECK-NEXT:    vsetivli zero, 2, e8, mf2, tu, mu
 ; CHECK-NEXT:    vslideup.vi v9, v8, 0
 ; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, mu
 ; CHECK-NEXT:    vmsne.vi v8, v9, 0
@@ -53,7 +53,7 @@ define void @splat_v1i1(<1 x i1>* %x, i1 %y) {
 ; CHECK-NEXT:    vmerge.vim v8, v8, 1, v0
 ; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, mu
 ; CHECK-NEXT:    vmv.v.i v9, 0
-; CHECK-NEXT:    vsetivli zero, 1, e8, mf2, ta, mu
+; CHECK-NEXT:    vsetivli zero, 1, e8, mf2, tu, mu
 ; CHECK-NEXT:    vslideup.vi v9, v8, 0
 ; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, mu
 ; CHECK-NEXT:    vmsne.vi v8, v9, 0
@@ -77,7 +77,7 @@ define void @splat_v1i1_icmp(<1 x i1>* %x, i32 signext %y, i32 signext %z) {
 ; CHECK-NEXT:    vmerge.vim v8, v8, 1, v0
 ; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, mu
 ; CHECK-NEXT:    vmv.v.i v9, 0
-; CHECK-NEXT:    vsetivli zero, 1, e8, mf2, ta, mu
+; CHECK-NEXT:    vsetivli zero, 1, e8, mf2, tu, mu
 ; CHECK-NEXT:    vslideup.vi v9, v8, 0
 ; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, mu
 ; CHECK-NEXT:    vmsne.vi v8, v9, 0
@@ -99,7 +99,7 @@ define void @splat_ones_v4i1(<4 x i1>* %x) {
 ; CHECK-NEXT:    vmerge.vim v8, v8, 1, v0
 ; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, mu
 ; CHECK-NEXT:    vmv.v.i v9, 0
-; CHECK-NEXT:    vsetivli zero, 4, e8, mf2, ta, mu
+; CHECK-NEXT:    vsetivli zero, 4, e8, mf2, tu, mu
 ; CHECK-NEXT:    vslideup.vi v9, v8, 0
 ; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, mu
 ; CHECK-NEXT:    vmsne.vi v8, v9, 0
@@ -120,7 +120,7 @@ define void @splat_v4i1(<4 x i1>* %x, i1 %y) {
 ; CHECK-NEXT:    vmerge.vim v8, v8, 1, v0
 ; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, mu
 ; CHECK-NEXT:    vmv.v.i v9, 0
-; CHECK-NEXT:    vsetivli zero, 4, e8, mf2, ta, mu
+; CHECK-NEXT:    vsetivli zero, 4, e8, mf2, tu, mu
 ; CHECK-NEXT:    vslideup.vi v9, v8, 0
 ; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, mu
 ; CHECK-NEXT:    vmsne.vi v8, v9, 0

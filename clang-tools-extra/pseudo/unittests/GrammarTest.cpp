@@ -112,7 +112,7 @@ TEST_F(GrammarTest, Diagnostics) {
     b := a
   )cpp");
 
-  EXPECT_EQ(G->startSymbol(), id("_"));
+  EXPECT_EQ(G->underscore(), id("_"));
   EXPECT_THAT(Diags, UnorderedElementsAre(
                          "Rule '_ := ,_opt' has a nullable RHS",
                          "Rule 'null := ' has a nullable RHS",

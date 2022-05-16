@@ -503,6 +503,9 @@ struct BufferizationState {
             Optional<Operation *> customCopyInsertionPoint = None);
 
   /// Return the buffer type for a given OpOperand (tensor) after bufferization.
+  ///
+  /// Note: Op implementations should preferrably call `getBuffer()->getType()`.
+  /// This function should only be used if `getBuffer` cannot be used.
   BaseMemRefType getBufferType(OpOperand &opOperand) const;
 
   /// Return a reference to the BufferizationOptions.
@@ -546,9 +549,18 @@ OpTy replaceOpWithNewBufferizedOp(RewriterBase &rewriter, Operation *op,
   return newOp;
 }
 
-/// Return a MemRefType to which the `tensorType` can be bufferized in a
-/// composable fashion. The layout must be the most dynamic possible and
-/// canonicalize away once bufferization is finished.
+/// Return a MemRefType to which the `tensorType` can be bufferized.
+///
+/// If possible, op bufferization implementations should not use this function
+/// and instead infer precise memref types for tensor results by themselves.
+///
+/// Unless a layout map was specified, `options` flags determine what kind of
+/// layout map will be used. For best composability (without copies), the fully
+/// dynamic layout map is used by default.
+///
+/// Note: Canonicalization patterns could clean up layout maps and infer more
+/// precise layout maps after bufferization. However, many possible
+/// canonicalizations are currently not implemented.
 BaseMemRefType getMemRefType(TensorType tensorType,
                              const BufferizationOptions &options,
                              MemRefLayoutAttrInterface layout = {},
