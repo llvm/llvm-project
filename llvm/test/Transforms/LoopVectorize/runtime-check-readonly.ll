@@ -4,18 +4,18 @@ target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f3
 
 define void @add_ints(i32* nocapture %A, i32* nocapture %B, i32* nocapture %C) {
 ; CHECK-LABEL: @add_ints(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_MEMCHECK:%.*]]
 ; CHECK-LABEL: vector.memcheck:
-; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr i32, i32* [[A:%.*]], i64 200
-; CHECK-NEXT:    [[SCEVGEP4:%.*]] = getelementptr i32, i32* [[B:%.*]], i64 200
-; CHECK-NEXT:    [[SCEVGEP7:%.*]] = getelementptr i32, i32* [[C:%.*]], i64 200
-; CHECK-NEXT:    [[BOUND0:%.*]] = icmp ugt i32* [[SCEVGEP4]], [[A]]
-; CHECK-NEXT:    [[BOUND1:%.*]] = icmp ugt i32* [[SCEVGEP]], [[B]]
-; CHECK-NEXT:    [[FOUND_CONFLICT:%.*]] = and i1 [[BOUND0]], [[BOUND1]]
-; CHECK-NEXT:    [[BOUND09:%.*]] = icmp ugt i32* [[SCEVGEP7]], [[A]]
-; CHECK-NEXT:    [[BOUND110:%.*]] = icmp ugt i32* [[SCEVGEP]], [[C]]
-; CHECK-NEXT:    [[FOUND_CONFLICT11:%.*]] = and i1 [[BOUND09]], [[BOUND110]]
-; CHECK-NEXT:    [[CONFLICT_RDX:%.*]] = or i1 [[FOUND_CONFLICT]], [[FOUND_CONFLICT11]]
-; CHECK-NEXT:    br i1 [[CONFLICT_RDX]], label %scalar.ph, label %vector.ph
+; CHECK-NEXT:    [[A1:%.*]] = ptrtoint i32* [[A:%.*]] to i64
+; CHECK-NEXT:    [[B2:%.*]] = ptrtoint i32* [[B:%.*]] to i64
+; CHECK-NEXT:    [[C3:%.*]] = ptrtoint i32* [[C:%.*]] to i64
+; CHECK-NEXT:    [[TMP0:%.*]] = sub i64 [[A1]], [[B2]]
+; CHECK-NEXT:    [[DIFF_CHECK:%.*]] = icmp ult i64 [[TMP0]], 16
+; CHECK-NEXT:    [[TMP1:%.*]] = sub i64 [[A1]], [[C3]]
+; CHECK-NEXT:    [[DIFF_CHECK4:%.*]] = icmp ult i64 [[TMP1]], 16
+; CHECK-NEXT:    [[CONFLICT_RDX:%.*]] = or i1 [[DIFF_CHECK]], [[DIFF_CHECK4]]
+; CHECK-NEXT:    br i1 [[CONFLICT_RDX]], label [[SCALAR_PH]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    br label %vector.body
 ; CHECK:       vector.body:
