@@ -120,8 +120,10 @@ SetThreadPriorityResult llvm::set_thread_priority(ThreadPriority Priority) {
   // End background processing mode. The system restores the resource scheduling
   // priorities of the thread as they were before the thread entered background
   // processing mode.
+  //
+  // FIXME: consider THREAD_PRIORITY_BELOW_NORMAL for Low
   return SetThreadPriority(GetCurrentThread(),
-                           Priority == ThreadPriority::Background
+                           Priority != ThreadPriority::Default
                                ? THREAD_MODE_BACKGROUND_BEGIN
                                : THREAD_MODE_BACKGROUND_END)
              ? SetThreadPriorityResult::SUCCESS
