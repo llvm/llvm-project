@@ -17,6 +17,7 @@ declare dso_local void @consume2(i32 addrspace(1)*, i32 addrspace(1)*)
 declare dso_local void @consume5(i32 addrspace(1)*, i32 addrspace(1)*, i32 addrspace(1)*, i32 addrspace(1)*, i32 addrspace(1)*)
 declare dso_local void @use1(i32 addrspace(1)*, i8 addrspace(1)*)
 declare dso_local void @bar(i8 addrspace(1)*, i8 addrspace(1)*)
+declare i8 addrspace(1)* @dummy(i32)
 
 ; test most simple relocate
 define i1 @test_relocate(i32 addrspace(1)* %a) gc "statepoint-example" {
@@ -244,6 +245,43 @@ right:
   ret i1 true
 }
 
+; Local and non-local relocates of the same value
+; CHECK-VREG-LABEL: name:            test_local_non_local_reloc
+; CHECK-VREG:  bb.0.entry:
+; CHECK-VREG:    %2:gr64 = COPY $rsi
+; CHECK-VREG:    %1:gr32 = COPY $edi
+; CHECK-VREG:    %4:gr8 = COPY %1.sub_8bit
+; CHECK-VREG:    ADJCALLSTACKDOWN64 0, 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
+; CHECK-VREG:    %5:gr32 = MOV32r0 implicit-def dead $eflags
+; CHECK-VREG:    $edi = COPY %5
+; CHECK-VREG:    %6:gr64 = IMPLICIT_DEF
+; CHECK-VREG:    %0:gr64 = STATEPOINT 2, 5, 1, killed %6, $edi, 2, 0, 2, 0, 2, 0, 2, 1, %2(tied-def 0), 2, 0, 2, 1, 0, 0, csr_64, implicit-def $rsp, implicit-def $ssp, implicit-def $rax
+; CHECK-VREG:    ADJCALLSTACKUP64 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
+; CHECK-VREG:    %7:gr64 = COPY $rax
+; CHECK-VREG:    %3:gr64 = COPY %0
+; CHECK-VREG:    TEST8ri killed %4, 1, implicit-def $eflags
+; CHECK-VREG:    JCC_1 %bb.2, 5, implicit $eflags
+; CHECK-VREG:    JMP_1 %bb.1
+; CHECK-VREG:  bb.1.left:
+; CHECK-VREG:    $rax = COPY %3
+; CHECK-VREG:    RET 0, $rax
+; CHECK-VREG:  bb.2.right:
+; CHECK-VREG:    $rax = COPY %0
+; CHECK-VREG:    RET 0, $rax
+define i8 addrspace(1)* @test_local_non_local_reloc(i1 %c, i8 addrspace(1)* %p) gc "statepoint-example" {
+entry:
+  %statepoint = call token (i64, i32, i8 addrspace(1)* (i32)*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_p1i8i32f(i64 2, i32 5, i8 addrspace(1)* (i32)* nonnull elementtype(i8 addrspace(1)* (i32)) @dummy, i32 1, i32 0, i32 0, i32 0, i32 0) [ "deopt"(), "gc-live"(i8 addrspace(1)* %p) ]
+  %p.relocated = call coldcc i8 addrspace(1)* @llvm.experimental.gc.relocate.p1i8(token %statepoint, i32 0, i32 0) ; (%p, %p)
+  br i1 %c, label %right, label %left
+
+left:
+  %p.relocated.2 = call coldcc i8 addrspace(1)* @llvm.experimental.gc.relocate.p1i8(token %statepoint, i32 0, i32 0) ; (%p, %p)
+  ret i8 addrspace(1)* %p.relocated.2
+
+right:
+  ret i8 addrspace(1)* %p.relocated
+}
+
 ; No need to check post-regalloc output as it is the same
 define i1 @duplicate_reloc() gc "statepoint-example" {
 ; CHECK-VREG-LABEL: name:            duplicate_reloc
@@ -375,4 +413,5 @@ declare dso_local i8 addrspace(1)* @llvm.experimental.gc.relocate.p1i8(token, i3
 declare <2 x i8 addrspace(1)*> @llvm.experimental.gc.relocate.v2p1i8(token, i32, i32)
 declare dso_local i1 @llvm.experimental.gc.result.i1(token)
 declare token @llvm.experimental.gc.statepoint.p0f_isVoidp1i8p1i8f(i64 immarg, i32 immarg, void (i8 addrspace(1)*, i8 addrspace(1)*)*, i32 immarg, i32 immarg, ...)
+declare token @llvm.experimental.gc.statepoint.p0f_p1i8i32f(i64, i32, i8 addrspace(1)* (i32)*, i32, i32, ...)
 
