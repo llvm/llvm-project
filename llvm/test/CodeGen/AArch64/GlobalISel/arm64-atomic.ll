@@ -629,17 +629,17 @@ define i64 @fetch_and_or_64(i64* %p) #0 {
 define void @acquire_fence() #0 {
 ; CHECK-NOLSE-LABEL: acquire_fence:
 ; CHECK-NOLSE:       ; %bb.0:
-; CHECK-NOLSE-NEXT:    dmb ish
+; CHECK-NOLSE-NEXT:    dmb ishld
 ; CHECK-NOLSE-NEXT:    ret
 ;
 ; CHECK-LSE-O1-LABEL: acquire_fence:
 ; CHECK-LSE-O1:       ; %bb.0:
-; CHECK-LSE-O1-NEXT:    dmb ish
+; CHECK-LSE-O1-NEXT:    dmb ishld
 ; CHECK-LSE-O1-NEXT:    ret
 ;
 ; CHECK-LSE-O0-LABEL: acquire_fence:
 ; CHECK-LSE-O0:       ; %bb.0:
-; CHECK-LSE-O0-NEXT:    dmb ish
+; CHECK-LSE-O0-NEXT:    dmb ishld
 ; CHECK-LSE-O0-NEXT:    ret
    fence acquire
    ret void
