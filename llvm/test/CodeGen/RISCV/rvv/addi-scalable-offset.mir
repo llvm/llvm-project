@@ -38,16 +38,19 @@ body: |
     ; CHECK-NEXT: frame-setup CFI_INSTRUCTION def_cfa $x8, 0
     ; CHECK-NEXT: $x2 = frame-setup ADDI $x2, -240
     ; CHECK-NEXT: $x12 = frame-setup PseudoReadVLENB
+    ; CHECK-NEXT: $x12 = frame-setup SLLI killed $x12, 1
     ; CHECK-NEXT: $x2 = frame-setup SUB $x2, killed $x12
     ; CHECK-NEXT: dead $x0 = PseudoVSETVLI killed renamable $x11, 88 /* e64, m1, ta, mu */, implicit-def $vl, implicit-def $vtype
     ; CHECK-NEXT: renamable $v8 = PseudoVLE64_V_M1 killed renamable $x10, $noreg, 6 /* e64 */, implicit $vl, implicit $vtype :: (load unknown-size from %ir.pa, align 8)
     ; CHECK-NEXT: $x11 = PseudoReadVLENB
+    ; CHECK-NEXT: $x11 = SLLI killed $x11, 1
     ; CHECK-NEXT: $x10 = LUI 1048575
     ; CHECK-NEXT: $x10 = ADDIW killed $x10, 1824
     ; CHECK-NEXT: $x10 = ADD $x8, killed $x10
     ; CHECK-NEXT: $x10 = SUB killed $x10, killed $x11
     ; CHECK-NEXT: VS1R_V killed renamable $v8, killed renamable $x10
     ; CHECK-NEXT: $x10 = frame-destroy PseudoReadVLENB
+    ; CHECK-NEXT: $x10 = frame-destroy SLLI killed $x10, 1
     ; CHECK-NEXT: $x2 = frame-destroy ADD $x2, killed $x10
     ; CHECK-NEXT: $x2 = frame-destroy ADDI $x2, 240
     ; CHECK-NEXT: $x1 = LD $x2, 2024 :: (load (s64) from %stack.3)

@@ -22,34 +22,34 @@ define <vscale x 16 x i32> @bar(i32 %0, i32 %1, i32 %2, i32 %3, i32 %4, i32 %5, 
 define <vscale x 16 x i32> @foo(i32 %0, i32 %1, i32 %2, i32 %3, i32 %4, i32 %5, i32 %6, i32 %7, <vscale x 16 x i32> %x) {
 ; CHECK-LABEL: foo:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi sp, sp, -48
-; CHECK-NEXT:    .cfi_def_cfa_offset 48
-; CHECK-NEXT:    sd ra, 40(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    addi sp, sp, -80
+; CHECK-NEXT:    .cfi_def_cfa_offset 80
+; CHECK-NEXT:    sd ra, 72(sp) # 8-byte Folded Spill
 ; CHECK-NEXT:    .cfi_offset ra, -8
 ; CHECK-NEXT:    csrr t0, vlenb
 ; CHECK-NEXT:    slli t0, t0, 4
 ; CHECK-NEXT:    sub sp, sp, t0
-; CHECK-NEXT:    addi t0, sp, 40
+; CHECK-NEXT:    addi t0, sp, 64
 ; CHECK-NEXT:    sd t0, 8(sp)
 ; CHECK-NEXT:    csrr t0, vlenb
 ; CHECK-NEXT:    slli t0, t0, 3
 ; CHECK-NEXT:    add t0, sp, t0
-; CHECK-NEXT:    addi t0, t0, 40
+; CHECK-NEXT:    addi t0, t0, 64
 ; CHECK-NEXT:    sd t0, 0(sp)
-; CHECK-NEXT:    addi t0, sp, 40
+; CHECK-NEXT:    addi t0, sp, 64
 ; CHECK-NEXT:    vs8r.v v8, (t0)
 ; CHECK-NEXT:    csrr t0, vlenb
 ; CHECK-NEXT:    slli t0, t0, 3
 ; CHECK-NEXT:    add t0, sp, t0
-; CHECK-NEXT:    addi t0, t0, 40
+; CHECK-NEXT:    addi t0, t0, 64
 ; CHECK-NEXT:    vs8r.v v8, (t0)
 ; CHECK-NEXT:    vmv8r.v v16, v8
 ; CHECK-NEXT:    call bar@plt
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    slli a0, a0, 4
 ; CHECK-NEXT:    add sp, sp, a0
-; CHECK-NEXT:    ld ra, 40(sp) # 8-byte Folded Reload
-; CHECK-NEXT:    addi sp, sp, 48
+; CHECK-NEXT:    ld ra, 72(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    addi sp, sp, 80
 ; CHECK-NEXT:    ret
   %ret = call <vscale x 16 x i32> @bar(i32 %0, i32 %1, i32 %2, i32 %3, i32 %4, i32 %5, i32 %6, i32 %7, <vscale x 16 x i32> %x, <vscale x 16 x i32> %x, <vscale x 16 x i32> %x, <vscale x 16 x i32> %x)
   ret <vscale x 16 x i32> %ret
