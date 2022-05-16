@@ -2230,6 +2230,11 @@ bool FastISel::tryToFoldLoad(const LoadInst *LI, const Instruction *FoldInst) {
   if (!MRI.hasOneUse(LoadReg))
     return false;
 
+  // If the register has fixups, there may be additional uses through a
+  // different alias of the register.
+  if (FuncInfo.RegsWithFixups.contains(LoadReg))
+    return false;
+
   MachineRegisterInfo::reg_iterator RI = MRI.reg_begin(LoadReg);
   MachineInstr *User = RI->getParent();
 
