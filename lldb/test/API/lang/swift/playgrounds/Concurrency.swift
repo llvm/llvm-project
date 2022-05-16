@@ -1,4 +1,3 @@
-import _Concurrency
 import Darwin
 // Test that the pass pipeline is set up to support concurrency.
 var i: Int = 0
