@@ -15,11 +15,15 @@
   "keywords": [
     "LLVM",
     "MLIR",
-    "PDLL"
+    "PDLL",
+    "TableGen",
+    "tblgen",
+    "tablegen"
   ],
   "activationEvents": [
     "onLanguage:mlir",
-    "onLanguage:pdll"
+    "onLanguage:pdll",
+    "onLanguage:tablegen"
   ],
   "main": "./out/extension",
   "scripts": {
@@ -75,6 +79,17 @@
           ".pdll"
         ],
         "configuration": "./pdll-language-configuration.json"
+      },
+      {
+        "id": "tablegen",
+        "aliases": [
+          "TableGen",
+          "tblgen"
+        ],
+        "extensions": [
+          ".td"
+        ],
+        "configuration": "./tablegen-language-configuration.json"
       }
     ],
     "grammars": [
@@ -108,6 +123,11 @@
         "language": "pdll",
         "scopeName": "source.pdll",
         "path": "./pdll-grammar.json"
+      },
+      {
+        "language": "tablegen",
+        "scopeName": "source.tablegen",
+        "path": "./tablegen-grammar.json"
       }
     ],
     "configuration": {
@@ -128,6 +148,11 @@
           "scope": "resource",
           "type": "array",
           "description": "A list of `pdll_compile_commands.yml` database files containing information about .pdll files processed by the server."
+        },
+        "mlir.tablegen_server_path": {
+          "scope": "resource",
+          "type": "string",
+          "description": "The file path of the tblgen-lsp-server executable."
         },
         "mlir.onSettingsChanged": {
           "type": "string",
