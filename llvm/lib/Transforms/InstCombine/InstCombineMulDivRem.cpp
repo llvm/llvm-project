@@ -1154,9 +1154,9 @@ Instruction *InstCombinerImpl::visitSDiv(BinaryOperator &I) {
   if (match(&I, m_c_BinOp(
                     m_OneUse(m_Intrinsic<Intrinsic::abs>(m_Value(X), m_One())),
                     m_Deferred(X)))) {
-    Constant *NegOne = ConstantInt::getAllOnesValue(Ty);
-    Value *Cond = Builder.CreateICmpSGT(X, NegOne);
-    return SelectInst::Create(Cond, ConstantInt::get(Ty, 1), NegOne);
+    Value *Cond = Builder.CreateIsNotNeg(X);
+    return SelectInst::Create(Cond, ConstantInt::get(Ty, 1),
+                              ConstantInt::getAllOnesValue(Ty));
   }
 
   // If the sign bits of both operands are zero (i.e. we can prove they are
