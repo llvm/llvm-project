@@ -187,10 +187,11 @@ public:
 
   /// Helpers to convert Clang's SourceLocation to a MLIR Location.
   mlir::Location getLoc(clang::SourceLocation SLoc);
-
   mlir::Location getLoc(clang::SourceRange SLoc);
-
   mlir::Location getLoc(mlir::Location lhs, mlir::Location rhs);
+
+  /// Helper to convert Clang's alignment to CIR alignment
+  mlir::IntegerAttr getAlignment(CharUnits &alignment);
 
   /// Determine whether an object of this type can be emitted
   /// as a constant.
