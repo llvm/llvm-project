@@ -366,12 +366,7 @@ func.func @test_simple_i32(%arg0: tensor<1xi32>) -> () {
   // CHECK: arith.addi
   %12 = "tosa.arithmetic_right_shift"(%arg0, %arg0) {round = 1 : i1} : (tensor<1xi32>, tensor<1xi32>) -> tensor<1xi32>
 
-  // CHECK: scf.while
-  // CHECK: arith.cmpi ne
-  // CHECK: scf.condition
-  // CHECK: arith.shrui
-  // CHECK: arith.subi
-  // CHECK: scf.yield
+  // CHECK: math.ctlz
   %13 = "tosa.clz"(%arg0) : (tensor<1xi32>) -> tensor<1xi32>
 
   // CHECK: linalg.generic
