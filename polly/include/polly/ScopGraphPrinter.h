@@ -24,35 +24,35 @@
 #include "llvm/Analysis/RegionPrinter.h"
 #include "llvm/IR/PassManager.h"
 
-using namespace polly;
-using namespace llvm;
-
 namespace llvm {
 
 template <>
-struct GraphTraits<ScopDetection *> : public GraphTraits<RegionInfo *> {
-  static NodeRef getEntryNode(ScopDetection *SD) {
+struct GraphTraits<polly::ScopDetection *> : public GraphTraits<RegionInfo *> {
+  static NodeRef getEntryNode(polly::ScopDetection *SD) {
     return GraphTraits<RegionInfo *>::getEntryNode(SD->getRI());
   }
-  static nodes_iterator nodes_begin(ScopDetection *SD) {
+  static nodes_iterator nodes_begin(polly::ScopDetection *SD) {
     return nodes_iterator::begin(getEntryNode(SD));
   }
-  static nodes_iterator nodes_end(ScopDetection *SD) {
+  static nodes_iterator nodes_end(polly::ScopDetection *SD) {
     return nodes_iterator::end(getEntryNode(SD));
   }
 };
 
 template <>
-struct DOTGraphTraits<ScopDetection *> : public DOTGraphTraits<RegionNode *> {
+struct DOTGraphTraits<polly::ScopDetection *>
+    : public DOTGraphTraits<RegionNode *> {
   DOTGraphTraits(bool isSimple = false)
       : DOTGraphTraits<RegionNode *>(isSimple) {}
-  static std::string getGraphName(ScopDetection *SD) { return "Scop Graph"; }
+  static std::string getGraphName(polly::ScopDetection *SD) {
+    return "Scop Graph";
+  }
 
   std::string getEdgeAttributes(RegionNode *srcNode,
                                 GraphTraits<RegionInfo *>::ChildIteratorType CI,
-                                ScopDetection *SD);
+                                polly::ScopDetection *SD);
 
-  std::string getNodeLabel(RegionNode *Node, ScopDetection *SD) {
+  std::string getNodeLabel(RegionNode *Node, polly::ScopDetection *SD) {
     return DOTGraphTraits<RegionNode *>::getNodeLabel(
         Node, reinterpret_cast<RegionNode *>(SD->getRI()->getTopLevelRegion()));
   }
@@ -61,32 +61,35 @@ struct DOTGraphTraits<ScopDetection *> : public DOTGraphTraits<RegionNode *> {
 
   /// Print the cluster of the subregions. This groups the single basic blocks
   /// and adds a different background color for each group.
-  static void printRegionCluster(ScopDetection *SD, const Region *R,
+  static void printRegionCluster(polly::ScopDetection *SD, const Region *R,
                                  raw_ostream &O, unsigned depth = 0);
 
-  static void addCustomGraphFeatures(ScopDetection *SD,
-                                     GraphWriter<ScopDetection *> &GW);
+  static void addCustomGraphFeatures(polly::ScopDetection *SD,
+                                     GraphWriter<polly::ScopDetection *> &GW);
 };
 } // end namespace llvm
 
 namespace polly {
 
-struct ScopViewer : public DOTGraphTraitsViewer<ScopAnalysis, false> {
-  ScopViewer() : DOTGraphTraitsViewer<ScopAnalysis, false>("scops") {}
+struct ScopViewer : public llvm::DOTGraphTraitsViewer<ScopAnalysis, false> {
+  ScopViewer() : llvm::DOTGraphTraitsViewer<ScopAnalysis, false>("scops") {}
 
   bool processFunction(Function &F, const ScopDetection &SD) override;
 };
 
-struct ScopOnlyViewer : public DOTGraphTraitsViewer<ScopAnalysis, false> {
-  ScopOnlyViewer() : DOTGraphTraitsViewer<ScopAnalysis, false>("scops-only") {}
+struct ScopOnlyViewer : public llvm::DOTGraphTraitsViewer<ScopAnalysis, false> {
+  ScopOnlyViewer()
+      : llvm::DOTGraphTraitsViewer<ScopAnalysis, false>("scops-only") {}
 };
 
-struct ScopPrinter : public DOTGraphTraitsPrinter<ScopAnalysis, false> {
-  ScopPrinter() : DOTGraphTraitsPrinter<ScopAnalysis, false>("scops") {}
+struct ScopPrinter : public llvm::DOTGraphTraitsPrinter<ScopAnalysis, false> {
+  ScopPrinter() : llvm::DOTGraphTraitsPrinter<ScopAnalysis, false>("scops") {}
 };
 
-struct ScopOnlyPrinter : public DOTGraphTraitsPrinter<ScopAnalysis, true> {
-  ScopOnlyPrinter() : DOTGraphTraitsPrinter<ScopAnalysis, true>("scopsonly") {}
+struct ScopOnlyPrinter
+    : public llvm::DOTGraphTraitsPrinter<ScopAnalysis, true> {
+  ScopOnlyPrinter()
+      : llvm::DOTGraphTraitsPrinter<ScopAnalysis, true>("scopsonly") {}
 };
 
 } // end namespace polly
