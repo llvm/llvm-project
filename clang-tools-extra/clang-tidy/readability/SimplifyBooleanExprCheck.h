@@ -34,73 +34,32 @@ public:
 private:
   class Visitor;
 
-  void reportBinOp(const ast_matchers::MatchFinder::MatchResult &Result,
-                   const BinaryOperator *Op);
+  void reportBinOp(const ASTContext &Context, const BinaryOperator *Op);
 
-  void matchBoolCondition(ast_matchers::MatchFinder *Finder, bool Value,
-                          StringRef BooleanId);
+  void replaceWithThenStatement(const ASTContext &Context,
+                                const IfStmt *IfStatement,
+                                const Expr *BoolLiteral);
 
-  void matchTernaryResult(ast_matchers::MatchFinder *Finder, bool Value,
-                          StringRef Id);
+  void replaceWithElseStatement(const ASTContext &Context,
+                                const IfStmt *IfStatement,
+                                const Expr *BoolLiteral);
 
-  void matchIfReturnsBool(ast_matchers::MatchFinder *Finder, bool Value,
-                          StringRef Id);
+  void replaceWithCondition(const ASTContext &Context,
+                            const ConditionalOperator *Ternary, bool Negated);
 
-  void matchIfAssignsBool(ast_matchers::MatchFinder *Finder, bool Value,
-                          StringRef Id);
+  void replaceWithReturnCondition(const ASTContext &Context, const IfStmt *If,
+                                  const Expr *BoolLiteral, bool Negated);
 
-  void matchCompoundIfReturnsBool(ast_matchers::MatchFinder *Finder, bool Value,
-                                  StringRef Id);
+  void replaceWithAssignment(const ASTContext &Context, const IfStmt *If,
+                             const Expr *Var, SourceLocation Loc, bool Negated);
 
-  void matchCaseIfReturnsBool(ast_matchers::MatchFinder *Finder, bool Value,
-                              StringRef Id);
+  void replaceCompoundReturnWithCondition(const ASTContext &Context,
+                                          const ReturnStmt *Ret, bool Negated,
+                                          const IfStmt *If);
 
-  void matchDefaultIfReturnsBool(ast_matchers::MatchFinder *Finder, bool Value,
-                                 StringRef Id);
-
-  void matchLabelIfReturnsBool(ast_matchers::MatchFinder *Finder, bool Value,
-                               StringRef Id);
-
-  void
-  replaceWithThenStatement(const ast_matchers::MatchFinder::MatchResult &Result,
-                           const Expr *BoolLiteral);
-
-  void
-  replaceWithElseStatement(const ast_matchers::MatchFinder::MatchResult &Result,
-                           const Expr *BoolLiteral);
-
-  void
-  replaceWithCondition(const ast_matchers::MatchFinder::MatchResult &Result,
-                       const ConditionalOperator *Ternary, bool Negated);
-
-  void replaceWithReturnCondition(
-      const ast_matchers::MatchFinder::MatchResult &Result, const IfStmt *If,
-      bool Negated);
-
-  void
-  replaceWithAssignment(const ast_matchers::MatchFinder::MatchResult &Result,
-                        const IfStmt *If, bool Negated);
-
-  void replaceCompoundReturnWithCondition(
-      const ast_matchers::MatchFinder::MatchResult &Result,
-      const CompoundStmt *Compound, bool Negated);
-
-  void replaceCompoundReturnWithCondition(
-      const ast_matchers::MatchFinder::MatchResult &Result, bool Negated,
-      const IfStmt *If);
-
-  void replaceCaseCompoundReturnWithCondition(
-      const ast_matchers::MatchFinder::MatchResult &Result, bool Negated);
-
-  void replaceDefaultCompoundReturnWithCondition(
-      const ast_matchers::MatchFinder::MatchResult &Result, bool Negated);
-
-  void replaceLabelCompoundReturnWithCondition(
-      const ast_matchers::MatchFinder::MatchResult &Result, bool Negated);
-
-  void issueDiag(const ast_matchers::MatchFinder::MatchResult &Result,
-                 SourceLocation Loc, StringRef Description,
-                 SourceRange ReplacementRange, StringRef Replacement);
+  void issueDiag(const ASTContext &Result, SourceLocation Loc,
+                 StringRef Description, SourceRange ReplacementRange,
+                 StringRef Replacement);
 
   const bool ChainedConditionalReturn;
   const bool ChainedConditionalAssignment;

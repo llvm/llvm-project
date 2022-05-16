@@ -2,8 +2,6 @@
 #include "ClangTidyTest.h"
 #include "readability/BracesAroundStatementsCheck.h"
 #include "readability/NamespaceCommentCheck.h"
-#include "readability/SimplifyBooleanExprMatchers.h"
-#include "clang/ASTMatchers/ASTMatchers.h"
 #include "gtest/gtest.h"
 
 namespace clang {
@@ -13,91 +11,6 @@ namespace test {
 using readability::BracesAroundStatementsCheck;
 using readability::NamespaceCommentCheck;
 using namespace ast_matchers;
-
-TEST_P(ASTMatchersTest, HasCaseSubstatement) {
-  EXPECT_TRUE(matches(
-      "void f() { switch (1) { case 1: return; break; default: break; } }",
-      traverse(TK_AsIs, caseStmt(hasSubstatement(returnStmt())))));
-}
-
-TEST_P(ASTMatchersTest, HasDefaultSubstatement) {
-  EXPECT_TRUE(matches(
-      "void f() { switch (1) { case 1: return; break; default: break; } }",
-      traverse(TK_AsIs, defaultStmt(hasSubstatement(breakStmt())))));
-}
-
-TEST_P(ASTMatchersTest, HasLabelSubstatement) {
-  EXPECT_TRUE(
-      matches("void f() { while (1) { bar: break; foo: return; } }",
-              traverse(TK_AsIs, labelStmt(hasSubstatement(breakStmt())))));
-}
-
-TEST_P(ASTMatchersTest, HasSubstatementSequenceSimple) {
-  const char *Text = "int f() { int x = 5; if (x < 0) return 1; return 0; }";
-  EXPECT_TRUE(matches(
-      Text, compoundStmt(hasSubstatementSequence(ifStmt(), returnStmt()))));
-  EXPECT_FALSE(matches(
-      Text, compoundStmt(hasSubstatementSequence(ifStmt(), labelStmt()))));
-  EXPECT_FALSE(matches(
-      Text, compoundStmt(hasSubstatementSequence(returnStmt(), ifStmt()))));
-  EXPECT_FALSE(matches(
-      Text, compoundStmt(hasSubstatementSequence(switchStmt(), labelStmt()))));
-}
-
-TEST_P(ASTMatchersTest, HasSubstatementSequenceAlmost) {
-  const char *Text = R"code(
-int f() {
-  int x = 5;
-  if (x < 10)
-    ;
-  if (x < 0)
-    return 1;
-  return 0;
-}
-)code";
-  EXPECT_TRUE(matches(
-      Text, compoundStmt(hasSubstatementSequence(ifStmt(), returnStmt()))));
-  EXPECT_TRUE(
-      matches(Text, compoundStmt(hasSubstatementSequence(ifStmt(), ifStmt()))));
-}
-
-TEST_P(ASTMatchersTest, HasSubstatementSequenceComplex) {
-  const char *Text = R"code(
-int f() {
-  int x = 5;
-  if (x < 10)
-    x -= 10;
-  if (x < 0)
-    return 1;
-  return 0;
-}
-)code";
-  EXPECT_TRUE(matches(
-      Text, compoundStmt(hasSubstatementSequence(ifStmt(), returnStmt()))));
-  EXPECT_FALSE(
-      matches(Text, compoundStmt(hasSubstatementSequence(ifStmt(), expr()))));
-}
-
-TEST_P(ASTMatchersTest, HasSubstatementSequenceExpression) {
-  const char *Text = R"code(
-int f() {
-  return ({ int x = 5;
-      int result;
-      if (x < 10)
-        x -= 10;
-      if (x < 0)
-        result = 1;
-      else
-        result = 0;
-      result;
-    });
-  }
-)code";
-  EXPECT_TRUE(
-      matches(Text, stmtExpr(hasSubstatementSequence(ifStmt(), expr()))));
-  EXPECT_FALSE(
-      matches(Text, stmtExpr(hasSubstatementSequence(ifStmt(), returnStmt()))));
-}
 
 // Copied from ASTMatchersTests
 static std::vector<TestClangConfig> allTestClangConfigs() {
