@@ -5,7 +5,7 @@
 // RUN: echo 'int foo() { return fn(); }' > %t/foo.h
 // RUN: echo 'module foo { header "foo.h" export * }' > %t/module.modulemap
 //
-// RUN: %clang_cc1 -fmodules -fimplicit-module-maps %s -fsyntax-only \
+// RUN: not %clang_cc1 -fmodules -fimplicit-module-maps %s -fsyntax-only \
 // RUN:   -I%t -fmodules-cache-path=%t/cache -Rmodule-build \
 // RUN:   -fmodules-hash-error-diagnostics 2>%t/out
 //
