@@ -1410,144 +1410,6 @@ extern "C" {
   }
 
 #define CASE_SECSAME(p, v, P, V) CASE(p, p, v, P, P, V)
-// TODO(D125432): move `_mlir_ciface_newSparseTensor` closer to these
-// macro definitions, but as a separate change so as not to muddy the diff.
-
-/// Methods that provide direct access to values.
-#define IMPL_SPARSEVALUES(VNAME, V)                                            \
-  void _mlir_ciface_sparseValues##VNAME(StridedMemRefType<V, 1> *ref,          \
-                                        void *tensor) {                        \
-    assert(ref &&tensor);                                                      \
-    std::vector<V> *v;                                                         \
-    static_cast<SparseTensorStorageBase *>(tensor)->getValues(&v);             \
-    ref->basePtr = ref->data = v->data();                                      \
-    ref->offset = 0;                                                           \
-    ref->sizes[0] = v->size();                                                 \
-    ref->strides[0] = 1;                                                       \
-  }
-FOREVERY_V(IMPL_SPARSEVALUES)
-#undef IMPL_SPARSEVALUES
-
-#define IMPL_GETOVERHEAD(NAME, TYPE, LIB)                                      \
-  void _mlir_ciface_##NAME(StridedMemRefType<TYPE, 1> *ref, void *tensor,      \
-                           index_type d) {                                     \
-    assert(ref &&tensor);                                                      \
-    std::vector<TYPE> *v;                                                      \
-    static_cast<SparseTensorStorageBase *>(tensor)->LIB(&v, d);                \
-    ref->basePtr = ref->data = v->data();                                      \
-    ref->offset = 0;                                                           \
-    ref->sizes[0] = v->size();                                                 \
-    ref->strides[0] = 1;                                                       \
-  }
-/// Methods that provide direct access to pointers.
-IMPL_GETOVERHEAD(sparsePointers, index_type, getPointers)
-IMPL_GETOVERHEAD(sparsePointers64, uint64_t, getPointers)
-IMPL_GETOVERHEAD(sparsePointers32, uint32_t, getPointers)
-IMPL_GETOVERHEAD(sparsePointers16, uint16_t, getPointers)
-IMPL_GETOVERHEAD(sparsePointers8, uint8_t, getPointers)
-
-/// Methods that provide direct access to indices.
-IMPL_GETOVERHEAD(sparseIndices, index_type, getIndices)
-IMPL_GETOVERHEAD(sparseIndices64, uint64_t, getIndices)
-IMPL_GETOVERHEAD(sparseIndices32, uint32_t, getIndices)
-IMPL_GETOVERHEAD(sparseIndices16, uint16_t, getIndices)
-IMPL_GETOVERHEAD(sparseIndices8, uint8_t, getIndices)
-#undef IMPL_GETOVERHEAD
-
-/// Helper to add value to coordinate scheme, one per value type.
-#define IMPL_ADDELT(VNAME, V)                                                  \
-  void *_mlir_ciface_addElt##VNAME(void *coo, V value,                         \
-                                   StridedMemRefType<index_type, 1> *iref,     \
-                                   StridedMemRefType<index_type, 1> *pref) {   \
-    assert(coo &&iref &&pref);                                                 \
-    assert(iref->strides[0] == 1 && pref->strides[0] == 1);                    \
-    assert(iref->sizes[0] == pref->sizes[0]);                                  \
-    const index_type *indx = iref->data + iref->offset;                        \
-    const index_type *perm = pref->data + pref->offset;                        \
-    uint64_t isize = iref->sizes[0];                                           \
-    std::vector<index_type> indices(isize);                                    \
-    for (uint64_t r = 0; r < isize; r++)                                       \
-      indices[perm[r]] = indx[r];                                              \
-    static_cast<SparseTensorCOO<V> *>(coo)->add(indices, value);               \
-    return coo;                                                                \
-  }
-FOREVERY_SIMPLEX_V(IMPL_ADDELT)
-// `complex64` apparently doesn't encounter any ABI issues (yet).
-IMPL_ADDELT(C64, complex64)
-// TODO: cleaner way to avoid ABI padding problem?
-IMPL_ADDELT(C32ABI, complex32)
-void *_mlir_ciface_addEltC32(void *tensor, float r, float i,
-                             StridedMemRefType<index_type, 1> *iref,
-                             StridedMemRefType<index_type, 1> *pref) {
-  return _mlir_ciface_addEltC32ABI(tensor, complex32(r, i), iref, pref);
-}
-#undef IMPL_ADDELT
-
-/// Helper to enumerate elements of coordinate scheme, one per value type.
-#define IMPL_GETNEXT(VNAME, V)                                                 \
-  bool _mlir_ciface_getNext##VNAME(void *coo,                                  \
-                                   StridedMemRefType<index_type, 1> *iref,     \
-                                   StridedMemRefType<V, 0> *vref) {            \
-    assert(coo &&iref &&vref);                                                 \
-    assert(iref->strides[0] == 1);                                             \
-    index_type *indx = iref->data + iref->offset;                              \
-    V *value = vref->data + vref->offset;                                      \
-    const uint64_t isize = iref->sizes[0];                                     \
-    const Element<V> *elem =                                                   \
-        static_cast<SparseTensorCOO<V> *>(coo)->getNext();                     \
-    if (elem == nullptr)                                                       \
-      return false;                                                            \
-    for (uint64_t r = 0; r < isize; r++)                                       \
-      indx[r] = elem->indices[r];                                              \
-    *value = elem->value;                                                      \
-    return true;                                                               \
-  }
-FOREVERY_V(IMPL_GETNEXT)
-#undef IMPL_GETNEXT
-
-/// Insert elements in lexicographical index order, one per value type.
-#define IMPL_LEXINSERT(VNAME, V)                                               \
-  void _mlir_ciface_lexInsert##VNAME(                                          \
-      void *tensor, StridedMemRefType<index_type, 1> *cref, V val) {           \
-    assert(tensor &&cref);                                                     \
-    assert(cref->strides[0] == 1);                                             \
-    index_type *cursor = cref->data + cref->offset;                            \
-    assert(cursor);                                                            \
-    static_cast<SparseTensorStorageBase *>(tensor)->lexInsert(cursor, val);    \
-  }
-FOREVERY_SIMPLEX_V(IMPL_LEXINSERT)
-// `complex64` apparently doesn't encounter any ABI issues (yet).
-IMPL_LEXINSERT(C64, complex64)
-// TODO: cleaner way to avoid ABI padding problem?
-IMPL_LEXINSERT(C32ABI, complex32)
-void _mlir_ciface_lexInsertC32(void *tensor,
-                               StridedMemRefType<index_type, 1> *cref, float r,
-                               float i) {
-  _mlir_ciface_lexInsertC32ABI(tensor, cref, complex32(r, i));
-}
-#undef IMPL_LEXINSERT
-
-/// Insert using expansion, one per value type.
-#define IMPL_EXPINSERT(VNAME, V)                                               \
-  void _mlir_ciface_expInsert##VNAME(                                          \
-      void *tensor, StridedMemRefType<index_type, 1> *cref,                    \
-      StridedMemRefType<V, 1> *vref, StridedMemRefType<bool, 1> *fref,         \
-      StridedMemRefType<index_type, 1> *aref, index_type count) {              \
-    assert(tensor &&cref &&vref &&fref &&aref);                                \
-    assert(cref->strides[0] == 1);                                             \
-    assert(vref->strides[0] == 1);                                             \
-    assert(fref->strides[0] == 1);                                             \
-    assert(aref->strides[0] == 1);                                             \
-    assert(vref->sizes[0] == fref->sizes[0]);                                  \
-    index_type *cursor = cref->data + cref->offset;                            \
-    V *values = vref->data + vref->offset;                                     \
-    bool *filled = fref->data + fref->offset;                                  \
-    index_type *added = aref->data + aref->offset;                             \
-    static_cast<SparseTensorStorageBase *>(tensor)->expInsert(                 \
-        cursor, values, filled, added, count);                                 \
-  }
-FOREVERY_V(IMPL_EXPINSERT)
-#undef IMPL_EXPINSERT
 
 // Assume index_type is in fact uint64_t, so that _mlir_ciface_newSparseTensor
 // can safely rewrite kIndex to kU64.  We make this assertion to guarantee
@@ -1680,6 +1542,142 @@ _mlir_ciface_newSparseTensor(StridedMemRefType<DimLevelType, 1> *aref, // NOLINT
 }
 #undef CASE
 #undef CASE_SECSAME
+
+/// Methods that provide direct access to values.
+#define IMPL_SPARSEVALUES(VNAME, V)                                            \
+  void _mlir_ciface_sparseValues##VNAME(StridedMemRefType<V, 1> *ref,          \
+                                        void *tensor) {                        \
+    assert(ref &&tensor);                                                      \
+    std::vector<V> *v;                                                         \
+    static_cast<SparseTensorStorageBase *>(tensor)->getValues(&v);             \
+    ref->basePtr = ref->data = v->data();                                      \
+    ref->offset = 0;                                                           \
+    ref->sizes[0] = v->size();                                                 \
+    ref->strides[0] = 1;                                                       \
+  }
+FOREVERY_V(IMPL_SPARSEVALUES)
+#undef IMPL_SPARSEVALUES
+
+#define IMPL_GETOVERHEAD(NAME, TYPE, LIB)                                      \
+  void _mlir_ciface_##NAME(StridedMemRefType<TYPE, 1> *ref, void *tensor,      \
+                           index_type d) {                                     \
+    assert(ref &&tensor);                                                      \
+    std::vector<TYPE> *v;                                                      \
+    static_cast<SparseTensorStorageBase *>(tensor)->LIB(&v, d);                \
+    ref->basePtr = ref->data = v->data();                                      \
+    ref->offset = 0;                                                           \
+    ref->sizes[0] = v->size();                                                 \
+    ref->strides[0] = 1;                                                       \
+  }
+/// Methods that provide direct access to pointers.
+IMPL_GETOVERHEAD(sparsePointers, index_type, getPointers)
+IMPL_GETOVERHEAD(sparsePointers64, uint64_t, getPointers)
+IMPL_GETOVERHEAD(sparsePointers32, uint32_t, getPointers)
+IMPL_GETOVERHEAD(sparsePointers16, uint16_t, getPointers)
+IMPL_GETOVERHEAD(sparsePointers8, uint8_t, getPointers)
+
+/// Methods that provide direct access to indices.
+IMPL_GETOVERHEAD(sparseIndices, index_type, getIndices)
+IMPL_GETOVERHEAD(sparseIndices64, uint64_t, getIndices)
+IMPL_GETOVERHEAD(sparseIndices32, uint32_t, getIndices)
+IMPL_GETOVERHEAD(sparseIndices16, uint16_t, getIndices)
+IMPL_GETOVERHEAD(sparseIndices8, uint8_t, getIndices)
+#undef IMPL_GETOVERHEAD
+
+/// Helper to add value to coordinate scheme, one per value type.
+#define IMPL_ADDELT(VNAME, V)                                                  \
+  void *_mlir_ciface_addElt##VNAME(void *coo, V value,                         \
+                                   StridedMemRefType<index_type, 1> *iref,     \
+                                   StridedMemRefType<index_type, 1> *pref) {   \
+    assert(coo &&iref &&pref);                                                 \
+    assert(iref->strides[0] == 1 && pref->strides[0] == 1);                    \
+    assert(iref->sizes[0] == pref->sizes[0]);                                  \
+    const index_type *indx = iref->data + iref->offset;                        \
+    const index_type *perm = pref->data + pref->offset;                        \
+    uint64_t isize = iref->sizes[0];                                           \
+    std::vector<index_type> indices(isize);                                    \
+    for (uint64_t r = 0; r < isize; r++)                                       \
+      indices[perm[r]] = indx[r];                                              \
+    static_cast<SparseTensorCOO<V> *>(coo)->add(indices, value);               \
+    return coo;                                                                \
+  }
+FOREVERY_SIMPLEX_V(IMPL_ADDELT)
+// `complex64` apparently doesn't encounter any ABI issues (yet).
+IMPL_ADDELT(C64, complex64)
+// TODO: cleaner way to avoid ABI padding problem?
+IMPL_ADDELT(C32ABI, complex32)
+void *_mlir_ciface_addEltC32(void *coo, float r, float i,
+                             StridedMemRefType<index_type, 1> *iref,
+                             StridedMemRefType<index_type, 1> *pref) {
+  return _mlir_ciface_addEltC32ABI(coo, complex32(r, i), iref, pref);
+}
+#undef IMPL_ADDELT
+
+/// Helper to enumerate elements of coordinate scheme, one per value type.
+#define IMPL_GETNEXT(VNAME, V)                                                 \
+  bool _mlir_ciface_getNext##VNAME(void *coo,                                  \
+                                   StridedMemRefType<index_type, 1> *iref,     \
+                                   StridedMemRefType<V, 0> *vref) {            \
+    assert(coo &&iref &&vref);                                                 \
+    assert(iref->strides[0] == 1);                                             \
+    index_type *indx = iref->data + iref->offset;                              \
+    V *value = vref->data + vref->offset;                                      \
+    const uint64_t isize = iref->sizes[0];                                     \
+    const Element<V> *elem =                                                   \
+        static_cast<SparseTensorCOO<V> *>(coo)->getNext();                     \
+    if (elem == nullptr)                                                       \
+      return false;                                                            \
+    for (uint64_t r = 0; r < isize; r++)                                       \
+      indx[r] = elem->indices[r];                                              \
+    *value = elem->value;                                                      \
+    return true;                                                               \
+  }
+FOREVERY_V(IMPL_GETNEXT)
+#undef IMPL_GETNEXT
+
+/// Insert elements in lexicographical index order, one per value type.
+#define IMPL_LEXINSERT(VNAME, V)                                               \
+  void _mlir_ciface_lexInsert##VNAME(                                          \
+      void *tensor, StridedMemRefType<index_type, 1> *cref, V val) {           \
+    assert(tensor &&cref);                                                     \
+    assert(cref->strides[0] == 1);                                             \
+    index_type *cursor = cref->data + cref->offset;                            \
+    assert(cursor);                                                            \
+    static_cast<SparseTensorStorageBase *>(tensor)->lexInsert(cursor, val);    \
+  }
+FOREVERY_SIMPLEX_V(IMPL_LEXINSERT)
+// `complex64` apparently doesn't encounter any ABI issues (yet).
+IMPL_LEXINSERT(C64, complex64)
+// TODO: cleaner way to avoid ABI padding problem?
+IMPL_LEXINSERT(C32ABI, complex32)
+void _mlir_ciface_lexInsertC32(void *tensor,
+                               StridedMemRefType<index_type, 1> *cref, float r,
+                               float i) {
+  _mlir_ciface_lexInsertC32ABI(tensor, cref, complex32(r, i));
+}
+#undef IMPL_LEXINSERT
+
+/// Insert using expansion, one per value type.
+#define IMPL_EXPINSERT(VNAME, V)                                               \
+  void _mlir_ciface_expInsert##VNAME(                                          \
+      void *tensor, StridedMemRefType<index_type, 1> *cref,                    \
+      StridedMemRefType<V, 1> *vref, StridedMemRefType<bool, 1> *fref,         \
+      StridedMemRefType<index_type, 1> *aref, index_type count) {              \
+    assert(tensor &&cref &&vref &&fref &&aref);                                \
+    assert(cref->strides[0] == 1);                                             \
+    assert(vref->strides[0] == 1);                                             \
+    assert(fref->strides[0] == 1);                                             \
+    assert(aref->strides[0] == 1);                                             \
+    assert(vref->sizes[0] == fref->sizes[0]);                                  \
+    index_type *cursor = cref->data + cref->offset;                            \
+    V *values = vref->data + vref->offset;                                     \
+    bool *filled = fref->data + fref->offset;                                  \
+    index_type *added = aref->data + aref->offset;                             \
+    static_cast<SparseTensorStorageBase *>(tensor)->expInsert(                 \
+        cursor, values, filled, added, count);                                 \
+  }
+FOREVERY_V(IMPL_EXPINSERT)
+#undef IMPL_EXPINSERT
 
 /// Output a sparse tensor, one per value type.
 #define IMPL_OUTSPARSETENSOR(VNAME, V)                                         \
