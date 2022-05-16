@@ -841,10 +841,7 @@ mlir::Value CIRGenFunction::buildAlloca(StringRef name, InitStyle initStyle,
   auto localVarTy = getCIRType(ty);
   auto localVarPtrTy =
       mlir::cir::PointerType::get(builder.getContext(), localVarTy);
-
-  auto alignIntAttr =
-      mlir::IntegerAttr::get(mlir::IntegerType::get(builder.getContext(), 64),
-                             alignment.getQuantity());
+  auto alignIntAttr = CGM.getAlignment(alignment);
 
   mlir::Value addr;
   {

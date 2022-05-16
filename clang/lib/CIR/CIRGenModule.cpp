@@ -1324,6 +1324,12 @@ void CIRGenModule::buildDeferred() {
   }
 }
 
+mlir::IntegerAttr CIRGenModule::getAlignment(CharUnits &alignment) {
+  return mlir::IntegerAttr::get(
+      mlir::IntegerType::get(builder.getContext(), 64),
+      alignment.getQuantity());
+}
+
 // TODO: this is gross, make a map
 mlir::Operation *CIRGenModule::GetGlobalValue(StringRef Name) {
   for (auto const &op :
