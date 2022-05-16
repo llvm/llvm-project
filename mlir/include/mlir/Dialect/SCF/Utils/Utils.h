@@ -54,7 +54,7 @@ using NewYieldValueFn = std::function<SmallVector<Value>(
     OpBuilder &b, Location loc, ArrayRef<BlockArgument> newBBArgs)>;
 scf::ForOp replaceLoopWithNewYields(OpBuilder &builder, scf::ForOp loop,
                                     ValueRange newIterOperands,
-                                    NewYieldValueFn newYieldValuesFn);
+                                    const NewYieldValueFn &newYieldValuesFn);
 
 /// Outline a region with a single block into a new FuncOp.
 /// Assumes the FuncOp result types is the type of the yielded operands of the
