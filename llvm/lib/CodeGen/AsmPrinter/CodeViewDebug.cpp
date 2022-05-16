@@ -3175,6 +3175,11 @@ void CodeViewDebug::collectGlobalVariableInfo() {
     for (const auto *GVE : CU->getGlobalVariables()) {
       const DIGlobalVariable *DIGV = GVE->getVariable();
       const DIExpression *DIE = GVE->getExpression();
+      // Don't emit string literals in CodeView, as the only useful parts are
+      // generally the filename and line number, which isn't possible to output
+      // in CodeView. String literals should be the only unnamed GlobalVariable
+      // with debug info.
+      if (DIGV->getName().empty()) continue;
 
       if ((DIE->getNumElements() == 2) &&
           (DIE->getElement(0) == dwarf::DW_OP_plus_uconst))
