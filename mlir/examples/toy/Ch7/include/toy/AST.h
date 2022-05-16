@@ -301,8 +301,8 @@ public:
   ModuleAST(std::vector<std::unique_ptr<RecordAST>> records)
       : records(std::move(records)) {}
 
-  auto begin() -> decltype(records.begin()) { return records.begin(); }
-  auto end() -> decltype(records.end()) { return records.end(); }
+  auto begin() { return records.begin(); }
+  auto end() { return records.end(); }
 };
 
 void dump(ModuleAST &);
