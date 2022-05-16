@@ -390,8 +390,6 @@ static bool PrintOption(const OptionDefinition &opt_def,
 
 void Options::GenerateOptionUsage(Stream &strm, CommandObject &cmd,
                                   uint32_t screen_width) {
-  const bool only_print_args = cmd.IsDashDashCommand();
-
   auto opt_defs = GetDefinitions();
   const uint32_t save_indent_level = strm.GetIndentLevel();
   llvm::StringRef name = cmd.GetCommandName();
@@ -402,6 +400,7 @@ void Options::GenerateOptionUsage(Stream &strm, CommandObject &cmd,
   if (num_options == 0)
     return;
 
+  const bool only_print_args = cmd.IsDashDashCommand();
   if (!only_print_args)
     strm.PutCString("\nCommand Options Usage:\n");
 
@@ -413,19 +412,16 @@ void Options::GenerateOptionUsage(Stream &strm, CommandObject &cmd,
   //                                                   [options-for-level-1]
   //                                                   etc.
 
-  uint32_t num_option_sets = GetRequiredOptions().size();
-
   if (!only_print_args) {
+    uint32_t num_option_sets = GetRequiredOptions().size();
     for (uint32_t opt_set = 0; opt_set < num_option_sets; ++opt_set) {
-      uint32_t opt_set_mask;
-
-      opt_set_mask = 1 << opt_set;
       if (opt_set > 0)
         strm.Printf("\n");
       strm.Indent(name);
 
       // Different option sets may require different args.
       StreamString args_str;
+      uint32_t opt_set_mask = 1 << opt_set;
       cmd.GetFormattedCommandArguments(args_str, opt_set_mask);
 
       // First go through and print all options that take no arguments as a
@@ -475,12 +471,9 @@ void Options::GenerateOptionUsage(Stream &strm, CommandObject &cmd,
       }
 
       if (args_str.GetSize() > 0) {
-        if (cmd.WantsRawCommandString() && !only_print_args)
+        if (cmd.WantsRawCommandString())
           strm.Printf(" --");
-
         strm << " " << args_str.GetString();
-        if (only_print_args)
-          break;
       }
     }
   }
