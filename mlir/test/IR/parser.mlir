@@ -832,7 +832,7 @@ func.func @unknown_dialect_type() -> !bar<""> {
 }
 
 // CHECK-LABEL: func @type_alias() -> i32 {
-!i32_type_alias = type i32
+!i32_type_alias = i32
 func.func @type_alias() -> !i32_type_alias {
 
   // Return a non-aliased i32 type.

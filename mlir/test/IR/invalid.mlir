@@ -881,20 +881,16 @@ func.func @type_alias_unknown(!unknown_alias) -> () { // expected-error {{undefi
 
 // -----
 
-!missing_eq_alias type i32 // expected-error {{expected '=' in type alias definition}}
+!missing_eq_alias i32 // expected-error {{expected '=' in type alias definition}}
 
 // -----
 
-!missing_kw_type_alias = i32 // expected-error {{expected 'type' in type alias definition}}
+!missing_type_alias = // expected-error {{expected non-function type}}
 
 // -----
 
-!missing_type_alias = type // expected-error {{expected non-function type}}
-
-// -----
-
-!redef_alias = type i32
-!redef_alias = type i32 // expected-error {{redefinition of type alias id 'redef_alias'}}
+!redef_alias = i32
+!redef_alias = i32 // expected-error {{redefinition of type alias id 'redef_alias'}}
 
 // -----
 

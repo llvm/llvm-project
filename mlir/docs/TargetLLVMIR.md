@@ -367,8 +367,7 @@ func.func @foo(%arg0: memref<?xf32>) -> () {
 
 // Gets converted to the following
 // (using type alias for brevity):
-!llvm.memref_1d = type !llvm.struct<(ptr<f32>, ptr<f32>, i64,
-                                     array<1xi64>, array<1xi64>)>
+!llvm.memref_1d = !llvm.struct<(ptr<f32>, ptr<f32>, i64, array<1xi64>, array<1xi64>)>
 
 llvm.func @foo(%arg0: !llvm.ptr<f32>,  // Allocated pointer.
                %arg1: !llvm.ptr<f32>,  // Aligned pointer.
@@ -398,8 +397,7 @@ func.func @bar() {
 
 // Gets converted to the following
 // (using type alias for brevity):
-!llvm.memref_1d = type !llvm.struct<(ptr<f32>, ptr<f32>, i64,
-                                     array<1xi64>, array<1xi64>)>
+!llvm.memref_1d = !llvm.struct<(ptr<f32>, ptr<f32>, i64, array<1xi64>, array<1xi64>)>
 
 llvm.func @bar() {
   %0 = "get"() : () -> !llvm.memref_1d
@@ -619,8 +617,7 @@ func.func @qux(%arg0: memref<?x?xf32>)
 
 // Gets converted into the following
 // (using type alias for brevity):
-!llvm.memref_2d = type !llvm.struct<(ptr<f32>, ptr<f32>, i64,
-                                     array<2xi64>, array<2xi64>)>
+!llvm.memref_2d = !llvm.struct<(ptr<f32>, ptr<f32>, i64, array<2xi64>, array<2xi64>)>
 
 // Function with unpacked arguments.
 llvm.func @qux(%arg0: !llvm.ptr<f32>, %arg1: !llvm.ptr<f32>,
@@ -665,10 +662,8 @@ func.func @foo(%arg0: memref<?x?xf32>) {
 
 // Gets converted into the following
 // (using type alias for brevity):
-!llvm.memref_2d = type !llvm.struct<(ptr<f32>, ptr<f32>, i64,
-                                     array<2xi64>, array<2xi64>)>
-!llvm.memref_2d_ptr = type !llvm.ptr<struct<(ptr<f32>, ptr<f32>, i64,
-                                             array<2xi64>, array<2xi64>)>>
+!llvm.memref_2d = !llvm.struct<(ptr<f32>, ptr<f32>, i64, array<2xi64>, array<2xi64>)>
+!llvm.memref_2d_ptr = !llvm.ptr<struct<(ptr<f32>, ptr<f32>, i64, array<2xi64>, array<2xi64>)>>
 
 // Function with unpacked arguments.
 llvm.func @foo(%arg0: !llvm.ptr<f32>, %arg1: !llvm.ptr<f32>,
@@ -704,10 +699,8 @@ func.func @foo(%arg0: memref<?x?xf32>) -> memref<?x?xf32> {
 
 // Gets converted into the following
 // (using type alias for brevity):
-!llvm.memref_2d = type !llvm.struct<(ptr<f32>, ptr<f32>, i64,
-                                     array<2xi64>, array<2xi64>)>
-!llvm.memref_2d_ptr = type !llvm.ptr<struct<(ptr<f32>, ptr<f32>, i64,
-                                             array<2xi64>, array<2xi64>)>>
+!llvm.memref_2d = !llvm.struct<(ptr<f32>, ptr<f32>, i64, array<2xi64>, array<2xi64>)>
+!llvm.memref_2d_ptr = !llvm.ptr<struct<(ptr<f32>, ptr<f32>, i64, array<2xi64>, array<2xi64>)>>
 
 // Function with unpacked arguments.
 llvm.func @foo(%arg0: !llvm.ptr<f32>, %arg1: !llvm.ptr<f32>, %arg2: i64,
