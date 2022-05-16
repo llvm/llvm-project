@@ -167,3 +167,9 @@ module {
 module {
   cir.global @b = #cir.cst_array<"example\00" : !cir.array<i32 x 8>> // expected-error {{constant array element for string literals expects i8 array element type}}
 } // expected-error {{expected constant attribute to match type}}
+
+// -----
+
+module {
+  cir.global "private" constant @".str2" = #cir.cst_array<"example\00"> {alignment = 1 : i64} // expected-error {{expected type declaration for string literal}}
+} // expected-error@-1 {{expected constant attribute to match type}}

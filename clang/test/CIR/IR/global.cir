@@ -5,6 +5,8 @@ module {
   cir.global @rgb = #cir.cst_array<[0 : i8, -23 : i8, 33 : i8] : !cir.array<i8 x 3>>
   cir.global @b = #cir.cst_array<"example\00" : !cir.array<i8 x 8>>
   cir.global "private" constant @".str" : !cir.array<i8 x 8> {alignment = 1 : i64}
+  cir.global "private" @c : i32
+  cir.global "private" constant @".str2" = #cir.cst_array<"example\00" : !cir.array<i8 x 8>> {alignment = 1 : i64}
   func.func @use_global() {
     %0 = cir.get_global @a : cir.ptr <i32>
     cir.return
@@ -15,6 +17,8 @@ module {
 // CHECK: cir.global @rgb = #cir.cst_array<[0 : i8, -23 : i8, 33 : i8] : !cir.array<i8 x 3>>
 // CHECK: cir.global @b = #cir.cst_array<"example\00" : !cir.array<i8 x 8>>
 // CHECK: cir.global "private" constant @".str" : !cir.array<i8 x 8> {alignment = 1 : i64}
+// CHECK: cir.global "private" @c : i32
+// CHECK: cir.global "private" constant @".str2" = #cir.cst_array<"example\00" : !cir.array<i8 x 8>> : !cir.array<i8 x 8> {alignment = 1 : i64}
 
 // CHECK: func @use_global()
 // CHECK-NEXT: %0 = cir.get_global @a : cir.ptr <i32>
