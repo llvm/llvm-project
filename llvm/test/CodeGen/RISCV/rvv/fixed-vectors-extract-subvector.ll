@@ -346,7 +346,7 @@ define void @extract_v2i1_v64i1_0(<64 x i1>* %x, <2 x i1>* %y) {
 ; LMULMAX2-NEXT:    vmerge.vim v8, v8, 1, v0
 ; LMULMAX2-NEXT:    vsetivli zero, 8, e8, mf2, ta, mu
 ; LMULMAX2-NEXT:    vmv.v.i v9, 0
-; LMULMAX2-NEXT:    vsetivli zero, 2, e8, mf2, ta, mu
+; LMULMAX2-NEXT:    vsetivli zero, 2, e8, mf2, tu, mu
 ; LMULMAX2-NEXT:    vslideup.vi v9, v8, 0
 ; LMULMAX2-NEXT:    vsetivli zero, 8, e8, mf2, ta, mu
 ; LMULMAX2-NEXT:    vmsne.vi v8, v9, 0
@@ -362,7 +362,7 @@ define void @extract_v2i1_v64i1_0(<64 x i1>* %x, <2 x i1>* %y) {
 ; LMULMAX1-NEXT:    vmerge.vim v8, v8, 1, v0
 ; LMULMAX1-NEXT:    vsetivli zero, 8, e8, mf2, ta, mu
 ; LMULMAX1-NEXT:    vmv.v.i v9, 0
-; LMULMAX1-NEXT:    vsetivli zero, 2, e8, mf2, ta, mu
+; LMULMAX1-NEXT:    vsetivli zero, 2, e8, mf2, tu, mu
 ; LMULMAX1-NEXT:    vslideup.vi v9, v8, 0
 ; LMULMAX1-NEXT:    vsetivli zero, 8, e8, mf2, ta, mu
 ; LMULMAX1-NEXT:    vmsne.vi v8, v9, 0
@@ -390,7 +390,7 @@ define void @extract_v2i1_v64i1_2(<64 x i1>* %x, <2 x i1>* %y) {
 ; LMULMAX2-NEXT:    vmerge.vim v8, v8, 1, v0
 ; LMULMAX2-NEXT:    vsetivli zero, 8, e8, mf2, ta, mu
 ; LMULMAX2-NEXT:    vmv.v.i v9, 0
-; LMULMAX2-NEXT:    vsetivli zero, 2, e8, mf2, ta, mu
+; LMULMAX2-NEXT:    vsetivli zero, 2, e8, mf2, tu, mu
 ; LMULMAX2-NEXT:    vslideup.vi v9, v8, 0
 ; LMULMAX2-NEXT:    vsetivli zero, 8, e8, mf2, ta, mu
 ; LMULMAX2-NEXT:    vmsne.vi v8, v9, 0
@@ -411,7 +411,7 @@ define void @extract_v2i1_v64i1_2(<64 x i1>* %x, <2 x i1>* %y) {
 ; LMULMAX1-NEXT:    vmerge.vim v8, v8, 1, v0
 ; LMULMAX1-NEXT:    vsetivli zero, 8, e8, mf2, ta, mu
 ; LMULMAX1-NEXT:    vmv.v.i v9, 0
-; LMULMAX1-NEXT:    vsetivli zero, 2, e8, mf2, ta, mu
+; LMULMAX1-NEXT:    vsetivli zero, 2, e8, mf2, tu, mu
 ; LMULMAX1-NEXT:    vslideup.vi v9, v8, 0
 ; LMULMAX1-NEXT:    vsetivli zero, 8, e8, mf2, ta, mu
 ; LMULMAX1-NEXT:    vmsne.vi v8, v9, 0
@@ -440,7 +440,7 @@ define void @extract_v2i1_v64i1_42(<64 x i1>* %x, <2 x i1>* %y) {
 ; LMULMAX2-NEXT:    vmerge.vim v8, v8, 1, v0
 ; LMULMAX2-NEXT:    vsetivli zero, 8, e8, mf2, ta, mu
 ; LMULMAX2-NEXT:    vmv.v.i v9, 0
-; LMULMAX2-NEXT:    vsetivli zero, 2, e8, mf2, ta, mu
+; LMULMAX2-NEXT:    vsetivli zero, 2, e8, mf2, tu, mu
 ; LMULMAX2-NEXT:    vslideup.vi v9, v8, 0
 ; LMULMAX2-NEXT:    vsetivli zero, 8, e8, mf2, ta, mu
 ; LMULMAX2-NEXT:    vmsne.vi v8, v9, 0
@@ -462,7 +462,7 @@ define void @extract_v2i1_v64i1_42(<64 x i1>* %x, <2 x i1>* %y) {
 ; LMULMAX1-NEXT:    vmerge.vim v8, v8, 1, v0
 ; LMULMAX1-NEXT:    vsetivli zero, 8, e8, mf2, ta, mu
 ; LMULMAX1-NEXT:    vmv.v.i v9, 0
-; LMULMAX1-NEXT:    vsetivli zero, 2, e8, mf2, ta, mu
+; LMULMAX1-NEXT:    vsetivli zero, 2, e8, mf2, tu, mu
 ; LMULMAX1-NEXT:    vslideup.vi v9, v8, 0
 ; LMULMAX1-NEXT:    vsetivli zero, 8, e8, mf2, ta, mu
 ; LMULMAX1-NEXT:    vmsne.vi v8, v9, 0
@@ -482,7 +482,7 @@ define void @extract_v2i1_nxv2i1_0(<vscale x 2 x i1> %x, <2 x i1>* %y) {
 ; CHECK-NEXT:    vmerge.vim v8, v8, 1, v0
 ; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, mu
 ; CHECK-NEXT:    vmv.v.i v9, 0
-; CHECK-NEXT:    vsetivli zero, 2, e8, mf2, ta, mu
+; CHECK-NEXT:    vsetivli zero, 2, e8, mf2, tu, mu
 ; CHECK-NEXT:    vslideup.vi v9, v8, 0
 ; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, mu
 ; CHECK-NEXT:    vmsne.vi v8, v9, 0
@@ -507,7 +507,7 @@ define void @extract_v2i1_nxv2i1_2(<vscale x 2 x i1> %x, <2 x i1>* %y) {
 ; CHECK-NEXT:    vmerge.vim v8, v8, 1, v0
 ; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, mu
 ; CHECK-NEXT:    vmv.v.i v9, 0
-; CHECK-NEXT:    vsetivli zero, 2, e8, mf2, ta, mu
+; CHECK-NEXT:    vsetivli zero, 2, e8, mf2, tu, mu
 ; CHECK-NEXT:    vslideup.vi v9, v8, 0
 ; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, mu
 ; CHECK-NEXT:    vmsne.vi v8, v9, 0
@@ -526,7 +526,7 @@ define void @extract_v2i1_nxv64i1_0(<vscale x 64 x i1> %x, <2 x i1>* %y) {
 ; CHECK-NEXT:    vmerge.vim v8, v8, 1, v0
 ; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, mu
 ; CHECK-NEXT:    vmv.v.i v9, 0
-; CHECK-NEXT:    vsetivli zero, 2, e8, mf2, ta, mu
+; CHECK-NEXT:    vsetivli zero, 2, e8, mf2, tu, mu
 ; CHECK-NEXT:    vslideup.vi v9, v8, 0
 ; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, mu
 ; CHECK-NEXT:    vmsne.vi v8, v9, 0
@@ -551,7 +551,7 @@ define void @extract_v2i1_nxv64i1_2(<vscale x 64 x i1> %x, <2 x i1>* %y) {
 ; CHECK-NEXT:    vmerge.vim v8, v8, 1, v0
 ; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, mu
 ; CHECK-NEXT:    vmv.v.i v9, 0
-; CHECK-NEXT:    vsetivli zero, 2, e8, mf2, ta, mu
+; CHECK-NEXT:    vsetivli zero, 2, e8, mf2, tu, mu
 ; CHECK-NEXT:    vslideup.vi v9, v8, 0
 ; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, mu
 ; CHECK-NEXT:    vmsne.vi v8, v9, 0
@@ -577,7 +577,7 @@ define void @extract_v2i1_nxv64i1_42(<vscale x 64 x i1> %x, <2 x i1>* %y) {
 ; CHECK-NEXT:    vmerge.vim v8, v8, 1, v0
 ; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, mu
 ; CHECK-NEXT:    vmv.v.i v9, 0
-; CHECK-NEXT:    vsetivli zero, 2, e8, mf2, ta, mu
+; CHECK-NEXT:    vsetivli zero, 2, e8, mf2, tu, mu
 ; CHECK-NEXT:    vslideup.vi v9, v8, 0
 ; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, mu
 ; CHECK-NEXT:    vmsne.vi v8, v9, 0
@@ -602,7 +602,7 @@ define void @extract_v2i1_nxv32i1_26(<vscale x 32 x i1> %x, <2 x i1>* %y) {
 ; CHECK-NEXT:    vmerge.vim v8, v8, 1, v0
 ; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, mu
 ; CHECK-NEXT:    vmv.v.i v9, 0
-; CHECK-NEXT:    vsetivli zero, 2, e8, mf2, ta, mu
+; CHECK-NEXT:    vsetivli zero, 2, e8, mf2, tu, mu
 ; CHECK-NEXT:    vslideup.vi v9, v8, 0
 ; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, mu
 ; CHECK-NEXT:    vmsne.vi v8, v9, 0
