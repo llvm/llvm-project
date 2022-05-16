@@ -505,18 +505,6 @@ def VariableInvalidG : TestFormat_Op<[{
 }]> {
   let successors = (successor AnySuccessor:$successor);
 }
-// CHECK: error: format ambiguity caused by `:` literal found after attribute `attr` which does not have a buildable type
-def VariableInvalidH : TestFormat_Op<[{
-  $attr `:` attr-dict
-}]>, Arguments<(ins ElementsAttr:$attr)>;
-// CHECK: error: format ambiguity caused by `:` literal found after attribute `attr` which does not have a buildable type
-def VariableInvalidI : TestFormat_Op<[{
-  (`foo` $attr^)? `:` attr-dict
-}]>, Arguments<(ins OptionalAttr<ElementsAttr>:$attr)>;
-// CHECK: error: format ambiguity caused by `:` literal found after attribute `attr` which does not have a buildable type
-def VariableInvalidJ : TestFormat_Op<[{
-  $attr ` ` `:` attr-dict
-}]>, Arguments<(ins ElementsAttr:$attr)>;
 // CHECK: error: region 'region' is already bound
 def VariableInvalidK : TestFormat_Op<[{
   $region $region attr-dict

@@ -10,11 +10,8 @@
 #include "FormatGen.h"
 #include "OpClass.h"
 #include "mlir/Support/LLVM.h"
-#include "mlir/Support/LogicalResult.h"
 #include "mlir/TableGen/Class.h"
 #include "mlir/TableGen/Format.h"
-#include "mlir/TableGen/GenInfo.h"
-#include "mlir/TableGen/Interfaces.h"
 #include "mlir/TableGen/Operator.h"
 #include "mlir/TableGen/Trait.h"
 #include "llvm/ADT/MapVector.h"
@@ -22,10 +19,9 @@
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallBitVector.h"
 #include "llvm/ADT/StringExtras.h"
-#include "llvm/ADT/StringSwitch.h"
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Support/Signals.h"
-#include "llvm/TableGen/Error.h"
+#include "llvm/Support/SourceMgr.h"
 #include "llvm/TableGen/Record.h"
 
 #define DEBUG_TYPE "mlir-tblgen-opformatgen"
@@ -2196,14 +2192,12 @@ private:
     Optional<StringRef> transformer;
   };
 
-  using ElementsItT = ArrayRef<FormatElement *>::iterator;
-
   /// Verify the state of operation attributes within the format.
   LogicalResult verifyAttributes(SMLoc loc, ArrayRef<FormatElement *> elements);
-  /// Verify the attribute elements at the back of the given stack of iterators.
-  LogicalResult verifyAttributes(
-      SMLoc loc,
-      SmallVectorImpl<std::pair<ElementsItT, ElementsItT>> &iteratorStack);
+
+  /// Verify that attributes elements aren't followed by colon literals.
+  LogicalResult verifyAttributeColonType(SMLoc loc,
+                                         ArrayRef<FormatElement *> elements);
 
   /// Verify the state of operation operands within the format.
   LogicalResult
@@ -2338,11 +2332,8 @@ OpFormatParser::verifyAttributes(SMLoc loc,
   // type. The attribute grammar contains an optional trailing colon type, which
   // can lead to unexpected and generally unintended behavior. Given that, it is
   // better to just error out here instead.
-  SmallVector<std::pair<ElementsItT, ElementsItT>, 1> iteratorStack;
-  iteratorStack.emplace_back(elements.begin(), elements.end());
-  while (!iteratorStack.empty())
-    if (failed(verifyAttributes(loc, iteratorStack)))
-      return ::failure();
+  if (failed(verifyAttributeColonType(loc, elements)))
+    return failure();
 
   // Check for VariadicOfVariadic variables. The segment attribute of those
   // variables will be infered.
@@ -2355,61 +2346,127 @@ OpFormatParser::verifyAttributes(SMLoc loc,
 
   return success();
 }
-/// Verify the attribute elements at the back of the given stack of iterators.
-LogicalResult OpFormatParser::verifyAttributes(
-    SMLoc loc,
-    SmallVectorImpl<std::pair<ElementsItT, ElementsItT>> &iteratorStack) {
-  auto &stackIt = iteratorStack.back();
-  ElementsItT &it = stackIt.first, e = stackIt.second;
-  while (it != e) {
-    FormatElement *element = *(it++);
 
-    // Traverse into optional groups.
-    if (auto *optional = dyn_cast<OptionalElement>(element)) {
-      auto thenElements = optional->getThenElements();
-      iteratorStack.emplace_back(thenElements.begin(), thenElements.end());
+/// Returns whether the single format element is optionally parsed.
+static bool isOptionallyParsed(FormatElement *el) {
+  if (auto *attrVar = dyn_cast<AttributeVariable>(el)) {
+    Attribute attr = attrVar->getVar()->attr;
+    return attr.isOptional() || attr.hasDefaultValue();
+  }
+  if (auto *operandVar = dyn_cast<OperandVariable>(el)) {
+    const NamedTypeConstraint *operand = operandVar->getVar();
+    return operand->isOptional() || operand->isVariadic() ||
+           operand->isVariadicOfVariadic();
+  }
+  if (auto *successorVar = dyn_cast<SuccessorVariable>(el))
+    return successorVar->getVar()->isVariadic();
+  if (auto *regionVar = dyn_cast<RegionVariable>(el))
+    return regionVar->getVar()->isVariadic();
+  return isa<WhitespaceElement, AttrDictDirective>(el);
+}
 
-      auto elseElements = optional->getElseElements();
-      iteratorStack.emplace_back(elseElements.begin(), elseElements.end());
-      return success();
-    }
-
-    // We are checking for an attribute element followed by a `:`, so there is
-    // no need to check the end.
-    if (it == e && iteratorStack.size() == 1)
-      break;
-
-    // Check for an attribute with a constant type builder, followed by a `:`.
-    auto *prevAttr = dyn_cast<AttributeVariable>(element);
-    if (!prevAttr || prevAttr->getTypeBuilder())
+/// Scan the given range of elements from the start for a colon literal,
+/// skipping any optionally-parsed elements. If an optional group is
+/// encountered, this function recurses into the 'then' and 'else' elements to
+/// check if they are invalid. Returns `success` if the range is known to be
+/// valid or `None` if scanning reached the end.
+///
+/// Since the guard element of an optional group is required, this function
+/// accepts an optional element pointer to mark it as required.
+static Optional<LogicalResult> checkElementRangeForColon(
+    function_ref<LogicalResult(const Twine &)> emitError, StringRef attrName,
+    iterator_range<ArrayRef<FormatElement *>::iterator> elementRange,
+    FormatElement *optionalGuard = nullptr) {
+  for (FormatElement *element : elementRange) {
+    // Skip optionally parsed elements.
+    if (element != optionalGuard && isOptionallyParsed(element))
       continue;
 
-    // Check the next iterator within the stack for literal elements.
-    for (auto &nextItPair : iteratorStack) {
-      ElementsItT nextIt = nextItPair.first, nextE = nextItPair.second;
-      for (; nextIt != nextE; ++nextIt) {
-        // Skip any trailing whitespace, attribute dictionaries, or optional
-        // groups.
-        if (isa<WhitespaceElement>(*nextIt) ||
-            isa<AttrDictDirective>(*nextIt) || isa<OptionalElement>(*nextIt))
-          continue;
+    // Recurse on optional groups.
+    if (auto *optional = dyn_cast<OptionalElement>(element)) {
+      if (Optional<LogicalResult> result = checkElementRangeForColon(
+              emitError, attrName, optional->getThenElements(),
+              // The optional group guard is required for the group.
+              optional->getThenElements().front()))
+        if (failed(*result))
+          return failure();
+      if (Optional<LogicalResult> result = checkElementRangeForColon(
+              emitError, attrName, optional->getElseElements()))
+        if (failed(*result))
+          return failure();
+      // Skip the optional group.
+      continue;
+    }
 
-        // We are only interested in `:` literals.
-        auto *literal = dyn_cast<LiteralElement>(*nextIt);
-        if (!literal || literal->getSpelling() != ":")
-          break;
+    // If we encounter anything other than `:`, this range is range.
+    auto *literal = dyn_cast<LiteralElement>(element);
+    if (!literal || literal->getSpelling() != ":")
+      return success();
+    // If we encounter `:`, the range is known to be invalid.
+    return emitError(
+        llvm::formatv("format ambiguity caused by `:` literal found after "
+                      "attribute `{0}` which does not have a buildable type",
+                      attrName));
+  }
+  // Return None to indicate that we reached the end.
+  return llvm::None;
+}
 
-        // TODO: Use the location of the literal element itself.
-        return emitError(
-            loc, llvm::formatv("format ambiguity caused by `:` literal found "
-                               "after attribute `{0}` which does not have "
-                               "a buildable type",
-                               prevAttr->getVar()->name));
-      }
+/// For the given elements, check whether any attributes are followed by a colon
+/// literal, resulting in an ambiguous assembly format. Returns a non-null
+/// attribute if verification of said attribute reached the end of the range.
+/// Returns null if all attribute elements are verified.
+static FailureOr<AttributeVariable *>
+verifyAttributeColon(function_ref<LogicalResult(const Twine &)> emitError,
+                     ArrayRef<FormatElement *> elements) {
+  for (auto *it = elements.begin(), *e = elements.end(); it != e; ++it) {
+    // The current attribute being verified.
+    AttributeVariable *attr = nullptr;
+
+    if ((attr = dyn_cast<AttributeVariable>(*it))) {
+      // Check only attributes without type builders or that are known to call
+      // the generic attribute parser.
+      if (attr->getTypeBuilder() ||
+          !(attr->shouldBeQualified() ||
+            attr->getVar()->attr.getStorageType() == "::mlir::Attribute"))
+        continue;
+    } else if (auto *optional = dyn_cast<OptionalElement>(*it)) {
+      // Recurse on optional groups.
+      FailureOr<AttributeVariable *> thenResult =
+          verifyAttributeColon(emitError, optional->getThenElements());
+      if (failed(thenResult))
+        return failure();
+      FailureOr<AttributeVariable *> elseResult =
+          verifyAttributeColon(emitError, optional->getElseElements());
+      if (failed(elseResult))
+        return failure();
+      // If either optional group has an unverified attribute, save it.
+      // Otherwise, move on to the next element.
+      if (!(attr = *thenResult) && !(attr = *elseResult))
+        continue;
+    } else {
+      continue;
+    }
+
+    // Verify subsequent elements for potential ambiguities.
+    if (Optional<LogicalResult> result = checkElementRangeForColon(
+            emitError, attr->getVar()->name, {std::next(it), e})) {
+      if (failed(*result))
+        return failure();
+    } else {
+      // Since we reached the end, return the attribute as unverified.
+      return attr;
     }
   }
-  iteratorStack.pop_back();
-  return success();
+  // All attribute elements are known to be verified.
+  return nullptr;
+}
+
+LogicalResult
+OpFormatParser::verifyAttributeColonType(SMLoc loc,
+                                         ArrayRef<FormatElement *> elements) {
+  return verifyAttributeColon(
+      [&](const Twine &msg) { return emitError(loc, msg); }, elements);
 }
 
 LogicalResult OpFormatParser::verifyOperands(

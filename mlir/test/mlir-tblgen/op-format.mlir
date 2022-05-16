@@ -389,6 +389,9 @@ func.func @foo() {
   return
 }
 
+// CHECK: test.format_literal_following_optional_group(5 : i32) : i32 {a}
+test.format_literal_following_optional_group(5 : i32) : i32 {a}
+
 //===----------------------------------------------------------------------===//
 // Format trait type inference
 //===----------------------------------------------------------------------===//
