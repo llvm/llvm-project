@@ -1059,8 +1059,8 @@ define i8 @not_lshr(i8 %x) {
 
 define <2 x i8> @not_lshr_vec(<2 x i8> %x) {
 ; CHECK-LABEL: @not_lshr_vec(
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp sgt <2 x i8> [[X:%.*]], <i8 -1, i8 -1>
-; CHECK-NEXT:    [[R:%.*]] = zext <2 x i1> [[TMP1]] to <2 x i8>
+; CHECK-NEXT:    [[TMP1:%.*]] = xor <2 x i8> [[X:%.*]], <i8 -1, i8 -1>
+; CHECK-NEXT:    [[R:%.*]] = lshr <2 x i8> [[TMP1]], <i8 7, i8 7>
 ; CHECK-NEXT:    ret <2 x i8> [[R]]
 ;
   %a = lshr <2 x i8> %x, <i8 7, i8 7>
