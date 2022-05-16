@@ -32,25 +32,22 @@ entry:
 ; SI:     buffer_load_dword v[[A_F16_0:[0-9]+]]
 ; VI:     flat_load_dword v[[A_F16_0:[0-9]+]]
 ; GFX9:   global_load_dword v[[A_F16_0:[0-9]+]]
-; SI:     s_mov_b32 [[A_F32_2:s[0-9]+]], 0x3f317218
-; GFX9:   s_movk_i32 [[A_F32_2:s[0-9]+]], 0x398c
 ; VI:     v_mov_b32_e32 [[A_F32_2_V:v[0-9]+]], 0x398c
 ; SI:     v_lshrrev_b32_e32 v[[A_F16_1:[0-9]+]], 16, v[[A_F16_0]]
 ; SI:     v_cvt_f32_f16_e32 v[[A_F32_0:[0-9]+]], v[[A_F16_1]]
 ; SI:     v_cvt_f32_f16_e32 v[[A_F32_1:[0-9]+]], v[[A_F16_0]]
 ; SI:     v_log_f32_e32 v[[R_F32_0:[0-9]+]], v[[A_F32_0]]
 ; SI:     v_log_f32_e32 v[[R_F32_1:[0-9]+]], v[[A_F32_1]]
-; SI:     v_mul_f32_e32 v[[R_F32_5:[0-9]+]], [[A_F32_2]], v[[R_F32_0]]
+; SI:     v_mul_f32_e32 v[[R_F32_5:[0-9]+]], 0x3f317218, v[[R_F32_0]]
 ; SI:     v_cvt_f16_f32_e32 v[[R_F16_0:[0-9]+]], v[[R_F32_5]]
-; SI:     v_mul_f32_e32 v[[R_F32_6:[0-9]+]], [[A_F32_2]], v[[R_F32_1]]
+; SI:     v_mul_f32_e32 v[[R_F32_6:[0-9]+]], 0x3f317218, v[[R_F32_1]]
 ; SI:     v_cvt_f16_f32_e32 v[[R_F16_1:[0-9]+]], v[[R_F32_6]]
 ; GFX9:   v_log_f16_e32 v[[R_F16_2:[0-9]+]], v[[A_F16_0]]
 ; VIGFX9: v_log_f16_sdwa v[[R_F16_1:[0-9]+]], v[[A_F16_0]] dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1
 ; VI:     v_log_f16_e32 v[[R_F16_0:[0-9]+]], v[[A_F16_0]]
 ; VI:     v_mul_f16_sdwa v[[R_F16_2:[0-9]+]], v[[R_F16_1]], [[A_F32_2_V]] dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
-; GFX9:   v_mul_f16_e32 v[[R_F32_3:[0-9]+]], [[A_F32_2]], v[[R_F16_2]]
-; VI:     v_mul_f16_e32 v[[R_F32_2:[0-9]+]], 0x398c, v[[R_F16_0]]
-; GFX9:   v_mul_f16_e32 v[[R_F32_2:[0-9]+]], [[A_F32_2]], v[[R_F16_0]]
+; GFX9:   v_mul_f16_e32 v[[R_F32_3:[0-9]+]], 0x398c, v[[R_F16_2]]
+; VIGFX9: v_mul_f16_e32 v[[R_F32_2:[0-9]+]], 0x398c, v[[R_F16_0]]
 ; SI:     v_lshlrev_b32_e32 v[[R_F16_HI:[0-9]+]], 16, v[[R_F16_0]]
 ; SI-NOT: v_and_b32_e32
 ; SI:     v_or_b32_e32 v[[R_F32_5:[0-9]+]], v[[R_F16_1]], v[[R_F16_0]]

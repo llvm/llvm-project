@@ -452,7 +452,7 @@ define i32 @v_uaddsat_v4i8(i32 %lhs.arg, i32 %rhs.arg) {
 ; GFX9-NEXT:    s_movk_i32 s4, 0xff
 ; GFX9-NEXT:    v_lshlrev_b32_sdwa v2, v2, v0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:BYTE_2
 ; GFX9-NEXT:    v_and_or_b32 v0, v0, s4, v2
-; GFX9-NEXT:    v_and_b32_e32 v2, s4, v1
+; GFX9-NEXT:    v_and_b32_e32 v2, 0xff, v1
 ; GFX9-NEXT:    v_mov_b32_e32 v3, 24
 ; GFX9-NEXT:    v_lshlrev_b32_e32 v2, 16, v2
 ; GFX9-NEXT:    v_lshlrev_b32_sdwa v1, v3, v1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:BYTE_2
@@ -617,7 +617,7 @@ define amdgpu_ps i32 @s_uaddsat_v4i8(i32 inreg %lhs.arg, i32 inreg %rhs.arg) {
 ; GFX9-NEXT:    v_lshlrev_b32_sdwa v2, s2, v0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:BYTE_2
 ; GFX9-NEXT:    s_mov_b32 s5, 24
 ; GFX9-NEXT:    v_and_or_b32 v0, v0, s0, v2
-; GFX9-NEXT:    v_and_b32_e32 v2, s0, v1
+; GFX9-NEXT:    v_and_b32_e32 v2, 0xff, v1
 ; GFX9-NEXT:    v_lshlrev_b32_e32 v2, 16, v2
 ; GFX9-NEXT:    v_lshlrev_b32_sdwa v1, s5, v1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:BYTE_2
 ; GFX9-NEXT:    v_or3_b32 v0, v0, v2, v1

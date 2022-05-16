@@ -93,7 +93,7 @@ bool SIShrinkInstructions::foldImmediates(MachineInstr &MI,
   MachineOperand &Src0 = MI.getOperand(Src0Idx);
   if (Src0.isReg()) {
     Register Reg = Src0.getReg();
-    if (Reg.isVirtual() && MRI->hasOneUse(Reg)) {
+    if (Reg.isVirtual()) {
       MachineInstr *Def = MRI->getUniqueVRegDef(Reg);
       if (Def && Def->isMoveImmediate()) {
         MachineOperand &MovSrc = Def->getOperand(1);
@@ -115,8 +115,8 @@ bool SIShrinkInstructions::foldImmediates(MachineInstr &MI,
         }
 
         if (ConstantFolded) {
-          assert(MRI->use_empty(Reg));
-          Def->eraseFromParent();
+          if (MRI->use_nodbg_empty(Reg))
+            Def->eraseFromParent();
           ++NumLiteralConstantsFolded;
           return true;
         }
@@ -739,11 +739,7 @@ bool SIShrinkInstructions::runOnMachineFunction(MachineFunction &MF) {
         }
       }
 
-      // FIXME: We also need to consider movs of constant operands since
-      // immediate operands are not folded if they have more than one use, and
-      // the operand folding pass is unaware if the immediate will be free since
-      // it won't know if the src == dest constraint will end up being
-      // satisfied.
+      // Try to use S_ADDK_I32 and S_MULK_I32.
       if (MI.getOpcode() == AMDGPU::S_ADD_I32 ||
           MI.getOpcode() == AMDGPU::S_MUL_I32) {
         const MachineOperand *Dest = &MI.getOperand(0);

@@ -275,12 +275,10 @@ define amdgpu_kernel void @v_and_constant_i64(i64 addrspace(1)* %out, i64 addrsp
 ; FUNC-LABEL: {{^}}v_and_multi_use_constant_i64:
 ; SI-DAG: buffer_load_dwordx2 v[[[LO0:[0-9]+]]:[[HI0:[0-9]+]]]
 ; SI-DAG: buffer_load_dwordx2 v[[[LO1:[0-9]+]]:[[HI1:[0-9]+]]]
-; SI-DAG: s_movk_i32 [[KHI:s[0-9]+]], 0x11e{{$}}
-; SI-DAG: s_mov_b32 [[KLO:s[0-9]+]], 0xab19b207{{$}}
-; SI-DAG: v_and_b32_e32 {{v[0-9]+}}, [[KLO]], v[[LO0]]
-; SI-DAG: v_and_b32_e32 {{v[0-9]+}}, [[KHI]], v[[HI0]]
-; SI-DAG: v_and_b32_e32 {{v[0-9]+}}, [[KLO]], v[[LO1]]
-; SI-DAG: v_and_b32_e32 {{v[0-9]+}}, [[KHI]], v[[HI1]]
+; SI-DAG: v_and_b32_e32 {{v[0-9]+}}, 0xab19b207, v[[LO0]]
+; SI-DAG: v_and_b32_e32 {{v[0-9]+}}, 0x11e, v[[HI0]]
+; SI-DAG: v_and_b32_e32 {{v[0-9]+}}, 0xab19b207, v[[LO1]]
+; SI-DAG: v_and_b32_e32 {{v[0-9]+}}, 0x11e, v[[HI1]]
 ; SI: buffer_store_dwordx2
 ; SI: buffer_store_dwordx2
 define amdgpu_kernel void @v_and_multi_use_constant_i64(i64 addrspace(1)* %out, i64 addrspace(1)* %aptr) {

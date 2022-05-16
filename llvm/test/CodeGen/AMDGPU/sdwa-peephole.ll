@@ -507,9 +507,9 @@ store_label:
 
 ; Check that "pulling out" SDWA operands works correctly.
 ; GCN-LABEL: {{^}}pulled_out_test:
-; NOSDWA-DAG: v_and_b32_e32 v{{[0-9]+}}, s{{[0-9]+}}, v{{[0-9]+}}
+; NOSDWA-DAG: v_and_b32_e32 v{{[0-9]+}}, 0xff, v{{[0-9]+}}
 ; NOSDWA-DAG: v_lshlrev_b16_e32 v{{[0-9]+}}, 8, v{{[0-9]+}}
-; NOSDWA-DAG: v_and_b32_e32 v{{[0-9]+}}, s{{[0-9]+}}, v{{[0-9]+}}
+; NOSDWA-DAG: v_and_b32_e32 v{{[0-9]+}}, 0xff, v{{[0-9]+}}
 ; NOSDWA-DAG: v_lshlrev_b16_e32 v{{[0-9]+}}, 8, v{{[0-9]+}}
 ; NOSDWA: v_or_b32_e32 v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}}
 ; NOSDWA-NOT: v_and_b32_sdwa

@@ -2619,8 +2619,7 @@ define amdgpu_kernel void @frem_v2f64(<2 x double> addrspace(1)* %out, <2 x doub
 ; SI-NEXT:    v_and_b32_e32 v10, v8, v10
 ; SI-NEXT:    v_not_b32_e32 v11, v11
 ; SI-NEXT:    v_and_b32_e32 v11, v9, v11
-; SI-NEXT:    s_brev_b32 s8, 1
-; SI-NEXT:    v_and_b32_e32 v13, s8, v9
+; SI-NEXT:    v_and_b32_e32 v13, 0x80000000, v9
 ; SI-NEXT:    v_cmp_gt_i32_e32 vcc, 0, v12
 ; SI-NEXT:    v_cndmask_b32_e32 v11, v11, v13, vcc
 ; SI-NEXT:    v_cmp_lt_i32_e64 s[0:1], 51, v12
@@ -2650,7 +2649,7 @@ define amdgpu_kernel void @frem_v2f64(<2 x double> addrspace(1)* %out, <2 x doub
 ; SI-NEXT:    v_and_b32_e32 v8, v6, v8
 ; SI-NEXT:    v_not_b32_e32 v9, v9
 ; SI-NEXT:    v_and_b32_e32 v9, v7, v9
-; SI-NEXT:    v_and_b32_e32 v11, s8, v7
+; SI-NEXT:    v_and_b32_e32 v11, 0x80000000, v7
 ; SI-NEXT:    v_cmp_gt_i32_e32 vcc, 0, v10
 ; SI-NEXT:    v_cndmask_b32_e32 v9, v9, v11, vcc
 ; SI-NEXT:    v_cmp_lt_i32_e64 s[0:1], 51, v10
