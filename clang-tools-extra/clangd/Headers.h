@@ -146,7 +146,7 @@ public:
   }
 
   bool hasIWYUExport(HeaderID ID) const {
-    return HasIWYUPragmas.contains(ID);
+    return HasIWYUExport.contains(ID);
   }
 
   // Return all transitively reachable files.
@@ -191,7 +191,7 @@ private:
   llvm::DenseSet<HeaderID> NonSelfContained;
   // Contains a set of headers that have either "IWYU pragma: export" or "IWYU
   // pragma: begin_exports".
-  llvm::DenseSet<HeaderID> HasIWYUPragmas;
+  llvm::DenseSet<HeaderID> HasIWYUExport;
 };
 
 // Calculates insertion edit for including a new header in a file.
