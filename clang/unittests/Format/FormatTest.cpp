@@ -17318,6 +17318,23 @@ TEST_F(FormatTest, AlignConsecutiveAssignments) {
   //              "    ccc ? aaaaa : bbbbb,\n"
   //              "    dddddddddddddddddddddddddd);",
   //              Alignment);
+
+  // Confirm proper handling of AlignConsecutiveAssignments with
+  // BinPackArguments.
+  // See https://llvm.org/PR55360
+  Alignment = getLLVMStyleWithColumns(50);
+  Alignment.AlignConsecutiveAssignments.Enabled = true;
+  Alignment.BinPackArguments = false;
+  verifyFormat("int a_long_name = 1;\n"
+               "auto b          = B({a_long_name, a_long_name},\n"
+               "                    {a_longer_name_for_wrap,\n"
+               "                     a_longer_name_for_wrap});",
+               Alignment);
+  verifyFormat("int a_long_name = 1;\n"
+               "auto b          = B{{a_long_name, a_long_name},\n"
+               "                    {a_longer_name_for_wrap,\n"
+               "                     a_longer_name_for_wrap}};",
+               Alignment);
 }
 
 TEST_F(FormatTest, AlignConsecutiveBitFields) {
