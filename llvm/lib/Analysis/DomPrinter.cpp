@@ -24,74 +24,6 @@
 
 using namespace llvm;
 
-namespace llvm {
-template<>
-struct DOTGraphTraits<DomTreeNode*> : public DefaultDOTGraphTraits {
-
-  DOTGraphTraits (bool isSimple=false)
-    : DefaultDOTGraphTraits(isSimple) {}
-
-  std::string getNodeLabel(DomTreeNode *Node, DomTreeNode *Graph) {
-
-    BasicBlock *BB = Node->getBlock();
-
-    if (!BB)
-      return "Post dominance root node";
-
-
-    if (isSimple())
-      return DOTGraphTraits<DOTFuncInfo *>
-        ::getSimpleNodeLabel(BB, nullptr);
-    else
-      return DOTGraphTraits<DOTFuncInfo *>
-        ::getCompleteNodeLabel(BB, nullptr);
-  }
-};
-
-template<>
-struct DOTGraphTraits<DominatorTree*> : public DOTGraphTraits<DomTreeNode*> {
-
-  DOTGraphTraits (bool isSimple=false)
-    : DOTGraphTraits<DomTreeNode*>(isSimple) {}
-
-  static std::string getGraphName(DominatorTree *DT) {
-    return "Dominator tree";
-  }
-
-  std::string getNodeLabel(DomTreeNode *Node, DominatorTree *G) {
-    return DOTGraphTraits<DomTreeNode*>::getNodeLabel(Node, G->getRootNode());
-  }
-};
-
-template<>
-struct DOTGraphTraits<PostDominatorTree*>
-  : public DOTGraphTraits<DomTreeNode*> {
-
-  DOTGraphTraits (bool isSimple=false)
-    : DOTGraphTraits<DomTreeNode*>(isSimple) {}
-
-  static std::string getGraphName(PostDominatorTree *DT) {
-    return "Post dominator tree";
-  }
-
-  std::string getNodeLabel(DomTreeNode *Node, PostDominatorTree *G ) {
-    return DOTGraphTraits<DomTreeNode*>::getNodeLabel(Node, G->getRootNode());
-  }
-};
-}
-
-PreservedAnalyses DomTreePrinterPass::run(Function &F,
-                                          FunctionAnalysisManager &AM) {
-  WriteDOTGraphToFile(F, &AM.getResult<DominatorTreeAnalysis>(F), "dom", false);
-  return PreservedAnalyses::all();
-}
-
-PreservedAnalyses DomTreeOnlyPrinterPass::run(Function &F,
-                                              FunctionAnalysisManager &AM) {
-  WriteDOTGraphToFile(F, &AM.getResult<DominatorTreeAnalysis>(F), "domonly",
-                      true);
-  return PreservedAnalyses::all();
-}
 
 void DominatorTree::viewGraph(const Twine &Name, const Twine &Title) {
 #ifndef NDEBUG
@@ -110,162 +42,167 @@ void DominatorTree::viewGraph() {
 }
 
 namespace {
-struct DominatorTreeWrapperPassAnalysisGraphTraits {
+struct LegacyDominatorTreeWrapperPassAnalysisGraphTraits {
   static DominatorTree *getGraph(DominatorTreeWrapperPass *DTWP) {
     return &DTWP->getDomTree();
   }
 };
 
-struct DomViewer : public DOTGraphTraitsViewerWrapperPass<
-                       DominatorTreeWrapperPass, false, DominatorTree *,
-                       DominatorTreeWrapperPassAnalysisGraphTraits> {
+struct DomViewerWrapperPass
+    : public DOTGraphTraitsViewerWrapperPass<
+          DominatorTreeWrapperPass, false, DominatorTree *,
+          LegacyDominatorTreeWrapperPassAnalysisGraphTraits> {
   static char ID;
-  DomViewer()
+  DomViewerWrapperPass()
       : DOTGraphTraitsViewerWrapperPass<
             DominatorTreeWrapperPass, false, DominatorTree *,
-            DominatorTreeWrapperPassAnalysisGraphTraits>("dom", ID) {
-    initializeDomViewerPass(*PassRegistry::getPassRegistry());
+            LegacyDominatorTreeWrapperPassAnalysisGraphTraits>("dom", ID) {
+    initializeDomViewerWrapperPassPass(*PassRegistry::getPassRegistry());
   }
 };
 
-struct DomOnlyViewer : public DOTGraphTraitsViewerWrapperPass<
-                           DominatorTreeWrapperPass, true, DominatorTree *,
-                           DominatorTreeWrapperPassAnalysisGraphTraits> {
+struct DomOnlyViewerWrapperPass
+    : public DOTGraphTraitsViewerWrapperPass<
+          DominatorTreeWrapperPass, true, DominatorTree *,
+          LegacyDominatorTreeWrapperPassAnalysisGraphTraits> {
   static char ID;
-  DomOnlyViewer()
+  DomOnlyViewerWrapperPass()
       : DOTGraphTraitsViewerWrapperPass<
             DominatorTreeWrapperPass, true, DominatorTree *,
-            DominatorTreeWrapperPassAnalysisGraphTraits>("domonly", ID) {
-    initializeDomOnlyViewerPass(*PassRegistry::getPassRegistry());
+            LegacyDominatorTreeWrapperPassAnalysisGraphTraits>("domonly", ID) {
+    initializeDomOnlyViewerWrapperPassPass(*PassRegistry::getPassRegistry());
   }
 };
 
-struct PostDominatorTreeWrapperPassAnalysisGraphTraits {
+struct LegacyPostDominatorTreeWrapperPassAnalysisGraphTraits {
   static PostDominatorTree *getGraph(PostDominatorTreeWrapperPass *PDTWP) {
     return &PDTWP->getPostDomTree();
   }
 };
 
-struct PostDomViewer
+struct PostDomViewerWrapperPass
     : public DOTGraphTraitsViewerWrapperPass<
           PostDominatorTreeWrapperPass, false, PostDominatorTree *,
-          PostDominatorTreeWrapperPassAnalysisGraphTraits> {
+          LegacyPostDominatorTreeWrapperPassAnalysisGraphTraits> {
   static char ID;
-  PostDomViewer()
+  PostDomViewerWrapperPass()
       : DOTGraphTraitsViewerWrapperPass<
             PostDominatorTreeWrapperPass, false, PostDominatorTree *,
-            PostDominatorTreeWrapperPassAnalysisGraphTraits>("postdom", ID) {
-    initializePostDomViewerPass(*PassRegistry::getPassRegistry());
+            LegacyPostDominatorTreeWrapperPassAnalysisGraphTraits>("postdom",
+                                                                   ID) {
+    initializePostDomViewerWrapperPassPass(*PassRegistry::getPassRegistry());
   }
 };
 
-struct PostDomOnlyViewer
+struct PostDomOnlyViewerWrapperPass
     : public DOTGraphTraitsViewerWrapperPass<
           PostDominatorTreeWrapperPass, true, PostDominatorTree *,
-          PostDominatorTreeWrapperPassAnalysisGraphTraits> {
+          LegacyPostDominatorTreeWrapperPassAnalysisGraphTraits> {
   static char ID;
-  PostDomOnlyViewer()
+  PostDomOnlyViewerWrapperPass()
       : DOTGraphTraitsViewerWrapperPass<
             PostDominatorTreeWrapperPass, true, PostDominatorTree *,
-            PostDominatorTreeWrapperPassAnalysisGraphTraits>("postdomonly",
-                                                             ID) {
-    initializePostDomOnlyViewerPass(*PassRegistry::getPassRegistry());
+            LegacyPostDominatorTreeWrapperPassAnalysisGraphTraits>(
+            "postdomonly", ID) {
+    initializePostDomOnlyViewerWrapperPassPass(
+        *PassRegistry::getPassRegistry());
   }
 };
 } // end anonymous namespace
 
-char DomViewer::ID = 0;
-INITIALIZE_PASS(DomViewer, "view-dom",
+char DomViewerWrapperPass::ID = 0;
+INITIALIZE_PASS(DomViewerWrapperPass, "view-dom",
                 "View dominance tree of function", false, false)
 
-char DomOnlyViewer::ID = 0;
-INITIALIZE_PASS(DomOnlyViewer, "view-dom-only",
+char DomOnlyViewerWrapperPass::ID = 0;
+INITIALIZE_PASS(DomOnlyViewerWrapperPass, "view-dom-only",
                 "View dominance tree of function (with no function bodies)",
                 false, false)
 
-char PostDomViewer::ID = 0;
-INITIALIZE_PASS(PostDomViewer, "view-postdom",
+char PostDomViewerWrapperPass::ID = 0;
+INITIALIZE_PASS(PostDomViewerWrapperPass, "view-postdom",
                 "View postdominance tree of function", false, false)
 
-char PostDomOnlyViewer::ID = 0;
-INITIALIZE_PASS(PostDomOnlyViewer, "view-postdom-only",
+char PostDomOnlyViewerWrapperPass::ID = 0;
+INITIALIZE_PASS(PostDomOnlyViewerWrapperPass, "view-postdom-only",
                 "View postdominance tree of function "
                 "(with no function bodies)",
                 false, false)
 
 namespace {
-struct DomPrinter : public DOTGraphTraitsPrinterWrapperPass<
-                        DominatorTreeWrapperPass, false, DominatorTree *,
-                        DominatorTreeWrapperPassAnalysisGraphTraits> {
+struct DomPrinterWrapperPass
+    : public DOTGraphTraitsPrinterWrapperPass<
+          DominatorTreeWrapperPass, false, DominatorTree *,
+          LegacyDominatorTreeWrapperPassAnalysisGraphTraits> {
   static char ID;
-  DomPrinter()
+  DomPrinterWrapperPass()
       : DOTGraphTraitsPrinterWrapperPass<
             DominatorTreeWrapperPass, false, DominatorTree *,
-            DominatorTreeWrapperPassAnalysisGraphTraits>("dom", ID) {
-    initializeDomPrinterPass(*PassRegistry::getPassRegistry());
+            LegacyDominatorTreeWrapperPassAnalysisGraphTraits>("dom", ID) {
+    initializeDomPrinterWrapperPassPass(*PassRegistry::getPassRegistry());
   }
 };
 
-struct DomOnlyPrinter : public DOTGraphTraitsPrinterWrapperPass<
-                            DominatorTreeWrapperPass, true, DominatorTree *,
-                            DominatorTreeWrapperPassAnalysisGraphTraits> {
+struct DomOnlyPrinterWrapperPass
+    : public DOTGraphTraitsPrinterWrapperPass<
+          DominatorTreeWrapperPass, true, DominatorTree *,
+          LegacyDominatorTreeWrapperPassAnalysisGraphTraits> {
   static char ID;
-  DomOnlyPrinter()
+  DomOnlyPrinterWrapperPass()
       : DOTGraphTraitsPrinterWrapperPass<
             DominatorTreeWrapperPass, true, DominatorTree *,
-            DominatorTreeWrapperPassAnalysisGraphTraits>("domonly", ID) {
-    initializeDomOnlyPrinterPass(*PassRegistry::getPassRegistry());
+            LegacyDominatorTreeWrapperPassAnalysisGraphTraits>("domonly", ID) {
+    initializeDomOnlyPrinterWrapperPassPass(*PassRegistry::getPassRegistry());
   }
 };
 
-struct PostDomPrinter
+struct PostDomPrinterWrapperPass
     : public DOTGraphTraitsPrinterWrapperPass<
           PostDominatorTreeWrapperPass, false, PostDominatorTree *,
-          PostDominatorTreeWrapperPassAnalysisGraphTraits> {
+          LegacyPostDominatorTreeWrapperPassAnalysisGraphTraits> {
   static char ID;
-  PostDomPrinter()
+  PostDomPrinterWrapperPass()
       : DOTGraphTraitsPrinterWrapperPass<
             PostDominatorTreeWrapperPass, false, PostDominatorTree *,
-            PostDominatorTreeWrapperPassAnalysisGraphTraits>("postdom", ID) {
-    initializePostDomPrinterPass(*PassRegistry::getPassRegistry());
+            LegacyPostDominatorTreeWrapperPassAnalysisGraphTraits>("postdom",
+                                                                   ID) {
+    initializePostDomPrinterWrapperPassPass(*PassRegistry::getPassRegistry());
   }
 };
 
-struct PostDomOnlyPrinter
+struct PostDomOnlyPrinterWrapperPass
     : public DOTGraphTraitsPrinterWrapperPass<
           PostDominatorTreeWrapperPass, true, PostDominatorTree *,
-          PostDominatorTreeWrapperPassAnalysisGraphTraits> {
+          LegacyPostDominatorTreeWrapperPassAnalysisGraphTraits> {
   static char ID;
-  PostDomOnlyPrinter()
+  PostDomOnlyPrinterWrapperPass()
       : DOTGraphTraitsPrinterWrapperPass<
             PostDominatorTreeWrapperPass, true, PostDominatorTree *,
-            PostDominatorTreeWrapperPassAnalysisGraphTraits>("postdomonly",
-                                                             ID) {
-    initializePostDomOnlyPrinterPass(*PassRegistry::getPassRegistry());
+            LegacyPostDominatorTreeWrapperPassAnalysisGraphTraits>(
+            "postdomonly", ID) {
+    initializePostDomOnlyPrinterWrapperPassPass(
+        *PassRegistry::getPassRegistry());
   }
 };
 } // end anonymous namespace
 
+char DomPrinterWrapperPass::ID = 0;
+INITIALIZE_PASS(DomPrinterWrapperPass, "dot-dom",
+                "Print dominance tree of function to 'dot' file", false, false)
 
-
-char DomPrinter::ID = 0;
-INITIALIZE_PASS(DomPrinter, "dot-dom",
-                "Print dominance tree of function to 'dot' file",
-                false, false)
-
-char DomOnlyPrinter::ID = 0;
-INITIALIZE_PASS(DomOnlyPrinter, "dot-dom-only",
+char DomOnlyPrinterWrapperPass::ID = 0;
+INITIALIZE_PASS(DomOnlyPrinterWrapperPass, "dot-dom-only",
                 "Print dominance tree of function to 'dot' file "
                 "(with no function bodies)",
                 false, false)
 
-char PostDomPrinter::ID = 0;
-INITIALIZE_PASS(PostDomPrinter, "dot-postdom",
-                "Print postdominance tree of function to 'dot' file",
-                false, false)
+char PostDomPrinterWrapperPass::ID = 0;
+INITIALIZE_PASS(PostDomPrinterWrapperPass, "dot-postdom",
+                "Print postdominance tree of function to 'dot' file", false,
+                false)
 
-char PostDomOnlyPrinter::ID = 0;
-INITIALIZE_PASS(PostDomOnlyPrinter, "dot-postdom-only",
+char PostDomOnlyPrinterWrapperPass::ID = 0;
+INITIALIZE_PASS(PostDomOnlyPrinterWrapperPass, "dot-postdom-only",
                 "Print postdominance tree of function to 'dot' file "
                 "(with no function bodies)",
                 false, false)
@@ -274,34 +211,34 @@ INITIALIZE_PASS(PostDomOnlyPrinter, "dot-postdom-only",
 // "include/llvm/LinkAllPasses.h". Otherwise the pass would be deleted by
 // the link time optimization.
 
-FunctionPass *llvm::createDomPrinterPass() {
-  return new DomPrinter();
+FunctionPass *llvm::createDomPrinterWrapperPassPass() {
+  return new DomPrinterWrapperPass();
 }
 
-FunctionPass *llvm::createDomOnlyPrinterPass() {
-  return new DomOnlyPrinter();
+FunctionPass *llvm::createDomOnlyPrinterWrapperPassPass() {
+  return new DomOnlyPrinterWrapperPass();
 }
 
-FunctionPass *llvm::createDomViewerPass() {
-  return new DomViewer();
+FunctionPass *llvm::createDomViewerWrapperPassPass() {
+  return new DomViewerWrapperPass();
 }
 
-FunctionPass *llvm::createDomOnlyViewerPass() {
-  return new DomOnlyViewer();
+FunctionPass *llvm::createDomOnlyViewerWrapperPassPass() {
+  return new DomOnlyViewerWrapperPass();
 }
 
-FunctionPass *llvm::createPostDomPrinterPass() {
-  return new PostDomPrinter();
+FunctionPass *llvm::createPostDomPrinterWrapperPassPass() {
+  return new PostDomPrinterWrapperPass();
 }
 
-FunctionPass *llvm::createPostDomOnlyPrinterPass() {
-  return new PostDomOnlyPrinter();
+FunctionPass *llvm::createPostDomOnlyPrinterWrapperPassPass() {
+  return new PostDomOnlyPrinterWrapperPass();
 }
 
-FunctionPass *llvm::createPostDomViewerPass() {
-  return new PostDomViewer();
+FunctionPass *llvm::createPostDomViewerWrapperPassPass() {
+  return new PostDomViewerWrapperPass();
 }
 
-FunctionPass *llvm::createPostDomOnlyViewerPass() {
-  return new PostDomOnlyViewer();
+FunctionPass *llvm::createPostDomOnlyViewerWrapperPassPass() {
+  return new PostDomOnlyViewerWrapperPass();
 }
