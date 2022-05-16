@@ -390,3 +390,25 @@ define i528 @large_promotion(i528 %A) nounwind {
   ret i528 %Z
 }
 declare i528 @llvm.bswap.i528(i528)
+
+define i32 @pr55484(i32 %0) {
+; CHECK-LABEL: pr55484:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; CHECK-NEXT:    bswapl %eax
+; CHECK-NEXT:    sarl $16, %eax
+; CHECK-NEXT:    retl
+;
+; CHECK64-LABEL: pr55484:
+; CHECK64:       # %bb.0:
+; CHECK64-NEXT:    movl %edi, %eax
+; CHECK64-NEXT:    bswapl %eax
+; CHECK64-NEXT:    sarl $16, %eax
+; CHECK64-NEXT:    retq
+  %2 = lshr i32 %0, 8
+  %3 = shl i32 %0, 8
+  %4 = or i32 %2, %3
+  %5 = trunc i32 %4 to i16
+  %6 = sext i16 %5 to i32
+  ret i32 %6
+}
