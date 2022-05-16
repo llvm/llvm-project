@@ -20,10 +20,7 @@ enum class SwiftLog : Log::MaskType {
   LLVM_MARK_AS_BITMASK_ENUM(Health)
 };
 
-class LogChannelSwift {
-  static Log::Channel g_channel;
-
-public:
+struct LogChannelSwift {
   static void Initialize();
   static void Terminate();
 

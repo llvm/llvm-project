@@ -1166,6 +1166,8 @@ eBasicTypeChar16 = _lldb.eBasicTypeChar16
 
 eBasicTypeChar32 = _lldb.eBasicTypeChar32
 
+eBasicTypeChar8 = _lldb.eBasicTypeChar8
+
 eBasicTypeShort = _lldb.eBasicTypeShort
 
 eBasicTypeUnsignedShort = _lldb.eBasicTypeUnsignedShort
@@ -1565,6 +1567,8 @@ eSaveCoreFull = _lldb.eSaveCoreFull
 eSaveCoreDirtyOnly = _lldb.eSaveCoreDirtyOnly
 
 eSaveCoreStackOnly = _lldb.eSaveCoreStackOnly
+
+eTraceCounterTSC = _lldb.eTraceCounterTSC
 
 class SBAddress(object):
     r"""
@@ -3138,6 +3142,10 @@ class SBCommandInterpreter(object):
         r"""HasAliasOptions(SBCommandInterpreter self) -> bool"""
         return _lldb.SBCommandInterpreter_HasAliasOptions(self)
 
+    def IsInteractive(self):
+        r"""IsInteractive(SBCommandInterpreter self) -> bool"""
+        return _lldb.SBCommandInterpreter_IsInteractive(self)
+
     def GetProcess(self):
         r"""GetProcess(SBCommandInterpreter self) -> SBProcess"""
         return _lldb.SBCommandInterpreter_GetProcess(self)
@@ -3798,6 +3806,10 @@ class SBData(object):
         r"""SetData(SBData self, SBError error, void const * buf, lldb::ByteOrder endian, uint8_t addr_size)"""
         return _lldb.SBData_SetData(self, error, buf, endian, addr_size)
 
+    def SetDataWithOwnership(self, error, buf, endian, addr_size):
+        r"""SetDataWithOwnership(SBData self, SBError error, void const * buf, lldb::ByteOrder endian, uint8_t addr_size)"""
+        return _lldb.SBData_SetDataWithOwnership(self, error, buf, endian, addr_size)
+
     def Append(self, rhs):
         r"""Append(SBData self, SBData rhs) -> bool"""
         return _lldb.SBData_Append(self, rhs)
@@ -4151,6 +4163,26 @@ class SBDebugger(object):
 
     thisown = property(lambda x: x.this.own(), lambda x, v: x.this.own(v), doc="The membership flag")
     __repr__ = _swig_repr
+    eBroadcastBitProgress = _lldb.SBDebugger_eBroadcastBitProgress
+    
+    eBroadcastBitWarning = _lldb.SBDebugger_eBroadcastBitWarning
+    
+    eBroadcastBitError = _lldb.SBDebugger_eBroadcastBitError
+    
+
+    @staticmethod
+    def GetProgressFromEvent(event):
+        r"""GetProgressFromEvent(SBEvent event) -> char const *"""
+        return _lldb.SBDebugger_GetProgressFromEvent(event)
+
+    @staticmethod
+    def GetDiagnosticFromEvent(event):
+        r"""GetDiagnosticFromEvent(SBEvent event) -> SBStructuredData"""
+        return _lldb.SBDebugger_GetDiagnosticFromEvent(event)
+
+    def GetBroadcaster(self):
+        r"""GetBroadcaster(SBDebugger self) -> SBBroadcaster"""
+        return _lldb.SBDebugger_GetBroadcaster(self)
 
     @staticmethod
     def Initialize():
@@ -4161,6 +4193,11 @@ class SBDebugger(object):
     def InitializeWithErrorHandling():
         r"""InitializeWithErrorHandling() -> SBError"""
         return _lldb.SBDebugger_InitializeWithErrorHandling()
+
+    @staticmethod
+    def PrintStackTraceOnError():
+        r"""PrintStackTraceOnError()"""
+        return _lldb.SBDebugger_PrintStackTraceOnError()
 
     @staticmethod
     def Terminate():
@@ -4653,6 +4690,14 @@ class SBDebugger(object):
 # Register SBDebugger in _lldb:
 _lldb.SBDebugger_swigregister(SBDebugger)
 
+def SBDebugger_GetProgressFromEvent(event):
+    r"""SBDebugger_GetProgressFromEvent(SBEvent event) -> char const *"""
+    return _lldb.SBDebugger_GetProgressFromEvent(event)
+
+def SBDebugger_GetDiagnosticFromEvent(event):
+    r"""SBDebugger_GetDiagnosticFromEvent(SBEvent event) -> SBStructuredData"""
+    return _lldb.SBDebugger_GetDiagnosticFromEvent(event)
+
 def SBDebugger_Initialize():
     r"""SBDebugger_Initialize()"""
     return _lldb.SBDebugger_Initialize()
@@ -4660,6 +4705,10 @@ def SBDebugger_Initialize():
 def SBDebugger_InitializeWithErrorHandling():
     r"""SBDebugger_InitializeWithErrorHandling() -> SBError"""
     return _lldb.SBDebugger_InitializeWithErrorHandling()
+
+def SBDebugger_PrintStackTraceOnError():
+    r"""SBDebugger_PrintStackTraceOnError()"""
+    return _lldb.SBDebugger_PrintStackTraceOnError()
 
 def SBDebugger_Terminate():
     r"""SBDebugger_Terminate()"""
@@ -7345,6 +7394,16 @@ class SBModule(object):
         r"""Clear(SBModule self)"""
         return _lldb.SBModule_Clear(self)
 
+    def IsFileBacked(self):
+        r"""
+        IsFileBacked(SBModule self) -> bool
+        Check if the module is file backed.
+            @return
+                True, if the module is backed by an object file on disk.
+                False, if the module is backed by an object file in memory.
+        """
+        return _lldb.SBModule_IsFileBacked(self)
+
     def GetFileSpec(self):
         r"""
         GetFileSpec(SBModule self) -> SBFileSpec
@@ -8265,6 +8324,10 @@ class SBPlatform(object):
     def GetOSUpdateVersion(self):
         r"""GetOSUpdateVersion(SBPlatform self) -> uint32_t"""
         return _lldb.SBPlatform_GetOSUpdateVersion(self)
+
+    def SetSDKRoot(self, sysroot):
+        r"""SetSDKRoot(SBPlatform self, char const * sysroot)"""
+        return _lldb.SBPlatform_SetSDKRoot(self, sysroot)
 
     def Get(self, src, dst):
         r"""Get(SBPlatform self, SBFileSpec src, SBFileSpec dst) -> SBError"""
@@ -10500,6 +10563,10 @@ class SBTarget(object):
         r"""GetTriple(SBTarget self) -> char const *"""
         return _lldb.SBTarget_GetTriple(self)
 
+    def GetABIName(self):
+        r"""GetABIName(SBTarget self) -> char const *"""
+        return _lldb.SBTarget_GetABIName(self)
+
     def GetDataByteSize(self):
         r"""
         GetDataByteSize(SBTarget self) -> uint32_t
@@ -11637,6 +11704,14 @@ class SBThread(object):
         """
         return _lldb.SBThread_SafeToCallFunctions(self)
 
+    def GetSiginfo(self):
+        r"""
+
+        Retruns a SBValue object representing the siginfo for the current signal.
+
+        """
+        return _lldb.SBThread_GetSiginfo(self)
+
     def __str__(self):
         r"""__str__(SBThread self) -> std::string"""
         return _lldb.SBThread___str__(self)
@@ -12322,6 +12397,20 @@ class SBType(object):
 
         """
         return _lldb.SBType_IsScopedEnumerationType(self)
+
+    def IsAggregateType(self):
+        r"""
+        IsAggregateType(SBType self) -> bool
+        Returns true if this type is an aggregate type.
+
+            Language-specific behaviour:
+
+            * C: Returns true for struct values, arrays, and vectors.
+            * C++: Same a C. Also includes class instances.
+            * Objective-C: Same as C. Also includes class instances.
+
+        """
+        return _lldb.SBType_IsAggregateType(self)
 
     def GetPointerType(self):
         r"""
@@ -15520,15 +15609,8 @@ def is_numeric_type(basic_type):
 
 
 
-_initialize = True
-try:
-   import lldbconfig
-   _initialize = lldbconfig.INITIALIZE
-except ImportError:
-   pass
 debugger_unique_id = 0
-if _initialize:
-   SBDebugger.Initialize()
+SBDebugger.Initialize()
 debugger = None
 target = None
 process = None
