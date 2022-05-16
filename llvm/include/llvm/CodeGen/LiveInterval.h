@@ -227,6 +227,14 @@ namespace llvm {
     const_vni_iterator vni_begin() const { return valnos.begin(); }
     const_vni_iterator vni_end() const   { return valnos.end(); }
 
+    iterator_range<vni_iterator> vnis() {
+      return make_range(vni_begin(), vni_end());
+    }
+
+    iterator_range<const_vni_iterator> vnis() const {
+      return make_range(vni_begin(), vni_end());
+    }
+
     /// Constructs a new LiveRange object.
     LiveRange(bool UseSegmentSet = false)
         : segmentSet(UseSegmentSet ? std::make_unique<SegmentSet>()
