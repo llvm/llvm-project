@@ -471,7 +471,10 @@ LogicalResult mlir::bufferization::runOneShotModuleBufferize(
     // would be invalidated.
     if (failed(bufferizeOp(funcOp, bufferizationState)))
       return failure();
-    foldMemRefCasts(funcOp);
+    // Change buffer return types to more precise layout maps.
+    if (options.functionBoundaryTypeConversion ==
+        BufferizationOptions::LayoutMapOption::InferLayoutMap)
+      foldMemRefCasts(funcOp);
   }
 
   // Check result.

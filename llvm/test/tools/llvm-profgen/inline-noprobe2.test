@@ -59,7 +59,7 @@
 ;CHECK:  6.1: 17
 ;CHECK:  6.3: 17
 ;CHECK:  7: 0
-;CHECK:  8: 0 quick_sort:1
+;CHECK:  8: 1 quick_sort:1
 ;CHECK:  9: 0
 ;CHECK:  11: 0
 ;CHECK:  14: 0
@@ -97,7 +97,7 @@
 ;CHECK: quick_sort:903:25
 ;CHECK:  1: 24
 ;CHECK:  2: 12 partition_pivot_last:7 partition_pivot_first:5
-;CHECK:  3: 11 quick_sort:12
+;CHECK:  3: 12 quick_sort:12
 ;CHECK:  4: 12 quick_sort:12
 ;CHECK:  6: 24
 ;CHECK:  65507: 12

@@ -64,9 +64,8 @@ define i1 @canonical_parity_noncanonical_pred(<16 x i1> %x) {
 ; NOPOPCNT-NEXT:    addl %eax, %ecx
 ; NOPOPCNT-NEXT:    andl $3855, %ecx # imm = 0xF0F
 ; NOPOPCNT-NEXT:    movl %ecx, %eax
-; NOPOPCNT-NEXT:    shll $8, %eax
-; NOPOPCNT-NEXT:    addl %ecx, %eax
 ; NOPOPCNT-NEXT:    shrl $8, %eax
+; NOPOPCNT-NEXT:    addl %ecx, %eax
 ; NOPOPCNT-NEXT:    # kill: def $al killed $al killed $eax
 ; NOPOPCNT-NEXT:    retq
 ;
