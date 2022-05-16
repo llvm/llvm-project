@@ -255,6 +255,9 @@ public:
       auto Hover = getHover(*AST, Pos, Style, &Index);
       vlog("    hover: {0}", Hover.hasValue());
 
+      unsigned DocHighlights = findDocumentHighlights(*AST, Pos).size();
+      vlog("    documentHighlight: {0}", DocHighlights);
+
       if (EnableCodeCompletion) {
         Position EndPos = offsetToPosition(Inputs.Contents, End);
         auto CC = codeComplete(File, EndPos, Preamble.get(), Inputs, CCOpts);
