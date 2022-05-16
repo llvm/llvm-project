@@ -25453,7 +25453,6 @@ TEST_F(FormatTest, RemoveBraces) {
                Style);
 
   Style.ColumnLimit = 65;
-
   verifyFormat("if (condition) {\n"
                "  ff(Indices,\n"
                "     [&](unsigned LHSI, unsigned RHSI) { return true; });\n"
@@ -25496,14 +25495,177 @@ TEST_F(FormatTest, RemoveBraces) {
                "}",
                Style);
 
-  Style.ColumnLimit = 0;
+  verifyFormat("if (-b >=\n"
+               "    c) { // Keep.\n"
+               "  foo();\n"
+               "} else {\n"
+               "  bar();\n"
+               "}",
+               "if (-b >= c) { // Keep.\n"
+               "  foo();\n"
+               "} else {\n"
+               "  bar();\n"
+               "}",
+               Style);
 
+  verifyFormat("if (a) /* Remove. */\n"
+               "  f();\n"
+               "else\n"
+               "  g();",
+               "if (a) <% /* Remove. */\n"
+               "  f();\n"
+               "%> else <%\n"
+               "  g();\n"
+               "%>",
+               Style);
+
+  verifyFormat("while (\n"
+               "    !i--) <% // Keep.\n"
+               "  foo();\n"
+               "%>",
+               "while (!i--) <% // Keep.\n"
+               "  foo();\n"
+               "%>",
+               Style);
+
+  verifyFormat("for (int &i : chars)\n"
+               "  ++i;",
+               "for (int &i :\n"
+               "     chars) {\n"
+               "  ++i;\n"
+               "}",
+               Style);
+
+  Style.ColumnLimit = 0;
   verifyFormat("if (a)\n"
                "  b234567890223456789032345678904234567890 = "
                "c234567890223456789032345678904234567890;",
                "if (a) {\n"
                "  b234567890223456789032345678904234567890 = "
                "c234567890223456789032345678904234567890;\n"
+               "}",
+               Style);
+
+  Style.BreakBeforeBraces = FormatStyle::BS_Custom;
+  Style.BraceWrapping.AfterControlStatement = FormatStyle::BWACS_Always;
+  Style.BraceWrapping.BeforeElse = true;
+
+  Style.ColumnLimit = 65;
+
+  verifyFormat("if (condition)\n"
+               "{\n"
+               "  ff(Indices,\n"
+               "     [&](unsigned LHSI, unsigned RHSI) { return true; });\n"
+               "}\n"
+               "else\n"
+               "{\n"
+               "  ff(Indices,\n"
+               "     [&](unsigned LHSI, unsigned RHSI) { return true; });\n"
+               "}",
+               "if (condition) {\n"
+               "  ff(Indices,\n"
+               "     [&](unsigned LHSI, unsigned RHSI) { return true; });\n"
+               "} else {\n"
+               "  ff(Indices,\n"
+               "     [&](unsigned LHSI, unsigned RHSI) { return true; });\n"
+               "}",
+               Style);
+
+  verifyFormat("if (a)\n"
+               "{ //\n"
+               "  foo();\n"
+               "}",
+               "if (a) { //\n"
+               "  foo();\n"
+               "}",
+               Style);
+
+  Style.ColumnLimit = 20;
+
+  verifyFormat("int ab = [](int i) {\n"
+               "  if (i > 0)\n"
+               "  {\n"
+               "    i = 12345678 -\n"
+               "        i;\n"
+               "  }\n"
+               "  return i;\n"
+               "};",
+               "int ab = [](int i) {\n"
+               "  if (i > 0) {\n"
+               "    i = 12345678 -\n"
+               "        i;\n"
+               "  }\n"
+               "  return i;\n"
+               "};",
+               Style);
+
+  verifyFormat("if (a)\n"
+               "{\n"
+               "  b = c + // 1 -\n"
+               "      d;\n"
+               "}",
+               "if (a) {\n"
+               "  b = c + // 1 -\n"
+               "      d;\n"
+               "}",
+               Style);
+
+  verifyFormat("if (a)\n"
+               "{\n"
+               "  b = c >= 0 ? d\n"
+               "             : e;\n"
+               "}",
+               "if (a) {\n"
+               "  b = c >= 0 ? d : e;\n"
+               "}",
+               Style);
+
+  verifyFormat("if (a)\n"
+               "  b = c > 0 ? d : e;",
+               "if (a)\n"
+               "{\n"
+               "  b = c > 0 ? d : e;\n"
+               "}",
+               Style);
+
+  verifyFormat("if (foo + bar <=\n"
+               "    baz)\n"
+               "{\n"
+               "  func(arg1, arg2);\n"
+               "}",
+               "if (foo + bar <= baz) {\n"
+               "  func(arg1, arg2);\n"
+               "}",
+               Style);
+
+  verifyFormat("if (foo + bar < baz)\n"
+               "  func(arg1, arg2);\n"
+               "else\n"
+               "  func();",
+               "if (foo + bar < baz)\n"
+               "<%\n"
+               "  func(arg1, arg2);\n"
+               "%>\n"
+               "else\n"
+               "<%\n"
+               "  func();\n"
+               "%>",
+               Style);
+
+  verifyFormat("while (i--)\n"
+               "<% // Keep.\n"
+               "  foo();\n"
+               "%>",
+               "while (i--) <% // Keep.\n"
+               "  foo();\n"
+               "%>",
+               Style);
+
+  verifyFormat("for (int &i : chars)\n"
+               "  ++i;",
+               "for (int &i : chars)\n"
+               "{\n"
+               "  ++i;\n"
                "}",
                Style);
 }

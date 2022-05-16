@@ -754,16 +754,19 @@ size_t UnwrappedLineParser::computePPHash() const {
   return h;
 }
 
-// Checks whether \p ParsedLine might fit on a single line. We must clone the
-// tokens of \p ParsedLine before running the token annotator on it so that we
-// can restore them afterward.
-bool UnwrappedLineParser::mightFitOnOneLine(UnwrappedLine &ParsedLine) const {
+// Checks whether \p ParsedLine might fit on a single line. If \p OpeningBrace
+// is not null, subtracts its length (plus the preceding space) when computing
+// the length of \p ParsedLine. We must clone the tokens of \p ParsedLine before
+// running the token annotator on it so that we can restore them afterward.
+bool UnwrappedLineParser::mightFitOnOneLine(
+    UnwrappedLine &ParsedLine, const FormatToken *OpeningBrace) const {
   const auto ColumnLimit = Style.ColumnLimit;
   if (ColumnLimit == 0)
     return true;
 
   auto &Tokens = ParsedLine.Tokens;
   assert(!Tokens.empty());
+
   const auto *LastToken = Tokens.back().Tok;
   assert(LastToken);
 
@@ -785,7 +788,11 @@ bool UnwrappedLineParser::mightFitOnOneLine(UnwrappedLine &ParsedLine) const {
   Annotator.annotate(Line);
   Annotator.calculateFormattingInformation(Line);
 
-  const int Length = LastToken->TotalLength;
+  auto Length = LastToken->TotalLength;
+  if (OpeningBrace) {
+    assert(OpeningBrace != Tokens.front().Tok);
+    Length -= OpeningBrace->TokenText.size() + 1;
+  }
 
   Index = 0;
   for (auto &Token : Tokens) {
@@ -805,6 +812,8 @@ UnwrappedLineParser::IfStmtKind UnwrappedLineParser::parseBlock(
   assert(FormatTok->isOneOf(tok::l_brace, TT_MacroBlockBegin) &&
          "'{' or macro block token expected");
   FormatToken *Tok = FormatTok;
+  const bool FollowedByComment = Tokens->peekNextToken()->is(tok::comment);
+  auto Index = CurrentLines->size();
   const bool MacroBlock = FormatTok->is(TT_MacroBlockBegin);
   FormatTok->setBlockKind(BK_Block);
 
@@ -854,14 +863,26 @@ UnwrappedLineParser::IfStmtKind UnwrappedLineParser::parseBlock(
     return IfKind;
   }
 
-  if (SimpleBlock && !KeepBraces &&
-      Tok->isOneOf(TT_ControlStatementLBrace, TT_ElseLBrace)) {
+  if (SimpleBlock && !KeepBraces) {
+    assert(Tok->isOneOf(TT_ControlStatementLBrace, TT_ElseLBrace));
     assert(FormatTok->is(tok::r_brace));
     const FormatToken *Previous = Tokens->getPreviousToken();
     assert(Previous);
     if (Previous->isNot(tok::r_brace) || Previous->Optional) {
       assert(!CurrentLines->empty());
-      if (mightFitOnOneLine(CurrentLines->back())) {
+      const FormatToken *OpeningBrace = Tok;
+      if (!Tok->Previous) { // Wrapped l_brace.
+        if (FollowedByComment) {
+          KeepBraces = true;
+        } else {
+          assert(Index > 0);
+          --Index; // The line above the wrapped l_brace.
+          OpeningBrace = nullptr;
+        }
+      }
+      if (!KeepBraces && mightFitOnOneLine(CurrentLines->back()) &&
+          (Tok->is(TT_ElseLBrace) ||
+           mightFitOnOneLine((*CurrentLines)[Index], OpeningBrace))) {
         Tok->MatchingParen = FormatTok;
         FormatTok->MatchingParen = Tok;
       }
