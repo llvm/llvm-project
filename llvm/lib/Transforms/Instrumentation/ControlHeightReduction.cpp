@@ -1974,6 +1974,13 @@ void CHR::addToMergedCondition(bool IsTrueBiased, Value *Cond,
       Cond = IRB.CreateXor(ConstantInt::getTrue(F.getContext()), Cond);
   }
 
+  // Select conditions can be poison, while branching on poison is immediate
+  // undefined behavior. As such, we need to freeze potentially poisonous
+  // conditions derived from selects.
+  if (isa<SelectInst>(BranchOrSelect) &&
+      !isGuaranteedNotToBeUndefOrPoison(Cond))
+    Cond = IRB.CreateFreeze(Cond);
+
   MergedCondition = IRB.CreateAnd(MergedCondition, Cond);
 }
 
