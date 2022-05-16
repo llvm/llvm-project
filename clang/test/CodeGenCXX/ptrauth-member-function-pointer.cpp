@@ -371,6 +371,20 @@ namespace testNonVirtualThunk {
   D d;
 }
 
+// CHECK: define internal void @_ZN22TestAnonymousNamespace12_GLOBAL__N_11S3fooEv_vfpthunk_(
+
+namespace TestAnonymousNamespace {
+namespace {
+struct S {
+  virtual void foo(){};
+};
+} // namespace
+
+void test() {
+  auto t = &S::foo;
+}
+} // namespace TestAnonymousNamespace
+
 // CHECK: define void @_Z39test_builtin_ptrauth_type_discriminatorv()
 // CHECK: store i32 [[TYPEDISC0]], i32* %
 // CHECK: store i32 [[TYPEDISC1]], i32* %
