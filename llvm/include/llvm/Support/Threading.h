@@ -233,15 +233,20 @@ bool llvm_is_multithreaded();
   unsigned get_cpus();
 
   enum class ThreadPriority {
+    /// Lower the current thread's priority as much as possible. Can be used
+    /// for long-running tasks that are not time critical; more energy-
+    /// efficient than Low.
     Background = 0,
-    Default = 1,
+
+    /// Lower the current thread's priority such that it does not affect
+    /// foreground tasks significantly. This is a good default for long-
+    /// running, latency-insensitive tasks to make sure cpu is not hogged
+    /// by this task.
+    Low = 1,
+
+    /// Restore the current thread's priority to default scheduling priority.
+    Default = 2,
   };
-  /// If priority is Background tries to lower current threads priority such
-  /// that it does not affect foreground tasks significantly. Can be used for
-  /// long-running, latency-insensitive tasks to make sure cpu is not hogged by
-  /// this task.
-  /// If the priority is default tries to restore current threads priority to
-  /// default scheduling priority.
   enum class SetThreadPriorityResult { FAILURE, SUCCESS };
   SetThreadPriorityResult set_thread_priority(ThreadPriority Priority);
 }

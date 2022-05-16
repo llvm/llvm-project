@@ -9025,7 +9025,9 @@ void clang::setThreadBackgroundPriority() {
     return;
 
 #if LLVM_ENABLE_THREADS
-  llvm::set_thread_priority(llvm::ThreadPriority::Background);
+  // The function name setThreadBackgroundPriority is for historical reasons;
+  // Low is more appropriate.
+  llvm::set_thread_priority(llvm::ThreadPriority::Low);
 #endif
 }
 

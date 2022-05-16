@@ -72,7 +72,7 @@ public:
     explicit Task(std::function<void()> Run) : Run(std::move(Run)) {}
 
     std::function<void()> Run;
-    llvm::ThreadPriority ThreadPri = llvm::ThreadPriority::Background;
+    llvm::ThreadPriority ThreadPri = llvm::ThreadPriority::Low;
     unsigned QueuePri = 0; // Higher-priority tasks will run first.
     std::string Tag;       // Allows priority to be boosted later.
     uint64_t Key = 0;      // If the key matches a previous task, drop this one.
