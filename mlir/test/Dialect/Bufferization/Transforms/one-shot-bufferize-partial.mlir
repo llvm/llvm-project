@@ -1,7 +1,7 @@
 // RUN: mlir-opt %s -allow-unregistered-dialect -one-shot-bufferize="allow-return-allocs allow-unknown-ops" -split-input-file | FileCheck %s
 
 // Test bufferization using memref types that have no layout map.
-// RUN: mlir-opt %s -allow-unregistered-dialect -one-shot-bufferize="allow-return-allocs allow-unknown-ops fully-dynamic-layout-maps=0" -split-input-file | FileCheck %s --check-prefix=CHECK-NO-LAYOUT-MAP
+// RUN: mlir-opt %s -allow-unregistered-dialect -one-shot-bufferize="allow-return-allocs allow-unknown-ops unknown-type-conversion=identity-layout-map" -split-input-file | FileCheck %s --check-prefix=CHECK-NO-LAYOUT-MAP
 
 // Run fuzzer with different seeds.
 // RUN: mlir-opt %s -allow-unregistered-dialect -one-shot-bufferize="allow-return-allocs test-analysis-only analysis-fuzzer-seed=23" -split-input-file -o /dev/null

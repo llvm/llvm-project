@@ -58,15 +58,24 @@ static func::ReturnOp getAssumedUniqueReturnOp(FuncOp funcOp) {
 
 /// Return the index-th bufferized function argument type. This assumes that the
 /// specified argument is a tensor. If the tensor is ranked, a layout map may be
-/// specified by the user. If no layout map is specified, a fully dynamic map is
-/// used.
+/// specified by the user. If no layout map is specified, the default layout map
+/// (as per `options.functionBoundaryTypeConversion`) is used.
 static BaseMemRefType
 getBufferizedFunctionArgType(FuncOp funcOp, int64_t index,
                              const BufferizationOptions &options) {
   auto tensorType =
       funcOp.getFunctionType().getInput(index).dyn_cast<TensorType>();
   assert(tensorType && "expected TensorType");
-  BaseMemRefType memrefType = getMemRefType(tensorType, options);
+
+  BaseMemRefType memrefType;
+  if (options.functionBoundaryTypeConversion ==
+      BufferizationOptions::LayoutMapOption::IdentityLayoutMap) {
+    memrefType = getMemRefTypeWithStaticIdentityLayout(tensorType);
+  } else {
+    // Note: Layout maps on function parameters cannot be inferred. The best we
+    // can do at the moment is "fully dynamic".
+    memrefType = getMemRefTypeWithFullyDynamicLayout(tensorType);
+  }
 
   auto layoutAttr = funcOp.getArgAttrOfType<AffineMapAttr>(
       index, BufferizationDialect::kBufferLayoutAttrName);
@@ -386,11 +395,10 @@ struct ReturnOpInterface
 
 struct FuncOpInterface
     : public BufferizableOpInterface::ExternalModel<FuncOpInterface, FuncOp> {
-  /// Rewrite function bbArgs and return values into buffer form (using the
-  /// canonical memref layout for now). This function bufferizes the function
-  /// signature and the ReturnOp. When the entire function body has been
-  /// bufferized, function return types can be switched to more concise memref
-  /// types as part of `foldMemRefCasts`.
+  /// Rewrite function bbArgs and return values into buffer form. This function
+  /// bufferizes the function signature and the ReturnOp. When the entire
+  /// function body has been bufferized, function return types can be switched
+  /// to more concise memref types as part of `foldMemRefCasts`.
   ///
   /// When a tensor function argument is known to be equivalent to a tensor
   /// result, it is dropped from the return values.
@@ -439,6 +447,7 @@ struct FuncOpInterface
     // TODO: Support functions with multiple returns.
     func::ReturnOp returnOp = getAssumedUniqueReturnOp(funcOp);
     assert(returnOp && "expected func with single return op");
+    Location loc = returnOp.getLoc();
 
     // 1. Rewrite the bbArgs. Turn every tensor bbArg into a memref bbArg.
     Block &frontBlock = funcOp.getBody().front();
@@ -474,9 +483,11 @@ struct FuncOpInterface
     SmallVector<Value> returnValues;
     for (OpOperand &returnOperand : returnOp->getOpOperands()) {
       Value returnVal = returnOperand.get();
+      auto tensorType = returnVal.getType().dyn_cast<TensorType>();
+      rewriter.setInsertionPoint(returnOp);
 
       // If not a tensor type just forward it.
-      if (!returnVal.getType().isa<RankedTensorType>()) {
+      if (!tensorType) {
         returnValues.push_back(returnVal);
         continue;
       }
@@ -485,12 +496,10 @@ struct FuncOpInterface
       if (options.dropEquivalentFuncResults) {
         if (Optional<int64_t> equivBbArgIdx = getEquivalentFuncArgIdx(
                 funcOp, funcState, returnOperand.getOperandNumber())) {
-          rewriter.setInsertionPoint(returnOp);
-          Location loc = returnOp.getLoc();
+          // TODO: Use memref type with fully dynamic layout map and add folder
+          // for memref.cast + memref.copy.
           Value toMemrefOp = rewriter.create<bufferization::ToMemrefOp>(
-              loc,
-              getMemRefType(returnVal.getType().cast<TensorType>(), options),
-              returnVal);
+              loc, getMemRefType(tensorType, options), returnVal);
           BlockArgument equivBbArg = funcOp.getArgument(*equivBbArgIdx);
           // Note: This copy will fold away. It must be inserted here to ensure
           // that `returnVal` still has at least one use and does not fold away.
@@ -501,7 +510,17 @@ struct FuncOpInterface
         }
       }
 
-      returnValues.push_back(*state.getBuffer(rewriter, returnOperand));
+      BaseMemRefType resultType;
+      if (options.functionBoundaryTypeConversion ==
+          BufferizationOptions::LayoutMapOption::IdentityLayoutMap) {
+        resultType = getMemRefTypeWithStaticIdentityLayout(tensorType);
+      } else {
+        // Note: If `InferLayoutMap`, cast are later folded away.
+        resultType = getMemRefTypeWithFullyDynamicLayout(tensorType);
+      }
+      Value toMemrefOp = rewriter.create<bufferization::ToMemrefOp>(
+          loc, resultType, returnVal);
+      returnValues.push_back(toMemrefOp);
     }
 
     // 3. Rewrite the terminator without the in-place bufferizable values.

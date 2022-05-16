@@ -151,6 +151,17 @@ struct FinalizingBufferizePass
   }
 };
 
+static BufferizationOptions::LayoutMapOption
+parseLayoutMapOption(std::string s) {
+  if (s == "fully-dynamic-layout-map")
+    return BufferizationOptions::LayoutMapOption::FullyDynamicLayoutMap;
+  if (s == "identity-layout-map")
+    return BufferizationOptions::LayoutMapOption::IdentityLayoutMap;
+  if (s == "infer-layout-map")
+    return BufferizationOptions::LayoutMapOption::InferLayoutMap;
+  llvm_unreachable("invalid layout map option");
+}
+
 struct OneShotBufferizePass
     : public OneShotBufferizeBase<OneShotBufferizePass> {
   OneShotBufferizePass() : OneShotBufferizeBase<OneShotBufferizePass>() {}
@@ -175,11 +186,13 @@ struct OneShotBufferizePass
       opt.alwaysAliasingWithDest = alwaysAliasingWithDest;
       opt.analysisFuzzerSeed = analysisFuzzerSeed;
       opt.createDeallocs = createDeallocs;
-      opt.fullyDynamicLayoutMaps = fullyDynamicLayoutMaps;
+      opt.functionBoundaryTypeConversion =
+          parseLayoutMapOption(functionBoundaryTypeConversion);
       opt.printConflicts = printConflicts;
       opt.testAnalysisOnly = testAnalysisOnly;
       opt.bufferizeFunctionBoundaries = bufferizeFunctionBoundaries;
       opt.promoteBufferResultsToOutParams = promoteBufferResultsToOutParams;
+      opt.unknownTypeConversion = parseLayoutMapOption(unknownTypeConversion);
 
       BufferizationOptions::OpFilterEntry::FilterFn filterFn =
           [&](Operation *op) {
@@ -362,6 +375,9 @@ LogicalResult
 bufferization::bufferizeOp(Operation *op,
                            BufferizationState &bufferizationState) {
   const auto &options = bufferizationState.getOptions();
+  assert(options.unknownTypeConversion !=
+             BufferizationOptions::LayoutMapOption::InferLayoutMap &&
+         "invalid layout map option");
 
   // Keep track of to_memref ops.
   DenseSet<Operation *> toMemrefOps;
@@ -371,13 +387,9 @@ bufferization::bufferizeOp(Operation *op,
   //
   // We should ideally know the exact memref type of all operands when
   // bufferizing an op. (This is the case when bufferizing top-to-bottom.)
-  // Otherwise, we have to use a memref type with a fully dynamic layout map,
-  // which has to canonicalize away. This is less efficient.
-  //
-  // If "fullyDynamicLayoutMaps = false", we would have to insert buffer copies
-  // to fold ("finalize") to_memref(to_tensor(x)) ops with non-cast-compatible
-  // layout maps when doing a traversal other than top-to-bottom. These would
-  // not easily fold away.
+  // Otherwise, we have to use a memref type with a fully dynamic layout map to
+  // avoid copies. We are currently missing patterns for layout maps to
+  // canonicalize away (or canonicalize to more precise layouts).
   SmallVector<Operation *> worklist;
   op->walk<WalkOrder::PreOrder>([&](Operation *op) {
     if (hasTensorSemantics(op))
@@ -478,6 +490,7 @@ BufferizationOptions bufferization::getPartialBufferizationOptions() {
   BufferizationOptions options;
   options.allowUnknownOps = true;
   options.createDeallocs = false;
-  options.fullyDynamicLayoutMaps = false;
+  options.unknownTypeConversion =
+      BufferizationOptions::LayoutMapOption::IdentityLayoutMap;
   return options;
 }
