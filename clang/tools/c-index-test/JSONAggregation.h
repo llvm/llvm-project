@@ -12,10 +12,14 @@
 #include "clang/Basic/LLVM.h"
 
 namespace clang {
+
+class PathRemapper;
+
 namespace index {
 
 /// Returns true if an error occurred, false otherwise.
-bool aggregateDataAsJSON(StringRef StorePath, raw_ostream &OS);
+bool aggregateDataAsJSON(StringRef StorePath, const PathRemapper &Remapper,
+						 raw_ostream &OS);
 
 } // end namespace index
 } // end namespace clang

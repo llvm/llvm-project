@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "indexstore/indexstore.h"
+#include "clang/Basic/PathRemapper.h"
 #include "clang/Index/IndexDataStore.h"
 #include "clang/Index/IndexDataStoreSymbolUtils.h"
 #include "clang/Index/IndexRecordReader.h"
@@ -79,6 +80,10 @@ struct IndexStoreError {
   std::string Error;
 };
 
+struct IndexStoreCreationOptions {
+  PathRemapper Remapper;
+};
+
 } // anonymous namespace
 
 const char *
@@ -96,8 +101,30 @@ indexstore_format_version(void) {
   return IndexDataStore::getFormatVersion();
 }
 
+indexstore_creation_options_t
+indexstore_creation_options_create(void) {
+  return new IndexStoreCreationOptions();
+}
+
+void
+indexstore_creation_options_dispose(indexstore_creation_options_t options) {
+  delete static_cast<IndexStoreCreationOptions*>(options);
+}
+
+void indexstore_creation_options_add_prefix_mapping(
+    indexstore_creation_options_t c_options, const char *path_prefix, const char *remapped_path_prefix) {
+  IndexStoreCreationOptions *options = static_cast<IndexStoreCreationOptions*>(c_options);
+  options->Remapper.addMapping(path_prefix, remapped_path_prefix);
+}
+
 indexstore_t
 indexstore_store_create(const char *store_path, indexstore_error_t *c_error) {
+  return indexstore_store_create_with_options(store_path, nullptr, c_error);
+}
+
+indexstore_t
+indexstore_store_create_with_options(const char *store_path, indexstore_creation_options_t c_options,
+                                     indexstore_error_t *c_error) {
   // Look through the managed static to trigger construction of the managed
   // static which registers our fatal error handler. This ensures it is only
   // registered once.
@@ -105,7 +132,12 @@ indexstore_store_create(const char *store_path, indexstore_error_t *c_error) {
 
   std::unique_ptr<IndexDataStore> store;
   std::string error;
-  store = IndexDataStore::create(store_path, error);
+  PathRemapper Remapper;
+  if (c_options != nullptr) {
+    IndexStoreCreationOptions *options = static_cast<IndexStoreCreationOptions*>(c_options);
+    Remapper = options->Remapper;
+  }
+  store = IndexDataStore::create(store_path, Remapper, error);
   if (!store) {
     if (c_error)
       *c_error = new IndexStoreError{ error };
@@ -575,12 +607,15 @@ indexstore_record_reader_occurrences_of_symbols_apply_f(indexstore_record_reader
 }
 
 size_t
-indexstore_store_get_unit_name_from_output_path(indexstore_t store,
+indexstore_store_get_unit_name_from_output_path(indexstore_t c_store,
                                                 const char *output_path,
                                                 char *name_buf,
                                                 size_t buf_size) {
+  IndexDataStore *store = static_cast<IndexDataStore*>(c_store);
   SmallString<256> unitName;
-  IndexUnitWriter::getUnitNameForAbsoluteOutputFile(output_path, unitName);
+  auto remapper = store->getPathRemapper();
+  IndexUnitWriter::getUnitNameForAbsoluteOutputFile(output_path, unitName,
+                                                    remapper);
   size_t nameLen = unitName.size();
   if (buf_size != 0) {
     strncpy(name_buf, unitName.c_str(), buf_size-1);
@@ -622,7 +657,9 @@ indexstore_unit_reader_create(indexstore_t c_store, const char *unit_name,
   std::unique_ptr<IndexUnitReader> reader;
   std::string error;
   reader = IndexUnitReader::createWithUnitFilename(unit_name,
-                                                   store->getFilePath(), error);
+                                                   store->getFilePath(),
+                                                   store->getPathRemapper(),
+                                                   error);
   if (!reader) {
     if (c_error)
       *c_error = new IndexStoreError{ error };
