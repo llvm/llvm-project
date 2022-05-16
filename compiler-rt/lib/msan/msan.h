@@ -195,6 +195,27 @@ const MappingDesc kMemoryLayout[] = {
   ((((uptr)(mem)) & ~0xC00000000000ULL) + 0x080000000000ULL)
 #define SHADOW_TO_ORIGIN(shadow) (((uptr)(shadow)) + 0x140000000000ULL)
 
+#elif SANITIZER_FREEBSD && defined(__aarch64__)
+
+// Low memory: main binary, MAP_32BIT mappings and modules
+// High memory: heap, modules and main thread stack
+const MappingDesc kMemoryLayout[] = {
+    {0x000000000000ULL, 0x020000000000ULL, MappingDesc::APP, "low memory"},
+    {0x020000000000ULL, 0x200000000000ULL, MappingDesc::INVALID, "invalid"},
+    {0x200000000000ULL, 0x620000000000ULL, MappingDesc::SHADOW, "shadow"},
+    {0x620000000000ULL, 0x700000000000ULL, MappingDesc::INVALID, "invalid"},
+    {0x700000000000ULL, 0xb20000000000ULL, MappingDesc::ORIGIN, "origin"},
+    {0xb20000000000ULL, 0xc00000000000ULL, MappingDesc::INVALID, "invalid"},
+    {0xc00000000000ULL, 0x1000000000000ULL, MappingDesc::APP, "high memory"}};
+
+// Maps low and high app ranges to contiguous space with zero base:
+//   Low:  0000 0000 0000 - 01ff ffff ffff -> 4000 0000 0000 - 41ff ffff ffff
+//   High: c000 0000 0000 - ffff ffff ffff -> 0000 0000 0000 - 3fff ffff ffff
+#define LINEARIZE_MEM(mem) \
+  (((uptr)(mem) & ~0x1800000000000ULL) ^ 0x400000000000ULL)
+#define MEM_TO_SHADOW(mem) (LINEARIZE_MEM((mem)) + 0x200000000000ULL)
+#define SHADOW_TO_ORIGIN(shadow) (((uptr)(shadow)) + 0x500000000000)
+
 #elif SANITIZER_FREEBSD && SANITIZER_WORDSIZE == 64
 
 // Low memory: main binary, MAP_32BIT mappings and modules
