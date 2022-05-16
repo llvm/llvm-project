@@ -371,6 +371,9 @@ AlignTokenSequence(const FormatStyle &Style, unsigned Start, unsigned End,
             return false;
           if (Changes[ScopeStart].NewlinesBefore > 0)
             return false;
+          if (Changes[i].Tok->is(tok::l_brace) &&
+              Changes[i].Tok->is(BK_BracedInit))
+            return true;
           return Style.BinPackArguments;
         }
 
@@ -385,6 +388,14 @@ AlignTokenSequence(const FormatStyle &Style, unsigned Start, unsigned End,
         // Continued ternary operator
         if (Changes[i].Tok->Previous &&
             Changes[i].Tok->Previous->is(TT_ConditionalExpr))
+          return true;
+
+        // Continued direct-list-initialization using braced list.
+        if (ScopeStart > Start + 1 &&
+            Changes[ScopeStart - 2].Tok->is(tok::identifier) &&
+            Changes[ScopeStart - 1].Tok->is(tok::l_brace) &&
+            Changes[i].Tok->is(tok::l_brace) &&
+            Changes[i].Tok->is(BK_BracedInit))
           return true;
 
         // Continued braced list.
