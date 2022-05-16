@@ -2945,7 +2945,7 @@ bool CombinerHelper::matchNotCmp(MachineInstr &MI,
   int64_t Cst;
   if (Ty.isVector()) {
     MachineInstr *CstDef = MRI.getVRegDef(CstReg);
-    auto MaybeCst = getBuildVectorConstantSplat(*CstDef, MRI);
+    auto MaybeCst = getIConstantSplatSExtVal(*CstDef, MRI);
     if (!MaybeCst)
       return false;
     if (!isConstValidTrue(TLI, Ty.getScalarSizeInBits(), *MaybeCst, true, IsFP))
@@ -4029,10 +4029,9 @@ bool CombinerHelper::matchOrShiftToFunnelShift(MachineInstr &MI,
 
   // Given constants C0 and C1 such that C0 + C1 is bit-width:
   // (or (shl x, C0), (lshr y, C1)) -> (fshl x, y, C0) or (fshr x, y, C1)
-  // TODO: Match constant splat.
   int64_t CstShlAmt, CstLShrAmt;
-  if (mi_match(ShlAmt, MRI, m_ICst(CstShlAmt)) &&
-      mi_match(LShrAmt, MRI, m_ICst(CstLShrAmt)) &&
+  if (mi_match(ShlAmt, MRI, m_ICstOrSplat(CstShlAmt)) &&
+      mi_match(LShrAmt, MRI, m_ICstOrSplat(CstLShrAmt)) &&
       CstShlAmt + CstLShrAmt == BitWidth) {
     FshOpc = TargetOpcode::G_FSHR;
     Amt = LShrAmt;
