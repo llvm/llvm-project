@@ -1596,8 +1596,13 @@ namespace CompoundLiteral {
   // Matching GCC, file-scope array compound literals initialized by constants
   // are lifetime-extended.
   constexpr int *p = (int*)(int[1]){3}; // expected-warning {{C99}}
-  static_assert(*p == 3, "");
+  static_assert(*p == 3, "");           // expected-error {{static_assert expression is not an integral constant expression}}
+                                        // expected-note@-1 {{subexpression not valid}}
+                                        // expected-note@-3 {{declared here}}
   static_assert((int[2]){1, 2}[1] == 2, ""); // expected-warning {{C99}}
+  // expected-error@-1 {{static_assert expression is not an integral constant expression}}
+  // expected-note@-2 {{subexpression not valid}}
+  // expected-note@-3 {{declared here}}
 
   // Other kinds are not.
   struct X { int a[2]; };
