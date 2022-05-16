@@ -187,6 +187,21 @@
 #  define SANITIZER_S390_64 0
 #endif
 
+#if defined(__sparc__)
+#  define SANITIZER_SPARC 1
+#  if defined(__arch64__)
+#    define SANITIZER_SPARC32 0
+#    define SANITIZER_SPARC64 1
+#  else
+#    define SANITIZER_SPARC32 1
+#    define SANITIZER_SPARC64 0
+#  endif
+#else
+#  define SANITIZER_SPARC 0
+#  define SANITIZER_SPARC32 0
+#  define SANITIZER_SPARC64 0
+#endif
+
 #if defined(__powerpc__)
 #  define SANITIZER_PPC 1
 #  if defined(__powerpc64__)

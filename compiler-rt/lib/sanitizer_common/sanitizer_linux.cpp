@@ -270,7 +270,7 @@ uptr internal_ftruncate(fd_t fd, uptr size) {
   return res;
 }
 
-#if !SANITIZER_LINUX_USES_64BIT_SYSCALLS && SANITIZER_LINUX
+#if (!SANITIZER_LINUX_USES_64BIT_SYSCALLS || SANITIZER_SPARC) && SANITIZER_LINUX
 static void stat64_to_stat(struct stat64 *in, struct stat *out) {
   internal_memset(out, 0, sizeof(*out));
   out->st_dev = in->st_dev;
@@ -343,7 +343,7 @@ uptr internal_stat(const char *path, void *buf) {
 #if SANITIZER_FREEBSD
   return internal_syscall(SYSCALL(fstatat), AT_FDCWD, (uptr)path, (uptr)buf, 0);
 #    elif SANITIZER_LINUX
-#      if SANITIZER_WORDSIZE == 64 || SANITIZER_X32
+#      if (SANITIZER_WORDSIZE == 64 || SANITIZER_X32) && !SANITIZER_SPARC
   return internal_syscall(SYSCALL(newfstatat), AT_FDCWD, (uptr)path, (uptr)buf,
                           0);
 #      else
@@ -366,7 +366,7 @@ uptr internal_lstat(const char *path, void *buf) {
   return internal_syscall(SYSCALL(fstatat), AT_FDCWD, (uptr)path, (uptr)buf,
                           AT_SYMLINK_NOFOLLOW);
 #    elif SANITIZER_LINUX
-#      if defined(_LP64) || SANITIZER_X32
+#      if (defined(_LP64) || SANITIZER_X32) && !SANITIZER_SPARC
   return internal_syscall(SYSCALL(newfstatat), AT_FDCWD, (uptr)path, (uptr)buf,
                           AT_SYMLINK_NOFOLLOW);
 #      else
