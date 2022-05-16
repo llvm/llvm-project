@@ -18,6 +18,7 @@
 #include "index/Index.h"
 #include "index/Merge.h"
 #include "index/Relation.h"
+#include "index/SymbolID.h"
 #include "index/SymbolLocation.h"
 #include "support/Logger.h"
 #include "clang/AST/ASTContext.h"
@@ -47,10 +48,12 @@
 #include "clang/Index/USRGeneration.h"
 #include "clang/Tooling/Syntax/Tokens.h"
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/None.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/SmallSet.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/Error.h"
@@ -397,8 +400,8 @@ locateASTReferent(SourceLocation CurLoc, const syntax::Token *TouchedIdentifier,
         }
       }
       // Special case: void foo() ^override: jump to the overridden method.
-    if (NodeKind.isSame(ASTNodeKind::getFromNodeKind<OverrideAttr>()) ||
-        NodeKind.isSame(ASTNodeKind::getFromNodeKind<FinalAttr>())) {
+      if (NodeKind.isSame(ASTNodeKind::getFromNodeKind<OverrideAttr>()) ||
+          NodeKind.isSame(ASTNodeKind::getFromNodeKind<FinalAttr>())) {
         // We may be overridding multiple methods - offer them all.
         for (const NamedDecl *ND : CMD->overridden_methods())
           AddResultDecl(ND);
@@ -887,8 +890,13 @@ public:
   };
 
   ReferenceFinder(const ParsedAST &AST,
-                  const llvm::DenseSet<SymbolID> &TargetIDs, bool PerToken)
-      : PerToken(PerToken), AST(AST), TargetIDs(TargetIDs) {}
+                  const llvm::ArrayRef<const NamedDecl *> Targets, bool PerToken)
+      : PerToken(PerToken), AST(AST) {
+    for (const NamedDecl *ND : Targets) {
+      const Decl *CD = ND->getCanonicalDecl();
+      TargetDeclToID[CD] = getSymbolID(CD);
+    }
+  }
 
   std::vector<Reference> take() && {
     llvm::sort(References, [](const Reference &L, const Reference &R) {
@@ -913,11 +921,11 @@ public:
                        llvm::ArrayRef<index::SymbolRelation> Relations,
                        SourceLocation Loc,
                        index::IndexDataConsumer::ASTNodeInfo ASTNode) override {
+    auto DeclID = TargetDeclToID.find(D->getCanonicalDecl());
+    if (DeclID == TargetDeclToID.end())
+      return true;
     const SourceManager &SM = AST.getSourceManager();
     if (!isInsideMainFile(Loc, SM))
-      return true;
-    SymbolID ID = getSymbolID(D);
-    if (!TargetIDs.contains(ID))
       return true;
     const auto &TB = AST.getTokens();
 
@@ -942,7 +950,7 @@ public:
     for (SourceLocation L : Locs) {
       L = SM.getFileLoc(L);
       if (const auto *Tok = TB.spelledTokenAt(L))
-        References.push_back({*Tok, Roles, ID});
+        References.push_back({*Tok, Roles, DeclID->getSecond()});
     }
     return true;
   }
@@ -951,12 +959,13 @@ private:
   bool PerToken; // If true, report 3 references for split ObjC selector names.
   std::vector<Reference> References;
   const ParsedAST &AST;
-  const llvm::DenseSet<SymbolID> &TargetIDs;
+  llvm::DenseMap<const Decl *, SymbolID> TargetDeclToID;
 };
 
 std::vector<ReferenceFinder::Reference>
-findRefs(const llvm::DenseSet<SymbolID> &IDs, ParsedAST &AST, bool PerToken) {
-  ReferenceFinder RefFinder(AST, IDs, PerToken);
+findRefs(const llvm::ArrayRef<const NamedDecl*> TargetDecls, ParsedAST &AST,
+         bool PerToken) {
+  ReferenceFinder RefFinder(AST, TargetDecls, PerToken);
   index::IndexingOptions IndexOpts;
   IndexOpts.SystemSymbolFilter =
       index::IndexingOptions::SystemSymbolFilterKind::All;
@@ -1242,16 +1251,12 @@ std::vector<DocumentHighlight> findDocumentHighlights(ParsedAST &AST,
     if (const SelectionTree::Node *N = ST.commonAncestor()) {
       DeclRelationSet Relations =
           DeclRelation::TemplatePattern | DeclRelation::Alias;
-      auto Decls =
-          targetDecl(N->ASTNode, Relations, AST.getHeuristicResolver());
-      if (!Decls.empty()) {
+      auto TargetDecls=
+           targetDecl(N->ASTNode, Relations, AST.getHeuristicResolver());
+      if (!TargetDecls.empty()) {
         // FIXME: we may get multiple DocumentHighlights with the same location
         // and different kinds, deduplicate them.
-        llvm::DenseSet<SymbolID> Targets;
-        for (const NamedDecl *ND : Decls)
-          if (auto ID = getSymbolID(ND))
-            Targets.insert(ID);
-        for (const auto &Ref : findRefs(Targets, AST, /*PerToken=*/true))
+        for (const auto &Ref : findRefs(TargetDecls, AST, /*PerToken=*/true))
           Result.push_back(toHighlight(Ref, SM));
         return true;
       }
@@ -1377,12 +1382,12 @@ ReferencesResult findReferences(ParsedAST &AST, Position Pos, uint32_t Limit,
         DeclRelation::TemplatePattern | DeclRelation::Alias;
     std::vector<const NamedDecl *> Decls =
         getDeclAtPosition(AST, *CurLoc, Relations);
-    llvm::DenseSet<SymbolID> TargetsInMainFile;
+    llvm::SmallVector<const NamedDecl *> TargetsInMainFile;
     for (const NamedDecl *D : Decls) {
       auto ID = getSymbolID(D);
       if (!ID)
         continue;
-      TargetsInMainFile.insert(ID);
+      TargetsInMainFile.push_back(D);
       // Not all symbols can be referenced from outside (e.g. function-locals).
       // TODO: we could skip TU-scoped symbols here (e.g. static functions) if
       // we know this file isn't a header. The details might be tricky.
