@@ -441,7 +441,8 @@ CIRGenModule::getOrCreateCIRGlobal(StringRef MangledName, mlir::Type Ty,
 
   // mlir::SymbolTable::Visibility::Public is the default, no need to explicitly
   // mark it as such.
-  auto GV = builder.create<mlir::cir::GlobalOp>(loc, MangledName, Ty);
+  auto GV = builder.create<mlir::cir::GlobalOp>(loc, MangledName, Ty,
+                                                /*isConstant=*/false);
   theModule.push_back(GV);
 
   // If we already created a global with the same mangled name (but different
