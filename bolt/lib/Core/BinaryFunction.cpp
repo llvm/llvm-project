@@ -12,6 +12,7 @@
 
 #include "bolt/Core/BinaryFunction.h"
 #include "bolt/Core/BinaryBasicBlock.h"
+#include "bolt/Core/BinaryDomTree.h"
 #include "bolt/Core/DynoStats.h"
 #include "bolt/Core/MCPlusBuilder.h"
 #include "bolt/Utils/NameResolver.h"

@@ -15,17 +15,12 @@
 #ifndef BOLT_CORE_BINARY_LOOP_H
 #define BOLT_CORE_BINARY_LOOP_H
 
-#include "llvm/ADT/DepthFirstIterator.h"
 #include "llvm/Analysis/LoopInfoImpl.h"
-#include "llvm/Support/GenericDomTreeConstruction.h"
 
 namespace llvm {
 namespace bolt {
 
 class BinaryBasicBlock;
-
-using BinaryDomTreeNode = DomTreeNodeBase<BinaryBasicBlock>;
-using BinaryDominatorTree = DomTreeBase<BinaryBasicBlock>;
 
 class BinaryLoop : public LoopBase<BinaryBasicBlock, BinaryLoop> {
 public:
@@ -60,37 +55,6 @@ public:
 };
 
 } // namespace bolt
-} // namespace llvm
-
-namespace llvm {
-
-// BinaryDominatorTree GraphTraits specializations.
-template <>
-struct GraphTraits<bolt::BinaryDomTreeNode *>
-    : public DomTreeGraphTraitsBase<bolt::BinaryDomTreeNode,
-                                    bolt::BinaryDomTreeNode::iterator> {};
-
-template <>
-struct GraphTraits<const bolt::BinaryDomTreeNode *>
-    : public DomTreeGraphTraitsBase<const bolt::BinaryDomTreeNode,
-                                    bolt::BinaryDomTreeNode::const_iterator> {};
-
-template <>
-struct GraphTraits<bolt::BinaryDominatorTree *>
-    : public GraphTraits<bolt::BinaryDomTreeNode *> {
-  static NodeRef getEntryNode(bolt::BinaryDominatorTree *DT) {
-    return DT->getRootNode();
-  }
-
-  static nodes_iterator nodes_begin(bolt::BinaryDominatorTree *N) {
-    return df_begin(getEntryNode(N));
-  }
-
-  static nodes_iterator nodes_end(bolt::BinaryDominatorTree *N) {
-    return df_end(getEntryNode(N));
-  }
-};
-
 } // namespace llvm
 
 #endif
