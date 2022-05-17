@@ -136,6 +136,8 @@ public:
     // Arbitrary value to ensure some concurrency in tests.
     // In production an explicit value is specified.
     size_t ThreadPoolSize = 4;
+    // Thread priority when indexing files.
+    llvm::ThreadPriority IndexingPriority = llvm::ThreadPriority::Low;
     // Callback that provides notifications as indexing makes progress.
     std::function<void(BackgroundQueue::Stats)> OnProgress = nullptr;
     // Function called to obtain the Context to use while indexing the specified
@@ -194,6 +196,7 @@ private:
   // configuration
   const ThreadsafeFS &TFS;
   const GlobalCompilationDatabase &CDB;
+  llvm::ThreadPriority IndexingPriority;
   std::function<Context(PathRef)> ContextProvider;
 
   llvm::Error index(tooling::CompileCommand);
