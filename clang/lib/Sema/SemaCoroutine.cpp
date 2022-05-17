@@ -1308,10 +1308,33 @@ bool CoroutineStmtBuilder::makeNewAndDeleteExpr() {
 
     PlacementArgs.push_back(PDRefExpr.get());
   }
-  S.FindAllocationFunctions(Loc, SourceRange(), /*NewScope*/ Sema::AFS_Class,
-                            /*DeleteScope*/ Sema::AFS_Both, PromiseType,
-                            /*isArray*/ false, PassAlignment, PlacementArgs,
-                            OperatorNew, UnusedResult, /*Diagnose*/ false);
+
+  bool PromiseContainNew = [this, &PromiseType]() -> bool {
+    DeclarationName NewName =
+        S.getASTContext().DeclarationNames.getCXXOperatorName(OO_New);
+    LookupResult R(S, NewName, Loc, Sema::LookupOrdinaryName);
+
+    if (PromiseType->isRecordType())
+      S.LookupQualifiedName(R, PromiseType->getAsCXXRecordDecl());
+
+    return !R.empty() && !R.isAmbiguous();
+  }();
+
+  auto LookupAllocationFunction = [&]() {
+    // [dcl.fct.def.coroutine]p9
+    //   The allocation function's name is looked up by searching for it in the
+    // scope of the promise type.
+    // - If any declarations are found, ...
+    // - Otherwise, a search is performed in the global scope.
+    Sema::AllocationFunctionScope NewScope = PromiseContainNew ? Sema::AFS_Class : Sema::AFS_Global;
+    S.FindAllocationFunctions(Loc, SourceRange(),
+                              NewScope,
+                              /*DeleteScope*/ Sema::AFS_Both, PromiseType,
+                              /*isArray*/ false, PassAlignment, PlacementArgs,
+                              OperatorNew, UnusedResult, /*Diagnose*/ false);
+  };
+
+  LookupAllocationFunction();
 
   // [dcl.fct.def.coroutine]p9
   //   If no viable function is found ([over.match.viable]), overload resolution
@@ -1319,22 +1342,7 @@ bool CoroutineStmtBuilder::makeNewAndDeleteExpr() {
   // space required as an argument of type std::size_t.
   if (!OperatorNew && !PlacementArgs.empty()) {
     PlacementArgs.clear();
-    S.FindAllocationFunctions(Loc, SourceRange(), /*NewScope*/ Sema::AFS_Class,
-                              /*DeleteScope*/ Sema::AFS_Both, PromiseType,
-                              /*isArray*/ false, PassAlignment, PlacementArgs,
-                              OperatorNew, UnusedResult, /*Diagnose*/ false);
-  }
-
-  // [dcl.fct.def.coroutine]p9
-  //   The allocation function's name is looked up by searching for it in the
-  // scope of the promise type.
-  // - If any declarations are found, ...
-  // - Otherwise, a search is performed in the global scope.
-  if (!OperatorNew) {
-    S.FindAllocationFunctions(Loc, SourceRange(), /*NewScope*/ Sema::AFS_Global,
-                              /*DeleteScope*/ Sema::AFS_Both, PromiseType,
-                              /*isArray*/ false, PassAlignment, PlacementArgs,
-                              OperatorNew, UnusedResult);
+    LookupAllocationFunction();
   }
 
   bool IsGlobalOverload =
@@ -1354,8 +1362,12 @@ bool CoroutineStmtBuilder::makeNewAndDeleteExpr() {
                               OperatorNew, UnusedResult);
   }
 
-  if (!OperatorNew)
+  if (!OperatorNew) {
+    if (PromiseContainNew)
+      S.Diag(Loc, diag::err_coroutine_unusable_new) << PromiseType << &FD;
+
     return false;
+  }
 
   if (RequiresNoThrowAlloc) {
     const auto *FT = OperatorNew->getType()->castAs<FunctionProtoType>();
