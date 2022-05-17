@@ -1077,7 +1077,7 @@ Instruction *InstCombinerImpl::transformZExtICmp(ICmpInst *Cmp, ZExtInst &Zext) 
       KnownBits KnownLHS = computeKnownBits(LHS, 0, &Zext);
       KnownBits KnownRHS = computeKnownBits(RHS, 0, &Zext);
 
-      if (KnownLHS.Zero == KnownRHS.Zero && KnownLHS.One == KnownRHS.One) {
+      if (KnownLHS == KnownRHS) {
         APInt KnownBits = KnownLHS.Zero | KnownLHS.One;
         APInt UnknownBit = ~KnownBits;
         if (UnknownBit.countPopulation() == 1) {

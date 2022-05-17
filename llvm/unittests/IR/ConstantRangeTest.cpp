@@ -2379,8 +2379,7 @@ TEST_F(ConstantRangeTest, ToKnownBits) {
     });
     // For an empty CR any result would be legal.
     if (!CR.isEmptySet()) {
-      EXPECT_EQ(ExpectedKnown.One, Known.One);
-      EXPECT_EQ(ExpectedKnown.Zero, Known.Zero);
+      EXPECT_EQ(ExpectedKnown, Known);
     }
   });
 }
