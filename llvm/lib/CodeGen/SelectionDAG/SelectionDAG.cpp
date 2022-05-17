@@ -8865,6 +8865,20 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
     if (VT == MVT::i1)
       Opcode = ISD::VP_REDUCE_XOR;
     break;
+  case ISD::VP_REDUCE_SMAX:
+  case ISD::VP_REDUCE_UMIN:
+    // If it is VP_REDUCE_SMAX/VP_REDUCE_UMIN mask operation then turn it to
+    // VP_REDUCE_AND.
+    if (VT == MVT::i1)
+      Opcode = ISD::VP_REDUCE_AND;
+    break;
+  case ISD::VP_REDUCE_SMIN:
+  case ISD::VP_REDUCE_UMAX:
+    // If it is VP_REDUCE_SMIN/VP_REDUCE_UMAX mask operation then turn it to
+    // VP_REDUCE_OR.
+    if (VT == MVT::i1)
+      Opcode = ISD::VP_REDUCE_OR;
+    break;
   }
 
   // Memoize nodes.
