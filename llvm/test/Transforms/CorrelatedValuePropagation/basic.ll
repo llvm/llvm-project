@@ -1832,12 +1832,10 @@ define void @xor(i8 %a, i1* %p) {
 ; CHECK-LABEL: @xor(
 ; CHECK-NEXT:    [[A_MASK:%.*]] = and i8 [[A:%.*]], 15
 ; CHECK-NEXT:    [[XOR:%.*]] = xor i8 [[A_MASK]], -86
-; CHECK-NEXT:    [[C1:%.*]] = icmp uge i8 [[XOR]], -96
-; CHECK-NEXT:    store i1 [[C1]], i1* [[P:%.*]], align 1
+; CHECK-NEXT:    store i1 true, i1* [[P:%.*]], align 1
 ; CHECK-NEXT:    [[C2:%.*]] = icmp ugt i8 [[XOR]], -96
 ; CHECK-NEXT:    store i1 [[C2]], i1* [[P]], align 1
-; CHECK-NEXT:    [[C3:%.*]] = icmp ule i8 [[XOR]], -81
-; CHECK-NEXT:    store i1 [[C3]], i1* [[P]], align 1
+; CHECK-NEXT:    store i1 true, i1* [[P]], align 1
 ; CHECK-NEXT:    [[C4:%.*]] = icmp ult i8 [[XOR]], -81
 ; CHECK-NEXT:    store i1 [[C4]], i1* [[P]], align 1
 ; CHECK-NEXT:    ret void
