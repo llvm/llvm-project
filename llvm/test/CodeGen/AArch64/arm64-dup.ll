@@ -404,9 +404,10 @@ entry:
 define <4 x i16> @test_perfectshuffle_dupext_v4i16(<4 x i16> %a, <4 x i16> %b) nounwind {
 ; CHECK-LABEL: test_perfectshuffle_dupext_v4i16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-NEXT:    dup.4h v0, v0[0]
-; CHECK-NEXT:    ext.8b v0, v0, v1, #4
+; CHECK-NEXT:    trn1.4h v0, v0, v0
+; CHECK-NEXT:    // kill: def $d1 killed $d1 def $q1
+; CHECK-NEXT:    mov.s v0[1], v1[0]
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-NEXT:    ret
   %r = shufflevector <4 x i16> %a, <4 x i16> %b, <4 x i32> <i32 0, i32 0, i32 4, i32 5>
   ret <4 x i16> %r
@@ -415,9 +416,10 @@ define <4 x i16> @test_perfectshuffle_dupext_v4i16(<4 x i16> %a, <4 x i16> %b) n
 define <4 x half> @test_perfectshuffle_dupext_v4f16(<4 x half> %a, <4 x half> %b) nounwind {
 ; CHECK-LABEL: test_perfectshuffle_dupext_v4f16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-NEXT:    dup.4h v0, v0[0]
-; CHECK-NEXT:    ext.8b v0, v0, v1, #4
+; CHECK-NEXT:    trn1.4h v0, v0, v0
+; CHECK-NEXT:    // kill: def $d1 killed $d1 def $q1
+; CHECK-NEXT:    mov.s v0[1], v1[0]
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-NEXT:    ret
   %r = shufflevector <4 x half> %a, <4 x half> %b, <4 x i32> <i32 0, i32 0, i32 4, i32 5>
   ret <4 x half> %r
@@ -426,8 +428,8 @@ define <4 x half> @test_perfectshuffle_dupext_v4f16(<4 x half> %a, <4 x half> %b
 define <4 x i32> @test_perfectshuffle_dupext_v4i32(<4 x i32> %a, <4 x i32> %b) nounwind {
 ; CHECK-LABEL: test_perfectshuffle_dupext_v4i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    dup.4s v0, v0[0]
-; CHECK-NEXT:    ext.16b v0, v0, v1, #8
+; CHECK-NEXT:    trn1.4s v0, v0, v0
+; CHECK-NEXT:    mov.d v0[1], v1[0]
 ; CHECK-NEXT:    ret
   %r = shufflevector <4 x i32> %a, <4 x i32> %b, <4 x i32> <i32 0, i32 0, i32 4, i32 5>
   ret <4 x i32> %r
@@ -436,8 +438,8 @@ define <4 x i32> @test_perfectshuffle_dupext_v4i32(<4 x i32> %a, <4 x i32> %b) n
 define <4 x float> @test_perfectshuffle_dupext_v4f32(<4 x float> %a, <4 x float> %b) nounwind {
 ; CHECK-LABEL: test_perfectshuffle_dupext_v4f32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    dup.4s v0, v0[0]
-; CHECK-NEXT:    ext.16b v0, v0, v1, #8
+; CHECK-NEXT:    trn1.4s v0, v0, v0
+; CHECK-NEXT:    mov.d v0[1], v1[0]
 ; CHECK-NEXT:    ret
   %r = shufflevector <4 x float> %a, <4 x float> %b, <4 x i32> <i32 0, i32 0, i32 4, i32 5>
   ret <4 x float> %r
