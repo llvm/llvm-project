@@ -1,5 +1,4 @@
 # REQUIRES: x86
-# UNSUPPORTED: system-windows
 
 # RUN: rm -rf %t; split-file %s %t
 
@@ -17,10 +16,10 @@
 # DEMANGLE-UNDEF: undefined symbol: f()
 
 # EXPORT: cannot export hidden symbol __ZTSN3foo3bar4MethE
-# EXPORT: cannot export hidden symbol __ZTIN3foo3bar4MethE
+# EXPORT-DAG: cannot export hidden symbol __ZTIN3foo3bar4MethE
 
 # DEMANGLE-EXPORT: cannot export hidden symbol typeinfo name for foo::bar::Meth
-# DEMANGLE-EXPORT: cannot export hidden symbol typeinfo for foo::bar::Meth
+# DEMANGLE-EXPORT-DAG: cannot export hidden symbol typeinfo for foo::bar::Meth
 
 #--- undefined-symbol.s
 .globl _main
