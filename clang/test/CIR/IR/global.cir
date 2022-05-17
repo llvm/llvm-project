@@ -6,7 +6,7 @@ module {
   cir.global @b = #cir.cst_array<"example\00" : !cir.array<i8 x 8>>
   cir.global "private" constant @".str" : !cir.array<i8 x 8> {alignment = 1 : i64}
   cir.global "private" @c : i32
-  cir.global "private" constant @".str2" = #cir.cst_array<"example\00" : !cir.array<i8 x 8>> {alignment = 1 : i64}
+  cir.global "private" constant @".str2" = #cir.cst_array<"example\00" : !cir.array<i8 x 8>> : !cir.array<i8 x 8> {alignment = 1 : i64}
   cir.global @s = @".str2": !cir.ptr<i8>
   func.func @use_global() {
     %0 = cir.get_global @a : cir.ptr <i32>

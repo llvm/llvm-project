@@ -71,36 +71,6 @@ public:
   }
 };
 
-/// A specialization of Address that requires the address to be an
-/// MLIR attribute
-class ConstantAddress : public Address {
-  ConstantAddress(std::nullptr_t) : Address(nullptr) {}
-
-public:
-  ConstantAddress(mlir::Value pointer, mlir::Type elementType,
-                  clang::CharUnits alignment)
-      : Address(pointer, elementType, alignment) {}
-
-  static ConstantAddress invalid() { return ConstantAddress(nullptr); }
-
-  mlir::Value getPointer() const { return Address::getPointer(); }
-
-  ConstantAddress getElementBitCast(mlir::Type ElemTy) const {
-    assert(0 && "NYI");
-  }
-
-  static bool isaImpl(Address addr) {
-    return addr.getPointer() ? true : false;
-    // TODO(cir): in LLVM codegen this (and other methods) are implemented via
-    // llvm::isa<llvm::Constant>, decide on what abstraction to use here.
-    // return llvm::isa<llvm::Constant>(addr.getPointer());
-  }
-  static ConstantAddress castImpl(Address addr) {
-    return ConstantAddress(addr.getPointer(), addr.getElementType(),
-                           addr.getAlignment());
-  }
-};
-
 } // namespace cir
 
 #endif // LLVM_CLANG_LIB_CIR_ADDRESS_H

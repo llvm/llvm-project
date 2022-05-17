@@ -34,6 +34,9 @@ struct UnimplementedFeature {
   static bool isWeakForLinker() { return false; }
   static bool setDSOLocal() { return false; }
   static bool threadLocal() { return false; }
+
+  // Sanitizers
+  static bool reportGlobalToASan() { return false; }
 };
 } // namespace cir
 

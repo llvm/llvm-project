@@ -179,9 +179,18 @@ public:
   /// Return a constant array for the given string.
   mlir::Attribute getConstantArrayFromStringLiteral(const StringLiteral *E);
 
-  /// Return a pointer to a constant array for the given string literal.
-  ConstantAddress getAddrOfConstantStringFromLiteral(const StringLiteral *S,
-                                                     StringRef Name = ".str");
+  /// Return a global symbol reference to a constant array for the given string
+  /// literal.
+  mlir::SymbolRefAttr
+  getAddrOfConstantStringFromLiteral(const StringLiteral *S,
+                                     StringRef Name = ".str");
+
+  /// Return the AST address space of constant literal, which is used to emit
+  /// the constant literal as global variable in LLVM IR.
+  /// Note: This is not necessarily the address space of the constant literal
+  /// in AST. For address space agnostic language, e.g. C++, constant literal
+  /// in AST is always in default address space.
+  LangAS getGlobalConstantAddressSpace() const;
 
   // TODO: this obviously overlaps with
   const TargetCIRGenInfo &getTargetCIRGenInfo();
