@@ -15,3 +15,5 @@ set(LLVM_LINK_COMPONENTS
 add_llvm_unittest(PowerPCTests
   AIXRelocModelTest.cpp
   )
+
+set_property(TARGET PowerPCTests PROPERTY FOLDER "Tests/UnitTests/TargetTests")
