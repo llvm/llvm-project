@@ -362,19 +362,80 @@ TEST(JSONTest, U64Integers) {
   uint64_t Var = 3100100100;
   EXPECT_EQ(Val, Var);
 
+  Val = uint64_t{std::numeric_limits<uint64_t>::max()};
+  Var = std::numeric_limits<uint64_t>::max();
+  EXPECT_EQ(Val, Var);
+
   // Test the parse() part.
-  const char *Str = "4611686018427387905";
-  llvm::Expected<Value> Doc = parse(Str);
+  {
+    const char *Str = "4611686018427387905";
+    llvm::Expected<Value> Doc = parse(Str);
 
-  EXPECT_TRUE(!!Doc);
-  EXPECT_EQ(Doc->getAsInteger(), int64_t{4611686018427387905});
-  EXPECT_EQ(Doc->getAsUINT64(), uint64_t{4611686018427387905});
+    EXPECT_TRUE(!!Doc);
+    EXPECT_EQ(Doc->getAsInteger(), int64_t{4611686018427387905});
+    EXPECT_EQ(Doc->getAsUINT64(), uint64_t{4611686018427387905});
+  }
 
-  const char *Str2 = "-78278238238328222";
-  llvm::Expected<Value> Doc2 = parse(Str2);
-  EXPECT_TRUE(!!Doc2);
-  EXPECT_EQ(Doc2->getAsInteger(), int64_t{-78278238238328222});
-  EXPECT_EQ(Doc2->getAsUINT64(), llvm::None);
+  {
+    const char *Str = "-78278238238328222";
+    llvm::Expected<Value> Doc = parse(Str);
+
+    EXPECT_TRUE(!!Doc);
+    EXPECT_EQ(Doc->getAsInteger(), int64_t{-78278238238328222});
+    EXPECT_EQ(Doc->getAsUINT64(), llvm::None);
+  }
+
+  // Test with the largest 64 signed int.
+  {
+    const char *Str = "9223372036854775807";
+    llvm::Expected<Value> Doc = parse(Str);
+
+    EXPECT_TRUE(!!Doc);
+    EXPECT_EQ(Doc->getAsInteger(), int64_t{9223372036854775807});
+    EXPECT_EQ(Doc->getAsUINT64(), uint64_t{9223372036854775807});
+  }
+
+  // Test with the largest 64 unsigned int.
+  {
+    const char *Str = "18446744073709551615";
+    llvm::Expected<Value> Doc = parse(Str);
+
+    EXPECT_TRUE(!!Doc);
+    EXPECT_EQ(Doc->getAsInteger(), None);
+    EXPECT_EQ(Doc->getAsUINT64(), uint64_t{18446744073709551615u});
+  }
+
+  // Test with a number that is too big for 64 bits.
+  {
+    const char *Str = "184467440737095516150";
+    llvm::Expected<Value> Doc = parse(Str);
+
+    EXPECT_TRUE(!!Doc);
+    EXPECT_EQ(Doc->getAsInteger(), None);
+    EXPECT_EQ(Doc->getAsUINT64(), None);
+    // The number was parsed as a double.
+    EXPECT_TRUE(!!Doc->getAsNumber());
+  }
+
+  // Test with a negative number that is too small for 64 bits.
+  {
+    const char *Str = "-18446744073709551615";
+    llvm::Expected<Value> Doc = parse(Str);
+
+    EXPECT_TRUE(!!Doc);
+    EXPECT_EQ(Doc->getAsInteger(), None);
+    EXPECT_EQ(Doc->getAsUINT64(), None);
+    // The number was parsed as a double.
+    EXPECT_TRUE(!!Doc->getAsNumber());
+  }
+  // Test with a large number that is malformed.
+  {
+    const char *Str = "184467440737095516150.12.12";
+    llvm::Expected<Value> Doc = parse(Str);
+
+    EXPECT_EQ("[1:27, byte=27]: Invalid JSON value (number?)",
+              llvm::toString(Doc.takeError()));
+  }
 }
 
 // Sample struct with typical JSON-mapping rules.
