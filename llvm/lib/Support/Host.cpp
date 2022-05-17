@@ -386,6 +386,26 @@ StringRef sys::detail::getHostCPUNameForS390x(StringRef ProcCpuinfoContent) {
   return "generic";
 }
 
+StringRef sys::detail::getHostCPUNameForRISCV(StringRef ProcCpuinfoContent) {
+  // There are 24 lines in /proc/cpuinfo
+  SmallVector<StringRef> Lines;
+  ProcCpuinfoContent.split(Lines, "\n");
+
+  // Look for uarch line to determine cpu name
+  StringRef UArch;
+  for (unsigned I = 0, E = Lines.size(); I != E; ++I) {
+    if (Lines[I].startswith("uarch")) {
+      UArch = Lines[I].substr(5).ltrim("\t :");
+      break;
+    }
+  }
+
+  return StringSwitch<const char *>(UArch)
+      .Case("sifive,u74-mc", "sifive-u74")
+      .Case("sifive,bullet0", "sifive-u74")
+      .Default("generic");
+}
+
 StringRef sys::detail::getHostCPUNameForBPF() {
 #if !defined(__linux__) || !defined(__x86_64__)
   return "generic";
@@ -1379,12 +1399,18 @@ StringRef sys::getHostCPUName() {
 }
 #elif defined(__riscv)
 StringRef sys::getHostCPUName() {
+#if defined(__linux__)
+  std::unique_ptr<llvm::MemoryBuffer> P = getProcCpuinfoContent();
+  StringRef Content = P ? P->getBuffer() : "";
+  return detail::getHostCPUNameForRISCV(Content);
+#else
 #if __riscv_xlen == 64
   return "generic-rv64";
 #elif __riscv_xlen == 32
   return "generic-rv32";
 #else
 #error "Unhandled value of __riscv_xlen"
+#endif
 #endif
 }
 #else
