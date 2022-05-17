@@ -13300,6 +13300,17 @@ AArch64TargetLowering::isDesirableToCommuteWithShift(const SDNode *N,
   return true;
 }
 
+bool AArch64TargetLowering::shouldFoldConstantShiftPairToMask(
+    const SDNode *N, CombineLevel Level) const {
+  assert(((N->getOpcode() == ISD::SHL &&
+           N->getOperand(0).getOpcode() == ISD::SRL) ||
+          (N->getOpcode() == ISD::SRL &&
+           N->getOperand(0).getOpcode() == ISD::SHL)) &&
+         "Expected shift-shift mask");
+  // Don't allow multiuse shift folding with the same shift amount.
+  return N->getOperand(0)->hasOneUse();
+}
+
 bool AArch64TargetLowering::shouldConvertConstantLoadToIntImm(const APInt &Imm,
                                                               Type *Ty) const {
   assert(Ty->isIntegerTy());
