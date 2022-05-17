@@ -751,7 +751,19 @@ llvm::json::Value CreateStackFrame(lldb::SBFrame &frame) {
   llvm::json::Object object;
   int64_t frame_id = MakeVSCodeFrameID(frame);
   object.try_emplace("id", frame_id);
-  EmplaceSafeString(object, "name", frame.GetFunctionName());
+
+  std::string frame_name;
+  const char *func_name = frame.GetFunctionName();
+  if (func_name)
+    frame_name = func_name;
+  else
+    frame_name = "<unknown>";
+  bool is_optimized = frame.GetFunction().GetIsOptimized();
+  if (is_optimized)
+    frame_name += " [opt]";
+  EmplaceSafeString(object, "name", frame_name);
+  object.try_emplace("optimized", is_optimized);
+
   int64_t disasm_line = 0;
   object.try_emplace("source", CreateSource(frame, disasm_line));
 
