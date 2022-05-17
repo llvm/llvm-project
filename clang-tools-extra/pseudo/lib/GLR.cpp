@@ -40,6 +40,7 @@ const ForestNode &glrParse(const TokenStream &Tokens, const ParseParams &Params,
                            SymbolID StartSymbol) {
   llvm::ArrayRef<ForestNode> Terminals = Params.Forest.createTerminals(Tokens);
   auto &G = Params.G;
+  (void)G;
   auto &GSS = Params.GSStack;
 
   // Lists of active shift, reduce, accept actions.
