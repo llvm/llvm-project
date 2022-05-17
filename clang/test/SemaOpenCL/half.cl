@@ -1,5 +1,5 @@
 // RUN: %clang_cc1 %s -verify -pedantic -fsyntax-only -Wno-unused-value -triple spir-unknown-unknown
-// RUN: %clang_cc1 %s -verify -pedantic -fsyntax-only -Wno-unused-value -triple spir-unknown-unknown -fdeclare-opencl-builtins -finclude-default-header
+// RUN: %clang_cc1 %s -verify -pedantic -fsyntax-only -Wno-unused-value -triple spir-unknown-unknown -fdeclare-opencl-builtins -finclude-default-header -DHAVE_BUILTINS
 
 constant float f = 1.0h; // expected-error{{half precision constant requires cl_khr_fp16}}
 
@@ -21,6 +21,11 @@ half half_disabled(half *p, // expected-error{{declaring function return value o
   half *allowed = &p[1];
   half *allowed2 = &*p;
   half *allowed3 = p + 1;
+
+#ifdef HAVE_BUILTINS
+  (void)ilogb(*p); // expected-error{{loading directly from pointer to type '__private half' requires cl_khr_fp16. Use vector data load builtin functions instead}}
+  vstore_half(42.0f, 0, p);
+#endif
 
   return h;
 }
@@ -48,6 +53,11 @@ half half_enabled(half *p, half h)
   half *allowed = &p[1];
   half *allowed2 = &*p;
   half *allowed3 = p + 1;
+
+#ifdef HAVE_BUILTINS
+  (void)ilogb(*p);
+  vstore_half(42.0f, 0, p);
+#endif
 
   return h;
 }
