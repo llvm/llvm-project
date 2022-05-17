@@ -55,11 +55,7 @@ void emitWebAssemblyDisassemblerTables(
     auto &CGIP = OpcodeTable[Prefix][Opc];
     // All wasm instructions have a StackBased field of type string, we only
     // want the instructions for which this is "true".
-    auto StackString =
-        Def.getValue("StackBased")->getValue()->getCastTo(StringRecTy::get(RK));
-    auto IsStackBased =
-        StackString &&
-        reinterpret_cast<const StringInit *>(StackString)->getValue() == "true";
+    bool IsStackBased = Def.getValueAsBit("StackBased");
     if (!IsStackBased)
       continue;
     if (CGIP.second) {
