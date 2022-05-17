@@ -1275,16 +1275,16 @@ void AMDGPUInstPrinter::printSendMsg(const MCInst *MI, unsigned OpNo,
   uint16_t MsgId;
   uint16_t OpId;
   uint16_t StreamId;
-  decodeMsg(Imm16, MsgId, OpId, StreamId);
+  decodeMsg(Imm16, MsgId, OpId, StreamId, STI);
 
   StringRef MsgName = getMsgName(MsgId, STI);
 
   if (!MsgName.empty() && isValidMsgOp(MsgId, OpId, STI) &&
       isValidMsgStream(MsgId, OpId, StreamId, STI)) {
     O << "sendmsg(" << MsgName;
-    if (msgRequiresOp(MsgId)) {
-      O << ", " << getMsgOpName(MsgId, OpId);
-      if (msgSupportsStream(MsgId, OpId)) {
+    if (msgRequiresOp(MsgId, STI)) {
+      O << ", " << getMsgOpName(MsgId, OpId, STI);
+      if (msgSupportsStream(MsgId, OpId, STI)) {
         O << ", " << StreamId;
       }
     }
@@ -1462,6 +1462,49 @@ void AMDGPUInstPrinter::printDepCtr(const MCInst *MI, unsigned OpNo,
   } else {
     O << formatHex(Imm16);
   }
+}
+
+void AMDGPUInstPrinter::printDelayFlag(const MCInst *MI, unsigned OpNo,
+                                       const MCSubtargetInfo &STI,
+                                       raw_ostream &O) {
+  const char *BadInstId = "/* invalid instid value */";
+  static const std::array<const char *, 12> InstIds = {
+      "NO_DEP",        "VALU_DEP_1",    "VALU_DEP_2",
+      "VALU_DEP_3",    "VALU_DEP_4",    "TRANS32_DEP_1",
+      "TRANS32_DEP_2", "TRANS32_DEP_3", "FMA_ACCUM_CYCLE_1",
+      "SALU_CYCLE_1",  "SALU_CYCLE_2",  "SALU_CYCLE_3"};
+
+  const char *BadInstSkip = "/* invalid instskip value */";
+  static const std::array<const char *, 6> InstSkips = {
+      "SAME", "NEXT", "SKIP_1", "SKIP_2", "SKIP_3", "SKIP_4"};
+
+  unsigned SImm16 = MI->getOperand(OpNo).getImm();
+  const char *Prefix = "";
+
+  unsigned Value = SImm16 & 0xF;
+  if (Value) {
+    const char *Name = Value < InstIds.size() ? InstIds[Value] : BadInstId;
+    O << Prefix << "instid0(" << Name << ')';
+    Prefix = " | ";
+  }
+
+  Value = (SImm16 >> 4) & 7;
+  if (Value) {
+    const char *Name =
+        Value < InstSkips.size() ? InstSkips[Value] : BadInstSkip;
+    O << Prefix << "instskip(" << Name << ')';
+    Prefix = " | ";
+  }
+
+  Value = (SImm16 >> 7) & 0xF;
+  if (Value) {
+    const char *Name = Value < InstIds.size() ? InstIds[Value] : BadInstId;
+    O << Prefix << "instid1(" << Name << ')';
+    Prefix = " | ";
+  }
+
+  if (!*Prefix)
+    O << "0";
 }
 
 void AMDGPUInstPrinter::printHwreg(const MCInst *MI, unsigned OpNo,

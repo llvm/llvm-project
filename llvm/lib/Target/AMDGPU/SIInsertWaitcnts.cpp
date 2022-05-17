@@ -971,8 +971,9 @@ bool SIInsertWaitcnts::generateWaitcntInstBefore(
   // Resolve vm waits before gs-done.
   else if ((MI.getOpcode() == AMDGPU::S_SENDMSG ||
             MI.getOpcode() == AMDGPU::S_SENDMSGHALT) &&
-           ((MI.getOperand(0).getImm() & AMDGPU::SendMsg::ID_MASK_) ==
-            AMDGPU::SendMsg::ID_GS_DONE)) {
+           ST->hasLegacyGeometry() &&
+           ((MI.getOperand(0).getImm() & AMDGPU::SendMsg::ID_MASK_PreGFX11_) ==
+            AMDGPU::SendMsg::ID_GS_DONE_PreGFX11)) {
     Wait.VmCnt = 0;
   }
 #if 0 // TODO: the following blocks of logic when we have fence.
