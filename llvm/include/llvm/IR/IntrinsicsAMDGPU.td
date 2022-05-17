@@ -1812,6 +1812,25 @@ def int_amdgcn_perm :
      [IntrNoMem, IntrSpeculatable, IntrWillReturn]>;
 
 //===----------------------------------------------------------------------===//
+// GFX9 Intrinsics
+//===----------------------------------------------------------------------===//
+
+class AMDGPUGlobalLoadLDS : Intrinsic <
+  [],
+  [LLVMQualPointerType<llvm_i8_ty, 1>, // Base global pointer to load from
+   LLVMQualPointerType<llvm_i8_ty, 3>, // LDS base pointer to store to
+   llvm_i32_ty,                        // Data byte size: 1/2/4
+   llvm_i32_ty,                        // imm offset (applied to both global and LDS address)
+   llvm_i32_ty],                       // auxiliary data (imm, cachepolicy (bit 0 = glc/sc0,
+                                       //                                   bit 1 = slc/sc1,
+                                       //                                   bit 2 = dlc on gfx10+))
+                                       //                                   bit 4 = scc/nt on gfx90a+))
+  [IntrWillReturn, NoCapture<ArgIndex<0>>, NoCapture<ArgIndex<1>>,
+   ImmArg<ArgIndex<2>>, ImmArg<ArgIndex<2>>, ImmArg<ArgIndex<3>>, ImmArg<ArgIndex<4>>],
+  "", [SDNPMemOperand]>;
+def int_amdgcn_global_load_lds : AMDGPUGlobalLoadLDS;
+
+//===----------------------------------------------------------------------===//
 // GFX10 Intrinsics
 //===----------------------------------------------------------------------===//
 

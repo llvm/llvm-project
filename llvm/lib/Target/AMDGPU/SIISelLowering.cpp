@@ -1318,6 +1318,14 @@ bool SITargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
       Info.flags |= MachineMemOperand::MOStore;
     return true;
   }
+  case Intrinsic::amdgcn_global_load_lds: {
+    Info.opc = ISD::INTRINSIC_VOID;
+    unsigned Width = cast<ConstantInt>(CI.getArgOperand(2))->getZExtValue();
+    Info.memVT = EVT::getIntegerVT(CI.getContext(), Width * 8);
+    Info.flags |= MachineMemOperand::MOLoad | MachineMemOperand::MOStore |
+                  MachineMemOperand::MOVolatile;
+    return true;
+  }
   default:
     return false;
   }
@@ -8314,6 +8322,81 @@ SDValue SITargetLowering::LowerINTRINSIC_VOID(SDValue Op,
                                 sizeof(int32_t), LoadMMO->getBaseAlign());
 
     auto Load = DAG.getMachineNode(Opc, DL, M->getVTList(), Ops);
+    DAG.setNodeMemRefs(Load, {LoadMMO, StoreMMO});
+
+    return SDValue(Load, 0);
+  }
+  case Intrinsic::amdgcn_global_load_lds: {
+    unsigned Opc;
+    unsigned Size = Op->getConstantOperandVal(4);
+    switch (Size) {
+    default:
+      return SDValue();
+    case 1:
+      Opc = AMDGPU::GLOBAL_LOAD_LDS_UBYTE;
+      break;
+    case 2:
+      Opc = AMDGPU::GLOBAL_LOAD_LDS_USHORT;
+      break;
+    case 4:
+      Opc = AMDGPU::GLOBAL_LOAD_LDS_DWORD;
+      break;
+    }
+
+    auto *M = cast<MemSDNode>(Op);
+    SDValue M0Val = copyToM0(DAG, Chain, DL, Op.getOperand(3));
+
+    SmallVector<SDValue, 6> Ops;
+
+    SDValue Addr = Op.getOperand(2); // Global ptr
+    SDValue VOffset;
+    // Try to split SAddr and VOffset. Global and LDS pointers share the same
+    // immediate offset, so we cannot use a regular SelectGlobalSAddr().
+    if (Addr->isDivergent() && Addr.getOpcode() == ISD::ADD) {
+      SDValue LHS = Addr.getOperand(0);
+      SDValue RHS = Addr.getOperand(1);
+
+      if (LHS->isDivergent())
+        std::swap(LHS, RHS);
+
+      if (!LHS->isDivergent() && RHS.getOpcode() == ISD::ZERO_EXTEND &&
+          RHS.getOperand(0).getValueType() == MVT::i32) {
+        // add (i64 sgpr), (zero_extend (i32 vgpr))
+        Addr = LHS;
+        VOffset = RHS.getOperand(0);
+      }
+    }
+
+    Ops.push_back(Addr);
+    if (!Addr->isDivergent()) {
+      Opc = AMDGPU::getGlobalSaddrOp(Opc);
+      if (!VOffset)
+        VOffset = SDValue(
+            DAG.getMachineNode(AMDGPU::V_MOV_B32_e32, DL, MVT::i32,
+                               DAG.getTargetConstant(0, DL, MVT::i32)), 0);
+      Ops.push_back(VOffset);
+    }
+
+    Ops.push_back(Op.getOperand(5));  // Offset
+    Ops.push_back(Op.getOperand(6));  // CPol
+    Ops.push_back(M0Val.getValue(0)); // Chain
+    Ops.push_back(M0Val.getValue(1)); // Glue
+
+    MachineMemOperand *LoadMMO = M->getMemOperand();
+    MachinePointerInfo LoadPtrI = LoadMMO->getPointerInfo();
+    LoadPtrI.Offset = Op->getConstantOperandVal(5);
+    MachinePointerInfo StorePtrI = LoadPtrI;
+    LoadPtrI.AddrSpace = AMDGPUAS::GLOBAL_ADDRESS;
+    StorePtrI.AddrSpace = AMDGPUAS::LOCAL_ADDRESS;
+    auto F = LoadMMO->getFlags() &
+             ~(MachineMemOperand::MOStore | MachineMemOperand::MOLoad);
+    LoadMMO = MF.getMachineMemOperand(LoadPtrI, F | MachineMemOperand::MOLoad,
+                                      Size, LoadMMO->getBaseAlign());
+    MachineMemOperand *StoreMMO =
+        MF.getMachineMemOperand(StorePtrI, F | MachineMemOperand::MOStore,
+                                sizeof(int32_t), Align(4));
+
+    auto Load = DAG.getMachineNode(Opc, DL, Op->getVTList(), Ops);
     DAG.setNodeMemRefs(Load, {LoadMMO, StoreMMO});
 
     return SDValue(Load, 0);
