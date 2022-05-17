@@ -148,7 +148,7 @@ define void @loop1(i32* %x, i32* %y) {
 ; CHECK-LABEL: @loop1(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
-; CHECK:  loop:
+; CHECK:       loop:
 ; CHECK-NEXT:    [[PHI:%.*]] = phi i32* [ [[F:%.*]], [[LOOP]] ], [ [[X:%.*]], [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    [[F]] = tail call i32* @f(i32* [[PHI]])
 ; CHECK-NEXT:    [[CMP1:%.*]] = icmp ne i32* [[F]], [[Y:%.*]]
@@ -162,12 +162,12 @@ entry:
   br label %loop
 
 loop:
-	%phi = phi i32* [ %sel, %loop ], [ %x, %entry ]
-	%f = tail call i32* @f(i32* %phi)
-	%cmp1 = icmp ne i32* %f, %y
-	%sel = select i1 %cmp1, i32* %f, i32* null
-	%cmp2 = icmp eq i32* %sel, null
-	br i1 %cmp2, label %return, label %loop
+  %phi = phi i32* [ %sel, %loop ], [ %x, %entry ]
+  %f = tail call i32* @f(i32* %phi)
+  %cmp1 = icmp ne i32* %f, %y
+  %sel = select i1 %cmp1, i32* %f, i32* null
+  %cmp2 = icmp eq i32* %sel, null
+  br i1 %cmp2, label %return, label %loop
 
 return:
   ret void
@@ -192,12 +192,12 @@ entry:
   br label %loop
 
 loop:
-	%phi = phi i32* [ %sel, %loop ], [ %x, %entry ]
-	%f = tail call i32* @f(i32* %phi)
-	%cmp1 = icmp eq i32* %f, %y
-	%sel = select i1 %cmp1, i32* null, i32* %f
-	%cmp2 = icmp eq i32* %sel, null
-	br i1 %cmp2, label %return, label %loop
+  %phi = phi i32* [ %sel, %loop ], [ %x, %entry ]
+  %f = tail call i32* @f(i32* %phi)
+  %cmp1 = icmp eq i32* %f, %y
+  %sel = select i1 %cmp1, i32* null, i32* %f
+  %cmp2 = icmp eq i32* %sel, null
+  br i1 %cmp2, label %return, label %loop
 
 return:
   ret void
@@ -1828,6 +1828,32 @@ define void @select_assume(i32 %a, i32 %b, i1 %c, i1* %p) {
   ret void
 }
 
+define void @xor(i8 %a, i1* %p) {
+; CHECK-LABEL: @xor(
+; CHECK-NEXT:    [[A_MASK:%.*]] = and i8 [[A:%.*]], 15
+; CHECK-NEXT:    [[XOR:%.*]] = xor i8 [[A_MASK]], -86
+; CHECK-NEXT:    [[C1:%.*]] = icmp uge i8 [[XOR]], -96
+; CHECK-NEXT:    store i1 [[C1]], i1* [[P:%.*]], align 1
+; CHECK-NEXT:    [[C2:%.*]] = icmp ugt i8 [[XOR]], -96
+; CHECK-NEXT:    store i1 [[C2]], i1* [[P]], align 1
+; CHECK-NEXT:    [[C3:%.*]] = icmp ule i8 [[XOR]], -81
+; CHECK-NEXT:    store i1 [[C3]], i1* [[P]], align 1
+; CHECK-NEXT:    [[C4:%.*]] = icmp ult i8 [[XOR]], -81
+; CHECK-NEXT:    store i1 [[C4]], i1* [[P]], align 1
+; CHECK-NEXT:    ret void
+;
+  %a.mask = and i8 %a, 15 ; 0b0000????
+  %xor = xor i8 %a.mask, 170 ; ^ 0b10101010 == 0b1010????
+  %c1 = icmp uge i8 %xor, 160
+  store i1 %c1, i1* %p
+  %c2 = icmp ugt i8 %xor, 160
+  store i1 %c2, i1* %p
+  %c3 = icmp ule i8 %xor, 175
+  store i1 %c3, i1* %p
+  %c4 = icmp ult i8 %xor, 175
+  store i1 %c4, i1* %p
+  ret void
+}
 
 declare i32 @llvm.uadd.sat.i32(i32, i32)
 declare i32 @llvm.usub.sat.i32(i32, i32)
