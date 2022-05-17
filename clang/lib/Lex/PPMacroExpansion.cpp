@@ -1640,7 +1640,9 @@ void Preprocessor::ExpandBuiltinMacro(Token &Tok) {
             // usual allocation and deallocation functions. Required by libc++
             return 201802;
           default:
-            return true;
+            return Builtin::evaluateRequiredTargetFeatures(
+                getBuiltinInfo().getRequiredFeatures(II->getBuiltinID()),
+                getTargetInfo().getTargetOpts().FeatureMap);
           }
           return true;
         } else if (II->getTokenID() != tok::identifier ||

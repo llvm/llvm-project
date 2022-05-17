@@ -1,4 +1,4 @@
-#include "../lib/CodeGen/CodeGenFunction.h"
+#include "../lib/Basic/BuiltinTargetFeatures.h"
 #include "gtest/gtest.h"
 
 using namespace llvm;
@@ -11,7 +11,7 @@ TEST(CheckTargetFeaturesTest, checkBuiltinFeatures) {
     StringMap<bool> SM;
     for (StringRef F : Features)
       SM.insert(std::make_pair(F, true));
-    clang::CodeGen::TargetFeatures TF(SM);
+    clang::Builtin::TargetFeatures TF(SM);
     return TF.hasRequiredFeatures(BuiltinFeatures);
   };
   // Make sure the basic function ',' and '|' works correctly
