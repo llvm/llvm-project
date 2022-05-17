@@ -933,6 +933,13 @@ CIRGenModule::getAddrOfConstantStringFromLiteral(const StringLiteral *S,
       assert(0 && "not implemented");
   }
 
+  SmallString<256> StringNameBuffer = Name;
+  llvm::raw_svector_ostream Out(StringNameBuffer);
+  if (StringLiteralCnt)
+    Out << StringLiteralCnt;
+  Name = Out.str();
+  StringLiteralCnt++;
+
   SmallString<256> MangledNameBuffer;
   StringRef GlobalVariableName;
   auto LT = mlir::SymbolTable::Visibility::Public;

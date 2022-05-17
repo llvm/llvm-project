@@ -184,6 +184,7 @@ public:
   mlir::SymbolRefAttr
   getAddrOfConstantStringFromLiteral(const StringLiteral *S,
                                      StringRef Name = ".str");
+  unsigned StringLiteralCnt = 0;
 
   /// Return the AST address space of constant literal, which is used to emit
   /// the constant literal as global variable in LLVM IR.
