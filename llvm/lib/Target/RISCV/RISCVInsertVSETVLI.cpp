@@ -373,24 +373,6 @@ public:
     return VSETVLIInfo::getUnknown();
   }
 
-  // Calculate the VSETVLIInfo visible at the end of the block assuming this
-  // is the predecessor value, and Other is change for this block.
-  VSETVLIInfo merge(const VSETVLIInfo &Other) const {
-    assert(isValid() && "Can only merge with a valid VSETVLInfo");
-
-    // Nothing changed from the predecessor, keep it.
-    if (!Other.isValid())
-      return *this;
-
-    // If the change is compatible with the input, we won't create a VSETVLI
-    // and should keep the predecessor.
-    if (isCompatible(Other, /*Strict*/ true))
-      return *this;
-
-    // Otherwise just use whatever is in this block.
-    return Other;
-  }
-
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   /// Support for debugging, callable in GDB: V->dump()
   LLVM_DUMP_METHOD void dump() const {
@@ -946,6 +928,7 @@ bool RISCVInsertVSETVLI::computeVLVTYPEChanges(const MachineBasicBlock &MBB) {
   bool HadVectorOp = false;
 
   BlockData &BBInfo = BlockInfo[MBB.getNumber()];
+  BBInfo.Change = BBInfo.Pred;
   for (const MachineInstr &MI : MBB) {
     // If this is an explicit VSETVLI or VSETIVLI, update our state.
     if (isVectorConfigInstr(MI)) {
@@ -983,15 +966,11 @@ bool RISCVInsertVSETVLI::computeVLVTYPEChanges(const MachineBasicBlock &MBB) {
       BBInfo.Change = VSETVLIInfo::getUnknown();
   }
 
-  // Initial exit state is whatever change we found in the block.
-  BBInfo.Exit = BBInfo.Change;
-  LLVM_DEBUG(dbgs() << "Initial exit state of " << printMBBReference(MBB)
-                    << " is " << BBInfo.Exit << "\n");
-
   return HadVectorOp;
 }
 
 void RISCVInsertVSETVLI::computeIncomingVLVTYPE(const MachineBasicBlock &MBB) {
+
   BlockData &BBInfo = BlockInfo[MBB.getNumber()];
 
   BBInfo.InQueue = false;
@@ -1017,7 +996,12 @@ void RISCVInsertVSETVLI::computeIncomingVLVTYPE(const MachineBasicBlock &MBB) {
   LLVM_DEBUG(dbgs() << "Entry state of " << printMBBReference(MBB)
                     << " changed to " << BBInfo.Pred << "\n");
 
-  VSETVLIInfo TmpStatus = BBInfo.Pred.merge(BBInfo.Change);
+  // Note: It's tempting to cache the state changes here, but due to the
+  // compatibility checks performed a blocks output state can change based on
+  // the input state.  To cache, we'd have to add logic for finding
+  // never-compatible state changes.
+  computeVLVTYPEChanges(MBB);
+  VSETVLIInfo TmpStatus = BBInfo.Change;
 
   // If the new exit value matches the old exit value, we don't need to revisit
   // any blocks.
@@ -1122,9 +1106,9 @@ void RISCVInsertVSETVLI::emitVSETVLIs(MachineBasicBlock &MBB) {
       if (!CurInfo.isValid()) {
         // We haven't found any vector instructions or VL/VTYPE changes yet,
         // use the predecessor information.
-        assert(BlockInfo[MBB.getNumber()].Pred.isValid() &&
-               "Expected a valid predecessor state.");
-        if (needVSETVLI(NewInfo, BlockInfo[MBB.getNumber()].Pred)) {
+        CurInfo = BlockInfo[MBB.getNumber()].Pred;
+        assert(CurInfo.isValid() && "Expected a valid predecessor state.");
+        if (needVSETVLI(NewInfo, CurInfo)) {
           // If this is the first implicit state change, and the state change
           // requested can be proven to produce the same register contents, we
           // can skip emitting the actual state change and continue as if we
@@ -1133,7 +1117,7 @@ void RISCVInsertVSETVLI::emitVSETVLIs(MachineBasicBlock &MBB) {
           // we *do* need to model the state as if it changed as while the
           // register contents are unchanged, the abstract model can change.
           if (needVSETVLIPHI(NewInfo, MBB))
-            insertVSETVLI(MBB, MI, NewInfo, BlockInfo[MBB.getNumber()].Pred);
+            insertVSETVLI(MBB, MI, NewInfo, CurInfo);
           CurInfo = NewInfo;
         }
       } else {
@@ -1306,8 +1290,15 @@ bool RISCVInsertVSETVLI::runOnMachineFunction(MachineFunction &MF) {
   bool HaveVectorOp = false;
 
   // Phase 1 - determine how VL/VTYPE are affected by the each block.
-  for (const MachineBasicBlock &MBB : MF)
+  for (const MachineBasicBlock &MBB : MF) {
     HaveVectorOp |= computeVLVTYPEChanges(MBB);
+    // Initial exit state is whatever change we found in the block.
+    BlockData &BBInfo = BlockInfo[MBB.getNumber()];
+    BBInfo.Exit = BBInfo.Change;
+    LLVM_DEBUG(dbgs() << "Initial exit state of " << printMBBReference(MBB)
+                      << " is " << BBInfo.Exit << "\n");
+
+  }
 
   // If we didn't find any instructions that need VSETVLI, we're done.
   if (!HaveVectorOp) {
