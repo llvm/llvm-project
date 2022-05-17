@@ -1,4 +1,5 @@
 # REQUIRES: x86
+# UNSUPPORTED: system-windows
 
 # RUN: rm -rf %t; split-file %s %t
 
