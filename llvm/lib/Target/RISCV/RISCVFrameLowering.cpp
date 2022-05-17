@@ -1034,9 +1034,9 @@ RISCVFrameLowering::getFirstSPAdjustAmount(const MachineFunction &MF) const {
   // Return the FirstSPAdjustAmount if the StackSize can not fit in signed
   // 12-bit and there exists a callee saved register need to be pushed.
   if (!isInt<12>(StackSize) && (CSI.size() > 0)) {
-    // FirstSPAdjustAmount is choosed as (2048 - StackAlign)
+    // FirstSPAdjustAmount is chosen as (2048 - StackAlign)
     // because 2048 will cause sp = sp + 2048 in epilogue split into
-    // multi-instructions. The offset smaller than 2048 can fit in signle
+    // multi-instructions. The offset smaller than 2048 can fit in single
     // load/store instruction and we have to stick with the stack alignment.
     // 2048 is 16-byte alignment. The stack alignment for RV32 and RV64 is 16,
     // for RV32E is 4. So (2048 - StackAlign) will satisfy the stack alignment.
