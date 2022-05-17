@@ -543,11 +543,11 @@ struct BufferizationState {
             Optional<ForceInPlacability> overrideInPlace = None,
             Optional<Operation *> customCopyInsertionPoint = None);
 
-  /// Return the buffer type for a given OpOperand (tensor) after bufferization.
+  /// Return the buffer type for a given Value (tensor) after bufferization.
   ///
   /// Note: Op implementations should preferrably call `getBuffer()->getType()`.
   /// This function should only be used if `getBuffer` cannot be used.
-  BaseMemRefType getBufferType(OpOperand &opOperand) const;
+  BaseMemRefType getBufferType(Value value) const;
 
   /// Return a reference to the BufferizationOptions.
   const BufferizationOptions &getOptions() const {
