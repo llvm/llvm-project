@@ -15857,7 +15857,7 @@ multiplication can be represented as
         ; Expands to
         %a2 = sext i4 %a to i8
         %b2 = sext i4 %b to i8
-        %mul = mul nsw nuw i8 %a, %b
+        %mul = mul nsw nuw i8 %a2, %b2
         %scale2 = trunc i32 %scale to i8
         %r = ashr i8 %mul, i8 %scale2  ; this is for a target rounding down towards negative infinity
         %result = trunc i8 %r to i4
