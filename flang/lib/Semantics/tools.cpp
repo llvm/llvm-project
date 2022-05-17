@@ -1363,6 +1363,18 @@ const Symbol *IsFunctionResultWithSameNameAsFunction(const Symbol &symbol) {
         return function;
       }
     }
+    // Check ENTRY result symbols too
+    const Scope &outer{symbol.owner().parent()};
+    auto iter{outer.find(symbol.name())};
+    if (iter != outer.end()) {
+      const Symbol &outerSym{*iter->second};
+      if (const auto *subp{outerSym.detailsIf<SubprogramDetails>()}) {
+        if (subp->entryScope() == &symbol.owner() &&
+            symbol.name() == outerSym.name()) {
+          return &outerSym;
+        }
+      }
+    }
   }
   return nullptr;
 }
