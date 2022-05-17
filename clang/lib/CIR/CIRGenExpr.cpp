@@ -890,7 +890,9 @@ mlir::Value CIRGenFunction::buildLoadOfScalar(Address Addr, bool Volatile,
                                               LValueBaseInfo BaseInfo,
                                               bool isNontemporal) {
   if (!CGM.getCodeGenOpts().PreserveVec3Type) {
-    llvm_unreachable("NYI");
+    if (Ty->isVectorType()) {
+      llvm_unreachable("NYI");
+    }
   }
 
   // Atomic operations have to be done on integral types
