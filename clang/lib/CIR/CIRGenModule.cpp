@@ -654,9 +654,30 @@ void CIRGenModule::buildGlobalVarDefinition(const clang::VarDecl *D,
     }
   }
 
-  assert(Init.isa<mlir::TypedAttr>() && "This should have a type");
-  auto TypedInitAttr = Init.cast<mlir::TypedAttr>();
-  auto InitType = TypedInitAttr.getType();
+  mlir::Type InitType;
+  // If the initializer attribute is a SymbolRefAttr it means we are
+  // initializing the global based on a global constant.
+  //
+  // TODO(cir): create another attribute to contain the final type and abstract
+  // away SymbolRefAttr.
+  if (auto symAttr = Init.dyn_cast<mlir::SymbolRefAttr>()) {
+    auto cstGlobal = mlir::SymbolTable::lookupSymbolIn(theModule, symAttr);
+    assert(isa<mlir::cir::GlobalOp>(cstGlobal) &&
+           "unaware of other symbol providers");
+    auto g = cast<mlir::cir::GlobalOp>(cstGlobal);
+    auto arrayTy = g.getSymType().dyn_cast<mlir::cir::ArrayType>();
+    // TODO(cir): pointer to array decay. Should this be modeled explicitly in
+    // CIR?
+    if (arrayTy)
+      InitType = mlir::cir::PointerType::get(builder.getContext(),
+                                             arrayTy.getEltType());
+  } else {
+    assert(Init.isa<mlir::TypedAttr>() && "This should have a type");
+    auto TypedInitAttr = Init.cast<mlir::TypedAttr>();
+    InitType = TypedInitAttr.getType();
+  }
+  assert(!InitType.isa<mlir::NoneType>() && "Should have a type by now");
+
   auto Entry = buildGlobal(D, InitType, ForDefinition_t(!IsTentative));
   // TODO(cir): Strip off pointer casts from Entry if we get them?
 
@@ -828,10 +849,10 @@ CIRGenModule::getConstantArrayFromStringLiteral(const StringLiteral *E) {
     Str.resize(finalSize);
 
     auto eltTy = getTypes().ConvertType(CAT->getElementType());
+    auto TheType =
+        mlir::cir::ArrayType::get(builder.getContext(), eltTy, finalSize);
     auto cstArray = mlir::cir::CstArrayAttr::get(
-        mlir::cir::ArrayType::get(builder.getContext(), eltTy, finalSize),
-        mlir::StringAttr::get(builder.getContext(), Str));
-    cstArray.dump();
+        TheType, mlir::StringAttr::get(Str, TheType));
     return cstArray;
   }
 
@@ -839,10 +860,72 @@ CIRGenModule::getConstantArrayFromStringLiteral(const StringLiteral *E) {
   return {};
 }
 
+// TODO(cir): this could be a common AST helper for both CIR and LLVM codegen.
+LangAS CIRGenModule::getGlobalConstantAddressSpace() const {
+  // OpenCL v1.2 s6.5.3: a string literal is in the constant address space.
+  if (getLangOpts().OpenCL)
+    return LangAS::opencl_constant;
+  if (getLangOpts().SYCLIsDevice)
+    return LangAS::sycl_global;
+  if (auto AS = getTarget().getConstantAddressSpace())
+    return AS.value();
+  return LangAS::Default;
+}
+
+static mlir::cir::GlobalOp
+generateStringLiteral(mlir::Location loc, mlir::TypedAttr C,
+                      mlir::SymbolTable::Visibility LT, CIRGenModule &CGM,
+                      StringRef GlobalName, CharUnits Alignment) {
+  unsigned AddrSpace = CGM.getASTContext().getTargetAddressSpace(
+      CGM.getGlobalConstantAddressSpace());
+  assert((AddrSpace == 0 && !cir::UnimplementedFeature::addressSpace()) &&
+         "NYI");
+
+  // Create a global variable for this string
+  // FIXME(cir): check for insertion point in module level.
+  auto GV = CGM.getBuilder().create<mlir::cir::GlobalOp>(
+      loc, GlobalName, C.getType(), !CGM.getLangOpts().WritableStrings);
+
+  // Set up extra information and add to the module
+  GV.setAlignmentAttr(CGM.getAlignment(Alignment));
+  mlir::SymbolTable::setSymbolVisibility(GV, LT);
+  GV.setInitialValueAttr(C);
+
+  CGM.getModule().push_back(GV);
+
+  // TODO(cir)
+  assert(!cir::UnimplementedFeature::threadLocal() && "NYI");
+  assert(!cir::UnimplementedFeature::unnamedAddr() && "NYI");
+  assert(!cir::UnimplementedFeature::isWeakForLinker() && "NYI");
+  assert(!cir::UnimplementedFeature::setDSOLocal() && "NYI");
+  return GV;
+}
+
+// In address space agnostic languages, string literals are in default address
+// space in AST. However, certain targets (e.g. amdgcn) request them to be
+// emitted in constant address space in LLVM IR. To be consistent with other
+// parts of AST, string literal global variables in constant address space
+// need to be casted to default address space before being put into address
+// map and referenced by other part of CodeGen.
+// In OpenCL, string literals are in constant address space in AST, therefore
+// they should not be casted to default address space.
+static mlir::StringAttr
+castStringLiteralToDefaultAddressSpace(CIRGenModule &CGM, mlir::StringAttr GV) {
+  if (!CGM.getLangOpts().OpenCL) {
+    auto AS = CGM.getGlobalConstantAddressSpace();
+    if (AS != LangAS::Default)
+      assert(0 && "not implemented");
+  }
+  return GV;
+}
+
 /// Return a pointer to a constant array for the given string literal.
-ConstantAddress
+mlir::SymbolRefAttr
 CIRGenModule::getAddrOfConstantStringFromLiteral(const StringLiteral *S,
                                                  StringRef Name) {
+  CharUnits Alignment =
+      astCtx.getAlignOfGlobalVarInChars(S->getType(), /*VD=*/nullptr);
+
   mlir::Attribute C = getConstantArrayFromStringLiteral(S);
   mlir::cir::GlobalOp Entry;
   if (!getLangOpts().WritableStrings) {
@@ -852,6 +935,7 @@ CIRGenModule::getAddrOfConstantStringFromLiteral(const StringLiteral *S,
 
   SmallString<256> MangledNameBuffer;
   StringRef GlobalVariableName;
+  auto LT = mlir::SymbolTable::Visibility::Public;
 
   // Mangle the string literal if that's how the ABI merges duplicate strings.
   // Don't do it if they are writable, since we don't want writes in one TU to
@@ -860,11 +944,21 @@ CIRGenModule::getAddrOfConstantStringFromLiteral(const StringLiteral *S,
       !getLangOpts().WritableStrings) {
     assert(0 && "not implemented");
   } else {
+    LT = mlir::SymbolTable::Visibility::Private;
     GlobalVariableName = Name;
   }
 
-  assert(0 && "not implemented");
-  return ConstantAddress::invalid();
+  auto loc = getLoc(S->getSourceRange());
+  auto typedC = llvm::dyn_cast<mlir::TypedAttr>(C);
+  if (!typedC)
+    llvm_unreachable("this should never be untyped at this point");
+  auto GV = generateStringLiteral(loc, typedC, LT, *this, GlobalVariableName,
+                                  Alignment);
+  ConstantStringMap[C] = GV;
+
+  assert(!cir::UnimplementedFeature::reportGlobalToASan() && "NYI");
+  return mlir::SymbolRefAttr::get(
+      castStringLiteralToDefaultAddressSpace(*this, GV.getSymNameAttr()));
 }
 
 // Emit code for a single top level declaration.

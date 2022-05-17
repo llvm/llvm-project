@@ -288,14 +288,14 @@ namespace {
 /// A struct which can be used to peephole certain kinds of finalization
 /// that normally happen during l-value emission.
 struct ConstantLValue {
-  mlir::Value Value;
+  using SymbolTy = mlir::SymbolRefAttr;
+  llvm::PointerUnion<mlir::Value, SymbolTy> Value;
   bool HasOffsetApplied;
 
   /*implicit*/ ConstantLValue(mlir::Value value, bool hasOffsetApplied = false)
       : Value(value), HasOffsetApplied(hasOffsetApplied) {}
 
-  /*implicit*/ ConstantLValue(ConstantAddress address)
-      : ConstantLValue(address.getPointer()) {}
+  /*implicit*/ ConstantLValue(SymbolTy address) : Value(address) {}
 
   ConstantLValue(std::nullptr_t) : ConstantLValue({}, false) {}
 };
@@ -346,6 +346,7 @@ private:
   mlir::Attribute applyOffset(mlir::Attribute C) {
     if (!hasNonZeroOffset())
       return C;
+    // TODO(cir): use ptr_stride, or something...
     assert(0 && "NYI");
   }
 };
@@ -375,21 +376,22 @@ mlir::Attribute ConstantLValueEmitter::tryEmit() {
   ConstantLValue result = tryEmitBase(base);
 
   // If that failed, we're done.
-  auto value = result.Value;
+  auto &value = result.Value;
   if (!value)
     return {};
 
   // Apply the offset if necessary and not already done.
-  if (!result.HasOffsetApplied) {
-    // TODO(cir): use ptr_stride, or something...
-    // value = applyOffset(value);
+  if (!result.HasOffsetApplied && !value.is<ConstantLValue::SymbolTy>()) {
+    assert(0 && "NYI");
   }
 
   // Convert to the appropriate type; this could be an lvalue for
   // an integer. FIXME: performAddrSpaceCast
-  if (destTy.isa<mlir::cir::PointerType>())
-    assert(0 &&
-           "NYI"); // return llvm::ConstantExpr::getPointerCast(value, destTy);
+  if (destTy.isa<mlir::cir::PointerType>()) {
+    if (value.is<ConstantLValue::SymbolTy>())
+      return value.get<ConstantLValue::SymbolTy>();
+    assert(0 && "NYI");
+  }
 
   assert(0 && "NYI");
 }
