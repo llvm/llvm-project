@@ -375,7 +375,7 @@ operation type. Nesting in this sense, corresponds to the
 
 For example, the following `.mlir`:
 
-```
+```mlir
 module {
   spv.module "Logical" "GLSL450" {
     func @foo() {
