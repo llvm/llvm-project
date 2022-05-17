@@ -741,6 +741,37 @@ void Sema::ActOnPragmaMSInitSeg(SourceLocation PragmaLocation,
   CurInitSegLoc = PragmaLocation;
 }
 
+void Sema::ActOnPragmaMSAllocText(
+    SourceLocation PragmaLocation, StringRef Section,
+    const SmallVector<std::tuple<IdentifierInfo *, SourceLocation>>
+        &Functions) {
+  if (!CurContext->getRedeclContext()->isFileContext()) {
+    Diag(PragmaLocation, diag::err_pragma_expected_file_scope) << "alloc_text";
+    return;
+  }
+
+  for (auto &Function : Functions) {
+    IdentifierInfo *II;
+    SourceLocation Loc;
+    std::tie(II, Loc) = Function;
+
+    DeclarationName DN(II);
+    NamedDecl *ND = LookupSingleName(TUScope, DN, Loc, LookupOrdinaryName);
+    if (!ND) {
+      Diag(Loc, diag::err_undeclared_use) << II->getName();
+      return;
+    }
+
+    DeclContext *DC = ND->getDeclContext();
+    if (!DC->isExternCContext()) {
+      Diag(Loc, diag::err_pragma_alloc_text_c_linkage);
+      return;
+    }
+
+    FunctionToSectionMap[II->getName()] = std::make_tuple(Section, Loc);
+  }
+}
+
 void Sema::ActOnPragmaUnused(const Token &IdTok, Scope *curScope,
                              SourceLocation PragmaLoc) {
 
@@ -1080,6 +1111,22 @@ void Sema::AddRangeBasedOptnone(FunctionDecl *FD) {
   // optimize 0 will probably map to this functionality too).
   if(OptimizeOffPragmaLocation.isValid())
     AddOptnoneAttributeIfNoConflicts(FD, OptimizeOffPragmaLocation);
+}
+
+void Sema::AddSectionMSAllocText(FunctionDecl *FD) {
+  if (!FD->getIdentifier())
+    return;
+
+  StringRef Name = FD->getName();
+  auto It = FunctionToSectionMap.find(Name);
+  if (It != FunctionToSectionMap.end()) {
+    StringRef Section;
+    SourceLocation Loc;
+    std::tie(Section, Loc) = It->second;
+
+    if (!FD->hasAttr<SectionAttr>())
+      FD->addAttr(SectionAttr::CreateImplicit(Context, Section));
+  }
 }
 
 void Sema::AddOptnoneAttributeIfNoConflicts(FunctionDecl *FD,

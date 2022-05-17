@@ -95,8 +95,7 @@ func.func @mul(%A: tensor<100x?xf32>, %B: tensor<?x50xf32>) -> (tensor<100x50xf3
   memref.dealloc %C_m : memref<100x50xf32>
 
   // Call TensorFlow built-in function to print the result tensor.
-  "tf.Print"(%C){message: "mul result"}
-                  : (tensor<100x50xf32) -> (tensor<100x50xf32>)
+  "tf.Print"(%C){message: "mul result"} : (tensor<100x50xf32>) -> (tensor<100x50xf32>)
 
   return %C : tensor<100x50xf32>
 }
@@ -152,7 +151,7 @@ literal     ::= `abcd` // Matches the literal `abcd`.
 
 Code examples are presented in blue boxes.
 
-```mlir
+```
 // This is an example use of the grammar above:
 // This matches things like: ba, bana, boma, banana, banoma, bomana...
 example ::= `b` (`an` | `om`)* `a`
@@ -657,7 +656,7 @@ function-type ::= (type | type-list-parens) `->` (type | type-list-parens)
 ### Type Aliases
 
 ```
-type-alias-def ::= '!' alias-name '=' 'type' type
+type-alias-def ::= '!' alias-name '=' type
 type-alias ::= '!' alias-name
 ```
 
@@ -669,7 +668,7 @@ names are reserved for [dialect types](#dialect-types).
 Example:
 
 ```mlir
-!avx_m128 = type vector<4 x f32>
+!avx_m128 = vector<4 x f32>
 
 // Using the original type.
 "foo"(%x) : vector<4 x f32> -> ()

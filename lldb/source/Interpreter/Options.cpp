@@ -388,26 +388,19 @@ static bool PrintOption(const OptionDefinition &opt_def,
   return true;
 }
 
-void Options::GenerateOptionUsage(Stream &strm, CommandObject *cmd,
+void Options::GenerateOptionUsage(Stream &strm, CommandObject &cmd,
                                   uint32_t screen_width) {
-  const bool only_print_args = cmd->IsDashDashCommand();
-
   auto opt_defs = GetDefinitions();
   const uint32_t save_indent_level = strm.GetIndentLevel();
-  llvm::StringRef name;
-
+  llvm::StringRef name = cmd.GetCommandName();
   StreamString arguments_str;
-
-  if (cmd) {
-    name = cmd->GetCommandName();
-    cmd->GetFormattedCommandArguments(arguments_str);
-  } else
-    name = "";
+  cmd.GetFormattedCommandArguments(arguments_str);
 
   const uint32_t num_options = NumCommandOptions();
   if (num_options == 0)
     return;
 
+  const bool only_print_args = cmd.IsDashDashCommand();
   if (!only_print_args)
     strm.PutCString("\nCommand Options Usage:\n");
 
@@ -419,21 +412,17 @@ void Options::GenerateOptionUsage(Stream &strm, CommandObject *cmd,
   //                                                   [options-for-level-1]
   //                                                   etc.
 
-  uint32_t num_option_sets = GetRequiredOptions().size();
-
   if (!only_print_args) {
+    uint32_t num_option_sets = GetRequiredOptions().size();
     for (uint32_t opt_set = 0; opt_set < num_option_sets; ++opt_set) {
-      uint32_t opt_set_mask;
-
-      opt_set_mask = 1 << opt_set;
       if (opt_set > 0)
         strm.Printf("\n");
       strm.Indent(name);
 
       // Different option sets may require different args.
       StreamString args_str;
-      if (cmd)
-        cmd->GetFormattedCommandArguments(args_str, opt_set_mask);
+      uint32_t opt_set_mask = 1 << opt_set;
+      cmd.GetFormattedCommandArguments(args_str, opt_set_mask);
 
       // First go through and print all options that take no arguments as a
       // single string. If a command has "-a" "-b" and "-c", this will show up
@@ -482,17 +471,14 @@ void Options::GenerateOptionUsage(Stream &strm, CommandObject *cmd,
       }
 
       if (args_str.GetSize() > 0) {
-        if (cmd->WantsRawCommandString() && !only_print_args)
+        if (cmd.WantsRawCommandString())
           strm.Printf(" --");
-
         strm << " " << args_str.GetString();
-        if (only_print_args)
-          break;
       }
     }
   }
 
-  if (cmd && (only_print_args || cmd->WantsRawCommandString()) &&
+  if ((only_print_args || cmd.WantsRawCommandString()) &&
       arguments_str.GetSize() > 0) {
     if (!only_print_args)
       strm.PutChar('\n');
