@@ -44,9 +44,8 @@ unsigned getBitMask(unsigned Shift, unsigned Width) {
 ///
 /// \returns Packed \p Dst.
 unsigned packBits(unsigned Src, unsigned Dst, unsigned Shift, unsigned Width) {
-  Dst &= ~(1 << Shift) & ~getBitMask(Shift, Width);
-  Dst |= (Src << Shift) & getBitMask(Shift, Width);
-  return Dst;
+  unsigned Mask = getBitMask(Shift, Width);
+  return ((Src << Shift) & Mask) | (Dst & ~Mask);
 }
 
 /// Unpacks bits from \p Src for given bit \p Shift and bit \p Width.
@@ -57,30 +56,40 @@ unsigned unpackBits(unsigned Src, unsigned Shift, unsigned Width) {
 }
 
 /// \returns Vmcnt bit shift (lower bits).
-unsigned getVmcntBitShiftLo() { return 0; }
+unsigned getVmcntBitShiftLo(unsigned VersionMajor) {
+  return VersionMajor >= 11 ? 10 : 0;
+}
 
 /// \returns Vmcnt bit width (lower bits).
-unsigned getVmcntBitWidthLo() { return 4; }
+unsigned getVmcntBitWidthLo(unsigned VersionMajor) {
+  return VersionMajor >= 11 ? 6 : 4;
+}
 
 /// \returns Expcnt bit shift.
-unsigned getExpcntBitShift() { return 4; }
+unsigned getExpcntBitShift(unsigned VersionMajor) {
+  return VersionMajor >= 11 ? 0 : 4;
+}
 
 /// \returns Expcnt bit width.
-unsigned getExpcntBitWidth() { return 3; }
+unsigned getExpcntBitWidth(unsigned VersionMajor) { return 3; }
 
 /// \returns Lgkmcnt bit shift.
-unsigned getLgkmcntBitShift() { return 8; }
+unsigned getLgkmcntBitShift(unsigned VersionMajor) {
+  return VersionMajor >= 11 ? 4 : 8;
+}
 
 /// \returns Lgkmcnt bit width.
 unsigned getLgkmcntBitWidth(unsigned VersionMajor) {
-  return (VersionMajor >= 10) ? 6 : 4;
+  return VersionMajor >= 10 ? 6 : 4;
 }
 
 /// \returns Vmcnt bit shift (higher bits).
-unsigned getVmcntBitShiftHi() { return 14; }
+unsigned getVmcntBitShiftHi(unsigned VersionMajor) { return 14; }
 
 /// \returns Vmcnt bit width (higher bits).
-unsigned getVmcntBitWidthHi() { return 2; }
+unsigned getVmcntBitWidthHi(unsigned VersionMajor) {
+  return (VersionMajor == 9 || VersionMajor == 10) ? 2 : 0;
+}
 
 } // end namespace anonymous
 
@@ -950,16 +959,13 @@ std::pair<int, int> getIntegerPairAttribute(const Function &F,
 }
 
 unsigned getVmcntBitMask(const IsaVersion &Version) {
-  unsigned VmcntLo = (1 << getVmcntBitWidthLo()) - 1;
-  if (Version.Major < 9)
-    return VmcntLo;
-
-  unsigned VmcntHi = ((1 << getVmcntBitWidthHi()) - 1) << getVmcntBitWidthLo();
-  return VmcntLo | VmcntHi;
+  return (1 << (getVmcntBitWidthLo(Version.Major) +
+                getVmcntBitWidthHi(Version.Major))) -
+         1;
 }
 
 unsigned getExpcntBitMask(const IsaVersion &Version) {
-  return (1 << getExpcntBitWidth()) - 1;
+  return (1 << getExpcntBitWidth(Version.Major)) - 1;
 }
 
 unsigned getLgkmcntBitMask(const IsaVersion &Version) {
@@ -967,36 +973,32 @@ unsigned getLgkmcntBitMask(const IsaVersion &Version) {
 }
 
 unsigned getWaitcntBitMask(const IsaVersion &Version) {
-  unsigned VmcntLo = getBitMask(getVmcntBitShiftLo(), getVmcntBitWidthLo());
-  unsigned Expcnt = getBitMask(getExpcntBitShift(), getExpcntBitWidth());
-  unsigned Lgkmcnt = getBitMask(getLgkmcntBitShift(),
+  unsigned VmcntLo = getBitMask(getVmcntBitShiftLo(Version.Major),
+                                getVmcntBitWidthLo(Version.Major));
+  unsigned Expcnt = getBitMask(getExpcntBitShift(Version.Major),
+                               getExpcntBitWidth(Version.Major));
+  unsigned Lgkmcnt = getBitMask(getLgkmcntBitShift(Version.Major),
                                 getLgkmcntBitWidth(Version.Major));
-  unsigned Waitcnt = VmcntLo | Expcnt | Lgkmcnt;
-  if (Version.Major < 9)
-    return Waitcnt;
-
-  unsigned VmcntHi = getBitMask(getVmcntBitShiftHi(), getVmcntBitWidthHi());
-  return Waitcnt | VmcntHi;
+  unsigned VmcntHi = getBitMask(getVmcntBitShiftHi(Version.Major),
+                                getVmcntBitWidthHi(Version.Major));
+  return VmcntLo | Expcnt | Lgkmcnt | VmcntHi;
 }
 
 unsigned decodeVmcnt(const IsaVersion &Version, unsigned Waitcnt) {
-  unsigned VmcntLo =
-      unpackBits(Waitcnt, getVmcntBitShiftLo(), getVmcntBitWidthLo());
-  if (Version.Major < 9)
-    return VmcntLo;
-
-  unsigned VmcntHi =
-      unpackBits(Waitcnt, getVmcntBitShiftHi(), getVmcntBitWidthHi());
-  VmcntHi <<= getVmcntBitWidthLo();
-  return VmcntLo | VmcntHi;
+  unsigned VmcntLo = unpackBits(Waitcnt, getVmcntBitShiftLo(Version.Major),
+                                getVmcntBitWidthLo(Version.Major));
+  unsigned VmcntHi = unpackBits(Waitcnt, getVmcntBitShiftHi(Version.Major),
+                                getVmcntBitWidthHi(Version.Major));
+  return VmcntLo | VmcntHi << getVmcntBitWidthLo(Version.Major);
 }
 
 unsigned decodeExpcnt(const IsaVersion &Version, unsigned Waitcnt) {
-  return unpackBits(Waitcnt, getExpcntBitShift(), getExpcntBitWidth());
+  return unpackBits(Waitcnt, getExpcntBitShift(Version.Major),
+                    getExpcntBitWidth(Version.Major));
 }
 
 unsigned decodeLgkmcnt(const IsaVersion &Version, unsigned Waitcnt) {
-  return unpackBits(Waitcnt, getLgkmcntBitShift(),
+  return unpackBits(Waitcnt, getLgkmcntBitShift(Version.Major),
                     getLgkmcntBitWidth(Version.Major));
 }
 
@@ -1017,24 +1019,23 @@ Waitcnt decodeWaitcnt(const IsaVersion &Version, unsigned Encoded) {
 
 unsigned encodeVmcnt(const IsaVersion &Version, unsigned Waitcnt,
                      unsigned Vmcnt) {
-  Waitcnt =
-      packBits(Vmcnt, Waitcnt, getVmcntBitShiftLo(), getVmcntBitWidthLo());
-  if (Version.Major < 9)
-    return Waitcnt;
-
-  Vmcnt >>= getVmcntBitWidthLo();
-  return packBits(Vmcnt, Waitcnt, getVmcntBitShiftHi(), getVmcntBitWidthHi());
+  Waitcnt = packBits(Vmcnt, Waitcnt, getVmcntBitShiftLo(Version.Major),
+                     getVmcntBitWidthLo(Version.Major));
+  return packBits(Vmcnt >> getVmcntBitWidthLo(Version.Major), Waitcnt,
+                  getVmcntBitShiftHi(Version.Major),
+                  getVmcntBitWidthHi(Version.Major));
 }
 
 unsigned encodeExpcnt(const IsaVersion &Version, unsigned Waitcnt,
                       unsigned Expcnt) {
-  return packBits(Expcnt, Waitcnt, getExpcntBitShift(), getExpcntBitWidth());
+  return packBits(Expcnt, Waitcnt, getExpcntBitShift(Version.Major),
+                  getExpcntBitWidth(Version.Major));
 }
 
 unsigned encodeLgkmcnt(const IsaVersion &Version, unsigned Waitcnt,
                        unsigned Lgkmcnt) {
-  return packBits(Lgkmcnt, Waitcnt, getLgkmcntBitShift(),
-                                    getLgkmcntBitWidth(Version.Major));
+  return packBits(Lgkmcnt, Waitcnt, getLgkmcntBitShift(Version.Major),
+                  getLgkmcntBitWidth(Version.Major));
 }
 
 unsigned encodeWaitcnt(const IsaVersion &Version,
@@ -1444,13 +1445,17 @@ unsigned getDefaultFormatEncoding(const MCSubtargetInfo &STI) {
 
 namespace SendMsg {
 
+static uint64_t getMsgIdMask(const MCSubtargetInfo &STI) {
+  return isGFX11Plus(STI) ? ID_MASK_GFX11Plus_ : ID_MASK_PreGFX11_;
+}
+
 int64_t getMsgId(const StringRef Name, const MCSubtargetInfo &STI) {
   int Idx = getOprIdx<const MCSubtargetInfo &>(Name, Msg, MSG_SIZE, STI);
   return (Idx < 0) ? Idx : Msg[Idx].Encoding;
 }
 
-bool isValidMsgId(int64_t MsgId) {
-  return 0 <= MsgId && isUInt<ID_WIDTH_>(MsgId);
+bool isValidMsgId(int64_t MsgId, const MCSubtargetInfo &STI) {
+  return (MsgId & ~(getMsgIdMask(STI))) == 0;
 }
 
 StringRef getMsgName(int64_t MsgId, const MCSubtargetInfo &STI) {
@@ -1472,26 +1477,27 @@ int64_t getMsgOpId(int64_t MsgId, const StringRef Name) {
 
 bool isValidMsgOp(int64_t MsgId, int64_t OpId, const MCSubtargetInfo &STI,
                   bool Strict) {
-  assert(isValidMsgId(MsgId));
+  assert(isValidMsgId(MsgId, STI));
 
   if (!Strict)
     return 0 <= OpId && isUInt<OP_WIDTH_>(OpId);
 
-  switch(MsgId)
-  {
-  case ID_GS:
-    return (OP_GS_FIRST_ <= OpId && OpId < OP_GS_LAST_) && OpId != OP_GS_NOP;
-  case ID_GS_DONE:
-    return OP_GS_FIRST_ <= OpId && OpId < OP_GS_LAST_;
-  case ID_SYSMSG:
+  if (MsgId == ID_SYSMSG)
     return OP_SYS_FIRST_ <= OpId && OpId < OP_SYS_LAST_;
-  default:
-    return OpId == OP_NONE_;
+  if (!isGFX11Plus(STI)) {
+    switch (MsgId) {
+    case ID_GS_PreGFX11:
+      return (OP_GS_FIRST_ <= OpId && OpId < OP_GS_LAST_) && OpId != OP_GS_NOP;
+    case ID_GS_DONE_PreGFX11:
+      return OP_GS_FIRST_ <= OpId && OpId < OP_GS_LAST_;
+    }
   }
+  return OpId == OP_NONE_;
 }
 
-StringRef getMsgOpName(int64_t MsgId, int64_t OpId) {
-  assert(msgRequiresOp(MsgId));
+StringRef getMsgOpName(int64_t MsgId, int64_t OpId,
+                       const MCSubtargetInfo &STI) {
+  assert(msgRequiresOp(MsgId, STI));
   return (MsgId == ID_SYSMSG)? OpSysSymbolic[OpId] : OpGsSymbolic[OpId];
 }
 
@@ -1502,42 +1508,48 @@ bool isValidMsgStream(int64_t MsgId, int64_t OpId, int64_t StreamId,
   if (!Strict)
     return 0 <= StreamId && isUInt<STREAM_ID_WIDTH_>(StreamId);
 
-  switch(MsgId)
-  {
-  case ID_GS:
-    return STREAM_ID_FIRST_ <= StreamId && StreamId < STREAM_ID_LAST_;
-  case ID_GS_DONE:
-    return (OpId == OP_GS_NOP)?
-           (StreamId == STREAM_ID_NONE_) :
-           (STREAM_ID_FIRST_ <= StreamId && StreamId < STREAM_ID_LAST_);
-  default:
-    return StreamId == STREAM_ID_NONE_;
+  if (!isGFX11Plus(STI)) {
+    switch (MsgId) {
+    case ID_GS_PreGFX11:
+      return STREAM_ID_FIRST_ <= StreamId && StreamId < STREAM_ID_LAST_;
+    case ID_GS_DONE_PreGFX11:
+      return (OpId == OP_GS_NOP) ?
+          (StreamId == STREAM_ID_NONE_) :
+          (STREAM_ID_FIRST_ <= StreamId && StreamId < STREAM_ID_LAST_);
+    }
   }
+  return StreamId == STREAM_ID_NONE_;
 }
 
-bool msgRequiresOp(int64_t MsgId) {
-  return MsgId == ID_GS || MsgId == ID_GS_DONE || MsgId == ID_SYSMSG;
+bool msgRequiresOp(int64_t MsgId, const MCSubtargetInfo &STI) {
+  return MsgId == ID_SYSMSG ||
+      (!isGFX11Plus(STI) &&
+       (MsgId == ID_GS_PreGFX11 || MsgId == ID_GS_DONE_PreGFX11));
 }
 
-bool msgSupportsStream(int64_t MsgId, int64_t OpId) {
-  return (MsgId == ID_GS || MsgId == ID_GS_DONE) && OpId != OP_GS_NOP;
+bool msgSupportsStream(int64_t MsgId, int64_t OpId,
+                       const MCSubtargetInfo &STI) {
+  return !isGFX11Plus(STI) &&
+      (MsgId == ID_GS_PreGFX11 || MsgId == ID_GS_DONE_PreGFX11) &&
+      OpId != OP_GS_NOP;
 }
 
-void decodeMsg(unsigned Val,
-               uint16_t &MsgId,
-               uint16_t &OpId,
-               uint16_t &StreamId) {
-  MsgId = Val & ID_MASK_;
-  OpId = (Val & OP_MASK_) >> OP_SHIFT_;
-  StreamId = (Val & STREAM_ID_MASK_) >> STREAM_ID_SHIFT_;
+void decodeMsg(unsigned Val, uint16_t &MsgId, uint16_t &OpId,
+               uint16_t &StreamId, const MCSubtargetInfo &STI) {
+  MsgId = Val & getMsgIdMask(STI);
+  if (isGFX11Plus(STI)) {
+    OpId = 0;
+    StreamId = 0;
+  } else {
+    OpId = (Val & OP_MASK_) >> OP_SHIFT_;
+    StreamId = (Val & STREAM_ID_MASK_) >> STREAM_ID_SHIFT_;
+  }
 }
 
 uint64_t encodeMsg(uint64_t MsgId,
                    uint64_t OpId,
                    uint64_t StreamId) {
-  return (MsgId << ID_SHIFT_) |
-         (OpId << OP_SHIFT_) |
-         (StreamId << STREAM_ID_SHIFT_);
+  return MsgId | (OpId << OP_SHIFT_) | (StreamId << STREAM_ID_SHIFT_);
 }
 
 } // namespace SendMsg

@@ -971,8 +971,9 @@ bool SIInsertWaitcnts::generateWaitcntInstBefore(
   // Resolve vm waits before gs-done.
   else if ((MI.getOpcode() == AMDGPU::S_SENDMSG ||
             MI.getOpcode() == AMDGPU::S_SENDMSGHALT) &&
-           ((MI.getOperand(0).getImm() & AMDGPU::SendMsg::ID_MASK_) ==
-            AMDGPU::SendMsg::ID_GS_DONE)) {
+           ST->hasLegacyGeometry() &&
+           ((MI.getOperand(0).getImm() & AMDGPU::SendMsg::ID_MASK_PreGFX11_) ==
+            AMDGPU::SendMsg::ID_GS_DONE_PreGFX11)) {
     Wait.VmCnt = 0;
   }
 #if 0 // TODO: the following blocks of logic when we have fence.
@@ -1098,6 +1099,9 @@ bool SIInsertWaitcnts::generateWaitcntInstBefore(
         }
         unsigned AS = Memop->getAddrSpace();
         if (AS != AMDGPUAS::LOCAL_ADDRESS && AS != AMDGPUAS::FLAT_ADDRESS)
+          continue;
+        // No need to wait before load from VMEM to LDS.
+        if (mayWriteLDSThroughDMA(MI))
           continue;
         unsigned RegNo = SQ_MAX_PGM_VGPRS + EXTRA_VGPR_LDS;
         // VM_CNT is only relevant to vgpr or LDS.
