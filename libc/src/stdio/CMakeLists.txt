@@ -211,7 +211,18 @@ add_entrypoint_object(
   HDRS
     sprintf.h
   DEPENDS
-    libc.include.stdio
+    libc.src.stdio.printf_core.printf_main
+    libc.src.stdio.printf_core.string_writer
+    libc.src.stdio.printf_core.writer
+)
+
+add_entrypoint_object(
+  snprintf
+  SRCS
+    snprintf.cpp
+  HDRS
+    snprintf.h
+  DEPENDS
     libc.src.stdio.printf_core.printf_main
     libc.src.stdio.printf_core.string_writer
     libc.src.stdio.printf_core.writer
