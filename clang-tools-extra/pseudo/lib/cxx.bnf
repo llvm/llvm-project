@@ -512,7 +512,7 @@ linkage-specification := EXTERN string-literal { declaration-seq_opt }
 linkage-specification := EXTERN string-literal declaration
 
 # gram.module
-module-declaration := export-keyword_opt module-keyword module-name module-partition_opt
+module-declaration := export-keyword_opt module-keyword module-name module-partition_opt ;
 module-name := module-name-qualifier_opt IDENTIFIER
 module-partition := : module-name-qualifier_opt IDENTIFIER
 module-name-qualifier := IDENTIFIER .
