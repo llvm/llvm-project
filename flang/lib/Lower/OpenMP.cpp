@@ -440,8 +440,20 @@ static void genOMP(Fortran::lower::AbstractConverter &converter,
 
   // Handle attribute based clauses.
   for (const Fortran::parser::OmpClause &clause : wsLoopOpClauseList.v) {
-    if (const auto &scheduleClause =
-            std::get_if<Fortran::parser::OmpClause::Schedule>(&clause.u)) {
+    if (const auto &orderedClause =
+            std::get_if<Fortran::parser::OmpClause::Ordered>(&clause.u)) {
+      if (orderedClause->v.has_value()) {
+        const auto *expr = Fortran::semantics::GetExpr(orderedClause->v);
+        const std::optional<std::int64_t> orderedClauseValue =
+            Fortran::evaluate::ToInt64(*expr);
+        wsLoopOp.ordered_valAttr(
+            firOpBuilder.getI64IntegerAttr(*orderedClauseValue));
+      } else {
+        wsLoopOp.ordered_valAttr(firOpBuilder.getI64IntegerAttr(0));
+      }
+    } else if (const auto &scheduleClause =
+                   std::get_if<Fortran::parser::OmpClause::Schedule>(
+                       &clause.u)) {
       mlir::MLIRContext *context = firOpBuilder.getContext();
       const auto &scheduleType = scheduleClause->v;
       const auto &scheduleKind =

@@ -378,6 +378,21 @@ TEST(getLinuxHostCPUName, s390x) {
   }
 }
 
+TEST(getLinuxHostCPUName, RISCV) {
+  const StringRef SifiveU74MCProcCPUInfo = R"(
+processor       : 0
+hart            : 2
+isa             : rv64imafdc
+mmu             : sv39
+uarch           : sifive,u74-mc
+)";
+  EXPECT_EQ(sys::detail::getHostCPUNameForRISCV(SifiveU74MCProcCPUInfo),
+            "sifive-u74");
+  EXPECT_EQ(
+      sys::detail::getHostCPUNameForRISCV("uarch           : sifive,bullet0\n"),
+      "sifive-u74");
+}
+
 static bool runAndGetCommandOutput(
     const char *ExePath, ArrayRef<llvm::StringRef> argv,
     std::unique_ptr<char[]> &Buffer, off_t &Size) {
