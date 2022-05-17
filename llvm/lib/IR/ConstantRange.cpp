@@ -1386,23 +1386,19 @@ ConstantRange ConstantRange::binaryNot() const {
   return ConstantRange(APInt::getAllOnes(getBitWidth())).sub(*this);
 }
 
-ConstantRange
-ConstantRange::binaryAnd(const ConstantRange &Other) const {
+ConstantRange ConstantRange::binaryAnd(const ConstantRange &Other) const {
   if (isEmptySet() || Other.isEmptySet())
     return getEmpty();
 
-  // Use APInt's implementation of AND for single element ranges.
-  if (isSingleElement() && Other.isSingleElement())
-    return {*getSingleElement() & *Other.getSingleElement()};
-
-  // TODO: replace this with something less conservative
-
-  APInt umin = APIntOps::umin(Other.getUnsignedMax(), getUnsignedMax());
-  return getNonEmpty(APInt::getZero(getBitWidth()), std::move(umin) + 1);
+  ConstantRange KnownBitsRange =
+      fromKnownBits(toKnownBits() & Other.toKnownBits(), false);
+  ConstantRange UMinUMaxRange =
+      getNonEmpty(APInt::getZero(getBitWidth()),
+                  APIntOps::umin(Other.getUnsignedMax(), getUnsignedMax()) + 1);
+  return KnownBitsRange.intersectWith(UMinUMaxRange);
 }
 
-ConstantRange
-ConstantRange::binaryOr(const ConstantRange &Other) const {
+ConstantRange ConstantRange::binaryOr(const ConstantRange &Other) const {
   if (isEmptySet() || Other.isEmptySet())
     return getEmpty();
 
