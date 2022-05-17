@@ -73,13 +73,17 @@ class Dialect {
   // If this dialect overrides the hook for op interface fallback.
   bit hasOperationInterfaceFallback = 0;
 
-  // If this dialect should use default generated attribute parser boilerplate:
-  // it'll dispatch the parsing to every individual attributes directly.
-  bit useDefaultAttributePrinterParser = 1;
+  // If this dialect should use default generated attribute parser boilerplate.
+  // When set, ODS will generate declarations for the attribute parsing and
+  // printing hooks in the dialect and default implementations that dispatch to
+  // each individual attribute directly.
+  bit useDefaultAttributePrinterParser = 0;
 
   // If this dialect should use default generated type parser boilerplate:
-  // it'll dispatch the parsing to every individual types directly.
-  bit useDefaultTypePrinterParser = 1;
+  // When set, ODS will generate declarations for the type parsing and printing
+  // hooks in the dialect and default implementations that dispatch to each
+  // individual type directly.
+  bit useDefaultTypePrinterParser = 0;
 
   // If this dialect overrides the hook for canonicalization patterns.
   bit hasCanonicalizer = 0;

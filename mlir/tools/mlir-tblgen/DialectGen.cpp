@@ -182,11 +182,7 @@ static const char *const operationInterfaceFallbackDecl = R"(
 )";
 
 /// Generate the declaration for the given dialect class.
-static void
-emitDialectDecl(Dialect &dialect,
-                const iterator_range<DialectFilterIterator> &dialectAttrs,
-                const iterator_range<DialectFilterIterator> &dialectTypes,
-                raw_ostream &os) {
+static void emitDialectDecl(Dialect &dialect, raw_ostream &os) {
   // Emit all nested namespaces.
   {
     NamespaceEmitter nsEmitter(os, dialect);
@@ -198,11 +194,13 @@ emitDialectDecl(Dialect &dialect,
     os << llvm::formatv(dialectDeclBeginStr, cppName, dialect.getName(),
                         superClassName);
 
-    // Check for any attributes/types registered to this dialect.  If there are,
-    // add the hooks for parsing/printing.
-    if (!dialectAttrs.empty() && dialect.useDefaultAttributePrinterParser())
+    // If the dialect requested the default attribute printer and parser, emit
+    // the declarations for the hooks.
+    if (dialect.useDefaultAttributePrinterParser())
       os << attrParserDecl;
-    if (!dialectTypes.empty() && dialect.useDefaultTypePrinterParser())
+    // If the dialect requested the default type printer and parser, emit the
+    // delcarations for the hooks.
+    if (dialect.useDefaultTypePrinterParser())
       os << typeParserDecl;
 
     // Add the decls for the various features of the dialect.
@@ -242,10 +240,7 @@ static bool emitDialectDecls(const llvm::RecordKeeper &recordKeeper,
   Optional<Dialect> dialect = findDialectToGenerate(dialects);
   if (!dialect)
     return true;
-  auto attrDefs = recordKeeper.getAllDerivedDefinitions("DialectAttr");
-  auto typeDefs = recordKeeper.getAllDerivedDefinitions("DialectType");
-  emitDialectDecl(*dialect, filterForDialect<Attribute>(attrDefs, *dialect),
-                  filterForDialect<Type>(typeDefs, *dialect), os);
+  emitDialectDecl(*dialect, os);
   return false;
 }
 

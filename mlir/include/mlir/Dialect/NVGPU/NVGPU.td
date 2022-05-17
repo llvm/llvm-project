@@ -32,7 +32,8 @@ def NVGPU_Dialect : Dialect {
     representing PTX specific operations while using MLIR high level concepts
     like memref and 2-D vector.
   }];
-  let useDefaultAttributePrinterParser = 1;
+
+  let useDefaultTypePrinterParser = 1;
 }
 
 /// Device-side synchronization token.

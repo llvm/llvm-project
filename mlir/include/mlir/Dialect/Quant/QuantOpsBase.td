@@ -18,6 +18,8 @@ include "mlir/IR/OpBase.td"
 def Quantization_Dialect : Dialect {
   let name = "quant";
   let cppNamespace = "::mlir::quant";
+
+  let useDefaultTypePrinterParser = 1;
 }
 
 //===----------------------------------------------------------------------===//
