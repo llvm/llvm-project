@@ -532,6 +532,13 @@ def StdC : StandardSpec<"stdc"> {
                ArgSpec<SizeTType>,
                ArgSpec<FILERestrictedPtr>]
           >,
+          FunctionSpec<
+              "sprintf",
+              RetValSpec<IntType>,
+              [ArgSpec<CharRestrictedPtr>,
+               ArgSpec<ConstCharRestrictedPtr>,
+               ArgSpec<VarArgType>]
+          >,
       ]
   >;
 

@@ -2079,9 +2079,8 @@ define <3 x i16> @fptoui_shuf_different_source_types(<3 x float> %x, <3 x half> 
 
 define <4 x i32> @fptoui_shuf_widen_elts(<4 x half> %x, <4 x half> %y) {
 ; CHECK-LABEL: @fptoui_shuf_widen_elts(
-; CHECK-NEXT:    [[NX:%.*]] = fptosi <4 x half> [[X:%.*]] to <4 x i32>
-; CHECK-NEXT:    [[NY:%.*]] = fptosi <4 x half> [[Y:%.*]] to <4 x i32>
-; CHECK-NEXT:    [[R:%.*]] = shufflevector <4 x i32> [[NX]], <4 x i32> [[NY]], <4 x i32> <i32 0, i32 1, i32 4, i32 5>
+; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <4 x half> [[X:%.*]], <4 x half> [[Y:%.*]], <4 x i32> <i32 0, i32 1, i32 4, i32 5>
+; CHECK-NEXT:    [[R:%.*]] = fptosi <4 x half> [[TMP1]] to <4 x i32>
 ; CHECK-NEXT:    ret <4 x i32> [[R]]
 ;
   %nx = fptosi <4 x half> %x to <4 x i32>
