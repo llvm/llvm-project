@@ -9,8 +9,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "DirectX.h"
+#include "llvm/ADT/StringSet.h"
 #include "llvm/ADT/Triple.h"
 #include "llvm/IR/Constants.h"
+#include "llvm/IR/Metadata.h"
 #include "llvm/IR/Module.h"
 #include "llvm/Pass.h"
 
@@ -56,9 +58,31 @@ static VersionTuple loadDXILValidatorVersion(MDNode *ValVerMD) {
   return VersionTuple(Major, Minor);
 }
 
-static void cleanModule(Module &M) {
-  M.getOrInsertModuleFlagsMetadata()->eraseFromParent();
+static void cleanModuleFlags(Module &M) {
+  constexpr StringLiteral DeadKeys[] = {ValVerKey};
+  // Collect DeadKeys in ModuleFlags.
+  StringSet<> DeadKeySet;
+  for (auto &Key : DeadKeys) {
+    if (M.getModuleFlag(Key))
+      DeadKeySet.insert(Key);
+  }
+  if (DeadKeySet.empty())
+    return;
+
+  SmallVector<Module::ModuleFlagEntry, 8> ModuleFlags;
+  M.getModuleFlagsMetadata(ModuleFlags);
+  NamedMDNode *MDFlags = M.getModuleFlagsMetadata();
+  MDFlags->eraseFromParent();
+  // Add ModuleFlag which not dead.
+  for (auto &Flag : ModuleFlags) {
+    StringRef Key = Flag.Key->getString();
+    if (DeadKeySet.contains(Key))
+      continue;
+    M.addModuleFlag(Flag.Behavior, Key, Flag.Val);
+  }
 }
+
+static void cleanModule(Module &M) { cleanModuleFlags(M); }
 
 namespace {
 class DXILTranslateMetadata : public ModulePass {
