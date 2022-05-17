@@ -1464,6 +1464,12 @@ def warn_omp51_compat_attributes : Warning<
 def err_omp_expected_colon : Error<"missing ':' in %0">;
 def err_omp_expected_context_selector
     : Error<"expected valid context selector in %0">;
+def err_omp_requires_out_inout_depend_type : Error<
+  "reserved locator 'omp_all_memory' requires 'out' or 'inout' "
+  "dependency types">;
+def warn_omp_more_one_omp_all_memory : Warning<
+  "reserved locator 'omp_all_memory' cannot be specified more than once">,
+  InGroup<OpenMPClauses>;
 
 // Pragma loop support.
 def err_pragma_loop_missing_argument : Error<
