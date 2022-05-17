@@ -2533,6 +2533,12 @@ bool InstrRefBasedLDV::vlocJoin(
     if (*V.second == FirstVal)
       continue; // No disagreement.
 
+    // If both values are not equal but have equal non-empty IDs then they refer
+    // to the same value from different sources (e.g. one is VPHI and the other
+    // is Def), which does not cause disagreement.
+    if (V.second->ID != ValueIDNum::EmptyValue && V.second->ID == FirstVal.ID)
+      continue;
+
     // Eliminate if a backedge feeds a VPHI back into itself.
     if (V.second->Kind == DbgValue::VPHI &&
         V.second->BlockNo == MBB.getNumber() &&
