@@ -455,24 +455,18 @@ public:
     if (!ShouldEmitDebugEntryValues)
       return false;
 
+    // Is the variable appropriate for entry values (i.e., is a parameter).
+    if (!isEntryValueVariable(Var, Prop.DIExpr))
+      return false;
+
     // Is the value assigned to this variable still the entry value?
     if (!isEntryValueValue(Num))
       return false;
 
+    // Emit a variable location using an entry value expression.
+    DIExpression *NewExpr =
+        DIExpression::prepend(Prop.DIExpr, DIExpression::EntryValue);
     Register Reg = MTracker->LocIdxToLocID[Num.getLoc()];
-
-    // Is the variable appropriate for entry values (i.e., is a parameter).
-    if (!isEntryValueVariable(Var, Prop.DIExpr) &&
-        !isSwiftAsyncContext(MF, Reg))
-      return false;
-
-    // Emit a variable location using an entry value expression. We only add the
-    // entry value expression if our expression is not yet an entry value.
-    const DIExpression *NewExpr = Prop.DIExpr;
-    if (!NewExpr->isEntryValue())
-      NewExpr =
-        DIExpression::prepend(NewExpr, DIExpression::EntryValue);
-
     MachineOperand MO = MachineOperand::CreateReg(Reg, false);
 
     PendingDbgValues.push_back(emitMOLoc(MO, Var, {NewExpr, Prop.Indirect}));
@@ -586,7 +580,11 @@ public:
       // is None and a $noreg DBG_VALUE will be created. Otherwise, a DBG_VALUE
       // identifying the alternative location will be emitted.
       const DbgValueProperties &Properties = ActiveVLocIt->second.Properties;
-      PendingDbgValues.push_back(MTracker->emitLoc(NewLoc, Var, Properties));
+      // Async support: Don't track spills for entry values.
+      if (ActiveVLocIt->second.Properties.DIExpr->isEntryValue())
+        PendingDbgValues.push_back(MTracker->emitLoc(MLoc, Var, Properties));
+      else
+        PendingDbgValues.push_back(MTracker->emitLoc(NewLoc, Var, Properties));
 
       // Update machine locations <=> variable locations maps. Defer updating
       // ActiveMLocs to avoid invalidaing the ActiveMLocIt iterator.
@@ -638,9 +636,13 @@ public:
       assert(ActiveVLocIt != ActiveVLocs.end());
       ActiveVLocIt->second.Loc = Dst;
 
-      MachineInstr *MI =
-          MTracker->emitLoc(Dst, Var, ActiveVLocIt->second.Properties);
-      PendingDbgValues.push_back(MI);
+      // Async support: Don't track transfers for entry values.
+      if (ActiveVLocIt->second.Properties.DIExpr->isEntryValue())
+        PendingDbgValues.push_back(
+            MTracker->emitLoc(Src, Var, ActiveVLocIt->second.Properties));
+      else
+        PendingDbgValues.push_back(
+            MTracker->emitLoc(Dst, Var, ActiveVLocIt->second.Properties));
     }
     ActiveMLocs[Src].clear();
     flushDbgValues(Pos, nullptr);
@@ -1076,15 +1078,20 @@ bool InstrRefBasedLDV::transferDebugValue(const MachineInstr &MI) {
   // MLocTracker needs to know that this register is read, even if it's only
   // read by a debug inst.
   if (MO.isReg() && MO.getReg() != 0) {
-    (void)MTracker->readReg(MO.getReg());
+    ValueIDNum RegId = MTracker->readReg(MO.getReg());
+
+    // Swift async function handling.
     auto *Expr = MI.getDebugExpression();
     const llvm::MachineFunction *MF = MI.getParent()->getParent();
     if (!(Expr && Expr->isEntryValue()) &&
         isSwiftAsyncContext(*MF, MO.getReg())) {
       // In Swift async functions entry values are preferred, since they
       // can be evaluated in both live frames and virtual backtraces.
-      const_cast<MachineInstr *>(&MI)->getOperand(3).setMetadata(
-          DIExpression::prepend(Expr, DIExpression::EntryValue));
+      if (TTracker)
+        TTracker->recoverAsEntryValue(V, Properties, RegId);
+      else
+        const_cast<MachineInstr *>(&MI)->getOperand(3).setMetadata(
+            DIExpression::prepend(Expr, DIExpression::EntryValue));
     }
   }
 
