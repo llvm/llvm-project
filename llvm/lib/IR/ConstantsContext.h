@@ -209,36 +209,6 @@ public:
   }
 };
 
-/// ExtractValueConstantExpr - This class is private to
-/// Constants.cpp, and is used behind the scenes to implement
-/// extractvalue constant exprs.
-class ExtractValueConstantExpr final : public ConstantExpr {
-public:
-  ExtractValueConstantExpr(Constant *Agg, ArrayRef<unsigned> IdxList,
-                           Type *DestTy)
-      : ConstantExpr(DestTy, Instruction::ExtractValue, &Op<0>(), 1),
-        Indices(IdxList.begin(), IdxList.end()) {
-    Op<0>() = Agg;
-  }
-
-  // allocate space for exactly one operand
-  void *operator new(size_t S) { return User::operator new(S, 1); }
-  void operator delete(void *Ptr) { User::operator delete(Ptr); }
-
-  /// Indices - These identify which value to extract.
-  const SmallVector<unsigned, 4> Indices;
-
-  /// Transparently provide more efficient getOperand methods.
-  DECLARE_TRANSPARENT_OPERAND_ACCESSORS(Value);
-
-  static bool classof(const ConstantExpr *CE) {
-    return CE->getOpcode() == Instruction::ExtractValue;
-  }
-  static bool classof(const Value *V) {
-    return isa<ConstantExpr>(V) && classof(cast<ConstantExpr>(V));
-  }
-};
-
 /// InsertValueConstantExpr - This class is private to
 /// Constants.cpp, and is used behind the scenes to implement
 /// insertvalue constant exprs.
@@ -361,11 +331,6 @@ template <>
 struct OperandTraits<ShuffleVectorConstantExpr>
     : public FixedNumOperandTraits<ShuffleVectorConstantExpr, 2> {};
 DEFINE_TRANSPARENT_OPERAND_ACCESSORS(ShuffleVectorConstantExpr, Value)
-
-template <>
-struct OperandTraits<ExtractValueConstantExpr>
-    : public FixedNumOperandTraits<ExtractValueConstantExpr, 1> {};
-DEFINE_TRANSPARENT_OPERAND_ACCESSORS(ExtractValueConstantExpr, Value)
 
 template <>
 struct OperandTraits<InsertValueConstantExpr>
@@ -620,8 +585,6 @@ public:
       return new ShuffleVectorConstantExpr(Ops[0], Ops[1], ShuffleMask);
     case Instruction::InsertValue:
       return new InsertValueConstantExpr(Ops[0], Ops[1], Indexes, Ty);
-    case Instruction::ExtractValue:
-      return new ExtractValueConstantExpr(Ops[0], Indexes, Ty);
     case Instruction::GetElementPtr:
       return GetElementPtrConstantExpr::Create(ExplicitTy, Ops[0], Ops.slice(1),
                                                Ty, SubclassOptionalData);

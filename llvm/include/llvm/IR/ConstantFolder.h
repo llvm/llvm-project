@@ -19,6 +19,7 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/IR/Constants.h"
+#include "llvm/IR/ConstantFold.h"
 #include "llvm/IR/IRBuilderFolder.h"
 #include "llvm/IR/Instruction.h"
 
@@ -97,7 +98,7 @@ public:
   Value *FoldExtractValue(Value *Agg,
                           ArrayRef<unsigned> IdxList) const override {
     if (auto *CAgg = dyn_cast<Constant>(Agg))
-      return ConstantExpr::getExtractValue(CAgg, IdxList);
+      return ConstantFoldExtractValueInstruction(CAgg, IdxList);
     return nullptr;
   };
 

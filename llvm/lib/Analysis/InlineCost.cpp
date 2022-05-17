@@ -2078,7 +2078,7 @@ bool CallAnalyzer::visitStore(StoreInst &I) {
 bool CallAnalyzer::visitExtractValue(ExtractValueInst &I) {
   // Constant folding for extract value is trivial.
   if (simplifyInstruction(I, [&](SmallVectorImpl<Constant *> &COps) {
-        return ConstantExpr::getExtractValue(COps[0], I.getIndices());
+        return ConstantFoldExtractValueInstruction(COps[0], I.getIndices());
       }))
     return true;
 

@@ -1082,7 +1082,7 @@ Constant *ConstantFoldInstOperandsImpl(const Value *InstOrCE, unsigned Opcode,
   case Instruction::ExtractElement:
     return ConstantExpr::getExtractElement(Ops[0], Ops[1]);
   case Instruction::ExtractValue:
-    return ConstantExpr::getExtractValue(
+    return ConstantFoldExtractValueInstruction(
         Ops[0], cast<ExtractValueInst>(InstOrCE)->getIndices());
   case Instruction::InsertElement:
     return ConstantExpr::getInsertElement(Ops[0], Ops[1], Ops[2]);
@@ -1198,7 +1198,7 @@ Constant *llvm::ConstantFoldInstruction(Instruction *I, const DataLayout &DL,
     return ConstantExpr::getInsertValue(Ops[0], Ops[1], IVI->getIndices());
 
   if (auto *EVI = dyn_cast<ExtractValueInst>(I))
-    return ConstantExpr::getExtractValue(Ops[0], EVI->getIndices());
+    return ConstantFoldExtractValueInstruction(Ops[0], EVI->getIndices());
 
   return ConstantFoldInstOperands(I, Ops, DL, TLI);
 }
