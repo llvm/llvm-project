@@ -11,11 +11,9 @@
 
 define i16 @with_lifetime(i32 %a, i32 %b) #0 {
 ; CHECK-LABEL: @with_lifetime(
-; CHECK-NEXT:    [[ARR_SROA_0_SROA_0_0_EXTRACT_TRUNC:%.*]] = trunc i32 [[A:%.*]] to i16
-; CHECK-NEXT:    [[ARR_SROA_0_SROA_4_0_EXTRACT_SHIFT:%.*]] = lshr i32 [[A]], 16
-; CHECK-NEXT:    [[ARR_SROA_0_SROA_4_0_EXTRACT_TRUNC:%.*]] = trunc i32 [[ARR_SROA_0_SROA_4_0_EXTRACT_SHIFT]] to i16
+; CHECK-NEXT:    [[ARR_SROA_0_0_EXTRACT_TRUNC:%.*]] = trunc i32 [[A:%.*]] to i16
 ; CHECK-NEXT:    [[ARR_SROA_4_4_EXTRACT_TRUNC:%.*]] = trunc i32 [[B:%.*]] to i16
-; CHECK-NEXT:    [[RET:%.*]] = add i16 [[ARR_SROA_0_SROA_0_0_EXTRACT_TRUNC]], [[ARR_SROA_4_4_EXTRACT_TRUNC]]
+; CHECK-NEXT:    [[RET:%.*]] = add i16 [[ARR_SROA_0_0_EXTRACT_TRUNC]], [[ARR_SROA_4_4_EXTRACT_TRUNC]]
 ; CHECK-NEXT:    ret i16 [[RET]]
 ;
   %arr = alloca %i32x2, align 4
