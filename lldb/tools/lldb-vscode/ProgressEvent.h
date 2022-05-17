@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include <atomic>
 #include <mutex>
 #include <queue>
 #include <thread>
@@ -149,7 +150,7 @@ private:
   std::queue<ProgressEventManagerSP> m_unreported_start_events;
   /// Thread used to invoke \a ReportStartEvents periodically.
   std::thread m_thread;
-  bool m_thread_should_exit;
+  std::atomic<bool> m_thread_should_exit;
   /// Mutex that prevents running \a Push and \a ReportStartEvents
   /// simultaneously, as both read and modify the same underlying objects.
   std::mutex m_mutex;
