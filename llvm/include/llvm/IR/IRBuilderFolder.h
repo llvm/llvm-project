@@ -46,6 +46,12 @@ public:
 
   virtual Value *FoldSelect(Value *C, Value *True, Value *False) const = 0;
 
+  virtual Value *FoldExtractValue(Value *Agg,
+                                  ArrayRef<unsigned> IdxList) const = 0;
+
+  virtual Value *FoldInsertValue(Value *Agg, Value *Val,
+                                 ArrayRef<unsigned> IdxList) const = 0;
+
   //===--------------------------------------------------------------------===//
   // Binary Operators
   //===--------------------------------------------------------------------===//
@@ -120,10 +126,6 @@ public:
                                      Constant *Idx) const = 0;
   virtual Value *CreateShuffleVector(Constant *V1, Constant *V2,
                                      ArrayRef<int> Mask) const = 0;
-  virtual Value *CreateExtractValue(Constant *Agg,
-                                    ArrayRef<unsigned> IdxList) const = 0;
-  virtual Value *CreateInsertValue(Constant *Agg, Constant *Val,
-                                   ArrayRef<unsigned> IdxList) const = 0;
 };
 
 } // end namespace llvm
