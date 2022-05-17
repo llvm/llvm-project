@@ -2238,6 +2238,17 @@ TEST_F(InstrRefLDVTest, vlocJoinDiamond) {
   EXPECT_EQ(JoinedLoc.Kind, DbgValue::Def);
   EXPECT_EQ(JoinedLoc.ID, LiveInRsp);
 
+  // Try the same PHI elimination but with one incoming value being a VPHI
+  // referring to the same value.
+  VLiveOuts[1] = DbgValue(LiveInRsp, EmptyProps, DbgValue::Def);
+  VLiveOuts[2] = DbgValue(2, EmptyProps, DbgValue::VPHI);
+  VLiveOuts[2].ID = LiveInRsp;
+  JoinedLoc = DbgValue(3, EmptyProps, DbgValue::VPHI);
+  Result = vlocJoin(*MBB3, VLiveOutIdx, AllBlocks, JoinedLoc);
+  EXPECT_TRUE(Result);
+  EXPECT_EQ(JoinedLoc.Kind, DbgValue::VPHI);
+  EXPECT_EQ(JoinedLoc.ID, LiveInRsp);
+
   // If the "current" live-in is a VPHI, but not a VPHI generated in the current
   // block, then it's the remains of an earlier value propagation. We should
   // value propagate through this merge. Even if the current incoming values
