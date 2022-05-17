@@ -52270,7 +52270,8 @@ static bool onlyZeroFlagUsed(SDValue Flags) {
 /// Also try (ADD/SUB)+(AND(SRL,1)) bit extraction pattern with BT+{ADC, SBB}.
 static SDValue combineAddOrSubToADCOrSBB(bool IsSub, const SDLoc &DL, EVT VT,
                                          SDValue X, SDValue Y,
-                                         SelectionDAG &DAG) {
+                                         SelectionDAG &DAG,
+                                         bool ZeroSecondOpOnly = false) {
   if (!DAG.getTargetLoweringInfo().isTypeLegal(VT))
     return SDValue();
 
@@ -52294,7 +52295,7 @@ static SDValue combineAddOrSubToADCOrSBB(bool IsSub, const SDLoc &DL, EVT VT,
   // If X is -1 or 0, then we have an opportunity to avoid constants required in
   // the general case below.
   auto *ConstantX = dyn_cast<ConstantSDNode>(X);
-  if (ConstantX) {
+  if (ConstantX && !ZeroSecondOpOnly) {
     if ((!IsSub && CC == X86::COND_AE && ConstantX->isAllOnes()) ||
         (IsSub && CC == X86::COND_B && ConstantX->isZero())) {
       // This is a complicated way to get -1 or 0 from the carry flag:
@@ -52331,6 +52332,9 @@ static SDValue combineAddOrSubToADCOrSBB(bool IsSub, const SDLoc &DL, EVT VT,
                        DAG.getVTList(VT, MVT::i32), X,
                        DAG.getConstant(0, DL, VT), EFLAGS);
   }
+
+  if (ZeroSecondOpOnly)
+    return SDValue();
 
   if (CC == X86::COND_A) {
     // Try to convert COND_A into COND_B in an attempt to facilitate
@@ -52589,7 +52593,8 @@ static SDValue combineX86AddSub(SDNode *N, SelectionDAG &DAG,
   SDValue LHS = N->getOperand(0);
   SDValue RHS = N->getOperand(1);
   MVT VT = LHS.getSimpleValueType();
-  unsigned GenericOpc = X86ISD::ADD == N->getOpcode() ? ISD::ADD : ISD::SUB;
+  bool IsSub = X86ISD::SUB == N->getOpcode();
+  unsigned GenericOpc = IsSub ? ISD::SUB : ISD::ADD;
 
   // If we don't use the flag result, simplify back to a generic ADD/SUB.
   if (!N->hasAnyUseOfValue(1)) {
@@ -52611,7 +52616,10 @@ static SDValue combineX86AddSub(SDNode *N, SelectionDAG &DAG,
   MatchGeneric(LHS, RHS, false);
   MatchGeneric(RHS, LHS, X86ISD::SUB == N->getOpcode());
 
-  return SDValue();
+  // TODO: Can we drop the ZeroSecondOpOnly limit? This is to guarantee that the
+  // EFLAGS result doesn't change.
+  return combineAddOrSubToADCOrSBB(IsSub, DL, VT, LHS, RHS, DAG,
+                                   /*ZeroSecondOpOnly*/ true);
 }
 
 static SDValue combineSBB(SDNode *N, SelectionDAG &DAG) {
