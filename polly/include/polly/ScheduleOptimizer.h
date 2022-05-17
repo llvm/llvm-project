@@ -20,7 +20,7 @@ namespace polly {
 llvm::Pass *createIslScheduleOptimizerWrapperPass();
 llvm::Pass *createIslScheduleOptimizerPrinterLegacyPass(llvm::raw_ostream &OS);
 
-struct IslScheduleOptimizerPass
+struct IslScheduleOptimizerPass final
     : llvm::PassInfoMixin<IslScheduleOptimizerPass> {
   IslScheduleOptimizerPass() {}
 
@@ -28,7 +28,7 @@ struct IslScheduleOptimizerPass
                               ScopStandardAnalysisResults &SAR, SPMUpdater &U);
 };
 
-struct IslScheduleOptimizerPrinterPass
+struct IslScheduleOptimizerPrinterPass final
     : llvm::PassInfoMixin<IslScheduleOptimizerPrinterPass> {
   IslScheduleOptimizerPrinterPass(raw_ostream &OS) : OS(OS) {}
 

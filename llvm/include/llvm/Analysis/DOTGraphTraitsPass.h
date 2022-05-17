@@ -41,8 +41,8 @@ template <typename AnalysisT, bool IsSimple,
           typename AnalysisGraphTraitsT =
               DefaultAnalysisGraphTraits<typename AnalysisT::Result &, GraphT>>
 struct DOTGraphTraitsViewer
-    : public PassInfoMixin<DOTGraphTraitsViewer<AnalysisT, IsSimple, GraphT,
-                                                AnalysisGraphTraitsT>> {
+    : PassInfoMixin<DOTGraphTraitsViewer<AnalysisT, IsSimple, GraphT,
+                                         AnalysisGraphTraitsT>> {
   DOTGraphTraitsViewer(StringRef GraphName) : Name(GraphName) {}
   virtual ~DOTGraphTraitsViewer() {}
 
@@ -96,8 +96,8 @@ template <typename AnalysisT, bool IsSimple,
           typename AnalysisGraphTraitsT =
               DefaultAnalysisGraphTraits<typename AnalysisT::Result &, GraphT>>
 struct DOTGraphTraitsPrinter
-    : public PassInfoMixin<DOTGraphTraitsPrinter<AnalysisT, IsSimple, GraphT,
-                                                 AnalysisGraphTraitsT>> {
+    : PassInfoMixin<DOTGraphTraitsPrinter<AnalysisT, IsSimple, GraphT,
+                                          AnalysisGraphTraitsT>> {
   DOTGraphTraitsPrinter(StringRef GraphName) : Name(GraphName) {}
   virtual ~DOTGraphTraitsPrinter() {}
 

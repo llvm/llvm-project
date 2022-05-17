@@ -28,7 +28,7 @@ using llvm::User;
 /// Despite its name it is not tied to virtual instructions (although it works
 /// fine with them), but to promote consistent handling of values used in
 /// statements.
-class VirtualUse {
+class VirtualUse final {
 public:
   /// The different types of uses. Handling usually differentiates a lot between
   /// these; one can use a switch to handle each case (and get warned by the
@@ -167,7 +167,7 @@ public:
 };
 
 /// An iterator for virtual operands.
-class VirtualOperandIterator {
+class VirtualOperandIterator final {
   friend class VirtualInstruction;
   friend class VirtualUse;
 
@@ -228,7 +228,7 @@ public:
 /// ScopStmt/Instruction-pair uniquely identifies a virtual instructions.
 /// ScopStmt::getInstruction() can contain the same instruction multiple times,
 /// but they necessarily compute the same value.
-class VirtualInstruction {
+class VirtualInstruction final {
   friend class VirtualOperandIterator;
   friend struct llvm::DenseMapInfo<VirtualInstruction>;
 

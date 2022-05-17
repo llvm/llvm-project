@@ -34,7 +34,7 @@ llvm::ModulePass *createDumpModuleWrapperPass(std::string Filename,
                                               bool IsSuffix);
 
 /// A pass that prints the module into a file.
-struct DumpModulePass : llvm::PassInfoMixin<DumpModulePass> {
+struct DumpModulePass final : llvm::PassInfoMixin<DumpModulePass> {
   std::string Filename;
   bool IsSuffix;
 

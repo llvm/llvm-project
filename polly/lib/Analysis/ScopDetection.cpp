@@ -281,7 +281,7 @@ static void updateLoopCountStatistic(ScopDetection::LoopStats Stats,
 
 namespace {
 
-class DiagnosticScopFound : public DiagnosticInfo {
+class DiagnosticScopFound final : public DiagnosticInfo {
 private:
   static int PluginDiagnosticKind;
 
@@ -850,7 +850,7 @@ namespace {
 /// always add and verify the assumption that for all subscript expressions
 /// 'exp' the inequality 0 <= exp < size holds. Hence, we will also verify
 /// that 0 <= size, which means smax(0, size) == size.
-class SCEVRemoveMax : public SCEVRewriteVisitor<SCEVRemoveMax> {
+class SCEVRemoveMax final : public SCEVRewriteVisitor<SCEVRemoveMax> {
 public:
   SCEVRemoveMax(ScalarEvolution &SE, std::vector<const SCEV *> *Terms)
       : SCEVRewriteVisitor(SE), Terms(Terms) {}
@@ -2048,7 +2048,7 @@ INITIALIZE_PASS_END(ScopDetectionWrapperPass, "polly-detect",
 
 namespace {
 /// Print result from ScopDetectionWrapperPass.
-class ScopDetectionPrinterLegacyPass : public FunctionPass {
+class ScopDetectionPrinterLegacyPass final : public FunctionPass {
 public:
   static char ID;
 

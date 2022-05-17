@@ -170,7 +170,7 @@ INITIALIZE_PASS_END(PolyhedralInfo, "polyhedral-info",
 
 namespace {
 /// Print result from PolyhedralInfo.
-class PolyhedralInfoPrinterLegacyPass : public FunctionPass {
+class PolyhedralInfoPrinterLegacyPass final : public FunctionPass {
 public:
   static char ID;
 

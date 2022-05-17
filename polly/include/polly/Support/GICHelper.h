@@ -354,7 +354,7 @@ operator<<(llvm::DiagnosticInfoOptimizationBase &OS,
 /// This is typically used inside a nested IslMaxOperationsGuard scope. The
 /// IslMaxOperationsGuard defines the number of allowed base operations for some
 /// code, IslQuotaScope defines where it is allowed to return an error result.
-class IslQuotaScope {
+class IslQuotaScope final {
   isl_ctx *IslCtx;
   int OldOnError;
 
@@ -421,7 +421,7 @@ public:
 /// counter cannot be reset to the previous state, or one that adds the
 /// operations while being in the nested scope. Use therefore is only allowed
 /// while currently a no operations-limit is active.
-class IslMaxOperationsGuard {
+class IslMaxOperationsGuard final {
 private:
   /// The ISL context to set the operations limit.
   ///

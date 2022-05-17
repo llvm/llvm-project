@@ -128,7 +128,7 @@ static isl::schedule rebuildBand(isl::schedule_node_band OldBand,
 /// AST build options must be set after the tree has been constructed.
 template <typename Derived, typename... Args>
 struct ScheduleTreeRewriter
-    : public RecursiveScheduleTreeVisitor<Derived, isl::schedule, Args...> {
+    : RecursiveScheduleTreeVisitor<Derived, isl::schedule, Args...> {
   Derived &getDerived() { return *static_cast<Derived *>(this); }
   const Derived &getDerived() const {
     return *static_cast<const Derived *>(this);
@@ -212,7 +212,7 @@ struct ScheduleTreeRewriter
 
 /// Rewrite the schedule tree without any changes. Useful to copy a subtree into
 /// a new schedule, discarding everything but.
-struct IdentityRewriter : public ScheduleTreeRewriter<IdentityRewriter> {};
+struct IdentityRewriter : ScheduleTreeRewriter<IdentityRewriter> {};
 
 /// Rewrite a schedule tree to an equivalent one without extension nodes.
 ///
@@ -225,9 +225,9 @@ struct IdentityRewriter : public ScheduleTreeRewriter<IdentityRewriter> {};
 ///    band nodes to schedule the additional domains at the same position as the
 ///    extension node would.
 ///
-struct ExtensionNodeRewriter
-    : public ScheduleTreeRewriter<ExtensionNodeRewriter, const isl::union_set &,
-                                  isl::union_map &> {
+struct ExtensionNodeRewriter final
+    : ScheduleTreeRewriter<ExtensionNodeRewriter, const isl::union_set &,
+                           isl::union_map &> {
   using BaseTy = ScheduleTreeRewriter<ExtensionNodeRewriter,
                                       const isl::union_set &, isl::union_map &>;
   BaseTy &getBase() { return *this; }
@@ -356,8 +356,8 @@ struct ExtensionNodeRewriter
 ///
 /// ScheduleTreeRewriter cannot apply the schedule tree options. This class
 /// collects these options to apply them later.
-struct CollectASTBuildOptions
-    : public RecursiveScheduleTreeVisitor<CollectASTBuildOptions> {
+struct CollectASTBuildOptions final
+    : RecursiveScheduleTreeVisitor<CollectASTBuildOptions> {
   using BaseTy = RecursiveScheduleTreeVisitor<CollectASTBuildOptions>;
   BaseTy &getBase() { return *this; }
   const BaseTy &getBase() const { return *this; }
@@ -376,8 +376,7 @@ struct CollectASTBuildOptions
 /// This rewrites a schedule tree with the AST build options applied. We assume
 /// that the band nodes are visited in the same order as they were when the
 /// build options were collected, typically by CollectASTBuildOptions.
-struct ApplyASTBuildOptions
-    : public ScheduleNodeRewriter<ApplyASTBuildOptions> {
+struct ApplyASTBuildOptions final : ScheduleNodeRewriter<ApplyASTBuildOptions> {
   using BaseTy = ScheduleNodeRewriter<ApplyASTBuildOptions>;
   BaseTy &getBase() { return *this; }
   const BaseTy &getBase() const { return *this; }
@@ -560,7 +559,8 @@ static isl::set addExtentConstraints(isl::set Set, int VectorWidth) {
 }
 
 /// Collapse perfectly nested bands into a single band.
-class BandCollapseRewriter : public ScheduleTreeRewriter<BandCollapseRewriter> {
+class BandCollapseRewriter final
+    : public ScheduleTreeRewriter<BandCollapseRewriter> {
 private:
   using BaseTy = ScheduleTreeRewriter<BandCollapseRewriter>;
   BaseTy &getBase() { return *this; }
@@ -833,7 +833,7 @@ static isl::schedule tryGreedyFuse(isl::schedule_node LHS,
 ///
 /// The isl::union_map parameters is the set of validity dependencies that have
 /// not been resolved/carried by a parent schedule node.
-class GreedyFusionRewriter
+class GreedyFusionRewriter final
     : public ScheduleTreeRewriter<GreedyFusionRewriter, isl::union_map> {
 private:
   using BaseTy = ScheduleTreeRewriter<GreedyFusionRewriter, isl::union_map>;

@@ -27,7 +27,7 @@ using namespace polly;
 
 namespace {
 
-class CodegenCleanup : public FunctionPass {
+class CodegenCleanup final : public FunctionPass {
 private:
   CodegenCleanup(const CodegenCleanup &) = delete;
   const CodegenCleanup &operator=(const CodegenCleanup &) = delete;
