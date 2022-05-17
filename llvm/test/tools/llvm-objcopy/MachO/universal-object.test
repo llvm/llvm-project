@@ -26,7 +26,6 @@
 ## Case 3: copy an archive containing a universal object.
 # RUN: llvm-ar cr %t.archive.containing.universal %t.universal
 # RUN: llvm-objcopy %t.archive.containing.universal %t.archive.containing.universal.copy
-# RUN: cmp %t.archive.containing.universal %t.archive.containing.universal.copy
 
 ## Case 4: try to copy a universal object file contaning a bitcode slice.
 # RUN: echo 'target triple = "arm64-apple-ios8.0.0"' | llvm-as -o %t.bitcode
