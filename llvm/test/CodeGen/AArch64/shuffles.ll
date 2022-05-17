@@ -104,3 +104,27 @@ define <4 x i32> @test7367(<4 x i32> %a, <4 x i32> %b)
   %r = shufflevector <4 x i32> %a, <4 x i32> %b, <4 x i32> <i32 7, i32 3, i32 6, i32 7>
   ret <4 x i32> %r
 }
+
+define <4 x i32> @test4045(<4 x i32> %a, <4 x i32> %b)
+; CHECK-LABEL: test4045:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ext v2.16b, v0.16b, v1.16b, #4
+; CHECK-NEXT:    ext v0.16b, v2.16b, v0.16b, #4
+; CHECK-NEXT:    ext v0.16b, v0.16b, v1.16b, #8
+; CHECK-NEXT:    ret
+{
+  %r = shufflevector <4 x i32> %a, <4 x i32> %b, <4 x i32> <i32 4, i32 0, i32 4, i32 5>
+  ret <4 x i32> %r
+}
+
+define <4 x i32> @test0067(<4 x i32> %a, <4 x i32> %b)
+; CHECK-LABEL: test0067:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov v1.s[0], v0.s[0]
+; CHECK-NEXT:    mov v1.s[1], v0.s[0]
+; CHECK-NEXT:    mov v0.16b, v1.16b
+; CHECK-NEXT:    ret
+{
+  %r = shufflevector <4 x i32> %a, <4 x i32> %b, <4 x i32> <i32 0, i32 0, i32 6, i32 7>
+  ret <4 x i32> %r
+}
