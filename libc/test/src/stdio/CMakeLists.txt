@@ -63,6 +63,16 @@ add_libc_unittest(
     LibcMemoryHelpers
 )
 
+add_libc_unittest(
+  sprintf_test
+  SUITE
+    libc_stdio_unittests
+  SRCS
+    sprintf_test.cpp
+  DEPENDS
+    libc.src.stdio.sprintf
+)
+
 add_subdirectory(printf_core)
 
 add_subdirectory(testdata)

@@ -268,6 +268,7 @@ if(LLVM_LIBC_FULL_BUILD)
     libc.src.stdio.funlockfile
     libc.src.stdio.fwrite
     libc.src.stdio.fwrite_unlocked
+    libc.src.stdio.sprintf
 
     # signal.h entrypoints
     # TODO: Enable signal.h entrypoints after fixing signal.h

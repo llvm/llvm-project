@@ -51,3 +51,16 @@ add_object_library(
     .writer
     .core_structs
 )
+
+
+add_header_library(
+  printf_main
+  HDRS
+    printf_main.h
+  DEPENDS
+    .parser
+    .converter
+    .writer
+    .core_structs
+    libc.src.__support.arg_list
+)
