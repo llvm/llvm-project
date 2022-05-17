@@ -955,13 +955,6 @@ Optional<ValueLatticeElement> LazyValueInfoImpl::solveBlockValueBinaryOp(
     BinaryOperator *BO, BasicBlock *BB) {
   assert(BO->getOperand(0)->getType()->isSized() &&
          "all operands to binary operators are sized");
-  if (BO->getOpcode() == Instruction::Xor) {
-    // Xor is the only operation not supported by ConstantRange::binaryOp().
-    LLVM_DEBUG(dbgs() << " compute BB '" << BB->getName()
-                      << "' - overdefined (unknown binary operator).\n");
-    return ValueLatticeElement::getOverdefined();
-  }
-
   if (auto *OBO = dyn_cast<OverflowingBinaryOperator>(BO)) {
     unsigned NoWrapKind = 0;
     if (OBO->hasNoUnsignedWrap())
