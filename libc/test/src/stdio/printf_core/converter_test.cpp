@@ -181,3 +181,17 @@ TEST_F(LlvmLibcPrintfConverterTest, StringConversionLeftJustified) {
   ASSERT_STREQ(str, "ghi ");
   ASSERT_EQ(writer.get_chars_written(), 4ull);
 }
+
+TEST_F(LlvmLibcPrintfConverterTest, IntConversionSimple) {
+  __llvm_libc::printf_core::FormatSection section;
+  section.has_conv = true;
+  section.raw_string = "%d";
+  section.conv_name = 'd';
+  section.conv_val_raw = 12345;
+  __llvm_libc::printf_core::convert(&writer, section);
+
+  str_writer.terminate();
+
+  ASSERT_STREQ(str, "12345");
+  ASSERT_EQ(writer.get_chars_written(), 5ull);
+}

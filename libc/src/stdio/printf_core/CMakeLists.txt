@@ -55,6 +55,7 @@ add_object_library(
     converter_atlas.h
     string_converter.h
     char_converter.h
+    int_converter.h
   DEPENDS
     .writer
     .core_structs
