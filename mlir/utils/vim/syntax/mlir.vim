@@ -14,7 +14,7 @@ syn case match
 
 " Types.
 "
-syn keyword mlirType index f16 f32 f64
+syn keyword mlirType index f16 f32 f64 bf16
 " Signless integer types.
 syn match mlirType /\<i\d\+\>/
 " Unsigned integer types.
@@ -23,7 +23,7 @@ syn match mlirType /\<ui\d\+\>/
 syn match mlirType /\<si\d\+\>/
 
 " Elemental types inside memref, tensor, or vector types.
-syn match mlirType /x\s*\zs\(f16\|f32\|f64\|i\d\+\|ui\d\+\|si\d\+\)/
+syn match mlirType /x\s*\zs\(bf16|f16\|f32\|f64\|i\d\+\|ui\d\+\|si\d\+\)/
 
 " Shaped types.
 syn match mlirType /\<memref\ze\s*<.*>/
