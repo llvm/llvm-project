@@ -33,7 +33,9 @@ def Bit4 : I32BitEnumAttrCaseBit<"Bit4", 4>;
 def Bit5 : I32BitEnumAttrCaseBit<"Bit5", 5>;
 
 def BitEnumWithNone : I32BitEnumAttr<"BitEnumWithNone", "A test enum",
-                                     [NoBits, Bit0, Bit3]>;
+                                     [NoBits, Bit0, Bit3]> {
+  let separator = " | ";
+}
 
 def BitEnumWithoutNone : I32BitEnumAttr<"BitEnumWithoutNone", "A test enum",
                                         [Bit0, Bit3]>;
@@ -46,12 +48,14 @@ def Bits0To5 : I32BitEnumAttrCaseGroup<"Bits0To5",
                                        [Bits0To3, Bits4And5]>;
 
 def BitEnumWithGroup : I32BitEnumAttr<"BitEnumWithGroup", "A test enum",
-                                      [Bit0, Bit1, Bit2, Bit3, Bit4, Bits0To3]>;
+                                      [Bit0, Bit1, Bit2, Bit3, Bit4, Bits0To3]> {
+  let separator = "|";
+}
 
 def BitEnumPrimaryGroup : I32BitEnumAttr<"BitEnumPrimaryGroup", "test enum",
                                         [Bit0, Bit1, Bit2, Bit3, Bit4, Bit5,
                                          Bits0To3, Bits4And5, Bits0To5]> {
-  let separator = ",";
+  let separator = ", ";
   let printBitEnumPrimaryGroups = 1;
 }
 

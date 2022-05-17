@@ -80,7 +80,7 @@ TEST(EnumsGenTest, GeneratedSymbolToStringFnForBitEnum) {
   EXPECT_EQ(stringifyBitEnumWithNone(BitEnumWithNone::Bit3), "Bit3");
   EXPECT_EQ(
       stringifyBitEnumWithNone(BitEnumWithNone::Bit0 | BitEnumWithNone::Bit3),
-      "Bit0|Bit3");
+      "Bit0 | Bit3");
 
   EXPECT_EQ(stringifyBitEnum64_Test(BitEnum64_Test::Bit1), "Bit1");
   EXPECT_EQ(
@@ -96,7 +96,7 @@ TEST(EnumsGenTest, GeneratedStringToSymbolForBitEnum) {
             BitEnumWithNone::Bit3 | BitEnumWithNone::Bit0);
 
   EXPECT_EQ(symbolizeBitEnumWithNone("Bit2"), llvm::None);
-  EXPECT_EQ(symbolizeBitEnumWithNone("Bit3|Bit4"), llvm::None);
+  EXPECT_EQ(symbolizeBitEnumWithNone("Bit3 | Bit4"), llvm::None);
 
   EXPECT_EQ(symbolizeBitEnumWithoutNone("None"), llvm::None);
 }
@@ -129,11 +129,11 @@ TEST(EnumsGenTest, GeneratedSymbolToStringFnForPrimaryGroupBitEnum) {
   EXPECT_EQ(stringifyBitEnumPrimaryGroup(BitEnumPrimaryGroup::Bit0 |
                                          BitEnumPrimaryGroup::Bit2 |
                                          BitEnumPrimaryGroup::Bit3),
-            "Bit0,Bit2,Bit3");
+            "Bit0, Bit2, Bit3");
   EXPECT_EQ(stringifyBitEnumPrimaryGroup(BitEnumPrimaryGroup::Bit0 |
                                          BitEnumPrimaryGroup::Bit4 |
                                          BitEnumPrimaryGroup::Bit5),
-            "Bits4And5,Bit0");
+            "Bits4And5, Bit0");
   EXPECT_EQ(stringifyBitEnumPrimaryGroup(
                 BitEnumPrimaryGroup::Bit0 | BitEnumPrimaryGroup::Bit1 |
                 BitEnumPrimaryGroup::Bit2 | BitEnumPrimaryGroup::Bit3 |

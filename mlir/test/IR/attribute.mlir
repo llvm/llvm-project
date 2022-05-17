@@ -413,9 +413,9 @@ func.func @disallowed_case7_fail() {
 
 // CHECK-LABEL: func @allowed_cases_pass
 func.func @allowed_cases_pass() {
-  // CHECK: test.op_with_bit_enum <read,write>
+  // CHECK: test.op_with_bit_enum <read, write>
   "test.op_with_bit_enum"() {value = #test.bit_enum<read, write>} : () -> ()
-  // CHECK: test.op_with_bit_enum <read,execute>
+  // CHECK: test.op_with_bit_enum <read, execute>
   test.op_with_bit_enum <read,execute>
   return
 }
@@ -424,11 +424,11 @@ func.func @allowed_cases_pass() {
 
 // CHECK-LABEL: func @allowed_cases_pass
 func.func @allowed_cases_pass() {
-  // CHECK: test.op_with_bit_enum_vbar <user|group>
+  // CHECK: test.op_with_bit_enum_vbar <user | group>
   "test.op_with_bit_enum_vbar"() {
     value = #test.bit_enum_vbar<user|group>
   } : () -> ()
-  // CHECK: test.op_with_bit_enum_vbar <user|group|other>
+  // CHECK: test.op_with_bit_enum_vbar <user | group | other>
   test.op_with_bit_enum_vbar <user | group | other>
   return
 }
