@@ -1890,6 +1890,8 @@ Error BitcodeReader::parseTypeTableBody() {
       if (!ResultTy ||
           !PointerType::isValidElementType(ResultTy))
         return error("Invalid type");
+      if (LLVM_UNLIKELY(!Context.hasSetOpaquePointersValue()))
+        Context.setOpaquePointers(false);
       ContainedIDs.push_back(Record[0]);
       ResultTy = PointerType::get(ResultTy, AddressSpace);
       break;
