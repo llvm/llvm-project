@@ -94,6 +94,22 @@ public:
     return nullptr;
   }
 
+  Value *FoldExtractValue(Value *Agg,
+                          ArrayRef<unsigned> IdxList) const override {
+    if (auto *CAgg = dyn_cast<Constant>(Agg))
+      return ConstantExpr::getExtractValue(CAgg, IdxList);
+    return nullptr;
+  };
+
+  Value *FoldInsertValue(Value *Agg, Value *Val,
+                         ArrayRef<unsigned> IdxList) const override {
+    auto *CAgg = dyn_cast<Constant>(Agg);
+    auto *CVal = dyn_cast<Constant>(Val);
+    if (CAgg && CVal)
+      return ConstantExpr::getInsertValue(CAgg, CVal, IdxList);
+    return nullptr;
+  }
+
   //===--------------------------------------------------------------------===//
   // Binary Operators
   //===--------------------------------------------------------------------===//
@@ -271,16 +287,6 @@ public:
   Constant *CreateShuffleVector(Constant *V1, Constant *V2,
                                 ArrayRef<int> Mask) const override {
     return ConstantExpr::getShuffleVector(V1, V2, Mask);
-  }
-
-  Constant *CreateExtractValue(Constant *Agg,
-                               ArrayRef<unsigned> IdxList) const override {
-    return ConstantExpr::getExtractValue(Agg, IdxList);
-  }
-
-  Constant *CreateInsertValue(Constant *Agg, Constant *Val,
-                              ArrayRef<unsigned> IdxList) const override {
-    return ConstantExpr::getInsertValue(Agg, Val, IdxList);
   }
 };
 
