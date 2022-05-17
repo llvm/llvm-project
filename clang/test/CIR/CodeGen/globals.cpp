@@ -13,6 +13,7 @@ unsigned char rgb[3] = {0, 233, 33};
 char alpha[4] = "abc";
 const char *s = "example";
 const char *s1 = "example1";
+const char *s2 = "example";
 
 // CHECK: module  {
 // CHECK-NEXT: cir.global @a = 3 : i32
@@ -28,3 +29,5 @@ const char *s1 = "example1";
 
 // CHECK-NEXT: cir.global "private" constant @".str1" = #cir.cst_array<"example1\00" : !cir.array<i8 x 9>> : !cir.array<i8 x 9> {alignment = 1 : i64}
 // CHECK-NEXT: cir.global @s1 = @".str1": !cir.ptr<i8>
+
+// CHECK-NEXT: cir.global @s2 = @".str": !cir.ptr<i8>
