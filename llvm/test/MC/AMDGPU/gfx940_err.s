@@ -84,3 +84,9 @@ ds_ordered_count v5, v1 offset:65535 gds
 
 exp pos0 v3, v2, v1, v0
 // GFX940: error: instruction not supported on this GPU
+
+global_load_dword v[2:3], off lds
+// GFX940: error: operands are not valid for this GPU or mode
+
+scratch_load_dword v2, off lds
+// GFX940: error: operands are not valid for this GPU or mode

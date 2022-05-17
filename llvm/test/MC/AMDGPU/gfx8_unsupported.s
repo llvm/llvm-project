@@ -1828,6 +1828,18 @@ v_xnor_b32_sdwa v255, v1, v2 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD 
 v_xor3_b32 v255, v1, v2, v3
 // CHECK: error: instruction not supported on this GPU
 
+global_load_lds_dword v[2:3], off
+// CHECK: error: instruction not supported on this GPU
+
+global_load_dword v[2:3], off lds
+// CHECK: error: instruction not supported on this GPU
+
+scratch_load_dword v2, off lds
+// CHECK: error: instruction not supported on this GPU
+
+scratch_load_dword off, s2 lds
+// CHECK: error: instruction not supported on this GPU
+
 //===----------------------------------------------------------------------===//
 // Unsupported e32 variants.
 //===----------------------------------------------------------------------===//
