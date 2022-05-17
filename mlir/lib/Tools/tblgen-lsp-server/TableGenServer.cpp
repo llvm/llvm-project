@@ -12,6 +12,7 @@
 #include "../lsp-server-support/Logging.h"
 #include "../lsp-server-support/Protocol.h"
 #include "../lsp-server-support/SourceMgrUtils.h"
+#include "mlir/Support/LogicalResult.h"
 #include "llvm/ADT/IntervalMap.h"
 #include "llvm/ADT/PointerUnion.h"
 #include "llvm/ADT/StringMap.h"
@@ -244,6 +245,12 @@ public:
   /// Return the current version of this text file.
   int64_t getVersion() const { return version; }
 
+  /// Update the file to the new version using the provided set of content
+  /// changes. Returns failure if the update was unsuccessful.
+  LogicalResult update(const lsp::URIForFile &uri, int64_t newVersion,
+                       ArrayRef<lsp::TextDocumentContentChangeEvent> changes,
+                       std::vector<lsp::Diagnostic> &diagnostics);
+
   //===--------------------------------------------------------------------===//
   // Definitions and References
   //===--------------------------------------------------------------------===//
@@ -268,6 +275,10 @@ public:
                                  const lsp::Position &hoverPos);
 
 private:
+  /// Initialize the text file from the given file contents.
+  void initialize(const lsp::URIForFile &uri, int64_t newVersion,
+                  std::vector<lsp::Diagnostic> &diagnostics);
+
   /// The full string contents of the file.
   std::string contents;
 
@@ -281,7 +292,7 @@ private:
   llvm::SourceMgr sourceMgr;
 
   /// The record keeper containing the parsed tablegen constructs.
-  llvm::RecordKeeper recordKeeper;
+  std::unique_ptr<llvm::RecordKeeper> recordKeeper;
 
   /// The index of the parsed file.
   TableGenIndex index;
@@ -296,12 +307,6 @@ TableGenTextFile::TableGenTextFile(
     const std::vector<std::string> &extraIncludeDirs,
     std::vector<lsp::Diagnostic> &diagnostics)
     : contents(fileContents.str()), version(version) {
-  auto memBuffer = llvm::MemoryBuffer::getMemBufferCopy(contents, uri.file());
-  if (!memBuffer) {
-    lsp::Logger::error("Failed to create memory buffer for file", uri.file());
-    return;
-  }
-
   // Build the set of include directories for this file.
   llvm::SmallString<32> uriDirectory(uri.file());
   llvm::sys::path::remove_filename(uriDirectory);
@@ -309,6 +314,37 @@ TableGenTextFile::TableGenTextFile(
   includeDirs.insert(includeDirs.end(), extraIncludeDirs.begin(),
                      extraIncludeDirs.end());
 
+  // Initialize the file.
+  initialize(uri, version, diagnostics);
+}
+
+LogicalResult
+TableGenTextFile::update(const lsp::URIForFile &uri, int64_t newVersion,
+                         ArrayRef<lsp::TextDocumentContentChangeEvent> changes,
+                         std::vector<lsp::Diagnostic> &diagnostics) {
+  if (failed(lsp::TextDocumentContentChangeEvent::applyTo(changes, contents))) {
+    lsp::Logger::error("Failed to update contents of {0}", uri.file());
+    return failure();
+  }
+
+  // If the file contents were properly changed, reinitialize the text file.
+  initialize(uri, newVersion, diagnostics);
+  return success();
+}
+
+void TableGenTextFile::initialize(const lsp::URIForFile &uri,
+                                  int64_t newVersion,
+                                  std::vector<lsp::Diagnostic> &diagnostics) {
+  version = newVersion;
+  sourceMgr = llvm::SourceMgr();
+  recordKeeper = std::make_unique<llvm::RecordKeeper>();
+
+  // Build a buffer for this file.
+  auto memBuffer = llvm::MemoryBuffer::getMemBuffer(contents, uri.file());
+  if (!memBuffer) {
+    lsp::Logger::error("Failed to create memory buffer for file", uri.file());
+    return;
+  }
   sourceMgr.setIncludeDirs(includeDirs);
   sourceMgr.AddNewSourceBuffer(std::move(memBuffer), SMLoc());
 
@@ -327,7 +363,7 @@ TableGenTextFile::TableGenTextFile(
           ctx->diagnostics.push_back(*lspDiag);
       },
       &handlerContext);
-  bool failedToParse = llvm::TableGenParseFile(sourceMgr, recordKeeper);
+  bool failedToParse = llvm::TableGenParseFile(sourceMgr, *recordKeeper);
 
   // Process all of the include files.
   lsp::gatherIncludeFiles(sourceMgr, parsedIncludes);
@@ -335,7 +371,7 @@ TableGenTextFile::TableGenTextFile(
     return;
 
   // If we successfully parsed the file, we can now build the index.
-  index.initialize(recordKeeper);
+  index.initialize(*recordKeeper);
 }
 
 //===----------------------------------------------------------------------===//
@@ -417,9 +453,9 @@ lsp::TableGenServer::TableGenServer(const Options &options)
     : impl(std::make_unique<Impl>(options)) {}
 lsp::TableGenServer::~TableGenServer() = default;
 
-void lsp::TableGenServer::addOrUpdateDocument(
-    const URIForFile &uri, StringRef contents, int64_t version,
-    std::vector<Diagnostic> &diagnostics) {
+void lsp::TableGenServer::addDocument(const URIForFile &uri, StringRef contents,
+                                      int64_t version,
+                                      std::vector<Diagnostic> &diagnostics) {
   // Build the set of additional include directories.
   std::vector<std::string> additionalIncludeDirs = impl->options.extraDirs;
   const auto &fileInfo = impl->compilationDatabase.getFileInfo(uri.file());
@@ -427,6 +463,20 @@ void lsp::TableGenServer::addOrUpdateDocument(
 
   impl->files[uri.file()] = std::make_unique<TableGenTextFile>(
       uri, contents, version, additionalIncludeDirs, diagnostics);
+}
+
+void lsp::TableGenServer::updateDocument(
+    const URIForFile &uri, ArrayRef<TextDocumentContentChangeEvent> changes,
+    int64_t version, std::vector<Diagnostic> &diagnostics) {
+  // Check that we actually have a document for this uri.
+  auto it = impl->files.find(uri.file());
+  if (it == impl->files.end())
+    return;
+
+  // Try to update the document. If we fail, erase the file from the server. A
+  // failed updated generally means we've fallen out of sync somewhere.
+  if (failed(it->second->update(uri, version, changes, diagnostics)))
+    impl->files.erase(it);
 }
 
 Optional<int64_t> lsp::TableGenServer::removeDocument(const URIForFile &uri) {

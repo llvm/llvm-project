@@ -21,6 +21,7 @@ struct DocumentLink;
 struct Hover;
 struct Location;
 struct Position;
+struct TextDocumentContentChangeEvent;
 class URIForFile;
 
 /// This class implements all of the TableGen related functionality necessary
@@ -44,12 +45,16 @@ public:
   TableGenServer(const Options &options);
   ~TableGenServer();
 
-  /// Add or update the document, with the provided `version`, at the given URI.
-  /// Any diagnostics emitted for this document should be added to
-  /// `diagnostics`.
-  void addOrUpdateDocument(const URIForFile &uri, StringRef contents,
-                           int64_t version,
-                           std::vector<Diagnostic> &diagnostics);
+  /// Add the document, with the provided `version`, at the given URI. Any
+  /// diagnostics emitted for this document should be added to `diagnostics`.
+  void addDocument(const URIForFile &uri, StringRef contents, int64_t version,
+                   std::vector<Diagnostic> &diagnostics);
+
+  /// Update the document, with the provided `version`, at the given URI. Any
+  /// diagnostics emitted for this document should be added to `diagnostics`.
+  void updateDocument(const URIForFile &uri,
+                      ArrayRef<TextDocumentContentChangeEvent> changes,
+                      int64_t version, std::vector<Diagnostic> &diagnostics);
 
   /// Remove the document with the given uri. Returns the version of the removed
   /// document, or None if the uri did not have a corresponding document within
