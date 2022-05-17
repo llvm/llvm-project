@@ -287,6 +287,22 @@ public:
 
   /// Method to support type inquiry through isa, cast, and dyn_cast.
   static inline bool classof(const VPDef *Recipe);
+
+  /// Returns true if the VPUser uses scalars of operand \p Op. Conservatively
+  /// returns if only first (scalar) lane is used, as default.
+  virtual bool usesScalars(const VPValue *Op) const {
+    assert(is_contained(operands(), Op) &&
+           "Op must be an operand of the recipe");
+    return onlyFirstLaneUsed(Op);
+  }
+
+  /// Returns true if the VPUser only uses the first lane of operand \p Op.
+  /// Conservatively returns false.
+  virtual bool onlyFirstLaneUsed(const VPValue *Op) const {
+    assert(is_contained(operands(), Op) &&
+           "Op must be an operand of the recipe");
+    return false;
+  }
 };
 
 /// This class augments a recipe with a set of VPValues defined by the recipe.

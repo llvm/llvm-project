@@ -440,13 +440,12 @@ void VPlanTransforms::optimizeInductions(VPlan &Plan, ScalarEvolution &SE) {
     // SetVector to ensure the list of users doesn't contain duplicates.
     SetVector<VPUser *> Users(IV->user_begin(), IV->user_end());
     for (VPUser *U : Users) {
-      VPRecipeBase *R = cast<VPRecipeBase>(U);
-      if (!R->usesScalars(IV))
+      if (!U->usesScalars(IV))
         continue;
-      for (unsigned I = 0, E = R->getNumOperands(); I != E; I++) {
-        if (R->getOperand(I) != IV)
+      for (unsigned I = 0, E = U->getNumOperands(); I != E; I++) {
+        if (U->getOperand(I) != IV)
           continue;
-        R->setOperand(I, Steps);
+        U->setOperand(I, Steps);
       }
     }
   }
