@@ -114,7 +114,6 @@ public:
   /// and macros in \p PP.
   void updatePreamble(PathRef Path, llvm::StringRef Version, ASTContext &AST,
                       Preprocessor &PP, const CanonicalIncludes &Includes);
-  void updatePreamble(IndexFileIn);
 
   /// Update symbols and references from main file \p Path with
   /// `indexMainDecls`.
