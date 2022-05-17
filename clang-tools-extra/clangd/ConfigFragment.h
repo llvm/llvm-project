@@ -199,6 +199,9 @@ struct Fragment {
       llvm::Optional<Located<std::string>> MountPoint;
     };
     llvm::Optional<Located<ExternalBlock>> External;
+    // Whether the standard library visible from this file should be indexed.
+    // This makes all standard library symbols available, included or not.
+    llvm::Optional<Located<bool>> StandardLibrary;
   };
   IndexBlock Index;
 
