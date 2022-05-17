@@ -66,6 +66,8 @@ static void setContextOpaquePointers(LLLexer &L, LLVMContext &C) {
     // explicit "ptr".
     if (K == lltok::star || K == lltok::Error || K == lltok::Eof ||
         isa_and_nonnull<PointerType>(L.getTyVal())) {
+      if (K == lltok::star)
+        C.setOpaquePointers(false);
       return;
     }
   }
