@@ -2363,16 +2363,25 @@ public:
   // Utility creation methods
   //===--------------------------------------------------------------------===//
 
-  /// Return an i1 value testing if \p Arg is null.
+  /// Return a boolean value testing if \p Arg == 0.
   Value *CreateIsNull(Value *Arg, const Twine &Name = "") {
-    return CreateICmpEQ(Arg, Constant::getNullValue(Arg->getType()),
-                        Name);
+    return CreateICmpEQ(Arg, ConstantInt::getNullValue(Arg->getType()), Name);
   }
 
-  /// Return an i1 value testing if \p Arg is not null.
+  /// Return a boolean value testing if \p Arg != 0.
   Value *CreateIsNotNull(Value *Arg, const Twine &Name = "") {
-    return CreateICmpNE(Arg, Constant::getNullValue(Arg->getType()),
-                        Name);
+    return CreateICmpNE(Arg, ConstantInt::getNullValue(Arg->getType()), Name);
+  }
+
+  /// Return a boolean value testing if \p Arg < 0.
+  Value *CreateIsNeg(Value *Arg, const Twine &Name = "") {
+    return CreateICmpSLT(Arg, ConstantInt::getNullValue(Arg->getType()), Name);
+  }
+
+  /// Return a boolean value testing if \p Arg > -1.
+  Value *CreateIsNotNeg(Value *Arg, const Twine &Name = "") {
+    return CreateICmpSGT(Arg, ConstantInt::getAllOnesValue(Arg->getType()),
+                         Name);
   }
 
   /// Return the i64 difference between two pointer values, dividing out

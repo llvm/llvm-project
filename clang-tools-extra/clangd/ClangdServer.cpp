@@ -148,7 +148,9 @@ ClangdServer::ClangdServer(const GlobalCompilationDatabase &CDB,
     : FeatureModules(Opts.FeatureModules), CDB(CDB), TFS(TFS),
       DynamicIdx(Opts.BuildDynamicSymbolIndex ? new FileIndex() : nullptr),
       ClangTidyProvider(Opts.ClangTidyProvider),
-      UseDirtyHeaders(Opts.UseDirtyHeaders), WorkspaceRoot(Opts.WorkspaceRoot),
+      UseDirtyHeaders(Opts.UseDirtyHeaders),
+      PreambleParseForwardingFunctions(Opts.PreambleParseForwardingFunctions),
+      WorkspaceRoot(Opts.WorkspaceRoot),
       Transient(Opts.ImplicitCancellation ? TUScheduler::InvalidateOnUpdate
                                           : TUScheduler::NoInvalidation),
       DirtyFS(std::make_unique<DraftStoreFS>(TFS, DraftMgr)) {
@@ -217,6 +219,7 @@ void ClangdServer::addDocument(PathRef File, llvm::StringRef Contents,
                                WantDiagnostics WantDiags, bool ForceRebuild) {
   std::string ActualVersion = DraftMgr.addDraft(File, Version, Contents);
   ParseOptions Opts;
+  Opts.PreambleParseForwardingFunctions = PreambleParseForwardingFunctions;
 
   // Compile command is set asynchronously during update, as it can be slow.
   ParseInputs Inputs;
@@ -910,7 +913,7 @@ void ClangdServer::getAST(PathRef File, llvm::Optional<Range> R,
           // It's safe to pass in the TU, as dumpAST() does not
           // deserialize the preamble.
           auto Node = DynTypedNode::create(
-                *Inputs->AST.getASTContext().getTranslationUnitDecl());
+              *Inputs->AST.getASTContext().getTranslationUnitDecl());
           return CB(dumpAST(Node, Inputs->AST.getTokens(),
                             Inputs->AST.getASTContext()));
         }

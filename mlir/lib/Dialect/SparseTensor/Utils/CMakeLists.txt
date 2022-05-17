@@ -6,6 +6,7 @@ add_mlir_dialect_library(MLIRSparseTensorUtils
 
   LINK_LIBS PUBLIC
   MLIRArithmetic
+  MLIRComplex
   MLIRIR
   MLIRLinalg
 )

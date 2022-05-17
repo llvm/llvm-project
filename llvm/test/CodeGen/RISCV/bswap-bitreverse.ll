@@ -1635,3 +1635,77 @@ define i64 @test_bitreverse_bswap_i64(i64 %a) nounwind {
   %tmp2 = call i64 @llvm.bswap.i64(i64 %tmp)
   ret i64 %tmp2
 }
+
+define i32 @pr55484(i32 %0) {
+; RV32I-LABEL: pr55484:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    srli a1, a0, 8
+; RV32I-NEXT:    slli a0, a0, 8
+; RV32I-NEXT:    or a0, a1, a0
+; RV32I-NEXT:    slli a0, a0, 16
+; RV32I-NEXT:    srai a0, a0, 16
+; RV32I-NEXT:    ret
+;
+; RV64I-LABEL: pr55484:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    srli a1, a0, 8
+; RV64I-NEXT:    slli a0, a0, 8
+; RV64I-NEXT:    or a0, a1, a0
+; RV64I-NEXT:    slli a0, a0, 48
+; RV64I-NEXT:    srai a0, a0, 48
+; RV64I-NEXT:    ret
+;
+; RV32ZBB-LABEL: pr55484:
+; RV32ZBB:       # %bb.0:
+; RV32ZBB-NEXT:    rev8 a0, a0
+; RV32ZBB-NEXT:    srai a0, a0, 16
+; RV32ZBB-NEXT:    ret
+;
+; RV64ZBB-LABEL: pr55484:
+; RV64ZBB:       # %bb.0:
+; RV64ZBB-NEXT:    rev8 a0, a0
+; RV64ZBB-NEXT:    srai a0, a0, 48
+; RV64ZBB-NEXT:    ret
+;
+; RV32ZBKB-LABEL: pr55484:
+; RV32ZBKB:       # %bb.0:
+; RV32ZBKB-NEXT:    srli a1, a0, 8
+; RV32ZBKB-NEXT:    slli a0, a0, 8
+; RV32ZBKB-NEXT:    or a0, a1, a0
+; RV32ZBKB-NEXT:    slli a0, a0, 16
+; RV32ZBKB-NEXT:    srai a0, a0, 16
+; RV32ZBKB-NEXT:    ret
+;
+; RV64ZBKB-LABEL: pr55484:
+; RV64ZBKB:       # %bb.0:
+; RV64ZBKB-NEXT:    srli a1, a0, 8
+; RV64ZBKB-NEXT:    slli a0, a0, 8
+; RV64ZBKB-NEXT:    or a0, a1, a0
+; RV64ZBKB-NEXT:    slli a0, a0, 48
+; RV64ZBKB-NEXT:    srai a0, a0, 48
+; RV64ZBKB-NEXT:    ret
+;
+; RV32ZBP-LABEL: pr55484:
+; RV32ZBP:       # %bb.0:
+; RV32ZBP-NEXT:    srli a1, a0, 8
+; RV32ZBP-NEXT:    slli a0, a0, 8
+; RV32ZBP-NEXT:    or a0, a1, a0
+; RV32ZBP-NEXT:    slli a0, a0, 16
+; RV32ZBP-NEXT:    srai a0, a0, 16
+; RV32ZBP-NEXT:    ret
+;
+; RV64ZBP-LABEL: pr55484:
+; RV64ZBP:       # %bb.0:
+; RV64ZBP-NEXT:    srli a1, a0, 8
+; RV64ZBP-NEXT:    slli a0, a0, 8
+; RV64ZBP-NEXT:    or a0, a1, a0
+; RV64ZBP-NEXT:    slli a0, a0, 48
+; RV64ZBP-NEXT:    srai a0, a0, 48
+; RV64ZBP-NEXT:    ret
+  %2 = lshr i32 %0, 8
+  %3 = shl i32 %0, 8
+  %4 = or i32 %2, %3
+  %5 = trunc i32 %4 to i16
+  %6 = sext i16 %5 to i32
+  ret i32 %6
+}

@@ -990,6 +990,8 @@ def err_super_in_lambda_unsupported : Error<
 
 def err_pragma_expected_file_scope : Error<
   "'#pragma %0' can only appear at file scope">;
+def err_pragma_alloc_text_c_linkage: Error<
+  "'#pragma alloc_text' is applicable only to functions with C linkage">;
 
 def warn_pragma_unused_undeclared_var : Warning<
   "undeclared variable %0 used as an argument for '#pragma unused'">,
@@ -11243,6 +11245,9 @@ def warn_always_inline_coroutine : Warning<
   "this coroutine may be split into pieces; not every piece is guaranteed to be inlined"
   >,
   InGroup<AlwaysInlineCoroutine>;
+def err_coroutine_unusable_new : Error<
+  "'operator new' provided by %0 is not usable with the function signature of %1"
+>;
 } // end of coroutines issue category
 
 let CategoryName = "Documentation Issue" in {

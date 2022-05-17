@@ -27,17 +27,13 @@
 // CHECK-NEXT:         0xe201              ; add fp, sp, #8
 // CHECK-NEXT:         0xe4                ; end
 // CHECK-NEXT:       ]
-// CHECK-NEXT:       EpilogueScopes [
-// CHECK-NEXT:         EpilogueScope {
-// CHECK:                Opcodes [
-// CHECK-NEXT:             0xc904              ; ldp x23, x24, [sp, #32]
-// CHECK-NEXT:             0xe6                ; restore next
-// CHECK-NEXT:             0xcc83              ; ldp x21, x22, [sp], #32
-// CHECK-NEXT:             0x24                ; ldp x19, x20, [sp], #32
-// CHECK-NEXT:             0xcc1f              ; ldp x19, x20, [sp], #256
-// CHECK-NEXT:             0xe4                ; end
-// CHECK-NEXT:           ]
-// CHECK-NEXT:         }
+// CHECK-NEXT:       Epilogue [
+// CHECK-NEXT:         0xc904              ; ldp x23, x24, [sp, #32]
+// CHECK-NEXT:         0xe6                ; restore next
+// CHECK-NEXT:         0xcc83              ; ldp x21, x22, [sp], #32
+// CHECK-NEXT:         0x24                ; ldp x19, x20, [sp], #32
+// CHECK-NEXT:         0xcc1f              ; ldp x19, x20, [sp], #256
+// CHECK-NEXT:         0xe4                ; end
 // CHECK-NEXT:       ]
 // CHECK-NEXT:     }
 // CHECK-NEXT:   }
