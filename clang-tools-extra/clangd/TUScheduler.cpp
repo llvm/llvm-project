@@ -1013,10 +1013,9 @@ void PreambleThread::build(Request Req) {
   bool IsFirstPreamble = !LatestBuild;
   LatestBuild = clang::clangd::buildPreamble(
       FileName, *Req.CI, Inputs, StoreInMemory,
-      [&](ASTContext &Ctx, Preprocessor &PP,
-          const CanonicalIncludes &CanonIncludes) {
-        Callbacks.onPreambleAST(FileName, Inputs.Version, *Req.CI, Ctx, PP,
-                                CanonIncludes);
+      [this, Version(Inputs.Version)](ASTContext &Ctx, Preprocessor &PP,
+                                      const CanonicalIncludes &CanonIncludes) {
+        Callbacks.onPreambleAST(FileName, Version, Ctx, PP, CanonIncludes);
       },
       &Stats);
   if (!LatestBuild)

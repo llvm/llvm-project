@@ -425,7 +425,12 @@ FileIndex::FileIndex()
       MainFileSymbols(IndexContents::All),
       MainFileIndex(std::make_unique<MemIndex>()) {}
 
-void FileIndex::updatePreamble(IndexFileIn IF) {
+void FileIndex::updatePreamble(PathRef Path, llvm::StringRef Version,
+                               ASTContext &AST, Preprocessor &PP,
+                               const CanonicalIncludes &Includes) {
+  IndexFileIn IF;
+  std::tie(IF.Symbols, std::ignore, IF.Relations) =
+      indexHeaderSymbols(Version, AST, PP, Includes);
   FileShardedIndex ShardedIndex(std::move(IF));
   for (auto Uri : ShardedIndex.getAllSources()) {
     auto IF = ShardedIndex.getShard(Uri);
@@ -454,15 +459,6 @@ void FileIndex::updatePreamble(IndexFileIn IF) {
         "{0} bytes",
         PreambleIndex.estimateMemoryUsage());
   }
-}
-
-void FileIndex::updatePreamble(PathRef Path, llvm::StringRef Version,
-                               ASTContext &AST, Preprocessor &PP,
-                               const CanonicalIncludes &Includes) {
-  IndexFileIn IF;
-  std::tie(IF.Symbols, std::ignore, IF.Relations) =
-      indexHeaderSymbols(Version, AST, PP, Includes);
-  updatePreamble(std::move(IF));
 }
 
 void FileIndex::updateMain(PathRef Path, ParsedAST &AST) {
