@@ -215,13 +215,10 @@ public:
            MaskAgnostic == Other.MaskAgnostic;
   }
 
-  bool hasCompatibleVTYPE(const VSETVLIInfo &Require, bool Strict) const {
+  bool hasCompatibleVTYPE(const VSETVLIInfo &Require) const {
     // Simple case, see if full VTYPE matches.
     if (hasSameVTYPE(Require))
       return true;
-
-    if (Strict)
-      return false;
 
     // If this is a mask reg operation, it only cares about VLMAX.
     // FIXME: Mask reg operations are probably ok if "this" VLMAX is larger
@@ -238,7 +235,7 @@ public:
   // Determine whether the vector instructions requirements represented by
   // Require are compatible with the previous vsetvli instruction represented
   // by this.
-  bool isCompatible(const VSETVLIInfo &Require, bool Strict) const {
+  bool isCompatible(const VSETVLIInfo &Require) const {
     assert(isValid() && Require.isValid() &&
            "Can't compare invalid VSETVLIInfos");
     assert(!Require.SEWLMULRatioOnly &&
@@ -253,16 +250,14 @@ public:
 
     // If the instruction doesn't need an AVLReg and the SEW matches, consider
     // it compatible.
-    if (!Strict && Require.hasAVLReg() &&
-        Require.AVLReg == RISCV::NoRegister) {
+    if (Require.hasAVLReg() && Require.AVLReg == RISCV::NoRegister)
       if (SEW == Require.SEW)
         return true;
-    }
 
     // For vmv.s.x and vfmv.s.f, there is only two behaviors, VL = 0 and VL > 0.
     // So it's compatible when we could make sure that both VL be the same
     // situation.
-    if (!Strict && Require.ScalarMovOp && Require.hasAVLImm() &&
+    if (Require.ScalarMovOp && Require.hasAVLImm() &&
         ((hasNonZeroAVL() && Require.hasNonZeroAVL()) ||
          (hasZeroAVL() && Require.hasZeroAVL())) &&
         hasSameSEW(Require) && hasSamePolicy(Require))
@@ -272,12 +267,8 @@ public:
     if (!hasSameAVL(Require))
       return false;
 
-    if (hasCompatibleVTYPE(Require, Strict))
+    if (hasCompatibleVTYPE(Require))
       return true;
-
-    // Strict matches must ensure a full VTYPE match.
-    if (Strict)
-      return false;
 
     // Store instructions don't use the policy fields.
     // TODO: Move into hasCompatibleVTYPE?
@@ -706,7 +697,7 @@ static VSETVLIInfo getInfoForVSETVLI(const MachineInstr &MI) {
 
 bool RISCVInsertVSETVLI::needVSETVLI(const VSETVLIInfo &Require,
                                      const VSETVLIInfo &CurInfo) {
-  if (CurInfo.isCompatible(Require, /*Strict*/ false))
+  if (CurInfo.isCompatible(Require))
     return false;
 
   // We didn't find a compatible value. If our AVL is a virtual register,
@@ -715,7 +706,7 @@ bool RISCVInsertVSETVLI::needVSETVLI(const VSETVLIInfo &Require,
   // VSETVLI here.
   if (!CurInfo.isUnknown() && Require.hasAVLReg() &&
       Require.getAVLReg().isVirtual() && !CurInfo.hasSEWLMULRatioOnly() &&
-      CurInfo.hasCompatibleVTYPE(Require, /*Strict*/ false)) {
+      CurInfo.hasCompatibleVTYPE(Require)) {
     if (MachineInstr *DefMI = MRI->getVRegDef(Require.getAVLReg())) {
       if (isVectorConfigInstr(*DefMI)) {
         VSETVLIInfo DefInfo = getInfoForVSETVLI(*DefMI);
@@ -1046,8 +1037,7 @@ bool RISCVInsertVSETVLI::needVSETVLIPHI(const VSETVLIInfo &Require,
     const BlockData &PBBInfo = BlockInfo[PBB->getNumber()];
     // If the exit from the predecessor has the VTYPE we are looking for
     // we might be able to avoid a VSETVLI.
-    if (PBBInfo.Exit.isUnknown() ||
-        !PBBInfo.Exit.hasCompatibleVTYPE(Require, /*Strict*/ false))
+    if (PBBInfo.Exit.isUnknown() || !PBBInfo.Exit.hasCompatibleVTYPE(Require))
       return true;
 
     // We need the PHI input to the be the output of a VSET(I)VLI.
