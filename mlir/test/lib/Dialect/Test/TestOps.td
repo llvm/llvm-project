@@ -324,7 +324,7 @@ def TestBitEnum
       ]> {
   let genSpecializedAttr = 0;
   let cppNamespace = "test";
-  let separator = ",";
+  let separator = ", ";
 }
 
 // Define the enum attribute.
@@ -347,7 +347,7 @@ def TestBitEnumVerticalBar
       ]> {
   let genSpecializedAttr = 0;
   let cppNamespace = "test";
-  let separator = "|";
+  let separator = " | ";
 }
 
 def TestBitEnumVerticalBarAttr

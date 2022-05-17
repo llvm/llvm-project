@@ -2884,26 +2884,9 @@ bool mlir::LLVM::satisfiesLLVMModule(Operation *op) {
          op->hasTrait<OpTrait::IsIsolatedFromAbove>();
 }
 
-static constexpr const FastmathFlags fastmathFlagsList[] = {
-    // clang-format off
-    FastmathFlags::nnan,
-    FastmathFlags::ninf,
-    FastmathFlags::nsz,
-    FastmathFlags::arcp,
-    FastmathFlags::contract,
-    FastmathFlags::afn,
-    FastmathFlags::reassoc,
-    FastmathFlags::fast,
-    // clang-format on
-};
-
 void FMFAttr::print(AsmPrinter &printer) const {
   printer << "<";
-  auto flags = llvm::make_filter_range(fastmathFlagsList, [&](auto flag) {
-    return bitEnumContains(this->getFlags(), flag);
-  });
-  llvm::interleaveComma(flags, printer,
-                        [&](auto flag) { printer << stringifyEnum(flag); });
+  printer << stringifyFastmathFlags(this->getFlags());
   printer << ">";
 }
 
