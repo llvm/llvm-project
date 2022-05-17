@@ -131,17 +131,17 @@ define amdgpu_kernel void @s_insertelement_v2i16_0_multi_use_hi_reg(<2 x i16> ad
 ; CI-NEXT:    s_load_dword s4, s[4:5], 0xc
 ; CI-NEXT:    s_waitcnt lgkmcnt(0)
 ; CI-NEXT:    s_load_dword s2, s[2:3], 0x0
-; CI-NEXT:    v_mov_b32_e32 v1, s1
 ; CI-NEXT:    v_mov_b32_e32 v0, s0
+; CI-NEXT:    v_mov_b32_e32 v1, s1
 ; CI-NEXT:    s_and_b32 s0, s4, 0xffff
 ; CI-NEXT:    s_waitcnt lgkmcnt(0)
-; CI-NEXT:    s_lshr_b32 s1, s2, 16
-; CI-NEXT:    s_lshl_b32 s2, s1, 16
-; CI-NEXT:    s_or_b32 s0, s0, s2
+; CI-NEXT:    s_and_b32 s1, s2, 0xffff0000
+; CI-NEXT:    s_or_b32 s0, s0, s1
 ; CI-NEXT:    v_mov_b32_e32 v2, s0
+; CI-NEXT:    s_lshr_b32 s2, s2, 16
 ; CI-NEXT:    flat_store_dword v[0:1], v2
 ; CI-NEXT:    ;;#ASMSTART
-; CI-NEXT:    ; use s1
+; CI-NEXT:    ; use s2
 ; CI-NEXT:    ;;#ASMEND
 ; CI-NEXT:    s_endpgm
   %vec = load <2 x i16>, <2 x i16> addrspace(4)* %vec.ptr

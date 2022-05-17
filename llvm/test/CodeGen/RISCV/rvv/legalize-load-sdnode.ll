@@ -36,9 +36,8 @@ define <vscale x 7 x half> @load_nxv7f16(<vscale x 7 x half>* %ptr, <vscale x 7 
 ; CHECK-LABEL: load_nxv7f16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    csrr a2, vlenb
-; CHECK-NEXT:    srli a2, a2, 3
-; CHECK-NEXT:    slli a3, a2, 3
-; CHECK-NEXT:    sub a2, a3, a2
+; CHECK-NEXT:    srli a3, a2, 3
+; CHECK-NEXT:    sub a2, a2, a3
 ; CHECK-NEXT:    vsetvli zero, a2, e16, m2, ta, mu
 ; CHECK-NEXT:    vle16.v v8, (a0)
 ; CHECK-NEXT:    vse16.v v8, (a1)

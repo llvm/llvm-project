@@ -123,15 +123,10 @@ define void @fun2(<8 x i32> %src, <8 x i31>* %p)
 define void @fun3(<3 x i31>* %src, <3 x i31>* %p)
 ; CHECK-LABEL: fun3:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    l %r0, 8(%r2)
+; CHECK-NEXT:    llgf %r0, 8(%r2)
 ; CHECK-NEXT:    lg %r1, 0(%r2)
-; CHECK-NEXT:    sllg %r2, %r1, 32
-; CHECK-NEXT:    lr %r2, %r0
-; CHECK-NEXT:    st %r0, 8(%r3)
-; CHECK-NEXT:    srlg %r0, %r2, 32
-; CHECK-NEXT:    lr %r1, %r0
-; CHECK-NEXT:    nihh %r1, 8191
 ; CHECK-NEXT:    stg %r1, 0(%r3)
+; CHECK-NEXT:    st %r0, 8(%r3)
 ; CHECK-NEXT:    br %r14
 {
   %tmp = load <3 x i31>, <3 x i31>* %src

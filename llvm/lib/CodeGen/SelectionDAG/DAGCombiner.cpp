@@ -8937,8 +8937,8 @@ SDValue DAGCombiner::visitSHL(SDNode *N) {
     //                               (and (srl x, (sub c1, c2), MASK)
     // Only fold this if the inner shift has no other uses -- if it does,
     // folding this will increase the total number of instructions.
-    // TODO - drop hasOneUse requirement if c1 == c2?
-    if (N0.getOpcode() == ISD::SRL && N0.hasOneUse() &&
+    if (N0.getOpcode() == ISD::SRL &&
+        (N0.getOperand(1) == N1 || N0.hasOneUse()) &&
         TLI.shouldFoldConstantShiftPairToMask(N, Level)) {
       if (ISD::matchBinaryPredicate(N1, N0.getOperand(1), MatchShiftAmount,
                                     /*AllowUndefs*/ false,
