@@ -29,6 +29,7 @@ enum class SymbolOrigin : uint16_t {
   Preamble = 1 << 6,   // From the dynamic index of preambles.
                        // 7 reserved
   Background = 1 << 8, // From the automatic project index.
+  StdLib = 1 << 9,     // Standard library index.
 };
 
 inline SymbolOrigin operator|(SymbolOrigin A, SymbolOrigin B) {
