@@ -2306,10 +2306,10 @@ static Instruction *foldCastShuffle(ShuffleVectorInst &Shuf,
   if (ShufTy != ShufOpTy)
     return nullptr;
 
-  // TODO: Allow element-size-changing casts?
+  // TODO: Allow element-size-decreasing casts (ex: fptosi float to i8)?
   assert(isa<FixedVectorType>(CastSrcTy) && isa<FixedVectorType>(ShufOpTy) &&
          "Expected fixed vector operands for casts and binary shuffle");
-  if (CastSrcTy->getPrimitiveSizeInBits() != ShufOpTy->getPrimitiveSizeInBits())
+  if (CastSrcTy->getPrimitiveSizeInBits() > ShufOpTy->getPrimitiveSizeInBits())
     return nullptr;
 
   // At least one of the operands must have only one use (the shuffle).
