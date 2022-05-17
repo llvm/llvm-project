@@ -149,8 +149,8 @@ define amdgpu_kernel void @madak_inline_imm_f32(float addrspace(1)* noalias %out
 ; GCN-DAG:      {{buffer|flat|global}}_load_{{dword|b32}}{{(_addtid)?}} [[VA:v[0-9]+]]
 ; GCN-NOT:      v_madak_f32
 ; GFX6_8_9:     v_mac_f32_e32 [[VK]], [[SB]], [[VA]]
-; GFX10-MAD:    v_mad_f32 v{{[0-9]+}}, [[VA]], [[SB]], 0x41200000
-; GFX10-FMA:    v_fma_f32 v{{[0-9]+}}, [[VA]], [[SB]], 0x41200000
+; GFX10-MAD:    v_madak_f32 v{{[0-9]+}}, [[SB]], [[VA]], 0x41200000
+; GFX10-FMA:    v_fmaak_f32 v{{[0-9]+}}, [[SB]], [[VA]], 0x41200000
 ; GFX940-FMA:   v_fmac_f32_e32 v{{[0-9]+}}, [[SB]], [[VA]]
 ; GFX11-MAD:    v_mul_f32_e32 [[VMUL:v[0-9]+]], [[SB]], [[VA]]
 ; GFX11-MAD:    v_add_f32_e32 {{v[0-9]+}}, 0x41200000, [[VMUL]]

@@ -149,6 +149,9 @@ Bug Fixes
   because there is no way to fully qualify the enumerator name, so this
   "extension" was unintentional and useless. This fixes
   `Issue 42372 <https://github.com/llvm/llvm-project/issues/42372>`_.
+- Clang shouldn't lookup allocation function in global scope for coroutines
+  in case it found the allocation function name in the promise_type body.
+  This fixes Issue `Issue 54881 <https://github.com/llvm/llvm-project/issues/54881>`_.
 
 Improvements to Clang's diagnostics
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -281,6 +284,9 @@ New Pragmas in Clang
 - Added support for MSVC's ``#pragma function``, which tells the compiler to
   generate calls to functions listed in the pragma instead of using the
   builtins.
+- Added support for MSVC's ``#pragma alloc_text``. The pragma names the code
+  section functions are placed in. The pragma only applies to functions with
+  C linkage.
 
 - ...
 

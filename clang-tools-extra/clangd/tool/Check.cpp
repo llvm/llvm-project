@@ -128,6 +128,8 @@ public:
     Inputs.CompileCommand = Cmd;
     Inputs.TFS = &TFS;
     Inputs.ClangTidyProvider = Opts.ClangTidyProvider;
+    Inputs.Opts.PreambleParseForwardingFunctions =
+        Opts.PreambleParseForwardingFunctions;
     if (Contents.hasValue()) {
       Inputs.Contents = *Contents;
       log("Imaginary source file contents:\n{0}", Inputs.Contents);
@@ -252,6 +254,9 @@ public:
 
       auto Hover = getHover(*AST, Pos, Style, &Index);
       vlog("    hover: {0}", Hover.hasValue());
+
+      unsigned DocHighlights = findDocumentHighlights(*AST, Pos).size();
+      vlog("    documentHighlight: {0}", DocHighlights);
 
       if (EnableCodeCompletion) {
         Position EndPos = offsetToPosition(Inputs.Contents, End);

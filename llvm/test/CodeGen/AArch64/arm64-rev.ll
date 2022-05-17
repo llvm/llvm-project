@@ -949,3 +949,24 @@ entry:
   %7 = or i64 %5, %6
   ret i64 %7
 }
+
+define i32 @pr55484(i32 %0) {
+; CHECK-LABEL: pr55484:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    rev w8, w0
+; CHECK-NEXT:    asr w0, w8, #16
+; CHECK-NEXT:    ret
+;
+; GISEL-LABEL: pr55484:
+; GISEL:       // %bb.0:
+; GISEL-NEXT:    lsl w8, w0, #8
+; GISEL-NEXT:    orr w8, w8, w0, lsr #8
+; GISEL-NEXT:    sxth w0, w8
+; GISEL-NEXT:    ret
+  %2 = lshr i32 %0, 8
+  %3 = shl i32 %0, 8
+  %4 = or i32 %2, %3
+  %5 = trunc i32 %4 to i16
+  %6 = sext i16 %5 to i32
+  ret i32 %6
+}

@@ -1788,7 +1788,9 @@ bool isGFX12Plus(const MCSubtargetInfo &STI) {
   return isGFX12(STI);
 }
 
-bool isNotGFX11Plus(const MCSubtargetInfo &STI) { return !isGFX11Plus(STI); }
+bool isNotGFX11Plus(const MCSubtargetInfo &STI) {
+  return !isGFX11Plus(STI);
+}
 
 bool isNotGFX10Plus(const MCSubtargetInfo &STI) {
   return isSI(STI) || isCI(STI) || isVI(STI) || isGFX9(STI);
