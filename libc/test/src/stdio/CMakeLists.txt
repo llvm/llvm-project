@@ -73,6 +73,16 @@ add_libc_unittest(
     libc.src.stdio.sprintf
 )
 
+add_libc_unittest(
+  snprintf_test
+  SUITE
+    libc_stdio_unittests
+  SRCS
+    snprintf_test.cpp
+  DEPENDS
+    libc.src.stdio.snprintf
+)
+
 add_subdirectory(printf_core)
 
 add_subdirectory(testdata)
