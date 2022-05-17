@@ -16,6 +16,7 @@ static_library("Linux") {
   include_dirs = [ "//lldb/source" ]
   sources = [
     "IntelPTCollector.cpp",
+    "IntelPTMultiCoreTrace.cpp",
     "IntelPTPerThreadProcessTrace.cpp",
     "IntelPTSingleBufferTrace.cpp",
     "IntelPTThreadTraceCollection.cpp",
