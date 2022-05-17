@@ -998,7 +998,7 @@ void VPlan::execute(VPTransformState *State) {
         // TODO: Split off the case that all users of a pointer phi are scalar
         // from the VPWidenPointerInductionRecipe.
         if (all_of(WidenPhi->users(), [WidenPhi](const VPUser *U) {
-              return cast<VPRecipeBase>(U)->usesScalars(WidenPhi);
+              return U->usesScalars(WidenPhi);
             }))
           continue;
 
@@ -1769,9 +1769,8 @@ void VPSlotTracker::assignSlots(const VPlan &Plan) {
 }
 
 bool vputils::onlyFirstLaneUsed(VPValue *Def) {
-  return all_of(Def->users(), [Def](VPUser *U) {
-    return cast<VPRecipeBase>(U)->onlyFirstLaneUsed(Def);
-  });
+  return all_of(Def->users(),
+                [Def](VPUser *U) { return U->onlyFirstLaneUsed(Def); });
 }
 
 VPValue *vputils::getOrCreateVPValueForSCEVExpr(VPlan &Plan, const SCEV *Expr,

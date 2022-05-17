@@ -761,22 +761,6 @@ public:
   bool mayReadOrWriteMemory() const {
     return mayReadFromMemory() || mayWriteToMemory();
   }
-
-  /// Returns true if the recipe only uses the first lane of operand \p Op.
-  /// Conservatively returns false.
-  virtual bool onlyFirstLaneUsed(const VPValue *Op) const {
-    assert(is_contained(operands(), Op) &&
-           "Op must be an operand of the recipe");
-    return false;
-  }
-
-  /// Returns true if the recipe uses scalars of operand \p Op. Conservatively
-  /// returns if only first (scalar) lane is used, as default.
-  virtual bool usesScalars(const VPValue *Op) const {
-    assert(is_contained(operands(), Op) &&
-           "Op must be an operand of the recipe");
-    return onlyFirstLaneUsed(Op);
-  }
 };
 
 inline bool VPUser::classof(const VPDef *Def) {
@@ -1425,9 +1409,8 @@ public:
            "Op must be an operand of the recipe");
     // Recursing through Blend recipes only, must terminate at header phi's the
     // latest.
-    return all_of(users(), [this](VPUser *U) {
-      return cast<VPRecipeBase>(U)->onlyFirstLaneUsed(this);
-    });
+    return all_of(users(),
+                  [this](VPUser *U) { return U->onlyFirstLaneUsed(this); });
   }
 };
 
