@@ -583,3 +583,25 @@ define <4 x half> @shuffle_vec(<4 x half>* %arg0, <4 x half>* %arg1) {
   %shuffle = shufflevector <4 x half> %val0, <4 x half> %val1, <4 x i32> <i32 2, i32 3, i32 undef, i32 undef>
   ret <4 x half> %shuffle
 }
+
+; ExtractElement
+; CHECK-LABEL: llvm.func @extract_element
+define half @extract_element(<4 x half>* %vec, i32 %idx) {
+  ; CHECK: %[[V0:.+]] = llvm.load %{{.+}} : !llvm.ptr<vector<4xf16>>
+  %val0 = load <4 x half>, <4 x half>* %vec
+  ; CHECK: %[[V1:.+]] = llvm.extractelement %[[V0]][%{{.+}} : i32] : vector<4xf16>
+  %r = extractelement <4 x half> %val0, i32 %idx
+  ; CHECK: llvm.return %[[V1]]
+  ret half %r
+}
+
+; InsertElement
+; CHECK-LABEL: llvm.func @insert_element
+define <4 x half> @insert_element(<4 x half>* %vec, half %v, i32 %idx) {
+  ; CHECK: %[[V0:.+]] = llvm.load %{{.+}} : !llvm.ptr<vector<4xf16>>
+  %val0 = load <4 x half>, <4 x half>* %vec
+  ; CHECK: %[[V1:.+]] = llvm.insertelement %{{.+}}, %[[V0]][%{{.+}} : i32] : vector<4xf16>
+  %r = insertelement <4 x half> %val0, half %v, i32 %idx
+  ; CHECK: llvm.return %[[V1]]
+  ret <4 x half> %r
+}
