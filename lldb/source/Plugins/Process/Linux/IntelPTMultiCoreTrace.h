@@ -44,10 +44,19 @@ public:
   ///
   /// \param[in] callback.core_trace
   ///   The single-buffer trace instance for the given core.
-  void
-  ForEachCore(std::function<void(lldb::core_id_t core_id,
-                                 const IntelPTSingleBufferTrace &core_trace)>
-                  callback);
+  void ForEachCore(std::function<void(lldb::core_id_t core_id,
+                                      IntelPTSingleBufferTrace &core_trace)>
+                       callback);
+
+  /// This method should be invoked as early as possible whenever the process
+  /// resumes or stops so that intel-pt collection is not enabled when
+  /// the process is not running. This is done to prevent polluting the core
+  /// traces with executions of unrelated processes, which increases the data
+  /// loss of the target process, given that core traces don't filter by
+  /// process.
+  /// A possible way to avoid this is to use CR3 filtering, which is equivalent
+  /// to process filtering, but the perf_event API doesn't support it.
+  void OnProcessStateChanged(lldb::StateType state);
 
 private:
   IntelPTMultiCoreTrace(
@@ -56,6 +65,10 @@ private:
       : m_traces_per_core(std::move(traces_per_core)) {}
 
   llvm::DenseMap<lldb::core_id_t, IntelPTSingleBufferTraceUP> m_traces_per_core;
+
+  /// The initial state is stopped because tracing can only start when the
+  /// process is paused.
+  lldb::StateType m_process_state = lldb::StateType::eStateStopped;
 };
 
 } // namespace process_linux

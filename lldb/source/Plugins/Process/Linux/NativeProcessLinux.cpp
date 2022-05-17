@@ -1665,6 +1665,11 @@ void NativeProcessLinux::StopTrackingThread(NativeThreadLinux &thread) {
   SignalIfAllThreadsStopped();
 }
 
+void NativeProcessLinux::NotifyTracersProcessStateChanged(
+    lldb::StateType state) {
+  m_intel_pt_collector.OnProcessStateChanged(state);
+}
+
 Status NativeProcessLinux::NotifyTracersOfNewThread(lldb::tid_t tid) {
   Log *log = GetLog(POSIXLog::Thread);
   Status error(m_intel_pt_collector.OnThreadCreated(tid));
