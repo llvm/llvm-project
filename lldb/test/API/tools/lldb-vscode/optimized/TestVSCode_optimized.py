@@ -33,3 +33,22 @@ class TestVSCode_optimized(lldbvscode_testcase.VSCodeTestCaseBase):
         self.assertTrue(leaf_frame['name'].endswith(' [opt]'))
         parent_frame = self.vscode.get_stackFrame(frameIndex=1)
         self.assertTrue(parent_frame['name'].endswith(' [opt]'))
+
+    @skipIfWindows
+    @skipIfRemote
+    def test_optimized_variable(self):
+        ''' Test optimized variable value contains error.
+        '''
+        program = self.getBuildArtifact("a.out")
+        self.build_and_launch(program)
+        source = 'main.cpp'
+        breakpoint_line = line_number(source, '// breakpoint 2')
+        lines = [breakpoint_line]
+        # Set breakpoint in the thread function so we can step the threads
+        breakpoint_ids = self.set_source_breakpoints(source, lines)
+        self.assertEqual(len(breakpoint_ids), len(lines),
+                        "expect correct number of breakpoints")
+        self.continue_to_breakpoints(breakpoint_ids)
+        optimized_variable = self.vscode.get_local_variable('optimized')
+
+        self.assertTrue(optimized_variable['value'].startswith('<error:'))
