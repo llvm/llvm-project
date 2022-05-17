@@ -15,6 +15,7 @@
 ///
 //===----------------------------------------------------------------------===//
 
+#include "llvm/DebugInfo/Symbolize/DIFetcher.h"
 #include "llvm/Debuginfod/Debuginfod.h"
 #include "llvm/Debuginfod/HTTPClient.h"
 #include "llvm/Support/CommandLine.h"
@@ -53,6 +54,11 @@ static cl::opt<bool>
                           "path to the cached artifact on disk."),
                  cl::cat(DebuginfodFindCategory));
 
+static cl::list<std::string> DebugFileDirectory(
+    "debug-file-directory",
+    cl::desc("Path to directory where to look for debug files."),
+    cl::cat(DebuginfodFindCategory));
+
 [[noreturn]] static void helpExit() {
   errs() << "Must specify exactly one of --executable, "
             "--source=/path/to/file, or --debuginfo.";
@@ -60,6 +66,8 @@ static cl::opt<bool>
 }
 
 ExitOnError ExitOnErr;
+
+static std::string fetchDebugInfo(ArrayRef<uint8_t> BuildID);
 
 int main(int argc, char **argv) {
   InitLLVM X(argc, argv);
@@ -92,7 +100,7 @@ int main(int argc, char **argv) {
   else if (FetchExecutable)
     Path = ExitOnErr(getCachedOrDownloadExecutable(ID));
   else if (FetchDebuginfo)
-    Path = ExitOnErr(getCachedOrDownloadDebuginfo(ID));
+    Path = fetchDebugInfo(ID);
   else
     llvm_unreachable("We have already checked that exactly one of the above "
                      "conditions is true.");
@@ -106,4 +114,14 @@ int main(int argc, char **argv) {
   } else
     // Print the path to the cached artifact file.
     outs() << Path << "\n";
+}
+
+// Find a debug binary in local build ID directories and via debuginfod.
+std::string fetchDebugInfo(ArrayRef<uint8_t> BuildID) {
+  if (!DebugFileDirectory.empty()) {
+    symbolize::LocalDIFetcher Fetcher(DebugFileDirectory);
+    if (Optional<std::string> LocalPath = Fetcher.fetchBuildID(BuildID))
+      return *LocalPath;
+  }
+  return ExitOnErr(getCachedOrDownloadDebuginfo(BuildID));
 }
