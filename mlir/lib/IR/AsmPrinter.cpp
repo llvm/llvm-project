@@ -822,7 +822,7 @@ void AliasState::printAliases(raw_ostream &os, NewLineCounter &newLine,
   }
   for (const auto &it : llvm::make_filter_range(typeToAlias, filterFn)) {
     it.second.print(os << '!');
-    os << " = type " << it.first << newLine;
+    os << " = " << it.first << newLine;
   }
 }
 
@@ -1758,11 +1758,10 @@ void AsmPrinter::Impl::printAttribute(Attribute attr,
   if (succeeded(printAlias(attr)))
     return;
 
-  if (!isa<BuiltinDialect>(attr.getDialect()))
-    return printDialectAttribute(attr);
-
   auto attrType = attr.getType();
-  if (auto opaqueAttr = attr.dyn_cast<OpaqueAttr>()) {
+  if (!isa<BuiltinDialect>(attr.getDialect())) {
+    printDialectAttribute(attr);
+  } else if (auto opaqueAttr = attr.dyn_cast<OpaqueAttr>()) {
     printDialectSymbol(os, "#", opaqueAttr.getDialectNamespace(),
                        opaqueAttr.getAttrData());
   } else if (attr.isa<UnitAttr>()) {

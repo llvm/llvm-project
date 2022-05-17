@@ -2366,6 +2366,25 @@ TEST_F(ConstantRangeTest, FromKnownBitsExhaustive) {
   }
 }
 
+TEST_F(ConstantRangeTest, ToKnownBits) {
+  unsigned Bits = 4;
+  EnumerateConstantRanges(Bits, [&](const ConstantRange &CR) {
+    KnownBits Known = CR.toKnownBits();
+    KnownBits ExpectedKnown(Bits);
+    ExpectedKnown.Zero.setAllBits();
+    ExpectedKnown.One.setAllBits();
+    ForeachNumInConstantRange(CR, [&](const APInt &N) {
+      ExpectedKnown.One &= N;
+      ExpectedKnown.Zero &= ~N;
+    });
+    // For an empty CR any result would be legal.
+    if (!CR.isEmptySet()) {
+      EXPECT_EQ(ExpectedKnown.One, Known.One);
+      EXPECT_EQ(ExpectedKnown.Zero, Known.Zero);
+    }
+  });
+}
+
 TEST_F(ConstantRangeTest, Negative) {
   // All elements in an empty set (of which there are none) are both negative
   // and non-negative. Empty & full sets checked explicitly for clarity, but

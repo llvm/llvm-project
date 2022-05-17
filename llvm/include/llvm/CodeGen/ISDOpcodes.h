@@ -1358,37 +1358,17 @@ static const int LAST_INDEXED_MODE = POST_DEC + 1;
 /// MemIndexType enum - This enum defines how to interpret MGATHER/SCATTER's
 /// index parameter when calculating addresses.
 ///
-/// SIGNED_SCALED     Addr = Base + ((signed)Index * sizeof(element))
-/// SIGNED_UNSCALED   Addr = Base + (signed)Index
-/// UNSIGNED_SCALED   Addr = Base + ((unsigned)Index * sizeof(element))
-/// UNSIGNED_UNSCALED Addr = Base + (unsigned)Index
-enum MemIndexType {
-  SIGNED_SCALED = 0,
-  SIGNED_UNSCALED,
-  UNSIGNED_SCALED,
-  UNSIGNED_UNSCALED
-};
+/// SIGNED_SCALED     Addr = Base + ((signed)Index * Scale)
+/// UNSIGNED_SCALED   Addr = Base + ((unsigned)Index * Scale)
+///
+/// NOTE: The value of Scale is typically only known to the node owning the
+/// IndexType, with a value of 1 the equivalent of being unscaled.
+enum MemIndexType { SIGNED_SCALED = 0, UNSIGNED_SCALED };
 
-static const int LAST_MEM_INDEX_TYPE = UNSIGNED_UNSCALED + 1;
-
-inline bool isIndexTypeScaled(MemIndexType IndexType) {
-  return IndexType == SIGNED_SCALED || IndexType == UNSIGNED_SCALED;
-}
+static const int LAST_MEM_INDEX_TYPE = UNSIGNED_SCALED + 1;
 
 inline bool isIndexTypeSigned(MemIndexType IndexType) {
-  return IndexType == SIGNED_SCALED || IndexType == SIGNED_UNSCALED;
-}
-
-inline MemIndexType getSignedIndexType(MemIndexType IndexType) {
-  return isIndexTypeScaled(IndexType) ? SIGNED_SCALED : SIGNED_UNSCALED;
-}
-
-inline MemIndexType getUnsignedIndexType(MemIndexType IndexType) {
-  return isIndexTypeScaled(IndexType) ? UNSIGNED_SCALED : UNSIGNED_UNSCALED;
-}
-
-inline MemIndexType getUnscaledIndexType(MemIndexType IndexType) {
-  return isIndexTypeSigned(IndexType) ? SIGNED_UNSCALED : UNSIGNED_UNSCALED;
+  return IndexType == SIGNED_SCALED;
 }
 
 //===--------------------------------------------------------------------===//

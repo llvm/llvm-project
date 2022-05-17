@@ -281,6 +281,9 @@ New Pragmas in Clang
 - Added support for MSVC's ``#pragma function``, which tells the compiler to
   generate calls to functions listed in the pragma instead of using the
   builtins.
+- Added support for MSVC's ``#pragma alloc_text``. The pragma names the code
+  section functions are placed in. The pragma only applies to functions with
+  C linkage.
 
 - ...
 

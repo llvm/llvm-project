@@ -14,7 +14,9 @@ attributes {
   // CHECK: #test.attr_params<42, 24>
   attr3 = #test.attr_params<42, 24>,
   // CHECK: #test.attr_with_type<i32, vector<4xi32>>
-  attr4 = #test.attr_with_type<i32, vector<4xi32>>
+  attr4 = #test.attr_with_type<i32, vector<4xi32>>,
+  // CHECK: #test.attr_self_type_format<5> : i32
+  attr5 = #test.attr_self_type_format<5> : i32
 }
 
 // CHECK-LABEL: @test_roundtrip_default_parsers_struct

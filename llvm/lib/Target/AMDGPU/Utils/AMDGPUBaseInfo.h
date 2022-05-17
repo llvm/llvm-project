@@ -685,13 +685,14 @@ bool isValidDfmtNfmt(unsigned Val, const MCSubtargetInfo &STI);
 
 bool isValidNfmt(unsigned Val, const MCSubtargetInfo &STI);
 
-int64_t getUnifiedFormat(const StringRef Name);
+int64_t getUnifiedFormat(const StringRef Name, const MCSubtargetInfo &STI);
 
-StringRef getUnifiedFormatName(unsigned Id);
+StringRef getUnifiedFormatName(unsigned Id, const MCSubtargetInfo &STI);
 
-bool isValidUnifiedFormat(unsigned Val);
+bool isValidUnifiedFormat(unsigned Val, const MCSubtargetInfo &STI);
 
-int64_t convertDfmtNfmt2Ufmt(unsigned Dfmt, unsigned Nfmt);
+int64_t convertDfmtNfmt2Ufmt(unsigned Dfmt, unsigned Nfmt,
+                             const MCSubtargetInfo &STI);
 
 bool isValidFormatEncoding(unsigned Val, const MCSubtargetInfo &STI);
 
@@ -796,12 +797,16 @@ bool isCI(const MCSubtargetInfo &STI);
 bool isVI(const MCSubtargetInfo &STI);
 bool isGFX9(const MCSubtargetInfo &STI);
 bool isGFX9_GFX10(const MCSubtargetInfo &STI);
+bool isGFX8_GFX9_GFX10(const MCSubtargetInfo &STI);
 bool isGFX8Plus(const MCSubtargetInfo &STI);
 bool isGFX9Plus(const MCSubtargetInfo &STI);
 bool isGFX10(const MCSubtargetInfo &STI);
 bool isGFX10Plus(const MCSubtargetInfo &STI);
 bool isNotGFX10Plus(const MCSubtargetInfo &STI);
 bool isGFX10Before1030(const MCSubtargetInfo &STI);
+bool isGFX11(const MCSubtargetInfo &STI);
+bool isGFX11Plus(const MCSubtargetInfo &STI);
+bool isNotGFX11Plus(const MCSubtargetInfo &STI);
 bool isGCN3Encoding(const MCSubtargetInfo &STI);
 bool isGFX10_AEncoding(const MCSubtargetInfo &STI);
 bool isGFX10_BEncoding(const MCSubtargetInfo &STI);

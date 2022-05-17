@@ -919,7 +919,7 @@ class SMEM_Real_gfx10<bits<8> op, SM_Pseudo ps> :
   // fields, in which case we need them to remain undefined.
   let Inst{52-32} = !if(ps.has_offset, offset{20-0}, !if(ps.has_soffset, 0, ?));
   let Inst{63-57} = !if(ps.has_soffset, soffset{6-0},
-                        !if(ps.has_offset, !cast<int>(SGPR_NULL.HWEncoding), ?));
+                        !if(ps.has_offset, !cast<int>(SGPR_NULL_gfxpre11.HWEncoding), ?));
 }
 
 multiclass SM_Real_Loads_gfx10<bits<8> op, string ps,
