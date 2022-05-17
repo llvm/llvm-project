@@ -3,9 +3,9 @@
 
 define i32 @PR38781(i32 noundef %a, i32 noundef %b) {
 ; CHECK-LABEL: @PR38781(
-; CHECK-NEXT:    [[A_LOBIT_NOT1_DEMORGAN:%.*]] = or i32 [[B:%.*]], [[A:%.*]]
-; CHECK-NEXT:    [[A_LOBIT_NOT1:%.*]] = xor i32 [[A_LOBIT_NOT1_DEMORGAN]], -1
-; CHECK-NEXT:    [[AND:%.*]] = lshr i32 [[A_LOBIT_NOT1]], 31
+; CHECK-NEXT:    [[TMP1:%.*]] = or i32 [[B:%.*]], [[A:%.*]]
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp sgt i32 [[TMP1]], -1
+; CHECK-NEXT:    [[AND:%.*]] = zext i1 [[TMP2]] to i32
 ; CHECK-NEXT:    ret i32 [[AND]]
 ;
   %cmp = icmp sge i32 %a, 0
@@ -48,17 +48,10 @@ land.end:
 define i1 @PR54692_b(i8 noundef signext %c) {
 ; CHECK-LABEL: @PR54692_b(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = xor i8 [[C:%.*]], -1
-; CHECK-NEXT:    [[TMP1:%.*]] = lshr i8 [[TMP0]], 7
-; CHECK-NEXT:    [[DOTNOT:%.*]] = zext i8 [[TMP1]] to i32
-; CHECK-NEXT:    [[CMP3:%.*]] = icmp slt i8 [[C]], 32
-; CHECK-NEXT:    [[CONV4:%.*]] = zext i1 [[CMP3]] to i32
-; CHECK-NEXT:    [[AND:%.*]] = and i32 [[DOTNOT]], [[CONV4]]
+; CHECK-NEXT:    [[TMP0:%.*]] = icmp ult i8 [[C:%.*]], 32
 ; CHECK-NEXT:    [[CMP6:%.*]] = icmp eq i8 [[C]], 127
-; CHECK-NEXT:    [[CONV7:%.*]] = zext i1 [[CMP6]] to i32
-; CHECK-NEXT:    [[OR:%.*]] = or i32 [[AND]], [[CONV7]]
-; CHECK-NEXT:    [[TOBOOL:%.*]] = icmp ne i32 [[OR]], 0
-; CHECK-NEXT:    ret i1 [[TOBOOL]]
+; CHECK-NEXT:    [[OR2:%.*]] = or i1 [[TMP0]], [[CMP6]]
+; CHECK-NEXT:    ret i1 [[OR2]]
 ;
 entry:
   %conv = sext i8 %c to i32
@@ -79,15 +72,9 @@ entry:
 define i1 @PR54692_c(i8 noundef signext %c) {
 ; CHECK-LABEL: @PR54692_c(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = xor i8 [[C:%.*]], -1
-; CHECK-NEXT:    [[TMP1:%.*]] = lshr i8 [[TMP0]], 7
-; CHECK-NEXT:    [[DOTNOT:%.*]] = zext i8 [[TMP1]] to i32
-; CHECK-NEXT:    [[CMP3:%.*]] = icmp slt i8 [[C]], 32
-; CHECK-NEXT:    [[CONV4:%.*]] = zext i1 [[CMP3]] to i32
-; CHECK-NEXT:    [[AND:%.*]] = and i32 [[DOTNOT]], [[CONV4]]
-; CHECK-NEXT:    [[TOBOOL:%.*]] = icmp ne i32 [[AND]], 0
+; CHECK-NEXT:    [[TMP0:%.*]] = icmp ult i8 [[C:%.*]], 32
 ; CHECK-NEXT:    [[CMP6:%.*]] = icmp eq i8 [[C]], 127
-; CHECK-NEXT:    [[T0:%.*]] = or i1 [[CMP6]], [[TOBOOL]]
+; CHECK-NEXT:    [[T0:%.*]] = or i1 [[TMP0]], [[CMP6]]
 ; CHECK-NEXT:    ret i1 [[T0]]
 ;
 entry:
