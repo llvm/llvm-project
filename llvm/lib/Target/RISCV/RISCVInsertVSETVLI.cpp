@@ -38,7 +38,7 @@ static cl::opt<bool> DisableInsertVSETVLPHIOpt(
     cl::desc("Disable looking through phis when inserting vsetvlis."));
 
 static cl::opt<bool> UseStrictAsserts(
-    "riscv-insert-vsetvl-strict-asserts", cl::init(true), cl::Hidden,
+    "riscv-insert-vsetvl-strict-asserts", cl::init(false), cl::Hidden,
     cl::desc("Enable strict assertion checking for the dataflow algorithm"));
 
 namespace {
