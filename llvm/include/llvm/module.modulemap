@@ -334,7 +334,6 @@ module LLVM_MC {
 module LLVM_MC_TableGen {
   requires cplusplus
   module MC_LaneBitmask { header "MC/LaneBitmask.h" export * }
-  module MC_FixedLenDisassembler { header "MC/MCFixedLenDisassembler.h" export * }
   module MC_InstrItineraries { header "MC/MCInstrItineraries.h" export * }
   module MC_Schedule { header "MC/MCSchedule.h" export * }
   module MC_SubtargetFeature { header "MC/SubtargetFeature.h" export * }

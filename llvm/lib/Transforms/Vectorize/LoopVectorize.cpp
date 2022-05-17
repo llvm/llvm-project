@@ -1970,7 +1970,7 @@ public:
   /// there is no vector code generation, the check blocks are removed
   /// completely.
   void Create(Loop *L, const LoopAccessInfo &LAI,
-              const SCEVPredicate &Pred) {
+              const SCEVPredicate &UnionPred, ElementCount VF, unsigned IC) {
 
     BasicBlock *LoopHeader = L->getHeader();
     BasicBlock *Preheader = L->getLoopPreheader();
@@ -1979,12 +1979,12 @@ public:
     // ensure the blocks are properly added to LoopInfo & DominatorTree. Those
     // may be used by SCEVExpander. The blocks will be un-linked from their
     // predecessors and removed from LI & DT at the end of the function.
-    if (!Pred.isAlwaysTrue()) {
+    if (!UnionPred.isAlwaysTrue()) {
       SCEVCheckBlock = SplitBlock(Preheader, Preheader->getTerminator(), DT, LI,
                                   nullptr, "vector.scevcheck");
 
       SCEVCheckCond = SCEVExp.expandCodeForPredicate(
-          &Pred, SCEVCheckBlock->getTerminator());
+          &UnionPred, SCEVCheckBlock->getTerminator());
     }
 
     const auto &RtPtrChecking = *LAI.getRuntimePointerChecking();
@@ -1993,9 +1993,19 @@ public:
       MemCheckBlock = SplitBlock(Pred, Pred->getTerminator(), DT, LI, nullptr,
                                  "vector.memcheck");
 
-      MemRuntimeCheckCond =
-          addRuntimeChecks(MemCheckBlock->getTerminator(), L,
-                           RtPtrChecking.getChecks(), MemCheckExp);
+      auto DiffChecks = RtPtrChecking.getDiffChecks();
+      if (DiffChecks) {
+        MemRuntimeCheckCond = addDiffRuntimeChecks(
+            MemCheckBlock->getTerminator(), L, *DiffChecks, MemCheckExp,
+            [VF](IRBuilderBase &B, unsigned Bits) {
+              return getRuntimeVF(B, B.getIntNTy(Bits), VF);
+            },
+            IC);
+      } else {
+        MemRuntimeCheckCond =
+            addRuntimeChecks(MemCheckBlock->getTerminator(), L,
+                             RtPtrChecking.getChecks(), MemCheckExp);
+      }
       assert(MemRuntimeCheckCond &&
              "no RT checks generated although RtPtrChecking "
              "claimed checks are required");
@@ -3075,13 +3085,17 @@ BasicBlock *InnerLoopVectorizer::emitMemRuntimeChecks(BasicBlock *Bypass) {
 
   AddedSafetyChecks = true;
 
-  // We currently don't use LoopVersioning for the actual loop cloning but we
-  // still use it to add the noalias metadata.
-  LVer = std::make_unique<LoopVersioning>(
-      *Legal->getLAI(),
-      Legal->getLAI()->getRuntimePointerChecking()->getChecks(), OrigLoop, LI,
-      DT, PSE.getSE());
-  LVer->prepareNoAliasMetadata();
+  // Only use noalias metadata when using memory checks guaranteeing no overlap
+  // across all iterations.
+  if (!Legal->getLAI()->getRuntimePointerChecking()->getDiffChecks()) {
+    //  We currently don't use LoopVersioning for the actual loop cloning but we
+    //  still use it to add the noalias metadata.
+    LVer = std::make_unique<LoopVersioning>(
+        *Legal->getLAI(),
+        Legal->getLAI()->getRuntimePointerChecking()->getChecks(), OrigLoop, LI,
+        DT, PSE.getSE());
+    LVer->prepareNoAliasMetadata();
+  }
   return MemCheckBlock;
 }
 
@@ -10570,7 +10584,7 @@ bool LoopVectorizePass::processLoop(Loop *L) {
     GeneratedRTChecks Checks(*PSE.getSE(), DT, LI,
                              F->getParent()->getDataLayout());
     if (!VF.Width.isScalar() || IC > 1)
-      Checks.Create(L, *LVL.getLAI(), PSE.getPredicate());
+      Checks.Create(L, *LVL.getLAI(), PSE.getPredicate(), VF.Width, IC);
 
     using namespace ore;
     if (!VectorizeLoop) {

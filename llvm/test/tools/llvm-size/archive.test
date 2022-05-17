@@ -5,7 +5,7 @@
 
 ## Case 1: Empty archive. No output expected.
 # RUN: rm -f %t1.a
-# RUN: llvm-ar rc --format=gnu %t1.a
+# RUN: llvm-ar rc %t1.a
 
 # RUN: llvm-size -B %t1.a | count 0
 # RUN: llvm-size -A %t1.a | count 0

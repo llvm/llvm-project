@@ -1608,6 +1608,40 @@ Value *llvm::addRuntimeChecks(
   return MemoryRuntimeCheck;
 }
 
+Value *llvm::addDiffRuntimeChecks(
+    Instruction *Loc, Loop *TheLoop, ArrayRef<PointerDiffInfo> Checks,
+    SCEVExpander &Expander,
+    function_ref<Value *(IRBuilderBase &, unsigned)> GetVF, unsigned IC) {
+
+  LLVMContext &Ctx = Loc->getContext();
+  IRBuilder<InstSimplifyFolder> ChkBuilder(Ctx,
+                                           Loc->getModule()->getDataLayout());
+  ChkBuilder.SetInsertPoint(Loc);
+  // Our instructions might fold to a constant.
+  Value *MemoryRuntimeCheck = nullptr;
+
+  for (auto &C : Checks) {
+    Type *Ty = C.SinkStart->getType();
+    // Compute VF * IC * AccessSize.
+    auto *VFTimesUFTimesSize =
+        ChkBuilder.CreateMul(GetVF(ChkBuilder, Ty->getScalarSizeInBits()),
+                             ConstantInt::get(Ty, IC * C.AccessSize));
+    Value *Sink = Expander.expandCodeFor(C.SinkStart, Ty, Loc);
+    Value *Src = Expander.expandCodeFor(C.SrcStart, Ty, Loc);
+    Value *Diff = ChkBuilder.CreateSub(Sink, Src);
+    Value *IsConflict =
+        ChkBuilder.CreateICmpULT(Diff, VFTimesUFTimesSize, "diff.check");
+
+    if (MemoryRuntimeCheck) {
+      IsConflict =
+          ChkBuilder.CreateOr(MemoryRuntimeCheck, IsConflict, "conflict.rdx");
+    }
+    MemoryRuntimeCheck = IsConflict;
+  }
+
+  return MemoryRuntimeCheck;
+}
+
 Optional<IVConditionInfo> llvm::hasPartialIVCondition(Loop &L,
                                                       unsigned MSSAThreshold,
                                                       MemorySSA &MSSA,

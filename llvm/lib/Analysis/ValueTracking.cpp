@@ -6653,11 +6653,38 @@ Optional<bool> llvm::isImpliedCondition(const Value *LHS, const Value *RHS,
   if (LHS == RHS)
     return LHSIsTrue;
 
-  const ICmpInst *RHSCmp = dyn_cast<ICmpInst>(RHS);
-  if (RHSCmp)
+  if (const ICmpInst *RHSCmp = dyn_cast<ICmpInst>(RHS))
     return isImpliedCondition(LHS, RHSCmp->getPredicate(),
                               RHSCmp->getOperand(0), RHSCmp->getOperand(1), DL,
                               LHSIsTrue, Depth);
+
+  if (Depth == MaxAnalysisRecursionDepth)
+    return None;
+
+  // LHS ==> (RHS1 || RHS2) if LHS ==> RHS1 or LHS ==> RHS2
+  // LHS ==> !(RHS1 && RHS2) if LHS ==> !RHS1 or LHS ==> !RHS2
+  const Value *RHS1, *RHS2;
+  if (match(RHS, m_LogicalOr(m_Value(RHS1), m_Value(RHS2)))) {
+    if (Optional<bool> Imp =
+            isImpliedCondition(LHS, RHS1, DL, LHSIsTrue, Depth + 1))
+      if (*Imp == true)
+        return true;
+    if (Optional<bool> Imp =
+            isImpliedCondition(LHS, RHS2, DL, LHSIsTrue, Depth + 1))
+      if (*Imp == true)
+        return true;
+  }
+  if (match(RHS, m_LogicalAnd(m_Value(RHS1), m_Value(RHS2)))) {
+    if (Optional<bool> Imp =
+            isImpliedCondition(LHS, RHS1, DL, LHSIsTrue, Depth + 1))
+      if (*Imp == false)
+        return false;
+    if (Optional<bool> Imp =
+            isImpliedCondition(LHS, RHS2, DL, LHSIsTrue, Depth + 1))
+      if (*Imp == false)
+        return false;
+  }
+
   return None;
 }
 

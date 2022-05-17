@@ -6618,8 +6618,10 @@ static bool areTwoInsertFromSameBuildVector(InsertElementInst *VU,
   // either VU as the original vector for IE2 or V as the original vector for
   // IE1.
   do {
-    if (IE2 == VU || IE1 == V)
-      return true;
+    if (IE2 == VU)
+      return VU->hasOneUse();
+    if (IE1 == V)
+      return V->hasOneUse();
     if (IE1) {
       if ((IE1 != VU && !IE1->hasOneUse()) ||
           getInsertIndex(IE1).getValueOr(Idx2) == Idx2)
