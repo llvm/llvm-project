@@ -3,13 +3,18 @@
 ; RUN: llc -verify-machineinstrs -mcpu=pwr7 -mtriple powerpc64-ibm-aix-xcoff -data-sections=false < %s | \
 ; RUN:   FileCheck --check-prefixes=CHECK,CHECK64 %s
 
-; RUN: llc -verify-machineinstrs -mcpu=pwr7 -mtriple powerpc-ibm-aix-xcoff -data-sections=false -filetype=obj -o %t.o < %s
+; RUN: llc -verify-machineinstrs -mcpu=pwr7 -mtriple powerpc-ibm-aix-xcoff -data-sections=false \
+; RUN:   -filetype=obj -o %t.o < %s
 ; RUN: llvm-readobj --section-headers --file-header %t.o | \
-; RUN:   FileCheck --check-prefix=OBJ %s
-; RUN: llvm-readobj --syms %t.o | FileCheck --check-prefix=SYMS %s
+; RUN:   FileCheck --check-prefixes=OBJ,OBJ32 %s
+; RUN: llvm-readobj --syms %t.o | FileCheck --check-prefixes=SYMS,SYMS32 %s
 ; RUN: llvm-objdump -D %t.o | FileCheck --check-prefix=DIS %s
 
-;; FIXME: currently only fileHeader and sectionHeaders are supported in XCOFF64.
+; RUN: llc -verify-machineinstrs -mcpu=pwr7 -mtriple powerpc64-ibm-aix-xcoff -data-sections=false \
+; RUN:   -filetype=obj -o %t64.o < %s
+; RUN: llvm-readobj --section-headers --file-header %t64.o | \
+; RUN:   FileCheck --check-prefixes=OBJ,OBJ64 %s
+; RUN: llvm-readobj --syms %t64.o | FileCheck --check-prefixes=SYMS,SYMS64 %s
 
 @const_ivar = constant i32 35, align 4
 @const_llvar = constant i64 36, align 8
@@ -70,16 +75,13 @@
 ; CHECK32-NEXT:        .vbyte	4, 0
 ; CHECK64-NEXT:        .vbyte	8, 0x4010000000000000
 
-
-; OBJ:      File: {{.*}}aix-xcoff-rodata.ll.tmp.o
-; OBJ-NEXT: Format: aixcoff-rs6000
-; OBJ-NEXT: Arch: powerpc
-; OBJ-NEXT: AddressSize: 32bit
-; OBJ-NEXT: FileHeader {
-; OBJ-NEXT:   Magic: 0x1DF
+; OBJ:      FileHeader {
+; OBJ32-NEXT: Magic: 0x1DF
+; OBJ64-NEXT: Magic: 0x1F7
 ; OBJ-NEXT:   NumberOfSections: 1
 ; OBJ-NEXT:   TimeStamp: None (0x0)
-; OBJ-NEXT:   SymbolTableOffset: 0x8C
+; OBJ32-NEXT: SymbolTableOffset: 0x8C
+; OBJ64-NEXT: SymbolTableOffset: 0xB0
 ; OBJ-NEXT:   SymbolTableEntries: 21
 ; OBJ-NEXT:   OptionalHeaderSize: 0x0
 ; OBJ-NEXT:   Flags: 0x0
@@ -91,8 +93,10 @@
 ; OBJ-NEXT:     Name: .text
 ; OBJ-NEXT:     PhysicalAddress: 0x0
 ; OBJ-NEXT:     VirtualAddress: 0x0
-; OBJ-NEXT:     Size: 0x50
-; OBJ-NEXT:     RawDataOffset: 0x3C
+; OBJ32-NEXT:   Size: 0x50
+; OBJ32-NEXT:   RawDataOffset: 0x3C
+; OBJ64-NEXT:   Size: 0x50
+; OBJ64-NEXT:   RawDataOffset: 0x60
 ; OBJ-NEXT:     RelocationPointer: 0x0
 ; OBJ-NEXT:     LineNumberPointer: 0x0
 ; OBJ-NEXT:     NumberOfRelocations: 0
@@ -101,11 +105,6 @@
 ; OBJ-NEXT:   }
 ; OBJ-NEXT: ]
 
-
-; SYMS:       File: {{.*}}aix-xcoff-rodata.ll.tmp.o
-; SYMS-NEXT:  Format: aixcoff-rs6000
-; SYMS-NEXT:  Arch: powerpc
-; SYMS-NEXT:  AddressSize: 32bit
 ; SYMS:       Symbols [
 ; SYMS:        Symbol {{[{][[:space:]] *}}Index: [[#INDX:]]{{[[:space:]] *}}Name: .rodata
 ; SYMS-NEXT:     Value (RelocatableAddress): 0x0
@@ -121,8 +120,9 @@
 ; SYMS-NEXT:       SymbolAlignmentLog2: 5
 ; SYMS-NEXT:       SymbolType: XTY_SD (0x1)
 ; SYMS-NEXT:       StorageMappingClass: XMC_RO (0x1)
-; SYMS-NEXT:       StabInfoIndex: 0x0
-; SYMS-NEXT:       StabSectNum: 0x0
+; SYMS32-NEXT:     StabInfoIndex: 0x0
+; SYMS32-NEXT:     StabSectNum: 0x0
+; SYMS64-NEXT:     Auxiliary Type: AUX_CSECT (0xFB)
 ; SYMS-NEXT:     }
 ; SYMS-NEXT:   }
 
@@ -142,8 +142,9 @@
 ; SYMS-NEXT:       SymbolAlignmentLog2: 0
 ; SYMS-NEXT:       SymbolType: XTY_LD (0x2)
 ; SYMS-NEXT:       StorageMappingClass: XMC_RO (0x1)
-; SYMS-NEXT:       StabInfoIndex: 0x0
-; SYMS-NEXT:       StabSectNum: 0x0
+; SYMS32-NEXT:     StabInfoIndex: 0x0
+; SYMS32-NEXT:     StabSectNum: 0x0
+; SYMS64-NEXT:     Auxiliary Type: AUX_CSECT (0xFB)
 ; SYMS-NEXT:     }
 ; SYMS-NEXT:   }
 
@@ -163,8 +164,9 @@
 ; SYMS-NEXT:       SymbolAlignmentLog2: 0
 ; SYMS-NEXT:       SymbolType: XTY_LD (0x2)
 ; SYMS-NEXT:       StorageMappingClass: XMC_RO (0x1)
-; SYMS-NEXT:       StabInfoIndex: 0x0
-; SYMS-NEXT:       StabSectNum: 0x0
+; SYMS32-NEXT:     StabInfoIndex: 0x0
+; SYMS32-NEXT:     StabSectNum: 0x0
+; SYMS64-NEXT:     Auxiliary Type: AUX_CSECT (0xFB)
 ; SYMS-NEXT:     }
 ; SYMS-NEXT:   }
 
@@ -184,8 +186,9 @@
 ; SYMS-NEXT:       SymbolAlignmentLog2: 0
 ; SYMS-NEXT:       SymbolType: XTY_LD (0x2)
 ; SYMS-NEXT:       StorageMappingClass: XMC_RO (0x1)
-; SYMS-NEXT:       StabInfoIndex: 0x0
-; SYMS-NEXT:       StabSectNum: 0x0
+; SYMS32-NEXT:     StabInfoIndex: 0x0
+; SYMS32-NEXT:     StabSectNum: 0x0
+; SYMS64-NEXT:     Auxiliary Type: AUX_CSECT (0xFB)
 ; SYMS-NEXT:     }
 ; SYMS-NEXT:   }
 
@@ -205,8 +208,9 @@
 ; SYMS-NEXT:       SymbolAlignmentLog2: 0
 ; SYMS-NEXT:       SymbolType: XTY_LD (0x2)
 ; SYMS-NEXT:       StorageMappingClass: XMC_RO (0x1)
-; SYMS-NEXT:       StabInfoIndex: 0x0
-; SYMS-NEXT:       StabSectNum: 0x0
+; SYMS32-NEXT:     StabInfoIndex: 0x0
+; SYMS32-NEXT:     StabSectNum: 0x0
+; SYMS64-NEXT:     Auxiliary Type: AUX_CSECT (0xFB)
 ; SYMS-NEXT:     }
 ; SYMS-NEXT:   }
 
@@ -226,8 +230,9 @@
 ; SYMS-NEXT:       SymbolAlignmentLog2: 0
 ; SYMS-NEXT:       SymbolType: XTY_LD (0x2)
 ; SYMS-NEXT:       StorageMappingClass: XMC_RO (0x1)
-; SYMS-NEXT:       StabInfoIndex: 0x0
-; SYMS-NEXT:       StabSectNum: 0x0
+; SYMS32-NEXT:     StabInfoIndex: 0x0
+; SYMS32-NEXT:     StabSectNum: 0x0
+; SYMS64-NEXT:     Auxiliary Type: AUX_CSECT (0xFB)
 ; SYMS-NEXT:     }
 ; SYMS-NEXT:   }
 
@@ -247,8 +252,9 @@
 ; SYMS-NEXT:       SymbolAlignmentLog2: 0
 ; SYMS-NEXT:       SymbolType: XTY_LD (0x2)
 ; SYMS-NEXT:       StorageMappingClass: XMC_RO (0x1)
-; SYMS-NEXT:       StabInfoIndex: 0x0
-; SYMS-NEXT:       StabSectNum: 0x0
+; SYMS32-NEXT:     StabInfoIndex: 0x0
+; SYMS32-NEXT:     StabSectNum: 0x0
+; SYMS64-NEXT:     Auxiliary Type: AUX_CSECT (0xFB)
 ; SYMS-NEXT:     }
 ; SYMS-NEXT:   }
 
@@ -268,8 +274,9 @@
 ; SYMS-NEXT:       SymbolAlignmentLog2: 0
 ; SYMS-NEXT:       SymbolType: XTY_LD (0x2)
 ; SYMS-NEXT:       StorageMappingClass: XMC_RO (0x1)
-; SYMS-NEXT:       StabInfoIndex: 0x0
-; SYMS-NEXT:       StabSectNum: 0x0
+; SYMS32-NEXT:     StabInfoIndex: 0x0
+; SYMS32-NEXT:     StabSectNum: 0x0
+; SYMS64-NEXT:     Auxiliary Type: AUX_CSECT (0xFB)
 ; SYMS-NEXT:     }
 ; SYMS-NEXT:   }
 
@@ -289,8 +296,9 @@
 ; SYMS-NEXT:       SymbolAlignmentLog2: 0
 ; SYMS-NEXT:       SymbolType: XTY_LD (0x2)
 ; SYMS-NEXT:       StorageMappingClass: XMC_RO (0x1)
-; SYMS-NEXT:       StabInfoIndex: 0x0
-; SYMS-NEXT:       StabSectNum: 0x0
+; SYMS32-NEXT:     StabInfoIndex: 0x0
+; SYMS32-NEXT:     StabSectNum: 0x0
+; SYMS64-NEXT:     Auxiliary Type: AUX_CSECT (0xFB)
 ; SYMS-NEXT:     }
 ; SYMS-NEXT:   }
 ; SYMS:      ]

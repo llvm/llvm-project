@@ -3,10 +3,13 @@
 ; RUN: llc -verify-machineinstrs -mcpu=pwr4 -mtriple powerpc64-ibm-aix-xcoff -data-sections=false < %s | \
 ; RUN:   FileCheck --check-prefixes=CHECK,ASM64 %s
 
-; RUN: llc -verify-machineinstrs -mcpu=pwr4 -mtriple powerpc-ibm-aix-xcoff -data-sections=false -filetype=obj -o %t.o < %s
-; RUN: llvm-readobj -r --expand-relocs --syms %t.o | FileCheck --check-prefixes=RELOC,SYM %s
+; RUN: llc -verify-machineinstrs -mcpu=pwr4 -mtriple powerpc-ibm-aix-xcoff -data-sections=false \
+; RUN:   -filetype=obj -o %t.o < %s
+; RUN: llvm-readobj -r --expand-relocs --syms %t.o | FileCheck --check-prefixes=RELOC,SYM,RELOC32,SYM32 %s
 
-;; FIXME: currently only fileHeader and sectionHeaders are supported in XCOFF64.
+; RUN: llc -verify-machineinstrs -mcpu=pwr4 -mtriple powerpc64-ibm-aix-xcoff -data-sections=false \
+; RUN:   -filetype=obj -o %t64.o < %s
+; RUN: llvm-readobj -r --expand-relocs --syms %t64.o | FileCheck --check-prefixes=RELOC,SYM,RELOC64,SYM64 %s
 
 @common = common global i32 0, align 4
 @pointer = global i32* @common, align 4
@@ -30,7 +33,8 @@
 ; RELOC-NEXT:     Symbol: common ([[#COM_INDX:]])
 ; RELOC-NEXT:     IsSigned: No
 ; RELOC-NEXT:     FixupBitValue: 0
-; RELOC-NEXT:     Length: 32
+; RELOC32-NEXT:   Length: 32
+; RELOC64-NEXT:   Length: 64
 ; RELOC-NEXT:     Type: R_POS (0x0)
 ; RELOC-NEXT:   }
 ; RELOC-NEXT: }
@@ -44,14 +48,17 @@
 ; SYM-NEXT:     NumberOfAuxEntries: 1
 ; SYM-NEXT:     CSECT Auxiliary Entry {
 ; SYM-NEXT:       Index: [[#INDX+1]]
-; SYM-NEXT:       SectionLen: 4
+; SYM32-NEXT:     SectionLen: 4
+; SYM64-NEXT:     SectionLen: 8
 ; SYM-NEXT:       ParameterHashIndex: 0x0
 ; SYM-NEXT:       TypeChkSectNum: 0x0
-; SYM-NEXT:       SymbolAlignmentLog2: 2
+; SYM32-NEXT:     SymbolAlignmentLog2: 2
+; SYM64-NEXT:     SymbolAlignmentLog2: 3
 ; SYM-NEXT:       SymbolType: XTY_SD (0x1)
 ; SYM-NEXT:       StorageMappingClass: XMC_RW (0x5)
-; SYM-NEXT:       StabInfoIndex: 0x0
-; SYM-NEXT:       StabSectNum: 0x0
+; SYM32-NEXT:     StabInfoIndex: 0x0
+; SYM32-NEXT:     StabSectNum: 0x0
+; SYM64-NEXT:     Auxiliary Type: AUX_CSECT (0xFB)
 ; SYM-NEXT:     }
 ; SYM-NEXT:   }
 ; SYM-NEXT:   Symbol {
@@ -70,14 +77,16 @@
 ; SYM-NEXT:       SymbolAlignmentLog2: 0
 ; SYM-NEXT:       SymbolType: XTY_LD (0x2)
 ; SYM-NEXT:       StorageMappingClass: XMC_RW (0x5)
-; SYM-NEXT:       StabInfoIndex: 0x0
-; SYM-NEXT:       StabSectNum: 0x0
+; SYM32-NEXT:     StabInfoIndex: 0x0
+; SYM32-NEXT:     StabSectNum: 0x0
+; SYM64-NEXT:     Auxiliary Type: AUX_CSECT (0xFB)
 ; SYM-NEXT:     }
 ; SYM-NEXT:   }
 ; SYM-NEXT:   Symbol {
 ; SYM-NEXT:     Index: [[#COM_INDX]]
 ; SYM-NEXT:     Name: common
-; SYM-NEXT:     Value (RelocatableAddress): 0x4
+; SYM32-NEXT:   Value (RelocatableAddress): 0x4
+; SYM64-NEXT:   Value (RelocatableAddress): 0x8
 ; SYM-NEXT:     Section: .bss
 ; SYM-NEXT:     Type: 0x0
 ; SYM-NEXT:     StorageClass: C_EXT (0x2)
@@ -90,7 +99,8 @@
 ; SYM-NEXT:       SymbolAlignmentLog2: 2
 ; SYM-NEXT:       SymbolType: XTY_CM (0x3)
 ; SYM-NEXT:       StorageMappingClass: XMC_RW (0x5)
-; SYM-NEXT:       StabInfoIndex: 0x0
-; SYM-NEXT:       StabSectNum: 0x0
+; SYM32-NEXT:     StabInfoIndex: 0x0
+; SYM32-NEXT:     StabSectNum: 0x0
+; SYM64-NEXT:     Auxiliary Type: AUX_CSECT (0xFB)
 ; SYM-NEXT:     }
 ; SYM-NEXT:   }
