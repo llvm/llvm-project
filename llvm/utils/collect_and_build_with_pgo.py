@@ -320,7 +320,7 @@ Args = collections.namedtuple('Args', [
 def _parse_args():
     parser = argparse.ArgumentParser(
         description='Builds LLVM and Clang with instrumentation, collects '
-        'instrumentation profiles for them, and (optionally) builds things'
+        'instrumentation profiles for them, and (optionally) builds things '
         'with these PGO profiles. By default, it\'s assumed that you\'re '
         'running this from your LLVM root, and all build artifacts will be '
         'saved to $PWD/out.')
