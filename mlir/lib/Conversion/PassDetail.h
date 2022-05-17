@@ -55,6 +55,10 @@ namespace LLVM {
 class LLVMDialect;
 } // namespace LLVM
 
+namespace nvgpu {
+class NVGPUDialect;
+}
+
 namespace NVVM {
 class NVVMDialect;
 } // namespace NVVM
