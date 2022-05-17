@@ -46,6 +46,8 @@ TensorExp::TensorExp(Kind k, unsigned x, unsigned y, Value v, Operation *o)
   case kTanhF:
   case kNegF:
   case kNegI:
+  case kCIm:
+  case kCRe:
     assert(x != -1u && y == -1u && !v && !o);
     children.e0 = x;
     children.e1 = y;
@@ -291,6 +293,8 @@ bool Merger::isSingleCondition(unsigned t, unsigned e) const {
   case kCastU:
   case kCastIdx:
   case kTruncI:
+  case kCIm:
+  case kCRe:
   case kBitCast:
     return isSingleCondition(t, tensorExps[e].children.e0);
   case kDivF: // note: x / c only
@@ -367,6 +371,10 @@ static const char *kindToOpSymbol(Kind kind) {
   case kCastU:
   case kCastIdx:
   case kTruncI:
+  case kCIm:
+    return "complex.im";
+  case kCRe:
+    return "complex.re";
   case kBitCast:
     return "cast";
   case kBinaryBranch:
@@ -526,6 +534,8 @@ unsigned Merger::buildLattices(unsigned e, unsigned i) {
   }
   case kAbsF:
   case kCeilF:
+  case kCIm:
+  case kCRe:
   case kFloorF:
   case kSqrtF:
   case kExpm1F:
@@ -776,6 +786,10 @@ Optional<unsigned> Merger::buildTensorExp(linalg::GenericOp op, Value v) {
         return addExp(kCastIdx, e, v);
       if (isa<arith::TruncIOp>(def))
         return addExp(kTruncI, e, v);
+      if (isa<complex::ImOp>(def))
+        return addExp(kCIm, e);
+      if (isa<complex::ReOp>(def))
+        return addExp(kCRe, e);
       if (isa<arith::BitcastOp>(def))
         return addExp(kBitCast, e, v);
       if (isa<sparse_tensor::UnaryOp>(def))
@@ -930,6 +944,15 @@ Value Merger::buildExp(RewriterBase &rewriter, Location loc, unsigned e,
     return rewriter.create<arith::IndexCastOp>(loc, inferType(e, v0), v0);
   case kTruncI:
     return rewriter.create<arith::TruncIOp>(loc, inferType(e, v0), v0);
+  case kCIm:
+  case kCRe: {
+    auto type = v0.getType().template cast<ComplexType>();
+    auto eltType = type.getElementType().template cast<FloatType>();
+    if (tensorExps[e].kind == kCIm)
+      return rewriter.create<complex::ImOp>(loc, eltType, v0);
+
+    return rewriter.create<complex::ReOp>(loc, eltType, v0);
+  }
   case kBitCast:
     return rewriter.create<arith::BitcastOp>(loc, inferType(e, v0), v0);
   // Binary ops.
