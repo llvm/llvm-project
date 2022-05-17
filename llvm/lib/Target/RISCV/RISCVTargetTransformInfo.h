@@ -171,9 +171,6 @@ public:
 
   bool isLegalToVectorizeReduction(const RecurrenceDescriptor &RdxDesc,
                                    ElementCount VF) const {
-    if (!ST->hasVInstructions())
-      return false;
-
     if (!VF.isScalable())
       return true;
 
