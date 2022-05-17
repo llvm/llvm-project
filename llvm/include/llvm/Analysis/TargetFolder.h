@@ -109,7 +109,7 @@ public:
   Value *FoldExtractValue(Value *Agg,
                           ArrayRef<unsigned> IdxList) const override {
     if (auto *CAgg = dyn_cast<Constant>(Agg))
-      return Fold(ConstantExpr::getExtractValue(CAgg, IdxList));
+      return ConstantFoldExtractValueInstruction(CAgg, IdxList);
     return nullptr;
   };
 
