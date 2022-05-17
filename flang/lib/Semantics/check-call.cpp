@@ -812,13 +812,23 @@ static void RearrangeArguments(const characteristics::Procedure &proc,
   }
 }
 
-// The actual argument arrays to an ELEMENTAL procedure must conform.
+// 15.8.1(3) -- In a reference to an elemental procedure, if any argument is an
+// array, each actual argument that corresponds to an INTENT(OUT) or
+// INTENT(INOUT) dummy argument shall be an array. The actual argument to an
+// ELEMENTAL procedure must conform.
 static bool CheckElementalConformance(parser::ContextualMessages &messages,
     const characteristics::Procedure &proc, evaluate::ActualArguments &actuals,
     evaluate::FoldingContext &context) {
   std::optional<evaluate::Shape> shape;
   std::string shapeName;
   int index{0};
+  bool hasArrayArg{false};
+  for (const auto &arg : actuals) {
+    if (arg && arg.value().Rank() > 0) {
+      hasArrayArg = true;
+      break;
+    }
+  }
   for (const auto &arg : actuals) {
     const auto &dummy{proc.dummyArguments.at(index++)};
     if (arg) {
@@ -839,6 +849,12 @@ static bool CheckElementalConformance(parser::ContextualMessages &messages,
               shape = std::move(argShape);
               shapeName = argName;
             }
+          } else if ((dummy.GetIntent() == common::Intent::Out ||
+                         dummy.GetIntent() == common::Intent::InOut) &&
+              hasArrayArg) {
+            messages.Say(
+                "In an elemental procedure with at least one array arugment, actual argument %s that corresponds to an INTENT(OUT) or INTENT(INOUT) dummay argument must be an array"_err_en_US,
+                expr->AsFortran());
           }
         }
       }
