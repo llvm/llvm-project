@@ -246,7 +246,7 @@ static void findReferencesInStmt(ScopStmt *Stmt, SetVector<Value *> &Values,
 
 void polly::addReferencesFromStmt(ScopStmt *Stmt, void *UserPtr,
                                   bool CreateScalarRefs) {
-  auto &References = *static_cast<struct SubtreeReferences *>(UserPtr);
+  auto &References = *static_cast<SubtreeReferences *>(UserPtr);
 
   findReferencesInStmt(Stmt, References.Values, References.GlobalMap,
                        References.SCEVs);
@@ -284,8 +284,7 @@ void polly::addReferencesFromStmt(ScopStmt *Stmt, void *UserPtr,
 /// @param Set     A set which references the ScopStmt we are interested in.
 /// @param UserPtr A void pointer that can be casted to a SubtreeReferences
 ///                structure.
-static void addReferencesFromStmtSet(isl::set Set,
-                                     struct SubtreeReferences *UserPtr) {
+static void addReferencesFromStmtSet(isl::set Set, SubtreeReferences *UserPtr) {
   isl::id Id = Set.get_tuple_id();
   auto *Stmt = static_cast<ScopStmt *>(Id.get_user());
   addReferencesFromStmt(Stmt, UserPtr);
@@ -304,9 +303,8 @@ static void addReferencesFromStmtSet(isl::set Set,
 /// @param References The SubtreeReferences data structure through which
 ///                   results are returned and further information is
 ///                   provided.
-static void
-addReferencesFromStmtUnionSet(isl::union_set USet,
-                              struct SubtreeReferences &References) {
+static void addReferencesFromStmtUnionSet(isl::union_set USet,
+                                          SubtreeReferences &References) {
 
   for (isl::set Set : USet.get_set_list())
     addReferencesFromStmtSet(Set, &References);
@@ -321,7 +319,7 @@ void IslNodeBuilder::getReferencesInSubtree(const isl::ast_node &For,
                                             SetVector<Value *> &Values,
                                             SetVector<const Loop *> &Loops) {
   SetVector<const SCEV *> SCEVs;
-  struct SubtreeReferences References = {
+  SubtreeReferences References = {
       LI, SE, S, ValueMap, Values, SCEVs, getBlockGenerator(), nullptr};
 
   for (const auto &I : IDToValue)

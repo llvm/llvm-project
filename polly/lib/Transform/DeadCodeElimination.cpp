@@ -51,7 +51,7 @@ cl::opt<int> DCEPreciseSteps(
              "before the actual dead code elimination."),
     cl::ZeroOrMore, cl::init(-1), cl::cat(PollyCategory));
 
-class DeadCodeElimWrapperPass : public ScopPass {
+class DeadCodeElimWrapperPass final : public ScopPass {
 public:
   static char ID;
   explicit DeadCodeElimWrapperPass() : ScopPass(ID) {}

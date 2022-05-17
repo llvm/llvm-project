@@ -197,7 +197,7 @@ struct ForwardingAction {
 /// the MemoryAccess is removed and the all the operand tree instructions are
 /// moved into the statement. All original instructions are left in the source
 /// statements. The simplification pass can clean these up.
-class ForwardOpTreeImpl : ZoneAlgorithm {
+class ForwardOpTreeImpl final : ZoneAlgorithm {
 private:
   using MemoizationTy = DenseMap<ForwardingAction::KeyTy, ForwardingAction>;
 
@@ -1101,7 +1101,7 @@ runForwardOpTreeUsingNPM(Scop &S, ScopAnalysisManager &SAM,
 /// scalar definition are redirected (We currently do not care about removing
 /// the write in this case).  This is also useful for the main DeLICM pass as
 /// there are less scalars to be mapped.
-class ForwardOpTreeWrapperPass : public ScopPass {
+class ForwardOpTreeWrapperPass final : public ScopPass {
 private:
   /// The pass implementation, also holding per-scop data.
   std::unique_ptr<ForwardOpTreeImpl> Impl;
@@ -1145,7 +1145,7 @@ public:
 char ForwardOpTreeWrapperPass::ID;
 
 /// Print result from ForwardOpTreeWrapperPass.
-class ForwardOpTreePrinterLegacyPass : public ScopPass {
+class ForwardOpTreePrinterLegacyPass final : public ScopPass {
 public:
   static char ID;
 

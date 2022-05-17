@@ -16,7 +16,7 @@ class TargetTransformInfo;
 }
 
 namespace polly {
-struct Dependences;
+class Dependences;
 
 /// Apply the BLIS matmul optimization pattern if possible.
 ///

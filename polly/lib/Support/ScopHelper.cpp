@@ -233,7 +233,7 @@ void polly::recordAssumption(polly::RecordedAssumptionsTy *RecordedAssumptions,
 /// and we generate code outside/in front of that region. Hence, we generate the
 /// code for the SDiv/SRem operands in front of the analyzed region and then
 /// create a new SDiv/SRem operation there too.
-struct ScopExpander : SCEVVisitor<ScopExpander, const SCEV *> {
+struct ScopExpander final : SCEVVisitor<ScopExpander, const SCEV *> {
   friend struct SCEVVisitor<ScopExpander, const SCEV *>;
 
   explicit ScopExpander(const Region &R, ScalarEvolution &SE,

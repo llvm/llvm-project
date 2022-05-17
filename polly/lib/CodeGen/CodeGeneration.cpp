@@ -303,7 +303,7 @@ static bool generateCode(Scop &S, IslAstInfo &AI, LoopInfo &LI,
 
 namespace {
 
-class CodeGeneration : public ScopPass {
+class CodeGeneration final : public ScopPass {
 public:
   static char ID;
 

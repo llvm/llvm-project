@@ -930,7 +930,7 @@ INITIALIZE_PASS_END(DependenceInfo, "polly-dependences",
 
 namespace {
 /// Print result from DependenceAnalysis.
-class DependenceInfoPrinterLegacyPass : public ScopPass {
+class DependenceInfoPrinterLegacyPass final : public ScopPass {
 public:
   static char ID;
 
@@ -1037,7 +1037,7 @@ INITIALIZE_PASS_END(
 
 namespace {
 /// Print result from DependenceInfoWrapperPass.
-class DependenceInfoPrinterLegacyFunctionPass : public FunctionPass {
+class DependenceInfoPrinterLegacyFunctionPass final : public FunctionPass {
 public:
   static char ID;
 

@@ -27,7 +27,7 @@
 namespace llvm {
 
 template <>
-struct GraphTraits<polly::ScopDetection *> : public GraphTraits<RegionInfo *> {
+struct GraphTraits<polly::ScopDetection *> : GraphTraits<RegionInfo *> {
   static NodeRef getEntryNode(polly::ScopDetection *SD) {
     return GraphTraits<RegionInfo *>::getEntryNode(SD->getRI());
   }
@@ -40,8 +40,7 @@ struct GraphTraits<polly::ScopDetection *> : public GraphTraits<RegionInfo *> {
 };
 
 template <>
-struct DOTGraphTraits<polly::ScopDetection *>
-    : public DOTGraphTraits<RegionNode *> {
+struct DOTGraphTraits<polly::ScopDetection *> : DOTGraphTraits<RegionNode *> {
   DOTGraphTraits(bool isSimple = false)
       : DOTGraphTraits<RegionNode *>(isSimple) {}
   static std::string getGraphName(polly::ScopDetection *SD) {
@@ -71,23 +70,22 @@ struct DOTGraphTraits<polly::ScopDetection *>
 
 namespace polly {
 
-struct ScopViewer : public llvm::DOTGraphTraitsViewer<ScopAnalysis, false> {
+struct ScopViewer final : llvm::DOTGraphTraitsViewer<ScopAnalysis, false> {
   ScopViewer() : llvm::DOTGraphTraitsViewer<ScopAnalysis, false>("scops") {}
 
   bool processFunction(Function &F, const ScopDetection &SD) override;
 };
 
-struct ScopOnlyViewer : public llvm::DOTGraphTraitsViewer<ScopAnalysis, false> {
+struct ScopOnlyViewer final : llvm::DOTGraphTraitsViewer<ScopAnalysis, false> {
   ScopOnlyViewer()
       : llvm::DOTGraphTraitsViewer<ScopAnalysis, false>("scops-only") {}
 };
 
-struct ScopPrinter : public llvm::DOTGraphTraitsPrinter<ScopAnalysis, false> {
+struct ScopPrinter final : llvm::DOTGraphTraitsPrinter<ScopAnalysis, false> {
   ScopPrinter() : llvm::DOTGraphTraitsPrinter<ScopAnalysis, false>("scops") {}
 };
 
-struct ScopOnlyPrinter
-    : public llvm::DOTGraphTraitsPrinter<ScopAnalysis, true> {
+struct ScopOnlyPrinter final : llvm::DOTGraphTraitsPrinter<ScopAnalysis, true> {
   ScopOnlyPrinter()
       : llvm::DOTGraphTraitsPrinter<ScopAnalysis, true>("scopsonly") {}
 };

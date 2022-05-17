@@ -539,8 +539,8 @@ static uint64_t getMatMulTypeSize(MatMulInfoTy MMI) {
 /// @param MMI Parameters of the matrix multiplication operands.
 /// @return The structure of type MicroKernelParamsTy.
 /// @see MicroKernelParamsTy
-static struct MicroKernelParamsTy
-getMicroKernelParams(const TargetTransformInfo *TTI, MatMulInfoTy MMI) {
+static MicroKernelParamsTy getMicroKernelParams(const TargetTransformInfo *TTI,
+                                                MatMulInfoTy MMI) {
   assert(TTI && "The target transform info should be provided.");
 
   // Nvec - Number of double-precision floating-point numbers that can be hold
@@ -614,7 +614,7 @@ static void getTargetCacheParameters(const llvm::TargetTransformInfo *TTI) {
 /// @return The structure of type MacroKernelParamsTy.
 /// @see MacroKernelParamsTy
 /// @see MicroKernelParamsTy
-static struct MacroKernelParamsTy
+static MacroKernelParamsTy
 getMacroKernelParams(const llvm::TargetTransformInfo *TTI,
                      const MicroKernelParamsTy &MicroKernelParams,
                      MatMulInfoTy MMI) {
@@ -893,7 +893,7 @@ getInductionVariablesSubstitution(isl::schedule_node Node,
 /// @return The modified isl_schedule_node.
 static isl::schedule_node
 isolateAndUnrollMatMulInnerLoops(isl::schedule_node Node,
-                                 struct MicroKernelParamsTy MicroKernelParams) {
+                                 MicroKernelParamsTy MicroKernelParams) {
   isl::schedule_node Child = Node.child(0);
   isl::union_map UnMapOldIndVar = Child.get_prefix_schedule_relation();
   isl::set Prefix = isl::map::from_union_map(UnMapOldIndVar).range();

@@ -141,9 +141,9 @@ struct ScopDetectionAnalysisGraphTraits {
 };
 
 struct ScopViewerWrapperPass
-    : public DOTGraphTraitsViewerWrapperPass<ScopDetectionWrapperPass, false,
-                                             ScopDetection *,
-                                             ScopDetectionAnalysisGraphTraits> {
+    : DOTGraphTraitsViewerWrapperPass<ScopDetectionWrapperPass, false,
+                                      ScopDetection *,
+                                      ScopDetectionAnalysisGraphTraits> {
   static char ID;
   ScopViewerWrapperPass()
       : DOTGraphTraitsViewerWrapperPass<ScopDetectionWrapperPass, false,
@@ -164,9 +164,9 @@ struct ScopViewerWrapperPass
 char ScopViewerWrapperPass::ID = 0;
 
 struct ScopOnlyViewerWrapperPass
-    : public DOTGraphTraitsViewerWrapperPass<ScopDetectionWrapperPass, false,
-                                             ScopDetection *,
-                                             ScopDetectionAnalysisGraphTraits> {
+    : DOTGraphTraitsViewerWrapperPass<ScopDetectionWrapperPass, false,
+                                      ScopDetection *,
+                                      ScopDetectionAnalysisGraphTraits> {
   static char ID;
   ScopOnlyViewerWrapperPass()
       : DOTGraphTraitsViewerWrapperPass<ScopDetectionWrapperPass, false,
@@ -177,9 +177,9 @@ struct ScopOnlyViewerWrapperPass
 char ScopOnlyViewerWrapperPass::ID = 0;
 
 struct ScopPrinterWrapperPass
-    : public DOTGraphTraitsPrinterWrapperPass<
-          ScopDetectionWrapperPass, false, ScopDetection *,
-          ScopDetectionAnalysisGraphTraits> {
+    : DOTGraphTraitsPrinterWrapperPass<ScopDetectionWrapperPass, false,
+                                       ScopDetection *,
+                                       ScopDetectionAnalysisGraphTraits> {
   static char ID;
   ScopPrinterWrapperPass()
       : DOTGraphTraitsPrinterWrapperPass<ScopDetectionWrapperPass, false,
@@ -190,9 +190,9 @@ struct ScopPrinterWrapperPass
 char ScopPrinterWrapperPass::ID = 0;
 
 struct ScopOnlyPrinterWrapperPass
-    : public DOTGraphTraitsPrinterWrapperPass<
-          ScopDetectionWrapperPass, true, ScopDetection *,
-          ScopDetectionAnalysisGraphTraits> {
+    : DOTGraphTraitsPrinterWrapperPass<ScopDetectionWrapperPass, true,
+                                       ScopDetection *,
+                                       ScopDetectionAnalysisGraphTraits> {
   static char ID;
   ScopOnlyPrinterWrapperPass()
       : DOTGraphTraitsPrinterWrapperPass<ScopDetectionWrapperPass, true,

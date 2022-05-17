@@ -234,8 +234,7 @@ namespace {
 /// We use the constructor of a statically declared object to initialize the
 /// different Polly passes right after the Polly library is loaded. This ensures
 /// that the Polly passes are available e.g. in the 'opt' tool.
-class StaticInitializer {
-public:
+struct StaticInitializer {
   StaticInitializer() {
     llvm::PassRegistry &Registry = *llvm::PassRegistry::getPassRegistry();
     polly::initializePollyPasses(Registry);

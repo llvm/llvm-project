@@ -34,7 +34,7 @@ using namespace polly;
 
 namespace {
 
-class MaximalStaticExpander : public ScopPass {
+class MaximalStaticExpander final : public ScopPass {
 public:
   static char ID;
 

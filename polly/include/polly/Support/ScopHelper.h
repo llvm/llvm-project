@@ -133,7 +133,7 @@ using BoxedLoopsSetTy = llvm::SetVector<const llvm::Loop *>;
 /// is currently not supported in C++ such that those cannot be used directly.
 /// (llvm::isa could, but then llvm:cast etc. would not have the expected
 /// behavior)
-class MemAccInst {
+class MemAccInst final {
 private:
   llvm::Instruction *I;
 
