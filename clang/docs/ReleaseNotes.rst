@@ -365,7 +365,7 @@ C++ Language Changes in Clang
   of clang; use the ``-fclang-abi-compat=14`` option to get the old mangling.
 - Preprocessor character literals with a ``u8`` prefix are now correctly treated as
   unsigned character literals. This fixes `Issue 54886 <https://github.com/llvm/llvm-project/issues/54886>`_.
-- Stopped allowing constriants on non-template functions to be compliant with
+- Stopped allowing constraints on non-template functions to be compliant with
   dcl.decl.general p4.
 
 C++20 Feature Support
