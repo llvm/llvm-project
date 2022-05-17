@@ -36,124 +36,121 @@ define i32 @v1(ptr nocapture noundef readonly %p1, i32 noundef %i1, ptr nocaptur
 ; CHECK-NEXT:    ld1 { v6.s }[1], [x2]
 ; CHECK-NEXT:    ushll v0.8h, v0.8b, #0
 ; CHECK-NEXT:    usubl v7.4s, v3.4h, v5.4h
-; CHECK-NEXT:    usubl2 v5.4s, v3.8h, v5.8h
-; CHECK-NEXT:    usubl2 v3.4s, v2.8h, v4.8h
+; CHECK-NEXT:    usubl2 v3.4s, v3.8h, v5.8h
+; CHECK-NEXT:    usubl2 v5.4s, v2.8h, v4.8h
 ; CHECK-NEXT:    usubl v2.4s, v2.4h, v4.4h
 ; CHECK-NEXT:    ushll v4.8h, v6.8b, #0
-; CHECK-NEXT:    shl v3.4s, v3.4s, #16
+; CHECK-NEXT:    shl v5.4s, v5.4s, #16
 ; CHECK-NEXT:    usubl2 v6.4s, v0.8h, v4.8h
 ; CHECK-NEXT:    shl v2.4s, v2.4s, #16
 ; CHECK-NEXT:    usubl v0.4s, v0.4h, v4.4h
+; CHECK-NEXT:    add v1.4s, v5.4s, v1.4s
+; CHECK-NEXT:    shl v4.4s, v6.4s, #16
+; CHECK-NEXT:    shl v0.4s, v0.4s, #16
 ; CHECK-NEXT:    add v2.4s, v2.4s, v16.4s
-; CHECK-NEXT:    shl v6.4s, v6.4s, #16
-; CHECK-NEXT:    shl v4.4s, v0.4s, #16
-; CHECK-NEXT:    add v19.4s, v6.4s, v5.4s
-; CHECK-NEXT:    add v6.4s, v4.4s, v7.4s
-; CHECK-NEXT:    add v17.4s, v3.4s, v1.4s
-; CHECK-NEXT:    ext v18.16b, v2.16b, v2.16b, #12
-; CHECK-NEXT:    zip1 v7.4s, v6.4s, v19.4s
-; CHECK-NEXT:    uzp2 v16.4s, v2.4s, v17.4s
-; CHECK-NEXT:    mov v1.16b, v2.16b
-; CHECK-NEXT:    mov v4.16b, v17.16b
-; CHECK-NEXT:    mov v20.16b, v6.16b
-; CHECK-NEXT:    zip2 v0.4s, v17.4s, v2.4s
-; CHECK-NEXT:    zip2 v3.4s, v2.4s, v17.4s
-; CHECK-NEXT:    mov v1.s[0], v17.s[1]
-; CHECK-NEXT:    ext v5.16b, v17.16b, v18.16b, #12
-; CHECK-NEXT:    zip2 v17.4s, v6.4s, v19.4s
-; CHECK-NEXT:    mov v4.s[1], v2.s[0]
-; CHECK-NEXT:    ext v18.16b, v6.16b, v7.16b, #8
-; CHECK-NEXT:    mov v20.s[3], v19.s[2]
-; CHECK-NEXT:    uzp2 v6.4s, v16.4s, v2.4s
-; CHECK-NEXT:    mov v1.d[1], v7.d[1]
-; CHECK-NEXT:    mov v4.d[1], v18.d[1]
-; CHECK-NEXT:    mov v5.d[1], v17.d[1]
-; CHECK-NEXT:    mov v0.d[1], v20.d[1]
-; CHECK-NEXT:    mov v6.d[1], v17.d[1]
-; CHECK-NEXT:    mov v3.d[1], v20.d[1]
-; CHECK-NEXT:    add v2.4s, v1.4s, v4.4s
-; CHECK-NEXT:    sub v1.4s, v4.4s, v1.4s
-; CHECK-NEXT:    sub v0.4s, v0.4s, v5.4s
-; CHECK-NEXT:    add v3.4s, v6.4s, v3.4s
-; CHECK-NEXT:    sub v5.4s, v1.4s, v0.4s
-; CHECK-NEXT:    add v0.4s, v0.4s, v1.4s
+; CHECK-NEXT:    add v3.4s, v4.4s, v3.4s
+; CHECK-NEXT:    add v0.4s, v0.4s, v7.4s
+; CHECK-NEXT:    uzp2 v6.4s, v2.4s, v1.4s
+; CHECK-NEXT:    ext v17.16b, v2.16b, v2.16b, #12
+; CHECK-NEXT:    zip1 v4.4s, v0.4s, v3.4s
 ; CHECK-NEXT:    mov v16.16b, v2.16b
-; CHECK-NEXT:    mov v4.16b, v3.16b
-; CHECK-NEXT:    mov v16.s[0], v2.s[1]
-; CHECK-NEXT:    rev64 v1.4s, v5.4s
-; CHECK-NEXT:    rev64 v6.4s, v0.4s
-; CHECK-NEXT:    mov v4.s[0], v3.s[1]
-; CHECK-NEXT:    mov v16.s[1], v2.s[0]
-; CHECK-NEXT:    add v17.4s, v5.4s, v1.4s
-; CHECK-NEXT:    add v18.4s, v0.4s, v6.4s
+; CHECK-NEXT:    mov v19.16b, v1.16b
+; CHECK-NEXT:    zip2 v5.4s, v1.4s, v2.4s
+; CHECK-NEXT:    zip2 v18.4s, v2.4s, v1.4s
+; CHECK-NEXT:    mov v16.s[0], v1.s[1]
+; CHECK-NEXT:    uzp2 v6.4s, v6.4s, v2.4s
+; CHECK-NEXT:    zip2 v7.4s, v0.4s, v3.4s
+; CHECK-NEXT:    ext v1.16b, v1.16b, v17.16b, #12
+; CHECK-NEXT:    ext v17.16b, v0.16b, v4.16b, #8
+; CHECK-NEXT:    mov v19.s[1], v2.s[0]
+; CHECK-NEXT:    mov v0.s[3], v3.s[2]
+; CHECK-NEXT:    mov v6.d[1], v7.d[1]
+; CHECK-NEXT:    mov v16.d[1], v4.d[1]
+; CHECK-NEXT:    mov v19.d[1], v17.d[1]
+; CHECK-NEXT:    mov v18.d[1], v0.d[1]
+; CHECK-NEXT:    mov v1.d[1], v7.d[1]
+; CHECK-NEXT:    mov v5.d[1], v0.d[1]
+; CHECK-NEXT:    add v0.4s, v16.4s, v19.4s
+; CHECK-NEXT:    add v4.4s, v6.4s, v18.4s
+; CHECK-NEXT:    rev64 v3.4s, v0.4s
 ; CHECK-NEXT:    sub v1.4s, v5.4s, v1.4s
-; CHECK-NEXT:    sub v0.4s, v0.4s, v6.4s
-; CHECK-NEXT:    mov v4.s[1], v3.s[0]
-; CHECK-NEXT:    ext v5.16b, v18.16b, v0.16b, #4
-; CHECK-NEXT:    ext v6.16b, v17.16b, v1.16b, #4
-; CHECK-NEXT:    add v3.4s, v3.4s, v16.4s
-; CHECK-NEXT:    sub v2.4s, v2.4s, v4.4s
-; CHECK-NEXT:    rev64 v16.4s, v3.4s
-; CHECK-NEXT:    rev64 v4.4s, v5.4s
-; CHECK-NEXT:    rev64 v5.4s, v6.4s
-; CHECK-NEXT:    rev64 v6.4s, v2.4s
-; CHECK-NEXT:    add v19.4s, v3.4s, v16.4s
-; CHECK-NEXT:    sub v3.4s, v3.4s, v16.4s
-; CHECK-NEXT:    rev64 v16.4s, v19.4s
-; CHECK-NEXT:    add v20.4s, v2.4s, v6.4s
-; CHECK-NEXT:    sub v2.4s, v2.4s, v6.4s
-; CHECK-NEXT:    ext v6.16b, v19.16b, v19.16b, #4
-; CHECK-NEXT:    ext v19.16b, v20.16b, v2.16b, #4
-; CHECK-NEXT:    mov v17.s[3], v1.s[3]
-; CHECK-NEXT:    ext v5.16b, v1.16b, v5.16b, #12
-; CHECK-NEXT:    mov v18.s[3], v0.s[3]
-; CHECK-NEXT:    rev64 v19.4s, v19.4s
-; CHECK-NEXT:    ext v4.16b, v0.16b, v4.16b, #12
-; CHECK-NEXT:    mov v20.s[3], v2.s[3]
-; CHECK-NEXT:    sub v22.4s, v17.4s, v5.4s
-; CHECK-NEXT:    trn2 v16.4s, v16.4s, v3.4s
-; CHECK-NEXT:    trn2 v3.4s, v3.4s, v6.4s
-; CHECK-NEXT:    mov v17.s[0], v1.s[0]
-; CHECK-NEXT:    ext v1.16b, v2.16b, v19.16b, #12
-; CHECK-NEXT:    sub v21.4s, v18.4s, v4.4s
-; CHECK-NEXT:    mov v18.s[0], v0.s[0]
-; CHECK-NEXT:    ext v0.16b, v3.16b, v3.16b, #4
-; CHECK-NEXT:    add v3.4s, v17.4s, v5.4s
-; CHECK-NEXT:    sub v5.4s, v20.4s, v1.4s
-; CHECK-NEXT:    mov v20.s[0], v2.s[0]
-; CHECK-NEXT:    add v4.4s, v18.4s, v4.4s
-; CHECK-NEXT:    add v6.4s, v16.4s, v0.4s
-; CHECK-NEXT:    mov v4.d[1], v21.d[1]
-; CHECK-NEXT:    sub v0.4s, v16.4s, v0.4s
-; CHECK-NEXT:    add v1.4s, v20.4s, v1.4s
-; CHECK-NEXT:    movi v7.8h, #1
-; CHECK-NEXT:    mov v3.d[1], v22.d[1]
-; CHECK-NEXT:    mov v1.d[1], v5.d[1]
-; CHECK-NEXT:    mov v6.d[1], v0.d[1]
-; CHECK-NEXT:    ushr v2.4s, v4.4s, #15
-; CHECK-NEXT:    ushr v5.4s, v3.4s, #15
-; CHECK-NEXT:    and v0.16b, v2.16b, v7.16b
-; CHECK-NEXT:    ushr v17.4s, v1.4s, #15
-; CHECK-NEXT:    movi v2.2d, #0x00ffff0000ffff
-; CHECK-NEXT:    ushr v16.4s, v6.4s, #15
-; CHECK-NEXT:    and v5.16b, v5.16b, v7.16b
-; CHECK-NEXT:    and v17.16b, v17.16b, v7.16b
-; CHECK-NEXT:    and v7.16b, v16.16b, v7.16b
-; CHECK-NEXT:    mul v0.4s, v0.4s, v2.4s
-; CHECK-NEXT:    mul v5.4s, v5.4s, v2.4s
-; CHECK-NEXT:    mul v7.4s, v7.4s, v2.4s
-; CHECK-NEXT:    mul v2.4s, v17.4s, v2.4s
-; CHECK-NEXT:    add v4.4s, v0.4s, v4.4s
-; CHECK-NEXT:    add v3.4s, v5.4s, v3.4s
-; CHECK-NEXT:    add v6.4s, v7.4s, v6.4s
-; CHECK-NEXT:    add v1.4s, v2.4s, v1.4s
-; CHECK-NEXT:    eor v6.16b, v6.16b, v7.16b
-; CHECK-NEXT:    eor v1.16b, v1.16b, v2.16b
-; CHECK-NEXT:    eor v2.16b, v3.16b, v5.16b
-; CHECK-NEXT:    eor v0.16b, v4.16b, v0.16b
+; CHECK-NEXT:    rev64 v5.4s, v4.4s
+; CHECK-NEXT:    sub v2.4s, v19.4s, v16.4s
+; CHECK-NEXT:    mov v3.d[1], v0.d[1]
+; CHECK-NEXT:    add v6.4s, v1.4s, v2.4s
+; CHECK-NEXT:    sub v1.4s, v2.4s, v1.4s
+; CHECK-NEXT:    mov v5.d[1], v4.d[1]
+; CHECK-NEXT:    rev64 v2.4s, v1.4s
+; CHECK-NEXT:    rev64 v7.4s, v6.4s
+; CHECK-NEXT:    add v3.4s, v4.4s, v3.4s
+; CHECK-NEXT:    sub v0.4s, v0.4s, v5.4s
+; CHECK-NEXT:    add v4.4s, v1.4s, v2.4s
+; CHECK-NEXT:    add v16.4s, v6.4s, v7.4s
+; CHECK-NEXT:    sub v1.4s, v1.4s, v2.4s
+; CHECK-NEXT:    sub v2.4s, v6.4s, v7.4s
+; CHECK-NEXT:    rev64 v6.4s, v3.4s
+; CHECK-NEXT:    rev64 v17.4s, v0.4s
+; CHECK-NEXT:    ext v7.16b, v4.16b, v1.16b, #4
+; CHECK-NEXT:    ext v5.16b, v16.16b, v2.16b, #4
+; CHECK-NEXT:    add v18.4s, v3.4s, v6.4s
+; CHECK-NEXT:    add v19.4s, v0.4s, v17.4s
+; CHECK-NEXT:    sub v0.4s, v0.4s, v17.4s
+; CHECK-NEXT:    sub v3.4s, v3.4s, v6.4s
+; CHECK-NEXT:    rev64 v6.4s, v7.4s
+; CHECK-NEXT:    rev64 v7.4s, v18.4s
+; CHECK-NEXT:    ext v17.16b, v18.16b, v18.16b, #4
+; CHECK-NEXT:    ext v18.16b, v19.16b, v0.16b, #4
+; CHECK-NEXT:    rev64 v5.4s, v5.4s
+; CHECK-NEXT:    mov v16.s[3], v2.s[3]
+; CHECK-NEXT:    mov v4.s[3], v1.s[3]
+; CHECK-NEXT:    rev64 v18.4s, v18.4s
+; CHECK-NEXT:    mov v19.s[3], v0.s[3]
+; CHECK-NEXT:    ext v5.16b, v2.16b, v5.16b, #12
+; CHECK-NEXT:    ext v6.16b, v1.16b, v6.16b, #12
+; CHECK-NEXT:    trn2 v7.4s, v7.4s, v3.4s
+; CHECK-NEXT:    trn2 v3.4s, v3.4s, v17.4s
+; CHECK-NEXT:    ext v18.16b, v0.16b, v18.16b, #12
+; CHECK-NEXT:    sub v17.4s, v16.4s, v5.4s
+; CHECK-NEXT:    sub v20.4s, v4.4s, v6.4s
+; CHECK-NEXT:    ext v3.16b, v3.16b, v3.16b, #4
+; CHECK-NEXT:    mov v16.s[0], v2.s[0]
+; CHECK-NEXT:    sub v2.4s, v19.4s, v18.4s
+; CHECK-NEXT:    mov v4.s[0], v1.s[0]
+; CHECK-NEXT:    mov v19.s[0], v0.s[0]
+; CHECK-NEXT:    add v1.4s, v7.4s, v3.4s
+; CHECK-NEXT:    sub v0.4s, v7.4s, v3.4s
+; CHECK-NEXT:    add v3.4s, v4.4s, v6.4s
+; CHECK-NEXT:    add v4.4s, v16.4s, v5.4s
+; CHECK-NEXT:    add v5.4s, v19.4s, v18.4s
+; CHECK-NEXT:    mov v4.d[1], v17.d[1]
+; CHECK-NEXT:    mov v3.d[1], v20.d[1]
+; CHECK-NEXT:    mov v1.d[1], v0.d[1]
+; CHECK-NEXT:    mov v5.d[1], v2.d[1]
+; CHECK-NEXT:    movi v0.8h, #1
+; CHECK-NEXT:    movi v17.2d, #0x00ffff0000ffff
+; CHECK-NEXT:    ushr v2.4s, v1.4s, #15
+; CHECK-NEXT:    ushr v6.4s, v4.4s, #15
+; CHECK-NEXT:    ushr v7.4s, v5.4s, #15
+; CHECK-NEXT:    ushr v16.4s, v3.4s, #15
+; CHECK-NEXT:    and v6.16b, v6.16b, v0.16b
+; CHECK-NEXT:    and v16.16b, v16.16b, v0.16b
+; CHECK-NEXT:    and v7.16b, v7.16b, v0.16b
+; CHECK-NEXT:    and v0.16b, v2.16b, v0.16b
+; CHECK-NEXT:    mul v2.4s, v6.4s, v17.4s
+; CHECK-NEXT:    mul v6.4s, v16.4s, v17.4s
+; CHECK-NEXT:    mul v0.4s, v0.4s, v17.4s
+; CHECK-NEXT:    mul v7.4s, v7.4s, v17.4s
+; CHECK-NEXT:    add v4.4s, v2.4s, v4.4s
+; CHECK-NEXT:    add v3.4s, v6.4s, v3.4s
+; CHECK-NEXT:    add v1.4s, v0.4s, v1.4s
+; CHECK-NEXT:    add v5.4s, v7.4s, v5.4s
+; CHECK-NEXT:    eor v0.16b, v1.16b, v0.16b
+; CHECK-NEXT:    eor v1.16b, v5.16b, v7.16b
+; CHECK-NEXT:    eor v3.16b, v3.16b, v6.16b
+; CHECK-NEXT:    eor v2.16b, v4.16b, v2.16b
+; CHECK-NEXT:    add v2.4s, v2.4s, v3.4s
+; CHECK-NEXT:    add v0.4s, v0.4s, v1.4s
 ; CHECK-NEXT:    add v0.4s, v0.4s, v2.4s
-; CHECK-NEXT:    add v1.4s, v6.4s, v1.4s
-; CHECK-NEXT:    add v0.4s, v1.4s, v0.4s
 ; CHECK-NEXT:    addv s0, v0.4s
 ; CHECK-NEXT:    fmov w8, s0
 ; CHECK-NEXT:    lsr w9, w8, #16
@@ -301,96 +298,94 @@ define i32 @v2(ptr nocapture noundef readonly %p1, i32 noundef %i1, ptr nocaptur
 ; CHECK-NEXT:    add v3.4s, v4.4s, v3.4s
 ; CHECK-NEXT:    add v0.4s, v0.4s, v7.4s
 ; CHECK-NEXT:    uzp2 v6.4s, v2.4s, v1.4s
-; CHECK-NEXT:    zip1 v7.4s, v0.4s, v3.4s
+; CHECK-NEXT:    ext v17.16b, v2.16b, v2.16b, #12
+; CHECK-NEXT:    zip1 v4.4s, v0.4s, v3.4s
 ; CHECK-NEXT:    mov v16.16b, v2.16b
-; CHECK-NEXT:    mov v4.16b, v1.16b
-; CHECK-NEXT:    zip2 v17.4s, v2.4s, v1.4s
+; CHECK-NEXT:    mov v19.16b, v0.16b
+; CHECK-NEXT:    zip2 v5.4s, v1.4s, v2.4s
+; CHECK-NEXT:    zip2 v18.4s, v2.4s, v1.4s
 ; CHECK-NEXT:    mov v16.s[0], v1.s[1]
 ; CHECK-NEXT:    uzp2 v6.4s, v6.4s, v2.4s
-; CHECK-NEXT:    zip2 v18.4s, v0.4s, v3.4s
-; CHECK-NEXT:    mov v4.s[1], v2.s[0]
-; CHECK-NEXT:    ext v19.16b, v0.16b, v7.16b, #8
-; CHECK-NEXT:    mov v0.s[3], v3.s[2]
-; CHECK-NEXT:    zip2 v5.4s, v1.4s, v2.4s
-; CHECK-NEXT:    ext v2.16b, v2.16b, v2.16b, #12
-; CHECK-NEXT:    mov v16.d[1], v7.d[1]
-; CHECK-NEXT:    mov v4.d[1], v19.d[1]
-; CHECK-NEXT:    mov v6.d[1], v18.d[1]
-; CHECK-NEXT:    mov v17.d[1], v0.d[1]
-; CHECK-NEXT:    ext v1.16b, v1.16b, v2.16b, #12
-; CHECK-NEXT:    add v2.4s, v16.4s, v4.4s
-; CHECK-NEXT:    mov v5.d[1], v0.d[1]
-; CHECK-NEXT:    add v6.4s, v6.4s, v17.4s
-; CHECK-NEXT:    mov v3.16b, v2.16b
-; CHECK-NEXT:    mov v0.16b, v6.16b
-; CHECK-NEXT:    mov v3.s[0], v2.s[1]
-; CHECK-NEXT:    mov v0.s[0], v6.s[1]
-; CHECK-NEXT:    mov v1.d[1], v18.d[1]
-; CHECK-NEXT:    sub v4.4s, v4.4s, v16.4s
-; CHECK-NEXT:    mov v3.s[1], v2.s[0]
-; CHECK-NEXT:    mov v0.s[1], v6.s[0]
-; CHECK-NEXT:    sub v1.4s, v5.4s, v1.4s
-; CHECK-NEXT:    add v5.4s, v1.4s, v4.4s
-; CHECK-NEXT:    add v3.4s, v6.4s, v3.4s
-; CHECK-NEXT:    sub v1.4s, v4.4s, v1.4s
-; CHECK-NEXT:    sub v0.4s, v2.4s, v0.4s
-; CHECK-NEXT:    zip1 v6.4s, v3.4s, v5.4s
-; CHECK-NEXT:    uzp2 v2.4s, v3.4s, v5.4s
+; CHECK-NEXT:    ext v7.16b, v1.16b, v17.16b, #12
+; CHECK-NEXT:    zip2 v17.4s, v0.4s, v3.4s
+; CHECK-NEXT:    ext v0.16b, v0.16b, v4.16b, #8
+; CHECK-NEXT:    mov v1.s[1], v2.s[0]
+; CHECK-NEXT:    mov v19.s[3], v3.s[2]
+; CHECK-NEXT:    mov v6.d[1], v17.d[1]
+; CHECK-NEXT:    mov v16.d[1], v4.d[1]
+; CHECK-NEXT:    mov v1.d[1], v0.d[1]
+; CHECK-NEXT:    mov v18.d[1], v19.d[1]
+; CHECK-NEXT:    mov v7.d[1], v17.d[1]
+; CHECK-NEXT:    mov v5.d[1], v19.d[1]
+; CHECK-NEXT:    add v0.4s, v16.4s, v1.4s
+; CHECK-NEXT:    add v3.4s, v6.4s, v18.4s
+; CHECK-NEXT:    rev64 v2.4s, v0.4s
+; CHECK-NEXT:    sub v4.4s, v5.4s, v7.4s
+; CHECK-NEXT:    rev64 v5.4s, v3.4s
+; CHECK-NEXT:    sub v1.4s, v1.4s, v16.4s
+; CHECK-NEXT:    mov v2.d[1], v0.d[1]
+; CHECK-NEXT:    add v6.4s, v4.4s, v1.4s
+; CHECK-NEXT:    mov v5.d[1], v3.d[1]
+; CHECK-NEXT:    sub v1.4s, v1.4s, v4.4s
+; CHECK-NEXT:    add v2.4s, v3.4s, v2.4s
+; CHECK-NEXT:    sub v0.4s, v0.4s, v5.4s
+; CHECK-NEXT:    zip1 v4.4s, v2.4s, v6.4s
+; CHECK-NEXT:    uzp2 v5.4s, v2.4s, v6.4s
 ; CHECK-NEXT:    zip1 v7.4s, v0.4s, v1.4s
-; CHECK-NEXT:    mov v16.16b, v3.16b
-; CHECK-NEXT:    zip2 v4.4s, v3.4s, v5.4s
-; CHECK-NEXT:    mov v16.s[1], v5.s[1]
-; CHECK-NEXT:    mov v5.16b, v0.16b
-; CHECK-NEXT:    trn2 v6.4s, v3.4s, v6.4s
+; CHECK-NEXT:    mov v16.16b, v2.16b
+; CHECK-NEXT:    zip2 v3.4s, v2.4s, v6.4s
+; CHECK-NEXT:    mov v16.s[1], v6.s[1]
+; CHECK-NEXT:    mov v6.16b, v0.16b
+; CHECK-NEXT:    trn2 v4.4s, v2.4s, v4.4s
 ; CHECK-NEXT:    zip2 v17.4s, v0.4s, v1.4s
 ; CHECK-NEXT:    ext v0.16b, v0.16b, v7.16b, #8
-; CHECK-NEXT:    uzp2 v2.4s, v2.4s, v3.4s
-; CHECK-NEXT:    mov v5.s[3], v1.s[2]
+; CHECK-NEXT:    uzp2 v2.4s, v5.4s, v2.4s
+; CHECK-NEXT:    mov v6.s[3], v1.s[2]
 ; CHECK-NEXT:    mov v16.d[1], v7.d[1]
-; CHECK-NEXT:    mov v6.d[1], v0.d[1]
+; CHECK-NEXT:    mov v4.d[1], v0.d[1]
 ; CHECK-NEXT:    mov v2.d[1], v17.d[1]
-; CHECK-NEXT:    mov v4.d[1], v5.d[1]
+; CHECK-NEXT:    mov v3.d[1], v6.d[1]
 ; CHECK-NEXT:    movi v0.8h, #1
-; CHECK-NEXT:    add v1.4s, v16.4s, v6.4s
-; CHECK-NEXT:    sub v3.4s, v6.4s, v16.4s
-; CHECK-NEXT:    add v6.4s, v4.4s, v2.4s
-; CHECK-NEXT:    sub v2.4s, v2.4s, v4.4s
-; CHECK-NEXT:    zip2 v4.4s, v3.4s, v1.4s
-; CHECK-NEXT:    zip2 v7.4s, v2.4s, v6.4s
+; CHECK-NEXT:    add v1.4s, v16.4s, v4.4s
+; CHECK-NEXT:    sub v4.4s, v4.4s, v16.4s
+; CHECK-NEXT:    add v6.4s, v3.4s, v2.4s
+; CHECK-NEXT:    sub v2.4s, v2.4s, v3.4s
 ; CHECK-NEXT:    ext v5.16b, v1.16b, v1.16b, #4
+; CHECK-NEXT:    zip2 v3.4s, v4.4s, v1.4s
+; CHECK-NEXT:    zip2 v7.4s, v2.4s, v6.4s
 ; CHECK-NEXT:    ext v17.16b, v6.16b, v6.16b, #4
-; CHECK-NEXT:    zip1 v16.4s, v1.4s, v3.4s
-; CHECK-NEXT:    zip2 v1.4s, v1.4s, v3.4s
-; CHECK-NEXT:    add v4.4s, v4.4s, v7.4s
+; CHECK-NEXT:    zip1 v16.4s, v1.4s, v4.4s
+; CHECK-NEXT:    zip2 v1.4s, v1.4s, v4.4s
+; CHECK-NEXT:    add v3.4s, v3.4s, v7.4s
 ; CHECK-NEXT:    zip2 v7.4s, v6.4s, v2.4s
-; CHECK-NEXT:    ext v3.16b, v5.16b, v3.16b, #8
 ; CHECK-NEXT:    zip1 v6.4s, v6.4s, v2.4s
+; CHECK-NEXT:    ext v4.16b, v5.16b, v4.16b, #8
 ; CHECK-NEXT:    ext v2.16b, v17.16b, v2.16b, #8
 ; CHECK-NEXT:    sub v1.4s, v7.4s, v1.4s
-; CHECK-NEXT:    movi v7.2d, #0x00ffff0000ffff
-; CHECK-NEXT:    ext v3.16b, v3.16b, v5.16b, #4
-; CHECK-NEXT:    ushr v5.4s, v4.4s, #15
-; CHECK-NEXT:    ext v2.16b, v2.16b, v17.16b, #4
-; CHECK-NEXT:    ushr v17.4s, v1.4s, #15
-; CHECK-NEXT:    and v5.16b, v5.16b, v0.16b
-; CHECK-NEXT:    mul v5.4s, v5.4s, v7.4s
 ; CHECK-NEXT:    sub v6.4s, v6.4s, v16.4s
-; CHECK-NEXT:    add v2.4s, v3.4s, v2.4s
+; CHECK-NEXT:    ext v4.16b, v4.16b, v5.16b, #4
+; CHECK-NEXT:    ext v2.16b, v2.16b, v17.16b, #4
+; CHECK-NEXT:    movi v7.2d, #0x00ffff0000ffff
+; CHECK-NEXT:    ushr v5.4s, v3.4s, #15
 ; CHECK-NEXT:    ushr v16.4s, v6.4s, #15
-; CHECK-NEXT:    add v3.4s, v5.4s, v4.4s
+; CHECK-NEXT:    ushr v17.4s, v1.4s, #15
+; CHECK-NEXT:    add v2.4s, v4.4s, v2.4s
+; CHECK-NEXT:    and v5.16b, v5.16b, v0.16b
 ; CHECK-NEXT:    ushr v4.4s, v2.4s, #15
 ; CHECK-NEXT:    and v17.16b, v17.16b, v0.16b
 ; CHECK-NEXT:    and v16.16b, v16.16b, v0.16b
 ; CHECK-NEXT:    and v0.16b, v4.16b, v0.16b
+; CHECK-NEXT:    mul v5.4s, v5.4s, v7.4s
 ; CHECK-NEXT:    mul v16.4s, v16.4s, v7.4s
 ; CHECK-NEXT:    mul v17.4s, v17.4s, v7.4s
 ; CHECK-NEXT:    mul v0.4s, v0.4s, v7.4s
-; CHECK-NEXT:    eor v3.16b, v3.16b, v5.16b
+; CHECK-NEXT:    add v3.4s, v5.4s, v3.4s
 ; CHECK-NEXT:    add v6.4s, v16.4s, v6.4s
 ; CHECK-NEXT:    add v1.4s, v17.4s, v1.4s
 ; CHECK-NEXT:    add v2.4s, v0.4s, v2.4s
 ; CHECK-NEXT:    eor v4.16b, v6.16b, v16.16b
 ; CHECK-NEXT:    eor v1.16b, v1.16b, v17.16b
+; CHECK-NEXT:    eor v3.16b, v3.16b, v5.16b
 ; CHECK-NEXT:    eor v0.16b, v2.16b, v0.16b
 ; CHECK-NEXT:    add v1.4s, v3.4s, v1.4s
 ; CHECK-NEXT:    add v0.4s, v0.4s, v4.4s

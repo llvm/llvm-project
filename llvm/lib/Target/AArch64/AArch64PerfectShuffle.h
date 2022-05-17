@@ -17,9 +17,9 @@
 #include "llvm/ADT/ArrayRef.h"
 
 // 31 entries have cost 0
-// 730 entries have cost 1
-// 3658 entries have cost 2
-// 2142 entries have cost 3
+// 756 entries have cost 1
+// 3690 entries have cost 2
+// 2084 entries have cost 3
 
 // This table is 6561*4 = 26244 bytes in size.
 static const unsigned PerfectShuffleTable[6561 + 1] = {
@@ -64,7 +64,7 @@ static const unsigned PerfectShuffleTable[6561 + 1] = {
     1947828326U, // <0,0,4,2>: Cost 2 vtrnl <0,2,4,6>, LHS
     2086002689U, // <0,0,4,3>: Cost 2 ins <0,u,4,3>, lane 1
     1947828428U, // <0,0,4,4>: Cost 2 vtrnl <0,2,4,6>, <0,2,4,6>
-    1543507254U, // <0,0,4,5>: Cost 2 vext2 <0,0,0,0>, RHS
+    2081030149U, // <0,0,4,5>: Cost 2 ins <0,0,u,u>, lane 5
     1679068470U, // <0,0,4,6>: Cost 2 vuzpl <0,2,0,2>, RHS
     3154477059U, // <0,0,4,7>: Cost 3 ins <0,0,4,u>, lane 3
     1679068488U, // <0,0,4,u>: Cost 2 vuzpl <0,2,0,2>, RHS
@@ -84,7 +84,7 @@ static const unsigned PerfectShuffleTable[6561 + 1] = {
     3202367488U, // <0,0,6,4>: Cost 3 ins <u,0,6,4>, lane 0
     2617250536U, // <0,0,6,5>: Cost 3 vext2 <0,0,0,0>, <6,5,6,7>
     1947287690U, // <0,0,6,6>: Cost 2 vtrnl <0,1,6,3>, <0,1,6,3>
-    2128650240U, // <0,0,6,7>: Cost 2 ins <u,0,6,7>, lane 0
+    2081030149U, // <0,0,6,7>: Cost 2 ins <0,0,u,u>, lane 5
     2080972802U, // <0,0,6,u>: Cost 2 ins <0,0,u,1>, lane 2
     2080964610U, // <0,0,7,0>: Cost 2 ins <0,0,u,0>, lane 2
     2080972802U, // <0,0,7,1>: Cost 2 ins <0,0,u,1>, lane 2
@@ -105,14 +105,14 @@ static const unsigned PerfectShuffleTable[6561 + 1] = {
     2080514051U, // <0,0,u,7>: Cost 2 ins <0,0,1,u>, lane 3
     873693340U,  // <0,0,u,u>: Cost 1 vtrnl LHS, LHS
     2085683201U, // <0,1,0,0>: Cost 2 ins <0,u,0,0>, lane 1
-    1680490834U, // <0,1,0,1>: Cost 2 vuzpl <0,4,1,5>, <0,4,1,5>
+    1007951877U, // <0,1,0,1>: Cost 1 ins LHS, lane 5
     1680490598U, // <0,1,0,2>: Cost 2 vuzpl <0,4,1,5>, LHS
     1007910914U, // <0,1,0,3>: Cost 1 ins LHS, lane 2
     2081660930U, // <0,1,0,4>: Cost 2 ins <0,1,u,4>, lane 2
     2081669122U, // <0,1,0,5>: Cost 2 ins <0,1,u,5>, lane 2
     2081677314U, // <0,1,0,6>: Cost 2 ins <0,1,u,6>, lane 2
     2081685506U, // <0,1,0,7>: Cost 2 ins <0,1,u,7>, lane 2
-    1007910914U, // <0,1,0,u>: Cost 1 ins LHS, lane 2
+    1007951877U, // <0,1,0,u>: Cost 1 ins LHS, lane 5
     1812775670U, // <0,1,1,0>: Cost 2 vzipl LHS, <1,0,3,2>
     1812775732U, // <0,1,1,1>: Cost 2 vzipl LHS, <1,1,1,1>
     1812775830U, // <0,1,1,2>: Cost 2 vzipl LHS, <1,2,3,0>
@@ -131,53 +131,53 @@ static const unsigned PerfectShuffleTable[6561 + 1] = {
     1007509507U, // <0,1,2,6>: Cost 1 ins LHS, lane 3
     1007509507U, // <0,1,2,7>: Cost 1 ins LHS, lane 3
     835584U,     // <0,1,2,u>: Cost 0 copy LHS
-    2081628162U, // <0,1,3,0>: Cost 2 ins <0,1,u,0>, lane 2
+    2133680132U, // <0,1,3,0>: Cost 2 ins <u,u,3,0>, lane 4
     2081636354U, // <0,1,3,1>: Cost 2 ins <0,1,u,1>, lane 2
-    2081644546U, // <0,1,3,2>: Cost 2 ins <0,1,u,2>, lane 2
+    2133696516U, // <0,1,3,2>: Cost 2 ins <u,u,3,2>, lane 4
     1007910914U, // <0,1,3,3>: Cost 1 ins LHS, lane 2
-    2081660930U, // <0,1,3,4>: Cost 2 ins <0,1,u,4>, lane 2
+    2133712900U, // <0,1,3,4>: Cost 2 ins <u,u,3,4>, lane 4
     2081669122U, // <0,1,3,5>: Cost 2 ins <0,1,u,5>, lane 2
     2081677314U, // <0,1,3,6>: Cost 2 ins <0,1,u,6>, lane 2
-    2081685506U, // <0,1,3,7>: Cost 2 ins <0,1,u,7>, lane 2
+    2133737476U, // <0,1,3,7>: Cost 2 ins <u,u,3,7>, lane 4
     1007910914U, // <0,1,3,u>: Cost 1 ins LHS, lane 2
     2081628162U, // <0,1,4,0>: Cost 2 ins <0,1,u,0>, lane 2
     2081636354U, // <0,1,4,1>: Cost 2 ins <0,1,u,1>, lane 2
     2081644546U, // <0,1,4,2>: Cost 2 ins <0,1,u,2>, lane 2
     1007910914U, // <0,1,4,3>: Cost 1 ins LHS, lane 2
     2081660930U, // <0,1,4,4>: Cost 2 ins <0,1,u,4>, lane 2
-    1557450038U, // <0,1,4,5>: Cost 2 vext2 <2,3,0,1>, RHS
+    1007951877U, // <0,1,4,5>: Cost 1 ins LHS, lane 5
     1680493878U, // <0,1,4,6>: Cost 2 vuzpl <0,4,1,5>, RHS
     2081685506U, // <0,1,4,7>: Cost 2 ins <0,1,u,7>, lane 2
     1007910914U, // <0,1,4,u>: Cost 1 ins LHS, lane 2
     2081628162U, // <0,1,5,0>: Cost 2 ins <0,1,u,0>, lane 2
-    2081636354U, // <0,1,5,1>: Cost 2 ins <0,1,u,1>, lane 2
+    2133835780U, // <0,1,5,1>: Cost 2 ins <u,u,5,1>, lane 4
     2081644546U, // <0,1,5,2>: Cost 2 ins <0,1,u,2>, lane 2
     1007910914U, // <0,1,5,3>: Cost 1 ins LHS, lane 2
     2081660930U, // <0,1,5,4>: Cost 2 ins <0,1,u,4>, lane 2
-    2081669122U, // <0,1,5,5>: Cost 2 ins <0,1,u,5>, lane 2
-    2081677314U, // <0,1,5,6>: Cost 2 ins <0,1,u,6>, lane 2
-    1744915766U, // <0,1,5,7>: Cost 2 vuzpr <0,0,1,1>, RHS
+    2133868548U, // <0,1,5,5>: Cost 2 ins <u,u,5,5>, lane 4
+    2133876740U, // <0,1,5,6>: Cost 2 ins <u,u,5,6>, lane 4
+    2133884932U, // <0,1,5,7>: Cost 2 ins <u,u,5,7>, lane 4
     1007910914U, // <0,1,5,u>: Cost 1 ins LHS, lane 2
     2081628162U, // <0,1,6,0>: Cost 2 ins <0,1,u,0>, lane 2
     2081636354U, // <0,1,6,1>: Cost 2 ins <0,1,u,1>, lane 2
-    2081644546U, // <0,1,6,2>: Cost 2 ins <0,1,u,2>, lane 2
+    2133917700U, // <0,1,6,2>: Cost 2 ins <u,u,6,2>, lane 4
     1007910914U, // <0,1,6,3>: Cost 1 ins LHS, lane 2
     2081660930U, // <0,1,6,4>: Cost 2 ins <0,1,u,4>, lane 2
     2081669122U, // <0,1,6,5>: Cost 2 ins <0,1,u,5>, lane 2
-    2081677314U, // <0,1,6,6>: Cost 2 ins <0,1,u,6>, lane 2
-    1583993678U, // <0,1,6,7>: Cost 2 vext2 <6,7,0,1>, <6,7,0,1>
+    2133950468U, // <0,1,6,6>: Cost 2 ins <u,u,6,6>, lane 4
+    1060216836U, // <0,1,6,7>: Cost 1 ins RHS, lane 4
     1007910914U, // <0,1,6,u>: Cost 1 ins LHS, lane 2
-    2081628162U, // <0,1,7,0>: Cost 2 ins <0,1,u,0>, lane 2
+    2133975044U, // <0,1,7,0>: Cost 2 ins <u,u,7,0>, lane 4
     2081636354U, // <0,1,7,1>: Cost 2 ins <0,1,u,1>, lane 2
     2081644546U, // <0,1,7,2>: Cost 2 ins <0,1,u,2>, lane 2
     1007910914U, // <0,1,7,3>: Cost 1 ins LHS, lane 2
-    2081660930U, // <0,1,7,4>: Cost 2 ins <0,1,u,4>, lane 2
+    2134007812U, // <0,1,7,4>: Cost 2 ins <u,u,7,4>, lane 4
     2081669122U, // <0,1,7,5>: Cost 2 ins <0,1,u,5>, lane 2
-    2081677314U, // <0,1,7,6>: Cost 2 ins <0,1,u,6>, lane 2
-    2081685506U, // <0,1,7,7>: Cost 2 ins <0,1,u,7>, lane 2
+    2134024196U, // <0,1,7,6>: Cost 2 ins <u,u,7,6>, lane 4
+    2134032388U, // <0,1,7,7>: Cost 2 ins <u,u,7,7>, lane 4
     1007910914U, // <0,1,7,u>: Cost 1 ins LHS, lane 2
     1007509507U, // <0,1,u,0>: Cost 1 ins LHS, lane 3
-    1007509507U, // <0,1,u,1>: Cost 1 ins LHS, lane 3
+    1007951877U, // <0,1,u,1>: Cost 1 ins LHS, lane 5
     1007509507U, // <0,1,u,2>: Cost 1 ins LHS, lane 3
     835584U,     // <0,1,u,3>: Cost 0 copy LHS
     1007509507U, // <0,1,u,4>: Cost 1 ins LHS, lane 3
@@ -246,7 +246,7 @@ static const unsigned PerfectShuffleTable[6561 + 1] = {
     1678562166U, // <0,2,6,4>: Cost 2 vuzpl LHS, <6,7,4,5>
     2756948621U, // <0,2,6,5>: Cost 3 vuzpl LHS, <6,4,5,6>
     2082340866U, // <0,2,6,6>: Cost 2 ins <0,2,u,6>, lane 2
-    1678561786U, // <0,2,6,7>: Cost 2 vuzpl LHS, <6,2,7,3>
+    2082357253U, // <0,2,6,7>: Cost 2 ins <0,2,u,u>, lane 5
     2082308098U, // <0,2,6,u>: Cost 2 ins <0,2,u,2>, lane 2
     3099378582U, // <0,2,7,0>: Cost 3 vtrnr <2,0,5,7>, <1,2,3,0>
     1678562298U, // <0,2,7,1>: Cost 2 vuzpl LHS, <7,0,1,2>
@@ -348,7 +348,7 @@ static const unsigned PerfectShuffleTable[6561 + 1] = {
     2130567168U, // <0,3,u,7>: Cost 2 ins <u,3,5,7>, lane 0
     1012113409U, // <0,3,u,u>: Cost 1 ins LHS, lane 1
     2085683201U, // <0,4,0,0>: Cost 2 ins <0,u,0,0>, lane 1
-    2618605670U, // <0,4,0,1>: Cost 3 vext2 <0,2,0,4>, LHS
+    2083684357U, // <0,4,0,1>: Cost 2 ins <0,4,u,u>, lane 5
     1679392870U, // <0,4,0,2>: Cost 2 vuzpl <0,2,4,6>, LHS
     2085707777U, // <0,4,0,3>: Cost 2 ins <0,u,0,3>, lane 1
     1679392972U, // <0,4,0,4>: Cost 2 vuzpl <0,2,4,6>, <0,2,4,6>
@@ -374,7 +374,7 @@ static const unsigned PerfectShuffleTable[6561 + 1] = {
     873254198U,  // <0,4,2,6>: Cost 1 vtrnl LHS, RHS
     2083241987U, // <0,4,2,7>: Cost 2 ins <0,4,2,u>, lane 3
     873254216U,  // <0,4,2,u>: Cost 1 vtrnl LHS, RHS
-    3020811520U, // <0,4,3,0>: Cost 3 vtrnl <0,1,3,3>, <4,5,0,7>
+    3020811514U, // <0,4,3,0>: Cost 3 vtrnl <0,1,3,3>, <4,5,0,1>
     2753136790U, // <0,4,3,1>: Cost 3 vuzpl <0,2,4,6>, <3,0,1,2>
     2753136801U, // <0,4,3,2>: Cost 3 vuzpl <0,2,4,6>, <3,0,2,4>
     2085928961U, // <0,4,3,3>: Cost 2 ins <0,u,3,3>, lane 1
@@ -408,9 +408,9 @@ static const unsigned PerfectShuffleTable[6561 + 1] = {
     2712522094U, // <0,4,6,4>: Cost 3 vext3 <4,6,4,0>, <4,6,4,0>
     2083659778U, // <0,4,6,5>: Cost 2 ins <0,4,u,5>, lane 2
     2131296256U, // <0,4,6,6>: Cost 2 ins <u,4,6,6>, lane 0
-    2131304448U, // <0,4,6,7>: Cost 2 ins <u,4,6,7>, lane 0
+    2083684357U, // <0,4,6,7>: Cost 2 ins <0,4,u,u>, lane 5
     2083659778U, // <0,4,6,u>: Cost 2 ins <0,4,u,5>, lane 2
-    3021106432U, // <0,4,7,0>: Cost 3 vtrnl <0,1,7,3>, <4,5,0,7>
+    3021106426U, // <0,4,7,0>: Cost 3 vtrnl <0,1,7,3>, <4,5,0,1>
     2860487502U, // <0,4,7,1>: Cost 3 vuzpr <7,0,1,4>, <6,7,0,1>
     3157377026U, // <0,4,7,2>: Cost 3 ins <0,4,u,2>, lane 2
     2086223873U, // <0,4,7,3>: Cost 2 ins <0,u,7,3>, lane 1
@@ -420,7 +420,7 @@ static const unsigned PerfectShuffleTable[6561 + 1] = {
     2752452204U, // <0,4,7,7>: Cost 3 vuzpl <0,1,4,3>, <7,7,7,7>
     2083659778U, // <0,4,7,u>: Cost 2 ins <0,4,u,5>, lane 2
     2083168259U, // <0,4,u,0>: Cost 2 ins <0,4,1,u>, lane 3
-    2085765121U, // <0,4,u,1>: Cost 2 ins <0,u,1,1>, lane 1
+    2083684357U, // <0,4,u,1>: Cost 2 ins <0,4,u,u>, lane 5
     1679398702U, // <0,4,u,2>: Cost 2 vuzpl <0,2,4,6>, LHS
     1012113409U, // <0,4,u,3>: Cost 1 ins LHS, lane 1
     1679392972U, // <0,4,u,4>: Cost 2 vuzpl <0,2,4,6>, <0,2,4,6>
@@ -429,7 +429,7 @@ static const unsigned PerfectShuffleTable[6561 + 1] = {
     2083168259U, // <0,4,u,7>: Cost 2 ins <0,4,1,u>, lane 3
     873696584U,  // <0,4,u,u>: Cost 1 vtrnl LHS, RHS
     2085683201U, // <0,5,0,0>: Cost 2 ins <0,u,0,0>, lane 1
-    2625912934U, // <0,5,0,1>: Cost 3 vext2 <1,4,0,5>, LHS
+    2131476480U, // <0,5,0,1>: Cost 2 ins <u,5,0,1>, lane 0
     2085699585U, // <0,5,0,2>: Cost 2 ins <0,u,0,2>, lane 1
     2085707777U, // <0,5,0,3>: Cost 2 ins <0,u,0,3>, lane 1
     3159457793U, // <0,5,0,4>: Cost 3 ins <0,u,0,4>, lane 1
@@ -469,7 +469,7 @@ static const unsigned PerfectShuffleTable[6561 + 1] = {
     3159736321U, // <0,5,4,2>: Cost 3 ins <0,u,4,2>, lane 1
     2086002689U, // <0,5,4,3>: Cost 2 ins <0,u,4,3>, lane 1
     2888454068U, // <0,5,4,4>: Cost 3 vzipl <0,4,1,5>, <5,4,5,6>
-    2888454148U, // <0,5,4,5>: Cost 3 vzipl <0,4,1,5>, <5,5,5,5>
+    2131804160U, // <0,5,4,5>: Cost 2 ins <u,5,4,5>, lane 0
     2086027265U, // <0,5,4,6>: Cost 2 ins <0,u,4,6>, lane 1
     2131820544U, // <0,5,4,7>: Cost 2 ins <u,5,4,7>, lane 0
     2086027265U, // <0,5,4,u>: Cost 2 ins <0,u,4,6>, lane 1
@@ -510,7 +510,7 @@ static const unsigned PerfectShuffleTable[6561 + 1] = {
     1058226176U, // <0,5,u,7>: Cost 1 ins RHS, lane 0
     1012113409U, // <0,5,u,u>: Cost 1 ins LHS, lane 1
     2085683201U, // <0,6,0,0>: Cost 2 ins <0,u,0,0>, lane 1
-    2619949158U, // <0,6,0,1>: Cost 3 vext2 <0,4,0,6>, LHS
+    2085691393U, // <0,6,0,1>: Cost 2 ins <0,u,0,1>, lane 1
     2132148224U, // <0,6,0,2>: Cost 2 ins <u,6,0,2>, lane 0
     2085707777U, // <0,6,0,3>: Cost 2 ins <0,u,0,3>, lane 1
     2619949386U, // <0,6,0,4>: Cost 3 vext2 <0,4,0,6>, <0,4,0,6>
@@ -550,7 +550,7 @@ static const unsigned PerfectShuffleTable[6561 + 1] = {
     3021574444U, // <0,6,4,2>: Cost 3 vtrnl <0,2,4,6>, <6,0,2,4>
     2086002689U, // <0,6,4,3>: Cost 2 ins <0,u,4,3>, lane 1
     2562559286U, // <0,6,4,4>: Cost 3 vext1 <2,0,6,4>, RHS
-    3021574797U, // <0,6,4,5>: Cost 3 vtrnl <0,2,4,6>, <6,4,5,6>
+    2086019073U, // <0,6,4,5>: Cost 2 ins <0,u,4,5>, lane 1
     2132475904U, // <0,6,4,6>: Cost 2 ins <u,6,4,6>, lane 0
     2954153270U, // <0,6,4,7>: Cost 3 vzipr <0,2,0,4>, RHS
     2132475904U, // <0,6,4,u>: Cost 2 ins <u,6,4,6>, lane 0
@@ -672,7 +672,7 @@ static const unsigned PerfectShuffleTable[6561 + 1] = {
     2133221376U, // <0,7,u,7>: Cost 2 ins <u,7,5,7>, lane 0
     1012113409U, // <0,7,u,u>: Cost 1 ins LHS, lane 1
     135053414U,  // <0,u,0,0>: Cost 1 vdup0 LHS
-    1678999562U, // <0,u,0,1>: Cost 2 vuzpl LHS, <0,0,1,1>
+    1007951877U, // <0,u,0,1>: Cost 1 ins LHS, lane 5
     605257830U,  // <0,u,0,2>: Cost 1 vuzpl LHS, LHS
     1007910914U, // <0,u,0,3>: Cost 1 ins LHS, lane 2
     1678999756U, // <0,u,0,4>: Cost 2 vuzpl LHS, <0,2,4,6>
@@ -698,21 +698,21 @@ static const unsigned PerfectShuffleTable[6561 + 1] = {
     873257114U,  // <0,u,2,6>: Cost 1 vtrnl LHS, RHS
     1007509507U, // <0,u,2,7>: Cost 1 ins LHS, lane 3
     835584U,     // <0,u,2,u>: Cost 0 copy LHS
-    2129698816U, // <0,u,3,0>: Cost 2 ins <u,2,3,0>, lane 0
+    2133680132U, // <0,u,3,0>: Cost 2 ins <u,u,3,0>, lane 4
     1679001750U, // <0,u,3,1>: Cost 2 vuzpl LHS, <3,0,1,2>
     2128388096U, // <0,u,3,2>: Cost 2 ins <u,0,3,2>, lane 0
     1007910914U, // <0,u,3,3>: Cost 1 ins LHS, lane 2
-    2129731584U, // <0,u,3,4>: Cost 2 ins <u,2,3,4>, lane 0
+    2133712900U, // <0,u,3,4>: Cost 2 ins <u,u,3,4>, lane 4
     1679002114U, // <0,u,3,5>: Cost 2 vuzpl LHS, <3,4,5,6>
     2082340866U, // <0,u,3,6>: Cost 2 ins <0,2,u,6>, lane 2
-    2131746816U, // <0,u,3,7>: Cost 2 ins <u,5,3,7>, lane 0
+    2133737476U, // <0,u,3,7>: Cost 2 ins <u,u,3,7>, lane 4
     1007910914U, // <0,u,3,u>: Cost 1 ins LHS, lane 2
     2082062339U, // <0,u,4,0>: Cost 2 ins <0,2,4,u>, lane 3
     1814714158U, // <0,u,4,1>: Cost 2 vzipl <0,4,1,5>, LHS
     1947834158U, // <0,u,4,2>: Cost 2 vtrnl <0,2,4,6>, LHS
     1007910914U, // <0,u,4,3>: Cost 1 ins LHS, lane 2
     1947828428U, // <0,u,4,4>: Cost 2 vtrnl <0,2,4,6>, <0,2,4,6>
-    1544899894U, // <0,u,4,5>: Cost 2 vext2 <0,2,0,u>, RHS
+    1007951877U, // <0,u,4,5>: Cost 1 ins LHS, lane 5
     605261110U,  // <0,u,4,6>: Cost 1 vuzpl LHS, RHS
     2082062339U, // <0,u,4,7>: Cost 2 ins <0,2,4,u>, lane 3
     605261128U,  // <0,u,4,u>: Cost 1 vuzpl LHS, RHS
@@ -721,7 +721,7 @@ static const unsigned PerfectShuffleTable[6561 + 1] = {
     2080980994U, // <0,u,5,2>: Cost 2 ins <0,0,u,2>, lane 2
     1007910914U, // <0,u,5,3>: Cost 1 ins LHS, lane 2
     2081660930U, // <0,u,5,4>: Cost 2 ins <0,1,u,4>, lane 2
-    2131214336U, // <0,u,5,5>: Cost 2 ins <u,4,5,5>, lane 0
+    2133868548U, // <0,u,5,5>: Cost 2 ins <u,u,5,5>, lane 4
     1618139290U, // <0,u,5,6>: Cost 2 vext3 <1,2,3,0>, RHS
     1751092534U, // <0,u,5,7>: Cost 2 vuzpr <1,0,3,u>, RHS
     1007910914U, // <0,u,5,u>: Cost 1 ins LHS, lane 2
@@ -731,17 +731,17 @@ static const unsigned PerfectShuffleTable[6561 + 1] = {
     1007910914U, // <0,u,6,3>: Cost 1 ins LHS, lane 2
     1679004534U, // <0,u,6,4>: Cost 2 vuzpl LHS, <6,7,4,5>
     2083659778U, // <0,u,6,5>: Cost 2 ins <0,4,u,5>, lane 2
-    2082340866U, // <0,u,6,6>: Cost 2 ins <0,2,u,6>, lane 2
-    1058226176U, // <0,u,6,7>: Cost 1 ins RHS, lane 0
+    2133950468U, // <0,u,6,6>: Cost 2 ins <u,u,6,6>, lane 4
+    1060216836U, // <0,u,6,7>: Cost 1 ins RHS, lane 4
     1007910914U, // <0,u,6,u>: Cost 1 ins LHS, lane 2
-    2132647936U, // <0,u,7,0>: Cost 2 ins <u,6,7,0>, lane 0
+    2133975044U, // <0,u,7,0>: Cost 2 ins <u,u,7,0>, lane 4
     2080972802U, // <0,u,7,1>: Cost 2 ins <0,0,u,1>, lane 2
     2080980994U, // <0,u,7,2>: Cost 2 ins <0,0,u,2>, lane 2
     1007910914U, // <0,u,7,3>: Cost 1 ins LHS, lane 2
-    2132680704U, // <0,u,7,4>: Cost 2 ins <u,6,7,4>, lane 0
+    2134007812U, // <0,u,7,4>: Cost 2 ins <u,u,7,4>, lane 4
     2083659778U, // <0,u,7,5>: Cost 2 ins <0,4,u,5>, lane 2
-    2082340866U, // <0,u,7,6>: Cost 2 ins <0,2,u,6>, lane 2
-    2132041728U, // <0,u,7,7>: Cost 2 ins <u,5,7,7>, lane 0
+    2134024196U, // <0,u,7,6>: Cost 2 ins <u,u,7,6>, lane 4
+    2134032388U, // <0,u,7,7>: Cost 2 ins <u,u,7,7>, lane 4
     1007910914U, // <0,u,7,u>: Cost 1 ins LHS, lane 2
     135053414U,  // <0,u,u,0>: Cost 1 vdup0 LHS
     743683886U,  // <0,u,u,1>: Cost 1 vzipl LHS, LHS
@@ -761,11 +761,11 @@ static const unsigned PerfectShuffleTable[6561 + 1] = {
     3160154115U, // <1,0,0,6>: Cost 3 ins <1,0,0,u>, lane 3
     3160154115U, // <1,0,0,7>: Cost 3 ins <1,0,0,u>, lane 3
     1818149533U, // <1,0,0,u>: Cost 2 vzipl <1,0,3,2>, LHS
-    1745641571U, // <1,0,1,0>: Cost 2 vuzpr <0,1,2,0>, <0,1,2,0>
+    1141522514U, // <1,0,1,0>: Cost 2 vrev <0,1,0,1>
     1818656870U, // <1,0,1,1>: Cost 2 vzipl <1,1,1,1>, LHS
     1616003174U, // <1,0,1,2>: Cost 2 vext3 <0,u,1,1>, LHS
     2091753473U, // <1,0,1,3>: Cost 2 ins <1,u,1,3>, lane 1
-    2556783926U, // <1,0,1,4>: Cost 3 vext1 <1,1,0,1>, RHS
+    1477070134U, // <1,0,1,4>: Cost 2 vext1 <0,1,0,1>, RHS
     2760770560U, // <1,0,1,5>: Cost 3 vuzpl <1,5,0,2>, <1,3,5,7>
     2724839566U, // <1,0,1,6>: Cost 3 vext3 <6,7,0,1>, <0,1,6,7>
     3165528065U, // <1,0,1,7>: Cost 3 ins <1,u,1,7>, lane 1
@@ -773,7 +773,7 @@ static const unsigned PerfectShuffleTable[6561 + 1] = {
     2685690019U, // <1,0,2,0>: Cost 3 vext3 <0,2,0,1>, <0,2,0,1>
     1819459686U, // <1,0,2,1>: Cost 2 vzipl <1,2,3,0>, LHS
     2128314368U, // <1,0,2,2>: Cost 2 ins <u,0,2,2>, lane 0
-    2128322560U, // <1,0,2,3>: Cost 2 ins <u,0,2,3>, lane 0
+    2087002117U, // <1,0,2,3>: Cost 2 ins <1,0,u,u>, lane 5
     2689745100U, // <1,0,2,4>: Cost 3 vext3 <0,u,1,1>, <0,2,4,6>
     2970798548U, // <1,0,2,5>: Cost 3 vzipr <3,0,1,2>, <3,4,0,5>
     3165593601U, // <1,0,2,6>: Cost 3 ins <1,u,2,6>, lane 1
@@ -793,7 +793,7 @@ static const unsigned PerfectShuffleTable[6561 + 1] = {
     2086952962U, // <1,0,4,2>: Cost 2 ins <1,0,u,2>, lane 2
     2819383641U, // <1,0,4,3>: Cost 3 vuzpr <0,1,2,0>, <0,4,2,3>
     2894569810U, // <1,0,4,4>: Cost 3 vzipl <1,4,3,5>, <0,4,1,5>
-    2619313462U, // <1,0,4,5>: Cost 3 vext2 <0,3,1,0>, RHS
+    2087002117U, // <1,0,4,5>: Cost 2 ins <1,0,u,u>, lane 5
     2758102326U, // <1,0,4,6>: Cost 3 vuzpl <1,1,0,0>, RHS
     2819386597U, // <1,0,4,7>: Cost 3 vuzpr <0,1,2,0>, <4,4,6,7>
     2086952962U, // <1,0,4,u>: Cost 2 ins <1,0,u,2>, lane 2
@@ -801,7 +801,7 @@ static const unsigned PerfectShuffleTable[6561 + 1] = {
     1821507686U, // <1,0,5,1>: Cost 2 vzipl <1,5,3,7>, LHS
     1954545766U, // <1,0,5,2>: Cost 2 vtrnl <1,3,5,7>, LHS
     3165790209U, // <1,0,5,3>: Cost 3 ins <1,u,5,3>, lane 1
-    2955560050U, // <1,0,5,4>: Cost 3 vzipr <0,4,1,5>, <1,5,0,4>
+    1141850234U, // <1,0,5,4>: Cost 2 vrev <0,1,4,5>
     3165806593U, // <1,0,5,5>: Cost 3 ins <1,u,5,5>, lane 1
     3202310144U, // <1,0,5,6>: Cost 3 ins <u,0,5,6>, lane 0
     2092081153U, // <1,0,5,7>: Cost 2 ins <1,u,5,7>, lane 1
@@ -811,9 +811,9 @@ static const unsigned PerfectShuffleTable[6561 + 1] = {
     2128609280U, // <1,0,6,2>: Cost 2 ins <u,0,6,2>, lane 0
     2819383803U, // <1,0,6,3>: Cost 3 vuzpr <0,1,2,0>, <0,6,2,3>
     2896060754U, // <1,0,6,4>: Cost 3 vzipl <1,6,5,7>, <0,4,1,5>
-    3029688449U, // <1,0,6,5>: Cost 3 vtrnl <1,5,6,7>, <0,1,5,3>
+    2215673988U, // <1,0,6,5>: Cost 3 vrev <0,1,5,6>
     3165888513U, // <1,0,6,6>: Cost 3 ins <1,u,6,6>, lane 1
-    2128650240U, // <1,0,6,7>: Cost 2 ins <u,0,6,7>, lane 0
+    2087002117U, // <1,0,6,7>: Cost 2 ins <1,0,u,u>, lane 5
     2128609280U, // <1,0,6,u>: Cost 2 ins <u,0,6,2>, lane 0
     2659128312U, // <1,0,7,0>: Cost 3 vext2 <7,0,1,0>, <7,0,1,0>
     2974156454U, // <1,0,7,1>: Cost 3 vzipr <3,5,1,7>, <2,3,0,1>
@@ -821,7 +821,7 @@ static const unsigned PerfectShuffleTable[6561 + 1] = {
     2861265024U, // <1,0,7,3>: Cost 3 vuzpr <7,1,3,0>, <5,7,1,3>
     3202441216U, // <1,0,7,4>: Cost 3 ins <u,0,7,4>, lane 0
     3165954049U, // <1,0,7,5>: Cost 3 ins <1,u,7,5>, lane 1
-    2663110110U, // <1,0,7,6>: Cost 3 vext2 <7,6,1,0>, <7,6,1,0>
+    1142014094U, // <1,0,7,6>: Cost 2 vrev <0,1,6,7>
     3165970433U, // <1,0,7,7>: Cost 3 ins <1,u,7,7>, lane 1
     2086952962U, // <1,0,7,u>: Cost 2 ins <1,0,u,2>, lane 2
     2014142464U, // <1,0,u,0>: Cost 2 vtrnr LHS, <0,0,0,0>
@@ -894,7 +894,7 @@ static const unsigned PerfectShuffleTable[6561 + 1] = {
     2221572948U, // <1,1,6,4>: Cost 3 vrev <1,1,4,6>
     2955567442U, // <1,1,6,5>: Cost 3 vzipr <0,4,1,6>, <0,4,1,5>
     2014126185U, // <1,1,6,6>: Cost 2 vtrnr <0,1,2,6>, <0,1,2,6>
-    2129313792U, // <1,1,6,7>: Cost 2 ins <u,1,6,7>, lane 0
+    2087665669U, // <1,1,6,7>: Cost 2 ins <1,1,u,u>, lane 5
     2087624706U, // <1,1,6,u>: Cost 2 ins <1,1,u,3>, lane 2
     2670416890U, // <1,1,7,0>: Cost 3 vext2 <u,u,1,1>, <7,0,1,2>
     2087608322U, // <1,1,7,1>: Cost 2 ins <1,1,u,1>, lane 2
@@ -975,7 +975,7 @@ static const unsigned PerfectShuffleTable[6561 + 1] = {
     2088296450U, // <1,2,6,4>: Cost 2 ins <1,2,u,4>, lane 2
     3162046466U, // <1,2,6,5>: Cost 3 ins <1,2,u,5>, lane 2
     2895914938U, // <1,2,6,6>: Cost 3 vzipl <1,6,3,7>, <2,6,3,7>
-    2129977344U, // <1,2,6,7>: Cost 2 ins <u,2,6,7>, lane 0
+    2088329221U, // <1,2,6,7>: Cost 2 ins <1,2,u,u>, lane 5
     2088263682U, // <1,2,6,u>: Cost 2 ins <1,2,u,0>, lane 2
     1585402874U, // <1,2,7,0>: Cost 2 vext2 <7,0,1,2>, <7,0,1,2>
     3203743744U, // <1,2,7,1>: Cost 3 ins <u,2,7,1>, lane 0
@@ -1121,11 +1121,11 @@ static const unsigned PerfectShuffleTable[6561 + 1] = {
     2758438198U, // <1,4,4,6>: Cost 3 vuzpl <1,1,4,5>, RHS
     2819419365U, // <1,4,4,7>: Cost 3 vuzpr <0,1,2,4>, <4,4,6,7>
     2131132416U, // <1,4,4,u>: Cost 2 ins <u,4,4,4>, lane 0
-    2557108326U, // <1,4,5,0>: Cost 3 vext1 <1,1,4,5>, LHS
+    1477394554U, // <1,4,5,0>: Cost 2 vext1 <0,1,4,5>, <0,1,4,5>
     2955558949U, // <1,4,5,1>: Cost 3 vzipr <0,4,1,5>, <0,0,4,1>
     3204931584U, // <1,4,5,2>: Cost 3 ins <u,4,5,2>, lane 0
     3165790209U, // <1,4,5,3>: Cost 3 ins <1,u,5,3>, lane 1
-    2557111606U, // <1,4,5,4>: Cost 3 vext1 <1,1,4,5>, RHS
+    1477397814U, // <1,4,5,4>: Cost 2 vext1 <0,1,4,5>, RHS
     1821510966U, // <1,4,5,5>: Cost 2 vzipl <1,5,3,7>, RHS
     1616006454U, // <1,4,5,6>: Cost 2 vext3 <0,u,1,1>, RHS
     2092081153U, // <1,4,5,7>: Cost 2 ins <1,u,5,7>, lane 1
@@ -1178,12 +1178,12 @@ static const unsigned PerfectShuffleTable[6561 + 1] = {
     2759853734U, // <1,5,2,0>: Cost 3 vuzpl <1,3,5,7>, <2,3,0,1>
     2620016163U, // <1,5,2,1>: Cost 3 vext2 <0,4,1,5>, <2,1,3,5>
     2620016232U, // <1,5,2,2>: Cost 3 vext2 <0,4,1,5>, <2,2,2,2>
-    2131640320U, // <1,5,2,3>: Cost 2 ins <u,5,2,3>, lane 0
+    2090319877U, // <1,5,2,3>: Cost 2 ins <1,5,u,u>, lane 5
     2759853774U, // <1,5,2,4>: Cost 3 vuzpl <1,3,5,7>, <2,3,4,5>
     2994687194U, // <1,5,2,5>: Cost 3 vzipr <7,0,1,2>, <4,4,5,5>
     2620016570U, // <1,5,2,6>: Cost 3 vext2 <0,4,1,5>, <2,6,3,7>
     2090311682U, // <1,5,2,7>: Cost 2 ins <1,5,u,7>, lane 2
-    2090311682U, // <1,5,2,u>: Cost 2 ins <1,5,u,7>, lane 2
+    2090319877U, // <1,5,2,u>: Cost 2 ins <1,5,u,u>, lane 5
     2091876353U, // <1,5,3,0>: Cost 2 ins <1,u,3,0>, lane 1
     2089951235U, // <1,5,3,1>: Cost 2 ins <1,5,3,u>, lane 3
     2091892737U, // <1,5,3,2>: Cost 2 ins <1,u,3,2>, lane 1
@@ -1631,7 +1631,7 @@ static const unsigned PerfectShuffleTable[6561 + 1] = {
     2129354752U, // <2,1,7,3>: Cost 2 ins <u,1,7,3>, lane 0
     3171917825U, // <2,1,7,4>: Cost 3 ins <2,u,7,4>, lane 1
     3203112960U, // <2,1,7,5>: Cost 3 ins <u,1,7,5>, lane 0
-    3112722537U, // <2,1,7,6>: Cost 3 vtrnr <4,2,6,7>, <0,1,2,6>
+    2222392248U, // <2,1,7,6>: Cost 3 vrev <1,2,6,7>
     3171942401U, // <2,1,7,7>: Cost 3 ins <2,u,7,7>, lane 1
     2129354752U, // <2,1,7,u>: Cost 2 ins <u,1,7,3>, lane 0
     2128961536U, // <2,1,u,0>: Cost 2 ins <u,1,2,0>, lane 0
@@ -1704,7 +1704,7 @@ static const unsigned PerfectShuffleTable[6561 + 1] = {
     3088679078U, // <2,2,6,4>: Cost 3 vtrnr <0,2,4,6>, <0,2,0,4>
     3171852289U, // <2,2,6,5>: Cost 3 ins <2,u,6,5>, lane 1
     2014937292U, // <2,2,6,6>: Cost 2 vtrnr <0,2,4,6>, <0,2,4,6>
-    2129977344U, // <2,2,6,7>: Cost 2 ins <u,2,6,7>, lane 0
+    2094301189U, // <2,2,6,7>: Cost 2 ins <2,2,u,u>, lane 5
     1881899115U, // <2,2,6,u>: Cost 2 vzipr <0,4,2,6>, LHS
     2726250474U, // <2,2,7,0>: Cost 3 vext3 <7,0,1,2>, <2,7,0,1>
     2867696462U, // <2,2,7,1>: Cost 3 vuzpr <u,2,0,2>, <6,7,0,1>
@@ -1740,17 +1740,17 @@ static const unsigned PerfectShuffleTable[6561 + 1] = {
     2551696694U, // <2,3,1,4>: Cost 3 vext1 <0,2,3,1>, RHS
     1548985488U, // <2,3,1,5>: Cost 2 vext2 LHS, <1,5,3,7>
     2622727375U, // <2,3,1,6>: Cost 3 vext2 LHS, <1,6,1,7>
-    2665858347U, // <2,3,1,7>: Cost 3 vext2 LHS, <1,7,3,0>
+    2094956546U, // <2,3,1,7>: Cost 2 ins <2,3,u,7>, lane 2
     1548985709U, // <2,3,1,u>: Cost 2 vext2 LHS, <1,u,1,3>
-    2958263190U, // <2,3,2,0>: Cost 3 vzipr <0,u,2,2>, <1,2,3,0>
+    2094522371U, // <2,3,2,0>: Cost 2 ins <2,3,2,u>, lane 3
     2094907394U, // <2,3,2,1>: Cost 2 ins <2,3,u,1>, lane 2
     1544341096U, // <2,3,2,2>: Cost 2 vext2 LHS, <2,2,2,2>
-    1544341158U, // <2,3,2,3>: Cost 2 vext2 LHS, <2,3,0,1>
-    2958263194U, // <2,3,2,4>: Cost 3 vzipr <0,u,2,2>, <1,2,3,4>
+    1059889156U, // <2,3,2,3>: Cost 1 ins LHS, lane 4
+    2094522371U, // <2,3,2,4>: Cost 2 ins <2,3,2,u>, lane 3
     2094940162U, // <2,3,2,5>: Cost 2 ins <2,3,u,5>, lane 2
     1548986298U, // <2,3,2,6>: Cost 2 vext2 LHS, <2,6,3,7>
-    3088352256U, // <2,3,2,7>: Cost 3 vtrnr <0,2,0,2>, <1,3,5,7>
-    1548986427U, // <2,3,2,u>: Cost 2 vext2 LHS, <2,u,0,1>
+    2094956546U, // <2,3,2,7>: Cost 2 ins <2,3,u,7>, lane 2
+    1059889156U, // <2,3,2,u>: Cost 1 ins LHS, lane 4
     1879884694U, // <2,3,3,0>: Cost 2 vzipr LHS, <1,2,3,0>
     2094907394U, // <2,3,3,1>: Cost 2 ins <2,3,u,1>, lane 2
     1879884534U, // <2,3,3,2>: Cost 2 vzipr LHS, <1,0,3,2>
@@ -1772,38 +1772,38 @@ static const unsigned PerfectShuffleTable[6561 + 1] = {
     2551726274U, // <2,3,5,0>: Cost 3 vext1 <0,2,3,5>, <0,2,3,5>
     1592118992U, // <2,3,5,1>: Cost 2 vext2 LHS, <5,1,7,3>
     2665860843U, // <2,3,5,2>: Cost 3 vext2 LHS, <5,2,1,3>
-    2551728642U, // <2,3,5,3>: Cost 3 vext1 <0,2,3,5>, <3,4,5,6>
+    2094923778U, // <2,3,5,3>: Cost 2 ins <2,3,u,3>, lane 2
     1592119238U, // <2,3,5,4>: Cost 2 vext2 LHS, <5,4,7,6>
     1592119300U, // <2,3,5,5>: Cost 2 vext2 LHS, <5,5,5,5>
     1592119394U, // <2,3,5,6>: Cost 2 vext2 LHS, <5,6,7,0>
     1758350646U, // <2,3,5,7>: Cost 2 vuzpr <2,2,3,3>, RHS
     1758350647U, // <2,3,5,u>: Cost 2 vuzpr <2,2,3,3>, RHS
-    2955641750U, // <2,3,6,0>: Cost 3 vzipr <0,4,2,6>, <1,2,3,0>
+    2094817283U, // <2,3,6,0>: Cost 2 ins <2,3,6,u>, lane 3
     2094907394U, // <2,3,6,1>: Cost 2 ins <2,3,u,1>, lane 2
     1592119802U, // <2,3,6,2>: Cost 2 vext2 LHS, <6,2,7,3>
-    3088679896U, // <2,3,6,3>: Cost 3 vtrnr <0,2,4,6>, <1,3,1,3>
-    2955641754U, // <2,3,6,4>: Cost 3 vzipr <0,4,2,6>, <1,2,3,4>
+    2094923778U, // <2,3,6,3>: Cost 2 ins <2,3,u,3>, lane 2
+    2094817283U, // <2,3,6,4>: Cost 2 ins <2,3,6,u>, lane 3
     2094940162U, // <2,3,6,5>: Cost 2 ins <2,3,u,5>, lane 2
     1592120120U, // <2,3,6,6>: Cost 2 vext2 LHS, <6,6,6,6>
-    1592120142U, // <2,3,6,7>: Cost 2 vext2 LHS, <6,7,0,1>
-    1592120223U, // <2,3,6,u>: Cost 2 vext2 LHS, <6,u,0,1>
+    1060216836U, // <2,3,6,7>: Cost 1 ins RHS, lane 4
+    1060216836U, // <2,3,6,u>: Cost 1 ins RHS, lane 4
     1592120314U, // <2,3,7,0>: Cost 2 vext2 LHS, <7,0,1,2>
     2094907394U, // <2,3,7,1>: Cost 2 ins <2,3,u,1>, lane 2
     2974892790U, // <2,3,7,2>: Cost 3 vzipr <3,6,2,7>, <1,0,3,2>
-    2856276096U, // <2,3,7,3>: Cost 3 vuzpr <6,2,7,3>, <5,7,1,3>
+    2133999620U, // <2,3,7,3>: Cost 2 ins <u,u,7,3>, lane 4
     1592120678U, // <2,3,7,4>: Cost 2 vext2 LHS, <7,4,5,6>
     2094940162U, // <2,3,7,5>: Cost 2 ins <2,3,u,5>, lane 2
-    2767672522U, // <2,3,7,6>: Cost 3 vuzpl <2,6,3,7>, <7,2,6,3>
+    2134024196U, // <2,3,7,6>: Cost 2 ins <u,u,7,6>, lane 4
     1592120940U, // <2,3,7,7>: Cost 2 vext2 LHS, <7,7,7,7>
     1592120962U, // <2,3,7,u>: Cost 2 vext2 LHS, <7,u,1,2>
     1879925654U, // <2,3,u,0>: Cost 2 vzipr LHS, <1,2,3,0>
     470603566U,  // <2,3,u,1>: Cost 1 vext2 LHS, LHS
     1879925494U, // <2,3,u,2>: Cost 2 vzipr LHS, <1,0,3,2>
-    1879925576U, // <2,3,u,3>: Cost 2 vzipr LHS, <1,1,3,3>
+    1059889156U, // <2,3,u,3>: Cost 1 ins LHS, lane 4
     1879925658U, // <2,3,u,4>: Cost 2 vzipr LHS, <1,2,3,4>
     470603930U,  // <2,3,u,5>: Cost 1 vext2 LHS, RHS
     1548990672U, // <2,3,u,6>: Cost 2 vext2 LHS, <u,6,3,7>
-    1879925904U, // <2,3,u,7>: Cost 2 vzipr LHS, <1,5,3,7>
+    1060216836U, // <2,3,u,7>: Cost 1 ins RHS, lane 4
     470604133U,  // <2,3,u,u>: Cost 1 vext2 LHS, LHS
     2826125312U, // <2,4,0,0>: Cost 3 vuzpr <1,2,3,4>, <0,0,0,0>
     2097635329U, // <2,4,0,1>: Cost 2 ins <2,u,0,1>, lane 1
@@ -1988,7 +1988,7 @@ static const unsigned PerfectShuffleTable[6561 + 1] = {
     2820244374U, // <2,6,2,0>: Cost 3 vuzpr <0,2,4,6>, <1,2,3,0>
     3171524609U, // <2,6,2,1>: Cost 3 ins <2,u,2,1>, lane 1
     2097790977U, // <2,6,2,2>: Cost 2 ins <2,u,2,2>, lane 1
-    2132303872U, // <2,6,2,3>: Cost 2 ins <u,6,2,3>, lane 0
+    2096955397U, // <2,6,2,3>: Cost 2 ins <2,6,u,u>, lane 5
     2820243622U, // <2,6,2,4>: Cost 3 vuzpr <0,2,4,6>, <0,2,0,4>
     3171557377U, // <2,6,2,5>: Cost 3 ins <2,u,2,5>, lane 1
     1746501836U, // <2,6,2,6>: Cost 2 vuzpr <0,2,4,6>, <0,2,4,6>
@@ -2190,15 +2190,15 @@ static const unsigned PerfectShuffleTable[6561 + 1] = {
     1478364470U, // <2,u,6,4>: Cost 2 vext1 <0,2,u,6>, RHS
     1828149402U, // <2,u,6,5>: Cost 2 vzipl <2,6,3,7>, RHS
     1592161080U, // <2,u,6,6>: Cost 2 vext2 LHS, <6,6,6,6>
-    1058226176U, // <2,u,6,7>: Cost 1 ins RHS, lane 0
-    1058226176U, // <2,u,6,u>: Cost 1 ins RHS, lane 0
+    1060216836U, // <2,u,6,7>: Cost 1 ins RHS, lane 4
+    1060216836U, // <2,u,6,u>: Cost 1 ins RHS, lane 4
     1592161274U, // <2,u,7,0>: Cost 2 vext2 LHS, <7,0,1,2>
     2094907394U, // <2,u,7,1>: Cost 2 ins <2,3,u,1>, lane 2
     2094252034U, // <2,u,7,2>: Cost 2 ins <2,2,u,2>, lane 2
     2129354752U, // <2,u,7,3>: Cost 2 ins <u,1,7,3>, lane 0
     1592161638U, // <2,u,7,4>: Cost 2 vext2 LHS, <7,4,5,6>
     2094940162U, // <2,u,7,5>: Cost 2 ins <2,3,u,5>, lane 2
-    2131369984U, // <2,u,7,6>: Cost 2 ins <u,4,7,6>, lane 0
+    2134024196U, // <2,u,7,6>: Cost 2 ins <u,u,7,6>, lane 4
     1592161900U, // <2,u,7,7>: Cost 2 vext2 LHS, <7,7,7,7>
     1592161922U, // <2,u,7,u>: Cost 2 vext2 LHS, <7,u,1,2>
     1879925699U, // <2,u,u,0>: Cost 2 vzipr LHS, <1,2,u,0>
@@ -2231,7 +2231,7 @@ static const unsigned PerfectShuffleTable[6561 + 1] = {
     1611890852U, // <3,0,2,0>: Cost 2 vext3 LHS, <0,2,0,2>
     2685632684U, // <3,0,2,1>: Cost 3 vext3 LHS, <0,2,1,1>
     2128314368U, // <3,0,2,2>: Cost 2 ins <u,0,2,2>, lane 0
-    2128322560U, // <3,0,2,3>: Cost 2 ins <u,0,2,3>, lane 0
+    2098946053U, // <3,0,2,3>: Cost 2 ins <3,0,u,u>, lane 5
     1611890892U, // <3,0,2,4>: Cost 2 vext3 LHS, <0,2,4,6>
     2959000610U, // <3,0,2,5>: Cost 3 vzipr <1,0,3,2>, <1,4,0,5>
     2624767930U, // <3,0,2,6>: Cost 3 vext2 <1,2,3,0>, <2,6,3,7>
@@ -2271,7 +2271,7 @@ static const unsigned PerfectShuffleTable[6561 + 1] = {
     3202367488U, // <3,0,6,4>: Cost 3 ins <u,0,6,4>, lane 0
     3172663298U, // <3,0,6,5>: Cost 3 ins <3,0,u,5>, lane 2
     2666574648U, // <3,0,6,6>: Cost 3 vext2 <u,2,3,0>, <6,6,6,6>
-    2128650240U, // <3,0,6,7>: Cost 2 ins <u,0,6,7>, lane 0
+    2098946053U, // <3,0,6,7>: Cost 2 ins <3,0,u,u>, lane 5
     2128609280U, // <3,0,6,u>: Cost 2 ins <u,0,6,2>, lane 0
     3095396352U, // <3,0,7,0>: Cost 3 vtrnr <1,3,5,7>, <0,0,0,0>
     3095396362U, // <3,0,7,1>: Cost 3 vtrnr <1,3,5,7>, <0,0,1,1>
@@ -2292,7 +2292,7 @@ static const unsigned PerfectShuffleTable[6561 + 1] = {
     2098429955U, // <3,0,u,7>: Cost 2 ins <3,0,1,u>, lane 3
     537707219U,  // <3,0,u,u>: Cost 1 vext3 LHS, LHS
     2552201468U, // <3,1,0,0>: Cost 3 vext1 <0,3,1,0>, <0,3,1,0>
-    2618802278U, // <3,1,0,1>: Cost 3 vext2 <0,2,3,1>, LHS
+    2128822272U, // <3,1,0,1>: Cost 2 ins <u,1,0,1>, lane 0
     1695727718U, // <3,1,0,2>: Cost 2 vuzpl <3,0,1,2>, LHS
     1611449078U, // <3,1,0,3>: Cost 2 vext3 LHS, <1,0,3,2>
     2552204598U, // <3,1,0,4>: Cost 3 vext1 <0,3,1,0>, RHS
@@ -2332,7 +2332,7 @@ static const unsigned PerfectShuffleTable[6561 + 1] = {
     2960345238U, // <3,1,4,2>: Cost 3 vzipr <1,2,3,4>, <3,0,1,2>
     2129133568U, // <3,1,4,3>: Cost 2 ins <u,1,4,3>, lane 0
     2552237366U, // <3,1,4,4>: Cost 3 vext1 <0,3,1,4>, RHS
-    2618805558U, // <3,1,4,5>: Cost 3 vext2 <0,2,3,1>, RHS
+    2129149952U, // <3,1,4,5>: Cost 2 ins <u,1,4,5>, lane 0
     1695730998U, // <3,1,4,6>: Cost 2 vuzpl <3,0,1,2>, RHS
     3177693185U, // <3,1,4,7>: Cost 3 ins <3,u,4,7>, lane 1
     1695731016U, // <3,1,4,u>: Cost 2 vuzpl <3,0,1,2>, RHS
@@ -2401,11 +2401,11 @@ static const unsigned PerfectShuffleTable[6561 + 1] = {
     1611892383U, // <3,2,2,u>: Cost 2 vext3 LHS, <2,2,u,3>
     1611450022U, // <3,2,3,0>: Cost 2 vext3 LHS, <2,3,0,1>
     2685191854U, // <3,2,3,1>: Cost 3 vext3 LHS, <2,3,1,0>
-    1696475377U, // <3,2,3,2>: Cost 2 vuzpl <3,1,2,3>, <3,1,2,3>
+    1611450042U, // <3,2,3,2>: Cost 2 vext3 LHS, <2,3,2,3>
     1885929574U, // <3,2,3,3>: Cost 2 vzipr <1,1,3,3>, LHS
     1611450062U, // <3,2,3,4>: Cost 2 vext3 LHS, <2,3,4,5>
     2732967635U, // <3,2,3,5>: Cost 3 vext3 LHS, <2,3,5,1>
-    2959671644U, // <3,2,3,6>: Cost 3 vzipr <1,1,3,3>, <0,4,2,6>
+    1611450082U, // <3,2,3,6>: Cost 2 vext3 LHS, <2,3,6,7>
     2732967652U, // <3,2,3,7>: Cost 3 vext3 LHS, <2,3,7,0>
     1611450094U, // <3,2,3,u>: Cost 2 vext3 LHS, <2,3,u,1>
     2558279782U, // <3,2,4,0>: Cost 3 vext1 <1,3,2,4>, LHS
@@ -2441,7 +2441,7 @@ static const unsigned PerfectShuffleTable[6561 + 1] = {
     1888616550U, // <3,2,7,3>: Cost 2 vzipr <1,5,3,7>, LHS
     3095397274U, // <3,2,7,4>: Cost 3 vtrnr <1,3,5,7>, <1,2,3,4>
     3095396528U, // <3,2,7,5>: Cost 3 vtrnr <1,3,5,7>, <0,2,1,5>
-    3095396556U, // <3,2,7,6>: Cost 3 vtrnr <1,3,5,7>, <0,2,4,6>
+    1155286754U, // <3,2,7,6>: Cost 2 vrev <2,3,6,7>
     2665264748U, // <3,2,7,7>: Cost 3 vext2 <u,0,3,2>, <7,7,7,7>
     1888616555U, // <3,2,7,u>: Cost 2 vzipr <1,5,3,7>, LHS
     1611892795U, // <3,2,u,0>: Cost 2 vext3 LHS, <2,u,0,1>
@@ -2555,12 +2555,12 @@ static const unsigned PerfectShuffleTable[6561 + 1] = {
     3204694016U, // <3,4,2,0>: Cost 3 ins <u,4,2,0>, lane 0
     2624800298U, // <3,4,2,1>: Cost 3 vext2 <1,2,3,4>, <2,1,4,3>
     2624800360U, // <3,4,2,2>: Cost 3 vext2 <1,2,3,4>, <2,2,2,2>
-    2130976768U, // <3,4,2,3>: Cost 2 ins <u,4,2,3>, lane 0
+    2101600261U, // <3,4,2,3>: Cost 2 ins <3,4,u,u>, lane 5
     2826716058U, // <3,4,2,4>: Cost 3 vuzpr <1,3,2,4>, <1,2,3,4>
     2959001294U, // <3,4,2,5>: Cost 3 vzipr <1,0,3,2>, <2,3,4,5>
     2131001344U, // <3,4,2,6>: Cost 2 ins <u,4,2,6>, lane 0
     3177545729U, // <3,4,2,7>: Cost 3 ins <3,u,2,7>, lane 1
-    2131001344U, // <3,4,2,u>: Cost 2 ins <u,4,2,6>, lane 0
+    2101600261U, // <3,4,2,u>: Cost 2 ins <3,4,u,u>, lane 5
     2624800918U, // <3,4,3,0>: Cost 3 vext2 <1,2,3,4>, <3,0,1,2>
     2636081403U, // <3,4,3,1>: Cost 3 vext2 <3,1,3,4>, <3,1,3,4>
     2636745036U, // <3,4,3,2>: Cost 3 vext2 <3,2,3,4>, <3,2,3,4>
@@ -2595,7 +2595,7 @@ static const unsigned PerfectShuffleTable[6561 + 1] = {
     1659227508U, // <3,4,6,4>: Cost 2 vext3 LHS, <4,6,4,6>
     2689838462U, // <3,4,6,5>: Cost 3 vext3 LHS, <4,6,5,7>
     2131296256U, // <3,4,6,6>: Cost 2 ins <u,4,6,6>, lane 0
-    2131304448U, // <3,4,6,7>: Cost 2 ins <u,4,6,7>, lane 0
+    2101600261U, // <3,4,6,7>: Cost 2 ins <3,4,u,u>, lane 5
     1659227540U, // <3,4,6,u>: Cost 2 vext3 LHS, <4,6,u,2>
     2666607610U, // <3,4,7,0>: Cost 3 vext2 <u,2,3,4>, <7,0,1,2>
     2659972191U, // <3,4,7,1>: Cost 3 vext2 <7,1,3,4>, <7,1,3,4>
@@ -2609,14 +2609,14 @@ static const unsigned PerfectShuffleTable[6561 + 1] = {
     1490690150U, // <3,4,u,0>: Cost 2 vext1 <2,3,4,u>, LHS
     1551062830U, // <3,4,u,1>: Cost 2 vext2 <1,2,3,4>, LHS
     1490691793U, // <3,4,u,2>: Cost 2 vext1 <2,3,4,u>, <2,3,4,u>
-    2101379075U, // <3,4,u,3>: Cost 2 ins <3,4,5,u>, lane 3
+    2101600261U, // <3,4,u,3>: Cost 2 ins <3,4,u,u>, lane 5
     1490693430U, // <3,4,u,4>: Cost 2 vext1 <2,3,4,u>, RHS
     1551063194U, // <3,4,u,5>: Cost 2 vext2 <1,2,3,4>, RHS
     537710121U,  // <3,4,u,6>: Cost 1 vext3 LHS, RHS
     2101379075U, // <3,4,u,7>: Cost 2 ins <3,4,5,u>, lane 3
     537710139U,  // <3,4,u,u>: Cost 1 vext3 LHS, RHS
     2832842752U, // <3,5,0,0>: Cost 3 vuzpr <2,3,4,5>, <0,0,0,0>
-    2618835046U, // <3,5,0,1>: Cost 3 vext2 <0,2,3,5>, LHS
+    2131476480U, // <3,5,0,1>: Cost 2 ins <u,5,0,1>, lane 0
     1698709606U, // <3,5,0,2>: Cost 2 vuzpl <3,4,5,6>, LHS
     2772451522U, // <3,5,0,3>: Cost 3 vuzpl <3,4,5,6>, <0,2,3,5>
     2689838690U, // <3,5,0,4>: Cost 3 vext3 LHS, <5,0,4,1>
@@ -2656,7 +2656,7 @@ static const unsigned PerfectShuffleTable[6561 + 1] = {
     2832844536U, // <3,5,4,2>: Cost 3 vuzpr <2,3,4,5>, <2,4,0,2>
     3177660417U, // <3,5,4,3>: Cost 3 ins <3,u,4,3>, lane 1
     2832845312U, // <3,5,4,4>: Cost 3 vuzpr <2,3,4,5>, <3,4,5,4>
-    2618838326U, // <3,5,4,5>: Cost 3 vext2 <0,2,3,5>, RHS
+    2131804160U, // <3,5,4,5>: Cost 2 ins <u,5,4,5>, lane 0
     1698712886U, // <3,5,4,6>: Cost 2 vuzpl <3,4,5,6>, RHS
     1659228102U, // <3,5,4,7>: Cost 2 vext3 LHS, <5,4,7,6>
     1698712904U, // <3,5,4,u>: Cost 2 vuzpl <3,4,5,6>, RHS
@@ -2761,11 +2761,11 @@ static const unsigned PerfectShuffleTable[6561 + 1] = {
     1659229003U, // <3,6,6,u>: Cost 2 vext3 LHS, <6,6,u,7>
     1659229006U, // <3,6,7,0>: Cost 2 vext3 LHS, <6,7,0,1>
     2558600201U, // <3,6,7,1>: Cost 3 vext1 <1,3,6,7>, <1,3,6,7>
-    2558601146U, // <3,6,7,2>: Cost 3 vext1 <1,3,6,7>, <2,6,3,7>
+    1611453282U, // <3,6,7,2>: Cost 2 vext3 LHS, <6,7,2,3>
     2968996198U, // <3,6,7,3>: Cost 3 vzipr <2,6,3,7>, <3,2,6,3>
     1659229046U, // <3,6,7,4>: Cost 2 vext3 LHS, <6,7,4,5>
     2968995633U, // <3,6,7,5>: Cost 3 vzipr <2,6,3,7>, <2,4,6,5>
-    2722059141U, // <3,6,7,6>: Cost 3 vext3 <6,2,7,3>, <6,7,6,2>
+    1611453322U, // <3,6,7,6>: Cost 2 vext3 LHS, <6,7,6,7>
     1888619830U, // <3,6,7,7>: Cost 2 vzipr <1,5,3,7>, RHS
     1888619831U, // <3,6,7,u>: Cost 2 vzipr <1,5,3,7>, RHS
     1659229087U, // <3,6,u,0>: Cost 2 vext3 LHS, <6,u,0,1>
@@ -2960,7 +2960,7 @@ static const unsigned PerfectShuffleTable[6561 + 1] = {
     2685714598U, // <4,0,2,0>: Cost 3 vext3 <0,2,0,4>, <0,2,0,4>
     2104860674U, // <4,0,2,1>: Cost 2 ins <4,0,u,1>, lane 2
     2128314368U, // <4,0,2,2>: Cost 2 ins <u,0,2,2>, lane 0
-    2128322560U, // <4,0,2,3>: Cost 2 ins <u,0,2,3>, lane 0
+    2104918021U, // <4,0,2,3>: Cost 2 ins <4,0,u,u>, lane 5
     2685714636U, // <4,0,2,4>: Cost 3 vext3 <0,2,0,4>, <0,2,4,6>
     3044622465U, // <4,0,2,5>: Cost 3 vtrnl <4,1,2,3>, <0,1,5,3>
     2833613004U, // <4,0,2,6>: Cost 3 vuzpr <2,4,6,0>, <0,2,4,6>
@@ -2980,7 +2980,7 @@ static const unsigned PerfectShuffleTable[6561 + 1] = {
     1974370406U, // <4,0,4,2>: Cost 2 vtrnl <4,6,4,6>, LHS
     3178364931U, // <4,0,4,3>: Cost 3 ins <4,0,4,u>, lane 3
     2109898753U, // <4,0,4,4>: Cost 2 ins <4,u,4,4>, lane 1
-    2631478582U, // <4,0,4,5>: Cost 3 vext2 <2,3,4,0>, RHS
+    2104918021U, // <4,0,4,5>: Cost 2 ins <4,0,u,u>, lane 5
     1705610550U, // <4,0,4,6>: Cost 2 vuzpl <4,6,0,2>, RHS
     2109923329U, // <4,0,4,7>: Cost 2 ins <4,u,4,7>, lane 1
     1705610568U, // <4,0,4,u>: Cost 2 vuzpl <4,6,0,2>, RHS
@@ -3014,14 +3014,14 @@ static const unsigned PerfectShuffleTable[6561 + 1] = {
     1974009856U, // <4,0,u,0>: Cost 2 vtrnl RHS, <0,0,0,0>
     767893606U,  // <4,0,u,1>: Cost 1 vzipl RHS, LHS
     900268134U,  // <4,0,u,2>: Cost 1 vtrnl RHS, LHS
-    2104696835U, // <4,0,u,3>: Cost 2 ins <4,0,5,u>, lane 3
+    2104918021U, // <4,0,u,3>: Cost 2 ins <4,0,u,u>, lane 5
     1974010060U, // <4,0,u,4>: Cost 2 vtrnl RHS, <0,2,4,6>
-    2109980673U, // <4,0,u,5>: Cost 2 ins <4,u,5,5>, lane 1
+    2104918021U, // <4,0,u,5>: Cost 2 ins <4,0,u,u>, lane 5
     1705613466U, // <4,0,u,6>: Cost 2 vuzpl <4,6,0,2>, RHS
     1036328961U, // <4,0,u,7>: Cost 1 ins RHS, lane 1
     900268188U,  // <4,0,u,u>: Cost 1 vtrnl RHS, LHS
     2600640614U, // <4,1,0,0>: Cost 3 vext1 <u,4,1,0>, LHS
-    2622857318U, // <4,1,0,1>: Cost 3 vext2 <0,u,4,1>, LHS
+    2128822272U, // <4,1,0,1>: Cost 2 ins <u,1,0,1>, lane 0
     2109587457U, // <4,1,0,2>: Cost 2 ins <4,u,0,2>, lane 1
     2128838656U, // <4,1,0,3>: Cost 2 ins <u,1,0,3>, lane 0
     2622857554U, // <4,1,0,4>: Cost 3 vext2 <0,u,4,1>, <0,4,1,5>
@@ -3061,7 +3061,7 @@ static const unsigned PerfectShuffleTable[6561 + 1] = {
     2912641946U, // <4,1,4,2>: Cost 3 vzipl <4,4,5,6>, <1,2,3,4>
     2040135782U, // <4,1,4,3>: Cost 2 vtrnr <4,4,4,4>, LHS
     2109898753U, // <4,1,4,4>: Cost 2 ins <4,u,4,4>, lane 1
-    2622860598U, // <4,1,4,5>: Cost 3 vext2 <0,u,4,1>, RHS
+    2129149952U, // <4,1,4,5>: Cost 2 ins <u,1,4,5>, lane 0
     2109915137U, // <4,1,4,6>: Cost 2 ins <4,u,4,6>, lane 1
     2109923329U, // <4,1,4,7>: Cost 2 ins <4,u,4,7>, lane 1
     2109915137U, // <4,1,4,u>: Cost 2 ins <4,u,4,6>, lane 1
@@ -3102,7 +3102,7 @@ static const unsigned PerfectShuffleTable[6561 + 1] = {
     1036328961U, // <4,1,u,7>: Cost 1 ins RHS, lane 1
     1055244288U, // <4,1,u,u>: Cost 1 ins LHS, lane 0
     3047786150U, // <4,2,0,0>: Cost 3 vtrnl <4,6,0,2>, <2,3,0,1>
-    2622865510U, // <4,2,0,1>: Cost 3 vext2 <0,u,4,2>, LHS
+    2109579265U, // <4,2,0,1>: Cost 2 ins <4,u,0,1>, lane 1
     2129494016U, // <4,2,0,2>: Cost 2 ins <u,2,0,2>, lane 0
     2967019622U, // <4,2,0,3>: Cost 3 vzipr <2,3,4,0>, LHS
     2635473244U, // <4,2,0,4>: Cost 3 vext2 <3,0,4,2>, <0,4,2,6>
@@ -3142,7 +3142,7 @@ static const unsigned PerfectShuffleTable[6561 + 1] = {
     1702448074U, // <4,2,4,2>: Cost 2 vuzpl <4,1,2,3>, <4,1,2,3>
     1905918054U, // <4,2,4,3>: Cost 2 vzipr <4,4,4,4>, LHS
     2109898753U, // <4,2,4,4>: Cost 2 ins <4,u,4,4>, lane 1
-    2622868790U, // <4,2,4,5>: Cost 3 vext2 <0,u,4,2>, RHS
+    2109906945U, // <4,2,4,5>: Cost 2 ins <4,u,4,5>, lane 1
     2129821696U, // <4,2,4,6>: Cost 2 ins <u,2,4,6>, lane 0
     2109923329U, // <4,2,4,7>: Cost 2 ins <4,u,4,7>, lane 1
     2129821696U, // <4,2,4,u>: Cost 2 ins <u,2,4,6>, lane 0
@@ -3251,7 +3251,7 @@ static const unsigned PerfectShuffleTable[6561 + 1] = {
     3204423680U, // <4,3,7,3>: Cost 3 ins <u,3,7,3>, lane 0
     2968404890U, // <4,3,7,4>: Cost 3 vzipr <2,5,4,7>, <1,2,3,4>
     3204440064U, // <4,3,7,5>: Cost 3 ins <u,3,7,5>, lane 0
-    2778953153U, // <4,3,7,6>: Cost 3 vuzpl <4,5,3,7>, <7,5,6,7>
+    2235664908U, // <4,3,7,6>: Cost 3 vrev <3,4,6,7>
     2110144513U, // <4,3,7,7>: Cost 2 ins <4,u,7,7>, lane 1
     2110144513U, // <4,3,7,u>: Cost 2 ins <4,u,7,7>, lane 1
     1841637526U, // <4,3,u,0>: Cost 2 vzipl RHS, <3,0,1,2>
@@ -3264,7 +3264,7 @@ static const unsigned PerfectShuffleTable[6561 + 1] = {
     1036328961U, // <4,3,u,7>: Cost 1 ins RHS, lane 1
     1036328961U, // <4,3,u,u>: Cost 1 ins RHS, lane 1
     1974046028U, // <4,4,0,0>: Cost 2 vtrnl <4,6,0,2>, <4,6,0,2>
-    1570373734U, // <4,4,0,1>: Cost 2 vext2 <4,4,4,4>, LHS
+    2107572229U, // <4,4,0,1>: Cost 2 ins <4,4,u,u>, lane 5
     1705934950U, // <4,4,0,2>: Cost 2 vuzpl <4,6,4,6>, LHS
     3180724227U, // <4,4,0,3>: Cost 3 ins <4,4,0,u>, lane 3
     2107539458U, // <4,4,0,4>: Cost 2 ins <4,4,u,4>, lane 2
@@ -3284,12 +3284,12 @@ static const unsigned PerfectShuffleTable[6561 + 1] = {
     2779678374U, // <4,4,2,0>: Cost 3 vuzpl <4,6,4,6>, <2,3,0,1>
     3044625673U, // <4,4,2,1>: Cost 3 vtrnl <4,1,2,3>, <4,5,1,7>
     1970883530U, // <4,4,2,2>: Cost 2 vtrnl <4,1,2,3>, <4,1,2,3>
-    2130976768U, // <4,4,2,3>: Cost 2 ins <u,4,2,3>, lane 0
+    2107572229U, // <4,4,2,3>: Cost 2 ins <4,4,u,u>, lane 5
     2107539458U, // <4,4,2,4>: Cost 2 ins <4,4,u,4>, lane 2
     2107547650U, // <4,4,2,5>: Cost 2 ins <4,4,u,5>, lane 2
     2131001344U, // <4,4,2,6>: Cost 2 ins <u,4,2,6>, lane 0
     2109775873U, // <4,4,2,7>: Cost 2 ins <4,u,2,7>, lane 1
-    2107547650U, // <4,4,2,u>: Cost 2 ins <4,4,u,5>, lane 2
+    2107572229U, // <4,4,2,u>: Cost 2 ins <4,4,u,u>, lane 5
     3181248514U, // <4,4,3,0>: Cost 3 ins <4,4,u,0>, lane 2
     2779678870U, // <4,4,3,1>: Cost 3 vuzpl <4,6,4,6>, <3,0,1,2>
     3181264898U, // <4,4,3,2>: Cost 3 ins <4,4,u,2>, lane 2
@@ -3336,46 +3336,46 @@ static const unsigned PerfectShuffleTable[6561 + 1] = {
     2040311013U, // <4,4,7,7>: Cost 2 vtrnr <4,4,6,7>, <4,4,6,7>
     2107547650U, // <4,4,7,u>: Cost 2 ins <4,4,u,5>, lane 2
     1974013260U, // <4,4,u,0>: Cost 2 vtrnl RHS, <4,6,0,2>
-    2109947905U, // <4,4,u,1>: Cost 2 ins <4,u,5,1>, lane 1
+    2107572229U, // <4,4,u,1>: Cost 2 ins <4,4,u,u>, lane 5
     1705940782U, // <4,4,u,2>: Cost 2 vuzpl <4,6,4,6>, LHS
-    2107351043U, // <4,4,u,3>: Cost 2 ins <4,4,5,u>, lane 3
+    2107572229U, // <4,4,u,3>: Cost 2 ins <4,4,u,u>, lane 5
     161926454U,  // <4,4,u,4>: Cost 1 vdup0 RHS
     767896886U,  // <4,4,u,5>: Cost 1 vzipl RHS, RHS
     900271414U,  // <4,4,u,6>: Cost 1 vtrnl RHS, RHS
     1036328961U, // <4,4,u,7>: Cost 1 ins RHS, lane 1
     900271432U,  // <4,4,u,u>: Cost 1 vtrnl RHS, RHS
     2108170242U, // <4,5,0,0>: Cost 2 ins <4,5,u,0>, lane 2
-    1557774438U, // <4,5,0,1>: Cost 2 vext2 <2,3,4,5>, LHS
+    1034493957U, // <4,5,0,1>: Cost 1 ins RHS, lane 5
     1707294822U, // <4,5,0,2>: Cost 2 vuzpl <4,u,5,1>, LHS
     2108194818U, // <4,5,0,3>: Cost 2 ins <4,5,u,3>, lane 2
     2108203010U, // <4,5,0,4>: Cost 2 ins <4,5,u,4>, lane 2
     2108211202U, // <4,5,0,5>: Cost 2 ins <4,5,u,5>, lane 2
     2108219394U, // <4,5,0,6>: Cost 2 ins <4,5,u,6>, lane 2
     1034485762U, // <4,5,0,7>: Cost 1 ins RHS, lane 2
-    1034485762U, // <4,5,0,u>: Cost 1 ins RHS, lane 2
+    1034493957U, // <4,5,0,u>: Cost 1 ins RHS, lane 5
     2108170242U, // <4,5,1,0>: Cost 2 ins <4,5,u,0>, lane 2
-    2108178434U, // <4,5,1,1>: Cost 2 ins <4,5,u,1>, lane 2
-    2108186626U, // <4,5,1,2>: Cost 2 ins <4,5,u,2>, lane 2
+    2133540868U, // <4,5,1,1>: Cost 2 ins <u,u,1,1>, lane 4
+    2133549060U, // <4,5,1,2>: Cost 2 ins <u,u,1,2>, lane 4
     1747599462U, // <4,5,1,3>: Cost 2 vuzpr <0,4,1,5>, LHS
     2108203010U, // <4,5,1,4>: Cost 2 ins <4,5,u,4>, lane 2
-    2108211202U, // <4,5,1,5>: Cost 2 ins <4,5,u,5>, lane 2
+    2133573636U, // <4,5,1,5>: Cost 2 ins <u,u,1,5>, lane 4
     2108219394U, // <4,5,1,6>: Cost 2 ins <4,5,u,6>, lane 2
     1034485762U, // <4,5,1,7>: Cost 1 ins RHS, lane 2
     1034485762U, // <4,5,1,u>: Cost 1 ins RHS, lane 2
     2108170242U, // <4,5,2,0>: Cost 2 ins <4,5,u,0>, lane 2
     2108178434U, // <4,5,2,1>: Cost 2 ins <4,5,u,1>, lane 2
-    2108186626U, // <4,5,2,2>: Cost 2 ins <4,5,u,2>, lane 2
-    1557776078U, // <4,5,2,3>: Cost 2 vext2 <2,3,4,5>, <2,3,4,5>
+    2133622788U, // <4,5,2,2>: Cost 2 ins <u,u,2,2>, lane 4
+    1059889156U, // <4,5,2,3>: Cost 1 ins LHS, lane 4
     2108203010U, // <4,5,2,4>: Cost 2 ins <4,5,u,4>, lane 2
     2108211202U, // <4,5,2,5>: Cost 2 ins <4,5,u,5>, lane 2
-    2108219394U, // <4,5,2,6>: Cost 2 ins <4,5,u,6>, lane 2
+    2133655556U, // <4,5,2,6>: Cost 2 ins <u,u,2,6>, lane 4
     1034485762U, // <4,5,2,7>: Cost 1 ins RHS, lane 2
-    1034485762U, // <4,5,2,u>: Cost 1 ins RHS, lane 2
-    2108170242U, // <4,5,3,0>: Cost 2 ins <4,5,u,0>, lane 2
+    1059889156U, // <4,5,2,u>: Cost 1 ins LHS, lane 4
+    2133680132U, // <4,5,3,0>: Cost 2 ins <u,u,3,0>, lane 4
     2108178434U, // <4,5,3,1>: Cost 2 ins <4,5,u,1>, lane 2
-    2108186626U, // <4,5,3,2>: Cost 2 ins <4,5,u,2>, lane 2
-    2108194818U, // <4,5,3,3>: Cost 2 ins <4,5,u,3>, lane 2
-    2108203010U, // <4,5,3,4>: Cost 2 ins <4,5,u,4>, lane 2
+    2133696516U, // <4,5,3,2>: Cost 2 ins <u,u,3,2>, lane 4
+    2133704708U, // <4,5,3,3>: Cost 2 ins <u,u,3,3>, lane 4
+    2133712900U, // <4,5,3,4>: Cost 2 ins <u,u,3,4>, lane 4
     2108211202U, // <4,5,3,5>: Cost 2 ins <4,5,u,5>, lane 2
     2108219394U, // <4,5,3,6>: Cost 2 ins <4,5,u,6>, lane 2
     1034485762U, // <4,5,3,7>: Cost 1 ins RHS, lane 2
@@ -3385,10 +3385,10 @@ static const unsigned PerfectShuffleTable[6561 + 1] = {
     2108186626U, // <4,5,4,2>: Cost 2 ins <4,5,u,2>, lane 2
     2108194818U, // <4,5,4,3>: Cost 2 ins <4,5,u,3>, lane 2
     2109898753U, // <4,5,4,4>: Cost 2 ins <4,u,4,4>, lane 1
-    1747599698U, // <4,5,4,5>: Cost 2 vuzpr <0,4,1,5>, <0,4,1,5>
+    1034493957U, // <4,5,4,5>: Cost 1 ins RHS, lane 5
     1707298102U, // <4,5,4,6>: Cost 2 vuzpl <4,u,5,1>, RHS
     1034485762U, // <4,5,4,7>: Cost 1 ins RHS, lane 2
-    1034485762U, // <4,5,4,u>: Cost 1 ins RHS, lane 2
+    1034493957U, // <4,5,4,u>: Cost 1 ins RHS, lane 5
     1503346790U, // <4,5,5,0>: Cost 2 vext1 <4,4,5,5>, LHS
     1839656656U, // <4,5,5,1>: Cost 2 vzipl RHS, <5,1,7,3>
     2108186626U, // <4,5,5,2>: Cost 2 ins <4,5,u,2>, lane 2
@@ -3407,21 +3407,21 @@ static const unsigned PerfectShuffleTable[6561 + 1] = {
     1034346499U, // <4,5,6,6>: Cost 1 ins RHS, lane 3
     27705344U,   // <4,5,6,7>: Cost 0 copy RHS
     27705344U,   // <4,5,6,u>: Cost 0 copy RHS
-    2108170242U, // <4,5,7,0>: Cost 2 ins <4,5,u,0>, lane 2
+    2133975044U, // <4,5,7,0>: Cost 2 ins <u,u,7,0>, lane 4
     2108178434U, // <4,5,7,1>: Cost 2 ins <4,5,u,1>, lane 2
     2108186626U, // <4,5,7,2>: Cost 2 ins <4,5,u,2>, lane 2
-    2108194818U, // <4,5,7,3>: Cost 2 ins <4,5,u,3>, lane 2
-    2108203010U, // <4,5,7,4>: Cost 2 ins <4,5,u,4>, lane 2
+    2133999620U, // <4,5,7,3>: Cost 2 ins <u,u,7,3>, lane 4
+    2134007812U, // <4,5,7,4>: Cost 2 ins <u,u,7,4>, lane 4
     2108211202U, // <4,5,7,5>: Cost 2 ins <4,5,u,5>, lane 2
-    2108219394U, // <4,5,7,6>: Cost 2 ins <4,5,u,6>, lane 2
+    2134024196U, // <4,5,7,6>: Cost 2 ins <u,u,7,6>, lane 4
     1034485762U, // <4,5,7,7>: Cost 1 ins RHS, lane 2
     1034485762U, // <4,5,7,u>: Cost 1 ins RHS, lane 2
     1034346499U, // <4,5,u,0>: Cost 1 ins RHS, lane 3
-    1034346499U, // <4,5,u,1>: Cost 1 ins RHS, lane 3
+    1034493957U, // <4,5,u,1>: Cost 1 ins RHS, lane 5
     1034346499U, // <4,5,u,2>: Cost 1 ins RHS, lane 3
-    1034346499U, // <4,5,u,3>: Cost 1 ins RHS, lane 3
+    1059889156U, // <4,5,u,3>: Cost 1 ins LHS, lane 4
     1034346499U, // <4,5,u,4>: Cost 1 ins RHS, lane 3
-    1034346499U, // <4,5,u,5>: Cost 1 ins RHS, lane 3
+    1034493957U, // <4,5,u,5>: Cost 1 ins RHS, lane 5
     1034346499U, // <4,5,u,6>: Cost 1 ins RHS, lane 3
     27705344U,   // <4,5,u,7>: Cost 0 copy RHS
     27705344U,   // <4,5,u,u>: Cost 0 copy RHS
@@ -3588,7 +3588,7 @@ static const unsigned PerfectShuffleTable[6561 + 1] = {
     1036328961U, // <4,7,u,7>: Cost 1 ins RHS, lane 1
     1036328961U, // <4,7,u,u>: Cost 1 ins RHS, lane 1
     1705574400U, // <4,u,0,0>: Cost 2 vuzpl RHS, <0,0,0,0>
-    1545191526U, // <4,u,0,1>: Cost 2 vext2 <0,2,4,u>, LHS
+    1034493957U, // <4,u,0,1>: Cost 1 ins RHS, lane 5
     631832678U,  // <4,u,0,2>: Cost 1 vuzpl RHS, LHS
     2108309507U, // <4,u,0,3>: Cost 2 ins <4,6,0,u>, lane 3
     1705574604U, // <4,u,0,4>: Cost 2 vuzpl RHS, <0,2,4,6>
@@ -3628,7 +3628,7 @@ static const unsigned PerfectShuffleTable[6561 + 1] = {
     1974376238U, // <4,u,4,2>: Cost 2 vtrnl <4,6,4,6>, LHS
     2108604419U, // <4,u,4,3>: Cost 2 ins <4,6,4,u>, lane 3
     161926454U,  // <4,u,4,4>: Cost 1 vdup0 RHS
-    1545194806U, // <4,u,4,5>: Cost 2 vext2 <0,2,4,u>, RHS
+    1034493957U, // <4,u,4,5>: Cost 1 ins RHS, lane 5
     631835958U,  // <4,u,4,6>: Cost 1 vuzpl RHS, RHS
     1034485762U, // <4,u,4,7>: Cost 1 ins RHS, lane 2
     631835976U,  // <4,u,4,u>: Cost 1 vuzpl RHS, RHS
@@ -3650,11 +3650,11 @@ static const unsigned PerfectShuffleTable[6561 + 1] = {
     900126874U,  // <4,u,6,6>: Cost 1 vtrnl RHS, RHS
     27705344U,   // <4,u,6,7>: Cost 0 copy RHS
     27705344U,   // <4,u,6,u>: Cost 0 copy RHS
-    2132647936U, // <4,u,7,0>: Cost 2 ins <u,6,7,0>, lane 0
+    2133975044U, // <4,u,7,0>: Cost 2 ins <u,u,7,0>, lane 4
     1705579514U, // <4,u,7,1>: Cost 2 vuzpl RHS, <7,0,1,2>
     2104868866U, // <4,u,7,2>: Cost 2 ins <4,0,u,2>, lane 2
     2129354752U, // <4,u,7,3>: Cost 2 ins <u,1,7,3>, lane 0
-    2132680704U, // <4,u,7,4>: Cost 2 ins <u,6,7,4>, lane 0
+    2134007812U, // <4,u,7,4>: Cost 2 ins <u,u,7,4>, lane 4
     1705579878U, // <4,u,7,5>: Cost 2 vuzpl RHS, <7,4,5,6>
     2131369984U, // <4,u,7,6>: Cost 2 ins <u,4,7,6>, lane 0
     1034485762U, // <4,u,7,7>: Cost 1 ins RHS, lane 2
@@ -3677,11 +3677,11 @@ static const unsigned PerfectShuffleTable[6561 + 1] = {
     3189334017U, // <5,0,0,6>: Cost 3 ins <5,u,0,6>, lane 1
     2846223265U, // <5,0,0,7>: Cost 3 vuzpr <4,5,6,0>, <4,0,6,7>
     2128150528U, // <5,0,0,u>: Cost 2 ins <u,0,0,0>, lane 0
-    2559434854U, // <5,0,1,0>: Cost 3 vext1 <1,5,0,1>, LHS
+    1503608934U, // <5,0,1,0>: Cost 2 vext1 <4,5,0,1>, LHS
     1843003494U, // <5,0,1,1>: Cost 2 vzipl <5,1,7,3>, LHS
     1613381734U, // <5,0,1,2>: Cost 2 vext3 <0,4,1,5>, LHS
     2115641345U, // <5,0,1,3>: Cost 2 ins <5,u,1,3>, lane 1
-    2559438134U, // <5,0,1,4>: Cost 3 vext1 <1,5,0,1>, RHS
+    1611612282U, // <5,0,1,4>: Cost 2 vext3 <0,1,4,5>, <0,1,4,5>
     2583326675U, // <5,0,1,5>: Cost 3 vext1 <5,5,0,1>, <5,5,0,1>
     3202015232U, // <5,0,1,6>: Cost 3 ins <u,0,1,6>, lane 0
     3189415937U, // <5,0,1,7>: Cost 3 ins <5,u,1,7>, lane 1
@@ -3810,7 +3810,7 @@ static const unsigned PerfectShuffleTable[6561 + 1] = {
     2224227480U, // <5,1,6,4>: Cost 3 vrev <1,5,4,6>
     2973778258U, // <5,1,6,5>: Cost 3 vzipr <3,4,5,6>, <0,4,1,5>
     2646823736U, // <5,1,6,6>: Cost 3 vext2 <4,u,5,1>, <6,6,6,6>
-    2129313792U, // <5,1,6,7>: Cost 2 ins <u,1,6,7>, lane 0
+    2111553541U, // <5,1,6,7>: Cost 2 ins <5,1,u,u>, lane 5
     2111512578U, // <5,1,6,u>: Cost 2 ins <5,1,u,3>, lane 2
     2116059137U, // <5,1,7,0>: Cost 2 ins <5,u,7,0>, lane 1
     2040972084U, // <5,1,7,1>: Cost 2 vtrnr RHS, <1,1,1,1>
@@ -3993,15 +3993,15 @@ static const unsigned PerfectShuffleTable[6561 + 1] = {
     2040980480U, // <5,3,u,7>: Cost 2 vtrnr RHS, <1,3,5,7>
     1485977390U, // <5,3,u,u>: Cost 2 vext1 <1,5,3,u>, LHS
     3189284865U, // <5,4,0,0>: Cost 3 ins <5,u,0,0>, lane 1
-    2636890214U, // <5,4,0,1>: Cost 3 vext2 <3,2,5,4>, LHS
+    2113544197U, // <5,4,0,1>: Cost 2 ins <5,4,u,u>, lane 5
     2781626470U, // <5,4,0,2>: Cost 3 vuzpl <5,0,4,1>, LHS
-    3114656089U, // <5,4,0,3>: Cost 3 vtrnr <4,5,6,0>, <0,4,2,3>
+    2242022676U, // <5,4,0,3>: Cost 3 vrev <4,5,3,0>
     2642198866U, // <5,4,0,4>: Cost 3 vext2 <4,1,5,4>, <0,4,1,5>
     2687126418U, // <5,4,0,5>: Cost 3 vext3 <0,4,1,5>, <4,0,5,1>
     2113527810U, // <5,4,0,6>: Cost 2 ins <5,4,u,6>, lane 2
     3114659045U, // <5,4,0,7>: Cost 3 vtrnr <4,5,6,0>, <4,4,6,7>
-    2113527810U, // <5,4,0,u>: Cost 2 ins <5,4,u,6>, lane 2
-    2241809658U, // <5,4,1,0>: Cost 3 vrev <4,5,0,1>
+    2113544197U, // <5,4,0,u>: Cost 2 ins <5,4,u,u>, lane 5
+    1168067834U, // <5,4,1,0>: Cost 2 vrev <4,5,0,1>
     3189366785U, // <5,4,1,1>: Cost 3 ins <5,u,1,1>, lane 1
     3204636672U, // <5,4,1,2>: Cost 3 ins <u,4,1,2>, lane 0
     2115641345U, // <5,4,1,3>: Cost 2 ins <5,u,1,3>, lane 1
@@ -4011,17 +4011,17 @@ static const unsigned PerfectShuffleTable[6561 + 1] = {
     3189415937U, // <5,4,1,7>: Cost 3 ins <5,u,1,7>, lane 1
     1843007017U, // <5,4,1,u>: Cost 2 vzipl <5,1,7,3>, RHS
     3204694016U, // <5,4,2,0>: Cost 3 ins <u,4,2,0>, lane 0
-    3050597641U, // <5,4,2,1>: Cost 3 vtrnl <5,1,2,3>, <4,5,1,7>
+    2241891588U, // <5,4,2,1>: Cost 3 vrev <4,5,1,2>
     3189448705U, // <5,4,2,2>: Cost 3 ins <5,u,2,2>, lane 1
-    2130976768U, // <5,4,2,3>: Cost 2 ins <u,4,2,3>, lane 0
+    2113544197U, // <5,4,2,3>: Cost 2 ins <5,4,u,u>, lane 5
     3204726784U, // <5,4,2,4>: Cost 3 ins <u,4,2,4>, lane 0
     2973746894U, // <5,4,2,5>: Cost 3 vzipr <3,4,5,2>, <2,3,4,5>
     2131001344U, // <5,4,2,6>: Cost 2 ins <u,4,2,6>, lane 0
     3114675429U, // <5,4,2,7>: Cost 3 vtrnr <4,5,6,2>, <4,4,6,7>
-    2131001344U, // <5,4,2,u>: Cost 2 ins <u,4,2,6>, lane 0
+    2113544197U, // <5,4,2,u>: Cost 2 ins <5,4,u,u>, lane 5
     3204767744U, // <5,4,3,0>: Cost 3 ins <u,4,3,0>, lane 0
     2241899781U, // <5,4,3,1>: Cost 3 vrev <4,5,1,3>
-    2636892510U, // <5,4,3,2>: Cost 3 vext2 <3,2,5,4>, <3,2,5,4>
+    1168231694U, // <5,4,3,2>: Cost 2 vrev <4,5,2,3>
     3189530625U, // <5,4,3,3>: Cost 3 ins <5,u,3,3>, lane 1
     2638219776U, // <5,4,3,4>: Cost 3 vext2 <3,4,5,4>, <3,4,5,4>
     2978399950U, // <5,4,3,5>: Cost 3 vzipr <4,2,5,3>, <2,3,4,5>
@@ -4037,11 +4037,11 @@ static const unsigned PerfectShuffleTable[6561 + 1] = {
     2113527810U, // <5,4,4,6>: Cost 2 ins <5,4,u,6>, lane 2
     2646183372U, // <5,4,4,7>: Cost 3 vext2 <4,7,5,4>, <4,7,5,4>
     1845022249U, // <5,4,4,u>: Cost 2 vzipl <5,4,7,6>, RHS
-    2559762534U, // <5,4,5,0>: Cost 3 vext1 <1,5,4,5>, LHS
+    1503936614U, // <5,4,5,0>: Cost 2 vext1 <4,5,4,5>, LHS
     2559763607U, // <5,4,5,1>: Cost 3 vext1 <1,5,4,5>, <1,5,4,5>
     2698628366U, // <5,4,5,2>: Cost 3 vext3 <2,3,4,5>, <4,5,2,3>
     3189678081U, // <5,4,5,3>: Cost 3 ins <5,u,5,3>, lane 1
-    1772514611U, // <5,4,5,4>: Cost 2 vuzpr <4,5,6,4>, <4,5,6,4>
+    1168395554U, // <5,4,5,4>: Cost 2 vrev <4,5,4,5>
     1845529910U, // <5,4,5,5>: Cost 2 vzipl <5,5,5,5>, RHS
     1613385014U, // <5,4,5,6>: Cost 2 vext3 <0,4,1,5>, RHS
     2115969025U, // <5,4,5,7>: Cost 2 ins <5,u,5,7>, lane 1
@@ -4053,7 +4053,7 @@ static const unsigned PerfectShuffleTable[6561 + 1] = {
     2559774006U, // <5,4,6,4>: Cost 3 vext1 <1,5,4,6>, RHS
     1846299958U, // <5,4,6,5>: Cost 2 vzipl <5,6,7,0>, RHS
     2131296256U, // <5,4,6,6>: Cost 2 ins <u,4,6,6>, lane 0
-    2131304448U, // <5,4,6,7>: Cost 2 ins <u,4,6,7>, lane 0
+    2113544197U, // <5,4,6,7>: Cost 2 ins <5,4,u,u>, lane 5
     1846300201U, // <5,4,6,u>: Cost 2 vzipl <5,6,7,0>, RHS
     2116059137U, // <5,4,7,0>: Cost 2 ins <5,u,7,0>, lane 1
     2113470467U, // <5,4,7,1>: Cost 2 ins <5,4,7,u>, lane 3
@@ -4065,7 +4065,7 @@ static const unsigned PerfectShuffleTable[6561 + 1] = {
     2116116481U, // <5,4,7,7>: Cost 2 ins <5,u,7,7>, lane 1
     94965064U,   // <5,4,7,u>: Cost 1 vrev RHS
     2116059137U, // <5,4,u,0>: Cost 2 ins <5,u,7,0>, lane 1
-    2113470467U, // <5,4,u,1>: Cost 2 ins <5,4,7,u>, lane 3
+    2113544197U, // <5,4,u,1>: Cost 2 ins <5,4,u,u>, lane 5
     2113470467U, // <5,4,u,2>: Cost 2 ins <5,4,7,u>, lane 3
     2115641345U, // <5,4,u,3>: Cost 2 ins <5,u,1,3>, lane 1
     2040982736U, // <5,4,u,4>: Cost 2 vtrnr RHS, <4,4,4,4>
@@ -4094,12 +4094,12 @@ static const unsigned PerfectShuffleTable[6561 + 1] = {
     2785052326U, // <5,5,2,0>: Cost 3 vuzpl <5,5,5,5>, <2,3,0,1>
     3205365760U, // <5,5,2,1>: Cost 3 ins <u,5,2,1>, lane 0
     2040933681U, // <5,5,2,2>: Cost 2 vtrnr <4,5,6,2>, <4,5,6,2>
-    2131640320U, // <5,5,2,3>: Cost 2 ins <u,5,2,3>, lane 0
+    2114207749U, // <5,5,2,3>: Cost 2 ins <5,5,u,u>, lane 5
     2785052366U, // <5,5,2,4>: Cost 3 vuzpl <5,5,5,5>, <2,3,4,5>
     2114183170U, // <5,5,2,5>: Cost 2 ins <5,5,u,5>, lane 2
     2646853562U, // <5,5,2,6>: Cost 3 vext2 <4,u,5,5>, <2,6,3,7>
     2114199554U, // <5,5,2,7>: Cost 2 ins <5,5,u,7>, lane 2
-    2114199554U, // <5,5,2,u>: Cost 2 ins <5,5,u,7>, lane 2
+    2114207749U, // <5,5,2,u>: Cost 2 ins <5,5,u,u>, lane 5
     2646853782U, // <5,5,3,0>: Cost 3 vext2 <4,u,5,5>, <3,0,1,2>
     2785052822U, // <5,5,3,1>: Cost 3 vuzpl <5,5,5,5>, <3,0,1,2>
     3187900418U, // <5,5,3,2>: Cost 3 ins <5,5,u,2>, lane 2
@@ -4175,7 +4175,7 @@ static const unsigned PerfectShuffleTable[6561 + 1] = {
     2114805762U, // <5,6,2,0>: Cost 2 ins <5,6,u,0>, lane 2
     3188555778U, // <5,6,2,1>: Cost 3 ins <5,6,u,1>, lane 2
     2638235240U, // <5,6,2,2>: Cost 3 vext2 <3,4,5,6>, <2,2,2,2>
-    2132303872U, // <5,6,2,3>: Cost 2 ins <u,6,2,3>, lane 0
+    2114871301U, // <5,6,2,3>: Cost 2 ins <5,6,u,u>, lane 5
     2114838530U, // <5,6,2,4>: Cost 2 ins <5,6,u,4>, lane 2
     2638235496U, // <5,6,2,5>: Cost 3 vext2 <3,4,5,6>, <2,5,3,6>
     2638235578U, // <5,6,2,6>: Cost 3 vext2 <3,4,5,6>, <2,6,3,7>
@@ -4620,7 +4620,7 @@ static const unsigned PerfectShuffleTable[6561 + 1] = {
     2687207361U, // <6,2,6,4>: Cost 3 vext3 <0,4,2,6>, <2,6,4,5>
     3195740161U, // <6,2,6,5>: Cost 3 ins <6,u,6,5>, lane 1
     2122006529U, // <6,2,6,6>: Cost 2 ins <6,u,6,6>, lane 1
-    2129977344U, // <6,2,6,7>: Cost 2 ins <u,2,6,7>, lane 0
+    2118189061U, // <6,2,6,7>: Cost 2 ins <6,2,u,u>, lane 5
     1908736107U, // <6,2,6,u>: Cost 2 vzipr <4,u,6,6>, LHS
     2118115331U, // <6,2,7,0>: Cost 2 ins <6,2,7,u>, lane 3
     2118115331U, // <6,2,7,1>: Cost 2 ins <6,2,7,u>, lane 3
@@ -4904,7 +4904,7 @@ static const unsigned PerfectShuffleTable[6561 + 1] = {
     3114896750U, // <6,6,2,0>: Cost 3 vtrnr <4,6,0,2>, <4,6,4,0>
     3195412481U, // <6,6,2,1>: Cost 3 ins <6,u,2,1>, lane 1
     2041154892U, // <6,6,2,2>: Cost 2 vtrnr <4,6,0,2>, <4,6,0,2>
-    2132303872U, // <6,6,2,3>: Cost 2 ins <u,6,2,3>, lane 0
+    2120843269U, // <6,6,2,3>: Cost 2 ins <6,6,u,u>, lane 5
     3114897510U, // <6,6,2,4>: Cost 3 vtrnr <4,6,0,2>, <5,6,7,4>
     3195445249U, // <6,6,2,5>: Cost 3 ins <6,u,2,5>, lane 1
     2120826882U, // <6,6,2,6>: Cost 2 ins <6,6,u,6>, lane 2
@@ -4980,25 +4980,25 @@ static const unsigned PerfectShuffleTable[6561 + 1] = {
     2644952098U, // <6,7,1,4>: Cost 3 vext2 RHS, <1,4,0,5>
     1571210384U, // <6,7,1,5>: Cost 2 vext2 RHS, <1,5,3,7>
     2644952271U, // <6,7,1,6>: Cost 3 vext2 RHS, <1,6,1,7>
-    2578535418U, // <6,7,1,7>: Cost 3 vext1 <4,6,7,1>, <7,0,1,2>
+    2121498626U, // <6,7,1,7>: Cost 2 ins <6,7,u,7>, lane 2
     1761034347U, // <6,7,1,u>: Cost 2 vuzpr <2,6,3,7>, LHS
-    2834776982U, // <6,7,2,0>: Cost 3 vuzpr <2,6,3,7>, <1,2,3,0>
+    2121064451U, // <6,7,2,0>: Cost 2 ins <6,7,2,u>, lane 3
     2121449474U, // <6,7,2,1>: Cost 2 ins <6,7,u,1>, lane 2
     1571210856U, // <6,7,2,2>: Cost 2 vext2 RHS, <2,2,2,2>
-    1571210918U, // <6,7,2,3>: Cost 2 vext2 RHS, <2,3,0,1>
-    2834776986U, // <6,7,2,4>: Cost 3 vuzpr <2,6,3,7>, <1,2,3,4>
+    1059889156U, // <6,7,2,3>: Cost 1 ins LHS, lane 4
+    2121064451U, // <6,7,2,4>: Cost 2 ins <6,7,2,u>, lane 3
     2121482242U, // <6,7,2,5>: Cost 2 ins <6,7,u,5>, lane 2
     1571211194U, // <6,7,2,6>: Cost 2 vext2 RHS, <2,6,3,7>
-    3114897576U, // <6,7,2,7>: Cost 3 vtrnr <4,6,0,2>, <5,7,5,7>
-    1571211323U, // <6,7,2,u>: Cost 2 vext2 RHS, <2,u,0,1>
+    2121498626U, // <6,7,2,7>: Cost 2 ins <6,7,u,7>, lane 2
+    1059889156U, // <6,7,2,u>: Cost 1 ins LHS, lane 4
     1571211414U, // <6,7,3,0>: Cost 2 vext2 RHS, <3,0,1,2>
     2121449474U, // <6,7,3,1>: Cost 2 ins <6,7,u,1>, lane 2
-    2834780746U, // <6,7,3,2>: Cost 3 vuzpr <2,6,3,7>, <6,3,7,2>
+    2133696516U, // <6,7,3,2>: Cost 2 ins <u,u,3,2>, lane 4
     1571211676U, // <6,7,3,3>: Cost 2 vext2 RHS, <3,3,3,3>
     1571211778U, // <6,7,3,4>: Cost 2 vext2 RHS, <3,4,5,6>
     2121482242U, // <6,7,3,5>: Cost 2 ins <6,7,u,5>, lane 2
     2834777789U, // <6,7,3,6>: Cost 3 vuzpr <2,6,3,7>, <2,3,2,6>
-    2834777088U, // <6,7,3,7>: Cost 3 vuzpr <2,6,3,7>, <1,3,5,7>
+    2133737476U, // <6,7,3,7>: Cost 2 ins <u,u,3,7>, lane 4
     1571212062U, // <6,7,3,u>: Cost 2 vext2 RHS, <3,u,1,2>
     1573202834U, // <6,7,4,0>: Cost 2 vext2 RHS, <4,0,5,1>
     2121449474U, // <6,7,4,1>: Cost 2 ins <6,7,u,1>, lane 2
@@ -5012,21 +5012,21 @@ static const unsigned PerfectShuffleTable[6561 + 1] = {
     2644954696U, // <6,7,5,0>: Cost 3 vext2 RHS, <5,0,1,2>
     1573203664U, // <6,7,5,1>: Cost 2 vext2 RHS, <5,1,7,3>
     2644954878U, // <6,7,5,2>: Cost 3 vext2 RHS, <5,2,3,4>
-    2644954991U, // <6,7,5,3>: Cost 3 vext2 RHS, <5,3,7,0>
+    2121465858U, // <6,7,5,3>: Cost 2 ins <6,7,u,3>, lane 2
     1571213254U, // <6,7,5,4>: Cost 2 vext2 RHS, <5,4,7,6>
     1571213316U, // <6,7,5,5>: Cost 2 vext2 RHS, <5,5,5,5>
     1571213410U, // <6,7,5,6>: Cost 2 vext2 RHS, <5,6,7,0>
     1761037622U, // <6,7,5,7>: Cost 2 vuzpr <2,6,3,7>, RHS
     1761037623U, // <6,7,5,u>: Cost 2 vuzpr <2,6,3,7>, RHS
-    2644955425U, // <6,7,6,0>: Cost 3 vext2 RHS, <6,0,1,2>
+    2121359363U, // <6,7,6,0>: Cost 2 ins <6,7,6,u>, lane 3
     2121449474U, // <6,7,6,1>: Cost 2 ins <6,7,u,1>, lane 2
     1573204474U, // <6,7,6,2>: Cost 2 vext2 RHS, <6,2,7,3>
-    2644955698U, // <6,7,6,3>: Cost 3 vext2 RHS, <6,3,4,5>
-    2644955789U, // <6,7,6,4>: Cost 3 vext2 RHS, <6,4,5,6>
+    2121465858U, // <6,7,6,3>: Cost 2 ins <6,7,u,3>, lane 2
+    2121359363U, // <6,7,6,4>: Cost 2 ins <6,7,6,u>, lane 3
     2121482242U, // <6,7,6,5>: Cost 2 ins <6,7,u,5>, lane 2
     1571214136U, // <6,7,6,6>: Cost 2 vext2 RHS, <6,6,6,6>
-    1761036218U, // <6,7,6,7>: Cost 2 vuzpr <2,6,3,7>, <2,6,3,7>
-    1573204895U, // <6,7,6,u>: Cost 2 vext2 RHS, <6,u,0,1>
+    1060216836U, // <6,7,6,7>: Cost 1 ins RHS, lane 4
+    1060216836U, // <6,7,6,u>: Cost 1 ins RHS, lane 4
     1906757730U, // <6,7,7,0>: Cost 2 vzipr RHS, <5,6,7,0>
     2121449474U, // <6,7,7,1>: Cost 2 ins <6,7,u,1>, lane 2
     2644956362U, // <6,7,7,2>: Cost 3 vext2 RHS, <7,2,6,3>
@@ -5039,11 +5039,11 @@ static const unsigned PerfectShuffleTable[6561 + 1] = {
     1571215059U, // <6,7,u,0>: Cost 2 vext2 RHS, <u,0,1,2>
     497473326U,  // <6,7,u,1>: Cost 1 vext2 RHS, LHS
     1571215237U, // <6,7,u,2>: Cost 2 vext2 RHS, <u,2,3,0>
-    1761034909U, // <6,7,u,3>: Cost 2 vuzpr <2,6,3,7>, LHS
+    1059889156U, // <6,7,u,3>: Cost 1 ins LHS, lane 4
     1571215423U, // <6,7,u,4>: Cost 2 vext2 RHS, <u,4,5,6>
     497473690U,  // <6,7,u,5>: Cost 1 vext2 RHS, RHS
     1571215568U, // <6,7,u,6>: Cost 2 vext2 RHS, <u,6,3,7>
-    1761037865U, // <6,7,u,7>: Cost 2 vuzpr <2,6,3,7>, RHS
+    1060216836U, // <6,7,u,7>: Cost 1 ins RHS, lane 4
     497473893U,  // <6,7,u,u>: Cost 1 vext2 RHS, LHS
     1571217408U, // <6,u,0,0>: Cost 2 vext2 RHS, <0,0,0,0>
     497475686U,  // <6,u,0,1>: Cost 1 vext2 RHS, LHS
@@ -5147,7 +5147,7 @@ static const unsigned PerfectShuffleTable[6561 + 1] = {
     1638318244U, // <7,0,2,0>: Cost 2 vext3 RHS, <0,2,0,2>
     2692743344U, // <7,0,2,1>: Cost 3 vext3 <1,3,5,7>, <0,2,1,5>
     2128314368U, // <7,0,2,2>: Cost 2 ins <u,0,2,2>, lane 0
-    2128322560U, // <7,0,2,3>: Cost 2 ins <u,0,2,3>, lane 0
+    2122833925U, // <7,0,2,3>: Cost 2 ins <7,0,u,u>, lane 5
     1638318284U, // <7,0,2,4>: Cost 2 vext3 RHS, <0,2,4,6>
     2712060118U, // <7,0,2,5>: Cost 3 vext3 RHS, <0,2,5,7>
     2712060126U, // <7,0,2,6>: Cost 3 vext3 RHS, <0,2,6,6>
@@ -5187,7 +5187,7 @@ static const unsigned PerfectShuffleTable[6561 + 1] = {
     3202367488U, // <7,0,6,4>: Cost 3 ins <u,0,6,4>, lane 0
     2651607730U, // <7,0,6,5>: Cost 3 vext2 <5,6,7,0>, <6,5,0,7>
     2651607864U, // <7,0,6,6>: Cost 3 vext2 <5,6,7,0>, <6,6,6,6>
-    2128650240U, // <7,0,6,7>: Cost 2 ins <u,0,6,7>, lane 0
+    2122833925U, // <7,0,6,7>: Cost 2 ins <7,0,u,u>, lane 5
     2128609280U, // <7,0,6,u>: Cost 2 ins <u,0,6,2>, lane 0
     2847477192U, // <7,0,7,0>: Cost 3 vuzpr <4,7,5,0>, <4,7,5,0>
     1858961510U, // <7,0,7,1>: Cost 2 vzipl <7,7,7,7>, LHS
@@ -5208,7 +5208,7 @@ static const unsigned PerfectShuffleTable[6561 + 1] = {
     2122317827U, // <7,0,u,7>: Cost 2 ins <7,0,1,u>, lane 3
     564576979U,  // <7,0,u,u>: Cost 1 vext3 RHS, LHS
     2712060634U, // <7,1,0,0>: Cost 3 vext3 RHS, <1,0,0,1>
-    2639003750U, // <7,1,0,1>: Cost 3 vext2 <3,5,7,1>, LHS
+    2128822272U, // <7,1,0,1>: Cost 2 ins <u,1,0,1>, lane 0
     1719615590U, // <7,1,0,2>: Cost 2 vuzpl <7,0,1,2>, LHS
     1638318838U, // <7,1,0,3>: Cost 2 vext3 RHS, <1,0,3,2>
     2859062268U, // <7,1,0,4>: Cost 3 vuzpr <6,7,0,1>, <7,0,1,4>
@@ -5248,7 +5248,7 @@ static const unsigned PerfectShuffleTable[6561 + 1] = {
     2712060980U, // <7,1,4,2>: Cost 3 vext3 RHS, <1,4,2,5>
     2129133568U, // <7,1,4,3>: Cost 2 ins <u,1,4,3>, lane 0
     2859060432U, // <7,1,4,4>: Cost 3 vuzpr <6,7,0,1>, <4,4,4,4>
-    2639007030U, // <7,1,4,5>: Cost 3 vext2 <3,5,7,1>, RHS
+    2129149952U, // <7,1,4,5>: Cost 2 ins <u,1,4,5>, lane 0
     1719618870U, // <7,1,4,6>: Cost 2 vuzpl <7,0,1,2>, RHS
     2793360778U, // <7,1,4,7>: Cost 3 vuzpl <7,0,1,2>, <4,6,7,1>
     1719618888U, // <7,1,4,u>: Cost 2 vuzpl <7,0,1,2>, RHS
@@ -5317,11 +5317,11 @@ static const unsigned PerfectShuffleTable[6561 + 1] = {
     1638319775U, // <7,2,2,u>: Cost 2 vext3 RHS, <2,2,u,3>
     1638319782U, // <7,2,3,0>: Cost 2 vext3 RHS, <2,3,0,1>
     2693924531U, // <7,2,3,1>: Cost 3 vext3 <1,5,3,7>, <2,3,1,5>
-    2700560061U, // <7,2,3,2>: Cost 3 vext3 <2,6,3,7>, <2,3,2,6>
+    1638319802U, // <7,2,3,2>: Cost 2 vext3 RHS, <2,3,2,3>
     1910112358U, // <7,2,3,3>: Cost 2 vzipr <5,1,7,3>, LHS
     1638319822U, // <7,2,3,4>: Cost 2 vext3 RHS, <2,3,4,5>
     2698716889U, // <7,2,3,5>: Cost 3 vext3 <2,3,5,7>, <2,3,5,7>
-    2983854428U, // <7,2,3,6>: Cost 3 vzipr <5,1,7,3>, <0,4,2,6>
+    1625048802U, // <7,2,3,6>: Cost 2 vext3 <2,3,6,7>, <2,3,6,7>
     2990495214U, // <7,2,3,7>: Cost 3 vzipr <6,2,7,3>, <7,6,2,7>
     1638319854U, // <7,2,3,u>: Cost 2 vext3 RHS, <2,3,u,1>
     2712061688U, // <7,2,4,0>: Cost 3 vext3 RHS, <2,4,0,2>
@@ -5471,12 +5471,12 @@ static const unsigned PerfectShuffleTable[6561 + 1] = {
     3204694016U, // <7,4,2,0>: Cost 3 ins <u,4,2,0>, lane 0
     3199172610U, // <7,4,2,1>: Cost 3 ins <7,4,u,1>, lane 2
     2651637352U, // <7,4,2,2>: Cost 3 vext2 <5,6,7,4>, <2,2,2,2>
-    2130976768U, // <7,4,2,3>: Cost 2 ins <u,4,2,3>, lane 0
+    2125488133U, // <7,4,2,3>: Cost 2 ins <7,4,u,u>, lane 5
     2853258138U, // <7,4,2,4>: Cost 3 vuzpr <5,7,2,4>, <1,2,3,4>
     2712063030U, // <7,4,2,5>: Cost 3 vext3 RHS, <4,2,5,3>
     2131001344U, // <7,4,2,6>: Cost 2 ins <u,4,2,6>, lane 0
     3201433601U, // <7,4,2,7>: Cost 3 ins <7,u,2,7>, lane 1
-    2131001344U, // <7,4,2,u>: Cost 2 ins <u,4,2,6>, lane 0
+    2125488133U, // <7,4,2,u>: Cost 2 ins <7,4,u,u>, lane 5
     2651637910U, // <7,4,3,0>: Cost 3 vext2 <5,6,7,4>, <3,0,1,2>
     3201458177U, // <7,4,3,1>: Cost 3 ins <7,u,3,1>, lane 1
     3204784128U, // <7,4,3,2>: Cost 3 ins <u,4,3,2>, lane 0
@@ -5511,7 +5511,7 @@ static const unsigned PerfectShuffleTable[6561 + 1] = {
     1638468980U, // <7,4,6,4>: Cost 2 vext3 RHS, <4,6,4,6>
     2712063358U, // <7,4,6,5>: Cost 3 vext3 RHS, <4,6,5,7>
     2131296256U, // <7,4,6,6>: Cost 2 ins <u,4,6,6>, lane 0
-    2131304448U, // <7,4,6,7>: Cost 2 ins <u,4,6,7>, lane 0
+    2125488133U, // <7,4,6,7>: Cost 2 ins <7,4,u,u>, lane 5
     1638469012U, // <7,4,6,u>: Cost 2 vext3 RHS, <4,6,u,2>
     2651640826U, // <7,4,7,0>: Cost 3 vext2 <5,6,7,4>, <7,0,1,2>
     2794279930U, // <7,4,7,1>: Cost 3 vuzpl <7,1,4,6>, <7,0,1,2>
@@ -5525,14 +5525,14 @@ static const unsigned PerfectShuffleTable[6561 + 1] = {
     1640312302U, // <7,4,u,0>: Cost 2 vext3 RHS, <4,u,0,2>
     1577899822U, // <7,4,u,1>: Cost 2 vext2 <5,6,7,4>, LHS
     2127577089U, // <7,4,u,2>: Cost 2 ins <7,u,1,2>, lane 1
-    2125266947U, // <7,4,u,3>: Cost 2 ins <7,4,5,u>, lane 3
+    2125488133U, // <7,4,u,3>: Cost 2 ins <7,4,u,u>, lane 5
     1640312342U, // <7,4,u,4>: Cost 2 vext3 RHS, <4,u,4,6>
     1638469146U, // <7,4,u,5>: Cost 2 vext3 RHS, <4,u,5,1>
     564579881U,  // <7,4,u,6>: Cost 1 vext3 RHS, RHS
     2125266947U, // <7,4,u,7>: Cost 2 ins <7,4,5,u>, lane 3
     564579899U,  // <7,4,u,u>: Cost 1 vext3 RHS, RHS
     2579038310U, // <7,5,0,0>: Cost 3 vext1 <4,7,5,0>, LHS
-    2636382310U, // <7,5,0,1>: Cost 3 vext2 <3,1,7,5>, LHS
+    2131476480U, // <7,5,0,1>: Cost 2 ins <u,5,0,1>, lane 0
     1722597478U, // <7,5,0,2>: Cost 2 vuzpl <7,4,5,6>, LHS
     3201253377U, // <7,5,0,3>: Cost 3 ins <7,u,0,3>, lane 1
     2712063586U, // <7,5,0,4>: Cost 3 vext3 RHS, <5,0,4,1>
@@ -5572,7 +5572,7 @@ static const unsigned PerfectShuffleTable[6561 + 1] = {
     2249281674U, // <7,5,4,2>: Cost 3 vrev <5,7,2,4>
     3201548289U, // <7,5,4,3>: Cost 3 ins <7,u,4,3>, lane 1
     2579074508U, // <7,5,4,4>: Cost 3 vext1 <4,7,5,4>, <4,7,5,4>
-    2636385590U, // <7,5,4,5>: Cost 3 vext2 <3,1,7,5>, RHS
+    2131804160U, // <7,5,4,5>: Cost 2 ins <u,5,4,5>, lane 0
     1722600758U, // <7,5,4,6>: Cost 2 vuzpl <7,4,5,6>, RHS
     1638322118U, // <7,5,4,7>: Cost 2 vext3 RHS, <5,4,7,6>
     1638469583U, // <7,5,4,u>: Cost 2 vext3 RHS, <5,4,u,6>
@@ -5641,7 +5641,7 @@ static const unsigned PerfectShuffleTable[6561 + 1] = {
     1638470147U, // <7,6,2,u>: Cost 2 vext3 RHS, <6,2,u,3>
     2650327190U, // <7,6,3,0>: Cost 3 vext2 <5,4,7,6>, <3,0,1,2>
     3121614200U, // <7,6,3,1>: Cost 3 vtrnr <5,7,1,3>, <4,6,5,1>
-    2983857052U, // <7,6,3,2>: Cost 3 vzipr <5,1,7,3>, <4,0,6,2>
+    1181504354U, // <7,6,3,2>: Cost 2 vrev <6,7,2,3>
     2650327452U, // <7,6,3,3>: Cost 3 vext2 <5,4,7,6>, <3,3,3,3>
     2712064562U, // <7,6,3,4>: Cost 3 vext3 RHS, <6,3,4,5>
     3206135808U, // <7,6,3,5>: Cost 3 ins <u,6,3,5>, lane 0
@@ -5677,11 +5677,11 @@ static const unsigned PerfectShuffleTable[6561 + 1] = {
     1638470475U, // <7,6,6,u>: Cost 2 vext3 RHS, <6,6,u,7>
     1638323022U, // <7,6,7,0>: Cost 2 vext3 RHS, <6,7,0,1>
     2712064854U, // <7,6,7,1>: Cost 3 vext3 RHS, <6,7,1,0>
-    2712064865U, // <7,6,7,2>: Cost 3 vext3 RHS, <6,7,2,2>
+    1638323042U, // <7,6,7,2>: Cost 2 vext3 RHS, <6,7,2,3>
     2712064872U, // <7,6,7,3>: Cost 3 vext3 RHS, <6,7,3,0>
     1638323062U, // <7,6,7,4>: Cost 2 vext3 RHS, <6,7,4,5>
     2712064894U, // <7,6,7,5>: Cost 3 vext3 RHS, <6,7,5,4>
-    1723348417U, // <7,6,7,6>: Cost 2 vuzpl <7,5,6,7>, <7,5,6,7>
+    1638323082U, // <7,6,7,6>: Cost 2 vext3 RHS, <6,7,6,7>
     1912802614U, // <7,6,7,7>: Cost 2 vzipr <5,5,7,7>, RHS
     1638323094U, // <7,6,7,u>: Cost 2 vext3 RHS, <6,7,u,1>
     1638470559U, // <7,6,u,0>: Cost 2 vext3 RHS, <6,u,0,1>
@@ -5937,14 +5937,14 @@ static const unsigned PerfectShuffleTable[6561 + 1] = {
     1036328961U, // <u,0,u,7>: Cost 1 ins RHS, lane 1
     537748179U,  // <u,0,u,u>: Cost 1 vext3 LHS, LHS
     1818149622U, // <u,1,0,0>: Cost 2 vzipl <1,0,3,2>, <1,0,3,2>
-    1549410406U, // <u,1,0,1>: Cost 2 vext2 <0,u,u,1>, LHS
+    1007951877U, // <u,1,0,1>: Cost 1 ins LHS, lane 5
     1725587558U, // <u,1,0,2>: Cost 2 vuzpl <u,0,1,2>, LHS
     1007910914U, // <u,1,0,3>: Cost 1 ins LHS, lane 2
     2081660930U, // <u,1,0,4>: Cost 2 ins <0,1,u,4>, lane 2
     2081669122U, // <u,1,0,5>: Cost 2 ins <0,1,u,5>, lane 2
     2081677314U, // <u,1,0,6>: Cost 2 ins <0,1,u,6>, lane 2
     2081685506U, // <u,1,0,7>: Cost 2 ins <0,1,u,7>, lane 2
-    1007910914U, // <u,1,0,u>: Cost 1 ins LHS, lane 2
+    1007951877U, // <u,1,0,u>: Cost 1 ins LHS, lane 5
     1481786002U, // <u,1,1,0>: Cost 2 vext1 <0,u,1,1>, <0,u,1,1>
     202162278U,  // <u,1,1,1>: Cost 1 vdup1 LHS
     1860551574U, // <u,1,1,2>: Cost 2 vzipl LHS, <1,2,3,0>
@@ -5970,14 +5970,14 @@ static const unsigned PerfectShuffleTable[6561 + 1] = {
     1487777078U, // <u,1,3,4>: Cost 2 vext1 <1,u,1,3>, RHS
     1611490304U, // <u,1,3,5>: Cost 2 vext3 LHS, <1,3,5,7>
     2087297027U, // <u,1,3,6>: Cost 2 ins <1,1,3,u>, lane 3
-    2091933697U, // <u,1,3,7>: Cost 2 ins <1,u,3,7>, lane 1
+    2133737476U, // <u,1,3,7>: Cost 2 ins <u,u,3,7>, lane 4
     945004651U,  // <u,1,3,u>: Cost 1 vtrnr LHS, LHS
     1567992749U, // <u,1,4,0>: Cost 2 vext2 <4,0,u,1>, <4,0,u,1>
     2081636354U, // <u,1,4,1>: Cost 2 ins <0,1,u,1>, lane 2
     2081644546U, // <u,1,4,2>: Cost 2 ins <0,1,u,2>, lane 2
     1007910914U, // <u,1,4,3>: Cost 1 ins LHS, lane 2
     2081660930U, // <u,1,4,4>: Cost 2 ins <0,1,u,4>, lane 2
-    1549413686U, // <u,1,4,5>: Cost 2 vext2 <0,u,u,1>, RHS
+    1007951877U, // <u,1,4,5>: Cost 1 ins LHS, lane 5
     1725590838U, // <u,1,4,6>: Cost 2 vuzpl <u,0,1,2>, RHS
     2081685506U, // <u,1,4,7>: Cost 2 ins <0,1,u,7>, lane 2
     1007910914U, // <u,1,4,u>: Cost 1 ins LHS, lane 2
@@ -5987,29 +5987,29 @@ static const unsigned PerfectShuffleTable[6561 + 1] = {
     1007910914U, // <u,1,5,3>: Cost 1 ins LHS, lane 2
     1481821494U, // <u,1,5,4>: Cost 2 vext1 <0,u,1,5>, RHS
     1863533712U, // <u,1,5,5>: Cost 2 vzipl RHS, <1,5,3,7>
-    2104016897U, // <u,1,5,6>: Cost 2 ins <3,u,5,6>, lane 1
+    2133876740U, // <u,1,5,6>: Cost 2 ins <u,u,5,6>, lane 4
     1750224182U, // <u,1,5,7>: Cost 2 vuzpr <0,u,1,1>, RHS
     1007910914U, // <u,1,5,u>: Cost 1 ins LHS, lane 2
     2081628162U, // <u,1,6,0>: Cost 2 ins <0,1,u,0>, lane 2
     1997751092U, // <u,1,6,1>: Cost 2 vtrnl RHS, <1,1,1,1>
-    2110029825U, // <u,1,6,2>: Cost 2 ins <4,u,6,2>, lane 1
+    2133917700U, // <u,1,6,2>: Cost 2 ins <u,u,6,2>, lane 4
     1007910914U, // <u,1,6,3>: Cost 1 ins LHS, lane 2
     2081660930U, // <u,1,6,4>: Cost 2 ins <0,1,u,4>, lane 2
     1997751296U, // <u,1,6,5>: Cost 2 vtrnl RHS, <1,3,5,7>
-    2110062593U, // <u,1,6,6>: Cost 2 ins <4,u,6,6>, lane 1
-    1036328961U, // <u,1,6,7>: Cost 1 ins RHS, lane 1
+    2133950468U, // <u,1,6,6>: Cost 2 ins <u,u,6,6>, lane 4
+    1060216836U, // <u,1,6,7>: Cost 1 ins RHS, lane 4
     1007910914U, // <u,1,6,u>: Cost 1 ins LHS, lane 2
-    2116059137U, // <u,1,7,0>: Cost 2 ins <5,u,7,0>, lane 1
+    2133975044U, // <u,1,7,0>: Cost 2 ins <u,u,7,0>, lane 4
     1906901002U, // <u,1,7,1>: Cost 2 vzipr RHS, <0,0,1,1>
     1906903190U, // <u,1,7,2>: Cost 2 vzipr RHS, <3,0,1,2>
     969220198U,  // <u,1,7,3>: Cost 1 vtrnr RHS, LHS
-    2116091905U, // <u,1,7,4>: Cost 2 ins <5,u,7,4>, lane 1
+    2134007812U, // <u,1,7,4>: Cost 2 ins <u,u,7,4>, lane 4
     1152558485U, // <u,1,7,5>: Cost 2 vrev <1,u,5,7>
-    2116108289U, // <u,1,7,6>: Cost 2 ins <5,u,7,6>, lane 1
-    2116116481U, // <u,1,7,7>: Cost 2 ins <5,u,7,7>, lane 1
+    2134024196U, // <u,1,7,6>: Cost 2 ins <u,u,7,6>, lane 4
+    2134032388U, // <u,1,7,7>: Cost 2 ins <u,u,7,7>, lane 4
     969220203U,  // <u,1,7,u>: Cost 1 vtrnr RHS, LHS
     1007509507U, // <u,1,u,0>: Cost 1 ins LHS, lane 3
-    1007509507U, // <u,1,u,1>: Cost 1 ins LHS, lane 3
+    1007951877U, // <u,1,u,1>: Cost 1 ins LHS, lane 5
     1007509507U, // <u,1,u,2>: Cost 1 ins LHS, lane 3
     835584U,     // <u,1,u,3>: Cost 0 copy LHS
     1007509507U, // <u,1,u,4>: Cost 1 ins LHS, lane 3
@@ -6159,15 +6159,15 @@ static const unsigned PerfectShuffleTable[6561 + 1] = {
     1798090854U, // <u,3,6,4>: Cost 2 vuzpr LHS, <5,6,7,4>
     1164495686U, // <u,3,6,5>: Cost 2 vrev <3,u,5,6>
     1592562488U, // <u,3,6,6>: Cost 2 vext2 LHS, <6,6,6,6>
-    1036328961U, // <u,3,6,7>: Cost 1 ins RHS, lane 1
-    1036328961U, // <u,3,6,u>: Cost 1 ins RHS, lane 1
+    1060216836U, // <u,3,6,7>: Cost 1 ins RHS, lane 4
+    1060216836U, // <u,3,6,u>: Cost 1 ins RHS, lane 4
     1487954022U, // <u,3,7,0>: Cost 2 vext1 <1,u,3,7>, LHS
     1487955331U, // <u,3,7,1>: Cost 2 vext1 <1,u,3,7>, <1,u,3,7>
     1493928028U, // <u,3,7,2>: Cost 2 vext1 <2,u,3,7>, <2,u,3,7>
     1906901832U, // <u,3,7,3>: Cost 2 vzipr RHS, <1,1,3,3>
     1487957302U, // <u,3,7,4>: Cost 2 vext1 <1,u,3,7>, RHS
     2042963662U, // <u,3,7,5>: Cost 2 vtrnr RHS, <2,3,4,5>
-    2116108289U, // <u,3,7,6>: Cost 2 ins <5,u,7,6>, lane 1
+    2134024196U, // <u,3,7,6>: Cost 2 ins <u,u,7,6>, lane 4
     1906902160U, // <u,3,7,7>: Cost 2 vzipr RHS, <1,5,3,7>
     1487959854U, // <u,3,7,u>: Cost 2 vext1 <1,u,3,7>, LHS
     1544787667U, // <u,3,u,0>: Cost 2 vext2 LHS, <u,0,1,2>
@@ -6261,14 +6261,14 @@ static const unsigned PerfectShuffleTable[6561 + 1] = {
     1036328961U, // <u,4,u,7>: Cost 1 ins RHS, lane 1
     537751099U,  // <u,4,u,u>: Cost 1 vext3 LHS, RHS
     2085683201U, // <u,5,0,0>: Cost 2 ins <0,u,0,0>, lane 1
-    1549443174U, // <u,5,0,1>: Cost 2 vext2 <0,u,u,5>, LHS
+    1034493957U, // <u,5,0,1>: Cost 1 ins RHS, lane 5
     1727914086U, // <u,5,0,2>: Cost 2 vuzpl <u,3,5,7>, LHS
     2085707777U, // <u,5,0,3>: Cost 2 ins <0,u,0,3>, lane 1
     1546273106U, // <u,5,0,4>: Cost 2 vext2 <0,4,1,5>, <0,4,1,5>
     1678778497U, // <u,5,0,5>: Cost 2 vuzpl <0,1,5,3>, <0,1,5,3>
     2108219394U, // <u,5,0,6>: Cost 2 ins <4,5,u,6>, lane 2
     1034485762U, // <u,5,0,7>: Cost 1 ins RHS, lane 2
-    1034485762U, // <u,5,0,u>: Cost 1 ins RHS, lane 2
+    1034493957U, // <u,5,0,u>: Cost 1 ins RHS, lane 5
     1505968230U, // <u,5,1,0>: Cost 2 vext1 <4,u,5,1>, LHS
     1860554448U, // <u,5,1,1>: Cost 2 vzipl LHS, <5,1,7,3>
     2103689217U, // <u,5,1,2>: Cost 2 ins <3,u,1,2>, lane 1
@@ -6301,10 +6301,10 @@ static const unsigned PerfectShuffleTable[6561 + 1] = {
     2108186626U, // <u,5,4,2>: Cost 2 ins <4,5,u,2>, lane 2
     2086002689U, // <u,5,4,3>: Cost 2 ins <0,u,4,3>, lane 1
     1845022662U, // <u,5,4,4>: Cost 2 vzipl <5,4,7,6>, <5,4,7,6>
-    1549446454U, // <u,5,4,5>: Cost 2 vext2 <0,u,u,5>, RHS
+    1034493957U, // <u,5,4,5>: Cost 1 ins RHS, lane 5
     1727917366U, // <u,5,4,6>: Cost 2 vuzpl <u,3,5,7>, RHS
     1034485762U, // <u,5,4,7>: Cost 1 ins RHS, lane 2
-    1034485762U, // <u,5,4,u>: Cost 1 ins RHS, lane 2
+    1034493957U, // <u,5,4,u>: Cost 1 ins RHS, lane 5
     1506000998U, // <u,5,5,0>: Cost 2 vext1 <4,u,5,5>, LHS
     1863536336U, // <u,5,5,1>: Cost 2 vzipl RHS, <5,1,7,3>
     2108186626U, // <u,5,5,2>: Cost 2 ins <4,5,u,2>, lane 2
@@ -6326,18 +6326,18 @@ static const unsigned PerfectShuffleTable[6561 + 1] = {
     1488101478U, // <u,5,7,0>: Cost 2 vext1 <1,u,5,7>, LHS
     1488102805U, // <u,5,7,1>: Cost 2 vext1 <1,u,5,7>, <1,u,5,7>
     2114134019U, // <u,5,7,2>: Cost 2 ins <5,5,7,u>, lane 3
-    2116083713U, // <u,5,7,3>: Cost 2 ins <5,u,7,3>, lane 1
+    2133999620U, // <u,5,7,3>: Cost 2 ins <u,u,7,3>, lane 4
     1488104758U, // <u,5,7,4>: Cost 2 vext1 <1,u,5,7>, RHS
     1638330536U, // <u,5,7,5>: Cost 2 vext3 RHS, <5,7,5,7>
     1906903554U, // <u,5,7,6>: Cost 2 vzipr RHS, <3,4,5,6>
     969223478U,  // <u,5,7,7>: Cost 1 vtrnr RHS, RHS
     969223479U,  // <u,5,7,u>: Cost 1 vtrnr RHS, RHS
     1034346499U, // <u,5,u,0>: Cost 1 ins RHS, lane 3
-    1034346499U, // <u,5,u,1>: Cost 1 ins RHS, lane 3
+    1034493957U, // <u,5,u,1>: Cost 1 ins RHS, lane 5
     1034346499U, // <u,5,u,2>: Cost 1 ins RHS, lane 3
     1012113409U, // <u,5,u,3>: Cost 1 ins LHS, lane 1
     1034346499U, // <u,5,u,4>: Cost 1 ins RHS, lane 3
-    1034346499U, // <u,5,u,5>: Cost 1 ins RHS, lane 3
+    1034493957U, // <u,5,u,5>: Cost 1 ins RHS, lane 5
     1034346499U, // <u,5,u,6>: Cost 1 ins RHS, lane 3
     27705344U,   // <u,5,u,7>: Cost 0 copy RHS
     27705344U,   // <u,5,u,u>: Cost 0 copy RHS

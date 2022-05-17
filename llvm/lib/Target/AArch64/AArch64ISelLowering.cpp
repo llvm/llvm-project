@@ -9812,14 +9812,37 @@ static SDValue GeneratePerfectShuffle(unsigned ID, SDValue V1,
         LHSID, V1, V2, PerfectShuffleTable[LHSID], LHS, RHS, DAG, dl);
     EVT VT = OpLHS.getValueType();
     assert(RHSID < 8 && "Expected a lane index for RHSID!");
-    int MaskElt = getPFIDLane(ID, RHSID);
-    assert(MaskElt >= 0 && "Didn't expect an undef movlane index!");
-    unsigned ExtLane = MaskElt < 4 ? MaskElt : (MaskElt - 4);
-    SDValue Input = MaskElt < 4 ? V1 : V2;
-    // Be careful about creating illegal types. Use f16 instead of i16.
-    if (VT == MVT::v4i16) {
-      Input = DAG.getBitcast(MVT::v4f16, Input);
-      OpLHS = DAG.getBitcast(MVT::v4f16, OpLHS);
+    unsigned ExtLane = 0;
+    SDValue Input;
+
+    // OP_MOVLANE are either D movs (if bit 0x4 is set) or S movs. D movs
+    // convert into a higher type.
+    if (RHSID & 0x4) {
+      int MaskElt = getPFIDLane(ID, (RHSID & 0x01) << 1) >> 1;
+      if (MaskElt == -1)
+        MaskElt = (getPFIDLane(ID, ((RHSID & 0x01) << 1) + 1) - 1) >> 1;
+      assert(MaskElt >= 0 && "Didn't expect an undef movlane index!");
+      ExtLane = MaskElt < 2 ? MaskElt : (MaskElt - 2);
+      Input = MaskElt < 2 ? V1 : V2;
+      if (VT.getScalarSizeInBits() == 16) {
+        Input = DAG.getBitcast(MVT::v2f32, Input);
+        OpLHS = DAG.getBitcast(MVT::v2f32, OpLHS);
+      } else {
+        assert(VT.getScalarSizeInBits() == 32 &&
+               "Expected 16 or 32 bit shuffle elemements");
+        Input = DAG.getBitcast(MVT::v2f64, Input);
+        OpLHS = DAG.getBitcast(MVT::v2f64, OpLHS);
+      }
+    } else {
+      int MaskElt = getPFIDLane(ID, RHSID);
+      assert(MaskElt >= 0 && "Didn't expect an undef movlane index!");
+      ExtLane = MaskElt < 4 ? MaskElt : (MaskElt - 4);
+      Input = MaskElt < 4 ? V1 : V2;
+      // Be careful about creating illegal types. Use f16 instead of i16.
+      if (VT == MVT::v4i16) {
+        Input = DAG.getBitcast(MVT::v4f16, Input);
+        OpLHS = DAG.getBitcast(MVT::v4f16, OpLHS);
+      }
     }
     SDValue Ext = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, dl,
                               Input.getValueType().getVectorElementType(),

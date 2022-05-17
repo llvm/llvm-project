@@ -517,9 +517,10 @@ define <8 x i16> @shuffle3_v4i16(<4 x i16> %a, <4 x i16> %b, <4 x i16> %c) {
 define <4 x i32> @shuffle3_v4i32(<4 x i32> %a, <4 x i32> %b, <4 x i32> %c) {
 ; CHECK-LABEL: shuffle3_v4i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    zip1 v0.4s, v0.4s, v0.4s
-; CHECK-NEXT:    mov v0.s[1], v1.s[0]
-; CHECK-NEXT:    mov v0.s[2], v2.s[0]
+; CHECK-NEXT:    trn1 v1.4s, v0.4s, v1.4s
+; CHECK-NEXT:    mov v1.d[1], v0.d[0]
+; CHECK-NEXT:    mov v1.s[2], v2.s[0]
+; CHECK-NEXT:    mov v0.16b, v1.16b
 ; CHECK-NEXT:    ret
   %x = shufflevector <4 x i32> %a, <4 x i32> %b, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
   %y = shufflevector <4 x i32> %c, <4 x i32> undef, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
