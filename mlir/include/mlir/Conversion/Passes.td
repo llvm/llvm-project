@@ -756,7 +756,10 @@ def TosaToArith : Pass<"tosa-to-arith"> {
   let options = [
     Option<"includeApplyRescale", "include-apply-rescale",
            "bool", /*default=*/"false",
-           "Whether to include the lowering for tosa.apply_rescale to arith">
+           "Whether to include the lowering for tosa.apply_rescale to arith">,
+    Option<"use32Bit", "use-32-bit",
+           "bool", /*default=*/"false",
+           "Whether to prioritze lowering to 32-bit operations">
   ];
 
   let constructor = "tosa::createTosaToArith()";
