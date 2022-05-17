@@ -4048,6 +4048,7 @@ void RewriteInstance::rewriteNoteSections() {
 
       if (BSec->getAllocAddress()) {
         assert(!DataWritten && "Writing section twice.");
+        (void)DataWritten;
         SectionData = BSec->getOutputData();
 
         LLVM_DEBUG(dbgs() << "BOLT-DEBUG: " << (Size ? "appending" : "writing")
