@@ -333,13 +333,12 @@ BufferizationState::getBuffer(RewriterBase &rewriter, OpOperand &opOperand,
   return resultBuffer;
 }
 
-/// Return the buffer type for a given OpOperand (tensor) after bufferization.
-BaseMemRefType BufferizationState::getBufferType(OpOperand &opOperand) const {
-  Value tensor = opOperand.get();
-  auto tensorType = tensor.getType().dyn_cast<TensorType>();
+/// Return the buffer type for a given Value (tensor) after bufferization.
+BaseMemRefType BufferizationState::getBufferType(Value value) const {
+  auto tensorType = value.getType().dyn_cast<TensorType>();
   assert(tensorType && "unexpected non-tensor type");
 
-  if (auto toTensorOp = tensor.getDefiningOp<bufferization::ToTensorOp>())
+  if (auto toTensorOp = value.getDefiningOp<bufferization::ToTensorOp>())
     return toTensorOp.memref().getType().cast<BaseMemRefType>();
 
   return getMemRefType(tensorType, getOptions());

@@ -111,7 +111,7 @@ struct CollapseShapeOpInterface
     auto collapseShapeOp = cast<tensor::CollapseShapeOp>(op);
     RankedTensorType tensorResultType = collapseShapeOp.getResultType();
     OpOperand &srcOperand = collapseShapeOp->getOpOperand(0) /*src*/;
-    auto bufferType = state.getBufferType(srcOperand).cast<MemRefType>();
+    auto bufferType = state.getBufferType(srcOperand.get()).cast<MemRefType>();
 
     if (tensorResultType.getRank() == 0) {
       // 0-d collapses must go through a different op builder.
