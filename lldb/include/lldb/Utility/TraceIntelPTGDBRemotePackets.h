@@ -48,6 +48,8 @@ struct TraceIntelPTStartRequest : TraceStartRequest {
 
   /// Whether to have a trace buffer per thread or per cpu core.
   llvm::Optional<bool> per_core_tracing;
+
+  bool IsPerCoreTracing() const;
 };
 
 bool fromJSON(const llvm::json::Value &value, TraceIntelPTStartRequest &packet,

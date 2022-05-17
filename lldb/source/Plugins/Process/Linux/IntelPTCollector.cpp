@@ -92,17 +92,21 @@ void IntelPTThreadTraceCollection::Clear() {
   m_total_buffer_size = 0;
 }
 
-/// IntelPTProcessTrace
+size_t IntelPTThreadTraceCollection::GetTracedThreadsCount() const {
+  return m_thread_traces.size();
+}
 
-bool IntelPTProcessTrace::TracesThread(lldb::tid_t tid) const {
+/// IntelPTPerThreadProcessTrace
+
+bool IntelPTPerThreadProcessTrace::TracesThread(lldb::tid_t tid) const {
   return m_thread_traces.TracesThread(tid);
 }
 
-Error IntelPTProcessTrace::TraceStop(lldb::tid_t tid) {
+Error IntelPTPerThreadProcessTrace::TraceStop(lldb::tid_t tid) {
   return m_thread_traces.TraceStop(tid);
 }
 
-Error IntelPTProcessTrace::TraceStart(lldb::tid_t tid) {
+Error IntelPTPerThreadProcessTrace::TraceStart(lldb::tid_t tid) {
   if (m_thread_traces.GetTotalBufferSize() +
           m_tracing_params.trace_buffer_size >
       static_cast<size_t>(*m_tracing_params.process_buffer_size_limit))
@@ -117,13 +121,14 @@ Error IntelPTProcessTrace::TraceStart(lldb::tid_t tid) {
 }
 
 const IntelPTThreadTraceCollection &
-IntelPTProcessTrace::GetThreadTraces() const {
+IntelPTPerThreadProcessTrace::GetThreadTraces() const {
   return m_thread_traces;
 }
 
 /// IntelPTCollector
 
-IntelPTCollector::IntelPTCollector() {
+IntelPTCollector::IntelPTCollector(NativeProcessProtocol &process)
+    : m_process(process) {
   if (Expected<LinuxPerfZeroTscConversion> tsc_conversion =
           LoadPerfTscConversionParameters())
     m_tsc_conversion =
@@ -134,8 +139,13 @@ IntelPTCollector::IntelPTCollector() {
 }
 
 Error IntelPTCollector::TraceStop(lldb::tid_t tid) {
-  if (IsProcessTracingEnabled() && m_process_trace->TracesThread(tid))
-    return m_process_trace->TraceStop(tid);
+  if (m_per_thread_process_trace_up &&
+      m_per_thread_process_trace_up->TracesThread(tid))
+    return m_per_thread_process_trace_up->TraceStop(tid);
+  else if (m_per_core_process_trace_up)
+    return createStringError(inconvertibleErrorCode(),
+                             "Can't stop tracing an individual thread when "
+                             "per-core process tracing is enabled.");
   return m_thread_traces.TraceStop(tid);
 }
 
@@ -152,26 +162,60 @@ Error IntelPTCollector::TraceStop(const TraceStopRequest &request) {
   }
 }
 
-Error IntelPTCollector::TraceStart(
-    const TraceIntelPTStartRequest &request,
-    const std::vector<lldb::tid_t> &process_threads) {
+Expected<IntelPTPerThreadProcessTraceUP>
+IntelPTPerThreadProcessTrace::Start(const TraceIntelPTStartRequest &request,
+                                    ArrayRef<lldb::tid_t> current_tids) {
+  IntelPTPerThreadProcessTraceUP trace(
+      new IntelPTPerThreadProcessTrace(request));
+
+  Error error = Error::success();
+  for (lldb::tid_t tid : current_tids)
+    error = joinErrors(std::move(error), trace->TraceStart(tid));
+  if (error)
+    return std::move(error);
+  return trace;
+}
+
+Error IntelPTCollector::TraceStart(const TraceIntelPTStartRequest &request) {
   if (request.IsProcessTracing()) {
     if (IsProcessTracingEnabled()) {
       return createStringError(
           inconvertibleErrorCode(),
           "Process currently traced. Stop process tracing first");
     }
-    if (request.per_core_tracing.getValueOr(false)) {
-      return createStringError(inconvertibleErrorCode(),
-                               "Per-core tracing is not supported.");
-    }
-    m_process_trace = IntelPTProcessTrace(request);
+    if (request.IsPerCoreTracing()) {
+      if (m_thread_traces.GetTracedThreadsCount() > 0)
+        return createStringError(
+            inconvertibleErrorCode(),
+            "Threads currently traced. Stop tracing them first.");
+      if (Expected<IntelPTMultiCoreTraceUP> trace =
+              IntelPTMultiCoreTrace::StartOnAllCores(request)) {
+        m_per_core_process_trace_up = std::move(*trace);
+        return Error::success();
+      } else {
+        return trace.takeError();
+      }
+    } else {
+      std::vector<lldb::tid_t> process_threads;
+      for (size_t i = 0; m_process.GetThreadAtIndex(i); i++)
+        process_threads.push_back(m_process.GetThreadAtIndex(i)->GetID());
 
-    Error error = Error::success();
-    for (lldb::tid_t tid : process_threads)
-      error = joinErrors(std::move(error), m_process_trace->TraceStart(tid));
-    return error;
+      // per-thread process tracing
+      if (Expected<IntelPTPerThreadProcessTraceUP> trace =
+              IntelPTPerThreadProcessTrace::Start(request, process_threads)) {
+        m_per_thread_process_trace_up = std::move(trace.get());
+        return Error::success();
+      } else {
+        return trace.takeError();
+      }
+    }
   } else {
+    // individual thread tracing
+    if (m_per_core_process_trace_up)
+      return createStringError(inconvertibleErrorCode(),
+                               "Process currently traced with per-core "
+                               "tracing. Stop process tracing first");
+
     Error error = Error::success();
     for (int64_t tid : *request.tids)
       error = joinErrors(std::move(error),
@@ -181,14 +225,16 @@ Error IntelPTCollector::TraceStart(
 }
 
 Error IntelPTCollector::OnThreadCreated(lldb::tid_t tid) {
-  if (!IsProcessTracingEnabled())
-    return Error::success();
-  return m_process_trace->TraceStart(tid);
+  if (m_per_thread_process_trace_up)
+    return m_per_thread_process_trace_up->TraceStart(tid);
+
+  return Error::success();
 }
 
 Error IntelPTCollector::OnThreadDestroyed(lldb::tid_t tid) {
-  if (IsProcessTracingEnabled() && m_process_trace->TracesThread(tid))
-    return m_process_trace->TraceStop(tid);
+  if (m_per_thread_process_trace_up &&
+      m_per_thread_process_trace_up->TracesThread(tid))
+    return m_per_thread_process_trace_up->TraceStop(tid);
   else if (m_thread_traces.TracesThread(tid))
     return m_thread_traces.TraceStop(tid);
   return Error::success();
@@ -200,26 +246,42 @@ Expected<json::Value> IntelPTCollector::GetState() const {
     return cpu_info.takeError();
 
   TraceGetStateResponse state;
-  state.processBinaryData.push_back(
+  state.process_binary_data.push_back(
       {IntelPTDataKinds::kProcFsCpuInfo, cpu_info->size()});
 
   std::vector<TraceThreadState> thread_states =
       m_thread_traces.GetThreadStates();
-  state.tracedThreads.insert(state.tracedThreads.end(), thread_states.begin(),
-                             thread_states.end());
+  state.traced_threads.insert(state.traced_threads.end(), thread_states.begin(),
+                              thread_states.end());
 
-  if (IsProcessTracingEnabled()) {
-    thread_states = m_process_trace->GetThreadTraces().GetThreadStates();
-    state.tracedThreads.insert(state.tracedThreads.end(), thread_states.begin(),
-                               thread_states.end());
+  if (m_per_thread_process_trace_up) {
+    thread_states =
+        m_per_thread_process_trace_up->GetThreadTraces().GetThreadStates();
+    state.traced_threads.insert(state.traced_threads.end(),
+                                thread_states.begin(), thread_states.end());
+  } else if (m_per_core_process_trace_up) {
+    for (size_t i = 0; m_process.GetThreadAtIndex(i); i++)
+      state.traced_threads.push_back(
+          TraceThreadState{m_process.GetThreadAtIndex(i)->GetID(), {}});
+
+    state.cores.emplace();
+    m_per_core_process_trace_up->ForEachCore(
+        [&](lldb::core_id_t core_id,
+            const IntelPTSingleBufferTrace &core_trace) {
+          state.cores->push_back({core_id,
+                                  {{IntelPTDataKinds::kTraceBuffer,
+                                    core_trace.GetTraceBufferSize()}}});
+        });
   }
   return toJSON(state);
 }
 
 Expected<const IntelPTSingleBufferTrace &>
 IntelPTCollector::GetTracedThread(lldb::tid_t tid) const {
-  if (IsProcessTracingEnabled() && m_process_trace->TracesThread(tid))
-    return m_process_trace->GetThreadTraces().GetTracedThread(tid);
+  if (m_per_thread_process_trace_up &&
+      m_per_thread_process_trace_up->TracesThread(tid))
+    return m_per_thread_process_trace_up->GetThreadTraces().GetTracedThread(
+        tid);
   return m_thread_traces.GetTracedThread(tid);
 }
 
@@ -239,7 +301,10 @@ IntelPTCollector::GetBinaryData(const TraceGetBinaryDataRequest &request) const 
                            request.kind.c_str());
 }
 
-void IntelPTCollector::ClearProcessTracing() { m_process_trace = None; }
+void IntelPTCollector::ClearProcessTracing() {
+  m_per_thread_process_trace_up.reset();
+  m_per_core_process_trace_up.reset();
+}
 
 bool IntelPTCollector::IsSupported() {
   if (Expected<uint32_t> intel_pt_type = GetIntelPTOSEventType()) {
@@ -251,7 +316,8 @@ bool IntelPTCollector::IsSupported() {
 }
 
 bool IntelPTCollector::IsProcessTracingEnabled() const {
-  return (bool)m_process_trace;
+  return (bool)m_per_thread_process_trace_up ||
+         (bool)m_per_core_process_trace_up;
 }
 
 void IntelPTCollector::Clear() {

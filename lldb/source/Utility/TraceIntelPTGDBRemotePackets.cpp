@@ -16,6 +16,10 @@ namespace lldb_private {
 const char *IntelPTDataKinds::kProcFsCpuInfo = "procfsCpuInfo";
 const char *IntelPTDataKinds::kTraceBuffer = "traceBuffer";
 
+bool TraceIntelPTStartRequest::IsPerCoreTracing() const {
+  return per_core_tracing.getValueOr(false);
+}
+
 bool fromJSON(const json::Value &value, TraceIntelPTStartRequest &packet,
               Path path) {
   ObjectMapper o(value, path);
