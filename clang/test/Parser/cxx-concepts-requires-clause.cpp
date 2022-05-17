@@ -139,8 +139,10 @@ template<typename T>
 void bar() requires (sizeof(T)) == 0;
 // expected-error@-1{{parentheses are required around this expression in a requires clause}}
 
+template<typename T>
 void bar(int x, int y) requires (x, y, true);
 
+template<typename T>
 struct B {
   int x;
   void foo(int y) requires (x, this, this->x, y, true);
