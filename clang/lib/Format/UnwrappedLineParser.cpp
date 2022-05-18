@@ -1839,8 +1839,7 @@ void UnwrappedLineParser::parseStructuralElement(IfStmtKind *IfKind,
                 : CommentsBeforeNextToken.front()->NewlinesBefore > 0;
 
         if (FollowedByNewline && (Text.size() >= 5 || FunctionLike) &&
-            tokenCanStartNewLine(*FormatTok) && Text == Text.upper() &&
-            !PreviousToken->isTypeFinalized()) {
+            tokenCanStartNewLine(*FormatTok) && Text == Text.upper()) {
           PreviousToken->setFinalizedType(TT_FunctionLikeOrFreestandingMacro);
           addUnwrappedLine();
           return;
