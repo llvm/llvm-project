@@ -159,11 +159,15 @@ bool GreedyPatternRewriteDriver::simplify(MutableArrayRef<Region> regions) {
       }
     } else {
       // Add all nested operations to the worklist in preorder.
-      for (auto &region : regions)
+      for (auto &region : regions) {
         region.walk<WalkOrder::PreOrder>([&](Operation *op) {
-          if (!insertKnownConstant(op))
+          if (!insertKnownConstant(op)) {
             worklist.push_back(op);
+            return WalkResult::advance();
+          }
+          return WalkResult::skip();
         });
+      }
 
       // Reverse the list so our pop-back loop processes them in-order.
       std::reverse(worklist.begin(), worklist.end());
