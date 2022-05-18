@@ -22,7 +22,7 @@ int handleError(LLVMErrorRef Err) {
   return 1;
 }
 
-LLVMOrcThreadSafeModuleRef createDemoModule() {
+LLVMOrcThreadSafeModuleRef createDemoModule(void) {
   // Create a new ThreadSafeContext and underlying LLVMContext.
   LLVMOrcThreadSafeContextRef TSCtx = LLVMOrcCreateNewThreadSafeContext();
 

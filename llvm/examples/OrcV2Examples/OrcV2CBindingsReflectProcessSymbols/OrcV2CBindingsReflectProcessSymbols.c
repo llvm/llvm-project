@@ -45,7 +45,7 @@ int allowedSymbols(void *Ctx, LLVMOrcSymbolStringPoolEntryRef Sym) {
   return 0;
 }
 
-LLVMOrcThreadSafeModuleRef createDemoModule() {
+LLVMOrcThreadSafeModuleRef createDemoModule(void) {
   // Create a new ThreadSafeContext and underlying LLVMContext.
   LLVMOrcThreadSafeContextRef TSCtx = LLVMOrcCreateNewThreadSafeContext();
 
