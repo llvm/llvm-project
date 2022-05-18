@@ -280,7 +280,8 @@ enum : unsigned {
   INLINE_FLOATING_C_MAX = 248,
   LITERAL_CONST = 255,
   VGPR_MIN = 256,
-  VGPR_MAX = 511
+  VGPR_MAX = 511,
+  IS_VGPR = 256  // Indicates VGPR or AGPR
 };
 
 } // namespace EncValues

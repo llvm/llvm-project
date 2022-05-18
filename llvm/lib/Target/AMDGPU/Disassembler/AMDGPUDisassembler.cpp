@@ -148,7 +148,8 @@ DECODE_OPERAND_REG(AReg_1024)
 DECODE_OPERAND_REG(AV_32)
 DECODE_OPERAND_REG(AV_64)
 DECODE_OPERAND_REG(AV_128)
-DECODE_OPERAND_REG(AV_512)
+DECODE_OPERAND_REG(AVDst_128)
+DECODE_OPERAND_REG(AVDst_512)
 
 static DecodeStatus decodeOperand_VSrc16(MCInst &Inst, unsigned Imm,
                                          uint64_t Addr,
@@ -972,8 +973,16 @@ MCOperand AMDGPUDisassembler::decodeOperand_AV_128(unsigned Val) const {
   return decodeSrcOp(OPW128, Val);
 }
 
-MCOperand AMDGPUDisassembler::decodeOperand_AV_512(unsigned Val) const {
-  return decodeSrcOp(OPW512, Val);
+MCOperand AMDGPUDisassembler::decodeOperand_AVDst_128(unsigned Val) const {
+  using namespace AMDGPU::EncValues;
+  assert((Val & IS_VGPR) == 0); // Val{8} is not encoded but assumed to be 1.
+  return decodeSrcOp(OPW128, Val | IS_VGPR);
+}
+
+MCOperand AMDGPUDisassembler::decodeOperand_AVDst_512(unsigned Val) const {
+  using namespace AMDGPU::EncValues;
+  assert((Val & IS_VGPR) == 0); // Val{8} is not encoded but assumed to be 1.
+  return decodeSrcOp(OPW512, Val | IS_VGPR);
 }
 
 MCOperand AMDGPUDisassembler::decodeOperand_VReg_64(unsigned Val) const {

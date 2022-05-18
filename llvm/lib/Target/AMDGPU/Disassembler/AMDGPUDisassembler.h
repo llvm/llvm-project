@@ -142,7 +142,8 @@ public:
   MCOperand decodeOperand_AV_32(unsigned Val) const;
   MCOperand decodeOperand_AV_64(unsigned Val) const;
   MCOperand decodeOperand_AV_128(unsigned Val) const;
-  MCOperand decodeOperand_AV_512(unsigned Val) const;
+  MCOperand decodeOperand_AVDst_128(unsigned Val) const;
+  MCOperand decodeOperand_AVDst_512(unsigned Val) const;
 
   enum OpWidthTy {
     OPW32,
