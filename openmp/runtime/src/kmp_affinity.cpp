@@ -138,6 +138,18 @@ const char *__kmp_hw_get_core_type_string(kmp_hw_core_type_t type) {
   return "unknown";
 }
 
+#if KMP_AFFINITY_SUPPORTED
+// If affinity is supported, check the affinity
+// verbose and warning flags before printing warning
+#define KMP_AFF_WARNING(...)                                                   \
+  if (__kmp_affinity_verbose ||                                                \
+      (__kmp_affinity_warnings && (__kmp_affinity_type != affinity_none))) {   \
+    KMP_WARNING(__VA_ARGS__);                                                  \
+  }
+#else
+#define KMP_AFF_WARNING KMP_WARNING
+#endif
+
 ////////////////////////////////////////////////////////////////////////////////
 // kmp_hw_thread_t methods
 int kmp_hw_thread_t::compare_ids(const void *a, const void *b) {
@@ -825,9 +837,9 @@ void kmp_topology_t::canonicalize() {
       }
       KMP_ASSERT(gran_type != KMP_HW_UNKNOWN);
       // Warn user what granularity setting will be used instead
-      KMP_WARNING(AffGranularityBad, "KMP_AFFINITY",
-                  __kmp_hw_get_catalog_string(__kmp_affinity_gran),
-                  __kmp_hw_get_catalog_string(gran_type));
+      KMP_AFF_WARNING(AffGranularityBad, "KMP_AFFINITY",
+                      __kmp_hw_get_catalog_string(__kmp_affinity_gran),
+                      __kmp_hw_get_catalog_string(gran_type));
       __kmp_affinity_gran = gran_type;
     }
 #if KMP_GROUP_AFFINITY
@@ -843,8 +855,8 @@ void kmp_topology_t::canonicalize() {
       int proc_group_depth = get_level(KMP_HW_PROC_GROUP);
       if (gran_depth >= 0 && proc_group_depth >= 0 &&
           gran_depth < proc_group_depth) {
-        KMP_WARNING(AffGranTooCoarseProcGroup, "KMP_AFFINITY",
-                    __kmp_hw_get_catalog_string(__kmp_affinity_gran));
+        KMP_AFF_WARNING(AffGranTooCoarseProcGroup, "KMP_AFFINITY",
+                        __kmp_hw_get_catalog_string(__kmp_affinity_gran));
         __kmp_affinity_gran = gran_type = KMP_HW_PROC_GROUP;
       }
     }
@@ -966,16 +978,16 @@ bool kmp_topology_t::filter_hw_subset() {
     if (equivalent_type != KMP_HW_UNKNOWN) {
       __kmp_hw_subset->at(i).type = equivalent_type;
     } else {
-      KMP_WARNING(AffHWSubsetNotExistGeneric,
-                  __kmp_hw_get_catalog_string(type));
+      KMP_AFF_WARNING(AffHWSubsetNotExistGeneric,
+                      __kmp_hw_get_catalog_string(type));
       return false;
     }
 
     // Check to see if current layer has already been
     // specified either directly or through an equivalent type
     if (specified[equivalent_type] != KMP_HW_UNKNOWN) {
-      KMP_WARNING(AffHWSubsetEqvLayers, __kmp_hw_get_catalog_string(type),
-                  __kmp_hw_get_catalog_string(specified[equivalent_type]));
+      KMP_AFF_WARNING(AffHWSubsetEqvLayers, __kmp_hw_get_catalog_string(type),
+                      __kmp_hw_get_catalog_string(specified[equivalent_type]));
       return false;
     }
     specified[equivalent_type] = type;
@@ -985,8 +997,8 @@ bool kmp_topology_t::filter_hw_subset() {
     if (max_count < 0 ||
         (num != kmp_hw_subset_t::USE_ALL && num + offset > max_count)) {
       bool plural = (num > 1);
-      KMP_WARNING(AffHWSubsetManyGeneric,
-                  __kmp_hw_get_catalog_string(type, plural));
+      KMP_AFF_WARNING(AffHWSubsetManyGeneric,
+                      __kmp_hw_get_catalog_string(type, plural));
       return false;
     }
 
@@ -1008,21 +1020,21 @@ bool kmp_topology_t::filter_hw_subset() {
       if ((using_core_effs || using_core_types) && !__kmp_is_hybrid_cpu()) {
         if (item.num_attrs == 1) {
           if (using_core_effs) {
-            KMP_WARNING(AffHWSubsetIgnoringAttr, "efficiency");
+            KMP_AFF_WARNING(AffHWSubsetIgnoringAttr, "efficiency");
           } else {
-            KMP_WARNING(AffHWSubsetIgnoringAttr, "core_type");
+            KMP_AFF_WARNING(AffHWSubsetIgnoringAttr, "core_type");
           }
           using_core_effs = false;
           using_core_types = false;
         } else {
-          KMP_WARNING(AffHWSubsetAttrsNonHybrid);
+          KMP_AFF_WARNING(AffHWSubsetAttrsNonHybrid);
           return false;
         }
       }
 
       // Check if using both core types and core efficiencies together
       if (using_core_types && using_core_effs) {
-        KMP_WARNING(AffHWSubsetIncompat, "core_type", "efficiency");
+        KMP_AFF_WARNING(AffHWSubsetIncompat, "core_type", "efficiency");
         return false;
       }
 
@@ -1058,7 +1070,7 @@ bool kmp_topology_t::filter_hw_subset() {
                 (num != kmp_hw_subset_t::USE_ALL && num + offset > max_count)) {
               kmp_str_buf_t buf;
               __kmp_hw_get_catalog_core_string(item.attr[j], &buf, num > 0);
-              KMP_WARNING(AffHWSubsetManyGeneric, buf.str);
+              KMP_AFF_WARNING(AffHWSubsetManyGeneric, buf.str);
               __kmp_str_buf_free(&buf);
               return false;
             }
@@ -1080,8 +1092,8 @@ bool kmp_topology_t::filter_hw_subset() {
             }
             kmp_str_buf_t buf;
             __kmp_hw_get_catalog_core_string(other_attr, &buf, item.num[j] > 0);
-            KMP_WARNING(AffHWSubsetIncompat,
-                        __kmp_hw_get_catalog_string(KMP_HW_CORE), buf.str);
+            KMP_AFF_WARNING(AffHWSubsetIncompat,
+                            __kmp_hw_get_catalog_string(KMP_HW_CORE), buf.str);
             __kmp_str_buf_free(&buf);
             return false;
           }
@@ -1093,7 +1105,7 @@ bool kmp_topology_t::filter_hw_subset() {
               kmp_str_buf_t buf;
               __kmp_hw_get_catalog_core_string(item.attr[j], &buf,
                                                item.num[j] > 0);
-              KMP_WARNING(AffHWSubsetAttrRepeat, buf.str);
+              KMP_AFF_WARNING(AffHWSubsetAttrRepeat, buf.str);
               __kmp_str_buf_free(&buf);
               return false;
             }
@@ -1201,7 +1213,7 @@ bool kmp_topology_t::filter_hw_subset() {
 
   // One last check that we shouldn't allow filtering entire machine
   if (num_filtered == num_hw_threads) {
-    KMP_WARNING(AffHWSubsetAllFiltered);
+    KMP_AFF_WARNING(AffHWSubsetAllFiltered);
     __kmp_free(filtered);
     return false;
   }
@@ -3355,10 +3367,7 @@ static kmp_affin_mask_t *__kmp_create_masks(unsigned *maxIndex,
     KMP_INFORM(ThreadsMigrate, "KMP_AFFINITY", __kmp_affinity_gran_levels);
   }
   if (__kmp_affinity_gran_levels >= (int)depth) {
-    if (__kmp_affinity_verbose ||
-        (__kmp_affinity_warnings && (__kmp_affinity_type != affinity_none))) {
-      KMP_WARNING(AffThreadsMayMigrate);
-    }
+    KMP_AFF_WARNING(AffThreadsMayMigrate);
   }
 
   // Run through the table, forming the masks for all threads on each core.
@@ -3445,11 +3454,7 @@ static int nextNewMask;
   {                                                                            \
     if (((_osId) > _maxOsId) ||                                                \
         (!KMP_CPU_ISSET((_osId), KMP_CPU_INDEX((_osId2Mask), (_osId))))) {     \
-      if (__kmp_affinity_verbose ||                                            \
-          (__kmp_affinity_warnings &&                                          \
-           (__kmp_affinity_type != affinity_none))) {                          \
-        KMP_WARNING(AffIgnoreInvalidProcID, _osId);                            \
-      }                                                                        \
+      KMP_AFF_WARNING(AffIgnoreInvalidProcID, _osId);                          \
     } else {                                                                   \
       ADD_MASK(KMP_CPU_INDEX(_osId2Mask, (_osId)));                            \
     }                                                                          \
@@ -3500,11 +3505,7 @@ static void __kmp_affinity_process_proclist(kmp_affin_mask_t **out_masks,
       // Copy the mask for that osId to the sum (union) mask.
       if ((num > maxOsId) ||
           (!KMP_CPU_ISSET(num, KMP_CPU_INDEX(osId2Mask, num)))) {
-        if (__kmp_affinity_verbose ||
-            (__kmp_affinity_warnings &&
-             (__kmp_affinity_type != affinity_none))) {
-          KMP_WARNING(AffIgnoreInvalidProcID, num);
-        }
+        KMP_AFF_WARNING(AffIgnoreInvalidProcID, num);
         KMP_CPU_ZERO(sumMask);
       } else {
         KMP_CPU_COPY(sumMask, KMP_CPU_INDEX(osId2Mask, num));
@@ -3536,11 +3537,7 @@ static void __kmp_affinity_process_proclist(kmp_affin_mask_t **out_masks,
         // Add the mask for that osId to the sum mask.
         if ((num > maxOsId) ||
             (!KMP_CPU_ISSET(num, KMP_CPU_INDEX(osId2Mask, num)))) {
-          if (__kmp_affinity_verbose ||
-              (__kmp_affinity_warnings &&
-               (__kmp_affinity_type != affinity_none))) {
-            KMP_WARNING(AffIgnoreInvalidProcID, num);
-          }
+          KMP_AFF_WARNING(AffIgnoreInvalidProcID, num);
         } else {
           KMP_CPU_UNION(sumMask, KMP_CPU_INDEX(osId2Mask, num));
           setSize++;
@@ -3697,11 +3694,7 @@ static void __kmp_process_subplace_list(const char **scan,
     if (**scan == '}' || **scan == ',') {
       if ((start > maxOsId) ||
           (!KMP_CPU_ISSET(start, KMP_CPU_INDEX(osId2Mask, start)))) {
-        if (__kmp_affinity_verbose ||
-            (__kmp_affinity_warnings &&
-             (__kmp_affinity_type != affinity_none))) {
-          KMP_WARNING(AffIgnoreInvalidProcID, start);
-        }
+        KMP_AFF_WARNING(AffIgnoreInvalidProcID, start);
       } else {
         KMP_CPU_UNION(tempMask, KMP_CPU_INDEX(osId2Mask, start));
         (*setSize)++;
@@ -3730,11 +3723,7 @@ static void __kmp_process_subplace_list(const char **scan,
       for (i = 0; i < count; i++) {
         if ((start > maxOsId) ||
             (!KMP_CPU_ISSET(start, KMP_CPU_INDEX(osId2Mask, start)))) {
-          if (__kmp_affinity_verbose ||
-              (__kmp_affinity_warnings &&
-               (__kmp_affinity_type != affinity_none))) {
-            KMP_WARNING(AffIgnoreInvalidProcID, start);
-          }
+          KMP_AFF_WARNING(AffIgnoreInvalidProcID, start);
           break; // don't proliferate warnings for large count
         } else {
           KMP_CPU_UNION(tempMask, KMP_CPU_INDEX(osId2Mask, start));
@@ -3781,11 +3770,7 @@ static void __kmp_process_subplace_list(const char **scan,
       for (i = 0; i < count; i++) {
         if ((start > maxOsId) ||
             (!KMP_CPU_ISSET(start, KMP_CPU_INDEX(osId2Mask, start)))) {
-          if (__kmp_affinity_verbose ||
-              (__kmp_affinity_warnings &&
-               (__kmp_affinity_type != affinity_none))) {
-            KMP_WARNING(AffIgnoreInvalidProcID, start);
-          }
+          KMP_AFF_WARNING(AffIgnoreInvalidProcID, start);
           break; // don't proliferate warnings for large count
         } else {
           KMP_CPU_UNION(tempMask, KMP_CPU_INDEX(osId2Mask, start));
@@ -3827,10 +3812,7 @@ static void __kmp_process_place(const char **scan, kmp_affin_mask_t *osId2Mask,
     KMP_ASSERT(num >= 0);
     if ((num > maxOsId) ||
         (!KMP_CPU_ISSET(num, KMP_CPU_INDEX(osId2Mask, num)))) {
-      if (__kmp_affinity_verbose ||
-          (__kmp_affinity_warnings && (__kmp_affinity_type != affinity_none))) {
-        KMP_WARNING(AffIgnoreInvalidProcID, num);
-      }
+      KMP_AFF_WARNING(AffIgnoreInvalidProcID, num);
     } else {
       KMP_CPU_UNION(tempMask, KMP_CPU_INDEX(osId2Mask, num));
       (*setSize)++;
@@ -3947,11 +3929,8 @@ void __kmp_affinity_process_placelist(kmp_affin_mask_t **out_masks,
             (!KMP_CPU_ISSET(j, __kmp_affin_fullMask)) ||
             (!KMP_CPU_ISSET(j + stride,
                             KMP_CPU_INDEX(osId2Mask, j + stride)))) {
-          if ((__kmp_affinity_verbose ||
-               (__kmp_affinity_warnings &&
-                (__kmp_affinity_type != affinity_none))) &&
-              i < count - 1) {
-            KMP_WARNING(AffIgnoreInvalidProcID, j + stride);
+          if (i < count - 1) {
+            KMP_AFF_WARNING(AffIgnoreInvalidProcID, j + stride);
           }
           continue;
         }
@@ -4092,11 +4071,7 @@ static void __kmp_aux_affinity_initialize(void) {
         __kmp_avail_proc++;
       }
       if (__kmp_avail_proc > __kmp_xproc) {
-        if (__kmp_affinity_verbose ||
-            (__kmp_affinity_warnings &&
-             (__kmp_affinity_type != affinity_none))) {
-          KMP_WARNING(ErrorInitializeAffinity);
-        }
+        KMP_AFF_WARNING(ErrorInitializeAffinity);
         __kmp_affinity_type = affinity_none;
         KMP_AFFINITY_DISABLE();
         return;
@@ -4265,10 +4240,8 @@ static void __kmp_aux_affinity_initialize(void) {
 
   // Early exit if topology could not be created
   if (!__kmp_topology) {
-    if (KMP_AFFINITY_CAPABLE() &&
-        (__kmp_affinity_verbose ||
-         (__kmp_affinity_warnings && (__kmp_affinity_type != affinity_none)))) {
-      KMP_WARNING(ErrorInitializeAffinity);
+    if (KMP_AFFINITY_CAPABLE()) {
+      KMP_AFF_WARNING(ErrorInitializeAffinity);
     }
     if (nPackages > 0 && nCoresPerPkg > 0 && __kmp_nThreadsPerCore > 0 &&
         __kmp_ncores > 0) {
@@ -4339,10 +4312,7 @@ static void __kmp_aux_affinity_initialize(void) {
           __kmp_affinity_proclist, osId2Mask, maxIndex);
     }
     if (__kmp_affinity_num_masks == 0) {
-      if (__kmp_affinity_verbose ||
-          (__kmp_affinity_warnings && (__kmp_affinity_type != affinity_none))) {
-        KMP_WARNING(AffNoValidProcID);
-      }
+      KMP_AFF_WARNING(AffNoValidProcID);
       __kmp_affinity_type = affinity_none;
       __kmp_create_affinity_none_places();
       return;
@@ -4392,9 +4362,7 @@ static void __kmp_aux_affinity_initialize(void) {
 
   case affinity_balanced:
     if (depth <= 1) {
-      if (__kmp_affinity_verbose || __kmp_affinity_warnings) {
-        KMP_WARNING(AffBalancedNotAvail, "KMP_AFFINITY");
-      }
+      KMP_AFF_WARNING(AffBalancedNotAvail, "KMP_AFFINITY");
       __kmp_affinity_type = affinity_none;
       __kmp_create_affinity_none_places();
       return;
@@ -4411,9 +4379,7 @@ static void __kmp_aux_affinity_initialize(void) {
 
       int nproc = ncores * maxprocpercore;
       if ((nproc < 2) || (nproc < __kmp_avail_proc)) {
-        if (__kmp_affinity_verbose || __kmp_affinity_warnings) {
-          KMP_WARNING(AffBalancedNotAvail, "KMP_AFFINITY");
-        }
+        KMP_AFF_WARNING(AffBalancedNotAvail, "KMP_AFFINITY");
         __kmp_affinity_type = affinity_none;
         return;
       }
