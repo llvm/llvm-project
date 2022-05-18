@@ -698,44 +698,6 @@ static bool findArgParts(Argument *Arg, const DataLayout &DL, AAResults &AAR,
   return true;
 }
 
-bool ArgumentPromotionPass::isDenselyPacked(Type *Ty, const DataLayout &DL) {
-  // There is no size information, so be conservative.
-  if (!Ty->isSized())
-    return false;
-
-  // If the alloc size is not equal to the storage size, then there are padding
-  // bytes. For x86_fp80 on x86-64, size: 80 alloc size: 128.
-  if (DL.getTypeSizeInBits(Ty) != DL.getTypeAllocSizeInBits(Ty))
-    return false;
-
-  // FIXME: This isn't the right way to check for padding in vectors with
-  // non-byte-size elements.
-  if (VectorType *SeqTy = dyn_cast<VectorType>(Ty))
-    return isDenselyPacked(SeqTy->getElementType(), DL);
-
-  // For array types, check for padding within members.
-  if (ArrayType *SeqTy = dyn_cast<ArrayType>(Ty))
-    return isDenselyPacked(SeqTy->getElementType(), DL);
-
-  if (!isa<StructType>(Ty))
-    return true;
-
-  // Check for padding within and between elements of a struct.
-  StructType *StructTy = cast<StructType>(Ty);
-  const StructLayout *Layout = DL.getStructLayout(StructTy);
-  uint64_t StartPos = 0;
-  for (unsigned I = 0, E = StructTy->getNumElements(); I < E; ++I) {
-    Type *ElTy = StructTy->getElementType(I);
-    if (!isDenselyPacked(ElTy, DL))
-      return false;
-    if (StartPos != Layout->getElementOffsetInBits(I))
-      return false;
-    StartPos += DL.getTypeAllocSizeInBits(ElTy);
-  }
-
-  return true;
-}
-
 /// Check if callers and callee agree on how promoted arguments would be
 /// passed.
 static bool areTypesABICompatible(ArrayRef<Type *> Types, const Function &F,
