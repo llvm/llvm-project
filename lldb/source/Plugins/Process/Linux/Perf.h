@@ -98,6 +98,11 @@ void ReadCyclicBuffer(llvm::MutableArrayRef<uint8_t> &dst,
 /// Handles the management of the event's file descriptor and mmap'ed
 /// regions.
 class PerfEvent {
+  enum class CollectionState {
+    Enabled,
+    Disabled,
+  };
+
 public:
   /// Create a new performance monitoring event via the perf_event_open syscall.
   ///
@@ -213,27 +218,59 @@ public:
   ///   \a ArrayRef<uint8_t> extending \a aux_size bytes from \a aux_offset.
   llvm::ArrayRef<uint8_t> GetAuxBuffer() const;
 
-  /// Use the ioctl API to disable the perf event. This doesn't terminate the
-  /// perf event.
+  /// Read the aux buffer managed by this perf event. To ensure that the
+  /// data is up-to-date and is not corrupted by read-write race conditions, the
+  /// underlying perf_event is paused during read, and later it's returned to
+  /// its initial state. The returned data will be linear, i.e. it will fix the
+  /// circular wrapping the might exist int he buffer.
+  ///
+  /// \param[in] offset
+  ///     Offset of the data to read.
+  ///
+  /// \param[in] size
+  ///     Number of bytes to read.
+  ///
+  /// \return
+  ///     A vector with the requested binary data. The vector will have the
+  ///     size of the requested \a size. Non-available positions will be
+  ///     filled with zeroes.
+  llvm::Expected<std::vector<uint8_t>>
+  ReadFlushedOutAuxCyclicBuffer(size_t offset, size_t size);
+
+  /// Use the ioctl API to disable the perf event and all the events in its
+  /// group. This doesn't terminate the perf event.
+  ///
+  /// This is no-op if the perf event is already disabled.
   ///
   /// \return
   ///   An Error if the perf event couldn't be disabled.
-  llvm::Error DisableWithIoctl() const;
+  llvm::Error DisableWithIoctl();
 
-  /// Use the ioctl API to enable the perf event.
+  /// Use the ioctl API to enable the perf event and all the events in its
+  /// group.
+  ///
+  /// This is no-op if the perf event is already enabled.
   ///
   /// \return
   ///   An Error if the perf event couldn't be enabled.
-  llvm::Error EnableWithIoctl() const;
+  llvm::Error EnableWithIoctl();
+
+  /// \return
+  ///   The size in bytes of the section of the data buffer that has effective
+  ///   data.
+  size_t GetEffectiveDataBufferSize() const;
 
 private:
   /// Create new \a PerfEvent.
   ///
   /// \param[in] fd
   ///   File descriptor of the perf event.
-  PerfEvent(long fd)
+  ///
+  /// \param[in] initial_state
+  ///   Initial collection state configured for this perf_event.
+  PerfEvent(long fd, CollectionState initial_state)
       : m_fd(new long(fd), resource_handle::FileDescriptorDeleter()),
-        m_metadata_data_base(), m_aux_base() {}
+        m_collection_state(initial_state) {}
 
   /// Wrapper for \a mmap to provide custom error messages.
   ///
@@ -270,6 +307,8 @@ private:
   /// AUX buffer is a separate region for high-bandwidth data streams
   /// such as IntelPT.
   resource_handle::MmapUP m_aux_base;
+  /// The state of the underlying perf_event.
+  CollectionState m_collection_state;
 };
 
 /// Load \a PerfTscConversionParameters from \a perf_event_mmap_page, if

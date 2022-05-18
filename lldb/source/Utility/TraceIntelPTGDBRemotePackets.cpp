@@ -15,6 +15,8 @@ namespace lldb_private {
 
 const char *IntelPTDataKinds::kProcFsCpuInfo = "procfsCpuInfo";
 const char *IntelPTDataKinds::kTraceBuffer = "traceBuffer";
+const char *IntelPTDataKinds::kPerfContextSwitchTrace =
+    "perfContextSwitchTrace";
 
 bool TraceIntelPTStartRequest::IsPerCoreTracing() const {
   return per_core_tracing.getValueOr(false);

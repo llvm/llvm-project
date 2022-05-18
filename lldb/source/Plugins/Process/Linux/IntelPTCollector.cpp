@@ -116,9 +116,14 @@ Error IntelPTCollector::TraceStart(const TraceIntelPTStartRequest &request) {
   }
 }
 
-void IntelPTCollector::OnProcessStateChanged(lldb::StateType state) {
+void IntelPTCollector::ProcessWillResume() {
   if (m_process_trace_up)
-    m_process_trace_up->OnProcessStateChanged(state);
+    m_process_trace_up->ProcessWillResume();
+}
+
+void IntelPTCollector::ProcessDidStop() {
+  if (m_process_trace_up)
+    m_process_trace_up->ProcessDidStop();
 }
 
 Error IntelPTCollector::OnThreadCreated(lldb::tid_t tid) {
