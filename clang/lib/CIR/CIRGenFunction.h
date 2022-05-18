@@ -18,6 +18,7 @@
 #include "CIRGenValue.h"
 
 #include "clang/AST/BaseSubobject.h"
+#include "clang/AST/CurrentSourceLocExprScope.h"
 #include "clang/AST/DeclObjC.h"
 #include "clang/AST/ExprCXX.h"
 #include "clang/AST/Type.h"
@@ -764,6 +765,12 @@ public:
                          const clang::CXXRecordDecl *VTableClass,
                          VisitedVirtualBasesSetTy &VBases, VPtrsVector &vptrs);
 
+  /// Source location information about the default argument or member
+  /// initializer expression we're evaluating, if any.
+  clang::CurrentSourceLocExprScope CurSourceLocExprScope;
+  using SourceLocExprScopeGuard =
+      clang::CurrentSourceLocExprScope::SourceLocExprScopeGuard;
+
   /// A scoep within which we are constructing the fields of an object which
   /// might use a CXXDefaultInitExpr. This stashes away a 'this' value to use if
   /// we need to evaluate the CXXDefaultInitExpr within the evaluation.
@@ -780,6 +787,31 @@ public:
   private:
     CIRGenFunction &CGF;
     Address OldCXXDefaultInitExprThis;
+  };
+
+  /// The scope of a CXXDefaultInitExpr. Within this scope, the value of 'this'
+  /// is overridden to be the object under construction.
+  class CXXDefaultInitExprScope {
+  public:
+    CXXDefaultInitExprScope(CIRGenFunction &CGF,
+                            const clang::CXXDefaultInitExpr *E)
+        : CGF{CGF}, OldCXXThisValue(CGF.CXXThisValue),
+          OldCXXThisAlignment(CGF.CXXThisAlignment),
+          SourceLocScope(E, CGF.CurSourceLocExprScope) {
+      CGF.CXXThisValue =
+          CGF.CXXDefaultInitExprThis.getPointer().getDefiningOp();
+      CGF.CXXThisAlignment = CGF.CXXDefaultInitExprThis.getAlignment();
+    }
+    ~CXXDefaultInitExprScope() {
+      CGF.CXXThisValue = OldCXXThisValue;
+      CGF.CXXThisAlignment = OldCXXThisAlignment;
+    }
+
+  public:
+    CIRGenFunction &CGF;
+    mlir::Operation *OldCXXThisValue;
+    clang::CharUnits OldCXXThisAlignment;
+    SourceLocExprScopeGuard SourceLocScope;
   };
 
   LValue MakeNaturalAlignPointeeAddrLValue(mlir::Operation *Op,
