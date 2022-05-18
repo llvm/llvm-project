@@ -17,10 +17,10 @@ define void @mainTest(i32* %ptr) #0  {
 ; CHECK-NEXT:    [[TMP5:%.*]] = mul <4 x i32> [[TMP1]], [[TMP1]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = sext i32 [[TMP3]] to i64
 ; CHECK-NEXT:    [[TMP7:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[TMP5]])
-; CHECK-NEXT:    [[OP_RDX:%.*]] = add i32 [[TMP7]], [[TMP4]]
-; CHECK-NEXT:    [[OP_RDX1:%.*]] = add i32 [[OP_RDX]], [[TMP3]]
-; CHECK-NEXT:    [[OP_RDX2:%.*]] = add i32 [[OP_RDX1]], [[TMP2]]
-; CHECK-NEXT:    [[OP_RDX3]] = add i32 [[OP_RDX2]], 1
+; CHECK-NEXT:    [[OP_RDX:%.*]] = add i32 [[TMP4]], [[TMP3]]
+; CHECK-NEXT:    [[OP_RDX1:%.*]] = add i32 [[TMP2]], 1
+; CHECK-NEXT:    [[OP_RDX2:%.*]] = add i32 [[OP_RDX]], [[OP_RDX1]]
+; CHECK-NEXT:    [[OP_RDX3]] = add i32 [[TMP7]], [[OP_RDX2]]
 ; CHECK-NEXT:    br label [[LOOP]]
 ; CHECK:       bail_out:
 ; CHECK-NEXT:    ret void

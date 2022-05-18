@@ -19,8 +19,8 @@ define void @test() #0 {
 ; CHECK-NEXT:    [[TMP5:%.*]] = add <4 x i64> <i64 1, i64 1, i64 1, i64 1>, [[TMP2]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = ashr exact <4 x i64> [[TMP5]], <i64 32, i64 32, i64 32, i64 32>
 ; CHECK-NEXT:    [[TMP7:%.*]] = call i64 @llvm.vector.reduce.add.v4i64(<4 x i64> [[TMP6]])
-; CHECK-NEXT:    [[OP_RDX:%.*]] = add i64 [[TMP7]], [[TMP3]]
-; CHECK-NEXT:    [[OP_RDX1]] = add i64 [[OP_RDX]], 0
+; CHECK-NEXT:    [[OP_RDX:%.*]] = add i64 [[TMP3]], 0
+; CHECK-NEXT:    [[OP_RDX1]] = add i64 [[TMP7]], [[OP_RDX]]
 ; CHECK-NEXT:    br label [[LOOP]]
 ;
 entry:
