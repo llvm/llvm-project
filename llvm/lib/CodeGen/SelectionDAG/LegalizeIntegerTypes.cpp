@@ -1112,11 +1112,10 @@ SDValue DAGTypeLegalizer::PromoteIntRes_Select(SDNode *N) {
   SDValue RHS = GetPromotedInteger(N->getOperand(2));
 
   unsigned Opcode = N->getOpcode();
-  return Opcode == ISD::VP_SELECT || Opcode == ISD::VP_MERGE
-             ? DAG.getNode(Opcode, SDLoc(N), LHS.getValueType(), Mask, LHS, RHS,
-                           N->getOperand(3))
-             : DAG.getNode(Opcode, SDLoc(N), LHS.getValueType(), Mask, LHS,
-                           RHS);
+  if (Opcode == ISD::VP_SELECT || Opcode == ISD::VP_MERGE)
+    return DAG.getNode(Opcode, SDLoc(N), LHS.getValueType(), Mask, LHS, RHS,
+                       N->getOperand(3));
+  return DAG.getNode(Opcode, SDLoc(N), LHS.getValueType(), Mask, LHS, RHS);
 }
 
 SDValue DAGTypeLegalizer::PromoteIntRes_SELECT_CC(SDNode *N) {
