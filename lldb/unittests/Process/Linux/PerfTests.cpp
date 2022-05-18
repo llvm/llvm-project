@@ -77,7 +77,7 @@ TEST(Perf, TscConversion) {
     GTEST_SKIP() << toString(tsc_after_sleep.takeError());
 
   std::chrono::nanoseconds converted_tsc_diff =
-      params->Convert(*tsc_after_sleep) - params->Convert(*tsc_before_sleep);
+      params->ToNanos(*tsc_after_sleep) - params->ToNanos(*tsc_before_sleep);
 
   std::chrono::microseconds acceptable_overhead(500);
 

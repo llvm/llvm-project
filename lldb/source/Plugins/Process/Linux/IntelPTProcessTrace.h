@@ -26,7 +26,7 @@ public:
   virtual void ProcessWillResume() {}
 
   /// Construct a minimal jLLDBTraceGetState response for this process trace.
-  virtual TraceGetStateResponse GetState() = 0;
+  virtual TraceIntelPTGetStateResponse GetState() = 0;
 
   virtual bool TracesThread(lldb::tid_t tid) const = 0;
 

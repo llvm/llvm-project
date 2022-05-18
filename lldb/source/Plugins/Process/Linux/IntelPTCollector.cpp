@@ -33,14 +33,20 @@ using namespace process_linux;
 using namespace llvm;
 
 IntelPTCollector::IntelPTCollector(NativeProcessProtocol &process)
-    : m_process(process) {
-  if (Expected<LinuxPerfZeroTscConversion> tsc_conversion =
-          LoadPerfTscConversionParameters())
-    m_tsc_conversion =
-        std::make_unique<LinuxPerfZeroTscConversion>(*tsc_conversion);
-  else
-    LLDB_LOG_ERROR(GetLog(POSIXLog::Trace), tsc_conversion.takeError(),
-                   "unable to load TSC to wall time conversion: {0}");
+    : m_process(process) {}
+
+llvm::Expected<LinuxPerfZeroTscConversion &>
+IntelPTCollector::FetchPerfTscConversionParameters() {
+  if (!m_cached_tsc_conversion) {
+    if (Expected<LinuxPerfZeroTscConversion> tsc_conversion =
+            LoadPerfTscConversionParameters())
+      m_cached_tsc_conversion = std::move(*tsc_conversion);
+    else
+      return createStringError(inconvertibleErrorCode(),
+                               "Unable to load TSC to wall time conversion: %s",
+                               toString(tsc_conversion.takeError()).c_str());
+  }
+  return *m_cached_tsc_conversion;
 }
 
 Error IntelPTCollector::TraceStop(lldb::tid_t tid) {
@@ -74,8 +80,20 @@ Error IntelPTCollector::TraceStart(const TraceIntelPTStartRequest &request) {
         return createStringError(
             inconvertibleErrorCode(),
             "Threads currently traced. Stop tracing them first.");
+      // CPU tracing is useless if we can't convert tsc to nanos.
+      Expected<LinuxPerfZeroTscConversion &> tsc_conversion =
+          FetchPerfTscConversionParameters();
+      if (!tsc_conversion)
+        return tsc_conversion.takeError();
+
+      // We force the enabledment of TSCs, which is needed for correlating the
+      // cpu traces.
+      TraceIntelPTStartRequest effective_request = request;
+      effective_request.enable_tsc = true;
+
       if (Expected<IntelPTProcessTraceUP> trace =
-              IntelPTMultiCoreTrace::StartOnAllCores(request, m_process)) {
+              IntelPTMultiCoreTrace::StartOnAllCores(effective_request,
+                                                     m_process)) {
         m_process_trace_up = std::move(*trace);
         return Error::success();
       } else {
@@ -146,7 +164,7 @@ Expected<json::Value> IntelPTCollector::GetState() {
   if (!cpu_info)
     return cpu_info.takeError();
 
-  TraceGetStateResponse state;
+  TraceIntelPTGetStateResponse state;
   if (m_process_trace_up)
     state = m_process_trace_up->GetState();
 
@@ -159,6 +177,12 @@ Expected<json::Value> IntelPTCollector::GetState() {
                                         {{IntelPTDataKinds::kTraceBuffer,
                                           thread_trace.GetTraceBufferSize()}}});
       });
+
+  if (Expected<LinuxPerfZeroTscConversion &> tsc_conversion =
+          FetchPerfTscConversionParameters())
+    state.tsc_perf_zero_conversion = *tsc_conversion;
+  else
+    state.warnings.push_back(toString(tsc_conversion.takeError()));
   return toJSON(state);
 }
 

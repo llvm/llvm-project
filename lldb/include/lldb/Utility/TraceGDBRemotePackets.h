@@ -129,35 +129,11 @@ bool fromJSON(const llvm::json::Value &value, TraceCoreState &packet,
 
 llvm::json::Value toJSON(const TraceCoreState &packet);
 
-/// Interface for different algorithms used to convert trace
-/// counters into different units.
-template <typename ToType> class TraceCounterConversion {
-public:
-  virtual ~TraceCounterConversion() = default;
-
-  /// Convert from raw counter value to the target type.
-  ///
-  /// \param[in] raw_counter_value
-  ///   The raw counter value to be converted.
-  ///
-  /// \return
-  ///   The converted counter value.
-  virtual ToType Convert(uint64_t raw_counter_value) = 0;
-
-  /// Serialize trace counter conversion values to JSON.
-  ///
-  /// \return
-  ///   \a llvm::json::Value representing the trace counter conversion object.
-  virtual llvm::json::Value toJSON() = 0;
-};
-
-using TraceTscConversionUP =
-    std::unique_ptr<TraceCounterConversion<std::chrono::nanoseconds>>;
-
 struct TraceGetStateResponse {
   std::vector<TraceThreadState> traced_threads;
   std::vector<TraceBinaryData> process_binary_data;
   llvm::Optional<std::vector<TraceCoreState>> cores;
+  std::vector<std::string> warnings;
 };
 
 bool fromJSON(const llvm::json::Value &value, TraceGetStateResponse &packet,

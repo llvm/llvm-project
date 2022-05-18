@@ -67,16 +67,7 @@ llvm::json::Value toJSON(const TraceIntelPTStartRequest &packet);
 /// See the documentation of `time_zero` in
 /// https://man7.org/linux/man-pages/man2/perf_event_open.2.html for more
 /// information.
-class LinuxPerfZeroTscConversion
-    : public TraceCounterConversion<std::chrono::nanoseconds> {
-public:
-  /// Create new \a LinuxPerfZeroTscConversion object from the conversion values
-  /// defined in the Linux perf_event_open API.
-  LinuxPerfZeroTscConversion(uint32_t time_mult, uint16_t time_shift,
-                             uint64_t time_zero)
-      : m_time_mult(time_mult), m_time_shift(time_shift),
-        m_time_zero(time_zero) {}
-
+struct LinuxPerfZeroTscConversion {
   /// Convert TSC value to nanosecond wall time. The beginning of time (0
   /// nanoseconds) is defined by the kernel at boot time and has no particularly
   /// useful meaning. On the other hand, this value is constant for an entire
@@ -89,23 +80,22 @@ public:
   ///
   /// \return
   ///   Nanosecond wall time.
-  std::chrono::nanoseconds Convert(uint64_t raw_counter_value) override;
+  std::chrono::nanoseconds ToNanos(uint64_t tsc);
 
-  llvm::json::Value toJSON() override;
-
-private:
-  uint32_t m_time_mult;
-  uint16_t m_time_shift;
-  uint64_t m_time_zero;
+  uint32_t time_mult;
+  uint16_t time_shift;
+  uint64_t time_zero;
 };
 
 struct TraceIntelPTGetStateResponse : TraceGetStateResponse {
   /// The TSC to wall time conversion if it exists, otherwise \b nullptr.
-  TraceTscConversionUP tsc_conversion;
+  llvm::Optional<LinuxPerfZeroTscConversion> tsc_perf_zero_conversion;
 };
 
 bool fromJSON(const llvm::json::Value &value,
-              TraceTscConversionUP &tsc_conversion, llvm::json::Path path);
+              LinuxPerfZeroTscConversion &packet, llvm::json::Path path);
+
+llvm::json::Value toJSON(const LinuxPerfZeroTscConversion &packet);
 
 bool fromJSON(const llvm::json::Value &value,
               TraceIntelPTGetStateResponse &packet, llvm::json::Path path);

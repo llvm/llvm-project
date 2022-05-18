@@ -200,7 +200,8 @@ class TestTraceStartStopMultipleThreads(TraceIntelPTTestCaseBase):
         self.expect("b 19")
         self.expect("c")
 
-        # We will assert that the trace state will contain valid context switch and trace buffer entries
+        # We will assert that the trace state will contain valid context switch and trace buffer entries.
+        # Besides that, we need to get tsc-to-nanos conversion information.
 
         # We first parse the json response from the custom packet
         self.runCmd("""process plugin packet send 'jLLDBTraceGetState:{"type":"intel-pt"}]'""")
@@ -213,6 +214,7 @@ class TestTraceStartStopMultipleThreads(TraceIntelPTTestCaseBase):
 
         self.assertTrue(output is not None)
         self.assertIn("cores", output)
+        self.assertIn("tscPerfZeroConversion", output)
         found_non_empty_context_switch = False
 
         for core in output["cores"]:
