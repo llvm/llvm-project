@@ -3160,6 +3160,7 @@ extern int __kmp_tp_cached; /* whether threadprivate cache has been created
                                (__kmpc_threadprivate_cached()) */
 extern int __kmp_dflt_blocktime; /* number of milliseconds to wait before
                                     blocking (env setting) */
+extern bool __kmp_wpolicy_passive; /* explicitly set passive wait policy */
 #if KMP_USE_MONITOR
 extern int
     __kmp_monitor_wakeups; /* number of times monitor wakes up per second */
