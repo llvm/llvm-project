@@ -489,14 +489,15 @@ bool JumpThreadingPass::runImpl(Function &F, TargetLibraryInfo *TLI_,
 // at the end of block. RAUW unconditionally replaces all uses
 // including the guards/assumes themselves and the uses before the
 // guard/assume.
-static void replaceFoldableUses(Instruction *Cond, Value *ToVal) {
+static void replaceFoldableUses(Instruction *Cond, Value *ToVal,
+                                BasicBlock *KnownAtEndOfBB) {
   assert(Cond->getType() == ToVal->getType());
-  auto *BB = Cond->getParent();
   // We can unconditionally replace all uses in non-local blocks (i.e. uses
   // strictly dominated by BB), since LVI information is true from the
   // terminator of BB.
-  replaceNonLocalUsesWith(Cond, ToVal);
-  for (Instruction &I : reverse(*BB)) {
+  if (Cond->getParent() == KnownAtEndOfBB)
+    replaceNonLocalUsesWith(Cond, ToVal);
+  for (Instruction &I : reverse(*KnownAtEndOfBB)) {
     // Reached the Cond whose uses we are trying to replace, so there are no
     // more uses.
     if (&I == Cond)
@@ -1142,30 +1143,12 @@ bool JumpThreadingPass::processBlock(BasicBlock *BB) {
     // If we're branching on a conditional, LVI might be able to determine
     // it's value at the branch instruction.  We only handle comparisons
     // against a constant at this time.
-    // TODO: This should be extended to handle switches as well.
-    BranchInst *CondBr = dyn_cast<BranchInst>(BB->getTerminator());
-    Constant *CondConst = dyn_cast<Constant>(CondCmp->getOperand(1));
-    if (CondBr && CondConst) {
-      // We should have returned as soon as we turn a conditional branch to
-      // unconditional. Because its no longer interesting as far as jump
-      // threading is concerned.
-      assert(CondBr->isConditional() && "Threading on unconditional terminator");
-
+    if (Constant *CondConst = dyn_cast<Constant>(CondCmp->getOperand(1))) {
       LazyValueInfo::Tristate Ret =
           LVI->getPredicateAt(CondCmp->getPredicate(), CondCmp->getOperand(0),
-                              CondConst, CondBr, /*UseBlockValue=*/false);
+                              CondConst, BB->getTerminator(),
+                              /*UseBlockValue=*/false);
       if (Ret != LazyValueInfo::Unknown) {
-        unsigned ToRemove = Ret == LazyValueInfo::True ? 1 : 0;
-        unsigned ToKeep = Ret == LazyValueInfo::True ? 0 : 1;
-        BasicBlock *ToRemoveSucc = CondBr->getSuccessor(ToRemove);
-        ToRemoveSucc->removePredecessor(BB, true);
-        BranchInst *UncondBr =
-          BranchInst::Create(CondBr->getSuccessor(ToKeep), CondBr);
-        UncondBr->setDebugLoc(CondBr->getDebugLoc());
-        ++NumFolds;
-        CondBr->eraseFromParent();
-        if (CondCmp->use_empty())
-          CondCmp->eraseFromParent();
         // We can safely replace *some* uses of the CondInst if it has
         // exactly one value as returned by LVI. RAUW is incorrect in the
         // presence of guards and assumes, that have the `Cond` as the use. This
@@ -1173,16 +1156,10 @@ bool JumpThreadingPass::processBlock(BasicBlock *BB) {
         // at the end of block, but RAUW unconditionally replaces all uses
         // including the guards/assumes themselves and the uses before the
         // guard/assume.
-        else if (CondCmp->getParent() == BB) {
-          auto *CI = Ret == LazyValueInfo::True ?
-            ConstantInt::getTrue(CondCmp->getType()) :
-            ConstantInt::getFalse(CondCmp->getType());
-          replaceFoldableUses(CondCmp, CI);
-        }
-        DTU->applyUpdatesPermissive(
-            {{DominatorTree::Delete, BB, ToRemoveSucc}});
-        if (HasProfileData)
-          BPI->eraseBlock(BB);
+        auto *CI = Ret == LazyValueInfo::True ?
+          ConstantInt::getTrue(CondCmp->getType()) :
+          ConstantInt::getFalse(CondCmp->getType());
+        replaceFoldableUses(CondCmp, CI, BB);
         return true;
       }
 
@@ -1761,9 +1738,8 @@ bool JumpThreadingPass::processThreadableEdges(Value *Cond, BasicBlock *BB,
         // at the end of block, but RAUW unconditionally replaces all uses
         // including the guards/assumes themselves and the uses before the
         // guard/assume.
-        else if (OnlyVal && OnlyVal != MultipleVal &&
-                 CondInst->getParent() == BB)
-          replaceFoldableUses(CondInst, OnlyVal);
+        else if (OnlyVal && OnlyVal != MultipleVal)
+          replaceFoldableUses(CondInst, OnlyVal, BB);
       }
       return true;
     }
