@@ -133,7 +133,7 @@ uint32_t SBMemoryRegionInfo::GetNumDirtyPages() {
   LLDB_INSTRUMENT_VA(this);
 
   uint32_t num_dirty_pages = 0;
-  llvm::Optional<std::vector<addr_t>> dirty_page_list =
+  const llvm::Optional<std::vector<addr_t>> &dirty_page_list =
       m_opaque_up->GetDirtyPageList();
   if (dirty_page_list.hasValue())
     num_dirty_pages = dirty_page_list.getValue().size();
