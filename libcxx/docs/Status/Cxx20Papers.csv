@@ -203,5 +203,5 @@
 "","","","","",""
 "`P2372R3 <https://wg21.link/P2372R3>`__","LWG","Fixing locale handling in chrono formatters","October 2021","",""
 "`P2415R2 <https://wg21.link/P2415R2>`__","LWG","What is a ``view``","October 2021","|Complete|","14.0"
-"`P2418R2 <https://wg21.link/P2418R2>`__","LWG","Add support for ``std::generator``-like types to ``std::format``","October 2021","",""
+"`P2418R2 <https://wg21.link/P2418R2>`__","LWG","Add support for ``std::generator``-like types to ``std::format``","October 2021","|Partial|",""
 "`P2432R1 <https://wg21.link/P2432R1>`__","LWG","Fix ``istream_view``","October 2021","",""

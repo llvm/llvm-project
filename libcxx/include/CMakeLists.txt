@@ -212,6 +212,7 @@ set(files
   __format/concepts.h
   __format/enable_insertable.h
   __format/format_arg.h
+  __format/format_arg_store.h
   __format/format_args.h
   __format/format_context.h
   __format/format_error.h
