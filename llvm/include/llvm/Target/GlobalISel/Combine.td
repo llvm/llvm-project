@@ -891,12 +891,20 @@ def combine_fsub_fpext_fneg_fmul_to_fmad_or_fma: GICombineRule<
                                             *${root}, ${info}); }]),
   (apply [{ Helper.applyBuildFn(*${root}, ${info}); }])>;
 
-def combine_minmax_nan_matchinfo: GIDefMatchData<"unsigned">;
 def combine_minmax_nan: GICombineRule<
-  (defs root:$root, combine_minmax_nan_matchinfo:$info),
+  (defs root:$root, unsigned_matchinfo:$info),
   (match (wip_match_opcode G_FMINNUM, G_FMAXNUM, G_FMINIMUM, G_FMAXIMUM):$root,
          [{ return Helper.matchCombineFMinMaxNaN(*${root}, ${info}); }]),
   (apply [{ Helper.replaceSingleDefInstWithOperand(*${root}, ${info}); }])>;
+
+// Transform (add x, (sub y, x)) -> y
+// Transform (add (sub y, x), x) -> y
+def add_sub_reg: GICombineRule <
+  (defs root:$root, register_matchinfo:$matchinfo),
+  (match (wip_match_opcode G_ADD):$root,
+         [{ return Helper.matchAddSubSameReg(*${root}, ${matchinfo}); }]),
+  (apply [{ return Helper.replaceSingleDefInstWithReg(*${root},
+                                                      ${matchinfo}); }])>;
 
 // FIXME: These should use the custom predicate feature once it lands.
 def undef_combines : GICombineGroup<[undef_to_fp_zero, undef_to_int_zero,
@@ -913,7 +921,8 @@ def identity_combines : GICombineGroup<[select_same_val, right_identity_zero,
                                         binop_same_val, binop_left_to_zero,
                                         binop_right_to_zero, p2i_to_i2p,
                                         i2p_to_p2i, anyext_trunc_fold,
-                                        fneg_fneg_fold, right_identity_one]>;
+                                        fneg_fneg_fold, right_identity_one,
+                                        add_sub_reg]>;
 
 def const_combines : GICombineGroup<[constant_fp_op, const_ptradd_to_i2p,
                                      overlapping_and, mulo_by_2, mulo_by_0,
