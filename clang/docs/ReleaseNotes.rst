@@ -265,6 +265,11 @@ New Compiler Flags
   the parameter list were ``void``. There is no ``-fknr-functions`` or
   ``-fno-no-knr-functions`` flag; this feature cannot be disabled in language
   modes where it is required, such as C++ or C2x.
+- A new ARM pass to workaround Cortex-A57 Erratum 1742098 and Cortex-A72 Erratum
+  1655431 can be enabled using ``-mfix-cortex-a57-aes-1742098`` or
+  ``-mfix-cortex-a72-aes-1655431``. The pass is enabled when using either of
+  these cpus with ``-mcpu=`` and can be disabled using
+  ``-mno-fix-cortex-a57-aes-1742098`` or ``-mno-fix-cortex-a72-aes-1655431``.
 
 Deprecated Compiler Flags
 -------------------------
