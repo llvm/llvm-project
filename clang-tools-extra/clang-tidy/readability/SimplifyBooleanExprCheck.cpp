@@ -236,41 +236,6 @@ static std::string replacementExpression(const ASTContext &Context,
   return asBool(getText(Context, *E), NeedsStaticCast);
 }
 
-static const Expr *stmtReturnsBool(const ReturnStmt *Ret, bool Negated) {
-  if (const auto *Bool = dyn_cast<CXXBoolLiteralExpr>(Ret->getRetValue())) {
-    if (Bool->getValue() == !Negated)
-      return Bool;
-  }
-  if (const auto *Unary = dyn_cast<UnaryOperator>(Ret->getRetValue())) {
-    if (Unary->getOpcode() == UO_LNot) {
-      if (const auto *Bool =
-              dyn_cast<CXXBoolLiteralExpr>(Unary->getSubExpr())) {
-        if (Bool->getValue() == Negated)
-          return Bool;
-      }
-    }
-  }
-
-  return nullptr;
-}
-
-static const Expr *stmtReturnsBool(const IfStmt *IfRet, bool Negated) {
-  if (IfRet->getElse() != nullptr)
-    return nullptr;
-
-  if (const auto *Ret = dyn_cast<ReturnStmt>(IfRet->getThen()))
-    return stmtReturnsBool(Ret, Negated);
-
-  if (const auto *Compound = dyn_cast<CompoundStmt>(IfRet->getThen())) {
-    if (Compound->size() == 1) {
-      if (const auto *CompoundRet = dyn_cast<ReturnStmt>(Compound->body_back()))
-        return stmtReturnsBool(CompoundRet, Negated);
-    }
-  }
-
-  return nullptr;
-}
-
 static bool containsDiscardedTokens(const ASTContext &Context,
                                     CharSourceRange CharRange) {
   std::string ReplacementText =
@@ -502,8 +467,8 @@ public:
           if (Check->ChainedConditionalReturn ||
               (!PrevIf && If->getElse() == nullptr)) {
             Check->replaceCompoundReturnWithCondition(
-                Context, cast<ReturnStmt>(*Second), TrailingReturnBool.Bool,
-                If);
+                Context, cast<ReturnStmt>(*Second), TrailingReturnBool.Bool, If,
+                ThenReturnBool.Item);
           }
         }
       } else if (isa<LabelStmt, CaseStmt, DefaultStmt>(*First)) {
@@ -523,7 +488,7 @@ public:
               ThenReturnBool.Bool != TrailingReturnBool.Bool) {
             Check->replaceCompoundReturnWithCondition(
                 Context, cast<ReturnStmt>(*Second), TrailingReturnBool.Bool,
-                SubIf);
+                SubIf, ThenReturnBool.Item);
           }
         }
       }
@@ -689,11 +654,11 @@ void SimplifyBooleanExprCheck::replaceWithReturnCondition(
 
 void SimplifyBooleanExprCheck::replaceCompoundReturnWithCondition(
     const ASTContext &Context, const ReturnStmt *Ret, bool Negated,
-    const IfStmt *If) {
-  const auto *Lit = stmtReturnsBool(If, Negated);
+    const IfStmt *If, const Expr *ThenReturn) {
   const std::string Replacement =
       "return " + replacementExpression(Context, Negated, If->getCond());
-  issueDiag(Context, Lit->getBeginLoc(), SimplifyConditionalReturnDiagnostic,
+  issueDiag(Context, ThenReturn->getBeginLoc(),
+            SimplifyConditionalReturnDiagnostic,
             SourceRange(If->getBeginLoc(), Ret->getEndLoc()), Replacement);
 }
 
