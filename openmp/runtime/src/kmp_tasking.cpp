@@ -1909,8 +1909,21 @@ kmp_int32 __kmp_omp_task(kmp_int32 gtid, kmp_task_t *new_task,
     if (serialize_immediate)
       new_taskdata->td_flags.task_serial = 1;
     __kmp_invoke_task(gtid, new_task, current_task);
+  } else if (__kmp_dflt_blocktime != KMP_MAX_BLOCKTIME &&
+             __kmp_wpolicy_passive) {
+    kmp_info_t *this_thr = __kmp_threads[gtid];
+    kmp_team_t *team = this_thr->th.th_team;
+    kmp_int32 nthreads = this_thr->th.th_team_nproc;
+    for (int i = 0; i < nthreads; ++i) {
+      kmp_info_t *thread = team->t.t_threads[i];
+      if (thread == this_thr)
+        continue;
+      if (thread->th.th_sleep_loc != NULL) {
+        __kmp_null_resume_wrapper(thread);
+        break; // awake one thread at a time
+      }
+    }
   }
-
   return TASK_CURRENT_NOT_QUEUED;
 }
 
@@ -4282,6 +4295,17 @@ void __kmpc_give_task(kmp_task_t *ptask, kmp_int32 start = 0) {
       pass = pass << 1;
 
   } while (!__kmp_give_task(thread, k, ptask, pass));
+
+  if (__kmp_dflt_blocktime != KMP_MAX_BLOCKTIME && __kmp_wpolicy_passive) {
+    // awake at least one thread to execute given task
+    for (int i = 0; i < nthreads; ++i) {
+      thread = team->t.t_threads[i];
+      if (thread->th.th_sleep_loc != NULL) {
+        __kmp_null_resume_wrapper(thread);
+        break;
+      }
+    }
+  }
 }
 
 /*!
