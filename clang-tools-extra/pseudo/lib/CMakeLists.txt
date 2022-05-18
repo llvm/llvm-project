@@ -1,6 +1,7 @@
 set(LLVM_LINK_COMPONENTS Support)
 
 add_clang_library(clangPseudo
+  Bracket.cpp
   DirectiveTree.cpp
   Forest.cpp
   GLR.cpp
