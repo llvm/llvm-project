@@ -2875,8 +2875,10 @@ Instruction *InstCombinerImpl::foldICmpBitCast(ICmpInst &Cmp) {
   Type *SrcType = Bitcast->getSrcTy();
   Type *DstType = Bitcast->getType();
 
-  // Make sure the bitcast doesn't change the number of vector elements.
-  if (SrcType->getScalarSizeInBits() == DstType->getScalarSizeInBits()) {
+  // Make sure the bitcast doesn't change between scalar and vector and
+  // doesn't change the number of vector elements.
+  if (SrcType->isVectorTy() == DstType->isVectorTy() &&
+      SrcType->getScalarSizeInBits() == DstType->getScalarSizeInBits()) {
     // Zero-equality and sign-bit checks are preserved through sitofp + bitcast.
     Value *X;
     if (match(BCSrcOp, m_SIToFP(m_Value(X)))) {
