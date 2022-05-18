@@ -651,7 +651,6 @@ Error MachOWriter::write() {
     return createStringError(errc::not_enough_memory,
                              "failed to allocate memory buffer of " +
                                  Twine::utohexstr(TotalSize) + " bytes");
-  memset(Buf->getBufferStart(), 0, totalSize());
   writeHeader();
   writeLoadCommands();
   writeSections();
