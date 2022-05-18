@@ -285,6 +285,7 @@ kmp_affin_mask_t *__kmp_affinity_masks = NULL;
 unsigned __kmp_affinity_num_masks = 0;
 
 char *__kmp_cpuinfo_file = NULL;
+bool __kmp_affin_reset = 0;
 
 #endif /* KMP_AFFINITY_SUPPORTED */
 
