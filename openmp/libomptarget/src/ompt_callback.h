@@ -37,11 +37,11 @@ public:
   void ompt_state_clear();
 
   // target op callbacks
-  void target_data_alloc_begin(int64_t device_id, void *TgtPtrBegin,
+  void target_data_alloc_begin(int64_t device_id, void *HstPtrBegin,
                                size_t Size, void *codeptr);
 
-  void target_data_alloc_end(int64_t device_id, void *TgtPtrBegin, size_t Size,
-                             void *codeptr);
+  void target_data_alloc_end(int64_t device_id, void *HstPtrBegin,
+                             void *TgtPtrBegin, size_t Size, void *codeptr);
 
   void target_data_submit_begin(int64_t device_id, void *HstPtrBegin,
                                 void *TgtPtrBegin, size_t Size, void *codeptr);
@@ -90,8 +90,8 @@ public:
   ompt_record_ompt_t *
   target_submit_trace_record_gen(unsigned int num_teams = 1);
   ompt_record_ompt_t *target_data_submit_trace_record_gen(
-      int64_t device_id, ompt_target_data_op_t data_op, void *tgt_ptr,
-      void *hst_ptr, size_t bytes);
+      ompt_target_data_op_t data_op, void *src_addr, int64_t src_device_num,
+      void *dest_addr, int64_t dest_device_num, size_t bytes);
 
 private:
   void ompt_state_set_helper(void *enter_frame, void *codeptr_ra, int flags,
@@ -119,9 +119,9 @@ private:
                                ompt_callbacks_t cbt);
   // Type specific helpers
   void set_trace_record_target_data_op(ompt_record_target_data_op_t *rec,
-                                       int64_t device_id,
                                        ompt_target_data_op_t data_op,
-                                       void *src_ptr, void *dest_ptr,
+                                       void *src_addr, int64_t src_device_num,
+                                       void *dest_ptr, int64_t dest_device_num,
                                        size_t bytes);
   void set_trace_record_target_kernel(ompt_record_target_kernel_t *rec,
                                       unsigned int num_teams);

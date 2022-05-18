@@ -34,6 +34,83 @@
 #define OMPT_IF_ENABLED(stmts)
 #endif
 
+/// Used for invoking OMPT target callbacks before and after data operations.
+struct OmptInterfaceTargetDataOpRAII {
+  OmptInterfaceTargetDataOpRAII(ompt_target_data_op_t Type, void *HPtr,
+                                void *TPtr, int64_t TgtId, int64_t Sz)
+      : OpType{Type}, HstPtr{HPtr}, TgtPtr{TPtr},
+        RTLDeviceID{TgtId}, Size{Sz}, CodePtr{nullptr} {
+    OMPT_IF_ENABLED(init(););
+  }
+  ~OmptInterfaceTargetDataOpRAII() { OMPT_IF_ENABLED(fini();); }
+
+private:
+  ompt_target_data_op_t OpType;
+  void *HstPtr;
+  void *TgtPtr;
+  int64_t RTLDeviceID;
+  int64_t Size;
+  void *CodePtr;
+
+  void init() {
+    CodePtr = OMPT_GET_RETURN_ADDRESS(0);
+    ompt_interface.ompt_state_set(OMPT_GET_FRAME_ADDRESS(0), CodePtr);
+    // Data allocation callbacks are handled elsewhere
+    switch (OpType) {
+    case ompt_target_data_delete:
+    case ompt_target_data_delete_async:
+      ompt_interface.target_data_delete_begin(RTLDeviceID, TgtPtr, CodePtr);
+      break;
+    case ompt_target_data_transfer_to_device:
+    case ompt_target_data_transfer_to_device_async:
+      ompt_interface.target_data_submit_begin(RTLDeviceID, HstPtr, TgtPtr, Size,
+                                              CodePtr);
+      break;
+    case ompt_target_data_transfer_from_device:
+    case ompt_target_data_transfer_from_device_async:
+      ompt_interface.target_data_retrieve_begin(RTLDeviceID, HstPtr, TgtPtr,
+                                                Size, CodePtr);
+      break;
+    default:
+      break;
+    }
+  }
+
+  void fini() {
+    switch (OpType) {
+    case ompt_target_data_delete:
+    case ompt_target_data_delete_async:
+      ompt_interface.target_data_submit_trace_record_gen(
+          ompt_target_data_delete, /*src_addr=*/TgtPtr,
+          /*src_device_num=*/RTLDeviceID, /*dest_addr=*/nullptr,
+          /*dest_device_num=*/-1, Size);
+      ompt_interface.target_data_delete_end(RTLDeviceID, TgtPtr, CodePtr);
+      break;
+    case ompt_target_data_transfer_to_device:
+    case ompt_target_data_transfer_to_device_async:
+      ompt_interface.target_data_submit_trace_record_gen(
+          ompt_target_data_transfer_to_device, /*src_addr=*/HstPtr,
+          /*src_device_num=*/omp_get_initial_device(), /*dest_addr=*/TgtPtr,
+          /*dest_device_num=*/RTLDeviceID, Size);
+      ompt_interface.target_data_submit_end(RTLDeviceID, HstPtr, TgtPtr, Size,
+                                            CodePtr);
+      break;
+    case ompt_target_data_transfer_from_device:
+    case ompt_target_data_transfer_from_device_async:
+      ompt_interface.target_data_submit_trace_record_gen(
+          ompt_target_data_transfer_from_device, /*src_addr=*/TgtPtr,
+          /*src_device_num=*/RTLDeviceID, /*dest_addr=*/HstPtr,
+          /*dest_device_num=*/omp_get_initial_device(), Size);
+      ompt_interface.target_data_retrieve_end(RTLDeviceID, HstPtr, TgtPtr, Size,
+                                              CodePtr);
+      break;
+    default:
+      break;
+    }
+    ompt_interface.ompt_state_clear();
+  }
+};
+
 int HostDataToTargetTy::addEventIfNecessary(DeviceTy &Device,
                                             AsyncInfoTy &AsyncInfo) const {
   // First, check if the user disabled atomic map transfer/malloc/dealloc.
@@ -552,6 +629,8 @@ __tgt_target_table *DeviceTy::load_binary(void *Img) {
 
 void *DeviceTy::allocData(int64_t Size, void *HstPtr, int32_t Kind) {
   void *codeptr = nullptr;
+  // Can't use OmptInterfaceTargetDataOpRAII since the target pointer
+  // is not available yet.
   OMPT_IF_ENABLED(
       codeptr = OMPT_GET_RETURN_ADDRESS(0);
       ompt_interface.ompt_state_set(OMPT_GET_FRAME_ADDRESS(0), codeptr);
@@ -560,31 +639,23 @@ void *DeviceTy::allocData(int64_t Size, void *HstPtr, int32_t Kind) {
 
   void *tgt_ptr = RTL->data_alloc(RTLDeviceID, Size, HstPtr, Kind);
 
-  OMPT_IF_ENABLED(
-      ompt_interface.target_data_submit_trace_record_gen(
-          RTLDeviceID, ompt_target_data_alloc, tgt_ptr, HstPtr, Size);
-      ompt_interface.target_data_alloc_end(RTLDeviceID, HstPtr, Size, codeptr);
-      ompt_interface.ompt_state_clear(););
+  OMPT_IF_ENABLED(ompt_interface.target_data_submit_trace_record_gen(
+      ompt_target_data_alloc, /*src_addr=*/HstPtr,
+      /*src_device_num=*/omp_get_initial_device(), /*dest_addr=*/tgt_ptr,
+      /*dest_device_num=*/RTLDeviceID, Size);
+                  ompt_interface.target_data_alloc_end(RTLDeviceID, HstPtr,
+                                                       tgt_ptr, Size, codeptr);
+                  ompt_interface.ompt_state_clear(););
   return tgt_ptr;
 }
 
 int32_t DeviceTy::deleteData(void *TgtPtrBegin) {
-  void *codeptr = nullptr;
-  OMPT_IF_ENABLED(
-      codeptr = OMPT_GET_RETURN_ADDRESS(0);
-      ompt_interface.ompt_state_set(OMPT_GET_FRAME_ADDRESS(0), codeptr);
-      ompt_interface.target_data_delete_begin(RTLDeviceID, TgtPtrBegin,
-                                              codeptr););
-
-  int32_t status = RTL->data_delete(RTLDeviceID, TgtPtrBegin);
-
-  OMPT_IF_ENABLED(
-      ompt_interface.target_data_submit_trace_record_gen(
-          DeviceID, ompt_target_data_delete, TgtPtrBegin, 0, 0);
-      ompt_interface.target_data_delete_end(RTLDeviceID, TgtPtrBegin, codeptr);
-      ompt_interface.ompt_state_clear(););
-
-  return status;
+  // If enabled, trigger OMPT callbacks before and after data delete. A trace
+  // record is generated as well.
+  OmptInterfaceTargetDataOpRAII delete_raii(ompt_target_data_delete,
+                                            /*host ptr=*/nullptr, TgtPtrBegin,
+                                            RTLDeviceID, /*Size=*/0);
+  return RTL->data_delete(RTLDeviceID, TgtPtrBegin);
 }
 
 // Submit data to device
@@ -603,27 +674,16 @@ int32_t DeviceTy::submitData(void *TgtPtrBegin, void *HstPtrBegin, int64_t Size,
                                 : "unknown");
   }
 
-  void *codeptr = nullptr;
-  OMPT_IF_ENABLED(
-      codeptr = OMPT_GET_RETURN_ADDRESS(0);
-      ompt_interface.ompt_state_set(OMPT_GET_FRAME_ADDRESS(0), codeptr);
-      ompt_interface.target_data_submit_begin(RTLDeviceID, TgtPtrBegin,
-                                              HstPtrBegin, Size, codeptr););
-
-  int32_t status;
+  // If enabled, trigger OMPT callbacks before and after data submit. A trace
+  // record is generated as well.
+  OmptInterfaceTargetDataOpRAII submit_raii(ompt_target_data_transfer_to_device,
+                                            HstPtrBegin, TgtPtrBegin,
+                                            RTLDeviceID, Size);
   if (ompt_enabled || !AsyncInfo || !RTL->data_submit_async || !RTL->synchronize)
-    status = RTL->data_submit(RTLDeviceID, TgtPtrBegin, HstPtrBegin, Size);
+    return RTL->data_submit(RTLDeviceID, TgtPtrBegin, HstPtrBegin, Size);
   else
-    status = RTL->data_submit_async(RTLDeviceID, TgtPtrBegin, HstPtrBegin, Size,
-                                    AsyncInfo);
-
-  OMPT_IF_ENABLED(ompt_interface.target_data_submit_trace_record_gen(
-      DeviceID, ompt_target_data_transfer_to_device, HstPtrBegin, TgtPtrBegin,
-      Size);
-                  ompt_interface.target_data_submit_end(
-                      RTLDeviceID, TgtPtrBegin, HstPtrBegin, Size, codeptr);
-                  ompt_interface.ompt_state_clear(););
-  return status;
+    return RTL->data_submit_async(RTLDeviceID, TgtPtrBegin, HstPtrBegin, Size,
+                                  AsyncInfo);
 }
 
 // Retrieve data from device
@@ -641,27 +701,16 @@ int32_t DeviceTy::retrieveData(void *HstPtrBegin, void *TgtPtrBegin,
                                 : "unknown");
   }
 
-  void *codeptr = nullptr;
-  OMPT_IF_ENABLED(
-      codeptr = OMPT_GET_RETURN_ADDRESS(0);
-      ompt_interface.ompt_state_set(OMPT_GET_FRAME_ADDRESS(0), codeptr);
-      ompt_interface.target_data_retrieve_begin(RTLDeviceID, HstPtrBegin,
-                                                TgtPtrBegin, Size, codeptr););
-
-  int32_t status;
+  // If enabled, trigger OMPT callbacks before and after data retrieve. A trace
+  // record is generated as well.
+  OmptInterfaceTargetDataOpRAII retrieve_raii(
+      ompt_target_data_transfer_from_device, HstPtrBegin, TgtPtrBegin,
+      RTLDeviceID, Size);
   if (ompt_enabled || !RTL->data_retrieve_async || !RTL->synchronize)
-    status = RTL->data_retrieve(RTLDeviceID, HstPtrBegin, TgtPtrBegin, Size);
+    return RTL->data_retrieve(RTLDeviceID, HstPtrBegin, TgtPtrBegin, Size);
   else
-    status = RTL->data_retrieve_async(RTLDeviceID, HstPtrBegin, TgtPtrBegin,
-                                      Size, AsyncInfo);
-
-  OMPT_IF_ENABLED(ompt_interface.target_data_submit_trace_record_gen(
-      DeviceID, ompt_target_data_transfer_from_device, TgtPtrBegin, HstPtrBegin,
-      Size);
-                  ompt_interface.target_data_retrieve_end(
-                      RTLDeviceID, HstPtrBegin, TgtPtrBegin, Size, codeptr);
-                  ompt_interface.ompt_state_clear(););
-  return status;
+    return RTL->data_retrieve_async(RTLDeviceID, HstPtrBegin, TgtPtrBegin, Size,
+                                    AsyncInfo);
 }
 
 // Copy data from current device to destination device directly

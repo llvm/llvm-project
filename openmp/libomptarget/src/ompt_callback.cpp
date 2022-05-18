@@ -196,40 +196,49 @@ void OmptInterface::target_data_alloc_begin(int64_t device_id,
                                             void *codeptr) {
   ompt_device_callbacks.ompt_callback_target_data_op_emi(
       ompt_scope_begin, ompt_target_task_data, &ompt_target_data,
-      ompt_target_data_alloc, hst_ptr_begin, device_id, NULL, 0, size, codeptr,
-      opid_create, &ompt_target_region_opid);
+      ompt_target_data_alloc, /*src_addr=*/hst_ptr_begin,
+      /*src_device_num=*/omp_get_initial_device(), /*dest_addr=*/nullptr,
+      /*dest_device_num=*/device_id, size, codeptr, opid_create,
+      &ompt_target_region_opid);
   target_operation_begin();
 }
 
 void OmptInterface::target_data_alloc_end(int64_t device_id,
-                                          void *hst_ptr_begin, size_t size,
+                                          void *hst_ptr_begin,
+                                          void *tgt_ptr_begin, size_t size,
                                           void *codeptr) {
   ompt_device_callbacks.ompt_callback_target_data_op_emi(
       ompt_scope_end, ompt_target_task_data, &ompt_target_data,
-      ompt_target_data_alloc, hst_ptr_begin, device_id, NULL, 0, size, codeptr,
+      ompt_target_data_alloc, /*src_addr=*/hst_ptr_begin,
+      /*src_device_num=*/omp_get_initial_device(),
+      /*dest_addr=*/tgt_ptr_begin, /*dest_device_num=*/device_id, size, codeptr,
       opid_get, &ompt_target_region_opid);
   target_operation_end();
 }
 
 void OmptInterface::target_data_submit_begin(int64_t device_id,
-                                             void *tgt_ptr_begin,
-                                             void *hst_ptr_begin, size_t size,
+                                             void *hst_ptr_begin,
+                                             void *tgt_ptr_begin, size_t size,
                                              void *codeptr) {
   ompt_device_callbacks.ompt_callback_target_data_op_emi(
       ompt_scope_begin, ompt_target_task_data, &ompt_target_data,
-      ompt_target_data_transfer_to_device, hst_ptr_begin, 0, tgt_ptr_begin,
-      device_id, size, codeptr, opid_create, &ompt_target_region_opid);
+      ompt_target_data_transfer_to_device, /*src_addr=*/hst_ptr_begin,
+      /*src_device_num=*/omp_get_initial_device(),
+      /*dest_addr=*/tgt_ptr_begin, /*dest_device_num=*/device_id, size, codeptr,
+      opid_create, &ompt_target_region_opid);
   target_operation_begin();
 }
 
 void OmptInterface::target_data_submit_end(int64_t device_id,
-                                           void *tgt_ptr_begin,
-                                           void *hst_ptr_begin, size_t size,
+                                           void *hst_ptr_begin,
+                                           void *tgt_ptr_begin, size_t size,
                                            void *codeptr) {
   ompt_device_callbacks.ompt_callback_target_data_op_emi(
       ompt_scope_end, ompt_target_task_data, &ompt_target_data,
-      ompt_target_data_transfer_to_device, hst_ptr_begin, 0, tgt_ptr_begin,
-      device_id, size, codeptr, opid_get, &ompt_target_region_opid);
+      ompt_target_data_transfer_to_device, /*src_addr=*/hst_ptr_begin,
+      /*src_device_num=*/omp_get_initial_device(),
+      /*dest_addr=*/tgt_ptr_begin, /*dest_device_num=*/device_id, size, codeptr,
+      opid_get, &ompt_target_region_opid);
   target_operation_end();
 }
 
@@ -238,8 +247,10 @@ void OmptInterface::target_data_delete_begin(int64_t device_id,
                                              void *codeptr) {
   ompt_device_callbacks.ompt_callback_target_data_op_emi(
       ompt_scope_begin, ompt_target_task_data, &ompt_target_data,
-      ompt_target_data_delete, tgt_ptr_begin, device_id, NULL, 0, 0, codeptr,
-      opid_create, &ompt_target_region_opid);
+      ompt_target_data_delete, /*src_addr=*/tgt_ptr_begin,
+      /*src_device_num=*/device_id, /*dest_addr=*/nullptr,
+      /*dest_device_num=*/-1, /*size=*/0, codeptr, opid_create,
+      &ompt_target_region_opid);
   target_operation_begin();
 }
 
@@ -247,8 +258,10 @@ void OmptInterface::target_data_delete_end(int64_t device_id,
                                            void *tgt_ptr_begin, void *codeptr) {
   ompt_device_callbacks.ompt_callback_target_data_op_emi(
       ompt_scope_end, ompt_target_task_data, &ompt_target_data,
-      ompt_target_data_delete, tgt_ptr_begin, device_id, NULL, 0, 0, codeptr,
-      opid_get, &ompt_target_region_opid);
+      ompt_target_data_delete, /*src_addr=*/tgt_ptr_begin,
+      /*src_device_num=*/device_id, /*dest_addr=*/nullptr,
+      /*dest_device_num=*/-1, /*size=*/0, codeptr, opid_get,
+      &ompt_target_region_opid);
   target_operation_end();
 }
 
@@ -258,8 +271,10 @@ void OmptInterface::target_data_retrieve_begin(int64_t device_id,
                                                void *codeptr) {
   ompt_device_callbacks.ompt_callback_target_data_op_emi(
       ompt_scope_begin, ompt_target_task_data, &ompt_target_data,
-      ompt_target_data_transfer_from_device, tgt_ptr_begin, device_id,
-      hst_ptr_begin, 0, size, codeptr, opid_create, &ompt_target_region_opid);
+      ompt_target_data_transfer_from_device, /*src_addr=*/tgt_ptr_begin,
+      /*src_device_num=*/device_id, /*dest_addr=*/hst_ptr_begin,
+      /*dest_device_num=*/omp_get_initial_device(), size, codeptr, opid_create,
+      &ompt_target_region_opid);
   target_operation_begin();
 }
 
@@ -269,14 +284,16 @@ void OmptInterface::target_data_retrieve_end(int64_t device_id,
                                              void *codeptr) {
   ompt_device_callbacks.ompt_callback_target_data_op_emi(
       ompt_scope_end, ompt_target_task_data, &ompt_target_data,
-      ompt_target_data_transfer_from_device, tgt_ptr_begin, device_id,
-      hst_ptr_begin, 0, size, codeptr, opid_get, &ompt_target_region_opid);
+      ompt_target_data_transfer_from_device, /*src_addr=*/tgt_ptr_begin,
+      /*src_device_num=*/device_id, /*dest_addr=*/hst_ptr_begin,
+      /*dest_device_num=*/omp_get_initial_device(), size, codeptr, opid_get,
+      &ompt_target_region_opid);
   target_operation_end();
 }
 
 ompt_record_ompt_t *OmptInterface::target_data_submit_trace_record_gen(
-    int64_t device_id, ompt_target_data_op_t data_op, void *src_ptr,
-    void *dest_ptr, size_t bytes) {
+    ompt_target_data_op_t data_op, void *src_addr, int64_t src_device_num,
+    void *dest_addr, int64_t dest_device_num, size_t bytes) {
   if (!ompt_device_callbacks.is_tracing_enabled() ||
       (!ompt_device_callbacks.is_tracing_type_enabled(
            ompt_callback_target_data_op) &&
@@ -292,8 +309,9 @@ ompt_record_ompt_t *OmptInterface::target_data_submit_trace_record_gen(
 
   set_trace_record_common(data_ptr, ompt_callback_target_data_op);
 
-  set_trace_record_target_data_op(&data_ptr->record.target_data_op, device_id,
-                                  data_op, src_ptr, dest_ptr, bytes);
+  set_trace_record_target_data_op(&data_ptr->record.target_data_op, data_op,
+                                  src_addr, src_device_num, dest_addr,
+                                  dest_device_num, bytes);
 
   // The trace record has been created, mark it ready for delivery to the tool
   ompt_trace_record_buffer_mgr.setTRStatus(data_ptr,
@@ -304,15 +322,15 @@ ompt_record_ompt_t *OmptInterface::target_data_submit_trace_record_gen(
 }
 
 void OmptInterface::set_trace_record_target_data_op(
-    ompt_record_target_data_op_t *rec, int64_t device_id,
-    ompt_target_data_op_t data_op, void *src_ptr, void *dest_ptr,
-    size_t bytes) {
+    ompt_record_target_data_op_t *rec, ompt_target_data_op_t data_op,
+    void *src_addr, int64_t src_device_num, void *dest_addr,
+    int64_t dest_device_num, size_t bytes) {
   rec->host_op_id = ompt_target_region_opid;
   rec->optype = data_op;
-  rec->src_addr = src_ptr;
-  rec->src_device_num = device_id;
-  rec->dest_addr = dest_ptr;
-  rec->dest_device_num = device_id;
+  rec->src_addr = src_addr;
+  rec->src_device_num = src_device_num;
+  rec->dest_addr = dest_addr;
+  rec->dest_device_num = dest_device_num;
   rec->bytes = bytes;
   rec->end_time = ompt_tr_end_time;
   rec->codeptr_ra = _codeptr_ra;
