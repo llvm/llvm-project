@@ -15,6 +15,8 @@
 #ifndef LLVM_BINARYFORMAT_GOFF_H
 #define LLVM_BINARYFORMAT_GOFF_H
 
+#include "llvm/Support/DataTypes.h"
+
 namespace llvm {
 
 namespace GOFF {
