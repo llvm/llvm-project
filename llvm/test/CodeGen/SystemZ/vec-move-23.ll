@@ -130,3 +130,36 @@ define void @fun7(<4 x i16> %Src, <4 x float>* %Dst) {
   ret void
 }
 
+; Test that this does not crash but results in scalarized conversions.
+define void @fun8(<2 x i64> %dwords, <2 x fp128> *%ptr) {
+; CHECK-LABEL: fun8
+; CHECK: vlgvg
+; CHECK: cxlgbr
+ %conv = uitofp <2 x i64> %dwords to <2 x fp128>
+ store <2 x fp128> %conv, <2 x fp128> *%ptr
+ ret void
+}
+
+; Test that this results in vectorized conversions.
+define void @fun9(<10 x i16> *%Src, <10 x float> *%ptr) {
+; CHECK-LABEL: fun9
+; Z15: 	    larl	%r1, .LCPI9_0
+; Z15-NEXT: vl	        %v0, 16(%r2), 4
+; Z15-NEXT: vl	        %v1, 0(%r2), 4
+; Z15-NEXT: vl	        %v2, 0(%r1), 3
+; Z15-NEXT: vperm	%v2, %v2, %v1, %v2
+; Z15-NEXT: vuplhh	%v1, %v1
+; Z15-NEXT: vuplhh	%v0, %v0
+; Z15-NEXT: vcelfb	%v2, %v2, 0, 0
+; Z15-NEXT: vcelfb	%v1, %v1, 0, 0
+; Z15-NEXT: vcelfb	%v0, %v0, 0, 0
+; Z15-NEXT: vsteg	%v0, 32(%r3), 0
+; Z15-NEXT: vst	%v2, 16(%r3), 4
+; Z15-NEXT: vst	%v1, 0(%r3), 4
+; Z15-NEXT: br	%r14
+
+ %Val = load <10 x i16>, <10 x i16> *%Src
+ %conv = uitofp <10 x i16> %Val to <10 x float>
+ store <10 x float> %conv, <10 x float> *%ptr
+ ret void
+}
