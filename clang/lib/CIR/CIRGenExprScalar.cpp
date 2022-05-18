@@ -260,8 +260,9 @@ public:
   mlir::Value VisitCXXDefaultArgExpr(CXXDefaultArgExpr *E) {
     llvm_unreachable("NYI");
   }
-  mlir::Value VisitCXXDefaultInitExpr(CXXDefaultInitExpr *E) {
-    llvm_unreachable("NYI");
+  mlir::Value VisitCXXDefaultInitExpr(CXXDefaultInitExpr *DIE) {
+    CIRGenFunction::CXXDefaultInitExprScope Scope(CGF, DIE);
+    return Visit(DIE->getExpr());
   }
   mlir::Value VisitCXXThisExpr(CXXThisExpr *E) { llvm_unreachable("NYI"); }
   mlir::Value VisitExprWithCleanups(ExprWithCleanups *E) {
