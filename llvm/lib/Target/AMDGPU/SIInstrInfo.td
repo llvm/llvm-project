@@ -2635,14 +2635,6 @@ def getIfAddr64Inst : InstrMapping {
   let ValueCols = [["1"]];
 }
 
-def getMUBUFNoLdsInst : InstrMapping {
-  let FilterClass = "MUBUFLdsTable";
-  let RowFields = ["OpName"];
-  let ColFields = ["IsLds"];
-  let KeyCol = ["1"];
-  let ValueCols = [["0"]];
-}
-
 // Maps an atomic opcode to its returnless version.
 def getAtomicNoRetOp : InstrMapping {
   let FilterClass = "AtomicNoRet";
