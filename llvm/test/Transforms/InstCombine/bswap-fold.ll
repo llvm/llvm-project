@@ -159,6 +159,51 @@ define i64 @swap_shl16_i64(i64 %x) {
   ret i64 %r
 }
 
+define <2 x i32> @variable_lshr_v2i32(<2 x i32> %x, <2 x i32> %n) {
+; CHECK-LABEL: @variable_lshr_v2i32(
+; CHECK-NEXT:    [[SHAMT:%.*]] = and <2 x i32> [[N:%.*]], <i32 -8, i32 -16>
+; CHECK-NEXT:    [[S:%.*]] = shl <2 x i32> [[X:%.*]], [[SHAMT]]
+; CHECK-NEXT:    [[R:%.*]] = call <2 x i32> @llvm.bswap.v2i32(<2 x i32> [[S]])
+; CHECK-NEXT:    ret <2 x i32> [[R]]
+;
+  %shamt = and <2 x i32> %n, <i32 -8, i32 -16>
+  %s = shl <2 x i32> %x, %shamt
+  %r = call <2 x i32> @llvm.bswap.v2i32(<2 x i32> %s)
+  ret <2 x i32> %r
+}
+
+; PR55327
+
+define i64 @variable_shl_i64(i64 %x, i64 %n) {
+; CHECK-LABEL: @variable_shl_i64(
+; CHECK-NEXT:    [[B:%.*]] = tail call i64 @llvm.bswap.i64(i64 [[X:%.*]])
+; CHECK-NEXT:    [[N8:%.*]] = shl i64 [[N:%.*]], 3
+; CHECK-NEXT:    [[SHAMT:%.*]] = and i64 [[N8]], 56
+; CHECK-NEXT:    [[S:%.*]] = shl i64 [[B]], [[SHAMT]]
+; CHECK-NEXT:    [[R:%.*]] = tail call i64 @llvm.bswap.i64(i64 [[S]])
+; CHECK-NEXT:    ret i64 [[R]]
+;
+  %b = tail call i64 @llvm.bswap.i64(i64 %x)
+  %n8 = shl i64 %n, 3
+  %shamt = and i64 %n8, 56
+  %s = shl i64 %b, %shamt
+  %r = tail call i64 @llvm.bswap.i64(i64 %s)
+  ret i64 %r
+}
+
+define i64 @variable_shl_not_masked_enough_i64(i64 %x, i64 %n) {
+; CHECK-LABEL: @variable_shl_not_masked_enough_i64(
+; CHECK-NEXT:    [[SHAMT:%.*]] = and i64 [[N:%.*]], -4
+; CHECK-NEXT:    [[S:%.*]] = shl i64 [[X:%.*]], [[SHAMT]]
+; CHECK-NEXT:    [[R:%.*]] = call i64 @llvm.bswap.i64(i64 [[S]])
+; CHECK-NEXT:    ret i64 [[R]]
+;
+  %shamt = and i64 %n, -4
+  %s = shl i64 %x, %shamt
+  %r = call i64 @llvm.bswap.i64(i64 %s)
+  ret i64 %r
+}
+
 ; PR5284
 define i16 @test7(i32 %A) {
 ; CHECK-LABEL: @test7(
