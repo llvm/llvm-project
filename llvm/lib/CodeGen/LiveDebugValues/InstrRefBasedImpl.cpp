@@ -196,6 +196,8 @@ public:
   MLocTracker *MTracker;
   MachineFunction &MF;
   bool ShouldEmitDebugEntryValues;
+  /// Whether this is a Swift async function.
+  bool IsSwiftAsyncFunction = false;
 
   /// Record of all changes in variable locations at a block position. Awkwardly
   /// we allow inserting either before or after the point: MBB != nullptr
@@ -333,6 +335,13 @@ public:
 
     // Now map variables to their picked LocIdxes.
     for (const auto &Var : VLocs) {
+      // Async support: Don't track spills for entry values.
+      // TODO: Skipping all entry values is a big hammer, we really
+      // only want to to skip spills.
+      if (IsSwiftAsyncFunction && Var.second.Properties.DIExpr &&
+          Var.second.Properties.DIExpr->isEntryValue())
+        continue;
+
       if (Var.second.Kind == DbgValue::Const) {
         PendingDbgValues.push_back(
             emitMOLoc(*Var.second.MO, Var.first, Var.second.Properties));
@@ -581,7 +590,8 @@ public:
       // identifying the alternative location will be emitted.
       const DbgValueProperties &Properties = ActiveVLocIt->second.Properties;
       // Async support: Don't track spills for entry values.
-      if (ActiveVLocIt->second.Properties.DIExpr->isEntryValue())
+      if (IsSwiftAsyncFunction && ActiveVLocIt->second.Properties.DIExpr &&
+          ActiveVLocIt->second.Properties.DIExpr->isEntryValue())
         PendingDbgValues.push_back(MTracker->emitLoc(MLoc, Var, Properties));
       else
         PendingDbgValues.push_back(MTracker->emitLoc(NewLoc, Var, Properties));
@@ -637,7 +647,8 @@ public:
       ActiveVLocIt->second.Loc = Dst;
 
       // Async support: Don't track transfers for entry values.
-      if (ActiveVLocIt->second.Properties.DIExpr->isEntryValue())
+      if (IsSwiftAsyncFunction && ActiveVLocIt->second.Properties.DIExpr &&
+          ActiveVLocIt->second.Properties.DIExpr->isEntryValue())
         PendingDbgValues.push_back(
             MTracker->emitLoc(Src, Var, ActiveVLocIt->second.Properties));
       else
@@ -1083,15 +1094,18 @@ bool InstrRefBasedLDV::transferDebugValue(const MachineInstr &MI) {
     // Swift async function handling.
     auto *Expr = MI.getDebugExpression();
     const llvm::MachineFunction *MF = MI.getParent()->getParent();
-    if (!(Expr && Expr->isEntryValue()) &&
-        isSwiftAsyncContext(*MF, MO.getReg())) {
+    if (isSwiftAsyncContext(*MF, MO.getReg())) {
       // In Swift async functions entry values are preferred, since they
       // can be evaluated in both live frames and virtual backtraces.
       if (TTracker)
-        TTracker->recoverAsEntryValue(V, Properties, RegId);
-      else
-        const_cast<MachineInstr *>(&MI)->getOperand(3).setMetadata(
-            DIExpression::prepend(Expr, DIExpression::EntryValue));
+        TTracker->IsSwiftAsyncFunction = true;
+      if (!Expr || !Expr->isEntryValue()) {
+        if (TTracker)
+          TTracker->recoverAsEntryValue(V, Properties, RegId);
+        else
+          const_cast<MachineInstr *>(&MI)->getOperand(3).setMetadata(
+              DIExpression::prepend(Expr, DIExpression::EntryValue));
+      }
     }
   }
 
