@@ -613,7 +613,8 @@ public:
                                               unsigned Flags,
                                               unsigned EntrySize);
 
-  MCSectionGOFF *getGOFFSection(StringRef Section, SectionKind Kind);
+  MCSectionGOFF *getGOFFSection(StringRef Section, SectionKind Kind,
+                                MCSection *Parent, const MCExpr *SubsectionId);
 
   MCSectionCOFF *getCOFFSection(StringRef Section, unsigned Characteristics,
                                 SectionKind Kind, StringRef COMDATSymName,
