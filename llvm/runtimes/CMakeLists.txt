@@ -90,8 +90,7 @@ function(builtin_default_target compiler_rt_path)
                                       -DCMAKE_ASM_COMPILER_WORKS=ON
                                       ${COMMON_CMAKE_ARGS}
                                       ${BUILTINS_CMAKE_ARGS}
-                           PASSTHROUGH_PREFIXES CMAKE_OSX
-                                                COMPILER_RT
+                           PASSTHROUGH_PREFIXES COMPILER_RT
                                                 DARWIN
                                                 SANITIZER
                            USE_TOOLCHAIN
@@ -249,8 +248,7 @@ function(runtime_default_target)
                                       -DCMAKE_ASM_COMPILER_WORKS=ON
                                       ${COMMON_CMAKE_ARGS}
                                       ${RUNTIMES_CMAKE_ARGS}
-                           PASSTHROUGH_PREFIXES CMAKE_OSX
-                                                LLVM_ENABLE_RUNTIMES
+                           PASSTHROUGH_PREFIXES LLVM_ENABLE_RUNTIMES
                                                 LLVM_USE_LINKER
                                                 ${ARG_PREFIXES}
                            EXTRA_TARGETS ${extra_targets}
