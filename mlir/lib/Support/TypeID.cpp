@@ -50,7 +50,7 @@ struct ImplicitTypeIDRegistry {
                    "explicit TypeID instantiation for this type using "
                    "`MLIR_DECLARE_EXPLICIT_TYPE_ID`/"
                    "`MLIR_DEFINE_EXPLICIT_TYPE_ID` or "
-                   "`DEFINE_EXPLICIT_PRIVATE_INLINE_TYPE_ID`.\n";
+                   "`MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID`.\n";
       }
       llvm::report_fatal_error(errorStr);
     }
