@@ -195,6 +195,8 @@ public:
   }
 };
 
+/// Meta qualifiers for a value. Pair of whatever expression is used to qualify
+/// the the value, and Boolean of whether or not it's indirect.
 class DbgValueProperties {
 public:
   DbgValueProperties(const DIExpression *DIExpr, bool Indirect)
@@ -702,7 +704,7 @@ public:
 
 public:
   VLocTracker(const OverlapMap &O, const DIExpression *EmptyExpr)
-    : OverlappingFragments(O), EmptyProperties(EmptyExpr, false) {}
+      : OverlappingFragments(O), EmptyProperties(EmptyExpr, false) {}
 
   void defVar(const MachineInstr &MI, const DbgValueProperties &Properties,
               Optional<ValueIDNum> ID) {
