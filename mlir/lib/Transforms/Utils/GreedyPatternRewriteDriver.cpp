@@ -133,6 +133,16 @@ bool GreedyPatternRewriteDriver::simplify(MutableArrayRef<Region> regions) {
   };
 #endif
 
+  auto insertKnownConstant = [&](Operation *op) {
+    // Check for existing constants when populating the worklist. This avoids
+    // accidentally reversing the constant order during processing.
+    Attribute constValue;
+    if (matchPattern(op, m_Constant(&constValue)))
+      if (!folder.insertKnownConstant(op, constValue))
+        return true;
+    return false;
+  };
+
   bool changed = false;
   unsigned iteration = 0;
   do {
@@ -142,22 +152,18 @@ bool GreedyPatternRewriteDriver::simplify(MutableArrayRef<Region> regions) {
     if (!config.useTopDownTraversal) {
       // Add operations to the worklist in postorder.
       for (auto &region : regions) {
-        region.walk([this](Operation *op) {
-          // If we aren't processing top-down, check for existing constants when
-          // populating the worklist. This avoids accidentally reversing the
-          // constant order during processing.
-          Attribute constValue;
-          if (matchPattern(op, m_Constant(&constValue)))
-            if (!folder.insertKnownConstant(op, constValue))
-              return;
-          addToWorklist(op);
+        region.walk([&](Operation *op) {
+          if (!insertKnownConstant(op))
+            addToWorklist(op);
         });
       }
     } else {
       // Add all nested operations to the worklist in preorder.
       for (auto &region : regions)
-        region.walk<WalkOrder::PreOrder>(
-            [this](Operation *op) { worklist.push_back(op); });
+        region.walk<WalkOrder::PreOrder>([&](Operation *op) {
+          if (!insertKnownConstant(op))
+            worklist.push_back(op);
+        });
 
       // Reverse the list so our pop-back loop processes them in-order.
       std::reverse(worklist.begin(), worklist.end());
