@@ -801,5 +801,18 @@ CrossTranslationUnitContext::getMacroExpansionContextForSourceLocation(
   return llvm::None;
 }
 
+bool CrossTranslationUnitContext::isImportedAsNew(const Decl *ToDecl) const {
+  if (!ImporterSharedSt)
+    return false;
+  return ImporterSharedSt->isNewDecl(const_cast<Decl *>(ToDecl));
+}
+
+bool CrossTranslationUnitContext::hasError(const Decl *ToDecl) const {
+  if (!ImporterSharedSt)
+    return false;
+  return static_cast<bool>(
+      ImporterSharedSt->getImportDeclErrorIfAny(const_cast<Decl *>(ToDecl)));
+}
+
 } // namespace cross_tu
 } // namespace clang

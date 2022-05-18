@@ -200,24 +200,17 @@ REGISTER_TRAIT_WITH_PROGRAMSTATE(ObjectsUnderConstruction,
 static const char* TagProviderName = "ExprEngine";
 
 ExprEngine::ExprEngine(cross_tu::CrossTranslationUnitContext &CTU,
-                       AnalysisManager &mgr,
-                       SetOfConstDecls *VisitedCalleesIn,
-                       FunctionSummariesTy *FS,
-                       InliningModes HowToInlineIn)
-    : CTU(CTU), AMgr(mgr),
-      AnalysisDeclContexts(mgr.getAnalysisDeclContextManager()),
+                       AnalysisManager &mgr, SetOfConstDecls *VisitedCalleesIn,
+                       FunctionSummariesTy *FS, InliningModes HowToInlineIn)
+    : CTU(CTU), IsCTUEnabled(mgr.getAnalyzerOptions().IsNaiveCTUEnabled),
+      AMgr(mgr), AnalysisDeclContexts(mgr.getAnalysisDeclContextManager()),
       Engine(*this, FS, mgr.getAnalyzerOptions()), G(Engine.getGraph()),
       StateMgr(getContext(), mgr.getStoreManagerCreator(),
-               mgr.getConstraintManagerCreator(), G.getAllocator(),
-               this),
-      SymMgr(StateMgr.getSymbolManager()),
-      MRMgr(StateMgr.getRegionManager()),
-      svalBuilder(StateMgr.getSValBuilder()),
-      ObjCNoRet(mgr.getASTContext()),
-      BR(mgr, *this),
-      VisitedCallees(VisitedCalleesIn),
-      HowToInline(HowToInlineIn)
-  {
+               mgr.getConstraintManagerCreator(), G.getAllocator(), this),
+      SymMgr(StateMgr.getSymbolManager()), MRMgr(StateMgr.getRegionManager()),
+      svalBuilder(StateMgr.getSValBuilder()), ObjCNoRet(mgr.getASTContext()),
+      BR(mgr, *this), VisitedCallees(VisitedCalleesIn),
+      HowToInline(HowToInlineIn) {
   unsigned TrimInterval = mgr.options.GraphTrimInterval;
   if (TrimInterval != 0) {
     // Enable eager node reclamation when constructing the ExplodedGraph.

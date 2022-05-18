@@ -410,6 +410,34 @@ ANALYZER_OPTION_DEPENDS_ON_USER_MODE(
     /* SHALLOW_VAL */ 75000, /* DEEP_VAL */ 225000)
 
 ANALYZER_OPTION(
+    unsigned, CTUMaxNodesPercentage, "ctu-max-nodes-pct",
+    "The percentage of single-TU analysed nodes that the CTU analysis is "
+    "allowed to visit.", 50)
+
+ANALYZER_OPTION(
+    unsigned, CTUMaxNodesMin, "ctu-max-nodes-min",
+    "The maximum number of nodes in CTU mode is determinded by "
+    "'ctu-max-nodes-pct'. However, if the number of nodes in single-TU "
+    "analysis is too low, it is meaningful to provide a minimum value that "
+    "serves as an upper bound instead.", 10000)
+
+ANALYZER_OPTION(
+    StringRef, CTUPhase1InliningMode, "ctu-phase1-inlining",
+    "Controls which functions will be inlined during the first phase of the ctu "
+    "analysis. "
+    "If the value is set to 'all' then all foreign functions are inlinied "
+    "immediately during the first phase, thus rendering the second phase a noop. "
+    "The 'ctu-max-nodes-*' budge has no effect in this case. "
+    "If the value is 'small' then only functions with a linear CFG and with a "
+    "limited number of statements would be inlined during the first phase. The "
+    "long and/or nontrivial functions are handled in the second phase and are "
+    "controlled by the 'ctu-max-nodes-*' budge. "
+    "The value 'none' means that all foreign functions are inlined only in the "
+    "second phase, 'ctu-max-nodes-*' budge limits the second phase. "
+    "Value: \"none\", \"small\", \"all\".",
+    "small")
+
+ANALYZER_OPTION(
     unsigned, RegionStoreSmallStructLimit, "region-store-small-struct-limit",
     "The largest number of fields a struct can have and still be considered "
     "small This is currently used to decide whether or not it is worth forcing "

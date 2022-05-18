@@ -427,10 +427,39 @@ namespace {
 
 REGISTER_MAP_WITH_PROGRAMSTATE(DynamicDispatchBifurcationMap,
                                const MemRegion *, unsigned)
+REGISTER_TRAIT_WITH_PROGRAMSTATE(CTUDispatchBifurcation, bool)
 
-bool ExprEngine::inlineCall(const CallEvent &Call, const Decl *D,
-                            NodeBuilder &Bldr, ExplodedNode *Pred,
-                            ProgramStateRef State) {
+void ExprEngine::ctuBifurcate(const CallEvent &Call, const Decl *D,
+                              NodeBuilder &Bldr, ExplodedNode *Pred,
+                              ProgramStateRef State) {
+  ProgramStateRef ConservativeEvalState = nullptr;
+  if (Call.isForeign() && !isSecondPhaseCTU()) {
+    const auto IK = AMgr.options.getCTUPhase1Inlining();
+    const bool DoInline = IK == CTUPhase1InliningKind::All ||
+                          (IK == CTUPhase1InliningKind::Small &&
+                           isSmall(AMgr.getAnalysisDeclContext(D)));
+    if (DoInline) {
+      inlineCall(Engine.getWorkList(), Call, D, Bldr, Pred, State);
+      return;
+    }
+    const bool BState = State->get<CTUDispatchBifurcation>();
+    if (!BState) { // This is the first time we see this foreign function.
+      // Enqueue it to be analyzed in the second (ctu) phase.
+      inlineCall(Engine.getCTUWorkList(), Call, D, Bldr, Pred, State);
+      // Conservatively evaluate in the first phase.
+      ConservativeEvalState = State->set<CTUDispatchBifurcation>(true);
+      conservativeEvalCall(Call, Bldr, Pred, ConservativeEvalState);
+    } else {
+      conservativeEvalCall(Call, Bldr, Pred, State);
+    }
+    return;
+  }
+  inlineCall(Engine.getWorkList(), Call, D, Bldr, Pred, State);
+}
+
+void ExprEngine::inlineCall(WorkList *WList, const CallEvent &Call,
+                            const Decl *D, NodeBuilder &Bldr,
+                            ExplodedNode *Pred, ProgramStateRef State) {
   assert(D);
 
   const LocationContext *CurLC = Pred->getLocationContext();
@@ -465,7 +494,7 @@ bool ExprEngine::inlineCall(const CallEvent &Call, const Decl *D,
   if (ExplodedNode *N = G.getNode(Loc, State, false, &isNew)) {
     N->addPredecessor(Pred, G);
     if (isNew)
-      Engine.getWorkList()->enqueue(N);
+      WList->enqueue(N);
   }
 
   // If we decided to inline the call, the successor has been manually
@@ -475,11 +504,17 @@ bool ExprEngine::inlineCall(const CallEvent &Call, const Decl *D,
   NumInlinedCalls++;
   Engine.FunctionSummaries->bumpNumTimesInlined(D);
 
-  // Mark the decl as visited.
-  if (VisitedCallees)
-    VisitedCallees->insert(D);
-
-  return true;
+  // Do not mark as visited in the 2nd run (CTUWList), so the function will
+  // be visited as top-level, this way we won't loose reports in non-ctu
+  // mode. Considering the case when a function in a foreign TU calls back
+  // into the main TU.
+  // Note, during the 1st run, it doesn't matter if we mark the foreign
+  // functions as visited (or not) because they can never appear as a top level
+  // function in the main TU.
+  if (!isSecondPhaseCTU())
+    // Mark the decl as visited.
+    if (VisitedCallees)
+      VisitedCallees->insert(D);
 }
 
 static ProgramStateRef getInlineFailedState(ProgramStateRef State,
@@ -1068,6 +1103,7 @@ void ExprEngine::defaultEvalCall(NodeBuilder &Bldr, ExplodedNode *Pred,
     State = InlinedFailedState;
   } else {
     RuntimeDefinition RD = Call->getRuntimeDefinition();
+    Call->setForeign(RD.isForeign());
     const Decl *D = RD.getDecl();
     if (shouldInlineCall(*Call, D, Pred, CallOpts)) {
       if (RD.mayHaveOtherDefinitions()) {
@@ -1085,10 +1121,8 @@ void ExprEngine::defaultEvalCall(NodeBuilder &Bldr, ExplodedNode *Pred,
           return;
         }
       }
-
-      // We are not bifurcating and we do have a Decl, so just inline.
-      if (inlineCall(*Call, D, Bldr, Pred, State))
-        return;
+      ctuBifurcate(*Call, D, Bldr, Pred, State);
+      return;
     }
   }
 
@@ -1110,8 +1144,7 @@ void ExprEngine::BifurcateCall(const MemRegion *BifurReg,
   if (BState) {
     // If we are on "inline path", keep inlining if possible.
     if (*BState == DynamicDispatchModeInlined)
-      if (inlineCall(Call, D, Bldr, Pred, State))
-        return;
+      ctuBifurcate(Call, D, Bldr, Pred, State);
     // If inline failed, or we are on the path where we assume we
     // don't have enough info about the receiver to inline, conjure the
     // return value and invalidate the regions.
@@ -1124,7 +1157,7 @@ void ExprEngine::BifurcateCall(const MemRegion *BifurReg,
   ProgramStateRef IState =
       State->set<DynamicDispatchBifurcationMap>(BifurReg,
                                                DynamicDispatchModeInlined);
-  inlineCall(Call, D, Bldr, Pred, IState);
+  ctuBifurcate(Call, D, Bldr, Pred, IState);
 
   ProgramStateRef NoIState =
       State->set<DynamicDispatchBifurcationMap>(BifurReg,
