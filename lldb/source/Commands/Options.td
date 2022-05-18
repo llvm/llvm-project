@@ -742,6 +742,8 @@ let Command = "process load" in {
 }
 
 let Command = "process handle" in {
+  def process_handle_clear : Option<"clear", "c">, Group<2>,
+    Desc<"Removes the signals listed from the Target signal handlers">;
   def process_handle_stop : Option<"stop", "s">, Group<1>, Arg<"Boolean">,
     Desc<"Whether or not the process should be stopped if the signal is "
     "received.">;
@@ -750,6 +752,10 @@ let Command = "process handle" in {
     "received.">;
   def process_handle_pass : Option<"pass", "p">, Group<1>, Arg<"Boolean">,
     Desc<"Whether or not the signal should be passed to the process.">;
+  def process_handle_only_target : Option<"target", "t">, Group<1>,
+    Desc<"Show only the signals with behaviors modified in this target">;
+  def process_handle_dummy : Option<"dummy", "d">, Group<2>,
+    Desc<"Also clear the values in the dummy target so they won't be inherited by new targets.">;
 }
 
 let Command = "process status" in {
