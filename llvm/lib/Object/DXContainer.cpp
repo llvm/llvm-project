@@ -24,7 +24,7 @@ static Error readStruct(StringRef Buffer, const char *P, T &Struct) {
     return parseFailed("Reading structure out of file bounds");
 
   memcpy(&Struct, P, sizeof(T));
-  // DXContainer is always BigEndian
+  // DXContainer is always little endian
   if (sys::IsBigEndianHost)
     Struct.byteSwap();
   return Error::success();
