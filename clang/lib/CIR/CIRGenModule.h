@@ -202,7 +202,7 @@ public:
   mlir::Location getLoc(mlir::Location lhs, mlir::Location rhs);
 
   /// Helper to convert Clang's alignment to CIR alignment
-  mlir::IntegerAttr getAlignment(CharUnits &alignment);
+  mlir::IntegerAttr getSize(CharUnits size);
 
   /// Determine whether an object of this type can be emitted
   /// as a constant.

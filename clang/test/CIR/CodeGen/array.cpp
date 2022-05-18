@@ -14,12 +14,12 @@ void a1() {
 }
 
 // CHECK: func @_Z2a1v() {
-// CHECK-NEXT:   %0 = cir.alloca !cir.array<i32 x 10>, cir.ptr <!cir.array<i32 x 10>>, ["a", uninitialized] {alignment = 16 : i64}
-// CHECK-NEXT:   %1 = cir.cst(1 : i32) : i32
-// CHECK-NEXT:   %2 = cir.cast(array_to_ptrdecay, %0 : !cir.ptr<!cir.array<i32 x 10>>), !cir.ptr<i32>
-// CHECK-NEXT:   %3 = cir.cst(0 : i32) : i32
-// CHECK-NEXT:   %4 = cir.ptr_stride(%2 : !cir.ptr<i32>, %3 : i32), !cir.ptr<i32>
-// CHECK-NEXT:   cir.store %1, %4 : i32, cir.ptr <i32>
+// CHECK-NEXT:  %0 = cir.alloca !cir.array<i32 x 10>, cir.ptr <!cir.array<i32 x 10>>, ["a", uninitialized] {alignment = 16 : i64}
+// CHECK-NEXT:  %1 = cir.cst(1 : i32) : i32
+// CHECK-NEXT:  %2 = cir.cst(0 : i32) : i32
+// CHECK-NEXT:  %3 = cir.cast(array_to_ptrdecay, %0 : !cir.ptr<!cir.array<i32 x 10>>), !cir.ptr<i32>
+// CHECK-NEXT:  %4 = cir.ptr_stride(%3 : !cir.ptr<i32>, %2 : i32), !cir.ptr<i32>
+// CHECK-NEXT:  cir.store %1, %4 : i32, cir.ptr <i32>
 
 int *a2() {
   int a[4];
@@ -29,10 +29,9 @@ int *a2() {
 // CHECK: func @_Z2a2v() -> !cir.ptr<i32> {
 // CHECK-NEXT:   %0 = cir.alloca !cir.ptr<i32>, cir.ptr <!cir.ptr<i32>>, ["__retval", uninitialized] {alignment = 8 : i64}
 // CHECK-NEXT:   %1 = cir.alloca !cir.array<i32 x 4>, cir.ptr <!cir.array<i32 x 4>>, ["a", uninitialized] {alignment = 16 : i64}
-// CHECK-NEXT:   %2 = cir.cast(array_to_ptrdecay, %1 : !cir.ptr<!cir.array<i32 x 4>>), !cir.ptr<i32>
-// CHECK-NEXT:   %3 = cir.cst(0 : i32) : i32
-// CHECK-NEXT:   %4 = cir.ptr_stride(%2 : !cir.ptr<i32>, %3 : i32), !cir.ptr<i32>
+// CHECK-NEXT:   %2 = cir.cst(0 : i32) : i32
+// CHECK-NEXT:   %3 = cir.cast(array_to_ptrdecay, %1 : !cir.ptr<!cir.array<i32 x 4>>), !cir.ptr<i32>
+// CHECK-NEXT:   %4 = cir.ptr_stride(%3 : !cir.ptr<i32>, %2 : i32), !cir.ptr<i32>
 // CHECK-NEXT:   cir.store %4, %0 : !cir.ptr<i32>, cir.ptr <!cir.ptr<i32>>
 // CHECK-NEXT:   %5 = cir.load %0 : cir.ptr <!cir.ptr<i32>>, !cir.ptr<i32>
-// CHECK:   cir.return %5 : !cir.ptr<i32>
-// CHECK: }
+// CHECK-NEXT:   cir.return %5 : !cir.ptr<i32>

@@ -38,9 +38,13 @@ struct UnimplementedFeature {
 
   // Sanitizers
   static bool reportGlobalToASan() { return false; }
+  static bool emitCheckedInBoundsGEP() { return false; }
 
   // ObjC
   static bool setObjCGCLValueClass() { return false; }
+
+  // Debug info
+  static bool generateDebugInfo() { return false; }
 };
 } // namespace cir
 
