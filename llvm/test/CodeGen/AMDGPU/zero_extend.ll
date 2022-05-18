@@ -51,9 +51,8 @@ define amdgpu_kernel void @s_cmp_zext_i1_to_i64(i64 addrspace(1)* %out, i32 %a, 
 ; GCN: s_load_dword [[A:s[0-9]+]]
 ; GCN: s_load_dword [[B:s[0-9]+]]
 
-; GCN: s_mov_b32 [[MASK:s[0-9]+]], 0xffff{{$}}
-; GCN-DAG: s_and_b32 [[MASK_A:s[0-9]+]], [[A]], [[MASK]]
-; GCN-DAG: s_and_b32 [[MASK_B:s[0-9]+]], [[B]], [[MASK]]
+; GCN-DAG: s_and_b32 [[MASK_A:s[0-9]+]], [[A]], 0xffff{{$}}
+; GCN-DAG: s_and_b32 [[MASK_B:s[0-9]+]], [[B]], 0xffff{{$}}
 ; GCN: s_cmp_eq_u32 [[MASK_A]], [[B]]
 ; GCN: s_cselect_b64 [[CC:s\[[0-9:]+\]]], -1, 0
 ; GCN: v_cndmask_b32_e64 [[RESULT:v[0-9]+]], 0, 1, [[CC]]

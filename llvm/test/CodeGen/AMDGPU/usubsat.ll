@@ -31,9 +31,8 @@ define i8 @v_usubsat_i8(i8 %lhs, i8 %rhs) {
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX10-NEXT:    s_movk_i32 s4, 0xff
-; GFX10-NEXT:    v_and_b32_e32 v1, s4, v1
-; GFX10-NEXT:    v_and_b32_e32 v0, s4, v0
+; GFX10-NEXT:    v_and_b32_e32 v1, 0xff, v1
+; GFX10-NEXT:    v_and_b32_e32 v0, 0xff, v0
 ; GFX10-NEXT:    v_sub_nc_u16 v0, v0, v1 clamp
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
   %result = call i8 @llvm.usub.sat.i8(i8 %lhs, i8 %rhs)

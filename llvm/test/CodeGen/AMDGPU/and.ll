@@ -63,9 +63,8 @@ define amdgpu_kernel void @s_and_constant_i32(i32 addrspace(1)* %out, i32 %a) {
 
 ; Second use is a VGPR use of the constant.
 ; FUNC-LABEL: {{^}}s_and_multi_use_constant_i32_0:
-; SI: s_mov_b32 [[K:s[0-9]+]], 0x12d687
-; SI-DAG: s_and_b32 [[AND:s[0-9]+]], s{{[0-9]+}}, [[K]]
-; SI-DAG: v_mov_b32_e32 [[VK:v[0-9]+]], [[K]]
+; SI-DAG: s_and_b32 [[AND:s[0-9]+]], s{{[0-9]+}}, 0x12d687
+; SI-DAG: v_mov_b32_e32 [[VK:v[0-9]+]], 0x12d687
 ; SI: buffer_store_dword [[VK]]
 define amdgpu_kernel void @s_and_multi_use_constant_i32_0(i32 addrspace(1)* %out, i32 %a, i32 %b) {
   %and = and i32 %a, 1234567
@@ -79,10 +78,9 @@ define amdgpu_kernel void @s_and_multi_use_constant_i32_0(i32 addrspace(1)* %out
 
 ; Second use is another SGPR use of the constant.
 ; FUNC-LABEL: {{^}}s_and_multi_use_constant_i32_1:
-; SI: s_mov_b32 [[K:s[0-9]+]], 0x12d687
-; SI: s_and_b32 [[AND:s[0-9]+]], s{{[0-9]+}}, [[K]]
+; SI: s_and_b32 [[AND:s[0-9]+]], s{{[0-9]+}}, 0x12d687
 ; SI: s_add_i32
-; SI: s_add_i32 [[ADD:s[0-9]+]], s{{[0-9]+}}, [[K]]
+; SI: s_add_i32 [[ADD:s[0-9]+]], s{{[0-9]+}}, 0x12d687
 ; SI: v_mov_b32_e32 [[VADD:v[0-9]+]], [[ADD]]
 ; SI: buffer_store_dword [[VADD]]
 define amdgpu_kernel void @s_and_multi_use_constant_i32_1(i32 addrspace(1)* %out, i32 %a, i32 %b) {

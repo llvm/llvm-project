@@ -71,21 +71,20 @@ define <4 x i16> @extract_4xi16(<8 x i16> addrspace(1) * %p0, <8 x i16> addrspac
 ; SI-NEXT:    v_bfe_i32 v0, v3, 0, 16
 ; SI-NEXT:    v_bfe_i32 v1, v4, 0, 16
 ; SI-NEXT:    v_bfe_i32 v2, v2, 0, 16
-; SI-NEXT:    s_mov_b32 s4, 0xffff
-; SI-NEXT:    v_mov_b32_e32 v3, 0x8000
-; SI-NEXT:    v_mov_b32_e32 v4, 0xffff0000
-; SI-NEXT:    v_bfrev_b32_e32 v5, 1
-; SI-NEXT:    v_mov_b32_e32 v6, 0xffff8000
-; SI-NEXT:    v_mov_b32_e32 v7, s4
+; SI-NEXT:    v_mov_b32_e32 v3, 0xffff
+; SI-NEXT:    v_mov_b32_e32 v4, 0x8000
+; SI-NEXT:    v_mov_b32_e32 v5, 0xffff0000
+; SI-NEXT:    v_bfrev_b32_e32 v6, 1
+; SI-NEXT:    v_mov_b32_e32 v7, 0xffff8000
 ; SI-NEXT:    v_cmp_lt_i32_e32 vcc, -1, v0
-; SI-NEXT:    v_cndmask_b32_e32 v0, v7, v3, vcc
+; SI-NEXT:    v_cndmask_b32_e32 v0, v3, v4, vcc
 ; SI-NEXT:    v_cmp_lt_i32_e32 vcc, -1, v1
-; SI-NEXT:    v_cndmask_b32_e32 v1, v4, v5, vcc
+; SI-NEXT:    v_cndmask_b32_e32 v1, v5, v6, vcc
 ; SI-NEXT:    v_cmp_lt_i32_e32 vcc, -1, v2
-; SI-NEXT:    v_cndmask_b32_e32 v2, -1, v6, vcc
+; SI-NEXT:    v_cndmask_b32_e32 v2, -1, v7, vcc
 ; SI-NEXT:    v_or_b32_e32 v0, v0, v1
 ; SI-NEXT:    v_lshlrev_b32_e32 v3, 16, v2
-; SI-NEXT:    v_and_b32_e32 v2, s4, v2
+; SI-NEXT:    v_and_b32_e32 v2, 0xffff, v2
 ; SI-NEXT:    v_or_b32_e32 v2, v2, v3
 ; SI-NEXT:    v_alignbit_b32 v1, v2, v1, 16
 ; SI-NEXT:    v_lshrrev_b32_e32 v3, 16, v2
