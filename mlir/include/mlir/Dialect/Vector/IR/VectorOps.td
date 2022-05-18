@@ -23,6 +23,8 @@ include "mlir/Interfaces/ViewLikeInterface.td"
 def Vector_Dialect : Dialect {
   let name = "vector";
   let cppNamespace = "::mlir::vector";
+
+  let useDefaultAttributePrinterParser = 1;
   let hasConstantMaterializer = 1;
   let dependentDialects = ["arith::ArithmeticDialect"];
   let emitAccessorPrefix = kEmitAccessorPrefix_Prefixed;
