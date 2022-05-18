@@ -22,7 +22,7 @@ Error IntelPTThreadTraceCollection::TraceStop(lldb::tid_t tid) {
   if (it == m_thread_traces.end())
     return createStringError(inconvertibleErrorCode(),
                              "Thread %" PRIu64 " not currently traced", tid);
-  m_total_buffer_size -= it->second->GetTraceBufferSize();
+  m_total_buffer_size -= it->second.GetTraceBufferSize();
   m_thread_traces.erase(tid);
   return Error::success();
 }
@@ -33,14 +33,13 @@ Error IntelPTThreadTraceCollection::TraceStart(
     return createStringError(inconvertibleErrorCode(),
                              "Thread %" PRIu64 " already traced", tid);
 
-  Expected<IntelPTSingleBufferTraceUP> trace_up =
-      IntelPTSingleBufferTrace::Start(request, tid, /*core_id=*/None,
-                                      TraceCollectionState::Running);
-  if (!trace_up)
-    return trace_up.takeError();
+  Expected<IntelPTSingleBufferTrace> trace =
+      IntelPTSingleBufferTrace::Start(request, tid);
+  if (!trace)
+    return trace.takeError();
 
-  m_total_buffer_size += (*trace_up)->GetTraceBufferSize();
-  m_thread_traces.try_emplace(tid, std::move(*trace_up));
+  m_total_buffer_size += trace->GetTraceBufferSize();
+  m_thread_traces.try_emplace(tid, std::move(*trace));
   return Error::success();
 }
 
@@ -52,7 +51,7 @@ void IntelPTThreadTraceCollection::ForEachThread(
     std::function<void(lldb::tid_t tid, IntelPTSingleBufferTrace &thread_trace)>
         callback) {
   for (auto &it : m_thread_traces)
-    callback(it.first, *it.second);
+    callback(it.first, it.second);
 }
 
 Expected<IntelPTSingleBufferTrace &>
@@ -61,7 +60,7 @@ IntelPTThreadTraceCollection::GetTracedThread(lldb::tid_t tid) {
   if (it == m_thread_traces.end())
     return createStringError(inconvertibleErrorCode(),
                              "Thread %" PRIu64 " not currently traced", tid);
-  return *it->second.get();
+  return it->second;
 }
 
 void IntelPTThreadTraceCollection::Clear() {

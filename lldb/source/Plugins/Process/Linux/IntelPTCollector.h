@@ -37,8 +37,12 @@ public:
 
   static bool IsSupported();
 
-  /// To be invoked whenever the state of the target process has changed.
-  void OnProcessStateChanged(lldb::StateType state);
+  /// To be invoked as soon as we know the process stopped.
+  void ProcessDidStop();
+
+  /// To be invoked before the process will resume, so that we can capture the
+  /// first instructions after the resume.
+  void ProcessWillResume();
 
   /// If "process tracing" is enabled, then trace the given thread.
   llvm::Error OnThreadCreated(lldb::tid_t tid);

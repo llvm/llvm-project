@@ -33,6 +33,54 @@ static Error IncludePerfEventParanoidMessageInError(Error &&error) {
       toString(std::move(error)).c_str());
 }
 
+static Expected<PerfEvent> CreateContextSwitchTracePerfEvent(
+    bool disabled, lldb::core_id_t core_id,
+    IntelPTSingleBufferTrace &intelpt_core_trace) {
+  Log *log = GetLog(POSIXLog::Trace);
+#ifndef PERF_ATTR_SIZE_VER5
+  return createStringError(inconvertibleErrorCode(),
+                           "Intel PT Linux perf event not supported");
+#else
+  perf_event_attr attr;
+  memset(&attr, 0, sizeof(attr));
+  attr.size = sizeof(attr);
+  attr.sample_period = 0;
+  attr.sample_type = PERF_SAMPLE_TID | PERF_SAMPLE_TIME;
+  attr.type = PERF_TYPE_SOFTWARE;
+  attr.context_switch = 1;
+  attr.exclude_kernel = 1;
+  attr.sample_id_all = 1;
+  attr.exclude_hv = 1;
+  attr.disabled = disabled;
+
+  // The given perf configuration will product context switch records of 32
+  // bytes each. Assuming that every context switch will be emitted twice (one
+  // for context switch ins and another one for context switch outs), and that a
+  // context switch will happen at least every half a millisecond per core, we
+  // need 500 * 32 bytes (~16 KB) for a trace of one second, which is much more
+  // than what a regular intel pt trace can get. Pessimistically we pick as
+  // 32KiB for the size of our context switch trace.
+
+  uint64_t data_buffer_size = 32768;
+  uint64_t data_buffer_numpages = data_buffer_size / getpagesize();
+
+  LLDB_LOG(log, "Will create context switch trace buffer of size {0}",
+           data_buffer_size);
+
+  if (Expected<PerfEvent> perf_event = PerfEvent::Init(
+          attr, /*pid=*/None, core_id,
+          intelpt_core_trace.GetPerfEvent().GetFd(), /*flags=*/0)) {
+    if (Error mmap_err =
+            perf_event->MmapMetadataAndBuffers(data_buffer_numpages, 0)) {
+      return std::move(mmap_err);
+    }
+    return perf_event;
+  } else {
+    return perf_event.takeError();
+  }
+#endif
+}
+
 Expected<IntelPTProcessTraceUP>
 IntelPTMultiCoreTrace::StartOnAllCores(const TraceIntelPTStartRequest &request,
                                        NativeProcessProtocol &process) {
@@ -46,55 +94,63 @@ IntelPTMultiCoreTrace::StartOnAllCores(const TraceIntelPTStartRequest &request,
         "The process can't be traced because the process trace size limit "
         "has been reached. Consider retracing with a higher limit.");
 
-  llvm::DenseMap<core_id_t, IntelPTSingleBufferTraceUP> buffers;
+  DenseMap<core_id_t, std::pair<IntelPTSingleBufferTrace, ContextSwitchTrace>>
+      traces;
+
   for (core_id_t core_id : *core_ids) {
-    if (Expected<IntelPTSingleBufferTraceUP> core_trace =
-            IntelPTSingleBufferTrace::Start(request, /*tid=*/None, core_id,
-                                            TraceCollectionState::Paused))
-      buffers.try_emplace(core_id, std::move(*core_trace));
-    else
+    Expected<IntelPTSingleBufferTrace> core_trace =
+        IntelPTSingleBufferTrace::Start(request, /*tid=*/None, core_id,
+                                        /*disabled=*/true);
+    if (!core_trace)
       return IncludePerfEventParanoidMessageInError(core_trace.takeError());
+
+    if (Expected<PerfEvent> context_switch_trace =
+            CreateContextSwitchTracePerfEvent(/*disabled=*/true, core_id,
+                                              core_trace.get())) {
+      traces.try_emplace(core_id,
+                         std::make_pair(std::move(*core_trace),
+                                        std::move(*context_switch_trace)));
+    } else {
+      return context_switch_trace.takeError();
+    }
   }
 
   return IntelPTProcessTraceUP(
-      new IntelPTMultiCoreTrace(std::move(buffers), process));
+      new IntelPTMultiCoreTrace(std::move(traces), process));
 }
 
 void IntelPTMultiCoreTrace::ForEachCore(
     std::function<void(core_id_t core_id, IntelPTSingleBufferTrace &core_trace)>
         callback) {
   for (auto &it : m_traces_per_core)
-    callback(it.first, *it.second);
+    callback(it.first, it.second.first);
 }
 
-void IntelPTMultiCoreTrace::OnProcessStateChanged(lldb::StateType state) {
-  if (m_process_state == state)
-    return;
-  switch (state) {
-  case eStateStopped:
-  case eStateExited: {
-    ForEachCore([](core_id_t core_id, IntelPTSingleBufferTrace &core_trace) {
-      if (Error err =
-              core_trace.ChangeCollectionState(TraceCollectionState::Paused)) {
-        LLDB_LOG_ERROR(GetLog(POSIXLog::Trace), std::move(err),
-                       "Unable to pause the core trace for core {0}", core_id);
-      }
-    });
-    break;
-  }
-  case eStateRunning: {
-    ForEachCore([](core_id_t core_id, IntelPTSingleBufferTrace &core_trace) {
-      if (Error err =
-              core_trace.ChangeCollectionState(TraceCollectionState::Running)) {
-        LLDB_LOG_ERROR(GetLog(POSIXLog::Trace), std::move(err),
-                       "Unable to resume the core trace for core {0}", core_id);
-      }
-    });
-    break;
-  }
-  default:
-    break;
-  }
+void IntelPTMultiCoreTrace::ForEachCore(
+    std::function<void(core_id_t core_id,
+                       IntelPTSingleBufferTrace &intelpt_trace,
+                       PerfEvent &context_switch_trace)>
+        callback) {
+  for (auto &it : m_traces_per_core)
+    callback(it.first, it.second.first, it.second.second);
+}
+
+void IntelPTMultiCoreTrace::ProcessDidStop() {
+  ForEachCore([](core_id_t core_id, IntelPTSingleBufferTrace &core_trace) {
+    if (Error err = core_trace.Pause()) {
+      LLDB_LOG_ERROR(GetLog(POSIXLog::Trace), std::move(err),
+                     "Unable to pause the core trace for core {0}", core_id);
+    }
+  });
+}
+
+void IntelPTMultiCoreTrace::ProcessWillResume() {
+  ForEachCore([](core_id_t core_id, IntelPTSingleBufferTrace &core_trace) {
+    if (Error err = core_trace.Resume()) {
+      LLDB_LOG_ERROR(GetLog(POSIXLog::Trace), std::move(err),
+                     "Unable to resume the core trace for core {0}", core_id);
+    }
+  });
 }
 
 TraceGetStateResponse IntelPTMultiCoreTrace::GetState() {
@@ -106,10 +162,13 @@ TraceGetStateResponse IntelPTMultiCoreTrace::GetState() {
 
   state.cores.emplace();
   ForEachCore([&](lldb::core_id_t core_id,
-                  const IntelPTSingleBufferTrace &core_trace) {
+                  const IntelPTSingleBufferTrace &core_trace,
+                  const PerfEvent &context_switch_trace) {
     state.cores->push_back(
         {core_id,
-         {{IntelPTDataKinds::kTraceBuffer, core_trace.GetTraceBufferSize()}}});
+         {{IntelPTDataKinds::kTraceBuffer, core_trace.GetTraceBufferSize()},
+          {IntelPTDataKinds::kPerfContextSwitchTrace,
+           context_switch_trace.GetEffectiveDataBufferSize()}}});
   });
 
   return state;

@@ -130,7 +130,8 @@ llvm::Expected<PerfEvent> PerfEvent::Init(perf_event_attr &attr,
         llvm::formatv("perf event syscall failed: {0}", std::strerror(errno));
     return llvm::createStringError(llvm::inconvertibleErrorCode(), err_msg);
   }
-  return PerfEvent{fd};
+  return PerfEvent(fd, attr.disabled ? CollectionState::Disabled
+                                     : CollectionState::Enabled);
 }
 
 llvm::Expected<PerfEvent> PerfEvent::Init(perf_event_attr &attr,
@@ -143,7 +144,7 @@ llvm::Expected<resource_handle::MmapUP>
 PerfEvent::DoMmap(void *addr, size_t length, int prot, int flags,
                   long int offset, llvm::StringRef buffer_name) {
   errno = 0;
-  auto mmap_result = ::mmap(nullptr, length, prot, flags, GetFd(), offset);
+  auto mmap_result = ::mmap(addr, length, prot, flags, GetFd(), offset);
 
   if (mmap_result == MAP_FAILED) {
     std::string err_msg =
@@ -157,7 +158,7 @@ PerfEvent::DoMmap(void *addr, size_t length, int prot, int flags,
 llvm::Error PerfEvent::MmapMetadataAndDataBuffer(size_t num_data_pages) {
   size_t mmap_size = (num_data_pages + 1) * getpagesize();
   if (Expected<resource_handle::MmapUP> mmap_metadata_data =
-          DoMmap(nullptr, mmap_size, PROT_WRITE, MAP_SHARED, 0,
+          DoMmap(nullptr, mmap_size, PROT_READ | PROT_WRITE, MAP_SHARED, 0,
                  "metadata and data buffer")) {
     m_metadata_data_base = std::move(mmap_metadata_data.get());
     return Error::success();
@@ -221,18 +222,72 @@ ArrayRef<uint8_t> PerfEvent::GetAuxBuffer() const {
            static_cast<size_t>(mmap_metadata.aux_size)};
 }
 
-Error PerfEvent::DisableWithIoctl() const {
-  if (ioctl(*m_fd, PERF_EVENT_IOC_DISABLE) < 0)
+Expected<std::vector<uint8_t>>
+PerfEvent::ReadFlushedOutAuxCyclicBuffer(size_t offset, size_t size) {
+  CollectionState previous_state = m_collection_state;
+  if (Error err = DisableWithIoctl())
+    return std::move(err);
+
+  std::vector<uint8_t> data(size, 0);
+  perf_event_mmap_page &mmap_metadata = GetMetadataPage();
+  Log *log = GetLog(POSIXLog::Trace);
+  uint64_t head = mmap_metadata.aux_head;
+
+  LLDB_LOG(log, "Aux size -{0} , Head - {1}", mmap_metadata.aux_size, head);
+
+  /**
+   * When configured as ring buffer, the aux buffer keeps wrapping around
+   * the buffer and its not possible to detect how many times the buffer
+   * wrapped. Initially the buffer is filled with zeros,as shown below
+   * so in order to get complete buffer we first copy firstpartsize, followed
+   * by any left over part from beginning to aux_head
+   *
+   * aux_offset [d,d,d,d,d,d,d,d,0,0,0,0,0,0,0,0,0,0,0] aux_size
+   *                 aux_head->||<- firstpartsize  ->|
+   *
+   * */
+
+  MutableArrayRef<uint8_t> buffer(data);
+  ReadCyclicBuffer(buffer, GetAuxBuffer(), static_cast<size_t>(head), offset);
+
+  if (previous_state == CollectionState::Enabled) {
+    if (Error err = EnableWithIoctl())
+      return std::move(err);
+  }
+
+  return data;
+}
+
+Error PerfEvent::DisableWithIoctl() {
+  if (m_collection_state == CollectionState::Disabled)
+    return Error::success();
+
+  if (ioctl(*m_fd, PERF_EVENT_IOC_DISABLE, PERF_IOC_FLAG_GROUP) < 0)
     return createStringError(inconvertibleErrorCode(),
                              "Can't disable perf event. %s",
                              std::strerror(errno));
+
+  m_collection_state = CollectionState::Disabled;
   return Error::success();
 }
 
-Error PerfEvent::EnableWithIoctl() const {
-  if (ioctl(*m_fd, PERF_EVENT_IOC_ENABLE) < 0)
+Error PerfEvent::EnableWithIoctl() {
+  if (m_collection_state == CollectionState::Enabled)
+    return Error::success();
+
+  if (ioctl(*m_fd, PERF_EVENT_IOC_ENABLE, PERF_IOC_FLAG_GROUP) < 0)
     return createStringError(inconvertibleErrorCode(),
-                             "Can't disable perf event. %s",
+                             "Can't enable perf event. %s",
                              std::strerror(errno));
+
+  m_collection_state = CollectionState::Enabled;
   return Error::success();
+}
+
+size_t PerfEvent::GetEffectiveDataBufferSize() const {
+  perf_event_mmap_page &mmap_metadata = GetMetadataPage();
+  if (mmap_metadata.data_head < mmap_metadata.data_size)
+    return mmap_metadata.data_head;
+  else
+    return mmap_metadata.data_size; // The buffer has wrapped.
 }

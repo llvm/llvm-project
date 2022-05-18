@@ -1,4 +1,5 @@
 import lldb
+import json
 from intelpt_testcase import *
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
@@ -195,8 +196,40 @@ class TestTraceStartStopMultipleThreads(TraceIntelPTTestCaseBase):
         self.traceStopThread(error="True",
             substrs=["Can't stop tracing an individual thread when per-core process tracing is enabled"])
 
-        # The GetState packet should return trace buffers per core and at least one traced thread
-        self.expect("""process plugin packet send 'jLLDBTraceGetState:{"type":"intel-pt"}]'""",
-            substrs=['''[{"kind":"traceBuffer","size":4096}],"coreId":''', '"tid":'])
+        # We move forward a little bit to collect some data
+        self.expect("b 19")
+        self.expect("c")
+
+        # We will assert that the trace state will contain valid context switch and trace buffer entries
+
+        # We first parse the json response from the custom packet
+        self.runCmd("""process plugin packet send 'jLLDBTraceGetState:{"type":"intel-pt"}]'""")
+        response_header = 'response: '
+        output = None
+        for line in self.res.GetOutput().splitlines():
+            if line.find(response_header) != -1:
+                response = line[line.find(response_header) + len(response_header):].strip()
+                output = json.loads(response)
+
+        self.assertTrue(output is not None)
+        self.assertIn("cores", output)
+        found_non_empty_context_switch = False
+
+        for core in output["cores"]:
+            context_switch_size = None
+            trace_buffer_size = None
+            for binary_data in core["binaryData"]:
+                if binary_data["kind"] == "traceBuffer":
+                    trace_buffer_size = binary_data["size"]
+                elif binary_data["kind"] == "perfContextSwitchTrace":
+                    context_switch_size = binary_data["size"]
+            self.assertTrue(context_switch_size is not None)
+            self.assertTrue(trace_buffer_size is not None)
+            if context_switch_size > 0:
+                found_non_empty_context_switch = True
+
+        # We must have captured the context switch of when the target resumed
+        self.assertTrue(found_non_empty_context_switch)
+
 
         self.traceStopProcess()
