@@ -50,6 +50,8 @@ enum Kind {
   kCastU,  // unsigned
   kCastIdx,
   kTruncI,
+  kCIm, // complex.im
+  kCRe, // complex.re
   kBitCast,
   kBinaryBranch, // semiring unary branch created from a binary op
   kUnary,        // semiring unary op
