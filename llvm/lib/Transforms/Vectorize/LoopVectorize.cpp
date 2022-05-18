@@ -10635,11 +10635,11 @@ bool LoopVectorizePass::processLoop(Loop *L) {
 
         VPlan &BestEpiPlan = LVP.getBestPlanFor(EPI.EpilogueVF);
         VPRegionBlock *VectorLoop = BestEpiPlan.getVectorLoopRegion();
-        VectorLoop->getEntryBasicBlock()->setName("vec.epilog.vector.body");
+        VPBasicBlock *Header = VectorLoop->getEntryBasicBlock();
+        Header->setName("vec.epilog.vector.body");
 
         // Ensure that the start values for any VPReductionPHIRecipes are
         // updated before vectorising the epilogue loop.
-        VPBasicBlock *Header = VectorLoop->getEntryBasicBlock();
         for (VPRecipeBase &R : Header->phis()) {
           if (auto *ReductionPhi = dyn_cast<VPReductionPHIRecipe>(&R)) {
             if (auto *Resume = MainILV.getReductionResumeValue(
