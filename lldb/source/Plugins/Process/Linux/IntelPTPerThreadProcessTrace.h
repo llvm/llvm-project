@@ -42,7 +42,7 @@ public:
 
   llvm::Error TraceStop(lldb::tid_t tid) override;
 
-  TraceGetStateResponse GetState() override;
+  TraceIntelPTGetStateResponse GetState() override;
 
   llvm::Expected<std::vector<uint8_t>>
   GetBinaryData(const TraceGetBinaryDataRequest &request) override;

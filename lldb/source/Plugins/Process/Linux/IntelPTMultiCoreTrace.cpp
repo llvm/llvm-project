@@ -153,8 +153,8 @@ void IntelPTMultiCoreTrace::ProcessWillResume() {
   });
 }
 
-TraceGetStateResponse IntelPTMultiCoreTrace::GetState() {
-  TraceGetStateResponse state;
+TraceIntelPTGetStateResponse IntelPTMultiCoreTrace::GetState() {
+  TraceIntelPTGetStateResponse state;
 
   for (size_t i = 0; m_process.GetThreadAtIndex(i); i++)
     state.traced_threads.push_back(

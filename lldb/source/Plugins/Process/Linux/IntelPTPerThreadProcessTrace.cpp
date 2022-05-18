@@ -35,8 +35,8 @@ Error IntelPTPerThreadProcessTrace::TraceStart(lldb::tid_t tid) {
   return m_thread_traces.TraceStart(tid, m_tracing_params);
 }
 
-TraceGetStateResponse IntelPTPerThreadProcessTrace::GetState() {
-  TraceGetStateResponse state;
+TraceIntelPTGetStateResponse IntelPTPerThreadProcessTrace::GetState() {
+  TraceIntelPTGetStateResponse state;
   m_thread_traces.ForEachThread(
       [&](lldb::tid_t tid, const IntelPTSingleBufferTrace &thread_trace) {
         state.traced_threads.push_back({tid,

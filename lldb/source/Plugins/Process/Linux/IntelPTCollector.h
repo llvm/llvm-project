@@ -73,6 +73,12 @@ private:
   llvm::Error TraceStart(lldb::tid_t tid,
                          const TraceIntelPTStartRequest &request);
 
+  /// \return
+  ///   The conversion object between TSC and wall time. It caches the result
+  ///   upon success.
+  llvm::Expected<LinuxPerfZeroTscConversion &>
+  FetchPerfTscConversionParameters();
+
   /// The target process.
   NativeProcessProtocol &m_process;
   /// Threads traced due to "thread tracing"
@@ -82,8 +88,8 @@ private:
   /// It might be \b nullptr.
   IntelPTProcessTraceUP m_process_trace_up;
 
-  /// TSC to wall time conversion.
-  TraceTscConversionUP m_tsc_conversion;
+  /// Cached TSC to and from wall time conversion.
+  llvm::Optional<LinuxPerfZeroTscConversion> m_cached_tsc_conversion;
 };
 
 } // namespace process_linux

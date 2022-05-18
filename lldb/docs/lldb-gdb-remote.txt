@@ -495,11 +495,10 @@ read packet: OK/E<error code>;AAAAAAAAA
 //        },
 //      ]
 //    ],
-//    "counters"?: {
-//      "info_kind": {...parameters specific to the provided counter info kind},
-//          Each entry includes information related to counters associated with
-//          the trace. They are described below.
-//    }
+//    "warnings"?: [<string>],
+//        Non-fatal messages useful for troubleshooting.
+//
+//    ... other attributes specific to the given tracing technology
 //  }
 //
 // NOTES
@@ -520,24 +519,22 @@ read packet: OK/E<error code>;AAAAAAAAA
 //                              perf_event_open.
 //    - procfsCpuInfo: contents of the /proc/cpuinfo file.
 //
-//  Counter info kinds:
-//    tsc-perf-zero-conversion:
+//  Additional attributes:
+//    tscPerfZeroConversion:
 //
-//    This field allows converting Intel processor's TSC values to a wall time.
+//    This field allows converting Intel processor's TSC values to nanoseconds.
 //    It is available through the Linux perf_event API when cap_user_time and cap_user_time_zero
 //    are set.
 //    See the documentation of time_zero in
 //    https://man7.org/linux/man-pages/man2/perf_event_open.2.html for more information about
 //    the calculation and the meaning of the values in the schema below.
 ///
-//    Sub-schema for this field:
+//    Schema for this field:
 //
-//    {
-//      "tsc-perf-zero-conversion": {
-//        "time_mult": <decimal integer>,
-//        "time_shift": <decimal integer>,
-//        "time_zero": <decimal integer>,
-//      }
+//    "tscPerfZeroConversion": {
+//      "timeMult": <decimal integer>,
+//      "timeShift": <decimal integer>,
+//      "timeSero": <decimal integer>,
 //    }
 //----------------------------------------------------------------------
 
