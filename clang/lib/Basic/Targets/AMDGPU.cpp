@@ -408,6 +408,12 @@ void AMDGPUTargetInfo::getTargetDefines(const LangOptions &Opts,
     StringRef CanonName = isAMDGCN(getTriple()) ?
       getArchNameAMDGCN(GPUKind) : getArchNameR600(GPUKind);
     Builder.defineMacro(Twine("__") + Twine(CanonName) + Twine("__"));
+    // Emit macros for gfx family e.g. gfx906 -> __GFX9__, gfx1030 -> __GFX10___
+    if (isAMDGCN(getTriple())) {
+      assert(CanonName.startswith("gfx") && "Invalid amdgcn canonical name");
+      Builder.defineMacro(Twine("__") + Twine(CanonName.drop_back(2).upper()) +
+                          Twine("__"));
+    }
     if (isAMDGCN(getTriple())) {
       Builder.defineMacro("__amdgcn_processor__",
                           Twine("\"") + Twine(CanonName) + Twine("\""));
