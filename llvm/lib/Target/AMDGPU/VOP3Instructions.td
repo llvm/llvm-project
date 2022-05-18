@@ -11,6 +11,8 @@
 let Asm64 = " $vdst, $src0_modifiers, $src1_modifiers, $src2_modifiers$clamp$omod" in {
 def VOP_F32_F32_F32_F32_VCC : VOPProfile<[f32, f32, f32, f32]> {
   let Outs64 = (outs DstRC.RegClass:$vdst);
+  let HasExtVOP3DPP = 0;
+  let HasExtDPP = 0;
 }
 def VOP_F64_F64_F64_F64_VCC : VOPProfile<[f64, f64, f64, f64]> {
   let Outs64 = (outs DstRC.RegClass:$vdst);
@@ -21,6 +23,8 @@ class VOP3b_Profile<ValueType vt> : VOPProfile<[vt, vt, vt, vt]> {
   let Outs64 = (outs DstRC:$vdst, VOPDstS64orS32:$sdst);
   let Asm64 = "$vdst, $sdst, $src0_modifiers, $src1_modifiers, $src2_modifiers$clamp$omod";
   let IsSingle = 1;
+  let HasExtVOP3DPP = 0;
+  let HasExtDPP = 0;
 }
 
 def VOP3b_F32_I1_F32_F32_F32 : VOP3b_Profile<f32>;
@@ -28,16 +32,20 @@ def VOP3b_F64_I1_F64_F64_F64 : VOP3b_Profile<f64>;
 
 def VOP3b_I64_I1_I32_I32_I64 : VOPProfile<[i64, i32, i32, i64]> {
   let HasClamp = 1;
-  let IsSingle = 1;
 
+  let IsSingle = 1;
   let Outs64 = (outs DstRC:$vdst, VOPDstS64orS32:$sdst);
   let Asm64 = "$vdst, $sdst, $src0, $src1, $src2$clamp";
 }
 
 class V_MUL_PROF<VOPProfile P> : VOP3_Profile<P> {
+  let HasExtVOP3DPP = 0;
+  let HasExtDPP = 0;
 }
 
 def DIV_FIXUP_F32_PROF : VOP3_Profile<VOP_F32_F32_F32_F32> {
+  let HasExtVOP3DPP = 0;
+  let HasExtDPP = 0;
 }
 
 //===----------------------------------------------------------------------===//
@@ -569,6 +577,8 @@ def VOP3_PERMLANE_Profile : VOP3_Profile<VOPProfile <[i32, i32, i32, i32]>, VOP3
                           IntOpSelMods:$src2_modifiers, SCSrc_b32:$src2,
                           VGPR_32:$vdst_in, op_sel0:$op_sel);
   let HasClamp = 0;
+  let HasExtVOP3DPP = 0;
+  let HasExtDPP = 0;
 }
 
 class PermlanePat<SDPatternOperator permlane,
@@ -660,6 +670,8 @@ def : DivFmasPat<f64, V_DIV_FMAS_F64_e64, VCC_LO>;
 }
 
 class VOP3_DOT_Profile<VOPProfile P, VOP3Features Features = VOP3_REGULAR> : VOP3_Profile<P, Features> {
+  // FIXME VOP3 DPP versions are unsupported
+  let HasExtVOP3DPP = 0;
   let HasClamp = 0;
   let HasOMod = 0;
   let InsVOP3OpSel = getInsVOP3OpSel<Src0RC64, Src1RC64, Src2RC64,
@@ -807,8 +819,9 @@ defm V_MAXMIN_U32          : VOP3_Realtriple_gfx11<0x262>;
 defm V_MINMAX_U32          : VOP3_Realtriple_gfx11<0x263>;
 defm V_MAXMIN_I32          : VOP3_Realtriple_gfx11<0x264>;
 defm V_MINMAX_I32          : VOP3_Realtriple_gfx11<0x265>;
-defm V_DOT2_F16_F16        : VOP3_Realtriple_gfx11<0x266>;
-defm V_DOT2_BF16_BF16      : VOP3_Realtriple_gfx11<0x267>;
+// FIXME VOP3 DPP Dot instructions are unsupported
+defm V_DOT2_F16_F16        : VOP3_Real_Base_gfx11<0x266>;
+defm V_DOT2_BF16_BF16      : VOP3_Real_Base_gfx11<0x267>;
 defm V_DIV_SCALE_F32       : VOP3be_Real_gfx11<0x2fc, "V_DIV_SCALE_F32", "v_div_scale_f32">;
 defm V_DIV_SCALE_F64       : VOP3be_Real_gfx11<0x2fd, "V_DIV_SCALE_F64", "v_div_scale_f64">;
 defm V_MAD_U64_U32_gfx11   : VOP3be_Real_gfx11<0x2fe, "V_MAD_U64_U32_gfx11", "v_mad_u64_u32">;
