@@ -1641,19 +1641,117 @@ protected:
 // CommandObjectMemoryRegion
 #pragma mark CommandObjectMemoryRegion
 
+#define LLDB_OPTIONS_memory_region
+#include "CommandOptions.inc"
+
 class CommandObjectMemoryRegion : public CommandObjectParsed {
 public:
+  class OptionGroupMemoryRegion : public OptionGroup {
+  public:
+    OptionGroupMemoryRegion() : OptionGroup(), m_all(false, false) {}
+
+    ~OptionGroupMemoryRegion() override = default;
+
+    llvm::ArrayRef<OptionDefinition> GetDefinitions() override {
+      return llvm::makeArrayRef(g_memory_region_options);
+    }
+
+    Status SetOptionValue(uint32_t option_idx, llvm::StringRef option_value,
+                          ExecutionContext *execution_context) override {
+      Status status;
+      const int short_option = g_memory_region_options[option_idx].short_option;
+
+      switch (short_option) {
+      case 'a':
+        m_all.SetCurrentValue(true);
+        m_all.SetOptionWasSet();
+        break;
+      default:
+        llvm_unreachable("Unimplemented option");
+      }
+
+      return status;
+    }
+
+    void OptionParsingStarting(ExecutionContext *execution_context) override {
+      m_all.Clear();
+    }
+
+    OptionValueBoolean m_all;
+  };
+
   CommandObjectMemoryRegion(CommandInterpreter &interpreter)
       : CommandObjectParsed(interpreter, "memory region",
                             "Get information on the memory region containing "
                             "an address in the current target process.",
-                            "memory region ADDR",
+                            "memory region <address-expression> (or --all)",
                             eCommandRequiresProcess | eCommandTryTargetAPILock |
-                                eCommandProcessMustBeLaunched) {}
+                                eCommandProcessMustBeLaunched) {
+    // Address in option set 1.
+    m_arguments.push_back(CommandArgumentEntry{CommandArgumentData(
+        eArgTypeAddressOrExpression, eArgRepeatPlain, LLDB_OPT_SET_1)});
+    // "--all" will go in option set 2.
+    m_option_group.Append(&m_memory_region_options);
+    m_option_group.Finalize();
+  }
 
   ~CommandObjectMemoryRegion() override = default;
 
+  Options *GetOptions() override { return &m_option_group; }
+
 protected:
+  void DumpRegion(CommandReturnObject &result, Target &target,
+                  const MemoryRegionInfo &range_info, lldb::addr_t load_addr) {
+    lldb::addr_t resolve_addr = load_addr;
+    if (m_memory_region_options.m_all)
+      resolve_addr = range_info.GetRange().GetRangeBase();
+
+    lldb_private::Address addr;
+    ConstString section_name;
+    if (target.ResolveLoadAddress(resolve_addr, addr)) {
+      SectionSP section_sp(addr.GetSection());
+      if (section_sp) {
+        // Got the top most section, not the deepest section
+        while (section_sp->GetParent())
+          section_sp = section_sp->GetParent();
+        section_name = section_sp->GetName();
+      }
+    }
+
+    ConstString name = range_info.GetName();
+    result.AppendMessageWithFormatv(
+        "[{0:x16}-{1:x16}) {2:r}{3:w}{4:x}{5}{6}{7}{8}",
+        range_info.GetRange().GetRangeBase(),
+        range_info.GetRange().GetRangeEnd(), range_info.GetReadable(),
+        range_info.GetWritable(), range_info.GetExecutable(), name ? " " : "",
+        name, section_name ? " " : "", section_name);
+    MemoryRegionInfo::OptionalBool memory_tagged = range_info.GetMemoryTagged();
+    if (memory_tagged == MemoryRegionInfo::OptionalBool::eYes)
+      result.AppendMessage("memory tagging: enabled");
+
+    const llvm::Optional<std::vector<addr_t>> &dirty_page_list =
+        range_info.GetDirtyPageList();
+    if (dirty_page_list.hasValue()) {
+      const size_t page_count = dirty_page_list.getValue().size();
+      result.AppendMessageWithFormat(
+          "Modified memory (dirty) page list provided, %zu entries.\n",
+          page_count);
+      if (page_count > 0) {
+        bool print_comma = false;
+        result.AppendMessageWithFormat("Dirty pages: ");
+        for (size_t i = 0; i < page_count; i++) {
+          if (print_comma)
+            result.AppendMessageWithFormat(", ");
+          else
+            print_comma = true;
+          result.AppendMessageWithFormat("0x%" PRIx64,
+                                         dirty_page_list.getValue()[i]);
+        }
+        result.AppendMessageWithFormat(".\n");
+      }
+    }
+  }
+
   bool DoExecute(Args &command, CommandReturnObject &result) override {
     ProcessSP process_sp = m_exe_ctx.GetProcessSP();
     if (!process_sp) {
@@ -1670,6 +1768,13 @@ protected:
     const lldb::ABISP &abi = process_sp->GetABI();
 
     if (argc == 1) {
+      if (m_memory_region_options.m_all) {
+        result.AppendError(
+            "The \"--all\" option cannot be used when an address "
+            "argument is given");
+        return false;
+      }
+
       auto load_addr_str = command[0].ref();
       // Non-address bits in this will be handled later by GetMemoryRegion
       load_addr = OptionArgParser::ToAddress(&m_exe_ctx, load_addr_str,
@@ -1683,67 +1788,53 @@ protected:
                // When we're repeating the command, the previous end address is
                // used for load_addr. If that was 0xF...F then we must have
                // reached the end of memory.
-               (argc == 0 && load_addr == LLDB_INVALID_ADDRESS) ||
+               (argc == 0 && !m_memory_region_options.m_all &&
+                load_addr == LLDB_INVALID_ADDRESS) ||
                // If the target has non-address bits (tags, limited virtual
                // address size, etc.), the end of mappable memory will be lower
                // than that. So if we find any non-address bit set, we must be
                // at the end of the mappable range.
                (abi && (abi->FixAnyAddress(load_addr) != load_addr))) {
-      result.AppendErrorWithFormat("'%s' takes one argument:\nUsage: %s\n",
-                                   m_cmd_name.c_str(), m_cmd_syntax.c_str());
+      result.AppendErrorWithFormat(
+          "'%s' takes one argument or \"--all\" option:\nUsage: %s\n",
+          m_cmd_name.c_str(), m_cmd_syntax.c_str());
       return false;
     }
 
-    lldb_private::MemoryRegionInfo range_info;
-    error = process_sp->GetMemoryRegionInfo(load_addr, range_info);
+    lldb_private::MemoryRegionInfos region_list;
+    if (m_memory_region_options.m_all) {
+      // We don't use GetMemoryRegions here because it doesn't include unmapped
+      // areas like repeating the command would. So instead, emulate doing that.
+      lldb::addr_t addr = 0;
+      while (error.Success() && addr != LLDB_INVALID_ADDRESS &&
+             // When there are non-address bits the last range will not extend
+             // to LLDB_INVALID_ADDRESS but to the max virtual address.
+             // This prevents us looping forever if that is the case.
+             (abi && (abi->FixAnyAddress(addr) == addr))) {
+        lldb_private::MemoryRegionInfo region_info;
+        error = process_sp->GetMemoryRegionInfo(addr, region_info);
+
+        if (error.Success()) {
+          region_list.push_back(region_info);
+          addr = region_info.GetRange().GetRangeEnd();
+        }
+      }
+
+      // Even if we read nothing, don't error for --all
+      error.Clear();
+    } else {
+      lldb_private::MemoryRegionInfo region_info;
+      error = process_sp->GetMemoryRegionInfo(load_addr, region_info);
+      if (error.Success())
+        region_list.push_back(region_info);
+    }
+
     if (error.Success()) {
-      lldb_private::Address addr;
-      ConstString name = range_info.GetName();
-      ConstString section_name;
-      if (process_sp->GetTarget().ResolveLoadAddress(load_addr, addr)) {
-        SectionSP section_sp(addr.GetSection());
-        if (section_sp) {
-          // Got the top most section, not the deepest section
-          while (section_sp->GetParent())
-            section_sp = section_sp->GetParent();
-          section_name = section_sp->GetName();
-        }
+      for (MemoryRegionInfo &range_info : region_list) {
+        DumpRegion(result, process_sp->GetTarget(), range_info, load_addr);
+        m_prev_end_addr = range_info.GetRange().GetRangeEnd();
       }
 
-      result.AppendMessageWithFormatv(
-          "[{0:x16}-{1:x16}) {2:r}{3:w}{4:x}{5}{6}{7}{8}",
-          range_info.GetRange().GetRangeBase(),
-          range_info.GetRange().GetRangeEnd(), range_info.GetReadable(),
-          range_info.GetWritable(), range_info.GetExecutable(), name ? " " : "",
-          name, section_name ? " " : "", section_name);
-      MemoryRegionInfo::OptionalBool memory_tagged =
-          range_info.GetMemoryTagged();
-      if (memory_tagged == MemoryRegionInfo::OptionalBool::eYes)
-        result.AppendMessage("memory tagging: enabled");
-
-      const llvm::Optional<std::vector<addr_t>> &dirty_page_list =
-          range_info.GetDirtyPageList();
-      if (dirty_page_list.hasValue()) {
-        const size_t page_count = dirty_page_list.getValue().size();
-        result.AppendMessageWithFormat(
-            "Modified memory (dirty) page list provided, %zu entries.\n",
-            page_count);
-        if (page_count > 0) {
-          bool print_comma = false;
-          result.AppendMessageWithFormat("Dirty pages: ");
-          for (size_t i = 0; i < page_count; i++) {
-            if (print_comma)
-              result.AppendMessageWithFormat(", ");
-            else
-              print_comma = true;
-            result.AppendMessageWithFormat("0x%" PRIx64,
-                                           dirty_page_list.getValue()[i]);
-          }
-          result.AppendMessageWithFormat(".\n");
-        }
-      }
-
-      m_prev_end_addr = range_info.GetRange().GetRangeEnd();
       result.SetStatus(eReturnStatusSuccessFinishResult);
       return true;
     }
@@ -1760,6 +1851,9 @@ protected:
   }
 
   lldb::addr_t m_prev_end_addr = LLDB_INVALID_ADDRESS;
+
+  OptionGroupOptions m_option_group;
+  OptionGroupMemoryRegion m_memory_region_options;
 };
 
 // CommandObjectMemory
