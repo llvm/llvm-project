@@ -54,20 +54,20 @@ entry:
 
   ; Check that the call was devirtualized, but preceeded by a check guarding
   ; a trap if the function pointer doesn't match.
-  ; TRAP:   %.not = icmp eq i32 (%struct.A*, i32)* %fptr1, @_ZN1A1nEi
+  ; TRAP:   %.not = icmp eq ptr %fptr1, @_ZN1A1nEi
   ; Ensure !prof and !callees metadata for indirect call promotion removed.
   ; TRAP-NOT: prof
   ; TRAP-NOT: callees
-  ; TRAP:   br i1 %.not, label %3, label %2
-  ; TRAP: 2:
+  ; TRAP:   br i1 %.not, label %1, label %0
+  ; TRAP: 0:
   ; TRAP:   tail call void @llvm.debugtrap()
-  ; TRAP:   br label %3
-  ; TRAP: 3:
+  ; TRAP:   br label %1
+  ; TRAP: 1:
   ; TRAP:   tail call i32 @_ZN1A1nEi
   ; Check that the call was devirtualized, but preceeded by a check guarding
   ; a fallback if the function pointer doesn't match.
-  ; FALLBACK:   %2 = icmp eq i32 (%struct.A*, i32)* %fptr1, @_ZN1A1nEi
-  ; FALLBACK:   br i1 %2, label %if.true.direct_targ, label %if.false.orig_indirect
+  ; FALLBACK:   %0 = icmp eq ptr %fptr1, @_ZN1A1nEi
+  ; FALLBACK:   br i1 %0, label %if.true.direct_targ, label %if.false.orig_indirect
   ; FALLBACK: if.true.direct_targ:
   ; FALLBACK:   tail call i32 @_ZN1A1nEi
   ; Ensure !prof and !callees metadata for indirect call promotion removed.

@@ -12,6 +12,6 @@ define void @ctor() {
 }
 
 ; `@ctor` doesn't do anything and so the optimizer should kill it, leaving no ctors
-; CHECK: @llvm.global_ctors = appending global [0 x { i32, void ()*, i8* }] zeroinitializer
+; CHECK: @llvm.global_ctors = appending global [0 x { i32, ptr, ptr }] zeroinitializer
 
 ; MLLVM: Pass Arguments:
