@@ -105,8 +105,8 @@ _LIBCPP_PUSH_MACROS
 #include <__undef_macros>
 
 #ifdef _LIBCPP_HAS_NO_THREADS
-#error <thread> is not supported on this single threaded system
-#else // !_LIBCPP_HAS_NO_THREADS
+# error "<thread> is not supported since libc++ has been configured without support for threads."
+#endif
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
@@ -400,8 +400,6 @@ void yield() _NOEXCEPT {__libcpp_thread_yield();}
 } // namespace this_thread
 
 _LIBCPP_END_NAMESPACE_STD
-
-#endif // !_LIBCPP_HAS_NO_THREADS
 
 _LIBCPP_POP_MACROS
 

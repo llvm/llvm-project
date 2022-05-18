@@ -51,7 +51,7 @@ namespace std
 #endif
 
 #ifdef _LIBCPP_HAS_NO_THREADS
-# error <latch> is not supported on this single threaded system
+# error "<latch> is not supported since libc++ has been configured without support for threads."
 #endif
 
 _LIBCPP_PUSH_MACROS
