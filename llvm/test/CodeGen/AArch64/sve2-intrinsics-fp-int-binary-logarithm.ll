@@ -1,5 +1,5 @@
 ; RUN: llc -mtriple=aarch64-linux-gnu -mattr=+sve2 -asm-verbose=0 < %s | FileCheck %s
-; RUN: llc -mtriple=aarch64-linux-gnu -mattr=+streaming-sve -asm-verbose=0 < %s | FileCheck %s
+; RUN: llc -mtriple=aarch64-linux-gnu -mattr=+sme -asm-verbose=0 < %s | FileCheck %s
 
 ;
 ; FLOGB

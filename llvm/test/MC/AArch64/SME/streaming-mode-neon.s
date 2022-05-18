@@ -1,15 +1,13 @@
 // RUN: llvm-mc -triple=aarch64 -show-encoding -mattr=-neon,+sme < %s \
 // RUN:        | FileCheck %s --check-prefixes=CHECK-ENCODING,CHECK-INST
-// RUN: llvm-mc -triple=aarch64 -show-encoding -mattr=-neon,+streaming-sve < %s \
-// RUN:        | FileCheck %s --check-prefixes=CHECK-ENCODING,CHECK-INST
 // RUN: not llvm-mc -triple=aarch64 -show-encoding -mattr=-neon < %s 2>&1 \
 // RUN:        | FileCheck %s --check-prefix=CHECK-ERROR
-// RUN: llvm-mc -triple=aarch64 -filetype=obj -mattr=-neon,+streaming-sve < %s \
+// RUN: llvm-mc -triple=aarch64 -filetype=obj -mattr=-neon,+sme < %s \
 // RUN:        | llvm-objdump -d - | FileCheck %s --check-prefix=CHECK-INST
 // Disassemble encoding and check the re-encoding (-show-encoding) matches.
-// RUN: llvm-mc -triple=aarch64 -show-encoding -mattr=-neon,+streaming-sve < %s \
+// RUN: llvm-mc -triple=aarch64 -show-encoding -mattr=-neon,+sme < %s \
 // RUN:        | sed '/.text/d' | sed 's/.*encoding: //g' \
-// RUN:        | llvm-mc -triple=aarch64 -mattr=-neon,+streaming-sve -disassemble -show-encoding \
+// RUN:        | llvm-mc -triple=aarch64 -mattr=-neon,+sme -disassemble -show-encoding \
 // RUN:        | FileCheck %s --check-prefixes=CHECK-ENCODING,CHECK-INST
 
 // Scalar FP instructions

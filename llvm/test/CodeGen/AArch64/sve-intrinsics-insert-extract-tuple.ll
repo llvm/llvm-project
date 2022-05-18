@@ -1,5 +1,5 @@
 ; RUN: llc -mtriple aarch64 -mattr=+sve -asm-verbose=0 < %s | FileCheck %s
-; RUN: llc -mtriple aarch64 -mattr=+streaming-sve -asm-verbose=0 < %s | FileCheck %s
+; RUN: llc -mtriple aarch64 -mattr=+sme -asm-verbose=0 < %s | FileCheck %s
 
 ; All these tests create a vector tuple, insert z5 into one of the elements,
 ; and finally extracts that element from the wide vector to return it.  These
