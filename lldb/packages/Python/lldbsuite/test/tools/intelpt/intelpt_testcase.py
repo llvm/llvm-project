@@ -33,6 +33,19 @@ class TraceIntelPTTestCaseBase(TestBase):
         if 'intel-pt' not in configuration.enabled_plugins:
             self.skipTest("The intel-pt test plugin is not enabled")
 
+    def skipIfPerCoreTracingIsNotSupported(self):
+        def is_supported():
+            try:
+                with open("/proc/sys/kernel/perf_event_paranoid", "r") as permissions:
+                    value = int(permissions.readlines()[0])
+                    if value <= 0:
+                        return True
+            except:
+                return False
+        if not is_supported():
+            self.skipTest("Per core tracing is not supported. You need "
+                "/proc/sys/kernel/perf_event_paranoid to be 0 or -1.")
+
     def getTraceOrCreate(self):
         if not self.target().GetTrace().IsValid():
             error = lldb.SBError()
@@ -110,7 +123,7 @@ class TraceIntelPTTestCaseBase(TestBase):
         else:
             self.expect("process trace stop")
 
-    def traceStopThread(self, thread=None, error=False):
+    def traceStopThread(self, thread=None, error=False, substrs=None):
         if self.USE_SB_API:
             thread = thread if thread is not None else self.thread()
             self.assertSBError(self.target().GetTrace().Stop(thread), error)
@@ -119,4 +132,4 @@ class TraceIntelPTTestCaseBase(TestBase):
             command = "thread trace stop"
             if thread is not None:
                 command += " " + str(thread.GetIndexID())
-            self.expect(command, error=error)
+            self.expect(command, error=error, substrs=substrs)
