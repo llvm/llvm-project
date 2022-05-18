@@ -285,8 +285,7 @@ std::string CGNVCUDARuntime::getDeviceSideName(const NamedDecl *ND) {
 
   // Make unique name for device side static file-scope variable for HIP.
   if (CGM.getContext().shouldExternalize(ND) &&
-      CGM.getLangOpts().GPURelocatableDeviceCode &&
-      !CGM.getLangOpts().CUID.empty()) {
+      CGM.getLangOpts().GPURelocatableDeviceCode) {
     SmallString<256> Buffer;
     llvm::raw_svector_ostream Out(Buffer);
     Out << DeviceSideName;

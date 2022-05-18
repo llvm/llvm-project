@@ -23,10 +23,10 @@ template __global__ void kernel<int>();
 // Ensure that unused static device function is eliminated
 static __device__ void static_func() {}
 // NORDC-NEG-NOT: define{{.*}} void @_ZL13static_funcv()
-// RDC-NEG-NOT:   define{{.*}} void @_ZL13static_funcv()
+// RDC-NEG-NOT:   define{{.*}} void @_ZL13static_funcv[[FILEID:.*]]()
 
 // Ensure that kernel function has external or weak_odr
 // linkage regardless static specifier
 static __global__ void static_kernel() {}
 // NORDC:     define void @_ZL13static_kernelv()
-// RDC:       define weak_odr void @_ZL13static_kernelv()
+// RDC:       define weak_odr void @_ZL13static_kernelv[[FILEID:.*]]()
