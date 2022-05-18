@@ -1,4 +1,5 @@
 // RUN: mlir-opt %s -pass-pipeline='func.func(canonicalize)' | FileCheck %s
+// RUN: mlir-opt %s -pass-pipeline='func.func(canonicalize{region-simplify=false})' | FileCheck %s --check-prefixes=CHECK,NO-RS
 
 // CHECK-LABEL: func @remove_op_with_inner_ops_pattern
 func.func @remove_op_with_inner_ops_pattern() {
@@ -88,4 +89,16 @@ func.func @test_dialect_canonicalizer() -> (i32) {
   // CHECK: %[[CST:.*]] = arith.constant 42 : i32
   // CHECK: return %[[CST]]
   return %0 : i32
+}
+
+// Check that the option to control region simplification actually works
+// CHECK-LABEL: test_region_simplify
+func.func @test_region_simplify() {
+  // CHECK-NEXT:   return
+  // NO-RS-NEXT: ^bb1
+  // NO-RS-NEXT:   return
+  // CHECK-NEXT: }
+  return
+^bb1:
+  return
 }
