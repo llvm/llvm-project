@@ -43,8 +43,8 @@ static LogicalResult alignAndAddBound(FlatAffineValueConstraints &constraints,
                                       unsigned pos, AffineMap map,
                                       ValueRange operands) {
   SmallVector<Value> dims, syms, newSyms;
-  unpackOptionalValues(constraints.getMaybeDimValues(), dims);
-  unpackOptionalValues(constraints.getMaybeSymbolValues(), syms);
+  unpackOptionalValues(constraints.getMaybeValues(IdKind::SetDim), dims);
+  unpackOptionalValues(constraints.getMaybeValues(IdKind::Symbol), syms);
 
   AffineMap alignedMap =
       alignAffineMapWithValues(map, operands, dims, syms, &newSyms);
@@ -182,7 +182,7 @@ canonicalizeMinMaxOp(RewriterBase &rewriter, Operation *op, AffineMap map,
   // Lower and upper bound of `op` are equal. Replace `minOp` with its bound.
   AffineMap newMap = alignedBoundMap;
   SmallVector<Value> newOperands;
-  unpackOptionalValues(constraints.getMaybeDimAndSymbolValues(), newOperands);
+  unpackOptionalValues(constraints.getMaybeValues(), newOperands);
   // If dims/symbols have known constant values, use those in order to simplify
   // the affine map further.
   for (int64_t i = 0, e = constraints.getNumIds(); i < e; ++i) {
