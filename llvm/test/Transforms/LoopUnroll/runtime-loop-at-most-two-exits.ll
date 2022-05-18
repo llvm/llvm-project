@@ -8,7 +8,8 @@ define i32 @test(i32* nocapture %a, i64 %n) {
 ; ENABLED-NEXT:    [[TMP0:%.*]] = add i64 [[N:%.*]], -1
 ; ENABLED-NEXT:    [[XTRAITER:%.*]] = and i64 [[N]], 7
 ; ENABLED-NEXT:    [[TMP1:%.*]] = icmp ult i64 [[TMP0]], 7
-; ENABLED-NEXT:    br i1 [[TMP1]], label [[FOR_END_UNR_LCSSA:%.*]], label [[ENTRY_NEW:%.*]]
+; ENABLED-NEXT:    [[TMP2:%.*]] = freeze i1 [[TMP1]]
+; ENABLED-NEXT:    br i1 [[TMP2]], label [[FOR_END_UNR_LCSSA:%.*]], label [[ENTRY_NEW:%.*]]
 ; ENABLED:       entry.new:
 ; ENABLED-NEXT:    [[UNROLL_ITER:%.*]] = sub i64 [[N]], [[XTRAITER]]
 ; ENABLED-NEXT:    br label [[HEADER:%.*]]
@@ -20,64 +21,64 @@ define i32 @test(i32* nocapture %a, i64 %n) {
 ; ENABLED-NEXT:    br i1 [[CMP]], label [[FOR_EXIT2_LOOPEXIT:%.*]], label [[FOR_BODY:%.*]]
 ; ENABLED:       for.body:
 ; ENABLED-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, i32* [[A:%.*]], i64 [[INDVARS_IV]]
-; ENABLED-NEXT:    [[TMP2:%.*]] = load i32, i32* [[ARRAYIDX]], align 4
-; ENABLED-NEXT:    [[ADD:%.*]] = add nsw i32 [[TMP2]], [[SUM_02]]
+; ENABLED-NEXT:    [[TMP3:%.*]] = load i32, i32* [[ARRAYIDX]], align 4
+; ENABLED-NEXT:    [[ADD:%.*]] = add nsw i32 [[TMP3]], [[SUM_02]]
 ; ENABLED-NEXT:    [[INDVARS_IV_NEXT:%.*]] = add nuw nsw i64 [[INDVARS_IV]], 1
 ; ENABLED-NEXT:    [[NITER_NEXT:%.*]] = add nuw nsw i64 [[NITER]], 1
 ; ENABLED-NEXT:    [[CMP_1:%.*]] = icmp eq i64 [[N]], 42
 ; ENABLED-NEXT:    br i1 [[CMP_1]], label [[FOR_EXIT2_LOOPEXIT]], label [[FOR_BODY_1:%.*]]
 ; ENABLED:       for.body.1:
 ; ENABLED-NEXT:    [[ARRAYIDX_1:%.*]] = getelementptr inbounds i32, i32* [[A]], i64 [[INDVARS_IV_NEXT]]
-; ENABLED-NEXT:    [[TMP3:%.*]] = load i32, i32* [[ARRAYIDX_1]], align 4
-; ENABLED-NEXT:    [[ADD_1:%.*]] = add nsw i32 [[TMP3]], [[ADD]]
+; ENABLED-NEXT:    [[TMP4:%.*]] = load i32, i32* [[ARRAYIDX_1]], align 4
+; ENABLED-NEXT:    [[ADD_1:%.*]] = add nsw i32 [[TMP4]], [[ADD]]
 ; ENABLED-NEXT:    [[INDVARS_IV_NEXT_1:%.*]] = add nuw nsw i64 [[INDVARS_IV_NEXT]], 1
 ; ENABLED-NEXT:    [[NITER_NEXT_1:%.*]] = add nuw nsw i64 [[NITER_NEXT]], 1
 ; ENABLED-NEXT:    [[CMP_2:%.*]] = icmp eq i64 [[N]], 42
 ; ENABLED-NEXT:    br i1 [[CMP_2]], label [[FOR_EXIT2_LOOPEXIT]], label [[FOR_BODY_2:%.*]]
 ; ENABLED:       for.body.2:
 ; ENABLED-NEXT:    [[ARRAYIDX_2:%.*]] = getelementptr inbounds i32, i32* [[A]], i64 [[INDVARS_IV_NEXT_1]]
-; ENABLED-NEXT:    [[TMP4:%.*]] = load i32, i32* [[ARRAYIDX_2]], align 4
-; ENABLED-NEXT:    [[ADD_2:%.*]] = add nsw i32 [[TMP4]], [[ADD_1]]
+; ENABLED-NEXT:    [[TMP5:%.*]] = load i32, i32* [[ARRAYIDX_2]], align 4
+; ENABLED-NEXT:    [[ADD_2:%.*]] = add nsw i32 [[TMP5]], [[ADD_1]]
 ; ENABLED-NEXT:    [[INDVARS_IV_NEXT_2:%.*]] = add nuw nsw i64 [[INDVARS_IV_NEXT_1]], 1
 ; ENABLED-NEXT:    [[NITER_NEXT_2:%.*]] = add nuw nsw i64 [[NITER_NEXT_1]], 1
 ; ENABLED-NEXT:    [[CMP_3:%.*]] = icmp eq i64 [[N]], 42
 ; ENABLED-NEXT:    br i1 [[CMP_3]], label [[FOR_EXIT2_LOOPEXIT]], label [[FOR_BODY_3:%.*]]
 ; ENABLED:       for.body.3:
 ; ENABLED-NEXT:    [[ARRAYIDX_3:%.*]] = getelementptr inbounds i32, i32* [[A]], i64 [[INDVARS_IV_NEXT_2]]
-; ENABLED-NEXT:    [[TMP5:%.*]] = load i32, i32* [[ARRAYIDX_3]], align 4
-; ENABLED-NEXT:    [[ADD_3:%.*]] = add nsw i32 [[TMP5]], [[ADD_2]]
+; ENABLED-NEXT:    [[TMP6:%.*]] = load i32, i32* [[ARRAYIDX_3]], align 4
+; ENABLED-NEXT:    [[ADD_3:%.*]] = add nsw i32 [[TMP6]], [[ADD_2]]
 ; ENABLED-NEXT:    [[INDVARS_IV_NEXT_3:%.*]] = add nuw nsw i64 [[INDVARS_IV_NEXT_2]], 1
 ; ENABLED-NEXT:    [[NITER_NEXT_3:%.*]] = add nuw nsw i64 [[NITER_NEXT_2]], 1
 ; ENABLED-NEXT:    [[CMP_4:%.*]] = icmp eq i64 [[N]], 42
 ; ENABLED-NEXT:    br i1 [[CMP_4]], label [[FOR_EXIT2_LOOPEXIT]], label [[FOR_BODY_4:%.*]]
 ; ENABLED:       for.body.4:
 ; ENABLED-NEXT:    [[ARRAYIDX_4:%.*]] = getelementptr inbounds i32, i32* [[A]], i64 [[INDVARS_IV_NEXT_3]]
-; ENABLED-NEXT:    [[TMP6:%.*]] = load i32, i32* [[ARRAYIDX_4]], align 4
-; ENABLED-NEXT:    [[ADD_4:%.*]] = add nsw i32 [[TMP6]], [[ADD_3]]
+; ENABLED-NEXT:    [[TMP7:%.*]] = load i32, i32* [[ARRAYIDX_4]], align 4
+; ENABLED-NEXT:    [[ADD_4:%.*]] = add nsw i32 [[TMP7]], [[ADD_3]]
 ; ENABLED-NEXT:    [[INDVARS_IV_NEXT_4:%.*]] = add nuw nsw i64 [[INDVARS_IV_NEXT_3]], 1
 ; ENABLED-NEXT:    [[NITER_NEXT_4:%.*]] = add nuw nsw i64 [[NITER_NEXT_3]], 1
 ; ENABLED-NEXT:    [[CMP_5:%.*]] = icmp eq i64 [[N]], 42
 ; ENABLED-NEXT:    br i1 [[CMP_5]], label [[FOR_EXIT2_LOOPEXIT]], label [[FOR_BODY_5:%.*]]
 ; ENABLED:       for.body.5:
 ; ENABLED-NEXT:    [[ARRAYIDX_5:%.*]] = getelementptr inbounds i32, i32* [[A]], i64 [[INDVARS_IV_NEXT_4]]
-; ENABLED-NEXT:    [[TMP7:%.*]] = load i32, i32* [[ARRAYIDX_5]], align 4
-; ENABLED-NEXT:    [[ADD_5:%.*]] = add nsw i32 [[TMP7]], [[ADD_4]]
+; ENABLED-NEXT:    [[TMP8:%.*]] = load i32, i32* [[ARRAYIDX_5]], align 4
+; ENABLED-NEXT:    [[ADD_5:%.*]] = add nsw i32 [[TMP8]], [[ADD_4]]
 ; ENABLED-NEXT:    [[INDVARS_IV_NEXT_5:%.*]] = add nuw nsw i64 [[INDVARS_IV_NEXT_4]], 1
 ; ENABLED-NEXT:    [[NITER_NEXT_5:%.*]] = add nuw nsw i64 [[NITER_NEXT_4]], 1
 ; ENABLED-NEXT:    [[CMP_6:%.*]] = icmp eq i64 [[N]], 42
 ; ENABLED-NEXT:    br i1 [[CMP_6]], label [[FOR_EXIT2_LOOPEXIT]], label [[FOR_BODY_6:%.*]]
 ; ENABLED:       for.body.6:
 ; ENABLED-NEXT:    [[ARRAYIDX_6:%.*]] = getelementptr inbounds i32, i32* [[A]], i64 [[INDVARS_IV_NEXT_5]]
-; ENABLED-NEXT:    [[TMP8:%.*]] = load i32, i32* [[ARRAYIDX_6]], align 4
-; ENABLED-NEXT:    [[ADD_6:%.*]] = add nsw i32 [[TMP8]], [[ADD_5]]
+; ENABLED-NEXT:    [[TMP9:%.*]] = load i32, i32* [[ARRAYIDX_6]], align 4
+; ENABLED-NEXT:    [[ADD_6:%.*]] = add nsw i32 [[TMP9]], [[ADD_5]]
 ; ENABLED-NEXT:    [[INDVARS_IV_NEXT_6:%.*]] = add nuw nsw i64 [[INDVARS_IV_NEXT_5]], 1
 ; ENABLED-NEXT:    [[NITER_NEXT_6:%.*]] = add nuw nsw i64 [[NITER_NEXT_5]], 1
 ; ENABLED-NEXT:    [[CMP_7:%.*]] = icmp eq i64 [[N]], 42
 ; ENABLED-NEXT:    br i1 [[CMP_7]], label [[FOR_EXIT2_LOOPEXIT]], label [[FOR_BODY_7]]
 ; ENABLED:       for.body.7:
 ; ENABLED-NEXT:    [[ARRAYIDX_7:%.*]] = getelementptr inbounds i32, i32* [[A]], i64 [[INDVARS_IV_NEXT_6]]
-; ENABLED-NEXT:    [[TMP9:%.*]] = load i32, i32* [[ARRAYIDX_7]], align 4
-; ENABLED-NEXT:    [[ADD_7]] = add nsw i32 [[TMP9]], [[ADD_6]]
+; ENABLED-NEXT:    [[TMP10:%.*]] = load i32, i32* [[ARRAYIDX_7]], align 4
+; ENABLED-NEXT:    [[ADD_7]] = add nsw i32 [[TMP10]], [[ADD_6]]
 ; ENABLED-NEXT:    [[INDVARS_IV_NEXT_7]] = add i64 [[INDVARS_IV_NEXT_6]], 1
 ; ENABLED-NEXT:    [[NITER_NEXT_7]] = add i64 [[NITER_NEXT_6]], 1
 ; ENABLED-NEXT:    [[NITER_NCMP_7:%.*]] = icmp eq i64 [[NITER_NEXT_7]], [[UNROLL_ITER]]
@@ -103,8 +104,8 @@ define i32 @test(i32* nocapture %a, i64 %n) {
 ; ENABLED-NEXT:    br i1 [[CMP_EPIL]], label [[FOR_EXIT2_LOOPEXIT2:%.*]], label [[FOR_BODY_EPIL]]
 ; ENABLED:       for.body.epil:
 ; ENABLED-NEXT:    [[ARRAYIDX_EPIL:%.*]] = getelementptr inbounds i32, i32* [[A]], i64 [[INDVARS_IV_EPIL]]
-; ENABLED-NEXT:    [[TMP10:%.*]] = load i32, i32* [[ARRAYIDX_EPIL]], align 4
-; ENABLED-NEXT:    [[ADD_EPIL]] = add nsw i32 [[TMP10]], [[SUM_02_EPIL]]
+; ENABLED-NEXT:    [[TMP11:%.*]] = load i32, i32* [[ARRAYIDX_EPIL]], align 4
+; ENABLED-NEXT:    [[ADD_EPIL]] = add nsw i32 [[TMP11]], [[SUM_02_EPIL]]
 ; ENABLED-NEXT:    [[INDVARS_IV_NEXT_EPIL]] = add i64 [[INDVARS_IV_EPIL]], 1
 ; ENABLED-NEXT:    [[EXITCOND_EPIL:%.*]] = icmp eq i64 [[INDVARS_IV_NEXT_EPIL]], [[N]]
 ; ENABLED-NEXT:    [[EPIL_ITER_NEXT]] = add i64 [[EPIL_ITER]], 1
