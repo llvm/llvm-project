@@ -246,44 +246,22 @@ static bool isValidCoroutineContext(Sema &S, SourceLocation Loc,
   return !Diagnosed;
 }
 
-static ExprResult buildOperatorCoawaitLookupExpr(Sema &SemaRef, Scope *S,
-                                                 SourceLocation Loc) {
-  DeclarationName OpName =
-      SemaRef.Context.DeclarationNames.getCXXOperatorName(OO_Coawait);
-  LookupResult Operators(SemaRef, OpName, SourceLocation(),
-                         Sema::LookupOperatorName);
-  SemaRef.LookupName(Operators, S);
-
-  assert(!Operators.isAmbiguous() && "Operator lookup cannot be ambiguous");
-  const auto &Functions = Operators.asUnresolvedSet();
-  bool IsOverloaded =
-      Functions.size() > 1 ||
-      (Functions.size() == 1 && isa<FunctionTemplateDecl>(*Functions.begin()));
-  Expr *CoawaitOp = UnresolvedLookupExpr::Create(
-      SemaRef.Context, /*NamingClass*/ nullptr, NestedNameSpecifierLoc(),
-      DeclarationNameInfo(OpName, Loc), /*RequiresADL*/ true, IsOverloaded,
-      Functions.begin(), Functions.end());
-  assert(CoawaitOp);
-  return CoawaitOp;
-}
-
 /// Build a call to 'operator co_await' if there is a suitable operator for
 /// the given expression.
-static ExprResult buildOperatorCoawaitCall(Sema &SemaRef, SourceLocation Loc,
-                                           Expr *E,
-                                           UnresolvedLookupExpr *Lookup) {
+ExprResult Sema::BuildOperatorCoawaitCall(SourceLocation Loc, Expr *E,
+                                          UnresolvedLookupExpr *Lookup) {
   UnresolvedSet<16> Functions;
   Functions.append(Lookup->decls_begin(), Lookup->decls_end());
-  return SemaRef.CreateOverloadedUnaryOp(Loc, UO_Coawait, Functions, E);
+  return CreateOverloadedUnaryOp(Loc, UO_Coawait, Functions, E);
 }
 
 static ExprResult buildOperatorCoawaitCall(Sema &SemaRef, Scope *S,
                                            SourceLocation Loc, Expr *E) {
-  ExprResult R = buildOperatorCoawaitLookupExpr(SemaRef, S, Loc);
+  ExprResult R = SemaRef.BuildOperatorCoawaitLookupExpr(S, Loc);
   if (R.isInvalid())
     return ExprError();
-  return buildOperatorCoawaitCall(SemaRef, Loc, E,
-                                  cast<UnresolvedLookupExpr>(R.get()));
+  return SemaRef.BuildOperatorCoawaitCall(Loc, E,
+                                          cast<UnresolvedLookupExpr>(R.get()));
 }
 
 static ExprResult buildCoroutineHandle(Sema &S, QualType PromiseType,
@@ -727,14 +705,15 @@ bool Sema::ActOnCoroutineBodyStart(Scope *SC, SourceLocation KWLoc,
   SourceLocation Loc = Fn->getLocation();
   // Build the initial suspend point
   auto buildSuspends = [&](StringRef Name) mutable -> StmtResult {
-    ExprResult Suspend =
+    ExprResult Operand =
         buildPromiseCall(*this, ScopeInfo->CoroutinePromise, Loc, Name, None);
+    if (Operand.isInvalid())
+      return StmtError();
+    ExprResult Suspend =
+        buildOperatorCoawaitCall(*this, SC, Loc, Operand.get());
     if (Suspend.isInvalid())
       return StmtError();
-    Suspend = buildOperatorCoawaitCall(*this, SC, Loc, Suspend.get());
-    if (Suspend.isInvalid())
-      return StmtError();
-    Suspend = BuildResolvedCoawaitExpr(Loc, Suspend.get(),
+    Suspend = BuildResolvedCoawaitExpr(Loc, Operand.get(), Suspend.get(),
                                        /*IsImplicit*/ true);
     Suspend = ActOnFinishFullExpr(Suspend.get(), /*DiscardedValue*/ false);
     if (Suspend.isInvalid()) {
@@ -815,88 +794,112 @@ ExprResult Sema::ActOnCoawaitExpr(Scope *S, SourceLocation Loc, Expr *E) {
     if (R.isInvalid()) return ExprError();
     E = R.get();
   }
-  ExprResult Lookup = buildOperatorCoawaitLookupExpr(*this, S, Loc);
+  ExprResult Lookup = BuildOperatorCoawaitLookupExpr(S, Loc);
   if (Lookup.isInvalid())
     return ExprError();
   return BuildUnresolvedCoawaitExpr(Loc, E,
                                    cast<UnresolvedLookupExpr>(Lookup.get()));
 }
 
-ExprResult Sema::BuildUnresolvedCoawaitExpr(SourceLocation Loc, Expr *E,
+ExprResult Sema::BuildOperatorCoawaitLookupExpr(Scope *S, SourceLocation Loc) {
+  DeclarationName OpName =
+      Context.DeclarationNames.getCXXOperatorName(OO_Coawait);
+  LookupResult Operators(*this, OpName, SourceLocation(),
+                         Sema::LookupOperatorName);
+  LookupName(Operators, S);
+
+  assert(!Operators.isAmbiguous() && "Operator lookup cannot be ambiguous");
+  const auto &Functions = Operators.asUnresolvedSet();
+  bool IsOverloaded =
+      Functions.size() > 1 ||
+      (Functions.size() == 1 && isa<FunctionTemplateDecl>(*Functions.begin()));
+  Expr *CoawaitOp = UnresolvedLookupExpr::Create(
+      Context, /*NamingClass*/ nullptr, NestedNameSpecifierLoc(),
+      DeclarationNameInfo(OpName, Loc), /*RequiresADL*/ true, IsOverloaded,
+      Functions.begin(), Functions.end());
+  assert(CoawaitOp);
+  return CoawaitOp;
+}
+
+// Attempts to resolve and build a CoawaitExpr from "raw" inputs, bailing out to
+// DependentCoawaitExpr if needed.
+ExprResult Sema::BuildUnresolvedCoawaitExpr(SourceLocation Loc, Expr *Operand,
                                             UnresolvedLookupExpr *Lookup) {
   auto *FSI = checkCoroutineContext(*this, Loc, "co_await");
   if (!FSI)
     return ExprError();
 
-  if (E->hasPlaceholderType()) {
-    ExprResult R = CheckPlaceholderExpr(E);
+  if (Operand->hasPlaceholderType()) {
+    ExprResult R = CheckPlaceholderExpr(Operand);
     if (R.isInvalid())
       return ExprError();
-    E = R.get();
+    Operand = R.get();
   }
 
   auto *Promise = FSI->CoroutinePromise;
   if (Promise->getType()->isDependentType()) {
-    Expr *Res =
-        new (Context) DependentCoawaitExpr(Loc, Context.DependentTy, E, Lookup);
+    Expr *Res = new (Context)
+        DependentCoawaitExpr(Loc, Context.DependentTy, Operand, Lookup);
     return Res;
   }
 
   auto *RD = Promise->getType()->getAsCXXRecordDecl();
+  auto *Transformed = Operand;
   if (lookupMember(*this, "await_transform", RD, Loc)) {
-    ExprResult R = buildPromiseCall(*this, Promise, Loc, "await_transform", E);
+    ExprResult R =
+        buildPromiseCall(*this, Promise, Loc, "await_transform", Operand);
     if (R.isInvalid()) {
       Diag(Loc,
            diag::note_coroutine_promise_implicit_await_transform_required_here)
-          << E->getSourceRange();
+          << Operand->getSourceRange();
       return ExprError();
     }
-    E = R.get();
+    Transformed = R.get();
   }
-  ExprResult Awaitable = buildOperatorCoawaitCall(*this, Loc, E, Lookup);
-  if (Awaitable.isInvalid())
+  ExprResult Awaiter = BuildOperatorCoawaitCall(Loc, Transformed, Lookup);
+  if (Awaiter.isInvalid())
     return ExprError();
 
-  return BuildResolvedCoawaitExpr(Loc, Awaitable.get());
+  return BuildResolvedCoawaitExpr(Loc, Operand, Awaiter.get());
 }
 
-ExprResult Sema::BuildResolvedCoawaitExpr(SourceLocation Loc, Expr *E,
-                                  bool IsImplicit) {
+ExprResult Sema::BuildResolvedCoawaitExpr(SourceLocation Loc, Expr *Operand,
+                                          Expr *Awaiter, bool IsImplicit) {
   auto *Coroutine = checkCoroutineContext(*this, Loc, "co_await", IsImplicit);
   if (!Coroutine)
     return ExprError();
 
-  if (E->hasPlaceholderType()) {
-    ExprResult R = CheckPlaceholderExpr(E);
+  if (Awaiter->hasPlaceholderType()) {
+    ExprResult R = CheckPlaceholderExpr(Awaiter);
     if (R.isInvalid()) return ExprError();
-    E = R.get();
+    Awaiter = R.get();
   }
 
-  if (E->getType()->isDependentType()) {
+  if (Awaiter->getType()->isDependentType()) {
     Expr *Res = new (Context)
-        CoawaitExpr(Loc, Context.DependentTy, E, IsImplicit);
+        CoawaitExpr(Loc, Context.DependentTy, Operand, Awaiter, IsImplicit);
     return Res;
   }
 
   // If the expression is a temporary, materialize it as an lvalue so that we
   // can use it multiple times.
-  if (E->isPRValue())
-    E = CreateMaterializeTemporaryExpr(E->getType(), E, true);
+  if (Awaiter->isPRValue())
+    Awaiter = CreateMaterializeTemporaryExpr(Awaiter->getType(), Awaiter, true);
 
   // The location of the `co_await` token cannot be used when constructing
   // the member call expressions since it's before the location of `Expr`, which
   // is used as the start of the member call expression.
-  SourceLocation CallLoc = E->getExprLoc();
+  SourceLocation CallLoc = Awaiter->getExprLoc();
 
   // Build the await_ready, await_suspend, await_resume calls.
-  ReadySuspendResumeResult RSS = buildCoawaitCalls(
-      *this, Coroutine->CoroutinePromise, CallLoc, E);
+  ReadySuspendResumeResult RSS =
+      buildCoawaitCalls(*this, Coroutine->CoroutinePromise, CallLoc, Awaiter);
   if (RSS.IsInvalid)
     return ExprError();
 
-  Expr *Res =
-      new (Context) CoawaitExpr(Loc, E, RSS.Results[0], RSS.Results[1],
-                                RSS.Results[2], RSS.OpaqueValue, IsImplicit);
+  Expr *Res = new (Context)
+      CoawaitExpr(Loc, Operand, Awaiter, RSS.Results[0], RSS.Results[1],
+                  RSS.Results[2], RSS.OpaqueValue, IsImplicit);
 
   return Res;
 }
@@ -933,8 +936,10 @@ ExprResult Sema::BuildCoyieldExpr(SourceLocation Loc, Expr *E) {
     E = R.get();
   }
 
+  Expr *Operand = E;
+
   if (E->getType()->isDependentType()) {
-    Expr *Res = new (Context) CoyieldExpr(Loc, Context.DependentTy, E);
+    Expr *Res = new (Context) CoyieldExpr(Loc, Context.DependentTy, Operand, E);
     return Res;
   }
 
@@ -950,7 +955,7 @@ ExprResult Sema::BuildCoyieldExpr(SourceLocation Loc, Expr *E) {
     return ExprError();
 
   Expr *Res =
-      new (Context) CoyieldExpr(Loc, E, RSS.Results[0], RSS.Results[1],
+      new (Context) CoyieldExpr(Loc, Operand, E, RSS.Results[0], RSS.Results[1],
                                 RSS.Results[2], RSS.OpaqueValue);
 
   return Res;

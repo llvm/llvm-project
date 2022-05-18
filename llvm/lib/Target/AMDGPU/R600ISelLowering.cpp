@@ -42,39 +42,26 @@ R600TargetLowering::R600TargetLowering(const TargetMachine &TM,
   computeRegisterProperties(Subtarget->getRegisterInfo());
 
   // Legalize loads and stores to the private address space.
-  setOperationAction(ISD::LOAD, MVT::i32, Custom);
-  setOperationAction(ISD::LOAD, MVT::v2i32, Custom);
-  setOperationAction(ISD::LOAD, MVT::v4i32, Custom);
+  setOperationAction(ISD::LOAD, {MVT::i32, MVT::v2i32, MVT::v4i32}, Custom);
 
   // EXTLOAD should be the same as ZEXTLOAD. It is legal for some address
   // spaces, so it is custom lowered to handle those where it isn't.
-  for (MVT VT : MVT::integer_valuetypes()) {
-    setLoadExtAction(ISD::SEXTLOAD, VT, MVT::i1, Promote);
-    setLoadExtAction(ISD::SEXTLOAD, VT, MVT::i8, Custom);
-    setLoadExtAction(ISD::SEXTLOAD, VT, MVT::i16, Custom);
-
-    setLoadExtAction(ISD::ZEXTLOAD, VT, MVT::i1, Promote);
-    setLoadExtAction(ISD::ZEXTLOAD, VT, MVT::i8, Custom);
-    setLoadExtAction(ISD::ZEXTLOAD, VT, MVT::i16, Custom);
-
-    setLoadExtAction(ISD::EXTLOAD, VT, MVT::i1, Promote);
-    setLoadExtAction(ISD::EXTLOAD, VT, MVT::i8, Custom);
-    setLoadExtAction(ISD::EXTLOAD, VT, MVT::i16, Custom);
-  }
+  for (auto Op : {ISD::SEXTLOAD, ISD::ZEXTLOAD, ISD::EXTLOAD})
+    for (MVT VT : MVT::integer_valuetypes()) {
+      setLoadExtAction(Op, VT, MVT::i1, Promote);
+      setLoadExtAction(Op, VT, MVT::i8, Custom);
+      setLoadExtAction(Op, VT, MVT::i16, Custom);
+    }
 
   // Workaround for LegalizeDAG asserting on expansion of i1 vector loads.
-  setLoadExtAction(ISD::EXTLOAD, MVT::v2i32, MVT::v2i1, Expand);
-  setLoadExtAction(ISD::SEXTLOAD, MVT::v2i32, MVT::v2i1, Expand);
-  setLoadExtAction(ISD::ZEXTLOAD, MVT::v2i32, MVT::v2i1, Expand);
+  setLoadExtAction({ISD::EXTLOAD, ISD::SEXTLOAD, ISD::ZEXTLOAD}, MVT::v2i32,
+                   MVT::v2i1, Expand);
 
-  setLoadExtAction(ISD::EXTLOAD, MVT::v4i32, MVT::v4i1, Expand);
-  setLoadExtAction(ISD::SEXTLOAD, MVT::v4i32, MVT::v4i1, Expand);
-  setLoadExtAction(ISD::ZEXTLOAD, MVT::v4i32, MVT::v4i1, Expand);
+  setLoadExtAction({ISD::EXTLOAD, ISD::SEXTLOAD, ISD::ZEXTLOAD}, MVT::v4i32,
+                   MVT::v4i1, Expand);
 
-  setOperationAction(ISD::STORE, MVT::i8, Custom);
-  setOperationAction(ISD::STORE, MVT::i32, Custom);
-  setOperationAction(ISD::STORE, MVT::v2i32, Custom);
-  setOperationAction(ISD::STORE, MVT::v4i32, Custom);
+  setOperationAction(ISD::STORE, {MVT::i8, MVT::i32, MVT::v2i32, MVT::v4i32},
+                     Custom);
 
   setTruncStoreAction(MVT::i32, MVT::i8, Custom);
   setTruncStoreAction(MVT::i32, MVT::i16, Custom);
@@ -96,55 +83,34 @@ R600TargetLowering::R600TargetLowering(const TargetMachine &TM,
   setTruncStoreAction(MVT::v4i32, MVT::v4i1, Expand);
 
   // Set condition code actions
-  setCondCodeAction(ISD::SETO,   MVT::f32, Expand);
-  setCondCodeAction(ISD::SETUO,  MVT::f32, Expand);
-  setCondCodeAction(ISD::SETLT,  MVT::f32, Expand);
-  setCondCodeAction(ISD::SETLE,  MVT::f32, Expand);
-  setCondCodeAction(ISD::SETOLT, MVT::f32, Expand);
-  setCondCodeAction(ISD::SETOLE, MVT::f32, Expand);
-  setCondCodeAction(ISD::SETONE, MVT::f32, Expand);
-  setCondCodeAction(ISD::SETUEQ, MVT::f32, Expand);
-  setCondCodeAction(ISD::SETUGE, MVT::f32, Expand);
-  setCondCodeAction(ISD::SETUGT, MVT::f32, Expand);
-  setCondCodeAction(ISD::SETULT, MVT::f32, Expand);
-  setCondCodeAction(ISD::SETULE, MVT::f32, Expand);
+  setCondCodeAction({ISD::SETO, ISD::SETUO, ISD::SETLT, ISD::SETLE, ISD::SETOLT,
+                     ISD::SETOLE, ISD::SETONE, ISD::SETUEQ, ISD::SETUGE,
+                     ISD::SETUGT, ISD::SETULT, ISD::SETULE},
+                    MVT::f32, Expand);
 
-  setCondCodeAction(ISD::SETLE, MVT::i32, Expand);
-  setCondCodeAction(ISD::SETLT, MVT::i32, Expand);
-  setCondCodeAction(ISD::SETULE, MVT::i32, Expand);
-  setCondCodeAction(ISD::SETULT, MVT::i32, Expand);
+  setCondCodeAction({ISD::SETLE, ISD::SETLT, ISD::SETULE, ISD::SETULT},
+                    MVT::i32, Expand);
 
-  setOperationAction(ISD::FCOS, MVT::f32, Custom);
-  setOperationAction(ISD::FSIN, MVT::f32, Custom);
+  setOperationAction({ISD::FCOS, ISD::FSIN}, MVT::f32, Custom);
 
-  setOperationAction(ISD::SETCC, MVT::v4i32, Expand);
-  setOperationAction(ISD::SETCC, MVT::v2i32, Expand);
+  setOperationAction(ISD::SETCC, {MVT::v4i32, MVT::v2i32}, Expand);
 
-  setOperationAction(ISD::BR_CC, MVT::i32, Expand);
-  setOperationAction(ISD::BR_CC, MVT::f32, Expand);
+  setOperationAction(ISD::BR_CC, {MVT::i32, MVT::f32}, Expand);
   setOperationAction(ISD::BRCOND, MVT::Other, Custom);
 
   setOperationAction(ISD::FSUB, MVT::f32, Expand);
 
-  setOperationAction(ISD::FCEIL, MVT::f64, Custom);
-  setOperationAction(ISD::FTRUNC, MVT::f64, Custom);
-  setOperationAction(ISD::FRINT, MVT::f64, Custom);
-  setOperationAction(ISD::FFLOOR, MVT::f64, Custom);
+  setOperationAction({ISD::FCEIL, ISD::FTRUNC, ISD::FRINT, ISD::FFLOOR},
+                     MVT::f64, Custom);
 
-  setOperationAction(ISD::SELECT_CC, MVT::f32, Custom);
-  setOperationAction(ISD::SELECT_CC, MVT::i32, Custom);
+  setOperationAction(ISD::SELECT_CC, {MVT::f32, MVT::i32}, Custom);
 
-  setOperationAction(ISD::SETCC, MVT::i32, Expand);
-  setOperationAction(ISD::SETCC, MVT::f32, Expand);
-  setOperationAction(ISD::FP_TO_UINT, MVT::i1, Custom);
-  setOperationAction(ISD::FP_TO_SINT, MVT::i1, Custom);
-  setOperationAction(ISD::FP_TO_SINT, MVT::i64, Custom);
-  setOperationAction(ISD::FP_TO_UINT, MVT::i64, Custom);
+  setOperationAction(ISD::SETCC, {MVT::i32, MVT::f32}, Expand);
+  setOperationAction({ISD::FP_TO_UINT, ISD::FP_TO_SINT}, {MVT::i1, MVT::i64},
+                     Custom);
 
-  setOperationAction(ISD::SELECT, MVT::i32, Expand);
-  setOperationAction(ISD::SELECT, MVT::f32, Expand);
-  setOperationAction(ISD::SELECT, MVT::v2i32, Expand);
-  setOperationAction(ISD::SELECT, MVT::v4i32, Expand);
+  setOperationAction(ISD::SELECT, {MVT::i32, MVT::f32, MVT::v2i32, MVT::v4i32},
+                     Expand);
 
   // ADD, SUB overflow.
   // TODO: turn these into Legal?
@@ -158,56 +124,43 @@ R600TargetLowering::R600TargetLowering(const TargetMachine &TM,
   if (!Subtarget->hasBFE())
     setOperationAction(ISD::SIGN_EXTEND_INREG, MVT::i1, Expand);
 
-  setOperationAction(ISD::SIGN_EXTEND_INREG, MVT::v2i1, Expand);
-  setOperationAction(ISD::SIGN_EXTEND_INREG, MVT::v4i1, Expand);
+  setOperationAction(ISD::SIGN_EXTEND_INREG, {MVT::v2i1, MVT::v4i1}, Expand);
 
   if (!Subtarget->hasBFE())
     setOperationAction(ISD::SIGN_EXTEND_INREG, MVT::i8, Expand);
-  setOperationAction(ISD::SIGN_EXTEND_INREG, MVT::v2i8, Expand);
-  setOperationAction(ISD::SIGN_EXTEND_INREG, MVT::v4i8, Expand);
+  setOperationAction(ISD::SIGN_EXTEND_INREG, {MVT::v2i8, MVT::v4i8}, Expand);
 
   if (!Subtarget->hasBFE())
     setOperationAction(ISD::SIGN_EXTEND_INREG, MVT::i16, Expand);
-  setOperationAction(ISD::SIGN_EXTEND_INREG, MVT::v2i16, Expand);
-  setOperationAction(ISD::SIGN_EXTEND_INREG, MVT::v4i16, Expand);
+  setOperationAction(ISD::SIGN_EXTEND_INREG, {MVT::v2i16, MVT::v4i16}, Expand);
 
   setOperationAction(ISD::SIGN_EXTEND_INREG, MVT::i32, Legal);
-  setOperationAction(ISD::SIGN_EXTEND_INREG, MVT::v2i32, Expand);
-  setOperationAction(ISD::SIGN_EXTEND_INREG, MVT::v4i32, Expand);
+  setOperationAction(ISD::SIGN_EXTEND_INREG, {MVT::v2i32, MVT::v4i32}, Expand);
 
   setOperationAction(ISD::SIGN_EXTEND_INREG, MVT::Other, Expand);
 
   setOperationAction(ISD::FrameIndex, MVT::i32, Custom);
 
-  setOperationAction(ISD::EXTRACT_VECTOR_ELT, MVT::v2i32, Custom);
-  setOperationAction(ISD::EXTRACT_VECTOR_ELT, MVT::v2f32, Custom);
-  setOperationAction(ISD::EXTRACT_VECTOR_ELT, MVT::v4i32, Custom);
-  setOperationAction(ISD::EXTRACT_VECTOR_ELT, MVT::v4f32, Custom);
+  setOperationAction(ISD::EXTRACT_VECTOR_ELT,
+                     {MVT::v2i32, MVT::v2f32, MVT::v4i32, MVT::v4f32}, Custom);
 
-  setOperationAction(ISD::INSERT_VECTOR_ELT, MVT::v2i32, Custom);
-  setOperationAction(ISD::INSERT_VECTOR_ELT, MVT::v2f32, Custom);
-  setOperationAction(ISD::INSERT_VECTOR_ELT, MVT::v4i32, Custom);
-  setOperationAction(ISD::INSERT_VECTOR_ELT, MVT::v4f32, Custom);
+  setOperationAction(ISD::INSERT_VECTOR_ELT,
+                     {MVT::v2i32, MVT::v2f32, MVT::v4i32, MVT::v4f32}, Custom);
 
   // We don't have 64-bit shifts. Thus we need either SHX i64 or SHX_PARTS i32
   //  to be Legal/Custom in order to avoid library calls.
-  setOperationAction(ISD::SHL_PARTS, MVT::i32, Custom);
-  setOperationAction(ISD::SRL_PARTS, MVT::i32, Custom);
-  setOperationAction(ISD::SRA_PARTS, MVT::i32, Custom);
+  setOperationAction({ISD::SHL_PARTS, ISD::SRL_PARTS, ISD::SRA_PARTS}, MVT::i32,
+                     Custom);
 
-  if (!Subtarget->hasFMA()) {
-    setOperationAction(ISD::FMA, MVT::f32, Expand);
-    setOperationAction(ISD::FMA, MVT::f64, Expand);
-  }
+  if (!Subtarget->hasFMA())
+    setOperationAction(ISD::FMA, {MVT::f32, MVT::f64}, Expand);
 
   // FIXME: May need no denormals check
   setOperationAction(ISD::FMAD, MVT::f32, Legal);
 
-  if (!Subtarget->hasBFI()) {
+  if (!Subtarget->hasBFI())
     // fcopysign can be done in a single instruction with BFI.
-    setOperationAction(ISD::FCOPYSIGN, MVT::f32, Expand);
-    setOperationAction(ISD::FCOPYSIGN, MVT::f64, Expand);
-  }
+    setOperationAction(ISD::FCOPYSIGN, {MVT::f32, MVT::f64}, Expand);
 
   if (!Subtarget->hasBCNT(32))
     setOperationAction(ISD::CTPOP, MVT::i32, Expand);
@@ -229,21 +182,17 @@ R600TargetLowering::R600TargetLowering(const TargetMachine &TM,
   setOperationAction(ISD::GlobalAddress, MVT::i32, Custom);
 
   const MVT ScalarIntVTs[] = { MVT::i32, MVT::i64 };
-  for (MVT VT : ScalarIntVTs) {
-    setOperationAction(ISD::ADDC, VT, Expand);
-    setOperationAction(ISD::SUBC, VT, Expand);
-    setOperationAction(ISD::ADDE, VT, Expand);
-    setOperationAction(ISD::SUBE, VT, Expand);
-  }
+  for (MVT VT : ScalarIntVTs)
+    setOperationAction({ISD::ADDC, ISD::SUBC, ISD::ADDE, ISD::SUBE}, VT,
+                       Expand);
 
   // LLVM will expand these to atomic_cmp_swap(0)
   // and atomic_swap, respectively.
-  setOperationAction(ISD::ATOMIC_LOAD, MVT::i32, Expand);
-  setOperationAction(ISD::ATOMIC_STORE, MVT::i32, Expand);
+  setOperationAction({ISD::ATOMIC_LOAD, ISD::ATOMIC_STORE}, MVT::i32, Expand);
 
   // We need to custom lower some of the intrinsics
-  setOperationAction(ISD::INTRINSIC_VOID, MVT::Other, Custom);
-  setOperationAction(ISD::INTRINSIC_WO_CHAIN, MVT::Other, Custom);
+  setOperationAction({ISD::INTRINSIC_VOID, ISD::INTRINSIC_WO_CHAIN}, MVT::Other,
+                     Custom);
 
   setSchedulingPreference(Sched::Source);
 

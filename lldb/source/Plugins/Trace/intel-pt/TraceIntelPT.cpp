@@ -252,7 +252,7 @@ void TraceIntelPT::DoRefreshLiveProcessState(
     return;
   }
 
-  for (const TraceThreadState &thread_state : state->tracedThreads) {
+  for (const TraceThreadState &thread_state : state->traced_threads) {
     ThreadSP thread_sp =
         m_live_process->GetThreadList().FindThreadByID(thread_state.tid);
     m_thread_decoders.emplace(
@@ -305,7 +305,8 @@ Error TraceIntelPT::Start(size_t trace_buffer_size,
   request.trace_buffer_size = trace_buffer_size;
   request.process_buffer_size_limit = total_buffer_size_limit;
   request.enable_tsc = enable_tsc;
-  request.psb_period = psb_period.map([](size_t val) { return (int64_t)val; });
+  request.psb_period =
+      psb_period.map([](size_t val) { return static_cast<uint64_t>(val); });
   request.type = GetPluginName().str();
   request.per_core_tracing = per_core_tracing;
   return Trace::Start(toJSON(request));
@@ -342,7 +343,8 @@ llvm::Error TraceIntelPT::Start(llvm::ArrayRef<lldb::tid_t> tids,
   TraceIntelPTStartRequest request;
   request.trace_buffer_size = trace_buffer_size;
   request.enable_tsc = enable_tsc;
-  request.psb_period = psb_period.map([](size_t val) { return (int64_t)val; });
+  request.psb_period =
+      psb_period.map([](size_t val) { return static_cast<uint64_t>(val); });
   request.type = GetPluginName().str();
   request.tids.emplace();
   for (lldb::tid_t tid : tids)
@@ -352,9 +354,9 @@ llvm::Error TraceIntelPT::Start(llvm::ArrayRef<lldb::tid_t> tids,
 
 Error TraceIntelPT::Start(llvm::ArrayRef<lldb::tid_t> tids,
                           StructuredData::ObjectSP configuration) {
-  size_t trace_buffer_size = kDefaultTraceBufferSize;
+  uint64_t trace_buffer_size = kDefaultTraceBufferSize;
   bool enable_tsc = kDefaultEnableTscValue;
-  Optional<size_t> psb_period = kDefaultPsbPeriod;
+  Optional<uint64_t> psb_period = kDefaultPsbPeriod;
 
   if (configuration) {
     if (StructuredData::Dictionary *dict = configuration->GetAsDictionary()) {

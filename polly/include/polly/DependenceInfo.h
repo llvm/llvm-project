@@ -33,7 +33,8 @@ namespace polly {
 /// The Dependences struct holds all dependence information we collect and
 /// compute for one SCoP. It also offers an interface that allows users to
 /// query only specific parts.
-struct Dependences {
+class Dependences final {
+public:
   // Granularities of the current dependence analysis
   enum AnalysisLevel {
     AL_Statement = 0,
@@ -191,7 +192,7 @@ private:
   const AnalysisLevel Level;
 };
 
-struct DependenceAnalysis : public AnalysisInfoMixin<DependenceAnalysis> {
+struct DependenceAnalysis final : public AnalysisInfoMixin<DependenceAnalysis> {
   static AnalysisKey Key;
   struct Result {
     Scop &S;
@@ -212,8 +213,8 @@ struct DependenceAnalysis : public AnalysisInfoMixin<DependenceAnalysis> {
              ScopStandardAnalysisResults &SAR);
 };
 
-struct DependenceInfoPrinterPass
-    : public PassInfoMixin<DependenceInfoPrinterPass> {
+struct DependenceInfoPrinterPass final
+    : PassInfoMixin<DependenceInfoPrinterPass> {
   DependenceInfoPrinterPass(raw_ostream &OS) : OS(OS) {}
 
   PreservedAnalyses run(Scop &S, ScopAnalysisManager &,
@@ -222,7 +223,7 @@ struct DependenceInfoPrinterPass
   raw_ostream &OS;
 };
 
-class DependenceInfo : public ScopPass {
+class DependenceInfo final : public ScopPass {
 public:
   static char ID;
 
@@ -266,7 +267,7 @@ llvm::Pass *createDependenceInfoPass();
 llvm::Pass *createDependenceInfoPrinterLegacyPass(llvm::raw_ostream &OS);
 
 /// Construct a new DependenceInfoWrapper pass.
-class DependenceInfoWrapperPass : public FunctionPass {
+class DependenceInfoWrapperPass final : public FunctionPass {
 public:
   static char ID;
 

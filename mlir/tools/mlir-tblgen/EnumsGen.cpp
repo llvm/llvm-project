@@ -277,6 +277,7 @@ static void emitStrToSymFnForBitEnum(const Record &enumDef, raw_ostream &os) {
   std::string underlyingType = std::string(enumAttr.getUnderlyingType());
   StringRef strToSymFnName = enumAttr.getStringToSymbolFnName();
   StringRef separator = enumDef.getValueAsString("separator");
+  StringRef separatorTrimmed = separator.trim();
   auto enumerants = enumAttr.getAllCases();
   auto allBitsUnsetCase = getAllBitsUnsetCase(enumerants);
 
@@ -292,15 +293,16 @@ static void emitStrToSymFnForBitEnum(const Record &enumDef, raw_ostream &os) {
 
   // Split the string to get symbols for all the bits.
   os << "  ::llvm::SmallVector<::llvm::StringRef, 2> symbols;\n";
-  os << formatv("  str.split(symbols, \"{0}\");\n\n", separator);
+  // Remove whitespace from the separator string when parsing.
+  os << formatv("  str.split(symbols, \"{0}\");\n\n", separatorTrimmed);
 
   os << formatv("  {0} val = 0;\n", underlyingType);
   os << "  for (auto symbol : symbols) {\n";
 
   // Convert each symbol to the bit ordinal and set the corresponding bit.
-  os << formatv(
-      "    auto bit = llvm::StringSwitch<::llvm::Optional<{0}>>(symbol)\n",
-      underlyingType);
+  os << formatv("    auto bit = "
+                "llvm::StringSwitch<::llvm::Optional<{0}>>(symbol.trim())\n",
+                underlyingType);
   for (const auto &enumerant : enumerants) {
     // Skip the special enumerant for None.
     if (auto val = enumerant.getValue())
