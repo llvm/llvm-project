@@ -15,6 +15,10 @@ const char *s = "example";
 const char *s1 = "example1";
 const char *s2 = "example";
 
+void use_global() {
+  int li = a;
+}
+
 // CHECK: module  {
 // CHECK-NEXT: cir.global @a = 3 : i32
 // CHECK-NEXT: cir.global @c = 2 : i64
@@ -31,3 +35,9 @@ const char *s2 = "example";
 // CHECK-NEXT: cir.global @s1 = @".str1": !cir.ptr<i8>
 
 // CHECK-NEXT: cir.global @s2 = @".str": !cir.ptr<i8>
+
+// CHECK: func @_Z10use_globalv() {
+// CHECK-NEXT:     %0 = cir.alloca i32, cir.ptr <i32>, ["li", cinit] {alignment = 4 : i64}
+// CHECK-NEXT:     %1 = cir.get_global @a : cir.ptr <i32>
+// CHECK-NEXT:     %2 = cir.load %1 : cir.ptr <i32>, i32
+// CHECK-NEXT:     cir.store %2, %0 : i32, cir.ptr <i32>

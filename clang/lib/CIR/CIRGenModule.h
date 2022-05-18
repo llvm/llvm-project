@@ -171,7 +171,7 @@ public:
   /// global with type Ty will be returned, not conversion of a variable with
   /// the same mangled name but some other type.
   mlir::Value
-  getAddrOfGlobalVar(const VarDecl *D, std::optional<mlir::Type> Ty,
+  getAddrOfGlobalVar(const VarDecl *D, std::optional<mlir::Type> Ty = {},
                      ForDefinition_t IsForDefinition = NotForDefinition);
 
   llvm::DenseMap<mlir::Attribute, mlir::cir::GlobalOp> ConstantStringMap;
