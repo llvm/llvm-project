@@ -189,3 +189,65 @@ T2:
 F2:
   ret i32 %B
 }
+
+define i32 @freeze_known_predicate(i1 %cond) {
+; CHECK-LABEL: @freeze_known_predicate(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br i1 [[COND:%.*]], label [[IF:%.*]], label [[ELSE2:%.*]]
+; CHECK:       if:
+; CHECK-NEXT:    br label [[ELSE2]]
+; CHECK:       else2:
+; CHECK-NEXT:    [[PHI:%.*]] = phi i32 [ 1, [[IF]] ], [ 2, [[ENTRY:%.*]] ]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[PHI]], 0
+; CHECK-NEXT:    ret i32 1
+;
+entry:
+  br i1 %cond, label %if, label %join
+
+if:
+  br label %join
+
+join:
+  %phi = phi i32 [ 1, %if ], [ 2, %entry ]
+  %cmp = icmp eq i32 %phi, 0
+  %cmp.fr = freeze i1 %cmp
+  br i1 %cmp.fr, label %if2, label %else2
+
+if2:
+  ret i32 0
+
+else2:
+  ret i32 1
+}
+
+define i32 @freeze_known_predicate_barrier(i1 %cond) {
+; CHECK-LABEL: @freeze_known_predicate_barrier(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br i1 [[COND:%.*]], label [[IF:%.*]], label [[ELSE2:%.*]]
+; CHECK:       if:
+; CHECK-NEXT:    br label [[ELSE2]]
+; CHECK:       else2:
+; CHECK-NEXT:    [[PHI:%.*]] = phi i32 [ 1, [[IF]] ], [ 2, [[ENTRY:%.*]] ]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[PHI]], 0
+; CHECK-NEXT:    [[TMP0:%.*]] = call i32 @f1()
+; CHECK-NEXT:    ret i32 1
+;
+entry:
+  br i1 %cond, label %if, label %join
+
+if:
+  br label %join
+
+join:
+  %phi = phi i32 [ 1, %if ], [ 2, %entry ]
+  %cmp = icmp eq i32 %phi, 0
+  %cmp.fr = freeze i1 %cmp
+  call i32 @f1()
+  br i1 %cmp.fr, label %if2, label %else2
+
+if2:
+  ret i32 0
+
+else2:
+  ret i32 1
+}
