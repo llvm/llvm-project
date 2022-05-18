@@ -1593,7 +1593,6 @@ multiclass SOP1_Real_gfx10<bits<8> op> {
 multiclass SOP1_Real_gfx10_gfx11<bits<8> op> :
   SOP1_Real_gfx10<op>, SOP1_Real_gfx11<op>;
 
-
 defm S_ANDN1_SAVEEXEC_B64   : SOP1_Real_gfx10<0x037>;
 defm S_ORN1_SAVEEXEC_B64    : SOP1_Real_gfx10<0x038>;
 defm S_ANDN1_WREXEC_B64     : SOP1_Real_gfx10<0x039>;
@@ -1751,7 +1750,6 @@ multiclass SOP2_Real_gfx10<bits<7> op> {
 
 multiclass SOP2_Real_gfx10_gfx11<bits<7> op> :
   SOP2_Real_gfx10<op>, SOP2_Real_gfx11<op>;
-
 
 defm S_LSHL1_ADD_U32   : SOP2_Real_gfx10<0x02e>;
 defm S_LSHL2_ADD_U32   : SOP2_Real_gfx10<0x02f>;
