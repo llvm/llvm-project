@@ -387,8 +387,8 @@ void RVVEmitter::createRVVIntrinsics(
   for (auto *R : RV) {
     StringRef Name = R->getValueAsString("Name");
     StringRef SuffixProto = R->getValueAsString("Suffix");
-    StringRef MangledName = R->getValueAsString("MangledName");
-    StringRef MangledSuffixProto = R->getValueAsString("MangledSuffix");
+    StringRef OverloadedName = R->getValueAsString("MangledName");
+    StringRef OverloadedSuffixProto = R->getValueAsString("MangledSuffix");
     StringRef Prototypes = R->getValueAsString("Prototype");
     StringRef TypeRange = R->getValueAsString("TypeRange");
     bool HasMasked = R->getValueAsBit("HasMasked");
@@ -414,30 +414,30 @@ void RVVEmitter::createRVVIntrinsics(
     unsigned NF = R->getValueAsInt("NF");
 
     // Parse prototype and create a list of primitive type with transformers
-    // (operand) in ProtoSeq. ProtoSeq[0] is output operand.
-    SmallVector<PrototypeDescriptor> ProtoSeq = parsePrototypes(Prototypes);
+    // (operand) in Prototype. Prototype[0] is output operand.
+    SmallVector<PrototypeDescriptor> Prototype = parsePrototypes(Prototypes);
 
-    SmallVector<PrototypeDescriptor> SuffixProtoSeq =
-        parsePrototypes(SuffixProto);
-    SmallVector<PrototypeDescriptor> MangledSuffixProtoSeq =
-        parsePrototypes(MangledSuffixProto);
+    SmallVector<PrototypeDescriptor> SuffixDesc = parsePrototypes(SuffixProto);
+    SmallVector<PrototypeDescriptor> OverloadedSuffixDesc =
+        parsePrototypes(OverloadedSuffixProto);
 
     // Compute Builtin types
-    SmallVector<PrototypeDescriptor> ProtoMaskSeq = ProtoSeq;
+    SmallVector<PrototypeDescriptor> MaskedPrototype = Prototype;
     if (HasMasked) {
       // If HasMaskedOffOperand, insert result type as first input operand.
       if (HasMaskedOffOperand) {
         if (NF == 1) {
-          ProtoMaskSeq.insert(ProtoMaskSeq.begin() + 1, ProtoSeq[0]);
+          MaskedPrototype.insert(MaskedPrototype.begin() + 1, Prototype[0]);
         } else {
           // Convert
           // (void, op0 address, op1 address, ...)
           // to
           // (void, op0 address, op1 address, ..., maskedoff0, maskedoff1, ...)
-          PrototypeDescriptor MaskoffType = ProtoSeq[1];
+          PrototypeDescriptor MaskoffType = Prototype[1];
           MaskoffType.TM &= ~static_cast<uint8_t>(TypeModifier::Pointer);
           for (unsigned I = 0; I < NF; ++I)
-            ProtoMaskSeq.insert(ProtoMaskSeq.begin() + NF + 1, MaskoffType);
+            MaskedPrototype.insert(MaskedPrototype.begin() + NF + 1,
+                                   MaskoffType);
         }
       }
       if (HasMaskedOffOperand && NF > 1) {
@@ -446,18 +446,18 @@ void RVVEmitter::createRVVIntrinsics(
         // to
         // (void, op0 address, op1 address, ..., mask, maskedoff0, maskedoff1,
         // ...)
-        ProtoMaskSeq.insert(ProtoMaskSeq.begin() + NF + 1,
-                            PrototypeDescriptor::Mask);
+        MaskedPrototype.insert(MaskedPrototype.begin() + NF + 1,
+                               PrototypeDescriptor::Mask);
       } else {
         // If HasMasked, insert PrototypeDescriptor:Mask as first input operand.
-        ProtoMaskSeq.insert(ProtoMaskSeq.begin() + 1,
-                            PrototypeDescriptor::Mask);
+        MaskedPrototype.insert(MaskedPrototype.begin() + 1,
+                               PrototypeDescriptor::Mask);
       }
     }
     // If HasVL, append PrototypeDescriptor:VL to last operand
     if (HasVL) {
-      ProtoSeq.push_back(PrototypeDescriptor::VL);
-      ProtoMaskSeq.push_back(PrototypeDescriptor::VL);
+      Prototype.push_back(PrototypeDescriptor::VL);
+      MaskedPrototype.push_back(PrototypeDescriptor::VL);
     }
 
     // Create Intrinsics for each type and LMUL.
@@ -465,18 +465,17 @@ void RVVEmitter::createRVVIntrinsics(
       for (int Log2LMUL : Log2LMULList) {
         BasicType BT = ParseBasicType(I);
         Optional<RVVTypes> Types =
-            RVVType::computeTypes(BT, Log2LMUL, NF, ProtoSeq);
+            RVVType::computeTypes(BT, Log2LMUL, NF, Prototype);
         // Ignored to create new intrinsic if there are any illegal types.
         if (!Types.hasValue())
           continue;
 
-        auto SuffixStr =
-            RVVIntrinsic::getSuffixStr(BT, Log2LMUL, SuffixProtoSeq);
-        auto MangledSuffixStr =
-            RVVIntrinsic::getSuffixStr(BT, Log2LMUL, MangledSuffixProtoSeq);
+        auto SuffixStr = RVVIntrinsic::getSuffixStr(BT, Log2LMUL, SuffixDesc);
+        auto OverloadedSuffixStr =
+            RVVIntrinsic::getSuffixStr(BT, Log2LMUL, OverloadedSuffixDesc);
         // Create a unmasked intrinsic
         Out.push_back(std::make_unique<RVVIntrinsic>(
-            Name, SuffixStr, MangledName, MangledSuffixStr, IRName,
+            Name, SuffixStr, OverloadedName, OverloadedSuffixStr, IRName,
             /*IsMasked=*/false, /*HasMaskedOffOperand=*/false, HasVL,
             UnMaskedPolicy, HasUnMaskedOverloaded, HasBuiltinAlias,
             ManualCodegen, Types.getValue(), IntrinsicTypes, RequiredFeatures,
@@ -484,9 +483,10 @@ void RVVEmitter::createRVVIntrinsics(
         if (HasMasked) {
           // Create a masked intrinsic
           Optional<RVVTypes> MaskTypes =
-              RVVType::computeTypes(BT, Log2LMUL, NF, ProtoMaskSeq);
+              RVVType::computeTypes(BT, Log2LMUL, NF, MaskedPrototype);
           Out.push_back(std::make_unique<RVVIntrinsic>(
-              Name, SuffixStr, MangledName, MangledSuffixStr, MaskedIRName,
+              Name, SuffixStr, OverloadedName, OverloadedSuffixStr,
+              MaskedIRName,
               /*IsMasked=*/true, HasMaskedOffOperand, HasVL, MaskedPolicy,
               HasUnMaskedOverloaded, HasBuiltinAlias, MaskedManualCodegen,
               MaskTypes.getValue(), IntrinsicTypes, RequiredFeatures, NF));
