@@ -5,13 +5,13 @@
 define i32 @test(i32* nocapture %a, i64 %n) {
 ; ENABLED-LABEL: @test(
 ; ENABLED-NEXT:  entry:
-; ENABLED-NEXT:    [[TMP0:%.*]] = add i64 [[N:%.*]], -1
-; ENABLED-NEXT:    [[XTRAITER:%.*]] = and i64 [[N]], 7
-; ENABLED-NEXT:    [[TMP1:%.*]] = icmp ult i64 [[TMP0]], 7
-; ENABLED-NEXT:    [[TMP2:%.*]] = freeze i1 [[TMP1]]
+; ENABLED-NEXT:    [[TMP0:%.*]] = freeze i64 [[N:%.*]]
+; ENABLED-NEXT:    [[TMP1:%.*]] = add i64 [[TMP0]], -1
+; ENABLED-NEXT:    [[XTRAITER:%.*]] = and i64 [[TMP0]], 7
+; ENABLED-NEXT:    [[TMP2:%.*]] = icmp ult i64 [[TMP1]], 7
 ; ENABLED-NEXT:    br i1 [[TMP2]], label [[FOR_END_UNR_LCSSA:%.*]], label [[ENTRY_NEW:%.*]]
 ; ENABLED:       entry.new:
-; ENABLED-NEXT:    [[UNROLL_ITER:%.*]] = sub i64 [[N]], [[XTRAITER]]
+; ENABLED-NEXT:    [[UNROLL_ITER:%.*]] = sub i64 [[TMP0]], [[XTRAITER]]
 ; ENABLED-NEXT:    br label [[HEADER:%.*]]
 ; ENABLED:       header:
 ; ENABLED-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ 0, [[ENTRY_NEW]] ], [ [[INDVARS_IV_NEXT_7:%.*]], [[FOR_BODY_7:%.*]] ]

@@ -252,11 +252,11 @@ define void @test4(i16 %c3) {
 ; CHECK-NEXT:  preheader:
 ; CHECK-NEXT:    [[C1:%.*]] = zext i32 undef to i64
 ; CHECK-NEXT:    [[UMAX:%.*]] = call i64 @llvm.umax.i64(i64 [[C1]], i64 1)
-; CHECK-NEXT:    [[TMP0:%.*]] = add nsw i64 [[UMAX]], -1
-; CHECK-NEXT:    [[XTRAITER:%.*]] = and i64 [[UMAX]], 3
+; CHECK-NEXT:    [[TMP0:%.*]] = freeze i64 [[UMAX]]
+; CHECK-NEXT:    [[TMP1:%.*]] = add i64 [[TMP0]], -1
+; CHECK-NEXT:    [[XTRAITER:%.*]] = and i64 [[TMP0]], 3
 ; CHECK-NEXT:    [[LCMP_MOD:%.*]] = icmp ne i64 [[XTRAITER]], 0
-; CHECK-NEXT:    [[TMP1:%.*]] = freeze i1 [[LCMP_MOD]]
-; CHECK-NEXT:    br i1 [[TMP1]], label [[HEADER_PROL_PREHEADER:%.*]], label [[HEADER_PROL_LOOPEXIT:%.*]]
+; CHECK-NEXT:    br i1 [[LCMP_MOD]], label [[HEADER_PROL_PREHEADER:%.*]], label [[HEADER_PROL_LOOPEXIT:%.*]]
 ; CHECK:       header.prol.preheader:
 ; CHECK-NEXT:    br label [[HEADER_PROL:%.*]]
 ; CHECK:       header.prol:
@@ -279,7 +279,7 @@ define void @test4(i16 %c3) {
 ; CHECK-NEXT:    br label [[HEADER_PROL_LOOPEXIT]]
 ; CHECK:       header.prol.loopexit:
 ; CHECK-NEXT:    [[INDVARS_IV_UNR:%.*]] = phi i64 [ 0, [[PREHEADER:%.*]] ], [ [[INDVARS_IV_UNR_PH]], [[HEADER_PROL_LOOPEXIT_UNR_LCSSA]] ]
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp ult i64 [[TMP0]], 3
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp ult i64 [[TMP1]], 3
 ; CHECK-NEXT:    br i1 [[TMP2]], label [[LATCHEXIT:%.*]], label [[PREHEADER_NEW:%.*]]
 ; CHECK:       preheader.new:
 ; CHECK-NEXT:    br label [[HEADER:%.*]]
@@ -375,7 +375,11 @@ define void @test5() {
 ; CHECK-NEXT:    [[TMP:%.*]] = icmp sgt i32 undef, 79
 ; CHECK-NEXT:    br i1 [[TMP]], label [[OUTERLATCHEXIT:%.*]], label [[BB1:%.*]]
 ; CHECK:       bb1:
-; CHECK-NEXT:    br i1 false, label [[OUTERH_PROL_PREHEADER:%.*]], label [[OUTERH_PROL_LOOPEXIT:%.*]]
+; CHECK-NEXT:    [[TMP0:%.*]] = freeze i32 undef
+; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[TMP0]], -1
+; CHECK-NEXT:    [[XTRAITER:%.*]] = and i32 [[TMP0]], 3
+; CHECK-NEXT:    [[LCMP_MOD:%.*]] = icmp ne i32 [[XTRAITER]], 0
+; CHECK-NEXT:    br i1 [[LCMP_MOD]], label [[OUTERH_PROL_PREHEADER:%.*]], label [[OUTERH_PROL_LOOPEXIT:%.*]]
 ; CHECK:       outerH.prol.preheader:
 ; CHECK-NEXT:    br label [[OUTERH_PROL:%.*]]
 ; CHECK:       outerH.prol:
@@ -418,14 +422,15 @@ define void @test5() {
 ; CHECK-NEXT:    [[TMP6_PROL]] = add i32 [[TMP4_PROL]], 1
 ; CHECK-NEXT:    [[TMP7_PROL:%.*]] = icmp sgt i32 [[TMP6_PROL]], 79
 ; CHECK-NEXT:    [[PROL_ITER_NEXT]] = add i32 [[PROL_ITER]], 1
-; CHECK-NEXT:    [[PROL_ITER_CMP:%.*]] = icmp ne i32 [[PROL_ITER_NEXT]], 0
+; CHECK-NEXT:    [[PROL_ITER_CMP:%.*]] = icmp ne i32 [[PROL_ITER_NEXT]], [[XTRAITER]]
 ; CHECK-NEXT:    br i1 [[PROL_ITER_CMP]], label [[OUTERH_PROL]], label [[OUTERH_PROL_LOOPEXIT_UNR_LCSSA:%.*]], !llvm.loop [[LOOP7:![0-9]+]]
 ; CHECK:       outerH.prol.loopexit.unr-lcssa:
 ; CHECK-NEXT:    [[TMP4_UNR_PH:%.*]] = phi i32 [ [[TMP6_PROL]], [[OUTERLATCH_PROL]] ]
 ; CHECK-NEXT:    br label [[OUTERH_PROL_LOOPEXIT]]
 ; CHECK:       outerH.prol.loopexit:
 ; CHECK-NEXT:    [[TMP4_UNR:%.*]] = phi i32 [ undef, [[BB1]] ], [ [[TMP4_UNR_PH]], [[OUTERH_PROL_LOOPEXIT_UNR_LCSSA]] ]
-; CHECK-NEXT:    br i1 false, label [[OUTERLATCHEXIT_LOOPEXIT:%.*]], label [[BB1_NEW:%.*]]
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp ult i32 [[TMP1]], 3
+; CHECK-NEXT:    br i1 [[TMP2]], label [[OUTERLATCHEXIT_LOOPEXIT:%.*]], label [[BB1_NEW:%.*]]
 ; CHECK:       bb1.new:
 ; CHECK-NEXT:    br label [[OUTERH:%.*]]
 ; CHECK:       outerH:
@@ -659,10 +664,11 @@ define void @test6(i64 %start) {
 ; CHECK-NEXT:    [[TMP2:%.*]] = sub i64 [[TMP1]], [[START]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = lshr i64 [[TMP2]], 1
 ; CHECK-NEXT:    [[TMP4:%.*]] = add nuw i64 [[TMP3]], 1
-; CHECK-NEXT:    [[XTRAITER:%.*]] = and i64 [[TMP4]], 3
+; CHECK-NEXT:    [[TMP5:%.*]] = freeze i64 [[TMP4]]
+; CHECK-NEXT:    [[TMP6:%.*]] = add i64 [[TMP5]], -1
+; CHECK-NEXT:    [[XTRAITER:%.*]] = and i64 [[TMP5]], 3
 ; CHECK-NEXT:    [[LCMP_MOD:%.*]] = icmp ne i64 [[XTRAITER]], 0
-; CHECK-NEXT:    [[TMP5:%.*]] = freeze i1 [[LCMP_MOD]]
-; CHECK-NEXT:    br i1 [[TMP5]], label [[HEADER_PROL_PREHEADER:%.*]], label [[HEADER_PROL_LOOPEXIT:%.*]]
+; CHECK-NEXT:    br i1 [[LCMP_MOD]], label [[HEADER_PROL_PREHEADER:%.*]], label [[HEADER_PROL_LOOPEXIT:%.*]]
 ; CHECK:       header.prol.preheader:
 ; CHECK-NEXT:    br label [[HEADER_PROL:%.*]]
 ; CHECK:       header.prol:
@@ -673,7 +679,7 @@ define void @test6(i64 %start) {
 ; CHECK-NEXT:    br i1 [[C1_PROL]], label [[LATCH_PROL]], label [[OTHEREXIT_LOOPEXIT1:%.*]]
 ; CHECK:       latch.prol:
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT_PROL]] = add nsw i64 [[INDVARS_IV_PROL]], 2
-; CHECK-NEXT:    [[TMP6:%.*]] = icmp slt i64 [[INDVARS_IV_NEXT_PROL]], 616
+; CHECK-NEXT:    [[TMP7:%.*]] = icmp slt i64 [[INDVARS_IV_NEXT_PROL]], 616
 ; CHECK-NEXT:    [[PROL_ITER_NEXT]] = add i64 [[PROL_ITER]], 1
 ; CHECK-NEXT:    [[PROL_ITER_CMP:%.*]] = icmp ne i64 [[PROL_ITER_NEXT]], [[XTRAITER]]
 ; CHECK-NEXT:    br i1 [[PROL_ITER_CMP]], label [[HEADER_PROL]], label [[HEADER_PROL_LOOPEXIT_UNR_LCSSA:%.*]], !llvm.loop [[LOOP9:![0-9]+]]
@@ -682,8 +688,8 @@ define void @test6(i64 %start) {
 ; CHECK-NEXT:    br label [[HEADER_PROL_LOOPEXIT]]
 ; CHECK:       header.prol.loopexit:
 ; CHECK-NEXT:    [[INDVARS_IV_UNR:%.*]] = phi i64 [ [[START]], [[ENTRY:%.*]] ], [ [[INDVARS_IV_UNR_PH]], [[HEADER_PROL_LOOPEXIT_UNR_LCSSA]] ]
-; CHECK-NEXT:    [[TMP7:%.*]] = icmp ult i64 [[TMP3]], 3
-; CHECK-NEXT:    br i1 [[TMP7]], label [[LATCHEXIT:%.*]], label [[ENTRY_NEW:%.*]]
+; CHECK-NEXT:    [[TMP8:%.*]] = icmp ult i64 [[TMP6]], 3
+; CHECK-NEXT:    br i1 [[TMP8]], label [[LATCHEXIT:%.*]], label [[ENTRY_NEW:%.*]]
 ; CHECK:       entry.new:
 ; CHECK-NEXT:    br label [[HEADER:%.*]]
 ; CHECK:       header:
@@ -708,8 +714,8 @@ define void @test6(i64 %start) {
 ; CHECK-NEXT:    br i1 [[C1_3]], label [[LATCH_3]], label [[OTHEREXIT_LOOPEXIT]]
 ; CHECK:       latch.3:
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT_3]] = add nsw i64 [[INDVARS_IV_NEXT_2]], 2
-; CHECK-NEXT:    [[TMP8:%.*]] = icmp slt i64 [[INDVARS_IV_NEXT_3]], 616
-; CHECK-NEXT:    br i1 [[TMP8]], label [[HEADER]], label [[LATCHEXIT_UNR_LCSSA:%.*]], !llvm.loop [[LOOP10:![0-9]+]]
+; CHECK-NEXT:    [[TMP9:%.*]] = icmp slt i64 [[INDVARS_IV_NEXT_3]], 616
+; CHECK-NEXT:    br i1 [[TMP9]], label [[HEADER]], label [[LATCHEXIT_UNR_LCSSA:%.*]], !llvm.loop [[LOOP10:![0-9]+]]
 ; CHECK:       latchexit.unr-lcssa:
 ; CHECK-NEXT:    br label [[LATCHEXIT]]
 ; CHECK:       latchexit:
