@@ -30,4 +30,8 @@ void test7(int a) {
 
 void test8(void) {
   __builtin_alloca_with_align(sizeof(__INT64_TYPE__), __alignof__(__INT64_TYPE__)); // expected-warning {{second argument to __builtin_alloca_with_align is supposed to be in bits}}
+#if defined(__csky__)
+  // expected-error@-1 {{requested alignment must be 8 or greater}}
+  // Because the alignment of long long is 4 in CSKY target
+#endif
 }
