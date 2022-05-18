@@ -809,7 +809,40 @@ for.end:                                          ; preds = %for.body
   ret void
 }
 
+; Demonstrates a case where mutation in phase3 is problematic.  We mutate the
+; vsetvli without considering that it changes the compatibility result of the
+; vadd in the second block.
+; FIXME: This currently crashes with strict asserts enabled.
+define <vscale x 4 x i32> @cross_block_mutate(<vscale x 4 x i32> %a, <vscale x 4 x i32> %b,
+; CHECK-LABEL: cross_block_mutate:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    vsetivli a0, 6, e32, m2, tu, mu
+; CHECK-NEXT:    vmv.s.x v8, a0
+; CHECK-NEXT:    vadd.vv v8, v8, v10, v0.t
+; CHECK-NEXT:    vsetvli zero, a0, e32, m2, tu, mu
+; CHECK-NEXT:    ret
+                                         <vscale x 4 x i1> %mask) {
+entry:
+  %vl = tail call i64 @llvm.riscv.vsetvli(i64 6, i64 1, i64 0)
+  %vl.trunc = trunc i64 %vl to i32
+  %a.mod = insertelement <vscale x 4 x i32> %a, i32 %vl.trunc, i32 0
+  br label %fallthrough
+
+fallthrough:
+  %res = call <vscale x 4 x i32> @llvm.riscv.vadd.mask.nxv4i32.nxv4i32(
+               <vscale x 4 x i32> undef, <vscale x 4 x i32> %a.mod,
+               <vscale x 4 x i32> %b, <vscale x 4 x i1> %mask, i64 %vl, i64 0)
+  ret <vscale x 4 x i32> %res
+}
+
 declare i64 @llvm.riscv.vsetvlimax.i64(i64, i64)
 declare <vscale x 1 x double> @llvm.riscv.vle.nxv1f64.i64(<vscale x 1 x double>, <vscale x 1 x double>* nocapture, i64)
 declare <vscale x 1 x double> @llvm.riscv.vfadd.nxv1f64.nxv1f64.i64(<vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double>, i64)
 declare void @llvm.riscv.vse.nxv1f64.i64(<vscale x 1 x double>, <vscale x 1 x double>* nocapture, i64)
+declare <vscale x 4 x i32> @llvm.riscv.vadd.mask.nxv4i32.nxv4i32(
+  <vscale x 4 x i32>,
+  <vscale x 4 x i32>,
+  <vscale x 4 x i32>,
+  <vscale x 4 x i1>,
+  i64,
+  i64);
