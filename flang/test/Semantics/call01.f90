@@ -97,6 +97,7 @@ function f13(n) result(res)
     res = ''
   else
     !ERROR: Assumed-length CHARACTER(*) function 'f13' cannot call itself
+    !ERROR: Assumed-length character function must be defined with a length to be called
     res = f13(n-1) ! 15.6.2.1(3)
   end if
 end function
@@ -112,6 +113,32 @@ function f14(n) result(res)
  contains
   character(1) function nested
     !ERROR: Assumed-length CHARACTER(*) function 'f14' cannot call itself
+    !ERROR: Assumed-length character function must be defined with a length to be called
     nested = f14(n-1) ! 15.6.2.1(3)
   end function nested
 end function
+
+subroutine s01(f1, f2, fp1, fp2)
+  character*(*) :: f1, f3, fp1
+  external :: f1, f3
+  pointer :: fp1
+  procedure(character*(*)), pointer :: fp2
+  interface
+    character*(*) function f2()
+    end function
+    character*(*) function f4()
+    end function
+  end interface
+  !ERROR: Assumed-length character function must be defined with a length to be called
+  print *, f1()
+  !ERROR: Assumed-length character function must be defined with a length to be called
+  print *, f2()
+  !ERROR: Assumed-length character function must be defined with a length to be called
+  print *, f3()
+  !ERROR: Assumed-length character function must be defined with a length to be called
+  print *, f4()
+  !ERROR: Assumed-length character function must be defined with a length to be called
+  print *, fp1()
+  !ERROR: Assumed-length character function must be defined with a length to be called
+  print *, fp2()
+end subroutine
