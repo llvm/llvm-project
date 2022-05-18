@@ -593,17 +593,18 @@ public:
         if (XReg != AArch64::FP)
           return CU::UNWIND_ARM64_MODE_DWARF;
 
-        assert(XReg == AArch64::FP && "Invalid frame pointer!");
-        assert(i + 2 < e && "Insufficient CFI instructions to define a frame!");
+        if (i + 2 >= e)
+          return CU::UNWIND_ARM64_MODE_DWARF;
 
         const MCCFIInstruction &LRPush = Instrs[++i];
-        assert(LRPush.getOperation() == MCCFIInstruction::OpOffset &&
-               "Link register not pushed!");
+        if (LRPush.getOperation() != MCCFIInstruction::OpOffset)
+          return CU::UNWIND_ARM64_MODE_DWARF;
         const MCCFIInstruction &FPPush = Instrs[++i];
-        assert(FPPush.getOperation() == MCCFIInstruction::OpOffset &&
-               "Frame pointer not pushed!");
+        if (FPPush.getOperation() != MCCFIInstruction::OpOffset)
+          return CU::UNWIND_ARM64_MODE_DWARF;
 
-        assert(FPPush.getOffset() + 8 == LRPush.getOffset());
+        if (FPPush.getOffset() + 8 != LRPush.getOffset())
+          return CU::UNWIND_ARM64_MODE_DWARF;
         CurOffset = FPPush.getOffset();
 
         unsigned LRReg = *MRI.getLLVMRegNum(LRPush.getRegister(), true);
@@ -612,8 +613,8 @@ public:
         LRReg = getXRegFromWReg(LRReg);
         FPReg = getXRegFromWReg(FPReg);
 
-        assert(LRReg == AArch64::LR && FPReg == AArch64::FP &&
-               "Pushing invalid registers for frame!");
+        if (LRReg != AArch64::LR || FPReg != AArch64::FP)
+          return CU::UNWIND_ARM64_MODE_DWARF;
 
         // Indicate that the function has a frame.
         CompactUnwindEncoding |= CU::UNWIND_ARM64_MODE_FRAME;
