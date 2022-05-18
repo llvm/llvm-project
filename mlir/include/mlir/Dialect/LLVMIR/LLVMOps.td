@@ -28,14 +28,17 @@ def FMFarcp     : I32BitEnumAttrCaseBit<"arcp", 3>;
 def FMFcontract : I32BitEnumAttrCaseBit<"contract", 4>;
 def FMFafn      : I32BitEnumAttrCaseBit<"afn", 5>;
 def FMFreassoc  : I32BitEnumAttrCaseBit<"reassoc", 6>;
-def FMFfast     : I32BitEnumAttrCaseBit<"fast", 7>;
+def FMFfast     : I32BitEnumAttrCaseGroup<"fast",
+  [ FMFnnan, FMFninf, FMFnsz, FMFarcp, FMFcontract, FMFafn, FMFreassoc]>;
 
 def FastmathFlags : I32BitEnumAttr<
     "FastmathFlags",
     "LLVM fastmath flags",
     [FMFnnan, FMFninf, FMFnsz, FMFarcp, FMFcontract, FMFafn, FMFreassoc, FMFfast
     ]> {
+  let separator = ", ";
   let cppNamespace = "::mlir::LLVM";
+  let printBitEnumPrimaryGroups = 1;
 }
 
 def LLVM_FMFAttr : DialectAttr<
@@ -334,16 +337,6 @@ def LLVM_GEPOp : LLVM_Op<"getelementptr", [NoSideEffect]> {
 
     /// Returns the type pointed to by the pointer argument of this GEP.
     Type getSourceElementType();
-
-    /// Populates `indices` with positions of GEP indices that correspond to
-    /// LLVMStructTypes potentially nested in the given `sourceElementType`,
-    /// which is the type pointed to by the pointer argument of a GEP. If
-    /// `structSizes` is provided, it is populated with sizes of the indexed
-    /// structs for bounds verification purposes.
-    static void findKnownStructIndices(
-        Type sourceElementType, SmallVectorImpl<unsigned> &indices,
-        SmallVectorImpl<unsigned> *structSizes = nullptr);
-
   }];
   let hasFolder = 1;
   let hasVerifier = 1;

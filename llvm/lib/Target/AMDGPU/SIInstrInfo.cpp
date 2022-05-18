@@ -389,6 +389,8 @@ bool SIInstrInfo::getMemOperandsWithOffsetWidth(
     DataOpIdx = AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::vdst);
     if (DataOpIdx == -1)
       DataOpIdx = AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::vdata);
+    if (DataOpIdx == -1) // LDS DMA
+      return false;
     Width = getOpSize(LdSt, DataOpIdx);
     return true;
   }
@@ -437,6 +439,8 @@ bool SIInstrInfo::getMemOperandsWithOffsetWidth(
     DataOpIdx = AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::vdst);
     if (DataOpIdx == -1)
       DataOpIdx = AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::vdata);
+    if (DataOpIdx == -1) // LDS DMA
+      return false;
     Width = getOpSize(LdSt, DataOpIdx);
     return true;
   }

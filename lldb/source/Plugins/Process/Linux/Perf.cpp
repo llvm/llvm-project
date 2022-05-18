@@ -15,6 +15,7 @@
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/MemoryBuffer.h"
 
+#include <sys/ioctl.h>
 #include <sys/mman.h>
 #include <sys/syscall.h>
 #include <unistd.h>
@@ -117,10 +118,13 @@ void resource_handle::FileDescriptorDeleter::operator()(long *ptr) {
 }
 
 llvm::Expected<PerfEvent> PerfEvent::Init(perf_event_attr &attr,
-                                          lldb::pid_t pid, int cpu,
-                                          int group_fd, unsigned long flags) {
+                                          Optional<lldb::pid_t> pid,
+                                          Optional<lldb::core_id_t> cpu,
+                                          Optional<int> group_fd,
+                                          unsigned long flags) {
   errno = 0;
-  long fd = syscall(SYS_perf_event_open, &attr, pid, cpu, group_fd, flags);
+  long fd = syscall(SYS_perf_event_open, &attr, pid.getValueOr(-1),
+                    cpu.getValueOr(-1), group_fd.getValueOr(-1), flags);
   if (fd == -1) {
     std::string err_msg =
         llvm::formatv("perf event syscall failed: {0}", std::strerror(errno));
@@ -130,8 +134,9 @@ llvm::Expected<PerfEvent> PerfEvent::Init(perf_event_attr &attr,
 }
 
 llvm::Expected<PerfEvent> PerfEvent::Init(perf_event_attr &attr,
-                                          lldb::pid_t pid) {
-  return Init(attr, pid, -1, -1, 0);
+                                          Optional<lldb::pid_t> pid,
+                                          Optional<lldb::core_id_t> cpu) {
+  return Init(attr, pid, cpu, -1, 0);
 }
 
 llvm::Expected<resource_handle::MmapUP>
@@ -214,4 +219,20 @@ ArrayRef<uint8_t> PerfEvent::GetAuxBuffer() const {
   perf_event_mmap_page &mmap_metadata = GetMetadataPage();
   return {reinterpret_cast<uint8_t *>(m_aux_base.get()),
            static_cast<size_t>(mmap_metadata.aux_size)};
+}
+
+Error PerfEvent::DisableWithIoctl() const {
+  if (ioctl(*m_fd, PERF_EVENT_IOC_DISABLE) < 0)
+    return createStringError(inconvertibleErrorCode(),
+                             "Can't disable perf event. %s",
+                             std::strerror(errno));
+  return Error::success();
+}
+
+Error PerfEvent::EnableWithIoctl() const {
+  if (ioctl(*m_fd, PERF_EVENT_IOC_ENABLE) < 0)
+    return createStringError(inconvertibleErrorCode(),
+                             "Can't disable perf event. %s",
+                             std::strerror(errno));
+  return Error::success();
 }

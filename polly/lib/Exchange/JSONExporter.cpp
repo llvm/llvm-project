@@ -51,7 +51,8 @@ static cl::opt<std::string>
                   cl::Hidden, cl::value_desc("File postfix"), cl::ValueRequired,
                   cl::init(""), cl::cat(PollyCategory));
 
-struct JSONExporter : public ScopPass {
+class JSONExporter : public ScopPass {
+public:
   static char ID;
   explicit JSONExporter() : ScopPass(ID) {}
 
@@ -65,7 +66,8 @@ struct JSONExporter : public ScopPass {
   void getAnalysisUsage(AnalysisUsage &AU) const override;
 };
 
-struct JSONImporter : public ScopPass {
+class JSONImporter : public ScopPass {
+public:
   static char ID;
   std::vector<std::string> NewAccessStrings;
   explicit JSONImporter() : ScopPass(ID) {}
@@ -838,7 +840,7 @@ INITIALIZE_PASS_END(JSONImporter, "polly-import-jscop",
 
 namespace {
 /// Print result from JSONImporter.
-class JSONImporterPrinterLegacyPass : public ScopPass {
+class JSONImporterPrinterLegacyPass final : public ScopPass {
 public:
   static char ID;
 

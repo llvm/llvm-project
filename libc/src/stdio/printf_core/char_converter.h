@@ -12,7 +12,7 @@
 namespace __llvm_libc {
 namespace printf_core {
 
-void convert_char(Writer *writer, FormatSection to_conv) {
+void convert_char(Writer *writer, const FormatSection &to_conv) {
   char c = to_conv.conv_val_raw;
 
   if (to_conv.min_width > 1) {

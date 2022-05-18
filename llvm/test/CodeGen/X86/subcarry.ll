@@ -312,16 +312,15 @@ define { i64, i64, i1 } @subcarry_2x64_add_reversed(i64 %x0, i64 %x1, i64 %y0, i
 ; CHECK-LABEL: subcarry_2x64_add_reversed:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movq %rdi, %rax
-; CHECK-NEXT:    xorl %edi, %edi
+; CHECK-NEXT:    movq %rsi, %rdi
+; CHECK-NEXT:    subq %rcx, %rdi
 ; CHECK-NEXT:    subq %rdx, %rax
-; CHECK-NEXT:    setb %dil
-; CHECK-NEXT:    movq %rsi, %rdx
-; CHECK-NEXT:    subq %rcx, %rdx
-; CHECK-NEXT:    subq %rdi, %rdx
-; CHECK-NEXT:    setb %dil
+; CHECK-NEXT:    sbbq $0, %rdi
+; CHECK-NEXT:    setb %r8b
 ; CHECK-NEXT:    cmpq %rcx, %rsi
-; CHECK-NEXT:    adcb $0, %dil
-; CHECK-NEXT:    movl %edi, %ecx
+; CHECK-NEXT:    adcb $0, %r8b
+; CHECK-NEXT:    movq %rdi, %rdx
+; CHECK-NEXT:    movl %r8d, %ecx
 ; CHECK-NEXT:    retq
   %t0 = call { i64, i1 } @llvm.usub.with.overflow.i64(i64 %x0, i64 %y0)
   %s0 = extractvalue { i64, i1 } %t0, 0
@@ -601,22 +600,20 @@ define void @sub_U256_without_i128_or_recursive(%uint256* sret(%uint256) %0, %ui
 ; CHECK-LABEL: sub_U256_without_i128_or_recursive:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movq %rdi, %rax
-; CHECK-NEXT:    movq (%rsi), %r9
-; CHECK-NEXT:    movq 8(%rsi), %r10
-; CHECK-NEXT:    subq (%rdx), %r9
-; CHECK-NEXT:    sbbq 8(%rdx), %r10
-; CHECK-NEXT:    setb %r8b
+; CHECK-NEXT:    movq (%rsi), %r8
+; CHECK-NEXT:    movq 8(%rsi), %r9
 ; CHECK-NEXT:    movq 16(%rsi), %rcx
 ; CHECK-NEXT:    movq 24(%rsi), %rsi
 ; CHECK-NEXT:    xorl %edi, %edi
 ; CHECK-NEXT:    subq 16(%rdx), %rcx
 ; CHECK-NEXT:    setb %dil
 ; CHECK-NEXT:    subq 24(%rdx), %rsi
-; CHECK-NEXT:    movzbl %r8b, %edx
-; CHECK-NEXT:    subq %rdx, %rcx
+; CHECK-NEXT:    subq (%rdx), %r8
+; CHECK-NEXT:    sbbq 8(%rdx), %r9
+; CHECK-NEXT:    sbbq $0, %rcx
 ; CHECK-NEXT:    sbbq %rdi, %rsi
-; CHECK-NEXT:    movq %r9, (%rax)
-; CHECK-NEXT:    movq %r10, 8(%rax)
+; CHECK-NEXT:    movq %r8, (%rax)
+; CHECK-NEXT:    movq %r9, 8(%rax)
 ; CHECK-NEXT:    movq %rcx, 16(%rax)
 ; CHECK-NEXT:    movq %rsi, 24(%rax)
 ; CHECK-NEXT:    retq
@@ -668,12 +665,10 @@ define void @sub_U256_without_i128_or_recursive(%uint256* sret(%uint256) %0, %ui
 define i1 @subcarry_ult_2x64(i64 %x0, i64 %x1, i64 %y0, i64 %y1) nounwind {
 ; CHECK-LABEL: subcarry_ult_2x64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    xorl %eax, %eax
-; CHECK-NEXT:    cmpq %rdx, %rdi
-; CHECK-NEXT:    setb %al
 ; CHECK-NEXT:    subq %rcx, %rsi
 ; CHECK-NEXT:    setb %cl
-; CHECK-NEXT:    cmpq %rax, %rsi
+; CHECK-NEXT:    cmpq %rdx, %rdi
+; CHECK-NEXT:    sbbq $0, %rsi
 ; CHECK-NEXT:    setb %al
 ; CHECK-NEXT:    orb %cl, %al
 ; CHECK-NEXT:    retq

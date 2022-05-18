@@ -202,6 +202,9 @@ typedef double double8 __attribute__((ext_vector_type(8)));
 typedef double double16 __attribute__((ext_vector_type(16)));
 #endif
 
+// An internal alias for half, for use by OpenCLBuiltins.td.
+#define __half half
+
 #if defined(__OPENCL_CPP_VERSION__)
 #define NULL nullptr
 #elif defined(__OPENCL_C_VERSION__)

@@ -12,6 +12,15 @@ s_delay_alu instid0(VALU_DEP_9)
 s_delay_alu instid0(1)
 // GFX11: [[@LINE-1]]:{{[0-9]+}}: error: expected a value name
 
+s_delay_alu instid0(VALU_DEP_9|)
+// GFX11: [[@LINE-1]]:{{[0-9]+}}: error: expected a right parenthesis
+
+s_delay_alu instid0(VALU_DEP_1) | (SALU_CYCLE_1)
+// GFX11: [[@LINE-1]]:{{[0-9]+}}: error: expected a field name
+
+s_delay_alu instid0(VALU_DEP_1) | SALU_CYCLE_1)
+// GFX11: [[@LINE-1]]:{{[0-9]+}}: error: expected a left parenthesis
+
 v_cubesc_f32_e64_dpp v5, v1, v2, 12345678 row_shr:4 row_mask:0xf bank_mask:0xf
 // GFX11: [[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
 
