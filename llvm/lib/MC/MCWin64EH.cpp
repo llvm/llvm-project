@@ -525,7 +525,7 @@ FindMatchingEpilog(const std::vector<WinEH::Instruction>& EpilogInstrs,
     auto InstrsIter = info->EpilogMap.find(EpilogStart);
     assert(InstrsIter != info->EpilogMap.end() &&
            "Epilog not found in EpilogMap");
-    const auto &Instrs = InstrsIter->second;
+    const auto &Instrs = InstrsIter->second.Instructions;
 
     if (Instrs.size() != EpilogInstrs.size())
       continue;
@@ -633,7 +633,7 @@ static int checkPackedEpilog(MCStreamer &streamer, WinEH::FrameInfo *info,
     return -1;
 
   const std::vector<WinEH::Instruction> &Epilog =
-      info->EpilogMap.begin()->second;
+      info->EpilogMap.begin()->second.Instructions;
 
   // Check that the epilog actually is at the very end of the function,
   // otherwise it can't be packed.
@@ -931,7 +931,7 @@ static void ARM64EmitUnwindInfo(MCStreamer &streamer, WinEH::FrameInfo *info,
 
   simplifyOpcodes(info->Instructions, false);
   for (auto &I : info->EpilogMap)
-    simplifyOpcodes(I.second, true);
+    simplifyOpcodes(I.second.Instructions, true);
 
   MCContext &context = streamer.getContext();
   MCSymbol *Label = context.createTempSymbol();
@@ -1003,7 +1003,7 @@ static void ARM64EmitUnwindInfo(MCStreamer &streamer, WinEH::FrameInfo *info,
 
   for (auto &I : info->EpilogMap) {
     MCSymbol *EpilogStart = I.first;
-    auto &EpilogInstrs = I.second;
+    auto &EpilogInstrs = I.second.Instructions;
     uint32_t CodeBytes = ARM64CountOfUnwindCodes(EpilogInstrs);
 
     MCSymbol* MatchingEpilog =
@@ -1085,7 +1085,7 @@ static void ARM64EmitUnwindInfo(MCStreamer &streamer, WinEH::FrameInfo *info,
 
   // Emit epilog unwind instructions
   for (auto &I : info->EpilogMap) {
-    auto &EpilogInstrs = I.second;
+    auto &EpilogInstrs = I.second.Instructions;
     for (const WinEH::Instruction &inst : EpilogInstrs)
       ARM64EmitUnwindCode(streamer, inst);
   }
