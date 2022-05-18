@@ -850,3 +850,45 @@ llvm::json::Value mlir::lsp::toJSON(const DocumentLink &value) {
       {"target", value.target},
   };
 }
+
+//===----------------------------------------------------------------------===//
+// InlayHintsParams
+//===----------------------------------------------------------------------===//
+
+bool mlir::lsp::fromJSON(const llvm::json::Value &value,
+                         InlayHintsParams &result, llvm::json::Path path) {
+  llvm::json::ObjectMapper o(value, path);
+  return o && o.map("textDocument", result.textDocument) &&
+         o.map("range", result.range);
+}
+
+//===----------------------------------------------------------------------===//
+// InlayHint
+//===----------------------------------------------------------------------===//
+
+llvm::json::Value mlir::lsp::toJSON(const InlayHint &value) {
+  return llvm::json::Object{{"position", value.position},
+                            {"kind", (int)value.kind},
+                            {"label", value.label},
+                            {"paddingLeft", value.paddingLeft},
+                            {"paddingRight", value.paddingRight}};
+}
+bool mlir::lsp::operator==(const InlayHint &lhs, const InlayHint &rhs) {
+  return std::tie(lhs.position, lhs.kind, lhs.label) ==
+         std::tie(rhs.position, rhs.kind, rhs.label);
+}
+bool mlir::lsp::operator<(const InlayHint &lhs, const InlayHint &rhs) {
+  return std::tie(lhs.position, lhs.kind, lhs.label) <
+         std::tie(rhs.position, rhs.kind, rhs.label);
+}
+
+llvm::raw_ostream &mlir::lsp::operator<<(llvm::raw_ostream &os,
+                                         InlayHintKind value) {
+  switch (value) {
+  case InlayHintKind::Parameter:
+    return os << "parameter";
+  case InlayHintKind::Type:
+    return os << "type";
+  }
+  llvm_unreachable("Unknown InlayHintKind");
+}
