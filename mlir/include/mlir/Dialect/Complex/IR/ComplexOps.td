@@ -347,6 +347,24 @@ def NotEqualOp : Complex_Op<"neq",
 }
 
 //===----------------------------------------------------------------------===//
+// PowOp
+//===----------------------------------------------------------------------===//
+
+def PowOp : ComplexArithmeticOp<"pow"> {
+  let summary = "complex power function";
+  let description = [{
+    The `sqrt` operation takes a complex number raises it to the given complex
+    exponent.
+
+    Example:
+
+    ```mlir
+    %a = complex.pow %b, %c : complex<f32>
+    ```
+  }];
+}
+
+//===----------------------------------------------------------------------===//
 // ReOp
 //===----------------------------------------------------------------------===//
 
@@ -410,6 +428,25 @@ def SinOp : ComplexUnaryOp<"sin", [SameOperandsAndResultType]> {
 }
 
 //===----------------------------------------------------------------------===//
+// SqrtOp
+//===----------------------------------------------------------------------===//
+
+def SqrtOp : ComplexUnaryOp<"sqrt", [SameOperandsAndResultType]> {
+  let summary = "complex square root";
+  let description = [{
+    The `sqrt` operation takes a complex number and returns its square root.
+
+    Example:
+
+    ```mlir
+    %a = complex.sqrt %b : complex<f32>
+    ```
+  }];
+
+  let results = (outs Complex<AnyFloat>:$result);
+}
+
+//===----------------------------------------------------------------------===//
 // SubOp
 //===----------------------------------------------------------------------===//
 
@@ -424,6 +461,26 @@ def SubOp : ComplexArithmeticOp<"sub"> {
     %a = complex.sub %b, %c : complex<f32>
     ```
   }];
+}
+
+//===----------------------------------------------------------------------===//
+// TanhOp
+//===----------------------------------------------------------------------===//
+
+def TanhOp : ComplexUnaryOp<"tanh", [SameOperandsAndResultType]> {
+  let summary = "complex hyperbolic tangent";
+  let description = [{
+    The `tanh` operation takes a complex number and returns its hyperbolic
+    tangent.
+
+    Example:
+
+    ```mlir
+    %a = complex.tanh %b : complex<f32>
+    ```
+  }];
+
+  let results = (outs Complex<AnyFloat>:$result);
 }
 
 #endif // COMPLEX_OPS
