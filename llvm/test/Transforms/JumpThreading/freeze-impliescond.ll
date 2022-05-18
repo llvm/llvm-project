@@ -42,19 +42,11 @@ define void @test2(i1 %cond, i1 %dummycond) {
 ; CHECK-NEXT:    [[COND_FR0:%.*]] = freeze i1 [[COND:%.*]]
 ; CHECK-NEXT:    br i1 [[COND_FR0]], label [[A:%.*]], label [[B:%.*]]
 ; CHECK:       A:
-; CHECK-NEXT:    br i1 [[DUMMYCOND:%.*]], label [[A2:%.*]], label [[DUMMY:%.*]]
-; CHECK:       A2:
-; CHECK-NEXT:    [[COND_FR:%.*]] = freeze i1 [[COND]]
-; CHECK-NEXT:    br i1 [[COND_FR]], label [[REACHABLE:%.*]], label [[UNREACHABLE:%.*]]
+; CHECK-NEXT:    br i1 [[DUMMYCOND:%.*]], label [[REACHABLE:%.*]], label [[DUMMY:%.*]]
 ; CHECK:       B:
-; CHECK-NEXT:    br i1 [[DUMMYCOND]], label [[B2:%.*]], label [[DUMMY]]
-; CHECK:       B2:
-; CHECK-NEXT:    [[COND_FR2:%.*]] = freeze i1 [[COND]]
-; CHECK-NEXT:    br i1 [[COND_FR2]], label [[UNREACHABLE]], label [[REACHABLE]]
+; CHECK-NEXT:    br i1 [[DUMMYCOND]], label [[REACHABLE]], label [[DUMMY]]
 ; CHECK:       REACHABLE:
 ; CHECK-NEXT:    call void @f()
-; CHECK-NEXT:    ret void
-; CHECK:       UNREACHABLE:
 ; CHECK-NEXT:    ret void
 ; CHECK:       DUMMY:
 ; CHECK-NEXT:    ret void
@@ -81,6 +73,14 @@ DUMMY:
   ret void
 }
 
+; In this specific example, it is still correct to fold %cond.fr into true.
+; This case is unsupported because it is unclear what is the result of
+; isImpliedCondition if LHS is poison or undef.
+; If isImpliedCondition(poison, any value) is true,
+; isImpliedCondition(and true, poison, false) is also true because 'and' propagates poison.
+; However, freeze(and true, poison) does not imply false because the former can
+; be frozen to true. Therefore, we cannot look through the argument of freeze (%cond.fr0)
+; in general under this isImpliedCondition definition.
 define void @and_noopt(i32 %x, i1 %cond2, i1 %dummycond) {
 ; CHECK-LABEL: @and_noopt(
 ; CHECK-NEXT:    [[COND1:%.*]] = icmp slt i32 0, [[X:%.*]]
@@ -135,10 +135,7 @@ define void @and(i32 %x, i1 %cond2, i1 %dummycond) {
 ; CHECK-NEXT:    [[COND:%.*]] = and i1 [[COND1]], [[COND2:%.*]]
 ; CHECK-NEXT:    br i1 [[COND]], label [[A:%.*]], label [[B:%.*]]
 ; CHECK:       A:
-; CHECK-NEXT:    br i1 [[DUMMYCOND:%.*]], label [[A2:%.*]], label [[DUMMY:%.*]]
-; CHECK:       A2:
-; CHECK-NEXT:    [[COND_FR:%.*]] = freeze i1 [[COND1]]
-; CHECK-NEXT:    br i1 [[COND_FR]], label [[REACHABLE:%.*]], label [[UNREACHABLE:%.*]]
+; CHECK-NEXT:    br i1 [[DUMMYCOND:%.*]], label [[REACHABLE:%.*]], label [[DUMMY:%.*]]
 ; CHECK:       B:
 ; CHECK-NEXT:    br i1 [[DUMMYCOND]], label [[B2:%.*]], label [[DUMMY]]
 ; CHECK:       B2:
@@ -149,8 +146,6 @@ define void @and(i32 %x, i1 %cond2, i1 %dummycond) {
 ; CHECK-NEXT:    ret void
 ; CHECK:       REACHABLE2:
 ; CHECK-NEXT:    call void @f()
-; CHECK-NEXT:    ret void
-; CHECK:       UNREACHABLE:
 ; CHECK-NEXT:    ret void
 ; CHECK:       DUMMY:
 ; CHECK-NEXT:    ret void
