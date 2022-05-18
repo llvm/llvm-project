@@ -202,3 +202,28 @@ add_entrypoint_object(
     libc.include.stdio
     libc.src.__support.File.file
 )
+
+
+add_entrypoint_object(
+  sprintf
+  SRCS
+    sprintf.cpp
+  HDRS
+    sprintf.h
+  DEPENDS
+    libc.src.stdio.printf_core.printf_main
+    libc.src.stdio.printf_core.string_writer
+    libc.src.stdio.printf_core.writer
+)
+
+add_entrypoint_object(
+  snprintf
+  SRCS
+    snprintf.cpp
+  HDRS
+    snprintf.h
+  DEPENDS
+    libc.src.stdio.printf_core.printf_main
+    libc.src.stdio.printf_core.string_writer
+    libc.src.stdio.printf_core.writer
+)

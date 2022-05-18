@@ -11,6 +11,8 @@
 
 #include <sys/ptrace.h>
 
+#include "lldb/lldb-types.h"
+
 #include "llvm/Support/Error.h"
 
 #include <vector>
@@ -43,13 +45,13 @@ llvm::Expected<llvm::ArrayRef<uint8_t>> GetProcfsCpuInfo();
 /// \return
 ///     A list of available logical core ids given the contents of
 ///     /proc/cpuinfo.
-llvm::Expected<std::vector<int>>
+llvm::Expected<std::vector<lldb::core_id_t>>
 GetAvailableLogicalCoreIDs(llvm::StringRef cpuinfo);
 
 /// \return
 ///     A list with all the logical cores available in the system and cache it
 ///     if errors didn't happen.
-llvm::Expected<llvm::ArrayRef<int>> GetAvailableLogicalCoreIDs();
+llvm::Expected<llvm::ArrayRef<lldb::core_id_t>> GetAvailableLogicalCoreIDs();
 
 } // namespace process_linux
 } // namespace lldb_private

@@ -2333,20 +2333,17 @@ public:
     return CreateShuffleVector(V, PoisonValue::get(V->getType()), Mask, Name);
   }
 
-  Value *CreateExtractValue(Value *Agg,
-                            ArrayRef<unsigned> Idxs,
+  Value *CreateExtractValue(Value *Agg, ArrayRef<unsigned> Idxs,
                             const Twine &Name = "") {
-    if (auto *AggC = dyn_cast<Constant>(Agg))
-      return Insert(Folder.CreateExtractValue(AggC, Idxs), Name);
+    if (auto *V = Folder.FoldExtractValue(Agg, Idxs))
+      return V;
     return Insert(ExtractValueInst::Create(Agg, Idxs), Name);
   }
 
-  Value *CreateInsertValue(Value *Agg, Value *Val,
-                           ArrayRef<unsigned> Idxs,
+  Value *CreateInsertValue(Value *Agg, Value *Val, ArrayRef<unsigned> Idxs,
                            const Twine &Name = "") {
-    if (auto *AggC = dyn_cast<Constant>(Agg))
-      if (auto *ValC = dyn_cast<Constant>(Val))
-        return Insert(Folder.CreateInsertValue(AggC, ValC, Idxs), Name);
+    if (auto *V = Folder.FoldInsertValue(Agg, Val, Idxs))
+      return V;
     return Insert(InsertValueInst::Create(Agg, Val, Idxs), Name);
   }
 

@@ -10270,6 +10270,7 @@ public:
         // If the edge is not an instruction, or it is different from the main
         // reduction opcode or has too many uses - possible reduced value.
         if (!EdgeInst || getRdxKind(EdgeInst) != RdxKind ||
+            IsCmpSelMinMax != isCmpSelMinMax(EdgeInst) ||
             !hasRequiredNumberOfUses(IsCmpSelMinMax, EdgeInst) ||
             !isVectorizable(getRdxKind(EdgeInst), EdgeInst)) {
           PossibleReducedVals.push_back(EdgeVal);

@@ -395,6 +395,103 @@ entry:
   ret <vscale x 1 x double> %y2
 }
 
+define i64 @avl_forward1(<vscale x 2 x i32> %v, <vscale x 2 x i32>* %p) nounwind {
+; CHECK-LABEL: avl_forward1:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    vsetivli a1, 6, e32, m1, ta, mu
+; CHECK-NEXT:    vse32.v v8, (a0)
+; CHECK-NEXT:    mv a0, a1
+; CHECK-NEXT:    ret
+entry:
+  %vl = tail call i64 @llvm.riscv.vsetvli(i64 6, i64 2, i64 0)
+  call void @llvm.riscv.vse.nxv2i32.i64(<vscale x 2 x i32> %v, <vscale x 2 x i32>* %p, i64 %vl)
+  ret i64 %vl
+}
+
+; Incompatible vtype
+define i64 @avl_forward1b_neg(<vscale x 2 x i32> %v, <vscale x 2 x i32>* %p) nounwind {
+; CHECK-LABEL: avl_forward1b_neg:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    vsetivli a1, 6, e16, m1, ta, mu
+; CHECK-NEXT:    vsetivli zero, 6, e32, m1, ta, mu
+; CHECK-NEXT:    vse32.v v8, (a0)
+; CHECK-NEXT:    mv a0, a1
+; CHECK-NEXT:    ret
+entry:
+  %vl = tail call i64 @llvm.riscv.vsetvli(i64 6, i64 1, i64 0)
+  call void @llvm.riscv.vse.nxv2i32.i64(<vscale x 2 x i32> %v, <vscale x 2 x i32>* %p, i64 %vl)
+  ret i64 %vl
+}
+
+define i64 @avl_forward2(<vscale x 2 x i32> %v, <vscale x 2 x i32>* %p) nounwind {
+; CHECK-LABEL: avl_forward2:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    vsetvli a1, zero, e32, m1, ta, mu
+; CHECK-NEXT:    vse32.v v8, (a0)
+; CHECK-NEXT:    mv a0, a1
+; CHECK-NEXT:    ret
+entry:
+  %vl = tail call i64 @llvm.riscv.vsetvlimax(i64 2, i64 0)
+  call void @llvm.riscv.vse.nxv2i32.i64(<vscale x 2 x i32> %v, <vscale x 2 x i32>* %p, i64 %vl)
+  ret i64 %vl
+}
+
+
+; %vl is intentionally used only once
+define void @avl_forward3(<vscale x 2 x i32> %v, <vscale x 2 x i32>* %p, i64 %reg) nounwind {
+; CHECK-LABEL: avl_forward3:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    vsetvli zero, a1, e32, m1, ta, mu
+; CHECK-NEXT:    vse32.v v8, (a0)
+; CHECK-NEXT:    ret
+entry:
+  %vl = tail call i64 @llvm.riscv.vsetvli(i64 %reg, i64 2, i64 0)
+  call void @llvm.riscv.vse.nxv2i32.i64(<vscale x 2 x i32> %v, <vscale x 2 x i32>* %p, i64 %vl)
+  ret void
+}
+
+; %vl has multiple uses
+define i64 @avl_forward3b(<vscale x 2 x i32> %v, <vscale x 2 x i32>* %p, i64 %reg) nounwind {
+; CHECK-LABEL: avl_forward3b:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    vsetvli a1, a1, e32, m1, ta, mu
+; CHECK-NEXT:    vse32.v v8, (a0)
+; CHECK-NEXT:    mv a0, a1
+; CHECK-NEXT:    ret
+entry:
+  %vl = tail call i64 @llvm.riscv.vsetvli(i64 %reg, i64 2, i64 0)
+  call void @llvm.riscv.vse.nxv2i32.i64(<vscale x 2 x i32> %v, <vscale x 2 x i32>* %p, i64 %vl)
+  ret i64 %vl
+}
+
+; Like4, but with incompatible VTYPE
+define void @avl_forward4(<vscale x 2 x i32> %v, <vscale x 2 x i32>* %p, i64 %reg) nounwind {
+; CHECK-LABEL: avl_forward4:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    vsetvli zero, a1, e16, m1, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e32, m1, ta, mu
+; CHECK-NEXT:    vse32.v v8, (a0)
+; CHECK-NEXT:    ret
+entry:
+  %vl = tail call i64 @llvm.riscv.vsetvli(i64 %reg, i64 1, i64 0)
+  call void @llvm.riscv.vse.nxv2i32.i64(<vscale x 2 x i32> %v, <vscale x 2 x i32>* %p, i64 %vl)
+  ret void
+}
+
+; Like4b, but with incompatible VTYPE
+define i64 @avl_forward4b(<vscale x 2 x i32> %v, <vscale x 2 x i32>* %p, i64 %reg) nounwind {
+; CHECK-LABEL: avl_forward4b:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    vsetvli a2, a1, e16, m1, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e32, m1, ta, mu
+; CHECK-NEXT:    vse32.v v8, (a0)
+; CHECK-NEXT:    mv a0, a2
+; CHECK-NEXT:    ret
+entry:
+  %vl = tail call i64 @llvm.riscv.vsetvli(i64 %reg, i64 1, i64 0)
+  call void @llvm.riscv.vse.nxv2i32.i64(<vscale x 2 x i32> %v, <vscale x 2 x i32>* %p, i64 %vl)
+  ret i64 %vl
+}
 
 declare <vscale x 1 x i64> @llvm.riscv.vadd.mask.nxv1i64.nxv1i64(
   <vscale x 1 x i64>,
@@ -428,3 +525,4 @@ declare <vscale x 2 x i1> @llvm.riscv.vmslt.nxv2i32.i32.i64(<vscale x 2 x i32>, 
 declare <vscale x 2 x i1> @llvm.riscv.vmsgt.nxv2i32.i32.i64(<vscale x 2 x i32>, i32, i64)
 declare <vscale x 2 x i1> @llvm.riscv.vmor.nxv2i1.i64(<vscale x 2 x i1>, <vscale x 2 x i1>, i64)
 declare void @llvm.riscv.vse.mask.nxv2i32.i64(<vscale x 2 x i32>, <vscale x 2 x i32>* nocapture, <vscale x 2 x i1>, i64)
+declare void @llvm.riscv.vse.nxv2i32.i64(<vscale x 2 x i32>, <vscale x 2 x i32>* nocapture, i64)

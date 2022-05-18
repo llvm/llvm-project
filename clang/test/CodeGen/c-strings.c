@@ -20,6 +20,11 @@
 // fails the check for "@f3.x = ... align [ALIGN]", since ALIGN is derived
 // from the alignment of a single i8, which is still 1.
 
+// XFAIL: csky
+// CSKY aligns arrays of size 4+ bytes to a 32-bit boundary, which
+// fails the check for "@f2.x = ... align [ALIGN]", since ALIGN is derived
+// from the alignment of a single i8, which is still 1.
+
 #if defined(__s390x__)
 unsigned char align = 2;
 #else
@@ -69,4 +74,3 @@ void f4(void) {
 }
 
 char x[3] = "ola";
-
