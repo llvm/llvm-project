@@ -1692,11 +1692,20 @@ Sema::CreateGenericSelectionExpr(SourceLocation KeyLoc,
           // reached. We will warn about this so users are less surprised by
           // the unreachable association. However, we don't have to handle
           // function types; that's not an object type, so it's handled above.
+          //
+          // The logic is somewhat different for C++ because C++ has different
+          // lvalue to rvalue conversion rules than C. [conv.lvalue]p1 says,
+          // If T is a non-class type, the type of the prvalue is the cv-
+          // unqualified version of T. Otherwise, the type of the prvalue is T.
+          // The result of these rules is that all qualified types in an
+          // association in C are unreachable, and in C++, only qualified non-
+          // class types are unreachable.
           unsigned Reason = 0;
           QualType QT = Types[i]->getType();
           if (QT->isArrayType())
             Reason = 1;
-          else if (QT.hasQualifiers())
+          else if (QT.hasQualifiers() &&
+                   (!LangOpts.CPlusPlus || !QT->isRecordType()))
             Reason = 2;
 
           if (Reason)
