@@ -1766,6 +1766,7 @@ FailureOr<ast::Expr *> Parser::parseAttributeExpr() {
   std::string attrExpr = curToken.getStringValue();
   consumeToken();
 
+  loc.End = curToken.getEndLoc();
   if (failed(
           parseToken(Token::greater, "expected `>` after attribute literal")))
     return failure();
@@ -1773,7 +1774,6 @@ FailureOr<ast::Expr *> Parser::parseAttributeExpr() {
 }
 
 FailureOr<ast::Expr *> Parser::parseCallExpr(ast::Expr *parentExpr) {
-  SMRange loc = curToken.getLoc();
   consumeToken(Token::l_paren);
 
   // Parse the arguments of the call.
@@ -1792,7 +1792,8 @@ FailureOr<ast::Expr *> Parser::parseCallExpr(ast::Expr *parentExpr) {
       arguments.push_back(*argument);
     } while (consumeIf(Token::comma));
   }
-  loc.End = curToken.getEndLoc();
+
+  SMRange loc(parentExpr->getLoc().Start, curToken.getEndLoc());
   if (failed(parseToken(Token::r_paren, "expected `)` after argument list")))
     return failure();
 
@@ -1846,7 +1847,7 @@ FailureOr<ast::Expr *> Parser::parseInlineRewriteLambdaExpr() {
 }
 
 FailureOr<ast::Expr *> Parser::parseMemberAccessExpr(ast::Expr *parentExpr) {
-  SMRange loc = curToken.getLoc();
+  SMRange dotLoc = curToken.getLoc();
   consumeToken(Token::dot);
 
   // Check for code completion of the member name.
@@ -1857,8 +1858,9 @@ FailureOr<ast::Expr *> Parser::parseMemberAccessExpr(ast::Expr *parentExpr) {
   Token memberNameTok = curToken;
   if (memberNameTok.isNot(Token::identifier, Token::integer) &&
       !memberNameTok.isKeyword())
-    return emitError(loc, "expected identifier or numeric member name");
+    return emitError(dotLoc, "expected identifier or numeric member name");
   StringRef memberName = memberNameTok.getSpelling();
+  SMRange loc(parentExpr->getLoc().Start, curToken.getEndLoc());
   consumeToken();
 
   return createMemberAccessExpr(parentExpr, memberName, loc);
@@ -2099,6 +2101,7 @@ FailureOr<ast::Expr *> Parser::parseTypeExpr() {
   std::string attrExpr = curToken.getStringValue();
   consumeToken();
 
+  loc.End = curToken.getEndLoc();
   if (failed(parseToken(Token::greater, "expected `>` after type literal")))
     return failure();
   return ast::TypeExpr::create(ctx, loc, attrExpr);
