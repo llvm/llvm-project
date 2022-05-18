@@ -10,7 +10,7 @@ entry:
 ; CHECK-NEXT:    .pad #1600
 ; CHECK-NEXT:    add sp, r6
 ; CHECK: .LCPI0_0:
-; CHECK_NEXT:    long   4294963196
+; CHECK-NEXT:    .long 4294965696
   %a = alloca [400 x i32], align 4
   %arraydecay = getelementptr inbounds [400 x i32], [400 x i32]* %a, i32 0, i32 0
   call void @bar(i32* %arraydecay)
