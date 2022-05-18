@@ -3033,6 +3033,11 @@ void AMDGPURegisterBankInfo::applyMappingImpl(
       constrainOpWithReadfirstlane(MI, MRI, 6); // soffset
       return;
     }
+    case Intrinsic::amdgcn_global_load_lds: {
+      applyDefaultMapping(OpdMapper);
+      constrainOpWithReadfirstlane(MI, MRI, 2);
+      return;
+    }
     case Intrinsic::amdgcn_lds_direct_load: {
       applyDefaultMapping(OpdMapper);
       // Readlane for m0 value, which is always the last operand.
@@ -4555,6 +4560,11 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
       unsigned Bank = getRegBankID(MI.getOperand(1).getReg(), MRI,
                                    AMDGPU::SGPRRegBankID);
       OpdsMapping[1] = AMDGPU::getValueMapping(Bank, 32);
+      break;
+    }
+    case Intrinsic::amdgcn_global_load_lds: {
+      OpdsMapping[1] = getVGPROpMapping(MI.getOperand(1).getReg(), MRI, *TRI);
+      OpdsMapping[2] = getSGPROpMapping(MI.getOperand(2).getReg(), MRI, *TRI);
       break;
     }
     case Intrinsic::amdgcn_lds_direct_load: {
