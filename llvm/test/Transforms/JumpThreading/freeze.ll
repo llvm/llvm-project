@@ -198,7 +198,6 @@ define i32 @freeze_known_predicate(i1 %cond) {
 ; CHECK-NEXT:    br label [[ELSE2]]
 ; CHECK:       else2:
 ; CHECK-NEXT:    [[PHI:%.*]] = phi i32 [ 1, [[IF]] ], [ 2, [[ENTRY:%.*]] ]
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[PHI]], 0
 ; CHECK-NEXT:    ret i32 1
 ;
 entry:

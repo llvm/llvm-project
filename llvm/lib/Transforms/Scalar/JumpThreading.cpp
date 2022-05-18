@@ -489,14 +489,15 @@ bool JumpThreadingPass::runImpl(Function &F, TargetLibraryInfo *TLI_,
 // at the end of block. RAUW unconditionally replaces all uses
 // including the guards/assumes themselves and the uses before the
 // guard/assume.
-static void replaceFoldableUses(Instruction *Cond, Value *ToVal,
+static bool replaceFoldableUses(Instruction *Cond, Value *ToVal,
                                 BasicBlock *KnownAtEndOfBB) {
+  bool Changed = false;
   assert(Cond->getType() == ToVal->getType());
   // We can unconditionally replace all uses in non-local blocks (i.e. uses
   // strictly dominated by BB), since LVI information is true from the
   // terminator of BB.
   if (Cond->getParent() == KnownAtEndOfBB)
-    replaceNonLocalUsesWith(Cond, ToVal);
+    Changed |= replaceNonLocalUsesWith(Cond, ToVal);
   for (Instruction &I : reverse(*KnownAtEndOfBB)) {
     // Reached the Cond whose uses we are trying to replace, so there are no
     // more uses.
@@ -506,10 +507,13 @@ static void replaceFoldableUses(Instruction *Cond, Value *ToVal,
     // of BB, where we know Cond is ToVal.
     if (!isGuaranteedToTransferExecutionToSuccessor(&I))
       break;
-    I.replaceUsesOfWith(Cond, ToVal);
+    Changed |= I.replaceUsesOfWith(Cond, ToVal);
   }
-  if (Cond->use_empty() && !Cond->mayHaveSideEffects())
+  if (Cond->use_empty() && !Cond->mayHaveSideEffects()) {
     Cond->eraseFromParent();
+    Changed = true;
+  }
+  return Changed;
 }
 
 /// Return the cost of duplicating a piece of this block from first non-phi
@@ -1139,7 +1143,7 @@ bool JumpThreadingPass::processBlock(BasicBlock *BB) {
   if (auto *FI = dyn_cast<FreezeInst>(CondInst))
     CondWithoutFreeze = FI->getOperand(0);
 
-  if (CmpInst *CondCmp = dyn_cast<CmpInst>(CondInst)) {
+  if (CmpInst *CondCmp = dyn_cast<CmpInst>(CondWithoutFreeze)) {
     // If we're branching on a conditional, LVI might be able to determine
     // it's value at the branch instruction.  We only handle comparisons
     // against a constant at this time.
@@ -1159,8 +1163,8 @@ bool JumpThreadingPass::processBlock(BasicBlock *BB) {
         auto *CI = Ret == LazyValueInfo::True ?
           ConstantInt::getTrue(CondCmp->getType()) :
           ConstantInt::getFalse(CondCmp->getType());
-        replaceFoldableUses(CondCmp, CI, BB);
-        return true;
+        if (replaceFoldableUses(CondCmp, CI, BB))
+          return true;
       }
 
       // We did not manage to simplify this branch, try to see whether

@@ -171,27 +171,23 @@ define i32 @unfold5(i32 %u, i32 %v, i32 %w, i32 %x, i32 %y, i32 %z, i32 %j) noun
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[ADD3:%.*]] = add nsw i32 [[J:%.*]], 2
 ; CHECK-NEXT:    [[CMP_I:%.*]] = icmp slt i32 [[U:%.*]], [[V:%.*]]
-; CHECK-NEXT:    br i1 [[CMP_I]], label [[DOTEXIT_THREAD:%.*]], label [[COND_FALSE_I:%.*]]
+; CHECK-NEXT:    br i1 [[CMP_I]], label [[DOTEXIT:%.*]], label [[COND_FALSE_I:%.*]]
 ; CHECK:       cond.false.i:
 ; CHECK-NEXT:    [[CMP4_I:%.*]] = icmp sgt i32 [[U]], [[V]]
-; CHECK-NEXT:    br i1 [[CMP4_I]], label [[DOTEXIT_THREAD]], label [[COND_FALSE_6_I:%.*]]
+; CHECK-NEXT:    br i1 [[CMP4_I]], label [[DOTEXIT]], label [[COND_FALSE_6_I:%.*]]
 ; CHECK:       cond.false.6.i:
 ; CHECK-NEXT:    [[CMP8_I:%.*]] = icmp slt i32 [[W:%.*]], [[X:%.*]]
-; CHECK-NEXT:    br i1 [[CMP8_I]], label [[DOTEXIT_THREAD]], label [[COND_FALSE_10_I:%.*]]
+; CHECK-NEXT:    br i1 [[CMP8_I]], label [[DOTEXIT]], label [[COND_FALSE_10_I:%.*]]
 ; CHECK:       cond.false.10.i:
 ; CHECK-NEXT:    [[CMP13_I:%.*]] = icmp sgt i32 [[W]], [[X]]
-; CHECK-NEXT:    br i1 [[CMP13_I]], label [[TMP0:%.*]], label [[COND_FALSE_15_I:%.*]]
+; CHECK-NEXT:    br i1 [[CMP13_I]], label [[DOTEXIT]], label [[COND_FALSE_15_I:%.*]]
 ; CHECK:       cond.false.15.i:
 ; CHECK-NEXT:    [[CMP19_I:%.*]] = icmp sge i32 [[Y:%.*]], [[Z:%.*]]
 ; CHECK-NEXT:    [[CONV:%.*]] = zext i1 [[CMP19_I]] to i32
-; CHECK-NEXT:    br label [[DOTEXIT_THREAD]]
-; CHECK:       0:
-; CHECK-NEXT:    [[COND23_I:%.*]] = phi i32 [ 7, [[COND_FALSE_10_I]] ]
-; CHECK-NEXT:    [[LNOT_I18:%.*]] = icmp sgt i32 [[COND23_I]], 5
-; CHECK-NEXT:    br label [[DOTEXIT_THREAD]]
-; CHECK:       .exit.thread:
-; CHECK-NEXT:    [[TMP1:%.*]] = phi i32 [ [[J]], [[TMP0]] ], [ [[CONV]], [[COND_FALSE_15_I]] ], [ 1, [[COND_FALSE_6_I]] ], [ 3, [[COND_FALSE_I]] ], [ 2, [[ENTRY:%.*]] ]
-; CHECK-NEXT:    ret i32 [[TMP1]]
+; CHECK-NEXT:    br label [[DOTEXIT]]
+; CHECK:       .exit:
+; CHECK-NEXT:    [[TMP0:%.*]] = phi i32 [ [[J]], [[COND_FALSE_10_I]] ], [ [[CONV]], [[COND_FALSE_15_I]] ], [ 1, [[COND_FALSE_6_I]] ], [ 3, [[COND_FALSE_I]] ], [ 2, [[ENTRY:%.*]] ]
+; CHECK-NEXT:    ret i32 [[TMP0]]
 ;
 entry:
   %add3 = add nsw i32 %j, 2
