@@ -4619,25 +4619,36 @@ bool SIInstrInfo::verifyInstruction(const MachineInstr &MI,
     }
   }
 
-  if (ST.needsAlignedVGPRs() &&
-      (MI.getOpcode() == AMDGPU::DS_GWS_INIT ||
-       MI.getOpcode() == AMDGPU::DS_GWS_SEMA_BR ||
-       MI.getOpcode() == AMDGPU::DS_GWS_BARRIER)) {
-    const MachineOperand *Op = getNamedOperand(MI, AMDGPU::OpName::data0);
-    Register Reg = Op->getReg();
-    bool Aligned = true;
-    if (Reg.isPhysical()) {
-      Aligned = !(RI.getHWRegIndex(Reg) & 1);
-    } else {
+  if (ST.needsAlignedVGPRs()) {
+    const auto isAlignedReg = [&MI, &MRI, this](unsigned OpName) -> bool {
+      const MachineOperand *Op = getNamedOperand(MI, OpName);
+      if (!Op)
+        return true;
+      Register Reg = Op->getReg();
+      if (Reg.isPhysical())
+        return !(RI.getHWRegIndex(Reg) & 1);
       const TargetRegisterClass &RC = *MRI.getRegClass(Reg);
-      Aligned = RI.getRegSizeInBits(RC) > 32 && RI.isProperlyAlignedRC(RC) &&
-                !(RI.getChannelFromSubReg(Op->getSubReg()) & 1);
+      return RI.getRegSizeInBits(RC) > 32 && RI.isProperlyAlignedRC(RC) &&
+             !(RI.getChannelFromSubReg(Op->getSubReg()) & 1);
+    };
+
+    if (MI.getOpcode() == AMDGPU::DS_GWS_INIT ||
+        MI.getOpcode() == AMDGPU::DS_GWS_SEMA_BR ||
+        MI.getOpcode() == AMDGPU::DS_GWS_BARRIER) {
+
+      if (!isAlignedReg(AMDGPU::OpName::data0)) {
+        ErrInfo = "Subtarget requires even aligned vector registers "
+                  "for DS_GWS instructions";
+        return false;
+      }
     }
 
-    if (!Aligned) {
-      ErrInfo = "Subtarget requires even aligned vector registers "
-                "for DS_GWS instructions";
-      return false;
+    if (isMIMG(MI)) {
+      if (!isAlignedReg(AMDGPU::OpName::vaddr)) {
+        ErrInfo = "Subtarget requires even aligned vector registers "
+                  "for vaddr operand of image instructions";
+        return false;
+      }
     }
   }
 
@@ -8426,4 +8437,38 @@ bool SIInstrInfo::optimizeCompareInstr(MachineInstr &CmpInstr, Register SrcReg,
   }
 
   return false;
+}
+
+void SIInstrInfo::enforceOperandRCAlignment(MachineInstr &MI,
+                                            unsigned OpName) const {
+  if (!ST.needsAlignedVGPRs())
+    return;
+
+  int OpNo = AMDGPU::getNamedOperandIdx(MI.getOpcode(), OpName);
+  if (OpNo < 0)
+    return;
+  MachineOperand &Op = MI.getOperand(OpNo);
+  if (getOpSize(MI, OpNo) > 4)
+    return;
+
+  // Add implicit aligned super-reg to force alignment on the data operand.
+  const DebugLoc &DL = MI.getDebugLoc();
+  MachineBasicBlock *BB = MI.getParent();
+  MachineRegisterInfo &MRI = BB->getParent()->getRegInfo();
+  Register DataReg = Op.getReg();
+  bool IsAGPR = RI.isAGPR(MRI, DataReg);
+  Register Undef = MRI.createVirtualRegister(
+      IsAGPR ? &AMDGPU::AGPR_32RegClass : &AMDGPU::VGPR_32RegClass);
+  BuildMI(*BB, MI, DL, get(AMDGPU::IMPLICIT_DEF), Undef);
+  Register NewVR =
+      MRI.createVirtualRegister(IsAGPR ? &AMDGPU::AReg_64_Align2RegClass
+                                       : &AMDGPU::VReg_64_Align2RegClass);
+  BuildMI(*BB, MI, DL, get(AMDGPU::REG_SEQUENCE), NewVR)
+      .addReg(DataReg, 0, Op.getSubReg())
+      .addImm(AMDGPU::sub0)
+      .addReg(Undef)
+      .addImm(AMDGPU::sub1);
+  Op.setReg(NewVR);
+  Op.setSubReg(AMDGPU::sub0);
+  MI.addOperand(MachineOperand::CreateReg(NewVR, false, true));
 }

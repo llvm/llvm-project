@@ -1,0 +1,27 @@
+# RUN: not --crash llc -mtriple=amdgcn-mesa-mesa3d -mcpu=gfx90a -run-pass=machineverifier -o /dev/null %s 2>&1 | FileCheck -check-prefix=GFX90A-ERR %s
+
+# GFX90A-ERR: *** Bad machine code: Subtarget requires even aligned vector registers for vaddr operand of image instructions ***
+# GFX90A-ERR: %4:vgpr_32 = IMAGE_SAMPLE_V1_V1_gfx90a %0.sub1:vreg_128_align2
+# GFX90A-ERR: *** Bad machine code: Subtarget requires even aligned vector registers for vaddr operand of image instructions ***
+# GFX90A-ERR: $vgpr0 = IMAGE_SAMPLE_V1_V1_gfx90a $vgpr1,
+# GFX90A-ERR: *** Bad machine code: Subtarget requires even aligned vector registers for vaddr operand of image instructions ***
+# GFX90A-ERR: %5:vgpr_32 = IMAGE_LOAD_V1_V1_gfx90a %0.sub1:vreg_128_align2
+# GFX90A-ERR: *** Bad machine code: Subtarget requires even aligned vector registers for vaddr operand of image instructions ***
+# GFX90A-ERR: IMAGE_STORE_V1_V1_gfx90a $vgpr1,
+# GFX90A-ERR: *** Bad machine code: Subtarget requires even aligned vector registers for vaddr operand of image instructions ***
+# GFX90A-ERR: %6:vgpr_32 = IMAGE_ATOMIC_SWAP_V1_V1_gfx90a %6:vgpr_32(tied-def 0), $vgpr1,
+---
+name:            image_sample_odd_vgpr
+body:             |
+  bb.0:
+    %0:vreg_128_align2 = IMPLICIT_DEF
+    %1:areg_128_align2 = IMPLICIT_DEF
+    %2:sgpr_256 = IMPLICIT_DEF
+    %3:sgpr_128 = IMPLICIT_DEF
+
+    %4:vgpr_32 = IMAGE_SAMPLE_V1_V1_gfx90a %0.sub1, %2, %3, 1, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s128) from custom "ImageResource")
+    $vgpr0 = IMAGE_SAMPLE_V1_V1_gfx90a $vgpr1, %2, %3, 1, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s128) from custom "ImageResource")
+    %5:vgpr_32 = IMAGE_LOAD_V1_V1_gfx90a %0.sub1, %2, 8, -1, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s32) from custom "ImageResource")
+    IMAGE_STORE_V1_V1_gfx90a $vgpr1, %5, %2, 2, -1, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable store (s32) into custom "ImageResource")
+    %6:vgpr_32 = IMAGE_ATOMIC_SWAP_V1_V1_gfx90a %6:vgpr_32, $vgpr1, %2, 1, -1, 1, 0, 0, 0, implicit $exec :: (volatile dereferenceable load store (s32) on custom "ImageResource")
+...

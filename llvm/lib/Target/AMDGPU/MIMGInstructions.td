@@ -478,6 +478,7 @@ multiclass MIMG_Store_Addr_Helper <mimgopc op, string asm,
       if op.HAS_BASE then {
         def _V1 : MIMG_Store_Helper <op, asm, data_rc, VGPR_32,
                                      !if(enableDisasm, "AMDGPU", "")>;
+        let hasPostISelHook = 1 in
         def _V1_gfx90a : MIMG_Store_Helper_gfx90a <op, asm, data_rc, VGPR_32,
                                      !if(enableDisasm, "GFX90A", "")>;
         def _V1_gfx10 : MIMG_Store_gfx10 <op, asm, data_rc, VGPR_32,
@@ -622,6 +623,7 @@ multiclass MIMG_Atomic_Addr_Helper_m <mimgopc op, string asm,
       }
       if op.HAS_VI then {
         def _V1_vi : MIMG_Atomic_vi <op, asm, data_rc, VGPR_32, enableDasm>;
+        let hasPostISelHook = 1 in
         def _V1_gfx90a : MIMG_Atomic_gfx90a <op, asm, data_rc, VGPR_32, enableDasm>;
       }
       if op.HAS_BASE then {
