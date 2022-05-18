@@ -385,6 +385,45 @@ define <2 x i64> @smlal2d(<2 x i32>* %A, <2 x i32>* %B, <2 x i64>* %C) nounwind 
   ret <2 x i64> %tmp5
 }
 
+define void @smlal8h_chain_with_constant(<8 x i16>* %dst, <8 x i8> %v1, <8 x i8> %v2, <8 x i8> %v3) {
+; CHECK-LABEL: smlal8h_chain_with_constant:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    smull.8h v0, v0, v2
+; CHECK-NEXT:    mvn.8b v2, v2
+; CHECK-NEXT:    movi.16b v3, #1
+; CHECK-NEXT:    smlal.8h v0, v1, v2
+; CHECK-NEXT:    add.8h v0, v0, v3
+; CHECK-NEXT:    str q0, [x0]
+; CHECK-NEXT:    ret
+  %xor = xor <8 x i8> %v3, <i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1>
+  %smull.1 = tail call <8 x i16> @llvm.aarch64.neon.smull.v8i16(<8 x i8> %v1, <8 x i8> %v3)
+  %add.1 = add <8 x i16> %smull.1, <i16 257, i16 257, i16 257, i16 257, i16 257, i16 257, i16 257, i16 257>
+  %smull.2 = tail call <8 x i16> @llvm.aarch64.neon.smull.v8i16(<8 x i8> %v2, <8 x i8> %xor)
+  %add.2 = add <8 x i16> %add.1, %smull.2
+  store <8 x i16> %add.2, <8 x i16>* %dst
+  ret void
+}
+
+define void @smlal2d_chain_with_constant(<2 x i64>* %dst, <2 x i32> %v1, <2 x i32> %v2, <2 x i32> %v3) {
+; CHECK-LABEL: smlal2d_chain_with_constant:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    smull.2d v0, v0, v2
+; CHECK-NEXT:    mov w8, #257
+; CHECK-NEXT:    mvn.8b v2, v2
+; CHECK-NEXT:    smlal.2d v0, v1, v2
+; CHECK-NEXT:    dup.2d v1, x8
+; CHECK-NEXT:    add.2d v0, v0, v1
+; CHECK-NEXT:    str q0, [x0]
+; CHECK-NEXT:    ret
+  %xor = xor <2 x i32> %v3, <i32 -1, i32 -1>
+  %smull.1 = tail call <2 x i64> @llvm.aarch64.neon.smull.v2i64(<2 x i32> %v1, <2 x i32> %v3)
+  %add.1 = add <2 x i64> %smull.1, <i64 257, i64 257>
+  %smull.2 = tail call <2 x i64> @llvm.aarch64.neon.smull.v2i64(<2 x i32> %v2, <2 x i32> %xor)
+  %add.2 = add <2 x i64> %add.1, %smull.2
+  store <2 x i64> %add.2, <2 x i64>* %dst
+  ret void
+}
+
 define <4 x i32> @smlsl4s(<4 x i16>* %A, <4 x i16>* %B, <4 x i32>* %C) nounwind {
 ; CHECK-LABEL: smlsl4s:
 ; CHECK:       // %bb.0:
@@ -415,6 +454,45 @@ define <2 x i64> @smlsl2d(<2 x i32>* %A, <2 x i32>* %B, <2 x i64>* %C) nounwind 
   %tmp4 = call <2 x i64> @llvm.aarch64.neon.smull.v2i64(<2 x i32> %tmp1, <2 x i32> %tmp2)
   %tmp5 = sub <2 x i64> %tmp3, %tmp4
   ret <2 x i64> %tmp5
+}
+
+define void @smlsl8h_chain_with_constant(<8 x i16>* %dst, <8 x i8> %v1, <8 x i8> %v2, <8 x i8> %v3) {
+; CHECK-LABEL: smlsl8h_chain_with_constant:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    smull.8h v0, v0, v2
+; CHECK-NEXT:    mvn.8b v2, v2
+; CHECK-NEXT:    movi.16b v3, #1
+; CHECK-NEXT:    smlal.8h v0, v1, v2
+; CHECK-NEXT:    sub.8h v0, v3, v0
+; CHECK-NEXT:    str q0, [x0]
+; CHECK-NEXT:    ret
+  %xor = xor <8 x i8> %v3, <i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1>
+  %smull.1 = tail call <8 x i16> @llvm.aarch64.neon.smull.v8i16(<8 x i8> %v1, <8 x i8> %v3)
+  %sub.1 = sub <8 x i16> <i16 257, i16 257, i16 257, i16 257, i16 257, i16 257, i16 257, i16 257>, %smull.1
+  %smull.2 = tail call <8 x i16> @llvm.aarch64.neon.smull.v8i16(<8 x i8> %v2, <8 x i8> %xor)
+  %sub.2 = sub <8 x i16> %sub.1, %smull.2
+  store <8 x i16> %sub.2, <8 x i16>* %dst
+  ret void
+}
+
+define void @smlsl2d_chain_with_constant(<2 x i64>* %dst, <2 x i32> %v1, <2 x i32> %v2, <2 x i32> %v3) {
+; CHECK-LABEL: smlsl2d_chain_with_constant:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    smull.2d v0, v0, v2
+; CHECK-NEXT:    mov w8, #257
+; CHECK-NEXT:    mvn.8b v2, v2
+; CHECK-NEXT:    smlal.2d v0, v1, v2
+; CHECK-NEXT:    dup.2d v1, x8
+; CHECK-NEXT:    sub.2d v0, v1, v0
+; CHECK-NEXT:    str q0, [x0]
+; CHECK-NEXT:    ret
+  %xor = xor <2 x i32> %v3, <i32 -1, i32 -1>
+  %smull.1 = tail call <2 x i64> @llvm.aarch64.neon.smull.v2i64(<2 x i32> %v1, <2 x i32> %v3)
+  %sub.1 = sub <2 x i64> <i64 257, i64 257>, %smull.1
+  %smull.2 = tail call <2 x i64> @llvm.aarch64.neon.smull.v2i64(<2 x i32> %v2, <2 x i32> %xor)
+  %sub.2 = sub <2 x i64> %sub.1, %smull.2
+  store <2 x i64> %sub.2, <2 x i64>* %dst
+  ret void
 }
 
 declare <4 x i32> @llvm.aarch64.neon.sqadd.v4i32(<4 x i32>, <4 x i32>)
@@ -590,6 +668,45 @@ define <2 x i64> @umlal2d(<2 x i32>* %A, <2 x i32>* %B, <2 x i64>* %C) nounwind 
   ret <2 x i64> %tmp5
 }
 
+define void @umlal8h_chain_with_constant(<8 x i16>* %dst, <8 x i8> %v1, <8 x i8> %v2, <8 x i8> %v3) {
+; CHECK-LABEL: umlal8h_chain_with_constant:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    umull.8h v0, v0, v2
+; CHECK-NEXT:    mvn.8b v2, v2
+; CHECK-NEXT:    movi.16b v3, #1
+; CHECK-NEXT:    umlal.8h v0, v1, v2
+; CHECK-NEXT:    add.8h v0, v0, v3
+; CHECK-NEXT:    str q0, [x0]
+; CHECK-NEXT:    ret
+  %xor = xor <8 x i8> %v3, <i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1>
+  %umull.1 = tail call <8 x i16> @llvm.aarch64.neon.umull.v8i16(<8 x i8> %v1, <8 x i8> %v3)
+  %add.1 = add <8 x i16> %umull.1, <i16 257, i16 257, i16 257, i16 257, i16 257, i16 257, i16 257, i16 257>
+  %umull.2 = tail call <8 x i16> @llvm.aarch64.neon.umull.v8i16(<8 x i8> %v2, <8 x i8> %xor)
+  %add.2 = add <8 x i16> %add.1, %umull.2
+  store <8 x i16> %add.2, <8 x i16>* %dst
+  ret void
+}
+
+define void @umlal2d_chain_with_constant(<2 x i64>* %dst, <2 x i32> %v1, <2 x i32> %v2, <2 x i32> %v3) {
+; CHECK-LABEL: umlal2d_chain_with_constant:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    umull.2d v0, v0, v2
+; CHECK-NEXT:    mov w8, #257
+; CHECK-NEXT:    mvn.8b v2, v2
+; CHECK-NEXT:    umlal.2d v0, v1, v2
+; CHECK-NEXT:    dup.2d v1, x8
+; CHECK-NEXT:    add.2d v0, v0, v1
+; CHECK-NEXT:    str q0, [x0]
+; CHECK-NEXT:    ret
+  %xor = xor <2 x i32> %v3, <i32 -1, i32 -1>
+  %umull.1 = tail call <2 x i64> @llvm.aarch64.neon.umull.v2i64(<2 x i32> %v1, <2 x i32> %v3)
+  %add.1 = add <2 x i64> %umull.1, <i64 257, i64 257>
+  %umull.2 = tail call <2 x i64> @llvm.aarch64.neon.umull.v2i64(<2 x i32> %v2, <2 x i32> %xor)
+  %add.2 = add <2 x i64> %add.1, %umull.2
+  store <2 x i64> %add.2, <2 x i64>* %dst
+  ret void
+}
+
 define <4 x i32> @umlsl4s(<4 x i16>* %A, <4 x i16>* %B, <4 x i32>* %C) nounwind {
 ; CHECK-LABEL: umlsl4s:
 ; CHECK:       // %bb.0:
@@ -620,6 +737,45 @@ define <2 x i64> @umlsl2d(<2 x i32>* %A, <2 x i32>* %B, <2 x i64>* %C) nounwind 
   %tmp4 = call <2 x i64> @llvm.aarch64.neon.umull.v2i64(<2 x i32> %tmp1, <2 x i32> %tmp2)
   %tmp5 = sub <2 x i64> %tmp3, %tmp4
   ret <2 x i64> %tmp5
+}
+
+define void @umlsl8h_chain_with_constant(<8 x i16>* %dst, <8 x i8> %v1, <8 x i8> %v2, <8 x i8> %v3) {
+; CHECK-LABEL: umlsl8h_chain_with_constant:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    umull.8h v0, v0, v2
+; CHECK-NEXT:    mvn.8b v2, v2
+; CHECK-NEXT:    movi.16b v3, #1
+; CHECK-NEXT:    umlal.8h v0, v1, v2
+; CHECK-NEXT:    sub.8h v0, v3, v0
+; CHECK-NEXT:    str q0, [x0]
+; CHECK-NEXT:    ret
+  %xor = xor <8 x i8> %v3, <i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1>
+  %umull.1 = tail call <8 x i16> @llvm.aarch64.neon.umull.v8i16(<8 x i8> %v1, <8 x i8> %v3)
+  %add.1 = sub <8 x i16> <i16 257, i16 257, i16 257, i16 257, i16 257, i16 257, i16 257, i16 257>, %umull.1
+  %umull.2 = tail call <8 x i16> @llvm.aarch64.neon.umull.v8i16(<8 x i8> %v2, <8 x i8> %xor)
+  %add.2 = sub <8 x i16> %add.1, %umull.2
+  store <8 x i16> %add.2, <8 x i16>* %dst
+  ret void
+}
+
+define void @umlsl2d_chain_with_constant(<2 x i64>* %dst, <2 x i32> %v1, <2 x i32> %v2, <2 x i32> %v3) {
+; CHECK-LABEL: umlsl2d_chain_with_constant:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    umull.2d v0, v0, v2
+; CHECK-NEXT:    mov w8, #257
+; CHECK-NEXT:    mvn.8b v2, v2
+; CHECK-NEXT:    umlal.2d v0, v1, v2
+; CHECK-NEXT:    dup.2d v1, x8
+; CHECK-NEXT:    sub.2d v0, v1, v0
+; CHECK-NEXT:    str q0, [x0]
+; CHECK-NEXT:    ret
+  %xor = xor <2 x i32> %v3, <i32 -1, i32 -1>
+  %umull.1 = tail call <2 x i64> @llvm.aarch64.neon.umull.v2i64(<2 x i32> %v1, <2 x i32> %v3)
+  %add.1 = sub <2 x i64> <i64 257, i64 257>, %umull.1
+  %umull.2 = tail call <2 x i64> @llvm.aarch64.neon.umull.v2i64(<2 x i32> %v2, <2 x i32> %xor)
+  %add.2 = sub <2 x i64> %add.1, %umull.2
+  store <2 x i64> %add.2, <2 x i64>* %dst
+  ret void
 }
 
 define <2 x float> @fmla_2s(<2 x float>* %A, <2 x float>* %B, <2 x float>* %C) nounwind {
