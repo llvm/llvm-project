@@ -29,6 +29,7 @@ class TestingConfig(object):
             'CLANG',
             'LLDB',
             'LD_PRELOAD',
+            'LLVM_SYMBOLIZER_PATH',
             'ASAN_SYMBOLIZER_PATH',
             'LSAN_SYMBOLIZER_PATH',
             'MSAN_SYMBOLIZER_PATH',
