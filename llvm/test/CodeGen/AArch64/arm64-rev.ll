@@ -953,8 +953,9 @@ entry:
 define i32 @pr55484(i32 %0) {
 ; CHECK-LABEL: pr55484:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    rev w8, w0
-; CHECK-NEXT:    asr w0, w8, #16
+; CHECK-NEXT:    lsr w8, w0, #8
+; CHECK-NEXT:    orr w8, w8, w0, lsl #8
+; CHECK-NEXT:    sxth w0, w8
 ; CHECK-NEXT:    ret
 ;
 ; GISEL-LABEL: pr55484:

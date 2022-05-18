@@ -395,15 +395,20 @@ define i32 @pr55484(i32 %0) {
 ; CHECK-LABEL: pr55484:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; CHECK-NEXT:    bswapl %eax
-; CHECK-NEXT:    sarl $16, %eax
+; CHECK-NEXT:    movl %eax, %ecx
+; CHECK-NEXT:    shrl $8, %ecx
+; CHECK-NEXT:    shll $8, %eax
+; CHECK-NEXT:    orl %ecx, %eax
+; CHECK-NEXT:    cwtl
 ; CHECK-NEXT:    retl
 ;
 ; CHECK64-LABEL: pr55484:
 ; CHECK64:       # %bb.0:
 ; CHECK64-NEXT:    movl %edi, %eax
-; CHECK64-NEXT:    bswapl %eax
-; CHECK64-NEXT:    sarl $16, %eax
+; CHECK64-NEXT:    shrl $8, %eax
+; CHECK64-NEXT:    shll $8, %edi
+; CHECK64-NEXT:    orl %eax, %edi
+; CHECK64-NEXT:    movswl %di, %eax
 ; CHECK64-NEXT:    retq
   %2 = lshr i32 %0, 8
   %3 = shl i32 %0, 8

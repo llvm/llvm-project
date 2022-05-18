@@ -67,7 +67,10 @@ entry:
 define i32 @pr55484(i32 %0) {
 ; CHECK-LABEL: pr55484:
 ; CHECK:       @ %bb.0:
-; CHECK-NEXT:    revsh r0, r0
+; CHECK-NEXT:    lsls r1, r0, #8
+; CHECK-NEXT:    lsrs r0, r0, #8
+; CHECK-NEXT:    orrs r0, r1
+; CHECK-NEXT:    sxth r0, r0
 ; CHECK-NEXT:    bx lr
   %2 = lshr i32 %0, 8
   %3 = shl i32 %0, 8
