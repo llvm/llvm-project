@@ -107,16 +107,15 @@ s_store_dword tma_hi, s[2:3], s4
 // NOGFX9GFX1012: error: register not available on this GPU
 // NOGFX1030: error: instruction not supported on this GPU
 
-// FIXME: Should error on SI instead of silently ignoring glc
 s_load_dword s1, s[2:3], 0xfc glc
 // GFX89: s_load_dword s1, s[2:3], 0xfc glc ; encoding: [0x41,0x00,0x03,0xc0,0xfc,0x00,0x00,0x00]
 // GFX10: s_load_dword s1, s[2:3], 0xfc glc ; encoding: [0x41,0x00,0x01,0xf4,0xfc,0x00,0x00,0xfa]
-// SICI: s_load_dword s1, s[2:3], 0xfc glc ; encoding: [0xfc,0x83,0x00,0xc0
+// NOSICI: error: cache policy is not supported for SMRD instructions
 
 s_load_dword s1, s[2:3], s4 glc
 // GFX89: s_load_dword s1, s[2:3], s4 glc ; encoding: [0x41,0x00,0x01,0xc0,0x04,0x00,0x00,0x00]
 // GFX10: s_load_dword s1, s[2:3], s4 glc ; encoding: [0x41,0x00,0x01,0xf4,0x00,0x00,0x00,0x08]
-// SICI: s_load_dword s1, s[2:3], s4 glc ; encoding: [0x04,0x82,0x00,0xc0]
+// NOSICI: error: cache policy is not supported for SMRD instructions
 
 s_buffer_store_dword s10, s[92:95], m0
 // GFX89: s_buffer_store_dword s10, s[92:95], m0 ; encoding: [0xae,0x02,0x60,0xc0,0x7c,0x00,0x00,0x00]
@@ -221,11 +220,10 @@ s_buffer_load_dwordx2 ttmp[0:1], s[92:95], m0
 // SICI:  s_buffer_load_dwordx2 ttmp[0:1], s[92:95], m0 ; encoding: [0x7c,0x5c,0x78,0xc2]
 // GFX10: s_buffer_load_dwordx2 ttmp[0:1], s[92:95], m0 ; encoding: [0x2e,0x1b,0x24,0xf4,0x00,0x00,0x00,0xf8]
 
-// FIXME: Should error on SI instead of silently ignoring glc
 s_buffer_load_dwordx4 s[8:11], s[92:95], m0 glc
 // GFX89: s_buffer_load_dwordx4 s[8:11], s[92:95], m0 glc ; encoding: [0x2e,0x02,0x29,0xc0,0x7c,0x00,0x00,0x00]
 // GFX10: s_buffer_load_dwordx4 s[8:11], s[92:95], m0 glc ; encoding: [0x2e,0x02,0x29,0xf4,0x00,0x00,0x00,0xf8]
-// SICI: s_buffer_load_dwordx4 s[8:11], s[92:95], m0 glc ; encoding: [0x7c,0x5c,0x84,0xc2]
+// NOSICI: error: cache policy is not supported for SMRD instructions
 
 //===----------------------------------------------------------------------===//
 // s_scratch instructions
