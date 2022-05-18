@@ -23,12 +23,6 @@ class MemoryCommandRegion(TestBase):
             'main.cpp',
             '// Run here before printing memory regions')
 
-    def test_help(self):
-        """ Test that help shows you must have one of address or --all, not both."""
-        self.expect("help memory region",
-            substrs=["memory region <address-expression>",
-                     "memory region -a"])
-
     def test(self):
         self.build()
 
@@ -45,15 +39,7 @@ class MemoryCommandRegion(TestBase):
         # Test that the first 'memory region' command prints the usage.
         interp.HandleCommand("memory region", result)
         self.assertFalse(result.Succeeded())
-        self.assertEqual(result.GetError(),
-                    "error: 'memory region' takes one argument or \"--all\" option:\n"
-                    "Usage: memory region <address-expression> (or --all)\n")
-
-        # We allow --all or an address argument, not both
-        interp.HandleCommand("memory region --all 0", result)
-        self.assertFalse(result.Succeeded())
-        self.assertRegexpMatches(result.GetError(),
-                "The \"--all\" option cannot be used when an address argument is given")
+        self.assertRegexpMatches(result.GetError(), "Usage: memory region ADDR")
 
         # Test that when the address fails to parse, we show an error and do not continue
         interp.HandleCommand("memory region not_an_address", result)
@@ -61,28 +47,18 @@ class MemoryCommandRegion(TestBase):
         self.assertEqual(result.GetError(),
                 "error: invalid address argument \"not_an_address\": address expression \"not_an_address\" evaluation failed\n")
 
-        # Accumulate the results to compare with the --all output
-        all_regions = ""
-
         # Now let's print the memory region starting at 0 which should always work.
         interp.HandleCommand("memory region 0x0", result)
         self.assertTrue(result.Succeeded())
         self.assertRegexpMatches(result.GetOutput(), "\\[0x0+-")
-        all_regions += result.GetOutput()
 
         # Keep printing memory regions until we printed all of them.
         while True:
             interp.HandleCommand("memory region", result)
             if not result.Succeeded():
                 break
-            all_regions += result.GetOutput()
 
         # Now that we reached the end, 'memory region' should again print the usage.
         interp.HandleCommand("memory region", result)
         self.assertFalse(result.Succeeded())
-        self.assertRegexpMatches(result.GetError(), "Usage: memory region <address\-expression> \(or \-\-all\)")
-
-        # --all should match what repeating the command gives you
-        interp.HandleCommand("memory region --all", result)
-        self.assertTrue(result.Succeeded())
-        self.assertEqual(result.GetOutput(), all_regions)
+        self.assertRegexpMatches(result.GetError(), "Usage: memory region ADDR")
