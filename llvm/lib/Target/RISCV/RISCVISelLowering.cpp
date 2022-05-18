@@ -510,10 +510,12 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
 
     // RVV intrinsics may have illegal operands.
     // We also need to custom legalize vmv.x.s.
-    setOperationAction({ISD::INTRINSIC_WO_CHAIN, ISD::INTRINSIC_W_CHAIN},
+    setOperationAction({ISD::INTRINSIC_WO_CHAIN, ISD::INTRINSIC_W_CHAIN,
+                        ISD::INTRINSIC_VOID},
                        {MVT::i8, MVT::i16}, Custom);
     if (Subtarget.is64Bit())
-      setOperationAction(ISD::INTRINSIC_W_CHAIN, MVT::i32, Custom);
+      setOperationAction({ISD::INTRINSIC_W_CHAIN, ISD::INTRINSIC_VOID},
+                         MVT::i32, Custom);
     else
       setOperationAction({ISD::INTRINSIC_WO_CHAIN, ISD::INTRINSIC_W_CHAIN},
                          MVT::i64, Custom);
@@ -5999,15 +6001,18 @@ SDValue RISCVTargetLowering::lowerEXTRACT_VECTOR_ELT(SDValue Op,
 // promoted or expanded.
 static SDValue lowerVectorIntrinsicScalars(SDValue Op, SelectionDAG &DAG,
                                            const RISCVSubtarget &Subtarget) {
-  assert((Op.getOpcode() == ISD::INTRINSIC_WO_CHAIN ||
+  assert((Op.getOpcode() == ISD::INTRINSIC_VOID ||
+          Op.getOpcode() == ISD::INTRINSIC_WO_CHAIN ||
           Op.getOpcode() == ISD::INTRINSIC_W_CHAIN) &&
          "Unexpected opcode");
 
   if (!Subtarget.hasVInstructions())
     return SDValue();
 
-  bool HasChain = Op.getOpcode() == ISD::INTRINSIC_W_CHAIN;
+  bool HasChain = Op.getOpcode() == ISD::INTRINSIC_VOID ||
+                  Op.getOpcode() == ISD::INTRINSIC_W_CHAIN;
   unsigned IntNo = Op.getConstantOperandVal(HasChain ? 1 : 0);
+
   SDLoc DL(Op);
 
   const RISCVVIntrinsicsTable::RISCVVIntrinsicInfo *II =
@@ -6476,7 +6481,7 @@ SDValue RISCVTargetLowering::LowerINTRINSIC_VOID(SDValue Op,
   }
   }
 
-  return SDValue();
+  return lowerVectorIntrinsicScalars(Op, DAG, Subtarget);
 }
 
 static unsigned getRVVReductionOp(unsigned ISDOpcode) {
