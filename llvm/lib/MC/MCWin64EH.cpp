@@ -860,6 +860,16 @@ static bool tryPackedUnwind(WinEH::FrameInfo *info, uint32_t FuncLength,
   if (Nops != 0 && Nops != 4)
     return false;
   int H = Nops == 4;
+  // There's an inconsistency regarding packed unwind info with homed
+  // parameters; according to the documentation, the epilog shouldn't have
+  // the same corresponding nops (and thus, to set the H bit, we should
+  // require an epilog which isn't exactly symmetrical - we shouldn't accept
+  // an exact mirrored epilog for those cases), but in practice,
+  // RtlVirtualUnwind behaves as if it does expect the epilogue to contain
+  // the same nops. See https://github.com/llvm/llvm-project/issues/54879.
+  // To play it safe, don't produce packed unwind info with homed parameters.
+  if (H)
+    return false;
   int IntSZ = 8 * RegI;
   if (StandaloneLR)
     IntSZ += 8;
