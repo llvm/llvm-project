@@ -198,7 +198,7 @@ define i8 @e(i32* nocapture %a, i32 %b) nounwind {
 
 %scalar = type { [4 x i64] }
 
-define %scalar @pr31719(%scalar* nocapture readonly %this, %scalar %arg.b) {
+define %scalar @pr31719(%scalar* nocapture readonly %this, %scalar %arg.b) nounwind {
 ; CHECK-LABEL: pr31719:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    movq %rdi, %rax
@@ -257,7 +257,7 @@ entry:
 
 %accumulator= type { i64, i64, i32 }
 
-define void @muladd(%accumulator* nocapture %this, i64 %arg.a, i64 %arg.b) {
+define void @muladd(%accumulator* nocapture %this, i64 %arg.a, i64 %arg.b) nounwind {
 ; CHECK-LABEL: muladd:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    movq %rdx, %rax
@@ -293,7 +293,7 @@ entry:
   ret void
 }
 
-define i64 @shiftadd(i64 %a, i64 %b, i64 %c, i64 %d) {
+define i64 @shiftadd(i64 %a, i64 %b, i64 %c, i64 %d) nounwind {
 ; CHECK-LABEL: shiftadd:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    movq %rdx, %rax
@@ -313,7 +313,7 @@ entry:
 
 %S = type { [4 x i64] }
 
-define %S @readd(%S* nocapture readonly %this, %S %arg.b) {
+define %S @readd(%S* nocapture readonly %this, %S %arg.b) nounwind {
 ; CHECK-LABEL: readd:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    movq %rdi, %rax
@@ -378,7 +378,7 @@ entry:
   ret %S %35
 }
 
-define i128 @addcarry1_not(i128 %n) {
+define i128 @addcarry1_not(i128 %n) nounwind {
 ; CHECK-LABEL: addcarry1_not:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movq %rdi, %rax
@@ -391,7 +391,7 @@ define i128 @addcarry1_not(i128 %n) {
   ret i128 %2
 }
 
-define i128 @addcarry_to_subcarry(i64 %a, i64 %b) {
+define i128 @addcarry_to_subcarry(i64 %a, i64 %b) nounwind {
 ; CHECK-LABEL: addcarry_to_subcarry:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movq %rdi, %rax
@@ -636,7 +636,7 @@ define { i64, i64, i1 } @addcarry_2x64_add_reversed(i64 %x0, i64 %x1, i64 %y0, i
 
 ; Here %carryin is considered as valid carry flag for combining into ADDCARRY
 ; although %carryin does not come from any carry-producing instruction.
-define { i64, i1 } @addcarry_fake_carry(i64 %a, i64 %b, i1 %carryin) {
+define { i64, i1 } @addcarry_fake_carry(i64 %a, i64 %b, i1 %carryin) nounwind {
 ; CHECK-LABEL: addcarry_fake_carry:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movq %rdi, %rax
@@ -659,7 +659,7 @@ define { i64, i1 } @addcarry_fake_carry(i64 %a, i64 %b, i1 %carryin) {
 }
 
 ; negative test: %carryin does not look like carry
-define { i64, i1 } @addcarry_carry_not_zext(i64 %a, i64 %b, i64 %carryin) {
+define { i64, i1 } @addcarry_carry_not_zext(i64 %a, i64 %b, i64 %carryin) nounwind {
 ; CHECK-LABEL: addcarry_carry_not_zext:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movq %rdi, %rax
@@ -683,7 +683,7 @@ define { i64, i1 } @addcarry_carry_not_zext(i64 %a, i64 %b, i64 %carryin) {
 }
 
 ; negative test: %carryin does not look like carry
-define { i64, i1 } @addcarry_carry_not_i1(i64 %a, i64 %b, i8 %carryin) {
+define { i64, i1 } @addcarry_carry_not_i1(i64 %a, i64 %b, i8 %carryin) nounwind {
 ; CHECK-LABEL: addcarry_carry_not_i1:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    # kill: def $edx killed $edx def $rdx
@@ -743,15 +743,11 @@ define { i64, i64, i1 } @addcarry_mixed_2x64(i64 %x0, i64 %x1, i64 %y0, i64 %y1)
 
 %struct.U320 = type { [5 x i64] }
 
-define i32 @add_U320_without_i128_add(%struct.U320* nocapture dereferenceable(40) %0, i64 %1, i64 %2, i64 %3, i64 %4, i64 %5) {
+define i32 @add_U320_without_i128_add(%struct.U320* nocapture dereferenceable(40) %0, i64 %1, i64 %2, i64 %3, i64 %4, i64 %5) nounwind {
 ; CHECK-LABEL: add_U320_without_i128_add:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    pushq %r14
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    pushq %rbx
-; CHECK-NEXT:    .cfi_def_cfa_offset 24
-; CHECK-NEXT:    .cfi_offset %rbx, -24
-; CHECK-NEXT:    .cfi_offset %r14, -16
 ; CHECK-NEXT:    movq 16(%rdi), %rax
 ; CHECK-NEXT:    leaq (%rax,%rcx), %r10
 ; CHECK-NEXT:    addq %rsi, (%rdi)
@@ -781,9 +777,7 @@ define i32 @add_U320_without_i128_add(%struct.U320* nocapture dereferenceable(40
 ; CHECK-NEXT:    movq %rsi, 32(%rdi)
 ; CHECK-NEXT:    adcl $0, %eax
 ; CHECK-NEXT:    popq %rbx
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    popq %r14
-; CHECK-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-NEXT:    retq
   %7 = getelementptr inbounds %struct.U320, %struct.U320* %0, i64 0, i32 0, i64 0
   %8 = load i64, i64* %7, align 8
@@ -834,7 +828,7 @@ define i32 @add_U320_without_i128_add(%struct.U320* nocapture dereferenceable(40
   ret i32 %47
 }
 
-define i32 @add_U320_without_i128_or(%struct.U320* nocapture dereferenceable(40) %0, i64 %1, i64 %2, i64 %3, i64 %4, i64 %5) {
+define i32 @add_U320_without_i128_or(%struct.U320* nocapture dereferenceable(40) %0, i64 %1, i64 %2, i64 %3, i64 %4, i64 %5) nounwind {
 ; CHECK-LABEL: add_U320_without_i128_or:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    addq %rsi, (%rdi)
@@ -890,7 +884,7 @@ define i32 @add_U320_without_i128_or(%struct.U320* nocapture dereferenceable(40)
   ret i32 %43
 }
 
-define i32 @add_U320_without_i128_xor(%struct.U320* nocapture dereferenceable(40) %0, i64 %1, i64 %2, i64 %3, i64 %4, i64 %5) {
+define i32 @add_U320_without_i128_xor(%struct.U320* nocapture dereferenceable(40) %0, i64 %1, i64 %2, i64 %3, i64 %4, i64 %5) nounwind {
 ; CHECK-LABEL: add_U320_without_i128_xor:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    addq %rsi, (%rdi)
@@ -948,7 +942,7 @@ define i32 @add_U320_without_i128_xor(%struct.U320* nocapture dereferenceable(40
 
 ; Either the primary addition can overflow or the addition of the carry, but
 ; they cannot both overflow.
-define i32 @bogus_add_U320_without_i128_and(%struct.U320* nocapture dereferenceable(40) %0, i64 %1, i64 %2, i64 %3, i64 %4, i64 %5) {
+define i32 @bogus_add_U320_without_i128_and(%struct.U320* nocapture dereferenceable(40) %0, i64 %1, i64 %2, i64 %3, i64 %4, i64 %5) nounwind {
 ; CHECK-LABEL: bogus_add_U320_without_i128_and:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    addq %rsi, (%rdi)
@@ -1003,7 +997,7 @@ define i32 @bogus_add_U320_without_i128_and(%struct.U320* nocapture dereferencea
   ret i32 %43
 }
 
-define void @add_U320_without_i128_or_no_ret(%struct.U320* nocapture dereferenceable(40) %0, i64 %1, i64 %2, i64 %3, i64 %4, i64 %5) {
+define void @add_U320_without_i128_or_no_ret(%struct.U320* nocapture dereferenceable(40) %0, i64 %1, i64 %2, i64 %3, i64 %4, i64 %5) nounwind {
 ; CHECK-LABEL: add_U320_without_i128_or_no_ret:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    addq %rsi, (%rdi)
@@ -1053,7 +1047,7 @@ define void @add_U320_without_i128_or_no_ret(%struct.U320* nocapture dereference
   ret void
 }
 
-define i32 @add_U320_uaddo(%struct.U320* nocapture dereferenceable(40) %0, i64 %1, i64 %2, i64 %3, i64 %4, i64 %5) {
+define i32 @add_U320_uaddo(%struct.U320* nocapture dereferenceable(40) %0, i64 %1, i64 %2, i64 %3, i64 %4, i64 %5) nounwind {
 ; CHECK-LABEL: add_U320_uaddo:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    addq %rsi, (%rdi)
@@ -1120,7 +1114,7 @@ define i32 @add_U320_uaddo(%struct.U320* nocapture dereferenceable(40) %0, i64 %
 
 %struct.U192 = type { [3 x i64] }
 
-define void @PR39464(%struct.U192* noalias nocapture sret(%struct.U192) %0, %struct.U192* nocapture readonly dereferenceable(24) %1, %struct.U192* nocapture readonly dereferenceable(24) %2) {
+define void @PR39464(%struct.U192* noalias nocapture sret(%struct.U192) %0, %struct.U192* nocapture readonly dereferenceable(24) %1, %struct.U192* nocapture readonly dereferenceable(24) %2) nounwind {
 ; CHECK-LABEL: PR39464:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movq %rdi, %rax
@@ -1360,7 +1354,7 @@ define void @add_U256_without_i128_or_recursive(%uint256* sret(%uint256) %0, %ui
   ret void
 }
 
-define i32 @addcarry_ult(i32 %a, i32 %b, i32 %x, i32 %y) {
+define i32 @addcarry_ult(i32 %a, i32 %b, i32 %x, i32 %y) nounwind {
 ; CHECK-LABEL: addcarry_ult:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movl %edi, %eax
@@ -1374,7 +1368,7 @@ define i32 @addcarry_ult(i32 %a, i32 %b, i32 %x, i32 %y) {
   ret i32 %r
 }
 
-define i32 @addcarry_ugt(i32 %a, i32 %b, i32 %x, i32 %y) {
+define i32 @addcarry_ugt(i32 %a, i32 %b, i32 %x, i32 %y) nounwind {
 ; CHECK-LABEL: addcarry_ugt:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movl %edi, %eax
@@ -1388,7 +1382,7 @@ define i32 @addcarry_ugt(i32 %a, i32 %b, i32 %x, i32 %y) {
   ret i32 %r
 }
 
-define i32 @addcarry_ule(i32 %a, i32 %b, i32 %x, i32 %y) {
+define i32 @addcarry_ule(i32 %a, i32 %b, i32 %x, i32 %y) nounwind {
 ; CHECK-LABEL: addcarry_ule:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    # kill: def $esi killed $esi def $rsi
@@ -1404,7 +1398,7 @@ define i32 @addcarry_ule(i32 %a, i32 %b, i32 %x, i32 %y) {
   ret i32 %r
 }
 
-define i32 @addcarry_uge(i32 %a, i32 %b, i32 %x, i32 %y) {
+define i32 @addcarry_uge(i32 %a, i32 %b, i32 %x, i32 %y) nounwind {
 ; CHECK-LABEL: addcarry_uge:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    # kill: def $esi killed $esi def $rsi
