@@ -21,6 +21,7 @@
 #include "CIRGenFunctionInfo.h"
 
 #include "clang/AST/GlobalDecl.h"
+#include "clang/Basic/Linkage.h"
 #include "clang/Basic/TargetInfo.h"
 
 using namespace cir;
@@ -99,6 +100,66 @@ public:
   void buildCXXConstructors(const clang::CXXConstructorDecl *D) override;
 
   void buildCXXStructor(clang::GlobalDecl GD) override;
+
+  /// TODO(cir): seems like could be shared between LLVM IR and CIR codegen.
+  bool mayNeedDestruction(const VarDecl *VD) const {
+    if (VD->needsDestruction(getContext()))
+      return true;
+
+    // If the variable has an incomplete class type (or array thereof), it
+    // might need destruction.
+    const Type *T = VD->getType()->getBaseElementTypeUnsafe();
+    if (T->getAs<RecordType>() && T->isIncompleteType())
+      return true;
+
+    return false;
+  }
+
+  /// Determine whether we will definitely emit this variable with a constant
+  /// initializer, either because the language semantics demand it or because
+  /// we know that the initializer is a constant.
+  /// For weak definitions, any initializer available in the current translation
+  /// is not necessarily reflective of the initializer used; such initializers
+  /// are ignored unless if InspectInitForWeakDef is true.
+  /// TODO(cir): seems like could be shared between LLVM IR and CIR codegen.
+  bool
+  isEmittedWithConstantInitializer(const VarDecl *VD,
+                                   bool InspectInitForWeakDef = false) const {
+    VD = VD->getMostRecentDecl();
+    if (VD->hasAttr<ConstInitAttr>())
+      return true;
+
+    // All later checks examine the initializer specified on the variable. If
+    // the variable is weak, such examination would not be correct.
+    if (!InspectInitForWeakDef &&
+        (VD->isWeak() || VD->hasAttr<SelectAnyAttr>()))
+      return false;
+
+    const VarDecl *InitDecl = VD->getInitializingDeclaration();
+    if (!InitDecl)
+      return false;
+
+    // If there's no initializer to run, this is constant initialization.
+    if (!InitDecl->hasInit())
+      return true;
+
+    // If we have the only definition, we don't need a thread wrapper if we
+    // will emit the value as a constant.
+    if (isUniqueGVALinkage(getContext().GetGVALinkageForVariable(VD)))
+      return !mayNeedDestruction(VD) && InitDecl->evaluateValue();
+
+    // Otherwise, we need a thread wrapper unless we know that every
+    // translation unit will emit the value as a constant. We rely on the
+    // variable being constant-initialized in every translation unit if it's
+    // constant-initialized in any translation unit, which isn't actually
+    // guaranteed by the standard but is necessary for sanity.
+    return InitDecl->hasConstantInitialization();
+  }
+
+  // TODO(cir): seems like could be shared between LLVM IR and CIR codegen.
+  bool usesThreadWrapperFunction(const VarDecl *VD) const override {
+    return !isEmittedWithConstantInitializer(VD) || mayNeedDestruction(VD);
+  }
 
   bool doStructorsInitializeVPtrs(const CXXRecordDecl *VTableClass) override {
     return true;

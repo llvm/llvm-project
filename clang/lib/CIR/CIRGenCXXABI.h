@@ -183,6 +183,10 @@ public:
 
   void setCXXABIThisValue(CIRGenFunction &CGF, mlir::Operation *ThisPtr);
 
+  // Determine if references to thread_local global variables can be made
+  // directly or require access through a thread wrapper function.
+  virtual bool usesThreadWrapperFunction(const VarDecl *VD) const = 0;
+
   /// Emit a single constructor/destructor with the gien type from a C++
   /// constructor Decl.
   virtual void buildCXXStructor(clang::GlobalDecl GD) = 0;
