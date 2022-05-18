@@ -13,7 +13,8 @@ target datalayout = "e-n32:64"
 define i64 @cttz(i64 %A) {
 ; SLOW-LABEL: @cttz(
 ; SLOW-NEXT:  entry:
-; SLOW-NEXT:    [[CMPZ:%.*]] = icmp eq i64 [[A:%.*]], 0
+; SLOW-NEXT:    [[A_FR:%.*]] = freeze i64 [[A:%.*]]
+; SLOW-NEXT:    [[CMPZ:%.*]] = icmp eq i64 [[A_FR]], 0
 ; SLOW-NEXT:    br i1 [[CMPZ]], label [[COND_END:%.*]], label [[COND_FALSE:%.*]]
 ; SLOW:       cond.false:
 ; SLOW-NEXT:    [[Z:%.*]] = call i64 @llvm.cttz.i64(i64 [[A]], i1 true)
@@ -29,7 +30,8 @@ define i64 @cttz(i64 %A) {
 ;
 ; FAST_LZ-LABEL: @cttz(
 ; FAST_LZ-NEXT:  entry:
-; FAST_LZ-NEXT:    [[CMPZ:%.*]] = icmp eq i64 [[A:%.*]], 0
+; FAST_LZ-NEXT:    [[A_FR:%.*]] = freeze i64 [[A:%.*]]
+; FAST_LZ-NEXT:    [[CMPZ:%.*]] = icmp eq i64 [[A_FR]], 0
 ; FAST_LZ-NEXT:    br i1 [[CMPZ]], label [[COND_END:%.*]], label [[COND_FALSE:%.*]]
 ; FAST_LZ:       cond.false:
 ; FAST_LZ-NEXT:    [[Z:%.*]] = call i64 @llvm.cttz.i64(i64 [[A]], i1 true)
@@ -46,7 +48,8 @@ entry:
 define i64 @ctlz(i64 %A) {
 ; SLOW-LABEL: @ctlz(
 ; SLOW-NEXT:  entry:
-; SLOW-NEXT:    [[CMPZ:%.*]] = icmp eq i64 [[A:%.*]], 0
+; SLOW-NEXT:    [[A_FR:%.*]] = freeze i64 [[A:%.*]]
+; SLOW-NEXT:    [[CMPZ:%.*]] = icmp eq i64 [[A_FR]], 0
 ; SLOW-NEXT:    br i1 [[CMPZ]], label [[COND_END:%.*]], label [[COND_FALSE:%.*]]
 ; SLOW:       cond.false:
 ; SLOW-NEXT:    [[Z:%.*]] = call i64 @llvm.ctlz.i64(i64 [[A]], i1 true)
@@ -57,7 +60,8 @@ define i64 @ctlz(i64 %A) {
 ;
 ; FAST_TZ-LABEL: @ctlz(
 ; FAST_TZ-NEXT:  entry:
-; FAST_TZ-NEXT:    [[CMPZ:%.*]] = icmp eq i64 [[A:%.*]], 0
+; FAST_TZ-NEXT:    [[A_FR:%.*]] = freeze i64 [[A:%.*]]
+; FAST_TZ-NEXT:    [[CMPZ:%.*]] = icmp eq i64 [[A_FR]], 0
 ; FAST_TZ-NEXT:    br i1 [[CMPZ]], label [[COND_END:%.*]], label [[COND_FALSE:%.*]]
 ; FAST_TZ:       cond.false:
 ; FAST_TZ-NEXT:    [[Z:%.*]] = call i64 @llvm.ctlz.i64(i64 [[A]], i1 true)
