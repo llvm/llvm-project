@@ -95,7 +95,7 @@ MultiStringType currency_symbol_ru_RU() {
     return MKSTR("\u0440\u0443\u0431");
   else
     return MKSTR("\u20BD"); // U+20BD RUBLE SIGN
-#elif defined(_WIN32) || defined(__FreeBSD__)
+#elif defined(_WIN32) || defined(__FreeBSD__) || defined(_AIX)
   return MKSTR("\u20BD"); // U+20BD RUBLE SIGN
 #else
   return MKSTR("\u0440\u0443\u0431.");
