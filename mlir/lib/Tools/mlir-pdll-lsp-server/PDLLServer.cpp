@@ -916,7 +916,7 @@ public:
     // Functor used to add a single include completion item.
     auto addIncludeCompletion = [&](StringRef path, bool isDirectory) {
       lsp::CompletionItem item;
-      item.label = (path + (isDirectory ? "/" : "")).str();
+      item.label = path.str();
       item.kind = isDirectory ? lsp::CompletionItemKind::Folder
                               : lsp::CompletionItemKind::File;
       if (seenResults.insert(item.label).second)
