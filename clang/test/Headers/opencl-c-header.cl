@@ -212,6 +212,9 @@ global atomic_int z = ATOMIC_VAR_INIT(99);
 #ifdef cl_khr_subgroup_clustered_reduce
 #error "Incorrect cl_khr_subgroup_clustered_reduce define"
 #endif
+#ifdef cl_khr_subgroup_rotate
+#error "Incorrect cl_khr_subgroup_rotate define"
+#endif
 #ifdef cl_khr_extended_bit_ops
 #error "Incorrect cl_khr_extended_bit_ops define"
 #endif

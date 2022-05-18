@@ -1,4 +1,5 @@
-// RUN: mlir-opt -test-patterns -test-patterns %s | FileCheck %s
+// RUN: mlir-opt -test-patterns='top-down=false' %s | FileCheck %s
+// RUN: mlir-opt -test-patterns='top-down=true' %s | FileCheck %s
 
 func.func @foo() -> i32 {
   %c42 = arith.constant 42 : i32

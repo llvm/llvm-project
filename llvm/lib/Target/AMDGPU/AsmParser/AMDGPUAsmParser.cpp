@@ -819,6 +819,7 @@ public:
 
   bool isSWaitCnt() const;
   bool isDepCtr() const;
+  bool isSDelayAlu() const;
   bool isHwreg() const;
   bool isSendMsg() const;
   bool isSwizzle() const;
@@ -1415,6 +1416,14 @@ public:
 
   bool isGFX10Plus() const { return AMDGPU::isGFX10Plus(getSTI()); }
 
+  bool isGFX11() const {
+    return AMDGPU::isGFX11(getSTI());
+  }
+
+  bool isGFX11Plus() const {
+    return AMDGPU::isGFX11Plus(getSTI());
+  }
+
   bool isGFX10_BEncoding() const {
     return AMDGPU::isGFX10_BEncoding(getSTI());
   }
@@ -1549,6 +1558,9 @@ public:
   void depCtrError(SMLoc Loc, int ErrorId, StringRef DepCtrName);
   OperandMatchResultTy parseDepCtrOps(OperandVector &Operands);
 
+  bool parseDelay(int64_t &Delay);
+  OperandMatchResultTy parseSDelayAluOps(OperandVector &Operands);
+
   OperandMatchResultTy parseHwreg(OperandVector &Operands);
 
 private:
@@ -1612,6 +1624,8 @@ private:
   bool validateDivScale(const MCInst &Inst);
   bool validateCoherencyBits(const MCInst &Inst, const OperandVector &Operands,
                              const SMLoc &IDLoc);
+  bool validateFlatLdsDMA(const MCInst &Inst, const OperandVector &Operands,
+                          const SMLoc &IDLoc);
   Optional<StringRef> validateLdsDirect(const MCInst &Inst);
   unsigned getConstantBusLimit(unsigned Opcode) const;
   bool usesConstantBus(const MCInst &Inst, unsigned OpIdx);
@@ -4367,10 +4381,16 @@ bool AMDGPUAsmParser::validateCoherencyBits(const MCInst &Inst,
   unsigned CPol = Inst.getOperand(CPolPos).getImm();
 
   uint64_t TSFlags = MII.get(Inst.getOpcode()).TSFlags;
-  if ((TSFlags & (SIInstrFlags::SMRD)) &&
-      (CPol & ~(AMDGPU::CPol::GLC | AMDGPU::CPol::DLC))) {
-    Error(IDLoc, "invalid cache policy for SMRD instruction");
-    return false;
+  if (TSFlags & SIInstrFlags::SMRD) {
+    if (CPol && (isSI() || isCI())) {
+      SMLoc S = getImmLoc(AMDGPUOperand::ImmTyCPol, Operands);
+      Error(S, "cache policy is not supported for SMRD instructions");
+      return false;
+    }
+    if (CPol & ~(AMDGPU::CPol::GLC | AMDGPU::CPol::DLC)) {
+      Error(IDLoc, "invalid cache policy for SMEM instruction");
+      return false;
+    }
   }
 
   if (isGFX90A() && !isGFX940() && (CPol & CPol::SCC)) {
@@ -4400,6 +4420,31 @@ bool AMDGPUAsmParser::validateCoherencyBits(const MCInst &Inst,
                           : "instruction must not use glc");
       return false;
     }
+  }
+
+  return true;
+}
+
+bool AMDGPUAsmParser::validateFlatLdsDMA(const MCInst &Inst,
+                                         const OperandVector &Operands,
+                                         const SMLoc &IDLoc) {
+  if (isGFX940())
+    return true;
+
+  uint64_t TSFlags = MII.get(Inst.getOpcode()).TSFlags;
+  if ((TSFlags & (SIInstrFlags::VALU | SIInstrFlags::FLAT)) !=
+      (SIInstrFlags::VALU | SIInstrFlags::FLAT))
+    return true;
+  // This is FLAT LDS DMA.
+
+  SMLoc S = getImmLoc(AMDGPUOperand::ImmTyLDS, Operands);
+  StringRef CStr(S.getPointer());
+  if (!CStr.startswith("lds")) {
+    // This is incorrectly selected LDS DMA version of a FLAT load opcode.
+    // And LDS version should have 'lds' modifier, but it follows optional
+    // operands so its absense is ignored by the matcher.
+    Error(IDLoc, "invalid operands for instruction");
+    return false;
   }
 
   return true;
@@ -4517,6 +4562,10 @@ bool AMDGPUAsmParser::validateInstruction(const MCInst &Inst,
     return false;
   }
   if (!validateCoherencyBits(Inst, Operands, IDLoc)) {
+    return false;
+  }
+
+  if (!validateFlatLdsDMA(Inst, Operands, IDLoc)) {
     return false;
   }
 
@@ -6350,10 +6399,93 @@ AMDGPUAsmParser::parseSWaitCntOps(OperandVector &Operands) {
   return MatchOperand_Success;
 }
 
+bool AMDGPUAsmParser::parseDelay(int64_t &Delay) {
+  SMLoc FieldLoc = getLoc();
+  StringRef FieldName = getTokenStr();
+  if (!skipToken(AsmToken::Identifier, "expected a field name") ||
+      !skipToken(AsmToken::LParen, "expected a left parenthesis"))
+    return false;
+
+  SMLoc ValueLoc = getLoc();
+  StringRef ValueName = getTokenStr();
+  if (!skipToken(AsmToken::Identifier, "expected a value name") ||
+      !skipToken(AsmToken::RParen, "expected a right parenthesis"))
+    return false;
+
+  unsigned Shift;
+  if (FieldName == "instid0") {
+    Shift = 0;
+  } else if (FieldName == "instskip") {
+    Shift = 4;
+  } else if (FieldName == "instid1") {
+    Shift = 7;
+  } else {
+    Error(FieldLoc, "invalid field name " + FieldName);
+    return false;
+  }
+
+  int Value;
+  if (Shift == 4) {
+    // Parse values for instskip.
+    Value = StringSwitch<int>(ValueName)
+                .Case("SAME", 0)
+                .Case("NEXT", 1)
+                .Case("SKIP_1", 2)
+                .Case("SKIP_2", 3)
+                .Case("SKIP_3", 4)
+                .Case("SKIP_4", 5)
+                .Default(-1);
+  } else {
+    // Parse values for instid0 and instid1.
+    Value = StringSwitch<int>(ValueName)
+                .Case("NO_DEP", 0)
+                .Case("VALU_DEP_1", 1)
+                .Case("VALU_DEP_2", 2)
+                .Case("VALU_DEP_3", 3)
+                .Case("VALU_DEP_4", 4)
+                .Case("TRANS32_DEP_1", 5)
+                .Case("TRANS32_DEP_2", 6)
+                .Case("TRANS32_DEP_3", 7)
+                .Case("FMA_ACCUM_CYCLE_1", 8)
+                .Case("SALU_CYCLE_1", 9)
+                .Case("SALU_CYCLE_2", 10)
+                .Case("SALU_CYCLE_3", 11)
+                .Default(-1);
+  }
+  if (Value < 0) {
+    Error(ValueLoc, "invalid value name " + ValueName);
+    return false;
+  }
+
+  Delay |= Value << Shift;
+  return true;
+}
+
+OperandMatchResultTy
+AMDGPUAsmParser::parseSDelayAluOps(OperandVector &Operands) {
+  int64_t Delay = 0;
+  SMLoc S = getLoc();
+
+  if (isToken(AsmToken::Identifier) && peekToken().is(AsmToken::LParen)) {
+    do {
+      if (!parseDelay(Delay))
+        return MatchOperand_ParseFail;
+    } while (trySkipToken(AsmToken::Pipe));
+  } else {
+    if (!parseExpr(Delay))
+      return MatchOperand_ParseFail;
+  }
+
+  Operands.push_back(AMDGPUOperand::CreateImm(this, Delay, S));
+  return MatchOperand_Success;
+}
+
 bool
 AMDGPUOperand::isSWaitCnt() const {
   return isImm();
 }
+
+bool AMDGPUOperand::isSDelayAlu() const { return isImm(); }
 
 //===----------------------------------------------------------------------===//
 // DepCtr
@@ -6602,12 +6734,12 @@ AMDGPUAsmParser::validateSendMsg(const OperandInfoTy &Msg,
       return false;
     }
   } else {
-    if (!isValidMsgId(Msg.Id)) {
+    if (!isValidMsgId(Msg.Id, getSTI())) {
       Error(Msg.Loc, "invalid message id");
       return false;
     }
   }
-  if (Strict && (msgRequiresOp(Msg.Id) != Op.IsDefined)) {
+  if (Strict && (msgRequiresOp(Msg.Id, getSTI()) != Op.IsDefined)) {
     if (Op.IsDefined) {
       Error(Op.Loc, "message does not support operations");
     } else {
@@ -6619,7 +6751,8 @@ AMDGPUAsmParser::validateSendMsg(const OperandInfoTy &Msg,
     Error(Op.Loc, "invalid operation id");
     return false;
   }
-  if (Strict && !msgSupportsStream(Msg.Id, Op.Id) && Stream.IsDefined) {
+  if (Strict && !msgSupportsStream(Msg.Id, Op.Id, getSTI()) &&
+      Stream.IsDefined) {
     Error(Stream.Loc, "message operation does not support streams");
     return false;
   }

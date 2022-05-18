@@ -177,7 +177,14 @@ if (LIBCXX_ABI_UNSTABLE)
 else()
   set(abi_version "1")
 endif()
-set(LIBCXX_ABI_VERSION "${abi_version}" CACHE STRING "ABI version of libc++. Can be either 1 or 2, where 2 is currently the unstable ABI. Defaults to 1 unless LIBCXX_ABI_UNSTABLE is specified, in which case this is 2.")
+set(LIBCXX_ABI_VERSION "${abi_version}" CACHE STRING
+  "ABI version of libc++. Can be either 1 or 2, where 2 is currently the unstable ABI.
+   Defaults to 1 unless LIBCXX_ABI_UNSTABLE is specified, in which case this is 2.")
+set(LIBCXX_LIBRARY_VERSION "${LIBCXX_ABI_VERSION}.0" CACHE STRING
+  "Version of libc++. This will be reflected in the name of the shared library produced.
+   For example, -DLIBCXX_LIBRARY_VERSION=x.y will result in the library being named
+   libc++.x.y.dylib, along with the usual symlinks pointing to that. On Apple platforms,
+   this also controls the linker's 'current_version' property.")
 set(LIBCXX_ABI_NAMESPACE "__${LIBCXX_ABI_VERSION}" CACHE STRING "The inline ABI namespace used by libc++. It defaults to __n where `n` is the current ABI version.")
 if (NOT LIBCXX_ABI_NAMESPACE MATCHES "__.*")
   message(FATAL_ERROR "LIBCXX_ABI_NAMESPACE must be a reserved identifier.")

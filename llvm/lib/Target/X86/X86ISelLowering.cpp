@@ -52270,7 +52270,8 @@ static bool onlyZeroFlagUsed(SDValue Flags) {
 /// Also try (ADD/SUB)+(AND(SRL,1)) bit extraction pattern with BT+{ADC, SBB}.
 static SDValue combineAddOrSubToADCOrSBB(bool IsSub, const SDLoc &DL, EVT VT,
                                          SDValue X, SDValue Y,
-                                         SelectionDAG &DAG) {
+                                         SelectionDAG &DAG,
+                                         bool ZeroSecondOpOnly = false) {
   if (!DAG.getTargetLoweringInfo().isTypeLegal(VT))
     return SDValue();
 
@@ -52294,7 +52295,7 @@ static SDValue combineAddOrSubToADCOrSBB(bool IsSub, const SDLoc &DL, EVT VT,
   // If X is -1 or 0, then we have an opportunity to avoid constants required in
   // the general case below.
   auto *ConstantX = dyn_cast<ConstantSDNode>(X);
-  if (ConstantX) {
+  if (ConstantX && !ZeroSecondOpOnly) {
     if ((!IsSub && CC == X86::COND_AE && ConstantX->isAllOnes()) ||
         (IsSub && CC == X86::COND_B && ConstantX->isZero())) {
       // This is a complicated way to get -1 or 0 from the carry flag:
@@ -52331,6 +52332,9 @@ static SDValue combineAddOrSubToADCOrSBB(bool IsSub, const SDLoc &DL, EVT VT,
                        DAG.getVTList(VT, MVT::i32), X,
                        DAG.getConstant(0, DL, VT), EFLAGS);
   }
+
+  if (ZeroSecondOpOnly)
+    return SDValue();
 
   if (CC == X86::COND_A) {
     // Try to convert COND_A into COND_B in an attempt to facilitate
@@ -52589,7 +52593,8 @@ static SDValue combineX86AddSub(SDNode *N, SelectionDAG &DAG,
   SDValue LHS = N->getOperand(0);
   SDValue RHS = N->getOperand(1);
   MVT VT = LHS.getSimpleValueType();
-  unsigned GenericOpc = X86ISD::ADD == N->getOpcode() ? ISD::ADD : ISD::SUB;
+  bool IsSub = X86ISD::SUB == N->getOpcode();
+  unsigned GenericOpc = IsSub ? ISD::SUB : ISD::ADD;
 
   // If we don't use the flag result, simplify back to a generic ADD/SUB.
   if (!N->hasAnyUseOfValue(1)) {
@@ -52611,7 +52616,10 @@ static SDValue combineX86AddSub(SDNode *N, SelectionDAG &DAG,
   MatchGeneric(LHS, RHS, false);
   MatchGeneric(RHS, LHS, X86ISD::SUB == N->getOpcode());
 
-  return SDValue();
+  // TODO: Can we drop the ZeroSecondOpOnly limit? This is to guarantee that the
+  // EFLAGS result doesn't change.
+  return combineAddOrSubToADCOrSBB(IsSub, DL, VT, LHS, RHS, DAG,
+                                   /*ZeroSecondOpOnly*/ true);
 }
 
 static SDValue combineSBB(SDNode *N, SelectionDAG &DAG) {
@@ -53552,9 +53560,9 @@ static SDValue combineConcatVectorOps(const SDLoc &DL, MVT VT,
   return SDValue();
 }
 
-static SDValue combineConcatVectors(SDNode *N, SelectionDAG &DAG,
-                                    TargetLowering::DAGCombinerInfo &DCI,
-                                    const X86Subtarget &Subtarget) {
+static SDValue combineCONCAT_VECTORS(SDNode *N, SelectionDAG &DAG,
+                                     TargetLowering::DAGCombinerInfo &DCI,
+                                     const X86Subtarget &Subtarget) {
   EVT VT = N->getValueType(0);
   EVT SrcVT = N->getOperand(0).getValueType();
   const TargetLowering &TLI = DAG.getTargetLoweringInfo();
@@ -53573,9 +53581,9 @@ static SDValue combineConcatVectors(SDNode *N, SelectionDAG &DAG,
   return SDValue();
 }
 
-static SDValue combineInsertSubvector(SDNode *N, SelectionDAG &DAG,
-                                      TargetLowering::DAGCombinerInfo &DCI,
-                                      const X86Subtarget &Subtarget) {
+static SDValue combineINSERT_SUBVECTOR(SDNode *N, SelectionDAG &DAG,
+                                       TargetLowering::DAGCombinerInfo &DCI,
+                                       const X86Subtarget &Subtarget) {
   if (DCI.isBeforeLegalizeOps())
     return SDValue();
 
@@ -53766,9 +53774,9 @@ static SDValue narrowExtractedVectorSelect(SDNode *Ext, SelectionDAG &DAG) {
   return DAG.getBitcast(VT, NarrowSel);
 }
 
-static SDValue combineExtractSubvector(SDNode *N, SelectionDAG &DAG,
-                                       TargetLowering::DAGCombinerInfo &DCI,
-                                       const X86Subtarget &Subtarget) {
+static SDValue combineEXTRACT_SUBVECTOR(SDNode *N, SelectionDAG &DAG,
+                                        TargetLowering::DAGCombinerInfo &DCI,
+                                        const X86Subtarget &Subtarget) {
   // For AVX1 only, if we are extracting from a 256-bit and+not (which will
   // eventually get combined/lowered into ANDNP) with a concatenated operand,
   // split the 'and' into 128-bit ops to avoid the concatenate and extract.
@@ -54414,11 +54422,11 @@ SDValue X86TargetLowering::PerformDAGCombine(SDNode *N,
   case X86ISD::PEXTRB:
     return combineExtractVectorElt(N, DAG, DCI, Subtarget);
   case ISD::CONCAT_VECTORS:
-    return combineConcatVectors(N, DAG, DCI, Subtarget);
+    return combineCONCAT_VECTORS(N, DAG, DCI, Subtarget);
   case ISD::INSERT_SUBVECTOR:
-    return combineInsertSubvector(N, DAG, DCI, Subtarget);
+    return combineINSERT_SUBVECTOR(N, DAG, DCI, Subtarget);
   case ISD::EXTRACT_SUBVECTOR:
-    return combineExtractSubvector(N, DAG, DCI, Subtarget);
+    return combineEXTRACT_SUBVECTOR(N, DAG, DCI, Subtarget);
   case ISD::VSELECT:
   case ISD::SELECT:
   case X86ISD::BLENDV:      return combineSelect(N, DAG, DCI, Subtarget);

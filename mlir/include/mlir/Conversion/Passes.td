@@ -197,6 +197,21 @@ def ConvertComplexToLLVM : Pass<"convert-complex-to-llvm"> {
 }
 
 //===----------------------------------------------------------------------===//
+// ComplexToLibm
+//===----------------------------------------------------------------------===//
+
+def ConvertComplexToLibm : Pass<"convert-complex-to-libm", "ModuleOp"> {
+  let summary = "Convert Complex dialect to libm calls";
+  let description = [{
+    This pass converts supported Complex ops to libm calls.
+  }];
+  let constructor = "mlir::createConvertComplexToLibmPass()";
+  let dependentDialects = [
+    "func::FuncDialect",
+  ];
+}
+
+//===----------------------------------------------------------------------===//
 // ComplexToStandard
 //===----------------------------------------------------------------------===//
 
@@ -756,7 +771,10 @@ def TosaToArith : Pass<"tosa-to-arith"> {
   let options = [
     Option<"includeApplyRescale", "include-apply-rescale",
            "bool", /*default=*/"false",
-           "Whether to include the lowering for tosa.apply_rescale to arith">
+           "Whether to include the lowering for tosa.apply_rescale to arith">,
+    Option<"use32Bit", "use-32-bit",
+           "bool", /*default=*/"false",
+           "Whether to prioritze lowering to 32-bit operations">
   ];
 
   let constructor = "tosa::createTosaToArith()";

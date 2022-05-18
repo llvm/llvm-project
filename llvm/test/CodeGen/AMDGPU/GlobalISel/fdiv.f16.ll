@@ -866,8 +866,7 @@ define <2 x half> @v_rcp_v2f16(<2 x half> %x) {
 ; GFX6-FLUSH-LABEL: v_rcp_v2f16:
 ; GFX6-FLUSH:       ; %bb.0:
 ; GFX6-FLUSH-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX6-FLUSH-NEXT:    s_movk_i32 s6, 0x3c00
-; GFX6-FLUSH-NEXT:    v_cvt_f32_f16_e32 v2, s6
+; GFX6-FLUSH-NEXT:    v_cvt_f32_f16_e32 v2, 1.0
 ; GFX6-FLUSH-NEXT:    v_cvt_f32_f16_e32 v0, v0
 ; GFX6-FLUSH-NEXT:    v_div_scale_f32 v3, s[4:5], v0, v0, v2
 ; GFX6-FLUSH-NEXT:    v_rcp_f32_e32 v4, v3
@@ -881,7 +880,7 @@ define <2 x half> @v_rcp_v2f16(<2 x half> %x) {
 ; GFX6-FLUSH-NEXT:    v_fma_f32 v3, -v3, v6, v5
 ; GFX6-FLUSH-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_MODE, 4, 2), 0
 ; GFX6-FLUSH-NEXT:    v_div_fmas_f32 v3, v3, v4, v6
-; GFX6-FLUSH-NEXT:    v_cvt_f32_f16_e32 v4, s6
+; GFX6-FLUSH-NEXT:    v_cvt_f32_f16_e32 v4, 1.0
 ; GFX6-FLUSH-NEXT:    v_cvt_f32_f16_e32 v1, v1
 ; GFX6-FLUSH-NEXT:    v_div_fixup_f32 v0, v3, v0, v2
 ; GFX6-FLUSH-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_MODE, 2, 2), 0
@@ -1001,8 +1000,7 @@ define <2 x half> @v_rcp_v2f16_arcp(<2 x half> %x) {
 ; GFX6-FLUSH-LABEL: v_rcp_v2f16_arcp:
 ; GFX6-FLUSH:       ; %bb.0:
 ; GFX6-FLUSH-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX6-FLUSH-NEXT:    s_movk_i32 s6, 0x3c00
-; GFX6-FLUSH-NEXT:    v_cvt_f32_f16_e32 v2, s6
+; GFX6-FLUSH-NEXT:    v_cvt_f32_f16_e32 v2, 1.0
 ; GFX6-FLUSH-NEXT:    v_cvt_f32_f16_e32 v0, v0
 ; GFX6-FLUSH-NEXT:    v_div_scale_f32 v3, s[4:5], v0, v0, v2
 ; GFX6-FLUSH-NEXT:    v_rcp_f32_e32 v4, v3
@@ -1016,7 +1014,7 @@ define <2 x half> @v_rcp_v2f16_arcp(<2 x half> %x) {
 ; GFX6-FLUSH-NEXT:    v_fma_f32 v3, -v3, v6, v5
 ; GFX6-FLUSH-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_MODE, 4, 2), 0
 ; GFX6-FLUSH-NEXT:    v_div_fmas_f32 v3, v3, v4, v6
-; GFX6-FLUSH-NEXT:    v_cvt_f32_f16_e32 v4, s6
+; GFX6-FLUSH-NEXT:    v_cvt_f32_f16_e32 v4, 1.0
 ; GFX6-FLUSH-NEXT:    v_cvt_f32_f16_e32 v1, v1
 ; GFX6-FLUSH-NEXT:    v_div_fixup_f32 v0, v3, v0, v2
 ; GFX6-FLUSH-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_MODE, 2, 2), 0
@@ -1182,8 +1180,7 @@ define <2 x half> @v_rcp_v2f16_ulp25(<2 x half> %x) {
 ; GFX6-FLUSH-LABEL: v_rcp_v2f16_ulp25:
 ; GFX6-FLUSH:       ; %bb.0:
 ; GFX6-FLUSH-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX6-FLUSH-NEXT:    s_movk_i32 s6, 0x3c00
-; GFX6-FLUSH-NEXT:    v_cvt_f32_f16_e32 v2, s6
+; GFX6-FLUSH-NEXT:    v_cvt_f32_f16_e32 v2, 1.0
 ; GFX6-FLUSH-NEXT:    v_cvt_f32_f16_e32 v0, v0
 ; GFX6-FLUSH-NEXT:    v_div_scale_f32 v3, s[4:5], v0, v0, v2
 ; GFX6-FLUSH-NEXT:    v_rcp_f32_e32 v4, v3
@@ -1197,7 +1194,7 @@ define <2 x half> @v_rcp_v2f16_ulp25(<2 x half> %x) {
 ; GFX6-FLUSH-NEXT:    v_fma_f32 v3, -v3, v6, v5
 ; GFX6-FLUSH-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_MODE, 4, 2), 0
 ; GFX6-FLUSH-NEXT:    v_div_fmas_f32 v3, v3, v4, v6
-; GFX6-FLUSH-NEXT:    v_cvt_f32_f16_e32 v4, s6
+; GFX6-FLUSH-NEXT:    v_cvt_f32_f16_e32 v4, 1.0
 ; GFX6-FLUSH-NEXT:    v_cvt_f32_f16_e32 v1, v1
 ; GFX6-FLUSH-NEXT:    v_div_fixup_f32 v0, v3, v0, v2
 ; GFX6-FLUSH-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_MODE, 2, 2), 0

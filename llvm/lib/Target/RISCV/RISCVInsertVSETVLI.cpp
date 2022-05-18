@@ -215,13 +215,10 @@ public:
            MaskAgnostic == Other.MaskAgnostic;
   }
 
-  bool hasCompatibleVTYPE(const VSETVLIInfo &Require, bool Strict) const {
+  bool hasCompatibleVTYPE(const VSETVLIInfo &Require) const {
     // Simple case, see if full VTYPE matches.
     if (hasSameVTYPE(Require))
       return true;
-
-    if (Strict)
-      return false;
 
     // If this is a mask reg operation, it only cares about VLMAX.
     // FIXME: Mask reg operations are probably ok if "this" VLMAX is larger
@@ -238,7 +235,7 @@ public:
   // Determine whether the vector instructions requirements represented by
   // Require are compatible with the previous vsetvli instruction represented
   // by this.
-  bool isCompatible(const VSETVLIInfo &Require, bool Strict) const {
+  bool isCompatible(const VSETVLIInfo &Require) const {
     assert(isValid() && Require.isValid() &&
            "Can't compare invalid VSETVLIInfos");
     assert(!Require.SEWLMULRatioOnly &&
@@ -253,16 +250,14 @@ public:
 
     // If the instruction doesn't need an AVLReg and the SEW matches, consider
     // it compatible.
-    if (!Strict && Require.hasAVLReg() &&
-        Require.AVLReg == RISCV::NoRegister) {
+    if (Require.hasAVLReg() && Require.AVLReg == RISCV::NoRegister)
       if (SEW == Require.SEW)
         return true;
-    }
 
     // For vmv.s.x and vfmv.s.f, there is only two behaviors, VL = 0 and VL > 0.
     // So it's compatible when we could make sure that both VL be the same
     // situation.
-    if (!Strict && Require.ScalarMovOp && Require.hasAVLImm() &&
+    if (Require.ScalarMovOp && Require.hasAVLImm() &&
         ((hasNonZeroAVL() && Require.hasNonZeroAVL()) ||
          (hasZeroAVL() && Require.hasZeroAVL())) &&
         hasSameSEW(Require) && hasSamePolicy(Require))
@@ -272,12 +267,8 @@ public:
     if (!hasSameAVL(Require))
       return false;
 
-    if (hasCompatibleVTYPE(Require, Strict))
+    if (hasCompatibleVTYPE(Require))
       return true;
-
-    // Strict matches must ensure a full VTYPE match.
-    if (Strict)
-      return false;
 
     // Store instructions don't use the policy fields.
     // TODO: Move into hasCompatibleVTYPE?
@@ -326,16 +317,16 @@ public:
     if (!hasSameAVL(Other))
       return false;
 
+    // If the SEWLMULRatioOnly bits are different, then they aren't equal.
+    if (SEWLMULRatioOnly != Other.SEWLMULRatioOnly)
+      return false;
+
     // If only the VLMAX is valid, check that it is the same.
-    if (SEWLMULRatioOnly && Other.SEWLMULRatioOnly)
+    if (SEWLMULRatioOnly)
       return hasSameVLMAX(Other);
 
     // If the full VTYPE is valid, check that it is the same.
-    if (!SEWLMULRatioOnly && !Other.SEWLMULRatioOnly)
-      return hasSameVTYPE(Other);
-
-    // If the SEWLMULRatioOnly bits are different, then they aren't equal.
-    return false;
+    return hasSameVTYPE(Other);
   }
 
   bool operator!=(const VSETVLIInfo &Other) const {
@@ -371,24 +362,6 @@ public:
 
     // Otherwise the result is unknown.
     return VSETVLIInfo::getUnknown();
-  }
-
-  // Calculate the VSETVLIInfo visible at the end of the block assuming this
-  // is the predecessor value, and Other is change for this block.
-  VSETVLIInfo merge(const VSETVLIInfo &Other) const {
-    assert(isValid() && "Can only merge with a valid VSETVLInfo");
-
-    // Nothing changed from the predecessor, keep it.
-    if (!Other.isValid())
-      return *this;
-
-    // If the change is compatible with the input, we won't create a VSETVLI
-    // and should keep the predecessor.
-    if (isCompatible(Other, /*Strict*/ true))
-      return *this;
-
-    // Otherwise just use whatever is in this block.
-    return Other;
   }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
@@ -724,7 +697,7 @@ static VSETVLIInfo getInfoForVSETVLI(const MachineInstr &MI) {
 
 bool RISCVInsertVSETVLI::needVSETVLI(const VSETVLIInfo &Require,
                                      const VSETVLIInfo &CurInfo) {
-  if (CurInfo.isCompatible(Require, /*Strict*/ false))
+  if (CurInfo.isCompatible(Require))
     return false;
 
   // We didn't find a compatible value. If our AVL is a virtual register,
@@ -733,7 +706,7 @@ bool RISCVInsertVSETVLI::needVSETVLI(const VSETVLIInfo &Require,
   // VSETVLI here.
   if (!CurInfo.isUnknown() && Require.hasAVLReg() &&
       Require.getAVLReg().isVirtual() && !CurInfo.hasSEWLMULRatioOnly() &&
-      CurInfo.hasCompatibleVTYPE(Require, /*Strict*/ false)) {
+      CurInfo.hasCompatibleVTYPE(Require)) {
     if (MachineInstr *DefMI = MRI->getVRegDef(Require.getAVLReg())) {
       if (isVectorConfigInstr(*DefMI)) {
         VSETVLIInfo DefInfo = getInfoForVSETVLI(*DefMI);
@@ -946,6 +919,7 @@ bool RISCVInsertVSETVLI::computeVLVTYPEChanges(const MachineBasicBlock &MBB) {
   bool HadVectorOp = false;
 
   BlockData &BBInfo = BlockInfo[MBB.getNumber()];
+  BBInfo.Change = BBInfo.Pred;
   for (const MachineInstr &MI : MBB) {
     // If this is an explicit VSETVLI or VSETIVLI, update our state.
     if (isVectorConfigInstr(MI)) {
@@ -983,15 +957,11 @@ bool RISCVInsertVSETVLI::computeVLVTYPEChanges(const MachineBasicBlock &MBB) {
       BBInfo.Change = VSETVLIInfo::getUnknown();
   }
 
-  // Initial exit state is whatever change we found in the block.
-  BBInfo.Exit = BBInfo.Change;
-  LLVM_DEBUG(dbgs() << "Initial exit state of " << printMBBReference(MBB)
-                    << " is " << BBInfo.Exit << "\n");
-
   return HadVectorOp;
 }
 
 void RISCVInsertVSETVLI::computeIncomingVLVTYPE(const MachineBasicBlock &MBB) {
+
   BlockData &BBInfo = BlockInfo[MBB.getNumber()];
 
   BBInfo.InQueue = false;
@@ -1017,7 +987,12 @@ void RISCVInsertVSETVLI::computeIncomingVLVTYPE(const MachineBasicBlock &MBB) {
   LLVM_DEBUG(dbgs() << "Entry state of " << printMBBReference(MBB)
                     << " changed to " << BBInfo.Pred << "\n");
 
-  VSETVLIInfo TmpStatus = BBInfo.Pred.merge(BBInfo.Change);
+  // Note: It's tempting to cache the state changes here, but due to the
+  // compatibility checks performed a blocks output state can change based on
+  // the input state.  To cache, we'd have to add logic for finding
+  // never-compatible state changes.
+  computeVLVTYPEChanges(MBB);
+  VSETVLIInfo TmpStatus = BBInfo.Change;
 
   // If the new exit value matches the old exit value, we don't need to revisit
   // any blocks.
@@ -1062,8 +1037,7 @@ bool RISCVInsertVSETVLI::needVSETVLIPHI(const VSETVLIInfo &Require,
     const BlockData &PBBInfo = BlockInfo[PBB->getNumber()];
     // If the exit from the predecessor has the VTYPE we are looking for
     // we might be able to avoid a VSETVLI.
-    if (PBBInfo.Exit.isUnknown() ||
-        !PBBInfo.Exit.hasCompatibleVTYPE(Require, /*Strict*/ false))
+    if (PBBInfo.Exit.isUnknown() || !PBBInfo.Exit.hasCompatibleVTYPE(Require))
       return true;
 
     // We need the PHI input to the be the output of a VSET(I)VLI.
@@ -1122,9 +1096,9 @@ void RISCVInsertVSETVLI::emitVSETVLIs(MachineBasicBlock &MBB) {
       if (!CurInfo.isValid()) {
         // We haven't found any vector instructions or VL/VTYPE changes yet,
         // use the predecessor information.
-        assert(BlockInfo[MBB.getNumber()].Pred.isValid() &&
-               "Expected a valid predecessor state.");
-        if (needVSETVLI(NewInfo, BlockInfo[MBB.getNumber()].Pred)) {
+        CurInfo = BlockInfo[MBB.getNumber()].Pred;
+        assert(CurInfo.isValid() && "Expected a valid predecessor state.");
+        if (needVSETVLI(NewInfo, CurInfo)) {
           // If this is the first implicit state change, and the state change
           // requested can be proven to produce the same register contents, we
           // can skip emitting the actual state change and continue as if we
@@ -1133,7 +1107,7 @@ void RISCVInsertVSETVLI::emitVSETVLIs(MachineBasicBlock &MBB) {
           // we *do* need to model the state as if it changed as while the
           // register contents are unchanged, the abstract model can change.
           if (needVSETVLIPHI(NewInfo, MBB))
-            insertVSETVLI(MBB, MI, NewInfo, BlockInfo[MBB.getNumber()].Pred);
+            insertVSETVLI(MBB, MI, NewInfo, CurInfo);
           CurInfo = NewInfo;
         }
       } else {
@@ -1268,6 +1242,29 @@ void RISCVInsertVSETVLI::doLocalPrepass(MachineBasicBlock &MBB) {
             }
           }
         }
+
+        // If AVL is defined by a vsetvli with the same vtype, we can
+        // replace the AVL operand with the AVL of the defining vsetvli.
+        // We avoid general register AVLs to avoid extending live ranges
+        // without being sure we can kill the original source reg entirely.
+        // TODO: We can ignore policy bits here, we only need VL to be the same.
+        if (Require.hasAVLReg() && Require.getAVLReg().isVirtual()) {
+          if (MachineInstr *DefMI = MRI->getVRegDef(Require.getAVLReg())) {
+            if (isVectorConfigInstr(*DefMI)) {
+              VSETVLIInfo DefInfo = getInfoForVSETVLI(*DefMI);
+              if (DefInfo.hasSameVTYPE(Require) &&
+                  (DefInfo.hasAVLImm() || DefInfo.getAVLReg() == RISCV::X0)) {
+                MachineOperand &VLOp = MI.getOperand(getVLOpNum(MI));
+                if (DefInfo.hasAVLImm())
+                  VLOp.ChangeToImmediate(DefInfo.getAVLImm());
+                else
+                  VLOp.ChangeToRegister(DefInfo.getAVLReg(), /*IsDef*/ false);
+                CurInfo = computeInfoForInstr(MI, TSFlags, MRI);
+                continue;
+              }
+            }
+          }
+        }
       }
       CurInfo = computeInfoForInstr(MI, TSFlags, MRI);
       continue;
@@ -1306,8 +1303,15 @@ bool RISCVInsertVSETVLI::runOnMachineFunction(MachineFunction &MF) {
   bool HaveVectorOp = false;
 
   // Phase 1 - determine how VL/VTYPE are affected by the each block.
-  for (const MachineBasicBlock &MBB : MF)
+  for (const MachineBasicBlock &MBB : MF) {
     HaveVectorOp |= computeVLVTYPEChanges(MBB);
+    // Initial exit state is whatever change we found in the block.
+    BlockData &BBInfo = BlockInfo[MBB.getNumber()];
+    BBInfo.Exit = BBInfo.Change;
+    LLVM_DEBUG(dbgs() << "Initial exit state of " << printMBBReference(MBB)
+                      << " is " << BBInfo.Exit << "\n");
+
+  }
 
   // If we didn't find any instructions that need VSETVLI, we're done.
   if (!HaveVectorOp) {

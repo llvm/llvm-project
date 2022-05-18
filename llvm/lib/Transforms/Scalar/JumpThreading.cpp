@@ -489,14 +489,16 @@ bool JumpThreadingPass::runImpl(Function &F, TargetLibraryInfo *TLI_,
 // at the end of block. RAUW unconditionally replaces all uses
 // including the guards/assumes themselves and the uses before the
 // guard/assume.
-static void replaceFoldableUses(Instruction *Cond, Value *ToVal) {
+static bool replaceFoldableUses(Instruction *Cond, Value *ToVal,
+                                BasicBlock *KnownAtEndOfBB) {
+  bool Changed = false;
   assert(Cond->getType() == ToVal->getType());
-  auto *BB = Cond->getParent();
   // We can unconditionally replace all uses in non-local blocks (i.e. uses
   // strictly dominated by BB), since LVI information is true from the
   // terminator of BB.
-  replaceNonLocalUsesWith(Cond, ToVal);
-  for (Instruction &I : reverse(*BB)) {
+  if (Cond->getParent() == KnownAtEndOfBB)
+    Changed |= replaceNonLocalUsesWith(Cond, ToVal);
+  for (Instruction &I : reverse(*KnownAtEndOfBB)) {
     // Reached the Cond whose uses we are trying to replace, so there are no
     // more uses.
     if (&I == Cond)
@@ -505,10 +507,13 @@ static void replaceFoldableUses(Instruction *Cond, Value *ToVal) {
     // of BB, where we know Cond is ToVal.
     if (!isGuaranteedToTransferExecutionToSuccessor(&I))
       break;
-    I.replaceUsesOfWith(Cond, ToVal);
+    Changed |= I.replaceUsesOfWith(Cond, ToVal);
   }
-  if (Cond->use_empty() && !Cond->mayHaveSideEffects())
+  if (Cond->use_empty() && !Cond->mayHaveSideEffects()) {
     Cond->eraseFromParent();
+    Changed = true;
+  }
+  return Changed;
 }
 
 /// Return the cost of duplicating a piece of this block from first non-phi
@@ -1133,34 +1138,21 @@ bool JumpThreadingPass::processBlock(BasicBlock *BB) {
     return ConstantFolded;
   }
 
-  if (CmpInst *CondCmp = dyn_cast<CmpInst>(CondInst)) {
+  // Some of the following optimization can safely work on the unfrozen cond.
+  Value *CondWithoutFreeze = CondInst;
+  if (auto *FI = dyn_cast<FreezeInst>(CondInst))
+    CondWithoutFreeze = FI->getOperand(0);
+
+  if (CmpInst *CondCmp = dyn_cast<CmpInst>(CondWithoutFreeze)) {
     // If we're branching on a conditional, LVI might be able to determine
     // it's value at the branch instruction.  We only handle comparisons
     // against a constant at this time.
-    // TODO: This should be extended to handle switches as well.
-    BranchInst *CondBr = dyn_cast<BranchInst>(BB->getTerminator());
-    Constant *CondConst = dyn_cast<Constant>(CondCmp->getOperand(1));
-    if (CondBr && CondConst) {
-      // We should have returned as soon as we turn a conditional branch to
-      // unconditional. Because its no longer interesting as far as jump
-      // threading is concerned.
-      assert(CondBr->isConditional() && "Threading on unconditional terminator");
-
+    if (Constant *CondConst = dyn_cast<Constant>(CondCmp->getOperand(1))) {
       LazyValueInfo::Tristate Ret =
           LVI->getPredicateAt(CondCmp->getPredicate(), CondCmp->getOperand(0),
-                              CondConst, CondBr, /*UseBlockValue=*/false);
+                              CondConst, BB->getTerminator(),
+                              /*UseBlockValue=*/false);
       if (Ret != LazyValueInfo::Unknown) {
-        unsigned ToRemove = Ret == LazyValueInfo::True ? 1 : 0;
-        unsigned ToKeep = Ret == LazyValueInfo::True ? 0 : 1;
-        BasicBlock *ToRemoveSucc = CondBr->getSuccessor(ToRemove);
-        ToRemoveSucc->removePredecessor(BB, true);
-        BranchInst *UncondBr =
-          BranchInst::Create(CondBr->getSuccessor(ToKeep), CondBr);
-        UncondBr->setDebugLoc(CondBr->getDebugLoc());
-        ++NumFolds;
-        CondBr->eraseFromParent();
-        if (CondCmp->use_empty())
-          CondCmp->eraseFromParent();
         // We can safely replace *some* uses of the CondInst if it has
         // exactly one value as returned by LVI. RAUW is incorrect in the
         // presence of guards and assumes, that have the `Cond` as the use. This
@@ -1168,17 +1160,11 @@ bool JumpThreadingPass::processBlock(BasicBlock *BB) {
         // at the end of block, but RAUW unconditionally replaces all uses
         // including the guards/assumes themselves and the uses before the
         // guard/assume.
-        else if (CondCmp->getParent() == BB) {
-          auto *CI = Ret == LazyValueInfo::True ?
-            ConstantInt::getTrue(CondCmp->getType()) :
-            ConstantInt::getFalse(CondCmp->getType());
-          replaceFoldableUses(CondCmp, CI);
-        }
-        DTU->applyUpdatesPermissive(
-            {{DominatorTree::Delete, BB, ToRemoveSucc}});
-        if (HasProfileData)
-          BPI->eraseBlock(BB);
-        return true;
+        auto *CI = Ret == LazyValueInfo::True ?
+          ConstantInt::getTrue(CondCmp->getType()) :
+          ConstantInt::getFalse(CondCmp->getType());
+        if (replaceFoldableUses(CondCmp, CI, BB))
+          return true;
       }
 
       // We did not manage to simplify this branch, try to see whether
@@ -1196,11 +1182,7 @@ bool JumpThreadingPass::processBlock(BasicBlock *BB) {
   // for loads that are used by a switch or by the condition for the branch.  If
   // we see one, check to see if it's partially redundant.  If so, insert a PHI
   // which can then be used to thread the values.
-  Value *SimplifyValue = CondInst;
-
-  if (auto *FI = dyn_cast<FreezeInst>(SimplifyValue))
-    // Look into freeze's operand
-    SimplifyValue = FI->getOperand(0);
+  Value *SimplifyValue = CondWithoutFreeze;
 
   if (CmpInst *CondCmp = dyn_cast<CmpInst>(SimplifyValue))
     if (isa<Constant>(CondCmp->getOperand(1)))
@@ -1225,10 +1207,7 @@ bool JumpThreadingPass::processBlock(BasicBlock *BB) {
 
   // If this is an otherwise-unfoldable branch on a phi node or freeze(phi) in
   // the current block, see if we can simplify.
-  PHINode *PN = dyn_cast<PHINode>(
-      isa<FreezeInst>(CondInst) ? cast<FreezeInst>(CondInst)->getOperand(0)
-                                : CondInst);
-
+  PHINode *PN = dyn_cast<PHINode>(CondWithoutFreeze);
   if (PN && PN->getParent() == BB && isa<BranchInst>(BB->getTerminator()))
     return processBranchOnPHI(PN);
 
@@ -1251,6 +1230,17 @@ bool JumpThreadingPass::processImpliedCondition(BasicBlock *BB) {
     return false;
 
   Value *Cond = BI->getCondition();
+  // Assuming that predecessor's branch was taken, if pred's branch condition
+  // (V) implies Cond, Cond can be either true, undef, or poison. In this case,
+  // freeze(Cond) is either true or a nondeterministic value.
+  // If freeze(Cond) has only one use, we can freely fold freeze(Cond) to true
+  // without affecting other instructions.
+  auto *FICond = dyn_cast<FreezeInst>(Cond);
+  if (FICond && FICond->hasOneUse())
+    Cond = FICond->getOperand(0);
+  else
+    FICond = nullptr;
+
   BasicBlock *CurrentBB = BB;
   BasicBlock *CurrentPred = BB->getSinglePredecessor();
   unsigned Iter = 0;
@@ -1267,6 +1257,15 @@ bool JumpThreadingPass::processImpliedCondition(BasicBlock *BB) {
     bool CondIsTrue = PBI->getSuccessor(0) == CurrentBB;
     Optional<bool> Implication =
         isImpliedCondition(PBI->getCondition(), Cond, DL, CondIsTrue);
+
+    // If the branch condition of BB (which is Cond) and CurrentPred are
+    // exactly the same freeze instruction, Cond can be folded into CondIsTrue.
+    if (!Implication && FICond && isa<FreezeInst>(PBI->getCondition())) {
+      if (cast<FreezeInst>(PBI->getCondition())->getOperand(0) ==
+          FICond->getOperand(0))
+        Implication = CondIsTrue;
+    }
+
     if (Implication) {
       BasicBlock *KeepSucc = BI->getSuccessor(*Implication ? 0 : 1);
       BasicBlock *RemoveSucc = BI->getSuccessor(*Implication ? 1 : 0);
@@ -1275,6 +1274,9 @@ bool JumpThreadingPass::processImpliedCondition(BasicBlock *BB) {
       UncondBI->setDebugLoc(BI->getDebugLoc());
       ++NumFolds;
       BI->eraseFromParent();
+      if (FICond)
+        FICond->eraseFromParent();
+
       DTU->applyUpdatesPermissive({{DominatorTree::Delete, BB, RemoveSucc}});
       if (HasProfileData)
         BPI->eraseBlock(BB);
@@ -1740,9 +1742,8 @@ bool JumpThreadingPass::processThreadableEdges(Value *Cond, BasicBlock *BB,
         // at the end of block, but RAUW unconditionally replaces all uses
         // including the guards/assumes themselves and the uses before the
         // guard/assume.
-        else if (OnlyVal && OnlyVal != MultipleVal &&
-                 CondInst->getParent() == BB)
-          replaceFoldableUses(CondInst, OnlyVal);
+        else if (OnlyVal && OnlyVal != MultipleVal)
+          replaceFoldableUses(CondInst, OnlyVal, BB);
       }
       return true;
     }
@@ -2911,8 +2912,7 @@ bool JumpThreadingPass::tryToUnfoldSelectInCurrBB(BasicBlock *BB) {
     // Expand the select.
     Value *Cond = SI->getCondition();
     if (InsertFreezeWhenUnfoldingSelect &&
-        !isGuaranteedNotToBeUndefOrPoison(Cond, nullptr, SI,
-                                          &DTU->getDomTree()))
+        !isGuaranteedNotToBeUndefOrPoison(Cond, nullptr, SI))
       Cond = new FreezeInst(Cond, "cond.fr", SI);
     Instruction *Term = SplitBlockAndInsertIfThen(Cond, SI, false);
     BasicBlock *SplitBB = SI->getParent();

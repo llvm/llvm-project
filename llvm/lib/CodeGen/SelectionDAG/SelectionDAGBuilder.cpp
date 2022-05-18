@@ -7648,7 +7648,10 @@ void SelectionDAGBuilder::visitVectorPredicationIntrinsic(
 
   switch (Opcode) {
   default: {
-    SDValue Result = DAG.getNode(Opcode, DL, VTs, OpValues);
+    SDNodeFlags SDFlags;
+    if (auto *FPMO = dyn_cast<FPMathOperator>(&VPIntrin))
+      SDFlags.copyFMF(*FPMO);
+    SDValue Result = DAG.getNode(Opcode, DL, VTs, OpValues, SDFlags);
     setValue(&VPIntrin, Result);
     break;
   }

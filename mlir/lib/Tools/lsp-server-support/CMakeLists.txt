@@ -1,6 +1,7 @@
 add_mlir_library(MLIRLspServerSupportLib
   Logging.cpp
   Protocol.cpp
+  SourceMgrUtils.cpp
   Transport.cpp
 
   ADDITIONAL_HEADER_DIRS
