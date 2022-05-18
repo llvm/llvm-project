@@ -373,7 +373,7 @@ class VOP3Pe_MAI <bits<7> op, VOPProfile P, bit acc_cd = 0> : Enc64 {
 }
 
 class VOP3Pe_SMFMAC <bits<7> op> : Enc64 {
-  bits<10> vdst;
+  bits<10> vdst; // VGPR or AGPR, but not SGPR. vdst{8} is not encoded in the instruction.
   bits<10> src0;
   bits<10> src1;
   bits<9> idx;
@@ -381,7 +381,6 @@ class VOP3Pe_SMFMAC <bits<7> op> : Enc64 {
   bits<3> cbsz;
   bits<4> abid;
 
-  let vdst{8} = 1; // VGPR or AGPR, but not SGPR
   let blgp = 0;
 
   let Inst{7-0} = vdst{7-0};

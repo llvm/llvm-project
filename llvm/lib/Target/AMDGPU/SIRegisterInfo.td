@@ -1097,7 +1097,7 @@ defm VISrc_512  : RegInlineOperandAC<"VReg", "VISrc_512",  "_512">;
 defm VISrc_1024 : RegInlineOperandAC<"VReg", "VISrc_1024", "_1024">;
 
 //===----------------------------------------------------------------------===//
-//  AVSrc_* Operands with an AGPR or VGPR
+//  AVSrc_*, AVDst_*, AVLdSt_* Operands with an AGPR or VGPR
 //===----------------------------------------------------------------------===//
 
 def AVSrc_32 : RegisterOperand<AV_32> {
@@ -1115,8 +1115,13 @@ def AVSrc_128 : RegisterOperand<AV_128> {
   let EncoderMethod = "getAVOperandEncoding";
 }
 
-def AVSrc_512 : RegisterOperand<AV_512> {
-  let DecoderMethod = "DecodeAV_512RegisterClass";
+def AVDst_128 : RegisterOperand<AV_128> {
+  let DecoderMethod = "DecodeAVDst_128RegisterClass";
+  let EncoderMethod = "getAVOperandEncoding";
+}
+
+def AVDst_512 : RegisterOperand<AV_512> {
+  let DecoderMethod = "DecodeAVDst_512RegisterClass";
   let EncoderMethod = "getAVOperandEncoding";
 }
 
