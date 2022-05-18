@@ -81,11 +81,12 @@ struct Config {
     /// forward-slashes.
     std::string MountPoint;
   };
-  /// Controls background-index behavior.
+  /// Controls index behavior.
   struct {
-    /// Whether this TU should be indexed.
+    /// Whether this TU should be background-indexed.
     BackgroundPolicy Background = BackgroundPolicy::Build;
     ExternalIndexSpec External;
+    bool StandardLibrary = false;
   } Index;
 
   enum UnusedIncludesPolicy { Strict, None };

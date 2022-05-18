@@ -119,6 +119,7 @@ add_clang_library(clangDaemon
   index/Ref.cpp
   index/Relation.cpp
   index/Serialization.cpp
+  index/StdLib.cpp
   index/Symbol.cpp
   index/SymbolCollector.cpp
   index/SymbolID.cpp
