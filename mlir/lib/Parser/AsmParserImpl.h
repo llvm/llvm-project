@@ -491,8 +491,10 @@ public:
   }
 
   ParseResult parseDimensionList(SmallVectorImpl<int64_t> &dimensions,
-                                 bool allowDynamic) override {
-    return parser.parseDimensionListRanked(dimensions, allowDynamic);
+                                 bool allowDynamic,
+                                 bool withTrailingX) override {
+    return parser.parseDimensionListRanked(dimensions, allowDynamic,
+                                           withTrailingX);
   }
 
   ParseResult parseXInDimensionList() override {

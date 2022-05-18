@@ -203,7 +203,8 @@ public:
   ParseResult parseVectorDimensionList(SmallVectorImpl<int64_t> &dimensions,
                                        unsigned &numScalableDims);
   ParseResult parseDimensionListRanked(SmallVectorImpl<int64_t> &dimensions,
-                                       bool allowDynamic = true);
+                                       bool allowDynamic = true,
+                                       bool withTrailingX = true);
   ParseResult parseIntegerInDimensionList(int64_t &value);
   ParseResult parseXInDimensionList();
 
