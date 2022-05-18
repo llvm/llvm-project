@@ -17275,6 +17275,40 @@ int __ovld __cnfn dot_acc_sat_4x8packed_us_int(uint, uint, int);
 int __ovld __cnfn dot_acc_sat_4x8packed_su_int(uint, uint, int);
 #endif // __opencl_c_integer_dot_product_input_4x8bit_packed
 
+#if defined(cl_khr_subgroup_rotate)
+char __ovld __conv sub_group_rotate(char, int);
+uchar __ovld __conv sub_group_rotate(uchar, int);
+short __ovld __conv sub_group_rotate(short, int);
+ushort __ovld __conv sub_group_rotate(ushort, int);
+int __ovld __conv sub_group_rotate(int, int);
+uint __ovld __conv sub_group_rotate(uint, int);
+long __ovld __conv sub_group_rotate(long, int);
+ulong __ovld __conv sub_group_rotate(ulong, int);
+float __ovld __conv sub_group_rotate(float, int);
+#if defined(cl_khr_fp64)
+double __ovld __conv sub_group_rotate(double, int);
+#endif // cl_khr_fp64
+#if defined(cl_khr_fp16)
+half __ovld __conv sub_group_rotate(half, int);
+#endif // cl_khr_fp16
+
+char __ovld __conv sub_group_clustered_rotate(char, int, uint);
+uchar __ovld __conv sub_group_clustered_rotate(uchar, int, uint);
+short __ovld __conv sub_group_clustered_rotate(short, int, uint);
+ushort __ovld __conv sub_group_clustered_rotate(ushort, int, uint);
+int __ovld __conv sub_group_clustered_rotate(int, int, uint);
+uint __ovld __conv sub_group_clustered_rotate(uint, int, uint);
+long __ovld __conv sub_group_clustered_rotate(long, int, uint);
+ulong __ovld __conv sub_group_clustered_rotate(ulong, int, uint);
+float __ovld __conv sub_group_clustered_rotate(float, int, uint);
+#if defined(cl_khr_fp64)
+double __ovld __conv sub_group_clustered_rotate(double, int, uint);
+#endif // cl_khr_fp64
+#if defined(cl_khr_fp16)
+half __ovld __conv sub_group_clustered_rotate(half, int, uint);
+#endif // cl_khr_fp16
+#endif // cl_khr_subgroup_rotate
+
 #if defined(cl_intel_subgroups)
 // Intel-Specific Sub Group Functions
 float   __ovld __conv intel_sub_group_shuffle( float , uint );
