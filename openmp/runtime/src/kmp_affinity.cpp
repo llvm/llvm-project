@@ -1536,6 +1536,8 @@ int __kmp_affinity_entire_machine_mask(kmp_affin_mask_t *mask) {
 // internal topology object and set the layer ids for it.  Each routine
 // returns a boolean on whether it was successful at doing so.
 kmp_affin_mask_t *__kmp_affin_fullMask = NULL;
+// Original mask is a subset of full mask in multiple processor groups topology
+kmp_affin_mask_t *__kmp_affin_origMask = NULL;
 
 #if KMP_USE_HWLOC
 static inline bool __kmp_hwloc_is_cache_type(hwloc_obj_t obj) {
@@ -4072,8 +4074,13 @@ static void __kmp_aux_affinity_initialize(void) {
   if (__kmp_affin_fullMask == NULL) {
     KMP_CPU_ALLOC(__kmp_affin_fullMask);
   }
+  if (__kmp_affin_origMask == NULL) {
+    KMP_CPU_ALLOC(__kmp_affin_origMask);
+  }
   if (KMP_AFFINITY_CAPABLE()) {
     __kmp_get_system_affinity(__kmp_affin_fullMask, TRUE);
+    // Make a copy before possible expanding to the entire machine mask
+    __kmp_affin_origMask->copy(__kmp_affin_fullMask);
     if (__kmp_affinity_respect_mask) {
       // Count the number of available processors.
       unsigned i;
@@ -4111,6 +4118,10 @@ static void __kmp_aux_affinity_initialize(void) {
       __kmp_avail_proc =
           __kmp_affinity_entire_machine_mask(__kmp_affin_fullMask);
 #if KMP_OS_WINDOWS
+      if (__kmp_num_proc_groups <= 1) {
+        // Copy expanded full mask if topology has single processor group
+        __kmp_affin_origMask->copy(__kmp_affin_fullMask);
+      }
       // Set the process affinity mask since threads' affinity
       // masks must be subset of process mask in Windows* OS
       __kmp_affin_fullMask->set_process_affinity(true);
@@ -4283,6 +4294,13 @@ static void __kmp_aux_affinity_initialize(void) {
   if (__kmp_affinity_verbose)
     __kmp_topology->print("KMP_AFFINITY");
   bool filtered = __kmp_topology->filter_hw_subset();
+  if (filtered) {
+#if KMP_OS_WINDOWS
+    // Copy filtered full mask if topology has single processor group
+    if (__kmp_num_proc_groups <= 1)
+#endif
+      __kmp_affin_origMask->copy(__kmp_affin_fullMask);
+  }
   if (filtered && __kmp_affinity_verbose)
     __kmp_topology->print("KMP_HW_SUBSET");
   machine_hierarchy.init(__kmp_topology->get_num_hw_threads());
@@ -4505,6 +4523,10 @@ void __kmp_affinity_uninitialize(void) {
   if (__kmp_affin_fullMask != NULL) {
     KMP_CPU_FREE(__kmp_affin_fullMask);
     __kmp_affin_fullMask = NULL;
+  }
+  if (__kmp_affin_origMask != NULL) {
+    KMP_CPU_FREE(__kmp_affin_origMask);
+    __kmp_affin_origMask = NULL;
   }
   __kmp_affinity_num_masks = 0;
   __kmp_affinity_type = affinity_default;
