@@ -491,15 +491,13 @@ bool PPCTTIImpl::mightUseCTR(BasicBlock *BB, TargetLibraryInfo *LibInfo,
           case Intrinsic::experimental_constrained_sin:
           case Intrinsic::experimental_constrained_cos:
             return true;
-          // There is no corresponding FMA instruction for PPC double double.
-          // Thus, we need to disable CTR loop generation for this type.
-          case Intrinsic::fmuladd:
           case Intrinsic::copysign:
             if (CI->getArgOperand(0)->getType()->getScalarType()->
                 isPPC_FP128Ty())
               return true;
             else
               continue; // ISD::FCOPYSIGN is never a library call.
+          case Intrinsic::fmuladd:
           case Intrinsic::fma:                Opcode = ISD::FMA;        break;
           case Intrinsic::sqrt:               Opcode = ISD::FSQRT;      break;
           case Intrinsic::floor:              Opcode = ISD::FFLOOR;     break;
