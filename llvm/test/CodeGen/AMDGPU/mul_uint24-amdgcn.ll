@@ -824,13 +824,12 @@ define i17 @test_umul24_anyextend_i23_src0_src1(i23 %a, i23 %b) {
 ; GCN-LABEL: test_umul24_anyextend_i23_src0_src1:
 ; GCN:       ; %bb.0: ; %entry
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GCN-NEXT:    s_mov_b32 s4, 0x7fffff
-; GCN-NEXT:    v_and_b32_e32 v0, s4, v0
-; GCN-NEXT:    v_and_b32_e32 v1, s4, v1
+; GCN-NEXT:    v_and_b32_e32 v0, 0x7fffff, v0
+; GCN-NEXT:    v_and_b32_e32 v1, 0x7fffff, v1
 ; GCN-NEXT:    v_mul_u32_u24_e32 v0, 0xea, v0
 ; GCN-NEXT:    v_mul_u32_u24_e32 v1, 0x39b, v1
 ; GCN-NEXT:    v_and_b32_e32 v0, 0x7ffffe, v0
-; GCN-NEXT:    v_and_b32_e32 v1, s4, v1
+; GCN-NEXT:    v_and_b32_e32 v1, 0x7fffff, v1
 ; GCN-NEXT:    v_mul_u32_u24_e32 v0, v0, v1
 ; GCN-NEXT:    v_and_b32_e32 v0, 0x1fffe, v0
 ; GCN-NEXT:    v_mul_u32_u24_e32 v0, 0x63, v0

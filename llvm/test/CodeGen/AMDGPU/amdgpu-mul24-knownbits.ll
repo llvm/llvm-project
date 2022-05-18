@@ -33,9 +33,8 @@ define i32 @f(i32 %x, i32 %y) {
 ; GCN-LABEL: f:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GCN-NEXT:    s_mov_b32 s4, 0xffff80
-; GCN-NEXT:    v_or_b32_e32 v0, s4, v0
-; GCN-NEXT:    v_or_b32_e32 v1, s4, v1
+; GCN-NEXT:    v_or_b32_e32 v0, 0xffff80, v0
+; GCN-NEXT:    v_or_b32_e32 v1, 0xffff80, v1
 ; GCN-NEXT:    v_mul_i32_i24_e32 v0, v0, v1
 ; GCN-NEXT:    v_lshrrev_b32_e32 v0, 14, v0
 ; GCN-NEXT:    s_setpc_b64 s[30:31]

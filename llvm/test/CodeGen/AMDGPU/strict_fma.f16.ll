@@ -94,10 +94,9 @@ define <4 x half> @v_constained_fma_v4f16_fpexcept_strict(<4 x half> %x, <4 x ha
 ; GFX9-NEXT:    v_lshrrev_b32_e32 v9, 16, v0
 ; GFX9-NEXT:    v_fma_f16 v1, v1, v3, v5
 ; GFX9-NEXT:    v_fma_f16 v0, v0, v2, v4
-; GFX9-NEXT:    v_mov_b32_e32 v2, 0xffff
 ; GFX9-NEXT:    v_fma_f16 v7, v9, v8, v7
-; GFX9-NEXT:    v_and_b32_e32 v0, v2, v0
-; GFX9-NEXT:    v_and_b32_e32 v1, v2, v1
+; GFX9-NEXT:    v_and_b32_e32 v0, 0xffff, v0
+; GFX9-NEXT:    v_and_b32_e32 v1, 0xffff, v1
 ; GFX9-NEXT:    v_lshl_or_b32 v0, v7, 16, v0
 ; GFX9-NEXT:    v_lshl_or_b32 v1, v6, 16, v1
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]

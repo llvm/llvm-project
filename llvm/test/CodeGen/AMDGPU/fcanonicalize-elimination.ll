@@ -136,8 +136,7 @@ define amdgpu_kernel void @test_fold_canonicalize_fma_value_f32(float addrspace(
 }
 
 ; GCN-LABEL: test_fold_canonicalize_fmad_ftz_value_f32:
-; GCN: v_mov_b32_e32 [[V:v[0-9]+]], 0x41700000
-; GCN: v_mac_f32_e32 [[V]], v{{[0-9]+}}, v{{[0-9]+$}}
+; GCN: v_mac_f32_e32 [[V:v[0-9]+]], 0x41700000, v{{[0-9]+$}}
 ; GCN-NOT: v_mul
 ; GCN-NOT: v_max
 ; GCN: {{flat|global}}_store_dword v{{.+}}, [[V]]
@@ -152,7 +151,7 @@ define amdgpu_kernel void @test_fold_canonicalize_fmad_ftz_value_f32(float addrs
 }
 
 ; GCN-LABEL: test_fold_canonicalize_fmuladd_value_f32:
-; GCN-FLUSH: v_mac_f32_e32 [[V:v[0-9]+]], v{{[0-9]+}}, v{{[0-9]+}}
+; GCN-FLUSH: v_mac_f32_e32 [[V:v[0-9]+]], 0x41700000, v{{[0-9]+}}
 ; GCN-DENORM: s_mov_b32 [[SREG:s[0-9]+]], 0x41700000
 ; GCN-DENORM: v_fma_f32 [[V:v[0-9]+]], v{{[0-9]+}}, [[SREG]], [[SREG]]
 ; GCN-NOT: v_mul

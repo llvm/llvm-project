@@ -84,16 +84,15 @@ define amdgpu_kernel void @cos_v2f16(<2 x half> addrspace(1)* %r, <2 x half> add
 ; GFX6-NEXT:    s_mov_b32 s8, s2
 ; GFX6-NEXT:    s_mov_b32 s9, s3
 ; GFX6-NEXT:    buffer_load_dword v0, off, s[8:11], 0
-; GFX6-NEXT:    s_mov_b32 s2, 0x3e22f983
 ; GFX6-NEXT:    s_mov_b32 s4, s0
 ; GFX6-NEXT:    s_mov_b32 s5, s1
 ; GFX6-NEXT:    s_waitcnt vmcnt(0)
 ; GFX6-NEXT:    v_cvt_f32_f16_e32 v1, v0
 ; GFX6-NEXT:    v_lshrrev_b32_e32 v0, 16, v0
 ; GFX6-NEXT:    v_cvt_f32_f16_e32 v0, v0
-; GFX6-NEXT:    v_mul_f32_e32 v1, s2, v1
+; GFX6-NEXT:    v_mul_f32_e32 v1, 0x3e22f983, v1
 ; GFX6-NEXT:    v_fract_f32_e32 v1, v1
-; GFX6-NEXT:    v_mul_f32_e32 v0, s2, v0
+; GFX6-NEXT:    v_mul_f32_e32 v0, 0x3e22f983, v0
 ; GFX6-NEXT:    v_fract_f32_e32 v0, v0
 ; GFX6-NEXT:    v_cos_f32_e32 v0, v0
 ; GFX6-NEXT:    v_cos_f32_e32 v1, v1

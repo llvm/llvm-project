@@ -255,7 +255,7 @@ define amdgpu_kernel void @v_test_global_nnans_med3_f32_pat0_srcmod012(float add
 ; SI-NEXT:    buffer_load_dword v4, v[0:1], s[8:11], 0 addr64 glc
 ; SI-NEXT:    s_waitcnt vmcnt(0)
 ; SI-NEXT:    s_mov_b32 s2, 0x80000000
-; SI-NEXT:    v_sub_f32_e32 v2, s2, v2
+; SI-NEXT:    v_sub_f32_e32 v2, 0x80000000, v2
 ; SI-NEXT:    v_sub_f32_e64 v4, s2, |v4|
 ; SI-NEXT:    v_med3_f32 v2, v2, |v3|, v4
 ; SI-NEXT:    s_mov_b64 s[2:3], s[10:11]
@@ -290,7 +290,7 @@ define amdgpu_kernel void @v_test_global_nnans_med3_f32_pat0_srcmod012(float add
 ; VI-NEXT:    v_mov_b32_e32 v1, s1
 ; VI-NEXT:    v_add_u32_e32 v0, vcc, v0, v6
 ; VI-NEXT:    v_addc_u32_e32 v1, vcc, 0, v1, vcc
-; VI-NEXT:    v_sub_f32_e32 v4, s2, v7
+; VI-NEXT:    v_sub_f32_e32 v4, 0x80000000, v7
 ; VI-NEXT:    v_sub_f32_e64 v3, s2, |v3|
 ; VI-NEXT:    v_med3_f32 v2, v4, |v2|, v3
 ; VI-NEXT:    flat_store_dword v[0:1], v2
@@ -308,7 +308,7 @@ define amdgpu_kernel void @v_test_global_nnans_med3_f32_pat0_srcmod012(float add
 ; GFX9-NEXT:    global_load_dword v3, v0, s[6:7] glc
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    s_mov_b32 s2, 0x80000000
-; GFX9-NEXT:    v_sub_f32_e32 v1, s2, v1
+; GFX9-NEXT:    v_sub_f32_e32 v1, 0x80000000, v1
 ; GFX9-NEXT:    v_sub_f32_e64 v3, s2, |v3|
 ; GFX9-NEXT:    v_med3_f32 v1, v1, |v2|, v3
 ; GFX9-NEXT:    global_store_dword v0, v1, s[0:1]
