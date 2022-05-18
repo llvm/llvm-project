@@ -21,7 +21,7 @@ namespace readability {
 /// of the function.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/readability-suspicious-call-argument.html
+/// http://clang.llvm.org/extra/clang-tidy/checks/readability/suspicious-call-argument.html
 class SuspiciousCallArgumentCheck : public ClangTidyCheck {
   enum class Heuristic {
     Equality,

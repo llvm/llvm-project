@@ -19,7 +19,7 @@ namespace cppcoreguidelines {
 /// Access to a union as a whole (e.g. passing to a function) is not flagged.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/cppcoreguidelines-pro-type-union-access.html
+/// http://clang.llvm.org/extra/clang-tidy/checks/cppcoreguidelines/pro-type-union-access.html
 class ProTypeUnionAccessCheck : public ClangTidyCheck {
 public:
   ProTypeUnionAccessCheck(StringRef Name, ClangTidyContext *Context)

@@ -19,7 +19,7 @@ namespace bugprone {
 /// intervening reinitialization.
 ///
 /// For details, see the user-facing documentation:
-/// http://clang.llvm.org/extra/clang-tidy/checks/bugprone-use-after-move.html
+/// http://clang.llvm.org/extra/clang-tidy/checks/bugprone/use-after-move.html
 class UseAfterMoveCheck : public ClangTidyCheck {
 public:
   UseAfterMoveCheck(StringRef Name, ClangTidyContext *Context)

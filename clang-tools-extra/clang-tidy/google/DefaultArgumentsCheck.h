@@ -20,7 +20,7 @@ namespace google {
 /// See https://google.github.io/styleguide/cppguide.html#Default_Arguments
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/google-default-arguments.html
+/// http://clang.llvm.org/extra/clang-tidy/checks/google/default-arguments.html
 class DefaultArgumentsCheck : public ClangTidyCheck {
 public:
   DefaultArgumentsCheck(StringRef Name, ClangTidyContext *Context)

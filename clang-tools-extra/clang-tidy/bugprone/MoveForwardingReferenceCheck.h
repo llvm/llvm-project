@@ -32,7 +32,7 @@ namespace bugprone {
 /// The check suggests replacing the std::move with a std::forward.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/bugprone-move-forwarding-reference.html
+/// http://clang.llvm.org/extra/clang-tidy/checks/bugprone/move-forwarding-reference.html
 class MoveForwardingReferenceCheck : public ClangTidyCheck {
 public:
   MoveForwardingReferenceCheck(StringRef Name, ClangTidyContext *Context)

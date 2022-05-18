@@ -18,7 +18,7 @@ namespace bugprone {
 /// The checker detects various cases when an enum is probably misused (as a
 /// bitmask).
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/bugprone-suspicious-enum-usage.html
+/// http://clang.llvm.org/extra/clang-tidy/checks/bugprone/suspicious-enum-usage.html
 class SuspiciousEnumUsageCheck : public ClangTidyCheck {
 public:
   SuspiciousEnumUsageCheck(StringRef Name, ClangTidyContext *Context);

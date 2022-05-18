@@ -33,7 +33,7 @@ namespace modernize {
 /// \endcode
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/modernize-use-equals-default.html
+/// http://clang.llvm.org/extra/clang-tidy/checks/modernize/use-equals-default.html
 class UseEqualsDefaultCheck : public ClangTidyCheck {
 public:
   UseEqualsDefaultCheck(StringRef Name, ClangTidyContext *Context);
