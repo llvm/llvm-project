@@ -26,7 +26,7 @@ namespace bugprone {
 //      be the most common case. Enabled by default.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/bugprone-misplaced-widening-cast.html
+/// http://clang.llvm.org/extra/clang-tidy/checks/bugprone/misplaced-widening-cast.html
 class MisplacedWideningCastCheck : public ClangTidyCheck {
 public:
   MisplacedWideningCastCheck(StringRef Name, ClangTidyContext *Context);

@@ -20,7 +20,7 @@ namespace cppcoreguidelines {
 /// have a constant index and are within bounds
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/cppcoreguidelines-pro-bounds-constant-array-index.html
+/// http://clang.llvm.org/extra/clang-tidy/checks/cppcoreguidelines/pro-bounds-constant-array-index.html
 class ProBoundsConstantArrayIndexCheck : public ClangTidyCheck {
   const std::string GslHeader;
   utils::IncludeInserter Inserter;

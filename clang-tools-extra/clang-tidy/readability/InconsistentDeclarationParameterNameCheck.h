@@ -20,7 +20,7 @@ namespace readability {
 /// Checks for declarations of functions which differ in parameter names.
 ///
 /// For detailed documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/readability-inconsistent-declaration-parameter-name.html
+/// http://clang.llvm.org/extra/clang-tidy/checks/readability/inconsistent-declaration-parameter-name.html
 ///
 class InconsistentDeclarationParameterNameCheck : public ClangTidyCheck {
 public:

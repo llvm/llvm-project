@@ -20,7 +20,7 @@ namespace readability {
 /// or spaces are used consistently and not mixed.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/readability-misleading-indentation.html
+/// http://clang.llvm.org/extra/clang-tidy/checks/readability/misleading-indentation.html
 class MisleadingIndentationCheck : public ClangTidyCheck {
 public:
   MisleadingIndentationCheck(StringRef Name, ClangTidyContext *Context)

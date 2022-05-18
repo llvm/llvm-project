@@ -36,7 +36,7 @@ namespace bugprone {
 /// point.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/bugprone-forward-declaration-namespace.html
+/// http://clang.llvm.org/extra/clang-tidy/checks/bugprone/forward-declaration-namespace.html
 class ForwardDeclarationNamespaceCheck : public ClangTidyCheck {
 public:
   ForwardDeclarationNamespaceCheck(StringRef Name, ClangTidyContext *Context)

@@ -18,7 +18,7 @@ namespace modernize {
 /// Replaces groups of related macros with an unscoped anonymous enum.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/modernize-macro-to-enum.html
+/// http://clang.llvm.org/extra/clang-tidy/checks/modernize/macro-to-enum.html
 class MacroToEnumCheck : public ClangTidyCheck {
 public:
   MacroToEnumCheck(StringRef Name, ClangTidyContext *Context)

@@ -20,7 +20,7 @@ namespace objc {
 /// operands of type NSString*.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/objc-assert-equals.html
+/// http://clang.llvm.org/extra/clang-tidy/checks/objc/assert-equals.html
 class AssertEquals final : public ClangTidyCheck {
 public:
   AssertEquals(StringRef Name, ClangTidyContext *Context)

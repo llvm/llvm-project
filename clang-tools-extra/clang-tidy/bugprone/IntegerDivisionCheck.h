@@ -19,7 +19,7 @@ namespace bugprone {
 /// cause unintended loss of precision.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/bugprone-integer-division.html
+/// http://clang.llvm.org/extra/clang-tidy/checks/bugprone/integer-division.html
 class IntegerDivisionCheck : public ClangTidyCheck {
 public:
   IntegerDivisionCheck(StringRef Name, ClangTidyContext *Context)

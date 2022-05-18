@@ -20,7 +20,7 @@ namespace openmp {
 /// other than ``none``, and suggests to use the ``default(none)`` clause.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/openmp-use-default-none.html
+/// http://clang.llvm.org/extra/clang-tidy/checks/openmp/use-default-none.html
 class UseDefaultNoneCheck : public ClangTidyCheck {
 public:
   UseDefaultNoneCheck(StringRef Name, ClangTidyContext *Context)

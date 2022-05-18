@@ -29,7 +29,7 @@ namespace bugprone {
 /// double underscore occurring anywhere.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/bugprone-reserved-identifier.html
+/// http://clang.llvm.org/extra/clang-tidy/checks/bugprone/reserved-identifier.html
 class ReservedIdentifierCheck final : public RenamerClangTidyCheck {
   const bool Invert;
   const std::vector<std::string> AllowedIdentifiers;

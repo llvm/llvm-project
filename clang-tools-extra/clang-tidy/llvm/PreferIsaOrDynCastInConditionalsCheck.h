@@ -47,7 +47,7 @@ namespace llvm_check {
 /// \endcode
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/llvm-prefer-isa-or-dyn-cast-in-conditionals.html
+/// http://clang.llvm.org/extra/clang-tidy/checks/llvm/prefer-isa-or-dyn-cast-in-conditionals.html
 class PreferIsaOrDynCastInConditionalsCheck : public ClangTidyCheck {
 public:
   PreferIsaOrDynCastInConditionalsCheck(StringRef Name,

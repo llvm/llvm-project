@@ -18,7 +18,7 @@ namespace modernize {
 /// Find C-style array types and recommend to use std::array<> / std::vector<>.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/modernize-avoid-c-arrays.html
+/// http://clang.llvm.org/extra/clang-tidy/checks/modernize/avoid-c-arrays.html
 class AvoidCArraysCheck : public ClangTidyCheck {
 public:
   AvoidCArraysCheck(StringRef Name, ClangTidyContext *Context)

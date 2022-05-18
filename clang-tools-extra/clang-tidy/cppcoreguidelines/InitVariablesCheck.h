@@ -20,7 +20,7 @@ namespace cppcoreguidelines {
 /// Find uninitialized local variables.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/cppcoreguidelines-init-variables.html
+/// http://clang.llvm.org/extra/clang-tidy/checks/cppcoreguidelines/init-variables.html
 class InitVariablesCheck : public ClangTidyCheck {
 public:
   InitVariablesCheck(StringRef Name, ClangTidyContext *Context);

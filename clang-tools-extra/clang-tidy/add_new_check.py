@@ -54,7 +54,6 @@ def adapt_cmake(module_path, check_name_camel):
 
 # Adds a header for the new check.
 def write_header(module_path, module, namespace, check_name, check_name_camel):
-  check_name_dashes = module + '-' + check_name
   filename = os.path.join(module_path, check_name_camel) + '.h'
   print('Creating %s...' % filename)
   with io.open(filename, 'w', encoding='utf8', newline='\n') as f:
@@ -85,10 +84,10 @@ namespace %(namespace)s {
 /// FIXME: Write a short description.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/%(check_name_dashes)s.html
-class %(check_name)s : public ClangTidyCheck {
+/// http://clang.llvm.org/extra/clang-tidy/checks/%(module)s/%(check_name)s.html
+class %(check_name_camel)s : public ClangTidyCheck {
 public:
-  %(check_name)s(StringRef Name, ClangTidyContext *Context)
+  %(check_name_camel)s(StringRef Name, ClangTidyContext *Context)
       : ClangTidyCheck(Name, Context) {}
   void registerMatchers(ast_matchers::MatchFinder *Finder) override;
   void check(const ast_matchers::MatchFinder::MatchResult &Result) override;
@@ -100,8 +99,8 @@ public:
 
 #endif // %(header_guard)s
 """ % {'header_guard': header_guard,
-       'check_name': check_name_camel,
-       'check_name_dashes': check_name_dashes,
+       'check_name_camel': check_name_camel,
+       'check_name': check_name,
        'module': module,
        'namespace': namespace})
 
@@ -261,11 +260,11 @@ def add_release_notes(module_path, module, check_name):
         if header_found and add_note_here:
           if not line.startswith('^^^^'):
             f.write("""- New :doc:`%s
-  <clang-tidy/checks/%s>` check.
+  <clang-tidy/checks/%s/%s>` check.
 
   FIXME: add release notes.
 
-""" % (check_name_dashes, check_name_dashes))
+""" % (check_name_dashes, module, check_name))
             note_added = True
 
       f.write(line)
@@ -316,8 +315,11 @@ def update_checks_list(clang_tidy_path):
   with io.open(filename, 'r', encoding='utf8') as f:
     lines = f.readlines()
   # Get all existing docs
-  doc_files = list(filter(lambda s: s.endswith('.rst') and s != 'list.rst',
-                     os.listdir(docs_dir)))
+  doc_files = []
+  for subdir in list(filter(lambda s: not s.endswith('.rst') and not s.endswith('.py'),
+                     os.listdir(docs_dir))):
+    for file in filter(lambda s: s.endswith('.rst'), os.listdir(os.path.join(docs_dir, subdir))):
+      doc_files.append([subdir, file])
   doc_files.sort()
 
   def has_auto_fix(check_name):
@@ -341,9 +343,9 @@ def update_checks_list(clang_tidy_path):
     return ''
 
   def process_doc(doc_file):
-    check_name = doc_file.replace('.rst', '')
+    check_name = doc_file[0] + '-' + doc_file[1].replace('.rst', '')
 
-    with io.open(os.path.join(docs_dir, doc_file), 'r', encoding='utf8') as doc:
+    with io.open(os.path.join(docs_dir, *doc_file), 'r', encoding='utf8') as doc:
       content = doc.read()
       match = re.search('.*:orphan:.*', content)
 
@@ -351,7 +353,7 @@ def update_checks_list(clang_tidy_path):
         # Orphan page, don't list it.
         return '', ''
 
-      match = re.search('.*:http-equiv=refresh: \d+;URL=(.*).html.*',
+      match = re.search('.*:http-equiv=refresh: \d+;URL=(.*).html(.*)',
                         content)
       # Is it a redirect?
       return check_name, match
@@ -359,8 +361,10 @@ def update_checks_list(clang_tidy_path):
   def format_link(doc_file):
     check_name, match = process_doc(doc_file)
     if not match and check_name:
-      return '   `%(check)s <%(check)s.html>`_,%(autofix)s\n' % {
-        'check': check_name,
+      return '   `%(check_name)s <%(module)s/%(check)s.html>`_,%(autofix)s\n' % {
+        'check_name': check_name,
+        'module': doc_file[0],
+        'check': doc_file[1].replace('.rst', ''),
         'autofix': has_auto_fix(check_name)
       }
     else:
@@ -369,16 +373,27 @@ def update_checks_list(clang_tidy_path):
   def format_link_alias(doc_file):
     check_name, match = process_doc(doc_file)
     if match and check_name:
+      module = doc_file[0]
+      check_file = doc_file[1].replace('.rst', '')
       if match.group(1) == 'https://clang.llvm.org/docs/analyzer/checkers':
-        title_redirect = 'Clang Static Analyzer'
+        title = 'Clang Static Analyzer ' + check_file
+        # Preserve the anchor in checkers.html from group 2.
+        target = match.group(1) + '.html' + match.group(2)
+        autofix = ''
       else:
-        title_redirect = match.group(1)
+        redirect_parts = re.search('^\.\./([^/]*)/([^/]*)$', match.group(1))
+        title = redirect_parts[1] + '-' + redirect_parts[2]
+        target = redirect_parts[1] + '/' + redirect_parts[2] + '.html'
+        autofix = has_auto_fix(title)
+
       # The checker is just a redirect.
-      return '   `%(check)s <%(check)s.html>`_, `%(title)s <%(target)s.html>`_,%(autofix)s\n' % {
-        'check': check_name,
-        'target': match.group(1),
-        'title': title_redirect,
-        'autofix': has_auto_fix(match.group(1))
+      return '   `%(check_name)s <%(module)s/%(check_file)s.html>`_, `%(title)s <%(target)s>`_,%(autofix)s\n' % {
+        'check_name': check_name,
+        'module': module,
+        'check_file': check_file,
+        'target': target,
+        'title': title,
+        'autofix': autofix
       }
     return ''
 
@@ -405,7 +420,7 @@ def update_checks_list(clang_tidy_path):
 def write_docs(module_path, module, check_name):
   check_name_dashes = module + '-' + check_name
   filename = os.path.normpath(os.path.join(
-      module_path, '../../docs/clang-tidy/checks/', check_name_dashes + '.rst'))
+      module_path, '../../docs/clang-tidy/checks/', module, check_name + '.rst'))
   print('Creating %s...' % filename)
   with io.open(filename, 'w', encoding='utf8', newline='\n') as f:
     f.write(""".. title:: clang-tidy - %(check_name_dashes)s

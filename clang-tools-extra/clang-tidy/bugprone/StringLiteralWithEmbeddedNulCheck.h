@@ -18,7 +18,7 @@ namespace bugprone {
 /// Find suspicious string literals with embedded NUL characters.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/bugprone-string-literal-with-embedded-nul.html
+/// http://clang.llvm.org/extra/clang-tidy/checks/bugprone/string-literal-with-embedded-nul.html
 class StringLiteralWithEmbeddedNulCheck : public ClangTidyCheck {
 public:
   StringLiteralWithEmbeddedNulCheck(StringRef Name, ClangTidyContext *Context)

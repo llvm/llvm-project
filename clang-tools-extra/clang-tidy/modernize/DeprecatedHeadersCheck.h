@@ -31,7 +31,7 @@ namespace modernize {
 /// Example: ``<stdio.h> => <cstdio>``
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/modernize-deprecated-headers.html
+/// http://clang.llvm.org/extra/clang-tidy/checks/modernize/deprecated-headers.html
 class DeprecatedHeadersCheck : public ClangTidyCheck {
 public:
   DeprecatedHeadersCheck(StringRef Name, ClangTidyContext *Context)
