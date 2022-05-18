@@ -2112,6 +2112,7 @@ incomingCalls(const CallHierarchyItem &Item, const SymbolIndex *Index) {
   // FIXME: Consider also using AST information when feasible.
   RefsRequest Request;
   Request.IDs.insert(*ID);
+  Request.WantContainer = true;
   // We could restrict more specifically to calls by introducing a new RefKind,
   // but non-call references (such as address-of-function) can still be
   // interesting as they can indicate indirect calls.
