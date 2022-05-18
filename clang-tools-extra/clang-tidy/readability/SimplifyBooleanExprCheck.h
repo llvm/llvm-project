@@ -55,7 +55,8 @@ private:
 
   void replaceCompoundReturnWithCondition(const ASTContext &Context,
                                           const ReturnStmt *Ret, bool Negated,
-                                          const IfStmt *If);
+                                          const IfStmt *If,
+                                          const Expr *ThenReturn);
 
   void issueDiag(const ASTContext &Result, SourceLocation Loc,
                  StringRef Description, SourceRange ReplacementRange,
