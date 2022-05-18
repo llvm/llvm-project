@@ -163,6 +163,10 @@ class AArch64LinuxNonAddressBitMemoryAccessTestCase(TestBase):
         # Open log ignoring utf-8 decode errors
         with open(log_file, 'r', errors='ignore') as f:
             read_packet = "send packet: $x{:x}"
+
+            # Since we allocated a 4k page that page will be aligned to 4k, which
+            # also fits the 512 byte line size of the memory cache. So we can expect
+            # to find a packet with its exact address.
             read_buf_packet = read_packet.format(buf)
             read_buf_with_non_address_packet = read_packet.format(buf_with_non_address)
 
@@ -180,3 +184,51 @@ class AArch64LinuxNonAddressBitMemoryAccessTestCase(TestBase):
 
             if not found_read_buf:
                 self.fail("Did not find any reads of buf.")
+
+    @skipIfLLVMTargetMissing("AArch64")
+    def test_non_address_bit_memory_corefile(self):
+        self.runCmd("target create --core corefile")
+
+        self.expect("thread list", substrs=['stopped',
+                                            'stop reason = signal SIGSEGV'])
+
+        # No caching (the program/corefile are the cache) and no writing
+        # to memory. So just check that tagged/untagged addresses read
+        # the same location.
+
+        # These are known addresses in the corefile, since we won't have symbols.
+        buf = 0x0000ffffa75a5000
+        buf_with_non_address = 0xff0bffffa75a5000
+
+        expected = ["4c 4c 44 42", "LLDB"]
+        self.expect("memory read 0x{:x}".format(buf), substrs=expected)
+        self.expect("memory read 0x{:x}".format(buf_with_non_address), substrs=expected)
+
+        # This takes a more direct route to ReadMemory. As opposed to "memory read"
+        # above that might fix the addresses up front for display reasons.
+        self.expect("expression (char*)0x{:x}".format(buf), substrs=["LLDB"])
+        self.expect("expression (char*)0x{:x}".format(buf_with_non_address), substrs=["LLDB"])
+
+        def check_reads(addrs, method, num_bytes, expected):
+            error = lldb.SBError()
+            for addr in addrs:
+                if num_bytes is None:
+                    got = method(addr, error)
+                else:
+                    got = method(addr, num_bytes, error)
+
+            self.assertTrue(error.Success())
+            self.assertEqual(expected, got)
+
+        addr_buf = lldb.SBAddress()
+        addr_buf.SetLoadAddress(buf, self.target())
+        addr_buf_with_non_address = lldb.SBAddress()
+        addr_buf_with_non_address.SetLoadAddress(buf_with_non_address, self.target())
+        check_reads([addr_buf, addr_buf_with_non_address], self.target().ReadMemory,
+                    4, b'LLDB')
+
+        addrs = [buf, buf_with_non_address]
+        check_reads(addrs, self.process().ReadMemory, 4, b'LLDB')
+        check_reads(addrs, self.process().ReadCStringFromMemory, 5, "LLDB")
+        check_reads(addrs, self.process().ReadUnsignedFromMemory, 4, 0x42444c4c)
+        check_reads(addrs, self.process().ReadPointerFromMemory, None, 0x0000000042444c4c)

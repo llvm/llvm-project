@@ -794,14 +794,20 @@ lldb::addr_t ABISysV_arm64::FixAddress(addr_t pc, addr_t mask) {
 // Reads code or data address mask for the current Linux process.
 static lldb::addr_t ReadLinuxProcessAddressMask(lldb::ProcessSP process_sp,
                                                 llvm::StringRef reg_name) {
-  // Linux configures user-space virtual addresses with top byte ignored.
-  // We set default value of mask such that top byte is masked out.
-  uint64_t address_mask = ~((1ULL << 56) - 1);
-  // If Pointer Authentication feature is enabled then Linux exposes
-  // PAC data and code mask register. Try reading relevant register
-  // below and merge it with default address mask calculated above.
+  // 0 means there isn't a mask or it has not been read yet.
+  // We do not return the top byte mask unless thread_sp is valid.
+  // This prevents calls to this function before the thread is setup locking
+  // in the value to just the top byte mask, in cases where pointer
+  // authentication might also be active.
+  uint64_t address_mask = 0;
   lldb::ThreadSP thread_sp = process_sp->GetThreadList().GetSelectedThread();
   if (thread_sp) {
+    // Linux configures user-space virtual addresses with top byte ignored.
+    // We set default value of mask such that top byte is masked out.
+    address_mask = ~((1ULL << 56) - 1);
+    // If Pointer Authentication feature is enabled then Linux exposes
+    // PAC data and code mask register. Try reading relevant register
+    // below and merge it with default address mask calculated above.
     lldb::RegisterContextSP reg_ctx_sp = thread_sp->GetRegisterContext();
     if (reg_ctx_sp) {
       const RegisterInfo *reg_info =
