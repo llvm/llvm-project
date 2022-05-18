@@ -351,6 +351,20 @@ steps:
           limit: 2
     timeout_in_minutes: 120
 
+  - label: "Shared library with merged ABI and unwinder libraries"
+    command: "libcxx/utils/ci/run-buildbot generic-merged"
+    artifact_paths:
+      - "**/test-results.xml"
+      - "**/*.abilist"
+    agents:
+      queue: "libcxx-builders"
+      os: "linux"
+    retry:
+      automatic:
+        - exit_status: -1  # Agent was lost
+          limit: 2
+    timeout_in_minutes: 120
+
   - label: "Assertions enabled"
     command: "libcxx/utils/ci/run-buildbot generic-assertions"
     artifact_paths:

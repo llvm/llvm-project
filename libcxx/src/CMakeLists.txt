@@ -223,10 +223,10 @@ if (LIBCXX_ENABLE_SHARED)
   # dependencies are recorded when creating a linker script.
   # TODO: Look into modifying the linker script creation to recursively consider interface libraries
   if (LIBCXXABI_USE_LLVM_UNWINDER)
-    if (NOT LIBCXXABI_STATICALLY_LINK_UNWINDER_IN_SHARED_LIBRARY AND (TARGET unwind_shared OR HAVE_LIBUNWIND))
-      target_link_libraries(cxx_shared PUBLIC unwind_shared)
-    elseif (LIBCXXABI_STATICALLY_LINK_UNWINDER_IN_SHARED_LIBRARY AND (TARGET unwind_static OR HAVE_LIBUNWIND))
+    if (LIBCXXABI_STATICALLY_LINK_UNWINDER_IN_SHARED_LIBRARY)
       # libunwind is already included in libc++abi
+    elseif (TARGET unwind_shared OR HAVE_LIBUNWIND)
+      target_link_libraries(cxx_shared PUBLIC unwind_shared)
     else()
       target_link_libraries(cxx_shared PUBLIC unwind)
     endif()
