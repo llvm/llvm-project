@@ -6748,22 +6748,26 @@ SDValue SystemZTargetLowering::combineINT_TO_FP(
     SDNode *N, DAGCombinerInfo &DCI) const {
   if (DCI.Level != BeforeLegalizeTypes)
     return SDValue();
+  SelectionDAG &DAG = DCI.DAG;
+  LLVMContext &Ctx = *DAG.getContext();
   unsigned Opcode = N->getOpcode();
   EVT OutVT = N->getValueType(0);
-  SelectionDAG &DAG = DCI.DAG;
+  Type *OutLLVMTy = OutVT.getTypeForEVT(Ctx);
   SDValue Op = N->getOperand(0);
-  unsigned OutScalarBits = OutVT.getScalarSizeInBits();
+  unsigned OutScalarBits = OutLLVMTy->getScalarSizeInBits();
   unsigned InScalarBits = Op->getValueType(0).getScalarSizeInBits();
 
   // Insert an extension before type-legalization to avoid scalarization, e.g.:
   // v2f64 = uint_to_fp v2i16
   // =>
   // v2f64 = uint_to_fp (v2i64 zero_extend v2i16)
-  if (OutVT.isVector() && OutScalarBits > InScalarBits) {
-    MVT ExtVT = MVT::getVectorVT(MVT::getIntegerVT(OutVT.getScalarSizeInBits()),
-                                 OutVT.getVectorNumElements());
+  if (OutLLVMTy->isVectorTy() && OutScalarBits > InScalarBits &&
+      OutScalarBits <= 64) {
+    unsigned NumElts = cast<FixedVectorType>(OutLLVMTy)->getNumElements();
+    EVT ExtVT = EVT::getVectorVT(
+        Ctx, EVT::getIntegerVT(Ctx, OutLLVMTy->getScalarSizeInBits()), NumElts);
     unsigned ExtOpcode =
-      (Opcode == ISD::UINT_TO_FP ? ISD::ZERO_EXTEND : ISD::SIGN_EXTEND);
+        (Opcode == ISD::UINT_TO_FP ? ISD::ZERO_EXTEND : ISD::SIGN_EXTEND);
     SDValue ExtOp = DAG.getNode(ExtOpcode, SDLoc(N), ExtVT, Op);
     return DAG.getNode(Opcode, SDLoc(N), OutVT, ExtOp);
   }
