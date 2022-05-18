@@ -127,6 +127,19 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  strlcpy
+  SRCS
+    strlcpy.cpp
+  HDRS
+    strlcpy.h
+  DEPENDS
+    .memory_utils.memcpy_implementation
+    .memory_utils.memset_implementation
+    .string_utils
+    libc.include.string
+)
+
+add_entrypoint_object(
   strlen
   SRCS
     strlen.cpp
