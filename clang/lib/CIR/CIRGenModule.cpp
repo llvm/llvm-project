@@ -355,8 +355,13 @@ void CIRGenModule::buildGlobalFunctionDefinition(GlobalDecl GD,
   assert(!D->getAttr<AnnotateAttr>() && "NYI");
 }
 
-/// FIXME: implement
-mlir::cir::GlobalOp CIRGenModule::getGlobalValue(StringRef Name) { return {}; }
+mlir::cir::GlobalOp CIRGenModule::getGlobalValue(StringRef Name) {
+  auto global = mlir::SymbolTable::lookupSymbolIn(theModule, Name);
+  if (!global)
+    return {};
+  assert(isa<mlir::cir::GlobalOp>(global) && "not supported");
+  return cast<mlir::cir::GlobalOp>(global);
+}
 
 static mlir::cir::GlobalOp createGlobalOp(CIRGenModule &CGM, mlir::Location loc,
                                           StringRef name, mlir::Type t,
@@ -395,22 +400,22 @@ CIRGenModule::getOrCreateCIRGlobal(StringRef MangledName, mlir::Type Ty,
   // unsigned TargetAS = astCtx.getTargetAddressSpace(AddrSpace);
   if (Entry) {
     if (WeakRefReferences.erase(Entry)) {
-      assert(0 && "not implemented");
-      // if (D && !D->hasAttr<WeakAttr>())
-      //   Entry->setLinkage(llvm::Function::ExternalLinkage);
+      if (D && !D->hasAttr<WeakAttr>())
+        mlir::SymbolTable::setSymbolVisibility(
+            Entry, mlir::SymbolTable::Visibility::Public);
     }
 
     // Handle dropped DLL attributes.
-    // FIXME: Entry->setDLLStorageClass(llvm::GlobalValue::DefaultStorageClass);
     if (D && !D->hasAttr<clang::DLLImportAttr>() &&
         !D->hasAttr<clang::DLLExportAttr>())
-      assert(0 && "not implemented");
+      assert(!UnimplementedFeature::setDLLStorageClass() && "NYI");
 
     if (getLangOpts().OpenMP && !getLangOpts().OpenMPSimd && D)
       assert(0 && "not implemented");
 
-    // TODO(cir): check address space matches
-    if (Entry.getSymType() == Ty)
+    // TODO(cir): check TargetAS matches Entry address space
+    if (Entry.getSymType() == Ty &&
+        !UnimplementedFeature::addressSpaceInGlobalVar())
       return Entry;
 
     // If there are two attempts to define the same mangled name, issue an
@@ -556,10 +561,10 @@ mlir::Value CIRGenModule::getAddrOfGlobalVar(const VarDecl *D,
                                              std::optional<mlir::Type> Ty,
                                              ForDefinition_t IsForDefinition) {
   auto g = buildGlobal(D, Ty, IsForDefinition);
-  (void)g;
-  // FIXME: create an operation to get the address of the global.
-  assert(0 && "not implemented");
-  return {};
+  auto ptrTy =
+      mlir::cir::PointerType::get(builder.getContext(), g.getSymType());
+  return builder.create<mlir::cir::GetGlobalOp>(getLoc(D->getSourceRange()),
+                                                ptrTy, g.getSymName());
 }
 
 /// TODO(cir): looks like part of this code can be part of a common AST
@@ -890,7 +895,8 @@ generateStringLiteral(mlir::Location loc, mlir::TypedAttr C,
                       StringRef GlobalName, CharUnits Alignment) {
   unsigned AddrSpace = CGM.getASTContext().getTargetAddressSpace(
       CGM.getGlobalConstantAddressSpace());
-  assert((AddrSpace == 0 && !cir::UnimplementedFeature::addressSpace()) &&
+  assert((AddrSpace == 0 &&
+          !cir::UnimplementedFeature::addressSpaceInGlobalVar()) &&
          "NYI");
 
   // Create a global variable for this string

@@ -272,6 +272,42 @@ void CIRGenFunction::buldStoreThroughLValue(RValue Src, LValue Dst,
   buildStoreOfScalar(Src.getScalarVal(), Dst, InitDecl);
 }
 
+static LValue buildGlobalVarDeclLValue(CIRGenFunction &CGF, const Expr *E,
+                                       const VarDecl *VD) {
+  QualType T = E->getType();
+
+  // If it's thread_local, emit a call to its wrapper function instead.
+  if (VD->getTLSKind() == VarDecl::TLS_Dynamic &&
+      CGF.CGM.getCXXABI().usesThreadWrapperFunction(VD))
+    assert(0 && "not implemented");
+
+  // Check if the variable is marked as declare target with link clause in
+  // device codegen.
+  if (CGF.getLangOpts().OpenMP) {
+    assert(0 && "not implemented");
+  }
+
+  auto V = CGF.CGM.getAddrOfGlobalVar(VD);
+  auto RealVarTy = CGF.getTypes().convertTypeForMem(VD->getType());
+  // TODO(cir): do we need this for CIR?
+  // V = EmitBitCastOfLValueToProperType(CGF, V, RealVarTy);
+  CharUnits Alignment = CGF.getContext().getDeclAlign(VD);
+  Address Addr(V, RealVarTy, Alignment);
+  // Emit reference to the private copy of the variable if it is an OpenMP
+  // threadprivate variable.
+  if (CGF.getLangOpts().OpenMP && !CGF.getLangOpts().OpenMPSimd &&
+      VD->hasAttr<clang::OMPThreadPrivateDeclAttr>()) {
+    assert(0 && "NYI");
+  }
+  LValue LV;
+  if (VD->getType()->isReferenceType())
+    assert(0 && "NYI");
+  else
+    LV = CGF.makeAddrLValue(Addr, T, AlignmentSource::Decl);
+  assert(!UnimplementedFeature::setObjCGCLValueClass() && "NYI");
+  return LV;
+}
+
 LValue CIRGenFunction::buildDeclRefLValue(const DeclRefExpr *E) {
   const NamedDecl *ND = E->getDecl();
   QualType T = E->getType();
@@ -300,7 +336,7 @@ LValue CIRGenFunction::buildDeclRefLValue(const DeclRefExpr *E) {
   if (const auto *VD = dyn_cast<VarDecl>(ND)) {
     // Check if this is a global variable
     if (VD->hasLinkage() || VD->isStaticDataMember())
-      llvm_unreachable("not implemented");
+      return buildGlobalVarDeclLValue(*this, E, VD);
 
     Address addr = Address::invalid();
 

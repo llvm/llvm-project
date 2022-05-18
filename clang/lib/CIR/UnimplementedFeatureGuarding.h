@@ -27,13 +27,14 @@ struct UnimplementedFeature {
   static bool cirVectorType() { return false; }
 
   // CIR still unware of address space
-  static bool addressSpace() { return false; }
+  static bool addressSpaceInGlobalVar() { return false; }
 
-  // Unhandled global information.
+  // Unhandled global/linkage information.
   static bool unnamedAddr() { return false; }
   static bool isWeakForLinker() { return false; }
   static bool setDSOLocal() { return false; }
   static bool threadLocal() { return false; }
+  static bool setDLLStorageClass() { return false; }
 
   // Sanitizers
   static bool reportGlobalToASan() { return false; }
