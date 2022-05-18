@@ -2379,8 +2379,7 @@ TEST_F(ConstantRangeTest, ToKnownBits) {
     });
     // For an empty CR any result would be legal.
     if (!CR.isEmptySet()) {
-      EXPECT_EQ(ExpectedKnown.One, Known.One);
-      EXPECT_EQ(ExpectedKnown.Zero, Known.Zero);
+      EXPECT_EQ(ExpectedKnown, Known);
     }
   });
 }
@@ -2536,12 +2535,22 @@ TEST_F(ConstantRangeTest, binaryXor) {
   EXPECT_EQ(*R16.binaryXor(R16).getSingleElement(), APInt(8, 0));
   EXPECT_EQ(*R16.binaryXor(R20).getSingleElement(), APInt(8, 16 ^ 20));
 
-  // Ranges with more than a single element. Handled conservatively for now.
+  // Ranges with more than a single element.
   ConstantRange R16_35(APInt(8, 16), APInt(8, 35));
   ConstantRange R0_99(APInt(8, 0), APInt(8, 99));
-  EXPECT_TRUE(R16_35.binaryXor(R16_35).isFullSet());
-  EXPECT_TRUE(R16_35.binaryXor(R0_99).isFullSet());
-  EXPECT_TRUE(R0_99.binaryXor(R16_35).isFullSet());
+  EXPECT_EQ(R16_35.binaryXor(R16_35), ConstantRange(APInt(8, 0), APInt(8, 64)));
+  EXPECT_EQ(R16_35.binaryXor(R0_99), ConstantRange(APInt(8, 0), APInt(8, 128)));
+  EXPECT_EQ(R0_99.binaryXor(R16_35), ConstantRange(APInt(8, 0), APInt(8, 128)));
+
+  TestBinaryOpExhaustive(
+      [](const ConstantRange &CR1, const ConstantRange &CR2) {
+        return CR1.binaryXor(CR2);
+      },
+      [](const APInt &N1, const APInt &N2) {
+        return N1 ^ N2;
+      },
+      PreferSmallest,
+      CheckSingleElementsOnly);
 }
 
 TEST_F(ConstantRangeTest, binaryNot) {

@@ -1,0 +1,39 @@
+# RUN: llc -mtriple riscv64 -mattr=+m,+v -run-pass=stack-coloring \
+# RUN:     -riscv-v-vector-bits-min=512 -o - %s | FileCheck %s
+
+# Test that a scalable slot (%stack.1) is not merged into a non-scalable one
+# (%stack.0)
+
+# CHECK:    {{^}}stack:
+# CHECK-NEXT: - { id: 0,
+# CHECK:      - { id: 1,
+
+--- |
+  define dso_local void @dont_merge() {
+  entry:
+    %buf1 = alloca <4 x i32>
+    %buf2 = alloca <vscale x 4 x i32>
+    ret void
+  }
+
+...
+---
+name:            dont_merge
+tracksRegLiveness: true
+stack:
+  - { id: 0, name: buf1, size: 16, alignment: 16 }
+  - { id: 1, name: buf2, size: 16, alignment: 16, stack-id: scalable-vector }
+body:             |
+  bb.0.entry:
+    liveins: $v8, $v10, $x10, $x11
+
+    LIFETIME_START %stack.0
+    PseudoVSPILL_M1 killed renamable $v8, %stack.0 :: (store 16 into %stack.0, align 16)
+    renamable $v8 = PseudoVRELOAD_M1 killed $x10 :: (load 16 from %stack.0, align 16)
+    LIFETIME_END %stack.0
+    LIFETIME_START %stack.1
+    PseudoVSPILL_M2 killed renamable $v10m2, %stack.1 :: (store unknown-size into %stack.1, align 16)
+    renamable $v10m2 = PseudoVRELOAD_M2 killed $x11 :: (load unknown-size from %stack.1, align 16)
+    LIFETIME_END %stack.1
+    PseudoRET
+...

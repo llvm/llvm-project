@@ -128,6 +128,13 @@ static cl::opt<unsigned long> GrowRegionComplexityBudget(
              "limit its budget and bail out once we reach the limit."),
     cl::init(10000), cl::Hidden);
 
+static cl::opt<bool> GreedyRegClassPriorityTrumpsGlobalness(
+    "greedy-regclass-priority-trumps-globalness",
+    cl::desc("Change the greedy register allocator's live range priority "
+             "calculation to make the AllocationPriority of the register class "
+             "more important then whether the range is global"),
+    cl::Hidden);
+
 static RegisterRegAlloc greedyRegAlloc("greedy", "greedy register allocator",
                                        createGreedyRegisterAllocator);
 
@@ -305,6 +312,7 @@ void RAGreedy::enqueue(PQueue &CurQueue, const LiveInterval *LI) {
     const TargetRegisterClass &RC = *MRI->getRegClass(Reg);
     bool ForceGlobal = !ReverseLocal &&
       (Size / SlotIndex::InstrDist) > (2 * RCI.getNumAllocatableRegs(&RC));
+    unsigned GlobalBit = 0;
 
     if (Stage == RS_Assign && !ForceGlobal && !LI->empty() &&
         LIS->intervalIsInOneMBB(*LI)) {
@@ -323,9 +331,13 @@ void RAGreedy::enqueue(PQueue &CurQueue, const LiveInterval *LI) {
       // Allocate global and split ranges in long->short order. Long ranges that
       // don't fit should be spilled (or split) ASAP so they don't create
       // interference.  Mark a bit to prioritize global above local ranges.
-      Prio = (1u << 29) + Size;
+      Prio = Size;
+      GlobalBit = 1;
     }
-    Prio |= RC.AllocationPriority << 24;
+    if (RegClassPriorityTrumpsGlobalness)
+      Prio |= RC.AllocationPriority << 25 | GlobalBit << 24;
+    else
+      Prio |= GlobalBit << 29 | RC.AllocationPriority << 24;
 
     // Mark a higher bit to prioritize global and local above RS_Split.
     Prio |= (1u << 31);
@@ -2692,6 +2704,10 @@ bool RAGreedy::runOnMachineFunction(MachineFunction &mf) {
   initializeCSRCost();
 
   RegCosts = TRI->getRegisterCosts(*MF);
+  RegClassPriorityTrumpsGlobalness =
+      GreedyRegClassPriorityTrumpsGlobalness.getNumOccurrences()
+          ? GreedyRegClassPriorityTrumpsGlobalness
+          : TRI->regClassPriorityTrumpsGlobalness(*MF);
 
   ExtraInfo.emplace();
   EvictAdvisor =

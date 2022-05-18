@@ -82,7 +82,7 @@ static void runDumpFunction(llvm::Function &F, StringRef Suffix) {
   LLVM_DEBUG(dbgs() << "Dump file " << Dumpfile << " written successfully\n");
 }
 
-class DumpFunctionWrapperPass : public FunctionPass {
+class DumpFunctionWrapperPass final : public FunctionPass {
 private:
   DumpFunctionWrapperPass(const DumpFunctionWrapperPass &) = delete;
   const DumpFunctionWrapperPass &

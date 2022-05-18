@@ -1358,7 +1358,7 @@ void Scop::setContext(isl::set NewContext) {
 namespace {
 
 /// Remap parameter values but keep AddRecs valid wrt. invariant loads.
-struct SCEVSensitiveParameterRewriter
+class SCEVSensitiveParameterRewriter final
     : public SCEVRewriteVisitor<SCEVSensitiveParameterRewriter> {
   const ValueToValueMap &VMap;
 
@@ -1389,7 +1389,7 @@ public:
 };
 
 /// Check whether we should remap a SCEV expression.
-struct SCEVFindInsideScop : public SCEVTraversal<SCEVFindInsideScop> {
+class SCEVFindInsideScop : public SCEVTraversal<SCEVFindInsideScop> {
   const ValueToValueMap &VMap;
   bool FoundInside = false;
   const Scop *S;
@@ -2647,7 +2647,7 @@ INITIALIZE_PASS_END(ScopInfoRegionPass, "polly-scops",
 namespace {
 
 /// Print result from ScopInfoRegionPass.
-class ScopInfoPrinterLegacyRegionPass : public RegionPass {
+class ScopInfoPrinterLegacyRegionPass final : public RegionPass {
 public:
   static char ID;
 
@@ -2829,7 +2829,7 @@ INITIALIZE_PASS_END(
 
 namespace {
 /// Print result from ScopInfoWrapperPass.
-class ScopInfoPrinterLegacyFunctionPass : public FunctionPass {
+class ScopInfoPrinterLegacyFunctionPass final : public FunctionPass {
 public:
   static char ID;
 

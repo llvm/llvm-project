@@ -31,7 +31,7 @@ namespace {
 
 /// Prepare the IR for the scop detection.
 ///
-class CodePreparation : public FunctionPass {
+class CodePreparation final : public FunctionPass {
   CodePreparation(const CodePreparation &) = delete;
   const CodePreparation &operator=(const CodePreparation &) = delete;
 
