@@ -19,7 +19,7 @@ target triple = "x86_64-pc-win32-elf"
 ; CHECK-NOT: vmovapd %xmm7, %xmm0
 ; CHECK-NEXT: vmovapd %xmm6, %xmm1
 ; Set TMP in the first argument of the second call.
-; CHECK_NEXT: callq *%r[[INDIRECT_CALL2]]
+; CHECK-NEXT: callq *%r[[INDIRECT_CALL2]]
 ; CHECK: retq
 define double @foo(i64 %arg) {
 top:
