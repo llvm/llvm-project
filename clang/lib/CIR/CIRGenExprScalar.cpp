@@ -58,7 +58,81 @@ public:
     llvm_unreachable("Stmt can't have complex result type!");
   }
 
-  mlir::Value VisitInitListExpr(InitListExpr *E);
+  mlir::Value VisitExpr(Expr *E) {
+    // Crashing here for "ScalarExprClassName"? Please implement
+    // VisitScalarExprClassName(...) to get this working.
+    emitError(CGF.getLoc(E->getExprLoc()), "scalar exp no implemented: '")
+        << E->getStmtClassName() << "'";
+    assert(0 && "shouldn't be here!");
+    return {};
+  }
+
+  mlir::Value VisitConstantExpr(ConstantExpr *E) { llvm_unreachable("NYI"); }
+  mlir::Value VisitParenExpr(ParenExpr *PE) { llvm_unreachable("NYI"); }
+  mlir::Value
+  VisitSubstnonTypeTemplateParmExpr(SubstNonTypeTemplateParmExpr *E) {
+    llvm_unreachable("NYI");
+  }
+  mlir::Value VisitGenericSelectionExpr(GenericSelectionExpr *GE) {
+    llvm_unreachable("NYI");
+  }
+  mlir::Value VisitCoawaitExpr(CoawaitExpr *S) { llvm_unreachable("NYI"); }
+  mlir::Value VisitCoyieldExpr(CoyieldExpr *S) { llvm_unreachable("NYI"); }
+  mlir::Value VisitUnaryCoawait(const UnaryOperator *E) {
+    llvm_unreachable("NYI");
+  }
+
+  // Leaves.
+  mlir::Value VisitIntegerLiteral(const IntegerLiteral *E) {
+    mlir::Type Ty = CGF.getCIRType(E->getType());
+    return Builder.create<mlir::cir::ConstantOp>(
+        CGF.getLoc(E->getExprLoc()), Ty,
+        Builder.getIntegerAttr(Ty, E->getValue()));
+  }
+
+  mlir::Value VisitFixedPointLiteral(const FixedPointLiteral *E) {
+    llvm_unreachable("NYI");
+  }
+  mlir::Value VisitFloatingLiteral(const FloatingLiteral *E) {
+    llvm_unreachable("NYI");
+  }
+  mlir::Value VisitCharacterLiteral(const CharacterLiteral *E) {
+    llvm_unreachable("NYI");
+  }
+  mlir::Value VisitObjCBoolLiteralExpr(const ObjCBoolLiteralExpr *E) {
+    llvm_unreachable("NYI");
+  }
+  mlir::Value VisitCXXBoolLiteralExpr(const CXXBoolLiteralExpr *E) {
+    mlir::Type Ty = CGF.getCIRType(E->getType());
+    return Builder.create<mlir::cir::ConstantOp>(
+        CGF.getLoc(E->getExprLoc()), Ty, Builder.getBoolAttr(E->getValue()));
+  }
+
+  mlir::Value VisitCXXScalarValueInitExpr(const CXXScalarValueInitExpr *E) {
+    llvm_unreachable("NYI");
+  }
+  mlir::Value VisitGNUNullExpr(const GNUNullExpr *E) {
+    llvm_unreachable("NYI");
+  }
+  mlir::Value VisitOffsetOfExpr(OffsetOfExpr *E) { llvm_unreachable("NYI"); }
+  mlir::Value VisitUnaryExprOrTypeTraitExpr(const UnaryExprOrTypeTraitExpr *E) {
+    llvm_unreachable("NYI");
+  }
+  mlir::Value VisitAddrLabelExpr(const AddrLabelExpr *E) {
+    llvm_unreachable("NYI");
+  }
+  mlir::Value VisitSizeOfPackExpr(SizeOfPackExpr *E) {
+    llvm_unreachable("NYI");
+  }
+  mlir::Value VisitPseudoObjectExpr(PseudoObjectExpr *E) {
+    llvm_unreachable("NYI");
+  }
+  mlir::Value VisitSYCLUniqueStableNameExpr(SYCLUniqueStableNameExpr *E) {
+    llvm_unreachable("NYI");
+  }
+  mlir::Value VisitOpaqueValueExpr(OpaqueValueExpr *E) {
+    llvm_unreachable("NYI");
+  }
 
   /// Emits the address of the l-value, then loads and returns the result.
   mlir::Value buildLoadOfLValue(const Expr *E) {
@@ -70,13 +144,29 @@ public:
     return load;
   }
 
-  // Handle l-values.
+  // l-values
   mlir::Value VisitDeclRefExpr(DeclRefExpr *E) {
     // FIXME: we could try to emit this as constant first, see
     // CGF.tryEmitAsConstant(E)
     return buildLoadOfLValue(E);
   }
 
+  mlir::Value VisitObjCSelectorExpr(ObjCSelectorExpr *E) {
+    llvm_unreachable("NYI");
+  }
+  mlir::Value VisitObjCProtocolExpr(ObjCProtocolExpr *E) {
+    llvm_unreachable("NYI");
+  }
+  mlir::Value VisitObjCIVarRefExpr(ObjCIvarRefExpr *E) {
+    llvm_unreachable("NYI");
+  }
+  mlir::Value VisitObjCMessageExpr(ObjCMessageExpr *E) {
+    llvm_unreachable("NYI");
+  }
+  mlir::Value VisitObjCIsaExpr(ObjCIsaExpr *E) { llvm_unreachable("NYI"); }
+  mlir::Value VisitObjCAvailabilityCheckExpr(ObjCAvailabilityCheckExpr *E) {
+    llvm_unreachable("NYI");
+  }
   mlir::Value VisitArraySubscriptExpr(ArraySubscriptExpr *E) {
     // Do we need anything like TestAndClearIgnoreResultAssign()?
     assert(!E->getBase()->getType()->isVectorType() &&
@@ -88,6 +178,173 @@ public:
     // rvalue, so we can't get it as an lvalue.
     return buildLoadOfLValue(E);
   }
+
+  mlir::Value VisitMatrixSubscriptExpr(MatrixSubscriptExpr *E) {
+    llvm_unreachable("NYI");
+  }
+  mlir::Value VisitShuffleVectorExpr(ShuffleVectorExpr *E) {
+    llvm_unreachable("NYI");
+  }
+  mlir::Value VisitConvertVectorExpr(ConvertVectorExpr *E) {
+    llvm_unreachable("NYI");
+  }
+  mlir::Value VisitMemberExpr(MemberExpr *E) { llvm_unreachable("NYI"); }
+  mlir::Value VisitExtVectorelementExpr(Expr *E) { llvm_unreachable("NYI"); }
+  mlir::Value VisitCompoundLiteralEpxr(CompoundLiteralExpr *E) {
+    llvm_unreachable("NYI");
+  }
+
+  mlir::Value VisitInitListExpr(InitListExpr *E);
+
+  mlir::Value VisitArrayInitIndexExpr(ArrayInitIndexExpr *E) {
+    llvm_unreachable("NYI");
+  }
+
+  mlir::Value VisitImplicitValueInitExpr(const ImplicitValueInitExpr *E) {
+    llvm_unreachable("NYI");
+  }
+  mlir::Value VisitExplicitCastExpr(ExplicitCastExpr *E) {
+    llvm_unreachable("NYI");
+  }
+  mlir::Value VisitCastExpr(CastExpr *E);
+  mlir::Value VisitCallExpr(const CallExpr *E);
+  mlir::Value VisitStmtExpr(StmtExpr *E) { llvm_unreachable("NYI"); }
+
+  // Unary Operators.
+  mlir::Value VisitUnaryPostDec(const UnaryOperator *E) {
+    llvm_unreachable("NYI");
+  }
+  mlir::Value VisitUnaryPostInc(const UnaryOperator *E) {
+    llvm_unreachable("NYI");
+  }
+  mlir::Value VisitUnaryPreDec(const UnaryOperator *E) {
+    llvm_unreachable("NYI");
+  }
+  mlir::Value VisitUnaryPreInc(const UnaryOperator *E) {
+    llvm_unreachable("NYI");
+  }
+
+  mlir::Value VisitUnaryAddrOf(const UnaryOperator *E) {
+    assert(!llvm::isa<MemberPointerType>(E->getType()) && "not implemented");
+    return CGF.buildLValue(E->getSubExpr()).getPointer();
+  }
+
+  mlir::Value VisitUnaryDeref(const UnaryOperator *E) {
+    llvm_unreachable("NYI");
+  }
+  mlir::Value VisitUnaryPlus(const UnaryOperator *E) {
+    llvm_unreachable("NYI");
+  }
+  mlir::Value VisitUnaryMinus(const UnaryOperator *E) {
+    llvm_unreachable("NYI");
+  }
+  mlir::Value VisitUnaryNot(const UnaryOperator *E) { llvm_unreachable("NYI"); }
+  mlir::Value VisitUnaryLNot(const UnaryOperator *E) {
+    llvm_unreachable("NYI");
+  }
+  mlir::Value VisitUnaryReal(const UnaryOperator *E) {
+    llvm_unreachable("NYI");
+  }
+  mlir::Value VisitUnaryImag(const UnaryOperator *E) {
+    llvm_unreachable("NYI");
+  }
+  mlir::Value VisitUnaryExtension(const UnaryOperator *E) {
+    llvm_unreachable("NYI");
+  }
+
+  // C++
+  mlir::Value VisitMaterializeTemporaryExpr(const MaterializeTemporaryExpr *E) {
+    llvm_unreachable("NYI");
+  }
+  mlir::Value VisitSourceLocExpr(SourceLocExpr *E) { llvm_unreachable("NYI"); }
+  mlir::Value VisitCXXDefaultArgExpr(CXXDefaultArgExpr *E) {
+    llvm_unreachable("NYI");
+  }
+  mlir::Value VisitCXXDefaultInitExpr(CXXDefaultInitExpr *E) {
+    llvm_unreachable("NYI");
+  }
+  mlir::Value VisitCXXThisExpr(CXXThisExpr *E) { llvm_unreachable("NYI"); }
+  mlir::Value VisitExprWithCleanups(ExprWithCleanups *E) {
+    llvm_unreachable("NYI");
+  }
+  mlir::Value VisitCXXNewExpr(const CXXNewExpr *E) { llvm_unreachable("NYI"); }
+  mlir::Value VisitCXXDeleteExpr(const CXXDeleteExpr *E) {
+    llvm_unreachable("NYI");
+  }
+  mlir::Value VisitTypeTraitExpr(const TypeTraitExpr *E) {
+    llvm_unreachable("NYI");
+  }
+  mlir::Value
+  VisitConceptSpecializationExpr(const ConceptSpecializationExpr *E) {
+    llvm_unreachable("NYI");
+  }
+  mlir::Value VisitRequiresExpr(const RequiresExpr *E) {
+    llvm_unreachable("NYI");
+  }
+  mlir::Value VisitArrayTypeTraitExpr(const ArrayTypeTraitExpr *E) {
+    llvm_unreachable("NYI");
+  }
+  mlir::Value VisitExpressionTraitExpr(const ExpressionTraitExpr *E) {
+    llvm_unreachable("NYI");
+  }
+  mlir::Value VisitCXXPseudoDestructorExpr(const CXXPseudoDestructorExpr *E) {
+    llvm_unreachable("NYI");
+  }
+  mlir::Value VisitCXXNullPtrLiteralExpr(CXXNullPtrLiteralExpr *E) {
+    llvm_unreachable("NYI");
+  }
+  mlir::Value VisitCXXThrowExpr(CXXThrowExpr *E) { llvm_unreachable("NYI"); }
+  mlir::Value VisitCXXNoexceptExpr(CXXNoexceptExpr *E) {
+    llvm_unreachable("NYI");
+  }
+
+  // Comparisons.
+#define VISITCOMP(CODE)                                                        \
+  mlir::Value VisitBin##CODE(const BinaryOperator *E) { return buildCmp(E); }
+  VISITCOMP(LT)
+  VISITCOMP(GT)
+  VISITCOMP(LE)
+  VISITCOMP(GE)
+  VISITCOMP(EQ)
+  VISITCOMP(NE)
+#undef VISITCOMP
+
+  mlir::Value VisitBinAssign(const BinaryOperator *E) {
+    llvm_unreachable("NYI");
+  }
+  mlir::Value VisitBinLAnd(const BinaryOperator *E) { llvm_unreachable("NYI"); }
+  mlir::Value VisitBinLOr(const BinaryOperator *E) { llvm_unreachable("NYI"); }
+  mlir::Value VisitBinComma(const BinaryOperator *E) {
+    llvm_unreachable("NYI");
+  }
+
+  mlir::Value VisitBinPtrMemD(const Expr *E) { llvm_unreachable("NYI"); }
+  mlir::Value VisitBinPtrMemI(const Expr *E) { llvm_unreachable("NYI"); }
+
+  mlir::Value VisitCXXRewrittenBinaryOperator(CXXRewrittenBinaryOperator *E) {
+    llvm_unreachable("NYI");
+  }
+
+  // Other Operators.
+  mlir::Value VisitBlockExpr(const BlockExpr *E) { llvm_unreachable("NYI"); }
+  mlir::Value
+  VisitAbstractConditionalOperator(const AbstractConditionalOperator *E) {
+    llvm_unreachable("NYI");
+  }
+  mlir::Value VisitChooseExpr(ChooseExpr *E) { llvm_unreachable("NYI"); }
+  mlir::Value VisitVAArgExpr(VAArgExpr *E) { llvm_unreachable("NYI"); }
+  mlir::Value VisitObjCStringLiteral(const ObjCStringLiteral *E) {
+    llvm_unreachable("NYI");
+  }
+  mlir::Value VisitObjCBoxedExpr(ObjCBoxedExpr *E) { llvm_unreachable("NYI"); }
+  mlir::Value VisitObjCArrayLiteral(ObjCArrayLiteral *E) {
+    llvm_unreachable("NYI");
+  }
+  mlir::Value VisitObjCDictionaryLiteral(ObjCDictionaryLiteral *E) {
+    llvm_unreachable("NYI");
+  }
+  mlir::Value VisitAsTypeExpr(AsTypeExpr *E) { llvm_unreachable("NYI"); }
+  mlir::Value VisitAtomicExpr(AtomicExpr *E) { llvm_unreachable("NYI"); }
 
   // Emit a conversion from the specified type to the specified destination
   // type, both of which are CIR scalar types.
@@ -111,205 +368,6 @@ public:
   mlir::Value buildScalarCast(mlir::Value Src, QualType SrcType,
                               QualType DstType, mlir::Type SrcTy,
                               mlir::Type DstTy, ScalarConversionOpts Opts);
-
-  // Emit code for an explicit or implicit cast.  Implicit
-  // casts have to handle a more broad range of conversions than explicit
-  // casts, as they handle things like function to ptr-to-function decay
-  // etc.
-  mlir::Value VisitCastExpr(CastExpr *CE) {
-    Expr *E = CE->getSubExpr();
-    QualType DestTy = CE->getType();
-    CastKind Kind = CE->getCastKind();
-
-    // These cases are generally not written to ignore the result of evaluating
-    // their sub-expressions, so we clear this now.
-    bool Ignored = TestAndClearIgnoreResultAssign();
-    (void)Ignored;
-
-    // Since almost all cast kinds apply to scalars, this switch doesn't have a
-    // default case, so the compiler will warn on a missing case. The cases are
-    // in the same order as in the CastKind enum.
-    switch (Kind) {
-    case clang::CK_Dependent:
-      llvm_unreachable("dependent cast kind in CIR gen!");
-    case clang::CK_BuiltinFnToFnPtr:
-      llvm_unreachable("builtin functions are handled elsewhere");
-
-    case CK_LValueBitCast:
-      llvm_unreachable("NYI");
-    case CK_ObjCObjectLValueCast:
-      llvm_unreachable("NYI");
-    case CK_LValueToRValueBitCast:
-      llvm_unreachable("NYI");
-    case CK_CPointerToObjCPointerCast:
-      llvm_unreachable("NYI");
-    case CK_BlockPointerToObjCPointerCast:
-      llvm_unreachable("NYI");
-    case CK_AnyPointerToBlockPointerCast:
-      llvm_unreachable("NYI");
-    case CK_BitCast:
-      llvm_unreachable("NYI");
-    case CK_AddressSpaceConversion:
-      llvm_unreachable("NYI");
-    case CK_AtomicToNonAtomic:
-      llvm_unreachable("NYI");
-    case CK_NonAtomicToAtomic:
-      llvm_unreachable("NYI");
-    case CK_UserDefinedConversion:
-      llvm_unreachable("NYI");
-    case CK_NoOp:
-      llvm_unreachable("NYI");
-    case CK_BaseToDerived:
-      llvm_unreachable("NYI");
-    case CK_DerivedToBase:
-      llvm_unreachable("NYI");
-    case CK_Dynamic:
-      llvm_unreachable("NYI");
-    case CK_ArrayToPointerDecay:
-      llvm_unreachable("NYI");
-    case CK_FunctionToPointerDecay:
-      llvm_unreachable("NYI");
-
-    case CK_NullToPointer: {
-      // FIXME: use MustVisitNullValue(E) and evaluate expr.
-      // Note that DestTy is used as the MLIR type instead of a custom
-      // nullptr type.
-      mlir::Type Ty = CGF.getCIRType(DestTy);
-      return Builder.create<mlir::cir::ConstantOp>(
-          CGF.getLoc(E->getExprLoc()), Ty,
-          mlir::cir::NullAttr::get(Builder.getContext(), Ty));
-    }
-
-    case CK_NullToMemberPointer:
-      llvm_unreachable("NYI");
-    case CK_ReinterpretMemberPointer:
-      llvm_unreachable("NYI");
-    case CK_BaseToDerivedMemberPointer:
-      llvm_unreachable("NYI");
-    case CK_DerivedToBaseMemberPointer:
-      llvm_unreachable("NYI");
-    case CK_ARCProduceObject:
-      llvm_unreachable("NYI");
-    case CK_ARCConsumeObject:
-      llvm_unreachable("NYI");
-    case CK_ARCReclaimReturnedObject:
-      llvm_unreachable("NYI");
-    case CK_ARCExtendBlockObject:
-      llvm_unreachable("NYI");
-    case CK_CopyAndAutoreleaseBlockObject:
-      llvm_unreachable("NYI");
-    case CK_FloatingRealToComplex:
-      llvm_unreachable("NYI");
-    case CK_FloatingComplexCast:
-      llvm_unreachable("NYI");
-    case CK_IntegralComplexToFloatingComplex:
-      llvm_unreachable("NYI");
-    case CK_FloatingComplexToIntegralComplex:
-      llvm_unreachable("NYI");
-    case CK_ConstructorConversion:
-      llvm_unreachable("NYI");
-    case CK_ToUnion:
-      llvm_unreachable("NYI");
-
-    case CK_LValueToRValue:
-      assert(CGF.getContext().hasSameUnqualifiedType(E->getType(), DestTy));
-      assert(E->isGLValue() && "lvalue-to-rvalue applied to r-value!");
-      return Visit(const_cast<Expr *>(E));
-
-    case CK_IntegralToPointer:
-      llvm_unreachable("NYI");
-    case CK_PointerToIntegral:
-      llvm_unreachable("NYI");
-    case CK_ToVoid:
-      llvm_unreachable("NYI");
-    case CK_MatrixCast:
-      llvm_unreachable("NYI");
-    case CK_VectorSplat:
-      llvm_unreachable("NYI");
-    case CK_FixedPointCast:
-      llvm_unreachable("NYI");
-    case CK_FixedPointToBoolean:
-      llvm_unreachable("NYI");
-    case CK_FixedPointToIntegral:
-      llvm_unreachable("NYI");
-    case CK_IntegralToFixedPoint:
-      llvm_unreachable("NYI");
-
-    case CK_IntegralCast: {
-      ScalarConversionOpts Opts;
-      if (auto *ICE = dyn_cast<ImplicitCastExpr>(CE)) {
-        if (!ICE->isPartOfExplicitCast())
-          Opts = ScalarConversionOpts(CGF.SanOpts);
-      }
-      return buildScalarConversion(Visit(E), E->getType(), DestTy,
-                                   CE->getExprLoc(), Opts);
-    }
-
-    case CK_IntegralToFloating:
-      llvm_unreachable("NYI");
-    case CK_FloatingToIntegral:
-      llvm_unreachable("NYI");
-    case CK_FloatingCast:
-      llvm_unreachable("NYI");
-    case CK_FixedPointToFloating:
-      llvm_unreachable("NYI");
-    case CK_FloatingToFixedPoint:
-      llvm_unreachable("NYI");
-    case CK_BooleanToSignedIntegral:
-      llvm_unreachable("NYI");
-
-    case CK_IntegralToBoolean: {
-      return buildIntToBoolConversion(Visit(E),
-                                      CGF.getLoc(CE->getSourceRange()));
-    }
-
-    case CK_PointerToBoolean:
-      llvm_unreachable("NYI");
-    case CK_FloatingToBoolean:
-      llvm_unreachable("NYI");
-    case CK_MemberPointerToBoolean:
-      llvm_unreachable("NYI");
-    case CK_FloatingComplexToReal:
-      llvm_unreachable("NYI");
-    case CK_IntegralComplexToReal:
-      llvm_unreachable("NYI");
-    case CK_FloatingComplexToBoolean:
-      llvm_unreachable("NYI");
-    case CK_IntegralComplexToBoolean:
-      llvm_unreachable("NYI");
-    case CK_ZeroToOCLOpaqueType:
-      llvm_unreachable("NYI");
-    case CK_IntToOCLSampler:
-      llvm_unreachable("NYI");
-
-    default:
-      emitError(CGF.getLoc(CE->getExprLoc()), "cast kind not implemented: '")
-          << CE->getCastKindName() << "'";
-      return nullptr;
-    } // end of switch
-
-    llvm_unreachable("unknown scalar cast");
-  }
-
-  mlir::Value VisitCallExpr(const CallExpr *E) {
-    assert(!E->getCallReturnType(CGF.getContext())->isReferenceType() && "NYI");
-
-    auto V = CGF.buildCallExpr(E).getScalarVal();
-
-    // TODO: buildLValueAlignmentAssumption
-    return V;
-  }
-
-  mlir::Value VisitUnaryAddrOf(const UnaryOperator *E) {
-    assert(!llvm::isa<MemberPointerType>(E->getType()) && "not implemented");
-    return CGF.buildLValue(E->getSubExpr()).getPointer();
-  }
-
-  mlir::Value VisitCXXBoolLiteralExpr(const CXXBoolLiteralExpr *E) {
-    mlir::Type Ty = CGF.getCIRType(E->getType());
-    return Builder.create<mlir::cir::ConstantOp>(
-        CGF.getLoc(E->getExprLoc()), Ty, Builder.getBoolAttr(E->getValue()));
-  }
 
   struct BinOpInfo {
     mlir::Value LHS;
@@ -500,25 +558,6 @@ public:
                                  E->getExprLoc());
   }
 
-#define VISITCOMP(CODE)                                                        \
-  mlir::Value VisitBin##CODE(const BinaryOperator *E) { return buildCmp(E); }
-  VISITCOMP(LT)
-  VISITCOMP(GT)
-  VISITCOMP(LE)
-  VISITCOMP(GE)
-  VISITCOMP(EQ)
-  VISITCOMP(NE)
-#undef VISITCOMP
-
-  mlir::Value VisitExpr(Expr *E) {
-    // Crashing here for "ScalarExprClassName"? Please implement
-    // VisitScalarExprClassName(...) to get this working.
-    emitError(CGF.getLoc(E->getExprLoc()), "scalar exp no implemented: '")
-        << E->getStmtClassName() << "'";
-    assert(0 && "shouldn't be here!");
-    return {};
-  }
-
   mlir::Value buildIntToBoolConversion(mlir::Value srcVal, mlir::Location loc) {
     // Because of the type rules of C, we often end up computing a
     // logical value, then zero extending it to int, then wanting it
@@ -651,14 +690,6 @@ public:
 
     return Res;
   }
-
-  // Leaves.
-  mlir::Value VisitIntegerLiteral(const IntegerLiteral *E) {
-    mlir::Type Ty = CGF.getCIRType(E->getType());
-    return Builder.create<mlir::cir::ConstantOp>(
-        CGF.getLoc(E->getExprLoc()), Ty,
-        Builder.getIntegerAttr(Ty, E->getValue()));
-  }
 };
 
 } // namespace
@@ -670,6 +701,193 @@ mlir::Value CIRGenFunction::buildScalarExpr(const Expr *E) {
          "Invalid scalar expression to emit");
 
   return ScalarExprEmitter(*this, builder).Visit(const_cast<Expr *>(E));
+}
+
+// Emit code for an explicit or implicit cast.  Implicit
+// casts have to handle a more broad range of conversions than explicit
+// casts, as they handle things like function to ptr-to-function decay
+// etc.
+mlir::Value ScalarExprEmitter::VisitCastExpr(CastExpr *CE) {
+  Expr *E = CE->getSubExpr();
+  QualType DestTy = CE->getType();
+  CastKind Kind = CE->getCastKind();
+
+  // These cases are generally not written to ignore the result of evaluating
+  // their sub-expressions, so we clear this now.
+  bool Ignored = TestAndClearIgnoreResultAssign();
+  (void)Ignored;
+
+  // Since almost all cast kinds apply to scalars, this switch doesn't have a
+  // default case, so the compiler will warn on a missing case. The cases are
+  // in the same order as in the CastKind enum.
+  switch (Kind) {
+  case clang::CK_Dependent:
+    llvm_unreachable("dependent cast kind in CIR gen!");
+  case clang::CK_BuiltinFnToFnPtr:
+    llvm_unreachable("builtin functions are handled elsewhere");
+
+  case CK_LValueBitCast:
+    llvm_unreachable("NYI");
+  case CK_ObjCObjectLValueCast:
+    llvm_unreachable("NYI");
+  case CK_LValueToRValueBitCast:
+    llvm_unreachable("NYI");
+  case CK_CPointerToObjCPointerCast:
+    llvm_unreachable("NYI");
+  case CK_BlockPointerToObjCPointerCast:
+    llvm_unreachable("NYI");
+  case CK_AnyPointerToBlockPointerCast:
+    llvm_unreachable("NYI");
+  case CK_BitCast:
+    llvm_unreachable("NYI");
+  case CK_AddressSpaceConversion:
+    llvm_unreachable("NYI");
+  case CK_AtomicToNonAtomic:
+    llvm_unreachable("NYI");
+  case CK_NonAtomicToAtomic:
+    llvm_unreachable("NYI");
+  case CK_UserDefinedConversion:
+    llvm_unreachable("NYI");
+  case CK_NoOp:
+    llvm_unreachable("NYI");
+  case CK_BaseToDerived:
+    llvm_unreachable("NYI");
+  case CK_DerivedToBase:
+    llvm_unreachable("NYI");
+  case CK_Dynamic:
+    llvm_unreachable("NYI");
+  case CK_ArrayToPointerDecay:
+    llvm_unreachable("NYI");
+  case CK_FunctionToPointerDecay:
+    llvm_unreachable("NYI");
+
+  case CK_NullToPointer: {
+    // FIXME: use MustVisitNullValue(E) and evaluate expr.
+    // Note that DestTy is used as the MLIR type instead of a custom
+    // nullptr type.
+    mlir::Type Ty = CGF.getCIRType(DestTy);
+    return Builder.create<mlir::cir::ConstantOp>(
+        CGF.getLoc(E->getExprLoc()), Ty,
+        mlir::cir::NullAttr::get(Builder.getContext(), Ty));
+  }
+
+  case CK_NullToMemberPointer:
+    llvm_unreachable("NYI");
+  case CK_ReinterpretMemberPointer:
+    llvm_unreachable("NYI");
+  case CK_BaseToDerivedMemberPointer:
+    llvm_unreachable("NYI");
+  case CK_DerivedToBaseMemberPointer:
+    llvm_unreachable("NYI");
+  case CK_ARCProduceObject:
+    llvm_unreachable("NYI");
+  case CK_ARCConsumeObject:
+    llvm_unreachable("NYI");
+  case CK_ARCReclaimReturnedObject:
+    llvm_unreachable("NYI");
+  case CK_ARCExtendBlockObject:
+    llvm_unreachable("NYI");
+  case CK_CopyAndAutoreleaseBlockObject:
+    llvm_unreachable("NYI");
+  case CK_FloatingRealToComplex:
+    llvm_unreachable("NYI");
+  case CK_FloatingComplexCast:
+    llvm_unreachable("NYI");
+  case CK_IntegralComplexToFloatingComplex:
+    llvm_unreachable("NYI");
+  case CK_FloatingComplexToIntegralComplex:
+    llvm_unreachable("NYI");
+  case CK_ConstructorConversion:
+    llvm_unreachable("NYI");
+  case CK_ToUnion:
+    llvm_unreachable("NYI");
+
+  case CK_LValueToRValue:
+    assert(CGF.getContext().hasSameUnqualifiedType(E->getType(), DestTy));
+    assert(E->isGLValue() && "lvalue-to-rvalue applied to r-value!");
+    return Visit(const_cast<Expr *>(E));
+
+  case CK_IntegralToPointer:
+    llvm_unreachable("NYI");
+  case CK_PointerToIntegral:
+    llvm_unreachable("NYI");
+  case CK_ToVoid:
+    llvm_unreachable("NYI");
+  case CK_MatrixCast:
+    llvm_unreachable("NYI");
+  case CK_VectorSplat:
+    llvm_unreachable("NYI");
+  case CK_FixedPointCast:
+    llvm_unreachable("NYI");
+  case CK_FixedPointToBoolean:
+    llvm_unreachable("NYI");
+  case CK_FixedPointToIntegral:
+    llvm_unreachable("NYI");
+  case CK_IntegralToFixedPoint:
+    llvm_unreachable("NYI");
+
+  case CK_IntegralCast: {
+    ScalarConversionOpts Opts;
+    if (auto *ICE = dyn_cast<ImplicitCastExpr>(CE)) {
+      if (!ICE->isPartOfExplicitCast())
+        Opts = ScalarConversionOpts(CGF.SanOpts);
+    }
+    return buildScalarConversion(Visit(E), E->getType(), DestTy,
+                                 CE->getExprLoc(), Opts);
+  }
+
+  case CK_IntegralToFloating:
+    llvm_unreachable("NYI");
+  case CK_FloatingToIntegral:
+    llvm_unreachable("NYI");
+  case CK_FloatingCast:
+    llvm_unreachable("NYI");
+  case CK_FixedPointToFloating:
+    llvm_unreachable("NYI");
+  case CK_FloatingToFixedPoint:
+    llvm_unreachable("NYI");
+  case CK_BooleanToSignedIntegral:
+    llvm_unreachable("NYI");
+
+  case CK_IntegralToBoolean: {
+    return buildIntToBoolConversion(Visit(E), CGF.getLoc(CE->getSourceRange()));
+  }
+
+  case CK_PointerToBoolean:
+    llvm_unreachable("NYI");
+  case CK_FloatingToBoolean:
+    llvm_unreachable("NYI");
+  case CK_MemberPointerToBoolean:
+    llvm_unreachable("NYI");
+  case CK_FloatingComplexToReal:
+    llvm_unreachable("NYI");
+  case CK_IntegralComplexToReal:
+    llvm_unreachable("NYI");
+  case CK_FloatingComplexToBoolean:
+    llvm_unreachable("NYI");
+  case CK_IntegralComplexToBoolean:
+    llvm_unreachable("NYI");
+  case CK_ZeroToOCLOpaqueType:
+    llvm_unreachable("NYI");
+  case CK_IntToOCLSampler:
+    llvm_unreachable("NYI");
+
+  default:
+    emitError(CGF.getLoc(CE->getExprLoc()), "cast kind not implemented: '")
+        << CE->getCastKindName() << "'";
+    return nullptr;
+  } // end of switch
+
+  llvm_unreachable("unknown scalar cast");
+}
+
+mlir::Value ScalarExprEmitter::VisitCallExpr(const CallExpr *E) {
+  assert(!E->getCallReturnType(CGF.getContext())->isReferenceType() && "NYI");
+
+  auto V = CGF.buildCallExpr(E).getScalarVal();
+
+  // TODO: buildLValueAlignmentAssumption
+  return V;
 }
 
 /// Emit a conversion from the specified type to the specified destination
