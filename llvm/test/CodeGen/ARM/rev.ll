@@ -183,10 +183,27 @@ entry:
 }
 
 define i32 @pr55484(i32 %0) {
-; CHECK-LABEL: pr55484:
-; CHECK:       @ %bb.0:
-; CHECK-NEXT:    revsh r0, r0
-; CHECK-NEXT:    bx lr
+; CHECK-ARM-LABEL: pr55484:
+; CHECK-ARM:       @ %bb.0:
+; CHECK-ARM-NEXT:    lsr r1, r0, #8
+; CHECK-ARM-NEXT:    orr r0, r1, r0, lsl #8
+; CHECK-ARM-NEXT:    sxth r0, r0
+; CHECK-ARM-NEXT:    bx lr
+;
+; CHECK-V6-LABEL: pr55484:
+; CHECK-V6:       @ %bb.0:
+; CHECK-V6-NEXT:    lsls r1, r0, #8
+; CHECK-V6-NEXT:    lsrs r0, r0, #8
+; CHECK-V6-NEXT:    orrs r0, r1
+; CHECK-V6-NEXT:    sxth r0, r0
+; CHECK-V6-NEXT:    bx lr
+;
+; CHECK-V7-LABEL: pr55484:
+; CHECK-V7:       @ %bb.0:
+; CHECK-V7-NEXT:    lsrs r1, r0, #8
+; CHECK-V7-NEXT:    orr.w r0, r1, r0, lsl #8
+; CHECK-V7-NEXT:    sxth r0, r0
+; CHECK-V7-NEXT:    bx lr
   %2 = lshr i32 %0, 8
   %3 = shl i32 %0, 8
   %4 = or i32 %2, %3
