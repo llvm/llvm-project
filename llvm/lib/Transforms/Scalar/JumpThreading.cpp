@@ -1251,6 +1251,17 @@ bool JumpThreadingPass::processImpliedCondition(BasicBlock *BB) {
     return false;
 
   Value *Cond = BI->getCondition();
+  // Assuming that predecessor's branch was taken, if pred's branch condition
+  // (V) implies Cond, Cond can be either true, undef, or poison. In this case,
+  // freeze(Cond) is either true or a nondeterministic value.
+  // If freeze(Cond) has only one use, we can freely fold freeze(Cond) to true
+  // without affecting other instructions.
+  auto *FICond = dyn_cast<FreezeInst>(Cond);
+  if (FICond && FICond->hasOneUse())
+    Cond = FICond->getOperand(0);
+  else
+    FICond = nullptr;
+
   BasicBlock *CurrentBB = BB;
   BasicBlock *CurrentPred = BB->getSinglePredecessor();
   unsigned Iter = 0;
@@ -1267,6 +1278,15 @@ bool JumpThreadingPass::processImpliedCondition(BasicBlock *BB) {
     bool CondIsTrue = PBI->getSuccessor(0) == CurrentBB;
     Optional<bool> Implication =
         isImpliedCondition(PBI->getCondition(), Cond, DL, CondIsTrue);
+
+    // If the branch condition of BB (which is Cond) and CurrentPred are
+    // exactly the same freeze instruction, Cond can be folded into CondIsTrue.
+    if (!Implication && FICond && isa<FreezeInst>(PBI->getCondition())) {
+      if (cast<FreezeInst>(PBI->getCondition())->getOperand(0) ==
+          FICond->getOperand(0))
+        Implication = CondIsTrue;
+    }
+
     if (Implication) {
       BasicBlock *KeepSucc = BI->getSuccessor(*Implication ? 0 : 1);
       BasicBlock *RemoveSucc = BI->getSuccessor(*Implication ? 1 : 0);
@@ -1275,6 +1295,9 @@ bool JumpThreadingPass::processImpliedCondition(BasicBlock *BB) {
       UncondBI->setDebugLoc(BI->getDebugLoc());
       ++NumFolds;
       BI->eraseFromParent();
+      if (FICond)
+        FICond->eraseFromParent();
+
       DTU->applyUpdatesPermissive({{DominatorTree::Delete, BB, RemoveSucc}});
       if (HasProfileData)
         BPI->eraseBlock(BB);
