@@ -250,3 +250,16 @@ add_entrypoint_object(
     libc.src.stdio.printf_core.string_writer
     libc.src.stdio.printf_core.writer
 )
+
+add_entrypoint_object(
+  fprintf
+  SRCS
+    fprintf.cpp
+  HDRS
+    fprintf.h
+  DEPENDS
+    libc.include.stdio
+    libc.src.stdio.printf_core.printf_main
+    libc.src.stdio.printf_core.file_writer
+    libc.src.stdio.printf_core.writer
+)
