@@ -515,12 +515,6 @@ let Command = "memory write" in {
     Desc<"Start writing bytes from an offset within the input file.">;
 }
 
-let Command = "memory region" in {
-  def memory_region_all : Option<"all", "a">, Group<2>, Required,
-    Desc<"Show all memory regions. This is equivalent to starting from address "
-         "0 and repeating the command. Unmapped areas are included.">;
-}
-
 let Command = "memory tag write" in {
   def memory_write_end_addr : Option<"end-addr", "e">, Group<1>,
   Arg<"AddressOrExpression">, Desc<

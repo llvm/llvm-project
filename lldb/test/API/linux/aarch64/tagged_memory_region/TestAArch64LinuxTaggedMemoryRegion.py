@@ -55,7 +55,7 @@ class AArch64LinuxTaggedMemoryRegionTestCase(TestBase):
             if result.Succeeded():
                 repeats += 1
             else:
-                self.assertRegexpMatches(result.GetError(), "Usage: memory region")
+                self.assertRegexpMatches(result.GetError(), "Usage: memory region ADDR")
                 break
 
         # This time repeat until we get the last region. At that
