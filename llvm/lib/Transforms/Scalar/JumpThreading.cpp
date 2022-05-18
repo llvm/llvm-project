@@ -1133,6 +1133,11 @@ bool JumpThreadingPass::processBlock(BasicBlock *BB) {
     return ConstantFolded;
   }
 
+  // Some of the following optimization can safely work on the unfrozen cond.
+  Value *CondWithoutFreeze = CondInst;
+  if (auto *FI = dyn_cast<FreezeInst>(CondInst))
+    CondWithoutFreeze = FI->getOperand(0);
+
   if (CmpInst *CondCmp = dyn_cast<CmpInst>(CondInst)) {
     // If we're branching on a conditional, LVI might be able to determine
     // it's value at the branch instruction.  We only handle comparisons
@@ -1196,11 +1201,7 @@ bool JumpThreadingPass::processBlock(BasicBlock *BB) {
   // for loads that are used by a switch or by the condition for the branch.  If
   // we see one, check to see if it's partially redundant.  If so, insert a PHI
   // which can then be used to thread the values.
-  Value *SimplifyValue = CondInst;
-
-  if (auto *FI = dyn_cast<FreezeInst>(SimplifyValue))
-    // Look into freeze's operand
-    SimplifyValue = FI->getOperand(0);
+  Value *SimplifyValue = CondWithoutFreeze;
 
   if (CmpInst *CondCmp = dyn_cast<CmpInst>(SimplifyValue))
     if (isa<Constant>(CondCmp->getOperand(1)))
@@ -1225,10 +1226,7 @@ bool JumpThreadingPass::processBlock(BasicBlock *BB) {
 
   // If this is an otherwise-unfoldable branch on a phi node or freeze(phi) in
   // the current block, see if we can simplify.
-  PHINode *PN = dyn_cast<PHINode>(
-      isa<FreezeInst>(CondInst) ? cast<FreezeInst>(CondInst)->getOperand(0)
-                                : CondInst);
-
+  PHINode *PN = dyn_cast<PHINode>(CondWithoutFreeze);
   if (PN && PN->getParent() == BB && isa<BranchInst>(BB->getTerminator()))
     return processBranchOnPHI(PN);
 
