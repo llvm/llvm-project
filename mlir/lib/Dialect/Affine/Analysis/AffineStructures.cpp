@@ -1666,8 +1666,8 @@ void FlatAffineRelation::compose(const FlatAffineRelation &other) {
   convertToLocal(IdKind::SetDim, getNumDomainDims() - removeDims,
                  getNumDomainDims());
 
-  auto thisMaybeValues = getMaybeDimValues();
-  auto relMaybeValues = rel.getMaybeDimValues();
+  auto thisMaybeValues = getMaybeValues(IdKind::SetDim);
+  auto relMaybeValues = rel.getMaybeValues(IdKind::SetDim);
 
   // Add and match domain of `rel` to domain of `this`.
   for (unsigned i = 0, e = rel.getNumDomainDims(); i < e; ++i)

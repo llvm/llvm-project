@@ -431,16 +431,11 @@ public:
     return {values.data(), values.size()};
   }
 
-  inline ArrayRef<Optional<Value>> getMaybeDimValues() const {
-    return {values.data(), getNumDimIds()};
-  }
-
-  inline ArrayRef<Optional<Value>> getMaybeSymbolValues() const {
-    return {values.data() + getNumDimIds(), getNumSymbolIds()};
-  }
-
-  inline ArrayRef<Optional<Value>> getMaybeDimAndSymbolValues() const {
-    return {values.data(), getNumDimIds() + getNumSymbolIds()};
+  inline ArrayRef<Optional<Value>>
+  getMaybeValues(presburger::IdKind kind) const {
+    assert(kind != IdKind::Local &&
+           "Local identifiers do not have any value attached to them.");
+    return {values.data() + getIdKindOffset(kind), getNumIdKind(kind)};
   }
 
   /// Sets the Value associated with the pos^th identifier.
