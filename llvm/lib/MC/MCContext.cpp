@@ -634,11 +634,14 @@ Optional<unsigned> MCContext::getELFUniqueIDForEntsize(StringRef SectionName,
   return (I != ELFEntrySizeMap.end()) ? Optional<unsigned>(I->second) : None;
 }
 
-MCSectionGOFF *MCContext::getGOFFSection(StringRef Section, SectionKind Kind) {
+MCSectionGOFF *MCContext::getGOFFSection(StringRef Section, SectionKind Kind,
+                                         MCSection *Parent,
+                                         const MCExpr *SubsectionId) {
   // Do the lookup. If we don't have a hit, return a new section.
   auto &GOFFSection = GOFFUniquingMap[Section.str()];
   if (!GOFFSection)
-    GOFFSection = new (GOFFAllocator.Allocate()) MCSectionGOFF(Section, Kind);
+    GOFFSection = new (GOFFAllocator.Allocate())
+        MCSectionGOFF(Section, Kind, Parent, SubsectionId);
 
   return GOFFSection;
 }
