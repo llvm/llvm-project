@@ -1123,7 +1123,8 @@ TEST_F(TUSchedulerTests, AsyncPreambleThread) {
   public:
     BlockPreambleThread(llvm::StringRef BlockVersion, Notification &N)
         : BlockVersion(BlockVersion), N(N) {}
-    void onPreambleAST(PathRef Path, llvm::StringRef Version, ASTContext &Ctx,
+    void onPreambleAST(PathRef Path, llvm::StringRef Version,
+                       const CompilerInvocation &, ASTContext &Ctx,
                        Preprocessor &, const CanonicalIncludes &) override {
       if (Version == BlockVersion)
         N.wait();
