@@ -44,3 +44,28 @@ template <class... Args> struct TypeMask {
 static_assert(TypeMask<int, long, short>::result == 7, "fail");
 static_assert(TypeMask<float, short>::result == 12, "fail");
 static_assert(TypeMask<int, float, float>::result == 9, "fail");
+
+
+struct Test {
+  int i;
+};
+
+void unreachable_associations(const int i, const Test t) {
+  // FIXME: it's not clear to me whether we intended to deviate from the C
+  // semantics in terms of how qualifiers are handled, so this documents the
+  // existing behavior but perhaps not the desired behavior.
+  static_assert(
+    _Generic(i,
+      const int : 1,    // expected-warning {{due to lvalue conversion of the controlling expression, association of type 'const int' will never be selected because it is qualified}}
+      volatile int : 2, // expected-warning {{due to lvalue conversion of the controlling expression, association of type 'volatile int' will never be selected because it is qualified}}
+      int[12] : 3,      // expected-warning {{due to lvalue conversion of the controlling expression, association of type 'int[12]' will never be selected because it is of array type}}
+      int : 4,
+      default : 5
+    ) == 4, "we had better pick int, not const int!");
+  static_assert(
+    _Generic(t,
+      Test : 1,
+      const Test : 2,  // Ok in C++, warned in C
+      default : 3
+    ) == 2, "we had better pick const Test, not Test!"); // C++-specific result
+}
