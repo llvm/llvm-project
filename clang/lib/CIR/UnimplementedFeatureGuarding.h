@@ -37,6 +37,9 @@ struct UnimplementedFeature {
 
   // Sanitizers
   static bool reportGlobalToASan() { return false; }
+
+  // ObjC
+  static bool setObjCGCLValueClass() { return false; }
 };
 } // namespace cir
 
