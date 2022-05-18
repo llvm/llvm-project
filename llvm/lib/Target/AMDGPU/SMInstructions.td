@@ -491,8 +491,6 @@ class SMRD_Real_si <bits<5> op, SM_Pseudo ps>
   let Inst{31-27} = 0x18; //encoding
 }
 
-// FIXME: Assembler should reject trying to use glc on SMRD
-// instructions on SI.
 multiclass SM_Real_Loads_si<bits<5> op, string ps,
                             SM_Load_Pseudo immPs = !cast<SM_Load_Pseudo>(ps#_IMM),
                             SM_Load_Pseudo sgprPs = !cast<SM_Load_Pseudo>(ps#_SGPR)> {
