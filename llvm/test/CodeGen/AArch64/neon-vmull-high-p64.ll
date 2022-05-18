@@ -38,13 +38,13 @@
 ; }
 
 
-;CHECK_LABEL: func:
+;CHECK-LABEL: func:
 ;CHECK: pmull2
 
 %struct.SS = type { <2 x i64>, <2 x i64> }
 
 ; Function Attrs: nofree noinline nounwind
-define dso_local void @_Z4funcP2SSjPKhPo(%struct.SS* nocapture readonly %g, i32 %count, i8* nocapture readonly %buf, i128* nocapture %res) local_unnamed_addr #0 {
+define dso_local void @func(%struct.SS* nocapture readonly %g, i32 %count, i8* nocapture readonly %buf, i128* nocapture %res) local_unnamed_addr #0 {
 entry:
   %h2 = getelementptr inbounds %struct.SS, %struct.SS* %g, i64 0, i32 1
   %0 = load <2 x i64>, <2 x i64>* %h2, align 16
