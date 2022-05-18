@@ -267,13 +267,20 @@ class BitEnumAttr<I intType, string name, string summary,
   // bits together.
   let symbolToStringFnRetType = "std::string";
 
-  // The delimiter used to separate bit enum cases in strings.
+  // The delimiter used to separate bit enum cases in strings. Only "|" and
+  // "," (along with optional spaces) are supported due to the use of the
+  // parseSeparatorFn in parameterParser below.
+  // Spaces in the separator string are used for printing, but will be optional
+  // for parsing.
   string separator = "|";
+  assert !or(!ge(!find(separator, "|"), 0), !ge(!find(separator, ","), 0)),
+      "separator must contain '|' or ',' for parameter parsing";
 
   // Parsing function that corresponds to the enum separator. Only
   // "," and "|" are supported by this definition.
-  string parseSeparatorFn = !if(!eq(separator,"|"),"parseOptionalVerticalBar",
-                                                   "parseOptionalComma");
+  string parseSeparatorFn = !if(!ge(!find(separator, "|"), 0),
+                                "parseOptionalVerticalBar",
+                                "parseOptionalComma");
 
   // Parse a keyword and pass it to `stringToSymbol`. Emit an error if a the
   // symbol is not valid.

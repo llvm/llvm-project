@@ -38,7 +38,7 @@ static cl::opt<bool> DisableInsertVSETVLPHIOpt(
     cl::desc("Disable looking through phis when inserting vsetvlis."));
 
 static cl::opt<bool> UseStrictAsserts(
-    "riscv-insert-vsetvl-strict-asserts", cl::init(false), cl::Hidden,
+    "riscv-insert-vsetvl-strict-asserts", cl::init(true), cl::Hidden,
     cl::desc("Enable strict assertion checking for the dataflow algorithm"));
 
 namespace {
@@ -317,16 +317,16 @@ public:
     if (!hasSameAVL(Other))
       return false;
 
+    // If the SEWLMULRatioOnly bits are different, then they aren't equal.
+    if (SEWLMULRatioOnly != Other.SEWLMULRatioOnly)
+      return false;
+
     // If only the VLMAX is valid, check that it is the same.
-    if (SEWLMULRatioOnly && Other.SEWLMULRatioOnly)
+    if (SEWLMULRatioOnly)
       return hasSameVLMAX(Other);
 
     // If the full VTYPE is valid, check that it is the same.
-    if (!SEWLMULRatioOnly && !Other.SEWLMULRatioOnly)
-      return hasSameVTYPE(Other);
-
-    // If the SEWLMULRatioOnly bits are different, then they aren't equal.
-    return false;
+    return hasSameVTYPE(Other);
   }
 
   bool operator!=(const VSETVLIInfo &Other) const {
@@ -1236,6 +1236,29 @@ void RISCVInsertVSETVLI::doLocalPrepass(MachineBasicBlock &MBB) {
                   VLOp.ChangeToImmediate(CurInfo.getAVLImm());
                 else
                   VLOp.ChangeToRegister(CurInfo.getAVLReg(), /*IsDef*/ false);
+                CurInfo = computeInfoForInstr(MI, TSFlags, MRI);
+                continue;
+              }
+            }
+          }
+        }
+
+        // If AVL is defined by a vsetvli with the same vtype, we can
+        // replace the AVL operand with the AVL of the defining vsetvli.
+        // We avoid general register AVLs to avoid extending live ranges
+        // without being sure we can kill the original source reg entirely.
+        // TODO: We can ignore policy bits here, we only need VL to be the same.
+        if (Require.hasAVLReg() && Require.getAVLReg().isVirtual()) {
+          if (MachineInstr *DefMI = MRI->getVRegDef(Require.getAVLReg())) {
+            if (isVectorConfigInstr(*DefMI)) {
+              VSETVLIInfo DefInfo = getInfoForVSETVLI(*DefMI);
+              if (DefInfo.hasSameVTYPE(Require) &&
+                  (DefInfo.hasAVLImm() || DefInfo.getAVLReg() == RISCV::X0)) {
+                MachineOperand &VLOp = MI.getOperand(getVLOpNum(MI));
+                if (DefInfo.hasAVLImm())
+                  VLOp.ChangeToImmediate(DefInfo.getAVLImm());
+                else
+                  VLOp.ChangeToRegister(DefInfo.getAVLReg(), /*IsDef*/ false);
                 CurInfo = computeInfoForInstr(MI, TSFlags, MRI);
                 continue;
               }

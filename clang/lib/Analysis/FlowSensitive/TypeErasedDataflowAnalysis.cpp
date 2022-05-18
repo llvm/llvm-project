@@ -104,7 +104,7 @@ public:
 private:
   void extendFlowCondition(const Expr &Cond) {
     // The terminator sub-expression might not be evaluated.
-    if (Env.getValue(Cond, SkipPast::None) == nullptr)
+    if (Env.getStorageLocation(Cond, SkipPast::None) == nullptr)
       transfer(StmtToEnv, Cond, Env);
 
     // FIXME: The flow condition must be an r-value, so `SkipPast::None` should
