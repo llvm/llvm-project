@@ -1036,9 +1036,9 @@ func.func @invariant_loop_args_in_same_order(%f_arg0: tensor<i32>) -> (tensor<i3
   }
   return %0#0, %0#1, %0#2, %0#3, %0#4 : tensor<i32>, tensor<i32>, tensor<i32>, tensor<i32>, tensor<i32>
 }
-// CHECK:    %[[CST42:.*]] = arith.constant dense<42>
-// CHECK:    %[[ONE:.*]] = arith.constant dense<1>
 // CHECK:    %[[ZERO:.*]] = arith.constant dense<0>
+// CHECK:    %[[ONE:.*]] = arith.constant dense<1>
+// CHECK:    %[[CST42:.*]] = arith.constant dense<42>
 // CHECK:    %[[WHILE:.*]]:3 = scf.while (%[[ARG0:.*]] = %[[ZERO]], %[[ARG2:.*]] = %[[ONE]], %[[ARG3:.*]] = %[[ONE]])
 // CHECK:       arith.cmpi slt, %[[ARG0]], %{{.*}}
 // CHECK:       tensor.extract %{{.*}}[]
@@ -1069,9 +1069,9 @@ func.func @while_loop_invariant_argument_different_order() -> (tensor<i32>, tens
   }
   return %0#0, %0#1, %0#2, %0#3, %0#4, %0#5 : tensor<i32>, tensor<i32>, tensor<i32>, tensor<i32>, tensor<i32>, tensor<i32>
 }
-// CHECK:    %[[CST42:.*]] = arith.constant dense<42>
-// CHECK:    %[[ONE:.*]] = arith.constant dense<1>
 // CHECK:    %[[ZERO:.*]] = arith.constant dense<0>
+// CHECK:    %[[ONE:.*]] = arith.constant dense<1>
+// CHECK:    %[[CST42:.*]] = arith.constant dense<42>
 // CHECK:    %[[WHILE:.*]]:2 = scf.while (%[[ARG1:.*]] = %[[ONE]], %[[ARG4:.*]] = %[[ZERO]])
 // CHECK:       arith.cmpi slt, %[[ZERO]], %[[CST42]]
 // CHECK:       tensor.extract %{{.*}}[]

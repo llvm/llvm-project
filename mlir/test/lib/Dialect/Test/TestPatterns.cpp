@@ -151,6 +151,9 @@ struct TestPatternDriver
     : public PassWrapper<TestPatternDriver, OperationPass<func::FuncOp>> {
   MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(TestPatternDriver)
 
+  TestPatternDriver() = default;
+  TestPatternDriver(const TestPatternDriver &other) : PassWrapper(other) {}
+
   StringRef getArgument() const final { return "test-patterns"; }
   StringRef getDescription() const final { return "Run test dialect patterns"; }
   void runOnOperation() override {
@@ -162,8 +165,16 @@ struct TestPatternDriver
                  FolderInsertBeforePreviouslyFoldedConstantPattern,
                  FolderCommutativeOp2WithConstant>(&getContext());
 
-    (void)applyPatternsAndFoldGreedily(getOperation(), std::move(patterns));
+    GreedyRewriteConfig config;
+    config.useTopDownTraversal = this->useTopDownTraversal;
+    (void)applyPatternsAndFoldGreedily(getOperation(), std::move(patterns),
+                                       config);
   }
+
+  Option<bool> useTopDownTraversal{
+      *this, "top-down",
+      llvm::cl::desc("Seed the worklist in general top-down order"),
+      llvm::cl::init(GreedyRewriteConfig().useTopDownTraversal)};
 };
 } // namespace
 
