@@ -411,3 +411,33 @@ class AArch64LinuxMTEMemoryTagAccessTestCase(TestBase):
         self.expect("memory read mte_buf mte_buf+32 -f \"uint8_t[]\" -s 16 -l 1 --show-tags",
                 patterns=["0x[0-9A-Fa-f]+00: \{(0x00 ){15}0x00\} \(tag: 0x0\)\n"
                           "0x[0-9A-Fa-f]+10: \{(0x00 ){15}0x00\} \(tag: 0x1\)"])
+
+    @skipUnlessArch("aarch64")
+    @skipUnlessPlatform(["linux"])
+    @skipUnlessAArch64MTELinuxCompiler
+    def test_mte_memory_read_tag_display_repeated(self):
+        """Test that the --show-tags option is kept when repeating the memory read command."""
+        self.setup_mte_test()
+
+        self.expect("memory read mte_buf mte_buf+16 -f \"x\" --show-tags",
+                    patterns=["0x[0-9A-fa-f]+00: 0x0+ 0x0+ 0x0+ 0x0+ \(tag: 0x0\)"])
+        # Equivalent to just pressing enter on the command line.
+        self.expect("memory read",
+                    patterns=["0x[0-9A-fa-f]+10: 0x0+ 0x0+ 0x0+ 0x0+ \(tag: 0x1\)"])
+
+        # You can add the argument to an existing repetition without resetting
+        # the whole command. Though all other optional arguments will reset to
+        # their default values when you do this.
+        self.expect("memory read mte_buf mte_buf+16 -f \"x\"",
+                    patterns=["0x[0-9A-fa-f]+00: 0x0+ 0x0+ 0x0+ 0x0+"])
+        self.expect("memory read",
+                    patterns=["0x[0-9A-fa-f]+10: 0x0+ 0x0+ 0x0+ 0x0+"])
+        # Note that the formatting returns to default here.
+        self.expect("memory read --show-tags",
+                    patterns=["0x[0-9A-fa-f]+20: (00 )+ \.+ \(tag: 0x2\)"])
+        self.expect("memory read",
+                    patterns=["0x[0-9A-fa-f]+30: (00 )+ \.+ \(tag: 0x3\)"])
+
+        # A fresh command reverts to the default of tags being off.
+        self.expect("memory read mte_buf mte_buf+16 -f \"x\"",
+                    patterns=["0x[0-9A-fa-f]+00: 0x0+ 0x0+ 0x0+ 0x0+"])
