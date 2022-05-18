@@ -672,6 +672,134 @@ static const Expr *isSimpleArrayDecayOperand(const Expr *E) {
   return SubExpr;
 }
 
+/// Given an array base, check whether its member access belongs to a record
+/// with preserve_access_index attribute or not.
+/// TODO(cir): don't need to be specific to LLVM's codegen, refactor into common
+/// AST helpers.
+static bool isPreserveAIArrayBase(CIRGenFunction &CGF, const Expr *ArrayBase) {
+  if (!ArrayBase || !CGF.getDebugInfo())
+    return false;
+
+  // Only support base as either a MemberExpr or DeclRefExpr.
+  // DeclRefExpr to cover cases like:
+  //    struct s { int a; int b[10]; };
+  //    struct s *p;
+  //    p[1].a
+  // p[1] will generate a DeclRefExpr and p[1].a is a MemberExpr.
+  // p->b[5] is a MemberExpr example.
+  const Expr *E = ArrayBase->IgnoreImpCasts();
+  if (const auto *ME = dyn_cast<MemberExpr>(E))
+    return ME->getMemberDecl()->hasAttr<BPFPreserveAccessIndexAttr>();
+
+  if (const auto *DRE = dyn_cast<DeclRefExpr>(E)) {
+    const auto *VarDef = dyn_cast<VarDecl>(DRE->getDecl());
+    if (!VarDef)
+      return false;
+
+    const auto *PtrT = VarDef->getType()->getAs<clang::PointerType>();
+    if (!PtrT)
+      return false;
+
+    const auto *PointeeT =
+        PtrT->getPointeeType()->getUnqualifiedDesugaredType();
+    if (const auto *RecT = dyn_cast<RecordType>(PointeeT))
+      return RecT->getDecl()->hasAttr<BPFPreserveAccessIndexAttr>();
+    return false;
+  }
+
+  return false;
+}
+
+static mlir::IntegerAttr getConstantIndexOrNull(mlir::Value idx) {
+  // TODO(cir): should we consider using MLIRs IndexType instead of IntegerAttr?
+  if (auto constantOp = dyn_cast<mlir::cir::ConstantOp>(idx.getDefiningOp()))
+    return constantOp.getValue().dyn_cast<mlir::IntegerAttr>();
+  return {};
+}
+
+static CharUnits getArrayElementAlign(CharUnits arrayAlign, mlir::Value idx,
+                                      CharUnits eltSize) {
+  // If we have a constant index, we can use the exact offset of the
+  // element we're accessing.
+  auto constantIdx = getConstantIndexOrNull(idx);
+  if (constantIdx) {
+    CharUnits offset = constantIdx.getValue().getZExtValue() * eltSize;
+    return arrayAlign.alignmentAtOffset(offset);
+    // Otherwise, use the worst-case alignment for any element.
+  } else {
+    return arrayAlign.alignmentOfArrayElement(eltSize);
+  }
+}
+
+static mlir::Value buildArrayAccessOp(mlir::OpBuilder &builder,
+                                      mlir::Location arrayLocBegin,
+                                      mlir::Location arrayLocEnd,
+                                      mlir::Value arrayPtr, mlir::Value idx) {
+  auto arrayPtrTy = arrayPtr.getType().dyn_cast<::mlir::cir::PointerType>();
+  assert(arrayPtrTy && "expected pointer type");
+  auto arrayTy = arrayPtrTy.getPointee().dyn_cast<::mlir::cir::ArrayType>();
+  assert(arrayTy && "expected array type");
+
+  auto flatPtrTy =
+      mlir::cir::PointerType::get(builder.getContext(), arrayTy.getEltType());
+  auto basePtr = builder.create<mlir::cir::CastOp>(
+      arrayLocBegin, flatPtrTy, mlir::cir::CastKind::array_to_ptrdecay,
+      arrayPtr);
+
+  return builder.create<mlir::cir::PtrStrideOp>(arrayLocEnd, flatPtrTy, basePtr,
+                                                idx);
+}
+
+static mlir::Value buildArraySubscriptPtr(
+    CIRGenFunction &CGF, mlir::Location beginLoc, mlir::Location endLoc,
+    mlir::Value ptr, ArrayRef<mlir::Value> indices, bool inbounds,
+    bool signedIndices, const llvm::Twine &name = "arrayidx") {
+  assert(indices.size() == 1 && "cannot handle multiple indices yet");
+  auto idx = indices.back();
+  auto &CGM = CGF.getCIRGenModule();
+  // TODO(cir): LLVM codegen emits in bound gep check here, is there anything
+  // that would enhance tracking this later in CIR?
+  if (inbounds)
+    assert(!UnimplementedFeature::emitCheckedInBoundsGEP() && "NYI");
+  return buildArrayAccessOp(CGM.getBuilder(), beginLoc, endLoc, ptr, idx);
+}
+
+static Address buildArraySubscriptPtr(
+    CIRGenFunction &CGF, mlir::Location beginLoc, mlir::Location endLoc,
+    Address addr, ArrayRef<mlir::Value> indices, QualType eltType,
+    bool inbounds, bool signedIndices, mlir::Location loc,
+    QualType *arrayType = nullptr, const Expr *Base = nullptr,
+    const llvm::Twine &name = "arrayidx") {
+  // Determine the element size of the statically-sized base.  This is
+  // the thing that the indices are expressed in terms of.
+  if (auto vla = CGF.getContext().getAsVariableArrayType(eltType)) {
+    assert(0 && "not implemented");
+  }
+
+  // We can use that to compute the best alignment of the element.
+  CharUnits eltSize = CGF.getContext().getTypeSizeInChars(eltType);
+  CharUnits eltAlign =
+      getArrayElementAlign(addr.getAlignment(), indices.back(), eltSize);
+
+  mlir::Value eltPtr;
+  auto LastIndex = getConstantIndexOrNull(indices.back());
+  if (!LastIndex ||
+      (!CGF.IsInPreservedAIRegion && !isPreserveAIArrayBase(CGF, Base))) {
+    eltPtr = buildArraySubscriptPtr(CGF, beginLoc, endLoc, addr.getPointer(),
+                                    indices, inbounds, signedIndices, name);
+  } else {
+    // assert(!UnimplementedFeature::generateDebugInfo() && "NYI");
+    // assert(indices.size() == 1 && "cannot handle multiple indices yet");
+    // auto idx = indices.back();
+    // auto &CGM = CGF.getCIRGenModule();
+    // eltPtr = buildArrayAccessOp(CGM.getBuilder(), beginLoc, endLoc,
+    //                             addr.getPointer(), idx);
+    assert(0 && "NYI");
+  }
+
+  return Address(eltPtr, CGF.getTypes().convertTypeForMem(eltType), eltAlign);
+}
+
 LValue CIRGenFunction::buildArraySubscriptExpr(const ArraySubscriptExpr *E,
                                                bool Accessed) {
   // The index must always be an integer, which is not an aggregate.  Emit it
@@ -740,28 +868,27 @@ LValue CIRGenFunction::buildArraySubscriptExpr(const ArraySubscriptExpr *E,
            "multidimensional array indexing not implemented");
 
     ArrayLV = buildLValue(Array);
-    auto arrayPtrTy =
-        ArrayLV.getPointer().getType().dyn_cast<::mlir::cir::PointerType>();
-    assert(arrayPtrTy && "expected pointer type");
-    auto arrayTy = arrayPtrTy.getPointee().dyn_cast<::mlir::cir::ArrayType>();
-    assert(arrayTy && "expected array type");
+    auto Idx = EmitIdxAfterBase(/*Promote=*/true);
+    QualType arrayType = Array->getType();
 
-    auto flatPtrTy =
-        mlir::cir::PointerType::get(builder.getContext(), arrayTy.getEltType());
-    auto loc = getLoc(Array->getBeginLoc());
-    auto basePtr = builder.create<mlir::cir::CastOp>(
-        loc, flatPtrTy, mlir::cir::CastKind::array_to_ptrdecay,
-        ArrayLV.getPointer());
-
-    loc = getLoc(Array->getEndLoc());
-    auto stride = builder.create<mlir::cir::PtrStrideOp>(
-        loc, flatPtrTy, basePtr, EmitIdxAfterBase(/*Promote=*/true));
     // Propagate the alignment from the array itself to the result.
-    Addr = Address(stride.getResult(), ArrayLV.getAlignment());
+    Addr = buildArraySubscriptPtr(
+        *this, CGM.getLoc(Array->getBeginLoc()), CGM.getLoc(Array->getEndLoc()),
+        ArrayLV.getAddress(), {Idx}, E->getType(),
+        !getLangOpts().isSignedOverflowDefined(), SignedIndices,
+        CGM.getLoc(E->getExprLoc()), &arrayType, E->getBase());
     EltBaseInfo = ArrayLV.getBaseInfo();
     // TODO: EltTBAAInfo
   } else {
     // The base must be a pointer; emit it with an estimate of its alignment.
+    // TODO(cir): EltTBAAInfo
+    Addr = buildPointerWithAlignment(E->getBase(), &EltBaseInfo);
+    // auto Idx = EmitIdxAfterBase(/*Promote*/ true);
+    // QualType ptrType = E->getBase()->getType();
+    // Addr = emitArraySubscriptGEP(*this, Addr, Idx, E->getType(),
+    //                              !getLangOpts().isSignedOverflowDefined(),
+    //                              SignedIndices, E->getExprLoc(), &ptrType,
+    //                              E->getBase());
     assert(0 && "not implemented");
   }
 
@@ -894,7 +1021,7 @@ mlir::Value CIRGenFunction::buildAlloca(StringRef name, InitStyle initStyle,
   auto localVarTy = getCIRType(ty);
   auto localVarPtrTy =
       mlir::cir::PointerType::get(builder.getContext(), localVarTy);
-  auto alignIntAttr = CGM.getAlignment(alignment);
+  auto alignIntAttr = CGM.getSize(alignment);
 
   mlir::Value addr;
   {
