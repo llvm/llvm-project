@@ -382,7 +382,7 @@ entry:
 
 ; Check that ISEL of gc.relocate used in other BB does not generate extra COPY instruction.
 define i1 @test_cross_bb_reloc(i32 addrspace(1)* %a, i1 %external_cond) gc "statepoint-example" {
-; CHECK-VREG_LABEL: test_cross_bb_reloc:
+; CHECK-VREG-LABEL: test_cross_bb_reloc
 ; CHECK-VREG:    bb.0.entry:
 ; CHECK-VREG:      [[VREG:%[^ ]+]]:gr64 = STATEPOINT 0, 0, 0, @return_i1, 2, 0, 2, 0, 2, 0, 2, 1, %2(tied-def 0), 2, 0, 2, 1, 0, 0, csr_64, implicit-def $rsp, implicit-def $ssp, implicit-def $al
 ; CHECK-VREG-NOT:  COPY [[VREG]]
