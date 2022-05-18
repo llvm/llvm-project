@@ -478,6 +478,14 @@ void lambda_conditional_return_statements() {
   // CHECK-FIXES-NEXT: {{^}}  };{{$}}
 }
 
+bool condition_variable_return_stmt(int i) {
+  // Unchanged: condition variable.
+  if (bool Res = i == 0)
+    return true;
+  else
+    return false;
+}
+
 void simple_conditional_assignment_statements(int i) {
   bool b;
   if (i > 10)
@@ -594,6 +602,13 @@ void complex_conditional_assignment_statements(int i) {
     h = true;
   } else
     h = false;
+
+  // Unchanged: condition variable.
+  bool k;
+  if (bool Res = j > 10)
+    k = true;
+  else
+    k = false;
 }
 
 // Unchanged: chained return statements, but ChainedConditionalReturn not set.

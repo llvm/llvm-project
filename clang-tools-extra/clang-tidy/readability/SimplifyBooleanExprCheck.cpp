@@ -351,6 +351,9 @@ public:
   }
 
   bool VisitIfStmt(IfStmt *If) {
+    // Skip any if's that have a condition var or an init statement.
+    if (If->hasInitStorage() || If->hasVarStorage())
+      return true;
     /*
      * if (true) ThenStmt(); -> ThenStmt();
      * if (false) ThenStmt(); -> <Empty>;
@@ -461,14 +464,17 @@ public:
          * if (Cond) return false; return true; -> return !Cond;
          */
         auto *If = cast<IfStmt>(*First);
-        ExprAndBool ThenReturnBool =
-            checkSingleStatement(If->getThen(), parseReturnLiteralBool);
-        if (ThenReturnBool && ThenReturnBool.Bool != TrailingReturnBool.Bool) {
-          if (Check->ChainedConditionalReturn ||
-              (!PrevIf && If->getElse() == nullptr)) {
-            Check->replaceCompoundReturnWithCondition(
-                Context, cast<ReturnStmt>(*Second), TrailingReturnBool.Bool, If,
-                ThenReturnBool.Item);
+        if (!If->hasInitStorage() && !If->hasVarStorage()) {
+          ExprAndBool ThenReturnBool =
+              checkSingleStatement(If->getThen(), parseReturnLiteralBool);
+          if (ThenReturnBool &&
+              ThenReturnBool.Bool != TrailingReturnBool.Bool) {
+            if (Check->ChainedConditionalReturn ||
+                (!PrevIf && If->getElse() == nullptr)) {
+              Check->replaceCompoundReturnWithCondition(
+                  Context, cast<ReturnStmt>(*Second), TrailingReturnBool.Bool,
+                  If, ThenReturnBool.Item);
+            }
           }
         }
       } else if (isa<LabelStmt, CaseStmt, DefaultStmt>(*First)) {
@@ -481,7 +487,8 @@ public:
             : isa<CaseStmt>(*First) ? cast<CaseStmt>(*First)->getSubStmt()
                                     : cast<DefaultStmt>(*First)->getSubStmt();
         auto *SubIf = dyn_cast<IfStmt>(SubStmt);
-        if (SubIf && !SubIf->getElse()) {
+        if (SubIf && !SubIf->getElse() && !SubIf->hasInitStorage() &&
+            !SubIf->hasVarStorage()) {
           ExprAndBool ThenReturnBool =
               checkSingleStatement(SubIf->getThen(), parseReturnLiteralBool);
           if (ThenReturnBool &&
