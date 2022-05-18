@@ -74,46 +74,45 @@ struct DOTGraphTraits<PostDominatorTree *>
   }
 };
 
-struct DomViewer : public DOTGraphTraitsViewer<DominatorTreeAnalysis, false> {
+struct DomViewer final : DOTGraphTraitsViewer<DominatorTreeAnalysis, false> {
   DomViewer() : DOTGraphTraitsViewer<DominatorTreeAnalysis, false>("dom") {}
 };
 
-struct DomOnlyViewer
-    : public DOTGraphTraitsViewer<DominatorTreeAnalysis, true> {
+struct DomOnlyViewer final : DOTGraphTraitsViewer<DominatorTreeAnalysis, true> {
   DomOnlyViewer()
       : DOTGraphTraitsViewer<DominatorTreeAnalysis, true>("domonly") {}
 };
 
-struct PostDomViewer
-    : public DOTGraphTraitsViewer<PostDominatorTreeAnalysis, false> {
+struct PostDomViewer final
+    : DOTGraphTraitsViewer<PostDominatorTreeAnalysis, false> {
   PostDomViewer()
       : DOTGraphTraitsViewer<PostDominatorTreeAnalysis, false>("postdom") {}
 };
 
-struct PostDomOnlyViewer
-    : public DOTGraphTraitsViewer<PostDominatorTreeAnalysis, true> {
+struct PostDomOnlyViewer final
+    : DOTGraphTraitsViewer<PostDominatorTreeAnalysis, true> {
   PostDomOnlyViewer()
       : DOTGraphTraitsViewer<PostDominatorTreeAnalysis, true>("postdomonly") {}
 };
 
-struct DomPrinter : public DOTGraphTraitsPrinter<DominatorTreeAnalysis, false> {
+struct DomPrinter final : DOTGraphTraitsPrinter<DominatorTreeAnalysis, false> {
   DomPrinter() : DOTGraphTraitsPrinter<DominatorTreeAnalysis, false>("dom") {}
 };
 
-struct DomOnlyPrinter
-    : public DOTGraphTraitsPrinter<DominatorTreeAnalysis, true> {
+struct DomOnlyPrinter final
+    : DOTGraphTraitsPrinter<DominatorTreeAnalysis, true> {
   DomOnlyPrinter()
       : DOTGraphTraitsPrinter<DominatorTreeAnalysis, true>("domonly") {}
 };
 
-struct PostDomPrinter
-    : public DOTGraphTraitsPrinter<PostDominatorTreeAnalysis, false> {
+struct PostDomPrinter final
+    : DOTGraphTraitsPrinter<PostDominatorTreeAnalysis, false> {
   PostDomPrinter()
       : DOTGraphTraitsPrinter<PostDominatorTreeAnalysis, false>("postdom") {}
 };
 
-struct PostDomOnlyPrinter
-    : public DOTGraphTraitsPrinter<PostDominatorTreeAnalysis, true> {
+struct PostDomOnlyPrinter final
+    : DOTGraphTraitsPrinter<PostDominatorTreeAnalysis, true> {
   PostDomOnlyPrinter()
       : DOTGraphTraitsPrinter<PostDominatorTreeAnalysis, true>("postdomonly") {}
 };
