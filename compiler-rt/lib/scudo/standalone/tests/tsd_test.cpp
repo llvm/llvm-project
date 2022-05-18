@@ -25,7 +25,9 @@ template <class Config> class MockAllocator {
 public:
   using ThisT = MockAllocator<Config>;
   using TSDRegistryT = typename Config::template TSDRegistryT<ThisT>;
-  using CacheT = struct MockCache { volatile scudo::uptr Canary; };
+  using CacheT = struct MockCache {
+    volatile scudo::uptr Canary;
+  };
   using QuarantineCacheT = struct MockQuarantine {};
 
   void init() {
