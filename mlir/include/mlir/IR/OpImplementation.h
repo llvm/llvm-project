@@ -991,18 +991,21 @@ public:
     return success();
   }
 
-  /// Parse a 'x' separated dimension list. This populates the dimension list,
-  /// using -1 for the `?` dimensions if `allowDynamic` is set and errors out on
-  /// `?` otherwise.
+  /// Parse a dimension list of a tensor or memref type.  This populates the
+  /// dimension list, using -1 for the `?` dimensions if `allowDynamic` is set
+  /// and errors out on `?` otherwise. Parsing the trailing `x` is configurable.
   ///
-  ///   dimension-list ::= (dimension `x`)*
-  ///   dimension ::= `?` | integer
+  ///   dimension-list ::= eps | dimension (`x` dimension)*
+  ///   dimension-list-with-trailing-x ::= (dimension `x`)*
+  ///   dimension ::= `?` | decimal-literal
   ///
   /// When `allowDynamic` is not set, this is used to parse:
   ///
-  ///   static-dimension-list ::= (integer `x`)*
+  ///   static-dimension-list ::= eps | decimal-literal (`x` decimal-literal)*
+  ///   static-dimension-list-with-trailing-x ::= (dimension `x`)*
   virtual ParseResult parseDimensionList(SmallVectorImpl<int64_t> &dimensions,
-                                         bool allowDynamic = true) = 0;
+                                         bool allowDynamic = true,
+                                         bool withTrailingX = true) = 0;
 
   /// Parse an 'x' token in a dimension list, handling the case where the x is
   /// juxtaposed with an element type, as in "xf32", leaving the "f32" as the
