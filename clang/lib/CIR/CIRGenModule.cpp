@@ -358,6 +358,19 @@ void CIRGenModule::buildGlobalFunctionDefinition(GlobalDecl GD,
 /// FIXME: implement
 mlir::cir::GlobalOp CIRGenModule::getGlobalValue(StringRef Name) { return {}; }
 
+static mlir::cir::GlobalOp createGlobalOp(CIRGenModule &CGM, mlir::Location loc,
+                                          StringRef name, mlir::Type t,
+                                          bool isCst = false) {
+  auto &builder = CGM.getBuilder();
+  // TODO(cir): when/if this hits a case where globals need to be emitted while
+  // emitting things in a function, do a save/restore insertion dance.
+  assert(!builder.getInsertionBlock() &&
+         "Globals shall only be added at the module level");
+  auto g = builder.create<mlir::cir::GlobalOp>(loc, name, t, isCst);
+  CGM.getModule().push_back(g);
+  return g;
+}
+
 /// If the specified mangled name is not in the module,
 /// create and return an mlir GlobalOp with the specified type (TODO(cir):
 /// address space).
@@ -441,9 +454,8 @@ CIRGenModule::getOrCreateCIRGlobal(StringRef MangledName, mlir::Type Ty,
 
   // mlir::SymbolTable::Visibility::Public is the default, no need to explicitly
   // mark it as such.
-  auto GV = builder.create<mlir::cir::GlobalOp>(loc, MangledName, Ty,
-                                                /*isConstant=*/false);
-  theModule.push_back(GV);
+  auto GV = createGlobalOp(*this, loc, MangledName, Ty,
+                           /*isConstant=*/false);
 
   // If we already created a global with the same mangled name (but different
   // type) before, take its name and remove it from its parent.
@@ -883,15 +895,13 @@ generateStringLiteral(mlir::Location loc, mlir::TypedAttr C,
 
   // Create a global variable for this string
   // FIXME(cir): check for insertion point in module level.
-  auto GV = CGM.getBuilder().create<mlir::cir::GlobalOp>(
-      loc, GlobalName, C.getType(), !CGM.getLangOpts().WritableStrings);
+  auto GV = createGlobalOp(CGM, loc, GlobalName, C.getType(),
+                           !CGM.getLangOpts().WritableStrings);
 
   // Set up extra information and add to the module
   GV.setAlignmentAttr(CGM.getAlignment(Alignment));
   mlir::SymbolTable::setSymbolVisibility(GV, LT);
   GV.setInitialValueAttr(C);
-
-  CGM.getModule().push_back(GV);
 
   // TODO(cir)
   assert(!cir::UnimplementedFeature::threadLocal() && "NYI");
