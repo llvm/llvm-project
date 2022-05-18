@@ -25,6 +25,7 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/IntrusiveRefCntPtr.h"
 #include "llvm/Option/ArgList.h"
+#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Host.h"
 #include "llvm/Support/InitLLVM.h"
 #include "llvm/Support/VirtualFileSystem.h"
@@ -71,6 +72,13 @@ static int executeFC1Tool(llvm::SmallVectorImpl<const char *> &argV) {
   return 1;
 }
 
+static void ExpandResponseFiles(
+    llvm::StringSaver &saver, llvm::SmallVectorImpl<const char *> &args) {
+  // We're defaulting to the GNU syntax, since we don't have a CL mode.
+  llvm::cl::TokenizerCallback tokenizer = &llvm::cl::TokenizeGNUCommandLine;
+  llvm::cl::ExpandResponseFiles(saver, tokenizer, args, /* MarkEOLs=*/false);
+}
+
 int main(int argc, const char **argv) {
 
   // Initialize variables to call the driver
@@ -79,6 +87,10 @@ int main(int argc, const char **argv) {
 
   clang::driver::ParsedClangName targetandMode("flang", "--driver-mode=flang");
   std::string driverPath = getExecutablePath(args[0]);
+
+  llvm::BumpPtrAllocator a;
+  llvm::StringSaver saver(a);
+  ExpandResponseFiles(saver, args);
 
   // Check if flang-new is in the frontend mode
   auto firstArg = std::find_if(
