@@ -48,6 +48,9 @@ class InstSI <dag outs, dag ins, string asm = "",
   field bit VGPRSpill = 0;
   field bit SGPRSpill = 0;
 
+  // LDSDIR instruction format.
+  field bit LDSDIR = 0;
+
   // High bits - other information.
   field bit VM_CNT = 0;
   field bit EXP_CNT = 0;
@@ -172,6 +175,8 @@ class InstSI <dag outs, dag ins, string asm = "",
 
   let TSFlags{24} = VGPRSpill;
   let TSFlags{25} = SGPRSpill;
+
+  let TSFlags{26} = LDSDIR;
 
   let TSFlags{32} = VM_CNT;
   let TSFlags{33} = EXP_CNT;
