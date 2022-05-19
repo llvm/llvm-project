@@ -295,6 +295,9 @@ public:
                       const TargetRegisterClass *NewRC,
                       LiveIntervals &LIS) const override;
 
+  bool
+  regClassPriorityTrumpsGlobalness(const MachineFunction &MF) const override;
+
   unsigned getRegPressureLimit(const TargetRegisterClass *RC,
                                MachineFunction &MF) const override;
 
