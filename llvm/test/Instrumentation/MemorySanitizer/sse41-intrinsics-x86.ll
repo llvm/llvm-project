@@ -432,30 +432,29 @@ define <2 x double> @test_x86_sse41_round_sd_load(<2 x double> %a0, <2 x double>
 }
 
 
-define <4 x float> @test_x86_sse41_round_ss(<4 x float> %a0, <4 x float> %a1) #0 {
-; CHECK-LABEL: @test_x86_sse41_round_ss(
-; CHECK-DAG:    [[TMP1:%.*]] = load <4 x i32>, <4 x i32>* bitcast ([100 x i64]* @__msan_param_tls to <4 x i32>*), align 8
-; CHECK-DAG:    [[TMP2:%.*]] = load <4 x i32>, <4 x i32>* inttoptr (i64 add (i64 ptrtoint ([100 x i64]* @__msan_param_tls to i64), i64 16) to <4 x i32>*), align 8
+define <4 x float> @test_x86_sse41_round_ss_load(<4 x float> %a0, <4 x float>* %a1) #0 {
+; CHECK-LABEL: @test_x86_sse41_round_ss_load(
+; CHECK-DAG:    [[TMP1:%.*]] = load i64, i64* inttoptr (i64 add (i64 ptrtoint ([100 x i64]* @__msan_param_tls to i64), i64 16) to i64*), align 8
+; CHECK-DAG:    [[TMP2:%.*]] = load <4 x i32>, <4 x i32>* bitcast ([100 x i64]* @__msan_param_tls to <4 x i32>*), align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
-; CHECK-NEXT:    [[TMP3:%.*]] = bitcast <4 x i32> [[TMP1]] to i128
-; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i128 [[TMP3]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP4:%.*]], label [[TMP5:%.*]], !prof [[PROF0]]
+; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[TMP1]], 0
+; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP3:%.*]], label [[TMP4:%.*]], !prof [[PROF0]]
+; CHECK:       3:
+; CHECK-NEXT:    call void @__msan_warning_with_origin_noreturn(i32 0) #[[ATTR3]]
+; CHECK-NEXT:    unreachable
 ; CHECK:       4:
-; CHECK-NEXT:    call void @__msan_warning_with_origin_noreturn(i32 0) #[[ATTR3]]
-; CHECK-NEXT:    unreachable
-; CHECK:       5:
-; CHECK-NEXT:    [[TMP6:%.*]] = bitcast <4 x i32> [[TMP2]] to i128
-; CHECK-NEXT:    [[_MSCMP1:%.*]] = icmp ne i128 [[TMP6]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP1]], label [[TMP7:%.*]], label [[TMP8:%.*]], !prof [[PROF0]]
-; CHECK:       7:
-; CHECK-NEXT:    call void @__msan_warning_with_origin_noreturn(i32 0) #[[ATTR3]]
-; CHECK-NEXT:    unreachable
-; CHECK:       8:
-; CHECK-NEXT:    [[RES:%.*]] = call <4 x float> @llvm.x86.sse41.round.ss(<4 x float> [[A0:%.*]], <4 x float> [[A1:%.*]], i32 7)
-; CHECK-NEXT:    store <4 x i32> zeroinitializer, <4 x i32>* bitcast ([100 x i64]* @__msan_retval_tls to <4 x i32>*), align 8
+; CHECK-NEXT:    [[A1B:%.*]] = load <4 x float>, <4 x float>* [[A1:%.*]], align 16
+; CHECK-NEXT:    [[TMP5:%.*]] = ptrtoint <4 x float>* [[A1]] to i64
+; CHECK-NEXT:    [[TMP6:%.*]] = xor i64 [[TMP5]], 87960930222080
+; CHECK-NEXT:    [[TMP7:%.*]] = inttoptr i64 [[TMP6]] to <4 x i32>*
+; CHECK-NEXT:    [[_MSLD:%.*]] = load <4 x i32>, <4 x i32>* [[TMP7]], align 16
+; CHECK-NEXT:    [[TMP8:%.*]] = shufflevector <4 x i32> [[TMP2]], <4 x i32> [[_MSLD]], <4 x i32> <i32 4, i32 1, i32 2, i32 3>
+; CHECK-NEXT:    [[RES:%.*]] = call <4 x float> @llvm.x86.sse41.round.ss(<4 x float> [[A0:%.*]], <4 x float> [[A1B]], i32 7)
+; CHECK-NEXT:    store <4 x i32> [[TMP8]], <4 x i32>* bitcast ([100 x i64]* @__msan_retval_tls to <4 x i32>*), align 8
 ; CHECK-NEXT:    ret <4 x float> [[RES]]
 ;
-  %res = call <4 x float> @llvm.x86.sse41.round.ss(<4 x float> %a0, <4 x float> %a1, i32 7) ; <<4 x float>> [#uses=1]
+  %a1b = load <4 x float>, <4 x float>* %a1
+  %res = call <4 x float> @llvm.x86.sse41.round.ss(<4 x float> %a0, <4 x float> %a1b, i32 7) ; <<4 x float>> [#uses=1]
   ret <4 x float> %res
 }
 declare <4 x float> @llvm.x86.sse41.round.ss(<4 x float>, <4 x float>, i32) nounwind readnone
