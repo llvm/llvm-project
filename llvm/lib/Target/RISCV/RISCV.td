@@ -430,6 +430,10 @@ foreach i = {1-31} in
 def FeatureSaveRestore : SubtargetFeature<"save-restore", "EnableSaveRestore",
                                           "true", "Enable save/restore.">;
 
+def TuneNoDefaultUnroll
+    : SubtargetFeature<"no-default-unroll", "EnableDefaultUnroll", "false",
+                       "Disable default unroll preference.">;
+
 def TuneSiFive7 : SubtargetFeature<"sifive7", "RISCVProcFamily", "SiFive7",
                                    "SiFive 7-Series processors">;
 
@@ -465,9 +469,9 @@ def : ProcessorModel<"rocket-rv32", RocketModel, []>;
 def : ProcessorModel<"rocket-rv64", RocketModel, [Feature64Bit]>;
 
 def : ProcessorModel<"sifive-7-rv32", SiFive7Model, [],
-                     [TuneSiFive7]>;
+                     [TuneSiFive7, TuneNoDefaultUnroll]>;
 def : ProcessorModel<"sifive-7-rv64", SiFive7Model, [Feature64Bit],
-                     [TuneSiFive7]>;
+                     [TuneSiFive7, TuneNoDefaultUnroll]>;
 
 def : ProcessorModel<"sifive-e20", RocketModel, [FeatureStdExtM,
                                                  FeatureStdExtC]>;
@@ -494,7 +498,7 @@ def : ProcessorModel<"sifive-e76", SiFive7Model, [FeatureStdExtM,
                                                   FeatureStdExtA,
                                                   FeatureStdExtF,
                                                   FeatureStdExtC],
-                     [TuneSiFive7]>;
+                     [TuneSiFive7, TuneNoDefaultUnroll]>;
 
 def : ProcessorModel<"sifive-s21", RocketModel, [Feature64Bit,
                                                  FeatureStdExtM,
@@ -519,7 +523,7 @@ def : ProcessorModel<"sifive-s76", SiFive7Model, [Feature64Bit,
                                                   FeatureStdExtF,
                                                   FeatureStdExtD,
                                                   FeatureStdExtC],
-                     [TuneSiFive7]>;
+                     [TuneSiFive7, TuneNoDefaultUnroll]>;
 
 def : ProcessorModel<"sifive-u54", RocketModel, [Feature64Bit,
                                                  FeatureStdExtM,
@@ -534,7 +538,7 @@ def : ProcessorModel<"sifive-u74", SiFive7Model, [Feature64Bit,
                                                   FeatureStdExtF,
                                                   FeatureStdExtD,
                                                   FeatureStdExtC],
-                     [TuneSiFive7]>;
+                     [TuneSiFive7, TuneNoDefaultUnroll]>;
 
 //===----------------------------------------------------------------------===//
 // Define the RISC-V target.
