@@ -36,8 +36,9 @@ class PExpectTest(TestBase):
         if not use_colors:
             args += '--no-use-colors'
         for cmd in self.setUpCommands():
-            if use_colors and "use-color false" not in cmd:
-                args += ['-O', cmd]
+            if "use-color false" in cmd and use_colors:
+                continue
+            args += ['-O', cmd]
         if executable is not None:
             args += ['--file', executable]
         if extra_args is not None:
@@ -58,9 +59,10 @@ class PExpectTest(TestBase):
             post_spawn()
         self.expect_prompt()
         for cmd in self.setUpCommands():
-            if use_colors and "use-color false" not in cmd:
-                self.child.expect_exact(cmd)
-                self.expect_prompt()
+            if "use-color false" in cmd and use_colors:
+                continue
+            self.child.expect_exact(cmd)
+            self.expect_prompt()
         if executable is not None:
             self.child.expect_exact("target create")
             self.child.expect_exact("Current executable set to")
