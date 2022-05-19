@@ -478,3 +478,38 @@ exit:
   store i32 %sum.lcssa, i32* %gep.dst.1, align 4
   ret void
 }
+
+; Test for PR55540.
+define void @test_drop_poison_generating_dead_recipe(i64* %dst) {
+; CHECK-LABEL: @test_drop_poison_generating_dead_recipe(
+; CHECK:       vector.body:
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, %vector.ph ], [ [[INDEX_NEXT:%.*]], %vector.body ]
+; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <4 x i64> [ zeroinitializer, %vector.ph ], [ [[TMP0:%.*]], %vector.body ]
+; CHECK-NEXT:    [[TMP0]] = add <4 x i64> [[VEC_PHI]], <i64 -31364, i64 -31364, i64 -31364, i64 -31364>
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 4
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i32 [[INDEX_NEXT]], 360
+; CHECK-NEXT:    br i1 [[TMP1]], label %middle.block, label %vector.body
+; CHECK:       middle.block:
+; CHECK-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vector.reduce.add.v4i64(<4 x i64> [[TMP0]])
+; CHECK-NEXT:    store i64 [[TMP2]], i64* [[DST:%.*]], align 8
+; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i32 363, 360
+; CHECK-NEXT:    br i1 [[CMP_N]], label %exit, label %scalar.ph
+; CHECK:       scalar.ph:
+;
+entry:
+  br label %body
+
+body:
+  %red = phi i64 [ 0, %entry ], [ %red.next, %body ]
+  %iv = phi i32 [ 2, %entry ], [ %iv.next, %body ]
+  %add.1 = add nuw i64 %red, -23523
+  store i64 %add.1, i64* %dst, align 8
+  %red.next = add nuw i64 %red, -31364
+  store i64 %red.next, i64* %dst, align 8
+  %iv.next = add nuw nsw i32 %iv, 1
+  %ec = icmp ugt i32 %iv, 363
+  br i1 %ec, label %exit, label %body
+
+exit:
+  ret void
+}
