@@ -3016,33 +3016,31 @@ Instruction *InstCombinerImpl::foldICmpBitCast(ICmpInst &Cmp) {
 /// where X is some kind of instruction.
 Instruction *InstCombinerImpl::foldICmpInstWithConstant(ICmpInst &Cmp) {
   const APInt *C;
-  if (!match(Cmp.getOperand(1), m_APInt(C)))
-    return nullptr;
 
-  if (auto *BO = dyn_cast<BinaryOperator>(Cmp.getOperand(0))) {
-    if (Instruction *I = foldICmpBinOpWithConstant(Cmp, BO, *C))
-      return I;
-  }
+  if (match(Cmp.getOperand(1), m_APInt(C))) {
+    if (auto *BO = dyn_cast<BinaryOperator>(Cmp.getOperand(0)))
+      if (Instruction *I = foldICmpBinOpWithConstant(Cmp, BO, *C))
+        return I;
 
-  // Match against CmpInst LHS being instructions other than binary operators.
+    if (auto *SI = dyn_cast<SelectInst>(Cmp.getOperand(0)))
+      // For now, we only support constant integers while folding the
+      // ICMP(SELECT)) pattern. We can extend this to support vector of integers
+      // similar to the cases handled by binary ops above.
+      if (auto *ConstRHS = dyn_cast<ConstantInt>(Cmp.getOperand(1)))
+        if (Instruction *I = foldICmpSelectConstant(Cmp, SI, ConstRHS))
+          return I;
 
-  if (auto *SI = dyn_cast<SelectInst>(Cmp.getOperand(0))) {
-    // For now, we only support constant integers while folding the
-    // ICMP(SELECT)) pattern. We can extend this to support vector of integers
-    // similar to the cases handled by binary ops above.
-    if (ConstantInt *ConstRHS = dyn_cast<ConstantInt>(Cmp.getOperand(1)))
-      if (Instruction *I = foldICmpSelectConstant(Cmp, SI, ConstRHS))
+    if (auto *TI = dyn_cast<TruncInst>(Cmp.getOperand(0)))
+      if (Instruction *I = foldICmpTruncConstant(Cmp, TI, *C))
+        return I;
+
+    if (auto *II = dyn_cast<IntrinsicInst>(Cmp.getOperand(0)))
+      if (Instruction *I = foldICmpIntrinsicWithConstant(Cmp, II, *C))
         return I;
   }
 
-  if (auto *TI = dyn_cast<TruncInst>(Cmp.getOperand(0))) {
-    if (Instruction *I = foldICmpTruncConstant(Cmp, TI, *C))
-      return I;
-  }
-
-  if (auto *II = dyn_cast<IntrinsicInst>(Cmp.getOperand(0)))
-    if (Instruction *I = foldICmpIntrinsicWithConstant(Cmp, II, *C))
-      return I;
+  if (match(Cmp.getOperand(1), m_APIntAllowUndef(C)))
+    return foldICmpInstWithConstantAllowUndef(Cmp, *C);
 
   return nullptr;
 }
@@ -3199,12 +3197,6 @@ Instruction *InstCombinerImpl::foldICmpEqIntrinsicWithConstant(
   case Intrinsic::fshl:
   case Intrinsic::fshr:
     if (II->getArgOperand(0) == II->getArgOperand(1)) {
-      // (rot X, ?) == 0/-1 --> X == 0/-1
-      // TODO: This transform is safe to re-use undef elts in a vector, but
-      //       the constant value passed in by the caller doesn't allow that.
-      if (C.isZero() || C.isAllOnes())
-        return new ICmpInst(Pred, II->getArgOperand(0), Cmp.getOperand(1));
-
       const APInt *RotAmtC;
       // ror(X, RotAmtC) == C --> X == rol(C, RotAmtC)
       // rol(X, RotAmtC) == C --> X == ror(C, RotAmtC)
@@ -3272,6 +3264,31 @@ static Instruction *foldICmpIntrinsicWithIntrinsic(ICmpInst &Cmp) {
     return new ICmpInst(Pred, IIOp0->getOperand(0), IIOp1->getOperand(0));
   default:
     break;
+  }
+
+  return nullptr;
+}
+
+/// Try to fold integer comparisons with a constant operand: icmp Pred X, C
+/// where X is some kind of instruction and C is AllowUndef.
+/// TODO: Move more folds which allow undef to this function.
+Instruction *
+InstCombinerImpl::foldICmpInstWithConstantAllowUndef(ICmpInst &Cmp,
+                                                     const APInt &C) {
+  const ICmpInst::Predicate Pred = Cmp.getPredicate();
+  if (auto *II = dyn_cast<IntrinsicInst>(Cmp.getOperand(0))) {
+    switch (II->getIntrinsicID()) {
+    default:
+      break;
+    case Intrinsic::fshl:
+    case Intrinsic::fshr:
+      if (Cmp.isEquality() && II->getArgOperand(0) == II->getArgOperand(1)) {
+        // (rot X, ?) == 0/-1 --> X == 0/-1
+        if (C.isZero() || C.isAllOnes())
+          return new ICmpInst(Pred, II->getArgOperand(0), Cmp.getOperand(1));
+      }
+      break;
+    }
   }
 
   return nullptr;
