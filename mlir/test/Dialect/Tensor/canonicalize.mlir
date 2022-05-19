@@ -1401,3 +1401,27 @@ func.func @insert_slice_cast(%arg0 : tensor<1x?xf32>, %arg1 : tensor<?x?xf32>, %
   // CHECK: return %[[RES]] : tensor<?x?xf32>
   return %1 : tensor<?x?xf32>
 }
+
+// -----
+
+// CHECK-LABEL: func @cast_extract_slice
+func.func @cast_extract_slice(%arg0 : tensor<128x512xf32>, %s : index, %o : index)
+    -> tensor<16x512xf32> {
+// CHECK: %[[E:.*]] = tensor.extract_slice %{{.*}}[%{{.*}}, 0] [16, 512] [1, 1] : tensor<128x512xf32> to tensor<16x512xf32>
+  %0 = tensor.extract_slice %arg0[%o, 0] [%s, 512] [1, 1] : tensor<128x512xf32> to tensor<?x512xf32>
+  %1 = tensor.cast %0 : tensor<?x512xf32> to tensor<16x512xf32>
+// CHECK: return %[[E]] : tensor<16x512xf32>
+  return %1 : tensor<16x512xf32>
+}
+
+// -----
+
+// CHECK-LABEL: func @cast_extract_slice_rank_reduce
+func.func @cast_extract_slice_rank_reduce(%arg0 : tensor<128x512xf32>, %s : index, %o : index)
+    -> tensor<16xf32> {
+// CHECK: %[[E:.*]]  = tensor.extract_slice %{{.*}}[%{{.*}}, 0] [16, 1] [1, 1] : tensor<128x512xf32> to tensor<16xf32>
+  %0 = tensor.extract_slice %arg0[%o, 0] [%s, 1] [1, 1] : tensor<128x512xf32> to tensor<?xf32>
+  %1 = tensor.cast %0 : tensor<?xf32> to tensor<16xf32>
+// CHECK: return %[[E]] : tensor<16xf32>
+  return %1 : tensor<16xf32>
+}
