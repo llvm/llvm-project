@@ -22,6 +22,10 @@
 
 #include "lldb/Host/PosixApi.h"
 
+#if defined(__APPLE__)
+#include <Availability.h>
+#endif
+
 #if defined(__ANDROID__)
 int posix_openpt(int flags);
 #endif
@@ -99,21 +103,33 @@ llvm::Error PseudoTerminal::OpenSecondary(int oflag) {
       std::error_code(errno, std::generic_category()));
 }
 
+static std::string use_ptsname(int fd) {
+  static std::mutex mutex;
+  std::lock_guard<std::mutex> guard(mutex);
+  const char *r = ptsname(fd);
+  assert(r != nullptr);
+  return r;
+}
+
 std::string PseudoTerminal::GetSecondaryName() const {
   assert(m_primary_fd >= 0);
 #if HAVE_PTSNAME_R
-  char buf[PATH_MAX];
-  buf[0] = '\0';
-  int r = ptsname_r(m_primary_fd, buf, sizeof(buf));
-  (void)r;
-  assert(r == 0);
-  return buf;
+#if defined(__APPLE__)
+  if (__builtin_available(macos 10.13.4, iOS 11.3, tvOS 11.3, watchOS 4.4, *)) {
+#endif
+    char buf[PATH_MAX];
+    buf[0] = '\0';
+    int r = ptsname_r(m_primary_fd, buf, sizeof(buf));
+    (void)r;
+    assert(r == 0);
+    return buf;
+#if defined(__APPLE__)
+  } else {
+    return use_ptsname(m_primary_fd);
+  }
+#endif
 #else
-  static std::mutex mutex;
-  std::lock_guard<std::mutex> guard(mutex);
-  const char *r = ptsname(m_primary_fd);
-  assert(r != nullptr);
-  return r;
+  return use_ptsname(m_primary_fd);
 #endif
 }
 
