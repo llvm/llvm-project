@@ -460,12 +460,12 @@ static bool unswitchTrivialBranch(Loop &L, BranchInst &BI, DominatorTree &DT,
   // some input conditions to the branch.
   bool FullUnswitch = false;
 
-  if (L.isLoopInvariant(BI.getCondition())) {
-    Invariants.push_back(BI.getCondition());
+  Value *Cond = skipTrivialSelect(BI.getCondition());
+  if (L.isLoopInvariant(Cond)) {
+    Invariants.push_back(Cond);
     FullUnswitch = true;
   } else {
-    if (auto *CondInst =
-            dyn_cast<Instruction>(skipTrivialSelect(BI.getCondition())))
+    if (auto *CondInst = dyn_cast<Instruction>(Cond))
       Invariants = collectHomogenousInstGraphLoopInvariants(L, *CondInst, LI);
     if (Invariants.empty()) {
       LLVM_DEBUG(dbgs() << "   Couldn't find invariant inputs!\n");
@@ -499,7 +499,6 @@ static bool unswitchTrivialBranch(Loop &L, BranchInst &BI, DominatorTree &DT,
   // is a graph of `or` operations, or the exit block is along the false edge
   // and the condition is a graph of `and` operations.
   if (!FullUnswitch) {
-    Value *Cond = skipTrivialSelect(BI.getCondition());
     if (ExitDirection ? !match(Cond, m_LogicalOr())
                       : !match(Cond, m_LogicalAnd())) {
       LLVM_DEBUG(dbgs() << "   Branch condition is in improper form for "
@@ -566,6 +565,7 @@ static bool unswitchTrivialBranch(Loop &L, BranchInst &BI, DominatorTree &DT,
     // its successors.
     OldPH->getInstList().splice(OldPH->end(), BI.getParent()->getInstList(),
                                 BI);
+    BI.setCondition(Cond);
     if (MSSAU) {
       // Temporarily clone the terminator, to make MSSA update cheaper by
       // separating "insert edge" updates from "remove edge" ones.
@@ -1040,7 +1040,8 @@ static bool unswitchAllTrivialConditions(Loop &L, DominatorTree &DT,
     // Don't bother trying to unswitch past an unconditional branch or a branch
     // with a constant value. These should be removed by simplifycfg prior to
     // running this pass.
-    if (!BI->isConditional() || isa<Constant>(BI->getCondition()))
+    if (!BI->isConditional() ||
+        isa<Constant>(skipTrivialSelect(BI->getCondition())))
       return Changed;
 
     // Found a trivial condition candidate: non-foldable conditional branch. If

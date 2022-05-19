@@ -248,3 +248,29 @@ do_something:
 loop_exit:
   ret i32 0
 }
+
+; Test case for PR55526.
+define void @test_pr55526(i16 %a) {
+; CHECK-LABEL: @test_pr55526(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TOBOOL:%.*]] = icmp ne i16 [[A:%.*]], 0
+; CHECK-NEXT:    br i1 [[TOBOOL]], label [[ENTRY_SPLIT:%.*]], label [[EXIT:%.*]]
+; CHECK:       entry.split:
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 true, i1 true, i1 false
+; CHECK-NEXT:    br label [[LOOP]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret void
+;
+entry:
+  %tobool = icmp ne i16 %a, 0
+  br label %loop
+
+loop:
+  %sel = select i1 %tobool, i1 true, i1 false
+  br i1 %sel, label %loop, label %exit
+
+exit:
+  ret void
+}
