@@ -1249,8 +1249,15 @@ bool StackColoring::runOnMachineFunction(MachineFunction &Func) {
 
   // Do not bother looking at empty intervals.
   for (unsigned I = 0; I < NumSlots; ++I) {
-    if (Intervals[SortedSlots[I]]->empty())
+    int Slot = SortedSlots[I];
+    if (Intervals[Slot]->empty()) {
+      if (InterestingSlots.test(Slot) && !ConservativeSlots.test(Slot)) {
+        RemovedSlots += 1;
+        ReducedSize += MFI->getObjectSize(Slot);
+        MFI->RemoveStackObject(Slot);
+      }
       SortedSlots[I] = -1;
+    }
   }
 
   // This is a simple greedy algorithm for merging allocas. First, sort the
