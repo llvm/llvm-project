@@ -63,7 +63,6 @@ getMachOObjectFileSymbolInfo(ExecutionSession &ES,
     auto Name = Sym.getName();
     if (!Name)
       return Name.takeError();
-    auto InternedName = ES.intern(*Name);
     auto SymFlags = JITSymbolFlags::fromObjectSymbol(Sym);
     if (!SymFlags)
       return SymFlags.takeError();
@@ -72,7 +71,7 @@ getMachOObjectFileSymbolInfo(ExecutionSession &ES,
     if (Name->startswith("l"))
       *SymFlags &= ~JITSymbolFlags::Exported;
 
-    I.SymbolFlags[InternedName] = std::move(*SymFlags);
+    I.SymbolFlags[ES.intern(*Name)] = std::move(*SymFlags);
   }
 
   for (auto &Sec : Obj.sections()) {
@@ -121,7 +120,7 @@ getELFObjectFileSymbolInfo(ExecutionSession &ES,
     auto Name = Sym.getName();
     if (!Name)
       return Name.takeError();
-    auto InternedName = ES.intern(*Name);
+
     auto SymFlags = JITSymbolFlags::fromObjectSymbol(Sym);
     if (!SymFlags)
       return SymFlags.takeError();
@@ -130,7 +129,7 @@ getELFObjectFileSymbolInfo(ExecutionSession &ES,
     if (Sym.getBinding() == ELF::STB_GNU_UNIQUE)
       *SymFlags |= JITSymbolFlags::Weak;
 
-    I.SymbolFlags[InternedName] = std::move(*SymFlags);
+    I.SymbolFlags[ES.intern(*Name)] = std::move(*SymFlags);
   }
 
   SymbolStringPtr InitSymbol;
@@ -175,12 +174,12 @@ getGenericObjectFileSymbolInfo(ExecutionSession &ES,
     auto Name = Sym.getName();
     if (!Name)
       return Name.takeError();
-    auto InternedName = ES.intern(*Name);
+
     auto SymFlags = JITSymbolFlags::fromObjectSymbol(Sym);
     if (!SymFlags)
       return SymFlags.takeError();
 
-    I.SymbolFlags[InternedName] = std::move(*SymFlags);
+    I.SymbolFlags[ES.intern(*Name)] = std::move(*SymFlags);
   }
 
   return I;
