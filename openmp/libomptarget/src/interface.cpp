@@ -179,14 +179,6 @@ EXTERN void __tgt_target_data_begin_mapper(ident_t *loc, int64_t device_id,
   DP("Entering data begin region for device %" PRId64 " with %d mappings\n",
      device_id, arg_num);
 
-  void *codeptr = nullptr;
-  OMPT_IF_ENABLED(
-      codeptr = OMPT_GET_RETURN_ADDRESS(0);
-      ompt_interface.ompt_state_set(OMPT_GET_FRAME_ADDRESS(0), codeptr);
-      ompt_interface.target_data_enter_begin(device_id, codeptr);
-      ompt_interface.target_trace_record_gen(device_id, ompt_target_enter_data,
-                                             ompt_scope_begin, codeptr););
-
   if (checkDeviceAndCtors(device_id, loc)) {
     DP("Not offloading to device %" PRId64 "\n", device_id);
     return;
@@ -205,6 +197,14 @@ EXTERN void __tgt_target_data_begin_mapper(ident_t *loc, int64_t device_id,
        (arg_names) ? getNameFromMapping(arg_names[i]).c_str() : "unknown");
   }
 #endif
+
+  void *codeptr = nullptr;
+  OMPT_IF_ENABLED(
+      codeptr = OMPT_GET_RETURN_ADDRESS(0);
+      ompt_interface.ompt_state_set(OMPT_GET_FRAME_ADDRESS(0), codeptr);
+      ompt_interface.target_data_enter_begin(device_id, codeptr);
+      ompt_interface.target_trace_record_gen(device_id, ompt_target_enter_data,
+                                             ompt_scope_begin, codeptr););
 
   AsyncInfoTy AsyncInfo(Device);
   int rc = targetDataBegin(loc, Device, arg_num, args_base, args, arg_sizes,
