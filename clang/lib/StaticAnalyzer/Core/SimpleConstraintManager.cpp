@@ -91,7 +91,7 @@ ProgramStateRef SimpleConstraintManager::assumeAux(ProgramStateRef State,
   } // end switch
 }
 
-ProgramStateRef SimpleConstraintManager::assumeInclusiveRange(
+ProgramStateRef SimpleConstraintManager::assumeInclusiveRangeInternal(
     ProgramStateRef State, NonLoc Value, const llvm::APSInt &From,
     const llvm::APSInt &To, bool InRange) {
 

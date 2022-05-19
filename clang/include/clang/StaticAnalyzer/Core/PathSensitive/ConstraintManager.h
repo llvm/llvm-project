@@ -94,35 +94,18 @@ public:
   /// not perfectly precise and this may happen very rarely.)
   ProgramStatePair assumeDual(ProgramStateRef State, DefinedSVal Cond);
 
-  virtual ProgramStateRef assumeInclusiveRange(ProgramStateRef State,
-                                               NonLoc Value,
-                                               const llvm::APSInt &From,
-                                               const llvm::APSInt &To,
-                                               bool InBound) = 0;
+  ProgramStateRef assumeInclusiveRange(ProgramStateRef State, NonLoc Value,
+                                       const llvm::APSInt &From,
+                                       const llvm::APSInt &To, bool InBound);
 
-  virtual ProgramStatePair assumeInclusiveRangeDual(ProgramStateRef State,
-                                                    NonLoc Value,
-                                                    const llvm::APSInt &From,
-                                                    const llvm::APSInt &To) {
-    ProgramStateRef StInRange =
-        assumeInclusiveRange(State, Value, From, To, true);
-
-    // If StTrue is infeasible, asserting the falseness of Cond is unnecessary
-    // because the existing constraints already establish this.
-    if (!StInRange)
-      return ProgramStatePair((ProgramStateRef)nullptr, State);
-
-    ProgramStateRef StOutOfRange =
-        assumeInclusiveRange(State, Value, From, To, false);
-    if (!StOutOfRange) {
-      // We are careful to return the original state, /not/ StTrue,
-      // because we want to avoid having callers generate a new node
-      // in the ExplodedGraph.
-      return ProgramStatePair(State, (ProgramStateRef)nullptr);
-    }
-
-    return ProgramStatePair(StInRange, StOutOfRange);
-  }
+  /// Returns a pair of states (StInRange, StOutOfRange) where the given value
+  /// is assumed to be in the range or out of the range, respectively.
+  /// (Note that these two states might be equal if the parent state turns out
+  /// to be infeasible. This may happen if the underlying constraint solver is
+  /// not perfectly precise and this may happen very rarely.)
+  ProgramStatePair assumeInclusiveRangeDual(ProgramStateRef State, NonLoc Value,
+                                            const llvm::APSInt &From,
+                                            const llvm::APSInt &To);
 
   /// If a symbol is perfectly constrained to a constant, attempt
   /// to return the concrete value.
@@ -162,6 +145,12 @@ protected:
 
   virtual ProgramStateRef assumeInternal(ProgramStateRef state,
                                          DefinedSVal Cond, bool Assumption) = 0;
+
+  virtual ProgramStateRef assumeInclusiveRangeInternal(ProgramStateRef State,
+                                                       NonLoc Value,
+                                                       const llvm::APSInt &From,
+                                                       const llvm::APSInt &To,
+                                                       bool InBound) = 0;
 
   /// canReasonAbout - Not all ConstraintManagers can accurately reason about
   ///  all SVal values.  This method returns true if the ConstraintManager can
