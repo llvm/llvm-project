@@ -73,8 +73,10 @@ class MxBiArOp_R_RR_xEA<string MN, SDNode NODE, MxType DST_TYPE, MxType SRC_TYPE
   let Inst = (descend
     CMD, (operand "$dst", 3),
     !cast<MxOpModeEncoding>("MxOpMode"#DST_TYPE.Size#"_"#DST_TYPE.RLet#"_EA").Value,
-    (descend /*MODE without last bit*/0b00,
-             /*REGISTER prefixed with D/A bit*/(operand "$opd", 4))
+    !cond(
+      !eq(SRC_TYPE.RLet, "r") : (descend 0b00, (operand "$opd", 4)),
+      !eq(SRC_TYPE.RLet, "d") : (descend 0b000, (operand "$opd", 3))
+    )
   );
 }
 
