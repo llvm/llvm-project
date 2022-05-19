@@ -5,9 +5,9 @@
 correctly_typed:
   .functype correctly_typed () -> (i32)
   i32.const 1
-	end_function
+  end_function
 
 incorrectly_typed:
   .functype incorrectly_typed () -> (i32)
   nop
-	end_function
+  end_function
