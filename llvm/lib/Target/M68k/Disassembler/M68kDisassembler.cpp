@@ -127,6 +127,10 @@ DecodeStatus M68kDisassembler::getInstruction(MCInst &Instr, uint64_t &Size,
     }
   };
   APInt Insn(16, support::endian::read16be(Bytes.data()));
+  // 2 bytes of data are consumed, so set Size to 2
+  // If we don't do this, disassembler may generate result even
+  // the encoding is invalid. We need to let it fail correctly.
+  Size = 2;
   Result = decodeInstruction(DecoderTable80, Instr, Insn, Address, this, STI,
                              MakeUp);
   if (Result == DecodeStatus::Success)
