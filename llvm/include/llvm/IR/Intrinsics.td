@@ -1950,8 +1950,14 @@ def int_preserve_struct_access_index : DefaultAttrsIntrinsic<[llvm_anyptr_ty],
 //===------------ Intrinsics to perform common vector shuffles ------------===//
 
 def int_experimental_vector_reverse : DefaultAttrsIntrinsic<[llvm_anyvector_ty],
-                                   [LLVMMatchType<0>],
-                                   [IntrNoMem]>;
+                                                            [LLVMMatchType<0>],
+                                                            [IntrNoMem]>;
+
+def int_experimental_vector_splice : DefaultAttrsIntrinsic<[llvm_anyvector_ty],
+                                                           [LLVMMatchType<0>,
+                                                            LLVMMatchType<0>,
+                                                            llvm_i32_ty],
+                                                           [IntrNoMem, ImmArg<ArgIndex<2>>]>;
 
 //===---------- Intrinsics to query properties of scalable vectors --------===//
 def int_vscale : DefaultAttrsIntrinsic<[llvm_anyint_ty], [], [IntrNoMem]>;
@@ -1964,14 +1970,6 @@ def int_experimental_vector_insert : DefaultAttrsIntrinsic<[llvm_anyvector_ty],
 def int_experimental_vector_extract : DefaultAttrsIntrinsic<[llvm_anyvector_ty],
                                                             [llvm_anyvector_ty, llvm_i64_ty],
                                                             [IntrNoMem, ImmArg<ArgIndex<1>>]>;
-
-//===---------- Named shufflevector intrinsics ------===//
-def int_experimental_vector_splice : DefaultAttrsIntrinsic<[llvm_anyvector_ty],
-                                                           [LLVMMatchType<0>,
-                                                            LLVMMatchType<0>,
-                                                            llvm_i32_ty],
-                                                           [IntrNoMem, ImmArg<ArgIndex<2>>]>;
-
 
 //===----------------- Pointer Authentication Intrinsics ------------------===//
 //
