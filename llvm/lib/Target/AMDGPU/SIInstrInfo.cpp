@@ -4366,16 +4366,11 @@ bool SIInstrInfo::verifyInstruction(const MachineInstr &MI,
   if (isSOP2(MI) || isSOPC(MI)) {
     const MachineOperand &Src0 = MI.getOperand(Src0Idx);
     const MachineOperand &Src1 = MI.getOperand(Src1Idx);
-    unsigned Immediates = 0;
 
-    if (!Src0.isReg() &&
-        !isInlineConstant(Src0, Desc.OpInfo[Src0Idx].OperandType))
-      Immediates++;
-    if (!Src1.isReg() &&
-        !isInlineConstant(Src1, Desc.OpInfo[Src1Idx].OperandType))
-      Immediates++;
-
-    if (Immediates > 1) {
+    if (!Src0.isReg() && !Src1.isReg() &&
+        !isInlineConstant(Src0, Desc.OpInfo[Src0Idx].OperandType) &&
+        !isInlineConstant(Src1, Desc.OpInfo[Src1Idx].OperandType) &&
+        !Src0.isIdenticalTo(Src1)) {
       ErrInfo = "SOP2/SOPC instruction requires too many immediate constants";
       return false;
     }
