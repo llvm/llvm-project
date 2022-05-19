@@ -49,11 +49,7 @@ test()
     static_assert((std::is_same<typename R::difference_type, typename T::difference_type>::value), "");
     static_assert((std::is_same<typename R::pointer, It>::value), "");
     static_assert((std::is_same<typename R::value_type, typename T::value_type>::value), "");
-#if TEST_STD_VER >= 11
     static_assert((std::is_same<typename R::reference, typename R::value_type&&>::value), "");
-#else
-    static_assert((std::is_same<typename R::reference, typename T::reference>::value), "");
-#endif
 #if TEST_STD_VER > 17
     if constexpr (std::is_same_v<typename T::iterator_category, std::contiguous_iterator_tag>) {
         static_assert((std::is_same<typename R::iterator_category, std::random_access_iterator_tag>::value), "");

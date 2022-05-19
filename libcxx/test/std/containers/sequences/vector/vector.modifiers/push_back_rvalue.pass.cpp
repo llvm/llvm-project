@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-// UNSUPPORTED: c++03
+// UNSUPPORTED: c++03 && !stdlib=libc++
 
 // <vector>
 
@@ -83,7 +83,7 @@ int main(int, char**)
             assert(c[j] == MoveOnly(j));
     }
     {
-        std::vector<MoveOnly, min_allocator<MoveOnly>> c;
+        std::vector<MoveOnly, min_allocator<MoveOnly> > c;
         c.push_back(MoveOnly(0));
         assert(c.size() == 1);
         assert(is_contiguous_container_asan_correct(c));

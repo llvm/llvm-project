@@ -79,17 +79,12 @@ public:
     typedef typename iterator_traits<iterator_type>::difference_type difference_type;
     typedef iterator_type pointer;
 
-#ifndef _LIBCPP_CXX03_LANG
     typedef typename iterator_traits<iterator_type>::reference __reference;
     typedef typename conditional<
             is_reference<__reference>::value,
             typename remove_reference<__reference>::type&&,
             __reference
         >::type reference;
-#else
-    typedef typename iterator_traits<iterator_type>::reference reference;
-#endif
-
 #endif // _LIBCPP_STD_VER > 17
 
 #if _LIBCPP_STD_VER > 17

@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-// UNSUPPORTED: c++03
+// UNSUPPORTED: c++03 && !stdlib=libc++
 
 // <vector>
 
@@ -40,7 +40,7 @@ int main(int, char**) {
     x.emplace_back();
   }
   {
-    std::vector<BadUserNoCookie<2>> x;
+    std::vector<BadUserNoCookie<2> > x;
     BadUserNoCookie<2> c;
     x.push_back(c);
   }

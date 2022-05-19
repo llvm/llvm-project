@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-// UNSUPPORTED: c++03
+// UNSUPPORTED: c++03 && !stdlib=libc++
 
 // <vector>
 
@@ -26,9 +26,10 @@ class A
     int i_;
     double d_;
 
-    A(const A&);
-    A& operator=(const A&);
 public:
+    A(const A&) = delete;
+    A& operator=(const A&) = delete;
+
     A(int i, double d)
         : i_(i), d_(d) {}
 
@@ -110,7 +111,7 @@ int main(int, char**)
         assert(is_contiguous_container_asan_correct(c));
     }
     {
-        std::vector<A, min_allocator<A>> c;
+        std::vector<A, min_allocator<A> > c;
 #if TEST_STD_VER > 14
         A& r1 = c.emplace_back(2, 3.5);
         assert(c.size() == 1);
@@ -137,7 +138,7 @@ int main(int, char**)
         assert(is_contiguous_container_asan_correct(c));
     }
     {
-        std::vector<Tag_X, TaggingAllocator<Tag_X>> c;
+        std::vector<Tag_X, TaggingAllocator<Tag_X> > c;
         c.emplace_back();
         assert(c.size() == 1);
         c.emplace_back(1, 2, 3);
