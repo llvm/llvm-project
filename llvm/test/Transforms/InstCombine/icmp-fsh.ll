@@ -57,8 +57,7 @@ define <2 x i1> @rotl_ne_n1(<2 x i5> %x, <2 x i5> %y) {
 
 define <2 x i1> @rotl_ne_n1_undef(<2 x i5> %x, <2 x i5> %y) {
 ; CHECK-LABEL: @rotl_ne_n1_undef(
-; CHECK-NEXT:    [[ROT:%.*]] = tail call <2 x i5> @llvm.fshl.v2i5(<2 x i5> [[X:%.*]], <2 x i5> [[X]], <2 x i5> [[Y:%.*]])
-; CHECK-NEXT:    [[R:%.*]] = icmp ne <2 x i5> [[ROT]], <i5 -1, i5 undef>
+; CHECK-NEXT:    [[R:%.*]] = icmp ne <2 x i5> [[X:%.*]], <i5 -1, i5 undef>
 ; CHECK-NEXT:    ret <2 x i1> [[R]]
 ;
   %rot = tail call <2 x i5> @llvm.fshl.v2i5(<2 x i5>%x, <2 x i5> %x, <2 x i5> %y)
@@ -68,8 +67,7 @@ define <2 x i1> @rotl_ne_n1_undef(<2 x i5> %x, <2 x i5> %y) {
 
 define <2 x i1> @rotl_eq_0_undef(<2 x i5> %x, <2 x i5> %y) {
 ; CHECK-LABEL: @rotl_eq_0_undef(
-; CHECK-NEXT:    [[ROT:%.*]] = tail call <2 x i5> @llvm.fshl.v2i5(<2 x i5> [[X:%.*]], <2 x i5> [[X]], <2 x i5> [[Y:%.*]])
-; CHECK-NEXT:    [[R:%.*]] = icmp eq <2 x i5> [[ROT]], <i5 0, i5 undef>
+; CHECK-NEXT:    [[R:%.*]] = icmp eq <2 x i5> [[X:%.*]], <i5 0, i5 undef>
 ; CHECK-NEXT:    ret <2 x i1> [[R]]
 ;
   %rot = tail call <2 x i5> @llvm.fshl.v2i5(<2 x i5>%x, <2 x i5> %x, <2 x i5> %y)
