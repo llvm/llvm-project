@@ -260,6 +260,11 @@ static cl::opt<bool> DisableExpandReductions(
     "disable-expand-reductions", cl::init(false), cl::Hidden,
     cl::desc("Disable the expand reduction intrinsics pass from running"));
 
+/// Disable the select optimization pass.
+static cl::opt<bool> DisableSelectOptimize(
+    "disable-select-optimize", cl::init(true), cl::Hidden,
+    cl::desc("Disable the select-optimization pass from running"));
+
 /// Allow standard passes to be disabled by command line options. This supports
 /// simple binary flags that either suppress the pass or do nothing.
 /// i.e. -disable-mypass=false has no effect.
@@ -494,6 +499,7 @@ CGPassBuilderOption llvm::getCGPassBuilderOption() {
   SET_BOOLEAN_OPTION(DisableConstantHoisting)
   SET_BOOLEAN_OPTION(DisableCGP)
   SET_BOOLEAN_OPTION(DisablePartialLibcallInlining)
+  SET_BOOLEAN_OPTION(DisableSelectOptimize)
   SET_BOOLEAN_OPTION(PrintLSR)
   SET_BOOLEAN_OPTION(PrintISelInput)
   SET_BOOLEAN_OPTION(PrintGCInfo)
@@ -935,6 +941,10 @@ void TargetPassConfig::addIRPasses() {
 
   if (getOptLevel() != CodeGenOpt::None)
     addPass(createTLSVariableHoistPass());
+
+  // Convert conditional moves to conditional jumps when profitable.
+  if (getOptLevel() != CodeGenOpt::None && !DisableSelectOptimize)
+    addPass(createSelectOptimizePass());
 }
 
 /// Turn exception handling constructs into something the code generators can

@@ -493,7 +493,8 @@ static bool shouldPinPassToLegacyPM(StringRef Pass) {
       "polyhedral-info",      "print-polyhedral-info",
       "replace-with-veclib",  "jmc-instrument",
       "dot-regions",          "dot-regions-only",
-      "view-regions",         "view-regions-only"};
+      "view-regions",         "view-regions-only",
+      "select-optimize"};
   for (const auto &P : PassNamePrefix)
     if (Pass.startswith(P))
       return true;
@@ -544,6 +545,7 @@ int main(int argc, char **argv) {
   // supported.
   initializeExpandMemCmpPassPass(Registry);
   initializeScalarizeMaskedMemIntrinLegacyPassPass(Registry);
+  initializeSelectOptimizePass(Registry);
   initializeCodeGenPreparePass(Registry);
   initializeAtomicExpandPass(Registry);
   initializeRewriteSymbolsLegacyPassPass(Registry);
