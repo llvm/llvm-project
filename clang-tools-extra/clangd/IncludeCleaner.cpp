@@ -486,7 +486,7 @@ std::vector<Diag> issueUnusedIncludesDiagnostics(ParsedAST &AST,
   for (const auto *Inc : computeUnusedIncludes(AST)) {
     Diag D;
     D.Message =
-        llvm::formatv("included header {0} is not used",
+        llvm::formatv("included header {0} is not used directly",
                       llvm::sys::path::filename(
                           Inc->Written.substr(1, Inc->Written.size() - 2),
                           llvm::sys::path::Style::posix));
