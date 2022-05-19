@@ -265,6 +265,13 @@ public:
   llvm::Error OnThreadBinaryDataRead(lldb::tid_t tid, llvm::StringRef kind,
                                      OnBinaryDataReadCallback callback);
 
+  /// Get the current traced live process.
+  ///
+  /// \return
+  ///     The current traced live process. If it's not a live process,
+  ///     return \a nullptr.
+  Process *GetLiveProcess();
+
 protected:
   /// Implementation of \a OnThreadBinaryDataRead() for live threads.
   llvm::Error OnLiveThreadBinaryDataRead(lldb::tid_t tid, llvm::StringRef kind,
@@ -365,14 +372,30 @@ protected:
   ///
   /// \param[in] state
   ///     The jLLDBTraceGetState response.
-  virtual void
-  DoRefreshLiveProcessState(llvm::Expected<TraceGetStateResponse> state) = 0;
-
-  /// Method to be invoked by the plug-in to refresh the live process state.
   ///
-  /// The result is cached through the same process stop.
-  void RefreshLiveProcessState();
+  /// \param[in] json_response
+  ///     The original JSON response as a string. It might be useful to redecode
+  ///     it if it contains custom data for a specific trace plug-in.
+  ///
+  /// \return
+  ///     \b Error::success() if this operation succeedes, or an actual error
+  ///     otherwise.
+  virtual llvm::Error
+  DoRefreshLiveProcessState(TraceGetStateResponse state,
+                            llvm::StringRef json_response) = 0;
 
+  /// Method to be invoked by the plug-in to refresh the live process state. It
+  /// will invoked DoRefreshLiveProcessState at some point, which should be
+  /// implemented by the plug-in for custom state handling.
+  ///
+  /// The result is cached through the same process stop. Even in the case of
+  /// errors, it caches the error.
+  ///
+  /// \return
+  ///   An error message if this operation failed, or \b nullptr otherwise.
+  const char *RefreshLiveProcessState();
+
+private:
   uint32_t m_stop_id = LLDB_INVALID_STOP_ID;
   /// Process traced by this object if doing live tracing. Otherwise it's null.
   Process *m_live_process = nullptr;
@@ -395,6 +418,8 @@ protected:
   /// tid -> data kind -> file
   llvm::DenseMap<lldb::tid_t, std::unordered_map<std::string, FileSpec>>
       m_postmortem_thread_data;
+
+  llvm::Optional<std::string> m_live_refresh_error;
 };
 
 } // namespace lldb_private

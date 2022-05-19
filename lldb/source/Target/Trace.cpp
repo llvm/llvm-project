@@ -17,6 +17,7 @@
 #include "lldb/Target/Process.h"
 #include "lldb/Target/SectionLoadList.h"
 #include "lldb/Target/Thread.h"
+#include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Stream.h"
 
 using namespace lldb;
@@ -175,28 +176,37 @@ Trace::GetLiveProcessBinaryData(llvm::StringRef kind) {
   return m_live_process->TraceGetBinaryData(request);
 }
 
-void Trace::RefreshLiveProcessState() {
+const char *Trace::RefreshLiveProcessState() {
   if (!m_live_process)
-    return;
+    return nullptr;
 
   uint32_t new_stop_id = m_live_process->GetStopID();
   if (new_stop_id == m_stop_id)
-    return;
+    return nullptr;
+
+  Log *log = GetLog(LLDBLog::Target);
+  LLDB_LOG(log, "Trace::RefreshLiveProcessState invoked");
 
   m_stop_id = new_stop_id;
   m_live_thread_data.clear();
+  m_live_refresh_error.reset();
+
+  auto HandleError = [&](Error &&err) -> const char * {
+    m_live_refresh_error = toString(std::move(err));
+    return m_live_refresh_error->c_str();
+  };
 
   Expected<std::string> json_string = GetLiveProcessState();
-  if (!json_string) {
-    DoRefreshLiveProcessState(json_string.takeError());
-    return;
-  }
+  if (!json_string)
+    return HandleError(json_string.takeError());
+
   Expected<TraceGetStateResponse> live_process_state =
       json::parse<TraceGetStateResponse>(*json_string, "TraceGetStateResponse");
-  if (!live_process_state) {
-    DoRefreshLiveProcessState(live_process_state.takeError());
-    return;
-  }
+  if (!live_process_state)
+    return HandleError(live_process_state.takeError());
+
+  for (std::string &warning : live_process_state->warnings)
+    LLDB_LOG(log, "Warning when fetching the trace state: {0}", warning);
 
   for (const TraceThreadState &thread_state :
        live_process_state->traced_threads) {
@@ -207,8 +217,14 @@ void Trace::RefreshLiveProcessState() {
   for (const TraceBinaryData &item : live_process_state->process_binary_data)
     m_live_process_data[item.kind] = item.size;
 
-  DoRefreshLiveProcessState(std::move(live_process_state));
+  if (Error err = DoRefreshLiveProcessState(std::move(*live_process_state),
+                                            *json_string))
+    return HandleError(std::move(err));
+
+  return nullptr;
 }
+
+Process *Trace::GetLiveProcess() { return m_live_process; }
 
 uint32_t Trace::GetStopID() {
   RefreshLiveProcessState();
