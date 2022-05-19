@@ -278,6 +278,80 @@ genOMP(Fortran::lower::AbstractConverter &converter,
       standaloneConstruct.u);
 }
 
+static omp::ClauseProcBindKindAttr genProcBindKindAttr(
+    fir::FirOpBuilder &firOpBuilder,
+    const Fortran::parser::OmpClause::ProcBind *procBindClause) {
+  omp::ClauseProcBindKind pbKind;
+  switch (procBindClause->v.v) {
+  case Fortran::parser::OmpProcBindClause::Type::Master:
+    pbKind = omp::ClauseProcBindKind::Master;
+    break;
+  case Fortran::parser::OmpProcBindClause::Type::Close:
+    pbKind = omp::ClauseProcBindKind::Close;
+    break;
+  case Fortran::parser::OmpProcBindClause::Type::Spread:
+    pbKind = omp::ClauseProcBindKind::Spread;
+    break;
+  case Fortran::parser::OmpProcBindClause::Type::Primary:
+    pbKind = omp::ClauseProcBindKind::Primary;
+    break;
+  }
+  return omp::ClauseProcBindKindAttr::get(firOpBuilder.getContext(), pbKind);
+}
+
+/* When parallel is used in a combined construct, then use this function to
+ * create the parallel operation. It handles the parallel specific clauses
+ * and leaves the rest for handling at the inner operations.
+ * TODO: Refactor clause handling
+ */
+template <typename Directive>
+static void
+createCombinedParallelOp(Fortran::lower::AbstractConverter &converter,
+                         Fortran::lower::pft::Evaluation &eval,
+                         const Directive &directive) {
+  fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
+  mlir::Location currentLocation = converter.getCurrentLocation();
+  Fortran::lower::StatementContext stmtCtx;
+  llvm::ArrayRef<mlir::Type> argTy;
+  mlir::Value ifClauseOperand, numThreadsClauseOperand;
+  SmallVector<Value> allocatorOperands, allocateOperands;
+  mlir::omp::ClauseProcBindKindAttr procBindKindAttr;
+  const auto &opClauseList =
+      std::get<Fortran::parser::OmpClauseList>(directive.t);
+  // TODO: Handle the following clauses
+  // 1. default
+  // 2. copyin
+  // Note: rest of the clauses are handled when the inner operation is created
+  for (const Fortran::parser::OmpClause &clause : opClauseList.v) {
+    if (const auto &ifClause =
+            std::get_if<Fortran::parser::OmpClause::If>(&clause.u)) {
+      auto &expr = std::get<Fortran::parser::ScalarLogicalExpr>(ifClause->v.t);
+      mlir::Value ifVal = fir::getBase(
+          converter.genExprValue(*Fortran::semantics::GetExpr(expr), stmtCtx));
+      ifClauseOperand = firOpBuilder.createConvert(
+          currentLocation, firOpBuilder.getI1Type(), ifVal);
+    } else if (const auto &numThreadsClause =
+                   std::get_if<Fortran::parser::OmpClause::NumThreads>(
+                       &clause.u)) {
+      numThreadsClauseOperand = fir::getBase(converter.genExprValue(
+          *Fortran::semantics::GetExpr(numThreadsClause->v), stmtCtx));
+    } else if (const auto &procBindClause =
+                   std::get_if<Fortran::parser::OmpClause::ProcBind>(
+                       &clause.u)) {
+      procBindKindAttr = genProcBindKindAttr(firOpBuilder, procBindClause);
+    }
+  }
+  // Create and insert the operation.
+  auto parallelOp = firOpBuilder.create<mlir::omp::ParallelOp>(
+      currentLocation, argTy, ifClauseOperand, numThreadsClauseOperand,
+      allocateOperands, allocatorOperands, /*reduction_vars=*/ValueRange(),
+      /*reductions=*/nullptr, procBindKindAttr);
+
+  createBodyOfOp<omp::ParallelOp>(parallelOp, converter, currentLocation,
+                                  &opClauseList, /*iv=*/{},
+                                  /*isCombined=*/true);
+}
+
 static void
 genOMP(Fortran::lower::AbstractConverter &converter,
        Fortran::lower::pft::Evaluation &eval,
@@ -318,23 +392,7 @@ genOMP(Fortran::lower::AbstractConverter &converter,
     } else if (const auto &procBindClause =
                    std::get_if<Fortran::parser::OmpClause::ProcBind>(
                        &clause.u)) {
-      omp::ClauseProcBindKind pbKind;
-      switch (procBindClause->v.v) {
-      case Fortran::parser::OmpProcBindClause::Type::Master:
-        pbKind = omp::ClauseProcBindKind::Master;
-        break;
-      case Fortran::parser::OmpProcBindClause::Type::Close:
-        pbKind = omp::ClauseProcBindKind::Close;
-        break;
-      case Fortran::parser::OmpProcBindClause::Type::Spread:
-        pbKind = omp::ClauseProcBindKind::Spread;
-        break;
-      case Fortran::parser::OmpProcBindClause::Type::Primary:
-        pbKind = omp::ClauseProcBindKind::Primary;
-        break;
-      }
-      procBindKindAttr =
-          omp::ClauseProcBindKindAttr::get(firOpBuilder.getContext(), pbKind);
+      procBindKindAttr = genProcBindKindAttr(firOpBuilder, procBindClause);
     } else if (const auto &allocateClause =
                    std::get_if<Fortran::parser::OmpClause::Allocate>(
                        &clause.u)) {
@@ -419,11 +477,17 @@ static void genOMP(Fortran::lower::AbstractConverter &converter,
       noWaitClauseOperand, orderedClauseOperand, orderClauseOperand;
   const auto &wsLoopOpClauseList = std::get<Fortran::parser::OmpClauseList>(
       std::get<Fortran::parser::OmpBeginLoopDirective>(loopConstruct.t).t);
-  if (llvm::omp::OMPD_do !=
+
+  const auto ompDirective =
       std::get<Fortran::parser::OmpLoopDirective>(
           std::get<Fortran::parser::OmpBeginLoopDirective>(loopConstruct.t).t)
-          .v) {
-    TODO(converter.getCurrentLocation(), "Combined worksharing loop construct");
+          .v;
+  if (llvm::omp::OMPD_parallel_do == ompDirective) {
+    createCombinedParallelOp<Fortran::parser::OmpBeginLoopDirective>(
+        converter, eval,
+        std::get<Fortran::parser::OmpBeginLoopDirective>(loopConstruct.t));
+  } else if (llvm::omp::OMPD_do != ompDirective) {
+    TODO(converter.getCurrentLocation(), "Construct enclosing do loop");
   }
 
   int64_t collapseValue = Fortran::lower::getCollapseValue(wsLoopOpClauseList);
@@ -648,15 +712,14 @@ genOMP(Fortran::lower::AbstractConverter &converter,
 
   // Parallel Sections Construct
   if (dir == llvm::omp::Directive::OMPD_parallel_sections) {
-    auto parallelOp = firOpBuilder.create<mlir::omp::ParallelOp>(
-        currentLocation, /*if_expr_var*/ nullptr, /*num_threads_var*/ nullptr,
-        allocateOperands, allocatorOperands, /*reduction_vars=*/ValueRange(),
-        /*reductions=*/nullptr, /*proc_bind_val*/ nullptr);
-    createBodyOfOp(parallelOp, converter, currentLocation);
+    createCombinedParallelOp<Fortran::parser::OmpBeginSectionsDirective>(
+        converter, eval,
+        std::get<Fortran::parser::OmpBeginSectionsDirective>(
+            sectionsConstruct.t));
     auto sectionsOp = firOpBuilder.create<mlir::omp::SectionsOp>(
         currentLocation, /*reduction_vars*/ ValueRange(),
-        /*reductions=*/nullptr, /*allocate_vars*/ ValueRange(),
-        /*allocators_vars*/ ValueRange(), /*nowait=*/nullptr);
+        /*reductions=*/nullptr, allocateOperands, allocatorOperands,
+        /*nowait=*/nullptr);
     createBodyOfOp(sectionsOp, converter, currentLocation);
 
     // Sections Construct
