@@ -22,7 +22,7 @@ define void @caller() #0 {
 ; IS__TUNIT_NPM-NEXT:    ret void
 ;
 ; IS__CGSCC_NPM-LABEL: define {{[^@]+}}@caller() {
-; IS__CGSCC_NPM-NEXT:    call void @promote_i32_ptr(i32 42), !prof [[PROF0:![0-9]+]]
+; IS__CGSCC_NPM-NEXT:    call void @promote_i32_ptr(i32 noundef 42), !prof [[PROF0:![0-9]+]]
 ; IS__CGSCC_NPM-NEXT:    ret void
 ;
   %x = alloca i32

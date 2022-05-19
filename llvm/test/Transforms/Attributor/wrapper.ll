@@ -9,7 +9,7 @@
 ;
 ; Check the original function, which is wrapped and becomes anonymous
 ; CHECK: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
-; CHECK: define internal i32 @0()
+; CHECK: define internal noundef i32 @0()
 ; CHECK: ret i32 1
 define linkonce i32 @inner1() {
 entry:
