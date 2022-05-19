@@ -28,6 +28,7 @@ class MultilineCompletionTest(PExpectTest):
 
     # PExpect uses many timeouts internally and doesn't play well
     # under ASAN on a loaded machine..
+    @expectedFailureAll()
     @skipIfAsan
     @skipIfEditlineSupportMissing
     @expectedFailureAll(oslist=['freebsd'], bugnumber='llvm.org/pr49408')

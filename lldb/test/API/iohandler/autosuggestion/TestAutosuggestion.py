@@ -23,6 +23,7 @@ class TestCase(PExpectTest):
 
     # PExpect uses many timeouts internally and doesn't play well
     # under ASAN on a loaded machine..
+    @expectedFailureAll()
     @skipIfAsan
     @skipIfEditlineSupportMissing
     def test_autosuggestion_add_spaces(self):
@@ -37,6 +38,7 @@ class TestCase(PExpectTest):
 
         self.quit()
 
+    @expectedFailureAll()
     @skipIfAsan
     @skipIfEditlineSupportMissing
     def test_autosuggestion(self):
@@ -104,6 +106,7 @@ class TestCase(PExpectTest):
 
         self.quit()
 
+    @expectedFailureAll()
     @skipIfAsan
     @skipIfEditlineSupportMissing
     def test_autosuggestion_custom_ansi_prefix_suffix(self):
