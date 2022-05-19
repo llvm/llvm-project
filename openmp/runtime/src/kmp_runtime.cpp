@@ -6965,10 +6965,12 @@ static void __kmp_do_serial_initialize(void) {
   /* Initialize internal memory allocator */
   __kmp_init_allocator();
 
-  /* Register the library startup via an environment variable and check to see
-     whether another copy of the library is already registered. */
-
-  __kmp_register_library_startup();
+  /* Register the library startup via an environment variable or via mapped
+     shared memory file and check to see whether another copy of the library is
+     already registered. Since forked child process is often terminated, we
+     postpone the registration till middle initialization in the child */
+  if (__kmp_need_register_serial)
+    __kmp_register_library_startup();
 
   /* TODO reinitialization of library */
   if (TCR_4(__kmp_global.g.g_done)) {
@@ -7254,6 +7256,12 @@ static void __kmp_do_middle_initialize(void) {
   }
 
   KA_TRACE(10, ("__kmp_middle_initialize: enter\n"));
+
+  if (UNLIKELY(!__kmp_need_register_serial)) {
+    // We are in a forked child process. The registration was skipped during
+    // serial initialization in __kmp_atfork_child handler. Do it here.
+    __kmp_register_library_startup();
+  }
 
   // Save the previous value for the __kmp_dflt_team_nth so that
   // we can avoid some reinitialization if it hasn't changed.
