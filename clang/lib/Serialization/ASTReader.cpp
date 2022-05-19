@@ -1589,14 +1589,13 @@ bool ASTReader::ReadSLocEntry(int ID) {
   }
 
   case SM_SLOC_EXPANSION_ENTRY: {
-    SourceLocation SpellingLoc = ReadSourceLocation(*F, Record[1]);
-    SourceMgr.createExpansionLoc(SpellingLoc,
-                                     ReadSourceLocation(*F, Record[2]),
-                                     ReadSourceLocation(*F, Record[3]),
-                                     Record[5],
-                                     Record[4],
-                                     ID,
-                                     BaseOffset + Record[0]);
+    LocSeq::State Seq;
+    SourceLocation SpellingLoc = ReadSourceLocation(*F, Record[1], Seq);
+    SourceLocation ExpansionBegin = ReadSourceLocation(*F, Record[2], Seq);
+    SourceLocation ExpansionEnd = ReadSourceLocation(*F, Record[3], Seq);
+    SourceMgr.createExpansionLoc(SpellingLoc, ExpansionBegin, ExpansionEnd,
+                                 Record[5], Record[4], ID,
+                                 BaseOffset + Record[0]);
     break;
   }
   }
