@@ -114,31 +114,31 @@ Expected<std::string> Trace::GetLiveProcessState() {
   return m_live_process->TraceGetState(GetPluginName());
 }
 
-Optional<size_t> Trace::GetLiveThreadBinaryDataSize(lldb::tid_t tid,
-                                                    llvm::StringRef kind) {
+Optional<uint64_t> Trace::GetLiveThreadBinaryDataSize(lldb::tid_t tid,
+                                                      llvm::StringRef kind) {
   auto it = m_live_thread_data.find(tid);
   if (it == m_live_thread_data.end())
     return None;
-  std::unordered_map<std::string, size_t> &single_thread_data = it->second;
+  std::unordered_map<std::string, uint64_t> &single_thread_data = it->second;
   auto single_thread_data_it = single_thread_data.find(kind.str());
   if (single_thread_data_it == single_thread_data.end())
     return None;
   return single_thread_data_it->second;
 }
 
-Optional<size_t> Trace::GetLiveCoreBinaryDataSize(lldb::core_id_t core_id,
-                                                  llvm::StringRef kind) {
+Optional<uint64_t> Trace::GetLiveCoreBinaryDataSize(lldb::core_id_t core_id,
+                                                    llvm::StringRef kind) {
   auto it = m_live_core_data.find(core_id);
   if (it == m_live_core_data.end())
     return None;
-  std::unordered_map<std::string, size_t> &single_core_data = it->second;
+  std::unordered_map<std::string, uint64_t> &single_core_data = it->second;
   auto single_thread_data_it = single_core_data.find(kind.str());
   if (single_thread_data_it == single_core_data.end())
     return None;
   return single_thread_data_it->second;
 }
 
-Optional<size_t> Trace::GetLiveProcessBinaryDataSize(llvm::StringRef kind) {
+Optional<uint64_t> Trace::GetLiveProcessBinaryDataSize(llvm::StringRef kind) {
   auto data_it = m_live_process_data.find(kind.str());
   if (data_it == m_live_process_data.end())
     return None;
@@ -150,7 +150,7 @@ Trace::GetLiveThreadBinaryData(lldb::tid_t tid, llvm::StringRef kind) {
   if (!m_live_process)
     return createStringError(inconvertibleErrorCode(),
                              "Tracing requires a live process.");
-  llvm::Optional<size_t> size = GetLiveThreadBinaryDataSize(tid, kind);
+  llvm::Optional<uint64_t> size = GetLiveThreadBinaryDataSize(tid, kind);
   if (!size)
     return createStringError(
         inconvertibleErrorCode(),
@@ -167,7 +167,7 @@ Trace::GetLiveCoreBinaryData(lldb::core_id_t core_id, llvm::StringRef kind) {
   if (!m_live_process)
     return createStringError(inconvertibleErrorCode(),
                              "Tracing requires a live process.");
-  llvm::Optional<size_t> size = GetLiveCoreBinaryDataSize(core_id, kind);
+  llvm::Optional<uint64_t> size = GetLiveCoreBinaryDataSize(core_id, kind);
   if (!size)
     return createStringError(
         inconvertibleErrorCode(),
@@ -185,7 +185,7 @@ Trace::GetLiveProcessBinaryData(llvm::StringRef kind) {
   if (!m_live_process)
     return createStringError(inconvertibleErrorCode(),
                              "Tracing requires a live process.");
-  llvm::Optional<size_t> size = GetLiveProcessBinaryDataSize(kind);
+  llvm::Optional<uint64_t> size = GetLiveProcessBinaryDataSize(kind);
   if (!size)
     return createStringError(
         inconvertibleErrorCode(),
