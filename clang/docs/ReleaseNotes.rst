@@ -451,10 +451,11 @@ C++20 Feature Support
 - No longer attempt to evaluate a consteval UDL function call at runtime when
   it is called through a template instantiation. This fixes
   `Issue 54578 <https://github.com/llvm/llvm-project/issues/54578>`_.
-
-- Implemented ``__builtin_source_location()``, which enables library support
-  for ``std::source_location``.
-
+- Implemented `__builtin_source_location()` which enables library support for std::source_location.
+- Clang now correctly delays the instantiation of function constraints until
+  the time of checking, which should now allow the libstdc++ ranges implementation
+  to work for at least trivial examples.  This fixes
+  `Issue 44178 <https://github.com/llvm/llvm-project/issues/44178>`_.
 - The mangling scheme for C++20 modules has incompatibly changed. The
   initial mangling was discovered not to be reversible, and the weak
   ownership design decision did not give the backwards compatibility

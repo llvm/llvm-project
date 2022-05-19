@@ -303,6 +303,7 @@ public:
     // Skip templated functions.
     switch (Decl->getTemplatedKind()) {
     case FunctionDecl::TK_NonTemplate:
+    case FunctionDecl::TK_DependentNonTemplate:
       break;
     case FunctionDecl::TK_MemberSpecialization:
     case FunctionDecl::TK_FunctionTemplateSpecialization:
