@@ -120,7 +120,7 @@ DecodeStatus M68kDisassembler::getInstruction(MCInst &Instr, uint64_t &Size,
   auto MakeUp = [&](APInt &Insn, unsigned InstrBits) {
     unsigned Idx = Insn.getBitWidth() >> 3;
     unsigned RoundUp = alignTo(InstrBits, Align(16));
-    Insn = Insn.zextOrSelf(RoundUp);
+    Insn = Insn.zext(RoundUp);
     RoundUp = RoundUp >> 3;
     for (; Idx < RoundUp; Idx += 2) {
       Insn.insertBits(support::endian::read16be(&Bytes[Idx]), Idx * 8, 16);
