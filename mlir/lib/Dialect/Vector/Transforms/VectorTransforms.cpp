@@ -2398,13 +2398,12 @@ class DropInnerMostUnitDims : public OpRewritePattern<vector::TransferReadOp> {
           {}, srcType.getMemorySpaceAsInt());
     } else {
       AffineMap map = srcType.getLayout().getAffineMap();
-      int numResultDims = map.getNumDims() - dimsToDrop;
       int numSymbols = map.getNumSymbols();
       for (size_t i = 0; i < dimsToDrop; ++i) {
         int dim = srcType.getRank() - i - 1;
         map = map.replace(rewriter.getAffineDimExpr(dim),
-                          rewriter.getAffineConstantExpr(0), numResultDims,
-                          numSymbols);
+                          rewriter.getAffineConstantExpr(0),
+                          map.getNumDims() - 1, numSymbols);
       }
       resultMemrefType = MemRefType::get(
           srcType.getShape().drop_back(dimsToDrop), srcType.getElementType(),
