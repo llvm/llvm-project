@@ -224,7 +224,7 @@ set(LIBCXX_CXX_ABI "${LIBCXX_DEFAULT_ABI_LIBRARY}" CACHE STRING "Specify C++ ABI
 
 # Temporary to still accept existing CMake caches that contain "default" as the value
 if (LIBCXX_CXX_ABI STREQUAL "default")
-  set(LIBCXX_CXX_ABI "${LIBCXX_DEFAULT_ABI_LIBRARY}")
+  set(LIBCXX_CXX_ABI "${LIBCXX_DEFAULT_ABI_LIBRARY}" CACHE STRING "" FORCE)
 endif()
 
 if (NOT "${LIBCXX_CXX_ABI}" IN_LIST LIBCXX_SUPPORTED_ABI_LIBRARIES)
