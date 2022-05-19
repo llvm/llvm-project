@@ -611,8 +611,6 @@ ModuleSP DynamicLoaderDarwin::GetDYLDModule() {
   return dyld_sp;
 }
 
-void DynamicLoaderDarwin::ClearDYLDModule() { m_dyld_module_wp.reset(); }
-
 bool DynamicLoaderDarwin::AddModulesUsingImageInfos(
     ImageInfo::collection &image_infos) {
   std::lock_guard<std::recursive_mutex> guard(m_mutex);

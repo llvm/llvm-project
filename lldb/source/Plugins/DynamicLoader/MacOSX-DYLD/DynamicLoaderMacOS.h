@@ -71,10 +71,6 @@ protected:
 
   bool DidSetNotificationBreakpoint() override;
 
-  bool SetDYLDHandoverBreakpoint(lldb::addr_t notification_address);
-
-  void ClearDYLDHandoverBreakpoint();
-
   void AddBinaries(const std::vector<lldb::addr_t> &load_addresses);
 
   void DoClear() override;
@@ -98,7 +94,6 @@ protected:
   uint32_t m_image_infos_stop_id; // The Stop ID the last time we
                                   // loaded/unloaded images
   lldb::user_id_t m_break_id;
-  lldb::user_id_t m_dyld_handover_break_id;
   mutable std::recursive_mutex m_mutex;
   lldb::addr_t m_maybe_image_infos_address; // If dyld is still maintaining the
                                             // all_image_infos address, store it
