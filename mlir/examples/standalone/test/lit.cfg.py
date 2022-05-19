@@ -30,7 +30,6 @@ config.test_source_root = os.path.dirname(__file__)
 config.test_exec_root = os.path.join(config.standalone_obj_root, 'test')
 
 config.substitutions.append(('%PATH%', config.environment['PATH']))
-config.substitutions.append(('%shlibext', config.llvm_shlib_ext))
 
 llvm_config.with_system_environment(
     ['HOME', 'INCLUDE', 'LIB', 'TMP', 'TEMP'])
@@ -54,11 +53,10 @@ tools = [
     'standalone-capi-test',
     'standalone-opt',
     'standalone-translate',
-    ToolSubst('%PYTHON', config.python_executable, unresolved='ignore'),
 ]
 
 llvm_config.add_tool_substitutions(tools, tool_dirs)
 
 llvm_config.with_environment('PYTHONPATH', [
-    os.path.join(config.mlir_binary_dir, 'python_packages', 'standalone'),
+    os.path.join(config.mlir_obj_dir, 'python_packages', 'standalone'),
 ], append_path=True)
