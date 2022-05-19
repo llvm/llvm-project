@@ -5527,7 +5527,7 @@ struct AAValueSimplifyImpl : AAValueSimplify {
     const auto &AA =
         A.getAAFor<AAType>(*this, getIRPosition(), DepClassTy::NONE);
 
-    Optional<ConstantInt *> COpt = AA.getAssumedConstantInt(A);
+    Optional<Constant *> COpt = AA.getAssumedConstant(A);
 
     if (!COpt.hasValue()) {
       SimplifiedAssociatedValue = llvm::None;
