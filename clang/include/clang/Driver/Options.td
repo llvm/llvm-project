@@ -4776,7 +4776,7 @@ def cpp : Flag<["-"], "cpp">, Group<f_Group>,
   HelpText<"Enable predefined and command line preprocessor macros">;
 def nocpp : Flag<["-"], "nocpp">, Group<f_Group>,
   HelpText<"Disable predefined and command line preprocessor macros">;
-def module_dir : Separate<["-"], "module-dir">, MetaVarName<"<dir>">,
+def module_dir : JoinedOrSeparate<["-"], "module-dir">, MetaVarName<"<dir>">,
   HelpText<"Put MODULE files in <dir>">,
   DocBrief<[{This option specifies where to put .mod files for compiled modules.
 It is also added to the list of directories to be searched by an USE statement.
