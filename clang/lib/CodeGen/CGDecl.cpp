@@ -359,7 +359,7 @@ CodeGenFunction::AddInitializerToStaticVarDecl(const VarDecl &D,
                       D.getFlexibleArrayInitChars(getContext());
   CharUnits CstSize = CharUnits::fromQuantity(
       CGM.getDataLayout().getTypeAllocSize(Init->getType()));
-  assert(VarSize == CstSize && "Emitted constant has unexpected size");
+  assert((VarSize == CstSize || D.getType()->isArrayType()) && "Emitted constant has unexpected size");
 #endif
 
   // The initializer may differ in type from the global. Rewrite
