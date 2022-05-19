@@ -26,6 +26,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include <climits>
 #include "clang/Basic/SourceLocation.h"
 
 #ifndef LLVM_CLANG_SERIALIZATION_SOURCELOCATIONENCODING_H
