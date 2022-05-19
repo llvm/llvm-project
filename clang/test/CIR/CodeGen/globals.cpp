@@ -19,6 +19,10 @@ void use_global() {
   int li = a;
 }
 
+void use_global_string() {
+  unsigned char c = s2[0];
+}
+
 // CHECK: module  {
 // CHECK-NEXT: cir.global @a = 3 : i32
 // CHECK-NEXT: cir.global @c = 2 : i64
@@ -41,3 +45,12 @@ void use_global() {
 // CHECK-NEXT:     %1 = cir.get_global @a : cir.ptr <i32>
 // CHECK-NEXT:     %2 = cir.load %1 : cir.ptr <i32>, i32
 // CHECK-NEXT:     cir.store %2, %0 : i32, cir.ptr <i32>
+
+// CHECK: func @_Z17use_global_stringv() {
+// CHECK-NEXT:   %0 = cir.alloca i8, cir.ptr <i8>, ["c", cinit] {alignment = 1 : i64}
+// CHECK-NEXT:   %1 = cir.get_global @s2 : cir.ptr <!cir.ptr<i8>>
+// CHECK-NEXT:   %2 = cir.load %1 : cir.ptr <!cir.ptr<i8>>, !cir.ptr<i8>
+// CHECK-NEXT:   %3 = cir.cst(0 : i32) : i32
+// CHECK-NEXT:   %4 = cir.ptr_stride(%2 : !cir.ptr<i8>, %3 : i32), !cir.ptr<i8>
+// CHECK-NEXT:   %5 = cir.load %4 : cir.ptr <i8>, i8
+// CHECK-NEXT:   cir.store %5, %0 : i8, cir.ptr <i8>

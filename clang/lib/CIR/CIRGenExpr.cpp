@@ -734,17 +734,25 @@ static CharUnits getArrayElementAlign(CharUnits arrayAlign, mlir::Value idx,
 static mlir::Value buildArrayAccessOp(mlir::OpBuilder &builder,
                                       mlir::Location arrayLocBegin,
                                       mlir::Location arrayLocEnd,
-                                      mlir::Value arrayPtr, mlir::Value idx) {
+                                      mlir::Value arrayPtr, mlir::Type eltTy,
+                                      mlir::Value idx) {
   auto arrayPtrTy = arrayPtr.getType().dyn_cast<::mlir::cir::PointerType>();
   assert(arrayPtrTy && "expected pointer type");
   auto arrayTy = arrayPtrTy.getPointee().dyn_cast<::mlir::cir::ArrayType>();
-  assert(arrayTy && "expected array type");
 
-  auto flatPtrTy =
-      mlir::cir::PointerType::get(builder.getContext(), arrayTy.getEltType());
-  auto basePtr = builder.create<mlir::cir::CastOp>(
-      arrayLocBegin, flatPtrTy, mlir::cir::CastKind::array_to_ptrdecay,
-      arrayPtr);
+  mlir::cir::PointerType flatPtrTy;
+  mlir::Value basePtr = arrayPtr;
+  if (arrayTy) {
+    flatPtrTy =
+        mlir::cir::PointerType::get(builder.getContext(), arrayTy.getEltType());
+    basePtr = builder.create<mlir::cir::CastOp>(
+        arrayLocBegin, flatPtrTy, mlir::cir::CastKind::array_to_ptrdecay,
+        arrayPtr);
+  } else {
+    assert(arrayPtrTy.getPointee() == eltTy &&
+           "flat pointee type must match original array element type");
+    flatPtrTy = arrayPtrTy;
+  }
 
   return builder.create<mlir::cir::PtrStrideOp>(arrayLocEnd, flatPtrTy, basePtr,
                                                 idx);
@@ -752,8 +760,8 @@ static mlir::Value buildArrayAccessOp(mlir::OpBuilder &builder,
 
 static mlir::Value buildArraySubscriptPtr(
     CIRGenFunction &CGF, mlir::Location beginLoc, mlir::Location endLoc,
-    mlir::Value ptr, ArrayRef<mlir::Value> indices, bool inbounds,
-    bool signedIndices, const llvm::Twine &name = "arrayidx") {
+    mlir::Value ptr, mlir::Type eltTy, ArrayRef<mlir::Value> indices,
+    bool inbounds, bool signedIndices, const llvm::Twine &name = "arrayidx") {
   assert(indices.size() == 1 && "cannot handle multiple indices yet");
   auto idx = indices.back();
   auto &CGM = CGF.getCIRGenModule();
@@ -761,7 +769,8 @@ static mlir::Value buildArraySubscriptPtr(
   // that would enhance tracking this later in CIR?
   if (inbounds)
     assert(!UnimplementedFeature::emitCheckedInBoundsGEP() && "NYI");
-  return buildArrayAccessOp(CGM.getBuilder(), beginLoc, endLoc, ptr, idx);
+  return buildArrayAccessOp(CGM.getBuilder(), beginLoc, endLoc, ptr, eltTy,
+                            idx);
 }
 
 static Address buildArraySubscriptPtr(
@@ -786,14 +795,16 @@ static Address buildArraySubscriptPtr(
   if (!LastIndex ||
       (!CGF.IsInPreservedAIRegion && !isPreserveAIArrayBase(CGF, Base))) {
     eltPtr = buildArraySubscriptPtr(CGF, beginLoc, endLoc, addr.getPointer(),
-                                    indices, inbounds, signedIndices, name);
+                                    addr.getElementType(), indices, inbounds,
+                                    signedIndices, name);
   } else {
     // assert(!UnimplementedFeature::generateDebugInfo() && "NYI");
     // assert(indices.size() == 1 && "cannot handle multiple indices yet");
     // auto idx = indices.back();
     // auto &CGM = CGF.getCIRGenModule();
     // eltPtr = buildArrayAccessOp(CGM.getBuilder(), beginLoc, endLoc,
-    //                             addr.getPointer(), idx);
+    //                             addr.getPointer(), addr.getElementType(),
+    //                             idx);
     assert(0 && "NYI");
   }
 
@@ -883,17 +894,15 @@ LValue CIRGenFunction::buildArraySubscriptExpr(const ArraySubscriptExpr *E,
     // The base must be a pointer; emit it with an estimate of its alignment.
     // TODO(cir): EltTBAAInfo
     Addr = buildPointerWithAlignment(E->getBase(), &EltBaseInfo);
-    // auto Idx = EmitIdxAfterBase(/*Promote*/ true);
-    // QualType ptrType = E->getBase()->getType();
-    // Addr = emitArraySubscriptGEP(*this, Addr, Idx, E->getType(),
-    //                              !getLangOpts().isSignedOverflowDefined(),
-    //                              SignedIndices, E->getExprLoc(), &ptrType,
-    //                              E->getBase());
-    assert(0 && "not implemented");
+    auto Idx = EmitIdxAfterBase(/*Promote*/ true);
+    QualType ptrType = E->getBase()->getType();
+    Addr = buildArraySubscriptPtr(
+        *this, CGM.getLoc(E->getBeginLoc()), CGM.getLoc(E->getEndLoc()), Addr,
+        Idx, E->getType(), !getLangOpts().isSignedOverflowDefined(),
+        SignedIndices, CGM.getLoc(E->getExprLoc()), &ptrType, E->getBase());
   }
 
   LValue LV = LValue::makeAddr(Addr, E->getType(), EltBaseInfo);
-
   if (getLangOpts().ObjC && getLangOpts().getGC() != LangOptions::NonGC) {
     assert(0 && "not implemented");
   }
