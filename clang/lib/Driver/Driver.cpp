@@ -5654,10 +5654,10 @@ InputInfoList Driver::BuildJobsForActionNoCache(
         A->getOffloadingDeviceKind(), TC->getTriple().normalize(),
         /*CreatePrefixForHost=*/!!A->getOffloadingHostActiveKinds() &&
             !AtTopLevel);
-    std::string TargetIDStr = TC->getTargetID();
+    StringRef TargetIDStr = TC->getTargetID();
     if (!TargetIDStr.empty() && BoundArch.empty()) {
-      BoundArch = StringRef(TargetIDStr);
-      OffloadingPrefix.append("-").append(TargetIDStr);
+      BoundArch = TargetIDStr;
+      OffloadingPrefix.append("-").append(TargetIDStr.str());
     }
 
     if (isa<OffloadWrapperJobAction>(JA)) {

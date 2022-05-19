@@ -545,7 +545,7 @@ void amdgpu::getAMDGPUTargetFeatures(const Driver &D,
                                      const llvm::Triple &Triple,
                                      const llvm::opt::ArgList &Args,
                                      std::vector<StringRef> &Features,
-                                     std::string TcTargetID) {
+                                     StringRef TcTargetID) {
   // Add target ID features to -target-feature options. No diagnostics should
   // be emitted here since invalid target ID is diagnosed at other places.
   StringRef TargetID = Args.getLastArgValue(options::OPT_mcpu_EQ);

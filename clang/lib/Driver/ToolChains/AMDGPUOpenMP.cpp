@@ -415,8 +415,7 @@ void AMDGCN::OpenMPLinker::ConstructJob(Compilation &C, const JobAction &JA,
   const toolchains::AMDGPUOpenMPToolChain &AMDGPUOpenMPTC =
       static_cast<const toolchains::AMDGPUOpenMPToolChain &>(TC);
 
-  std::string TargetIDStr = AMDGPUOpenMPTC.getTargetID();
-  StringRef TargetID = StringRef(TargetIDStr);
+  StringRef TargetID = AMDGPUOpenMPTC.getTargetID();
   assert(TargetID.startswith("gfx") && "Unsupported sub arch");
 
   // Prefix for temporary file name.
@@ -468,12 +467,12 @@ void AMDGPUOpenMPToolChain::addClangTargetOptions(
     Action::OffloadKind DeviceOffloadingKind) const {
   HostTC.addClangTargetOptions(DriverArgs, CC1Args, DeviceOffloadingKind);
 
-  std::string TargetIDStr = getTargetID();
-  StringRef TargetID = StringRef(TargetIDStr);
+  std::string TargetIDStr = getTargetID().str();
   if (TargetIDStr.empty()) {
     if (!checkSystemForAMDGPU(DriverArgs, *this, TargetIDStr))
       return;
   }
+  StringRef TargetID = StringRef(TargetIDStr);
   assert((DeviceOffloadingKind == Action::OFK_HIP ||
           DeviceOffloadingKind == Action::OFK_OpenMP) &&
          "Only HIP offloading kinds are supported for GPUs.");
@@ -580,7 +579,7 @@ llvm::opt::DerivedArgList *AMDGPUOpenMPToolChain::TranslateArgs(
     if (!DAL->hasArg(options::OPT_march_EQ)) {
       std::string Arch = BoundArch.str();
       if (Arch.empty()) {
-        Arch = getTargetID(); // arch may have come from --Offload-Arch=
+        Arch = getTargetID().str(); // arch may have come from --Offload-Arch=
         if (Arch.empty())
           checkSystemForAMDGPU(Args, *this, Arch);
       }

@@ -5414,7 +5414,7 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   std::string CPU = getCPUName(D, Args, Triple, /*FromAs*/ false);
   // In case args have been translated and -march deleted, get GPU from TC
   if (CPU.empty())
-    CPU = TC.getTargetID();
+    CPU = TC.getTargetID().str();
   if (!CPU.empty()) {
     CmdArgs.push_back("-target-cpu");
     CmdArgs.push_back(Args.MakeArgString(CPU));
@@ -8390,11 +8390,10 @@ void OffloadWrapper::ConstructJob(Compilation &C, const JobAction &JA,
         CmdArgs.push_back(I.getFilename());
         continue;
       }
-      std::string OffloadArchs("--offload-arch=");
-      OffloadArchs.append(TargetID);
 
       // FIXME: Add other architecture target ids here
-      CmdArgs.push_back(Args.MakeArgString(OffloadArchs.c_str()));
+      CmdArgs.push_back(
+          Args.MakeArgString(Twine("--offload-arch=") + TargetID));
       CmdArgs.push_back(I.getFilename());
     }
   }

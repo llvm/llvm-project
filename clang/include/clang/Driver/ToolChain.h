@@ -263,7 +263,7 @@ public:
     return EffectiveTriple;
   }
 
-  const std::string getTargetID() const { return TargetID; }
+  StringRef getTargetID() const { return TargetID; }
 
   path_list &getLibraryPaths() { return LibraryPaths; }
   const path_list &getLibraryPaths() const { return LibraryPaths; }
