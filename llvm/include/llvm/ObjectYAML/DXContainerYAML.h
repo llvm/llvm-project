@@ -41,9 +41,22 @@ struct FileHeader {
   Optional<std::vector<uint32_t>> PartOffsets;
 };
 
+struct DXILProgram {
+  uint8_t MajorVersion;
+  uint8_t MinorVersion;
+  uint16_t ShaderKind;
+  Optional<uint32_t> Size;
+  uint16_t DXILMajorVersion;
+  uint16_t DXILMinorVersion;
+  Optional<uint32_t> DXILOffset;
+  Optional<uint32_t> DXILSize;
+  Optional<std::vector<llvm::yaml::Hex8>> DXIL;
+};
+
 struct Part {
   std::string Name;
   uint32_t Size;
+  Optional<DXILProgram> Program;
 };
 
 struct Object {
@@ -67,6 +80,10 @@ template <> struct MappingTraits<DXContainerYAML::VersionTuple> {
 
 template <> struct MappingTraits<DXContainerYAML::FileHeader> {
   static void mapping(IO &IO, DXContainerYAML::FileHeader &Header);
+};
+
+template <> struct MappingTraits<DXContainerYAML::DXILProgram> {
+  static void mapping(IO &IO, DXContainerYAML::DXILProgram &Program);
 };
 
 template <> struct MappingTraits<DXContainerYAML::Part> {
