@@ -817,8 +817,8 @@ def : Pat<(xor GPR:$rs1, (not GPR:$rs2)), (XNOR GPR:$rs1, GPR:$rs2)>;
 } // Predicates = [HasStdExtZbbOrZbpOrZbkb]
 
 let Predicates = [HasStdExtZbbOrZbpOrZbkb] in {
-def : PatGprGpr<shiftop<rotl>, ROL>;
-def : PatGprGpr<shiftop<rotr>, ROR>;
+def : PatGprGpr<rotl, ROL>;
+def : PatGprGpr<rotr, ROR>;
 
 def : PatGprImm<rotr, RORI, uimmlog2xlen>;
 // There's no encoding for roli in the the 'B' extension as it can be
@@ -828,8 +828,8 @@ def : Pat<(rotl GPR:$rs1, uimmlog2xlen:$shamt),
 } // Predicates = [HasStdExtZbbOrZbpOrZbkb]
 
 let Predicates = [HasStdExtZbbOrZbpOrZbkb, IsRV64] in {
-def : PatGprGpr<shiftopw<riscv_rolw>, ROLW>;
-def : PatGprGpr<shiftopw<riscv_rorw>, RORW>;
+def : PatGprGpr<riscv_rolw, ROLW>;
+def : PatGprGpr<riscv_rorw, RORW>;
 def : PatGprImm<riscv_rorw, RORIW, uimm5>;
 def : Pat<(riscv_rolw GPR:$rs1, uimm5:$rs2),
           (RORIW GPR:$rs1, (ImmSubFrom32 uimm5:$rs2))>;
