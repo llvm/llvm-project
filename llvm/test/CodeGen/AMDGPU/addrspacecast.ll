@@ -376,10 +376,10 @@ define amdgpu_kernel void @store_flat_scratch(i32 addrspace(1)* noalias %out, i3
 ; HSA-LABEL: {{^}}use_constant_to_constant32_addrspacecast
 ; GFX9: s_load_dwordx2 [[PTRPTR:s\[[0-9]+:[0-9]+\]]], s[4:5], 0x0{{$}}
 ; GFX9: s_load_dword [[OFFSET:s[0-9]+]], s[4:5], 0x8{{$}}
-; GFX9: s_load_dwordx2 s[[[PTR_LO:[0-9]+]]:[[PTR_HI:[0-9]+]]], [[PTRPTR]], 0x0{{$}}
+; GFX9: s_load_dwordx2 s[[[PTR_LO:[0-9]+]]:[[PTR_HI:[0-9]+]]], [[PTRPTR]], 0x0 glc{{$}}
 ; GFX9: s_mov_b32 s[[PTR_HI]], 0{{$}}
 ; GFX9: s_add_i32 s[[PTR_LO]], s[[PTR_LO]], [[OFFSET]]
-; GFX9: s_load_dword s{{[0-9]+}}, s[[[PTR_LO]]:[[PTR_HI]]], 0x0{{$}}
+; GFX9: s_load_dword s{{[0-9]+}}, s[[[PTR_LO]]:[[PTR_HI]]], 0x0 glc{{$}}
 define amdgpu_kernel void @use_constant_to_constant32_addrspacecast(i8 addrspace(4)* addrspace(4)* %ptr.ptr, i32 %offset) #0 {
   %ptr = load volatile i8 addrspace(4)*, i8 addrspace(4)* addrspace(4)* %ptr.ptr
   %addrspacecast = addrspacecast i8 addrspace(4)* %ptr to i8 addrspace(6)*
@@ -392,10 +392,10 @@ define amdgpu_kernel void @use_constant_to_constant32_addrspacecast(i8 addrspace
 ; HSA-LABEL: {{^}}use_global_to_constant32_addrspacecast
 ; GFX9: s_load_dwordx2 [[PTRPTR:s\[[0-9]+:[0-9]+\]]], s[4:5], 0x0{{$}}
 ; GFX9: s_load_dword [[OFFSET:s[0-9]+]], s[4:5], 0x8{{$}}
-; GFX9: s_load_dwordx2 s[[[PTR_LO:[0-9]+]]:[[PTR_HI:[0-9]+]]], [[PTRPTR]], 0x0{{$}}
+; GFX9: s_load_dwordx2 s[[[PTR_LO:[0-9]+]]:[[PTR_HI:[0-9]+]]], [[PTRPTR]], 0x0 glc{{$}}
 ; GFX9: s_mov_b32 s[[PTR_HI]], 0{{$}}
 ; GFX9: s_add_i32 s[[PTR_LO]], s[[PTR_LO]], [[OFFSET]]
-; GFX9: s_load_dword s{{[0-9]+}}, s[[[PTR_LO]]:[[PTR_HI]]], 0x0{{$}}
+; GFX9: s_load_dword s{{[0-9]+}}, s[[[PTR_LO]]:[[PTR_HI]]], 0x0 glc{{$}}
 define amdgpu_kernel void @use_global_to_constant32_addrspacecast(i8 addrspace(1)* addrspace(4)* %ptr.ptr, i32 %offset) #0 {
   %ptr = load volatile i8 addrspace(1)*, i8 addrspace(1)* addrspace(4)* %ptr.ptr
   %addrspacecast = addrspacecast i8 addrspace(1)* %ptr to i8 addrspace(6)*
