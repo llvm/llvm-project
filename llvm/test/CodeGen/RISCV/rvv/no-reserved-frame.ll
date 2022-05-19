@@ -18,7 +18,7 @@ define signext i32 @foo(i32 signext %aa) #0 {
 ; CHECK-NEXT:    csrr a1, vlenb
 ; CHECK-NEXT:    slli a1, a1, 1
 ; CHECK-NEXT:    sub sp, sp, a1
-; CHECK-NEXT:    andi sp, sp, -8
+; CHECK-NEXT:    andi sp, sp, -16
 ; CHECK-NEXT:    mv s1, sp
 ; CHECK-NEXT:    lw t0, 44(s1)
 ; CHECK-NEXT:    lw a2, 40(s1)
