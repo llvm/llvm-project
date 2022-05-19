@@ -1263,15 +1263,15 @@ public:
 
   /// Truncate this APInt if necessary to ensure that its bit width is <= \p
   /// width.
-  APInt truncOrSelf(unsigned width) const;
+  [[deprecated("Use trunc instead")]] APInt truncOrSelf(unsigned width) const;
 
   /// Sign-extend this APInt if necessary to ensure that its bit width is >= \p
   /// width.
-  APInt sextOrSelf(unsigned width) const;
+  [[deprecated("Use sext instead")]] APInt sextOrSelf(unsigned width) const;
 
   /// Zero-extend this APInt if necessary to ensure that its bit width is >= \p
   /// width.
-  APInt zextOrSelf(unsigned width) const;
+  [[deprecated("Use zext instead")]] APInt zextOrSelf(unsigned width) const;
 
   /// @}
   /// \name Bit Manipulation Operators
