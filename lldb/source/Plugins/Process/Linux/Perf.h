@@ -74,24 +74,6 @@ using MmapUP = std::unique_ptr<void, resource_handle::MmapDeleter>;
 
 } // namespace resource_handle
 
-/// Read data from a cyclic buffer
-///
-/// \param[in] [out] buf
-///     Destination buffer, the buffer will be truncated to written size.
-///
-/// \param[in] src
-///     Source buffer which must be a cyclic buffer.
-///
-/// \param[in] src_cyc_index
-///     The index pointer (start of the valid data in the cyclic
-///     buffer).
-///
-/// \param[in] offset
-///     The offset to begin reading the data in the cyclic buffer.
-void ReadCyclicBuffer(llvm::MutableArrayRef<uint8_t> &dst,
-                      llvm::ArrayRef<uint8_t> src, size_t src_cyc_index,
-                      size_t offset);
-
 /// Thin wrapper of the perf_event_open API.
 ///
 /// Exposes the metadata page and data and aux buffers of a perf event.
@@ -174,11 +156,16 @@ public:
   ///     A value of 0 effectively is a no-op and no data is mmap'ed for this
   ///     buffer.
   ///
+  /// \param[in] data_buffer_write
+  ///     Whether to mmap the data buffer with WRITE permissions. This changes
+  ///     the behavior of how the kernel writes to the data buffer.
+  ///
   /// \return
   ///   \a llvm::Error::success if the mmap operations succeeded,
   ///   or an \a llvm::Error otherwise.
   llvm::Error MmapMetadataAndBuffers(size_t num_data_pages,
-                                     size_t num_aux_pages);
+                                     size_t num_aux_pages,
+                                     bool data_buffer_write);
 
   /// Get the file descriptor associated with the perf event.
   long GetFd() const;
@@ -237,6 +224,25 @@ public:
   llvm::Expected<std::vector<uint8_t>>
   ReadFlushedOutAuxCyclicBuffer(size_t offset, size_t size);
 
+  /// Read the data buffer managed by this perf event. To ensure that the
+  /// data is up-to-date and is not corrupted by read-write race conditions, the
+  /// underlying perf_event is paused during read, and later it's returned to
+  /// its initial state. The returned data will be linear, i.e. it will fix the
+  /// circular wrapping the might exist int he buffer.
+  ///
+  /// \param[in] offset
+  ///     Offset of the data to read.
+  ///
+  /// \param[in] size
+  ///     Number of bytes to read.
+  ///
+  /// \return
+  ///     A vector with the requested binary data. The vector will have the
+  ///     size of the requested \a size. Non-available positions will be
+  ///     filled with zeroes.
+  llvm::Expected<std::vector<uint8_t>>
+  ReadFlushedOutDataCyclicBuffer(size_t offset, size_t size);
+
   /// Use the ioctl API to disable the perf event and all the events in its
   /// group. This doesn't terminate the perf event.
   ///
@@ -290,7 +296,12 @@ private:
   ///     Number of pages in the data buffer to mmap, must be a power of 2.
   ///     A value of 0 is useful for "dummy" events that only want to access
   ///     the metadata, \a perf_event_mmap_page, or the aux buffer.
-  llvm::Error MmapMetadataAndDataBuffer(size_t num_data_pages);
+  ///
+  /// \param[in] data_buffer_write
+  ///     Whether to mmap the data buffer with WRITE permissions. This changes
+  ///     the behavior of how the kernel writes to the data buffer.
+  llvm::Error MmapMetadataAndDataBuffer(size_t num_data_pages,
+                                        bool data_buffer_write);
 
   /// Mmap the aux buffer of the perf event.
   ///

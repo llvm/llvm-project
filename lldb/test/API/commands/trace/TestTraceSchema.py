@@ -9,7 +9,7 @@ class TestTraceLoad(TraceIntelPTTestCaseBase):
     mydir = TestBase.compute_mydir(__file__)
 
     def testSchema(self):
-        self.expect("trace schema intel-pt", substrs=["trace", "triple", "threads", "traceFile"])
+        self.expect("trace schema intel-pt", substrs=["triple", "threads", "traceBuffer"])
 
     def testInvalidPluginSchema(self):
         self.expect("trace schema invalid-plugin", error=True,
@@ -17,12 +17,12 @@ class TestTraceLoad(TraceIntelPTTestCaseBase):
 
     def testAllSchemas(self):
         self.expect("trace schema all", substrs=['''{
-  "trace": {
-    "type": "intel-pt",
-    "cpuInfo": {
-      "vendor": "intel" | "unknown",
-      "family": integer,
-      "model": integer,
-      "stepping": integer
-    }
+  "type": "intel-pt",
+  "cpuInfo": {
+    // CPU information gotten from, for example, /proc/cpuinfo.
+
+    "vendor": "GenuineIntel" | "unknown",
+    "family": integer,
+    "model": integer,
+    "stepping": integer
   },'''])

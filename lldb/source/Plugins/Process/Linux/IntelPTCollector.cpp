@@ -182,32 +182,39 @@ Expected<json::Value> IntelPTCollector::GetState() {
           FetchPerfTscConversionParameters())
     state.tsc_perf_zero_conversion = *tsc_conversion;
   else
-    state.warnings.push_back(toString(tsc_conversion.takeError()));
+    state.AddWarning(toString(tsc_conversion.takeError()));
   return toJSON(state);
 }
 
 Expected<std::vector<uint8_t>>
 IntelPTCollector::GetBinaryData(const TraceGetBinaryDataRequest &request) {
-  if (request.kind == IntelPTDataKinds::kTraceBuffer) {
-    if (!request.tid)
-      return createStringError(
-          inconvertibleErrorCode(),
-          "Getting a trace buffer without a tid is currently unsupported");
-
-    if (m_process_trace_up && m_process_trace_up->TracesThread(*request.tid))
-      return m_process_trace_up->GetBinaryData(request);
-
-    if (Expected<IntelPTSingleBufferTrace &> trace =
-            m_thread_traces.GetTracedThread(*request.tid))
-      return trace->GetTraceBuffer(request.offset, request.size);
-    else
-      return trace.takeError();
-  } else if (request.kind == IntelPTDataKinds::kProcFsCpuInfo) {
+  if (request.kind == IntelPTDataKinds::kProcFsCpuInfo)
     return GetProcfsCpuInfo();
+
+  if (m_process_trace_up) {
+    Expected<Optional<std::vector<uint8_t>>> data =
+        m_process_trace_up->TryGetBinaryData(request);
+    if (!data)
+      return data.takeError();
+    if (*data)
+      return **data;
   }
-  return createStringError(inconvertibleErrorCode(),
-                           "Unsuported trace binary data kind: %s",
-                           request.kind.c_str());
+
+  {
+    Expected<Optional<std::vector<uint8_t>>> data =
+        m_thread_traces.TryGetBinaryData(request);
+    if (!data)
+      return data.takeError();
+    if (*data)
+      return **data;
+  }
+
+  return createStringError(
+      inconvertibleErrorCode(),
+      formatv("Can't fetch data kind {0} for core_id {1}, tid {2} and "
+              "\"process tracing\" mode {3}",
+              request.kind, request.core_id, request.tid,
+              m_process_trace_up ? "enabled" : "not enabled"));
 }
 
 bool IntelPTCollector::IsSupported() {

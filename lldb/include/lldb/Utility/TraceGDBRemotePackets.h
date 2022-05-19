@@ -133,7 +133,9 @@ struct TraceGetStateResponse {
   std::vector<TraceThreadState> traced_threads;
   std::vector<TraceBinaryData> process_binary_data;
   llvm::Optional<std::vector<TraceCoreState>> cores;
-  std::vector<std::string> warnings;
+  llvm::Optional<std::vector<std::string>> warnings;
+
+  void AddWarning(llvm::StringRef warning);
 };
 
 bool fromJSON(const llvm::json::Value &value, TraceGetStateResponse &packet,
@@ -151,6 +153,8 @@ struct TraceGetBinaryDataRequest {
   std::string kind;
   /// Optional tid if the data is related to a thread.
   llvm::Optional<lldb::tid_t> tid;
+  /// Optional core id if the data is related to a cpu core.
+  llvm::Optional<lldb::tid_t> core_id;
   /// Offset in bytes from where to start reading the data.
   uint64_t offset;
   /// Number of bytes to read.
