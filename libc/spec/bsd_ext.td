@@ -6,6 +6,11 @@ def BsdExtensions : StandardSpec<"BSDExtensions"> {
       [], // Enumerations
       [ 
         FunctionSpec<
+            "strlcat",
+            RetValSpec<SizeTType>,
+            [ArgSpec<CharPtr>, ArgSpec<ConstCharPtr>, ArgSpec<SizeTType>]
+        >,
+        FunctionSpec<
             "strlcpy",
             RetValSpec<SizeTType>,
             [ArgSpec<CharPtr>, ArgSpec<ConstCharPtr>, ArgSpec<SizeTType>]
