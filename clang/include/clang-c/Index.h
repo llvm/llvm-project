@@ -2189,7 +2189,17 @@ enum CXCursorKind {
    */
   CXCursor_CXXAddrspaceCastExpr = 152,
 
-  CXCursor_LastExpr = CXCursor_CXXAddrspaceCastExpr,
+  /**
+   * Expression that references a C++20 concept.
+   */
+  CXCursor_ConceptSpecializationExpr = 153,
+
+  /**
+   * Expression that references a C++20 concept.
+   */
+  CXCursor_RequiresExpr = 154,
+
+  CXCursor_LastExpr = CXCursor_RequiresExpr,
 
   /* Statements */
   CXCursor_FirstStmt = 200,
@@ -2700,8 +2710,13 @@ enum CXCursorKind {
    * a friend declaration.
    */
   CXCursor_FriendDecl = 603,
+  /**
+   * a concept declaration.
+   */
+  CXCursor_ConceptDecl = 604,
+
   CXCursor_FirstExtraDecl = CXCursor_ModuleImportDecl,
-  CXCursor_LastExtraDecl = CXCursor_FriendDecl,
+  CXCursor_LastExtraDecl = CXCursor_ConceptDecl,
 
   /**
    * A code completion overload candidate.
@@ -6319,7 +6334,8 @@ typedef enum {
   CXIdxEntity_CXXDestructor = 23,
   CXIdxEntity_CXXConversionFunction = 24,
   CXIdxEntity_CXXTypeAlias = 25,
-  CXIdxEntity_CXXInterface = 26
+  CXIdxEntity_CXXInterface = 26,
+  CXIdxEntity_CXXConcept = 27
 
 } CXIdxEntityKind;
 
