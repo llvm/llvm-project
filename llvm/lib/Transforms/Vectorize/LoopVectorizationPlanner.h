@@ -320,6 +320,9 @@ public:
   getDecisionAndClampRange(const std::function<bool(ElementCount)> &Predicate,
                            VFRange &Range);
 
+  /// Check if the number of runtime checks exceeds the threshold.
+  bool requiresTooManyRuntimeChecks() const;
+
 protected:
   /// Collect the instructions from the original loop that would be trivially
   /// dead in the vectorized loop if generated.

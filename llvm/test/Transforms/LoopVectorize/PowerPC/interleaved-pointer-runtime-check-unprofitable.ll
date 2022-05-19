@@ -8,7 +8,7 @@
 ; (e.g., runtime-memory-check-threshold, default 8).
 
 ; CHECK-LABEL: @eddy_diff_caleddy_
-; CHECK: vector.memcheck
+; CHECK-NOT: vector.memcheck
 
 define fastcc void @eddy_diff_caleddy_(i64* %wet_cl, i64 %0, i32 %ncol.cast.val) {
 entry:
