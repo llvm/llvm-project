@@ -21,6 +21,7 @@ class TestCase(PExpectTest):
 
     # PExpect uses many timeouts internally and doesn't play well
     # under ASAN on a loaded machine..
+    @expectedFailureAll()
     @skipIfAsan
     @skipIf(oslist=["linux"], archs=["arm", "aarch64"]) # Randomly fails on buildbot
     @skipIfEditlineSupportMissing
