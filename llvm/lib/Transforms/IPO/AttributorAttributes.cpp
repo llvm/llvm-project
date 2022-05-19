@@ -551,10 +551,9 @@ static void clampReturnedValueStates(
     LLVM_DEBUG(dbgs() << "[Attributor] RV: " << RV << " AA: " << AA.getAsStr()
                       << " @ " << RVPos << "\n");
     const StateType &AAS = AA.getState();
-    if (T.hasValue())
-      *T &= AAS;
-    else
-      T = AAS;
+    if (!T.hasValue())
+      T = StateType::getBestState(AAS);
+    *T &= AAS;
     LLVM_DEBUG(dbgs() << "[Attributor] AA State: " << AAS << " RV State: " << T
                       << "\n");
     return T->isValidState();
@@ -618,10 +617,9 @@ static void clampCallSiteArgumentStates(Attributor &A, const AAType &QueryingAA,
     LLVM_DEBUG(dbgs() << "[Attributor] ACS: " << *ACS.getInstruction()
                       << " AA: " << AA.getAsStr() << " @" << ACSArgPos << "\n");
     const StateType &AAS = AA.getState();
-    if (T.hasValue())
-      *T &= AAS;
-    else
-      T = AAS;
+    if (!T.hasValue())
+      T = StateType::getBestState(AAS);
+    *T &= AAS;
     LLVM_DEBUG(dbgs() << "[Attributor] AA State: " << AAS << " CSA State: " << T
                       << "\n");
     return T->isValidState();
