@@ -27,17 +27,14 @@
     ret void
   }
 
-  ; FIXME: If the stack realignment does nothing to sp (a possibility) then
-  ; the vlenb*2-sized RVV stack object at sp+56 overlaps with the slot
-  ; allocated to spilling s9 (sp+52+vlenb*2)
   define void @rvv_clobbers_callee_save() #0 {
   ; CHECK-LABEL: rvv_clobbers_callee_save:
   ; CHECK:       # %bb.0: # %entry
-  ; CHECK-NEXT:    addi sp, sp, -64
-  ; CHECK-NEXT:    sw ra, 60(sp) # 4-byte Folded Spill
-  ; CHECK-NEXT:    sw s0, 56(sp) # 4-byte Folded Spill
-  ; CHECK-NEXT:    sw s9, 52(sp) # 4-byte Folded Spill
-  ; CHECK-NEXT:    addi s0, sp, 64
+  ; CHECK-NEXT:    addi sp, sp, -80
+  ; CHECK-NEXT:    sw ra, 76(sp) # 4-byte Folded Spill
+  ; CHECK-NEXT:    sw s0, 72(sp) # 4-byte Folded Spill
+  ; CHECK-NEXT:    sw s9, 68(sp) # 4-byte Folded Spill
+  ; CHECK-NEXT:    addi s0, sp, 80
   ; CHECK-NEXT:    csrr a1, vlenb
   ; CHECK-NEXT:    slli a1, a1, 1
   ; CHECK-NEXT:    sub sp, sp, a1
@@ -45,11 +42,11 @@
   ; CHECK-NEXT:    sw a0, 32(sp) # 4-byte Folded Spill
   ; CHECK-NEXT:    addi a0, sp, 56
   ; CHECK-NEXT:    vs2r.v v30, (a0) # Unknown-size Folded Spill
-  ; CHECK-NEXT:    addi sp, s0, -64
-  ; CHECK-NEXT:    lw ra, 60(sp) # 4-byte Folded Reload
-  ; CHECK-NEXT:    lw s0, 56(sp) # 4-byte Folded Reload
-  ; CHECK-NEXT:    lw s9, 52(sp) # 4-byte Folded Reload
-  ; CHECK-NEXT:    addi sp, sp, 64
+  ; CHECK-NEXT:    addi sp, s0, -80
+  ; CHECK-NEXT:    lw ra, 76(sp) # 4-byte Folded Reload
+  ; CHECK-NEXT:    lw s0, 72(sp) # 4-byte Folded Reload
+  ; CHECK-NEXT:    lw s9, 68(sp) # 4-byte Folded Reload
+  ; CHECK-NEXT:    addi sp, sp, 80
   ; CHECK-NEXT:    ret
   entry:
     ret void
