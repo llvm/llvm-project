@@ -433,15 +433,15 @@ protected:
   GetLiveProcessBinaryData(llvm::StringRef kind);
 
   /// Get the size of the data returned by \a GetLiveThreadBinaryData
-  llvm::Optional<size_t> GetLiveThreadBinaryDataSize(lldb::tid_t tid,
-                                                     llvm::StringRef kind);
+  llvm::Optional<uint64_t> GetLiveThreadBinaryDataSize(lldb::tid_t tid,
+                                                       llvm::StringRef kind);
 
   /// Get the size of the data returned by \a GetLiveCoreBinaryData
-  llvm::Optional<size_t> GetLiveCoreBinaryDataSize(lldb::core_id_t core_id,
-                                                   llvm::StringRef kind);
+  llvm::Optional<uint64_t> GetLiveCoreBinaryDataSize(lldb::core_id_t core_id,
+                                                     llvm::StringRef kind);
 
   /// Get the size of the data returned by \a GetLiveProcessBinaryData
-  llvm::Optional<size_t> GetLiveProcessBinaryDataSize(llvm::StringRef kind);
+  llvm::Optional<uint64_t> GetLiveProcessBinaryDataSize(llvm::StringRef kind);
 
   /// Constructor for post mortem processes
   Trace(llvm::ArrayRef<lldb::ProcessSP> postmortem_processes,
@@ -513,14 +513,14 @@ private:
   /// \{
 
   /// tid -> data kind -> size
-  llvm::DenseMap<lldb::tid_t, std::unordered_map<std::string, size_t>>
+  llvm::DenseMap<lldb::tid_t, std::unordered_map<std::string, uint64_t>>
       m_live_thread_data;
 
   /// core id -> data kind -> size
-  llvm::DenseMap<lldb::core_id_t, std::unordered_map<std::string, size_t>>
+  llvm::DenseMap<lldb::core_id_t, std::unordered_map<std::string, uint64_t>>
       m_live_core_data;
   /// data kind -> size
-  std::unordered_map<std::string, size_t> m_live_process_data;
+  std::unordered_map<std::string, uint64_t> m_live_process_data;
   /// \}
 
   /// The list of cores being traced. Might be \b None depending on the plug-in.

@@ -132,6 +132,11 @@ bool fromJSON(const json::Value &value, JSONTraceSession &session, Path path) {
       !o.map("type", session.type) || !o.map("cores", session.cores) ||
       !o.map("tscPerfZeroConversion", session.tsc_perf_zero_conversion))
     return false;
+  if (session.cores && !session.tsc_perf_zero_conversion) {
+    path.report(
+        "\"tscPerfZeroConversion\" is required when \"cores\" is provided");
+    return false;
+  }
   // We have to do this because the compiler fails at doing it automatically
   // because pt_cpu is not in a namespace
   if (!fromJSON(*value.getAsObject()->get("cpuInfo"), session.cpu_info,
