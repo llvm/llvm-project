@@ -2,7 +2,7 @@
 # RUN: llc -mtriple=riscv32 -mattr=+m,+v  -o - %s \
 # RUN:   -start-before=prologepilog | FileCheck %s
 #
-# This test checks that we are assigning the right stack slot to GPRs and to
+# These tests check that we are assigning the right stack slot to GPRs and to
 # vector registers (VRs). If this test changes, make sure there is no overlap
 # between slots for GPRs and VRs.
 --- |
@@ -27,6 +27,34 @@
     ret void
   }
 
+  ; FIXME: If the stack realignment does nothing to sp (a possibility) then
+  ; the vlenb*2-sized RVV stack object at sp+56 overlaps with the slot
+  ; allocated to spilling s9 (sp+52+vlenb*2)
+  define void @rvv_clobbers_callee_save() #0 {
+  ; CHECK-LABEL: rvv_clobbers_callee_save:
+  ; CHECK:       # %bb.0: # %entry
+  ; CHECK-NEXT:    addi sp, sp, -64
+  ; CHECK-NEXT:    sw ra, 60(sp) # 4-byte Folded Spill
+  ; CHECK-NEXT:    sw s0, 56(sp) # 4-byte Folded Spill
+  ; CHECK-NEXT:    sw s9, 52(sp) # 4-byte Folded Spill
+  ; CHECK-NEXT:    addi s0, sp, 64
+  ; CHECK-NEXT:    csrr a1, vlenb
+  ; CHECK-NEXT:    slli a1, a1, 1
+  ; CHECK-NEXT:    sub sp, sp, a1
+  ; CHECK-NEXT:    andi sp, sp, -32
+  ; CHECK-NEXT:    sw a0, 32(sp) # 4-byte Folded Spill
+  ; CHECK-NEXT:    addi a0, sp, 56
+  ; CHECK-NEXT:    vs2r.v v30, (a0) # Unknown-size Folded Spill
+  ; CHECK-NEXT:    addi sp, s0, -64
+  ; CHECK-NEXT:    lw ra, 60(sp) # 4-byte Folded Reload
+  ; CHECK-NEXT:    lw s0, 56(sp) # 4-byte Folded Reload
+  ; CHECK-NEXT:    lw s9, 52(sp) # 4-byte Folded Reload
+  ; CHECK-NEXT:    addi sp, sp, 64
+  ; CHECK-NEXT:    ret
+  entry:
+    ret void
+  }
+
   attributes #0 = { nounwind }
 ...
 ---
@@ -36,6 +64,25 @@ frameInfo:
   maxAlignment:    8
 stack:
   - { id: 0, type: spill-slot, size: 4, alignment: 4 }
+  - { id: 1, type: spill-slot, size: 16, alignment: 8, stack-id: scalable-vector }
+machineFunctionInfo: {}
+body:             |
+  bb.0.entry:
+    liveins: $x10, $v30m2
+
+    $x25 = COPY $x10
+    SW renamable $x25, %stack.0, 0 :: (store (s32) into %stack.0)
+    PseudoVSPILL_M2 renamable $v30m2, %stack.1 :: (store unknown-size into %stack.1, align 8)
+    PseudoRET
+
+...
+---
+name:            rvv_clobbers_callee_save
+alignment:       2
+frameInfo:
+  maxAlignment:    8
+stack:
+  - { id: 0, type: spill-slot, size: 4, alignment: 32 }
   - { id: 1, type: spill-slot, size: 16, alignment: 8, stack-id: scalable-vector }
 machineFunctionInfo: {}
 body:             |
