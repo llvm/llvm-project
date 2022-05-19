@@ -1695,7 +1695,7 @@ public:
 /// - For store: Address, stored value, optional mask
 /// TODO: We currently execute only per-part unless a specific instance is
 /// provided.
-class VPWidenMemoryInstructionRecipe : public VPRecipeBase, public VPValue {
+class VPWidenMemoryInstructionRecipe : public VPRecipeBase {
   Instruction &Ingredient;
 
   // Whether the loaded-from / stored-to addresses are consecutive.
@@ -1717,10 +1717,10 @@ class VPWidenMemoryInstructionRecipe : public VPRecipeBase, public VPValue {
 public:
   VPWidenMemoryInstructionRecipe(LoadInst &Load, VPValue *Addr, VPValue *Mask,
                                  bool Consecutive, bool Reverse)
-      : VPRecipeBase(VPWidenMemoryInstructionSC, {Addr}),
-        VPValue(VPValue::VPVMemoryInstructionSC, &Load, this), Ingredient(Load),
+      : VPRecipeBase(VPWidenMemoryInstructionSC, {Addr}), Ingredient(Load),
         Consecutive(Consecutive), Reverse(Reverse) {
     assert((Consecutive || !Reverse) && "Reverse implies consecutive");
+    new VPValue(VPValue::VPVMemoryInstructionSC, &Load, this);
     setMask(Mask);
   }
 
@@ -1728,7 +1728,6 @@ public:
                                  VPValue *StoredValue, VPValue *Mask,
                                  bool Consecutive, bool Reverse)
       : VPRecipeBase(VPWidenMemoryInstructionSC, {Addr, StoredValue}),
-        VPValue(VPValue::VPVMemoryInstructionSC, &Store, this),
         Ingredient(Store), Consecutive(Consecutive), Reverse(Reverse) {
     assert((Consecutive || !Reverse) && "Reverse implies consecutive");
     setMask(Mask);
@@ -1787,6 +1786,8 @@ public:
     return Op == getAddr() && isConsecutive() &&
            (!isStore() || Op != getStoredValue());
   }
+
+  Instruction &getIngredient() const { return Ingredient; }
 };
 
 /// Recipe to expand a SCEV expression.
