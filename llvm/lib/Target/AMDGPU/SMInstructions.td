@@ -235,7 +235,7 @@ class SM_WaveId_Pseudo<string opName, SDPatternOperator node> : SM_Pseudo<
   " $sdst", [(set i32:$sdst, (node))]> {
   let hasSideEffects = 1;
   let mayStore = 0;
-  let mayLoad = 1;
+  let mayLoad = 0;
   let has_sbase = 0;
 }
 
