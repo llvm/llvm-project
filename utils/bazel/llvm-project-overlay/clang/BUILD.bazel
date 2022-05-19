@@ -403,6 +403,7 @@ cc_library(
     ]),
     hdrs = glob([
         "include/clang/Basic/*.h",
+        "lib/Basic/BuiltinTargetFeatures.h",
     ]),
     copts = [
         "-DHAVE_VCS_VERSION_INC",
