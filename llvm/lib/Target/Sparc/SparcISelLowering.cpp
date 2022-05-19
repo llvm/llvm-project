@@ -3175,6 +3175,11 @@ SparcTargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
   case SP::SELECT_CC_DFP_ICC:
   case SP::SELECT_CC_QFP_ICC:
     return expandSelectCC(MI, BB, SP::BCOND);
+  case SP::SELECT_CC_Int_XCC:
+  case SP::SELECT_CC_FP_XCC:
+  case SP::SELECT_CC_DFP_XCC:
+  case SP::SELECT_CC_QFP_XCC:
+    return expandSelectCC(MI, BB, SP::BPXCC);
   case SP::SELECT_CC_Int_FCC:
   case SP::SELECT_CC_FP_FCC:
   case SP::SELECT_CC_DFP_FCC:
