@@ -1379,11 +1379,11 @@ def int_amdgcn_s_setprio :
   Intrinsic<[], [llvm_i16_ty], [ImmArg<ArgIndex<0>>, IntrNoMem,
                                 IntrHasSideEffects, IntrWillReturn]>;
 
+// This is IntrHasSideEffects so it can be used to read cycle counters.
 def int_amdgcn_s_getreg :
   GCCBuiltin<"__builtin_amdgcn_s_getreg">,
   Intrinsic<[llvm_i32_ty], [llvm_i32_ty],
-  [IntrInaccessibleMemOnly, IntrReadMem, IntrSpeculatable,
-   IntrWillReturn, ImmArg<ArgIndex<0>>]
+  [IntrNoMem, IntrHasSideEffects, IntrWillReturn, ImmArg<ArgIndex<0>>]
 >;
 
 // Note this can be used to set FP environment properties that are
