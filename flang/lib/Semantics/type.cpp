@@ -373,8 +373,11 @@ void DerivedTypeSpec::Instantiate(Scope &containingScope) {
 }
 
 void InstantiateHelper::InstantiateComponents(const Scope &fromScope) {
-  for (const auto &pair : fromScope) {
-    InstantiateComponent(*pair.second);
+  // Instantiate symbols in declaration order; this ensures that
+  // parent components and type parameters of ancestor types exist
+  // by the time that they're needed.
+  for (SymbolRef ref : fromScope.GetSymbols()) {
+    InstantiateComponent(*ref);
   }
   ComputeOffsets(context(), scope_);
 }
@@ -396,7 +399,7 @@ public:
 
   void Post(const parser::Name &name) {
     if (name.symbol && name.symbol->has<TypeParamDetails>()) {
-      name.symbol = scope_.FindSymbol(name.source);
+      name.symbol = scope_.FindComponent(name.source);
     }
   }
 
