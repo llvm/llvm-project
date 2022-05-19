@@ -3706,7 +3706,8 @@ void SubprogramVisitor::PushBlockDataScope(const parser::Name &name) {
 
 // If name is a generic, return specific subprogram with the same name.
 Symbol *SubprogramVisitor::GetSpecificFromGeneric(const parser::Name &name) {
-  if (auto *symbol{FindSymbol(name)}) {
+  // Search for the name but don't resolve it
+  if (auto *symbol{currScope().FindSymbol(name.source)}) {
     if (auto *details{symbol->detailsIf<GenericDetails>()}) {
       // found generic, want subprogram
       auto *specific{details->specific()};
