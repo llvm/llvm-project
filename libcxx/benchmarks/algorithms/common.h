@@ -1,18 +1,21 @@
+//===----------------------------------------------------------------------===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+
+#ifndef LIBCXX_ALGORITHMS_COMMON_H
+#define LIBCXX_ALGORITHMS_COMMON_H
 
 #include <algorithm>
-#include <cstdint>
-#include <map>
-#include <random>
-#include <string>
-#include <utility>
+#include <numeric>
+#include <tuple>
 #include <vector>
 
-#include "CartesianBenchmarks.h"
-#include "GenerateInput.h"
-#include "benchmark/benchmark.h"
-#include "test_macros.h"
-
-namespace {
+#include "../CartesianBenchmarks.h"
+#include "../GenerateInput.h"
 
 enum class ValueType { Uint32, Uint64, Pair, Tuple, String, Float };
 struct AllValueTypes : EnumValuesAsTuple<AllValueTypes, ValueType, 6> {
@@ -54,9 +57,9 @@ void fillAdversarialQuickSortInput(T& V, size_t N) {
   assert(N > 0);
   // If an element is equal to gas, it indicates that the value of the element
   // is still to be decided and may change over the course of time.
-  const int gas = N - 1;
+  const unsigned int gas = N - 1;
   V.resize(N);
-  for (int i = 0; i < N; ++i) {
+  for (unsigned int i = 0; i < N; ++i) {
     V[i] = gas;
   }
   // Candidate for the pivot position.
@@ -134,7 +137,7 @@ void fillValues(std::vector<std::tuple<T1, T2, T3> >& V, size_t N, Order O) {
   }
 }
 
-void fillValues(std::vector<std::string>& V, size_t N, Order O) {
+inline void fillValues(std::vector<std::string>& V, size_t N, Order O) {
   if (O == Order::SingleElement) {
     V.resize(N, getRandomString(64));
   } else {
@@ -228,169 +231,14 @@ void runOpOnCopies(benchmark::State& state, size_t Quantity, Order O,
   }
 }
 
-template <class ValueType, class Order>
-struct Sort {
-  size_t Quantity;
 
-  void run(benchmark::State& state) const {
-    runOpOnCopies<ValueType>(
-        state, Quantity, Order(), BatchSize::CountElements,
-        [](auto& Copy) { std::sort(Copy.begin(), Copy.end()); });
-  }
-
-  bool skip() const { return Order() == ::Order::Heap; }
-
-  std::string name() const {
-    return "BM_Sort" + ValueType::name() + Order::name() + "_" +
-           std::to_string(Quantity);
-  };
-};
-
-template <class ValueType, class Order>
-struct StableSort {
-  size_t Quantity;
-
-  void run(benchmark::State& state) const {
-    runOpOnCopies<ValueType>(
-        state, Quantity, Order(), BatchSize::CountElements,
-        [](auto& Copy) { std::stable_sort(Copy.begin(), Copy.end()); });
-  }
-
-  bool skip() const { return Order() == ::Order::Heap; }
-
-  std::string name() const {
-    return "BM_StableSort" + ValueType::name() + Order::name() + "_" +
-           std::to_string(Quantity);
-  };
-};
-
-template <class ValueType, class Order>
-struct MakeHeap {
-  size_t Quantity;
-
-  void run(benchmark::State& state) const {
-    runOpOnCopies<ValueType>(
-        state, Quantity, Order(), BatchSize::CountElements,
-        [](auto& Copy) { std::make_heap(Copy.begin(), Copy.end()); });
-  }
-
-  std::string name() const {
-    return "BM_MakeHeap" + ValueType::name() + Order::name() + "_" +
-           std::to_string(Quantity);
-  };
-};
-
-template <class ValueType>
-struct SortHeap {
-  size_t Quantity;
-
-  void run(benchmark::State& state) const {
-    runOpOnCopies<ValueType>(
-        state, Quantity, Order::Heap, BatchSize::CountElements,
-        [](auto& Copy) { std::sort_heap(Copy.begin(), Copy.end()); });
-  }
-
-  std::string name() const {
-    return "BM_SortHeap" + ValueType::name() + "_" + std::to_string(Quantity);
-  };
-};
-
-template <class ValueType, class Order>
-struct MakeThenSortHeap {
-  size_t Quantity;
-
-  void run(benchmark::State& state) const {
-    runOpOnCopies<ValueType>(state, Quantity, Order(), BatchSize::CountElements,
-                             [](auto& Copy) {
-                               std::make_heap(Copy.begin(), Copy.end());
-                               std::sort_heap(Copy.begin(), Copy.end());
-                             });
-  }
-
-  std::string name() const {
-    return "BM_MakeThenSortHeap" + ValueType::name() + Order::name() + "_" +
-           std::to_string(Quantity);
-  };
-};
-
-template <class ValueType, class Order>
-struct PushHeap {
-  size_t Quantity;
-
-  void run(benchmark::State& state) const {
-    runOpOnCopies<ValueType>(
-        state, Quantity, Order(), BatchSize::CountElements, [](auto& Copy) {
-          for (auto I = Copy.begin(), E = Copy.end(); I != E; ++I) {
-            std::push_heap(Copy.begin(), I + 1);
-          }
-        });
-  }
-
-  bool skip() const { return Order() == ::Order::Heap; }
-
-  std::string name() const {
-    return "BM_PushHeap" + ValueType::name() + Order::name() + "_" +
-           std::to_string(Quantity);
-  };
-};
-
-template <class ValueType>
-struct PopHeap {
-  size_t Quantity;
-
-  void run(benchmark::State& state) const {
-    runOpOnCopies<ValueType>(
-        state, Quantity, Order(), BatchSize::CountElements, [](auto& Copy) {
-          for (auto B = Copy.begin(), I = Copy.end(); I != B; --I) {
-            std::pop_heap(B, I);
-          }
-        });
-  }
-
-  std::string name() const {
-    return "BM_PopHeap" + ValueType::name() + "_" + std::to_string(Quantity);
-  };
-};
-
-template <class ValueType, class Order>
-struct MinMaxElement {
-  size_t Quantity;
-
-  void run(benchmark::State& state) const {
-    runOpOnCopies<ValueType>(state, Quantity, Order(), BatchSize::CountElements, [](auto& Copy) {
-      benchmark::DoNotOptimize(std::minmax_element(Copy.begin(), Copy.end()));
-    });
-  }
-
-  std::string name() const {
-    return "BM_MinMaxElement" + ValueType::name() + Order::name() + "_" + std::to_string(Quantity);
-  }
-};
-
-} // namespace
-
-int main(int argc, char** argv) {
-  benchmark::Initialize(&argc, argv);
-  if (benchmark::ReportUnrecognizedArguments(argc, argv))
-    return 1;
-
-  const std::vector<size_t> Quantities = {1 << 0, 1 << 2,  1 << 4,  1 << 6,
-                                          1 << 8, 1 << 10, 1 << 14,
+const std::vector<size_t> Quantities = {1 << 0, 1 << 2,  1 << 4,  1 << 6,
+                                        1 << 8, 1 << 10, 1 << 14,
     // Running each benchmark in parallel consumes too much memory with MSAN
     // and can lead to the test process being killed.
 #if !TEST_HAS_FEATURE(memory_sanitizer)
-                                          1 << 18
+                                        1 << 18
 #endif
-  };
-  makeCartesianProductBenchmark<Sort, AllValueTypes, AllOrders>(Quantities);
-  makeCartesianProductBenchmark<StableSort, AllValueTypes, AllOrders>(
-      Quantities);
-  makeCartesianProductBenchmark<MakeHeap, AllValueTypes, AllOrders>(Quantities);
-  makeCartesianProductBenchmark<SortHeap, AllValueTypes>(Quantities);
-  makeCartesianProductBenchmark<MakeThenSortHeap, AllValueTypes, AllOrders>(
-      Quantities);
-  makeCartesianProductBenchmark<PushHeap, AllValueTypes, AllOrders>(Quantities);
-  makeCartesianProductBenchmark<PopHeap, AllValueTypes>(Quantities);
-  makeCartesianProductBenchmark<MinMaxElement, AllValueTypes, AllOrders>(Quantities);
-  benchmark::RunSpecifiedBenchmarks();
-}
+};
+
+#endif // LIBCXX_ALGORITHMS_COMMON_H
