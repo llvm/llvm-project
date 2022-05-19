@@ -608,7 +608,7 @@ define void @local_alloca_simplifiable_2() {
 ; IS__CGSCC_OPM-NEXT:    br label [[FOR_COND28]], !llvm.loop [[LOOP23:![0-9]+]]
 ; IS__CGSCC_OPM:       for.end38:
 ; IS__CGSCC_OPM-NEXT:    [[I24:%.*]] = getelementptr inbounds [1024 x i8], [1024 x i8]* [[BYTES]], i64 0, i64 0
-; IS__CGSCC_OPM-NEXT:    call void @llvm.lifetime.end.p0i8(i64 noundef 1024, i8* nofree noundef nonnull [[I24]])
+; IS__CGSCC_OPM-NEXT:    call void @llvm.lifetime.end.p0i8(i64 noundef 1024, i8* nofree noundef nonnull align 16 dereferenceable(1024) [[I24]])
 ; IS__CGSCC_OPM-NEXT:    ret void
 ;
 ; IS__CGSCC_NPM-LABEL: define {{[^@]+}}@local_alloca_simplifiable_2() {
@@ -691,7 +691,7 @@ define void @local_alloca_simplifiable_2() {
 ; IS__CGSCC_NPM-NEXT:    br label [[FOR_COND28]], !llvm.loop [[LOOP23:![0-9]+]]
 ; IS__CGSCC_NPM:       for.end38:
 ; IS__CGSCC_NPM-NEXT:    [[I24:%.*]] = getelementptr inbounds [1024 x i8], [1024 x i8]* [[BYTES]], i64 0, i64 0
-; IS__CGSCC_NPM-NEXT:    call void @llvm.lifetime.end.p0i8(i64 noundef 1024, i8* nofree noundef nonnull [[I24]])
+; IS__CGSCC_NPM-NEXT:    call void @llvm.lifetime.end.p0i8(i64 noundef 1024, i8* nofree noundef nonnull align 16 dereferenceable(1024) [[I24]])
 ; IS__CGSCC_NPM-NEXT:    ret void
 ;
 entry:
