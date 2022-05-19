@@ -177,7 +177,7 @@ bool DwarfInstructions<A, R>::getRA_SIGN_STATE(A &addressSpace, R registers,
   pint_t raSignState;
   auto regloc = prolog.savedRegisters[UNW_AARCH64_RA_SIGN_STATE];
   if (regloc.location == CFI_Parser<A>::kRegisterUnused)
-    raSignState = regloc.value;
+    raSignState = static_cast<pint_t>(regloc.value);
   else
     raSignState = getSavedRegister(addressSpace, registers, cfa, regloc);
 
