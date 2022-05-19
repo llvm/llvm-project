@@ -379,6 +379,49 @@ filegroup(
 )
 
 ##---------------------------------------------------------------------------##
+# MLProgram dialect.
+##---------------------------------------------------------------------------##
+
+td_library(
+    name = "MLProgramOpsPyTdFiles",
+    srcs = [
+        "//mlir:include/mlir/Bindings/Python/Attributes.td",
+    ],
+    includes = ["../include"],
+    deps = [
+        "//mlir:MLProgramOpsTdFiles",
+        "//mlir:OpBaseTdFiles",
+    ],
+)
+
+gentbl_filegroup(
+    name = "MLProgramOpsPyGen",
+    tbl_outs = [
+        (
+            [
+                "-gen-python-op-bindings",
+                "-bind-dialect=ml_program",
+            ],
+            "mlir/dialects/_ml_program_ops_gen.py",
+        ),
+    ],
+    tblgen = "//mlir:mlir-tblgen",
+    td_file = "mlir/dialects/MLProgramOps.td",
+    deps = [
+        ":MLProgramOpsPyTdFiles",
+    ],
+)
+
+filegroup(
+    name = "MLProgramOpsPyFiles",
+    srcs = [
+        "mlir/dialects/_ml_program_ops_ext.py",
+        "mlir/dialects/ml_program.py",
+        ":MLProgramOpsPyGen",
+    ],
+)
+
+##---------------------------------------------------------------------------##
 # PDL dialect.
 ##---------------------------------------------------------------------------##
 
