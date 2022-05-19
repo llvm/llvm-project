@@ -101,7 +101,7 @@ bool fromJSON(const json::Value &value, TraceGetStateResponse &packet,
   return o && o.map("tracedThreads", packet.traced_threads) &&
          o.map("processBinaryData", packet.process_binary_data) &&
          o.map("cores", packet.cores) &&
-         o.mapOptional("warnings", packet.warnings);
+         o.map("warnings", packet.warnings);
 }
 
 json::Value toJSON(const TraceGetStateResponse &packet) {
@@ -109,6 +109,12 @@ json::Value toJSON(const TraceGetStateResponse &packet) {
                             {"processBinaryData", packet.process_binary_data},
                             {"cores", packet.cores},
                             {"warnings", packet.warnings}});
+}
+
+void TraceGetStateResponse::AddWarning(StringRef warning) {
+  if (!warnings)
+    warnings.emplace();
+  warnings->push_back(warning.data());
 }
 
 bool fromJSON(const json::Value &value, TraceCoreState &packet,
@@ -135,6 +141,7 @@ json::Value toJSON(const TraceGetBinaryDataRequest &packet) {
                             {"kind", packet.kind},
                             {"offset", packet.offset},
                             {"tid", packet.tid},
+                            {"coreId", packet.core_id},
                             {"size", packet.size}});
 }
 
@@ -143,7 +150,7 @@ bool fromJSON(const json::Value &value, TraceGetBinaryDataRequest &packet,
   ObjectMapper o(value, path);
   return o && o.map("type", packet.type) && o.map("kind", packet.kind) &&
          o.map("tid", packet.tid) && o.map("offset", packet.offset) &&
-         o.map("size", packet.size);
+         o.map("size", packet.size) && o.map("coreId", packet.core_id);
 }
 /// \}
 

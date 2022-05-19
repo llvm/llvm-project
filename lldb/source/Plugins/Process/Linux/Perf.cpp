@@ -24,54 +24,6 @@ using namespace lldb_private;
 using namespace process_linux;
 using namespace llvm;
 
-void lldb_private::process_linux::ReadCyclicBuffer(
-    llvm::MutableArrayRef<uint8_t> &dst, llvm::ArrayRef<uint8_t> src,
-    size_t src_cyc_index, size_t offset) {
-
-  Log *log = GetLog(POSIXLog::Trace);
-
-  if (dst.empty() || src.empty()) {
-    dst = dst.drop_back(dst.size());
-    return;
-  }
-
-  if (dst.data() == nullptr || src.data() == nullptr) {
-    dst = dst.drop_back(dst.size());
-    return;
-  }
-
-  if (src_cyc_index > src.size()) {
-    dst = dst.drop_back(dst.size());
-    return;
-  }
-
-  if (offset >= src.size()) {
-    LLDB_LOG(log, "Too Big offset ");
-    dst = dst.drop_back(dst.size());
-    return;
-  }
-
-  llvm::SmallVector<ArrayRef<uint8_t>, 2> parts = {
-      src.slice(src_cyc_index), src.take_front(src_cyc_index)};
-
-  if (offset > parts[0].size()) {
-    parts[1] = parts[1].slice(offset - parts[0].size());
-    parts[0] = parts[0].drop_back(parts[0].size());
-  } else if (offset == parts[0].size()) {
-    parts[0] = parts[0].drop_back(parts[0].size());
-  } else {
-    parts[0] = parts[0].slice(offset);
-  }
-  auto next = dst.begin();
-  auto bytes_left = dst.size();
-  for (auto part : parts) {
-    size_t chunk_size = std::min(part.size(), bytes_left);
-    next = std::copy_n(part.begin(), chunk_size, next);
-    bytes_left -= chunk_size;
-  }
-  dst = dst.drop_back(bytes_left);
-}
-
 Expected<LinuxPerfZeroTscConversion>
 lldb_private::process_linux::LoadPerfTscConversionParameters() {
   lldb::pid_t pid = getpid();
@@ -84,8 +36,10 @@ lldb_private::process_linux::LoadPerfTscConversionParameters() {
   Expected<PerfEvent> perf_event = PerfEvent::Init(attr, pid);
   if (!perf_event)
     return perf_event.takeError();
-  if (Error mmap_err = perf_event->MmapMetadataAndBuffers(/*num_data_pages*/ 0,
-                                                          /*num_aux_pages*/ 0))
+  if (Error mmap_err =
+          perf_event->MmapMetadataAndBuffers(/*num_data_pages=*/0,
+                                             /*num_aux_pages=*/0,
+                                             /*data_buffer_write=*/false))
     return std::move(mmap_err);
 
   perf_event_mmap_page &mmap_metada = perf_event->GetMetadataPage();
@@ -155,11 +109,12 @@ PerfEvent::DoMmap(void *addr, size_t length, int prot, int flags,
   return resource_handle::MmapUP(mmap_result, length);
 }
 
-llvm::Error PerfEvent::MmapMetadataAndDataBuffer(size_t num_data_pages) {
+llvm::Error PerfEvent::MmapMetadataAndDataBuffer(size_t num_data_pages,
+                                                 bool data_buffer_write) {
   size_t mmap_size = (num_data_pages + 1) * getpagesize();
-  if (Expected<resource_handle::MmapUP> mmap_metadata_data =
-          DoMmap(nullptr, mmap_size, PROT_READ | PROT_WRITE, MAP_SHARED, 0,
-                 "metadata and data buffer")) {
+  if (Expected<resource_handle::MmapUP> mmap_metadata_data = DoMmap(
+          nullptr, mmap_size, PROT_READ | (data_buffer_write ? PROT_WRITE : 0),
+          MAP_SHARED, 0, "metadata and data buffer")) {
     m_metadata_data_base = std::move(mmap_metadata_data.get());
     return Error::success();
   } else
@@ -171,6 +126,7 @@ llvm::Error PerfEvent::MmapAuxBuffer(size_t num_aux_pages) {
     return Error::success();
 
   perf_event_mmap_page &metadata_page = GetMetadataPage();
+
   metadata_page.aux_offset =
       metadata_page.data_offset + metadata_page.data_size;
   metadata_page.aux_size = num_aux_pages * getpagesize();
@@ -185,7 +141,8 @@ llvm::Error PerfEvent::MmapAuxBuffer(size_t num_aux_pages) {
 }
 
 llvm::Error PerfEvent::MmapMetadataAndBuffers(size_t num_data_pages,
-                                              size_t num_aux_pages) {
+                                              size_t num_aux_pages,
+                                              bool data_buffer_write) {
   if (num_data_pages != 0 && !isPowerOf2_64(num_data_pages))
     return llvm::createStringError(
         llvm::inconvertibleErrorCode(),
@@ -196,7 +153,7 @@ llvm::Error PerfEvent::MmapMetadataAndBuffers(size_t num_data_pages,
         llvm::inconvertibleErrorCode(),
         llvm::formatv("Number of aux pages must be a power of 2, got: {0}",
                       num_aux_pages));
-  if (Error err = MmapMetadataAndDataBuffer(num_data_pages))
+  if (Error err = MmapMetadataAndDataBuffer(num_data_pages, data_buffer_write))
     return err;
   if (Error err = MmapAuxBuffer(num_aux_pages))
     return err;
@@ -223,17 +180,73 @@ ArrayRef<uint8_t> PerfEvent::GetAuxBuffer() const {
 }
 
 Expected<std::vector<uint8_t>>
+PerfEvent::ReadFlushedOutDataCyclicBuffer(size_t offset, size_t size) {
+  CollectionState previous_state = m_collection_state;
+  if (Error err = DisableWithIoctl())
+    return std::move(err);
+
+  /**
+   * The data buffer and aux buffer have different implementations
+   * with respect to their definition of head pointer. In the case
+   * of Aux data buffer the head always wraps around the aux buffer
+   * and we don't need to care about it, whereas the data_head keeps
+   * increasing and needs to be wrapped by modulus operator
+   */
+  perf_event_mmap_page &mmap_metadata = GetMetadataPage();
+
+  ArrayRef<uint8_t> data = GetDataBuffer();
+  uint64_t data_head = mmap_metadata.data_head;
+  uint64_t data_size = mmap_metadata.data_size;
+  std::vector<uint8_t> output;
+  output.reserve(size);
+
+  if (data_head > data_size) {
+    uint64_t actual_data_head = data_head % data_size;
+    // The buffer has wrapped
+    for (uint64_t i = actual_data_head + offset;
+         i < data_size && output.size() < size; i++)
+      output.push_back(data[i]);
+
+    // We need to find the starting position for the left part if the offset was
+    // too big
+    uint64_t left_part_start = actual_data_head + offset >= data_size
+                                   ? actual_data_head + offset - data_size
+                                   : 0;
+    for (uint64_t i = left_part_start;
+         i < actual_data_head && output.size() < size; i++)
+      output.push_back(data[i]);
+  } else {
+    for (uint64_t i = offset; i < data_head && output.size() < size; i++)
+      output.push_back(data[i]);
+  }
+
+  if (previous_state == CollectionState::Enabled) {
+    if (Error err = EnableWithIoctl())
+      return std::move(err);
+  }
+
+  if (output.size() != size)
+    return createStringError(inconvertibleErrorCode(),
+                             formatv("Requested {0} bytes of perf_event data "
+                                     "buffer but only {1} are available",
+                                     size, output.size()));
+
+  return data;
+}
+
+Expected<std::vector<uint8_t>>
 PerfEvent::ReadFlushedOutAuxCyclicBuffer(size_t offset, size_t size) {
   CollectionState previous_state = m_collection_state;
   if (Error err = DisableWithIoctl())
     return std::move(err);
 
-  std::vector<uint8_t> data(size, 0);
   perf_event_mmap_page &mmap_metadata = GetMetadataPage();
-  Log *log = GetLog(POSIXLog::Trace);
-  uint64_t head = mmap_metadata.aux_head;
 
-  LLDB_LOG(log, "Aux size -{0} , Head - {1}", mmap_metadata.aux_size, head);
+  ArrayRef<uint8_t> data = GetAuxBuffer();
+  uint64_t aux_head = mmap_metadata.aux_head;
+  uint64_t aux_size = mmap_metadata.aux_size;
+  std::vector<uint8_t> output;
+  output.reserve(size);
 
   /**
    * When configured as ring buffer, the aux buffer keeps wrapping around
@@ -247,13 +260,27 @@ PerfEvent::ReadFlushedOutAuxCyclicBuffer(size_t offset, size_t size) {
    *
    * */
 
-  MutableArrayRef<uint8_t> buffer(data);
-  ReadCyclicBuffer(buffer, GetAuxBuffer(), static_cast<size_t>(head), offset);
+  for (uint64_t i = aux_head + offset; i < aux_size && output.size() < size;
+       i++)
+    output.push_back(data[i]);
+
+  // We need to find the starting position for the left part if the offset was
+  // too big
+  uint64_t left_part_start =
+      aux_head + offset >= aux_size ? aux_head + offset - aux_size : 0;
+  for (uint64_t i = left_part_start; i < aux_head && output.size() < size; i++)
+    output.push_back(data[i]);
 
   if (previous_state == CollectionState::Enabled) {
     if (Error err = EnableWithIoctl())
       return std::move(err);
   }
+
+  if (output.size() != size)
+    return createStringError(inconvertibleErrorCode(),
+                             formatv("Requested {0} bytes of perf_event aux "
+                                     "buffer but only {1} are available",
+                                     size, output.size()));
 
   return data;
 }
@@ -286,7 +313,7 @@ Error PerfEvent::EnableWithIoctl() {
 
 size_t PerfEvent::GetEffectiveDataBufferSize() const {
   perf_event_mmap_page &mmap_metadata = GetMetadataPage();
-  if (mmap_metadata.data_head < mmap_metadata.data_size)
+  if (mmap_metadata.data_head <= mmap_metadata.data_size)
     return mmap_metadata.data_head;
   else
     return mmap_metadata.data_size; // The buffer has wrapped.

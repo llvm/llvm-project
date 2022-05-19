@@ -36,9 +36,12 @@ public:
   /// \copydoc IntelPTThreadTraceCollection::TraceStop()
   virtual llvm::Error TraceStop(lldb::tid_t tid) = 0;
 
-  /// Get binary data owned by this instance.
-  virtual llvm::Expected<std::vector<uint8_t>>
-  GetBinaryData(const TraceGetBinaryDataRequest &request) = 0;
+  /// \return
+  ///   \b None if this instance doesn't support the requested data, an \a
+  ///   llvm::Error if this isntance supports it but fails at fetching it, and
+  ///   \b Error::success() otherwise.
+  virtual llvm::Expected<llvm::Optional<std::vector<uint8_t>>>
+  TryGetBinaryData(const TraceGetBinaryDataRequest &request) = 0;
 };
 
 using IntelPTProcessTraceUP = std::unique_ptr<IntelPTProcessTrace>;

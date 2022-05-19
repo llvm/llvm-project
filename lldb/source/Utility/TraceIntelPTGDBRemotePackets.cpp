@@ -60,7 +60,6 @@ std::chrono::nanoseconds LinuxPerfZeroTscConversion::ToNanos(uint64_t tsc) {
 
 json::Value toJSON(const LinuxPerfZeroTscConversion &packet) {
   return json::Value(json::Object{
-      {"kind", "tscPerfZeroConversion"},
       {"timeMult", packet.time_mult},
       {"timeShift", packet.time_shift},
       {"timeZero", packet.time_zero},
