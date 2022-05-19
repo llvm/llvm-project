@@ -44,7 +44,7 @@ define internal i32 @caller(i32* %B) {
 ; IS__CGSCC_NPM-SAME: (i32 [[TMP0:%.*]]) #[[ATTR1:[0-9]+]] {
 ; IS__CGSCC_NPM-NEXT:    [[B_PRIV:%.*]] = alloca i32, align 4
 ; IS__CGSCC_NPM-NEXT:    store i32 [[TMP0]], i32* [[B_PRIV]], align 4
-; IS__CGSCC_NPM-NEXT:    [[C:%.*]] = call i32 @test(i32 1, i32* noalias nocapture nofree noundef nonnull readonly align 4 dereferenceable(4) [[B_PRIV]]) #[[ATTR3:[0-9]+]]
+; IS__CGSCC_NPM-NEXT:    [[C:%.*]] = call i32 @test(i32 noundef 1, i32* noalias nocapture nofree noundef nonnull readonly align 4 dereferenceable(4) [[B_PRIV]]) #[[ATTR3:[0-9]+]]
 ; IS__CGSCC_NPM-NEXT:    ret i32 [[C]]
 ;
   %A = alloca i32
@@ -71,7 +71,7 @@ define i32 @callercaller() {
 ; IS__CGSCC_NPM: Function Attrs: nofree nosync nounwind readnone willreturn
 ; IS__CGSCC_NPM-LABEL: define {{[^@]+}}@callercaller
 ; IS__CGSCC_NPM-SAME: () #[[ATTR2:[0-9]+]] {
-; IS__CGSCC_NPM-NEXT:    [[X:%.*]] = call i32 @caller(i32 2) #[[ATTR4:[0-9]+]]
+; IS__CGSCC_NPM-NEXT:    [[X:%.*]] = call i32 @caller(i32 noundef 2) #[[ATTR4:[0-9]+]]
 ; IS__CGSCC_NPM-NEXT:    ret i32 [[X]]
 ;
   %B = alloca i32
