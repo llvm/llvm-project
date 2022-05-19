@@ -1231,11 +1231,12 @@ Given
 
   #pragma omp parallel default(none)
   #pragma omp parallel default(shared)
+  #pragma omp parallel default(private)
   #pragma omp parallel default(firstprivate)
   #pragma omp parallel
 
-``ompDefaultClause()`` matches ``default(none)``, ``default(shared)``, and
-``default(firstprivate)``
+``ompDefaultClause()`` matches ``default(none)``, ``default(shared)``,
+``default(private)`` and ``default(firstprivate)``
 </pre></td></tr>
 
 
@@ -4715,6 +4716,22 @@ varDecl(isInline()) will match Foo;
 </pre></td></tr>
 
 
+<tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1OMPDefaultClause.html">OMPDefaultClause</a>&gt;</td><td class="name" onclick="toggle('isPrivateKind0')"><a name="isPrivateKind0Anchor">isFirstPrivateKind</a></td><td></td></tr>
+<tr><td colspan="4" class="doc" id="isPrivateKind0"><pre>Matches if the OpenMP ``default`` clause has ``private`` kind
+specified.
+
+Given
+
+  #pragma omp parallel
+  #pragma omp parallel default(none)
+  #pragma omp parallel default(shared)
+  #pragma omp parallel default(private)
+  #pragma omp parallel default(firstprivate)
+
+``ompDefaultClause(isFirstPrivateKind())`` matches only
+``default(private)``.
+</pre></td></tr>
+
 <tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1OMPDefaultClause.html">OMPDefaultClause</a>&gt;</td><td class="name" onclick="toggle('isFirstPrivateKind0')"><a name="isFirstPrivateKind0Anchor">isFirstPrivateKind</a></td><td></td></tr>
 <tr><td colspan="4" class="doc" id="isFirstPrivateKind0"><pre>Matches if the OpenMP ``default`` clause has ``firstprivate`` kind
 specified.
@@ -4724,6 +4741,7 @@ Given
   #pragma omp parallel
   #pragma omp parallel default(none)
   #pragma omp parallel default(shared)
+  #pragma omp parallel default(private)
   #pragma omp parallel default(firstprivate)
 
 ``ompDefaultClause(isFirstPrivateKind())`` matches only
@@ -4739,6 +4757,7 @@ Given
   #pragma omp parallel
   #pragma omp parallel default(none)
   #pragma omp parallel default(shared)
+  #pragma omp parallel default(private)
   #pragma omp parallel default(firstprivate)
 
 ``ompDefaultClause(isNoneKind())`` matches only ``default(none)``.
@@ -4753,6 +4772,7 @@ Given
   #pragma omp parallel
   #pragma omp parallel default(none)
   #pragma omp parallel default(shared)
+  #pragma omp parallel default(private)
   #pragma omp parallel default(firstprivate)
 
 ``ompDefaultClause(isSharedKind())`` matches only ``default(shared)``.

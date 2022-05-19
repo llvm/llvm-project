@@ -1032,6 +1032,7 @@ __OMP_CANCEL_KIND(taskgroup, 4)
 
 __OMP_DEFAULT_KIND(none)
 __OMP_DEFAULT_KIND(shared)
+__OMP_DEFAULT_KIND(private)
 __OMP_DEFAULT_KIND(firstprivate)
 __OMP_DEFAULT_KIND(unknown)
 

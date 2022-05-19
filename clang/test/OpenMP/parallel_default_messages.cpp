@@ -18,11 +18,10 @@ int main(int argc, char **argv) {
   const int c = 0;
 
   #pragma omp parallel default // expected-error {{expected '(' after 'default'}}
-#pragma omp parallel default(  // expected-error {{expected 'none', 'shared' or 'firstprivate' in OpenMP clause 'default'}} expected-error {{expected ')'}} expected-note {{to match this '('}}
-#pragma omp parallel default() // expected-error {{expected 'none', 'shared' or 'firstprivate' in OpenMP clause 'default'}}
+#pragma omp parallel default(  // expected-error {{expected 'none', 'shared', 'private' or 'firstprivate' in OpenMP clause 'default'}} expected-error {{expected ')'}} expected-note {{to match this '('}}
+#pragma omp parallel default() // expected-error {{expected 'none', 'shared', 'private' or 'firstprivate' in OpenMP clause 'default'}}
 #pragma omp parallel default(none                     // expected-error {{expected ')'}} expected-note {{to match this '('}}
 #pragma omp parallel default(shared), default(shared) // expected-error {{directive '#pragma omp parallel' cannot contain more than one 'default' clause}}
-#pragma omp parallel default(x)                       // expected-error {{expected 'none', 'shared' or 'firstprivate' in OpenMP clause 'default'}}
   foo();
 
   #pragma omp parallel default(none) // expected-note {{explicit data sharing attribute requested here}}
@@ -37,6 +36,11 @@ int main(int argc, char **argv) {
 
 #ifdef OMP51
 #pragma omp parallel default(firstprivate) // expected-note 2 {{explicit data sharing attribute requested here}}
+  {
+    ++x; // expected-error {{variable 'x' must have explicitly specified data sharing attributes}}
+    ++y; // expected-error {{variable 'y' must have explicitly specified data sharing attributes}}
+  }
+#pragma omp parallel default(private) // expected-note 2 {{explicit data sharing attribute requested here}}
   {
     ++x; // expected-error {{variable 'x' must have explicitly specified data sharing attributes}}
     ++y; // expected-error {{variable 'y' must have explicitly specified data sharing attributes}}
