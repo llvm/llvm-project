@@ -28,6 +28,29 @@ body:             |
     RET_ReallyLR implicit $w0
 ...
 ---
+name:            disjoint_masks_rev
+tracksRegLiveness: true
+machineFunctionInfo: {}
+body:             |
+  bb.0:
+    liveins: $w0
+    ; CHECK-LABEL: name: disjoint_masks_rev
+    ; CHECK: liveins: $w0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %x:_(s32) = COPY $w0
+    ; CHECK-NEXT: %two:_(s32) = G_CONSTANT i32 2
+    ; CHECK-NEXT: %and:_(s32) = G_AND %x, %two
+    ; CHECK-NEXT: $w0 = COPY %and(s32)
+    ; CHECK-NEXT: RET_ReallyLR implicit $w0
+    %x:_(s32) = COPY $w0
+    %one:_(s32) = G_CONSTANT i32 1
+    %two:_(s32) = G_CONSTANT i32 2
+    %or:_(s32) = G_OR %x, %one
+    %and:_(s32) = G_AND %two, %or
+    $w0 = COPY %and(s32)
+    RET_ReallyLR implicit $w0
+...
+---
 name:            intersecting_masks
 tracksRegLiveness: true
 machineFunctionInfo: {}
@@ -49,6 +72,31 @@ body:             |
     %two:_(s32) = G_CONSTANT i32 2
     %or:_(s32) = G_OR %x, %one
     %and:_(s32) = G_AND %or, %two
+    $w0 = COPY %and(s32)
+    RET_ReallyLR implicit $w0
+...
+---
+name:            intersecting_masks_rev
+tracksRegLiveness: true
+machineFunctionInfo: {}
+body:             |
+  bb.0:
+    liveins: $w0
+    ; CHECK-LABEL: name: intersecting_masks_rev
+    ; CHECK: liveins: $w0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %x:_(s32) = COPY $w0
+    ; CHECK-NEXT: %one:_(s32) = G_CONSTANT i32 3
+    ; CHECK-NEXT: %two:_(s32) = G_CONSTANT i32 2
+    ; CHECK-NEXT: %or:_(s32) = G_OR %x, %one
+    ; CHECK-NEXT: %and:_(s32) = G_AND %two, %or
+    ; CHECK-NEXT: $w0 = COPY %and(s32)
+    ; CHECK-NEXT: RET_ReallyLR implicit $w0
+    %x:_(s32) = COPY $w0
+    %one:_(s32) = G_CONSTANT i32 3
+    %two:_(s32) = G_CONSTANT i32 2
+    %or:_(s32) = G_OR %x, %one
+    %and:_(s32) = G_AND %two, %or
     $w0 = COPY %and(s32)
     RET_ReallyLR implicit $w0
 ...
