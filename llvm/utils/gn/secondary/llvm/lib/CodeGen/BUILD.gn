@@ -191,6 +191,7 @@ static_library("CodeGen") {
     "ScheduleDAGInstrs.cpp",
     "ScheduleDAGPrinter.cpp",
     "ScoreboardHazardRecognizer.cpp",
+    "SelectOptimize.cpp",
     "ShadowStackGCLowering.cpp",
     "ShrinkWrap.cpp",
     "SjLjEHPrepare.cpp",
