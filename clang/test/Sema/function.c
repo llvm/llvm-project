@@ -117,6 +117,6 @@ void t22(int *ptr, int (*array)[3]) {
 
 void const Bar (void); // ok on decl
 // PR 20146
-void const Bar (void) // expected-warning {{function cannot return qualified void type 'const void'}}
+void const Bar (void) // also okay on defn per DR 423
 {
 }
