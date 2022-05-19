@@ -9,6 +9,7 @@
 #include "clang/Serialization/SourceLocationEncoding.h"
 
 #include "gtest/gtest.h"
+#include <climits>
 
 using namespace llvm;
 using namespace clang;
