@@ -87,11 +87,10 @@ TraceIntelPT::TraceIntelPT(
 }
 
 DecodedThreadSP TraceIntelPT::Decode(Thread &thread) {
-  RefreshLiveProcessState();
-  if (m_live_refresh_error.hasValue())
+  if (const char *error = RefreshLiveProcessState())
     return std::make_shared<DecodedThread>(
         thread.shared_from_this(),
-        createStringError(inconvertibleErrorCode(), *m_live_refresh_error));
+        createStringError(inconvertibleErrorCode(), error));
 
   auto it = m_thread_decoders.find(thread.GetID());
   if (it == m_thread_decoders.end())
@@ -241,23 +240,29 @@ Expected<pt_cpu> TraceIntelPT::GetCPUInfo() {
   return *m_cpu_info;
 }
 
-Process *TraceIntelPT::GetLiveProcess() { return m_live_process; }
-
-void TraceIntelPT::DoRefreshLiveProcessState(
-    Expected<TraceGetStateResponse> state) {
+Error TraceIntelPT::DoRefreshLiveProcessState(TraceGetStateResponse state,
+                                              StringRef json_response) {
   m_thread_decoders.clear();
 
-  if (!state) {
-    m_live_refresh_error = toString(state.takeError());
-    return;
-  }
-
-  for (const TraceThreadState &thread_state : state->traced_threads) {
+  for (const TraceThreadState &thread_state : state.traced_threads) {
     ThreadSP thread_sp =
-        m_live_process->GetThreadList().FindThreadByID(thread_state.tid);
+        GetLiveProcess()->GetThreadList().FindThreadByID(thread_state.tid);
     m_thread_decoders.emplace(
         thread_state.tid, std::make_unique<ThreadDecoder>(thread_sp, *this));
   }
+
+  Expected<TraceIntelPTGetStateResponse> intelpt_state =
+      json::parse<TraceIntelPTGetStateResponse>(json_response,
+                                                "TraceIntelPTGetStateResponse");
+  if (!intelpt_state)
+    return intelpt_state.takeError();
+
+  m_tsc_conversion = intelpt_state->tsc_perf_zero_conversion;
+  if (m_tsc_conversion) {
+    Log *log = GetLog(LLDBLog::Target);
+    LLDB_LOG(log, "TraceIntelPT found TSC conversion information");
+  }
+  return Error::success();
 }
 
 bool TraceIntelPT::IsTraced(lldb::tid_t tid) {

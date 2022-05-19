@@ -75,8 +75,8 @@ public:
 
   llvm::Expected<size_t> GetRawTraceSize(Thread &thread);
 
-  void DoRefreshLiveProcessState(
-      llvm::Expected<TraceGetStateResponse> state) override;
+  llvm::Error DoRefreshLiveProcessState(TraceGetStateResponse state,
+                                        llvm::StringRef json_response) override;
 
   bool IsTraced(lldb::tid_t tid) override;
 
@@ -148,12 +148,6 @@ public:
 
   llvm::Expected<pt_cpu> GetCPUInfo();
 
-  /// Get the current traced live process.
-  ///
-  /// \return
-  ///     The current traced live process. If it's not a live process,
-  ///     return \a nullptr.
-  Process *GetLiveProcess();
 
   /// \return
   ///     The timer object for this trace.
@@ -191,9 +185,11 @@ private:
   /// binary data.
   llvm::Optional<pt_cpu> m_cpu_info;
   std::map<lldb::tid_t, std::unique_ptr<ThreadDecoder>> m_thread_decoders;
-  /// Error gotten after a failed live process update, if any.
-  llvm::Optional<std::string> m_live_refresh_error;
+  /// Helper variable used to track long running operations for telemetry.
   TaskTimer m_task_timer;
+  /// It is provided by either a session file or a live process to convert TSC
+  /// counters to and from nanos. It might not be available on all hosts.
+  llvm::Optional<LinuxPerfZeroTscConversion> m_tsc_conversion;
 };
 
 } // namespace trace_intel_pt
