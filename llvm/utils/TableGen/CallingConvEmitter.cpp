@@ -20,6 +20,14 @@ using namespace llvm;
 namespace {
 class CallingConvEmitter {
   RecordKeeper &Records;
+  unsigned Counter;
+  std::string CurrentAction;
+  bool SwiftAction;
+
+  std::map<std::string, std::set<std::string>> AssignedRegsMap;
+  std::map<std::string, std::set<std::string>> AssignedSwiftRegsMap;
+  std::map<std::string, std::set<std::string>> DelegateToMap;
+
 public:
   explicit CallingConvEmitter(RecordKeeper &R) : Records(R) {}
 
@@ -28,7 +36,7 @@ public:
 private:
   void EmitCallingConv(Record *CC, raw_ostream &O);
   void EmitAction(Record *Action, unsigned Indent, raw_ostream &O);
-  unsigned Counter;
+  void EmitArgRegisterLists(raw_ostream &O);
 };
 } // End anonymous namespace
 
@@ -38,6 +46,7 @@ void CallingConvEmitter::run(raw_ostream &O) {
   // Emit prototypes for all of the non-custom CC's so that they can forward ref
   // each other.
   Records.startTimer("Emit prototypes");
+  O << "#ifndef GET_CC_REGISTER_LISTS\n\n";
   for (Record *CC : CCs) {
     if (!CC->getValueAsBit("Custom")) {
       unsigned Pad = CC->getName().size();
@@ -58,18 +67,28 @@ void CallingConvEmitter::run(raw_ostream &O) {
   // Emit each non-custom calling convention description in full.
   Records.startTimer("Emit full descriptions");
   for (Record *CC : CCs) {
-    if (!CC->getValueAsBit("Custom"))
+    if (!CC->getValueAsBit("Custom")) {
       EmitCallingConv(CC, O);
+    }
   }
-}
 
+  EmitArgRegisterLists(O);
+
+  O << "\n#endif // CC_REGISTER_LIST\n";
+}
 
 void CallingConvEmitter::EmitCallingConv(Record *CC, raw_ostream &O) {
   ListInit *CCActions = CC->getValueAsListInit("Actions");
   Counter = 0;
 
+  CurrentAction = CC->getName().str();
+  // Call upon the creation of a map entry from the void!
+  // We want an entry in AssignedRegsMap for every action, even if that
+  // entry is empty.
+  AssignedRegsMap[CurrentAction] = {};
+
   O << "\n\n";
-  unsigned Pad = CC->getName().size();
+  unsigned Pad = CurrentAction.size();
   if (CC->getValueAsBit("Entry")) {
     O << "bool llvm::";
     Pad += 12;
@@ -77,13 +96,21 @@ void CallingConvEmitter::EmitCallingConv(Record *CC, raw_ostream &O) {
     O << "static bool ";
     Pad += 13;
   }
-  O << CC->getName() << "(unsigned ValNo, MVT ValVT,\n"
+  O << CurrentAction << "(unsigned ValNo, MVT ValVT,\n"
     << std::string(Pad, ' ') << "MVT LocVT, CCValAssign::LocInfo LocInfo,\n"
     << std::string(Pad, ' ') << "ISD::ArgFlagsTy ArgFlags, CCState &State) {\n";
   // Emit all of the actions, in order.
   for (unsigned i = 0, e = CCActions->size(); i != e; ++i) {
+    Record *Action = CCActions->getElementAsRecord(i);
+    SwiftAction = llvm::any_of(Action->getSuperClasses(),
+                               [](const std::pair<Record *, SMRange> &Class) {
+                                 StringRef Name =
+                                     Class.first->getNameInitAsString();
+                                 return Name.startswith("CCIfSwift");
+                               });
+
     O << "\n";
-    EmitAction(CCActions->getElementAsRecord(i), 2, O);
+    EmitAction(Action, 2, O);
   }
   
   O << "\n  return true; // CC didn't match.\n";
@@ -93,7 +120,7 @@ void CallingConvEmitter::EmitCallingConv(Record *CC, raw_ostream &O) {
 void CallingConvEmitter::EmitAction(Record *Action,
                                     unsigned Indent, raw_ostream &O) {
   std::string IndentStr = std::string(Indent, ' ');
-  
+
   if (Action->isSubClassOf("CCPredicateAction")) {
     O << IndentStr << "if (";
     
@@ -121,18 +148,30 @@ void CallingConvEmitter::EmitAction(Record *Action,
       O << IndentStr << "if (!" << CC->getName()
         << "(ValNo, ValVT, LocVT, LocInfo, ArgFlags, State))\n"
         << IndentStr << "  return false;\n";
+      DelegateToMap[CurrentAction].insert(CC->getName().str());
     } else if (Action->isSubClassOf("CCAssignToReg")) {
       ListInit *RegList = Action->getValueAsListInit("RegList");
       if (RegList->size() == 1) {
-        O << IndentStr << "if (unsigned Reg = State.AllocateReg(";
-        O << getQualifiedName(RegList->getElementAsRecord(0)) << ")) {\n";
+        std::string Name = getQualifiedName(RegList->getElementAsRecord(0));
+        O << IndentStr << "if (unsigned Reg = State.AllocateReg(" << Name
+          << ")) {\n";
+        if (SwiftAction)
+          AssignedSwiftRegsMap[CurrentAction].insert(Name);
+        else
+          AssignedRegsMap[CurrentAction].insert(Name);
       } else {
         O << IndentStr << "static const MCPhysReg RegList" << ++Counter
           << "[] = {\n";
         O << IndentStr << "  ";
         ListSeparator LS;
-        for (unsigned i = 0, e = RegList->size(); i != e; ++i)
-          O << LS << getQualifiedName(RegList->getElementAsRecord(i));
+        for (unsigned i = 0, e = RegList->size(); i != e; ++i) {
+          std::string Name = getQualifiedName(RegList->getElementAsRecord(i));
+          if (SwiftAction)
+            AssignedSwiftRegsMap[CurrentAction].insert(Name);
+          else
+            AssignedRegsMap[CurrentAction].insert(Name);
+          O << LS << Name;
+        }
         O << "\n" << IndentStr << "};\n";
         O << IndentStr << "if (unsigned Reg = State.AllocateReg(RegList"
           << Counter << ")) {\n";
@@ -284,6 +323,83 @@ void CallingConvEmitter::EmitAction(Record *Action,
       errs() << *Action;
       PrintFatalError(Action->getLoc(), "Unknown CCAction!");
     }
+  }
+}
+
+void CallingConvEmitter::EmitArgRegisterLists(raw_ostream &O) {
+  // Transitively merge all delegated CCs into AssignedRegsMap.
+  using EntryTy = std::pair<std::string, std::set<std::string>>;
+  bool Redo;
+  do {
+    Redo = false;
+    std::deque<EntryTy> Worklist(DelegateToMap.begin(), DelegateToMap.end());
+
+    while (!Worklist.empty()) {
+      EntryTy Entry = Worklist.front();
+      Worklist.pop_front();
+
+      const std::string &CCName = Entry.first;
+      std::set<std::string> &Registers = Entry.second;
+      if (!Registers.empty())
+        continue;
+
+      for (auto &InnerEntry : Worklist) {
+        const std::string &InnerCCName = InnerEntry.first;
+        std::set<std::string> &InnerRegisters = InnerEntry.second;
+
+        if (InnerRegisters.find(CCName) != InnerRegisters.end()) {
+          AssignedRegsMap[InnerCCName].insert(
+              AssignedRegsMap[CCName].begin(),
+              AssignedRegsMap[CCName].end());
+          InnerRegisters.erase(CCName);
+        }
+      }
+
+      DelegateToMap.erase(CCName);
+      Redo = true;
+    }
+  } while (Redo);
+
+  if (AssignedRegsMap.empty())
+    return;
+
+  O << "\n#else\n\n";
+
+  for (auto &Entry : AssignedRegsMap) {
+    const std::string &RegName = Entry.first;
+    std::set<std::string> &Registers = Entry.second;
+
+    if (RegName.empty())
+      continue;
+
+    O << "const MCRegister " << Entry.first << "_ArgRegs[] = { ";
+
+    if (Registers.empty()) {
+      O << "0";
+    } else {
+      ListSeparator LS;
+      for (const std::string &Reg : Registers)
+        O << LS << Reg;
+    }
+
+    O << " };\n";
+  }
+
+  if (AssignedSwiftRegsMap.empty())
+    return;
+
+  O << "\n// Registers used by Swift.\n";
+  for (auto &Entry : AssignedSwiftRegsMap) {
+    const std::string &RegName = Entry.first;
+    std::set<std::string> &Registers = Entry.second;
+
+    O << "const MCRegister " << RegName << "_Swift_ArgRegs[] = { ";
+
+    ListSeparator LS;
+    for (const std::string &Reg : Registers)
+      O << LS << Reg;
+
+    O << " };\n";
   }
 }
 
