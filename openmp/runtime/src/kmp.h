@@ -3070,6 +3070,7 @@ static inline bool __kmp_is_hybrid_cpu() { return false; }
 extern volatile int __kmp_init_serial;
 extern volatile int __kmp_init_gtid;
 extern volatile int __kmp_init_common;
+extern volatile int __kmp_need_register_serial;
 extern volatile int __kmp_init_middle;
 extern volatile int __kmp_init_parallel;
 #if KMP_USE_MONITOR
