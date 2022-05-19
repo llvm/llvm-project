@@ -252,6 +252,8 @@ static void defineXLCompatMacros(MacroBuilder &Builder) {
   Builder.defineMacro("__test_data_class", "__builtin_ppc_test_data_class");
   Builder.defineMacro("__swdiv", "__builtin_ppc_swdiv");
   Builder.defineMacro("__swdivs", "__builtin_ppc_swdivs");
+  Builder.defineMacro("__fnabs", "__builtin_ppc_fnabs");
+  Builder.defineMacro("__fnabss", "__builtin_ppc_fnabss");
   Builder.defineMacro("__builtin_maxfe", "__builtin_ppc_maxfe");
   Builder.defineMacro("__builtin_maxfl", "__builtin_ppc_maxfl");
   Builder.defineMacro("__builtin_maxfs", "__builtin_ppc_maxfs");

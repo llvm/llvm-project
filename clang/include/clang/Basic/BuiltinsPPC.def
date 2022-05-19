@@ -159,6 +159,9 @@ BUILTIN(__builtin_ppc_maxfs, "ffff.", "t")
 BUILTIN(__builtin_ppc_minfe, "LdLdLdLd.", "t")
 BUILTIN(__builtin_ppc_minfl, "dddd.", "t")
 BUILTIN(__builtin_ppc_minfs, "ffff.", "t")
+// Floating Negative Absolute Value
+BUILTIN(__builtin_ppc_fnabs, "dd", "")
+BUILTIN(__builtin_ppc_fnabss, "ff", "")
 
 BUILTIN(__builtin_ppc_get_timebase, "ULLi", "n")
 

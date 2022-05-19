@@ -703,6 +703,11 @@ let hasSideEffects = 0 in {
                       (outs vsfrc:$XT), (ins vsfrc:$XB),
                       "xsnabsdp $XT, $XB", IIC_VecFP,
                       [(set f64:$XT, (fneg (fabs f64:$XB)))]>;
+  let isCodeGenOnly = 1 in
+  def XSNABSDPs : XX2Form<60, 361,
+                      (outs vssrc:$XT), (ins vssrc:$XB),
+                      "xsnabsdp $XT, $XB", IIC_VecFP,
+                      [(set f32:$XT, (fneg (fabs f32:$XB)))]>;
   def XSNEGDP : XX2Form<60, 377,
                       (outs vsfrc:$XT), (ins vsfrc:$XB),
                       "xsnegdp $XT, $XB", IIC_VecFP,
@@ -2871,6 +2876,8 @@ def : Pat<(int_ppc_fmsub f64:$A, f64:$B, f64:$C), (XSMSUBMDP $A, $B, $C)>;
 def : Pat<(int_ppc_fnmadd f64:$A, f64:$B, f64:$C), (XSNMADDMDP $A, $B, $C)>;
 def : Pat<(int_ppc_fre f64:$A), (XSREDP $A)>;
 def : Pat<(int_ppc_frsqrte vsfrc:$XB), (XSRSQRTEDP $XB)>;
+def : Pat<(int_ppc_fnabs f64:$A), (XSNABSDP $A)>;
+def : Pat<(int_ppc_fnabss f32:$A), (XSNABSDPs $A)>;
 
 // XXMRG[LH]W is a direct replacement for VMRG[LH]W respectively.
 // Prefer the VSX form for greater register range.
