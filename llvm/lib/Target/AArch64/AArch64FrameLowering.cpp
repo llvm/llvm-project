@@ -675,6 +675,138 @@ void AArch64FrameLowering::emitCalleeSavedSVERestores(
   emitCalleeSavedRestores(MBB, MBBI, true);
 }
 
+static MCRegister getRegisterOrZero(MCRegister Reg, bool HasSVE) {
+  switch (Reg.id()) {
+  default:
+    // The called routine is expected to preserve r19-r28
+    // r29 and r30 are used as frame pointer and link register resp.
+    return 0;
+
+    // GPRs
+#define CASE(n)                                                                \
+  case AArch64::W##n:                                                          \
+  case AArch64::X##n:                                                          \
+    return AArch64::X##n
+  CASE(0);
+  CASE(1);
+  CASE(2);
+  CASE(3);
+  CASE(4);
+  CASE(5);
+  CASE(6);
+  CASE(7);
+  CASE(8);
+  CASE(9);
+  CASE(10);
+  CASE(11);
+  CASE(12);
+  CASE(13);
+  CASE(14);
+  CASE(15);
+  CASE(16);
+  CASE(17);
+  CASE(18);
+#undef CASE
+
+    // FPRs
+#define CASE(n)                                                                \
+  case AArch64::B##n:                                                          \
+  case AArch64::H##n:                                                          \
+  case AArch64::S##n:                                                          \
+  case AArch64::D##n:                                                          \
+  case AArch64::Q##n:                                                          \
+    return HasSVE ? AArch64::Z##n : AArch64::Q##n
+  CASE(0);
+  CASE(1);
+  CASE(2);
+  CASE(3);
+  CASE(4);
+  CASE(5);
+  CASE(6);
+  CASE(7);
+  CASE(8);
+  CASE(9);
+  CASE(10);
+  CASE(11);
+  CASE(12);
+  CASE(13);
+  CASE(14);
+  CASE(15);
+  CASE(16);
+  CASE(17);
+  CASE(18);
+  CASE(19);
+  CASE(20);
+  CASE(21);
+  CASE(22);
+  CASE(23);
+  CASE(24);
+  CASE(25);
+  CASE(26);
+  CASE(27);
+  CASE(28);
+  CASE(29);
+  CASE(30);
+  CASE(31);
+#undef CASE
+  }
+}
+
+void AArch64FrameLowering::emitZeroCallUsedRegs(BitVector RegsToZero,
+                                                MachineBasicBlock &MBB) const {
+  // Insertion point.
+  MachineBasicBlock::iterator MBBI = MBB.getFirstTerminator();
+
+  // Fake a debug loc.
+  DebugLoc DL;
+  if (MBBI != MBB.end())
+    DL = MBBI->getDebugLoc();
+
+  const MachineFunction &MF = *MBB.getParent();
+  const AArch64Subtarget &STI = MF.getSubtarget<AArch64Subtarget>();
+  const AArch64RegisterInfo &TRI = *STI.getRegisterInfo();
+
+  BitVector GPRsToZero(TRI.getNumRegs());
+  BitVector FPRsToZero(TRI.getNumRegs());
+  bool HasSVE = STI.hasSVE();
+  for (MCRegister Reg : RegsToZero.set_bits()) {
+    if (TRI.isGeneralPurposeRegister(MF, Reg)) {
+      // For GPRs, we only care to clear out the 64-bit register.
+      if (MCRegister XReg = getRegisterOrZero(Reg, HasSVE))
+        GPRsToZero.set(XReg);
+    } else if (AArch64::FPR128RegClass.contains(Reg) ||
+               AArch64::FPR64RegClass.contains(Reg) ||
+               AArch64::FPR32RegClass.contains(Reg) ||
+               AArch64::FPR16RegClass.contains(Reg) ||
+               AArch64::FPR8RegClass.contains(Reg)) {
+      // For FPRs,
+      if (MCRegister XReg = getRegisterOrZero(Reg, HasSVE))
+        FPRsToZero.set(XReg);
+    }
+  }
+
+  const AArch64InstrInfo &TII = *STI.getInstrInfo();
+
+  // Zero out GPRs.
+  for (MCRegister Reg : GPRsToZero.set_bits())
+    BuildMI(MBB, MBBI, DL, TII.get(AArch64::MOVi64imm), Reg).addImm(0);
+
+  // Zero out FP/vector registers.
+  for (MCRegister Reg : FPRsToZero.set_bits())
+    BuildMI(MBB, MBBI, DL, TII.get(AArch64::MOVID), Reg).addImm(0);
+
+  if (HasSVE) {
+    for (MCRegister PReg :
+         {AArch64::P0, AArch64::P1, AArch64::P2, AArch64::P3, AArch64::P4,
+          AArch64::P5, AArch64::P6, AArch64::P7, AArch64::P8, AArch64::P9,
+          AArch64::P10, AArch64::P11, AArch64::P12, AArch64::P13, AArch64::P14,
+          AArch64::P15}) {
+      if (RegsToZero[PReg])
+        BuildMI(MBB, MBBI, DL, TII.get(AArch64::PFALSE), PReg);
+    }
+  }
+}
+
 // Find a scratch register that we can use at the start of the prologue to
 // re-align the stack pointer.  We avoid using callee-save registers since they
 // may appear to be free when this is called from canUseAsPrologue (during

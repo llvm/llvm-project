@@ -120,6 +120,9 @@ public:
   bool hasBasePointer(const MachineFunction &MF) const;
   unsigned getBaseRegister() const;
 
+  bool isArgumentRegister(const MachineFunction &MF,
+                          MCRegister Reg) const override;
+
   // Debug information queries.
   Register getFrameRegister(const MachineFunction &MF) const override;
 
