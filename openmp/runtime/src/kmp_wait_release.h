@@ -609,7 +609,8 @@ final_spin=FALSE)
       continue;
 
     // Don't suspend if there is a likelihood of new tasks being spawned.
-    if ((task_team != NULL) && TCR_4(task_team->tt.tt_found_tasks))
+    if (task_team != NULL && TCR_4(task_team->tt.tt_found_tasks) &&
+        !__kmp_wpolicy_passive)
       continue;
 
 #if KMP_USE_MONITOR

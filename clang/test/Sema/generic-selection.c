@@ -58,7 +58,11 @@ void GH50227(void) {
     ), int : 0);
 }
 
-void unreachable_associations(const int i) {
+struct Test {
+  int i;
+};
+
+void unreachable_associations(const int i, const struct Test t) {
   _Static_assert( // ext-warning {{'_Static_assert' is a C11 extension}}
     _Generic(i, // ext-warning {{'_Generic' is a C11 extension}}
       const int : 1,    // expected-warning {{due to lvalue conversion of the controlling expression, association of type 'const int' will never be selected because it is qualified}}
@@ -67,4 +71,10 @@ void unreachable_associations(const int i) {
       int : 4,
       default : 5
     ) == 4, "we had better pick int!");
+  _Static_assert( // ext-warning {{'_Static_assert' is a C11 extension}}
+    _Generic(t, // ext-warning {{'_Generic' is a C11 extension}}
+      struct Test : 1,
+      const struct Test : 2, // expected-warning {{due to lvalue conversion of the controlling expression, association of type 'const struct Test' will never be selected because it is qualified}}
+      default : 3
+    ) == 1, "we had better pick struct Test, not const struct Test!"); // C-specific result
 }

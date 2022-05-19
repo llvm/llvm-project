@@ -241,8 +241,10 @@ END-SCRIPT
 #include <__filesystem/space_info.h> // expected-error@*:* {{use of private header from outside its module: '__filesystem/space_info.h'}}
 #include <__filesystem/u8path.h> // expected-error@*:* {{use of private header from outside its module: '__filesystem/u8path.h'}}
 #include <__format/buffer.h> // expected-error@*:* {{use of private header from outside its module: '__format/buffer.h'}}
+#include <__format/concepts.h> // expected-error@*:* {{use of private header from outside its module: '__format/concepts.h'}}
 #include <__format/enable_insertable.h> // expected-error@*:* {{use of private header from outside its module: '__format/enable_insertable.h'}}
 #include <__format/format_arg.h> // expected-error@*:* {{use of private header from outside its module: '__format/format_arg.h'}}
+#include <__format/format_arg_store.h> // expected-error@*:* {{use of private header from outside its module: '__format/format_arg_store.h'}}
 #include <__format/format_args.h> // expected-error@*:* {{use of private header from outside its module: '__format/format_args.h'}}
 #include <__format/format_context.h> // expected-error@*:* {{use of private header from outside its module: '__format/format_context.h'}}
 #include <__format/format_error.h> // expected-error@*:* {{use of private header from outside its module: '__format/format_error.h'}}
