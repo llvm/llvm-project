@@ -107,7 +107,7 @@ const array_of_pointer_to_CI mine3;
 
 void main(void) {} /* expected-error {{'main' must return 'int'}} */
 
-const int main(void) {} /* expected-error {{'main' must return 'int'}} */
+const int main(void) {} /* OK per DR 423 */
 
 long long ll1 = /* expected-warning {{'long long' is an extension when C99 mode is not enabled}} */
          -42LL; /* expected-warning {{'long long' is an extension when C99 mode is not enabled}} */
