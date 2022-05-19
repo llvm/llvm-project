@@ -4224,18 +4224,23 @@ bool CombinerHelper::matchAndOrDisjointMask(
     return false;
 
   Register Src;
-  int64_t MaskAnd;
-  int64_t MaskOr;
+  Register AndMaskReg;
+  int64_t AndMaskBits;
+  int64_t OrMaskBits;
   if (!mi_match(MI, MRI,
-                m_GAnd(m_GOr(m_Reg(Src), m_ICst(MaskOr)), m_ICst(MaskAnd))))
+                m_GAnd(m_GOr(m_Reg(Src), m_ICst(OrMaskBits)),
+                       m_all_of(m_ICst(AndMaskBits), m_Reg(AndMaskReg)))))
     return false;
 
-  // Check if MaskOr could turn on any bits in Src.
-  if (MaskAnd & MaskOr)
+  // Check if OrMask could turn on any bits in Src.
+  if (AndMaskBits & OrMaskBits)
     return false;
 
   MatchInfo = [=, &MI](MachineIRBuilder &B) {
     Observer.changingInstr(MI);
+    // Canonicalize the result to have the constant on the RHS.
+    if (MI.getOperand(1).getReg() == AndMaskReg)
+      MI.getOperand(2).setReg(AndMaskReg);
     MI.getOperand(1).setReg(Src);
     Observer.changedInstr(MI);
   };
