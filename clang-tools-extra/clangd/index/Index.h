@@ -72,6 +72,9 @@ struct RefsRequest {
   /// choose to return less than this, e.g. it tries to avoid returning stale
   /// results.
   llvm::Optional<uint32_t> Limit;
+  /// If set, populates the container of the reference.
+  /// Index implementations may chose to populate containers no matter what.
+  bool WantContainer = false;
 };
 
 struct RelationsRequest {
