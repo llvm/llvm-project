@@ -121,11 +121,11 @@ void unroll_partial_heuristic_for(int m, float *a, float *b, float *c, float *d,
 // CHECK-NEXT:    [[TMP15:%.*]] = load i32, i32* [[DOTUNROLL_INNER_IV_J]], align 4
 // CHECK-NEXT:    [[TMP16:%.*]] = load i32, i32* [[DOTUNROLLED_IV_J7]], align 4
 // CHECK-NEXT:    [[ADD21:%.*]] = add nsw i32 [[TMP16]], 2
-// CHECK-NEXT:    [[CMP22:%.*]] = icmp sle i32 [[TMP15]], [[ADD21]]
+// CHECK-NEXT:    [[CMP22:%.*]] = icmp slt i32 [[TMP15]], [[ADD21]]
 // CHECK-NEXT:    br i1 [[CMP22]], label [[LAND_RHS:%.*]], label [[LAND_END:%.*]]
 // CHECK:       land.rhs:
 // CHECK-NEXT:    [[TMP17:%.*]] = load i32, i32* [[DOTUNROLL_INNER_IV_J]], align 4
-// CHECK-NEXT:    [[CMP24:%.*]] = icmp sle i32 [[TMP17]], 8
+// CHECK-NEXT:    [[CMP24:%.*]] = icmp slt i32 [[TMP17]], 8
 // CHECK-NEXT:    br label [[LAND_END]]
 // CHECK:       land.end:
 // CHECK-NEXT:    [[TMP18:%.*]] = phi i1 [ false, [[FOR_COND]] ], [ [[CMP24]], [[LAND_RHS]] ]
