@@ -14483,11 +14483,11 @@ StmtResult Sema::ActOnOpenMPUnrollDirective(ArrayRef<OMPClause *> Clauses,
   if (!EndOfTile.isUsable())
     return StmtError();
   ExprResult InnerCond1 = BuildBinOp(CurScope, LoopHelper.Cond->getExprLoc(),
-                                     BO_LE, MakeInnerRef(), EndOfTile.get());
+                                     BO_LT, MakeInnerRef(), EndOfTile.get());
   if (!InnerCond1.isUsable())
     return StmtError();
   ExprResult InnerCond2 =
-      BuildBinOp(CurScope, LoopHelper.Cond->getExprLoc(), BO_LE, MakeInnerRef(),
+      BuildBinOp(CurScope, LoopHelper.Cond->getExprLoc(), BO_LT, MakeInnerRef(),
                  MakeNumIterations());
   if (!InnerCond2.isUsable())
     return StmtError();
