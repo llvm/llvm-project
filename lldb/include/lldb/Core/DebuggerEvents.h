@@ -32,6 +32,7 @@ public:
 
   static const ProgressEventData *GetEventDataFromEvent(const Event *event_ptr);
   uint64_t GetID() const { return m_id; }
+  bool IsFinite() const { return m_total != UINT64_MAX; }
   uint64_t GetCompleted() const { return m_completed; }
   uint64_t GetTotal() const { return m_total; }
   const std::string &GetMessage() const { return m_message; }
