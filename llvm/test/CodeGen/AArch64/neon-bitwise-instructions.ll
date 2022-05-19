@@ -909,9 +909,9 @@ define <8 x i8> @vselect_equivalent_shuffle_v8i8(<8 x i8> %a, <8 x i8> %b) {
 
 ; CHECK-LABEL: .LCPI90_0:
 ; CHECK-NEXT: .byte   0
-; CHECK-NEXT: .byte   8
+; CHECK-NEXT: .byte   255
 ; CHECK-NEXT: .byte   2
-; CHECK-NEXT: .byte   9
+; CHECK-NEXT: .byte   255
 ; CHECK-NEXT: .byte   4
 ; CHECK-NEXT: .byte   5
 ; CHECK-NEXT: .byte   6
@@ -930,14 +930,14 @@ define <8 x i8> @vselect_equivalent_shuffle_v8i8_zero(<8 x i8> %a) {
 }
 
 ; CHECK-LABEL: .LCPI91_0:
-; CHECK-NEXT: .byte   24
-; CHECK-NEXT: .byte   16
-; CHECK-NEXT: .byte   26
-; CHECK-NEXT: .byte   17
-; CHECK-NEXT: .byte   28
-; CHECK-NEXT: .byte   29
-; CHECK-NEXT: .byte   30
-; CHECK-NEXT: .byte   31
+; CHECK-NEXT: .byte   0
+; CHECK-NEXT: .byte   255
+; CHECK-NEXT: .byte   2
+; CHECK-NEXT: .byte   255
+; CHECK-NEXT: .byte   4
+; CHECK-NEXT: .byte   5
+; CHECK-NEXT: .byte   6
+; CHECK-NEXT: .byte   7
 define <8 x i8> @vselect_equivalent_shuffle_v8i8_zeroswap(<8 x i8> %a) {
 ; CHECK-LABEL: vselect_equivalent_shuffle_v8i8_zeroswap:
 ; CHECK:       // %bb.0:
@@ -984,12 +984,12 @@ define <8 x i16> @vselect_equivalent_shuffle_v8i16(<8 x i16> %a, <8 x i16> %b) {
 ; CHECK-LABEL: .LCPI93_0:
 ; CHECK-NEXT: .byte   0
 ; CHECK-NEXT: .byte   1
-; CHECK-NEXT: .byte   16
-; CHECK-NEXT: .byte   17
+; CHECK-NEXT: .byte   255
+; CHECK-NEXT: .byte   255
 ; CHECK-NEXT: .byte   4
 ; CHECK-NEXT: .byte   5
-; CHECK-NEXT: .byte   18
-; CHECK-NEXT: .byte   19
+; CHECK-NEXT: .byte   255
+; CHECK-NEXT: .byte   255
 ; CHECK-NEXT: .byte   8
 ; CHECK-NEXT: .byte   9
 ; CHECK-NEXT: .byte   10
@@ -1011,12 +1011,12 @@ define <8 x i16> @vselect_equivalent_shuffle_v8i16_zero(<8 x i16> %a) {
 
 ; CHECK: .byte   0
 ; CHECK: .byte   1
-; CHECK: .byte   16
-; CHECK: .byte   17
+; CHECK: .byte   255
+; CHECK: .byte   255
 ; CHECK: .byte   4
 ; CHECK: .byte   5
-; CHECK: .byte   18
-; CHECK: .byte   19
+; CHECK: .byte   255
+; CHECK: .byte   255
 ; CHECK: .byte   8
 ; CHECK: .byte   9
 ; CHECK: .byte   10
