@@ -549,6 +549,9 @@ void arith::XOrIOp::getCanonicalizationPatterns(
 //===----------------------------------------------------------------------===//
 
 OpFoldResult arith::NegFOp::fold(ArrayRef<Attribute> operands) {
+  /// negf(negf(x)) -> x
+  if (auto op = this->getOperand().getDefiningOp<arith::NegFOp>())
+    return op.getOperand();
   return constFoldUnaryOp<FloatAttr>(operands,
                                      [](const APFloat &a) { return -a; });
 }
