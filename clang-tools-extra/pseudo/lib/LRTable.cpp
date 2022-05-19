@@ -97,7 +97,7 @@ LRTable::StateID LRTable::getGoToState(StateID State,
 }
 
 llvm::ArrayRef<LRTable::Action> LRTable::find(StateID Src, SymbolID ID) const {
-  size_t Idx = isToken(ID) ? symbolToToken(ID) : ID;
+  size_t Idx = isToken(ID) ? static_cast<size_t>(symbolToToken(ID)) : ID;
   assert(isToken(ID) ? Idx + 1 < TerminalOffset.size()
                      : Idx + 1 < NontermOffset.size());
   std::pair<size_t, size_t> TargetStateRange =
