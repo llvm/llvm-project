@@ -767,16 +767,6 @@ no_sanitize_features = [
 ]
 
 cc_library(
-    name = "string_utils",
-    hdrs = ["src/string/string_utils.h"],
-    deps = [
-        ":__support_common",
-        ":__support_cpp_bitset",
-        ":libc_root",
-    ],
-)
-
-cc_library(
     name = "string_memory_utils",
     hdrs = [
         "src/string/memory_utils/elements.h",
@@ -794,6 +784,17 @@ cc_library(
         ":__support_common",
         ":__support_cpp_bit",
         ":libc_root",
+    ],
+)
+
+cc_library(
+    name = "string_utils",
+    hdrs = ["src/string/string_utils.h"],
+    deps = [
+        ":__support_common",
+        ":__support_cpp_bitset",
+        ":libc_root",
+        ":string_memory_utils"
     ],
 )
 
