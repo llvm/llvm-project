@@ -49,6 +49,11 @@ class WebAssemblyOptimizeLiveIntervals final : public MachineFunctionPass {
     MachineFunctionPass::getAnalysisUsage(AU);
   }
 
+  MachineFunctionProperties getRequiredProperties() const override {
+    return MachineFunctionProperties().set(
+        MachineFunctionProperties::Property::TracksLiveness);
+  }
+
   bool runOnMachineFunction(MachineFunction &MF) override;
 
 public:
@@ -102,7 +107,7 @@ bool WebAssemblyOptimizeLiveIntervals::runOnMachineFunction(
     SplitLIs.clear();
   }
 
-  // In PrepareForLiveIntervals, we conservatively inserted IMPLICIT_DEF
+  // In FixIrreducibleControlFlow, we conservatively inserted IMPLICIT_DEF
   // instructions to satisfy LiveIntervals' requirement that all uses be
   // dominated by defs. Now that LiveIntervals has computed which of these
   // defs are actually needed and which are dead, remove the dead ones.
