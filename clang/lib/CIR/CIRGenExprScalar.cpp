@@ -627,10 +627,12 @@ public:
       assert(0 && "not implemented");
     }
 
-    // LLVM codegen ignore conversions like int -> uint, we should probably
-    // emit it here in case lowering to sanitizers dialect at some point.
+    // TODO(cir): LLVM codegen ignore conversions like int -> uint,
+    // is there anything to be done for CIR here?
     if (SrcTy == DstTy) {
-      assert(0 && "not implemented");
+      if (Opts.EmitImplicitIntegerSignChangeChecks)
+        assert(0 && "not implemented");
+      return Src;
     }
 
     // Handle pointer conversions next: pointers can only be converted to/from
