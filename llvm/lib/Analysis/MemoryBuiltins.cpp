@@ -385,7 +385,7 @@ llvm::getAllocSize(const CallBase *CB,
       if (!Arg)
         return None;
 
-      APInt MaxSize = Arg->getValue().zextOrSelf(IntTyBits);
+      APInt MaxSize = Arg->getValue().zext(IntTyBits);
       if (Size.ugt(MaxSize))
         Size = MaxSize + 1;
     }

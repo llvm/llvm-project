@@ -1540,7 +1540,7 @@ SDValue DAGTypeLegalizer::PromoteIntRes_VSCALE(SDNode *N) {
   EVT VT = TLI.getTypeToTransformTo(*DAG.getContext(), N->getValueType(0));
 
   APInt MulImm = cast<ConstantSDNode>(N->getOperand(0))->getAPIntValue();
-  return DAG.getVScale(SDLoc(N), VT, MulImm.sextOrSelf(VT.getSizeInBits()));
+  return DAG.getVScale(SDLoc(N), VT, MulImm.sext(VT.getSizeInBits()));
 }
 
 SDValue DAGTypeLegalizer::PromoteIntRes_VAARG(SDNode *N) {

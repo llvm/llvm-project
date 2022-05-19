@@ -808,8 +808,8 @@ void MicrosoftCXXNameMangler::mangleNumber(llvm::APSInt Number) {
   // to convert every integer to signed 64 bit before mangling (including
   // unsigned 64 bit values). Do the same, but preserve bits beyond the bottom
   // 64.
-  llvm::APInt Value =
-      Number.isSigned() ? Number.sextOrSelf(64) : Number.zextOrSelf(64);
+  unsigned Width = std::max(Number.getBitWidth(), 64U);
+  llvm::APInt Value = Number.extend(Width);
 
   // <non-negative integer> ::= A@              # when Number == 0
   //                        ::= <decimal digit> # when 1 <= Number <= 10

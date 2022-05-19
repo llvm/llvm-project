@@ -2002,7 +2002,7 @@ EmitCheckedMixedSignMultiply(CodeGenFunction &CGF, const clang::Expr *Op1,
     // Signed overflow occurs if the result is greater than INT_MAX or lesser
     // than INT_MIN, i.e when |Result| > (INT_MAX + IsNegative).
     auto IntMax =
-        llvm::APInt::getSignedMaxValue(ResultInfo.Width).zextOrSelf(OpWidth);
+        llvm::APInt::getSignedMaxValue(ResultInfo.Width).zext(OpWidth);
     llvm::Value *MaxResult =
         CGF.Builder.CreateAdd(llvm::ConstantInt::get(OpTy, IntMax),
                               CGF.Builder.CreateZExt(IsNegative, OpTy));

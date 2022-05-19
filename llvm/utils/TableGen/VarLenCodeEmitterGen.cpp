@@ -424,7 +424,7 @@ std::string VarLenCodeEmitterGen::getInstructionCaseForEncoding(
   raw_string_ostream SS(Case);
   // Resize the scratch buffer.
   if (BitWidth && !VLI.isFixedValueOnly())
-    SS.indent(6) << "Scratch = Scratch.zextOrSelf(" << BitWidth << ");\n";
+    SS.indent(6) << "Scratch = Scratch.zext(" << BitWidth << ");\n";
   // Populate based value.
   SS.indent(6) << "Inst = getInstBits(opcode);\n";
 

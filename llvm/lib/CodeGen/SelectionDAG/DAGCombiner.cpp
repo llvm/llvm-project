@@ -882,8 +882,8 @@ void DAGCombiner::deleteAndRecombine(SDNode *N) {
 // We provide an Offset so that we can create bitwidths that won't overflow.
 static void zeroExtendToMatch(APInt &LHS, APInt &RHS, unsigned Offset = 0) {
   unsigned Bits = Offset + std::max(LHS.getBitWidth(), RHS.getBitWidth());
-  LHS = LHS.zextOrSelf(Bits);
-  RHS = RHS.zextOrSelf(Bits);
+  LHS = LHS.zext(Bits);
+  RHS = RHS.zext(Bits);
 }
 
 // Return true if this node is a setcc, or is a select_cc
@@ -4970,8 +4970,7 @@ static SDValue isSaturatingMinMax(SDValue N0, SDValue N1, SDValue N2,
       return 0;
     const APInt &C1 = N1C->getAPIntValue();
     const APInt &C2 = N3C->getAPIntValue();
-    if (C1.getBitWidth() < C2.getBitWidth() ||
-        C1 != C2.sextOrSelf(C1.getBitWidth()))
+    if (C1.getBitWidth() < C2.getBitWidth() || C1 != C2.sext(C1.getBitWidth()))
       return 0;
     return CC == ISD::SETLT ? ISD::SMIN : (CC == ISD::SETGT ? ISD::SMAX : 0);
   };
@@ -5078,7 +5077,7 @@ static SDValue PerformUMinFpToSatCombine(SDValue N0, SDValue N1, SDValue N2,
   const APInt &C1 = N1C->getAPIntValue();
   const APInt &C3 = N3C->getAPIntValue();
   if (!(C1 + 1).isPowerOf2() || C1.getBitWidth() < C3.getBitWidth() ||
-      C1 != C3.zextOrSelf(C1.getBitWidth()))
+      C1 != C3.zext(C1.getBitWidth()))
     return SDValue();
 
   unsigned BW = (C1 + 1).exactLogBase2();
