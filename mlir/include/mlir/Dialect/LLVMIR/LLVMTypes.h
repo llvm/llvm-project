@@ -14,6 +14,7 @@
 #ifndef MLIR_DIALECT_LLVMIR_LLVMTYPES_H_
 #define MLIR_DIALECT_LLVMIR_LLVMTYPES_H_
 
+#include "mlir/IR/SubElementInterfaces.h"
 #include "mlir/IR/Types.h"
 #include "mlir/Interfaces/DataLayoutInterfaces.h"
 
@@ -73,7 +74,8 @@ DEFINE_TRIVIAL_LLVM_TYPE(LLVMMetadataType);
 /// type.
 class LLVMArrayType
     : public Type::TypeBase<LLVMArrayType, Type, detail::LLVMTypeAndSizeStorage,
-                            DataLayoutTypeInterface::Trait> {
+                            DataLayoutTypeInterface::Trait,
+                            SubElementTypeInterface::Trait> {
 public:
   /// Inherit base constructors.
   using Base::Base;
@@ -111,6 +113,9 @@ public:
 
   unsigned getPreferredAlignment(const DataLayout &dataLayout,
                                  DataLayoutEntryListRef params) const;
+
+  void walkImmediateSubElements(function_ref<void(Attribute)> walkAttrsFn,
+                                function_ref<void(Type)> walkTypesFn) const;
 };
 
 //===----------------------------------------------------------------------===//
@@ -120,9 +125,9 @@ public:
 /// LLVM dialect function type. It consists of a single return type (unlike MLIR
 /// which can have multiple), a list of parameter types and can optionally be
 /// variadic.
-class LLVMFunctionType
-    : public Type::TypeBase<LLVMFunctionType, Type,
-                            detail::LLVMFunctionTypeStorage> {
+class LLVMFunctionType : public Type::TypeBase<LLVMFunctionType, Type,
+                                               detail::LLVMFunctionTypeStorage,
+                                               SubElementTypeInterface::Trait> {
 public:
   /// Inherit base constructors.
   using Base::Base;
@@ -150,11 +155,11 @@ public:
   LLVMFunctionType clone(TypeRange inputs, TypeRange results) const;
 
   /// Returns the result type of the function.
-  Type getReturnType();
+  Type getReturnType() const;
 
   /// Returns the result type of the function as an ArrayRef, enabling better
   /// integration with generic MLIR utilities.
-  ArrayRef<Type> getReturnTypes();
+  ArrayRef<Type> getReturnTypes() const;
 
   /// Returns the number of arguments to the function.
   unsigned getNumParams();
@@ -163,12 +168,15 @@ public:
   Type getParamType(unsigned i);
 
   /// Returns a list of argument types of the function.
-  ArrayRef<Type> getParams();
+  ArrayRef<Type> getParams() const;
   ArrayRef<Type> params() { return getParams(); }
 
   /// Verifies that the type about to be constructed is well-formed.
   static LogicalResult verify(function_ref<InFlightDiagnostic()> emitError,
                               Type result, ArrayRef<Type> arguments, bool);
+
+  void walkImmediateSubElements(function_ref<void(Attribute)> walkAttrsFn,
+                                function_ref<void(Type)> walkTypesFn) const;
 };
 
 //===----------------------------------------------------------------------===//
@@ -179,9 +187,10 @@ public:
 /// object in memory. Pointers may be opaque or parameterized by the element
 /// type. Both opaque and non-opaque pointers are additionally parameterized by
 /// the address space.
-class LLVMPointerType : public Type::TypeBase<LLVMPointerType, Type,
-                                              detail::LLVMPointerTypeStorage,
-                                              DataLayoutTypeInterface::Trait> {
+class LLVMPointerType
+    : public Type::TypeBase<
+          LLVMPointerType, Type, detail::LLVMPointerTypeStorage,
+          DataLayoutTypeInterface::Trait, SubElementTypeInterface::Trait> {
 public:
   /// Inherit base constructors.
   using Base::Base;
@@ -232,6 +241,9 @@ public:
                      DataLayoutEntryListRef newLayout) const;
   LogicalResult verifyEntries(DataLayoutEntryListRef entries,
                               Location loc) const;
+
+  void walkImmediateSubElements(function_ref<void(Attribute)> walkAttrsFn,
+                                function_ref<void(Type)> walkTypesFn) const;
 };
 
 //===----------------------------------------------------------------------===//
@@ -265,6 +277,7 @@ public:
 class LLVMStructType
     : public Type::TypeBase<LLVMStructType, Type, detail::LLVMStructTypeStorage,
                             DataLayoutTypeInterface::Trait,
+                            SubElementTypeInterface::Trait,
                             TypeTrait::IsMutable> {
 public:
   /// Inherit base constructors.
@@ -359,6 +372,9 @@ public:
 
   LogicalResult verifyEntries(DataLayoutEntryListRef entries,
                               Location loc) const;
+
+  void walkImmediateSubElements(function_ref<void(Attribute)> walkAttrsFn,
+                                function_ref<void(Type)> walkTypesFn) const;
 };
 
 //===----------------------------------------------------------------------===//
@@ -369,7 +385,8 @@ public:
 /// length that can be processed as one.
 class LLVMFixedVectorType
     : public Type::TypeBase<LLVMFixedVectorType, Type,
-                            detail::LLVMTypeAndSizeStorage> {
+                            detail::LLVMTypeAndSizeStorage,
+                            SubElementTypeInterface::Trait> {
 public:
   /// Inherit base constructor.
   using Base::Base;
@@ -388,7 +405,7 @@ public:
   static bool isValidElementType(Type type);
 
   /// Returns the element type of the vector.
-  Type getElementType();
+  Type getElementType() const;
 
   /// Returns the number of elements in the fixed vector.
   unsigned getNumElements();
@@ -396,6 +413,9 @@ public:
   /// Verifies that the type about to be constructed is well-formed.
   static LogicalResult verify(function_ref<InFlightDiagnostic()> emitError,
                               Type elementType, unsigned numElements);
+
+  void walkImmediateSubElements(function_ref<void(Attribute)> walkAttrsFn,
+                                function_ref<void(Type)> walkTypesFn) const;
 };
 
 //===----------------------------------------------------------------------===//
@@ -407,7 +427,8 @@ public:
 /// elements can be processed as one in SIMD context.
 class LLVMScalableVectorType
     : public Type::TypeBase<LLVMScalableVectorType, Type,
-                            detail::LLVMTypeAndSizeStorage> {
+                            detail::LLVMTypeAndSizeStorage,
+                            SubElementTypeInterface::Trait> {
 public:
   /// Inherit base constructor.
   using Base::Base;
@@ -424,7 +445,7 @@ public:
   static bool isValidElementType(Type type);
 
   /// Returns the element type of the vector.
-  Type getElementType();
+  Type getElementType() const;
 
   /// Returns the scaling factor of the number of elements in the vector. The
   /// vector contains at least the resulting number of elements, or any non-zero
@@ -434,6 +455,9 @@ public:
   /// Verifies that the type about to be constructed is well-formed.
   static LogicalResult verify(function_ref<InFlightDiagnostic()> emitError,
                               Type elementType, unsigned minNumElements);
+
+  void walkImmediateSubElements(function_ref<void(Attribute)> walkAttrsFn,
+                                function_ref<void(Type)> walkTypesFn) const;
 };
 
 //===----------------------------------------------------------------------===//

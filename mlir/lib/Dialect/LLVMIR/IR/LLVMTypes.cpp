@@ -86,6 +86,12 @@ LLVMArrayType::getPreferredAlignment(const DataLayout &dataLayout,
   return dataLayout.getTypePreferredAlignment(getElementType());
 }
 
+void LLVMArrayType::walkImmediateSubElements(
+    function_ref<void(Attribute)> walkAttrsFn,
+    function_ref<void(Type)> walkTypesFn) const {
+  walkTypesFn(getElementType());
+}
+
 //===----------------------------------------------------------------------===//
 // Function type.
 //===----------------------------------------------------------------------===//
@@ -119,8 +125,10 @@ LLVMFunctionType LLVMFunctionType::clone(TypeRange inputs,
   return get(results[0], llvm::to_vector(inputs), isVarArg());
 }
 
-Type LLVMFunctionType::getReturnType() { return getImpl()->getReturnType(); }
-ArrayRef<Type> LLVMFunctionType::getReturnTypes() {
+Type LLVMFunctionType::getReturnType() const {
+  return getImpl()->getReturnType();
+}
+ArrayRef<Type> LLVMFunctionType::getReturnTypes() const {
   return getImpl()->getReturnType();
 }
 
@@ -134,7 +142,7 @@ Type LLVMFunctionType::getParamType(unsigned i) {
 
 bool LLVMFunctionType::isVarArg() const { return getImpl()->isVariadic(); }
 
-ArrayRef<Type> LLVMFunctionType::getParams() {
+ArrayRef<Type> LLVMFunctionType::getParams() const {
   return getImpl()->getArgumentTypes();
 }
 
@@ -149,6 +157,13 @@ LLVMFunctionType::verify(function_ref<InFlightDiagnostic()> emitError,
       return emitError() << "invalid function argument type: " << arg;
 
   return success();
+}
+
+void LLVMFunctionType::walkImmediateSubElements(
+    function_ref<void(Attribute)> walkAttrsFn,
+    function_ref<void(Type)> walkTypesFn) const {
+  for (Type type : llvm::concat<const Type>(getReturnTypes(), getParams()))
+    walkTypesFn(type);
 }
 
 //===----------------------------------------------------------------------===//
@@ -351,6 +366,12 @@ LogicalResult LLVMPointerType::verifyEntries(DataLayoutEntryListRef entries,
     }
   }
   return success();
+}
+
+void LLVMPointerType::walkImmediateSubElements(
+    function_ref<void(Attribute)> walkAttrsFn,
+    function_ref<void(Type)> walkTypesFn) const {
+  walkTypesFn(getElementType());
 }
 
 //===----------------------------------------------------------------------===//
@@ -589,6 +610,13 @@ LogicalResult LLVMStructType::verifyEntries(DataLayoutEntryListRef entries,
   return mlir::success();
 }
 
+void LLVMStructType::walkImmediateSubElements(
+    function_ref<void(Attribute)> walkAttrsFn,
+    function_ref<void(Type)> walkTypesFn) const {
+  for (Type type : getBody())
+    walkTypesFn(type);
+}
+
 //===----------------------------------------------------------------------===//
 // Vector types.
 //===----------------------------------------------------------------------===//
@@ -621,7 +649,7 @@ LLVMFixedVectorType::getChecked(function_ref<InFlightDiagnostic()> emitError,
                           numElements);
 }
 
-Type LLVMFixedVectorType::getElementType() {
+Type LLVMFixedVectorType::getElementType() const {
   return static_cast<detail::LLVMTypeAndSizeStorage *>(impl)->elementType;
 }
 
@@ -638,6 +666,12 @@ LLVMFixedVectorType::verify(function_ref<InFlightDiagnostic()> emitError,
                             Type elementType, unsigned numElements) {
   return verifyVectorConstructionInvariants<LLVMFixedVectorType>(
       emitError, elementType, numElements);
+}
+
+void LLVMFixedVectorType::walkImmediateSubElements(
+    function_ref<void(Attribute)> walkAttrsFn,
+    function_ref<void(Type)> walkTypesFn) const {
+  walkTypesFn(getElementType());
 }
 
 //===----------------------------------------------------------------------===//
@@ -658,7 +692,7 @@ LLVMScalableVectorType::getChecked(function_ref<InFlightDiagnostic()> emitError,
                           minNumElements);
 }
 
-Type LLVMScalableVectorType::getElementType() {
+Type LLVMScalableVectorType::getElementType() const {
   return static_cast<detail::LLVMTypeAndSizeStorage *>(impl)->elementType;
 }
 
@@ -678,6 +712,12 @@ LLVMScalableVectorType::verify(function_ref<InFlightDiagnostic()> emitError,
                                Type elementType, unsigned numElements) {
   return verifyVectorConstructionInvariants<LLVMScalableVectorType>(
       emitError, elementType, numElements);
+}
+
+void LLVMScalableVectorType::walkImmediateSubElements(
+    function_ref<void(Attribute)> walkAttrsFn,
+    function_ref<void(Type)> walkTypesFn) const {
+  walkTypesFn(getElementType());
 }
 
 //===----------------------------------------------------------------------===//
