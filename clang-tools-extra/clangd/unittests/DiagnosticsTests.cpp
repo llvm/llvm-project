@@ -1831,7 +1831,8 @@ $fix[[  $diag[[#include "unused.h"]]
   EXPECT_THAT(
       *TU.build().getDiagnostics(),
       UnorderedElementsAre(AllOf(
-          Diag(Test.range("diag"), "included header unused.h is not used"),
+          Diag(Test.range("diag"),
+               "included header unused.h is not used directly"),
           withTag(DiagnosticTag::Unnecessary), diagSource(Diag::Clangd),
           withFix(Fix(Test.range("fix"), "", "remove #include directive")))));
   Cfg.Diagnostics.SuppressAll = true;
