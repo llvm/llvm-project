@@ -60,7 +60,7 @@ getVariant(uint64_t LLVMDisassembler_VariantKind) {
 /// an operand to the MCInst and Fail otherwise.
 bool AArch64ExternalSymbolizer::tryAddingSymbolicOperand(
     MCInst &MI, raw_ostream &CommentStream, int64_t Value, uint64_t Address,
-    bool IsBranch, uint64_t Offset, uint64_t InstSize) {
+    bool IsBranch, uint64_t Offset, uint64_t OpSize, uint64_t InstSize) {
   if (!SymbolLookUp)
     return false;
   // FIXME: This method shares a lot of code with
@@ -73,8 +73,8 @@ bool AArch64ExternalSymbolizer::tryAddingSymbolicOperand(
   SymbolicOp.Value = Value;
   uint64_t ReferenceType;
   const char *ReferenceName;
-  if (!GetOpInfo ||
-      !GetOpInfo(DisInfo, Address, 0 /* Offset */, InstSize, 1, &SymbolicOp)) {
+  if (!GetOpInfo || !GetOpInfo(DisInfo, Address, /*Offset=*/0, OpSize, InstSize,
+                               1, &SymbolicOp)) {
     if (IsBranch) {
       ReferenceType = LLVMDisassembler_ReferenceType_In_Branch;
       const char *Name = SymbolLookUp(DisInfo, Address + Value, &ReferenceType,

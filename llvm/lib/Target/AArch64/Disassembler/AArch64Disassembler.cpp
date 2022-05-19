@@ -749,7 +749,7 @@ static DecodeStatus DecodePCRelLabel19(MCInst &Inst, unsigned Imm,
     ImmVal |= ~((1LL << 19) - 1);
 
   if (!Decoder->tryAddingSymbolicOperand(
-          Inst, ImmVal * 4, Addr, Inst.getOpcode() != AArch64::LDRXl, 0, 4))
+          Inst, ImmVal * 4, Addr, Inst.getOpcode() != AArch64::LDRXl, 0, 0, 4))
     Inst.addOperand(MCOperand::createImm(ImmVal));
   return Success;
 }
@@ -1030,7 +1030,7 @@ DecodeUnsignedLdStInstruction(MCInst &Inst, uint32_t insn, uint64_t Addr,
   }
 
   DecodeGPR64spRegisterClass(Inst, Rn, Addr, Decoder);
-  if (!Decoder->tryAddingSymbolicOperand(Inst, offset, Addr, Fail, 0, 4))
+  if (!Decoder->tryAddingSymbolicOperand(Inst, offset, Addr, Fail, 0, 0, 4))
     Inst.addOperand(MCOperand::createImm(offset));
   return Success;
 }
@@ -1640,7 +1640,7 @@ static DecodeStatus DecodeAdrInstruction(MCInst &Inst, uint32_t insn,
     imm |= ~((1LL << 21) - 1);
 
   DecodeGPR64RegisterClass(Inst, Rd, Addr, Decoder);
-  if (!Decoder->tryAddingSymbolicOperand(Inst, imm, Addr, Fail, 0, 4))
+  if (!Decoder->tryAddingSymbolicOperand(Inst, imm, Addr, Fail, 0, 0, 4))
     Inst.addOperand(MCOperand::createImm(imm));
 
   return Success;
@@ -1675,7 +1675,7 @@ static DecodeStatus DecodeAddSubImmShift(MCInst &Inst, uint32_t insn,
     DecodeGPR32spRegisterClass(Inst, Rn, Addr, Decoder);
   }
 
-  if (!Decoder->tryAddingSymbolicOperand(Inst, Imm, Addr, Fail, 0, 4))
+  if (!Decoder->tryAddingSymbolicOperand(Inst, Imm, Addr, Fail, 0, 0, 4))
     Inst.addOperand(MCOperand::createImm(ImmVal));
   Inst.addOperand(MCOperand::createImm(12 * ShifterVal));
   return Success;
@@ -1690,7 +1690,7 @@ static DecodeStatus DecodeUnconditionalBranch(MCInst &Inst, uint32_t insn,
   if (imm & (1 << (26 - 1)))
     imm |= ~((1LL << 26) - 1);
 
-  if (!Decoder->tryAddingSymbolicOperand(Inst, imm * 4, Addr, true, 0, 4))
+  if (!Decoder->tryAddingSymbolicOperand(Inst, imm * 4, Addr, true, 0, 0, 4))
     Inst.addOperand(MCOperand::createImm(imm));
 
   return Success;
@@ -1742,7 +1742,7 @@ static DecodeStatus DecodeTestAndBranch(MCInst &Inst, uint32_t insn,
   else
     DecodeGPR64RegisterClass(Inst, Rt, Addr, Decoder);
   Inst.addOperand(MCOperand::createImm(bit));
-  if (!Decoder->tryAddingSymbolicOperand(Inst, dst * 4, Addr, true, 0, 4))
+  if (!Decoder->tryAddingSymbolicOperand(Inst, dst * 4, Addr, true, 0, 0, 4))
     Inst.addOperand(MCOperand::createImm(dst));
 
   return Success;

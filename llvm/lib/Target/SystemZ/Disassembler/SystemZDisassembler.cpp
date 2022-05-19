@@ -75,7 +75,7 @@ static bool tryAddingSymbolicOperand(int64_t Value, bool isBranch,
                                      uint64_t Width, MCInst &MI,
                                      const MCDisassembler *Decoder) {
   return Decoder->tryAddingSymbolicOperand(MI, Value, Address, isBranch, Offset,
-                                           Width);
+                                           Width, /*InstSize=*/0);
 }
 
 static DecodeStatus decodeRegisterClass(MCInst &Inst, uint64_t RegNo,

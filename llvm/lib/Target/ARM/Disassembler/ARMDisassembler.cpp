@@ -835,7 +835,8 @@ static bool tryAddingSymbolicOperand(uint64_t Address, int32_t Value,
                                      const MCDisassembler *Decoder) {
   // FIXME: Does it make sense for value to be negative?
   return Decoder->tryAddingSymbolicOperand(MI, (uint32_t)Value, Address,
-                                           isBranch, /* Offset */ 0, InstSize);
+                                           isBranch, /*Offset=*/0, /*OpSize=*/0,
+                                           InstSize);
 }
 
 /// tryAddingPcLoadReferenceComment - trys to add a comment as to what is being

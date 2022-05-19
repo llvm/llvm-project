@@ -63,12 +63,13 @@ public:
   /// \param Address   - Load address of the instruction.
   /// \param IsBranch  - Is the instruction a branch?
   /// \param Offset    - Byte offset of the operand inside the inst.
+  /// \param OpSize    - Size of the operand in bytes.
   /// \param InstSize  - Size of the instruction in bytes.
   /// \return Whether a symbolic operand was added.
   virtual bool tryAddingSymbolicOperand(MCInst &Inst, raw_ostream &cStream,
                                         int64_t Value, uint64_t Address,
                                         bool IsBranch, uint64_t Offset,
-                                        uint64_t InstSize) = 0;
+                                        uint64_t OpSize, uint64_t InstSize) = 0;
 
   /// Try to add a comment on the PC-relative load.
   /// For instance, in Mach-O, this is used to add annotations to instructions
