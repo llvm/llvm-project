@@ -25,7 +25,6 @@ if @LIBUNWIND_USES_ARM_EHABI@:
     config.available_features.add('libunwind-arm-ehabi')
 
 if not @LIBUNWIND_ENABLE_THREADS@:
-    compile_flags.append('-D_LIBUNWIND_HAS_NO_THREADS')
     config.available_features.add('libunwind-no-threads')
 
 if @LIBUNWIND_ENABLE_CET@:
