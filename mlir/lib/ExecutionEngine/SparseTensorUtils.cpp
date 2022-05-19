@@ -173,9 +173,9 @@ public:
     assert(!iteratorLocked && "Attempt to sort() after startIterator()");
     // TODO: we may want to cache an `isSorted` bit, to avoid
     // unnecessary/redundant sorting.
+    uint64_t rank = getRank();
     std::sort(elements.begin(), elements.end(),
-              [this](const Element<V> &e1, const Element<V> &e2) {
-                uint64_t rank = getRank();
+              [rank](const Element<V> &e1, const Element<V> &e2) {
                 for (uint64_t r = 0; r < rank; r++) {
                   if (e1.indices[r] == e2.indices[r])
                     continue;
