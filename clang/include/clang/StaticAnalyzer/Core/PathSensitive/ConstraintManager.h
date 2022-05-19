@@ -162,6 +162,10 @@ protected:
   /// Returns whether or not a symbol is known to be null ("true"), known to be
   /// non-null ("false"), or may be either ("underconstrained").
   virtual ConditionTruthVal checkNull(ProgramStateRef State, SymbolRef Sym);
+
+  template <typename AssumeFunction>
+  ProgramStatePair assumeDualImpl(ProgramStateRef &State,
+                                  AssumeFunction &Assume);
 };
 
 std::unique_ptr<ConstraintManager>

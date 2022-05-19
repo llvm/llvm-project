@@ -42,12 +42,14 @@ ConditionTruthVal ConstraintManager::checkNull(ProgramStateRef State,
   return {};
 }
 
+template <typename AssumeFunction>
 ConstraintManager::ProgramStatePair
-ConstraintManager::assumeDual(ProgramStateRef State, DefinedSVal Cond) {
-  ProgramStateRef StTrue = assumeInternal(State, Cond, true);
+ConstraintManager::assumeDualImpl(ProgramStateRef &State,
+                                  AssumeFunction &Assume) {
+  ProgramStateRef StTrue = Assume(true);
 
   if (!StTrue) {
-    ProgramStateRef StFalse = assumeInternal(State, Cond, false);
+    ProgramStateRef StFalse = Assume(false);
     if (LLVM_UNLIKELY(!StFalse)) { // both infeasible
       ProgramStateRef StInfeasible = State->cloneAsPosteriorlyOverconstrained();
       assert(StInfeasible->isPosteriorlyOverconstrained());
@@ -63,7 +65,7 @@ ConstraintManager::assumeDual(ProgramStateRef State, DefinedSVal Cond) {
     return ProgramStatePair(nullptr, StFalse);
   }
 
-  ProgramStateRef StFalse = assumeInternal(State, Cond, false);
+  ProgramStateRef StFalse = Assume(false);
   if (!StFalse) {
     return ProgramStatePair(StTrue, nullptr);
   }
@@ -72,35 +74,21 @@ ConstraintManager::assumeDual(ProgramStateRef State, DefinedSVal Cond) {
 }
 
 ConstraintManager::ProgramStatePair
+ConstraintManager::assumeDual(ProgramStateRef State, DefinedSVal Cond) {
+  auto AssumeFun = [&](bool Assumption) {
+    return assumeInternal(State, Cond, Assumption);
+  };
+  return assumeDualImpl(State, AssumeFun);
+}
+
+ConstraintManager::ProgramStatePair
 ConstraintManager::assumeInclusiveRangeDual(ProgramStateRef State, NonLoc Value,
                                             const llvm::APSInt &From,
                                             const llvm::APSInt &To) {
-  ProgramStateRef StInRange =
-      assumeInclusiveRangeInternal(State, Value, From, To, true);
-  if (!StInRange) {
-    ProgramStateRef StOutOfRange =
-        assumeInclusiveRangeInternal(State, Value, From, To, false);
-    if (LLVM_UNLIKELY(!StOutOfRange)) { // both infeasible
-      ProgramStateRef StInfeasible = State->cloneAsPosteriorlyOverconstrained();
-      assert(StInfeasible->isPosteriorlyOverconstrained());
-      // Checkers might rely on the API contract that both returned states
-      // cannot be null. Thus, we return StInfeasible for both branches because
-      // it might happen that a Checker uncoditionally uses one of them if the
-      // other is a nullptr. This may also happen with the non-dual and
-      // adjacent `assume(true)` and `assume(false)` calls. By implementing
-      // assume in therms of assumeDual, we can keep our API contract there as
-      // well.
-      return ProgramStatePair(StInfeasible, StInfeasible);
-    }
-  }
-
-  ProgramStateRef StOutOfRange =
-      assumeInclusiveRangeInternal(State, Value, From, To, false);
-  if (!StOutOfRange) {
-    return ProgramStatePair(StInRange, nullptr);
-  }
-
-  return ProgramStatePair(StInRange, StOutOfRange);
+  auto AssumeFun = [&](bool Assumption) {
+    return assumeInclusiveRangeInternal(State, Value, From, To, Assumption);
+  };
+  return assumeDualImpl(State, AssumeFun);
 }
 
 ProgramStateRef ConstraintManager::assume(ProgramStateRef State,
