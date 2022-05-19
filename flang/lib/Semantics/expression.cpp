@@ -1921,7 +1921,10 @@ auto ExpressionAnalyzer::AnalyzeProcedureComponentRef(
               }};
           auto pair{ResolveGeneric(*sym, arguments, adjustment)};
           sym = pair.first;
-          if (!sym) {
+          if (sym) {
+            // re-resolve the name to the specific binding
+            sc.component.symbol = const_cast<Symbol *>(sym);
+          } else {
             EmitGenericResolutionError(*sc.component.symbol, pair.second);
             return std::nullopt;
           }
@@ -2184,6 +2187,10 @@ auto ExpressionAnalyzer::GetCalleeAndArguments(const parser::Name &name,
         *symbol, arguments, noAdjustment, mightBeStructureConstructor)};
     resolution = pair.first;
     dueToNullActual = pair.second;
+    if (resolution) {
+      // re-resolve name to the specific procedure
+      name.symbol = const_cast<Symbol *>(resolution);
+    }
   }
   if (!resolution) {
     // Not generic, or no resolution; may be intrinsic
