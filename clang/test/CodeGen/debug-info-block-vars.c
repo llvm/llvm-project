@@ -13,8 +13,8 @@
 // CHECK-OPT-NOT: alloca
 // Since the block address is not used anywhere in this function,
 // the optimizer (DeadArgElim) has replaced all the false uses
-// (i.e., metadata users) with undef.
-// CHECK-OPT: call void @llvm.dbg.value(metadata i8* undef,
+// (i.e., metadata users) with poison.
+// CHECK-OPT: call void @llvm.dbg.value(metadata i8* poison,
 // CHECK-OPT-SAME:                      metadata !DIExpression())
 void f(void) {
   a(^{

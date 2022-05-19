@@ -5,7 +5,7 @@
 ; Because of that use, we used to bail out on removing the
 ; unused arguments for this function.
 ; Yet, we should still be able to rewrite the direct calls that are
-; statically known, by replacing the related arguments with undef.
+; statically known, by replacing the related arguments with poison.
 ; This is what we check on the call that produces %res2.
 
 define i32 @call_indirect(i32 (i32, i32, i32)* readnone %fct_ptr, i32 %arg1, i32 %arg2, i32 %arg3) {
@@ -13,13 +13,13 @@ define i32 @call_indirect(i32 (i32, i32, i32)* readnone %fct_ptr, i32 %arg1, i32
 ; CHECK-NEXT:    [[CMP0:%.*]] = icmp eq i32 (i32, i32, i32)* [[FCT_PTR:%.*]], @external_fct
 ; CHECK-NEXT:    br i1 [[CMP0]], label [[CALL_EXT:%.*]], label [[CHK2:%.*]]
 ; CHECK:       call_ext:
-; CHECK-NEXT:    [[RES1:%.*]] = tail call i32 @external_fct(i32 undef, i32 [[ARG2:%.*]], i32 undef)
+; CHECK-NEXT:    [[RES1:%.*]] = tail call i32 @external_fct(i32 poison, i32 [[ARG2:%.*]], i32 poison)
 ; CHECK-NEXT:    br label [[END:%.*]]
 ; CHECK:       chk2:
 ; CHECK-NEXT:    [[CMP1:%.*]] = icmp eq i32 (i32, i32, i32)* [[FCT_PTR]], @internal_fct
 ; CHECK-NEXT:    br i1 [[CMP1]], label [[CALL_INT:%.*]], label [[CALL_OTHER:%.*]]
 ; CHECK:       call_int:
-; CHECK-NEXT:    [[RES2:%.*]] = tail call i32 @internal_fct(i32 undef, i32 [[ARG2]], i32 undef)
+; CHECK-NEXT:    [[RES2:%.*]] = tail call i32 @internal_fct(i32 poison, i32 [[ARG2]], i32 poison)
 ; CHECK-NEXT:    br label [[END]]
 ; CHECK:       call_other:
 ; CHECK-NEXT:    [[RES3:%.*]] = tail call i32 @other_fct(i32 [[ARG2]])
