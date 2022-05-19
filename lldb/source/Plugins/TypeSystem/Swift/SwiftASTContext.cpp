@@ -1349,7 +1349,8 @@ static bool DeserializeAllCompilerFlags(swift::CompilerInvocation &invocation,
     for (; !buf.empty(); buf = buf.substr(info.bytes)) {
       swift::serialization::ExtendedValidationInfo extended_validation_info;
       info = swift::serialization::validateSerializedAST(
-          buf, invocation.getSILOptions().EnableOSSAModules, &extended_validation_info);
+          buf, invocation.getSILOptions().EnableOSSAModules,
+          /*requiredSDK*/StringRef(), &extended_validation_info);
       bool invalid_ast = info.status != swift::serialization::Status::Valid;
       bool invalid_size = (info.bytes == 0) || (info.bytes > buf.size());
       bool invalid_name = info.name.empty();
