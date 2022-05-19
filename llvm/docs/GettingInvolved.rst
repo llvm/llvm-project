@@ -281,6 +281,32 @@ don't find anyone present, chances are they happen to be off that day.
     - `GoogleMeet <https://meet.google.com/kdy-fdbv-nuk>`__
     - English, Russian, German (not fluently)
 
+
+Guidance for office hours hosts
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+* If you're interested in becoming an office hours host, please add your
+  information to the list above.
+* When starting an office hours session, consider typing something like "*Hi,
+  I'm available for chats in the next half hour at* video chat URL. *I'm
+  looking forward to having conversations on the video chat or here.*" on the
+  LLVM chat channels that you are already on. These could include:
+
+    * the `#office-hours Discord channel
+      <https://discord.com/channels/636084430946959380/976196303681896538>`__.
+    * :ref:`IRC`
+
+  Doing this can help:
+    * overcome potential anxiety to call in for a first time,
+    * people who prefer to first exchange a few messages through text chat
+      before dialing in, and
+    * remind the wider community that office hours do exist.
+* If you decide to no longer host office hours, please do remove your entry
+  from the list above.
+
+
+.. _IRC:
+
 IRC
 ---
 
