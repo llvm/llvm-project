@@ -485,6 +485,9 @@ Expected<SymbolAliasMap> buildSimpleReexportsAliasMap(JITDylib &SourceJD,
 
 class InProgressLookupState {
 public:
+  // FIXME: Reduce the number of SymbolStringPtrs here. See
+  //        https://github.com/llvm/llvm-project/issues/55576.
+
   InProgressLookupState(LookupKind K, JITDylibSearchOrder SearchOrder,
                         SymbolLookupSet LookupSet, SymbolState RequiredState)
       : K(K), SearchOrder(std::move(SearchOrder)),
