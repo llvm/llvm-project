@@ -18,3 +18,12 @@ ml_program.subgraph @compute_subgraph(%arg0 : i32) -> i32 {
   %0 = "unregistered.dummy"(%arg0) : (i32) -> i32
   ml_program.output %0 : i32
 }
+
+// CHECK: ml_program.global private @global_same_type(dense<4> : tensor<4xi32>) : tensor<4xi32>
+ml_program.global private @global_same_type(dense<4> : tensor<4xi32>) : tensor<4xi32>
+
+// CHECK: ml_program.global private mutable @global_mutable_undef : tensor<?xi32>
+ml_program.global private mutable @global_mutable_undef : tensor<?xi32>
+
+// CHECK: ml_program.global private mutable @global_extern(#extern) : tensor<?xi32>
+ml_program.global private mutable @global_extern(#ml_program.extern : tensor<4xi32>) : tensor<?xi32>
