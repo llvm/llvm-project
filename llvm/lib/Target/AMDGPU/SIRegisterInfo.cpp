@@ -23,6 +23,7 @@
 #include "llvm/CodeGen/MachineDominators.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/RegisterScavenging.h"
+#include "llvm/IR/IntrinsicsAMDGPU.h"
 
 using namespace llvm;
 
@@ -2858,6 +2859,34 @@ bool SIRegisterInfo::shouldCoalesce(MachineInstr *MI,
     return true;
 
   return NewSize <= DstSize || NewSize <= SrcSize;
+}
+
+static bool functionUsesBVHIntrinsics(const MachineFunction &MF) {
+  const Function &F = MF.getFunction();
+  const Module &M = *F.getParent();
+  for (const auto &I : M) {
+    switch (I.getIntrinsicID()) {
+    case Intrinsic::amdgcn_image_bvh_intersect_ray:
+      for (const auto *U : I.users()) {
+        if (const auto *UI = dyn_cast<Instruction>(U)) {
+          if (UI->getFunction() == &F)
+            return true;
+        }
+      }
+    }
+  }
+  return false;
+}
+
+bool SIRegisterInfo::regClassPriorityTrumpsGlobalness(
+    const MachineFunction &MF) const {
+  // As a heuristic, only tweak the register allocator's live range priority for
+  // functions that use BVH intrinsics.
+  if (!ST.hasGFX10_AEncoding()) {
+    assert(!functionUsesBVHIntrinsics(MF));
+    return false;
+  }
+  return functionUsesBVHIntrinsics(MF);
 }
 
 unsigned SIRegisterInfo::getRegPressureLimit(const TargetRegisterClass *RC,
