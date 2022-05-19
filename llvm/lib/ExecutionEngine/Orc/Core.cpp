@@ -2070,7 +2070,7 @@ void ExecutionSession::lookup(
 
 Expected<SymbolMap>
 ExecutionSession::lookup(const JITDylibSearchOrder &SearchOrder,
-                         const SymbolLookupSet &Symbols, LookupKind K,
+                         SymbolLookupSet Symbols, LookupKind K,
                          SymbolState RequiredState,
                          RegisterDependenciesFunction RegisterDependencies) {
 #if LLVM_ENABLE_THREADS
@@ -2102,7 +2102,7 @@ ExecutionSession::lookup(const JITDylibSearchOrder &SearchOrder,
 #endif
 
   // Perform the asynchronous lookup.
-  lookup(K, SearchOrder, Symbols, RequiredState, NotifyComplete,
+  lookup(K, SearchOrder, std::move(Symbols), RequiredState, NotifyComplete,
          RegisterDependencies);
 
 #if LLVM_ENABLE_THREADS
