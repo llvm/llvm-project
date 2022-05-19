@@ -12,9 +12,9 @@
 # RUN: cmp %t.i386 %t.i386.copy
 # RUN: cmp %t.x86_64 %t.x86_64.copy
 
-## Case 2: copy a universal object file containing an archive.
+## Case 2: copy a universal object file containing an archive with darwin specific timestamps.
 # RUN: rm -f %t.archive.i386
-# RUN: llvm-ar cr %t.archive.i386 %t.i386
+# RUN: llvm-ar --format=darwin cr %t.archive.i386 %t.i386 %t.i386
 # RUN: llvm-lipo %t.archive.i386 %t.x86_64 -create -output %t.universal.containing.archive
 # RUN: llvm-objcopy %t.universal.containing.archive %t.universal.containing.archive.copy
 # RUN: llvm-lipo %t.universal.containing.archive.copy -archs | FileCheck --check-prefix=VERIFY_ARCHS %s
