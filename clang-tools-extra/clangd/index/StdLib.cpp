@@ -118,6 +118,7 @@ llvm::StringRef getStdlibUmbrellaHeader(const LangOptions &LO) {
                                                           }));
     return *UmbrellaC;
   }
+  llvm_unreachable("invalid Lang in langFromOpts");
 }
 
 namespace {
