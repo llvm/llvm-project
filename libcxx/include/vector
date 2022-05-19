@@ -435,9 +435,14 @@ public:
     vector(initializer_list<value_type> __il, const allocator_type& __a);
 
     _LIBCPP_INLINE_VISIBILITY
+    vector& operator=(initializer_list<value_type> __il)
+        {assign(__il.begin(), __il.end()); return *this;}
+#endif // !_LIBCPP_CXX03_LANG
+
+    _LIBCPP_INLINE_VISIBILITY
     vector(vector&& __x)
 #if _LIBCPP_STD_VER > 14
-        _NOEXCEPT;
+        noexcept;
 #else
         _NOEXCEPT_(is_nothrow_move_constructible<allocator_type>::value);
 #endif
@@ -447,12 +452,6 @@ public:
     _LIBCPP_INLINE_VISIBILITY
     vector& operator=(vector&& __x)
         _NOEXCEPT_((__noexcept_move_assign_container<_Allocator, __alloc_traits>::value));
-
-    _LIBCPP_INLINE_VISIBILITY
-    vector& operator=(initializer_list<value_type> __il)
-        {assign(__il.begin(), __il.end()); return *this;}
-
-#endif // !_LIBCPP_CXX03_LANG
 
     template <class _InputIterator>
         typename enable_if
@@ -565,41 +564,26 @@ public:
     const value_type* data() const _NOEXCEPT
         {return _VSTD::__to_address(this->__begin_);}
 
-#ifdef _LIBCPP_CXX03_LANG
-    _LIBCPP_INLINE_VISIBILITY
-    void __emplace_back(const value_type& __x) { push_back(__x); }
-#else
-    template <class _Arg>
-    _LIBCPP_INLINE_VISIBILITY
-    void __emplace_back(_Arg&& __arg) {
-      emplace_back(_VSTD::forward<_Arg>(__arg));
-    }
-#endif
-
     _LIBCPP_INLINE_VISIBILITY void push_back(const_reference __x);
 
-#ifndef _LIBCPP_CXX03_LANG
     _LIBCPP_INLINE_VISIBILITY void push_back(value_type&& __x);
 
     template <class... _Args>
-        _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_INLINE_VISIBILITY
 #if _LIBCPP_STD_VER > 14
         reference emplace_back(_Args&&... __args);
 #else
         void      emplace_back(_Args&&... __args);
 #endif
-#endif // !_LIBCPP_CXX03_LANG
 
     _LIBCPP_INLINE_VISIBILITY
     void pop_back();
 
     iterator insert(const_iterator __position, const_reference __x);
 
-#ifndef _LIBCPP_CXX03_LANG
     iterator insert(const_iterator __position, value_type&& __x);
     template <class... _Args>
-        iterator emplace(const_iterator __position, _Args&&... __args);
-#endif // !_LIBCPP_CXX03_LANG
+    iterator emplace(const_iterator __position, _Args&&... __args);
 
     iterator insert(const_iterator __position, size_type __n, const_reference __x);
     template <class _InputIterator>
@@ -724,7 +708,6 @@ private:
         __annotate_shrink(__old_size);
     }
 
-#ifndef _LIBCPP_CXX03_LANG
     template <class _Up>
     _LIBCPP_INLINE_VISIBILITY
     inline void __push_back_slow_path(_Up&& __x);
@@ -732,11 +715,6 @@ private:
     template <class... _Args>
     _LIBCPP_INLINE_VISIBILITY
     inline void __emplace_back_slow_path(_Args&&... __args);
-#else
-    template <class _Up>
-    _LIBCPP_INLINE_VISIBILITY
-    inline void __push_back_slow_path(_Up& __x);
-#endif
 
     // The following functions are no-ops outside of AddressSanitizer mode.
     // We call annotatations only for the default Allocator because other allocators
@@ -1110,7 +1088,7 @@ vector<_Tp, _Allocator>::vector(_InputIterator __first,
 {
     _VSTD::__debug_db_insert_c(this);
     for (; __first != __last; ++__first)
-        __emplace_back(*__first);
+        emplace_back(*__first);
 }
 
 template <class _Tp, class _Allocator>
@@ -1125,7 +1103,7 @@ vector<_Tp, _Allocator>::vector(_InputIterator __first, _InputIterator __last, c
 {
     _VSTD::__debug_db_insert_c(this);
     for (; __first != __last; ++__first)
-        __emplace_back(*__first);
+        emplace_back(*__first);
 }
 
 template <class _Tp, class _Allocator>
@@ -1190,13 +1168,11 @@ vector<_Tp, _Allocator>::vector(const vector& __x, const __type_identity_t<alloc
     }
 }
 
-#ifndef _LIBCPP_CXX03_LANG
-
 template <class _Tp, class _Allocator>
 inline _LIBCPP_INLINE_VISIBILITY
 vector<_Tp, _Allocator>::vector(vector&& __x)
 #if _LIBCPP_STD_VER > 14
-        _NOEXCEPT
+        noexcept
 #else
         _NOEXCEPT_(is_nothrow_move_constructible<allocator_type>::value)
 #endif
@@ -1231,6 +1207,8 @@ vector<_Tp, _Allocator>::vector(vector&& __x, const __type_identity_t<allocator_
     }
 }
 
+#ifndef _LIBCPP_CXX03_LANG
+
 template <class _Tp, class _Allocator>
 inline _LIBCPP_INLINE_VISIBILITY
 vector<_Tp, _Allocator>::vector(initializer_list<value_type> __il)
@@ -1255,6 +1233,8 @@ vector<_Tp, _Allocator>::vector(initializer_list<value_type> __il, const allocat
         __construct_at_end(__il.begin(), __il.end(), __il.size());
     }
 }
+
+#endif // _LIBCPP_CXX03_LANG
 
 template <class _Tp, class _Allocator>
 inline _LIBCPP_INLINE_VISIBILITY
@@ -1295,8 +1275,6 @@ vector<_Tp, _Allocator>::__move_assign(vector& __c, true_type)
     std::__debug_db_swap(this, std::addressof(__c));
 }
 
-#endif // !_LIBCPP_CXX03_LANG
-
 template <class _Tp, class _Allocator>
 inline _LIBCPP_INLINE_VISIBILITY
 vector<_Tp, _Allocator>&
@@ -1325,7 +1303,7 @@ vector<_Tp, _Allocator>::assign(_InputIterator __first, _InputIterator __last)
 {
     clear();
     for (; __first != __last; ++__first)
-        __emplace_back(*__first);
+        emplace_back(*__first);
 }
 
 template <class _Tp, class _Allocator>
@@ -1519,11 +1497,7 @@ vector<_Tp, _Allocator>::shrink_to_fit() _NOEXCEPT
 template <class _Tp, class _Allocator>
 template <class _Up>
 void
-#ifndef _LIBCPP_CXX03_LANG
 vector<_Tp, _Allocator>::__push_back_slow_path(_Up&& __x)
-#else
-vector<_Tp, _Allocator>::__push_back_slow_path(_Up& __x)
-#endif
 {
     allocator_type& __a = this->__alloc();
     __split_buffer<value_type, allocator_type&> __v(__recommend(size() + 1), size(), __a);
@@ -1545,8 +1519,6 @@ vector<_Tp, _Allocator>::push_back(const_reference __x)
     else
         __push_back_slow_path(__x);
 }
-
-#ifndef _LIBCPP_CXX03_LANG
 
 template <class _Tp, class _Allocator>
 inline _LIBCPP_INLINE_VISIBILITY
@@ -1594,8 +1566,6 @@ vector<_Tp, _Allocator>::emplace_back(_Args&&... __args)
     return this->back();
 #endif
 }
-
-#endif // !_LIBCPP_CXX03_LANG
 
 template <class _Tp, class _Allocator>
 inline
@@ -1693,8 +1663,6 @@ vector<_Tp, _Allocator>::insert(const_iterator __position, const_reference __x)
     return __make_iter(__p);
 }
 
-#ifndef _LIBCPP_CXX03_LANG
-
 template <class _Tp, class _Allocator>
 typename vector<_Tp, _Allocator>::iterator
 vector<_Tp, _Allocator>::insert(const_iterator __position, value_type&& __x)
@@ -1754,8 +1722,6 @@ vector<_Tp, _Allocator>::emplace(const_iterator __position, _Args&&... __args)
     }
     return __make_iter(__p);
 }
-
-#endif // !_LIBCPP_CXX03_LANG
 
 template <class _Tp, class _Allocator>
 typename vector<_Tp, _Allocator>::iterator
@@ -2126,9 +2092,15 @@ public:
     vector(initializer_list<value_type> __il, const allocator_type& __a);
 
     _LIBCPP_INLINE_VISIBILITY
+    vector& operator=(initializer_list<value_type> __il)
+        {assign(__il.begin(), __il.end()); return *this;}
+
+#endif // !_LIBCPP_CXX03_LANG
+
+    _LIBCPP_INLINE_VISIBILITY
     vector(vector&& __v)
 #if _LIBCPP_STD_VER > 14
-        _NOEXCEPT;
+        noexcept;
 #else
         _NOEXCEPT_(is_nothrow_move_constructible<allocator_type>::value);
 #endif
@@ -2136,12 +2108,6 @@ public:
     _LIBCPP_INLINE_VISIBILITY
     vector& operator=(vector&& __v)
         _NOEXCEPT_((__noexcept_move_assign_container<_Allocator, __alloc_traits>::value));
-
-    _LIBCPP_INLINE_VISIBILITY
-    vector& operator=(initializer_list<value_type> __il)
-        {assign(__il.begin(), __il.end()); return *this;}
-
-#endif // !_LIBCPP_CXX03_LANG
 
     template <class _InputIterator>
         typename enable_if
@@ -2739,8 +2705,6 @@ vector<bool, _Allocator>::operator=(const vector& __v)
     return *this;
 }
 
-#ifndef _LIBCPP_CXX03_LANG
-
 template <class _Allocator>
 inline _LIBCPP_INLINE_VISIBILITY vector<bool, _Allocator>::vector(vector&& __v)
 #if _LIBCPP_STD_VER > 14
@@ -2811,8 +2775,6 @@ vector<bool, _Allocator>::__move_assign(vector& __c, true_type)
     __c.__begin_ = nullptr;
     __c.__cap() = __c.__size_ = 0;
 }
-
-#endif // !_LIBCPP_CXX03_LANG
 
 template <class _Allocator>
 void

@@ -11,8 +11,6 @@
 
 #include "test_macros.h"
 
-#if TEST_STD_VER >= 11
-
 #include <cstddef>
 #include <functional>
 
@@ -20,31 +18,35 @@ class MoveOnly
 {
     int data_;
 public:
-    constexpr MoveOnly(int data = 1) : data_(data) {}
+    TEST_CONSTEXPR MoveOnly(int data = 1) : data_(data) {}
+
+    MoveOnly(const MoveOnly&) = delete;
+    MoveOnly& operator=(const MoveOnly&) = delete;
+
     TEST_CONSTEXPR_CXX14 MoveOnly(MoveOnly&& x)
         : data_(x.data_) {x.data_ = 0;}
     TEST_CONSTEXPR_CXX14 MoveOnly& operator=(MoveOnly&& x)
         {data_ = x.data_; x.data_ = 0; return *this;}
 
-    constexpr int get() const {return data_;}
+    TEST_CONSTEXPR int get() const {return data_;}
 
-    friend constexpr bool operator==(const MoveOnly& x, const MoveOnly& y)
+    friend TEST_CONSTEXPR bool operator==(const MoveOnly& x, const MoveOnly& y)
         { return x.data_ == y.data_; }
-    friend constexpr bool operator!=(const MoveOnly& x, const MoveOnly& y)
+    friend TEST_CONSTEXPR bool operator!=(const MoveOnly& x, const MoveOnly& y)
         { return x.data_ != y.data_; }
-    friend constexpr bool operator< (const MoveOnly& x, const MoveOnly& y)
+    friend TEST_CONSTEXPR bool operator< (const MoveOnly& x, const MoveOnly& y)
         { return x.data_ <  y.data_; }
-    friend constexpr bool operator<=(const MoveOnly& x, const MoveOnly& y)
+    friend TEST_CONSTEXPR bool operator<=(const MoveOnly& x, const MoveOnly& y)
         { return x.data_ <= y.data_; }
-    friend constexpr bool operator> (const MoveOnly& x, const MoveOnly& y)
+    friend TEST_CONSTEXPR bool operator> (const MoveOnly& x, const MoveOnly& y)
         { return x.data_ >  y.data_; }
-    friend constexpr bool operator>=(const MoveOnly& x, const MoveOnly& y)
+    friend TEST_CONSTEXPR bool operator>=(const MoveOnly& x, const MoveOnly& y)
         { return x.data_ >= y.data_; }
 
     TEST_CONSTEXPR_CXX14 MoveOnly operator+(const MoveOnly& x) const
-        { return MoveOnly{data_ + x.data_}; }
+        { return MoveOnly(data_ + x.data_); }
     TEST_CONSTEXPR_CXX14 MoveOnly operator*(const MoveOnly& x) const
-        { return MoveOnly{data_ * x.data_}; }
+        { return MoveOnly(data_ * x.data_); }
 
     template<class T, class U>
     friend void operator,(T t, U u) = delete;
@@ -56,9 +58,7 @@ struct std::hash<MoveOnly>
 {
     typedef MoveOnly argument_type;
     typedef size_t result_type;
-    constexpr size_t operator()(const MoveOnly& x) const {return x.get();}
+    TEST_CONSTEXPR size_t operator()(const MoveOnly& x) const {return x.get();}
 };
-
-#endif // TEST_STD_VER >= 11
 
 #endif // MOVEONLY_H

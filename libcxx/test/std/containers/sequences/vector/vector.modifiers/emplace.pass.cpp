@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-// UNSUPPORTED: c++03
+// UNSUPPORTED: c++03 && !stdlib=libc++
 
 // <vector>
 
@@ -109,8 +109,8 @@ int main(int, char**)
         assert(is_contiguous_container_asan_correct(c));
     }
     {
-        std::vector<A, min_allocator<A>> c;
-        std::vector<A, min_allocator<A>>::iterator i = c.emplace(c.cbegin(), 2, 3.5);
+        std::vector<A, min_allocator<A> > c;
+        std::vector<A, min_allocator<A> >::iterator i = c.emplace(c.cbegin(), 2, 3.5);
         assert(i == c.begin());
         assert(c.size() == 1);
         assert(c.front().geti() == 2);
