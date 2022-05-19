@@ -2343,6 +2343,7 @@ static void writeDIArgList(raw_ostream &Out, const DIArgList *N,
 
 static void writeDIExpr(raw_ostream &Out, const DIExpr *N,
                         AsmWriterContext &WriterCtx) {
+  assert(WriterCtx.TypePrinter && "DIExpr require TypePrinting!");
   FieldSeparator FS;
   Out << "!DIExpr(";
   for (auto &&Op : N->builder()) {
@@ -3468,6 +3469,7 @@ static void printMetadataIdentifier(StringRef Name,
 }
 
 void AssemblyWriter::printNamedMDNode(const NamedMDNode *NMD) {
+  AsmWriterContext WriterCtx(&TypePrinter, &Machine, NMD->getParent());
   Out << '!';
   printMetadataIdentifier(NMD->getName(), Out);
   Out << " = !{";
@@ -3482,7 +3484,7 @@ void AssemblyWriter::printNamedMDNode(const NamedMDNode *NMD) {
            "DIArgLists should not appear in NamedMDNodes");
 #define HANDLE_MDNODE_LEAF_UNIQUED(CLASS)                                      \
   if (auto *N = dyn_cast<CLASS>(Op)) {                                         \
-    write##CLASS(Out, N, AsmWriterContext::getEmpty());                        \
+    write##CLASS(Out, N, WriterCtx);                                           \
     continue;                                                                  \
   }
 #include "llvm/IR/Metadata.def"
