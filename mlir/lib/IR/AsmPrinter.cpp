@@ -2718,7 +2718,10 @@ void OperationPrinter::printOperation(Operation *op) {
       if (auto opPrinter = dialect->getOperationPrinter(op)) {
         // Print the op name first.
         StringRef name = op->getName().getStringRef();
-        name.consume_front((defaultDialectStack.back() + ".").str());
+        // Only drop the default dialect prefix when it cannot lead to
+        // ambiguities.
+        if (name.count('.') == 1)
+          name.consume_front((defaultDialectStack.back() + ".").str());
         printEscapedString(name, os);
         // Print the rest of the op now.
         opPrinter(op, *this);

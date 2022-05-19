@@ -810,6 +810,12 @@ def DefaultDialectOp : TEST_Op<"default_dialect", [OpAsmOpInterface]> {
   let assemblyFormat = "regions attr-dict-with-keyword";
 }
 
+// This is used to test that the default dialect is not elided when printing an
+// op with dots in the name to avoid parsing ambiguity.
+def OpWithDotInNameOp : TEST_Op<"op.with_dot_in_name"> {
+  let assemblyFormat = "attr-dict";
+}
+
 // This is used to test the OpAsmOpInterface::getAsmBlockName() feature:
 // blocks nested in a region under this op will have a name defined by the
 // interface.
