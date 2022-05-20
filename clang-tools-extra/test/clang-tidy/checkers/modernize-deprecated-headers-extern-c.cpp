@@ -8,6 +8,13 @@
 // RUN:   && cp %S/Inputs/modernize-deprecated-headers/mylib.h       %t/usr/mylib.h
 
 // RUN: %check_clang_tidy -std=c++11 %s modernize-deprecated-headers %t \
+// RUN:   -check-suffixes=DEFAULT \
+// RUN:   --header-filter='.*' --system-headers \
+// RUN:   -- -I %t/usr -isystem %t/sys -isystem %S/Inputs/modernize-deprecated-headers
+
+// RUN: %check_clang_tidy -std=c++11 %s modernize-deprecated-headers %t \
+// RUN:   -check-suffixes=DEFAULT,CHECK-HEADER-FILE \
+// RUN:   -config="{CheckOptions: [{key: modernize-deprecated-headers.CheckHeaderFile, value: 'true'}]}" \
 // RUN:   --header-filter='.*' --system-headers \
 // RUN:   -- -I %t/usr -isystem %t/sys -isystem %S/Inputs/modernize-deprecated-headers
 
@@ -18,20 +25,20 @@
 extern "C++" {
 // We should still have the warnings here.
 #include <stdbool.h>
-// CHECK-MESSAGES: :[[@LINE-1]]:10: warning: including 'stdbool.h' has no effect in C++; consider removing it [modernize-deprecated-headers]
+// CHECK-MESSAGES-DEFAULT: :[[@LINE-1]]:10: warning: including 'stdbool.h' has no effect in C++; consider removing it [modernize-deprecated-headers]
 }
 
 #include <assert.h>
-// CHECK-MESSAGES: :[[@LINE-1]]:10: warning: inclusion of deprecated C++ header 'assert.h'; consider using 'cassert' instead [modernize-deprecated-headers]
+// CHECK-MESSAGES-DEFAULT: :[[@LINE-1]]:10: warning: inclusion of deprecated C++ header 'assert.h'; consider using 'cassert' instead [modernize-deprecated-headers]
 
 #include <stdbool.h>
-// CHECK-MESSAGES: :[[@LINE-1]]:10: warning: including 'stdbool.h' has no effect in C++; consider removing it [modernize-deprecated-headers]
+// CHECK-MESSAGES-DEFAULT: :[[@LINE-1]]:10: warning: including 'stdbool.h' has no effect in C++; consider removing it [modernize-deprecated-headers]
 
 #include <mysystemlib.h> // FIXME: We should have no warning into system headers.
-// CHECK-MESSAGES: mysystemlib.h:1:10: warning: inclusion of deprecated C++ header 'assert.h'; consider using 'cassert' instead [modernize-deprecated-headers]
+// CHECK-MESSAGES-CHECK-HEADER-FILE: mysystemlib.h:1:10: warning: inclusion of deprecated C++ header 'assert.h'; consider using 'cassert' instead [modernize-deprecated-headers]
 
 #include <mylib.h>
-// CHECK-MESSAGES: mylib.h:1:10: warning: inclusion of deprecated C++ header 'assert.h'; consider using 'cassert' instead [modernize-deprecated-headers]
+// CHECK-MESSAGES-CHECK-HEADER-FILE: mylib.h:1:10: warning: inclusion of deprecated C++ header 'assert.h'; consider using 'cassert' instead [modernize-deprecated-headers]
 
 namespace wrapping {
 extern "C" {

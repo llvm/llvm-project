@@ -174,6 +174,10 @@ Changes in existing checks
   <clang-tidy/checks/modernize-deprecated-headers>` involving including
   C header files from C++ files wrapped by ``extern "C" { ... }`` blocks.
   Such includes will be ignored by now.
+  By default now it doesn't warn for including deprecated headers from header
+  files, since that header file might be used from C source files. By passing
+  the ``CheckHeaderFile=true`` option if header files of the project only
+  included by C++ source files.
 
 - Improved :doc:`performance-inefficient-vector-operation
   <clang-tidy/checks/performance-inefficient-vector-operation>` to work when
