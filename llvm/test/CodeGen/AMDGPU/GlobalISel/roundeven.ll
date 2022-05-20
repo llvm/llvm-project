@@ -466,13 +466,12 @@ define <4 x half> @v_roundeven_v4f16(<4 x half> %x) {
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX10-NEXT:    v_mov_b32_e32 v2, 0xffff
-; GFX10-NEXT:    v_rndne_f16_e32 v3, v0
+; GFX10-NEXT:    v_rndne_f16_e32 v2, v0
 ; GFX10-NEXT:    v_rndne_f16_sdwa v0, v0 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1
-; GFX10-NEXT:    v_rndne_f16_e32 v4, v1
+; GFX10-NEXT:    v_rndne_f16_e32 v3, v1
 ; GFX10-NEXT:    v_rndne_f16_sdwa v1, v1 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1
-; GFX10-NEXT:    v_and_or_b32 v0, v3, v2, v0
-; GFX10-NEXT:    v_and_or_b32 v1, v4, v2, v1
+; GFX10-NEXT:    v_and_or_b32 v0, 0xffff, v2, v0
+; GFX10-NEXT:    v_and_or_b32 v1, 0xffff, v3, v1
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-LABEL: v_roundeven_v4f16:
@@ -485,11 +484,10 @@ define <4 x half> @v_roundeven_v4f16(<4 x half> %x) {
 ; GFX11-NEXT:    v_rndne_f16_e32 v1, v1
 ; GFX11-NEXT:    v_rndne_f16_e32 v2, v2
 ; GFX11-NEXT:    v_rndne_f16_e32 v3, v3
-; GFX11-NEXT:    v_mov_b32_e32 v4, 0xffff
 ; GFX11-NEXT:    v_lshlrev_b32_e32 v2, 16, v2
 ; GFX11-NEXT:    v_lshlrev_b32_e32 v3, 16, v3
-; GFX11-NEXT:    v_and_or_b32 v0, v0, v4, v2
-; GFX11-NEXT:    v_and_or_b32 v1, v1, v4, v3
+; GFX11-NEXT:    v_and_or_b32 v0, 0xffff, v0, v2
+; GFX11-NEXT:    v_and_or_b32 v1, 0xffff, v1, v3
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %roundeven = call <4 x half> @llvm.roundeven.v4f16(<4 x half> %x)
   ret <4 x half> %roundeven
@@ -725,8 +723,8 @@ define <2 x double> @v_roundeven_v2f64(<2 x double> %x) {
 ; GFX6:       ; %bb.0:
 ; GFX6-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX6-NEXT:    s_brev_b32 s6, 1
-; GFX6-NEXT:    s_mov_b32 s7, 0x43300000
 ; GFX6-NEXT:    v_and_b32_e32 v5, s6, v1
+; GFX6-NEXT:    s_mov_b32 s7, 0x43300000
 ; GFX6-NEXT:    v_mov_b32_e32 v4, 0
 ; GFX6-NEXT:    v_or_b32_e32 v5, s7, v5
 ; GFX6-NEXT:    v_add_f64 v[6:7], v[0:1], v[4:5]

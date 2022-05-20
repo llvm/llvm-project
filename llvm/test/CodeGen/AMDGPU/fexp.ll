@@ -107,10 +107,9 @@ define <2 x half> @v_exp_v2f16(<2 x half> %arg0) {
 ; VI-LABEL: v_exp_v2f16:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; VI-NEXT:    s_movk_i32 s4, 0x3dc5
-; VI-NEXT:    v_mov_b32_e32 v1, s4
+; VI-NEXT:    v_mov_b32_e32 v1, 0x3dc5
 ; VI-NEXT:    v_mul_f16_sdwa v1, v0, v1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
-; VI-NEXT:    v_mul_f16_e32 v0, s4, v0
+; VI-NEXT:    v_mul_f16_e32 v0, 0x3dc5, v0
 ; VI-NEXT:    v_exp_f16_sdwa v1, v1 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD
 ; VI-NEXT:    v_exp_f16_e32 v0, v0
 ; VI-NEXT:    v_or_b32_e32 v0, v0, v1
@@ -161,7 +160,7 @@ define <4 x half> @v_exp_v4f16(<4 x half> %arg0) {
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; VI-NEXT:    s_movk_i32 s4, 0x3dc5
-; VI-NEXT:    v_mov_b32_e32 v3, s4
+; VI-NEXT:    v_mov_b32_e32 v3, 0x3dc5
 ; VI-NEXT:    v_mul_f16_e32 v2, s4, v1
 ; VI-NEXT:    v_mul_f16_sdwa v1, v1, v3 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
 ; VI-NEXT:    v_mul_f16_e32 v4, s4, v0

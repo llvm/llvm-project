@@ -4,7 +4,7 @@
 ; RUN: llc -march=amdgcn -mcpu=gfx1010 -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,GFX10PLUS,GFX8PLUS,GFX10-MAD %s
 ; RUN: llc -march=amdgcn -mcpu=gfx1010 -verify-machineinstrs -fp-contract=fast < %s | FileCheck -check-prefixes=GCN,GFX10PLUS,GFX8PLUS,FMA,GFX10-FMA %s
 ; RUN: llc -march=amdgcn -mcpu=gfx940 -verify-machineinstrs -fp-contract=fast < %s | FileCheck -check-prefixes=GCN,GFX9,GFX8PLUS,FMA,GFX940-FMA %s
-; RUN: llc -march=amdgcn -mcpu=gfx1100 -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,GFX8PLUS,GFX11-MAD %s
+; RUN: llc -march=amdgcn -mcpu=gfx1100 -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,GFX10PLUS,GFX8PLUS,GFX11-MAD %s
 ; RUN: llc -march=amdgcn -mcpu=gfx1100 -verify-machineinstrs -fp-contract=fast < %s | FileCheck -check-prefixes=GCN,GFX10PLUS,GFX8PLUS,FMA,GFX10-FMA %s
 
 declare i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
@@ -47,8 +47,6 @@ define amdgpu_kernel void @madak_f32(float addrspace(1)* noalias %out, float add
 
 ; GCN-LABEL: {{^}}madak_2_use_f32:
 ; GFX9:         v_mov_b32_e32 [[VK:v[0-9]+]], 0x41200000
-; GFX10PLUS:    v_mov_b32_e32 [[VK:v[0-9]+]], 0x41200000
-; GFX11-MAD:    s_mov_b32 [[SK:s[0-9]+]], 0x41200000
 ; GFX6-DAG:     buffer_load_dword [[VA:v[0-9]+]], {{v\[[0-9]+:[0-9]+\]}}, {{s\[[0-9]+:[0-9]+\]}}, 0 addr64 glc{{$}}
 ; GFX6-DAG:     buffer_load_dword [[VB:v[0-9]+]], {{v\[[0-9]+:[0-9]+\]}}, {{s\[[0-9]+:[0-9]+\]}}, 0 addr64 offset:4
 ; GFX6-DAG:     buffer_load_dword [[VC:v[0-9]+]], {{v\[[0-9]+:[0-9]+\]}}, {{s\[[0-9]+:[0-9]+\]}}, 0 addr64 offset:8
@@ -59,12 +57,11 @@ define amdgpu_kernel void @madak_f32(float addrspace(1)* noalias %out, float add
 ; GFX8-DAG:     v_mov_b32_e32 [[VK:v[0-9]+]], 0x41200000
 ; GFX6_8_9-DAG: v_madak_f32 {{v[0-9]+}}, [[VA]], [[VB]], 0x41200000
 ; GFX10-MAD-DAG:v_madak_f32 {{v[0-9]+}}, [[VA]], [[VB]], 0x41200000
+; GFX11-MAD-DAG:v_madak_f32 {{v[0-9]+}}, [[VA]], [[VB]], 0x41200000
 ; FMA-DAG:      v_fmaak_f32 {{v[0-9]+}}, [[VA]], [[VB]], 0x41200000
 ; MAD-DAG:      v_mac_f32_e32 [[VK]], [[VA]], [[VC]]
-; FMA-DAG:      v_fmac_f32_e32 [[VK]], [[VA]], [[VC]]
-; GFX11-MAD:    v_mul_f32_e32 [[VMULAB:v[0-9]+]], [[VA]], [[VB]]
-; GFX11-MAD:    v_mul_f32_e32 [[VMULAC:v[0-9]+]], [[VA]], [[VC]]
-; GFX11-MAD:    v_dual_add_f32 {{v[0-9]+}}, [[SK]], [[VMULAC]] :: v_dual_add_f32 {{v[0-9]+}}, [[SK]], [[VMULAB]]
+; GFX10-FMA-DAG:v_fmaak_f32 {{v[0-9]+}}, [[VA]], [[VC]], 0x41200000
+; GFX940-FMA-DAG:v_fmac_f32_e32 [[VK]], [[VA]], [[VC]]
 ; GCN:          s_endpgm
 define amdgpu_kernel void @madak_2_use_f32(float addrspace(1)* noalias %out, float addrspace(1)* noalias %in) #0 {
   %tid = tail call i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
