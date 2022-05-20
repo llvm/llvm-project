@@ -77,12 +77,6 @@ VScaleVal LMULType::getScale(unsigned ElementBitwidth) const {
 
 void LMULType::MulLog2LMUL(int log2LMUL) { Log2LMUL += log2LMUL; }
 
-LMULType &LMULType::operator*=(uint32_t RHS) {
-  assert(isPowerOf2_32(RHS));
-  this->Log2LMUL = this->Log2LMUL + Log2_32(RHS);
-  return *this;
-}
-
 RVVType::RVVType(BasicType BT, int Log2LMUL,
                  const PrototypeDescriptor &prototype)
     : BT(BT), LMUL(LMULType(Log2LMUL)) {
@@ -628,17 +622,17 @@ void RVVType::applyModifier(const PrototypeDescriptor &Transformer) {
   switch (static_cast<VectorTypeModifier>(Transformer.VTM)) {
   case VectorTypeModifier::Widening2XVector:
     ElementBitwidth *= 2;
-    LMUL *= 2;
+    LMUL.MulLog2LMUL(1);
     Scale = LMUL.getScale(ElementBitwidth);
     break;
   case VectorTypeModifier::Widening4XVector:
     ElementBitwidth *= 4;
-    LMUL *= 4;
+    LMUL.MulLog2LMUL(2);
     Scale = LMUL.getScale(ElementBitwidth);
     break;
   case VectorTypeModifier::Widening8XVector:
     ElementBitwidth *= 8;
-    LMUL *= 8;
+    LMUL.MulLog2LMUL(3);
     Scale = LMUL.getScale(ElementBitwidth);
     break;
   case VectorTypeModifier::MaskVector:

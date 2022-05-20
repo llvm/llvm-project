@@ -156,7 +156,6 @@ struct LMULType {
   std::string str() const;
   llvm::Optional<unsigned> getScale(unsigned ElementBitwidth) const;
   void MulLog2LMUL(int Log2LMUL);
-  LMULType &operator*=(uint32_t RHS);
 };
 
 class RVVType;
