@@ -7608,6 +7608,8 @@ cc_library(
         ":IR",
         ":LLVMDialect",
         ":MemRefDialect",
+        ":NVGPU",
+        ":NVVMDialect",
         ":Pass",
         ":SCFDialect",
         ":Support",
@@ -8560,8 +8562,8 @@ cc_library(
 td_library(
     name = "MLProgramOpsTdFiles",
     srcs = [
-        "include/mlir/Dialect/MLProgram/IR/MLProgramBase.td",
         "include/mlir/Dialect/MLProgram/IR/MLProgramAttributes.td",
+        "include/mlir/Dialect/MLProgram/IR/MLProgramBase.td",
         "include/mlir/Dialect/MLProgram/IR/MLProgramOps.td",
     ],
     includes = ["include"],
