@@ -114,10 +114,8 @@
 ; ASM:        .asciz  "loop_csr"              # Function name
 ; ASM:        .short  4414                    # Record kind: S_LOCAL
 ; ASM:        .asciz  "o"
-; ASM:        .cv_def_range    [[oy_ox_start]] [[ox_start]], subfield_reg, 24, 0
-; ASM:        .cv_def_range    [[oy_ox_start]] [[oy_start]], subfield_reg, 23, 4
-; ASM:        .cv_def_range    [[ox_start]] [[loopskip_start]], subfield_reg, 24, 0
-; ASM:        .cv_def_range    [[oy_start]] [[loopskip_start]], subfield_reg, 23, 4
+; ASM:        .cv_def_range    [[oy_ox_start]] [[loopskip_start]], subfield_reg, 24, 0
+; ASM:        .cv_def_range    [[oy_ox_start]] [[loopskip_start]], subfield_reg, 23, 4
 
 
 ; OBJ-LABEL: GlobalProcIdSym {

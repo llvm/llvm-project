@@ -1242,9 +1242,9 @@ void CodeViewDebug::emitDebugInfoForFunction(const Function *GV,
   OS.emitCVLinetableDirective(FI.FuncId, Fn, FI.End);
 }
 
-CodeViewDebug::LocalVarDefRange
+CodeViewDebug::LocalVarDef
 CodeViewDebug::createDefRangeMem(uint16_t CVRegister, int Offset) {
-  LocalVarDefRange DR;
+  LocalVarDef DR;
   DR.InMemory = -1;
   DR.DataOffset = Offset;
   assert(DR.DataOffset == Offset && "truncation");
@@ -1296,19 +1296,19 @@ void CodeViewDebug::collectVariableInfoFromMFTable(
            "Frame offsets with a scalable component are not supported");
 
     // Calculate the label ranges.
-    LocalVarDefRange DefRange =
+    LocalVarDef DefRange =
         createDefRangeMem(CVReg, FrameOffset.getFixed() + ExprOffset);
+
+    LocalVariable Var;
+    Var.DIVar = VI.Var;
 
     for (const InsnRange &Range : Scope->getRanges()) {
       const MCSymbol *Begin = getLabelBeforeInsn(Range.first);
       const MCSymbol *End = getLabelAfterInsn(Range.second);
       End = End ? End : Asm->getFunctionEnd();
-      DefRange.Ranges.emplace_back(Begin, End);
+      Var.DefRanges[DefRange].emplace_back(Begin, End);
     }
 
-    LocalVariable Var;
-    Var.DIVar = VI.Var;
-    Var.DefRanges.emplace_back(std::move(DefRange));
     if (Deref)
       Var.UseReferenceType = true;
 
@@ -1367,24 +1367,18 @@ void CodeViewDebug::calculateRanges(
     // We can only handle a register or an offseted load of a register.
     if (Location->Register == 0 || Location->LoadChain.size() > 1)
       continue;
-    {
-      LocalVarDefRange DR;
-      DR.CVRegister = TRI->getCodeViewRegNum(Location->Register);
-      DR.InMemory = !Location->LoadChain.empty();
-      DR.DataOffset =
-          !Location->LoadChain.empty() ? Location->LoadChain.back() : 0;
-      if (Location->FragmentInfo) {
-        DR.IsSubfield = true;
-        DR.StructOffset = Location->FragmentInfo->OffsetInBits / 8;
-      } else {
-        DR.IsSubfield = false;
-        DR.StructOffset = 0;
-      }
 
-      if (Var.DefRanges.empty() ||
-          Var.DefRanges.back().isDifferentLocation(DR)) {
-        Var.DefRanges.emplace_back(std::move(DR));
-      }
+    LocalVarDef DR;
+    DR.CVRegister = TRI->getCodeViewRegNum(Location->Register);
+    DR.InMemory = !Location->LoadChain.empty();
+    DR.DataOffset =
+        !Location->LoadChain.empty() ? Location->LoadChain.back() : 0;
+    if (Location->FragmentInfo) {
+      DR.IsSubfield = true;
+      DR.StructOffset = Location->FragmentInfo->OffsetInBits / 8;
+    } else {
+      DR.IsSubfield = false;
+      DR.StructOffset = 0;
     }
 
     // Compute the label range.
@@ -1401,7 +1395,7 @@ void CodeViewDebug::calculateRanges(
     // If the last range end is our begin, just extend the last range.
     // Otherwise make a new range.
     SmallVectorImpl<std::pair<const MCSymbol *, const MCSymbol *>> &R =
-        Var.DefRanges.back().Ranges;
+        Var.DefRanges[DR];
     if (!R.empty() && R.back().second == Begin)
       R.back().second = End;
     else
@@ -2814,7 +2808,9 @@ void CodeViewDebug::emitLocalVariable(const FunctionInfo &FI,
   // records and on disk formats are described in SymbolRecords.h. BytePrefix
   // should be big enough to hold all forms without memory allocation.
   SmallString<20> BytePrefix;
-  for (const LocalVarDefRange &DefRange : Var.DefRanges) {
+  for (const auto &Pair : Var.DefRanges) {
+    LocalVarDef DefRange = Pair.first;
+    const auto &Ranges = Pair.second;
     BytePrefix.clear();
     if (DefRange.InMemory) {
       int Offset = DefRange.DataOffset;
@@ -2838,7 +2834,7 @@ void CodeViewDebug::emitLocalVariable(const FunctionInfo &FI,
                : (EncFP == FI.EncodedLocalFramePtrReg))) {
         DefRangeFramePointerRelHeader DRHdr;
         DRHdr.Offset = Offset;
-        OS.emitCVDefRangeDirective(DefRange.Ranges, DRHdr);
+        OS.emitCVDefRangeDirective(Ranges, DRHdr);
       } else {
         uint16_t RegRelFlags = 0;
         if (DefRange.IsSubfield) {
@@ -2850,7 +2846,7 @@ void CodeViewDebug::emitLocalVariable(const FunctionInfo &FI,
         DRHdr.Register = Reg;
         DRHdr.Flags = RegRelFlags;
         DRHdr.BasePointerOffset = Offset;
-        OS.emitCVDefRangeDirective(DefRange.Ranges, DRHdr);
+        OS.emitCVDefRangeDirective(Ranges, DRHdr);
       }
     } else {
       assert(DefRange.DataOffset == 0 && "unexpected offset into register");
@@ -2859,12 +2855,12 @@ void CodeViewDebug::emitLocalVariable(const FunctionInfo &FI,
         DRHdr.Register = DefRange.CVRegister;
         DRHdr.MayHaveNoName = 0;
         DRHdr.OffsetInParent = DefRange.StructOffset;
-        OS.emitCVDefRangeDirective(DefRange.Ranges, DRHdr);
+        OS.emitCVDefRangeDirective(Ranges, DRHdr);
       } else {
         DefRangeRegisterHeader DRHdr;
         DRHdr.Register = DefRange.CVRegister;
         DRHdr.MayHaveNoName = 0;
-        OS.emitCVDefRangeDirective(DefRange.Ranges, DRHdr);
+        OS.emitCVDefRangeDirective(Ranges, DRHdr);
       }
     }
   }
