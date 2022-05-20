@@ -352,6 +352,15 @@ public:
 
   void emitError(const llvm::Twine &message) { theModule.emitError(message); }
 
+  /// -------
+  /// Linkage
+  /// -------
+
+  mlir::SymbolTable::Visibility getFunctionLinkage(GlobalDecl GD);
+  mlir::SymbolTable::Visibility
+  getCIRLinkageForDeclarator(const DeclaratorDecl *D, GVALinkage Linkage,
+                             bool IsConstantVariable);
+
 private:
   // TODO: CodeGen also passes an AttributeList here. We'll have to match that
   // in CIR

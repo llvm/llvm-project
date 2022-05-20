@@ -1054,6 +1054,194 @@ void CIRGenModule::buildTopLevelDecl(Decl *decl) {
   }
 }
 
+static bool shouldBeInCOMDAT(CIRGenModule &CGM, const Decl &D) {
+  if (!CGM.supportsCOMDAT())
+    return false;
+
+  if (D.hasAttr<SelectAnyAttr>())
+    return true;
+
+  GVALinkage Linkage;
+  if (auto *VD = dyn_cast<VarDecl>(&D))
+    Linkage = CGM.getASTContext().GetGVALinkageForVariable(VD);
+  else
+    Linkage =
+        CGM.getASTContext().GetGVALinkageForFunction(cast<FunctionDecl>(&D));
+
+  switch (Linkage) {
+  case clang::GVA_Internal:
+  case clang::GVA_AvailableExternally:
+  case clang::GVA_StrongExternal:
+    return false;
+  case clang::GVA_DiscardableODR:
+  case clang::GVA_StrongODR:
+    return true;
+  }
+  llvm_unreachable("No such linkage");
+}
+
+// TODO(cir): this could be a common method between LLVM codegen.
+static bool isVarDeclStrongDefinition(const ASTContext &Context,
+                                      CIRGenModule &CGM, const VarDecl *D,
+                                      bool NoCommon) {
+  // Don't give variables common linkage if -fno-common was specified unless it
+  // was overridden by a NoCommon attribute.
+  if ((NoCommon || D->hasAttr<NoCommonAttr>()) && !D->hasAttr<CommonAttr>())
+    return true;
+
+  // C11 6.9.2/2:
+  //   A declaration of an identifier for an object that has file scope without
+  //   an initializer, and without a storage-class specifier or with the
+  //   storage-class specifier static, constitutes a tentative definition.
+  if (D->getInit() || D->hasExternalStorage())
+    return true;
+
+  // A variable cannot be both common and exist in a section.
+  if (D->hasAttr<SectionAttr>())
+    return true;
+
+  // A variable cannot be both common and exist in a section.
+  // We don't try to determine which is the right section in the front-end.
+  // If no specialized section name is applicable, it will resort to default.
+  if (D->hasAttr<PragmaClangBSSSectionAttr>() ||
+      D->hasAttr<PragmaClangDataSectionAttr>() ||
+      D->hasAttr<PragmaClangRelroSectionAttr>() ||
+      D->hasAttr<PragmaClangRodataSectionAttr>())
+    return true;
+
+  // Thread local vars aren't considered common linkage.
+  if (D->getTLSKind())
+    return true;
+
+  // Tentative definitions marked with WeakImportAttr are true definitions.
+  if (D->hasAttr<WeakImportAttr>())
+    return true;
+
+  // A variable cannot be both common and exist in a comdat.
+  if (shouldBeInCOMDAT(CGM, *D))
+    return true;
+
+  // Declarations with a required alignment do not have common linkage in MSVC
+  // mode.
+  if (Context.getTargetInfo().getCXXABI().isMicrosoft()) {
+    if (D->hasAttr<AlignedAttr>())
+      return true;
+    QualType VarType = D->getType();
+    if (Context.isAlignmentRequired(VarType))
+      return true;
+
+    if (const auto *RT = VarType->getAs<RecordType>()) {
+      const RecordDecl *RD = RT->getDecl();
+      for (const FieldDecl *FD : RD->fields()) {
+        if (FD->isBitField())
+          continue;
+        if (FD->hasAttr<AlignedAttr>())
+          return true;
+        if (Context.isAlignmentRequired(FD->getType()))
+          return true;
+      }
+    }
+  }
+
+  // Microsoft's link.exe doesn't support alignments greater than 32 bytes for
+  // common symbols, so symbols with greater alignment requirements cannot be
+  // common.
+  // Other COFF linkers (ld.bfd and LLD) support arbitrary power-of-two
+  // alignments for common symbols via the aligncomm directive, so this
+  // restriction only applies to MSVC environments.
+  if (Context.getTargetInfo().getTriple().isKnownWindowsMSVCEnvironment() &&
+      Context.getTypeAlignIfKnown(D->getType()) >
+          Context.toBits(CharUnits::fromQuantity(32)))
+    return true;
+
+  return false;
+}
+
+mlir::SymbolTable::Visibility CIRGenModule::getCIRLinkageForDeclarator(
+    const DeclaratorDecl *D, GVALinkage Linkage, bool IsConstantVariable) {
+  if (Linkage == GVA_Internal)
+    return mlir::SymbolTable::Visibility::Private;
+
+  if (D->hasAttr<WeakAttr>()) {
+    assert(UnimplementedFeature::globalWeakLinkage() && "NYI");
+  }
+
+  if (const auto *FD = D->getAsFunction())
+    if (FD->isMultiVersion() && Linkage == GVA_AvailableExternally)
+      assert(UnimplementedFeature::globalLinkOnceAnyLinkage() && "NYI");
+
+  // We are guaranteed to have a strong definition somewhere else,
+  // so we can use available_externally linkage.
+  if (Linkage == GVA_AvailableExternally)
+    assert(UnimplementedFeature::globalAvailableExternallyLinkage() && "NYI");
+
+  // Note that Apple's kernel linker doesn't support symbol
+  // coalescing, so we need to avoid linkonce and weak linkages there.
+  // Normally, this means we just map to internal, but for explicit
+  // instantiations we'll map to external.
+
+  // In C++, the compiler has to emit a definition in every translation unit
+  // that references the function.  We should use linkonce_odr because
+  // a) if all references in this translation unit are optimized away, we
+  // don't need to codegen it.  b) if the function persists, it needs to be
+  // merged with other definitions. c) C++ has the ODR, so we know the
+  // definition is dependable.
+  if (Linkage == GVA_DiscardableODR)
+    assert(0 && "NYI");
+
+  // An explicit instantiation of a template has weak linkage, since
+  // explicit instantiations can occur in multiple translation units
+  // and must all be equivalent. However, we are not allowed to
+  // throw away these explicit instantiations.
+  //
+  // CUDA/HIP: For -fno-gpu-rdc case, device code is limited to one TU,
+  // so say that CUDA templates are either external (for kernels) or internal.
+  // This lets llvm perform aggressive inter-procedural optimizations. For
+  // -fgpu-rdc case, device function calls across multiple TU's are allowed,
+  // therefore we need to follow the normal linkage paradigm.
+  if (Linkage == GVA_StrongODR) {
+    assert(0 && "NYI");
+  }
+
+  // C++ doesn't have tentative definitions and thus cannot have common
+  // linkage.
+  if (!getLangOpts().CPlusPlus && isa<VarDecl>(D) &&
+      !isVarDeclStrongDefinition(astCtx, *this, cast<VarDecl>(D),
+                                 getCodeGenOpts().NoCommon))
+    assert(UnimplementedFeature::globalCommonLinkage() && "NYI");
+
+  // selectany symbols are externally visible, so use weak instead of
+  // linkonce.  MSVC optimizes away references to const selectany globals, so
+  // all definitions should be the same and ODR linkage should be used.
+  // http://msdn.microsoft.com/en-us/library/5tkz6s71.aspx
+  if (D->hasAttr<SelectAnyAttr>())
+    assert(UnimplementedFeature::globalWeakLinkage() && "NYI");
+
+  // Otherwise, we have strong external linkage.
+  assert(Linkage == GVA_StrongExternal);
+  return mlir::SymbolTable::Visibility::Public;
+}
+
+mlir::SymbolTable::Visibility CIRGenModule::getFunctionLinkage(GlobalDecl GD) {
+  const auto *D = cast<FunctionDecl>(GD.getDecl());
+
+  GVALinkage Linkage = astCtx.GetGVALinkageForFunction(D);
+
+  if (const auto *Dtor = dyn_cast<CXXDestructorDecl>(D))
+    assert(0 && "NYI");
+
+  if (isa<CXXConstructorDecl>(D) &&
+      cast<CXXConstructorDecl>(D)->isInheritingConstructor() &&
+      astCtx.getTargetInfo().getCXXABI().isMicrosoft()) {
+    // Our approach to inheriting constructors is fundamentally different from
+    // that used by the MS ABI, so keep our inheriting constructor thunks
+    // internal rather than trying to pick an unambiguous mangling for them.
+    return mlir::SymbolTable::Visibility::Private;
+  }
+
+  return getCIRLinkageForDeclarator(D, Linkage, /*IsConstantVariable=*/false);
+}
+
 mlir::Type CIRGenModule::getCIRType(const QualType &type) {
   return genTypes.ConvertType(type);
 }
@@ -1551,37 +1739,12 @@ bool CIRGenModule::supportsCOMDAT() const {
   return getTriple().supportsCOMDAT();
 }
 
-static bool shouldBeInCOMDAT(CIRGenModule &CGM, const Decl &D) {
-  if (!CGM.supportsCOMDAT())
-    return false;
-
-  if (D.hasAttr<SelectAnyAttr>())
-    return true;
-
-  GVALinkage Linkage;
-  if (auto *VD = dyn_cast<VarDecl>(&D))
-    Linkage = CGM.getASTContext().GetGVALinkageForVariable(VD);
-  else
-    Linkage =
-        CGM.getASTContext().GetGVALinkageForFunction(cast<FunctionDecl>(&D));
-
-  switch (Linkage) {
-  case clang::GVA_Internal:
-  case clang::GVA_AvailableExternally:
-  case clang::GVA_StrongExternal:
-    return false;
-  case clang::GVA_DiscardableODR:
-  case clang::GVA_StrongODR:
-    return true;
-  }
-  llvm_unreachable("No such linkage");
-}
-
 void CIRGenModule::maybeSetTrivialComdat(const Decl &D, mlir::Operation *Op) {
   if (!shouldBeInCOMDAT(*this, D))
     return;
 
   // TODO: Op.setComdat
+  assert(!UnimplementedFeature::setComdat() && "NYI");
 }
 
 bool CIRGenModule::isInNoSanitizeList(SanitizerMask Kind, mlir::FuncOp Fn,
