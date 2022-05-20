@@ -982,8 +982,33 @@ module std [system] {
     export functional.__functional.unwrap_ref
     export *
 
-    module integral_constant { private header "__type_traits/integral_constant.h" }
-    module is_callable       { private header "__type_traits/is_callable.h" }
+    module add_pointer                { private header "__type_traits/add_pointer.h" }
+    module conditional                { private header "__type_traits/conditional.h" }
+    module decay                      { private header "__type_traits/decay.h" }
+    module enable_if                  { private header "__type_traits/enable_if.h" }
+    module integral_constant          { private header "__type_traits/integral_constant.h" }
+    module is_array                   { private header "__type_traits/is_array.h" }
+    module is_base_of                 { private header "__type_traits/is_base_of.h" }
+    module is_callable                { private header "__type_traits/is_callable.h" }
+    module is_const                   { private header "__type_traits/is_const.h" }
+    module is_convertible             { private header "__type_traits/is_convertible.h" }
+    module is_floating_point          { private header "__type_traits/is_floating_point.h" }
+    module is_function                { private header "__type_traits/is_function.h" }
+    module is_integral                { private header "__type_traits/is_integral.h" }
+    module is_member_function_pointer { private header "__type_traits/is_member_function_pointer.h" }
+    module is_member_object_pointer   { private header "__type_traits/is_member_object_pointer.h" }
+    module is_null_pointer            { private header "__type_traits/is_null_pointer.h" }
+    module is_reference               { private header "__type_traits/is_reference.h" }
+    module is_reference_wrapper       { private header "__type_traits/is_reference_wrapper.h" }
+    module is_referenceable           { private header "__type_traits/is_referenceable.h" }
+    module is_same                    { private header "__type_traits/is_same.h" }
+    module is_void                    { private header "__type_traits/is_void.h" }
+    module is_volatile                { private header "__type_traits/is_volatile.h" }
+    module remove_const               { private header "__type_traits/remove_const.h" }
+    module remove_cv                  { private header "__type_traits/remove_cv.h" }
+    module remove_extent              { private header "__type_traits/remove_extent.h" }
+    module remove_reference           { private header "__type_traits/remove_reference.h" }
+    module remove_volatile            { private header "__type_traits/remove_volatile.h" }
   }
   module typeindex {
     header "typeindex"
