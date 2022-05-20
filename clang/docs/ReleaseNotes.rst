@@ -318,6 +318,10 @@ Attribute Changes in Clang
 - The ``__declspec(naked)`` attribute can no longer be written on a member
   function in Microsoft compatibility mode, matching the behavior of cl.exe.
 
+- Attribute ``no_builtin`` should now affect the generated code. It now disables
+  builtins (corresponding to the specific names listed in the attribute) in the
+  body of the function the attribute is on.
+
 Windows Support
 ---------------
 
