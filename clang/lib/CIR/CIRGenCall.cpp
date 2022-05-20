@@ -500,8 +500,10 @@ void CIRGenFunction::buildCallArg(CallArgList &args, const Expr *E,
   // we make it to the call.
   assert(!type->isRecordType() && "Record type args NYI");
 
-  assert(!HasAggregateEvalKind && "aggregate args NYI");
-  assert(!isa<ImplicitCastExpr>(E) && "Casted args NYI");
+  if (HasAggregateEvalKind && isa<ImplicitCastExpr>(E) &&
+      cast<CastExpr>(E)->getCastKind() == CK_LValueToRValue) {
+    assert(0 && "NYI");
+  }
 
   args.add(buildAnyExprToTemp(E), type);
 }
