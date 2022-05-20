@@ -244,7 +244,27 @@ static StructorCIRGen getCIRGenToUse(CIRGenModule &CGM,
   if (!CGM.getCodeGenOpts().CXXCtorDtorAliases)
     return StructorCIRGen::Emit;
 
-  llvm_unreachable("Nothing else implemented yet");
+  // The complete and base structors are not equivalent if there are any virtual
+  // bases, so emit separate functions.
+  if (MD->getParent()->getNumVBases())
+    return StructorCIRGen::Emit;
+
+  GlobalDecl AliasDecl;
+  if (const auto *DD = dyn_cast<CXXDestructorDecl>(MD)) {
+    AliasDecl = GlobalDecl(DD, Dtor_Complete);
+  } else {
+    const auto *CD = cast<CXXConstructorDecl>(MD);
+    AliasDecl = GlobalDecl(CD, Ctor_Complete);
+  }
+  auto Linkage = CGM.getFunctionLinkage(AliasDecl);
+  (void)Linkage;
+
+  assert(!UnimplementedFeature::globalIsDiscardableIfUnused() && "NYI");
+  // // FIXME: Should we allow available_externally aliases?
+  assert(!UnimplementedFeature::globalIsValidLinkage() && "NYI");
+  assert(!UnimplementedFeature::globalIsWeakForLinker() && "NYI");
+
+  return StructorCIRGen::Alias;
 }
 
 void CIRGenItaniumCXXABI::buildCXXStructor(GlobalDecl GD) {
