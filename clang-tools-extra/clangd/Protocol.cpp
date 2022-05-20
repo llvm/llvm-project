@@ -592,6 +592,10 @@ llvm::json::Value toJSON(const DiagnosticRelatedInformation &DRI) {
 
 llvm::json::Value toJSON(DiagnosticTag Tag) { return static_cast<int>(Tag); }
 
+llvm::json::Value toJSON(const CodeDescription &D) {
+  return llvm::json::Object{{"href", D.href}};
+}
+
 llvm::json::Value toJSON(const Diagnostic &D) {
   llvm::json::Object Diag{
       {"range", D.range},
@@ -604,6 +608,8 @@ llvm::json::Value toJSON(const Diagnostic &D) {
     Diag["codeActions"] = D.codeActions;
   if (!D.code.empty())
     Diag["code"] = D.code;
+  if (D.codeDescription.hasValue())
+    Diag["codeDescription"] = *D.codeDescription;
   if (!D.source.empty())
     Diag["source"] = D.source;
   if (D.relatedInformation)

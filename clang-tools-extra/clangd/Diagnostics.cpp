@@ -477,6 +477,10 @@ void toLSPDiags(
   }
 
   Main.code = D.Name;
+  if (auto URI = getDiagnosticDocURI(D.Source, D.ID, D.Name)) {
+    Main.codeDescription.emplace();
+    Main.codeDescription->href = std::move(*URI);
+  }
   switch (D.Source) {
   case Diag::Clang:
     Main.source = "clang";
@@ -901,6 +905,32 @@ llvm::StringRef normalizeSuppressedCode(llvm::StringRef Code) {
   Code.consume_front("err_");
   Code.consume_front("-W");
   return Code;
+}
+
+llvm::Optional<std::string> getDiagnosticDocURI(Diag::DiagSource Source,
+                                                unsigned ID,
+                                                llvm::StringRef Name) {
+  switch (Source) {
+  case Diag::Unknown:
+    break;
+  case Diag::Clang:
+    // There is a page listing many warning flags, but it provides too little
+    // information to be worth linking.
+    // https://clang.llvm.org/docs/DiagnosticsReference.html
+    break;
+  case Diag::ClangTidy:
+    return {("https://clang.llvm.org/extra/clang-tidy/checks/" + Name + ".html")
+                .str()};
+  case Diag::Clangd:
+    if (Name == "unused-includes")
+      return {"https://clangd.llvm.org/guides/include-cleaner"};
+    break;
+  case Diag::ClangdConfig:
+    // FIXME: we should link to https://clangd.llvm.org/config
+    // However we have no diagnostic codes, which the link should describe!
+    break;
+  }
+  return llvm::None;
 }
 
 } // namespace clangd
