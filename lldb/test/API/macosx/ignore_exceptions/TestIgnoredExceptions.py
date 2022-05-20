@@ -42,6 +42,11 @@ class TestDarwinSignalHandlers(TestBase):
         # Now continue, and we should stop with a stop reason of SIGBUS:
         process.Continue()
         self.assertEqual(process.state, lldb.eStateStopped, "Stopped after continue to SIGBUS")
+        if thread.stop_reason == lldb.eStopReasonBreakpoint:
+            id = thread.GetStopReasonDataAtIndex(0)
+            name = thread.frame[0].name
+            self.fail("Hit breakpoint {0} in '{1}' rather than getting a SIGBUS".format(id, name))
+
         self.assertEqual(thread.stop_reason, lldb.eStopReasonSignal)
         self.assertEqual(thread.GetStopReasonDataAtIndex(0), 10, "Got a SIGBUS")
 
