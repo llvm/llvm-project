@@ -118,6 +118,7 @@ public:
   clang::DiagnosticsEngine &getDiags() const { return Diags; }
   CIRGenTypes &getTypes() { return genTypes; }
   const clang::LangOptions &getLangOpts() const { return langOpts; }
+  CIRGenFunction *getCurrCIRGenFun() const { return CurCGF; }
 
   CIRGenCXXABI &getCXXABI() const { return *ABI; }
 

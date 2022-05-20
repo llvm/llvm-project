@@ -26,7 +26,10 @@ mlir::FuncOp CIRGenModule::codegenCXXStructor(GlobalDecl GD) {
                                  /*DontDefer=*/true, ForDefinition);
 
   // TODO: setFunctionLinkage
-  CIRGenFunction(*this, builder).generateCode(GD, Fn, FnInfo);
+  CIRGenFunction CGF{*this, builder};
+  CurCGF = &CGF;
+  CGF.generateCode(GD, Fn, FnInfo);
+  CurCGF = nullptr;
 
   // TODO: setNonAliasAttributes
   // TODO: SetLLVMFunctionAttributesForDefinition
