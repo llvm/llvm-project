@@ -2350,9 +2350,9 @@ static Value *optimizeIntegerToVectorInsertions(BitCastInst &CI,
 /// usually not type-specific like scalar integer or scalar floating-point.
 static Instruction *canonicalizeBitCastExtElt(BitCastInst &BitCast,
                                               InstCombinerImpl &IC) {
-  // TODO: Create and use a pattern matcher for ExtractElementInst.
-  auto *ExtElt = dyn_cast<ExtractElementInst>(BitCast.getOperand(0));
-  if (!ExtElt || !ExtElt->hasOneUse())
+  Value *VecOp, *Index;
+  if (!match(BitCast.getOperand(0),
+             m_OneUse(m_ExtractElt(m_Value(VecOp), m_Value(Index)))))
     return nullptr;
 
   // The bitcast must be to a vectorizable type, otherwise we can't make a new
@@ -2361,10 +2361,10 @@ static Instruction *canonicalizeBitCastExtElt(BitCastInst &BitCast,
   if (!VectorType::isValidElementType(DestType))
     return nullptr;
 
-  auto *NewVecType = VectorType::get(DestType, ExtElt->getVectorOperandType());
-  auto *NewBC = IC.Builder.CreateBitCast(ExtElt->getVectorOperand(),
-                                         NewVecType, "bc");
-  return ExtractElementInst::Create(NewBC, ExtElt->getIndexOperand());
+  auto *NewVecType =
+      VectorType::get(DestType, cast<VectorType>(VecOp->getType()));
+  auto *NewBC = IC.Builder.CreateBitCast(VecOp, NewVecType, "bc");
+  return ExtractElementInst::Create(NewBC, Index);
 }
 
 /// Change the type of a bitwise logic operation if we can eliminate a bitcast.
