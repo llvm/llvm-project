@@ -3192,7 +3192,7 @@ private:
   void scheduleBlock(BlockScheduling *BS);
 
   /// List of users to ignore during scheduling and that don't need extracting.
-  ArrayRef<Value *> UserIgnoreList;
+  SmallPtrSet<Value *, 4> UserIgnoreList;
 
   /// A DenseMapInfo implementation for holding DenseMaps and DenseSets of
   /// sorted SmallVectors of unsigned.
@@ -4119,7 +4119,7 @@ void BoUpSLP::buildExternalUses(
         }
 
         // Ignore users in the user ignore list.
-        if (is_contained(UserIgnoreList, UserInst))
+        if (UserIgnoreList.contains(UserInst))
           continue;
 
         LLVM_DEBUG(dbgs() << "SLP: Need to extract:" << *U << " from lane "
@@ -4278,7 +4278,8 @@ BoUpSLP::findExternalStoreUsersReorderIndices(TreeEntry *TE) const {
 void BoUpSLP::buildTree(ArrayRef<Value *> Roots,
                         ArrayRef<Value *> UserIgnoreLst) {
   deleteTree();
-  UserIgnoreList = UserIgnoreLst;
+  UserIgnoreList.clear();
+  UserIgnoreList.insert(UserIgnoreLst.begin(), UserIgnoreLst.end());
   if (!allSameType(Roots))
     return;
   buildTree_rec(Roots, 0, EdgeInfo());
@@ -4638,7 +4639,7 @@ void BoUpSLP::buildTree_rec(ArrayRef<Value *> VL, unsigned Depth,
 
   // The reduction nodes (stored in UserIgnoreList) also should stay scalar.
   for (Value *V : VL) {
-    if (is_contained(UserIgnoreList, V)) {
+    if (UserIgnoreList.contains(V)) {
       LLVM_DEBUG(dbgs() << "SLP: Gathering due to gathered scalar.\n");
       if (TryToFindDuplicates(S))
         newTreeEntry(VL, None /*not vectorized*/, S, UserTreeIdx,
@@ -8260,7 +8261,7 @@ BoUpSLP::vectorizeTree(ExtraValueToDebugLocsMap &ExternallyUsedValues) {
           LLVM_DEBUG(dbgs() << "SLP: \tvalidating user:" << *U << ".\n");
 
           // It is legal to delete users in the ignorelist.
-          assert((getTreeEntry(U) || is_contained(UserIgnoreList, U) ||
+          assert((getTreeEntry(U) || UserIgnoreList.contains(U) ||
                   (isa_and_nonnull<Instruction>(U) &&
                    isDeleted(cast<Instruction>(U)))) &&
                  "Deleting out-of-tree value");
