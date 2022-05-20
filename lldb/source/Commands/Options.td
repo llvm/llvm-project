@@ -128,13 +128,15 @@ let Command = "breakpoint set" in {
     Arg<"AddressOrExpression">, Required,
     Desc<"Set the breakpoint at the specified address.  If the address maps "
     "uniquely to a particular binary, then the address will be converted to "
-    "a \"file\"address, so that the breakpoint will track that binary+offset "
+    "a \"file\" address, so that the breakpoint will track that binary+offset "
     "no matter where the binary eventually loads.  Alternately, if you also "
     "specify the module - with the -s option - then the address will be "
     "treated as a file address in that module, and resolved accordingly.  "
     "Again, this will allow lldb to track that offset on subsequent reloads.  "
     "The module need not have been loaded at the time you specify this "
-    "breakpoint, and will get resolved when the module is loaded.">;
+    "breakpoint, and will get resolved when the module is loaded.  If no "
+    "module is specified, the binary being debugged is considered as a "
+    "fallback.">;
   def breakpoint_set_name : Option<"name", "n">, Group<3>, Arg<"FunctionName">,
     Completion<"Symbol">, Required,
     Desc<"Set the breakpoint by function name.  Can be repeated multiple times "

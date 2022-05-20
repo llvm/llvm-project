@@ -2989,22 +2989,18 @@ void CommandInterpreter::PrintCommandOutput(IOHandler &io_handler,
   lldb::StreamFileSP stream = is_stdout ? io_handler.GetOutputStreamFileSP()
                                         : io_handler.GetErrorStreamFileSP();
   // Split the output into lines and poll for interrupt requests
-  size_t size = str.size();
-  while (size > 0 && !WasInterrupted()) {
+  while (!str.empty() && !WasInterrupted()) {
     llvm::StringRef line;
-    size_t written = 0;
     std::tie(line, str) = str.split('\n');
     {
       std::lock_guard<std::recursive_mutex> guard(io_handler.GetOutputMutex());
-      written += stream->Write(line.data(), line.size());
-      written += stream->Write("\n", 1);
+      stream->Write(line.data(), line.size());
+      stream->Write("\n", 1);
     }
-    lldbassert(size >= written);
-    size -= written;
   }
 
   std::lock_guard<std::recursive_mutex> guard(io_handler.GetOutputMutex());
-  if (size > 0)
+  if (!str.empty())
     stream->Printf("\n... Interrupted.\n");
   stream->Flush();
 }
