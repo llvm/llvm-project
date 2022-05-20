@@ -256,6 +256,7 @@ void AggExprEmitter::VisitCastExpr(CastExpr *E) {
   default: {
     llvm::errs() << "cast kind not implemented: '" << E->getCastKindName()
                  << "'\n";
+    assert(0 && "not implemented");
     break;
   }
   }
