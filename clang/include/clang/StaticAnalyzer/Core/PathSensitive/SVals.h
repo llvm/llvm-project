@@ -432,13 +432,6 @@ public:
     return D->first.castAs<Loc>();
   }
 
-  Loc getPersistentLoc() const {
-    const std::pair<SVal, uintptr_t> *D =
-      static_cast<const std::pair<SVal, uintptr_t> *>(Data);
-    const SVal& V = D->first;
-    return V.castAs<Loc>();
-  }
-
   unsigned getNumBits() const {
     const std::pair<SVal, uintptr_t> *D =
       static_cast<const std::pair<SVal, uintptr_t> *>(Data);
