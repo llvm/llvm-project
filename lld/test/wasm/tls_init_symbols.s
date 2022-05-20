@@ -42,8 +42,10 @@ tls_sym:
 # CHECK-NEXT:      - Index:           1
 # CHECK-NEXT:        Name:            __wasm_init_tls
 # CHECK-NEXT:      - Index:           2
-# CHECK-NEXT:        Name:            __wasm_apply_global_tls_relocs
+# CHECK-NEXT:        Name:            __wasm_init_memory
 # CHECK-NEXT:      - Index:           3
+# CHECK-NEXT:        Name:            __wasm_apply_global_tls_relocs
+# CHECK-NEXT:      - Index:           4
 # CHECK-NEXT:        Name:            _start
 
 # DIS:       <__wasm_init_tls>:
@@ -53,7 +55,7 @@ tls_sym:
 # DIS-NEXT:   i32.const 0
 # DIS-NEXT:   i32.const 4
 # DIS-NEXT:   memory.init 0, 0
-# DIS-NEXT:   call  2
+# DIS-NEXT:   call  3
 # DIS-NEXT:   end
 
 # DIS:      <__wasm_apply_global_tls_relocs>:
