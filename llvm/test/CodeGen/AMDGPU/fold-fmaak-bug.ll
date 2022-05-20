@@ -1,13 +1,12 @@
-; RUN: not --crash llc -march=amdgcn -mcpu=gfx1010 -verify-machineinstrs < %s 2>&1 | FileCheck %s -check-prefix GFX10
+; RUN: llc -march=amdgcn -mcpu=gfx1010 -verify-machineinstrs < %s | FileCheck %s -check-prefix GFX10
 
 declare <2 x half> @llvm.amdgcn.cvt.pkrtz(float, float)
 declare void @llvm.amdgcn.exp.compr.v2f16(i32 immarg, i32 immarg, <2 x half>, <2 x half>, i1 immarg, i1 immarg)
 
-; FIXME: This instruction uses two different literal constants which is not
-; allowed.
+; Check that this constant is not folded into the v_fmaak_f32 instruction.
 ; GFX10-LABEL: _amdgpu_ps_main:
-; GFX10: Bad machine code: VOP2/VOP3 instruction uses more than one literal
-; GFX10: instruction: %4:vgpr_32 = nnan nsz arcp contract afn reassoc nofpexcept V_FMAAK_F32 1078530011, %0:vgpr_32, -1077342245, implicit $mode, implicit $exec
+; GFX10: v_mov_b32_e32 v1, 0x40490fdb
+; GFX10: v_fmaak_f32 v1, v0, v1, 0xbfc90fdb
 define amdgpu_ps void @_amdgpu_ps_main(float %arg) {
 bb:
   %i = fmul reassoc nnan nsz arcp contract afn float %arg, 0x400921FB60000000
