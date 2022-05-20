@@ -77,7 +77,7 @@ public:
   void VisitPredefinedExpr(const PredefinedExpr *E) { llvm_unreachable("NYI"); }
 
   // Operators.
-  void VisitCastExpr(CastExpr *E) { llvm_unreachable("NYI"); }
+  void VisitCastExpr(CastExpr *E);
   void VisitCallExpr(const CallExpr *E) { llvm_unreachable("NYI"); }
   void VisitStmtExpr(const StmtExpr *E) { llvm_unreachable("NYI"); }
   void VisitBinaryOperator(const BinaryOperator *E) { llvm_unreachable("NYI"); }
@@ -192,6 +192,78 @@ void AggExprEmitter::VisitLambdaExpr(LambdaExpr *E) {
   if (CleanupDominator)
     CleanupDominator->erase();
 }
+
+void AggExprEmitter::VisitCastExpr(CastExpr *E) {
+  if (const auto *ECE = dyn_cast<ExplicitCastExpr>(E))
+    assert(0 && "NYI");
+  switch (E->getCastKind()) {
+  case CK_LValueBitCast:
+    llvm_unreachable("should not be emitting lvalue bitcast as rvalue");
+
+  case CK_Dependent:
+  case CK_BitCast:
+  case CK_ArrayToPointerDecay:
+  case CK_FunctionToPointerDecay:
+  case CK_NullToPointer:
+  case CK_NullToMemberPointer:
+  case CK_BaseToDerivedMemberPointer:
+  case CK_DerivedToBaseMemberPointer:
+  case CK_MemberPointerToBoolean:
+  case CK_ReinterpretMemberPointer:
+  case CK_IntegralToPointer:
+  case CK_PointerToIntegral:
+  case CK_PointerToBoolean:
+  case CK_ToVoid:
+  case CK_VectorSplat:
+  case CK_IntegralCast:
+  case CK_BooleanToSignedIntegral:
+  case CK_IntegralToBoolean:
+  case CK_IntegralToFloating:
+  case CK_FloatingToIntegral:
+  case CK_FloatingToBoolean:
+  case CK_FloatingCast:
+  case CK_CPointerToObjCPointerCast:
+  case CK_BlockPointerToObjCPointerCast:
+  case CK_AnyPointerToBlockPointerCast:
+  case CK_ObjCObjectLValueCast:
+  case CK_FloatingRealToComplex:
+  case CK_FloatingComplexToReal:
+  case CK_FloatingComplexToBoolean:
+  case CK_FloatingComplexCast:
+  case CK_FloatingComplexToIntegralComplex:
+  case CK_IntegralRealToComplex:
+  case CK_IntegralComplexToReal:
+  case CK_IntegralComplexToBoolean:
+  case CK_IntegralComplexCast:
+  case CK_IntegralComplexToFloatingComplex:
+  case CK_ARCProduceObject:
+  case CK_ARCConsumeObject:
+  case CK_ARCReclaimReturnedObject:
+  case CK_ARCExtendBlockObject:
+  case CK_CopyAndAutoreleaseBlockObject:
+  case CK_BuiltinFnToFnPtr:
+  case CK_ZeroToOCLOpaqueType:
+  case CK_MatrixCast:
+
+  case CK_IntToOCLSampler:
+  case CK_FloatingToFixedPoint:
+  case CK_FixedPointToFloating:
+  case CK_FixedPointCast:
+  case CK_FixedPointToBoolean:
+  case CK_FixedPointToIntegral:
+  case CK_IntegralToFixedPoint:
+    llvm_unreachable("cast kind invalid for aggregate types");
+  default: {
+    llvm::errs() << "cast kind not implemented: '" << E->getCastKindName()
+                 << "'\n";
+    break;
+  }
+  }
+}
+
+//===----------------------------------------------------------------------===//
+//                        Helpers and dispatcher
+//===----------------------------------------------------------------------===//
 
 /// CheckAggExprForMemSetUse - If the initializer is large and has a lot of
 /// zeros in it, emit a memset and avoid storing the individual zeros.
