@@ -485,6 +485,11 @@ static std::optional<Procedure> CharacterizeProcedure(
           [&](const semantics::UseDetails &use) {
             return CharacterizeProcedure(use.symbol(), context, seenProcs);
           },
+          [](const semantics::UseErrorDetails &) {
+            // Ambiguous use-association will be handled later during symbol
+            // checks, ignore UseErrorDetails here without actual symbol usage.
+            return std::optional<Procedure>{};
+          },
           [&](const semantics::HostAssocDetails &assoc) {
             return CharacterizeProcedure(assoc.symbol(), context, seenProcs);
           },
