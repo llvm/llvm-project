@@ -366,7 +366,7 @@ set_target_properties("clang-resource-headers" PROPERTIES
   RUNTIME_OUTPUT_DIRECTORY "${output_dir}")
 add_dependencies("clang-resource-headers"
                  "core-resource-headers"
-                 "arm-common-headers"
+                 "arm-common-resource-headers"
                  "arm-resource-headers"
                  "aarch64-resource-headers"
                  "cuda-resource-headers"
@@ -387,7 +387,7 @@ add_dependencies("clang-resource-headers"
 
 # Core/common headers
 add_header_target("core-resource-headers" ${core_files})
-add_header_target("arm-common-headers" "${arm_common_files};${arm_common_generated_files}")
+add_header_target("arm-common-resource-headers" "${arm_common_files};${arm_common_generated_files}")
 
 # Architecture/platform specific targets
 add_header_target("arm-resource-headers" "${arm_only_files};${arm_only_generated_files}")
@@ -546,7 +546,7 @@ install(
 
 install(
   FILES ${openmp_wrapper_files}
-  DESTINATION ${header_install_dir}
+  DESTINATION ${header_install_dir}/openmp_wrappers
   EXCLUDE_FROM_ALL
   COMPONENT openmp-resource-headers)
 
@@ -557,7 +557,7 @@ install(
   COMPONENT utility-resource-headers)
 
 install(
-  FILES ${windows_files}
+  FILES ${windows_only_files}
   DESTINATION ${header_install_dir}
   EXCLUDE_FROM_ALL
   COMPONENT windows-resource-headers)
@@ -621,7 +621,7 @@ if (NOT LLVM_ENABLE_IDE)
                            DEPENDS openmp-resource-headers
                            COMPONENT openmp-resource-headers)
   add_llvm_install_targets(install-windows-resource-headers
-                           DEPENDS window-resource-headers
+                           DEPENDS windows-resource-headers
                            COMPONENT windows-resource-headers)
   add_llvm_install_targets(install-utility-resource-headers
                            DEPENDS utility-resource-headers
