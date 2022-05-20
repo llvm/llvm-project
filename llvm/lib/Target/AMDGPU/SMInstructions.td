@@ -220,6 +220,7 @@ class SM_Time_Pseudo<string opName, SDPatternOperator node = null_frag> : SM_Pse
 class SM_Inval_Pseudo <string opName, SDPatternOperator node = null_frag> : SM_Pseudo<
   opName, (outs), (ins), "", [(node)]> {
   let hasSideEffects = 1;
+  let mayLoad = 0;
   let mayStore = 0;
   let has_sdst = 0;
   let has_sbase = 0;
