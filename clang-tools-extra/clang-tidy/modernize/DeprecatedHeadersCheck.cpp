@@ -27,7 +27,8 @@ namespace {
 class IncludeModernizePPCallbacks : public PPCallbacks {
 public:
   explicit IncludeModernizePPCallbacks(
-      std::vector<IncludeMarker> &IncludesToBeProcessed, LangOptions LangOpts);
+      std::vector<IncludeMarker> &IncludesToBeProcessed, LangOptions LangOpts,
+      const SourceManager &SM, bool CheckHeaderFile);
 
   void InclusionDirective(SourceLocation HashLoc, const Token &IncludeTok,
                           StringRef FileName, bool IsAngled,
@@ -41,6 +42,8 @@ private:
   LangOptions LangOpts;
   llvm::StringMap<std::string> CStyledHeaderToCxx;
   llvm::StringSet<> DeleteHeaders;
+  const SourceManager &SM;
+  bool CheckHeaderFile;
 };
 
 class ExternCRefutationVisitor
@@ -75,12 +78,18 @@ public:
 
 DeprecatedHeadersCheck::DeprecatedHeadersCheck(StringRef Name,
                                                ClangTidyContext *Context)
-    : ClangTidyCheck(Name, Context) {}
+    : ClangTidyCheck(Name, Context),
+      CheckHeaderFile(Options.get("CheckHeaderFile", false)) {}
+
+void DeprecatedHeadersCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
+  Options.store(Opts, "CheckHeaderFile", CheckHeaderFile);
+}
 
 void DeprecatedHeadersCheck::registerPPCallbacks(
     const SourceManager &SM, Preprocessor *PP, Preprocessor *ModuleExpanderPP) {
   PP->addPPCallbacks(std::make_unique<IncludeModernizePPCallbacks>(
-      IncludesToBeProcessed, getLangOpts()));
+      IncludesToBeProcessed, getLangOpts(), PP->getSourceManager(),
+      CheckHeaderFile));
 }
 void DeprecatedHeadersCheck::registerMatchers(
     ast_matchers::MatchFinder *Finder) {
@@ -124,8 +133,10 @@ void DeprecatedHeadersCheck::check(
 }
 
 IncludeModernizePPCallbacks::IncludeModernizePPCallbacks(
-    std::vector<IncludeMarker> &IncludesToBeProcessed, LangOptions LangOpts)
-    : IncludesToBeProcessed(IncludesToBeProcessed), LangOpts(LangOpts) {
+    std::vector<IncludeMarker> &IncludesToBeProcessed, LangOptions LangOpts,
+    const SourceManager &SM, bool CheckHeaderFile)
+    : IncludesToBeProcessed(IncludesToBeProcessed), LangOpts(LangOpts), SM(SM),
+      CheckHeaderFile(CheckHeaderFile) {
   for (const auto &KeyValue :
        std::vector<std::pair<llvm::StringRef, std::string>>(
            {{"assert.h", "cassert"},
@@ -171,6 +182,12 @@ void IncludeModernizePPCallbacks::InclusionDirective(
     bool IsAngled, CharSourceRange FilenameRange, Optional<FileEntryRef> File,
     StringRef SearchPath, StringRef RelativePath, const Module *Imported,
     SrcMgr::CharacteristicKind FileType) {
+
+  // If we don't want to warn for non-main file reports and this is one, skip
+  // it.
+  if (!CheckHeaderFile && !SM.isInMainFile(HashLoc))
+    return;
+
   // FIXME: Take care of library symbols from the global namespace.
   //
   // Reasonable options for the check:
