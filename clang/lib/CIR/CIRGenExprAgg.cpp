@@ -197,6 +197,16 @@ void AggExprEmitter::VisitCastExpr(CastExpr *E) {
   if (const auto *ECE = dyn_cast<ExplicitCastExpr>(E))
     assert(0 && "NYI");
   switch (E->getCastKind()) {
+
+  case CK_NoOp:
+  case CK_UserDefinedConversion:
+  case CK_ConstructorConversion:
+    assert(CGF.getContext().hasSameUnqualifiedType(E->getSubExpr()->getType(),
+                                                   E->getType()) &&
+           "Implicit cast types must be compatible");
+    Visit(E->getSubExpr());
+    break;
+
   case CK_LValueBitCast:
     llvm_unreachable("should not be emitting lvalue bitcast as rvalue");
 
