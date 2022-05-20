@@ -1778,14 +1778,23 @@ ARMTTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
         (ST->hasFullFP16() && LT.second == MVT::f16 && MTy == MVT::i32))
       return LT.first;
 
+    // Equally for MVE vector types
+    if (ST->hasMVEFloatOps() &&
+        (LT.second == MVT::v4f32 || LT.second == MVT::v8f16) &&
+        LT.second.getScalarSizeInBits() == MTy.getScalarSizeInBits())
+      return LT.first * ST->getMVEVectorCostFactor(CostKind);
+
     // Otherwise we use a legal convert followed by a min+max
     if (((ST->hasVFP2Base() && LT.second == MVT::f32) ||
          (ST->hasFP64() && LT.second == MVT::f64) ||
-         (ST->hasFullFP16() && LT.second == MVT::f16)) &&
+         (ST->hasFullFP16() && LT.second == MVT::f16) ||
+         (ST->hasMVEFloatOps() &&
+          (LT.second == MVT::v4f32 || LT.second == MVT::v8f16))) &&
         LT.second.getScalarSizeInBits() >= MTy.getScalarSizeInBits()) {
       Type *LegalTy = Type::getIntNTy(ICA.getReturnType()->getContext(),
                                       LT.second.getScalarSizeInBits());
-      InstructionCost Cost = 1;
+      InstructionCost Cost =
+          LT.second.isVector() ? ST->getMVEVectorCostFactor(CostKind) : 1;
       IntrinsicCostAttributes Attrs1(IsSigned ? Intrinsic::smin
                                               : Intrinsic::umin,
                                      LegalTy, {LegalTy, LegalTy});
