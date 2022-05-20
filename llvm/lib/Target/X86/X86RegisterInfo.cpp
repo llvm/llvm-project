@@ -656,7 +656,7 @@ bool X86RegisterInfo::isArgumentRegister(const MachineFunction &MF,
                    [&](MCRegister &RegA) { return IsSubReg(RegA, Reg); }))
     return true;
 
-  return false;
+  return X86GenRegisterInfo::isArgumentRegister(MF, Reg);
 }
 
 bool X86RegisterInfo::isFixedRegister(const MachineFunction &MF,
