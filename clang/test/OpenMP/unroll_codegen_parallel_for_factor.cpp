@@ -143,14 +143,14 @@ extern "C" void func(int start, int end, int step) {
 // IR-NEXT:    %[[TMP26:.+]] = load i32, i32* %[[DOTUNROLL_INNER_IV_I]], align 4
 // IR-NEXT:    %[[TMP27:.+]] = load i32, i32* %[[DOTUNROLLED_IV_I12]], align 4
 // IR-NEXT:    %[[ADD17:.+]] = add i32 %[[TMP27]], 7
-// IR-NEXT:    %[[CMP18:.+]] = icmp ule i32 %[[TMP26]], %[[ADD17]]
+// IR-NEXT:    %[[CMP18:.+]] = icmp ult i32 %[[TMP26]], %[[ADD17]]
 // IR-NEXT:    br i1 %[[CMP18]], label %[[LAND_RHS:.+]], label %[[LAND_END:.+]]
 // IR-EMPTY:
 // IR-NEXT:  [[LAND_RHS]]:
 // IR-NEXT:    %[[TMP28:.+]] = load i32, i32* %[[DOTUNROLL_INNER_IV_I]], align 4
 // IR-NEXT:    %[[TMP29:.+]] = load i32, i32* %[[DOTCAPTURE_EXPR_3]], align 4
 // IR-NEXT:    %[[ADD19:.+]] = add i32 %[[TMP29]], 1
-// IR-NEXT:    %[[CMP20:.+]] = icmp ule i32 %[[TMP28]], %[[ADD19]]
+// IR-NEXT:    %[[CMP20:.+]] = icmp ult i32 %[[TMP28]], %[[ADD19]]
 // IR-NEXT:    br label %[[LAND_END]]
 // IR-EMPTY:
 // IR-NEXT:  [[LAND_END]]:

@@ -162,14 +162,14 @@ extern "C" void body(...) {}
 // IR-NEXT:    %[[TMP31:.+]] = load i32, i32* %[[DOTUNROLL_INNER_IV_I]], align 4
 // IR-NEXT:    %[[TMP32:.+]] = load i32, i32* %[[DOTUNROLLED_IV_I]], align 4
 // IR-NEXT:    %[[ADD36:.+]] = add i32 %[[TMP32]], 2
-// IR-NEXT:    %[[CMP37:.+]] = icmp ule i32 %[[TMP31]], %[[ADD36]]
+// IR-NEXT:    %[[CMP37:.+]] = icmp ult i32 %[[TMP31]], %[[ADD36]]
 // IR-NEXT:    br i1 %[[CMP37]], label %[[LAND_RHS:.+]], label %[[LAND_END:.+]]
 // IR-EMPTY:
 // IR-NEXT:  [[LAND_RHS]]:
 // IR-NEXT:    %[[TMP33:.+]] = load i32, i32* %[[DOTUNROLL_INNER_IV_I]], align 4
 // IR-NEXT:    %[[TMP34:.+]] = load i32, i32* %[[DOTCAPTURE_EXPR_3]], align 4
 // IR-NEXT:    %[[ADD38:.+]] = add i32 %[[TMP34]], 1
-// IR-NEXT:    %[[CMP39:.+]] = icmp ule i32 %[[TMP33]], %[[ADD38]]
+// IR-NEXT:    %[[CMP39:.+]] = icmp ult i32 %[[TMP33]], %[[ADD38]]
 // IR-NEXT:    br label %[[LAND_END]]
 // IR-EMPTY:
 // IR-NEXT:  [[LAND_END]]:
