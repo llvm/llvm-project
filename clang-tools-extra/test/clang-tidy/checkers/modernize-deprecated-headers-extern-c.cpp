@@ -34,8 +34,7 @@ extern "C++" {
 #include <stdbool.h>
 // CHECK-MESSAGES-DEFAULT: :[[@LINE-1]]:10: warning: including 'stdbool.h' has no effect in C++; consider removing it [modernize-deprecated-headers]
 
-#include <mysystemlib.h> // FIXME: We should have no warning into system headers.
-// CHECK-MESSAGES-CHECK-HEADER-FILE: mysystemlib.h:1:10: warning: inclusion of deprecated C++ header 'assert.h'; consider using 'cassert' instead [modernize-deprecated-headers]
+#include <mysystemlib.h> // no-warning: Don't warn into system headers.
 
 #include <mylib.h>
 // CHECK-MESSAGES-CHECK-HEADER-FILE: mylib.h:1:10: warning: inclusion of deprecated C++ header 'assert.h'; consider using 'cassert' instead [modernize-deprecated-headers]
