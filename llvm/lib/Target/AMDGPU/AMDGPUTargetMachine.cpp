@@ -613,8 +613,6 @@ void AMDGPUTargetMachine::adjustPassManager(PassManagerBuilder &Builder) {
       PM.add(llvm::createAMDGPUUseNativeCallsPass());
       if (LibCallSimplify)
         PM.add(llvm::createAMDGPUSimplifyLibCallsPass(this));
-      if (getOptLevel() >= CodeGenOpt::Default)
-        PM.add(llvm::createAMDGPUImageIntrinsicOptimizerPass(this));
   });
 
   Builder.addExtension(
@@ -733,8 +731,6 @@ void AMDGPUTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB) {
         FPM.addPass(AMDGPUUseNativeCallsPass());
         if (EnableLibCallSimplify && Level != OptimizationLevel::O0)
           FPM.addPass(AMDGPUSimplifyLibCallsPass(*this));
-        if (getOptLevel() >= CodeGenOpt::Default)
-          FPM.addPass(AMDGPUImageIntrinsicOptimizerPass(*this));
         PM.addPass(createModuleToFunctionPassAdaptor(std::move(FPM)));
       });
 
