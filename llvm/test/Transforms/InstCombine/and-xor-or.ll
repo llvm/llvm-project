@@ -4159,8 +4159,7 @@ define i32 @zext_zext_and_uses(i8 %x, i8 %y) {
 ; CHECK-NEXT:    call void @use(i32 [[ZX]])
 ; CHECK-NEXT:    [[ZY:%.*]] = zext i8 [[Y]] to i32
 ; CHECK-NEXT:    call void @use(i32 [[ZY]])
-; CHECK-NEXT:    [[R1:%.*]] = and i8 [[X]], [[Y]]
-; CHECK-NEXT:    [[R:%.*]] = zext i8 [[R1]] to i32
+; CHECK-NEXT:    [[R:%.*]] = and i32 [[ZX]], [[ZY]]
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %zx = zext i8 %x to i32
@@ -4178,8 +4177,7 @@ define i32 @sext_sext_or_uses(i8 %x, i8 %y) {
 ; CHECK-NEXT:    call void @use(i32 [[SX]])
 ; CHECK-NEXT:    [[SY:%.*]] = sext i8 [[Y]] to i32
 ; CHECK-NEXT:    call void @use(i32 [[SY]])
-; CHECK-NEXT:    [[R1:%.*]] = or i8 [[X]], [[Y]]
-; CHECK-NEXT:    [[R:%.*]] = sext i8 [[R1]] to i32
+; CHECK-NEXT:    [[R:%.*]] = or i32 [[SX]], [[SY]]
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %sx = sext i8 %x to i32
@@ -4197,8 +4195,7 @@ define i32 @trunc_trunc_xor_uses(i65 %x, i65 %y) {
 ; CHECK-NEXT:    call void @use(i32 [[SX]])
 ; CHECK-NEXT:    [[SY:%.*]] = trunc i65 [[Y]] to i32
 ; CHECK-NEXT:    call void @use(i32 [[SY]])
-; CHECK-NEXT:    [[R1:%.*]] = xor i65 [[X]], [[Y]]
-; CHECK-NEXT:    [[R:%.*]] = trunc i65 [[R1]] to i32
+; CHECK-NEXT:    [[R:%.*]] = xor i32 [[SX]], [[SY]]
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %sx = trunc i65 %x to i32
