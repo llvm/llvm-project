@@ -58,6 +58,7 @@ MATCHER_P(scopeRefs, Refs, "") { return arg.ScopeRefsInFile == Refs; }
 MATCHER_P(nameStartsWith, Prefix, "") {
   return llvm::StringRef(arg.Name).startswith(Prefix);
 }
+MATCHER_P(filterText, F, "") { return arg.FilterText == F; }
 MATCHER_P(scope, S, "") { return arg.Scope == S; }
 MATCHER_P(qualifier, Q, "") { return arg.RequiredQualifier == Q; }
 MATCHER_P(labeled, Label, "") {
@@ -1918,6 +1919,7 @@ TEST(CompletionTest, QualifiedNames) {
 TEST(CompletionTest, Render) {
   CodeCompletion C;
   C.Name = "x";
+  C.FilterText = "x";
   C.Signature = "(bool) const";
   C.SnippetSuffix = "(${0:bool})";
   C.ReturnType = "int";
@@ -1949,6 +1951,11 @@ TEST(CompletionTest, Render) {
   EXPECT_EQ(R.sortText, sortText(1.0, "x"));
   EXPECT_FALSE(R.deprecated);
   EXPECT_EQ(R.score, .5f);
+
+  C.FilterText = "xtra";
+  R = C.render(Opts);
+  EXPECT_EQ(R.filterText, "xtra");
+  EXPECT_EQ(R.sortText, sortText(1.0, "xtra"));
 
   Opts.EnableSnippets = true;
   R = C.render(Opts);
@@ -3049,6 +3056,25 @@ TEST(CompletionTest, ObjectiveCMethodTwoArgumentsFromMiddle) {
   EXPECT_THAT(C, ElementsAre(returnType("id")));
   EXPECT_THAT(C, ElementsAre(signature("(unsigned int)")));
   EXPECT_THAT(C, ElementsAre(snippetSuffix("${1:(unsigned int)}")));
+}
+
+TEST(CompletionTest, ObjectiveCMethodFilterOnEntireSelector) {
+  auto Results = completions(R"objc(
+      @interface Foo
+      + (id)player:(id)player willRun:(id)run;
+      @end
+      id val = [Foo wi^]
+    )objc",
+                             /*IndexSymbols=*/{},
+                             /*Opts=*/{}, "Foo.m");
+
+  auto C = Results.Completions;
+  EXPECT_THAT(C, ElementsAre(named("player:")));
+  EXPECT_THAT(C, ElementsAre(filterText("player:willRun:")));
+  EXPECT_THAT(C, ElementsAre(kind(CompletionItemKind::Method)));
+  EXPECT_THAT(C, ElementsAre(returnType("id")));
+  EXPECT_THAT(C, ElementsAre(signature("(id) willRun:(id)")));
+  EXPECT_THAT(C, ElementsAre(snippetSuffix("${1:(id)} willRun:${2:(id)}")));
 }
 
 TEST(CompletionTest, ObjectiveCSimpleMethodDeclaration) {
