@@ -18,8 +18,11 @@
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/Object/Archive.h"
 #include "llvm/Object/Error.h"
+#include "llvm/Object/IRObjectFile.h"
+#include "llvm/Object/MachO.h"
 #include "llvm/Object/ObjectFile.h"
 #include "llvm/Object/SymbolicFile.h"
+#include "llvm/Object/XCOFFObjectFile.h"
 #include "llvm/Support/Alignment.h"
 #include "llvm/Support/EndianStream.h"
 #include "llvm/Support/Errc.h"
@@ -43,6 +46,40 @@ using namespace llvm;
 NewArchiveMember::NewArchiveMember(MemoryBufferRef BufRef)
     : Buf(MemoryBuffer::getMemBuffer(BufRef, false)),
       MemberName(BufRef.getBufferIdentifier()) {}
+
+object::Archive::Kind NewArchiveMember::detectKindFromObject() const {
+  auto MemBufferRef = this->Buf->getMemBufferRef();
+  Expected<std::unique_ptr<object::ObjectFile>> OptionalObject =
+      object::ObjectFile::createObjectFile(MemBufferRef);
+
+  if (OptionalObject)
+    return isa<object::MachOObjectFile>(**OptionalObject)
+               ? object::Archive::K_DARWIN
+               : (isa<object::XCOFFObjectFile>(**OptionalObject)
+                      ? object::Archive::K_AIXBIG
+                      : object::Archive::K_GNU);
+
+  // Squelch the error in case we had a non-object file.
+  consumeError(OptionalObject.takeError());
+
+  // If we're adding a bitcode file to the archive, detect the Archive kind
+  // based on the target triple.
+  LLVMContext Context;
+  if (identify_magic(MemBufferRef.getBuffer()) == file_magic::bitcode) {
+    if (auto ObjOrErr = object::SymbolicFile::createSymbolicFile(
+            MemBufferRef, file_magic::bitcode, &Context)) {
+      auto &IRObject = cast<object::IRObjectFile>(**ObjOrErr);
+      return Triple(IRObject.getTargetTriple()).isOSDarwin()
+                 ? object::Archive::K_DARWIN
+                 : object::Archive::K_GNU;
+    } else {
+      // Squelch the error in case this was not a SymbolicFile.
+      consumeError(ObjOrErr.takeError());
+    }
+  }
+
+  return object::Archive::getDefaultKindForHost();
+}
 
 Expected<NewArchiveMember>
 NewArchiveMember::getOldMember(const object::Archive::Child &OldMember,

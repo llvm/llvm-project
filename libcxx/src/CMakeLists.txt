@@ -223,10 +223,10 @@ if (LIBCXX_ENABLE_SHARED)
   # dependencies are recorded when creating a linker script.
   # TODO: Look into modifying the linker script creation to recursively consider interface libraries
   if (LIBCXXABI_USE_LLVM_UNWINDER)
-    if (NOT LIBCXXABI_STATICALLY_LINK_UNWINDER_IN_SHARED_LIBRARY AND (TARGET unwind_shared OR HAVE_LIBUNWIND))
-      target_link_libraries(cxx_shared PUBLIC unwind_shared)
-    elseif (LIBCXXABI_STATICALLY_LINK_UNWINDER_IN_SHARED_LIBRARY AND (TARGET unwind_static OR HAVE_LIBUNWIND))
+    if (LIBCXXABI_STATICALLY_LINK_UNWINDER_IN_SHARED_LIBRARY)
       # libunwind is already included in libc++abi
+    elseif (TARGET unwind_shared OR HAVE_LIBUNWIND)
+      target_link_libraries(cxx_shared PUBLIC unwind_shared)
     else()
       target_link_libraries(cxx_shared PUBLIC unwind)
     endif()
@@ -300,7 +300,9 @@ if (LIBCXX_ENABLE_STATIC)
       append_flags_if_supported(CXX_STATIC_LIBRARY_FLAGS -fvisibility-global-new-delete-hidden)
     endif()
     target_compile_options(cxx_static PRIVATE ${CXX_STATIC_LIBRARY_FLAGS})
-    target_compile_definitions(cxx_static PRIVATE _LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS)
+    # _LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS can be defined in __config_site
+    # too. Define it in the same way here, to avoid redefinition conflicts.
+    target_compile_definitions(cxx_static PRIVATE _LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS=)
   endif()
 
   list(APPEND LIBCXX_BUILD_TARGETS "cxx_static")

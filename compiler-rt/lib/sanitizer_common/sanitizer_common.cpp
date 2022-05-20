@@ -351,6 +351,13 @@ void SleepForSeconds(unsigned seconds) {
 }
 void SleepForMillis(unsigned millis) { internal_usleep((u64)millis * 1000); }
 
+void WaitForDebugger(unsigned seconds, const char *label) {
+  if (seconds) {
+    Report("Sleeping for %u second(s) %s\n", seconds, label);
+    SleepForSeconds(seconds);
+  }
+}
+
 } // namespace __sanitizer
 
 using namespace __sanitizer;

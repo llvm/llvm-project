@@ -485,6 +485,9 @@ Expected<SymbolAliasMap> buildSimpleReexportsAliasMap(JITDylib &SourceJD,
 
 class InProgressLookupState {
 public:
+  // FIXME: Reduce the number of SymbolStringPtrs here. See
+  //        https://github.com/llvm/llvm-project/issues/55576.
+
   InProgressLookupState(LookupKind K, JITDylibSearchOrder SearchOrder,
                         SymbolLookupSet LookupSet, SymbolState RequiredState)
       : K(K), SearchOrder(std::move(SearchOrder)),
@@ -2070,7 +2073,7 @@ void ExecutionSession::lookup(
 
 Expected<SymbolMap>
 ExecutionSession::lookup(const JITDylibSearchOrder &SearchOrder,
-                         const SymbolLookupSet &Symbols, LookupKind K,
+                         SymbolLookupSet Symbols, LookupKind K,
                          SymbolState RequiredState,
                          RegisterDependenciesFunction RegisterDependencies) {
 #if LLVM_ENABLE_THREADS
@@ -2102,7 +2105,7 @@ ExecutionSession::lookup(const JITDylibSearchOrder &SearchOrder,
 #endif
 
   // Perform the asynchronous lookup.
-  lookup(K, SearchOrder, Symbols, RequiredState, NotifyComplete,
+  lookup(K, SearchOrder, std::move(Symbols), RequiredState, NotifyComplete,
          RegisterDependencies);
 
 #if LLVM_ENABLE_THREADS

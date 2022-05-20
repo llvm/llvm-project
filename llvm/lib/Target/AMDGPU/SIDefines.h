@@ -63,6 +63,9 @@ enum : uint64_t {
   VGPRSpill = 1 << 24,
   SGPRSpill = 1 << 25,
 
+  // LDSDIR instruction format.
+  LDSDIR = 1 << 26,
+
   // High bits - other information.
   VM_CNT = UINT64_C(1) << 32,
   EXP_CNT = UINT64_C(1) << 33,
@@ -280,7 +283,8 @@ enum : unsigned {
   INLINE_FLOATING_C_MAX = 248,
   LITERAL_CONST = 255,
   VGPR_MIN = 256,
-  VGPR_MAX = 511
+  VGPR_MAX = 511,
+  IS_VGPR = 256  // Indicates VGPR or AGPR
 };
 
 } // namespace EncValues

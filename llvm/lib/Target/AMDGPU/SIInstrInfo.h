@@ -666,6 +666,14 @@ public:
     return get(Opcode).TSFlags & SIInstrFlags::IsDOT;
   }
 
+  static bool isLDSDIR(const MachineInstr &MI) {
+    return MI.getDesc().TSFlags & SIInstrFlags::LDSDIR;
+  }
+
+  bool isLDSDIR(uint16_t Opcode) const {
+    return get(Opcode).TSFlags & SIInstrFlags::LDSDIR;
+  }
+
   static bool isScalarUnit(const MachineInstr &MI) {
     return MI.getDesc().TSFlags & (SIInstrFlags::SALU | SIInstrFlags::SMRD);
   }
@@ -1218,9 +1226,6 @@ namespace AMDGPU {
   /// \returns \p Opcode if it is an Addr64 opcode, otherwise -1.
   LLVM_READONLY
   int getIfAddr64Inst(uint16_t Opcode);
-
-  LLVM_READONLY
-  int getMUBUFNoLdsInst(uint16_t Opcode);
 
   LLVM_READONLY
   int getAtomicNoRetOp(uint16_t Opcode);

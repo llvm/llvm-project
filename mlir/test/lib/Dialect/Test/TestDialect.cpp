@@ -371,6 +371,11 @@ TestDialect::getParseOperationHook(StringRef opName) const {
       return parser.parseKeyword("custom_format_fallback");
     }};
   }
+  if (opName == "test.dialect_custom_printer.with.dot") {
+    return ParseOpHook{[](OpAsmParser &parser, OperationState &state) {
+      return ParseResult::success();
+    }};
+  }
   return None;
 }
 

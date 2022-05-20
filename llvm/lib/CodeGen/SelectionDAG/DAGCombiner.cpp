@@ -882,8 +882,8 @@ void DAGCombiner::deleteAndRecombine(SDNode *N) {
 // We provide an Offset so that we can create bitwidths that won't overflow.
 static void zeroExtendToMatch(APInt &LHS, APInt &RHS, unsigned Offset = 0) {
   unsigned Bits = Offset + std::max(LHS.getBitWidth(), RHS.getBitWidth());
-  LHS = LHS.zextOrSelf(Bits);
-  RHS = RHS.zextOrSelf(Bits);
+  LHS = LHS.zext(Bits);
+  RHS = RHS.zext(Bits);
 }
 
 // Return true if this node is a setcc, or is a select_cc
@@ -4970,8 +4970,7 @@ static SDValue isSaturatingMinMax(SDValue N0, SDValue N1, SDValue N2,
       return 0;
     const APInt &C1 = N1C->getAPIntValue();
     const APInt &C2 = N3C->getAPIntValue();
-    if (C1.getBitWidth() < C2.getBitWidth() ||
-        C1 != C2.sextOrSelf(C1.getBitWidth()))
+    if (C1.getBitWidth() < C2.getBitWidth() || C1 != C2.sext(C1.getBitWidth()))
       return 0;
     return CC == ISD::SETLT ? ISD::SMIN : (CC == ISD::SETGT ? ISD::SMAX : 0);
   };
@@ -5078,7 +5077,7 @@ static SDValue PerformUMinFpToSatCombine(SDValue N0, SDValue N1, SDValue N2,
   const APInt &C1 = N1C->getAPIntValue();
   const APInt &C3 = N3C->getAPIntValue();
   if (!(C1 + 1).isPowerOf2() || C1.getBitWidth() < C3.getBitWidth() ||
-      C1 != C3.zextOrSelf(C1.getBitWidth()))
+      C1 != C3.zext(C1.getBitWidth()))
     return SDValue();
 
   unsigned BW = (C1 + 1).exactLogBase2();
@@ -6490,19 +6489,23 @@ SDValue DAGCombiner::MatchBSwapHWordLow(SDNode *N, SDValue N0, SDValue N1,
   // Make sure everything beyond the low halfword gets set to zero since the SRL
   // 16 will clear the top bits.
   unsigned OpSizeInBits = VT.getSizeInBits();
-  if (DemandHighBits && OpSizeInBits > 16) {
+  if (OpSizeInBits > 16) {
     // If the left-shift isn't masked out then the only way this is a bswap is
     // if all bits beyond the low 8 are 0. In that case the entire pattern
     // reduces to a left shift anyway: leave it for other parts of the combiner.
-    if (!LookPassAnd0)
+    if (DemandHighBits && !LookPassAnd0)
       return SDValue();
 
     // However, if the right shift isn't masked out then it might be because
-    // it's not needed. See if we can spot that too.
-    if (!LookPassAnd1 &&
-        !DAG.MaskedValueIsZero(
-            N10, APInt::getHighBitsSet(OpSizeInBits, OpSizeInBits - 16)))
-      return SDValue();
+    // it's not needed. See if we can spot that too. If the high bits aren't
+    // demanded, we only need bits 23:16 to be zero. Otherwise, we need all
+    // upper bits to be zero.
+    if (!LookPassAnd1) {
+      unsigned HighBit = DemandHighBits ? OpSizeInBits : 24;
+      if (!DAG.MaskedValueIsZero(N10,
+                                 APInt::getBitsSet(OpSizeInBits, 16, HighBit)))
+        return SDValue();
+    }
   }
 
   SDValue Res = DAG.getNode(ISD::BSWAP, SDLoc(N), VT, N00);

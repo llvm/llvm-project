@@ -127,6 +127,7 @@ public:
     uint8_t flags; // Action flags describing what to do with the exception
   };
   static const char *Name(exception_type_t exc_type);
+  static exception_mask_t ExceptionMask(const char *name);
 };
 
 #endif

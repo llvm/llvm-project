@@ -3240,6 +3240,8 @@ def : Pat<(int_ppc_fnmadd f64:$A, f64:$B, f64:$C), (FNMADD $A, $B, $C)>;
 def : Pat<(int_ppc_fnmadds f32:$A, f32:$B, f32:$C), (FNMADDS $A, $B, $C)>;
 def : Pat<(int_ppc_fre f64:$A), (FRE $A)>;
 def : Pat<(int_ppc_fres f32:$A), (FRES $A)>;
+def : Pat<(int_ppc_fnabs f64:$A), (FNABSD $A)>;
+def : Pat<(int_ppc_fnabss f32:$A), (FNABSS $A)>;
 
 include "PPCInstrAltivec.td"
 include "PPCInstrSPE.td"

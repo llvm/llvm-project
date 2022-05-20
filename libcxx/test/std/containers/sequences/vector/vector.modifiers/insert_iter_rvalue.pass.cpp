@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-// UNSUPPORTED: c++03
+// UNSUPPORTED: c++03 && !stdlib=libc++
 
 // <vector>
 
@@ -50,8 +50,8 @@ int main(int, char**)
             assert(v[j] == MoveOnly());
     }
     {
-        std::vector<MoveOnly, min_allocator<MoveOnly>> v(100);
-        std::vector<MoveOnly, min_allocator<MoveOnly>>::iterator i = v.insert(v.cbegin() + 10, MoveOnly(3));
+        std::vector<MoveOnly, min_allocator<MoveOnly> > v(100);
+        std::vector<MoveOnly, min_allocator<MoveOnly> >::iterator i = v.insert(v.cbegin() + 10, MoveOnly(3));
         assert(v.size() == 101);
         assert(is_contiguous_container_asan_correct(v));
         assert(i == v.begin() + 10);

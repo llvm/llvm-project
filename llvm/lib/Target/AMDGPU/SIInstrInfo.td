@@ -1291,6 +1291,8 @@ def exp_tgt : NamedOperandU32<"ExpTgt", NamedMatchClass<"ExpTgt", 0>> {
 
 }
 
+def wait_vdst : NamedOperandU8<"WaitVDST", NamedMatchClass<"WaitVDST">>;
+
 } // End OperandType = "OPERAND_IMMEDIATE"
 
 class KImmMatchClass<int size> : AsmOperandClass {
@@ -2633,14 +2635,6 @@ def getIfAddr64Inst : InstrMapping {
   let ColFields = ["IsAddr64"];
   let KeyCol = ["1"];
   let ValueCols = [["1"]];
-}
-
-def getMUBUFNoLdsInst : InstrMapping {
-  let FilterClass = "MUBUFLdsTable";
-  let RowFields = ["OpName"];
-  let ColFields = ["IsLds"];
-  let KeyCol = ["1"];
-  let ValueCols = [["0"]];
 }
 
 // Maps an atomic opcode to its returnless version.

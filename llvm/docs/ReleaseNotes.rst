@@ -99,6 +99,8 @@ Changes to the ARM Backend
   warnings will be generated and -mrestrict-it is now always off by default.
   Previously it was on by default for Armv8 and off for all other architecture
   versions.
+* Added a pass to workaround Cortex-A57 Erratum 1742098 and Cortex-A72
+  Erratum 1655431. This is enabled by default when targeting either CPU.
 
 Changes to the AVR Backend
 --------------------------
@@ -169,6 +171,26 @@ Changes to the LLVM tools
 
 Changes to LLDB
 ---------------------------------
+
+* The "memory region" command now has a "--all" option to list all
+  memory regions (including unmapped ranges). This is the equivalent
+  of using address 0 then repeating the command until all regions
+  have been listed.
+* Added "--show-tags" option to the "memory find" command. This is off by default.
+  When enabled, if the target value is found in tagged memory, the tags for that
+  memory will be shown inline with the memory contents.
+* Various memory related parts of LLDB have been updated to handle
+  non-address bits (such as AArch64 pointer signatures):
+
+  * "memory read", "memory write" and "memory find" can now be used with
+    addresses with non-address bits.
+  * All the read and write memory methods on SBProccess and SBTarget can
+    be used with addreses with non-address bits.
+  * When printing a pointer expression, LLDB can now dereference the result
+    even if it has non-address bits.
+  * The memory cache now ignores non-address bits when looking up memory
+    locations. This prevents us reading locations multiple times, or not
+    writing out new values if the addresses have different non-address bits.
 
 Changes to Sanitizers
 ---------------------

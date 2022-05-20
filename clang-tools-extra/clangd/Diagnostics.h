@@ -126,6 +126,10 @@ CodeAction toCodeAction(const Fix &D, const URIForFile &File);
 /// Convert from clang diagnostic level to LSP severity.
 int getSeverity(DiagnosticsEngine::Level L);
 
+/// Returns a URI providing more information about a particular diagnostic.
+llvm::Optional<std::string> getDiagnosticDocURI(Diag::DiagSource, unsigned ID,
+                                                llvm::StringRef Name);
+
 /// StoreDiags collects the diagnostics that can later be reported by
 /// clangd. It groups all notes for a diagnostic into a single Diag
 /// and filters out diagnostics that don't mention the main file (i.e. neither
