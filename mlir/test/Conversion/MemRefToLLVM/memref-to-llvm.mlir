@@ -89,6 +89,29 @@ func.func @view(%arg0 : index, %arg1 : index, %arg2 : index) {
 
 // -----
 
+// CHECK-LABL: func @view_empty_memref(
+// CHECK:        %[[ARG0:.*]]: index,
+// CHECK:        %[[ARG1:.*]]: memref<0xi8>)
+func.func @view_empty_memref(%offset: index, %mem: memref<0xi8>) {
+
+  // CHECK: llvm.mlir.undef : !llvm.struct<(ptr<f32>, ptr<f32>, i64, array<2 x i64>, array<2 x i64>)>
+  // CHECK: llvm.mlir.constant(0 : index) : i64
+  // CHECK: llvm.insertvalue %{{.*}}, %{{.*}}[2] : !llvm.struct<(ptr<f32>, ptr<f32>, i64, array<2 x i64>, array<2 x i64>)>
+  // CHECK: llvm.mlir.constant(4 : index) : i64
+  // CHECK: llvm.insertvalue %{{.*}}, %{{.*}}[3, 1] : !llvm.struct<(ptr<f32>, ptr<f32>, i64, array<2 x i64>, array<2 x i64>)>
+  // CHECK: llvm.mlir.constant(0 : index) : i64
+  // CHECK: llvm.insertvalue %{{.*}}, %{{.*}}[4, 1] : !llvm.struct<(ptr<f32>, ptr<f32>, i64, array<2 x i64>, array<2 x i64>)>
+  // CHECK: llvm.mlir.constant(0 : index) : i64
+  // CHECK: llvm.insertvalue %{{.*}}, %{{.*}}[3, 0] : !llvm.struct<(ptr<f32>, ptr<f32>, i64, array<2 x i64>, array<2 x i64>)>
+  // CHECK: llvm.mlir.constant(0 : index) : i64
+  // CHECK: = llvm.insertvalue %{{.*}}, %{{.*}}[4, 0] : !llvm.struct<(ptr<f32>, ptr<f32>, i64, array<2 x i64>, array<2 x i64>)>
+  %0 = memref.view %mem[%offset][] : memref<0xi8> to memref<0x4xf32>
+
+  return
+}
+
+// -----
+
 // CHECK-LABEL: func @subview(
 // CHECK:         %[[MEM:.*]]: memref<{{.*}}>,
 // CHECK:         %[[ARG0f:[a-zA-Z0-9]*]]: index,

@@ -1848,6 +1848,12 @@ struct ViewOpLowering : public ConvertOpToLLVMPattern<memref::ViewOp> {
       return viewOp.emitWarning("cannot cast to non-strided shape"), failure();
     assert(offset == 0 && "expected offset to be 0");
 
+    // Target memref must be contiguous in memory (innermost stride is 1), or
+    // empty (special case when at least one of the memref dimensions is 0).
+    if (!strides.empty() && (strides.back() != 1 && strides.back() != 0))
+      return viewOp.emitWarning("cannot cast to non-contiguous shape"),
+             failure();
+
     // Create the descriptor.
     MemRefDescriptor sourceMemRef(adaptor.source());
     auto targetMemRef = MemRefDescriptor::undef(rewriter, loc, targetDescTy);
@@ -1884,9 +1890,6 @@ struct ViewOpLowering : public ConvertOpToLLVMPattern<memref::ViewOp> {
       return rewriter.replaceOp(viewOp, {targetMemRef}), success();
 
     // Fields 4 and 5: Update sizes and strides.
-    if (strides.back() != 1)
-      return viewOp.emitWarning("cannot cast to non-contiguous shape"),
-             failure();
     Value stride = nullptr, nextSize = nullptr;
     for (int i = viewMemRefType.getRank() - 1; i >= 0; --i) {
       // Update size.
