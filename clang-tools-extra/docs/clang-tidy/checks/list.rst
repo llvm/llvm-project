@@ -37,19 +37,19 @@ Clang-Tidy Checks
    `altera-struct-pack-align <altera-struct-pack-align.html>`_, "Yes"
    `altera-unroll-loops <altera-unroll-loops.html>`_,
    `android-cloexec-accept <android-cloexec-accept.html>`_, "Yes"
-   `android-cloexec-accept4 <android-cloexec-accept4.html>`_,
+   `android-cloexec-accept4 <android-cloexec-accept4.html>`_, "Yes"
    `android-cloexec-creat <android-cloexec-creat.html>`_, "Yes"
    `android-cloexec-dup <android-cloexec-dup.html>`_, "Yes"
-   `android-cloexec-epoll-create <android-cloexec-epoll-create.html>`_,
-   `android-cloexec-epoll-create1 <android-cloexec-epoll-create1.html>`_,
-   `android-cloexec-fopen <android-cloexec-fopen.html>`_,
-   `android-cloexec-inotify-init <android-cloexec-inotify-init.html>`_,
-   `android-cloexec-inotify-init1 <android-cloexec-inotify-init1.html>`_,
-   `android-cloexec-memfd-create <android-cloexec-memfd-create.html>`_,
-   `android-cloexec-open <android-cloexec-open.html>`_,
+   `android-cloexec-epoll-create <android-cloexec-epoll-create.html>`_, "Yes"
+   `android-cloexec-epoll-create1 <android-cloexec-epoll-create1.html>`_, "Yes"
+   `android-cloexec-fopen <android-cloexec-fopen.html>`_, "Yes"
+   `android-cloexec-inotify-init <android-cloexec-inotify-init.html>`_, "Yes"
+   `android-cloexec-inotify-init1 <android-cloexec-inotify-init1.html>`_, "Yes"
+   `android-cloexec-memfd-create <android-cloexec-memfd-create.html>`_, "Yes"
+   `android-cloexec-open <android-cloexec-open.html>`_, "Yes"
    `android-cloexec-pipe <android-cloexec-pipe.html>`_, "Yes"
-   `android-cloexec-pipe2 <android-cloexec-pipe2.html>`_,
-   `android-cloexec-socket <android-cloexec-socket.html>`_,
+   `android-cloexec-pipe2 <android-cloexec-pipe2.html>`_, "Yes"
+   `android-cloexec-socket <android-cloexec-socket.html>`_, "Yes"
    `android-comparison-in-temp-failure-retry <android-comparison-in-temp-failure-retry.html>`_,
    `boost-use-to-string <boost-use-to-string.html>`_, "Yes"
    `bugprone-argument-comment <bugprone-argument-comment.html>`_, "Yes"
@@ -105,7 +105,7 @@ Clang-Tidy Checks
    `bugprone-terminating-continue <bugprone-terminating-continue.html>`_, "Yes"
    `bugprone-throw-keyword-missing <bugprone-throw-keyword-missing.html>`_,
    `bugprone-too-small-loop-variable <bugprone-too-small-loop-variable.html>`_,
-   `bugprone-unchecked-optional-access <bugprone-unchecked-optional-access.html>`_, "Yes"
+   `bugprone-unchecked-optional-access <bugprone-unchecked-optional-access.html>`_,
    `bugprone-undefined-memory-manipulation <bugprone-undefined-memory-manipulation.html>`_,
    `bugprone-undelegated-constructor <bugprone-undelegated-constructor.html>`_,
    `bugprone-unhandled-exception-at-new <bugprone-unhandled-exception-at-new.html>`_,
