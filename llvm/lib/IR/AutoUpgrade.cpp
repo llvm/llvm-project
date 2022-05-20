@@ -4675,3 +4675,15 @@ void llvm::UpgradeAttributes(AttrBuilder &B) {
       B.addAttribute(Attribute::NullPointerIsValid);
   }
 }
+
+void llvm::UpgradeOperandBundles(std::vector<OperandBundleDef> &Bundles) {
+
+  // clang.arc.attachedcall bundles are now required to have an operand.
+  // If they don't, it's okay to drop them entirely: when there is an operand,
+  // the "attachedcall" is meaningful and required, but without an operand,
+  // it's just a marker NOP.  Dropping it merely prevents an optimization.
+  erase_if(Bundles, [&](OperandBundleDef &OBD) {
+    return OBD.getTag() == "clang.arc.attachedcall" &&
+           OBD.inputs().empty();
+  });
+}
