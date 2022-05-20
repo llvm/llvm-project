@@ -8,6 +8,7 @@
 //===----------------------------------------------------------------------===//
 
 // REQUIRES: linux && target={{aarch64-.+}}
+// XFAIL: no-exceptions
 
 // This test ensures the .cfi_negate_ra_state the RA_SIGN_STATE pseudo register
 // could be set directly set by a DWARF expression and the unwinder handles it
