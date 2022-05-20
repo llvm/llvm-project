@@ -702,10 +702,9 @@ public:
                        LValue lvalue);
 
   LValue buildDeclRefLValue(const clang::DeclRefExpr *E);
-
   LValue buildBinaryOperatorLValue(const clang::BinaryOperator *E);
-
   LValue buildUnaryOpLValue(const clang::UnaryOperator *E);
+  LValue buildStringLiteralLValue(const StringLiteral *E);
 
   /// Given an expression of pointer type, try to
   /// derive a more accurate bound on the alignment of the pointer.
@@ -853,9 +852,9 @@ public:
 
   LValue buildLValueForField(LValue Base, const clang::FieldDecl *Field);
 
-  /// buildLValueForFieldInitialization - like buildLValueForField, excpet that
-  /// if the Field is a reference, this will return the address of the reference
-  /// and not the address of the value stored in the reference.
+  /// Like buildLValueForField, excpet that if the Field is a reference, this
+  /// will return the address of the reference and not the address of the value
+  /// stored in the reference.
   LValue buildLValueForFieldInitialization(LValue Base,
                                            const clang::FieldDecl *Field);
 
@@ -885,15 +884,19 @@ public:
                                        const FunctionArgList &Args,
                                        clang::SourceLocation Loc);
 
-  /// buildDelegatingCallArg - We are performing a delegate call; that is, the
-  /// current function is delegating to another one. Produce a r-value suitable
-  /// for passing the given parameter.
+  /// We are performing a delegate call; that is, the current function is
+  /// delegating to another one. Produce a r-value suitable for passing the
+  /// given parameter.
   void buildDelegateCallArg(CallArgList &args, const clang::VarDecl *param,
                             clang::SourceLocation loc);
 
-  /// ShouldInstrumentFunction - Return true if the current function should be
-  /// instrumented with __cyg_profile_func_* calls
+  /// Return true if the current function should be instrumented with
+  /// __cyg_profile_func_* calls
   bool ShouldInstrumentFunction();
+
+  /// TODO(cir): add TBAAAccessInfo
+  Address buildArrayToPointerDecay(const Expr *Array,
+                                   LValueBaseInfo *BaseInfo = nullptr);
 };
 
 } // namespace cir

@@ -655,6 +655,68 @@ void CIRGenFunction::buildIgnoredExpr(const Expr *E) {
   buildLValue(E);
 }
 
+static mlir::Value maybeBuildArrayDecay(mlir::OpBuilder &builder,
+                                        mlir::Location loc,
+                                        mlir::Value arrayPtr,
+                                        mlir::Type eltTy) {
+  auto arrayPtrTy = arrayPtr.getType().dyn_cast<::mlir::cir::PointerType>();
+  assert(arrayPtrTy && "expected pointer type");
+  auto arrayTy = arrayPtrTy.getPointee().dyn_cast<::mlir::cir::ArrayType>();
+
+  if (arrayTy) {
+    mlir::cir::PointerType flatPtrTy =
+        mlir::cir::PointerType::get(builder.getContext(), arrayTy.getEltType());
+    return builder.create<mlir::cir::CastOp>(
+        loc, flatPtrTy, mlir::cir::CastKind::array_to_ptrdecay, arrayPtr);
+  }
+
+  assert(arrayPtrTy.getPointee() == eltTy &&
+         "flat pointee type must match original array element type");
+  return arrayPtr;
+}
+
+Address CIRGenFunction::buildArrayToPointerDecay(const Expr *E,
+                                                 LValueBaseInfo *BaseInfo) {
+  assert(E->getType()->isArrayType() &&
+         "Array to pointer decay must have array source type!");
+
+  // Expressions of array type can't be bitfields or vector elements.
+  LValue LV = buildLValue(E);
+  Address Addr = LV.getAddress();
+
+  // If the array type was an incomplete type, we need to make sure
+  // the decay ends up being the right type.
+  auto lvalueAddrTy =
+      Addr.getPointer().getType().dyn_cast<mlir::cir::PointerType>();
+  assert(lvalueAddrTy && "expected pointer");
+
+  auto pointeeTy = lvalueAddrTy.getPointee().dyn_cast<mlir::cir::ArrayType>();
+  assert(pointeeTy && "expected array");
+
+  mlir::Type arrayTy = convertType(E->getType());
+  assert(arrayTy.isa<mlir::cir::ArrayType>() && "expected array");
+  assert(pointeeTy == arrayTy);
+
+  // TODO(cir): in LLVM codegen VLA pointers are always decayed, so we don't
+  // need to do anything here. Revisit this for VAT when its supported in CIR.
+  assert(!E->getType()->isVariableArrayType() && "what now?");
+
+  // The result of this decay conversion points to an array element within the
+  // base lvalue. However, since TBAA currently does not support representing
+  // accesses to elements of member arrays, we conservatively represent accesses
+  // to the pointee object as if it had no any base lvalue specified.
+  // TODO: Support TBAA for member arrays.
+  QualType EltType = E->getType()->castAsArrayTypeUnsafe()->getElementType();
+  if (BaseInfo)
+    *BaseInfo = LV.getBaseInfo();
+  assert(!UnimplementedFeature::tbaa() && "NYI");
+
+  mlir::Value ptr = maybeBuildArrayDecay(
+      CGM.getBuilder(), CGM.getLoc(E->getSourceRange()), Addr.getPointer(),
+      getTypes().convertTypeForMem(EltType));
+  return Address(ptr, Addr.getAlignment());
+}
+
 /// If the specified expr is a simple decay from an array to pointer,
 /// return the array subexpression.
 /// FIXME: this could be abstracted into a commeon AST helper.
@@ -736,23 +798,9 @@ static mlir::Value buildArrayAccessOp(mlir::OpBuilder &builder,
                                       mlir::Location arrayLocEnd,
                                       mlir::Value arrayPtr, mlir::Type eltTy,
                                       mlir::Value idx) {
-  auto arrayPtrTy = arrayPtr.getType().dyn_cast<::mlir::cir::PointerType>();
-  assert(arrayPtrTy && "expected pointer type");
-  auto arrayTy = arrayPtrTy.getPointee().dyn_cast<::mlir::cir::ArrayType>();
-
-  mlir::cir::PointerType flatPtrTy;
-  mlir::Value basePtr = arrayPtr;
-  if (arrayTy) {
-    flatPtrTy =
-        mlir::cir::PointerType::get(builder.getContext(), arrayTy.getEltType());
-    basePtr = builder.create<mlir::cir::CastOp>(
-        arrayLocBegin, flatPtrTy, mlir::cir::CastKind::array_to_ptrdecay,
-        arrayPtr);
-  } else {
-    assert(arrayPtrTy.getPointee() == eltTy &&
-           "flat pointee type must match original array element type");
-    flatPtrTy = arrayPtrTy;
-  }
+  mlir::Value basePtr =
+      maybeBuildArrayDecay(builder, arrayLocBegin, arrayPtr, eltTy);
+  mlir::Type flatPtrTy = basePtr.getType();
 
   return builder.create<mlir::cir::PtrStrideOp>(arrayLocEnd, flatPtrTy, basePtr,
                                                 idx);
@@ -909,6 +957,26 @@ LValue CIRGenFunction::buildArraySubscriptExpr(const ArraySubscriptExpr *E,
   return LV;
 }
 
+LValue CIRGenFunction::buildStringLiteralLValue(const StringLiteral *E) {
+  auto sym = CGM.getAddrOfConstantStringFromLiteral(E);
+
+  auto cstGlobal = mlir::SymbolTable::lookupSymbolIn(CGM.getModule(), sym);
+  assert(cstGlobal && "Expected global");
+
+  auto g = dyn_cast<mlir::cir::GlobalOp>(cstGlobal);
+  assert(g && "unaware of other symbol providers");
+
+  auto ptrTy = mlir::cir::PointerType::get(CGM.getBuilder().getContext(),
+                                           g.getSymType());
+  assert(g.getAlignment() && "expected alignment for string literal");
+  auto align = *g.getAlignment();
+  auto addr = builder.create<mlir::cir::GetGlobalOp>(
+      getLoc(E->getSourceRange()), ptrTy, g.getSymName());
+  return makeAddrLValue(
+      Address(addr, g.getSymType(), CharUnits::fromQuantity(align)),
+      E->getType(), AlignmentSource::Decl);
+}
+
 /// Emit code to compute a designator that specifies the location
 /// of the expression.
 /// FIXME: document this function better.
@@ -928,6 +996,8 @@ LValue CIRGenFunction::buildLValue(const Expr *E) {
     return buildDeclRefLValue(cast<DeclRefExpr>(E));
   case Expr::UnaryOperatorClass:
     return buildUnaryOpLValue(cast<UnaryOperator>(E));
+  case Expr::StringLiteralClass:
+    return buildStringLiteralLValue(cast<StringLiteral>(E));
   case Expr::ObjCPropertyRefExprClass:
     llvm_unreachable("cannot emit a property reference directly");
   }

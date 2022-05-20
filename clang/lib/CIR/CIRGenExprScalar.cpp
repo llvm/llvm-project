@@ -760,7 +760,7 @@ mlir::Value ScalarExprEmitter::VisitCastExpr(CastExpr *CE) {
   case CK_Dynamic:
     llvm_unreachable("NYI");
   case CK_ArrayToPointerDecay:
-    llvm_unreachable("NYI");
+    return CGF.buildArrayToPointerDecay(E).getPointer();
   case CK_FunctionToPointerDecay:
     llvm_unreachable("NYI");
 
