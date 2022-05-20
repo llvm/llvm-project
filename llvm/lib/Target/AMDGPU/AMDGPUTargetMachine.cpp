@@ -329,6 +329,11 @@ static cl::opt<bool> EnablePromoteKernelArguments(
     cl::desc("Enable promotion of flat kernel pointer arguments to global"),
     cl::Hidden, cl::init(true));
 
+static cl::opt<bool> EnableImageIntrinsicOptimizer(
+    "amdgpu-enable-image-intrinsic-optimizer",
+    cl::desc("Enable image intrinsic optimizer pass"), cl::init(true),
+    cl::Hidden);
+
 extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAMDGPUTarget() {
   // Register the target
   RegisterTargetMachine<R600TargetMachine> X(getTheAMDGPUTarget());
@@ -1003,7 +1008,7 @@ void AMDGPUPassConfig::addIRPasses() {
   // A call to propagate attributes pass in the backend in case opt was not run.
   addPass(createAMDGPUPropagateAttributesEarlyPass(&TM));
 
-  if (TM.getOptLevel() >= CodeGenOpt::Default)
+  if (isPassEnabled(EnableImageIntrinsicOptimizer))
     addPass(createAMDGPUImageIntrinsicOptimizerPass(&TM));
 
   addPass(createAMDGPULowerIntrinsicsPass());
