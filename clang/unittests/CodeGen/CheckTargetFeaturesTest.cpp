@@ -1,4 +1,4 @@
-#include "../lib/Basic/BuiltinTargetFeatures.h"
+#include "clang/Basic/Builtins.h"
 #include "gtest/gtest.h"
 
 using namespace llvm;
@@ -11,8 +11,7 @@ TEST(CheckTargetFeaturesTest, checkBuiltinFeatures) {
     StringMap<bool> SM;
     for (StringRef F : Features)
       SM.insert(std::make_pair(F, true));
-    clang::Builtin::TargetFeatures TF(SM);
-    return TF.hasRequiredFeatures(BuiltinFeatures);
+    return clang::Builtin::evaluateRequiredTargetFeatures(BuiltinFeatures, SM);
   };
   // Make sure the basic function ',' and '|' works correctly
   ASSERT_FALSE(doCheck("A,B,C,D", "A"));
