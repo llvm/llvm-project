@@ -189,5 +189,7 @@ Value mlir::sparse_tensor::genIsNonzero(OpBuilder &builder, mlir::Location loc,
   if (tp.isIntOrIndex())
     return builder.create<arith::CmpIOp>(loc, arith::CmpIPredicate::ne, v,
                                          zero);
+  if (tp.dyn_cast<ComplexType>())
+    return builder.create<complex::NotEqualOp>(loc, v, zero);
   llvm_unreachable("Non-numeric type");
 }
