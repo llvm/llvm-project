@@ -31,7 +31,6 @@ def libc_function(name, srcs, deps = None, copts = None, **kwargs):
     deps.append(LIBC_ROOT_TARGET)
     copts = copts or []
     copts.append("-O3")
-    copts.append("-fno-builtin")
 
     # We compile the code twice, the first target is suffixed with ".__internal__" and contains the
     # C++ functions in the "__llvm_libc" namespace. This allows us to test the function in the
