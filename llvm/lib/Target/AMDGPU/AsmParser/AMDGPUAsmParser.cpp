@@ -9246,25 +9246,6 @@ bool AMDGPUOperand::isEndpgm() const { return isImmTy(ImmTyEndpgm); }
 // LDSDIR
 //===----------------------------------------------------------------------===//
 
-OperandMatchResultTy AMDGPUAsmParser::parseWaitVDST(OperandVector &Operands) {
-  SMLoc S = Parser.getTok().getLoc();
-  int64_t Imm = 0;
-
-  if (!parseExpr(Imm)) {
-    // The operand is optional, if not present default to 0
-    Imm = 0;
-  }
-
-  if (!isUInt<4>(Imm)) {
-    Error(S, "expected a 4-bit value");
-    return MatchOperand_ParseFail;
-  }
-
-  Operands.push_back(
-      AMDGPUOperand::CreateImm(this, Imm, S, AMDGPUOperand::ImmTyWaitVDST));
-  return MatchOperand_Success;
-}
-
 AMDGPUOperand::Ptr AMDGPUAsmParser::defaultWaitVDST() const {
   return AMDGPUOperand::CreateImm(this, 0, SMLoc(), AMDGPUOperand::ImmTyWaitVDST);
 }
@@ -9276,25 +9257,6 @@ bool AMDGPUOperand::isWaitVDST() const {
 //===----------------------------------------------------------------------===//
 // VINTERP
 //===----------------------------------------------------------------------===//
-
-OperandMatchResultTy AMDGPUAsmParser::parseWaitEXP(OperandVector &Operands) {
-  SMLoc S = Parser.getTok().getLoc();
-  int64_t Imm = 0;
-
-  if (!parseExpr(Imm)) {
-    // The operand is optional, if not present default to 0
-    Imm = 0;
-  }
-
-  if (!isUInt<3>(Imm)) {
-    Error(S, "expected a 3-bit value");
-    return MatchOperand_ParseFail;
-  }
-
-  Operands.push_back(
-      AMDGPUOperand::CreateImm(this, Imm, S, AMDGPUOperand::ImmTyWaitEXP));
-  return MatchOperand_Success;
-}
 
 AMDGPUOperand::Ptr AMDGPUAsmParser::defaultWaitEXP() const {
   return AMDGPUOperand::CreateImm(this, 0, SMLoc(), AMDGPUOperand::ImmTyWaitEXP);
