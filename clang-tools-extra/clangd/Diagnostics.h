@@ -69,7 +69,7 @@ struct DiagBase {
   // Since File is only descriptive, we store a separate flag to distinguish
   // diags from the main file.
   bool InsideMainFile = false;
-  unsigned ID; // e.g. member of clang::diag, or clang-tidy assigned ID.
+  unsigned ID = 0; // e.g. member of clang::diag, or clang-tidy assigned ID.
   // Feature modules can make use of this field to propagate data from a
   // diagnostic to a CodeAction request. Each module should only append to the
   // list.
