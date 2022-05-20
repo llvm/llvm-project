@@ -1643,7 +1643,7 @@ const DNBRegisterInfo DNBArchMachARM64::g_gpr_registers[] = {
     // used for
     // userland debugging.
     {e_regSetGPR, gpr_cpsr, "cpsr", "flags", Uint, Hex, 4,
-     GPR_OFFSET_NAME(cpsr), dwarf_elr_mode, dwarf_elr_mode, INVALID_NUB_REGNUM,
+     GPR_OFFSET_NAME(cpsr), dwarf_elr_mode, dwarf_elr_mode, GENERIC_REGNUM_FLAGS,
      debugserver_gpr_cpsr, NULL, NULL},
 
     DEFINE_PSEUDO_GPR_IDX(0, w0),
