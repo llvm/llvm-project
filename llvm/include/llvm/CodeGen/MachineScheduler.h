@@ -103,8 +103,10 @@ extern cl::opt<bool> ForceBottomUp;
 extern cl::opt<bool> VerifyScheduling;
 #ifndef NDEBUG
 extern cl::opt<bool> ViewMISchedDAGs;
+extern cl::opt<bool> PrintDAGs;
 #else
 extern const bool ViewMISchedDAGs;
+extern const bool PrintDAGs;
 #endif
 
 class AAResults;
