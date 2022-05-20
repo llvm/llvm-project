@@ -361,3 +361,14 @@ define i32 @degenerateicmp() {
   %3 = select i1 %2, i32 1, i32 0
   ret i32 %3
 }
+
+define i1 @pr55490() {
+; CHECK-LABEL: @pr55490(
+; CHECK-NEXT:    [[TMP1:%.*]] = sub i32 10, 8
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp ult i32 [[TMP1]], 3
+; CHECK-NEXT:    ret i1 [[TMP2]]
+;
+  %1 = sub i4 -6, -8
+  %2 = icmp ult i4 %1, 3
+  ret i1 %2
+}

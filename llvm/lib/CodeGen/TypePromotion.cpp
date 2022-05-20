@@ -484,7 +484,10 @@ void IRPromoter::PromoteTree() {
         continue;
 
       if (auto *Const = dyn_cast<ConstantInt>(Op)) {
-        Constant *NewConst = (SafeWrap.contains(I) && i == 1)
+        // For subtract, we don't need to sext the constant. We only put it in
+        // SafeWrap because SafeWrap.size() is used elsewhere.
+        Constant *NewConst = (SafeWrap.contains(I) && i == 1 &&
+                              I->getOpcode() != Instruction::Sub)
                                  ? ConstantExpr::getSExt(Const, ExtTy)
                                  : ConstantExpr::getZExt(Const, ExtTy);
         I->setOperand(i, NewConst);
