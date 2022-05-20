@@ -1100,7 +1100,7 @@ bool MIParser::parse(MachineInstr *&MI) {
     if (!IsImplicitOp) {
       if (!MCID.isVariadic() && NumExplicitOps >= MCID.getNumOperands() &&
           !Operand.Operand.isValidExcessOperand())
-        return error("too many operands for instruction");
+        return error(Operand.Begin, "too many operands for instruction");
 
       ++NumExplicitOps;
     }
