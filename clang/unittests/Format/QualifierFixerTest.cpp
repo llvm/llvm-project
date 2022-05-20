@@ -318,6 +318,8 @@ TEST_F(QualifierFixerTest, RightQualifier) {
   verifyFormat("Foo<int> const &a", "const Foo<int> &a", Style);
   verifyFormat("Foo<int>::iterator const &a", "const Foo<int>::iterator &a",
                Style);
+  verifyFormat("::Foo<int>::iterator const &a", "const ::Foo<int>::iterator &a",
+               Style);
 
   verifyFormat("Foo(int a, "
                "unsigned b, // c-style args\n"
@@ -355,6 +357,8 @@ TEST_F(QualifierFixerTest, RightQualifier) {
 
   verifyFormat("void fn(Foo<T> const &i);", "void fn(const Foo<T> &i);", Style);
   verifyFormat("void fns(ns::S const &s);", "void fns(const ns::S &s);", Style);
+  verifyFormat("void fns(::ns::S const &s);", "void fns(const ::ns::S &s);",
+               Style);
   verifyFormat("void fn(ns::Foo<T> const &i);", "void fn(const ns::Foo<T> &i);",
                Style);
   verifyFormat("void fns(ns::ns2::S const &s);",
@@ -445,6 +449,8 @@ TEST_F(QualifierFixerTest, LeftQualifier) {
   verifyFormat("const Foo<int> &a", "Foo<int> const &a", Style);
   verifyFormat("const Foo<int>::iterator &a", "Foo<int>::iterator const &a",
                Style);
+  verifyFormat("const ::Foo<int>::iterator &a", "::Foo<int>::iterator const &a",
+               Style);
 
   verifyFormat("const int a;", "int const a;", Style);
   verifyFormat("const int *a;", "int const *a;", Style);
@@ -508,6 +514,8 @@ TEST_F(QualifierFixerTest, LeftQualifier) {
 
   verifyFormat("void fn(const Foo<T> &i);", "void fn(Foo<T> const &i);", Style);
   verifyFormat("void fns(const ns::S &s);", "void fns(ns::S const &s);", Style);
+  verifyFormat("void fns(const ::ns::S &s);", "void fns(::ns::S const &s);",
+               Style);
   verifyFormat("void fn(const ns::Foo<T> &i);", "void fn(ns::Foo<T> const &i);",
                Style);
   verifyFormat("void fns(const ns::ns2::S &s);",
