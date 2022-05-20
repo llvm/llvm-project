@@ -1,5 +1,8 @@
 # REQUIRES: python, native && target-aarch64 && system-darwin
 
+# rdar://93655633
+# UNSUPPORTED: arm64
+
 # RUN: %clangxx_host -std=c++17 -g %S/Inputs/multithread-test.cc -o %t.out
 
 # RUN: cp %S/Inputs/scripted_crashlog.ips %t.crash
