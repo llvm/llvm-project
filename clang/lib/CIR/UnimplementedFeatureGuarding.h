@@ -37,6 +37,9 @@ struct UnimplementedFeature {
   static bool globalLinkOnceAnyLinkage() { return false; }
   static bool globalAvailableExternallyLinkage() { return false; }
   static bool globalCommonLinkage() { return false; }
+  static bool globalIsDiscardableIfUnused() { return false; }
+  static bool globalIsValidLinkage() { return false; }
+  static bool globalIsWeakForLinker() { return false; }
   static bool setComdat() { return false; }
 
   static bool setDSOLocal() { return false; }
