@@ -16,7 +16,9 @@
 #include <__format/format_error.h>
 #include <__format/format_fwd.h>
 #include <__format/format_parse_context.h>
+#include <__functional/invoke.h>
 #include <__memory/addressof.h>
+#include <__utility/forward.h>
 #include <__utility/unreachable.h>
 #include <__variant/monostate.h>
 #include <string>

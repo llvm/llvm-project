@@ -52,11 +52,6 @@ struct hash<type_index>
 #include <version>
 
 // TODO: remove these headers
-#include <__functional/binary_function.h>
-#include <__functional/invoke.h>
-#include <__functional/operations.h>
-#include <__functional/reference_wrapper.h>
-#include <__functional/weak_result_type.h>
 #include <__memory/allocator_arg_t.h>
 #include <__memory/uses_allocator.h>
 #include <new>

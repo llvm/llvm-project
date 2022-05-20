@@ -206,6 +206,7 @@ template <class Key, class T, class Hash, class Pred, class Alloc>
 #include <__hash_table>
 #include <algorithm>
 #include <ext/__hash>
+#include <functional>
 #include <stdexcept>
 #include <type_traits>
 

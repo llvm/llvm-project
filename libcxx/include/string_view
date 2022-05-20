@@ -199,6 +199,7 @@ namespace std {
 #include <__algorithm/min.h>
 #include <__assert> // all public C++ headers provide the assertion handler
 #include <__config>
+#include <__functional/unary_function.h>
 #include <__fwd/string_view.h>
 #include <__ranges/concepts.h>
 #include <__ranges/data.h>

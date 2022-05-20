@@ -16,6 +16,7 @@
 #include <__algorithm/unwrap_iter.h>
 #include <__bits>
 #include <__config>
+#include <__functional/operations.h>
 #include <__utility/swap.h>
 #include <climits>
 #include <memory>

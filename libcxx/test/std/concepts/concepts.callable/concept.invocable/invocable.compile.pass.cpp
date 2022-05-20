@@ -13,6 +13,7 @@
 
 #include <chrono>
 #include <concepts>
+#include <functional>
 #include <memory>
 #include <random>
 #include <type_traits>

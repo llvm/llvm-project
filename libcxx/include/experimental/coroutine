@@ -47,6 +47,7 @@ template <class P> struct hash<coroutine_handle<P>>;
 
 #include <__assert> // all public C++ headers provide the assertion handler
 #include <__functional/hash.h>
+#include <__functional/operations.h>
 #include <cstddef>
 #include <experimental/__config>
 #include <memory> // for hash<T*>
