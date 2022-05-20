@@ -48,6 +48,10 @@ foreach(param IN LISTS LIBUNWIND_TEST_PARAMS)
   serialize_lit_param("${name}" "\"${value}\"")
 endforeach()
 
+configure_file("${CMAKE_CURRENT_SOURCE_DIR}/configs/cmake-bridge.cfg.in"
+               "${CMAKE_CURRENT_BINARY_DIR}/cmake-bridge.cfg"
+               @ONLY)
+
 configure_lit_site_cfg(
   "${LIBUNWIND_TEST_CONFIG}"
   ${CMAKE_CURRENT_BINARY_DIR}/lit.site.cfg
