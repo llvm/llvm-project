@@ -10632,9 +10632,6 @@ bool LoopVectorizePass::processLoop(Loop *L) {
                         DT);
         ++LoopsVectorized;
 
-        simplifyLoop(L, DT, LI, SE, AC, nullptr, false /* PreserveLCSSA */);
-        formLCSSARecursively(*L, *DT, LI, SE);
-
         // Second pass vectorizes the epilogue and adjusts the control flow
         // edges from the first pass.
         EPI.MainLoopVF = EPI.EpilogueVF;

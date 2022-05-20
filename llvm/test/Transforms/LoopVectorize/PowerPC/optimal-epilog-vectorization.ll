@@ -227,7 +227,7 @@ define dso_local void @f1(float* noalias %aa, float* noalias %bb, float* noalias
 ; VF-TWO-CHECK-NEXT:    br i1 [[TMP144]], label [[VEC_EPILOG_MIDDLE_BLOCK:%.*]], label [[VEC_EPILOG_VECTOR_BODY]], !llvm.loop [[LOOPID_EV:![0-9]+]]
 ; VF-TWO-CHECK:       vec.epilog.middle.block:
 ; VF-TWO-CHECK-NEXT:    [[CMP_N27:%.*]] = icmp eq i64 [[WIDE_TRIP_COUNT]], [[N_VEC26]]
-; VF-TWO-CHECK-NEXT:    br i1 [[CMP_N27]], label [[FOR_END_LOOPEXIT_LOOPEXIT:%.*]], label [[VEC_EPILOG_SCALAR_PH]]
+; VF-TWO-CHECK-NEXT:    br i1 [[CMP_N27]], label [[FOR_END_LOOPEXIT]], label [[VEC_EPILOG_SCALAR_PH]]
 ; VF-TWO-CHECK:       vec.epilog.scalar.ph:
 ; VF-TWO-CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC26]], [[VEC_EPILOG_MIDDLE_BLOCK]] ], [ [[N_VEC]], [[VEC_EPILOG_ITER_CHECK]] ], [ 0, [[ITER_CHECK]] ]
 ; VF-TWO-CHECK-NEXT:    br label [[FOR_BODY:%.*]]
@@ -242,9 +242,7 @@ define dso_local void @f1(float* noalias %aa, float* noalias %bb, float* noalias
 ; VF-TWO-CHECK-NEXT:    store float [[ADD]], float* [[ARRAYIDX4]], align 4
 ; VF-TWO-CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
 ; VF-TWO-CHECK-NEXT:    [[EXITCOND:%.*]] = icmp ne i64 [[INDVARS_IV_NEXT]], [[WIDE_TRIP_COUNT]]
-; VF-TWO-CHECK-NEXT:    br i1 [[EXITCOND]], label [[FOR_BODY]], label [[FOR_END_LOOPEXIT_LOOPEXIT]], !llvm.loop [[LOOP4:![0-9]+]]
-; VF-TWO-CHECK:       for.end.loopexit.loopexit:
-; VF-TWO-CHECK-NEXT:    br label [[FOR_END_LOOPEXIT]]
+; VF-TWO-CHECK-NEXT:    br i1 [[EXITCOND]], label [[FOR_BODY]], label [[FOR_END_LOOPEXIT]], !llvm.loop [[LOOP4:![0-9]+]]
 ; VF-TWO-CHECK:       for.end.loopexit:
 ; VF-TWO-CHECK-NEXT:    br label [[FOR_END]]
 ; VF-TWO-CHECK:       for.end:
@@ -471,7 +469,7 @@ define dso_local void @f1(float* noalias %aa, float* noalias %bb, float* noalias
 ; VF-FOUR-CHECK-NEXT:    br i1 [[TMP144]], label [[VEC_EPILOG_MIDDLE_BLOCK:%.*]], label [[VEC_EPILOG_VECTOR_BODY]], !llvm.loop [[LOOP2:![0-9]+]]
 ; VF-FOUR-CHECK:       vec.epilog.middle.block:
 ; VF-FOUR-CHECK-NEXT:    [[CMP_N27:%.*]] = icmp eq i64 [[WIDE_TRIP_COUNT]], [[N_VEC26]]
-; VF-FOUR-CHECK-NEXT:    br i1 [[CMP_N27]], label [[FOR_END_LOOPEXIT_LOOPEXIT:%.*]], label [[VEC_EPILOG_SCALAR_PH]]
+; VF-FOUR-CHECK-NEXT:    br i1 [[CMP_N27]], label [[FOR_END_LOOPEXIT]], label [[VEC_EPILOG_SCALAR_PH]]
 ; VF-FOUR-CHECK:       vec.epilog.scalar.ph:
 ; VF-FOUR-CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC26]], [[VEC_EPILOG_MIDDLE_BLOCK]] ], [ [[N_VEC]], [[VEC_EPILOG_ITER_CHECK]] ], [ 0, [[ITER_CHECK]] ]
 ; VF-FOUR-CHECK-NEXT:    br label [[FOR_BODY:%.*]]
@@ -486,9 +484,7 @@ define dso_local void @f1(float* noalias %aa, float* noalias %bb, float* noalias
 ; VF-FOUR-CHECK-NEXT:    store float [[ADD]], float* [[ARRAYIDX4]], align 4
 ; VF-FOUR-CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
 ; VF-FOUR-CHECK-NEXT:    [[EXITCOND:%.*]] = icmp ne i64 [[INDVARS_IV_NEXT]], [[WIDE_TRIP_COUNT]]
-; VF-FOUR-CHECK-NEXT:    br i1 [[EXITCOND]], label [[FOR_BODY]], label [[FOR_END_LOOPEXIT_LOOPEXIT]], !llvm.loop [[LOOP4:![0-9]+]]
-; VF-FOUR-CHECK:       for.end.loopexit.loopexit:
-; VF-FOUR-CHECK-NEXT:    br label [[FOR_END_LOOPEXIT]]
+; VF-FOUR-CHECK-NEXT:    br i1 [[EXITCOND]], label [[FOR_BODY]], label [[FOR_END_LOOPEXIT]], !llvm.loop [[LOOP4:![0-9]+]]
 ; VF-FOUR-CHECK:       for.end.loopexit:
 ; VF-FOUR-CHECK-NEXT:    br label [[FOR_END]]
 ; VF-FOUR-CHECK:       for.end:
@@ -725,7 +721,7 @@ define dso_local signext i32 @f2(float* noalias %A, float* noalias %B, i32 signe
 ; VF-TWO-CHECK-NEXT:    br i1 [[TMP126]], label [[VEC_EPILOG_MIDDLE_BLOCK:%.*]], label [[VEC_EPILOG_VECTOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
 ; VF-TWO-CHECK:       vec.epilog.middle.block:
 ; VF-TWO-CHECK-NEXT:    [[CMP_N20:%.*]] = icmp eq i64 [[WIDE_TRIP_COUNT]], [[N_VEC17]]
-; VF-TWO-CHECK-NEXT:    br i1 [[CMP_N20]], label [[FOR_END_LOOPEXIT_LOOPEXIT:%.*]], label [[VEC_EPILOG_SCALAR_PH]]
+; VF-TWO-CHECK-NEXT:    br i1 [[CMP_N20]], label [[FOR_END_LOOPEXIT]], label [[VEC_EPILOG_SCALAR_PH]]
 ; VF-TWO-CHECK:       vec.epilog.scalar.ph:
 ; VF-TWO-CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC17]], [[VEC_EPILOG_MIDDLE_BLOCK]] ], [ [[N_VEC]], [[VEC_EPILOG_ITER_CHECK]] ], [ 0, [[VECTOR_SCEVCHECK]] ], [ 0, [[ITER_CHECK]] ]
 ; VF-TWO-CHECK-NEXT:    [[BC_RESUME_VAL18:%.*]] = phi i32 [ [[IND_END]], [[VEC_EPILOG_MIDDLE_BLOCK]] ], [ [[IND_END19]], [[VEC_EPILOG_ITER_CHECK]] ], [ 0, [[VECTOR_SCEVCHECK]] ], [ 0, [[ITER_CHECK]] ]
@@ -744,9 +740,7 @@ define dso_local signext i32 @f2(float* noalias %A, float* noalias %B, i32 signe
 ; VF-TWO-CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
 ; VF-TWO-CHECK-NEXT:    [[INC]] = add nuw nsw i32 [[I_014]], 1
 ; VF-TWO-CHECK-NEXT:    [[EXITCOND:%.*]] = icmp ne i64 [[INDVARS_IV_NEXT]], [[WIDE_TRIP_COUNT]]
-; VF-TWO-CHECK-NEXT:    br i1 [[EXITCOND]], label [[FOR_BODY]], label [[FOR_END_LOOPEXIT_LOOPEXIT]], !llvm.loop [[LOOPID_MS_CM:![0-9]+]]
-; VF-TWO-CHECK:       for.end.loopexit.loopexit:
-; VF-TWO-CHECK-NEXT:    br label [[FOR_END_LOOPEXIT]]
+; VF-TWO-CHECK-NEXT:    br i1 [[EXITCOND]], label [[FOR_BODY]], label [[FOR_END_LOOPEXIT]], !llvm.loop [[LOOPID_MS_CM:![0-9]+]]
 ; VF-TWO-CHECK:       for.end.loopexit:
 ; VF-TWO-CHECK-NEXT:    br label [[FOR_END]]
 ; VF-TWO-CHECK:       for.end:
@@ -952,7 +946,7 @@ define dso_local signext i32 @f2(float* noalias %A, float* noalias %B, i32 signe
 ; VF-FOUR-CHECK-NEXT:    br i1 [[TMP126]], label [[VEC_EPILOG_MIDDLE_BLOCK:%.*]], label [[VEC_EPILOG_VECTOR_BODY]], !llvm.loop [[LOOPID_EV_CM:![0-9]+]]
 ; VF-FOUR-CHECK:       vec.epilog.middle.block:
 ; VF-FOUR-CHECK-NEXT:    [[CMP_N20:%.*]] = icmp eq i64 [[WIDE_TRIP_COUNT]], [[N_VEC17]]
-; VF-FOUR-CHECK-NEXT:    br i1 [[CMP_N20]], label [[FOR_END_LOOPEXIT_LOOPEXIT:%.*]], label [[VEC_EPILOG_SCALAR_PH]]
+; VF-FOUR-CHECK-NEXT:    br i1 [[CMP_N20]], label [[FOR_END_LOOPEXIT]], label [[VEC_EPILOG_SCALAR_PH]]
 ; VF-FOUR-CHECK:       vec.epilog.scalar.ph:
 ; VF-FOUR-CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC17]], [[VEC_EPILOG_MIDDLE_BLOCK]] ], [ [[N_VEC]], [[VEC_EPILOG_ITER_CHECK]] ], [ 0, [[VECTOR_SCEVCHECK]] ], [ 0, [[ITER_CHECK]] ]
 ; VF-FOUR-CHECK-NEXT:    [[BC_RESUME_VAL18:%.*]] = phi i32 [ [[IND_END]], [[VEC_EPILOG_MIDDLE_BLOCK]] ], [ [[IND_END19]], [[VEC_EPILOG_ITER_CHECK]] ], [ 0, [[VECTOR_SCEVCHECK]] ], [ 0, [[ITER_CHECK]] ]
@@ -971,9 +965,7 @@ define dso_local signext i32 @f2(float* noalias %A, float* noalias %B, i32 signe
 ; VF-FOUR-CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
 ; VF-FOUR-CHECK-NEXT:    [[INC]] = add nuw nsw i32 [[I_014]], 1
 ; VF-FOUR-CHECK-NEXT:    [[EXITCOND:%.*]] = icmp ne i64 [[INDVARS_IV_NEXT]], [[WIDE_TRIP_COUNT]]
-; VF-FOUR-CHECK-NEXT:    br i1 [[EXITCOND]], label [[FOR_BODY]], label [[FOR_END_LOOPEXIT_LOOPEXIT]], !llvm.loop [[LOOP7:![0-9]+]]
-; VF-FOUR-CHECK:       for.end.loopexit.loopexit:
-; VF-FOUR-CHECK-NEXT:    br label [[FOR_END_LOOPEXIT]]
+; VF-FOUR-CHECK-NEXT:    br i1 [[EXITCOND]], label [[FOR_BODY]], label [[FOR_END_LOOPEXIT]], !llvm.loop [[LOOP7:![0-9]+]]
 ; VF-FOUR-CHECK:       for.end.loopexit:
 ; VF-FOUR-CHECK-NEXT:    br label [[FOR_END]]
 ; VF-FOUR-CHECK:       for.end:
