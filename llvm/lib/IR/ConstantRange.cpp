@@ -1410,14 +1410,13 @@ ConstantRange ConstantRange::binaryOr(const ConstantRange &Other) const {
   if (isEmptySet() || Other.isEmptySet())
     return getEmpty();
 
-  // Use APInt's implementation of OR for single element ranges.
-  if (isSingleElement() && Other.isSingleElement())
-    return {*getSingleElement() | *Other.getSingleElement()};
-
-  // TODO: replace this with something less conservative
-
-  APInt umax = APIntOps::umax(getUnsignedMin(), Other.getUnsignedMin());
-  return getNonEmpty(std::move(umax), APInt::getZero(getBitWidth()));
+  ConstantRange KnownBitsRange =
+      fromKnownBits(toKnownBits() | Other.toKnownBits(), false);
+  // Upper wrapped range.
+  ConstantRange UMaxUMinRange =
+      getNonEmpty(APIntOps::umax(getUnsignedMin(), Other.getUnsignedMin()),
+                  APInt::getZero(getBitWidth()));
+  return KnownBitsRange.intersectWith(UMaxUMinRange);
 }
 
 ConstantRange ConstantRange::binaryXor(const ConstantRange &Other) const {
