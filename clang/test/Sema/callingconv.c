@@ -54,6 +54,8 @@ int __attribute__((pcs("foo"))) pcs7(void); // expected-error {{invalid PCS type
 int __attribute__((aarch64_vector_pcs)) aavpcs(void); // expected-warning {{'aarch64_vector_pcs' calling convention is not supported for this target}}
 int __attribute__((aarch64_sve_pcs)) aasvepcs(void);  // expected-warning {{'aarch64_sve_pcs' calling convention is not supported for this target}}
 
+int __attribute__((amdgpu_kernel)) amdgpu_kernel(void); // expected-warning {{'amdgpu_kernel' calling convention is not supported for this target}}
+
 // PR6361
 void ctest3();
 void __attribute__((cdecl)) ctest3() {}
