@@ -471,7 +471,7 @@ bool AArch64AsmBackend::writeNopData(raw_ostream &OS, uint64_t Count,
   // We are properly aligned, so write NOPs as requested.
   Count /= 4;
   for (uint64_t i = 0; i != Count; ++i)
-    support::endian::write<uint32_t>(OS, 0xd503201f, Endian);
+    OS.write("\x1f\x20\x03\xd5", 4);
   return true;
 }
 
