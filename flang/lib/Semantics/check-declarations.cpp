@@ -109,12 +109,13 @@ private:
   void CheckDefinedIoProc(
       const Symbol &, const GenericDetails &, GenericKind::DefinedIo);
   bool CheckDioDummyIsData(const Symbol &, const Symbol *, std::size_t);
-  void CheckDioDummyIsDerived(
-      const Symbol &, const Symbol &, GenericKind::DefinedIo ioKind);
+  void CheckDioDummyIsDerived(const Symbol &, const Symbol &,
+      GenericKind::DefinedIo ioKind, const Symbol &);
   void CheckDioDummyIsDefaultInteger(const Symbol &, const Symbol &);
   void CheckDioDummyIsScalar(const Symbol &, const Symbol &);
   void CheckDioDummyAttrs(const Symbol &, const Symbol &, Attr);
-  void CheckDioDtvArg(const Symbol &, const Symbol *, GenericKind::DefinedIo);
+  void CheckDioDtvArg(
+      const Symbol &, const Symbol *, GenericKind::DefinedIo, const Symbol &);
   void CheckGenericVsIntrinsic(const Symbol &, const GenericDetails &);
   void CheckDefaultIntegerArg(const Symbol &, const Symbol *, Attr);
   void CheckDioAssumedLenCharacterArg(
@@ -123,12 +124,13 @@ private:
   void CheckDioArgCount(
       const Symbol &, GenericKind::DefinedIo ioKind, std::size_t);
   struct TypeWithDefinedIo {
-    const DerivedTypeSpec *type;
+    const DerivedTypeSpec &type;
     GenericKind::DefinedIo ioKind;
     const Symbol &proc;
+    const Symbol &generic;
   };
-  void CheckAlreadySeenDefinedIo(
-      const DerivedTypeSpec *, GenericKind::DefinedIo, const Symbol &);
+  void CheckAlreadySeenDefinedIo(const DerivedTypeSpec &,
+      GenericKind::DefinedIo, const Symbol &, const Symbol &generic);
 
   SemanticsContext &context_;
   evaluate::FoldingContext &foldingContext_{context_.foldingContext()};
@@ -1903,28 +1905,34 @@ bool CheckHelper::CheckDioDummyIsData(
   }
 }
 
-void CheckHelper::CheckAlreadySeenDefinedIo(const DerivedTypeSpec *derivedType,
-    GenericKind::DefinedIo ioKind, const Symbol &proc) {
+void CheckHelper::CheckAlreadySeenDefinedIo(const DerivedTypeSpec &derivedType,
+    GenericKind::DefinedIo ioKind, const Symbol &proc, const Symbol &generic) {
   for (TypeWithDefinedIo definedIoType : seenDefinedIoTypes_) {
-    if (*derivedType == *definedIoType.type && ioKind == definedIoType.ioKind &&
-        proc != definedIoType.proc) {
+    // It's okay to have two or more distinct derived type I/O procedures
+    // for the same type if they're coming from distinct non-type-bound
+    // interfaces.  (The non-type-bound interfaces would have been merged into
+    // a single generic if both were visible in the same scope.)
+    if (derivedType == definedIoType.type && ioKind == definedIoType.ioKind &&
+        proc != definedIoType.proc &&
+        (generic.owner().IsDerivedType() ||
+            definedIoType.generic.owner().IsDerivedType())) {
       SayWithDeclaration(proc, definedIoType.proc.name(),
           "Derived type '%s' already has defined input/output procedure"
           " '%s'"_err_en_US,
-          derivedType->name(),
+          derivedType.name(),
           parser::ToUpperCaseLetters(GenericKind::EnumToString(ioKind)));
       return;
     }
   }
   seenDefinedIoTypes_.emplace_back(
-      TypeWithDefinedIo{derivedType, ioKind, proc});
+      TypeWithDefinedIo{derivedType, ioKind, proc, generic});
 }
 
-void CheckHelper::CheckDioDummyIsDerived(
-    const Symbol &subp, const Symbol &arg, GenericKind::DefinedIo ioKind) {
+void CheckHelper::CheckDioDummyIsDerived(const Symbol &subp, const Symbol &arg,
+    GenericKind::DefinedIo ioKind, const Symbol &generic) {
   if (const DeclTypeSpec * type{arg.GetType()}) {
     if (const DerivedTypeSpec * derivedType{type->AsDerived()}) {
-      CheckAlreadySeenDefinedIo(derivedType, ioKind, subp);
+      CheckAlreadySeenDefinedIo(*derivedType, ioKind, subp, generic);
       bool isPolymorphic{type->IsPolymorphic()};
       if (isPolymorphic != IsExtensibleType(derivedType)) {
         messages_.Say(arg.name(),
@@ -1965,11 +1973,11 @@ void CheckHelper::CheckDioDummyIsScalar(const Symbol &subp, const Symbol &arg) {
   }
 }
 
-void CheckHelper::CheckDioDtvArg(
-    const Symbol &subp, const Symbol *arg, GenericKind::DefinedIo ioKind) {
+void CheckHelper::CheckDioDtvArg(const Symbol &subp, const Symbol *arg,
+    GenericKind::DefinedIo ioKind, const Symbol &generic) {
   // Dtv argument looks like: dtv-type-spec, INTENT(INOUT) :: dtv
   if (CheckDioDummyIsData(subp, arg, 0)) {
-    CheckDioDummyIsDerived(subp, *arg, ioKind);
+    CheckDioDummyIsDerived(subp, *arg, ioKind, generic);
     CheckDioDummyAttrs(subp, *arg,
         ioKind == GenericKind::DefinedIo::ReadFormatted ||
                 ioKind == GenericKind::DefinedIo::ReadUnformatted
@@ -2107,7 +2115,7 @@ void CheckHelper::CheckDefinedIoProc(const Symbol &symbol,
         switch (argCount++) {
         case 0:
           // dtv-type-spec, INTENT(INOUT) :: dtv
-          CheckDioDtvArg(specific, arg, ioKind);
+          CheckDioDtvArg(specific, arg, ioKind, symbol);
           break;
         case 1:
           // INTEGER, INTENT(IN) :: unit
