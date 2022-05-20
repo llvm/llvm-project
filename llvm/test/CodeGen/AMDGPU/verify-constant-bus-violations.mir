@@ -1,21 +1,26 @@
-# RUN: not --crash llc -march=amdgcn -mcpu=gfx900 -run-pass machineverifier -o /dev/null %s 2>&1 | FileCheck -check-prefix=GFX9-ERR %s
-# RUN: not --crash llc -march=amdgcn -mcpu=gfx1010 -mattr=-wavefrontsize32,+wavefrontsize64 -run-pass machineverifier -o /dev/null %s 2>&1 | FileCheck -check-prefix=GFX10PLUS-ERR %s
-# RUN: not --crash llc -march=amdgcn -mcpu=gfx1100 -mattr=-wavefrontsize32,+wavefrontsize64 -run-pass machineverifier -o /dev/null %s 2>&1 | FileCheck -check-prefix=GFX10PLUS-ERR %s
+# RUN: not --crash llc -march=amdgcn -mcpu=gfx900 -run-pass machineverifier -o /dev/null %s 2>&1 | FileCheck -implicit-check-not="Bad machine code" -check-prefix=GFX9-ERR %s
+# RUN: not --crash llc -march=amdgcn -mcpu=gfx1010 -mattr=-wavefrontsize32,+wavefrontsize64 -run-pass machineverifier -o /dev/null %s 2>&1 | FileCheck -implicit-check-not="Bad machine code" -check-prefix=GFX10PLUS-ERR %s
+# RUN: not --crash llc -march=amdgcn -mcpu=gfx1100 -mattr=-wavefrontsize32,+wavefrontsize64 -run-pass machineverifier -o /dev/null %s 2>&1 | FileCheck -implicit-check-not="Bad machine code" -check-prefix=GFX10PLUS-ERR %s
 
 # GFX9-ERR: *** Bad machine code: VOP* instruction violates constant bus restriction ***
 # GFX9-ERR: $vgpr0 = V_CNDMASK_B32_e64 0, $sgpr0, 0, -1, killed $sgpr0_sgpr1, implicit $exec
+# GFX9-ERR: *** Bad machine code: VOP* instruction violates constant bus restriction ***
+# GFX9-ERR: $vgpr0 = V_FMAAK_F32 $sgpr2, $vgpr0, 1077936128, implicit $mode, implicit $exec
 ---
 name:           sgpr_reuse_2sgpr
 liveins:
   - { reg: '$sgpr0_sgpr1', virtual-reg: '' }
 body:            |
   bb.0:
-    liveins: $sgpr0_sgpr1
+    liveins: $sgpr0_sgpr1, $sgpr2
     $vgpr0 = V_CNDMASK_B32_e64 0, $sgpr0, 0, -1, killed $sgpr0_sgpr1, implicit $exec
+    $vgpr0 = V_FMAAK_F32 $sgpr2, $vgpr0, 1077936128, implicit $mode, implicit $exec
 ...
 
 # GFX10PLUS-ERR: *** Bad machine code: VOP* instruction violates constant bus restriction ***
 # GFX10PLUS-ERR: $vgpr0 = V_CNDMASK_B32_e64 0, $sgpr0, 0, $sgpr2, killed $sgpr0_sgpr1, implicit $exec
+# GFX10PLUS-ERR: *** Bad machine code: VOP2/VOP3 instruction uses more than one literal ***
+# GFX10PLUS-ERR: $vgpr0 = V_FMAAK_F32 1077936128, $vgpr0, 0, implicit $mode, implicit $exec
 ---
 name:           sgpr_reuse_3sgpr
 liveins:
@@ -25,4 +30,6 @@ body:            |
   bb.0:
     liveins: $sgpr0_sgpr1, $sgpr2
     $vgpr0 = V_CNDMASK_B32_e64 0, $sgpr0, 0, $sgpr2, killed $sgpr0_sgpr1, implicit $exec
+    $vgpr0 = V_FMAAK_F32 1077936128, $vgpr0, 0, implicit $mode, implicit $exec
+    $vgpr0 = V_FMAAK_F32 $sgpr2, $vgpr0, 1077936128, implicit $mode, implicit $exec
 ...

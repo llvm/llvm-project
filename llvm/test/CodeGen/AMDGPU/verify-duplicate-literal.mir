@@ -28,6 +28,15 @@ body:            |
 ...
 
 ---
+name: use_duplicate_literal_fmaak
+tracksRegLiveness: true
+body:            |
+  bb.0:
+    liveins: $vgpr0
+    $vgpr0 = V_FMAAK_F32 1077936128, $vgpr0, 1077936128, implicit $mode, implicit $exec
+...
+
+---
 name: use_duplicate_literal_sop2
 tracksRegLiveness: true
 body: |
