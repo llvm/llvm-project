@@ -49,10 +49,6 @@ config.substitutions.append(
 config.substitutions.append(
     ('%target_triple', config.target_triple))
 
-# Propagate path to symbolizer for ASan/MSan.
-llvm_config.with_system_environment(
-    ['ASAN_SYMBOLIZER_PATH', 'MSAN_SYMBOLIZER_PATH'])
-
 config.substitutions.append(('%PATH%', config.environment['PATH']))
 
 
