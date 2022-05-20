@@ -764,6 +764,7 @@ def Arith_MulFOp : Arith_FloatBinaryOp<"mulf", [Commutative]> {
     math, contraction, rounding mode, and other controls.
   }];
   let hasFolder = 1;
+  let hasCanonicalizer = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -773,6 +774,7 @@ def Arith_MulFOp : Arith_FloatBinaryOp<"mulf", [Commutative]> {
 def Arith_DivFOp : Arith_FloatBinaryOp<"divf"> {
   let summary = "floating point division operation";
   let hasFolder = 1;
+  let hasCanonicalizer = 1;
 }
 
 //===----------------------------------------------------------------------===//

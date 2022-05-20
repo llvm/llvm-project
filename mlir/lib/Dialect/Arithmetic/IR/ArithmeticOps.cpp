@@ -743,6 +743,11 @@ OpFoldResult arith::MulFOp::fold(ArrayRef<Attribute> operands) {
       operands, [](const APFloat &a, const APFloat &b) { return a * b; });
 }
 
+void arith::MulFOp::getCanonicalizationPatterns(RewritePatternSet &patterns,
+                                                MLIRContext *context) {
+  patterns.add<MulFOfNegF>(context);
+}
+
 //===----------------------------------------------------------------------===//
 // DivFOp
 //===----------------------------------------------------------------------===//
@@ -754,6 +759,11 @@ OpFoldResult arith::DivFOp::fold(ArrayRef<Attribute> operands) {
 
   return constFoldBinaryOp<FloatAttr>(
       operands, [](const APFloat &a, const APFloat &b) { return a / b; });
+}
+
+void arith::DivFOp::getCanonicalizationPatterns(RewritePatternSet &patterns,
+                                                MLIRContext *context) {
+  patterns.add<DivFOfNegF>(context);
 }
 
 //===----------------------------------------------------------------------===//
