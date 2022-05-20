@@ -2033,6 +2033,7 @@ cc_library(
         ":Affine",
         ":ArithmeticDialect",
         ":BufferizationDialect",
+        ":ComplexDialect",
         ":FuncDialect",
         ":FuncTransforms",
         ":IR",
