@@ -254,7 +254,8 @@ bool AtomicExpand::runOnFunction(Function &F) {
     }
 
     if (LI) {
-      if (LI->getType()->isFloatingPointTy()) {
+      if (TLI->shouldCastAtomicLoadInIR(LI) ==
+          TargetLoweringBase::AtomicExpansionKind::CastToInteger) {
         // TODO: add a TLI hook to control this so that each target can
         // convert to lowering the original type one at a time.
         LI = convertAtomicLoadToIntegerType(LI);
@@ -264,7 +265,8 @@ bool AtomicExpand::runOnFunction(Function &F) {
 
       MadeChange |= tryExpandAtomicLoad(LI);
     } else if (SI) {
-      if (SI->getValueOperand()->getType()->isFloatingPointTy()) {
+      if (TLI->shouldCastAtomicStoreInIR(SI) ==
+          TargetLoweringBase::AtomicExpansionKind::CastToInteger) {
         // TODO: add a TLI hook to control this so that each target can
         // convert to lowering the original type one at a time.
         SI = convertAtomicStoreToIntegerType(SI);
@@ -285,8 +287,8 @@ bool AtomicExpand::runOnFunction(Function &F) {
         MadeChange = true;
       } else {
         AtomicRMWInst::BinOp Op = RMWI->getOperation();
-        if (Op == AtomicRMWInst::Xchg &&
-            RMWI->getValOperand()->getType()->isFloatingPointTy()) {
+        if (TLI->shouldCastAtomicRMWIInIR(RMWI) ==
+            TargetLoweringBase::AtomicExpansionKind::CastToInteger) {
           // TODO: add a TLI hook to control this so that each target can
           // convert to lowering the original type one at a time.
           RMWI = convertAtomicXchgToIntegerType(RMWI);
