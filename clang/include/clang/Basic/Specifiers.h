@@ -281,6 +281,7 @@ namespace clang {
     CC_PreserveAll,  // __attribute__((preserve_all))
     CC_AArch64VectorCall, // __attribute__((aarch64_vector_pcs))
     CC_AArch64SVEPCS, // __attribute__((aarch64_sve_pcs))
+    CC_AMDGPUKernelCall, // __attribute__((amdgpu_kernel))
   };
 
   /// Checks whether the given calling convention supports variadic
