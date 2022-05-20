@@ -163,6 +163,7 @@ add_gen_header(
   DEPENDS
     .llvm_libc_common_h
     .llvm-libc-types.pthread_attr_t
+    .llvm-libc-types.pthread_mutex_t
     .llvm-libc-types.pthread_mutexattr_t
 )
 

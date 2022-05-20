@@ -39,3 +39,20 @@ add_libc_unittest(
     libc.src.pthread.pthread_mutexattr_setrobust
     libc.src.pthread.pthread_mutexattr_settype
 )
+
+add_libc_unittest(
+  phtread_mutex_test
+  SUITE
+    libc_pthread_unittests
+  SRCS
+    pthread_mutex_test.cpp
+  DEPENDS
+    libc.include.pthread
+    libc.src.errno.errno
+    libc.src.pthread.pthread_mutex_destroy
+    libc.src.pthread.pthread_mutex_init
+    libc.src.pthread.pthread_mutex_lock
+    libc.src.pthread.pthread_mutex_unlock
+    libc.src.threads.thrd_create
+    libc.src.threads.thrd_join
+)
