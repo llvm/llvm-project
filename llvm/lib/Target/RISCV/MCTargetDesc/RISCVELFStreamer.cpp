@@ -180,6 +180,11 @@ void RISCVTargetELFStreamer::finish() {
   MCA.setELFHeaderEFlags(EFlags);
 }
 
+void RISCVTargetELFStreamer::reset() {
+  AttributeSection = nullptr;
+  Contents.clear();
+}
+
 namespace {
 class RISCVELFStreamer : public MCELFStreamer {
   static std::pair<unsigned, unsigned> getRelocPairForSize(unsigned Size) {
@@ -224,6 +229,13 @@ class RISCVELFStreamer : public MCELFStreamer {
                             : !A.getName().empty()) ||
            (B.isInSection() ? B.getSection().hasInstructions()
                             : !B.getName().empty());
+  }
+
+  void reset() override {
+    MCTargetStreamer &TS = *getTargetStreamer();
+    RISCVTargetStreamer &RTS = static_cast<RISCVTargetStreamer &>(TS);
+    RTS.reset();
+    MCELFStreamer::reset();
   }
 
 public:
