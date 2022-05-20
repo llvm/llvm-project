@@ -297,7 +297,7 @@ define void @foo1(i32* nocapture %A, i32* nocapture readonly %B, i32* nocapture 
 ; AVX512-NEXT:    br i1 [[TMP63]], label [[VEC_EPILOG_MIDDLE_BLOCK:%.*]], label [[VEC_EPILOG_VECTOR_BODY]], !llvm.loop [[LOOP2:![0-9]+]]
 ; AVX512:       vec.epilog.middle.block:
 ; AVX512-NEXT:    [[CMP_N11:%.*]] = icmp eq i64 10000, 10000
-; AVX512-NEXT:    br i1 [[CMP_N11]], label [[FOR_END_LOOPEXIT:%.*]], label [[VEC_EPILOG_SCALAR_PH]]
+; AVX512-NEXT:    br i1 [[CMP_N11]], label [[FOR_END]], label [[VEC_EPILOG_SCALAR_PH]]
 ; AVX512:       vec.epilog.scalar.ph:
 ; AVX512-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 10000, [[VEC_EPILOG_MIDDLE_BLOCK]] ], [ 9984, [[VEC_EPILOG_ITER_CHECK]] ], [ 0, [[VECTOR_MEMCHECK]] ], [ 0, [[ITER_CHECK:%.*]] ]
 ; AVX512-NEXT:    br label [[FOR_BODY:%.*]]
@@ -317,9 +317,7 @@ define void @foo1(i32* nocapture %A, i32* nocapture readonly %B, i32* nocapture 
 ; AVX512:       for.inc:
 ; AVX512-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
 ; AVX512-NEXT:    [[EXITCOND:%.*]] = icmp eq i64 [[INDVARS_IV_NEXT]], 10000
-; AVX512-NEXT:    br i1 [[EXITCOND]], label [[FOR_END_LOOPEXIT]], label [[FOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
-; AVX512:       for.end.loopexit:
-; AVX512-NEXT:    br label [[FOR_END]]
+; AVX512-NEXT:    br i1 [[EXITCOND]], label [[FOR_END]], label [[FOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
 ; AVX512:       for.end:
 ; AVX512-NEXT:    ret void
 ;
@@ -632,7 +630,7 @@ define void @foo1_addrspace1(i32 addrspace(1)* nocapture %A, i32 addrspace(1)* n
 ; AVX512-NEXT:    br i1 [[TMP63]], label [[VEC_EPILOG_MIDDLE_BLOCK:%.*]], label [[VEC_EPILOG_VECTOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
 ; AVX512:       vec.epilog.middle.block:
 ; AVX512-NEXT:    [[CMP_N11:%.*]] = icmp eq i64 10000, 10000
-; AVX512-NEXT:    br i1 [[CMP_N11]], label [[FOR_END_LOOPEXIT:%.*]], label [[VEC_EPILOG_SCALAR_PH]]
+; AVX512-NEXT:    br i1 [[CMP_N11]], label [[FOR_END]], label [[VEC_EPILOG_SCALAR_PH]]
 ; AVX512:       vec.epilog.scalar.ph:
 ; AVX512-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 10000, [[VEC_EPILOG_MIDDLE_BLOCK]] ], [ 9984, [[VEC_EPILOG_ITER_CHECK]] ], [ 0, [[VECTOR_MEMCHECK]] ], [ 0, [[ITER_CHECK:%.*]] ]
 ; AVX512-NEXT:    br label [[FOR_BODY:%.*]]
@@ -652,9 +650,7 @@ define void @foo1_addrspace1(i32 addrspace(1)* nocapture %A, i32 addrspace(1)* n
 ; AVX512:       for.inc:
 ; AVX512-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
 ; AVX512-NEXT:    [[EXITCOND:%.*]] = icmp eq i64 [[INDVARS_IV_NEXT]], 10000
-; AVX512-NEXT:    br i1 [[EXITCOND]], label [[FOR_END_LOOPEXIT]], label [[FOR_BODY]], !llvm.loop [[LOOP7:![0-9]+]]
-; AVX512:       for.end.loopexit:
-; AVX512-NEXT:    br label [[FOR_END]]
+; AVX512-NEXT:    br i1 [[EXITCOND]], label [[FOR_END]], label [[FOR_BODY]], !llvm.loop [[LOOP7:![0-9]+]]
 ; AVX512:       for.end:
 ; AVX512-NEXT:    ret void
 ;
@@ -988,7 +984,7 @@ define void @foo2(float* nocapture %A, float* nocapture readonly %B, i32* nocapt
 ; AVX512-NEXT:    br i1 [[TMP68]], label [[VEC_EPILOG_MIDDLE_BLOCK:%.*]], label [[VEC_EPILOG_VECTOR_BODY]], !llvm.loop [[LOOP9:![0-9]+]]
 ; AVX512:       vec.epilog.middle.block:
 ; AVX512-NEXT:    [[CMP_N11:%.*]] = icmp eq i64 10000, 10000
-; AVX512-NEXT:    br i1 [[CMP_N11]], label [[FOR_END_LOOPEXIT:%.*]], label [[VEC_EPILOG_SCALAR_PH]]
+; AVX512-NEXT:    br i1 [[CMP_N11]], label [[FOR_END]], label [[VEC_EPILOG_SCALAR_PH]]
 ; AVX512:       vec.epilog.scalar.ph:
 ; AVX512-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 10000, [[VEC_EPILOG_MIDDLE_BLOCK]] ], [ 9984, [[VEC_EPILOG_ITER_CHECK]] ], [ 0, [[VECTOR_MEMCHECK]] ], [ 0, [[ITER_CHECK:%.*]] ]
 ; AVX512-NEXT:    br label [[FOR_BODY:%.*]]
@@ -1009,9 +1005,7 @@ define void @foo2(float* nocapture %A, float* nocapture readonly %B, i32* nocapt
 ; AVX512:       for.inc:
 ; AVX512-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
 ; AVX512-NEXT:    [[EXITCOND:%.*]] = icmp eq i64 [[INDVARS_IV_NEXT]], 10000
-; AVX512-NEXT:    br i1 [[EXITCOND]], label [[FOR_END_LOOPEXIT]], label [[FOR_BODY]], !llvm.loop [[LOOP10:![0-9]+]]
-; AVX512:       for.end.loopexit:
-; AVX512-NEXT:    br label [[FOR_END]]
+; AVX512-NEXT:    br i1 [[EXITCOND]], label [[FOR_END]], label [[FOR_BODY]], !llvm.loop [[LOOP10:![0-9]+]]
 ; AVX512:       for.end:
 ; AVX512-NEXT:    ret void
 ;

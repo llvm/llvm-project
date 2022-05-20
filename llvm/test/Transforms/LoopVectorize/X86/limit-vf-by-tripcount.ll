@@ -51,7 +51,7 @@ define void @test1(i8 * noalias %src, i8 * noalias %dst) #0 {
 ; CHECK-NEXT:    br i1 [[TMP15]], label [[VEC_EPILOG_MIDDLE_BLOCK:%.*]], label [[VEC_EPILOG_VECTOR_BODY]], !llvm.loop [[LOOP2:![0-9]+]]
 ; CHECK:       vec.epilog.middle.block:
 ; CHECK-NEXT:    [[CMP_N1:%.*]] = icmp eq i64 17, 16
-; CHECK-NEXT:    br i1 [[CMP_N1]], label [[EXIT_LOOPEXIT:%.*]], label [[VEC_EPILOG_SCALAR_PH]]
+; CHECK-NEXT:    br i1 [[CMP_N1]], label [[EXIT]], label [[VEC_EPILOG_SCALAR_PH]]
 ; CHECK:       vec.epilog.scalar.ph:
 ; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 16, [[VEC_EPILOG_MIDDLE_BLOCK]] ], [ 16, [[VEC_EPILOG_ITER_CHECK]] ], [ 0, [[ITER_CHECK:%.*]] ]
 ; CHECK-NEXT:    br label [[LOOP_MEMCPY_EXPANSION:%.*]]
@@ -63,9 +63,7 @@ define void @test1(i8 * noalias %src, i8 * noalias %dst) #0 {
 ; CHECK-NEXT:    store i8 [[VAL]], i8* [[STADDR]], align 64
 ; CHECK-NEXT:    [[I_NEXT]] = add i64 [[I]], 1
 ; CHECK-NEXT:    [[IS_NEXT:%.*]] = icmp ult i64 [[I_NEXT]], 17
-; CHECK-NEXT:    br i1 [[IS_NEXT]], label [[LOOP_MEMCPY_EXPANSION]], label [[EXIT_LOOPEXIT]], !llvm.loop [[LOOP4:![0-9]+]]
-; CHECK:       exit.loopexit:
-; CHECK-NEXT:    br label [[EXIT]]
+; CHECK-NEXT:    br i1 [[IS_NEXT]], label [[LOOP_MEMCPY_EXPANSION]], label [[EXIT]], !llvm.loop [[LOOP4:![0-9]+]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret void
 ;

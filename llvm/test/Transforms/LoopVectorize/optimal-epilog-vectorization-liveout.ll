@@ -51,30 +51,30 @@ define signext i32 @f1(i32* noalias %A, i32* noalias %B, i32 signext %n) {
 ; VF-TWO-CHECK-NEXT:    br i1 [[MIN_EPILOG_ITERS_CHECK]], label [[VEC_EPILOG_SCALAR_PH]], label [[VEC_EPILOG_PH]]
 ; VF-TWO-CHECK:       vec.epilog.ph:
 ; VF-TWO-CHECK-NEXT:    [[VEC_EPILOG_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], [[VEC_EPILOG_ITER_CHECK]] ], [ 0, [[VECTOR_MAIN_LOOP_ITER_CHECK]] ]
-; VF-TWO-CHECK-NEXT:    [[N_MOD_VF4:%.*]] = urem i64 [[WIDE_TRIP_COUNT]], 2
-; VF-TWO-CHECK-NEXT:    [[N_VEC5:%.*]] = sub i64 [[WIDE_TRIP_COUNT]], [[N_MOD_VF4]]
+; VF-TWO-CHECK-NEXT:    [[N_MOD_VF3:%.*]] = urem i64 [[WIDE_TRIP_COUNT]], 2
+; VF-TWO-CHECK-NEXT:    [[N_VEC4:%.*]] = sub i64 [[WIDE_TRIP_COUNT]], [[N_MOD_VF3]]
 ; VF-TWO-CHECK-NEXT:    br label [[VEC_EPILOG_VECTOR_BODY:%.*]]
 ; VF-TWO-CHECK:       vec.epilog.vector.body:
-; VF-TWO-CHECK-NEXT:    [[OFFSET_IDX:%.*]] = phi i64 [ [[VEC_EPILOG_RESUME_VAL]], [[VEC_EPILOG_PH]] ], [ [[INDEX_NEXT10:%.*]], [[VEC_EPILOG_VECTOR_BODY]] ]
+; VF-TWO-CHECK-NEXT:    [[OFFSET_IDX:%.*]] = phi i64 [ [[VEC_EPILOG_RESUME_VAL]], [[VEC_EPILOG_PH]] ], [ [[INDEX_NEXT9:%.*]], [[VEC_EPILOG_VECTOR_BODY]] ]
 ; VF-TWO-CHECK-NEXT:    [[TMP10:%.*]] = add i64 [[OFFSET_IDX]], 0
 ; VF-TWO-CHECK-NEXT:    [[TMP11:%.*]] = getelementptr inbounds i32, i32* [[A]], i64 [[TMP10]]
 ; VF-TWO-CHECK-NEXT:    [[TMP12:%.*]] = getelementptr inbounds i32, i32* [[TMP11]], i32 0
 ; VF-TWO-CHECK-NEXT:    [[TMP13:%.*]] = bitcast i32* [[TMP12]] to <2 x i32>*
-; VF-TWO-CHECK-NEXT:    [[WIDE_LOAD8:%.*]] = load <2 x i32>, <2 x i32>* [[TMP13]], align 4
+; VF-TWO-CHECK-NEXT:    [[WIDE_LOAD7:%.*]] = load <2 x i32>, <2 x i32>* [[TMP13]], align 4
 ; VF-TWO-CHECK-NEXT:    [[TMP14:%.*]] = getelementptr inbounds i32, i32* [[B]], i64 [[TMP10]]
 ; VF-TWO-CHECK-NEXT:    [[TMP15:%.*]] = getelementptr inbounds i32, i32* [[TMP14]], i32 0
 ; VF-TWO-CHECK-NEXT:    [[TMP16:%.*]] = bitcast i32* [[TMP15]] to <2 x i32>*
-; VF-TWO-CHECK-NEXT:    [[WIDE_LOAD9:%.*]] = load <2 x i32>, <2 x i32>* [[TMP16]], align 4
-; VF-TWO-CHECK-NEXT:    [[TMP17:%.*]] = add nsw <2 x i32> [[WIDE_LOAD8]], [[WIDE_LOAD9]]
-; VF-TWO-CHECK-NEXT:    [[INDEX_NEXT10]] = add nuw i64 [[OFFSET_IDX]], 2
-; VF-TWO-CHECK-NEXT:    [[TMP18:%.*]] = icmp eq i64 [[INDEX_NEXT10]], [[N_VEC5]]
+; VF-TWO-CHECK-NEXT:    [[WIDE_LOAD8:%.*]] = load <2 x i32>, <2 x i32>* [[TMP16]], align 4
+; VF-TWO-CHECK-NEXT:    [[TMP17:%.*]] = add nsw <2 x i32> [[WIDE_LOAD7]], [[WIDE_LOAD8]]
+; VF-TWO-CHECK-NEXT:    [[INDEX_NEXT9]] = add nuw i64 [[OFFSET_IDX]], 2
+; VF-TWO-CHECK-NEXT:    [[TMP18:%.*]] = icmp eq i64 [[INDEX_NEXT9]], [[N_VEC4]]
 ; VF-TWO-CHECK-NEXT:    br i1 [[TMP18]], label [[VEC_EPILOG_MIDDLE_BLOCK:%.*]], label [[VEC_EPILOG_VECTOR_BODY]], !llvm.loop [[LOOP2:![0-9]+]]
 ; VF-TWO-CHECK:       vec.epilog.middle.block:
-; VF-TWO-CHECK-NEXT:    [[CMP_N6:%.*]] = icmp eq i64 [[WIDE_TRIP_COUNT]], [[N_VEC5]]
+; VF-TWO-CHECK-NEXT:    [[CMP_N5:%.*]] = icmp eq i64 [[WIDE_TRIP_COUNT]], [[N_VEC4]]
 ; VF-TWO-CHECK-NEXT:    [[TMP19:%.*]] = extractelement <2 x i32> [[TMP17]], i32 1
-; VF-TWO-CHECK-NEXT:    br i1 [[CMP_N6]], label [[FOR_END_LOOPEXIT_LOOPEXIT:%.*]], label [[VEC_EPILOG_SCALAR_PH]]
+; VF-TWO-CHECK-NEXT:    br i1 [[CMP_N5]], label [[FOR_END_LOOPEXIT]], label [[VEC_EPILOG_SCALAR_PH]]
 ; VF-TWO-CHECK:       vec.epilog.scalar.ph:
-; VF-TWO-CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC5]], [[VEC_EPILOG_MIDDLE_BLOCK]] ], [ [[N_VEC]], [[VEC_EPILOG_ITER_CHECK]] ], [ 0, [[ITER_CHECK]] ]
+; VF-TWO-CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC4]], [[VEC_EPILOG_MIDDLE_BLOCK]] ], [ [[N_VEC]], [[VEC_EPILOG_ITER_CHECK]] ], [ 0, [[ITER_CHECK]] ]
 ; VF-TWO-CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; VF-TWO-CHECK:       for.body:
 ; VF-TWO-CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[VEC_EPILOG_SCALAR_PH]] ], [ [[INDVARS_IV_NEXT:%.*]], [[FOR_BODY]] ]
@@ -85,12 +85,9 @@ define signext i32 @f1(i32* noalias %A, i32* noalias %B, i32 signext %n) {
 ; VF-TWO-CHECK-NEXT:    [[ADD:%.*]] = add nsw i32 [[TMP20]], [[TMP21]]
 ; VF-TWO-CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
 ; VF-TWO-CHECK-NEXT:    [[EXITCOND:%.*]] = icmp ne i64 [[INDVARS_IV_NEXT]], [[WIDE_TRIP_COUNT]]
-; VF-TWO-CHECK-NEXT:    br i1 [[EXITCOND]], label [[FOR_BODY]], label [[FOR_END_LOOPEXIT_LOOPEXIT]], !llvm.loop [[LOOP4:![0-9]+]]
-; VF-TWO-CHECK:       for.end.loopexit.loopexit:
-; VF-TWO-CHECK-NEXT:    [[ADD_LCSSA3:%.*]] = phi i32 [ [[ADD]], [[FOR_BODY]] ], [ [[TMP19]], [[VEC_EPILOG_MIDDLE_BLOCK]] ]
-; VF-TWO-CHECK-NEXT:    br label [[FOR_END_LOOPEXIT]]
+; VF-TWO-CHECK-NEXT:    br i1 [[EXITCOND]], label [[FOR_BODY]], label [[FOR_END_LOOPEXIT]], !llvm.loop [[LOOP4:![0-9]+]]
 ; VF-TWO-CHECK:       for.end.loopexit:
-; VF-TWO-CHECK-NEXT:    [[ADD_LCSSA:%.*]] = phi i32 [ [[TMP9]], [[MIDDLE_BLOCK]] ], [ [[ADD_LCSSA3]], [[FOR_END_LOOPEXIT_LOOPEXIT]] ]
+; VF-TWO-CHECK-NEXT:    [[ADD_LCSSA:%.*]] = phi i32 [ [[ADD]], [[FOR_BODY]] ], [ [[TMP9]], [[MIDDLE_BLOCK]] ], [ [[TMP19]], [[VEC_EPILOG_MIDDLE_BLOCK]] ]
 ; VF-TWO-CHECK-NEXT:    br label [[FOR_END]]
 ; VF-TWO-CHECK:       for.end:
 ; VF-TWO-CHECK-NEXT:    [[RES_0_LCSSA:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[ADD_LCSSA]], [[FOR_END_LOOPEXIT]] ]
