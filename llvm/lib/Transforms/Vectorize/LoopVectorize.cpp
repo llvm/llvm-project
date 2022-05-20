@@ -581,7 +581,7 @@ protected:
   void fixReduction(VPReductionPHIRecipe *Phi, VPTransformState &State);
 
   /// Clear NSW/NUW flags from reduction instructions if necessary.
-  void clearReductionWrapFlags(const RecurrenceDescriptor &RdxDesc,
+  void clearReductionWrapFlags(VPReductionPHIRecipe *PhiR,
                                VPTransformState &State);
 
   /// Fixup the LCSSA phi nodes in the unique exit block.  This simply
@@ -1129,10 +1129,10 @@ void InnerLoopVectorizer::collectPoisonGeneratingRecipes(
   for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(Iter)) {
     for (VPRecipeBase &Recipe : *VPBB) {
       if (auto *WidenRec = dyn_cast<VPWidenMemoryInstructionRecipe>(&Recipe)) {
-        Instruction *UnderlyingInstr = WidenRec->getUnderlyingInstr();
+        Instruction &UnderlyingInstr = WidenRec->getIngredient();
         VPDef *AddrDef = WidenRec->getAddr()->getDef();
-        if (AddrDef && WidenRec->isConsecutive() && UnderlyingInstr &&
-            Legal->blockNeedsPredication(UnderlyingInstr->getParent()))
+        if (AddrDef && WidenRec->isConsecutive() &&
+            Legal->blockNeedsPredication(UnderlyingInstr.getParent()))
           collectPoisonGeneratingInstrsInBackwardSlice(
               cast<VPRecipeBase>(AddrDef));
       } else if (auto *InterleaveRec = dyn_cast<VPInterleaveRecipe>(&Recipe)) {
@@ -3884,7 +3884,7 @@ void InnerLoopVectorizer::fixReduction(VPReductionPHIRecipe *PhiR,
   Type *VecTy = State.get(LoopExitInstDef, 0)->getType();
 
   // Wrap flags are in general invalid after vectorization, clear them.
-  clearReductionWrapFlags(RdxDesc, State);
+  clearReductionWrapFlags(PhiR, State);
 
   // Before each round, move the insertion point right between
   // the PHIs and the values we are going to write.
@@ -4060,34 +4060,35 @@ void InnerLoopVectorizer::fixReduction(VPReductionPHIRecipe *PhiR,
   OrigPhi->setIncomingValue(IncomingEdgeBlockIdx, LoopExitInst);
 }
 
-void InnerLoopVectorizer::clearReductionWrapFlags(const RecurrenceDescriptor &RdxDesc,
+void InnerLoopVectorizer::clearReductionWrapFlags(VPReductionPHIRecipe *PhiR,
                                                   VPTransformState &State) {
+  const RecurrenceDescriptor &RdxDesc = PhiR->getRecurrenceDescriptor();
   RecurKind RK = RdxDesc.getRecurrenceKind();
   if (RK != RecurKind::Add && RK != RecurKind::Mul)
     return;
 
-  Instruction *LoopExitInstr = RdxDesc.getLoopExitInstr();
-  assert(LoopExitInstr && "null loop exit instruction");
-  SmallVector<Instruction *, 8> Worklist;
-  SmallPtrSet<Instruction *, 8> Visited;
-  Worklist.push_back(LoopExitInstr);
-  Visited.insert(LoopExitInstr);
+  SmallVector<VPValue *, 8> Worklist;
+  SmallPtrSet<VPValue *, 8> Visited;
+  Worklist.push_back(PhiR);
+  Visited.insert(PhiR);
 
   while (!Worklist.empty()) {
-    Instruction *Cur = Worklist.pop_back_val();
-    if (isa<OverflowingBinaryOperator>(Cur))
-      for (unsigned Part = 0; Part < UF; ++Part) {
-        // FIXME: Should not rely on getVPValue at this point.
-        Value *V = State.get(State.Plan->getVPValue(Cur, true), Part);
-        cast<Instruction>(V)->dropPoisonGeneratingFlags();
+    VPValue *Cur = Worklist.pop_back_val();
+    for (unsigned Part = 0; Part < UF; ++Part) {
+      Value *V = State.get(Cur, Part);
+      if (!isa<OverflowingBinaryOperator>(V))
+        break;
+      cast<Instruction>(V)->dropPoisonGeneratingFlags();
       }
 
-    for (User *U : Cur->users()) {
-      Instruction *UI = cast<Instruction>(U);
-      if ((Cur != LoopExitInstr || OrigLoop->contains(UI->getParent())) &&
-          Visited.insert(UI).second)
-        Worklist.push_back(UI);
-    }
+      for (VPUser *U : Cur->users()) {
+        auto *UserRecipe = dyn_cast<VPRecipeBase>(U);
+        if (!UserRecipe)
+          continue;
+        for (VPValue *V : UserRecipe->definedValues())
+          if (Visited.insert(V).second)
+            Worklist.push_back(V);
+      }
   }
 }
 
@@ -7492,6 +7493,14 @@ LoopVectorizationPlanner::planInVPlanNativePath(ElementCount UserVF) {
   return VectorizationFactor::Disabled();
 }
 
+bool LoopVectorizationPlanner::requiresTooManyRuntimeChecks() const {
+  unsigned NumRuntimePointerChecks = Requirements.getNumRuntimePointerChecks();
+  return (NumRuntimePointerChecks >
+              VectorizerParams::RuntimeMemoryCheckThreshold &&
+          !Hints.allowReordering()) ||
+         NumRuntimePointerChecks > PragmaVectorizeMemoryCheckThreshold;
+}
+
 Optional<VectorizationFactor>
 LoopVectorizationPlanner::plan(ElementCount UserVF, unsigned UserIC) {
   assert(OrigLoop->isInnermost() && "Inner loop expected.");
@@ -7560,30 +7569,7 @@ LoopVectorizationPlanner::plan(ElementCount UserVF, unsigned UserIC) {
     return VectorizationFactor::Disabled();
 
   // Select the optimal vectorization factor.
-  auto SelectedVF = CM.selectVectorizationFactor(VFCandidates);
-
-  // Check if it is profitable to vectorize with runtime checks.
-  unsigned NumRuntimePointerChecks = Requirements.getNumRuntimePointerChecks();
-  if (SelectedVF.Width.getKnownMinValue() > 1 && NumRuntimePointerChecks) {
-    bool PragmaThresholdReached =
-        NumRuntimePointerChecks > PragmaVectorizeMemoryCheckThreshold;
-    bool ThresholdReached =
-        NumRuntimePointerChecks > VectorizerParams::RuntimeMemoryCheckThreshold;
-    if ((ThresholdReached && !Hints.allowReordering()) ||
-        PragmaThresholdReached) {
-      ORE->emit([&]() {
-        return OptimizationRemarkAnalysisAliasing(
-                   DEBUG_TYPE, "CantReorderMemOps", OrigLoop->getStartLoc(),
-                   OrigLoop->getHeader())
-               << "loop not vectorized: cannot prove it is safe to reorder "
-                  "memory operations";
-      });
-      LLVM_DEBUG(dbgs() << "LV: Too many memory checks needed.\n");
-      Hints.emitRemarkWithHints();
-      return VectorizationFactor::Disabled();
-    }
-  }
-  return SelectedVF;
+  return CM.selectVectorizationFactor(VFCandidates);
 }
 
 VPlan &LoopVectorizationPlanner::getBestPlanFor(ElementCount VF) const {
@@ -8444,6 +8430,7 @@ VPWidenRecipe *VPRecipeBuilder::tryToWiden(Instruction *I,
     case Instruction::URem:
     case Instruction::Xor:
     case Instruction::ZExt:
+    case Instruction::Freeze:
       return true;
     }
     return false;
@@ -9367,6 +9354,17 @@ void VPWidenRecipe::execute(VPTransformState &State) {
 
     break;
   }
+  case Instruction::Freeze: {
+    State.ILV->setDebugLocFromInst(&I);
+
+    for (unsigned Part = 0; Part < State.UF; ++Part) {
+      Value *Op = State.get(getOperand(0), Part);
+
+      Value *Freeze = Builder.CreateFreeze(Op);
+      State.set(this, Freeze, Part);
+    }
+    break;
+  }
   case Instruction::ICmp:
   case Instruction::FCmp: {
     // Widen compares. Generate vector compares.
@@ -10085,7 +10083,7 @@ void VPWidenMemoryInstructionRecipe::execute(VPTransformState &State) {
         NewLI = Builder.CreateVectorReverse(NewLI, "reverse");
     }
 
-    State.set(this, NewLI, Part);
+    State.set(getVPSingleValue(), NewLI, Part);
   }
 }
 
@@ -10487,6 +10485,18 @@ bool LoopVectorizePass::processLoop(Loop *L) {
   unsigned IC = 1;
 
   if (MaybeVF) {
+    if (LVP.requiresTooManyRuntimeChecks()) {
+      ORE->emit([&]() {
+        return OptimizationRemarkAnalysisAliasing(
+                   DEBUG_TYPE, "CantReorderMemOps", L->getStartLoc(),
+                   L->getHeader())
+               << "loop not vectorized: cannot prove it is safe to reorder "
+                  "memory operations";
+      });
+      LLVM_DEBUG(dbgs() << "LV: Too many memory checks needed.\n");
+      Hints.emitRemarkWithHints();
+      return false;
+    }
     VF = *MaybeVF;
     // Select the interleave count.
     IC = CM.selectInterleaveCount(VF.Width, *VF.Cost.getValue());

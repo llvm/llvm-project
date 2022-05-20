@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-// UNSUPPORTED: c++03
+// UNSUPPORTED: c++03 && !stdlib=libc++
 
 // <vector>
 
@@ -78,8 +78,8 @@ int main(int, char**)
         assert(is_contiguous_container_asan_correct(l2));
     }
     {
-        std::vector<MoveOnly, min_allocator<MoveOnly> > l(min_allocator<MoveOnly>{});
-        std::vector<MoveOnly, min_allocator<MoveOnly> > lo(min_allocator<MoveOnly>{});
+        std::vector<MoveOnly, min_allocator<MoveOnly> > l((min_allocator<MoveOnly>()));
+        std::vector<MoveOnly, min_allocator<MoveOnly> > lo((min_allocator<MoveOnly>()));
         assert(is_contiguous_container_asan_correct(l));
         assert(is_contiguous_container_asan_correct(lo));
         for (int i = 1; i <= 3; ++i)
@@ -89,7 +89,7 @@ int main(int, char**)
         }
         assert(is_contiguous_container_asan_correct(l));
         assert(is_contiguous_container_asan_correct(lo));
-        std::vector<MoveOnly, min_allocator<MoveOnly> > l2(min_allocator<MoveOnly>{});
+        std::vector<MoveOnly, min_allocator<MoveOnly> > l2((min_allocator<MoveOnly>()));
         l2 = std::move(l);
         assert(l2 == lo);
         assert(l.empty());

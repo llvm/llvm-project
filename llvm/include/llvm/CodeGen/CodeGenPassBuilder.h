@@ -663,6 +663,10 @@ void CodeGenPassBuilder<Derived>::addIRPasses(AddIRPass &addPass) const {
 
   // Expand reduction intrinsics into shuffle sequences if the target wants to.
   addPass(ExpandReductionsPass());
+
+  // Convert conditional moves to conditional jumps when profitable.
+  if (getOptLevel() != CodeGenOpt::None && !Opt.DisableSelectOptimize)
+    addPass(SelectOptimizePass());
 }
 
 /// Turn exception handling constructs into something the code generators can

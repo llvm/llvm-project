@@ -39,14 +39,14 @@ define { i128, i8 } @muloti_test(i128 %l, i128 %r) unnamed_addr #0 {
 ; WASM32: i32.const       $push5=, 40
 ; WASM32: i32.add         $push6=, $pop52, $pop5
 ; WASM32: i64.load        $push33=, 0($pop6)
-; WASM32: local.tee       $push32=, 1, $pop33
+; WASM32: local.tee       $push32=, 3, $pop33
 ; WASM32: local.get       $push53=, 5
 ; WASM32: i64.load        $push3=, 0($pop53)
 ; WASM32: local.get       $push54=, 5
 ; WASM32: i64.load        $push2=, 16($pop54)
 ; WASM32: i64.add         $push4=, $pop3, $pop2
 ; WASM32: i64.add         $push31=, $pop32, $pop4
-; WASM32: local.tee       $push30=, 3, $pop31
+; WASM32: local.tee       $push30=, 1, $pop31
 ; WASM32: i64.store       8($pop55), $pop30
 ; WASM32: local.get       $push62=, 0
 ; WASM32: local.get       $push56=, 2
@@ -66,8 +66,8 @@ define { i128, i8 } @muloti_test(i128 %l, i128 %r) unnamed_addr #0 {
 ; WASM32: i64.const       $push26=, 0
 ; WASM32: i64.ne          $push14=, $pop13, $pop26
 ; WASM32: i32.or          $push15=, $pop12, $pop14
-; WASM32: local.get       $push61=, 3
-; WASM32: local.get       $push60=, 1
+; WASM32: local.get       $push61=, 1
+; WASM32: local.get       $push60=, 3
 ; WASM32: i64.lt_u        $push16=, $pop61, $pop60
 ; WASM32: i32.or          $push17=, $pop15, $pop16
 ; WASM32: i32.store8      16($pop62), $pop17

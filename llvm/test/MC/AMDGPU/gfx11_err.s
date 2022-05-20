@@ -20,3 +20,9 @@ s_delay_alu instid0(VALU_DEP_1) | (SALU_CYCLE_1)
 
 s_delay_alu instid0(VALU_DEP_1) | SALU_CYCLE_1)
 // GFX11: [[@LINE-1]]:{{[0-9]+}}: error: expected a left parenthesis
+
+lds_direct_load v15 wait_vdst:16
+// GFX11: [[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+
+lds_direct_load v15 wait_vdst
+// GFX11: [[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction

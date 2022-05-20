@@ -7466,7 +7466,7 @@ static Register getMemsetValue(Register Val, LLT Ty, MachineIRBuilder &MIB) {
   unsigned NumBits = Ty.getScalarSizeInBits();
   auto ValVRegAndVal = getIConstantVRegValWithLookThrough(Val, MRI);
   if (!Ty.isVector() && ValVRegAndVal) {
-    APInt Scalar = ValVRegAndVal->Value.truncOrSelf(8);
+    APInt Scalar = ValVRegAndVal->Value.trunc(8);
     APInt SplatVal = APInt::getSplat(NumBits, Scalar);
     return MIB.buildConstant(Ty, SplatVal).getReg(0);
   }

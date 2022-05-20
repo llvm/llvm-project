@@ -3593,17 +3593,14 @@ AArch64TargetLowering::LowerVectorFP_TO_INT_SAT(SDValue Op,
   SDValue Sat;
   if (Op.getOpcode() == ISD::FP_TO_SINT_SAT) {
     SDValue MinC = DAG.getConstant(
-        APInt::getSignedMaxValue(SatWidth).sextOrSelf(SrcElementWidth), DL,
-        IntVT);
+        APInt::getSignedMaxValue(SatWidth).sext(SrcElementWidth), DL, IntVT);
     SDValue Min = DAG.getNode(ISD::SMIN, DL, IntVT, NativeCvt, MinC);
     SDValue MaxC = DAG.getConstant(
-        APInt::getSignedMinValue(SatWidth).sextOrSelf(SrcElementWidth), DL,
-        IntVT);
+        APInt::getSignedMinValue(SatWidth).sext(SrcElementWidth), DL, IntVT);
     Sat = DAG.getNode(ISD::SMAX, DL, IntVT, Min, MaxC);
   } else {
     SDValue MinC = DAG.getConstant(
-        APInt::getAllOnesValue(SatWidth).zextOrSelf(SrcElementWidth), DL,
-        IntVT);
+        APInt::getAllOnesValue(SatWidth).zext(SrcElementWidth), DL, IntVT);
     Sat = DAG.getNode(ISD::UMIN, DL, IntVT, NativeCvt, MinC);
   }
 
@@ -3652,14 +3649,14 @@ SDValue AArch64TargetLowering::LowerFP_TO_INT_SAT(SDValue Op,
   SDValue Sat;
   if (Op.getOpcode() == ISD::FP_TO_SINT_SAT) {
     SDValue MinC = DAG.getConstant(
-        APInt::getSignedMaxValue(SatWidth).sextOrSelf(DstWidth), DL, DstVT);
+        APInt::getSignedMaxValue(SatWidth).sext(DstWidth), DL, DstVT);
     SDValue Min = DAG.getNode(ISD::SMIN, DL, DstVT, NativeCvt, MinC);
     SDValue MaxC = DAG.getConstant(
-        APInt::getSignedMinValue(SatWidth).sextOrSelf(DstWidth), DL, DstVT);
+        APInt::getSignedMinValue(SatWidth).sext(DstWidth), DL, DstVT);
     Sat = DAG.getNode(ISD::SMAX, DL, DstVT, Min, MaxC);
   } else {
     SDValue MinC = DAG.getConstant(
-        APInt::getAllOnesValue(SatWidth).zextOrSelf(DstWidth), DL, DstVT);
+        APInt::getAllOnesValue(SatWidth).zext(DstWidth), DL, DstVT);
     Sat = DAG.getNode(ISD::UMIN, DL, DstVT, NativeCvt, MinC);
   }
 
@@ -9942,16 +9939,10 @@ static SDValue GenerateTBL(SDValue Op, ArrayRef<int> ShuffleMask,
     Swap = true;
   }
 
-  SmallVector<SDValue, 8> TBLMask;
-  for (int Val : ShuffleMask) {
-    for (unsigned Byte = 0; Byte < BytesPerElt; ++Byte) {
-      unsigned Offset = Byte + Val * BytesPerElt;
-      if (Swap)
-        Offset = Offset < 16 ? Offset + 16 : Offset - 16;
-      TBLMask.push_back(DAG.getConstant(Offset, DL, MVT::i32));
-    }
-  }
-
+  // If the V2 source is undef or zero then we can use a tbl1, as tbl1 will fill
+  // out of range values with 0s. We do need to make sure that any out-of-range
+  // values are really out-of-range for a v16i8 vector.
+  bool IsUndefOrZero = V2.isUndef() || isZerosVector(V2.getNode());
   MVT IndexVT = MVT::v8i8;
   unsigned IndexLen = 8;
   if (Op.getValueSizeInBits() == 128) {
@@ -9959,13 +9950,23 @@ static SDValue GenerateTBL(SDValue Op, ArrayRef<int> ShuffleMask,
     IndexLen = 16;
   }
 
+  SmallVector<SDValue, 8> TBLMask;
+  for (int Val : ShuffleMask) {
+    for (unsigned Byte = 0; Byte < BytesPerElt; ++Byte) {
+      unsigned Offset = Byte + Val * BytesPerElt;
+      if (Swap)
+        Offset = Offset < IndexLen ? Offset + IndexLen : Offset - IndexLen;
+      if (IsUndefOrZero && Offset >= IndexLen)
+        Offset = 255;
+      TBLMask.push_back(DAG.getConstant(Offset, DL, MVT::i32));
+    }
+  }
+
   SDValue V1Cst = DAG.getNode(ISD::BITCAST, DL, IndexVT, V1);
   SDValue V2Cst = DAG.getNode(ISD::BITCAST, DL, IndexVT, V2);
 
   SDValue Shuffle;
-  // If the V2 source is undef or zero then we can use a tbl1, as tbl1 will fill
-  // out of range values with 0s.
-  if (V2.isUndef() || isZerosVector(V2.getNode())) {
+  if (IsUndefOrZero) {
     if (IndexLen == 8)
       V1Cst = DAG.getNode(ISD::CONCAT_VECTORS, DL, MVT::v16i8, V1Cst, V1Cst);
     Shuffle = DAG.getNode(
@@ -12061,8 +12062,8 @@ SDValue AArch64TargetLowering::LowerVSCALE(SDValue Op,
 
   SDLoc DL(Op);
   APInt MulImm = cast<ConstantSDNode>(Op.getOperand(0))->getAPIntValue();
-  return DAG.getZExtOrTrunc(DAG.getVScale(DL, MVT::i64, MulImm.sextOrSelf(64)),
-                            DL, VT);
+  return DAG.getZExtOrTrunc(DAG.getVScale(DL, MVT::i64, MulImm.sext(64)), DL,
+                            VT);
 }
 
 /// Set the IntrinsicInfo for the `aarch64_sve_st<N>` intrinsics.

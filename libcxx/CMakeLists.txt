@@ -224,7 +224,7 @@ set(LIBCXX_CXX_ABI "${LIBCXX_DEFAULT_ABI_LIBRARY}" CACHE STRING "Specify C++ ABI
 
 # Temporary to still accept existing CMake caches that contain "default" as the value
 if (LIBCXX_CXX_ABI STREQUAL "default")
-  set(LIBCXX_CXX_ABI "${LIBCXX_DEFAULT_ABI_LIBRARY}")
+  set(LIBCXX_CXX_ABI "${LIBCXX_DEFAULT_ABI_LIBRARY}" CACHE STRING "" FORCE)
 endif()
 
 if (NOT "${LIBCXX_CXX_ABI}" IN_LIST LIBCXX_SUPPORTED_ABI_LIBRARIES)
@@ -237,11 +237,11 @@ option(LIBCXX_ENABLE_STATIC_ABI_LIBRARY
 
 cmake_dependent_option(LIBCXX_STATICALLY_LINK_ABI_IN_STATIC_LIBRARY
   "Statically link the ABI library to static library" ON
-  "LIBCXX_ENABLE_STATIC_ABI_LIBRARY;LIBCXX_ENABLE_STATIC" OFF)
+  "LIBCXX_ENABLE_STATIC_ABI_LIBRARY" OFF)
 
 cmake_dependent_option(LIBCXX_STATICALLY_LINK_ABI_IN_SHARED_LIBRARY
   "Statically link the ABI library to shared library" ON
-  "LIBCXX_ENABLE_STATIC_ABI_LIBRARY;LIBCXX_ENABLE_SHARED" OFF)
+  "LIBCXX_ENABLE_STATIC_ABI_LIBRARY" OFF)
 
 # Generate and install a linker script inplace of libc++.so. The linker script
 # will link libc++ to the correct ABI library. This option is on by default

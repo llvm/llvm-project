@@ -7,6 +7,7 @@ add_mlir_dialect_library(MLIRMLProgram
 
   DEPENDS
   MLIRMLProgramOpsIncGen
+  MLIRMLProgramAttributesIncGen
 
   LINK_LIBS PUBLIC
   MLIRDialect

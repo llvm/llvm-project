@@ -132,6 +132,15 @@ declare_mlir_dialect_python_bindings(
     dialects/_memref_ops_ext.py
   DIALECT_NAME memref)
 
+declare_mlir_dialect_python_bindings(
+  ADD_TO_PARENT MLIRPythonSources.Dialects
+  ROOT_DIR "${CMAKE_CURRENT_SOURCE_DIR}/mlir"
+  TD_FILE dialects/MLProgramOps.td
+  SOURCES
+    dialects/ml_program.py
+    dialects/_ml_program_ops_ext.py
+  DIALECT_NAME ml_program)
+
 declare_mlir_python_sources(
   MLIRPythonSources.Dialects.quant
   ADD_TO_PARENT MLIRPythonSources.Dialects

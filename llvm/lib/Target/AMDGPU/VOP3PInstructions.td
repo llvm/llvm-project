@@ -700,12 +700,13 @@ multiclass VOP3P_Real_MFMA<bits<7> op, string GFX940Name = !cast<VOP3_Pseudo>(NA
   }
 }
 
-multiclass VOP3P_Real_SMFMAC<bits<7> op> {
+multiclass VOP3P_Real_SMFMAC<bits<7> op, string alias> {
   def _gfx940 : VOP3P_Real<!cast<VOP3_Pseudo>(NAME#"_e64"), SIEncodingFamily.VI>,
                 VOP3Pe_SMFMAC <op> {
     let AssemblerPredicate = isGFX940Plus;
     let DecoderNamespace = "GFX8";
   }
+  def : MnemonicAlias<alias, !cast<VOP3_Pseudo>(NAME#"_e64").Mnemonic>;
 }
 
 defm V_PK_MAD_I16 : VOP3P_Real_vi <0x00>;
@@ -822,12 +823,12 @@ defm V_MFMA_F32_16X16X16BF16_1K  : VOP3P_Real_MFMA_gfx940 <0x61, "v_mfma_f32_16x
 defm V_MFMA_F64_16X16X4F64       : VOP3P_Real_MFMA_gfx940 <0x6e, "v_mfma_f64_16x16x4_f64">;
 defm V_MFMA_F64_4X4X4F64         : VOP3P_Real_MFMA_gfx940 <0x6f, "v_mfma_f64_4x4x4_4b_f64">;
 
-defm V_SMFMAC_F32_16X16X32_F16     : VOP3P_Real_SMFMAC <0x62>;
-defm V_SMFMAC_F32_32X32X16_F16     : VOP3P_Real_SMFMAC <0x64>;
-defm V_SMFMAC_F32_16X16X32_BF16    : VOP3P_Real_SMFMAC <0x66>;
-defm V_SMFMAC_F32_32X32X16_BF16    : VOP3P_Real_SMFMAC <0x68>;
-defm V_SMFMAC_I32_16X16X64_I8      : VOP3P_Real_SMFMAC <0x6a>;
-defm V_SMFMAC_I32_32X32X32_I8      : VOP3P_Real_SMFMAC <0x6c>;
+defm V_SMFMAC_F32_16X16X32_F16     : VOP3P_Real_SMFMAC <0x62, "v_smfmac_f32_16x16x32f16">;
+defm V_SMFMAC_F32_32X32X16_F16     : VOP3P_Real_SMFMAC <0x64, "v_smfmac_f32_32x32x16f16">;
+defm V_SMFMAC_F32_16X16X32_BF16    : VOP3P_Real_SMFMAC <0x66, "v_smfmac_f32_16x16x32bf16">;
+defm V_SMFMAC_F32_32X32X16_BF16    : VOP3P_Real_SMFMAC <0x68, "v_smfmac_f32_32x32x16bf16">;
+defm V_SMFMAC_I32_16X16X64_I8      : VOP3P_Real_SMFMAC <0x6a, "v_smfmac_i32_16x16x64i8">;
+defm V_SMFMAC_I32_32X32X32_I8      : VOP3P_Real_SMFMAC <0x6c, "v_smfmac_i32_32x32x32i8">;
 
 let SubtargetPredicate = HasPackedFP32Ops in {
   defm V_PK_FMA_F32 : VOP3P_Real_vi <0x30>;

@@ -1,4 +1,4 @@
-# RUN: %PYTHON %s | FileCheck %s
+# RUN: %python %s | FileCheck %s
 
 from mlir_standalone.ir import *
 from mlir_standalone.dialects import (
