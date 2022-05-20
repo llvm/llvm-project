@@ -57,9 +57,11 @@ add_object_library(
   HDRS
     converter.h
     converter_atlas.h
+    converter_utils.h
     string_converter.h
     char_converter.h
     int_converter.h
+    hex_converter.h
   DEPENDS
     .writer
     .core_structs

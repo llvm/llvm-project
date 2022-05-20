@@ -9,7 +9,7 @@
 #ifndef LLVM_LIBC_SRC_STDIO_PRINTF_CORE_INT_CONVERTER_H
 #define LLVM_LIBC_SRC_STDIO_PRINTF_CORE_INT_CONVERTER_H
 
-#include "src/__support/CPP/Limits.h"
+#include "src/stdio/printf_core/converter_utils.h"
 #include "src/stdio/printf_core/core_structs.h"
 #include "src/stdio/printf_core/writer.h"
 
@@ -52,37 +52,7 @@ int inline convert_int(Writer *writer, const FormatSection &to_conv) {
     }
   }
 
-  switch (to_conv.length_modifier) {
-  case LengthModifier::none:
-    num = num & cpp::NumericLimits<unsigned int>::max();
-    break;
-
-  case LengthModifier::l:
-    num = num & cpp::NumericLimits<unsigned long>::max();
-    break;
-  case LengthModifier::ll:
-  case LengthModifier::L:
-    num = num & cpp::NumericLimits<unsigned long long>::max();
-    break;
-  case LengthModifier::h:
-    num = num & cpp::NumericLimits<unsigned short>::max();
-    break;
-  case LengthModifier::hh:
-    num = num & cpp::NumericLimits<unsigned char>::max();
-    break;
-  case LengthModifier::z:
-    num = num & cpp::NumericLimits<size_t>::max();
-    break;
-  case LengthModifier::t:
-    // We don't have unsigned ptrdiff so uintptr_t is used, since we need an
-    // unsigned type and ptrdiff is usually the same size as a pointer.
-    static_assert(sizeof(ptrdiff_t) == sizeof(uintptr_t));
-    num = num & cpp::NumericLimits<uintptr_t>::max();
-    break;
-  case LengthModifier::j:
-    // j is intmax, so no mask is necessary.
-    break;
-  }
+  num = apply_length_modifier(num, to_conv.length_modifier);
 
   // buff_cur can never reach 0, since the buffer is sized to always be able to
   // contain the whole integer. This means that bounds checking it should be
