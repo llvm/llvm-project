@@ -33,10 +33,19 @@ if 'TEMP' in os.environ:
 if 'HOME' in os.environ:
     config.environment['HOME'] = os.environ['HOME']
 
-# Propagate path to symbolizer for ASan/MSan.
-for symbolizer in ['ASAN_SYMBOLIZER_PATH', 'MSAN_SYMBOLIZER_PATH']:
-    if symbolizer in os.environ:
-        config.environment[symbolizer] = os.environ[symbolizer]
+# Propagate sanitizer options.
+for var in [
+    'ASAN_SYMBOLIZER_PATH',
+    'MSAN_SYMBOLIZER_PATH',
+    'TSAN_SYMBOLIZER_PATH',
+    'UBSAN_SYMBOLIZER_PATH',
+    'ASAN_OPTIONS',
+    'MSAN_OPTIONS',
+    'TSAN_OPTIONS',
+    'UBSAN_OPTIONS',
+]:
+    if var in os.environ:
+        config.environment[var] = os.environ[var]
 
 # Win32 seeks DLLs along %PATH%.
 if sys.platform in ['win32', 'cygwin'] and os.path.isdir(config.shlibdir):

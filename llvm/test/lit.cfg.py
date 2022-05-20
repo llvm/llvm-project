@@ -40,7 +40,7 @@ llvm_config.with_environment('PATH', config.llvm_tools_dir, append_path=True)
 
 # Propagate some variables from the host environment.
 llvm_config.with_system_environment(
-    ['HOME', 'INCLUDE', 'LIB', 'TMP', 'TEMP', 'ASAN_SYMBOLIZER_PATH', 'MSAN_SYMBOLIZER_PATH'])
+    ['HOME', 'INCLUDE', 'LIB', 'TMP', 'TEMP'])
 
 
 # Set up OCAMLPATH to include newly built OCaml libraries.
