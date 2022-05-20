@@ -289,7 +289,7 @@ uint32_t &lookupForModify32Impl(uint32_t ICVStateTy::*Var, IdentTy *Ident) {
                  TeamState.ICVState.LevelVar == 0))
     return TeamState.ICVState.*Var;
   uint32_t TId = mapping::getThreadIdInBlock();
-  if (!ThreadStates[TId]) {
+  if (OMP_UNLIKELY(!ThreadStates[TId])) {
     ThreadStates[TId] = reinterpret_cast<ThreadStateTy *>(memory::allocGlobal(
         sizeof(ThreadStateTy), "ICV modification outside data environment"));
     ASSERT(ThreadStates[TId] != nullptr && "Nullptr returned by malloc!");
