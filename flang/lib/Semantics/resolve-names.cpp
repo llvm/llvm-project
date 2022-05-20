@@ -809,7 +809,6 @@ class SubprogramVisitor : public virtual ScopeHandler, public InterfaceVisitor {
 public:
   bool HandleStmtFunction(const parser::StmtFunctionStmt &);
   bool Pre(const parser::SubroutineStmt &);
-  void Post(const parser::SubroutineStmt &);
   bool Pre(const parser::FunctionStmt &);
   void Post(const parser::FunctionStmt &);
   bool Pre(const parser::EntryStmt &);
@@ -827,7 +826,8 @@ public:
       const ProgramTree::EntryStmtList * = nullptr);
   bool BeginMpSubprogram(const parser::Name &);
   void PushBlockDataScope(const parser::Name &);
-  void EndSubprogram();
+  void EndSubprogram(
+      const std::optional<parser::LanguageBindingSpec> * = nullptr);
 
 protected:
   // Set when we see a stmt function that is really an array element assignment
@@ -3208,7 +3208,9 @@ bool SubprogramVisitor::Pre(const parser::Suffix &suffix) {
       }
     }
   }
-  return true;
+  // LanguageBindingSpec deferred to Post(EntryStmt) or, for FunctionStmt,
+  // all the way to EndSubprogram().
+  return false;
 }
 
 bool SubprogramVisitor::Pre(const parser::PrefixSpec &x) {
@@ -3234,30 +3236,27 @@ bool SubprogramVisitor::Pre(const parser::InterfaceBody::Subroutine &x) {
       std::get<parser::Statement<parser::SubroutineStmt>>(x.t).statement.t)};
   return BeginSubprogram(name, Symbol::Flag::Subroutine);
 }
-void SubprogramVisitor::Post(const parser::InterfaceBody::Subroutine &) {
-  EndSubprogram();
+void SubprogramVisitor::Post(const parser::InterfaceBody::Subroutine &x) {
+  EndSubprogram(&std::get<std::optional<parser::LanguageBindingSpec>>(
+      std::get<parser::Statement<parser::SubroutineStmt>>(x.t).statement.t));
 }
 bool SubprogramVisitor::Pre(const parser::InterfaceBody::Function &x) {
   const auto &name{std::get<parser::Name>(
       std::get<parser::Statement<parser::FunctionStmt>>(x.t).statement.t)};
   return BeginSubprogram(name, Symbol::Flag::Function);
 }
-void SubprogramVisitor::Post(const parser::InterfaceBody::Function &) {
-  EndSubprogram();
+void SubprogramVisitor::Post(const parser::InterfaceBody::Function &x) {
+  const auto &maybeSuffix{std::get<std::optional<parser::Suffix>>(
+      std::get<parser::Statement<parser::FunctionStmt>>(x.t).statement.t)};
+  EndSubprogram(maybeSuffix ? &maybeSuffix->binding : nullptr);
 }
 
-bool SubprogramVisitor::Pre(const parser::SubroutineStmt &) {
-  return BeginAttrs();
-}
-bool SubprogramVisitor::Pre(const parser::FunctionStmt &) {
-  FuncResultStack::FuncInfo &info{DEREF(funcResultStack().Top())};
-  CHECK(!info.inFunctionStmt);
-  info.inFunctionStmt = true;
-  return BeginAttrs();
-}
-bool SubprogramVisitor::Pre(const parser::EntryStmt &) { return BeginAttrs(); }
-
-void SubprogramVisitor::Post(const parser::SubroutineStmt &stmt) {
+bool SubprogramVisitor::Pre(const parser::SubroutineStmt &stmt) {
+  BeginAttrs();
+  Walk(std::get<std::list<parser::PrefixSpec>>(stmt.t));
+  Walk(std::get<parser::Name>(stmt.t));
+  Walk(std::get<std::list<parser::DummyArg>>(stmt.t));
+  // Don't traverse the LanguageBindingSpec now; it's deferred to EndSubprogram.
   const auto &name{std::get<parser::Name>(stmt.t)};
   auto &details{PostSubprogramStmt(name)};
   for (const auto &dummyArg : std::get<std::list<parser::DummyArg>>(stmt.t)) {
@@ -3268,7 +3267,15 @@ void SubprogramVisitor::Post(const parser::SubroutineStmt &stmt) {
       details.add_alternateReturn();
     }
   }
+  return false;
 }
+bool SubprogramVisitor::Pre(const parser::FunctionStmt &) {
+  FuncResultStack::FuncInfo &info{DEREF(funcResultStack().Top())};
+  CHECK(!info.inFunctionStmt);
+  info.inFunctionStmt = true;
+  return BeginAttrs();
+}
+bool SubprogramVisitor::Pre(const parser::EntryStmt &) { return BeginAttrs(); }
 
 void SubprogramVisitor::Post(const parser::FunctionStmt &stmt) {
   const auto &name{std::get<parser::Name>(stmt.t)};
@@ -3340,11 +3347,6 @@ void SubprogramVisitor::Post(const parser::FunctionStmt &stmt) {
 SubprogramDetails &SubprogramVisitor::PostSubprogramStmt(
     const parser::Name &name) {
   Symbol &symbol{*currScope().symbol()};
-  auto &subp{symbol.get<SubprogramDetails>()};
-  SetBindNameOn(symbol);
-  CHECK(name.source == symbol.name() ||
-      (subp.bindName() && symbol.owner().IsGlobal() &&
-          context().IsTempName(symbol.name().ToString())));
   symbol.attrs() |= EndAttrs();
   if (symbol.attrs().test(Attr::MODULE)) {
     symbol.attrs().set(Attr::EXTERNAL, false);
@@ -3353,6 +3355,9 @@ SubprogramDetails &SubprogramVisitor::PostSubprogramStmt(
 }
 
 void SubprogramVisitor::Post(const parser::EntryStmt &stmt) {
+  if (const auto &suffix{std::get<std::optional<parser::Suffix>>(stmt.t)}) {
+    Walk(suffix->binding);
+  }
   PostEntryStmt(stmt);
   EndAttrs();
 }
@@ -3592,7 +3597,19 @@ bool SubprogramVisitor::BeginSubprogram(const parser::Name &name,
   return true;
 }
 
-void SubprogramVisitor::EndSubprogram() { PopScope(); }
+void SubprogramVisitor::EndSubprogram(
+    const std::optional<parser::LanguageBindingSpec> *binding) {
+  if (binding && *binding && currScope().symbol()) {
+    // Finally process the BIND(C,NAME=name) now that symbols in the name
+    // expression will resolve local names.
+    auto flagRestorer{common::ScopedSet(inSpecificationPart_, false)};
+    BeginAttrs();
+    Walk(**binding);
+    SetBindNameOn(*currScope().symbol());
+    currScope().symbol()->attrs() |= EndAttrs();
+  }
+  PopScope();
+}
 
 bool SubprogramVisitor::HandlePreviousCalls(
     const parser::Name &name, Symbol &symbol, Symbol::Flag subpFlag) {
@@ -7421,7 +7438,27 @@ bool ResolveNamesVisitor::BeginScopeForNode(const ProgramTree &node) {
 }
 
 void ResolveNamesVisitor::EndScopeForNode(const ProgramTree &node) {
-  EndSubprogram();
+  using BindingPtr = const std::optional<parser::LanguageBindingSpec> *;
+  EndSubprogram(common::visit(
+      common::visitors{
+          [](const parser::Statement<parser::FunctionStmt> *stmt) {
+            if (stmt) {
+              if (const auto &maybeSuffix{
+                      std::get<std::optional<parser::Suffix>>(
+                          stmt->statement.t)}) {
+                return &maybeSuffix->binding;
+              }
+            }
+            return BindingPtr{};
+          },
+          [](const parser::Statement<parser::SubroutineStmt> *stmt) {
+            return stmt ? &std::get<std::optional<parser::LanguageBindingSpec>>(
+                              stmt->statement.t)
+                        : BindingPtr{};
+          },
+          [](const auto *) { return BindingPtr{}; },
+      },
+      node.stmt()));
 }
 
 // Some analyses and checks, such as the processing of initializers of

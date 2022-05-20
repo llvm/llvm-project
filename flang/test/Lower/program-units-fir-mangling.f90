@@ -185,4 +185,41 @@ subroutine sub_with_entries
  entry some_other_entry() bind(c)
 end subroutine
 
+! Test that semantics constructs binding labels with local name resolution
+module testMod3
+  character*(*), parameter :: foo = "bad!!"
+  character*(*), parameter :: ok = "ok"
+  interface
+    real function f1() bind(c,name=ok//'1')
+      import ok
+    end function
+    subroutine s1() bind(c,name=ok//'2')
+      import ok
+    end subroutine
+  end interface
+ contains
+! CHECK-LABEL: func @ok3() -> f32 attributes {fir.sym_name = "_QMtestmod3Pf2"} {
+  real function f2() bind(c,name=foo//'3')
+    character*(*), parameter :: foo = ok
+! CHECK: fir.call @ok1() : () -> f32
+! CHECK-LABEL: func @ok4() -> f32 attributes {fir.sym_name = "_QMtestmod3Pf3"} {
+    entry f3() bind(c,name=foo//'4')
+! CHECK: fir.call @ok1() : () -> f32
+    f2 = f1()
+  end function
+! CHECK-LABEL: func @ok5() attributes {fir.sym_name = "_QMtestmod3Ps2"} {
+  subroutine s2() bind(c,name=foo//'5')
+    character*(*), parameter :: foo = ok
+! CHECK: fir.call @ok2() : () -> ()
+! CHECK-LABEL: func @ok6() attributes {fir.sym_name = "_QMtestmod3Ps3"} {
+    entry s3() bind(c,name=foo//'6')
+! CHECK: fir.call @ok2() : () -> ()
+    continue ! force end of specification part
+! CHECK-LABEL: func @ok7() attributes {fir.sym_name = "_QMtestmod3Ps4"} {
+    entry s4() bind(c,name=foo//'7')
+! CHECK: fir.call @ok2() : () -> ()
+    call s1
+  end subroutine
+end module
+
 ! CHECK-LABEL: fir.global internal @_QFfooEpi : f32 {
