@@ -922,7 +922,7 @@ std::string RVVIntrinsic::getBuiltinTypeStr() const {
 
 std::string RVVIntrinsic::getSuffixStr(
     BasicType Type, int Log2LMUL,
-    const llvm::SmallVector<PrototypeDescriptor> &PrototypeDescriptors) {
+    llvm::ArrayRef<PrototypeDescriptor> PrototypeDescriptors) {
   SmallVector<std::string> SuffixStrs;
   for (auto PD : PrototypeDescriptors) {
     auto T = RVVType::computeType(Type, Log2LMUL, PD);
