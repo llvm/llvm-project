@@ -262,9 +262,9 @@ class HelpCommandTestCase(TestBase):
         """Test that we put a break between the usage and the options help lines,
            and between the options themselves."""
         self.expect("help memory read", substrs=[
-                    "[<address-expression>]\n\n       --show-tags",
-                    # Starts with the end of the show-tags line
-                    "output).\n\n       -A"])
+                    "[<address-expression>]\n\n       -A ( --show-all-children )",
+                    # Starts with the end of the show-all-children line
+                    "to show.\n\n       -D"])
 
     @no_debug_info_test
     def test_help_detailed_information_ordering(self):

@@ -300,7 +300,9 @@ if (LIBCXX_ENABLE_STATIC)
       append_flags_if_supported(CXX_STATIC_LIBRARY_FLAGS -fvisibility-global-new-delete-hidden)
     endif()
     target_compile_options(cxx_static PRIVATE ${CXX_STATIC_LIBRARY_FLAGS})
-    target_compile_definitions(cxx_static PRIVATE _LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS)
+    # _LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS can be defined in __config_site
+    # too. Define it in the same way here, to avoid redefinition conflicts.
+    target_compile_definitions(cxx_static PRIVATE _LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS=)
   endif()
 
   list(APPEND LIBCXX_BUILD_TARGETS "cxx_static")

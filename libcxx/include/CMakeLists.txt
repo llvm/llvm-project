@@ -209,8 +209,10 @@ set(files
   __filesystem/space_info.h
   __filesystem/u8path.h
   __format/buffer.h
+  __format/concepts.h
   __format/enable_insertable.h
   __format/format_arg.h
+  __format/format_arg_store.h
   __format/format_args.h
   __format/format_context.h
   __format/format_error.h

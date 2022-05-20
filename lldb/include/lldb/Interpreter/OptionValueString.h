@@ -109,6 +109,11 @@ public:
   bool IsCurrentValueEmpty() const { return m_current_value.empty(); }
 
   bool IsDefaultValueEmpty() const { return m_default_value.empty(); }
+  
+  void SetValidator(ValidatorCallback validator, void *baton = nullptr) {
+    m_validator = validator;
+    m_validator_baton = baton;
+  }
 
 protected:
   std::string m_current_value;
