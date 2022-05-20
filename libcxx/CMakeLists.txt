@@ -634,9 +634,6 @@ function(cxx_add_warning_flags target)
   if (LIBCXX_ENABLE_PEDANTIC)
     target_add_compile_flags_if_supported(${target} PRIVATE -pedantic)
   endif()
-  if (LIBCXX_DISABLE_MACRO_CONFLICT_WARNINGS)
-    target_compile_definitions(${target} PRIVATE -D_LIBCPP_DISABLE_MACRO_CONFLICT_WARNINGS)
-  endif()
 endfunction()
 
 # Exception flags =============================================================
