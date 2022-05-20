@@ -203,11 +203,12 @@ public:
     bool StrippedAtomics = false;
     bool StrippedTLS = false;
 
-    if (!Features[WebAssembly::FeatureAtomics])
+    if (!Features[WebAssembly::FeatureAtomics]) {
       StrippedAtomics = stripAtomics(M);
-
-    if (!Features[WebAssembly::FeatureBulkMemory])
       StrippedTLS = stripThreadLocals(M);
+    } else if (!Features[WebAssembly::FeatureBulkMemory]) {
+      StrippedTLS |= stripThreadLocals(M);
+    }
 
     if (StrippedAtomics && !StrippedTLS)
       stripThreadLocals(M);
