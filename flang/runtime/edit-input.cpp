@@ -47,7 +47,7 @@ static bool EditBOZInput(
   }
   auto significantBytes{static_cast<std::size_t>(digits * LOG2_BASE + 7) / 8};
   if (significantBytes > bytes) {
-    io.GetIoErrorHandler().SignalError(
+    io.GetIoErrorHandler().SignalError(IostatBOZInputOverflow,
         "B/O/Z input of %d digits overflows %zd-byte variable", digits, bytes);
     return false;
   }
@@ -140,6 +140,7 @@ bool EditIntegerInput(
   bool negate{ScanNumericPrefix(io, edit, next, remaining)};
   common::UnsignedInt128 value{0};
   bool any{negate};
+  bool overflow{false};
   for (; next; next = io.NextInField(remaining, edit)) {
     char32_t ch{*next};
     if (ch == ' ' || ch == '\t') {
@@ -157,9 +158,22 @@ bool EditIntegerInput(
           "Bad character '%lc' in INTEGER input field", ch);
       return false;
     }
+    static constexpr auto maxu128{~common::UnsignedInt128{0}};
+    static constexpr auto maxu128OverTen{maxu128 / 10};
+    static constexpr int maxLastDigit{
+        static_cast<int>(maxu128 - (maxu128OverTen * 10))};
+    overflow |= value >= maxu128OverTen &&
+        (value > maxu128OverTen || digit > maxLastDigit);
     value *= 10;
     value += digit;
     any = true;
+  }
+  auto maxForKind{common::UnsignedInt128{1} << ((8 * kind) - 1)};
+  overflow |= value >= maxForKind && (value > maxForKind || !negate);
+  if (overflow) {
+    io.GetIoErrorHandler().SignalError(IostatIntegerInputOverflow,
+        "Decimal input overflows INTEGER(%d) variable", kind);
+    return false;
   }
   if (negate) {
     value = -value;
