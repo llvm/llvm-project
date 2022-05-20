@@ -942,9 +942,11 @@ void RISCVFrameLowering::processFunctionBeforeFrameFinalized(
   }
   RVFI->setCalleeSavedStackSize(Size);
 
-  // Padding required to keep the RVV stack aligned to 8 bytes
-  // within the main stack. We only need this when not using FP.
-  if (RVVStackSize && !hasFP(MF) && Size % 8 != 0) {
+  // Padding required to keep the RVV stack aligned to 8 bytes within the main
+  // stack. We only need this when using SP or BP to access stack objects.
+  const TargetRegisterInfo *TRI = STI.getRegisterInfo();
+  if (RVVStackSize && (!hasFP(MF) || TRI->hasStackRealignment(MF)) &&
+      Size % 8 != 0) {
     // Because we add the padding to the size of the stack, adding
     // getStackAlign() will keep it aligned.
     RVFI->setRVVPadding(getStackAlign().value());
