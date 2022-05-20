@@ -207,7 +207,7 @@ if platform.system() == 'Windows' and '-win' in config.target_triple:
 
 config.available_features.add(config.host_os.lower())
 
-if config.target_triple.startswith("ppc"):
+if config.target_triple.startswith("ppc") or config.target_triple.startswith("powerpc"):
   config.available_features.add("ppc")
 
 if re.match(r'^x86_64.*-linux', config.target_triple):
