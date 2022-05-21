@@ -1185,7 +1185,8 @@ private:
       }
       break;
     case tok::arrow:
-      if (Tok->Previous && Tok->Previous->is(tok::kw_noexcept))
+      if (Tok->isNot(TT_LambdaArrow) && Tok->Previous &&
+          Tok->Previous->is(tok::kw_noexcept))
         Tok->setType(TT_TrailingReturnArrow);
       break;
     default:
