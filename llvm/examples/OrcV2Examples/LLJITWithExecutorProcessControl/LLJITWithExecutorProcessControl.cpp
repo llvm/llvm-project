@@ -194,5 +194,8 @@ int main(int argc, char *argv[]) {
   outs() << "---Result---\n"
          << "entry(" << argc << ") = " << Result << "\n";
 
+  // Destroy the EPCIndirectionUtils utility.
+  ExitOnErr(EPCIU->cleanup());
+
   return 0;
 }
