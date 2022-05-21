@@ -19,7 +19,8 @@ define i32 @test_minsize(i32 %argc, i8** nocapture readonly %argv) local_unnamed
 ; DEFAULT-NEXT:    [[TMP2:%.*]] = mul i32 [[TMP1]], [[TMP1]]
 ; DEFAULT-NEXT:    [[TMP3:%.*]] = mul i32 [[COND]], [[TMP2]]
 ; DEFAULT-NEXT:    [[TMP4:%.*]] = icmp sgt i32 [[COND]], 0
-; DEFAULT-NEXT:    br i1 [[TMP4]], label [[TMP5:%.*]], label [[TMP6:%.*]]
+; DEFAULT-NEXT:    [[COND_FR:%.*]] = freeze i1 [[TMP4]]
+; DEFAULT-NEXT:    br i1 [[COND_FR]], label [[TMP5:%.*]], label [[TMP6:%.*]]
 ; DEFAULT:       5:
 ; DEFAULT-NEXT:    br label [[TMP6]]
 ; DEFAULT:       6:
@@ -40,14 +41,15 @@ define i32 @test_minsize(i32 %argc, i8** nocapture readonly %argv) local_unnamed
 ; OVERIDE-NEXT:    [[TMP2:%.*]] = mul i32 [[TMP1]], [[TMP1]]
 ; OVERIDE-NEXT:    [[TMP3:%.*]] = mul i32 [[CALL]], [[TMP2]]
 ; OVERIDE-NEXT:    [[TMP4:%.*]] = icmp sgt i32 [[CALL]], 0
-; OVERIDE-NEXT:    br i1 [[TMP4]], label [[COND_END_THREAD]], label [[TMP6:%.*]]
+; OVERIDE-NEXT:    [[COND_FR:%.*]] = freeze i1 [[TMP4]]
+; OVERIDE-NEXT:    br i1 [[COND_FR]], label [[COND_END_THREAD]], label [[TMP6:%.*]]
 ; OVERIDE:       cond.end.thread:
 ; OVERIDE-NEXT:    [[TMP5:%.*]] = phi i32 [ [[TMP3]], [[COND_END]] ], [ 205962976, [[ENTRY:%.*]] ]
-; OVERIDE-NEXT:    [[COND2:%.*]] = phi i32 [ [[CALL]], [[COND_END]] ], [ 46, [[ENTRY]] ]
+; OVERIDE-NEXT:    [[COND3:%.*]] = phi i32 [ [[CALL]], [[COND_END]] ], [ 46, [[ENTRY]] ]
 ; OVERIDE-NEXT:    br label [[TMP6]]
 ; OVERIDE:       6:
 ; OVERIDE-NEXT:    [[TMP7:%.*]] = phi i32 [ [[TMP5]], [[COND_END_THREAD]] ], [ [[TMP3]], [[COND_END]] ]
-; OVERIDE-NEXT:    [[TMP8:%.*]] = phi i32 [ [[COND2]], [[COND_END_THREAD]] ], [ 0, [[COND_END]] ]
+; OVERIDE-NEXT:    [[TMP8:%.*]] = phi i32 [ [[COND3]], [[COND_END_THREAD]] ], [ 0, [[COND_END]] ]
 ; OVERIDE-NEXT:    [[TMP9:%.*]] = mul i32 [[TMP7]], [[TMP8]]
 ; OVERIDE-NEXT:    [[CALL33:%.*]] = tail call i32 (i8*, ...) @printf(i8* nonnull dereferenceable(1) getelementptr inbounds ([4 x i8], [4 x i8]* @.str, i32 0, i32 0), i32 [[TMP9]])
 ; OVERIDE-NEXT:    ret i32 0
@@ -87,14 +89,15 @@ define i32 @test_optsize(i32 %argc, i8** nocapture readonly %argv) local_unnamed
 ; DEFAULT-NEXT:    [[TMP2:%.*]] = mul i32 [[TMP1]], [[TMP1]]
 ; DEFAULT-NEXT:    [[TMP3:%.*]] = mul i32 [[CALL]], [[TMP2]]
 ; DEFAULT-NEXT:    [[TMP4:%.*]] = icmp sgt i32 [[CALL]], 0
-; DEFAULT-NEXT:    br i1 [[TMP4]], label [[COND_END_THREAD]], label [[TMP6:%.*]]
+; DEFAULT-NEXT:    [[COND_FR:%.*]] = freeze i1 [[TMP4]]
+; DEFAULT-NEXT:    br i1 [[COND_FR]], label [[COND_END_THREAD]], label [[TMP6:%.*]]
 ; DEFAULT:       cond.end.thread:
 ; DEFAULT-NEXT:    [[TMP5:%.*]] = phi i32 [ [[TMP3]], [[COND_END]] ], [ 205962976, [[ENTRY:%.*]] ]
-; DEFAULT-NEXT:    [[COND2:%.*]] = phi i32 [ [[CALL]], [[COND_END]] ], [ 46, [[ENTRY]] ]
+; DEFAULT-NEXT:    [[COND3:%.*]] = phi i32 [ [[CALL]], [[COND_END]] ], [ 46, [[ENTRY]] ]
 ; DEFAULT-NEXT:    br label [[TMP6]]
 ; DEFAULT:       6:
 ; DEFAULT-NEXT:    [[TMP7:%.*]] = phi i32 [ [[TMP5]], [[COND_END_THREAD]] ], [ [[TMP3]], [[COND_END]] ]
-; DEFAULT-NEXT:    [[TMP8:%.*]] = phi i32 [ [[COND2]], [[COND_END_THREAD]] ], [ 0, [[COND_END]] ]
+; DEFAULT-NEXT:    [[TMP8:%.*]] = phi i32 [ [[COND3]], [[COND_END_THREAD]] ], [ 0, [[COND_END]] ]
 ; DEFAULT-NEXT:    [[TMP9:%.*]] = mul i32 [[TMP7]], [[TMP8]]
 ; DEFAULT-NEXT:    [[CALL33:%.*]] = tail call i32 (i8*, ...) @printf(i8* nonnull dereferenceable(1) getelementptr inbounds ([4 x i8], [4 x i8]* @.str, i32 0, i32 0), i32 [[TMP9]])
 ; DEFAULT-NEXT:    ret i32 0
@@ -111,14 +114,15 @@ define i32 @test_optsize(i32 %argc, i8** nocapture readonly %argv) local_unnamed
 ; OVERIDE-NEXT:    [[TMP2:%.*]] = mul i32 [[TMP1]], [[TMP1]]
 ; OVERIDE-NEXT:    [[TMP3:%.*]] = mul i32 [[CALL]], [[TMP2]]
 ; OVERIDE-NEXT:    [[TMP4:%.*]] = icmp sgt i32 [[CALL]], 0
-; OVERIDE-NEXT:    br i1 [[TMP4]], label [[COND_END_THREAD]], label [[TMP6:%.*]]
+; OVERIDE-NEXT:    [[COND_FR:%.*]] = freeze i1 [[TMP4]]
+; OVERIDE-NEXT:    br i1 [[COND_FR]], label [[COND_END_THREAD]], label [[TMP6:%.*]]
 ; OVERIDE:       cond.end.thread:
 ; OVERIDE-NEXT:    [[TMP5:%.*]] = phi i32 [ [[TMP3]], [[COND_END]] ], [ 205962976, [[ENTRY:%.*]] ]
-; OVERIDE-NEXT:    [[COND2:%.*]] = phi i32 [ [[CALL]], [[COND_END]] ], [ 46, [[ENTRY]] ]
+; OVERIDE-NEXT:    [[COND3:%.*]] = phi i32 [ [[CALL]], [[COND_END]] ], [ 46, [[ENTRY]] ]
 ; OVERIDE-NEXT:    br label [[TMP6]]
 ; OVERIDE:       6:
 ; OVERIDE-NEXT:    [[TMP7:%.*]] = phi i32 [ [[TMP5]], [[COND_END_THREAD]] ], [ [[TMP3]], [[COND_END]] ]
-; OVERIDE-NEXT:    [[TMP8:%.*]] = phi i32 [ [[COND2]], [[COND_END_THREAD]] ], [ 0, [[COND_END]] ]
+; OVERIDE-NEXT:    [[TMP8:%.*]] = phi i32 [ [[COND3]], [[COND_END_THREAD]] ], [ 0, [[COND_END]] ]
 ; OVERIDE-NEXT:    [[TMP9:%.*]] = mul i32 [[TMP7]], [[TMP8]]
 ; OVERIDE-NEXT:    [[CALL33:%.*]] = tail call i32 (i8*, ...) @printf(i8* nonnull dereferenceable(1) getelementptr inbounds ([4 x i8], [4 x i8]* @.str, i32 0, i32 0), i32 [[TMP9]])
 ; OVERIDE-NEXT:    ret i32 0
