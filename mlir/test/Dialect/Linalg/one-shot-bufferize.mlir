@@ -339,7 +339,7 @@ func.func @op_is_reading_but_following_ops_are_not(
 // -----
 
 //===----------------------------------------------------------------------===//
-// InitTensorOp elimination would produce SSA violations for the example below.
+// AllocTensorOp elimination would produce SSA violations for the example below.
 //===----------------------------------------------------------------------===//
 
 func.func @depthwise_conv_1d_nwc_wc(%arg0: index, %arg1: index, %arg2: tensor<8x18x32xf32>)
@@ -347,9 +347,9 @@ func.func @depthwise_conv_1d_nwc_wc(%arg0: index, %arg1: index, %arg2: tensor<8x
   %c0 = arith.constant 0 : index
   %c32 = arith.constant 32 : index
   %c8 = arith.constant 8 : index
-  %0 = linalg.init_tensor [4, 1, 6, 8] : tensor<4x1x6x8xf32>
+  %0 = bufferization.alloc_tensor [4, 1, 6, 8] : tensor<4x1x6x8xf32>
   %1 = tensor.cast %0 : tensor<4x1x6x8xf32> to tensor<?x1x6x8xf32>
-  %2 = linalg.init_tensor [1, 6, 8] : tensor<1x6x8xf32>
+  %2 = bufferization.alloc_tensor [1, 6, 8] : tensor<1x6x8xf32>
   %3 = scf.for %arg3 = %c0 to %c32 step %c8 iter_args(%arg4 = %1) -> (tensor<?x1x6x8xf32>) {
     %4 = affine.apply affine_map<(d0) -> (d0 ceildiv 8)>(%arg3)
     %5 = tensor.insert_slice %2 into %arg4[%4,0, 0, 0] [1, 1, 6, 8] [1, 1, 1, 1] :
@@ -361,8 +361,8 @@ func.func @depthwise_conv_1d_nwc_wc(%arg0: index, %arg1: index, %arg2: tensor<8x
 
 // -----
 
-// CHECK-LABEL: func @do_not_copy_init_tensors(
-func.func @do_not_copy_init_tensors(%f1: f32, %f2: f32, %idx: index)
+// CHECK-LABEL: func @do_not_copy_alloc_tensors(
+func.func @do_not_copy_alloc_tensors(%f1: f32, %f2: f32, %idx: index)
   -> (tensor<5xf32>, tensor<5xf32>)
 {
   // CHECK: memref.alloc
@@ -370,7 +370,7 @@ func.func @do_not_copy_init_tensors(%f1: f32, %f2: f32, %idx: index)
   // CHECK-NOT: copy
   // CHECK: memref.store
   // CHECK: memref.store
-  %0 = linalg.init_tensor [5] : tensor<5xf32>
+  %0 = bufferization.alloc_tensor [5] : tensor<5xf32>
   %1 = tensor.insert %f1 into %0[%idx] : tensor<5xf32>
   %2 = tensor.insert %f2 into %0[%idx] : tensor<5xf32>
   return %1, %2 : tensor<5xf32>, tensor<5xf32>
