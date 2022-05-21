@@ -319,6 +319,24 @@ entry:
   ret i32 %conv1
 }
 
+define i32 @icmp_minus_imm_noncanonicalcmp(i8* %a) {
+; CHECK-LABEL: @icmp_minus_imm_noncanonicalcmp(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = load i8, i8* [[A:%.*]], align 1
+; CHECK-NEXT:    [[TMP1:%.*]] = zext i8 [[TMP0]] to i32
+; CHECK-NEXT:    [[ADD_I:%.*]] = add i32 [[TMP1]], -7
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i32 -5, [[ADD_I]]
+; CHECK-NEXT:    [[CONV1:%.*]] = zext i1 [[CMP]] to i32
+; CHECK-NEXT:    ret i32 [[CONV1]]
+;
+entry:
+  %0 = load i8, i8* %a, align 1
+  %add.i = add i8 %0, -7
+  %cmp = icmp ult i8 -5, %add.i
+  %conv1 = zext i1 %cmp to i32
+  ret i32 %conv1
+}
+
 define void @mul_with_neg_imm(i32, i32* %b) {
 ; CHECK-LABEL: @mul_with_neg_imm(
 ; CHECK-NEXT:  entry:
