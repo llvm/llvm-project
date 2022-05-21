@@ -722,11 +722,15 @@ define double @splat_loads(double *%array1, double *%array2, double *%ptrA, doub
 ; SSE-NEXT:    [[TMP3:%.*]] = load <2 x double>, <2 x double>* [[TMP2]], align 8
 ; SSE-NEXT:    [[SHUFFLE:%.*]] = shufflevector <2 x double> [[TMP3]], <2 x double> poison, <2 x i32> <i32 1, i32 0>
 ; SSE-NEXT:    [[TMP4:%.*]] = fmul <2 x double> [[TMP1]], [[SHUFFLE]]
-; SSE-NEXT:    [[TMP5:%.*]] = fmul <2 x double> [[TMP1]], [[TMP3]]
-; SSE-NEXT:    [[TMP6:%.*]] = fadd <2 x double> [[TMP4]], [[TMP5]]
-; SSE-NEXT:    [[TMP7:%.*]] = extractelement <2 x double> [[TMP6]], i32 0
-; SSE-NEXT:    [[TMP8:%.*]] = extractelement <2 x double> [[TMP6]], i32 1
-; SSE-NEXT:    [[ADD3:%.*]] = fadd double [[TMP7]], [[TMP8]]
+; SSE-NEXT:    [[TMP5:%.*]] = extractelement <2 x double> [[SHUFFLE]], i32 1
+; SSE-NEXT:    [[TMP6:%.*]] = insertelement <2 x double> poison, double [[TMP5]], i32 0
+; SSE-NEXT:    [[TMP7:%.*]] = extractelement <2 x double> [[SHUFFLE]], i32 0
+; SSE-NEXT:    [[TMP8:%.*]] = insertelement <2 x double> [[TMP6]], double [[TMP7]], i32 1
+; SSE-NEXT:    [[TMP9:%.*]] = fmul <2 x double> [[TMP1]], [[TMP8]]
+; SSE-NEXT:    [[TMP10:%.*]] = fadd <2 x double> [[TMP4]], [[TMP9]]
+; SSE-NEXT:    [[TMP11:%.*]] = extractelement <2 x double> [[TMP10]], i32 0
+; SSE-NEXT:    [[TMP12:%.*]] = extractelement <2 x double> [[TMP10]], i32 1
+; SSE-NEXT:    [[ADD3:%.*]] = fadd double [[TMP11]], [[TMP12]]
 ; SSE-NEXT:    ret double [[ADD3]]
 ;
 ; AVX-LABEL: @splat_loads(
@@ -787,13 +791,17 @@ define double @splat_loads_with_internal_uses(double *%array1, double *%array2, 
 ; SSE-NEXT:    [[TMP3:%.*]] = load <2 x double>, <2 x double>* [[TMP2]], align 8
 ; SSE-NEXT:    [[SHUFFLE:%.*]] = shufflevector <2 x double> [[TMP3]], <2 x double> poison, <2 x i32> <i32 1, i32 0>
 ; SSE-NEXT:    [[TMP4:%.*]] = fmul <2 x double> [[TMP1]], [[SHUFFLE]]
-; SSE-NEXT:    [[TMP5:%.*]] = fmul <2 x double> [[TMP1]], [[TMP3]]
-; SSE-NEXT:    [[TMP6:%.*]] = fadd <2 x double> [[TMP4]], [[TMP5]]
-; SSE-NEXT:    [[TMP7:%.*]] = shufflevector <2 x double> [[TMP3]], <2 x double> poison, <2 x i32> zeroinitializer
-; SSE-NEXT:    [[TMP8:%.*]] = fsub <2 x double> [[TMP6]], [[TMP7]]
-; SSE-NEXT:    [[TMP9:%.*]] = extractelement <2 x double> [[TMP8]], i32 0
-; SSE-NEXT:    [[TMP10:%.*]] = extractelement <2 x double> [[TMP8]], i32 1
-; SSE-NEXT:    [[RES:%.*]] = fadd double [[TMP9]], [[TMP10]]
+; SSE-NEXT:    [[TMP5:%.*]] = extractelement <2 x double> [[SHUFFLE]], i32 1
+; SSE-NEXT:    [[TMP6:%.*]] = insertelement <2 x double> poison, double [[TMP5]], i32 0
+; SSE-NEXT:    [[TMP7:%.*]] = extractelement <2 x double> [[SHUFFLE]], i32 0
+; SSE-NEXT:    [[TMP8:%.*]] = insertelement <2 x double> [[TMP6]], double [[TMP7]], i32 1
+; SSE-NEXT:    [[TMP9:%.*]] = fmul <2 x double> [[TMP1]], [[TMP8]]
+; SSE-NEXT:    [[TMP10:%.*]] = fadd <2 x double> [[TMP4]], [[TMP9]]
+; SSE-NEXT:    [[TMP11:%.*]] = insertelement <2 x double> [[TMP6]], double [[TMP5]], i32 1
+; SSE-NEXT:    [[TMP12:%.*]] = fsub <2 x double> [[TMP10]], [[TMP11]]
+; SSE-NEXT:    [[TMP13:%.*]] = extractelement <2 x double> [[TMP12]], i32 0
+; SSE-NEXT:    [[TMP14:%.*]] = extractelement <2 x double> [[TMP12]], i32 1
+; SSE-NEXT:    [[RES:%.*]] = fadd double [[TMP13]], [[TMP14]]
 ; SSE-NEXT:    ret double [[RES]]
 ;
 ; AVX-LABEL: @splat_loads_with_internal_uses(

@@ -12,15 +12,22 @@ define void @test() {
 ; CHECK-NEXT:    [[TMP6:%.*]] = sub nsw <4 x i32> zeroinitializer, [[SHUFFLE]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = shl nsw <4 x i32> [[TMP6]], zeroinitializer
 ; CHECK-NEXT:    [[TMP8:%.*]] = add nsw <4 x i32> [[TMP7]], zeroinitializer
-; CHECK-NEXT:    [[TMP9:%.*]] = shufflevector <4 x i32> [[TMP8]], <4 x i32> poison, <4 x i32> <i32 1, i32 0, i32 3, i32 2>
-; CHECK-NEXT:    [[TMP10:%.*]] = add nsw <4 x i32> [[TMP8]], [[TMP9]]
-; CHECK-NEXT:    [[TMP11:%.*]] = sub nsw <4 x i32> [[TMP8]], [[TMP9]]
-; CHECK-NEXT:    [[TMP12:%.*]] = shufflevector <4 x i32> [[TMP10]], <4 x i32> [[TMP11]], <4 x i32> <i32 0, i32 5, i32 2, i32 7>
-; CHECK-NEXT:    [[TMP13:%.*]] = add nsw <4 x i32> zeroinitializer, [[TMP12]]
-; CHECK-NEXT:    [[TMP14:%.*]] = sub nsw <4 x i32> zeroinitializer, [[TMP12]]
-; CHECK-NEXT:    [[TMP15:%.*]] = shufflevector <4 x i32> [[TMP13]], <4 x i32> [[TMP14]], <4 x i32> <i32 0, i32 1, i32 6, i32 7>
-; CHECK-NEXT:    [[TMP16:%.*]] = bitcast i32* [[TMP2]] to <4 x i32>*
-; CHECK-NEXT:    store <4 x i32> [[TMP15]], <4 x i32>* [[TMP16]], align 16
+; CHECK-NEXT:    [[TMP9:%.*]] = extractelement <4 x i32> [[TMP8]], i32 1
+; CHECK-NEXT:    [[TMP10:%.*]] = insertelement <4 x i32> poison, i32 [[TMP9]], i32 0
+; CHECK-NEXT:    [[TMP11:%.*]] = extractelement <4 x i32> [[TMP8]], i32 0
+; CHECK-NEXT:    [[TMP12:%.*]] = insertelement <4 x i32> [[TMP10]], i32 [[TMP11]], i32 1
+; CHECK-NEXT:    [[TMP13:%.*]] = extractelement <4 x i32> [[TMP8]], i32 3
+; CHECK-NEXT:    [[TMP14:%.*]] = insertelement <4 x i32> [[TMP12]], i32 [[TMP13]], i32 2
+; CHECK-NEXT:    [[TMP15:%.*]] = extractelement <4 x i32> [[TMP8]], i32 2
+; CHECK-NEXT:    [[TMP16:%.*]] = insertelement <4 x i32> [[TMP14]], i32 [[TMP15]], i32 3
+; CHECK-NEXT:    [[TMP17:%.*]] = add nsw <4 x i32> [[TMP8]], [[TMP16]]
+; CHECK-NEXT:    [[TMP18:%.*]] = sub nsw <4 x i32> [[TMP8]], [[TMP16]]
+; CHECK-NEXT:    [[TMP19:%.*]] = shufflevector <4 x i32> [[TMP17]], <4 x i32> [[TMP18]], <4 x i32> <i32 0, i32 5, i32 2, i32 7>
+; CHECK-NEXT:    [[TMP20:%.*]] = add nsw <4 x i32> zeroinitializer, [[TMP19]]
+; CHECK-NEXT:    [[TMP21:%.*]] = sub nsw <4 x i32> zeroinitializer, [[TMP19]]
+; CHECK-NEXT:    [[TMP22:%.*]] = shufflevector <4 x i32> [[TMP20]], <4 x i32> [[TMP21]], <4 x i32> <i32 0, i32 1, i32 6, i32 7>
+; CHECK-NEXT:    [[TMP23:%.*]] = bitcast i32* [[TMP2]] to <4 x i32>*
+; CHECK-NEXT:    store <4 x i32> [[TMP22]], <4 x i32>* [[TMP23]], align 16
 ; CHECK-NEXT:    ret void
 ;
   %1 = getelementptr inbounds i8, i8* undef, i64 4
