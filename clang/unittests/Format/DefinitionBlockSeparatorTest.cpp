@@ -76,8 +76,9 @@ protected:
       if (Result.size()) {
         auto LastChar = Result.back();
         if ((Char == '\n' && LastChar == '\n') ||
-            (Char == '\r' && (LastChar == '\r' || LastChar == '\n')))
+            (Char == '\r' && (LastChar == '\r' || LastChar == '\n'))) {
           continue;
+        }
       }
       Result.push_back(Char);
     }
