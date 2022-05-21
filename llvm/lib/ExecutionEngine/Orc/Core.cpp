@@ -263,9 +263,21 @@ StringRef AbsoluteSymbolsMaterializationUnit::getName() const {
 
 void AbsoluteSymbolsMaterializationUnit::materialize(
     std::unique_ptr<MaterializationResponsibility> R) {
-  // No dependencies, so these calls can't fail.
-  cantFail(R->notifyResolved(Symbols));
-  cantFail(R->notifyEmitted());
+  // Even though these are just absolute symbols we need to check for failure
+  // to resolve/emit: the tracker for these symbols may have been removed while
+  // the materialization was in flight (e.g. due to a failure in some action
+  // triggered by the queries attached to the resolution/emission of these
+  // symbols).
+  if (auto Err = R->notifyResolved(Symbols)) {
+    R->getExecutionSession().reportError(std::move(Err));
+    R->failMaterialization();
+    return;
+  }
+  if (auto Err = R->notifyEmitted()) {
+    R->getExecutionSession().reportError(std::move(Err));
+    R->failMaterialization();
+    return;
+  }
 }
 
 void AbsoluteSymbolsMaterializationUnit::discard(const JITDylib &JD,
