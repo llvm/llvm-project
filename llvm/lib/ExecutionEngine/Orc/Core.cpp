@@ -1860,6 +1860,12 @@ ExecutionSession::ExecutionSession(std::unique_ptr<ExecutorProcessControl> EPC)
   this->EPC->ES = this;
 }
 
+ExecutionSession::~ExecutionSession() {
+  // You must call endSession prior to destroying the session.
+  assert(!SessionOpen &&
+         "Session still open. Did you forget to call endSession?");
+}
+
 Error ExecutionSession::endSession() {
   LLVM_DEBUG(dbgs() << "Ending ExecutionSession " << this << "\n");
 
