@@ -14,5 +14,5 @@
 int i[10];
 int j[];
 
-// CHECK: @i = {{.*}} global [10 x i32] zeroinitializer
-// CHECK-NEXT: @j = {{.*}} global [1 x i32] zeroinitializer
+// CHECK: @i = {{.*}}global [10 x i32] zeroinitializer
+// CHECK-NEXT: @j = {{.*}}global [1 x i32] zeroinitializer
