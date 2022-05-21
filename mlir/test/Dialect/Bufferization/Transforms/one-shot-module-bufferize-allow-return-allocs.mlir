@@ -17,7 +17,7 @@
 //       CHECK:   %[[alloc:.*]] = memref.alloc
 //       CHECK:   return %[[alloc]]
 func.func @create_tensor() -> tensor<10xf32> {
-  %0 = linalg.init_tensor [10] : tensor<10xf32>
+  %0 = bufferization.alloc_tensor [10] : tensor<10xf32>
   return %0 : tensor<10xf32>
 }
 

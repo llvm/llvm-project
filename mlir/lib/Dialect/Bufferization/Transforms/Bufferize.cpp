@@ -237,6 +237,28 @@ private:
 };
 } // namespace
 
+namespace {
+struct BufferizationBufferizePass
+    : public BufferizationBufferizeBase<BufferizationBufferizePass> {
+  void runOnOperation() override {
+    BufferizationOptions options = getPartialBufferizationOptions();
+    options.allowDialectInFilter<BufferizationDialect>();
+
+    if (failed(bufferizeOp(getOperation(), options)))
+      signalPassFailure();
+  }
+
+  void getDependentDialects(DialectRegistry &registry) const override {
+    registry
+        .insert<bufferization::BufferizationDialect, memref::MemRefDialect>();
+  }
+};
+} // namespace
+
+std::unique_ptr<Pass> mlir::bufferization::createBufferizationBufferizePass() {
+  return std::make_unique<BufferizationBufferizePass>();
+}
+
 std::unique_ptr<Pass> mlir::bufferization::createOneShotBufferizePass() {
   return std::make_unique<OneShotBufferizePass>();
 }

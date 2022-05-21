@@ -12,11 +12,127 @@
 include "mlir/Dialect/Bufferization/IR/AllocationOpInterface.td"
 include "mlir/Dialect/Bufferization/IR/BufferizableOpInterface.td"
 include "mlir/Dialect/Bufferization/IR/BufferizationBase.td"
+include "mlir/Interfaces/InferTypeOpInterface.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
 include "mlir/Interfaces/CopyOpInterface.td"
 
 class Bufferization_Op<string mnemonic, list<Trait> traits = []>
     : Op<Bufferization_Dialect, mnemonic, traits>;
+
+//===----------------------------------------------------------------------===//
+// AllocTensorOp
+//===----------------------------------------------------------------------===//
+
+def Bufferization_AllocTensorOp : Bufferization_Op<"alloc_tensor",
+    [BufferizableOpInterface,
+     DeclareOpInterfaceMethods<ReifyRankedShapedTypeOpInterface>]> {
+  let summary = "buffer allocation in tensor land";
+
+  let description = [{
+    `bufferization.alloc_tensor` is an operation that bufferizes to a buffer
+    allocation of a given shape. The shape could be dynamic or static.
+    Reading from the result of an `alloc_tensor` op yields an undefined value.
+
+    `alloc_tensor` is a helper op for bufferization. It marks the beginning of
+    a new tensor SSA use-def chain and is used to control in-place bufferization
+    decisions during One-Shot Bufferize.
+  }];
+
+  let arguments =
+    (ins Variadic<Index>:$sizes, I64ArrayAttr:$static_sizes);
+
+  let results = (outs AnyTensor:$result);
+
+  let assemblyFormat = [{
+    custom<OperandsOrIntegersSizesList>($sizes, $static_sizes) attr-dict
+    `:` type($result)
+  }];
+
+  let extraClassDeclaration = [{
+    LogicalResult bufferize(RewriterBase &rewriter, BufferizationState &state);
+
+    bool isMemoryWrite(OpResult opResult, const AnalysisState &state) const {
+      // AllocTensorOps allocate but do not write.
+      return false;
+    }
+
+    static StringRef getStaticSizesAttrName() {
+      return "static_sizes";
+    }
+
+    RankedTensorType getType() {
+      return getResult().getType().cast<RankedTensorType>();
+    }
+
+    // Infer the shape of the result tensor given the static shapes
+    // and element type of the result tensor.
+    static Type inferResultType(ArrayRef<int64_t> staticSizes, Type elementType,
+                                Attribute encoding = {});
+
+    // Return true if the size of the tensor is dynamic at `idx`
+    bool isDynamicSize(unsigned idx) {
+      APInt v = *(static_sizes().getAsValueRange<IntegerAttr>().begin() + idx);
+      return ShapedType::isDynamic(v.getSExtValue());
+    }
+
+    // Assert that the size of the result tensor is static at `idx`
+    // and return the shape.
+    int64_t getStaticSize(unsigned idx) {
+      assert(!isDynamicSize(idx) && "expected static size");
+      APInt v = *(static_sizes().
+          template getAsValueRange<IntegerAttr>().begin() + idx);
+        return v.getSExtValue();
+    }
+
+    // Return the argument position that contains the dynamic size of
+    // the tensor at dimension `idx`. Asserts that the shape is
+    // dynamic at that `idx`.
+    unsigned getIndexOfDynamicSize(unsigned idx) {
+      assert(isDynamicSize(idx) && "expected dynamic size");
+      return std::count_if(
+          static_sizes().getValue().begin(),
+          static_sizes().getValue().begin() + idx,
+          [&](Attribute attr) {
+            return ShapedType::isDynamic(attr.cast<IntegerAttr>().getInt());
+          });
+    }
+
+    // Return both static and dynamic sizes as a list of `OpFoldResult`.
+    SmallVector<OpFoldResult> getMixedSizes();
+
+    // Return the Value of the dynamic size of the tensor at dimension
+    // `idx`. Asserts that the shape is dynamic at that `idx.
+    Value getDynamicSize(unsigned idx) {
+      return getOperand(getIndexOfDynamicSize(idx));
+    }
+  }];
+
+  let builders = [
+    OpBuilder<(ins "ValueRange":$shape,
+                  "ArrayRef<int64_t>":$staticShape, "Type":$elementType),
+    [{
+      build($_builder, $_state,
+            AllocTensorOp::inferResultType(staticShape, elementType),
+            shape, $_builder.getI64ArrayAttr(staticShape));
+    }]>,
+    OpBuilder<(ins "ValueRange":$shape, "Type":$elementType),
+    [{
+      SmallVector<int64_t, 4> staticShape(
+        shape.size(), ShapedType::kDynamicSize);
+      build($_builder, $_state, shape, staticShape, elementType);
+    }]>,
+    OpBuilder<(ins "ArrayRef<int64_t>":$staticShape, "Type":$elementType),
+    [{
+      build($_builder, $_state, ValueRange{}, staticShape, elementType);
+    }]>,
+    OpBuilder<(ins "ArrayRef<OpFoldResult>":$sizes, "Type":$elementType,
+      CArg<"ArrayRef<NamedAttribute>", "{}">:$attrs)>
+  ];
+
+  let hasCanonicalizer = 1;
+  let hasCustomAssemblyFormat = 1;
+  let hasVerifier = 1;
+}
 
 //===----------------------------------------------------------------------===//
 // CloneOp
