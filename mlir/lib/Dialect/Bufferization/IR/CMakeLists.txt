@@ -12,6 +12,7 @@ add_mlir_dialect_library(MLIRBufferization
   MLIRBufferizationOpsIncGen
 
   LINK_LIBS PUBLIC
+  MLIRAffine
   MLIRDialect
   MLIRFunc
   MLIRIR

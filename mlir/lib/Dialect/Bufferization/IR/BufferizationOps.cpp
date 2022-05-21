@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
+#include "mlir/Dialect/Bufferization/IR/BufferizableOpInterface.h"
 #include "mlir/Dialect/Bufferization/IR/Bufferization.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/MemRef/Utils/MemRefUtils.h"
@@ -124,6 +125,167 @@ LogicalResult mlir::bufferization::foldToMemrefToTensorPair(
          "expected that types are cast compatible");
   rewriter.replaceOpWithNewOp<memref::CastOp>(toMemref, destType,
                                               memrefToTensor.memref());
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
+// AllocTensorOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult AllocTensorOp::bufferize(RewriterBase &rewriter,
+                                       BufferizationState &state) {
+  // Nothing to do for dead AllocTensorOps.
+  if (getOperation()->getUses().empty())
+    return success();
+
+  FailureOr<Value> alloc = state.createAlloc(rewriter, getLoc(), getResult());
+  if (failed(alloc))
+    return failure();
+  replaceOpWithBufferizedValues(rewriter, getOperation(), *alloc);
+  return success();
+}
+
+void AllocTensorOp::build(OpBuilder &b, OperationState &result,
+                          ArrayRef<OpFoldResult> sizes, Type elementType,
+                          ArrayRef<NamedAttribute> attrs) {
+  SmallVector<Value, 4> dynamicSizes;
+  SmallVector<int64_t, 4> staticSizes;
+  dispatchIndexOpFoldResults(sizes, dynamicSizes, staticSizes,
+                             ShapedType::kDynamicSize);
+  auto resultType = RankedTensorType ::get(staticSizes, elementType);
+  build(b, result, resultType, dynamicSizes, b.getI64ArrayAttr(staticSizes));
+  result.addAttributes(attrs);
+}
+
+LogicalResult AllocTensorOp::verify() {
+  RankedTensorType resultType = getType();
+  SmallVector<int64_t, 4> staticSizes = llvm::to_vector<4>(llvm::map_range(
+      static_sizes().cast<ArrayAttr>(),
+      [](Attribute a) -> int64_t { return a.cast<IntegerAttr>().getInt(); }));
+
+  if (failed(verifyListOfOperandsOrIntegers(
+          *this, "sizes", resultType.getRank(), static_sizes(), sizes(),
+          ShapedType::isDynamic)))
+    return failure();
+
+  if (static_sizes().size() != static_cast<unsigned>(resultType.getRank()))
+    return emitError("expected ") << resultType.getRank() << " sizes values";
+
+  Type expectedType = AllocTensorOp::inferResultType(
+      staticSizes, resultType.getElementType(), resultType.getEncoding());
+  if (resultType != expectedType) {
+    return emitError("specified type ")
+           << resultType << " does not match the inferred type "
+           << expectedType;
+  }
+  return success();
+}
+
+Type AllocTensorOp::inferResultType(ArrayRef<int64_t> staticSizes,
+                                    Type elementType, Attribute encoding) {
+  return RankedTensorType::get(staticSizes, elementType, encoding);
+}
+
+SmallVector<OpFoldResult> AllocTensorOp::getMixedSizes() {
+  SmallVector<OpFoldResult> mixedSizes;
+  mixedSizes.reserve(getType().getRank());
+  unsigned dynamicValIndex = 0;
+  for (Attribute attr : static_sizes()) {
+    auto intAttr = attr.cast<IntegerAttr>();
+    if (!ShapedType::isDynamic(intAttr.getInt())) {
+      mixedSizes.push_back(intAttr);
+      continue;
+    }
+    mixedSizes.push_back(sizes()[dynamicValIndex++]);
+  }
+  return mixedSizes;
+}
+
+namespace {
+/// Change the type of the result of a `bufferization.alloc_tensor` by making
+/// the result type statically sized along dimension that in the original
+/// operation where defined as dynamic, but the size was defined using a
+/// `constant` op. For example:
+///
+///  %c5 = arith.constant 5: index
+///  %0 = bufferization.alloc_tensor [%arg0, %c5] : tensor<?x?xf32>
+///
+///  to
+///
+///  %0 = bufferization.alloc_tensor [%arg0, 5] : tensor<?x5xf32>
+struct ReplaceStaticShapeDims : OpRewritePattern<AllocTensorOp> {
+  using OpRewritePattern<AllocTensorOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(AllocTensorOp op,
+                                PatternRewriter &rewriter) const override {
+    SmallVector<Value, 4> dynamicSizes;
+    SmallVector<int64_t, 4> staticSizes;
+    for (unsigned i = 0, e = op.getType().getRank(); i != e; ++i) {
+      // If the size is already static, nothing to do.
+      if (!op.isDynamicSize(i)) {
+        staticSizes.push_back(op.getStaticSize(i));
+        continue;
+      }
+
+      // If the size is dynamic but defined using a `constant` op, get the
+      // constant value to find the static size to use.
+      unsigned operandNum = op.getIndexOfDynamicSize(i);
+      Value sizeOperand = op.getOperand(operandNum);
+      if (auto constantIndexOp =
+              sizeOperand.getDefiningOp<arith::ConstantIndexOp>()) {
+        staticSizes.push_back(constantIndexOp.value());
+        continue;
+      }
+
+      // Fallback case. Keep the size dynamic.
+      dynamicSizes.push_back(sizeOperand);
+      staticSizes.push_back(ShapedType::kDynamicSize);
+    }
+    RankedTensorType newType =
+        RankedTensorType::get(staticSizes, op.getType().getElementType());
+    if (newType == op.getType())
+      return failure();
+    auto newOp =
+        rewriter.create<AllocTensorOp>(op.getLoc(), newType, dynamicSizes,
+                                       rewriter.getI64ArrayAttr(staticSizes));
+    rewriter.replaceOpWithNewOp<tensor::CastOp>(op, op.getType(), newOp);
+    return success();
+  }
+};
+
+struct FoldDimOfAllocTensorOp : public OpRewritePattern<tensor::DimOp> {
+  using OpRewritePattern<tensor::DimOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(tensor::DimOp dimOp,
+                                PatternRewriter &rewriter) const override {
+    Optional<int64_t> maybeConstantIndex = dimOp.getConstantIndex();
+    auto allocTensorOp = dimOp.source().getDefiningOp<AllocTensorOp>();
+    if (!allocTensorOp || !maybeConstantIndex)
+      return failure();
+    if (!allocTensorOp.isDynamicSize(*maybeConstantIndex))
+      return failure();
+    rewriter.replaceOp(dimOp,
+                       allocTensorOp.getDynamicSize(*maybeConstantIndex));
+    return success();
+  }
+};
+} // namespace
+
+void AllocTensorOp::getCanonicalizationPatterns(RewritePatternSet &results,
+                                                MLIRContext *ctx) {
+  results.add<FoldDimOfAllocTensorOp, ReplaceStaticShapeDims>(ctx);
+}
+
+LogicalResult AllocTensorOp::reifyResultShapes(
+    OpBuilder &builder, ReifiedRankedShapedTypeDims &reifiedReturnShapes) {
+  auto shapes = llvm::to_vector<4>(llvm::map_range(
+      llvm::seq<int64_t>(0, getType().getRank()), [&](int64_t dim) -> Value {
+        if (isDynamicSize(dim))
+          return getDynamicSize(dim);
+        return builder.create<arith::ConstantIndexOp>(getLoc(),
+                                                      getStaticSize(dim));
+      }));
+  reifiedReturnShapes.emplace_back(std::move(shapes));
   return success();
 }
 

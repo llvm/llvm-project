@@ -583,7 +583,7 @@ func.func @write_to_same_tensor_in_loop_in_place(
 {
   // CHECK: scf.for {{.*}} {
   %r0 = scf.for %i = %lb to %ub step %step iter_args(%t = %A) -> (tensor<?xf32>) {
-    %B = linalg.init_tensor [%sz] : tensor<?xf32>
+    %B = bufferization.alloc_tensor [%sz] : tensor<?xf32>
     %i2 = arith.index_cast %i : index to i32
     %i3 = arith.sitofp %i2 : i32 to f32
     // The tensor.insert is in-place because the %B is defined inside the loop.

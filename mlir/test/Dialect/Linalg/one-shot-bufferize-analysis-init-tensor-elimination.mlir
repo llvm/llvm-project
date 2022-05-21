@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s -linalg-eliminate-init-tensors -one-shot-bufferize="bufferize-function-boundaries test-analysis-only allow-return-allocs" -split-input-file | FileCheck %s
+// RUN: mlir-opt %s -eliminate-alloc-tensors -one-shot-bufferize="bufferize-function-boundaries test-analysis-only allow-return-allocs" -split-input-file | FileCheck %s
 
 //===----------------------------------------------------------------------===//
 // InitTensorOp elimination
@@ -10,7 +10,7 @@ func.func @buffer_forwarding_conflict(%arg0: tensor<?xf32> {bufferization.writab
   //      CHECK: tensor.extract_slice
   // CHECK-SAME: {__inplace_operands_attr__ = ["false", "none"]
   // Instead of allocating, share buffer with some inplace bufferization?
-  %0 = linalg.init_tensor [%arg1] : tensor<?xf32>
+  %0 = bufferization.alloc_tensor [%arg1] : tensor<?xf32>
 
   //      CHECK: linalg.fill
   // CHECK-SAME: {__inplace_operands_attr__ = ["none", "true"]
@@ -37,7 +37,7 @@ func.func @buffer_forwarding_no_conflict(%arg0: tensor<?xf32> {bufferization.wri
   //      CHECK: tensor.extract_slice
   // CHECK-SAME: {__inplace_operands_attr__ = ["true", "none"]
   // Instead of allocating, share buffer with some inplace bufferization?
-  %0 = linalg.init_tensor [%arg1] : tensor<?xf32>
+  %0 = bufferization.alloc_tensor [%arg1] : tensor<?xf32>
 
   //      CHECK: linalg.fill
   // CHECK-SAME: {__inplace_operands_attr__ = ["none", "true"]

@@ -1,4 +1,5 @@
 add_mlir_dialect_library(MLIRBufferizationTransforms
+  AllocTensorElimination.cpp
   Bufferize.cpp
   BufferDeallocation.cpp
   BufferOptimizations.cpp
@@ -22,5 +23,6 @@ add_mlir_dialect_library(MLIRBufferizationTransforms
   MLIRIR
   MLIRMemRef
   MLIRPass
+  MLIRTensor
   MLIRTransforms
 )

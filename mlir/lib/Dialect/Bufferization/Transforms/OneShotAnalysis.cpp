@@ -379,7 +379,7 @@ getCommonEnclosingRepetitiveRegion(ArrayRef<Value> values) {
 
 /// Return `true` if the given tensor value is a memory write. Most values are
 /// tensor writes, but ops that define a tensor SSA value without specifying its
-/// contents (e.g., init_tensor) are not.
+/// contents (e.g., alloc_tensor) are not.
 static bool isMemoryWrite(Value value, const AnalysisState &state) {
   auto opResult = value.dyn_cast<OpResult>();
   if (!opResult)
@@ -855,7 +855,7 @@ annotateOpsWithBufferizationMarkers(Operation *op,
 /// %1 = scf.if %c -> (tensor<?xf32>) {
 ///   scf.yield %0 : tensor<?xf32>
 /// } else {
-///   %t = linalg.init_tensor : tensor<?xf32>
+///   %t = linalg.alloc_tensor : tensor<?xf32>
 ///   scf.yield %t : tensor<?xf32>
 /// }
 /// ```

@@ -27,11 +27,16 @@ class Linalg_Op<string mnemonic, list<Trait> traits = []> :
 def Linalg_InitTensorOp : Linalg_Op<"init_tensor",
     [NoSideEffect,
      DeclareOpInterfaceMethods<ReifyRankedShapedTypeOpInterface>]> {
-  let summary = "operation to define a tensor of particular value";
+  let summary = "operation to define a tensor of particular shape";
 
   let description = [{
-    `linalg.init_tensor` is an operation that materializes a tensor of
-    a given shape. The shape could be dynamic or static.
+    `linalg.init_tensor` is an operation that defines a tensor of a particular
+    shape. The shape could be dynamic or static. The contents of the tensor are
+    unspecified and the only purpose of the op result is to materialize the
+    specified shape in IR and make it available to other transformations.
+
+    Note: This op can be lowered to a `bufferization.alloc_tensor`, at which
+    point it turns into an explicit buffer allocation.
   }];
 
   let arguments =

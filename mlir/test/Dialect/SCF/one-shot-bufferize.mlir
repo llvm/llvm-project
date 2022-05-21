@@ -220,7 +220,7 @@ func.func @scf_if_non_equiv_yields(
 //       CHECK:   return %[[r]]
 func.func @scf_execute_region_yield_non_equivalent(%i: index, %j: index) -> f32 {
   %r = scf.execute_region -> (tensor<?xf32>) {
-    %t2 = linalg.init_tensor [%i] : tensor<?xf32>
+    %t2 = bufferization.alloc_tensor [%i] : tensor<?xf32>
     scf.yield %t2 : tensor<?xf32>
   }
   %f = tensor.extract %r[%j] : tensor<?xf32>
@@ -261,7 +261,7 @@ func.func @scf_for_yield_non_equivalent(
 //  CHECK-SAME:     %[[t:.*]]: memref<?xf32
 //       CHECK:   %[[cloned:.*]] = bufferization.clone %[[t]]
 //       CHECK:   %[[for:.*]] = scf.for {{.*}} iter_args(%[[iter:.*]] = %[[cloned]])
-// This alloc is for the linalg.init_tensor.
+// This alloc is for the bufferization.alloc_tensor.
 //   CHECK-DAG:     %[[alloc2:.*]] = memref.alloc(%{{.*}})
 //   CHECK-DAG:     memref.dealloc %[[iter]]
 // This alloc is for the scf.yield.
@@ -274,7 +274,7 @@ func.func @scf_for_yield_non_equivalent(
 func.func @scf_for_yield_allocation(%t: tensor<?xf32>, %lb : index, %ub : index,
                                %step : index) -> tensor<?xf32> {
   %r = scf.for %i = %lb to %ub step %step iter_args(%a = %t) -> tensor<?xf32> {
-    %t2 = linalg.init_tensor [%i] : tensor<?xf32>
+    %t2 = bufferization.alloc_tensor [%i] : tensor<?xf32>
     scf.yield %t2 : tensor<?xf32>
   }
 

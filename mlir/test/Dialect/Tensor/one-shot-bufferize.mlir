@@ -179,9 +179,9 @@ func.func @rank_reducing(
   %c8 = arith.constant 8 : index
   %c32 = arith.constant 32 : index
   %c0 = arith.constant 0 : index
-  %0 = linalg.init_tensor [4, 1, 6, 8] : tensor<4x1x6x8xf32>
+  %0 = bufferization.alloc_tensor [4, 1, 6, 8] : tensor<4x1x6x8xf32>
   %1 = tensor.cast %0 : tensor<4x1x6x8xf32> to tensor<?x1x6x8xf32>
-  %2 = linalg.init_tensor [1, 6, 8] : tensor<1x6x8xf32>
+  %2 = bufferization.alloc_tensor [1, 6, 8] : tensor<1x6x8xf32>
   %5 = scf.for %arg7 = %c0 to %c32 step %c8 iter_args(%arg8 = %1) -> (tensor<?x1x6x8xf32>) {
     %7 = affine.apply affine_map<(d0) -> (d0 ceildiv 8)>(%arg7)
     %8 = tensor.extract_slice %arg0[%i, %j, %arg7] [1, 6, 8] [1, 1, 1] : tensor<8x18x32xf32> to tensor<1x6x8xf32>

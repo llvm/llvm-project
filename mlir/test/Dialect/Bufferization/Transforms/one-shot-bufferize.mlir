@@ -44,7 +44,7 @@ func.func @return_tensor(%A : tensor<?xf32>, %v : vector<4xf32>) -> (tensor<?xf3
 // CHECK-LABEL: func @func_without_tensor_args
 func.func @func_without_tensor_args(%v : vector<10xf32>) -> () {
   // CHECK: %[[alloc:.*]] = memref.alloc()
-  %0 = linalg.init_tensor[10] : tensor<10xf32>
+  %0 = bufferization.alloc_tensor[10] : tensor<10xf32>
 
   %c0 = arith.constant 0 : index
   // CHECK: vector.transfer_write %{{.*}}, %[[alloc]]
@@ -97,7 +97,7 @@ func.func @read_after_write_conflict(%cst : f32, %idx : index, %idx2 : index)
 // CHECK-LABEL: func @copy_deallocated(
 func.func @copy_deallocated() -> tensor<10xf32> {
   // CHECK: %[[alloc:.*]] = memref.alloc()
-  %0 = linalg.init_tensor[10] : tensor<10xf32>
+  %0 = bufferization.alloc_tensor[10] : tensor<10xf32>
   // CHECK: %[[alloc_tensor:.*]] = bufferization.to_tensor %[[alloc]]
   // CHECK: memref.dealloc %[[alloc]]
   // CHECK: return %[[alloc_tensor]]
@@ -111,7 +111,7 @@ func.func @copy_deallocated() -> tensor<10xf32> {
 func.func @select_different_tensors(%t: tensor<?xf32>, %sz: index, %c: i1) -> tensor<?xf32> {
   // CHECK-DAG: %[[m:.*]] = bufferization.to_memref %[[t]] : memref<?xf32, #{{.*}}>
   // CHECK-DAG: %[[alloc:.*]] = memref.alloc(%{{.*}}) {{.*}} : memref<?xf32>
-  %0 = linalg.init_tensor [%sz] : tensor<?xf32>
+  %0 = bufferization.alloc_tensor [%sz] : tensor<?xf32>
 
   // A cast must be inserted because %t and %0 have different memref types.
   // CHECK: %[[casted:.*]] = memref.cast %[[alloc]] : memref<?xf32> to memref<?xf32, #{{.*}}>
