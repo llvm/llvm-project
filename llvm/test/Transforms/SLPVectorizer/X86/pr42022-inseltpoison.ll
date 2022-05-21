@@ -10,10 +10,16 @@ define { <2 x float>, <2 x float> } @StructOfVectors(float *%Ptr) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = bitcast float* [[GEP0]] to <4 x float>*
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <4 x float>, <4 x float>* [[TMP1]], align 4
 ; CHECK-NEXT:    [[TMP3:%.*]] = fadd fast <4 x float> [[TMP2]], <float 1.100000e+01, float 1.200000e+01, float 1.300000e+01, float 1.400000e+01>
-; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <4 x float> [[TMP3]], <4 x float> poison, <2 x i32> <i32 0, i32 1>
-; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <4 x float> [[TMP3]], <4 x float> poison, <2 x i32> <i32 2, i32 3>
-; CHECK-NEXT:    [[RET0:%.*]] = insertvalue { <2 x float>, <2 x float> } undef, <2 x float> [[TMP4]], 0
-; CHECK-NEXT:    [[RET1:%.*]] = insertvalue { <2 x float>, <2 x float> } [[RET0]], <2 x float> [[TMP5]], 1
+; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <4 x float> [[TMP3]], i32 0
+; CHECK-NEXT:    [[VECIN0:%.*]] = insertelement <2 x float> poison, float [[TMP4]], i64 0
+; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <4 x float> [[TMP3]], i32 1
+; CHECK-NEXT:    [[VECIN1:%.*]] = insertelement <2 x float> [[VECIN0]], float [[TMP5]], i64 1
+; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <4 x float> [[TMP3]], i32 2
+; CHECK-NEXT:    [[VECIN2:%.*]] = insertelement <2 x float> poison, float [[TMP6]], i64 0
+; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <4 x float> [[TMP3]], i32 3
+; CHECK-NEXT:    [[VECIN3:%.*]] = insertelement <2 x float> [[VECIN2]], float [[TMP7]], i64 1
+; CHECK-NEXT:    [[RET0:%.*]] = insertvalue { <2 x float>, <2 x float> } undef, <2 x float> [[VECIN1]], 0
+; CHECK-NEXT:    [[RET1:%.*]] = insertvalue { <2 x float>, <2 x float> } [[RET0]], <2 x float> [[VECIN3]], 1
 ; CHECK-NEXT:    ret { <2 x float>, <2 x float> } [[RET1]]
 ;
   %GEP0 = getelementptr inbounds float, float* %Ptr, i64 0
