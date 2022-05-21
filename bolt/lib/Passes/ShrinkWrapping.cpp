@@ -13,6 +13,8 @@
 #include "bolt/Passes/ShrinkWrapping.h"
 #include "bolt/Core/MCPlus.h"
 #include "bolt/Passes/DataflowInfoManager.h"
+#include "bolt/Passes/MCF.h"
+#include "bolt/Utils/CommandLineOpts.h"
 #include <numeric>
 #include <stack>
 
@@ -1981,6 +1983,9 @@ bool ShrinkWrapping::perform(bool HotOnly) {
 
   if (HotOnly && (BF.getKnownExecutionCount() < BC.getHotThreshold()))
     return false;
+
+  if (opts::EqualizeBBCounts)
+    equalizeBBCounts(Info, BF);
 
   if (BF.checkForAmbiguousJumpTables()) {
     LLVM_DEBUG(dbgs() << "BOLT-DEBUG: ambiguous JTs in " << BF.getPrintName()
