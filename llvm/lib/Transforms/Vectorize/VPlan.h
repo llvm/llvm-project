@@ -664,6 +664,32 @@ public:
 #endif
 };
 
+/// A value that is used outside the VPlan. The operand of the user needs to be
+/// added to the associated LCSSA phi node.
+class VPLiveOut : public VPUser {
+  PHINode *Phi;
+
+public:
+  VPLiveOut(PHINode *Phi, VPValue *Op)
+      : VPUser({Op}, VPUser::VPUserID::LiveOut), Phi(Phi) {}
+
+  /// Fixup the wrapped LCSSA phi node in the unique exit block.  This simply
+  /// means we need to add the appropriate incoming value from the middle
+  /// block as exiting edges from the scalar epilogue loop (if present) are
+  /// already in place, and we exit the vector loop exclusively to the middle
+  /// block.
+  void fixPhi(VPlan &Plan, VPTransformState &State);
+
+  /// Returns true if the VPLiveOut uses scalars of operand \p Op.
+  bool usesScalars(const VPValue *Op) const override {
+    assert(is_contained(operands(), Op) &&
+           "Op must be an operand of the recipe");
+    return true;
+  }
+
+  PHINode *getPhi() const { return Phi; }
+};
+
 /// VPRecipeBase is a base class modeling a sequence of one or more output IR
 /// instructions. VPRecipeBase owns the the VPValues it defines through VPDef
 /// and is responsible for deleting its defined values. Single-value
@@ -2483,6 +2509,9 @@ class VPlan {
   /// mapping cannot be used any longer, because it is stale.
   bool Value2VPValueEnabled = true;
 
+  /// Values used outside the plan.
+  DenseMap<PHINode *, VPLiveOut *> LiveOuts;
+
 public:
   VPlan(VPBlockBase *Entry = nullptr) : Entry(Entry) {
     if (Entry)
@@ -2490,6 +2519,8 @@ public:
   }
 
   ~VPlan() {
+    clearLiveOuts();
+
     if (Entry) {
       VPValue DummyValue;
       for (VPBlockBase *Block : depth_first(Entry))
@@ -2656,6 +2687,23 @@ public:
       EntryVPBB = cast<VPBasicBlock>(EntryVPBB->getSingleSuccessor());
     }
     return cast<VPCanonicalIVPHIRecipe>(&*EntryVPBB->begin());
+  }
+
+  void addLiveOut(PHINode *PN, VPValue *V);
+
+  void clearLiveOuts() {
+    for (auto &KV : LiveOuts)
+      delete KV.second;
+    LiveOuts.clear();
+  }
+
+  void removeLiveOut(PHINode *PN) {
+    delete LiveOuts[PN];
+    LiveOuts.erase(PN);
+  }
+
+  const DenseMap<PHINode *, VPLiveOut *> &getLiveOuts() const {
+    return LiveOuts;
   }
 
 private:
