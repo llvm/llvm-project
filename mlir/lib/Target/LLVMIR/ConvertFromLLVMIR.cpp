@@ -581,46 +581,73 @@ static StringRef lookupOperationNameFromOpcode(unsigned opcode) {
 #define INST(llvm_n, mlir_n)                                                   \
   { llvm::Instruction::llvm_n, LLVM::mlir_n##Op::getOperationName() }
   static const DenseMap<unsigned, StringRef> opcMap = {
-      // Ret is handled specially.
+      // clang-format off
+      INST(Ret, Return),
       // Br is handled specially.
       // Switch is handled specially.
       // FIXME: indirectbr
-      // FIXME: invoke
+      // Invoke is handled specially.
       INST(Resume, Resume),
-      // FIXME: unreachable
+      INST(Unreachable, Unreachable),
       // FIXME: cleanupret
       // FIXME: catchret
       // FIXME: catchswitch
       // FIXME: callbr
-      // FIXME: fneg
-      INST(Add, Add), INST(FAdd, FAdd), INST(Sub, Sub), INST(FSub, FSub),
-      INST(Mul, Mul), INST(FMul, FMul), INST(UDiv, UDiv), INST(SDiv, SDiv),
-      INST(FDiv, FDiv), INST(URem, URem), INST(SRem, SRem), INST(FRem, FRem),
-      INST(Shl, Shl), INST(LShr, LShr), INST(AShr, AShr), INST(And, And),
-      INST(Or, Or), INST(Xor, XOr), INST(Alloca, Alloca), INST(Load, Load),
+      INST(FNeg, FNeg),
+      INST(Add, Add),
+      INST(FAdd, FAdd),
+      INST(Sub, Sub),
+      INST(FSub, FSub),
+      INST(Mul, Mul),
+      INST(FMul, FMul),
+      INST(UDiv, UDiv),
+      INST(SDiv, SDiv),
+      INST(FDiv, FDiv),
+      INST(URem, URem),
+      INST(SRem, SRem),
+      INST(FRem, FRem),
+      INST(Shl, Shl),
+      INST(LShr, LShr),
+      INST(AShr, AShr),
+      INST(And, And),
+      INST(Or, Or),
+      INST(Xor, XOr),
+      INST(ExtractElement, ExtractElement),
+      INST(InsertElement, InsertElement),
+      // ShuffleVector is handled specially.
+      // ExtractValue is handled specially.
+      // InsertValue is handled specially.
+      INST(Alloca, Alloca),
+      INST(Load, Load),
       INST(Store, Store),
-      // Getelementptr is handled specially.
-      INST(Ret, Return), INST(Fence, Fence),
+      INST(Fence, Fence),
       // FIXME: atomiccmpxchg
       // FIXME: atomicrmw
-      INST(Trunc, Trunc), INST(ZExt, ZExt), INST(SExt, SExt),
-      INST(FPToUI, FPToUI), INST(FPToSI, FPToSI), INST(UIToFP, UIToFP),
-      INST(SIToFP, SIToFP), INST(FPTrunc, FPTrunc), INST(FPExt, FPExt),
-      INST(PtrToInt, PtrToInt), INST(IntToPtr, IntToPtr),
-      INST(BitCast, Bitcast), INST(AddrSpaceCast, AddrSpaceCast),
-      // FIXME: cleanuppad
-      // FIXME: catchpad
+      // Getelementptr is handled specially.
+      INST(Trunc, Trunc),
+      INST(ZExt, ZExt),
+      INST(SExt, SExt),
+      INST(FPToUI, FPToUI),
+      INST(FPToSI, FPToSI),
+      INST(UIToFP, UIToFP),
+      INST(SIToFP, SIToFP),
+      INST(FPTrunc, FPTrunc),
+      INST(FPExt, FPExt),
+      INST(PtrToInt, PtrToInt),
+      INST(IntToPtr, IntToPtr),
+      INST(BitCast, Bitcast),
+      INST(AddrSpaceCast, AddrSpaceCast),
       // ICmp is handled specially.
       // FCmp is handled specially.
       // PHI is handled specially.
-      INST(Freeze, Freeze), INST(Call, Call),
-      // FIXME: select
+      INST(Select, Select),
+      INST(Freeze, Freeze),
+      INST(Call, Call),
       // FIXME: vaarg
-      INST(ExtractElement, ExtractElement), INST(InsertElement, InsertElement),
-      // ShuffleVector is handled specially.
-      // InsertValue is handled specially.
-      // ExtractValue is handled specially.
       // FIXME: landingpad
+      // FIXME: catchpad
+      // FIXME: cleanuppad
+      // clang-format on
   };
 #undef INST
 
@@ -776,7 +803,10 @@ LogicalResult Importer::processInstruction(llvm::Instruction *inst) {
   case llvm::Instruction::Freeze:
   case llvm::Instruction::BitCast:
   case llvm::Instruction::ExtractElement:
-  case llvm::Instruction::InsertElement: {
+  case llvm::Instruction::InsertElement:
+  case llvm::Instruction::Select:
+  case llvm::Instruction::FNeg:
+  case llvm::Instruction::Unreachable: {
     OperationState state(loc, lookupOperationNameFromOpcode(inst->getOpcode()));
     SmallVector<Value, 4> ops;
     ops.reserve(inst->getNumOperands());

@@ -278,6 +278,10 @@ define void @FPArithmetic(float %a, float %b, double %c, double %d) {
   %10 = frem float %a, %b
   ; CHECK: %[[a13:[0-9]+]] = llvm.frem %arg2, %arg3 : f64
   %11 = frem double %c, %d
+  ; CHECK: %{{.+}} = llvm.fneg %{{.+}} : f32
+  %12 = fneg float %a
+  ; CHECK: %{{.+}} = llvm.fneg %{{.+}} : f64
+  %13 = fneg double %c
   ret void
 }
 
@@ -604,4 +608,19 @@ define <4 x half> @insert_element(<4 x half>* %vec, half %v, i32 %idx) {
   %r = insertelement <4 x half> %val0, half %v, i32 %idx
   ; CHECK: llvm.return %[[V1]]
   ret <4 x half> %r
+}
+
+; Select
+; CHECK-LABEL: llvm.func @select_inst
+define void @select_inst(i32 %arg0, i32 %arg1, i1 %pred) {
+  ; CHECK: %{{.+}} = llvm.select %{{.+}}, %{{.+}}, %{{.+}} : i1, i32
+  %1 = select i1 %pred, i32 %arg0, i32 %arg1
+  ret void
+}
+
+; Unreachable
+; CHECK-LABEL: llvm.func @unreachable_inst
+define void @unreachable_inst() {
+  ; CHECK: llvm.unreachable
+  unreachable
 }
