@@ -16,16 +16,17 @@ define void @test(i32* %base, i32 %limit, i32 %start) {
 ; CHECK-NEXT:    [[SMAX:%.*]] = call i32 @llvm.smax.i32(i32 [[LIMIT:%.*]], i32 [[TMP1]])
 ; CHECK-NEXT:    [[TMP2:%.*]] = add i32 [[SMAX]], -1
 ; CHECK-NEXT:    [[TMP3:%.*]] = sub i32 [[TMP2]], [[START]]
-; CHECK-NEXT:    [[UMIN:%.*]] = call i32 @llvm.umin.i32(i32 [[TMP3]], i32 [[TMP0]])
-; CHECK-NEXT:    [[TMP4:%.*]] = icmp ne i32 [[TMP0]], [[UMIN]]
-; CHECK-NEXT:    [[TMP5:%.*]] = icmp ne i32 [[TMP3]], [[UMIN]]
+; CHECK-NEXT:    [[TMP4:%.*]] = freeze i32 [[TMP3]]
+; CHECK-NEXT:    [[UMIN:%.*]] = call i32 @llvm.umin.i32(i32 [[TMP4]], i32 [[TMP0]])
+; CHECK-NEXT:    [[TMP5:%.*]] = icmp ne i32 [[TMP0]], [[UMIN]]
+; CHECK-NEXT:    [[TMP6:%.*]] = icmp ne i32 [[TMP3]], [[UMIN]]
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
-; CHECK-NEXT:    br i1 [[TMP4]], label [[CONTINUE:%.*]], label [[FOR_END:%.*]]
+; CHECK-NEXT:    br i1 [[TMP5]], label [[CONTINUE:%.*]], label [[FOR_END:%.*]]
 ; CHECK:       continue:
 ; CHECK-NEXT:    br label [[FOR_INC:%.*]]
 ; CHECK:       for.inc:
-; CHECK-NEXT:    br i1 [[TMP5]], label [[FOR_BODY]], label [[FOR_END]]
+; CHECK-NEXT:    br i1 [[TMP6]], label [[FOR_BODY]], label [[FOR_END]]
 ; CHECK:       for.end:
 ; CHECK-NEXT:    br label [[EXIT:%.*]]
 ; CHECK:       exit:
@@ -67,16 +68,17 @@ define void @test_false_edge(i32* %base, i32 %limit, i32 %start) {
 ; CHECK-NEXT:    [[SMAX:%.*]] = call i32 @llvm.smax.i32(i32 [[LIMIT:%.*]], i32 [[TMP1]])
 ; CHECK-NEXT:    [[TMP2:%.*]] = add i32 [[SMAX]], -1
 ; CHECK-NEXT:    [[TMP3:%.*]] = sub i32 [[TMP2]], [[START]]
-; CHECK-NEXT:    [[UMIN:%.*]] = call i32 @llvm.umin.i32(i32 [[TMP3]], i32 [[TMP0]])
-; CHECK-NEXT:    [[TMP4:%.*]] = icmp eq i32 [[TMP0]], [[UMIN]]
-; CHECK-NEXT:    [[TMP5:%.*]] = icmp ne i32 [[TMP3]], [[UMIN]]
+; CHECK-NEXT:    [[TMP4:%.*]] = freeze i32 [[TMP3]]
+; CHECK-NEXT:    [[UMIN:%.*]] = call i32 @llvm.umin.i32(i32 [[TMP4]], i32 [[TMP0]])
+; CHECK-NEXT:    [[TMP5:%.*]] = icmp eq i32 [[TMP0]], [[UMIN]]
+; CHECK-NEXT:    [[TMP6:%.*]] = icmp ne i32 [[TMP3]], [[UMIN]]
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
-; CHECK-NEXT:    br i1 [[TMP4]], label [[FOR_END:%.*]], label [[CONTINUE:%.*]]
+; CHECK-NEXT:    br i1 [[TMP5]], label [[FOR_END:%.*]], label [[CONTINUE:%.*]]
 ; CHECK:       continue:
 ; CHECK-NEXT:    br label [[FOR_INC:%.*]]
 ; CHECK:       for.inc:
-; CHECK-NEXT:    br i1 [[TMP5]], label [[FOR_BODY]], label [[FOR_END]]
+; CHECK-NEXT:    br i1 [[TMP6]], label [[FOR_BODY]], label [[FOR_END]]
 ; CHECK:       for.end:
 ; CHECK-NEXT:    br label [[EXIT:%.*]]
 ; CHECK:       exit:
