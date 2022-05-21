@@ -173,7 +173,7 @@ public:
     if (!EmitLongStrLiterals) {
       OS << Decl << " = {\n";
       emit(OS, printChar, "0");
-      OS << "\n};\n\n";
+      OS << "  0\n};\n\n";
       return;
     }
 
