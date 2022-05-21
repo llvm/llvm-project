@@ -170,18 +170,18 @@ public:
   /// `EmitLongStrLiterals` is false
   void emitStringLiteralDef(raw_ostream &OS, const llvm::Twine &Decl) const {
     assert(Entries && "Call layout() before emitStringLiteralDef()");
-    if (EmitLongStrLiterals) {
-      OS << "\n#ifdef __GNUC__\n"
-         << "#pragma GCC diagnostic push\n"
-         << "#pragma GCC diagnostic ignored \"-Woverlength-strings\"\n"
-         << "#endif\n"
-         << Decl << " = {\n";
-    } else {
+    if (!EmitLongStrLiterals) {
       OS << Decl << " = {\n";
       emit(OS, printChar, "0");
       OS << "\n};\n\n";
       return;
     }
+
+    OS << "\n#ifdef __GNUC__\n"
+       << "#pragma GCC diagnostic push\n"
+       << "#pragma GCC diagnostic ignored \"-Woverlength-strings\"\n"
+       << "#endif\n"
+       << Decl << " = {\n";
     for (auto I : Seqs) {
       OS << "  /* " << I.second << " */ \"";
       for (auto C : I.first) {
