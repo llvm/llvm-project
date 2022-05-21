@@ -127,8 +127,8 @@ int main(int argc, char *argv[]) {
     LLVMErrorRef Err;
 
     LLVMOrcThreadSafeModuleRef FooTSM;
-    if ((Err =
-             parseExampleModule(FooMod, sizeof(FooMod), "foo-mod", &FooTSM))) {
+    if ((Err = parseExampleModule(FooMod, sizeof(FooMod) - 1, "foo-mod",
+                                  &FooTSM))) {
       MainResult = handleError(Err);
       goto jit_cleanup;
     }
@@ -142,8 +142,8 @@ int main(int argc, char *argv[]) {
     }
 
     LLVMOrcThreadSafeModuleRef BarTSM;
-    if ((Err =
-             parseExampleModule(BarMod, sizeof(BarMod), "bar-mod", &BarTSM))) {
+    if ((Err = parseExampleModule(BarMod, sizeof(BarMod) - 1, "bar-mod",
+                                  &BarTSM))) {
       MainResult = handleError(Err);
       goto jit_cleanup;
     }
@@ -155,7 +155,7 @@ int main(int argc, char *argv[]) {
     }
 
     LLVMOrcThreadSafeModuleRef MainTSM;
-    if ((Err = parseExampleModule(MainMod, sizeof(MainMod), "main-mod",
+    if ((Err = parseExampleModule(MainMod, sizeof(MainMod) - 1, "main-mod",
                                   &MainTSM))) {
       MainResult = handleError(Err);
       goto jit_cleanup;
