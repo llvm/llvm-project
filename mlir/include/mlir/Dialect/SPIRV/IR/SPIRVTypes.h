@@ -275,8 +275,9 @@ public:
 /// In the above, expressing recursive struct types is accomplished by giving a
 /// recursive struct a unique identified and using that identifier in the struct
 /// definition for recursive references.
-class StructType : public Type::TypeBase<StructType, CompositeType,
-                                         detail::StructTypeStorage> {
+class StructType
+    : public Type::TypeBase<StructType, CompositeType,
+                            detail::StructTypeStorage, TypeTrait::IsMutable> {
 public:
   using Base::Base;
 
