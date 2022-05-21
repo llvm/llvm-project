@@ -26,7 +26,7 @@ target triple = "thumbv7-apple-ios7.0.0"
 ; CHECK:          $r0 = COPY %0
 ; CHECK-NEXT:     $r1 = COPY %1
 ; CHECK-NEXT:     DBG_INSTR_REF 1, 0
-; CHECK-NEXT:     TCRETURNdi &__divsi3, 0, implicit $sp, implicit $r0, implicit $r1
+; CHECK-NEXT:     TCRETURNdi &__divsi3, 0, csr_ios, implicit $sp, implicit $r0, implicit $r1
 
 declare i1 @ext()
 
