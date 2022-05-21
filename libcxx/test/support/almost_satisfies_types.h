@@ -107,6 +107,7 @@ public:
 };
 
 using InputRangeNotSentinelSemiregular = UncheckedRange<cpp20_input_iterator<int*>, SentinelForNotSemiregular>;
+using OutputRangeNotSentinelSemiregular = UncheckedRange<cpp20_output_iterator<int*>, SentinelForNotSemiregular>;
 
 static_assert(std::input_or_output_iterator<SentinelForNotSemiregular>);
 static_assert(!std::semiregular<SentinelForNotSemiregular>);
@@ -123,6 +124,8 @@ public:
 
 using InputRangeNotSentinelEqualityComparableWith =
   UncheckedRange<cpp20_input_iterator<int*>, SentinelForNotWeaklyEqualityComparableWith>;
+using OutputRangeNotSentinelEqualityComparableWith =
+  UncheckedRange<cpp20_output_iterator<int*>, SentinelForNotWeaklyEqualityComparableWith>;
 
 static_assert(std::input_or_output_iterator<SentinelForNotWeaklyEqualityComparableWith>);
 static_assert(std::semiregular<SentinelForNotWeaklyEqualityComparableWith>);
@@ -219,5 +222,40 @@ static_assert(std::input_iterator<PermutableNotSwappable>);
 static_assert(std::forward_iterator<PermutableNotSwappable>);
 static_assert(!std::permutable<PermutableNotSwappable>);
 static_assert(!std::indirectly_swappable<PermutableNotSwappable>);
+
+class OutputIteratorNotInputOrOutputIterator {
+public:
+  using difference_type = long;
+  using value_type = int;
+  using iterator_category = std::input_iterator_tag;
+
+  int& operator++();
+  void operator++(int);
+  int& operator*();
+};
+
+using OutputRangeNotInputOrOutputIterator = UncheckedRange<InputIteratorNotInputOrOutputIterator>;
+
+static_assert(!std::input_or_output_iterator<OutputIteratorNotInputOrOutputIterator>);
+static_assert(std::indirectly_writable<OutputIteratorNotInputOrOutputIterator, int>);
+static_assert(!std::output_iterator<OutputIteratorNotInputOrOutputIterator, int>);
+static_assert(!std::ranges::input_range<OutputRangeNotInputOrOutputIterator>);
+
+class OutputIteratorNotIndirectlyWritable {
+public:
+  using difference_type = long;
+  using iterator_category = std::input_iterator_tag;
+
+  OutputIteratorNotIndirectlyWritable& operator++();
+  void operator++(int);
+  const int& operator*() const;
+};
+
+using OutputRangeNotIndirectlyWritable = UncheckedRange<OutputIteratorNotIndirectlyWritable>;
+
+static_assert(std::input_or_output_iterator<OutputIteratorNotIndirectlyWritable>);
+static_assert(!std::indirectly_writable<OutputIteratorNotIndirectlyWritable, int>);
+static_assert(!std::output_iterator<OutputIteratorNotIndirectlyWritable, int>);
+static_assert(!std::ranges::output_range<OutputIteratorNotIndirectlyWritable, int>);
 
 #endif // ALMOST_SATISFIES_TYPES_H
