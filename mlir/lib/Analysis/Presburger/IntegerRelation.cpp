@@ -61,12 +61,12 @@ IntegerRelation IntegerRelation::intersect(IntegerRelation other) const {
 }
 
 bool IntegerRelation::isEqual(const IntegerRelation &other) const {
-  assert(space.isEqual(other.getSpace()) && "Spaces must be equal.");
+  assert(space.isCompatible(other.getSpace()) && "Spaces must be compatible.");
   return PresburgerRelation(*this).isEqual(PresburgerRelation(other));
 }
 
 bool IntegerRelation::isSubsetOf(const IntegerRelation &other) const {
-  assert(space.isEqual(other.getSpace()) && "Spaces must be equal.");
+  assert(space.isCompatible(other.getSpace()) && "Spaces must be compatible.");
   return PresburgerRelation(*this).isSubsetOf(PresburgerRelation(other));
 }
 
