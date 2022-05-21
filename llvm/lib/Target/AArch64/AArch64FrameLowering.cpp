@@ -793,7 +793,12 @@ void AArch64FrameLowering::emitZeroCallUsedRegs(BitVector RegsToZero,
 
   // Zero out FP/vector registers.
   for (MCRegister Reg : FPRsToZero.set_bits())
-    BuildMI(MBB, MBBI, DL, TII.get(AArch64::MOVID), Reg).addImm(0);
+    if (HasSVE)
+      BuildMI(MBB, MBBI, DL, TII.get(AArch64::DUP_ZI_D), Reg)
+        .addImm(0)
+        .addImm(0);
+    else
+      BuildMI(MBB, MBBI, DL, TII.get(AArch64::MOVIv2d_ns), Reg).addImm(0);
 
   if (HasSVE) {
     for (MCRegister PReg :

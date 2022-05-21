@@ -3,10 +3,10 @@
 declare <2 x half> @llvm.amdgcn.cvt.pkrtz(float, float)
 declare void @llvm.amdgcn.exp.compr.v2f16(i32 immarg, i32 immarg, <2 x half>, <2 x half>, i1 immarg, i1 immarg)
 
-; FIXME: This instruction uses two different literal constants which is not
-; allowed.
+; Check that this constant is not folded into the v_fmaak_f32 instruction.
 ; GFX10-LABEL: _amdgpu_ps_main:
-; GFX10: v_fmaak_f32 {{v[0-9]+}}, 0x40490fdb, {{v[0-9]+}}, 0xbfc90fdb
+; GFX10: v_mov_b32_e32 v1, 0x40490fdb
+; GFX10: v_fmaak_f32 v1, v0, v1, 0xbfc90fdb
 define amdgpu_ps void @_amdgpu_ps_main(float %arg) {
 bb:
   %i = fmul reassoc nnan nsz arcp contract afn float %arg, 0x400921FB60000000

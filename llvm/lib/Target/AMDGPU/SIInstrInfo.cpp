@@ -4297,8 +4297,12 @@ bool SIInstrInfo::verifyInstruction(const MachineInstr &MI,
     bool UsesLiteral = false;
     const MachineOperand *LiteralVal = nullptr;
 
-    if (AMDGPU::getNamedOperandIdx(Opcode, AMDGPU::OpName::imm) != -1)
+    int ImmIdx = AMDGPU::getNamedOperandIdx(Opcode, AMDGPU::OpName::imm);
+    if (ImmIdx != -1) {
       ++ConstantBusCount;
+      UsesLiteral = true;
+      LiteralVal = &MI.getOperand(ImmIdx);
+    }
 
     SmallVector<Register, 2> SGPRsUsed;
     Register SGPRUsed;
@@ -4325,8 +4329,8 @@ bool SIInstrInfo::verifyInstruction(const MachineInstr &MI,
             UsesLiteral = true;
             LiteralVal = &MO;
           } else if (!MO.isIdenticalTo(*LiteralVal)) {
-            assert(isVOP3(MI));
-            ErrInfo = "VOP3 instruction uses more than one literal";
+            assert(isVOP2(MI) || isVOP3(MI));
+            ErrInfo = "VOP2/VOP3 instruction uses more than one literal";
             return false;
           }
         }
@@ -5006,9 +5010,9 @@ bool SIInstrInfo::isOperandLegal(const MachineInstr &MI, unsigned OpIdx,
     MO = &MI.getOperand(OpIdx);
 
   int ConstantBusLimit = ST.getConstantBusLimit(MI.getOpcode());
-  int VOP3LiteralLimit = ST.hasVOP3Literal() ? 1 : 0;
+  int LiteralLimit = !isVOP3(MI) || ST.hasVOP3Literal() ? 1 : 0;
   if (isVALU(MI) && usesConstantBus(MRI, *MO, OpInfo)) {
-    if (isVOP3(MI) && isLiteralConstantLike(*MO, OpInfo) && !VOP3LiteralLimit--)
+    if (isLiteralConstantLike(*MO, OpInfo) && !LiteralLimit--)
       return false;
 
     SmallDenseSet<RegSubRegPair> SGPRsUsed;
@@ -5027,12 +5031,10 @@ bool SIInstrInfo::isOperandLegal(const MachineInstr &MI, unsigned OpIdx,
             return false;
           SGPRsUsed.insert(SGPR);
         }
-      } else if (InstDesc.OpInfo[i].OperandType == AMDGPU::OPERAND_KIMM32) {
-        if (--ConstantBusLimit <= 0)
-          return false;
-      } else if (isVOP3(MI) && AMDGPU::isSISrcOperand(InstDesc, i) &&
-                 isLiteralConstantLike(Op, InstDesc.OpInfo[i])) {
-        if (!VOP3LiteralLimit--)
+      } else if (InstDesc.OpInfo[i].OperandType == AMDGPU::OPERAND_KIMM32 ||
+                 (AMDGPU::isSISrcOperand(InstDesc, i) &&
+                  isLiteralConstantLike(Op, InstDesc.OpInfo[i]))) {
+        if (!LiteralLimit--)
           return false;
         if (--ConstantBusLimit <= 0)
           return false;
