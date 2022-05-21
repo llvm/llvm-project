@@ -95,7 +95,7 @@ class JumpThreadingPass : public PassInfoMixin<JumpThreadingPass> {
   bool InsertFreezeWhenUnfoldingSelect;
 
 public:
-  JumpThreadingPass(bool InsertFreezeWhenUnfoldingSelect = false, int T = -1);
+  JumpThreadingPass(bool InsertFreezeWhenUnfoldingSelect = true, int T = -1);
 
   // Glue for old PM.
   bool runImpl(Function &F, TargetLibraryInfo *TLI, TargetTransformInfo *TTI,

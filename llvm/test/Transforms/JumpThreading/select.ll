@@ -175,7 +175,8 @@ define void @test_switch_cmp(i1 %cond, i32 %val, i8 %value) nounwind {
 ; CHECK:       L0:
 ; CHECK-NEXT:    [[VAL_PHI:%.*]] = phi i32 [ [[VAL:%.*]], [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[VAL_PHI]], 0
-; CHECK-NEXT:    br i1 [[CMP]], label [[L1:%.*]], label [[TMP0:%.*]]
+; CHECK-NEXT:    [[COND_FR:%.*]] = freeze i1 [[CMP]]
+; CHECK-NEXT:    br i1 [[COND_FR]], label [[L1:%.*]], label [[TMP0:%.*]]
 ; CHECK:       0:
 ; CHECK-NEXT:    [[TMP1:%.*]] = phi i8 [ [[VALUE:%.*]], [[L0]] ]
 ; CHECK-NEXT:    switch i8 [[TMP1]], label [[L3:%.*]] [
@@ -361,22 +362,23 @@ define i32 @unfold3(i32 %u, i32 %v, i32 %w, i32 %x, i32 %y, i32 %z, i32 %j) noun
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[ADD3:%.*]] = add nsw i32 [[J:%.*]], 2
 ; CHECK-NEXT:    [[CMP_I:%.*]] = icmp slt i32 [[U:%.*]], [[V:%.*]]
-; CHECK-NEXT:    br i1 [[CMP_I]], label [[DOTEXIT_THREAD3:%.*]], label [[COND_FALSE_I:%.*]]
+; CHECK-NEXT:    br i1 [[CMP_I]], label [[DOTEXIT_THREAD4:%.*]], label [[COND_FALSE_I:%.*]]
 ; CHECK:       cond.false.i:
 ; CHECK-NEXT:    [[CMP4_I:%.*]] = icmp sgt i32 [[U]], [[V]]
 ; CHECK-NEXT:    br i1 [[CMP4_I]], label [[DOTEXIT_THREAD:%.*]], label [[COND_FALSE_6_I:%.*]]
 ; CHECK:       cond.false.6.i:
 ; CHECK-NEXT:    [[CMP8_I:%.*]] = icmp slt i32 [[W:%.*]], [[X:%.*]]
-; CHECK-NEXT:    br i1 [[CMP8_I]], label [[DOTEXIT_THREAD3]], label [[COND_FALSE_10_I:%.*]]
+; CHECK-NEXT:    br i1 [[CMP8_I]], label [[DOTEXIT_THREAD4]], label [[COND_FALSE_10_I:%.*]]
 ; CHECK:       cond.false.10.i:
 ; CHECK-NEXT:    [[CMP13_I:%.*]] = icmp sgt i32 [[W]], [[X]]
 ; CHECK-NEXT:    br i1 [[CMP13_I]], label [[DOTEXIT_THREAD]], label [[DOTEXIT:%.*]]
 ; CHECK:       .exit:
 ; CHECK-NEXT:    [[PHITMP:%.*]] = icmp sge i32 [[Y:%.*]], [[Z:%.*]]
-; CHECK-NEXT:    br i1 [[PHITMP]], label [[DOTEXIT_THREAD]], label [[DOTEXIT_THREAD3]]
+; CHECK-NEXT:    [[COND_FR:%.*]] = freeze i1 [[PHITMP]]
+; CHECK-NEXT:    br i1 [[COND_FR]], label [[DOTEXIT_THREAD]], label [[DOTEXIT_THREAD4]]
 ; CHECK:       .exit.thread:
-; CHECK-NEXT:    br label [[DOTEXIT_THREAD3]]
-; CHECK:       .exit.thread3:
+; CHECK-NEXT:    br label [[DOTEXIT_THREAD4]]
+; CHECK:       .exit.thread4:
 ; CHECK-NEXT:    [[TMP0:%.*]] = phi i32 [ [[J]], [[DOTEXIT_THREAD]] ], [ [[ADD3]], [[DOTEXIT]] ], [ [[ADD3]], [[ENTRY:%.*]] ], [ [[ADD3]], [[COND_FALSE_6_I]] ]
 ; CHECK-NEXT:    ret i32 [[TMP0]]
 ;
@@ -416,21 +418,22 @@ define i32 @unfold4(i32 %u, i32 %v, i32 %w, i32 %x, i32 %y, i32 %z, i32 %j) noun
 ; CHECK-NEXT:    br i1 [[CMP_I]], label [[DOTEXIT_THREAD:%.*]], label [[COND_FALSE_I:%.*]]
 ; CHECK:       cond.false.i:
 ; CHECK-NEXT:    [[CMP4_I:%.*]] = icmp sgt i32 [[U]], [[V]]
-; CHECK-NEXT:    br i1 [[CMP4_I]], label [[DOTEXIT_THREAD4:%.*]], label [[COND_FALSE_6_I:%.*]]
+; CHECK-NEXT:    br i1 [[CMP4_I]], label [[DOTEXIT_THREAD5:%.*]], label [[COND_FALSE_6_I:%.*]]
 ; CHECK:       cond.false.6.i:
 ; CHECK-NEXT:    [[CMP8_I:%.*]] = icmp slt i32 [[W:%.*]], [[X:%.*]]
 ; CHECK-NEXT:    br i1 [[CMP8_I]], label [[DOTEXIT_THREAD]], label [[COND_FALSE_10_I:%.*]]
 ; CHECK:       cond.false.10.i:
 ; CHECK-NEXT:    [[CMP13_I:%.*]] = icmp sgt i32 [[W]], [[X]]
-; CHECK-NEXT:    br i1 [[CMP13_I]], label [[DOTEXIT_THREAD4]], label [[DOTEXIT:%.*]]
+; CHECK-NEXT:    br i1 [[CMP13_I]], label [[DOTEXIT_THREAD5]], label [[DOTEXIT:%.*]]
 ; CHECK:       .exit:
 ; CHECK-NEXT:    [[CMP19_I:%.*]] = icmp sge i32 [[Y:%.*]], [[Z:%.*]]
 ; CHECK-NEXT:    [[CONV:%.*]] = zext i1 [[CMP19_I]] to i32
 ; CHECK-NEXT:    [[LNOT_I18:%.*]] = icmp eq i32 [[CONV]], 1
-; CHECK-NEXT:    br i1 [[LNOT_I18]], label [[DOTEXIT_THREAD]], label [[DOTEXIT_THREAD4]]
+; CHECK-NEXT:    [[COND_FR:%.*]] = freeze i1 [[LNOT_I18]]
+; CHECK-NEXT:    br i1 [[COND_FR]], label [[DOTEXIT_THREAD]], label [[DOTEXIT_THREAD5]]
 ; CHECK:       .exit.thread:
-; CHECK-NEXT:    br label [[DOTEXIT_THREAD4]]
-; CHECK:       .exit.thread4:
+; CHECK-NEXT:    br label [[DOTEXIT_THREAD5]]
+; CHECK:       .exit.thread5:
 ; CHECK-NEXT:    [[TMP0:%.*]] = phi i32 [ [[J]], [[DOTEXIT_THREAD]] ], [ [[ADD3]], [[DOTEXIT]] ], [ [[ADD3]], [[COND_FALSE_I]] ], [ [[ADD3]], [[COND_FALSE_10_I]] ]
 ; CHECK-NEXT:    ret i32 [[TMP0]]
 ;
@@ -625,16 +628,13 @@ sw.default:                                       ; preds = %if.end, %sw.bb9
   br label %for.cond
 }
 
-; FIXME: This is an invalid transform. If %b is false and %x is poison,
-; then the select produces poison (the result of the program is poison).
-; But with this transform, we may be branching on poison, and that is UB.
-
 define i32 @TryToUnfoldSelectInCurrBB(i1 %b, i1 %ui, i32 %s, i1 %x) {
 ; CHECK-LABEL: @TryToUnfoldSelectInCurrBB(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br i1 [[B:%.*]], label [[IF_END_THREAD:%.*]], label [[IF_END:%.*]]
 ; CHECK:       if.end:
-; CHECK-NEXT:    br i1 [[X:%.*]], label [[TMP0:%.*]], label [[IF_END_THREAD]]
+; CHECK-NEXT:    [[COND_FR:%.*]] = freeze i1 [[X:%.*]]
+; CHECK-NEXT:    br i1 [[COND_FR]], label [[TMP0:%.*]], label [[IF_END_THREAD]]
 ; CHECK:       0:
 ; CHECK-NEXT:    br label [[IF_END_THREAD]]
 ; CHECK:       if.end.thread:
