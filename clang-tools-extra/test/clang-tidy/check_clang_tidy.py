@@ -19,11 +19,17 @@ Usage:
     [-assume-filename=<file-with-source-extension>] \
     [-check-suffix=<comma-separated-file-check-suffixes>] \
     [-check-suffixes=<comma-separated-file-check-suffixes>] \
+    [-std=c++(98|11|14|17|20)[-or-later]] \
     <source-file> <check-name> <temp-file> \
     -- [optional clang-tidy arguments]
 
 Example:
   // RUN: %check_clang_tidy %s llvm-include-order %t -- -- -isystem %S/Inputs
+
+Notes:
+  -std=c++(98|11|14|17|20)-or-later:
+    This flag will cause multiple runs within the same check_clang_tidy
+    execution. Make sure you don't have shared state across these runs.
 """
 
 import argparse
