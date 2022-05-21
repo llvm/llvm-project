@@ -1181,13 +1181,15 @@ public:
   }
 
   /// Compare this range with another.
-  template <typename OtherT> bool operator==(const OtherT &other) const {
-    return size() ==
-               static_cast<size_t>(std::distance(other.begin(), other.end())) &&
-           std::equal(begin(), end(), other.begin());
+  template <typename OtherT>
+  friend bool operator==(const indexed_accessor_range_base &lhs,
+                         const OtherT &rhs) {
+    return std::equal(lhs.begin(), lhs.end(), rhs.begin(), rhs.end());
   }
-  template <typename OtherT> bool operator!=(const OtherT &other) const {
-    return !(*this == other);
+  template <typename OtherT>
+  friend bool operator!=(const indexed_accessor_range_base &lhs,
+                         const OtherT &rhs) {
+    return !(lhs == rhs);
   }
 
   /// Return the size of this range.
