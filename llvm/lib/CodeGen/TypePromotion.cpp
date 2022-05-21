@@ -486,7 +486,10 @@ void IRPromoter::PromoteTree() {
       if (auto *Const = dyn_cast<ConstantInt>(Op)) {
         // For subtract, we don't need to sext the constant. We only put it in
         // SafeWrap because SafeWrap.size() is used elsewhere.
-        Constant *NewConst = (SafeWrap.contains(I) && i == 1 &&
+        // For cmp, we need to sign extend a constant appearing in either
+        // operand. For add, we should only sign extend the RHS.
+        Constant *NewConst = (SafeWrap.contains(I) &&
+                              (I->getOpcode() == Instruction::ICmp || i == 1) &&
                               I->getOpcode() != Instruction::Sub)
                                  ? ConstantExpr::getSExt(Const, ExtTy)
                                  : ConstantExpr::getZExt(Const, ExtTy);
