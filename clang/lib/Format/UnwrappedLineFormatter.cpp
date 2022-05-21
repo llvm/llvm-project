@@ -404,8 +404,9 @@ private:
         // If possible, merge the next line's wrapped left brace with the
         // current line. Otherwise, leave it on the next line, as this is a
         // multi-line control statement.
-        return (Style.ColumnLimit == 0 ||
-                TheLine->Last->TotalLength <= Style.ColumnLimit)
+        return (Style.ColumnLimit == 0 || TheLine->Level * Style.IndentWidth +
+                                                  TheLine->Last->TotalLength <=
+                                              Style.ColumnLimit)
                    ? 1
                    : 0;
       }

@@ -3096,6 +3096,14 @@ TEST_F(FormatTest, MultiLineControlStatements) {
             "         baz);",
             format("do{foo();}while(bar&&baz);", Style));
   // Long lines should put opening brace on new line.
+  verifyFormat("void f() {\n"
+               "  if (a1 && a2 &&\n"
+               "      a3)\n"
+               "  {\n"
+               "    quux();\n"
+               "  }\n"
+               "}",
+               "void f(){if(a1&&a2&&a3){quux();}}", Style);
   EXPECT_EQ("if (foo && bar &&\n"
             "    baz)\n"
             "{\n"
