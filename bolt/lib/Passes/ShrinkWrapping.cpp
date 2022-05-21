@@ -1066,6 +1066,14 @@ bool ShrinkWrapping::validatePushPopsMode(unsigned CSR, MCInst *BestPosSave,
     });
     return false;
   }
+  if (FA.hasStackArithmetic(BF)) {
+    LLVM_DEBUG({
+      dbgs() << "Reg " << CSR
+             << " is not using push/pops due to function "
+                "taking the address of a stack position.\n";
+    });
+    return false;
+  }
   for (MCInst *Save : CSA.getSavesByReg(CSR)) {
     if (!SLM.canCollapseRegion(Save)) {
       LLVM_DEBUG(dbgs() << "Reg " << CSR << " cannot collapse region.\n");

@@ -38,6 +38,11 @@ static cl::opt<std::string> FrameOptFunctionNamesFile(
 static cl::opt<bool> TimeFA("time-fa", cl::desc("time frame analysis steps"),
                             cl::ReallyHidden, cl::cat(BoltOptCategory));
 
+static cl::opt<bool>
+    ExperimentalSW("experimental-shrink-wrapping",
+                   cl::desc("process functions with stack pointer arithmetic"),
+                   cl::ReallyHidden, cl::ZeroOrMore, cl::cat(BoltOptCategory));
+
 bool shouldFrameOptimize(const llvm::bolt::BinaryFunction &Function) {
   if (Function.hasUnknownControlFlow())
     return false;
@@ -111,6 +116,7 @@ class FrameAccessAnalysis {
   const MCInst *Prev{nullptr};
   /// Info about the last frame access
   bool IsValidAccess{false};
+  bool EscapesStackAddress{false};
   FrameIndexEntry FIE;
 
   bool decodeFrameAccess(const MCInst &Inst) {
@@ -124,14 +130,15 @@ class FrameAccessAnalysis {
       return true;
     }
 
-    if (IsIndexed || FIE.Size == 0) {
+    if (IsIndexed || (!FIE.Size && (FIE.IsLoad || FIE.IsStore))) {
       LLVM_DEBUG(dbgs() << "Giving up on indexed memory access/unknown size\n");
       LLVM_DEBUG(dbgs() << "Blame insn: ");
+      LLVM_DEBUG(BC.printInstruction(outs(), Inst, 0, &BF, true, false, false));
       LLVM_DEBUG(Inst.dump());
       return false;
     }
 
-    assert(FIE.Size != 0);
+    assert(FIE.Size != 0 || (!FIE.IsLoad && !FIE.IsStore));
 
     FIE.RegOrImm = SrcImm;
     if (FIE.IsLoad || FIE.IsStoreFromReg)
@@ -171,9 +178,11 @@ public:
   const FrameIndexEntry &getFIE() const { return FIE; }
   int getSPOffset() const { return SPOffset; }
   bool isValidAccess() const { return IsValidAccess; }
+  bool doesEscapeStackAddress() const { return EscapesStackAddress; }
 
   bool doNext(const BinaryBasicBlock &BB, const MCInst &Inst) {
     IsValidAccess = false;
+    EscapesStackAddress = false;
     std::tie(SPOffset, FPOffset) =
         Prev ? *SPT.getStateAt(*Prev) : *SPT.getStateAt(BB);
     Prev = &Inst;
@@ -214,11 +223,14 @@ public:
     }
 
     if (BC.MIB->escapesVariable(Inst, SPT.HasFramePointer)) {
-      LLVM_DEBUG(
-          dbgs() << "Leaked stack address, giving up on this function.\n");
-      LLVM_DEBUG(dbgs() << "Blame insn: ");
-      LLVM_DEBUG(Inst.dump());
-      return false;
+      EscapesStackAddress = true;
+      if (!opts::ExperimentalSW) {
+        LLVM_DEBUG(
+            dbgs() << "Leaked stack address, giving up on this function.\n");
+        LLVM_DEBUG(dbgs() << "Blame insn: ");
+        LLVM_DEBUG(Inst.dump());
+        return false;
+      }
     }
 
     return decodeFrameAccess(Inst);
@@ -405,7 +417,7 @@ bool FrameAnalysis::computeArgsAccessed(BinaryFunction &BF) {
     FAA.enterNewBB();
 
     for (MCInst &Inst : *BB) {
-      if (!FAA.doNext(*BB, Inst)) {
+      if (!FAA.doNext(*BB, Inst) || FAA.doesEscapeStackAddress()) {
         ArgsTouchedMap[&BF].emplace(std::make_pair(-1, 0));
         NoInfo = true;
         break;
@@ -474,6 +486,12 @@ bool FrameAnalysis::restoreFrameIndex(BinaryFunction &BF) {
         Inst.dump();
         dbgs() << "\t\t\tSP offset is " << FAA.getSPOffset() << "\n";
       });
+
+      if (FAA.doesEscapeStackAddress()) {
+        if (!FunctionsWithStackArithmetic.count(&BF))
+          FunctionsWithStackArithmetic.insert(&BF);
+        continue;
+      }
 
       if (!FAA.isValidAccess())
         continue;

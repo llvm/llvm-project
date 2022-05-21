@@ -268,13 +268,15 @@ void FrameOptimizerPass::runOnFunctions(BinaryContext &BC) {
     {
       NamedRegionTimer T1("removeloads", "remove loads", "FOP", "FOP breakdown",
                           opts::TimeOpts);
-      removeUnnecessaryLoads(*RA, *FA, I.second);
+      if (!FA->hasStackArithmetic(I.second))
+        removeUnnecessaryLoads(*RA, *FA, I.second);
     }
 
     if (opts::RemoveStores) {
       NamedRegionTimer T1("removestores", "remove stores", "FOP",
                           "FOP breakdown", opts::TimeOpts);
-      removeUnusedStores(*FA, I.second);
+      if (!FA->hasStackArithmetic(I.second))
+        removeUnusedStores(*FA, I.second);
     }
     // Don't even start shrink wrapping if no profiling info is available
     if (I.second.getKnownExecutionCount() == 0)
