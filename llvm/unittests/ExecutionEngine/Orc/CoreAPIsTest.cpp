@@ -1557,4 +1557,35 @@ TEST_F(CoreAPIsStandardTest, RemoveJITDylibs) {
   BazMR->failMaterialization();
 }
 
+TEST(CoreAPIsExtraTest, SessionTeardownByFailedToMaterialize) {
+
+  auto RunTestCase = []() -> Error {
+    ExecutionSession ES{std::make_unique<UnsupportedExecutorProcessControl>(
+        std::make_shared<SymbolStringPool>())};
+    auto Foo = ES.intern("foo");
+    auto FooFlags = JITSymbolFlags::Exported;
+
+    auto &JD = ES.createBareJITDylib("Foo");
+    cantFail(JD.define(std::make_unique<SimpleMaterializationUnit>(
+        SymbolFlagsMap({{Foo, FooFlags}}),
+        [&](std::unique_ptr<MaterializationResponsibility> R) {
+          R->failMaterialization();
+        })));
+
+    auto Sym = ES.lookup({&JD}, Foo);
+    assert(!Sym && "Query should have failed");
+    cantFail(ES.endSession());
+    return Sym.takeError();
+  };
+
+  auto Err = RunTestCase();
+  EXPECT_TRUE(!!Err); // Expect that error occurred.
+  EXPECT_TRUE(
+      Err.isA<FailedToMaterialize>()); // Expect FailedToMaterialize error.
+
+  // Make sure that we can log errors, even though the session has been
+  // destroyed.
+  logAllUnhandledErrors(std::move(Err), nulls(), "");
+}
+
 } // namespace
