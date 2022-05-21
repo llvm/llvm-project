@@ -2099,8 +2099,8 @@ public:
       : CommandObjectMultiword(
             interpreter, "command container",
             "Commands for adding container commands to lldb.  "
-            "Container commands are containers for other commands.  You can"
-            "add nested container commands by specifying a command path, but "
+            "Container commands are containers for other commands.  You can "
+            "add nested container commands by specifying a command path, "
             "but you can't add commands into the built-in command hierarchy.",
             "command container <subcommand> [<subcommand-options>]") {
     LoadSubCommand("add", CommandObjectSP(new CommandObjectCommandsContainerAdd(
