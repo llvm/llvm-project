@@ -127,6 +127,8 @@ define float @print_reduction(i64 %n, float* noalias %y) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT: middle.block:
 ; CHECK-NEXT: No successors
+; CHECK-EMPTY:
+; CHECK-NEXT: Live-out float %red.next.lcssa = ir<%red.next>
 ; CHECK-NEXT: }
 ;
 entry:
@@ -363,6 +365,8 @@ define float @print_fmuladd_strict(float* %a, float* %b, i64 %n) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT: middle.block:
 ; CHECK-NEXT: No successors
+; CHECK-EMPTY:
+; CHECK-NEXT: Live-out float %muladd.lcssa = ir<%muladd>
 ; CHECK-NEXT:}
 
 entry:
@@ -552,6 +556,8 @@ define i32 @print_exit_value(i8* %ptr, i32 %off) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT: middle.block:
 ; CHECK-NEXT: No successors
+; CHECK-EMPTY:
+; CHECK-NEXT: Live-out i32 %lcssa = ir<%add>
 ; CHECK-NEXT: }
 ;
 entry:

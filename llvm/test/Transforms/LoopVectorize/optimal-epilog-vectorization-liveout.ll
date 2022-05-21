@@ -42,8 +42,8 @@ define signext i32 @f1(i32* noalias %A, i32* noalias %B, i32 signext %n) {
 ; VF-TWO-CHECK-NEXT:    [[TMP8:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; VF-TWO-CHECK-NEXT:    br i1 [[TMP8]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; VF-TWO-CHECK:       middle.block:
-; VF-TWO-CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[WIDE_TRIP_COUNT]], [[N_VEC]]
 ; VF-TWO-CHECK-NEXT:    [[TMP9:%.*]] = extractelement <2 x i32> [[TMP7]], i32 1
+; VF-TWO-CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[WIDE_TRIP_COUNT]], [[N_VEC]]
 ; VF-TWO-CHECK-NEXT:    br i1 [[CMP_N]], label [[FOR_END_LOOPEXIT:%.*]], label [[VEC_EPILOG_ITER_CHECK:%.*]]
 ; VF-TWO-CHECK:       vec.epilog.iter.check:
 ; VF-TWO-CHECK-NEXT:    [[N_VEC_REMAINING:%.*]] = sub i64 [[WIDE_TRIP_COUNT]], [[N_VEC]]
@@ -70,8 +70,8 @@ define signext i32 @f1(i32* noalias %A, i32* noalias %B, i32 signext %n) {
 ; VF-TWO-CHECK-NEXT:    [[TMP18:%.*]] = icmp eq i64 [[INDEX_NEXT9]], [[N_VEC4]]
 ; VF-TWO-CHECK-NEXT:    br i1 [[TMP18]], label [[VEC_EPILOG_MIDDLE_BLOCK:%.*]], label [[VEC_EPILOG_VECTOR_BODY]], !llvm.loop [[LOOP2:![0-9]+]]
 ; VF-TWO-CHECK:       vec.epilog.middle.block:
-; VF-TWO-CHECK-NEXT:    [[CMP_N5:%.*]] = icmp eq i64 [[WIDE_TRIP_COUNT]], [[N_VEC4]]
 ; VF-TWO-CHECK-NEXT:    [[TMP19:%.*]] = extractelement <2 x i32> [[TMP17]], i32 1
+; VF-TWO-CHECK-NEXT:    [[CMP_N5:%.*]] = icmp eq i64 [[WIDE_TRIP_COUNT]], [[N_VEC4]]
 ; VF-TWO-CHECK-NEXT:    br i1 [[CMP_N5]], label [[FOR_END_LOOPEXIT]], label [[VEC_EPILOG_SCALAR_PH]]
 ; VF-TWO-CHECK:       vec.epilog.scalar.ph:
 ; VF-TWO-CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC4]], [[VEC_EPILOG_MIDDLE_BLOCK]] ], [ [[N_VEC]], [[VEC_EPILOG_ITER_CHECK]] ], [ 0, [[ITER_CHECK]] ]

@@ -208,6 +208,7 @@ public:
   /// Subclass identifier (for isa/dyn_cast).
   enum class VPUserID {
     Recipe,
+    LiveOut,
     // TODO: Currently VPUsers are used in VPBlockBase, but in the future the
     // only VPUsers should either be recipes or live-outs.
     Block
