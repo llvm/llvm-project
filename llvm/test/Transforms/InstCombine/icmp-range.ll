@@ -171,6 +171,78 @@ define i1 @test_two_ranges3(i32* nocapture readonly %arg1, i32* nocapture readon
   ret i1 %rval
 }
 
+define i1 @ugt_zext(i1 %b, i8 %x) {
+; CHECK-LABEL: @ugt_zext(
+; CHECK-NEXT:    [[Z:%.*]] = zext i1 [[B:%.*]] to i8
+; CHECK-NEXT:    [[R:%.*]] = icmp ugt i8 [[Z]], [[X:%.*]]
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %z = zext i1 %b to i8
+  %r = icmp ugt i8 %z, %x
+  ret i1 %r
+}
+
+define <2 x i1> @ult_zext(<2 x i1> %b, <2 x i8> %p) {
+; CHECK-LABEL: @ult_zext(
+; CHECK-NEXT:    [[X:%.*]] = mul <2 x i8> [[P:%.*]], [[P]]
+; CHECK-NEXT:    [[Z:%.*]] = zext <2 x i1> [[B:%.*]] to <2 x i8>
+; CHECK-NEXT:    [[R:%.*]] = icmp ult <2 x i8> [[X]], [[Z]]
+; CHECK-NEXT:    ret <2 x i1> [[R]]
+;
+  %x = mul <2 x i8> %p, %p ; thwart complexity-based canonicalization
+  %z = zext <2 x i1> %b to <2 x i8>
+  %r = icmp ult <2 x i8> %x, %z
+  ret <2 x i1> %r
+}
+
+define i1 @uge_zext(i1 %b, i8 %x) {
+; CHECK-LABEL: @uge_zext(
+; CHECK-NEXT:    [[Z:%.*]] = zext i1 [[B:%.*]] to i8
+; CHECK-NEXT:    [[R:%.*]] = icmp uge i8 [[Z]], [[X:%.*]]
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %z = zext i1 %b to i8
+  %r = icmp uge i8 %z, %x
+  ret i1 %r
+}
+
+define i1 @ule_zext(i1 %b, i8 %p) {
+; CHECK-LABEL: @ule_zext(
+; CHECK-NEXT:    [[X:%.*]] = mul i8 [[P:%.*]], [[P]]
+; CHECK-NEXT:    [[Z:%.*]] = zext i1 [[B:%.*]] to i8
+; CHECK-NEXT:    [[R:%.*]] = icmp ule i8 [[X]], [[Z]]
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %x = mul i8 %p, %p ; thwart complexity-based canonicalization
+  %z = zext i1 %b to i8
+  %r = icmp ule i8 %x, %z
+  ret i1 %r
+}
+
+define i1 @ugt_zext_use(i1 %b, i8 %x) {
+; CHECK-LABEL: @ugt_zext_use(
+; CHECK-NEXT:    [[Z:%.*]] = zext i1 [[B:%.*]] to i8
+; CHECK-NEXT:    call void @use(i8 [[Z]])
+; CHECK-NEXT:    [[R:%.*]] = icmp ugt i8 [[Z]], [[X:%.*]]
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %z = zext i1 %b to i8
+  call void @use(i8 %z)
+  %r = icmp ugt i8 %z, %x
+  ret i1 %r
+}
+
+define i1 @ult_zext_not_i1(i2 %b, i8 %x) {
+; CHECK-LABEL: @ult_zext_not_i1(
+; CHECK-NEXT:    [[Z:%.*]] = zext i2 [[B:%.*]] to i8
+; CHECK-NEXT:    [[R:%.*]] = icmp ugt i8 [[Z]], [[X:%.*]]
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %z = zext i2 %b to i8
+  %r = icmp ult i8 %x, %z
+  ret i1 %r
+}
+
 define i1 @sub_ult_zext(i1 %b, i8 %x, i8 %y) {
 ; CHECK-LABEL: @sub_ult_zext(
 ; CHECK-NEXT:    [[Z:%.*]] = zext i1 [[B:%.*]] to i8
@@ -179,6 +251,48 @@ define i1 @sub_ult_zext(i1 %b, i8 %x, i8 %y) {
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %z = zext i1 %b to i8
+  %s = sub i8 %x, %y
+  %r = icmp ult i8 %s, %z
+  ret i1 %r
+}
+
+define i1 @zext_ult_zext(i1 %b, i8 %p) {
+; CHECK-LABEL: @zext_ult_zext(
+; CHECK-NEXT:    [[X:%.*]] = mul i8 [[P:%.*]], [[P]]
+; CHECK-NEXT:    [[TMP1:%.*]] = zext i1 [[B:%.*]] to i8
+; CHECK-NEXT:    [[R:%.*]] = icmp ult i8 [[X]], [[TMP1]]
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %x = mul i8 %p, %p ; thwart complexity-based canonicalization
+  %z = zext i1 %b to i16
+  %zx = zext i8 %x to i16
+  %r = icmp ult i16 %zx, %z
+  ret i1 %r
+}
+
+define i1 @zext_ugt_zext(i1 %b, i4 %x) {
+; CHECK-LABEL: @zext_ugt_zext(
+; CHECK-NEXT:    [[ZX:%.*]] = zext i4 [[X:%.*]] to i8
+; CHECK-NEXT:    call void @use(i8 [[ZX]])
+; CHECK-NEXT:    [[TMP1:%.*]] = zext i1 [[B:%.*]] to i4
+; CHECK-NEXT:    [[R:%.*]] = icmp ugt i4 [[TMP1]], [[X]]
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %z = zext i1 %b to i8
+  %zx = zext i4 %x to i8
+  call void @use(i8 %zx)
+  %r = icmp ugt i8 %z, %zx
+  ret i1 %r
+}
+
+define i1 @sub_ult_zext_not_i1(i2 %b, i8 %x, i8 %y) {
+; CHECK-LABEL: @sub_ult_zext_not_i1(
+; CHECK-NEXT:    [[Z:%.*]] = zext i2 [[B:%.*]] to i8
+; CHECK-NEXT:    [[S:%.*]] = sub i8 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = icmp ult i8 [[S]], [[Z]]
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %z = zext i2 %b to i8
   %s = sub i8 %x, %y
   %r = icmp ult i8 %s, %z
   ret i1 %r
