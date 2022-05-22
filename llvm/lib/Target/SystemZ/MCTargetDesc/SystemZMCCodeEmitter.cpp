@@ -37,6 +37,8 @@ class SystemZMCCodeEmitter : public MCCodeEmitter {
   const MCInstrInfo &MCII;
   MCContext &Ctx;
 
+  mutable unsigned MemOpsEmitted;
+
 public:
   SystemZMCCodeEmitter(const MCInstrInfo &mcii, MCContext &ctx)
     : MCII(mcii), Ctx(ctx) {
@@ -165,6 +167,7 @@ encodeInstruction(const MCInst &MI, raw_ostream &OS,
   verifyInstructionPredicates(MI,
                               computeAvailableFeatures(STI.getFeatureBits()));
 
+  MemOpsEmitted = 0;
   uint64_t Bits = getBinaryCodeForInstr(MI, Fixups, STI);
   unsigned Size = MCII.get(MI.getOpcode()).getSize();
   // Big-endian insertion of Size bytes.
@@ -191,12 +194,14 @@ getDispOpValue(const MCInst &MI, unsigned OpNum,
                SmallVectorImpl<MCFixup> &Fixups,
                SystemZ::FixupKind Kind) const {
   const MCOperand &MO = MI.getOperand(OpNum);
-  if (MO.isImm())
+  if (MO.isImm()) {
+    ++MemOpsEmitted;
     return static_cast<uint64_t>(MO.getImm());
+  }
   if (MO.isExpr()) {
     // All instructions follow the pattern where the first displacement has a
     // 2 bytes offset, and the second one 4 bytes.
-    unsigned ByteOffs = Fixups.size() == 0 ? 2 : 4;
+    unsigned ByteOffs = MemOpsEmitted++ == 0 ? 2 : 4;
     Fixups.push_back(MCFixup::create(ByteOffs, MO.getExpr(), (MCFixupKind)Kind,
                                      MI.getLoc()));
     assert(Fixups.size() <= 2 && "More than two memory operands in MI?");
