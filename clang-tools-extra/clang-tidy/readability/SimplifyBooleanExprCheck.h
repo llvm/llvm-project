@@ -58,12 +58,17 @@ private:
                                           const IfStmt *If,
                                           const Expr *ThenReturn);
 
+  bool reportDeMorgan(const ASTContext &Context, const UnaryOperator *Outer,
+                      const BinaryOperator *Inner, bool TryOfferFix,
+                      const Stmt *Parent, const ParenExpr *Parens);
+
   void issueDiag(const ASTContext &Result, SourceLocation Loc,
                  StringRef Description, SourceRange ReplacementRange,
                  StringRef Replacement);
 
   const bool ChainedConditionalReturn;
   const bool ChainedConditionalAssignment;
+  const bool SimplifyDeMorgan;
 };
 
 } // namespace readability

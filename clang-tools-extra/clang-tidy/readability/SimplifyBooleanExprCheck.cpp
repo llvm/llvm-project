@@ -9,6 +9,7 @@
 #include "SimplifyBooleanExprCheck.h"
 #include "clang/AST/RecursiveASTVisitor.h"
 #include "clang/Lex/Lexer.h"
+#include "llvm/Support/SaveAndRestore.h"
 
 #include <string>
 #include <utility>
@@ -257,6 +258,8 @@ static bool containsDiscardedTokens(const ASTContext &Context,
 }
 
 class SimplifyBooleanExprCheck::Visitor : public RecursiveASTVisitor<Visitor> {
+  using Base = RecursiveASTVisitor<Visitor>;
+
 public:
   Visitor(SimplifyBooleanExprCheck *Check, ASTContext &Context)
       : Check(Check), Context(Context) {}
@@ -503,7 +506,73 @@ public:
     return true;
   }
 
+  static bool isUnaryLNot(const Expr *E) {
+    return isa<UnaryOperator>(E) &&
+           cast<UnaryOperator>(E)->getOpcode() == UO_LNot;
+  }
+
+  template <typename Functor>
+  static bool checkEitherSide(const BinaryOperator *BO, Functor Func) {
+    return Func(BO->getLHS()) || Func(BO->getRHS());
+  }
+
+  static bool nestedDemorgan(const Expr *E, unsigned NestingLevel) {
+    const auto *BO = dyn_cast<BinaryOperator>(E->IgnoreUnlessSpelledInSource());
+    if (!BO)
+      return false;
+    if (!BO->getType()->isBooleanType())
+      return false;
+    switch (BO->getOpcode()) {
+    case BO_LT:
+    case BO_GT:
+    case BO_LE:
+    case BO_GE:
+    case BO_EQ:
+    case BO_NE:
+      return true;
+    case BO_LAnd:
+    case BO_LOr:
+      if (checkEitherSide(BO, isUnaryLNot))
+        return true;
+      if (NestingLevel) {
+        if (checkEitherSide(BO, [NestingLevel](const Expr *E) {
+              return nestedDemorgan(E, NestingLevel - 1);
+            }))
+          return true;
+      }
+      return false;
+    default:
+      return false;
+    }
+  }
+
+  bool TraverseUnaryOperator(UnaryOperator *Op) {
+    if (!Check->SimplifyDeMorgan || Op->getOpcode() != UO_LNot)
+      return Base::TraverseUnaryOperator(Op);
+    Expr *SubImp = Op->getSubExpr()->IgnoreImplicit();
+    auto *Parens = dyn_cast<ParenExpr>(SubImp);
+    auto *BinaryOp =
+        Parens
+            ? dyn_cast<BinaryOperator>(Parens->getSubExpr()->IgnoreImplicit())
+            : dyn_cast<BinaryOperator>(SubImp);
+    if (!BinaryOp || !BinaryOp->isLogicalOp() ||
+        !BinaryOp->getType()->isBooleanType())
+      return Base::TraverseUnaryOperator(Op);
+    if (checkEitherSide(BinaryOp, isUnaryLNot) ||
+        checkEitherSide(BinaryOp,
+                        [](const Expr *E) { return nestedDemorgan(E, 1); })) {
+      if (Check->reportDeMorgan(Context, Op, BinaryOp, !IsProcessing, parent(),
+                                Parens) &&
+          !Check->areDiagsSelfContained()) {
+        llvm::SaveAndRestore<bool> RAII(IsProcessing, true);
+        return Base::TraverseUnaryOperator(Op);
+      }
+    }
+    return Base::TraverseUnaryOperator(Op);
+  }
+
 private:
+  bool IsProcessing = false;
   SimplifyBooleanExprCheck *Check;
   SmallVector<Stmt *, 32> StmtStack;
   ASTContext &Context;
@@ -514,7 +583,8 @@ SimplifyBooleanExprCheck::SimplifyBooleanExprCheck(StringRef Name,
     : ClangTidyCheck(Name, Context),
       ChainedConditionalReturn(Options.get("ChainedConditionalReturn", false)),
       ChainedConditionalAssignment(
-          Options.get("ChainedConditionalAssignment", false)) {}
+          Options.get("ChainedConditionalAssignment", false)),
+      SimplifyDeMorgan(Options.get("SimplifyDeMorgan", true)) {}
 
 static bool containsBoolLiteral(const Expr *E) {
   if (!E)
@@ -685,6 +755,196 @@ void SimplifyBooleanExprCheck::replaceWithAssignment(const ASTContext &Context,
             Range, Replacement);
 }
 
+/// Swaps a \c BinaryOperator opcode from `&&` to `||` or vice-versa.
+static bool flipDemorganOperator(llvm::SmallVectorImpl<FixItHint> &Output,
+                                 const BinaryOperator *BO) {
+  assert(BO->isLogicalOp());
+  if (BO->getOperatorLoc().isMacroID())
+    return true;
+  Output.push_back(FixItHint::CreateReplacement(
+      BO->getOperatorLoc(), BO->getOpcode() == BO_LAnd ? "||" : "&&"));
+  return false;
+}
+
+static BinaryOperatorKind getDemorganFlippedOperator(BinaryOperatorKind BO) {
+  assert(BinaryOperator::isLogicalOp(BO));
+  return BO == BO_LAnd ? BO_LOr : BO_LAnd;
+}
+
+static bool flipDemorganSide(SmallVectorImpl<FixItHint> &Fixes,
+                             const ASTContext &Ctx, const Expr *E,
+                             Optional<BinaryOperatorKind> OuterBO);
+
+/// Inverts \p BinOp, Removing \p Parens if they exist and are safe to remove.
+/// returns \c true if there is any issue building the Fixes, \c false
+/// otherwise.
+static bool flipDemorganBinaryOperator(SmallVectorImpl<FixItHint> &Fixes,
+                                       const ASTContext &Ctx,
+                                       const BinaryOperator *BinOp,
+                                       Optional<BinaryOperatorKind> OuterBO,
+                                       const ParenExpr *Parens = nullptr) {
+  switch (BinOp->getOpcode()) {
+  case BO_LAnd:
+  case BO_LOr: {
+    // if we have 'a && b' or 'a || b', use demorgan to flip it to '!a || !b'
+    // or '!a && !b'.
+    if (flipDemorganOperator(Fixes, BinOp))
+      return true;
+    auto NewOp = getDemorganFlippedOperator(BinOp->getOpcode());
+    if (OuterBO) {
+      // The inner parens are technically needed in a fix for
+      // `!(!A1 && !(A2 || A3)) -> (A1 || (A2 && A3))`,
+      // however this would trip the LogicalOpParentheses warning.
+      // FIXME: Make this user configurable or detect if that warning is
+      // enabled.
+      constexpr bool LogicalOpParentheses = true;
+      if (((*OuterBO == NewOp) || (!LogicalOpParentheses &&
+                                   (*OuterBO == BO_LOr && NewOp == BO_LAnd))) &&
+          Parens) {
+        if (!Parens->getLParen().isMacroID() &&
+            !Parens->getRParen().isMacroID()) {
+          Fixes.push_back(FixItHint::CreateRemoval(Parens->getLParen()));
+          Fixes.push_back(FixItHint::CreateRemoval(Parens->getRParen()));
+        }
+      }
+      if (*OuterBO == BO_LAnd && NewOp == BO_LOr && !Parens) {
+        Fixes.push_back(FixItHint::CreateInsertion(BinOp->getBeginLoc(), "("));
+        Fixes.push_back(FixItHint::CreateInsertion(
+            Lexer::getLocForEndOfToken(BinOp->getEndLoc(), 0,
+                                       Ctx.getSourceManager(),
+                                       Ctx.getLangOpts()),
+            ")"));
+      }
+    }
+    if (flipDemorganSide(Fixes, Ctx, BinOp->getLHS(), NewOp) ||
+        flipDemorganSide(Fixes, Ctx, BinOp->getRHS(), NewOp))
+      return true;
+    return false;
+  };
+  case BO_LT:
+  case BO_GT:
+  case BO_LE:
+  case BO_GE:
+  case BO_EQ:
+  case BO_NE:
+    // For comparison operators, just negate the comparison.
+    if (BinOp->getOperatorLoc().isMacroID())
+      return true;
+    Fixes.push_back(FixItHint::CreateReplacement(
+        BinOp->getOperatorLoc(),
+        BinaryOperator::getOpcodeStr(
+            BinaryOperator::negateComparisonOp(BinOp->getOpcode()))));
+    return false;
+  default:
+    // for any other binary operator, just use logical not and wrap in
+    // parens.
+    if (Parens) {
+      if (Parens->getBeginLoc().isMacroID())
+        return true;
+      Fixes.push_back(FixItHint::CreateInsertion(Parens->getBeginLoc(), "!"));
+    } else {
+      if (BinOp->getBeginLoc().isMacroID() || BinOp->getEndLoc().isMacroID())
+        return true;
+      Fixes.append({FixItHint::CreateInsertion(BinOp->getBeginLoc(), "!("),
+                    FixItHint::CreateInsertion(
+                        Lexer::getLocForEndOfToken(BinOp->getEndLoc(), 0,
+                                                   Ctx.getSourceManager(),
+                                                   Ctx.getLangOpts()),
+                        ")")});
+    }
+    break;
+  }
+  return false;
+}
+
+static bool flipDemorganSide(SmallVectorImpl<FixItHint> &Fixes,
+                             const ASTContext &Ctx, const Expr *E,
+                             Optional<BinaryOperatorKind> OuterBO) {
+  if (isa<UnaryOperator>(E) && cast<UnaryOperator>(E)->getOpcode() == UO_LNot) {
+    //  if we have a not operator, '!a', just remove the '!'.
+    if (cast<UnaryOperator>(E)->getOperatorLoc().isMacroID())
+      return true;
+    Fixes.push_back(
+        FixItHint::CreateRemoval(cast<UnaryOperator>(E)->getOperatorLoc()));
+    return false;
+  }
+  if (const auto *BinOp = dyn_cast<BinaryOperator>(E)) {
+    return flipDemorganBinaryOperator(Fixes, Ctx, BinOp, OuterBO);
+  }
+  if (const auto *Paren = dyn_cast<ParenExpr>(E)) {
+    if (const auto *BinOp = dyn_cast<BinaryOperator>(Paren->getSubExpr())) {
+      return flipDemorganBinaryOperator(Fixes, Ctx, BinOp, OuterBO, Paren);
+    }
+  }
+  // Fallback case just insert a logical not operator.
+  if (E->getBeginLoc().isMacroID())
+    return true;
+  Fixes.push_back(FixItHint::CreateInsertion(E->getBeginLoc(), "!"));
+  return false;
+}
+
+static bool shouldRemoveParens(const Stmt *Parent,
+                               BinaryOperatorKind NewOuterBinary,
+                               const ParenExpr *Parens) {
+  if (!Parens)
+    return false;
+  if (!Parent)
+    return true;
+  switch (Parent->getStmtClass()) {
+  case Stmt::BinaryOperatorClass: {
+    const auto *BO = cast<BinaryOperator>(Parent);
+    if (BO->isAssignmentOp())
+      return true;
+    if (BO->isCommaOp())
+      return true;
+    if (BO->getOpcode() == NewOuterBinary)
+      return true;
+    return false;
+  }
+  case Stmt::UnaryOperatorClass:
+  case Stmt::CXXRewrittenBinaryOperatorClass:
+    return false;
+  default:
+    return true;
+  }
+}
+
+bool SimplifyBooleanExprCheck::reportDeMorgan(const ASTContext &Context,
+                                              const UnaryOperator *Outer,
+                                              const BinaryOperator *Inner,
+                                              bool TryOfferFix,
+                                              const Stmt *Parent,
+                                              const ParenExpr *Parens) {
+  assert(Outer);
+  assert(Inner);
+  assert(Inner->isLogicalOp());
+
+  auto Diag =
+      diag(Outer->getBeginLoc(),
+           "boolean expression can be simplified by DeMorgan's theorem");
+  Diag << Outer->getSourceRange();
+  // If we have already fixed this with a previous fix, don't attempt any fixes
+  if (!TryOfferFix)
+    return false;
+  if (Outer->getOperatorLoc().isMacroID())
+    return false;
+  SmallVector<FixItHint> Fixes;
+  auto NewOpcode = getDemorganFlippedOperator(Inner->getOpcode());
+  if (shouldRemoveParens(Parent, NewOpcode, Parens)) {
+    Fixes.push_back(FixItHint::CreateRemoval(
+        SourceRange(Outer->getOperatorLoc(), Parens->getLParen())));
+    Fixes.push_back(FixItHint::CreateRemoval(Parens->getRParen()));
+  } else {
+    Fixes.push_back(FixItHint::CreateRemoval(Outer->getOperatorLoc()));
+  }
+  if (flipDemorganOperator(Fixes, Inner))
+    return false;
+  if (flipDemorganSide(Fixes, Context, Inner->getLHS(), NewOpcode) ||
+      flipDemorganSide(Fixes, Context, Inner->getRHS(), NewOpcode))
+    return false;
+  Diag << Fixes;
+  return true;
+}
 } // namespace readability
 } // namespace tidy
 } // namespace clang
