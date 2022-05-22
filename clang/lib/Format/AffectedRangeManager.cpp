@@ -60,10 +60,12 @@ bool AffectedRangeManager::computeAffectedLines(
 
 bool AffectedRangeManager::affectsCharSourceRange(
     const CharSourceRange &Range) {
-  for (const CharSourceRange &R : Ranges)
+  for (const CharSourceRange &R : Ranges) {
     if (!SourceMgr.isBeforeInTranslationUnit(Range.getEnd(), R.getBegin()) &&
-        !SourceMgr.isBeforeInTranslationUnit(R.getEnd(), Range.getBegin()))
+        !SourceMgr.isBeforeInTranslationUnit(R.getEnd(), Range.getBegin())) {
       return true;
+    }
+  }
   return false;
 }
 

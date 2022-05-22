@@ -106,8 +106,9 @@ unsigned CommaSeparatedList::formatAfterToken(LineState &State,
       State.NextToken->Previous->getPreviousNonComment();
   if (!LBrace || !LBrace->isOneOf(tok::l_brace, TT_ArrayInitializerLSquare) ||
       LBrace->is(BK_Block) || LBrace->is(TT_DictLiteral) ||
-      LBrace->Next->is(TT_DesignatedInitializerPeriod))
+      LBrace->Next->is(TT_DesignatedInitializerPeriod)) {
     return 0;
+  }
 
   // Calculate the number of code points we have to format this list. As the
   // first token is already placed, we have to subtract it.
@@ -172,15 +173,17 @@ static unsigned CodePointsBetween(const FormatToken *Begin,
 void CommaSeparatedList::precomputeFormattingInfos(const FormatToken *Token) {
   // FIXME: At some point we might want to do this for other lists, too.
   if (!Token->MatchingParen ||
-      !Token->isOneOf(tok::l_brace, TT_ArrayInitializerLSquare))
+      !Token->isOneOf(tok::l_brace, TT_ArrayInitializerLSquare)) {
     return;
+  }
 
   // In C++11 braced list style, we should not format in columns unless they
   // have many items (20 or more) or we allow bin-packing of function call
   // arguments.
   if (Style.Cpp11BracedListStyle && !Style.BinPackArguments &&
-      Commas.size() < 19)
+      Commas.size() < 19) {
     return;
+  }
 
   // Limit column layout for JavaScript array initializers to 20 or more items
   // for now to introduce it carefully. We can become more aggressive if this
@@ -238,8 +241,9 @@ void CommaSeparatedList::precomputeFormattingInfos(const FormatToken *Token) {
 
       // Consume trailing comments so the are included in EndOfLineItemLength.
       if (ItemEnd->Next && !ItemEnd->Next->HasUnescapedNewline &&
-          ItemEnd->Next->isTrailingComment())
+          ItemEnd->Next->isTrailingComment()) {
         ItemEnd = ItemEnd->Next;
+      }
     }
     EndOfLineItemLength.push_back(CodePointsBetween(ItemBegin, ItemEnd));
     // If there is a trailing comma in the list, the next item will start at the
@@ -300,8 +304,9 @@ void CommaSeparatedList::precomputeFormattingInfos(const FormatToken *Token) {
             if (Format.ColumnSizes[i] - MinSizeInColumn[i] > 10)
               return true;
           return false;
-        }())
+        }()) {
       continue;
+    }
 
     // Ignore layouts that are bound to violate the column limit.
     if (Format.TotalWidth > Style.ColumnLimit && Columns > 1)

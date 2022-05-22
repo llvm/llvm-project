@@ -107,12 +107,13 @@ bool operator<(const JsModuleReference &LHS, const JsModuleReference &RHS) {
   if (LHS.Category != RHS.Category)
     return LHS.Category < RHS.Category;
   if (LHS.Category == JsModuleReference::ReferenceCategory::SIDE_EFFECT ||
-      LHS.Category == JsModuleReference::ReferenceCategory::ALIAS)
+      LHS.Category == JsModuleReference::ReferenceCategory::ALIAS) {
     // Side effect imports and aliases might be ordering sensitive. Consider
     // them equal so that they maintain their relative order in the stable sort
     // below. This retains transitivity because LHS.Category == RHS.Category
     // here.
     return false;
+  }
   // Empty URLs sort *last* (for export {...};).
   if (LHS.URL.empty() != RHS.URL.empty())
     return LHS.URL.empty() < RHS.URL.empty();
@@ -171,8 +172,9 @@ public:
         // in a single group.
         if (!Reference.IsExport &&
             (Reference.IsExport != References[I + 1].IsExport ||
-             Reference.Category != References[I + 1].Category))
+             Reference.Category != References[I + 1].Category)) {
           ReferencesText += "\n";
+        }
       }
     }
     llvm::StringRef PreviousText = getSourceText(InsertionPoint);
@@ -193,8 +195,10 @@ public:
     // Separate references from the main code body of the file.
     if (FirstNonImportLine && FirstNonImportLine->First->NewlinesBefore < 2 &&
         !(FirstNonImportLine->First->is(tok::comment) &&
-          FirstNonImportLine->First->TokenText.trim() == "// clang-format on"))
+          FirstNonImportLine->First->TokenText.trim() ==
+              "// clang-format on")) {
       ReferencesText += "\n";
+    }
 
     LLVM_DEBUG(llvm::dbgs() << "Replacing imports:\n"
                             << PreviousText << "\nwith:\n"
@@ -389,11 +393,12 @@ private:
         Current = Current->Next;
       }
       skipComments();
-      if (Start.isInvalid() || References.empty())
+      if (Start.isInvalid() || References.empty()) {
         // After the first file level comment, consider line comments to be part
         // of the import that immediately follows them by using the previously
         // set Start.
         Start = Line->First->Tok.getLocation();
+      }
       if (!Current) {
         // Only comments on this line. Could be the first non-import line.
         FirstNonImportLine = Line;
@@ -462,13 +467,14 @@ private:
       // URL = TokenText without the quotes.
       Reference.URL =
           Current->TokenText.substr(1, Current->TokenText.size() - 2);
-      if (Reference.URL.startswith(".."))
+      if (Reference.URL.startswith("..")) {
         Reference.Category =
             JsModuleReference::ReferenceCategory::RELATIVE_PARENT;
-      else if (Reference.URL.startswith("."))
+      } else if (Reference.URL.startswith(".")) {
         Reference.Category = JsModuleReference::ReferenceCategory::RELATIVE;
-      else
+      } else {
         Reference.Category = JsModuleReference::ReferenceCategory::ABSOLUTE;
+      }
     }
     return true;
   }
