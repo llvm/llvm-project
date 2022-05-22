@@ -46,9 +46,9 @@ def testTransferReadOp():
     with InsertionPoint(f.add_entry_block()):
       A, zero, padding, mask = f.arguments
       vector.TransferReadOp(vector_type, A, [zero, zero], identity_map_attr,
-                            padding, mask, None)
+                            padding, mask=mask)
       vector.TransferReadOp(vector_type, A, [zero, zero], identity_map_attr,
-                            padding, None, None)
+                            padding)
       func.ReturnOp([])
 
   # CHECK: @transfer_read(%[[MEM:.*]]: memref<?x?xf32>, %[[IDX:.*]]: index,

@@ -620,6 +620,13 @@ populateBuilderArgs(const Operator &op,
     if (!op.getArg(i).is<NamedAttribute *>())
       operandNames.push_back(name);
   }
+}
+
+/// Populates `builderArgs` with the Python-compatible names of builder function
+/// successor arguments. Additionally, `successorArgNames` is also populated.
+static void populateBuilderArgsSuccessors(
+    const Operator &op, llvm::SmallVectorImpl<std::string> &builderArgs,
+    llvm::SmallVectorImpl<std::string> &successorArgNames) {
 
   for (int i = 0, e = op.getNumSuccessors(); i < e; ++i) {
     NamedSuccessor successor = op.getSuccessor(i);
@@ -857,6 +864,8 @@ static void emitDefaultOpBuilder(const Operator &op, raw_ostream &os) {
   populateBuilderArgsResults(op, builderArgs);
   size_t numResultArgs = builderArgs.size();
   populateBuilderArgs(op, builderArgs, operandArgNames, successorArgNames);
+  size_t numOperandAttrArgs = builderArgs.size() - numResultArgs;
+  populateBuilderArgsSuccessors(op, builderArgs, successorArgNames);
 
   populateBuilderLinesOperand(op, operandArgNames, builderLines);
   populateBuilderLinesAttr(
@@ -868,10 +877,53 @@ static void emitDefaultOpBuilder(const Operator &op, raw_ostream &os) {
   populateBuilderLinesSuccessors(op, successorArgNames, builderLines);
   populateBuilderRegions(op, builderArgs, builderLines);
 
-  builderArgs.push_back("*");
-  builderArgs.push_back("loc=None");
-  builderArgs.push_back("ip=None");
-  os << llvm::formatv(initTemplate, llvm::join(builderArgs, ", "),
+  // Layout of builderArgs vector elements:
+  // [ result_args  operand_attr_args successor_args regions ]
+
+  // Determine whether the argument corresponding to a given index into the
+  // builderArgs vector is a python keyword argument or not.
+  auto isKeywordArgFn = [&](size_t builderArgIndex) -> bool {
+    // All result, successor, and region arguments are positional arguments.
+    if ((builderArgIndex < numResultArgs) ||
+        (builderArgIndex >= (numResultArgs + numOperandAttrArgs)))
+      return false;
+    // Keyword arguments:
+    // - optional named attributes (including unit attributes)
+    // - default-valued named attributes
+    // - optional operands
+    Argument a = op.getArg(builderArgIndex - numResultArgs);
+    if (auto *nattr = a.dyn_cast<NamedAttribute *>())
+      return (nattr->attr.isOptional() || nattr->attr.hasDefaultValue());
+    else if (auto *ntype = a.dyn_cast<NamedTypeConstraint *>())
+      return ntype->isOptional();
+    else
+      return false;
+  };
+
+  // StringRefs in functionArgs refer to strings allocated by builderArgs.
+  llvm::SmallVector<llvm::StringRef> functionArgs;
+
+  // Add positional arguments.
+  for (size_t i = 0, cnt = builderArgs.size(); i < cnt; ++i) {
+    if (!isKeywordArgFn(i))
+      functionArgs.push_back(builderArgs[i]);
+  }
+
+  // Add a bare '*' to indicate that all following arguments must be keyword
+  // arguments.
+  functionArgs.push_back("*");
+
+  // Add a default 'None' value to each keyword arg string, and then add to the
+  // function args list.
+  for (size_t i = 0, cnt = builderArgs.size(); i < cnt; ++i) {
+    if (isKeywordArgFn(i)) {
+      builderArgs[i].append("=None");
+      functionArgs.push_back(builderArgs[i]);
+    }
+  }
+  functionArgs.push_back("loc=None");
+  functionArgs.push_back("ip=None");
+  os << llvm::formatv(initTemplate, llvm::join(functionArgs, ", "),
                       llvm::join(builderLines, "\n    "));
 }
 

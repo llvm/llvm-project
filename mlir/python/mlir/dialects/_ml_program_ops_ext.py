@@ -48,7 +48,7 @@ class FuncOp:
     type = TypeAttr.get(type)
     sym_visibility = StringAttr.get(
         str(visibility)) if visibility is not None else None
-    super().__init__(sym_name, type, sym_visibility, loc=loc, ip=ip)
+    super().__init__(sym_name, type, sym_visibility=sym_visibility, loc=loc, ip=ip)
     if body_builder:
       entry_block = self.add_entry_block()
       with InsertionPoint(entry_block):
