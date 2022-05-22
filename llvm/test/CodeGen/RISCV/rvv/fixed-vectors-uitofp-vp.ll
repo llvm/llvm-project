@@ -4,6 +4,21 @@
 ; RUN: llc -mtriple=riscv64 -mattr=+m,+v,+zfh,+experimental-zvfh \
 ; RUN:     -riscv-v-vector-bits-min=128 < %s | FileCheck %s
 
+declare <4 x half> @llvm.vp.uitofp.v4f16.v4i7(<4 x i7>, <4 x i1>, i32)
+
+define <4 x half> @vuitofp_v4f16_v4i7(<4 x i7> %va, <4 x i1> %m, i32 zeroext %evl) {
+; CHECK-LABEL: vuitofp_v4f16_v4i7:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    li a1, 127
+; CHECK-NEXT:    vsetivli zero, 4, e8, mf4, ta, mu
+; CHECK-NEXT:    vand.vx v9, v8, a1
+; CHECK-NEXT:    vsetvli zero, a0, e8, mf4, ta, mu
+; CHECK-NEXT:    vfwcvt.f.xu.v v8, v9, v0.t
+; CHECK-NEXT:    ret
+  %v = call <4 x half> @llvm.vp.uitofp.v4f16.v4i7(<4 x i7> %va, <4 x i1> %m, i32 %evl)
+  ret <4 x half> %v
+}
+
 declare <4 x half> @llvm.vp.uitofp.v4f16.v4i8(<4 x i8>, <4 x i1>, i32)
 
 define <4 x half> @vuitofp_v4f16_v4i8(<4 x i8> %va, <4 x i1> %m, i32 zeroext %evl) {

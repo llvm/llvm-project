@@ -44,6 +44,34 @@ define <2 x float> @si2fp_v2i1_v2f32(<2 x i1> %x) {
   ret <2 x float> %z
 }
 
+define <2 x float> @si2fp_v2i7_v2f32(<2 x i7> %x) {
+; CHECK-LABEL: si2fp_v2i7_v2f32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 2, e8, mf8, ta, mu
+; CHECK-NEXT:    vadd.vv v8, v8, v8
+; CHECK-NEXT:    vsra.vi v8, v8, 1
+; CHECK-NEXT:    vsetvli zero, zero, e32, mf2, ta, mu
+; CHECK-NEXT:    vsext.vf4 v9, v8
+; CHECK-NEXT:    vfcvt.f.x.v v8, v9
+; CHECK-NEXT:    ret
+  %z = sitofp <2 x i7> %x to <2 x float>
+  ret <2 x float> %z
+}
+
+define <2 x float> @ui2fp_v2i7_v2f32(<2 x i7> %x) {
+; CHECK-LABEL: ui2fp_v2i7_v2f32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    li a0, 127
+; CHECK-NEXT:    vsetivli zero, 2, e8, mf8, ta, mu
+; CHECK-NEXT:    vand.vx v8, v8, a0
+; CHECK-NEXT:    vsetvli zero, zero, e32, mf2, ta, mu
+; CHECK-NEXT:    vzext.vf4 v9, v8
+; CHECK-NEXT:    vfcvt.f.xu.v v8, v9
+; CHECK-NEXT:    ret
+  %z = uitofp <2 x i7> %x to <2 x float>
+  ret <2 x float> %z
+}
+
 define <2 x float> @ui2fp_v2i1_v2f32(<2 x i1> %x) {
 ; CHECK-LABEL: ui2fp_v2i1_v2f32:
 ; CHECK:       # %bb.0:
