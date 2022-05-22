@@ -249,7 +249,9 @@ public:
 
   /// Methods for debug and self-test.
   //@{
+#ifndef NDEBUG
   bool validateTree() const;
+#endif
   void print(raw_ostream &Out) const;
   void dump() const { print(dbgs()); }
   //@}
