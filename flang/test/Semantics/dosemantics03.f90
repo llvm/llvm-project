@@ -1,15 +1,14 @@
-! RUN: %python %S/test_errors.py %s %flang_fc1 -pedantic -Werror
-
-! Issue 458 -- semantic checks for a normal DO loop.  The DO variable
-! and the initial, final, and step expressions must be INTEGER if the
-! options for standard conformance and turning warnings into errors
-! are both in effect.  This test turns on the options for standards
-! conformance and turning warnings into errors.  This produces error
-! messages for the cases where REAL and DOUBLE PRECISION variables
-! and expressions are used in the DO controls.
-
+! RUN: %python %S/test_errors.py %s %flang_fc1 -pedantic
+!
 ! C1120 -- DO variable (and associated expressions) must be INTEGER.
 ! This is extended by allowing REAL and DOUBLE PRECISION
+!
+! The standard requires the DO variable and the initial, final, and step
+! expressions to be INTEGER. As an extension, we do however allow them to be
+! REAL or DOUBLE PRECISION. This test turns on the option for standard
+! conformance checking to test that we get portability warnings for these
+! cases. We also check that other types, such as CHARACTER and LOGICAL, yield
+! errors when used in the DO controls.
 
 MODULE share
   INTEGER :: intvarshare
@@ -51,11 +50,13 @@ PROGRAM do_issue_458
   END DO
 
 ! REAL DO variable
+!WARNING: DO controls should be INTEGER
   DO rvar = 1, 10, 3
     PRINT *, "rvar is: ", rvar
   END DO
 
 ! DOUBLE PRECISISON DO variable
+!WARNING: DO controls should be INTEGER
   DO dvar = 1, 10, 3
     PRINT *, "dvar is: ", dvar
   END DO
@@ -68,12 +69,14 @@ PROGRAM do_issue_458
 
 ! Pointer to REAL DO variable
   ALLOCATE(prvar)
+!WARNING: DO controls should be INTEGER
   DO prvar = 1, 10, 3
     PRINT *, "prvar is: ", prvar
   END DO
 
 ! Pointer to DOUBLE PRECISION DO variable
   ALLOCATE(pdvar)
+!WARNING: DO controls should be INTEGER
   DO pdvar = 1, 10, 3
     PRINT *, "pdvar is: ", pdvar
   END DO
@@ -145,22 +148,26 @@ PROGRAM do_issue_458
   END DO
 
 ! Shared association REAL DO variable
+!WARNING: DO controls should be INTEGER
   DO realvarshare = 1, 10, 3
     PRINT *, "ivar is: ", ivar
   END DO
 
 ! Shared association DOUBLE PRECISION DO variable
+!WARNING: DO controls should be INTEGER
   DO dpvarshare = 1, 10, 3
     PRINT *, "ivar is: ", ivar
   END DO
 
 ! Initial expressions
 ! REAL initial expression
+!WARNING: DO controls should be INTEGER
   DO ivar = rvar, 10, 3
     PRINT *, "ivar is: ", ivar
   END DO
 
 ! DOUBLE PRECISION initial expression
+!WARNING: DO controls should be INTEGER
   DO ivar = dvar, 10, 3
     PRINT *, "ivar is: ", ivar
   END DO
@@ -171,11 +178,13 @@ PROGRAM do_issue_458
   END DO
 
 ! Pointer to REAL initial expression
+!WARNING: DO controls should be INTEGER
   DO ivar = prvar, 10, 3
     PRINT *, "ivar is: ", ivar
   END DO
 
 ! Pointer to DOUBLE PRECISION initial expression
+!WARNING: DO controls should be INTEGER
   DO ivar = pdvar, 10, 3
     PRINT *, "ivar is: ", ivar
   END DO
@@ -212,11 +221,13 @@ PROGRAM do_issue_458
 
 ! Final expression
 ! REAL final expression
+!WARNING: DO controls should be INTEGER
   DO ivar = 1, rvar, 3
     PRINT *, "ivar is: ", ivar
   END DO
 
 ! DOUBLE PRECISION final expression
+!WARNING: DO controls should be INTEGER
   DO ivar = 1, dvar, 3
     PRINT *, "ivar is: ", ivar
   END DO
@@ -227,11 +238,13 @@ PROGRAM do_issue_458
   END DO
 
 ! Pointer to REAL final expression
+!WARNING: DO controls should be INTEGER
   DO ivar = 1, prvar, 3
     PRINT *, "ivar is: ", ivar
   END DO
 
 ! Pointer to DOUBLE PRECISION final expression
+!WARNING: DO controls should be INTEGER
   DO ivar = pdvar, 10, 3
     PRINT *, "ivar is: ", ivar
   END DO
@@ -250,11 +263,13 @@ PROGRAM do_issue_458
 
 ! Step expression
 ! REAL step expression
+!WARNING: DO controls should be INTEGER
   DO ivar = 1, 10, rvar
     PRINT *, "ivar is: ", ivar
   END DO
 
 ! DOUBLE PRECISION step expression
+!WARNING: DO controls should be INTEGER
   DO ivar = 1, 10, dvar
     PRINT *, "ivar is: ", ivar
   END DO
@@ -265,11 +280,13 @@ PROGRAM do_issue_458
   END DO
 
 ! Pointer to REAL step expression
+!WARNING: DO controls should be INTEGER
   DO ivar = 1, 10, prvar
     PRINT *, "ivar is: ", ivar
   END DO
 
 ! Pointer to DOUBLE PRECISION step expression
+!WARNING: DO controls should be INTEGER
   DO ivar = 1, 10, pdvar
     PRINT *, "ivar is: ", ivar
   END DO
