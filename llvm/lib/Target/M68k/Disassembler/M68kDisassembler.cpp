@@ -31,7 +31,6 @@ using namespace llvm;
 #define DEBUG_TYPE "m68k-disassembler"
 
 typedef MCDisassembler::DecodeStatus DecodeStatus;
-const unsigned MaxInstrWord = 11;
 
 static const unsigned RegisterDecode[] = {
     M68k::D0, M68k::D1, M68k::D2, M68k::D3, M68k::D4, M68k::D5,
@@ -98,13 +97,9 @@ static DecodeStatus DecodeCCRCRegisterClass(MCInst &Inst, APInt &Insn,
 #include "M68kGenDisassemblerTable.inc"
 
 /// A disassembler class for M68k.
-class M68kDisassembler : public MCDisassembler {
-  MCInstrInfo *MCII;
-
-public:
-  M68kDisassembler(const MCSubtargetInfo &STI, MCContext &Ctx,
-                   MCInstrInfo *MCII)
-      : MCDisassembler(STI, Ctx), MCII(MCII) {}
+struct M68kDisassembler : public MCDisassembler {
+  M68kDisassembler(const MCSubtargetInfo &STI, MCContext &Ctx)
+      : MCDisassembler(STI, Ctx) {}
   virtual ~M68kDisassembler() {}
 
   DecodeStatus getInstruction(MCInst &Instr, uint64_t &Size,
@@ -142,7 +137,7 @@ DecodeStatus M68kDisassembler::getInstruction(MCInst &Instr, uint64_t &Size,
 static MCDisassembler *createM68kDisassembler(const Target &T,
                                               const MCSubtargetInfo &STI,
                                               MCContext &Ctx) {
-  return new M68kDisassembler(STI, Ctx, T.createMCInstrInfo());
+  return new M68kDisassembler(STI, Ctx);
 }
 
 extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeM68kDisassembler() {

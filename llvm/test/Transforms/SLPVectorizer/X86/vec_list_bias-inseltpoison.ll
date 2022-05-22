@@ -49,9 +49,15 @@ define void @test(i32* nocapture %t2) {
 ; CHECK-NEXT:    [[TMP8:%.*]] = add nsw <4 x i32> [[TMP4]], [[TMP7]]
 ; CHECK-NEXT:    [[TMP9:%.*]] = mul nsw <4 x i32> [[TMP4]], [[TMP7]]
 ; CHECK-NEXT:    [[TMP10:%.*]] = shufflevector <4 x i32> [[TMP8]], <4 x i32> [[TMP9]], <4 x i32> <i32 0, i32 1, i32 6, i32 3>
-; CHECK-NEXT:    [[TMP11:%.*]] = shufflevector <4 x i32> [[TMP10]], <4 x i32> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 0, i32 1, i32 undef, i32 3>
-; CHECK-NEXT:    [[T71:%.*]] = insertelement <8 x i32> [[TMP11]], i32 [[T34]], i32 6
-; CHECK-NEXT:    [[T76:%.*]] = shl <8 x i32> [[T71]], <i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3>
+; CHECK-NEXT:    [[TMP11:%.*]] = shufflevector <4 x i32> [[TMP10]], <4 x i32> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 undef, i32 undef, i32 undef, i32 undef>
+; CHECK-NEXT:    [[TMP12:%.*]] = extractelement <4 x i32> [[TMP10]], i32 0
+; CHECK-NEXT:    [[T69:%.*]] = insertelement <8 x i32> [[TMP11]], i32 [[TMP12]], i32 4
+; CHECK-NEXT:    [[TMP13:%.*]] = extractelement <4 x i32> [[TMP10]], i32 1
+; CHECK-NEXT:    [[T70:%.*]] = insertelement <8 x i32> [[T69]], i32 [[TMP13]], i32 5
+; CHECK-NEXT:    [[T71:%.*]] = insertelement <8 x i32> [[T70]], i32 [[T34]], i32 6
+; CHECK-NEXT:    [[TMP14:%.*]] = extractelement <4 x i32> [[TMP10]], i32 3
+; CHECK-NEXT:    [[T72:%.*]] = insertelement <8 x i32> [[T71]], i32 [[TMP14]], i32 7
+; CHECK-NEXT:    [[T76:%.*]] = shl <8 x i32> [[T72]], <i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3>
 ; CHECK-NEXT:    [[T79:%.*]] = bitcast i32* [[T2]] to <8 x i32>*
 ; CHECK-NEXT:    store <8 x i32> [[T76]], <8 x i32>* [[T79]], align 4
 ; CHECK-NEXT:    ret void
