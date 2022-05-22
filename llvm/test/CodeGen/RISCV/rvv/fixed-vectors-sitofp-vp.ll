@@ -4,6 +4,21 @@
 ; RUN: llc -mtriple=riscv64 -mattr=+m,+v,+zfh,+experimental-zvfh \
 ; RUN:     -riscv-v-vector-bits-min=128 < %s | FileCheck %s
 
+declare <4 x half> @llvm.vp.sitofp.v4f16.v4i7(<4 x i7>, <4 x i1>, i32)
+
+define <4 x half> @vsitofp_v4f16_v4i7(<4 x i7> %va, <4 x i1> %m, i32 zeroext %evl) {
+; CHECK-LABEL: vsitofp_v4f16_v4i7:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 4, e8, mf4, ta, mu
+; CHECK-NEXT:    vadd.vv v8, v8, v8
+; CHECK-NEXT:    vsra.vi v9, v8, 1
+; CHECK-NEXT:    vsetvli zero, a0, e8, mf4, ta, mu
+; CHECK-NEXT:    vfwcvt.f.x.v v8, v9, v0.t
+; CHECK-NEXT:    ret
+  %v = call <4 x half> @llvm.vp.sitofp.v4f16.v4i7(<4 x i7> %va, <4 x i1> %m, i32 %evl)
+  ret <4 x half> %v
+}
+
 declare <4 x half> @llvm.vp.sitofp.v4f16.v4i8(<4 x i8>, <4 x i1>, i32)
 
 define <4 x half> @vsitofp_v4f16_v4i8(<4 x i8> %va, <4 x i1> %m, i32 zeroext %evl) {
