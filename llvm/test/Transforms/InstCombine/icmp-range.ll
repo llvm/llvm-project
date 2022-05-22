@@ -173,8 +173,9 @@ define i1 @test_two_ranges3(i32* nocapture readonly %arg1, i32* nocapture readon
 
 define i1 @sub_ult_zext(i1 %b, i8 %x, i8 %y) {
 ; CHECK-LABEL: @sub_ult_zext(
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i8 [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    [[R:%.*]] = and i1 [[TMP1]], [[B:%.*]]
+; CHECK-NEXT:    [[Z:%.*]] = zext i1 [[B:%.*]] to i8
+; CHECK-NEXT:    [[S:%.*]] = sub i8 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = icmp ult i8 [[S]], [[Z]]
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %z = zext i1 %b to i8
@@ -187,8 +188,8 @@ define i1 @sub_ult_zext_use1(i1 %b, i8 %x, i8 %y) {
 ; CHECK-LABEL: @sub_ult_zext_use1(
 ; CHECK-NEXT:    [[Z:%.*]] = zext i1 [[B:%.*]] to i8
 ; CHECK-NEXT:    call void @use(i8 [[Z]])
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i8 [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    [[R:%.*]] = and i1 [[TMP1]], [[B]]
+; CHECK-NEXT:    [[S:%.*]] = sub i8 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = icmp ult i8 [[S]], [[Z]]
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %z = zext i1 %b to i8
@@ -200,10 +201,10 @@ define i1 @sub_ult_zext_use1(i1 %b, i8 %x, i8 %y) {
 
 define <2 x i1> @zext_ugt_sub_use2(<2 x i1> %b, <2 x i8> %x, <2 x i8> %y) {
 ; CHECK-LABEL: @zext_ugt_sub_use2(
+; CHECK-NEXT:    [[Z:%.*]] = zext <2 x i1> [[B:%.*]] to <2 x i8>
 ; CHECK-NEXT:    [[S:%.*]] = sub <2 x i8> [[X:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    call void @use_vec(<2 x i8> [[S]])
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq <2 x i8> [[X]], [[Y]]
-; CHECK-NEXT:    [[R:%.*]] = and <2 x i1> [[TMP1]], [[B:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = icmp ult <2 x i8> [[S]], [[Z]]
 ; CHECK-NEXT:    ret <2 x i1> [[R]]
 ;
   %z = zext <2 x i1> %b to <2 x i8>
@@ -212,8 +213,6 @@ define <2 x i1> @zext_ugt_sub_use2(<2 x i1> %b, <2 x i8> %x, <2 x i8> %y) {
   %r = icmp ugt <2 x i8> %z, %s
   ret <2 x i1> %r
 }
-
-; negative test - too many extra uses
 
 define i1 @sub_ult_zext_use3(i1 %b, i8 %x, i8 %y) {
 ; CHECK-LABEL: @sub_ult_zext_use3(
@@ -231,8 +230,6 @@ define i1 @sub_ult_zext_use3(i1 %b, i8 %x, i8 %y) {
   %r = icmp ult i8 %s, %z
   ret i1 %r
 }
-
-; negative test - wrong predicate
 
 define i1 @sub_ule_zext(i1 %b, i8 %x, i8 %y) {
 ; CHECK-LABEL: @sub_ule_zext(
