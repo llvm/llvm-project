@@ -80,7 +80,7 @@ void NonTrivialTypesLibcMemoryCallsCheck::registerMatchers(
   auto IsRecordSizeOf =
       expr(sizeOfExpr(hasArgumentOfType(equalsBoundNode("Record"))));
   auto ArgChecker = [&](Matcher<CXXRecordDecl> RecordConstraint,
-                        BindableMatcher<Stmt> SecondArg) {
+                        BindableMatcher<Stmt> SecondArg = expr()) {
     return allOf(argumentCountIs(3),
                  hasArgument(0, IsStructPointer(RecordConstraint, true)),
                  hasArgument(1, SecondArg), hasArgument(2, IsRecordSizeOf));
@@ -89,8 +89,7 @@ void NonTrivialTypesLibcMemoryCallsCheck::registerMatchers(
   Finder->addMatcher(
       callExpr(callee(namedDecl(hasAnyName(
                    utils::options::parseListPair(BuiltinMemSet, MemSetNames)))),
-               ArgChecker(unless(isTriviallyDefaultConstructible()),
-                          expr(integerLiteral(equals(0)))))
+               ArgChecker(unless(isTriviallyDefaultConstructible())))
           .bind("lazyConstruct"),
       this);
   Finder->addMatcher(
