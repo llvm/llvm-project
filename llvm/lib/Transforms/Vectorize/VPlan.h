@@ -1245,6 +1245,9 @@ public:
   /// Generate vector values for the pointer induction.
   void execute(VPTransformState &State) override;
 
+  /// Returns true if only scalar values will be generated.
+  bool onlyScalarsGenerated(ElementCount VF);
+
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   /// Print the recipe.
   void print(raw_ostream &O, const Twine &Indent,
