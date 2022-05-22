@@ -194,6 +194,10 @@ Changes in existing checks
   <clang-tidy/checks/readability-non-const-parameter>` when the parameter is
   referenced by an lvalue.
 
+- Expanded :doc:`readability-simplify-boolean-expr
+  <clang-tidy/checks/readability-simplify-boolean-expr>` to simplify expressions
+  using DeMorgan's Theorem.
+
 Removed checks
 ^^^^^^^^^^^^^^
 
