@@ -666,6 +666,7 @@ void SimplifyBooleanExprCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
   Options.store(Opts, "ChainedConditionalReturn", ChainedConditionalReturn);
   Options.store(Opts, "ChainedConditionalAssignment",
                 ChainedConditionalAssignment);
+  Options.store(Opts, "SimplifyDeMorgan", SimplifyDeMorgan);
 }
 
 void SimplifyBooleanExprCheck::registerMatchers(MatchFinder *Finder) {
