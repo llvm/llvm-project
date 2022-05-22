@@ -5631,29 +5631,6 @@ Instruction *InstCombinerImpl::foldICmpUsingKnownBits(ICmpInst &I) {
   return nullptr;
 }
 
-/// If one operand of an icmp is effectively a bool (value range of {0,1}),
-/// then try to reduce patterns based on that limit.
-static Instruction *foldICmpUsingBoolRange(ICmpInst &I,
-                                           InstCombiner::BuilderTy &Builder) {
-  Value *Op0 = I.getOperand(0), *Op1 = I.getOperand(1);
-  const ICmpInst::Predicate Pred = I.getPredicate();
-
-  Value *X, *Y, *Z;
-  if (Pred != ICmpInst::ICMP_ULT || !match(Op0, m_Sub(m_Value(X), m_Value(Y))))
-    return nullptr;
-
-  unsigned ExtraUses = !Op0->hasOneUse() + !Op1->hasOneUse();
-
-  // Sub must be 0 and bool must be true for "ULT":
-  // (sub X, Y) <u (zext i1 Z) --> (X == Y) && Z
-  if (match(Op1, m_ZExt(m_Value(Z))) && ExtraUses < 2) {
-    Value *EqXY = Builder.CreateICmpEQ(X, Y);
-    return BinaryOperator::CreateAnd(EqXY, Z);
-  }
-
-  return nullptr;
-}
-
 llvm::Optional<std::pair<CmpInst::Predicate, Constant *>>
 InstCombiner::getFlippedStrictnessPredicateAndConstant(CmpInst::Predicate Pred,
                                                        Constant *C) {
@@ -6079,9 +6056,6 @@ Instruction *InstCombinerImpl::visitICmpInst(ICmpInst &I) {
     return Res;
 
   if (Instruction *Res = foldICmpWithDominatingICmp(I))
-    return Res;
-
-  if (Instruction *Res = foldICmpUsingBoolRange(I, Builder))
     return Res;
 
   if (Instruction *Res = foldICmpUsingKnownBits(I))
