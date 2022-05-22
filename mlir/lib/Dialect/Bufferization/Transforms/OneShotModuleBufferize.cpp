@@ -105,6 +105,8 @@ static FuncAnalysisState &getFuncAnalysisState(AnalysisState &state) {
 }
 
 /// Return the state (phase) of analysis of the FuncOp.
+/// Used for debug modes.
+LLVM_ATTRIBUTE_UNUSED
 static FuncOpAnalysisState getFuncOpAnalysisState(const AnalysisState &state,
                                                   func::FuncOp funcOp) {
   const FuncAnalysisState &funcState = getFuncAnalysisState(state);
