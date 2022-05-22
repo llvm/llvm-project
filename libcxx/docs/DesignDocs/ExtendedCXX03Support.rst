@@ -27,12 +27,12 @@ libc++ expects Clang  to provide are:
 * Alias templates
 * defaulted and deleted Functions.
 * reference qualified Functions
+* ``auto``
 
 There are also features that Clang *does not* provide as an extension in C++03
 mode. These include:
 
 * ``constexpr`` and ``noexcept``
-* ``auto``
 *  Trailing return types.
 * ``>>`` without a space.
 
