@@ -205,7 +205,9 @@ let Pattern = [(null_frag)] in {
     foreach TYPE = [MxType16, MxType32] in
     def MOV # TYPE.Size # REG # AM # _TC
         : MxMove_RM<TYPE, REG, !cast<MxOpBundle>("MxOp"#TYPE.Size#"AddrMode_"#AM),
-                    !cast<MxEncMemOp>("MxMoveSrcOpEnc_"#AM)>;
+                    !cast<MxEncMemOp>("MxMoveSrcOpEnc_"#AM)> {
+      let isCodeGenOnly = true;
+    }
   } // foreach AM
 } // let Pattern
 
