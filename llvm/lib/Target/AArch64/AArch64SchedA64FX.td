@@ -3554,7 +3554,7 @@ def : InstRW<[A64FXWrite_4Cyc_GI03], (instrs SQINCW_ZPiI)>;
 def : InstRW<[A64FXWrite_ST1W_6], (instrs ST1B, ST1B_D, ST1B_H, ST1B_S)>;
 
 // [421]   "st1b        $Zt, $Pg, [$Rn, $Zm]";
-def : InstRW<[A64FXWrite_ST1W_19], (instrs SST1B_D_REAL, SST1B_D_SXTW, SST1B_D_UXTW, SST1B_S_SXTW, SST1B_S_UXTW)>;
+def : InstRW<[A64FXWrite_ST1W_19], (instrs SST1B_D, SST1B_D_SXTW, SST1B_D_UXTW, SST1B_S_SXTW, SST1B_S_UXTW)>;
 
 // [422]   "st1b        $Zt, $Pg, [$Rn, $imm4, mul vl]";
 def : InstRW<[A64FXWrite_ST1W_6], (instrs ST1B_D_IMM, ST1B_H_IMM, ST1B_IMM, ST1B_S_IMM)>;
@@ -3566,7 +3566,7 @@ def : InstRW<[A64FXWrite_ST1W_15], (instrs SST1B_D_IMM, SST1B_S_IMM)>;
 def : InstRW<[A64FXWrite_ST1W_6], (instrs ST1D)>;
 
 // [425]   "st1d        $Zt, $Pg, [$Rn, $Zm]";
-def : InstRW<[A64FXWrite_ST1W_19], (instrs SST1D_REAL, SST1D_SCALED_SCALED_REAL, SST1D_SXTW, SST1D_SXTW_SCALED, SST1D_UXTW, SST1D_UXTW_SCALED)>;
+def : InstRW<[A64FXWrite_ST1W_19], (instrs SST1D, SST1D_SCALED, SST1D_SXTW, SST1D_SXTW_SCALED, SST1D_UXTW, SST1D_UXTW_SCALED)>;
 
 // [426]   "st1d        $Zt, $Pg, [$Rn, $imm4, mul vl]";
 def : InstRW<[A64FXWrite_ST1W_6], (instrs ST1D_IMM)>;
@@ -3578,7 +3578,7 @@ def : InstRW<[A64FXWrite_ST1W_15], (instrs SST1D_IMM)>;
 def : InstRW<[A64FXWrite_ST1W_6], (instrs ST1H, ST1H_D, ST1H_S)>;
 
 // [429]   "st1h        $Zt, $Pg, [$Rn, $Zm]";
-def : InstRW<[A64FXWrite_ST1W_19], (instrs SST1H_D_REAL, SST1H_D_SCALED_SCALED_REAL, SST1H_D_SXTW, SST1H_D_SXTW_SCALED, SST1H_D_UXTW, SST1H_D_UXTW_SCALED, SST1H_S_SXTW, SST1H_S_SXTW_SCALED, SST1H_S_UXTW, SST1H_S_UXTW_SCALED)>;
+def : InstRW<[A64FXWrite_ST1W_19], (instrs SST1H_D, SST1H_D_SCALED, SST1H_D_SXTW, SST1H_D_SXTW_SCALED, SST1H_D_UXTW, SST1H_D_UXTW_SCALED, SST1H_S_SXTW, SST1H_S_SXTW_SCALED, SST1H_S_UXTW, SST1H_S_UXTW_SCALED)>;
 
 // [430]   "st1h        $Zt, $Pg, [$Rn, $imm4, mul vl]";
 def : InstRW<[A64FXWrite_ST1W_6], (instrs ST1H_D_IMM, ST1H_IMM, ST1H_S_IMM)>;
@@ -3590,7 +3590,7 @@ def : InstRW<[A64FXWrite_ST1W_15], (instrs SST1H_D_IMM, SST1H_S_IMM)>;
 def : InstRW<[A64FXWrite_ST1W_6], (instrs ST1W, ST1W_D)>;
 
 // [433]   "st1w        $Zt, $Pg, [$Rn, $Zm]";
-def : InstRW<[A64FXWrite_ST1W_19], (instrs SST1W_D_REAL, SST1W_D_SCALED_SCALED_REAL, SST1W_D_SXTW, SST1W_D_SXTW_SCALED, SST1W_D_UXTW, SST1W_D_UXTW_SCALED, SST1W_SXTW, SST1W_SXTW_SCALED, SST1W_UXTW, SST1W_UXTW_SCALED)>;
+def : InstRW<[A64FXWrite_ST1W_19], (instrs SST1W_D, SST1W_D_SCALED, SST1W_D_SXTW, SST1W_D_SXTW_SCALED, SST1W_D_UXTW, SST1W_D_UXTW_SCALED, SST1W_SXTW, SST1W_SXTW_SCALED, SST1W_UXTW, SST1W_UXTW_SCALED)>;
 
 // [434]   "st1w        $Zt, $Pg, [$Rn, $imm4, mul vl]";
 def : InstRW<[A64FXWrite_ST1W_6], (instrs ST1W_D_IMM, ST1W_IMM)>;
