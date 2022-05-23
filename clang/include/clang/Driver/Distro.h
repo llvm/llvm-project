@@ -75,6 +75,7 @@ public:
     UbuntuHirsute,
     UbuntuImpish,
     UbuntuJammy,
+    UbuntuKinetic,
     UnknownDistro
   };
 
@@ -126,7 +127,7 @@ public:
   }
 
   bool IsUbuntu() const {
-    return DistroVal >= UbuntuHardy && DistroVal <= UbuntuJammy;
+    return DistroVal >= UbuntuHardy && DistroVal <= UbuntuKinetic;
   }
 
   bool IsAlpineLinux() const { return DistroVal == AlpineLinux; }
