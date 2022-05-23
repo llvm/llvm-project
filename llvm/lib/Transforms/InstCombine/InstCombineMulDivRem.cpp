@@ -529,9 +529,8 @@ Instruction *InstCombinerImpl::visitFMul(BinaryOperator &I) {
     // sqrt(X) * sqrt(Y) -> sqrt(X * Y)
     // nnan disallows the possibility of returning a number if both operands are
     // negative (in that case, we should return NaN).
-    if (I.hasNoNaNs() &&
-        match(Op0, m_OneUse(m_Intrinsic<Intrinsic::sqrt>(m_Value(X)))) &&
-        match(Op1, m_OneUse(m_Intrinsic<Intrinsic::sqrt>(m_Value(Y))))) {
+    if (I.hasNoNaNs() && match(Op0, m_OneUse(m_Sqrt(m_Value(X)))) &&
+        match(Op1, m_OneUse(m_Sqrt(m_Value(Y))))) {
       Value *XY = Builder.CreateFMulFMF(X, Y, &I);
       Value *Sqrt = Builder.CreateUnaryIntrinsic(Intrinsic::sqrt, XY, &I);
       return replaceInstUsesWith(I, Sqrt);
@@ -545,11 +544,11 @@ Instruction *InstCombinerImpl::visitFMul(BinaryOperator &I) {
     // has the necessary (reassoc) fast-math-flags.
     if (I.hasNoSignedZeros() &&
         match(Op0, (m_FDiv(m_SpecificFP(1.0), m_Value(Y)))) &&
-        match(Y, m_Intrinsic<Intrinsic::sqrt>(m_Value(X))) && Op1 == X)
+        match(Y, m_Sqrt(m_Value(X))) && Op1 == X)
       return BinaryOperator::CreateFDivFMF(X, Y, &I);
     if (I.hasNoSignedZeros() &&
         match(Op1, (m_FDiv(m_SpecificFP(1.0), m_Value(Y)))) &&
-        match(Y, m_Intrinsic<Intrinsic::sqrt>(m_Value(X))) && Op0 == X)
+        match(Y, m_Sqrt(m_Value(X))) && Op0 == X)
       return BinaryOperator::CreateFDivFMF(X, Y, &I);
 
     // Like the similar transform in instsimplify, this requires 'nsz' because
@@ -558,14 +557,12 @@ Instruction *InstCombinerImpl::visitFMul(BinaryOperator &I) {
         Op0->hasNUses(2)) {
       // Peek through fdiv to find squaring of square root:
       // (X / sqrt(Y)) * (X / sqrt(Y)) --> (X * X) / Y
-      if (match(Op0, m_FDiv(m_Value(X),
-                            m_Intrinsic<Intrinsic::sqrt>(m_Value(Y))))) {
+      if (match(Op0, m_FDiv(m_Value(X), m_Sqrt(m_Value(Y))))) {
         Value *XX = Builder.CreateFMulFMF(X, X, &I);
         return BinaryOperator::CreateFDivFMF(XX, Y, &I);
       }
       // (sqrt(Y) / X) * (sqrt(Y) / X) --> Y / (X * X)
-      if (match(Op0, m_FDiv(m_Intrinsic<Intrinsic::sqrt>(m_Value(Y)),
-                            m_Value(X)))) {
+      if (match(Op0, m_FDiv(m_Sqrt(m_Value(Y)), m_Value(X)))) {
         Value *XX = Builder.CreateFMulFMF(X, X, &I);
         return BinaryOperator::CreateFDivFMF(Y, XX, &I);
       }
