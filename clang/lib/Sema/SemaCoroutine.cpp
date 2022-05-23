@@ -1239,41 +1239,6 @@ bool CoroutineStmtBuilder::makeReturnOnAllocFailure() {
   return true;
 }
 
-// Collect placement arguments for allocation function of coroutine FD.
-// Return true if we collect placement arguments succesfully. Return false,
-// otherwise.
-static bool collectPlacementArgs(Sema &S, FunctionDecl &FD, SourceLocation Loc,
-                                 SmallVectorImpl<Expr *> &PlacementArgs) {
-  if (auto *MD = dyn_cast<CXXMethodDecl>(&FD)) {
-    if (MD->isInstance() && !isLambdaCallOperator(MD)) {
-      ExprResult ThisExpr = S.ActOnCXXThis(Loc);
-      if (ThisExpr.isInvalid())
-        return false;
-      ThisExpr = S.CreateBuiltinUnaryOp(Loc, UO_Deref, ThisExpr.get());
-      if (ThisExpr.isInvalid())
-        return false;
-      PlacementArgs.push_back(ThisExpr.get());
-    }
-  }
-
-  for (auto *PD : FD.parameters()) {
-    if (PD->getType()->isDependentType())
-      continue;
-
-    // Build a reference to the parameter.
-    auto PDLoc = PD->getLocation();
-    ExprResult PDRefExpr =
-        S.BuildDeclRefExpr(PD, PD->getOriginalType().getNonReferenceType(),
-                           ExprValueKind::VK_LValue, PDLoc);
-    if (PDRefExpr.isInvalid())
-      return false;
-
-    PlacementArgs.push_back(PDRefExpr.get());
-  }
-
-  return true;
-}
-
 bool CoroutineStmtBuilder::makeNewAndDeleteExpr() {
   // Form and check allocation and deallocation calls.
   assert(!IsPromiseDependentType &&
@@ -1290,7 +1255,13 @@ bool CoroutineStmtBuilder::makeNewAndDeleteExpr() {
   // allocated, followed by the coroutine function's arguments. If a matching
   // allocation function exists, use it. Otherwise, use an allocation function
   // that just takes the requested size.
-  //
+
+  FunctionDecl *OperatorNew = nullptr;
+  FunctionDecl *OperatorDelete = nullptr;
+  FunctionDecl *UnusedResult = nullptr;
+  bool PassAlignment = false;
+  SmallVector<Expr *, 1> PlacementArgs;
+
   // [dcl.fct.def.coroutine]p9
   //   An implementation may need to allocate additional storage for a
   //   coroutine.
@@ -1317,12 +1288,31 @@ bool CoroutineStmtBuilder::makeNewAndDeleteExpr() {
   // and p_i denotes the i-th function parameter otherwise. For a non-static
   // member function, q_1 is an lvalue that denotes *this; any other q_i is an
   // lvalue that denotes the parameter copy corresponding to p_i.
+  if (auto *MD = dyn_cast<CXXMethodDecl>(&FD)) {
+    if (MD->isInstance() && !isLambdaCallOperator(MD)) {
+      ExprResult ThisExpr = S.ActOnCXXThis(Loc);
+      if (ThisExpr.isInvalid())
+        return false;
+      ThisExpr = S.CreateBuiltinUnaryOp(Loc, UO_Deref, ThisExpr.get());
+      if (ThisExpr.isInvalid())
+        return false;
+      PlacementArgs.push_back(ThisExpr.get());
+    }
+  }
+  for (auto *PD : FD.parameters()) {
+    if (PD->getType()->isDependentType())
+      continue;
 
-  FunctionDecl *OperatorNew = nullptr;
-  FunctionDecl *OperatorDelete = nullptr;
-  FunctionDecl *UnusedResult = nullptr;
-  bool PassAlignment = false;
-  SmallVector<Expr *, 1> PlacementArgs;
+    // Build a reference to the parameter.
+    auto PDLoc = PD->getLocation();
+    ExprResult PDRefExpr =
+        S.BuildDeclRefExpr(PD, PD->getOriginalType().getNonReferenceType(),
+                           ExprValueKind::VK_LValue, PDLoc);
+    if (PDRefExpr.isInvalid())
+      return false;
+
+    PlacementArgs.push_back(PDRefExpr.get());
+  }
 
   bool PromiseContainNew = [this, &PromiseType]() -> bool {
     DeclarationName NewName =
@@ -1340,10 +1330,8 @@ bool CoroutineStmtBuilder::makeNewAndDeleteExpr() {
     //   The allocation function's name is looked up by searching for it in the
     // scope of the promise type.
     // - If any declarations are found, ...
-    // - If no declarations are found in the scope of the promise type, a search
-    // is performed in the global scope.
-    Sema::AllocationFunctionScope NewScope =
-        PromiseContainNew ? Sema::AFS_Class : Sema::AFS_Global;
+    // - Otherwise, a search is performed in the global scope.
+    Sema::AllocationFunctionScope NewScope = PromiseContainNew ? Sema::AFS_Class : Sema::AFS_Global;
     S.FindAllocationFunctions(Loc, SourceRange(),
                               NewScope,
                               /*DeleteScope*/ Sema::AFS_Both, PromiseType,
@@ -1351,17 +1339,13 @@ bool CoroutineStmtBuilder::makeNewAndDeleteExpr() {
                               OperatorNew, UnusedResult, /*Diagnose*/ false);
   };
 
-  // We don't expect to call to global operator new with (size, p0, …, pn).
-  if (PromiseContainNew && !collectPlacementArgs(S, FD, Loc, PlacementArgs))
-    return false;
-
   LookupAllocationFunction();
 
   // [dcl.fct.def.coroutine]p9
   //   If no viable function is found ([over.match.viable]), overload resolution
   // is performed again on a function call created by passing just the amount of
   // space required as an argument of type std::size_t.
-  if (!OperatorNew && !PlacementArgs.empty() && PromiseContainNew) {
+  if (!OperatorNew && !PlacementArgs.empty()) {
     PlacementArgs.clear();
     LookupAllocationFunction();
   }
