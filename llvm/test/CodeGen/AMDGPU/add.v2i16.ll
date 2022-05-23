@@ -1,6 +1,6 @@
 ; RUN: llc -march=amdgcn -mcpu=tonga -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,VI %s
-; RUN: llc -march=amdgcn -mcpu=gfx900 -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GFX9PLUS,GFX9GFX10,GFX9 %s
-; RUN: llc -march=amdgcn -mcpu=gfx1010 -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GFX9PLUS,GFX10PLUS,GFX9GFX10 %s
+; RUN: llc -march=amdgcn -mcpu=gfx900 -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GFX9PLUS,GFX9_10,GFX9 %s
+; RUN: llc -march=amdgcn -mcpu=gfx1010 -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GFX9PLUS,GFX10PLUS,GFX9_10 %s
 ; RUN: llc -march=amdgcn -mcpu=gfx1100 -mattr=-flat-for-global -amdgpu-enable-vopd=0 -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GFX9PLUS,GFX10PLUS %s
 
 ; FIXME: Need to handle non-uniform case for function below (load without gep).
@@ -201,14 +201,14 @@ define amdgpu_kernel void @v_test_add_v2i16_zext_to_v2i32(<2 x i32> addrspace(1)
 
 ; FIXME: Need to handle non-uniform case for function below (load without gep).
 ; GCN-LABEL: {{^}}v_test_add_v2i16_zext_to_v2i64:
-; GFX9GFX10: v_mov_b32_e32 [[MASK:v[0-9+]]], 0xffff
+; GFX9_10: v_mov_b32_e32 [[MASK:v[0-9+]]], 0xffff
 ; GFX9PLUS: global_load_{{dword|b32}} [[A:v[0-9]+]]
 ; GFX9PLUS: global_load_{{dword|b32}} [[B:v[0-9]+]]
 
 ; GFX9PLUS: v_pk_add_u16 [[ADD:v[0-9]+]], [[A]], [[B]]
 ; GFX9-DAG: v_and_b32_e32 v[[ELT0:[0-9]+]], [[MASK]], [[ADD]]
 ; GFX10PLUS-DAG: v_and_b32_e32 v[[ELT0:[0-9]+]], 0xffff, [[ADD]]
-; GFX9GFX10-DAG: v_and_b32_sdwa v{{[0-9]+}}, [[MASK]], v{{[0-9]+}} dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_1
+; GFX9_10-DAG: v_and_b32_sdwa v{{[0-9]+}}, [[MASK]], v{{[0-9]+}} dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_1
 ; GFX9PLUS: buffer_store_{{dwordx4|b128}}
 
 ; VI-DAG: v_mov_b32_e32 v{{[0-9]+}}, 0{{$}}
