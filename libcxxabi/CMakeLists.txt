@@ -115,10 +115,10 @@ cmake_dependent_option(LIBCXXABI_INSTALL_SHARED_LIBRARY
 
 cmake_dependent_option(LIBCXXABI_STATICALLY_LINK_UNWINDER_IN_STATIC_LIBRARY
   "Statically link the LLVM unwinder to static library" ON
-  "LIBCXXABI_ENABLE_STATIC_UNWINDER;LIBCXXABI_ENABLE_STATIC" OFF)
+  "LIBCXXABI_ENABLE_STATIC_UNWINDER" OFF)
 cmake_dependent_option(LIBCXXABI_STATICALLY_LINK_UNWINDER_IN_SHARED_LIBRARY
   "Statically link the LLVM unwinder to shared library" ON
-  "LIBCXXABI_ENABLE_STATIC_UNWINDER;LIBCXXABI_ENABLE_SHARED" OFF)
+  "LIBCXXABI_ENABLE_STATIC_UNWINDER" OFF)
 
 option(LIBCXXABI_BAREMETAL "Build libc++abi for baremetal targets." OFF)
 # The default terminate handler attempts to demangle uncaught exceptions, which
