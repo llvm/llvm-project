@@ -1935,7 +1935,7 @@ def int_amdgcn_mov_dpp8 :
 def int_amdgcn_s_get_waveid_in_workgroup :
   GCCBuiltin<"__builtin_amdgcn_s_get_waveid_in_workgroup">,
   Intrinsic<[llvm_i32_ty], [],
-    [IntrReadMem, IntrInaccessibleMemOnly, IntrWillReturn]>;
+    [IntrNoMem, IntrHasSideEffects, IntrWillReturn]>;
 
 class AMDGPUGlobalAtomicRtn<LLVMType vt> : Intrinsic <
   [vt],

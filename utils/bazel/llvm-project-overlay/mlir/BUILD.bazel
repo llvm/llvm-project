@@ -2033,6 +2033,7 @@ cc_library(
         ":Affine",
         ":ArithmeticDialect",
         ":BufferizationDialect",
+        ":ComplexDialect",
         ":FuncDialect",
         ":FuncTransforms",
         ":IR",
@@ -7607,6 +7608,8 @@ cc_library(
         ":IR",
         ":LLVMDialect",
         ":MemRefDialect",
+        ":NVGPU",
+        ":NVVMDialect",
         ":Pass",
         ":SCFDialect",
         ":Support",
@@ -8559,8 +8562,8 @@ cc_library(
 td_library(
     name = "MLProgramOpsTdFiles",
     srcs = [
-        "include/mlir/Dialect/MLProgram/IR/MLProgramBase.td",
         "include/mlir/Dialect/MLProgram/IR/MLProgramAttributes.td",
+        "include/mlir/Dialect/MLProgram/IR/MLProgramBase.td",
         "include/mlir/Dialect/MLProgram/IR/MLProgramOps.td",
     ],
     includes = ["include"],
@@ -8689,6 +8692,7 @@ td_library(
     deps = [
         ":AllocationOpInterfaceTdFiles",
         ":CopyOpInterfaceTdFiles",
+        ":InferTypeOpInterfaceTdFiles",
         ":OpBaseTdFiles",
         ":SideEffectInterfacesTdFiles",
     ],
@@ -8752,6 +8756,7 @@ cc_library(
     ],
     includes = ["include"],
     deps = [
+        ":Affine",
         ":AllocationOpInterface",
         ":ArithmeticDialect",
         ":BufferizableOpInterfaceIncGen",
@@ -8760,6 +8765,7 @@ cc_library(
         ":CopyOpInterface",
         ":FuncDialect",
         ":IR",
+        ":InferTypeOpInterface",
         ":MemRefDialect",
         ":Support",
         ":TensorDialect",
@@ -8806,6 +8812,7 @@ cc_library(
         ":LoopLikeInterface",
         ":MemRefDialect",
         ":Pass",
+        ":TensorDialect",
         ":Transforms",
         "//llvm:Support",
     ],

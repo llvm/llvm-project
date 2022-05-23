@@ -1185,7 +1185,8 @@ private:
       }
       break;
     case tok::arrow:
-      if (Tok->Previous && Tok->Previous->is(tok::kw_noexcept))
+      if (Tok->isNot(TT_LambdaArrow) && Tok->Previous &&
+          Tok->Previous->is(tok::kw_noexcept))
         Tok->setType(TT_TrailingReturnArrow);
       break;
     default:
@@ -1251,9 +1252,9 @@ private:
   void parsePragma() {
     next(); // Consume "pragma".
     if (CurrentToken &&
-        CurrentToken->isOneOf(Keywords.kw_mark, Keywords.kw_option)) {
+        CurrentToken->isOneOf(Keywords.kw_mark, Keywords.kw_option, Keywords.kw_region)) {
       bool IsMark = CurrentToken->is(Keywords.kw_mark);
-      next(); // Consume "mark".
+      next();
       next(); // Consume first token (so we fix leading whitespace).
       while (CurrentToken) {
         if (IsMark || CurrentToken->Previous->is(TT_BinaryOperator))

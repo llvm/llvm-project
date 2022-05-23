@@ -1320,6 +1320,15 @@ func.func @test_negf() -> (f32) {
   return %0: f32
 }
 
+// CHECK-LABEL: @test_negf1(
+// CHECK-SAME: %[[arg0:.+]]:
+// CHECK: return %[[arg0]]
+func.func @test_negf1(%f : f32) -> (f32) {
+  %0 = arith.negf %f : f32
+  %1 = arith.negf %0 : f32
+  return %1: f32
+}
+
 // -----
 
 // CHECK-LABEL: @test_remui(

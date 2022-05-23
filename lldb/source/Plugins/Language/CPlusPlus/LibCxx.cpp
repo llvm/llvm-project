@@ -546,7 +546,7 @@ bool lldb_private::formatters::LibcxxContainerSummaryProvider(
                                        nullptr, nullptr, &valobj, false, false);
 }
 
-// the field layout in a libc++ string (cap, side, data or data, size, cap)
+/// The field layout in a libc++ string (cap, side, data or data, size, cap).
 enum LibcxxStringLayoutMode {
   eLibcxxStringLayoutModeCSD = 0,
   eLibcxxStringLayoutModeDSC = 1,
@@ -626,6 +626,9 @@ ExtractLibcxxStringInfo(ValueObject &valobj) {
       return {};
     ValueObjectSP location_sp = short_sp->GetChildAtIndex(
         (layout == eLibcxxStringLayoutModeDSC) ? 0 : 1, true);
+    // After D125496, there is a flat layout.
+    if (location_sp->GetName() == g_size_name)
+      location_sp = short_sp->GetChildAtIndex(3, true);
     if (using_bitmasks)
       size = (layout == eLibcxxStringLayoutModeDSC)
                  ? size_mode_value

@@ -84,22 +84,34 @@ static inline uint64_t checkedMul(uint64_t lhs, uint64_t rhs) {
   return lhs * rhs;
 }
 
+// This macro helps minimize repetition of this idiom, as well as ensuring
+// we have some additional output indicating where the error is coming from.
+// (Since `fprintf` doesn't provide a stacktrace, this helps make it easier
+// to track down whether an error is coming from our code vs somewhere else
+// in MLIR.)
+#define FATAL(...)                                                             \
+  {                                                                            \
+    fprintf(stderr, "SparseTensorUtils: " __VA_ARGS__);                        \
+    exit(1);                                                                   \
+  }
+
 // TODO: adjust this so it can be used by `openSparseTensorCOO` too.
-// That version doesn't have the permutation, and the `sizes` are
+// That version doesn't have the permutation, and the `dimSizes` are
 // a pointer/C-array rather than `std::vector`.
 //
-/// Asserts that the `sizes` (in target-order) under the `perm` (mapping
+/// Asserts that the `dimSizes` (in target-order) under the `perm` (mapping
 /// semantic-order to target-order) are a refinement of the desired `shape`
 /// (in semantic-order).
 ///
 /// Precondition: `perm` and `shape` must be valid for `rank`.
 static inline void
-assertPermutedSizesMatchShape(const std::vector<uint64_t> &sizes, uint64_t rank,
-                              const uint64_t *perm, const uint64_t *shape) {
+assertPermutedSizesMatchShape(const std::vector<uint64_t> &dimSizes,
+                              uint64_t rank, const uint64_t *perm,
+                              const uint64_t *shape) {
   assert(perm && shape);
-  assert(rank == sizes.size() && "Rank mismatch");
+  assert(rank == dimSizes.size() && "Rank mismatch");
   for (uint64_t r = 0; r < rank; r++)
-    assert((shape[r] == 0 || shape[r] == sizes[perm[r]]) &&
+    assert((shape[r] == 0 || shape[r] == dimSizes[perm[r]]) &&
            "Dimension size mismatch");
 }
 
@@ -133,8 +145,8 @@ using ElementConsumer =
 template <typename V>
 struct SparseTensorCOO final {
 public:
-  SparseTensorCOO(const std::vector<uint64_t> &szs, uint64_t capacity)
-      : sizes(szs) {
+  SparseTensorCOO(const std::vector<uint64_t> &dimSizes, uint64_t capacity)
+      : dimSizes(dimSizes) {
     if (capacity) {
       elements.reserve(capacity);
       indices.reserve(capacity * getRank());
@@ -147,9 +159,9 @@ public:
     uint64_t *base = indices.data();
     uint64_t size = indices.size();
     uint64_t rank = getRank();
-    assert(rank == ind.size());
+    assert(ind.size() == rank && "Element rank mismatch");
     for (uint64_t r = 0; r < rank; r++) {
-      assert(ind[r] < sizes[r]); // within bounds
+      assert(ind[r] < dimSizes[r] && "Index is too large for the dimension");
       indices.push_back(ind[r]);
     }
     // This base only changes if indices were reallocated. In that case, we
@@ -172,9 +184,9 @@ public:
     assert(!iteratorLocked && "Attempt to sort() after startIterator()");
     // TODO: we may want to cache an `isSorted` bit, to avoid
     // unnecessary/redundant sorting.
+    uint64_t rank = getRank();
     std::sort(elements.begin(), elements.end(),
-              [this](const Element<V> &e1, const Element<V> &e2) {
-                uint64_t rank = getRank();
+              [rank](const Element<V> &e1, const Element<V> &e2) {
                 for (uint64_t r = 0; r < rank; r++) {
                   if (e1.indices[r] == e2.indices[r])
                     continue;
@@ -184,13 +196,13 @@ public:
               });
   }
 
-  /// Returns rank.
-  uint64_t getRank() const { return sizes.size(); }
+  /// Get the rank of the tensor.
+  uint64_t getRank() const { return dimSizes.size(); }
 
-  /// Getter for sizes array.
-  const std::vector<uint64_t> &getSizes() const { return sizes; }
+  /// Getter for the dimension-sizes array.
+  const std::vector<uint64_t> &getDimSizes() const { return dimSizes; }
 
-  /// Getter for elements array.
+  /// Getter for the elements array.
   const std::vector<Element<V>> &getElements() const { return elements; }
 
   /// Switch into iterator mode.
@@ -213,23 +225,23 @@ public:
   /// that same ordering for the given indices. The result is a
   /// fully permuted coordinate scheme.
   ///
-  /// Precondition: `sizes` and `perm` must be valid for `rank`.
+  /// Precondition: `dimSizes` and `perm` must be valid for `rank`.
   static SparseTensorCOO<V> *newSparseTensorCOO(uint64_t rank,
-                                                const uint64_t *sizes,
+                                                const uint64_t *dimSizes,
                                                 const uint64_t *perm,
                                                 uint64_t capacity = 0) {
     std::vector<uint64_t> permsz(rank);
     for (uint64_t r = 0; r < rank; r++) {
-      assert(sizes[r] > 0 && "Dimension size zero has trivial storage");
-      permsz[perm[r]] = sizes[r];
+      assert(dimSizes[r] > 0 && "Dimension size zero has trivial storage");
+      permsz[perm[r]] = dimSizes[r];
     }
     return new SparseTensorCOO<V>(permsz, capacity);
   }
 
 private:
-  const std::vector<uint64_t> sizes; // per-dimension sizes
-  std::vector<Element<V>> elements;  // all COO elements
-  std::vector<uint64_t> indices;     // shared index pool
+  const std::vector<uint64_t> dimSizes; // per-dimension sizes
+  std::vector<Element<V>> elements;     // all COO elements
+  std::vector<uint64_t> indices;        // shared index pool
   bool iteratorLocked = false;
   unsigned iteratorPos = 0;
 };
@@ -257,9 +269,34 @@ private:
   DO(C64, complex64)                                                           \
   DO(C32, complex32)
 
+// This x-macro calls its argument on every overhead type which has
+// fixed-width.  It excludes `index_type` because that type is often
+// handled specially (e.g., by translating it into the architecture-dependent
+// equivalent fixed-width overhead type).
+#define FOREVERY_FIXED_O(DO)                                                   \
+  DO(64, uint64_t)                                                             \
+  DO(32, uint32_t)                                                             \
+  DO(16, uint16_t)                                                             \
+  DO(8, uint8_t)
+
+// This x-macro calls its argument on every overhead type, including
+// `index_type`.  Our naming convention uses an empty suffix for
+// `index_type`, so the missing first argument when we call `DO`
+// gets resolved to the empty token which can then be concatenated
+// as intended.  (This behavior is standard per C99 6.10.3/4 and
+// C++11 N3290 16.3/4; whereas in C++03 16.3/10 it was undefined behavior.)
+#define FOREVERY_O(DO)                                                         \
+  FOREVERY_FIXED_O(DO)                                                         \
+  DO(, index_type)
+
 // Forward.
 template <typename V>
 class SparseTensorEnumeratorBase;
+
+// Helper macro for generating error messages when some
+// `SparseTensorStorage<P,I,V>` is cast to `SparseTensorStorageBase`
+// and then the wrong "partial method specialization" is called.
+#define FATAL_PIV(NAME) FATAL("<P,I,V> type mismatch for: " #NAME);
 
 /// Abstract base class for `SparseTensorStorage<P,I,V>`.  This class
 /// takes responsibility for all the `<P,I,V>`-independent aspects
@@ -271,12 +308,12 @@ class SparseTensorStorageBase {
 public:
   /// Constructs a new storage object.  The `perm` maps the tensor's
   /// semantic-ordering of dimensions to this object's storage-order.
-  /// The `szs` and `sparsity` arrays are already in storage-order.
+  /// The `dimSizes` and `sparsity` arrays are already in storage-order.
   ///
-  /// Precondition: `perm` and `sparsity` must be valid for `szs.size()`.
-  SparseTensorStorageBase(const std::vector<uint64_t> &szs,
+  /// Precondition: `perm` and `sparsity` must be valid for `dimSizes.size()`.
+  SparseTensorStorageBase(const std::vector<uint64_t> &dimSizes,
                           const uint64_t *perm, const DimLevelType *sparsity)
-      : dimSizes(szs), rev(getRank()),
+      : dimSizes(dimSizes), rev(getRank()),
         dimTypes(sparsity, sparsity + getRank()) {
     assert(perm && sparsity);
     const uint64_t rank = getRank();
@@ -324,37 +361,41 @@ public:
 #define DECL_NEWENUMERATOR(VNAME, V)                                           \
   virtual void newEnumerator(SparseTensorEnumeratorBase<V> **, uint64_t,       \
                              const uint64_t *) const {                         \
-    fatal("newEnumerator" #VNAME);                                             \
+    FATAL_PIV("newEnumerator" #VNAME);                                         \
   }
   FOREVERY_V(DECL_NEWENUMERATOR)
 #undef DECL_NEWENUMERATOR
 
   /// Overhead storage.
-  virtual void getPointers(std::vector<uint64_t> **, uint64_t) { fatal("p64"); }
-  virtual void getPointers(std::vector<uint32_t> **, uint64_t) { fatal("p32"); }
-  virtual void getPointers(std::vector<uint16_t> **, uint64_t) { fatal("p16"); }
-  virtual void getPointers(std::vector<uint8_t> **, uint64_t) { fatal("p8"); }
-  virtual void getIndices(std::vector<uint64_t> **, uint64_t) { fatal("i64"); }
-  virtual void getIndices(std::vector<uint32_t> **, uint64_t) { fatal("i32"); }
-  virtual void getIndices(std::vector<uint16_t> **, uint64_t) { fatal("i16"); }
-  virtual void getIndices(std::vector<uint8_t> **, uint64_t) { fatal("i8"); }
+#define DECL_GETPOINTERS(PNAME, P)                                             \
+  virtual void getPointers(std::vector<P> **, uint64_t) {                      \
+    FATAL_PIV("getPointers" #PNAME);                                           \
+  }
+  FOREVERY_FIXED_O(DECL_GETPOINTERS)
+#undef DECL_GETPOINTERS
+#define DECL_GETINDICES(INAME, I)                                              \
+  virtual void getIndices(std::vector<I> **, uint64_t) {                       \
+    FATAL_PIV("getIndices" #INAME);                                            \
+  }
+  FOREVERY_FIXED_O(DECL_GETINDICES)
+#undef DECL_GETINDICES
 
   /// Primary storage.
 #define DECL_GETVALUES(VNAME, V)                                               \
-  virtual void getValues(std::vector<V> **) { fatal("getValues" #VNAME); }
+  virtual void getValues(std::vector<V> **) { FATAL_PIV("getValues" #VNAME); }
   FOREVERY_V(DECL_GETVALUES)
 #undef DECL_GETVALUES
 
   /// Element-wise insertion in lexicographic index order.
 #define DECL_LEXINSERT(VNAME, V)                                               \
-  virtual void lexInsert(const uint64_t *, V) { fatal("lexInsert" #VNAME); }
+  virtual void lexInsert(const uint64_t *, V) { FATAL_PIV("lexInsert" #VNAME); }
   FOREVERY_V(DECL_LEXINSERT)
 #undef DECL_LEXINSERT
 
   /// Expanded insertion.
 #define DECL_EXPINSERT(VNAME, V)                                               \
   virtual void expInsert(uint64_t *, V *, bool *, uint64_t *, uint64_t) {      \
-    fatal("expInsert" #VNAME);                                                 \
+    FATAL_PIV("expInsert" #VNAME);                                             \
   }
   FOREVERY_V(DECL_EXPINSERT)
 #undef DECL_EXPINSERT
@@ -373,15 +414,12 @@ protected:
   SparseTensorStorageBase &operator=(const SparseTensorStorageBase &) = delete;
 
 private:
-  static void fatal(const char *tp) {
-    fprintf(stderr, "unsupported %s\n", tp);
-    exit(1);
-  }
-
   const std::vector<uint64_t> dimSizes;
   std::vector<uint64_t> rev;
   const std::vector<DimLevelType> dimTypes;
 };
+
+#undef FATAL_PIV
 
 // Forward.
 template <typename P, typename I, typename V>
@@ -400,10 +438,10 @@ class SparseTensorStorage final : public SparseTensorStorageBase {
   /// valid state after this constructor alone; e.g., `isCompressedDim(d)`
   /// doesn't entail `!(pointers[d].empty())`.
   ///
-  /// Precondition: `perm` and `sparsity` must be valid for `szs.size()`.
-  SparseTensorStorage(const std::vector<uint64_t> &szs, const uint64_t *perm,
-                      const DimLevelType *sparsity)
-      : SparseTensorStorageBase(szs, perm, sparsity), pointers(getRank()),
+  /// Precondition: `perm` and `sparsity` must be valid for `dimSizes.size()`.
+  SparseTensorStorage(const std::vector<uint64_t> &dimSizes,
+                      const uint64_t *perm, const DimLevelType *sparsity)
+      : SparseTensorStorageBase(dimSizes, perm, sparsity), pointers(getRank()),
         indices(getRank()), idx(getRank()) {}
 
 public:
@@ -411,10 +449,11 @@ public:
   /// permutation, and per-dimension dense/sparse annotations, using
   /// the coordinate scheme tensor for the initial contents if provided.
   ///
-  /// Precondition: `perm` and `sparsity` must be valid for `szs.size()`.
-  SparseTensorStorage(const std::vector<uint64_t> &szs, const uint64_t *perm,
-                      const DimLevelType *sparsity, SparseTensorCOO<V> *coo)
-      : SparseTensorStorage(szs, perm, sparsity) {
+  /// Precondition: `perm` and `sparsity` must be valid for `dimSizes.size()`.
+  SparseTensorStorage(const std::vector<uint64_t> &dimSizes,
+                      const uint64_t *perm, const DimLevelType *sparsity,
+                      SparseTensorCOO<V> *coo)
+      : SparseTensorStorage(dimSizes, perm, sparsity) {
     // Provide hints on capacity of pointers and indices.
     // TODO: needs much fine-tuning based on actual sparsity; currently
     //       we reserve pointer/index space based on all previous dense
@@ -424,7 +463,7 @@ public:
     uint64_t sz = 1;
     for (uint64_t r = 0, rank = getRank(); r < rank; r++) {
       if (isCompressedDim(r)) {
-        // TODO: Take a parameter between 1 and `sizes[r]`, and multiply
+        // TODO: Take a parameter between 1 and `dimSizes[r]`, and multiply
         // `sz` by that before reserving. (For now we just use 1.)
         pointers[r].reserve(sz + 1);
         pointers[r].push_back(0);
@@ -438,7 +477,7 @@ public:
     // Then assign contents from coordinate scheme tensor if provided.
     if (coo) {
       // Ensure both preconditions of `fromCOO`.
-      assert(coo->getSizes() == getDimSizes() && "Tensor size mismatch");
+      assert(coo->getDimSizes() == getDimSizes() && "Tensor size mismatch");
       coo->sort();
       // Now actually insert the `elements`.
       const std::vector<Element<V>> &elements = coo->getElements();
@@ -455,10 +494,10 @@ public:
   /// the given sparse tensor for the initial contents.
   ///
   /// Preconditions:
-  /// * `perm` and `sparsity` must be valid for `szs.size()`.
+  /// * `perm` and `sparsity` must be valid for `dimSizes.size()`.
   /// * The `tensor` must have the same value type `V`.
-  SparseTensorStorage(const std::vector<uint64_t> &szs, const uint64_t *perm,
-                      const DimLevelType *sparsity,
+  SparseTensorStorage(const std::vector<uint64_t> &dimSizes,
+                      const uint64_t *perm, const DimLevelType *sparsity,
                       const SparseTensorStorageBase &tensor);
 
   ~SparseTensorStorage() final override = default;
@@ -562,7 +601,7 @@ public:
                   const DimLevelType *sparsity, SparseTensorCOO<V> *coo) {
     SparseTensorStorage<P, I, V> *n = nullptr;
     if (coo) {
-      const auto &coosz = coo->getSizes();
+      const auto &coosz = coo->getDimSizes();
       assertPermutedSizesMatchShape(coosz, rank, perm, shape);
       n = new SparseTensorStorage<P, I, V>(coosz, perm, sparsity, coo);
     } else {
@@ -615,7 +654,7 @@ private:
   /// sense.  For non-dense dimensions, that means appending to the
   /// `indices[d]` array, checking that `i` is representable in the `I`
   /// type; however, we do not verify other semantic requirements (e.g.,
-  /// that `i` is in bounds for `sizes[d]`, and not previously occurring
+  /// that `i` is in bounds for `dimSizes[d]`, and not previously occurring
   /// in the same segment).  For dense dimensions, this method instead
   /// appends the appropriate number of zeros to the `values` array,
   /// where `full` is the number of "entries" already written to `values`
@@ -639,7 +678,7 @@ private:
   /// Writes the given coordinate to `indices[d][pos]`.  This method
   /// checks that `i` is representable in the `I` type; however, it
   /// does not check that `i` is semantically valid (i.e., in bounds
-  /// for `sizes[d]` and not elsewhere occurring in the same segment).
+  /// for `dimSizes[d]` and not elsewhere occurring in the same segment).
   void writeIndex(uint64_t d, uint64_t pos, uint64_t i) {
     assert(isCompressedDim(d));
     // Subscript assignment to `std::vector` requires that the `pos`-th
@@ -672,7 +711,7 @@ private:
   ///
   /// Preconditions:
   /// (1) the `elements` must be lexicographically sorted.
-  /// (2) the indices of every element are valid for `sizes` (equal rank
+  /// (2) the indices of every element are valid for `dimSizes` (equal rank
   ///     and pointwise less-than).
   void fromCOO(const std::vector<Element<V>> &elements, uint64_t lo,
                uint64_t hi, uint64_t d) {
@@ -804,12 +843,12 @@ public:
         cursor(getRank()) {
     assert(perm && "Received nullptr for permutation");
     assert(rank == getRank() && "Permutation rank mismatch");
-    const auto &rev = src.getRev();        // source stg-order -> semantic-order
-    const auto &sizes = src.getDimSizes(); // in source storage-order
-    for (uint64_t s = 0; s < rank; s++) {  // `s` source storage-order
-      uint64_t t = perm[rev[s]];           // `t` target-order
+    const auto &rev = src.getRev();           // source-order -> semantic-order
+    const auto &dimSizes = src.getDimSizes(); // in source storage-order
+    for (uint64_t s = 0; s < rank; s++) {     // `s` source storage-order
+      uint64_t t = perm[rev[s]];              // `t` target-order
       reord[s] = t;
-      permsz[t] = sizes[s];
+      permsz[t] = dimSizes[s];
     }
   }
 
@@ -885,7 +924,7 @@ private:
       const uint64_t pstop = static_cast<uint64_t>(pointers_d[parentPos + 1]);
       // Loop-invariant code for looking up the `d`-level coordinates/indices.
       const std::vector<I> &indices_d = src.indices[d];
-      assert(pstop - 1 < indices_d.size() && "Index position is out of bounds");
+      assert(pstop <= indices_d.size() && "Index position is out of bounds");
       uint64_t &cursor_reord_d = this->cursor[this->reord[d]];
       for (uint64_t pos = pstart; pos < pstop; pos++) {
         cursor_reord_d = static_cast<uint64_t>(indices_d[pos]);
@@ -917,10 +956,10 @@ public:
   /// does not actually populate the statistics, however; for that see
   /// `initialize`.
   ///
-  /// Precondition: `szs` must not contain zeros.
-  SparseTensorNNZ(const std::vector<uint64_t> &szs,
+  /// Precondition: `dimSizes` must not contain zeros.
+  SparseTensorNNZ(const std::vector<uint64_t> &dimSizes,
                   const std::vector<DimLevelType> &sparsity)
-      : dimSizes(szs), dimTypes(sparsity), nnz(getRank()) {
+      : dimSizes(dimSizes), dimTypes(sparsity), nnz(getRank()) {
     assert(dimSizes.size() == dimTypes.size() && "Rank mismatch");
     bool uncompressed = true;
     uint64_t sz = 1; // the product of all `dimSizes` strictly less than `r`.
@@ -1017,9 +1056,9 @@ private:
 
 template <typename P, typename I, typename V>
 SparseTensorStorage<P, I, V>::SparseTensorStorage(
-    const std::vector<uint64_t> &szs, const uint64_t *perm,
+    const std::vector<uint64_t> &dimSizes, const uint64_t *perm,
     const DimLevelType *sparsity, const SparseTensorStorageBase &tensor)
-    : SparseTensorStorage(szs, perm, sparsity) {
+    : SparseTensorStorage(dimSizes, perm, sparsity) {
   SparseTensorEnumeratorBase<V> *enumerator;
   tensor.newEnumerator(&enumerator, getRank(), perm);
   {
@@ -1120,10 +1159,8 @@ static void readMMEHeader(FILE *file, char *filename, char *line,
   char symmetry[64];
   // Read header line.
   if (fscanf(file, "%63s %63s %63s %63s %63s\n", header, object, format, field,
-             symmetry) != 5) {
-    fprintf(stderr, "Corrupt header in %s\n", filename);
-    exit(1);
-  }
+             symmetry) != 5)
+    FATAL("Corrupt header in %s\n", filename);
   // Set properties
   *isPattern = (strcmp(toLower(field), "pattern") == 0);
   *isSymmetric = (strcmp(toLower(symmetry), "symmetric") == 0);
@@ -1132,26 +1169,20 @@ static void readMMEHeader(FILE *file, char *filename, char *line,
       strcmp(toLower(object), "matrix") ||
       strcmp(toLower(format), "coordinate") ||
       (strcmp(toLower(field), "real") && !(*isPattern)) ||
-      (strcmp(toLower(symmetry), "general") && !(*isSymmetric))) {
-    fprintf(stderr, "Cannot find a general sparse matrix in %s\n", filename);
-    exit(1);
-  }
+      (strcmp(toLower(symmetry), "general") && !(*isSymmetric)))
+    FATAL("Cannot find a general sparse matrix in %s\n", filename);
   // Skip comments.
   while (true) {
-    if (!fgets(line, kColWidth, file)) {
-      fprintf(stderr, "Cannot find data in %s\n", filename);
-      exit(1);
-    }
+    if (!fgets(line, kColWidth, file))
+      FATAL("Cannot find data in %s\n", filename);
     if (line[0] != '%')
       break;
   }
   // Next line contains M N NNZ.
   idata[0] = 2; // rank
   if (sscanf(line, "%" PRIu64 "%" PRIu64 "%" PRIu64 "\n", idata + 2, idata + 3,
-             idata + 1) != 3) {
-    fprintf(stderr, "Cannot find size in %s\n", filename);
-    exit(1);
-  }
+             idata + 1) != 3)
+    FATAL("Cannot find size in %s\n", filename);
 }
 
 /// Read the "extended" FROSTT header. Although not part of the documented
@@ -1162,25 +1193,18 @@ static void readExtFROSTTHeader(FILE *file, char *filename, char *line,
                                 uint64_t *idata) {
   // Skip comments.
   while (true) {
-    if (!fgets(line, kColWidth, file)) {
-      fprintf(stderr, "Cannot find data in %s\n", filename);
-      exit(1);
-    }
+    if (!fgets(line, kColWidth, file))
+      FATAL("Cannot find data in %s\n", filename);
     if (line[0] != '#')
       break;
   }
   // Next line contains RANK and NNZ.
-  if (sscanf(line, "%" PRIu64 "%" PRIu64 "\n", idata, idata + 1) != 2) {
-    fprintf(stderr, "Cannot find metadata in %s\n", filename);
-    exit(1);
-  }
+  if (sscanf(line, "%" PRIu64 "%" PRIu64 "\n", idata, idata + 1) != 2)
+    FATAL("Cannot find metadata in %s\n", filename);
   // Followed by a line with the dimension sizes (one per rank).
-  for (uint64_t r = 0; r < idata[0]; r++) {
-    if (fscanf(file, "%" PRIu64, idata + 2 + r) != 1) {
-      fprintf(stderr, "Cannot find dimension size %s\n", filename);
-      exit(1);
-    }
-  }
+  for (uint64_t r = 0; r < idata[0]; r++)
+    if (fscanf(file, "%" PRIu64, idata + 2 + r) != 1)
+      FATAL("Cannot find dimension size %s\n", filename);
   fgets(line, kColWidth, file); // end of line
 }
 
@@ -1191,12 +1215,10 @@ static SparseTensorCOO<V> *openSparseTensorCOO(char *filename, uint64_t rank,
                                                const uint64_t *shape,
                                                const uint64_t *perm) {
   // Open the file.
+  assert(filename && "Received nullptr for filename");
   FILE *file = fopen(filename, "r");
-  if (!file) {
-    assert(filename && "Received nullptr for filename");
-    fprintf(stderr, "Cannot find file %s\n", filename);
-    exit(1);
-  }
+  if (!file)
+    FATAL("Cannot find file %s\n", filename);
   // Perform some file format dependent set up.
   char line[kColWidth];
   uint64_t idata[512];
@@ -1207,8 +1229,7 @@ static SparseTensorCOO<V> *openSparseTensorCOO(char *filename, uint64_t rank,
   } else if (strstr(filename, ".tns")) {
     readExtFROSTTHeader(file, filename, line, idata);
   } else {
-    fprintf(stderr, "Unknown format %s\n", filename);
-    exit(1);
+    FATAL("Unknown format %s\n", filename);
   }
   // Prepare sparse tensor object with per-dimension sizes
   // and the number of nonzeros as initial capacity.
@@ -1222,10 +1243,8 @@ static SparseTensorCOO<V> *openSparseTensorCOO(char *filename, uint64_t rank,
   // Read all nonzero elements.
   std::vector<uint64_t> indices(rank);
   for (uint64_t k = 0; k < nnz; k++) {
-    if (!fgets(line, kColWidth, file)) {
-      fprintf(stderr, "Cannot find next line of data in %s\n", filename);
-      exit(1);
-    }
+    if (!fgets(line, kColWidth, file))
+      FATAL("Cannot find next line of data in %s\n", filename);
     char *linePtr = line;
     for (uint64_t r = 0; r < rank; r++) {
       uint64_t idx = strtoul(linePtr, &linePtr, 10);
@@ -1256,7 +1275,7 @@ static void outSparseTensor(void *tensor, void *dest, bool sort) {
   if (sort)
     coo->sort();
   char *filename = static_cast<char *>(dest);
-  auto &sizes = coo->getSizes();
+  auto &dimSizes = coo->getDimSizes();
   auto &elements = coo->getElements();
   uint64_t rank = coo->getRank();
   uint64_t nnz = elements.size();
@@ -1265,8 +1284,8 @@ static void outSparseTensor(void *tensor, void *dest, bool sort) {
   assert(file.is_open());
   file << "; extended FROSTT format\n" << rank << " " << nnz << std::endl;
   for (uint64_t r = 0; r < rank - 1; r++)
-    file << sizes[r] << " ";
-  file << sizes[rank - 1] << std::endl;
+    file << dimSizes[r] << " ";
+  file << dimSizes[rank - 1] << std::endl;
   for (uint64_t i = 0; i < nnz; i++) {
     auto &idx = elements[i].indices;
     for (uint64_t r = 0; r < rank; r++)
@@ -1288,22 +1307,15 @@ toMLIRSparseTensor(uint64_t rank, uint64_t nse, uint64_t *shape, V *values,
   // Verify that perm is a permutation of 0..(rank-1).
   std::vector<uint64_t> order(perm, perm + rank);
   std::sort(order.begin(), order.end());
-  for (uint64_t i = 0; i < rank; ++i) {
-    if (i != order[i]) {
-      fprintf(stderr, "Not a permutation of 0..%" PRIu64 "\n", rank);
-      exit(1);
-    }
-  }
+  for (uint64_t i = 0; i < rank; ++i)
+    if (i != order[i])
+      FATAL("Not a permutation of 0..%" PRIu64 "\n", rank);
 
   // Verify that the sparsity values are supported.
-  for (uint64_t i = 0; i < rank; ++i) {
+  for (uint64_t i = 0; i < rank; ++i)
     if (sparsity[i] != DimLevelType::kDense &&
-        sparsity[i] != DimLevelType::kCompressed) {
-      fprintf(stderr, "Unsupported sparsity value %d\n",
-              static_cast<int>(sparsity[i]));
-      exit(1);
-    }
-  }
+        sparsity[i] != DimLevelType::kCompressed)
+      FATAL("Unsupported sparsity value %d\n", static_cast<int>(sparsity[i]));
 #endif
 
   // Convert external format to internal COO.
@@ -1340,7 +1352,7 @@ static void fromMLIRSparseTensor(void *tensor, uint64_t *pRank, uint64_t *pNse,
 
   uint64_t *shape = new uint64_t[rank];
   for (uint64_t i = 0; i < rank; i++)
-    shape[i] = coo->getSizes()[i];
+    shape[i] = coo->getDimSizes()[i];
 
   V *values = new V[nse];
   uint64_t *indices = new uint64_t[rank * nse];
@@ -1537,8 +1549,10 @@ _mlir_ciface_newSparseTensor(StridedMemRefType<DimLevelType, 1> *aref, // NOLINT
   CASE_SECSAME(OverheadType::kU64, PrimaryType::kC32, uint64_t, complex32);
 
   // Unsupported case (add above if needed).
-  fputs("unsupported combination of types\n", stderr);
-  exit(1);
+  // TODO: better pretty-printing of enum values!
+  FATAL("unsupported combination of types: <P=%d, I=%d, V=%d>\n",
+        static_cast<int>(ptrTp), static_cast<int>(indTp),
+        static_cast<int>(valTp));
 }
 #undef CASE
 #undef CASE_SECSAME
@@ -1570,18 +1584,16 @@ FOREVERY_V(IMPL_SPARSEVALUES)
     ref->strides[0] = 1;                                                       \
   }
 /// Methods that provide direct access to pointers.
-IMPL_GETOVERHEAD(sparsePointers, index_type, getPointers)
-IMPL_GETOVERHEAD(sparsePointers64, uint64_t, getPointers)
-IMPL_GETOVERHEAD(sparsePointers32, uint32_t, getPointers)
-IMPL_GETOVERHEAD(sparsePointers16, uint16_t, getPointers)
-IMPL_GETOVERHEAD(sparsePointers8, uint8_t, getPointers)
+#define IMPL_SPARSEPOINTERS(PNAME, P)                                          \
+  IMPL_GETOVERHEAD(sparsePointers##PNAME, P, getPointers)
+FOREVERY_O(IMPL_SPARSEPOINTERS)
+#undef IMPL_SPARSEPOINTERS
 
 /// Methods that provide direct access to indices.
-IMPL_GETOVERHEAD(sparseIndices, index_type, getIndices)
-IMPL_GETOVERHEAD(sparseIndices64, uint64_t, getIndices)
-IMPL_GETOVERHEAD(sparseIndices32, uint32_t, getIndices)
-IMPL_GETOVERHEAD(sparseIndices16, uint16_t, getIndices)
-IMPL_GETOVERHEAD(sparseIndices8, uint8_t, getIndices)
+#define IMPL_SPARSEINDICES(INAME, I)                                           \
+  IMPL_GETOVERHEAD(sparseIndices##INAME, I, getIndices)
+FOREVERY_O(IMPL_SPARSEINDICES)
+#undef IMPL_SPARSEINDICES
 #undef IMPL_GETOVERHEAD
 
 /// Helper to add value to coordinate scheme, one per value type.
@@ -1702,10 +1714,8 @@ char *getTensorFilename(index_type id) {
   char var[80];
   sprintf(var, "TENSOR%" PRIu64, id);
   char *env = getenv(var);
-  if (!env) {
-    fprintf(stderr, "Environment variable %s is not set\n", var);
-    exit(1);
-  }
+  if (!env)
+    FATAL("Environment variable %s is not set\n", var);
   return env;
 }
 
