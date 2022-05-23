@@ -23,8 +23,8 @@ struct InitTensorLoweringPattern : public OpRewritePattern<InitTensorOp> {
 
   LogicalResult matchAndRewrite(InitTensorOp op,
                                 PatternRewriter &rewriter) const override {
-    rewriter.replaceOpWithNewOp<bufferization::AllocTensorOp>(
-        op, op.getMixedSizes(), op.getType().getElementType());
+    rewriter.replaceOpWithNewOp<bufferization::AllocTensorOp>(op, op.getType(),
+                                                              op.sizes());
     return success();
   }
 };

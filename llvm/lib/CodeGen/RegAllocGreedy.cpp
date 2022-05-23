@@ -310,8 +310,9 @@ void RAGreedy::enqueue(PQueue &CurQueue, const LiveInterval *LI) {
     // prevents excessive spilling in pathological cases.
     bool ReverseLocal = TRI->reverseLocalAssignment();
     const TargetRegisterClass &RC = *MRI->getRegClass(Reg);
-    bool ForceGlobal = !ReverseLocal &&
-      (Size / SlotIndex::InstrDist) > (2 * RCI.getNumAllocatableRegs(&RC));
+    bool ForceGlobal =
+        !ReverseLocal && (Size / SlotIndex::InstrDist) >
+                             (2 * RegClassInfo.getNumAllocatableRegs(&RC));
     unsigned GlobalBit = 0;
 
     if (Stage == RS_Assign && !ForceGlobal && !LI->empty() &&
@@ -1444,7 +1445,8 @@ unsigned RAGreedy::tryInstructionSplit(const LiveInterval &VirtReg,
 
   const TargetRegisterClass *SuperRC =
       TRI->getLargestLegalSuperClass(CurRC, *MF);
-  unsigned SuperRCNumAllocatableRegs = RCI.getNumAllocatableRegs(SuperRC);
+  unsigned SuperRCNumAllocatableRegs =
+      RegClassInfo.getNumAllocatableRegs(SuperRC);
   // Split around every non-copy instruction if this split will relax
   // the constraints on the virtual register.
   // Otherwise, splitting just inserts uncoalescable copies that do not help
@@ -1454,7 +1456,7 @@ unsigned RAGreedy::tryInstructionSplit(const LiveInterval &VirtReg,
       if (MI->isFullCopy() ||
           SuperRCNumAllocatableRegs ==
               getNumAllocatableRegsForConstraints(MI, VirtReg.reg(), SuperRC,
-                                                  TII, TRI, RCI)) {
+                                                  TII, TRI, RegClassInfo)) {
         LLVM_DEBUG(dbgs() << "    skip:\t" << Use << '\t' << *MI);
         continue;
       }
@@ -2681,9 +2683,7 @@ bool RAGreedy::runOnMachineFunction(MachineFunction &mf) {
                     << "********** Function: " << mf.getName() << '\n');
 
   MF = &mf;
-  TRI = MF->getSubtarget().getRegisterInfo();
   TII = MF->getSubtarget().getInstrInfo();
-  RCI.runOnMachineFunction(mf);
 
   if (VerifyEnabled)
     MF->verify(this, "Before greedy register allocator");

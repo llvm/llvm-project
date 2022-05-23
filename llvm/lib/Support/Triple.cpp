@@ -495,8 +495,10 @@ static Triple::ArchType parseArch(StringRef ArchName) {
     .Case("hsail64", Triple::hsail64)
     .Case("spir", Triple::spir)
     .Case("spir64", Triple::spir64)
-    .Case("spirv32", Triple::spirv32)
-    .Case("spirv64", Triple::spirv64)
+    .Cases("spirv32", "spirv32v1.0", "spirv32v1.1", "spirv32v1.2",
+           "spirv32v1.3", "spirv32v1.4", "spirv32v1.5", Triple::spirv32)
+    .Cases("spirv64", "spirv64v1.0", "spirv64v1.1", "spirv64v1.2",
+           "spirv64v1.3", "spirv64v1.4", "spirv64v1.5", Triple::spirv64)
     .StartsWith("kalimba", Triple::kalimba)
     .Case("lanai", Triple::lanai)
     .Case("renderscript32", Triple::renderscript32)
@@ -653,6 +655,16 @@ static Triple::SubArchType parseSubArch(StringRef SubArchName) {
 
   if (SubArchName == "arm64e")
     return Triple::AArch64SubArch_arm64e;
+
+  if (SubArchName.startswith("spirv"))
+    return StringSwitch<Triple::SubArchType>(SubArchName)
+        .EndsWith("v1.0", Triple::SPIRVSubArch_v10)
+        .EndsWith("v1.1", Triple::SPIRVSubArch_v11)
+        .EndsWith("v1.2", Triple::SPIRVSubArch_v12)
+        .EndsWith("v1.3", Triple::SPIRVSubArch_v13)
+        .EndsWith("v1.4", Triple::SPIRVSubArch_v14)
+        .EndsWith("v1.5", Triple::SPIRVSubArch_v15)
+        .Default(Triple::NoSubArch);
 
   StringRef ARMSubArch = ARM::getCanonicalArchName(SubArchName);
 
@@ -1511,7 +1523,9 @@ Triple Triple::get32BitArchVariant() const {
   case Triple::riscv64:        T.setArch(Triple::riscv32); break;
   case Triple::sparcv9:        T.setArch(Triple::sparc);   break;
   case Triple::spir64:         T.setArch(Triple::spir);    break;
-  case Triple::spirv64:        T.setArch(Triple::spirv32); break;
+  case Triple::spirv64:
+    T.setArch(Triple::spirv32, getSubArch());
+    break;
   case Triple::wasm64:         T.setArch(Triple::wasm32);  break;
   case Triple::x86_64:         T.setArch(Triple::x86);     break;
   }
@@ -1586,7 +1600,9 @@ Triple Triple::get64BitArchVariant() const {
   case Triple::riscv32:         T.setArch(Triple::riscv64);    break;
   case Triple::sparc:           T.setArch(Triple::sparcv9);    break;
   case Triple::spir:            T.setArch(Triple::spir64);     break;
-  case Triple::spirv32:         T.setArch(Triple::spirv64);    break;
+  case Triple::spirv32:
+    T.setArch(Triple::spirv64, getSubArch());
+    break;
   case Triple::thumb:           T.setArch(Triple::aarch64);    break;
   case Triple::thumbeb:         T.setArch(Triple::aarch64_be); break;
   case Triple::wasm32:          T.setArch(Triple::wasm64);     break;

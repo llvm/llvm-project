@@ -50,7 +50,7 @@ target triple = "powerpc64-unknown-linux-gnu"
 ; Num Functions
 ; CHECK-NEXT:   .long 11
 ; Num LargeConstants
-; CHECK-NEXT:   .long 2
+; CHECK-NEXT:   .long 3
 ; Num Callsites
 ; CHECK-NEXT:   .long 11
 
@@ -92,13 +92,14 @@ target triple = "powerpc64-unknown-linux-gnu"
 ; Num LargeConstants
 ; CHECK-NEXT:   .quad   4294967295
 ; CHECK-NEXT:   .quad   4294967296
+; CHECK-NEXT:   .quad   4294967297
 
 ; Constant arguments
 ;
 ; CHECK-NEXT:   .quad   1
 ; CHECK-NEXT:   .long   .L{{.*}}-.L[[constantargs_BEGIN]]
 ; CHECK-NEXT:   .short  0
-; CHECK-NEXT:   .short  4
+; CHECK-NEXT:   .short  6
 ; SmallConstant
 ; CHECK-NEXT:   .byte   4
 ; CHECK-NEXT:   .byte   0
@@ -113,25 +114,39 @@ target triple = "powerpc64-unknown-linux-gnu"
 ; CHECK-NEXT:   .short  0
 ; CHECK-NEXT:   .short  0
 ; CHECK-NEXT:   .long   65536
-; SmallConstant
-; CHECK-NEXT:   .byte   5
-; CHECK-NEXT:   .byte   0
-; CHECK-NEXT:   .short  8
-; CHECK-NEXT:   .short  0
-; CHECK-NEXT:   .short  0
-; CHECK-NEXT:   .long   0
 ; LargeConstant at index 0
 ; CHECK-NEXT:   .byte   5
 ; CHECK-NEXT:   .byte   0
 ; CHECK-NEXT:   .short  8
 ; CHECK-NEXT:   .short  0
 ; CHECK-NEXT:   .short  0
+; CHECK-NEXT:   .long   0
+; LargeConstant at index 1
+; CHECK-NEXT:   .byte   5
+; CHECK-NEXT:   .byte   0
+; CHECK-NEXT:   .short  8
+; CHECK-NEXT:   .short  0
+; CHECK-NEXT:   .short  0
 ; CHECK-NEXT:   .long   1
+; SmallConstant
+; CHECK-NEXT:   .byte   4
+; CHECK-NEXT:   .byte   0
+; CHECK-NEXT:   .short  8
+; CHECK-NEXT:   .short  0
+; CHECK-NEXT:   .short  0
+; CHECK-NEXT:   .long   66
+; LargeConstant at index 2
+; CHECK-NEXT:   .byte   5
+; CHECK-NEXT:   .byte   0
+; CHECK-NEXT:   .short  8
+; CHECK-NEXT:   .short  0
+; CHECK-NEXT:   .short  0
+; CHECK-NEXT:   .long   2
 
 define void @constantargs() {
 entry:
   %0 = inttoptr i64 244837814094590 to i8*
-  tail call void (i64, i32, i8*, i32, ...) @llvm.experimental.patchpoint.void(i64 1, i32 40, i8* %0, i32 0, i64 65535, i64 65536, i64 4294967295, i64 4294967296)
+  tail call void (i64, i32, i8*, i32, ...) @llvm.experimental.patchpoint.void(i64 1, i32 40, i8* %0, i32 0, i64 65535, i64 65536, i64 4294967295, i64 4294967296, i128 66, i128 4294967297)
   ret void
 }
 

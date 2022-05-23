@@ -494,3 +494,186 @@ if.else:
   %vmull1 = tail call <8 x i16> @llvm.aarch64.neon.pmull.v8i16(<8 x i8> %s3, <8 x i8> %s4)
   ret <8 x i16> %vmull1
 }
+
+declare <8 x half> @llvm.fma.v8f16(<8 x half>, <8 x half>, <8 x half>)
+
+define <8 x half> @sink_shufflevector_fma_v8f16(i1 %c, <8 x half> %a, <8 x half> %b) {
+; CHECK-LABEL: @sink_shufflevector_fma_v8f16(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[S0:%.*]] = shufflevector <8 x half> [[A:%.*]], <8 x half> poison, <8 x i32> zeroinitializer
+; CHECK-NEXT:    [[S1:%.*]] = shufflevector <8 x half> [[A]], <8 x half> poison, <8 x i32> <i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
+; CHECK-NEXT:    [[S2:%.*]] = shufflevector <8 x half> [[A]], <8 x half> poison, <8 x i32> <i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2>
+; CHECK-NEXT:    [[S3:%.*]] = shufflevector <8 x half> [[A]], <8 x half> poison, <8 x i32> <i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3>
+; CHECK-NEXT:    [[S4:%.*]] = shufflevector <8 x half> [[A]], <8 x half> poison, <8 x i32> <i32 4, i32 4, i32 4, i32 4, i32 4, i32 4, i32 4, i32 4>
+; CHECK-NEXT:    [[S5:%.*]] = shufflevector <8 x half> [[A]], <8 x half> poison, <8 x i32> <i32 5, i32 5, i32 5, i32 5, i32 5, i32 5, i32 5, i32 5>
+; CHECK-NEXT:    [[S6:%.*]] = shufflevector <8 x half> [[A]], <8 x half> poison, <8 x i32> <i32 6, i32 6, i32 6, i32 6, i32 6, i32 6, i32 6, i32 6>
+; CHECK-NEXT:    [[S7:%.*]] = shufflevector <8 x half> [[A]], <8 x half> poison, <8 x i32> <i32 7, i32 7, i32 7, i32 7, i32 7, i32 7, i32 7, i32 7>
+; CHECK-NEXT:    br i1 [[C:%.*]], label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]]
+; CHECK:       if.then:
+; CHECK-NEXT:    [[R_0:%.*]] = tail call fast <8 x half> @llvm.fma.v8f16(<8 x half> [[B:%.*]], <8 x half> [[S0]], <8 x half> [[B]])
+; CHECK-NEXT:    [[R_1:%.*]] = tail call fast <8 x half> @llvm.fma.v8f16(<8 x half> [[R_0]], <8 x half> [[S1]], <8 x half> [[B]])
+; CHECK-NEXT:    [[R_2:%.*]] = tail call fast <8 x half> @llvm.fma.v8f16(<8 x half> [[R_1]], <8 x half> [[S2]], <8 x half> [[B]])
+; CHECK-NEXT:    [[R_3:%.*]] = tail call fast <8 x half> @llvm.fma.v8f16(<8 x half> [[R_2]], <8 x half> [[S3]], <8 x half> [[B]])
+; CHECK-NEXT:    ret <8 x half> [[R_3]]
+; CHECK:       if.else:
+; CHECK-NEXT:    [[R_4:%.*]] = tail call fast <8 x half> @llvm.fma.v8f16(<8 x half> [[B]], <8 x half> [[S4]], <8 x half> [[B]])
+; CHECK-NEXT:    [[R_5:%.*]] = tail call fast <8 x half> @llvm.fma.v8f16(<8 x half> [[R_4]], <8 x half> [[S5]], <8 x half> [[B]])
+; CHECK-NEXT:    [[R_6:%.*]] = tail call fast <8 x half> @llvm.fma.v8f16(<8 x half> [[R_5]], <8 x half> [[S6]], <8 x half> [[B]])
+; CHECK-NEXT:    [[R_7:%.*]] = tail call fast <8 x half> @llvm.fma.v8f16(<8 x half> [[R_6]], <8 x half> [[S7]], <8 x half> [[B]])
+; CHECK-NEXT:    ret <8 x half> [[R_7]]
+;
+entry:
+  %s0 = shufflevector <8 x half> %a, <8 x half> poison, <8 x i32> zeroinitializer
+  %s1 = shufflevector <8 x half> %a, <8 x half> poison, <8 x i32> <i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
+  %s2 = shufflevector <8 x half> %a, <8 x half> poison, <8 x i32> <i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2>
+  %s3 = shufflevector <8 x half> %a, <8 x half> poison, <8 x i32> <i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3>
+  %s4 = shufflevector <8 x half> %a, <8 x half> poison, <8 x i32> <i32 4, i32 4, i32 4, i32 4, i32 4, i32 4, i32 4, i32 4>
+  %s5 = shufflevector <8 x half> %a, <8 x half> poison, <8 x i32> <i32 5, i32 5, i32 5, i32 5, i32 5, i32 5, i32 5, i32 5>
+  %s6 = shufflevector <8 x half> %a, <8 x half> poison, <8 x i32> <i32 6, i32 6, i32 6, i32 6, i32 6, i32 6, i32 6, i32 6>
+  %s7 = shufflevector <8 x half> %a, <8 x half> poison, <8 x i32> <i32 7, i32 7, i32 7, i32 7, i32 7, i32 7, i32 7, i32 7>
+  br i1 %c, label %if.then, label %if.else
+
+if.then:
+  %r.0 = tail call fast <8 x half> @llvm.fma.v8f16(<8 x half> %b, <8 x half> %s0, <8 x half> %b)
+  %r.1 = tail call fast <8 x half> @llvm.fma.v8f16(<8 x half> %r.0, <8 x half> %s1, <8 x half> %b)
+  %r.2 = tail call fast <8 x half> @llvm.fma.v8f16(<8 x half> %r.1, <8 x half> %s2, <8 x half> %b)
+  %r.3 = tail call fast <8 x half> @llvm.fma.v8f16(<8 x half> %r.2, <8 x half> %s3, <8 x half> %b)
+  ret <8 x half> %r.3
+
+if.else:
+  %r.4 = tail call fast <8 x half> @llvm.fma.v8f16(<8 x half> %b, <8 x half> %s4, <8 x half> %b)
+  %r.5 = tail call fast <8 x half> @llvm.fma.v8f16(<8 x half> %r.4, <8 x half> %s5, <8 x half> %b)
+  %r.6 = tail call fast <8 x half> @llvm.fma.v8f16(<8 x half> %r.5, <8 x half> %s6, <8 x half> %b)
+  %r.7 = tail call fast <8 x half> @llvm.fma.v8f16(<8 x half> %r.6, <8 x half> %s7, <8 x half> %b)
+  ret <8 x half> %r.7
+}
+
+declare <4 x float> @llvm.fma.v4f32(<4 x float>, <4 x float>, <4 x float>)
+
+define <4 x float> @sink_shufflevector_fma_v4f32(i1 %c, <8 x float> %a, <4 x float> %b) {
+; CHECK-LABEL: @sink_shufflevector_fma_v4f32(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[S0:%.*]] = shufflevector <8 x float> [[A:%.*]], <8 x float> poison, <4 x i32> zeroinitializer
+; CHECK-NEXT:    [[S1:%.*]] = shufflevector <8 x float> [[A]], <8 x float> poison, <4 x i32> <i32 1, i32 1, i32 1, i32 1>
+; CHECK-NEXT:    [[S2:%.*]] = shufflevector <8 x float> [[A]], <8 x float> poison, <4 x i32> <i32 2, i32 2, i32 2, i32 2>
+; CHECK-NEXT:    [[S3:%.*]] = shufflevector <8 x float> [[A]], <8 x float> poison, <4 x i32> <i32 3, i32 3, i32 3, i32 3>
+; CHECK-NEXT:    br i1 [[C:%.*]], label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]]
+; CHECK:       if.then:
+; CHECK-NEXT:    [[R_0:%.*]] = tail call fast <4 x float> @llvm.fma.v4f32(<4 x float> [[B:%.*]], <4 x float> [[S0]], <4 x float> [[B]])
+; CHECK-NEXT:    [[R_1:%.*]] = tail call fast <4 x float> @llvm.fma.v4f32(<4 x float> [[R_0]], <4 x float> [[S1]], <4 x float> [[B]])
+; CHECK-NEXT:    ret <4 x float> [[R_1]]
+; CHECK:       if.else:
+; CHECK-NEXT:    [[R_2:%.*]] = tail call fast <4 x float> @llvm.fma.v4f32(<4 x float> [[B]], <4 x float> [[S2]], <4 x float> [[B]])
+; CHECK-NEXT:    [[R_3:%.*]] = tail call fast <4 x float> @llvm.fma.v4f32(<4 x float> [[R_2]], <4 x float> [[S3]], <4 x float> [[B]])
+; CHECK-NEXT:    ret <4 x float> [[R_3]]
+;
+entry:
+  %s0 = shufflevector <8 x float> %a, <8 x float> poison, <4 x i32> zeroinitializer
+  %s1 = shufflevector <8 x float> %a, <8 x float> poison, <4 x i32> <i32 1, i32 1, i32 1, i32 1>
+  %s2 = shufflevector <8 x float> %a, <8 x float> poison, <4 x i32> <i32 2, i32 2, i32 2, i32 2>
+  %s3 = shufflevector <8 x float> %a, <8 x float> poison, <4 x i32> <i32 3, i32 3, i32 3, i32 3>
+  br i1 %c, label %if.then, label %if.else
+
+if.then:
+  %r.0 = tail call fast <4 x float> @llvm.fma.v4f32(<4 x float> %b, <4 x float> %s0, <4 x float> %b)
+  %r.1 = tail call fast <4 x float> @llvm.fma.v4f32(<4 x float> %r.0, <4 x float> %s1, <4 x float> %b)
+  ret <4 x float> %r.1
+
+if.else:
+  %r.2 = tail call fast <4 x float> @llvm.fma.v4f32(<4 x float> %b, <4 x float> %s2, <4 x float> %b)
+  %r.3 = tail call fast <4 x float> @llvm.fma.v4f32(<4 x float> %r.2, <4 x float> %s3, <4 x float> %b)
+  ret <4 x float> %r.3
+}
+
+declare <2 x double> @llvm.fma.v2f64(<2 x double>, <2 x double>, <2 x double>)
+
+define <2 x double> @sink_shufflevector_fma_v2f64(i1 %c, <2 x double> %a, <2 x double> %b) {
+; CHECK-LABEL: @sink_shufflevector_fma_v2f64(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[S0:%.*]] = shufflevector <2 x double> [[A:%.*]], <2 x double> poison, <2 x i32> zeroinitializer
+; CHECK-NEXT:    [[S1:%.*]] = shufflevector <2 x double> [[A]], <2 x double> poison, <2 x i32> <i32 1, i32 1>
+; CHECK-NEXT:    br i1 [[C:%.*]], label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]]
+; CHECK:       if.then:
+; CHECK-NEXT:    [[R_0:%.*]] = tail call fast <2 x double> @llvm.fma.v2f64(<2 x double> [[B:%.*]], <2 x double> [[S0]], <2 x double> [[B]])
+; CHECK-NEXT:    ret <2 x double> [[R_0]]
+; CHECK:       if.else:
+; CHECK-NEXT:    [[R_1:%.*]] = tail call fast <2 x double> @llvm.fma.v2f64(<2 x double> [[B]], <2 x double> [[S1]], <2 x double> [[B]])
+; CHECK-NEXT:    ret <2 x double> [[R_1]]
+;
+entry:
+  %s0 = shufflevector <2 x double> %a, <2 x double> poison, <2 x i32> zeroinitializer
+  %s1 = shufflevector <2 x double> %a, <2 x double> poison, <2 x i32> <i32 1, i32 1>
+  br i1 %c, label %if.then, label %if.else
+
+if.then:
+  %r.0 = tail call fast <2 x double> @llvm.fma.v2f64(<2 x double> %b, <2 x double> %s0, <2 x double> %b)
+  ret <2 x double> %r.0
+
+if.else:
+  %r.1 = tail call fast <2 x double> @llvm.fma.v2f64(<2 x double> %b, <2 x double> %s1, <2 x double> %b)
+  ret <2 x double> %r.1
+}
+
+define <4 x float> @do_not_sink_out_of_range_shufflevector_fma_v4f32(i1 %c, <8 x float> %a, <4 x float> %b) {
+; CHECK-LABEL: @do_not_sink_out_of_range_shufflevector_fma_v4f32(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[S4:%.*]] = shufflevector <8 x float> [[A:%.*]], <8 x float> poison, <4 x i32> <i32 4, i32 4, i32 4, i32 4>
+; CHECK-NEXT:    br i1 [[C:%.*]], label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]]
+; CHECK:       if.then:
+; CHECK-NEXT:    [[R:%.*]] = tail call fast <4 x float> @llvm.fma.v4f32(<4 x float> [[B:%.*]], <4 x float> [[S4]], <4 x float> [[B]])
+; CHECK-NEXT:    ret <4 x float> [[R]]
+; CHECK:       if.else:
+; CHECK-NEXT:    ret <4 x float> zeroinitializer
+;
+entry:
+  %s4 = shufflevector <8 x float> %a, <8 x float> poison, <4 x i32> <i32 4, i32 4, i32 4, i32 4>
+  br i1 %c, label %if.then, label %if.else
+
+if.then:
+  %r = tail call fast <4 x float> @llvm.fma.v4f32(<4 x float> %b, <4 x float> %s4, <4 x float> %b)
+  ret <4 x float> %r
+
+if.else:
+  ret <4 x float> zeroinitializer
+}
+
+declare <5 x float> @llvm.fma.v5f32(<5 x float>, <5 x float>, <5 x float>)
+
+define <5 x float> @do_not_sink_shufflevector_fma_v5f32(i1 %c, <8 x float> %a, <5 x float> %b) {
+; CHECK-LABEL: @do_not_sink_shufflevector_fma_v5f32(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[S0:%.*]] = shufflevector <8 x float> [[A:%.*]], <8 x float> poison, <5 x i32> zeroinitializer
+; CHECK-NEXT:    [[S1:%.*]] = shufflevector <8 x float> [[A]], <8 x float> poison, <5 x i32> <i32 1, i32 1, i32 1, i32 1, i32 4>
+; CHECK-NEXT:    [[S2:%.*]] = shufflevector <8 x float> [[A]], <8 x float> poison, <5 x i32> <i32 2, i32 2, i32 2, i32 2, i32 4>
+; CHECK-NEXT:    [[S3:%.*]] = shufflevector <8 x float> [[A]], <8 x float> poison, <5 x i32> <i32 3, i32 3, i32 3, i32 3, i32 4>
+; CHECK-NEXT:    [[S4:%.*]] = shufflevector <8 x float> [[A]], <8 x float> poison, <5 x i32> <i32 4, i32 4, i32 4, i32 4, i32 4>
+; CHECK-NEXT:    br i1 [[C:%.*]], label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]]
+; CHECK:       if.then:
+; CHECK-NEXT:    [[R_0:%.*]] = tail call fast <5 x float> @llvm.fma.v5f32(<5 x float> [[B:%.*]], <5 x float> [[S0]], <5 x float> [[B]])
+; CHECK-NEXT:    [[R_1:%.*]] = tail call fast <5 x float> @llvm.fma.v5f32(<5 x float> [[R_0]], <5 x float> [[S1]], <5 x float> [[B]])
+; CHECK-NEXT:    ret <5 x float> [[R_1]]
+; CHECK:       if.else:
+; CHECK-NEXT:    [[R_2:%.*]] = tail call fast <5 x float> @llvm.fma.v5f32(<5 x float> [[B]], <5 x float> [[S2]], <5 x float> [[B]])
+; CHECK-NEXT:    [[R_3:%.*]] = tail call fast <5 x float> @llvm.fma.v5f32(<5 x float> [[R_2]], <5 x float> [[S3]], <5 x float> [[B]])
+; CHECK-NEXT:    [[R_4:%.*]] = tail call fast <5 x float> @llvm.fma.v5f32(<5 x float> [[R_3]], <5 x float> [[S4]], <5 x float> [[B]])
+; CHECK-NEXT:    ret <5 x float> [[R_4]]
+;
+entry:
+  %s0 = shufflevector <8 x float> %a, <8 x float> poison, <5 x i32> zeroinitializer
+  %s1 = shufflevector <8 x float> %a, <8 x float> poison, <5 x i32> <i32 1, i32 1, i32 1, i32 1, i32 4>
+  %s2 = shufflevector <8 x float> %a, <8 x float> poison, <5 x i32> <i32 2, i32 2, i32 2, i32 2, i32 4>
+  %s3 = shufflevector <8 x float> %a, <8 x float> poison, <5 x i32> <i32 3, i32 3, i32 3, i32 3, i32 4>
+  %s4 = shufflevector <8 x float> %a, <8 x float> poison, <5 x i32> <i32 4, i32 4, i32 4, i32 4, i32 4>
+  br i1 %c, label %if.then, label %if.else
+
+if.then:
+  %r.0 = tail call fast <5 x float> @llvm.fma.v5f32(<5 x float> %b, <5 x float> %s0, <5 x float> %b)
+  %r.1 = tail call fast <5 x float> @llvm.fma.v5f32(<5 x float> %r.0, <5 x float> %s1, <5 x float> %b)
+  ret <5 x float> %r.1
+
+if.else:
+  %r.2 = tail call fast <5 x float> @llvm.fma.v5f32(<5 x float> %b, <5 x float> %s2, <5 x float> %b)
+  %r.3 = tail call fast <5 x float> @llvm.fma.v5f32(<5 x float> %r.2, <5 x float> %s3, <5 x float> %b)
+  %r.4 = tail call fast <5 x float> @llvm.fma.v5f32(<5 x float> %r.3, <5 x float> %s4, <5 x float> %b)
+  ret <5 x float> %r.4
+}

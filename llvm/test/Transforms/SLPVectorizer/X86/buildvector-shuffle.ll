@@ -50,8 +50,7 @@ define void @test(float %a) {
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[TMP2:%.*]] = fadd <2 x float> zeroinitializer, [[TMP1]]
-; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <2 x float> [[TMP2]], i32 0
-; CHECK-NEXT:    [[AGG:%.*]] = insertelement <2 x float> [[TMP2]], float [[TMP3]], i64 1
+; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <2 x float> [[TMP2]], <2 x float> poison, <2 x i32> zeroinitializer
 ; CHECK-NEXT:    br label [[LOOP]]
 ;
 entry:
