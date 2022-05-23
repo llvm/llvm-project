@@ -765,7 +765,6 @@ llvm::json::Value CreateStackFrame(lldb::SBFrame &frame) {
   if (is_optimized)
     frame_name += " [opt]";
   EmplaceSafeString(object, "name", frame_name);
-  object.try_emplace("optimized", is_optimized);
 
   int64_t disasm_line = 0;
   object.try_emplace("source", CreateSource(frame, disasm_line));
