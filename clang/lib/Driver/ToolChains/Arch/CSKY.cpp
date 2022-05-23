@@ -91,6 +91,22 @@ getCSKYFPUFeatures(const Driver &D, const Arg *A, const ArgList &Args,
           .Case("fpv3_hsf", llvm::CSKY::FK_FPV3_HSF)
           .Case("fpv3_sdf", llvm::CSKY::FK_FPV3_SDF)
           .Default(llvm::CSKY::FK_INVALID);
+  if (FPUID == llvm::CSKY::FK_INVALID) {
+    D.Diag(clang::diag::err_drv_clang_unsupported) << A->getAsString(Args);
+    return llvm::CSKY::FK_INVALID;
+  }
+
+  auto RemoveTargetFPUFeature =
+      [&Features](ArrayRef<const char *> FPUFeatures) {
+        for (auto FPUFeature : FPUFeatures) {
+          auto it = std::find(Features.begin(), Features.end(), FPUFeature);
+          if (it != Features.end())
+            Features.erase(it);
+        }
+      };
+
+  RemoveTargetFPUFeature({"+fpuv2_sf", "+fpuv2_df", "+fdivdu", "+fpuv3_hi",
+                          "+fpuv3_hf", "+fpuv3_sf", "+fpuv3_df"});
 
   if (!llvm::CSKY::getFPUFeatures(FPUID, Features)) {
     D.Diag(clang::diag::err_drv_clang_unsupported) << A->getAsString(Args);
@@ -126,6 +142,8 @@ void csky::getCSKYTargetFeatures(const Driver &D, const llvm::Triple &Triple,
       return;
     }
     cpuName = A->getValue();
+    if (archName.empty())
+      archName = llvm::CSKY::getArchName(Kind);
   }
 
   if (archName.empty() && cpuName.empty()) {
@@ -144,11 +162,9 @@ void csky::getCSKYTargetFeatures(const Driver &D, const llvm::Triple &Triple,
     Features.push_back("+hard-float");
   }
 
-  if (const Arg *FPUArg = Args.getLastArg(options::OPT_mfpu_EQ))
-    getCSKYFPUFeatures(D, FPUArg, Args, FPUArg->getValue(), Features);
-  else if (FloatABI != csky::FloatABI::Soft && archName.empty())
-    llvm::CSKY::getFPUFeatures(llvm::CSKY::FK_AUTO, Features);
-
   uint64_t Extension = llvm::CSKY::getDefaultExtensions(cpuName);
   llvm::CSKY::getExtensionFeatures(Extension, Features);
+
+  if (const Arg *FPUArg = Args.getLastArg(options::OPT_mfpu_EQ))
+    getCSKYFPUFeatures(D, FPUArg, Args, FPUArg->getValue(), Features);
 }

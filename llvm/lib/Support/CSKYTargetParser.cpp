@@ -43,14 +43,17 @@ bool CSKY::getFPUFeatures(CSKYFPUKind CSKYFPUKind,
     break;
   case FK_FPV3:
     Features.push_back("+fpuv3_hf");
+    Features.push_back("+fpuv3_hi");
     Features.push_back("+fpuv3_sf");
     Features.push_back("+fpuv3_df");
     break;
   case FK_FPV3_HF:
     Features.push_back("+fpuv3_hf");
+    Features.push_back("+fpuv3_hi");
     break;
   case FK_FPV3_HSF:
     Features.push_back("+fpuv3_hf");
+    Features.push_back("+fpuv3_hi");
     Features.push_back("+fpuv3_sf");
     break;
   case FK_FPV3_SDF:
