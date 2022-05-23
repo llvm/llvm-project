@@ -40,8 +40,21 @@ entry:
   ret double %vcvtd_n_f64_s64
 }
 
+define float @do_stuff(<8 x i16> noundef %var_135) {
+; CHECK-LABEL: do_stuff:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    umaxv.8h h0, v0
+; CHECK-NEXT:    ucvtf s0, s0, #1
+; CHECK-NEXT:    ret
+entry:
+  %vmaxv.i = call i32 @llvm.aarch64.neon.umaxv.i32.v8i16(<8 x i16> %var_135) #2
+  %vcvts_n_f32_u32 = call float @llvm.aarch64.neon.vcvtfxu2fp.f32.i32(i32 %vmaxv.i, i32 1)
+  ret float %vcvts_n_f32_u32
+}
+
 declare <1 x i64> @llvm.aarch64.neon.vsri.v1i64(<1 x i64>, <1 x i64>, i32)
 declare double @llvm.aarch64.neon.vcvtfxs2fp.f64.i64(i64, i32)
 declare <1 x double> @llvm.nearbyint.v1f64(<1 x double>)
 declare i64 @llvm.aarch64.neon.fcvtzs.i64.f64(double)
-
+declare i32 @llvm.aarch64.neon.umaxv.i32.v8i16(<8 x i16>) #1
+declare float @llvm.aarch64.neon.vcvtfxu2fp.f32.i32(i32, i32) #1

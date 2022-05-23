@@ -15109,7 +15109,7 @@ static SDValue tryCombineFixedPointConvert(SDNode *N,
   else if (Vec.getValueType() == MVT::v2i64)
     VecResTy = MVT::v2f64;
   else
-    llvm_unreachable("unexpected vector type!");
+    return SDValue();
 
   SDValue Convert =
       DAG.getNode(ISD::INTRINSIC_WO_CHAIN, DL, VecResTy, IID, Vec, Shift);
