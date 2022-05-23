@@ -253,6 +253,50 @@ filegroup(
 )
 
 ##---------------------------------------------------------------------------##
+# Bufferization dialect.
+##---------------------------------------------------------------------------##
+
+td_library(
+    name = "BufferizationOpsPyTdFiles",
+    srcs = [
+        "//mlir:include/mlir/Bindings/Python/Attributes.td",
+    ],
+    includes = ["../include"],
+    deps = [
+        "//mlir:BufferizableOpInterfaceTdFiles",
+        "//mlir:BufferizationOpsTdFiles",
+        "//mlir:OpBaseTdFiles",
+    ],
+)
+
+gentbl_filegroup(
+    name = "BufferizationOpsPyGen",
+    tbl_outs = [
+        (
+            [
+                "-gen-python-op-bindings",
+                "-bind-dialect=bufferization",
+            ],
+            "mlir/dialects/_bufferization_ops_gen.py",
+        ),
+    ],
+    tblgen = "//mlir:mlir-tblgen",
+    td_file = "mlir/dialects/BufferizationOps.td",
+    deps = [
+        ":BufferizationOpsPyTdFiles",
+    ],
+)
+
+filegroup(
+    name = "BufferizationOpsPyFiles",
+    srcs = [
+        "mlir/dialects/_bufferization_ops_ext.py",
+        "mlir/dialects/bufferization.py",
+        ":BufferizationOpsPyGen",
+    ],
+)
+
+##---------------------------------------------------------------------------##
 # ControlFlow dialect.
 ##---------------------------------------------------------------------------##
 
