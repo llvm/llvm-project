@@ -682,7 +682,7 @@ func.func @matmul_on_tensors(
   %cst_0 = arith.constant 0.000000e+00 : f32
   %cst_1 = arith.constant 1.000000e+00 : f32
 
-  %7 = bufferization.alloc_tensor [256, 256] : tensor<256x256xf32>
+  %7 = bufferization.alloc_tensor() : tensor<256x256xf32>
 
   //      CHECK: linalg.fill
   // CHECK-SAME: {__inplace_operands_attr__ = ["none", "false"]}
@@ -720,7 +720,7 @@ func.func @matmul_on_tensors(
   %cst_0 = arith.constant 0.000000e+00 : f32
   %cst_1 = arith.constant 1.000000e+00 : f32
 
-  %7 = bufferization.alloc_tensor [256, 256] : tensor<256x256xf32>
+  %7 = bufferization.alloc_tensor() : tensor<256x256xf32>
 
   //     CHECK: linalg.fill
   // CHECK-SAME: {__inplace_operands_attr__ = ["none", "false"]}
@@ -1252,7 +1252,7 @@ func.func @write_to_same_alloc_tensor_in_place(
     %lb : index, %ub : index, %step : index, %sz: index, %sz2: index)
   -> (tensor<?xf32>)
 {
-  %B = bufferization.alloc_tensor [%sz2] : tensor<?xf32>
+  %B = bufferization.alloc_tensor(%sz2) : tensor<?xf32>
 
   // CHECK: scf.for {{.*}} {
   %r0 = scf.for %i = %lb to %ub step %step iter_args(%t = %A) -> (tensor<?xf32>) {
@@ -1280,7 +1280,7 @@ func.func @write_to_same_alloc_tensor_out_of_place(
     %lb : index, %ub : index, %step : index, %sz: index, %sz2: index, %f: f32)
   -> (tensor<?xf32>)
 {
-  %B = bufferization.alloc_tensor [%sz2] : tensor<?xf32>
+  %B = bufferization.alloc_tensor(%sz2) : tensor<?xf32>
   %C = tensor.insert %f into %B[%lb] : tensor<?xf32>
 
   // CHECK: scf.for {{.*}} {

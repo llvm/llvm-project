@@ -32,7 +32,7 @@
 // Example: `foo` fails bufferization because %0 is not equivalent to any bbArg.
 // ```
 // func @foo() -> tensor<?xf32> {
-//   %0 = linalg.alloc_tensor [...] : tensor<?xf32>
+//   %0 = bufferization.alloc_tensor(...) : tensor<?xf32>
 //   return %0 : tensor<?xf32>
 // }
 // ```
@@ -105,6 +105,8 @@ static FuncAnalysisState &getFuncAnalysisState(AnalysisState &state) {
 }
 
 /// Return the state (phase) of analysis of the FuncOp.
+/// Used for debug modes.
+LLVM_ATTRIBUTE_UNUSED
 static FuncOpAnalysisState getFuncOpAnalysisState(const AnalysisState &state,
                                                   func::FuncOp funcOp) {
   const FuncAnalysisState &funcState = getFuncAnalysisState(state);

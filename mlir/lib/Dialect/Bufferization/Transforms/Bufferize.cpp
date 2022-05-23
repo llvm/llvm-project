@@ -389,6 +389,8 @@ private:
   DenseSet<Operation *> &toMemrefOps;
 
   /// The bufferization options.
+  /// Used for debug modes.
+  LLVM_ATTRIBUTE_UNUSED
   const BufferizationOptions &options;
 };
 } // namespace
