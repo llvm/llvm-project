@@ -1794,7 +1794,7 @@ define amdgpu_kernel void @s_test_sdiv24_k_num_i64(i64 addrspace(1)* %out, i64 %
 ; GCN-NEXT:    s_or_b32 s0, s0, 1
 ; GCN-NEXT:    v_mov_b32_e32 v3, s0
 ; GCN-NEXT:    s_mov_b32 s5, s1
-; GCN-NEXT:    v_mul_f32_e32 v1, s3, v1
+; GCN-NEXT:    v_mul_f32_e32 v1, 0x41c00000, v1
 ; GCN-NEXT:    v_trunc_f32_e32 v1, v1
 ; GCN-NEXT:    v_mad_f32 v2, -v1, v0, s3
 ; GCN-NEXT:    v_cvt_i32_f32_e32 v1, v1
@@ -1821,7 +1821,7 @@ define amdgpu_kernel void @s_test_sdiv24_k_num_i64(i64 addrspace(1)* %out, i64 %
 ; GCN-IR-NEXT:    s_or_b32 s0, s0, 1
 ; GCN-IR-NEXT:    v_mov_b32_e32 v3, s0
 ; GCN-IR-NEXT:    s_mov_b32 s5, s1
-; GCN-IR-NEXT:    v_mul_f32_e32 v1, s3, v1
+; GCN-IR-NEXT:    v_mul_f32_e32 v1, 0x41c00000, v1
 ; GCN-IR-NEXT:    v_trunc_f32_e32 v1, v1
 ; GCN-IR-NEXT:    v_mad_f32 v2, -v1, v0, s3
 ; GCN-IR-NEXT:    v_cvt_i32_f32_e32 v1, v1
@@ -1906,7 +1906,7 @@ define i64 @v_test_sdiv24_k_num_i64(i64 %x) {
 ; GCN-NEXT:    v_ashrrev_i32_e32 v0, 30, v0
 ; GCN-NEXT:    v_or_b32_e32 v0, 1, v0
 ; GCN-NEXT:    v_rcp_iflag_f32_e32 v2, v1
-; GCN-NEXT:    v_mul_f32_e32 v2, s4, v2
+; GCN-NEXT:    v_mul_f32_e32 v2, 0x41c00000, v2
 ; GCN-NEXT:    v_trunc_f32_e32 v2, v2
 ; GCN-NEXT:    v_mad_f32 v3, -v2, v1, s4
 ; GCN-NEXT:    v_cvt_i32_f32_e32 v2, v2
@@ -1926,7 +1926,7 @@ define i64 @v_test_sdiv24_k_num_i64(i64 %x) {
 ; GCN-IR-NEXT:    v_ashrrev_i32_e32 v0, 30, v0
 ; GCN-IR-NEXT:    v_or_b32_e32 v0, 1, v0
 ; GCN-IR-NEXT:    v_rcp_iflag_f32_e32 v2, v1
-; GCN-IR-NEXT:    v_mul_f32_e32 v2, s4, v2
+; GCN-IR-NEXT:    v_mul_f32_e32 v2, 0x41c00000, v2
 ; GCN-IR-NEXT:    v_trunc_f32_e32 v2, v2
 ; GCN-IR-NEXT:    v_mad_f32 v3, -v2, v1, s4
 ; GCN-IR-NEXT:    v_cvt_i32_f32_e32 v2, v2
@@ -1951,7 +1951,7 @@ define i64 @v_test_sdiv24_pow2_k_num_i64(i64 %x) {
 ; GCN-NEXT:    v_ashrrev_i32_e32 v0, 30, v0
 ; GCN-NEXT:    v_or_b32_e32 v0, 1, v0
 ; GCN-NEXT:    v_rcp_iflag_f32_e32 v2, v1
-; GCN-NEXT:    v_mul_f32_e32 v2, s4, v2
+; GCN-NEXT:    v_mul_f32_e32 v2, 0x47000000, v2
 ; GCN-NEXT:    v_trunc_f32_e32 v2, v2
 ; GCN-NEXT:    v_mad_f32 v3, -v2, v1, s4
 ; GCN-NEXT:    v_cvt_i32_f32_e32 v2, v2
@@ -1971,7 +1971,7 @@ define i64 @v_test_sdiv24_pow2_k_num_i64(i64 %x) {
 ; GCN-IR-NEXT:    v_ashrrev_i32_e32 v0, 30, v0
 ; GCN-IR-NEXT:    v_or_b32_e32 v0, 1, v0
 ; GCN-IR-NEXT:    v_rcp_iflag_f32_e32 v2, v1
-; GCN-IR-NEXT:    v_mul_f32_e32 v2, s4, v2
+; GCN-IR-NEXT:    v_mul_f32_e32 v2, 0x47000000, v2
 ; GCN-IR-NEXT:    v_trunc_f32_e32 v2, v2
 ; GCN-IR-NEXT:    v_mad_f32 v3, -v2, v1, s4
 ; GCN-IR-NEXT:    v_cvt_i32_f32_e32 v2, v2
