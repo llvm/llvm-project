@@ -110,12 +110,6 @@ llvm_config.add_tool_substitutions(tools, tool_dirs)
 # it can be explicitly opted-in by prefixing the variable name with $
 config.environment['FILECHECK_OPTS'] = "-enable-var-scope --allow-unused-prefixes=false"
 
-
-if config.native_target in config.targets_to_build:
-    config.available_features.add('llvm_has_native_target')
-
-
-
 # Add the python path for both the source and binary tree.
 # Note that presently, the python sources come from the source tree and the
 # binaries come from the build tree. This should be unified to the build tree
