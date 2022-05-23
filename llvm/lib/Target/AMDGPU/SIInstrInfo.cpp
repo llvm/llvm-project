@@ -4345,8 +4345,8 @@ bool SIInstrInfo::verifyInstruction(const MachineInstr &MI,
             UsesLiteral = true;
             LiteralVal = &MO;
           } else if (!MO.isIdenticalTo(*LiteralVal)) {
-            assert(isVOP3(MI));
-            ErrInfo = "VOP3 instruction uses more than one literal";
+            assert(isVOP2(MI) || isVOP3(MI));
+            ErrInfo = "VOP2/VOP3 instruction uses more than one literal";
             return false;
           }
         }
@@ -4437,16 +4437,11 @@ bool SIInstrInfo::verifyInstruction(const MachineInstr &MI,
   if (isSOP2(MI) || isSOPC(MI)) {
     const MachineOperand &Src0 = MI.getOperand(Src0Idx);
     const MachineOperand &Src1 = MI.getOperand(Src1Idx);
-    unsigned Immediates = 0;
 
-    if (!Src0.isReg() &&
-        !isInlineConstant(Src0, Desc.OpInfo[Src0Idx].OperandType))
-      Immediates++;
-    if (!Src1.isReg() &&
-        !isInlineConstant(Src1, Desc.OpInfo[Src1Idx].OperandType))
-      Immediates++;
-
-    if (Immediates > 1) {
+    if (!Src0.isReg() && !Src1.isReg() &&
+        !isInlineConstant(Src0, Desc.OpInfo[Src0Idx].OperandType) &&
+        !isInlineConstant(Src1, Desc.OpInfo[Src1Idx].OperandType) &&
+        !Src0.isIdenticalTo(Src1)) {
       ErrInfo = "SOP2/SOPC instruction requires too many immediate constants";
       return false;
     }
@@ -5037,9 +5032,9 @@ bool SIInstrInfo::isOperandLegal(const MachineInstr &MI, unsigned OpIdx,
     MO = &MI.getOperand(OpIdx);
 
   int ConstantBusLimit = ST.getConstantBusLimit(MI.getOpcode());
-  int VOP3LiteralLimit = ST.hasVOP3Literal() ? 1 : 0;
+  int LiteralLimit = !isVOP3(MI) || ST.hasVOP3Literal() ? 1 : 0;
   if (isVALU(MI) && usesConstantBus(MRI, *MO, OpInfo)) {
-    if (isVOP3(MI) && isLiteralConstantLike(*MO, OpInfo) && !VOP3LiteralLimit--)
+    if (isLiteralConstantLike(*MO, OpInfo) && !LiteralLimit--)
       return false;
 
     SmallDenseSet<RegSubRegPair> SGPRsUsed;
@@ -5058,12 +5053,10 @@ bool SIInstrInfo::isOperandLegal(const MachineInstr &MI, unsigned OpIdx,
             return false;
           SGPRsUsed.insert(SGPR);
         }
-      } else if (InstDesc.OpInfo[i].OperandType == AMDGPU::OPERAND_KIMM32) {
-        if (--ConstantBusLimit <= 0)
-          return false;
-      } else if (isVOP3(MI) && AMDGPU::isSISrcOperand(InstDesc, i) &&
-                 isLiteralConstantLike(Op, InstDesc.OpInfo[i])) {
-        if (!VOP3LiteralLimit--)
+      } else if (InstDesc.OpInfo[i].OperandType == AMDGPU::OPERAND_KIMM32 ||
+                 (AMDGPU::isSISrcOperand(InstDesc, i) &&
+                  isLiteralConstantLike(Op, InstDesc.OpInfo[i]))) {
+        if (!LiteralLimit--)
           return false;
         if (--ConstantBusLimit <= 0)
           return false;

@@ -610,4 +610,92 @@ TEST(DxcModeTest, ValidatorVersionValidation) {
   DiagConsumer->clear();
 }
 
+TEST(ToolChainTest, Toolsets) {
+  IntrusiveRefCntPtr<DiagnosticOptions> DiagOpts = new DiagnosticOptions();
+  IntrusiveRefCntPtr<DiagnosticIDs> DiagID(new DiagnosticIDs());
+  struct TestDiagnosticConsumer : public DiagnosticConsumer {};
+
+  // Check (newer) GCC toolset installation.
+  {
+    IntrusiveRefCntPtr<llvm::vfs::InMemoryFileSystem> InMemoryFileSystem(
+        new llvm::vfs::InMemoryFileSystem);
+
+    // These should be ignored
+    InMemoryFileSystem->addFile("/opt/rh/gcc-toolset-2", 0,
+                                llvm::MemoryBuffer::getMemBuffer("\n"));
+    InMemoryFileSystem->addFile("/opt/rh/gcc-toolset-", 0,
+                                llvm::MemoryBuffer::getMemBuffer("\n"));
+    InMemoryFileSystem->addFile("/opt/rh/gcc-toolset--", 0,
+                                llvm::MemoryBuffer::getMemBuffer("\n"));
+    InMemoryFileSystem->addFile("/opt/rh/gcc-toolset--1", 0,
+                                llvm::MemoryBuffer::getMemBuffer("\n"));
+
+    // File needed for GCC installation detection.
+    InMemoryFileSystem->addFile(
+        "/opt/rh/gcc-toolset-12/lib/gcc/x86_64-redhat-linux/11/crtbegin.o", 0,
+        llvm::MemoryBuffer::getMemBuffer("\n"));
+
+    DiagnosticsEngine Diags(DiagID, &*DiagOpts, new TestDiagnosticConsumer);
+    Driver TheDriver("/bin/clang", "x86_64-redhat-linux", Diags,
+                     "clang LLVM compiler", InMemoryFileSystem);
+    std::unique_ptr<Compilation> C(TheDriver.BuildCompilation({"-v"}));
+    ASSERT_TRUE(C);
+    std::string S;
+    {
+      llvm::raw_string_ostream OS(S);
+      C->getDefaultToolChain().printVerboseInfo(OS);
+    }
+    if (is_style_windows(llvm::sys::path::Style::native))
+      std::replace(S.begin(), S.end(), '\\', '/');
+    EXPECT_EQ("Found candidate GCC installation: "
+              "/opt/rh/gcc-toolset-12/lib/gcc/x86_64-redhat-linux/11\n"
+              "Selected GCC installation: "
+              "/opt/rh/gcc-toolset-12/lib/gcc/x86_64-redhat-linux/11\n"
+              "Candidate multilib: .;@m64\n"
+              "Selected multilib: .;@m64\n",
+              S);
+  }
+
+  // And older devtoolset.
+  {
+    IntrusiveRefCntPtr<llvm::vfs::InMemoryFileSystem> InMemoryFileSystem(
+        new llvm::vfs::InMemoryFileSystem);
+
+    // These should be ignored
+    InMemoryFileSystem->addFile("/opt/rh/devtoolset-2", 0,
+                                llvm::MemoryBuffer::getMemBuffer("\n"));
+    InMemoryFileSystem->addFile("/opt/rh/devtoolset-", 0,
+                                llvm::MemoryBuffer::getMemBuffer("\n"));
+    InMemoryFileSystem->addFile("/opt/rh/devtoolset--", 0,
+                                llvm::MemoryBuffer::getMemBuffer("\n"));
+    InMemoryFileSystem->addFile("/opt/rh/devtoolset--1", 0,
+                                llvm::MemoryBuffer::getMemBuffer("\n"));
+
+    // File needed for GCC installation detection.
+    InMemoryFileSystem->addFile(
+        "/opt/rh/devtoolset-12/lib/gcc/x86_64-redhat-linux/11/crtbegin.o", 0,
+        llvm::MemoryBuffer::getMemBuffer("\n"));
+
+    DiagnosticsEngine Diags(DiagID, &*DiagOpts, new TestDiagnosticConsumer);
+    Driver TheDriver("/bin/clang", "x86_64-redhat-linux", Diags,
+                     "clang LLVM compiler", InMemoryFileSystem);
+    std::unique_ptr<Compilation> C(TheDriver.BuildCompilation({"-v"}));
+    ASSERT_TRUE(C);
+    std::string S;
+    {
+      llvm::raw_string_ostream OS(S);
+      C->getDefaultToolChain().printVerboseInfo(OS);
+    }
+    if (is_style_windows(llvm::sys::path::Style::native))
+      std::replace(S.begin(), S.end(), '\\', '/');
+    EXPECT_EQ("Found candidate GCC installation: "
+              "/opt/rh/devtoolset-12/lib/gcc/x86_64-redhat-linux/11\n"
+              "Selected GCC installation: "
+              "/opt/rh/devtoolset-12/lib/gcc/x86_64-redhat-linux/11\n"
+              "Candidate multilib: .;@m64\n"
+              "Selected multilib: .;@m64\n",
+              S);
+  }
+}
+
 } // end anonymous namespace.

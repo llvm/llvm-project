@@ -249,9 +249,9 @@ define void @select_v128f16(<128 x half>* %a, <128 x half>* %b, i1 %mask) #0 {
 ; NO_SVE-NEXT:    ldr q26, [x1, #32]
 ; NO_SVE-NEXT:    ldr q27, [x1, #16]
 ; NO_SVE-NEXT:    ldr q11, [x1]
+; NO_SVE-NEXT:    stp q3, q2, [x0, #192]
 ; NO_SVE-NEXT:    stp q1, q0, [x0, #224]
 ; NO_SVE-NEXT:    mov v0.16b, v8.16b
-; NO_SVE-NEXT:    stp q3, q2, [x0, #192]
 ; NO_SVE-NEXT:    mov v1.16b, v8.16b
 ; NO_SVE-NEXT:    mov v2.16b, v8.16b
 ; NO_SVE-NEXT:    bsl v0.16b, v5.16b, v29.16b
@@ -531,9 +531,9 @@ define void @select_v64f32(<64 x float>* %a, <64 x float>* %b, i1 %mask) #0 {
 ; NO_SVE-NEXT:    ldr q26, [x1, #32]
 ; NO_SVE-NEXT:    ldr q27, [x1, #16]
 ; NO_SVE-NEXT:    ldr q11, [x1]
+; NO_SVE-NEXT:    stp q3, q2, [x0, #192]
 ; NO_SVE-NEXT:    stp q1, q0, [x0, #224]
 ; NO_SVE-NEXT:    mov v0.16b, v8.16b
-; NO_SVE-NEXT:    stp q3, q2, [x0, #192]
 ; NO_SVE-NEXT:    mov v1.16b, v8.16b
 ; NO_SVE-NEXT:    mov v2.16b, v8.16b
 ; NO_SVE-NEXT:    bsl v0.16b, v5.16b, v29.16b
@@ -813,9 +813,9 @@ define void @select_v32f64(<32 x double>* %a, <32 x double>* %b, i1 %mask) #0 {
 ; NO_SVE-NEXT:    ldr q26, [x1, #32]
 ; NO_SVE-NEXT:    ldr q27, [x1, #16]
 ; NO_SVE-NEXT:    ldr q11, [x1]
+; NO_SVE-NEXT:    stp q3, q2, [x0, #192]
 ; NO_SVE-NEXT:    stp q1, q0, [x0, #224]
 ; NO_SVE-NEXT:    mov v0.16b, v8.16b
-; NO_SVE-NEXT:    stp q3, q2, [x0, #192]
 ; NO_SVE-NEXT:    mov v1.16b, v8.16b
 ; NO_SVE-NEXT:    mov v2.16b, v8.16b
 ; NO_SVE-NEXT:    bsl v0.16b, v5.16b, v29.16b

@@ -220,6 +220,7 @@ class SM_Time_Pseudo<string opName, SDPatternOperator node = null_frag> : SM_Pse
 class SM_Inval_Pseudo <string opName, SDPatternOperator node = null_frag> : SM_Pseudo<
   opName, (outs), (ins), "", [(node)]> {
   let hasSideEffects = 1;
+  let mayLoad = 0;
   let mayStore = 0;
   let has_sdst = 0;
   let has_sbase = 0;
@@ -235,7 +236,7 @@ class SM_WaveId_Pseudo<string opName, SDPatternOperator node> : SM_Pseudo<
   " $sdst", [(set i32:$sdst, (node))]> {
   let hasSideEffects = 1;
   let mayStore = 0;
-  let mayLoad = 1;
+  let mayLoad = 0;
   let has_sbase = 0;
 }
 
@@ -491,8 +492,6 @@ class SMRD_Real_si <bits<5> op, SM_Pseudo ps>
   let Inst{31-27} = 0x18; //encoding
 }
 
-// FIXME: Assembler should reject trying to use glc on SMRD
-// instructions on SI.
 multiclass SM_Real_Loads_si<bits<5> op, string ps,
                             SM_Load_Pseudo immPs = !cast<SM_Load_Pseudo>(ps#_IMM),
                             SM_Load_Pseudo sgprPs = !cast<SM_Load_Pseudo>(ps#_SGPR)> {

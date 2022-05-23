@@ -1550,19 +1550,18 @@ define amdgpu_kernel void @test_div_scale_f32_undef_val_val(float addrspace(1)* 
 ; GFX10-LABEL: test_div_scale_f32_undef_val_val:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
-; GFX10-NEXT:    v_mov_b32_e32 v0, 0x41000000
 ; GFX10-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX10-NEXT:    v_div_scale_f32 v0, s2, v0, v0, s0
+; GFX10-NEXT:    v_div_scale_f32 v0, s2, 0x41000000, 0x41000000, s0
 ; GFX10-NEXT:    global_store_dword v1, v0, s[0:1]
 ; GFX10-NEXT:    s_endpgm
 ;
 ; GFX11-LABEL: test_div_scale_f32_undef_val_val:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_load_b64 s[0:1], s[0:1], 0x24
-; GFX11-NEXT:    v_dual_mov_b32 v0, 0x41000000 :: v_dual_mov_b32 v1, 0
+; GFX11-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX11-NEXT:    v_div_scale_f32 v0, s2, v0, v0, s0
+; GFX11-NEXT:    v_div_scale_f32 v0, s2, 0x41000000, 0x41000000, s0
 ; GFX11-NEXT:    global_store_b32 v1, v0, s[0:1]
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm

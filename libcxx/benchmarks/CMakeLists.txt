@@ -159,10 +159,41 @@ endfunction()
 #==============================================================================
 # Register Benchmark tests
 #==============================================================================
-file(GLOB BENCHMARK_TESTS "*.bench.cpp")
+set(BENCHMARK_TESTS
+    algorithms/make_heap_then_sort_heap.bench.cpp
+    algorithms/make_heap.bench.cpp
+    algorithms/min_max_element.bench.cpp
+    algorithms/pop_heap.bench.cpp
+    algorithms/push_heap.bench.cpp
+    algorithms/sort_heap.bench.cpp
+    algorithms/stable_sort.bench.cpp
+    algorithms.partition_point.bench.cpp
+    allocation.bench.cpp
+    deque.bench.cpp
+    filesystem.bench.cpp
+    function.bench.cpp
+    map.bench.cpp
+    ordered_set.bench.cpp
+    string.bench.cpp
+    stringstream.bench.cpp
+    to_chars.bench.cpp
+    unordered_set_operations.bench.cpp
+    util_smartptr.bench.cpp
+    variant_visit_1.bench.cpp
+    variant_visit_2.bench.cpp
+    variant_visit_3.bench.cpp
+    vector_operations.bench.cpp
+    )
 
-if (NOT LIBCXX_ENABLE_INCOMPLETE_FEATURES)
-  list(FILTER BENCHMARK_TESTS EXCLUDE REGEX "(format_to_n|format_to|format|formatted_size|formatter_float|std_format_spec_string_unicode).bench.cpp")
+if (LIBCXX_ENABLE_INCOMPLETE_FEATURES)
+  set(BENCHMARK_TESTS
+      ${BENCHMARK_TESTS}
+      format_to_n.bench.cpp
+      format_to.bench.cpp
+      format.bench.cpp
+      formatted_size.bench.cpp
+      formatter_float.bench.cpp
+      std_format_spec_string_unicode.bench.cpp)
 endif()
 
 foreach(test_path ${BENCHMARK_TESTS})
@@ -173,7 +204,7 @@ foreach(test_path ${BENCHMARK_TESTS})
     # Only report the adding of the benchmark once.
     set(${test_name}_REPORTED ON CACHE INTERNAL "")
   endif()
-  add_benchmark_test(${test_name} ${test_file})
+  add_benchmark_test(${test_name} ${test_path})
 endforeach()
 
 if (LIBCXX_INCLUDE_TESTS)

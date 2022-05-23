@@ -4481,10 +4481,16 @@ bool AMDGPUAsmParser::validateCoherencyBits(const MCInst &Inst,
   unsigned CPol = Inst.getOperand(CPolPos).getImm();
 
   uint64_t TSFlags = MII.get(Inst.getOpcode()).TSFlags;
-  if ((TSFlags & (SIInstrFlags::SMRD)) &&
-      (CPol & ~(AMDGPU::CPol::GLC | AMDGPU::CPol::DLC))) {
-    Error(IDLoc, "invalid cache policy for SMRD instruction");
-    return false;
+  if (TSFlags & SIInstrFlags::SMRD) {
+    if (CPol && (isSI() || isCI())) {
+      SMLoc S = getImmLoc(AMDGPUOperand::ImmTyCPol, Operands);
+      Error(S, "cache policy is not supported for SMRD instructions");
+      return false;
+    }
+    if (CPol & ~(AMDGPU::CPol::GLC | AMDGPU::CPol::DLC)) {
+      Error(IDLoc, "invalid cache policy for SMEM instruction");
+      return false;
+    }
   }
 
   if (isGFX90A() && !isGFX940() && (CPol & CPol::SCC)) {
@@ -7863,7 +7869,8 @@ bool AMDGPUOperand::isSMRDOffset8() const {
 }
 
 bool AMDGPUOperand::isSMEMOffset() const {
-  return isImm(); // Offset range is checked later by validator.
+  return isImmTy(ImmTyNone) ||
+         isImmTy(ImmTyOffset); // Offset range is checked later by validator.
 }
 
 bool AMDGPUOperand::isSMRDLiteralOffset() const {
@@ -9246,25 +9253,6 @@ bool AMDGPUOperand::isEndpgm() const { return isImmTy(ImmTyEndpgm); }
 // LDSDIR
 //===----------------------------------------------------------------------===//
 
-OperandMatchResultTy AMDGPUAsmParser::parseWaitVDST(OperandVector &Operands) {
-  SMLoc S = Parser.getTok().getLoc();
-  int64_t Imm = 0;
-
-  if (!parseExpr(Imm)) {
-    // The operand is optional, if not present default to 0
-    Imm = 0;
-  }
-
-  if (!isUInt<4>(Imm)) {
-    Error(S, "expected a 4-bit value");
-    return MatchOperand_ParseFail;
-  }
-
-  Operands.push_back(
-      AMDGPUOperand::CreateImm(this, Imm, S, AMDGPUOperand::ImmTyWaitVDST));
-  return MatchOperand_Success;
-}
-
 AMDGPUOperand::Ptr AMDGPUAsmParser::defaultWaitVDST() const {
   return AMDGPUOperand::CreateImm(this, 0, SMLoc(), AMDGPUOperand::ImmTyWaitVDST);
 }
@@ -9276,25 +9264,6 @@ bool AMDGPUOperand::isWaitVDST() const {
 //===----------------------------------------------------------------------===//
 // VINTERP
 //===----------------------------------------------------------------------===//
-
-OperandMatchResultTy AMDGPUAsmParser::parseWaitEXP(OperandVector &Operands) {
-  SMLoc S = Parser.getTok().getLoc();
-  int64_t Imm = 0;
-
-  if (!parseExpr(Imm)) {
-    // The operand is optional, if not present default to 0
-    Imm = 0;
-  }
-
-  if (!isUInt<3>(Imm)) {
-    Error(S, "expected a 3-bit value");
-    return MatchOperand_ParseFail;
-  }
-
-  Operands.push_back(
-      AMDGPUOperand::CreateImm(this, Imm, S, AMDGPUOperand::ImmTyWaitEXP));
-  return MatchOperand_Success;
-}
 
 AMDGPUOperand::Ptr AMDGPUAsmParser::defaultWaitEXP() const {
   return AMDGPUOperand::CreateImm(this, 0, SMLoc(), AMDGPUOperand::ImmTyWaitEXP);

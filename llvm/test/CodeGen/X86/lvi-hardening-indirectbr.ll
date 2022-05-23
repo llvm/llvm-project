@@ -127,7 +127,7 @@ define void @nonlazybind_caller() #0 {
 ; Check that a switch gets lowered using a jump table
 define void @switch_jumptable(i32* %ptr, i64* %sink) #0 {
 ; X64-LABEL: switch_jumptable:
-; X64_NOT:      jmpq *
+; X64-NOT:      jmpq *
 entry:
   br label %header
 

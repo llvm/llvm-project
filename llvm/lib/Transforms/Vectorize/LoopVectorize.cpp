@@ -567,7 +567,8 @@ protected:
   /// Set up the values of the IVs correctly when exiting the vector loop.
   void fixupIVUsers(PHINode *OrigPhi, const InductionDescriptor &II,
                     Value *VectorTripCount, Value *EndValue,
-                    BasicBlock *MiddleBlock, BasicBlock *VectorHeader);
+                    BasicBlock *MiddleBlock, BasicBlock *VectorHeader,
+                    VPlan &Plan);
 
   /// Handle all cross-iteration phis in the header.
   void fixCrossIterationPHIs(VPTransformState &State);
@@ -581,15 +582,8 @@ protected:
   void fixReduction(VPReductionPHIRecipe *Phi, VPTransformState &State);
 
   /// Clear NSW/NUW flags from reduction instructions if necessary.
-  void clearReductionWrapFlags(const RecurrenceDescriptor &RdxDesc,
+  void clearReductionWrapFlags(VPReductionPHIRecipe *PhiR,
                                VPTransformState &State);
-
-  /// Fixup the LCSSA phi nodes in the unique exit block.  This simply
-  /// means we need to add the appropriate incoming value from the middle
-  /// block as exiting edges from the scalar epilogue loop (if present) are
-  /// already in place, and we exit the vector loop exclusively to the middle
-  /// block.
-  void fixLCSSAPHIs(VPTransformState &State);
 
   /// Iteratively sink the scalarized operands of a predicated instruction into
   /// the block that was created for it.
@@ -1129,10 +1123,10 @@ void InnerLoopVectorizer::collectPoisonGeneratingRecipes(
   for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(Iter)) {
     for (VPRecipeBase &Recipe : *VPBB) {
       if (auto *WidenRec = dyn_cast<VPWidenMemoryInstructionRecipe>(&Recipe)) {
-        Instruction *UnderlyingInstr = WidenRec->getUnderlyingInstr();
+        Instruction &UnderlyingInstr = WidenRec->getIngredient();
         VPDef *AddrDef = WidenRec->getAddr()->getDef();
-        if (AddrDef && WidenRec->isConsecutive() && UnderlyingInstr &&
-            Legal->blockNeedsPredication(UnderlyingInstr->getParent()))
+        if (AddrDef && WidenRec->isConsecutive() &&
+            Legal->blockNeedsPredication(UnderlyingInstr.getParent()))
           collectPoisonGeneratingInstrsInBackwardSlice(
               cast<VPRecipeBase>(AddrDef));
       } else if (auto *InterleaveRec = dyn_cast<VPInterleaveRecipe>(&Recipe)) {
@@ -3335,7 +3329,7 @@ void InnerLoopVectorizer::fixupIVUsers(PHINode *OrigPhi,
                                        const InductionDescriptor &II,
                                        Value *VectorTripCount, Value *EndValue,
                                        BasicBlock *MiddleBlock,
-                                       BasicBlock *VectorHeader) {
+                                       BasicBlock *VectorHeader, VPlan &Plan) {
   // There are two kinds of external IV usages - those that use the value
   // computed in the last iteration (the PHI) and those that use the penultimate
   // value (the value that feeds into the phi from the loop latch).
@@ -3395,8 +3389,10 @@ void InnerLoopVectorizer::fixupIVUsers(PHINode *OrigPhi,
     // In this case, if IV1 has an external use, we need to avoid adding both
     // "last value of IV1" and "penultimate value of IV2". So, verify that we
     // don't already have an incoming value for the middle block.
-    if (PHI->getBasicBlockIndex(MiddleBlock) == -1)
+    if (PHI->getBasicBlockIndex(MiddleBlock) == -1) {
       PHI->addIncoming(I.second, MiddleBlock);
+      Plan.removeLiveOut(PHI);
+    }
   }
 }
 
@@ -3700,19 +3696,29 @@ void InnerLoopVectorizer::fixVectorizedLoop(VPTransformState &State,
 
   VPBasicBlock *LatchVPBB = Plan.getVectorLoopRegion()->getExitBasicBlock();
   Loop *VectorLoop = LI->getLoopFor(State.CFG.VPBB2IRBB[LatchVPBB]);
-  // If we inserted an edge from the middle block to the unique exit block,
-  // update uses outside the loop (phis) to account for the newly inserted
-  // edge.
-  if (!Cost->requiresScalarEpilogue(VF)) {
+  if (Cost->requiresScalarEpilogue(VF)) {
+    // No edge from the middle block to the unique exit block has been inserted
+    // and there is nothing to fix from vector loop; phis should have incoming
+    // from scalar loop only.
+    Plan.clearLiveOuts();
+  } else {
+    // If we inserted an edge from the middle block to the unique exit block,
+    // update uses outside the loop (phis) to account for the newly inserted
+    // edge.
+
     // Fix-up external users of the induction variables.
     for (auto &Entry : Legal->getInductionVars())
       fixupIVUsers(Entry.first, Entry.second,
                    getOrCreateVectorTripCount(VectorLoop->getLoopPreheader()),
                    IVEndValues[Entry.first], LoopMiddleBlock,
-                   VectorLoop->getHeader());
-
-    fixLCSSAPHIs(State);
+                   VectorLoop->getHeader(), Plan);
   }
+
+  // Fix LCSSA phis not already fixed earlier. Extracts may need to be generated
+  // in the exit block, so update the builder.
+  State.Builder.SetInsertPoint(State.CFG.ExitBB->getFirstNonPHI());
+  for (auto &KV : Plan.getLiveOuts())
+    KV.second->fixPhi(Plan, State);
 
   for (Instruction *PI : PredicatedInstructions)
     sinkScalarOperands(&*PI);
@@ -3862,8 +3868,10 @@ void InnerLoopVectorizer::fixFirstOrderRecurrence(
   // and thus no phis which needed updated.
   if (!Cost->requiresScalarEpilogue(VF))
     for (PHINode &LCSSAPhi : LoopExitBlock->phis())
-      if (llvm::is_contained(LCSSAPhi.incoming_values(), Phi))
+      if (llvm::is_contained(LCSSAPhi.incoming_values(), Phi)) {
         LCSSAPhi.addIncoming(ExtractForPhiUsedOutsideLoop, LoopMiddleBlock);
+        State.Plan->removeLiveOut(&LCSSAPhi);
+      }
 }
 
 void InnerLoopVectorizer::fixReduction(VPReductionPHIRecipe *PhiR,
@@ -3884,7 +3892,7 @@ void InnerLoopVectorizer::fixReduction(VPReductionPHIRecipe *PhiR,
   Type *VecTy = State.get(LoopExitInstDef, 0)->getType();
 
   // Wrap flags are in general invalid after vectorization, clear them.
-  clearReductionWrapFlags(RdxDesc, State);
+  clearReductionWrapFlags(PhiR, State);
 
   // Before each round, move the insertion point right between
   // the PHIs and the values we are going to write.
@@ -4046,8 +4054,10 @@ void InnerLoopVectorizer::fixReduction(VPReductionPHIRecipe *PhiR,
   // fixFirstOrderRecurrence for a more complete explaination of the logic.
   if (!Cost->requiresScalarEpilogue(VF))
     for (PHINode &LCSSAPhi : LoopExitBlock->phis())
-      if (llvm::is_contained(LCSSAPhi.incoming_values(), LoopExitInst))
+      if (llvm::is_contained(LCSSAPhi.incoming_values(), LoopExitInst)) {
         LCSSAPhi.addIncoming(ReducedPartRdx, LoopMiddleBlock);
+        State.Plan->removeLiveOut(&LCSSAPhi);
+      }
 
   // Fix the scalar loop reduction variable with the incoming reduction sum
   // from the vector body and from the backedge value.
@@ -4060,63 +4070,35 @@ void InnerLoopVectorizer::fixReduction(VPReductionPHIRecipe *PhiR,
   OrigPhi->setIncomingValue(IncomingEdgeBlockIdx, LoopExitInst);
 }
 
-void InnerLoopVectorizer::clearReductionWrapFlags(const RecurrenceDescriptor &RdxDesc,
+void InnerLoopVectorizer::clearReductionWrapFlags(VPReductionPHIRecipe *PhiR,
                                                   VPTransformState &State) {
+  const RecurrenceDescriptor &RdxDesc = PhiR->getRecurrenceDescriptor();
   RecurKind RK = RdxDesc.getRecurrenceKind();
   if (RK != RecurKind::Add && RK != RecurKind::Mul)
     return;
 
-  Instruction *LoopExitInstr = RdxDesc.getLoopExitInstr();
-  assert(LoopExitInstr && "null loop exit instruction");
-  SmallVector<Instruction *, 8> Worklist;
-  SmallPtrSet<Instruction *, 8> Visited;
-  Worklist.push_back(LoopExitInstr);
-  Visited.insert(LoopExitInstr);
+  SmallVector<VPValue *, 8> Worklist;
+  SmallPtrSet<VPValue *, 8> Visited;
+  Worklist.push_back(PhiR);
+  Visited.insert(PhiR);
 
   while (!Worklist.empty()) {
-    Instruction *Cur = Worklist.pop_back_val();
-    if (isa<OverflowingBinaryOperator>(Cur))
-      for (unsigned Part = 0; Part < UF; ++Part) {
-        // FIXME: Should not rely on getVPValue at this point.
-        Value *V = State.get(State.Plan->getVPValue(Cur, true), Part);
-        cast<Instruction>(V)->dropPoisonGeneratingFlags();
+    VPValue *Cur = Worklist.pop_back_val();
+    for (unsigned Part = 0; Part < UF; ++Part) {
+      Value *V = State.get(Cur, Part);
+      if (!isa<OverflowingBinaryOperator>(V))
+        break;
+      cast<Instruction>(V)->dropPoisonGeneratingFlags();
       }
 
-    for (User *U : Cur->users()) {
-      Instruction *UI = cast<Instruction>(U);
-      if ((Cur != LoopExitInstr || OrigLoop->contains(UI->getParent())) &&
-          Visited.insert(UI).second)
-        Worklist.push_back(UI);
-    }
-  }
-}
-
-void InnerLoopVectorizer::fixLCSSAPHIs(VPTransformState &State) {
-  for (PHINode &LCSSAPhi : LoopExitBlock->phis()) {
-    if (LCSSAPhi.getBasicBlockIndex(LoopMiddleBlock) != -1)
-      // Some phis were already hand updated by the reduction and recurrence
-      // code above, leave them alone.
-      continue;
-
-    auto *IncomingValue = LCSSAPhi.getIncomingValue(0);
-    // Non-instruction incoming values will have only one value.
-
-    VPLane Lane = VPLane::getFirstLane();
-    if (isa<Instruction>(IncomingValue) &&
-        !Cost->isUniformAfterVectorization(cast<Instruction>(IncomingValue),
-                                           VF))
-      Lane = VPLane::getLastLaneForVF(VF);
-
-    // Can be a loop invariant incoming value or the last scalar value to be
-    // extracted from the vectorized loop.
-    // FIXME: Should not rely on getVPValue at this point.
-    Builder.SetInsertPoint(LoopMiddleBlock->getTerminator());
-    Value *lastIncomingValue =
-        OrigLoop->isLoopInvariant(IncomingValue)
-            ? IncomingValue
-            : State.get(State.Plan->getVPValue(IncomingValue, true),
-                        VPIteration(UF - 1, Lane));
-    LCSSAPhi.addIncoming(lastIncomingValue, LoopMiddleBlock);
+      for (VPUser *U : Cur->users()) {
+        auto *UserRecipe = dyn_cast<VPRecipeBase>(U);
+        if (!UserRecipe)
+          continue;
+        for (VPValue *V : UserRecipe->definedValues())
+          if (Visited.insert(V).second)
+            Worklist.push_back(V);
+      }
   }
 }
 
@@ -6005,16 +5987,10 @@ LoopVectorizationCostModel::calculateRegisterUsage(ArrayRef<ElementCount> VFs) {
 
   LLVM_DEBUG(dbgs() << "LV(REG): Calculating max register usage:\n");
 
-  // A lambda that gets the register usage for the given type and VF.
-  const auto &TTICapture = TTI;
-  auto GetRegUsage = [&TTICapture](Type *Ty, ElementCount VF) -> unsigned {
+  auto GetRegUsage = [&TTI = TTI](Type *Ty, ElementCount VF) -> unsigned {
     if (Ty->isTokenTy() || !VectorType::isValidElementType(Ty))
       return 0;
-    InstructionCost::CostType RegUsage =
-        *TTICapture.getRegUsageForType(VectorType::get(Ty, VF)).getValue();
-    assert(RegUsage >= 0 && RegUsage <= std::numeric_limits<unsigned>::max() &&
-           "Nonsensical values for register usage.");
-    return RegUsage;
+    return TTI.getRegUsageForType(VectorType::get(Ty, VF));
   };
 
   for (unsigned int i = 0, s = IdxToInstr.size(); i < s; ++i) {
@@ -7492,6 +7468,14 @@ LoopVectorizationPlanner::planInVPlanNativePath(ElementCount UserVF) {
   return VectorizationFactor::Disabled();
 }
 
+bool LoopVectorizationPlanner::requiresTooManyRuntimeChecks() const {
+  unsigned NumRuntimePointerChecks = Requirements.getNumRuntimePointerChecks();
+  return (NumRuntimePointerChecks >
+              VectorizerParams::RuntimeMemoryCheckThreshold &&
+          !Hints.allowReordering()) ||
+         NumRuntimePointerChecks > PragmaVectorizeMemoryCheckThreshold;
+}
+
 Optional<VectorizationFactor>
 LoopVectorizationPlanner::plan(ElementCount UserVF, unsigned UserIC) {
   assert(OrigLoop->isInnermost() && "Inner loop expected.");
@@ -7560,30 +7544,7 @@ LoopVectorizationPlanner::plan(ElementCount UserVF, unsigned UserIC) {
     return VectorizationFactor::Disabled();
 
   // Select the optimal vectorization factor.
-  auto SelectedVF = CM.selectVectorizationFactor(VFCandidates);
-
-  // Check if it is profitable to vectorize with runtime checks.
-  unsigned NumRuntimePointerChecks = Requirements.getNumRuntimePointerChecks();
-  if (SelectedVF.Width.getKnownMinValue() > 1 && NumRuntimePointerChecks) {
-    bool PragmaThresholdReached =
-        NumRuntimePointerChecks > PragmaVectorizeMemoryCheckThreshold;
-    bool ThresholdReached =
-        NumRuntimePointerChecks > VectorizerParams::RuntimeMemoryCheckThreshold;
-    if ((ThresholdReached && !Hints.allowReordering()) ||
-        PragmaThresholdReached) {
-      ORE->emit([&]() {
-        return OptimizationRemarkAnalysisAliasing(
-                   DEBUG_TYPE, "CantReorderMemOps", OrigLoop->getStartLoc(),
-                   OrigLoop->getHeader())
-               << "loop not vectorized: cannot prove it is safe to reorder "
-                  "memory operations";
-      });
-      LLVM_DEBUG(dbgs() << "LV: Too many memory checks needed.\n");
-      Hints.emitRemarkWithHints();
-      return VectorizationFactor::Disabled();
-    }
-  }
-  return SelectedVF;
+  return CM.selectVectorizationFactor(VFCandidates);
 }
 
 VPlan &LoopVectorizationPlanner::getBestPlanFor(ElementCount VF) const {
@@ -8444,6 +8405,7 @@ VPWidenRecipe *VPRecipeBuilder::tryToWiden(Instruction *I,
     case Instruction::URem:
     case Instruction::Xor:
     case Instruction::ZExt:
+    case Instruction::Freeze:
       return true;
     }
     return false;
@@ -8729,6 +8691,26 @@ static void addCanonicalIVRecipes(VPlan &Plan, Type *IdxTy, DebugLoc DL,
   EB->appendRecipe(BranchOnCount);
 }
 
+// Add exit values to \p Plan. VPLiveOuts are added for each LCSSA phi in the
+// original exit block.
+static void addUsersInExitBlock(VPBasicBlock *HeaderVPBB,
+                                VPBasicBlock *MiddleVPBB, Loop *OrigLoop,
+                                VPlan &Plan) {
+  BasicBlock *ExitBB = OrigLoop->getUniqueExitBlock();
+  BasicBlock *ExitingBB = OrigLoop->getExitingBlock();
+  // Only handle single-exit loops with unique exit blocks for now.
+  if (!ExitBB || !ExitBB->getSinglePredecessor() || !ExitingBB)
+    return;
+
+  // Introduce VPUsers modeling the exit values.
+  for (PHINode &ExitPhi : ExitBB->phis()) {
+    Value *IncomingValue =
+        ExitPhi.getIncomingValueForBlock(ExitingBB);
+    VPValue *V = Plan.getOrAddVPValue(IncomingValue, true);
+    Plan.addLiveOut(&ExitPhi, V);
+  }
+}
+
 VPlanPtr LoopVectorizationPlanner::buildVPlanWithVPRecipes(
     VFRange &Range, SmallPtrSetImpl<Instruction *> &DeadInstructions,
     const MapVector<Instruction *, Instruction *> &SinkAfter) {
@@ -8907,6 +8889,8 @@ VPlanPtr LoopVectorizationPlanner::buildVPlanWithVPRecipes(
   assert(VPBB && "expected to fold last (empty) block");
   // After here, VPBB should not be used.
   VPBB = nullptr;
+
+  addUsersInExitBlock(HeaderVPBB, MiddleVPBB, OrigLoop, *Plan);
 
   assert(isa<VPRegionBlock>(Plan->getVectorLoopRegion()) &&
          !Plan->getVectorLoopRegion()->getEntryBasicBlock()->empty() &&
@@ -9367,6 +9351,17 @@ void VPWidenRecipe::execute(VPTransformState &State) {
 
     break;
   }
+  case Instruction::Freeze: {
+    State.ILV->setDebugLocFromInst(&I);
+
+    for (unsigned Part = 0; Part < State.UF; ++Part) {
+      Value *Op = State.get(getOperand(0), Part);
+
+      Value *Freeze = Builder.CreateFreeze(Op);
+      State.set(this, Freeze, Part);
+    }
+    break;
+  }
   case Instruction::ICmp:
   case Instruction::FCmp: {
     // Widen compares. Generate vector compares.
@@ -9610,8 +9605,7 @@ void VPWidenPointerInductionRecipe::execute(VPTransformState &State) {
   auto *IVR = getParent()->getPlan()->getCanonicalIV();
   PHINode *CanonicalIV = cast<PHINode>(State.get(IVR, 0));
 
-  if (all_of(users(),
-             [this](const VPUser *U) { return U->usesScalars(this); })) {
+  if (onlyScalarsGenerated(State.VF)) {
     // This is the normalized GEP that starts counting at zero.
     Value *PtrInd = State.Builder.CreateSExtOrTrunc(
         CanonicalIV, IndDesc.getStep()->getType());
@@ -10085,7 +10079,7 @@ void VPWidenMemoryInstructionRecipe::execute(VPTransformState &State) {
         NewLI = Builder.CreateVectorReverse(NewLI, "reverse");
     }
 
-    State.set(this, NewLI, Part);
+    State.set(getVPSingleValue(), NewLI, Part);
   }
 }
 
@@ -10487,6 +10481,18 @@ bool LoopVectorizePass::processLoop(Loop *L) {
   unsigned IC = 1;
 
   if (MaybeVF) {
+    if (LVP.requiresTooManyRuntimeChecks()) {
+      ORE->emit([&]() {
+        return OptimizationRemarkAnalysisAliasing(
+                   DEBUG_TYPE, "CantReorderMemOps", L->getStartLoc(),
+                   L->getHeader())
+               << "loop not vectorized: cannot prove it is safe to reorder "
+                  "memory operations";
+      });
+      LLVM_DEBUG(dbgs() << "LV: Too many memory checks needed.\n");
+      Hints.emitRemarkWithHints();
+      return false;
+    }
     VF = *MaybeVF;
     // Select the interleave count.
     IC = CM.selectInterleaveCount(VF.Width, *VF.Cost.getValue());
@@ -10622,9 +10628,6 @@ bool LoopVectorizePass::processLoop(Loop *L) {
                         DT);
         ++LoopsVectorized;
 
-        simplifyLoop(L, DT, LI, SE, AC, nullptr, false /* PreserveLCSSA */);
-        formLCSSARecursively(*L, *DT, LI, SE);
-
         // Second pass vectorizes the epilogue and adjusts the control flow
         // edges from the first pass.
         EPI.MainLoopVF = EPI.EpilogueVF;
@@ -10635,11 +10638,11 @@ bool LoopVectorizePass::processLoop(Loop *L) {
 
         VPlan &BestEpiPlan = LVP.getBestPlanFor(EPI.EpilogueVF);
         VPRegionBlock *VectorLoop = BestEpiPlan.getVectorLoopRegion();
-        VectorLoop->getEntryBasicBlock()->setName("vec.epilog.vector.body");
+        VPBasicBlock *Header = VectorLoop->getEntryBasicBlock();
+        Header->setName("vec.epilog.vector.body");
 
         // Ensure that the start values for any VPReductionPHIRecipes are
         // updated before vectorising the epilogue loop.
-        VPBasicBlock *Header = VectorLoop->getEntryBasicBlock();
         for (VPRecipeBase &R : Header->phis()) {
           if (auto *ReductionPhi = dyn_cast<VPReductionPHIRecipe>(&R)) {
             if (auto *Resume = MainILV.getReductionResumeValue(

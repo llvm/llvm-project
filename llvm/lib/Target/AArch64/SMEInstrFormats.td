@@ -17,7 +17,7 @@
 class sme_fp_outer_product_inst<bit S, bit sz, MatrixTileOperand za_ty,
                                 ZPRRegOp zpr_ty, string mnemonic>
     : I<(outs za_ty:$ZAda),
-        (ins PPR3bAny:$Pn, PPR3bAny:$Pm, zpr_ty:$Zn, zpr_ty:$Zm),
+      (ins za_ty:$_ZAda, PPR3bAny:$Pn, PPR3bAny:$Pm, zpr_ty:$Zn, zpr_ty:$Zm),
         mnemonic, "\t$ZAda, $Pn/m, $Pm/m, $Zn, $Zm",
         "", []>,
       Sched<[]> {
@@ -34,6 +34,8 @@ class sme_fp_outer_product_inst<bit S, bit sz, MatrixTileOperand za_ty,
   let Inst{9-5}   = Zn;
   let Inst{4}     = S;
   let Inst{3}     = 0b0;
+
+  let Constraints = "$ZAda = $_ZAda";
 }
 
 class sme_outer_product_fp32<bit S, string mnemonic>
@@ -53,7 +55,7 @@ class sme_int_outer_product_inst<bit u0, bit u1, bit S, bit sz,
                                  MatrixTileOperand za_ty, ZPRRegOp zpr_ty,
                                  string mnemonic>
     : I<(outs za_ty:$ZAda),
-        (ins PPR3bAny:$Pn, PPR3bAny:$Pm, zpr_ty:$Zn, zpr_ty:$Zm),
+        (ins za_ty:$_ZAda, PPR3bAny:$Pn, PPR3bAny:$Pm, zpr_ty:$Zn, zpr_ty:$Zm),
         mnemonic, "\t$ZAda, $Pn/m, $Pm/m, $Zn, $Zm",
         "", []>,
       Sched<[]> {
@@ -72,6 +74,8 @@ class sme_int_outer_product_inst<bit u0, bit u1, bit S, bit sz,
   let Inst{9-5}   = Zn;
   let Inst{4}     = S;
   let Inst{3}     = 0b0;
+
+  let Constraints = "$ZAda = $_ZAda";
 }
 
 class sme_int_outer_product_i32<bits<3> opc, string mnemonic>
@@ -91,7 +95,7 @@ class sme_int_outer_product_i64<bits<3> opc, string mnemonic>
 
 class sme_outer_product_widening_inst<bit op, bit S, string mnemonic>
     : I<(outs TileOp32:$ZAda),
-        (ins PPR3bAny:$Pn, PPR3bAny:$Pm, ZPR16:$Zn, ZPR16:$Zm),
+        (ins  TileOp32:$_ZAda, PPR3bAny:$Pn, PPR3bAny:$Pm, ZPR16:$Zn, ZPR16:$Zm),
         mnemonic, "\t$ZAda, $Pn/m, $Pm/m, $Zn, $Zm",
         "", []>,
       Sched<[]> {
@@ -109,6 +113,8 @@ class sme_outer_product_widening_inst<bit op, bit S, string mnemonic>
   let Inst{4}     = S;
   let Inst{3-2}   = 0b00;
   let Inst{1-0}   = ZAda;
+
+  let Constraints = "$ZAda = $_ZAda";
 }
 
 multiclass sme_bf16_outer_product<bit S, string mnemonic> {
@@ -126,7 +132,7 @@ multiclass sme_f16_outer_product<bit S, string mnemonic> {
 class sme_add_vector_to_tile_inst<bit op, bit V, MatrixTileOperand tile_ty,
                                   ZPRRegOp zpr_ty, string mnemonic>
     : I<(outs tile_ty:$ZAda),
-        (ins PPR3bAny:$Pn, PPR3bAny:$Pm, zpr_ty:$Zn),
+        (ins tile_ty:$_ZAda, PPR3bAny:$Pn, PPR3bAny:$Pm, zpr_ty:$Zn),
         mnemonic, "\t$ZAda, $Pn/m, $Pm/m, $Zn",
         "", []>, Sched<[]> {
   bits<3> Pm;
@@ -140,6 +146,8 @@ class sme_add_vector_to_tile_inst<bit op, bit V, MatrixTileOperand tile_ty,
   let Inst{12-10} = Pn;
   let Inst{9-5}   = Zn;
   let Inst{4-3}   = 0b00;
+
+  let Constraints = "$ZAda = $_ZAda";
 }
 
 class sme_add_vector_to_tile_u32<bit V, string mnemonic>
@@ -429,8 +437,12 @@ class sme_vector_to_tile_inst<bit Q, bits<2> sz, MatrixTileVectorOperand tile_ty
                               bit is_col, Operand imm_ty, ZPRRegOp zpr_ty,
                               string mnemonic>
     : sme_vector_to_tile_base<Q, is_col, sz, (outs tile_ty:$ZAd),
-        (ins MatrixIndexGPR32Op12_15:$Rv, imm_ty:$imm, PPR3bAny:$Pg, zpr_ty:$Zn),
-        mnemonic, "\t$ZAd[$Rv, $imm], $Pg/m, $Zn">;
+        (ins tile_ty:$_ZAd, MatrixIndexGPR32Op12_15:$Rv, imm_ty:$imm, PPR3bAny:$Pg, zpr_ty:$Zn),
+        mnemonic, "\t$ZAd[$Rv, $imm], $Pg/m, $Zn">{
+
+  let Constraints = "$ZAd = $_ZAd";
+}
+
 
 multiclass sme_vector_to_tile_aliases<Instruction inst,
                                       MatrixTileVectorOperand tile_ty,
@@ -526,8 +538,11 @@ class sme_tile_to_vector_inst<bit Q, bits<2> sz, ZPRRegOp zpr_ty,
                               MatrixTileVectorOperand tile_ty,
                               bit is_col, Operand imm_ty, string mnemonic>
     : sme_tile_to_vector_base<Q, is_col, sz, (outs zpr_ty:$Zd),
-        (ins PPR3bAny:$Pg, tile_ty:$ZAn, MatrixIndexGPR32Op12_15:$Rv, imm_ty:$imm),
-        mnemonic, "\t$Zd, $Pg/m, $ZAn[$Rv, $imm]">;
+        (ins zpr_ty:$_Zd, PPR3bAny:$Pg, tile_ty:$ZAn, MatrixIndexGPR32Op12_15:$Rv, imm_ty:$imm),
+        mnemonic, "\t$Zd, $Pg/m, $ZAn[$Rv, $imm]"> {
+
+  let Constraints = "$Zd = $_Zd";
+}
 
 multiclass sme_tile_to_vector_aliases<Instruction inst, ZPRRegOp zpr_ty,
                                       MatrixTileVectorOperand tile_ty,

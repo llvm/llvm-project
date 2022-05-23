@@ -264,8 +264,8 @@ bool shouldCompletelyUnroll(const Stmt *LoopStmt, ASTContext &ASTCtx,
       Matches[0].getNodeAs<IntegerLiteral>("initNum")->getValue();
   auto CondOp = Matches[0].getNodeAs<BinaryOperator>("conditionOperator");
   if (InitNum.getBitWidth() != BoundNum.getBitWidth()) {
-    InitNum = InitNum.zextOrSelf(BoundNum.getBitWidth());
-    BoundNum = BoundNum.zextOrSelf(InitNum.getBitWidth());
+    InitNum = InitNum.zext(BoundNum.getBitWidth());
+    BoundNum = BoundNum.zext(InitNum.getBitWidth());
   }
 
   if (CondOp->getOpcode() == BO_GE || CondOp->getOpcode() == BO_LE)

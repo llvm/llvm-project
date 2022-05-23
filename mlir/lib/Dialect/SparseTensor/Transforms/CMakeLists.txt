@@ -13,6 +13,7 @@ add_mlir_dialect_library(MLIRSparseTensorTransforms
   LINK_LIBS PUBLIC
   MLIRArithmetic
   MLIRBufferization
+  MLIRComplex
   MLIRFunc
   MLIRIR
   MLIRLLVMIR

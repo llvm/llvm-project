@@ -21,6 +21,7 @@
 #define cl_khr_subgroup_shuffle 1
 #define cl_khr_subgroup_shuffle_relative 1
 #define cl_khr_subgroup_clustered_reduce 1
+#define cl_khr_subgroup_rotate 1
 #define cl_khr_extended_bit_ops 1
 #define cl_khr_integer_dot_product 1
 #define __opencl_c_integer_dot_product_input_4x8bit 1

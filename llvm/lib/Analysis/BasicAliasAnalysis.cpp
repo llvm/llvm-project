@@ -659,8 +659,8 @@ BasicAAResult::DecomposeGEPExpression(const Value *V, const DataLayout &DL,
       unsigned TypeSize =
           DL.getTypeAllocSize(GTI.getIndexedType()).getFixedSize();
       LE = LE.mul(APInt(IndexSize, TypeSize), GEPOp->isInBounds());
-      Decomposed.Offset += LE.Offset.sextOrSelf(MaxIndexSize);
-      APInt Scale = LE.Scale.sextOrSelf(MaxIndexSize);
+      Decomposed.Offset += LE.Offset.sext(MaxIndexSize);
+      APInt Scale = LE.Scale.sext(MaxIndexSize);
 
       // If we already had an occurrence of this index variable, merge this
       // scale into it.  For example, we want to handle:
@@ -992,6 +992,20 @@ ModRefInfo BasicAAResult::getModRefInfo(const CallBase *Call,
         return ModRefInfo::NoModRef;
       return IsMustAlias ? setMust(Result) : clearMust(Result);
     }
+  }
+
+  // If the call is malloc/calloc like, we can assume that it doesn't
+  // modify any IR visible value.  This is only valid because we assume these
+  // routines do not read values visible in the IR.  TODO: Consider special
+  // casing realloc and strdup routines which access only their arguments as
+  // well.  Or alternatively, replace all of this with inaccessiblememonly once
+  // that's implemented fully.
+  if (isMallocOrCallocLikeFn(Call, &TLI)) {
+    // Be conservative if the accessed pointer may alias the allocation -
+    // fallback to the generic handling below.
+    if (getBestAAResults().alias(MemoryLocation::getBeforeOrAfter(Call), Loc,
+                                 AAQI) == AliasResult::NoAlias)
+      return ModRefInfo::NoModRef;
   }
 
   // Ideally, there should be no need to special case for memcpy/memove

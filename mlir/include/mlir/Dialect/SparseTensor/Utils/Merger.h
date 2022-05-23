@@ -31,14 +31,18 @@ enum Kind {
   kIndex,
   // Unary operations.
   kAbsF,
+  kAbsC,
   kCeilF,
   kFloorF,
   kSqrtF,
   kExpm1F,
   kLog1pF,
+  kLog1pC,
   kSinF,
+  kSinC,
   kTanhF,
   kNegF,
+  kNegC,
   kNegI,
   kTruncF,
   kExtF,
@@ -50,6 +54,8 @@ enum Kind {
   kCastU,  // unsigned
   kCastIdx,
   kTruncI,
+  kCIm, // complex.im
+  kCRe, // complex.re
   kBitCast,
   kBinaryBranch, // semiring unary branch created from a binary op
   kUnary,        // semiring unary op
@@ -58,12 +64,14 @@ enum Kind {
   kMulC,
   kMulI,
   kDivF,
+  kDivC, // complex
   kDivS, // signed
   kDivU, // unsigned
   kAddF,
   kAddC,
   kAddI,
   kSubF,
+  kSubC,
   kSubI,
   kAndI,
   kOrI,

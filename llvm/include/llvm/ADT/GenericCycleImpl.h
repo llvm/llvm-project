@@ -326,6 +326,7 @@ auto GenericCycleInfo<ContextT>::getCycle(const BlockT *Block) const
   return nullptr;
 }
 
+#ifndef NDEBUG
 /// \brief Validate the internal consistency of the cycle tree.
 ///
 /// Note that this does \em not check that cycles are really cycles in the CFG,
@@ -391,6 +392,7 @@ bool GenericCycleInfo<ContextT>::validateTree() const {
 
   return true;
 }
+#endif
 
 /// \brief Print the cycle info.
 template <typename ContextT>

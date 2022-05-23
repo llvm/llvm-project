@@ -1335,6 +1335,7 @@ static unsigned getDwarfCC(CallingConv CC) {
   case CC_SpirFunction:
     return llvm::dwarf::DW_CC_LLVM_SpirFunction;
   case CC_OpenCLKernel:
+  case CC_AMDGPUKernelCall:
     return llvm::dwarf::DW_CC_LLVM_OpenCLKernel;
   case CC_Swift:
     return llvm::dwarf::DW_CC_LLVM_Swift;
@@ -5132,7 +5133,7 @@ std::string CGDebugInfo::GetName(const Decl *D, bool Qualified) const {
     return Name;
   codegenoptions::DebugTemplateNamesKind TemplateNamesKind =
       CGM.getCodeGenOpts().getDebugSimpleTemplateNames();
-  
+
   if (!CGM.getCodeGenOpts().hasReducedDebugInfo())
     TemplateNamesKind = codegenoptions::DebugTemplateNamesKind::Full;
 
@@ -5457,6 +5458,21 @@ void CGDebugInfo::EmitGlobalAlias(const llvm::GlobalValue *GV,
 
   // Record this DIE in the cache for nested declaration reference.
   ImportedDeclCache[GD.getCanonicalDecl().getDecl()].reset(ImportDI);
+}
+
+void CGDebugInfo::AddStringLiteralDebugInfo(llvm::GlobalVariable *GV,
+                                            const StringLiteral *S) {
+  SourceLocation Loc = S->getStrTokenLoc(0);
+  PresumedLoc PLoc = CGM.getContext().getSourceManager().getPresumedLoc(Loc);
+  if (!PLoc.isValid())
+    return;
+
+  llvm::DIFile *File = getOrCreateFile(Loc);
+  llvm::DIGlobalVariableExpression *Debug =
+      DBuilder.createGlobalVariableExpression(
+          nullptr, StringRef(), StringRef(), getOrCreateFile(Loc),
+          getLineNumber(Loc), getOrCreateType(S->getType(), File), true);
+  GV->addDebugInfo(Debug);
 }
 
 llvm::DIScope *CGDebugInfo::getCurrentContextDescriptor(const Decl *D) {

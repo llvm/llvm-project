@@ -7,21 +7,20 @@
 define amdgpu_cs void @f() {
 ; CHECK-LABEL: f:
 ; CHECK:       ; %bb.0: ; %bb
-; CHECK-NEXT:    s_movk_i32 s0, 0xff
+; CHECK-NEXT:    v_mov_b16_e32 v0.h, 0xff
 ; CHECK-NEXT:    v_mov_b16_e32 v0.l, 0
-; CHECK-NEXT:    v_mov_b16_e32 v0.h, s0
 ; CHECK-NEXT:    s_cbranch_scc1 .LBB0_2
 ; CHECK-NEXT:  .LBB0_1: ; %bb3
 ; CHECK-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; CHECK-NEXT:    v_mov_b16_e32 v1.l, v0.h
-; CHECK-NEXT:    v_and_b32_e32 v1, s0, v1
+; CHECK-NEXT:    v_and_b32_e32 v1, 0xff, v1
 ; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; CHECK-NEXT:    v_min_u16 v1, v1, 1
 ; CHECK-NEXT:    v_mov_b16_e32 v0.h, v1.l
 ; CHECK-NEXT:    s_cbranch_scc0 .LBB0_1
 ; CHECK-NEXT:  .LBB0_2: ; =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_2)
+; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; CHECK-NEXT:    v_mov_b16_e32 v0.h, v0.l
 ; CHECK-NEXT:    s_cbranch_scc1 .LBB0_2
 ; CHECK-NEXT:    s_branch .LBB0_1

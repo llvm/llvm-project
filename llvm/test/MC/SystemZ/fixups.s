@@ -287,6 +287,11 @@
         .align 16
         vgeg %v0, src(%v0,%r1), 0
 
+## Fixup for second operand only
+# CHECK:  mvc     32(8,%r0), src                # encoding: [0xd2,0x07,0x00,0x20,0b0000AAAA,A]
+# CHECK-NEXT:                                   # fixup A - offset: 4, value: src, kind: FK_390_12
+        .align 16
+        mvc     32(8,%r0),src
 
 # Data relocs
 # llvm-mc does not show any "encoding" string for data, so we just check the relocs

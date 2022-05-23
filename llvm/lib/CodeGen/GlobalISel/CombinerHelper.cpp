@@ -4224,18 +4224,23 @@ bool CombinerHelper::matchAndOrDisjointMask(
     return false;
 
   Register Src;
-  int64_t MaskAnd;
-  int64_t MaskOr;
+  Register AndMaskReg;
+  int64_t AndMaskBits;
+  int64_t OrMaskBits;
   if (!mi_match(MI, MRI,
-                m_GAnd(m_GOr(m_Reg(Src), m_ICst(MaskOr)), m_ICst(MaskAnd))))
+                m_GAnd(m_GOr(m_Reg(Src), m_ICst(OrMaskBits)),
+                       m_all_of(m_ICst(AndMaskBits), m_Reg(AndMaskReg)))))
     return false;
 
-  // Check if MaskOr could turn on any bits in Src.
-  if (MaskAnd & MaskOr)
+  // Check if OrMask could turn on any bits in Src.
+  if (AndMaskBits & OrMaskBits)
     return false;
 
   MatchInfo = [=, &MI](MachineIRBuilder &B) {
     Observer.changingInstr(MI);
+    // Canonicalize the result to have the constant on the RHS.
+    if (MI.getOperand(1).getReg() == AndMaskReg)
+      MI.getOperand(2).setReg(AndMaskReg);
     MI.getOperand(1).setReg(Src);
     Observer.changedInstr(MI);
   };
@@ -5600,6 +5605,33 @@ bool CombinerHelper::matchSelectToLogical(MachineInstr &MI,
   return false;
 }
 
+bool CombinerHelper::matchCombineFMinMaxNaN(MachineInstr &MI,
+                                            unsigned &IdxToPropagate) {
+  bool PropagateNaN;
+  switch (MI.getOpcode()) {
+  default:
+    return false;
+  case TargetOpcode::G_FMINNUM:
+  case TargetOpcode::G_FMAXNUM:
+    PropagateNaN = false;
+    break;
+  case TargetOpcode::G_FMINIMUM:
+  case TargetOpcode::G_FMAXIMUM:
+    PropagateNaN = true;
+    break;
+  }
+
+  auto MatchNaN = [&](unsigned Idx) {
+    Register MaybeNaNReg = MI.getOperand(Idx).getReg();
+    const ConstantFP *MaybeCst = getConstantFPVRegVal(MaybeNaNReg, MRI);
+    if (!MaybeCst || !MaybeCst->getValueAPF().isNaN())
+      return false;
+    IdxToPropagate = PropagateNaN ? Idx : (Idx == 1 ? 2 : 1);
+    return true;
+  };
+
+  return MatchNaN(1) || MatchNaN(2);
+}
 
 bool CombinerHelper::tryCombine(MachineInstr &MI) {
   if (tryCombineCopy(MI))

@@ -1845,6 +1845,12 @@ let Extension = FunctionExtension<"__opencl_c_integer_dot_product_input_4x8bit_p
   def : Builtin<"dot_acc_sat_4x8packed_su_int", [Int, UInt, UInt, Int], Attr.Const>;
 }
 
+// Section 48.3 - cl_khr_subgroup_rotate
+let Extension = FunctionExtension<"cl_khr_subgroup_rotate"> in {
+  def : Builtin<"sub_group_rotate", [AGenType1, AGenType1, Int], Attr.Convergent>;
+  def : Builtin<"sub_group_clustered_rotate", [AGenType1, AGenType1, Int, UInt], Attr.Convergent>;
+}
+
 //--------------------------------------------------------------------
 // Arm extensions.
 let Extension = ArmIntegerDotProductInt8 in {

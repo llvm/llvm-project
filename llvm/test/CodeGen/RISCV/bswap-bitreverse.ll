@@ -1657,14 +1657,18 @@ define i32 @pr55484(i32 %0) {
 ;
 ; RV32ZBB-LABEL: pr55484:
 ; RV32ZBB:       # %bb.0:
-; RV32ZBB-NEXT:    rev8 a0, a0
-; RV32ZBB-NEXT:    srai a0, a0, 16
+; RV32ZBB-NEXT:    srli a1, a0, 8
+; RV32ZBB-NEXT:    slli a0, a0, 8
+; RV32ZBB-NEXT:    or a0, a1, a0
+; RV32ZBB-NEXT:    sext.h a0, a0
 ; RV32ZBB-NEXT:    ret
 ;
 ; RV64ZBB-LABEL: pr55484:
 ; RV64ZBB:       # %bb.0:
-; RV64ZBB-NEXT:    rev8 a0, a0
-; RV64ZBB-NEXT:    srai a0, a0, 48
+; RV64ZBB-NEXT:    srli a1, a0, 8
+; RV64ZBB-NEXT:    slli a0, a0, 8
+; RV64ZBB-NEXT:    or a0, a1, a0
+; RV64ZBB-NEXT:    sext.h a0, a0
 ; RV64ZBB-NEXT:    ret
 ;
 ; RV32ZBKB-LABEL: pr55484:

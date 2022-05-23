@@ -512,3 +512,50 @@ const char *MachException::Name(exception_type_t exc_type) {
   }
   return NULL;
 }
+
+// Returns the exception mask for a given exception name.  
+// 0 is not a legit mask, so we return that in the case of an error.
+exception_mask_t MachException::ExceptionMask(const char *name) {
+  static const char *exception_prefix = "EXC_";
+  static const int prefix_len = strlen(exception_prefix);
+
+  // All mach exceptions start with this prefix:
+  if (strstr(name, exception_prefix) != name)
+    return 0;
+
+  name += prefix_len;
+  std::string name_str = name;
+  if (name_str == "BAD_ACCESS")
+    return EXC_MASK_BAD_ACCESS;
+  if (name_str == "BAD_INSTRUCTION")
+    return EXC_MASK_BAD_INSTRUCTION;
+  if (name_str == "ARITHMETIC")
+    return EXC_MASK_ARITHMETIC;
+  if (name_str == "EMULATION")
+    return EXC_MASK_EMULATION;
+  if (name_str == "SOFTWARE")
+    return EXC_MASK_SOFTWARE;
+  if (name_str == "BREAKPOINT")
+    return EXC_MASK_BREAKPOINT;
+  if (name_str == "SYSCALL")
+    return EXC_MASK_SYSCALL;
+  if (name_str == "MACH_SYSCALL")
+    return EXC_MASK_MACH_SYSCALL;
+  if (name_str == "RPC_ALERT")
+    return EXC_MASK_RPC_ALERT;
+#ifdef EXC_CRASH
+  if (name_str == "CRASH")
+    return EXC_MASK_CRASH;
+#endif
+  if (name_str == "RESOURCE")
+    return EXC_MASK_RESOURCE;
+#ifdef EXC_GUARD
+  if (name_str == "GUARD")
+    return EXC_MASK_GUARD;
+#endif
+#ifdef EXC_CORPSE_NOTIFY
+  if (name_str == "CORPSE_NOTIFY")
+    return EXC_MASK_CORPSE_NOTIFY;
+#endif
+  return 0;
+}
