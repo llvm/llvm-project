@@ -5,9 +5,10 @@ define i1 @f(i2 %0) {
 ; CHECK-LABEL: f:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    sbfx w8, w0, #0, #2
-; CHECK-NEXT:    add w8, w8, w8
-; CHECK-NEXT:    lsl w9, w8, #30
-; CHECK-NEXT:    cmp w8, w9, asr #30
+; CHECK-NEXT:    lsl w8, w8, #1
+; CHECK-NEXT:    neg w9, w8
+; CHECK-NEXT:    lsl w9, w9, #30
+; CHECK-NEXT:    cmn w8, w9, asr #30
 ; CHECK-NEXT:    cset w0, ne
 ; CHECK-NEXT:    ret
   %2 = call { i2, i1 } @llvm.smul.with.overflow.i2(i2 %0, i2 -2)
