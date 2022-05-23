@@ -613,9 +613,9 @@ PlatformPOSIX::MakeLoadImageUtilityFunction(ExecutionContext &exe_ctx,
       std::move(expr), dlopen_wrapper_name, eLanguageTypeC_plus_plus, exe_ctx);
   if (!utility_fn_or_error) {
     std::string error_str = llvm::toString(utility_fn_or_error.takeError());
-    error.SetErrorStringWithFormat("dlopen error: could not create utility"
-                                   "function: %s",
-                                   error_str.c_str());
+    error.SetErrorStringWithFormat(
+        "dlopen error: could not create utility function: %s",
+        error_str.c_str());
     return nullptr;
   }
   std::unique_ptr<UtilityFunction> dlopen_utility_func_up =
@@ -650,8 +650,9 @@ PlatformPOSIX::MakeLoadImageUtilityFunction(ExecutionContext &exe_ctx,
   do_dlopen_function = dlopen_utility_func_up->MakeFunctionCaller(
       clang_void_pointer_type, arguments, exe_ctx.GetThreadSP(), utility_error);
   if (utility_error.Fail()) {
-    error.SetErrorStringWithFormat("dlopen error: could not make function"
-                                   "caller: %s", utility_error.AsCString());
+    error.SetErrorStringWithFormat(
+        "dlopen error: could not make function caller: %s",
+        utility_error.AsCString());
     return nullptr;
   }
   
@@ -717,8 +718,9 @@ uint32_t PlatformPOSIX::DoLoadImage(lldb_private::Process *process,
                                                    permissions,
                                                    utility_error);
   if (path_addr == LLDB_INVALID_ADDRESS) {
-    error.SetErrorStringWithFormat("dlopen error: could not allocate memory"
-                                    "for path: %s", utility_error.AsCString());
+    error.SetErrorStringWithFormat(
+        "dlopen error: could not allocate memory for path: %s",
+        utility_error.AsCString());
     return LLDB_INVALID_IMAGE_TOKEN;
   }
 
@@ -730,8 +732,9 @@ uint32_t PlatformPOSIX::DoLoadImage(lldb_private::Process *process,
 
   process->WriteMemory(path_addr, path.c_str(), path_len, utility_error);
   if (utility_error.Fail()) {
-    error.SetErrorStringWithFormat("dlopen error: could not write path string:"
-                                    " %s", utility_error.AsCString());
+    error.SetErrorStringWithFormat(
+        "dlopen error: could not write path string: %s",
+        utility_error.AsCString());
     return LLDB_INVALID_IMAGE_TOKEN;
   }
   
@@ -742,8 +745,9 @@ uint32_t PlatformPOSIX::DoLoadImage(lldb_private::Process *process,
                                                       permissions,
                                                       utility_error);
   if (utility_error.Fail()) {
-    error.SetErrorStringWithFormat("dlopen error: could not allocate memory"
-                                    "for path: %s", utility_error.AsCString());
+    error.SetErrorStringWithFormat(
+        "dlopen error: could not allocate memory for path: %s",
+        utility_error.AsCString());
     return LLDB_INVALID_IMAGE_TOKEN;
   }
   
@@ -791,9 +795,9 @@ uint32_t PlatformPOSIX::DoLoadImage(lldb_private::Process *process,
                                               permissions,
                                               utility_error);
     if (path_array_addr == LLDB_INVALID_ADDRESS) {
-      error.SetErrorStringWithFormat("dlopen error: could not allocate memory"
-                                      "for path array: %s", 
-                                      utility_error.AsCString());
+      error.SetErrorStringWithFormat(
+          "dlopen error: could not allocate memory for path array: %s",
+          utility_error.AsCString());
       return LLDB_INVALID_IMAGE_TOKEN;
     }
     
@@ -807,8 +811,9 @@ uint32_t PlatformPOSIX::DoLoadImage(lldb_private::Process *process,
                          path_array.size(), utility_error);
 
     if (utility_error.Fail()) {
-      error.SetErrorStringWithFormat("dlopen error: could not write path array:"
-                                     " %s", utility_error.AsCString());
+      error.SetErrorStringWithFormat(
+          "dlopen error: could not write path array: %s",
+          utility_error.AsCString());
       return LLDB_INVALID_IMAGE_TOKEN;
     }
     // Now make spaces in the target for the buffer.  We need to add one for
@@ -819,9 +824,9 @@ uint32_t PlatformPOSIX::DoLoadImage(lldb_private::Process *process,
                                           permissions,
                                           utility_error);
     if (buffer_addr == LLDB_INVALID_ADDRESS) {
-      error.SetErrorStringWithFormat("dlopen error: could not allocate memory"
-                                      "for buffer: %s", 
-                                      utility_error.AsCString());
+      error.SetErrorStringWithFormat(
+          "dlopen error: could not allocate memory for buffer: %s",
+          utility_error.AsCString());
       return LLDB_INVALID_IMAGE_TOKEN;
     }
   
@@ -844,9 +849,9 @@ uint32_t PlatformPOSIX::DoLoadImage(lldb_private::Process *process,
                                                  func_args_addr,
                                                  arguments,
                                                  diagnostics)) {
-    error.SetErrorStringWithFormat("dlopen error: could not write function "
-                                   "arguments: %s", 
-                                   diagnostics.GetString().c_str());
+    error.SetErrorStringWithFormat(
+        "dlopen error: could not write function arguments: %s",
+        diagnostics.GetString().c_str());
     return LLDB_INVALID_IMAGE_TOKEN;
   }
   
@@ -886,9 +891,9 @@ uint32_t PlatformPOSIX::DoLoadImage(lldb_private::Process *process,
   ExpressionResults results = do_dlopen_function->ExecuteFunction(
       exe_ctx, &func_args_addr, options, diagnostics, return_value);
   if (results != eExpressionCompleted) {
-    error.SetErrorStringWithFormat("dlopen error: failed executing "
-                                   "dlopen wrapper function: %s", 
-                                   diagnostics.GetString().c_str());
+    error.SetErrorStringWithFormat(
+        "dlopen error: failed executing dlopen wrapper function: %s",
+        diagnostics.GetString().c_str());
     return LLDB_INVALID_IMAGE_TOKEN;
   }
   
@@ -896,8 +901,9 @@ uint32_t PlatformPOSIX::DoLoadImage(lldb_private::Process *process,
   lldb::addr_t token = process->ReadPointerFromMemory(return_addr, 
                                                       utility_error);
   if (utility_error.Fail()) {
-    error.SetErrorStringWithFormat("dlopen error: could not read the return "
-                                    "struct: %s", utility_error.AsCString());
+    error.SetErrorStringWithFormat(
+        "dlopen error: could not read the return struct: %s",
+        utility_error.AsCString());
     return LLDB_INVALID_IMAGE_TOKEN;
   }
   
@@ -920,8 +926,9 @@ uint32_t PlatformPOSIX::DoLoadImage(lldb_private::Process *process,
   lldb::addr_t error_addr 
     = process->ReadPointerFromMemory(return_addr + addr_size, utility_error);
   if (utility_error.Fail()) {
-    error.SetErrorStringWithFormat("dlopen error: could not read error string: "
-                                    "%s", utility_error.AsCString());
+    error.SetErrorStringWithFormat(
+        "dlopen error: could not read error string: %s",
+        utility_error.AsCString());
     return LLDB_INVALID_IMAGE_TOKEN;
   }
   
