@@ -23,13 +23,13 @@
 namespace lldb_private {
 class TypeCategoryMap {
 private:
-  typedef ConstString KeyType;
-  typedef TypeCategoryImpl ValueType;
-  typedef ValueType::SharedPointer ValueSP;
   typedef std::list<lldb::TypeCategoryImplSP> ActiveCategoriesList;
   typedef ActiveCategoriesList::iterator ActiveCategoriesIterator;
 
 public:
+  typedef ConstString KeyType;
+  typedef TypeCategoryImpl ValueType;
+  typedef ValueType::SharedPointer ValueSP;
   typedef std::map<KeyType, ValueSP> MapType;
   typedef MapType::iterator MapIterator;
   typedef std::function<bool(const ValueSP &)> ForEachCallback;
@@ -103,9 +103,6 @@ private:
   ActiveCategoriesList &active_list() { return m_active_categories; }
 
   std::recursive_mutex &mutex() { return m_map_mutex; }
-
-  friend class FormattersContainer<ValueType>;
-  friend class FormatManager;
 };
 } // namespace lldb_private
 
