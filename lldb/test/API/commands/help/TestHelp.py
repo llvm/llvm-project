@@ -105,6 +105,13 @@ class HelpCommandTestCase(TestBase):
                     'Dump the line table for one or more compilation units'])
 
     @no_debug_info_test
+    def test_help_image_list_shows_positional_args(self):
+        """Command 'help image list' should describe positional args."""
+        # 'image' is an alias for 'target modules'.
+        self.expect("help image list", substrs=[
+                    '<shlib-name> [...]'])
+
+    @no_debug_info_test
     def test_help_target_variable_syntax(self):
         """Command 'help target variable' should display <variable-name> ..."""
         self.expect("help target variable",

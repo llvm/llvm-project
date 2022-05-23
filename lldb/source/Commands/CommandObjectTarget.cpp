@@ -50,6 +50,7 @@
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/State.h"
 #include "lldb/Utility/Timer.h"
+#include "lldb/lldb-enumerations.h"
 #include "lldb/lldb-private-enumerations.h"
 
 #include "llvm/ADT/ScopeExit.h"
@@ -2901,8 +2902,10 @@ public:
   CommandObjectTargetModulesList(CommandInterpreter &interpreter)
       : CommandObjectParsed(
             interpreter, "target modules list",
-            "List current executable and dependent shared library images.",
-            "target modules list [<cmd-options>]") {}
+            "List current executable and dependent shared library images.") {
+    CommandArgumentData module_arg{eArgTypeShlibName, eArgRepeatStar};
+    m_arguments.push_back({module_arg});
+  }
 
   ~CommandObjectTargetModulesList() override = default;
 
