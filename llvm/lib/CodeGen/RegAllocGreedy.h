@@ -164,8 +164,6 @@ private:
 
   // Shortcuts to some useful interface.
   const TargetInstrInfo *TII;
-  const TargetRegisterInfo *TRI;
-  RegisterClassInfo RCI;
 
   // analyses
   SlotIndexes *Indexes;
