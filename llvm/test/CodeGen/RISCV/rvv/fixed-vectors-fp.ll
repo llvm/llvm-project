@@ -2266,3 +2266,118 @@ define void @round_v2f64(<2 x double>* %x) {
   ret void
 }
 declare <2 x double> @llvm.round.v2f64(<2 x double>)
+
+define void @fmuladd_v8f16(<8 x half>* %x, <8 x half>* %y, <8 x half>* %z) {
+; CHECK-LABEL: fmuladd_v8f16:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 8, e16, m1, ta, mu
+; CHECK-NEXT:    vle16.v v8, (a0)
+; CHECK-NEXT:    vle16.v v9, (a1)
+; CHECK-NEXT:    vle16.v v10, (a2)
+; CHECK-NEXT:    vfmacc.vv v10, v8, v9
+; CHECK-NEXT:    vse16.v v10, (a0)
+; CHECK-NEXT:    ret
+  %a = load <8 x half>, <8 x half>* %x
+  %b = load <8 x half>, <8 x half>* %y
+  %c = load <8 x half>, <8 x half>* %z
+  %d = call <8 x half> @llvm.fmuladd.v8f16(<8 x half> %a, <8 x half> %b, <8 x half> %c)
+  store <8 x half> %d, <8 x half>* %x
+  ret void
+}
+declare <8 x half> @llvm.fmuladd.v8f16(<8 x half>, <8 x half>, <8 x half>)
+
+define void @fmuladd_v4f32(<4 x float>* %x, <4 x float>* %y, <4 x float>* %z) {
+; CHECK-LABEL: fmuladd_v4f32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, mu
+; CHECK-NEXT:    vle32.v v8, (a0)
+; CHECK-NEXT:    vle32.v v9, (a1)
+; CHECK-NEXT:    vle32.v v10, (a2)
+; CHECK-NEXT:    vfmacc.vv v10, v8, v9
+; CHECK-NEXT:    vse32.v v10, (a0)
+; CHECK-NEXT:    ret
+  %a = load <4 x float>, <4 x float>* %x
+  %b = load <4 x float>, <4 x float>* %y
+  %c = load <4 x float>, <4 x float>* %z
+  %d = call <4 x float> @llvm.fmuladd.v4f32(<4 x float> %a, <4 x float> %b, <4 x float> %c)
+  store <4 x float> %d, <4 x float>* %x
+  ret void
+}
+declare <4 x float> @llvm.fmuladd.v4f32(<4 x float>, <4 x float>, <4 x float>)
+
+define void @fmuladd_v2f64(<2 x double>* %x, <2 x double>* %y, <2 x double>* %z) {
+; CHECK-LABEL: fmuladd_v2f64:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 2, e64, m1, ta, mu
+; CHECK-NEXT:    vle64.v v8, (a0)
+; CHECK-NEXT:    vle64.v v9, (a1)
+; CHECK-NEXT:    vle64.v v10, (a2)
+; CHECK-NEXT:    vfmacc.vv v10, v8, v9
+; CHECK-NEXT:    vse64.v v10, (a0)
+; CHECK-NEXT:    ret
+  %a = load <2 x double>, <2 x double>* %x
+  %b = load <2 x double>, <2 x double>* %y
+  %c = load <2 x double>, <2 x double>* %z
+  %d = call <2 x double> @llvm.fmuladd.v2f64(<2 x double> %a, <2 x double> %b, <2 x double> %c)
+  store <2 x double> %d, <2 x double>* %x
+  ret void
+}
+declare <2 x double> @llvm.fmuladd.v2f64(<2 x double>, <2 x double>, <2 x double>)
+
+define void @fmsub_fmuladd_v8f16(<8 x half>* %x, <8 x half>* %y, <8 x half>* %z) {
+; CHECK-LABEL: fmsub_fmuladd_v8f16:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 8, e16, m1, ta, mu
+; CHECK-NEXT:    vle16.v v8, (a0)
+; CHECK-NEXT:    vle16.v v9, (a1)
+; CHECK-NEXT:    vle16.v v10, (a2)
+; CHECK-NEXT:    vfmsac.vv v10, v8, v9
+; CHECK-NEXT:    vse16.v v10, (a0)
+; CHECK-NEXT:    ret
+  %a = load <8 x half>, <8 x half>* %x
+  %b = load <8 x half>, <8 x half>* %y
+  %c = load <8 x half>, <8 x half>* %z
+  %neg = fneg <8 x half> %c
+  %d = call <8 x half> @llvm.fmuladd.v8f16(<8 x half> %a, <8 x half> %b, <8 x half> %neg)
+  store <8 x half> %d, <8 x half>* %x
+  ret void
+}
+
+define void @fnmsub_fmuladd_v4f32(<4 x float>* %x, <4 x float>* %y, <4 x float>* %z) {
+; CHECK-LABEL: fnmsub_fmuladd_v4f32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, mu
+; CHECK-NEXT:    vle32.v v8, (a0)
+; CHECK-NEXT:    vle32.v v9, (a1)
+; CHECK-NEXT:    vle32.v v10, (a2)
+; CHECK-NEXT:    vfnmsac.vv v10, v8, v9
+; CHECK-NEXT:    vse32.v v10, (a0)
+; CHECK-NEXT:    ret
+  %a = load <4 x float>, <4 x float>* %x
+  %b = load <4 x float>, <4 x float>* %y
+  %c = load <4 x float>, <4 x float>* %z
+  %neg = fneg <4 x float> %a
+  %d = call <4 x float> @llvm.fmuladd.v4f32(<4 x float> %neg, <4 x float> %b, <4 x float> %c)
+  store <4 x float> %d, <4 x float>* %x
+  ret void
+}
+
+define void @fnmadd_fmuladd_v2f64(<2 x double>* %x, <2 x double>* %y, <2 x double>* %z) {
+; CHECK-LABEL: fnmadd_fmuladd_v2f64:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 2, e64, m1, ta, mu
+; CHECK-NEXT:    vle64.v v8, (a0)
+; CHECK-NEXT:    vle64.v v9, (a1)
+; CHECK-NEXT:    vle64.v v10, (a2)
+; CHECK-NEXT:    vfnmacc.vv v10, v8, v9
+; CHECK-NEXT:    vse64.v v10, (a0)
+; CHECK-NEXT:    ret
+  %a = load <2 x double>, <2 x double>* %x
+  %b = load <2 x double>, <2 x double>* %y
+  %c = load <2 x double>, <2 x double>* %z
+  %neg = fneg <2 x double> %b
+  %neg2 = fneg <2 x double> %c
+  %d = call <2 x double> @llvm.fmuladd.v2f64(<2 x double> %a, <2 x double> %neg, <2 x double> %neg2)
+  store <2 x double> %d, <2 x double>* %x
+  ret void
+}
