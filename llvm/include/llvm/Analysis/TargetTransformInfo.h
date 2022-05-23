@@ -937,7 +937,8 @@ public:
   /// creating vectors that span multiple vector registers.
   /// If false, the vectorization factor will be chosen based on the
   /// size of the widest element type.
-  bool shouldMaximizeVectorBandwidth() const;
+  /// \p K Register Kind for vectorization.
+  bool shouldMaximizeVectorBandwidth(TargetTransformInfo::RegisterKind K) const;
 
   /// \return The minimum vectorization factor for types of given element
   /// bit width, or 0 if there is no minimum VF. The returned value only
@@ -1640,7 +1641,8 @@ public:
   virtual unsigned getMinVectorRegisterBitWidth() const = 0;
   virtual Optional<unsigned> getMaxVScale() const = 0;
   virtual Optional<unsigned> getVScaleForTuning() const = 0;
-  virtual bool shouldMaximizeVectorBandwidth() const = 0;
+  virtual bool
+  shouldMaximizeVectorBandwidth(TargetTransformInfo::RegisterKind K) const = 0;
   virtual ElementCount getMinimumVF(unsigned ElemWidth,
                                     bool IsScalable) const = 0;
   virtual unsigned getMaximumVF(unsigned ElemWidth, unsigned Opcode) const = 0;
@@ -2139,8 +2141,9 @@ public:
   Optional<unsigned> getVScaleForTuning() const override {
     return Impl.getVScaleForTuning();
   }
-  bool shouldMaximizeVectorBandwidth() const override {
-    return Impl.shouldMaximizeVectorBandwidth();
+  bool shouldMaximizeVectorBandwidth(
+      TargetTransformInfo::RegisterKind K) const override {
+    return Impl.shouldMaximizeVectorBandwidth(K);
   }
   ElementCount getMinimumVF(unsigned ElemWidth,
                             bool IsScalable) const override {

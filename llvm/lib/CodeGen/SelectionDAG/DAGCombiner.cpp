@@ -4913,7 +4913,9 @@ SDValue DAGCombiner::visitMULO(SDNode *N) {
                      DAG.getConstant(0, DL, CarryVT));
 
   // (mulo x, 2) -> (addo x, x)
-  if (N1C && N1C->getAPIntValue() == 2)
+  // FIXME: This needs a freeze.
+  if (N1C && N1C->getAPIntValue() == 2 &&
+      (!IsSigned || VT.getScalarSizeInBits() > 2))
     return DAG.getNode(IsSigned ? ISD::SADDO : ISD::UADDO, DL,
                        N->getVTList(), N0, N0);
 
