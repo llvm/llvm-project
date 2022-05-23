@@ -13,6 +13,7 @@
 #ifndef LLVM_SUPPORT_BASE64_H
 #define LLVM_SUPPORT_BASE64_H
 
+#include <cstdint>
 #include <string>
 
 namespace llvm {
