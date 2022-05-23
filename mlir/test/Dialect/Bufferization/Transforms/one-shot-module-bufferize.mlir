@@ -70,7 +70,7 @@ func.func private @external_func_with_return_val(tensor<4xi32>) -> f32
 //  CHECK-FULLY-DYNAMIC-LAYOUT-MAP-SAME: #[[$map2a]]> {
 func.func @return_extract_slice(%idx: index, %sz: index) -> (tensor<2x?xf32>)
 {
-  %t = bufferization.alloc_tensor [20, 10] : tensor<20x10xf32>
+  %t = bufferization.alloc_tensor() : tensor<20x10xf32>
   %0 = tensor.extract_slice %t[%idx, %idx][2, %sz][1, 1]
       : tensor<20x10xf32> to tensor<2x?xf32>
   return %0 : tensor<2x?xf32>
@@ -120,7 +120,7 @@ func.func @main(%t: tensor<?xf32> {bufferization.writable = false}) -> (f32) {
 // CHECK-LABEL: func @func_without_tensor_args
 func.func @func_without_tensor_args(%v : vector<10xf32>) -> () {
   // CHECK: %[[alloc:.*]] = memref.alloc()
-  %0 = bufferization.alloc_tensor[10] : tensor<10xf32>
+  %0 = bufferization.alloc_tensor() : tensor<10xf32>
 
   %c0 = arith.constant 0 : index
   // CHECK: vector.transfer_write %{{.*}}, %[[alloc]]
@@ -456,9 +456,9 @@ func.func @main() {
   //  CHECK-DAG:   %[[cA:.*]] = memref.cast %[[A]] : memref<64xf32> to memref<64xf32, #[[$DYN_1D_MAP]]>
   //  CHECK-DAG:   %[[cB:.*]] = memref.cast %[[B]] : memref<64xf32> to memref<64xf32, #[[$DYN_1D_MAP]]>
   //  CHECK-DAG:   %[[cC:.*]] = memref.cast %[[C]] : memref<f32> to memref<f32, #[[$DYN_0D_MAP]]>
-  %A = bufferization.alloc_tensor [64] : tensor<64xf32>
-  %B = bufferization.alloc_tensor [64] : tensor<64xf32>
-  %C = bufferization.alloc_tensor [] : tensor<f32>
+  %A = bufferization.alloc_tensor() : tensor<64xf32>
+  %B = bufferization.alloc_tensor() : tensor<64xf32>
+  %C = bufferization.alloc_tensor() : tensor<f32>
 
   //  CHECK-DAG:   linalg.fill ins(%[[C1]] : f32) outs(%[[A]] : memref<64xf32>)
   //  CHECK-DAG:   linalg.fill ins(%[[C2]] : f32) outs(%[[B]] : memref<64xf32>)
