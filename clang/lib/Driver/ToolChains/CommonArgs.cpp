@@ -1286,23 +1286,24 @@ tools::ParsePICArgs(const ToolChain &ToolChain, const ArgList &Args) {
             O.matches(options::OPT_fPIE) || O.matches(options::OPT_fPIC);
       } else {
         PIE = PIC = false;
-        if (EffectiveTriple.isPS4()) {
+        if (EffectiveTriple.isPS()) {
           Arg *ModelArg = Args.getLastArg(options::OPT_mcmodel_EQ);
           StringRef Model = ModelArg ? ModelArg->getValue() : "";
           if (Model != "kernel") {
             PIC = true;
-            ToolChain.getDriver().Diag(diag::warn_drv_ps4_force_pic)
-                << LastPICArg->getSpelling();
+            ToolChain.getDriver().Diag(diag::warn_drv_ps_force_pic)
+                << LastPICArg->getSpelling()
+                << (EffectiveTriple.isPS4() ? "PS4" : "PS5");
           }
         }
       }
     }
   }
 
-  // Introduce a Darwin and PS4-specific hack. If the default is PIC, but the
-  // PIC level would've been set to level 1, force it back to level 2 PIC
+  // Introduce a Darwin and PS4/PS5-specific hack. If the default is PIC, but
+  // the PIC level would've been set to level 1, force it back to level 2 PIC
   // instead.
-  if (PIC && (Triple.isOSDarwin() || EffectiveTriple.isPS4()))
+  if (PIC && (Triple.isOSDarwin() || EffectiveTriple.isPS()))
     IsPICLevelTwo |= ToolChain.isPICDefault();
 
   // This kernel flags are a trump-card: they will disable PIC/PIE

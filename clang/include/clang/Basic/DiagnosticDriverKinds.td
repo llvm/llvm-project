@@ -546,8 +546,8 @@ def warn_drv_unable_to_find_directory_expected : Warning<
   "unable to find %0 directory, expected to be in '%1'">,
   InGroup<InvalidOrNonExistentDirectory>, DefaultIgnore;
 
-def warn_drv_ps4_force_pic : Warning<
-  "option '%0' was ignored by the PS4 toolchain, using '-fPIC'">,
+def warn_drv_ps_force_pic : Warning<
+  "option '%0' was ignored by the %1 toolchain, using '-fPIC'">,
   InGroup<OptionIgnored>;
 
 def warn_drv_ps_sdk_dir : Warning<
