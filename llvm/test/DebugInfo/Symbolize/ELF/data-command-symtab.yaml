@@ -7,12 +7,15 @@
 
 # CHECK:       func
 # CHECK-NEXT:  4096 1
+# CHECK-NEXT:  ??:?
 # CHECK-EMPTY:
 # CHECK-NEXT:  data
 # CHECK-NEXT:  8192 2
+# CHECK-NEXT:  ??:?
 # CHECK-EMPTY:
 # CHECK-NEXT:  notype
 # CHECK-NEXT:  8194 3
+# CHECK-NEXT:  ??:?
 # CHECK-EMPTY:
 
 --- !ELF

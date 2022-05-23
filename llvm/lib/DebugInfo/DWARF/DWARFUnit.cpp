@@ -9,6 +9,7 @@
 #include "llvm/DebugInfo/DWARF/DWARFUnit.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/DebugInfo/DWARF/DWARFAbbreviationDeclaration.h"
 #include "llvm/DebugInfo/DWARF/DWARFCompileUnit.h"
 #include "llvm/DebugInfo/DWARF/DWARFContext.h"
@@ -18,11 +19,13 @@
 #include "llvm/DebugInfo/DWARF/DWARFDebugRangeList.h"
 #include "llvm/DebugInfo/DWARF/DWARFDebugRnglists.h"
 #include "llvm/DebugInfo/DWARF/DWARFDie.h"
+#include "llvm/DebugInfo/DWARF/DWARFExpression.h"
 #include "llvm/DebugInfo/DWARF/DWARFFormValue.h"
 #include "llvm/DebugInfo/DWARF/DWARFListTable.h"
 #include "llvm/DebugInfo/DWARF/DWARFObject.h"
 #include "llvm/DebugInfo/DWARF/DWARFSection.h"
 #include "llvm/DebugInfo/DWARF/DWARFTypeUnit.h"
+#include "llvm/Object/ObjectFile.h"
 #include "llvm/Support/DataExtractor.h"
 #include "llvm/Support/Errc.h"
 #include "llvm/Support/Path.h"
@@ -739,6 +742,100 @@ DWARFDie DWARFUnit::getSubroutineForAddress(uint64_t Address) {
   auto R = AddrDieMap.upper_bound(Address);
   if (R == AddrDieMap.begin())
     return DWARFDie();
+  // upper_bound's previous item contains Address.
+  --R;
+  if (Address >= R->second.first)
+    return DWARFDie();
+  return R->second.second;
+}
+
+void DWARFUnit::updateVariableDieMap(DWARFDie Die) {
+  for (DWARFDie Child : Die) {
+    if (isType(Child.getTag()))
+      continue;
+    updateVariableDieMap(Child);
+  }
+
+  if (Die.getTag() != DW_TAG_variable)
+    return;
+
+  Expected<DWARFLocationExpressionsVector> Locations =
+      Die.getLocations(DW_AT_location);
+  if (!Locations) {
+    // Missing DW_AT_location is fine here.
+    consumeError(Locations.takeError());
+    return;
+  }
+
+  uint64_t Address = UINT64_MAX;
+
+  for (const DWARFLocationExpression &Location : *Locations) {
+    uint8_t AddressSize = getAddressByteSize();
+    DataExtractor Data(Location.Expr, /*IsLittleEndian=*/true, AddressSize);
+    DWARFExpression Expr(Data, AddressSize);
+    auto It = Expr.begin();
+    if (It == Expr.end())
+      continue;
+
+    // Match exactly the main sequence used to describe global variables:
+    // `DW_OP_addr[x] [+ DW_OP_plus_uconst]`. Currently, this is the sequence
+    // that LLVM produces for DILocalVariables and DIGlobalVariables. If, in
+    // future, the DWARF producer (`DwarfCompileUnit::addLocationAttribute()` is
+    // a good starting point) is extended to use further expressions, this code
+    // needs to be updated.
+    uint64_t LocationAddr;
+    if (It->getCode() == dwarf::DW_OP_addr) {
+      LocationAddr = It->getRawOperand(0);
+    } else if (It->getCode() == dwarf::DW_OP_addrx) {
+      uint64_t DebugAddrOffset = It->getRawOperand(0);
+      if (auto Pointer = getAddrOffsetSectionItem(DebugAddrOffset)) {
+        LocationAddr = Pointer->Address;
+      }
+    } else {
+      continue;
+    }
+
+    // Read the optional 2nd operand, a DW_OP_plus_uconst.
+    if (++It != Expr.end()) {
+      if (It->getCode() != dwarf::DW_OP_plus_uconst)
+        continue;
+
+      LocationAddr += It->getRawOperand(0);
+
+      // Probe for a 3rd operand, if it exists, bail.
+      if (++It != Expr.end())
+        continue;
+    }
+
+    Address = LocationAddr;
+    break;
+  }
+
+  // Get the size of the global variable. If all else fails (i.e. the global has
+  // no type), then we use a size of one to still allow symbolization of the
+  // exact address.
+  uint64_t GVSize = 1;
+  if (DWARFDie BaseType = Die.getAttributeValueAsReferencedDie(DW_AT_type))
+    if (Optional<uint64_t> Size = Die.getTypeSize(getAddressByteSize()))
+      GVSize = *Size;
+
+  if (Address != UINT64_MAX)
+    VariableDieMap[Address] = {Address + GVSize, Die};
+}
+
+DWARFDie DWARFUnit::getVariableForAddress(uint64_t Address) {
+  extractDIEsIfNeeded(false);
+
+  auto RootDie = getUnitDIE();
+
+  auto RootLookup = RootsParsedForVariables.insert(RootDie.getOffset());
+  if (RootLookup.second)
+    updateVariableDieMap(RootDie);
+
+  auto R = VariableDieMap.upper_bound(Address);
+  if (R == VariableDieMap.begin())
+    return DWARFDie();
+
   // upper_bound's previous item contains Address.
   --R;
   if (Address >= R->second.first)

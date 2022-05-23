@@ -1037,7 +1037,25 @@ DWARFCompileUnit *DWARFContext::getCompileUnitForAddress(uint64_t Address) {
   // First, get the offset of the compile unit.
   uint64_t CUOffset = getDebugAranges()->findAddress(Address);
   // Retrieve the compile unit.
-  return getCompileUnitForOffset(CUOffset);
+  if (DWARFCompileUnit *OffsetCU = getCompileUnitForOffset(CUOffset))
+    return OffsetCU;
+
+  // Global variables are often not found by the above search, for one of two
+  // reasons:
+  //   1. .debug_aranges may not include global variables. On clang, it seems we
+  //      put the globals in the aranges, but this isn't true for gcc.
+  //   2. Even if the global variable is in a .debug_arange, global variables
+  //      may not be captured in the [start, end) addresses described by the
+  //      parent compile unit.
+  //
+  // So, we walk the CU's and their child DI's manually, looking for the
+  // specific global variable.
+  for (std::unique_ptr<DWARFUnit> &CU : compile_units()) {
+    if (DWARFDie Die = CU->getVariableForAddress(Address)) {
+      return static_cast<DWARFCompileUnit *>(CU.get());
+    }
+  }
+  return nullptr;
 }
 
 DWARFContext::DIEsForAddress DWARFContext::getDIEsForAddress(uint64_t Address) {
@@ -1107,64 +1125,6 @@ static bool getFunctionNameAndStartLineForAddress(
   return FoundResult;
 }
 
-static Optional<uint64_t> getTypeSize(DWARFDie Type, uint64_t PointerSize) {
-  if (auto SizeAttr = Type.find(DW_AT_byte_size))
-    if (Optional<uint64_t> Size = SizeAttr->getAsUnsignedConstant())
-      return Size;
-
-  switch (Type.getTag()) {
-  case DW_TAG_pointer_type:
-  case DW_TAG_reference_type:
-  case DW_TAG_rvalue_reference_type:
-    return PointerSize;
-  case DW_TAG_ptr_to_member_type: {
-    if (DWARFDie BaseType = Type.getAttributeValueAsReferencedDie(DW_AT_type))
-      if (BaseType.getTag() == DW_TAG_subroutine_type)
-        return 2 * PointerSize;
-    return PointerSize;
-  }
-  case DW_TAG_const_type:
-  case DW_TAG_immutable_type:
-  case DW_TAG_volatile_type:
-  case DW_TAG_restrict_type:
-  case DW_TAG_typedef: {
-    if (DWARFDie BaseType = Type.getAttributeValueAsReferencedDie(DW_AT_type))
-      return getTypeSize(BaseType, PointerSize);
-    break;
-  }
-  case DW_TAG_array_type: {
-    DWARFDie BaseType = Type.getAttributeValueAsReferencedDie(DW_AT_type);
-    if (!BaseType)
-      return Optional<uint64_t>();
-    Optional<uint64_t> BaseSize = getTypeSize(BaseType, PointerSize);
-    if (!BaseSize)
-      return Optional<uint64_t>();
-    uint64_t Size = *BaseSize;
-    for (DWARFDie Child : Type) {
-      if (Child.getTag() != DW_TAG_subrange_type)
-        continue;
-
-      if (auto ElemCountAttr = Child.find(DW_AT_count))
-        if (Optional<uint64_t> ElemCount =
-                ElemCountAttr->getAsUnsignedConstant())
-          Size *= *ElemCount;
-      if (auto UpperBoundAttr = Child.find(DW_AT_upper_bound))
-        if (Optional<int64_t> UpperBound =
-                UpperBoundAttr->getAsSignedConstant()) {
-          int64_t LowerBound = 0;
-          if (auto LowerBoundAttr = Child.find(DW_AT_lower_bound))
-            LowerBound = LowerBoundAttr->getAsSignedConstant().getValueOr(0);
-          Size *= *UpperBound - LowerBound + 1;
-        }
-    }
-    return Size;
-  }
-  default:
-    break;
-  }
-  return Optional<uint64_t>();
-}
-
 static Optional<int64_t>
 getExpressionFrameOffset(ArrayRef<uint8_t> Expr,
                          Optional<unsigned> FrameBaseReg) {
@@ -1225,7 +1185,7 @@ void DWARFContext::addLocalsForDie(DWARFCompileUnit *CU, DWARFDie Subprogram,
       if (Optional<const char *> Name = dwarf::toString(*NameAttr))
         Local.Name = *Name;
     if (auto Type = Die.getAttributeValueAsReferencedDie(DW_AT_type))
-      Local.Size = getTypeSize(Type, getCUAddrSize());
+      Local.Size = Type.getTypeSize(getCUAddrSize());
     if (auto DeclFileAttr = Die.find(DW_AT_decl_file)) {
       if (const auto *LT = CU->getContext().getLineTableForUnit(CU))
         LT->getFileNameByIndex(
@@ -1266,7 +1226,6 @@ DWARFContext::getLocalsForAddress(object::SectionedAddress Address) {
 DILineInfo DWARFContext::getLineInfoForAddress(object::SectionedAddress Address,
                                                DILineInfoSpecifier Spec) {
   DILineInfo Result;
-
   DWARFCompileUnit *CU = getCompileUnitForAddress(Address.Address);
   if (!CU)
     return Result;
@@ -1281,6 +1240,22 @@ DILineInfo DWARFContext::getLineInfoForAddress(object::SectionedAddress Address,
           Spec.FLIKind, Result);
     }
   }
+
+  return Result;
+}
+
+DILineInfo
+DWARFContext::getLineInfoForDataAddress(object::SectionedAddress Address) {
+  DILineInfo Result;
+  DWARFCompileUnit *CU = getCompileUnitForAddress(Address.Address);
+  if (!CU)
+    return Result;
+
+  if (DWARFDie Die = CU->getVariableForAddress(Address.Address)) {
+    Result.FileName = Die.getDeclFile(FileLineInfoKind::AbsoluteFilePath);
+    Result.Line = Die.getDeclLine();
+  }
+
   return Result;
 }
 

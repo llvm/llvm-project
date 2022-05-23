@@ -206,6 +206,10 @@ void PlainPrinterBase::print(const Request &Request, const DIGlobal &Global) {
     Name = DILineInfo::Addr2LineBadString;
   OS << Name << "\n";
   OS << Global.Start << " " << Global.Size << "\n";
+  if (Global.DeclFile.empty())
+    OS << "??:?\n";
+  else
+    OS << Global.DeclFile << ":" << Global.DeclLine << "\n";
   printFooter();
 }
 
