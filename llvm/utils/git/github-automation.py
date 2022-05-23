@@ -272,7 +272,7 @@ release_workflow_parser.add_argument('--llvm-project-dir', type=str, default='.'
 release_workflow_parser.add_argument('--issue-number', type=int, required=True, help='The issue number to update')
 release_workflow_parser.add_argument('--branch-repo-token', type=str,
                                      help='GitHub authentication token to use for the repository where new branches will be pushed. Defaults to TOKEN.')
-release_workflow_parser.add_argument('--branch-repo', type=str, default='llvmbot/llvm-project',
+release_workflow_parser.add_argument('--branch-repo', type=str, default='llvm/llvm-project-release-prs',
                                      help='The name of the repo where new branches will be pushed (e.g. llvm/llvm-project)')
 release_workflow_parser.add_argument('sub_command', type=str, choices=['print-release-branch', 'auto'],
                                      help='Print to stdout the name of the release branch ISSUE_NUMBER should be backported to')
