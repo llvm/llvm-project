@@ -15,7 +15,7 @@ func.func @fill_extract_matmul_1234(
   %c0 = arith.constant 0 : index
   %cst = arith.constant 0.000000e+00 : f32
   %cst_0 = arith.constant 1.000000e+00 : f32
-  %0 = bufferization.alloc_tensor [256, 256] : tensor<256x256xf32>
+  %0 = bufferization.alloc_tensor() : tensor<256x256xf32>
 
   // CHECK: {__inplace_operands_attr__ = ["none", "false"]}
   %1 = linalg.fill ins(%cst : f32) outs(%0 : tensor<256x256xf32>) -> tensor<256x256xf32>
@@ -42,7 +42,7 @@ func.func @fill_extract_matmul_1243(
   %c0 = arith.constant 0 : index
   %cst = arith.constant 0.000000e+00 : f32
   %cst_0 = arith.constant 1.000000e+00 : f32
-  %0 = bufferization.alloc_tensor [256, 256] : tensor<256x256xf32>
+  %0 = bufferization.alloc_tensor() : tensor<256x256xf32>
 
   // CHECK: {__inplace_operands_attr__ = ["none", "false"]}
   %1 = linalg.fill ins(%cst : f32) outs(%0 : tensor<256x256xf32>) -> tensor<256x256xf32>
@@ -69,7 +69,7 @@ func.func @fill_extract_matmul_1324(
   %c0 = arith.constant 0 : index
   %cst = arith.constant 0.000000e+00 : f32
   %cst_0 = arith.constant 1.000000e+00 : f32
-  %0 = bufferization.alloc_tensor [256, 256] : tensor<256x256xf32>
+  %0 = bufferization.alloc_tensor() : tensor<256x256xf32>
 
   // CHECK: {__inplace_operands_attr__ = ["none", "false"]}
   %1 = linalg.fill ins(%cst : f32) outs(%0 : tensor<256x256xf32>) -> tensor<256x256xf32>
@@ -96,7 +96,7 @@ func.func @fill_extract_matmul_1342(
   %c0 = arith.constant 0 : index
   %cst = arith.constant 0.000000e+00 : f32
   %cst_0 = arith.constant 1.000000e+00 : f32
-  %0 = bufferization.alloc_tensor [256, 256] : tensor<256x256xf32>
+  %0 = bufferization.alloc_tensor() : tensor<256x256xf32>
 
   // CHECK: {__inplace_operands_attr__ = ["none", "false"]}
   %1 = linalg.fill ins(%cst : f32) outs(%0 : tensor<256x256xf32>) -> tensor<256x256xf32>
@@ -123,7 +123,7 @@ func.func @fill_extract_matmul_1423(
   %c0 = arith.constant 0 : index
   %cst = arith.constant 0.000000e+00 : f32
   %cst_0 = arith.constant 1.000000e+00 : f32
-  %0 = bufferization.alloc_tensor [256, 256] : tensor<256x256xf32>
+  %0 = bufferization.alloc_tensor() : tensor<256x256xf32>
 
   // CHECK: {__inplace_operands_attr__ = ["none", "false"]}
   %1 = linalg.fill ins(%cst : f32) outs(%0 : tensor<256x256xf32>) -> tensor<256x256xf32>
@@ -150,7 +150,7 @@ func.func @fill_extract_matmul_1432(
   %c0 = arith.constant 0 : index
   %cst = arith.constant 0.000000e+00 : f32
   %cst_0 = arith.constant 1.000000e+00 : f32
-  %0 = bufferization.alloc_tensor [256, 256] : tensor<256x256xf32>
+  %0 = bufferization.alloc_tensor() : tensor<256x256xf32>
 
   // CHECK: {__inplace_operands_attr__ = ["none", "false"]}
   %1 = linalg.fill ins(%cst : f32) outs(%0 : tensor<256x256xf32>) -> tensor<256x256xf32>
@@ -177,7 +177,7 @@ func.func @fill_extract_matmul_2134(
   %c0 = arith.constant 0 : index
   %cst = arith.constant 0.000000e+00 : f32
   %cst_0 = arith.constant 1.000000e+00 : f32
-  %0 = bufferization.alloc_tensor [256, 256] : tensor<256x256xf32>
+  %0 = bufferization.alloc_tensor() : tensor<256x256xf32>
 
   // CHECK: {__inplace_operands_attr__ = ["none", "false"]}
   %2 = linalg.fill ins(%cst_0 : f32) outs(%0 : tensor<256x256xf32>) -> tensor<256x256xf32>
@@ -204,7 +204,7 @@ func.func @fill_extract_matmul_2143(
   %c0 = arith.constant 0 : index
   %cst = arith.constant 0.000000e+00 : f32
   %cst_0 = arith.constant 1.000000e+00 : f32
-  %0 = bufferization.alloc_tensor [256, 256] : tensor<256x256xf32>
+  %0 = bufferization.alloc_tensor() : tensor<256x256xf32>
 
   // CHECK: {__inplace_operands_attr__ = ["none", "false"]}
   %2 = linalg.fill ins(%cst_0 : f32) outs(%0 : tensor<256x256xf32>) -> tensor<256x256xf32>
@@ -231,7 +231,7 @@ func.func @fill_extract_matmul_2314(
   %c0 = arith.constant 0 : index
   %cst = arith.constant 0.000000e+00 : f32
   %cst_0 = arith.constant 1.000000e+00 : f32
-  %0 = bufferization.alloc_tensor [256, 256] : tensor<256x256xf32>
+  %0 = bufferization.alloc_tensor() : tensor<256x256xf32>
 
   // CHECK: {__inplace_operands_attr__ = ["none", "false"]}
   %2 = linalg.fill ins(%cst_0 : f32) outs(%0 : tensor<256x256xf32>) -> tensor<256x256xf32>
@@ -258,7 +258,7 @@ func.func @fill_extract_matmul_2341(
   %c0 = arith.constant 0 : index
   %cst = arith.constant 0.000000e+00 : f32
   %cst_0 = arith.constant 1.000000e+00 : f32
-  %0 = bufferization.alloc_tensor [256, 256] : tensor<256x256xf32>
+  %0 = bufferization.alloc_tensor() : tensor<256x256xf32>
 
   // CHECK: {__inplace_operands_attr__ = ["none", "false"]}
   %2 = linalg.fill ins(%cst_0 : f32) outs(%0 : tensor<256x256xf32>) -> tensor<256x256xf32>
@@ -285,7 +285,7 @@ func.func @fill_extract_matmul_2413(
   %c0 = arith.constant 0 : index
   %cst = arith.constant 0.000000e+00 : f32
   %cst_0 = arith.constant 1.000000e+00 : f32
-  %0 = bufferization.alloc_tensor [256, 256] : tensor<256x256xf32>
+  %0 = bufferization.alloc_tensor() : tensor<256x256xf32>
 
   // CHECK: {__inplace_operands_attr__ = ["none", "false"]}
   %2 = linalg.fill ins(%cst_0 : f32) outs(%0 : tensor<256x256xf32>) -> tensor<256x256xf32>
@@ -312,7 +312,7 @@ func.func @fill_extract_matmul_2431(
   %c0 = arith.constant 0 : index
   %cst = arith.constant 0.000000e+00 : f32
   %cst_0 = arith.constant 1.000000e+00 : f32
-  %0 = bufferization.alloc_tensor [256, 256] : tensor<256x256xf32>
+  %0 = bufferization.alloc_tensor() : tensor<256x256xf32>
 
   // CHECK: {__inplace_operands_attr__ = ["none", "false"]}
   %2 = linalg.fill ins(%cst_0 : f32) outs(%0 : tensor<256x256xf32>) -> tensor<256x256xf32>
@@ -339,7 +339,7 @@ func.func @fill_extract_matmul_3124(
   %c0 = arith.constant 0 : index
   %cst = arith.constant 0.000000e+00 : f32
   %cst_0 = arith.constant 1.000000e+00 : f32
-  %0 = bufferization.alloc_tensor [256, 256] : tensor<256x256xf32>
+  %0 = bufferization.alloc_tensor() : tensor<256x256xf32>
 
   // CHECK: {__inplace_operands_attr__ = ["false"]}
   %3 = tensor.extract_slice %0[0, 0] [256, 16] [1, 1] : tensor<256x256xf32> to tensor<256x16xf32>
@@ -366,7 +366,7 @@ func.func @fill_extract_matmul_3142(
   %c0 = arith.constant 0 : index
   %cst = arith.constant 0.000000e+00 : f32
   %cst_0 = arith.constant 1.000000e+00 : f32
-  %0 = bufferization.alloc_tensor [256, 256] : tensor<256x256xf32>
+  %0 = bufferization.alloc_tensor() : tensor<256x256xf32>
 
   // CHECK: {__inplace_operands_attr__ = ["false"]}
   %3 = tensor.extract_slice %0[0, 0] [256, 16] [1, 1] : tensor<256x256xf32> to tensor<256x16xf32>
@@ -392,7 +392,7 @@ func.func @fill_extract_matmul_3214(
   %c0 = arith.constant 0 : index
   %cst = arith.constant 0.000000e+00 : f32
   %cst_0 = arith.constant 1.000000e+00 : f32
-  %0 = bufferization.alloc_tensor [256, 256] : tensor<256x256xf32>
+  %0 = bufferization.alloc_tensor() : tensor<256x256xf32>
 
   // CHECK: {__inplace_operands_attr__ = ["false"]}
   %3 = tensor.extract_slice %0[0, 0] [256, 16] [1, 1] : tensor<256x256xf32> to tensor<256x16xf32>
@@ -419,7 +419,7 @@ func.func @fill_extract_matmul_3241(
   %c0 = arith.constant 0 : index
   %cst = arith.constant 0.000000e+00 : f32
   %cst_0 = arith.constant 1.000000e+00 : f32
-  %0 = bufferization.alloc_tensor [256, 256] : tensor<256x256xf32>
+  %0 = bufferization.alloc_tensor() : tensor<256x256xf32>
 
   // CHECK: {__inplace_operands_attr__ = ["false"]}
   %3 = tensor.extract_slice %0[0, 0] [256, 16] [1, 1] : tensor<256x256xf32> to tensor<256x16xf32>
@@ -446,7 +446,7 @@ func.func @fill_extract_matmul_3412(
   %c0 = arith.constant 0 : index
   %cst = arith.constant 0.000000e+00 : f32
   %cst_0 = arith.constant 1.000000e+00 : f32
-  %0 = bufferization.alloc_tensor [256, 256] : tensor<256x256xf32>
+  %0 = bufferization.alloc_tensor() : tensor<256x256xf32>
 
   // CHECK: {__inplace_operands_attr__ = ["false"]}
   %3 = tensor.extract_slice %0[0, 0] [256, 16] [1, 1] : tensor<256x256xf32> to tensor<256x16xf32>
@@ -473,7 +473,7 @@ func.func @fill_extract_matmul_3421(
   %c0 = arith.constant 0 : index
   %cst = arith.constant 0.000000e+00 : f32
   %cst_0 = arith.constant 1.000000e+00 : f32
-  %0 = bufferization.alloc_tensor [256, 256] : tensor<256x256xf32>
+  %0 = bufferization.alloc_tensor() : tensor<256x256xf32>
 
   // CHECK: {__inplace_operands_attr__ = ["false"]}
   %3 = tensor.extract_slice %0[0, 0] [256, 16] [1, 1] : tensor<256x256xf32> to tensor<256x16xf32>
@@ -500,7 +500,7 @@ func.func @fill_extract_matmul_4123(
   %c0 = arith.constant 0 : index
   %cst = arith.constant 0.000000e+00 : f32
   %cst_0 = arith.constant 1.000000e+00 : f32
-  %0 = bufferization.alloc_tensor [256, 256] : tensor<256x256xf32>
+  %0 = bufferization.alloc_tensor() : tensor<256x256xf32>
 
   // CHECK: {__inplace_operands_attr__ = ["false"]}
   %4 = tensor.extract_slice %0[0, 0] [16, 256] [1, 1] : tensor<256x256xf32> to tensor<16x256xf32>
@@ -527,7 +527,7 @@ func.func @fill_extract_matmul_4132(
   %c0 = arith.constant 0 : index
   %cst = arith.constant 0.000000e+00 : f32
   %cst_0 = arith.constant 1.000000e+00 : f32
-  %0 = bufferization.alloc_tensor [256, 256] : tensor<256x256xf32>
+  %0 = bufferization.alloc_tensor() : tensor<256x256xf32>
 
   // CHECK: {__inplace_operands_attr__ = ["false"]}
   %4 = tensor.extract_slice %0[0, 0] [16, 256] [1, 1] : tensor<256x256xf32> to tensor<16x256xf32>
@@ -554,7 +554,7 @@ func.func @fill_extract_matmul_4213(
   %c0 = arith.constant 0 : index
   %cst = arith.constant 0.000000e+00 : f32
   %cst_0 = arith.constant 1.000000e+00 : f32
-  %0 = bufferization.alloc_tensor [256, 256] : tensor<256x256xf32>
+  %0 = bufferization.alloc_tensor() : tensor<256x256xf32>
 
   // CHECK: {__inplace_operands_attr__ = ["false"]}
   %4 = tensor.extract_slice %0[0, 0] [16, 256] [1, 1] : tensor<256x256xf32> to tensor<16x256xf32>
@@ -581,7 +581,7 @@ func.func @fill_extract_matmul_4231(
   %c0 = arith.constant 0 : index
   %cst = arith.constant 0.000000e+00 : f32
   %cst_0 = arith.constant 1.000000e+00 : f32
-  %0 = bufferization.alloc_tensor [256, 256] : tensor<256x256xf32>
+  %0 = bufferization.alloc_tensor() : tensor<256x256xf32>
 
   // CHECK: {__inplace_operands_attr__ = ["false"]}
   %4 = tensor.extract_slice %0[0, 0] [16, 256] [1, 1] : tensor<256x256xf32> to tensor<16x256xf32>
@@ -608,7 +608,7 @@ func.func @fill_extract_matmul_4312(
   %c0 = arith.constant 0 : index
   %cst = arith.constant 0.000000e+00 : f32
   %cst_0 = arith.constant 1.000000e+00 : f32
-  %0 = bufferization.alloc_tensor [256, 256] : tensor<256x256xf32>
+  %0 = bufferization.alloc_tensor() : tensor<256x256xf32>
 
   // CHECK: {__inplace_operands_attr__ = ["false"]}
   %4 = tensor.extract_slice %0[0, 0] [16, 256] [1, 1] : tensor<256x256xf32> to tensor<16x256xf32>
@@ -635,7 +635,7 @@ func.func @fill_extract_matmul_4321(
   %c0 = arith.constant 0 : index
   %cst = arith.constant 0.000000e+00 : f32
   %cst_0 = arith.constant 1.000000e+00 : f32
-  %0 = bufferization.alloc_tensor [256, 256] : tensor<256x256xf32>
+  %0 = bufferization.alloc_tensor() : tensor<256x256xf32>
 
   // CHECK: {__inplace_operands_attr__ = ["false"]}
   %4 = tensor.extract_slice %0[0, 0] [16, 256] [1, 1] : tensor<256x256xf32> to tensor<16x256xf32>

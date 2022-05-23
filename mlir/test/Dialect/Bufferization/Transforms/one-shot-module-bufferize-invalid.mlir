@@ -60,7 +60,7 @@ func.func @scf_if_not_aliasing(
     scf.yield %t1 : tensor<?xf32>
   } else {
     // This buffer aliases.
-    %t2 = bufferization.alloc_tensor [%idx] : tensor<?xf32>
+    %t2 = bufferization.alloc_tensor(%idx) : tensor<?xf32>
     // expected-error @+1 {{operand #0 of ReturnLike op does not satisfy destination passing style}}
     scf.yield %t2 : tensor<?xf32>
   }
@@ -221,7 +221,7 @@ func.func @unknown_op(%A : tensor<4xf32>) -> tensor<4xf32>
 
 func.func @mini_test_case1() -> tensor<10x20xf32> {
   %f0 = arith.constant 0.0 : f32
-  %t = bufferization.alloc_tensor [10, 20] : tensor<10x20xf32>
+  %t = bufferization.alloc_tensor() : tensor<10x20xf32>
   %r = linalg.fill ins(%f0 : f32) outs(%t : tensor<10x20xf32>) -> tensor<10x20xf32>
   // expected-error @+1 {{operand #0 of ReturnLike op does not satisfy destination passing style}}
   return %r : tensor<10x20xf32>
@@ -274,7 +274,7 @@ func.func @call_to_unknown_tensor_returning_func(%t : tensor<?xf32>) {
 // -----
 
 func.func @foo(%t : tensor<5xf32>) -> (tensor<5xf32>) {
-  %0 = bufferization.alloc_tensor [5] : tensor<5xf32>
+  %0 = bufferization.alloc_tensor() : tensor<5xf32>
   // expected-error @+1 {{operand #0 of ReturnLike op does not satisfy destination passing style}}
   return %0 : tensor<5xf32>
 }
@@ -291,7 +291,7 @@ func.func @call_to_func_returning_non_equiv_tensor(%t : tensor<5xf32>) {
 func.func @destination_passing_style_dominance_test_1(%cst : f32, %idx : index,
                                                  %idx2 : index) -> f32 {
   %0 = scf.execute_region -> tensor<?xf32> {
-    %1 = bufferization.alloc_tensor [%idx] : tensor<?xf32>
+    %1 = bufferization.alloc_tensor(%idx) : tensor<?xf32>
     // expected-error @+1 {{operand #0 of ReturnLike op does not satisfy destination passing style}}
     scf.yield %1 : tensor<?xf32>
   }
@@ -304,7 +304,7 @@ func.func @destination_passing_style_dominance_test_1(%cst : f32, %idx : index,
 
 func.func @destination_passing_style_dominance_test_2(%cst : f32, %idx : index,
                                                  %idx2 : index) -> f32 {
-  %1 = bufferization.alloc_tensor [%idx] : tensor<?xf32>
+  %1 = bufferization.alloc_tensor(%idx) : tensor<?xf32>
 
   %0 = scf.execute_region -> tensor<?xf32> {
     // This YieldOp is in destination-passing style, thus no error.

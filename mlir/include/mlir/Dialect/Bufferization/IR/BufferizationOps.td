@@ -38,15 +38,11 @@ def Bufferization_AllocTensorOp : Bufferization_Op<"alloc_tensor",
     decisions during One-Shot Bufferize.
   }];
 
-  let arguments =
-    (ins Variadic<Index>:$sizes, I64ArrayAttr:$static_sizes);
+  let arguments = (ins Variadic<Index>:$dynamicSizes);
 
   let results = (outs AnyTensor:$result);
 
-  let assemblyFormat = [{
-    custom<OperandsOrIntegersSizesList>($sizes, $static_sizes) attr-dict
-    `:` type($result)
-  }];
+  let assemblyFormat = "`(`$dynamicSizes`)` attr-dict `:` type($result)";
 
   let extraClassDeclaration = [{
     LogicalResult bufferize(RewriterBase &rewriter, BufferizationState &state);
@@ -56,81 +52,41 @@ def Bufferization_AllocTensorOp : Bufferization_Op<"alloc_tensor",
       return false;
     }
 
-    static StringRef getStaticSizesAttrName() {
-      return "static_sizes";
-    }
-
     RankedTensorType getType() {
       return getResult().getType().cast<RankedTensorType>();
     }
 
-    // Infer the shape of the result tensor given the static shapes
-    // and element type of the result tensor.
-    static Type inferResultType(ArrayRef<int64_t> staticSizes, Type elementType,
-                                Attribute encoding = {});
-
     // Return true if the size of the tensor is dynamic at `idx`
-    bool isDynamicSize(unsigned idx) {
-      APInt v = *(static_sizes().getAsValueRange<IntegerAttr>().begin() + idx);
-      return ShapedType::isDynamic(v.getSExtValue());
-    }
-
-    // Assert that the size of the result tensor is static at `idx`
-    // and return the shape.
-    int64_t getStaticSize(unsigned idx) {
-      assert(!isDynamicSize(idx) && "expected static size");
-      APInt v = *(static_sizes().
-          template getAsValueRange<IntegerAttr>().begin() + idx);
-        return v.getSExtValue();
+    bool isDynamicDim(unsigned idx) {
+      return getType().isDynamicDim(idx);
     }
 
     // Return the argument position that contains the dynamic size of
     // the tensor at dimension `idx`. Asserts that the shape is
     // dynamic at that `idx`.
     unsigned getIndexOfDynamicSize(unsigned idx) {
-      assert(isDynamicSize(idx) && "expected dynamic size");
+      assert(isDynamicDim(idx) && "expected dynamic size");
+      ArrayRef<int64_t> shape = getType().getShape();
       return std::count_if(
-          static_sizes().getValue().begin(),
-          static_sizes().getValue().begin() + idx,
-          [&](Attribute attr) {
-            return ShapedType::isDynamic(attr.cast<IntegerAttr>().getInt());
-          });
+          shape.begin(), shape.begin() + idx,
+          [&](int64_t size) { return ShapedType::isDynamic(size); });
     }
-
-    // Return both static and dynamic sizes as a list of `OpFoldResult`.
-    SmallVector<OpFoldResult> getMixedSizes();
 
     // Return the Value of the dynamic size of the tensor at dimension
     // `idx`. Asserts that the shape is dynamic at that `idx.
     Value getDynamicSize(unsigned idx) {
       return getOperand(getIndexOfDynamicSize(idx));
     }
+
+    // Assert that the size of the result tensor is static at `idx`
+    // and return the shape.
+    int64_t getStaticSize(unsigned idx) {
+      assert(!isDynamicDim(idx) && "expected static size");
+      return getType().getShape()[idx];
+    }
   }];
 
-  let builders = [
-    OpBuilder<(ins "ValueRange":$shape,
-                  "ArrayRef<int64_t>":$staticShape, "Type":$elementType),
-    [{
-      build($_builder, $_state,
-            AllocTensorOp::inferResultType(staticShape, elementType),
-            shape, $_builder.getI64ArrayAttr(staticShape));
-    }]>,
-    OpBuilder<(ins "ValueRange":$shape, "Type":$elementType),
-    [{
-      SmallVector<int64_t, 4> staticShape(
-        shape.size(), ShapedType::kDynamicSize);
-      build($_builder, $_state, shape, staticShape, elementType);
-    }]>,
-    OpBuilder<(ins "ArrayRef<int64_t>":$staticShape, "Type":$elementType),
-    [{
-      build($_builder, $_state, ValueRange{}, staticShape, elementType);
-    }]>,
-    OpBuilder<(ins "ArrayRef<OpFoldResult>":$sizes, "Type":$elementType,
-      CArg<"ArrayRef<NamedAttribute>", "{}">:$attrs)>
-  ];
-
   let hasCanonicalizer = 1;
-  let hasCustomAssemblyFormat = 1;
   let hasVerifier = 1;
 }
 

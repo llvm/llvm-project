@@ -18,7 +18,7 @@ func.func @buffer_forwarding_conflict(
   // insert_slice. AllocTensorOp replaces the alloc_tensor with an out-of-place
   // extract_slice.
   //     CHECK: %[[EXTRACT_SLICE_ALLOC:.*]] = memref.alloc(%[[sz]])
-  %a = bufferization.alloc_tensor[%sz] : tensor<?xf32>
+  %a = bufferization.alloc_tensor(%sz) : tensor<?xf32>
 
   //     CHECK: linalg.fill ins({{.*}} : f32) outs(%[[EXTRACT_SLICE_ALLOC]] : memref<?xf32>)
   %f = linalg.fill ins(%f0 : f32) outs(%a : tensor<?xf32>) -> tensor<?xf32>
@@ -50,7 +50,7 @@ func.func @buffer_forwarding_no_conflict(
   // alloc_tensor itself does not alloc but forwards to the insert_slice.
   // InitTensorOp replaces the alloc_tensor with an inplace extract_slice.
   // CHECK: %[[T_SUBVIEW:.*]] =  memref.subview %[[FUNC_ARG]][42] [%[[sz]]] [1]
-  %a = bufferization.alloc_tensor[%sz] : tensor<?xf32>
+  %a = bufferization.alloc_tensor(%sz) : tensor<?xf32>
 
   // CHECK: linalg.fill ins({{.*}} : f32) outs(%[[T_SUBVIEW]] : memref<?xf32
   %f = linalg.fill ins(%f0 : f32) outs(%a : tensor<?xf32>) -> tensor<?xf32>
@@ -71,7 +71,7 @@ func.func @insertion_point_inside_loop(%t : tensor<?xf32>, %sz : index) -> (tens
   %c5 = arith.constant 5 : index
 
   // CHECK-NOT: memref.alloc
-  %blank = bufferization.alloc_tensor [5] : tensor<5xf32>
+  %blank = bufferization.alloc_tensor() : tensor<5xf32>
 
   // CHECK: scf.for %[[iv:.*]] = %{{.*}} to %[[sz]] step %{{.*}} {
   %r = scf.for %iv = %c0 to %sz step %c5 iter_args(%bb = %t) -> (tensor<?xf32>) {
@@ -102,7 +102,7 @@ func.func @insertion_point_outside_loop(%t : tensor<?xf32>, %sz : index,
 
   // CHECK-NOT: memref.alloc
   // CHECK: %[[subview:.*]] = memref.subview %[[t]][%[[idx]]] [5] [1]
-  %blank = bufferization.alloc_tensor [5] : tensor<5xf32>
+  %blank = bufferization.alloc_tensor() : tensor<5xf32>
 
   // CHECK: scf.for %[[iv:.*]] = %{{.*}} to %[[sz]] step %{{.*}} {
   %r = scf.for %iv = %c0 to %sz step %c5 iter_args(%bb = %t) -> (tensor<?xf32>) {

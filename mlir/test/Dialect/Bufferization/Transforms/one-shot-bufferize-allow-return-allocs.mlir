@@ -16,7 +16,7 @@ func.func @buffer_not_deallocated(%t : tensor<?xf32>, %c : i1) -> tensor<?xf32> 
     // CHECK-NOT: dealloc
     // CHECK: scf.yield %[[casted]]
     %sz = "test.some_op"() : () -> (index)
-    %0 = bufferization.alloc_tensor[%sz] : tensor<?xf32>
+    %0 = bufferization.alloc_tensor(%sz) : tensor<?xf32>
     scf.yield %0 : tensor<?xf32>
   } else {
   // CHECK: } else {

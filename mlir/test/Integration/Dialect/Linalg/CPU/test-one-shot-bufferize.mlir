@@ -16,7 +16,7 @@ func.func @init_and_dot(%arg0: tensor<64xf32>, %arg1: tensor<64xf32>, %arg2: ten
   %c0 = arith.constant 0 : index
   %0 = linalg.fill ins(%cst : f32) outs(%arg2 : tensor<f32>) -> tensor<f32>
   %1 = affine.apply #map0(%c0, %c64)[%c2]
-  %2 = bufferization.alloc_tensor [%1, 2] : tensor<?x2xf32>
+  %2 = bufferization.alloc_tensor(%1) : tensor<?x2xf32>
   %3 = scf.for %arg3 = %c0 to %c64 step %c2 iter_args(%arg4 = %2) -> (tensor<?x2xf32>) {
     %8 = affine.apply #map1(%arg3, %c0)[%c2]
     %9 = tensor.extract_slice %arg1[%arg3] [2] [1] : tensor<64xf32> to tensor<2xf32>
@@ -33,13 +33,13 @@ func.func @init_and_dot(%arg0: tensor<64xf32>, %arg1: tensor<64xf32>, %arg2: ten
   // call @printMemrefF32(%B) : (tensor<*xf32>) -> ()
 
   %4 = affine.apply #map0(%c0, %c64)[%c2]
-  %5 = bufferization.alloc_tensor [%4, 2] : tensor<?x2xf32>
+  %5 = bufferization.alloc_tensor(%4) : tensor<?x2xf32>
   %6 = scf.for %arg3 = %c0 to %c64 step %c2 iter_args(%arg4 = %5) -> (tensor<?x2xf32>) {
     %8 = affine.apply #map1(%arg3, %c0)[%c2]
     %9 = tensor.extract_slice %arg0[%arg3] [2] [1] : tensor<64xf32> to tensor<2xf32>
     %10 = tensor.cast %9 : tensor<2xf32> to tensor<?xf32>
     %11 = tensor.pad %10 low[%c0] high[%c0]  {
-    ^bb0(%arg5: index):  
+    ^bb0(%arg5: index):
       tensor.yield %cst : f32
     } : tensor<?xf32> to tensor<2xf32>
     %12 = tensor.insert_slice %11 into %arg4[%8, 0] [1, 2] [1, 1] : tensor<2xf32> into tensor<?x2xf32>
@@ -80,9 +80,9 @@ func.func @main() {
   %v1 = arith.constant 1.0 : f32
   %v2 = arith.constant 2.0 : f32
 
-  %A = bufferization.alloc_tensor [64] : tensor<64xf32>
-  %B = bufferization.alloc_tensor [64] : tensor<64xf32>
-  %C = bufferization.alloc_tensor [] : tensor<f32>
+  %A = bufferization.alloc_tensor() : tensor<64xf32>
+  %B = bufferization.alloc_tensor() : tensor<64xf32>
+  %C = bufferization.alloc_tensor() : tensor<f32>
   %AA = linalg.fill ins(%v1 : f32) outs(%A : tensor<64xf32>) -> tensor<64xf32>
   %BB = linalg.fill ins(%v2 : f32) outs(%B : tensor<64xf32>) -> tensor<64xf32>
   %CC = linalg.fill ins(%v0 : f32) outs(%C : tensor<f32>) -> tensor<f32>
