@@ -1909,3 +1909,31 @@ llvm.func @duplicate_block_with_args_in_switch(%cond : i32, %arg1: f32, %arg2: f
 llvm.func @bar(f32)
 llvm.func @baz()
 llvm.func @qux(f32)
+
+// -----
+
+// Varaidic function definition
+
+// CHECK: %struct.va_list = type { ptr }
+
+// CHECK: define void @vararg_function(i32 %{{.*}}, ...)
+llvm.func @vararg_function(%arg0: i32, ...) {
+  %0 = llvm.mlir.constant(1 : i32) : i32
+  %1 = llvm.mlir.constant(1 : i32) : i32
+  // CHECK: %[[ALLOCA0:.+]] = alloca %struct.va_list, align 8
+  %2 = llvm.alloca %1 x !llvm.struct<"struct.va_list", (ptr<i8>)> {alignment = 8 : i64} : (i32) -> !llvm.ptr<struct<"struct.va_list", (ptr<i8>)>>
+  %3 = llvm.bitcast %2 : !llvm.ptr<struct<"struct.va_list", (ptr<i8>)>> to !llvm.ptr<i8>
+  // CHECK: call void @llvm.va_start(ptr %[[ALLOCA0]])
+  llvm.intr.vastart %3
+  // CHECK: %[[ALLOCA1:.+]] = alloca ptr, align 8
+  %4 = llvm.alloca %0 x !llvm.ptr<i8> {alignment = 8 : i64} : (i32) -> !llvm.ptr<ptr<i8>>
+  %5 = llvm.bitcast %4 : !llvm.ptr<ptr<i8>> to !llvm.ptr<i8>
+  // CHECK: call void @llvm.va_copy(ptr %[[ALLOCA1]], ptr %[[ALLOCA0]])
+  llvm.intr.vacopy %3 to %5
+  // CHECK: call void @llvm.va_end(ptr %[[ALLOCA1]])
+  // CHECK: call void @llvm.va_end(ptr %[[ALLOCA0]])
+  llvm.intr.vaend %5
+  llvm.intr.vaend %3
+  // CHECK: ret void
+  llvm.return
+}

@@ -62,6 +62,17 @@ func.func @indirect_call(%arg0: (f32) -> i32, %arg1: f32) -> i32 {
   return %0 : i32
 }
 
+func.func @variadic_func(%arg0: i32) attributes { "func.varargs" = true } {
+  return
+}
+
 // -----
 
 func.func private @badllvmlinkage(i32) attributes { "llvm.linkage" = 3 : i64 } // expected-error {{Contains llvm.linkage attribute not of type LLVM::LinkageAttr}}
+
+// -----
+
+// expected-error@+1{{C interface for variadic functions is not supported yet.}}
+func.func @variadic_func(%arg0: i32) attributes { "func.varargs" = true, "llvm.emit_c_interface" } {
+  return
+}
