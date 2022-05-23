@@ -66,6 +66,15 @@ declare_mlir_dialect_python_bindings(
 declare_mlir_dialect_python_bindings(
   ADD_TO_PARENT MLIRPythonSources.Dialects
   ROOT_DIR "${CMAKE_CURRENT_SOURCE_DIR}/mlir"
+  TD_FILE dialects/BufferizationOps.td
+  SOURCES
+    dialects/bufferization.py
+    dialects/_bufferization_ops_ext.py
+  DIALECT_NAME bufferization)
+
+declare_mlir_dialect_python_bindings(
+  ADD_TO_PARENT MLIRPythonSources.Dialects
+  ROOT_DIR "${CMAKE_CURRENT_SOURCE_DIR}/mlir"
   TD_FILE dialects/BuiltinOps.td
   SOURCES
     dialects/builtin.py
