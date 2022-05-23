@@ -145,7 +145,9 @@ static SmallVector<Value> unpackOperandVector(RewriterBase &rewriter,
   Type f64Ty = rewriter.getF64Type();
   Type f32Ty = rewriter.getF32Type();
   Type i8Ty = rewriter.getI8Type();
+  Type i4Ty = rewriter.getIntegerType(4);
   Type i8x4Ty = LLVM::getFixedVectorType(i8Ty, 4);
+  Type i4x8Ty = LLVM::getFixedVectorType(i4Ty, 8);
   Type f32x1Ty = LLVM::getFixedVectorType(f32Ty, 1);
   auto arrayTy = operand.getType().cast<LLVM::LLVMArrayType>();
 
@@ -156,6 +158,7 @@ static SmallVector<Value> unpackOperandVector(RewriterBase &rewriter,
     // For 4xi8 vectors, the intrinsic expects these to be provided as i32
     // scalar types.
     if (arrayTy.getElementType() == i8x4Ty ||
+        arrayTy.getElementType() == i4x8Ty ||
         (arrayTy.getElementType() == f32x1Ty &&
          operandPtxType == NVVM::MMATypes::tf32)) {
       result.push_back(
@@ -281,6 +284,10 @@ struct MmaSyncOptoNVVM : public ConvertOpToLLVMPattern<nvgpu::MmaSyncOp> {
       ptxTypeA = NVVM::MMATypes::s8;
       ptxTypeB = NVVM::MMATypes::s8;
       overflow = NVVM::MMAIntOverflow::satfinite;
+    } else if (aType.getElementType().isInteger(4)) {
+      ptxTypeA = NVVM::MMATypes::s4;
+      ptxTypeB = NVVM::MMATypes::s4;
+      overflow = NVVM::MMAIntOverflow::satfinite;
     } else if (aType.getElementType().isF16()) {
       ptxTypeA = NVVM::MMATypes::f16;
       ptxTypeB = NVVM::MMATypes::f16;
@@ -374,7 +381,7 @@ struct NVGPUAsyncCopyLowering
                                                     scrPtr);
     int64_t numElements = adaptor.numElements().getZExtValue();
     int64_t sizeInBytes =
-        (dstMemrefType.getElementTypeBitWidth() / 8) * numElements;
+        (dstMemrefType.getElementTypeBitWidth() * numElements) / 8;
     // bypass L1 is only supported for byte sizes of 16, we drop the hint
     // otherwise.
     UnitAttr bypassL1 = sizeInBytes == 16 ? adaptor.bypassL1Attr() : UnitAttr();
