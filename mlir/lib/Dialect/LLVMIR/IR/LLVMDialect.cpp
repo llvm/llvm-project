@@ -2087,7 +2087,7 @@ ParseResult ShuffleVectorOp::parse(OpAsmParser &parser,
         loc, "expected LLVM IR dialect vector type for operand #1");
   auto vType =
       LLVM::getVectorType(LLVM::getVectorElementType(typeV1), maskAttr.size(),
-                          typeV1.cast<VectorType>().isScalable());
+                          LLVM::isScalableVectorType(typeV1));
   result.addTypes(vType);
   return success();
 }
