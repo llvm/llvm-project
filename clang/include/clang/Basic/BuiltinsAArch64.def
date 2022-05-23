@@ -251,6 +251,11 @@ TARGET_HEADER_BUILTIN(__umulh, "ULLiULLiULLi", "nh", "intrin.h", ALL_MS_LANGUAGE
 
 TARGET_HEADER_BUILTIN(__break, "vi", "nh", "intrin.h", ALL_MS_LANGUAGES, "")
 
+TARGET_HEADER_BUILTIN(__writex18byte,  "vULiUc", "nh", "intrin.h", ALL_MS_LANGUAGES, "")
+TARGET_HEADER_BUILTIN(__writex18word,  "vULiUs", "nh", "intrin.h", ALL_MS_LANGUAGES, "")
+TARGET_HEADER_BUILTIN(__writex18dword, "vULiULi", "nh", "intrin.h", ALL_MS_LANGUAGES, "")
+TARGET_HEADER_BUILTIN(__writex18qword, "vULiULLi", "nh", "intrin.h", ALL_MS_LANGUAGES, "")
+
 #undef BUILTIN
 #undef LANGBUILTIN
 #undef TARGET_HEADER_BUILTIN
