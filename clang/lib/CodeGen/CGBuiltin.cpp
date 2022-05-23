@@ -9977,6 +9977,30 @@ Value *CodeGenFunction::EmitAArch64BuiltinExpr(unsigned BuiltinID,
     return Store;
   }
 
+  if (BuiltinID == AArch64::BI__readx18byte ||
+      BuiltinID == AArch64::BI__readx18word ||
+      BuiltinID == AArch64::BI__readx18dword ||
+      BuiltinID == AArch64::BI__readx18qword) {
+    llvm::Type *IntTy = ConvertType(E->getType());
+
+    // Read x18 as i8*
+    LLVMContext &Context = CGM.getLLVMContext();
+    llvm::Metadata *Ops[] = {llvm::MDString::get(Context, "x18")};
+    llvm::MDNode *RegName = llvm::MDNode::get(Context, Ops);
+    llvm::Value *Metadata = llvm::MetadataAsValue::get(Context, RegName);
+    llvm::Function *F =
+        CGM.getIntrinsic(llvm::Intrinsic::read_register, {Int64Ty});
+    llvm::Value *X18 = Builder.CreateCall(F, Metadata);
+    X18 = Builder.CreateIntToPtr(X18, llvm::PointerType::get(Int8Ty, 0));
+
+    // Load x18 + offset
+    Value *Offset = Builder.CreateZExt(EmitScalarExpr(E->getArg(0)), Int64Ty);
+    Value *Ptr = Builder.CreateGEP(Int8Ty, X18, Offset);
+    Ptr = Builder.CreatePointerCast(Ptr, llvm::PointerType::get(IntTy, 0));
+    LoadInst *Load = Builder.CreateAlignedLoad(IntTy, Ptr, CharUnits::One());
+    return Load;
+  }
+
   // Handle MSVC intrinsics before argument evaluation to prevent double
   // evaluation.
   if (Optional<MSVCIntrin> MsvcIntId = translateAarch64ToMsvcIntrin(BuiltinID))
