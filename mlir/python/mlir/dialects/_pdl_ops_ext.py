@@ -93,7 +93,7 @@ class AttributeOp:
                ip=None):
     type = type if type is None else _get_value(type)
     result = pdl.AttributeType.get()
-    super().__init__(result, type, value, loc=loc, ip=ip)
+    super().__init__(result, type=type, value=value, loc=loc, ip=ip)
 
 
 class EraseOp:
@@ -118,7 +118,7 @@ class OperandOp:
                ip=None):
     type = type if type is None else _get_value(type)
     result = pdl.ValueType.get()
-    super().__init__(result, type, loc=loc, ip=ip)
+    super().__init__(result, type=type, loc=loc, ip=ip)
 
 
 class OperandsOp:
@@ -131,7 +131,7 @@ class OperandsOp:
                ip=None):
     types = types if types is None else _get_value(types)
     result = pdl.RangeType.get(pdl.ValueType.get())
-    super().__init__(result, types, loc=loc, ip=ip)
+    super().__init__(result, type=types, loc=loc, ip=ip)
 
 
 class OperationOp:
@@ -155,7 +155,7 @@ class OperationOp:
     attributeNames = ArrayAttr.get(attributeNames)
     types = _get_values(types)
     result = pdl.OperationType.get()
-    super().__init__(result, name, args, attributeValues, attributeNames, types, loc=loc, ip=ip)
+    super().__init__(result, args, attributeValues, attributeNames, types, name=name, loc=loc, ip=ip)
 
 
 class PatternOp:
@@ -170,7 +170,7 @@ class PatternOp:
     """Creates an PDL `pattern` operation."""
     name_attr = None if name is None else _get_str_attr(name)
     benefit_attr = _get_int_attr(16, benefit)
-    super().__init__(benefit_attr, name_attr, loc=loc, ip=ip)
+    super().__init__(benefit_attr, sym_name=name_attr, loc=loc, ip=ip)
     self.regions[0].blocks.append()
 
   @property
@@ -192,7 +192,7 @@ class ReplaceOp:
     op = _get_value(op)
     with_op = with_op if with_op is None else _get_value(with_op)
     with_values = _get_values(with_values)
-    super().__init__(op, with_op, with_values, loc=loc, ip=ip)
+    super().__init__(op, with_values, replOperation=with_op, loc=loc, ip=ip)
 
 
 class ResultOp:
@@ -222,7 +222,7 @@ class ResultsOp:
                ip=None):
     parent = _get_value(parent)
     index = index if index is None else _get_int_attr(32, index)
-    super().__init__(result, parent, index, loc=loc, ip=ip)
+    super().__init__(result, parent, index=index, loc=loc, ip=ip)
 
 
 class RewriteOp:
@@ -238,7 +238,7 @@ class RewriteOp:
     root = root if root is None else _get_value(root)
     name = name if name is None else _get_str_attr(name)
     args = _get_values(args)
-    super().__init__(root, name, args, loc=loc, ip=ip)
+    super().__init__(args, root=root,name=name, loc=loc, ip=ip)
 
   def add_body(self):
     """Add body (block) to the rewrite."""
@@ -261,7 +261,7 @@ class TypeOp:
                ip=None):
     type = type if type is None else _get_type_attr(type)
     result = pdl.TypeType.get()
-    super().__init__(result, type, loc=loc, ip=ip)
+    super().__init__(result, type=type, loc=loc, ip=ip)
 
 
 class TypesOp:
@@ -275,4 +275,4 @@ class TypesOp:
     types = _get_array_attr([_get_type_attr(ty) for ty in types])
     types = None if not types else types
     result = pdl.RangeType.get(pdl.TypeType.get())
-    super().__init__(result, types, loc=loc, ip=ip)
+    super().__init__(result, types=types, loc=loc, ip=ip)
