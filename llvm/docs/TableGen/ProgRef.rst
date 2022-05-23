@@ -1224,8 +1224,6 @@ The statement list establishes an inner scope. Variables local to a
 values do not carry over from one iteration to the next. Foreach loops may
 be nested.
 
-The ``foreach`` statement can also be used in a record :token:`Body`.
-
 .. Note that the productions involving RangeList and RangePiece have precedence
    over the more generic value parsing based on the first token.
 
