@@ -13,21 +13,19 @@ define fastcc void @LzmaDec_DecodeReal2(%struct.CLzmaDec.1.28.55.82.103.124.145.
 ; CHECK-NEXT:    [[RANGE20_I:%.*]] = getelementptr inbounds [[STRUCT_CLZMADEC_1_28_55_82_103_124_145_166_181_196_229_259_334:%.*]], %struct.CLzmaDec.1.28.55.82.103.124.145.166.181.196.229.259.334* [[P:%.*]], i64 0, i32 4
 ; CHECK-NEXT:    br label [[DO_BODY66_I:%.*]]
 ; CHECK:       do.body66.i:
-; CHECK-NEXT:    [[TMP0:%.*]] = phi <2 x i32> [ [[TMP5:%.*]], [[DO_COND_I:%.*]] ], [ undef, [[ENTRY:%.*]] ]
+; CHECK-NEXT:    [[TMP0:%.*]] = phi <2 x i32> [ [[TMP3:%.*]], [[DO_COND_I:%.*]] ], [ undef, [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    [[TMP1:%.*]] = select <2 x i1> undef, <2 x i32> undef, <2 x i32> [[TMP0]]
-; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <2 x i32> [[TMP1]], i32 1
-; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <2 x i32> <i32 undef, i32 poison>, i32 [[TMP2]], i32 1
 ; CHECK-NEXT:    br i1 undef, label [[DO_COND_I]], label [[IF_ELSE_I:%.*]]
 ; CHECK:       if.else.i:
-; CHECK-NEXT:    [[TMP4:%.*]] = sub <2 x i32> [[TMP1]], undef
+; CHECK-NEXT:    [[TMP2:%.*]] = sub <2 x i32> [[TMP1]], undef
 ; CHECK-NEXT:    br label [[DO_COND_I]]
 ; CHECK:       do.cond.i:
-; CHECK-NEXT:    [[TMP5]] = phi <2 x i32> [ [[TMP4]], [[IF_ELSE_I]] ], [ [[TMP3]], [[DO_BODY66_I]] ]
+; CHECK-NEXT:    [[TMP3]] = phi <2 x i32> [ [[TMP2]], [[IF_ELSE_I]] ], [ [[TMP1]], [[DO_BODY66_I]] ]
 ; CHECK-NEXT:    br i1 undef, label [[DO_BODY66_I]], label [[DO_END1006_I:%.*]]
 ; CHECK:       do.end1006.i:
-; CHECK-NEXT:    [[TMP6:%.*]] = select <2 x i1> undef, <2 x i32> undef, <2 x i32> [[TMP5]]
-; CHECK-NEXT:    [[TMP7:%.*]] = bitcast i32* [[RANGE20_I]] to <2 x i32>*
-; CHECK-NEXT:    store <2 x i32> [[TMP6]], <2 x i32>* [[TMP7]], align 4
+; CHECK-NEXT:    [[TMP4:%.*]] = select <2 x i1> undef, <2 x i32> undef, <2 x i32> [[TMP3]]
+; CHECK-NEXT:    [[TMP5:%.*]] = bitcast i32* [[RANGE20_I]] to <2 x i32>*
+; CHECK-NEXT:    store <2 x i32> [[TMP4]], <2 x i32>* [[TMP5]], align 4
 ; CHECK-NEXT:    ret void
 ;
 entry:
