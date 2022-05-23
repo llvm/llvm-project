@@ -121,27 +121,16 @@ Searcher::CallbackReturn BreakpointResolverAddress::SearchCallback(
 
   if (filter.AddressPasses(m_addr)) {
     if (breakpoint.GetNumLocations() == 0) {
-      // If the address is just an offset ...
-      if (!m_addr.IsSectionOffset()) {
-        ModuleSP containing_module_sp = nullptr;
+      // If the address is just an offset, and we're given a module, see if we
+      // can find the appropriate module loaded in the binary, and fix up
+      // m_addr to use that.
+      if (!m_addr.IsSectionOffset() && m_module_filespec) {
         Target &target = breakpoint.GetTarget();
-        if (m_module_filespec) {
-          // ... and we're given a module, see if we can find the
-          // appropriate module loaded in the binary, and fix up
-          // m_addr to use that.
-          ModuleSpec module_spec(m_module_filespec);
-          containing_module_sp =
-              target.GetImages().FindFirstModule(module_spec);
-        } else {
-          // ... and we're not given a module, see if the offset is
-          // somewhere in the executable module. If it is, then we'll
-          // fix up m_addr to use that.
-          containing_module_sp = target.GetExecutableModule();
-        }
-        if (containing_module_sp) {
+        ModuleSpec module_spec(m_module_filespec);
+        ModuleSP module_sp = target.GetImages().FindFirstModule(module_spec);
+        if (module_sp) {
           Address tmp_address;
-          if (containing_module_sp->ResolveFileAddress(m_addr.GetOffset(),
-                                                       tmp_address))
+          if (module_sp->ResolveFileAddress(m_addr.GetOffset(), tmp_address))
             m_addr = tmp_address;
         }
       }
