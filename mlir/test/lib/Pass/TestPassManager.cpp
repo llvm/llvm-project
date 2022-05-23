@@ -62,7 +62,7 @@ struct TestOptionsPass
                                      llvm::cl::desc("Example string option")};
   };
   TestOptionsPass() = default;
-  TestOptionsPass(const TestOptionsPass &) {}
+  TestOptionsPass(const TestOptionsPass &) : PassWrapper() {}
   TestOptionsPass(const Options &options) {
     listOption = options.listOption;
     stringOption = options.stringOption;
@@ -168,7 +168,7 @@ struct TestStatisticPass
   MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(TestStatisticPass)
 
   TestStatisticPass() = default;
-  TestStatisticPass(const TestStatisticPass &) {}
+  TestStatisticPass(const TestStatisticPass &) : PassWrapper() {}
   StringRef getArgument() const final { return "test-stats-pass"; }
   StringRef getDescription() const final { return "Test pass statistics"; }
 
