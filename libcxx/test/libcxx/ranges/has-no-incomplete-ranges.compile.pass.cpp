@@ -25,7 +25,6 @@
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 namespace ranges {
-  int output_range;
   int data;
   int size;
   int prev;
@@ -37,5 +36,5 @@ namespace ranges {
   int filter_view;
   int join_view;
   int views; // this entire namespace should be absent
-}
+} // namespace ranges
 _LIBCPP_END_NAMESPACE_STD

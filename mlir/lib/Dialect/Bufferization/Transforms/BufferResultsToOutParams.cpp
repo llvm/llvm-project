@@ -15,20 +15,50 @@
 
 using namespace mlir;
 
+/// Return `true` if the given MemRef type has a fully dynamic layout.
+static bool hasFullyDynamicLayoutMap(MemRefType type) {
+  int64_t offset;
+  SmallVector<int64_t, 4> strides;
+  if (failed(getStridesAndOffset(type, strides, offset)))
+    return false;
+  if (!llvm::all_of(strides, [](int64_t stride) {
+        return ShapedType::isDynamicStrideOrOffset(stride);
+      }))
+    return false;
+  if (!ShapedType::isDynamicStrideOrOffset(offset))
+    return false;
+  return true;
+}
+
+/// Return `true` if the given MemRef type has a static identity layout (i.e.,
+/// no layout).
+static bool hasStaticIdentityLayout(MemRefType type) {
+  return type.getLayout().isIdentity();
+}
+
 // Updates the func op and entry block.
 //
 // Any args appended to the entry block are added to `appendedEntryArgs`.
-static void updateFuncOp(func::FuncOp func,
-                         SmallVectorImpl<BlockArgument> &appendedEntryArgs) {
+static LogicalResult
+updateFuncOp(func::FuncOp func,
+             SmallVectorImpl<BlockArgument> &appendedEntryArgs) {
   auto functionType = func.getFunctionType();
 
   // Collect information about the results will become appended arguments.
   SmallVector<Type, 6> erasedResultTypes;
   BitVector erasedResultIndices(functionType.getNumResults());
   for (const auto &resultType : llvm::enumerate(functionType.getResults())) {
-    if (resultType.value().isa<BaseMemRefType>()) {
+    if (auto memrefType = resultType.value().dyn_cast<MemRefType>()) {
+      if (!hasStaticIdentityLayout(memrefType) &&
+          !hasFullyDynamicLayoutMap(memrefType)) {
+        // Only buffers with static identity layout can be allocated. These can
+        // be casted to memrefs with fully dynamic layout map. Other layout maps
+        // are not supported.
+        return func->emitError()
+               << "cannot create out param for result with unsupported layout";
+      }
       erasedResultIndices.set(resultType.index());
-      erasedResultTypes.push_back(resultType.value());
+      erasedResultTypes.push_back(memrefType);
     }
   }
 
@@ -51,10 +81,12 @@ static void updateFuncOp(func::FuncOp func,
 
   // Add the new arguments to the entry block if the function is not external.
   if (func.isExternal())
-    return;
+    return success();
   Location loc = func.getLoc();
   for (Type type : erasedResultTypes)
     appendedEntryArgs.push_back(func.front().addArgument(type, loc));
+
+  return success();
 }
 
 // Updates all ReturnOps in the scope of the given func::FuncOp by either
@@ -66,7 +98,7 @@ static void updateReturnOps(func::FuncOp func,
     SmallVector<Value, 6> copyIntoOutParams;
     SmallVector<Value, 6> keepAsReturnOperands;
     for (Value operand : op.getOperands()) {
-      if (operand.getType().isa<BaseMemRefType>())
+      if (operand.getType().isa<MemRefType>())
         copyIntoOutParams.push_back(operand);
       else
         keepAsReturnOperands.push_back(operand);
@@ -88,7 +120,7 @@ static LogicalResult updateCalls(ModuleOp module) {
     SmallVector<Value, 6> replaceWithNewCallResults;
     SmallVector<Value, 6> replaceWithOutParams;
     for (OpResult result : op.getResults()) {
-      if (result.getType().isa<BaseMemRefType>())
+      if (result.getType().isa<MemRefType>())
         replaceWithOutParams.push_back(result);
       else
         replaceWithNewCallResults.push_back(result);
@@ -96,14 +128,24 @@ static LogicalResult updateCalls(ModuleOp module) {
     SmallVector<Value, 6> outParams;
     OpBuilder builder(op);
     for (Value memref : replaceWithOutParams) {
-      if (!memref.getType().cast<BaseMemRefType>().hasStaticShape()) {
+      if (!memref.getType().cast<MemRefType>().hasStaticShape()) {
         op.emitError()
             << "cannot create out param for dynamically shaped result";
         didFail = true;
         return;
       }
-      Value outParam = builder.create<memref::AllocOp>(
-          op.getLoc(), memref.getType().cast<MemRefType>());
+      auto memrefType = memref.getType().cast<MemRefType>();
+      auto allocType =
+          MemRefType::get(memrefType.getShape(), memrefType.getElementType(),
+                          AffineMap(), memrefType.getMemorySpaceAsInt());
+      Value outParam = builder.create<memref::AllocOp>(op.getLoc(), allocType);
+      if (!hasStaticIdentityLayout(memrefType)) {
+        // Layout maps are already checked in `updateFuncOp`.
+        assert(hasFullyDynamicLayoutMap(memrefType) &&
+               "layout map not supported");
+        outParam =
+            builder.create<memref::CastOp>(op.getLoc(), memrefType, outParam);
+      }
       memref.replaceAllUsesWith(outParam);
       outParams.push_back(outParam);
     }
@@ -126,7 +168,8 @@ LogicalResult
 mlir::bufferization::promoteBufferResultsToOutParams(ModuleOp module) {
   for (auto func : module.getOps<func::FuncOp>()) {
     SmallVector<BlockArgument, 6> appendedEntryArgs;
-    updateFuncOp(func, appendedEntryArgs);
+    if (failed(updateFuncOp(func, appendedEntryArgs)))
+      return failure();
     if (func.isExternal())
       continue;
     updateReturnOps(func, appendedEntryArgs);

@@ -223,6 +223,31 @@ def ExpOp : ComplexUnaryOp<"exp", [SameOperandsAndResultType]> {
 }
 
 //===----------------------------------------------------------------------===//
+// Expm1Op
+//===----------------------------------------------------------------------===//
+
+def Expm1Op : ComplexUnaryOp<"expm1", [SameOperandsAndResultType]> {
+  let summary = "computes exponential of a complex number minus 1";
+  let description = [{
+    Syntax:
+
+    ```
+    operation ::= ssa-id `=` `complex.expm1` ssa-use `:` type
+    ```
+
+    complex.expm1(x) := complex.exp(x) - 1
+
+    Example:
+
+    ```mlir
+    %a = complex.expm1 %b : complex<f32>
+    ```
+  }];
+
+  let results = (outs Complex<AnyFloat>:$result);
+}
+
+//===----------------------------------------------------------------------===//
 // ImOp
 //===----------------------------------------------------------------------===//
 
@@ -385,6 +410,25 @@ def ReOp : ComplexUnaryOp<"re",
 
   let results = (outs AnyFloat:$real);
   let hasFolder = 1;
+}
+
+//===----------------------------------------------------------------------===//
+// RsqrtOp
+//===----------------------------------------------------------------------===//
+
+def RsqrtOp : ComplexUnaryOp<"rsqrt", [SameOperandsAndResultType]> {
+  let summary = "complex reciprocal of square root";
+  let description = [{
+    The `rsqrt` operation computes reciprocal of square root.
+
+    Example:
+
+    ```mlir
+    %a = complex.rsqrt %b : complex<f32>
+    ```
+  }];
+
+  let results = (outs Complex<AnyFloat>:$result);
 }
 
 //===----------------------------------------------------------------------===//
