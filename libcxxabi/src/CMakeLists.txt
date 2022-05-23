@@ -248,10 +248,13 @@ if(LIBCXXABI_HERMETIC_STATIC_LIBRARY)
   if (LIBCXXABI_ENABLE_NEW_DELETE_DEFINITIONS)
     target_add_compile_flags_if_supported(cxxabi_static_objects PRIVATE -fvisibility-global-new-delete-hidden)
   endif()
+  # _LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS can be defined in libcxx's
+  # __config_site too. Define it in the same way here, to avoid redefinition
+  # conflicts.
   target_compile_definitions(cxxabi_static_objects
     PRIVATE
       _LIBCXXABI_DISABLE_VISIBILITY_ANNOTATIONS
-      _LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS)
+      _LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS=)
 endif()
 
 if (LIBCXXABI_ENABLE_STATIC)

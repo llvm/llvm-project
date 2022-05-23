@@ -2457,6 +2457,7 @@ cc_library(
         ":AsyncToLLVM",
         ":BufferizationToMemRef",
         ":ComplexToLLVM",
+        ":ComplexToLibm",
         ":ComplexToStandard",
         ":ControlFlowToLLVM",
         ":ControlFlowToSPIRV",
@@ -4708,7 +4709,6 @@ cc_library(
     ],
 )
 
-
 cc_library(
     name = "TensorToSPIRV",
     srcs = glob([
@@ -6189,6 +6189,7 @@ cc_library(
         ":BufferizationTransforms",
         ":ComplexDialect",
         ":ComplexToLLVM",
+        ":ComplexToLibm",
         ":ControlFlowOps",
         ":ConversionPasses",
         ":DLTIDialect",
@@ -8062,6 +8063,30 @@ cc_library(
 )
 
 cc_library(
+    name = "ComplexToLibm",
+    srcs = glob([
+        "lib/Conversion/ComplexToLibm/*.cpp",
+        "lib/Conversion/ComplexToLibm/*.h",
+    ]) + [":ConversionPassDetail"],
+    hdrs = glob([
+        "include/mlir/Conversion/ComplexToLibm/*.h",
+    ]),
+    includes = ["include"],
+    deps = [
+        ":ComplexDialect",
+        ":ConversionPassIncGen",
+        ":DialectUtils",
+        ":FuncDialect",
+        ":IR",
+        ":Pass",
+        ":Support",
+        ":Transforms",
+        "//llvm:Core",
+        "//llvm:Support",
+    ],
+)
+
+cc_library(
     name = "ComplexToStandard",
     srcs = glob([
         "lib/Conversion/ComplexToStandard/*.cpp",
@@ -8535,6 +8560,7 @@ td_library(
     name = "MLProgramOpsTdFiles",
     srcs = [
         "include/mlir/Dialect/MLProgram/IR/MLProgramBase.td",
+        "include/mlir/Dialect/MLProgram/IR/MLProgramAttributes.td",
         "include/mlir/Dialect/MLProgram/IR/MLProgramOps.td",
     ],
     includes = ["include"],
@@ -8574,6 +8600,24 @@ gentbl_cc_library(
     deps = [":MLProgramOpsTdFiles"],
 )
 
+gentbl_cc_library(
+    name = "MLProgramAttributesIncGen",
+    strip_include_prefix = "include",
+    tbl_outs = [
+        (
+            ["-gen-attrdef-decls"],
+            "include/mlir/Dialect/MLProgram/IR/MLProgramAttributes.h.inc",
+        ),
+        (
+            ["-gen-attrdef-defs"],
+            "include/mlir/Dialect/MLProgram/IR/MLProgramAttributes.cpp.inc",
+        ),
+    ],
+    tblgen = ":mlir-tblgen",
+    td_file = "include/mlir/Dialect/MLProgram/IR/MLProgramAttributes.td",
+    deps = [":MLProgramOpsTdFiles"],
+)
+
 cc_library(
     name = "MLProgramDialect",
     srcs = glob([
@@ -8587,6 +8631,7 @@ cc_library(
     deps = [
         ":ControlFlowInterfaces",
         ":IR",
+        ":MLProgramAttributesIncGen",
         ":MLProgramOpsIncGen",
         ":Pass",
         ":Support",

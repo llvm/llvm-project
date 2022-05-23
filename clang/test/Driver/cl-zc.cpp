@@ -64,10 +64,54 @@
 // RUN: %clang_cl /c -### /Zc:ternary- -- %s 2>&1 | FileCheck -check-prefix=TERNARY-OFF %s
 // TERNARY-OFF: argument unused during compilation
 
+// thread safe statics are off for versions < 19.
+// RUN: %clang_cl /c -### -fms-compatibility-version=18 -- %s 2>&1 | FileCheck -check-prefix=NoThreadSafeStatics %s
+// RUN: %clang_cl /Zc:threadSafeInit /Zc:threadSafeInit- /c -### -- %s 2>&1 | FileCheck -check-prefix=NoThreadSafeStatics %s
+// NoThreadSafeStatics: "-fno-threadsafe-statics"
+
+// RUN: %clang_cl /Zc:threadSafeInit /c -### -- %s 2>&1 | FileCheck -check-prefix=ThreadSafeStatics %s
+// ThreadSafeStatics-NOT: "-fno-threadsafe-statics"
+
+// RUN: %clang_cl /Zc:dllexportInlines- /c -### -- %s 2>&1 | FileCheck -check-prefix=NoDllExportInlines %s
+// NoDllExportInlines: "-fno-dllexport-inlines"
+// RUN: %clang_cl /Zc:dllexportInlines /c -### -- %s 2>&1 | FileCheck -check-prefix=DllExportInlines %s
+// DllExportInlines-NOT: "-fno-dllexport-inlines"
+
+// We recognize -f[no-]delayed-template-parsing.
+// /Zc:twoPhase[-] has the opposite meaning.
+// RUN: %clang_cl -c -### -- %s 2>&1 | FileCheck -check-prefix=DELAYEDDEFAULT %s
+// DELAYEDDEFAULT: "-fdelayed-template-parsing"
+// RUN: %clang_cl -c -fdelayed-template-parsing -### -- %s 2>&1 | FileCheck -check-prefix=DELAYEDON %s
+// RUN: %clang_cl -c /Zc:twoPhase- -### -- %s 2>&1 | FileCheck -check-prefix=DELAYEDON %s
+// DELAYEDON: "-fdelayed-template-parsing"
+// RUN: %clang_cl -c -fno-delayed-template-parsing -### -- %s 2>&1 | FileCheck -check-prefix=DELAYEDOFF %s
+// RUN: %clang_cl -c /Zc:twoPhase -### -- %s 2>&1 | FileCheck -check-prefix=DELAYEDOFF %s
+// DELAYEDOFF-NOT: "-fdelayed-template-parsing"
+
+// RUN: %clang_cl -c -### /std:c++latest -- %s 2>&1 | FileCheck -check-prefix CHECK-LATEST-CHAR8_T %s
+// CHECK-LATEST-CHAR8_T-NOT: "-fchar8_t"
+// RUN: %clang_cl -c -### /Zc:char8_t -- %s 2>&1 | FileCheck -check-prefix CHECK-CHAR8_T %s
+// CHECK-CHAR8_T: "-fchar8_t"
+// RUN: %clang_cl -c -### /Zc:char8_t- -- %s 2>&1 | FileCheck -check-prefix CHECK-CHAR8_T_ %s
+// CHECK-CHAR8_T_: "-fno-char8_t"
+
+
 
 // These never warn, but don't have an effect yet.
 
-// RUN: %clang_cl /c -### /Zc:rvalueCast -- %s 2>&1 | FileCheck -check-prefix=RVALUECAST-ON %s
-// RVALUECAST-ON-NOT: argument unused during compilation
-// RUN: %clang_cl /c -### /Zc:rvalueCast- -- %s 2>&1 | FileCheck -check-prefix=RVALUECAST-OFF %s
-// RVALUECAST-OFF: argument unused during compilation
+// RUN: %clang_cl /c \
+// RUN:   /Zc:__cplusplus \
+// RUN:   /Zc:auto \
+// RUN:   /Zc:forScope \
+// RUN:   /Zc:inline \
+// RUN:   /Zc:rvalueCast \
+// RUN:   /Zc:ternary \
+// RUN:   -### -- %s 2>&1 | FileCheck -check-prefix=IGNORED %s
+// IGNORED-NOT: argument unused during compilation
+// IGNORED-NOT: no such file or directory
+
+// Negated form warns:
+// RUN: %clang_cl /c \
+// RUN:   /Zc:rvalueCast- \
+// RUN:   -### -- %s 2>&1 | FileCheck -check-prefix=NOTIGNORED %s
+// NOTIGNORED: argument unused during compilation

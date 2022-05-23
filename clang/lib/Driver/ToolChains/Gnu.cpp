@@ -2147,9 +2147,10 @@ void Generic_GCC::GCCInstallationDetector::AddDefaultGCCPrefixes(
     return;
   }
 
-  // Non-Solaris is much simpler - most systems just go with "/usr".
-  if (SysRoot.empty() && TargetTriple.getOS() == llvm::Triple::Linux) {
-    // Yet, still look for RHEL/CentOS devtoolsets and gcc-toolsets.
+  // For Linux, if --sysroot is not specified, look for RHEL/CentOS devtoolsets
+  // and gcc-toolsets.
+  if (SysRoot.empty() && TargetTriple.getOS() == llvm::Triple::Linux &&
+      D.getVFS().exists("/opt/rh")) {
     Prefixes.push_back("/opt/rh/gcc-toolset-11/root/usr");
     Prefixes.push_back("/opt/rh/gcc-toolset-10/root/usr");
     Prefixes.push_back("/opt/rh/devtoolset-11/root/usr");
@@ -2162,6 +2163,8 @@ void Generic_GCC::GCCInstallationDetector::AddDefaultGCCPrefixes(
     Prefixes.push_back("/opt/rh/devtoolset-3/root/usr");
     Prefixes.push_back("/opt/rh/devtoolset-2/root/usr");
   }
+
+  // Fall back to /usr which is used by most non-Solaris systems.
   Prefixes.push_back(SysRoot.str() + "/usr");
 }
 

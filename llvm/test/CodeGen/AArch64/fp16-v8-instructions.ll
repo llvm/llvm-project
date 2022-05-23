@@ -679,13 +679,6 @@ define <8 x i8> @fptosi_i8(<8 x half> %a) #0 {
 }
 
 define <8 x i16> @fptosi_i16(<8 x half> %a) #0 {
-; CHECK-CVT_DAG:   fcvtl   [[LO:v[0-9]+\.4s]], v0.4h
-; CHECK-CVT_DAG:   fcvtl2  [[HI:v[0-9]+\.4s]], v0.8h
-; CHECK-CVT_DAG:   fcvtzs  [[LOF32:v[0-9]+\.4s]], [[LO]]
-; CHECK-CVT_DAG:   xtn     [[I16:v[0-9]+]].4h, [[LOF32]]
-; CHECK-CVT_DAG:   fcvtzs  [[HIF32:v[0-9]+\.4s]], [[HI]]
-; CHECK-CVT_DAG:   xtn2    [[I16]].8h, [[HIF32]]
-; CHECK-COMMON_NEXT:      ret
 ; CHECK-CVT-LABEL: fptosi_i16:
 ; CHECK-CVT:       // %bb.0:
 ; CHECK-CVT-NEXT:    fcvtl2 v1.4s, v0.8h
