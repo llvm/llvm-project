@@ -20,18 +20,15 @@ define void @_foo(double %p1, double %p2, double %p3) #0 {
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[INDVARS_IV266:%.*]] = phi i64 [ 0, [[BB1]] ], [ [[INDVARS_IV_NEXT267:%.*]], [[FOR_BODY]] ]
-; CHECK-NEXT:    [[TMP4:%.*]] = phi <2 x double> [ [[TMP3]], [[BB1]] ], [ [[TMP7:%.*]], [[FOR_BODY]] ]
-; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <2 x double> [[TMP4]], i32 0
-; CHECK-NEXT:    [[VECINIT_I_I237:%.*]] = insertelement <2 x double> poison, double [[TMP5]], i32 0
-; CHECK-NEXT:    [[X13:%.*]] = tail call i32 @_xfn(<2 x double> [[VECINIT_I_I237]])
+; CHECK-NEXT:    [[TMP4:%.*]] = phi <2 x double> [ [[TMP3]], [[BB1]] ], [ [[TMP6:%.*]], [[FOR_BODY]] ]
+; CHECK-NEXT:    [[X13:%.*]] = tail call i32 @_xfn(<2 x double> [[TMP4]])
 ; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [256 x i32], [256 x i32]* [[TAB1]], i64 0, i64 [[INDVARS_IV266]]
 ; CHECK-NEXT:    store i32 [[X13]], i32* [[ARRAYIDX]], align 4, !tbaa [[TBAA0:![0-9]+]]
-; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <2 x double> [[TMP4]], i32 1
-; CHECK-NEXT:    [[VECINIT_I_I:%.*]] = insertelement <2 x double> poison, double [[TMP6]], i32 0
-; CHECK-NEXT:    [[X14:%.*]] = tail call i32 @_xfn(<2 x double> [[VECINIT_I_I]])
+; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <2 x double> [[TMP4]], <2 x double> poison, <2 x i32> <i32 1, i32 undef>
+; CHECK-NEXT:    [[X14:%.*]] = tail call i32 @_xfn(<2 x double> [[TMP5]])
 ; CHECK-NEXT:    [[ARRAYIDX26:%.*]] = getelementptr inbounds [256 x i32], [256 x i32]* [[TAB2]], i64 0, i64 [[INDVARS_IV266]]
 ; CHECK-NEXT:    store i32 [[X14]], i32* [[ARRAYIDX26]], align 4, !tbaa [[TBAA0]]
-; CHECK-NEXT:    [[TMP7]] = fadd <2 x double> [[TMP2]], [[TMP4]]
+; CHECK-NEXT:    [[TMP6]] = fadd <2 x double> [[TMP2]], [[TMP4]]
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT267]] = add nuw nsw i64 [[INDVARS_IV266]], 1
 ; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i64 [[INDVARS_IV_NEXT267]], 256
 ; CHECK-NEXT:    br i1 [[EXITCOND]], label [[RETURN:%.*]], label [[FOR_BODY]]

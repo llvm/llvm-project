@@ -57,6 +57,7 @@ intermediate LLVM representation.
    ResponseGuide
    Remarks
    SourceLevelDebugging
+   SPIRVUsage
    StackSafetyAnalysis
    SupportLibrary
    TableGen/index
@@ -243,3 +244,6 @@ Additional Topics
    This document describes a DWARF extension to allow location descriptions on
    the DWARF expression stack. It is part of
    :doc:`AMDGPUDwarfExtensionsForHeterogeneousDebugging`.
+
+:doc:`SPIRVUsage`
+   This document describes using the SPIR-V target to compile GPU kernels.

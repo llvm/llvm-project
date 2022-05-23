@@ -327,6 +327,14 @@ DIGlobal SymbolizableObjectFile::symbolizeData(
   std::string FileName;
   getNameFromSymbolTable(ModuleOffset.Address, Res.Name, Res.Start, Res.Size,
                          FileName);
+  Res.DeclFile = FileName;
+
+  // Try and get a better filename:lineno pair from the debuginfo, if present.
+  DILineInfo DL = DebugInfoContext->getLineInfoForDataAddress(ModuleOffset);
+  if (DL.Line != 0) {
+    Res.DeclFile = DL.FileName;
+    Res.DeclLine = DL.Line;
+  }
   return Res;
 }
 

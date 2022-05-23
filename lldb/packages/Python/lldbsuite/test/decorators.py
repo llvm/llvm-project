@@ -378,8 +378,8 @@ def apple_simulator_test(platform):
     The SDK identifiers for simulators are iphonesimulator, appletvsimulator, watchsimulator
     """
     def should_skip_simulator_test():
-        if lldbplatformutil.getHostPlatform() != 'darwin':
-            return "simulator tests are run only on darwin hosts"
+        if lldbplatformutil.getHostPlatform() not in ['darwin', 'macosx']:
+            return "simulator tests are run only on darwin hosts."
         try:
             DEVNULL = open(os.devnull, 'w')
             output = subprocess.check_output(["xcodebuild", "-showsdks"], stderr=DEVNULL).decode("utf-8")

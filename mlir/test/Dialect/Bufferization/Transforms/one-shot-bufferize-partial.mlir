@@ -142,7 +142,7 @@ func.func @unknown_op_may_read(%v: vector<5xf32>)
   // bufferizes out-of-place.
   // CHECK: %[[m1:.*]] = memref.alloc() {{.*}} : memref<10xf32>
   // CHECK: %[[alloc:.*]] = memref.alloc() {{.*}} : memref<10xf32>
-  %t1 = bufferization.alloc_tensor [10] : tensor<10xf32>
+  %t1 = bufferization.alloc_tensor() : tensor<10xf32>
 
   // CHECK: linalg.fill ins(%{{.*}}{{.*}}outs(%[[m1]]
   // CHECK: %[[filled_tensor:.*]] = bufferization.to_tensor %[[m1]]
