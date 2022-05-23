@@ -708,6 +708,7 @@ class VOP_DPP_Real <VOP_DPP_Pseudo ps, int EncodingFamily> :
   let isConvergent         = ps.isConvergent;
   let SubtargetPredicate   = ps.SubtargetPredicate;
   let AssemblerPredicate   = ps.AssemblerPredicate;
+  let OtherPredicates      = ps.OtherPredicates;
   let AsmMatchConverter    = ps.AsmMatchConverter;
   let AsmVariantName       = ps.AsmVariantName;
   let UseNamedOperandTable = ps.UseNamedOperandTable;

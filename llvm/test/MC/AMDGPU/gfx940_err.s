@@ -1,8 +1,19 @@
 // RUN: not llvm-mc -arch=amdgcn -mcpu=gfx940 %s 2>&1 | FileCheck --check-prefix=GFX940 --implicit-check-not=error: %s
 
 v_mac_f32 v0, v1, v2
-// FIXME: error message is incorrect
-// GFX940: error: operands are not valid for this GPU or mode
+// GFX940: error: instruction not supported on this GPU
+
+v_mac_f32_e64 v5, v1, v2
+// GFX940: error: instruction not supported on this GPU
+
+v_mac_f32_dpp v5, v1, v2 quad_perm:[0,1,2,3] row_mask:0xf bank_mask:0xf
+// GFX940: error: instruction not supported on this GPU
+
+v_mac_f32_dpp v5, v1, v2 dpp8:[7,6,5,4,3,2,1,0]
+// GFX940: error: instruction not supported on this GPU
+
+v_mac_f32_sdwa v5, v1, v2 dst_sel:DWORD dst_unused:UNUSED_PRESERVE src0_sel:DWORD src1_sel:DWORD
+// GFX940: error: instruction not supported on this GPU
 
 v_mad_f32 v0, v1, v2, v3
 // GFX940: error: instruction not supported on this GPU
