@@ -8165,7 +8165,10 @@ ScalarEvolution::BackedgeTakenInfo::getExact(const Loop *L, ScalarEvolution *SE,
            "Predicate should be always true!");
   }
 
-  return SE->getUMinFromMismatchedTypes(Ops);
+  // If an earlier exit exits on the first iteration (exit count zero), then
+  // a later poison exit count should not propagate into the result. This are
+  // exactly the semantics provided by umin_seq.
+  return SE->getUMinFromMismatchedTypes(Ops, /* Sequential */ true);
 }
 
 /// Get the exact not taken count for this loop exit.

@@ -45,6 +45,8 @@
 @e = private constant [9 x i8] c"constant\00", align 1
 @f = private constant i8 43, align 4
 
+@g = thread_local global i32 99, align 4
+
 ; ERROR: 'bulk-memory' feature must be used in order to use shared memory
 
 ; ACTIVE-LABEL: - Type:            CODE
@@ -77,7 +79,7 @@
 ; PASSIVE-LABEL: - Type:            START
 ; PASSIVE-NEXT:    StartFunction:   2
 ; PASSIVE-LABEL: - Type:            DATACOUNT
-; PASSIVE-NEXT:    Count:           2
+; PASSIVE-NEXT:    Count:           3
 ; PASSIVE-LABEL: - Type:            CODE
 ; PASSIVE-NEXT:    Functions:
 ; PASSIVE-NEXT:      - Index:           0
@@ -85,7 +87,7 @@
 ; PASSIVE-NEXT:        Body:            0B
 ; PASSIVE-NEXT:      - Index:           1
 ; PASSIVE-NEXT:        Locals:          []
-; PASSIVE-NEXT:        Body:            0B
+; PASSIVE-NEXT:        Body:            {{.*}}
 ; PASSIVE-NEXT:      - Index:           2
 ; PASSIVE-NEXT:        Locals:          []
 ; PASSIVE-NEXT:        Body:            {{.*}}
@@ -93,8 +95,11 @@
 ; PASSIVE-NEXT:    Segments:
 ; PASSIVE-NEXT:      - SectionOffset:   3
 ; PASSIVE-NEXT:        InitFlags:       1
+; PASSIVE-NEXT:        Content:         '63000000'
+; PASSIVE-NEXT:      - SectionOffset:   9
+; PASSIVE-NEXT:        InitFlags:       1
 ; PASSIVE-NEXT:        Content:         636F6E7374616E74000000002B
-; PASSIVE-NEXT:      - SectionOffset:   18
+; PASSIVE-NEXT:      - SectionOffset:   24
 ; PASSIVE-NEXT:        InitFlags:       1
 ; PASSIVE-NEXT:        Content:         68656C6C6F00676F6F646279650000002A000000
 ; PASSIVE-NEXT:  - Type:            CUSTOM
@@ -110,7 +115,7 @@
 ;      PASSIVE-PIC:  - Type:            START
 ; PASSIVE-PIC-NEXT:    StartFunction:   2
 ; PASSIVE-PIC-NEXT:  - Type:            DATACOUNT
-; PASSIVE-PIC-NEXT:    Count:           2
+; PASSIVE-PIC-NEXT:    Count:           3
 ; PASSIVE-PIC-NEXT:  - Type:            CODE
 ; PASSIVE-PIC-NEXT:    Functions:
 ; PASSIVE-PIC-NEXT:      - Index:           0
@@ -118,7 +123,7 @@
 ; PASSIVE-PIC-NEXT:        Body:            0B
 ; PASSIVE-PIC-NEXT:      - Index:           1
 ; PASSIVE-PIC-NEXT:        Locals:          []
-; PASSIVE-PIC-NEXT:        Body:            0B
+; PASSIVE-PIC-NEXT:        Body:            {{.*}}
 ; PASSIVE-PIC-NEXT:      - Index:           2
 ; PASSIVE-PIC-NEXT:        Locals:
 ; PASSIVE32-PIC-NEXT:          - Type:            I32
@@ -132,8 +137,11 @@
 ; PASSIVE-PIC-NEXT:    Segments:
 ; PASSIVE-PIC-NEXT:      - SectionOffset:   3
 ; PASSIVE-PIC-NEXT:        InitFlags:       1
+; PASSIVE-PIC-NEXT:        Content:         '63000000'
+; PASSIVE-PIC-NEXT:      - SectionOffset:   9
+; PASSIVE-PIC-NEXT:        InitFlags:       1
 ; PASSIVE-PIC-NEXT:        Content:         636F6E7374616E74000000002B
-; PASSIVE-PIC-NEXT:      - SectionOffset:   18
+; PASSIVE-PIC-NEXT:      - SectionOffset:   24
 ; PASSIVE-PIC-NEXT:        InitFlags:       1
 ; PASSIVE-PIC-NEXT:        Content:         68656C6C6F00676F6F646279650000002A000000
 ; PASSIVE-PIC-NEXT:  - Type:            CUSTOM
@@ -152,7 +160,7 @@
 
 ; PIC-DIS:           .local [[PTR]]
 ; PIC-DIS-NEXT:      global.get      1
-; PIC-DIS-NEXT:      [[PTR]].const   10036
+; PIC-DIS-NEXT:      [[PTR]].const   10040
 ; PIC-DIS-NEXT:      [[PTR]].add
 ; PIC-DIS-NEXT:      local.set       0
 
@@ -160,7 +168,7 @@
 ; DIS-NEXT:           block
 ; DIS-NEXT:            block
 
-; NOPIC-DIS-NEXT:       [[PTR]].const   11060
+; NOPIC-DIS-NEXT:       [[PTR]].const   11064
 ; PIC-DIS-NEXT:         local.get       0
 
 ; DIS-NEXT:             i32.const       0
@@ -170,25 +178,25 @@
 ; DIS-NEXT:                                            # 2:     down to label0
 ; DIS-NEXT:            end
 
-; NOPIC-DIS-NEXT:      [[PTR]].const   1024
-; PIC-DIS-NEXT:        [[PTR]].const   0
+; NOPIC-DIS-NEXT:      [[PTR]].const   1028
+; PIC-DIS-NEXT:        [[PTR]].const   4
 ; PIC-DIS-NEXT:        global.get      1
 ; PIC-DIS-NEXT:        [[PTR]].add
 
 ; DIS-NEXT:            i32.const       0
 ; DIS-NEXT:            i32.const       13
-; DIS-NEXT:            memory.init     0, 0
+; DIS-NEXT:            memory.init     1, 0
 
-; NOPIC-DIS-NEXT:      [[PTR]].const   1040
-; PIC-DIS-NEXT:        [[PTR]].const   16
+; NOPIC-DIS-NEXT:      [[PTR]].const   1044
+; PIC-DIS-NEXT:        [[PTR]].const   20
 ; PIC-DIS-NEXT:        global.get      1
 ; PIC-DIS-NEXT:        [[PTR]].add
 
 ; DIS-NEXT:            i32.const       0
 ; DIS-NEXT:            i32.const       20
-; DIS-NEXT:            memory.init     1, 0
-; NOPIC-DIS-NEXT:      [[PTR]].const   1060
-; PIC-DIS-NEXT:        [[PTR]].const   36
+; DIS-NEXT:            memory.init     2, 0
+; NOPIC-DIS-NEXT:      [[PTR]].const   1064
+; PIC-DIS-NEXT:        [[PTR]].const   40
 ; PIC-DIS-NEXT:        global.get      1
 ; PIC-DIS-NEXT:        [[PTR]].add
 ; DIS-NEXT:            i32.const       0
@@ -197,13 +205,13 @@
 
 ; PIC-DIS-NEXT:        call 3
 
-; NOPIC-DIS-NEXT:      [[PTR]].const   11060
+; NOPIC-DIS-NEXT:      [[PTR]].const   11064
 ; PIC-DIS-NEXT:        local.get       0
 
 ; DIS-NEXT:            i32.const       2
 ; DIS-NEXT:            i32.atomic.store        0
 
-; NOPIC-DIS-NEXT:      [[PTR]].const   11060
+; NOPIC-DIS-NEXT:      [[PTR]].const   11064
 ; PIC-DIS-NEXT:        local.get       0
 
 ; DIS-NEXT:            i32.const       -1
@@ -212,7 +220,7 @@
 ; DIS-NEXT:            br              1               # 1:     down to label1
 ; DIS-NEXT:           end
 
-; NOPIC-DIS-NEXT:     [[PTR]].const   11060
+; NOPIC-DIS-NEXT:     [[PTR]].const   11064
 ; PIC-DIS-NEXT:       local.get       0
 
 ; DIS-NEXT:           i32.const       1
@@ -220,6 +228,6 @@
 ; DIS-NEXT:           memory.atomic.wait32    0
 ; DIS-NEXT:           drop
 ; DIS-NEXT:          end
-; DIS-NEXT:          data.drop       0
 ; DIS-NEXT:          data.drop       1
+; DIS-NEXT:          data.drop       2
 ; DIS-NEXT:         end

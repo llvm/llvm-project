@@ -2049,9 +2049,9 @@ void LLVM::ShuffleVectorOp::build(OpBuilder &b, OperationState &result,
                                   Value v1, Value v2, ArrayAttr mask,
                                   ArrayRef<NamedAttribute> attrs) {
   auto containerType = v1.getType();
-  auto vType = LLVM::getVectorType(
-      LLVM::getVectorElementType(containerType), mask.size(),
-      containerType.cast<VectorType>().isScalable());
+  auto vType = LLVM::getVectorType(LLVM::getVectorElementType(containerType),
+                                   mask.size(),
+                                   LLVM::isScalableVectorType(containerType));
   build(b, result, vType, v1, v2, mask);
   result.addAttributes(attrs);
 }

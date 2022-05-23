@@ -1090,7 +1090,7 @@ private:
   }
 
   bool shouldExtendGSIndex(EVT VT, EVT &EltTy) const override;
-  bool shouldRemoveExtendFromGSIndex(EVT VT) const override;
+  bool shouldRemoveExtendFromGSIndex(EVT IndexVT, EVT DataVT) const override;
   bool isVectorLoadExtDesirable(SDValue ExtVal) const override;
   bool isUsedByReturnOnly(SDNode *N, SDValue &Chain) const override;
   bool mayBeEmittedAsTailCall(const CallInst *CI) const override;
