@@ -329,6 +329,11 @@ static cl::opt<bool> EnablePromoteKernelArguments(
     cl::desc("Enable promotion of flat kernel pointer arguments to global"),
     cl::Hidden, cl::init(true));
 
+static cl::opt<bool> EnableImageIntrinsicOptimizer(
+    "amdgpu-enable-image-intrinsic-optimizer",
+    cl::desc("Enable image intrinsic optimizer pass"), cl::init(true),
+    cl::Hidden);
+
 extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAMDGPUTarget() {
   // Register the target
   RegisterTargetMachine<R600TargetMachine> X(getTheAMDGPUTarget());
@@ -610,8 +615,6 @@ void AMDGPUTargetMachine::adjustPassManager(PassManagerBuilder &Builder) {
       PM.add(llvm::createAMDGPUUseNativeCallsPass());
       if (LibCallSimplify)
         PM.add(llvm::createAMDGPUSimplifyLibCallsPass(this));
-      if (getOptLevel() >= CodeGenOpt::Default)
-        PM.add(llvm::createAMDGPUImageIntrinsicOptimizerPass(this));
   });
 
   Builder.addExtension(
@@ -730,8 +733,6 @@ void AMDGPUTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB) {
         FPM.addPass(AMDGPUUseNativeCallsPass());
         if (EnableLibCallSimplify && Level != OptimizationLevel::O0)
           FPM.addPass(AMDGPUSimplifyLibCallsPass(*this));
-        if (getOptLevel() >= CodeGenOpt::Default)
-          FPM.addPass(AMDGPUImageIntrinsicOptimizerPass(*this));
         PM.addPass(createModuleToFunctionPassAdaptor(std::move(FPM)));
       });
 
@@ -1005,7 +1006,7 @@ void AMDGPUPassConfig::addIRPasses() {
   // A call to propagate attributes pass in the backend in case opt was not run.
   addPass(createAMDGPUPropagateAttributesEarlyPass(&TM));
 
-  if (TM.getOptLevel() >= CodeGenOpt::Default)
+  if (isPassEnabled(EnableImageIntrinsicOptimizer))
     addPass(createAMDGPUImageIntrinsicOptimizerPass(&TM));
 
   addPass(createAMDGPULowerIntrinsicsPass());

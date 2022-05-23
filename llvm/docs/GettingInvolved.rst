@@ -204,7 +204,7 @@ writing, the following sync-ups are organized:
    * - LLVM Pointer Authentication
      - Every month on Mondays
      - `ics <https://calendar.google.com/calendar/ical/fr1qtmrmt2s9odufjvurkb6j70%40group.calendar.google.com/public/basic.ics>`__
-     - `Minutes/docs <https://docs.google.com/document/d/14IDnh3YY9m6Ej_PaRKOz8tTTZlObgtLl8mYeRbytAec/edit?usp=sharing>`__
+     - `Minutes/docs <https://discourse.llvm.org/t/llvm-pointer-authentication-sync-ups/62661>`__
    * - MemorySSA in LLVM
      - Every 8 weeks on Mondays
      - `ics <https://calendar.google.com/calendar/ical/c_1mincouiltpa24ac14of14lhi4%40group.calendar.google.com/public/basic.ics>`__
@@ -280,6 +280,32 @@ don't find anyone present, chances are they happen to be off that day.
     - Monthly, 2nd Thursday of the month at 17:00 BST - London time (9:00am PT except for 2 weeks in spring), 1 hour slot.
     - `GoogleMeet <https://meet.google.com/kdy-fdbv-nuk>`__
     - English, Russian, German (not fluently)
+
+
+Guidance for office hours hosts
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+* If you're interested in becoming an office hours host, please add your
+  information to the list above.
+* When starting an office hours session, consider typing something like "*Hi,
+  I'm available for chats in the next half hour at* video chat URL. *I'm
+  looking forward to having conversations on the video chat or here.*" on the
+  LLVM chat channels that you are already on. These could include:
+
+    * the `#office-hours Discord channel
+      <https://discord.com/channels/636084430946959380/976196303681896538>`__.
+    * :ref:`IRC`
+
+  Doing this can help:
+    * overcome potential anxiety to call in for a first time,
+    * people who prefer to first exchange a few messages through text chat
+      before dialing in, and
+    * remind the wider community that office hours do exist.
+* If you decide to no longer host office hours, please do remove your entry
+  from the list above.
+
+
+.. _IRC:
 
 IRC
 ---

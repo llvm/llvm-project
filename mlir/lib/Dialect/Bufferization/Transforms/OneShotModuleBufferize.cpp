@@ -32,7 +32,7 @@
 // Example: `foo` fails bufferization because %0 is not equivalent to any bbArg.
 // ```
 // func @foo() -> tensor<?xf32> {
-//   %0 = linalg.init_tensor [...] : tensor<?xf32>
+//   %0 = linalg.alloc_tensor [...] : tensor<?xf32>
 //   return %0 : tensor<?xf32>
 // }
 // ```
@@ -342,10 +342,8 @@ getFuncOpsOrderedByCalls(ModuleOp moduleOp,
         return callOp->emitError() << "expected a CallOp";
       func::FuncOp calledFunction = getCalledFunction(callOp);
       assert(calledFunction && "could not retrieved called func::FuncOp");
-      auto it = callerMap.try_emplace(calledFunction, DenseSet<Operation *>{});
-      it.first->getSecond().insert(callOp);
-      if (calledBy[calledFunction].count(funcOp) == 0) {
-        calledBy[calledFunction].insert(funcOp);
+      callerMap[calledFunction].insert(callOp);
+      if (calledBy[calledFunction].insert(funcOp).second) {
         numberCallOpsContainedInFuncOp[funcOp]++;
       }
       return WalkResult::advance();

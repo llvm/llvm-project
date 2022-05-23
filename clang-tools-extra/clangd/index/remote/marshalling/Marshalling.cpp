@@ -122,6 +122,7 @@ Marshaller::fromProtobuf(const RefsRequest *Message) {
     Req.Filter = clangd::RefKind::All;
   if (Message->limit())
     Req.Limit = Message->limit();
+  Req.WantContainer = Message->want_container();
   return Req;
 }
 
@@ -239,6 +240,7 @@ RefsRequest Marshaller::toProtobuf(const clangd::RefsRequest &From) {
   RPCRequest.set_filter(static_cast<uint32_t>(From.Filter));
   if (From.Limit)
     RPCRequest.set_limit(*From.Limit);
+  RPCRequest.set_want_container(From.WantContainer);
   return RPCRequest;
 }
 

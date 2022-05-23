@@ -2464,6 +2464,24 @@ void format_tests(TestFunction check, ExceptionTest check_exception) {
   check.template operator()<"hello {0:} {1:}">(SV("hello false true"), false, true);
   check.template operator()<"hello {1:} {0:}">(SV("hello true false"), false, true);
 
+  // *** Test many arguments ***
+
+  // [format.args]/1
+  // An instance of basic_format_args provides access to formatting arguments.
+  // Implementations should optimize the representation of basic_format_args
+  // for a small number of formatting arguments.
+  //
+  // These's no guidances what "a small number of formatting arguments" is.
+  // - fmtlib uses a 15 elements
+  // - libc++ uses 12 elements
+  // - MSVC STL uses a different approach regardless of the number of arguments
+  // - libstdc++ has no implementation yet
+  // fmtlib and libc++ use a similar approach, this approach can support 16
+  // elements (based on design choices both support less elements). This test
+  // makes sure "the large number of formatting arguments" code path is tested.
+  check.template operator()<"{}{}{}{}{}{}{}{}{}{}\t{}{}{}{}{}{}{}{}{}{}">(SV("1234567890\t1234567890"), 1, 2, 3, 4, 5,
+                                                                          6, 7, 8, 9, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 0);
+
   // ** Test invalid format strings ***
   check_exception("The format string terminates at a '{'", SV("{"));
   check_exception("The replacement field misses a terminating '}'", SV("{:"), 42);

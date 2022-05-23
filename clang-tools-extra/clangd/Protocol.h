@@ -835,6 +835,13 @@ enum DiagnosticTag {
 };
 llvm::json::Value toJSON(DiagnosticTag Tag);
 
+/// Structure to capture a description for an error code.
+struct CodeDescription {
+  /// An URI to open with more information about the diagnostic error.
+  std::string href;
+};
+llvm::json::Value toJSON(const CodeDescription &);
+
 struct CodeAction;
 struct Diagnostic {
   /// The range at which the message applies.
@@ -846,6 +853,9 @@ struct Diagnostic {
 
   /// The diagnostic's code. Can be omitted.
   std::string code;
+
+  /// An optional property to describe the error code.
+  llvm::Optional<CodeDescription> codeDescription;
 
   /// A human-readable string describing the source of this
   /// diagnostic, e.g. 'typescript' or 'super lint'.
@@ -874,7 +884,7 @@ struct Diagnostic {
 
   /// A data entry field that is preserved between a
   /// `textDocument/publishDiagnostics` notification
-  /// and`textDocument/codeAction` request.
+  /// and `textDocument/codeAction` request.
   /// Mutating users should associate their data with a unique key they can use
   /// to retrieve later on.
   llvm::json::Object data;

@@ -1768,7 +1768,7 @@ void Parser::ParseOpenMPEndAssumesDirective(SourceLocation Loc) {
 /// Parsing of simple OpenMP clauses like 'default' or 'proc_bind'.
 ///
 ///    default-clause:
-///         'default' '(' 'none' | 'shared'  | 'firstprivate' ')
+///         'default' '(' 'none' | 'shared'  | 'private' | 'firstprivate' ')
 ///
 ///    proc_bind-clause:
 ///         'proc_bind' '(' 'master' | 'close' | 'spread' ')
@@ -3586,7 +3586,7 @@ OMPClause *Parser::ParseOpenMPInteropClause(OpenMPClauseKind Kind,
 /// Parsing of simple OpenMP clauses like 'default' or 'proc_bind'.
 ///
 ///    default-clause:
-///         'default' '(' 'none' | 'shared' | 'firstprivate' ')'
+///         'default' '(' 'none' | 'shared' | 'private' | 'firstprivate' ')'
 ///
 ///    proc_bind-clause:
 ///         'proc_bind' '(' 'master' | 'close' | 'spread' ')'
@@ -3604,10 +3604,14 @@ OMPClause *Parser::ParseOpenMPSimpleClause(OpenMPClauseKind Kind,
   if (!Val || ParseOnly)
     return nullptr;
   if (getLangOpts().OpenMP < 51 && Kind == OMPC_default &&
-      static_cast<DefaultKind>(Val.getValue().Type) ==
-          OMP_DEFAULT_firstprivate) {
+      (static_cast<DefaultKind>(Val.getValue().Type) == OMP_DEFAULT_private ||
+       static_cast<DefaultKind>(Val.getValue().Type) ==
+           OMP_DEFAULT_firstprivate)) {
     Diag(Val.getValue().LOpen, diag::err_omp_invalid_dsa)
-        << getOpenMPClauseName(OMPC_firstprivate)
+        << getOpenMPClauseName(static_cast<DefaultKind>(Val.getValue().Type) ==
+                                       OMP_DEFAULT_private
+                                   ? OMPC_private
+                                   : OMPC_firstprivate)
         << getOpenMPClauseName(OMPC_default) << "5.1";
     return nullptr;
   }

@@ -12,6 +12,7 @@
 #include "AArch64TargetMachine.h"
 #include "AArch64.h"
 #include "AArch64MachineFunctionInfo.h"
+#include "AArch64MachineScheduler.h"
 #include "AArch64MacroFusion.h"
 #include "AArch64Subtarget.h"
 #include "AArch64TargetObjectFile.h"
@@ -474,15 +475,17 @@ public:
   ScheduleDAGInstrs *
   createPostMachineScheduler(MachineSchedContext *C) const override {
     const AArch64Subtarget &ST = C->MF->getSubtarget<AArch64Subtarget>();
+    ScheduleDAGMI *DAG =
+        new ScheduleDAGMI(C, std::make_unique<AArch64PostRASchedStrategy>(C),
+                          /* RemoveKillFlags=*/true);
     if (ST.hasFusion()) {
       // Run the Macro Fusion after RA again since literals are expanded from
       // pseudos then (v. addPreSched2()).
-      ScheduleDAGMI *DAG = createGenericSchedPostRA(C);
       DAG->addMutation(createAArch64MacroFusionDAGMutation());
       return DAG;
     }
 
-    return nullptr;
+    return DAG;
   }
 
   void addIRPasses()  override;

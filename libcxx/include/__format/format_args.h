@@ -12,8 +12,11 @@
 
 #include <__availability>
 #include <__config>
+#include <__format/format_arg.h>
+#include <__format/format_arg_store.h>
 #include <__format/format_fwd.h>
 #include <cstddef>
+#include <cstdint>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -26,29 +29,47 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 template <class _Context>
 class _LIBCPP_TEMPLATE_VIS _LIBCPP_AVAILABILITY_FORMAT basic_format_args {
 public:
-  // TODO FMT Implement [format.args]/5
-  // [Note 1: Implementations are encouraged to optimize the representation of
-  // basic_format_args for small number of formatting arguments by storing
-  // indices of type alternatives separately from values and packing the
-  // former. - end note]
-  // Note: Change  __format_arg_store to use a built-in array.
   _LIBCPP_HIDE_FROM_ABI basic_format_args() noexcept = default;
 
   template <class... _Args>
-  _LIBCPP_HIDE_FROM_ABI basic_format_args(
-      const __format_arg_store<_Context, _Args...>& __store) noexcept
-      : __size_(sizeof...(_Args)), __data_(__store.__args.data()) {}
+  _LIBCPP_HIDE_FROM_ABI basic_format_args(const __format_arg_store<_Context, _Args...>& __store) noexcept
+      : __size_(sizeof...(_Args)) {
+    if constexpr (sizeof...(_Args) != 0) {
+      if constexpr (__format::__use_packed_format_arg_store(sizeof...(_Args))) {
+        __values_ = __store.__storage.__values_;
+        __types_ = __store.__storage.__types_;
+      } else
+        __args_ = __store.__storage.__args_;
+    }
+  }
 
   _LIBCPP_HIDE_FROM_ABI
   basic_format_arg<_Context> get(size_t __id) const noexcept {
-    return __id < __size_ ? __data_[__id] : basic_format_arg<_Context>{};
+    if (__id >= __size_)
+      return basic_format_arg<_Context>{};
+
+    if (__format::__use_packed_format_arg_store(__size_))
+      return basic_format_arg<_Context>{__format::__get_packed_type(__types_, __id), __values_[__id]};
+
+    return __args_[__id];
   }
 
   _LIBCPP_HIDE_FROM_ABI size_t __size() const noexcept { return __size_; }
 
 private:
   size_t __size_{0};
-  const basic_format_arg<_Context>* __data_{nullptr};
+  // [format.args]/5
+  // [Note 1: Implementations are encouraged to optimize the representation of
+  // basic_format_args for small number of formatting arguments by storing
+  // indices of type alternatives separately from values and packing the
+  // former. - end note]
+  union {
+    struct {
+      const __basic_format_arg_value<_Context>* __values_;
+      uint64_t __types_;
+    };
+    const basic_format_arg<_Context>* __args_;
+  };
 };
 
 #endif //_LIBCPP_STD_VER > 17

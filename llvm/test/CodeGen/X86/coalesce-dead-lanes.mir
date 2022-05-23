@@ -14,6 +14,6 @@ body:             |
 # This used to hit an assertion:
 #   lib/CodeGen/RegisterCoalescer.cpp:1110: RegisterCoalescer::reMaterializeTrivialDef(...): Assertion `ValNo && "CopyMI input register not live"' failed.
 #
-# CHECK_LABEL: name:            foo
+# CHECK-LABEL: name:            foo
 # CHECK:       bb.0:
 # CHECK-NEXT:    $al = COPY undef %2:gr8

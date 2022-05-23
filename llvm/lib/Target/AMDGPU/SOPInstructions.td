@@ -873,9 +873,7 @@ def S_CBRANCH_I_FORK : SOPK_Pseudo <
   "$sdst, $simm16"
 >;
 
-let mayLoad = 1 in {
-// s_getreg_b32 should use hasSideEffects = 1 for tablegen to allow
-// its use in the readcyclecounter selection.
+// This is hasSideEffects to allow its use in readcyclecounter selection.
 // FIXME: Need to truncate immediate to 16-bits.
 def S_GETREG_B32 : SOPK_Pseudo <
   "s_getreg_b32",
@@ -885,7 +883,6 @@ def S_GETREG_B32 : SOPK_Pseudo <
   let SOPKZext = 1;
   let hasSideEffects = 1;
 }
-} // End mayLoad = 1
 
 let Defs = [MODE], Uses = [MODE] in {
 

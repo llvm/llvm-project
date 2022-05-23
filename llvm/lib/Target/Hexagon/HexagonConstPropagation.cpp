@@ -1217,8 +1217,8 @@ bool MachineConstEvaluator::evaluateCMPii(uint32_t Cmp, const APInt &A1,
   unsigned W2 = A2.getBitWidth();
   unsigned MaxW = (W1 >= W2) ? W1 : W2;
   if (Cmp & Comparison::U) {
-    const APInt Zx1 = A1.zextOrSelf(MaxW);
-    const APInt Zx2 = A2.zextOrSelf(MaxW);
+    APInt Zx1 = A1.zext(MaxW);
+    APInt Zx2 = A2.zext(MaxW);
     if (Cmp & Comparison::L)
       Result = Zx1.ult(Zx2);
     else if (Cmp & Comparison::G)
@@ -1227,8 +1227,8 @@ bool MachineConstEvaluator::evaluateCMPii(uint32_t Cmp, const APInt &A1,
   }
 
   // Signed comparison.
-  const APInt Sx1 = A1.sextOrSelf(MaxW);
-  const APInt Sx2 = A2.sextOrSelf(MaxW);
+  APInt Sx1 = A1.sext(MaxW);
+  APInt Sx2 = A2.sext(MaxW);
   if (Cmp & Comparison::L)
     Result = Sx1.slt(Sx2);
   else if (Cmp & Comparison::G)
@@ -1813,7 +1813,7 @@ bool MachineConstEvaluator::evaluateSplati(const APInt &A1, unsigned Bits,
       unsigned Count, APInt &Result) {
   assert(Count > 0);
   unsigned BW = A1.getBitWidth(), SW = Count*Bits;
-  APInt LoBits = (Bits < BW) ? A1.trunc(Bits) : A1.zextOrSelf(Bits);
+  APInt LoBits = (Bits < BW) ? A1.trunc(Bits) : A1.zext(Bits);
   if (Count > 1)
     LoBits = LoBits.zext(SW);
 
@@ -2538,9 +2538,9 @@ bool HexagonConstEvaluator::evaluateHexRSEQ32(RegisterSubReg RL, RegisterSubReg 
   }
 
   for (unsigned i = 0; i < HiVs.size(); ++i) {
-    APInt HV = HiVs[i].zextOrSelf(64) << 32;
+    APInt HV = HiVs[i].zext(64) << 32;
     for (unsigned j = 0; j < LoVs.size(); ++j) {
-      APInt LV = LoVs[j].zextOrSelf(64);
+      APInt LV = LoVs[j].zext(64);
       const Constant *C = intToConst(HV | LV);
       Result.add(C);
       if (Result.isBottom())

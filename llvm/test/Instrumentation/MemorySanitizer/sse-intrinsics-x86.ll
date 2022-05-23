@@ -249,9 +249,10 @@ define <4 x float> @test_x86_sse_max_ss(<4 x float> %a0, <4 x float> %a1) #0 {
 ; CHECK-DAG:    [[TMP1:%.*]] = load <4 x i32>, <4 x i32>* bitcast ([100 x i64]* @__msan_param_tls to <4 x i32>*), align 8
 ; CHECK-DAG:    [[TMP2:%.*]] = load <4 x i32>, <4 x i32>* inttoptr (i64 add (i64 ptrtoint ([100 x i64]* @__msan_param_tls to i64), i64 16) to <4 x i32>*), align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
-; CHECK-NEXT:    [[_MSPROP:%.*]] = or <4 x i32> [[TMP1]], [[TMP2]]
+; CHECK-NEXT:    [[TMP3:%.*]] = or <4 x i32> [[TMP1]], [[TMP2]]
+; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <4 x i32> [[TMP1]], <4 x i32> [[TMP3]], <4 x i32> <i32 4, i32 1, i32 2, i32 3>
 ; CHECK-NEXT:    [[RES:%.*]] = call <4 x float> @llvm.x86.sse.max.ss(<4 x float> [[A0:%.*]], <4 x float> [[A1:%.*]])
-; CHECK-NEXT:    store <4 x i32> [[_MSPROP]], <4 x i32>* bitcast ([100 x i64]* @__msan_retval_tls to <4 x i32>*), align 8
+; CHECK-NEXT:    store <4 x i32> [[TMP4]], <4 x i32>* bitcast ([100 x i64]* @__msan_retval_tls to <4 x i32>*), align 8
 ; CHECK-NEXT:    ret <4 x float> [[RES]]
 ;
   %res = call <4 x float> @llvm.x86.sse.max.ss(<4 x float> %a0, <4 x float> %a1) ; <<4 x float>> [#uses=1]
@@ -281,9 +282,10 @@ define <4 x float> @test_x86_sse_min_ss(<4 x float> %a0, <4 x float> %a1) #0 {
 ; CHECK-DAG:    [[TMP1:%.*]] = load <4 x i32>, <4 x i32>* bitcast ([100 x i64]* @__msan_param_tls to <4 x i32>*), align 8
 ; CHECK-DAG:    [[TMP2:%.*]] = load <4 x i32>, <4 x i32>* inttoptr (i64 add (i64 ptrtoint ([100 x i64]* @__msan_param_tls to i64), i64 16) to <4 x i32>*), align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
-; CHECK-NEXT:    [[_MSPROP:%.*]] = or <4 x i32> [[TMP1]], [[TMP2]]
+; CHECK-NEXT:    [[TMP3:%.*]] = or <4 x i32> [[TMP1]], [[TMP2]]
+; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <4 x i32> [[TMP1]], <4 x i32> [[TMP3]], <4 x i32> <i32 4, i32 1, i32 2, i32 3>
 ; CHECK-NEXT:    [[RES:%.*]] = call <4 x float> @llvm.x86.sse.min.ss(<4 x float> [[A0:%.*]], <4 x float> [[A1:%.*]])
-; CHECK-NEXT:    store <4 x i32> [[_MSPROP]], <4 x i32>* bitcast ([100 x i64]* @__msan_retval_tls to <4 x i32>*), align 8
+; CHECK-NEXT:    store <4 x i32> [[TMP4]], <4 x i32>* bitcast ([100 x i64]* @__msan_retval_tls to <4 x i32>*), align 8
 ; CHECK-NEXT:    ret <4 x float> [[RES]]
 ;
   %res = call <4 x float> @llvm.x86.sse.min.ss(<4 x float> %a0, <4 x float> %a1) ; <<4 x float>> [#uses=1]

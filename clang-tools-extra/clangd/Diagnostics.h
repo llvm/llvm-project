@@ -69,7 +69,7 @@ struct DiagBase {
   // Since File is only descriptive, we store a separate flag to distinguish
   // diags from the main file.
   bool InsideMainFile = false;
-  unsigned ID; // e.g. member of clang::diag, or clang-tidy assigned ID.
+  unsigned ID = 0; // e.g. member of clang::diag, or clang-tidy assigned ID.
   // Feature modules can make use of this field to propagate data from a
   // diagnostic to a CodeAction request. Each module should only append to the
   // list.
@@ -125,6 +125,10 @@ CodeAction toCodeAction(const Fix &D, const URIForFile &File);
 
 /// Convert from clang diagnostic level to LSP severity.
 int getSeverity(DiagnosticsEngine::Level L);
+
+/// Returns a URI providing more information about a particular diagnostic.
+llvm::Optional<std::string> getDiagnosticDocURI(Diag::DiagSource, unsigned ID,
+                                                llvm::StringRef Name);
 
 /// StoreDiags collects the diagnostics that can later be reported by
 /// clangd. It groups all notes for a diagnostic into a single Diag

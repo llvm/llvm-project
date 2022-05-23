@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "OrcTestCommon.h"
+#include "llvm/ADT/ScopeExit.h"
 #include "llvm/Config/llvm-config.h"
 #include "llvm/ExecutionEngine/Orc/Core.h"
 #include "llvm/ExecutionEngine/Orc/Shared/OrcError.h"
@@ -1410,6 +1411,7 @@ TEST(JITDylibTest, GetDFSLinkOrderTree) {
   // form a tree.
 
   ExecutionSession ES{std::make_unique<UnsupportedExecutorProcessControl>()};
+  auto _ = make_scope_exit([&]() { cantFail(ES.endSession()); });
 
   auto &LibA = ES.createBareJITDylib("A");
   auto &LibB = ES.createBareJITDylib("B");
@@ -1451,6 +1453,8 @@ TEST(JITDylibTest, GetDFSLinkOrderDiamond) {
   // contain a diamond.
 
   ExecutionSession ES{std::make_unique<UnsupportedExecutorProcessControl>()};
+  auto _ = make_scope_exit([&]() { cantFail(ES.endSession()); });
+
   auto &LibA = ES.createBareJITDylib("A");
   auto &LibB = ES.createBareJITDylib("B");
   auto &LibC = ES.createBareJITDylib("C");
@@ -1473,6 +1477,8 @@ TEST(JITDylibTest, GetDFSLinkOrderCycle) {
   // contain a cycle.
 
   ExecutionSession ES{std::make_unique<UnsupportedExecutorProcessControl>()};
+  auto _ = make_scope_exit([&]() { cantFail(ES.endSession()); });
+
   auto &LibA = ES.createBareJITDylib("A");
   auto &LibB = ES.createBareJITDylib("B");
   auto &LibC = ES.createBareJITDylib("C");
@@ -1549,6 +1555,37 @@ TEST_F(CoreAPIsStandardTest, RemoveJITDylibs) {
   EXPECT_THAT_EXPECTED(JD.getDFSLinkOrder(), Failed());
 
   BazMR->failMaterialization();
+}
+
+TEST(CoreAPIsExtraTest, SessionTeardownByFailedToMaterialize) {
+
+  auto RunTestCase = []() -> Error {
+    ExecutionSession ES{std::make_unique<UnsupportedExecutorProcessControl>(
+        std::make_shared<SymbolStringPool>())};
+    auto Foo = ES.intern("foo");
+    auto FooFlags = JITSymbolFlags::Exported;
+
+    auto &JD = ES.createBareJITDylib("Foo");
+    cantFail(JD.define(std::make_unique<SimpleMaterializationUnit>(
+        SymbolFlagsMap({{Foo, FooFlags}}),
+        [&](std::unique_ptr<MaterializationResponsibility> R) {
+          R->failMaterialization();
+        })));
+
+    auto Sym = ES.lookup({&JD}, Foo);
+    assert(!Sym && "Query should have failed");
+    cantFail(ES.endSession());
+    return Sym.takeError();
+  };
+
+  auto Err = RunTestCase();
+  EXPECT_TRUE(!!Err); // Expect that error occurred.
+  EXPECT_TRUE(
+      Err.isA<FailedToMaterialize>()); // Expect FailedToMaterialize error.
+
+  // Make sure that we can log errors, even though the session has been
+  // destroyed.
+  logAllUnhandledErrors(std::move(Err), nulls(), "");
 }
 
 } // namespace

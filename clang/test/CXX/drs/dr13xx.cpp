@@ -450,6 +450,13 @@ namespace dr1391 { // dr1391: partial
   }
 }
 
+namespace dr1394 { // dr1394: 15
+#if __cplusplus >= 201103L
+struct Incomplete;
+Incomplete f(Incomplete) = delete; // well-formed
+#endif
+}
+
 namespace dr1399 { // dr1399: dup 1388
   template<typename ...T> void f(T..., int, T...) {} // expected-note {{candidate}} expected-error 0-1{{C++11}}
   void g() {
