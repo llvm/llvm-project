@@ -71,8 +71,49 @@ ConstraintManager::assumeDual(ProgramStateRef State, DefinedSVal Cond) {
   return ProgramStatePair(StTrue, StFalse);
 }
 
+ConstraintManager::ProgramStatePair
+ConstraintManager::assumeInclusiveRangeDual(ProgramStateRef State, NonLoc Value,
+                                            const llvm::APSInt &From,
+                                            const llvm::APSInt &To) {
+  ProgramStateRef StInRange =
+      assumeInclusiveRangeInternal(State, Value, From, To, true);
+  if (!StInRange) {
+    ProgramStateRef StOutOfRange =
+        assumeInclusiveRangeInternal(State, Value, From, To, false);
+    if (LLVM_UNLIKELY(!StOutOfRange)) { // both infeasible
+      ProgramStateRef StInfeasible = State->cloneAsPosteriorlyOverconstrained();
+      assert(StInfeasible->isPosteriorlyOverconstrained());
+      // Checkers might rely on the API contract that both returned states
+      // cannot be null. Thus, we return StInfeasible for both branches because
+      // it might happen that a Checker uncoditionally uses one of them if the
+      // other is a nullptr. This may also happen with the non-dual and
+      // adjacent `assume(true)` and `assume(false)` calls. By implementing
+      // assume in therms of assumeDual, we can keep our API contract there as
+      // well.
+      return ProgramStatePair(StInfeasible, StInfeasible);
+    }
+  }
+
+  ProgramStateRef StOutOfRange =
+      assumeInclusiveRangeInternal(State, Value, From, To, false);
+  if (!StOutOfRange) {
+    return ProgramStatePair(StInRange, nullptr);
+  }
+
+  return ProgramStatePair(StInRange, StOutOfRange);
+}
+
 ProgramStateRef ConstraintManager::assume(ProgramStateRef State,
                                           DefinedSVal Cond, bool Assumption) {
   ConstraintManager::ProgramStatePair R = assumeDual(State, Cond);
   return Assumption ? R.first : R.second;
+}
+
+ProgramStateRef
+ConstraintManager::assumeInclusiveRange(ProgramStateRef State, NonLoc Value,
+                                        const llvm::APSInt &From,
+                                        const llvm::APSInt &To, bool InBound) {
+  ConstraintManager::ProgramStatePair R =
+      assumeInclusiveRangeDual(State, Value, From, To);
+  return InBound ? R.first : R.second;
 }
