@@ -136,10 +136,13 @@ void SetValueForKey(lldb::SBValue &v, llvm::json::Object &object,
   llvm::StringRef value = v.GetValue();
   llvm::StringRef summary = v.GetSummary();
   llvm::StringRef type_name = v.GetType().GetDisplayTypeName();
+  lldb::SBError error = v.GetError();
 
   std::string result;
   llvm::raw_string_ostream strm(result);
-  if (!value.empty()) {
+  if (!error.Success()) {
+    strm << "<error: " << error.GetCString() << ">";
+  } else if (!value.empty()) {
     strm << value;
     if (!summary.empty())
       strm << ' ' << summary;
