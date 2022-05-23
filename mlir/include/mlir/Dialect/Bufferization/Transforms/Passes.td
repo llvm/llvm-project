@@ -175,11 +175,13 @@ def OneShotBufferize : Pass<"one-shot-bufferize", "ModuleOp"> {
     example, `tensor.generate` is not in destination-passing style and always
     results in a new buffer allocation.
 
-    One-Shot Bufferize deallocates all buffers that it allocates. Returning or
-    yielding newly allocated buffers from a block can lead to bad performance
-    because additional buffer copies would be inserted. By default, such IR is
-    rejected by One-Shot Bufferize. If performance is not important, such IR can
-    be allowed with `allow-return-allocs=1`.
+    One-Shot Bufferize deallocates all buffers that it allocates. Yielding newly
+    allocated buffers from a block can lead to bad performance because
+    additional buffer copies are often needed to make sure that every buffer
+    allocation is also deallocated again. By default, such IR is rejected by
+    One-Shot Bufferize. Such IR can be allowed with `allow-return-allocs`.
+    Note that new buffer allocations that are returned from a function can
+    currently not be deallocated and leak.
 
     One-Shot Bufferize will by default reject IR that contains non-bufferizable
     op, i.e., ops that do not implemement BufferizableOpInterface. Such IR can
@@ -207,13 +209,6 @@ def OneShotBufferize : Pass<"one-shot-bufferize", "ModuleOp"> {
     behavior can be overridden with `unknown-type-conversion`. Valid values are
     `fully-dynamic-layout-map` and `identity-layout-map`.
 
-    Layout maps on function signatures can be controlled with a separate
-    `function-boundary-type-conversion` option, which can be set to
-    `infer-layout-map` in addition to the two possible values mentioned above.
-    When layout maps are referred, function return types may be more precise.
-    Function argument types cannot be inferred and have fully dynamic layout
-    maps in that case.
-
     For testing/debugging purposes, `test-analysis-only=1 print-conflicts=1`
     prints analysis results and explains why an OpOperand was decided to
     bufferize out-of-place. This is useful for understanding why One-Shot
@@ -224,13 +219,30 @@ def OneShotBufferize : Pass<"one-shot-bufferize", "ModuleOp"> {
     and supports only simple cases at the moment. In particular:
 
     * Recursive or circular function call graphs are not supported.
-    * If a newly allocated buffer is returned from a function (with
-      `allow-return-allocs`), the buffer will never be deallocated and leak.
-      Such IR needs special handling, e.g., allocation hoisting or reference
-      counting.
+    * When a returned tensor can be proven to be equivalent to a tensor function
+      argument, the return value disappears. Instead, the buffer of the tensor
+      argument is modified in-place.
+    * Returning non-equivalent tensors is forbidden by default and must be
+      explicitly activated with `allow-return-allocs`. If such a tensor happens
+      to bufferize to a new memory allocation, this buffer will never be
+      deallocated and leak. Such IR needs special handling, e.g., allocation
+      hoisting or reference counting.
+    * Non-equivalent returned tensors of fully static size can be promoted to
+      function arguments with `promote-buffer-results-to-out-params`. In that
+      case, buffers for such tensors are allocated at each call site. Instead of
+      returning a buffer, the buffer contents are copied into these allocations.
     * External functions (without bodies) that return a tensor are not
       supported.
     * Function with multiple blocks or multiple ReturnOps are not supported.
+    * Layout maps on function signatures can be controlled with a separate
+      `function-boundary-type-conversion` option, which is similar to
+      `unknown-type-conversion` but supports an additional `infer-layout-map`
+      option. `fully-dynamic-layout-map` and `identity-layout-map` ensure that
+      function signatures bufferize to easily predictable types, potentially at
+      the cost of additional casts and copies, respectively. When layout maps
+      are inferred, function return types may be more precise, but less
+      predictable. Function argument types cannot be inferred and always have
+      fully dynamic layout maps with `infer-layout-map`.
 
     One-Shot Bufferize implements the following contract around function calls:
     The buffer of function arguments is always writable (unless annotated with
