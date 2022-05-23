@@ -187,6 +187,28 @@ def LLVM_CoroResumeOp : LLVM_IntrOp<"coro.resume", [], [], [], 0> {
 }
 
 //
+// Variadic function intrinsics.
+//
+
+def LLVM_VaStartOp : LLVM_ZeroResultIntrOp<"vastart">,
+                     Arguments<(ins LLVM_i8Ptr:$arg_list)> {
+  let assemblyFormat = "$arg_list attr-dict";
+  let summary = "Initializes `arg_list` for subsequent variadic argument extractions.";
+}
+
+def LLVM_VaCopyOp : LLVM_ZeroResultIntrOp<"vacopy">,
+                    Arguments<(ins LLVM_i8Ptr:$dest_list, LLVM_i8Ptr:$src_list)> {
+  let assemblyFormat = "$src_list `to` $dest_list attr-dict";
+  let summary = "Copies the current argument position from `src_list` to `dest_list`.";
+}
+
+def LLVM_VaEndOp : LLVM_ZeroResultIntrOp<"vaend">,
+                   Arguments<(ins LLVM_i8Ptr:$arg_list)> {
+  let assemblyFormat = "$arg_list attr-dict";
+  let summary = "Destroys `arg_list`, which has been initialized by `intr.vastart` or `intr.vacopy`.";
+}
+
+//
 // Exception handling intrinsics.
 //
 
