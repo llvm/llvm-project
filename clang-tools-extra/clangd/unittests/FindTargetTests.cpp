@@ -268,6 +268,17 @@ TEST_F(TargetDeclTest, UsingDecl) {
   EXPECT_DECLS("DeducedTemplateSpecializationTypeLoc",
                {"using ns::S", Rel::Alias}, {"template <typename T> class S"},
                {"class S", Rel::TemplatePattern});
+
+  Code = R"cpp(
+    template<typename T>
+    class Foo { public: class foo {}; };
+    template <class T> class A : public Foo<T> {
+      using typename Foo<T>::foo;
+      [[foo]] abc;
+    };
+  )cpp";
+  EXPECT_DECLS("UnresolvedUsingTypeLoc",
+               {"using typename Foo<T>::foo", Rel::Alias});
 }
 
 TEST_F(TargetDeclTest, BaseSpecifier) {

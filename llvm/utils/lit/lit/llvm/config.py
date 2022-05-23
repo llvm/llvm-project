@@ -56,6 +56,17 @@ class LLVMConfig(object):
         if not self.use_lit_shell:
             features.add('shell')
 
+        self.with_system_environment([
+            'ASAN_SYMBOLIZER_PATH',
+            'MSAN_SYMBOLIZER_PATH',
+            'TSAN_SYMBOLIZER_PATH',
+            'UBSAN_SYMBOLIZER_PATH'
+            'ASAN_OPTIONS',
+            'MSAN_OPTIONS',
+            'TSAN_OPTIONS',
+            'UBSAN_OPTIONS',
+        ])
+
         # Running on Darwin OS
         if platform.system() == 'Darwin':
             # FIXME: lld uses the first, other projects use the second.

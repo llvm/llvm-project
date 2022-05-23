@@ -122,6 +122,7 @@ static void diagnoseBadTypeAttribute(Sema &S, const ParsedAttr &attr,
   case ParsedAttr::AT_VectorCall:                                              \
   case ParsedAttr::AT_AArch64VectorPcs:                                        \
   case ParsedAttr::AT_AArch64SVEPcs:                                           \
+  case ParsedAttr::AT_AMDGPUKernelCall:                                        \
   case ParsedAttr::AT_MSABI:                                                   \
   case ParsedAttr::AT_SysVABI:                                                 \
   case ParsedAttr::AT_Pcs:                                                     \
@@ -5181,15 +5182,11 @@ static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
       if ((T.getCVRQualifiers() || T->isAtomicType()) &&
           !(S.getLangOpts().CPlusPlus &&
             (T->isDependentType() || T->isRecordType()))) {
-        if (T->isVoidType() && !S.getLangOpts().CPlusPlus &&
-            D.getFunctionDefinitionKind() ==
-                FunctionDefinitionKind::Definition) {
-          // [6.9.1/3] qualified void return is invalid on a C
-          // function definition.  Apparently ok on declarations and
-          // in C++ though (!)
-          S.Diag(DeclType.Loc, diag::err_func_returning_qualified_void) << T;
-        } else
-          diagnoseRedundantReturnTypeQualifiers(S, T, D, chunkIndex);
+        // WG14 DR 423 updated 6.7.6.3p4 to have the function declarator drop
+        // all qualifiers from the return type.
+        diagnoseRedundantReturnTypeQualifiers(S, T, D, chunkIndex);
+        if (!S.getLangOpts().CPlusPlus)
+          T = T.getAtomicUnqualifiedType();
 
         // C++2a [dcl.fct]p12:
         //   A volatile-qualified return type is deprecated
@@ -7486,6 +7483,8 @@ static Attr *getCCTypeAttr(ASTContext &Ctx, ParsedAttr &Attr) {
     return createSimpleAttr<AArch64VectorPcsAttr>(Ctx, Attr);
   case ParsedAttr::AT_AArch64SVEPcs:
     return createSimpleAttr<AArch64SVEPcsAttr>(Ctx, Attr);
+  case ParsedAttr::AT_AMDGPUKernelCall:
+    return createSimpleAttr<AMDGPUKernelCallAttr>(Ctx, Attr);
   case ParsedAttr::AT_Pcs: {
     // The attribute may have had a fixit applied where we treated an
     // identifier as a string literal.  The contents of the string are valid,

@@ -741,8 +741,7 @@ static bool narrowSDivOrSRem(BinaryOperator *Instr, LazyValueInfo *LVI) {
   // sdiv/srem is UB if divisor is -1 and divident is INT_MIN, so unless we can
   // prove that such a combination is impossible, we need to bump the bitwidth.
   if (CRs[1]->contains(APInt::getAllOnes(OrigWidth)) &&
-      CRs[0]->contains(
-          APInt::getSignedMinValue(MinSignedBits).sextOrSelf(OrigWidth)))
+      CRs[0]->contains(APInt::getSignedMinValue(MinSignedBits).sext(OrigWidth)))
     ++MinSignedBits;
 
   // Don't shrink below 8 bits wide.

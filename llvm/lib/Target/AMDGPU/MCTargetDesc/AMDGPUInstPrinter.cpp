@@ -607,8 +607,8 @@ void AMDGPUInstPrinter::printDefaultVccOperand(bool FirstOperand,
 }
 
 void AMDGPUInstPrinter::printWaitVDST(const MCInst *MI, unsigned OpNo,
-                                    const MCSubtargetInfo &STI,
-                                    raw_ostream &O) {
+                                      const MCSubtargetInfo &STI,
+                                      raw_ostream &O) {
   uint8_t Imm = MI->getOperand(OpNo).getImm();
   if (Imm != 0) {
     O << " wait_vdst:";

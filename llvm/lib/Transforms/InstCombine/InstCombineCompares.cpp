@@ -2872,10 +2872,13 @@ Instruction *InstCombinerImpl::foldICmpBitCast(ICmpInst &Cmp) {
   ICmpInst::Predicate Pred = Cmp.getPredicate();
   Value *Op1 = Cmp.getOperand(1);
   Value *BCSrcOp = Bitcast->getOperand(0);
+  Type *SrcType = Bitcast->getSrcTy();
+  Type *DstType = Bitcast->getType();
 
-  // Make sure the bitcast doesn't change the number of vector elements.
-  if (Bitcast->getSrcTy()->getScalarSizeInBits() ==
-          Bitcast->getDestTy()->getScalarSizeInBits()) {
+  // Make sure the bitcast doesn't change between scalar and vector and
+  // doesn't change the number of vector elements.
+  if (SrcType->isVectorTy() == DstType->isVectorTy() &&
+      SrcType->getScalarSizeInBits() == DstType->getScalarSizeInBits()) {
     // Zero-equality and sign-bit checks are preserved through sitofp + bitcast.
     Value *X;
     if (match(BCSrcOp, m_SIToFP(m_Value(X)))) {
@@ -2920,8 +2923,7 @@ Instruction *InstCombinerImpl::foldICmpBitCast(ICmpInst &Cmp) {
         Type *XType = X->getType();
 
         // We can't currently handle Power style floating point operations here.
-        if (!(XType->isPPC_FP128Ty() || BCSrcOp->getType()->isPPC_FP128Ty())) {
-
+        if (!(XType->isPPC_FP128Ty() || SrcType->isPPC_FP128Ty())) {
           Type *NewType = Builder.getIntNTy(XType->getScalarSizeInBits());
           if (auto *XVTy = dyn_cast<VectorType>(XType))
             NewType = VectorType::get(NewType, XVTy->getElementCount());
@@ -2939,21 +2941,19 @@ Instruction *InstCombinerImpl::foldICmpBitCast(ICmpInst &Cmp) {
 
   // Test to see if the operands of the icmp are casted versions of other
   // values. If the ptr->ptr cast can be stripped off both arguments, do so.
-  if (Bitcast->getType()->isPointerTy() &&
-      (isa<Constant>(Op1) || isa<BitCastInst>(Op1))) {
+  if (DstType->isPointerTy() && (isa<Constant>(Op1) || isa<BitCastInst>(Op1))) {
     // If operand #1 is a bitcast instruction, it must also be a ptr->ptr cast
     // so eliminate it as well.
     if (auto *BC2 = dyn_cast<BitCastInst>(Op1))
       Op1 = BC2->getOperand(0);
 
-    Op1 = Builder.CreateBitCast(Op1, BCSrcOp->getType());
+    Op1 = Builder.CreateBitCast(Op1, SrcType);
     return new ICmpInst(Pred, BCSrcOp, Op1);
   }
 
   const APInt *C;
-  if (!match(Cmp.getOperand(1), m_APInt(C)) ||
-      !Bitcast->getType()->isIntegerTy() ||
-      !Bitcast->getSrcTy()->isIntOrIntVectorTy())
+  if (!match(Cmp.getOperand(1), m_APInt(C)) || !DstType->isIntegerTy() ||
+      !SrcType->isIntOrIntVectorTy())
     return nullptr;
 
   // If this is checking if all elements of a vector compare are set or not,
@@ -2965,9 +2965,8 @@ Instruction *InstCombinerImpl::foldICmpBitCast(ICmpInst &Cmp) {
   // TODO: Try harder to reduce compare of 2 freely invertible operands?
   if (Cmp.isEquality() && C->isAllOnes() && Bitcast->hasOneUse() &&
       isFreeToInvert(BCSrcOp, BCSrcOp->hasOneUse())) {
-    Type *ScalarTy = Bitcast->getType();
-    Value *Cast = Builder.CreateBitCast(Builder.CreateNot(BCSrcOp), ScalarTy);
-    return new ICmpInst(Pred, Cast, ConstantInt::getNullValue(ScalarTy));
+    Value *Cast = Builder.CreateBitCast(Builder.CreateNot(BCSrcOp), DstType);
+    return new ICmpInst(Pred, Cast, ConstantInt::getNullValue(DstType));
   }
 
   // If this is checking if all elements of an extended vector are clear or not,
@@ -2995,7 +2994,7 @@ Instruction *InstCombinerImpl::foldICmpBitCast(ICmpInst &Cmp) {
   if (match(BCSrcOp, m_Shuffle(m_Value(Vec), m_Undef(), m_Mask(Mask)))) {
     // Check whether every element of Mask is the same constant
     if (is_splat(Mask)) {
-      auto *VecTy = cast<VectorType>(BCSrcOp->getType());
+      auto *VecTy = cast<VectorType>(SrcType);
       auto *EltTy = cast<IntegerType>(VecTy->getElementType());
       if (C->isSplat(EltTy->getBitWidth())) {
         // Fold the icmp based on the value of C
@@ -3017,33 +3016,31 @@ Instruction *InstCombinerImpl::foldICmpBitCast(ICmpInst &Cmp) {
 /// where X is some kind of instruction.
 Instruction *InstCombinerImpl::foldICmpInstWithConstant(ICmpInst &Cmp) {
   const APInt *C;
-  if (!match(Cmp.getOperand(1), m_APInt(C)))
-    return nullptr;
 
-  if (auto *BO = dyn_cast<BinaryOperator>(Cmp.getOperand(0))) {
-    if (Instruction *I = foldICmpBinOpWithConstant(Cmp, BO, *C))
-      return I;
-  }
+  if (match(Cmp.getOperand(1), m_APInt(C))) {
+    if (auto *BO = dyn_cast<BinaryOperator>(Cmp.getOperand(0)))
+      if (Instruction *I = foldICmpBinOpWithConstant(Cmp, BO, *C))
+        return I;
 
-  // Match against CmpInst LHS being instructions other than binary operators.
+    if (auto *SI = dyn_cast<SelectInst>(Cmp.getOperand(0)))
+      // For now, we only support constant integers while folding the
+      // ICMP(SELECT)) pattern. We can extend this to support vector of integers
+      // similar to the cases handled by binary ops above.
+      if (auto *ConstRHS = dyn_cast<ConstantInt>(Cmp.getOperand(1)))
+        if (Instruction *I = foldICmpSelectConstant(Cmp, SI, ConstRHS))
+          return I;
 
-  if (auto *SI = dyn_cast<SelectInst>(Cmp.getOperand(0))) {
-    // For now, we only support constant integers while folding the
-    // ICMP(SELECT)) pattern. We can extend this to support vector of integers
-    // similar to the cases handled by binary ops above.
-    if (ConstantInt *ConstRHS = dyn_cast<ConstantInt>(Cmp.getOperand(1)))
-      if (Instruction *I = foldICmpSelectConstant(Cmp, SI, ConstRHS))
+    if (auto *TI = dyn_cast<TruncInst>(Cmp.getOperand(0)))
+      if (Instruction *I = foldICmpTruncConstant(Cmp, TI, *C))
+        return I;
+
+    if (auto *II = dyn_cast<IntrinsicInst>(Cmp.getOperand(0)))
+      if (Instruction *I = foldICmpIntrinsicWithConstant(Cmp, II, *C))
         return I;
   }
 
-  if (auto *TI = dyn_cast<TruncInst>(Cmp.getOperand(0))) {
-    if (Instruction *I = foldICmpTruncConstant(Cmp, TI, *C))
-      return I;
-  }
-
-  if (auto *II = dyn_cast<IntrinsicInst>(Cmp.getOperand(0)))
-    if (Instruction *I = foldICmpIntrinsicWithConstant(Cmp, II, *C))
-      return I;
+  if (match(Cmp.getOperand(1), m_APIntAllowUndef(C)))
+    return foldICmpInstWithConstantAllowUndef(Cmp, *C);
 
   return nullptr;
 }
@@ -3200,12 +3197,6 @@ Instruction *InstCombinerImpl::foldICmpEqIntrinsicWithConstant(
   case Intrinsic::fshl:
   case Intrinsic::fshr:
     if (II->getArgOperand(0) == II->getArgOperand(1)) {
-      // (rot X, ?) == 0/-1 --> X == 0/-1
-      // TODO: This transform is safe to re-use undef elts in a vector, but
-      //       the constant value passed in by the caller doesn't allow that.
-      if (C.isZero() || C.isAllOnes())
-        return new ICmpInst(Pred, II->getArgOperand(0), Cmp.getOperand(1));
-
       const APInt *RotAmtC;
       // ror(X, RotAmtC) == C --> X == rol(C, RotAmtC)
       // rol(X, RotAmtC) == C --> X == ror(C, RotAmtC)
@@ -3273,6 +3264,31 @@ static Instruction *foldICmpIntrinsicWithIntrinsic(ICmpInst &Cmp) {
     return new ICmpInst(Pred, IIOp0->getOperand(0), IIOp1->getOperand(0));
   default:
     break;
+  }
+
+  return nullptr;
+}
+
+/// Try to fold integer comparisons with a constant operand: icmp Pred X, C
+/// where X is some kind of instruction and C is AllowUndef.
+/// TODO: Move more folds which allow undef to this function.
+Instruction *
+InstCombinerImpl::foldICmpInstWithConstantAllowUndef(ICmpInst &Cmp,
+                                                     const APInt &C) {
+  const ICmpInst::Predicate Pred = Cmp.getPredicate();
+  if (auto *II = dyn_cast<IntrinsicInst>(Cmp.getOperand(0))) {
+    switch (II->getIntrinsicID()) {
+    default:
+      break;
+    case Intrinsic::fshl:
+    case Intrinsic::fshr:
+      if (Cmp.isEquality() && II->getArgOperand(0) == II->getArgOperand(1)) {
+        // (rot X, ?) == 0/-1 --> X == 0/-1
+        if (C.isZero() || C.isAllOnes())
+          return new ICmpInst(Pred, II->getArgOperand(0), Cmp.getOperand(1));
+      }
+      break;
+    }
   }
 
   return nullptr;

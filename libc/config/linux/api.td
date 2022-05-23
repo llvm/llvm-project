@@ -1,5 +1,6 @@
 include "config/public_api.td"
 
+include "spec/bsd_ext.td"
 include "spec/gnu_ext.td"
 include "spec/linux.td"
 include "spec/llvm_libc_ext.td"

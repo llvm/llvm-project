@@ -126,6 +126,8 @@ StringExtractorGDBRemote::GetServerPacketType() const {
         return eServerPacketType_QSetWorkingDir;
       if (PACKET_STARTS_WITH("QSetLogging:"))
         return eServerPacketType_QSetLogging;
+      if (PACKET_STARTS_WITH("QSetIgnoredExceptions"))
+        return eServerPacketType_QSetIgnoredExceptions;
       if (PACKET_STARTS_WITH("QSetMaxPacketSize:"))
         return eServerPacketType_QSetMaxPacketSize;
       if (PACKET_STARTS_WITH("QSetMaxPayloadSize:"))

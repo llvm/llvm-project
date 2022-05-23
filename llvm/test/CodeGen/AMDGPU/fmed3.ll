@@ -970,7 +970,7 @@ define amdgpu_kernel void @two_non_inline_constant(float addrspace(1)* %out, flo
 
 ; FIXME: Simple stores do not work as a multiple use because they are bitcasted to integer constants.
 ; GCN-LABEL: {{^}}one_non_inline_constant:
-; GCN-DAG: s_mov_b32 [[K1:s[0-9]+]], 0x41800000
+; GCN-DAG: v_mov_b32_e32 [[K1:v[0-9]+]], 0x41800000
 ; GCN-DAG: v_add_f32_e32 [[ADD:v[0-9]+]], 0.5,
 ; GCN: v_med3_f32 v{{[0-9]+}}, [[ADD]], 1.0, [[K1]]
 define amdgpu_kernel void @one_non_inline_constant(float addrspace(1)* %out, float addrspace(1)* %aptr) #1 {
@@ -990,9 +990,8 @@ define amdgpu_kernel void @one_non_inline_constant(float addrspace(1)* %out, flo
 }
 
 ; GCN-LABEL: {{^}}two_non_inline_constant_multi_use:
-; GCN-DAG: s_mov_b32 [[K1:s[0-9]+]], 0x41800000
 ; GCN-DAG: s_mov_b32 [[K0:s[0-9]+]], 0x41000000
-; GCN-DAG: v_mov_b32_e32 [[VK1:v[0-9]+]], [[K1]]
+; GCN-DAG: v_mov_b32_e32 [[VK1:v[0-9]+]], 0x41800000
 ; GCN-DAG: v_add_f32_e32 [[ADD:v[0-9]+]], 0.5,
 ; GCN: v_med3_f32 v{{[0-9]+}}, [[ADD]], [[K0]], [[VK1]]
 define amdgpu_kernel void @two_non_inline_constant_multi_use(float addrspace(1)* %out, float addrspace(1)* %aptr) #1 {

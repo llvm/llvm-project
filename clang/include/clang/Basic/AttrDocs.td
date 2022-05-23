@@ -6000,9 +6000,6 @@ attribute `clang_builtin_alias`.
 def NoBuiltinDocs : Documentation {
   let Category = DocCatFunction;
   let Content = [{
-.. Note:: This attribute is not yet fully implemented, it is validated but has
-          no effect on the generated code.
-
 The ``__attribute__((no_builtin))`` is similar to the ``-fno-builtin`` flag
 except it is specific to the body of a function. The attribute may also be
 applied to a virtual function but has no effect on the behavior of overriding

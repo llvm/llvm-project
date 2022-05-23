@@ -248,6 +248,8 @@ public:
   /// w.r.t. what they should expand to.
   enum class AtomicExpansionKind {
     None,    // Don't expand the instruction.
+    CastToInteger,    // Cast the atomic instruction to another type, e.g. from
+                      // floating-point to integer type.
     LLSC,    // Expand the instruction into loadlinked/storeconditional; used
              // by ARM/AArch64.
     LLOnly,  // Expand the (load) instruction into just a load-linked, which has
@@ -1388,7 +1390,9 @@ public:
 
   // Returns true if VT is a legal index type for masked gathers/scatters
   // on this target
-  virtual bool shouldRemoveExtendFromGSIndex(EVT VT) const { return false; }
+  virtual bool shouldRemoveExtendFromGSIndex(EVT IndexVT, EVT DataVT) const {
+    return false;
+  }
 
   /// Return how the condition code should be treated: either it is legal, needs
   /// to be expanded to some other code sequence, or the target has a custom
@@ -2045,10 +2049,27 @@ public:
     return AtomicExpansionKind::None;
   }
 
+  /// Returns how the given (atomic) load should be cast by the IR-level
+  /// AtomicExpand pass.
+  virtual AtomicExpansionKind shouldCastAtomicLoadInIR(LoadInst *LI) const {
+    if (LI->getType()->isFloatingPointTy())
+      return AtomicExpansionKind::CastToInteger;
+    return AtomicExpansionKind::None;
+  }
+
   /// Returns how the given (atomic) store should be expanded by the IR-level
   /// AtomicExpand pass into. For instance AtomicExpansionKind::Expand will try
   /// to use an atomicrmw xchg.
   virtual AtomicExpansionKind shouldExpandAtomicStoreInIR(StoreInst *SI) const {
+    return AtomicExpansionKind::None;
+  }
+
+  /// Returns how the given (atomic) store should be cast by the IR-level
+  /// AtomicExpand pass into. For instance AtomicExpansionKind::CastToInteger
+  /// will try to cast the operands to integer values.
+  virtual AtomicExpansionKind shouldCastAtomicStoreInIR(StoreInst *SI) const {
+    if (SI->getValueOperand()->getType()->isFloatingPointTy())
+      return AtomicExpansionKind::CastToInteger;
     return AtomicExpansionKind::None;
   }
 
@@ -2064,6 +2085,17 @@ public:
   virtual AtomicExpansionKind shouldExpandAtomicRMWInIR(AtomicRMWInst *RMW) const {
     return RMW->isFloatingPointOperation() ?
       AtomicExpansionKind::CmpXChg : AtomicExpansionKind::None;
+  }
+
+  /// Returns how the given atomic atomicrmw should be cast by the IR-level
+  /// AtomicExpand pass.
+  virtual AtomicExpansionKind
+  shouldCastAtomicRMWIInIR(AtomicRMWInst *RMWI) const {
+    if (RMWI->getOperation() == AtomicRMWInst::Xchg &&
+        RMWI->getValOperand()->getType()->isFloatingPointTy())
+      return AtomicExpansionKind::CastToInteger;
+
+    return AtomicExpansionKind::None;
   }
 
   /// On some platforms, an AtomicRMW that never actually modifies the value

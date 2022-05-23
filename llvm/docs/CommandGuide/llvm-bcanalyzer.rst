@@ -28,25 +28,13 @@ OPTIONS
 
 .. program:: llvm-bcanalyzer
 
-.. option:: -nodetails
-
- Causes :program:`llvm-bcanalyzer` to abbreviate its output by writing out only
- a module level summary.  The details for individual functions are not
- displayed.
-
-.. option:: -dump
+.. option:: --dump
 
  Causes :program:`llvm-bcanalyzer` to dump the bitcode in a human readable
  format.  This format is significantly different from LLVM assembly and
  provides details about the encoding of the bitcode file.
 
-.. option:: -verify
-
- Causes :program:`llvm-bcanalyzer` to verify the module produced by reading the
- bitcode.  This ensures that the statistics generated are based on a consistent
- module.
-
-.. option:: -help
+.. option:: --help
 
  Print a summary of command line options.
 

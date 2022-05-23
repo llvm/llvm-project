@@ -3,9 +3,8 @@
 ; RUN: llc -amdgpu-scalarize-global-loads=false -march=amdgcn -mcpu=gfx900 -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GFX9,GFX89 %s
 
 ; GCN-LABEL: {{^}}v_mul_i16:
-; SI: s_mov_b32 [[K:s[0-9]+]], 0xffff{{$}}
-; SI: v_and_b32_e32 v{{[0-9]+}}, [[K]]
-; SI: v_and_b32_e32 v{{[0-9]+}}, [[K]]
+; SI: v_and_b32_e32 v{{[0-9]+}}, 0xffff, v{{[0-9]+}}
+; SI: v_and_b32_e32 v{{[0-9]+}}, 0xffff, v{{[0-9]+}}
 ; SI: v_mul_u32_u24
 
 ; GFX89: v_mul_lo_u16_e32 v0, v0, v1

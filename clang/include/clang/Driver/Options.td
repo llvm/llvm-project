@@ -2986,7 +2986,7 @@ def fenable_matrix : Flag<["-"], "fenable-matrix">, Group<f_Group>,
 
 def fzero_call_used_regs_EQ
     : Joined<["-"], "fzero-call-used-regs=">, Group<f_Group>, Flags<[CC1Option]>,
-      HelpText<"Clear call-used registers upon function return.">,
+      HelpText<"Clear call-used registers upon function return (AArch64/x86 only)">,
       Values<"skip,used-gpr-arg,used-gpr,used-arg,used,all-gpr-arg,all-gpr,all-arg,all">,
       NormalizedValues<["Skip", "UsedGPRArg", "UsedGPR", "UsedArg", "Used",
                         "AllGPRArg", "AllGPR", "AllArg", "All"]>,
@@ -4776,7 +4776,7 @@ def cpp : Flag<["-"], "cpp">, Group<f_Group>,
   HelpText<"Enable predefined and command line preprocessor macros">;
 def nocpp : Flag<["-"], "nocpp">, Group<f_Group>,
   HelpText<"Disable predefined and command line preprocessor macros">;
-def module_dir : Separate<["-"], "module-dir">, MetaVarName<"<dir>">,
+def module_dir : JoinedOrSeparate<["-"], "module-dir">, MetaVarName<"<dir>">,
   HelpText<"Put MODULE files in <dir>">,
   DocBrief<[{This option specifies where to put .mod files for compiled modules.
 It is also added to the list of directories to be searched by an USE statement.

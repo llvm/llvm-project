@@ -149,6 +149,11 @@ def FinalizingBufferize : Pass<"finalizing-bufferize", "func::FuncOp"> {
   let constructor = "mlir::bufferization::createFinalizingBufferizePass()";
 }
 
+def BufferizationBufferize : Pass<"bufferization-bufferize", "func::FuncOp"> {
+  let summary = "Bufferize the `bufferization` dialect";
+  let constructor = "mlir::bufferization::createBufferizationBufferizePass()";
+}
+
 def OneShotBufferize : Pass<"one-shot-bufferize", "ModuleOp"> {
   let summary = "One-Shot Bufferize";
   let description = [{
@@ -307,6 +312,18 @@ def PromoteBuffersToStack : Pass<"promote-buffers-to-stack", "func::FuncOp"> {
            /*default=*/"1",
            "Maximal memref rank to promote dynamic buffers.">,
   ];
+}
+
+def AllocTensorElimination : Pass<"eliminate-alloc-tensors"> {
+  let summary = "Try to eliminate all alloc_tensor ops.";
+  let description = [{
+    This pass tries to eliminate all insert_slice op-anchored alloc_tensor ops.
+    I.e., when a value that is equivalent to an alloc_tensor op is inserted into
+    another tensor, this pass tries to rewrite the IR in such a way that the
+    destination tensor of the insert_slice op is used directly instead of the
+    alloc_tensor result.
+  }];
+  let constructor = "mlir::bufferization::createAllocTensorEliminationPass()";
 }
 
 #endif // MLIR_DIALECT_BUFFERIZATION_TRANSFORMS_PASSES

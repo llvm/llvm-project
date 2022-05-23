@@ -420,12 +420,15 @@ class FailedToMaterialize : public ErrorInfo<FailedToMaterialize> {
 public:
   static char ID;
 
-  FailedToMaterialize(std::shared_ptr<SymbolDependenceMap> Symbols);
+  FailedToMaterialize(std::shared_ptr<SymbolStringPool> SSP,
+                      std::shared_ptr<SymbolDependenceMap> Symbols);
+  ~FailedToMaterialize();
   std::error_code convertToErrorCode() const override;
   void log(raw_ostream &OS) const override;
   const SymbolDependenceMap &getSymbols() const { return *Symbols; }
 
 private:
+  std::shared_ptr<SymbolStringPool> SSP;
   std::shared_ptr<SymbolDependenceMap> Symbols;
 };
 
@@ -1389,8 +1392,12 @@ public:
   /// object.
   ExecutionSession(std::unique_ptr<ExecutorProcessControl> EPC);
 
+  /// Destroy an ExecutionSession. Verifies that endSession was called prior to
+  /// destruction.
+  ~ExecutionSession();
+
   /// End the session. Closes all JITDylibs and disconnects from the
-  /// executor.
+  /// executor. Clients must call this method before destroying the session.
   Error endSession();
 
   /// Get the ExecutorProcessControl object associated with this
@@ -1523,7 +1530,7 @@ public:
   /// after resolution, the function will return a success value, but the
   /// error will be reported via reportErrors.
   Expected<SymbolMap> lookup(const JITDylibSearchOrder &SearchOrder,
-                             const SymbolLookupSet &Symbols,
+                             SymbolLookupSet Symbols,
                              LookupKind K = LookupKind::Static,
                              SymbolState RequiredState = SymbolState::Ready,
                              RegisterDependenciesFunction RegisterDependencies =

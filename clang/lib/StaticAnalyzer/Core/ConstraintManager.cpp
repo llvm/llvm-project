@@ -42,12 +42,14 @@ ConditionTruthVal ConstraintManager::checkNull(ProgramStateRef State,
   return {};
 }
 
+template <typename AssumeFunction>
 ConstraintManager::ProgramStatePair
-ConstraintManager::assumeDual(ProgramStateRef State, DefinedSVal Cond) {
-  ProgramStateRef StTrue = assumeInternal(State, Cond, true);
+ConstraintManager::assumeDualImpl(ProgramStateRef &State,
+                                  AssumeFunction &Assume) {
+  ProgramStateRef StTrue = Assume(true);
 
   if (!StTrue) {
-    ProgramStateRef StFalse = assumeInternal(State, Cond, false);
+    ProgramStateRef StFalse = Assume(false);
     if (LLVM_UNLIKELY(!StFalse)) { // both infeasible
       ProgramStateRef StInfeasible = State->cloneAsPosteriorlyOverconstrained();
       assert(StInfeasible->isPosteriorlyOverconstrained());
@@ -63,7 +65,7 @@ ConstraintManager::assumeDual(ProgramStateRef State, DefinedSVal Cond) {
     return ProgramStatePair(nullptr, StFalse);
   }
 
-  ProgramStateRef StFalse = assumeInternal(State, Cond, false);
+  ProgramStateRef StFalse = Assume(false);
   if (!StFalse) {
     return ProgramStatePair(StTrue, nullptr);
   }
@@ -71,8 +73,35 @@ ConstraintManager::assumeDual(ProgramStateRef State, DefinedSVal Cond) {
   return ProgramStatePair(StTrue, StFalse);
 }
 
+ConstraintManager::ProgramStatePair
+ConstraintManager::assumeDual(ProgramStateRef State, DefinedSVal Cond) {
+  auto AssumeFun = [&](bool Assumption) {
+    return assumeInternal(State, Cond, Assumption);
+  };
+  return assumeDualImpl(State, AssumeFun);
+}
+
+ConstraintManager::ProgramStatePair
+ConstraintManager::assumeInclusiveRangeDual(ProgramStateRef State, NonLoc Value,
+                                            const llvm::APSInt &From,
+                                            const llvm::APSInt &To) {
+  auto AssumeFun = [&](bool Assumption) {
+    return assumeInclusiveRangeInternal(State, Value, From, To, Assumption);
+  };
+  return assumeDualImpl(State, AssumeFun);
+}
+
 ProgramStateRef ConstraintManager::assume(ProgramStateRef State,
                                           DefinedSVal Cond, bool Assumption) {
   ConstraintManager::ProgramStatePair R = assumeDual(State, Cond);
   return Assumption ? R.first : R.second;
+}
+
+ProgramStateRef
+ConstraintManager::assumeInclusiveRange(ProgramStateRef State, NonLoc Value,
+                                        const llvm::APSInt &From,
+                                        const llvm::APSInt &To, bool InBound) {
+  ConstraintManager::ProgramStatePair R =
+      assumeInclusiveRangeDual(State, Value, From, To);
+  return InBound ? R.first : R.second;
 }

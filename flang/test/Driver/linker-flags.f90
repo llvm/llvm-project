@@ -2,12 +2,12 @@
 ! invocation. These libraries are added on top of other standard runtime
 ! libraries that the Clang driver will include.
 
-! NOTE: The additional linker flags tested here are currently specified in
-! clang/lib/Driver/Toolchains/Gnu.cpp. This makes the current implementation GNU
-! (Linux) specific. The following line will make sure that this test is skipped
-! on Windows. Ideally we should find a more robust way of testing this.
-! REQUIRES: shell
-! UNSUPPORTED: darwin, macos, system-windows
+! NOTE: The additional linker flags tested here are currently only specified for
+! GNU and Darwin. The following line will make sure that this test is skipped on
+! Windows. If you are running this test on a yet another platform and it is
+! failing for you, please either update the following or (preferably) update the
+! linker invocation accordingly.
+! UNSUPPORTED: system-windows
 
 !------------
 ! RUN COMMAND

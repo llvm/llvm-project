@@ -2,6 +2,7 @@
 #include "ClangTidyTest.h"
 #include "readability/BracesAroundStatementsCheck.h"
 #include "readability/NamespaceCommentCheck.h"
+#include "readability/SimplifyBooleanExprCheck.h"
 #include "gtest/gtest.h"
 
 namespace clang {
@@ -10,6 +11,7 @@ namespace test {
 
 using readability::BracesAroundStatementsCheck;
 using readability::NamespaceCommentCheck;
+using readability::SimplifyBooleanExprCheck;
 using namespace ast_matchers;
 
 // Copied from ASTMatchersTests
@@ -531,6 +533,16 @@ TEST(BracesAroundStatementsCheckTest, ImplicitCastInReturn) {
             "  return \"abc\";\n"
             "}\n",
             runCheckOnCode<BracesAroundStatementsCheck>(Input));
+}
+
+TEST(SimplifyBooleanExprCheckTest, CodeWithError) {
+  // Fixes PR55557
+  // Need to downgrade Wreturn-type from error as runCheckOnCode will fatal_exit
+  // if any errors occur.
+  EXPECT_EQ("void foo(bool b){ return b; }",
+            runCheckOnCode<SimplifyBooleanExprCheck>(
+                "void foo(bool b){ if (b) return true; return false; }",
+                nullptr, "input.cc", {"-Wno-error=return-type"}));
 }
 
 } // namespace test

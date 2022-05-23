@@ -36,7 +36,7 @@ use_1:
   ; This use can be classified as applying only to ret 1.
   %val0 = extractvalue { i32, i32 } %val, 1
   call void @callee(i32 %val0)
-  ret { i32, i32 } undef
+  ret { i32, i32 } poison
 
 use_aggregate:
   ; This use is assumed to apply to both 0 and 1.
@@ -61,7 +61,7 @@ use_1:
   ; This use can be classified as applying only to ret 1.
   %val0 = extractvalue { i32, i32 } %val, 1
   call void @callee(i32 %val0)
-  ret { i32, i32 } undef
+  ret { i32, i32 } poison
 
 use_aggregate:
   ; This use is assumed to apply to both 0 and 1.
@@ -77,7 +77,7 @@ declare void @callee(i32)
 ; CHECK-LABEL: define internal [2 x i32] @array_rets_have_multiple_slots(i32 %in)
 
 define internal [2 x i32] @array_rets_have_multiple_slots(i32 %in) {
-  %ret = insertvalue [2 x i32] undef, i32 %in, 1
+  %ret = insertvalue [2 x i32] poison, i32 %in, 1
   ret [2 x i32] %ret
 }
 
@@ -91,7 +91,7 @@ define [2 x i32] @test_array_rets_have_multiple_slots() {
 
 ; CHECK-LABEL: define internal [2 x i32] @can_shrink_arrays()
 ; CHECK: [[VAL0:%.*]] = extractvalue [3 x i32] [i32 42, i32 43, i32 44], 0
-; CHECK: [[RESTMP:%.*]] = insertvalue [2 x i32] undef, i32 [[VAL0]], 0
+; CHECK: [[RESTMP:%.*]] = insertvalue [2 x i32] poison, i32 [[VAL0]], 0
 ; CHECK: [[VAL2:%.*]] = extractvalue [3 x i32] [i32 42, i32 43, i32 44], 2
 ; CHECK: [[RES:%.*]] = insertvalue [2 x i32] [[RESTMP]], i32 [[VAL2]], 1
 ; CHECK: ret [2 x i32] [[RES]]
@@ -168,9 +168,9 @@ entry:
 
 ; CHECK-LABEL: define void @PR24906
 ; CHECK: %[[invoke:.*]] = invoke i32 @agg_ret()
-; CHECK: %[[oldret:.*]] = insertvalue { i32 } undef, i32 %[[invoke]], 0
+; CHECK: %[[oldret:.*]] = insertvalue { i32 } poison, i32 %[[invoke]], 0
 ; CHECK: phi { i32 } [ %[[oldret]],
-define void @PR24906() personality i32 (i32)* undef {
+define void @PR24906() personality i32 (i32)* poison {
 entry:
   %tmp2 = invoke { i32 } @agg_ret()
           to label %bb3 unwind label %bb4
