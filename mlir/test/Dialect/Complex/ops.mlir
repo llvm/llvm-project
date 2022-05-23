@@ -61,5 +61,18 @@ func.func @ops(%f: f32) {
 
   // CHECK: complex.sub %[[C]], %[[C]] : complex<f32>
   %diff = complex.sub %complex, %complex : complex<f32>
+
+  // CHECK: complex.tanh %[[C]] : complex<f32>
+  %tanh = complex.tanh %complex : complex<f32>
+
+  // CHECK: complex.pow %[[C]], %[[C]] : complex<f32>
+  %pow = complex.pow %complex, %complex : complex<f32>
+
+  // CHECK: complex.sqrt %[[C]] : complex<f32>
+  %sqrt = complex.sqrt %complex : complex<f32>
+
+  // CHECK: complex.rsqrt %[[C]] : complex<f32>
+  %rsqrt = complex.rsqrt %complex : complex<f32>
+
   return
 }
