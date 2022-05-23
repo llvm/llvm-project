@@ -199,6 +199,8 @@ public:
 
   virtual void mangleDynamicStermFinalizer(const VarDecl *D, raw_ostream &) = 0;
 
+  virtual void mangleModuleInitializer(const Module *Module, raw_ostream &) = 0;
+
   // This has to live here, otherwise the CXXNameMangler won't have access to
   // it.
   virtual DiscriminatorOverrideTy getDiscriminatorOverride() const = 0;
