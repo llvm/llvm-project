@@ -55,6 +55,13 @@
 #  define SANITIZER_SOLARIS 0
 #endif
 
+// - SANITIZER_APPLE: all Apple code
+//   - TARGET_OS_OSX: macOS
+//   - SANITIZER_IOS: devices (iOS and iOS-like)
+//     - SANITIZER_WATCHOS
+//     - SANITIZER_TVOS
+//   - SANITIZER_IOSSIM: simulators (iOS and iOS-like)
+//   - SANITIZER_DRIVERKIT
 #if defined(__APPLE__)
 #  define SANITIZER_APPLE 1
 // SANITIZER_MAC will be deprecated/removed in the future
@@ -93,11 +100,11 @@
 #else
 #  define SANITIZER_APPLE 0
 #  define SANITIZER_MAC SANITIZER_APPLE
+#  define SANITIZER_OSX 0
 #  define SANITIZER_IOS 0
 #  define SANITIZER_WATCHOS 0
 #  define SANITIZER_TVOS 0
 #  define SANITIZER_IOSSIM 0
-#  define SANITIZER_OSX 0
 #  define SANITIZER_DRIVERKIT 0
 #endif
 
