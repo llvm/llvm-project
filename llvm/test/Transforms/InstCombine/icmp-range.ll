@@ -173,8 +173,8 @@ define i1 @test_two_ranges3(i32* nocapture readonly %arg1, i32* nocapture readon
 
 define i1 @ugt_zext(i1 %b, i8 %x) {
 ; CHECK-LABEL: @ugt_zext(
-; CHECK-NEXT:    [[Z:%.*]] = zext i1 [[B:%.*]] to i8
-; CHECK-NEXT:    [[R:%.*]] = icmp ugt i8 [[Z]], [[X:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i8 [[X:%.*]], 0
+; CHECK-NEXT:    [[R:%.*]] = and i1 [[TMP1]], [[B:%.*]]
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %z = zext i1 %b to i8
@@ -185,8 +185,8 @@ define i1 @ugt_zext(i1 %b, i8 %x) {
 define <2 x i1> @ult_zext(<2 x i1> %b, <2 x i8> %p) {
 ; CHECK-LABEL: @ult_zext(
 ; CHECK-NEXT:    [[X:%.*]] = mul <2 x i8> [[P:%.*]], [[P]]
-; CHECK-NEXT:    [[Z:%.*]] = zext <2 x i1> [[B:%.*]] to <2 x i8>
-; CHECK-NEXT:    [[R:%.*]] = icmp ult <2 x i8> [[X]], [[Z]]
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq <2 x i8> [[X]], zeroinitializer
+; CHECK-NEXT:    [[R:%.*]] = and <2 x i1> [[TMP1]], [[B:%.*]]
 ; CHECK-NEXT:    ret <2 x i1> [[R]]
 ;
   %x = mul <2 x i8> %p, %p ; thwart complexity-based canonicalization
@@ -194,6 +194,8 @@ define <2 x i1> @ult_zext(<2 x i1> %b, <2 x i8> %p) {
   %r = icmp ult <2 x i8> %x, %z
   ret <2 x i1> %r
 }
+
+; negative test - need ult/ugt
 
 define i1 @uge_zext(i1 %b, i8 %x) {
 ; CHECK-LABEL: @uge_zext(
@@ -205,6 +207,8 @@ define i1 @uge_zext(i1 %b, i8 %x) {
   %r = icmp uge i8 %z, %x
   ret i1 %r
 }
+
+; negative test - need ult/ugt
 
 define i1 @ule_zext(i1 %b, i8 %p) {
 ; CHECK-LABEL: @ule_zext(
@@ -219,6 +223,8 @@ define i1 @ule_zext(i1 %b, i8 %p) {
   ret i1 %r
 }
 
+; negative test - extra use
+
 define i1 @ugt_zext_use(i1 %b, i8 %x) {
 ; CHECK-LABEL: @ugt_zext_use(
 ; CHECK-NEXT:    [[Z:%.*]] = zext i1 [[B:%.*]] to i8
@@ -232,6 +238,8 @@ define i1 @ugt_zext_use(i1 %b, i8 %x) {
   ret i1 %r
 }
 
+; negative test - must be zext of i1
+
 define i1 @ult_zext_not_i1(i2 %b, i8 %x) {
 ; CHECK-LABEL: @ult_zext_not_i1(
 ; CHECK-NEXT:    [[Z:%.*]] = zext i2 [[B:%.*]] to i8
@@ -243,11 +251,12 @@ define i1 @ult_zext_not_i1(i2 %b, i8 %x) {
   ret i1 %r
 }
 
+; sub is eliminated
+
 define i1 @sub_ult_zext(i1 %b, i8 %x, i8 %y) {
 ; CHECK-LABEL: @sub_ult_zext(
-; CHECK-NEXT:    [[Z:%.*]] = zext i1 [[B:%.*]] to i8
-; CHECK-NEXT:    [[S:%.*]] = sub i8 [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    [[R:%.*]] = icmp ult i8 [[S]], [[Z]]
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i8 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = and i1 [[TMP1]], [[B:%.*]]
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %z = zext i1 %b to i8
@@ -259,8 +268,8 @@ define i1 @sub_ult_zext(i1 %b, i8 %x, i8 %y) {
 define i1 @zext_ult_zext(i1 %b, i8 %p) {
 ; CHECK-LABEL: @zext_ult_zext(
 ; CHECK-NEXT:    [[X:%.*]] = mul i8 [[P:%.*]], [[P]]
-; CHECK-NEXT:    [[TMP1:%.*]] = zext i1 [[B:%.*]] to i8
-; CHECK-NEXT:    [[R:%.*]] = icmp ult i8 [[X]], [[TMP1]]
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i8 [[X]], 0
+; CHECK-NEXT:    [[R:%.*]] = and i1 [[TMP1]], [[B:%.*]]
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %x = mul i8 %p, %p ; thwart complexity-based canonicalization
@@ -270,12 +279,14 @@ define i1 @zext_ult_zext(i1 %b, i8 %p) {
   ret i1 %r
 }
 
+; match and fold even if both sides are zexts (from different source types)
+
 define i1 @zext_ugt_zext(i1 %b, i4 %x) {
 ; CHECK-LABEL: @zext_ugt_zext(
 ; CHECK-NEXT:    [[ZX:%.*]] = zext i4 [[X:%.*]] to i8
 ; CHECK-NEXT:    call void @use(i8 [[ZX]])
-; CHECK-NEXT:    [[TMP1:%.*]] = zext i1 [[B:%.*]] to i4
-; CHECK-NEXT:    [[R:%.*]] = icmp ugt i4 [[TMP1]], [[X]]
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i4 [[X]], 0
+; CHECK-NEXT:    [[R:%.*]] = and i1 [[TMP1]], [[B:%.*]]
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %z = zext i1 %b to i8
@@ -284,6 +295,8 @@ define i1 @zext_ugt_zext(i1 %b, i4 %x) {
   %r = icmp ugt i8 %z, %zx
   ret i1 %r
 }
+
+; negative test - must be zext of i1
 
 define i1 @sub_ult_zext_not_i1(i2 %b, i8 %x, i8 %y) {
 ; CHECK-LABEL: @sub_ult_zext_not_i1(
@@ -297,6 +310,8 @@ define i1 @sub_ult_zext_not_i1(i2 %b, i8 %x, i8 %y) {
   %r = icmp ult i8 %s, %z
   ret i1 %r
 }
+
+; negative test - extra use (but we could try harder to fold this)
 
 define i1 @sub_ult_zext_use1(i1 %b, i8 %x, i8 %y) {
 ; CHECK-LABEL: @sub_ult_zext_use1(
@@ -315,10 +330,10 @@ define i1 @sub_ult_zext_use1(i1 %b, i8 %x, i8 %y) {
 
 define <2 x i1> @zext_ugt_sub_use2(<2 x i1> %b, <2 x i8> %x, <2 x i8> %y) {
 ; CHECK-LABEL: @zext_ugt_sub_use2(
-; CHECK-NEXT:    [[Z:%.*]] = zext <2 x i1> [[B:%.*]] to <2 x i8>
 ; CHECK-NEXT:    [[S:%.*]] = sub <2 x i8> [[X:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    call void @use_vec(<2 x i8> [[S]])
-; CHECK-NEXT:    [[R:%.*]] = icmp ult <2 x i8> [[S]], [[Z]]
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq <2 x i8> [[X]], [[Y]]
+; CHECK-NEXT:    [[R:%.*]] = and <2 x i1> [[TMP1]], [[B:%.*]]
 ; CHECK-NEXT:    ret <2 x i1> [[R]]
 ;
   %z = zext <2 x i1> %b to <2 x i8>
