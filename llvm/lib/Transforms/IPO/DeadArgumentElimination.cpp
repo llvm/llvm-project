@@ -54,8 +54,8 @@ using namespace llvm;
 
 STATISTIC(NumArgumentsEliminated, "Number of unread args removed");
 STATISTIC(NumRetValsEliminated  , "Number of unused return values removed");
-STATISTIC(NumArgumentsReplacedWithUndef,
-          "Number of unread args replaced with undef");
+STATISTIC(NumArgumentsReplacedWithPoison,
+          "Number of unread args replaced with poison");
 
 namespace {
 
@@ -251,14 +251,14 @@ bool DeadArgumentEliminationPass::DeleteDeadVarargs(Function &Fn) {
 }
 
 /// RemoveDeadArgumentsFromCallers - Checks if the given function has any
-/// arguments that are unused, and changes the caller parameters to be undefined
+/// arguments that are unused, and changes the caller parameters to be poison
 /// instead.
 bool DeadArgumentEliminationPass::RemoveDeadArgumentsFromCallers(Function &Fn) {
   // We cannot change the arguments if this TU does not define the function or
   // if the linker may choose a function body from another TU, even if the
   // nominal linkage indicates that other copies of the function have the same
   // semantics. In the below example, the dead load from %p may not have been
-  // eliminated from the linker-chosen copy of f, so replacing %p with undef
+  // eliminated from the linker-chosen copy of f, so replacing %p with poison
   // in callers may introduce undefined behavior.
   //
   // define linkonce_odr void @f(i32* %p) {
@@ -294,7 +294,7 @@ bool DeadArgumentEliminationPass::RemoveDeadArgumentsFromCallers(Function &Fn) {
     if (!Arg.hasSwiftErrorAttr() && Arg.use_empty() &&
         !Arg.hasPassPointeeByValueCopyAttr()) {
       if (Arg.isUsedByMetadata()) {
-        Arg.replaceAllUsesWith(UndefValue::get(Arg.getType()));
+        Arg.replaceAllUsesWith(PoisonValue::get(Arg.getType()));
         Changed = true;
       }
       UnusedArgs.push_back(Arg.getArgNo());
@@ -311,15 +311,15 @@ bool DeadArgumentEliminationPass::RemoveDeadArgumentsFromCallers(Function &Fn) {
         CB->getFunctionType() != Fn.getFunctionType())
       continue;
 
-    // Now go through all unused args and replace them with "undef".
+    // Now go through all unused args and replace them with poison.
     for (unsigned I = 0, E = UnusedArgs.size(); I != E; ++I) {
       unsigned ArgNo = UnusedArgs[I];
 
       Value *Arg = CB->getArgOperand(ArgNo);
-      CB->setArgOperand(ArgNo, UndefValue::get(Arg->getType()));
+      CB->setArgOperand(ArgNo, PoisonValue::get(Arg->getType()));
       CB->removeParamAttrs(ArgNo, UBImplyingAttributes);
 
-      ++NumArgumentsReplacedWithUndef;
+      ++NumArgumentsReplacedWithPoison;
       Changed = true;
     }
   }
@@ -964,10 +964,10 @@ bool DeadArgumentEliminationPass::RemoveDeadStuffFromFunction(Function *F) {
         CB.replaceAllUsesWith(NewCB);
         NewCB->takeName(&CB);
       } else if (NewCB->getType()->isVoidTy()) {
-        // If the return value is dead, replace any uses of it with undef
+        // If the return value is dead, replace any uses of it with poison
         // (any non-debug value uses will get removed later on).
         if (!CB.getType()->isX86_MMXTy())
-          CB.replaceAllUsesWith(UndefValue::get(CB.getType()));
+          CB.replaceAllUsesWith(PoisonValue::get(CB.getType()));
       } else {
         assert((RetTy->isStructTy() || RetTy->isArrayTy()) &&
                "Return type changed, but not into a void. The old return type"
@@ -983,8 +983,8 @@ bool DeadArgumentEliminationPass::RemoveDeadStuffFromFunction(Function *F) {
         // with all the uses, we will just rebuild it using extract/insertvalue
         // chaining and let instcombine clean that up.
         //
-        // Start out building up our return value from undef
-        Value *RetVal = UndefValue::get(RetTy);
+        // Start out building up our return value from poison
+        Value *RetVal = PoisonValue::get(RetTy);
         for (unsigned Ri = 0; Ri != RetCount; ++Ri)
           if (NewRetIdxs[Ri] != -1) {
             Value *V;
@@ -1029,10 +1029,10 @@ bool DeadArgumentEliminationPass::RemoveDeadStuffFromFunction(Function *F) {
       I2->takeName(&*I);
       ++I2;
     } else {
-      // If this argument is dead, replace any uses of it with undef
+      // If this argument is dead, replace any uses of it with poison
       // (any non-debug value uses will get removed later on).
       if (!I->getType()->isX86_MMXTy())
-        I->replaceAllUsesWith(UndefValue::get(I->getType()));
+        I->replaceAllUsesWith(PoisonValue::get(I->getType()));
     }
 
   // If we change the return value of the function we must rewrite any return
@@ -1051,8 +1051,8 @@ bool DeadArgumentEliminationPass::RemoveDeadStuffFromFunction(Function *F) {
           // This does generate messy code, but we'll let it to instcombine to
           // clean that up.
           Value *OldRet = RI->getOperand(0);
-          // Start out building up our return value from undef
-          RetVal = UndefValue::get(NRetTy);
+          // Start out building up our return value from poison
+          RetVal = PoisonValue::get(NRetTy);
           for (unsigned RetI = 0; RetI != RetCount; ++RetI)
             if (NewRetIdxs[RetI] != -1) {
               Value *EV = IRB.CreateExtractValue(OldRet, RetI, "oldret");
@@ -1117,7 +1117,7 @@ PreservedAnalyses DeadArgumentEliminationPass::run(Module &M,
     Changed |= RemoveDeadStuffFromFunction(&F);
 
   // Finally, look for any unused parameters in functions with non-local
-  // linkage and replace the passed in parameters with undef.
+  // linkage and replace the passed in parameters with poison.
   for (auto &F : M)
     Changed |= RemoveDeadArgumentsFromCallers(F);
 
