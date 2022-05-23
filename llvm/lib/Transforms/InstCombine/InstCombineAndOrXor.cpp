@@ -872,6 +872,7 @@ static Value *foldSignedTruncationCheck(ICmpInst *ICmp0, ICmpInst *ICmp1,
 
 /// Fold (icmp eq ctpop(X) 1) | (icmp eq X 0) into (icmp ult ctpop(X) 2) and
 /// fold (icmp ne ctpop(X) 1) & (icmp ne X 0) into (icmp ugt ctpop(X) 1).
+/// Also used for logical and/or, must be poison safe.
 static Value *foldIsPowerOf2OrZero(ICmpInst *Cmp0, ICmpInst *Cmp1, bool IsAnd,
                                    InstCombiner::BuilderTy &Builder) {
   CmpInst::Predicate Pred0, Pred1;
@@ -891,6 +892,7 @@ static Value *foldIsPowerOf2OrZero(ICmpInst *Cmp0, ICmpInst *Cmp1, bool IsAnd,
 }
 
 /// Reduce a pair of compares that check if a value has exactly 1 bit set.
+/// Also used for logical and/or, must be poison safe.
 static Value *foldIsPowerOf2(ICmpInst *Cmp0, ICmpInst *Cmp1, bool JoinedByAnd,
                              InstCombiner::BuilderTy &Builder) {
   // Handle 'and' / 'or' commutation: make the equality check the first operand.
@@ -1083,12 +1085,9 @@ Value *InstCombinerImpl::foldEqOfParts(ICmpInst *Cmp0, ICmpInst *Cmp1,
 /// common operand with the constant. Callers are expected to call this with
 /// Cmp0/Cmp1 switched to handle logic op commutativity.
 static Value *foldAndOrOfICmpsWithConstEq(ICmpInst *Cmp0, ICmpInst *Cmp1,
-                                          BinaryOperator &Logic,
+                                          bool IsAnd,
                                           InstCombiner::BuilderTy &Builder,
                                           const SimplifyQuery &Q) {
-  bool IsAnd = Logic.getOpcode() == Instruction::And;
-  assert((IsAnd || Logic.getOpcode() == Instruction::Or) && "Wrong logic op");
-
   // Match an equality compare with a non-poison constant as Cmp0.
   // Also, give up if the compare can be constant-folded to avoid looping.
   ICmpInst::Predicate Pred0;
@@ -1122,7 +1121,8 @@ static Value *foldAndOrOfICmpsWithConstEq(ICmpInst *Cmp0, ICmpInst *Cmp1,
       return nullptr;
     SubstituteCmp = Builder.CreateICmp(Pred1, Y, C);
   }
-  return Builder.CreateBinOp(Logic.getOpcode(), Cmp0, SubstituteCmp);
+  return Builder.CreateBinOp(IsAnd ? Instruction::And : Instruction::Or, Cmp0,
+                             SubstituteCmp);
 }
 
 /// Fold (icmp Pred1 V1, C1) & (icmp Pred2 V2, C2)
@@ -2389,14 +2389,17 @@ Value *foldAndOrOfICmpEqZeroAndICmp(ICmpInst *LHS, ICmpInst *RHS, bool IsAnd,
 }
 
 /// Fold (icmp)&(icmp) or (icmp)|(icmp) if possible.
+/// If IsLogical is true, then the and/or is in select form and the transform
+/// must be poison-safe.
 Value *InstCombinerImpl::foldAndOrOfICmps(ICmpInst *LHS, ICmpInst *RHS,
-                                          BinaryOperator &BO, bool IsAnd) {
-  const SimplifyQuery Q = SQ.getWithInstruction(&BO);
+                                          Instruction &I, bool IsAnd,
+                                          bool IsLogical) {
+  const SimplifyQuery Q = SQ.getWithInstruction(&I);
 
   // Fold (iszero(A & K1) | iszero(A & K2)) ->  (A & (K1 | K2)) != (K1 | K2)
   // Fold (!iszero(A & K1) & !iszero(A & K2)) ->  (A & (K1 | K2)) == (K1 | K2)
   // if K1 and K2 are a one-bit mask.
-  if (Value *V = foldAndOrOfICmpsOfAndWithPow2(LHS, RHS, &BO, IsAnd))
+  if (Value *V = foldAndOrOfICmpsOfAndWithPow2(LHS, RHS, &I, IsAnd, IsLogical))
     return V;
 
   ICmpInst::Predicate PredL = LHS->getPredicate(), PredR = RHS->getPredicate();
@@ -2421,48 +2424,67 @@ Value *InstCombinerImpl::foldAndOrOfICmps(ICmpInst *LHS, ICmpInst *RHS,
     }
   }
 
-  // handle (roughly):
-  // (icmp ne (A & B), C) | (icmp ne (A & D), E)
-  // (icmp eq (A & B), C) & (icmp eq (A & D), E)
-  if (Value *V = foldLogOpOfMaskedICmps(LHS, RHS, IsAnd, Builder))
-    return V;
+  // TODO: Some (but not all) of the patterns handled by this function are
+  // safe with logical and/or.
+  if (!IsLogical) {
+    // handle (roughly):
+    // (icmp ne (A & B), C) | (icmp ne (A & D), E)
+    // (icmp eq (A & B), C) & (icmp eq (A & D), E)
+    if (Value *V = foldLogOpOfMaskedICmps(LHS, RHS, IsAnd, Builder))
+      return V;
+  }
 
-  if (Value *V = foldAndOrOfICmpEqZeroAndICmp(LHS, RHS, IsAnd, Builder))
-    return V;
-  if (Value *V = foldAndOrOfICmpEqZeroAndICmp(RHS, LHS, IsAnd, Builder))
-    return V;
+  // TODO: One of these directions is fine with logical and/or, the other could
+  // be supported by inserting freeze.
+  if (!IsLogical) {
+    if (Value *V = foldAndOrOfICmpEqZeroAndICmp(LHS, RHS, IsAnd, Builder))
+      return V;
+    if (Value *V = foldAndOrOfICmpEqZeroAndICmp(RHS, LHS, IsAnd, Builder))
+      return V;
+  }
 
-  if (Value *V = foldAndOrOfICmpsWithConstEq(LHS, RHS, BO, Builder, Q))
-    return V;
-  if (Value *V = foldAndOrOfICmpsWithConstEq(RHS, LHS, BO, Builder, Q))
-    return V;
+  // TODO: Verify whether this is safe for logical and/or.
+  if (!IsLogical) {
+    if (Value *V = foldAndOrOfICmpsWithConstEq(LHS, RHS, IsAnd, Builder, Q))
+      return V;
+    if (Value *V = foldAndOrOfICmpsWithConstEq(RHS, LHS, IsAnd, Builder, Q))
+      return V;
+  }
 
   if (Value *V = foldIsPowerOf2OrZero(LHS, RHS, IsAnd, Builder))
     return V;
   if (Value *V = foldIsPowerOf2OrZero(RHS, LHS, IsAnd, Builder))
     return V;
 
-  // E.g. (icmp slt x, 0) | (icmp sgt x, n) --> icmp ugt x, n
-  // E.g. (icmp sge x, 0) & (icmp slt x, n) --> icmp ult x, n
-  if (Value *V = simplifyRangeCheck(LHS, RHS, /*Inverted=*/!IsAnd))
-    return V;
+  // TODO: One of these directions is fine with logical and/or, the other could
+  // be supported by inserting freeze.
+  if (!IsLogical) {
+    // E.g. (icmp slt x, 0) | (icmp sgt x, n) --> icmp ugt x, n
+    // E.g. (icmp sge x, 0) & (icmp slt x, n) --> icmp ult x, n
+    if (Value *V = simplifyRangeCheck(LHS, RHS, /*Inverted=*/!IsAnd))
+      return V;
 
-  // E.g. (icmp sgt x, n) | (icmp slt x, 0) --> icmp ugt x, n
-  // E.g. (icmp slt x, n) & (icmp sge x, 0) --> icmp ult x, n
-  if (Value *V = simplifyRangeCheck(RHS, LHS, /*Inverted=*/!IsAnd))
-    return V;
+    // E.g. (icmp sgt x, n) | (icmp slt x, 0) --> icmp ugt x, n
+    // E.g. (icmp slt x, n) & (icmp sge x, 0) --> icmp ult x, n
+    if (Value *V = simplifyRangeCheck(RHS, LHS, /*Inverted=*/!IsAnd))
+      return V;
+  }
 
-  if (IsAnd)
-    if (Value *V = foldSignedTruncationCheck(LHS, RHS, BO, Builder))
+  // TODO: Add conjugated or fold, check whether it is safe for logical and/or.
+  if (IsAnd && !IsLogical)
+    if (Value *V = foldSignedTruncationCheck(LHS, RHS, I, Builder))
       return V;
 
   if (Value *V = foldIsPowerOf2(LHS, RHS, IsAnd, Builder))
     return V;
 
-  if (Value *X = foldUnsignedUnderflowCheck(LHS, RHS, IsAnd, Q, Builder))
-    return X;
-  if (Value *X = foldUnsignedUnderflowCheck(RHS, LHS, IsAnd, Q, Builder))
-    return X;
+  // TODO: Verify whether this is safe for logical and/or.
+  if (!IsLogical) {
+    if (Value *X = foldUnsignedUnderflowCheck(LHS, RHS, IsAnd, Q, Builder))
+      return X;
+    if (Value *X = foldUnsignedUnderflowCheck(RHS, LHS, IsAnd, Q, Builder))
+      return X;
+  }
 
   if (Value *X = foldEqOfParts(LHS, RHS, IsAnd))
     return X;
@@ -2470,7 +2492,7 @@ Value *InstCombinerImpl::foldAndOrOfICmps(ICmpInst *LHS, ICmpInst *RHS,
   // (icmp ne A, 0) | (icmp ne B, 0) --> (icmp ne (A|B), 0)
   // (icmp eq A, 0) & (icmp eq B, 0) --> (icmp eq (A|B), 0)
   // TODO: Remove this when foldLogOpOfMaskedICmps can handle undefs.
-  if (PredL == (IsAnd ? ICmpInst::ICMP_EQ : ICmpInst::ICMP_NE) &&
+  if (!IsLogical && PredL == (IsAnd ? ICmpInst::ICMP_EQ : ICmpInst::ICMP_NE) &&
       PredL == PredR && match(LHS1, m_ZeroInt()) && match(RHS1, m_ZeroInt()) &&
       LHS0->getType() == RHS0->getType()) {
     Value *NewOr = Builder.CreateOr(LHS0, RHS0);
