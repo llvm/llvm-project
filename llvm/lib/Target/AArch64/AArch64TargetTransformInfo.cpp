@@ -51,6 +51,12 @@ bool AArch64TTIImpl::areInlineCompatible(const Function *Caller,
   return (CallerBits & CalleeBits) == CalleeBits;
 }
 
+bool AArch64TTIImpl::shouldMaximizeVectorBandwidth(
+    TargetTransformInfo::RegisterKind K) const {
+  assert(K != TargetTransformInfo::RGK_Scalar);
+  return K == TargetTransformInfo::RGK_FixedWidthVector;
+}
+
 /// Calculate the cost of materializing a 64-bit value. This helper
 /// method might only calculate a fraction of a larger immediate. Therefore it
 /// is valid to return a cost of ZERO.
