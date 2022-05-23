@@ -429,7 +429,7 @@ void RISCVTTIImpl::getPeelingPreferences(Loop *L, ScalarEvolution &SE,
   BaseT::getPeelingPreferences(L, SE, PP);
 }
 
-InstructionCost RISCVTTIImpl::getRegUsageForType(Type *Ty) {
+unsigned RISCVTTIImpl::getRegUsageForType(Type *Ty) {
   TypeSize Size = Ty->getPrimitiveSizeInBits();
   if (Ty->isVectorTy()) {
     if (Size.isScalable() && ST->hasVInstructions())

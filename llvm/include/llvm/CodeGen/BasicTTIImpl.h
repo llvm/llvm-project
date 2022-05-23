@@ -382,10 +382,9 @@ public:
     return getTLI()->isTypeLegal(VT);
   }
 
-  InstructionCost getRegUsageForType(Type *Ty) {
-    InstructionCost Val = getTLI()->getTypeLegalizationCost(DL, Ty).first;
-    assert(Val >= 0 && "Negative cost!");
-    return Val;
+  unsigned getRegUsageForType(Type *Ty) {
+    EVT ETy = getTLI()->getValueType(DL, Ty);
+    return getTLI()->getNumRegisters(Ty->getContext(), ETy);
   }
 
   InstructionCost getGEPCost(Type *PointeeType, const Value *Ptr,
