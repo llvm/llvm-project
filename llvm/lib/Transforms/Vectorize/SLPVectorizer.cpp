@@ -6718,6 +6718,7 @@ static T *performExtractsShuffleAction(
         Mask[Idx] = (Res.second ? Idx : Mask[Idx]) + VF;
     }
     auto *V = ValueSelect::get<T *>(Base);
+    (void)V;
     assert((!V || GetVF(V) == Mask.size()) &&
            "Expected base vector of VF number of elements.");
     Prev = Action(Mask, {nullptr, Res.first});
