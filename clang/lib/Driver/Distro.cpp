@@ -153,6 +153,8 @@ static Distro::DistroType DetectDistro(llvm::vfs::FileSystem &VFS) {
         return Distro::DebianBullseye;
       case 12:
         return Distro::DebianBookworm;
+      case 13:
+        return Distro::DebianTrixie;
       default:
         return Distro::UnknownDistro;
       }
