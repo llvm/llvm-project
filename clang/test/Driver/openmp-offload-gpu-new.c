@@ -104,3 +104,9 @@
 // RUN:     -foffload-lto %s 2>&1 | FileCheck --check-prefix=CHECK-LTO-LIBRARY %s
 
 // CHECK-LTO-LIBRARY: {{.*}}-lomptarget{{.*}}-lomptarget.devicertl
+
+// RUN:   %clang -### --target=x86_64-unknown-linux-gnu -fopenmp --offload-arch=sm_52 -nogpulib \
+// RUN:     -Xoffload-linker a -Xoffload-linker-nvptx64-nvidia-cuda b -Xoffload-linker-nvptx64 c \
+// RUN:     %s 2>&1 | FileCheck --check-prefix=CHECK-XLINKER %s
+
+// CHECK-XLINKER: -device-linker=a{{.*}}-device-linker=nvptx64-nvidia-cuda=b{{.*}}-device-linker=nvptx64-nvidia-cuda=c{{.*}}--
