@@ -85,6 +85,11 @@
 #  else
 #    define SANITIZER_IOSSIM 0
 #  endif
+#  if TARGET_OS_DRIVERKIT
+#    define SANITIZER_DRIVERKIT 1
+#  else
+#    define SANITIZER_DRIVERKIT 0
+#  endif
 #else
 #  define SANITIZER_APPLE 0
 #  define SANITIZER_MAC SANITIZER_APPLE
@@ -93,6 +98,7 @@
 #  define SANITIZER_TVOS 0
 #  define SANITIZER_IOSSIM 0
 #  define SANITIZER_OSX 0
+#  define SANITIZER_DRIVERKIT 0
 #endif
 
 #if defined(_WIN32)
