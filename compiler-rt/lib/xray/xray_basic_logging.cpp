@@ -18,7 +18,7 @@
 #include <fcntl.h>
 #include <pthread.h>
 #include <sys/stat.h>
-#if SANITIZER_FREEBSD || SANITIZER_NETBSD || SANITIZER_MAC
+#if SANITIZER_FREEBSD || SANITIZER_NETBSD || SANITIZER_APPLE
 #include <sys/syscall.h>
 #endif
 #include <sys/types.h>

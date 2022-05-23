@@ -12,7 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "sanitizer_common/sanitizer_platform.h"
-#if SANITIZER_MAC
+#if SANITIZER_APPLE
 
 #include "asan_interceptors.h"
 #include "asan_internal.h"
@@ -296,4 +296,4 @@ INTERCEPTOR(void, dispatch_source_set_event_handler,
 }
 #endif
 
-#endif  // SANITIZER_MAC
+#endif  // SANITIZER_APPLE

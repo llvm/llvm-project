@@ -123,7 +123,7 @@ TEST(SanitizerCommon, FileOps) {
 
   fd = OpenFile(tmpfile, WrOnly);
   ASSERT_NE(fd, kInvalidFd);
-#if SANITIZER_POSIX && !SANITIZER_MAC
+#if SANITIZER_POSIX && !SANITIZER_APPLE
   EXPECT_EQ(internal_lseek(fd, 0, SEEK_END), 0u);
 #endif
   uptr bytes_written = 0;
@@ -311,7 +311,7 @@ TEST(SanitizerCommon, InternalWideStringFunctions) {
 }
 
 // FIXME: File manipulations are not yet supported on Windows
-#if SANITIZER_POSIX && !SANITIZER_MAC
+#if SANITIZER_POSIX && !SANITIZER_APPLE
 TEST(SanitizerCommon, InternalMmapWithOffset) {
   char tmpfile[128];
   temp_file_name(tmpfile, sizeof(tmpfile),

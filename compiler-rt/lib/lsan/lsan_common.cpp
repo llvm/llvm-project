@@ -105,7 +105,7 @@ static const char kStdSuppressions[] =
     // definition.
     "leak:*pthread_exit*\n"
 #  endif  // SANITIZER_SUPPRESS_LEAK_ON_PTHREAD_EXIT
-#  if SANITIZER_MAC
+#  if SANITIZER_APPLE
     // For Darwin and os_log/os_trace: https://reviews.llvm.org/D35173
     "leak:*_os_trace*\n"
 #  endif
