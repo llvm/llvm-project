@@ -53,8 +53,8 @@ define [ 9 x double ] @array_9() {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    movi v0.2d, #0000000000000000
 ; CHECK-NEXT:    str xzr, [x8, #64]
-; CHECK-NEXT:    stp q0, q0, [x8, #32]
 ; CHECK-NEXT:    stp q0, q0, [x8]
+; CHECK-NEXT:    stp q0, q0, [x8, #32]
 ; CHECK-NEXT:    ret
   ret [ 9 x double ] zeroinitializer
 }
@@ -232,8 +232,8 @@ define [ 5 x %T_STRUCT_SAMEM ] @array_of_struct_in_memory() {
 ; CHECK-LABEL: array_of_struct_in_memory:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    movi v0.2d, #0000000000000000
-; CHECK-NEXT:    stp q0, q0, [x8, #48]
 ; CHECK-NEXT:    stp q0, q0, [x8, #16]
+; CHECK-NEXT:    stp q0, q0, [x8, #48]
 ; CHECK-NEXT:    str q0, [x8]
 ; CHECK-NEXT:    ret
   ret [ 5 x %T_STRUCT_SAMEM ] zeroinitializer
@@ -350,8 +350,8 @@ define [ 2 x %T_NESTED_STRUCT_SAMEM ] @array_of_struct_nested_same_field_types_2
 ; CHECK-LABEL: array_of_struct_nested_same_field_types_2:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    movi v0.2d, #0000000000000000
-; CHECK-NEXT:    stp q0, q0, [x8, #48]
 ; CHECK-NEXT:    stp q0, q0, [x8, #16]
+; CHECK-NEXT:    stp q0, q0, [x8, #48]
 ; CHECK-NEXT:    str q0, [x8]
 ; CHECK-NEXT:    ret
   ret [ 2 x %T_NESTED_STRUCT_SAMEM ] zeroinitializer
@@ -440,8 +440,8 @@ define %T_IN_MEMORY @return_in_memory() {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    movi v0.2d, #0000000000000000
 ; CHECK-NEXT:    str xzr, [x8, #64]
-; CHECK-NEXT:    stp q0, q0, [x8, #32]
 ; CHECK-NEXT:    stp q0, q0, [x8]
+; CHECK-NEXT:    stp q0, q0, [x8, #32]
 ; CHECK-NEXT:    ret
   ret %T_IN_MEMORY zeroinitializer
 }
