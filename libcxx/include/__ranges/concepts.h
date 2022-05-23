@@ -68,8 +68,6 @@ namespace ranges {
   template <range _Rp>
   using range_rvalue_reference_t = iter_rvalue_reference_t<iterator_t<_Rp>>;
 
-#if !defined(_LIBCPP_HAS_NO_INCOMPLETE_RANGES)
-
   // [range.sized]
   template <class _Tp>
   concept sized_range = range<_Tp> && requires(_Tp& __t) { ranges::size(__t); };
@@ -134,8 +132,6 @@ namespace ranges {
      (!view<remove_cvref_t<_Tp>> &&
       (is_lvalue_reference_v<_Tp> ||
        (movable<remove_reference_t<_Tp>> && !__is_std_initializer_list<remove_cvref_t<_Tp>>))));
-
-#endif // !defined(_LIBCPP_HAS_NO_INCOMPLETE_RANGES)
 
 } // namespace ranges
 
