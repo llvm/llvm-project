@@ -40,8 +40,6 @@ public:
   const Stmt *findPointeeMutation(const Decl *Dec);
   static bool isUnevaluated(const Stmt *Smt, const Stmt &Stm,
                             ASTContext &Context);
-  static bool isUnevaluated(const Expr *Exp, const Stmt &Stm,
-                            ASTContext &Context);
 
 private:
   using MutationFinder = const Stmt *(ExprMutationAnalyzer::*)(const Expr *);

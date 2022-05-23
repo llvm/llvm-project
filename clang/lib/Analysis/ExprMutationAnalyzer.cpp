@@ -39,8 +39,13 @@ AST_MATCHER_P(Expr, maybeEvalCommaExpr, ast_matchers::internal::Matcher<Expr>,
   return InnerMatcher.matches(*Result, Finder, Builder);
 }
 
-AST_MATCHER_P(Expr, canResolveToExpr, ast_matchers::internal::Matcher<Expr>,
+AST_MATCHER_P(Stmt, canResolveToExpr, ast_matchers::internal::Matcher<Stmt>,
               InnerMatcher) {
+  auto *Exp = dyn_cast<Expr>(&Node);
+  if (!Exp) {
+    return stmt().matches(Node, Finder, Builder);
+  }
+
   auto DerivedToBase = [](const ast_matchers::internal::Matcher<Expr> &Inner) {
     return implicitCastExpr(anyOf(hasCastKind(CK_DerivedToBase),
                                   hasCastKind(CK_UncheckedDerivedToBase)),
@@ -71,7 +76,7 @@ AST_MATCHER_P(Expr, canResolveToExpr, ast_matchers::internal::Matcher<Expr>,
                  IgnoreDerivedToBase(ConditionalOperator),
                  IgnoreDerivedToBase(ElvisOperator))));
 
-  return ComplexMatcher.matches(Node, Finder, Builder);
+  return ComplexMatcher.matches(*Exp, Finder, Builder);
 }
 
 // Similar to 'hasAnyArgument', but does not work because 'InitListExpr' does
@@ -194,44 +199,36 @@ const Stmt *ExprMutationAnalyzer::tryEachDeclRef(const Decl *Dec,
   return nullptr;
 }
 
-auto isUnevaluatedMatcher(const Stmt *Exp) {
-  return anyOf(
-      // `Exp` is part of the underlying expression of
-      // decltype/typeof if it has an ancestor of
-      // typeLoc.
-      hasAncestor(typeLoc(unless(hasAncestor(unaryExprOrTypeTraitExpr())))),
-      hasAncestor(expr(anyOf(
-          // `UnaryExprOrTypeTraitExpr` is unevaluated
-          // unless it's sizeof on VLA.
-          unaryExprOrTypeTraitExpr(
-              unless(sizeOfExpr(hasArgumentOfType(variableArrayType())))),
-          // `CXXTypeidExpr` is unevaluated unless it's
-          // applied to an expression of glvalue of
-          // polymorphic class type.
-          cxxTypeidExpr(unless(isPotentiallyEvaluated())),
-          // The controlling expression of
-          // `GenericSelectionExpr` is unevaluated.
-          genericSelectionExpr(
-              hasControllingExpr(hasDescendant(equalsNode(Exp)))),
-          cxxNoexceptExpr()))));
-}
-
-bool ExprMutationAnalyzer::isUnevaluated(const Expr *Exp, const Stmt &Stm,
-                                         ASTContext &Context) {
-  return selectFirst<Expr>(NodeID<Expr>::value,
-                           match(findAll(expr(canResolveToExpr(equalsNode(Exp)),
-                                              isUnevaluatedMatcher(Exp))
-                                             .bind(NodeID<Expr>::value)),
-                                 Stm, Context)) != nullptr;
-}
-
 bool ExprMutationAnalyzer::isUnevaluated(const Stmt *Exp, const Stmt &Stm,
                                          ASTContext &Context) {
   return selectFirst<Stmt>(
              NodeID<Expr>::value,
-             match(findAll(stmt(equalsNode(Exp), isUnevaluatedMatcher(Exp))
-                               .bind(NodeID<Expr>::value)),
-                   Stm, Context)) != nullptr;
+             match(
+                 findAll(
+                     stmt(canResolveToExpr(equalsNode(Exp)),
+                          anyOf(
+                              // `Exp` is part of the underlying expression of
+                              // decltype/typeof if it has an ancestor of
+                              // typeLoc.
+                              hasAncestor(typeLoc(unless(
+                                  hasAncestor(unaryExprOrTypeTraitExpr())))),
+                              hasAncestor(expr(anyOf(
+                                  // `UnaryExprOrTypeTraitExpr` is unevaluated
+                                  // unless it's sizeof on VLA.
+                                  unaryExprOrTypeTraitExpr(unless(sizeOfExpr(
+                                      hasArgumentOfType(variableArrayType())))),
+                                  // `CXXTypeidExpr` is unevaluated unless it's
+                                  // applied to an expression of glvalue of
+                                  // polymorphic class type.
+                                  cxxTypeidExpr(
+                                      unless(isPotentiallyEvaluated())),
+                                  // The controlling expression of
+                                  // `GenericSelectionExpr` is unevaluated.
+                                  genericSelectionExpr(hasControllingExpr(
+                                      hasDescendant(equalsNode(Exp)))),
+                                  cxxNoexceptExpr())))))
+                         .bind(NodeID<Expr>::value)),
+                 Stm, Context)) != nullptr;
 }
 
 bool ExprMutationAnalyzer::isUnevaluated(const Expr *Exp) {
