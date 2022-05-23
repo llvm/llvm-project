@@ -36,9 +36,10 @@ struct LoopParams {
 };
 } // namespace
 
-scf::ForOp mlir::replaceLoopWithNewYields(OpBuilder &builder, scf::ForOp loop,
-                                          ValueRange newIterOperands,
-                                          NewYieldValueFn newYieldValuesFn) {
+scf::ForOp
+mlir::replaceLoopWithNewYields(OpBuilder &builder, scf::ForOp loop,
+                               ValueRange newIterOperands,
+                               const NewYieldValueFn &newYieldValuesFn) {
   // Create a new loop before the existing one, with the extra operands.
   OpBuilder::InsertionGuard g(builder);
   builder.setInsertionPoint(loop);
