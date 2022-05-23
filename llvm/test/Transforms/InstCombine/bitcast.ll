@@ -149,6 +149,21 @@ define <4 x float> @bitcasts_and_bitcast_to_fp(<4 x float> %a, <8 x i16> %b) {
   ret <4 x float> %bc3
 }
 
+define <4 x float> @bitcasts_or_bitcast_to_fp(<4 x float> %a, <8 x i16> %b) {
+; CHECK-LABEL: @bitcasts_or_bitcast_to_fp(
+; CHECK-NEXT:    [[BC1:%.*]] = bitcast <4 x float> [[A:%.*]] to <2 x i64>
+; CHECK-NEXT:    [[BC2:%.*]] = bitcast <8 x i16> [[B:%.*]] to <2 x i64>
+; CHECK-NEXT:    [[AND:%.*]] = or <2 x i64> [[BC1]], [[BC2]]
+; CHECK-NEXT:    [[BC3:%.*]] = bitcast <2 x i64> [[AND]] to <4 x float>
+; CHECK-NEXT:    ret <4 x float> [[BC3]]
+;
+  %bc1 = bitcast <4 x float> %a to <2 x i64>
+  %bc2 = bitcast <8 x i16> %b to <2 x i64>
+  %and = or <2 x i64> %bc1, %bc2
+  %bc3 = bitcast <2 x i64> %and to <4 x float>
+  ret <4 x float> %bc3
+}
+
 ; FIXME: Transform limited from changing vector op to integer op to avoid codegen problems.
 
 define i128 @bitcast_or_bitcast(i128 %a, <2 x i64> %b) {
