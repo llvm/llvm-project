@@ -3035,6 +3035,15 @@ bool AArch64FrameLowering::assignCalleeSavedSpillSlots(
   // stack slots for them.
   MachineFrameInfo &MFI = MF.getFrameInfo();
   auto *AFI = MF.getInfo<AArch64FunctionInfo>();
+
+  bool UsesWinAAPCS = isTargetWindows(MF);
+  if (UsesWinAAPCS && hasFP(MF) && AFI->hasSwiftAsyncContext()) {
+    int FrameIdx = MFI.CreateStackObject(8, Align(16), true);
+    AFI->setSwiftAsyncContextFrameIdx(FrameIdx);
+    if ((unsigned)FrameIdx < MinCSFrameIndex) MinCSFrameIndex = FrameIdx;
+    if ((unsigned)FrameIdx > MaxCSFrameIndex) MaxCSFrameIndex = FrameIdx;
+  }
+
   for (auto &CS : CSI) {
     Register Reg = CS.getReg();
     const TargetRegisterClass *RC = RegInfo->getMinimalPhysRegClass(Reg);
@@ -3048,7 +3057,8 @@ bool AArch64FrameLowering::assignCalleeSavedSpillSlots(
     if ((unsigned)FrameIdx > MaxCSFrameIndex) MaxCSFrameIndex = FrameIdx;
 
     // Grab 8 bytes below FP for the extended asynchronous frame info.
-    if (hasFP(MF) && AFI->hasSwiftAsyncContext() && Reg == AArch64::FP) {
+    if (hasFP(MF) && AFI->hasSwiftAsyncContext() && !UsesWinAAPCS &&
+        Reg == AArch64::FP) {
       FrameIdx = MFI.CreateStackObject(8, Alignment, true);
       AFI->setSwiftAsyncContextFrameIdx(FrameIdx);
       if ((unsigned)FrameIdx < MinCSFrameIndex) MinCSFrameIndex = FrameIdx;
