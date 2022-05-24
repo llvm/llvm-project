@@ -1485,7 +1485,7 @@ std::string PatternEmitter::handleOpCreation(DagNode tree, int resultIndex,
 
   // Then prepare the result types. We need to specify the types for all
   // results.
-  os.indent() << formatv("::mlir::SmallVector<::mlir::Type, 4> tblgen_types; "
+  os.indent() << formatv("::llvm::SmallVector<::mlir::Type, 4> tblgen_types; "
                          "(void)tblgen_types;\n");
   int numResults = resultOp.getNumResults();
   if (tail.returnType) {
@@ -1531,7 +1531,7 @@ void PatternEmitter::createSeparateLocalVarsForOpArgs(
     std::string varName;
     if (operand->isVariadic()) {
       varName = std::string(formatv("tblgen_values_{0}", valueIndex++));
-      os << formatv("::mlir::SmallVector<::mlir::Value, 4> {0};\n", varName);
+      os << formatv("::llvm::SmallVector<::mlir::Value, 4> {0};\n", varName);
       std::string range;
       if (node.isNestedDagArg(argIndex)) {
         range = childNodeNames[argIndex];
@@ -1614,9 +1614,9 @@ void PatternEmitter::createAggregateLocalVarsForOpArgs(
   Operator &resultOp = node.getDialectOp(opMap);
 
   auto scope = os.scope();
-  os << formatv("::mlir::SmallVector<::mlir::Value, 4> "
+  os << formatv("::llvm::SmallVector<::mlir::Value, 4> "
                 "tblgen_values; (void)tblgen_values;\n");
-  os << formatv("::mlir::SmallVector<::mlir::NamedAttribute, 4> "
+  os << formatv("::llvm::SmallVector<::mlir::NamedAttribute, 4> "
                 "tblgen_attrs; (void)tblgen_attrs;\n");
 
   const char *addAttrCmd =

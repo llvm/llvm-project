@@ -1631,7 +1631,7 @@ void OpEmitter::genInferredTypeCollectiveParamBuilder() {
 
   // Result types
   body << formatv(R"(
-  ::mlir::SmallVector<::mlir::Type, 2> inferredReturnTypes;
+  ::llvm::SmallVector<::mlir::Type, 2> inferredReturnTypes;
   if (::mlir::succeeded({0}::inferReturnTypes(odsBuilder.getContext(),
           {1}.location, operands,
           {1}.attributes.getDictionary({1}.getContext()),
@@ -2271,7 +2271,7 @@ void OpEmitter::genSideEffectInterfaceMethods() {
 
   for (auto &it : interfaceEffects) {
     // Generate the 'getEffects' method.
-    std::string type = llvm::formatv("::mlir::SmallVectorImpl<::mlir::"
+    std::string type = llvm::formatv("::llvm::SmallVectorImpl<::mlir::"
                                      "SideEffects::EffectInstance<{0}>> &",
                                      it.first())
                            .str();

@@ -28,7 +28,7 @@ def VectorUnrollOpInterface : OpInterface<"VectorUnrollOpInterface"> {
         `targetShape`. Return `None` if the op cannot be unrolled to the target
         vector shape.
       }],
-      /*retTy=*/"::mlir::Optional<::mlir::SmallVector<int64_t, 4>>",
+      /*retTy=*/"::mlir::Optional<::llvm::SmallVector<int64_t, 4>>",
       /*methodName=*/"getShapeForUnroll",
       /*args=*/(ins),
       /*methodBody=*/"",
@@ -38,7 +38,7 @@ def VectorUnrollOpInterface : OpInterface<"VectorUnrollOpInterface"> {
           template dyn_cast<::mlir::VectorType>();
         if (!vt)
           return ::mlir::None;
-        ::mlir::SmallVector<int64_t, 4> res(vt.getShape().begin(), vt.getShape().end());
+        ::llvm::SmallVector<int64_t, 4> res(vt.getShape().begin(), vt.getShape().end());
         return res;
       }]
     >,

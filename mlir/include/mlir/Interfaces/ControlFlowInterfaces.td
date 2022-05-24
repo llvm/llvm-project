@@ -161,7 +161,7 @@ def RegionBranchOpInterface : OpInterface<"RegionBranchOpInterface"> {
       "void", "getSuccessorRegions",
       (ins "::mlir::Optional<unsigned>":$index,
            "::mlir::ArrayRef<::mlir::Attribute>":$operands,
-           "::mlir::SmallVectorImpl<::mlir::RegionSuccessor> &":$regions)
+           "::llvm::SmallVectorImpl<::mlir::RegionSuccessor> &":$regions)
     >,
     InterfaceMethod<[{
         Populates `invocationBounds` with the minimum and maximum number of

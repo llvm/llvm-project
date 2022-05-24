@@ -793,7 +793,7 @@ static void genElementParserStorage(FormatElement *element, const Operator &op,
       genElementParserStorage(paramElement, op, body);
 
   } else if (isa<OperandsDirective>(element)) {
-    body << "  ::mlir::SmallVector<::mlir::OpAsmParser::UnresolvedOperand, 4> "
+    body << "  ::llvm::SmallVector<::mlir::OpAsmParser::UnresolvedOperand, 4> "
             "allOperands;\n";
 
   } else if (isa<RegionsDirective>(element)) {
@@ -812,7 +812,7 @@ static void genElementParserStorage(FormatElement *element, const Operator &op,
     StringRef name = operand->getVar()->name;
     if (operand->getVar()->isVariableLength()) {
       body
-          << "  ::mlir::SmallVector<::mlir::OpAsmParser::UnresolvedOperand, 4> "
+          << "  ::llvm::SmallVector<::mlir::OpAsmParser::UnresolvedOperand, 4> "
           << name << "Operands;\n";
       if (operand->getVar()->isVariadicOfVariadic()) {
         body << "    llvm::SmallVector<int32_t> " << name
@@ -855,7 +855,7 @@ static void genElementParserStorage(FormatElement *element, const Operator &op,
     ArgumentLengthKind lengthKind;
     StringRef name = getTypeListName(dir->getArg(), lengthKind);
     if (lengthKind != ArgumentLengthKind::Single)
-      body << "  ::mlir::SmallVector<::mlir::Type, 1> " << name << "Types;\n";
+      body << "  ::llvm::SmallVector<::mlir::Type, 1> " << name << "Types;\n";
     else
       body << llvm::formatv("  ::mlir::Type {0}RawTypes[1];\n", name)
            << llvm::formatv(
