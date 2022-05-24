@@ -80,9 +80,9 @@ struct LinuxPerfZeroTscConversion {
   ///
   /// \return
   ///   Nanosecond wall time.
-  std::chrono::nanoseconds ToNanos(uint64_t tsc) const;
+  uint64_t ToNanos(uint64_t tsc) const;
 
-  uint64_t ToTSC(std::chrono::nanoseconds nanos) const;
+  uint64_t ToTSC(uint64_t nanos) const;
 
   uint32_t time_mult;
   uint16_t time_shift;

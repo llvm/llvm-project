@@ -128,8 +128,8 @@ Optional<uint64_t> Trace::GetLiveThreadBinaryDataSize(lldb::tid_t tid,
 
 Optional<uint64_t> Trace::GetLiveCoreBinaryDataSize(lldb::core_id_t core_id,
                                                     llvm::StringRef kind) {
-  auto it = m_live_core_data.find(core_id);
-  if (it == m_live_core_data.end())
+  auto it = m_live_core_data_sizes.find(core_id);
+  if (it == m_live_core_data_sizes.end())
     return None;
   std::unordered_map<std::string, uint64_t> &single_core_data = it->second;
   auto single_thread_data_it = single_core_data.find(kind.str());
@@ -211,6 +211,8 @@ const char *Trace::RefreshLiveProcessState() {
   m_stop_id = new_stop_id;
   m_live_thread_data.clear();
   m_live_refresh_error.reset();
+  m_live_core_data_sizes.clear();
+  m_live_core_data.clear();
   m_cores.reset();
 
   auto HandleError = [&](Error &&err) -> const char * {
@@ -246,7 +248,7 @@ const char *Trace::RefreshLiveProcessState() {
     for (const TraceCoreState &core_state : *live_process_state->cores) {
       m_cores->push_back(core_state.core_id);
       for (const TraceBinaryData &item : core_state.binary_data)
-        m_live_core_data[core_state.core_id][item.kind] = item.size;
+        m_live_core_data_sizes[core_state.core_id][item.kind] = item.size;
     }
     LLDB_LOG(log, "== Found {0} cpu cores being traced",
             live_process_state->cores->size());
@@ -353,10 +355,18 @@ Trace::OnLiveThreadBinaryDataRead(lldb::tid_t tid, llvm::StringRef kind,
 llvm::Error Trace::OnLiveCoreBinaryDataRead(lldb::core_id_t core_id,
                                             llvm::StringRef kind,
                                             OnBinaryDataReadCallback callback) {
+  auto core_data_entries = m_live_core_data.find(core_id);
+  if (core_data_entries != m_live_core_data.end()) {
+    auto core_data = core_data_entries->second.find(kind.str());
+    if (core_data != core_data_entries->second.end())
+      return callback(core_data->second);
+  }
+
   Expected<std::vector<uint8_t>> data = GetLiveCoreBinaryData(core_id, kind);
   if (!data)
     return data.takeError();
-  return callback(*data);
+  auto it = m_live_core_data[core_id].insert({kind.str(), std::move(*data)});
+  return callback(it.first->second);
 }
 
 llvm::Error Trace::OnDataFileRead(FileSpec file,
@@ -399,6 +409,28 @@ llvm::Error Trace::OnThreadBinaryDataRead(lldb::tid_t tid, llvm::StringRef kind,
     return OnLiveThreadBinaryDataRead(tid, kind, callback);
   else
     return OnPostMortemThreadBinaryDataRead(tid, kind, callback);
+}
+
+llvm::Error
+Trace::OnCoresBinaryDataRead(const std::set<lldb::core_id_t> core_ids,
+                             llvm::StringRef kind,
+                             OnCoresBinaryDataReadCallback callback) {
+  DenseMap<core_id_t, ArrayRef<uint8_t>> buffers;
+
+  std::function<Error(std::set<core_id_t>::iterator)> process_core =
+      [&](std::set<core_id_t>::iterator core_id) -> Error {
+    if (core_id == core_ids.end())
+      return callback(buffers);
+
+    return OnCoreBinaryDataRead(*core_id, kind,
+                                [&](ArrayRef<uint8_t> data) -> Error {
+                                  buffers.try_emplace(*core_id, data);
+                                  auto next_id = core_id;
+                                  next_id++;
+                                  return process_core(next_id);
+                                });
+  };
+  return process_core(core_ids.begin());
 }
 
 llvm::Error Trace::OnCoreBinaryDataRead(lldb::core_id_t core_id,

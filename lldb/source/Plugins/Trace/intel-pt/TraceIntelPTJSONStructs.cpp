@@ -49,8 +49,10 @@ bool fromJSON(const json::Value &value, JSONModule &module, Path path) {
 }
 
 json::Value toJSON(const JSONThread &thread) {
-  return json::Object{{"tid", thread.tid},
-                      {"traceBuffer", thread.trace_buffer}};
+  json::Object obj{{"tid", thread.tid}};
+  if (thread.trace_buffer)
+    obj["traceBuffer"] = *thread.trace_buffer;
+  return obj;
 }
 
 bool fromJSON(const json::Value &value, JSONThread &thread, Path path) {

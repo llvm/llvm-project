@@ -240,6 +240,9 @@ public:
 
   using OnBinaryDataReadCallback =
       std::function<llvm::Error(llvm::ArrayRef<uint8_t> data)>;
+  using OnCoresBinaryDataReadCallback = std::function<llvm::Error(
+      const llvm::DenseMap<lldb::core_id_t, llvm::ArrayRef<uint8_t>>
+          &core_to_data)>;
 
   /// Fetch binary data associated with a thread, either live or postmortem, and
   /// pass it to the given callback. The reason of having a callback is to free
@@ -291,6 +294,12 @@ public:
   llvm::Error OnCoreBinaryDataRead(lldb::core_id_t core_id,
                                    llvm::StringRef kind,
                                    OnBinaryDataReadCallback callback);
+
+  /// Similar to \a OnCoreBinaryDataRead but this is able to fetch the same data
+  /// from multiple cores at once.
+  llvm::Error OnCoresBinaryDataRead(const std::set<lldb::core_id_t> core_ids,
+                                    llvm::StringRef kind,
+                                    OnCoresBinaryDataReadCallback callback);
 
   /// \return
   ///     All the currently traced processes.
@@ -518,7 +527,12 @@ private:
 
   /// core id -> data kind -> size
   llvm::DenseMap<lldb::core_id_t, std::unordered_map<std::string, uint64_t>>
+      m_live_core_data_sizes;
+  /// core id -> data kind -> bytes
+  llvm::DenseMap<lldb::core_id_t,
+                 std::unordered_map<std::string, std::vector<uint8_t>>>
       m_live_core_data;
+
   /// data kind -> size
   std::unordered_map<std::string, uint64_t> m_live_process_data;
   /// \}
