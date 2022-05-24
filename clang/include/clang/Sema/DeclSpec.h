@@ -516,7 +516,8 @@ public:
   SourceLocation getTypeSpecSatLoc() const { return TSSatLoc; }
 
   SourceLocation getTypeSpecTypeNameLoc() const {
-    assert(isDeclRep((TST) TypeSpecType) || TypeSpecType == TST_typename);
+    assert(isDeclRep((TST)TypeSpecType) || isTypeRep((TST)TypeSpecType) ||
+           isExprRep((TST)TypeSpecType));
     return TSTNameLoc;
   }
 

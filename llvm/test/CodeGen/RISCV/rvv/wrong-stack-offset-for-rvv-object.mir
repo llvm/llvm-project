@@ -4,17 +4,19 @@
 # Stack layout of this program
 # |--------------------------| -- <-- Incoming SP
 # | a7 (Vaarg)               |
-# | ------------------------ | -- <-- New SP + vlenb  + 56
+# | ------------------------ | -- <-- New SP + vlenb  + 72
 # | a6 (Vaarg)               |
-# | ------------------------ | -- <-- New SP + vlenb  + 48
+# | ------------------------ | -- <-- New SP + vlenb  + 64
 # | ra (Callee-saved reg)    |
-# | ------------------------ | -- <-- New SP + vlenb  + 40
+# | ------------------------ | -- <-- New SP + vlenb  + 56
 # | s0 (Callee-saved reg)    |
-# | ------------------------ | -- <-- New SP + vlenb  + 32
+# | ------------------------ | -- <-- New SP + vlenb  + 48
 # | s1 (Callee-saved reg)    |
-# | ------------------------ | -- <-- New SP + vlenb  + 24
+# | ------------------------ | -- <-- New SP + vlenb  + 40
+# | 8 bytes of padding       |
+# | ------------------------ | -- <-- New SP + vlenb
 # | v8 (RVV objects)         |
-# | ------------------------ | -- <-- New SP + 24
+# | ------------------------ | -- <-- New SP + 32
 # | buf1                     |
 # |--------------------------| -- <-- New SP + 16
 # | Stack ID 5               |
@@ -122,7 +124,7 @@ body:             |
   ; CHECK-NEXT:  - { id: 0, name: buf1, type: default, offset: -48, size: 1, alignment: 8,
   ; CHECK-NEXT:      stack-id: default, callee-saved-register: '', callee-saved-restored: true,
   ; CHECK-NEXT:      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
-  ; CHECK-NEXT:  - { id: 1, name: '', type: spill-slot, offset: -8, size: 8, alignment: 8,
+  ; CHECK-NEXT:  - { id: 1, name: '', type: spill-slot, offset: -16, size: 8, alignment: 8,
   ; CHECK-NEXT:      stack-id: scalable-vector, callee-saved-register: '', callee-saved-restored: true,
   ; CHECK-NEXT:      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
   ; CHECK-NEXT:  - { id: 2, name: '', type: spill-slot, offset: -24, size: 8, alignment: 8,
@@ -144,27 +146,30 @@ body:             |
   ; CHECK-NEXT:   successors: %bb.1(0x80000000)
   ; CHECK-NEXT:   liveins: $x11, $x14, $x16, $x17, $x1, $x8, $x9
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   $x2 = frame-setup ADDI $x2, -64
-  ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION def_cfa_offset 64
-  ; CHECK-NEXT:   SD killed $x1, $x2, 40 :: (store (s64) into %stack.2)
-  ; CHECK-NEXT:   SD killed $x8, $x2, 32 :: (store (s64) into %stack.3)
-  ; CHECK-NEXT:   SD killed $x9, $x2, 24 :: (store (s64) into %stack.4)
+  ; CHECK-NEXT:   $x2 = frame-setup ADDI $x2, -80
+  ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION def_cfa_offset 80
+  ; CHECK-NEXT:   SD killed $x1, $x2, 56 :: (store (s64) into %stack.2)
+  ; CHECK-NEXT:   SD killed $x8, $x2, 48 :: (store (s64) into %stack.3)
+  ; CHECK-NEXT:   SD killed $x9, $x2, 40 :: (store (s64) into %stack.4)
   ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION offset $x1, -24
   ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION offset $x8, -32
   ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION offset $x9, -40
   ; CHECK-NEXT:   $x10 = frame-setup PseudoReadVLENB
+  ; CHECK-NEXT:   $x10 = frame-setup SLLI killed $x10, 1
   ; CHECK-NEXT:   $x2 = frame-setup SUB $x2, killed $x10
   ; CHECK-NEXT:   renamable $x8 = COPY $x14
   ; CHECK-NEXT:   renamable $x9 = COPY $x11
   ; CHECK-NEXT:   $x10 = PseudoReadVLENB
+  ; CHECK-NEXT:   $x10 = SLLI killed $x10, 1
   ; CHECK-NEXT:   $x10 = ADD $x2, killed $x10
-  ; CHECK-NEXT:   SD killed renamable $x17, killed $x10, 56 :: (store (s64))
+  ; CHECK-NEXT:   SD killed renamable $x17, killed $x10, 72 :: (store (s64))
   ; CHECK-NEXT:   $x10 = PseudoReadVLENB
+  ; CHECK-NEXT:   $x10 = SLLI killed $x10, 1
   ; CHECK-NEXT:   $x10 = ADD $x2, killed $x10
-  ; CHECK-NEXT:   SD killed renamable $x16, killed $x10, 48 :: (store (s64) into %fixed-stack.1, align 16)
+  ; CHECK-NEXT:   SD killed renamable $x16, killed $x10, 64 :: (store (s64) into %fixed-stack.1, align 16)
   ; CHECK-NEXT:   dead $x0 = PseudoVSETIVLI 2, 69 /* e8, mf8, ta, mu */, implicit-def $vl, implicit-def $vtype
   ; CHECK-NEXT:   renamable $v8 = PseudoVMV_V_I_MF8 0, 2, 3 /* e8 */, implicit $vl, implicit $vtype
-  ; CHECK-NEXT:   $x10 = ADDI $x2, 24
+  ; CHECK-NEXT:   $x10 = ADDI $x2, 32
   ; CHECK-NEXT:   PseudoVSPILL_M1 killed renamable $v8, killed $x10 :: (store unknown-size into %stack.1, align 8)
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.1.while.cond:
@@ -179,7 +184,7 @@ body:             |
   ; CHECK-NEXT:   liveins: $x8, $x9
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   dead $x0 = PseudoVSETIVLI 2, 69 /* e8, mf8, ta, mu */, implicit-def $vl, implicit-def $vtype
-  ; CHECK-NEXT:   $x10 = ADDI $x2, 24
+  ; CHECK-NEXT:   $x10 = ADDI $x2, 32
   ; CHECK-NEXT:   renamable $v8 = PseudoVRELOAD_M1 killed $x10 :: (load unknown-size from %stack.1, align 8)
   ; CHECK-NEXT:   PseudoVSE8_V_MF8 killed renamable $v8, renamable $x8, 2, 3 /* e8 */, implicit $vl, implicit $vtype :: (store (s16) into %ir.0, align 1)
   ; CHECK-NEXT:   $x10 = COPY renamable $x9

@@ -2,7 +2,7 @@
 ! Tests valid and invalid ENTRY statements
 
 module m1
-  !ERROR: ENTRY may appear only in a subroutine or function
+  !ERROR: ENTRY 'badentryinmodule' may appear only in a subroutine or function
   entry badentryinmodule
   interface
     module subroutine separate
@@ -30,18 +30,18 @@ end module
 submodule(m1) m1s1
  contains
   module procedure separate
-    !ERROR: ENTRY may not appear in a separate module procedure
+    !ERROR: ENTRY 'badentryinsmp' may not appear in a separate module procedure
     entry badentryinsmp ! 1571
   end procedure
 end submodule
 
 program main
-  !ERROR: ENTRY may appear only in a subroutine or function
+  !ERROR: ENTRY 'badentryinprogram' may appear only in a subroutine or function
   entry badentryinprogram ! C1571
 end program
 
 block data bd1
-  !ERROR: ENTRY may appear only in a subroutine or function
+  !ERROR: ENTRY 'badentryinbd' may appear only in a subroutine or function
   entry badentryinbd ! C1571
 end block data
 
@@ -80,9 +80,9 @@ function ifunc()
   integer, allocatable :: alloc
   integer, pointer :: ptr
   entry iok1()
-  !ERROR: ENTRY name 'ibad1' may not be declared when RESULT() is present
+  !ERROR: 'ibad1' is already declared in this scoping unit
   entry ibad1() result(ibad1res) ! C1570
-  !ERROR: 'ibad2' was previously declared as an item that may not be used as a function result
+  !ERROR: 'ibad2' is already declared in this scoping unit
   entry ibad2()
   !ERROR: ENTRY in a function may not have an alternate return dummy argument
   entry ibadalt(*) ! C1573
@@ -92,6 +92,7 @@ function ifunc()
   !ERROR: RESULT(iok) may not have the same name as an ENTRY in the function
   entry isameres2() result(iok) ! C1574
   entry isameres3() result(iok2) ! C1574
+  !ERROR: 'iok2' is already declared in this scoping unit
   entry iok2()
   !These cases are all acceptably incompatible
   entry iok3() result(weird1)
@@ -114,6 +115,8 @@ function ifunc()
   continue ! force transition to execution part
   entry implicit()
   implicit = 666 ! ok, just ensure that it works
+  !ERROR: Cannot call function 'implicit' like a subroutine
+  call implicit
 end function
 
 function chfunc() result(chr)
@@ -133,8 +136,9 @@ subroutine externals
   !ERROR: 'iok1' is already defined as a global identifier
   entry iok1
   integer :: ix
+  !ERROR: Cannot call subroutine 'iproc' like a function
+  !ERROR: Function result characteristics are not known
   ix = iproc()
-  !ERROR: 'iproc' was previously called as a function
   entry iproc
 end subroutine
 
@@ -211,4 +215,32 @@ module m5
     ent = 1.0
     entry ent
   end function
+end module
+
+module m6
+ contains
+  recursive subroutine passSubr
+    call foo(passSubr)
+    call foo(ent1)
+    entry ent1
+    call foo(ent1)
+  end subroutine
+  recursive function passFunc1
+    !ERROR: Actual argument associated with procedure dummy argument 'e=' is not a procedure
+    call foo(passFunc1)
+    !ERROR: Actual argument associated with procedure dummy argument 'e=' is not a procedure
+    call foo(ent2)
+    entry ent2
+    !ERROR: Actual argument associated with procedure dummy argument 'e=' is not a procedure
+    call foo(ent2)
+  end function
+  recursive function passFunc2() result(res)
+    call foo(passFunc2)
+    call foo(ent3)
+    entry ent3() result(res)
+    call foo(ent3)
+  end function
+  subroutine foo(e)
+    external e
+  end subroutine
 end module

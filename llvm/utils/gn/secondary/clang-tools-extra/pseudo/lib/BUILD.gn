@@ -8,6 +8,7 @@ static_library("lib") {
   ]
   include_dirs = [ "../include" ]
   sources = [
+    "Bracket.cpp",
     "DirectiveTree.cpp",
     "Forest.cpp",
     "GLR.cpp",

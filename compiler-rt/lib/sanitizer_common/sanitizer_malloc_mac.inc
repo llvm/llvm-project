@@ -12,7 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "sanitizer_common/sanitizer_platform.h"
-#if !SANITIZER_MAC
+#if !SANITIZER_APPLE
 #error "This file should only be compiled on Darwin."
 #endif
 
