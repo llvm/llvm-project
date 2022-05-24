@@ -157,6 +157,7 @@
 ; GCN-O1-NEXT:Scoped NoAlias Alias Analysis
 ; GCN-O1-NEXT:Argument Register Usage Information Storage
 ; GCN-O1-NEXT:Create Garbage Collector Module Metadata
+; GCN-O1-NEXT:Basic Block Sections Profile Reader
 ; GCN-O1-NEXT:Machine Branch Probability Analysis
 ; GCN-O1-NEXT:Register Usage Information Storage
 ; GCN-O1-NEXT:Default Regalloc Eviction Advisor
@@ -411,6 +412,7 @@
 ; GCN-O1-OPTS-NEXT:Scoped NoAlias Alias Analysis
 ; GCN-O1-OPTS-NEXT:Argument Register Usage Information Storage
 ; GCN-O1-OPTS-NEXT:Create Garbage Collector Module Metadata
+; GCN-O1-OPTS-NEXT:Basic Block Sections Profile Reader
 ; GCN-O1-OPTS-NEXT:Machine Branch Probability Analysis
 ; GCN-O1-OPTS-NEXT:Register Usage Information Storage
 ; GCN-O1-OPTS-NEXT:Default Regalloc Eviction Advisor
@@ -698,6 +700,7 @@
 ; GCN-O2-NEXT:Scoped NoAlias Alias Analysis
 ; GCN-O2-NEXT:Argument Register Usage Information Storage
 ; GCN-O2-NEXT:Create Garbage Collector Module Metadata
+; GCN-O2-NEXT:Basic Block Sections Profile Reader
 ; GCN-O2-NEXT:Machine Branch Probability Analysis
 ; GCN-O2-NEXT:Register Usage Information Storage
 ; GCN-O2-NEXT:Default Regalloc Eviction Advisor
@@ -987,6 +990,7 @@
 ; GCN-O3-NEXT:Scoped NoAlias Alias Analysis
 ; GCN-O3-NEXT:Argument Register Usage Information Storage
 ; GCN-O3-NEXT:Create Garbage Collector Module Metadata
+; GCN-O3-NEXT:Basic Block Sections Profile Reader
 ; GCN-O3-NEXT:Machine Branch Probability Analysis
 ; GCN-O3-NEXT:Register Usage Information Storage
 ; GCN-O3-NEXT:Default Regalloc Eviction Advisor
