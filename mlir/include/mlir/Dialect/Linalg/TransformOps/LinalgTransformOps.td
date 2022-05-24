@@ -16,6 +16,81 @@ include "mlir/Dialect/PDL/IR/PDLTypes.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
 include "mlir/IR/OpBase.td"
 
+def InterchangeOp : Op<Transform_Dialect, "structured.interchange",
+    [FunctionalStyleTransformOpTrait, MemoryEffectsOpInterface,
+    TransformOpInterface, TransformEachOpTrait]> {
+  let description = [{
+    Interchanges the iterators of the operations pointed to by the target handle
+    using the iterator interchange attribute.
+  }];
+
+  let arguments =
+    (ins PDL_Operation:$target,
+         DefaultValuedAttr<I64ArrayAttr, "{}">:$iterator_interchange);
+  let results = (outs PDL_Operation:$transformed);
+
+  let assemblyFormat = "$target attr-dict";
+  let hasVerifier = 1;
+
+  let extraClassDeclaration = [{
+    ::mlir::FailureOr<::mlir::linalg::LinalgOp> applyToOne(
+        ::mlir::linalg::LinalgOp target);
+  }];
+}
+
+def PadOp : Op<Transform_Dialect, "structured.pad",
+    [FunctionalStyleTransformOpTrait, MemoryEffectsOpInterface,
+     TransformOpInterface, TransformEachOpTrait]> {
+  let description = [{
+    Pads the operations pointed to by the target handle using the options
+    provides as operation attributes.
+  }];
+
+  let arguments =
+    (ins PDL_Operation:$target,
+         DefaultValuedAttr<ArrayAttr, "{}">:$padding_values,
+         DefaultValuedAttr<I64ArrayAttr, "{}">:$padding_dimensions,
+         DefaultValuedAttr<I64ArrayAttr, "{}">:$pack_paddings,
+         DefaultValuedAttr<I64ArrayAttr, "{}">:$hoist_paddings,
+         DefaultValuedAttr<
+          TypedArrayAttrBase<I64ArrayAttr, "array of arrays of i64">,
+          "{}">:$transpose_paddings);
+  let results = (outs PDL_Operation:$transformed);
+
+  let assemblyFormat = "$target attr-dict";
+  let hasVerifier = 1;
+
+  let extraClassDeclaration = [{
+    ::mlir::FailureOr<::mlir::linalg::LinalgOp> applyToOne(
+        ::mlir::linalg::LinalgOp target);
+  }];
+}
+
+def ScalarizeOp : Op<Transform_Dialect, "structured.scalarize",
+    [FunctionalStyleTransformOpTrait, MemoryEffectsOpInterface,
+     TransformOpInterface, TransformEachOpTrait]> {
+  let description = [{
+    Indicates that ops of a specific kind in the given function should be
+    scalarized (i.e. their dynamic dimensions tiled by 1).
+
+    This operation returns the tiled op but not the loops.
+
+    We make this design choice because it is hard to know ahead of time the
+    number of loops that will be produced (it depends on the number of dynamic
+    dimensions after multiple transformations have been applied).
+  }];
+
+  let arguments = (ins PDL_Operation:$target);
+  let results = (outs PDL_Operation:$result);
+
+  let assemblyFormat = "$target attr-dict";
+
+  let extraClassDeclaration = [{
+    ::mlir::FailureOr<::mlir::linalg::LinalgOp> applyToOne(
+        ::mlir::linalg::LinalgOp target);
+  }];
+}
+
 def TileOp : Op<Transform_Dialect, "structured.tile",
        [DeclareOpInterfaceMethods<TransformOpInterface>,
         DeclareOpInterfaceMethods<MemoryEffectsOpInterface>]> {
