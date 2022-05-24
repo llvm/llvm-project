@@ -100,7 +100,7 @@ def InferShapedTypeOpInterface : OpInterface<"InferShapedTypeOpInterface"> {
                     "::mlir::ValueShapeRange":$operands,
                     "::mlir::DictionaryAttr":$attributes,
                     "::mlir::RegionRange":$regions,
-                    "::mlir::SmallVectorImpl<::mlir::ShapedTypeComponents>&":
+                    "::llvm::SmallVectorImpl<::mlir::ShapedTypeComponents>&":
                       $inferredReturnShapes),
       /*methodBody=*/[{}],
       /*defaultImplementation=*/[{ return ::mlir::failure(); }]
@@ -126,7 +126,7 @@ def InferShapedTypeOpInterface : OpInterface<"InferShapedTypeOpInterface"> {
       /*methodName=*/"reifyReturnTypeShapes",
       /*args=*/(ins "::mlir::OpBuilder&":$builder,
           "::mlir::ValueRange":$operands,
-          "::mlir::SmallVectorImpl<::mlir::Value> &":$reifiedReturnShapes),
+          "::llvm::SmallVectorImpl<::mlir::Value> &":$reifiedReturnShapes),
       /*methodBody=*/[{}],
       /*defaultImplementation=*/[{ return ::mlir::failure(); }]
     >
