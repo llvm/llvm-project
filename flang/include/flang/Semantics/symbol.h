@@ -137,16 +137,10 @@ public:
   SubprogramNameDetails() = delete;
   SubprogramKind kind() const { return kind_; }
   ProgramTree &node() const { return *node_; }
-  bool isEntryStmt() const { return isEntryStmt_; }
-  SubprogramNameDetails &set_isEntryStmt(bool yes = true) {
-    isEntryStmt_ = yes;
-    return *this;
-  }
 
 private:
   SubprogramKind kind_;
   common::Reference<ProgramTree> node_;
-  bool isEntryStmt_{false};
 };
 
 // A name from an entity-decl -- could be object or function.
