@@ -196,3 +196,49 @@ add_entrypoint_object(
     libc.include.errno
     libc.include.pthread
 )
+
+add_entrypoint_object(
+  pthread_mutex_init
+  SRCS
+    pthread_mutex_init.cpp
+  HDRS
+    pthread_mutex_init.h
+  DEPENDS
+    .pthread_mutexattr
+    libc.include.errno
+    libc.include.pthread
+    libc.src.__support.threads.mutex
+)
+
+add_entrypoint_object(
+  pthread_mutex_destroy
+  SRCS
+    pthread_mutex_destroy.cpp
+  HDRS
+    pthread_mutex_destroy.h
+  DEPENDS
+    libc.include.pthread
+    libc.src.__support.threads.mutex
+)
+
+add_entrypoint_object(
+  pthread_mutex_lock
+  SRCS
+    pthread_mutex_lock.cpp
+  HDRS
+    pthread_mutex_lock.h
+  DEPENDS
+    libc.include.pthread
+    libc.src.__support.threads.mutex
+)
+
+add_entrypoint_object(
+  pthread_mutex_unlock
+  SRCS
+    pthread_mutex_unlock.cpp
+  HDRS
+    pthread_mutex_unlock.h
+  DEPENDS
+    libc.include.pthread
+    libc.src.__support.threads.mutex
+)

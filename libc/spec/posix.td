@@ -33,6 +33,12 @@ def POSIX : StandardSpec<"POSIX"> {
   ConstType ConstPThreadMutexAttrTPtr = ConstType<PThreadMutexAttrTPtr>;
   ConstType ConstRestrictedPThreadMutexAttrTPtr = ConstType<RestrictedPThreadMutexAttrTPtr>;
 
+  NamedType PThreadMutexTType = NamedType<"pthread_mutex_t">;
+  PtrType PThreadMutexTPtr = PtrType<PThreadMutexTType>;
+  RestrictedPtrType RestrictedPThreadMutexTPtr = RestrictedPtrType<PThreadMutexTType>;
+  ConstType ConstPThreadMutexTPtr = ConstType<PThreadMutexTPtr>;
+  ConstType ConstRestrictedPThreadMutexTPtr = ConstType<RestrictedPThreadMutexTPtr>;
+
   HeaderSpec Errno = HeaderSpec<
       "errno.h",
       [
@@ -386,7 +392,7 @@ def POSIX : StandardSpec<"POSIX"> {
   HeaderSpec PThread = HeaderSpec<
     "pthread.h",
     [], // Macros
-    [PThreadAttrTType, PThreadMutexAttrTType], // Types
+    [PThreadAttrTType, PThreadMutexAttrTType, PThreadMutexTType], // Types
     [], // Enumerations
     [
       FunctionSpec<
@@ -498,6 +504,26 @@ def POSIX : StandardSpec<"POSIX"> {
           "pthread_mutexattr_setprioceiling",
           RetValSpec<IntType>,
           [ArgSpec<RestrictedPThreadMutexAttrTPtr>, ArgSpec<IntType>]
+      >,
+      FunctionSpec<
+          "pthread_mutex_init",
+          RetValSpec<IntType>,
+          [ArgSpec<RestrictedPThreadMutexTPtr>, ArgSpec<ConstRestrictedPThreadMutexAttrTPtr>]
+      >,
+      FunctionSpec<
+          "pthread_mutex_destroy",
+          RetValSpec<IntType>,
+          [ArgSpec<PThreadMutexTPtr>]
+      >,
+      FunctionSpec<
+          "pthread_mutex_lock",
+          RetValSpec<IntType>,
+          [ArgSpec<PThreadMutexTPtr>]
+      >,
+      FunctionSpec<
+          "pthread_mutex_unlock",
+          RetValSpec<IntType>,
+          [ArgSpec<PThreadMutexTPtr>]
       >,
     ]
   >;
