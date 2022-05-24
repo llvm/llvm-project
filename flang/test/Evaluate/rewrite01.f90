@@ -105,11 +105,9 @@ end subroutine
 !CHECK: len_test
 subroutine len_test(a,b, c, d, e, n, m)
   character(*), intent(in) :: a
-  character(*) :: b
+  character(10) :: b
   external b
   character(10), intent(in) :: c
-  character(10) :: d
-  external d
   integer, intent(in) :: n, m
   character(n), intent(in) :: e
 
@@ -117,9 +115,9 @@ subroutine len_test(a,b, c, d, e, n, m)
   print *, len(a, kind=8)
   !CHECK: PRINT *, 5_4
   print *, len(a(1:5))
-  !CHECK: PRINT *, len(b(a))
+  !CHECK: PRINT *, 10_4
   print *, len(b(a))
-  !CHECK: PRINT *, len(b(a)//a)
+  !CHECK: PRINT *, int(10_8+int(a%len,kind=8),kind=4)
   print *, len(b(a) // a)
   !CHECK: PRINT *, 10_4
   print *, len(c)
@@ -128,14 +126,14 @@ subroutine len_test(a,b, c, d, e, n, m)
   !CHECK: PRINT *, 5_4
   print *, len(c(1:5))
   !CHECK: PRINT *, 10_4
-  print *, len(d(c))
+  print *, len(b(c))
   !CHECK: PRINT *, 20_4
-  print *, len(d(c) // c)
+  print *, len(b(c) // c)
   !CHECK: PRINT *, 0_4
   print *, len(a(10:4))
   !CHECK: PRINT *, int(max(0_8,int(m,kind=8)-int(n,kind=8)+1_8),kind=4)
   print *, len(a(n:m))
-  !CHECK: PRINT *, len(b(a(int(n,kind=8):int(m,kind=8))))
+  !CHECK: PRINT *, 10_4
   print *, len(b(a(n:m)))
   !CHECK: PRINT *, int(max(0_8,max(0_8,int(n,kind=8))-4_8+1_8),kind=4)
   print *, len(e(4:))
