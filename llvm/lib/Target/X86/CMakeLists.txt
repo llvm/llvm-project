@@ -38,6 +38,7 @@ set(sources
   X86PreAMXConfig.cpp
   X86LowerAMXIntrinsics.cpp
   X86TileConfig.cpp
+  X86FastPreTileConfig.cpp
   X86FastTileConfig.cpp
   X86PreTileConfig.cpp
   X86ExpandPseudo.cpp

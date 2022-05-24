@@ -78,6 +78,7 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeX86Target() {
   initializeX86CallFrameOptimizationPass(PR);
   initializeX86CmovConverterPassPass(PR);
   initializeX86TileConfigPass(PR);
+  initializeX86FastPreTileConfigPass(PR);
   initializeX86FastTileConfigPass(PR);
   initializeX86LowerTileCopyPass(PR);
   initializeX86ExpandPseudoPass(PR);
@@ -420,9 +421,6 @@ void X86PassConfig::addIRPasses() {
   addPass(createX86LowerAMXIntrinsicsPass());
   addPass(createX86LowerAMXTypePass());
 
-  if (TM->getOptLevel() == CodeGenOpt::None)
-    addPass(createX86PreAMXConfigPass());
-
   TargetPassConfig::addIRPasses();
 
   if (TM->getOptLevel() != CodeGenOpt::None) {
@@ -511,9 +509,10 @@ void X86PassConfig::addPreRegAlloc() {
   addPass(createX86FlagsCopyLoweringPass());
   addPass(createX86DynAllocaExpander());
 
-  if (getOptLevel() != CodeGenOpt::None) {
+  if (getOptLevel() != CodeGenOpt::None)
     addPass(createX86PreTileConfigPass());
-  }
+  else
+    addPass(createX86FastPreTileConfigPass());
 }
 
 void X86PassConfig::addMachineSSAOptimization() {
