@@ -3602,4 +3602,33 @@ TEST_F(DebugVariableTest, DenseMap) {
   EXPECT_EQ(DebugVariableMap.find(DebugVariableFragB)->second, 12u);
 }
 
+typedef MetadataTest MDTupleAllocationTest;
+TEST_F(MDTupleAllocationTest, Tracking) {
+  // Make sure that the move constructor and move assignment op
+  // for MDOperand correctly adjust tracking information.
+  auto *Value1 = getConstantAsMetadata();
+  MDTuple *A = MDTuple::getDistinct(Context, {Value1, Value1});
+  EXPECT_EQ(A->getOperand(0), Value1);
+  EXPECT_EQ(A->getOperand(1), Value1);
+
+  MDNode::op_range Ops = A->operands();
+
+  MDOperand NewOps1;
+  // Move assignment operator.
+  NewOps1 = std::move(*const_cast<MDOperand *>(Ops.begin()));
+  // Move constructor.
+  MDOperand NewOps2(std::move(*const_cast<MDOperand *>(Ops.begin() + 1)));
+
+  EXPECT_EQ(NewOps1.get(), static_cast<Metadata *>(Value1));
+  EXPECT_EQ(NewOps2.get(), static_cast<Metadata *>(Value1));
+
+  auto *Value2 = getConstantAsMetadata();
+  Value *V1 = Value1->getValue();
+  Value *V2 = Value2->getValue();
+  ValueAsMetadata::handleRAUW(V1, V2);
+
+  EXPECT_EQ(NewOps1.get(), static_cast<Metadata *>(Value2));
+  EXPECT_EQ(NewOps2.get(), static_cast<Metadata *>(Value2));
+}
+
 } // end namespace

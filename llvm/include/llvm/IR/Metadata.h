@@ -775,10 +775,21 @@ class MDOperand {
 
 public:
   MDOperand() = default;
-  MDOperand(MDOperand &&) = delete;
   MDOperand(const MDOperand &) = delete;
-  MDOperand &operator=(MDOperand &&) = delete;
+  MDOperand(MDOperand &&Op) {
+    MD = Op.MD;
+    if (MD)
+      (void)MetadataTracking::retrack(Op.MD, MD);
+    Op.MD = nullptr;
+  }
   MDOperand &operator=(const MDOperand &) = delete;
+  MDOperand &operator=(MDOperand &&Op) {
+    MD = Op.MD;
+    if (MD)
+      (void)MetadataTracking::retrack(Op.MD, MD);
+    Op.MD = nullptr;
+    return *this;
+  }
   ~MDOperand() { untrack(); }
 
   Metadata *get() const { return MD; }
