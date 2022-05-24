@@ -143,14 +143,9 @@ Cookie IONAME(BeginUnformattedOutput)(ExternalUnit = DefaultUnit,
 Cookie IONAME(BeginUnformattedInput)(ExternalUnit = DefaultUnit,
     const char *sourceFile = nullptr, int sourceLine = 0);
 
-// Asynchronous I/O is supported (at most) for unformatted direct access
-// block transfers.
-AsynchronousId IONAME(BeginAsynchronousOutput)(ExternalUnit, std::int64_t REC,
-    const char *, std::size_t, const char *sourceFile = nullptr,
-    int sourceLine = 0);
-AsynchronousId IONAME(BeginAsynchronousInput)(ExternalUnit, std::int64_t REC,
-    char *, std::size_t, const char *sourceFile = nullptr, int sourceLine = 0);
+// WAIT(ID=)
 Cookie IONAME(BeginWait)(ExternalUnit, AsynchronousId);
+// WAIT(no ID=)
 Cookie IONAME(BeginWaitAll)(ExternalUnit);
 
 // Other I/O statements
@@ -198,6 +193,9 @@ Cookie IONAME(BeginInquireIoLength)(
 //   if (EndIoStatement(cookie) == FORTRAN_RUTIME_IOSTAT_END) goto label666;
 void IONAME(EnableHandlers)(Cookie, bool hasIoStat = false, bool hasErr = false,
     bool hasEnd = false, bool hasEor = false, bool hasIoMsg = false);
+
+// ASYNCHRONOUS='YES' or 'NO' with no ID= on READ/WRITE/OPEN
+bool IONAME(SetAsynchronous)(Cookie, const char *, std::size_t);
 
 // Control list options.  These return false on a error that the
 // Begin...() call has specified will be handled by the caller.
@@ -270,14 +268,12 @@ bool IONAME(InputNamelist)(Cookie, const NamelistGroup &);
 
 // Additional specifier interfaces for the connection-list of
 // on OPEN statement (only).  SetBlank(), SetDecimal(),
-// SetDelim(), GetIoMsg(), SetPad(), SetRound(), & SetSign()
-// are also acceptable for OPEN.
+// SetDelim(), GetIoMsg(), SetPad(), SetRound(), SetSign(),
+// & SetAsynchronous() are also acceptable for OPEN.
 // ACCESS=SEQUENTIAL, DIRECT, STREAM
 bool IONAME(SetAccess)(Cookie, const char *, std::size_t);
 // ACTION=READ, WRITE, or READWRITE
 bool IONAME(SetAction)(Cookie, const char *, std::size_t);
-// ASYNCHRONOUS=YES, NO
-bool IONAME(SetAsynchronous)(Cookie, const char *, std::size_t);
 // CARRIAGECONTROL=LIST, FORTRAN, NONE
 bool IONAME(SetCarriagecontrol)(Cookie, const char *, std::size_t);
 // CONVERT=NATIVE, LITTLE_ENDIAN, BIG_ENDIAN, or SWAP
@@ -309,6 +305,9 @@ std::size_t IONAME(GetIoLength)(Cookie);
 // GetIoMsg() does not modify its argument unless an error or
 // end-of-record/file condition is present.
 void IONAME(GetIoMsg)(Cookie, char *, std::size_t); // IOMSG=
+
+// TODO: for ID= on READ/WRITE(ASYNCHRONOUS='YES')
+// int IONAME(GetAsynchronousId)(Cookie);
 
 // INQUIRE() specifiers are mostly identified by their NUL-terminated
 // case-insensitive names.
