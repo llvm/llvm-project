@@ -47,6 +47,19 @@ static void replaceBranchTerminator(BasicBlock &BB,
   Term->eraseFromParent();
 
   if (ChunkSuccessors.empty()) {
+    // Scan forward in BB list to try find a block that is kept.
+    Function &F = *BB.getParent();
+    Function::iterator FI = BB.getIterator();
+    FI++;
+    while (FI != F.end()) {
+      auto &FIB = *FI;
+      if (BBsToKeep.count(&FIB) && !isa<PHINode>(FIB.begin())) {
+        BranchInst::Create(&FIB, &BB);
+        return;
+      }
+      FI++;
+    }
+    // If that fails then resort to replacing with a ret.
     auto *FnRetTy = BB.getParent()->getReturnType();
     ReturnInst::Create(BB.getContext(),
                        FnRetTy->isVoidTy() ? nullptr : UndefValue::get(FnRetTy),
