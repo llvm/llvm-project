@@ -59,6 +59,54 @@ module {
     return %0 : tensor<?xcomplex<f64>, #SparseVector>
   }
 
+  func.func @complex_sqrt(%arga: tensor<?xcomplex<f64>, #SparseVector>)
+                 -> tensor<?xcomplex<f64>, #SparseVector> {
+    %c0 = arith.constant 0 : index
+    %d = tensor.dim %arga, %c0 : tensor<?xcomplex<f64>, #SparseVector>
+    %xv = sparse_tensor.init [%d] : tensor<?xcomplex<f64>, #SparseVector>
+    %0 = linalg.generic #trait_op1
+       ins(%arga: tensor<?xcomplex<f64>, #SparseVector>)
+        outs(%xv: tensor<?xcomplex<f64>, #SparseVector>) {
+        ^bb(%a: complex<f64>, %x: complex<f64>):
+          %1 = complex.sqrt %a : complex<f64>
+          linalg.yield %1 : complex<f64>
+    } -> tensor<?xcomplex<f64>, #SparseVector>
+    return %0 : tensor<?xcomplex<f64>, #SparseVector>
+  }
+
+  func.func @complex_tanh(%arga: tensor<?xcomplex<f64>, #SparseVector>)
+                 -> tensor<?xcomplex<f64>, #SparseVector> {
+    %c0 = arith.constant 0 : index
+    %d = tensor.dim %arga, %c0 : tensor<?xcomplex<f64>, #SparseVector>
+    %xv = sparse_tensor.init [%d] : tensor<?xcomplex<f64>, #SparseVector>
+    %0 = linalg.generic #trait_op1
+       ins(%arga: tensor<?xcomplex<f64>, #SparseVector>)
+        outs(%xv: tensor<?xcomplex<f64>, #SparseVector>) {
+       ^bb(%a: complex<f64>, %x: complex<f64>):
+          %1 = complex.tanh %a : complex<f64>
+          linalg.yield %1 : complex<f64>
+   } -> tensor<?xcomplex<f64>, #SparseVector>
+    return %0 : tensor<?xcomplex<f64>, #SparseVector>
+  }
+
+  func.func @clog1p_expm1(%arga: tensor<?xcomplex<f64>, #SparseVector>)
+                 -> tensor<?xcomplex<f64>, #SparseVector> {
+    %c0 = arith.constant 0 : index
+    %d = tensor.dim %arga, %c0 : tensor<?xcomplex<f64>, #SparseVector>
+    %xv = sparse_tensor.init [%d] : tensor<?xcomplex<f64>, #SparseVector>
+    %0 = linalg.generic #trait_op1
+       ins(%arga: tensor<?xcomplex<f64>, #SparseVector>)
+        outs(%xv: tensor<?xcomplex<f64>, #SparseVector>) {
+        ^bb(%a: complex<f64>, %x: complex<f64>):
+          %1 = complex.log1p %a : complex<f64>
+          // TODO(bixia): Enable this line after adding complex.expm1 to
+          // complex to standard lowering.
+          // %2 = complex.expm1 %1 : complex<f64>
+          linalg.yield %1 : complex<f64>
+    } -> tensor<?xcomplex<f64>, #SparseVector>
+    return %0 : tensor<?xcomplex<f64>, #SparseVector>
+  }
+
   func.func @cdiv(%arga: tensor<?xcomplex<f64>, #SparseVector>)
                  -> tensor<?xcomplex<f64>, #SparseVector> {
     %c0 = arith.constant 0 : index
@@ -131,9 +179,15 @@ module {
           tensor<?xcomplex<f64>, #SparseVector>) -> tensor<?xcomplex<f64>, #SparseVector>
     %1 = call @csin(%sv1)
        : (tensor<?xcomplex<f64>, #SparseVector>) -> tensor<?xcomplex<f64>, #SparseVector>
-    %2 = call @cdiv(%sv1)
+    %2 = call @complex_sqrt(%sv1)
        : (tensor<?xcomplex<f64>, #SparseVector>) -> tensor<?xcomplex<f64>, #SparseVector>
-    %3 = call @cabs(%sv1)
+    %3 = call @complex_tanh(%sv2)
+       : (tensor<?xcomplex<f64>, #SparseVector>) -> tensor<?xcomplex<f64>, #SparseVector>
+    %4 = call @clog1p_expm1(%sv1)
+       : (tensor<?xcomplex<f64>, #SparseVector>) -> tensor<?xcomplex<f64>, #SparseVector>
+    %5 = call @cdiv(%sv1)
+       : (tensor<?xcomplex<f64>, #SparseVector>) -> tensor<?xcomplex<f64>, #SparseVector>
+    %6 = call @cabs(%sv1)
        : (tensor<?xcomplex<f64>, #SparseVector>) -> tensor<?xf64, #SparseVector>
 
     //
@@ -157,15 +211,36 @@ module {
     // CHECK-NEXT: -193.43
     // CHECK-NEXT: 57.2184
     call @dumpc(%1, %d3) : (tensor<?xcomplex<f64>, #SparseVector>, index) -> ()
+    // CHECK-NEXT: 0.433635
+    // CHECK-NEXT: 2.30609
+    // CHECK-NEXT: 2
+    // CHECK-NEXT: 1
+    // CHECK-NEXT: 2.53083
+    // CHECK-NEXT: 1.18538
+    call @dumpc(%2, %d3) : (tensor<?xcomplex<f64>, #SparseVector>, index) -> ()
+    // CHECK-NEXT: 0.761594
+    // CHECK-NEXT: 0
+    // CHECK-NEXT: -0.964028
+    // CHECK-NEXT: 0
+    // CHECK-NEXT: 0.995055
+    // CHECK-NEXT: 0
+    call @dumpc(%3, %d3) : (tensor<?xcomplex<f64>, #SparseVector>, index) -> ()
+    // CHECK-NEXT: 1.52361
+    // CHECK-NEXT: 2.69061
+    // CHECK-NEXT: 1.73287
+    // CHECK-NEXT: 0.785398
+    // CHECK-NEXT: 2.13833
+    // CHECK-NEXT: 0.785398
+    call @dumpc(%4, %d3) : (tensor<?xcomplex<f64>, #SparseVector>, index) -> ()
     // CHECK-NEXT: -2.565
     // CHECK-NEXT: 1
     // CHECK-NEXT: 1.5
     // CHECK-NEXT: 2
     // CHECK-NEXT: 2.5
     // CHECK-NEXT: 3
-    call @dumpc(%2, %d3) : (tensor<?xcomplex<f64>, #SparseVector>, index) -> ()
+    call @dumpc(%5, %d3) : (tensor<?xcomplex<f64>, #SparseVector>, index) -> ()
     // CHECK-NEXT: ( 5.50608, 5, 7.81025 )
-    call @dumpf(%3) : (tensor<?xf64, #SparseVector>) -> ()
+    call @dumpf(%6) : (tensor<?xf64, #SparseVector>) -> ()
 
     // Release the resources.
     sparse_tensor.release %sv1 : tensor<?xcomplex<f64>, #SparseVector>
@@ -173,7 +248,10 @@ module {
     sparse_tensor.release %0 : tensor<?xcomplex<f64>, #SparseVector>
     sparse_tensor.release %1 : tensor<?xcomplex<f64>, #SparseVector>
     sparse_tensor.release %2 : tensor<?xcomplex<f64>, #SparseVector>
-    sparse_tensor.release %3 : tensor<?xf64, #SparseVector>
+    sparse_tensor.release %3 : tensor<?xcomplex<f64>, #SparseVector>
+    sparse_tensor.release %4 : tensor<?xcomplex<f64>, #SparseVector>
+    sparse_tensor.release %5 : tensor<?xcomplex<f64>, #SparseVector>
+    sparse_tensor.release %6 : tensor<?xf64, #SparseVector>
     return
   }
 }
