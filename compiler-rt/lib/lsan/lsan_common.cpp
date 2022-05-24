@@ -240,7 +240,7 @@ class Decorator : public __sanitizer::SanitizerCommonDecorator {
   const char *Leak() { return Blue(); }
 };
 
-static inline bool CanBeAHeapPointer(uptr p) {
+static inline bool MaybeUserPointer(uptr p) {
   // Since our heap is located in mmap-ed memory, we can assume a sensible lower
   // bound on heap addresses.
   const uptr kMinAddress = 4 * 4096;
@@ -252,8 +252,8 @@ static inline bool CanBeAHeapPointer(uptr p) {
 #  elif defined(__mips64)
   return ((p >> 40) == 0);
 #  elif defined(__aarch64__)
-  unsigned runtimeVMA = (MostSignificantSetBitIndex(GET_CURRENT_FRAME()) + 1);
-  return ((p >> runtimeVMA) == 0);
+  // Accept up to 48 bit VMA.
+  return ((p >> 48) == 0);
 #  else
   return true;
 #  endif
@@ -276,7 +276,7 @@ void ScanRangeForPointers(uptr begin, uptr end, Frontier *frontier,
     pp = pp + alignment - pp % alignment;
   for (; pp + sizeof(void *) <= end; pp += alignment) {
     void *p = *reinterpret_cast<void **>(pp);
-    if (!CanBeAHeapPointer(reinterpret_cast<uptr>(p)))
+    if (!MaybeUserPointer(reinterpret_cast<uptr>(p)))
       continue;
     uptr chunk = PointsIntoChunk(p);
     if (!chunk)
