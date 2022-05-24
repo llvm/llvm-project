@@ -6,6 +6,7 @@
 namespace llvm {
 
 class DependencyGraphFlattenerPass : public PassInfoMixin<DependencyGraphFlattenerPass> {
+
 public:
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
 };
