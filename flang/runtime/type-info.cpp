@@ -91,7 +91,7 @@ void Component::EstablishDescriptor(Descriptor &descriptor,
   if (cat == TypeCategory::Character) {
     std::size_t lengthInChars{0};
     if (auto length{characterLen_.GetValue(&container)}) {
-      lengthInChars = static_cast<std::size_t>(*length / kind_);
+      lengthInChars = static_cast<std::size_t>(*length);
     } else {
       RUNTIME_CHECK(
           terminator, characterLen_.genre() == Value::Genre::Deferred);

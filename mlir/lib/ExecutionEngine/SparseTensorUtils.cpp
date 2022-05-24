@@ -896,9 +896,9 @@ public:
                          uint64_t rank, const uint64_t *perm)
       : Base(tensor, rank, perm) {}
 
-  ~SparseTensorEnumerator() final override = default;
+  ~SparseTensorEnumerator() final = default;
 
-  void forallElements(ElementConsumer<V> yield) final override {
+  void forallElements(ElementConsumer<V> yield) final {
     forallElements(yield, 0, 0);
   }
 
