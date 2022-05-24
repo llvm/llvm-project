@@ -1890,7 +1890,7 @@ void ItaniumRecordLayoutBuilder::LayoutField(const FieldDecl *D,
   llvm::Triple Target = Context.getTargetInfo().getTriple();
   bool FieldPacked = (Packed && (!FieldClass || FieldClass->isPOD() ||
                                  Context.getLangOpts().getClangABICompat() <=
-                                     LangOptions::ClangABI::Ver13 ||
+                                     LangOptions::ClangABI::Ver14 ||
                                  Target.isPS4() || Target.isOSDarwin())) ||
                      D->hasAttr<PackedAttr>();
 
