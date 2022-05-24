@@ -266,7 +266,7 @@ bool NoLintDirectiveHandler::Impl::diagHasNoLintInMacro(
       return true;
     if (!DiagLoc.isMacroID())
       return false;
-    DiagLoc = SrcMgr.getImmediateMacroCallerLoc(DiagLoc);
+    DiagLoc = SrcMgr.getImmediateExpansionRange(DiagLoc).getBegin();
   }
   return false;
 }
