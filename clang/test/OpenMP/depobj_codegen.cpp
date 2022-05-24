@@ -160,12 +160,12 @@ int main(int argc, char **argv) {
 // &p[0]
 // CHECK: [[P:%.+]] = load i8*, i8** [[P_ADDR]], align 8
 // CHECK: [[P0:%.+]] = getelementptr inbounds i8, i8* [[P]], i64 0
+// CHECK: [[P0_ADDR:%.+]] = ptrtoint i8* [[P0]] to i64
 
 // dep[ITERATOR_COUNTER].base_addr = &p[0];
 // CHECK: [[ITERATOR_COUNTER:%.+]] = load i64, i64* [[ITERATOR_COUNTER_ADDR]], align 8
 // CHECK: [[DEP_IC:%.+]] = getelementptr %struct.kmp_depend_info, %struct.kmp_depend_info* [[DEP_ADDR]], i64 [[ITERATOR_COUNTER]]
 // CHECK: [[DEP_IC_BASE_ADDR:%.+]] = getelementptr inbounds %struct.kmp_depend_info, %struct.kmp_depend_info* [[DEP_IC]], i{{.+}} 0, i{{.+}} 0
-// CHECK: [[P0_ADDR:%.+]] = ptrtoint i8* [[P0]] to i64
 // CHECK: store i64 [[P0_ADDR]], i64* [[DEP_IC_BASE_ADDR]], align 8
 
 // dep[ITERATOR_COUNTER].size = sizeof(p[0]);
@@ -210,9 +210,9 @@ int main(int argc, char **argv) {
 // CHECK: [[SHAPE_ADDR:%.+]] = load i32*, i32** [[ARGV_ADDR:%.+]], align 8
 // CHECK: [[SZ1:%.+]] = mul nuw i64 12, %{{.+}}
 // CHECK: [[SZ:%.+]] = mul nuw i64 [[SZ1]], 4
+// CHECK: [[SHAPE:%.+]] = ptrtoint i32* [[SHAPE_ADDR]] to i64
 // CHECK: [[BASE_ADDR:%.+]] = getelementptr %struct.kmp_depend_info, %struct.kmp_depend_info* [[DEP_ADDR]], i{{.+}} 2
 // CHECK: [[ADDR:%.+]] = getelementptr inbounds %struct.kmp_depend_info, %struct.kmp_depend_info* [[BASE_ADDR]], i{{.+}} 0, i{{.+}} 0
-// CHECK: [[SHAPE:%.+]] = ptrtoint i32* [[SHAPE_ADDR]] to i64
 // CHECK: store i64 [[SHAPE]], i64* [[ADDR]], align 8
 // CHECK: [[SZ_ADDR:%.+]] = getelementptr inbounds %struct.kmp_depend_info, %struct.kmp_depend_info* [[BASE_ADDR]], i{{.+}} 0, i{{.+}} 1
 // CHECK: store i64 [[SZ]], i64* [[SZ_ADDR]], align 8

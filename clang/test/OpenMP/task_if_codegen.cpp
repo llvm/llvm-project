@@ -408,13 +408,13 @@ int main() {
 // CHECK1-NEXT:    [[TMP16:%.*]] = bitcast i8* [[TMP15]] to %struct.kmp_task_t_with_privates.15*
 // CHECK1-NEXT:    [[TMP17:%.*]] = getelementptr inbounds [[STRUCT_KMP_TASK_T_WITH_PRIVATES_15:%.*]], %struct.kmp_task_t_with_privates.15* [[TMP16]], i32 0, i32 0
 // CHECK1-NEXT:    [[TMP18:%.*]] = getelementptr inbounds [1 x %struct.kmp_depend_info], [1 x %struct.kmp_depend_info]* [[DOTDEP_ARR_ADDR]], i64 0, i64 0
-// CHECK1-NEXT:    [[TMP19:%.*]] = getelementptr [[STRUCT_KMP_DEPEND_INFO:%.*]], %struct.kmp_depend_info* [[TMP18]], i64 0
-// CHECK1-NEXT:    [[TMP20:%.*]] = getelementptr inbounds [[STRUCT_KMP_DEPEND_INFO]], %struct.kmp_depend_info* [[TMP19]], i32 0, i32 0
-// CHECK1-NEXT:    [[TMP21:%.*]] = ptrtoint i32* [[ARG_ADDR]] to i64
-// CHECK1-NEXT:    store i64 [[TMP21]], i64* [[TMP20]], align 8
-// CHECK1-NEXT:    [[TMP22:%.*]] = getelementptr inbounds [[STRUCT_KMP_DEPEND_INFO]], %struct.kmp_depend_info* [[TMP19]], i32 0, i32 1
+// CHECK1-NEXT:    [[TMP19:%.*]] = ptrtoint i32* [[ARG_ADDR]] to i64
+// CHECK1-NEXT:    [[TMP20:%.*]] = getelementptr [[STRUCT_KMP_DEPEND_INFO:%.*]], %struct.kmp_depend_info* [[TMP18]], i64 0
+// CHECK1-NEXT:    [[TMP21:%.*]] = getelementptr inbounds [[STRUCT_KMP_DEPEND_INFO]], %struct.kmp_depend_info* [[TMP20]], i32 0, i32 0
+// CHECK1-NEXT:    store i64 [[TMP19]], i64* [[TMP21]], align 8
+// CHECK1-NEXT:    [[TMP22:%.*]] = getelementptr inbounds [[STRUCT_KMP_DEPEND_INFO]], %struct.kmp_depend_info* [[TMP20]], i32 0, i32 1
 // CHECK1-NEXT:    store i64 4, i64* [[TMP22]], align 8
-// CHECK1-NEXT:    [[TMP23:%.*]] = getelementptr inbounds [[STRUCT_KMP_DEPEND_INFO]], %struct.kmp_depend_info* [[TMP19]], i32 0, i32 2
+// CHECK1-NEXT:    [[TMP23:%.*]] = getelementptr inbounds [[STRUCT_KMP_DEPEND_INFO]], %struct.kmp_depend_info* [[TMP20]], i32 0, i32 2
 // CHECK1-NEXT:    store i8 1, i8* [[TMP23]], align 8
 // CHECK1-NEXT:    store i64 1, i64* [[DEP_COUNTER_ADDR]], align 8
 // CHECK1-NEXT:    [[TMP24:%.*]] = bitcast %struct.kmp_depend_info* [[TMP18]] to i8*
@@ -435,13 +435,13 @@ int main() {
 // CHECK1-NEXT:    [[TMP29:%.*]] = bitcast i8* [[TMP28]] to %struct.kmp_task_t_with_privates.17*
 // CHECK1-NEXT:    [[TMP30:%.*]] = getelementptr inbounds [[STRUCT_KMP_TASK_T_WITH_PRIVATES_17:%.*]], %struct.kmp_task_t_with_privates.17* [[TMP29]], i32 0, i32 0
 // CHECK1-NEXT:    [[TMP31:%.*]] = getelementptr inbounds [1 x %struct.kmp_depend_info], [1 x %struct.kmp_depend_info]* [[DOTDEP_ARR_ADDR9]], i64 0, i64 0
-// CHECK1-NEXT:    [[TMP32:%.*]] = getelementptr [[STRUCT_KMP_DEPEND_INFO]], %struct.kmp_depend_info* [[TMP31]], i64 0
-// CHECK1-NEXT:    [[TMP33:%.*]] = getelementptr inbounds [[STRUCT_KMP_DEPEND_INFO]], %struct.kmp_depend_info* [[TMP32]], i32 0, i32 0
-// CHECK1-NEXT:    [[TMP34:%.*]] = ptrtoint i32* [[ARG_ADDR]] to i64
-// CHECK1-NEXT:    store i64 [[TMP34]], i64* [[TMP33]], align 8
-// CHECK1-NEXT:    [[TMP35:%.*]] = getelementptr inbounds [[STRUCT_KMP_DEPEND_INFO]], %struct.kmp_depend_info* [[TMP32]], i32 0, i32 1
+// CHECK1-NEXT:    [[TMP32:%.*]] = ptrtoint i32* [[ARG_ADDR]] to i64
+// CHECK1-NEXT:    [[TMP33:%.*]] = getelementptr [[STRUCT_KMP_DEPEND_INFO]], %struct.kmp_depend_info* [[TMP31]], i64 0
+// CHECK1-NEXT:    [[TMP34:%.*]] = getelementptr inbounds [[STRUCT_KMP_DEPEND_INFO]], %struct.kmp_depend_info* [[TMP33]], i32 0, i32 0
+// CHECK1-NEXT:    store i64 [[TMP32]], i64* [[TMP34]], align 8
+// CHECK1-NEXT:    [[TMP35:%.*]] = getelementptr inbounds [[STRUCT_KMP_DEPEND_INFO]], %struct.kmp_depend_info* [[TMP33]], i32 0, i32 1
 // CHECK1-NEXT:    store i64 4, i64* [[TMP35]], align 8
-// CHECK1-NEXT:    [[TMP36:%.*]] = getelementptr inbounds [[STRUCT_KMP_DEPEND_INFO]], %struct.kmp_depend_info* [[TMP32]], i32 0, i32 2
+// CHECK1-NEXT:    [[TMP36:%.*]] = getelementptr inbounds [[STRUCT_KMP_DEPEND_INFO]], %struct.kmp_depend_info* [[TMP33]], i32 0, i32 2
 // CHECK1-NEXT:    store i8 3, i8* [[TMP36]], align 8
 // CHECK1-NEXT:    store i64 1, i64* [[DEP_COUNTER_ADDR10]], align 8
 // CHECK1-NEXT:    [[TMP37:%.*]] = bitcast %struct.kmp_depend_info* [[TMP31]] to i8*
@@ -462,13 +462,13 @@ int main() {
 // CHECK1-NEXT:    [[TMP42:%.*]] = bitcast i8* [[TMP41]] to %struct.kmp_task_t_with_privates.19*
 // CHECK1-NEXT:    [[TMP43:%.*]] = getelementptr inbounds [[STRUCT_KMP_TASK_T_WITH_PRIVATES_19:%.*]], %struct.kmp_task_t_with_privates.19* [[TMP42]], i32 0, i32 0
 // CHECK1-NEXT:    [[TMP44:%.*]] = getelementptr inbounds [1 x %struct.kmp_depend_info], [1 x %struct.kmp_depend_info]* [[DOTDEP_ARR_ADDR16]], i64 0, i64 0
-// CHECK1-NEXT:    [[TMP45:%.*]] = getelementptr [[STRUCT_KMP_DEPEND_INFO]], %struct.kmp_depend_info* [[TMP44]], i64 0
-// CHECK1-NEXT:    [[TMP46:%.*]] = getelementptr inbounds [[STRUCT_KMP_DEPEND_INFO]], %struct.kmp_depend_info* [[TMP45]], i32 0, i32 0
-// CHECK1-NEXT:    [[TMP47:%.*]] = ptrtoint i32* [[ARG_ADDR]] to i64
-// CHECK1-NEXT:    store i64 [[TMP47]], i64* [[TMP46]], align 8
-// CHECK1-NEXT:    [[TMP48:%.*]] = getelementptr inbounds [[STRUCT_KMP_DEPEND_INFO]], %struct.kmp_depend_info* [[TMP45]], i32 0, i32 1
+// CHECK1-NEXT:    [[TMP45:%.*]] = ptrtoint i32* [[ARG_ADDR]] to i64
+// CHECK1-NEXT:    [[TMP46:%.*]] = getelementptr [[STRUCT_KMP_DEPEND_INFO]], %struct.kmp_depend_info* [[TMP44]], i64 0
+// CHECK1-NEXT:    [[TMP47:%.*]] = getelementptr inbounds [[STRUCT_KMP_DEPEND_INFO]], %struct.kmp_depend_info* [[TMP46]], i32 0, i32 0
+// CHECK1-NEXT:    store i64 [[TMP45]], i64* [[TMP47]], align 8
+// CHECK1-NEXT:    [[TMP48:%.*]] = getelementptr inbounds [[STRUCT_KMP_DEPEND_INFO]], %struct.kmp_depend_info* [[TMP46]], i32 0, i32 1
 // CHECK1-NEXT:    store i64 4, i64* [[TMP48]], align 8
-// CHECK1-NEXT:    [[TMP49:%.*]] = getelementptr inbounds [[STRUCT_KMP_DEPEND_INFO]], %struct.kmp_depend_info* [[TMP45]], i32 0, i32 2
+// CHECK1-NEXT:    [[TMP49:%.*]] = getelementptr inbounds [[STRUCT_KMP_DEPEND_INFO]], %struct.kmp_depend_info* [[TMP46]], i32 0, i32 2
 // CHECK1-NEXT:    store i8 3, i8* [[TMP49]], align 8
 // CHECK1-NEXT:    store i64 1, i64* [[DEP_COUNTER_ADDR17]], align 8
 // CHECK1-NEXT:    [[TMP50:%.*]] = bitcast %struct.kmp_depend_info* [[TMP44]] to i8*
@@ -1025,13 +1025,13 @@ int main() {
 // CHECK2-NEXT:    [[TMP16:%.*]] = bitcast i8* [[TMP15]] to %struct.kmp_task_t_with_privates.15*
 // CHECK2-NEXT:    [[TMP17:%.*]] = getelementptr inbounds [[STRUCT_KMP_TASK_T_WITH_PRIVATES_15:%.*]], %struct.kmp_task_t_with_privates.15* [[TMP16]], i32 0, i32 0
 // CHECK2-NEXT:    [[TMP18:%.*]] = getelementptr inbounds [1 x %struct.kmp_depend_info], [1 x %struct.kmp_depend_info]* [[DOTDEP_ARR_ADDR]], i64 0, i64 0
-// CHECK2-NEXT:    [[TMP19:%.*]] = getelementptr [[STRUCT_KMP_DEPEND_INFO:%.*]], %struct.kmp_depend_info* [[TMP18]], i64 0
-// CHECK2-NEXT:    [[TMP20:%.*]] = getelementptr inbounds [[STRUCT_KMP_DEPEND_INFO]], %struct.kmp_depend_info* [[TMP19]], i32 0, i32 0
-// CHECK2-NEXT:    [[TMP21:%.*]] = ptrtoint i32* [[ARG_ADDR]] to i64
-// CHECK2-NEXT:    store i64 [[TMP21]], i64* [[TMP20]], align 8
-// CHECK2-NEXT:    [[TMP22:%.*]] = getelementptr inbounds [[STRUCT_KMP_DEPEND_INFO]], %struct.kmp_depend_info* [[TMP19]], i32 0, i32 1
+// CHECK2-NEXT:    [[TMP19:%.*]] = ptrtoint i32* [[ARG_ADDR]] to i64
+// CHECK2-NEXT:    [[TMP20:%.*]] = getelementptr [[STRUCT_KMP_DEPEND_INFO:%.*]], %struct.kmp_depend_info* [[TMP18]], i64 0
+// CHECK2-NEXT:    [[TMP21:%.*]] = getelementptr inbounds [[STRUCT_KMP_DEPEND_INFO]], %struct.kmp_depend_info* [[TMP20]], i32 0, i32 0
+// CHECK2-NEXT:    store i64 [[TMP19]], i64* [[TMP21]], align 8
+// CHECK2-NEXT:    [[TMP22:%.*]] = getelementptr inbounds [[STRUCT_KMP_DEPEND_INFO]], %struct.kmp_depend_info* [[TMP20]], i32 0, i32 1
 // CHECK2-NEXT:    store i64 4, i64* [[TMP22]], align 8
-// CHECK2-NEXT:    [[TMP23:%.*]] = getelementptr inbounds [[STRUCT_KMP_DEPEND_INFO]], %struct.kmp_depend_info* [[TMP19]], i32 0, i32 2
+// CHECK2-NEXT:    [[TMP23:%.*]] = getelementptr inbounds [[STRUCT_KMP_DEPEND_INFO]], %struct.kmp_depend_info* [[TMP20]], i32 0, i32 2
 // CHECK2-NEXT:    store i8 1, i8* [[TMP23]], align 8
 // CHECK2-NEXT:    store i64 1, i64* [[DEP_COUNTER_ADDR]], align 8
 // CHECK2-NEXT:    [[TMP24:%.*]] = bitcast %struct.kmp_depend_info* [[TMP18]] to i8*
@@ -1052,13 +1052,13 @@ int main() {
 // CHECK2-NEXT:    [[TMP29:%.*]] = bitcast i8* [[TMP28]] to %struct.kmp_task_t_with_privates.17*
 // CHECK2-NEXT:    [[TMP30:%.*]] = getelementptr inbounds [[STRUCT_KMP_TASK_T_WITH_PRIVATES_17:%.*]], %struct.kmp_task_t_with_privates.17* [[TMP29]], i32 0, i32 0
 // CHECK2-NEXT:    [[TMP31:%.*]] = getelementptr inbounds [1 x %struct.kmp_depend_info], [1 x %struct.kmp_depend_info]* [[DOTDEP_ARR_ADDR9]], i64 0, i64 0
-// CHECK2-NEXT:    [[TMP32:%.*]] = getelementptr [[STRUCT_KMP_DEPEND_INFO]], %struct.kmp_depend_info* [[TMP31]], i64 0
-// CHECK2-NEXT:    [[TMP33:%.*]] = getelementptr inbounds [[STRUCT_KMP_DEPEND_INFO]], %struct.kmp_depend_info* [[TMP32]], i32 0, i32 0
-// CHECK2-NEXT:    [[TMP34:%.*]] = ptrtoint i32* [[ARG_ADDR]] to i64
-// CHECK2-NEXT:    store i64 [[TMP34]], i64* [[TMP33]], align 8
-// CHECK2-NEXT:    [[TMP35:%.*]] = getelementptr inbounds [[STRUCT_KMP_DEPEND_INFO]], %struct.kmp_depend_info* [[TMP32]], i32 0, i32 1
+// CHECK2-NEXT:    [[TMP32:%.*]] = ptrtoint i32* [[ARG_ADDR]] to i64
+// CHECK2-NEXT:    [[TMP33:%.*]] = getelementptr [[STRUCT_KMP_DEPEND_INFO]], %struct.kmp_depend_info* [[TMP31]], i64 0
+// CHECK2-NEXT:    [[TMP34:%.*]] = getelementptr inbounds [[STRUCT_KMP_DEPEND_INFO]], %struct.kmp_depend_info* [[TMP33]], i32 0, i32 0
+// CHECK2-NEXT:    store i64 [[TMP32]], i64* [[TMP34]], align 8
+// CHECK2-NEXT:    [[TMP35:%.*]] = getelementptr inbounds [[STRUCT_KMP_DEPEND_INFO]], %struct.kmp_depend_info* [[TMP33]], i32 0, i32 1
 // CHECK2-NEXT:    store i64 4, i64* [[TMP35]], align 8
-// CHECK2-NEXT:    [[TMP36:%.*]] = getelementptr inbounds [[STRUCT_KMP_DEPEND_INFO]], %struct.kmp_depend_info* [[TMP32]], i32 0, i32 2
+// CHECK2-NEXT:    [[TMP36:%.*]] = getelementptr inbounds [[STRUCT_KMP_DEPEND_INFO]], %struct.kmp_depend_info* [[TMP33]], i32 0, i32 2
 // CHECK2-NEXT:    store i8 3, i8* [[TMP36]], align 8
 // CHECK2-NEXT:    store i64 1, i64* [[DEP_COUNTER_ADDR10]], align 8
 // CHECK2-NEXT:    [[TMP37:%.*]] = bitcast %struct.kmp_depend_info* [[TMP31]] to i8*
@@ -1079,13 +1079,13 @@ int main() {
 // CHECK2-NEXT:    [[TMP42:%.*]] = bitcast i8* [[TMP41]] to %struct.kmp_task_t_with_privates.19*
 // CHECK2-NEXT:    [[TMP43:%.*]] = getelementptr inbounds [[STRUCT_KMP_TASK_T_WITH_PRIVATES_19:%.*]], %struct.kmp_task_t_with_privates.19* [[TMP42]], i32 0, i32 0
 // CHECK2-NEXT:    [[TMP44:%.*]] = getelementptr inbounds [1 x %struct.kmp_depend_info], [1 x %struct.kmp_depend_info]* [[DOTDEP_ARR_ADDR16]], i64 0, i64 0
-// CHECK2-NEXT:    [[TMP45:%.*]] = getelementptr [[STRUCT_KMP_DEPEND_INFO]], %struct.kmp_depend_info* [[TMP44]], i64 0
-// CHECK2-NEXT:    [[TMP46:%.*]] = getelementptr inbounds [[STRUCT_KMP_DEPEND_INFO]], %struct.kmp_depend_info* [[TMP45]], i32 0, i32 0
-// CHECK2-NEXT:    [[TMP47:%.*]] = ptrtoint i32* [[ARG_ADDR]] to i64
-// CHECK2-NEXT:    store i64 [[TMP47]], i64* [[TMP46]], align 8
-// CHECK2-NEXT:    [[TMP48:%.*]] = getelementptr inbounds [[STRUCT_KMP_DEPEND_INFO]], %struct.kmp_depend_info* [[TMP45]], i32 0, i32 1
+// CHECK2-NEXT:    [[TMP45:%.*]] = ptrtoint i32* [[ARG_ADDR]] to i64
+// CHECK2-NEXT:    [[TMP46:%.*]] = getelementptr [[STRUCT_KMP_DEPEND_INFO]], %struct.kmp_depend_info* [[TMP44]], i64 0
+// CHECK2-NEXT:    [[TMP47:%.*]] = getelementptr inbounds [[STRUCT_KMP_DEPEND_INFO]], %struct.kmp_depend_info* [[TMP46]], i32 0, i32 0
+// CHECK2-NEXT:    store i64 [[TMP45]], i64* [[TMP47]], align 8
+// CHECK2-NEXT:    [[TMP48:%.*]] = getelementptr inbounds [[STRUCT_KMP_DEPEND_INFO]], %struct.kmp_depend_info* [[TMP46]], i32 0, i32 1
 // CHECK2-NEXT:    store i64 4, i64* [[TMP48]], align 8
-// CHECK2-NEXT:    [[TMP49:%.*]] = getelementptr inbounds [[STRUCT_KMP_DEPEND_INFO]], %struct.kmp_depend_info* [[TMP45]], i32 0, i32 2
+// CHECK2-NEXT:    [[TMP49:%.*]] = getelementptr inbounds [[STRUCT_KMP_DEPEND_INFO]], %struct.kmp_depend_info* [[TMP46]], i32 0, i32 2
 // CHECK2-NEXT:    store i8 3, i8* [[TMP49]], align 8
 // CHECK2-NEXT:    store i64 1, i64* [[DEP_COUNTER_ADDR17]], align 8
 // CHECK2-NEXT:    [[TMP50:%.*]] = bitcast %struct.kmp_depend_info* [[TMP44]] to i8*
@@ -1642,13 +1642,13 @@ int main() {
 // CHECK5-NEXT:    [[TMP16:%.*]] = bitcast i8* [[TMP15]] to %struct.kmp_task_t_with_privates.15*
 // CHECK5-NEXT:    [[TMP17:%.*]] = getelementptr inbounds [[STRUCT_KMP_TASK_T_WITH_PRIVATES_15:%.*]], %struct.kmp_task_t_with_privates.15* [[TMP16]], i32 0, i32 0
 // CHECK5-NEXT:    [[TMP18:%.*]] = getelementptr inbounds [1 x %struct.kmp_depend_info], [1 x %struct.kmp_depend_info]* [[DOTDEP_ARR_ADDR]], i64 0, i64 0
-// CHECK5-NEXT:    [[TMP19:%.*]] = getelementptr [[STRUCT_KMP_DEPEND_INFO:%.*]], %struct.kmp_depend_info* [[TMP18]], i64 0
-// CHECK5-NEXT:    [[TMP20:%.*]] = getelementptr inbounds [[STRUCT_KMP_DEPEND_INFO]], %struct.kmp_depend_info* [[TMP19]], i32 0, i32 0
-// CHECK5-NEXT:    [[TMP21:%.*]] = ptrtoint i32* [[ARG_ADDR]] to i64
-// CHECK5-NEXT:    store i64 [[TMP21]], i64* [[TMP20]], align 8
-// CHECK5-NEXT:    [[TMP22:%.*]] = getelementptr inbounds [[STRUCT_KMP_DEPEND_INFO]], %struct.kmp_depend_info* [[TMP19]], i32 0, i32 1
+// CHECK5-NEXT:    [[TMP19:%.*]] = ptrtoint i32* [[ARG_ADDR]] to i64
+// CHECK5-NEXT:    [[TMP20:%.*]] = getelementptr [[STRUCT_KMP_DEPEND_INFO:%.*]], %struct.kmp_depend_info* [[TMP18]], i64 0
+// CHECK5-NEXT:    [[TMP21:%.*]] = getelementptr inbounds [[STRUCT_KMP_DEPEND_INFO]], %struct.kmp_depend_info* [[TMP20]], i32 0, i32 0
+// CHECK5-NEXT:    store i64 [[TMP19]], i64* [[TMP21]], align 8
+// CHECK5-NEXT:    [[TMP22:%.*]] = getelementptr inbounds [[STRUCT_KMP_DEPEND_INFO]], %struct.kmp_depend_info* [[TMP20]], i32 0, i32 1
 // CHECK5-NEXT:    store i64 4, i64* [[TMP22]], align 8
-// CHECK5-NEXT:    [[TMP23:%.*]] = getelementptr inbounds [[STRUCT_KMP_DEPEND_INFO]], %struct.kmp_depend_info* [[TMP19]], i32 0, i32 2
+// CHECK5-NEXT:    [[TMP23:%.*]] = getelementptr inbounds [[STRUCT_KMP_DEPEND_INFO]], %struct.kmp_depend_info* [[TMP20]], i32 0, i32 2
 // CHECK5-NEXT:    store i8 1, i8* [[TMP23]], align 8
 // CHECK5-NEXT:    store i64 1, i64* [[DEP_COUNTER_ADDR]], align 8
 // CHECK5-NEXT:    [[TMP24:%.*]] = bitcast %struct.kmp_depend_info* [[TMP18]] to i8*
@@ -1669,13 +1669,13 @@ int main() {
 // CHECK5-NEXT:    [[TMP29:%.*]] = bitcast i8* [[TMP28]] to %struct.kmp_task_t_with_privates.17*
 // CHECK5-NEXT:    [[TMP30:%.*]] = getelementptr inbounds [[STRUCT_KMP_TASK_T_WITH_PRIVATES_17:%.*]], %struct.kmp_task_t_with_privates.17* [[TMP29]], i32 0, i32 0
 // CHECK5-NEXT:    [[TMP31:%.*]] = getelementptr inbounds [1 x %struct.kmp_depend_info], [1 x %struct.kmp_depend_info]* [[DOTDEP_ARR_ADDR9]], i64 0, i64 0
-// CHECK5-NEXT:    [[TMP32:%.*]] = getelementptr [[STRUCT_KMP_DEPEND_INFO]], %struct.kmp_depend_info* [[TMP31]], i64 0
-// CHECK5-NEXT:    [[TMP33:%.*]] = getelementptr inbounds [[STRUCT_KMP_DEPEND_INFO]], %struct.kmp_depend_info* [[TMP32]], i32 0, i32 0
-// CHECK5-NEXT:    [[TMP34:%.*]] = ptrtoint i32* [[ARG_ADDR]] to i64
-// CHECK5-NEXT:    store i64 [[TMP34]], i64* [[TMP33]], align 8
-// CHECK5-NEXT:    [[TMP35:%.*]] = getelementptr inbounds [[STRUCT_KMP_DEPEND_INFO]], %struct.kmp_depend_info* [[TMP32]], i32 0, i32 1
+// CHECK5-NEXT:    [[TMP32:%.*]] = ptrtoint i32* [[ARG_ADDR]] to i64
+// CHECK5-NEXT:    [[TMP33:%.*]] = getelementptr [[STRUCT_KMP_DEPEND_INFO]], %struct.kmp_depend_info* [[TMP31]], i64 0
+// CHECK5-NEXT:    [[TMP34:%.*]] = getelementptr inbounds [[STRUCT_KMP_DEPEND_INFO]], %struct.kmp_depend_info* [[TMP33]], i32 0, i32 0
+// CHECK5-NEXT:    store i64 [[TMP32]], i64* [[TMP34]], align 8
+// CHECK5-NEXT:    [[TMP35:%.*]] = getelementptr inbounds [[STRUCT_KMP_DEPEND_INFO]], %struct.kmp_depend_info* [[TMP33]], i32 0, i32 1
 // CHECK5-NEXT:    store i64 4, i64* [[TMP35]], align 8
-// CHECK5-NEXT:    [[TMP36:%.*]] = getelementptr inbounds [[STRUCT_KMP_DEPEND_INFO]], %struct.kmp_depend_info* [[TMP32]], i32 0, i32 2
+// CHECK5-NEXT:    [[TMP36:%.*]] = getelementptr inbounds [[STRUCT_KMP_DEPEND_INFO]], %struct.kmp_depend_info* [[TMP33]], i32 0, i32 2
 // CHECK5-NEXT:    store i8 3, i8* [[TMP36]], align 8
 // CHECK5-NEXT:    store i64 1, i64* [[DEP_COUNTER_ADDR10]], align 8
 // CHECK5-NEXT:    [[TMP37:%.*]] = bitcast %struct.kmp_depend_info* [[TMP31]] to i8*
@@ -1696,13 +1696,13 @@ int main() {
 // CHECK5-NEXT:    [[TMP42:%.*]] = bitcast i8* [[TMP41]] to %struct.kmp_task_t_with_privates.19*
 // CHECK5-NEXT:    [[TMP43:%.*]] = getelementptr inbounds [[STRUCT_KMP_TASK_T_WITH_PRIVATES_19:%.*]], %struct.kmp_task_t_with_privates.19* [[TMP42]], i32 0, i32 0
 // CHECK5-NEXT:    [[TMP44:%.*]] = getelementptr inbounds [1 x %struct.kmp_depend_info], [1 x %struct.kmp_depend_info]* [[DOTDEP_ARR_ADDR16]], i64 0, i64 0
-// CHECK5-NEXT:    [[TMP45:%.*]] = getelementptr [[STRUCT_KMP_DEPEND_INFO]], %struct.kmp_depend_info* [[TMP44]], i64 0
-// CHECK5-NEXT:    [[TMP46:%.*]] = getelementptr inbounds [[STRUCT_KMP_DEPEND_INFO]], %struct.kmp_depend_info* [[TMP45]], i32 0, i32 0
-// CHECK5-NEXT:    [[TMP47:%.*]] = ptrtoint i32* [[ARG_ADDR]] to i64
-// CHECK5-NEXT:    store i64 [[TMP47]], i64* [[TMP46]], align 8
-// CHECK5-NEXT:    [[TMP48:%.*]] = getelementptr inbounds [[STRUCT_KMP_DEPEND_INFO]], %struct.kmp_depend_info* [[TMP45]], i32 0, i32 1
+// CHECK5-NEXT:    [[TMP45:%.*]] = ptrtoint i32* [[ARG_ADDR]] to i64
+// CHECK5-NEXT:    [[TMP46:%.*]] = getelementptr [[STRUCT_KMP_DEPEND_INFO]], %struct.kmp_depend_info* [[TMP44]], i64 0
+// CHECK5-NEXT:    [[TMP47:%.*]] = getelementptr inbounds [[STRUCT_KMP_DEPEND_INFO]], %struct.kmp_depend_info* [[TMP46]], i32 0, i32 0
+// CHECK5-NEXT:    store i64 [[TMP45]], i64* [[TMP47]], align 8
+// CHECK5-NEXT:    [[TMP48:%.*]] = getelementptr inbounds [[STRUCT_KMP_DEPEND_INFO]], %struct.kmp_depend_info* [[TMP46]], i32 0, i32 1
 // CHECK5-NEXT:    store i64 4, i64* [[TMP48]], align 8
-// CHECK5-NEXT:    [[TMP49:%.*]] = getelementptr inbounds [[STRUCT_KMP_DEPEND_INFO]], %struct.kmp_depend_info* [[TMP45]], i32 0, i32 2
+// CHECK5-NEXT:    [[TMP49:%.*]] = getelementptr inbounds [[STRUCT_KMP_DEPEND_INFO]], %struct.kmp_depend_info* [[TMP46]], i32 0, i32 2
 // CHECK5-NEXT:    store i8 3, i8* [[TMP49]], align 8
 // CHECK5-NEXT:    store i64 1, i64* [[DEP_COUNTER_ADDR17]], align 8
 // CHECK5-NEXT:    [[TMP50:%.*]] = bitcast %struct.kmp_depend_info* [[TMP44]] to i8*
@@ -2259,13 +2259,13 @@ int main() {
 // CHECK6-NEXT:    [[TMP16:%.*]] = bitcast i8* [[TMP15]] to %struct.kmp_task_t_with_privates.15*
 // CHECK6-NEXT:    [[TMP17:%.*]] = getelementptr inbounds [[STRUCT_KMP_TASK_T_WITH_PRIVATES_15:%.*]], %struct.kmp_task_t_with_privates.15* [[TMP16]], i32 0, i32 0
 // CHECK6-NEXT:    [[TMP18:%.*]] = getelementptr inbounds [1 x %struct.kmp_depend_info], [1 x %struct.kmp_depend_info]* [[DOTDEP_ARR_ADDR]], i64 0, i64 0
-// CHECK6-NEXT:    [[TMP19:%.*]] = getelementptr [[STRUCT_KMP_DEPEND_INFO:%.*]], %struct.kmp_depend_info* [[TMP18]], i64 0
-// CHECK6-NEXT:    [[TMP20:%.*]] = getelementptr inbounds [[STRUCT_KMP_DEPEND_INFO]], %struct.kmp_depend_info* [[TMP19]], i32 0, i32 0
-// CHECK6-NEXT:    [[TMP21:%.*]] = ptrtoint i32* [[ARG_ADDR]] to i64
-// CHECK6-NEXT:    store i64 [[TMP21]], i64* [[TMP20]], align 8
-// CHECK6-NEXT:    [[TMP22:%.*]] = getelementptr inbounds [[STRUCT_KMP_DEPEND_INFO]], %struct.kmp_depend_info* [[TMP19]], i32 0, i32 1
+// CHECK6-NEXT:    [[TMP19:%.*]] = ptrtoint i32* [[ARG_ADDR]] to i64
+// CHECK6-NEXT:    [[TMP20:%.*]] = getelementptr [[STRUCT_KMP_DEPEND_INFO:%.*]], %struct.kmp_depend_info* [[TMP18]], i64 0
+// CHECK6-NEXT:    [[TMP21:%.*]] = getelementptr inbounds [[STRUCT_KMP_DEPEND_INFO]], %struct.kmp_depend_info* [[TMP20]], i32 0, i32 0
+// CHECK6-NEXT:    store i64 [[TMP19]], i64* [[TMP21]], align 8
+// CHECK6-NEXT:    [[TMP22:%.*]] = getelementptr inbounds [[STRUCT_KMP_DEPEND_INFO]], %struct.kmp_depend_info* [[TMP20]], i32 0, i32 1
 // CHECK6-NEXT:    store i64 4, i64* [[TMP22]], align 8
-// CHECK6-NEXT:    [[TMP23:%.*]] = getelementptr inbounds [[STRUCT_KMP_DEPEND_INFO]], %struct.kmp_depend_info* [[TMP19]], i32 0, i32 2
+// CHECK6-NEXT:    [[TMP23:%.*]] = getelementptr inbounds [[STRUCT_KMP_DEPEND_INFO]], %struct.kmp_depend_info* [[TMP20]], i32 0, i32 2
 // CHECK6-NEXT:    store i8 1, i8* [[TMP23]], align 8
 // CHECK6-NEXT:    store i64 1, i64* [[DEP_COUNTER_ADDR]], align 8
 // CHECK6-NEXT:    [[TMP24:%.*]] = bitcast %struct.kmp_depend_info* [[TMP18]] to i8*
@@ -2286,13 +2286,13 @@ int main() {
 // CHECK6-NEXT:    [[TMP29:%.*]] = bitcast i8* [[TMP28]] to %struct.kmp_task_t_with_privates.17*
 // CHECK6-NEXT:    [[TMP30:%.*]] = getelementptr inbounds [[STRUCT_KMP_TASK_T_WITH_PRIVATES_17:%.*]], %struct.kmp_task_t_with_privates.17* [[TMP29]], i32 0, i32 0
 // CHECK6-NEXT:    [[TMP31:%.*]] = getelementptr inbounds [1 x %struct.kmp_depend_info], [1 x %struct.kmp_depend_info]* [[DOTDEP_ARR_ADDR9]], i64 0, i64 0
-// CHECK6-NEXT:    [[TMP32:%.*]] = getelementptr [[STRUCT_KMP_DEPEND_INFO]], %struct.kmp_depend_info* [[TMP31]], i64 0
-// CHECK6-NEXT:    [[TMP33:%.*]] = getelementptr inbounds [[STRUCT_KMP_DEPEND_INFO]], %struct.kmp_depend_info* [[TMP32]], i32 0, i32 0
-// CHECK6-NEXT:    [[TMP34:%.*]] = ptrtoint i32* [[ARG_ADDR]] to i64
-// CHECK6-NEXT:    store i64 [[TMP34]], i64* [[TMP33]], align 8
-// CHECK6-NEXT:    [[TMP35:%.*]] = getelementptr inbounds [[STRUCT_KMP_DEPEND_INFO]], %struct.kmp_depend_info* [[TMP32]], i32 0, i32 1
+// CHECK6-NEXT:    [[TMP32:%.*]] = ptrtoint i32* [[ARG_ADDR]] to i64
+// CHECK6-NEXT:    [[TMP33:%.*]] = getelementptr [[STRUCT_KMP_DEPEND_INFO]], %struct.kmp_depend_info* [[TMP31]], i64 0
+// CHECK6-NEXT:    [[TMP34:%.*]] = getelementptr inbounds [[STRUCT_KMP_DEPEND_INFO]], %struct.kmp_depend_info* [[TMP33]], i32 0, i32 0
+// CHECK6-NEXT:    store i64 [[TMP32]], i64* [[TMP34]], align 8
+// CHECK6-NEXT:    [[TMP35:%.*]] = getelementptr inbounds [[STRUCT_KMP_DEPEND_INFO]], %struct.kmp_depend_info* [[TMP33]], i32 0, i32 1
 // CHECK6-NEXT:    store i64 4, i64* [[TMP35]], align 8
-// CHECK6-NEXT:    [[TMP36:%.*]] = getelementptr inbounds [[STRUCT_KMP_DEPEND_INFO]], %struct.kmp_depend_info* [[TMP32]], i32 0, i32 2
+// CHECK6-NEXT:    [[TMP36:%.*]] = getelementptr inbounds [[STRUCT_KMP_DEPEND_INFO]], %struct.kmp_depend_info* [[TMP33]], i32 0, i32 2
 // CHECK6-NEXT:    store i8 3, i8* [[TMP36]], align 8
 // CHECK6-NEXT:    store i64 1, i64* [[DEP_COUNTER_ADDR10]], align 8
 // CHECK6-NEXT:    [[TMP37:%.*]] = bitcast %struct.kmp_depend_info* [[TMP31]] to i8*
@@ -2313,13 +2313,13 @@ int main() {
 // CHECK6-NEXT:    [[TMP42:%.*]] = bitcast i8* [[TMP41]] to %struct.kmp_task_t_with_privates.19*
 // CHECK6-NEXT:    [[TMP43:%.*]] = getelementptr inbounds [[STRUCT_KMP_TASK_T_WITH_PRIVATES_19:%.*]], %struct.kmp_task_t_with_privates.19* [[TMP42]], i32 0, i32 0
 // CHECK6-NEXT:    [[TMP44:%.*]] = getelementptr inbounds [1 x %struct.kmp_depend_info], [1 x %struct.kmp_depend_info]* [[DOTDEP_ARR_ADDR16]], i64 0, i64 0
-// CHECK6-NEXT:    [[TMP45:%.*]] = getelementptr [[STRUCT_KMP_DEPEND_INFO]], %struct.kmp_depend_info* [[TMP44]], i64 0
-// CHECK6-NEXT:    [[TMP46:%.*]] = getelementptr inbounds [[STRUCT_KMP_DEPEND_INFO]], %struct.kmp_depend_info* [[TMP45]], i32 0, i32 0
-// CHECK6-NEXT:    [[TMP47:%.*]] = ptrtoint i32* [[ARG_ADDR]] to i64
-// CHECK6-NEXT:    store i64 [[TMP47]], i64* [[TMP46]], align 8
-// CHECK6-NEXT:    [[TMP48:%.*]] = getelementptr inbounds [[STRUCT_KMP_DEPEND_INFO]], %struct.kmp_depend_info* [[TMP45]], i32 0, i32 1
+// CHECK6-NEXT:    [[TMP45:%.*]] = ptrtoint i32* [[ARG_ADDR]] to i64
+// CHECK6-NEXT:    [[TMP46:%.*]] = getelementptr [[STRUCT_KMP_DEPEND_INFO]], %struct.kmp_depend_info* [[TMP44]], i64 0
+// CHECK6-NEXT:    [[TMP47:%.*]] = getelementptr inbounds [[STRUCT_KMP_DEPEND_INFO]], %struct.kmp_depend_info* [[TMP46]], i32 0, i32 0
+// CHECK6-NEXT:    store i64 [[TMP45]], i64* [[TMP47]], align 8
+// CHECK6-NEXT:    [[TMP48:%.*]] = getelementptr inbounds [[STRUCT_KMP_DEPEND_INFO]], %struct.kmp_depend_info* [[TMP46]], i32 0, i32 1
 // CHECK6-NEXT:    store i64 4, i64* [[TMP48]], align 8
-// CHECK6-NEXT:    [[TMP49:%.*]] = getelementptr inbounds [[STRUCT_KMP_DEPEND_INFO]], %struct.kmp_depend_info* [[TMP45]], i32 0, i32 2
+// CHECK6-NEXT:    [[TMP49:%.*]] = getelementptr inbounds [[STRUCT_KMP_DEPEND_INFO]], %struct.kmp_depend_info* [[TMP46]], i32 0, i32 2
 // CHECK6-NEXT:    store i8 3, i8* [[TMP49]], align 8
 // CHECK6-NEXT:    store i64 1, i64* [[DEP_COUNTER_ADDR17]], align 8
 // CHECK6-NEXT:    [[TMP50:%.*]] = bitcast %struct.kmp_depend_info* [[TMP44]] to i8*

@@ -4507,7 +4507,8 @@ enum RTLDependenceKindTy {
   DepIn = 0x01,
   DepInOut = 0x3,
   DepMutexInOutSet = 0x4,
-  DepInOutSet = 0x8
+  DepInOutSet = 0x8,
+  DepOmpAllMem = 0x80,
 };
 /// Fields ids in kmp_depend_info record.
 enum RTLDependInfoFieldsTy { BaseAddr, Len, Flags };
@@ -4531,10 +4532,12 @@ static RTLDependenceKindTy translateDependencyKind(OpenMPDependClauseKind K) {
   case OMPC_DEPEND_inoutset:
     DepKind = DepInOutSet;
     break;
+  case OMPC_DEPEND_outallmemory:
+    DepKind = DepOmpAllMem;
+    break;
   case OMPC_DEPEND_source:
   case OMPC_DEPEND_sink:
   case OMPC_DEPEND_depobj:
-  case OMPC_DEPEND_outallmemory:
   case OMPC_DEPEND_inoutallmemory:
   case OMPC_DEPEND_unknown:
     llvm_unreachable("Unknown task dependence type");
@@ -4602,12 +4605,21 @@ static void emitDependData(CodeGenFunction &CGF, QualType &KmpDependInfoTy,
   for (const Expr *E : Data.DepExprs) {
     llvm::Value *Addr;
     llvm::Value *Size;
-    std::tie(Addr, Size) = getPointerAndSize(CGF, E);
+
+    // The expression will be a nullptr in the 'omp_all_memory' case.
+    if (E) {
+      std::tie(Addr, Size) = getPointerAndSize(CGF, E);
+      Addr = CGF.Builder.CreatePtrToInt(Addr, CGF.IntPtrTy);
+    } else {
+      Addr = llvm::ConstantInt::get(CGF.IntPtrTy, 0);
+      Size = llvm::ConstantInt::get(CGF.SizeTy, 0);
+    }
     LValue Base;
     if (unsigned *P = Pos.dyn_cast<unsigned *>()) {
       Base = CGF.MakeAddrLValue(
           CGF.Builder.CreateConstGEP(DependenciesArray, *P), KmpDependInfoTy);
     } else {
+      assert(E && "Expected a non-null expression");
       LValue &PosLVal = *Pos.get<LValue *>();
       llvm::Value *Idx = CGF.EmitLoadOfScalar(PosLVal, E->getExprLoc());
       Base = CGF.MakeAddrLValue(
@@ -4616,8 +4628,7 @@ static void emitDependData(CodeGenFunction &CGF, QualType &KmpDependInfoTy,
     // deps[i].base_addr = &<Dependencies[i].second>;
     LValue BaseAddrLVal = CGF.EmitLValueForField(
         Base, *std::next(KmpDependInfoRD->field_begin(), BaseAddr));
-    CGF.EmitStoreOfScalar(CGF.Builder.CreatePtrToInt(Addr, CGF.IntPtrTy),
-                          BaseAddrLVal);
+    CGF.EmitStoreOfScalar(Addr, BaseAddrLVal);
     // deps[i].len = sizeof(<Dependencies[i].second>);
     LValue LenLVal = CGF.EmitLValueForField(
         Base, *std::next(KmpDependInfoRD->field_begin(), Len));
