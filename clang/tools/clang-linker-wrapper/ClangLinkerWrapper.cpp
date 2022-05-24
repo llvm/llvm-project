@@ -1012,8 +1012,14 @@ Error linkBitcodeFiles(SmallVectorImpl<std::string> &InputFiles,
   if (Error Err = LTOBackend->run(AddStream))
     return Err;
 
+  // If we are embedding bitcode we only need the intermediate output.
+  if (EmbedBitcode) {
+    InputFiles = NewInputFiles;
+    return Error::success();
+  }
+
   // Is we are compiling for NVPTX we need to run the assembler first.
-  if (TheTriple.isNVPTX() && !EmbedBitcode) {
+  if (TheTriple.isNVPTX()) {
     for (auto &File : Files) {
       auto FileOrErr = nvptx::assemble(File, TheTriple, Arch, !WholeProgram);
       if (!FileOrErr)
