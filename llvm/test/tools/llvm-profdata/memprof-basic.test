@@ -52,6 +52,7 @@ CHECK-NEXT:     -
 CHECK-NEXT:       Callstack:
 CHECK-NEXT:       -
 CHECK-NEXT:         Function: {{[0-9]+}}
+CHECK-NEXT:         SymbolName: main
 CHECK-NEXT:         LineOffset: 1
 CHECK-NEXT:         Column: 21
 CHECK-NEXT:         Inline: 0
@@ -79,6 +80,7 @@ CHECK-NEXT:     -
 CHECK-NEXT:       Callstack:
 CHECK-NEXT:       -
 CHECK-NEXT:         Function: {{[0-9]+}}
+CHECK-NEXT:         SymbolName: main
 CHECK-NEXT:         LineOffset: 5
 CHECK-NEXT:         Column: 15
 CHECK-NEXT:         Inline: 0
