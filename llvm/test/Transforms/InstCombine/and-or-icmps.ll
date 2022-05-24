@@ -1364,14 +1364,12 @@ define i1 @bitwise_and_bitwise_and_icmps_comm3(i8 %x, i8 %y, i8 %z) {
 define i1 @bitwise_and_logical_and_icmps(i8 %x, i8 %y, i8 %z) {
 ; CHECK-LABEL: @bitwise_and_logical_and_icmps(
 ; CHECK-NEXT:    [[C1:%.*]] = icmp eq i8 [[Y:%.*]], 42
-; CHECK-NEXT:    [[X_M1:%.*]] = and i8 [[X:%.*]], 1
 ; CHECK-NEXT:    [[Z_SHIFT:%.*]] = shl i8 1, [[Z:%.*]]
-; CHECK-NEXT:    [[X_M2:%.*]] = and i8 [[Z_SHIFT]], [[X]]
-; CHECK-NEXT:    [[C2:%.*]] = icmp ne i8 [[X_M1]], 0
-; CHECK-NEXT:    [[C3:%.*]] = icmp ne i8 [[X_M2]], 0
-; CHECK-NEXT:    [[AND1:%.*]] = select i1 [[C1]], i1 [[C2]], i1 false
-; CHECK-NEXT:    [[AND2:%.*]] = and i1 [[AND1]], [[C3]]
-; CHECK-NEXT:    ret i1 [[AND2]]
+; CHECK-NEXT:    [[TMP1:%.*]] = or i8 [[Z_SHIFT]], 1
+; CHECK-NEXT:    [[TMP2:%.*]] = and i8 [[TMP1]], [[X:%.*]]
+; CHECK-NEXT:    [[TMP3:%.*]] = icmp eq i8 [[TMP2]], [[TMP1]]
+; CHECK-NEXT:    [[TMP4:%.*]] = select i1 [[C1]], i1 [[TMP3]], i1 false
+; CHECK-NEXT:    ret i1 [[TMP4]]
 ;
   %c1 = icmp eq i8 %y, 42
   %x.m1 = and i8 %x, 1
@@ -1387,14 +1385,12 @@ define i1 @bitwise_and_logical_and_icmps(i8 %x, i8 %y, i8 %z) {
 define i1 @bitwise_and_logical_and_icmps_comm1(i8 %x, i8 %y, i8 %z) {
 ; CHECK-LABEL: @bitwise_and_logical_and_icmps_comm1(
 ; CHECK-NEXT:    [[C1:%.*]] = icmp eq i8 [[Y:%.*]], 42
-; CHECK-NEXT:    [[X_M1:%.*]] = and i8 [[X:%.*]], 1
 ; CHECK-NEXT:    [[Z_SHIFT:%.*]] = shl i8 1, [[Z:%.*]]
-; CHECK-NEXT:    [[X_M2:%.*]] = and i8 [[Z_SHIFT]], [[X]]
-; CHECK-NEXT:    [[C2:%.*]] = icmp ne i8 [[X_M1]], 0
-; CHECK-NEXT:    [[C3:%.*]] = icmp ne i8 [[X_M2]], 0
-; CHECK-NEXT:    [[AND1:%.*]] = select i1 [[C1]], i1 [[C2]], i1 false
-; CHECK-NEXT:    [[AND2:%.*]] = and i1 [[C3]], [[AND1]]
-; CHECK-NEXT:    ret i1 [[AND2]]
+; CHECK-NEXT:    [[TMP1:%.*]] = or i8 [[Z_SHIFT]], 1
+; CHECK-NEXT:    [[TMP2:%.*]] = and i8 [[TMP1]], [[X:%.*]]
+; CHECK-NEXT:    [[TMP3:%.*]] = icmp eq i8 [[TMP2]], [[TMP1]]
+; CHECK-NEXT:    [[TMP4:%.*]] = select i1 [[C1]], i1 [[TMP3]], i1 false
+; CHECK-NEXT:    ret i1 [[TMP4]]
 ;
   %c1 = icmp eq i8 %y, 42
   %x.m1 = and i8 %x, 1
@@ -1410,14 +1406,13 @@ define i1 @bitwise_and_logical_and_icmps_comm1(i8 %x, i8 %y, i8 %z) {
 define i1 @bitwise_and_logical_and_icmps_comm2(i8 %x, i8 %y, i8 %z) {
 ; CHECK-LABEL: @bitwise_and_logical_and_icmps_comm2(
 ; CHECK-NEXT:    [[C1:%.*]] = icmp eq i8 [[Y:%.*]], 42
-; CHECK-NEXT:    [[X_M1:%.*]] = and i8 [[X:%.*]], 1
 ; CHECK-NEXT:    [[Z_SHIFT:%.*]] = shl i8 1, [[Z:%.*]]
-; CHECK-NEXT:    [[X_M2:%.*]] = and i8 [[Z_SHIFT]], [[X]]
-; CHECK-NEXT:    [[C2:%.*]] = icmp ne i8 [[X_M1]], 0
-; CHECK-NEXT:    [[C3:%.*]] = icmp ne i8 [[X_M2]], 0
-; CHECK-NEXT:    [[AND1:%.*]] = select i1 [[C2]], i1 [[C1]], i1 false
-; CHECK-NEXT:    [[AND2:%.*]] = and i1 [[AND1]], [[C3]]
-; CHECK-NEXT:    ret i1 [[AND2]]
+; CHECK-NEXT:    [[TMP1:%.*]] = freeze i8 [[Z_SHIFT]]
+; CHECK-NEXT:    [[TMP2:%.*]] = or i8 [[TMP1]], 1
+; CHECK-NEXT:    [[TMP3:%.*]] = and i8 [[TMP2]], [[X:%.*]]
+; CHECK-NEXT:    [[TMP4:%.*]] = icmp eq i8 [[TMP3]], [[TMP2]]
+; CHECK-NEXT:    [[TMP5:%.*]] = select i1 [[TMP4]], i1 [[C1]], i1 false
+; CHECK-NEXT:    ret i1 [[TMP5]]
 ;
   %c1 = icmp eq i8 %y, 42
   %x.m1 = and i8 %x, 1
@@ -1433,14 +1428,12 @@ define i1 @bitwise_and_logical_and_icmps_comm2(i8 %x, i8 %y, i8 %z) {
 define i1 @bitwise_and_logical_and_icmps_comm3(i8 %x, i8 %y, i8 %z) {
 ; CHECK-LABEL: @bitwise_and_logical_and_icmps_comm3(
 ; CHECK-NEXT:    [[C1:%.*]] = icmp eq i8 [[Y:%.*]], 42
-; CHECK-NEXT:    [[X_M1:%.*]] = and i8 [[X:%.*]], 1
 ; CHECK-NEXT:    [[Z_SHIFT:%.*]] = shl i8 1, [[Z:%.*]]
-; CHECK-NEXT:    [[X_M2:%.*]] = and i8 [[Z_SHIFT]], [[X]]
-; CHECK-NEXT:    [[C2:%.*]] = icmp ne i8 [[X_M1]], 0
-; CHECK-NEXT:    [[C3:%.*]] = icmp ne i8 [[X_M2]], 0
-; CHECK-NEXT:    [[AND1:%.*]] = select i1 [[C2]], i1 [[C1]], i1 false
-; CHECK-NEXT:    [[AND2:%.*]] = and i1 [[C3]], [[AND1]]
-; CHECK-NEXT:    ret i1 [[AND2]]
+; CHECK-NEXT:    [[TMP1:%.*]] = or i8 [[Z_SHIFT]], 1
+; CHECK-NEXT:    [[TMP2:%.*]] = and i8 [[TMP1]], [[X:%.*]]
+; CHECK-NEXT:    [[TMP3:%.*]] = icmp eq i8 [[TMP2]], [[TMP1]]
+; CHECK-NEXT:    [[TMP4:%.*]] = select i1 [[TMP3]], i1 [[C1]], i1 false
+; CHECK-NEXT:    ret i1 [[TMP4]]
 ;
   %c1 = icmp eq i8 %y, 42
   %x.m1 = and i8 %x, 1
@@ -1722,14 +1715,12 @@ define i1 @bitwise_or_bitwise_or_icmps_comm3(i8 %x, i8 %y, i8 %z) {
 define i1 @bitwise_or_logical_or_icmps(i8 %x, i8 %y, i8 %z) {
 ; CHECK-LABEL: @bitwise_or_logical_or_icmps(
 ; CHECK-NEXT:    [[C1:%.*]] = icmp eq i8 [[Y:%.*]], 42
-; CHECK-NEXT:    [[X_M1:%.*]] = and i8 [[X:%.*]], 1
 ; CHECK-NEXT:    [[Z_SHIFT:%.*]] = shl i8 1, [[Z:%.*]]
-; CHECK-NEXT:    [[X_M2:%.*]] = and i8 [[Z_SHIFT]], [[X]]
-; CHECK-NEXT:    [[C2:%.*]] = icmp eq i8 [[X_M1]], 0
-; CHECK-NEXT:    [[C3:%.*]] = icmp eq i8 [[X_M2]], 0
-; CHECK-NEXT:    [[OR1:%.*]] = select i1 [[C1]], i1 true, i1 [[C2]]
-; CHECK-NEXT:    [[OR2:%.*]] = or i1 [[OR1]], [[C3]]
-; CHECK-NEXT:    ret i1 [[OR2]]
+; CHECK-NEXT:    [[TMP1:%.*]] = or i8 [[Z_SHIFT]], 1
+; CHECK-NEXT:    [[TMP2:%.*]] = and i8 [[TMP1]], [[X:%.*]]
+; CHECK-NEXT:    [[TMP3:%.*]] = icmp ne i8 [[TMP2]], [[TMP1]]
+; CHECK-NEXT:    [[TMP4:%.*]] = select i1 [[C1]], i1 true, i1 [[TMP3]]
+; CHECK-NEXT:    ret i1 [[TMP4]]
 ;
   %c1 = icmp eq i8 %y, 42
   %x.m1 = and i8 %x, 1
@@ -1745,14 +1736,12 @@ define i1 @bitwise_or_logical_or_icmps(i8 %x, i8 %y, i8 %z) {
 define i1 @bitwise_or_logical_or_icmps_comm1(i8 %x, i8 %y, i8 %z) {
 ; CHECK-LABEL: @bitwise_or_logical_or_icmps_comm1(
 ; CHECK-NEXT:    [[C1:%.*]] = icmp eq i8 [[Y:%.*]], 42
-; CHECK-NEXT:    [[X_M1:%.*]] = and i8 [[X:%.*]], 1
 ; CHECK-NEXT:    [[Z_SHIFT:%.*]] = shl i8 1, [[Z:%.*]]
-; CHECK-NEXT:    [[X_M2:%.*]] = and i8 [[Z_SHIFT]], [[X]]
-; CHECK-NEXT:    [[C2:%.*]] = icmp eq i8 [[X_M1]], 0
-; CHECK-NEXT:    [[C3:%.*]] = icmp eq i8 [[X_M2]], 0
-; CHECK-NEXT:    [[OR1:%.*]] = select i1 [[C1]], i1 true, i1 [[C2]]
-; CHECK-NEXT:    [[OR2:%.*]] = or i1 [[C3]], [[OR1]]
-; CHECK-NEXT:    ret i1 [[OR2]]
+; CHECK-NEXT:    [[TMP1:%.*]] = or i8 [[Z_SHIFT]], 1
+; CHECK-NEXT:    [[TMP2:%.*]] = and i8 [[TMP1]], [[X:%.*]]
+; CHECK-NEXT:    [[TMP3:%.*]] = icmp ne i8 [[TMP2]], [[TMP1]]
+; CHECK-NEXT:    [[TMP4:%.*]] = select i1 [[C1]], i1 true, i1 [[TMP3]]
+; CHECK-NEXT:    ret i1 [[TMP4]]
 ;
   %c1 = icmp eq i8 %y, 42
   %x.m1 = and i8 %x, 1
@@ -1768,14 +1757,13 @@ define i1 @bitwise_or_logical_or_icmps_comm1(i8 %x, i8 %y, i8 %z) {
 define i1 @bitwise_or_logical_or_icmps_comm2(i8 %x, i8 %y, i8 %z) {
 ; CHECK-LABEL: @bitwise_or_logical_or_icmps_comm2(
 ; CHECK-NEXT:    [[C1:%.*]] = icmp eq i8 [[Y:%.*]], 42
-; CHECK-NEXT:    [[X_M1:%.*]] = and i8 [[X:%.*]], 1
 ; CHECK-NEXT:    [[Z_SHIFT:%.*]] = shl i8 1, [[Z:%.*]]
-; CHECK-NEXT:    [[X_M2:%.*]] = and i8 [[Z_SHIFT]], [[X]]
-; CHECK-NEXT:    [[C2:%.*]] = icmp eq i8 [[X_M1]], 0
-; CHECK-NEXT:    [[C3:%.*]] = icmp eq i8 [[X_M2]], 0
-; CHECK-NEXT:    [[OR1:%.*]] = select i1 [[C2]], i1 true, i1 [[C1]]
-; CHECK-NEXT:    [[OR2:%.*]] = or i1 [[OR1]], [[C3]]
-; CHECK-NEXT:    ret i1 [[OR2]]
+; CHECK-NEXT:    [[TMP1:%.*]] = freeze i8 [[Z_SHIFT]]
+; CHECK-NEXT:    [[TMP2:%.*]] = or i8 [[TMP1]], 1
+; CHECK-NEXT:    [[TMP3:%.*]] = and i8 [[TMP2]], [[X:%.*]]
+; CHECK-NEXT:    [[TMP4:%.*]] = icmp ne i8 [[TMP3]], [[TMP2]]
+; CHECK-NEXT:    [[TMP5:%.*]] = select i1 [[TMP4]], i1 true, i1 [[C1]]
+; CHECK-NEXT:    ret i1 [[TMP5]]
 ;
   %c1 = icmp eq i8 %y, 42
   %x.m1 = and i8 %x, 1
@@ -1791,14 +1779,12 @@ define i1 @bitwise_or_logical_or_icmps_comm2(i8 %x, i8 %y, i8 %z) {
 define i1 @bitwise_or_logical_or_icmps_comm3(i8 %x, i8 %y, i8 %z) {
 ; CHECK-LABEL: @bitwise_or_logical_or_icmps_comm3(
 ; CHECK-NEXT:    [[C1:%.*]] = icmp eq i8 [[Y:%.*]], 42
-; CHECK-NEXT:    [[X_M1:%.*]] = and i8 [[X:%.*]], 1
 ; CHECK-NEXT:    [[Z_SHIFT:%.*]] = shl i8 1, [[Z:%.*]]
-; CHECK-NEXT:    [[X_M2:%.*]] = and i8 [[Z_SHIFT]], [[X]]
-; CHECK-NEXT:    [[C2:%.*]] = icmp eq i8 [[X_M1]], 0
-; CHECK-NEXT:    [[C3:%.*]] = icmp eq i8 [[X_M2]], 0
-; CHECK-NEXT:    [[OR1:%.*]] = select i1 [[C2]], i1 true, i1 [[C1]]
-; CHECK-NEXT:    [[OR2:%.*]] = or i1 [[C3]], [[OR1]]
-; CHECK-NEXT:    ret i1 [[OR2]]
+; CHECK-NEXT:    [[TMP1:%.*]] = or i8 [[Z_SHIFT]], 1
+; CHECK-NEXT:    [[TMP2:%.*]] = and i8 [[TMP1]], [[X:%.*]]
+; CHECK-NEXT:    [[TMP3:%.*]] = icmp ne i8 [[TMP2]], [[TMP1]]
+; CHECK-NEXT:    [[TMP4:%.*]] = select i1 [[TMP3]], i1 true, i1 [[C1]]
+; CHECK-NEXT:    ret i1 [[TMP4]]
 ;
   %c1 = icmp eq i8 %y, 42
   %x.m1 = and i8 %x, 1
