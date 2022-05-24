@@ -5945,11 +5945,11 @@ SDValue DAGTypeLegalizer::WidenVecOp_VP_SCATTER(SDNode *N, unsigned OpNo) {
     Mask = GetWidenedMask(Mask, WideEC);
     WideMemVT = EVT::getVectorVT(*DAG.getContext(),
                                  VPSC->getMemoryVT().getScalarType(), WideEC);
-  } else if (OpNo == 4) {
+  } else if (OpNo == 3) {
     // Just widen the index. It's allowed to have extra elements.
     Index = GetWidenedVector(Index);
   } else
-    llvm_unreachable("Can't widen this operand of mscatter");
+    llvm_unreachable("Can't widen this operand of VP_SCATTER");
 
   SDValue Ops[] = {
       VPSC->getChain(),       DataOp, VPSC->getBasePtr(), Index, Scale, Mask,
