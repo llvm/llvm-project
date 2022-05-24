@@ -975,30 +975,28 @@ private:
     }
   }
 
-  /// For multiple entry subprograms, build a list of the dummy arguments that
-  /// appear in some, but not all entry points.  For those that are functions,
-  /// also find one of the largest function results, since a single result
-  /// container holds the result for all entries.
+  /// Do processing specific to subprograms with multiple entry points.
   void processEntryPoints() {
     lower::pft::Evaluation *initialEval = &evaluationListStack.back()->front();
     lower::pft::FunctionLikeUnit *unit = initialEval->getOwningProcedure();
     int entryCount = unit->entryPointList.size();
     if (entryCount == 1)
       return;
-    llvm::DenseMap<semantics::Symbol *, int> dummyCountMap;
+
+    // The first executable statement in the subprogram is preceded by a
+    // branch to the entry point, so it starts a new block.
+    if (initialEval->hasNestedEvaluations())
+      initialEval = &initialEval->getFirstNestedEvaluation();
+    else if (initialEval->isA<Fortran::parser::EntryStmt>())
+      initialEval = initialEval->lexicalSuccessor;
+    initialEval->isNewBlock = true;
+
+    // All function entry points share a single result container.
+    // Find one of the largest results.
     for (int entryIndex = 0; entryIndex < entryCount; ++entryIndex) {
       unit->setActiveEntry(entryIndex);
       const auto &details =
           unit->getSubprogramSymbol().get<semantics::SubprogramDetails>();
-      for (semantics::Symbol *arg : details.dummyArgs()) {
-        if (!arg)
-          continue; // alternate return specifier (no actual argument)
-        const auto iter = dummyCountMap.find(arg);
-        if (iter == dummyCountMap.end())
-          dummyCountMap.try_emplace(arg, 1);
-        else
-          ++iter->second;
-      }
       if (details.isFunction()) {
         const semantics::Symbol *resultSym = &details.result();
         assert(resultSym && "missing result symbol");
@@ -1008,16 +1006,6 @@ private:
       }
     }
     unit->setActiveEntry(0);
-    for (auto arg : dummyCountMap)
-      if (arg.second < entryCount)
-        unit->nonUniversalDummyArguments.push_back(arg.first);
-    // The first executable statement in the subprogram is preceded by a
-    // branch to the entry point, so it starts a new block.
-    if (initialEval->hasNestedEvaluations())
-      initialEval = &initialEval->getFirstNestedEvaluation();
-    else if (initialEval->isA<Fortran::parser::EntryStmt>())
-      initialEval = initialEval->lexicalSuccessor;
-    initialEval->isNewBlock = true;
   }
 
   std::unique_ptr<lower::pft::Program> pgm;
@@ -1401,10 +1389,14 @@ struct SymbolDependenceDepth {
     LLVM_DEBUG(llvm::dbgs() << "analyze symbol: " << sym << '\n');
     if (!done.second)
       return 0;
-    if (semantics::IsProcedure(sym)) {
-      // TODO: add declaration?
+    const bool isProcedurePointerOrDummy =
+        semantics::IsProcedurePointer(sym) ||
+        (semantics::IsProcedure(sym) && IsDummy(sym));
+    // A procedure argument in a subprogram with multiple entry points might
+    // need a vars list entry to trigger creation of a symbol map entry in
+    // some cases.  Non-dummy procedures don't.
+    if (semantics::IsProcedure(sym) && !isProcedurePointerOrDummy)
       return 0;
-    }
     semantics::Symbol ultimate = sym.GetUltimate();
     if (const auto *details =
             ultimate.detailsIf<semantics::NamelistDetails>()) {
@@ -1414,7 +1406,7 @@ struct SymbolDependenceDepth {
       return 0;
     }
     if (!ultimate.has<semantics::ObjectEntityDetails>() &&
-        !ultimate.has<semantics::ProcEntityDetails>())
+        !isProcedurePointerOrDummy)
       return 0;
 
     if (sym.has<semantics::DerivedTypeDetails>())
@@ -1422,15 +1414,14 @@ struct SymbolDependenceDepth {
 
     // Symbol must be something lowering will have to allocate.
     int depth = 0;
-    const semantics::DeclTypeSpec *symTy = sym.GetType();
-    assert(symTy && "symbol must have a type");
-
     // Analyze symbols appearing in object entity specification expression. This
     // ensures these symbols will be instantiated before the current one.
     // This is not done for object entities that are host associated because
     // they must be instantiated from the value of the host symbols (the
     // specification expressions should not be re-evaluated).
     if (const auto *details = sym.detailsIf<semantics::ObjectEntityDetails>()) {
+      const semantics::DeclTypeSpec *symTy = sym.GetType();
+      assert(symTy && "symbol must have a type");
       // check CHARACTER's length
       if (symTy->category() == semantics::DeclTypeSpec::Character)
         if (auto e = symTy->characterTypeSpec().length().GetExplicit())
@@ -1471,9 +1462,8 @@ struct SymbolDependenceDepth {
 
     // If there are alias sets, then link the participating variables to their
     // aggregate stores when constructing the new variable on the list.
-    if (lower::pft::Variable::AggregateStore *store = findStoreIfAlias(sym)) {
+    if (lower::pft::Variable::AggregateStore *store = findStoreIfAlias(sym))
       vars[depth].back().setAlias(store->getOffset());
-    }
     return depth;
   }
 

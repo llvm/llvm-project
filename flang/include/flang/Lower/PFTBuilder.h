@@ -668,8 +668,6 @@ struct FunctionLikeUnit : public ProgramUnit {
       entryPointList{std::pair{nullptr, nullptr}};
   /// Current index into entryPointList.  Index 0 is the primary entry point.
   int activeEntry = 0;
-  /// Dummy arguments that are not universal across entry points.
-  llvm::SmallVector<const semantics::Symbol *, 1> nonUniversalDummyArguments;
   /// Primary result for function subprograms with alternate entries.  This
   /// is one of the largest result values, not necessarily the first one.
   const semantics::Symbol *primaryResult{nullptr};
