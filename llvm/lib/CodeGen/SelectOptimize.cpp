@@ -179,8 +179,8 @@ private:
   // For a given source instruction, collect its backwards dependence slice
   // consisting of instructions exclusively computed for producing the operands
   // of the source instruction.
-  void getExclBackwardsSlice(Instruction *I, std::stack<Instruction *> &Slice,
-                             bool ForSinking = false);
+  void getExclBackwardsSlice(Instruction *I,
+                             SmallVector<Instruction *, 2> &Slice);
 
   // Returns true if the condition of the select is highly predictable.
   bool isSelectHighlyPredictable(const SelectInst *SI);
@@ -329,10 +329,6 @@ getTrueOrFalseValue(SelectInst *SI, bool isTrue,
 
 void SelectOptimize::convertProfitableSIGroups(SelectGroups &ProfSIGroups) {
   for (SelectGroup &ASI : ProfSIGroups) {
-    // The code transformation here is a modified version of the sinking
-    // transformation in CodeGenPrepare::optimizeSelectInst with a more
-    // aggressive strategy of which instructions to sink.
-    //
     // TODO: eliminate the redundancy of logic transforming selects to branches
     // by removing CodeGenPrepare::optimizeSelectInst and optimizing here
     // selects for all cases (with and without profile information).
@@ -346,72 +342,13 @@ void SelectOptimize::convertProfitableSIGroups(SelectGroups &ProfSIGroups) {
     //    start:
     //       %cmp = cmp uge i32 %a, %b
     //       %cmp.frozen = freeze %cmp
-    //       br i1 %cmp.frozen, label %select.true, label %select.false
-    //    select.true:
-    //       br label %select.end
+    //       br i1 %cmp.frozen, label %select.end, label %select.false
     //    select.false:
     //       br label %select.end
     //    select.end:
-    //       %sel = phi i32 [ %c, %select.true ], [ %d, %select.false ]
+    //       %sel = phi i32 [ %c, %start ], [ %d, %select.false ]
     //
     // %cmp should be frozen, otherwise it may introduce undefined behavior.
-    // In addition, we may sink instructions that produce %c or %d into the
-    // destination(s) of the new branch.
-    // If the true or false blocks do not contain a sunken instruction, that
-    // block and its branch may be optimized away. In that case, one side of the
-    // first branch will point directly to select.end, and the corresponding PHI
-    // predecessor block will be the start block.
-
-    // Find all the instructions that can be soundly sunk to the true/false
-    // blocks. These are instructions that are computed solely for producing the
-    // operands of the select instructions in the group and can be sunk without
-    // breaking the semantics of the LLVM IR (e.g., cannot sink instructions
-    // with side effects).
-    SmallVector<std::stack<Instruction *>, 2> TrueSlices, FalseSlices;
-    unsigned long maxTrueSliceLen = 0, maxFalseSliceLen = 0;
-    for (SelectInst *SI : ASI) {
-      // For each select, compute the sinkable dependence chains of the true and
-      // false operands.
-      if (auto *TI = dyn_cast<Instruction>(SI->getTrueValue())) {
-        std::stack<Instruction *> TrueSlice;
-        getExclBackwardsSlice(TI, TrueSlice, true);
-        maxTrueSliceLen = std::max(maxTrueSliceLen, TrueSlice.size());
-        TrueSlices.push_back(TrueSlice);
-      }
-      if (auto *FI = dyn_cast<Instruction>(SI->getFalseValue())) {
-        std::stack<Instruction *> FalseSlice;
-        getExclBackwardsSlice(FI, FalseSlice, true);
-        maxFalseSliceLen = std::max(maxFalseSliceLen, FalseSlice.size());
-        FalseSlices.push_back(FalseSlice);
-      }
-    }
-    // In the case of multiple select instructions in the same group, the order
-    // of non-dependent instructions (instructions of different dependence
-    // slices) in the true/false blocks appears to affect performance.
-    // Interleaving the slices seems to experimentally be the optimal approach.
-    // This interleaving scheduling allows for more ILP (with a natural downside
-    // of increasing a bit register pressure) compared to a simple ordering of
-    // one whole chain after another. One would expect that this ordering would
-    // not matter since the scheduling in the backend of the compiler  would
-    // take care of it, but apparently the scheduler fails to deliver optimal
-    // ILP with a naive ordering here.
-    SmallVector<Instruction *, 2> TrueSlicesInterleaved, FalseSlicesInterleaved;
-    for (unsigned long IS = 0; IS < maxTrueSliceLen; ++IS) {
-      for (auto &S : TrueSlices) {
-        if (!S.empty()) {
-          TrueSlicesInterleaved.push_back(S.top());
-          S.pop();
-        }
-      }
-    }
-    for (unsigned long IS = 0; IS < maxFalseSliceLen; ++IS) {
-      for (auto &S : FalseSlices) {
-        if (!S.empty()) {
-          FalseSlicesInterleaved.push_back(S.top());
-          S.pop();
-        }
-      }
-    }
 
     // We split the block containing the select(s) into two blocks.
     SelectInst *SI = ASI.front();
@@ -437,55 +374,24 @@ void SelectOptimize::convertProfitableSIGroups(SelectGroups &ProfSIGroups) {
     }
 
     // These are the new basic blocks for the conditional branch.
-    // At least one will become an actual new basic block.
+    // For now, no instruction sinking to the true/false blocks.
+    // Thus both True and False blocks will be empty.
     BasicBlock *TrueBlock = nullptr, *FalseBlock = nullptr;
-    BranchInst *TrueBranch = nullptr, *FalseBranch = nullptr;
-    if (!TrueSlicesInterleaved.empty()) {
-      TrueBlock = BasicBlock::Create(LastSI->getContext(), "select.true.sink",
-                                     EndBlock->getParent(), EndBlock);
-      TrueBranch = BranchInst::Create(EndBlock, TrueBlock);
-      TrueBranch->setDebugLoc(LastSI->getDebugLoc());
-      for (Instruction *TrueInst : TrueSlicesInterleaved)
-        TrueInst->moveBefore(TrueBranch);
-    }
-    if (!FalseSlicesInterleaved.empty()) {
-      FalseBlock = BasicBlock::Create(LastSI->getContext(), "select.false.sink",
-                                      EndBlock->getParent(), EndBlock);
-      FalseBranch = BranchInst::Create(EndBlock, FalseBlock);
-      FalseBranch->setDebugLoc(LastSI->getDebugLoc());
-      for (Instruction *FalseInst : FalseSlicesInterleaved)
-        FalseInst->moveBefore(FalseBranch);
-    }
-    // If there was nothing to sink, then arbitrarily choose the 'false' side
-    // for a new input value to the PHI.
-    if (TrueBlock == FalseBlock) {
-      assert(TrueBlock == nullptr &&
-             "Unexpected basic block transform while optimizing select");
 
-      FalseBlock = BasicBlock::Create(SI->getContext(), "select.false",
-                                      EndBlock->getParent(), EndBlock);
-      auto *FalseBranch = BranchInst::Create(EndBlock, FalseBlock);
-      FalseBranch->setDebugLoc(SI->getDebugLoc());
-    }
+    // Use the 'false' side for a new input value to the PHI.
+    FalseBlock = BasicBlock::Create(SI->getContext(), "select.false",
+                                    EndBlock->getParent(), EndBlock);
+    auto *FalseBranch = BranchInst::Create(EndBlock, FalseBlock);
+    FalseBranch->setDebugLoc(SI->getDebugLoc());
+
+    // For the 'true' side the path originates from the start block from the
+    // point view of the new PHI.
+    TrueBlock = StartBlock;
 
     // Insert the real conditional branch based on the original condition.
-    // If we did not create a new block for one of the 'true' or 'false' paths
-    // of the condition, it means that side of the branch goes to the end block
-    // directly and the path originates from the start block from the point of
-    // view of the new PHI.
     BasicBlock *TT, *FT;
-    if (TrueBlock == nullptr) {
-      TT = EndBlock;
-      FT = FalseBlock;
-      TrueBlock = StartBlock;
-    } else if (FalseBlock == nullptr) {
-      TT = TrueBlock;
-      FT = EndBlock;
-      FalseBlock = StartBlock;
-    } else {
-      TT = TrueBlock;
-      FT = FalseBlock;
-    }
+    TT = EndBlock;
+    FT = FalseBlock;
     IRBuilder<> IB(SI);
     auto *CondFr =
         IB.CreateFreeze(SI->getCondition(), SI->getName() + ".frozen");
@@ -680,13 +586,12 @@ bool SelectOptimize::hasExpensiveColdOperand(
       HotWeight = TrueWeight;
     }
     if (ColdI) {
-      std::stack<Instruction *> ColdSlice;
+      SmallVector<Instruction *, 2> ColdSlice;
       getExclBackwardsSlice(ColdI, ColdSlice);
       InstructionCost SliceCost = 0;
-      while (!ColdSlice.empty()) {
-        SliceCost += TTI->getInstructionCost(ColdSlice.top(),
-                                             TargetTransformInfo::TCK_Latency);
-        ColdSlice.pop();
+      for (auto *ColdII : ColdSlice) {
+        SliceCost +=
+            TTI->getInstructionCost(ColdII, TargetTransformInfo::TCK_Latency);
       }
       // The colder the cold value operand of the select is the more expensive
       // the cmov becomes for computing the cold value operand every time. Thus,
@@ -708,9 +613,8 @@ bool SelectOptimize::hasExpensiveColdOperand(
 // (sufficiently-accurate in practice), we populate this set with the
 // instructions of the backwards dependence slice that only have one-use and
 // form an one-use chain that leads to the source instruction.
-void SelectOptimize::getExclBackwardsSlice(Instruction *I,
-                                           std::stack<Instruction *> &Slice,
-                                           bool ForSinking) {
+void SelectOptimize::getExclBackwardsSlice(
+    Instruction *I, SmallVector<Instruction *, 2> &Slice) {
   SmallPtrSet<Instruction *, 2> Visited;
   std::queue<Instruction *> Worklist;
   Worklist.push(I);
@@ -726,20 +630,13 @@ void SelectOptimize::getExclBackwardsSlice(Instruction *I,
     if (!II->hasOneUse())
       continue;
 
-    // Cannot soundly sink instructions with side-effects.
-    // Terminator or phi instructions cannot be sunk.
-    // Avoid sinking other select instructions (should be handled separetely).
-    if (ForSinking && (II->isTerminator() || II->mayHaveSideEffects() ||
-                       isa<SelectInst>(II) || isa<PHINode>(II)))
-      continue;
-
     // Avoid considering instructions with less frequency than the source
     // instruction (i.e., avoid colder code regions of the dependence slice).
     if (BFI->getBlockFreq(II->getParent()) < BFI->getBlockFreq(I->getParent()))
       continue;
 
     // Eligible one-use instruction added to the dependence slice.
-    Slice.push(II);
+    Slice.push_back(II);
 
     // Explore all the operands of the current instruction to expand the slice.
     for (unsigned k = 0; k < II->getNumOperands(); ++k)
