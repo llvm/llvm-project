@@ -2934,10 +2934,6 @@ Scope *ModuleVisitor::FindModule(const parser::Name &name,
   if (!scope) {
     return nullptr;
   }
-  if (scope->kind() != Scope::Kind::Module) {
-    Say(name, "'%s' is not a module"_err_en_US);
-    return nullptr;
-  }
   if (DoesScopeContain(scope, currScope())) { // 14.2.2(1)
     Say(name, "Module '%s' cannot USE itself"_err_en_US);
   }
