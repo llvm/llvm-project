@@ -3779,15 +3779,19 @@ InstructionCost X86TTIImpl::getScalarizationOverhead(VectorType *Ty,
                                                      const APInt &DemandedElts,
                                                      bool Insert,
                                                      bool Extract) {
+  assert(DemandedElts.getBitWidth() ==
+             cast<FixedVectorType>(Ty)->getNumElements() &&
+         "Vector size mismatch");
+
+  std::pair<InstructionCost, MVT> LT = TLI->getTypeLegalizationCost(DL, Ty);
+  MVT MScalarTy = LT.second.getScalarType();
+  unsigned SizeInBits = LT.second.getSizeInBits();
+
   InstructionCost Cost = 0;
 
   // For insertions, a ISD::BUILD_VECTOR style vector initialization can be much
   // cheaper than an accumulation of ISD::INSERT_VECTOR_ELT.
   if (Insert) {
-    std::pair<InstructionCost, MVT> LT = TLI->getTypeLegalizationCost(DL, Ty);
-    MVT MScalarTy = LT.second.getScalarType();
-    unsigned SizeInBits = LT.second.getSizeInBits();
-
     if ((MScalarTy == MVT::i16 && ST->hasSSE2()) ||
         (MScalarTy.isInteger() && ST->hasSSE41()) ||
         (MScalarTy == MVT::f32 && ST->hasSSE41())) {
@@ -3865,8 +3869,46 @@ InstructionCost X86TTIImpl::getScalarizationOverhead(VectorType *Ty,
       return MOVMSKCost;
     }
 
-    // TODO: Use default extraction for now, but we should investigate extending
-    // this to handle repeated subvector extraction.
+    if (LT.second.isVector()) {
+      int CostValue = *LT.first.getValue();
+      assert(CostValue >= 0 && "Negative cost!");
+
+      unsigned NumElts = LT.second.getVectorNumElements() * CostValue;
+      assert(NumElts >= DemandedElts.getBitWidth() &&
+             "Vector has been legalized to smaller element count");
+
+      // If we're extracting elements from a 128-bit subvector lane, we only need
+      // to extract each lane once, not for every element.
+      if (SizeInBits > 128) {
+        assert((SizeInBits % 128) == 0 && "Illegal vector");
+        unsigned NumLegal128Lanes = SizeInBits / 128;
+        unsigned Num128Lanes = NumLegal128Lanes * CostValue;
+        APInt WidenedDemandedElts = DemandedElts.zext(NumElts);
+        unsigned Scale = NumElts / Num128Lanes;
+
+        // Add cost for each demanded 128-bit subvector extraction.
+        // Luckily this is a lot easier than for insertion.
+        APInt DemandedUpper128Lanes =
+            APIntOps::ScaleBitMask(WidenedDemandedElts, Num128Lanes);
+        auto *Ty128 = FixedVectorType::get(Ty->getElementType(), Scale);
+        for (unsigned I = 0; I != Num128Lanes; ++I)
+          if (DemandedUpper128Lanes[I])
+            Cost += getShuffleCost(TTI::SK_ExtractSubvector, Ty, None,
+                                   I * Scale, Ty128);
+
+        // Add all the demanded element extractions together, but adjust the
+        // index to use the equivalent of the bottom 128 bit lane.
+        for (unsigned I = 0; I != NumElts; ++I)
+          if (WidenedDemandedElts[I]) {
+            unsigned Idx = I % Scale;
+            Cost += getVectorInstrCost(Instruction::ExtractElement, Ty, Idx);
+          }
+
+        return Cost;
+      }
+    }
+
+    // Fallback to default extraction.
     Cost += BaseT::getScalarizationOverhead(Ty, DemandedElts, false, Extract);
   }
 

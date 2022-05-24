@@ -80,12 +80,12 @@ define i32 @masked_load() {
 ; AVX-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V8I32 = call <8 x i32> @llvm.masked.load.v8i32.p0v8i32(<8 x i32>* undef, i32 1, <8 x i1> undef, <8 x i32> undef)
 ; AVX-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V4I32 = call <4 x i32> @llvm.masked.load.v4i32.p0v4i32(<4 x i32>* undef, i32 1, <4 x i1> undef, <4 x i32> undef)
 ; AVX-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V2I32 = call <2 x i32> @llvm.masked.load.v2i32.p0v2i32(<2 x i32>* undef, i32 1, <2 x i1> undef, <2 x i32> undef)
-; AVX-NEXT:  Cost Model: Found an estimated cost of 148 for instruction: %V32I16 = call <32 x i16> @llvm.masked.load.v32i16.p0v32i16(<32 x i16>* undef, i32 1, <32 x i1> undef, <32 x i16> undef)
+; AVX-NEXT:  Cost Model: Found an estimated cost of 133 for instruction: %V32I16 = call <32 x i16> @llvm.masked.load.v32i16.p0v32i16(<32 x i16>* undef, i32 1, <32 x i1> undef, <32 x i16> undef)
 ; AVX-NEXT:  Cost Model: Found an estimated cost of 66 for instruction: %V16I16 = call <16 x i16> @llvm.masked.load.v16i16.p0v16i16(<16 x i16>* undef, i32 1, <16 x i1> undef, <16 x i16> undef)
 ; AVX-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %V8I16 = call <8 x i16> @llvm.masked.load.v8i16.p0v8i16(<8 x i16>* undef, i32 1, <8 x i1> undef, <8 x i16> undef)
 ; AVX-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %V4I16 = call <4 x i16> @llvm.masked.load.v4i16.p0v4i16(<4 x i16>* undef, i32 1, <4 x i1> undef, <4 x i16> undef)
-; AVX-NEXT:  Cost Model: Found an estimated cost of 292 for instruction: %V64I8 = call <64 x i8> @llvm.masked.load.v64i8.p0v64i8(<64 x i8>* undef, i32 1, <64 x i1> undef, <64 x i8> undef)
-; AVX-NEXT:  Cost Model: Found an estimated cost of 146 for instruction: %V32I8 = call <32 x i8> @llvm.masked.load.v32i8.p0v32i8(<32 x i8>* undef, i32 1, <32 x i1> undef, <32 x i8> undef)
+; AVX-NEXT:  Cost Model: Found an estimated cost of 262 for instruction: %V64I8 = call <64 x i8> @llvm.masked.load.v64i8.p0v64i8(<64 x i8>* undef, i32 1, <64 x i1> undef, <64 x i8> undef)
+; AVX-NEXT:  Cost Model: Found an estimated cost of 131 for instruction: %V32I8 = call <32 x i8> @llvm.masked.load.v32i8.p0v32i8(<32 x i8>* undef, i32 1, <32 x i1> undef, <32 x i8> undef)
 ; AVX-NEXT:  Cost Model: Found an estimated cost of 64 for instruction: %V16I8 = call <16 x i8> @llvm.masked.load.v16i8.p0v16i8(<16 x i8>* undef, i32 1, <16 x i1> undef, <16 x i8> undef)
 ; AVX-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %V8I8 = call <8 x i8> @llvm.masked.load.v8i8.p0v8i8(<8 x i8>* undef, i32 1, <8 x i1> undef, <8 x i8> undef)
 ; AVX-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 0
@@ -107,12 +107,12 @@ define i32 @masked_load() {
 ; KNL-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V8I32 = call <8 x i32> @llvm.masked.load.v8i32.p0v8i32(<8 x i32>* undef, i32 1, <8 x i1> undef, <8 x i32> undef)
 ; KNL-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V4I32 = call <4 x i32> @llvm.masked.load.v4i32.p0v4i32(<4 x i32>* undef, i32 1, <4 x i1> undef, <4 x i32> undef)
 ; KNL-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V2I32 = call <2 x i32> @llvm.masked.load.v2i32.p0v2i32(<2 x i32>* undef, i32 1, <2 x i1> undef, <2 x i32> undef)
-; KNL-NEXT:  Cost Model: Found an estimated cost of 148 for instruction: %V32I16 = call <32 x i16> @llvm.masked.load.v32i16.p0v32i16(<32 x i16>* undef, i32 1, <32 x i1> undef, <32 x i16> undef)
+; KNL-NEXT:  Cost Model: Found an estimated cost of 133 for instruction: %V32I16 = call <32 x i16> @llvm.masked.load.v32i16.p0v32i16(<32 x i16>* undef, i32 1, <32 x i1> undef, <32 x i16> undef)
 ; KNL-NEXT:  Cost Model: Found an estimated cost of 66 for instruction: %V16I16 = call <16 x i16> @llvm.masked.load.v16i16.p0v16i16(<16 x i16>* undef, i32 1, <16 x i1> undef, <16 x i16> undef)
 ; KNL-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %V8I16 = call <8 x i16> @llvm.masked.load.v8i16.p0v8i16(<8 x i16>* undef, i32 1, <8 x i1> undef, <8 x i16> undef)
 ; KNL-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %V4I16 = call <4 x i16> @llvm.masked.load.v4i16.p0v4i16(<4 x i16>* undef, i32 1, <4 x i1> undef, <4 x i16> undef)
-; KNL-NEXT:  Cost Model: Found an estimated cost of 308 for instruction: %V64I8 = call <64 x i8> @llvm.masked.load.v64i8.p0v64i8(<64 x i8>* undef, i32 1, <64 x i1> undef, <64 x i8> undef)
-; KNL-NEXT:  Cost Model: Found an estimated cost of 146 for instruction: %V32I8 = call <32 x i8> @llvm.masked.load.v32i8.p0v32i8(<32 x i8>* undef, i32 1, <32 x i1> undef, <32 x i8> undef)
+; KNL-NEXT:  Cost Model: Found an estimated cost of 263 for instruction: %V64I8 = call <64 x i8> @llvm.masked.load.v64i8.p0v64i8(<64 x i8>* undef, i32 1, <64 x i1> undef, <64 x i8> undef)
+; KNL-NEXT:  Cost Model: Found an estimated cost of 131 for instruction: %V32I8 = call <32 x i8> @llvm.masked.load.v32i8.p0v32i8(<32 x i8>* undef, i32 1, <32 x i1> undef, <32 x i8> undef)
 ; KNL-NEXT:  Cost Model: Found an estimated cost of 64 for instruction: %V16I8 = call <16 x i8> @llvm.masked.load.v16i8.p0v16i8(<16 x i8>* undef, i32 1, <16 x i1> undef, <16 x i8> undef)
 ; KNL-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %V8I8 = call <8 x i8> @llvm.masked.load.v8i8.p0v8i8(<8 x i8>* undef, i32 1, <8 x i1> undef, <8 x i8> undef)
 ; KNL-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 0
@@ -249,12 +249,12 @@ define i32 @masked_store() {
 ; AVX-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: call void @llvm.masked.store.v8i32.p0v8i32(<8 x i32> undef, <8 x i32>* undef, i32 1, <8 x i1> undef)
 ; AVX-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: call void @llvm.masked.store.v4i32.p0v4i32(<4 x i32> undef, <4 x i32>* undef, i32 1, <4 x i1> undef)
 ; AVX-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: call void @llvm.masked.store.v2i32.p0v2i32(<2 x i32> undef, <2 x i32>* undef, i32 1, <2 x i1> undef)
-; AVX-NEXT:  Cost Model: Found an estimated cost of 160 for instruction: call void @llvm.masked.store.v32i16.p0v32i16(<32 x i16> undef, <32 x i16>* undef, i32 1, <32 x i1> undef)
-; AVX-NEXT:  Cost Model: Found an estimated cost of 72 for instruction: call void @llvm.masked.store.v16i16.p0v16i16(<16 x i16> undef, <16 x i16>* undef, i32 1, <16 x i1> undef)
+; AVX-NEXT:  Cost Model: Found an estimated cost of 131 for instruction: call void @llvm.masked.store.v32i16.p0v32i16(<32 x i16> undef, <32 x i16>* undef, i32 1, <32 x i1> undef)
+; AVX-NEXT:  Cost Model: Found an estimated cost of 65 for instruction: call void @llvm.masked.store.v16i16.p0v16i16(<16 x i16> undef, <16 x i16>* undef, i32 1, <16 x i1> undef)
 ; AVX-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: call void @llvm.masked.store.v8i16.p0v8i16(<8 x i16> undef, <8 x i16>* undef, i32 1, <8 x i1> undef)
 ; AVX-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: call void @llvm.masked.store.v4i16.p0v4i16(<4 x i16> undef, <4 x i16>* undef, i32 1, <4 x i1> undef)
-; AVX-NEXT:  Cost Model: Found an estimated cost of 320 for instruction: call void @llvm.masked.store.v64i8.p0v64i8(<64 x i8> undef, <64 x i8>* undef, i32 1, <64 x i1> undef)
-; AVX-NEXT:  Cost Model: Found an estimated cost of 160 for instruction: call void @llvm.masked.store.v32i8.p0v32i8(<32 x i8> undef, <32 x i8>* undef, i32 1, <32 x i1> undef)
+; AVX-NEXT:  Cost Model: Found an estimated cost of 260 for instruction: call void @llvm.masked.store.v64i8.p0v64i8(<64 x i8> undef, <64 x i8>* undef, i32 1, <64 x i1> undef)
+; AVX-NEXT:  Cost Model: Found an estimated cost of 130 for instruction: call void @llvm.masked.store.v32i8.p0v32i8(<32 x i8> undef, <32 x i8>* undef, i32 1, <32 x i1> undef)
 ; AVX-NEXT:  Cost Model: Found an estimated cost of 64 for instruction: call void @llvm.masked.store.v16i8.p0v16i8(<16 x i8> undef, <16 x i8>* undef, i32 1, <16 x i1> undef)
 ; AVX-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: call void @llvm.masked.store.v8i8.p0v8i8(<8 x i8> undef, <8 x i8>* undef, i32 1, <8 x i1> undef)
 ; AVX-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 0
@@ -276,12 +276,12 @@ define i32 @masked_store() {
 ; KNL-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: call void @llvm.masked.store.v8i32.p0v8i32(<8 x i32> undef, <8 x i32>* undef, i32 1, <8 x i1> undef)
 ; KNL-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: call void @llvm.masked.store.v4i32.p0v4i32(<4 x i32> undef, <4 x i32>* undef, i32 1, <4 x i1> undef)
 ; KNL-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: call void @llvm.masked.store.v2i32.p0v2i32(<2 x i32> undef, <2 x i32>* undef, i32 1, <2 x i1> undef)
-; KNL-NEXT:  Cost Model: Found an estimated cost of 168 for instruction: call void @llvm.masked.store.v32i16.p0v32i16(<32 x i16> undef, <32 x i16>* undef, i32 1, <32 x i1> undef)
-; KNL-NEXT:  Cost Model: Found an estimated cost of 72 for instruction: call void @llvm.masked.store.v16i16.p0v16i16(<16 x i16> undef, <16 x i16>* undef, i32 1, <16 x i1> undef)
+; KNL-NEXT:  Cost Model: Found an estimated cost of 132 for instruction: call void @llvm.masked.store.v32i16.p0v32i16(<32 x i16> undef, <32 x i16>* undef, i32 1, <32 x i1> undef)
+; KNL-NEXT:  Cost Model: Found an estimated cost of 65 for instruction: call void @llvm.masked.store.v16i16.p0v16i16(<16 x i16> undef, <16 x i16>* undef, i32 1, <16 x i1> undef)
 ; KNL-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: call void @llvm.masked.store.v8i16.p0v8i16(<8 x i16> undef, <8 x i16>* undef, i32 1, <8 x i1> undef)
 ; KNL-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: call void @llvm.masked.store.v4i16.p0v4i16(<4 x i16> undef, <4 x i16>* undef, i32 1, <4 x i1> undef)
-; KNL-NEXT:  Cost Model: Found an estimated cost of 352 for instruction: call void @llvm.masked.store.v64i8.p0v64i8(<64 x i8> undef, <64 x i8>* undef, i32 1, <64 x i1> undef)
-; KNL-NEXT:  Cost Model: Found an estimated cost of 160 for instruction: call void @llvm.masked.store.v32i8.p0v32i8(<32 x i8> undef, <32 x i8>* undef, i32 1, <32 x i1> undef)
+; KNL-NEXT:  Cost Model: Found an estimated cost of 262 for instruction: call void @llvm.masked.store.v64i8.p0v64i8(<64 x i8> undef, <64 x i8>* undef, i32 1, <64 x i1> undef)
+; KNL-NEXT:  Cost Model: Found an estimated cost of 130 for instruction: call void @llvm.masked.store.v32i8.p0v32i8(<32 x i8> undef, <32 x i8>* undef, i32 1, <32 x i1> undef)
 ; KNL-NEXT:  Cost Model: Found an estimated cost of 64 for instruction: call void @llvm.masked.store.v16i8.p0v16i8(<16 x i8> undef, <16 x i8>* undef, i32 1, <16 x i1> undef)
 ; KNL-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: call void @llvm.masked.store.v8i8.p0v8i8(<8 x i8> undef, <8 x i8>* undef, i32 1, <8 x i1> undef)
 ; KNL-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 0
@@ -402,57 +402,57 @@ define i32 @masked_gather() {
 ; SSE42-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 0
 ;
 ; AVX1-LABEL: 'masked_gather'
-; AVX1-NEXT:  Cost Model: Found an estimated cost of 26 for instruction: %V8F64 = call <8 x double> @llvm.masked.gather.v8f64.v8p0f64(<8 x double*> undef, i32 1, <8 x i1> undef, <8 x double> undef)
-; AVX1-NEXT:  Cost Model: Found an estimated cost of 13 for instruction: %V4F64 = call <4 x double> @llvm.masked.gather.v4f64.v4p0f64(<4 x double*> undef, i32 1, <4 x i1> undef, <4 x double> undef)
+; AVX1-NEXT:  Cost Model: Found an estimated cost of 24 for instruction: %V8F64 = call <8 x double> @llvm.masked.gather.v8f64.v8p0f64(<8 x double*> undef, i32 1, <8 x i1> undef, <8 x double> undef)
+; AVX1-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: %V4F64 = call <4 x double> @llvm.masked.gather.v4f64.v4p0f64(<4 x double*> undef, i32 1, <4 x i1> undef, <4 x double> undef)
 ; AVX1-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %V2F64 = call <2 x double> @llvm.masked.gather.v2f64.v2p0f64(<2 x double*> undef, i32 1, <2 x i1> undef, <2 x double> undef)
 ; AVX1-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V1F64 = call <1 x double> @llvm.masked.gather.v1f64.v1p0f64(<1 x double*> undef, i32 1, <1 x i1> undef, <1 x double> undef)
-; AVX1-NEXT:  Cost Model: Found an estimated cost of 56 for instruction: %V16F32 = call <16 x float> @llvm.masked.gather.v16f32.v16p0f32(<16 x float*> undef, i32 1, <16 x i1> undef, <16 x float> undef)
-; AVX1-NEXT:  Cost Model: Found an estimated cost of 28 for instruction: %V8F32 = call <8 x float> @llvm.masked.gather.v8f32.v8p0f32(<8 x float*> undef, i32 1, <8 x i1> undef, <8 x float> undef)
-; AVX1-NEXT:  Cost Model: Found an estimated cost of 13 for instruction: %V4F32 = call <4 x float> @llvm.masked.gather.v4f32.v4p0f32(<4 x float*> undef, i32 1, <4 x i1> undef, <4 x float> undef)
+; AVX1-NEXT:  Cost Model: Found an estimated cost of 52 for instruction: %V16F32 = call <16 x float> @llvm.masked.gather.v16f32.v16p0f32(<16 x float*> undef, i32 1, <16 x i1> undef, <16 x float> undef)
+; AVX1-NEXT:  Cost Model: Found an estimated cost of 26 for instruction: %V8F32 = call <8 x float> @llvm.masked.gather.v8f32.v8p0f32(<8 x float*> undef, i32 1, <8 x i1> undef, <8 x float> undef)
+; AVX1-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: %V4F32 = call <4 x float> @llvm.masked.gather.v4f32.v4p0f32(<4 x float*> undef, i32 1, <4 x i1> undef, <4 x float> undef)
 ; AVX1-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %V2F32 = call <2 x float> @llvm.masked.gather.v2f32.v2p0f32(<2 x float*> undef, i32 1, <2 x i1> undef, <2 x float> undef)
-; AVX1-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %V8I64 = call <8 x i64> @llvm.masked.gather.v8i64.v8p0i64(<8 x i64*> undef, i32 1, <8 x i1> undef, <8 x i64> undef)
-; AVX1-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %V4I64 = call <4 x i64> @llvm.masked.gather.v4i64.v4p0i64(<4 x i64*> undef, i32 1, <4 x i1> undef, <4 x i64> undef)
+; AVX1-NEXT:  Cost Model: Found an estimated cost of 30 for instruction: %V8I64 = call <8 x i64> @llvm.masked.gather.v8i64.v8p0i64(<8 x i64*> undef, i32 1, <8 x i1> undef, <8 x i64> undef)
+; AVX1-NEXT:  Cost Model: Found an estimated cost of 15 for instruction: %V4I64 = call <4 x i64> @llvm.masked.gather.v4i64.v4p0i64(<4 x i64*> undef, i32 1, <4 x i1> undef, <4 x i64> undef)
 ; AVX1-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %V2I64 = call <2 x i64> @llvm.masked.gather.v2i64.v2p0i64(<2 x i64*> undef, i32 1, <2 x i1> undef, <2 x i64> undef)
 ; AVX1-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V1I64 = call <1 x i64> @llvm.masked.gather.v1i64.v1p0i64(<1 x i64*> undef, i32 1, <1 x i1> undef, <1 x i64> undef)
-; AVX1-NEXT:  Cost Model: Found an estimated cost of 60 for instruction: %V16I32 = call <16 x i32> @llvm.masked.gather.v16i32.v16p0i32(<16 x i32*> undef, i32 1, <16 x i1> undef, <16 x i32> undef)
-; AVX1-NEXT:  Cost Model: Found an estimated cost of 30 for instruction: %V8I32 = call <8 x i32> @llvm.masked.gather.v8i32.v8p0i32(<8 x i32*> undef, i32 1, <8 x i1> undef, <8 x i32> undef)
-; AVX1-NEXT:  Cost Model: Found an estimated cost of 14 for instruction: %V4I32 = call <4 x i32> @llvm.masked.gather.v4i32.v4p0i32(<4 x i32*> undef, i32 1, <4 x i1> undef, <4 x i32> undef)
+; AVX1-NEXT:  Cost Model: Found an estimated cost of 56 for instruction: %V16I32 = call <16 x i32> @llvm.masked.gather.v16i32.v16p0i32(<16 x i32*> undef, i32 1, <16 x i1> undef, <16 x i32> undef)
+; AVX1-NEXT:  Cost Model: Found an estimated cost of 28 for instruction: %V8I32 = call <8 x i32> @llvm.masked.gather.v8i32.v8p0i32(<8 x i32*> undef, i32 1, <8 x i1> undef, <8 x i32> undef)
+; AVX1-NEXT:  Cost Model: Found an estimated cost of 13 for instruction: %V4I32 = call <4 x i32> @llvm.masked.gather.v4i32.v4p0i32(<4 x i32*> undef, i32 1, <4 x i1> undef, <4 x i32> undef)
 ; AVX1-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %V2I32 = call <2 x i32> @llvm.masked.gather.v2i32.v2p0i32(<2 x i32*> undef, i32 1, <2 x i1> undef, <2 x i32> undef)
-; AVX1-NEXT:  Cost Model: Found an estimated cost of 116 for instruction: %V32I16 = call <32 x i16> @llvm.masked.gather.v32i16.v32p0i16(<32 x i16*> undef, i32 1, <32 x i1> undef, <32 x i16> undef)
-; AVX1-NEXT:  Cost Model: Found an estimated cost of 58 for instruction: %V16I16 = call <16 x i16> @llvm.masked.gather.v16i16.v16p0i16(<16 x i16*> undef, i32 1, <16 x i1> undef, <16 x i16> undef)
-; AVX1-NEXT:  Cost Model: Found an estimated cost of 28 for instruction: %V8I16 = call <8 x i16> @llvm.masked.gather.v8i16.v8p0i16(<8 x i16*> undef, i32 1, <8 x i1> undef, <8 x i16> undef)
-; AVX1-NEXT:  Cost Model: Found an estimated cost of 14 for instruction: %V4I16 = call <4 x i16> @llvm.masked.gather.v4i16.v4p0i16(<4 x i16*> undef, i32 1, <4 x i1> undef, <4 x i16> undef)
-; AVX1-NEXT:  Cost Model: Found an estimated cost of 228 for instruction: %V64I8 = call <64 x i8> @llvm.masked.gather.v64i8.v64p0i8(<64 x i8*> undef, i32 1, <64 x i1> undef, <64 x i8> undef)
-; AVX1-NEXT:  Cost Model: Found an estimated cost of 114 for instruction: %V32I8 = call <32 x i8> @llvm.masked.gather.v32i8.v32p0i8(<32 x i8*> undef, i32 1, <32 x i1> undef, <32 x i8> undef)
-; AVX1-NEXT:  Cost Model: Found an estimated cost of 56 for instruction: %V16I8 = call <16 x i8> @llvm.masked.gather.v16i8.v16p0i8(<16 x i8*> undef, i32 1, <16 x i1> undef, <16 x i8> undef)
-; AVX1-NEXT:  Cost Model: Found an estimated cost of 28 for instruction: %V8I8 = call <8 x i8> @llvm.masked.gather.v8i8.v8p0i8(<8 x i8*> undef, i32 1, <8 x i1> undef, <8 x i8> undef)
+; AVX1-NEXT:  Cost Model: Found an estimated cost of 108 for instruction: %V32I16 = call <32 x i16> @llvm.masked.gather.v32i16.v32p0i16(<32 x i16*> undef, i32 1, <32 x i1> undef, <32 x i16> undef)
+; AVX1-NEXT:  Cost Model: Found an estimated cost of 54 for instruction: %V16I16 = call <16 x i16> @llvm.masked.gather.v16i16.v16p0i16(<16 x i16*> undef, i32 1, <16 x i1> undef, <16 x i16> undef)
+; AVX1-NEXT:  Cost Model: Found an estimated cost of 26 for instruction: %V8I16 = call <8 x i16> @llvm.masked.gather.v8i16.v8p0i16(<8 x i16*> undef, i32 1, <8 x i1> undef, <8 x i16> undef)
+; AVX1-NEXT:  Cost Model: Found an estimated cost of 13 for instruction: %V4I16 = call <4 x i16> @llvm.masked.gather.v4i16.v4p0i16(<4 x i16*> undef, i32 1, <4 x i1> undef, <4 x i16> undef)
+; AVX1-NEXT:  Cost Model: Found an estimated cost of 212 for instruction: %V64I8 = call <64 x i8> @llvm.masked.gather.v64i8.v64p0i8(<64 x i8*> undef, i32 1, <64 x i1> undef, <64 x i8> undef)
+; AVX1-NEXT:  Cost Model: Found an estimated cost of 106 for instruction: %V32I8 = call <32 x i8> @llvm.masked.gather.v32i8.v32p0i8(<32 x i8*> undef, i32 1, <32 x i1> undef, <32 x i8> undef)
+; AVX1-NEXT:  Cost Model: Found an estimated cost of 52 for instruction: %V16I8 = call <16 x i8> @llvm.masked.gather.v16i8.v16p0i8(<16 x i8*> undef, i32 1, <16 x i1> undef, <16 x i8> undef)
+; AVX1-NEXT:  Cost Model: Found an estimated cost of 26 for instruction: %V8I8 = call <8 x i8> @llvm.masked.gather.v8i8.v8p0i8(<8 x i8*> undef, i32 1, <8 x i1> undef, <8 x i8> undef)
 ; AVX1-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 0
 ;
 ; AVX2-LABEL: 'masked_gather'
-; AVX2-NEXT:  Cost Model: Found an estimated cost of 26 for instruction: %V8F64 = call <8 x double> @llvm.masked.gather.v8f64.v8p0f64(<8 x double*> undef, i32 1, <8 x i1> undef, <8 x double> undef)
-; AVX2-NEXT:  Cost Model: Found an estimated cost of 13 for instruction: %V4F64 = call <4 x double> @llvm.masked.gather.v4f64.v4p0f64(<4 x double*> undef, i32 1, <4 x i1> undef, <4 x double> undef)
+; AVX2-NEXT:  Cost Model: Found an estimated cost of 24 for instruction: %V8F64 = call <8 x double> @llvm.masked.gather.v8f64.v8p0f64(<8 x double*> undef, i32 1, <8 x i1> undef, <8 x double> undef)
+; AVX2-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: %V4F64 = call <4 x double> @llvm.masked.gather.v4f64.v4p0f64(<4 x double*> undef, i32 1, <4 x i1> undef, <4 x double> undef)
 ; AVX2-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %V2F64 = call <2 x double> @llvm.masked.gather.v2f64.v2p0f64(<2 x double*> undef, i32 1, <2 x i1> undef, <2 x double> undef)
 ; AVX2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V1F64 = call <1 x double> @llvm.masked.gather.v1f64.v1p0f64(<1 x double*> undef, i32 1, <1 x i1> undef, <1 x double> undef)
-; AVX2-NEXT:  Cost Model: Found an estimated cost of 56 for instruction: %V16F32 = call <16 x float> @llvm.masked.gather.v16f32.v16p0f32(<16 x float*> undef, i32 1, <16 x i1> undef, <16 x float> undef)
-; AVX2-NEXT:  Cost Model: Found an estimated cost of 28 for instruction: %V8F32 = call <8 x float> @llvm.masked.gather.v8f32.v8p0f32(<8 x float*> undef, i32 1, <8 x i1> undef, <8 x float> undef)
-; AVX2-NEXT:  Cost Model: Found an estimated cost of 13 for instruction: %V4F32 = call <4 x float> @llvm.masked.gather.v4f32.v4p0f32(<4 x float*> undef, i32 1, <4 x i1> undef, <4 x float> undef)
+; AVX2-NEXT:  Cost Model: Found an estimated cost of 52 for instruction: %V16F32 = call <16 x float> @llvm.masked.gather.v16f32.v16p0f32(<16 x float*> undef, i32 1, <16 x i1> undef, <16 x float> undef)
+; AVX2-NEXT:  Cost Model: Found an estimated cost of 26 for instruction: %V8F32 = call <8 x float> @llvm.masked.gather.v8f32.v8p0f32(<8 x float*> undef, i32 1, <8 x i1> undef, <8 x float> undef)
+; AVX2-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: %V4F32 = call <4 x float> @llvm.masked.gather.v4f32.v4p0f32(<4 x float*> undef, i32 1, <4 x i1> undef, <4 x float> undef)
 ; AVX2-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %V2F32 = call <2 x float> @llvm.masked.gather.v2f32.v2p0f32(<2 x float*> undef, i32 1, <2 x i1> undef, <2 x float> undef)
-; AVX2-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %V8I64 = call <8 x i64> @llvm.masked.gather.v8i64.v8p0i64(<8 x i64*> undef, i32 1, <8 x i1> undef, <8 x i64> undef)
-; AVX2-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %V4I64 = call <4 x i64> @llvm.masked.gather.v4i64.v4p0i64(<4 x i64*> undef, i32 1, <4 x i1> undef, <4 x i64> undef)
+; AVX2-NEXT:  Cost Model: Found an estimated cost of 30 for instruction: %V8I64 = call <8 x i64> @llvm.masked.gather.v8i64.v8p0i64(<8 x i64*> undef, i32 1, <8 x i1> undef, <8 x i64> undef)
+; AVX2-NEXT:  Cost Model: Found an estimated cost of 15 for instruction: %V4I64 = call <4 x i64> @llvm.masked.gather.v4i64.v4p0i64(<4 x i64*> undef, i32 1, <4 x i1> undef, <4 x i64> undef)
 ; AVX2-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %V2I64 = call <2 x i64> @llvm.masked.gather.v2i64.v2p0i64(<2 x i64*> undef, i32 1, <2 x i1> undef, <2 x i64> undef)
 ; AVX2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V1I64 = call <1 x i64> @llvm.masked.gather.v1i64.v1p0i64(<1 x i64*> undef, i32 1, <1 x i1> undef, <1 x i64> undef)
-; AVX2-NEXT:  Cost Model: Found an estimated cost of 60 for instruction: %V16I32 = call <16 x i32> @llvm.masked.gather.v16i32.v16p0i32(<16 x i32*> undef, i32 1, <16 x i1> undef, <16 x i32> undef)
-; AVX2-NEXT:  Cost Model: Found an estimated cost of 30 for instruction: %V8I32 = call <8 x i32> @llvm.masked.gather.v8i32.v8p0i32(<8 x i32*> undef, i32 1, <8 x i1> undef, <8 x i32> undef)
-; AVX2-NEXT:  Cost Model: Found an estimated cost of 14 for instruction: %V4I32 = call <4 x i32> @llvm.masked.gather.v4i32.v4p0i32(<4 x i32*> undef, i32 1, <4 x i1> undef, <4 x i32> undef)
+; AVX2-NEXT:  Cost Model: Found an estimated cost of 56 for instruction: %V16I32 = call <16 x i32> @llvm.masked.gather.v16i32.v16p0i32(<16 x i32*> undef, i32 1, <16 x i1> undef, <16 x i32> undef)
+; AVX2-NEXT:  Cost Model: Found an estimated cost of 28 for instruction: %V8I32 = call <8 x i32> @llvm.masked.gather.v8i32.v8p0i32(<8 x i32*> undef, i32 1, <8 x i1> undef, <8 x i32> undef)
+; AVX2-NEXT:  Cost Model: Found an estimated cost of 13 for instruction: %V4I32 = call <4 x i32> @llvm.masked.gather.v4i32.v4p0i32(<4 x i32*> undef, i32 1, <4 x i1> undef, <4 x i32> undef)
 ; AVX2-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %V2I32 = call <2 x i32> @llvm.masked.gather.v2i32.v2p0i32(<2 x i32*> undef, i32 1, <2 x i1> undef, <2 x i32> undef)
-; AVX2-NEXT:  Cost Model: Found an estimated cost of 116 for instruction: %V32I16 = call <32 x i16> @llvm.masked.gather.v32i16.v32p0i16(<32 x i16*> undef, i32 1, <32 x i1> undef, <32 x i16> undef)
-; AVX2-NEXT:  Cost Model: Found an estimated cost of 58 for instruction: %V16I16 = call <16 x i16> @llvm.masked.gather.v16i16.v16p0i16(<16 x i16*> undef, i32 1, <16 x i1> undef, <16 x i16> undef)
-; AVX2-NEXT:  Cost Model: Found an estimated cost of 28 for instruction: %V8I16 = call <8 x i16> @llvm.masked.gather.v8i16.v8p0i16(<8 x i16*> undef, i32 1, <8 x i1> undef, <8 x i16> undef)
-; AVX2-NEXT:  Cost Model: Found an estimated cost of 14 for instruction: %V4I16 = call <4 x i16> @llvm.masked.gather.v4i16.v4p0i16(<4 x i16*> undef, i32 1, <4 x i1> undef, <4 x i16> undef)
-; AVX2-NEXT:  Cost Model: Found an estimated cost of 228 for instruction: %V64I8 = call <64 x i8> @llvm.masked.gather.v64i8.v64p0i8(<64 x i8*> undef, i32 1, <64 x i1> undef, <64 x i8> undef)
-; AVX2-NEXT:  Cost Model: Found an estimated cost of 114 for instruction: %V32I8 = call <32 x i8> @llvm.masked.gather.v32i8.v32p0i8(<32 x i8*> undef, i32 1, <32 x i1> undef, <32 x i8> undef)
-; AVX2-NEXT:  Cost Model: Found an estimated cost of 56 for instruction: %V16I8 = call <16 x i8> @llvm.masked.gather.v16i8.v16p0i8(<16 x i8*> undef, i32 1, <16 x i1> undef, <16 x i8> undef)
-; AVX2-NEXT:  Cost Model: Found an estimated cost of 28 for instruction: %V8I8 = call <8 x i8> @llvm.masked.gather.v8i8.v8p0i8(<8 x i8*> undef, i32 1, <8 x i1> undef, <8 x i8> undef)
+; AVX2-NEXT:  Cost Model: Found an estimated cost of 108 for instruction: %V32I16 = call <32 x i16> @llvm.masked.gather.v32i16.v32p0i16(<32 x i16*> undef, i32 1, <32 x i1> undef, <32 x i16> undef)
+; AVX2-NEXT:  Cost Model: Found an estimated cost of 54 for instruction: %V16I16 = call <16 x i16> @llvm.masked.gather.v16i16.v16p0i16(<16 x i16*> undef, i32 1, <16 x i1> undef, <16 x i16> undef)
+; AVX2-NEXT:  Cost Model: Found an estimated cost of 26 for instruction: %V8I16 = call <8 x i16> @llvm.masked.gather.v8i16.v8p0i16(<8 x i16*> undef, i32 1, <8 x i1> undef, <8 x i16> undef)
+; AVX2-NEXT:  Cost Model: Found an estimated cost of 13 for instruction: %V4I16 = call <4 x i16> @llvm.masked.gather.v4i16.v4p0i16(<4 x i16*> undef, i32 1, <4 x i1> undef, <4 x i16> undef)
+; AVX2-NEXT:  Cost Model: Found an estimated cost of 212 for instruction: %V64I8 = call <64 x i8> @llvm.masked.gather.v64i8.v64p0i8(<64 x i8*> undef, i32 1, <64 x i1> undef, <64 x i8> undef)
+; AVX2-NEXT:  Cost Model: Found an estimated cost of 106 for instruction: %V32I8 = call <32 x i8> @llvm.masked.gather.v32i8.v32p0i8(<32 x i8*> undef, i32 1, <32 x i1> undef, <32 x i8> undef)
+; AVX2-NEXT:  Cost Model: Found an estimated cost of 52 for instruction: %V16I8 = call <16 x i8> @llvm.masked.gather.v16i8.v16p0i8(<16 x i8*> undef, i32 1, <16 x i1> undef, <16 x i8> undef)
+; AVX2-NEXT:  Cost Model: Found an estimated cost of 26 for instruction: %V8I8 = call <8 x i8> @llvm.masked.gather.v8i8.v8p0i8(<8 x i8*> undef, i32 1, <8 x i1> undef, <8 x i8> undef)
 ; AVX2-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 0
 ;
 ; SKL-LABEL: 'masked_gather'
@@ -472,41 +472,41 @@ define i32 @masked_gather() {
 ; SKL-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: %V8I32 = call <8 x i32> @llvm.masked.gather.v8i32.v8p0i32(<8 x i32*> undef, i32 1, <8 x i1> undef, <8 x i32> undef)
 ; SKL-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %V4I32 = call <4 x i32> @llvm.masked.gather.v4i32.v4p0i32(<4 x i32*> undef, i32 1, <4 x i1> undef, <4 x i32> undef)
 ; SKL-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V2I32 = call <2 x i32> @llvm.masked.gather.v2i32.v2p0i32(<2 x i32*> undef, i32 1, <2 x i1> undef, <2 x i32> undef)
-; SKL-NEXT:  Cost Model: Found an estimated cost of 116 for instruction: %V32I16 = call <32 x i16> @llvm.masked.gather.v32i16.v32p0i16(<32 x i16*> undef, i32 1, <32 x i1> undef, <32 x i16> undef)
-; SKL-NEXT:  Cost Model: Found an estimated cost of 58 for instruction: %V16I16 = call <16 x i16> @llvm.masked.gather.v16i16.v16p0i16(<16 x i16*> undef, i32 1, <16 x i1> undef, <16 x i16> undef)
-; SKL-NEXT:  Cost Model: Found an estimated cost of 28 for instruction: %V8I16 = call <8 x i16> @llvm.masked.gather.v8i16.v8p0i16(<8 x i16*> undef, i32 1, <8 x i1> undef, <8 x i16> undef)
-; SKL-NEXT:  Cost Model: Found an estimated cost of 14 for instruction: %V4I16 = call <4 x i16> @llvm.masked.gather.v4i16.v4p0i16(<4 x i16*> undef, i32 1, <4 x i1> undef, <4 x i16> undef)
-; SKL-NEXT:  Cost Model: Found an estimated cost of 228 for instruction: %V64I8 = call <64 x i8> @llvm.masked.gather.v64i8.v64p0i8(<64 x i8*> undef, i32 1, <64 x i1> undef, <64 x i8> undef)
-; SKL-NEXT:  Cost Model: Found an estimated cost of 114 for instruction: %V32I8 = call <32 x i8> @llvm.masked.gather.v32i8.v32p0i8(<32 x i8*> undef, i32 1, <32 x i1> undef, <32 x i8> undef)
-; SKL-NEXT:  Cost Model: Found an estimated cost of 56 for instruction: %V16I8 = call <16 x i8> @llvm.masked.gather.v16i8.v16p0i8(<16 x i8*> undef, i32 1, <16 x i1> undef, <16 x i8> undef)
-; SKL-NEXT:  Cost Model: Found an estimated cost of 28 for instruction: %V8I8 = call <8 x i8> @llvm.masked.gather.v8i8.v8p0i8(<8 x i8*> undef, i32 1, <8 x i1> undef, <8 x i8> undef)
+; SKL-NEXT:  Cost Model: Found an estimated cost of 108 for instruction: %V32I16 = call <32 x i16> @llvm.masked.gather.v32i16.v32p0i16(<32 x i16*> undef, i32 1, <32 x i1> undef, <32 x i16> undef)
+; SKL-NEXT:  Cost Model: Found an estimated cost of 54 for instruction: %V16I16 = call <16 x i16> @llvm.masked.gather.v16i16.v16p0i16(<16 x i16*> undef, i32 1, <16 x i1> undef, <16 x i16> undef)
+; SKL-NEXT:  Cost Model: Found an estimated cost of 26 for instruction: %V8I16 = call <8 x i16> @llvm.masked.gather.v8i16.v8p0i16(<8 x i16*> undef, i32 1, <8 x i1> undef, <8 x i16> undef)
+; SKL-NEXT:  Cost Model: Found an estimated cost of 13 for instruction: %V4I16 = call <4 x i16> @llvm.masked.gather.v4i16.v4p0i16(<4 x i16*> undef, i32 1, <4 x i1> undef, <4 x i16> undef)
+; SKL-NEXT:  Cost Model: Found an estimated cost of 212 for instruction: %V64I8 = call <64 x i8> @llvm.masked.gather.v64i8.v64p0i8(<64 x i8*> undef, i32 1, <64 x i1> undef, <64 x i8> undef)
+; SKL-NEXT:  Cost Model: Found an estimated cost of 106 for instruction: %V32I8 = call <32 x i8> @llvm.masked.gather.v32i8.v32p0i8(<32 x i8*> undef, i32 1, <32 x i1> undef, <32 x i8> undef)
+; SKL-NEXT:  Cost Model: Found an estimated cost of 52 for instruction: %V16I8 = call <16 x i8> @llvm.masked.gather.v16i8.v16p0i8(<16 x i8*> undef, i32 1, <16 x i1> undef, <16 x i8> undef)
+; SKL-NEXT:  Cost Model: Found an estimated cost of 26 for instruction: %V8I8 = call <8 x i8> @llvm.masked.gather.v8i8.v8p0i8(<8 x i8*> undef, i32 1, <8 x i1> undef, <8 x i8> undef)
 ; SKL-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 0
 ;
 ; KNL-LABEL: 'masked_gather'
 ; KNL-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %V8F64 = call <8 x double> @llvm.masked.gather.v8f64.v8p0f64(<8 x double*> undef, i32 1, <8 x i1> undef, <8 x double> undef)
-; KNL-NEXT:  Cost Model: Found an estimated cost of 13 for instruction: %V4F64 = call <4 x double> @llvm.masked.gather.v4f64.v4p0f64(<4 x double*> undef, i32 1, <4 x i1> undef, <4 x double> undef)
+; KNL-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: %V4F64 = call <4 x double> @llvm.masked.gather.v4f64.v4p0f64(<4 x double*> undef, i32 1, <4 x i1> undef, <4 x double> undef)
 ; KNL-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %V2F64 = call <2 x double> @llvm.masked.gather.v2f64.v2p0f64(<2 x double*> undef, i32 1, <2 x i1> undef, <2 x double> undef)
 ; KNL-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V1F64 = call <1 x double> @llvm.masked.gather.v1f64.v1p0f64(<1 x double*> undef, i32 1, <1 x i1> undef, <1 x double> undef)
 ; KNL-NEXT:  Cost Model: Found an estimated cost of 20 for instruction: %V16F32 = call <16 x float> @llvm.masked.gather.v16f32.v16p0f32(<16 x float*> undef, i32 1, <16 x i1> undef, <16 x float> undef)
 ; KNL-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %V8F32 = call <8 x float> @llvm.masked.gather.v8f32.v8p0f32(<8 x float*> undef, i32 1, <8 x i1> undef, <8 x float> undef)
-; KNL-NEXT:  Cost Model: Found an estimated cost of 13 for instruction: %V4F32 = call <4 x float> @llvm.masked.gather.v4f32.v4p0f32(<4 x float*> undef, i32 1, <4 x i1> undef, <4 x float> undef)
+; KNL-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: %V4F32 = call <4 x float> @llvm.masked.gather.v4f32.v4p0f32(<4 x float*> undef, i32 1, <4 x i1> undef, <4 x float> undef)
 ; KNL-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %V2F32 = call <2 x float> @llvm.masked.gather.v2f32.v2p0f32(<2 x float*> undef, i32 1, <2 x i1> undef, <2 x float> undef)
 ; KNL-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %V8I64 = call <8 x i64> @llvm.masked.gather.v8i64.v8p0i64(<8 x i64*> undef, i32 1, <8 x i1> undef, <8 x i64> undef)
-; KNL-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %V4I64 = call <4 x i64> @llvm.masked.gather.v4i64.v4p0i64(<4 x i64*> undef, i32 1, <4 x i1> undef, <4 x i64> undef)
+; KNL-NEXT:  Cost Model: Found an estimated cost of 15 for instruction: %V4I64 = call <4 x i64> @llvm.masked.gather.v4i64.v4p0i64(<4 x i64*> undef, i32 1, <4 x i1> undef, <4 x i64> undef)
 ; KNL-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %V2I64 = call <2 x i64> @llvm.masked.gather.v2i64.v2p0i64(<2 x i64*> undef, i32 1, <2 x i1> undef, <2 x i64> undef)
 ; KNL-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V1I64 = call <1 x i64> @llvm.masked.gather.v1i64.v1p0i64(<1 x i64*> undef, i32 1, <1 x i1> undef, <1 x i64> undef)
 ; KNL-NEXT:  Cost Model: Found an estimated cost of 20 for instruction: %V16I32 = call <16 x i32> @llvm.masked.gather.v16i32.v16p0i32(<16 x i32*> undef, i32 1, <16 x i1> undef, <16 x i32> undef)
 ; KNL-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %V8I32 = call <8 x i32> @llvm.masked.gather.v8i32.v8p0i32(<8 x i32*> undef, i32 1, <8 x i1> undef, <8 x i32> undef)
-; KNL-NEXT:  Cost Model: Found an estimated cost of 14 for instruction: %V4I32 = call <4 x i32> @llvm.masked.gather.v4i32.v4p0i32(<4 x i32*> undef, i32 1, <4 x i1> undef, <4 x i32> undef)
+; KNL-NEXT:  Cost Model: Found an estimated cost of 13 for instruction: %V4I32 = call <4 x i32> @llvm.masked.gather.v4i32.v4p0i32(<4 x i32*> undef, i32 1, <4 x i1> undef, <4 x i32> undef)
 ; KNL-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %V2I32 = call <2 x i32> @llvm.masked.gather.v2i32.v2p0i32(<2 x i32*> undef, i32 1, <2 x i1> undef, <2 x i32> undef)
-; KNL-NEXT:  Cost Model: Found an estimated cost of 124 for instruction: %V32I16 = call <32 x i16> @llvm.masked.gather.v32i16.v32p0i16(<32 x i16*> undef, i32 1, <32 x i1> undef, <32 x i16> undef)
-; KNL-NEXT:  Cost Model: Found an estimated cost of 62 for instruction: %V16I16 = call <16 x i16> @llvm.masked.gather.v16i16.v16p0i16(<16 x i16*> undef, i32 1, <16 x i1> undef, <16 x i16> undef)
-; KNL-NEXT:  Cost Model: Found an estimated cost of 30 for instruction: %V8I16 = call <8 x i16> @llvm.masked.gather.v8i16.v8p0i16(<8 x i16*> undef, i32 1, <8 x i1> undef, <8 x i16> undef)
-; KNL-NEXT:  Cost Model: Found an estimated cost of 14 for instruction: %V4I16 = call <4 x i16> @llvm.masked.gather.v4i16.v4p0i16(<4 x i16*> undef, i32 1, <4 x i1> undef, <4 x i16> undef)
-; KNL-NEXT:  Cost Model: Found an estimated cost of 244 for instruction: %V64I8 = call <64 x i8> @llvm.masked.gather.v64i8.v64p0i8(<64 x i8*> undef, i32 1, <64 x i1> undef, <64 x i8> undef)
-; KNL-NEXT:  Cost Model: Found an estimated cost of 122 for instruction: %V32I8 = call <32 x i8> @llvm.masked.gather.v32i8.v32p0i8(<32 x i8*> undef, i32 1, <32 x i1> undef, <32 x i8> undef)
-; KNL-NEXT:  Cost Model: Found an estimated cost of 60 for instruction: %V16I8 = call <16 x i8> @llvm.masked.gather.v16i8.v16p0i8(<16 x i8*> undef, i32 1, <16 x i1> undef, <16 x i8> undef)
-; KNL-NEXT:  Cost Model: Found an estimated cost of 30 for instruction: %V8I8 = call <8 x i8> @llvm.masked.gather.v8i8.v8p0i8(<8 x i8*> undef, i32 1, <8 x i1> undef, <8 x i8> undef)
+; KNL-NEXT:  Cost Model: Found an estimated cost of 112 for instruction: %V32I16 = call <32 x i16> @llvm.masked.gather.v32i16.v32p0i16(<32 x i16*> undef, i32 1, <32 x i1> undef, <32 x i16> undef)
+; KNL-NEXT:  Cost Model: Found an estimated cost of 56 for instruction: %V16I16 = call <16 x i16> @llvm.masked.gather.v16i16.v16p0i16(<16 x i16*> undef, i32 1, <16 x i1> undef, <16 x i16> undef)
+; KNL-NEXT:  Cost Model: Found an estimated cost of 27 for instruction: %V8I16 = call <8 x i16> @llvm.masked.gather.v8i16.v8p0i16(<8 x i16*> undef, i32 1, <8 x i1> undef, <8 x i16> undef)
+; KNL-NEXT:  Cost Model: Found an estimated cost of 13 for instruction: %V4I16 = call <4 x i16> @llvm.masked.gather.v4i16.v4p0i16(<4 x i16*> undef, i32 1, <4 x i1> undef, <4 x i16> undef)
+; KNL-NEXT:  Cost Model: Found an estimated cost of 220 for instruction: %V64I8 = call <64 x i8> @llvm.masked.gather.v64i8.v64p0i8(<64 x i8*> undef, i32 1, <64 x i1> undef, <64 x i8> undef)
+; KNL-NEXT:  Cost Model: Found an estimated cost of 110 for instruction: %V32I8 = call <32 x i8> @llvm.masked.gather.v32i8.v32p0i8(<32 x i8*> undef, i32 1, <32 x i1> undef, <32 x i8> undef)
+; KNL-NEXT:  Cost Model: Found an estimated cost of 54 for instruction: %V16I8 = call <16 x i8> @llvm.masked.gather.v16i8.v16p0i8(<16 x i8*> undef, i32 1, <16 x i1> undef, <16 x i8> undef)
+; KNL-NEXT:  Cost Model: Found an estimated cost of 27 for instruction: %V8I8 = call <8 x i8> @llvm.masked.gather.v8i8.v8p0i8(<8 x i8*> undef, i32 1, <8 x i1> undef, <8 x i8> undef)
 ; KNL-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 0
 ;
 ; SKX-LABEL: 'masked_gather'
@@ -526,14 +526,14 @@ define i32 @masked_gather() {
 ; SKX-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %V8I32 = call <8 x i32> @llvm.masked.gather.v8i32.v8p0i32(<8 x i32*> undef, i32 1, <8 x i1> undef, <8 x i32> undef)
 ; SKX-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %V4I32 = call <4 x i32> @llvm.masked.gather.v4i32.v4p0i32(<4 x i32*> undef, i32 1, <4 x i1> undef, <4 x i32> undef)
 ; SKX-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %V2I32 = call <2 x i32> @llvm.masked.gather.v2i32.v2p0i32(<2 x i32*> undef, i32 1, <2 x i1> undef, <2 x i32> undef)
-; SKX-NEXT:  Cost Model: Found an estimated cost of 124 for instruction: %V32I16 = call <32 x i16> @llvm.masked.gather.v32i16.v32p0i16(<32 x i16*> undef, i32 1, <32 x i1> undef, <32 x i16> undef)
-; SKX-NEXT:  Cost Model: Found an estimated cost of 62 for instruction: %V16I16 = call <16 x i16> @llvm.masked.gather.v16i16.v16p0i16(<16 x i16*> undef, i32 1, <16 x i1> undef, <16 x i16> undef)
-; SKX-NEXT:  Cost Model: Found an estimated cost of 30 for instruction: %V8I16 = call <8 x i16> @llvm.masked.gather.v8i16.v8p0i16(<8 x i16*> undef, i32 1, <8 x i1> undef, <8 x i16> undef)
-; SKX-NEXT:  Cost Model: Found an estimated cost of 14 for instruction: %V4I16 = call <4 x i16> @llvm.masked.gather.v4i16.v4p0i16(<4 x i16*> undef, i32 1, <4 x i1> undef, <4 x i16> undef)
-; SKX-NEXT:  Cost Model: Found an estimated cost of 244 for instruction: %V64I8 = call <64 x i8> @llvm.masked.gather.v64i8.v64p0i8(<64 x i8*> undef, i32 1, <64 x i1> undef, <64 x i8> undef)
-; SKX-NEXT:  Cost Model: Found an estimated cost of 122 for instruction: %V32I8 = call <32 x i8> @llvm.masked.gather.v32i8.v32p0i8(<32 x i8*> undef, i32 1, <32 x i1> undef, <32 x i8> undef)
-; SKX-NEXT:  Cost Model: Found an estimated cost of 60 for instruction: %V16I8 = call <16 x i8> @llvm.masked.gather.v16i8.v16p0i8(<16 x i8*> undef, i32 1, <16 x i1> undef, <16 x i8> undef)
-; SKX-NEXT:  Cost Model: Found an estimated cost of 30 for instruction: %V8I8 = call <8 x i8> @llvm.masked.gather.v8i8.v8p0i8(<8 x i8*> undef, i32 1, <8 x i1> undef, <8 x i8> undef)
+; SKX-NEXT:  Cost Model: Found an estimated cost of 112 for instruction: %V32I16 = call <32 x i16> @llvm.masked.gather.v32i16.v32p0i16(<32 x i16*> undef, i32 1, <32 x i1> undef, <32 x i16> undef)
+; SKX-NEXT:  Cost Model: Found an estimated cost of 56 for instruction: %V16I16 = call <16 x i16> @llvm.masked.gather.v16i16.v16p0i16(<16 x i16*> undef, i32 1, <16 x i1> undef, <16 x i16> undef)
+; SKX-NEXT:  Cost Model: Found an estimated cost of 27 for instruction: %V8I16 = call <8 x i16> @llvm.masked.gather.v8i16.v8p0i16(<8 x i16*> undef, i32 1, <8 x i1> undef, <8 x i16> undef)
+; SKX-NEXT:  Cost Model: Found an estimated cost of 13 for instruction: %V4I16 = call <4 x i16> @llvm.masked.gather.v4i16.v4p0i16(<4 x i16*> undef, i32 1, <4 x i1> undef, <4 x i16> undef)
+; SKX-NEXT:  Cost Model: Found an estimated cost of 220 for instruction: %V64I8 = call <64 x i8> @llvm.masked.gather.v64i8.v64p0i8(<64 x i8*> undef, i32 1, <64 x i1> undef, <64 x i8> undef)
+; SKX-NEXT:  Cost Model: Found an estimated cost of 110 for instruction: %V32I8 = call <32 x i8> @llvm.masked.gather.v32i8.v32p0i8(<32 x i8*> undef, i32 1, <32 x i1> undef, <32 x i8> undef)
+; SKX-NEXT:  Cost Model: Found an estimated cost of 54 for instruction: %V16I8 = call <16 x i8> @llvm.masked.gather.v16i8.v16p0i8(<16 x i8*> undef, i32 1, <16 x i1> undef, <16 x i8> undef)
+; SKX-NEXT:  Cost Model: Found an estimated cost of 27 for instruction: %V8I8 = call <8 x i8> @llvm.masked.gather.v8i8.v8p0i8(<8 x i8*> undef, i32 1, <8 x i1> undef, <8 x i8> undef)
 ; SKX-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 0
 ;
   %V8F64 = call <8 x double> @llvm.masked.gather.v8f64.v8p0f64(<8 x double*> undef, i32 1, <8 x i1> undef, <8 x double> undef)
@@ -625,57 +625,57 @@ define i32 @masked_scatter() {
 ; SSE42-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 0
 ;
 ; AVX-LABEL: 'masked_scatter'
-; AVX-NEXT:  Cost Model: Found an estimated cost of 28 for instruction: call void @llvm.masked.scatter.v8f64.v8p0f64(<8 x double> undef, <8 x double*> undef, i32 1, <8 x i1> undef)
-; AVX-NEXT:  Cost Model: Found an estimated cost of 14 for instruction: call void @llvm.masked.scatter.v4f64.v4p0f64(<4 x double> undef, <4 x double*> undef, i32 1, <4 x i1> undef)
+; AVX-NEXT:  Cost Model: Found an estimated cost of 24 for instruction: call void @llvm.masked.scatter.v8f64.v8p0f64(<8 x double> undef, <8 x double*> undef, i32 1, <8 x i1> undef)
+; AVX-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: call void @llvm.masked.scatter.v4f64.v4p0f64(<4 x double> undef, <4 x double*> undef, i32 1, <4 x i1> undef)
 ; AVX-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: call void @llvm.masked.scatter.v2f64.v2p0f64(<2 x double> undef, <2 x double*> undef, i32 1, <2 x i1> undef)
 ; AVX-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: call void @llvm.masked.scatter.v1f64.v1p0f64(<1 x double> undef, <1 x double*> undef, i32 1, <1 x i1> undef)
-; AVX-NEXT:  Cost Model: Found an estimated cost of 60 for instruction: call void @llvm.masked.scatter.v16f32.v16p0f32(<16 x float> undef, <16 x float*> undef, i32 1, <16 x i1> undef)
-; AVX-NEXT:  Cost Model: Found an estimated cost of 30 for instruction: call void @llvm.masked.scatter.v8f32.v8p0f32(<8 x float> undef, <8 x float*> undef, i32 1, <8 x i1> undef)
-; AVX-NEXT:  Cost Model: Found an estimated cost of 13 for instruction: call void @llvm.masked.scatter.v4f32.v4p0f32(<4 x float> undef, <4 x float*> undef, i32 1, <4 x i1> undef)
+; AVX-NEXT:  Cost Model: Found an estimated cost of 50 for instruction: call void @llvm.masked.scatter.v16f32.v16p0f32(<16 x float> undef, <16 x float*> undef, i32 1, <16 x i1> undef)
+; AVX-NEXT:  Cost Model: Found an estimated cost of 25 for instruction: call void @llvm.masked.scatter.v8f32.v8p0f32(<8 x float> undef, <8 x float*> undef, i32 1, <8 x i1> undef)
+; AVX-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: call void @llvm.masked.scatter.v4f32.v4p0f32(<4 x float> undef, <4 x float*> undef, i32 1, <4 x i1> undef)
 ; AVX-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: call void @llvm.masked.scatter.v2f32.v2p0f32(<2 x float> undef, <2 x float*> undef, i32 1, <2 x i1> undef)
-; AVX-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: call void @llvm.masked.scatter.v8i64.v8p0i64(<8 x i64> undef, <8 x i64*> undef, i32 1, <8 x i1> undef)
-; AVX-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: call void @llvm.masked.scatter.v4i64.v4p0i64(<4 x i64> undef, <4 x i64*> undef, i32 1, <4 x i1> undef)
+; AVX-NEXT:  Cost Model: Found an estimated cost of 28 for instruction: call void @llvm.masked.scatter.v8i64.v8p0i64(<8 x i64> undef, <8 x i64*> undef, i32 1, <8 x i1> undef)
+; AVX-NEXT:  Cost Model: Found an estimated cost of 14 for instruction: call void @llvm.masked.scatter.v4i64.v4p0i64(<4 x i64> undef, <4 x i64*> undef, i32 1, <4 x i1> undef)
 ; AVX-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: call void @llvm.masked.scatter.v2i64.v2p0i64(<2 x i64> undef, <2 x i64*> undef, i32 1, <2 x i1> undef)
 ; AVX-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: call void @llvm.masked.scatter.v1i64.v1p0i64(<1 x i64> undef, <1 x i64*> undef, i32 1, <1 x i1> undef)
-; AVX-NEXT:  Cost Model: Found an estimated cost of 64 for instruction: call void @llvm.masked.scatter.v16i32.v16p0i32(<16 x i32> undef, <16 x i32*> undef, i32 1, <16 x i1> undef)
-; AVX-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: call void @llvm.masked.scatter.v8i32.v8p0i32(<8 x i32> undef, <8 x i32*> undef, i32 1, <8 x i1> undef)
-; AVX-NEXT:  Cost Model: Found an estimated cost of 14 for instruction: call void @llvm.masked.scatter.v4i32.v4p0i32(<4 x i32> undef, <4 x i32*> undef, i32 1, <4 x i1> undef)
+; AVX-NEXT:  Cost Model: Found an estimated cost of 54 for instruction: call void @llvm.masked.scatter.v16i32.v16p0i32(<16 x i32> undef, <16 x i32*> undef, i32 1, <16 x i1> undef)
+; AVX-NEXT:  Cost Model: Found an estimated cost of 27 for instruction: call void @llvm.masked.scatter.v8i32.v8p0i32(<8 x i32> undef, <8 x i32*> undef, i32 1, <8 x i1> undef)
+; AVX-NEXT:  Cost Model: Found an estimated cost of 13 for instruction: call void @llvm.masked.scatter.v4i32.v4p0i32(<4 x i32> undef, <4 x i32*> undef, i32 1, <4 x i1> undef)
 ; AVX-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: call void @llvm.masked.scatter.v2i32.v2p0i32(<2 x i32> undef, <2 x i32*> undef, i32 1, <2 x i1> undef)
-; AVX-NEXT:  Cost Model: Found an estimated cost of 128 for instruction: call void @llvm.masked.scatter.v32i16.v32p0i16(<32 x i16> undef, <32 x i16*> undef, i32 1, <32 x i1> undef)
-; AVX-NEXT:  Cost Model: Found an estimated cost of 64 for instruction: call void @llvm.masked.scatter.v16i16.v16p0i16(<16 x i16> undef, <16 x i16*> undef, i32 1, <16 x i1> undef)
-; AVX-NEXT:  Cost Model: Found an estimated cost of 28 for instruction: call void @llvm.masked.scatter.v8i16.v8p0i16(<8 x i16> undef, <8 x i16*> undef, i32 1, <8 x i1> undef)
-; AVX-NEXT:  Cost Model: Found an estimated cost of 14 for instruction: call void @llvm.masked.scatter.v4i16.v4p0i16(<4 x i16> undef, <4 x i16*> undef, i32 1, <4 x i1> undef)
-; AVX-NEXT:  Cost Model: Found an estimated cost of 256 for instruction: call void @llvm.masked.scatter.v64i8.v64p0i8(<64 x i8> undef, <64 x i8*> undef, i32 1, <64 x i1> undef)
-; AVX-NEXT:  Cost Model: Found an estimated cost of 128 for instruction: call void @llvm.masked.scatter.v32i8.v32p0i8(<32 x i8> undef, <32 x i8*> undef, i32 1, <32 x i1> undef)
-; AVX-NEXT:  Cost Model: Found an estimated cost of 56 for instruction: call void @llvm.masked.scatter.v16i8.v16p0i8(<16 x i8> undef, <16 x i8*> undef, i32 1, <16 x i1> undef)
-; AVX-NEXT:  Cost Model: Found an estimated cost of 28 for instruction: call void @llvm.masked.scatter.v8i8.v8p0i8(<8 x i8> undef, <8 x i8*> undef, i32 1, <8 x i1> undef)
+; AVX-NEXT:  Cost Model: Found an estimated cost of 106 for instruction: call void @llvm.masked.scatter.v32i16.v32p0i16(<32 x i16> undef, <32 x i16*> undef, i32 1, <32 x i1> undef)
+; AVX-NEXT:  Cost Model: Found an estimated cost of 53 for instruction: call void @llvm.masked.scatter.v16i16.v16p0i16(<16 x i16> undef, <16 x i16*> undef, i32 1, <16 x i1> undef)
+; AVX-NEXT:  Cost Model: Found an estimated cost of 26 for instruction: call void @llvm.masked.scatter.v8i16.v8p0i16(<8 x i16> undef, <8 x i16*> undef, i32 1, <8 x i1> undef)
+; AVX-NEXT:  Cost Model: Found an estimated cost of 13 for instruction: call void @llvm.masked.scatter.v4i16.v4p0i16(<4 x i16> undef, <4 x i16*> undef, i32 1, <4 x i1> undef)
+; AVX-NEXT:  Cost Model: Found an estimated cost of 210 for instruction: call void @llvm.masked.scatter.v64i8.v64p0i8(<64 x i8> undef, <64 x i8*> undef, i32 1, <64 x i1> undef)
+; AVX-NEXT:  Cost Model: Found an estimated cost of 105 for instruction: call void @llvm.masked.scatter.v32i8.v32p0i8(<32 x i8> undef, <32 x i8*> undef, i32 1, <32 x i1> undef)
+; AVX-NEXT:  Cost Model: Found an estimated cost of 52 for instruction: call void @llvm.masked.scatter.v16i8.v16p0i8(<16 x i8> undef, <16 x i8*> undef, i32 1, <16 x i1> undef)
+; AVX-NEXT:  Cost Model: Found an estimated cost of 26 for instruction: call void @llvm.masked.scatter.v8i8.v8p0i8(<8 x i8> undef, <8 x i8*> undef, i32 1, <8 x i1> undef)
 ; AVX-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 0
 ;
 ; KNL-LABEL: 'masked_scatter'
 ; KNL-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: call void @llvm.masked.scatter.v8f64.v8p0f64(<8 x double> undef, <8 x double*> undef, i32 1, <8 x i1> undef)
-; KNL-NEXT:  Cost Model: Found an estimated cost of 14 for instruction: call void @llvm.masked.scatter.v4f64.v4p0f64(<4 x double> undef, <4 x double*> undef, i32 1, <4 x i1> undef)
+; KNL-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: call void @llvm.masked.scatter.v4f64.v4p0f64(<4 x double> undef, <4 x double*> undef, i32 1, <4 x i1> undef)
 ; KNL-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: call void @llvm.masked.scatter.v2f64.v2p0f64(<2 x double> undef, <2 x double*> undef, i32 1, <2 x i1> undef)
 ; KNL-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: call void @llvm.masked.scatter.v1f64.v1p0f64(<1 x double> undef, <1 x double*> undef, i32 1, <1 x i1> undef)
 ; KNL-NEXT:  Cost Model: Found an estimated cost of 20 for instruction: call void @llvm.masked.scatter.v16f32.v16p0f32(<16 x float> undef, <16 x float*> undef, i32 1, <16 x i1> undef)
 ; KNL-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: call void @llvm.masked.scatter.v8f32.v8p0f32(<8 x float> undef, <8 x float*> undef, i32 1, <8 x i1> undef)
-; KNL-NEXT:  Cost Model: Found an estimated cost of 13 for instruction: call void @llvm.masked.scatter.v4f32.v4p0f32(<4 x float> undef, <4 x float*> undef, i32 1, <4 x i1> undef)
+; KNL-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: call void @llvm.masked.scatter.v4f32.v4p0f32(<4 x float> undef, <4 x float*> undef, i32 1, <4 x i1> undef)
 ; KNL-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: call void @llvm.masked.scatter.v2f32.v2p0f32(<2 x float> undef, <2 x float*> undef, i32 1, <2 x i1> undef)
 ; KNL-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: call void @llvm.masked.scatter.v8i64.v8p0i64(<8 x i64> undef, <8 x i64*> undef, i32 1, <8 x i1> undef)
-; KNL-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: call void @llvm.masked.scatter.v4i64.v4p0i64(<4 x i64> undef, <4 x i64*> undef, i32 1, <4 x i1> undef)
+; KNL-NEXT:  Cost Model: Found an estimated cost of 14 for instruction: call void @llvm.masked.scatter.v4i64.v4p0i64(<4 x i64> undef, <4 x i64*> undef, i32 1, <4 x i1> undef)
 ; KNL-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: call void @llvm.masked.scatter.v2i64.v2p0i64(<2 x i64> undef, <2 x i64*> undef, i32 1, <2 x i1> undef)
 ; KNL-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: call void @llvm.masked.scatter.v1i64.v1p0i64(<1 x i64> undef, <1 x i64*> undef, i32 1, <1 x i1> undef)
 ; KNL-NEXT:  Cost Model: Found an estimated cost of 20 for instruction: call void @llvm.masked.scatter.v16i32.v16p0i32(<16 x i32> undef, <16 x i32*> undef, i32 1, <16 x i1> undef)
 ; KNL-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: call void @llvm.masked.scatter.v8i32.v8p0i32(<8 x i32> undef, <8 x i32*> undef, i32 1, <8 x i1> undef)
-; KNL-NEXT:  Cost Model: Found an estimated cost of 14 for instruction: call void @llvm.masked.scatter.v4i32.v4p0i32(<4 x i32> undef, <4 x i32*> undef, i32 1, <4 x i1> undef)
+; KNL-NEXT:  Cost Model: Found an estimated cost of 13 for instruction: call void @llvm.masked.scatter.v4i32.v4p0i32(<4 x i32> undef, <4 x i32*> undef, i32 1, <4 x i1> undef)
 ; KNL-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: call void @llvm.masked.scatter.v2i32.v2p0i32(<2 x i32> undef, <2 x i32*> undef, i32 1, <2 x i1> undef)
-; KNL-NEXT:  Cost Model: Found an estimated cost of 144 for instruction: call void @llvm.masked.scatter.v32i16.v32p0i16(<32 x i16> undef, <32 x i16*> undef, i32 1, <32 x i1> undef)
-; KNL-NEXT:  Cost Model: Found an estimated cost of 68 for instruction: call void @llvm.masked.scatter.v16i16.v16p0i16(<16 x i16> undef, <16 x i16*> undef, i32 1, <16 x i1> undef)
-; KNL-NEXT:  Cost Model: Found an estimated cost of 30 for instruction: call void @llvm.masked.scatter.v8i16.v8p0i16(<8 x i16> undef, <8 x i16*> undef, i32 1, <8 x i1> undef)
-; KNL-NEXT:  Cost Model: Found an estimated cost of 14 for instruction: call void @llvm.masked.scatter.v4i16.v4p0i16(<4 x i16> undef, <4 x i16*> undef, i32 1, <4 x i1> undef)
-; KNL-NEXT:  Cost Model: Found an estimated cost of 288 for instruction: call void @llvm.masked.scatter.v64i8.v64p0i8(<64 x i8> undef, <64 x i8*> undef, i32 1, <64 x i1> undef)
-; KNL-NEXT:  Cost Model: Found an estimated cost of 136 for instruction: call void @llvm.masked.scatter.v32i8.v32p0i8(<32 x i8> undef, <32 x i8*> undef, i32 1, <32 x i1> undef)
-; KNL-NEXT:  Cost Model: Found an estimated cost of 60 for instruction: call void @llvm.masked.scatter.v16i8.v16p0i8(<16 x i8> undef, <16 x i8*> undef, i32 1, <16 x i1> undef)
-; KNL-NEXT:  Cost Model: Found an estimated cost of 30 for instruction: call void @llvm.masked.scatter.v8i8.v8p0i8(<8 x i8> undef, <8 x i8*> undef, i32 1, <8 x i1> undef)
+; KNL-NEXT:  Cost Model: Found an estimated cost of 111 for instruction: call void @llvm.masked.scatter.v32i16.v32p0i16(<32 x i16> undef, <32 x i16*> undef, i32 1, <32 x i1> undef)
+; KNL-NEXT:  Cost Model: Found an estimated cost of 55 for instruction: call void @llvm.masked.scatter.v16i16.v16p0i16(<16 x i16> undef, <16 x i16*> undef, i32 1, <16 x i1> undef)
+; KNL-NEXT:  Cost Model: Found an estimated cost of 27 for instruction: call void @llvm.masked.scatter.v8i16.v8p0i16(<8 x i16> undef, <8 x i16*> undef, i32 1, <8 x i1> undef)
+; KNL-NEXT:  Cost Model: Found an estimated cost of 13 for instruction: call void @llvm.masked.scatter.v4i16.v4p0i16(<4 x i16> undef, <4 x i16*> undef, i32 1, <4 x i1> undef)
+; KNL-NEXT:  Cost Model: Found an estimated cost of 219 for instruction: call void @llvm.masked.scatter.v64i8.v64p0i8(<64 x i8> undef, <64 x i8*> undef, i32 1, <64 x i1> undef)
+; KNL-NEXT:  Cost Model: Found an estimated cost of 109 for instruction: call void @llvm.masked.scatter.v32i8.v32p0i8(<32 x i8> undef, <32 x i8*> undef, i32 1, <32 x i1> undef)
+; KNL-NEXT:  Cost Model: Found an estimated cost of 54 for instruction: call void @llvm.masked.scatter.v16i8.v16p0i8(<16 x i8> undef, <16 x i8*> undef, i32 1, <16 x i1> undef)
+; KNL-NEXT:  Cost Model: Found an estimated cost of 27 for instruction: call void @llvm.masked.scatter.v8i8.v8p0i8(<8 x i8> undef, <8 x i8*> undef, i32 1, <8 x i1> undef)
 ; KNL-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 0
 ;
 ; SKX-LABEL: 'masked_scatter'
@@ -695,14 +695,14 @@ define i32 @masked_scatter() {
 ; SKX-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: call void @llvm.masked.scatter.v8i32.v8p0i32(<8 x i32> undef, <8 x i32*> undef, i32 1, <8 x i1> undef)
 ; SKX-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: call void @llvm.masked.scatter.v4i32.v4p0i32(<4 x i32> undef, <4 x i32*> undef, i32 1, <4 x i1> undef)
 ; SKX-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: call void @llvm.masked.scatter.v2i32.v2p0i32(<2 x i32> undef, <2 x i32*> undef, i32 1, <2 x i1> undef)
-; SKX-NEXT:  Cost Model: Found an estimated cost of 144 for instruction: call void @llvm.masked.scatter.v32i16.v32p0i16(<32 x i16> undef, <32 x i16*> undef, i32 1, <32 x i1> undef)
-; SKX-NEXT:  Cost Model: Found an estimated cost of 68 for instruction: call void @llvm.masked.scatter.v16i16.v16p0i16(<16 x i16> undef, <16 x i16*> undef, i32 1, <16 x i1> undef)
-; SKX-NEXT:  Cost Model: Found an estimated cost of 30 for instruction: call void @llvm.masked.scatter.v8i16.v8p0i16(<8 x i16> undef, <8 x i16*> undef, i32 1, <8 x i1> undef)
-; SKX-NEXT:  Cost Model: Found an estimated cost of 14 for instruction: call void @llvm.masked.scatter.v4i16.v4p0i16(<4 x i16> undef, <4 x i16*> undef, i32 1, <4 x i1> undef)
-; SKX-NEXT:  Cost Model: Found an estimated cost of 288 for instruction: call void @llvm.masked.scatter.v64i8.v64p0i8(<64 x i8> undef, <64 x i8*> undef, i32 1, <64 x i1> undef)
-; SKX-NEXT:  Cost Model: Found an estimated cost of 136 for instruction: call void @llvm.masked.scatter.v32i8.v32p0i8(<32 x i8> undef, <32 x i8*> undef, i32 1, <32 x i1> undef)
-; SKX-NEXT:  Cost Model: Found an estimated cost of 60 for instruction: call void @llvm.masked.scatter.v16i8.v16p0i8(<16 x i8> undef, <16 x i8*> undef, i32 1, <16 x i1> undef)
-; SKX-NEXT:  Cost Model: Found an estimated cost of 30 for instruction: call void @llvm.masked.scatter.v8i8.v8p0i8(<8 x i8> undef, <8 x i8*> undef, i32 1, <8 x i1> undef)
+; SKX-NEXT:  Cost Model: Found an estimated cost of 111 for instruction: call void @llvm.masked.scatter.v32i16.v32p0i16(<32 x i16> undef, <32 x i16*> undef, i32 1, <32 x i1> undef)
+; SKX-NEXT:  Cost Model: Found an estimated cost of 55 for instruction: call void @llvm.masked.scatter.v16i16.v16p0i16(<16 x i16> undef, <16 x i16*> undef, i32 1, <16 x i1> undef)
+; SKX-NEXT:  Cost Model: Found an estimated cost of 27 for instruction: call void @llvm.masked.scatter.v8i16.v8p0i16(<8 x i16> undef, <8 x i16*> undef, i32 1, <8 x i1> undef)
+; SKX-NEXT:  Cost Model: Found an estimated cost of 13 for instruction: call void @llvm.masked.scatter.v4i16.v4p0i16(<4 x i16> undef, <4 x i16*> undef, i32 1, <4 x i1> undef)
+; SKX-NEXT:  Cost Model: Found an estimated cost of 219 for instruction: call void @llvm.masked.scatter.v64i8.v64p0i8(<64 x i8> undef, <64 x i8*> undef, i32 1, <64 x i1> undef)
+; SKX-NEXT:  Cost Model: Found an estimated cost of 109 for instruction: call void @llvm.masked.scatter.v32i8.v32p0i8(<32 x i8> undef, <32 x i8*> undef, i32 1, <32 x i1> undef)
+; SKX-NEXT:  Cost Model: Found an estimated cost of 54 for instruction: call void @llvm.masked.scatter.v16i8.v16p0i8(<16 x i8> undef, <16 x i8*> undef, i32 1, <16 x i1> undef)
+; SKX-NEXT:  Cost Model: Found an estimated cost of 27 for instruction: call void @llvm.masked.scatter.v8i8.v8p0i8(<8 x i8> undef, <8 x i8*> undef, i32 1, <8 x i1> undef)
 ; SKX-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 0
 ;
   call void @llvm.masked.scatter.v8f64.v8p0f64(<8 x double> undef, <8 x double*> undef, i32 1, <8 x i1> undef)
@@ -936,109 +936,109 @@ define i32 @masked_compressstore() {
 ; SSE42-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 0
 ;
 ; AVX1-LABEL: 'masked_compressstore'
-; AVX1-NEXT:  Cost Model: Found an estimated cost of 17 for instruction: call void @llvm.masked.compressstore.v8f64(<8 x double> undef, double* undef, <8 x i1> undef)
-; AVX1-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: call void @llvm.masked.compressstore.v4f64(<4 x double> undef, double* undef, <4 x i1> undef)
+; AVX1-NEXT:  Cost Model: Found an estimated cost of 15 for instruction: call void @llvm.masked.compressstore.v8f64(<8 x double> undef, double* undef, <8 x i1> undef)
+; AVX1-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: call void @llvm.masked.compressstore.v4f64(<4 x double> undef, double* undef, <4 x i1> undef)
 ; AVX1-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: call void @llvm.masked.compressstore.v2f64(<2 x double> undef, double* undef, <2 x i1> undef)
 ; AVX1-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: call void @llvm.masked.compressstore.v1f64(<1 x double> undef, double* undef, <1 x i1> undef)
-; AVX1-NEXT:  Cost Model: Found an estimated cost of 37 for instruction: call void @llvm.masked.compressstore.v16f32(<16 x float> undef, float* undef, <16 x i1> undef)
-; AVX1-NEXT:  Cost Model: Found an estimated cost of 19 for instruction: call void @llvm.masked.compressstore.v8f32(<8 x float> undef, float* undef, <8 x i1> undef)
+; AVX1-NEXT:  Cost Model: Found an estimated cost of 31 for instruction: call void @llvm.masked.compressstore.v16f32(<16 x float> undef, float* undef, <16 x i1> undef)
+; AVX1-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: call void @llvm.masked.compressstore.v8f32(<8 x float> undef, float* undef, <8 x i1> undef)
 ; AVX1-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: call void @llvm.masked.compressstore.v4f32(<4 x float> undef, float* undef, <4 x i1> undef)
 ; AVX1-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: call void @llvm.masked.compressstore.v2f32(<2 x float> undef, float* undef, <2 x i1> undef)
-; AVX1-NEXT:  Cost Model: Found an estimated cost of 21 for instruction: call void @llvm.masked.compressstore.v8i64(<8 x i64> undef, i64* undef, <8 x i1> undef)
-; AVX1-NEXT:  Cost Model: Found an estimated cost of 11 for instruction: call void @llvm.masked.compressstore.v4i64(<4 x i64> undef, i64* undef, <4 x i1> undef)
+; AVX1-NEXT:  Cost Model: Found an estimated cost of 19 for instruction: call void @llvm.masked.compressstore.v8i64(<8 x i64> undef, i64* undef, <8 x i1> undef)
+; AVX1-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: call void @llvm.masked.compressstore.v4i64(<4 x i64> undef, i64* undef, <4 x i1> undef)
 ; AVX1-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: call void @llvm.masked.compressstore.v2i64(<2 x i64> undef, i64* undef, <2 x i1> undef)
 ; AVX1-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: call void @llvm.masked.compressstore.v1i64(<1 x i64> undef, i64* undef, <1 x i1> undef)
-; AVX1-NEXT:  Cost Model: Found an estimated cost of 41 for instruction: call void @llvm.masked.compressstore.v16i32(<16 x i32> undef, i32* undef, <16 x i1> undef)
-; AVX1-NEXT:  Cost Model: Found an estimated cost of 21 for instruction: call void @llvm.masked.compressstore.v8i32(<8 x i32> undef, i32* undef, <8 x i1> undef)
+; AVX1-NEXT:  Cost Model: Found an estimated cost of 35 for instruction: call void @llvm.masked.compressstore.v16i32(<16 x i32> undef, i32* undef, <16 x i1> undef)
+; AVX1-NEXT:  Cost Model: Found an estimated cost of 18 for instruction: call void @llvm.masked.compressstore.v8i32(<8 x i32> undef, i32* undef, <8 x i1> undef)
 ; AVX1-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: call void @llvm.masked.compressstore.v4i32(<4 x i32> undef, i32* undef, <4 x i1> undef)
 ; AVX1-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: call void @llvm.masked.compressstore.v2i32(<2 x i32> undef, i32* undef, <2 x i1> undef)
-; AVX1-NEXT:  Cost Model: Found an estimated cost of 82 for instruction: call void @llvm.masked.compressstore.v32i16(<32 x i16> undef, i16* undef, <32 x i1> undef)
-; AVX1-NEXT:  Cost Model: Found an estimated cost of 41 for instruction: call void @llvm.masked.compressstore.v16i16(<16 x i16> undef, i16* undef, <16 x i1> undef)
+; AVX1-NEXT:  Cost Model: Found an estimated cost of 68 for instruction: call void @llvm.masked.compressstore.v32i16(<32 x i16> undef, i16* undef, <32 x i1> undef)
+; AVX1-NEXT:  Cost Model: Found an estimated cost of 34 for instruction: call void @llvm.masked.compressstore.v16i16(<16 x i16> undef, i16* undef, <16 x i1> undef)
 ; AVX1-NEXT:  Cost Model: Found an estimated cost of 17 for instruction: call void @llvm.masked.compressstore.v8i16(<8 x i16> undef, i16* undef, <8 x i1> undef)
 ; AVX1-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: call void @llvm.masked.compressstore.v4i16(<4 x i16> undef, i16* undef, <4 x i1> undef)
-; AVX1-NEXT:  Cost Model: Found an estimated cost of 164 for instruction: call void @llvm.masked.compressstore.v64i8(<64 x i8> undef, i8* undef, <64 x i1> undef)
-; AVX1-NEXT:  Cost Model: Found an estimated cost of 82 for instruction: call void @llvm.masked.compressstore.v32i8(<32 x i8> undef, i8* undef, <32 x i1> undef)
+; AVX1-NEXT:  Cost Model: Found an estimated cost of 134 for instruction: call void @llvm.masked.compressstore.v64i8(<64 x i8> undef, i8* undef, <64 x i1> undef)
+; AVX1-NEXT:  Cost Model: Found an estimated cost of 67 for instruction: call void @llvm.masked.compressstore.v32i8(<32 x i8> undef, i8* undef, <32 x i1> undef)
 ; AVX1-NEXT:  Cost Model: Found an estimated cost of 33 for instruction: call void @llvm.masked.compressstore.v16i8(<16 x i8> undef, i8* undef, <16 x i1> undef)
 ; AVX1-NEXT:  Cost Model: Found an estimated cost of 17 for instruction: call void @llvm.masked.compressstore.v8i8(<8 x i8> undef, i8* undef, <8 x i1> undef)
 ; AVX1-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 0
 ;
 ; AVX2-LABEL: 'masked_compressstore'
-; AVX2-NEXT:  Cost Model: Found an estimated cost of 17 for instruction: call void @llvm.masked.compressstore.v8f64(<8 x double> undef, double* undef, <8 x i1> undef)
-; AVX2-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: call void @llvm.masked.compressstore.v4f64(<4 x double> undef, double* undef, <4 x i1> undef)
+; AVX2-NEXT:  Cost Model: Found an estimated cost of 15 for instruction: call void @llvm.masked.compressstore.v8f64(<8 x double> undef, double* undef, <8 x i1> undef)
+; AVX2-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: call void @llvm.masked.compressstore.v4f64(<4 x double> undef, double* undef, <4 x i1> undef)
 ; AVX2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: call void @llvm.masked.compressstore.v2f64(<2 x double> undef, double* undef, <2 x i1> undef)
 ; AVX2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: call void @llvm.masked.compressstore.v1f64(<1 x double> undef, double* undef, <1 x i1> undef)
-; AVX2-NEXT:  Cost Model: Found an estimated cost of 37 for instruction: call void @llvm.masked.compressstore.v16f32(<16 x float> undef, float* undef, <16 x i1> undef)
-; AVX2-NEXT:  Cost Model: Found an estimated cost of 19 for instruction: call void @llvm.masked.compressstore.v8f32(<8 x float> undef, float* undef, <8 x i1> undef)
+; AVX2-NEXT:  Cost Model: Found an estimated cost of 31 for instruction: call void @llvm.masked.compressstore.v16f32(<16 x float> undef, float* undef, <16 x i1> undef)
+; AVX2-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: call void @llvm.masked.compressstore.v8f32(<8 x float> undef, float* undef, <8 x i1> undef)
 ; AVX2-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: call void @llvm.masked.compressstore.v4f32(<4 x float> undef, float* undef, <4 x i1> undef)
 ; AVX2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: call void @llvm.masked.compressstore.v2f32(<2 x float> undef, float* undef, <2 x i1> undef)
-; AVX2-NEXT:  Cost Model: Found an estimated cost of 21 for instruction: call void @llvm.masked.compressstore.v8i64(<8 x i64> undef, i64* undef, <8 x i1> undef)
-; AVX2-NEXT:  Cost Model: Found an estimated cost of 11 for instruction: call void @llvm.masked.compressstore.v4i64(<4 x i64> undef, i64* undef, <4 x i1> undef)
+; AVX2-NEXT:  Cost Model: Found an estimated cost of 19 for instruction: call void @llvm.masked.compressstore.v8i64(<8 x i64> undef, i64* undef, <8 x i1> undef)
+; AVX2-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: call void @llvm.masked.compressstore.v4i64(<4 x i64> undef, i64* undef, <4 x i1> undef)
 ; AVX2-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: call void @llvm.masked.compressstore.v2i64(<2 x i64> undef, i64* undef, <2 x i1> undef)
 ; AVX2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: call void @llvm.masked.compressstore.v1i64(<1 x i64> undef, i64* undef, <1 x i1> undef)
-; AVX2-NEXT:  Cost Model: Found an estimated cost of 41 for instruction: call void @llvm.masked.compressstore.v16i32(<16 x i32> undef, i32* undef, <16 x i1> undef)
-; AVX2-NEXT:  Cost Model: Found an estimated cost of 21 for instruction: call void @llvm.masked.compressstore.v8i32(<8 x i32> undef, i32* undef, <8 x i1> undef)
+; AVX2-NEXT:  Cost Model: Found an estimated cost of 35 for instruction: call void @llvm.masked.compressstore.v16i32(<16 x i32> undef, i32* undef, <16 x i1> undef)
+; AVX2-NEXT:  Cost Model: Found an estimated cost of 18 for instruction: call void @llvm.masked.compressstore.v8i32(<8 x i32> undef, i32* undef, <8 x i1> undef)
 ; AVX2-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: call void @llvm.masked.compressstore.v4i32(<4 x i32> undef, i32* undef, <4 x i1> undef)
 ; AVX2-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: call void @llvm.masked.compressstore.v2i32(<2 x i32> undef, i32* undef, <2 x i1> undef)
-; AVX2-NEXT:  Cost Model: Found an estimated cost of 81 for instruction: call void @llvm.masked.compressstore.v32i16(<32 x i16> undef, i16* undef, <32 x i1> undef)
-; AVX2-NEXT:  Cost Model: Found an estimated cost of 41 for instruction: call void @llvm.masked.compressstore.v16i16(<16 x i16> undef, i16* undef, <16 x i1> undef)
+; AVX2-NEXT:  Cost Model: Found an estimated cost of 67 for instruction: call void @llvm.masked.compressstore.v32i16(<32 x i16> undef, i16* undef, <32 x i1> undef)
+; AVX2-NEXT:  Cost Model: Found an estimated cost of 34 for instruction: call void @llvm.masked.compressstore.v16i16(<16 x i16> undef, i16* undef, <16 x i1> undef)
 ; AVX2-NEXT:  Cost Model: Found an estimated cost of 17 for instruction: call void @llvm.masked.compressstore.v8i16(<8 x i16> undef, i16* undef, <8 x i1> undef)
 ; AVX2-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: call void @llvm.masked.compressstore.v4i16(<4 x i16> undef, i16* undef, <4 x i1> undef)
-; AVX2-NEXT:  Cost Model: Found an estimated cost of 162 for instruction: call void @llvm.masked.compressstore.v64i8(<64 x i8> undef, i8* undef, <64 x i1> undef)
-; AVX2-NEXT:  Cost Model: Found an estimated cost of 81 for instruction: call void @llvm.masked.compressstore.v32i8(<32 x i8> undef, i8* undef, <32 x i1> undef)
+; AVX2-NEXT:  Cost Model: Found an estimated cost of 132 for instruction: call void @llvm.masked.compressstore.v64i8(<64 x i8> undef, i8* undef, <64 x i1> undef)
+; AVX2-NEXT:  Cost Model: Found an estimated cost of 66 for instruction: call void @llvm.masked.compressstore.v32i8(<32 x i8> undef, i8* undef, <32 x i1> undef)
 ; AVX2-NEXT:  Cost Model: Found an estimated cost of 33 for instruction: call void @llvm.masked.compressstore.v16i8(<16 x i8> undef, i8* undef, <16 x i1> undef)
 ; AVX2-NEXT:  Cost Model: Found an estimated cost of 17 for instruction: call void @llvm.masked.compressstore.v8i8(<8 x i8> undef, i8* undef, <8 x i1> undef)
 ; AVX2-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 0
 ;
 ; SKL-LABEL: 'masked_compressstore'
-; SKL-NEXT:  Cost Model: Found an estimated cost of 17 for instruction: call void @llvm.masked.compressstore.v8f64(<8 x double> undef, double* undef, <8 x i1> undef)
-; SKL-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: call void @llvm.masked.compressstore.v4f64(<4 x double> undef, double* undef, <4 x i1> undef)
+; SKL-NEXT:  Cost Model: Found an estimated cost of 15 for instruction: call void @llvm.masked.compressstore.v8f64(<8 x double> undef, double* undef, <8 x i1> undef)
+; SKL-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: call void @llvm.masked.compressstore.v4f64(<4 x double> undef, double* undef, <4 x i1> undef)
 ; SKL-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: call void @llvm.masked.compressstore.v2f64(<2 x double> undef, double* undef, <2 x i1> undef)
 ; SKL-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: call void @llvm.masked.compressstore.v1f64(<1 x double> undef, double* undef, <1 x i1> undef)
-; SKL-NEXT:  Cost Model: Found an estimated cost of 37 for instruction: call void @llvm.masked.compressstore.v16f32(<16 x float> undef, float* undef, <16 x i1> undef)
-; SKL-NEXT:  Cost Model: Found an estimated cost of 19 for instruction: call void @llvm.masked.compressstore.v8f32(<8 x float> undef, float* undef, <8 x i1> undef)
+; SKL-NEXT:  Cost Model: Found an estimated cost of 31 for instruction: call void @llvm.masked.compressstore.v16f32(<16 x float> undef, float* undef, <16 x i1> undef)
+; SKL-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: call void @llvm.masked.compressstore.v8f32(<8 x float> undef, float* undef, <8 x i1> undef)
 ; SKL-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: call void @llvm.masked.compressstore.v4f32(<4 x float> undef, float* undef, <4 x i1> undef)
 ; SKL-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: call void @llvm.masked.compressstore.v2f32(<2 x float> undef, float* undef, <2 x i1> undef)
-; SKL-NEXT:  Cost Model: Found an estimated cost of 21 for instruction: call void @llvm.masked.compressstore.v8i64(<8 x i64> undef, i64* undef, <8 x i1> undef)
-; SKL-NEXT:  Cost Model: Found an estimated cost of 11 for instruction: call void @llvm.masked.compressstore.v4i64(<4 x i64> undef, i64* undef, <4 x i1> undef)
+; SKL-NEXT:  Cost Model: Found an estimated cost of 19 for instruction: call void @llvm.masked.compressstore.v8i64(<8 x i64> undef, i64* undef, <8 x i1> undef)
+; SKL-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: call void @llvm.masked.compressstore.v4i64(<4 x i64> undef, i64* undef, <4 x i1> undef)
 ; SKL-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: call void @llvm.masked.compressstore.v2i64(<2 x i64> undef, i64* undef, <2 x i1> undef)
 ; SKL-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: call void @llvm.masked.compressstore.v1i64(<1 x i64> undef, i64* undef, <1 x i1> undef)
-; SKL-NEXT:  Cost Model: Found an estimated cost of 41 for instruction: call void @llvm.masked.compressstore.v16i32(<16 x i32> undef, i32* undef, <16 x i1> undef)
-; SKL-NEXT:  Cost Model: Found an estimated cost of 21 for instruction: call void @llvm.masked.compressstore.v8i32(<8 x i32> undef, i32* undef, <8 x i1> undef)
+; SKL-NEXT:  Cost Model: Found an estimated cost of 35 for instruction: call void @llvm.masked.compressstore.v16i32(<16 x i32> undef, i32* undef, <16 x i1> undef)
+; SKL-NEXT:  Cost Model: Found an estimated cost of 18 for instruction: call void @llvm.masked.compressstore.v8i32(<8 x i32> undef, i32* undef, <8 x i1> undef)
 ; SKL-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: call void @llvm.masked.compressstore.v4i32(<4 x i32> undef, i32* undef, <4 x i1> undef)
 ; SKL-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: call void @llvm.masked.compressstore.v2i32(<2 x i32> undef, i32* undef, <2 x i1> undef)
-; SKL-NEXT:  Cost Model: Found an estimated cost of 81 for instruction: call void @llvm.masked.compressstore.v32i16(<32 x i16> undef, i16* undef, <32 x i1> undef)
-; SKL-NEXT:  Cost Model: Found an estimated cost of 41 for instruction: call void @llvm.masked.compressstore.v16i16(<16 x i16> undef, i16* undef, <16 x i1> undef)
+; SKL-NEXT:  Cost Model: Found an estimated cost of 67 for instruction: call void @llvm.masked.compressstore.v32i16(<32 x i16> undef, i16* undef, <32 x i1> undef)
+; SKL-NEXT:  Cost Model: Found an estimated cost of 34 for instruction: call void @llvm.masked.compressstore.v16i16(<16 x i16> undef, i16* undef, <16 x i1> undef)
 ; SKL-NEXT:  Cost Model: Found an estimated cost of 17 for instruction: call void @llvm.masked.compressstore.v8i16(<8 x i16> undef, i16* undef, <8 x i1> undef)
 ; SKL-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: call void @llvm.masked.compressstore.v4i16(<4 x i16> undef, i16* undef, <4 x i1> undef)
-; SKL-NEXT:  Cost Model: Found an estimated cost of 162 for instruction: call void @llvm.masked.compressstore.v64i8(<64 x i8> undef, i8* undef, <64 x i1> undef)
-; SKL-NEXT:  Cost Model: Found an estimated cost of 81 for instruction: call void @llvm.masked.compressstore.v32i8(<32 x i8> undef, i8* undef, <32 x i1> undef)
+; SKL-NEXT:  Cost Model: Found an estimated cost of 132 for instruction: call void @llvm.masked.compressstore.v64i8(<64 x i8> undef, i8* undef, <64 x i1> undef)
+; SKL-NEXT:  Cost Model: Found an estimated cost of 66 for instruction: call void @llvm.masked.compressstore.v32i8(<32 x i8> undef, i8* undef, <32 x i1> undef)
 ; SKL-NEXT:  Cost Model: Found an estimated cost of 33 for instruction: call void @llvm.masked.compressstore.v16i8(<16 x i8> undef, i8* undef, <16 x i1> undef)
 ; SKL-NEXT:  Cost Model: Found an estimated cost of 17 for instruction: call void @llvm.masked.compressstore.v8i8(<8 x i8> undef, i8* undef, <8 x i1> undef)
 ; SKL-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 0
 ;
 ; AVX512-LABEL: 'masked_compressstore'
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 26 for instruction: call void @llvm.masked.compressstore.v8f64(<8 x double> undef, double* undef, <8 x i1> undef)
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: call void @llvm.masked.compressstore.v4f64(<4 x double> undef, double* undef, <4 x i1> undef)
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 23 for instruction: call void @llvm.masked.compressstore.v8f64(<8 x double> undef, double* undef, <8 x i1> undef)
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 11 for instruction: call void @llvm.masked.compressstore.v4f64(<4 x double> undef, double* undef, <4 x i1> undef)
 ; AVX512-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: call void @llvm.masked.compressstore.v2f64(<2 x double> undef, double* undef, <2 x i1> undef)
 ; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: call void @llvm.masked.compressstore.v1f64(<1 x double> undef, double* undef, <1 x i1> undef)
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 56 for instruction: call void @llvm.masked.compressstore.v16f32(<16 x float> undef, float* undef, <16 x i1> undef)
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 26 for instruction: call void @llvm.masked.compressstore.v8f32(<8 x float> undef, float* undef, <8 x i1> undef)
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 47 for instruction: call void @llvm.masked.compressstore.v16f32(<16 x float> undef, float* undef, <16 x i1> undef)
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 23 for instruction: call void @llvm.masked.compressstore.v8f32(<8 x float> undef, float* undef, <8 x i1> undef)
 ; AVX512-NEXT:  Cost Model: Found an estimated cost of 11 for instruction: call void @llvm.masked.compressstore.v4f32(<4 x float> undef, float* undef, <4 x i1> undef)
 ; AVX512-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: call void @llvm.masked.compressstore.v2f32(<2 x float> undef, float* undef, <2 x i1> undef)
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 30 for instruction: call void @llvm.masked.compressstore.v8i64(<8 x i64> undef, i64* undef, <8 x i1> undef)
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 14 for instruction: call void @llvm.masked.compressstore.v4i64(<4 x i64> undef, i64* undef, <4 x i1> undef)
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 27 for instruction: call void @llvm.masked.compressstore.v8i64(<8 x i64> undef, i64* undef, <8 x i1> undef)
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 13 for instruction: call void @llvm.masked.compressstore.v4i64(<4 x i64> undef, i64* undef, <4 x i1> undef)
 ; AVX512-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: call void @llvm.masked.compressstore.v2i64(<2 x i64> undef, i64* undef, <2 x i1> undef)
 ; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: call void @llvm.masked.compressstore.v1i64(<1 x i64> undef, i64* undef, <1 x i1> undef)
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 60 for instruction: call void @llvm.masked.compressstore.v16i32(<16 x i32> undef, i32* undef, <16 x i1> undef)
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 28 for instruction: call void @llvm.masked.compressstore.v8i32(<8 x i32> undef, i32* undef, <8 x i1> undef)
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 51 for instruction: call void @llvm.masked.compressstore.v16i32(<16 x i32> undef, i32* undef, <16 x i1> undef)
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 25 for instruction: call void @llvm.masked.compressstore.v8i32(<8 x i32> undef, i32* undef, <8 x i1> undef)
 ; AVX512-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: call void @llvm.masked.compressstore.v4i32(<4 x i32> undef, i32* undef, <4 x i1> undef)
 ; AVX512-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: call void @llvm.masked.compressstore.v2i32(<2 x i32> undef, i32* undef, <2 x i1> undef)
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 120 for instruction: call void @llvm.masked.compressstore.v32i16(<32 x i16> undef, i16* undef, <32 x i1> undef)
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 56 for instruction: call void @llvm.masked.compressstore.v16i16(<16 x i16> undef, i16* undef, <16 x i1> undef)
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 99 for instruction: call void @llvm.masked.compressstore.v32i16(<32 x i16> undef, i16* undef, <32 x i1> undef)
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 49 for instruction: call void @llvm.masked.compressstore.v16i16(<16 x i16> undef, i16* undef, <16 x i1> undef)
 ; AVX512-NEXT:  Cost Model: Found an estimated cost of 24 for instruction: call void @llvm.masked.compressstore.v8i16(<8 x i16> undef, i16* undef, <8 x i1> undef)
 ; AVX512-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: call void @llvm.masked.compressstore.v4i16(<4 x i16> undef, i16* undef, <4 x i1> undef)
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 240 for instruction: call void @llvm.masked.compressstore.v64i8(<64 x i8> undef, i8* undef, <64 x i1> undef)
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 112 for instruction: call void @llvm.masked.compressstore.v32i8(<32 x i8> undef, i8* undef, <32 x i1> undef)
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 195 for instruction: call void @llvm.masked.compressstore.v64i8(<64 x i8> undef, i8* undef, <64 x i1> undef)
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 97 for instruction: call void @llvm.masked.compressstore.v32i8(<32 x i8> undef, i8* undef, <32 x i1> undef)
 ; AVX512-NEXT:  Cost Model: Found an estimated cost of 48 for instruction: call void @llvm.masked.compressstore.v16i8(<16 x i8> undef, i8* undef, <16 x i1> undef)
 ; AVX512-NEXT:  Cost Model: Found an estimated cost of 24 for instruction: call void @llvm.masked.compressstore.v8i8(<8 x i8> undef, i8* undef, <8 x i1> undef)
 ; AVX512-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 0
@@ -1333,11 +1333,11 @@ define <4 x i32> @test_gather_4i32(<4 x i32*> %ptrs, <4 x i1> %mask, <4 x i32> %
 ; SSE42-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <4 x i32> %res
 ;
 ; AVX1-LABEL: 'test_gather_4i32'
-; AVX1-NEXT:  Cost Model: Found an estimated cost of 19 for instruction: %res = call <4 x i32> @llvm.masked.gather.v4i32.v4p0i32(<4 x i32*> %ptrs, i32 4, <4 x i1> %mask, <4 x i32> %src0)
+; AVX1-NEXT:  Cost Model: Found an estimated cost of 18 for instruction: %res = call <4 x i32> @llvm.masked.gather.v4i32.v4p0i32(<4 x i32*> %ptrs, i32 4, <4 x i1> %mask, <4 x i32> %src0)
 ; AVX1-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <4 x i32> %res
 ;
 ; AVX2-LABEL: 'test_gather_4i32'
-; AVX2-NEXT:  Cost Model: Found an estimated cost of 19 for instruction: %res = call <4 x i32> @llvm.masked.gather.v4i32.v4p0i32(<4 x i32*> %ptrs, i32 4, <4 x i1> %mask, <4 x i32> %src0)
+; AVX2-NEXT:  Cost Model: Found an estimated cost of 18 for instruction: %res = call <4 x i32> @llvm.masked.gather.v4i32.v4p0i32(<4 x i32*> %ptrs, i32 4, <4 x i1> %mask, <4 x i32> %src0)
 ; AVX2-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <4 x i32> %res
 ;
 ; SKL-LABEL: 'test_gather_4i32'
@@ -1345,7 +1345,7 @@ define <4 x i32> @test_gather_4i32(<4 x i32*> %ptrs, <4 x i1> %mask, <4 x i32> %
 ; SKL-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <4 x i32> %res
 ;
 ; KNL-LABEL: 'test_gather_4i32'
-; KNL-NEXT:  Cost Model: Found an estimated cost of 22 for instruction: %res = call <4 x i32> @llvm.masked.gather.v4i32.v4p0i32(<4 x i32*> %ptrs, i32 4, <4 x i1> %mask, <4 x i32> %src0)
+; KNL-NEXT:  Cost Model: Found an estimated cost of 21 for instruction: %res = call <4 x i32> @llvm.masked.gather.v4i32.v4p0i32(<4 x i32*> %ptrs, i32 4, <4 x i1> %mask, <4 x i32> %src0)
 ; KNL-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <4 x i32> %res
 ;
 ; SKX-LABEL: 'test_gather_4i32'
@@ -1366,11 +1366,11 @@ define <4 x i32> @test_gather_4i32_const_mask(<4 x i32*> %ptrs, <4 x i32> %src0)
 ; SSE42-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <4 x i32> %res
 ;
 ; AVX1-LABEL: 'test_gather_4i32_const_mask'
-; AVX1-NEXT:  Cost Model: Found an estimated cost of 14 for instruction: %res = call <4 x i32> @llvm.masked.gather.v4i32.v4p0i32(<4 x i32*> %ptrs, i32 4, <4 x i1> <i1 true, i1 true, i1 true, i1 true>, <4 x i32> %src0)
+; AVX1-NEXT:  Cost Model: Found an estimated cost of 13 for instruction: %res = call <4 x i32> @llvm.masked.gather.v4i32.v4p0i32(<4 x i32*> %ptrs, i32 4, <4 x i1> <i1 true, i1 true, i1 true, i1 true>, <4 x i32> %src0)
 ; AVX1-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <4 x i32> %res
 ;
 ; AVX2-LABEL: 'test_gather_4i32_const_mask'
-; AVX2-NEXT:  Cost Model: Found an estimated cost of 14 for instruction: %res = call <4 x i32> @llvm.masked.gather.v4i32.v4p0i32(<4 x i32*> %ptrs, i32 4, <4 x i1> <i1 true, i1 true, i1 true, i1 true>, <4 x i32> %src0)
+; AVX2-NEXT:  Cost Model: Found an estimated cost of 13 for instruction: %res = call <4 x i32> @llvm.masked.gather.v4i32.v4p0i32(<4 x i32*> %ptrs, i32 4, <4 x i1> <i1 true, i1 true, i1 true, i1 true>, <4 x i32> %src0)
 ; AVX2-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <4 x i32> %res
 ;
 ; SKL-LABEL: 'test_gather_4i32_const_mask'
@@ -1378,7 +1378,7 @@ define <4 x i32> @test_gather_4i32_const_mask(<4 x i32*> %ptrs, <4 x i32> %src0)
 ; SKL-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <4 x i32> %res
 ;
 ; KNL-LABEL: 'test_gather_4i32_const_mask'
-; KNL-NEXT:  Cost Model: Found an estimated cost of 14 for instruction: %res = call <4 x i32> @llvm.masked.gather.v4i32.v4p0i32(<4 x i32*> %ptrs, i32 4, <4 x i1> <i1 true, i1 true, i1 true, i1 true>, <4 x i32> %src0)
+; KNL-NEXT:  Cost Model: Found an estimated cost of 13 for instruction: %res = call <4 x i32> @llvm.masked.gather.v4i32.v4p0i32(<4 x i32*> %ptrs, i32 4, <4 x i1> <i1 true, i1 true, i1 true, i1 true>, <4 x i32> %src0)
 ; KNL-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <4 x i32> %res
 ;
 ; SKX-LABEL: 'test_gather_4i32_const_mask'
@@ -1405,13 +1405,13 @@ define <16 x float> @test_gather_16f32_const_mask(float* %base, <16 x i32> %ind)
 ; AVX1-LABEL: 'test_gather_16f32_const_mask'
 ; AVX1-NEXT:  Cost Model: Found an estimated cost of 14 for instruction: %sext_ind = sext <16 x i32> %ind to <16 x i64>
 ; AVX1-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %gep.v = getelementptr float, float* %base, <16 x i64> %sext_ind
-; AVX1-NEXT:  Cost Model: Found an estimated cost of 56 for instruction: %res = call <16 x float> @llvm.masked.gather.v16f32.v16p0f32(<16 x float*> %gep.v, i32 4, <16 x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>, <16 x float> undef)
+; AVX1-NEXT:  Cost Model: Found an estimated cost of 52 for instruction: %res = call <16 x float> @llvm.masked.gather.v16f32.v16p0f32(<16 x float*> %gep.v, i32 4, <16 x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>, <16 x float> undef)
 ; AVX1-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <16 x float> %res
 ;
 ; AVX2-LABEL: 'test_gather_16f32_const_mask'
 ; AVX2-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %sext_ind = sext <16 x i32> %ind to <16 x i64>
 ; AVX2-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %gep.v = getelementptr float, float* %base, <16 x i64> %sext_ind
-; AVX2-NEXT:  Cost Model: Found an estimated cost of 56 for instruction: %res = call <16 x float> @llvm.masked.gather.v16f32.v16p0f32(<16 x float*> %gep.v, i32 4, <16 x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>, <16 x float> undef)
+; AVX2-NEXT:  Cost Model: Found an estimated cost of 52 for instruction: %res = call <16 x float> @llvm.masked.gather.v16f32.v16p0f32(<16 x float*> %gep.v, i32 4, <16 x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>, <16 x float> undef)
 ; AVX2-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <16 x float> %res
 ;
 ; SKL-LABEL: 'test_gather_16f32_const_mask'
@@ -1449,13 +1449,13 @@ define <16 x float> @test_gather_16f32_var_mask(float* %base, <16 x i32> %ind, <
 ; AVX1-LABEL: 'test_gather_16f32_var_mask'
 ; AVX1-NEXT:  Cost Model: Found an estimated cost of 14 for instruction: %sext_ind = sext <16 x i32> %ind to <16 x i64>
 ; AVX1-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %gep.v = getelementptr float, float* %base, <16 x i64> %sext_ind
-; AVX1-NEXT:  Cost Model: Found an estimated cost of 73 for instruction: %res = call <16 x float> @llvm.masked.gather.v16f32.v16p0f32(<16 x float*> %gep.v, i32 4, <16 x i1> %mask, <16 x float> undef)
+; AVX1-NEXT:  Cost Model: Found an estimated cost of 69 for instruction: %res = call <16 x float> @llvm.masked.gather.v16f32.v16p0f32(<16 x float*> %gep.v, i32 4, <16 x i1> %mask, <16 x float> undef)
 ; AVX1-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <16 x float> %res
 ;
 ; AVX2-LABEL: 'test_gather_16f32_var_mask'
 ; AVX2-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %sext_ind = sext <16 x i32> %ind to <16 x i64>
 ; AVX2-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %gep.v = getelementptr float, float* %base, <16 x i64> %sext_ind
-; AVX2-NEXT:  Cost Model: Found an estimated cost of 73 for instruction: %res = call <16 x float> @llvm.masked.gather.v16f32.v16p0f32(<16 x float*> %gep.v, i32 4, <16 x i1> %mask, <16 x float> undef)
+; AVX2-NEXT:  Cost Model: Found an estimated cost of 69 for instruction: %res = call <16 x float> @llvm.masked.gather.v16f32.v16p0f32(<16 x float*> %gep.v, i32 4, <16 x i1> %mask, <16 x float> undef)
 ; AVX2-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <16 x float> %res
 ;
 ; SKL-LABEL: 'test_gather_16f32_var_mask'
@@ -1493,13 +1493,13 @@ define <16 x float> @test_gather_16f32_ra_var_mask(<16 x float*> %ptrs, <16 x i3
 ; AVX1-LABEL: 'test_gather_16f32_ra_var_mask'
 ; AVX1-NEXT:  Cost Model: Found an estimated cost of 14 for instruction: %sext_ind = sext <16 x i32> %ind to <16 x i64>
 ; AVX1-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %gep.v = getelementptr float, <16 x float*> %ptrs, <16 x i64> %sext_ind
-; AVX1-NEXT:  Cost Model: Found an estimated cost of 73 for instruction: %res = call <16 x float> @llvm.masked.gather.v16f32.v16p0f32(<16 x float*> %gep.v, i32 4, <16 x i1> %mask, <16 x float> undef)
+; AVX1-NEXT:  Cost Model: Found an estimated cost of 69 for instruction: %res = call <16 x float> @llvm.masked.gather.v16f32.v16p0f32(<16 x float*> %gep.v, i32 4, <16 x i1> %mask, <16 x float> undef)
 ; AVX1-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <16 x float> %res
 ;
 ; AVX2-LABEL: 'test_gather_16f32_ra_var_mask'
 ; AVX2-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %sext_ind = sext <16 x i32> %ind to <16 x i64>
 ; AVX2-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %gep.v = getelementptr float, <16 x float*> %ptrs, <16 x i64> %sext_ind
-; AVX2-NEXT:  Cost Model: Found an estimated cost of 73 for instruction: %res = call <16 x float> @llvm.masked.gather.v16f32.v16p0f32(<16 x float*> %gep.v, i32 4, <16 x i1> %mask, <16 x float> undef)
+; AVX2-NEXT:  Cost Model: Found an estimated cost of 69 for instruction: %res = call <16 x float> @llvm.masked.gather.v16f32.v16p0f32(<16 x float*> %gep.v, i32 4, <16 x i1> %mask, <16 x float> undef)
 ; AVX2-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <16 x float> %res
 ;
 ; SKL-LABEL: 'test_gather_16f32_ra_var_mask'
@@ -1543,7 +1543,7 @@ define <16 x float> @test_gather_16f32_const_mask2(float* %base, <16 x i32> %ind
 ; AVX1-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %broadcast.splat = shufflevector <16 x float*> %broadcast.splatinsert, <16 x float*> poison, <16 x i32> zeroinitializer
 ; AVX1-NEXT:  Cost Model: Found an estimated cost of 14 for instruction: %sext_ind = sext <16 x i32> %ind to <16 x i64>
 ; AVX1-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %gep.random = getelementptr float, <16 x float*> %broadcast.splat, <16 x i64> %sext_ind
-; AVX1-NEXT:  Cost Model: Found an estimated cost of 56 for instruction: %res = call <16 x float> @llvm.masked.gather.v16f32.v16p0f32(<16 x float*> %gep.random, i32 4, <16 x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>, <16 x float> undef)
+; AVX1-NEXT:  Cost Model: Found an estimated cost of 52 for instruction: %res = call <16 x float> @llvm.masked.gather.v16f32.v16p0f32(<16 x float*> %gep.random, i32 4, <16 x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>, <16 x float> undef)
 ; AVX1-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <16 x float> %res
 ;
 ; AVX2-LABEL: 'test_gather_16f32_const_mask2'
@@ -1551,7 +1551,7 @@ define <16 x float> @test_gather_16f32_const_mask2(float* %base, <16 x i32> %ind
 ; AVX2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %broadcast.splat = shufflevector <16 x float*> %broadcast.splatinsert, <16 x float*> poison, <16 x i32> zeroinitializer
 ; AVX2-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %sext_ind = sext <16 x i32> %ind to <16 x i64>
 ; AVX2-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %gep.random = getelementptr float, <16 x float*> %broadcast.splat, <16 x i64> %sext_ind
-; AVX2-NEXT:  Cost Model: Found an estimated cost of 56 for instruction: %res = call <16 x float> @llvm.masked.gather.v16f32.v16p0f32(<16 x float*> %gep.random, i32 4, <16 x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>, <16 x float> undef)
+; AVX2-NEXT:  Cost Model: Found an estimated cost of 52 for instruction: %res = call <16 x float> @llvm.masked.gather.v16f32.v16p0f32(<16 x float*> %gep.random, i32 4, <16 x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>, <16 x float> undef)
 ; AVX2-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <16 x float> %res
 ;
 ; SKL-LABEL: 'test_gather_16f32_const_mask2'
@@ -1602,7 +1602,7 @@ define void @test_scatter_16i32(i32* %base, <16 x i32> %ind, i16 %mask, <16 x i3
 ; AVX1-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %broadcast.splat = shufflevector <16 x i32*> %broadcast.splatinsert, <16 x i32*> poison, <16 x i32> zeroinitializer
 ; AVX1-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %gep.random = getelementptr i32, <16 x i32*> %broadcast.splat, <16 x i32> %ind
 ; AVX1-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %imask = bitcast i16 %mask to <16 x i1>
-; AVX1-NEXT:  Cost Model: Found an estimated cost of 81 for instruction: call void @llvm.masked.scatter.v16i32.v16p0i32(<16 x i32> %val, <16 x i32*> %gep.random, i32 4, <16 x i1> %imask)
+; AVX1-NEXT:  Cost Model: Found an estimated cost of 71 for instruction: call void @llvm.masked.scatter.v16i32.v16p0i32(<16 x i32> %val, <16 x i32*> %gep.random, i32 4, <16 x i1> %imask)
 ; AVX1-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
 ; AVX2-LABEL: 'test_scatter_16i32'
@@ -1610,7 +1610,7 @@ define void @test_scatter_16i32(i32* %base, <16 x i32> %ind, i16 %mask, <16 x i3
 ; AVX2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %broadcast.splat = shufflevector <16 x i32*> %broadcast.splatinsert, <16 x i32*> poison, <16 x i32> zeroinitializer
 ; AVX2-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %gep.random = getelementptr i32, <16 x i32*> %broadcast.splat, <16 x i32> %ind
 ; AVX2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %imask = bitcast i16 %mask to <16 x i1>
-; AVX2-NEXT:  Cost Model: Found an estimated cost of 81 for instruction: call void @llvm.masked.scatter.v16i32.v16p0i32(<16 x i32> %val, <16 x i32*> %gep.random, i32 4, <16 x i1> %imask)
+; AVX2-NEXT:  Cost Model: Found an estimated cost of 71 for instruction: call void @llvm.masked.scatter.v16i32.v16p0i32(<16 x i32> %val, <16 x i32*> %gep.random, i32 4, <16 x i1> %imask)
 ; AVX2-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
 ; SKL-LABEL: 'test_scatter_16i32'
@@ -1618,7 +1618,7 @@ define void @test_scatter_16i32(i32* %base, <16 x i32> %ind, i16 %mask, <16 x i3
 ; SKL-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %broadcast.splat = shufflevector <16 x i32*> %broadcast.splatinsert, <16 x i32*> poison, <16 x i32> zeroinitializer
 ; SKL-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %gep.random = getelementptr i32, <16 x i32*> %broadcast.splat, <16 x i32> %ind
 ; SKL-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %imask = bitcast i16 %mask to <16 x i1>
-; SKL-NEXT:  Cost Model: Found an estimated cost of 81 for instruction: call void @llvm.masked.scatter.v16i32.v16p0i32(<16 x i32> %val, <16 x i32*> %gep.random, i32 4, <16 x i1> %imask)
+; SKL-NEXT:  Cost Model: Found an estimated cost of 71 for instruction: call void @llvm.masked.scatter.v16i32.v16p0i32(<16 x i32> %val, <16 x i32*> %gep.random, i32 4, <16 x i1> %imask)
 ; SKL-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
 ; AVX512-LABEL: 'test_scatter_16i32'
@@ -1648,7 +1648,7 @@ define void @test_scatter_8i32(<8 x i32>%a1, <8 x i32*> %ptr, <8 x i1>%mask) {
 ; SSE42-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
 ; AVX-LABEL: 'test_scatter_8i32'
-; AVX-NEXT:  Cost Model: Found an estimated cost of 41 for instruction: call void @llvm.masked.scatter.v8i32.v8p0i32(<8 x i32> %a1, <8 x i32*> %ptr, i32 4, <8 x i1> %mask)
+; AVX-NEXT:  Cost Model: Found an estimated cost of 36 for instruction: call void @llvm.masked.scatter.v8i32.v8p0i32(<8 x i32> %a1, <8 x i32*> %ptr, i32 4, <8 x i1> %mask)
 ; AVX-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
 ; AVX512-LABEL: 'test_scatter_8i32'
@@ -1669,11 +1669,11 @@ define void @test_scatter_4i32(<4 x i32>%a1, <4 x i32*> %ptr, <4 x i1>%mask) {
 ; SSE42-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
 ; AVX-LABEL: 'test_scatter_4i32'
-; AVX-NEXT:  Cost Model: Found an estimated cost of 19 for instruction: call void @llvm.masked.scatter.v4i32.v4p0i32(<4 x i32> %a1, <4 x i32*> %ptr, i32 4, <4 x i1> %mask)
+; AVX-NEXT:  Cost Model: Found an estimated cost of 18 for instruction: call void @llvm.masked.scatter.v4i32.v4p0i32(<4 x i32> %a1, <4 x i32*> %ptr, i32 4, <4 x i1> %mask)
 ; AVX-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
 ; KNL-LABEL: 'test_scatter_4i32'
-; KNL-NEXT:  Cost Model: Found an estimated cost of 22 for instruction: call void @llvm.masked.scatter.v4i32.v4p0i32(<4 x i32> %a1, <4 x i32*> %ptr, i32 4, <4 x i1> %mask)
+; KNL-NEXT:  Cost Model: Found an estimated cost of 21 for instruction: call void @llvm.masked.scatter.v4i32.v4p0i32(<4 x i32> %a1, <4 x i32*> %ptr, i32 4, <4 x i1> %mask)
 ; KNL-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
 ; SKX-LABEL: 'test_scatter_4i32'
@@ -1700,13 +1700,13 @@ define <4 x float> @test_gather_4f32(float* %ptr, <4 x i32> %ind, <4 x i1>%mask)
 ; AVX1-LABEL: 'test_gather_4f32'
 ; AVX1-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %sext_ind = sext <4 x i32> %ind to <4 x i64>
 ; AVX1-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %gep.v = getelementptr float, float* %ptr, <4 x i64> %sext_ind
-; AVX1-NEXT:  Cost Model: Found an estimated cost of 18 for instruction: %res = call <4 x float> @llvm.masked.gather.v4f32.v4p0f32(<4 x float*> %gep.v, i32 4, <4 x i1> %mask, <4 x float> undef)
+; AVX1-NEXT:  Cost Model: Found an estimated cost of 17 for instruction: %res = call <4 x float> @llvm.masked.gather.v4f32.v4p0f32(<4 x float*> %gep.v, i32 4, <4 x i1> %mask, <4 x float> undef)
 ; AVX1-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <4 x float> %res
 ;
 ; AVX2-LABEL: 'test_gather_4f32'
 ; AVX2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %sext_ind = sext <4 x i32> %ind to <4 x i64>
 ; AVX2-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %gep.v = getelementptr float, float* %ptr, <4 x i64> %sext_ind
-; AVX2-NEXT:  Cost Model: Found an estimated cost of 18 for instruction: %res = call <4 x float> @llvm.masked.gather.v4f32.v4p0f32(<4 x float*> %gep.v, i32 4, <4 x i1> %mask, <4 x float> undef)
+; AVX2-NEXT:  Cost Model: Found an estimated cost of 17 for instruction: %res = call <4 x float> @llvm.masked.gather.v4f32.v4p0f32(<4 x float*> %gep.v, i32 4, <4 x i1> %mask, <4 x float> undef)
 ; AVX2-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <4 x float> %res
 ;
 ; SKL-LABEL: 'test_gather_4f32'
@@ -1718,7 +1718,7 @@ define <4 x float> @test_gather_4f32(float* %ptr, <4 x i32> %ind, <4 x i1>%mask)
 ; KNL-LABEL: 'test_gather_4f32'
 ; KNL-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %sext_ind = sext <4 x i32> %ind to <4 x i64>
 ; KNL-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %gep.v = getelementptr float, float* %ptr, <4 x i64> %sext_ind
-; KNL-NEXT:  Cost Model: Found an estimated cost of 21 for instruction: %res = call <4 x float> @llvm.masked.gather.v4f32.v4p0f32(<4 x float*> %gep.v, i32 4, <4 x i1> %mask, <4 x float> undef)
+; KNL-NEXT:  Cost Model: Found an estimated cost of 20 for instruction: %res = call <4 x float> @llvm.masked.gather.v4f32.v4p0f32(<4 x float*> %gep.v, i32 4, <4 x i1> %mask, <4 x float> undef)
 ; KNL-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <4 x float> %res
 ;
 ; SKX-LABEL: 'test_gather_4f32'
@@ -1750,13 +1750,13 @@ define <4 x float> @test_gather_4f32_const_mask(float* %ptr, <4 x i32> %ind) {
 ; AVX1-LABEL: 'test_gather_4f32_const_mask'
 ; AVX1-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %sext_ind = sext <4 x i32> %ind to <4 x i64>
 ; AVX1-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %gep.v = getelementptr float, float* %ptr, <4 x i64> %sext_ind
-; AVX1-NEXT:  Cost Model: Found an estimated cost of 13 for instruction: %res = call <4 x float> @llvm.masked.gather.v4f32.v4p0f32(<4 x float*> %gep.v, i32 4, <4 x i1> <i1 true, i1 true, i1 true, i1 true>, <4 x float> undef)
+; AVX1-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: %res = call <4 x float> @llvm.masked.gather.v4f32.v4p0f32(<4 x float*> %gep.v, i32 4, <4 x i1> <i1 true, i1 true, i1 true, i1 true>, <4 x float> undef)
 ; AVX1-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <4 x float> %res
 ;
 ; AVX2-LABEL: 'test_gather_4f32_const_mask'
 ; AVX2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %sext_ind = sext <4 x i32> %ind to <4 x i64>
 ; AVX2-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %gep.v = getelementptr float, float* %ptr, <4 x i64> %sext_ind
-; AVX2-NEXT:  Cost Model: Found an estimated cost of 13 for instruction: %res = call <4 x float> @llvm.masked.gather.v4f32.v4p0f32(<4 x float*> %gep.v, i32 4, <4 x i1> <i1 true, i1 true, i1 true, i1 true>, <4 x float> undef)
+; AVX2-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: %res = call <4 x float> @llvm.masked.gather.v4f32.v4p0f32(<4 x float*> %gep.v, i32 4, <4 x i1> <i1 true, i1 true, i1 true, i1 true>, <4 x float> undef)
 ; AVX2-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <4 x float> %res
 ;
 ; SKL-LABEL: 'test_gather_4f32_const_mask'
@@ -1768,7 +1768,7 @@ define <4 x float> @test_gather_4f32_const_mask(float* %ptr, <4 x i32> %ind) {
 ; KNL-LABEL: 'test_gather_4f32_const_mask'
 ; KNL-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %sext_ind = sext <4 x i32> %ind to <4 x i64>
 ; KNL-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %gep.v = getelementptr float, float* %ptr, <4 x i64> %sext_ind
-; KNL-NEXT:  Cost Model: Found an estimated cost of 13 for instruction: %res = call <4 x float> @llvm.masked.gather.v4f32.v4p0f32(<4 x float*> %gep.v, i32 4, <4 x i1> <i1 true, i1 true, i1 true, i1 true>, <4 x float> undef)
+; KNL-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: %res = call <4 x float> @llvm.masked.gather.v4f32.v4p0f32(<4 x float*> %gep.v, i32 4, <4 x i1> <i1 true, i1 true, i1 true, i1 true>, <4 x float> undef)
 ; KNL-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <4 x float> %res
 ;
 ; SKX-LABEL: 'test_gather_4f32_const_mask'

@@ -22,15 +22,15 @@ define void @test() {
 ; AVX1:  LV: Found an estimated cost of 1 for VF 1 For instruction: store i32 %v7, ptr %out7, align 4
 ; AVX1:  LV: Found an estimated cost of 38 for VF 2 For instruction: store i32 %v7, ptr %out7, align 4
 ; AVX1:  LV: Found an estimated cost of 76 for VF 4 For instruction: store i32 %v7, ptr %out7, align 4
-; AVX1:  LV: Found an estimated cost of 184 for VF 8 For instruction: store i32 %v7, ptr %out7, align 4
-; AVX1:  LV: Found an estimated cost of 368 for VF 16 For instruction: store i32 %v7, ptr %out7, align 4
+; AVX1:  LV: Found an estimated cost of 160 for VF 8 For instruction: store i32 %v7, ptr %out7, align 4
+; AVX1:  LV: Found an estimated cost of 320 for VF 16 For instruction: store i32 %v7, ptr %out7, align 4
 ;
 ; AVX2-LABEL: 'test'
 ; AVX2:  LV: Found an estimated cost of 1 for VF 1 For instruction: store i32 %v7, ptr %out7, align 4
 ; AVX2:  LV: Found an estimated cost of 38 for VF 2 For instruction: store i32 %v7, ptr %out7, align 4
 ; AVX2:  LV: Found an estimated cost of 76 for VF 4 For instruction: store i32 %v7, ptr %out7, align 4
-; AVX2:  LV: Found an estimated cost of 184 for VF 8 For instruction: store i32 %v7, ptr %out7, align 4
-; AVX2:  LV: Found an estimated cost of 368 for VF 16 For instruction: store i32 %v7, ptr %out7, align 4
+; AVX2:  LV: Found an estimated cost of 160 for VF 8 For instruction: store i32 %v7, ptr %out7, align 4
+; AVX2:  LV: Found an estimated cost of 320 for VF 16 For instruction: store i32 %v7, ptr %out7, align 4
 ;
 ; AVX512-LABEL: 'test'
 ; AVX512:  LV: Found an estimated cost of 1 for VF 1 For instruction: store i32 %v7, ptr %out7, align 4
