@@ -215,6 +215,9 @@ protected:
   static void addSystemIncludes(const llvm::opt::ArgList &DriverArgs,
                                 llvm::opt::ArgStringList &CC1Args,
                                 ArrayRef<StringRef> Paths);
+
+  static std::string concat(StringRef Path, const Twine &A, const Twine &B = "",
+                            const Twine &C = "", const Twine &D = "");
   ///@}
 
 public:
