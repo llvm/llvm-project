@@ -974,7 +974,24 @@ Value *LibCallSimplifier::optimizeMemRChr(CallInst *CI, IRBuilderBase &B) {
     }
   }
 
-  return nullptr;
+  // Truncate the string to search at most EndOff characters.
+  Str = Str.substr(0, EndOff);
+  if (Str.find_first_not_of(Str[0]) != StringRef::npos)
+    return nullptr;
+
+  // If the source array consists of all equal characters, then for any
+  // C and N (whether in bounds or not), fold memrchr(S, C, N) to
+  //   N != 0 && *S == C ? S + N - 1 : null
+  Type *SizeTy = Size->getType();
+  Type *Int8Ty = B.getInt8Ty();
+  Value *NNeZ = B.CreateICmpNE(Size, ConstantInt::get(SizeTy, 0));
+  // Slice off the sought character's high end bits.
+  CharVal = B.CreateTrunc(CharVal, Int8Ty);
+  Value *CEqS0 = B.CreateICmpEQ(ConstantInt::get(Int8Ty, Str[0]), CharVal);
+  Value *And = B.CreateLogicalAnd(NNeZ, CEqS0);
+  Value *SizeM1 = B.CreateSub(Size, ConstantInt::get(SizeTy, 1));
+  Value *SrcPlus = B.CreateGEP(Int8Ty, SrcStr, SizeM1, "memrchr.ptr_plus");
+  return B.CreateSelect(And, SrcPlus, NullPtr, "memrchr.sel");
 }
 
 Value *LibCallSimplifier::optimizeMemChr(CallInst *CI, IRBuilderBase &B) {
