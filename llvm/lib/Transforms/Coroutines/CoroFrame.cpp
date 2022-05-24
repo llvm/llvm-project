@@ -2564,6 +2564,7 @@ void coro::salvageDebugInfo(
   bool SkipOutermostLoad = !isa<DbgValueInst>(DVI);
   Value *Storage = DVI->getVariableLocationOp(0);
   Value *OriginalStorage = Storage;
+
   while (auto *Inst = dyn_cast_or_null<Instruction>(Storage)) {
     if (auto *LdInst = dyn_cast<LoadInst>(Inst)) {
       Storage = LdInst->getOperand(0);
@@ -2619,8 +2620,7 @@ void coro::salvageDebugInfo(
       // expression, we need to add a DW_OP_deref at the *start* of the
       // expression to first load the contents of the alloca before
       // adjusting it with the expression.
-      if (Expr && Expr->isComplex())
-        Expr = DIExpression::prepend(Expr, DIExpression::DerefBefore);
+      Expr = DIExpression::prepend(Expr, DIExpression::DerefBefore);
     }
 
   DVI->replaceVariableLocationOp(OriginalStorage, Storage);
