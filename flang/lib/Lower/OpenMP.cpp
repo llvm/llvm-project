@@ -138,11 +138,35 @@ static mlir::Type getLoopVarType(Fortran::lower::AbstractConverter &converter,
   return converter.getFirOpBuilder().getIntegerType(loopVarTypeSize);
 }
 
+/// Create empty blocks for the current region.
+/// These blocks replace blocks parented to an enclosing region.
+void createEmptyRegionBlocks(
+    fir::FirOpBuilder &firOpBuilder,
+    std::list<Fortran::lower::pft::Evaluation> &evaluationList) {
+  auto *region = &firOpBuilder.getRegion();
+  for (auto &eval : evaluationList) {
+    if (eval.block) {
+      if (eval.block->empty()) {
+        eval.block->erase();
+        eval.block = firOpBuilder.createBlock(region);
+      } else {
+        [[maybe_unused]] auto &terminatorOp = eval.block->back();
+        assert((mlir::isa<mlir::omp::TerminatorOp>(terminatorOp) ||
+                mlir::isa<mlir::omp::YieldOp>(terminatorOp)) &&
+               "expected terminator op");
+      }
+    }
+    if (eval.hasNestedEvaluations())
+      createEmptyRegionBlocks(firOpBuilder, eval.getNestedEvaluations());
+  }
+}
+
 /// Create the body (block) for an OpenMP Operation.
 ///
 /// \param [in]    op - the operation the body belongs to.
 /// \param [inout] converter - converter to use for the clauses.
 /// \param [in]    loc - location in source code.
+/// \param [in]    eval - current PFT node/evaluation.
 /// \oaran [in]    clauses - list of clauses to process.
 /// \param [in]    args - block arguments (induction variable[s]) for the
 ////                      region.
@@ -151,14 +175,14 @@ static mlir::Type getLoopVarType(Fortran::lower::AbstractConverter &converter,
 template <typename Op>
 static void
 createBodyOfOp(Op &op, Fortran::lower::AbstractConverter &converter,
-               mlir::Location &loc,
+               mlir::Location &loc, Fortran::lower::pft::Evaluation &eval,
                const Fortran::parser::OmpClauseList *clauses = nullptr,
                const SmallVector<const Fortran::semantics::Symbol *> &args = {},
                bool outerCombined = false) {
-  fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
-  // If arguments for the region are provided then create the block with those
-  // arguments. Also update the symbol's address with the mlir argument values.
-  // e.g. For loops the arguments are the induction variable. And all further
+  auto &firOpBuilder = converter.getFirOpBuilder();
+  // If an argument for the region is provided then create the block with that
+  // argument. Also update the symbol's address with the mlir argument value.
+  // e.g. For loops the argument is the induction variable. And all further
   // uses of the induction variable should use this mlir value.
   if (args.size()) {
     std::size_t loopVarTypeSize = 0;
@@ -184,7 +208,10 @@ createBodyOfOp(Op &op, Fortran::lower::AbstractConverter &converter,
   auto &block = op.getRegion().back();
   firOpBuilder.setInsertionPointToStart(&block);
 
-  // Insert the terminator.
+  if (eval.lowerAsUnstructured())
+    createEmptyRegionBlocks(firOpBuilder, eval.getNestedEvaluations());
+
+  // Ensure the block is well-formed by inserting terminators.
   if constexpr (std::is_same_v<Op, omp::WsLoopOp>) {
     mlir::ValueRange results;
     firOpBuilder.create<mlir::omp::YieldOp>(loc, results);
@@ -369,7 +396,7 @@ createCombinedParallelOp(Fortran::lower::AbstractConverter &converter,
       allocateOperands, allocatorOperands, /*reduction_vars=*/ValueRange(),
       /*reductions=*/nullptr, procBindKindAttr);
 
-  createBodyOfOp<omp::ParallelOp>(parallelOp, converter, currentLocation,
+  createBodyOfOp<omp::ParallelOp>(parallelOp, converter, currentLocation, eval,
                                   &opClauseList, /*iv=*/{},
                                   /*isCombined=*/true);
 }
@@ -461,26 +488,27 @@ genOMP(Fortran::lower::AbstractConverter &converter,
         allocateOperands, allocatorOperands, /*reduction_vars=*/ValueRange(),
         /*reductions=*/nullptr, procBindKindAttr);
     createBodyOfOp<omp::ParallelOp>(parallelOp, converter, currentLocation,
-                                    &opClauseList);
+                                    eval, &opClauseList);
   } else if (blockDirective.v == llvm::omp::OMPD_master) {
     auto masterOp =
         firOpBuilder.create<mlir::omp::MasterOp>(currentLocation, argTy);
-    createBodyOfOp<omp::MasterOp>(masterOp, converter, currentLocation);
+    createBodyOfOp<omp::MasterOp>(masterOp, converter, currentLocation, eval);
   } else if (blockDirective.v == llvm::omp::OMPD_single) {
     auto singleOp = firOpBuilder.create<mlir::omp::SingleOp>(
         currentLocation, allocateOperands, allocatorOperands, nowaitAttr);
-    createBodyOfOp<omp::SingleOp>(singleOp, converter, currentLocation);
+    createBodyOfOp<omp::SingleOp>(singleOp, converter, currentLocation, eval);
   } else if (blockDirective.v == llvm::omp::OMPD_ordered) {
     auto orderedOp = firOpBuilder.create<mlir::omp::OrderedRegionOp>(
         currentLocation, /*simd=*/nullptr);
-    createBodyOfOp<omp::OrderedRegionOp>(orderedOp, converter, currentLocation);
+    createBodyOfOp<omp::OrderedRegionOp>(orderedOp, converter, currentLocation,
+                                         eval);
   } else if (blockDirective.v == llvm::omp::OMPD_task) {
     auto taskOp = firOpBuilder.create<mlir::omp::TaskOp>(
         currentLocation, ifClauseOperand, finalClauseOperand, untiedAttr,
         mergeableAttr, /*in_reduction_vars=*/ValueRange(),
         /*in_reductions=*/nullptr, priorityClauseOperand, allocateOperands,
         allocatorOperands);
-    createBodyOfOp(taskOp, converter, currentLocation, &opClauseList);
+    createBodyOfOp(taskOp, converter, currentLocation, eval, &opClauseList);
   } else {
     TODO(converter.getCurrentLocation(), "Unhandled block directive");
   }
@@ -644,7 +672,7 @@ static void genOMP(Fortran::lower::AbstractConverter &converter,
         wsLoopOp.nowaitAttr(firOpBuilder.getUnitAttr());
   }
 
-  createBodyOfOp<omp::WsLoopOp>(wsLoopOp, converter, currentLocation,
+  createBodyOfOp<omp::WsLoopOp>(wsLoopOp, converter, currentLocation, eval,
                                 &wsLoopOpClauseList, iv);
 }
 
@@ -688,7 +716,7 @@ genOMP(Fortran::lower::AbstractConverter &converter,
                                firOpBuilder.getContext(), global.sym_name()));
     }
   }();
-  createBodyOfOp<omp::CriticalOp>(criticalOp, converter, currentLocation);
+  createBodyOfOp<omp::CriticalOp>(criticalOp, converter, currentLocation, eval);
 }
 
 static void
@@ -700,7 +728,7 @@ genOMP(Fortran::lower::AbstractConverter &converter,
   auto currentLocation = converter.getCurrentLocation();
   mlir::omp::SectionOp sectionOp =
       firOpBuilder.create<mlir::omp::SectionOp>(currentLocation);
-  createBodyOfOp<omp::SectionOp>(sectionOp, converter, currentLocation);
+  createBodyOfOp<omp::SectionOp>(sectionOp, converter, currentLocation, eval);
 }
 
 // TODO: Add support for reduction
@@ -757,14 +785,15 @@ genOMP(Fortran::lower::AbstractConverter &converter,
         currentLocation, /*reduction_vars*/ ValueRange(),
         /*reductions=*/nullptr, allocateOperands, allocatorOperands,
         /*nowait=*/nullptr);
-    createBodyOfOp(sectionsOp, converter, currentLocation);
+    createBodyOfOp(sectionsOp, converter, currentLocation, eval);
 
     // Sections Construct
   } else if (dir == llvm::omp::Directive::OMPD_sections) {
     auto sectionsOp = firOpBuilder.create<mlir::omp::SectionsOp>(
         currentLocation, reductionVars, /*reductions = */ nullptr,
         allocateOperands, allocatorOperands, noWaitClauseOperand);
-    createBodyOfOp<omp::SectionsOp>(sectionsOp, converter, currentLocation);
+    createBodyOfOp<omp::SectionsOp>(sectionsOp, converter, currentLocation,
+                                    eval);
   }
 }
 
