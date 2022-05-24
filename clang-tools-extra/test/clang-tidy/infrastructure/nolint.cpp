@@ -1,5 +1,5 @@
 // REQUIRES: static-analyzer
-// RUN: %check_clang_tidy %s google-explicit-constructor,clang-diagnostic-unused-variable,clang-analyzer-core.UndefinedBinaryOperatorResult,modernize-avoid-c-arrays,cppcoreguidelines-avoid-c-arrays %t -- -extra-arg=-Wunused-variable -- -I%S/Inputs/nolint
+// RUN: %check_clang_tidy %s google-explicit-constructor,clang-diagnostic-unused-variable,clang-analyzer-core.UndefinedBinaryOperatorResult,modernize-avoid-c-arrays,cppcoreguidelines-avoid-c-arrays,cppcoreguidelines-pro-type-member-init %t -- -extra-arg=-Wunused-variable -- -I%S/Inputs/nolint
 
 #include "trigger_warning.h"
 void I(int& Out) {
@@ -96,6 +96,23 @@ MACRO_NOARG // NOLINT
 #define MACRO_NOLINT class G { G(int i); }; // NOLINT
 MACRO_NOLINT
 
+// Check that we can suppress diagnostics about macro arguments (as opposed to
+// diagnostics about the macro contents itself).
+#define MACRO_SUPPRESS_DIAG_FOR_ARG_1(X)                \
+  class X {                                             \
+    X(int i); /* NOLINT(google-explicit-constructor) */ \
+  };
+
+MACRO_SUPPRESS_DIAG_FOR_ARG_1(G1)
+
+#define MACRO_SUPPRESS_DIAG_FOR_ARG_2(X)                          \
+  struct X { /* NOLINT(cppcoreguidelines-pro-type-member-init) */ \
+    int a = 0;                                                    \
+    int b;                                                        \
+  };
+
+MACRO_SUPPRESS_DIAG_FOR_ARG_2(G2)
+
 #define DOUBLE_MACRO MACRO(H) // NOLINT
 DOUBLE_MACRO
 
@@ -116,4 +133,4 @@ int array2[10];  // NOLINT(cppcoreguidelines-avoid-c-arrays)
 int array3[10];  // NOLINT(cppcoreguidelines-avoid-c-arrays,modernize-avoid-c-arrays)
 int array4[10];  // NOLINT(*-avoid-c-arrays)
 
-// CHECK-MESSAGES: Suppressed 34 warnings (34 NOLINT)
+// CHECK-MESSAGES: Suppressed 36 warnings (36 NOLINT)

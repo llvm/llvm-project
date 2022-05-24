@@ -210,6 +210,10 @@ Improvements to clang-tidy
 
 - Added support for external plugin checks with `-load`.
 
+- Fixed a regression introduced in clang-tidy 14.0.0, which prevented NOLINTs
+  from suppressing diagnostics associated with macro arguments. This fixes
+  `Issue 55134 <https://github.com/llvm/llvm-project/issues/55134>`_.
+
 New checks
 ^^^^^^^^^^
 
