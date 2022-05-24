@@ -106,6 +106,8 @@ OPENMP_DEPEND_KIND(depobj)
 OPENMP_DEPEND_KIND(source)
 OPENMP_DEPEND_KIND(sink)
 OPENMP_DEPEND_KIND(inoutset)
+OPENMP_DEPEND_KIND(outallmemory)
+OPENMP_DEPEND_KIND(inoutallmemory)
 
 // Modifiers for 'linear' clause.
 OPENMP_LINEAR_KIND(val)

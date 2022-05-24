@@ -1,10 +1,10 @@
 // RUN: %clang_cc1 -verify=expected,omp45 -fopenmp-version=45 -fopenmp -ferror-limit 100 -o - -std=c++11 %s -Wuninitialized
 // RUN: %clang_cc1 -verify=expected,omp50 -fopenmp-version=50 -fopenmp -ferror-limit 100 -o - -std=c++11 %s -Wuninitialized
-// RUN: %clang_cc1 -verify=expected,omp51 -fopenmp-version=51 -fopenmp -ferror-limit 100 -o - -std=c++11 %s -Wuninitialized
+// RUN: %clang_cc1 -verify=expected,omp51,omp51warn -fopenmp-version=51 -fopenmp -ferror-limit 100 -o - -std=c++11 %s -Wuninitialized
 
 // RUN: %clang_cc1 -verify=expected,omp45 -fopenmp-version=45 -fopenmp-simd -ferror-limit 100 -o - -std=c++11 %s -Wuninitialized
 // RUN: %clang_cc1 -verify=expected,omp50 -fopenmp-version=50 -fopenmp-simd -ferror-limit 100 -o - -std=c++11 %s -Wuninitialized
-// RUN: %clang_cc1 -verify=expected,omp51 -fopenmp-version=51 -fopenmp-simd -ferror-limit 100 -o - -std=c++11 %s -Wuninitialized
+// RUN: %clang_cc1 -verify=expected,omp51,omp51warn -fopenmp-version=51 -fopenmp-simd -ferror-limit 100 -o - -std=c++11 %s -Wuninitialized
 
 typedef void *omp_depend_t;
 
@@ -85,6 +85,10 @@ int main(int argc, char **argv, char *env[]) {
   argc = 0;
 #pragma omp task depend(iterator(i = 0:10, i = 0:10), in : argv[i]) // omp45-error {{expected 'in', 'out', 'inout' or 'mutexinoutset' in OpenMP clause 'depend'}} omp45-error {{use of undeclared identifier 'i'}} omp50-error {{redefinition of 'i'}} omp50-note {{previous definition is here}}  omp51-error {{redefinition of 'i'}} omp51-note {{previous definition is here}}
   i = 0; // expected-error {{use of undeclared identifier 'i'}}
-
+#pragma omp task depend(in: argc, omp_all_memory) // omp45-error {{use of undeclared identifier 'omp_all_memory'}} omp50-error {{use of undeclared identifier 'omp_all_memory'}} omp51-error {{reserved locator 'omp_all_memory' requires 'out' or 'inout' dependency types}}
+#pragma omp task depend(out: omp_all_memory, argc, omp_all_memory) // omp45-error {{use of undeclared identifier 'omp_all_memory'}} omp45-error {{use of undeclared identifier 'omp_all_memory'}} omp50-error {{use of undeclared identifier 'omp_all_memory'}} omp50-error {{use of undeclared identifier 'omp_all_memory'}} omp51warn-warning {{reserved locator 'omp_all_memory' cannot be specified more than once}}
+  // expected-error@+1 {{use of undeclared identifier 'omp_all_memory'}}
+#pragma omp task depend(out: argc) private(argc) allocate(argc, omp_all_memory)
+  argc = 0;
   return 0;
 }
