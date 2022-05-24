@@ -23,8 +23,8 @@ namespace scudo {
 // support for memory tagging if the operating system enables TBI.
 // HWASan uses the top byte for its own purpose and Scudo should not touch it.
 #if (__clang_major__ >= 12 && defined(__aarch64__) && !defined(__ILP32__) &&   \
-     SCUDO_LINUX &&                                                            \
-     !defined(SCUDO_DISABLE_TBI) !__has_feature(hwaddress_sanitizer)) ||       \
+     SCUDO_LINUX && !defined(SCUDO_DISABLE_TBI) &&                             \
+     !__has_feature(hwaddress_sanitizer)) ||                                   \
     defined(SCUDO_FUZZ)
 
 inline constexpr bool archSupportsMemoryTagging() { return true; }
