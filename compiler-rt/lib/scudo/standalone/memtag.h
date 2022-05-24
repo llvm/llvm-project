@@ -18,19 +18,16 @@
 
 namespace scudo {
 
-#if (__clang_major__ >= 12 && defined(__aarch64__) && !defined(__ILP32__)) ||  \
-    defined(SCUDO_FUZZ)
-
 // We assume that Top-Byte Ignore is enabled if the architecture supports memory
 // tagging. Not all operating systems enable TBI, so we only claim architectural
 // support for memory tagging if the operating system enables TBI.
 // HWASan uses the top byte for its own purpose and Scudo should not touch it.
-#if SCUDO_LINUX && !defined(SCUDO_DISABLE_TBI) &&                              \
-    !__has_feature(hwaddress_sanitizer)
+#if (__clang_major__ >= 12 && defined(__aarch64__) && !defined(__ILP32__) &&   \
+     SCUDO_LINUX &&                                                            \
+     !defined(SCUDO_DISABLE_TBI) !__has_feature(hwaddress_sanitizer)) ||       \
+    defined(SCUDO_FUZZ)
+
 inline constexpr bool archSupportsMemoryTagging() { return true; }
-#else
-inline constexpr bool archSupportsMemoryTagging() { return false; }
-#endif
 
 inline constexpr uptr archMemoryTagGranuleSize() { return 16; }
 
