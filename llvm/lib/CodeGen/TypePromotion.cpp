@@ -102,7 +102,6 @@ static cl::opt<bool> DisablePromotion("disable-type-promotion", cl::Hidden,
 namespace {
 class IRPromoter {
   LLVMContext &Ctx;
-  IntegerType *OrigTy = nullptr;
   unsigned PromotedWidth = 0;
   SetVector<Value *> &Visited;
   SetVector<Value *> &Sources;
@@ -122,16 +121,13 @@ class IRPromoter {
   void Cleanup();
 
 public:
-  IRPromoter(LLVMContext &C, IntegerType *Ty, unsigned Width,
+  IRPromoter(LLVMContext &C, unsigned Width,
              SetVector<Value *> &visited, SetVector<Value *> &sources,
              SetVector<Instruction *> &sinks,
              SmallPtrSetImpl<Instruction *> &wrap)
-      : Ctx(C), OrigTy(Ty), PromotedWidth(Width), Visited(visited),
+      : Ctx(C), PromotedWidth(Width), Visited(visited),
         Sources(sources), Sinks(sinks), SafeWrap(wrap) {
     ExtTy = IntegerType::get(Ctx, PromotedWidth);
-    assert(OrigTy->getPrimitiveSizeInBits().getFixedSize() <
-               ExtTy->getPrimitiveSizeInBits().getFixedSize() &&
-           "Original type not smaller than extended type");
   }
 
   void Mutate();
@@ -244,7 +240,7 @@ bool TypePromotion::isSource(Value *V) {
 bool TypePromotion::isSink(Value *V) {
   // TODO The truncate also isn't actually necessary because we would already
   // proved that the data value is kept within the range of the original data
-  // type.
+  // type. We currently remove any truncs inserted for handling zext sinks.
 
   // Sinks are:
   // - points where the value in the register is being observed, such as an
@@ -591,11 +587,9 @@ void IRPromoter::Cleanup() {
       continue;
     }
 
-    // Unless they produce a value that is narrower than ExtTy, we can
-    // replace the result of the zext with the input of a newly inserted
-    // trunc.
-    if (NewInsts.count(Src) && isa<TruncInst>(Src) &&
-        Src->getType() == OrigTy) {
+    // We've inserted a trunc for a zext sink, but we already know that the
+    // input is in range, negating the need for the trunc.
+    if (NewInsts.count(Src) && isa<TruncInst>(Src)) {
       auto *Trunc = cast<TruncInst>(Src);
       assert(Trunc->getOperand(0)->getType() == ExtTy &&
              "expected inserted trunc to be operating on i32");
@@ -636,9 +630,8 @@ void IRPromoter::ConvertTruncs() {
 }
 
 void IRPromoter::Mutate() {
-  LLVM_DEBUG(dbgs() << "IR Promotion: Promoting use-def chains from "
-                    << OrigTy->getBitWidth() << " to " << PromotedWidth
-                    << "-bits\n");
+  LLVM_DEBUG(dbgs() << "IR Promotion: Promoting use-def chains to "
+                    << PromotedWidth << "-bits\n");
 
   // Cache original types of the values that will likely need truncating
   for (auto *I : Sinks) {
@@ -878,8 +871,8 @@ bool TypePromotion::TryToPromote(Value *V, unsigned PromotedWidth) {
   if (ToPromote < 2 || (Blocks.size() == 1 && (NonFreeArgs > SafeWrap.size())))
     return false;
 
-  IRPromoter Promoter(*Ctx, cast<IntegerType>(OrigTy), PromotedWidth,
-                      CurrentVisited, Sources, Sinks, SafeWrap);
+  IRPromoter Promoter(*Ctx, PromotedWidth, CurrentVisited, Sources, Sinks,
+                      SafeWrap);
   Promoter.Mutate();
   return true;
 }

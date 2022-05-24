@@ -996,8 +996,8 @@ entry:
   ret i1 %tobool
 }
 
-define i32 @dont_replace_trunc_2(i16* %a, i8* %b) {
-; CHECK-LABEL: @dont_replace_trunc_2(
+define i32 @dont_return_inserted_trunc(i16* %a, i8* %b) {
+; CHECK-LABEL: @dont_return_inserted_trunc(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i16, i16* [[A:%.*]], align 2
 ; CHECK-NEXT:    [[TMP1:%.*]] = zext i16 [[TMP0]] to i32
@@ -1010,8 +1010,7 @@ define i32 @dont_replace_trunc_2(i16* %a, i8* %b) {
 ; CHECK-NEXT:    [[TMP5:%.*]] = trunc i32 [[OR]] to i8
 ; CHECK-NEXT:    store i8 [[TMP5]], i8* [[B]], align 1
 ; CHECK-NEXT:    [[TMP6:%.*]] = trunc i32 [[OR]] to i8
-; CHECK-NEXT:    [[CONV5:%.*]] = zext i8 [[TMP6]] to i32
-; CHECK-NEXT:    ret i32 [[CONV5]]
+; CHECK-NEXT:    ret i32 [[OR]]
 ;
 entry:
   %0 = load i16, i16* %a, align 2
@@ -1037,10 +1036,9 @@ define i32 @replace_trunk_with_mask(i16* %a) {
 ; CHECK-NEXT:    [[TMP3:%.*]] = and i32 [[TMP2]], 255
 ; CHECK-NEXT:    [[TMP4:%.*]] = udiv i32 [[TMP3]], 3
 ; CHECK-NEXT:    [[TMP5:%.*]] = trunc i32 [[TMP4]] to i8
-; CHECK-NEXT:    [[PHITMP:%.*]] = zext i8 [[TMP5]] to i32
 ; CHECK-NEXT:    br label [[COND_END]]
 ; CHECK:       cond.end:
-; CHECK-NEXT:    [[COND:%.*]] = phi i32 [ [[PHITMP]], [[COND_FALSE]] ], [ 0, [[ENTRY:%.*]] ]
+; CHECK-NEXT:    [[COND:%.*]] = phi i32 [ [[TMP4]], [[COND_FALSE]] ], [ 0, [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    ret i32 [[COND]]
 ;
 entry:
