@@ -54,39 +54,69 @@ p.add_option('--libstdcxx-dso-path', metavar='PATH',
              help='path to libstdc++ DSO directory',
              default='/usr/lib/x86_64-linux-gnu')
 
+p.add_option('--only-explicit-files', action='store_true',
+             dest='only_explicit_files', default=False,
+             help='Only process --lib-file, not the default libc libraries.')
+p.add_option('--lib-file', action='append', metavar='PATH',
+             help='Specific library files to add.',
+             default=[])
+
+p.add_option('--error-missing-lib', action='store_true',
+             help='Make this script exit with an error code if any library is missing.',
+             dest='error_missing_lib', default=False)
+
 (options, args) = p.parse_args()
 
-libs = [os.path.join(options.libc_dso_path, name) for name in
-        ['ld-linux-x86-64.so.2',
-         'libanl.so.1',
-         'libBrokenLocale.so.1',
-         'libcidn.so.1',
-         'libcrypt.so.1',
-         'libc.so.6',
-         'libdl.so.2',
-         'libm.so.6',
-         'libnsl.so.1',
-         'libpthread.so.0',
-         'libresolv.so.2',
-         'librt.so.1',
-         'libthread_db.so.1',
-         'libutil.so.1']]
-libs += [os.path.join(options.libc_archive_path, name) for name in
-         ['libc_nonshared.a',
-          'libpthread_nonshared.a']]
+def build_libs_list():
+    libs = [os.path.join(options.libc_dso_path, name) for name in
+            ['ld-linux-x86-64.so.2',
+             'libanl.so.1',
+             'libBrokenLocale.so.1',
+             'libcidn.so.1',
+             'libcrypt.so.1',
+             'libc.so.6',
+             'libdl.so.2',
+             'libm.so.6',
+             'libnsl.so.1',
+             'libpthread.so.0',
+             'libresolv.so.2',
+             'librt.so.1',
+             'libthread_db.so.1',
+             'libutil.so.1']]
+    libs += [os.path.join(options.libc_archive_path, name) for name in
+             ['libc_nonshared.a',
+              'libpthread_nonshared.a']]
 
-libs.append(os.path.join(options.libgcc_dso_path, 'libgcc_s.so.1'))
-libs.append(os.path.join(options.libgcc_archive_path, 'libgcc.a'))
+    libs.append(os.path.join(options.libgcc_dso_path, 'libgcc_s.so.1'))
+    libs.append(os.path.join(options.libgcc_archive_path, 'libgcc.a'))
 
-if options.with_libstdcxx:
-  libs.append(os.path.join(options.libstdcxx_dso_path, 'libstdc++.so.6'))
+    if options.with_libstdcxx:
+      libs.append(os.path.join(options.libstdcxx_dso_path, 'libstdc++.so.6'))
 
+    return libs
+
+libs = []
+if options.only_explicit_files:
+    libs = options.lib_file
+    if not libs:
+        print >> sys.stderr, 'No libraries provided.'
+        exit(1)
+else:
+    libs = build_libs_list()
+    libs.extend(options.lib_file)
+
+missing_lib = False
 functions = []
 for l in libs:
   if os.path.exists(l):
     functions += defined_function_list(l)
   else:
+    missing_lib = True
     print >> sys.stderr, 'warning: library %s not found' % l
+
+if options.error_missing_lib and missing_lib:
+    print >> sys.stderr, 'Exiting with failure code due to missing library.'
+    exit(1)
 
 functions = list(set(functions))
 functions.sort()
