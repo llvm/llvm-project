@@ -85,6 +85,7 @@ set(files
   __algorithm/ranges_minmax.h
   __algorithm/ranges_minmax_element.h
   __algorithm/ranges_mismatch.h
+  __algorithm/ranges_reverse.h
   __algorithm/ranges_swap_ranges.h
   __algorithm/ranges_transform.h
   __algorithm/remove.h
