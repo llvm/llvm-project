@@ -81,6 +81,22 @@ static bool isVarThatIsPossiblyChanged(const Decl *Func, const Stmt *LoopStmt,
   return false;
 }
 
+bool isUnevaluated(const Decl *Func, const Stmt *LoopStmt, const Stmt *Cond,
+                   ASTContext *Context) {
+  if (const auto *Exp = dyn_cast<Expr>(Cond)) {
+    if (const auto *ForLoop = dyn_cast<ForStmt>(LoopStmt)) {
+      return (ForLoop->getInc() && ExprMutationAnalyzer::isUnevaluated(
+                                       Exp, *ForLoop->getInc(), *Context)) ||
+             (ForLoop->getBody() && ExprMutationAnalyzer::isUnevaluated(
+                                        Exp, *ForLoop->getBody(), *Context)) ||
+             (ForLoop->getCond() && ExprMutationAnalyzer::isUnevaluated(
+                                        Exp, *ForLoop->getCond(), *Context));
+    }
+    return ExprMutationAnalyzer::isUnevaluated(Exp, *LoopStmt, *Context);
+  }
+  return true;
+}
+
 /// Return whether at least one variable of `Cond` changed in `LoopStmt`.
 static bool isAtLeastOneCondVarChanged(const Decl *Func, const Stmt *LoopStmt,
                                        const Stmt *Cond, ASTContext *Context) {
@@ -176,6 +192,9 @@ void InfiniteLoopCheck::check(const MatchFinder::MatchResult &Result) {
       }
     }
   }
+
+  if (isUnevaluated(Func, LoopStmt, Cond, Result.Context))
+    return;
 
   if (isAtLeastOneCondVarChanged(Func, LoopStmt, Cond, Result.Context))
     return;
