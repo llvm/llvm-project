@@ -128,7 +128,7 @@
 ; PASSIVE-PIC-NEXT:        Locals:
 ; PASSIVE32-PIC-NEXT:          - Type:            I32
 ; PASSIVE64-PIC-NEXT:          - Type:            I64
-; PASSIVE-PIC-NEXT:              Count:           1
+; PASSIVE-PIC-NEXT:              Count:           2
 ; PASSIVE-PIC-NEXT:        Body:            {{.*}}
 ; PASSIVE-PIC-NEXT:      - Index:           3
 ; PASSIVE-PIC-NEXT:        Locals:          []
@@ -177,6 +177,19 @@
 ; DIS-NEXT:             br_table        {0, 1, 2}      # 1:     down to label1
 ; DIS-NEXT:                                            # 2:     down to label0
 ; DIS-NEXT:            end
+
+; NOPIC-DIS-NEXT:      [[PTR]].const   1024
+; NOPIC-DIS-NEXT:      [[PTR]].const   1024
+; NOPIC-DIS-NEXT:      global.set      1
+; PIC-DIS-NEXT:        [[PTR]].const   0
+; PIC-DIS-NEXT:        global.get      1
+; PIC-DIS-NEXT:        [[PTR]].add
+; PIC-DIS-NEXT:        local.tee       1
+; PIC-DIS-NEXT:        global.set      {{\d*}}
+; PIC-DIS-NEXT:        local.get       1
+; DIS-NEXT:            i32.const       0
+; DIS-NEXT:            i32.const       4
+; DIS-NEXT:            memory.init  0, 0
 
 ; NOPIC-DIS-NEXT:      [[PTR]].const   1028
 ; PIC-DIS-NEXT:        [[PTR]].const   4
