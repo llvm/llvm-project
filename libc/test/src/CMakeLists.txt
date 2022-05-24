@@ -96,6 +96,8 @@ set_target_properties(
   PROPERTIES
   INCLUDE_DIRECTORIES ""
 )
+target_link_libraries(libc-api-test llvmlibc)
+
 # Only include we need is the include for cpp::IsSame and our generated
 # public headers.
 target_include_directories(

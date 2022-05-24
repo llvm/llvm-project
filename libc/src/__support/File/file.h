@@ -223,6 +223,9 @@ public:
 // library.
 File *openfile(const char *path, const char *mode);
 
+extern File *stdout;
+extern File *stderr;
+
 } // namespace __llvm_libc
 
 #endif // LLVM_LIBC_SRC_SUPPORT_OSUTIL_FILE_H

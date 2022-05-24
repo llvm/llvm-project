@@ -114,6 +114,15 @@ void writeAPIFromIndex(APIIndexer &G,
 
     OS << ");\n\n";
   }
+
+  // Make another pass over entrypoints to emit object declarations.
+  for (const auto &Name : EntrypointNameList) {
+    if (G.ObjectSpecMap.find(Name) == G.ObjectSpecMap.end())
+      continue;
+    llvm::Record *ObjectSpec = G.ObjectSpecMap[Name];
+    auto Type = ObjectSpec->getValueAsString("Type");
+    OS << "extern " << Type << " " << Name << ";\n";
+  }
   OS << "__END_C_DECLS\n";
 }
 
