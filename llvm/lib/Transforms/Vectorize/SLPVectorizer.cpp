@@ -3858,7 +3858,7 @@ void BoUpSLP::reorderBottomToTop(bool IgnoreReorder) {
   while (!OrderedEntries.empty()) {
     // 1. Filter out only reordered nodes.
     // 2. If the entry has multiple uses - skip it and jump to the next node.
-    MapVector<TreeEntry *, SmallVector<std::pair<unsigned, TreeEntry *>>> Users;
+    DenseMap<TreeEntry *, SmallVector<std::pair<unsigned, TreeEntry *>>> Users;
     SmallVector<TreeEntry *> Filtered;
     for (TreeEntry *TE : OrderedEntries) {
       if (!(TE->State == TreeEntry::Vectorize ||
@@ -3886,7 +3886,13 @@ void BoUpSLP::reorderBottomToTop(bool IgnoreReorder) {
     // Erase filtered entries.
     for_each(Filtered,
              [&OrderedEntries](TreeEntry *TE) { OrderedEntries.remove(TE); });
-    for (auto &Data : Users) {
+    SmallVector<
+        std::pair<TreeEntry *, SmallVector<std::pair<unsigned, TreeEntry *>>>>
+        UsersVec(Users.begin(), Users.end());
+    sort(UsersVec, [](const auto &Data1, const auto &Data2) {
+      return Data1.first->Idx > Data2.first->Idx;
+    });
+    for (auto &Data : UsersVec) {
       // Check that operands are used only in the User node.
       SmallVector<TreeEntry *> GatherOps;
       if (!canReorderOperands(Data.first, Data.second, NonVectorized,
