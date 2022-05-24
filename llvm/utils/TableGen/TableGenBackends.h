@@ -67,7 +67,6 @@ void EmitAsmMatcher(RecordKeeper &RK, raw_ostream &OS);
 void EmitAsmWriter(RecordKeeper &RK, raw_ostream &OS);
 void EmitCallingConv(RecordKeeper &RK, raw_ostream &OS);
 void EmitCodeEmitter(RecordKeeper &RK, raw_ostream &OS);
-void EmitCodeBeads(RecordKeeper &RK, raw_ostream &OS);
 void EmitDAGISel(RecordKeeper &RK, raw_ostream &OS);
 void EmitDFAPacketizer(RecordKeeper &RK, raw_ostream &OS);
 void EmitDisassembler(RecordKeeper &RK, raw_ostream &OS);
