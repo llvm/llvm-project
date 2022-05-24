@@ -340,9 +340,9 @@ public:
   // Return the type string for a BUILTIN() macro in Builtins.def.
   std::string getBuiltinTypeStr() const;
 
-  static std::string getSuffixStr(
-      BasicType Type, int Log2LMUL,
-      const llvm::SmallVector<PrototypeDescriptor> &PrototypeDescriptors);
+  static std::string
+  getSuffixStr(BasicType Type, int Log2LMUL,
+               llvm::ArrayRef<PrototypeDescriptor> PrototypeDescriptors);
 };
 
 } // end namespace RISCV
