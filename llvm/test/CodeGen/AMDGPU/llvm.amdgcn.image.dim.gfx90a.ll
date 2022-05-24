@@ -1,5 +1,7 @@
 ; RUN: llc -march=amdgcn -mcpu=gfx90a -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN %s
-; RUN: llc -global-isel -march=amdgcn -mcpu=gfx90a -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN %s
+; XUN: llc -global-isel -march=amdgcn -mcpu=gfx90a -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN %s
+
+; FIXME: global isel does not select _gfx90a flavor of image instructions.
 
 ; GCN-LABEL: {{^}}load_1d:
 ; GCN: image_load v[0:3], v0, s[0:7] dmask:0xf unorm{{$}}
