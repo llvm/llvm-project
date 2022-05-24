@@ -601,6 +601,10 @@ Expected<const DWARFDebugLine::LineTable *> DWARFDebugLine::getOrParseLineTable(
   return LT;
 }
 
+void DWARFDebugLine::clearLineTable(uint64_t Offset) {
+  LineTableMap.erase(Offset);
+}
+
 static StringRef getOpcodeName(uint8_t Opcode, uint8_t OpcodeBase) {
   assert(Opcode != 0);
   if (Opcode < OpcodeBase)

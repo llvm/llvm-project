@@ -1003,6 +1003,22 @@ Expected<const DWARFDebugLine::LineTable *> DWARFContext::getLineTableForUnit(
                                    RecoverableErrorHandler);
 }
 
+void DWARFContext::clearLineTableForUnit(DWARFUnit *U) {
+  if (!Line)
+    return;
+
+  auto UnitDIE = U->getUnitDIE();
+  if (!UnitDIE)
+    return;
+
+  auto Offset = toSectionOffset(UnitDIE.find(DW_AT_stmt_list));
+  if (!Offset)
+    return;
+
+  uint64_t stmtOffset = *Offset + U->getLineTableOffset();
+  Line->clearLineTable(stmtOffset);
+}
+
 void DWARFContext::parseNormalUnits() {
   if (!NormalUnits.empty())
     return;
