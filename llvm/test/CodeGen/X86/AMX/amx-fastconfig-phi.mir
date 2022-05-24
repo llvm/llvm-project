@@ -1,0 +1,177 @@
+# RUN: llc -mtriple=x86_64-- -run-pass=fastpretileconfig -o - %s | FileCheck %s
+#
+# This case test tile phi is nested accessed, but the its def block is
+# not visited yet.
+#
+#                  BB.5
+#           %6 = phi(%3, b%10) <-----
+#            |               |      |
+#            |               |      |
+#          BB.6             BB.7    |
+#            \              /       |
+#              \          /         |
+#                \      /           |
+#                  BB.8 -------------
+#            %10 = phi(%8, %9)
+#
+# #define STRIDE 32
+# void foo(int cond, char *buf) {
+#   __tile1024i a = {16, 64};
+#   __tile1024i b = {16, 64};
+#   __tile1024i c = {16, 64};
+# 
+#   if (cond) {
+#     __tile_zero(&c);
+#   } else {
+#     __tile_loadd(&c, buf, STRIDE);
+#   }
+#   __tile_zero(&a);
+#   __tile_zero(&b);
+#   for(int i = 0; i < 10; i++) {
+#     __tile_dpbssd(&c, a, b);
+#     if (cond) {
+#       __tile_zero(&c);
+#     } else {
+#       __tile_loadd(&c, buf, STRIDE);
+#     }
+#   }
+#   __tile_stored(buf, STRIDE, c);
+# }
+---
+name:            foo
+alignment:       16
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: gr8 }
+  - { id: 1, class: tile }
+  - { id: 2, class: tile }
+  - { id: 3, class: tile }
+  - { id: 4, class: tile }
+  - { id: 5, class: tile }
+  - { id: 6, class: gr32 }
+  - { id: 7, class: tile }
+  - { id: 8, class: tile }
+  - { id: 9, class: tile }
+  - { id: 10, class: tile }
+  - { id: 11, class: gr32 }
+  - { id: 12, class: gr32 }
+  - { id: 13, class: gr32 }
+  - { id: 14, class: gr64 }
+  - { id: 15, class: gr64 }
+  - { id: 16, class: gr8 }
+  - { id: 17, class: gr16 }
+  - { id: 18, class: gr16 }
+  - { id: 19, class: gr64_nosp }
+  - { id: 20, class: gr16 }
+  - { id: 21, class: gr16 }
+  - { id: 22, class: gr32 }
+  - { id: 23, class: gr16 }
+  - { id: 24, class: gr16 }
+  - { id: 25, class: gr16 }
+  - { id: 26, class: gr16 }
+  - { id: 27, class: gr16 }
+  - { id: 28, class: gr16 }
+  - { id: 29, class: tile }
+  - { id: 30, class: gr16 }
+  - { id: 31, class: gr16 }
+  - { id: 32, class: gr64_nosp }
+  - { id: 33, class: gr16 }
+  - { id: 34, class: gr16 }
+  - { id: 35, class: gr32 }
+  - { id: 36, class: gr64_nosp }
+  - { id: 37, class: gr16 }
+  - { id: 38, class: gr16 }
+liveins:
+  - { reg: '$edi', virtual-reg: '%12' }
+  - { reg: '$rsi', virtual-reg: '%14' }
+frameInfo:
+  maxAlignment:    1
+machineFunctionInfo: {}
+body:             |
+  bb.0.entry:
+    liveins: $edi, $rsi
+  
+    %14:gr64 = COPY $rsi
+    %12:gr32 = COPY $edi
+    %13:gr32 = COPY killed %12
+    %15:gr64 = COPY killed %14
+    CMP32ri8 %13, 0, implicit-def $eflags
+    %16:gr8 = SETCCr 4, implicit $eflags
+    TEST8ri %16, 1, implicit-def $eflags
+    JCC_1 %bb.2, 5, implicit $eflags
+  
+  bb.1:
+    %17:gr16 = MOV16ri 64
+    %18:gr16 = MOV16ri 16
+    %1:tile = PTILEZEROV killed %18, killed %17
+    JMP_1 %bb.3
+  
+  bb.2:
+    %19:gr64_nosp = MOV32ri64 32
+    %20:gr16 = MOV16ri 64
+    %21:gr16 = MOV16ri 16
+    %2:tile = PTILELOADDV killed %21, killed %20, %15, 1, killed %19, 0, $noreg
+  
+  bb.3:
+    ; CHECK: 	  %43:gr16 = PHI %17, %bb.1, %20, %bb.2
+    ; CHECK-NEXT: %42:gr16 = PHI %18, %bb.1, %21, %bb.2
+    ; CHECK-NEXT: %41:gr64_nosp = PHI %44, %bb.1, %45, %bb.2
+    ; CHECK-NEXT: LDTILECFG
+
+    %3:tile = PHI %1, %bb.1, %2, %bb.2
+    %25:gr16 = MOV16ri 64
+    %26:gr16 = MOV16ri 16
+    %4:tile = PTILEZEROV killed %26, killed %25
+    %23:gr16 = MOV16ri 64
+    %24:gr16 = MOV16ri 16
+    %5:tile = PTILEZEROV killed %24, killed %23
+    %22:gr32 = MOV32r0 implicit-def $eflags
+    JMP_1 %bb.5
+  
+  bb.4:
+    %36:gr64_nosp = MOV32ri64 32
+    %37:gr16 = MOV16ri 64
+    %38:gr16 = MOV16ri 16
+    PTILESTOREDV killed %38, killed %37, %15, 1, killed %36, 0, $noreg, %10
+    RET64
+  
+  bb.5:
+    ; CHECK: 	  %6:gr32 = PHI %22, %bb.3, %35, %bb.8
+    ; CHECK-NEXT: %56:gr16 = PHI %43, %bb.3, %60, %bb.8
+    ; CHECK-NEXT: %55:gr16 = PHI %42, %bb.3, %59, %bb.8
+    ; CHECK-NEXT: %54:gr64_nosp = PHI %57, %bb.3, %58, %bb.8
+    ; CHECK-NEXT: LDTILECFG
+
+    %6:gr32 = PHI %22, %bb.3, %35, %bb.8
+    %7:tile = PHI %3, %bb.3, %10, %bb.8
+    %27:gr16 = MOV16ri 64
+    %28:gr16 = MOV16ri 16
+    %29:tile = PTDPBSSDV killed %28, %27, %27, %7, %4, %5
+    TEST8ri %16, 1, implicit-def $eflags
+    JCC_1 %bb.7, 5, implicit $eflags
+  
+  bb.6:
+    %30:gr16 = MOV16ri 64
+    %31:gr16 = MOV16ri 16
+    %8:tile = PTILEZEROV killed %31, killed %30
+    JMP_1 %bb.8
+  
+  bb.7:
+    %32:gr64_nosp = MOV32ri64 32
+    %33:gr16 = MOV16ri 64
+    %34:gr16 = MOV16ri 16
+    %9:tile = PTILELOADDV killed %34, killed %33, %15, 1, killed %32, 0, $noreg
+  
+  bb.8:
+    ; CHECK: 	  %60:gr16 = PHI %30, %bb.6, %33, %bb.7
+    ; CHECK-NEXT: %59:gr16 = PHI %31, %bb.6, %34, %bb.7
+    ; CHECK-NEXT: %58:gr64_nosp = PHI %61, %bb.6, %62, %bb.7
+    ; CHECK-NEXT: LDTILECFG
+
+    %10:tile = PHI %8, %bb.6, %9, %bb.7
+    %35:gr32 = ADD32ri8 %6, 1, implicit-def $eflags
+    CMP32ri8 %35, 10, implicit-def $eflags
+    JCC_1 %bb.4, 4, implicit $eflags
+    JMP_1 %bb.5
+
+...

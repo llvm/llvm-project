@@ -738,11 +738,28 @@ bool llvm::UnrollRuntimeLoopRemainder(
   // Compute the number of extra iterations required, which is:
   //  extra iterations = run-time trip count % loop unroll factor
   PreHeaderBR = cast<BranchInst>(PreHeader->getTerminator());
+  IRBuilder<> B(PreHeaderBR);
   Value *TripCount = Expander.expandCodeFor(TripCountSC, TripCountSC->getType(),
                                             PreHeaderBR);
-  Value *BECount = Expander.expandCodeFor(BECountSC, BECountSC->getType(),
-                                          PreHeaderBR);
-  IRBuilder<> B(PreHeaderBR);
+  Value *BECount;
+  // If there are other exits before the latch, that may cause the latch exit
+  // branch to never be executed, and the latch exit count may be poison.
+  // In this case, freeze the TripCount and base BECount on the frozen
+  // TripCount. We will introduce two branches using these values, and it's
+  // important that they see a consistent value (which would not be guaranteed
+  // if were frozen independently.)
+  if ((!OtherExits.empty() || !SE->loopHasNoAbnormalExits(L)) &&
+      !isGuaranteedNotToBeUndefOrPoison(TripCount, AC, PreHeaderBR, DT)) {
+    TripCount = B.CreateFreeze(TripCount);
+    BECount =
+        B.CreateAdd(TripCount, ConstantInt::get(TripCount->getType(), -1));
+  } else {
+    // If we don't need to freeze, use SCEVExpander for BECount as well, to
+    // allow slightly better value reuse.
+    BECount =
+        Expander.expandCodeFor(BECountSC, BECountSC->getType(), PreHeaderBR);
+  }
+
   Value * const ModVal = CreateTripRemainder(B, BECount, TripCount, Count);
 
   Value *BranchVal =
@@ -752,11 +769,6 @@ bool llvm::UnrollRuntimeLoopRemainder(
                            B.CreateIsNotNull(ModVal, "lcmp.mod");
   BasicBlock *RemainderLoop = UseEpilogRemainder ? NewExit : PrologPreHeader;
   BasicBlock *UnrollingLoop = UseEpilogRemainder ? NewPreHeader : PrologExit;
-  // Freeze the condition if there are other exits before the latch that may
-  // cause the latch exit branch to never be executed.
-  if ((!OtherExits.empty() || !SE->loopHasNoAbnormalExits(L)) &&
-      !isGuaranteedNotToBeUndefOrPoison(BranchVal, AC, PreHeaderBR, DT))
-    BranchVal = B.CreateFreeze(BranchVal);
   // Branch to either remainder (extra iterations) loop or unrolling loop.
   B.CreateCondBr(BranchVal, RemainderLoop, UnrollingLoop);
   PreHeaderBR->eraseFromParent();

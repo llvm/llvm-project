@@ -101,7 +101,7 @@ enum {
 // THREADLOCAL variables they are not usable early on during process init when
 // `__sanitizer::Mutex` is used.
 #define SANITIZER_CHECK_DEADLOCKS \
-  (SANITIZER_DEBUG && !SANITIZER_GO && SANITIZER_SUPPORTS_THREADLOCAL && !SANITIZER_MAC)
+  (SANITIZER_DEBUG && !SANITIZER_GO && SANITIZER_SUPPORTS_THREADLOCAL && !SANITIZER_APPLE)
 
 #if SANITIZER_CHECK_DEADLOCKS
 struct MutexMeta {

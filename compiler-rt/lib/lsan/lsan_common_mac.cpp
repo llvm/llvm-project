@@ -15,7 +15,7 @@
 #include "sanitizer_common/sanitizer_libc.h"
 #include "lsan_common.h"
 
-#if CAN_SANITIZE_LEAKS && SANITIZER_MAC
+#if CAN_SANITIZE_LEAKS && SANITIZER_APPLE
 
 #include "sanitizer_common/sanitizer_allocator_internal.h"
 #include "lsan_allocator.h"
@@ -201,4 +201,4 @@ void LockStuffAndStopTheWorld(StopTheWorldCallback callback,
 
 } // namespace __lsan
 
-#endif // CAN_SANITIZE_LEAKS && SANITIZER_MAC
+#endif // CAN_SANITIZE_LEAKS && SANITIZER_APPLE

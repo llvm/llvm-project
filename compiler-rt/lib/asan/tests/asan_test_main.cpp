@@ -14,7 +14,7 @@
 
 // Default ASAN_OPTIONS for the unit tests.
 extern "C" const char* __asan_default_options() {
-#if SANITIZER_MAC
+#if SANITIZER_APPLE
   // On Darwin, we default to `abort_on_error=1`, which would make tests run
   // much slower. Let's override this and run lit tests with 'abort_on_error=0'
   // and make sure we do not overwhelm the syslog while testing. Also, let's
@@ -35,7 +35,7 @@ extern "C" const char* __asan_default_options() {
 
 namespace __sanitizer {
 bool ReexecDisabled() {
-#if __has_feature(address_sanitizer) && SANITIZER_MAC
+#if __has_feature(address_sanitizer) && SANITIZER_APPLE
   // Allow re-exec in instrumented unit tests on Darwin.  Technically, we only
   // need this for 10.10 and below, where re-exec is required for the
   // interceptors to work, but to avoid duplicating the version detection logic,

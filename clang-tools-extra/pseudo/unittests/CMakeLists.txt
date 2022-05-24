@@ -1,9 +1,11 @@
 set(LLVM_LINK_COMPONENTS
   Support
+  TestingSupport
   )
 
 add_custom_target(ClangPseudoUnitTests)
 add_unittest(ClangPseudoUnitTests ClangPseudoTests
+  BracketTest.cpp
   DirectiveTreeTest.cpp
   ForestTest.cpp
   GLRTest.cpp

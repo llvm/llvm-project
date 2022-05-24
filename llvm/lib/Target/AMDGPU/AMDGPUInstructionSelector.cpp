@@ -1444,23 +1444,7 @@ bool AMDGPUInstructionSelector::selectDSGWSIntrinsic(MachineInstr &MI,
 
   if (HasVSrc) {
     Register VSrc = MI.getOperand(1).getReg();
-
-    if (STI.needsAlignedVGPRs()) {
-      // Add implicit aligned super-reg to force alignment on the data operand.
-      Register Undef = MRI->createVirtualRegister(&AMDGPU::VGPR_32RegClass);
-      BuildMI(*MBB, &*MIB, DL, TII.get(AMDGPU::IMPLICIT_DEF), Undef);
-      Register NewVR =
-          MRI->createVirtualRegister(&AMDGPU::VReg_64_Align2RegClass);
-      BuildMI(*MBB, &*MIB, DL, TII.get(AMDGPU::REG_SEQUENCE), NewVR)
-          .addReg(VSrc, 0, MI.getOperand(1).getSubReg())
-          .addImm(AMDGPU::sub0)
-          .addReg(Undef)
-          .addImm(AMDGPU::sub1);
-      MIB.addReg(NewVR, 0, AMDGPU::sub0);
-      MIB.addReg(NewVR, RegState::Implicit);
-    } else {
-      MIB.addReg(VSrc);
-    }
+    MIB.addReg(VSrc);
 
     if (!RBI.constrainGenericRegister(VSrc, AMDGPU::VGPR_32RegClass, *MRI))
       return false;
@@ -1468,6 +1452,8 @@ bool AMDGPUInstructionSelector::selectDSGWSIntrinsic(MachineInstr &MI,
 
   MIB.addImm(ImmOffset)
      .cloneMemRefs(MI);
+
+  TII.enforceOperandRCAlignment(*MIB, AMDGPU::OpName::data0);
 
   MI.eraseFromParent();
   return true;
@@ -1769,7 +1755,9 @@ bool AMDGPUInstructionSelector::selectImageIntrinsic(
   }
 
   MI.eraseFromParent();
-  return constrainSelectedInstRegOperands(*MIB, TII, TRI, RBI);
+  constrainSelectedInstRegOperands(*MIB, TII, TRI, RBI);
+  TII.enforceOperandRCAlignment(*MIB, AMDGPU::OpName::vaddr);
+  return true;
 }
 
 // We need to handle this here because tablegen doesn't support matching
