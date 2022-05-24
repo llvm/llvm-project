@@ -172,7 +172,7 @@ writing, the following sync-ups are organized:
      - Monthly, every 3rd Tuesday
      - `ics <https://calendar.google.com/calendar/ical/eoh3m9k1l6vqbd1fkp94fv5q74%40group.calendar.google.com/public/basic.ics>`__
        `gcal <https://calendar.google.com/calendar/embed?src=eoh3m9k1l6vqbd1fkp94fv5q74%40group.calendar.google.com>`__
-     - `Minutes/docs <https://docs.google.com/document/d/1GLCE8cl7goCaLSiM9j1eIq5IqeXt6_YTY2UEcC4jmsg/edit?usp=sharing>`__
+     - `Minutes/docs <https://discourse.llvm.org/t/llvm-security-group-public-sync-ups/62735>`__
    * - `CIRCT <https://github.com/llvm/circt>`__
      - Weekly, on Wednesday
      -
