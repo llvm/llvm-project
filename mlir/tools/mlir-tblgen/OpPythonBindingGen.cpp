@@ -894,7 +894,7 @@ static void emitDefaultOpBuilder(const Operator &op, raw_ostream &os) {
     Argument a = op.getArg(builderArgIndex - numResultArgs);
     if (auto *nattr = a.dyn_cast<NamedAttribute *>())
       return (nattr->attr.isOptional() || nattr->attr.hasDefaultValue());
-    else if (auto *ntype = a.dyn_cast<NamedTypeConstraint *>())
+    if (auto *ntype = a.dyn_cast<NamedTypeConstraint *>())
       return ntype->isOptional();
     else
       return false;
