@@ -1076,6 +1076,11 @@ Constant<T> PackageConstant(std::vector<Scalar<T>> &&elements,
 std::optional<Expr<SomeType>> DataConstantConversionExtension(
     FoldingContext &, const DynamicType &, const Expr<SomeType> &);
 
+// Convert Hollerith or short character to a another type as if the
+// Hollerith data had been BOZ.
+std::optional<Expr<SomeType>> HollerithToBOZ(
+    FoldingContext &, const Expr<SomeType> &, const DynamicType &);
+
 } // namespace Fortran::evaluate
 
 namespace Fortran::semantics {
