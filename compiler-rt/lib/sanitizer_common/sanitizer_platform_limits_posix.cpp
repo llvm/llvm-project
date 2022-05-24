@@ -23,7 +23,7 @@
 // Must go after undef _FILE_OFFSET_BITS.
 #include "sanitizer_platform.h"
 
-#if SANITIZER_LINUX || SANITIZER_MAC
+#if SANITIZER_LINUX || SANITIZER_APPLE
 // Must go after undef _FILE_OFFSET_BITS.
 #include "sanitizer_glibc_version.h"
 
@@ -51,7 +51,7 @@
 #include <time.h>
 #include <wchar.h>
 #include <regex.h>
-#if !SANITIZER_MAC
+#if !SANITIZER_APPLE
 #include <utmp.h>
 #endif
 
@@ -163,7 +163,7 @@ typedef struct user_fpregs elf_fpregset_t;
 #include <fstab.h>
 #endif // SANITIZER_LINUX
 
-#if SANITIZER_MAC
+#if SANITIZER_APPLE
 #include <net/ethernet.h>
 #include <sys/filio.h>
 #include <sys/sockio.h>
@@ -177,9 +177,9 @@ typedef struct user_fpregs elf_fpregset_t;
 namespace __sanitizer {
   unsigned struct_utsname_sz = sizeof(struct utsname);
   unsigned struct_stat_sz = sizeof(struct stat);
-#if !SANITIZER_IOS && !(SANITIZER_MAC && TARGET_CPU_ARM64)
+#if !SANITIZER_IOS && !(SANITIZER_APPLE && TARGET_CPU_ARM64)
   unsigned struct_stat64_sz = sizeof(struct stat64);
-#endif // !SANITIZER_IOS && !(SANITIZER_MAC && TARGET_CPU_ARM64)
+#endif // !SANITIZER_IOS && !(SANITIZER_APPLE && TARGET_CPU_ARM64)
   unsigned struct_rusage_sz = sizeof(struct rusage);
   unsigned struct_tm_sz = sizeof(struct tm);
   unsigned struct_passwd_sz = sizeof(struct passwd);
@@ -204,14 +204,14 @@ namespace __sanitizer {
   unsigned struct_regex_sz = sizeof(regex_t);
   unsigned struct_regmatch_sz = sizeof(regmatch_t);
 
-#if (SANITIZER_MAC && !TARGET_CPU_ARM64) && !SANITIZER_IOS
+#if (SANITIZER_APPLE && !TARGET_CPU_ARM64) && !SANITIZER_IOS
   unsigned struct_statfs64_sz = sizeof(struct statfs64);
-#endif // (SANITIZER_MAC && !TARGET_CPU_ARM64) && !SANITIZER_IOS
+#endif // (SANITIZER_APPLE && !TARGET_CPU_ARM64) && !SANITIZER_IOS
 
-#if SANITIZER_GLIBC || SANITIZER_FREEBSD || SANITIZER_NETBSD || SANITIZER_MAC
+#if SANITIZER_GLIBC || SANITIZER_FREEBSD || SANITIZER_NETBSD || SANITIZER_APPLE
   unsigned struct_fstab_sz = sizeof(struct fstab);
 #endif  // SANITIZER_GLIBC || SANITIZER_FREEBSD || SANITIZER_NETBSD ||
-        // SANITIZER_MAC
+        // SANITIZER_APPLE
 #if !SANITIZER_ANDROID
   unsigned struct_statfs_sz = sizeof(struct statfs);
   unsigned struct_sockaddr_sz = sizeof(struct sockaddr);
@@ -300,7 +300,7 @@ namespace __sanitizer {
   int shmctl_shm_stat = (int)SHM_STAT;
 #endif
 
-#if !SANITIZER_MAC && !SANITIZER_FREEBSD
+#if !SANITIZER_APPLE && !SANITIZER_FREEBSD
   unsigned struct_utmp_sz = sizeof(struct utmp);
 #endif
 #if !SANITIZER_ANDROID
@@ -508,7 +508,7 @@ unsigned struct_ElfW_Phdr_sz = sizeof(Elf_Phdr);
   unsigned struct_ppp_stats_sz = sizeof(struct ppp_stats);
 #endif  // SANITIZER_GLIBC
 
-#if !SANITIZER_ANDROID && !SANITIZER_MAC
+#if !SANITIZER_ANDROID && !SANITIZER_APPLE
   unsigned struct_sioc_sg_req_sz = sizeof(struct sioc_sg_req);
   unsigned struct_sioc_vif_req_sz = sizeof(struct sioc_vif_req);
 #endif
@@ -1067,7 +1067,7 @@ CHECK_SIZE_AND_OFFSET(mmsghdr, msg_len);
 
 COMPILER_CHECK(sizeof(__sanitizer_dirent) <= sizeof(dirent));
 CHECK_SIZE_AND_OFFSET(dirent, d_ino);
-#if SANITIZER_MAC
+#if SANITIZER_APPLE
 CHECK_SIZE_AND_OFFSET(dirent, d_seekoff);
 #elif SANITIZER_FREEBSD
 // There is no 'd_off' field on FreeBSD.
@@ -1249,7 +1249,7 @@ CHECK_SIZE_AND_OFFSET(passwd, pw_shell);
 CHECK_SIZE_AND_OFFSET(passwd, pw_gecos);
 #endif
 
-#if SANITIZER_MAC
+#if SANITIZER_APPLE
 CHECK_SIZE_AND_OFFSET(passwd, pw_change);
 CHECK_SIZE_AND_OFFSET(passwd, pw_expire);
 CHECK_SIZE_AND_OFFSET(passwd, pw_class);
@@ -1317,4 +1317,4 @@ CHECK_TYPE_SIZE(sem_t);
 COMPILER_CHECK(ARM_VFPREGS_SIZE == ARM_VFPREGS_SIZE_ASAN);
 #endif
 
-#endif // SANITIZER_LINUX || SANITIZER_FREEBSD || SANITIZER_MAC
+#endif // SANITIZER_LINUX || SANITIZER_FREEBSD || SANITIZER_APPLE

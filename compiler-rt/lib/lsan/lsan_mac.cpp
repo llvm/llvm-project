@@ -12,7 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "sanitizer_common/sanitizer_platform.h"
-#if SANITIZER_MAC
+#if SANITIZER_APPLE
 
 #include "interception/interception.h"
 #include "lsan.h"
@@ -188,4 +188,4 @@ INTERCEPTOR(void, dispatch_source_set_event_handler, dispatch_source_t ds,
 }
 #endif
 
-#endif  // SANITIZER_MAC
+#endif  // SANITIZER_APPLE

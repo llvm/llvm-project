@@ -12,7 +12,7 @@
 
 #include "sanitizer_platform.h"
 
-#if SANITIZER_MAC && (defined(__x86_64__) || defined(__aarch64__) || \
+#if SANITIZER_APPLE && (defined(__x86_64__) || defined(__aarch64__) || \
                       defined(__i386))
 
 #include <mach/mach.h>
@@ -176,5 +176,5 @@ PtraceRegistersStatus SuspendedThreadsListMac::GetRegistersAndSP(
 
 } // namespace __sanitizer
 
-#endif  // SANITIZER_MAC && (defined(__x86_64__) || defined(__aarch64__)) ||
+#endif  // SANITIZER_APPLE && (defined(__x86_64__) || defined(__aarch64__)) ||
         //                   defined(__i386))

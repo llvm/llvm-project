@@ -203,13 +203,13 @@ extern const short *_tolower_tab_;
 #endif
 
 // Platform-specific options.
-#if SANITIZER_MAC
+#if SANITIZER_APPLE
 #define PLATFORM_HAS_DIFFERENT_MEMCPY_AND_MEMMOVE 0
 #elif SANITIZER_WINDOWS64
 #define PLATFORM_HAS_DIFFERENT_MEMCPY_AND_MEMMOVE 0
 #else
 #define PLATFORM_HAS_DIFFERENT_MEMCPY_AND_MEMMOVE 1
-#endif  // SANITIZER_MAC
+#endif  // SANITIZER_APPLE
 
 #ifndef COMMON_INTERCEPTOR_INITIALIZE_RANGE
 #define COMMON_INTERCEPTOR_INITIALIZE_RANGE(p, size) {}
@@ -1334,7 +1334,7 @@ INTERCEPTOR_WITH_SUFFIX(int, fputs, char *s, void *file) {
   // libc file streams can call user-supplied functions, see fopencookie.
   void *ctx;
   COMMON_INTERCEPTOR_ENTER(ctx, fputs, s, file);
-  if (!SANITIZER_MAC || s) {  // `fputs(NULL, file)` is supported on Darwin.
+  if (!SANITIZER_APPLE || s) {  // `fputs(NULL, file)` is supported on Darwin.
     COMMON_INTERCEPTOR_READ_RANGE(ctx, s, internal_strlen(s) + 1);
   }
   return REAL(fputs)(s, file);
@@ -1349,7 +1349,7 @@ INTERCEPTOR(int, puts, char *s) {
   // libc file streams can call user-supplied functions, see fopencookie.
   void *ctx;
   COMMON_INTERCEPTOR_ENTER(ctx, puts, s);
-  if (!SANITIZER_MAC || s) {  // `puts(NULL)` is supported on Darwin.
+  if (!SANITIZER_APPLE || s) {  // `puts(NULL)` is supported on Darwin.
     COMMON_INTERCEPTOR_READ_RANGE(ctx, s, internal_strlen(s) + 1);
   }
   return REAL(puts)(s);
@@ -1952,7 +1952,7 @@ UNUSED static void unpoison_passwd(void *ctx, __sanitizer_passwd *pwd) {
       COMMON_INTERCEPTOR_WRITE_RANGE(ctx, pwd->pw_gecos,
                                      internal_strlen(pwd->pw_gecos) + 1);
 #endif
-#if SANITIZER_MAC || SANITIZER_FREEBSD || SANITIZER_NETBSD
+#if SANITIZER_APPLE || SANITIZER_FREEBSD || SANITIZER_NETBSD
     if (pwd->pw_class)
       COMMON_INTERCEPTOR_WRITE_RANGE(ctx, pwd->pw_class,
                                      internal_strlen(pwd->pw_class) + 1);
@@ -3941,7 +3941,7 @@ INTERCEPTOR(char *, strerror, int errnum) {
 //  * GNU version returns message pointer, which points to either buf or some
 //    static storage.
 #if ((_POSIX_C_SOURCE >= 200112L || _XOPEN_SOURCE >= 600) && !_GNU_SOURCE) || \
-    SANITIZER_MAC || SANITIZER_ANDROID || SANITIZER_NETBSD ||                 \
+    SANITIZER_APPLE || SANITIZER_ANDROID || SANITIZER_NETBSD ||                 \
     SANITIZER_FREEBSD
 // POSIX version. Spec is not clear on whether buf is NULL-terminated.
 // At least on OSX, buf contents are valid even when the call fails.
@@ -3974,7 +3974,7 @@ INTERCEPTOR(char *, strerror_r, int errnum, char *buf, SIZE_T buflen) {
   return res;
 }
 #endif //(_POSIX_C_SOURCE >= 200112L || _XOPEN_SOURCE >= 600) && !_GNU_SOURCE ||
-       //SANITIZER_MAC
+       //SANITIZER_APPLE
 #define INIT_STRERROR_R COMMON_INTERCEPT_FUNCTION(strerror_r);
 #else
 #define INIT_STRERROR_R

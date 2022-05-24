@@ -133,7 +133,7 @@ DECLARE_REAL(char*, strncpy, char *to, const char *from, uptr size)
 DECLARE_REAL(uptr, strnlen, const char *s, uptr maxlen)
 DECLARE_REAL(char*, strstr, const char *s1, const char *s2)
 
-#  if !SANITIZER_MAC
+#  if !SANITIZER_APPLE
 #    define ASAN_INTERCEPT_FUNC(name)                                        \
       do {                                                                   \
         if (!INTERCEPT_FUNCTION(name))                                       \
@@ -156,7 +156,7 @@ DECLARE_REAL(char*, strstr, const char *s1, const char *s2)
 #  else
 // OS X interceptors don't need to be initialized with INTERCEPT_FUNCTION.
 #    define ASAN_INTERCEPT_FUNC(name)
-#  endif  // SANITIZER_MAC
+#  endif  // SANITIZER_APPLE
 
 #endif  // !SANITIZER_FUCHSIA
 

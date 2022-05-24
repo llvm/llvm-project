@@ -155,7 +155,7 @@ bool SymbolizerProcess::StartSymbolizerSubprocess() {
   }
 
   if (use_posix_spawn_) {
-#if SANITIZER_MAC
+#if SANITIZER_APPLE
     fd_t fd = internal_spawn(argv, const_cast<const char **>(GetEnvP()), &pid);
     if (fd == kInvalidFd) {
       Report("WARNING: failed to spawn external symbolizer (errno: %d)\n",
@@ -165,9 +165,9 @@ bool SymbolizerProcess::StartSymbolizerSubprocess() {
 
     input_fd_ = fd;
     output_fd_ = fd;
-#else  // SANITIZER_MAC
+#else  // SANITIZER_APPLE
     UNIMPLEMENTED();
-#endif  // SANITIZER_MAC
+#endif  // SANITIZER_APPLE
   } else {
     fd_t infd[2] = {}, outfd[2] = {};
     if (!CreateTwoHighNumberedPipes(infd, outfd)) {
@@ -427,13 +427,13 @@ static SymbolizerTool *ChooseExternalSymbolizer(LowLevelAllocator *allocator) {
     VReport(2, "Using llvm-symbolizer at user-specified path: %s\n", path);
     return new(*allocator) LLVMSymbolizer(path, allocator);
   } else if (!internal_strcmp(binary_name, "atos")) {
-#if SANITIZER_MAC
+#if SANITIZER_APPLE
     VReport(2, "Using atos at user-specified path: %s\n", path);
     return new(*allocator) AtosSymbolizer(path, allocator);
-#else  // SANITIZER_MAC
+#else  // SANITIZER_APPLE
     Report("ERROR: Using `atos` is only supported on Darwin.\n");
     Die();
-#endif  // SANITIZER_MAC
+#endif  // SANITIZER_APPLE
   } else if (!internal_strcmp(binary_name, "addr2line")) {
     VReport(2, "Using addr2line at user-specified path: %s\n", path);
     return new(*allocator) Addr2LinePool(path, allocator);
@@ -446,12 +446,12 @@ static SymbolizerTool *ChooseExternalSymbolizer(LowLevelAllocator *allocator) {
 
   // Otherwise symbolizer program is unknown, let's search $PATH
   CHECK(path == nullptr);
-#if SANITIZER_MAC
+#if SANITIZER_APPLE
   if (const char *found_path = FindPathToBinary("atos")) {
     VReport(2, "Using atos found at: %s\n", found_path);
     return new(*allocator) AtosSymbolizer(found_path, allocator);
   }
-#endif  // SANITIZER_MAC
+#endif  // SANITIZER_APPLE
   if (const char *found_path = FindPathToBinary("llvm-symbolizer")) {
     VReport(2, "Using llvm-symbolizer found at: %s\n", found_path);
     return new(*allocator) LLVMSymbolizer(found_path, allocator);
@@ -488,10 +488,10 @@ static void ChooseSymbolizerTools(IntrusiveList<SymbolizerTool> *list,
     list->push_back(tool);
   }
 
-#if SANITIZER_MAC
+#if SANITIZER_APPLE
   VReport(2, "Using dladdr symbolizer.\n");
   list->push_back(new(*allocator) DlAddrSymbolizer());
-#endif  // SANITIZER_MAC
+#endif  // SANITIZER_APPLE
 }
 
 Symbolizer *Symbolizer::PlatformInit() {
