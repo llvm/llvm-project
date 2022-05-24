@@ -3141,6 +3141,15 @@ bool TypeSystemSwiftTypeRef::IsImportedType(opaque_compiler_type_t type,
     Demangler dem;
     NodePointer node = GetDemangledType(dem, AsMangledName(type));
 
+    auto *log = GetLog(LLDBLog::Types);
+    // Types with generic parameters have to be resolved before calling
+    // IsImportedType.
+    if (log && ContainsGenericTypeParameter(node))
+      LLDB_LOGF(log,
+                "Checking if type %s which contains a generic parameter is "
+                "an imported type",
+                AsMangledName(type));
+
     // This is an imported Objective-C type; look it up in the debug info.
     StringRef ident = GetObjCTypeName(node);
     if (ident.empty())
