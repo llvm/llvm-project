@@ -8,9 +8,11 @@ unittest("ClangPseudoTests") {
     "//clang/lib/Lex",
     "//clang/lib/Testing",
     "//llvm/lib/Support",
+    "//llvm/lib/Testing/Support",
   ]
   include_dirs = [ "../include" ]
   sources = [
+    "BracketTest.cpp",
     "DirectiveTreeTest.cpp",
     "ForestTest.cpp",
     "GLRTest.cpp",
