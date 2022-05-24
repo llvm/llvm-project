@@ -213,8 +213,9 @@ namespace {
                               const SmallSet<Register, 2> &TargetReg,
                               RecurrenceCycle &RC);
 
-    /// If copy instruction \p MI is a virtual register copy, track it in
-    /// the set \p CopyMIs. If this virtual register was previously seen as a
+    /// If copy instruction \p MI is a virtual register copy or a copy of a
+    /// constant physical register to a virtual register, track it in the
+    /// set \p CopyMIs. If this virtual register was previously seen as a
     /// copy, replace the uses of this copy with the previously seen copy's
     /// destination register.
     bool foldRedundantCopy(MachineInstr &MI,
@@ -1411,7 +1412,7 @@ bool PeepholeOptimizer::foldRedundantCopy(
 
   Register SrcReg = MI.getOperand(1).getReg();
   unsigned SrcSubReg = MI.getOperand(1).getSubReg();
-  if (!SrcReg.isVirtual())
+  if (!SrcReg.isVirtual() && !MRI->isConstantPhysReg(SrcReg))
     return false;
 
   Register DstReg = MI.getOperand(0).getReg();
@@ -1642,8 +1643,8 @@ bool PeepholeOptimizer::runOnMachineFunction(MachineFunction &MF) {
     // without any intervening re-definition of $physreg.
     DenseMap<Register, MachineInstr *> NAPhysToVirtMIs;
 
-    // Set of pairs of virtual registers and their subregs that are copied
-    // from.
+    // Set of copies to virtual registers keyed by source register.  Never
+    // holds any physreg which requires def tracking.
     DenseMap<RegSubRegPair, MachineInstr *> CopySrcMIs;
 
     bool IsLoopHeader = MLI->isLoopHeader(&MBB);
