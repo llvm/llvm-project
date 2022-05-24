@@ -328,8 +328,8 @@ void TextOutputSection::finalize() {
                                          std::to_string(thunkInfo.sequence++));
       if (!isa<Defined>(funcSym) || cast<Defined>(funcSym)->isExternal()) {
         r.referent = thunkInfo.sym = symtab->addDefined(
-            thunkName, /*file=*/nullptr, thunkInfo.isec, /*value=*/0,
-            thunkSize, /*isWeakDef=*/false, /*isPrivateExtern=*/true,
+            thunkName, /*file=*/nullptr, thunkInfo.isec, /*value=*/0, thunkSize,
+            /*isWeakDef=*/false, /*isPrivateExtern=*/true,
             /*isThumb=*/false, /*isReferencedDynamically=*/false,
             /*noDeadStrip=*/false, /*isWeakDefCanBeHidden=*/false);
       } else {

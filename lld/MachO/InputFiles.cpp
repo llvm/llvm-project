@@ -258,8 +258,8 @@ InputFile::InputFile(Kind kind, const InterfaceFile &interface)
 // used by the Mach-O format.
 static Optional<size_t> getRecordSize(StringRef segname, StringRef name) {
   if (name == section_names::compactUnwind) {
-      if (segname == segment_names::ld)
-        return target->wordSize == 8 ? 32 : 20;
+    if (segname == segment_names::ld)
+      return target->wordSize == 8 ? 32 : 20;
   }
   if (config->icfLevel == ICFLevel::none)
     return {};
@@ -439,8 +439,7 @@ static bool validateRelocationInfo(InputFile *file, const SectionHeader &sec,
 
 template <class SectionHeader>
 void ObjFile::parseRelocations(ArrayRef<SectionHeader> sectionHeaders,
-                               const SectionHeader &sec,
-                               Section &section) {
+                               const SectionHeader &sec, Section &section) {
   auto *buf = reinterpret_cast<const uint8_t *>(mb.getBufferStart());
   ArrayRef<relocation_info> relInfos(
       reinterpret_cast<const relocation_info *>(buf + sec.reloff), sec.nreloc);
