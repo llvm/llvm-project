@@ -7446,7 +7446,9 @@ SDValue TargetLowering::expandIS_FPCLASS(EVT ResultVT, SDValue Op,
   assert(OperandVT.isFloatingPoint());
 
   // Degenerated cases.
-  if (Test == 0 || (Test & fcAllFlags) == fcAllFlags)
+  if (Test == 0)
+    return DAG.getBoolConstant(false, DL, ResultVT, OperandVT);
+  if ((Test & fcAllFlags) == fcAllFlags)
     return DAG.getBoolConstant(true, DL, ResultVT, OperandVT);
 
   // PPC double double is a pair of doubles, of which the higher part determines
