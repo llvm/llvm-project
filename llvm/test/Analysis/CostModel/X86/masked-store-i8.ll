@@ -35,7 +35,7 @@ define void @test([1024 x i8]* %C) {
 ; AVX1:  LV: Found an estimated cost of 4 for VF 4 For instruction: store i8 %valB, i8* %out, align 1
 ; AVX1:  LV: Found an estimated cost of 8 for VF 8 For instruction: store i8 %valB, i8* %out, align 1
 ; AVX1:  LV: Found an estimated cost of 16 for VF 16 For instruction: store i8 %valB, i8* %out, align 1
-; AVX1:  LV: Found an estimated cost of 40 for VF 32 For instruction: store i8 %valB, i8* %out, align 1
+; AVX1:  LV: Found an estimated cost of 32 for VF 32 For instruction: store i8 %valB, i8* %out, align 1
 ;
 ; AVX2-LABEL: 'test'
 ; AVX2:  LV: Found an estimated cost of 1 for VF 1 For instruction: store i8 %valB, i8* %out, align 1
@@ -43,7 +43,7 @@ define void @test([1024 x i8]* %C) {
 ; AVX2:  LV: Found an estimated cost of 4 for VF 4 For instruction: store i8 %valB, i8* %out, align 1
 ; AVX2:  LV: Found an estimated cost of 8 for VF 8 For instruction: store i8 %valB, i8* %out, align 1
 ; AVX2:  LV: Found an estimated cost of 16 for VF 16 For instruction: store i8 %valB, i8* %out, align 1
-; AVX2:  LV: Found an estimated cost of 40 for VF 32 For instruction: store i8 %valB, i8* %out, align 1
+; AVX2:  LV: Found an estimated cost of 32 for VF 32 For instruction: store i8 %valB, i8* %out, align 1
 ;
 ; AVX512-LABEL: 'test'
 ; AVX512:  LV: Found an estimated cost of 1 for VF 1 For instruction: store i8 %valB, i8* %out, align 1

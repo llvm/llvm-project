@@ -23,10 +23,10 @@ define void @test() {
 ; AVX1-LABEL: 'test'
 ; AVX1:  LV: Found an estimated cost of 1 for VF 1 For instruction: %v0 = load i16, ptr %in0, align 2
 ; AVX1:  LV: Found an estimated cost of 17 for VF 2 For instruction: %v0 = load i16, ptr %in0, align 2
-; AVX1:  LV: Found an estimated cost of 41 for VF 4 For instruction: %v0 = load i16, ptr %in0, align 2
-; AVX1:  LV: Found an estimated cost of 82 for VF 8 For instruction: %v0 = load i16, ptr %in0, align 2
-; AVX1:  LV: Found an estimated cost of 172 for VF 16 For instruction: %v0 = load i16, ptr %in0, align 2
-; AVX1:  LV: Found an estimated cost of 344 for VF 32 For instruction: %v0 = load i16, ptr %in0, align 2
+; AVX1:  LV: Found an estimated cost of 34 for VF 4 For instruction: %v0 = load i16, ptr %in0, align 2
+; AVX1:  LV: Found an estimated cost of 68 for VF 8 For instruction: %v0 = load i16, ptr %in0, align 2
+; AVX1:  LV: Found an estimated cost of 144 for VF 16 For instruction: %v0 = load i16, ptr %in0, align 2
+; AVX1:  LV: Found an estimated cost of 288 for VF 32 For instruction: %v0 = load i16, ptr %in0, align 2
 ;
 ; AVX2-LABEL: 'test'
 ; AVX2:  LV: Found an estimated cost of 1 for VF 1 For instruction: %v0 = load i16, ptr %in0, align 2
@@ -43,7 +43,7 @@ define void @test() {
 ; AVX512DQ:  LV: Found an estimated cost of 34 for VF 8 For instruction: %v0 = load i16, ptr %in0, align 2
 ; AVX512DQ:  LV: Found an estimated cost of 77 for VF 16 For instruction: %v0 = load i16, ptr %in0, align 2
 ; AVX512DQ:  LV: Found an estimated cost of 154 for VF 32 For instruction: %v0 = load i16, ptr %in0, align 2
-; AVX512DQ:  LV: Found an estimated cost of 744 for VF 64 For instruction: %v0 = load i16, ptr %in0, align 2
+; AVX512DQ:  LV: Found an estimated cost of 576 for VF 64 For instruction: %v0 = load i16, ptr %in0, align 2
 ;
 ; AVX512BW-LABEL: 'test'
 ; AVX512BW:  LV: Found an estimated cost of 1 for VF 1 For instruction: %v0 = load i16, ptr %in0, align 2

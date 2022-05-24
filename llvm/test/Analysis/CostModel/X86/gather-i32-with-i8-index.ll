@@ -57,7 +57,7 @@ define void @test() {
 ; AVX512-LABEL: 'test'
 ; AVX512:  LV: Found an estimated cost of 1 for VF 1 For instruction: %valB = load i32, i32* %inB, align 4
 ; AVX512:  LV: Found an estimated cost of 6 for VF 2 For instruction: %valB = load i32, i32* %inB, align 4
-; AVX512:  LV: Found an estimated cost of 14 for VF 4 For instruction: %valB = load i32, i32* %inB, align 4
+; AVX512:  LV: Found an estimated cost of 13 for VF 4 For instruction: %valB = load i32, i32* %inB, align 4
 ; AVX512:  LV: Found an estimated cost of 10 for VF 8 For instruction: %valB = load i32, i32* %inB, align 4
 ; AVX512:  LV: Found an estimated cost of 18 for VF 16 For instruction: %valB = load i32, i32* %inB, align 4
 ; AVX512:  LV: Found an estimated cost of 36 for VF 32 For instruction: %valB = load i32, i32* %inB, align 4

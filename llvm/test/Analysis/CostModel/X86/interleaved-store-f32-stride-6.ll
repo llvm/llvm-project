@@ -22,8 +22,8 @@ define void @test() {
 ; AVX1:  LV: Found an estimated cost of 1 for VF 1 For instruction: store float %v5, ptr %out5, align 4
 ; AVX1:  LV: Found an estimated cost of 20 for VF 2 For instruction: store float %v5, ptr %out5, align 4
 ; AVX1:  LV: Found an estimated cost of 45 for VF 4 For instruction: store float %v5, ptr %out5, align 4
-; AVX1:  LV: Found an estimated cost of 114 for VF 8 For instruction: store float %v5, ptr %out5, align 4
-; AVX1:  LV: Found an estimated cost of 228 for VF 16 For instruction: store float %v5, ptr %out5, align 4
+; AVX1:  LV: Found an estimated cost of 96 for VF 8 For instruction: store float %v5, ptr %out5, align 4
+; AVX1:  LV: Found an estimated cost of 192 for VF 16 For instruction: store float %v5, ptr %out5, align 4
 ;
 ; AVX2-LABEL: 'test'
 ; AVX2:  LV: Found an estimated cost of 1 for VF 1 For instruction: store float %v5, ptr %out5, align 4

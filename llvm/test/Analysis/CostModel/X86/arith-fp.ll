@@ -663,23 +663,23 @@ define i32 @frem(i32 %arg) {
 ; AVX-LABEL: 'frem'
 ; AVX-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %F32 = frem float undef, undef
 ; AVX-NEXT:  Cost Model: Found an estimated cost of 14 for instruction: %V4F32 = frem <4 x float> undef, undef
-; AVX-NEXT:  Cost Model: Found an estimated cost of 34 for instruction: %V8F32 = frem <8 x float> undef, undef
-; AVX-NEXT:  Cost Model: Found an estimated cost of 68 for instruction: %V16F32 = frem <16 x float> undef, undef
+; AVX-NEXT:  Cost Model: Found an estimated cost of 31 for instruction: %V8F32 = frem <8 x float> undef, undef
+; AVX-NEXT:  Cost Model: Found an estimated cost of 62 for instruction: %V16F32 = frem <16 x float> undef, undef
 ; AVX-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %F64 = frem double undef, undef
 ; AVX-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %V2F64 = frem <2 x double> undef, undef
-; AVX-NEXT:  Cost Model: Found an estimated cost of 15 for instruction: %V4F64 = frem <4 x double> undef, undef
-; AVX-NEXT:  Cost Model: Found an estimated cost of 30 for instruction: %V8F64 = frem <8 x double> undef, undef
+; AVX-NEXT:  Cost Model: Found an estimated cost of 14 for instruction: %V4F64 = frem <4 x double> undef, undef
+; AVX-NEXT:  Cost Model: Found an estimated cost of 28 for instruction: %V8F64 = frem <8 x double> undef, undef
 ; AVX-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
 ;
 ; AVX512-LABEL: 'frem'
 ; AVX512-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %F32 = frem float undef, undef
 ; AVX512-NEXT:  Cost Model: Found an estimated cost of 14 for instruction: %V4F32 = frem <4 x float> undef, undef
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 34 for instruction: %V8F32 = frem <8 x float> undef, undef
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 72 for instruction: %V16F32 = frem <16 x float> undef, undef
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 31 for instruction: %V8F32 = frem <8 x float> undef, undef
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 63 for instruction: %V16F32 = frem <16 x float> undef, undef
 ; AVX512-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %F64 = frem double undef, undef
 ; AVX512-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %V2F64 = frem <2 x double> undef, undef
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 15 for instruction: %V4F64 = frem <4 x double> undef, undef
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 33 for instruction: %V8F64 = frem <8 x double> undef, undef
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 14 for instruction: %V4F64 = frem <4 x double> undef, undef
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 30 for instruction: %V8F64 = frem <8 x double> undef, undef
 ; AVX512-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
 ;
 ; SLM-LABEL: 'frem'
