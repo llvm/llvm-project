@@ -11,10 +11,10 @@ extract - A set of function that extract symbol lists from shared libraries.
 """
 import distutils.spawn
 import os.path
-import sys
 import re
+import subprocess
+import sys
 
-import libcxx.util
 from libcxx.sym_check import util
 
 extract_ignore_names = ['_init', '_fini']
@@ -51,9 +51,7 @@ class NMExtractor(object):
         parsed symbols.
         """
         cmd = [self.nm_exe] + self.flags + [lib]
-        out, _, exit_code = libcxx.util.executeCommandVerbose(cmd)
-        if exit_code != 0:
-            raise RuntimeError('Failed to run %s on %s' % (self.nm_exe, lib))
+        out = subprocess.check_output(cmd).decode()
         fmt_syms = (self._extract_sym(l)
                     for l in out.splitlines() if l.strip())
         # Cast symbol to string.
@@ -139,9 +137,7 @@ class ReadElfExtractor(object):
         parsed symbols.
         """
         cmd = [self.tool] + self.flags + [lib]
-        out, _, exit_code = libcxx.util.executeCommandVerbose(cmd)
-        if exit_code != 0:
-            raise RuntimeError('Failed to run %s on %s' % (self.nm_exe, lib))
+        out = subprocess.check_output(cmd).decode()
         dyn_syms = self.get_dynsym_table(out)
         return self.process_syms(dyn_syms)
 
