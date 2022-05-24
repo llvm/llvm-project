@@ -21,12 +21,12 @@ write_cmake_config("llvm-lit") {
   deps = [ "//llvm/tools/llvm-config" ]
 
   deps += [
-    "//clang-tools-extra/test:lit_site_cfg",
-    "//clang-tools-extra/test:lit_unit_site_cfg",
     "//clang-tools-extra/clangd/test:lit_site_cfg",
     "//clang-tools-extra/clangd/test:lit_unit_site_cfg",
     "//clang-tools-extra/pseudo/test:lit_site_cfg",
     "//clang-tools-extra/pseudo/test:lit_unit_site_cfg",
+    "//clang-tools-extra/test:lit_site_cfg",
+    "//clang-tools-extra/test:lit_unit_site_cfg",
     "//clang/test:lit_site_cfg",
     "//clang/test:lit_unit_site_cfg",
     "//lld/test:lit_site_cfg",
