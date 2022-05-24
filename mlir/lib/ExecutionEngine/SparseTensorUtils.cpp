@@ -450,21 +450,21 @@ public:
                       const uint64_t *perm, const DimLevelType *sparsity,
                       const SparseTensorStorageBase &tensor);
 
-  ~SparseTensorStorage() final override = default;
+  ~SparseTensorStorage() final = default;
 
   /// Partially specialize these getter methods based on template types.
-  void getPointers(std::vector<P> **out, uint64_t d) final override {
+  void getPointers(std::vector<P> **out, uint64_t d) final {
     assert(d < getRank());
     *out = &pointers[d];
   }
-  void getIndices(std::vector<I> **out, uint64_t d) final override {
+  void getIndices(std::vector<I> **out, uint64_t d) final {
     assert(d < getRank());
     *out = &indices[d];
   }
-  void getValues(std::vector<V> **out) final override { *out = &values; }
+  void getValues(std::vector<V> **out) final { *out = &values; }
 
   /// Partially specialize lexicographical insertions based on template types.
-  void lexInsert(const uint64_t *cursor, V val) final override {
+  void lexInsert(const uint64_t *cursor, V val) final {
     // First, wrap up pending insertion path.
     uint64_t diff = 0;
     uint64_t top = 0;
@@ -481,7 +481,7 @@ public:
   /// Note that this method resets the values/filled-switch array back
   /// to all-zero/false while only iterating over the nonzero elements.
   void expInsert(uint64_t *cursor, V *values, bool *filled, uint64_t *added,
-                 uint64_t count) final override {
+                 uint64_t count) final {
     if (count == 0)
       return;
     // Sort.
@@ -507,7 +507,7 @@ public:
   }
 
   /// Finalizes lexicographic insertions.
-  void endInsert() final override {
+  void endInsert() final {
     if (values.empty())
       finalizeSegment(0);
     else
@@ -515,7 +515,7 @@ public:
   }
 
   void newEnumerator(SparseTensorEnumeratorBase<V> **out, uint64_t rank,
-                     const uint64_t *perm) const final override {
+                     const uint64_t *perm) const final {
     *out = new SparseTensorEnumerator<P, I, V>(*this, rank, perm);
   }
 
