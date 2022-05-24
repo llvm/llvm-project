@@ -134,6 +134,9 @@ TEST(ConstantsTest, PointerCast) {
   VectorType *Int8PtrVecTy = FixedVectorType::get(Int8PtrTy, 4);
   VectorType *Int32PtrVecTy = FixedVectorType::get(Int32PtrTy, 4);
   VectorType *Int64VecTy = FixedVectorType::get(Int64Ty, 4);
+  VectorType *Int8PtrScalableVecTy = ScalableVectorType::get(Int8PtrTy, 4);
+  VectorType *Int32PtrScalableVecTy = ScalableVectorType::get(Int32PtrTy, 4);
+  VectorType *Int64ScalableVecTy = ScalableVectorType::get(Int64Ty, 4);
 
   // ptrtoint i8* to i64
   EXPECT_EQ(
@@ -150,10 +153,22 @@ TEST(ConstantsTest, PointerCast) {
             ConstantExpr::getPointerCast(Constant::getNullValue(Int8PtrVecTy),
                                          Int64VecTy));
 
+  // ptrtoint <vscale x 4 x i8*> to <vscale x 4 x i64>
+  EXPECT_EQ(
+      Constant::getNullValue(Int64ScalableVecTy),
+      ConstantExpr::getPointerCast(Constant::getNullValue(Int8PtrScalableVecTy),
+                                   Int64ScalableVecTy));
+
   // bitcast <4 x i8*> to <4 x i32*>
   EXPECT_EQ(Constant::getNullValue(Int32PtrVecTy),
             ConstantExpr::getPointerCast(Constant::getNullValue(Int8PtrVecTy),
                                          Int32PtrVecTy));
+
+  // bitcast <vscale x 4 x i8*> to <vscale x 4 x i32*>
+  EXPECT_EQ(
+      Constant::getNullValue(Int32PtrScalableVecTy),
+      ConstantExpr::getPointerCast(Constant::getNullValue(Int8PtrScalableVecTy),
+                                   Int32PtrScalableVecTy));
 
   Type *Int32Ptr1Ty = Type::getInt32PtrTy(C, 1);
   ConstantInt *K = ConstantInt::get(Type::getInt64Ty(C), 1234);
