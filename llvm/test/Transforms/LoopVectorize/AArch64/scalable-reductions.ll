@@ -328,8 +328,6 @@ define void @invariant_store(i32* %dst, i32* readonly %src) {
 ; CHECK: %[[LOAD2:.*]] = load <vscale x 4 x i32>
 ; CHECK: %[[ADD1:.*]] = add <vscale x 4 x i32> %{{.*}}, %[[LOAD1]]
 ; CHECK: %[[ADD2:.*]] = add <vscale x 4 x i32> %{{.*}}, %[[LOAD2]]
-; CHECK: call void @llvm.masked.scatter.nxv4i32.nxv4p0i32(<vscale x 4 x i32> %[[ADD1]]
-; CHECK: call void @llvm.masked.scatter.nxv4i32.nxv4p0i32(<vscale x 4 x i32> %[[ADD2]]
 ; CHECK: middle.block:
 ; CHECK: %[[ADD:.*]] = add <vscale x 4 x i32> %[[ADD2]], %[[ADD1]]
 ; CHECK-NEXT: %[[SUM:.*]] = call i32 @llvm.vector.reduce.add.nxv4i32(<vscale x 4 x i32> %[[ADD]])
