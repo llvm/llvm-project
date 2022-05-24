@@ -618,6 +618,16 @@ public:
   /// \param Loc The location where the taskyield directive was encountered.
   void createTaskyield(const LocationDescription &Loc);
 
+  /// Generator for `#omp task`
+  ///
+  /// \param Loc The location where the task construct was encountered.
+  /// \param AllocaIP The insertion point to be used for alloca instructions.
+  /// \param BodyGenCB Callback that will generate the region code.
+  /// \param Tied True if the task is tied, false if the task is untied.
+  InsertPointTy createTask(const LocationDescription &Loc,
+                           InsertPointTy AllocaIP, BodyGenCallbackTy BodyGenCB,
+                           bool Tied = true);
+
   /// Functions used to generate reductions. Such functions take two Values
   /// representing LHS and RHS of the reduction, respectively, and a reference
   /// to the value that is updated to refer to the reduction result.
