@@ -260,6 +260,8 @@ void DefFormat::genParser(MethodBody &os) {
   // a loop (parsers return FailureOr anyways).
   ArrayRef<AttrOrTypeParameter> params = def.getParameters();
   for (const AttrOrTypeParameter &param : params) {
+    if (isa<AttributeSelfTypeParameter>(param))
+      continue;
     os << formatv("::mlir::FailureOr<{0}> _result_{1};\n",
                   param.getCppStorageType(), param.getName());
   }
@@ -277,10 +279,9 @@ void DefFormat::genParser(MethodBody &os) {
   // Emit an assert for each mandatory parameter. Triggering an assert means
   // the generated parser is incorrect (i.e. there is a bug in this code).
   for (const AttrOrTypeParameter &param : params) {
-    if (!param.isOptional()) {
-      os << formatv("assert(::mlir::succeeded(_result_{0}));\n",
-                    param.getName());
-    }
+    if (param.isOptional() || isa<AttributeSelfTypeParameter>(param))
+      continue;
+    os << formatv("assert(::mlir::succeeded(_result_{0}));\n", param.getName());
   }
 
   // Generate call to the attribute or type builder. Use the checked getter
@@ -293,15 +294,18 @@ void DefFormat::genParser(MethodBody &os) {
                 def.getCppClassName());
   }
   for (const AttrOrTypeParameter &param : params) {
+    os << ",\n    ";
     if (param.isOptional()) {
-      os << formatv(",\n    _result_{0}.getValueOr(", param.getName());
+      os << formatv("_result_{0}.getValueOr(", param.getName());
       if (Optional<StringRef> defaultValue = param.getDefaultValue())
         os << tgfmt(*defaultValue, &ctx);
       else
         os << param.getCppStorageType() << "()";
       os << ")";
+    } else if (isa<AttributeSelfTypeParameter>(param)) {
+      os << tgfmt("$_type", &ctx);
     } else {
-      os << formatv(",\n    *_result_{0}", param.getName());
+      os << formatv("*_result_{0}", param.getName());
     }
   }
   os << ");";
@@ -666,7 +670,7 @@ void DefFormat::genPrinter(MethodBody &os) {
   ctx.addSubst("_ctx", "getContext()");
   os.indent();
 
-  /// Generate printers.
+  // Generate printers.
   shouldEmitSpace = true;
   lastWasPunctuation = false;
   for (FormatElement *el : elements)
@@ -904,9 +908,17 @@ LogicalResult DefFormatParser::verify(SMLoc loc,
                                       ArrayRef<FormatElement *> elements) {
   // Check that all parameters are referenced in the format.
   for (auto &it : llvm::enumerate(def.getParameters())) {
-    if (!it.value().isOptional() && !seenParams.test(it.index())) {
+    if (it.value().isOptional())
+      continue;
+    if (!seenParams.test(it.index())) {
+      if (isa<AttributeSelfTypeParameter>(it.value()))
+        continue;
       return emitError(loc, "format is missing reference to parameter: " +
                                 it.value().getName());
+    }
+    if (isa<AttributeSelfTypeParameter>(it.value())) {
+      return emitError(loc,
+                       "unexpected self type parameter in assembly format");
     }
   }
   if (elements.empty())
