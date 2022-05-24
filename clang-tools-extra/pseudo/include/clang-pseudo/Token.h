@@ -88,11 +88,15 @@ struct Token {
     while (T->Kind == tok::comment);
     return *T;
   }
+  /// Returns the bracket paired with this one, if any.
+  const Token *pair() const { return Pair == 0 ? nullptr : this + Pair; }
 
   /// The type of token as determined by clang's lexer.
   clang::tok::TokenKind Kind = clang::tok::unknown;
+  /// If this token is a paired bracket, the offset of the pair in the stream.
+  int32_t Pair = 0;
 };
-static_assert(sizeof(Token) <= sizeof(char *) + 16, "Careful with layout!");
+static_assert(sizeof(Token) <= sizeof(char *) + 20, "Careful with layout!");
 llvm::raw_ostream &operator<<(llvm::raw_ostream &, const Token &);
 
 /// A half-open range of tokens within a stream.
@@ -153,6 +157,11 @@ public:
   }
   ArrayRef<Token> tokens(Token::Range R) const {
     return tokens().slice(R.Begin, R.End - R.Begin);
+  }
+
+  MutableArrayRef<Token> tokens() {
+    assert(isFinalized());
+    return Tokens;
   }
 
   /// May return the end sentinel if the stream is empty.

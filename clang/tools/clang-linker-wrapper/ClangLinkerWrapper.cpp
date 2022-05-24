@@ -108,6 +108,12 @@ static cl::list<std::string>
               cl::desc("Argument to pass to the ptxas invocation"),
               cl::cat(ClangLinkerWrapperCategory));
 
+static cl::list<std::string>
+    LinkerArgs("device-linker", cl::ZeroOrMore,
+               cl::desc("Arguments to pass to the device linker invocation"),
+               cl::value_desc("<value> or <triple>=<value>"),
+               cl::cat(ClangLinkerWrapperCategory));
+
 static cl::opt<bool> Verbose("v", cl::ZeroOrMore,
                              cl::desc("Verbose output from tools"),
                              cl::init(false),
@@ -224,6 +230,17 @@ void printCommands(ArrayRef<StringRef> CmdArgs) {
   llvm::errs() << " \"" << CmdArgs.front() << "\" ";
   for (auto IC = std::next(CmdArgs.begin()), IE = CmdArgs.end(); IC != IE; ++IC)
     llvm::errs() << *IC << (std::next(IC) != IE ? " " : "\n");
+}
+
+// Forward user requested arguments to the device linking job.
+void renderXLinkerArgs(SmallVectorImpl<StringRef> &Args, StringRef Triple) {
+  for (StringRef Arg : LinkerArgs) {
+    auto TripleAndValue = Arg.split('=');
+    if (TripleAndValue.second.empty())
+      Args.push_back(TripleAndValue.first);
+    else if (TripleAndValue.first == Triple)
+      Args.push_back(TripleAndValue.second);
+  }
 }
 
 std::string getMainExecutable(const char *Name) {
@@ -531,6 +548,7 @@ Expected<std::string> link(ArrayRef<std::string> InputFiles, Triple TheTriple,
   for (StringRef Input : InputFiles)
     CmdArgs.push_back(Input);
 
+  renderXLinkerArgs(CmdArgs, TheTriple.getTriple());
   if (Error Err = executeCommands(*NvlinkPath, CmdArgs))
     return std::move(Err);
 
@@ -599,6 +617,7 @@ Expected<std::string> link(ArrayRef<std::string> InputFiles, Triple TheTriple,
   for (StringRef Input : InputFiles)
     CmdArgs.push_back(Input);
 
+  renderXLinkerArgs(CmdArgs, TheTriple.getTriple());
   if (Error Err = executeCommands(*LLDPath, CmdArgs))
     return std::move(Err);
 
@@ -676,6 +695,7 @@ Expected<std::string> link(ArrayRef<std::string> InputFiles, Triple TheTriple,
   for (StringRef Input : InputFiles)
     CmdArgs.push_back(Input);
 
+  renderXLinkerArgs(CmdArgs, TheTriple.getTriple());
   if (Error Err = executeCommands(LinkerUserPath, CmdArgs))
     return std::move(Err);
 
