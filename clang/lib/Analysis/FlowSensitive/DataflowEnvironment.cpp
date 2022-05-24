@@ -239,9 +239,6 @@ bool Environment::equivalentTo(const Environment &Other,
   if (ExprToLoc != Other.ExprToLoc)
     return false;
 
-  if (MemberLocToStruct != Other.MemberLocToStruct)
-    return false;
-
   // Compare the contents for the intersection of their domains.
   for (auto &Entry : LocToVal) {
     const StorageLocation *Loc = Entry.first;

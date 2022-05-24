@@ -3120,4 +3120,59 @@ TEST_F(TransferTest, LoopWithReferenceAssignmentConverges) {
       });
 }
 
+TEST_F(TransferTest, LoopWithStructReferenceAssignmentConverges) {
+  std::string Code = R"(
+    struct Lookup {
+      int x;
+    };
+
+    void target(Lookup val, bool b) {
+      const Lookup* l = nullptr;
+      while (b) {
+        l = &val;
+        /*[[p-inner]]*/
+      }
+      (void)0;
+      /*[[p-outer]]*/
+    }
+  )";
+  // The key property that we are verifying is implicit in `runDataflow` --
+  // namely, that the analysis succeeds, rather than hitting the maximum number
+  // of iterations.
+  runDataflow(
+      Code, [](llvm::ArrayRef<
+                   std::pair<std::string, DataflowAnalysisState<NoopLattice>>>
+                   Results,
+               ASTContext &ASTCtx) {
+        ASSERT_THAT(Results,
+                    ElementsAre(Pair("p-outer", _), Pair("p-inner", _)));
+        const Environment &OuterEnv = Results[0].second.Env;
+        const Environment &InnerEnv = Results[1].second.Env;
+
+        const ValueDecl *ValDecl = findValueDecl(ASTCtx, "val");
+        ASSERT_THAT(ValDecl, NotNull());
+
+        const ValueDecl *LDecl = findValueDecl(ASTCtx, "l");
+        ASSERT_THAT(LDecl, NotNull());
+
+        // Inner.
+        auto *LVal = dyn_cast<IndirectionValue>(
+            InnerEnv.getValue(*LDecl, SkipPast::None));
+        ASSERT_THAT(LVal, NotNull());
+
+        EXPECT_EQ(&LVal->getPointeeLoc(),
+                  InnerEnv.getStorageLocation(*ValDecl, SkipPast::Reference));
+
+        // Outer.
+        LVal = dyn_cast<IndirectionValue>(
+            OuterEnv.getValue(*LDecl, SkipPast::None));
+        ASSERT_THAT(LVal, NotNull());
+
+        // The loop body may not have been executed, so we should not conclude
+        // that `l` points to `val`.
+        EXPECT_NE(&LVal->getPointeeLoc(),
+                  OuterEnv.getStorageLocation(*ValDecl, SkipPast::Reference));
+});
+}
+
 } // namespace
