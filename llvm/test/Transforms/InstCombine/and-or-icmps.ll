@@ -1981,13 +1981,10 @@ define i1 @logical_or_logical_or_icmps_comm3(i8 %x, i8 %y, i8 %z) {
 
 define i1 @bitwise_and_logical_and_masked_icmp_asymmetric(i1 %c, i32 %x) {
 ; CHECK-LABEL: @bitwise_and_logical_and_masked_icmp_asymmetric(
-; CHECK-NEXT:    [[X_M1:%.*]] = and i32 [[X:%.*]], 255
-; CHECK-NEXT:    [[C1:%.*]] = icmp ne i32 [[X_M1]], 0
-; CHECK-NEXT:    [[AND1:%.*]] = select i1 [[C1]], i1 [[C:%.*]], i1 false
-; CHECK-NEXT:    [[X_M2:%.*]] = and i32 [[X]], 11
+; CHECK-NEXT:    [[X_M2:%.*]] = and i32 [[X:%.*]], 11
 ; CHECK-NEXT:    [[C2:%.*]] = icmp eq i32 [[X_M2]], 11
-; CHECK-NEXT:    [[AND2:%.*]] = and i1 [[AND1]], [[C2]]
-; CHECK-NEXT:    ret i1 [[AND2]]
+; CHECK-NEXT:    [[TMP1:%.*]] = select i1 [[C2]], i1 [[C:%.*]], i1 false
+; CHECK-NEXT:    ret i1 [[TMP1]]
 ;
   %x.m1 = and i32 %x, 255
   %c1 = icmp ne i32 %x.m1, 0
@@ -2000,13 +1997,10 @@ define i1 @bitwise_and_logical_and_masked_icmp_asymmetric(i1 %c, i32 %x) {
 
 define i1 @bitwise_and_logical_and_masked_icmp_allzeros(i1 %c, i32 %x) {
 ; CHECK-LABEL: @bitwise_and_logical_and_masked_icmp_allzeros(
-; CHECK-NEXT:    [[X_M1:%.*]] = and i32 [[X:%.*]], 8
-; CHECK-NEXT:    [[C1:%.*]] = icmp eq i32 [[X_M1]], 0
-; CHECK-NEXT:    [[AND1:%.*]] = select i1 [[C1]], i1 [[C:%.*]], i1 false
-; CHECK-NEXT:    [[X_M2:%.*]] = and i32 [[X]], 7
-; CHECK-NEXT:    [[C2:%.*]] = icmp eq i32 [[X_M2]], 0
-; CHECK-NEXT:    [[AND2:%.*]] = and i1 [[AND1]], [[C2]]
-; CHECK-NEXT:    ret i1 [[AND2]]
+; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[X:%.*]], 15
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i32 [[TMP1]], 0
+; CHECK-NEXT:    [[TMP3:%.*]] = select i1 [[TMP2]], i1 [[C:%.*]], i1 false
+; CHECK-NEXT:    ret i1 [[TMP3]]
 ;
   %x.m1 = and i32 %x, 8
   %c1 = icmp eq i32 %x.m1, 0
@@ -2019,13 +2013,11 @@ define i1 @bitwise_and_logical_and_masked_icmp_allzeros(i1 %c, i32 %x) {
 
 define i1 @bitwise_and_logical_and_masked_icmp_allzeros_poison1(i1 %c, i32 %x, i32 %y) {
 ; CHECK-LABEL: @bitwise_and_logical_and_masked_icmp_allzeros_poison1(
-; CHECK-NEXT:    [[X_M1:%.*]] = and i32 [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    [[C1:%.*]] = icmp eq i32 [[X_M1]], 0
-; CHECK-NEXT:    [[AND1:%.*]] = select i1 [[C1]], i1 [[C:%.*]], i1 false
-; CHECK-NEXT:    [[X_M2:%.*]] = and i32 [[X]], 7
-; CHECK-NEXT:    [[C2:%.*]] = icmp eq i32 [[X_M2]], 0
-; CHECK-NEXT:    [[AND2:%.*]] = and i1 [[AND1]], [[C2]]
-; CHECK-NEXT:    ret i1 [[AND2]]
+; CHECK-NEXT:    [[TMP1:%.*]] = or i32 [[Y:%.*]], 7
+; CHECK-NEXT:    [[TMP2:%.*]] = and i32 [[TMP1]], [[X:%.*]]
+; CHECK-NEXT:    [[TMP3:%.*]] = icmp eq i32 [[TMP2]], 0
+; CHECK-NEXT:    [[TMP4:%.*]] = select i1 [[TMP3]], i1 [[C:%.*]], i1 false
+; CHECK-NEXT:    ret i1 [[TMP4]]
 ;
   %x.m1 = and i32 %x, %y
   %c1 = icmp eq i32 %x.m1, 0
@@ -2057,13 +2049,10 @@ define i1 @bitwise_and_logical_and_masked_icmp_allzeros_poison2(i1 %c, i32 %x, i
 
 define i1 @bitwise_and_logical_and_masked_icmp_allones(i1 %c, i32 %x) {
 ; CHECK-LABEL: @bitwise_and_logical_and_masked_icmp_allones(
-; CHECK-NEXT:    [[X_M1:%.*]] = and i32 [[X:%.*]], 8
-; CHECK-NEXT:    [[C1:%.*]] = icmp ne i32 [[X_M1]], 0
-; CHECK-NEXT:    [[AND1:%.*]] = select i1 [[C1]], i1 [[C:%.*]], i1 false
-; CHECK-NEXT:    [[X_M2:%.*]] = and i32 [[X]], 7
-; CHECK-NEXT:    [[C2:%.*]] = icmp eq i32 [[X_M2]], 7
-; CHECK-NEXT:    [[AND2:%.*]] = and i1 [[AND1]], [[C2]]
-; CHECK-NEXT:    ret i1 [[AND2]]
+; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[X:%.*]], 15
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i32 [[TMP1]], 15
+; CHECK-NEXT:    [[TMP3:%.*]] = select i1 [[TMP2]], i1 [[C:%.*]], i1 false
+; CHECK-NEXT:    ret i1 [[TMP3]]
 ;
   %x.m1 = and i32 %x, 8
   %c1 = icmp eq i32 %x.m1, 8
@@ -2076,13 +2065,11 @@ define i1 @bitwise_and_logical_and_masked_icmp_allones(i1 %c, i32 %x) {
 
 define i1 @bitwise_and_logical_and_masked_icmp_allones_poison1(i1 %c, i32 %x, i32 %y) {
 ; CHECK-LABEL: @bitwise_and_logical_and_masked_icmp_allones_poison1(
-; CHECK-NEXT:    [[X_M1:%.*]] = and i32 [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    [[C1:%.*]] = icmp eq i32 [[X_M1]], [[Y]]
-; CHECK-NEXT:    [[AND1:%.*]] = select i1 [[C1]], i1 [[C:%.*]], i1 false
-; CHECK-NEXT:    [[X_M2:%.*]] = and i32 [[X]], 7
-; CHECK-NEXT:    [[C2:%.*]] = icmp eq i32 [[X_M2]], 7
-; CHECK-NEXT:    [[AND2:%.*]] = and i1 [[AND1]], [[C2]]
-; CHECK-NEXT:    ret i1 [[AND2]]
+; CHECK-NEXT:    [[TMP1:%.*]] = or i32 [[Y:%.*]], 7
+; CHECK-NEXT:    [[TMP2:%.*]] = and i32 [[TMP1]], [[X:%.*]]
+; CHECK-NEXT:    [[TMP3:%.*]] = icmp eq i32 [[TMP2]], [[TMP1]]
+; CHECK-NEXT:    [[TMP4:%.*]] = select i1 [[TMP3]], i1 [[C:%.*]], i1 false
+; CHECK-NEXT:    ret i1 [[TMP4]]
 ;
   %x.m1 = and i32 %x, %y
   %c1 = icmp eq i32 %x.m1, %y
