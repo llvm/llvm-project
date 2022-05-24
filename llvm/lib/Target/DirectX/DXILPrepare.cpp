@@ -94,8 +94,10 @@ class DXILPrepareModule : public ModulePass {
     Builder.SetInsertPoint(&Inst);
     // This code only gets hit in opaque-pointer mode, so the type of the
     // pointer doesn't matter.
-    return Builder.Insert(CastInst::Create(Instruction::BitCast, Operand,
-                                           Builder.getInt8PtrTy()));
+    PointerType *PtrTy = cast<PointerType>(Operand->getType());
+    return Builder.Insert(
+        CastInst::Create(Instruction::BitCast, Operand,
+                         Builder.getInt8PtrTy(PtrTy->getAddressSpace())));
   }
 
 public:
