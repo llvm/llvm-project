@@ -1129,16 +1129,19 @@ class SMEM_Real_gfx11<bits<8> op, SM_Pseudo ps, string opName = ps.Mnemonic> :
                         !if(ps.has_offset, !cast<int>(SGPR_NULL_gfx11plus.HWEncoding), ?));
 }
 
-multiclass SM_Real_Loads_gfx11<bits<8> op, string ps, string opName,
-                               SM_Load_Pseudo immPs = !cast<SM_Load_Pseudo>(ps#_IMM),
-                               SM_Load_Pseudo sgprPs = !cast<SM_Load_Pseudo>(ps#_SGPR)> {
-  def _IMM_gfx11 : SMEM_Real_gfx11<op, immPs, opName> {
-    let InOperandList = (ins immPs.BaseClass:$sbase, smem_offset:$offset, CPol:$cpol);
-  }
-  def _SGPR_gfx11 : SMEM_Real_gfx11<op, sgprPs, opName> {
-    let InOperandList = (ins sgprPs.BaseClass:$sbase, SReg_32:$soffset, CPol:$cpol);
-  }
-  def : MnemonicAlias<immPs.Mnemonic, opName>, Requires<[isGFX11Plus]>;
+class SMEM_Real_Load_gfx11<bits<8> op, string ps, string opName, dag offsets> :
+    SMEM_Real_gfx11<op, !cast<SM_Pseudo>(ps), opName> {
+  RegisterClass BaseClass = !cast<SM_Load_Pseudo>(ps).BaseClass;
+  let InOperandList = !con((ins BaseClass:$sbase), offsets, (ins CPol:$cpol));
+}
+
+multiclass SM_Real_Loads_gfx11<bits<8> op, string ps, string opName> {
+  def _IMM_gfx11 : SMEM_Real_Load_gfx11<op, ps#"_IMM", opName, (ins smem_offset:$offset)>;
+  def _SGPR_gfx11 : SMEM_Real_Load_gfx11<op, ps#"_SGPR", opName, (ins SReg_32:$soffset)>;
+  def _SGPR_IMM_gfx11 : SMEM_Real_Load_gfx11<
+    op, ps#"_SGPR_IMM", opName, (ins SReg_32:$soffset, smem_offset_mod:$offset)>;
+  def : MnemonicAlias<!cast<SM_Pseudo>(ps#"_IMM").Mnemonic, opName>,
+                      Requires<[isGFX11Plus]>;
 }
 
 defm S_LOAD_B32  : SM_Real_Loads_gfx11<0x000, "S_LOAD_DWORD", "s_load_b32">;
