@@ -282,7 +282,7 @@ TEST(AddressSanitizer, LoadStoreCallbacks) {
 }
 
 #if defined(__x86_64__) && \
-    !(defined(SANITIZER_MAC) || defined(SANITIZER_WINDOWS))
+    !(defined(SANITIZER_APPLE) || defined(SANITIZER_WINDOWS))
 // clang-format off
 
 #define CALL_ASAN_MEMORY_ACCESS_CALLBACK_ADD(s, reg, op)        \

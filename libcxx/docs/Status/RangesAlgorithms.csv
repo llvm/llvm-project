@@ -67,7 +67,7 @@ Merge,set_symmetric_difference,Not assigned,n/a,Not started
 Merge,set_union,Not assigned,n/a,Not started
 Permutation,remove,Not assigned,n/a,Not started
 Permutation,remove_if,Not assigned,n/a,Not started
-Permutation,reverse,Not assigned,n/a,Not started
+Permutation,reverse,Nikolas Klauser,`D125752 <https://llvm.org/D125752>`_,✅
 Permutation,rotate,Not assigned,n/a,Not started
 Permutation,shuffle,Not assigned,n/a,Not started
 Permutation,unique,Not assigned,n/a,Not started

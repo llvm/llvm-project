@@ -1162,7 +1162,11 @@ SplitBlockPredecessorsImpl(BasicBlock *BB, ArrayRef<BasicBlock *> Preds,
     if (NewLatch != OldLatch) {
       MDNode *MD = OldLatch->getTerminator()->getMetadata("llvm.loop");
       NewLatch->getTerminator()->setMetadata("llvm.loop", MD);
-      OldLatch->getTerminator()->setMetadata("llvm.loop", nullptr);
+      // It's still possible that OldLatch is the latch of another inner loop,
+      // in which case we do not remove the metadata.
+      Loop *IL = LI->getLoopFor(OldLatch);
+      if (IL && IL->getLoopLatch() != OldLatch)
+        OldLatch->getTerminator()->setMetadata("llvm.loop", nullptr);
     }
   }
 

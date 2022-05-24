@@ -3458,6 +3458,9 @@ static void RenderOpenCLOptions(const ArgList &Args, ArgStringList &CmdArgs,
   if (Arg *A = Args.getLastArg(options::OPT_cl_std_EQ)) {
     std::string CLStdStr = std::string("-cl-std=") + A->getValue();
     CmdArgs.push_back(Args.MakeArgString(CLStdStr));
+  } else if (Arg *A = Args.getLastArg(options::OPT_cl_ext_EQ)) {
+    std::string CLExtStr = std::string("-cl-ext=") + A->getValue();
+    CmdArgs.push_back(Args.MakeArgString(CLExtStr));
   }
 
   for (const auto &Arg : ForwardedArguments)
@@ -8389,6 +8392,20 @@ void LinkerWrapper::ConstructJob(Compilation &C, const JobAction &JA,
   // Construct the link job so we can wrap around it.
   Linker->ConstructJob(C, JA, Output, Inputs, Args, LinkingOutput);
   const auto &LinkCommand = C.getJobs().getJobs().back();
+
+  // Forward -Xoffload-linker<-triple> arguments to the device link job.
+  for (auto *Arg : Args.filtered(options::OPT_Xoffload_linker)) {
+    StringRef Val = Arg->getValue(0);
+    if (Val.empty())
+      CmdArgs.push_back(
+          Args.MakeArgString(Twine("-device-linker=") + Arg->getValue(1)));
+    else
+      CmdArgs.push_back(Args.MakeArgString(
+          "-device-linker=" +
+          ToolChain::getOpenMPTriple(Val.drop_front()).getTriple() + "=" +
+          Arg->getValue(1)));
+  }
+  Args.ClaimAllArgs(options::OPT_Xoffload_linker);
 
   // Add the linker arguments to be forwarded by the wrapper.
   CmdArgs.push_back("-linker-path");

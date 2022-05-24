@@ -1253,6 +1253,172 @@ void OpenMPIRBuilder::createTaskyield(const LocationDescription &Loc) {
   emitTaskyieldImpl(Loc);
 }
 
+OpenMPIRBuilder::InsertPointTy
+OpenMPIRBuilder::createTask(const LocationDescription &Loc,
+                            InsertPointTy AllocaIP, BodyGenCallbackTy BodyGenCB,
+                            bool Tied) {
+  if (!updateToLocation(Loc))
+    return InsertPointTy();
+
+  // The current basic block is split into four basic blocks. After outlining,
+  // they will be mapped as follows:
+  // ```
+  // def current_fn() {
+  //   current_basic_block:
+  //     br label %task.exit
+  //   task.exit:
+  //     ; instructions after task
+  // }
+  // def outlined_fn() {
+  //   task.alloca:
+  //     br label %task.body
+  //   task.body:
+  //     ret void
+  // }
+  // ```
+  BasicBlock *TaskExitBB = splitBB(Builder, /*CreateBranch=*/true, "task.exit");
+  BasicBlock *TaskBodyBB = splitBB(Builder, /*CreateBranch=*/true, "task.body");
+  BasicBlock *TaskAllocaBB =
+      splitBB(Builder, /*CreateBranch=*/true, "task.alloca");
+
+  OutlineInfo OI;
+  OI.EntryBB = TaskAllocaBB;
+  OI.OuterAllocaBB = AllocaIP.getBlock();
+  OI.ExitBB = TaskExitBB;
+  OI.PostOutlineCB = [this, &Loc, Tied](Function &OutlinedFn) {
+    // The input IR here looks like the following-
+    // ```
+    // func @current_fn() {
+    //   outlined_fn(%args)
+    // }
+    // func @outlined_fn(%args) { ... }
+    // ```
+    //
+    // This is changed to the following-
+    //
+    // ```
+    // func @current_fn() {
+    //   runtime_call(..., wrapper_fn, ...)
+    // }
+    // func @wrapper_fn(..., %args) {
+    //   outlined_fn(%args)
+    // }
+    // func @outlined_fn(%args) { ... }
+    // ```
+
+    // The stale call instruction will be replaced with a new call instruction
+    // for runtime call with a wrapper function.
+    assert(OutlinedFn.getNumUses() == 1 &&
+           "there must be a single user for the outlined function");
+    CallInst *StaleCI = cast<CallInst>(OutlinedFn.user_back());
+
+    // HasTaskData is true if any variables are captured in the outlined region,
+    // false otherwise.
+    bool HasTaskData = StaleCI->arg_size() > 0;
+    Builder.SetInsertPoint(StaleCI);
+
+    // Gather the arguments for emitting the runtime call for
+    // @__kmpc_omp_task_alloc
+    Function *TaskAllocFn =
+        getOrCreateRuntimeFunctionPtr(OMPRTL___kmpc_omp_task_alloc);
+
+    // Arguments - `loc_ref` (Ident) and `gtid` (ThreadID)
+    // call.
+    uint32_t SrcLocStrSize;
+    Constant *SrcLocStr = getOrCreateSrcLocStr(Loc, SrcLocStrSize);
+    Value *Ident = getOrCreateIdent(SrcLocStr, SrcLocStrSize);
+    Value *ThreadID = getOrCreateThreadID(Ident);
+
+    // Argument - `flags`
+    // If task is tied, then (Flags & 1) == 1.
+    // If task is untied, then (Flags & 1) == 0.
+    // TODO: Handle the other flags.
+    Value *Flags = Builder.getInt32(Tied);
+
+    // Argument - `sizeof_kmp_task_t` (TaskSize)
+    // Tasksize refers to the size in bytes of kmp_task_t data structure
+    // including private vars accessed in task.
+    Value *TaskSize = Builder.getInt64(0);
+    if (HasTaskData) {
+      AllocaInst *ArgStructAlloca =
+          dyn_cast<AllocaInst>(StaleCI->getArgOperand(0));
+      assert(ArgStructAlloca &&
+             "Unable to find the alloca instruction corresponding to arguments "
+             "for extracted function");
+      StructType *ArgStructType =
+          dyn_cast<StructType>(ArgStructAlloca->getAllocatedType());
+      assert(ArgStructType && "Unable to find struct type corresponding to "
+                              "arguments for extracted function");
+      TaskSize =
+          Builder.getInt64(M.getDataLayout().getTypeStoreSize(ArgStructType));
+    }
+
+    // TODO: Argument - sizeof_shareds
+
+    // Argument - task_entry (the wrapper function)
+    // If the outlined function has some captured variables (i.e. HasTaskData is
+    // true), then the wrapper function will have an additional argument (the
+    // struct containing captured variables). Otherwise, no such argument will
+    // be present.
+    SmallVector<Type *> WrapperArgTys{Builder.getInt32Ty()};
+    if (HasTaskData)
+      WrapperArgTys.push_back(OutlinedFn.getArg(0)->getType());
+    FunctionCallee WrapperFuncVal = M.getOrInsertFunction(
+        (Twine(OutlinedFn.getName()) + ".wrapper").str(),
+        FunctionType::get(Builder.getInt32Ty(), WrapperArgTys, false));
+    Function *WrapperFunc = dyn_cast<Function>(WrapperFuncVal.getCallee());
+    PointerType *WrapperFuncBitcastType =
+        FunctionType::get(Builder.getInt32Ty(),
+                          {Builder.getInt32Ty(), Builder.getInt8PtrTy()}, false)
+            ->getPointerTo();
+    Value *WrapperFuncBitcast =
+        ConstantExpr::getBitCast(WrapperFunc, WrapperFuncBitcastType);
+
+    // Emit the @__kmpc_omp_task_alloc runtime call
+    // The runtime call returns a pointer to an area where the task captured
+    // variables must be copied before the task is run (NewTaskData)
+    CallInst *NewTaskData = Builder.CreateCall(
+        TaskAllocFn,
+        {/*loc_ref=*/Ident, /*gtid=*/ThreadID, /*flags=*/Flags,
+         /*sizeof_task=*/TaskSize, /*sizeof_shared=*/Builder.getInt64(0),
+         /*task_func=*/WrapperFuncBitcast});
+
+    // Copy the arguments for outlined function
+    if (HasTaskData) {
+      Value *TaskData = StaleCI->getArgOperand(0);
+      Align Alignment = TaskData->getPointerAlignment(M.getDataLayout());
+      Builder.CreateMemCpy(NewTaskData, Alignment, TaskData, Alignment,
+                           TaskSize);
+    }
+
+    // Emit the @__kmpc_omp_task runtime call to spawn the task
+    Function *TaskFn = getOrCreateRuntimeFunctionPtr(OMPRTL___kmpc_omp_task);
+    Builder.CreateCall(TaskFn, {Ident, ThreadID, NewTaskData});
+
+    StaleCI->eraseFromParent();
+
+    // Emit the body for wrapper function
+    BasicBlock *WrapperEntryBB =
+        BasicBlock::Create(M.getContext(), "", WrapperFunc);
+    Builder.SetInsertPoint(WrapperEntryBB);
+    if (HasTaskData)
+      Builder.CreateCall(&OutlinedFn, {WrapperFunc->getArg(1)});
+    else
+      Builder.CreateCall(&OutlinedFn);
+    Builder.CreateRet(Builder.getInt32(0));
+  };
+
+  addOutlineInfo(std::move(OI));
+
+  InsertPointTy TaskAllocaIP =
+      InsertPointTy(TaskAllocaBB, TaskAllocaBB->begin());
+  InsertPointTy TaskBodyIP = InsertPointTy(TaskBodyBB, TaskBodyBB->begin());
+  BodyGenCB(TaskAllocaIP, TaskBodyIP);
+  Builder.SetInsertPoint(TaskExitBB);
+
+  return Builder.saveIP();
+}
+
 OpenMPIRBuilder::InsertPointTy OpenMPIRBuilder::createSections(
     const LocationDescription &Loc, InsertPointTy AllocaIP,
     ArrayRef<StorableBodyGenCallbackTy> SectionCBs, PrivatizeCallbackTy PrivCB,

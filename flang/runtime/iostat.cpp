@@ -83,6 +83,15 @@ const char *IostatErrorString(int iostat) {
     return "Bad REAL input value";
   case IostatBadScaleFactor:
     return "Bad REAL output scale factor (kP)";
+  case IostatBadAsynchronous:
+    return "READ/WRITE(ASYNCHRONOUS='YES') on unit without "
+           "OPEN(ASYNCHRONOUS='YES')";
+  case IostatBadWaitUnit:
+    return "WAIT(ID=nonzero) for a bad unit number";
+  case IostatBOZInputOverflow:
+    return "B/O/Z input value overflows variable";
+  case IostatIntegerInputOverflow:
+    return "Integer input value overflows variable";
   default:
     return nullptr;
   }

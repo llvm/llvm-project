@@ -68,31 +68,6 @@ All the options in this section are frontend-only and therefore if used
 with regular clang driver they require frontend forwarding, e.g. ``-cc1``
 or ``-Xclang``.
 
-.. _opencl_cl_ext:
-
-.. option:: -cl-ext
-
-Disables support of OpenCL extensions. All OpenCL targets provide a list
-of extensions that they support. Clang allows to amend this using the ``-cl-ext``
-flag with a comma-separated list of extensions prefixed with ``'+'`` or ``'-'``.
-The syntax: ``-cl-ext=<(['-'|'+']<extension>[,])+>``,  where extensions
-can be either one of `the OpenCL published extensions
-<https://www.khronos.org/registry/OpenCL>`_
-or any vendor extension. Alternatively, ``'all'`` can be used to enable
-or disable all known extensions.
-
-Example disabling double support for the 64-bit SPIR target:
-
-   .. code-block:: console
-
-     $ clang -cc1 -triple spir64-unknown-unknown -cl-ext=-cl_khr_fp64 test.cl
-
-Enabling all extensions except double support in R600 AMD GPU can be done using:
-
-   .. code-block:: console
-
-     $ clang -cc1 -triple r600-unknown-unknown -cl-ext=-all,+cl_khr_fp16 test.cl
-
 .. _opencl_finclude_default_header:
 
 .. option:: -finclude-default-header

@@ -3779,11 +3779,11 @@ InstCombinerImpl::pushFreezeToPreventPoisonFromPropagating(FreezeInst &OrigFI) {
   if (!MaybePoisonOperand)
     return OrigOp;
 
-  auto *FrozenMaybePoisonOperand = new FreezeInst(
+  Builder.SetInsertPoint(OrigOpInst);
+  auto *FrozenMaybePoisonOperand = Builder.CreateFreeze(
       MaybePoisonOperand->get(), MaybePoisonOperand->get()->getName() + ".fr");
 
   replaceUse(*MaybePoisonOperand, FrozenMaybePoisonOperand);
-  FrozenMaybePoisonOperand->insertBefore(OrigOpInst);
   return OrigOp;
 }
 

@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "clang-pseudo/Bracket.h"
 #include "clang-pseudo/DirectiveTree.h"
 #include "clang-pseudo/GLR.h"
 #include "clang-pseudo/Grammar.h"
@@ -89,6 +90,7 @@ int main(int argc, char *argv[]) {
       llvm::outs() << DirectiveStructure;
 
     ParseableStream = clang::pseudo::stripComments(cook(*Stream, LangOpts));
+    pairBrackets(*ParseableStream);
   }
 
   if (Grammar.getNumOccurrences()) {
