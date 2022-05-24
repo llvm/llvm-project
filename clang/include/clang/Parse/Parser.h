@@ -3332,30 +3332,14 @@ public:
   ExprResult ParseOpenMPParensExpr(StringRef ClauseName, SourceLocation &RLoc,
                                    bool IsAddressOfOperand = false);
 
-  /// Data used for parsing list of variables in OpenMP clauses.
-  struct OpenMPVarListDataTy {
-    Expr *DepModOrTailExpr = nullptr;
-    SourceLocation ColonLoc;
-    SourceLocation RLoc;
-    CXXScopeSpec ReductionOrMapperIdScopeSpec;
-    DeclarationNameInfo ReductionOrMapperId;
-    int ExtraModifier = -1; ///< Additional modifier for linear, map, depend or
-                            ///< lastprivate clause.
-    SmallVector<OpenMPMapModifierKind, NumberOfOMPMapClauseModifiers>
-    MapTypeModifiers;
-    SmallVector<SourceLocation, NumberOfOMPMapClauseModifiers>
-    MapTypeModifiersLoc;
-    SmallVector<OpenMPMotionModifierKind, NumberOfOMPMotionModifiers>
-        MotionModifiers;
-    SmallVector<SourceLocation, NumberOfOMPMotionModifiers> MotionModifiersLoc;
-    bool IsMapTypeImplicit = false;
-    SourceLocation ExtraModifierLoc;
-  };
-
+  /// Parses a reserved locator like 'omp_all_memory'.
+  bool ParseOpenMPReservedLocator(OpenMPClauseKind Kind,
+                                  Sema::OpenMPVarListDataTy &Data,
+                                  const LangOptions &LangOpts);
   /// Parses clauses with list.
   bool ParseOpenMPVarList(OpenMPDirectiveKind DKind, OpenMPClauseKind Kind,
                           SmallVectorImpl<Expr *> &Vars,
-                          OpenMPVarListDataTy &Data);
+                          Sema::OpenMPVarListDataTy &Data);
   bool ParseUnqualifiedId(CXXScopeSpec &SS, ParsedType ObjectType,
                           bool ObjectHadErrors, bool EnteringContext,
                           bool AllowDestructorName, bool AllowConstructorName,
@@ -3363,11 +3347,11 @@ public:
                           SourceLocation *TemplateKWLoc, UnqualifiedId &Result);
 
   /// Parses the mapper modifier in map, to, and from clauses.
-  bool parseMapperModifier(OpenMPVarListDataTy &Data);
+  bool parseMapperModifier(Sema::OpenMPVarListDataTy &Data);
   /// Parses map-type-modifiers in map clause.
   /// map([ [map-type-modifier[,] [map-type-modifier[,] ...] map-type : ] list)
   /// where, map-type-modifier ::= always | close | mapper(mapper-identifier)
-  bool parseMapTypeModifiers(OpenMPVarListDataTy &Data);
+  bool parseMapTypeModifiers(Sema::OpenMPVarListDataTy &Data);
 
 private:
   //===--------------------------------------------------------------------===//
