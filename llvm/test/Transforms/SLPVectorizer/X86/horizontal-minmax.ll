@@ -1430,8 +1430,8 @@ define void @PR49730() {
 ; SSE-NEXT:    ret void
 ;
 ; AVX-LABEL: @PR49730(
-; AVX-NEXT:    [[TMP1:%.*]] = call <4 x i32> @llvm.smin.v4i32(<4 x i32> poison, <4 x i32> <i32 2, i32 2, i32 1, i32 1>)
-; AVX-NEXT:    [[TMP2:%.*]] = sub nsw <4 x i32> poison, [[TMP1]]
+; AVX-NEXT:    [[TMP1:%.*]] = call <4 x i32> @llvm.smin.v4i32(<4 x i32> undef, <4 x i32> <i32 2, i32 2, i32 1, i32 1>)
+; AVX-NEXT:    [[TMP2:%.*]] = sub nsw <4 x i32> undef, [[TMP1]]
 ; AVX-NEXT:    [[T12:%.*]] = sub nsw i32 undef, undef
 ; AVX-NEXT:    [[TMP3:%.*]] = call i32 @llvm.vector.reduce.umin.v4i32(<4 x i32> [[TMP2]])
 ; AVX-NEXT:    [[TMP4:%.*]] = call i32 @llvm.umin.i32(i32 [[T12]], i32 undef)
@@ -1440,8 +1440,8 @@ define void @PR49730() {
 ; AVX-NEXT:    ret void
 ;
 ; AVX2-LABEL: @PR49730(
-; AVX2-NEXT:    [[TMP1:%.*]] = call <4 x i32> @llvm.smin.v4i32(<4 x i32> poison, <4 x i32> <i32 2, i32 2, i32 1, i32 1>)
-; AVX2-NEXT:    [[TMP2:%.*]] = sub nsw <4 x i32> poison, [[TMP1]]
+; AVX2-NEXT:    [[TMP1:%.*]] = call <4 x i32> @llvm.smin.v4i32(<4 x i32> undef, <4 x i32> <i32 2, i32 2, i32 1, i32 1>)
+; AVX2-NEXT:    [[TMP2:%.*]] = sub nsw <4 x i32> undef, [[TMP1]]
 ; AVX2-NEXT:    [[T12:%.*]] = sub nsw i32 undef, undef
 ; AVX2-NEXT:    [[TMP3:%.*]] = call i32 @llvm.vector.reduce.umin.v4i32(<4 x i32> [[TMP2]])
 ; AVX2-NEXT:    [[TMP4:%.*]] = call i32 @llvm.umin.i32(i32 [[T12]], i32 undef)
@@ -1450,8 +1450,8 @@ define void @PR49730() {
 ; AVX2-NEXT:    ret void
 ;
 ; THRESH-LABEL: @PR49730(
-; THRESH-NEXT:    [[TMP1:%.*]] = call <4 x i32> @llvm.smin.v4i32(<4 x i32> poison, <4 x i32> <i32 2, i32 2, i32 1, i32 1>)
-; THRESH-NEXT:    [[TMP2:%.*]] = sub nsw <4 x i32> poison, [[TMP1]]
+; THRESH-NEXT:    [[TMP1:%.*]] = call <4 x i32> @llvm.smin.v4i32(<4 x i32> undef, <4 x i32> <i32 2, i32 2, i32 1, i32 1>)
+; THRESH-NEXT:    [[TMP2:%.*]] = sub nsw <4 x i32> undef, [[TMP1]]
 ; THRESH-NEXT:    [[T12:%.*]] = sub nsw i32 undef, undef
 ; THRESH-NEXT:    [[TMP3:%.*]] = call i32 @llvm.vector.reduce.umin.v4i32(<4 x i32> [[TMP2]])
 ; THRESH-NEXT:    [[TMP4:%.*]] = call i32 @llvm.umin.i32(i32 [[T12]], i32 undef)
