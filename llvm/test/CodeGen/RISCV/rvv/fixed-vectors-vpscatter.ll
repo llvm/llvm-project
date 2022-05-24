@@ -1833,8 +1833,8 @@ define void @vpscatter_baseidx_v32i32_v32f64(<32 x double> %val, double* %base, 
 ; RV64-NEXT:    addi sp, sp, -16
 ; RV64-NEXT:    .cfi_def_cfa_offset 16
 ; RV64-NEXT:    csrr a3, vlenb
-; RV64-NEXT:    slli a4, a3, 3
-; RV64-NEXT:    add a3, a4, a3
+; RV64-NEXT:    li a4, 10
+; RV64-NEXT:    mul a3, a3, a4
 ; RV64-NEXT:    sub sp, sp, a3
 ; RV64-NEXT:    li a3, 32
 ; RV64-NEXT:    vsetvli zero, a3, e32, m8, ta, mu
@@ -1882,8 +1882,8 @@ define void @vpscatter_baseidx_v32i32_v32f64(<32 x double> %val, double* %base, 
 ; RV64-NEXT:    vsetvli zero, a1, e64, m8, ta, mu
 ; RV64-NEXT:    vsoxei64.v v16, (a0), v8, v0.t
 ; RV64-NEXT:    csrr a0, vlenb
-; RV64-NEXT:    slli a1, a0, 3
-; RV64-NEXT:    add a0, a1, a0
+; RV64-NEXT:    li a1, 10
+; RV64-NEXT:    mul a0, a0, a1
 ; RV64-NEXT:    add sp, sp, a0
 ; RV64-NEXT:    addi sp, sp, 16
 ; RV64-NEXT:    ret

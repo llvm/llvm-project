@@ -40,7 +40,7 @@
   ; CHECK-NEXT:    sub sp, sp, a1
   ; CHECK-NEXT:    andi sp, sp, -32
   ; CHECK-NEXT:    sw a0, 32(sp) # 4-byte Folded Spill
-  ; CHECK-NEXT:    addi a0, sp, 56
+  ; CHECK-NEXT:    addi a0, sp, 64
   ; CHECK-NEXT:    vs2r.v v30, (a0) # Unknown-size Folded Spill
   ; CHECK-NEXT:    addi sp, s0, -80
   ; CHECK-NEXT:    lw ra, 76(sp) # 4-byte Folded Reload

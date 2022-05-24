@@ -5,17 +5,18 @@
 define signext i32 @foo(i32 signext %aa) #0 {
 ; CHECK-LABEL: foo:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    addi sp, sp, -80
-; CHECK-NEXT:    .cfi_def_cfa_offset 80
-; CHECK-NEXT:    sd ra, 72(sp) # 8-byte Folded Spill
-; CHECK-NEXT:    sd s0, 64(sp) # 8-byte Folded Spill
-; CHECK-NEXT:    sd s1, 56(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    addi sp, sp, -96
+; CHECK-NEXT:    .cfi_def_cfa_offset 96
+; CHECK-NEXT:    sd ra, 88(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    sd s0, 80(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    sd s1, 72(sp) # 8-byte Folded Spill
 ; CHECK-NEXT:    .cfi_offset ra, -8
 ; CHECK-NEXT:    .cfi_offset s0, -16
 ; CHECK-NEXT:    .cfi_offset s1, -24
-; CHECK-NEXT:    addi s0, sp, 80
+; CHECK-NEXT:    addi s0, sp, 96
 ; CHECK-NEXT:    .cfi_def_cfa s0, 0
 ; CHECK-NEXT:    csrr a1, vlenb
+; CHECK-NEXT:    slli a1, a1, 1
 ; CHECK-NEXT:    sub sp, sp, a1
 ; CHECK-NEXT:    andi sp, sp, -8
 ; CHECK-NEXT:    mv s1, sp
@@ -40,11 +41,11 @@ define signext i32 @foo(i32 signext %aa) #0 {
 ; CHECK-NEXT:    call gfunc@plt
 ; CHECK-NEXT:    addi sp, sp, 32
 ; CHECK-NEXT:    li a0, 0
-; CHECK-NEXT:    addi sp, s0, -80
-; CHECK-NEXT:    ld ra, 72(sp) # 8-byte Folded Reload
-; CHECK-NEXT:    ld s0, 64(sp) # 8-byte Folded Reload
-; CHECK-NEXT:    ld s1, 56(sp) # 8-byte Folded Reload
-; CHECK-NEXT:    addi sp, sp, 80
+; CHECK-NEXT:    addi sp, s0, -96
+; CHECK-NEXT:    ld ra, 88(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    ld s0, 80(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    ld s1, 72(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    addi sp, sp, 96
 ; CHECK-NEXT:    ret
 entry:
   %aa.addr = alloca i32, align 4
