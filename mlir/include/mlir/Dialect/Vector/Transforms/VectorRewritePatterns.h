@@ -49,6 +49,9 @@ enum class VectorContractLowering {
   Matmul = 1,
   /// Lower to `vector.outerproduct`.
   OuterProduct = 2,
+  /// Lower contract with all reduction dimensions unrolled to 1 to a vector
+  /// elementwise operations.
+  ParallelArith = 3,
 };
 /// Enum to control the splitting of `vector.transfer` operations into
 /// in-bounds and out-of-bounds variants.
