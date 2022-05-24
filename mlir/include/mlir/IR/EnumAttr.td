@@ -222,9 +222,10 @@ class IntEnumAttr<I intType, string name, string summary,
                           stringToSymbolFnName # [{(enumKeyword);
     if (maybeEnum)
       return *maybeEnum;
-    return {(::mlir::LogicalResult)$_parser.emitError(loc, "expected }] #
-    cppType # [{ to be one of: }] #
-    !interleave(!foreach(enum, enumerants, enum.str), ", ") # [{")};
+    return {(::mlir::LogicalResult)($_parser.emitError(loc) << "expected " }] #
+    [{<< "}] # cppType # [{" << " to be one of: " << }] #
+    !interleave(!foreach(enum, enumerants, "\"" # enum.str # "\""),
+                [{ << ", " << }]) # [{)};
   }()}];
   // Print the enum by calling `symbolToString`.
   let parameterPrinter = "$_printer << " # symbolToStringFnName # "($_self)";
@@ -294,10 +295,10 @@ class BitEnumAttr<I intType, string name, string summary,
       auto maybeEnum = }] # cppNamespace # "::" #
                             stringToSymbolFnName # [{(enumKeyword);
       if (!maybeEnum) {
-          return {(::mlir::LogicalResult)$_parser.emitError(loc, "expected }] #
-                  cppType # [{ to be one of: }] #
-                 !interleave(!foreach(enum, enumerants, enum.str),
-                             ", ") # [{")};
+          return {(::mlir::LogicalResult)($_parser.emitError(loc) << }] #
+              [{"expected " << "}] # cppType # [{" << " to be one of: " << }] #
+              !interleave(!foreach(enum, enumerants, "\"" # enum.str # "\""),
+                          [{ << ", " << }]) # [{)};
       }
       flags = flags | *maybeEnum;
     } while(::mlir::succeeded($_parser.}] # parseSeparatorFn # [{()));
