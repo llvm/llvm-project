@@ -258,6 +258,7 @@ protected:
                                 bool is_indirect_enum_case);
 
   bool GetDynamicTypeAndAddress_Class(ValueObject &in_value,
+                                      CompilerType class_type,
                                       lldb::DynamicValueType use_dynamic,
                                       TypeAndOrName &class_type_or_name,
                                       Address &address);

@@ -1572,22 +1572,22 @@ static bool IsPrivateNSClass(NodePointer node) {
 }
 
 bool SwiftLanguageRuntimeImpl::GetDynamicTypeAndAddress_Class(
-    ValueObject &in_value, lldb::DynamicValueType use_dynamic,
-    TypeAndOrName &class_type_or_name, Address &address) {
+    ValueObject &in_value, CompilerType class_type,
+    lldb::DynamicValueType use_dynamic, TypeAndOrName &class_type_or_name,
+    Address &address) {
   AddressType address_type;
   lldb::addr_t instance_ptr = in_value.GetPointerValue(&address_type);
   if (instance_ptr == LLDB_INVALID_ADDRESS || instance_ptr == 0)
     return false;
 
-  CompilerType static_type = in_value.GetCompilerType();
   auto *tss =
-      llvm::dyn_cast_or_null<TypeSystemSwift>(static_type.GetTypeSystem());
+      llvm::dyn_cast_or_null<TypeSystemSwift>(class_type.GetTypeSystem());
   if (!tss)
     return false;
   address.SetRawAddress(instance_ptr);
   auto &ts = tss->GetTypeSystemSwiftTypeRef();
   // Ask the Objective-C runtime about Objective-C types.
-  if (tss->IsImportedType(static_type.GetOpaqueQualType(), nullptr))
+  if (tss->IsImportedType(class_type.GetOpaqueQualType(), nullptr))
     if (auto *objc_runtime = SwiftLanguageRuntime::GetObjCRuntime(m_process)) {
       Value::ValueType value_type;
       if (objc_runtime->GetDynamicTypeAndAddress(
@@ -2595,7 +2595,7 @@ bool SwiftLanguageRuntimeImpl::GetDynamicTypeAndAddress(
         in_value, use_dynamic, class_type_or_name, address);
   else if (type_info.AnySet(eTypeIsClass) ||
            type_info.AllSet(eTypeIsBuiltIn | eTypeIsPointer | eTypeHasValue))
-    success = GetDynamicTypeAndAddress_Class(in_value, use_dynamic,
+    success = GetDynamicTypeAndAddress_Class(in_value, val_type, use_dynamic,
                                              class_type_or_name, address);
   else if (type_info.AnySet(eTypeIsProtocol))
     success = GetDynamicTypeAndAddress_Protocol(in_value, val_type, use_dynamic,
@@ -2612,8 +2612,8 @@ bool SwiftLanguageRuntimeImpl::GetDynamicTypeAndAddress(
 
     Flags subst_type_info(bound_type.GetTypeInfo());
     if (subst_type_info.AnySet(eTypeIsClass)) {
-      success = GetDynamicTypeAndAddress_Class(in_value, use_dynamic,
-                                               class_type_or_name, address);
+      success = GetDynamicTypeAndAddress_Class(
+          in_value, bound_type, use_dynamic, class_type_or_name, address);
     } else if (subst_type_info.AnySet(eTypeIsProtocol)) {
       success = GetDynamicTypeAndAddress_Protocol(
           in_value, bound_type, use_dynamic, class_type_or_name, address);
