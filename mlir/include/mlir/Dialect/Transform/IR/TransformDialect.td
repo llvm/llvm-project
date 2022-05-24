@@ -242,11 +242,29 @@ def Transform_Dialect : Dialect {
       getPDLConstraintHooks() const;
 
     private:
+      template <typename OpTy>
+      void addOperationIfNotRegistered() {
+        Optional<RegisteredOperationName> opName =
+            RegisteredOperationName::lookup(OpTy::getOperationName(),
+                                            getContext());
+        if (!opName)
+          return addOperations<OpTy>();
+
+        if (opName->getTypeID() == TypeID::get<OpTy>())
+          return;
+
+        llvm::errs() << "error: extensible dialect operation '"
+                     << OpTy::getOperationName()
+                     << "' is already registered with a mismatching TypeID";
+        abort();
+      }
+
       /// Registers operations specified as template parameters with this
       /// dialect. Checks that they implement the required interfaces.
       template <typename... OpTys>
       void addOperationsChecked() {
-        addOperations<OpTys...>();
+        (void)std::initializer_list<int>{(addOperationIfNotRegistered<OpTys>(),
+                                          0)...};
 
         #ifndef NDEBUG
         (void)std::initializer_list<int>{
