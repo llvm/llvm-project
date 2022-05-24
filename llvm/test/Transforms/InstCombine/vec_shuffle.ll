@@ -2075,8 +2075,6 @@ define <3 x i16> @fptoui_shuf_different_source_types(<3 x float> %x, <3 x half> 
   ret <3 x i16> %r
 }
 
-; negative test - must have same size elements
-
 define <4 x i32> @fptoui_shuf_widen_elts(<4 x half> %x, <4 x half> %y) {
 ; CHECK-LABEL: @fptoui_shuf_widen_elts(
 ; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <4 x half> [[X:%.*]], <4 x half> [[Y:%.*]], <4 x i32> <i32 0, i32 1, i32 4, i32 5>
@@ -2089,7 +2087,7 @@ define <4 x i32> @fptoui_shuf_widen_elts(<4 x half> %x, <4 x half> %y) {
   ret <4 x i32> %r
 }
 
-; negative test - must have same size elements
+; negative test - must have same or smaller size source elements
 
 define <4 x float> @sitofp_shuf_narrow_elts(<4 x i64> %x, <4 x i64> %y) {
 ; CHECK-LABEL: @sitofp_shuf_narrow_elts(
@@ -2172,7 +2170,7 @@ define <4 x i32> @fptoi_shuf(<4 x float> %x, <4 x float> %y) {
   ret <4 x i32> %r
 }
 
-; negative test - length-changing shuffle
+; negative test - length-increasing shuffle
 
 define <4 x float> @sitofp_shuf_widen(<2 x i32> %x, <2 x i32> %y) {
 ; CHECK-LABEL: @sitofp_shuf_widen(
@@ -2187,13 +2185,10 @@ define <4 x float> @sitofp_shuf_widen(<2 x i32> %x, <2 x i32> %y) {
   ret <4 x float> %r
 }
 
-; negative test - length-changing shuffle
-
 define <2 x float> @uitofp_shuf_narrow(<4 x i32> %x, <4 x i32> %y) {
 ; CHECK-LABEL: @uitofp_shuf_narrow(
-; CHECK-NEXT:    [[NX:%.*]] = uitofp <4 x i32> [[X:%.*]] to <4 x float>
-; CHECK-NEXT:    [[NY:%.*]] = uitofp <4 x i32> [[Y:%.*]] to <4 x float>
-; CHECK-NEXT:    [[R:%.*]] = shufflevector <4 x float> [[NX]], <4 x float> [[NY]], <2 x i32> <i32 3, i32 5>
+; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <4 x i32> [[X:%.*]], <4 x i32> [[Y:%.*]], <2 x i32> <i32 3, i32 5>
+; CHECK-NEXT:    [[R:%.*]] = uitofp <2 x i32> [[TMP1]] to <2 x float>
 ; CHECK-NEXT:    ret <2 x float> [[R]]
 ;
   %nx = uitofp <4 x i32> %x to <4 x float>
