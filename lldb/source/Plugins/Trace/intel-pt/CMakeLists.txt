@@ -18,6 +18,7 @@ add_lldb_library(lldbPluginTraceIntelPT PLUGIN
   DecodedThread.cpp
   TaskTimer.cpp
   LibiptDecoder.cpp
+  PerfContextSwitchDecoder.cpp
   ThreadDecoder.cpp
   TraceCursorIntelPT.cpp
   TraceIntelPT.cpp
