@@ -1239,8 +1239,10 @@ void RISCVInsertVSETVLI::doLocalPrepass(MachineBasicBlock &MBB) {
                 MachineOperand &VLOp = MI.getOperand(getVLOpNum(MI));
                 if (CurInfo.hasAVLImm())
                   VLOp.ChangeToImmediate(CurInfo.getAVLImm());
-                else
+                else {
+                  MRI->clearKillFlags(CurInfo.getAVLReg());
                   VLOp.ChangeToRegister(CurInfo.getAVLReg(), /*IsDef*/ false);
+                }
                 CurInfo = computeInfoForInstr(MI, TSFlags, MRI);
                 continue;
               }
