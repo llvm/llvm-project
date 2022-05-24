@@ -186,6 +186,24 @@ int main(int, char**) {
     static_assert(throws_invocable_r<ThrowsImplicit, Fn, Tag&>(), "");
   }
   {
+    // Check that it's fine if the result type is non-moveable.
+    struct CantMove {
+      CantMove() = default;
+      CantMove(CantMove&&) = delete;
+    };
+
+    static_assert(!std::is_move_constructible_v<CantMove>);
+    static_assert(!std::is_copy_constructible_v<CantMove>);
+
+    using Fn = CantMove() noexcept;
+
+    static_assert(std::is_nothrow_invocable_r<CantMove, Fn>::value);
+    static_assert(!std::is_nothrow_invocable_r<CantMove, Fn, int>::value);
+
+    static_assert(std::is_nothrow_invocable_r_v<CantMove, Fn>);
+    static_assert(!std::is_nothrow_invocable_r_v<CantMove, Fn, int>);
+  }
+  {
     // Check for is_nothrow_invocable_v
     using Fn = CallObject<true, int>;
     static_assert(std::is_nothrow_invocable_v<Fn>, "");
