@@ -236,6 +236,10 @@ inline bool isExplicitShape(const Fortran::semantics::Symbol &sym) {
   return det && det->IsArray() && det->shape().IsExplicitShape();
 }
 
+inline bool isAssumedSize(const Fortran::semantics::Symbol &sym) {
+  return Fortran::semantics::IsAssumedSizeArray(sym.GetUltimate());
+}
+
 //===----------------------------------------------------------------------===//
 // Perform analysis to determine a box's parameter values
 //===----------------------------------------------------------------------===//
@@ -378,7 +382,7 @@ public:
   /// Run the analysis on `sym`.
   void analyze(const Fortran::semantics::Symbol &sym) {
     if (symIsArray(sym)) {
-      bool isConstant = true;
+      bool isConstant = !isAssumedSize(sym);
       llvm::SmallVector<int64_t> lbounds;
       llvm::SmallVector<int64_t> shapes;
       llvm::SmallVector<const Fortran::semantics::ShapeSpec *> bounds;
@@ -396,6 +400,8 @@ public:
                 continue;
               }
             } else if (subs.ubound().isStar()) {
+              assert(Fortran::semantics::IsNamedConstant(sym) &&
+                     "expect implied shape constant");
               shapes.push_back(fir::SequenceType::getUnknownExtent());
               continue;
             }
