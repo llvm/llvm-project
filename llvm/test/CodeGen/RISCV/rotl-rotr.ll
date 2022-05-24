@@ -576,8 +576,7 @@ define signext i32 @rotl_32_mask_shared(i32 signext %a, i32 signext %b, i32 sign
 ;
 ; RV32ZBB-LABEL: rotl_32_mask_shared:
 ; RV32ZBB:       # %bb.0:
-; RV32ZBB-NEXT:    andi a3, a2, 31
-; RV32ZBB-NEXT:    rol a0, a0, a3
+; RV32ZBB-NEXT:    rol a0, a0, a2
 ; RV32ZBB-NEXT:    sll a1, a1, a2
 ; RV32ZBB-NEXT:    add a0, a0, a1
 ; RV32ZBB-NEXT:    ret
@@ -695,8 +694,7 @@ define signext i64 @rotl_64_mask_shared(i64 signext %a, i64 signext %b, i64 sign
 ;
 ; RV64ZBB-LABEL: rotl_64_mask_shared:
 ; RV64ZBB:       # %bb.0:
-; RV64ZBB-NEXT:    andi a3, a2, 63
-; RV64ZBB-NEXT:    rol a0, a0, a3
+; RV64ZBB-NEXT:    rol a0, a0, a2
 ; RV64ZBB-NEXT:    sll a1, a1, a2
 ; RV64ZBB-NEXT:    add a0, a0, a1
 ; RV64ZBB-NEXT:    ret
@@ -731,8 +729,7 @@ define signext i32 @rotr_32_mask_shared(i32 signext %a, i32 signext %b, i32 sign
 ;
 ; RV32ZBB-LABEL: rotr_32_mask_shared:
 ; RV32ZBB:       # %bb.0:
-; RV32ZBB-NEXT:    andi a3, a2, 31
-; RV32ZBB-NEXT:    ror a0, a0, a3
+; RV32ZBB-NEXT:    ror a0, a0, a2
 ; RV32ZBB-NEXT:    sll a1, a1, a2
 ; RV32ZBB-NEXT:    add a0, a0, a1
 ; RV32ZBB-NEXT:    ret
@@ -848,8 +845,7 @@ define signext i64 @rotr_64_mask_shared(i64 signext %a, i64 signext %b, i64 sign
 ;
 ; RV64ZBB-LABEL: rotr_64_mask_shared:
 ; RV64ZBB:       # %bb.0:
-; RV64ZBB-NEXT:    andi a3, a2, 63
-; RV64ZBB-NEXT:    ror a0, a0, a3
+; RV64ZBB-NEXT:    ror a0, a0, a2
 ; RV64ZBB-NEXT:    sll a1, a1, a2
 ; RV64ZBB-NEXT:    add a0, a0, a1
 ; RV64ZBB-NEXT:    ret
