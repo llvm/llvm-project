@@ -259,6 +259,11 @@ public:
   std::size_t maxAlignment() const { return maxAlignment_; }
   const semantics::DerivedTypeSpec *pdtInstance() const { return pdtInstance_; }
   const IntrinsicProcTable &intrinsics() const { return intrinsics_; }
+  bool inModuleFile() const { return inModuleFile_; }
+  FoldingContext &set_inModuleFile(bool yes = true) {
+    inModuleFile_ = yes;
+    return *this;
+  }
 
   ConstantSubscript &StartImpliedDo(parser::CharBlock, ConstantSubscript = 1);
   std::optional<ConstantSubscript> GetImpliedDo(parser::CharBlock) const;
@@ -282,6 +287,7 @@ private:
   static constexpr bool bigEndian_{false}; // TODO: configure for target
   static constexpr std::size_t maxAlignment_{8}; // TODO: configure for target
   const semantics::DerivedTypeSpec *pdtInstance_{nullptr};
+  bool inModuleFile_{false};
   std::map<parser::CharBlock, ConstantSubscript> impliedDos_;
 };
 

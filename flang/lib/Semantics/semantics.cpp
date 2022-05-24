@@ -356,6 +356,16 @@ Scope &SemanticsContext::FindScope(parser::CharBlock source) {
   }
 }
 
+bool SemanticsContext::IsInModuleFile(parser::CharBlock source) const {
+  for (const Scope *scope{&FindScope(source)}; !scope->IsGlobal();
+       scope = &scope->parent()) {
+    if (scope->IsModuleFile()) {
+      return true;
+    }
+  }
+  return false;
+}
+
 void SemanticsContext::PopConstruct() {
   CHECK(!constructStack_.empty());
   constructStack_.pop_back();
