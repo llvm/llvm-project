@@ -1,7 +1,5 @@
 ; RUN: llc -march=amdgcn -mcpu=gfx90a -verify-machineinstrs < %s | FileCheck -check-prefixes=GFX90A,SDAG %s
-; XUN: llc -global-isel -march=amdgcn -mcpu=gfx90a -verify-machineinstrs < %s | FileCheck -check-prefixes=GFX90A,GISEL %s
-
-; FIXME: global isel does not select _gfx90a flavor of image instructions.
+; RUN: llc -global-isel -march=amdgcn -mcpu=gfx90a -verify-machineinstrs < %s | FileCheck -check-prefixes=GFX90A,GISEL %s
 
 ; GFX90A-LABEL: {{^}}sample_1d:
 ; GFX90A-NOT: s_wqm_b64
