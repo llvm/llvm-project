@@ -125,7 +125,7 @@ static_assert(test(std::ranges::mismatch, a, a));
 //static_assert(test(std::ranges::replace_copy, a, a, 42, 43));
 //static_assert(test(std::ranges::replace_copy_if, a, a, odd, 43));
 //static_assert(test(std::ranges::replace_if, a, odd, 43));
-//static_assert(test(std::ranges::reverse, a));
+static_assert(test(std::ranges::reverse, a));
 //static_assert(test(std::ranges::reverse_copy, a, a));
 //static_assert(test(std::ranges::rotate, a, a+5));
 //static_assert(test(std::ranges::rotate_copy, a, a+5, a));

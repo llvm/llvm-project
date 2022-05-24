@@ -274,6 +274,15 @@ namespace ranges {
            indirect_unary_predicate<projected<iterator_t<R>, Proj>> Pred>
     constexpr bool ranges::is_partitioned(R&& r, Pred pred, Proj proj = {});                // since C++20
 
+
+  template<bidirectional_iterator I, sentinel_for<I> S>
+    requires permutable<I>
+    constexpr I ranges::reverse(I first, S last);                                           // since C++20
+
+  template<bidirectional_range R>
+    requires permutable<iterator_t<R>>
+    constexpr borrowed_iterator_t<R> ranges::reverse(R&& r);                                // since C++20
+
 }
 
     constexpr bool     // constexpr in C++20
@@ -1009,6 +1018,7 @@ template <class BidirectionalIterator, class Compare>
 #include <__algorithm/ranges_minmax.h>
 #include <__algorithm/ranges_minmax_element.h>
 #include <__algorithm/ranges_mismatch.h>
+#include <__algorithm/ranges_reverse.h>
 #include <__algorithm/ranges_swap_ranges.h>
 #include <__algorithm/ranges_transform.h>
 #include <__algorithm/remove.h>

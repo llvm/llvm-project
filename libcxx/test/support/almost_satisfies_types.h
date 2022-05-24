@@ -139,4 +139,85 @@ public:
 static_assert(!std::movable<WeaklyIncrementableNotMovable>);
 static_assert(!std::weakly_incrementable<WeaklyIncrementableNotMovable>);
 
+class BidirectionalIteratorNotDerivedFrom {
+public:
+  using difference_type = long;
+  using value_type = int;
+  using iterator_category = std::forward_iterator_tag;
+
+  BidirectionalIteratorNotDerivedFrom& operator++();
+  BidirectionalIteratorNotDerivedFrom operator++(int);
+  BidirectionalIteratorNotDerivedFrom& operator--();
+  BidirectionalIteratorNotDerivedFrom operator--(int);
+  int& operator*() const;
+
+  bool operator==(const BidirectionalIteratorNotDerivedFrom&) const = default;
+};
+
+using BidirectionalRangeNotDerivedFrom = UncheckedRange<BidirectionalIteratorNotDerivedFrom>;
+
+static_assert(std::forward_iterator<BidirectionalIteratorNotDerivedFrom>);
+static_assert(!std::bidirectional_iterator<BidirectionalIteratorNotDerivedFrom>);
+static_assert(!std::ranges::bidirectional_range<BidirectionalRangeNotDerivedFrom>);
+
+class BidirectionalIteratorNotDecrementable {
+public:
+  using difference_type = long;
+  using value_type = int;
+  using iterator_category = std::bidirectional_iterator_tag;
+
+  BidirectionalIteratorNotDecrementable& operator++();
+  BidirectionalIteratorNotDecrementable operator++(int);
+  int& operator*() const;
+
+  bool operator==(const BidirectionalIteratorNotDecrementable&) const = default;
+};
+
+using BidirectionalRangeNotDecrementable = UncheckedRange<BidirectionalIteratorNotDecrementable>;
+
+static_assert(std::forward_iterator<BidirectionalIteratorNotDecrementable>);
+static_assert(!std::bidirectional_iterator<BidirectionalIteratorNotDecrementable>);
+static_assert(!std::ranges::bidirectional_range<BidirectionalRangeNotDecrementable>);
+
+class PermutableNotForwardIterator {
+public:
+  using difference_type = long;
+  using value_type = int;
+  using iterator_category = std::input_iterator_tag;
+
+  PermutableNotForwardIterator& operator++();
+  void operator++(int);
+  int& operator*() const;
+};
+
+using PermutableRangeNotForwardIterator = UncheckedRange<PermutableNotForwardIterator>;
+
+static_assert(std::input_iterator<PermutableNotForwardIterator>);
+static_assert(!std::forward_iterator<PermutableNotForwardIterator>);
+static_assert(!std::permutable<PermutableNotForwardIterator>);
+
+class PermutableNotSwappable {
+public:
+  class NotSwappable {
+    NotSwappable(NotSwappable&&) = delete;
+  };
+
+  using difference_type = long;
+  using value_type = NotSwappable;
+  using iterator_category = std::contiguous_iterator_tag;
+
+  PermutableNotSwappable& operator++();
+  PermutableNotSwappable operator++(int);
+  NotSwappable& operator*() const;
+
+  bool operator==(const PermutableNotSwappable&) const = default;
+};
+
+using PermutableRangeNotSwappable = UncheckedRange<PermutableNotSwappable>;
+
+static_assert(std::input_iterator<PermutableNotSwappable>);
+static_assert(std::forward_iterator<PermutableNotSwappable>);
+static_assert(!std::permutable<PermutableNotSwappable>);
+static_assert(!std::indirectly_swappable<PermutableNotSwappable>);
+
 #endif // ALMOST_SATISFIES_TYPES_H
