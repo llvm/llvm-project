@@ -935,6 +935,37 @@ entry:
   ret <4 x i1> %0
 }
 
+define i1 @isnone_f(float %x) {
+; CHECK-32-LABEL: isnone_f:
+; CHECK-32:       # %bb.0: # %entry
+; CHECK-32-NEXT:    xorl %eax, %eax
+; CHECK-32-NEXT:    retl
+;
+; CHECK-64-LABEL: isnone_f:
+; CHECK-64:       # %bb.0: # %entry
+; CHECK-64-NEXT:    xorl %eax, %eax
+; CHECK-64-NEXT:    retq
+entry:
+  %0 = tail call i1 @llvm.is.fpclass.f32(float %x, i32 0)
+  ret i1 %0
+}
+
+define i1 @isany_f(float %x) {
+; CHECK-32-LABEL: isany_f:
+; CHECK-32:       # %bb.0: # %entry
+; CHECK-32-NEXT:    movb $1, %al
+; CHECK-32-NEXT:    retl
+;
+; CHECK-64-LABEL: isany_f:
+; CHECK-64:       # %bb.0: # %entry
+; CHECK-64-NEXT:    movb $1, %al
+; CHECK-64-NEXT:    retq
+entry:
+  %0 = tail call i1 @llvm.is.fpclass.f32(float %x, i32 1023)
+  ret i1 %0
+}
+
+
 
 declare i1 @llvm.is.fpclass.f32(float, i32)
 declare i1 @llvm.is.fpclass.f64(double, i32)

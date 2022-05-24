@@ -12,6 +12,10 @@ void blarg() {}       // expected-error {{conflicting types for 'blarg'}}
 void blerp(short);      // expected-note {{previous}}
 void blerp(x) int x; {} // expected-error {{conflicting types for 'blerp'}}
 
+void foo(int); // expected-note {{previous}}
+void foo();
+void foo() {} // expected-error {{conflicting types for 'foo'}}
+
 void glerp(int);
 void glerp(x) short x; {} // Okay, promoted type is fine
 
