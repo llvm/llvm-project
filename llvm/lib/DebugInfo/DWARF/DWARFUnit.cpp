@@ -380,6 +380,9 @@ void DWARFUnit::clear() {
   AddrOffsetSectionBase = None;
   SU = nullptr;
   clearDIEs(false);
+  AddrDieMap.clear();
+  if (DWO)
+    DWO->clear();
   DWO.reset();
 }
 
