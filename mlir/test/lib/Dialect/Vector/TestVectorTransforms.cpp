@@ -135,6 +135,10 @@ struct TestVectorContractionLowering
       llvm::cl::desc("Lower vector.contract to vector.outerproduct but not for "
                      "vectors of size 4."),
       llvm::cl::init(false)};
+  Option<bool> lowerToParallelArith{
+      *this, "vector-parallel-arith",
+      llvm::cl::desc("Lower vector.contract to elementwise vector ops."),
+      llvm::cl::init(false)};
 
   void runOnOperation() override {
     RewritePatternSet patterns(&getContext());
@@ -161,6 +165,15 @@ struct TestVectorContractionLowering
               return failure();
             return success();
           });
+      (void)applyPatternsAndFoldGreedily(getOperation(), std::move(patterns));
+      return;
+    }
+
+    if (lowerToParallelArith) {
+      vector::populateVectorContractLoweringPatterns(
+          patterns,
+          vector::VectorTransformsOptions().setVectorTransformsOptions(
+              vector::VectorContractLowering::ParallelArith));
       (void)applyPatternsAndFoldGreedily(getOperation(), std::move(patterns));
       return;
     }
