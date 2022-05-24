@@ -410,7 +410,7 @@ steps:
   - group: "Parts disabled"
     steps:
     - label: "No threads"
-      command: "libcxx/utils/ci/run-buildbot generic-singlethreaded"
+      command: "libcxx/utils/ci/run-buildbot generic-no-threads"
       artifact_paths:
         - "**/test-results.xml"
         - "**/*.abilist"
