@@ -188,16 +188,21 @@ static SDNode *selectImm(SelectionDAG *CurDAG, const SDLoc &DL, const MVT VT,
   SDValue SrcReg = CurDAG->getRegister(RISCV::X0, XLenVT);
   for (RISCVMatInt::Inst &Inst : Seq) {
     SDValue SDImm = CurDAG->getTargetConstant(Inst.Imm, DL, XLenVT);
-    if (Inst.Opc == RISCV::LUI)
-      Result = CurDAG->getMachineNode(RISCV::LUI, DL, XLenVT, SDImm);
-    else if (Inst.Opc == RISCV::ADD_UW)
-      Result = CurDAG->getMachineNode(RISCV::ADD_UW, DL, XLenVT, SrcReg,
+    switch (Inst.getOpndKind()) {
+    case RISCVMatInt::Imm:
+      Result = CurDAG->getMachineNode(Inst.Opc, DL, XLenVT, SDImm);
+      break;
+    case RISCVMatInt::RegX0:
+      Result = CurDAG->getMachineNode(Inst.Opc, DL, XLenVT, SrcReg,
                                       CurDAG->getRegister(RISCV::X0, XLenVT));
-    else if (Inst.Opc == RISCV::SH1ADD || Inst.Opc == RISCV::SH2ADD ||
-             Inst.Opc == RISCV::SH3ADD)
+      break;
+    case RISCVMatInt::RegReg:
       Result = CurDAG->getMachineNode(Inst.Opc, DL, XLenVT, SrcReg, SrcReg);
-    else
+      break;
+    case RISCVMatInt::RegImm:
       Result = CurDAG->getMachineNode(Inst.Opc, DL, XLenVT, SrcReg, SDImm);
+      break;
+    }
 
     // Only the first instruction has X0 as its source.
     SrcReg = SDValue(Result, 0);

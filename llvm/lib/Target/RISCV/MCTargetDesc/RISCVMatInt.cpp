@@ -394,5 +394,30 @@ int getIntMatCost(const APInt &Val, unsigned Size,
   }
   return std::max(1, Cost);
 }
+
+OpndKind Inst::getOpndKind() const {
+  switch (Opc) {
+  default:
+    llvm_unreachable("Unexpected opcode!");
+  case RISCV::LUI:
+    return RISCVMatInt::Imm;
+  case RISCV::ADD_UW:
+    return RISCVMatInt::RegX0;
+  case RISCV::SH1ADD:
+  case RISCV::SH2ADD:
+  case RISCV::SH3ADD:
+    return RISCVMatInt::RegReg;
+  case RISCV::ADDI:
+  case RISCV::ADDIW:
+  case RISCV::SLLI:
+  case RISCV::SRLI:
+  case RISCV::SLLI_UW:
+  case RISCV::RORI:
+  case RISCV::BSETI:
+  case RISCV::BCLRI:
+    return RISCVMatInt::RegImm;
+  }
+}
+
 } // namespace RISCVMatInt
 } // namespace llvm

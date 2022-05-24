@@ -2318,23 +2318,26 @@ void RISCVAsmParser::emitLoadImm(MCRegister DestReg, int64_t Value,
 
   MCRegister SrcReg = RISCV::X0;
   for (RISCVMatInt::Inst &Inst : Seq) {
-    if (Inst.Opc == RISCV::LUI) {
+    switch (Inst.getOpndKind()) {
+    case RISCVMatInt::Imm:
+      emitToStreamer(Out,
+                     MCInstBuilder(Inst.Opc).addReg(DestReg).addImm(Inst.Imm));
+      break;
+    case RISCVMatInt::RegX0:
       emitToStreamer(
-          Out, MCInstBuilder(RISCV::LUI).addReg(DestReg).addImm(Inst.Imm));
-    } else if (Inst.Opc == RISCV::ADD_UW) {
-      emitToStreamer(Out, MCInstBuilder(RISCV::ADD_UW)
-                              .addReg(DestReg)
-                              .addReg(SrcReg)
-                              .addReg(RISCV::X0));
-    } else if (Inst.Opc == RISCV::SH1ADD || Inst.Opc == RISCV::SH2ADD ||
-               Inst.Opc == RISCV::SH3ADD) {
+          Out, MCInstBuilder(Inst.Opc).addReg(DestReg).addReg(SrcReg).addReg(
+                   RISCV::X0));
+      break;
+    case RISCVMatInt::RegReg:
       emitToStreamer(
           Out, MCInstBuilder(Inst.Opc).addReg(DestReg).addReg(SrcReg).addReg(
                    SrcReg));
-    } else {
+      break;
+    case RISCVMatInt::RegImm:
       emitToStreamer(
           Out, MCInstBuilder(Inst.Opc).addReg(DestReg).addReg(SrcReg).addImm(
                    Inst.Imm));
+      break;
     }
 
     // Only the first instruction has X0 as its source.
