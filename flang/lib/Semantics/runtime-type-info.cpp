@@ -103,9 +103,13 @@ private:
               lenParameterEnum_, FindLenParameterIndex(*parameters, *lenParam));
         }
       }
+      // TODO: Replace a specification expression requiring actual operations
+      // with a reference to a new anonymous LEN type parameter whose default
+      // value captures the expression.  This replacement must take place when
+      // the type is declared so that the new LEN type parameters appear in
+      // all instantiations and structure constructors.
       context_.Say(location_,
-          "Specification expression '%s' is neither constant nor a length "
-          "type parameter"_err_en_US,
+          "derived type specification expression '%s' that is neither constant nor a length type parameter"_todo_en_US,
           expr->AsFortran());
     }
     return PackageIntValue(deferredEnum_);
@@ -734,7 +738,7 @@ evaluate::StructureConstructor RuntimeTableBuilder::DescribeComponent(
             evaluate::Extremum<evaluate::SubscriptInteger>>(*len)}) {
       if (clamped->ordering == evaluate::Ordering::Greater &&
           clamped->left() == evaluate::Expr<evaluate::SubscriptInteger>{0}) {
-        len = clamped->right();
+        len = common::Clone(clamped->right());
       }
     }
     AddValue(values, componentSchema_, "characterlen"s,
