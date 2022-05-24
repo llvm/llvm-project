@@ -834,8 +834,7 @@ define i8* @freeze_load_noundef(i8** %ptr) {
 define i8* @freeze_load_dereferenceable(i8** %ptr) {
 ; CHECK-LABEL: @freeze_load_dereferenceable(
 ; CHECK-NEXT:    [[P:%.*]] = load i8*, i8** [[PTR:%.*]], align 8, !dereferenceable !1
-; CHECK-NEXT:    [[P_FR:%.*]] = freeze i8* [[P]]
-; CHECK-NEXT:    ret i8* [[P_FR]]
+; CHECK-NEXT:    ret i8* [[P]]
 ;
   %p = load i8*, i8** %ptr, !dereferenceable !1
   %p.fr = freeze i8* %p
@@ -845,8 +844,7 @@ define i8* @freeze_load_dereferenceable(i8** %ptr) {
 define i8* @freeze_load_dereferenceable_or_null(i8** %ptr) {
 ; CHECK-LABEL: @freeze_load_dereferenceable_or_null(
 ; CHECK-NEXT:    [[P:%.*]] = load i8*, i8** [[PTR:%.*]], align 8, !dereferenceable_or_null !1
-; CHECK-NEXT:    [[P_FR:%.*]] = freeze i8* [[P]]
-; CHECK-NEXT:    ret i8* [[P_FR]]
+; CHECK-NEXT:    ret i8* [[P]]
 ;
   %p = load i8*, i8** %ptr, !dereferenceable_or_null !1
   %p.fr = freeze i8* %p
