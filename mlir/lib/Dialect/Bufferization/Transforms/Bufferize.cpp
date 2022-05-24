@@ -152,7 +152,7 @@ struct FinalizingBufferizePass
 };
 
 static BufferizationOptions::LayoutMapOption
-parseLayoutMapOption(std::string s) {
+parseLayoutMapOption(const std::string &s) {
   if (s == "fully-dynamic-layout-map")
     return BufferizationOptions::LayoutMapOption::FullyDynamicLayoutMap;
   if (s == "identity-layout-map")
