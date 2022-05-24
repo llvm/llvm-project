@@ -372,13 +372,7 @@ define i64 @gep_diff_second_inbounds(i8* %foo, i64 %i, i64 %j) {
 
 define i64 @gep_diff_with_bitcast(i64* %p, i64 %idx) {
 ; CHECK-LABEL: @gep_diff_with_bitcast(
-; CHECK-NEXT:    [[I0:%.*]] = bitcast i64* [[P:%.*]] to [4 x i64]*
-; CHECK-NEXT:    [[I1:%.*]] = getelementptr inbounds [4 x i64], [4 x i64]* [[I0]], i64 [[IDX:%.*]]
-; CHECK-NEXT:    [[I3:%.*]] = ptrtoint [4 x i64]* [[I1]] to i64
-; CHECK-NEXT:    [[I4:%.*]] = ptrtoint i64* [[P]] to i64
-; CHECK-NEXT:    [[I5:%.*]] = sub nuw i64 [[I3]], [[I4]]
-; CHECK-NEXT:    [[I6:%.*]] = lshr i64 [[I5]], 5
-; CHECK-NEXT:    ret i64 [[I6]]
+; CHECK-NEXT:    ret i64 [[IDX:%.*]]
 ;
   %i0 = bitcast i64* %p to [4 x i64]*
   %i1 = getelementptr inbounds [4 x i64], [4 x i64]* %i0, i64 %idx
