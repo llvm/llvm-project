@@ -2508,12 +2508,6 @@ EquivalenceClass::removeMember(ProgramStateRef State, const SymbolRef Old) {
   SymbolSet ClsMembers = getClassMembers(State);
   assert(ClsMembers.contains(Old));
 
-  // We don't remove `Old`'s Sym->Class relation for two reasons:
-  // 1) This way constraints for the old symbol can still be found via it's
-  // equivalence class that it used to be the member of.
-  // 2) Performance and resource reasons. We can spare one removal and thus one
-  // additional tree in the forest of `ClassMap`.
-
   // Remove `Old`'s Class->Sym relation.
   SymbolSet::Factory &F = getMembersFactory(State);
   ClassMembersTy::Factory &EMFactory = State->get_context<ClassMembers>();
@@ -2526,6 +2520,12 @@ EquivalenceClass::removeMember(ProgramStateRef State, const SymbolRef Old) {
   ClassMembersTy ClassMembersMap = State->get<ClassMembers>();
   ClassMembersMap = EMFactory.add(ClassMembersMap, *this, ClsMembers);
   State = State->set<ClassMembers>(ClassMembersMap);
+
+  // Remove `Old`'s Sym->Class relation.
+  ClassMapTy Classes = State->get<ClassMap>();
+  ClassMapTy::Factory &CMF = State->get_context<ClassMap>();
+  Classes = CMF.remove(Classes, Old);
+  State = State->set<ClassMap>(Classes);
 
   return State;
 }
