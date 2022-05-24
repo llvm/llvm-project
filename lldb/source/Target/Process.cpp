@@ -4792,8 +4792,7 @@ Process::RunThreadPlan(ExecutionContext &exe_ctx,
                        DiagnosticManager &diagnostic_manager) {
   ExpressionResults return_value = eExpressionSetupError;
 
-  Log *log(lldb_private::GetLogIfAnyCategoriesSet(LIBLLDB_LOG_STEP |
-                                                  LIBLLDB_LOG_PROCESS));
+  Log *log(GetLog(LLDBLog::State | LLDBLog::Process));
 
   if (!m_run_thread_plan_lock.try_lock()) {
     if (log)

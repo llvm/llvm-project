@@ -175,7 +175,7 @@ function(add_properties_for_swift_modules target)
       set_property(TARGET ${target} APPEND_STRING PROPERTY
                    LINK_FLAGS " -lobjc ")
     elseif (CMAKE_SYSTEM_NAME MATCHES "Linux")
-      string(REGEX MATCH "^[^-]*" arch ${TARGET_TRIPLE})
+      string(REGEX MATCH "^[^-]*" arch ${LLVM_TARGET_TRIPLE})
       target_link_libraries(${target} PRIVATE swiftCore-linux-${arch})
   
       # TODO: add "${LLDB_SWIFT_LIBS}/linux" to BUILD_RPATH and not INSTALL_RPATH.

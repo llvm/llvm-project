@@ -414,7 +414,7 @@ bool ThreadPlanStepOut::ShouldStop(Event *event_ptr) {
       if (!m_step_out_further_plan_sp) {
         // We didn't want to stop here, but we can't find a plan to get us 
         // out of here, so we'll stop.
-        Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_STEP));
+        Log *log = GetLog(LLDBLog::Step);
         LLDB_LOG(log, "Should stop here was false but we couldn't find a"
                       "plan to get us out from here.  Stopping.");
         SetPlanComplete();
