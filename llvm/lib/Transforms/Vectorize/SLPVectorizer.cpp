@@ -6659,6 +6659,8 @@ static bool areTwoInsertFromSameBuildVector(InsertElementInst *VU,
 /// buildvector sequence.
 static bool isFirstInsertElement(const InsertElementInst *IE1,
                                  const InsertElementInst *IE2) {
+  if (IE1 == IE2)
+    return false;
   const auto *I1 = IE1;
   const auto *I2 = IE2;
   const InsertElementInst *PrevI1;
