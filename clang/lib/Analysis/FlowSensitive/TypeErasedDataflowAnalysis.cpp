@@ -11,6 +11,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include <algorithm>
 #include <memory>
 #include <system_error>
 #include <utility>
@@ -330,10 +331,17 @@ runTypeErasedDataflowAnalysis(const ControlFlowContext &CFCtx,
   // converging. To limit the damage (infinite loops) that these bugs can cause,
   // limit the number of iterations.
   // FIXME: Consider making the maximum number of iterations configurable.
+  // FIXME: Consider restricting the number of backedges followed, rather than
+  // iterations.
   // FIXME: Set up statistics (see llvm/ADT/Statistic.h) to count average number
   // of iterations, number of functions that time out, etc.
+  static constexpr uint32_t MaxAverageVisitsPerBlock = 4;
+  static constexpr uint32_t AbsoluteMaxIterations = 1 << 16;
+  const uint32_t RelativeMaxIterations =
+      MaxAverageVisitsPerBlock * BlockStates.size();
+  const uint32_t MaxIterations =
+      std::min(RelativeMaxIterations, AbsoluteMaxIterations);
   uint32_t Iterations = 0;
-  static constexpr uint32_t MaxIterations = 1 << 16;
   while (const CFGBlock *Block = Worklist.dequeue()) {
     if (++Iterations > MaxIterations) {
       return llvm::createStringError(std::errc::timed_out,
