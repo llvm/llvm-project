@@ -101,6 +101,10 @@ public:
     assert(hasAVLImm());
     return AVLImm;
   }
+
+  unsigned getSEW() const { return SEW; }
+  RISCVII::VLMUL getVLMUL() const { return VLMul; }
+
   bool hasZeroAVL() const {
     if (hasAVLImm())
       return getAVLImm() == 0;
@@ -458,6 +462,7 @@ private:
   void computeIncomingVLVTYPE(const MachineBasicBlock &MBB);
   void emitVSETVLIs(MachineBasicBlock &MBB);
   void doLocalPrepass(MachineBasicBlock &MBB);
+  void doPRE(MachineBasicBlock &MBB);
 };
 
 } // end anonymous namespace
@@ -1278,6 +1283,98 @@ void RISCVInsertVSETVLI::doLocalPrepass(MachineBasicBlock &MBB) {
   }
 }
 
+/// Return true if the VL value configured must be equal to the requested one.
+static bool hasFixedResult(const VSETVLIInfo &Info, const RISCVSubtarget &ST) {
+  if (!Info.hasAVLImm())
+    // TODO: Could allow VLMAX (e.g. X0), and possibly other registers
+    // by looking at the associated vreg def placement.
+    return false;
+
+  if (RISCVII::LMUL_1 != Info.getVLMUL())
+    // TODO: Generalize the code below to account for LMUL
+    return false;
+
+  unsigned AVL = Info.getAVLImm();
+  unsigned SEW = Info.getSEW();
+  unsigned AVLInBits = AVL * SEW;
+  return ST.getRealMinVLen() >= AVLInBits;
+}
+
+/// Perform simple partial redundancy elimination of the VSETVLI instructions
+/// we're about to insert by looking for cases where we can PRE from the
+/// beginning of one block to the end of one of its predecessors.  Specifically,
+/// this is geared to catch the common case of a fixed length vsetvl in a single
+/// block loop when it could execute once in the preheader instead.
+void RISCVInsertVSETVLI::doPRE(MachineBasicBlock &MBB) {
+  const MachineFunction &MF = *MBB.getParent();
+  const RISCVSubtarget &ST = MF.getSubtarget<RISCVSubtarget>();
+
+  if (!BlockInfo[MBB.getNumber()].Pred.isUnknown())
+    return;
+
+  MachineBasicBlock *UnavailablePred = nullptr;
+  VSETVLIInfo AvailableInfo;
+  for (MachineBasicBlock *P : MBB.predecessors()) {
+    const VSETVLIInfo &PredInfo = BlockInfo[P->getNumber()].Exit;
+    if (PredInfo.isUnknown()) {
+      if (UnavailablePred)
+        return;
+      UnavailablePred = P;
+    } else if (!AvailableInfo.isValid()) {
+      AvailableInfo = PredInfo;
+    } else if (AvailableInfo != PredInfo) {
+      return;
+    }
+  }
+
+  // unreachable, single pred, or full redundancy.  Note that FRE
+  // is handled by phase 3.
+  if (!UnavailablePred || !AvailableInfo.isValid())
+    return;
+
+  // critical edge - TODO: consider splitting?
+  if (UnavailablePred->succ_size() != 1)
+    return;
+
+  // If VL can be less than AVL, then we can't reduce the frequency of exec.
+  if (!hasFixedResult(AvailableInfo, ST))
+    return;
+
+  // Does it actually let us remove an implicit transition in MBB?
+  bool Found = false;
+  for (auto &MI : MBB) {
+    if (isVectorConfigInstr(MI))
+      return;
+
+    const uint64_t TSFlags = MI.getDesc().TSFlags;
+    if (RISCVII::hasSEWOp(TSFlags)) {
+      if (AvailableInfo != computeInfoForInstr(MI, TSFlags, MRI))
+        return;
+      Found = true;
+      break;
+    }
+  }
+  if (!Found)
+    return;
+
+  // Finally, update both data flow state and insert the actual vsetvli.
+  // Doing both keeps the code in sync with the dataflow results, which
+  // is critical for correctness of phase 3.
+  auto OldInfo = BlockInfo[UnavailablePred->getNumber()].Exit;
+  LLVM_DEBUG(dbgs() << "PRE VSETVLI from " << MBB.getName() << " to "
+                    << UnavailablePred->getName() << " with state "
+                    << AvailableInfo << "\n");
+  BlockInfo[UnavailablePred->getNumber()].Exit = AvailableInfo;
+  BlockInfo[MBB.getNumber()].Pred = AvailableInfo;
+
+  // Note there's an implicit assumption here that terminators never use
+  // or modify VL or VTYPE.  Also, fallthrough will return end().
+  auto InsertPt = UnavailablePred->getFirstInstrTerminator();
+  insertVSETVLI(*UnavailablePred, InsertPt,
+                UnavailablePred->findDebugLoc(InsertPt),
+                AvailableInfo, OldInfo);
+}
+
 bool RISCVInsertVSETVLI::runOnMachineFunction(MachineFunction &MF) {
   // Skip if the vector extension is not enabled.
   const RISCVSubtarget &ST = MF.getSubtarget<RISCVSubtarget>();
@@ -1331,6 +1428,10 @@ bool RISCVInsertVSETVLI::runOnMachineFunction(MachineFunction &MF) {
     WorkList.pop();
     computeIncomingVLVTYPE(MBB);
   }
+
+  // Perform partial redundancy elimination of vsetvli transitions.
+  for (MachineBasicBlock &MBB : MF)
+    doPRE(MBB);
 
   // Phase 3 - add any vsetvli instructions needed in the block. Use the
   // Phase 2 information to avoid adding vsetvlis before the first vector
