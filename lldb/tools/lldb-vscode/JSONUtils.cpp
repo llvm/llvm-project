@@ -136,10 +136,13 @@ void SetValueForKey(lldb::SBValue &v, llvm::json::Object &object,
   llvm::StringRef value = v.GetValue();
   llvm::StringRef summary = v.GetSummary();
   llvm::StringRef type_name = v.GetType().GetDisplayTypeName();
+  lldb::SBError error = v.GetError();
 
   std::string result;
   llvm::raw_string_ostream strm(result);
-  if (!value.empty()) {
+  if (!error.Success()) {
+    strm << "<error: " << error.GetCString() << ">";
+  } else if (!value.empty()) {
     strm << value;
     if (!summary.empty())
       strm << ' ' << summary;
@@ -751,7 +754,18 @@ llvm::json::Value CreateStackFrame(lldb::SBFrame &frame) {
   llvm::json::Object object;
   int64_t frame_id = MakeVSCodeFrameID(frame);
   object.try_emplace("id", frame_id);
-  EmplaceSafeString(object, "name", frame.GetFunctionName());
+
+  std::string frame_name;
+  const char *func_name = frame.GetFunctionName();
+  if (func_name)
+    frame_name = func_name;
+  else
+    frame_name = "<unknown>";
+  bool is_optimized = frame.GetFunction().GetIsOptimized();
+  if (is_optimized)
+    frame_name += " [opt]";
+  EmplaceSafeString(object, "name", frame_name);
+
   int64_t disasm_line = 0;
   object.try_emplace("source", CreateSource(frame, disasm_line));
 

@@ -34,16 +34,6 @@ public:
   // Implementation for interface from ConstraintManager.
   //===------------------------------------------------------------------===//
 
-  /// Ensures that the DefinedSVal conditional is expressed as a NonLoc by
-  /// creating boolean casts to handle Loc's.
-  ProgramStateRef assumeInternal(ProgramStateRef State, DefinedSVal Cond,
-                                 bool Assumption) override;
-
-  ProgramStateRef assumeInclusiveRange(ProgramStateRef State, NonLoc Value,
-                                       const llvm::APSInt &From,
-                                       const llvm::APSInt &To,
-                                       bool InRange) override;
-
 protected:
   //===------------------------------------------------------------------===//
   // Interface that subclasses must implement.
@@ -73,6 +63,17 @@ protected:
   //===------------------------------------------------------------------===//
   // Internal implementation.
   //===------------------------------------------------------------------===//
+
+  /// Ensures that the DefinedSVal conditional is expressed as a NonLoc by
+  /// creating boolean casts to handle Loc's.
+  ProgramStateRef assumeInternal(ProgramStateRef State, DefinedSVal Cond,
+                                 bool Assumption) override;
+
+  ProgramStateRef assumeInclusiveRangeInternal(ProgramStateRef State,
+                                               NonLoc Value,
+                                               const llvm::APSInt &From,
+                                               const llvm::APSInt &To,
+                                               bool InRange) override;
 
   SValBuilder &getSValBuilder() const { return SVB; }
   BasicValueFactory &getBasicVals() const { return SVB.getBasicValueFactory(); }
