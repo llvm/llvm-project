@@ -605,6 +605,27 @@ static void simplifyOpcodes(std::vector<WinEH::Instruction> &Instructions,
   }
 }
 
+// Check if an epilog exists as a subset of the end of a prolog (backwards).
+static int getOffsetInProlog(const std::vector<WinEH::Instruction> &Prolog,
+                             const std::vector<WinEH::Instruction> &Epilog) {
+  // Can't find an epilog as a subset if it is longer than the prolog.
+  if (Epilog.size() > Prolog.size())
+    return -1;
+
+  // Check that the epilog actually is a perfect match for the end (backwrds)
+  // of the prolog.
+  for (int I = Epilog.size() - 1; I >= 0; I--) {
+    if (Prolog[I] != Epilog[Epilog.size() - 1 - I])
+      return -1;
+  }
+
+  // If the epilog was a subset of the prolog, find its offset.
+  if (Epilog.size() == Prolog.size())
+    return 0;
+  return ARM64CountOfUnwindCodes(ArrayRef<WinEH::Instruction>(
+      &Prolog[Epilog.size()], Prolog.size() - Epilog.size()));
+}
+
 static int checkPackedEpilog(MCStreamer &streamer, WinEH::FrameInfo *info,
                              int PrologCodeBytes) {
   // Can only pack if there's one single epilog
@@ -630,22 +651,9 @@ static int checkPackedEpilog(MCStreamer &streamer, WinEH::FrameInfo *info,
       PrologCodeBytes + ARM64CountOfUnwindCodes(Epilog) <= 124)
     RetVal = PrologCodeBytes;
 
-  // Can pack if the epilog is a subset of the prolog but not vice versa
-  if (Epilog.size() > info->Instructions.size())
+  int Offset = getOffsetInProlog(info->Instructions, Epilog);
+  if (Offset < 0)
     return RetVal;
-
-  // Check that the epilog actually is a perfect match for the end (backwrds)
-  // of the prolog.
-  for (int I = Epilog.size() - 1; I >= 0; I--) {
-    if (info->Instructions[I] != Epilog[Epilog.size() - 1 - I])
-      return RetVal;
-  }
-
-  int Offset = Epilog.size() == info->Instructions.size()
-                   ? 0
-                   : ARM64CountOfUnwindCodes(ArrayRef<WinEH::Instruction>(
-                         &info->Instructions[Epilog.size()],
-                         info->Instructions.size() - Epilog.size()));
 
   // Check that the offset and prolog size fits in the first word; it's
   // unclear whether the epilog count in the extension word can be taken
@@ -990,10 +998,17 @@ static void ARM64EmitUnwindInfo(MCStreamer &streamer, WinEH::FrameInfo *info,
 
     MCSymbol* MatchingEpilog =
       FindMatchingEpilog(EpilogInstrs, AddedEpilogs, info);
+    int PrologOffset;
     if (MatchingEpilog) {
       assert(EpilogInfo.find(MatchingEpilog) != EpilogInfo.end() &&
              "Duplicate epilog not found");
       EpilogInfo[EpilogStart] = EpilogInfo.lookup(MatchingEpilog);
+      // Clear the unwind codes in the EpilogMap, so that they don't get output
+      // in the logic below.
+      EpilogInstrs.clear();
+    } else if ((PrologOffset =
+                    getOffsetInProlog(info->Instructions, EpilogInstrs)) >= 0) {
+      EpilogInfo[EpilogStart] = PrologOffset;
       // Clear the unwind codes in the EpilogMap, so that they don't get output
       // in the logic below.
       EpilogInstrs.clear();
@@ -1027,8 +1042,6 @@ static void ARM64EmitUnwindInfo(MCStreamer &streamer, WinEH::FrameInfo *info,
   // Extended Code Words, Extended Epilog Count
   if (ExtensionWord) {
     // FIXME: We should be able to split unwind info into multiple sections.
-    // FIXME: We should share epilog codes across epilogs, where possible,
-    // which would make this issue show up less frequently.
     if (CodeWords > 0xFF || EpilogCount > 0xFFFF)
       report_fatal_error("SEH unwind data splitting not yet implemented");
     uint32_t row2 = 0x0;
