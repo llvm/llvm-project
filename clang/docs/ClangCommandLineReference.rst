@@ -4215,6 +4215,10 @@ Pass the comma separated arguments in <arg> to the linker
 
 Pass <arg> to the linker
 
+.. option:: -Xoffload-linker <arg>, -Xoffload-linker-<triple> <arg>
+
+Pass <arg> to all the device linking jobs, or for only <triple> if specified.
+
 .. program:: clang1
 .. option:: -Z
 .. program:: clang
