@@ -328,8 +328,7 @@ entry:
 define double @test17(i64 %avl, <vscale x 1 x double> %a, <vscale x 1 x double> %b) nounwind {
 ; CHECK-LABEL: test17:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a0, a0, e32, mf2, ta, mu
-; CHECK-NEXT:    vsetvli zero, zero, e64, m1, ta, mu
+; CHECK-NEXT:    vsetvli a0, a0, e64, m1, ta, mu
 ; CHECK-NEXT:    vfmv.f.s ft0, v8
 ; CHECK-NEXT:    vsetvli zero, a0, e64, m1, ta, mu
 ; CHECK-NEXT:    vfadd.vv v8, v8, v9
@@ -468,7 +467,6 @@ entry:
 define void @avl_forward4(<vscale x 2 x i32> %v, <vscale x 2 x i32>* %p, i64 %reg) nounwind {
 ; CHECK-LABEL: avl_forward4:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli zero, a1, e16, m1, ta, mu
 ; CHECK-NEXT:    vsetvli zero, a1, e32, m1, ta, mu
 ; CHECK-NEXT:    vse32.v v8, (a0)
 ; CHECK-NEXT:    ret
@@ -498,7 +496,6 @@ entry:
 define <vscale x 1 x i64> @vleNff(i64* %str, i64 %n, i64 %x) {
 ; CHECK-LABEL: vleNff:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli zero, a1, e8, m4, ta, mu
 ; CHECK-NEXT:    vsetvli zero, a1, e64, m1, ta, mu
 ; CHECK-NEXT:    vle64ff.v v8, (a0)
 ; CHECK-NEXT:    csrr a0, vl
@@ -526,7 +523,6 @@ define <vscale x 2 x i32> @avl_forward5(<vscale x 2 x i32>* %addr) {
 ; CHECK-LABEL: avl_forward5:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    li a1, 32
-; CHECK-NEXT:    vsetvli zero, a1, e8, m4, ta, mu
 ; CHECK-NEXT:    vsetvli zero, a1, e32, m1, ta, mu
 ; CHECK-NEXT:    vle32.v v8, (a0)
 ; CHECK-NEXT:    ret
