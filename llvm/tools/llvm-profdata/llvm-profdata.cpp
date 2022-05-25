@@ -2532,8 +2532,8 @@ static int showSampleProfile(const std::string &Filename, bool ShowCounts,
 static int showMemProfProfile(const std::string &Filename,
                               const std::string &ProfiledBinary,
                               raw_fd_ostream &OS) {
-  auto ReaderOr =
-      llvm::memprof::RawMemProfReader::create(Filename, ProfiledBinary);
+  auto ReaderOr = llvm::memprof::RawMemProfReader::create(
+      Filename, ProfiledBinary, /*KeepNames=*/true);
   if (Error E = ReaderOr.takeError())
     // Since the error can be related to the profile or the binary we do not
     // pass whence. Instead additional context is provided where necessary in

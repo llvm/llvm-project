@@ -35,21 +35,6 @@ bin/clang -fuse-ld=lld -Wl,--no-rosegment -gmlt -fdebug-info-for-profiling \
 env MEMPROF_OPTIONS=log_path=stdout ./memprof-inline.exe > inline.memprofraw
 ```
 
-From a debug run we collect the name to guid mappings to ensure that the
-ordering we observe is as expected.
-
-```
-build-dbg/bin/llvm-profdata show --memory --debug-only=memprof \
-          inline.memprofraw --profiled-binary memprof-inline.exe
-
-FunctionName: qux GUID: 15505678318020221912
-FunctionName: foo GUID: 6699318081062747564
-FunctionName: bar GUID: 16434608426314478903
-FunctionName: main GUID: 15822663052811949562
-
-[..omit output here which is checked below..]
-```
-
 RUN: llvm-profdata show --memory %p/Inputs/inline.memprofraw --profiled-binary %p/Inputs/inline.memprofexe | FileCheck %s
 
 CHECK:  MemprofProfile:
@@ -68,21 +53,25 @@ CHECK-NEXT:    -
 CHECK-NEXT:      Callstack:
 CHECK-NEXT:      -
 CHECK-NEXT:        Function: 15505678318020221912
+CHECK-NEXT:        SymbolName: qux
 CHECK-NEXT:        LineOffset: 1
 CHECK-NEXT:        Column: 15
 CHECK-NEXT:        Inline: 1
 CHECK-NEXT:      -
 CHECK-NEXT:        Function: 6699318081062747564
+CHECK-NEXT:        SymbolName: foo
 CHECK-NEXT:        LineOffset: 0
 CHECK-NEXT:        Column: 18
 CHECK-NEXT:        Inline: 0
 CHECK-NEXT:      -
 CHECK-NEXT:        Function: 16434608426314478903
+CHECK-NEXT:        SymbolName: bar
 CHECK-NEXT:        LineOffset: 0
 CHECK-NEXT:        Column: 19
 CHECK-NEXT:        Inline: 0
 CHECK-NEXT:      -
 CHECK-NEXT:        Function: 15822663052811949562
+CHECK-NEXT:        SymbolName: main
 CHECK-NEXT:        LineOffset: 1
 CHECK-NEXT:        Column: 3
 CHECK-NEXT:        Inline: 0
@@ -113,21 +102,25 @@ CHECK-NEXT:    -
 CHECK-NEXT:      Callstack:
 CHECK-NEXT:      -
 CHECK-NEXT:        Function: 15505678318020221912
+CHECK-NEXT:        SymbolName: qux
 CHECK-NEXT:        LineOffset: 1
 CHECK-NEXT:        Column: 15
 CHECK-NEXT:        Inline: 1
 CHECK-NEXT:      -
 CHECK-NEXT:        Function: 6699318081062747564
+CHECK-NEXT:        SymbolName: foo
 CHECK-NEXT:        LineOffset: 0
 CHECK-NEXT:        Column: 18
 CHECK-NEXT:        Inline: 0
 CHECK-NEXT:      -
 CHECK-NEXT:        Function: 16434608426314478903
+CHECK-NEXT:        SymbolName: bar
 CHECK-NEXT:        LineOffset: 0
 CHECK-NEXT:        Column: 19
 CHECK-NEXT:        Inline: 0
 CHECK-NEXT:      -
 CHECK-NEXT:        Function: 15822663052811949562
+CHECK-NEXT:        SymbolName: main
 CHECK-NEXT:        LineOffset: 1
 CHECK-NEXT:        Column: 3
 CHECK-NEXT:        Inline: 0
@@ -155,12 +148,14 @@ CHECK-NEXT:    CallSites:
 CHECK-NEXT:    -
 CHECK-NEXT:      -
 CHECK-NEXT:        Function: 15505678318020221912
+CHECK-NEXT:        SymbolName: qux
 CHECK-NEXT:        LineOffset: 1
 CHECK-NEXT:        Column: 15
 CHECK-NEXT:        Inline: 1
 CHECK-NEXT:    -
 CHECK-NEXT:      -
 CHECK-NEXT:        Function: 6699318081062747564
+CHECK-NEXT:        SymbolName: foo
 CHECK-NEXT:        LineOffset: 0
 CHECK-NEXT:        Column: 18
 CHECK-NEXT:        Inline: 0
@@ -170,6 +165,7 @@ CHECK-NEXT:    CallSites:
 CHECK-NEXT:    -
 CHECK-NEXT:      -
 CHECK-NEXT:        Function: 15822663052811949562
+CHECK-NEXT:        SymbolName: main
 CHECK-NEXT:        LineOffset: 1
 CHECK-NEXT:        Column: 3
 CHECK-NEXT:        Inline: 0
@@ -179,6 +175,7 @@ CHECK-NEXT:    CallSites:
 CHECK-NEXT:    -
 CHECK-NEXT:      -
 CHECK-NEXT:        Function: 16434608426314478903
+CHECK-NEXT:        SymbolName: bar
 CHECK-NEXT:        LineOffset: 0
 CHECK-NEXT:        Column: 19
 CHECK-NEXT:        Inline: 0

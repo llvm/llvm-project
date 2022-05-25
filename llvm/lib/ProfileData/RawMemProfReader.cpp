@@ -12,6 +12,7 @@
 
 #include <algorithm>
 #include <cstdint>
+#include <memory>
 #include <type_traits>
 
 #include "llvm/ADT/ArrayRef.h"
@@ -174,7 +175,8 @@ bool isRuntimePath(const StringRef Path) {
 } // namespace
 
 Expected<std::unique_ptr<RawMemProfReader>>
-RawMemProfReader::create(const Twine &Path, const StringRef ProfiledBinary) {
+RawMemProfReader::create(const Twine &Path, const StringRef ProfiledBinary,
+                         bool KeepName) {
   auto BufferOr = MemoryBuffer::getFileOrSTDIN(Path);
   if (std::error_code EC = BufferOr.getError())
     return report(errorCodeToError(EC), Path.getSingleStringRef());
@@ -193,8 +195,9 @@ RawMemProfReader::create(const Twine &Path, const StringRef ProfiledBinary) {
     return report(BinaryOr.takeError(), ProfiledBinary);
   }
 
-  std::unique_ptr<RawMemProfReader> Reader(
-      new RawMemProfReader(std::move(Buffer), std::move(BinaryOr.get())));
+  // Use new here since constructor is private.
+  std::unique_ptr<RawMemProfReader> Reader(new RawMemProfReader(
+      std::move(Buffer), std::move(BinaryOr.get()), KeepName));
   if (Error E = Reader->initialize()) {
     return std::move(E);
   }
@@ -407,21 +410,21 @@ Error RawMemProfReader::symbolizeAndFilterStackFrames() {
       for (size_t I = 0, NumFrames = DI.getNumberOfFrames(); I < NumFrames;
            I++) {
         const auto &DIFrame = DI.getFrame(I);
-        LLVM_DEBUG(
-            // Print out the name to guid mapping for debugging.
-            llvm::dbgs() << "FunctionName: " << DIFrame.FunctionName
-                         << " GUID: "
-                         << IndexedMemProfRecord::getGUID(DIFrame.FunctionName)
-                         << "\n";);
-
-        const Frame F(IndexedMemProfRecord::getGUID(DIFrame.FunctionName),
-                      DIFrame.Line - DIFrame.StartLine, DIFrame.Column,
+        const uint64_t Guid =
+            IndexedMemProfRecord::getGUID(DIFrame.FunctionName);
+        const Frame F(Guid, DIFrame.Line - DIFrame.StartLine, DIFrame.Column,
                       // Only the last entry is not an inlined location.
                       I != NumFrames - 1);
+        // Here we retain a mapping from the GUID to symbol name instead of
+        // adding it to the frame object directly to reduce memory overhead.
+        // This is because there can be many unique frames, particularly for
+        // callsite frames.
+        if (KeepSymbolName)
+          GuidToSymbolName.insert({Guid, DIFrame.FunctionName});
 
-        const FrameId Id = F.hash();
-        IdToFrame.insert({Id, F});
-        SymbolizedFrame[VAddr].push_back(Id);
+        const FrameId Hash = F.hash();
+        IdToFrame.insert({Hash, F});
+        SymbolizedFrame[VAddr].push_back(Hash);
       }
     }
 
@@ -525,8 +528,15 @@ Error RawMemProfReader::readNextRecord(GuidMemProfRecordPair &GuidRecord) {
     return make_error<InstrProfError>(instrprof_error::eof);
 
   auto IdToFrameCallback = [this](const FrameId Id) {
-    return this->idToFrame(Id);
+    Frame F = this->idToFrame(Id);
+    if (!this->KeepSymbolName)
+      return F;
+    auto Iter = this->GuidToSymbolName.find(F.Function);
+    assert(Iter != this->GuidToSymbolName.end());
+    F.SymbolName = Iter->getSecond();
+    return F;
   };
+
   const IndexedMemProfRecord &IndexedRecord = Iter->second;
   GuidRecord = {Iter->first, MemProfRecord(IndexedRecord, IdToFrameCallback)};
   Iter++;
