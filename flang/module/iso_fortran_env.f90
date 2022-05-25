@@ -144,13 +144,14 @@ module iso_fortran_env
   integer, parameter :: stat_unlocked = FORTRAN_RUNTIME_STAT_UNLOCKED
   integer, parameter :: stat_unlocked_failed_image = FORTRAN_RUNTIME_STAT_UNLOCKED_FAILED_IMAGE
 
- contains
+  interface compiler_options
+    character(len=80) function compiler_options()
+    end function compiler_options
+  end interface compiler_options
 
-  character(len=80) function compiler_options()
-    compiler_options = 'COMPILER_OPTIONS() not yet implemented'
-  end function compiler_options
+  interface compiler_version
+    character(len=80) function compiler_version()
+    end function compiler_version
+  end interface compiler_version
 
-  character(len=80) function compiler_version()
-    compiler_version = 'f18 in development'
-  end function compiler_version
 end module iso_fortran_env

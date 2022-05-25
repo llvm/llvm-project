@@ -6,13 +6,18 @@
 !
 !===------------------------------------------------------------------------===!
 
-! See Fortran 2018, clause 17.2
+! Fortran 2018 Clause 17
+
 module ieee_arithmetic
+  ! 17.1: "The module IEEE_ARITHMETIC behaves as if it contained a
+  ! USE statement for IEEE_EXCEPTIONS; everything that is public in
+  ! IEEE_EXCEPTIONS is public in IEEE_ARITHMETIC."
+  use __Fortran_ieee_exceptions
 
   use __Fortran_builtins, only: &
     ieee_is_nan => __builtin_ieee_is_nan, &
-    ieee_is_normal => __builtin_ieee_is_normal, &
     ieee_is_negative => __builtin_ieee_is_negative, &
+    ieee_is_normal => __builtin_ieee_is_normal, &
     ieee_next_after => __builtin_ieee_next_after, &
     ieee_next_down => __builtin_ieee_next_down, &
     ieee_next_up => __builtin_ieee_next_up, &
@@ -28,11 +33,6 @@ module ieee_arithmetic
     ieee_support_standard => __builtin_ieee_support_standard, &
     ieee_support_subnormal => __builtin_ieee_support_subnormal, &
     ieee_support_underflow_control => __builtin_ieee_support_underflow_control
-
-  ! 17.1: "The module IEEE_ARITHMETIC behaves as if it contained a USE statement
-  ! for IEEE_EXCEPTIONS; everything that is public in IEEE_EXCEPTIONS is public
-  ! in IEEE_ARITHMETIC."
-  use __Fortran_ieee_exceptions
 
   implicit none
 
@@ -72,291 +72,478 @@ module ieee_arithmetic
     ieee_other = ieee_round_type(6)
 
   interface operator(==)
-    module procedure class_eq
-    module procedure round_eq
+    elemental logical function ieee_class_eq(x, y)
+      import ieee_class_type
+      type(ieee_class_type), intent(in) :: x, y
+    end function ieee_class_eq
+    elemental logical function ieee_round_eq(x, y)
+      import ieee_round_type
+      type(ieee_round_type), intent(in) :: x, y
+    end function ieee_round_eq
   end interface operator(==)
   interface operator(/=)
-    module procedure class_ne
-    module procedure round_ne
+    elemental logical function ieee_class_ne(x, y)
+      import ieee_class_type
+      type(ieee_class_type), intent(in) :: x, y
+    end function ieee_class_ne
+    elemental logical function ieee_round_ne(x, y)
+      import ieee_round_type
+      type(ieee_round_type), intent(in) :: x, y
+    end function ieee_round_ne
   end interface operator(/=)
-  private :: class_eq, class_ne, round_eq, round_ne
+  private :: ieee_class_eq, ieee_round_eq, ieee_class_ne, ieee_round_ne
 
-  ! See Fortran 2018, 17.10 & 17.11
-  generic :: ieee_class => ieee_class_a2, ieee_class_a3, ieee_class_a4, ieee_class_a8, ieee_class_a10, ieee_class_a16
-  private :: ieee_class_a2, ieee_class_a3, ieee_class_a4, ieee_class_a8, ieee_class_a10, ieee_class_a16
+! Define specifics with 1 or 2 INTEGER, LOGICAL, or REAL arguments for
+! generic G.
+#define SPECIFICS_I(G) \
+  G(1) G(2) G(4) G(8) G(16)
+#define SPECIFICS_L(G) \
+  G(1) G(2) G(4) G(8)
+#define SPECIFICS_R(G) \
+  G(2) G(3) G(4) G(8) G(10) G(16)
+#define SPECIFICS_II(G) \
+  G(1,1) G(1,2) G(1,4) G(1,8) G(1,16) \
+  G(2,1) G(2,2) G(2,4) G(2,8) G(2,16) \
+  G(4,1) G(4,2) G(4,4) G(4,8) G(4,16) \
+  G(8,1) G(8,2) G(8,4) G(8,8) G(8,16) \
+  G(16,1) G(16,2) G(16,4) G(16,8) G(16,16)
+#define SPECIFICS_RI(G) \
+  G(2,1) G(2,2) G(2,4) G(2,8) G(2,16) \
+  G(3,1) G(3,2) G(3,4) G(3,8) G(3,16) \
+  G(4,1) G(4,2) G(4,4) G(4,8) G(4,16) \
+  G(8,1) G(8,2) G(8,4) G(8,8) G(8,16) \
+  G(10,1) G(10,2) G(10,4) G(10,8) G(10,16) \
+  G(16,1) G(16,2) G(16,4) G(16,8) G(16,16)
+#define SPECIFICS_RR(G) \
+  G(2,2) G(2,3) G(2,4) G(2,8) G(2,10) G(2,16) \
+  G(3,2) G(3,3) G(3,4) G(3,8) G(3,10) G(3,16) \
+  G(4,2) G(4,3) G(4,4) G(4,8) G(4,10) G(4,16) \
+  G(8,2) G(8,3) G(8,4) G(8,8) G(8,10) G(8,16) \
+  G(10,2) G(10,3) G(10,4) G(10,8) G(10,10) G(10,16) \
+  G(16,2) G(16,3) G(16,4) G(16,8) G(16,10) G(16,16)
 
-  generic :: ieee_copy_sign => ieee_copy_sign_a2, ieee_copy_sign_a3, ieee_copy_sign_a4, ieee_copy_sign_a8, ieee_copy_sign_a10, ieee_copy_sign_a16
-  private :: ieee_copy_sign_a2, ieee_copy_sign_a3, ieee_copy_sign_a4, ieee_copy_sign_a8, ieee_copy_sign_a10, ieee_copy_sign_a16
+! Set PRIVATE accessibility for specifics with 1 or 2 INTEGER, LOGICAL, or REAL
+! arguments for generic G.
+#define PRIVATE_I(G) private :: \
+  G##_i1, G##_i2, G##_i4, G##_i8, G##_i16
+#define PRIVATE_L(G) private :: \
+  G##_l1, G##_l2, G##_l4, G##_l8
+#define PRIVATE_R(G) private :: \
+  G##_a2, G##_a3, G##_a4, G##_a8, G##_a10, G##_a16
+#define PRIVATE_II(G) private :: \
+  G##_i1_i1, G##_i1_i2, G##_i1_i4, G##_i1_i8, G##_i1_i16, \
+  G##_i2_i1, G##_i2_i2, G##_i2_i4, G##_i2_i8, G##_i2_i16, \
+  G##_i4_i1, G##_i4_i2, G##_i4_i4, G##_i4_i8, G##_i4_i16, \
+  G##_i8_i1, G##_i8_i2, G##_i8_i4, G##_i8_i8, G##_i8_i16, \
+  G##_i16_i1, G##_i16_i2, G##_i16_i4, G##_i16_i8, G##_i16_i16
+#define PRIVATE_RI(G) private :: \
+  G##_a2_i1, G##_a2_i2, G##_a2_i4, G##_a2_i8, G##_a2_i16, \
+  G##_a3_i1, G##_a3_i2, G##_a3_i4, G##_a3_i8, G##_a3_i16, \
+  G##_a4_i1, G##_a4_i2, G##_a4_i4, G##_a4_i8, G##_a4_i16, \
+  G##_a8_i1, G##_a8_i2, G##_a8_i4, G##_a8_i8, G##_a8_i16, \
+  G##_a10_i1, G##_a10_i2, G##_a10_i4, G##_a10_i8, G##_a10_i16, \
+  G##_a16_i1, G##_a16_i2, G##_a16_i4, G##_a16_i8, G##_a16_i16
+#define PRIVATE_RR(G) private :: \
+  G##_a2_a2, G##_a2_a3, G##_a2_a4, G##_a2_a8, G##_a2_a10, G##_a2_a16, \
+  G##_a3_a2, G##_a3_a3, G##_a3_a4, G##_a3_a8, G##_a3_a10, G##_a3_a16, \
+  G##_a4_a2, G##_a4_a3, G##_a4_a4, G##_a4_a8, G##_a4_a10, G##_a4_a16, \
+  G##_a8_a2, G##_a8_a3, G##_a8_a4, G##_a8_a8, G##_a8_a10, G##_a8_a16, \
+  G##_a10_a2, G##_a10_a3, G##_a10_a4, G##_a10_a8, G##_a10_a10, G##_a10_a16, \
+  G##_a16_a2, G##_a16_a3, G##_a16_a4, G##_a16_a8, G##_a16_a10, G##_a16_a16
 
-  generic :: ieee_is_finite => ieee_is_finite_a2, ieee_is_finite_a3, ieee_is_finite_a4, ieee_is_finite_a8, ieee_is_finite_a10, ieee_is_finite_a16
-  private :: ieee_is_finite_a2, ieee_is_finite_a3, ieee_is_finite_a4, ieee_is_finite_a8, ieee_is_finite_a10, ieee_is_finite_a16
+#define IEEE_CLASS_R(XKIND) \
+  elemental type(ieee_class_type) function ieee_class_a##XKIND(x); \
+    import ieee_class_type; \
+    real(XKIND), intent(in) :: x; \
+  end function ieee_class_a##XKIND;
+  interface ieee_class
+    SPECIFICS_R(IEEE_CLASS_R)
+  end interface ieee_class
+  PRIVATE_R(IEEE_CLASS)
+#undef IEEE_CLASS_R
 
-  generic :: ieee_rem => &
-    ieee_rem_a2_a2, ieee_rem_a2_a3, ieee_rem_a2_a4, ieee_rem_a2_a8, ieee_rem_a2_a10, ieee_rem_a2_a16, &
-    ieee_rem_a3_a2, ieee_rem_a3_a3, ieee_rem_a3_a4, ieee_rem_a3_a8, ieee_rem_a3_a10, ieee_rem_a3_a16, &
-    ieee_rem_a4_a2, ieee_rem_a4_a3, ieee_rem_a4_a4, ieee_rem_a4_a8, ieee_rem_a4_a10, ieee_rem_a4_a16, &
-    ieee_rem_a8_a2, ieee_rem_a8_a3, ieee_rem_a8_a4, ieee_rem_a8_a8, ieee_rem_a8_a10, ieee_rem_a8_a16, &
-    ieee_rem_a10_a2, ieee_rem_a10_a3, ieee_rem_a10_a4, ieee_rem_a10_a8, ieee_rem_a10_a10, ieee_rem_a10_a16, &
-    ieee_rem_a16_a2, ieee_rem_a16_a3, ieee_rem_a16_a4, ieee_rem_a16_a8, ieee_rem_a16_a10, ieee_rem_a16_a16
-  private :: &
-    ieee_rem_a2_a2, ieee_rem_a2_a3, ieee_rem_a2_a4, ieee_rem_a2_a8, ieee_rem_a2_a10, ieee_rem_a2_a16, &
-    ieee_rem_a3_a2, ieee_rem_a3_a3, ieee_rem_a3_a4, ieee_rem_a3_a8, ieee_rem_a3_a10, ieee_rem_a3_a16, &
-    ieee_rem_a4_a2, ieee_rem_a4_a3, ieee_rem_a4_a4, ieee_rem_a4_a8, ieee_rem_a4_a10, ieee_rem_a4_a16, &
-    ieee_rem_a8_a2, ieee_rem_a8_a3, ieee_rem_a8_a4, ieee_rem_a8_a8, ieee_rem_a8_a10, ieee_rem_a8_a16, &
-    ieee_rem_a10_a2, ieee_rem_a10_a3, ieee_rem_a10_a4, ieee_rem_a10_a8, ieee_rem_a10_a10, ieee_rem_a10_a16, &
-    ieee_rem_a16_a2, ieee_rem_a16_a3, ieee_rem_a16_a4, ieee_rem_a16_a8, ieee_rem_a16_a10, ieee_rem_a16_a16
+#define IEEE_COPY_SIGN_RR(XKIND, YKIND) \
+  elemental real(XKIND) function ieee_copy_sign_a##XKIND##_a##YKIND(x, y); \
+    real(XKIND), intent(in) :: x; \
+    real(YKIND), intent(in) :: y; \
+  end function ieee_copy_sign_a##XKIND##_a##YKIND;
+  interface ieee_copy_sign
+    SPECIFICS_RR(IEEE_COPY_SIGN_RR)
+  end interface ieee_copy_sign
+  PRIVATE_RR(IEEE_COPY_SIGN)
+#undef IEEE_COPY_SIGN_RR
 
-  generic :: ieee_support_rounding => ieee_support_rounding_, &
-    ieee_support_rounding_2, ieee_support_rounding_3, &
-    ieee_support_rounding_4, ieee_support_rounding_8, &
-    ieee_support_rounding_10, ieee_support_rounding_16
-  private :: ieee_support_rounding_, &
-    ieee_support_rounding_2, ieee_support_rounding_3, &
-    ieee_support_rounding_4, ieee_support_rounding_8, &
-    ieee_support_rounding_10, ieee_support_rounding_16
+#define IEEE_FMA_R(AKIND) \
+  elemental real(AKIND) function ieee_fma_a##AKIND(a, b, c); \
+    real(AKIND), intent(in) :: a, b, c; \
+  end function ieee_fma_a##AKIND;
+  interface ieee_fma
+    SPECIFICS_R(IEEE_FMA_R)
+  end interface ieee_fma
+  PRIVATE_R(IEEE_FMA)
+#undef IEEE_FMA_R
 
-  ! TODO: more interfaces (_fma, &c.)
+#define IEEE_GET_ROUNDING_MODE_I(RKIND) \
+  subroutine ieee_get_rounding_mode_i##RKIND(round_value, radix); \
+    import ieee_round_type; \
+    type(ieee_round_type), intent(out) :: round_value; \
+    integer(RKIND), intent(in) :: radix; \
+  end subroutine ieee_get_rounding_mode_i##RKIND;
+  interface ieee_get_rounding_mode
+    subroutine ieee_get_rounding_mode(round_value)
+      import ieee_round_type
+      type(ieee_round_type), intent(out) :: round_value
+    end subroutine ieee_get_rounding_mode
+    SPECIFICS_I(IEEE_GET_ROUNDING_MODE_I)
+  end interface ieee_get_rounding_mode
+  PRIVATE_I(IEEE_GET_ROUNDING_MODE)
+#undef IEEE_GET_ROUNDING_MODE_I
 
-  private :: classify
+#define IEEE_GET_UNDERFLOW_MODE_L(GKIND) \
+  subroutine ieee_get_underflow_mode_l##GKIND(gradual); \
+    logical(GKIND), intent(out) :: gradual; \
+  end subroutine ieee_get_underflow_mode_l##GKIND;
+  interface ieee_get_underflow_mode
+    SPECIFICS_L(IEEE_GET_UNDERFLOW_MODE_L)
+  end interface ieee_get_underflow_mode
+  PRIVATE_L(IEEE_GET_UNDERFLOW_MODE)
+#undef IEEE_GET_UNDERFLOW_MODE_L
 
- contains
+! When kind argument is present, kind(result) is value(kind), not kind(kind).
+! That is not known here, so return integer(16).
+#define IEEE_INT_R(AKIND) \
+  elemental integer function ieee_int_a##AKIND(a, round); \
+    import ieee_round_type; \
+    real(AKIND), intent(in) :: a; \
+    type(ieee_round_type), intent(in) :: round; \
+  end function ieee_int_a##AKIND;
+#define IEEE_INT_RI(AKIND, KKIND) \
+  elemental integer(16) function ieee_int_a##AKIND##_i##KKIND(a, round, kind); \
+    import ieee_round_type; \
+    real(AKIND), intent(in) :: a; \
+    type(ieee_round_type), intent(in) :: round; \
+    integer(KKIND), intent(in) :: kind; \
+  end function ieee_int_a##AKIND##_i##KKIND;
+  interface ieee_int
+    SPECIFICS_R(IEEE_INT_R)
+    SPECIFICS_RI(IEEE_INT_RI)
+  end interface ieee_int
+  PRIVATE_R(IEEE_INT)
+  PRIVATE_RI(IEEE_INT)
+#undef IEEE_INT_R
+#undef IEEE_INT_RI
 
-  elemental logical function class_eq(x,y)
-    type(ieee_class_type), intent(in) :: x, y
-    class_eq = x%which == y%which
-  end function class_eq
+#define IEEE_IS_FINITE_R(XKIND) \
+  elemental logical function ieee_is_finite_a##XKIND(x); \
+    real(XKIND), intent(in) :: x; \
+  end function ieee_is_finite_a##XKIND;
+  interface ieee_is_finite
+    SPECIFICS_R(IEEE_IS_FINITE_R)
+  end interface ieee_is_finite
+  PRIVATE_R(IEEE_IS_FINITE)
+#undef IEEE_IS_FINITE_R
 
-  elemental logical function class_ne(x,y)
-    type(ieee_class_type), intent(in) :: x, y
-    class_ne = x%which /= y%which
-  end function class_ne
+#define IEEE_LOGB_R(XKIND) \
+  elemental real(XKIND) function ieee_logb_a##XKIND(x); \
+    real(XKIND), intent(in) :: x; \
+  end function ieee_logb_a##XKIND;
+  interface ieee_logb
+    SPECIFICS_R(IEEE_LOGB_R)
+  end interface ieee_logb
+  PRIVATE_R(IEEE_LOGB)
+#undef IEEE_LOGB_R
 
-  elemental logical function round_eq(x,y)
-    type(ieee_round_type), intent(in) :: x, y
-    round_eq = x%mode == y%mode
-  end function round_eq
+#define IEEE_MAX_NUM_R(XKIND) \
+  elemental real(XKIND) function ieee_max_num_a##XKIND(x, y); \
+    real(XKIND), intent(in) :: x, y; \
+  end function ieee_max_num_a##XKIND;
+  interface ieee_max_num
+    SPECIFICS_R(IEEE_MAX_NUM_R)
+  end interface ieee_max_num
+  PRIVATE_R(IEEE_MAX_NUM)
+#undef IEEE_MAX_NUM_R
 
-  elemental logical function round_ne(x,y)
-    type(ieee_round_type), intent(in) :: x, y
-    round_ne = x%mode /= y%mode
-  end function round_ne
+#define IEEE_MAX_NUM_MAG_R(XKIND) \
+  elemental real(XKIND) function ieee_max_num_mag_a##XKIND(x, y); \
+    real(XKIND), intent(in) :: x, y; \
+  end function ieee_max_num_mag_a##XKIND;
+  interface ieee_max_num_mag
+    SPECIFICS_R(IEEE_MAX_NUM_MAG_R)
+  end interface ieee_max_num_mag
+  PRIVATE_R(IEEE_MAX_NUM_MAG)
+#undef IEEE_MAX_NUM_MAG_R
 
-  elemental type(ieee_class_type) function classify( &
-      expo,maxExpo,negative,significandNZ,quietBit)
-    integer, intent(in) :: expo, maxExpo
-    logical, intent(in) :: negative, significandNZ, quietBit
-    if (expo == 0) then
-      if (significandNZ) then
-        if (negative) then
-          classify = ieee_negative_denormal
-        else
-          classify = ieee_positive_denormal
-        end if
-      else
-        if (negative) then
-          classify = ieee_negative_zero
-        else
-          classify = ieee_positive_zero
-        end if
-      end if
-    else if (expo == maxExpo) then
-      if (significandNZ) then
-        if (quietBit) then
-          classify = ieee_quiet_nan
-        else
-          classify = ieee_signaling_nan
-        end if
-      else
-        if (negative) then
-          classify = ieee_negative_inf
-        else
-          classify = ieee_positive_inf
-        end if
-      end if
-    else
-      if (negative) then
-        classify = ieee_negative_normal
-      else
-        classify = ieee_positive_normal
-      end if
-    end if
-  end function classify
+#define IEEE_MIN_NUM_R(XKIND) \
+  elemental real(XKIND) function ieee_min_num_a##XKIND(x, y); \
+    real(XKIND), intent(in) :: x, y; \
+  end function ieee_min_num_a##XKIND;
+  interface ieee_min_num
+    SPECIFICS_R(IEEE_MIN_NUM_R)
+  end interface ieee_min_num
+  PRIVATE_R(IEEE_MIN_NUM)
+#undef IEEE_MIN_NUM_R
 
-#define _CLASSIFY(RKIND,IKIND,TOTALBITS,PREC,IMPLICIT) \
-  type(ieee_class_type) elemental function ieee_class_a##RKIND(x); \
-    real(kind=RKIND), intent(in) :: x; \
-    integer(kind=IKIND) :: raw; \
-    integer, parameter :: significand = PREC - IMPLICIT; \
-    integer, parameter :: exponentBits = TOTALBITS - 1 - significand; \
-    integer, parameter :: maxExpo = shiftl(1, exponentBits) - 1; \
-    integer :: exponent, sign; \
-    logical :: negative, nzSignificand, quiet; \
-    raw = transfer(x, raw); \
-    exponent = ibits(raw, significand, exponentBits); \
-    negative = btest(raw, TOTALBITS - 1); \
-    nzSignificand = ibits(raw, 0, significand) /= 0; \
-    quiet = btest(raw, significand - 1); \
-    ieee_class_a##RKIND = classify(exponent, maxExpo, negative, nzSignificand, quiet); \
-  end function ieee_class_a##RKIND
-  _CLASSIFY(2,2,16,11,1)
-  _CLASSIFY(3,2,16,8,1)
-  _CLASSIFY(4,4,32,24,1)
-  _CLASSIFY(8,8,64,53,1)
-  _CLASSIFY(10,16,80,64,0)
-  _CLASSIFY(16,16,128,112,1)
-#undef _CLASSIFY
+#define IEEE_MIN_NUM_MAG_R(XKIND) \
+  elemental real(XKIND) function ieee_min_num_mag_a##XKIND(x, y); \
+    real(XKIND), intent(in) :: x, y; \
+  end function ieee_min_num_mag_a##XKIND;
+  interface ieee_min_num_mag
+    SPECIFICS_R(IEEE_MIN_NUM_MAG_R)
+  end interface ieee_min_num_mag
+  PRIVATE_R(IEEE_MIN_NUM_MAG)
+#undef IEEE_MIN_NUM_MAG_R
 
-  ! TODO: This might need to be an actual Operation instead
-#define _COPYSIGN(RKIND,IKIND,BITS) \
-  real(kind=RKIND) elemental function ieee_copy_sign_a##RKIND(x,y); \
-    real(kind=RKIND), intent(in) :: x, y; \
-    integer(kind=IKIND) :: xbits, ybits; \
-    xbits = transfer(x, xbits); \
-    ybits = transfer(y, ybits); \
-    xbits = ior(ibclr(xbits, BITS-1), iand(ybits, shiftl(1_##IKIND, BITS-1))); \
-    ieee_copy_sign_a##RKIND = transfer(xbits, x); \
-  end function ieee_copy_sign_a##RKIND
-  _COPYSIGN(2,2,16)
-  _COPYSIGN(3,2,16)
-  _COPYSIGN(4,4,32)
-  _COPYSIGN(8,8,64)
-  _COPYSIGN(10,16,80)
-  _COPYSIGN(16,16,128)
-#undef _COPYSIGN
+#define IEEE_QUIET_EQ_R(AKIND) \
+  elemental logical function ieee_quiet_eq_a##AKIND(a, b); \
+    real(AKIND), intent(in) :: a, b; \
+  end function ieee_quiet_eq_a##AKIND;
+  interface ieee_quiet_eq
+    SPECIFICS_R(IEEE_QUIET_EQ_R)
+  end interface ieee_quiet_eq
+  PRIVATE_R(IEEE_QUIET_EQ)
+#undef IEEE_QUIET_EQ_R
 
-#define _IS_FINITE(KIND) \
-  elemental function ieee_is_finite_a##KIND(x) result(res); \
-    real(kind=KIND), intent(in) :: x; \
-    logical :: res; \
-    type(ieee_class_type) :: classification; \
-    classification = ieee_class(x); \
-    res = classification == ieee_negative_zero .or. classification == ieee_positive_zero \
-     .or. classification == ieee_negative_denormal .or. classification == ieee_positive_denormal \
-     .or. classification == ieee_negative_normal .or. classification == ieee_positive_normal; \
-  end function
-  _IS_FINITE(2)
-  _IS_FINITE(3)
-  _IS_FINITE(4)
-  _IS_FINITE(8)
-  _IS_FINITE(10)
-  _IS_FINITE(16)
-#undef _IS_FINITE
+#define IEEE_QUIET_GE_R(AKIND) \
+  elemental logical function ieee_quiet_ge_a##AKIND(a, b); \
+    real(AKIND), intent(in) :: a, b; \
+  end function ieee_quiet_ge_a##AKIND;
+  interface ieee_quiet_ge
+    SPECIFICS_R(IEEE_QUIET_GE_R)
+  end interface ieee_quiet_ge
+  PRIVATE_R(IEEE_QUIET_GE)
+#undef IEEE_QUIET_GE_R
 
-#define _IS_NEGATIVE(KIND) \
-  elemental function ieee_is_negative_a##KIND(x) result(res); \
-    real(kind=KIND), intent(in) :: x; \
-    logical :: res; \
-    type(ieee_class_type) :: classification; \
-    classification = ieee_class(x); \
-    res = classification == ieee_negative_zero .or. classification == ieee_negative_denormal \
-     .or. classification == ieee_negative_normal .or. classification == ieee_negative_inf; \
-  end function
-  _IS_NEGATIVE(2)
-  _IS_NEGATIVE(3)
-  _IS_NEGATIVE(4)
-  _IS_NEGATIVE(8)
-  _IS_NEGATIVE(10)
-  _IS_NEGATIVE(16)
-#undef _IS_NEGATIVE
+#define IEEE_QUIET_GT_R(AKIND) \
+  elemental logical function ieee_quiet_gt_a##AKIND(a, b); \
+    real(AKIND), intent(in) :: a, b; \
+  end function ieee_quiet_gt_a##AKIND;
+  interface ieee_quiet_gt
+    SPECIFICS_R(IEEE_QUIET_GT_R)
+  end interface ieee_quiet_gt
+  PRIVATE_R(IEEE_QUIET_GT)
+#undef IEEE_QUIET_GT_R
 
-#define _IS_NORMAL(KIND) \
-  elemental function ieee_is_normal_a##KIND(x) result(res); \
-    real(kind=KIND), intent(in) :: x; \
-    logical :: res; \
-    type(ieee_class_type) :: classification; \
-    classification = ieee_class(x); \
-    res = classification == ieee_negative_normal .or. classification == ieee_positive_normal \
-      .or. classification == ieee_negative_zero .or. classification == ieee_positive_zero; \
-  end function
-  _IS_NORMAL(2)
-  _IS_NORMAL(3)
-  _IS_NORMAL(4)
-  _IS_NORMAL(8)
-  _IS_NORMAL(10)
-  _IS_NORMAL(16)
-#undef _IS_NORMAL
+#define IEEE_QUIET_LE_R(AKIND) \
+  elemental logical function ieee_quiet_le_a##AKIND(a, b); \
+    real(AKIND), intent(in) :: a, b; \
+  end function ieee_quiet_le_a##AKIND;
+  interface ieee_quiet_le
+    SPECIFICS_R(IEEE_QUIET_LE_R)
+  end interface ieee_quiet_le
+  PRIVATE_R(IEEE_QUIET_LE)
+#undef IEEE_QUIET_LE_R
 
-! TODO: handle edge cases from 17.11.31
-#define _REM(XKIND,YKIND) \
-  elemental function ieee_rem_a##XKIND##_a##YKIND(x, y) result(res); \
-    real(kind=XKIND), intent(in) :: x; \
-    real(kind=YKIND), intent(in) :: y; \
-    integer, parameter :: rkind = max(XKIND, YKIND); \
-    real(kind=rkind) :: res, tmp; \
-    tmp = anint(real(x, kind=rkind) / y); \
-    res = x - y * tmp; \
-  end function
-  _REM(2,2)
-  _REM(2,3)
-  _REM(2,4)
-  _REM(2,8)
-  _REM(2,10)
-  _REM(2,16)
-  _REM(3,2)
-  _REM(3,3)
-  _REM(3,4)
-  _REM(3,8)
-  _REM(3,10)
-  _REM(3,16)
-  _REM(4,2)
-  _REM(4,3)
-  _REM(4,4)
-  _REM(4,8)
-  _REM(4,10)
-  _REM(4,16)
-  _REM(8,2)
-  _REM(8,3)
-  _REM(8,4)
-  _REM(8,8)
-  _REM(8,10)
-  _REM(8,16)
-  _REM(10,2)
-  _REM(10,3)
-  _REM(10,4)
-  _REM(10,8)
-  _REM(10,10)
-  _REM(10,16)
-  _REM(16,2)
-  _REM(16,3)
-  _REM(16,4)
-  _REM(16,8)
-  _REM(16,10)
-  _REM(16,16)
-#undef _REM
+#define IEEE_QUIET_LT_R(AKIND) \
+  elemental logical function ieee_quiet_lt_a##AKIND(a, b); \
+    real(AKIND), intent(in) :: a, b; \
+  end function ieee_quiet_lt_a##AKIND;
+  interface ieee_quiet_lt
+    SPECIFICS_R(IEEE_QUIET_LT_R)
+  end interface ieee_quiet_lt
+  PRIVATE_R(IEEE_QUIET_LT)
+#undef IEEE_QUIET_LT_R
 
-  pure logical function ieee_support_rounding_(round_type)
-    type(ieee_round_type), intent(in) :: round_type
-    ieee_support_rounding_ = .true.
-  end function
-  pure logical function ieee_support_rounding_2(round_type,x)
-    type(ieee_round_type), intent(in) :: round_type
-    real(kind=2), intent(in) :: x
-    ieee_support_rounding_2 = .true.
-  end function
-  pure logical function ieee_support_rounding_3(round_type,x)
-    type(ieee_round_type), intent(in) :: round_type
-    real(kind=3), intent(in) :: x
-    ieee_support_rounding_3 = .true.
-  end function
-  pure logical function ieee_support_rounding_4(round_type,x)
-    type(ieee_round_type), intent(in) :: round_type
-    real(kind=4), intent(in) :: x
-    ieee_support_rounding_4 = .true.
-  end function
-  pure logical function ieee_support_rounding_8(round_type,x)
-    type(ieee_round_type), intent(in) :: round_type
-    real(kind=8), intent(in) :: x
-    ieee_support_rounding_8 = .true.
-  end function
-  pure logical function ieee_support_rounding_10(round_type,x)
-    type(ieee_round_type), intent(in) :: round_type
-    real(kind=10), intent(in) :: x
-    ieee_support_rounding_10 = .true.
-  end function
-  pure logical function ieee_support_rounding_16(round_type,x)
-    type(ieee_round_type), intent(in) :: round_type
-    real(kind=16), intent(in) :: x
-    ieee_support_rounding_16 = .true.
-  end function
+#define IEEE_QUIET_NE_R(AKIND) \
+  elemental logical function ieee_quiet_ne_a##AKIND(a, b); \
+    real(AKIND), intent(in) :: a, b; \
+  end function ieee_quiet_ne_a##AKIND;
+  interface ieee_quiet_ne
+    SPECIFICS_R(IEEE_QUIET_NE_R)
+  end interface ieee_quiet_ne
+  PRIVATE_R(IEEE_QUIET_NE)
+#undef IEEE_QUIET_NE_R
+
+! When kind argument is present, kind(result) is value(kind), not kind(kind).
+! That is not known here, so return real(16).
+#define IEEE_REAL_I(AKIND) \
+  elemental real function ieee_real_i##AKIND(a); \
+    integer(AKIND), intent(in) :: a; \
+  end function ieee_real_i##AKIND;
+#define IEEE_REAL_R(AKIND) \
+  elemental real function ieee_real_a##AKIND(a); \
+    real(AKIND), intent(in) :: a; \
+  end function ieee_real_a##AKIND;
+#define IEEE_REAL_II(AKIND, KKIND) \
+  elemental real(16) function ieee_real_i##AKIND##_i##KKIND(a, kind); \
+    integer(AKIND), intent(in) :: a; \
+    integer(KKIND), intent(in) :: kind; \
+  end function ieee_real_i##AKIND##_i##KKIND;
+#define IEEE_REAL_RI(AKIND, KKIND) \
+  elemental real(16) function ieee_real_a##AKIND##_i##KKIND(a, kind); \
+    real(AKIND), intent(in) :: a; \
+    integer(KKIND), intent(in) :: kind; \
+  end function ieee_real_a##AKIND##_i##KKIND;
+  interface ieee_real
+    SPECIFICS_I(IEEE_REAL_I)
+    SPECIFICS_R(IEEE_REAL_R)
+    SPECIFICS_II(IEEE_REAL_II)
+    SPECIFICS_RI(IEEE_REAL_RI)
+  end interface ieee_real
+  PRIVATE_I(IEEE_REAL)
+  PRIVATE_R(IEEE_REAL)
+  PRIVATE_II(IEEE_REAL)
+  PRIVATE_RI(IEEE_REAL)
+#undef IEEE_REAL_I
+#undef IEEE_REAL_R
+#undef IEEE_REAL_II
+#undef IEEE_REAL_RI
+
+#define IEEE_REM_RR(XKIND, YKIND) \
+  elemental real(XKIND) function ieee_rem_a##XKIND##_a##YKIND(x, y); \
+    real(XKIND), intent(in) :: x; \
+    real(YKIND), intent(in) :: y; \
+  end function ieee_rem_a##XKIND##_a##YKIND;
+  interface ieee_rem
+    SPECIFICS_RR(IEEE_REM_RR)
+  end interface ieee_rem
+  PRIVATE_RR(IEEE_REM)
+#undef IEEE_REM_RR
+
+#define IEEE_RINT_R(XKIND) \
+  elemental real(XKIND) function ieee_rint_a##XKIND(x, round); \
+    import ieee_round_type; \
+    real(XKIND), intent(in) :: x; \
+    type(ieee_round_type), optional, intent(in) :: round; \
+  end function ieee_rint_a##XKIND;
+  interface ieee_rint
+    SPECIFICS_R(IEEE_RINT_R)
+  end interface ieee_rint
+  PRIVATE_R(IEEE_RINT)
+#undef IEEE_RINT_R
+
+#define IEEE_SET_ROUNDING_MODE_I(RKIND) \
+  subroutine ieee_set_rounding_mode_i##RKIND(round_value, radix); \
+    import ieee_round_type; \
+    type(ieee_round_type), intent(in) :: round_value; \
+    integer(RKIND), intent(in) :: radix; \
+  end subroutine ieee_set_rounding_mode_i##RKIND;
+  interface ieee_set_rounding_mode
+    subroutine ieee_set_rounding_mode(round_value)
+      import ieee_round_type
+      type(ieee_round_type), intent(in) :: round_value
+    end subroutine ieee_set_rounding_mode
+    SPECIFICS_I(IEEE_SET_ROUNDING_MODE_I)
+  end interface ieee_set_rounding_mode
+  PRIVATE_I(IEEE_SET_ROUNDING_MODE)
+#undef IEEE_SET_ROUNDING_MODE_I
+
+#define IEEE_SET_UNDERFLOW_MODE_L(GKIND) \
+  subroutine ieee_set_underflow_mode_l##GKIND(gradual); \
+    logical(GKIND), intent(in) :: gradual; \
+  end subroutine ieee_set_underflow_mode_l##GKIND;
+  interface ieee_set_underflow_mode
+    SPECIFICS_L(IEEE_SET_UNDERFLOW_MODE_L)
+  end interface ieee_set_underflow_mode
+  PRIVATE_L(IEEE_SET_UNDERFLOW_MODE)
+#undef IEEE_SET_UNDERFLOW_MODE_L
+
+#define IEEE_SIGNALING_EQ_R(AKIND) \
+  elemental logical function ieee_signaling_eq_a##AKIND(a, b); \
+    real(AKIND), intent(in) :: a, b; \
+  end function ieee_signaling_eq_a##AKIND;
+  interface ieee_signaling_eq
+    SPECIFICS_R(IEEE_SIGNALING_EQ_R)
+  end interface ieee_signaling_eq
+  PRIVATE_R(IEEE_SIGNALING_EQ)
+#undef IEEE_SIGNALING_EQ_R
+
+#define IEEE_SIGNALING_GE_R(AKIND) \
+  elemental logical function ieee_signaling_ge_a##AKIND(a, b); \
+    real(AKIND), intent(in) :: a, b; \
+  end function ieee_signaling_ge_a##AKIND;
+  interface ieee_signaling_ge
+    SPECIFICS_R(IEEE_SIGNALING_GE_R)
+  end interface ieee_signaling_ge
+  PRIVATE_R(IEEE_SIGNALING_GE)
+#undef IEEE_SIGNALING_GE_R
+
+#define IEEE_SIGNALING_GT_R(AKIND) \
+  elemental logical function ieee_signaling_gt_a##AKIND(a, b); \
+    real(AKIND), intent(in) :: a, b; \
+  end function ieee_signaling_gt_a##AKIND;
+  interface ieee_signaling_gt
+    SPECIFICS_R(IEEE_SIGNALING_GT_R)
+  end interface ieee_signaling_gt
+  PRIVATE_R(IEEE_SIGNALING_GT)
+#undef IEEE_SIGNALING_GT_R
+
+#define IEEE_SIGNALING_LE_R(AKIND) \
+  elemental logical function ieee_signaling_le_a##AKIND(a, b); \
+    real(AKIND), intent(in) :: a, b; \
+  end function ieee_signaling_le_a##AKIND;
+  interface ieee_signaling_le
+    SPECIFICS_R(IEEE_SIGNALING_LE_R)
+  end interface ieee_signaling_le
+  PRIVATE_R(IEEE_SIGNALING_LE)
+#undef IEEE_SIGNALING_LE_R
+
+#define IEEE_SIGNALING_LT_R(AKIND) \
+  elemental logical function ieee_signaling_lt_a##AKIND(a, b); \
+    real(AKIND), intent(in) :: a, b; \
+  end function ieee_signaling_lt_a##AKIND;
+  interface ieee_signaling_lt
+    SPECIFICS_R(IEEE_SIGNALING_LT_R)
+  end interface ieee_signaling_lt
+  PRIVATE_R(IEEE_SIGNALING_LT)
+#undef IEEE_SIGNALING_LT_R
+
+#define IEEE_SIGNALING_NE_R(AKIND) \
+  elemental logical function ieee_signaling_ne_a##AKIND(a, b); \
+    real(AKIND), intent(in) :: a, b; \
+  end function ieee_signaling_ne_a##AKIND;
+  interface ieee_signaling_ne
+    SPECIFICS_R(IEEE_SIGNALING_NE_R)
+  end interface ieee_signaling_ne
+  PRIVATE_R(IEEE_SIGNALING_NE)
+#undef IEEE_SIGNALING_NE_R
+
+#define IEEE_SIGNBIT_R(XKIND) \
+  elemental logical function ieee_signbit_a##XKIND(x); \
+    real(XKIND), intent(in) :: x; \
+  end function ieee_signbit_a##XKIND;
+  interface ieee_signbit
+    SPECIFICS_R(IEEE_SIGNBIT_R)
+  end interface ieee_signbit
+  PRIVATE_R(IEEE_SIGNBIT)
+#undef IEEE_SIGNBIT_R
+
+#define IEEE_SUPPORT_ROUNDING_R(XKIND) \
+  pure logical function ieee_support_rounding_a##XKIND(round_value, x); \
+    import ieee_round_type; \
+    type(ieee_round_type), intent(in) :: round_value; \
+    real(XKIND), intent(in) :: x(..); \
+  end function ieee_support_rounding_a##XKIND;
+  interface ieee_support_rounding
+    logical function ieee_support_rounding(round_value)
+      import ieee_round_type
+      type(ieee_round_type), intent(in) :: round_value
+    end function ieee_support_rounding
+    SPECIFICS_R(IEEE_SUPPORT_ROUNDING_R)
+  end interface ieee_support_rounding
+  PRIVATE_R(IEEE_SUPPORT_ROUNDING)
+#undef IEEE_SUPPORT_ROUNDING_R
+
+#define IEEE_UNORDERED_RR(XKIND, YKIND) \
+ elemental logical function ieee_unordered_a##XKIND##_a##YKIND(x, y); \
+    real(XKIND), intent(in) :: x; \
+    real(YKIND), intent(in) :: y; \
+  end function ieee_unordered_a##XKIND##_a##YKIND;
+  interface ieee_unordered
+    SPECIFICS_RR(IEEE_UNORDERED_RR)
+  end interface ieee_unordered
+  PRIVATE_RR(IEEE_UNORDERED)
+#undef IEEE_UNORDERED_RR
+
+#define IEEE_VALUE_R(XKIND) \
+  elemental real(XKIND) function ieee_value_a##XKIND(x, class); \
+    import ieee_class_type; \
+    real(XKIND), intent(in) :: x; \
+    type(ieee_class_type), intent(in) :: class; \
+  end function ieee_value_a##XKIND;
+  interface ieee_value
+    SPECIFICS_R(IEEE_VALUE_R)
+  end interface ieee_value
+  PRIVATE_R(IEEE_VALUE)
+#undef IEEE_VALUE_R
 
 end module ieee_arithmetic
