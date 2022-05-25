@@ -143,6 +143,7 @@ private:
   bool selectAMDGPU_BUFFER_ATOMIC_FADD(MachineInstr &I) const;
   bool selectGlobalAtomicFadd(MachineInstr &I, MachineOperand &AddrOp,
                               MachineOperand &DataOp) const;
+  bool selectBufferLoadLds(MachineInstr &MI) const;
   bool selectBVHIntrinsic(MachineInstr &I) const;
   bool selectSMFMACIntrin(MachineInstr &I) const;
   bool selectWaveAddress(MachineInstr &I) const;
