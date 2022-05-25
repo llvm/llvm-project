@@ -413,7 +413,7 @@ static Type convertBoolMemrefType(const spirv::TargetEnv &targetEnv,
   }
 
   int64_t memrefSize = (type.getNumElements() * numBoolBits + 7) / 8;
-  auto arrayElemCount = (memrefSize + *arrayElemSize - 1) / *arrayElemSize;
+  auto arrayElemCount = llvm::divideCeil(memrefSize, *arrayElemSize);
   int64_t stride = needsExplicitLayout(*storageClass) ? *arrayElemSize : 0;
   auto arrayType = spirv::ArrayType::get(arrayElemType, arrayElemCount, stride);
 
@@ -455,13 +455,6 @@ static Type convertMemrefType(const spirv::TargetEnv &targetEnv,
   if (!arrayElemType)
     return nullptr;
 
-  Optional<int64_t> elementSize = getTypeNumBytes(options, elementType);
-  if (!elementSize) {
-    LLVM_DEBUG(llvm::dbgs()
-               << type << " illegal: cannot deduce element size\n");
-    return nullptr;
-  }
-
   Optional<int64_t> arrayElemSize = getTypeNumBytes(options, arrayElemType);
   if (!arrayElemSize) {
     LLVM_DEBUG(llvm::dbgs()
@@ -482,7 +475,7 @@ static Type convertMemrefType(const spirv::TargetEnv &targetEnv,
     return nullptr;
   }
 
-  auto arrayElemCount = *memrefSize / *elementSize;
+  auto arrayElemCount = llvm::divideCeil(*memrefSize, *arrayElemSize);
   int64_t stride = needsExplicitLayout(*storageClass) ? *arrayElemSize : 0;
   auto arrayType = spirv::ArrayType::get(arrayElemType, arrayElemCount, stride);
 
