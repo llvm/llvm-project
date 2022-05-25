@@ -4,6 +4,7 @@
 
 @sc64 = external dso_local global i64
 @fsc64 = external dso_local global double
+@psc64 = external dso_local global i8*
 
 define void @atomic_fetch_add64() nounwind {
 ; X64-LABEL: atomic_fetch_add64:
@@ -778,5 +779,20 @@ define void @atomic_fetch_swapf64(double %x) nounwind {
 ; I486-NEXT:    popl %ebp
 ; I486-NEXT:    retl
   %t1 = atomicrmw xchg double* @fsc64, double %x acquire
+  ret void
+}
+
+define void @atomic_fetch_swapptr(i8* %x) nounwind {
+; X64-LABEL: atomic_fetch_swapptr:
+; X64:       # %bb.0:
+; X64-NEXT:    xchgq %rdi, psc64(%rip)
+; X64-NEXT:    retq
+;
+; I486-LABEL: atomic_fetch_swapptr:
+; I486:       # %bb.0:
+; I486-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; I486-NEXT:    xchgl %eax, psc64
+; I486-NEXT:    retl
+  %t1 = atomicrmw xchg i8** @psc64, i8* %x acquire
   ret void
 }
