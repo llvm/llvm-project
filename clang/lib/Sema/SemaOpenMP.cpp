@@ -22101,6 +22101,14 @@ void Sema::ActOnFinishedOpenMPDeclareTargetContext(
     ActOnOpenMPDeclareTargetName(It.first, It.second.Loc, It.second.MT, DTCI);
 }
 
+void Sema::DiagnoseUnterminatedOpenMPDeclareTarget() {
+  if (DeclareTargetNesting.empty())
+    return;
+  DeclareTargetContextInfo &DTCI = DeclareTargetNesting.back();
+  Diag(DTCI.Loc, diag::warn_omp_unterminated_declare_target)
+      << getOpenMPDirectiveName(DTCI.Kind);
+}
+
 NamedDecl *Sema::lookupOpenMPDeclareTargetName(Scope *CurScope,
                                                CXXScopeSpec &ScopeSpec,
                                                const DeclarationNameInfo &Id) {
