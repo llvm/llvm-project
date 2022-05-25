@@ -462,6 +462,7 @@ private:
   void computeIncomingVLVTYPE(const MachineBasicBlock &MBB);
   void emitVSETVLIs(MachineBasicBlock &MBB);
   void doLocalPrepass(MachineBasicBlock &MBB);
+  void doLocalPostpass(MachineBasicBlock &MBB);
   void doPRE(MachineBasicBlock &MBB);
 };
 
@@ -476,6 +477,15 @@ static bool isVectorConfigInstr(const MachineInstr &MI) {
   return MI.getOpcode() == RISCV::PseudoVSETVLI ||
          MI.getOpcode() == RISCV::PseudoVSETVLIX0 ||
          MI.getOpcode() == RISCV::PseudoVSETIVLI;
+}
+
+/// Return true if this is 'vsetvli x0, x0, vtype' which preserves
+/// VL and only sets VTYPE.
+static bool isVLPreservingConfig(const MachineInstr &MI) {
+  if (MI.getOpcode() != RISCV::PseudoVSETVLIX0)
+    return false;
+  assert(RISCV::X0 == MI.getOperand(1).getReg());
+  return RISCV::X0 == MI.getOperand(0).getReg();
 }
 
 static MachineInstr *elideCopies(MachineInstr *MI,
@@ -1065,9 +1075,6 @@ bool RISCVInsertVSETVLI::needVSETVLIPHI(const VSETVLIInfo &Require,
 
 void RISCVInsertVSETVLI::emitVSETVLIs(MachineBasicBlock &MBB) {
   VSETVLIInfo CurInfo;
-  // Only be set if current VSETVLIInfo is from an explicit VSET(I)VLI.
-  MachineInstr *PrevVSETVLIMI = nullptr;
-
   for (MachineInstr &MI : MBB) {
     // If this is an explicit VSETVLI or VSETIVLI, update our state.
     if (isVectorConfigInstr(MI)) {
@@ -1078,7 +1085,6 @@ void RISCVInsertVSETVLI::emitVSETVLIs(MachineBasicBlock &MBB) {
       MI.getOperand(3).setIsDead(false);
       MI.getOperand(4).setIsDead(false);
       CurInfo = getInfoForVSETVLI(MI);
-      PrevVSETVLIMI = &MI;
       continue;
     }
 
@@ -1125,29 +1131,10 @@ void RISCVInsertVSETVLI::emitVSETVLIs(MachineBasicBlock &MBB) {
         // vl/vtype for succesor blocks.
         if (!canSkipVSETVLIForLoadStore(MI, NewInfo, CurInfo) &&
             needVSETVLI(NewInfo, CurInfo)) {
-          // If the previous VL/VTYPE is set by VSETVLI and do not use, Merge it
-          // with current VL/VTYPE.
-          bool NeedInsertVSETVLI = true;
-          if (PrevVSETVLIMI) {
-            // If these two VSETVLI have the same AVL and the same VLMAX,
-            // we could merge these two VSETVLI.
-            // TODO: If we remove this, we get a `vsetvli x0, x0, vtype'
-            // here.  We could simply let this be emitted, then remove
-            // the unused vsetvlis in a post-pass.
-            if (CurInfo.hasSameAVL(NewInfo) && CurInfo.hasSameVLMAX(NewInfo)) {
-              // WARNING: For correctness, it is essential the contents of VL
-              // and VTYPE stay the same after MI.  This greatly limits the
-              // mutation we can legally do here.
-              PrevVSETVLIMI->getOperand(2).setImm(NewInfo.encodeVTYPE());
-              NeedInsertVSETVLI = false;
-            }
-          }
-          if (NeedInsertVSETVLI)
-            insertVSETVLI(MBB, MI, NewInfo, CurInfo);
+          insertVSETVLI(MBB, MI, NewInfo, CurInfo);
           CurInfo = NewInfo;
         }
       }
-      PrevVSETVLIMI = nullptr;
     }
 
     // If this is something that updates VL/VTYPE that we don't know about, set
@@ -1155,7 +1142,6 @@ void RISCVInsertVSETVLI::emitVSETVLIs(MachineBasicBlock &MBB) {
     if (MI.isCall() || MI.isInlineAsm() || MI.modifiesRegister(RISCV::VL) ||
         MI.modifiesRegister(RISCV::VTYPE)) {
       CurInfo = VSETVLIInfo::getUnknown();
-      PrevVSETVLIMI = nullptr;
     }
   }
 
@@ -1378,6 +1364,52 @@ void RISCVInsertVSETVLI::doPRE(MachineBasicBlock &MBB) {
                 AvailableInfo, OldInfo);
 }
 
+void RISCVInsertVSETVLI::doLocalPostpass(MachineBasicBlock &MBB) {
+  MachineInstr *PrevMI = nullptr;
+  bool UsedVL = false, UsedVTYPE = false;
+  SmallVector<MachineInstr*> ToDelete;
+  for (MachineInstr &MI : MBB) {
+    // Note: Must be *before* vsetvli handling to account for config cases
+    // which only change some subfields.
+    if (MI.isCall() || MI.isInlineAsm() || MI.readsRegister(RISCV::VL))
+      UsedVL = true;
+    if (MI.isCall() || MI.isInlineAsm() || MI.readsRegister(RISCV::VTYPE))
+      UsedVTYPE = true;
+
+    if (!isVectorConfigInstr(MI))
+      continue;
+
+    if (PrevMI) {
+      if (!UsedVL && !UsedVTYPE) {
+        ToDelete.push_back(PrevMI);
+        // fallthrough
+      } else if (!UsedVTYPE && isVLPreservingConfig(MI)) {
+        // Note: `vsetvli x0, x0, vtype' is the canonical instruction
+        // for this case.  If you find yourself wanting to add other forms
+        // to this "unused VTYPE" case, we're probably missing a
+        // canonicalization earlier.
+        // Note: We don't need to explicitly check vtype compatibility
+        // here because this form is only legal (per ISA) when not
+        // changing VL.
+        PrevMI->getOperand(2).setImm(MI.getOperand(2).getImm());
+        ToDelete.push_back(&MI);
+        // Leave PrevMI unchanged
+        continue;
+      }
+    }
+    PrevMI = &MI;
+    UsedVL = false;
+    UsedVTYPE = false;
+    Register VRegDef = MI.getOperand(0).getReg();
+    if (VRegDef != RISCV::X0 &&
+        !(VRegDef.isVirtual() && MRI->use_nodbg_empty(VRegDef)))
+      UsedVL = true;
+  }
+
+  for (auto *MI : ToDelete)
+    MI->eraseFromParent();
+}
+
 bool RISCVInsertVSETVLI::runOnMachineFunction(MachineFunction &MF) {
   // Skip if the vector extension is not enabled.
   const RISCVSubtarget &ST = MF.getSubtarget<RISCVSubtarget>();
@@ -1442,6 +1474,15 @@ bool RISCVInsertVSETVLI::runOnMachineFunction(MachineFunction &MF) {
   // predecessors.
   for (MachineBasicBlock &MBB : MF)
     emitVSETVLIs(MBB);
+
+  // Now that all vsetvlis are explicit, go through and do block local
+  // DSE and peephole based demanded fields based transforms.  Note that
+  // this *must* be done outside the main dataflow so long as we allow
+  // any cross block analysis within the dataflow.  We can't have both
+  // demanded fields based mutation and non-local analysis in the
+  // dataflow at the same time without introducing inconsistencies.
+  for (MachineBasicBlock &MBB : MF)
+    doLocalPostpass(MBB);
 
   // Once we're fully done rewriting all the instructions, do a final pass
   // through to check for VSETVLIs which write to an unused destination.
