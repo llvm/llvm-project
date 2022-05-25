@@ -1154,8 +1154,8 @@ TEST_F(TransferTest, DerivedBaseMemberClass) {
         // two.
 
         // Base-class fields.
-        EXPECT_THAT(FooVal.getChild(*ADefaultDecl), IsNull());
-        EXPECT_THAT(FooVal.getChild(*APrivateDecl), IsNull());
+        EXPECT_THAT(FooVal.getChild(*ADefaultDecl), NotNull());
+        EXPECT_THAT(FooVal.getChild(*APrivateDecl), NotNull());
 
         EXPECT_THAT(FooVal.getChild(*AProtectedDecl), NotNull());
         EXPECT_EQ(Env.getValue(FooLoc.getChild(*APublicDecl)),
@@ -1177,6 +1177,40 @@ TEST_F(TransferTest, DerivedBaseMemberClass) {
       });
 }
 
+static void derivedBaseMemberExpectations(
+    llvm::ArrayRef<std::pair<std::string, DataflowAnalysisState<NoopLattice>>>
+        Results,
+    ASTContext &ASTCtx) {
+  ASSERT_THAT(Results, ElementsAre(Pair("p", _)));
+  const Environment &Env = Results[0].second.Env;
+
+  const ValueDecl *FooDecl = findValueDecl(ASTCtx, "Foo");
+  ASSERT_THAT(FooDecl, NotNull());
+
+  ASSERT_TRUE(FooDecl->getType()->isRecordType());
+  const FieldDecl *BarDecl = nullptr;
+  for (const clang::CXXBaseSpecifier &Base :
+       FooDecl->getType()->getAsCXXRecordDecl()->bases()) {
+    QualType BaseType = Base.getType();
+    ASSERT_TRUE(BaseType->isStructureType());
+
+    for (const FieldDecl *Field : BaseType->getAsRecordDecl()->fields()) {
+      if (Field->getNameAsString() == "Bar") {
+        BarDecl = Field;
+      } else {
+        FAIL() << "Unexpected field: " << Field->getNameAsString();
+      }
+    }
+  }
+  ASSERT_THAT(BarDecl, NotNull());
+
+  const auto &FooLoc = *cast<AggregateStorageLocation>(
+      Env.getStorageLocation(*FooDecl, SkipPast::None));
+  const auto &FooVal = *cast<StructValue>(Env.getValue(FooLoc));
+  EXPECT_THAT(FooVal.getChild(*BarDecl), NotNull());
+  EXPECT_EQ(Env.getValue(FooLoc.getChild(*BarDecl)), FooVal.getChild(*BarDecl));
+}
+
 TEST_F(TransferTest, DerivedBaseMemberStructDefault) {
   std::string Code = R"(
     struct A {
@@ -1190,41 +1224,28 @@ TEST_F(TransferTest, DerivedBaseMemberStructDefault) {
       // [[p]]
     }
   )";
-  runDataflow(
-      Code, [](llvm::ArrayRef<
-                   std::pair<std::string, DataflowAnalysisState<NoopLattice>>>
-                   Results,
-               ASTContext &ASTCtx) {
-        ASSERT_THAT(Results, ElementsAre(Pair("p", _)));
-        const Environment &Env = Results[0].second.Env;
+  runDataflow(Code, derivedBaseMemberExpectations);
+}
 
-        const ValueDecl *FooDecl = findValueDecl(ASTCtx, "Foo");
-        ASSERT_THAT(FooDecl, NotNull());
+TEST_F(TransferTest, DerivedBaseMemberPrivateFriend) {
+  // Include an access to `Foo.Bar` to verify the analysis doesn't crash on that
+  // access.
+  std::string Code = R"(
+    struct A {
+    private:
+      friend void target();
+      int Bar;
+    };
+    struct B : public A {
+    };
 
-        ASSERT_TRUE(FooDecl->getType()->isRecordType());
-        const FieldDecl *BarDecl = nullptr;
-        for (const clang::CXXBaseSpecifier &Base :
-             FooDecl->getType()->getAsCXXRecordDecl()->bases()) {
-          QualType BaseType = Base.getType();
-          ASSERT_TRUE(BaseType->isStructureType());
-
-          for (const FieldDecl *Field : BaseType->getAsRecordDecl()->fields()) {
-            if (Field->getNameAsString() == "Bar") {
-              BarDecl = Field;
-            } else {
-              FAIL() << "Unexpected field: " << Field->getNameAsString();
-            }
-          }
-        }
-        ASSERT_THAT(BarDecl, NotNull());
-
-        const auto &FooLoc = *cast<AggregateStorageLocation>(
-            Env.getStorageLocation(*FooDecl, SkipPast::None));
-        const auto &FooVal = *cast<StructValue>(Env.getValue(FooLoc));
-        EXPECT_THAT(FooVal.getChild(*BarDecl), NotNull());
-        EXPECT_EQ(Env.getValue(FooLoc.getChild(*BarDecl)),
-                  FooVal.getChild(*BarDecl));
-      });
+    void target() {
+      B Foo;
+      (void)Foo.Bar;
+      // [[p]]
+    }
+  )";
+  runDataflow(Code, derivedBaseMemberExpectations);
 }
 
 TEST_F(TransferTest, ClassMember) {
