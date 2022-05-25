@@ -629,6 +629,7 @@ def OMP_Requires : Directive<"requires"> {
     VersionedClause<OMPC_AtomicDefaultMemOrder>
   ];
 }
+def OMP_Nothing : Directive<"nothing"> {}
 def OMP_TargetData : Directive<"target data"> {
   let allowedClauses = [
     VersionedClause<OMPC_UseDevicePtr>,

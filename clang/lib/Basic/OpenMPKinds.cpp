@@ -730,6 +730,9 @@ void clang::getOpenMPCaptureRegions(
   case OMPD_teams_loop:
     CaptureRegions.push_back(OMPD_teams);
     break;
+  case OMPD_nothing:
+    CaptureRegions.push_back(OMPD_nothing);
+    break;
   case OMPD_loop:
     // TODO: 'loop' may require different capture regions depending on the bind
     // clause or the parent directive when there is no bind clause. Use
