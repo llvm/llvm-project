@@ -412,7 +412,7 @@ private:
 ///       : tensor<?x?x?xf32> into tensor<?x?x?x?x?x?xf32>
 ///
 ///  The reshape can be folded into the `genericOp` if its loop dimensionality
-///  is increased to match the result (operand) of the tensor_expand_shape.
+///  is increased to match the result (operand) of the tensor.expand_shape.
 ///  The indexing_map of the fused tensor in the `genericOp` and the
 ///  reassociation map helps compute the indexing maps of the modified op.
 ///  For the above example, based on the reassociation map it
@@ -677,7 +677,7 @@ static void updateExpandedGenericOpRegion(PatternRewriter &rewriter,
   }
 }
 
-/// Implements the fusion of a tensor_collapse_shape or a tensor_expand_shape op
+/// Implements the fusion of a tensor.collapse_shape or a tensor.expand_shape op
 /// and a generic op as explained in `isFusableWithReshapeByExpansion`. Assumes
 /// that those conditions have been satisfied.
 static Optional<SmallVector<Value>>
@@ -811,7 +811,7 @@ fuseWithReshapeByExpansion(GenericOp genericOp, Operation *reshapeOp,
 
 namespace {
 
-/// Pattern to fuse a tensor_collapse_shape op with its consumer generic op,
+/// Pattern to fuse a tensor.collapse_shape op with its consumer generic op,
 /// when the reshape op is collapsing dimensions. The dimensionality of the loop
 /// in the consumer is expanded.
 class FoldWithProducerReshapeOpByExpansion
@@ -851,7 +851,7 @@ private:
   ControlFusionFn controlFoldingReshapes;
 };
 
-/// Pattern to fold a tensor_expand_shape op with its producer generic op
+/// Pattern to fold a tensor.expand_shape op with its producer generic op
 /// by expanding the dimensionality of the loop in the producer op.
 struct FoldReshapeWithGenericOpByExpansion
     : public OpRewritePattern<tensor::ExpandShapeOp> {
