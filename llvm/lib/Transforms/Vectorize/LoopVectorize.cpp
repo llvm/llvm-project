@@ -8829,6 +8829,14 @@ VPlanPtr LoopVectorizationPlanner::buildVPlanWithVPRecipes(
         auto OpRange = Plan->mapToVPValues(Instr->operands());
         Operands = {OpRange.begin(), OpRange.end()};
       }
+
+      // Invariant stores inside loop will be deleted and a single store
+      // with the final reduction value will be added to the exit block
+      StoreInst *SI;
+      if ((SI = dyn_cast<StoreInst>(&I)) &&
+          Legal->isInvariantAddressOfReduction(SI->getPointerOperand()))
+        continue;
+
       if (auto RecipeOrValue = RecipeBuilder.tryToCreateWidenRecipe(
               Instr, Operands, Range, Plan)) {
         // If Instr can be simplified to an existing VPValue, use it.
@@ -8863,13 +8871,6 @@ VPlanPtr LoopVectorizationPlanner::buildVPlanWithVPRecipes(
         VPBB->appendRecipe(Recipe);
         continue;
       }
-
-      // Invariant stores inside loop will be deleted and a single store
-      // with the final reduction value will be added to the exit block
-      StoreInst *SI;
-      if ((SI = dyn_cast<StoreInst>(&I)) &&
-          Legal->isInvariantAddressOfReduction(SI->getPointerOperand()))
-        continue;
 
       // Otherwise, if all widening options failed, Instruction is to be
       // replicated. This may create a successor for VPBB.
