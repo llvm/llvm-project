@@ -8,6 +8,7 @@
 
 #include "llvm/ADT/IntervalMap.h"
 #include "gtest/gtest.h"
+#include <type_traits>
 
 using namespace llvm;
 
@@ -16,6 +17,15 @@ namespace {
 typedef IntervalMap<unsigned, unsigned, 4> UUMap;
 typedef IntervalMap<unsigned, unsigned, 4,
                     IntervalMapHalfOpenInfo<unsigned>> UUHalfOpenMap;
+
+static_assert(!std::is_copy_constructible<UUMap>::value,
+              "IntervalMap copy constructor should be deleted");
+static_assert(!std::is_move_constructible<UUMap>::value,
+              "IntervalMap move constructor should be deleted");
+static_assert(!std::is_copy_assignable<UUMap>::value,
+              "IntervalMap copy assignment should be deleted");
+static_assert(!std::is_move_assignable<UUMap>::value,
+              "IntervalMap move assignment should be deleted");
 
 // Empty map tests
 TEST(IntervalMapTest, EmptyMap) {
