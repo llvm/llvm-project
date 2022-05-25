@@ -208,7 +208,9 @@ identifiers::
    multiclass string        then          true
 
 .. warning::
-  The ``field`` reserved word is deprecated.
+  The ``field`` reserved word is deprecated, except when used with the
+  CodeEmitterGen backend where it's used to distinguish normal record
+  fields from encoding fields.
 
 Bang operators
 --------------
