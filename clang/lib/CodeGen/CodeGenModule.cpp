@@ -4738,7 +4738,12 @@ void CodeGenModule::EmitGlobalVarDefinition(const VarDecl *D,
       GV->setConstant(true);
   }
 
-  GV->setAlignment(getContext().getDeclAlign(D).getAsAlign());
+  CharUnits AlignVal = getContext().getDeclAlign(D);
+  // Check for alignment specifed in an 'omp allocate' directive.
+  if (llvm::Optional<CharUnits> AlignValFromAllocate =
+          getOMPAllocateAlignment(D))
+    AlignVal = AlignValFromAllocate.getValue();
+  GV->setAlignment(AlignVal.getAsAlign());
 
   // On Darwin, unlike other Itanium C++ ABI platforms, the thread-wrapper
   // function is only defined alongside the variable, not also alongside
