@@ -2488,6 +2488,16 @@ StmtResult Parser::ParseOpenMPDeclarativeOrExecutableDirective(
   bool HasAssociatedStatement = true;
 
   switch (DKind) {
+  case OMPD_nothing:
+    if ((StmtCtx & ParsedStmtContext::AllowStandaloneOpenMPDirectives) ==
+        ParsedStmtContext())
+      Diag(Tok, diag::err_omp_immediate_directive)
+        << getOpenMPDirectiveName(DKind) << 0;
+    ConsumeToken();
+    skipUntilPragmaOpenMPEnd(DKind);
+    if (Tok.is(tok::annot_pragma_openmp_end))
+      ConsumeAnnotationToken();
+    break;
   case OMPD_metadirective: {
     ConsumeToken();
     SmallVector<VariantMatchInfo, 4> VMIs;
