@@ -91,9 +91,8 @@ BufferizationOptions getPartialBufferizationOptions();
 LogicalResult bufferizeOp(Operation *op,
                           BufferizationState &bufferizationState);
 
-/// Finalize all buffer allocations.
-/// * Hoist buffer allocations as much as possible.
-/// * Create alloc/dealloc ops as specified by the bufferization options.
+/// Finalize all buffer allocations: Create alloc/dealloc ops as specified by
+/// the bufferization options.
 LogicalResult finalizeBuffers(Operation *op,
                               const BufferizationOptions &options);
 } // namespace bufferization
