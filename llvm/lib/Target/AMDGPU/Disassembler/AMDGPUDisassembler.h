@@ -101,6 +101,7 @@ public:
   DecodeStatus decodeCOMPUTE_PGM_RSRC2(uint32_t FourByteBuffer,
                                        raw_string_ostream &KdStream) const;
 
+  DecodeStatus convertEXPInst(MCInst &MI) const;
   DecodeStatus convertFMAanyK(MCInst &MI, int ImmLitIdx) const;
   DecodeStatus convertSDWAInst(MCInst &MI) const;
   DecodeStatus convertDPP8Inst(MCInst &MI) const;
