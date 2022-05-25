@@ -711,7 +711,6 @@
 ; GCN-O2-NEXT:    Lower ctors and dtors for AMDGPU
 ; GCN-O2-NEXT:    FunctionPass Manager
 ; GCN-O2-NEXT:      Early propagate attributes from kernels to functions
-; GCN-O2-NEXT:      AMDGPU Image Intrinsic Optimizer
 ; GCN-O2-NEXT:    AMDGPU Lower Intrinsics
 ; GCN-O2-NEXT:    AMDGPU Inline All Functions
 ; GCN-O2-NEXT:    CallGraph Construction
@@ -1003,7 +1002,6 @@
 ; GCN-O3-NEXT:    Lower ctors and dtors for AMDGPU
 ; GCN-O3-NEXT:    FunctionPass Manager
 ; GCN-O3-NEXT:      Early propagate attributes from kernels to functions
-; GCN-O3-NEXT:      AMDGPU Image Intrinsic Optimizer
 ; GCN-O3-NEXT:    AMDGPU Lower Intrinsics
 ; GCN-O3-NEXT:    AMDGPU Inline All Functions
 ; GCN-O3-NEXT:    CallGraph Construction
