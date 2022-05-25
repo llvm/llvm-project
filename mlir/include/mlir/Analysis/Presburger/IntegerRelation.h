@@ -505,6 +505,12 @@ public:
   /// Return a set corresponding to all points in the range of the relation.
   IntegerPolyhedron getRangeSet() const;
 
+  /// Invert the relation i.e., swap it's domain and range.
+  ///
+  /// Formally, let the relation `this` be R: A -> B, then this operation
+  /// modifies R to be B -> A.
+  void inverse();
+
   void print(raw_ostream &os) const;
   void dump() const;
 

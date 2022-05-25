@@ -2102,6 +2102,12 @@ IntegerPolyhedron IntegerRelation::getRangeSet() const {
   return IntegerPolyhedron(std::move(copyRel));
 }
 
+void IntegerRelation::inverse() {
+  unsigned numRangeIds = getNumIdKind(IdKind::Range);
+  convertIdKind(IdKind::Domain, 0, getIdKindEnd(IdKind::Domain), IdKind::Range);
+  convertIdKind(IdKind::Range, 0, numRangeIds, IdKind::Domain);
+}
+
 void IntegerRelation::printSpace(raw_ostream &os) const {
   space.print(os);
   os << getNumConstraints() << " constraints\n";
