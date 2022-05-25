@@ -700,9 +700,9 @@ let inputOp = op<my_dialect.input_op>(resultOp.result, resultOp.0);
 ```
 
 Along with result name access, variables of `Op` type may implicitly convert to
-`Value` or `ValueRange`. These variables are converted to `Value` when they are
-known (via ODS) to only have one result, in all other cases they convert to
-`ValueRange`:
+`Value` or `ValueRange`. If these variables are registered (has ODS entry), they
+are converted to `Value` when they are known to only have one result, otherwise
+they will be converted to `ValueRange`:
 
 ```pdll
 // `resultOp` may also convert implicitly to a Value for use in `inputOp`:
@@ -711,6 +711,17 @@ let inputOp = op<my_dialect.input_op>(resultOp);
 
 // We could also inline `resultOp` directly:
 let inputOp = op<my_dialect.input_op>(op<my_dialect.result_op>);
+```
+
+#### Unregistered Operations
+
+A variable of unregistered op is still available for numeric result indexing.
+Given that we don't have knowledge of its result groups, numeric indexing
+returns a Value corresponding to the individual result at the given index.
+
+```pdll
+// Use the index `0` to refer to the first result value of the unregistered op.
+let inputOp = op<my_dialect.input_op>(op<my_dialect.unregistered_op>.0);
 ```
 
 ### Attribute Expression

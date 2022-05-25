@@ -90,6 +90,26 @@ Pattern {
 
 // -----
 
+// CHECK: Module
+// CHECK: `-VariableDecl {{.*}} Name<op> Type<Op<my_dialect.unregistered_foo>>
+// CHECK:   `-OperationExpr {{.*}} Type<Op<my_dialect.unregistered_foo>>
+// CHECK:     `-OpNameDecl {{.*}} Name<my_dialect.unregistered_foo>
+// CHECK:     `Operands`
+// CHECK:       `-MemberAccessExpr {{.*}} Member<0> Type<Value>
+// CHECK:         `-OperationExpr {{.*}} Type<Op<my_dialect.unregistered_bar>>
+// CHECK:           `-OpNameDecl {{.*}} Name<my_dialect.unregistered_bar>
+// CHECK:           `Operands`
+// CHECK:             `-DeclRefExpr {{.*}} Type<ValueRange>
+// CHECK:               `-VariableDecl {{.*}} Name<_> Type<ValueRange>
+// CHECK:                 `Constraints`
+// CHECK:                   `-ValueRangeConstraintDecl
+Pattern {
+  let op = op<my_dialect.unregistered_foo>(op<my_dialect.unregistered_bar>.0);
+  erase op;
+}
+
+// -----
+
 //===----------------------------------------------------------------------===//
 // OperationExpr
 //===----------------------------------------------------------------------===//

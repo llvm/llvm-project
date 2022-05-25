@@ -55,6 +55,19 @@ Pattern OpAllResultMemberAccess {
 
 // -----
 
+// Handle result indexing on unregistered op.
+// CHECK: pdl.pattern @UnregisteredOpResultIndexing
+// CHECK: %[[BAR_OP:.*]] = operation "my_dialect.unregistered_bar"
+// CHECK: %[[BAR_RES:.*]] = result 0 of %[[BAR_OP]]
+// CHECK: operation "my_dialect.unregistered_foo"(%[[BAR_RES]] : !pdl.value)
+Pattern UnregisteredOpResultIndexing {
+  let bar : Op<my_dialect.unregistered_bar>;
+  let op = op<my_dialect.unregistered_foo>(bar.0);
+  erase op;
+}
+
+// -----
+
 // Handle implicit "named" operation results access.
 
 #include "include/ops.td"

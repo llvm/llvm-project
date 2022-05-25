@@ -2683,8 +2683,11 @@ FailureOr<ast::Type> Parser::validateMemberAccess(ast::Expr *parentExpr,
       });
       if (it != results.end())
         return it->isVariadic() ? valueRangeTy : valueTy;
+    } else if (llvm::isDigit(name[0])) {
+      // Allow unchecked numeric indexing of the results of unregistered
+      // operations. It returns a single value.
+      return valueTy;
     }
-
   } else if (auto tupleType = parentType.dyn_cast<ast::TupleType>()) {
     // Handle indexed results.
     unsigned index = 0;
