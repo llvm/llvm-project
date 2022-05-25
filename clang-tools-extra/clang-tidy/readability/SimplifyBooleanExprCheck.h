@@ -69,6 +69,7 @@ private:
   const bool ChainedConditionalReturn;
   const bool ChainedConditionalAssignment;
   const bool SimplifyDeMorgan;
+  const bool SimplifyDeMorganRelaxed;
 };
 
 } // namespace readability
