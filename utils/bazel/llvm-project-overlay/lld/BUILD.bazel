@@ -13,7 +13,7 @@ package(
 genrule(
     name = "config_version_gen",
     outs = ["include/lld/Common/Version.inc"],
-    cmd = "echo '#define LLD_VERSION_STRING \"14.0.0\"' > $@",
+    cmd = "echo '#define LLD_VERSION_STRING \"15.0.0\"' > $@",
 )
 
 genrule(
