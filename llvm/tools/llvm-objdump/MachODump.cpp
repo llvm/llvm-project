@@ -2608,7 +2608,8 @@ struct DisassembleInfo {
 // value of TagType is currently 1 (for the LLVMOpInfo1 struct). If symbolic
 // information is returned then this function returns 1 else it returns 0.
 static int SymbolizerGetOpInfo(void *DisInfo, uint64_t Pc, uint64_t Offset,
-                               uint64_t Size, int TagType, void *TagBuf) {
+                               uint64_t OpSize, uint64_t InstSize, int TagType,
+                               void *TagBuf) {
   struct DisassembleInfo *info = (struct DisassembleInfo *)DisInfo;
   struct LLVMOpInfo1 *op_info = (struct LLVMOpInfo1 *)TagBuf;
   uint64_t value = op_info->Value;
@@ -2625,7 +2626,7 @@ static int SymbolizerGetOpInfo(void *DisInfo, uint64_t Pc, uint64_t Offset,
 
   unsigned int Arch = info->O->getArch();
   if (Arch == Triple::x86) {
-    if (Size != 1 && Size != 2 && Size != 4 && Size != 0)
+    if (OpSize != 1 && OpSize != 2 && OpSize != 4 && OpSize != 0)
       return 0;
     if (info->O->getHeader().filetype != MachO::MH_OBJECT) {
       // TODO:
@@ -2705,7 +2706,7 @@ static int SymbolizerGetOpInfo(void *DisInfo, uint64_t Pc, uint64_t Offset,
     return 0;
   }
   if (Arch == Triple::x86_64) {
-    if (Size != 1 && Size != 2 && Size != 4 && Size != 0)
+    if (OpSize != 1 && OpSize != 2 && OpSize != 4 && OpSize != 0)
       return 0;
     // For non MH_OBJECT types, like MH_KEXT_BUNDLE, Search the external
     // relocation entries of a linked image (if any) for an entry that matches
@@ -2737,7 +2738,7 @@ static int SymbolizerGetOpInfo(void *DisInfo, uint64_t Pc, uint64_t Offset,
         // adds the Pc.  But for x86_64 external relocation entries the Value
         // is the offset from the external symbol.
         if (info->O->getAnyRelocationPCRel(RE))
-          op_info->Value -= Pc + Offset + Size;
+          op_info->Value -= Pc + InstSize;
         const char *name =
             unwrapOrError(Symbol.getName(), info->O->getFileName()).data();
         op_info->AddSymbol.Present = 1;
@@ -2775,7 +2776,7 @@ static int SymbolizerGetOpInfo(void *DisInfo, uint64_t Pc, uint64_t Offset,
       // adds the Pc.  But for x86_64 external relocation entries the Value
       // is the offset from the external symbol.
       if (info->O->getAnyRelocationPCRel(RE))
-        op_info->Value -= Pc + Offset + Size;
+        op_info->Value -= Pc + InstSize;
       const char *name =
           unwrapOrError(Symbol.getName(), info->O->getFileName()).data();
       unsigned Type = info->O->getAnyRelocationType(RE);
@@ -2803,7 +2804,7 @@ static int SymbolizerGetOpInfo(void *DisInfo, uint64_t Pc, uint64_t Offset,
     return 0;
   }
   if (Arch == Triple::arm) {
-    if (Offset != 0 || (Size != 4 && Size != 2))
+    if (Offset != 0 || (InstSize != 4 && InstSize != 2))
       return 0;
     if (info->O->getHeader().filetype != MachO::MH_OBJECT) {
       // TODO:
@@ -2940,7 +2941,7 @@ static int SymbolizerGetOpInfo(void *DisInfo, uint64_t Pc, uint64_t Offset,
     return 1;
   }
   if (Arch == Triple::aarch64) {
-    if (Offset != 0 || Size != 4)
+    if (Offset != 0 || InstSize != 4)
       return 0;
     if (info->O->getHeader().filetype != MachO::MH_OBJECT) {
       // TODO:

@@ -181,7 +181,7 @@ static bool DecodeSymbolicOperand(MCInst &Inst, uint64_t Address,
                                   const MCDisassembler *Decoder) {
   static const uint64_t AtLeast = 2;
   return (nullptr != Decoder && Decoder->tryAddingSymbolicOperand(
-                                    Inst, Value, Address, true, 0, AtLeast));
+                                    Inst, Value, Address, true, 0, AtLeast, 0));
 }
 
 static void DecodeSymbolicOperandOff(MCInst &Inst, uint64_t Address,
