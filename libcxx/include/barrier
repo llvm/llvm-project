@@ -51,9 +51,7 @@ namespace std
 #include <__thread/timed_backoff_policy.h>
 #include <atomic>
 #include <limits>
-#ifndef _LIBCPP_HAS_NO_TREE_BARRIER
-# include <memory>
-#endif
+#include <memory>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -280,7 +278,7 @@ public:
     }
 };
 
-#endif //_LIBCPP_HAS_NO_TREE_BARRIER
+#endif // !_LIBCPP_HAS_NO_TREE_BARRIER
 
 template<class _CompletionF = __empty_completion>
 class barrier {
