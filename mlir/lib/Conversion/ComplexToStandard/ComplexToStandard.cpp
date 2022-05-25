@@ -413,6 +413,30 @@ struct ExpOpConversion : public OpConversionPattern<complex::ExpOp> {
   }
 };
 
+struct Expm1OpConversion : public OpConversionPattern<complex::Expm1Op> {
+  using OpConversionPattern<complex::Expm1Op>::OpConversionPattern;
+
+  LogicalResult
+  matchAndRewrite(complex::Expm1Op op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    auto type = adaptor.getComplex().getType().cast<ComplexType>();
+    auto elementType = type.getElementType().cast<FloatType>();
+
+    mlir::ImplicitLocOpBuilder b(op.getLoc(), rewriter);
+    Value exp = b.create<complex::ExpOp>(adaptor.getComplex());
+
+    Value real = b.create<complex::ReOp>(elementType, exp);
+    Value one = b.create<arith::ConstantOp>(elementType,
+                                            b.getFloatAttr(elementType, 1));
+    Value realMinusOne = b.create<arith::SubFOp>(real, one);
+    Value imag = b.create<complex::ImOp>(elementType, exp);
+
+    rewriter.replaceOpWithNewOp<complex::CreateOp>(op, type, realMinusOne,
+                                                   imag);
+    return success();
+  }
+};
+
 struct LogOpConversion : public OpConversionPattern<complex::LogOp> {
   using OpConversionPattern<complex::LogOp>::OpConversionPattern;
 
@@ -718,6 +742,7 @@ void mlir::populateComplexToStandardConversionPatterns(
       CosOpConversion,
       DivOpConversion,
       ExpOpConversion,
+      Expm1OpConversion,
       LogOpConversion,
       Log1pOpConversion,
       MulOpConversion,
