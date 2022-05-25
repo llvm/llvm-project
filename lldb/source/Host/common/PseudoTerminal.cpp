@@ -103,6 +103,7 @@ llvm::Error PseudoTerminal::OpenSecondary(int oflag) {
       std::error_code(errno, std::generic_category()));
 }
 
+#if !HAVE_PTSNAME_R || defined(__APPLE__)
 static std::string use_ptsname(int fd) {
   static std::mutex mutex;
   std::lock_guard<std::mutex> guard(mutex);
@@ -110,6 +111,7 @@ static std::string use_ptsname(int fd) {
   assert(r != nullptr);
   return r;
 }
+#endif
 
 std::string PseudoTerminal::GetSecondaryName() const {
   assert(m_primary_fd >= 0);
