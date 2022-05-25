@@ -66,12 +66,12 @@ static_assert(test(std::ranges::end, a));
 static_assert(test(std::ranges::cbegin, a));
 static_assert(test(std::ranges::cdata, a));
 static_assert(test(std::ranges::cend, a));
-//static_assert(test(std::ranges::crbegin, a));
-//static_assert(test(std::ranges::crend, a));
+static_assert(test(std::ranges::crbegin, a));
+static_assert(test(std::ranges::crend, a));
 static_assert(test(std::ranges::data, a));
 static_assert(test(std::ranges::empty, a));
-//static_assert(test(std::ranges::rbegin, a));
-//static_assert(test(std::ranges::rend, a));
+static_assert(test(std::ranges::rbegin, a));
+static_assert(test(std::ranges::rend, a));
 static_assert(test(std::ranges::size, a));
 static_assert(test(std::ranges::ssize, a));
 
