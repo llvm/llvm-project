@@ -834,6 +834,24 @@ template <typename T>
 struct CastInfo<T, const ::mlir::Operation>
     : public ConstStrippingForwardingCast<T, const ::mlir::Operation,
                                           CastInfo<T, ::mlir::Operation>> {};
+
+/// Cast (const) Operation * to itself. This is helpful to avoid SFINAE in
+/// templated implementations that should work on both base and derived
+/// operation types.
+template <>
+struct CastInfo<::mlir::Operation *, ::mlir::Operation *>
+    : public NullableValueCastFailed<::mlir::Operation *>,
+      public DefaultDoCastIfPossible<
+          ::mlir::Operation *, ::mlir::Operation *,
+          CastInfo<::mlir::Operation *, ::mlir::Operation *>> {
+  static bool isPossible(::mlir::Operation *op) { return true; }
+  static ::mlir::Operation *doCast(::mlir::Operation *op) { return op; }
+};
+template <>
+struct CastInfo<const ::mlir::Operation *, const ::mlir::Operation *>
+    : public ConstStrippingForwardingCast<
+          const ::mlir::Operation *, const ::mlir::Operation *,
+          CastInfo<::mlir::Operation *, ::mlir::Operation *>> {};
 } // namespace llvm
 
 #endif // MLIR_IR_OPERATION_H
