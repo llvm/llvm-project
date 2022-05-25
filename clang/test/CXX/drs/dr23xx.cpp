@@ -158,3 +158,14 @@ void g() {
 }
 } //namespace dr2303
 #endif
+
+namespace dr2394 { // dr2394: 15
+
+struct A {};
+const A a;
+
+// Now allowed to default-init B.
+struct B { const A a; };
+B b;
+
+}
