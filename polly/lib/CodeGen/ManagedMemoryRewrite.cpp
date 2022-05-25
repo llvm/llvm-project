@@ -348,7 +348,7 @@ static void replaceAllUsesAndConstantUses(Value *Old, Value *New,
     rewriteOldValToNew(I, Old, New, Builder);
 }
 
-class ManagedMemoryRewritePass : public ModulePass {
+class ManagedMemoryRewritePass final : public ModulePass {
 public:
   static char ID;
   GPUArch Architecture;
