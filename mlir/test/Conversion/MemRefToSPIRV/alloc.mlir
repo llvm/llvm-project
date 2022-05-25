@@ -41,7 +41,7 @@ module attributes {
 
 //       CHECK: spv.GlobalVariable @__workgroup_mem__{{[0-9]+}}
 //  CHECK-SAME:   !spv.ptr<!spv.struct<(!spv.array<20 x i32>)>, Workgroup>
-// CHECK_LABEL: spv.func @alloc_dealloc_workgroup_mem
+//       CHECK: func @alloc_dealloc_workgroup_mem
 //       CHECK:   %[[VAR:.+]] = spv.mlir.addressof @__workgroup_mem__0
 //       CHECK:   %[[LOC:.+]] = spv.SDiv
 //       CHECK:   %[[PTR:.+]] = spv.AccessChain %[[VAR]][%{{.+}}, %[[LOC]]]
