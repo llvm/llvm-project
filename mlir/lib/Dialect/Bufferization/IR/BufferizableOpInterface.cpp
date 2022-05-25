@@ -582,63 +582,6 @@ bufferization::createAllocDeallocOps(Operation *op,
   return success(!status.wasInterrupted());
 }
 
-/// Try to hoist all new buffer allocations until the next hoisting barrier.
-// TODO: Consolidate this function with the existing buffer hoisting pass.
-LogicalResult
-bufferization::hoistBufferAllocations(Operation *op,
-                                      const BufferizationOptions &options) {
-  // Nothing to do if allocation hoisting is deactivated.
-  if (!options.hoistAllocations)
-    return success();
-
-  // Gather all buffer allocations that were created by the bufferization.
-  SmallVector<Operation *> allocaOps;
-  op->walk([&](memref::AllocaOp allocaOp) {
-    if (allocaOp->hasAttr(kBufferAllocationAttr))
-      allocaOps.push_back(allocaOp);
-  });
-
-  for (Operation *allocaOp : allocaOps) {
-    // TODO: Hoisting of allocs with dynamic shape not implemented.
-    if (!allocaOp->getOpOperands().empty())
-      continue;
-
-    Operation *op = allocaOp->getParentOp();
-    while (op) {
-      if (auto bufferizableOp = dyn_cast<BufferizableOpInterface>(op)) {
-        if (bufferizableOp.isAllocationHoistingBarrier()) {
-          break;
-        }
-      } else {
-        // Op is not bufferizable: It may not be safe to hoist across this op.
-        break;
-      }
-      op = op->getParentOp();
-    }
-
-    // FuncOp is an allocation hoisting barrier, so this should never happen.
-    assert(op && "allocation hoisting barrier not found");
-
-    // Nothing to do if the insertion point is in the same block.
-    if (op == allocaOp->getParentOp())
-      continue;
-
-    // `op` may have multiple blocks. Make sure that we insert in the right one.
-    SmallVector<Block *> blocks;
-    for (Region &r : op->getRegions())
-      for (Block &b : r.getBlocks())
-        blocks.push_back(&b);
-    auto *insertionBlock = llvm::find_if(
-        blocks, [&](Block *b) { return b->findAncestorOpInBlock(*allocaOp); });
-    assert(insertionBlock != blocks.end() && "owning block not found");
-
-    // Move to the beginning of the block.
-    allocaOp->moveBefore(&(*insertionBlock)->front());
-  }
-
-  return success();
-}
-
 //===----------------------------------------------------------------------===//
 // Bufferization-specific BlockAndValueMapping support with debugging.
 //===----------------------------------------------------------------------===//

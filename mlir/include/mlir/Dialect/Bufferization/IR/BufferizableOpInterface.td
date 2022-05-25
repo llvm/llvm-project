@@ -261,22 +261,6 @@ def BufferizableOpInterface : OpInterface<"BufferizableOpInterface"> {
       >,
       InterfaceMethod<
         /*desc=*/[{
-          Return `true` if the op is an allocation hoisting barrier. Buffer
-          allocations will never be beyond such ops. E.g., ops with certain
-          parallel semantics may be allocation hoisting barriers. The majority
-          of ops, however, is not a barrier. Therefore, this method returns
-          `false` by default.
-        }],
-        /*retType=*/"bool",
-        /*methodName=*/"isAllocationHoistingBarrier",
-        /*args=*/(ins),
-        /*methodBody=*/"",
-        /*defaultImplementation=*/[{
-          return false;
-        }]
-      >,
-      InterfaceMethod<
-        /*desc=*/[{
           Return `true` if the `uRead` and `uWrite` do not constitute a RaW
           conflict. If they are conflicting or if it is unknown whether they are
           conflicting, return `false`. This method will never be called with

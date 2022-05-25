@@ -549,8 +549,6 @@ struct FuncOpInterface
     // All function arguments are writable by default.
     return true;
   }
-
-  bool isAllocationHoistingBarrier(Operation *op) const { return true; }
 };
 
 } // namespace func_ext

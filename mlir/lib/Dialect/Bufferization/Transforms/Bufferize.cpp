@@ -295,10 +295,6 @@ static bool hasTensorSemantics(Operation *op) {
 LogicalResult
 bufferization::finalizeBuffers(Operation *op,
                                const BufferizationOptions &options) {
-  // Hoist buffers.
-  if (failed(hoistBufferAllocations(op, options)))
-    return failure();
-
   // Create allocation ops for "leaking buffers", i.e., buffer allocations that
   // escape block boundaries. If there are no leaking allocs, `hasLeakingAllocs`
   // is set to `false`.
