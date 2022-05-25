@@ -4,6 +4,7 @@ static_library("lib") {
   deps = [
     "//clang/lib/Basic",
     "//clang/lib/Lex",
+    "//clang-tools-extra/pseudo/lib/grammar",
     "//llvm/lib/Support",
   ]
   include_dirs = [ "../include" ]
@@ -12,11 +13,6 @@ static_library("lib") {
     "DirectiveTree.cpp",
     "Forest.cpp",
     "GLR.cpp",
-    "Grammar.cpp",
-    "GrammarBNF.cpp",
-    "LRGraph.cpp",
-    "LRTable.cpp",
-    "LRTableBuild.cpp",
     "Lex.cpp",
     "Token.cpp",
   ]
