@@ -20,6 +20,7 @@
 #include "bolt/Utils/Utils.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallSet.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/edit_distance.h"
 #include "llvm/Demangle/Demangle.h"
@@ -454,31 +455,25 @@ void BinaryFunction::print(raw_ostream &OS, std::string Annotation,
     OS << "\n  Parent      : " << *ParentFragment;
   if (!Fragments.empty()) {
     OS << "\n  Fragments   : ";
-    const char *Sep = "";
-    for (BinaryFunction *Frag : Fragments) {
-      OS << Sep << *Frag;
-      Sep = ", ";
-    }
+    ListSeparator LS;
+    for (BinaryFunction *Frag : Fragments)
+      OS << LS << *Frag;
   }
   if (hasCFG())
     OS << "\n  Hash        : " << Twine::utohexstr(computeHash());
   if (isMultiEntry()) {
     OS << "\n  Secondary Entry Points : ";
-    const char *Sep = "";
-    for (const auto &KV : SecondaryEntryPoints) {
-      OS << Sep << KV.second->getName();
-      Sep = ", ";
-    }
+    ListSeparator LS;
+    for (const auto &KV : SecondaryEntryPoints)
+      OS << LS << KV.second->getName();
   }
   if (FrameInstructions.size())
     OS << "\n  CFI Instrs  : " << FrameInstructions.size();
   if (BasicBlocksLayout.size()) {
     OS << "\n  BB Layout   : ";
-    const char *Sep = "";
-    for (BinaryBasicBlock *BB : BasicBlocksLayout) {
-      OS << Sep << BB->getName();
-      Sep = ", ";
-    }
+    ListSeparator LS;
+    for (BinaryBasicBlock *BB : BasicBlocksLayout)
+      OS << LS << BB->getName();
   }
   if (ImageAddress)
     OS << "\n  Image       : 0x" << Twine::utohexstr(ImageAddress);
@@ -553,20 +548,16 @@ void BinaryFunction::print(raw_ostream &OS, std::string Annotation,
     }
     if (!BB->pred_empty()) {
       OS << "  Predecessors: ";
-      const char *Sep = "";
-      for (BinaryBasicBlock *Pred : BB->predecessors()) {
-        OS << Sep << Pred->getName();
-        Sep = ", ";
-      }
+      ListSeparator LS;
+      for (BinaryBasicBlock *Pred : BB->predecessors())
+        OS << LS << Pred->getName();
       OS << '\n';
     }
     if (!BB->throw_empty()) {
       OS << "  Throwers: ";
-      const char *Sep = "";
-      for (BinaryBasicBlock *Throw : BB->throwers()) {
-        OS << Sep << Throw->getName();
-        Sep = ", ";
-      }
+      ListSeparator LS;
+      for (BinaryBasicBlock *Throw : BB->throwers())
+        OS << LS << Throw->getName();
       OS << '\n';
     }
 
@@ -586,11 +577,11 @@ void BinaryFunction::print(raw_ostream &OS, std::string Annotation,
                            return BB->BranchInfo[B] < BB->BranchInfo[A];
                          });
       }
-      const char *Sep = "";
+      ListSeparator LS;
       for (unsigned I = 0; I < Indices.size(); ++I) {
         BinaryBasicBlock *Succ = BB->Successors[Indices[I]];
         BinaryBasicBlock::BinaryBranchInfo &BI = BB->BranchInfo[Indices[I]];
-        OS << Sep << Succ->getName();
+        OS << LS << Succ->getName();
         if (ExecutionCount != COUNT_NO_PROFILE &&
             BI.MispredictedCount != BinaryBasicBlock::COUNT_INFERRED) {
           OS << " (mispreds: " << BI.MispredictedCount
@@ -599,20 +590,18 @@ void BinaryFunction::print(raw_ostream &OS, std::string Annotation,
                    BI.Count != BinaryBasicBlock::COUNT_NO_PROFILE) {
           OS << " (inferred count: " << BI.Count << ")";
         }
-        Sep = ", ";
       }
       OS << '\n';
     }
 
     if (!BB->lp_empty()) {
       OS << "  Landing Pads: ";
-      const char *Sep = "";
+      ListSeparator LS;
       for (BinaryBasicBlock *LP : BB->landing_pads()) {
-        OS << Sep << LP->getName();
+        OS << LS << LP->getName();
         if (ExecutionCount != COUNT_NO_PROFILE) {
           OS << " (count: " << LP->getExecutionCount() << ")";
         }
-        Sep = ", ";
       }
       OS << '\n';
     }
@@ -4461,11 +4450,9 @@ void BinaryFunction::printLoopInfo(raw_ostream &OS) const {
        << " loop header: " << L->getHeader()->getName();
     OS << "\n";
     OS << "Loop basic blocks: ";
-    const char *Sep = "";
-    for (auto BI = L->block_begin(), BE = L->block_end(); BI != BE; ++BI) {
-      OS << Sep << (*BI)->getName();
-      Sep = ", ";
-    }
+    ListSeparator LS;
+    for (BinaryBasicBlock *BB : L->blocks())
+      OS << LS << BB->getName();
     OS << "\n";
     if (hasValidProfile()) {
       OS << "Total back edge count: " << L->TotalBackEdgeCount << "\n";
