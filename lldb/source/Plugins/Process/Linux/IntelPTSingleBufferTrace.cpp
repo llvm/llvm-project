@@ -318,7 +318,7 @@ Expected<IntelPTSingleBufferTraceUP> IntelPTSingleBufferTrace::Start(
     }
     IntelPTSingleBufferTraceUP trace_up(
         new IntelPTSingleBufferTrace(std::move(*perf_event), initial_state));
-    return trace_up;
+    return std::move(trace_up);
   } else {
     return perf_event.takeError();
   }
