@@ -553,8 +553,8 @@ def V_ACCVGPR_MOV_B32 : VOP1_Pseudo<"v_accvgpr_mov_b32", VOPProfileAccMov, [], 1
 class MOV_16_Profile<VOPProfile P> :  VOPProfile<P.ArgVT> {
   let DstRC = VOPDstOperandT16F128;
   let DstRC64 = VOPDstOperandT16;
-  let Src0RC32 = VSrcT_f16_F128;
-  let Src0RC64 = VSrcT_f16;
+  let Src0RC32 = VSrcT_b16_F128;
+  let Src0RC64 = VSrcT_b16;
 }
 
 let SubtargetPredicate = isGFX11Plus in {
