@@ -1,5 +1,6 @@
 // RUN: %clang_cc1 -emit-llvm -triple i686-windows-itanium -fdeclspec %s -o - | FileCheck %s --check-prefixes=CHECK,WI
 // RUN: %clang_cc1 -emit-llvm -triple x86_64-scei-ps4 -fdeclspec %s -o - | FileCheck %s --check-prefixes=CHECK,PS4
+// RUN: %clang_cc1 -emit-llvm -triple x86_64-sie-ps5  -fdeclspec %s -o - | FileCheck %s --check-prefixes=CHECK,PS4
 
 #define JOIN2(x, y) x##y
 #define JOIN(x, y) JOIN2(x, y)
