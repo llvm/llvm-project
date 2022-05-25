@@ -2528,16 +2528,17 @@ std::optional<characteristics::Procedure> ExpressionAnalyzer::CheckCall(
     bool procIsAssociated{
         specificIntrinsic && specificIntrinsic->name == "associated"};
     if (!procIsAssociated) {
+      const Symbol *procSymbol{proc.GetSymbol()};
+      bool procIsDummy{procSymbol && IsDummy(*procSymbol)};
       if (chars->functionResult &&
           chars->functionResult->IsAssumedLengthCharacter() &&
-          !specificIntrinsic) {
+          !specificIntrinsic && !procIsDummy) {
         Say(callSite,
             "Assumed-length character function must be defined with a length to be called"_err_en_US);
       }
       semantics::CheckArguments(*chars, arguments, GetFoldingContext(),
           context_.FindScope(callSite), treatExternalAsImplicit,
           specificIntrinsic);
-      const Symbol *procSymbol{proc.GetSymbol()};
       if (procSymbol && !IsPureProcedure(*procSymbol)) {
         if (const semantics::Scope *
             pure{semantics::FindPureProcedureContaining(
