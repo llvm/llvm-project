@@ -1430,8 +1430,7 @@ ConstantRange ConstantRange::binaryXor(const ConstantRange &Other) const {
   if (isSingleElement() && getSingleElement()->isAllOnes())
     return Other.binaryNot();
 
-  // TODO: replace this with something less conservative
-  return getFull();
+  return fromKnownBits(toKnownBits() ^ Other.toKnownBits(), /*IsSigned*/false);
 }
 
 ConstantRange
