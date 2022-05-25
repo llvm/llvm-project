@@ -820,6 +820,8 @@ def Xopenmp_target_EQ : JoinedAndSeparate<["-"], "Xopenmp-target=">, Group<Compi
 def z : Separate<["-"], "z">, Flags<[LinkerInput, RenderAsInput]>,
   HelpText<"Pass -z <arg> to the linker">, MetaVarName<"<arg>">,
   Group<Link_Group>;
+def offload_link : Flag<["--"], "offload-link">, Group<Link_Group>,
+  HelpText<"Use the new offloading linker to perform the link job.">;
 def Xlinker : Separate<["-"], "Xlinker">, Flags<[LinkerInput, RenderAsInput]>,
   HelpText<"Pass <arg> to the linker">, MetaVarName<"<arg>">,
   Group<Link_Group>;

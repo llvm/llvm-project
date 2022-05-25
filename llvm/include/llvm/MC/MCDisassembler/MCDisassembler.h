@@ -181,10 +181,9 @@ protected:
 
 public:
   // Helpers around MCSymbolizer
-  bool tryAddingSymbolicOperand(MCInst &Inst,
-                                int64_t Value,
-                                uint64_t Address, bool IsBranch,
-                                uint64_t Offset, uint64_t InstSize) const;
+  bool tryAddingSymbolicOperand(MCInst &Inst, int64_t Value, uint64_t Address,
+                                bool IsBranch, uint64_t Offset, uint64_t OpSize,
+                                uint64_t InstSize) const;
 
   void tryAddingPcLoadReferenceComment(int64_t Value, uint64_t Address) const;
 
