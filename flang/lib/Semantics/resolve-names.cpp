@@ -3411,10 +3411,21 @@ void SubprogramVisitor::CreateEntry(
   if (outer.IsModule() && !attrs.test(Attr::PRIVATE)) {
     attrs.set(Attr::PUBLIC);
   }
-  Symbol &entrySymbol{MakeSymbol(outer, entryName.source, attrs)};
+  Symbol *entrySymbol{FindInScope(outer, entryName.source)};
+  if (entrySymbol) {
+    if (auto *generic{entrySymbol->detailsIf<GenericDetails>()}) {
+      if (auto *specific{generic->specific()}) {
+        // Forward reference to ENTRY from a generic interface
+        entrySymbol = specific;
+        entrySymbol->attrs() |= attrs;
+      }
+    }
+  } else {
+    entrySymbol = &MakeSymbol(outer, entryName.source, attrs);
+  }
   SubprogramDetails entryDetails;
   entryDetails.set_entryScope(currScope());
-  entrySymbol.set(subpFlag);
+  entrySymbol->set(subpFlag);
   if (subpFlag == Symbol::Flag::Function) {
     Symbol *result{nullptr};
     EntityDetails resultDetails;
@@ -3443,11 +3454,12 @@ void SubprogramVisitor::CreateEntry(
   if (subpFlag == Symbol::Flag::Subroutine ||
       (distinctResultName && !badResultName)) {
     Symbol &assoc{MakeSymbol(entryName.source)};
-    assoc.set_details(HostAssocDetails{entrySymbol});
+    assoc.set_details(HostAssocDetails{*entrySymbol});
     assoc.set(Symbol::Flag::Subroutine);
   }
-  Resolve(entryName, entrySymbol);
-  entrySymbol.set_details(std::move(entryDetails));
+  Resolve(entryName, *entrySymbol);
+  Details details{std::move(entryDetails)};
+  entrySymbol->set_details(std::move(entryDetails));
 }
 
 void SubprogramVisitor::PostEntryStmt(const parser::EntryStmt &stmt) {
