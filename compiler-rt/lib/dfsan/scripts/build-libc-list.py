@@ -11,6 +11,30 @@
 # uninstrumented, thus allowing the instrumentation pass to treat calls to those
 # functions correctly.
 
+# Typical usage will list runtime libraries which are not instrumented by dfsan.
+# This would include libc, and compiler builtins.
+#
+# ./build-libc-list.py \
+#    --lib-file=/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2 \
+#    --lib-file=/lib/x86_64-linux-gnu/libanl.so.1 \
+#    --lib-file=/lib/x86_64-linux-gnu/libBrokenLocale.so.1 \
+#    --lib-file=/lib/x86_64-linux-gnu/libcidn.so.1 \
+#    --lib-file=/lib/x86_64-linux-gnu/libcrypt.so.1 \
+#    --lib-file=/lib/x86_64-linux-gnu/libc.so.6 \
+#    --lib-file=/lib/x86_64-linux-gnu/libdl.so.2 \
+#    --lib-file=/lib/x86_64-linux-gnu/libm.so.6 \
+#    --lib-file=/lib/x86_64-linux-gnu/libnsl.so.1 \
+#    --lib-file=/lib/x86_64-linux-gnu/libpthread.so.0 \
+#    --lib-file=/lib/x86_64-linux-gnu/libresolv.so.2 \
+#    --lib-file=/lib/x86_64-linux-gnu/librt.so.1 \
+#    --lib-file=/lib/x86_64-linux-gnu/libthread_db.so.1 \
+#    --lib-file=/lib/x86_64-linux-gnu/libutil.so.1 \
+#    --lib-file=/usr/lib/x86_64-linux-gnu/libc_nonshared.a \
+#    --lib-file=/usr/lib/x86_64-linux-gnu/libpthread_nonshared.a \
+#    --lib-file=/lib/x86_64-linux-gnu/libgcc_s.so.1 \
+#    --lib-file=/usr/lib/gcc/x86_64-linux-gnu/4.6/libgcc.a \
+#    --error-missing-lib
+
 import os
 import subprocess
 import sys
@@ -33,30 +57,10 @@ def defined_function_list(object):
 
 p = OptionParser()
 
-p.add_option('--libc-dso-path', metavar='PATH',
-             help='path to libc DSO directory',
-             default='/lib/x86_64-linux-gnu')
-p.add_option('--libc-archive-path', metavar='PATH',
-             help='path to libc archive directory',
-             default='/usr/lib/x86_64-linux-gnu')
-
-p.add_option('--libgcc-dso-path', metavar='PATH',
-             help='path to libgcc DSO directory',
-             default='/lib/x86_64-linux-gnu')
-p.add_option('--libgcc-archive-path', metavar='PATH',
-             help='path to libgcc archive directory',
-             default='/usr/lib/gcc/x86_64-linux-gnu/4.6')
-
-p.add_option('--with-libstdcxx', action='store_true',
-             dest='with_libstdcxx',
-             help='include libstdc++ in the list (inadvisable)')
-p.add_option('--libstdcxx-dso-path', metavar='PATH',
-             help='path to libstdc++ DSO directory',
-             default='/usr/lib/x86_64-linux-gnu')
-
 p.add_option('--only-explicit-files', action='store_true',
-             dest='only_explicit_files', default=False,
-             help='Only process --lib-file, not the default libc libraries.')
+             dest='only_explicit_files', default=True,
+             help='[DEPRECATED] Only process --lib-file, not the default libc libraries.')
+
 p.add_option('--lib-file', action='append', metavar='PATH',
              help='Specific library files to add.',
              default=[])
@@ -67,43 +71,10 @@ p.add_option('--error-missing-lib', action='store_true',
 
 (options, args) = p.parse_args()
 
-def build_libs_list():
-    libs = [os.path.join(options.libc_dso_path, name) for name in
-            ['ld-linux-x86-64.so.2',
-             'libanl.so.1',
-             'libBrokenLocale.so.1',
-             'libcidn.so.1',
-             'libcrypt.so.1',
-             'libc.so.6',
-             'libdl.so.2',
-             'libm.so.6',
-             'libnsl.so.1',
-             'libpthread.so.0',
-             'libresolv.so.2',
-             'librt.so.1',
-             'libthread_db.so.1',
-             'libutil.so.1']]
-    libs += [os.path.join(options.libc_archive_path, name) for name in
-             ['libc_nonshared.a',
-              'libpthread_nonshared.a']]
-
-    libs.append(os.path.join(options.libgcc_dso_path, 'libgcc_s.so.1'))
-    libs.append(os.path.join(options.libgcc_archive_path, 'libgcc.a'))
-
-    if options.with_libstdcxx:
-      libs.append(os.path.join(options.libstdcxx_dso_path, 'libstdc++.so.6'))
-
-    return libs
-
-libs = []
-if options.only_explicit_files:
-    libs = options.lib_file
-    if not libs:
-        print >> sys.stderr, 'No libraries provided.'
-        exit(1)
-else:
-    libs = build_libs_list()
-    libs.extend(options.lib_file)
+libs = options.lib_file
+if not libs:
+    print >> sys.stderr, 'No libraries provided.'
+    exit(1)
 
 missing_lib = False
 functions = []
