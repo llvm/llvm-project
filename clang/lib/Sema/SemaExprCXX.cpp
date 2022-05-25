@@ -1506,12 +1506,17 @@ Sema::BuildCXXTypeConstructExpr(TypeSourceInfo *TInfo,
           Diag(Deduce->getBeginLoc(), diag::err_auto_expr_init_paren_braces)
           << ListInitialization << Ty << FullRange);
     QualType DeducedType;
-    if (DeduceAutoType(TInfo, Deduce, DeducedType) == DAR_Failed)
+    TemplateDeductionInfo Info(Deduce->getExprLoc());
+    TemplateDeductionResult Result =
+        DeduceAutoType(TInfo->getTypeLoc(), Deduce, DeducedType, Info);
+    if (Result != TDK_Success && Result != TDK_AlreadyDiagnosed)
       return ExprError(Diag(TyBeginLoc, diag::err_auto_expr_deduction_failure)
                        << Ty << Deduce->getType() << FullRange
                        << Deduce->getSourceRange());
-    if (DeducedType.isNull())
+    if (DeducedType.isNull()) {
+      assert(Result == TDK_AlreadyDiagnosed);
       return ExprError();
+    }
 
     Ty = DeducedType;
     Entity = InitializedEntity::InitializeTemporary(TInfo, Ty);
@@ -2045,12 +2050,17 @@ Sema::BuildCXXNew(SourceRange Range, bool UseGlobal,
           Diag(Deduce->getBeginLoc(), diag::err_auto_expr_init_paren_braces)
           << Braced << AllocType << TypeRange);
     QualType DeducedType;
-    if (DeduceAutoType(AllocTypeInfo, Deduce, DeducedType) == DAR_Failed)
+    TemplateDeductionInfo Info(Deduce->getExprLoc());
+    TemplateDeductionResult Result =
+        DeduceAutoType(AllocTypeInfo->getTypeLoc(), Deduce, DeducedType, Info);
+    if (Result != TDK_Success && Result != TDK_AlreadyDiagnosed)
       return ExprError(Diag(StartLoc, diag::err_auto_new_deduction_failure)
-                       << AllocType << Deduce->getType()
-                       << TypeRange << Deduce->getSourceRange());
-    if (DeducedType.isNull())
+                       << AllocType << Deduce->getType() << TypeRange
+                       << Deduce->getSourceRange());
+    if (DeducedType.isNull()) {
+      assert(Result == TDK_AlreadyDiagnosed);
       return ExprError();
+    }
     AllocType = DeducedType;
   }
 
@@ -6689,79 +6699,6 @@ QualType Sema::CXXCheckConditionalOperands(ExprResult &Cond, ExprResult &LHS,
   return QualType();
 }
 
-static FunctionProtoType::ExceptionSpecInfo
-mergeExceptionSpecs(Sema &S, FunctionProtoType::ExceptionSpecInfo ESI1,
-                    FunctionProtoType::ExceptionSpecInfo ESI2,
-                    SmallVectorImpl<QualType> &ExceptionTypeStorage) {
-  ExceptionSpecificationType EST1 = ESI1.Type;
-  ExceptionSpecificationType EST2 = ESI2.Type;
-
-  // If either of them can throw anything, that is the result.
-  if (EST1 == EST_None) return ESI1;
-  if (EST2 == EST_None) return ESI2;
-  if (EST1 == EST_MSAny) return ESI1;
-  if (EST2 == EST_MSAny) return ESI2;
-  if (EST1 == EST_NoexceptFalse) return ESI1;
-  if (EST2 == EST_NoexceptFalse) return ESI2;
-
-  // If either of them is non-throwing, the result is the other.
-  if (EST1 == EST_NoThrow) return ESI2;
-  if (EST2 == EST_NoThrow) return ESI1;
-  if (EST1 == EST_DynamicNone) return ESI2;
-  if (EST2 == EST_DynamicNone) return ESI1;
-  if (EST1 == EST_BasicNoexcept) return ESI2;
-  if (EST2 == EST_BasicNoexcept) return ESI1;
-  if (EST1 == EST_NoexceptTrue) return ESI2;
-  if (EST2 == EST_NoexceptTrue) return ESI1;
-
-  // If we're left with value-dependent computed noexcept expressions, we're
-  // stuck. Before C++17, we can just drop the exception specification entirely,
-  // since it's not actually part of the canonical type. And this should never
-  // happen in C++17, because it would mean we were computing the composite
-  // pointer type of dependent types, which should never happen.
-  if (EST1 == EST_DependentNoexcept || EST2 == EST_DependentNoexcept) {
-    assert(!S.getLangOpts().CPlusPlus17 &&
-           "computing composite pointer type of dependent types");
-    return FunctionProtoType::ExceptionSpecInfo();
-  }
-
-  // Switch over the possibilities so that people adding new values know to
-  // update this function.
-  switch (EST1) {
-  case EST_None:
-  case EST_DynamicNone:
-  case EST_MSAny:
-  case EST_BasicNoexcept:
-  case EST_DependentNoexcept:
-  case EST_NoexceptFalse:
-  case EST_NoexceptTrue:
-  case EST_NoThrow:
-    llvm_unreachable("handled above");
-
-  case EST_Dynamic: {
-    // This is the fun case: both exception specifications are dynamic. Form
-    // the union of the two lists.
-    assert(EST2 == EST_Dynamic && "other cases should already be handled");
-    llvm::SmallPtrSet<QualType, 8> Found;
-    for (auto &Exceptions : {ESI1.Exceptions, ESI2.Exceptions})
-      for (QualType E : Exceptions)
-        if (Found.insert(S.Context.getCanonicalType(E)).second)
-          ExceptionTypeStorage.push_back(E);
-
-    FunctionProtoType::ExceptionSpecInfo Result(EST_Dynamic);
-    Result.Exceptions = ExceptionTypeStorage;
-    return Result;
-  }
-
-  case EST_Unevaluated:
-  case EST_Uninstantiated:
-  case EST_Unparsed:
-    llvm_unreachable("shouldn't see unresolved exception specifications here");
-  }
-
-  llvm_unreachable("invalid ExceptionSpecificationType");
-}
-
 /// Find a merged pointer type and convert the two expressions to it.
 ///
 /// This finds the composite pointer type for \p E1 and \p E2 according to
@@ -7065,9 +7002,9 @@ QualType Sema::FindCompositePointerType(SourceLocation Loc,
 
         // The result is nothrow if both operands are.
         SmallVector<QualType, 8> ExceptionTypeStorage;
-        EPI1.ExceptionSpec = EPI2.ExceptionSpec =
-            mergeExceptionSpecs(*this, EPI1.ExceptionSpec, EPI2.ExceptionSpec,
-                                ExceptionTypeStorage);
+        EPI1.ExceptionSpec = EPI2.ExceptionSpec = Context.mergeExceptionSpecs(
+            EPI1.ExceptionSpec, EPI2.ExceptionSpec, ExceptionTypeStorage,
+            getLangOpts().CPlusPlus17);
 
         Composite1 = Context.getFunctionType(FPT1->getReturnType(),
                                              FPT1->getParamTypes(), EPI1);
