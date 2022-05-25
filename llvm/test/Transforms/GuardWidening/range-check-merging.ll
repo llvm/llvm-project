@@ -334,5 +334,29 @@ entry:
   ret void
 }
 
+define void @f_8(i32 %x, i32* %length_buf) {
+; Check that we clean nuw nsw flags
+; CHECK-LABEL: @f_8(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[LENGTH:%.*]] = load i32, i32* [[LENGTH_BUF:%.*]], align 4, !range [[RNG0]]
+; CHECK-NEXT:    [[CHK0:%.*]] = icmp ult i32 [[X:%.*]], [[LENGTH]]
+; CHECK-NEXT:    [[X_INC1:%.*]] = add nuw nsw i32 [[X]], 1
+; CHECK-NEXT:    [[CHK1:%.*]] = icmp ult i32 [[X_INC1]], [[LENGTH]]
+; CHECK-NEXT:    [[WIDE_CHK:%.*]] = and i1 [[CHK0]], [[CHK1]]
+; CHECK-NEXT:    call void (i1, ...) @llvm.experimental.guard(i1 [[WIDE_CHK]]) [ "deopt"() ]
+; CHECK-NEXT:    ret void
+;
+entry:
+  %length = load i32, i32* %length_buf, !range !0
+  %chk0 = icmp ult i32 %x, %length
+  call void(i1, ...) @llvm.experimental.guard(i1 %chk0) [ "deopt"() ]
+
+  %x.inc1 = add nuw nsw i32 %x, 1
+  %chk1 = icmp ult i32 %x.inc1, %length
+  call void(i1, ...) @llvm.experimental.guard(i1 %chk1) [ "deopt"() ]
+  ret void
+}
+
+
 
 !0 = !{i32 0, i32 2147483648}
