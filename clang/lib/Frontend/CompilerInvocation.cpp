@@ -3445,6 +3445,8 @@ void CompilerInvocation::GenerateLangArgs(const LangOptions &Opts,
 
   if (Opts.OpenMPTargetIgnoreEnvVars)
     GenerateArg(Args, OPT_fopenmp_target_ignore_env_vars, SA);
+  else
+    GenerateArg(Args, OPT_fno_openmp_target_ignore_env_vars, SA);
 
   if (Opts.OpenMPThreadSubscription)
     GenerateArg(Args, OPT_fopenmp_assume_threads_oversubscription, SA);
@@ -3896,7 +3898,9 @@ bool CompilerInvocation::ParseLangArgs(LangOptions &Opts, ArgList &Args,
                          Opts.OpenMPGPUThreadsPerTeam, Diags);
 
   Opts.OpenMPTargetIgnoreEnvVars =
-      Args.hasArg(options::OPT_fopenmp_target_ignore_env_vars);
+      Args.hasFlag(options::OPT_fopenmp_target_ignore_env_vars,
+                   options::OPT_fno_openmp_target_ignore_env_vars,
+                   /*Default=*/false);
 
   // Set the value of the debugging flag used in the new offloading device RTL.
   // Set either by a specific value or to a default if not specified.

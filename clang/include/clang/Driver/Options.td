@@ -2538,6 +2538,10 @@ def fopenmp_target_ignore_env_vars : Flag<["-"], "fopenmp-target-ignore-env-vars
   Flags<[CC1Option, NoArgumentUnused, HelpHidden]>, 
   HelpText<"Assert that device related environment variables can be ignored while generating code">,
   MarshallingInfoFlag<LangOpts<"OpenMPTargetIgnoreEnvVars">>;
+def fno_openmp_target_ignore_env_vars : Flag<["-"], "fno-openmp-target-ignore-env-vars">, Group<f_Group>, 
+  Flags<[CC1Option, NoArgumentUnused, HelpHidden]>, 
+  HelpText<"Assert that device related environment variables cannot be ignored while generating code">,
+  MarshallingInfoFlag<LangOpts<"OpenMPTargetIgnoreEnvVars">>;
 def fopenmp_assume_teams_oversubscription : Flag<["-"], "fopenmp-assume-teams-oversubscription">,
   Group<f_Group>, Flags<[CC1Option, NoArgumentUnused, HelpHidden]>;
 def fopenmp_assume_threads_oversubscription : Flag<["-"], "fopenmp-assume-threads-oversubscription">,
