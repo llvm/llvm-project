@@ -57,6 +57,27 @@
  *
  * WG14 DR067: yes
  * Integer and integral type confusion
+ *
+ * WG14 DR069: yes
+ * Questions about the representation of integer types
+ *
+ * WG14 DR077: yes
+ * Stability of addresses
+ *
+ * WG14 DR080: yes
+ * Merging of string constants
+ *
+ * WG14 DR086: yes
+ * Object-like macros in system headers
+ *
+ * WG14 DR091: yes
+ * Multibyte encodings
+ *
+ * WG14 DR092: dup 060
+ * Partial initialization of strings
+ *
+ * WG14 DR093: yes
+ * Reservation of identifiers
  */
 
 
@@ -238,6 +259,17 @@ _Static_assert(DR038(DR038_X + DR038_Y) == DR038_X + DR038_Y, "fail");
  */
 _Static_assert(sizeof('a') == sizeof(int), "fail");
 
+/* WG14 DR040: partial
+ * 9 unrelated questions about C89
+ *
+ * Question 6
+ */
+struct dr040 { /* expected-note {{definition of 'struct dr040' is not complete until the closing '}'}} */
+  char c;
+  short s;
+  int i[__builtin_offsetof(struct dr040, s)]; /* expected-error {{offsetof of incomplete type 'struct dr040'}} */
+};
+
 /* WG14 DR043: yes
  * On the definition of the NULL macro
  */
@@ -344,4 +376,147 @@ void dr068(void) {
   /* char is unsigned */
   _Static_assert('\xFF' == 0xFF, "fail");
 #endif
+}
+
+#if __STDC_VERSION__ < 202000L
+/* WG14: DR070: yes
+ * Interchangeability of function arguments
+ *
+ * Note: we could issue a pedantic warning in this case. We are claiming
+ * conformance not because we diagnose the UB when we could but because we're
+ * not obligated to do anything about it and we make it "just work" via the
+ * usual conversion rules.
+ *
+ * This behavior is specific to functions without prototypes. A function with
+ * a prototype causes implicit conversions rather than relying on default
+ * argument promotion and warm thoughts.
+ */
+void dr070_1(c) /* expected-warning {{a function declaration without a prototype is deprecated in all versions of C and is not supported in C2x}} */
+  int c; {
+}
+
+void dr070_2(void) {
+  dr070_1(6);
+  dr070_1(6U); /* Pedantically UB */
+}
+#endif /* __STDC_VERSION__ < 202000L */
+
+/* WG14 DR071: yes
+ * Enumerated types
+ */
+enum dr071_t { foo_A = 0, foo_B = 1, foo_C = 8 };
+void dr071(void) {
+  /* Test that in-range values not present in the enumeration still round-trip
+   * to the original value.
+   */
+  _Static_assert(100 == (int)(enum dr071_t)100, "fail");
+}
+
+/* WG14 DR081: yes
+ * Left shift operator
+ */
+void dr081(void) {
+  /* Demonstrate that we don't crash when left shifting a signed value; that's
+   * implementation defined behavior.
+   */
+ _Static_assert(-1 << 1 == -2, "fail"); /* Didn't shift a zero into the "sign bit". */
+ _Static_assert(1 << 3 == 1u << 3u, "fail"); /* Shift of a positive signed value does sensible things. */
+}
+
+/* WG14 DR084: yes
+ * Incomplete type in function declaration
+ *
+ * Note: because the situation is UB, we're free to do what we want. We elect
+ * to accept and require the incomplete type to be completed before the
+ * function definition.
+ */
+struct dr084_t; /* expected-note {{forward declaration of 'struct dr084_t'}} */
+extern void (*dr084_1)(struct dr084_t);
+void dr084_2(struct dr084_t);
+void dr084_2(struct dr084_t val) {} /* expected-error {{variable has incomplete type 'struct dr084_t'}} */
+
+/* WG14 DR088: yes
+ * Compatibility of incomplete types
+ */
+struct dr088_t_1;
+
+void dr088_f(struct dr088_t_1 *); /* expected-note {{passing argument to parameter here}} */
+void dr088_1(void) {
+  /* Distinct type from the file scope forward declaration. */
+  struct dr088_t_1;
+  /* FIXME: this diagnostic could be improved to not be utterly baffling. */
+  dr088_f((struct dr088_t_1 *)0); /* expected-warning {{incompatible pointer types passing 'struct dr088_t_1 *' to parameter of type 'struct dr088_t_1 *'}} */
+}
+
+void dr088_2(struct dr088_t_1 *p) { /* Pointer to incomplete type. */ }
+struct dr088_t_1 { int i; }; /* Type is completed. */
+void dr088_3(struct dr088_t_1 s) {
+  /* When passing a pointer to the completed type, is it the same type as the
+   * incomplete type used in the call declaration?
+   */
+  dr088_2(&s);
+}
+
+/* WG14 DR089: yes
+ * Multiple definitions of macros
+ */
+#define DR089 object_like             /* expected-note {{previous definition is here}} */
+#define DR089(argument) function_like /* expected-warning {{'DR089' macro redefined}} */
+
+/* WG14 DR095: yes
+ * Is initialization as constrained as assignment?
+ */
+void dr095(void) {
+  /* Ensure that type compatibility constraints on assignment are also honored
+   * for initializations.
+   */
+  struct One {
+    int a;
+  } one;
+  struct Two {
+    float f;
+  } two = one; /* expected-error {{initializing 'struct Two' with an expression of incompatible type 'struct One'}} */
+
+  two = one; /* expected-error {{assigning to 'struct Two' from incompatible type 'struct One'}} */
+}
+
+/* WG14 DR096: yes
+ * Arrays of incomplete types
+ */
+void dr096(void) {
+  typedef void func_type(void);
+  func_type array_funcs[10]; /* expected-error {{'array_funcs' declared as array of functions of type 'func_type' (aka 'void (void)')}} */
+
+  void array_void[10]; /* expected-error {{array has incomplete element type 'void'}} */
+
+  struct S; /* expected-note {{forward declaration of 'struct S'}} */
+  struct S s[10]; /* expected-error {{array has incomplete element type 'struct S'}} */
+
+  union U; /* expected-note {{forward declaration of 'union U'}} */
+  union U u[10]; /* expected-error {{array has incomplete element type 'union U'}} */
+  union U { int i; };
+
+  int never_completed_incomplete_array[][]; /* expected-error {{array has incomplete element type 'int[]'}} */
+
+  extern int completed_later[][]; /* expected-error {{array has incomplete element type 'int[]'}} */
+  extern int completed_later[10][10];
+}
+
+/* WG14 DR098: yes
+ * Pre/post increment/decrement of function or incomplete types
+ */
+void dr098(void) {
+  typedef void func_type(void);
+  func_type fp;
+  struct incomplete *incomplete_ptr;
+
+  ++fp; /* expected-error {{cannot increment value of type 'func_type' (aka 'void (void)')}} */
+  fp++; /* expected-error {{cannot increment value of type 'func_type' (aka 'void (void)')}} */
+  --fp; /* expected-error {{cannot decrement value of type 'func_type' (aka 'void (void)')}} */
+  fp--; /* expected-error {{cannot decrement value of type 'func_type' (aka 'void (void)')}} */
+
+  (*incomplete_ptr)++; /* expected-error {{cannot increment value of type 'struct incomplete'}} */
+  ++(*incomplete_ptr); /* expected-error {{cannot increment value of type 'struct incomplete'}} */
+  (*incomplete_ptr)--; /* expected-error {{cannot decrement value of type 'struct incomplete'}} */
+  --(*incomplete_ptr); /* expected-error {{cannot decrement value of type 'struct incomplete'}} */
 }
