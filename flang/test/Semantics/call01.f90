@@ -129,16 +129,12 @@ subroutine s01(f1, f2, fp1, fp2)
     character*(*) function f4()
     end function
   end interface
-  !ERROR: Assumed-length character function must be defined with a length to be called
   print *, f1()
-  !ERROR: Assumed-length character function must be defined with a length to be called
   print *, f2()
   !ERROR: Assumed-length character function must be defined with a length to be called
   print *, f3()
   !ERROR: Assumed-length character function must be defined with a length to be called
   print *, f4()
-  !ERROR: Assumed-length character function must be defined with a length to be called
   print *, fp1()
-  !ERROR: Assumed-length character function must be defined with a length to be called
   print *, fp2()
 end subroutine
