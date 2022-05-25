@@ -83,14 +83,12 @@ define float @caller(i8* %error_ref) {
 ; CHECK-O0-NEXT:    push {r7, lr}
 ; CHECK-O0-NEXT:    mov r7, sp
 ; CHECK-O0-NEXT:    push {r8}
-; CHECK-O0-NEXT:    sub sp, sp, #16
+; CHECK-O0-NEXT:    sub sp, sp, #12
 ; CHECK-O0-NEXT:    @ implicit-def: $r1
 ; CHECK-O0-NEXT:    str r0, [sp] @ 4-byte Spill
 ; CHECK-O0-NEXT:    mov r8, #0
 ; CHECK-O0-NEXT:    bl _foo
 ; CHECK-O0-NEXT:    str r8, [sp, #4] @ 4-byte Spill
-; CHECK-O0-NEXT:    mov r0, r8
-; CHECK-O0-NEXT:    str r0, [sp, #8] @ 4-byte Spill
 ; CHECK-O0-NEXT:    movw r0, #0
 ; CHECK-O0-NEXT:    cmp r8, r0
 ; CHECK-O0-NEXT:    bne LBB1_2
@@ -100,7 +98,7 @@ define float @caller(i8* %error_ref) {
 ; CHECK-O0-NEXT:    ldrb r0, [r0, #8]
 ; CHECK-O0-NEXT:    strb r0, [r1]
 ; CHECK-O0-NEXT:  LBB1_2: @ %handler
-; CHECK-O0-NEXT:    ldr r0, [sp, #8] @ 4-byte Reload
+; CHECK-O0-NEXT:    ldr r0, [sp, #4] @ 4-byte Reload
 ; CHECK-O0-NEXT:    bl _free
 ; CHECK-O0-NEXT:    mov r0, #1065353216
 ; CHECK-O0-NEXT:    sub sp, r7, #4
@@ -183,9 +181,9 @@ define float @caller2(i8* %error_ref) {
 ; CHECK-O0-NEXT:    push {r7, lr}
 ; CHECK-O0-NEXT:    mov r7, sp
 ; CHECK-O0-NEXT:    push {r8}
-; CHECK-O0-NEXT:    sub sp, sp, #20
+; CHECK-O0-NEXT:    sub sp, sp, #16
 ; CHECK-O0-NEXT:    @ implicit-def: $r1
-; CHECK-O0-NEXT:    str r0, [sp, #12] @ 4-byte Spill
+; CHECK-O0-NEXT:    str r0, [sp, #8] @ 4-byte Spill
 ; CHECK-O0-NEXT:  LBB2_1: @ %bb_loop
 ; CHECK-O0-NEXT:    @ =>This Inner Loop Header: Depth=1
 ; CHECK-O0-NEXT:    mov r8, #0
@@ -193,8 +191,6 @@ define float @caller2(i8* %error_ref) {
 ; CHECK-O0-NEXT:    vmov s0, r0
 ; CHECK-O0-NEXT:    vstr s0, [sp] @ 4-byte Spill
 ; CHECK-O0-NEXT:    str r8, [sp, #4] @ 4-byte Spill
-; CHECK-O0-NEXT:    mov r0, r8
-; CHECK-O0-NEXT:    str r0, [sp, #8] @ 4-byte Spill
 ; CHECK-O0-NEXT:    movw r0, #0
 ; CHECK-O0-NEXT:    cmp r8, r0
 ; CHECK-O0-NEXT:    bne LBB2_4
@@ -206,12 +202,12 @@ define float @caller2(i8* %error_ref) {
 ; CHECK-O0-NEXT:    vmrs APSR_nzcv, fpscr
 ; CHECK-O0-NEXT:    ble LBB2_1
 ; CHECK-O0-NEXT:  @ %bb.3: @ %bb_end
-; CHECK-O0-NEXT:    ldr r1, [sp, #12] @ 4-byte Reload
+; CHECK-O0-NEXT:    ldr r1, [sp, #8] @ 4-byte Reload
 ; CHECK-O0-NEXT:    ldr r0, [sp, #4] @ 4-byte Reload
 ; CHECK-O0-NEXT:    ldrb r0, [r0, #8]
 ; CHECK-O0-NEXT:    strb r0, [r1]
 ; CHECK-O0-NEXT:  LBB2_4: @ %handler
-; CHECK-O0-NEXT:    ldr r0, [sp, #8] @ 4-byte Reload
+; CHECK-O0-NEXT:    ldr r0, [sp, #4] @ 4-byte Reload
 ; CHECK-O0-NEXT:    bl _free
 ; CHECK-O0-NEXT:    mov r0, #1065353216
 ; CHECK-O0-NEXT:    sub sp, r7, #4
@@ -604,20 +600,18 @@ define float @caller3(i8* %error_ref) {
 ; CHECK-O0-NEXT:    sub sp, sp, #44
 ; CHECK-O0-NEXT:    bfc sp, #0, #3
 ; CHECK-O0-NEXT:    @ implicit-def: $r1
-; CHECK-O0-NEXT:    str r0, [sp] @ 4-byte Spill
+; CHECK-O0-NEXT:    str r0, [sp, #4] @ 4-byte Spill
 ; CHECK-O0-NEXT:    mov r8, #0
 ; CHECK-O0-NEXT:    add r0, sp, #16
 ; CHECK-O0-NEXT:    mov r1, #1
 ; CHECK-O0-NEXT:    bl _foo_sret
-; CHECK-O0-NEXT:    str r8, [sp, #4] @ 4-byte Spill
-; CHECK-O0-NEXT:    mov r0, r8
-; CHECK-O0-NEXT:    str r0, [sp, #8] @ 4-byte Spill
+; CHECK-O0-NEXT:    str r8, [sp, #8] @ 4-byte Spill
 ; CHECK-O0-NEXT:    movw r0, #0
 ; CHECK-O0-NEXT:    cmp r8, r0
 ; CHECK-O0-NEXT:    bne LBB6_2
 ; CHECK-O0-NEXT:  @ %bb.1: @ %cont
-; CHECK-O0-NEXT:    ldr r1, [sp] @ 4-byte Reload
-; CHECK-O0-NEXT:    ldr r0, [sp, #4] @ 4-byte Reload
+; CHECK-O0-NEXT:    ldr r1, [sp, #4] @ 4-byte Reload
+; CHECK-O0-NEXT:    ldr r0, [sp, #8] @ 4-byte Reload
 ; CHECK-O0-NEXT:    ldrb r0, [r0, #8]
 ; CHECK-O0-NEXT:    strb r0, [r1]
 ; CHECK-O0-NEXT:  LBB6_2: @ %handler
@@ -828,23 +822,21 @@ define float @caller4(i8* %error_ref) {
 ; CHECK-O0-NEXT:    push {r7, lr}
 ; CHECK-O0-NEXT:    mov r7, sp
 ; CHECK-O0-NEXT:    push {r8}
-; CHECK-O0-NEXT:    sub sp, sp, #28
+; CHECK-O0-NEXT:    sub sp, sp, #24
 ; CHECK-O0-NEXT:    @ implicit-def: $r1
 ; CHECK-O0-NEXT:    str r0, [sp] @ 4-byte Spill
 ; CHECK-O0-NEXT:    mov r8, #0
 ; CHECK-O0-NEXT:    mov r0, #10
 ; CHECK-O0-NEXT:    str r0, [r7, #-12]
 ; CHECK-O0-NEXT:    mov r0, #11
-; CHECK-O0-NEXT:    str r0, [sp, #16]
-; CHECK-O0-NEXT:    mov r0, #12
 ; CHECK-O0-NEXT:    str r0, [sp, #12]
+; CHECK-O0-NEXT:    mov r0, #12
+; CHECK-O0-NEXT:    str r0, [sp, #8]
 ; CHECK-O0-NEXT:    ldr r0, [r7, #-12]
-; CHECK-O0-NEXT:    ldr r1, [sp, #16]
-; CHECK-O0-NEXT:    ldr r2, [sp, #12]
+; CHECK-O0-NEXT:    ldr r1, [sp, #12]
+; CHECK-O0-NEXT:    ldr r2, [sp, #8]
 ; CHECK-O0-NEXT:    bl _foo_vararg
 ; CHECK-O0-NEXT:    str r8, [sp, #4] @ 4-byte Spill
-; CHECK-O0-NEXT:    mov r0, r8
-; CHECK-O0-NEXT:    str r0, [sp, #8] @ 4-byte Spill
 ; CHECK-O0-NEXT:    movw r0, #0
 ; CHECK-O0-NEXT:    cmp r8, r0
 ; CHECK-O0-NEXT:    bne LBB8_2
@@ -854,7 +846,7 @@ define float @caller4(i8* %error_ref) {
 ; CHECK-O0-NEXT:    ldrb r0, [r0, #8]
 ; CHECK-O0-NEXT:    strb r0, [r1]
 ; CHECK-O0-NEXT:  LBB8_2: @ %handler
-; CHECK-O0-NEXT:    ldr r0, [sp, #8] @ 4-byte Reload
+; CHECK-O0-NEXT:    ldr r0, [sp, #4] @ 4-byte Reload
 ; CHECK-O0-NEXT:    bl _free
 ; CHECK-O0-NEXT:    mov r0, #1065353216
 ; CHECK-O0-NEXT:    sub sp, r7, #4
