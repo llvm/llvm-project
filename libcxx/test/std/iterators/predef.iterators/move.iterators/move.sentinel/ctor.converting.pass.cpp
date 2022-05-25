@@ -31,15 +31,20 @@ static_assert(!std::convertible_to<long, NonConvertible>);
 
 constexpr bool test()
 {
+  // Constructing from an lvalue.
   {
     std::move_sentinel<int> m(42);
     std::move_sentinel<long> m2 = m;
     assert(m2.base() == 42L);
   }
+
+  // Constructing from an rvalue.
   {
     std::move_sentinel<long> m2 = std::move_sentinel<int>(43);
     assert(m2.base() == 43L);
   }
+
+  // SFINAE checks.
   {
     static_assert( std::is_convertible_v<std::move_sentinel<int>, std::move_sentinel<long>>);
     static_assert( std::is_convertible_v<std::move_sentinel<int*>, std::move_sentinel<const int*>>);

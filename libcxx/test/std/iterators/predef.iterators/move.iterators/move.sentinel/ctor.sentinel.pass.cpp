@@ -19,17 +19,22 @@
 
 constexpr bool test()
 {
+  // The underlying sentinel is an integer.
   {
     static_assert(!std::is_convertible_v<int, std::move_sentinel<int>>);
     std::move_sentinel<int> m(42);
     assert(m.base() == 42);
   }
+
+  // The underlying sentinel is a pointer.
   {
     static_assert(!std::is_convertible_v<int*, std::move_sentinel<int*>>);
     int i = 42;
     std::move_sentinel<int*> m(&i);
     assert(m.base() == &i);
   }
+
+  // The underlying sentinel is a user-defined type with an explicit default constructor.
   {
     struct S {
       explicit S() = default;

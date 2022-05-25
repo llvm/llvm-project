@@ -22,6 +22,7 @@
 
 constexpr bool test()
 {
+  // The sentinel type is a value.
   {
     auto m = std::move_sentinel<int>(42);
     const auto& cm = m;
@@ -34,6 +35,8 @@ constexpr bool test()
     ASSERT_SAME_TYPE(decltype(std::move(m).base()), int);
     ASSERT_SAME_TYPE(decltype(std::move(cm).base()), int);
   }
+
+  // The sentinel type is a pointer.
   {
     int a[] = {1, 2, 3};
     auto m = std::move_sentinel<const int*>(a);

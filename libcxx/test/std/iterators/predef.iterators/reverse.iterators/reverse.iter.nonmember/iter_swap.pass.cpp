@@ -22,46 +22,8 @@
 #include <cassert>
 #include <type_traits>
 #include <utility>
+#include "test_iterators.h"
 #include "test_macros.h"
-
-namespace adl {
-
-struct Iterator {
-  using value_type = int;
-  using difference_type = ptrdiff_t;
-
-  value_type* ptr_ = nullptr;
-  int* iter_swap_invocations_ = nullptr;
-
-  constexpr Iterator() = default;
-  constexpr explicit Iterator(int& iter_swaps) : iter_swap_invocations_(&iter_swaps) {}
-
-  value_type& operator*() const { return *ptr_; }
-
-  Iterator& operator++() { ++ptr_; return *this; }
-  Iterator operator++(int) {
-    Iterator prev = *this;
-    ++ptr_;
-    return prev;
-  }
-
-  Iterator& operator--() { --ptr_; return *this; }
-  Iterator operator--(int) {
-    Iterator prev = *this;
-    --ptr_;
-    return prev;
-  }
-
-  constexpr friend void iter_swap(Iterator a, Iterator) {
-    if (a.iter_swap_invocations_) {
-      ++(*a.iter_swap_invocations_);
-    }
-  }
-
-  friend bool operator==(const Iterator& lhs, const Iterator& rhs) { return lhs.ptr_ == rhs.ptr_; }
-};
-
-} // namespace adl
 
 constexpr bool test() {
   // Can use `iter_swap` with a regular array.
@@ -80,15 +42,17 @@ constexpr bool test() {
     assert(a[2] == 0);
   }
 
-  // Ensure the `iter_swap` customization point is being used.
+  // Check that the `iter_swap` customization point is being used.
   {
     int iter_swap_invocations = 0;
-    adl::Iterator i1(iter_swap_invocations), i2(iter_swap_invocations);
-    std::reverse_iterator<adl::Iterator> ri1(i1), ri2(i2);
-    iter_swap(i1, i2);
+    int a[] = {0, 1, 2};
+    adl::Iterator base1 = adl::Iterator::TrackSwaps(a + 1, iter_swap_invocations);
+    adl::Iterator base2 = adl::Iterator::TrackSwaps(a + 2, iter_swap_invocations);
+    std::reverse_iterator<adl::Iterator> ri1(base1), ri2(base2);
+    iter_swap(ri1, ri2);
     assert(iter_swap_invocations == 1);
 
-    iter_swap(i2, i1);
+    iter_swap(ri2, ri1);
     assert(iter_swap_invocations == 2);
   }
 

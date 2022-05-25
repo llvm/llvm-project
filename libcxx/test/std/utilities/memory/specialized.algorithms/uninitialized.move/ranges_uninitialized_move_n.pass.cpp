@@ -24,8 +24,8 @@
 
 #include "../buffer.h"
 #include "../counted.h"
-#include "test_macros.h"
 #include "test_iterators.h"
+#include "test_macros.h"
 
 // TODO(varconst): consolidate the ADL checks into a single file.
 // Because this is a variable and not a function, it's guaranteed that ADL won't be used. However,
@@ -37,40 +37,6 @@ static_assert(std::is_invocable_v<decltype(std::ranges::uninitialized_move_n), i
 struct NotConvertibleFromInt {};
 static_assert(!std::is_invocable_v<decltype(std::ranges::uninitialized_move_n), int*, size_t, NotConvertibleFromInt*,
                                    NotConvertibleFromInt*>);
-
-namespace adl {
-
-static int iter_move_invocations = 0;
-
-template <class T>
-struct Iterator {
-  using value_type = T;
-  using difference_type = int;
-  using iterator_concept = std::input_iterator_tag;
-
-  T* ptr = nullptr;
-
-  Iterator() = default;
-  explicit Iterator(int* p) : ptr(p) {}
-
-  T& operator*() const { return *ptr; }
-
-  Iterator& operator++() { ++ptr; return *this; }
-  Iterator operator++(int) {
-    Iterator prev = *this;
-    ++ptr;
-    return prev;
-  }
-
-  friend T&& iter_move(Iterator iter) {
-    ++iter_move_invocations;
-    return std::move(*iter);
-  }
-
-  friend bool operator==(const Iterator& lhs, const Iterator& rhs) { return lhs.ptr == rhs.ptr; }
-};
-
-} // namespace adl
 
 int main(int, char**) {
   // An empty range -- no default constructors should be invoked.
@@ -187,17 +153,18 @@ int main(int, char**) {
     constexpr int N = 3;
     int in[N] = {1, 2, 3};
     Buffer<int, N> out;
-    adl::Iterator<int> begin(in);
-    adl::Iterator<int> end(in + N);
+    int iter_moves = 0;
+    adl::Iterator begin = adl::Iterator::TrackMoves(in, iter_moves);
+    adl::Iterator end = adl::Iterator::TrackMoves(in + N, iter_moves);
 
     std::ranges::uninitialized_move(begin, end, out.begin(), out.end());
-    assert(adl::iter_move_invocations == 3);
-    adl::iter_move_invocations = 0;
+    assert(iter_moves == 3);
+    iter_moves = 0;
 
     std::ranges::subrange range(begin, end);
     std::ranges::uninitialized_move(range, out);
-    assert(adl::iter_move_invocations == 3);
-    adl::iter_move_invocations = 0;
+    assert(iter_moves == 3);
+    iter_moves = 0;
   }
 
   return 0;

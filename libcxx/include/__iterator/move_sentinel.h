@@ -31,7 +31,7 @@ public:
   move_sentinel() = default;
 
   _LIBCPP_HIDE_FROM_ABI constexpr
-  explicit move_sentinel(_Sent __s) : __last_(_VSTD::move(__s)) {}
+  explicit move_sentinel(_Sent __s) : __last_(std::move(__s)) {}
 
   template <class _S2>
     requires convertible_to<const _S2&, _Sent>

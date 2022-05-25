@@ -19,14 +19,20 @@
 
 constexpr bool test()
 {
+
+  // The underlying sentinel is an integer.
   {
     std::move_sentinel<int> m;
     assert(m.base() == 0);
   }
+
+  // The underlying sentinel is a pointer.
   {
     std::move_sentinel<int*> m;
     assert(m.base() == nullptr);
   }
+
+  // The underlying sentinel is a user-defined type with an explicit default constructor.
   {
     struct S {
       explicit S() = default;
@@ -35,6 +41,7 @@ constexpr bool test()
     std::move_sentinel<S> m;
     assert(m.base().i == 3);
   }
+
   return true;
 }
 

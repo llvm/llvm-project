@@ -23,39 +23,41 @@
 namespace adl {
 
 template <bool IsNoexcept = false>
-struct Iterator {
+struct MaybeNoexceptIterator {
   using value_type = int;
   using difference_type = ptrdiff_t;
 
   value_type* ptr_ = nullptr;
   int* iter_swap_invocations_ = nullptr;
 
-  constexpr Iterator() = default;
-  constexpr explicit Iterator(int& iter_swaps) : iter_swap_invocations_(&iter_swaps) {}
+  constexpr MaybeNoexceptIterator() = default;
+  constexpr explicit MaybeNoexceptIterator(int& iter_swaps) : iter_swap_invocations_(&iter_swaps) {}
 
   value_type& operator*() const { return *ptr_; }
 
-  Iterator& operator++() { ++ptr_; return *this; }
-  Iterator operator++(int) {
-    Iterator prev = *this;
+  MaybeNoexceptIterator& operator++() { ++ptr_; return *this; }
+  MaybeNoexceptIterator operator++(int) {
+    MaybeNoexceptIterator prev = *this;
     ++ptr_;
     return prev;
   }
 
-  Iterator& operator--() { --ptr_; return *this; }
-  Iterator operator--(int) {
-    Iterator prev = *this;
+  MaybeNoexceptIterator& operator--() { --ptr_; return *this; }
+  MaybeNoexceptIterator operator--(int) {
+    MaybeNoexceptIterator prev = *this;
     --ptr_;
     return prev;
   }
 
-  constexpr friend void iter_swap(Iterator a, Iterator) noexcept(IsNoexcept) {
+  constexpr friend void iter_swap(MaybeNoexceptIterator a, MaybeNoexceptIterator) noexcept(IsNoexcept) {
     if (a.iter_swap_invocations_) {
       ++(*a.iter_swap_invocations_);
     }
   }
 
-  friend bool operator==(const Iterator& lhs, const Iterator& rhs) { return lhs.ptr_ == rhs.ptr_; }
+  friend bool operator==(const MaybeNoexceptIterator& lhs, const MaybeNoexceptIterator& rhs) {
+    return lhs.ptr_ == rhs.ptr_;
+  }
 };
 
 template <bool IsNoexcept = false>
@@ -66,8 +68,12 @@ struct View : std::ranges::view_base {
   constexpr View(int& iter_swap_invocations) : iter_swaps(&iter_swap_invocations) {
   }
 
-  constexpr adl::Iterator<IsNoexcept> begin() { return adl::Iterator<IsNoexcept>(*iter_swaps); }
-  constexpr adl::Iterator<IsNoexcept> end() { return adl::Iterator<IsNoexcept>(*iter_swaps); }
+  constexpr adl::MaybeNoexceptIterator<IsNoexcept> begin() {
+    return adl::MaybeNoexceptIterator<IsNoexcept>(*iter_swaps);
+  }
+  constexpr adl::MaybeNoexceptIterator<IsNoexcept> end() {
+    return adl::MaybeNoexceptIterator<IsNoexcept>(*iter_swaps);
+  }
 };
 
 } // namespace adl
@@ -189,8 +195,9 @@ constexpr bool test() {
       using ThrowingSplitView = std::ranges::lazy_split_view<adl::View<false>, adl::View<false>>;
       using ThrowingValueType = std::ranges::iterator_t<ThrowingSplitView>::value_type;
       using ThrowingIter = std::ranges::iterator_t<ThrowingValueType>;
-      ASSERT_NOT_NOEXCEPT(
-          std::ranges::iter_swap(std::declval<adl::Iterator<false>>(), std::declval<adl::Iterator<false>>()));
+      ASSERT_NOT_NOEXCEPT(std::ranges::iter_swap(
+          std::declval<adl::MaybeNoexceptIterator<false>>(),
+          std::declval<adl::MaybeNoexceptIterator<false>>()));
       ASSERT_NOT_NOEXCEPT(iter_swap(std::declval<ThrowingIter>(), std::declval<ThrowingIter>()));
     }
 
@@ -198,8 +205,9 @@ constexpr bool test() {
       using NoexceptSplitView = std::ranges::lazy_split_view<adl::View<true>, adl::View<true>>;
       using NoexceptValueType = std::ranges::iterator_t<NoexceptSplitView>::value_type;
       using NoexceptIter = std::ranges::iterator_t<NoexceptValueType>;
-      ASSERT_NOEXCEPT(
-          std::ranges::iter_swap(std::declval<adl::Iterator<true>>(), std::declval<adl::Iterator<true>>()));
+      ASSERT_NOEXCEPT(std::ranges::iter_swap(
+          std::declval<adl::MaybeNoexceptIterator<true>>(),
+          std::declval<adl::MaybeNoexceptIterator<true>>()));
       ASSERT_NOEXCEPT(iter_swap(std::declval<NoexceptIter>(), std::declval<NoexceptIter>()));
     }
   }

@@ -82,7 +82,9 @@ struct std::incrementable_traits<FooIter> {
   using difference_type = char;
 };
 
+// Not using `FooIter::value_type`.
 static_assert(std::is_same_v<typename std::reverse_iterator<FooIter>::value_type, int>);
+// Not using `FooIter::difference_type`.
 static_assert(std::is_same_v<typename std::reverse_iterator<FooIter>::difference_type, char>);
 
 #endif

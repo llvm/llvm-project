@@ -20,47 +20,8 @@
 #include <cassert>
 #include <type_traits>
 #include <utility>
+#include "test_iterators.h"
 #include "test_macros.h"
-
-namespace adl {
-
-struct Iterator {
-  using value_type = int;
-  using difference_type = ptrdiff_t;
-
-  value_type* ptr_ = nullptr;
-  int* iter_move_invocations_ = nullptr;
-
-  constexpr Iterator() = default;
-  constexpr explicit Iterator(int* p, int& iter_moves) : ptr_(p), iter_move_invocations_(&iter_moves) {}
-
-  constexpr value_type& operator*() const { return *ptr_; }
-
-  Iterator& operator++() { ++ptr_; return *this; }
-  Iterator operator++(int) {
-    Iterator prev = *this;
-    ++ptr_;
-    return prev;
-  }
-
-  constexpr Iterator& operator--() { --ptr_; return *this; }
-  constexpr Iterator operator--(int) {
-    Iterator prev = *this;
-    --ptr_;
-    return prev;
-  }
-
-  constexpr friend value_type&& iter_move(Iterator iter) {
-    if (iter.iter_move_invocations_) {
-      ++(*iter.iter_move_invocations_);
-    }
-    return std::move(*iter);
-  }
-
-  friend bool operator==(const Iterator& lhs, const Iterator& rhs) { return lhs.ptr_ == rhs.ptr_; }
-};
-
-} // namespace adl
 
 constexpr bool test() {
   // Can use `iter_move` with a regular array.
@@ -76,13 +37,13 @@ constexpr bool test() {
     assert(iter_move(ri) == 1);
   }
 
-  // Ensure the `iter_move` customization point is being used.
+  // Check that the `iter_move` customization point is being used.
   {
     constexpr int N = 3;
     int a[N] = {0, 1, 2};
 
     int iter_move_invocations = 0;
-    adl::Iterator i(a + N, iter_move_invocations);
+    adl::Iterator i = adl::Iterator::TrackMoves(a + N, iter_move_invocations);
     std::reverse_iterator<adl::Iterator> ri(i);
     int x = iter_move(ri);
     assert(x == 2);

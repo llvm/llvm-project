@@ -386,12 +386,13 @@ constexpr insert_iterator<Container> inserter(Container& x, ranges::iterator_t<C
 template <class Iterator>
 class move_iterator {
 public:
-    typedef Iterator                                              iterator_type;
-    typedef typename iterator_traits<Iterator>::difference_type   difference_type;
-    typedef Iterator                                              pointer;
-    typedef typename iterator_traits<Iterator>::value_type        value_type;
-    typedef typename iterator_traits<Iterator>::iterator_category iterator_category;
-    typedef value_type&&                                          reference;
+    using iterator_type     = Iterator;
+    using iterator_concept  = input_iterator_tag; // From C++20
+    using iterator_category = see below; // not always present starting from C++20
+    using value_type        = iter_value_t<Iterator>; // Until C++20, iterator_traits<Iterator>::value_type
+    using difference_type   = iter_difference_t<Iterator>; // Until C++20, iterator_traits<Iterator>::difference_type;
+    using pointer           = Iterator;
+    using reference         = iter_rvalue_reference_t<Iterator>; // Until C++20, value_type&&
 
     constexpr move_iterator();  // all the constexprs are in C++17
     constexpr explicit move_iterator(Iterator i);
@@ -399,18 +400,40 @@ public:
       constexpr move_iterator(const move_iterator<U>& u);
     template <class U>
       constexpr move_iterator& operator=(const move_iterator<U>& u);
-    constexpr iterator_type base() const;
+
+    constexpr iterator_type base() const; // Until C++20
+    constexpr const Iterator& base() const & noexcept; // From C++20
+    constexpr Iterator base() &&; // From C++20
+
     constexpr reference operator*() const;
-    constexpr pointer operator->() const;
+    constexpr pointer operator->() const; // Removed in C++20
     constexpr move_iterator& operator++();
-    constexpr move_iterator operator++(int);
+    constexpr auto operator++(int); // Return type was move_iterator until C++20
     constexpr move_iterator& operator--();
     constexpr move_iterator operator--(int);
     constexpr move_iterator operator+(difference_type n) const;
     constexpr move_iterator& operator+=(difference_type n);
     constexpr move_iterator operator-(difference_type n) const;
     constexpr move_iterator& operator-=(difference_type n);
-    constexpr unspecified operator[](difference_type n) const;
+    constexpr reference operator[](difference_type n) const; // Return type unspecified until C++20
+
+    template<sentinel_for<Iterator> S>
+      friend constexpr bool
+        operator==(const move_iterator& x, const move_sentinel<S>& y); // Since C++20
+    template<sized_sentinel_for<Iterator> S>
+      friend constexpr iter_difference_t<Iterator>
+        operator-(const move_sentinel<S>& x, const move_iterator& y); // Since C++20
+    template<sized_sentinel_for<Iterator> S>
+      friend constexpr iter_difference_t<Iterator>
+        operator-(const move_iterator& x, const move_sentinel<S>& y); // Since C++20
+    friend constexpr iter_rvalue_reference_t<Iterator>
+      iter_move(const move_iterator& i)
+        noexcept(noexcept(ranges::iter_move(i.current))); // Since C++20
+    template<indirectly_swappable<Iterator> Iterator2>
+      friend constexpr void
+        iter_swap(const move_iterator& x, const move_iterator<Iterator2>& y)
+          noexcept(noexcept(ranges::iter_swap(x.current, y.current))); // Since C++20
+
 private:
     Iterator current; // exposition only
 };
@@ -451,6 +474,23 @@ constexpr move_iterator<Iterator> operator+(   // constexpr in C++17
 
 template <class Iterator>   // constexpr in C++17
 constexpr  move_iterator<Iterator> make_move_iterator(const Iterator& i);
+
+template<semiregular S>
+class move_sentinel {
+public:
+  constexpr move_sentinel();
+  constexpr explicit move_sentinel(S s);
+  template<class S2>
+    requires convertible_to<const S2&, S>
+      constexpr move_sentinel(const move_sentinel<S2>& s);
+  template<class S2>
+    requires assignable_from<S&, const S2&>
+      constexpr move_sentinel& operator=(const move_sentinel<S2>& s);
+
+  constexpr S base() const;
+private:
+  S last;     // exposition only
+};
 
 // [default.sentinel], default sentinel
 struct default_sentinel_t;
