@@ -69,3 +69,11 @@
 // SPLINK-SAME: "-o" [[BC:".*bc"]]
 // SPLINK: {{llvm-spirv.*"}} [[BC]] "-o" [[SPV2:".*o"]]
 // SPLINK: {{spirv-link.*"}} [[SPV1]] [[SPV2]] "-o" "a.out"
+
+//-----------------------------------------------------------------------------
+// Check external vs internal object emission.
+// RUN: %clang -### --target=spirv64 -fno-integrated-objemitter %s 2>&1 | FileCheck --check-prefix=XTOR %s
+// RUN: %clang -### --target=spirv64 -fintegrated-objemitter %s 2>&1 | FileCheck --check-prefix=BACKEND %s
+
+// XTOR: {{llvm-spirv.*"}}
+// BACKEND-NOT: {{llvm-spirv.*"}}
