@@ -4,14 +4,29 @@
 #include "llvm/IR/PassManager.h"
 #include "llvm/IR/ValueMap.h"
 
+// Procedure to build this Pass was copied from the BranchProbabilityInfo Pass
+// You can search for this pass by looking for "branch-prob" in PassRegistry.def
+
 namespace llvm {
 
 // Class holding the Flattened Dependency Graph
 class FlattenedDependencyGraph {
 public:
+  // Default Constructor
   FlattenedDependencyGraph() = default;
-  FlattenedDependencyGraph(FlattenedDependencyGraph const &graph) {}
+
+  // Copy Constructor
+  FlattenedDependencyGraph(FlattenedDependencyGraph const &graph) {
+    for (std::pair<Value*, std::vector<Value*>> dependency_pair: graph.dependency_map) {
+      this->dependency_map.insert(std::make_pair(dependency_pair.first, dependency_pair.second));
+    }
+    this->LastF = graph.LastF;
+  }
   ValueMap<Value*, std::vector<Value*>> dependency_map;
+  void print(raw_ostream &OS);
+
+  /// Track the last function we run over for printing.
+  const Function *LastF = nullptr;
 };
 
 // Analysis pass giving out a Flattened version of the Dependency Graph of a
@@ -30,6 +45,17 @@ public:
   using Result = FlattenedDependencyGraph;
 
   FlattenedDependencyGraph run(Function &F, FunctionAnalysisManager &AM);
+};
+
+// Printer Pass for the DependencyGraphFlattenerAnalysis results
+class DependencyGraphFlattenerPrinterPass
+    : public PassInfoMixin<DependencyGraphFlattenerPrinterPass> {
+  raw_ostream &OS;
+
+public:
+  explicit DependencyGraphFlattenerPrinterPass(raw_ostream &OS) : OS(OS) {}
+
+  PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
 };
 
 

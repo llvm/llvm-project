@@ -1,8 +1,26 @@
 #include "llvm/Transforms/Utils/DependencyGraphFlattener.h"
 #include "llvm/IR/InstIterator.h"
 
+// Procedure to build this Pass was copied from the BranchProbabilityInfo Pass
+// You can search for this pass by looking for "branch-prob" in PassRegistry.def
 
 using namespace llvm;
+
+void FlattenedDependencyGraph::print(raw_ostream &OS) {
+  OS << "---- Flattened Dependency Graph ----\n";
+
+  // Printing the DependencyGraph
+  // TODO: Improve the display format of this graph
+  for (auto map_it = dependency_map.begin(), last_pair = dependency_map.end();
+       map_it != last_pair; ++map_it) {
+    OS << "The instruction " << *map_it->first << " uses:\n";
+    for(std::vector<Value*>::iterator value_iterator = map_it->second.begin();
+         value_iterator != map_it->second.end(); ++value_iterator) {
+      OS << **value_iterator << "\n";
+    }
+    OS << "\n";
+  }
+}
 
 // Defining the Key
 AnalysisKey DependencyGraphFlattenerAnalysis::Key;
@@ -11,6 +29,8 @@ AnalysisKey DependencyGraphFlattenerAnalysis::Key;
 FlattenedDependencyGraph DependencyGraphFlattenerAnalysis::run(Function &F,
                                                 FunctionAnalysisManager &AM) {
   FlattenedDependencyGraph FDG;
+
+  FDG.LastF = &F; // Store the last function we ran on for printing.
 
   // Iterating through each instruction
   for (inst_iterator current_instruction = inst_begin(F), last_instruction = inst_end(F);
@@ -56,4 +76,14 @@ FlattenedDependencyGraph DependencyGraphFlattenerAnalysis::run(Function &F,
 //  }
 
   return FDG;
+}
+
+PreservedAnalyses
+DependencyGraphFlattenerPrinterPass::run(Function &F, FunctionAnalysisManager &AM) {
+  OS << "Printing analysis results of FDG for function "
+     << "'" << F.getName() << "':"
+     << "\n";
+  auto temp = AM.getResult<DependencyGraphFlattenerAnalysis>(F);
+  temp.print(OS);
+  return PreservedAnalyses::all();
 }
