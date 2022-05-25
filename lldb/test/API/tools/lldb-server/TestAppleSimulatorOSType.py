@@ -17,9 +17,13 @@ class TestAppleSimulatorOSType(gdbremote_testcase.GdbRemoteTestCaseBase):
 
     def check_simulator_ostype(self, sdk, platform_name, arch=platform.machine()):
         cmd = ['xcrun', 'simctl', 'list', '-j', 'devices']
-        self.trace(' '.join(cmd))
+        cmd_str = ' '.join(cmd)
+        self.trace(cmd_str)
         sim_devices_str = subprocess.check_output(cmd).decode("utf-8")
-        sim_devices = json.loads(sim_devices_str)['devices']
+        try:
+            sim_devices = json.loads(sim_devices_str)['devices']
+        except json.decoder.JSONDecodeError:
+            self.fail("Could not parse '{}' output. Authorization denied?".format(cmd_str))
         # Find an available simulator for the requested platform
         deviceUDID = None
         deviceRuntime = None
