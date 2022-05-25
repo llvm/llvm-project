@@ -31,12 +31,18 @@ class HelloWatchLocationTestCase(TestBase):
         self.exe_name = self.testMethodName
         self.d = {'CXX_SOURCES': self.source, 'EXE': self.exe_name}
 
+    # on arm64 targets, lldb has incorrect hit-count / ignore-counts
+    # for watchpoints when they are hit with multiple threads at
+    # the same time.  Tracked as llvm.org/pr49433
+    # or rdar://93863107 inside Apple.
+    def affected_by_radar_93863107(self): 
+        return (self.getArchitecture() in ['arm64', 'arm64e']) and self.platformIsDarwin()
+
     # Most of the MIPS boards provide only one H/W watchpoints, and S/W
     # watchpoints are not supported yet
     @expectedFailureAll(triple=re.compile('^mips'))
     # SystemZ and PowerPC also currently supports only one H/W watchpoint
     @expectedFailureAll(archs=['powerpc64le', 's390x'])
-    @skipIfDarwin
     @skipIfWindows # This test is flaky on Windows
     def test_hello_watchlocation(self):
         """Test watching a location with '-s size' option."""
@@ -103,8 +109,13 @@ class HelloWatchLocationTestCase(TestBase):
                     substrs=[self.violating_func])
 
         # Use the '-v' option to do verbose listing of the watchpoint.
-        # The hit count should now be 1.
-        self.expect("watchpoint list -v",
-                    substrs=['hit_count = 1'])
+        # The hit count should now be the same as the number of threads that
+        # stopped on a watchpoint.
+        threads = lldbutil.get_stopped_threads(
+            self.process(), lldb.eStopReasonWatchpoint)
+
+        if not self.affected_by_radar_93863107():
+          self.expect("watchpoint list -v",
+                      substrs=['hit_count = %d' % len(threads)])
 
         self.runCmd("thread backtrace all")
