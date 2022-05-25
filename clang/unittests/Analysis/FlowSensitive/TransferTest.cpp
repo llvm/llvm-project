@@ -1296,6 +1296,49 @@ TEST_F(TransferTest, ClassMember) {
       });
 }
 
+TEST_F(TransferTest, BaseClassInitializer) {
+  using ast_matchers::cxxConstructorDecl;
+  using ast_matchers::hasName;
+  using ast_matchers::ofClass;
+
+  std::string Code = R"(
+    class A {
+    public:
+      A(int I) : Bar(I) {}
+      int Bar;
+    };
+
+    class B : public A {
+    public:
+      B(int I) : A(I) {
+        (void)0;
+        // [[p]]
+      }
+    };
+  )";
+  ASSERT_THAT_ERROR(
+      test::checkDataflow<NoopAnalysis>(
+          Code, cxxConstructorDecl(ofClass(hasName("B"))),
+          [](ASTContext &C, Environment &) {
+            return NoopAnalysis(C, /*ApplyBuiltinTransfer=*/true);
+          },
+          [](llvm::ArrayRef<
+                 std::pair<std::string, DataflowAnalysisState<NoopLattice>>>
+                 Results,
+             ASTContext &ASTCtx) {
+            // Regression test to verify that base-class initializers do not
+            // trigger an assertion. If we add support for such initializers in
+            // the future, we can expand this test to check more specific
+            // properties.
+            EXPECT_THAT(Results, ElementsAre(Pair("p", _)));
+          },
+          {"-fsyntax-only", "-fno-delayed-template-parsing",
+           "-std=" + std::string(LangStandard::getLangStandardForKind(
+                                     LangStandard::lang_cxx17)
+                                     .getName())}),
+      llvm::Succeeded());
+}
+
 TEST_F(TransferTest, ReferenceMember) {
   std::string Code = R"(
     struct A {
