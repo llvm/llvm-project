@@ -7,7 +7,7 @@ add_custom_command(OUTPUT ${cxx_symbols_inc}
    COMMAND "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/pseudo-gen"
      --grammar ${cxx_bnf}
      --emit-symbol-list
-     > ${cxx_symbols_inc}
+     -o ${cxx_symbols_inc}
    COMMENT "Generating nonterminal symbol file for cxx grammar..."
    DEPENDS pseudo-gen
    VERBATIM)
@@ -17,7 +17,7 @@ add_custom_command(OUTPUT ${cxx_bnf_inc}
    COMMAND "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/pseudo-gen"
      --grammar ${cxx_bnf}
      --emit-grammar-content
-     > ${cxx_bnf_inc}
+     -o ${cxx_bnf_inc}
    COMMENT "Generating bnf string file for cxx grammar..."
    DEPENDS pseudo-gen
    VERBATIM)
