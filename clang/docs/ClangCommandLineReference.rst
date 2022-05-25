@@ -4209,6 +4209,10 @@ Set starting address of TEXT to <addr>
 
 Pass the comma separated arguments in <arg> to the linker
 
+.. option:: --offload-link
+
+Use the linker supporting offloading device linking.
+
 .. option:: -X
 
 .. option:: -Xlinker <arg>, --for-linker <arg>, --for-linker=<arg>
