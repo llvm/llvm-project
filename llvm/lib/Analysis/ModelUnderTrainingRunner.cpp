@@ -11,7 +11,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/Analysis/TensorSpec.h"
 #include "llvm/Config/config.h"
 #if defined(LLVM_HAVE_TF_API)
 

@@ -26,7 +26,6 @@
 #include "llvm/MC/MCTargetOptions.h"
 #include "llvm/MC/MCValue.h"
 #include "llvm/MC/TargetRegistry.h"
-#include "llvm/Support/EndianStream.h"
 #include "llvm/Support/ErrorHandling.h"
 using namespace llvm;
 
