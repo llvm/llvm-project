@@ -564,6 +564,15 @@ enum : unsigned {
   EF_MIPS_ARCH = 0xf0000000       // Mask for applying EF_MIPS_ARCH_ variant
 };
 
+// MIPS-specific section indexes
+enum {
+  SHN_MIPS_ACOMMON = 0xff00,   // Common symbols which are defined and allocated
+  SHN_MIPS_TEXT = 0xff01,      // Not ABI compliant
+  SHN_MIPS_DATA = 0xff02,      // Not ABI compliant
+  SHN_MIPS_SCOMMON = 0xff03,   // Common symbols for global data area
+  SHN_MIPS_SUNDEFINED = 0xff04 // Undefined symbols for global data area
+};
+
 // ELF Relocation types for Mips
 enum {
 #include "ELFRelocs/Mips.def"
