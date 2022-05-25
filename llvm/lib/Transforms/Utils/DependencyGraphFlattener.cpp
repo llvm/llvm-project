@@ -1,12 +1,16 @@
 #include "llvm/Transforms/Utils/DependencyGraphFlattener.h"
 #include "llvm/IR/InstIterator.h"
-#include "llvm/IR/ValueMap.h"
+
 
 using namespace llvm;
 
-PreservedAnalyses DependencyGraphFlattenerPass::run(Function &F,
+// Defining the Key
+AnalysisKey DependencyGraphFlattenerAnalysis::Key;
+
+// Defining run function that will generate the Flattened Dependency Graph
+FlattenedDependencyGraph DependencyGraphFlattenerAnalysis::run(Function &F,
                                                 FunctionAnalysisManager &AM) {
-  ValueMap<Value*, std::vector<Value*>> dependency_map;
+  FlattenedDependencyGraph FDG;
 
   // Iterating through each instruction
   for (inst_iterator current_instruction = inst_begin(F), last_instruction = inst_end(F);
@@ -19,11 +23,11 @@ PreservedAnalyses DependencyGraphFlattenerPass::run(Function &F,
       // Add the operand to the local vector
       dependency_vector.push_back(&*U.get());
 
-      // If operand present in dependency_map, iterate through the corresponding 
+      // If operand present in FDG.dependency_map, iterate through the corresponding 
       // dependency_vector and add each element to the local vector.
-      if (dependency_map.count(U.get())) {
-        for(std::vector<Value*>::iterator value_iterator = dependency_map[U.get()].begin();
-             value_iterator != dependency_map[U.get()].end(); ++value_iterator) {
+      if (FDG.dependency_map.count(U.get())) {
+        for(std::vector<Value*>::iterator value_iterator = FDG.dependency_map[U.get()].begin();
+             value_iterator != FDG.dependency_map[U.get()].end(); ++value_iterator) {
           dependency_vector.push_back(*value_iterator);
         }
       }
@@ -31,8 +35,8 @@ PreservedAnalyses DependencyGraphFlattenerPass::run(Function &F,
 //      Value* v = U.get();
 //      errs() << *v << "\n";
     }
-    // Add instruction along with empty dependency_vector to dependency_map
-    dependency_map.insert(std::make_pair(&*current_instruction, dependency_vector));
+    // Add instruction along with empty dependency_vector to FDG.dependency_map
+    FDG.dependency_map.insert(std::make_pair(&*current_instruction, dependency_vector));
 
 //    for(std::vector<Value*>::iterator value_iterator = std::begin(dependency_vector);
 //         value_iterator != std::end(dependency_vector); ++value_iterator) {
@@ -41,7 +45,7 @@ PreservedAnalyses DependencyGraphFlattenerPass::run(Function &F,
   }
 
   // Printing dependency map for debugging.
-//  for (auto map_it = dependency_map.begin(), last_pair = dependency_map.end();
+//  for (auto map_it = FDG.dependency_map.begin(), last_pair = FDG.dependency_map.end();
 //       map_it != last_pair; ++map_it) {
 //    errs() << "The instruction " << *map_it->first << " uses:\n";
 //    for(std::vector<Value*>::iterator value_iterator = map_it->second.begin();
@@ -51,5 +55,5 @@ PreservedAnalyses DependencyGraphFlattenerPass::run(Function &F,
 //    errs() << "\n";
 //  }
 
-  return PreservedAnalyses::all();
+  return FDG;
 }
