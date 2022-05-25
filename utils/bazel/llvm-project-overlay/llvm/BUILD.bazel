@@ -159,7 +159,7 @@ cc_library(
 genrule(
     name = "generate_vcs_revision",
     outs = ["include/llvm/Support/VCSRevision.h"],
-    cmd = "echo '#define LLVM_REVISION \"git\"' >> $@\n" +
+    cmd = "echo '#undef LLVM_REVISION' >> $@\n" +
           "echo '#undef LLVM_REPOSITORY' >> $@\n",
 )
 

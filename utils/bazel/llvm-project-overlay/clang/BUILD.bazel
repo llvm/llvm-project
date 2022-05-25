@@ -373,7 +373,7 @@ genrule(
     # are passed through bazel, it's easier to drop generated files next to
     # the other includes.
     outs = ["include/VCSVersion.inc"],
-    cmd = "echo '#define CLANG_REVISION \"git\"' > $@",
+    cmd = "echo '#undef CLANG_REVISION' > $@",
 )
 
 # A hacky library to expose some internal headers of the `basic` library to its
