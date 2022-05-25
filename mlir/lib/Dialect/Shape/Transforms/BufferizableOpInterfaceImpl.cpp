@@ -119,11 +119,6 @@ struct AssumingOpInterface
                                 const AnalysisState &state) const {
     return BufferRelation::Equivalent;
   }
-
-  bool isAllocationHoistingBarrier(Operation *op) const {
-    // Allocations should not be hoisted out of AssumingOps.
-    return true;
-  }
 };
 
 /// Bufferization of shape.assuming_yield. Bufferized as part of their enclosing
