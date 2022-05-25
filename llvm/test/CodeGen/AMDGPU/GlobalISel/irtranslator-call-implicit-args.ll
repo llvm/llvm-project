@@ -56,7 +56,7 @@ define amdgpu_kernel void @test_call_external_void_func_i32([17 x i8]) #0 {
   ; GFX900-NEXT:   $sgpr13 = COPY [[COPY15]](s32)
   ; GFX900-NEXT:   $sgpr14 = COPY [[COPY16]](s32)
   ; GFX900-NEXT:   $vgpr31 = COPY [[OR1]](s32)
-  ; GFX900-NEXT:   $sgpr30_sgpr31 = G_SI_CALL [[GV]](p0), @external_void_func_i32, csr_amdgpu_highregs, implicit $vgpr0, implicit $sgpr0_sgpr1_sgpr2_sgpr3, implicit $sgpr4_sgpr5, implicit $sgpr6_sgpr7, implicit $sgpr8_sgpr9, implicit $sgpr10_sgpr11, implicit $sgpr12, implicit $sgpr13, implicit $sgpr14, implicit $vgpr31
+  ; GFX900-NEXT:   $sgpr30_sgpr31 = G_SI_CALL [[GV]](p0), @external_void_func_i32, csr_amdgpu, implicit $vgpr0, implicit $sgpr0_sgpr1_sgpr2_sgpr3, implicit $sgpr4_sgpr5, implicit $sgpr6_sgpr7, implicit $sgpr8_sgpr9, implicit $sgpr10_sgpr11, implicit $sgpr12, implicit $sgpr13, implicit $sgpr14, implicit $vgpr31
   ; GFX900-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $scc
   ; GFX900-NEXT:   S_ENDPGM 0
   ; GFX908-LABEL: name: test_call_external_void_func_i32
@@ -106,7 +106,7 @@ define amdgpu_kernel void @test_call_external_void_func_i32([17 x i8]) #0 {
   ; GFX908-NEXT:   $sgpr13 = COPY [[COPY15]](s32)
   ; GFX908-NEXT:   $sgpr14 = COPY [[COPY16]](s32)
   ; GFX908-NEXT:   $vgpr31 = COPY [[OR1]](s32)
-  ; GFX908-NEXT:   $sgpr30_sgpr31 = G_SI_CALL [[GV]](p0), @external_void_func_i32, csr_amdgpu_highregs, implicit $vgpr0, implicit $sgpr0_sgpr1_sgpr2_sgpr3, implicit $sgpr4_sgpr5, implicit $sgpr6_sgpr7, implicit $sgpr8_sgpr9, implicit $sgpr10_sgpr11, implicit $sgpr12, implicit $sgpr13, implicit $sgpr14, implicit $vgpr31
+  ; GFX908-NEXT:   $sgpr30_sgpr31 = G_SI_CALL [[GV]](p0), @external_void_func_i32, csr_amdgpu, implicit $vgpr0, implicit $sgpr0_sgpr1_sgpr2_sgpr3, implicit $sgpr4_sgpr5, implicit $sgpr6_sgpr7, implicit $sgpr8_sgpr9, implicit $sgpr10_sgpr11, implicit $sgpr12, implicit $sgpr13, implicit $sgpr14, implicit $vgpr31
   ; GFX908-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $scc
   ; GFX908-NEXT:   S_ENDPGM 0
   call void @external_void_func_i32(i32 42)
@@ -148,7 +148,7 @@ define void @test_func_call_external_void_func_i32() #0 {
   ; GFX900-NEXT:   $sgpr13 = COPY [[COPY13]](s32)
   ; GFX900-NEXT:   $sgpr14 = COPY [[COPY14]](s32)
   ; GFX900-NEXT:   $vgpr31 = COPY [[COPY15]](s32)
-  ; GFX900-NEXT:   $sgpr30_sgpr31 = G_SI_CALL [[GV]](p0), @external_void_func_i32, csr_amdgpu_highregs, implicit $vgpr0, implicit $sgpr0_sgpr1_sgpr2_sgpr3, implicit $sgpr4_sgpr5, implicit $sgpr6_sgpr7, implicit $sgpr8_sgpr9, implicit $sgpr10_sgpr11, implicit $sgpr12, implicit $sgpr13, implicit $sgpr14, implicit $vgpr31
+  ; GFX900-NEXT:   $sgpr30_sgpr31 = G_SI_CALL [[GV]](p0), @external_void_func_i32, csr_amdgpu, implicit $vgpr0, implicit $sgpr0_sgpr1_sgpr2_sgpr3, implicit $sgpr4_sgpr5, implicit $sgpr6_sgpr7, implicit $sgpr8_sgpr9, implicit $sgpr10_sgpr11, implicit $sgpr12, implicit $sgpr13, implicit $sgpr14, implicit $vgpr31
   ; GFX900-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $scc
   ; GFX900-NEXT:   SI_RETURN
   ; GFX908-LABEL: name: test_func_call_external_void_func_i32
@@ -185,7 +185,7 @@ define void @test_func_call_external_void_func_i32() #0 {
   ; GFX908-NEXT:   $sgpr13 = COPY [[COPY13]](s32)
   ; GFX908-NEXT:   $sgpr14 = COPY [[COPY14]](s32)
   ; GFX908-NEXT:   $vgpr31 = COPY [[COPY15]](s32)
-  ; GFX908-NEXT:   $sgpr30_sgpr31 = G_SI_CALL [[GV]](p0), @external_void_func_i32, csr_amdgpu_highregs, implicit $vgpr0, implicit $sgpr0_sgpr1_sgpr2_sgpr3, implicit $sgpr4_sgpr5, implicit $sgpr6_sgpr7, implicit $sgpr8_sgpr9, implicit $sgpr10_sgpr11, implicit $sgpr12, implicit $sgpr13, implicit $sgpr14, implicit $vgpr31
+  ; GFX908-NEXT:   $sgpr30_sgpr31 = G_SI_CALL [[GV]](p0), @external_void_func_i32, csr_amdgpu, implicit $vgpr0, implicit $sgpr0_sgpr1_sgpr2_sgpr3, implicit $sgpr4_sgpr5, implicit $sgpr6_sgpr7, implicit $sgpr8_sgpr9, implicit $sgpr10_sgpr11, implicit $sgpr12, implicit $sgpr13, implicit $sgpr14, implicit $vgpr31
   ; GFX908-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $scc
   ; GFX908-NEXT:   SI_RETURN
   call void @external_void_func_i32(i32 99)
@@ -278,7 +278,7 @@ define amdgpu_kernel void @test_call_external_void_func_v32i32([17 x i8]) #0 {
   ; GFX900-NEXT:   $sgpr13 = COPY [[COPY15]](s32)
   ; GFX900-NEXT:   $sgpr14 = COPY [[COPY16]](s32)
   ; GFX900-NEXT:   $vgpr31 = COPY [[OR1]](s32)
-  ; GFX900-NEXT:   $sgpr30_sgpr31 = G_SI_CALL [[GV]](p0), @external_void_func_v32i32, csr_amdgpu_highregs, implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $vgpr3, implicit $vgpr4, implicit $vgpr5, implicit $vgpr6, implicit $vgpr7, implicit $vgpr8, implicit $vgpr9, implicit $vgpr10, implicit $vgpr11, implicit $vgpr12, implicit $vgpr13, implicit $vgpr14, implicit $vgpr15, implicit $vgpr16, implicit $vgpr17, implicit $vgpr18, implicit $vgpr19, implicit $vgpr20, implicit $vgpr21, implicit $vgpr22, implicit $vgpr23, implicit $vgpr24, implicit $vgpr25, implicit $vgpr26, implicit $vgpr27, implicit $vgpr28, implicit $vgpr29, implicit $vgpr30, implicit $sgpr0_sgpr1_sgpr2_sgpr3, implicit $sgpr4_sgpr5, implicit $sgpr6_sgpr7, implicit $sgpr8_sgpr9, implicit $sgpr10_sgpr11, implicit $sgpr12, implicit $sgpr13, implicit $sgpr14, implicit $vgpr31
+  ; GFX900-NEXT:   $sgpr30_sgpr31 = G_SI_CALL [[GV]](p0), @external_void_func_v32i32, csr_amdgpu, implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $vgpr3, implicit $vgpr4, implicit $vgpr5, implicit $vgpr6, implicit $vgpr7, implicit $vgpr8, implicit $vgpr9, implicit $vgpr10, implicit $vgpr11, implicit $vgpr12, implicit $vgpr13, implicit $vgpr14, implicit $vgpr15, implicit $vgpr16, implicit $vgpr17, implicit $vgpr18, implicit $vgpr19, implicit $vgpr20, implicit $vgpr21, implicit $vgpr22, implicit $vgpr23, implicit $vgpr24, implicit $vgpr25, implicit $vgpr26, implicit $vgpr27, implicit $vgpr28, implicit $vgpr29, implicit $vgpr30, implicit $sgpr0_sgpr1_sgpr2_sgpr3, implicit $sgpr4_sgpr5, implicit $sgpr6_sgpr7, implicit $sgpr8_sgpr9, implicit $sgpr10_sgpr11, implicit $sgpr12, implicit $sgpr13, implicit $sgpr14, implicit $vgpr31
   ; GFX900-NEXT:   ADJCALLSTACKDOWN 0, 4, implicit-def $scc
   ; GFX900-NEXT:   S_ENDPGM 0
   ; GFX908-LABEL: name: test_call_external_void_func_v32i32
@@ -364,7 +364,7 @@ define amdgpu_kernel void @test_call_external_void_func_v32i32([17 x i8]) #0 {
   ; GFX908-NEXT:   $sgpr13 = COPY [[COPY15]](s32)
   ; GFX908-NEXT:   $sgpr14 = COPY [[COPY16]](s32)
   ; GFX908-NEXT:   $vgpr31 = COPY [[OR1]](s32)
-  ; GFX908-NEXT:   $sgpr30_sgpr31 = G_SI_CALL [[GV]](p0), @external_void_func_v32i32, csr_amdgpu_highregs, implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $vgpr3, implicit $vgpr4, implicit $vgpr5, implicit $vgpr6, implicit $vgpr7, implicit $vgpr8, implicit $vgpr9, implicit $vgpr10, implicit $vgpr11, implicit $vgpr12, implicit $vgpr13, implicit $vgpr14, implicit $vgpr15, implicit $vgpr16, implicit $vgpr17, implicit $vgpr18, implicit $vgpr19, implicit $vgpr20, implicit $vgpr21, implicit $vgpr22, implicit $vgpr23, implicit $vgpr24, implicit $vgpr25, implicit $vgpr26, implicit $vgpr27, implicit $vgpr28, implicit $vgpr29, implicit $vgpr30, implicit $sgpr0_sgpr1_sgpr2_sgpr3, implicit $sgpr4_sgpr5, implicit $sgpr6_sgpr7, implicit $sgpr8_sgpr9, implicit $sgpr10_sgpr11, implicit $sgpr12, implicit $sgpr13, implicit $sgpr14, implicit $vgpr31
+  ; GFX908-NEXT:   $sgpr30_sgpr31 = G_SI_CALL [[GV]](p0), @external_void_func_v32i32, csr_amdgpu, implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $vgpr3, implicit $vgpr4, implicit $vgpr5, implicit $vgpr6, implicit $vgpr7, implicit $vgpr8, implicit $vgpr9, implicit $vgpr10, implicit $vgpr11, implicit $vgpr12, implicit $vgpr13, implicit $vgpr14, implicit $vgpr15, implicit $vgpr16, implicit $vgpr17, implicit $vgpr18, implicit $vgpr19, implicit $vgpr20, implicit $vgpr21, implicit $vgpr22, implicit $vgpr23, implicit $vgpr24, implicit $vgpr25, implicit $vgpr26, implicit $vgpr27, implicit $vgpr28, implicit $vgpr29, implicit $vgpr30, implicit $sgpr0_sgpr1_sgpr2_sgpr3, implicit $sgpr4_sgpr5, implicit $sgpr6_sgpr7, implicit $sgpr8_sgpr9, implicit $sgpr10_sgpr11, implicit $sgpr12, implicit $sgpr13, implicit $sgpr14, implicit $vgpr31
   ; GFX908-NEXT:   ADJCALLSTACKDOWN 0, 4, implicit-def $scc
   ; GFX908-NEXT:   S_ENDPGM 0
   call void @external_void_func_v32i32(<32 x i32> zeroinitializer)
@@ -493,7 +493,7 @@ define void @test_func_call_external_void_func_v32i32([17 x i8]) #0 {
   ; GFX900-NEXT:   $sgpr13 = COPY [[COPY30]](s32)
   ; GFX900-NEXT:   $sgpr14 = COPY [[COPY31]](s32)
   ; GFX900-NEXT:   $vgpr31 = COPY [[COPY32]](s32)
-  ; GFX900-NEXT:   $sgpr30_sgpr31 = G_SI_CALL [[GV]](p0), @external_void_func_v32i32, csr_amdgpu_highregs, implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $vgpr3, implicit $vgpr4, implicit $vgpr5, implicit $vgpr6, implicit $vgpr7, implicit $vgpr8, implicit $vgpr9, implicit $vgpr10, implicit $vgpr11, implicit $vgpr12, implicit $vgpr13, implicit $vgpr14, implicit $vgpr15, implicit $vgpr16, implicit $vgpr17, implicit $vgpr18, implicit $vgpr19, implicit $vgpr20, implicit $vgpr21, implicit $vgpr22, implicit $vgpr23, implicit $vgpr24, implicit $vgpr25, implicit $vgpr26, implicit $vgpr27, implicit $vgpr28, implicit $vgpr29, implicit $vgpr30, implicit $sgpr0_sgpr1_sgpr2_sgpr3, implicit $sgpr4_sgpr5, implicit $sgpr6_sgpr7, implicit $sgpr8_sgpr9, implicit $sgpr10_sgpr11, implicit $sgpr12, implicit $sgpr13, implicit $sgpr14, implicit $vgpr31
+  ; GFX900-NEXT:   $sgpr30_sgpr31 = G_SI_CALL [[GV]](p0), @external_void_func_v32i32, csr_amdgpu, implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $vgpr3, implicit $vgpr4, implicit $vgpr5, implicit $vgpr6, implicit $vgpr7, implicit $vgpr8, implicit $vgpr9, implicit $vgpr10, implicit $vgpr11, implicit $vgpr12, implicit $vgpr13, implicit $vgpr14, implicit $vgpr15, implicit $vgpr16, implicit $vgpr17, implicit $vgpr18, implicit $vgpr19, implicit $vgpr20, implicit $vgpr21, implicit $vgpr22, implicit $vgpr23, implicit $vgpr24, implicit $vgpr25, implicit $vgpr26, implicit $vgpr27, implicit $vgpr28, implicit $vgpr29, implicit $vgpr30, implicit $sgpr0_sgpr1_sgpr2_sgpr3, implicit $sgpr4_sgpr5, implicit $sgpr6_sgpr7, implicit $sgpr8_sgpr9, implicit $sgpr10_sgpr11, implicit $sgpr12, implicit $sgpr13, implicit $sgpr14, implicit $vgpr31
   ; GFX900-NEXT:   ADJCALLSTACKDOWN 0, 4, implicit-def $scc
   ; GFX900-NEXT:   SI_RETURN
   ; GFX908-LABEL: name: test_func_call_external_void_func_v32i32
@@ -617,7 +617,7 @@ define void @test_func_call_external_void_func_v32i32([17 x i8]) #0 {
   ; GFX908-NEXT:   $sgpr13 = COPY [[COPY30]](s32)
   ; GFX908-NEXT:   $sgpr14 = COPY [[COPY31]](s32)
   ; GFX908-NEXT:   $vgpr31 = COPY [[COPY32]](s32)
-  ; GFX908-NEXT:   $sgpr30_sgpr31 = G_SI_CALL [[GV]](p0), @external_void_func_v32i32, csr_amdgpu_highregs, implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $vgpr3, implicit $vgpr4, implicit $vgpr5, implicit $vgpr6, implicit $vgpr7, implicit $vgpr8, implicit $vgpr9, implicit $vgpr10, implicit $vgpr11, implicit $vgpr12, implicit $vgpr13, implicit $vgpr14, implicit $vgpr15, implicit $vgpr16, implicit $vgpr17, implicit $vgpr18, implicit $vgpr19, implicit $vgpr20, implicit $vgpr21, implicit $vgpr22, implicit $vgpr23, implicit $vgpr24, implicit $vgpr25, implicit $vgpr26, implicit $vgpr27, implicit $vgpr28, implicit $vgpr29, implicit $vgpr30, implicit $sgpr0_sgpr1_sgpr2_sgpr3, implicit $sgpr4_sgpr5, implicit $sgpr6_sgpr7, implicit $sgpr8_sgpr9, implicit $sgpr10_sgpr11, implicit $sgpr12, implicit $sgpr13, implicit $sgpr14, implicit $vgpr31
+  ; GFX908-NEXT:   $sgpr30_sgpr31 = G_SI_CALL [[GV]](p0), @external_void_func_v32i32, csr_amdgpu, implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $vgpr3, implicit $vgpr4, implicit $vgpr5, implicit $vgpr6, implicit $vgpr7, implicit $vgpr8, implicit $vgpr9, implicit $vgpr10, implicit $vgpr11, implicit $vgpr12, implicit $vgpr13, implicit $vgpr14, implicit $vgpr15, implicit $vgpr16, implicit $vgpr17, implicit $vgpr18, implicit $vgpr19, implicit $vgpr20, implicit $vgpr21, implicit $vgpr22, implicit $vgpr23, implicit $vgpr24, implicit $vgpr25, implicit $vgpr26, implicit $vgpr27, implicit $vgpr28, implicit $vgpr29, implicit $vgpr30, implicit $sgpr0_sgpr1_sgpr2_sgpr3, implicit $sgpr4_sgpr5, implicit $sgpr6_sgpr7, implicit $sgpr8_sgpr9, implicit $sgpr10_sgpr11, implicit $sgpr12, implicit $sgpr13, implicit $sgpr14, implicit $vgpr31
   ; GFX908-NEXT:   ADJCALLSTACKDOWN 0, 4, implicit-def $scc
   ; GFX908-NEXT:   SI_RETURN
   call void @external_void_func_v32i32(<32 x i32> zeroinitializer)
@@ -661,7 +661,7 @@ define amdgpu_kernel void @test_only_workitem_id_x() #0 !reqd_work_group_size !0
   ; GFX900-NEXT:   $sgpr13 = COPY [[COPY13]](s32)
   ; GFX900-NEXT:   $sgpr14 = COPY [[COPY14]](s32)
   ; GFX900-NEXT:   $vgpr31 = COPY [[COPY15]](s32)
-  ; GFX900-NEXT:   $sgpr30_sgpr31 = G_SI_CALL [[GV]](p0), @external_void_func_i32, csr_amdgpu_highregs, implicit $vgpr0, implicit $sgpr0_sgpr1_sgpr2_sgpr3, implicit $sgpr4_sgpr5, implicit $sgpr6_sgpr7, implicit $sgpr8_sgpr9, implicit $sgpr10_sgpr11, implicit $sgpr12, implicit $sgpr13, implicit $sgpr14, implicit $vgpr31
+  ; GFX900-NEXT:   $sgpr30_sgpr31 = G_SI_CALL [[GV]](p0), @external_void_func_i32, csr_amdgpu, implicit $vgpr0, implicit $sgpr0_sgpr1_sgpr2_sgpr3, implicit $sgpr4_sgpr5, implicit $sgpr6_sgpr7, implicit $sgpr8_sgpr9, implicit $sgpr10_sgpr11, implicit $sgpr12, implicit $sgpr13, implicit $sgpr14, implicit $vgpr31
   ; GFX900-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $scc
   ; GFX900-NEXT:   S_ENDPGM 0
   ; GFX908-LABEL: name: test_only_workitem_id_x
@@ -700,7 +700,7 @@ define amdgpu_kernel void @test_only_workitem_id_x() #0 !reqd_work_group_size !0
   ; GFX908-NEXT:   $sgpr13 = COPY [[COPY13]](s32)
   ; GFX908-NEXT:   $sgpr14 = COPY [[COPY14]](s32)
   ; GFX908-NEXT:   $vgpr31 = COPY [[COPY15]](s32)
-  ; GFX908-NEXT:   $sgpr30_sgpr31 = G_SI_CALL [[GV]](p0), @external_void_func_i32, csr_amdgpu_highregs, implicit $vgpr0, implicit $sgpr0_sgpr1_sgpr2_sgpr3, implicit $sgpr4_sgpr5, implicit $sgpr6_sgpr7, implicit $sgpr8_sgpr9, implicit $sgpr10_sgpr11, implicit $sgpr12, implicit $sgpr13, implicit $sgpr14, implicit $vgpr31
+  ; GFX908-NEXT:   $sgpr30_sgpr31 = G_SI_CALL [[GV]](p0), @external_void_func_i32, csr_amdgpu, implicit $vgpr0, implicit $sgpr0_sgpr1_sgpr2_sgpr3, implicit $sgpr4_sgpr5, implicit $sgpr6_sgpr7, implicit $sgpr8_sgpr9, implicit $sgpr10_sgpr11, implicit $sgpr12, implicit $sgpr13, implicit $sgpr14, implicit $vgpr31
   ; GFX908-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $scc
   ; GFX908-NEXT:   S_ENDPGM 0
   call void @external_void_func_i32(i32 42)
@@ -748,7 +748,7 @@ define amdgpu_kernel void @test_only_workitem_id_y() #0 !reqd_work_group_size !1
   ; GFX900-NEXT:   $sgpr13 = COPY [[COPY13]](s32)
   ; GFX900-NEXT:   $sgpr14 = COPY [[COPY14]](s32)
   ; GFX900-NEXT:   $vgpr31 = COPY [[OR]](s32)
-  ; GFX900-NEXT:   $sgpr30_sgpr31 = G_SI_CALL [[GV]](p0), @external_void_func_i32, csr_amdgpu_highregs, implicit $vgpr0, implicit $sgpr0_sgpr1_sgpr2_sgpr3, implicit $sgpr4_sgpr5, implicit $sgpr6_sgpr7, implicit $sgpr8_sgpr9, implicit $sgpr10_sgpr11, implicit $sgpr12, implicit $sgpr13, implicit $sgpr14, implicit $vgpr31
+  ; GFX900-NEXT:   $sgpr30_sgpr31 = G_SI_CALL [[GV]](p0), @external_void_func_i32, csr_amdgpu, implicit $vgpr0, implicit $sgpr0_sgpr1_sgpr2_sgpr3, implicit $sgpr4_sgpr5, implicit $sgpr6_sgpr7, implicit $sgpr8_sgpr9, implicit $sgpr10_sgpr11, implicit $sgpr12, implicit $sgpr13, implicit $sgpr14, implicit $vgpr31
   ; GFX900-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $scc
   ; GFX900-NEXT:   S_ENDPGM 0
   ; GFX908-LABEL: name: test_only_workitem_id_y
@@ -791,7 +791,7 @@ define amdgpu_kernel void @test_only_workitem_id_y() #0 !reqd_work_group_size !1
   ; GFX908-NEXT:   $sgpr13 = COPY [[COPY13]](s32)
   ; GFX908-NEXT:   $sgpr14 = COPY [[COPY14]](s32)
   ; GFX908-NEXT:   $vgpr31 = COPY [[OR]](s32)
-  ; GFX908-NEXT:   $sgpr30_sgpr31 = G_SI_CALL [[GV]](p0), @external_void_func_i32, csr_amdgpu_highregs, implicit $vgpr0, implicit $sgpr0_sgpr1_sgpr2_sgpr3, implicit $sgpr4_sgpr5, implicit $sgpr6_sgpr7, implicit $sgpr8_sgpr9, implicit $sgpr10_sgpr11, implicit $sgpr12, implicit $sgpr13, implicit $sgpr14, implicit $vgpr31
+  ; GFX908-NEXT:   $sgpr30_sgpr31 = G_SI_CALL [[GV]](p0), @external_void_func_i32, csr_amdgpu, implicit $vgpr0, implicit $sgpr0_sgpr1_sgpr2_sgpr3, implicit $sgpr4_sgpr5, implicit $sgpr6_sgpr7, implicit $sgpr8_sgpr9, implicit $sgpr10_sgpr11, implicit $sgpr12, implicit $sgpr13, implicit $sgpr14, implicit $vgpr31
   ; GFX908-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $scc
   ; GFX908-NEXT:   S_ENDPGM 0
   call void @external_void_func_i32(i32 42)
@@ -839,7 +839,7 @@ define amdgpu_kernel void @test_only_workitem_id_z() #0 !reqd_work_group_size !2
   ; GFX900-NEXT:   $sgpr13 = COPY [[COPY13]](s32)
   ; GFX900-NEXT:   $sgpr14 = COPY [[COPY14]](s32)
   ; GFX900-NEXT:   $vgpr31 = COPY [[OR]](s32)
-  ; GFX900-NEXT:   $sgpr30_sgpr31 = G_SI_CALL [[GV]](p0), @external_void_func_i32, csr_amdgpu_highregs, implicit $vgpr0, implicit $sgpr0_sgpr1_sgpr2_sgpr3, implicit $sgpr4_sgpr5, implicit $sgpr6_sgpr7, implicit $sgpr8_sgpr9, implicit $sgpr10_sgpr11, implicit $sgpr12, implicit $sgpr13, implicit $sgpr14, implicit $vgpr31
+  ; GFX900-NEXT:   $sgpr30_sgpr31 = G_SI_CALL [[GV]](p0), @external_void_func_i32, csr_amdgpu, implicit $vgpr0, implicit $sgpr0_sgpr1_sgpr2_sgpr3, implicit $sgpr4_sgpr5, implicit $sgpr6_sgpr7, implicit $sgpr8_sgpr9, implicit $sgpr10_sgpr11, implicit $sgpr12, implicit $sgpr13, implicit $sgpr14, implicit $vgpr31
   ; GFX900-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $scc
   ; GFX900-NEXT:   S_ENDPGM 0
   ; GFX908-LABEL: name: test_only_workitem_id_z
@@ -882,7 +882,7 @@ define amdgpu_kernel void @test_only_workitem_id_z() #0 !reqd_work_group_size !2
   ; GFX908-NEXT:   $sgpr13 = COPY [[COPY13]](s32)
   ; GFX908-NEXT:   $sgpr14 = COPY [[COPY14]](s32)
   ; GFX908-NEXT:   $vgpr31 = COPY [[OR]](s32)
-  ; GFX908-NEXT:   $sgpr30_sgpr31 = G_SI_CALL [[GV]](p0), @external_void_func_i32, csr_amdgpu_highregs, implicit $vgpr0, implicit $sgpr0_sgpr1_sgpr2_sgpr3, implicit $sgpr4_sgpr5, implicit $sgpr6_sgpr7, implicit $sgpr8_sgpr9, implicit $sgpr10_sgpr11, implicit $sgpr12, implicit $sgpr13, implicit $sgpr14, implicit $vgpr31
+  ; GFX908-NEXT:   $sgpr30_sgpr31 = G_SI_CALL [[GV]](p0), @external_void_func_i32, csr_amdgpu, implicit $vgpr0, implicit $sgpr0_sgpr1_sgpr2_sgpr3, implicit $sgpr4_sgpr5, implicit $sgpr6_sgpr7, implicit $sgpr8_sgpr9, implicit $sgpr10_sgpr11, implicit $sgpr12, implicit $sgpr13, implicit $sgpr14, implicit $vgpr31
   ; GFX908-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $scc
   ; GFX908-NEXT:   S_ENDPGM 0
   call void @external_void_func_i32(i32 42)
@@ -931,7 +931,7 @@ define amdgpu_kernel void @test_only_workitem_id_xy() #0 !reqd_work_group_size !
   ; GFX900-NEXT:   $sgpr13 = COPY [[COPY14]](s32)
   ; GFX900-NEXT:   $sgpr14 = COPY [[COPY15]](s32)
   ; GFX900-NEXT:   $vgpr31 = COPY [[OR]](s32)
-  ; GFX900-NEXT:   $sgpr30_sgpr31 = G_SI_CALL [[GV]](p0), @external_void_func_i32, csr_amdgpu_highregs, implicit $vgpr0, implicit $sgpr0_sgpr1_sgpr2_sgpr3, implicit $sgpr4_sgpr5, implicit $sgpr6_sgpr7, implicit $sgpr8_sgpr9, implicit $sgpr10_sgpr11, implicit $sgpr12, implicit $sgpr13, implicit $sgpr14, implicit $vgpr31
+  ; GFX900-NEXT:   $sgpr30_sgpr31 = G_SI_CALL [[GV]](p0), @external_void_func_i32, csr_amdgpu, implicit $vgpr0, implicit $sgpr0_sgpr1_sgpr2_sgpr3, implicit $sgpr4_sgpr5, implicit $sgpr6_sgpr7, implicit $sgpr8_sgpr9, implicit $sgpr10_sgpr11, implicit $sgpr12, implicit $sgpr13, implicit $sgpr14, implicit $vgpr31
   ; GFX900-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $scc
   ; GFX900-NEXT:   S_ENDPGM 0
   ; GFX908-LABEL: name: test_only_workitem_id_xy
@@ -975,7 +975,7 @@ define amdgpu_kernel void @test_only_workitem_id_xy() #0 !reqd_work_group_size !
   ; GFX908-NEXT:   $sgpr13 = COPY [[COPY14]](s32)
   ; GFX908-NEXT:   $sgpr14 = COPY [[COPY15]](s32)
   ; GFX908-NEXT:   $vgpr31 = COPY [[OR]](s32)
-  ; GFX908-NEXT:   $sgpr30_sgpr31 = G_SI_CALL [[GV]](p0), @external_void_func_i32, csr_amdgpu_highregs, implicit $vgpr0, implicit $sgpr0_sgpr1_sgpr2_sgpr3, implicit $sgpr4_sgpr5, implicit $sgpr6_sgpr7, implicit $sgpr8_sgpr9, implicit $sgpr10_sgpr11, implicit $sgpr12, implicit $sgpr13, implicit $sgpr14, implicit $vgpr31
+  ; GFX908-NEXT:   $sgpr30_sgpr31 = G_SI_CALL [[GV]](p0), @external_void_func_i32, csr_amdgpu, implicit $vgpr0, implicit $sgpr0_sgpr1_sgpr2_sgpr3, implicit $sgpr4_sgpr5, implicit $sgpr6_sgpr7, implicit $sgpr8_sgpr9, implicit $sgpr10_sgpr11, implicit $sgpr12, implicit $sgpr13, implicit $sgpr14, implicit $vgpr31
   ; GFX908-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $scc
   ; GFX908-NEXT:   S_ENDPGM 0
   call void @external_void_func_i32(i32 42)
@@ -1028,7 +1028,7 @@ define amdgpu_kernel void @test_only_workitem_id_yz() #0 !reqd_work_group_size !
   ; GFX900-NEXT:   $sgpr13 = COPY [[COPY14]](s32)
   ; GFX900-NEXT:   $sgpr14 = COPY [[COPY15]](s32)
   ; GFX900-NEXT:   $vgpr31 = COPY [[OR1]](s32)
-  ; GFX900-NEXT:   $sgpr30_sgpr31 = G_SI_CALL [[GV]](p0), @external_void_func_i32, csr_amdgpu_highregs, implicit $vgpr0, implicit $sgpr0_sgpr1_sgpr2_sgpr3, implicit $sgpr4_sgpr5, implicit $sgpr6_sgpr7, implicit $sgpr8_sgpr9, implicit $sgpr10_sgpr11, implicit $sgpr12, implicit $sgpr13, implicit $sgpr14, implicit $vgpr31
+  ; GFX900-NEXT:   $sgpr30_sgpr31 = G_SI_CALL [[GV]](p0), @external_void_func_i32, csr_amdgpu, implicit $vgpr0, implicit $sgpr0_sgpr1_sgpr2_sgpr3, implicit $sgpr4_sgpr5, implicit $sgpr6_sgpr7, implicit $sgpr8_sgpr9, implicit $sgpr10_sgpr11, implicit $sgpr12, implicit $sgpr13, implicit $sgpr14, implicit $vgpr31
   ; GFX900-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $scc
   ; GFX900-NEXT:   S_ENDPGM 0
   ; GFX908-LABEL: name: test_only_workitem_id_yz
@@ -1076,7 +1076,7 @@ define amdgpu_kernel void @test_only_workitem_id_yz() #0 !reqd_work_group_size !
   ; GFX908-NEXT:   $sgpr13 = COPY [[COPY14]](s32)
   ; GFX908-NEXT:   $sgpr14 = COPY [[COPY15]](s32)
   ; GFX908-NEXT:   $vgpr31 = COPY [[OR1]](s32)
-  ; GFX908-NEXT:   $sgpr30_sgpr31 = G_SI_CALL [[GV]](p0), @external_void_func_i32, csr_amdgpu_highregs, implicit $vgpr0, implicit $sgpr0_sgpr1_sgpr2_sgpr3, implicit $sgpr4_sgpr5, implicit $sgpr6_sgpr7, implicit $sgpr8_sgpr9, implicit $sgpr10_sgpr11, implicit $sgpr12, implicit $sgpr13, implicit $sgpr14, implicit $vgpr31
+  ; GFX908-NEXT:   $sgpr30_sgpr31 = G_SI_CALL [[GV]](p0), @external_void_func_i32, csr_amdgpu, implicit $vgpr0, implicit $sgpr0_sgpr1_sgpr2_sgpr3, implicit $sgpr4_sgpr5, implicit $sgpr6_sgpr7, implicit $sgpr8_sgpr9, implicit $sgpr10_sgpr11, implicit $sgpr12, implicit $sgpr13, implicit $sgpr14, implicit $vgpr31
   ; GFX908-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $scc
   ; GFX908-NEXT:   S_ENDPGM 0
   call void @external_void_func_i32(i32 42)
@@ -1125,7 +1125,7 @@ define amdgpu_kernel void @test_only_workitem_id_xz() #0 !reqd_work_group_size !
   ; GFX900-NEXT:   $sgpr13 = COPY [[COPY14]](s32)
   ; GFX900-NEXT:   $sgpr14 = COPY [[COPY15]](s32)
   ; GFX900-NEXT:   $vgpr31 = COPY [[OR]](s32)
-  ; GFX900-NEXT:   $sgpr30_sgpr31 = G_SI_CALL [[GV]](p0), @external_void_func_i32, csr_amdgpu_highregs, implicit $vgpr0, implicit $sgpr0_sgpr1_sgpr2_sgpr3, implicit $sgpr4_sgpr5, implicit $sgpr6_sgpr7, implicit $sgpr8_sgpr9, implicit $sgpr10_sgpr11, implicit $sgpr12, implicit $sgpr13, implicit $sgpr14, implicit $vgpr31
+  ; GFX900-NEXT:   $sgpr30_sgpr31 = G_SI_CALL [[GV]](p0), @external_void_func_i32, csr_amdgpu, implicit $vgpr0, implicit $sgpr0_sgpr1_sgpr2_sgpr3, implicit $sgpr4_sgpr5, implicit $sgpr6_sgpr7, implicit $sgpr8_sgpr9, implicit $sgpr10_sgpr11, implicit $sgpr12, implicit $sgpr13, implicit $sgpr14, implicit $vgpr31
   ; GFX900-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $scc
   ; GFX900-NEXT:   S_ENDPGM 0
   ; GFX908-LABEL: name: test_only_workitem_id_xz
@@ -1169,7 +1169,7 @@ define amdgpu_kernel void @test_only_workitem_id_xz() #0 !reqd_work_group_size !
   ; GFX908-NEXT:   $sgpr13 = COPY [[COPY14]](s32)
   ; GFX908-NEXT:   $sgpr14 = COPY [[COPY15]](s32)
   ; GFX908-NEXT:   $vgpr31 = COPY [[OR]](s32)
-  ; GFX908-NEXT:   $sgpr30_sgpr31 = G_SI_CALL [[GV]](p0), @external_void_func_i32, csr_amdgpu_highregs, implicit $vgpr0, implicit $sgpr0_sgpr1_sgpr2_sgpr3, implicit $sgpr4_sgpr5, implicit $sgpr6_sgpr7, implicit $sgpr8_sgpr9, implicit $sgpr10_sgpr11, implicit $sgpr12, implicit $sgpr13, implicit $sgpr14, implicit $vgpr31
+  ; GFX908-NEXT:   $sgpr30_sgpr31 = G_SI_CALL [[GV]](p0), @external_void_func_i32, csr_amdgpu, implicit $vgpr0, implicit $sgpr0_sgpr1_sgpr2_sgpr3, implicit $sgpr4_sgpr5, implicit $sgpr6_sgpr7, implicit $sgpr8_sgpr9, implicit $sgpr10_sgpr11, implicit $sgpr12, implicit $sgpr13, implicit $sgpr14, implicit $vgpr31
   ; GFX908-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $scc
   ; GFX908-NEXT:   S_ENDPGM 0
   call void @external_void_func_i32(i32 42)

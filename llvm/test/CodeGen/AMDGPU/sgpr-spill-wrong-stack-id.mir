@@ -40,11 +40,11 @@
 # SHARE: SI_SPILL_V32_SAVE killed $vgpr0, %stack.0, $sgpr32, 0, implicit $exec :: (store (s32) into %stack.0, addrspace 5)
 # SHARE: SI_SPILL_S64_SAVE killed renamable $sgpr4_sgpr5, %stack.1, implicit $exec, implicit $sgpr32 :: (store (s64) into %stack.1, align 4, addrspace 5)
 # SHARE: renamable $sgpr4_sgpr5 = SI_SPILL_S64_RESTORE %stack.1, implicit $exec, implicit $sgpr32 :: (load (s64) from %stack.1, align 4, addrspace 5)
-# SHARE: dead $sgpr30_sgpr31 = SI_CALL killed renamable $sgpr4_sgpr5, @func, csr_amdgpu_highregs, implicit undef $vgpr0
+# SHARE: dead $sgpr30_sgpr31 = SI_CALL killed renamable $sgpr4_sgpr5, @func, csr_amdgpu, implicit undef $vgpr0
 # SHARE: $sgpr32 = SI_SPILL_S32_RESTORE %stack.2, implicit $exec, implicit $sgpr32 :: (load (s32) from %stack.2, addrspace 5)
 # SHARE: $vgpr0 = SI_SPILL_V32_RESTORE %stack.0, $sgpr32, 0, implicit $exec :: (load (s32) from %stack.0, addrspace 5)
 # SHARE: renamable $sgpr4_sgpr5 = SI_SPILL_S64_RESTORE %stack.1, implicit $exec, implicit $sgpr32 :: (load (s64) from %stack.1, align 4, addrspace 5)
-# SHARE: dead $sgpr30_sgpr31 = SI_CALL killed renamable $sgpr4_sgpr5, @func, csr_amdgpu_highregs, implicit $vgpr0
+# SHARE: dead $sgpr30_sgpr31 = SI_CALL killed renamable $sgpr4_sgpr5, @func, csr_amdgpu, implicit $vgpr0
 # SHARE:  $sgpr32 = SI_SPILL_S32_RESTORE %stack.2, implicit $exec, implicit $sgpr32 :: (load (s32) from %stack.2, addrspace 5)
 
 # NOSHARE: stack:
@@ -65,12 +65,12 @@
 # NOSHARE: SI_SPILL_V32_SAVE killed $vgpr0, %stack.0, $sgpr32, 0, implicit $exec :: (store (s32) into %stack.0, addrspace 5)
 # NOSHARE: SI_SPILL_S64_SAVE killed renamable $sgpr4_sgpr5, %stack.1, implicit $exec, implicit $sgpr32 :: (store (s64) into %stack.1, align 4, addrspace 5)
 # NOSHARE: renamable $sgpr4_sgpr5 = SI_SPILL_S64_RESTORE %stack.1, implicit $exec, implicit $sgpr32 :: (load (s64) from %stack.1, align 4, addrspace 5)
-# NOSHARE: dead $sgpr30_sgpr31 = SI_CALL killed renamable $sgpr4_sgpr5, @func, csr_amdgpu_highregs, implicit undef $vgpr0
+# NOSHARE: dead $sgpr30_sgpr31 = SI_CALL killed renamable $sgpr4_sgpr5, @func, csr_amdgpu, implicit undef $vgpr0
 # NOSHARE: $sgpr32 = SI_SPILL_S32_RESTORE %stack.2, implicit $exec, implicit $sgpr32 :: (load (s32) from %stack.2, addrspace 5)
 # NOSHARE: SI_SPILL_S32_SAVE $sgpr32, %stack.3, implicit $exec, implicit $sgpr32 :: (store (s32) into %stack.3, addrspace 5)
 # NOSHARE: $vgpr0 = SI_SPILL_V32_RESTORE %stack.0, $sgpr32, 0, implicit $exec :: (load (s32) from %stack.0, addrspace 5)
 # NOSHARE: renamable $sgpr4_sgpr5 = SI_SPILL_S64_RESTORE %stack.1, implicit $exec, implicit $sgpr32 :: (load (s64) from %stack.1, align 4, addrspace 5)
-# NOSHARE: dead $sgpr30_sgpr31 = SI_CALL killed renamable $sgpr4_sgpr5, @func, csr_amdgpu_highregs, implicit $vgpr0
+# NOSHARE: dead $sgpr30_sgpr31 = SI_CALL killed renamable $sgpr4_sgpr5, @func, csr_amdgpu, implicit $vgpr0
 # NOSHARE: $sgpr32 = SI_SPILL_S32_RESTORE %stack.3, implicit $exec, implicit $sgpr32 :: (load (s32) from %stack.3, addrspace 5)
 
 ...
@@ -90,13 +90,13 @@ body:             |
     %2:vgpr_32 = FLAT_LOAD_DWORD %1, 0, 0, implicit $exec, implicit $flat_scr
     %3:sreg_64 = SI_PC_ADD_REL_OFFSET target-flags(amdgpu-rel32-lo) @func + 4, target-flags(amdgpu-rel32-hi) @func + 4, implicit-def dead $scc
     ADJCALLSTACKUP 0, 0, implicit-def $scc, implicit-def $sgpr32, implicit $sgpr32, implicit $sgpr32
-    dead $sgpr30_sgpr31 = SI_CALL %3, @func, csr_amdgpu_highregs, implicit undef $vgpr0
+    dead $sgpr30_sgpr31 = SI_CALL %3, @func, csr_amdgpu, implicit undef $vgpr0
     $sgpr32 = COPY %0
     %4:sreg_32_xm0 = COPY $sgpr32
     ADJCALLSTACKDOWN 0, 0, implicit-def $scc, implicit-def $sgpr32, implicit $sgpr32, implicit $sgpr32
     ADJCALLSTACKUP 0, 0, implicit-def $scc, implicit-def $sgpr32, implicit $sgpr32, implicit $sgpr32
     $vgpr0 = COPY %2
-    dead $sgpr30_sgpr31 = SI_CALL %3, @func, csr_amdgpu_highregs, implicit killed $vgpr0
+    dead $sgpr30_sgpr31 = SI_CALL %3, @func, csr_amdgpu, implicit killed $vgpr0
     $sgpr32 = COPY %4
     ADJCALLSTACKDOWN 0, 0, implicit-def $scc, implicit-def $sgpr32, implicit $sgpr32, implicit $sgpr32
 

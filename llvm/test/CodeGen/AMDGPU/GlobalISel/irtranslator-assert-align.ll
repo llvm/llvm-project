@@ -54,7 +54,7 @@ define void @call_result_align_1() {
   ; CHECK-NEXT:   $sgpr13 = COPY [[COPY13]](s32)
   ; CHECK-NEXT:   $sgpr14 = COPY [[COPY14]](s32)
   ; CHECK-NEXT:   $vgpr31 = COPY [[COPY15]](s32)
-  ; CHECK-NEXT:   $sgpr30_sgpr31 = G_SI_CALL [[GV]](p0), @returns_ptr, csr_amdgpu_highregs, implicit $sgpr0_sgpr1_sgpr2_sgpr3, implicit $sgpr4_sgpr5, implicit $sgpr6_sgpr7, implicit $sgpr8_sgpr9, implicit $sgpr10_sgpr11, implicit $sgpr12, implicit $sgpr13, implicit $sgpr14, implicit $vgpr31, implicit-def $vgpr0, implicit-def $vgpr1
+  ; CHECK-NEXT:   $sgpr30_sgpr31 = G_SI_CALL [[GV]](p0), @returns_ptr, csr_amdgpu, implicit $sgpr0_sgpr1_sgpr2_sgpr3, implicit $sgpr4_sgpr5, implicit $sgpr6_sgpr7, implicit $sgpr8_sgpr9, implicit $sgpr10_sgpr11, implicit $sgpr12, implicit $sgpr13, implicit $sgpr14, implicit $vgpr31, implicit-def $vgpr0, implicit-def $vgpr1
   ; CHECK-NEXT:   [[COPY17:%[0-9]+]]:_(s32) = COPY $vgpr0
   ; CHECK-NEXT:   [[COPY18:%[0-9]+]]:_(s32) = COPY $vgpr1
   ; CHECK-NEXT:   [[MV:%[0-9]+]]:_(p1) = G_MERGE_VALUES [[COPY17]](s32), [[COPY18]](s32)
@@ -100,7 +100,7 @@ define void @call_result_align_8() {
   ; CHECK-NEXT:   $sgpr13 = COPY [[COPY13]](s32)
   ; CHECK-NEXT:   $sgpr14 = COPY [[COPY14]](s32)
   ; CHECK-NEXT:   $vgpr31 = COPY [[COPY15]](s32)
-  ; CHECK-NEXT:   $sgpr30_sgpr31 = G_SI_CALL [[GV]](p0), @returns_ptr, csr_amdgpu_highregs, implicit $sgpr0_sgpr1_sgpr2_sgpr3, implicit $sgpr4_sgpr5, implicit $sgpr6_sgpr7, implicit $sgpr8_sgpr9, implicit $sgpr10_sgpr11, implicit $sgpr12, implicit $sgpr13, implicit $sgpr14, implicit $vgpr31, implicit-def $vgpr0, implicit-def $vgpr1
+  ; CHECK-NEXT:   $sgpr30_sgpr31 = G_SI_CALL [[GV]](p0), @returns_ptr, csr_amdgpu, implicit $sgpr0_sgpr1_sgpr2_sgpr3, implicit $sgpr4_sgpr5, implicit $sgpr6_sgpr7, implicit $sgpr8_sgpr9, implicit $sgpr10_sgpr11, implicit $sgpr12, implicit $sgpr13, implicit $sgpr14, implicit $vgpr31, implicit-def $vgpr0, implicit-def $vgpr1
   ; CHECK-NEXT:   [[COPY17:%[0-9]+]]:_(s32) = COPY $vgpr0
   ; CHECK-NEXT:   [[COPY18:%[0-9]+]]:_(s32) = COPY $vgpr1
   ; CHECK-NEXT:   [[MV:%[0-9]+]]:_(p1) = G_MERGE_VALUES [[COPY17]](s32), [[COPY18]](s32)
@@ -147,7 +147,7 @@ define void @declaration_result_align_8() {
   ; CHECK-NEXT:   $sgpr13 = COPY [[COPY13]](s32)
   ; CHECK-NEXT:   $sgpr14 = COPY [[COPY14]](s32)
   ; CHECK-NEXT:   $vgpr31 = COPY [[COPY15]](s32)
-  ; CHECK-NEXT:   $sgpr30_sgpr31 = G_SI_CALL [[GV]](p0), @returns_ptr_align8, csr_amdgpu_highregs, implicit $sgpr0_sgpr1_sgpr2_sgpr3, implicit $sgpr4_sgpr5, implicit $sgpr6_sgpr7, implicit $sgpr8_sgpr9, implicit $sgpr10_sgpr11, implicit $sgpr12, implicit $sgpr13, implicit $sgpr14, implicit $vgpr31, implicit-def $vgpr0, implicit-def $vgpr1
+  ; CHECK-NEXT:   $sgpr30_sgpr31 = G_SI_CALL [[GV]](p0), @returns_ptr_align8, csr_amdgpu, implicit $sgpr0_sgpr1_sgpr2_sgpr3, implicit $sgpr4_sgpr5, implicit $sgpr6_sgpr7, implicit $sgpr8_sgpr9, implicit $sgpr10_sgpr11, implicit $sgpr12, implicit $sgpr13, implicit $sgpr14, implicit $vgpr31, implicit-def $vgpr0, implicit-def $vgpr1
   ; CHECK-NEXT:   [[COPY17:%[0-9]+]]:_(s32) = COPY $vgpr0
   ; CHECK-NEXT:   [[COPY18:%[0-9]+]]:_(s32) = COPY $vgpr1
   ; CHECK-NEXT:   [[MV:%[0-9]+]]:_(p1) = G_MERGE_VALUES [[COPY17]](s32), [[COPY18]](s32)
@@ -192,7 +192,7 @@ define i8 addrspace(1)* @tail_call_assert_align() {
   ; CHECK-NEXT:   $sgpr13 = COPY [[COPY13]](s32)
   ; CHECK-NEXT:   $sgpr14 = COPY [[COPY14]](s32)
   ; CHECK-NEXT:   $vgpr31 = COPY [[COPY15]](s32)
-  ; CHECK-NEXT:   SI_TCRETURN [[GV]](p0), @returns_ptr_align8, 0, csr_amdgpu_highregs, implicit $sgpr0_sgpr1_sgpr2_sgpr3, implicit $sgpr4_sgpr5, implicit $sgpr6_sgpr7, implicit $sgpr8_sgpr9, implicit $sgpr10_sgpr11, implicit $sgpr12, implicit $sgpr13, implicit $sgpr14, implicit $vgpr31
+  ; CHECK-NEXT:   SI_TCRETURN [[GV]](p0), @returns_ptr_align8, 0, csr_amdgpu, implicit $sgpr0_sgpr1_sgpr2_sgpr3, implicit $sgpr4_sgpr5, implicit $sgpr6_sgpr7, implicit $sgpr8_sgpr9, implicit $sgpr10_sgpr11, implicit $sgpr12, implicit $sgpr13, implicit $sgpr14, implicit $vgpr31
 entry:
   %call = tail call i8 addrspace(1)* @returns_ptr_align8()
   ret i8 addrspace(1)* %call
