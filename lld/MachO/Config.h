@@ -94,6 +94,13 @@ public:
   bool match(llvm::StringRef symbolName) const;
 };
 
+enum class SymtabPresence {
+  All,
+  None,
+  SelectivelyIncluded,
+  SelectivelyExcluded,
+};
+
 struct Configuration {
   Symbol *entry = nullptr;
   bool hasReexports = false;
@@ -178,6 +185,9 @@ struct Configuration {
   SymbolPatterns exportedSymbols;
   SymbolPatterns unexportedSymbols;
   SymbolPatterns whyLive;
+
+  SymtabPresence localSymbolsPresence = SymtabPresence::All;
+  SymbolPatterns localSymbolPatterns;
 
   bool zeroModTime = false;
 
