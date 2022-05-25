@@ -103,11 +103,10 @@ MachineBasicBlock *llvm::PeelSingleBlockLoop(LoopPeelDirection Direction,
 
   DebugLoc DL;
   if (Direction == LPD_Front) {
-    Preheader->replaceSuccessor(Loop, NewBB);
+    Preheader->ReplaceUsesOfBlockWith(Loop, NewBB);
     NewBB->addSuccessor(Loop);
     Loop->replacePhiUsesWith(Preheader, NewBB);
-    if (TII->removeBranch(*Preheader) > 0)
-      TII->insertBranch(*Preheader, NewBB, nullptr, {}, DL);
+    Preheader->updateTerminator(Loop);
     TII->removeBranch(*NewBB);
     TII->insertBranch(*NewBB, Loop, nullptr, {}, DL);
   } else {
