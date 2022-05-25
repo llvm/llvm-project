@@ -491,6 +491,7 @@ struct ForOpInterface
     auto newForOp = rewriter.create<scf::ForOp>(
         forOp.getLoc(), forOp.getLowerBound(), forOp.getUpperBound(),
         forOp.getStep(), initArgs);
+    newForOp->setAttrs(forOp->getAttrs());
     ValueRange initArgsRange(initArgs);
     TypeRange initArgsTypes(initArgsRange);
     Block *loopBody = &newForOp.getLoopBody().front();
