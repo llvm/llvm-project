@@ -25,6 +25,13 @@ class WatchpointIgnoreCountTestCase(TestBase):
         self.line = line_number(
             self.source, '// Set break point at this line.')
 
+    # on arm64 targets, lldb has incorrect hit-count / ignore-counts
+    # for watchpoints when they are hit with multiple threads at
+    # the same time.  Tracked as llvm.org/pr49433
+    # or rdar://93863107 inside Apple.
+    def affected_by_radar_93863107(self):
+        return (self.getArchitecture() in ['arm64', 'arm64e']) and self.platformIsDarwin()
+
     # Read-write watchpoints not supported on SystemZ
     @expectedFailureAll(archs=['s390x'])
     def test_set_watch_ignore_count(self):
@@ -87,5 +94,6 @@ class WatchpointIgnoreCountTestCase(TestBase):
         # Verify some vital statistics.
         self.assertTrue(watchpoint)
         self.assertEqual(watchpoint.GetWatchSize(), 4)
-        self.assertEqual(watchpoint.GetHitCount(), 2)
+        if not self.affected_by_radar_93863107():
+          self.assertEqual(watchpoint.GetHitCount(), 2)
         print(watchpoint)
