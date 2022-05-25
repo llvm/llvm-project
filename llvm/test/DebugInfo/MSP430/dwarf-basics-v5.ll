@@ -98,7 +98,7 @@
 
 ; CHECK:      .debug_aranges contents:
 ; CHECK-NEXT: Address Range Header: length = 0x{{.*}}, format = DWARF32, version = 0x0002, cu_offset = 0x00000000, addr_size = 0x02, seg_size = 0x00
-; CHECK-NEXT: [0x0000, 0x0006)
+; CHECK-NEXT: [0x0000, 0x0001)
 
 ; CHECK:      .debug_addr contents:
 ; CHECK-NEXT: Address table header: length = 0x{{.*}}, format = DWARF32, version = 0x0005, addr_size = 0x02, seg_size = 0x00
