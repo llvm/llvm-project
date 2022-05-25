@@ -19,6 +19,19 @@ define i8 @trunc_lshr_trunc(i64 %a) {
   ret i8 %d
 }
 
+define <2 x i8> @trunc_shl_trunc(<2 x i64> %a) {
+; CHECK-LABEL: @trunc_shl_trunc(
+; CHECK-NEXT:    [[B:%.*]] = trunc <2 x i64> [[A:%.*]] to <2 x i32>
+; CHECK-NEXT:    [[C:%.*]] = shl <2 x i32> [[B]], <i32 9, i32 7>
+; CHECK-NEXT:    [[D:%.*]] = trunc <2 x i32> [[C]] to <2 x i8>
+; CHECK-NEXT:    ret <2 x i8> [[D]]
+;
+  %b = trunc <2 x i64> %a to <2 x i32>
+  %c = shl <2 x i32> %b, <i32 9, i32 7>
+  %d = trunc <2 x i32> %c to <2 x i8>
+  ret <2 x i8> %d
+}
+
 define <2 x i8> @trunc_lshr_trunc_uniform(<2 x i64> %a) {
 ; CHECK-LABEL: @trunc_lshr_trunc_uniform(
 ; CHECK-NEXT:    [[C1:%.*]] = lshr <2 x i64> [[A:%.*]], <i64 8, i64 8>
