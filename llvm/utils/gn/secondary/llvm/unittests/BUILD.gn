@@ -93,6 +93,7 @@ group("unittests") {
   }
   if (llvm_build_X86) {
     deps += [
+      "MC/X86:X86MCTests",
       "Target/X86:X86Tests",
       "tools/llvm-exegesis/X86:LLVMExegesisX86Tests",
     ]
