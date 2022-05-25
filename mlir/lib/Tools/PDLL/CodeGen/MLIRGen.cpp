@@ -444,7 +444,15 @@ Value CodeGen::genExprImpl(const ast::MemberAccessExpr *expr) {
 
     assert(opType.getName() && "expected valid operation name");
     const ods::Operation *odsOp = odsContext.lookupOperation(*opType.getName());
-    assert(odsOp && "expected valid ODS operation information");
+
+    if (!odsOp) {
+      assert(llvm::isDigit(name[0]) && "unregistered op only allows numeric indexing");
+      unsigned resultIndex;
+      name.getAsInteger(/*Radix=*/10, resultIndex);
+      IntegerAttr index = builder.getI32IntegerAttr(resultIndex);
+      return builder.create<pdl::ResultOp>(loc, genType(expr->getType()),
+                                            parentExprs[0], index);
+    }
 
     // Find the result with the member name or by index.
     ArrayRef<ods::OperandOrResult> results = odsOp->getResults();
