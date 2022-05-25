@@ -406,9 +406,9 @@ unsigned DWARFVerifier::verifyIndex(StringRef Name,
   DataExtractor D(IndexStr, DCtx.isLittleEndian(), 0);
   if (!Index.parse(D))
     return 1;
-  IntervalMap<uint32_t, uint64_t>::Allocator Alloc;
-  std::vector<IntervalMap<uint32_t, uint64_t>> Sections(
-      Index.getColumnKinds().size(), IntervalMap<uint32_t, uint64_t>(Alloc));
+  using MapType = IntervalMap<uint32_t, uint64_t>;
+  MapType::Allocator Alloc;
+  std::vector<std::unique_ptr<MapType>> Sections(Index.getColumnKinds().size());
   for (const DWARFUnitIndex::Entry &E : Index.getRows()) {
     uint64_t Sig = E.getSignature();
     if (!E.getContributions())
@@ -421,7 +421,9 @@ unsigned DWARFVerifier::verifyIndex(StringRef Name,
       int Col = E.index();
       if (SC.Length == 0)
         continue;
-      auto &M = Sections[Col];
+      if (!Sections[Col])
+        Sections[Col] = std::make_unique<MapType>(Alloc);
+      auto &M = *Sections[Col];
       auto I = M.find(SC.Offset);
       if (I != M.end() && I.start() < (SC.Offset + SC.Length)) {
         error() << llvm::formatv(
