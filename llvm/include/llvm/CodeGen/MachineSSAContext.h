@@ -28,8 +28,6 @@ template <typename, bool> class DominatorTreeBase;
 
 inline auto successors(MachineBasicBlock *BB) { return BB->successors(); }
 inline auto predecessors(MachineBasicBlock *BB) { return BB->predecessors(); }
-inline unsigned succ_size(MachineBasicBlock *BB) { return BB->succ_size(); }
-inline unsigned pred_size(MachineBasicBlock *BB) { return BB->pred_size(); }
 
 template <> class GenericSSAContext<MachineFunction> {
   const MachineRegisterInfo *RegInfo = nullptr;
