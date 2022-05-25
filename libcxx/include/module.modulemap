@@ -3,7 +3,6 @@
 // include cycle.
 module std_config [system] [extern_c] {
   header "__config"
-  header "__config_site"
   export *
 }
 
@@ -370,7 +369,6 @@ module std [system] {
     export *
   }
   module barrier {
-    requires cplusplus14
     header "barrier"
     export *
   }
@@ -698,7 +696,6 @@ module std [system] {
     }
   }
   module latch {
-    requires cplusplus14
     header "latch"
     export *
   }
@@ -906,7 +903,6 @@ module std [system] {
     export *
   }
   module semaphore {
-    requires cplusplus14
     header "semaphore"
     export *
   }
