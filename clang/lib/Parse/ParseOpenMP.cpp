@@ -2488,6 +2488,16 @@ StmtResult Parser::ParseOpenMPDeclarativeOrExecutableDirective(
   bool HasAssociatedStatement = true;
 
   switch (DKind) {
+  case OMPD_nothing:
+    if ((StmtCtx & ParsedStmtContext::AllowStandaloneOpenMPDirectives) ==
+        ParsedStmtContext())
+      Diag(Tok, diag::err_omp_immediate_directive)
+        << getOpenMPDirectiveName(DKind) << 0;
+    ConsumeToken();
+    skipUntilPragmaOpenMPEnd(DKind);
+    if (Tok.is(tok::annot_pragma_openmp_end))
+      ConsumeAnnotationToken();
+    break;
   case OMPD_metadirective: {
     ConsumeToken();
     SmallVector<VariantMatchInfo, 4> VMIs;
@@ -3234,6 +3244,7 @@ OMPClause *Parser::ParseOpenMPClause(OpenMPDirectiveKind DKind,
   case OMPC_write:
   case OMPC_capture:
   case OMPC_compare:
+  case OMPC_fail:
   case OMPC_seq_cst:
   case OMPC_acq_rel:
   case OMPC_acquire:
@@ -3620,6 +3631,45 @@ OMPClause *Parser::ParseOpenMPSimpleClause(OpenMPClauseKind Kind,
       Val.getValue().Loc, Val.getValue().RLoc);
 }
 
+OMPClause *Parser::ParseOpenMPFailClause(OMPClause *Clause) {
+
+  OMPFailClause *FailClause = static_cast<OMPFailClause *>(Clause);
+  SourceLocation LParenLoc;
+  if (Tok.is(tok::l_paren)) {
+    LParenLoc = Tok.getLocation();
+    ConsumeAnyToken();
+  } else {
+    Diag(diag::err_expected_lparen_after) << getOpenMPClauseName(OMPC_fail);
+    return Clause;
+  }
+
+
+  OpenMPClauseKind CKind = Tok.isAnnotation()
+				 ? OMPC_unknown
+				 : getOpenMPClauseKind(PP.getSpelling(Tok));
+  if (CKind == OMPC_unknown) {
+    Diag(diag::err_omp_expected_clause) << ("atomic compare fail");
+    return Clause;
+  }
+  OMPClause *MemoryOrderClause = ParseOpenMPClause(CKind, false);
+  SourceLocation MemOrderLoc;
+  // Store Memory Order SubClause for Sema.
+  if (MemoryOrderClause) {
+    MemOrderLoc = Tok.getLocation();
+  }
+
+  if (Tok.is(tok::r_paren)) {
+    FailClause->initFailClause(LParenLoc,MemoryOrderClause,MemOrderLoc);
+    ConsumeAnyToken();
+  } else {
+    const IdentifierInfo *Arg = Tok.getIdentifierInfo();
+    Diag(Tok, diag::err_expected_rparen_after)
+        << (Arg ? Arg->getName() : "atomic compare fail");
+  }
+
+  return Clause;
+}
+
 /// Parsing of OpenMP clauses like 'ordered'.
 ///
 ///    ordered-clause:
@@ -3652,7 +3702,11 @@ OMPClause *Parser::ParseOpenMPClause(OpenMPClauseKind Kind, bool ParseOnly) {
 
   if (ParseOnly)
     return nullptr;
-  return Actions.ActOnOpenMPClause(Kind, Loc, Tok.getLocation());
+  OMPClause *Clause = Actions.ActOnOpenMPClause(Kind, Loc, Tok.getLocation());
+  if (Kind == llvm::omp::Clause::OMPC_fail) {
+    Clause = ParseOpenMPFailClause(Clause);
+  }
+  return Clause;
 }
 
 /// Parsing of OpenMP clauses with single expressions and some additional
