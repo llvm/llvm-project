@@ -30,6 +30,16 @@ class VOP <string opName> {
   string OpName = opName;
 }
 
+// First 13 insts from VOPDY are also VOPDX. DOT2ACC_F32_BF16 is omitted
+defvar VOPDX_Max_Index = 12;
+
+class VOPD_Component<bits<5> OpIn, string vOPDName> {
+  Instruction BaseVOP = !cast<Instruction>(NAME);
+  string VOPDName = "v_dual_" # !substr(vOPDName, 2);
+  bits<5> VOPDOp = OpIn;
+  bit CanBeVOPDX = !le(VOPDOp, VOPDX_Max_Index);
+}
+
 class VOPAnyCommon <dag outs, dag ins, string asm, list<dag> pattern> :
     InstSI <outs, ins, asm, pattern> {
 
@@ -1417,6 +1427,7 @@ include "VOP1Instructions.td"
 include "VOP2Instructions.td"
 include "VOP3Instructions.td"
 include "VOP3PInstructions.td"
+include "VOPDInstructions.td"
 
 
 class VOPInfoTable <string Format> : GenericTable {

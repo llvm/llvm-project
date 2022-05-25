@@ -2074,6 +2074,15 @@ class getAsm32 <bit HasDst, int NumSrcArgs, ValueType DstVT = i32> {
                !if(!eq(NumSrcArgs, 3), src0#src1#src2, "");
 }
 
+class getAsmVOPDPart <int NumSrcArgs, string XorY> {
+  string dst = "$vdst" # XorY;
+  string src0 = ", $src0" # XorY;
+  string src1 = ", $vsrc1" # XorY;
+  string ret = dst #
+               !if(!ge(NumSrcArgs, 1), src0, "") #
+               !if(!ge(NumSrcArgs, 2), src1, "");
+}
+
 // Returns the assembly string for the inputs and outputs of a VOP3
 // instruction.
 class getAsm64 <bit HasDst, int NumSrcArgs, bit HasIntClamp, bit HasModifiers,
@@ -2513,6 +2522,14 @@ class VOPProfile <list<ValueType> _ArgVT, bit _EnableF32SrcMods = 0,
   field dag InsSDWA = getInsSDWA<Src0SDWA, Src1SDWA, NumSrcArgs,
                                  HasSDWAOMod, Src0ModSDWA, Src1ModSDWA,
                                  DstVT>.ret;
+  field dag InsVOPDX = (ins Src0RC32:$src0X, Src1RC32:$vsrc1X);
+  // It is a slight misnomer to use the deferred f32 operand type for non-float
+  // operands, but this operand type will only be used if the other dual
+  // component is FMAAK or FMAMK
+  field dag InsVOPDXDeferred = (ins !if(!eq(Src0VT.Size, 32), VSrc_f32_Deferred, VSrc_f16_Deferred):$src0X, VGPR_32:$vsrc1X);
+  field dag InsVOPDY = (ins Src0RC32:$src0Y, Src1RC32:$vsrc1Y);
+  field dag InsVOPDYDeferred = (ins !if(!eq(Src1VT.Size, 32), VSrc_f32_Deferred, VSrc_f16_Deferred):$src0Y, VGPR_32:$vsrc1Y);
+
 
   field string Asm32 = getAsm32<HasDst, NumSrcArgs, DstVT>.ret;
   field string Asm64 = getAsm64<HasDst, NumSrcArgs, HasIntClamp, HasModifiers, HasOMod, DstVT>.ret;
@@ -2536,6 +2553,8 @@ class VOPProfile <list<ValueType> _ArgVT, bit _EnableF32SrcMods = 0,
   field string AsmVOP3DPP8 = getAsmVOP3DPP8<AsmVOP3DPPBase>.ret;
   field string AsmSDWA = getAsmSDWA<HasDst, NumSrcArgs, DstVT>.ret;
   field string AsmSDWA9 = getAsmSDWA9<HasDst, HasSDWAOMod, NumSrcArgs, DstVT>.ret;
+  field string AsmVOPDX = getAsmVOPDPart<NumSrcArgs, "X">.ret;
+  field string AsmVOPDY = getAsmVOPDPart<NumSrcArgs, "Y">.ret;
   field string TieRegDPP = "$old";
 }
 
