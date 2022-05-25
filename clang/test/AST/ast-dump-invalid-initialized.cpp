@@ -12,10 +12,10 @@ void test() {
   const A a2;
   // CHECK: `-VarDecl {{.*}} a3 'A'
   A a3 = garbage();
+  // CHECK: `-VarDecl {{.*}} a4 'const A &'
+  const A& a4;
 
 
-  // CHECK: `-VarDecl {{.*}} invalid b1 'const A &'
-  const A& b1;
   // CHECK: `-VarDecl {{.*}} invalid b2 'ForwardDecl'
   ForwardDecl b2;
   // CHECK: `-VarDecl {{.*}} invalid b3 'auto'
