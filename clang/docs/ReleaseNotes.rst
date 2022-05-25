@@ -431,7 +431,7 @@ ABI Changes in Clang
   attribute is also specified on the member. Clang historically did perform
   such packing. Clang now matches the gcc behavior (except on Darwin and PS4).
   You can switch back to the old ABI behavior with the flag:
-  ``-fclang-abi-compat=13.0``.
+  ``-fclang-abi-compat=14.0``.
 
 OpenMP Support in Clang
 -----------------------
