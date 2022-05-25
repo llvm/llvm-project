@@ -13,6 +13,11 @@ namespace llvm {
 // Class holding the Flattened Dependency Graph
 class FlattenedDependencyGraph {
 public:
+  ValueMap<Value*, std::vector<Value*>> dependency_map;
+
+  /// Track the last function we run over for printing.
+  const Function *LastF = nullptr;
+
   // Default Constructor
   FlattenedDependencyGraph() = default;
 
@@ -23,17 +28,15 @@ public:
     }
     this->LastF = graph.LastF;
   }
-  ValueMap<Value*, std::vector<Value*>> dependency_map;
+
   void print(raw_ostream &OS) const;
 
-  /// Track the last function we run over for printing.
-  const Function *LastF = nullptr;
 };
 
 // Analysis pass giving out a Flattened version of the Dependency Graph of a
 // function.
 class DependencyGraphFlattenerAnalysis : public AnalysisInfoMixin<DependencyGraphFlattenerAnalysis> {
-  // Making AnalysisInfoMixin friend so it can access members of this class
+  // Making AnalysisInfoMixin friend, so it can access members of this class
   friend AnalysisInfoMixin<DependencyGraphFlattenerAnalysis>;
 
   // Analysis passes require a Key identifying the Analysis pass which is used
@@ -41,7 +44,7 @@ class DependencyGraphFlattenerAnalysis : public AnalysisInfoMixin<DependencyGrap
   static AnalysisKey Key;
 public:
 
-  // Type aliasing FlattenedDependencyGraph as Result as Result is used by the
+  // Type aliasing FlattenedDependencyGraph as Result, as Result is used by the
   // PassManager.
   using Result = FlattenedDependencyGraph;
 
