@@ -283,6 +283,14 @@ namespace ranges {
     requires permutable<iterator_t<R>>
     constexpr borrowed_iterator_t<R> ranges::reverse(R&& r);                                // since C++20
 
+  template<class T, output_iterator<const T&> O, sentinel_for<O> S>
+    constexpr O ranges::fill(O first, S last, const T& value);                              // since C++20
+
+  template<class T, output_range<const T&> R>
+    constexpr borrowed_iterator_t<R> ranges::fill(R&& r, const T& value);                   // since C++20
+
+  template<class T, output_iterator<const T&> O>
+    constexpr O ranges::fill_n(O first, iter_difference_t<O> n, const T& value);            // since C++20
 }
 
     constexpr bool     // constexpr in C++20
@@ -1005,6 +1013,8 @@ template <class BidirectionalIterator, class Compare>
 #include <__algorithm/ranges_copy_n.h>
 #include <__algorithm/ranges_count.h>
 #include <__algorithm/ranges_count_if.h>
+#include <__algorithm/ranges_fill.h>
+#include <__algorithm/ranges_fill_n.h>
 #include <__algorithm/ranges_find.h>
 #include <__algorithm/ranges_find_if.h>
 #include <__algorithm/ranges_find_if_not.h>
