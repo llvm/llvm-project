@@ -438,7 +438,6 @@ Decl *Parser::ParseExportDeclaration() {
     // FIXME: Factor out a ParseExternalDeclarationWithAttrs.
     ParsedAttributes Attrs(AttrFactory);
     MaybeParseCXX11Attributes(Attrs);
-    MaybeParseMicrosoftAttributes(Attrs);
     ParseExternalDeclaration(Attrs);
     return Actions.ActOnFinishExportDecl(getCurScope(), ExportDecl,
                                          SourceLocation());
@@ -458,7 +457,6 @@ Decl *Parser::ParseExportDeclaration() {
          Tok.isNot(tok::eof)) {
     ParsedAttributes Attrs(AttrFactory);
     MaybeParseCXX11Attributes(Attrs);
-    MaybeParseMicrosoftAttributes(Attrs);
     ParseExternalDeclaration(Attrs);
   }
 
