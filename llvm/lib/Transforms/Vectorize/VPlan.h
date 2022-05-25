@@ -30,6 +30,7 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DepthFirstIterator.h"
 #include "llvm/ADT/GraphTraits.h"
+#include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/SmallBitVector.h"
 #include "llvm/ADT/SmallPtrSet.h"
@@ -2513,7 +2514,7 @@ class VPlan {
   bool Value2VPValueEnabled = true;
 
   /// Values used outside the plan.
-  DenseMap<PHINode *, VPLiveOut *> LiveOuts;
+  MapVector<PHINode *, VPLiveOut *> LiveOuts;
 
 public:
   VPlan(VPBlockBase *Entry = nullptr) : Entry(Entry) {
@@ -2705,7 +2706,7 @@ public:
     LiveOuts.erase(PN);
   }
 
-  const DenseMap<PHINode *, VPLiveOut *> &getLiveOuts() const {
+  const MapVector<PHINode *, VPLiveOut *> &getLiveOuts() const {
     return LiveOuts;
   }
 
