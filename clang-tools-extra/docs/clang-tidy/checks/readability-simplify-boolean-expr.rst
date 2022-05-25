@@ -101,6 +101,7 @@ Options
 
    If `true`, :option:`SimplifyDeMorgan` will also transform negated 
    conjunctions and disjunctions where there is no negation on either operand. 
+   This option has no effect if :option:`SimplifyDeMorgan` is `false`.
    Default is `false`.
 
    When Enabled:
