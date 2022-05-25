@@ -4430,6 +4430,14 @@ static std::pair<size_t, size_t> generateKeySubkey(
           hash_value(isa<BinaryOperator>(I)
                          ? I->getType()
                          : cast<CastInst>(I)->getOperand(0)->getType()));
+      // For casts, look through the only operand to improve compile time.
+      if (isa<CastInst>(I)) {
+        std::pair<size_t, size_t> OpVals =
+            generateKeySubkey(I->getOperand(0), TLI, LoadsSubkeyGenerator,
+                              /*=AllowAlternate*/ true);
+        Key = hash_combine(OpVals.first, Key);
+        SubKey = hash_combine(OpVals.first, SubKey);
+      }
     } else if (auto *CI = dyn_cast<CmpInst>(I)) {
       CmpInst::Predicate Pred = CI->getPredicate();
       if (CI->isCommutative())
@@ -4440,13 +4448,15 @@ static std::pair<size_t, size_t> generateKeySubkey(
                             hash_value(CI->getOperand(0)->getType()));
     } else if (auto *Call = dyn_cast<CallInst>(I)) {
       Intrinsic::ID ID = getVectorIntrinsicIDForCall(Call, TLI);
-      if (isTriviallyVectorizable(ID))
+      if (isTriviallyVectorizable(ID)) {
         SubKey = hash_combine(hash_value(I->getOpcode()), hash_value(ID));
-      else if (!VFDatabase(*Call).getMappings(*Call).empty())
+      } else if (!VFDatabase(*Call).getMappings(*Call).empty()) {
         SubKey = hash_combine(hash_value(I->getOpcode()),
                               hash_value(Call->getCalledFunction()));
-      else
+      } else {
+        Key = hash_combine(hash_value(Call), Key);
         SubKey = hash_combine(hash_value(I->getOpcode()), hash_value(Call));
+      }
       for (const CallBase::BundleOpInfo &Op : Call->bundle_op_infos())
         SubKey = hash_combine(hash_value(Op.Begin), hash_value(Op.End),
                               hash_value(Op.Tag), SubKey);
@@ -10640,12 +10650,16 @@ public:
           std::tie(Key, Idx) = generateKeySubkey(
               V, &TLI,
               [&PossibleReducedVals, &DL, &SE](size_t Key, LoadInst *LI) {
-                for (const auto &LoadData : PossibleReducedVals[Key]) {
-                  auto *RLI = cast<LoadInst>(LoadData.second.front().first);
-                  if (getPointersDiff(RLI->getType(), RLI->getPointerOperand(),
-                                      LI->getType(), LI->getPointerOperand(),
-                                      DL, SE, /*StrictCheck=*/true))
-                    return hash_value(RLI->getPointerOperand());
+                auto It = PossibleReducedVals.find(Key);
+                if (It != PossibleReducedVals.end()) {
+                  for (const auto &LoadData : It->second) {
+                    auto *RLI = cast<LoadInst>(LoadData.second.front().first);
+                    if (getPointersDiff(RLI->getType(),
+                                        RLI->getPointerOperand(), LI->getType(),
+                                        LI->getPointerOperand(), DL, SE,
+                                        /*StrictCheck=*/true))
+                      return hash_value(RLI->getPointerOperand());
+                  }
                 }
                 return hash_value(LI->getPointerOperand());
               },
@@ -10661,12 +10675,15 @@ public:
         std::tie(Key, Idx) = generateKeySubkey(
             TreeN, &TLI,
             [&PossibleReducedVals, &DL, &SE](size_t Key, LoadInst *LI) {
-              for (const auto &LoadData : PossibleReducedVals[Key]) {
-                auto *RLI = cast<LoadInst>(LoadData.second.front().first);
-                if (getPointersDiff(RLI->getType(), RLI->getPointerOperand(),
-                                    LI->getType(), LI->getPointerOperand(), DL,
-                                    SE, /*StrictCheck=*/true))
-                  return hash_value(RLI->getPointerOperand());
+              auto It = PossibleReducedVals.find(Key);
+              if (It != PossibleReducedVals.end()) {
+                for (const auto &LoadData : It->second) {
+                  auto *RLI = cast<LoadInst>(LoadData.second.front().first);
+                  if (getPointersDiff(RLI->getType(), RLI->getPointerOperand(),
+                                      LI->getType(), LI->getPointerOperand(),
+                                      DL, SE, /*StrictCheck=*/true))
+                    return hash_value(RLI->getPointerOperand());
+                }
               }
               return hash_value(LI->getPointerOperand());
             },
