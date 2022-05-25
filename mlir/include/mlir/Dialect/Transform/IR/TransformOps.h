@@ -14,6 +14,7 @@
 #include "mlir/IR/OpDefinition.h"
 #include "mlir/IR/OpImplementation.h"
 #include "mlir/IR/SymbolTable.h"
+#include "mlir/Interfaces/ControlFlowInterfaces.h"
 
 #define GET_OP_CLASSES
 #include "mlir/Dialect/Transform/IR/TransformOps.h.inc"
