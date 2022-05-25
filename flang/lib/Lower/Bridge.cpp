@@ -2392,19 +2392,6 @@ private:
     for (const Fortran::lower::CalleeInterface::PassedEntity &arg :
          callee.getPassedArguments())
       mapPassedEntity(arg);
-
-    // Allocate local skeleton instances of dummies from other entry points.
-    // Most of these locals will not survive into final generated code, but
-    // some will.  It is illegal to reference them at run time if they do.
-    for (const Fortran::semantics::Symbol *arg :
-         funit.nonUniversalDummyArguments) {
-      if (lookupSymbol(*arg))
-        continue;
-      mlir::Type type = genType(*arg);
-      // TODO: Account for VALUE arguments (and possibly other variants).
-      type = builder->getRefType(type);
-      addSymbol(*arg, builder->create<fir::UndefOp>(toLocation(), type));
-    }
     if (std::optional<Fortran::lower::CalleeInterface::PassedEntity>
             passedResult = callee.getPassedResult()) {
       mapPassedEntity(*passedResult);
@@ -2491,15 +2478,10 @@ private:
       }
     }
 
-    // If this is a host procedure with host associations, then create the tuple
-    // of pointers for passing to the internal procedures.
-    if (!funit.getHostAssoc().empty())
-      funit.getHostAssoc().hostProcedureBindings(*this, localSymbols);
-
-    /// TODO: should use same mechanism as equivalence?
-    /// One blocking point is character entry returns that need special handling
-    /// since they are not locally allocated but come as argument. CHARACTER(*)
-    /// is not something that fit wells with equivalence lowering.
+    // TODO: should use same mechanism as equivalence?
+    // One blocking point is character entry returns that need special handling
+    // since they are not locally allocated but come as argument. CHARACTER(*)
+    // is not something that fits well with equivalence lowering.
     for (const Fortran::lower::pft::Variable &altResult :
          deferredFuncResultList) {
       if (std::optional<Fortran::lower::CalleeInterface::PassedEntity>
@@ -2509,6 +2491,11 @@ private:
       Fortran::lower::mapSymbolAttributes(*this, altResult, localSymbols,
                                           stmtCtx, primaryFuncResultStorage);
     }
+
+    // If this is a host procedure with host associations, then create the tuple
+    // of pointers for passing to the internal procedures.
+    if (!funit.getHostAssoc().empty())
+      funit.getHostAssoc().hostProcedureBindings(*this, localSymbols);
 
     // Create most function blocks in advance.
     createEmptyBlocks(funit.evaluationList);

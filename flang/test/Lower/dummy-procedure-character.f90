@@ -143,21 +143,6 @@ end subroutine
 !     Test calling character dummy function
 ! -----------------------------------------------------------------------------
 
-! CHECK-LABEL: func @_QPcall_assumed_length
-! CHECK-SAME: %[[VAL_0:.*]]: tuple<!fir.boxproc<() -> ()>, i64> {fir.char_proc}) {
-subroutine call_assumed_length(bar8)
-  character(*) :: bar8
-  external :: bar8
-! CHECK:  %[[VAL_3:.*]] = fir.extract_value %[[VAL_0]], [0 : index] : (tuple<!fir.boxproc<() -> ()>, i64>) -> !fir.boxproc<() -> ()>
-! CHECK:  %[[WAL_2:.*]] = fir.box_addr %[[VAL_3]] : (!fir.boxproc<() -> ()>) -> (() -> ())
-! CHECK:  %[[VAL_4:.*]] = fir.extract_value %[[VAL_0]], [1 : index] : (tuple<!fir.boxproc<() -> ()>, i64>) -> i64
-! CHECK:  %[[VAL_6:.*]] = fir.alloca !fir.char<1,?>(%[[VAL_4]] : i64) {bindc_name = ".result"}
-! CHECK:  %[[VAL_7:.*]] = fir.convert %[[WAL_2]] : (() -> ()) -> ((!fir.ref<!fir.char<1,?>>, index, !fir.ref<i32>) -> !fir.boxchar<1>)
-! CHECK:  %[[VAL_8:.*]] = fir.convert %[[VAL_4]] : (i64) -> index
-! CHECK:  fir.call %[[VAL_7]](%[[VAL_6]], %[[VAL_8]], %{{.*}}) : (!fir.ref<!fir.char<1,?>>, index, !fir.ref<i32>) -> !fir.boxchar<1>
-  call test(bar8(42))
-end subroutine
-
 ! CHECK-LABEL: func @_QPcall_explicit_length
 ! CHECK-SAME: %[[VAL_0:.*]]: tuple<!fir.boxproc<() -> ()>, i64> {fir.char_proc}) {
 subroutine call_explicit_length(bar9)
@@ -194,34 +179,6 @@ subroutine call_explicit_length_with_iface(bar10)
 ! CHECK:  %[[VAL_8:.*]] = fir.convert %[[WAL_1]] : (() -> ()) -> ((!fir.ref<!fir.char<1,?>>, index, !fir.ref<i64>) -> !fir.boxchar<1>)
 ! CHECK:  fir.call %[[VAL_8]](%[[VAL_7]], %[[VAL_5]], %[[VAL_1]]) : (!fir.ref<!fir.char<1,?>>, index, !fir.ref<i64>) -> !fir.boxchar<1>
   call test(bar10(42_8))
-end subroutine
-
-
-! CHECK-LABEL: func @_QPhost(
-! CHECK-SAME:  %[[VAL_0:.*]]: tuple<!fir.boxproc<() -> ()>, i64>
-subroutine host(f)
-  character*(*) :: f
-  external :: f
-  ! CHECK:  %[[VAL_3:.*]] = fir.coordinate_of %[[VAL_1:.*]], %{{.*}} : (!fir.ref<tuple<tuple<!fir.boxproc<() -> ()>, i64>>>, i32) -> !fir.ref<tuple<!fir.boxproc<() -> ()>, i64>>
-  ! CHECK:  fir.store %[[VAL_0]] to %[[VAL_3]] : !fir.ref<tuple<!fir.boxproc<() -> ()>, i64>>
-  ! CHECK: fir.call @_QFhostPintern(%[[VAL_1]])
-  call intern()
-contains
-! CHECK-LABEL: func @_QFhostPintern(
-! CHECK-SAME:  %[[VAL_0:.*]]: !fir.ref<tuple<tuple<!fir.boxproc<() -> ()>, i64>>> {fir.host_assoc})
-  subroutine intern()
-! CHECK:  %[[VAL_1:.*]] = arith.constant 0 : i32
-! CHECK:  %[[VAL_2:.*]] = fir.coordinate_of %[[VAL_0]], %[[VAL_1]] : (!fir.ref<tuple<tuple<!fir.boxproc<() -> ()>, i64>>>, i32) -> !fir.ref<tuple<!fir.boxproc<() -> ()>, i64>>
-! CHECK:  %[[VAL_3:.*]] = fir.load %[[VAL_2]] : !fir.ref<tuple<!fir.boxproc<() -> ()>, i64>>
-! CHECK:  %[[VAL_4:.*]] = fir.extract_value %[[VAL_3]], [0 : index] : (tuple<!fir.boxproc<() -> ()>, i64>) -> !fir.boxproc<() -> ()>
-! CHECK:  %[[WAL_1:.*]] = fir.box_addr %[[VAL_4]] : (!fir.boxproc<() -> ()>) -> (() -> ())
-! CHECK:  %[[VAL_5:.*]] = fir.extract_value %[[VAL_3]], [1 : index] : (tuple<!fir.boxproc<() -> ()>, i64>) -> i64
-! CHECK:  %[[VAL_7:.*]] = fir.alloca !fir.char<1,?>(%[[VAL_5]] : i64) {bindc_name = ".result"}
-! CHECK:  %[[VAL_8:.*]] = fir.convert %[[WAL_1]] : (() -> ()) -> ((!fir.ref<!fir.char<1,?>>, index) -> !fir.boxchar<1>)
-! CHECK:  %[[VAL_9:.*]] = fir.convert %[[VAL_5]] : (i64) -> index
-! CHECK:  fir.call %[[VAL_8]](%[[VAL_7]], %[[VAL_9]]) : (!fir.ref<!fir.char<1,?>>, index) -> !fir.boxchar<1>
-    call test(f())
-  end subroutine
 end subroutine
 
 ! CHECK-LABEL: func @_QPhost2(

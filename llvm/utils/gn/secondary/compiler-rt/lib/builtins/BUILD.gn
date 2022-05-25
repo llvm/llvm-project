@@ -435,9 +435,9 @@ static_library("builtins") {
 
   if (current_cpu == "avr") {
     sources += [
-      "avr/exit.S",
       "avr/divmodhi4.S",
       "avr/divmodqi4.S",
+      "avr/exit.S",
       "avr/mulhi3.S",
       "avr/mulqi3.S",
       "avr/udivmodhi4.S",
