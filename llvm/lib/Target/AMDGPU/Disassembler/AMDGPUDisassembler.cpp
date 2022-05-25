@@ -607,6 +607,9 @@ DecodeStatus AMDGPUDisassembler::getInstruction(MCInst &MI, uint64_t &Size,
   if (Res && (MCII->get(MI.getOpcode()).TSFlags & SIInstrFlags::EXP))
     Res = convertEXPInst(MI);
 
+  if (Res && (MCII->get(MI.getOpcode()).TSFlags & SIInstrFlags::VINTERP))
+    Res = convertVINTERPInst(MI);
+
   if (Res && IsSDWA)
     Res = convertSDWAInst(MI);
 
@@ -644,6 +647,18 @@ DecodeStatus AMDGPUDisassembler::convertEXPInst(MCInst &MI) const {
     // in the GFX11 instruction.
     insertNamedMCOperand(MI, MCOperand::createImm(0), AMDGPU::OpName::vm);
     insertNamedMCOperand(MI, MCOperand::createImm(0), AMDGPU::OpName::compr);
+  }
+  return MCDisassembler::Success;
+}
+
+DecodeStatus AMDGPUDisassembler::convertVINTERPInst(MCInst &MI) const {
+  if (MI.getOpcode() == AMDGPU::V_INTERP_P10_F16_F32_inreg_gfx11 ||
+      MI.getOpcode() == AMDGPU::V_INTERP_P10_RTZ_F16_F32_inreg_gfx11 ||
+      MI.getOpcode() == AMDGPU::V_INTERP_P2_F16_F32_inreg_gfx11 ||
+      MI.getOpcode() == AMDGPU::V_INTERP_P2_RTZ_F16_F32_inreg_gfx11) {
+    // The MCInst has this field that is not directly encoded in the
+    // instruction.
+    insertNamedMCOperand(MI, MCOperand::createImm(0), AMDGPU::OpName::op_sel);
   }
   return MCDisassembler::Success;
 }
