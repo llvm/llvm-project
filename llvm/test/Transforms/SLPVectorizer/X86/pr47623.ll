@@ -33,8 +33,11 @@ define void @foo() {
 ; AVX-NEXT:    ret void
 ;
 ; AVX512-LABEL: @foo(
-; AVX512-NEXT:    [[TMP1:%.*]] = call <2 x i32> @llvm.masked.gather.v2i32.v2p0i32(<2 x i32*> <i32* getelementptr inbounds ([8 x i32], [8 x i32]* @b, i64 0, i64 0), i32* getelementptr inbounds ([8 x i32], [8 x i32]* @b, i64 0, i64 2)>, i32 8, <2 x i1> <i1 true, i1 true>, <2 x i32> undef)
-; AVX512-NEXT:    [[SHUFFLE:%.*]] = shufflevector <2 x i32> [[TMP1]], <2 x i32> poison, <8 x i32> <i32 0, i32 1, i32 0, i32 1, i32 0, i32 1, i32 0, i32 1>
+; AVX512-NEXT:    [[TMP1:%.*]] = load i32, i32* getelementptr inbounds ([8 x i32], [8 x i32]* @b, i64 0, i64 0), align 16
+; AVX512-NEXT:    [[TMP2:%.*]] = load i32, i32* getelementptr inbounds ([8 x i32], [8 x i32]* @b, i64 0, i64 2), align 8
+; AVX512-NEXT:    [[TMP3:%.*]] = insertelement <8 x i32> poison, i32 [[TMP1]], i64 0
+; AVX512-NEXT:    [[TMP4:%.*]] = insertelement <8 x i32> [[TMP3]], i32 [[TMP2]], i64 1
+; AVX512-NEXT:    [[SHUFFLE:%.*]] = shufflevector <8 x i32> [[TMP4]], <8 x i32> poison, <8 x i32> <i32 0, i32 1, i32 0, i32 1, i32 0, i32 1, i32 0, i32 1>
 ; AVX512-NEXT:    store <8 x i32> [[SHUFFLE]], <8 x i32>* bitcast ([8 x i32]* @a to <8 x i32>*), align 16
 ; AVX512-NEXT:    ret void
 ;
