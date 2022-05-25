@@ -1187,7 +1187,8 @@ public:
                         uint64_t Offset = 0,
                         const BinaryFunction *Function = nullptr,
                         bool PrintMCInst = false, bool PrintMemData = false,
-                        bool PrintRelocations = false) const;
+                        bool PrintRelocations = false,
+                        StringRef Endl = "\n") const;
 
   /// Print a range of instructions.
   template <typename Itr>
@@ -1195,10 +1196,11 @@ public:
   printInstructions(raw_ostream &OS, Itr Begin, Itr End, uint64_t Offset = 0,
                     const BinaryFunction *Function = nullptr,
                     bool PrintMCInst = false, bool PrintMemData = false,
-                    bool PrintRelocations = false) const {
+                    bool PrintRelocations = false,
+                    StringRef Endl = "\n") const {
     while (Begin != End) {
       printInstruction(OS, *Begin, Offset, Function, PrintMCInst, PrintMemData,
-                       PrintRelocations);
+                       PrintRelocations, Endl);
       Offset += computeCodeSize(Begin, Begin + 1);
       ++Begin;
     }

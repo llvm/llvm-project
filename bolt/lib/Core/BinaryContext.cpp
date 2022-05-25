@@ -1643,9 +1643,10 @@ void BinaryContext::printInstruction(raw_ostream &OS, const MCInst &Instruction,
                                      uint64_t Offset,
                                      const BinaryFunction *Function,
                                      bool PrintMCInst, bool PrintMemData,
-                                     bool PrintRelocations) const {
+                                     bool PrintRelocations,
+                                     StringRef Endl) const {
   if (MIB->isEHLabel(Instruction)) {
-    OS << "  EH_LABEL: " << *MIB->getTargetSymbol(Instruction) << '\n';
+    OS << "  EH_LABEL: " << *MIB->getTargetSymbol(Instruction) << Endl;
     return;
   }
   OS << format("    %08" PRIx64 ": ", Offset);
@@ -1654,7 +1655,7 @@ void BinaryContext::printInstruction(raw_ostream &OS, const MCInst &Instruction,
     OS << "\t!CFI\t$" << Offset << "\t; ";
     if (Function)
       printCFI(OS, *Function->getCFIFor(Instruction));
-    OS << "\n";
+    OS << Endl;
     return;
   }
   InstPrinter->printInst(&Instruction, 0, "", *STI, OS);
@@ -1718,11 +1719,11 @@ void BinaryContext::printInstruction(raw_ostream &OS, const MCInst &Instruction,
     Function->printRelocations(OS, Offset, Size);
   }
 
-  OS << "\n";
+  OS << Endl;
 
   if (PrintMCInst) {
     Instruction.dump_pretty(OS, InstPrinter.get());
-    OS << "\n";
+    OS << Endl;
   }
 }
 
