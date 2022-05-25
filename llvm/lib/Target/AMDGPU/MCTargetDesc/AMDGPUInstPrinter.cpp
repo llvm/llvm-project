@@ -144,7 +144,7 @@ void AMDGPUInstPrinter::printFlatOffset(const MCInst *MI, unsigned OpNo,
     if (IsFlatSeg) { // Unsigned offset
       printU16ImmDecOperand(MI, OpNo, O);
     } else {         // Signed offset
-      if (AMDGPU::isGFX10Plus(STI)) {
+      if (AMDGPU::isGFX10(STI)) {
         O << formatDec(SignExtend32<12>(MI->getOperand(OpNo).getImm()));
       } else {
         O << formatDec(SignExtend32<13>(MI->getOperand(OpNo).getImm()));
