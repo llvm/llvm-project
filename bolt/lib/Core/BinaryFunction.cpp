@@ -18,6 +18,7 @@
 #include "bolt/Utils/NameResolver.h"
 #include "bolt/Utils/NameShortener.h"
 #include "bolt/Utils/Utils.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/edit_distance.h"
@@ -4446,14 +4447,12 @@ void BinaryFunction::printLoopInfo(raw_ostream &OS) const {
   OS << "\n";
 
   std::stack<BinaryLoop *> St;
-  for (auto I = BLI->begin(), E = BLI->end(); I != E; ++I)
-    St.push(*I);
+  for_each(*BLI, [&](BinaryLoop *L) { St.push(L); });
   while (!St.empty()) {
     BinaryLoop *L = St.top();
     St.pop();
 
-    for (BinaryLoop::iterator I = L->begin(), E = L->end(); I != E; ++I)
-      St.push(*I);
+    for_each(*L, [&](BinaryLoop *Inner) { St.push(Inner); });
 
     if (!hasValidProfile())
       continue;
