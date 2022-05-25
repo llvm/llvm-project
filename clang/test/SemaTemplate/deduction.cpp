@@ -162,6 +162,15 @@ template void e(const float *, int);
 
 } // namespace test4
 
+namespace test5 {
+
+template <bool, int = 0> class a {};
+template <class b> void c(b, b);
+template <bool b> void c(a<b>, a<b>);
+void d() { c(a<true>(), a<true>()); }
+
+} // namespace test5
+
 // Verify that we can deduce enum-typed arguments correctly.
 namespace test14 {
   enum E { E0, E1 };
