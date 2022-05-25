@@ -616,8 +616,7 @@ static StringRef lookupOperationNameFromOpcode(unsigned opcode) {
       INST(Freeze, Freeze), INST(Call, Call),
       // FIXME: select
       // FIXME: vaarg
-      // FIXME: extractelement
-      // FIXME: insertelement
+      INST(ExtractElement, ExtractElement), INST(InsertElement, InsertElement),
       // ShuffleVector is handled specially.
       // InsertValue is handled specially.
       // ExtractValue is handled specially.
@@ -775,7 +774,9 @@ LogicalResult Importer::processInstruction(llvm::Instruction *inst) {
   case llvm::Instruction::IntToPtr:
   case llvm::Instruction::AddrSpaceCast:
   case llvm::Instruction::Freeze:
-  case llvm::Instruction::BitCast: {
+  case llvm::Instruction::BitCast:
+  case llvm::Instruction::ExtractElement:
+  case llvm::Instruction::InsertElement: {
     OperationState state(loc, lookupOperationNameFromOpcode(inst->getOpcode()));
     SmallVector<Value, 4> ops;
     ops.reserve(inst->getNumOperands());
