@@ -206,6 +206,13 @@ Bug Fixes
   statement in clangd (hover over the symbol, jump to definition) as well as in the AST dump.
   This also fixes `issue 55095 <https://github.com/llvm/llvm-project/issues/#55095>`_ as a
   side-effect.
+- When including a PCH from a GCC style directory with multiple alternative PCH
+  files, Clang now requires all defines set on the command line while generating
+  the PCH and when including it to match. This matches GCC's behaviour.
+  Previously Clang would tolerate defines to be set when creating the PCH but
+  missing when used, or vice versa. This makes sure that Clang picks the
+  correct one, where it previously would consider multiple ones as potentially
+  acceptable (and erroneously use whichever one is tried first).
 
 Improvements to Clang's diagnostics
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
