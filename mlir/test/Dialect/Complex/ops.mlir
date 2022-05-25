@@ -77,5 +77,8 @@ func.func @ops(%f: f32) {
   // CHECK: complex.rsqrt %[[C]] : complex<f32>
   %rsqrt = complex.rsqrt %complex : complex<f32>
 
+  // CHECK: complex.atan2 %[[C]], %[[C]] : complex<f32>
+  %atan2 = complex.atan2 %complex, %complex : complex<f32>
+
   return
 }
