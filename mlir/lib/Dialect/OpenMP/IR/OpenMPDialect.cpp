@@ -838,6 +838,9 @@ LogicalResult AtomicWriteOp::verify() {
           "memory-order must not be acq_rel or acquire for atomic writes");
     }
   }
+  if (address().getType().cast<PointerLikeType>().getElementType() !=
+      value().getType())
+    return emitError("address must dereference to value type");
   return verifySynchronizationHint(*this, hint_val());
 }
 
