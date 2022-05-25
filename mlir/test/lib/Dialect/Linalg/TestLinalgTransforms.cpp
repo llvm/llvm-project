@@ -110,8 +110,8 @@ struct TestLinalgTransforms
       llvm::cl::init(false)};
   Option<bool> testSwapSubTensorPadTensor{
       *this, "test-swap-subtensor-padtensor",
-      llvm::cl::desc("Test rewrite of subtensor(pad_tensor) into "
-                     "pad_tensor(subtensor)"),
+      llvm::cl::desc("Test rewrite of subtensor(tensor.pad) into "
+                     "tensor.pad(subtensor)"),
       llvm::cl::init(false)};
   Option<bool> testSplitReduction{
       *this, "test-split-reduction",
