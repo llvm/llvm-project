@@ -163,3 +163,60 @@ define i33 @squared_demanded_3_low_bits(i33 %x) {
   %and = and i33 %mul, 7
   ret i33 %and
 }
+
+; Instcombine should be able to simplify mul operator.
+
+; Scalar tests
+define i64 @scalar_mul_bit_x0_y0(i64 %x, i64 %y) {
+; CHECK-LABEL: @scalar_mul_bit_x0_y0(
+; CHECK-NEXT:    [[AND1:%.*]] = and i64 [[X:%.*]], 1
+; CHECK-NEXT:    [[AND2:%.*]] = and i64 [[Y:%.*]], 1
+; CHECK-NEXT:    [[MUL:%.*]] = mul nuw nsw i64 [[AND1]], [[AND2]]
+; CHECK-NEXT:    ret i64 [[MUL]]
+;
+  %and1 = and i64 %x, 1
+  %and2 = and i64 %y, 1
+  %mul = mul i64 %and1, %and2
+  ret i64 %mul
+}
+
+; Negative test
+define i64 @scalar_mul_bit_x0_y1(i64 %x, i64 %y) {
+; CHECK-LABEL: @scalar_mul_bit_x0_y1(
+; CHECK-NEXT:    [[AND1:%.*]] = and i64 [[X:%.*]], 1
+; CHECK-NEXT:    [[AND2:%.*]] = and i64 [[Y:%.*]], 2
+; CHECK-NEXT:    [[MUL:%.*]] = mul nuw nsw i64 [[AND1]], [[AND2]]
+; CHECK-NEXT:    ret i64 [[MUL]]
+;
+  %and1 = and i64 %x, 1
+  %and2 = and i64 %y, 2
+  %mul = mul i64 %and1, %and2
+  ret i64 %mul
+}
+
+define i64 @scalar_mul_bit_x0_yC(i64 %x, i64 %y, i64 %c) {
+; CHECK-LABEL: @scalar_mul_bit_x0_yC(
+; CHECK-NEXT:    [[AND1:%.*]] = and i64 [[X:%.*]], 1
+; CHECK-NEXT:    [[AND2:%.*]] = and i64 [[Y:%.*]], [[C:%.*]]
+; CHECK-NEXT:    [[MUL:%.*]] = mul nuw i64 [[AND1]], [[AND2]]
+; CHECK-NEXT:    ret i64 [[MUL]]
+;
+  %and1 = and i64 %x, 1
+  %and2 = and i64 %y, %c
+  %mul = mul i64 %and1, %and2
+  ret i64 %mul
+}
+
+; Vector tests
+define <2 x i64> @vector_mul_bit_x0_y0(<2 x i64> %x, <2 x i64> %y) {
+; CHECK-LABEL: @vector_mul_bit_x0_y0(
+; CHECK-NEXT:    [[AND1:%.*]] = and <2 x i64> [[X:%.*]], <i64 1, i64 1>
+; CHECK-NEXT:    [[AND2:%.*]] = and <2 x i64> [[Y:%.*]], <i64 1, i64 1>
+; CHECK-NEXT:    [[MUL:%.*]] = mul nuw nsw <2 x i64> [[AND1]], [[AND2]]
+; CHECK-NEXT:    ret <2 x i64> [[MUL]]
+;
+  %and1 = and <2 x i64> %x, <i64 1, i64 1>
+  %and2 = and <2 x i64> %y, <i64 1, i64 1>
+  %mul = mul <2 x i64> %and1, %and2
+  ret <2 x i64> %mul
+}
