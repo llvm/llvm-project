@@ -348,10 +348,7 @@ bool ExternalFileUnit::Receive(char *data, std::size_t bytes,
     furthestPositionInRecord = furthestAfter;
     return true;
   } else {
-    handler.SignalEnd();
-    if (IsRecordFile() && access != Access::Direct) {
-      endfileRecordNumber = currentRecordNumber;
-    }
+    HitEndOnRead(handler);
     return false;
   }
 }
@@ -384,10 +381,7 @@ const char *ExternalFileUnit::FrameNextInput(
     if (got >= need) {
       return Frame() + at;
     }
-    handler.SignalEnd();
-    if (IsRecordFile() && access != Access::Direct) {
-      endfileRecordNumber = currentRecordNumber;
-    }
+    HitEndOnRead(handler);
   }
   return nullptr;
 }
@@ -422,7 +416,7 @@ bool ExternalFileUnit::BeginReadingRecord(IoErrorHandler &handler) {
         recordLength = openRecl;
       } else {
         recordLength.reset();
-        handler.SignalEnd();
+        HitEndOnRead(handler);
       }
     } else {
       recordLength.reset();
@@ -667,7 +661,7 @@ void ExternalFileUnit::BeginSequentialVariableUnformattedInputRecord(
   const char *error{nullptr};
   if (got < need) {
     if (got == recordOffsetInFrame_) {
-      handler.SignalEnd();
+      HitEndOnRead(handler);
     } else {
       error = "Unformatted variable-length sequential file input failed at "
               "record #%jd (file offset %jd): truncated record header";
@@ -722,7 +716,7 @@ void ExternalFileUnit::BeginVariableFormattedInputRecord(
         recordLength = length;
         unterminatedRecord = true;
       } else {
-        handler.SignalEnd();
+        HitEndOnRead(handler);
       }
       break;
     }
@@ -876,6 +870,13 @@ bool ExternalFileUnit::CheckDirectAccess(IoErrorHandler &handler) {
     }
   }
   return true;
+}
+
+void ExternalFileUnit::HitEndOnRead(IoErrorHandler &handler) {
+  handler.SignalEnd();
+  if (IsRecordFile() && access != Access::Direct) {
+    endfileRecordNumber = currentRecordNumber;
+  }
 }
 
 ChildIo &ExternalFileUnit::PushChildIo(IoStatementState &parent) {

@@ -590,10 +590,10 @@ define void @struct_gather(i32* noalias nocapture %A, %struct.foo* noalias nocap
 ; CHECK-ASM-NEXT:    addi a1, a1, 132
 ; CHECK-ASM-NEXT:    li a2, 1024
 ; CHECK-ASM-NEXT:    li a3, 16
+; CHECK-ASM-NEXT:    vsetivli zero, 8, e32, m1, ta, mu
 ; CHECK-ASM-NEXT:  .LBB8_1: # %vector.body
 ; CHECK-ASM-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-ASM-NEXT:    addi a4, a1, -128
-; CHECK-ASM-NEXT:    vsetivli zero, 8, e32, m1, ta, mu
 ; CHECK-ASM-NEXT:    vlse32.v v8, (a4), a3
 ; CHECK-ASM-NEXT:    vlse32.v v9, (a1), a3
 ; CHECK-ASM-NEXT:    vle32.v v10, (a0)
@@ -706,9 +706,9 @@ define void @gather_unroll(i32* noalias nocapture %A, i32* noalias nocapture rea
 ; CHECK-ASM-NEXT:    li a2, 256
 ; CHECK-ASM-NEXT:    li a3, 64
 ; CHECK-ASM-NEXT:    li a4, 16
+; CHECK-ASM-NEXT:    vsetivli zero, 8, e32, m1, ta, mu
 ; CHECK-ASM-NEXT:  .LBB9_1: # %vector.body
 ; CHECK-ASM-NEXT:    # =>This Inner Loop Header: Depth=1
-; CHECK-ASM-NEXT:    vsetivli zero, 8, e32, m1, ta, mu
 ; CHECK-ASM-NEXT:    vlse32.v v8, (a1), a3
 ; CHECK-ASM-NEXT:    vlse32.v v9, (a0), a4
 ; CHECK-ASM-NEXT:    vadd.vv v8, v9, v8
@@ -818,8 +818,8 @@ define void @gather_of_pointers(i32** noalias nocapture %0, i32** noalias nocapt
 ; CHECK-ASM:       # %bb.0:
 ; CHECK-ASM-NEXT:    li a2, 1024
 ; CHECK-ASM-NEXT:    li a3, 40
-; CHECK-ASM-NEXT:  .LBB10_1: # =>This Inner Loop Header: Depth=1
 ; CHECK-ASM-NEXT:    vsetivli zero, 2, e64, m1, ta, mu
+; CHECK-ASM-NEXT:  .LBB10_1: # =>This Inner Loop Header: Depth=1
 ; CHECK-ASM-NEXT:    vlse64.v v8, (a1), a3
 ; CHECK-ASM-NEXT:    addi a4, a1, 80
 ; CHECK-ASM-NEXT:    vlse64.v v9, (a4), a3
@@ -891,8 +891,8 @@ define void @scatter_of_pointers(i32** noalias nocapture %0, i32** noalias nocap
 ; CHECK-ASM:       # %bb.0:
 ; CHECK-ASM-NEXT:    li a2, 1024
 ; CHECK-ASM-NEXT:    li a3, 40
-; CHECK-ASM-NEXT:  .LBB11_1: # =>This Inner Loop Header: Depth=1
 ; CHECK-ASM-NEXT:    vsetivli zero, 2, e64, m1, ta, mu
+; CHECK-ASM-NEXT:  .LBB11_1: # =>This Inner Loop Header: Depth=1
 ; CHECK-ASM-NEXT:    vle64.v v8, (a1)
 ; CHECK-ASM-NEXT:    addi a4, a1, 16
 ; CHECK-ASM-NEXT:    vle64.v v9, (a4)

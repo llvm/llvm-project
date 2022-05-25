@@ -58,7 +58,7 @@ unwind_backtrace_signal_arch_func unwind_backtrace_signal_arch;
 #endif
 
 uptr Unwind_GetIP(struct _Unwind_Context *ctx) {
-#if defined(__arm__) && !SANITIZER_MAC
+#if defined(__arm__) && !SANITIZER_APPLE
   uptr val;
   _Unwind_VRS_Result res = _Unwind_VRS_Get(ctx, _UVRSC_CORE,
       15 /* r15 = PC */, _UVRSD_UINT32, &val);

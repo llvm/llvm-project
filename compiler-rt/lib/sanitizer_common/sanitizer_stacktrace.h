@@ -33,7 +33,7 @@ static const u32 kStackTraceMax = 255;
 // Fast unwind is the only option on Mac for now; we will need to
 // revisit this macro when slow unwind works on Mac, see
 // https://github.com/google/sanitizers/issues/137
-#if SANITIZER_MAC
+#if SANITIZER_APPLE
 #  define SANITIZER_CAN_SLOW_UNWIND 0
 #else
 # define SANITIZER_CAN_SLOW_UNWIND 1
