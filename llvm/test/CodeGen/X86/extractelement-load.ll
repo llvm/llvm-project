@@ -342,29 +342,29 @@ define i32 @multi_use_volatile_load_scalarization(<4 x i32>* %p) nounwind {
 ; X32-SSE2-LABEL: multi_use_volatile_load_scalarization:
 ; X32-SSE2:       # %bb.0:
 ; X32-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X32-SSE2-NEXT:    movl (%ecx), %eax
 ; X32-SSE2-NEXT:    movdqu (%ecx), %xmm0
 ; X32-SSE2-NEXT:    pcmpeqd %xmm1, %xmm1
+; X32-SSE2-NEXT:    movd %xmm0, %eax
 ; X32-SSE2-NEXT:    psubd %xmm1, %xmm0
 ; X32-SSE2-NEXT:    movdqa %xmm0, (%ecx)
 ; X32-SSE2-NEXT:    retl
 ;
 ; X64-SSSE3-LABEL: multi_use_volatile_load_scalarization:
 ; X64-SSSE3:       # %bb.0:
-; X64-SSSE3-NEXT:    movl (%rdi), %eax
 ; X64-SSSE3-NEXT:    movdqu (%rdi), %xmm0
 ; X64-SSSE3-NEXT:    pcmpeqd %xmm1, %xmm1
+; X64-SSSE3-NEXT:    movd %xmm0, %eax
 ; X64-SSSE3-NEXT:    psubd %xmm1, %xmm0
 ; X64-SSSE3-NEXT:    movdqa %xmm0, (%rdi)
 ; X64-SSSE3-NEXT:    retq
 ;
 ; X64-AVX-LABEL: multi_use_volatile_load_scalarization:
 ; X64-AVX:       # %bb.0:
-; X64-AVX-NEXT:    movl (%rdi), %eax
 ; X64-AVX-NEXT:    vmovdqu (%rdi), %xmm0
 ; X64-AVX-NEXT:    vpcmpeqd %xmm1, %xmm1, %xmm1
-; X64-AVX-NEXT:    vpsubd %xmm1, %xmm0, %xmm0
-; X64-AVX-NEXT:    vmovdqa %xmm0, (%rdi)
+; X64-AVX-NEXT:    vpsubd %xmm1, %xmm0, %xmm1
+; X64-AVX-NEXT:    vmovdqa %xmm1, (%rdi)
+; X64-AVX-NEXT:    vmovd %xmm0, %eax
 ; X64-AVX-NEXT:    retq
   %v = load volatile <4 x i32>, <4 x i32>* %p, align 1
   %v1 = add <4 x i32> %v, <i32 1, i32 1, i32 1, i32 1>
