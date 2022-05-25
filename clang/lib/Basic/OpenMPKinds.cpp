@@ -366,6 +366,20 @@ const char *clang::getOpenMPSimpleClauseTypeName(OpenMPClauseKind Kind,
 #include "clang/Basic/OpenMPKinds.def"
     }
     llvm_unreachable("Invalid OpenMP 'depend' clause type");
+  case OMPC_fail: {
+    OpenMPClauseKind CK = static_cast<OpenMPClauseKind>(Type);
+    switch (CK) {
+    case OMPC_acquire:
+      return "acquire";
+    case OMPC_relaxed:
+      return "relaxed";
+    case OMPC_seq_cst:
+      return "seq_cst";
+    default:
+      return "unknown";
+    }
+    llvm_unreachable("Invalid OpenMP 'fail' clause modifier");
+  }
   case OMPC_device:
     switch (Type) {
     case OMPC_DEVICE_unknown:
@@ -715,6 +729,9 @@ void clang::getOpenMPCaptureRegions(
     break;
   case OMPD_teams_loop:
     CaptureRegions.push_back(OMPD_teams);
+    break;
+  case OMPD_nothing:
+    CaptureRegions.push_back(OMPD_nothing);
     break;
   case OMPD_loop:
     // TODO: 'loop' may require different capture regions depending on the bind

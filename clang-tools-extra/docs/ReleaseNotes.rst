@@ -106,6 +106,10 @@ Improvements to clang-tidy
   means it is advised to use YAML's block style initiated by the pipe character `|` for the `Checks`
   section in order to benefit from the easier syntax that works without commas.
 
+- Fixed a regression introduced in clang-tidy 14.0.0, which prevented NOLINTs
+  from suppressing diagnostics associated with macro arguments. This fixes
+  `Issue 55134 <https://github.com/llvm/llvm-project/issues/55134>`_.
+
 New checks
 ^^^^^^^^^^
 

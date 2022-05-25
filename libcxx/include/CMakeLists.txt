@@ -72,6 +72,8 @@ set(files
   __algorithm/ranges_copy_n.h
   __algorithm/ranges_count.h
   __algorithm/ranges_count_if.h
+  __algorithm/ranges_fill.h
+  __algorithm/ranges_fill_n.h
   __algorithm/ranges_find.h
   __algorithm/ranges_find_if.h
   __algorithm/ranges_find_if_not.h

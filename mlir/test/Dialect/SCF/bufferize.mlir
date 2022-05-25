@@ -30,14 +30,14 @@ func.func @if(%pred: i1, %true_val: tensor<?xf32>, %false_val: tensor<?xf32>) ->
 // CHECK:           %[[MEMREF:.*]] = bufferization.to_memref %[[TENSOR]] : memref<f32>
 // CHECK:           %[[RESULT_MEMREF:.*]] = scf.for %[[VAL_6:.*]] = %[[LB]] to %[[UB]] step %[[STEP]] iter_args(%[[ITER:.*]] = %[[MEMREF]]) -> (memref<f32>) {
 // CHECK:             scf.yield %[[ITER]] : memref<f32>
-// CHECK:           }
+// CHECK:           } {some_attr}
 // CHECK:           %[[VAL_8:.*]] = bufferization.to_tensor %[[VAL_9:.*]] : memref<f32>
 // CHECK:           return %[[VAL_8]] : tensor<f32>
 // CHECK:         }
 func.func @for(%arg0: tensor<f32>, %lb: index, %ub: index, %step: index) -> tensor<f32> {
   %ret = scf.for %iv = %lb to %ub step %step iter_args(%iter = %arg0) -> tensor<f32> {
     scf.yield %iter : tensor<f32>
-  }
+  } {some_attr}
   return %ret : tensor<f32>
 }
 
