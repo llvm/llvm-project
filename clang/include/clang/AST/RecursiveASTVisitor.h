@@ -2841,9 +2841,10 @@ DEF_TRAVERSE_STMT(RequiresExpr, {
       if (!ExprReq->isExprSubstitutionFailure())
         TRY_TO(TraverseStmt(ExprReq->getExpr()));
       auto &RetReq = ExprReq->getReturnTypeRequirement();
-      if (RetReq.isTypeConstraint())
-        TRY_TO(TraverseTemplateParameterListHelper(
-                   RetReq.getTypeConstraintTemplateParameterList()));
+      if (RetReq.isTypeConstraint()) {
+        TRY_TO(TraverseStmt(
+            RetReq.getTypeConstraint()->getImmediatelyDeclaredConstraint()));
+      }
     } else {
       auto *NestedReq = cast<concepts::NestedRequirement>(Req);
       if (!NestedReq->isSubstitutionFailure())
