@@ -1,0 +1,11 @@
+import("//llvm/utils/unittest/unittest.gni")
+
+unittest("X86MCTests") {
+  deps = [
+    "//llvm/lib/MC",
+    "//llvm/lib/MC/MCParser",
+    "//llvm/lib/Support",
+    "//llvm/lib/Target/X86",
+  ]
+  sources = [ "X86MCDisassemblerTest.cpp" ]
+}
