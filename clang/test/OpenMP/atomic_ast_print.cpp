@@ -226,16 +226,6 @@ T foo(T argc) {
   { v = a; if (a < b) { a = b; } }
 #pragma omp atomic compare capture hint(6)
   { v = a == b; if (v) a = c; }
-#pragma omp atomic compare fail(acq_rel)
-  { if (a < c) { a = c; } }
-#pragma omp atomic compare fail(acquire)
-  { if (a < c) { a = c; } }
-#pragma omp atomic compare fail(release)
-  { if (a < c) { a = c; } }
-#pragma omp atomic compare fail(relaxed)
-  { if (a < c) { a = c; } }
-#pragma omp atomic compare fail(seq_cst)
-  { if (a < c) { a = c; } }
 #endif
   return T();
 }
@@ -1109,16 +1099,6 @@ int main(int argc, char **argv) {
   { v = a; if (a < b) { a = b; } }
 #pragma omp atomic compare capture hint(6)
   { v = a == b; if (v) a = c; }
-#pragma omp atomic compare fail(acq_rel)
-  if(a < b) { a = b; }
-#pragma omp atomic compare fail(acquire)
-  if(a < b) { a = b; }
-#pragma omp atomic compare fail(release)
-  if(a < b) { a = b; }
-#pragma omp atomic compare fail(relaxed)
-  if(a < b) { a = b; }
-#pragma omp atomic compare fail(seq_cst)
-  if(a < b) { a = b; }
 #endif
   // CHECK-NEXT: #pragma omp atomic
   // CHECK-NEXT: a++;
@@ -1448,26 +1428,6 @@ int main(int argc, char **argv) {
   // CHECK-51-NEXT: v = a == b;
   // CHECK-51-NEXT: if (v)
   // CHECK-51-NEXT: a = c;
-  // CHECK-51-NEXT: }
-  // CHECK-51-NEXT: #pragma omp atomic compare fail(acquire)
-  // CHECK-51-NEXT: if (a < b) {
-  // CHECK-51-NEXT: a = b;
-  // CHECK-51-NEXT: }
-  // CHECK-51-NEXT: #pragma omp atomic compare fail(acquire)
-  // CHECK-51-NEXT: if (a < b) {
-  // CHECK-51-NEXT: a = b;
-  // CHECK-51-NEXT: }
-  // CHECK-51-NEXT: #pragma omp atomic compare fail(relaxed)
-  // CHECK-51-NEXT: if (a < b) {
-  // CHECK-51-NEXT: a = b;
-  // CHECK-51-NEXT: }
-  // CHECK-51-NEXT: #pragma omp atomic compare fail(relaxed)
-  // CHECK-51-NEXT: if (a < b) {
-  // CHECK-51-NEXT: a = b;
-  // CHECK-51-NEXT: }
-  // CHECK-51-NEXT: #pragma omp atomic compare fail(seq_cst)
-  // CHECK-51-NEXT: if (a < b) {
-  // CHECK-51-NEXT: a = b;
   // CHECK-51-NEXT: }
   // expect-note@+1 {{in instantiation of function template specialization 'foo<int>' requested here}}
   return foo(a);
