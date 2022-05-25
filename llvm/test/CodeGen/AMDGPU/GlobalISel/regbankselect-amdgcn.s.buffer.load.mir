@@ -17,29 +17,27 @@ body:             |
 
     ; FAST-LABEL: name: s_buffer_load_f32_vgpr_offset_cross_bank_copy_add_offset
     ; FAST: liveins: $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr0
-    ; FAST-NEXT: {{  $}}
-    ; FAST-NEXT: [[COPY:%[0-9]+]]:sgpr(<4 x s32>) = COPY $sgpr0_sgpr1_sgpr2_sgpr3
-    ; FAST-NEXT: [[COPY1:%[0-9]+]]:sgpr(s32) = COPY $sgpr0
-    ; FAST-NEXT: [[C:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 256
-    ; FAST-NEXT: [[COPY2:%[0-9]+]]:vgpr(s32) = COPY [[C]](s32)
-    ; FAST-NEXT: [[COPY3:%[0-9]+]]:vgpr(s32) = COPY [[COPY1]](s32)
-    ; FAST-NEXT: [[ADD:%[0-9]+]]:vgpr(s32) = G_ADD [[COPY3]], [[COPY2]]
-    ; FAST-NEXT: [[C1:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 0
-    ; FAST-NEXT: [[C2:%[0-9]+]]:vgpr(s32) = G_CONSTANT i32 0
-    ; FAST-NEXT: [[AMDGPU_BUFFER_LOAD:%[0-9]+]]:vgpr(s32) = G_AMDGPU_BUFFER_LOAD [[COPY]](<4 x s32>), [[C2]](s32), [[COPY3]], [[C1]], 256, 0, 0 :: (dereferenceable invariant load (s32))
-    ; FAST-NEXT: S_ENDPGM 0, implicit [[AMDGPU_BUFFER_LOAD]](s32)
+    ; FAST: [[COPY:%[0-9]+]]:sgpr(<4 x s32>) = COPY $sgpr0_sgpr1_sgpr2_sgpr3
+    ; FAST: [[COPY1:%[0-9]+]]:sgpr(s32) = COPY $sgpr0
+    ; FAST: [[C:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 256
+    ; FAST: [[COPY2:%[0-9]+]]:vgpr(s32) = COPY [[C]](s32)
+    ; FAST: [[COPY3:%[0-9]+]]:vgpr(s32) = COPY [[COPY1]](s32)
+    ; FAST: [[ADD:%[0-9]+]]:vgpr(s32) = G_ADD [[COPY3]], [[COPY2]]
+    ; FAST: [[C1:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 0
+    ; FAST: [[C2:%[0-9]+]]:vgpr(s32) = G_CONSTANT i32 0
+    ; FAST: [[AMDGPU_BUFFER_LOAD:%[0-9]+]]:vgpr(s32) = G_AMDGPU_BUFFER_LOAD [[COPY]](<4 x s32>), [[C2]](s32), [[COPY3]], [[C1]], 256, 0, 0 :: (dereferenceable invariant load (s32))
+    ; FAST: S_ENDPGM 0, implicit [[AMDGPU_BUFFER_LOAD]](s32)
     ; GREEDY-LABEL: name: s_buffer_load_f32_vgpr_offset_cross_bank_copy_add_offset
     ; GREEDY: liveins: $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr0
-    ; GREEDY-NEXT: {{  $}}
-    ; GREEDY-NEXT: [[COPY:%[0-9]+]]:sgpr(<4 x s32>) = COPY $sgpr0_sgpr1_sgpr2_sgpr3
-    ; GREEDY-NEXT: [[COPY1:%[0-9]+]]:sgpr(s32) = COPY $sgpr0
-    ; GREEDY-NEXT: [[C:%[0-9]+]]:vgpr(s32) = G_CONSTANT i32 256
-    ; GREEDY-NEXT: [[COPY2:%[0-9]+]]:vgpr(s32) = COPY [[COPY1]](s32)
-    ; GREEDY-NEXT: [[ADD:%[0-9]+]]:vgpr(s32) = G_ADD [[COPY2]], [[C]]
-    ; GREEDY-NEXT: [[C1:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 0
-    ; GREEDY-NEXT: [[C2:%[0-9]+]]:vgpr(s32) = G_CONSTANT i32 0
-    ; GREEDY-NEXT: [[AMDGPU_BUFFER_LOAD:%[0-9]+]]:vgpr(s32) = G_AMDGPU_BUFFER_LOAD [[COPY]](<4 x s32>), [[C2]](s32), [[COPY2]], [[C1]], 256, 0, 0 :: (dereferenceable invariant load (s32))
-    ; GREEDY-NEXT: S_ENDPGM 0, implicit [[AMDGPU_BUFFER_LOAD]](s32)
+    ; GREEDY: [[COPY:%[0-9]+]]:sgpr(<4 x s32>) = COPY $sgpr0_sgpr1_sgpr2_sgpr3
+    ; GREEDY: [[COPY1:%[0-9]+]]:sgpr(s32) = COPY $sgpr0
+    ; GREEDY: [[C:%[0-9]+]]:vgpr(s32) = G_CONSTANT i32 256
+    ; GREEDY: [[COPY2:%[0-9]+]]:vgpr(s32) = COPY [[COPY1]](s32)
+    ; GREEDY: [[ADD:%[0-9]+]]:vgpr(s32) = G_ADD [[COPY2]], [[C]]
+    ; GREEDY: [[C1:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 0
+    ; GREEDY: [[C2:%[0-9]+]]:vgpr(s32) = G_CONSTANT i32 0
+    ; GREEDY: [[AMDGPU_BUFFER_LOAD:%[0-9]+]]:vgpr(s32) = G_AMDGPU_BUFFER_LOAD [[COPY]](<4 x s32>), [[C2]](s32), [[COPY2]], [[C1]], 256, 0, 0 :: (dereferenceable invariant load (s32))
+    ; GREEDY: S_ENDPGM 0, implicit [[AMDGPU_BUFFER_LOAD]](s32)
     %0:_(<4 x s32>) = COPY $sgpr0_sgpr1_sgpr2_sgpr3
     %1:_(s32) = COPY $sgpr0
     %2:vgpr(s32) = G_CONSTANT i32 256
@@ -59,28 +57,26 @@ body:             |
 
     ; FAST-LABEL: name: s_buffer_load_negative_offset
     ; FAST: liveins: $sgpr0_sgpr1_sgpr2_sgpr3, $vgpr0
-    ; FAST-NEXT: {{  $}}
-    ; FAST-NEXT: [[COPY:%[0-9]+]]:sgpr(<4 x s32>) = COPY $sgpr0_sgpr1_sgpr2_sgpr3
-    ; FAST-NEXT: [[COPY1:%[0-9]+]]:vgpr(s32) = COPY $vgpr0
-    ; FAST-NEXT: [[C:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 -60
-    ; FAST-NEXT: [[COPY2:%[0-9]+]]:vgpr(s32) = COPY [[C]](s32)
-    ; FAST-NEXT: [[ADD:%[0-9]+]]:vgpr(s32) = G_ADD [[COPY1]], [[COPY2]]
-    ; FAST-NEXT: [[C1:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 0
-    ; FAST-NEXT: [[C2:%[0-9]+]]:vgpr(s32) = G_CONSTANT i32 0
-    ; FAST-NEXT: [[AMDGPU_BUFFER_LOAD:%[0-9]+]]:vgpr(s32) = G_AMDGPU_BUFFER_LOAD [[COPY]](<4 x s32>), [[C2]](s32), [[ADD]], [[C1]], 0, 0, 0 :: (dereferenceable invariant load (s32))
-    ; FAST-NEXT: S_ENDPGM 0, implicit [[AMDGPU_BUFFER_LOAD]](s32)
+    ; FAST: [[COPY:%[0-9]+]]:sgpr(<4 x s32>) = COPY $sgpr0_sgpr1_sgpr2_sgpr3
+    ; FAST: [[COPY1:%[0-9]+]]:vgpr(s32) = COPY $vgpr0
+    ; FAST: [[C:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 -60
+    ; FAST: [[COPY2:%[0-9]+]]:vgpr(s32) = COPY [[C]](s32)
+    ; FAST: [[ADD:%[0-9]+]]:vgpr(s32) = G_ADD [[COPY1]], [[COPY2]]
+    ; FAST: [[C1:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 0
+    ; FAST: [[C2:%[0-9]+]]:vgpr(s32) = G_CONSTANT i32 0
+    ; FAST: [[AMDGPU_BUFFER_LOAD:%[0-9]+]]:vgpr(s32) = G_AMDGPU_BUFFER_LOAD [[COPY]](<4 x s32>), [[C2]](s32), [[ADD]], [[C1]], 0, 0, 0 :: (dereferenceable invariant load (s32))
+    ; FAST: S_ENDPGM 0, implicit [[AMDGPU_BUFFER_LOAD]](s32)
     ; GREEDY-LABEL: name: s_buffer_load_negative_offset
     ; GREEDY: liveins: $sgpr0_sgpr1_sgpr2_sgpr3, $vgpr0
-    ; GREEDY-NEXT: {{  $}}
-    ; GREEDY-NEXT: [[COPY:%[0-9]+]]:sgpr(<4 x s32>) = COPY $sgpr0_sgpr1_sgpr2_sgpr3
-    ; GREEDY-NEXT: [[COPY1:%[0-9]+]]:vgpr(s32) = COPY $vgpr0
-    ; GREEDY-NEXT: [[C:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 -60
-    ; GREEDY-NEXT: [[COPY2:%[0-9]+]]:vgpr(s32) = COPY [[C]](s32)
-    ; GREEDY-NEXT: [[ADD:%[0-9]+]]:vgpr(s32) = G_ADD [[COPY1]], [[COPY2]]
-    ; GREEDY-NEXT: [[C1:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 0
-    ; GREEDY-NEXT: [[C2:%[0-9]+]]:vgpr(s32) = G_CONSTANT i32 0
-    ; GREEDY-NEXT: [[AMDGPU_BUFFER_LOAD:%[0-9]+]]:vgpr(s32) = G_AMDGPU_BUFFER_LOAD [[COPY]](<4 x s32>), [[C2]](s32), [[ADD]], [[C1]], 0, 0, 0 :: (dereferenceable invariant load (s32))
-    ; GREEDY-NEXT: S_ENDPGM 0, implicit [[AMDGPU_BUFFER_LOAD]](s32)
+    ; GREEDY: [[COPY:%[0-9]+]]:sgpr(<4 x s32>) = COPY $sgpr0_sgpr1_sgpr2_sgpr3
+    ; GREEDY: [[COPY1:%[0-9]+]]:vgpr(s32) = COPY $vgpr0
+    ; GREEDY: [[C:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 -60
+    ; GREEDY: [[COPY2:%[0-9]+]]:vgpr(s32) = COPY [[C]](s32)
+    ; GREEDY: [[ADD:%[0-9]+]]:vgpr(s32) = G_ADD [[COPY1]], [[COPY2]]
+    ; GREEDY: [[C1:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 0
+    ; GREEDY: [[C2:%[0-9]+]]:vgpr(s32) = G_CONSTANT i32 0
+    ; GREEDY: [[AMDGPU_BUFFER_LOAD:%[0-9]+]]:vgpr(s32) = G_AMDGPU_BUFFER_LOAD [[COPY]](<4 x s32>), [[C2]](s32), [[ADD]], [[C1]], 0, 0, 0 :: (dereferenceable invariant load (s32))
+    ; GREEDY: S_ENDPGM 0, implicit [[AMDGPU_BUFFER_LOAD]](s32)
     %0:_(<4 x s32>) = COPY $sgpr0_sgpr1_sgpr2_sgpr3
     %1:_(s32) = COPY $vgpr0
     %2:_(s32) = G_CONSTANT i32 -60

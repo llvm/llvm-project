@@ -59,9 +59,6 @@ public:
     SmallSet<Register, 4> &SGPROperandRegs,
     MachineRegisterInfo &MRI) const;
 
-  Register buildReadFirstLane(MachineIRBuilder &B, MachineRegisterInfo &MRI,
-                              Register Src) const;
-
   bool executeInWaterfallLoop(MachineIRBuilder &B,
                               MachineInstr &MI,
                               MachineRegisterInfo &MRI,
