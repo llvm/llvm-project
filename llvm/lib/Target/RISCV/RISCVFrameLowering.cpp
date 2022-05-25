@@ -757,8 +757,7 @@ RISCVFrameLowering::getFrameIndexReference(const MachineFunction &MF, int FI,
     // objects to the required alignment.
     if (MFI.getStackID(FI) == TargetStackID::Default) {
       Offset += StackOffset::getFixed(MFI.getStackSize());
-      if (FI < 0)
-        Offset += StackOffset::getFixed(RVFI->getLibCallStackSize());
+      assert(FI >= 0 && "Unhandled negative frame index");
     } else if (MFI.getStackID(FI) == TargetStackID::ScalableVector) {
       // Ensure the base of the RVV stack is correctly aligned: add on the
       // alignment padding.
