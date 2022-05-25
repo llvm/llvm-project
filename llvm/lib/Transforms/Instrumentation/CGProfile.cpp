@@ -39,7 +39,8 @@ addModuleFlags(Module &M,
     Nodes.push_back(MDNode::get(Context, Vals));
   }
 
-  M.addModuleFlag(Module::Append, "CG Profile", MDNode::get(Context, Nodes));
+  M.addModuleFlag(Module::Append, "CG Profile",
+                  MDTuple::getDistinct(Context, Nodes));
   return true;
 }
 
