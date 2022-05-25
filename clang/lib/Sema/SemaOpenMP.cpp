@@ -12026,6 +12026,68 @@ bool OpenMPAtomicCompareCaptureChecker::checkStmt(Stmt *S,
 
   return checkType(ErrorInfo);
 }
+
+class OpenMPAtomicFailChecker {
+
+protected:
+  Sema &SemaRef;
+  ASTContext &Context;
+
+public:
+  // Error descriptor type which will be returned to Sema
+  unsigned int ErrorNo;
+
+  OpenMPAtomicFailChecker(Sema &S) : SemaRef(S), Context(S.getASTContext()) {}
+
+  /// Check if all results conform with spec in terms of lvalue/rvalue
+  /// and scalar type.
+  bool checkSubClause(ArrayRef<OMPClause *> Clauses, SourceLocation *ErrorLoc);
+  /// Return the error descriptor that will guide the error message emission.
+  unsigned getErrorDesc() const { return ErrorNo; }
+};
+
+bool OpenMPAtomicFailChecker::checkSubClause(ArrayRef<OMPClause *> Clauses,
+                                             SourceLocation *ErrorLoc) {
+  int NoOfFails = 0;
+  ErrorNo = 0;
+  SourceLocation ClauseLoc;
+  for (const OMPClause *C : Clauses) {
+    if (C->getClauseKind() == OMPC_fail) {
+      NoOfFails++;
+      const OMPFailClause *FC = static_cast<const OMPFailClause *>(C);
+      const OMPClause *MemOrderC = FC->const_getMemoryOrderClause();
+      /* Clauses contains OMPC_fail and the subclause */
+      if (MemOrderC) {
+        OpenMPClauseKind ClauseKind = MemOrderC->getClauseKind();
+        if ((ClauseKind == OMPC_acq_rel) || (ClauseKind == OMPC_acquire) ||
+            (ClauseKind == OMPC_relaxed) || (ClauseKind == OMPC_release) ||
+            (ClauseKind == OMPC_seq_cst)) {
+          switch(ClauseKind) {
+          case OMPC_acq_rel :
+            ClauseKind = OMPC_acquire;
+            break;
+          case OMPC_release :
+            ClauseKind = OMPC_relaxed;
+            break;
+          default : break;
+          }
+          continue;
+        } else {
+          ErrorNo = diag::err_omp_atomic_fail_wrong_or_no_clauses;
+          *ErrorLoc = MemOrderC->getBeginLoc();
+          continue;
+        }
+      }
+    }
+  }
+  if (NoOfFails > 1) {
+    ErrorNo = diag::err_omp_atomic_fail_extra_clauses;
+    *ErrorLoc = ClauseLoc;
+  }
+
+  return !ErrorNo;
+}
+
 } // namespace
 
 StmtResult Sema::ActOnOpenMPAtomicDirective(ArrayRef<OMPClause *> Clauses,
@@ -12046,6 +12108,8 @@ StmtResult Sema::ActOnOpenMPAtomicDirective(ArrayRef<OMPClause *> Clauses,
   SourceLocation AtomicKindLoc;
   OpenMPClauseKind MemOrderKind = OMPC_unknown;
   SourceLocation MemOrderLoc;
+  llvm::omp::Clause SubClause = OMPC_unknown;
+  SourceLocation SubClauseLoc;
   bool MutexClauseEncountered = false;
   llvm::SmallSet<OpenMPClauseKind, 2> EncounteredAtomicKinds;
   for (const OMPClause *C : Clauses) {
@@ -12072,6 +12136,16 @@ StmtResult Sema::ActOnOpenMPAtomicDirective(ArrayRef<OMPClause *> Clauses,
               << getOpenMPClauseName(AtomicKind);
         }
       }
+      break;
+    }
+    case OMPC_fail: {
+      if (AtomicKind != OMPC_compare) {
+        Diag(C->getBeginLoc(), diag::err_omp_atomic_fail_no_compare)
+            << SourceRange(C->getBeginLoc(), C->getEndLoc());
+        return StmtError();
+      }
+      SubClause = OMPC_fail;
+      SubClauseLoc = C->getBeginLoc();
       break;
     }
     case OMPC_seq_cst:
@@ -12552,6 +12626,17 @@ StmtResult Sema::ActOnOpenMPAtomicDirective(ArrayRef<OMPClause *> Clauses,
       CE = Checker.getCond();
       // We reuse IsXLHSInRHSPart to tell if it is in the form 'x ordop expr'.
       IsXLHSInRHSPart = Checker.isXBinopExpr();
+      if (SubClause == OMPC_fail) {
+        OpenMPAtomicFailChecker Checker(*this);
+        SourceLocation ErrorLoc, NoteLoc;
+        NoteLoc = ErrorLoc = Body->getBeginLoc();
+        ErrorLoc = SubClauseLoc;
+        if (!Checker.checkSubClause(Clauses,&ErrorLoc)) {
+          unsigned ErrorNo = Checker.getErrorDesc();
+          Diag(ErrorLoc, ErrorNo);
+          return StmtError();
+        }
+      }
     }
   }
 
@@ -16491,6 +16576,9 @@ OMPClause *Sema::ActOnOpenMPClause(OpenMPClauseKind Kind,
   case OMPC_compare:
     Res = ActOnOpenMPCompareClause(StartLoc, EndLoc);
     break;
+  case OMPC_fail:
+    Res = ActOnOpenMPFailClause(StartLoc, EndLoc);
+    break;
   case OMPC_seq_cst:
     Res = ActOnOpenMPSeqCstClause(StartLoc, EndLoc);
     break;
@@ -16642,6 +16730,11 @@ OMPClause *Sema::ActOnOpenMPCaptureClause(SourceLocation StartLoc,
 OMPClause *Sema::ActOnOpenMPCompareClause(SourceLocation StartLoc,
                                           SourceLocation EndLoc) {
   return new (Context) OMPCompareClause(StartLoc, EndLoc);
+}
+
+OMPClause *Sema::ActOnOpenMPFailClause(SourceLocation StartLoc,
+                                       SourceLocation EndLoc) {
+  return OMPFailClause::Create(Context, StartLoc, EndLoc);
 }
 
 OMPClause *Sema::ActOnOpenMPSeqCstClause(SourceLocation StartLoc,

@@ -127,6 +127,7 @@ const OMPClauseWithPreInit *OMPClauseWithPreInit::get(const OMPClause *C) {
   case OMPC_update:
   case OMPC_capture:
   case OMPC_compare:
+  case OMPC_fail:
   case OMPC_seq_cst:
   case OMPC_acq_rel:
   case OMPC_acquire:
@@ -220,6 +221,7 @@ const OMPClauseWithPostUpdate *OMPClauseWithPostUpdate::get(const OMPClause *C) 
   case OMPC_update:
   case OMPC_capture:
   case OMPC_compare:
+  case OMPC_fail:
   case OMPC_seq_cst:
   case OMPC_acq_rel:
   case OMPC_acquire:
@@ -409,6 +411,25 @@ OMPUpdateClause *OMPUpdateClause::CreateEmpty(const ASTContext &C,
                  alignof(OMPUpdateClause));
   auto *Clause = new (Mem) OMPUpdateClause(/*IsExtended=*/true);
   Clause->IsExtended = true;
+  return Clause;
+}
+
+OMPFailClause *OMPFailClause::Create(const ASTContext &C,
+                                     SourceLocation StartLoc,
+                                     SourceLocation EndLoc) {
+  void *Mem =
+      C.Allocate(totalSizeToAlloc<SourceLocation, OpenMPClauseKind>(2, 1),
+                 alignof(OMPFailClause));
+  auto *Clause =
+      new (Mem) OMPFailClause(StartLoc, EndLoc);
+  return Clause;
+}
+
+OMPFailClause *OMPFailClause::CreateEmpty(const ASTContext &C) {
+  void *Mem =
+      C.Allocate(totalSizeToAlloc<SourceLocation, OpenMPClauseKind>(2, 1),
+                 alignof(OMPFailClause));
+  auto *Clause = new (Mem) OMPFailClause();
   return Clause;
 }
 
@@ -1845,6 +1866,16 @@ void OMPClausePrinter::VisitOMPCaptureClause(OMPCaptureClause *) {
 
 void OMPClausePrinter::VisitOMPCompareClause(OMPCompareClause *) {
   OS << "compare";
+}
+
+void OMPClausePrinter::VisitOMPFailClause(OMPFailClause *Node) {
+  OS << "fail";
+  if(Node) {
+    OS << "(";
+    OS << getOpenMPSimpleClauseTypeName(Node->getClauseKind(),
+                       static_cast<int>(Node->getMemOrderClauseKind()));
+    OS << ")";
+  }
 }
 
 void OMPClausePrinter::VisitOMPSeqCstClause(OMPSeqCstClause *) {

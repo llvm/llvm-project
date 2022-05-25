@@ -557,6 +557,8 @@ void OMPClauseProfiler::VisitOMPCaptureClause(const OMPCaptureClause *) {}
 
 void OMPClauseProfiler::VisitOMPCompareClause(const OMPCompareClause *) {}
 
+void OMPClauseProfiler::VisitOMPFailClause(const OMPFailClause *) {}
+
 void OMPClauseProfiler::VisitOMPSeqCstClause(const OMPSeqCstClause *) {}
 
 void OMPClauseProfiler::VisitOMPAcqRelClause(const OMPAcqRelClause *) {}

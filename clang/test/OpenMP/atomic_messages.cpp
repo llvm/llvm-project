@@ -958,6 +958,24 @@ int mixed() {
 // expected-error@+1 {{directive '#pragma omp atomic' cannot contain more than one 'capture' clause}}
 #pragma omp atomic compare compare capture capture
   { v = a; if (a > b) a = b; }
+// expected-error@+1 {{expected 'compare' clause with the 'fail' modifier}}
+#pragma omp atomic fail(seq_cst)
+  if(v == a) { v = a; }
+// expected-error@+1 {{expected '(' after 'fail'}}
+#pragma omp atomic compare fail
+  if(v < a) { v = a; }
+// expected-error@+1 {{expected a memory order clause}}
+#pragma omp atomic compare fail(capture)
+  if(v < a) { v = a; }
+ // expected-error@+2 {{expected ')' after 'atomic compare fail'}}
+ // expected-warning@+1 {{extra tokens at the end of '#pragma omp atomic' are ignored}}
+#pragma omp atomic compare fail(seq_cst | acquire)
+  if(v < a) { v = a; }
+// expected-error@+1 {{directive '#pragma omp atomic' cannot contain more than one 'fail' clause}}
+#pragma omp atomic compare fail(relaxed) fail(seq_cst)
+  if(v < a) { v = a; }
+
+
 #endif
   // expected-note@+1 {{in instantiation of function template specialization 'mixed<int>' requested here}}
   return mixed<int>();
