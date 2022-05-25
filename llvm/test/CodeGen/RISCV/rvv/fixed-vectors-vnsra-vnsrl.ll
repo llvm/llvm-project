@@ -18,7 +18,7 @@ define <8 x i8> @vnsra_v8i16_v8i8_scalar(<8 x i16> %x, i16 %y) {
 define <8 x i8> @vnsra_v8i16_v8i8_scalar_sext(<8 x i16> %x, i8 %y) {
 ; CHECK-LABEL: vnsra_v8i16_v8i8_scalar_sext:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a1, zero, e8, mf2, ta, mu
+; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, mu
 ; CHECK-NEXT:    vnsra.wx v8, v8, a0
 ; CHECK-NEXT:    ret
   %insert = insertelement <8 x i8> poison, i8 %y, i8 0
@@ -32,7 +32,7 @@ define <8 x i8> @vnsra_v8i16_v8i8_scalar_sext(<8 x i16> %x, i8 %y) {
 define <8 x i8> @vnsra_v8i16_v8i8_scalar_zext(<8 x i16> %x, i8 %y) {
 ; CHECK-LABEL: vnsra_v8i16_v8i8_scalar_zext:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a1, zero, e8, mf2, ta, mu
+; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, mu
 ; CHECK-NEXT:    vnsra.wx v8, v8, a0
 ; CHECK-NEXT:    ret
   %insert = insertelement <8 x i8> poison, i8 %y, i8 0
@@ -59,7 +59,7 @@ define <4 x i16> @vnsra_v4i32_v4i16_scalar(<4 x i32> %x, i32 %y) {
 define <4 x i16> @vnsra_v4i32_v4i16_scalar_sext(<4 x i32> %x, i16 %y) {
 ; CHECK-LABEL: vnsra_v4i32_v4i16_scalar_sext:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a1, zero, e16, mf2, ta, mu
+; CHECK-NEXT:    vsetivli zero, 4, e16, mf2, ta, mu
 ; CHECK-NEXT:    vnsra.wx v8, v8, a0
 ; CHECK-NEXT:    ret
   %insert = insertelement <4 x i16> poison, i16 %y, i16 0
@@ -73,7 +73,7 @@ define <4 x i16> @vnsra_v4i32_v4i16_scalar_sext(<4 x i32> %x, i16 %y) {
 define <4 x i16> @vnsra_v4i32_v4i16_scalar_zext(<4 x i32> %x, i16 %y) {
 ; CHECK-LABEL: vnsra_v4i32_v4i16_scalar_zext:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a1, zero, e16, mf2, ta, mu
+; CHECK-NEXT:    vsetivli zero, 4, e16, mf2, ta, mu
 ; CHECK-NEXT:    vnsra.wx v8, v8, a0
 ; CHECK-NEXT:    ret
   %insert = insertelement <4 x i16> poison, i16 %y, i16 0
@@ -100,7 +100,7 @@ define <2 x i32> @vnsra_v2i64_v2i32_scalar(<2 x i64> %x, i64 %y) {
 define <2 x i32> @vnsra_v2i64_v2i32_scalar_sext(<2 x i64> %x, i32 %y) {
 ; CHECK-LABEL: vnsra_v2i64_v2i32_scalar_sext:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a1, zero, e32, mf2, ta, mu
+; CHECK-NEXT:    vsetivli zero, 2, e32, mf2, ta, mu
 ; CHECK-NEXT:    vnsra.wx v8, v8, a0
 ; CHECK-NEXT:    ret
   %insert = insertelement <2 x i32> poison, i32 %y, i32 0
@@ -114,7 +114,7 @@ define <2 x i32> @vnsra_v2i64_v2i32_scalar_sext(<2 x i64> %x, i32 %y) {
 define <2 x i32> @vnsra_v2i64_v2i32_scalar_zext(<2 x i64> %x, i32 %y) {
 ; CHECK-LABEL: vnsra_v2i64_v2i32_scalar_zext:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a1, zero, e32, mf2, ta, mu
+; CHECK-NEXT:    vsetivli zero, 2, e32, mf2, ta, mu
 ; CHECK-NEXT:    vnsra.wx v8, v8, a0
 ; CHECK-NEXT:    ret
   %insert = insertelement <2 x i32> poison, i32 %y, i32 0
@@ -174,7 +174,7 @@ define <8 x i8> @vnsrl_v8i16_v8i8_scalar(<8 x i16> %x, i16 %y) {
 define <8 x i8> @vnsrl_v8i16_v8i8_scalar_sext(<8 x i16> %x, i8 %y) {
 ; CHECK-LABEL: vnsrl_v8i16_v8i8_scalar_sext:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a1, zero, e8, mf2, ta, mu
+; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, mu
 ; CHECK-NEXT:    vnsrl.wx v8, v8, a0
 ; CHECK-NEXT:    ret
   %insert = insertelement <8 x i8> poison, i8 %y, i16 0
@@ -188,7 +188,7 @@ define <8 x i8> @vnsrl_v8i16_v8i8_scalar_sext(<8 x i16> %x, i8 %y) {
 define <8 x i8> @vnsrl_v8i16_v8i8_scalar_zext(<8 x i16> %x, i8 %y) {
 ; CHECK-LABEL: vnsrl_v8i16_v8i8_scalar_zext:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a1, zero, e8, mf2, ta, mu
+; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, mu
 ; CHECK-NEXT:    vnsrl.wx v8, v8, a0
 ; CHECK-NEXT:    ret
   %insert = insertelement <8 x i8> poison, i8 %y, i16 0
@@ -215,7 +215,7 @@ define <4 x i16> @vnsrl_v4i32_v4i16_scalar(<4 x i32> %x, i32 %y) {
 define <4 x i16> @vnsrl_v4i32_v4i16_scalar_sext(<4 x i32> %x, i16 %y) {
 ; CHECK-LABEL: vnsrl_v4i32_v4i16_scalar_sext:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a1, zero, e16, mf2, ta, mu
+; CHECK-NEXT:    vsetivli zero, 4, e16, mf2, ta, mu
 ; CHECK-NEXT:    vnsrl.wx v8, v8, a0
 ; CHECK-NEXT:    ret
   %insert = insertelement <4 x i16> poison, i16 %y, i16 0
@@ -229,7 +229,7 @@ define <4 x i16> @vnsrl_v4i32_v4i16_scalar_sext(<4 x i32> %x, i16 %y) {
 define <4 x i16> @vnsrl_v4i32_v4i16_scalar_zext(<4 x i32> %x, i16 %y) {
 ; CHECK-LABEL: vnsrl_v4i32_v4i16_scalar_zext:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a1, zero, e16, mf2, ta, mu
+; CHECK-NEXT:    vsetivli zero, 4, e16, mf2, ta, mu
 ; CHECK-NEXT:    vnsrl.wx v8, v8, a0
 ; CHECK-NEXT:    ret
   %insert = insertelement <4 x i16> poison, i16 %y, i16 0
@@ -256,7 +256,7 @@ define <2 x i32> @vnsrl_v2i64_v2i32_scalar(<2 x i64> %x, i64 %y) {
 define <2 x i32> @vnsrl_v2i64_v2i32_scalar_sext(<2 x i64> %x, i32 %y) {
 ; CHECK-LABEL: vnsrl_v2i64_v2i32_scalar_sext:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a1, zero, e32, mf2, ta, mu
+; CHECK-NEXT:    vsetivli zero, 2, e32, mf2, ta, mu
 ; CHECK-NEXT:    vnsrl.wx v8, v8, a0
 ; CHECK-NEXT:    ret
   %insert = insertelement <2 x i32> poison, i32 %y, i32 0
@@ -270,7 +270,7 @@ define <2 x i32> @vnsrl_v2i64_v2i32_scalar_sext(<2 x i64> %x, i32 %y) {
 define <2 x i32> @vnsrl_v2i64_v2i32_scalar_zext(<2 x i64> %x, i32 %y) {
 ; CHECK-LABEL: vnsrl_v2i64_v2i32_scalar_zext:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a1, zero, e32, mf2, ta, mu
+; CHECK-NEXT:    vsetivli zero, 2, e32, mf2, ta, mu
 ; CHECK-NEXT:    vnsrl.wx v8, v8, a0
 ; CHECK-NEXT:    ret
   %insert = insertelement <2 x i32> poison, i32 %y, i32 0
