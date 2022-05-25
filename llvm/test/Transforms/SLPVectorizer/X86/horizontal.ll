@@ -1463,7 +1463,6 @@ define float @fadd_v4f32_fmf_intersect(float* %p) {
   ret float %add3
 }
 
-; FIXME: Can't preserve no-wrap guarantees with reassociated math.
 ; This must not propagate 'nsw' to a new add instruction.
 
 define void @nsw_propagation_v4i32(i32* %res, i32 %start) {
@@ -1482,7 +1481,7 @@ define void @nsw_propagation_v4i32(i32* %res, i32 %start) {
 ; STORE-LABEL: @nsw_propagation_v4i32(
 ; STORE-NEXT:    [[TMP1:%.*]] = load <4 x i32>, <4 x i32>* bitcast ([32 x i32]* @arr_i32 to <4 x i32>*), align 16
 ; STORE-NEXT:    [[TMP2:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[TMP1]])
-; STORE-NEXT:    [[OP_RDX:%.*]] = add nsw i32 [[TMP2]], [[START:%.*]]
+; STORE-NEXT:    [[OP_RDX:%.*]] = add i32 [[TMP2]], [[START:%.*]]
 ; STORE-NEXT:    store i32 [[OP_RDX]], i32* [[RES:%.*]], align 16
 ; STORE-NEXT:    ret void
 ;

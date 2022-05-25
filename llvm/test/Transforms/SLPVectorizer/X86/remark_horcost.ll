@@ -10,7 +10,7 @@ define i32 @foo(i32* %diff) #0 {
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[INDVARS_IV_NEXT:%.*]], [[FOR_BODY]] ]
-; CHECK-NEXT:    [[A_088:%.*]] = phi i32 [ 0, [[ENTRY]] ], [ [[OP_EXTRA:%.*]], [[FOR_BODY]] ]
+; CHECK-NEXT:    [[A_088:%.*]] = phi i32 [ 0, [[ENTRY]] ], [ [[OP_RDX:%.*]], [[FOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP1:%.*]] = shl i64 [[INDVARS_IV]], 3
 ; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, i32* [[DIFF:%.*]], i64 [[TMP1]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = or i64 [[TMP1]], 4
@@ -24,12 +24,12 @@ define i32 @foo(i32* %diff) #0 {
 ; CHECK-NEXT:    [[TMP8:%.*]] = bitcast i32* [[ARRAYIDX6]] to <4 x i32>*
 ; CHECK-NEXT:    store <4 x i32> [[TMP7]], <4 x i32>* [[TMP8]], align 16
 ; CHECK-NEXT:    [[TMP9:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[TMP7]])
-; CHECK-NEXT:    [[OP_EXTRA]] = add nsw i32 [[TMP9]], [[A_088]]
+; CHECK-NEXT:    [[OP_RDX]] = add i32 [[TMP9]], [[A_088]]
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
 ; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i64 [[INDVARS_IV_NEXT]], 8
 ; CHECK-NEXT:    br i1 [[EXITCOND]], label [[FOR_END:%.*]], label [[FOR_BODY]]
 ; CHECK:       for.end:
-; CHECK-NEXT:    ret i32 [[OP_EXTRA]]
+; CHECK-NEXT:    ret i32 [[OP_RDX]]
 ;
 entry:
   %m2 = alloca [8 x [8 x i32]], align 16
