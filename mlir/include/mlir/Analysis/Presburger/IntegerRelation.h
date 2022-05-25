@@ -24,6 +24,9 @@
 namespace mlir {
 namespace presburger {
 
+class IntegerRelation;
+class IntegerPolyhedron;
+
 /// An IntegerRelation represents the set of points from a PresburgerSpace that
 /// satisfy a list of affine constraints. Affine constraints can be inequalities
 /// or equalities in the form:
@@ -496,6 +499,12 @@ public:
     space.setDimSymbolSeparation(newSymbolCount);
   }
 
+  /// Return a set corresponding to all points in the domain of the relation.
+  IntegerPolyhedron getDomainSet() const;
+
+  /// Return a set corresponding to all points in the range of the relation.
+  IntegerPolyhedron getRangeSet() const;
+
   void print(raw_ostream &os) const;
   void dump() const;
 
@@ -642,6 +651,21 @@ public:
       : IntegerPolyhedron(/*numReservedInequalities=*/0,
                           /*numReservedEqualities=*/0,
                           /*numReservedCols=*/space.getNumIds() + 1, space) {}
+
+  /// Construct a set from an IntegerRelation. The relation should have
+  /// no domain ids.
+  explicit IntegerPolyhedron(const IntegerRelation &rel)
+      : IntegerRelation(rel) {
+    assert(space.getNumDomainIds() == 0 &&
+           "Number of domain id's should be zero in Set kind space.");
+  }
+
+  /// Construct a set from an IntegerRelation, but instead of creating a copy,
+  /// use move constructor. The relation should have no domain ids.
+  explicit IntegerPolyhedron(IntegerRelation &&rel) : IntegerRelation(rel) {
+    assert(space.getNumDomainIds() == 0 &&
+           "Number of domain id's should be zero in Set kind space.");
+  }
 
   /// Return a system with no constraints, i.e., one which is satisfied by all
   /// points.
