@@ -713,14 +713,12 @@ define { i64, i64, i1 } @addcarry_mixed_2x64(i64 %x0, i64 %x1, i64 %y0, i64 %y1)
 ; CHECK-LABEL: addcarry_mixed_2x64:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movq %rdi, %rax
-; CHECK-NEXT:    xorl %edi, %edi
-; CHECK-NEXT:    addq %rdx, %rax
-; CHECK-NEXT:    setb %dil
 ; CHECK-NEXT:    addq %rcx, %rsi
-; CHECK-NEXT:    setb %dl
-; CHECK-NEXT:    subq %rdi, %rsi
+; CHECK-NEXT:    setb %dil
+; CHECK-NEXT:    addq %rdx, %rax
+; CHECK-NEXT:    sbbq $0, %rsi
 ; CHECK-NEXT:    setb %cl
-; CHECK-NEXT:    orb %dl, %cl
+; CHECK-NEXT:    orb %dil, %cl
 ; CHECK-NEXT:    movq %rsi, %rdx
 ; CHECK-NEXT:    retq
   %t0 = call { i64, i1 } @llvm.uadd.with.overflow.i64(i64 %x0, i64 %y0)
