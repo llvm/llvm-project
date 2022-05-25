@@ -726,6 +726,8 @@ TypeSP SymbolFileNativePDB::CreateAndCacheType(PdbTypeSymId type_id) {
   PdbTypeSymId best_decl_id = full_decl_uid ? *full_decl_uid : type_id;
 
   clang::QualType qt = m_ast->GetOrCreateType(best_decl_id);
+  if (qt.isNull())
+    return nullptr;
 
   TypeSP result = CreateType(best_decl_id, m_ast->ToCompilerType(qt));
   if (!result)
