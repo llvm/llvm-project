@@ -1288,9 +1288,10 @@ void RISCVInsertVSETVLI::doLocalPrepass(MachineBasicBlock &MBB) {
 /// Return true if the VL value configured must be equal to the requested one.
 static bool hasFixedResult(const VSETVLIInfo &Info, const RISCVSubtarget &ST) {
   if (!Info.hasAVLImm())
-    // TODO: Could allow VLMAX (e.g. X0), and possibly other registers
-    // by looking at the associated vreg def placement.
-    return false;
+    // VLMAX is always the same value.
+    // TODO: Could extend to other registers by looking at the associated
+    // vreg def placement.
+    return RISCV::X0 == Info.getAVLReg();
 
   if (RISCVII::LMUL_1 != Info.getVLMUL())
     // TODO: Generalize the code below to account for LMUL
