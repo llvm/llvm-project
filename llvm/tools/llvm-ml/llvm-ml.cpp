@@ -208,7 +208,9 @@ int main(int Argc, char **Argv) {
   std::string InputFilename;
   for (auto *Arg : InputArgs.filtered(OPT_INPUT)) {
     std::string ArgString = Arg->getAsString(InputArgs);
-    if (ArgString == "-" || StringRef(ArgString).endswith(".asm")) {
+    StringRef ArgStringRef(ArgString);
+    if (ArgString == "-" || ArgStringRef.endswith(".asm") ||
+        ArgStringRef.endswith(".S")) {
       if (!InputFilename.empty()) {
         WithColor::warning(errs(), ProgName)
             << "does not support multiple assembly files in one command; "
@@ -234,7 +236,7 @@ int main(int Argc, char **Argv) {
           << "does not support multiple assembly files in one command; "
           << "ignoring '" << InputFilename << "'\n";
     }
-    InputFilename = Arg->getAsString(InputArgs);
+    InputFilename = Arg->getValue();
   }
 
   for (auto *Arg : InputArgs.filtered(OPT_unsupported_Group)) {
