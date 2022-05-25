@@ -220,10 +220,21 @@ void __kmpc_parallel_51(IdentTy *ident, int32_t, int32_t if_expr,
     state::ValueRAII ActiveLevelRAII(icv::ActiveLevel, 1u, 0u, true, ident);
     state::ValueRAII LevelRAII(icv::Level, 1u, 0u, true, ident);
 
+#ifdef __AMDGCN__
+    synchronize::omptarget_master_ready = true;
+#endif
     // Master signals work to activate workers.
     synchronize::threads();
     // Master waits for workers to signal.
     synchronize::threads();
+#ifdef __AMDGCN__
+    while (!synchronize::omptarget_workers_done)
+      synchronize::threads();
+
+    // Initialize for next parallel region
+    synchronize::omptarget_workers_done = false;
+    synchronize::omptarget_master_ready = false;
+#endif
   }
 
   if (nargs)

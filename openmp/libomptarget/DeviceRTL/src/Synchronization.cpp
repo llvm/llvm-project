@@ -262,6 +262,35 @@ float unsafeAtomicAdd(float *addr, float value) {
 }
 #endif // if defined(gfx90a) &&
 
+bool volatile omptarget_workers_done [[clang::loader_uninitialized]];
+#pragma omp allocate(omptarget_workers_done) allocator(omp_pteam_mem_alloc)
+
+bool volatile omptarget_master_ready [[clang::loader_uninitialized]];
+#pragma omp allocate(omptarget_master_ready) allocator(omp_pteam_mem_alloc)
+
+void workersStartBarrier() {
+#ifdef __AMDGCN__
+  synchronize::omptarget_workers_done = true;
+  synchronize::threads();
+  while (!synchronize::omptarget_master_ready)
+    synchronize::threads();
+  synchronize::omptarget_workers_done = false;
+#else
+  synchronize::threads();
+#endif
+}
+
+void workersDoneBarrier() {
+  // This worker termination logic permits full barriers in reductions
+  // by keeping the master thread waiting at another barrier till
+  // all workers are finished.
+#ifdef __AMDGCN__
+  if (mapping::getThreadIdInBlock() == 0)
+    synchronize::omptarget_workers_done = true;
+#endif
+  synchronize::threads();
+}
+
 #pragma omp end declare variant
 ///}
 
@@ -305,6 +334,10 @@ void syncThreads() {
 
 void syncThreadsAligned() { __syncthreads(); }
 
+void workersStartBarrier() { syncThreads(); }
+
+void workersDoneBarrier() { syncThreads(); }
+
 constexpr uint32_t OMP_SPIN = 1000;
 
 void initLock(omp_lock_t *Lock) { unsetLock(Lock); }
@@ -343,6 +376,10 @@ void synchronize::warp(LaneMaskTy Mask) { impl::syncWarp(Mask); }
 void synchronize::threads() { impl::syncThreads(); }
 
 void synchronize::threadsAligned() { impl::syncThreadsAligned(); }
+
+void synchronize::workersStartBarrier() { impl::workersStartBarrier(); }
+
+void synchronize::workersDoneBarrier() { impl::workersDoneBarrier(); }
 
 void fence::team(int Ordering) { impl::fenceTeam(Ordering); }
 

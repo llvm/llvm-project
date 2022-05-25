@@ -36,9 +36,8 @@ static void genericStateMachine(IdentTy *Ident) {
 
   do {
     ParallelRegionFnTy WorkFn = 0;
-
     // Wait for the signal that we have a new work function.
-    synchronize::threads();
+    synchronize::workersStartBarrier();
 
     // Retrieve the work function from the runtime.
     bool IsActive = __kmpc_kernel_parallel(&WorkFn);
@@ -54,7 +53,7 @@ static void genericStateMachine(IdentTy *Ident) {
       __kmpc_kernel_end_parallel();
     }
 
-    synchronize::threads();
+    synchronize::workersDoneBarrier();
 
   } while (true);
 }
@@ -68,7 +67,15 @@ extern "C" {
 int32_t __kmpc_target_init(IdentTy *Ident, int8_t Mode,
                            bool UseGenericStateMachine, bool) {
   FunctionTracingRAII();
+
   const bool IsSPMD = Mode & OMP_TGT_EXEC_MODE_SPMD;
+#ifdef __AMDGCN__
+  if (__kmpc_get_hardware_thread_id_in_block() == 0) {
+    synchronize::omptarget_workers_done = false;
+    synchronize::omptarget_master_ready = false;
+  }
+  synchronize::threadsAligned();
+#endif
   if (IsSPMD) {
     inititializeRuntime(/* IsSPMD */ true);
     synchronize::threadsAligned();
@@ -125,6 +132,7 @@ void __kmpc_target_deinit(IdentTy *Ident, int8_t Mode, bool) {
 
   // make sure workers cannot continue before the initial thread
   // has reset the Fn pointer for termination
+  synchronize::omptarget_master_ready = true;
   synchronize::threads();
 }
 
