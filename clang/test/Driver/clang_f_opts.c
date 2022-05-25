@@ -605,3 +605,8 @@
 // CHECK_JMC_WARN_NOT_ELF: -fjmc works only for ELF; option ignored
 // CHECK_NOJMC-NOT: -fjmc
 // CHECK_JMC: -fjmc
+
+// RUN: %clang -### -fintegrated-objemitter -target x86_64 %s 2>&1 | FileCheck -check-prefix=CHECK-INT-OBJEMITTER %s
+// CHECK-INT-OBJEMITTER-NOT: unsupported option '-fintegrated-objemitter' for target
+// RUN: %clang -### -fno-integrated-objemitter -target x86_64 %s 2>&1 | FileCheck -check-prefix=CHECK-NOINT-OBJEMITTER %s
+// CHECK-NOINT-OBJEMITTER: unsupported option '-fno-integrated-objemitter' for target
