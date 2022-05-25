@@ -667,9 +667,6 @@ private:
                                            uint64_t Offset,
                                            uint64_t &TargetAddress);
 
-  DenseMap<const MCInst *, SmallVector<MCInst *, 4>>
-  computeLocalUDChain(const MCInst *CurInstr);
-
   BinaryFunction &operator=(const BinaryFunction &) = delete;
   BinaryFunction(const BinaryFunction &) = delete;
 
