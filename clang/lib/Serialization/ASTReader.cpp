@@ -5171,8 +5171,9 @@ namespace {
     bool ReadPreprocessorOptions(const PreprocessorOptions &PPOpts,
                                  bool Complain,
                                  std::string &SuggestedPredefines) override {
-      return checkPreprocessorOptions(ExistingPPOpts, PPOpts, nullptr, FileMgr,
-                                      SuggestedPredefines, ExistingLangOpts);
+      return checkPreprocessorOptions(PPOpts, ExistingPPOpts, /*Diags=*/nullptr,
+                                      FileMgr, SuggestedPredefines,
+                                      ExistingLangOpts);
     }
   };
 
