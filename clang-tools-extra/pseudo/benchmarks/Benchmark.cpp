@@ -20,6 +20,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "benchmark/benchmark.h"
+#include "clang-pseudo/Bracket.h"
 #include "clang-pseudo/DirectiveTree.h"
 #include "clang-pseudo/Forest.h"
 #include "clang-pseudo/GLR.h"
@@ -89,7 +90,9 @@ TokenStream lexAndPreprocess() {
   chooseConditionalBranches(DirectiveStructure, RawStream);
   TokenStream Cook =
       cook(DirectiveStructure.stripDirectives(RawStream), LangOpts);
-  return stripComments(Cook);
+  auto Stream = stripComments(Cook);
+  pairBrackets(Stream);
+  return Stream;
 }
 
 static void lex(benchmark::State &State) {
@@ -100,6 +103,16 @@ static void lex(benchmark::State &State) {
                           SourceText->size());
 }
 BENCHMARK(lex);
+
+static void pairBrackets(benchmark::State &State) {
+  clang::LangOptions LangOpts = genericLangOpts();
+  auto Stream = clang::pseudo::lex(*SourceText, LangOpts);
+  for (auto _ : State)
+    pairBrackets(Stream);
+  State.SetBytesProcessed(static_cast<uint64_t>(State.iterations()) *
+                          SourceText->size());
+}
+BENCHMARK(pairBrackets);
 
 static void preprocess(benchmark::State &State) {
   clang::LangOptions LangOpts = genericLangOpts();
