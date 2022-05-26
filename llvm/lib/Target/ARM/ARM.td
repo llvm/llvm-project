@@ -1161,7 +1161,7 @@ include "ARMScheduleM7.td"
 // ARM processors
 //
 // Dummy CPU, used to target architectures
-def : ProcessorModel<"generic",     CortexA8Model,      [FeatureFixCortexA57AES1742098]>;
+def : ProcessorModel<"generic",     CortexA8Model,      []>;
 
 // FIXME: Several processors below are not using their own scheduler
 // model, but one of similar/previous processor. These should be fixed.
