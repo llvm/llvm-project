@@ -35,3 +35,8 @@
 
 // RUN: %clang -### -target x86_64-linux-gnu -nocudalib --cuda-feature=+ptx61 --offload-arch=sm_70 %s 2>&1 | FileCheck -check-prefix MANUAL-FEATURE %s
 // MANUAL-FEATURE: -cc1{{.*}}-target-feature{{.*}}+ptx61
+
+// RUN: %clang -### -target x86_64-linux-gnu -nocudalib -ccc-print-bindings --offload-link %s 2>&1 \
+// RUN: | FileCheck -check-prefix DEVICE-LINK %s
+
+// DEVICE-LINK: "x86_64-unknown-linux-gnu" - "Offload::Linker", inputs: ["[[INPUT:.+]]"], output: "a.out"

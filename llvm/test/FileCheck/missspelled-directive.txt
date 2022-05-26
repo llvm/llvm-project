@@ -1,0 +1,28 @@
+RUN: not FileCheck --check-prefix=P1 %s 2>&1 | FileCheck --check-prefix=CHECK1 %s
+RUN: not FileCheck --check-prefix=P2 %s 2>&1 | FileCheck --check-prefix=CHECK2 %s
+RUN: not FileCheck --check-prefix=P3 %s 2>&1 | FileCheck --check-prefix=CHECK3 %s
+RUN: not FileCheck --check-prefix=P4 %s 2>&1 | FileCheck --check-prefix=CHECK4 %s
+RUN: not FileCheck --check-prefix=P5 %s 2>&1 | FileCheck --check-prefix=CHECK5 %s
+RUN: not FileCheck --check-prefix=P6 %s 2>&1 | FileCheck --check-prefix=CHECK6 %s
+RUN: not FileCheck --check-prefix=P7 %s 2>&1 | FileCheck --check-prefix=CHECK7 %s
+
+P1_LABEL: foo
+CHECK1: error: misspelled directive 'P1_LABEL:'
+
+P2_NEXT: foo
+CHECK2: error: misspelled directive 'P2_NEXT:'
+
+P3_NOT: foo
+CHECK3: error: misspelled directive 'P3_NOT:'
+
+P4_COUNT-2: foo
+CHECK4: error: misspelled directive 'P4_COUNT-2:'
+
+P5_SAME: foo
+CHECK5: error: misspelled directive 'P5_SAME:'
+
+P6_EMPTY: foo
+CHECK6: error: misspelled directive 'P6_EMPTY:'
+
+P7_DAG: foo
+CHECK7: error: misspelled directive 'P7_DAG:'

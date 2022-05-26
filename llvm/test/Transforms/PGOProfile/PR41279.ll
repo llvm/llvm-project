@@ -77,6 +77,6 @@ define void @foo({ i8*, i64 }*, { i8*, i64 }*) personality i32 (...)* @__CxxFram
 ; USE-DAG: {{![0-9]+}} = !{i32 1, !"ProfileSummary", {{![0-9]+}}}
 ; USE-DAG: {{![0-9]+}} = !{!"DetailedSummary", {{![0-9]+}}}
 ; USE-DAG: ![[FUNC_ENTRY_COUNT]] = !{!"function_entry_count", i64 8}
-; USE_DAG: ![[BW_ENTRY1]] = !{!"branch_weights", i32 5, i32 3}
-; USE_DAG: ![[BW_ENTRY2]] = !{!"branch_weights", i32 2, i32 1}
+; USE-DAG: ![[BW_ENTRY1]] = !{!"branch_weights", i32 5, i32 3}
+; USE-DAG: ![[BW_ENTRY2]] = !{!"branch_weights", i32 2, i32 1}
 

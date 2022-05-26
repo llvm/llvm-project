@@ -51,6 +51,9 @@ class InstSI <dag outs, dag ins, string asm = "",
   // LDSDIR instruction format.
   field bit LDSDIR = 0;
 
+  // VINTERP instruction format.
+  field bit VINTERP = 0;
+
   // High bits - other information.
   field bit VM_CNT = 0;
   field bit EXP_CNT = 0;
@@ -177,6 +180,7 @@ class InstSI <dag outs, dag ins, string asm = "",
   let TSFlags{25} = SGPRSpill;
 
   let TSFlags{26} = LDSDIR;
+  let TSFlags{27} = VINTERP;
 
   let TSFlags{32} = VM_CNT;
   let TSFlags{33} = EXP_CNT;
@@ -357,9 +361,7 @@ class MIMGe_gfx10 <bits<8> op> : MIMGe {
 class EXPe : Enc64 {
   bits<4> en;
   bits<6> tgt;
-  bits<1> compr;
   bits<1> done;
-  bits<1> vm;
   bits<8> src0;
   bits<8> src1;
   bits<8> src2;
@@ -367,14 +369,28 @@ class EXPe : Enc64 {
 
   let Inst{3-0} = en;
   let Inst{9-4} = tgt;
-  let Inst{10} = compr;
   let Inst{11} = done;
-  let Inst{12} = vm;
   let Inst{31-26} = 0x3e;
   let Inst{39-32} = src0;
   let Inst{47-40} = src1;
   let Inst{55-48} = src2;
   let Inst{63-56} = src3;
+}
+
+// Pre-GFX11 encoding has compr and vm bits.
+class EXPe_ComprVM : EXPe {
+  bits<1> compr;
+  bits<1> vm;
+
+  let Inst{10} = compr;
+  let Inst{12} = vm;
+}
+
+// GFX11+ encoding has row bit.
+class EXPe_Row : EXPe {
+  bits<1> row;
+
+  let Inst{13} = row;
 }
 
 let Uses = [EXEC] in {

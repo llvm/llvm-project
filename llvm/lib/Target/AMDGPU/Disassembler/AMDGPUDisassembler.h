@@ -101,6 +101,8 @@ public:
   DecodeStatus decodeCOMPUTE_PGM_RSRC2(uint32_t FourByteBuffer,
                                        raw_string_ostream &KdStream) const;
 
+  DecodeStatus convertEXPInst(MCInst &MI) const;
+  DecodeStatus convertVINTERPInst(MCInst &MI) const;
   DecodeStatus convertFMAanyK(MCInst &MI, int ImmLitIdx) const;
   DecodeStatus convertSDWAInst(MCInst &MI) const;
   DecodeStatus convertDPP8Inst(MCInst &MI) const;
@@ -215,8 +217,8 @@ public:
                    : MCSymbolizer(Ctx, std::move(RelInfo)), DisInfo(disInfo) {}
 
   bool tryAddingSymbolicOperand(MCInst &Inst, raw_ostream &cStream,
-                                int64_t Value, uint64_t Address,
-                                bool IsBranch, uint64_t Offset,
+                                int64_t Value, uint64_t Address, bool IsBranch,
+                                uint64_t Offset, uint64_t OpSize,
                                 uint64_t InstSize) override;
 
   void tryAddingPcLoadReferenceComment(raw_ostream &cStream,
