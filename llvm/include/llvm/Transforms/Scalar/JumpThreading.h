@@ -92,10 +92,9 @@ class JumpThreadingPass : public PassInfoMixin<JumpThreadingPass> {
 
   unsigned BBDupThreshold;
   unsigned DefaultBBDupThreshold;
-  bool InsertFreezeWhenUnfoldingSelect;
 
 public:
-  JumpThreadingPass(bool InsertFreezeWhenUnfoldingSelect = true, int T = -1);
+  JumpThreadingPass(int T = -1);
 
   // Glue for old PM.
   bool runImpl(Function &F, TargetLibraryInfo *TLI, TargetTransformInfo *TTI,
