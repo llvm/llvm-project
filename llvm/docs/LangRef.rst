@@ -817,6 +817,14 @@ empty list of arguments, an optional alignment, an optional :ref:`garbage
 collector name <gc>`, an optional :ref:`prefix <prefixdata>`, and an optional
 :ref:`prologue <prologuedata>`.
 
+Syntax::
+
+    declare [linkage] [visibility] [DLLStorageClass]
+            [cconv] [ret attrs]
+            <ResultType> @<FunctionName> ([argument list])
+            [(unnamed_addr|local_unnamed_addr)] [align N] [gc]
+            [prefix Constant] [prologue Constant]
+
 A function definition contains a list of basic blocks, forming the CFG (Control
 Flow Graph) for the function. Each basic block may optionally start with a label
 (giving the basic block a symbol table entry), contains a list of instructions,
