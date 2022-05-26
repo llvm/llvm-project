@@ -8692,6 +8692,7 @@ td_library(
     deps = [
         ":AllocationOpInterfaceTdFiles",
         ":CopyOpInterfaceTdFiles",
+        ":InferTypeOpInterfaceTdFiles",
         ":OpBaseTdFiles",
         ":SideEffectInterfacesTdFiles",
     ],
@@ -8755,6 +8756,7 @@ cc_library(
     ],
     includes = ["include"],
     deps = [
+        ":Affine",
         ":AllocationOpInterface",
         ":ArithmeticDialect",
         ":BufferizableOpInterfaceIncGen",
@@ -8763,6 +8765,7 @@ cc_library(
         ":CopyOpInterface",
         ":FuncDialect",
         ":IR",
+        ":InferTypeOpInterface",
         ":MemRefDialect",
         ":Support",
         ":TensorDialect",
@@ -8809,6 +8812,7 @@ cc_library(
         ":LoopLikeInterface",
         ":MemRefDialect",
         ":Pass",
+        ":TensorDialect",
         ":Transforms",
         "//llvm:Support",
     ],
