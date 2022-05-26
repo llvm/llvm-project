@@ -73,7 +73,7 @@ TEST_F(AsmPrinterEmitDwarfSymbolReferenceTest, COFF) {
   if (!init("x86_64-pc-windows", /*DwarfVersion=*/4, dwarf::DWARF32))
     GTEST_SKIP();
 
-  EXPECT_CALL(TestPrinter->getMS(), EmitCOFFSecRel32(Val, 0));
+  EXPECT_CALL(TestPrinter->getMS(), emitCOFFSecRel32(Val, 0));
   TestPrinter->getAP()->emitDwarfSymbolReference(Val, false);
 }
 

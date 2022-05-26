@@ -224,7 +224,7 @@ unsigned CodeViewDebug::maybeRecordFile(const DIFile *F) {
         break;
       }
     }
-    bool Success = OS.EmitCVFileDirective(NextId, FullPath, ChecksumAsBytes,
+    bool Success = OS.emitCVFileDirective(NextId, FullPath, ChecksumAsBytes,
                                           static_cast<unsigned>(CSKind));
     (void)Success;
     assert(Success && ".cv_file directive failed");
@@ -245,7 +245,7 @@ CodeViewDebug::getInlineSite(const DILocation *InlinedAt,
               .SiteFuncId;
 
     Site->SiteFuncId = NextFuncId++;
-    OS.EmitCVInlineSiteIdDirective(
+    OS.emitCVInlineSiteIdDirective(
         Site->SiteFuncId, ParentFuncId, maybeRecordFile(InlinedAt->getFile()),
         InlinedAt->getLine(), InlinedAt->getColumn(), SMLoc());
     Site->Inlinee = Inlinee;
@@ -1073,9 +1073,9 @@ void CodeViewDebug::emitDebugInfoForThunk(const Function *GV,
   OS.AddComment("PtrNext");
   OS.emitInt32(0);
   OS.AddComment("Thunk section relative address");
-  OS.EmitCOFFSecRel32(Fn, /*Offset=*/0);
+  OS.emitCOFFSecRel32(Fn, /*Offset=*/0);
   OS.AddComment("Thunk section index");
-  OS.EmitCOFFSectionIndex(Fn);
+  OS.emitCOFFSectionIndex(Fn);
   OS.AddComment("Code size");
   OS.emitAbsoluteSymbolDiff(FI.End, Fn, 2);
   OS.AddComment("Ordinal");
@@ -1125,7 +1125,7 @@ void CodeViewDebug::emitDebugInfoForFunction(const Function *GV,
 
   // Emit FPO data, but only on 32-bit x86. No other platforms use it.
   if (Triple(MMI->getModule()->getTargetTriple()).getArch() == Triple::x86)
-    OS.EmitCVFPOData(Fn);
+    OS.emitCVFPOData(Fn);
 
   // Emit a symbol subsection, required by VS2012+ to find function boundaries.
   OS.AddComment("Symbol subsection for " + Twine(FuncName));
@@ -1153,9 +1153,9 @@ void CodeViewDebug::emitDebugInfoForFunction(const Function *GV,
     OS.AddComment("Function type index");
     OS.emitInt32(getFuncIdForSubprogram(GV->getSubprogram()).getIndex());
     OS.AddComment("Function section relative address");
-    OS.EmitCOFFSecRel32(Fn, /*Offset=*/0);
+    OS.emitCOFFSecRel32(Fn, /*Offset=*/0);
     OS.AddComment("Function section index");
-    OS.EmitCOFFSectionIndex(Fn);
+    OS.emitCOFFSectionIndex(Fn);
     OS.AddComment("Flags");
     OS.emitInt8(0);
     // Emit the function display name as a null-terminated string.
@@ -1200,9 +1200,9 @@ void CodeViewDebug::emitDebugInfoForFunction(const Function *GV,
       MCSymbol *Label = Annot.first;
       MDTuple *Strs = cast<MDTuple>(Annot.second);
       MCSymbol *AnnotEnd = beginSymbolRecord(SymbolKind::S_ANNOTATION);
-      OS.EmitCOFFSecRel32(Label, /*Offset=*/0);
+      OS.emitCOFFSecRel32(Label, /*Offset=*/0);
       // FIXME: Make sure we don't overflow the max record size.
-      OS.EmitCOFFSectionIndex(Label);
+      OS.emitCOFFSectionIndex(Label);
       OS.emitInt16(Strs->getNumOperands());
       for (Metadata *MD : Strs->operands()) {
         // MDStrings are null terminated, so we can do EmitBytes and get the
@@ -1220,9 +1220,9 @@ void CodeViewDebug::emitDebugInfoForFunction(const Function *GV,
       const DIType *DITy = std::get<2>(HeapAllocSite);
       MCSymbol *HeapAllocEnd = beginSymbolRecord(SymbolKind::S_HEAPALLOCSITE);
       OS.AddComment("Call site offset");
-      OS.EmitCOFFSecRel32(BeginLabel, /*Offset=*/0);
+      OS.emitCOFFSecRel32(BeginLabel, /*Offset=*/0);
       OS.AddComment("Call site section index");
-      OS.EmitCOFFSectionIndex(BeginLabel);
+      OS.emitCOFFSectionIndex(BeginLabel);
       OS.AddComment("Call instruction length");
       OS.emitAbsoluteSymbolDiff(EndLabel, BeginLabel, 2);
       OS.AddComment("Type index");
@@ -1512,7 +1512,7 @@ void CodeViewDebug::beginFunctionImpl(const MachineFunction *MF) {
   // FIXME: Set GuardCfg when it is implemented.
   CurFn->FrameProcOpts = FPO;
 
-  OS.EmitCVFuncIdDirective(CurFn->FuncId);
+  OS.emitCVFuncIdDirective(CurFn->FuncId);
 
   // Find the end of the function prolog.  First known non-DBG_VALUE and
   // non-frame setup location marks the beginning of the function body.
@@ -2884,9 +2884,9 @@ void CodeViewDebug::emitLexicalBlock(const LexicalBlock &Block,
   OS.AddComment("Code size");
   OS.emitAbsoluteSymbolDiff(Block.End, Block.Begin, 4);   // Code Size
   OS.AddComment("Function section relative address");
-  OS.EmitCOFFSecRel32(Block.Begin, /*Offset=*/0);         // Func Offset
+  OS.emitCOFFSecRel32(Block.Begin, /*Offset=*/0); // Func Offset
   OS.AddComment("Function section index");
-  OS.EmitCOFFSectionIndex(FI.Begin);                      // Func Symbol
+  OS.emitCOFFSectionIndex(FI.Begin); // Func Symbol
   OS.AddComment("Lexical block name");
   emitNullTerminatedSymbolName(OS, Block.Name);           // Name
   endSymbolRecord(RecordEnd);
@@ -3375,10 +3375,10 @@ void CodeViewDebug::emitDebugInfoForGlobal(const CVGlobalVariable &CVGV) {
     if (CVGlobalVariableOffsets.find(DIGV) != CVGlobalVariableOffsets.end())
       // Use the offset seen while collecting info on globals.
       Offset = CVGlobalVariableOffsets[DIGV];
-    OS.EmitCOFFSecRel32(GVSym, Offset);
+    OS.emitCOFFSecRel32(GVSym, Offset);
 
     OS.AddComment("Segment");
-    OS.EmitCOFFSectionIndex(GVSym);
+    OS.emitCOFFSectionIndex(GVSym);
     OS.AddComment("Name");
     const unsigned LengthOfDataRecord = 12;
     emitNullTerminatedSymbolName(OS, QualifiedName, LengthOfDataRecord);

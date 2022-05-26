@@ -109,17 +109,17 @@ void WinCFGuard::endModule() {
   auto &OS = *Asm->OutStreamer;
   OS.SwitchSection(Asm->OutContext.getObjectFileInfo()->getGFIDsSection());
   for (const MCSymbol *S : GFIDsEntries)
-    OS.EmitCOFFSymbolIndex(S);
+    OS.emitCOFFSymbolIndex(S);
 
   // Emit the symbol index of each GIATs entry to form the .giats section.
   OS.SwitchSection(Asm->OutContext.getObjectFileInfo()->getGIATsSection());
   for (const MCSymbol *S : GIATsEntries) {
-    OS.EmitCOFFSymbolIndex(S);
+    OS.emitCOFFSymbolIndex(S);
   }
 
   // Emit the symbol index of each longjmp target to form the .gljmp section.
   OS.SwitchSection(Asm->OutContext.getObjectFileInfo()->getGLJMPSection());
   for (const MCSymbol *S : LongjmpTargets) {
-    OS.EmitCOFFSymbolIndex(S);
+    OS.emitCOFFSymbolIndex(S);
   }
 }

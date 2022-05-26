@@ -46,14 +46,14 @@ public:
   bool emitSymbolAttribute(MCSymbol *Symbol, MCSymbolAttr Attribute) override;
   void emitSymbolDesc(MCSymbol *Symbol, unsigned DescValue) override;
   void BeginCOFFSymbolDef(MCSymbol const *Symbol) override;
-  void EmitCOFFSymbolStorageClass(int StorageClass) override;
-  void EmitCOFFSymbolType(int Type) override;
+  void emitCOFFSymbolStorageClass(int StorageClass) override;
+  void emitCOFFSymbolType(int Type) override;
   void EndCOFFSymbolDef() override;
-  void EmitCOFFSafeSEH(MCSymbol const *Symbol) override;
-  void EmitCOFFSymbolIndex(MCSymbol const *Symbol) override;
-  void EmitCOFFSectionIndex(MCSymbol const *Symbol) override;
-  void EmitCOFFSecRel32(MCSymbol const *Symbol, uint64_t Offset) override;
-  void EmitCOFFImgRel32(MCSymbol const *Symbol, int64_t Offset) override;
+  void emitCOFFSafeSEH(MCSymbol const *Symbol) override;
+  void emitCOFFSymbolIndex(MCSymbol const *Symbol) override;
+  void emitCOFFSectionIndex(MCSymbol const *Symbol) override;
+  void emitCOFFSecRel32(MCSymbol const *Symbol, uint64_t Offset) override;
+  void emitCOFFImgRel32(MCSymbol const *Symbol, int64_t Offset) override;
   void emitCommonSymbol(MCSymbol *Symbol, uint64_t Size,
                         unsigned ByteAlignment) override;
   void emitLocalCommonSymbol(MCSymbol *Symbol, uint64_t Size,
@@ -64,7 +64,7 @@ public:
   void emitTBSSSymbol(MCSection *Section, MCSymbol *Symbol, uint64_t Size,
                       unsigned ByteAlignment) override;
   void emitIdent(StringRef IdentString) override;
-  void EmitWinEHHandlerData(SMLoc Loc) override;
+  void emitWinEHHandlerData(SMLoc Loc) override;
   void emitCGProfileEntry(const MCSymbolRefExpr *From,
                           const MCSymbolRefExpr *To, uint64_t Count) override;
   void finishImpl() override;
