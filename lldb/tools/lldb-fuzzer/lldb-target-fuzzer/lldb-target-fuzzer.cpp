@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <utils/TempFile.h>
+#include "utils/TempFile.h"
 
 #include "lldb/API/SBDebugger.h"
 #include "lldb/API/SBTarget.h"
