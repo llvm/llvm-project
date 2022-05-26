@@ -13,9 +13,9 @@
 #define __bool_true_false_are_defined 1
 
 #if __STDC_VERSION__ > 201710L
-#if !defined(_CLANG_DISABLE_CRT_DEPRECATION_WARNINGS)
-#warning "the <stdbool.h> header is deprecated in C2x"
-#endif /* !defined(_CLANG_DISABLE_CRT_DEPRECATION_WARNINGS) */
+/* FIXME: We should be issuing a deprecation warning here, but cannot yet due
+ * to system headers which include this header file unconditionally.
+ */
 #elif !defined(__cplusplus)
 #define bool _Bool
 #define true 1
