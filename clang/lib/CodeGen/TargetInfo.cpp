@@ -9418,7 +9418,7 @@ void AMDGPUTargetCodeGenInfo::setTargetAttributes(
   const bool IsHIPKernel =
       M.getLangOpts().HIP && FD && FD->hasAttr<CUDAGlobalAttr>();
 
-  if (IsHIPKernel)
+  if (IsHIPKernel || M.getLangOpts().OpenMPIsDevice)
     F->addFnAttr("uniform-work-group-size", "true");
 
   if (M.getContext().getTargetInfo().allowAMDGPUUnsafeFPAtomics())

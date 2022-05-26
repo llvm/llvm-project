@@ -1097,10 +1097,9 @@ void CGOpenMPRuntimeGPU::GenerateMetaData(CodeGenModule &CGM,
       if (IsGeneric)
         compileTimeThreadLimit =
             ComputeGenericWorkgroupSize(CGM, compileTimeThreadLimit);
-      std::string AttrVal = llvm::utostr(compileTimeThreadLimit);
       FlatAttr = compileTimeThreadLimit;
       OutlinedFn->addFnAttr("amdgpu-flat-work-group-size",
-                            AttrVal + "," + AttrVal);
+                            "1," + llvm::utostr(compileTimeThreadLimit));
       flatAttrEmitted = true;
     } // end   > 0
   }   // end of amdgcn teams or parallel directive
@@ -1114,10 +1113,9 @@ void CGOpenMPRuntimeGPU::GenerateMetaData(CodeGenModule &CGM,
       GenericModeWorkgroupSize =
           ComputeGenericWorkgroupSize(CGM, CmdLineWorkGroupSz);
 
-    std::string FlatAttrVal = llvm::utostr(GenericModeWorkgroupSize);
     FlatAttr = GenericModeWorkgroupSize;
     OutlinedFn->addFnAttr("amdgpu-flat-work-group-size",
-                            FlatAttrVal + "," + FlatAttrVal);
+                          "1," + llvm::utostr(GenericModeWorkgroupSize));
   }
   // Emit a kernel descriptor for runtime.
   setPropertyWorkGroupSize(CGM, OutlinedFn->getName(), FlatAttr);
