@@ -15,5 +15,5 @@ def BsdExtensions : StandardSpec<"BSDExtensions"> {
 
   let Headers = [
     String,
-  ]
+  ];
 }
