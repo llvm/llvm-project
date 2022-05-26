@@ -10,7 +10,7 @@ RUN: echo ..Z... > %t/T1/3
 RUN: rm -f %t/MCF
 RUN: %run %t-FullCoverageSetTest -merge=1 -merge_control_file=%t/MCF %t/T0 %t/T1 2>&1 | FileCheck %s --check-prefix=CHECK1
 CHECK1: MERGE-OUTER: 3 files, 0 in the initial corpus
-CHECK1: MERGE-OUTER: 3 new files with {{.*}} new features added; 11 new coverage edges
+CHECK1: MERGE-OUTER: 3 new files with {{.*}} new features added; 10 new coverage edges
 
 RUN: echo ...Z.. > %t/T2/1
 RUN: echo ....E. > %t/T2/2
@@ -26,6 +26,6 @@ CHECK2: MERGE-OUTER: non-empty control file provided
 CHECK2: MERGE-OUTER: control file ok, 3 files total, first not processed file 3
 CHECK2: MERGE-OUTER: starting merge from scratch, but reusing coverage information from the given control file
 CHECK2: MERGE-OUTER: 7 files, 0 in the initial corpus, 3 processed earlier
-CHECK2: MERGE-INNER: using the control file 
+CHECK2: MERGE-INNER: using the control file
 CHECK2: MERGE-INNER: 4 total files; 0 processed earlier; will process 4 files now
-CHECK2: MERGE-OUTER: 6 new files with {{.*}} new features added; 14 new coverage edges
+CHECK2: MERGE-OUTER: 6 new files with {{.*}} new features added; 13 new coverage edges
