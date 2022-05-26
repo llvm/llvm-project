@@ -212,7 +212,11 @@ public:
       case UNIT_PATH_BUFFER:
         Reader.PathsBuffer = Blob;
         Reader.WorkingDir = Reader.getAndRemapPathFromBuffer(WorkDirOffset, WorkDirSize);
-        Reader.OutputFile = Reader.getAndRemapPathFromBuffer(OutputFileOffset, OutputFileSize);
+        // We intentionally do -not- remap the output file and instead leave it
+        // in the canonical form. This is because the output file need not be an
+        // actual real file path and this allows clients to provide the same
+        // canonical output path e.g. in the explicit output files list.
+        Reader.OutputFile = Reader.getPathFromBuffer(OutputFileOffset, OutputFileSize).str();
         Reader.SysrootPath = Reader.getAndRemapPathFromBuffer(SysrootOffset, SysrootSize);
 
         // now we can populate the main file's path

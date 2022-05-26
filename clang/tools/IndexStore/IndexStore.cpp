@@ -613,7 +613,10 @@ indexstore_store_get_unit_name_from_output_path(indexstore_t c_store,
                                                 size_t buf_size) {
   IndexDataStore *store = static_cast<IndexDataStore*>(c_store);
   SmallString<256> unitName;
-  auto remapper = store->getPathRemapper();
+  // We intentionally don't use the index store's path remapper since it
+  // maps from canonical -> local instead of local -> canonical. This means that
+  // callers must gives us the canonical `output_path`, not the local one.
+  PathRemapper remapper;
   IndexUnitWriter::getUnitNameForAbsoluteOutputFile(output_path, unitName,
                                                     remapper);
   size_t nameLen = unitName.size();
