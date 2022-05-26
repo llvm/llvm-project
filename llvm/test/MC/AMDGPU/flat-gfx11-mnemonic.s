@@ -1,8 +1,6 @@
 // RUN: not llvm-mc -arch=amdgcn -mcpu=gfx1100 -show-encoding %s | FileCheck --check-prefix=GFX11 %s
 
-
 // FLAT
-
 
 flat_load_ubyte v1, v[4:5]
 // GFX11: flat_load_u8 v1, v[4:5] ; encoding: [0x00,0x00,0x40,0xdc,0x04,0x00,0x7c,0x01]
@@ -61,9 +59,7 @@ flat_atomic_cmpswap v0, v[1:2], v[3:4] offset:2047 glc
 flat_atomic_cmpswap_x2 v[1:2], v[3:4], v[5:8] offset:2047 glc
 // GFX11: encoding: [0xff,0x47,0x08,0xdd,0x03,0x05,0x7c,0x01]
 
-
 // GLOBAL No saddr
-
 
 global_load_ubyte v1, v[3:4], off
 // GFX11: global_load_u8 v1, v[3:4], off ; encoding: [0x00,0x00,0x42,0xdc,0x03,0x00,0x7c,0x01]
@@ -116,9 +112,7 @@ global_atomic_swap_x2 v[1:2], v[3:4], v[5:6], off offset:2047 glc
 global_atomic_cmpswap_x2 v[1:4], v3, v[5:8], off offset:2047 glc
 // GFX11-NOT: encoding: [0xff,0x47,0x0a,0xdd,0x03,0x05,0x7c,0x01]
 
-
 // SCRATCH
-
 
 scratch_load_ubyte v1, v2, s1
 // GFX11: encoding: [0x00,0x00,0x41,0xdc,0x02,0x00,0x81,0x01]

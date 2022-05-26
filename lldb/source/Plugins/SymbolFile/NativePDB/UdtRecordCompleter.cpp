@@ -67,7 +67,8 @@ clang::QualType UdtRecordCompleter::AddBaseClassForTypeIndex(
       m_ast_builder.clang().CreateBaseClassSpecifier(
           qt.getAsOpaquePtr(), TranslateMemberAccess(access),
           vtable_idx.hasValue(), udt_cvt.kind() == LF_CLASS);
-  lldbassert(base_spec);
+  if (!base_spec)
+    return {};
 
   m_bases.push_back(
       std::make_pair(vtable_idx.getValueOr(0), std::move(base_spec)));
@@ -80,6 +81,8 @@ void UdtRecordCompleter::AddMethod(llvm::StringRef name, TypeIndex type_idx,
                                    MemberAttributes attrs) {
   clang::QualType method_qt =
       m_ast_builder.GetOrCreateType(PdbTypeSymId(type_idx));
+  if (method_qt.isNull())
+    return;
   m_ast_builder.CompleteType(method_qt);
   CompilerType method_ct = m_ast_builder.ToCompilerType(method_qt);
   lldb::opaque_compiler_type_t derived_opaque_ty = m_derived_ct.GetOpaqueQualType();
@@ -106,6 +109,8 @@ Error UdtRecordCompleter::visitKnownMember(CVMemberRecord &cvr,
   clang::QualType base_qt =
       AddBaseClassForTypeIndex(base.Type, base.getAccess());
 
+  if (base_qt.isNull())
+    return llvm::Error::success();
   auto decl =
       m_ast_builder.clang().GetAsCXXRecordDecl(base_qt.getAsOpaquePtr());
   lldbassert(decl);
@@ -137,6 +142,8 @@ Error UdtRecordCompleter::visitKnownMember(
     CVMemberRecord &cvr, StaticDataMemberRecord &static_data_member) {
   clang::QualType member_type =
       m_ast_builder.GetOrCreateType(PdbTypeSymId(static_data_member.Type));
+  if (member_type.isNull())
+    return llvm::Error::success();
 
   CompilerType member_ct = m_ast_builder.ToCompilerType(member_type);
 
@@ -235,6 +242,8 @@ Error UdtRecordCompleter::visitKnownMember(CVMemberRecord &cvr,
   }
 
   clang::QualType member_qt = m_ast_builder.GetOrCreateType(PdbTypeSymId(ti));
+  if (member_qt.isNull())
+    return Error::success();
   m_ast_builder.CompleteType(member_qt);
 
   lldb::AccessType access = TranslateMemberAccess(data_member.getAccess());

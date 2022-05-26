@@ -57,7 +57,8 @@ public:
   // \p Path. The binary from which the profile has been collected is specified
   // via a path in \p ProfiledBinary.
   static Expected<std::unique_ptr<RawMemProfReader>>
-  create(const Twine &Path, const StringRef ProfiledBinary);
+  create(const Twine &Path, const StringRef ProfiledBinary,
+         bool KeepName = false);
 
   using GuidMemProfRecordPair = std::pair<GlobalValue::GUID, MemProfRecord>;
   using Iterator = InstrProfIterator<GuidMemProfRecordPair, RawMemProfReader>;
@@ -76,9 +77,9 @@ public:
   RawMemProfReader(std::unique_ptr<llvm::symbolize::SymbolizableModule> Sym,
                    llvm::SmallVectorImpl<SegmentEntry> &Seg,
                    llvm::MapVector<uint64_t, MemInfoBlock> &Prof,
-                   CallStackMap &SM)
+                   CallStackMap &SM, bool KeepName = false)
       : Symbolizer(std::move(Sym)), SegmentInfo(Seg.begin(), Seg.end()),
-        CallstackProfileData(Prof), StackMap(SM) {
+        CallstackProfileData(Prof), StackMap(SM), KeepSymbolName(KeepName) {
     // We don't call initialize here since there is no raw profile to read. The
     // test should pass in the raw profile as structured data.
 
@@ -103,8 +104,9 @@ public:
 
 private:
   RawMemProfReader(std::unique_ptr<MemoryBuffer> DataBuffer,
-                   object::OwningBinary<object::Binary> &&Bin)
-      : DataBuffer(std::move(DataBuffer)), Binary(std::move(Bin)) {}
+                   object::OwningBinary<object::Binary> &&Bin, bool KeepName)
+      : DataBuffer(std::move(DataBuffer)), Binary(std::move(Bin)),
+        KeepSymbolName(KeepName) {}
   Error initialize();
   Error readRawProfile();
   // Symbolize and cache all the virtual addresses we encounter in the
@@ -146,8 +148,12 @@ private:
 
   llvm::MapVector<GlobalValue::GUID, IndexedMemProfRecord> FunctionProfileData;
   llvm::MapVector<GlobalValue::GUID, IndexedMemProfRecord>::iterator Iter;
-};
 
+  // Whether to keep the symbol name for each frame after hashing.
+  bool KeepSymbolName = false;
+  // A mapping of the hash to symbol name, only used if KeepSymbolName is true.
+  llvm::DenseMap<uint64_t, std::string> GuidToSymbolName;
+};
 } // namespace memprof
 } // namespace llvm
 

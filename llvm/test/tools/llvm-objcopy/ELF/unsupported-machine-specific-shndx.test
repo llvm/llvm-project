@@ -1,0 +1,17 @@
+# RUN: yaml2obj %s -o %t -DMACHINE=HEXAGON
+# RUN: not llvm-objcopy %t %t2 2>&1 >/dev/null | FileCheck %s -DINDEX=65280
+# RUN: yaml2obj %s -o %t -DMACHINE=MIPS
+# RUN: not llvm-objcopy %t %t2 2>&1 >/dev/null | FileCheck %s -DINDEX=65283
+
+!ELF
+FileHeader:
+  Class:           ELFCLASS64
+  Data:            ELFDATA2LSB
+  Type:            ET_EXEC
+  Machine:         EM_X86_64
+Symbols:
+  - Name:     test
+    Index:    SHN_[[MACHINE]]_SCOMMON
+    Binding:  STB_GLOBAL
+
+# CHECK: symbol 'test' has unsupported value greater than or equal to SHN_LORESERVE: [[INDEX]]

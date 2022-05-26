@@ -331,7 +331,7 @@ static cl::opt<bool> EnablePromoteKernelArguments(
 
 static cl::opt<bool> EnableImageIntrinsicOptimizer(
     "amdgpu-enable-image-intrinsic-optimizer",
-    cl::desc("Enable image intrinsic optimizer pass"), cl::init(true),
+    cl::desc("Enable image intrinsic optimizer pass"), cl::init(false),
     cl::Hidden);
 
 extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAMDGPUTarget() {

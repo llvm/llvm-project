@@ -9,20 +9,13 @@
 #ifndef MLIR_DIALECT_BUFFERIZATION_IR_BUFFERIZABLEOPINTERFACE_H_
 #define MLIR_DIALECT_BUFFERIZATION_IR_BUFFERIZABLEOPINTERFACE_H_
 
-#include <utility>
-
-#include "mlir/IR/BlockAndValueMapping.h"
-#include "mlir/IR/Builders.h"
-#include "mlir/IR/BuiltinOps.h"
-#include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/Operation.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Support/LLVM.h"
 #include "llvm/ADT/SetVector.h"
 
 namespace mlir {
-class BlockAndValueMapping;
-class DominanceInfo;
+class OpBuilder;
 
 namespace bufferization {
 
@@ -280,14 +273,6 @@ struct BufferizationOptions {
   /// computation. Whether this pays off or not can be very input IR-specific.
   bool alwaysAliasingWithDest = true;
 
-  /// If set to `true`, try to hoist allocations out of blocks as much as
-  /// possible. An allocation is not hoisted across allocation hoisting barriers
-  /// as indicated by `BufferizableOpInterface::isAllocationHoistingBarrier`.
-  ///
-  /// Examples of allocation hoisting barriers are parallel loops or ops where
-  /// SSA values cannot be captured from the outside.
-  bool hoistAllocations = true;
-
   /// Buffer alignment for new memory allocations.
   unsigned int bufferAlignment = 128;
 
@@ -482,31 +467,6 @@ private:
   const BufferizationOptions &options;
 };
 
-/// This a "no analysis, always copy" AnalysisState. In the absence of an
-/// analysis, a buffer must be copied each time it is written to. Therefore, all
-/// OpOperands that bufferize to a memory write must bufferize out-of-place.
-class AlwaysCopyAnalysisState : public AnalysisState {
-public:
-  explicit AlwaysCopyAnalysisState(const BufferizationOptions &options);
-
-  AlwaysCopyAnalysisState(const AlwaysCopyAnalysisState &) = delete;
-
-  virtual ~AlwaysCopyAnalysisState() = default;
-
-  /// Return `true` if the given OpResult has been decided to bufferize inplace.
-  bool isInPlace(OpOperand &opOperand) const override;
-
-  /// Return true if `v1` and `v2` bufferize to equivalent buffers.
-  bool areEquivalentBufferizedValues(Value v1, Value v2) const override;
-
-  /// Return `true` if the given tensor has undefined contents.
-  bool hasUndefinedContents(OpOperand *opOperand) const override;
-
-  /// Return true if the given tensor (or an aliasing tensor) is yielded from
-  /// the containing block. Also include all aliasing tensors in the same block.
-  bool isTensorYielded(Value tensor) const override;
-};
-
 /// BufferizationState provides helper functions for performing bufferization
 /// rewrites and handling memref buffers.
 struct BufferizationState {
@@ -617,10 +577,6 @@ BaseMemRefType getMemRefTypeWithFullyDynamicLayout(TensorType tensorType,
 BaseMemRefType
 getMemRefTypeWithStaticIdentityLayout(TensorType tensorType,
                                       Attribute memorySpace = {});
-
-/// Try to hoist all new buffer allocations until the next hoisting barrier.
-LogicalResult hoistBufferAllocations(Operation *op,
-                                     const BufferizationOptions &options);
 
 /// Create alloc/dealloc ops as specified in the bufferization options. If
 /// `onlyLeakingAlloc`, only those buffer allocations are processed for which no

@@ -820,6 +820,8 @@ def Xopenmp_target_EQ : JoinedAndSeparate<["-"], "Xopenmp-target=">, Group<Compi
 def z : Separate<["-"], "z">, Flags<[LinkerInput, RenderAsInput]>,
   HelpText<"Pass -z <arg> to the linker">, MetaVarName<"<arg>">,
   Group<Link_Group>;
+def offload_link : Flag<["--"], "offload-link">, Group<Link_Group>,
+  HelpText<"Use the new offloading linker to perform the link job.">;
 def Xlinker : Separate<["-"], "Xlinker">, Flags<[LinkerInput, RenderAsInput]>,
   HelpText<"Pass <arg> to the linker">, MetaVarName<"<arg>">,
   Group<Link_Group>;
@@ -4169,6 +4171,13 @@ def fintegrated_cc1 : Flag<["-"], "fintegrated-cc1">,
 def fno_integrated_cc1 : Flag<["-"], "fno-integrated-cc1">,
                          Flags<[CoreOption, NoXarchOption]>, Group<f_Group>,
                          HelpText<"Spawn a separate process for each cc1">;
+
+def fintegrated_objemitter : Flag<["-"], "fintegrated-objemitter">,
+  Flags<[CoreOption, NoXarchOption]>, Group<f_Group>,
+  HelpText<"Use internal machine object code emitter.">;
+def fno_integrated_objemitter : Flag<["-"], "fno-integrated-objemitter">,
+  Flags<[CoreOption, NoXarchOption]>, Group<f_Group>,
+  HelpText<"Use external machine object code emitter.">;
 
 def : Flag<["-"], "integrated-as">, Alias<fintegrated_as>, Flags<[NoXarchOption]>;
 def : Flag<["-"], "no-integrated-as">, Alias<fno_integrated_as>,

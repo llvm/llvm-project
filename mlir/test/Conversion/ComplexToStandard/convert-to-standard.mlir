@@ -190,6 +190,27 @@ func.func @complex_exp(%arg: complex<f32>) -> complex<f32> {
 // CHECK: %[[RESULT:.*]] = complex.create %[[RESULT_REAL]], %[[RESULT_IMAG]] : complex<f32>
 // CHECK: return %[[RESULT]] : complex<f32>
 
+// CHECK-LABEL:   func.func @complex_expm1(
+// CHECK-SAME:                             %[[ARG:.*]]: complex<f32>) -> complex<f32> {
+func.func @complex_expm1(%arg: complex<f32>) -> complex<f32> {
+  %expm1 = complex.expm1 %arg: complex<f32>
+  return %expm1 : complex<f32>
+}
+// CHECK: %[[REAL_I:.*]] = complex.re %[[ARG]] : complex<f32>
+// CHECK: %[[IMAG_I:.*]] = complex.im %[[ARG]] : complex<f32>
+// CHECK: %[[EXP:.*]] = math.exp %[[REAL_I]] : f32
+// CHECK: %[[COS:.*]] = math.cos %[[IMAG_I]] : f32
+// CHECK: %[[RES_REAL:.*]] = arith.mulf %[[EXP]], %[[COS]] : f32
+// CHECK: %[[SIN:.*]] = math.sin %[[IMAG_I]] : f32
+// CHECK: %[[RES_IMAG:.*]] = arith.mulf %[[EXP]], %[[SIN]] : f32
+// CHECK: %[[RES_EXP:.*]] = complex.create %[[RES_REAL]], %[[RES_IMAG]] : complex<f32>
+// CHECK: %[[REAL:.*]] = complex.re %[[RES_EXP]] : complex<f32>
+// CHECK: %[[ONE:.*]] = arith.constant 1.000000e+00 : f32
+// CHECK: %[[REAL_M1:.*]] = arith.subf %[[REAL]], %[[ONE]] : f32
+// CHECK: %[[IMAG:.*]] = complex.im %[[RES_EXP]] : complex<f32>
+// CHECK: %[[RES:.*]] = complex.create %[[REAL_M1]], %[[IMAG]] : complex<f32>
+// CHECK: return %[[RES]] : complex<f32>
+
 // CHECK-LABEL: func @complex_log
 // CHECK-SAME: %[[ARG:.*]]: complex<f32>
 func.func @complex_log(%arg: complex<f32>) -> complex<f32> {

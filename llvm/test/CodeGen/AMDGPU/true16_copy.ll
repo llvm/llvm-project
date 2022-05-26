@@ -70,4 +70,28 @@ bb16:
   ret void
 }
 
+; Check that we don't try to emit v_mov_b16 with an fp inline constant operand
+; like 1.0, because they don't work as expected in _b16 instructions.
+
+define amdgpu_cs half @v_mov_b16_inline(half %arg) {
+; CHECK-LABEL: v_mov_b16_inline:
+; CHECK:       ; %bb.0: ; %bb
+; CHECK-NEXT:    v_mov_b16_e32 v1.l, 0x3c00
+; CHECK-NEXT:  .LBB1_1: ; %bb1
+; CHECK-NEXT:    ; =>This Inner Loop Header: Depth=1
+; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; CHECK-NEXT:    v_mul_f16_e32 v1, v1, v0
+; CHECK-NEXT:    s_branch .LBB1_1
+bb:
+  br label %bb1
+
+bb1:
+  %i = phi half [ 0xH3C00, %bb ], [ %i2, %bb1 ]
+  %i2 = fmul half %i, %arg
+  br label %bb1
+
+bb2:
+  ret half %i2
+}
+
 declare i8 @llvm.umin.i8(i8, i8)

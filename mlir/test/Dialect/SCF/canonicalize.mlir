@@ -372,7 +372,7 @@ func.func @for_yields_3(%lb : index, %ub : index, %step : index) -> (i32, i32, i
   %r:3 = scf.for %i = %lb to %ub step %step iter_args(%0 = %a, %1 = %a, %2 = %b) -> (i32, i32, i32) {
     %c = func.call @make_i32() : () -> (i32)
     scf.yield %0, %c, %2 : i32, i32, i32
-  }
+  } {some_attr}
   return %r#0, %r#1, %r#2 : i32, i32, i32
 }
 
@@ -382,7 +382,7 @@ func.func @for_yields_3(%lb : index, %ub : index, %step : index) -> (i32, i32, i
 //  CHECK-NEXT:     %[[r1:.*]] = scf.for {{.*}} iter_args(%arg4 = %[[a]]) -> (i32) {
 //  CHECK-NEXT:       %[[c:.*]] = func.call @make_i32() : () -> i32
 //  CHECK-NEXT:       scf.yield %[[c]] : i32
-//  CHECK-NEXT:     }
+//  CHECK-NEXT:     } {some_attr}
 //  CHECK-NEXT:     return %[[a]], %[[r1]], %[[b]] : i32, i32, i32
 
 // -----
@@ -846,11 +846,12 @@ func.func @matmul_on_tensors(%t0: tensor<32x1024xf32>, %t1: tensor<1024x1024xf32
 //       CHECK:   %[[DONE:.*]] = func.call @do(%[[CAST]]) : (tensor<?x?xf32>) -> tensor<?x?xf32>
 //       CHECK:   %[[UNCAST:.*]] = tensor.cast %[[DONE]] : tensor<?x?xf32> to tensor<32x1024xf32>
 //       CHECK:   scf.yield %[[UNCAST]] : tensor<32x1024xf32>
+//       CHECK: } {some_attr}
   %0 = tensor.cast %t0 : tensor<32x1024xf32> to tensor<?x?xf32>
   %1 = scf.for %i = %c0 to %c1024 step %c32 iter_args(%iter_t0 = %0) -> (tensor<?x?xf32>) {
     %2 = func.call @do(%iter_t0) : (tensor<?x?xf32>) -> tensor<?x?xf32>
     scf.yield %2 : tensor<?x?xf32>
-  }
+  } {some_attr}
 //   CHECK-NOT: tensor.cast
 //       CHECK: %[[RES:.*]] = tensor.insert_slice %[[FOR_RES]] into %[[T1]][0, 0] [32, 1024] [1, 1] : tensor<32x1024xf32> into tensor<1024x1024xf32>
 //       CHECK: return %[[RES]] : tensor<1024x1024xf32>
