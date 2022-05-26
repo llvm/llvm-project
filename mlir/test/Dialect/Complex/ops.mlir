@@ -38,6 +38,9 @@ func.func @ops(%f: f32) {
   // CHECK: complex.exp %[[C]] : complex<f32>
   %exp = complex.exp %complex : complex<f32>
 
+  // CHECK: complex.expm1 %[[C]] : complex<f32>
+  %expm1 = complex.expm1 %complex : complex<f32>
+
   // CHECK: complex.log %[[C]] : complex<f32>
   %log = complex.log %complex : complex<f32>
 
