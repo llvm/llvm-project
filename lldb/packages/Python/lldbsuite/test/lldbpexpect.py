@@ -34,7 +34,7 @@ class PExpectTest(TestBase):
             args += run_under
         args += [lldbtest_config.lldbExec, '--no-lldbinit']
         if not use_colors:
-            args += '--no-use-colors'
+            args.append('--no-use-colors')
         for cmd in self.setUpCommands():
             if "use-color false" in cmd and use_colors:
                 continue
