@@ -388,6 +388,25 @@ def ReOp : ComplexUnaryOp<"re",
 }
 
 //===----------------------------------------------------------------------===//
+// RsqrtOp
+//===----------------------------------------------------------------------===//
+
+def RsqrtOp : ComplexUnaryOp<"rsqrt", [SameOperandsAndResultType]> {
+  let summary = "complex reciprocal of square root";
+  let description = [{
+    The `rsqrt` operation computes reciprocal of square root.
+
+    Example:
+
+    ```mlir
+    %a = complex.rsqrt %b : complex<f32>
+    ```
+  }];
+
+  let results = (outs Complex<AnyFloat>:$result);
+}
+
+//===----------------------------------------------------------------------===//
 // SignOp
 //===----------------------------------------------------------------------===//
 
