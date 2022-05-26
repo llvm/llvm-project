@@ -4746,14 +4746,24 @@ class OMPDependClause final
   friend OMPVarListClause;
   friend TrailingObjects;
 
-  /// Dependency type (one of in, out, inout).
-  OpenMPDependClauseKind DepKind = OMPC_DEPEND_unknown;
+public:
+  struct DependDataTy final {
+    /// Dependency type (one of in, out, inout).
+    OpenMPDependClauseKind DepKind = OMPC_DEPEND_unknown;
 
-  /// Dependency type location.
-  SourceLocation DepLoc;
+    /// Dependency type location.
+    SourceLocation DepLoc;
 
-  /// Colon location.
-  SourceLocation ColonLoc;
+    /// Colon location.
+    SourceLocation ColonLoc;
+
+    /// Location of 'omp_all_memory'.
+    SourceLocation OmpAllMemoryLoc;
+  };
+
+private:
+  /// Dependency type and source locations.
+  DependDataTy Data;
 
   /// Number of loops, associated with the depend clause.
   unsigned NumLoops = 0;
@@ -4784,13 +4794,16 @@ class OMPDependClause final
         NumLoops(NumLoops) {}
 
   /// Set dependency kind.
-  void setDependencyKind(OpenMPDependClauseKind K) { DepKind = K; }
+  void setDependencyKind(OpenMPDependClauseKind K) { Data.DepKind = K; }
 
   /// Set dependency kind and its location.
-  void setDependencyLoc(SourceLocation Loc) { DepLoc = Loc; }
+  void setDependencyLoc(SourceLocation Loc) { Data.DepLoc = Loc; }
 
   /// Set colon location.
-  void setColonLoc(SourceLocation Loc) { ColonLoc = Loc; }
+  void setColonLoc(SourceLocation Loc) { Data.ColonLoc = Loc; }
+
+  /// Set the 'omp_all_memory' location.
+  void setOmpAllMemoryLoc(SourceLocation Loc) { Data.OmpAllMemoryLoc = Loc; }
 
   /// Sets optional dependency modifier.
   void setModifier(Expr *DepModifier);
@@ -4802,18 +4815,15 @@ public:
   /// \param StartLoc Starting location of the clause.
   /// \param LParenLoc Location of '('.
   /// \param EndLoc Ending location of the clause.
-  /// \param DepKind Dependency type.
-  /// \param DepLoc Location of the dependency type.
-  /// \param ColonLoc Colon location.
+  /// \param Data Dependency type and source locations.
   /// \param VL List of references to the variables.
   /// \param NumLoops Number of loops that is associated with this depend
   /// clause.
   static OMPDependClause *Create(const ASTContext &C, SourceLocation StartLoc,
                                  SourceLocation LParenLoc,
-                                 SourceLocation EndLoc, Expr *DepModifier,
-                                 OpenMPDependClauseKind DepKind,
-                                 SourceLocation DepLoc, SourceLocation ColonLoc,
-                                 ArrayRef<Expr *> VL, unsigned NumLoops);
+                                 SourceLocation EndLoc, DependDataTy Data,
+                                 Expr *DepModifier, ArrayRef<Expr *> VL,
+                                 unsigned NumLoops);
 
   /// Creates an empty clause with \a N variables.
   ///
@@ -4825,19 +4835,22 @@ public:
                                       unsigned NumLoops);
 
   /// Get dependency type.
-  OpenMPDependClauseKind getDependencyKind() const { return DepKind; }
+  OpenMPDependClauseKind getDependencyKind() const { return Data.DepKind; }
+
+  /// Get dependency type location.
+  SourceLocation getDependencyLoc() const { return Data.DepLoc; }
+
+  /// Get colon location.
+  SourceLocation getColonLoc() const { return Data.ColonLoc; }
+
+  /// Get 'omp_all_memory' location.
+  SourceLocation getOmpAllMemoryLoc() const { return Data.OmpAllMemoryLoc; }
 
   /// Return optional depend modifier.
   Expr *getModifier();
   const Expr *getModifier() const {
     return const_cast<OMPDependClause *>(this)->getModifier();
   }
-
-  /// Get dependency type location.
-  SourceLocation getDependencyLoc() const { return DepLoc; }
-
-  /// Get colon location.
-  SourceLocation getColonLoc() const { return ColonLoc; }
 
   /// Get number of loops associated with the clause.
   unsigned getNumLoops() const { return NumLoops; }
