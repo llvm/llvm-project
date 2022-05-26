@@ -4269,10 +4269,6 @@ RISCVTargetLowering::lowerVectorFPExtendOrRoundLike(SDValue Op,
 
   bool IsDirectConv = IsDirectExtend || IsDirectTrunc;
 
-  // For FP_ROUND/FP_EXTEND of scalable vectors, leave it to the pattern.
-  if (!VT.isFixedLengthVector() && !IsVP && IsDirectConv)
-    return Op;
-
   // Prepare any fixed-length vector operands.
   MVT ContainerVT = VT;
   SDValue Mask, VL;
