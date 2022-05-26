@@ -826,7 +826,7 @@ multiclass VPatNarrowShiftSplatExt_WX<SDNode op, PatFrags extop, string instruct
           (wti.Mask true_mask), VLOpFrag),
         (vti.Mask true_mask), VLOpFrag)),
       (!cast<Instruction>(instruction_name#"_WX_"#vti.LMul.MX)
-        wti.RegClass:$rs2, GPR:$rs1, vti.AVL, vti.Log2SEW)>;
+        wti.RegClass:$rs2, GPR:$rs1, GPR:$vl, vti.Log2SEW)>;
   }
 }
 

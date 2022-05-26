@@ -41,12 +41,15 @@ TensorExp::TensorExp(Kind k, unsigned x, unsigned y, Value v, Operation *o)
   case kCeilF:
   case kFloorF:
   case kSqrtF:
+  case kSqrtC:
   case kExpm1F:
+  case kExpm1C:
   case kLog1pF:
   case kLog1pC:
   case kSinF:
   case kSinC:
   case kTanhF:
+  case kTanhC:
   case kNegF:
   case kNegC:
   case kNegI:
@@ -284,12 +287,15 @@ bool Merger::isSingleCondition(unsigned t, unsigned e) const {
   case kCeilF:
   case kFloorF:
   case kSqrtF:
+  case kSqrtC:
   case kExpm1F:
+  case kExpm1C:
   case kLog1pF:
   case kLog1pC:
   case kSinF:
   case kSinC:
   case kTanhF:
+  case kTanhC:
   case kNegF:
   case kNegC:
   case kNegI:
@@ -360,8 +366,10 @@ static const char *kindToOpSymbol(Kind kind) {
   case kFloorF:
     return "floor";
   case kSqrtF:
+  case kSqrtC:
     return "sqrt";
   case kExpm1F:
+  case kExpm1C:
     return "expm1";
   case kLog1pF:
   case kLog1pC:
@@ -370,6 +378,7 @@ static const char *kindToOpSymbol(Kind kind) {
   case kSinC:
     return "sin";
   case kTanhF:
+  case kTanhC:
     return "tanh";
   case kNegF:
   case kNegC:
@@ -449,10 +458,13 @@ void Merger::dumpExp(unsigned e) const {
   case kCeilF:
   case kFloorF:
   case kSqrtF:
+  case kSqrtC:
   case kExpm1F:
+  case kExpm1C:
   case kLog1pF:
   case kSinF:
   case kTanhF:
+  case kTanhC:
   case kNegF:
   case kNegI:
   case kTruncF:
@@ -555,12 +567,15 @@ unsigned Merger::buildLattices(unsigned e, unsigned i) {
   case kCRe:
   case kFloorF:
   case kSqrtF:
+  case kSqrtC:
   case kExpm1F:
+  case kExpm1C:
   case kLog1pF:
   case kLog1pC:
   case kSinF:
   case kSinC:
   case kTanhF:
+  case kTanhC:
   case kNegF:
   case kNegC:
   case kNegI:
@@ -785,8 +800,12 @@ Optional<unsigned> Merger::buildTensorExp(linalg::GenericOp op, Value v) {
         return addExp(kFloorF, e);
       if (isa<math::SqrtOp>(def))
         return addExp(kSqrtF, e);
+      if (isa<complex::SqrtOp>(def))
+        return addExp(kSqrtC, e);
       if (isa<math::ExpM1Op>(def))
         return addExp(kExpm1F, e);
+      if (isa<complex::Expm1Op>(def))
+        return addExp(kExpm1C, e);
       if (isa<math::Log1pOp>(def))
         return addExp(kLog1pF, e);
       if (isa<complex::Log1pOp>(def))
@@ -797,6 +816,8 @@ Optional<unsigned> Merger::buildTensorExp(linalg::GenericOp op, Value v) {
         return addExp(kSinC, e);
       if (isa<math::TanhOp>(def))
         return addExp(kTanhF, e);
+      if (isa<complex::TanhOp>(def))
+        return addExp(kTanhC, e);
       if (isa<arith::NegFOp>(def))
         return addExp(kNegF, e); // no negi in std
       if (isa<complex::NegOp>(def))
@@ -952,8 +973,12 @@ Value Merger::buildExp(RewriterBase &rewriter, Location loc, unsigned e,
     return rewriter.create<math::FloorOp>(loc, v0);
   case kSqrtF:
     return rewriter.create<math::SqrtOp>(loc, v0);
+  case kSqrtC:
+    return rewriter.create<complex::SqrtOp>(loc, v0);
   case kExpm1F:
     return rewriter.create<math::ExpM1Op>(loc, v0);
+  case kExpm1C:
+    return rewriter.create<complex::Expm1Op>(loc, v0);
   case kLog1pF:
     return rewriter.create<math::Log1pOp>(loc, v0);
   case kLog1pC:
@@ -964,6 +989,8 @@ Value Merger::buildExp(RewriterBase &rewriter, Location loc, unsigned e,
     return rewriter.create<complex::SinOp>(loc, v0);
   case kTanhF:
     return rewriter.create<math::TanhOp>(loc, v0);
+  case kTanhC:
+    return rewriter.create<complex::TanhOp>(loc, v0);
   case kNegF:
     return rewriter.create<arith::NegFOp>(loc, v0);
   case kNegC:

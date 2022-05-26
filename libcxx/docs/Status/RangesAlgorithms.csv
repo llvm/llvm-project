@@ -42,8 +42,8 @@ Write,copy_n,Nikolas Klauser,`D122982 <https://llvm.org/D122982>`_,✅
 Write,copy_backward,Nikolas Klauser,`D122982 <https://llvm.org/D122982>`_,✅
 Write,move,Not assigned,n/a,Not started
 Write,move_backward,Not assigned,n/a,Not started
-Write,fill,Not assigned,n/a,Not started
-Write,fill_n,Not assigned,n/a,Not started
+Write,fill,Nikolas Klauser,`D123462 <https://reviews.llvm.org/D123462>`_,✅
+Write,fill_n,Nikolas Klauser,`D123462 <https://reviews.llvm.org/D123462>`_,✅
 Write,transform,Nikolas Klauser,`D122173 <https://llvm.org/D122173>`_,✅
 Write,generate,Not assigned,n/a,Not started
 Write,generate_n,Not assigned,n/a,Not started

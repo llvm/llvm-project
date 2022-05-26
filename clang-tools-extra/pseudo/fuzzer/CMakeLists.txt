@@ -11,4 +11,5 @@ add_llvm_fuzzer(clang-pseudo-fuzzer
 target_link_libraries(clang-pseudo-fuzzer
   PRIVATE
   clangPseudo
+  clangPseudoGrammar
   )
