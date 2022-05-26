@@ -8703,14 +8703,15 @@ static void addUsersInExitBlock(VPBasicBlock *HeaderVPBB,
                                 VPBasicBlock *MiddleVPBB, Loop *OrigLoop,
                                 VPlan &Plan) {
   BasicBlock *ExitBB = OrigLoop->getUniqueExitBlock();
+  BasicBlock *ExitingBB = OrigLoop->getExitingBlock();
   // Only handle single-exit loops with unique exit blocks for now.
-  if (!ExitBB || !ExitBB->getSinglePredecessor())
+  if (!ExitBB || !ExitBB->getSinglePredecessor() || !ExitingBB)
     return;
 
   // Introduce VPUsers modeling the exit values.
   for (PHINode &ExitPhi : ExitBB->phis()) {
     Value *IncomingValue =
-        ExitPhi.getIncomingValueForBlock(OrigLoop->getLoopLatch());
+        ExitPhi.getIncomingValueForBlock(ExitingBB);
     VPValue *V = Plan.getOrAddVPValue(IncomingValue, true);
     Plan.addLiveOut(&ExitPhi, V);
   }
