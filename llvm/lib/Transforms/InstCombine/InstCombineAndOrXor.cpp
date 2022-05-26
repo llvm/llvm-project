@@ -365,6 +365,7 @@ getMaskedTypeForICmpPair(Value *&A, Value *&B, Value *&C,
 /// (icmp(A & X) ==/!= Y), where the left-hand side is of type Mask_NotAllZeros
 /// and the right hand side is of type BMask_Mixed. For example,
 /// (icmp (A & 12) != 0) & (icmp (A & 15) == 8) -> (icmp (A & 15) == 8).
+/// Also used for logical and/or, must be poison safe.
 static Value *foldLogOpOfMaskedICmps_NotAllZeros_BMask_Mixed(
     ICmpInst *LHS, ICmpInst *RHS, bool IsAnd, Value *A, Value *B, Value *C,
     Value *D, Value *E, ICmpInst::Predicate PredL, ICmpInst::Predicate PredR,
@@ -486,6 +487,7 @@ static Value *foldLogOpOfMaskedICmps_NotAllZeros_BMask_Mixed(
 /// Try to fold (icmp(A & B) ==/!= 0) &/| (icmp(A & D) ==/!= E) into a single
 /// (icmp(A & X) ==/!= Y), where the left-hand side and the right hand side
 /// aren't of the common mask pattern type.
+/// Also used for logical and/or, must be poison safe.
 static Value *foldLogOpOfMaskedICmpsAsymmetric(
     ICmpInst *LHS, ICmpInst *RHS, bool IsAnd, Value *A, Value *B, Value *C,
     Value *D, Value *E, ICmpInst::Predicate PredL, ICmpInst::Predicate PredR,
@@ -520,6 +522,7 @@ static Value *foldLogOpOfMaskedICmpsAsymmetric(
 /// Try to fold (icmp(A & B) ==/!= C) &/| (icmp(A & D) ==/!= E)
 /// into a single (icmp(A & X) ==/!= Y).
 static Value *foldLogOpOfMaskedICmps(ICmpInst *LHS, ICmpInst *RHS, bool IsAnd,
+                                     bool IsLogical,
                                      InstCombiner::BuilderTy &Builder) {
   Value *A = nullptr, *B = nullptr, *C = nullptr, *D = nullptr, *E = nullptr;
   ICmpInst::Predicate PredL = LHS->getPredicate(), PredR = RHS->getPredicate();
@@ -564,6 +567,8 @@ static Value *foldLogOpOfMaskedICmps(ICmpInst *LHS, ICmpInst *RHS, bool IsAnd,
   if (Mask & Mask_AllZeros) {
     // (icmp eq (A & B), 0) & (icmp eq (A & D), 0)
     // -> (icmp eq (A & (B|D)), 0)
+    if (IsLogical && !isGuaranteedNotToBeUndefOrPoison(D))
+      return nullptr; // TODO: Use freeze?
     Value *NewOr = Builder.CreateOr(B, D);
     Value *NewAnd = Builder.CreateAnd(A, NewOr);
     // We can't use C as zero because we might actually handle
@@ -575,6 +580,8 @@ static Value *foldLogOpOfMaskedICmps(ICmpInst *LHS, ICmpInst *RHS, bool IsAnd,
   if (Mask & BMask_AllOnes) {
     // (icmp eq (A & B), B) & (icmp eq (A & D), D)
     // -> (icmp eq (A & (B|D)), (B|D))
+    if (IsLogical && !isGuaranteedNotToBeUndefOrPoison(D))
+      return nullptr; // TODO: Use freeze?
     Value *NewOr = Builder.CreateOr(B, D);
     Value *NewAnd = Builder.CreateAnd(A, NewOr);
     return Builder.CreateICmp(NewCC, NewAnd, NewOr);
@@ -582,6 +589,8 @@ static Value *foldLogOpOfMaskedICmps(ICmpInst *LHS, ICmpInst *RHS, bool IsAnd,
   if (Mask & AMask_AllOnes) {
     // (icmp eq (A & B), A) & (icmp eq (A & D), A)
     // -> (icmp eq (A & (B&D)), A)
+    if (IsLogical && !isGuaranteedNotToBeUndefOrPoison(D))
+      return nullptr; // TODO: Use freeze?
     Value *NewAnd1 = Builder.CreateAnd(B, D);
     Value *NewAnd2 = Builder.CreateAnd(A, NewAnd1);
     return Builder.CreateICmp(NewCC, NewAnd2, A);
@@ -2442,15 +2451,11 @@ Value *InstCombinerImpl::foldAndOrOfICmps(ICmpInst *LHS, ICmpInst *RHS,
     }
   }
 
-  // TODO: Some (but not all) of the patterns handled by this function are
-  // safe with logical and/or.
-  if (!IsLogical) {
-    // handle (roughly):
-    // (icmp ne (A & B), C) | (icmp ne (A & D), E)
-    // (icmp eq (A & B), C) & (icmp eq (A & D), E)
-    if (Value *V = foldLogOpOfMaskedICmps(LHS, RHS, IsAnd, Builder))
-      return V;
-  }
+  // handle (roughly):
+  // (icmp ne (A & B), C) | (icmp ne (A & D), E)
+  // (icmp eq (A & B), C) & (icmp eq (A & D), E)
+  if (Value *V = foldLogOpOfMaskedICmps(LHS, RHS, IsAnd, IsLogical, Builder))
+    return V;
 
   // TODO: One of these directions is fine with logical and/or, the other could
   // be supported by inserting freeze.
