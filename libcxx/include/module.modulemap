@@ -545,6 +545,7 @@ module std [system] {
       module concepts                 { private header "__format/concepts.h" }
       module enable_insertable        { private header "__format/enable_insertable.h" }
       module format_arg               { private header "__format/format_arg.h" }
+      module format_arg_store         { private header "__format/format_arg_store.h" }
       module format_args              { private header "__format/format_args.h" }
       module format_context {
         private header "__format/format_context.h"
