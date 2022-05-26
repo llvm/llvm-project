@@ -1,7 +1,7 @@
 Category,Algorithm,Assignee,CL,Complete
-Search,any_of,Christopher Di Bella,`D105793 <https://llvm.org/D105793>`_
-Search,all_of,Christopher Di Bella,`D105793 <https://llvm.org/D105793>`_
-Search,none_of,Christopher Di Bella,`D105793 <https://llvm.org/D105793>`_
+Search,any_of,Nikolas Klauser,`D123016 <https://llvm.org/D123016>`_,✅
+Search,all_of,Nikolas Klauser,`D123016 <https://llvm.org/D123016>`_,✅
+Search,none_of,Nikolas Klauser,`D123016 <https://llvm.org/D123016>`_,✅
 Search,find,Nikolas Klauser,`D121248 <https://reviews.llvm.org/D121248>`_,✅
 Search,find_if,Nikolas Klauser,`D121248 <https://reviews.llvm.org/D121248>`_,✅
 Search,find_if_not,Nikolas Klauser,`D121248 <https://reviews.llvm.org/D121248>`_,✅

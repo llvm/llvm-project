@@ -298,6 +298,8 @@ module std [system] {
       module pop_heap                 { private header "__algorithm/pop_heap.h" }
       module prev_permutation         { private header "__algorithm/prev_permutation.h" }
       module push_heap                { private header "__algorithm/push_heap.h" }
+      module ranges_all_of            { private header "__algorithm/ranges_all_of.h" }
+      module ranges_any_of            { private header "__algorithm/ranges_any_of.h" }
       module ranges_copy              { private header "__algorithm/ranges_copy.h" }
       module ranges_copy_backward     { private header "__algorithm/ranges_copy_backward.h" }
       module ranges_copy_if           { private header "__algorithm/ranges_copy_if.h" }
@@ -320,6 +322,7 @@ module std [system] {
       module ranges_minmax            { private header "__algorithm/ranges_minmax.h" }
       module ranges_minmax_element    { private header "__algorithm/ranges_minmax_element.h" }
       module ranges_mismatch          { private header "__algorithm/ranges_mismatch.h" }
+      module ranges_none_of           { private header "__algorithm/ranges_none_of.h" }
       module ranges_reverse           { private header "__algorithm/ranges_reverse.h" }
       module ranges_swap_ranges       { private header "__algorithm/ranges_swap_ranges.h" }
       module ranges_transform         { private header "__algorithm/ranges_transform.h" }
