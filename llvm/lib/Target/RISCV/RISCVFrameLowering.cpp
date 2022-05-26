@@ -962,6 +962,11 @@ void RISCVFrameLowering::processFunctionBeforeFrameFinalized(
   RVFI->setRVVStackSize(RVVStackSize);
   RVFI->setRVVStackAlign(RVVStackAlign);
 
+  // Ensure the entire stack is aligned to at least the RVV requirement: some
+  // scalable-vector object alignments are not considered by the
+  // target-independent code.
+  MFI.ensureMaxAlignment(RVVStackAlign);
+
   const RISCVInstrInfo &TII = *MF.getSubtarget<RISCVSubtarget>().getInstrInfo();
 
   // estimateStackSize has been observed to under-estimate the final stack

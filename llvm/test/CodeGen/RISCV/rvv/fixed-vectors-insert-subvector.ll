@@ -561,9 +561,12 @@ define void @insert_v2i64_nxv16i64_hi(<2 x i64>* %psv, <vscale x 16 x i64>* %out
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    addi sp, sp, -64
 ; CHECK-NEXT:    .cfi_def_cfa_offset 64
+; CHECK-NEXT:    addi s0, sp, 64
+; CHECK-NEXT:    .cfi_def_cfa s0, 0
 ; CHECK-NEXT:    csrr a2, vlenb
 ; CHECK-NEXT:    slli a2, a2, 4
 ; CHECK-NEXT:    sub sp, sp, a2
+; CHECK-NEXT:    andi sp, sp, -64
 ; CHECK-NEXT:    vsetivli zero, 2, e64, m1, ta, mu
 ; CHECK-NEXT:    vle64.v v8, (a0)
 ; CHECK-NEXT:    addi a0, sp, 128
@@ -578,9 +581,7 @@ define void @insert_v2i64_nxv16i64_hi(<2 x i64>* %psv, <vscale x 16 x i64>* %out
 ; CHECK-NEXT:    add a0, a1, a0
 ; CHECK-NEXT:    vs8r.v v8, (a0)
 ; CHECK-NEXT:    vs8r.v v16, (a1)
-; CHECK-NEXT:    csrr a0, vlenb
-; CHECK-NEXT:    slli a0, a0, 4
-; CHECK-NEXT:    add sp, sp, a0
+; CHECK-NEXT:    addi sp, s0, -64
 ; CHECK-NEXT:    addi sp, sp, 64
 ; CHECK-NEXT:    ret
   %sv = load <2 x i64>, <2 x i64>* %psv
