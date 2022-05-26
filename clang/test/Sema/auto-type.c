@@ -78,3 +78,13 @@ void Issue53652(void) {
                  __typeof__(i) : 0,   // expected-note {{compatible type 'typeof (i)' (aka 'int') specified here}}
                  __typeof__(a) : 1);  // expected-error {{type 'typeof (a)' (aka 'int') in generic association compatible with previously specified type 'typeof (i)' (aka 'int')}}
 }
+
+void Issue55702(void) {
+  // A controlling expression which uses __auto_type should not be
+  // automatically compatible with every association; we should be using the
+  // canonical type for that comparison.
+  void *ptr = 0;
+  __auto_type v = ptr;
+  (void)_Generic(v, long double : 0, double : 0, default : 1); // OK
+  _Static_assert(_Generic(v, long double : 0, default : 1) == 1, "fail");
+}
