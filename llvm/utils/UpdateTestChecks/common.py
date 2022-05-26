@@ -131,8 +131,10 @@ def parse_commandline_args(parser):
                       help='List of regular expressions that a global value declaration must match to generate a check (has no effect if checking globals is not enabled)')
   parser.add_argument('--global-hex-value-regex', nargs='+', default=[],
                       help='List of regular expressions such that, for matching global value declarations, literal integer values should be encoded in hex in the associated FileCheck directives')
-  parser.add_argument('--generate-body-for-unused-prefixes',
-                      action=argparse.BooleanOptionalAction,
+  # FIXME: in 3.9, we can use argparse.BooleanOptionalAction. At that point,
+  # we need to rename the flag to just -generate-body-for-unused-prefixes.
+  parser.add_argument('--no-generate-body-for-unused-prefixes',
+                      action='store_false',
                       dest='gen_unused_prefix_body',
                       default=True,
                       help='Generate a function body that always matches for unused prefixes. This is useful when unused prefixes are desired, and it avoids needing to annotate each FileCheck as allowing them.')
