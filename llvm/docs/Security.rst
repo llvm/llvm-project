@@ -39,6 +39,7 @@ The members of the group represent a wide cross-section of the community, and me
 * Dimitry Andric (individual; FreeBSD) [dim]
 * Ed Maste (individual; FreeBSD) [emaste]
 * George Burgess IV (Google) [george.burgess.iv]
+* Josh Stone (RedHat; Rust) [cuviper]
 * Kate McInnes (Apple) []
 * Kristof Beyls (ARM) [kristof.beyls]
 * Matthew Riley (Google) [mattdr]
@@ -50,7 +51,6 @@ The members of the group represent a wide cross-section of the community, and me
 * Serge Guelton (RedHat) [serge-sans-paille]
 * Sergey Maslov (Intel) [smaslov-intel]
 * Shayne Hiet-Block (Microsoft) [Shayne]
-* Steve Klabnik (Oxide Computer Company; Rust) [steveklabnik]
 * Tim Penge (Sony) [tpenge]
 
 Criteria
