@@ -2302,8 +2302,9 @@ static Instruction *foldCastShuffle(ShuffleVectorInst &Shuf,
   VectorType *ShufOpTy = cast<VectorType>(Shuf.getOperand(0)->getType());
   VectorType *CastSrcTy = cast<VectorType>(Cast0->getSrcTy());
 
-  // TODO: Allow length-changing shuffles?
-  if (ShufTy != ShufOpTy)
+  // TODO: Allow length-increasing shuffles?
+  if (ShufTy->getElementCount().getKnownMinValue() >
+      ShufOpTy->getElementCount().getKnownMinValue())
     return nullptr;
 
   // TODO: Allow element-size-decreasing casts (ex: fptosi float to i8)?
