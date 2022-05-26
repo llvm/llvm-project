@@ -317,16 +317,16 @@ public:
     if (!hasSameAVL(Other))
       return false;
 
+    // If the SEWLMULRatioOnly bits are different, then they aren't equal.
+    if (SEWLMULRatioOnly != Other.SEWLMULRatioOnly)
+      return false;
+
     // If only the VLMAX is valid, check that it is the same.
-    if (SEWLMULRatioOnly && Other.SEWLMULRatioOnly)
+    if (SEWLMULRatioOnly)
       return hasSameVLMAX(Other);
 
     // If the full VTYPE is valid, check that it is the same.
-    if (!SEWLMULRatioOnly && !Other.SEWLMULRatioOnly)
-      return hasSameVTYPE(Other);
-
-    // If the SEWLMULRatioOnly bits are different, then they aren't equal.
-    return false;
+    return hasSameVTYPE(Other);
   }
 
   bool operator!=(const VSETVLIInfo &Other) const {
