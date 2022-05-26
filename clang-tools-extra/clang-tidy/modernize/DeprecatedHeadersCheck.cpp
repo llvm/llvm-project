@@ -188,6 +188,10 @@ void IncludeModernizePPCallbacks::InclusionDirective(
   if (!CheckHeaderFile && !SM.isInMainFile(HashLoc))
     return;
 
+  // Ignore system headers.
+  if (SM.isInSystemHeader(HashLoc))
+    return;
+
   // FIXME: Take care of library symbols from the global namespace.
   //
   // Reasonable options for the check:
