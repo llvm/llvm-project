@@ -3419,11 +3419,18 @@ bool UnwrappedLineParser::parseEnum() {
 
   while (FormatTok->Tok.getIdentifierInfo() ||
          FormatTok->isOneOf(tok::colon, tok::coloncolon, tok::less,
-                            tok::greater, tok::comma, tok::question)) {
+                            tok::greater, tok::comma, tok::question,
+                            tok::l_square, tok::r_square)) {
     nextToken();
     // We can have macros or attributes in between 'enum' and the enum name.
     if (FormatTok->is(tok::l_paren))
       parseParens();
+    if (FormatTok->is(TT_AttributeSquare)) {
+      parseSquare();
+      // Consume the closing TT_AttributeSquare.
+      if (FormatTok->Next && FormatTok->is(TT_AttributeSquare))
+        nextToken();
+    }
     if (FormatTok->is(tok::identifier)) {
       nextToken();
       // If there are two identifiers in a row, this is likely an elaborate
