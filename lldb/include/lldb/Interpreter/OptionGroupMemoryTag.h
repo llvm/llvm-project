@@ -16,7 +16,10 @@ namespace lldb_private {
 
 class OptionGroupMemoryTag : public OptionGroup {
 public:
-  OptionGroupMemoryTag();
+  OptionGroupMemoryTag(
+      // Whether to note that --show-tags does not apply to binary output.
+      // "memory read" wants this but "memory find" does not.
+      bool note_binary = false);
 
   ~OptionGroupMemoryTag() override = default;
 
@@ -33,6 +36,7 @@ public:
 
 protected:
   OptionValueBoolean m_show_tags;
+  OptionDefinition m_option_definition;
 };
 
 } // namespace lldb_private

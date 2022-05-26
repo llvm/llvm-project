@@ -441,3 +441,34 @@ class AArch64LinuxMTEMemoryTagAccessTestCase(TestBase):
         # A fresh command reverts to the default of tags being off.
         self.expect("memory read mte_buf mte_buf+16 -f \"x\"",
                     patterns=["0x[0-9A-fa-f]+00: 0x0+ 0x0+ 0x0+ 0x0+"])
+
+    @skipUnlessArch("aarch64")
+    @skipUnlessPlatform(["linux"])
+    @skipUnlessAArch64MTELinuxCompiler
+    def test_mte_memory_find(self):
+        """Test the --show-tags option with memory find."""
+        self.setup_mte_test()
+
+        # No result, nothing changes.
+        self.expect("memory find -s \"foo\" mte_buf mte_buf+32 --show-tags",
+            substrs=["data not found within the range."])
+
+        cmd = "memory find -s \"LLDB\" mte_buf+64 mte_buf+512"
+        found_pattern = "data found at location: 0x[0-9A-Fa-f]+80"
+        results_patterns = [
+            "0x[0-9A-Fa-f]+80: 4c 4c 44 42 (00 )+ LLDB\.+",
+            "0x[0-9A-Fa-f]+90: 00 00 00 00 (00 )+ \.+"
+        ]
+
+        # Default is not to show tags
+        self.expect(cmd, patterns=[found_pattern, *results_patterns])
+        self.expect(cmd + " --show-tags", patterns=[found_pattern,
+                    results_patterns[0] + " \(tag: 0x8\)",
+                    results_patterns[1] + " \(tag: 0x9\)"])
+
+        # Uses the same logic as memory read to handle misalignment.
+        self.expect("memory find -s \"DB\" mte_buf+64 mte_buf+512 --show-tags",
+            patterns=[
+                "data found at location: 0x[0-9A-Fa-f]+82\n"
+                "0x[0-9A-Fa-f]+82: 44 42 (00 )+ DB\.+ \(tags: 0x8 0x9\)\n",
+                "0x[0-9A-Fa-f]+92: 00 00 (00 )+ ..\.+ \(tags: 0x9 0xa\)"])

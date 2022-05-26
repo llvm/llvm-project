@@ -303,3 +303,13 @@ class HelpCommandTestCase(TestBase):
 
         self.assertEqual(sorted(short_options), short_options,
                          "Short option help displayed in an incorrect order!")
+
+    @no_debug_info_test
+    def test_help_show_tags(self):
+        """ Check that memory find and memory read have the --show-tags option
+            but only memory read mentions binary output. """
+        self.expect("help memory read", patterns=[
+                    "--show-tags\n\s+Include memory tags in output "
+                    "\(does not apply to binary output\)."])
+        self.expect("help memory find", patterns=[
+                    "--show-tags\n\s+Include memory tags in output."])
