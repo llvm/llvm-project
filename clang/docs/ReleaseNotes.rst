@@ -149,9 +149,15 @@ Bug Fixes
   because there is no way to fully qualify the enumerator name, so this
   "extension" was unintentional and useless. This fixes
   `Issue 42372 <https://github.com/llvm/llvm-project/issues/42372>`_.
-- Clang shouldn't lookup allocation function in global scope for coroutines
-  in case it found the allocation function name in the promise_type body.
+- Clang will now find and emit a call to an allocation function in a 
+  promise_type body for coroutines if there is any allocation function 
+  declaration in the scope of promise_type. Additionally, to implement CWG2585,
+  a coroutine will no longer generate a call to a global allocation function
+  with the signature (std::size_t, p0, ..., pn).
   This fixes Issue `Issue 54881 <https://github.com/llvm/llvm-project/issues/54881>`_.
+- Implement `CWG 2394 <https://wg21.link/cwg2394>`_: Const class members
+  may be initialized with a defaulted default constructor under the same
+  conditions it would be allowed for a const object elsewhere.
 
 Improvements to Clang's diagnostics
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -428,7 +434,7 @@ ABI Changes in Clang
   attribute is also specified on the member. Clang historically did perform
   such packing. Clang now matches the gcc behavior (except on Darwin and PS4).
   You can switch back to the old ABI behavior with the flag:
-  ``-fclang-abi-compat=13.0``.
+  ``-fclang-abi-compat=14.0``.
 
 OpenMP Support in Clang
 -----------------------

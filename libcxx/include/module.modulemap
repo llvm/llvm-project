@@ -3,7 +3,6 @@
 // include cycle.
 module std_config [system] [extern_c] {
   header "__config"
-  header "__config_site"
   export *
 }
 
@@ -305,6 +304,8 @@ module std [system] {
       module ranges_copy_n            { private header "__algorithm/ranges_copy_n.h" }
       module ranges_count             { private header "__algorithm/ranges_count.h" }
       module ranges_count_if          { private header "__algorithm/ranges_count_if.h" }
+      module ranges_fill              { private header "__algorithm/ranges_fill.h" }
+      module ranges_fill_n            { private header "__algorithm/ranges_fill_n.h" }
       module ranges_find              { private header "__algorithm/ranges_find.h" }
       module ranges_find_if           { private header "__algorithm/ranges_find_if.h" }
       module ranges_find_if_not       { private header "__algorithm/ranges_find_if_not.h" }
@@ -370,7 +371,6 @@ module std [system] {
     export *
   }
   module barrier {
-    requires cplusplus14
     header "barrier"
     export *
   }
@@ -698,7 +698,6 @@ module std [system] {
     }
   }
   module latch {
-    requires cplusplus14
     header "latch"
     export *
   }
@@ -906,7 +905,6 @@ module std [system] {
     export *
   }
   module semaphore {
-    requires cplusplus14
     header "semaphore"
     export *
   }

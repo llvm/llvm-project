@@ -171,10 +171,10 @@ define amdgpu_ps <4 x float> @image_bvh_intersect_ray_vgpr_descr(i32 %node_ptr, 
 ; GFX1030-NEXT:    v_readfirstlane_b32 s7, v14
 ; GFX1030-NEXT:    v_cmp_eq_u64_e32 vcc_lo, s[4:5], v[11:12]
 ; GFX1030-NEXT:    v_cmp_eq_u64_e64 s0, s[6:7], v[13:14]
-; GFX1030-NEXT:    s_and_b32 s0, s0, vcc_lo
+; GFX1030-NEXT:    s_and_b32 s0, vcc_lo, s0
 ; GFX1030-NEXT:    s_and_saveexec_b32 s0, s0
 ; GFX1030-NEXT:    image_bvh_intersect_ray v[0:3], v[15:30], s[4:7]
-; GFX1030-NEXT:    ; implicit-def: $vgpr11_vgpr12
+; GFX1030-NEXT:    ; implicit-def: $vgpr11
 ; GFX1030-NEXT:    ; implicit-def: $vgpr15
 ; GFX1030-NEXT:    ; implicit-def: $vgpr16
 ; GFX1030-NEXT:    ; implicit-def: $vgpr17
@@ -208,10 +208,10 @@ define amdgpu_ps <4 x float> @image_bvh_intersect_ray_vgpr_descr(i32 %node_ptr, 
 ; GFX1013-NEXT:    v_readfirstlane_b32 s7, v19
 ; GFX1013-NEXT:    v_cmp_eq_u64_e32 vcc_lo, s[4:5], v[16:17]
 ; GFX1013-NEXT:    v_cmp_eq_u64_e64 s0, s[6:7], v[18:19]
-; GFX1013-NEXT:    s_and_b32 s0, s0, vcc_lo
+; GFX1013-NEXT:    s_and_b32 s0, vcc_lo, s0
 ; GFX1013-NEXT:    s_and_saveexec_b32 s0, s0
 ; GFX1013-NEXT:    image_bvh_intersect_ray v[20:23], v[0:15], s[4:7]
-; GFX1013-NEXT:    ; implicit-def: $vgpr16_vgpr17
+; GFX1013-NEXT:    ; implicit-def: $vgpr16
 ; GFX1013-NEXT:    ; implicit-def: $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15
 ; GFX1013-NEXT:    ; implicit-def: $vgpr16_vgpr17_vgpr18_vgpr19
 ; GFX1013-NEXT:    s_waitcnt_depctr 0xffe3
@@ -241,10 +241,10 @@ define amdgpu_ps <4 x float> @image_bvh_intersect_ray_vgpr_descr(i32 %node_ptr, 
 ; GFX11-NEXT:    v_cmp_eq_u64_e32 vcc_lo, s[4:5], v[11:12]
 ; GFX11-NEXT:    v_cmp_eq_u64_e64 s0, s[6:7], v[13:14]
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
-; GFX11-NEXT:    s_and_b32 s0, s0, vcc_lo
+; GFX11-NEXT:    s_and_b32 s0, vcc_lo, s0
 ; GFX11-NEXT:    s_and_saveexec_b32 s0, s0
 ; GFX11-NEXT:    image_bvh_intersect_ray v[0:3], [v18, v19, v[15:17], v[5:7], v[8:10]], s[4:7]
-; GFX11-NEXT:    ; implicit-def: $vgpr11_vgpr12
+; GFX11-NEXT:    ; implicit-def: $vgpr11
 ; GFX11-NEXT:    ; implicit-def: $vgpr18
 ; GFX11-NEXT:    ; implicit-def: $vgpr19
 ; GFX11-NEXT:    ; implicit-def: $vgpr15_vgpr16_vgpr17
@@ -286,10 +286,10 @@ define amdgpu_ps <4 x float> @image_bvh_intersect_ray_a16_vgpr_descr(i32 %node_p
 ; GFX1030-NEXT:    v_readfirstlane_b32 s7, v12
 ; GFX1030-NEXT:    v_cmp_eq_u64_e32 vcc_lo, s[4:5], v[9:10]
 ; GFX1030-NEXT:    v_cmp_eq_u64_e64 s0, s[6:7], v[11:12]
-; GFX1030-NEXT:    s_and_b32 s0, s0, vcc_lo
+; GFX1030-NEXT:    s_and_b32 s0, vcc_lo, s0
 ; GFX1030-NEXT:    s_and_saveexec_b32 s0, s0
 ; GFX1030-NEXT:    image_bvh_intersect_ray v[0:3], v[13:20], s[4:7] a16
-; GFX1030-NEXT:    ; implicit-def: $vgpr9_vgpr10
+; GFX1030-NEXT:    ; implicit-def: $vgpr9
 ; GFX1030-NEXT:    ; implicit-def: $vgpr13
 ; GFX1030-NEXT:    ; implicit-def: $vgpr14
 ; GFX1030-NEXT:    ; implicit-def: $vgpr15
@@ -324,10 +324,10 @@ define amdgpu_ps <4 x float> @image_bvh_intersect_ray_a16_vgpr_descr(i32 %node_p
 ; GFX1013-NEXT:    v_readfirstlane_b32 s7, v12
 ; GFX1013-NEXT:    v_cmp_eq_u64_e32 vcc_lo, s[4:5], v[9:10]
 ; GFX1013-NEXT:    v_cmp_eq_u64_e64 s0, s[6:7], v[11:12]
-; GFX1013-NEXT:    s_and_b32 s0, s0, vcc_lo
+; GFX1013-NEXT:    s_and_b32 s0, vcc_lo, s0
 ; GFX1013-NEXT:    s_and_saveexec_b32 s0, s0
 ; GFX1013-NEXT:    image_bvh_intersect_ray v[13:16], v[0:7], s[4:7] a16
-; GFX1013-NEXT:    ; implicit-def: $vgpr9_vgpr10
+; GFX1013-NEXT:    ; implicit-def: $vgpr9
 ; GFX1013-NEXT:    ; implicit-def: $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7
 ; GFX1013-NEXT:    ; implicit-def: $vgpr9_vgpr10_vgpr11_vgpr12
 ; GFX1013-NEXT:    s_waitcnt_depctr 0xffe3
@@ -366,10 +366,10 @@ define amdgpu_ps <4 x float> @image_bvh_intersect_ray_a16_vgpr_descr(i32 %node_p
 ; GFX11-NEXT:    v_cmp_eq_u64_e32 vcc_lo, s[4:5], v[9:10]
 ; GFX11-NEXT:    v_cmp_eq_u64_e64 s0, s[6:7], v[11:12]
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
-; GFX11-NEXT:    s_and_b32 s0, s0, vcc_lo
+; GFX11-NEXT:    s_and_b32 s0, vcc_lo, s0
 ; GFX11-NEXT:    s_and_saveexec_b32 s0, s0
 ; GFX11-NEXT:    image_bvh_intersect_ray v[0:3], [v13, v14, v[15:17], v[4:6]], s[4:7] a16
-; GFX11-NEXT:    ; implicit-def: $vgpr9_vgpr10
+; GFX11-NEXT:    ; implicit-def: $vgpr9
 ; GFX11-NEXT:    ; implicit-def: $vgpr13
 ; GFX11-NEXT:    ; implicit-def: $vgpr14
 ; GFX11-NEXT:    ; implicit-def: $vgpr15_vgpr16_vgpr17
@@ -409,10 +409,10 @@ define amdgpu_ps <4 x float> @image_bvh64_intersect_ray_vgpr_descr(i64 %node_ptr
 ; GFX1030-NEXT:    v_readfirstlane_b32 s7, v15
 ; GFX1030-NEXT:    v_cmp_eq_u64_e32 vcc_lo, s[4:5], v[12:13]
 ; GFX1030-NEXT:    v_cmp_eq_u64_e64 s0, s[6:7], v[14:15]
-; GFX1030-NEXT:    s_and_b32 s0, s0, vcc_lo
+; GFX1030-NEXT:    s_and_b32 s0, vcc_lo, s0
 ; GFX1030-NEXT:    s_and_saveexec_b32 s0, s0
 ; GFX1030-NEXT:    image_bvh64_intersect_ray v[0:3], v[16:31], s[4:7]
-; GFX1030-NEXT:    ; implicit-def: $vgpr12_vgpr13
+; GFX1030-NEXT:    ; implicit-def: $vgpr12
 ; GFX1030-NEXT:    ; implicit-def: $vgpr16
 ; GFX1030-NEXT:    ; implicit-def: $vgpr17
 ; GFX1030-NEXT:    ; implicit-def: $vgpr18
@@ -447,10 +447,10 @@ define amdgpu_ps <4 x float> @image_bvh64_intersect_ray_vgpr_descr(i64 %node_ptr
 ; GFX1013-NEXT:    v_readfirstlane_b32 s7, v19
 ; GFX1013-NEXT:    v_cmp_eq_u64_e32 vcc_lo, s[4:5], v[16:17]
 ; GFX1013-NEXT:    v_cmp_eq_u64_e64 s0, s[6:7], v[18:19]
-; GFX1013-NEXT:    s_and_b32 s0, s0, vcc_lo
+; GFX1013-NEXT:    s_and_b32 s0, vcc_lo, s0
 ; GFX1013-NEXT:    s_and_saveexec_b32 s0, s0
 ; GFX1013-NEXT:    image_bvh64_intersect_ray v[20:23], v[0:15], s[4:7]
-; GFX1013-NEXT:    ; implicit-def: $vgpr16_vgpr17
+; GFX1013-NEXT:    ; implicit-def: $vgpr16
 ; GFX1013-NEXT:    ; implicit-def: $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15
 ; GFX1013-NEXT:    ; implicit-def: $vgpr16_vgpr17_vgpr18_vgpr19
 ; GFX1013-NEXT:    s_waitcnt_depctr 0xffe3
@@ -480,10 +480,10 @@ define amdgpu_ps <4 x float> @image_bvh64_intersect_ray_vgpr_descr(i64 %node_ptr
 ; GFX11-NEXT:    v_cmp_eq_u64_e32 vcc_lo, s[4:5], v[12:13]
 ; GFX11-NEXT:    v_cmp_eq_u64_e64 s0, s[6:7], v[14:15]
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
-; GFX11-NEXT:    s_and_b32 s0, s0, vcc_lo
+; GFX11-NEXT:    s_and_b32 s0, vcc_lo, s0
 ; GFX11-NEXT:    s_and_saveexec_b32 s0, s0
 ; GFX11-NEXT:    image_bvh64_intersect_ray v[0:3], [v[19:20], v21, v[16:18], v[6:8], v[9:11]], s[4:7]
-; GFX11-NEXT:    ; implicit-def: $vgpr12_vgpr13
+; GFX11-NEXT:    ; implicit-def: $vgpr12
 ; GFX11-NEXT:    ; implicit-def: $vgpr19_vgpr20
 ; GFX11-NEXT:    ; implicit-def: $vgpr21
 ; GFX11-NEXT:    ; implicit-def: $vgpr16_vgpr17_vgpr18
@@ -526,10 +526,10 @@ define amdgpu_ps <4 x float> @image_bvh64_intersect_ray_a16_vgpr_descr(i64 %node
 ; GFX1030-NEXT:    v_readfirstlane_b32 s7, v13
 ; GFX1030-NEXT:    v_cmp_eq_u64_e32 vcc_lo, s[4:5], v[10:11]
 ; GFX1030-NEXT:    v_cmp_eq_u64_e64 s0, s[6:7], v[12:13]
-; GFX1030-NEXT:    s_and_b32 s0, s0, vcc_lo
+; GFX1030-NEXT:    s_and_b32 s0, vcc_lo, s0
 ; GFX1030-NEXT:    s_and_saveexec_b32 s0, s0
 ; GFX1030-NEXT:    image_bvh64_intersect_ray v[0:3], v[14:29], s[4:7] a16
-; GFX1030-NEXT:    ; implicit-def: $vgpr10_vgpr11
+; GFX1030-NEXT:    ; implicit-def: $vgpr10
 ; GFX1030-NEXT:    ; implicit-def: $vgpr14
 ; GFX1030-NEXT:    ; implicit-def: $vgpr15
 ; GFX1030-NEXT:    ; implicit-def: $vgpr16
@@ -569,10 +569,10 @@ define amdgpu_ps <4 x float> @image_bvh64_intersect_ray_a16_vgpr_descr(i64 %node
 ; GFX1013-NEXT:    v_readfirstlane_b32 s7, v19
 ; GFX1013-NEXT:    v_cmp_eq_u64_e32 vcc_lo, s[4:5], v[16:17]
 ; GFX1013-NEXT:    v_cmp_eq_u64_e64 s0, s[6:7], v[18:19]
-; GFX1013-NEXT:    s_and_b32 s0, s0, vcc_lo
+; GFX1013-NEXT:    s_and_b32 s0, vcc_lo, s0
 ; GFX1013-NEXT:    s_and_saveexec_b32 s0, s0
 ; GFX1013-NEXT:    image_bvh64_intersect_ray v[20:23], v[0:15], s[4:7] a16
-; GFX1013-NEXT:    ; implicit-def: $vgpr16_vgpr17
+; GFX1013-NEXT:    ; implicit-def: $vgpr16
 ; GFX1013-NEXT:    ; implicit-def: $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15
 ; GFX1013-NEXT:    ; implicit-def: $vgpr16_vgpr17_vgpr18_vgpr19
 ; GFX1013-NEXT:    s_waitcnt_depctr 0xffe3
@@ -612,10 +612,10 @@ define amdgpu_ps <4 x float> @image_bvh64_intersect_ray_a16_vgpr_descr(i64 %node
 ; GFX11-NEXT:    v_cmp_eq_u64_e32 vcc_lo, s[4:5], v[10:11]
 ; GFX11-NEXT:    v_cmp_eq_u64_e64 s0, s[6:7], v[12:13]
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
-; GFX11-NEXT:    s_and_b32 s0, s0, vcc_lo
+; GFX11-NEXT:    s_and_b32 s0, vcc_lo, s0
 ; GFX11-NEXT:    s_and_saveexec_b32 s0, s0
 ; GFX11-NEXT:    image_bvh64_intersect_ray v[0:3], [v[14:15], v16, v[17:19], v[4:6]], s[4:7] a16
-; GFX11-NEXT:    ; implicit-def: $vgpr10_vgpr11
+; GFX11-NEXT:    ; implicit-def: $vgpr10
 ; GFX11-NEXT:    ; implicit-def: $vgpr14_vgpr15
 ; GFX11-NEXT:    ; implicit-def: $vgpr16
 ; GFX11-NEXT:    ; implicit-def: $vgpr17_vgpr18_vgpr19

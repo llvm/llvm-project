@@ -4209,11 +4209,19 @@ Set starting address of TEXT to <addr>
 
 Pass the comma separated arguments in <arg> to the linker
 
+.. option:: --offload-link
+
+Use the linker supporting offloading device linking.
+
 .. option:: -X
 
 .. option:: -Xlinker <arg>, --for-linker <arg>, --for-linker=<arg>
 
 Pass <arg> to the linker
+
+.. option:: -Xoffload-linker <arg>, -Xoffload-linker-<triple> <arg>
+
+Pass <arg> to all the device linking jobs, or for only <triple> if specified.
 
 .. program:: clang1
 .. option:: -Z

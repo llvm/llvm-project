@@ -142,6 +142,9 @@ struct Frame {
   // A uuid (uint64_t) identifying the function. It is obtained by
   // llvm::md5(FunctionName) which returns the lower 64 bits.
   GlobalValue::GUID Function;
+  // The symbol name for the function. Only populated in the Frame by the reader
+  // if requested during initialization. This field should not be serialized.
+  llvm::Optional<std::string> SymbolName;
   // The source line offset of the call from the beginning of parent function.
   uint32_t LineOffset;
   // The source column number of the call to help distinguish multiple calls
@@ -152,6 +155,7 @@ struct Frame {
 
   Frame(const Frame &Other) {
     Function = Other.Function;
+    SymbolName = Other.SymbolName;
     LineOffset = Other.LineOffset;
     Column = Other.Column;
     IsInlineFrame = Other.IsInlineFrame;
@@ -161,12 +165,15 @@ struct Frame {
       : Function(Hash), LineOffset(Off), Column(Col), IsInlineFrame(Inline) {}
 
   bool operator==(const Frame &Other) const {
+    // Ignore the SymbolName field to avoid a string compare. Comparing the
+    // function hash serves the same purpose.
     return Other.Function == Function && Other.LineOffset == LineOffset &&
            Other.Column == Column && Other.IsInlineFrame == IsInlineFrame;
   }
 
   Frame &operator=(const Frame &Other) {
     Function = Other.Function;
+    SymbolName = Other.SymbolName;
     LineOffset = Other.LineOffset;
     Column = Other.Column;
     IsInlineFrame = Other.IsInlineFrame;
@@ -214,6 +221,8 @@ struct Frame {
   void printYAML(raw_ostream &OS) const {
     OS << "      -\n"
        << "        Function: " << Function << "\n"
+       << "        SymbolName: "
+       << (SymbolName.hasValue() ? SymbolName.getValue() : "<None>") << "\n"
        << "        LineOffset: " << LineOffset << "\n"
        << "        Column: " << Column << "\n"
        << "        Inline: " << IsInlineFrame << "\n";

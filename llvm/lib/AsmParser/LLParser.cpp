@@ -7436,10 +7436,12 @@ int LLParser::parseAtomicRMW(Instruction *&Inst, PerFunctionState &PFS) {
 
   if (Operation == AtomicRMWInst::Xchg) {
     if (!Val->getType()->isIntegerTy() &&
-        !Val->getType()->isFloatingPointTy()) {
-      return error(ValLoc,
-                   "atomicrmw " + AtomicRMWInst::getOperationName(Operation) +
-                       " operand must be an integer or floating point type");
+        !Val->getType()->isFloatingPointTy() &&
+        !Val->getType()->isPointerTy()) {
+      return error(
+          ValLoc,
+          "atomicrmw " + AtomicRMWInst::getOperationName(Operation) +
+              " operand must be an integer, floating point, or pointer type");
     }
   } else if (IsFP) {
     if (!Val->getType()->isFloatingPointTy()) {
@@ -7455,7 +7457,9 @@ int LLParser::parseAtomicRMW(Instruction *&Inst, PerFunctionState &PFS) {
     }
   }
 
-  unsigned Size = Val->getType()->getPrimitiveSizeInBits();
+  unsigned Size =
+      PFS.getFunction().getParent()->getDataLayout().getTypeStoreSizeInBits(
+          Val->getType());
   if (Size < 8 || (Size & (Size - 1)))
     return error(ValLoc, "atomicrmw operand must be power-of-two byte-sized"
                          " integer");

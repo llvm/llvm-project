@@ -323,6 +323,8 @@ PdbAstBuilder::CreateDeclInfoForType(const TagRecord &record, TypeIndex ti) {
   // LLDB TypeSP for the parent.  This will cause the AST to automatically get
   // the right DeclContext created for any parent.
   clang::QualType parent_qt = GetOrCreateType(parent_iter->second);
+  if (parent_qt.isNull())
+    return {nullptr, ""};
 
   context = clang::TagDecl::castToDeclContext(parent_qt->getAsTagDecl());
   return {context, uname};
@@ -532,6 +534,8 @@ llvm::Optional<CompilerDecl> PdbAstBuilder::GetOrCreateDeclForUid(PdbSymUid uid)
     break;
   case PdbSymUidKind::Type: {
     clang::QualType qt = GetOrCreateType(uid.asTypeSym());
+    if (qt.isNull())
+      return llvm::None;
     if (auto *tag = qt->getAsTagDecl()) {
       result = tag;
       break;
@@ -581,6 +585,8 @@ PdbAstBuilder::CreateDeclInfoForUndecoratedName(llvm::StringRef name) {
   std::vector<TypeIndex> types = m_index.tpi().findRecordsByName(scope_name);
   while (!types.empty()) {
     clang::QualType qt = GetOrCreateType(types.back());
+    if (qt.isNull())
+      continue;
     clang::TagDecl *tag = qt->getAsTagDecl();
     if (tag)
       return {clang::TagDecl::castToDeclContext(tag), std::string(uname)};
@@ -622,6 +628,8 @@ PdbAstBuilder::GetParentDeclContextForSymbol(const CVSymbol &sym) {
     std::vector<TypeIndex> matches = m_index.tpi().findRecordsByName(qname);
     while (!matches.empty()) {
       clang::QualType qt = GetOrCreateType(matches.back());
+      if (qt.isNull())
+        continue;
       clang::TagDecl *tag = qt->getAsTagDecl();
       if (tag)
         return clang::TagDecl::castToDeclContext(tag);
@@ -700,6 +708,8 @@ clang::DeclContext *PdbAstBuilder::GetParentDeclContext(PdbSymUid uid) {
 }
 
 bool PdbAstBuilder::CompleteType(clang::QualType qt) {
+  if (qt.isNull())
+    return false;
   clang::TagDecl *tag = qt->getAsTagDecl();
   if (!tag)
     return false;
@@ -767,6 +777,8 @@ clang::QualType PdbAstBuilder::CreateSimpleType(TypeIndex ti) {
 
   if (ti.getSimpleMode() != SimpleTypeMode::Direct) {
     clang::QualType direct_type = GetOrCreateType(ti.makeDirect());
+    if (direct_type.isNull())
+      return {};
     return m_clang.getASTContext().getPointerType(direct_type);
   }
 
@@ -791,7 +803,8 @@ clang::QualType PdbAstBuilder::CreatePointerType(const PointerRecord &pointer) {
   if (pointer.isPointerToMember()) {
     MemberPointerInfo mpi = pointer.getMemberInfo();
     clang::QualType class_type = GetOrCreateType(mpi.ContainingType);
-
+    if (class_type.isNull())
+      return {};
     return m_clang.getASTContext().getMemberPointerType(
         pointee_type, class_type.getTypePtr());
   }
@@ -835,6 +848,9 @@ clang::QualType PdbAstBuilder::CreateRecordType(PdbTypeSymId id,
   clang::DeclContext *context = nullptr;
   std::string uname;
   std::tie(context, uname) = CreateDeclInfoForType(record, id.index);
+  if (!context)
+    return {};
+
   clang::TagTypeKind ttk = TranslateUdtKind(record);
   lldb::AccessType access =
       (ttk == clang::TTK_Class) ? lldb::eAccessPrivate : lldb::eAccessPublic;
@@ -899,6 +915,8 @@ clang::VarDecl *PdbAstBuilder::CreateVariableDecl(PdbSymUid uid, CVSymbol sym,
                                                   clang::DeclContext &scope) {
   VariableInfo var_info = GetVariableNameInfo(sym);
   clang::QualType qt = GetOrCreateType(var_info.type);
+  if (qt.isNull())
+    return nullptr;
 
   clang::VarDecl *var_decl = m_clang.CreateVariableDeclaration(
       &scope, OptionalClangModuleID(), var_info.name.str().c_str(), qt);
@@ -947,6 +965,8 @@ PdbAstBuilder::GetOrCreateTypedefDecl(PdbGlobalSymId id) {
 
   PdbTypeSymId real_type_id{udt.Type, false};
   clang::QualType qt = GetOrCreateType(real_type_id);
+  if (qt.isNull())
+    return nullptr;
 
   std::string uname = std::string(DropNameScope(udt.Name));
 
@@ -1017,6 +1037,9 @@ clang::QualType PdbAstBuilder::CreateType(PdbTypeSymId type) {
 }
 
 clang::QualType PdbAstBuilder::GetOrCreateType(PdbTypeSymId type) {
+  if (type.index.isNoneType())
+    return {};
+
   lldb::user_id_t uid = toOpaqueUid(type);
   auto iter = m_uid_to_type.find(uid);
   if (iter != m_uid_to_type.end())
@@ -1029,6 +1052,8 @@ clang::QualType PdbAstBuilder::GetOrCreateType(PdbTypeSymId type) {
     // This is a forward decl.  Call GetOrCreate on the full decl, then map the
     // forward decl id to the full decl QualType.
     clang::QualType qt = GetOrCreateType(best_type);
+    if (qt.isNull())
+      return {};
     m_uid_to_type[toOpaqueUid(type)] = qt;
     return qt;
   }
@@ -1036,6 +1061,9 @@ clang::QualType PdbAstBuilder::GetOrCreateType(PdbTypeSymId type) {
   // This is either a full decl, or a forward decl with no matching full decl
   // in the debug info.
   qt = CreateType(type);
+  if (qt.isNull())
+    return {};
+
   m_uid_to_type[toOpaqueUid(type)] = qt;
   if (IsTagRecord(type, m_index.tpi())) {
     clang::TagDecl *tag = qt->getAsTagDecl();
@@ -1298,6 +1326,8 @@ void PdbAstBuilder::CreateFunctionParameters(PdbCompilandSymId func_id,
 
     PdbCompilandSymId param_uid(func_id.modi, record_offset);
     clang::QualType qt = GetOrCreateType(param_type);
+    if (qt.isNull())
+      return;
 
     CompilerType param_type_ct = m_clang.GetType(qt);
     clang::ParmVarDecl *param = m_clang.CreateParameterDeclaration(
@@ -1319,7 +1349,12 @@ clang::QualType PdbAstBuilder::CreateEnumType(PdbTypeSymId id,
   clang::DeclContext *decl_context = nullptr;
   std::string uname;
   std::tie(decl_context, uname) = CreateDeclInfoForType(er, id.index);
+  if (!decl_context)
+    return {};
+
   clang::QualType underlying_type = GetOrCreateType(er.UnderlyingType);
+  if (underlying_type.isNull())
+    return {};
 
   Declaration declaration;
   CompilerType enum_ct = m_clang.CreateEnumerationType(
@@ -1336,7 +1371,7 @@ clang::QualType PdbAstBuilder::CreateArrayType(const ArrayRecord &ar) {
   clang::QualType element_type = GetOrCreateType(ar.ElementType);
 
   uint64_t element_size = GetSizeOfType({ar.ElementType}, m_index.tpi());
-  if (element_size == 0)
+  if (element_type.isNull() || element_size == 0)
     return {};
   uint64_t element_count = ar.Size / element_size;
 
@@ -1364,10 +1399,14 @@ clang::QualType PdbAstBuilder::CreateFunctionType(
 
   for (TypeIndex arg_index : arg_indices) {
     clang::QualType arg_type = GetOrCreateType(arg_index);
+    if (arg_type.isNull())
+      continue;
     arg_types.push_back(ToCompilerType(arg_type));
   }
 
   clang::QualType return_type = GetOrCreateType(return_type_idx);
+  if (return_type.isNull())
+    return {};
 
   llvm::Optional<clang::CallingConv> cc =
       TranslateCallingConvention(calling_convention);
@@ -1418,7 +1457,7 @@ void PdbAstBuilder::ParseAllNamespacesPlusChildrenOf(
     clang::DeclContext *context = nullptr;
     std::string uname;
     std::tie(context, uname) = CreateDeclInfoForType(tag.asTag(), tid.index);
-    if (!context->isNamespace())
+    if (!context || !context->isNamespace())
       continue;
 
     clang::NamespaceDecl *ns = llvm::cast<clang::NamespaceDecl>(context);

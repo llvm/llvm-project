@@ -343,6 +343,8 @@ BUILTIN(__nvvm_rcp_rn_d, "dd", "")
 BUILTIN(__nvvm_rcp_rz_d, "dd", "")
 BUILTIN(__nvvm_rcp_rm_d, "dd", "")
 BUILTIN(__nvvm_rcp_rp_d, "dd", "")
+
+BUILTIN(__nvvm_rcp_approx_ftz_f, "ff", "")
 BUILTIN(__nvvm_rcp_approx_ftz_d, "dd", "")
 
 // Sqrt
