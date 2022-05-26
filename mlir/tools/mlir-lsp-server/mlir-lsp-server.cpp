@@ -13,8 +13,19 @@
 
 using namespace mlir;
 
+#ifdef MLIR_INCLUDE_TESTS
+namespace test {
+void registerTestDialect(DialectRegistry &);
+void registerTestTransformDialectExtension(DialectRegistry &);
+} // namespace test
+#endif
+
 int main(int argc, char **argv) {
   DialectRegistry registry;
   registerAllDialects(registry);
+#ifdef MLIR_INCLUDE_TESTS
+  ::test::registerTestDialect(registry);
+  ::test::registerTestTransformDialectExtension(registry);
+#endif
   return failed(MlirLspServerMain(argc, argv, registry));
 }
