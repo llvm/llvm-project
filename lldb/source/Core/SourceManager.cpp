@@ -49,6 +49,13 @@ using namespace lldb_private;
 
 static inline bool is_newline_char(char ch) { return ch == '\n' || ch == '\r'; }
 
+static void resolve_tilde(FileSpec &file_spec) {
+  if (!FileSystem::Instance().Exists(file_spec) &&
+      file_spec.GetDirectory().GetCString()[0] == '~') {
+    FileSystem::Instance().Resolve(file_spec);
+  }
+}
+
 // SourceManager constructor
 SourceManager::SourceManager(const TargetSP &target_sp)
     : m_last_line(0), m_last_count(0), m_default_set(false),
@@ -66,10 +73,13 @@ SourceManager::FileSP SourceManager::GetFile(const FileSpec &file_spec) {
   if (!file_spec)
     return nullptr;
 
+  FileSpec resolved_fspec = file_spec;
+  resolve_tilde(resolved_fspec);
+
   DebuggerSP debugger_sp(m_debugger_wp.lock());
   FileSP file_sp;
   if (debugger_sp && debugger_sp->GetUseSourceCache())
-    file_sp = debugger_sp->GetSourceFileCache().FindSourceFile(file_spec);
+    file_sp = debugger_sp->GetSourceFileCache().FindSourceFile(resolved_fspec);
 
   TargetSP target_sp(m_target_wp.lock());
 
@@ -87,9 +97,9 @@ SourceManager::FileSP SourceManager::GetFile(const FileSpec &file_spec) {
   // If file_sp is no good or it points to a non-existent file, reset it.
   if (!file_sp || !FileSystem::Instance().Exists(file_sp->GetFileSpec())) {
     if (target_sp)
-      file_sp = std::make_shared<File>(file_spec, target_sp.get());
+      file_sp = std::make_shared<File>(resolved_fspec, target_sp.get());
     else
-      file_sp = std::make_shared<File>(file_spec, debugger_sp);
+      file_sp = std::make_shared<File>(resolved_fspec, debugger_sp);
 
     if (debugger_sp && debugger_sp->GetUseSourceCache())
       debugger_sp->GetSourceFileCache().AddSourceFile(file_sp);
@@ -441,6 +451,7 @@ void SourceManager::File::CommonInitializer(const FileSpec &file_spec,
           }
         }
       }
+      resolve_tilde(m_file_spec);
       // Try remapping if m_file_spec does not correspond to an existing file.
       if (!FileSystem::Instance().Exists(m_file_spec)) {
         // Check target specific source remappings (i.e., the
