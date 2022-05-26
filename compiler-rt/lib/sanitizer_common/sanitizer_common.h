@@ -294,6 +294,7 @@ void InitTlsSize();
 uptr GetTlsSize();
 
 // Other
+void WaitForDebugger(unsigned seconds, const char *label);
 void SleepForSeconds(unsigned seconds);
 void SleepForMillis(unsigned millis);
 u64 NanoTime();
