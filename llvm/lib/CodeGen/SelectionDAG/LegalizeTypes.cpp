@@ -83,7 +83,7 @@ void DAGTypeLegalizer::PerformExpensiveChecks() {
       auto ResId = ValueToIdMap.lookup(Res);
 
       unsigned Mapped = 0;
-      if (ResId && (ReplacedValues.find(ResId) != ReplacedValues.end())) {
+      if (ResId && ReplacedValues.count(ResId)) {
         Mapped |= 1;
         // Check that remapped values are only used by nodes marked NewNode.
         for (SDNode::use_iterator UI = Node.use_begin(), UE = Node.use_end();
@@ -105,23 +105,23 @@ void DAGTypeLegalizer::PerformExpensiveChecks() {
         assert(NewVal.getNode()->getNodeId() != NewNode &&
                "ReplacedValues maps to a new node!");
       }
-      if (ResId && PromotedIntegers.find(ResId) != PromotedIntegers.end())
+      if (ResId && PromotedIntegers.count(ResId))
         Mapped |= 2;
-      if (ResId && SoftenedFloats.find(ResId) != SoftenedFloats.end())
+      if (ResId && SoftenedFloats.count(ResId))
         Mapped |= 4;
-      if (ResId && ScalarizedVectors.find(ResId) != ScalarizedVectors.end())
+      if (ResId && ScalarizedVectors.count(ResId))
         Mapped |= 8;
-      if (ResId && ExpandedIntegers.find(ResId) != ExpandedIntegers.end())
+      if (ResId && ExpandedIntegers.count(ResId))
         Mapped |= 16;
-      if (ResId && ExpandedFloats.find(ResId) != ExpandedFloats.end())
+      if (ResId && ExpandedFloats.count(ResId))
         Mapped |= 32;
-      if (ResId && SplitVectors.find(ResId) != SplitVectors.end())
+      if (ResId && SplitVectors.count(ResId))
         Mapped |= 64;
-      if (ResId && WidenedVectors.find(ResId) != WidenedVectors.end())
+      if (ResId && WidenedVectors.count(ResId))
         Mapped |= 128;
-      if (ResId && PromotedFloats.find(ResId) != PromotedFloats.end())
+      if (ResId && PromotedFloats.count(ResId))
         Mapped |= 256;
-      if (ResId && SoftPromotedHalfs.find(ResId) != SoftPromotedHalfs.end())
+      if (ResId && SoftPromotedHalfs.count(ResId))
         Mapped |= 512;
 
       if (Node.getNodeId() != Processed) {
