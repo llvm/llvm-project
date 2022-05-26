@@ -51,6 +51,7 @@ static inline bool is_newline_char(char ch) { return ch == '\n' || ch == '\r'; }
 
 static void resolve_tilde(FileSpec &file_spec) {
   if (!FileSystem::Instance().Exists(file_spec) &&
+      file_spec.GetDirectory() &&
       file_spec.GetDirectory().GetCString()[0] == '~') {
     FileSystem::Instance().Resolve(file_spec);
   }
