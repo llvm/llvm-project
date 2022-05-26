@@ -82,3 +82,38 @@ loop.latch:
 exit:
   ret void
 }
+
+; Test case for PR55697.
+define i32 @unswitch_trivial_select_cmp_outside(i32 %x) {
+; CHECK-LABEL: @unswitch_trivial_select_cmp_outside(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[C:%.*]] = icmp ult i32 [[X:%.*]], 100
+; CHECK-NEXT:    br i1 [[C]], label [[ENTRY_SPLIT_US:%.*]], label [[ENTRY_SPLIT:%.*]]
+; CHECK:       entry.split.us:
+; CHECK-NEXT:    br label [[LOOP_US:%.*]]
+; CHECK:       loop.us:
+; CHECK-NEXT:    [[P_US:%.*]] = phi i32 [ 0, [[ENTRY_SPLIT_US]] ], [ 35, [[LOOP_US]] ]
+; CHECK-NEXT:    br label [[LOOP_US]]
+; CHECK:       entry.split:
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[P:%.*]] = phi i32 [ 0, [[ENTRY_SPLIT]] ]
+; CHECK-NEXT:    [[SPEC_SELECT:%.*]] = select i1 false, i1 true, i1 false
+; CHECK-NEXT:    br label [[EXIT:%.*]]
+; CHECK:       exit:
+; CHECK-NEXT:    [[LCSSA:%.*]] = phi i32 [ [[P]], [[LOOP]] ]
+; CHECK-NEXT:    ret i32 [[LCSSA]]
+;
+entry:
+  %c = icmp ult i32 %x, 100
+  br label %loop
+
+loop:
+  %p = phi i32 [ 0, %entry ], [ 35, %loop ]
+  %spec.select = select i1 %c, i1 true, i1 false
+  br i1 %spec.select, label %loop, label %exit
+
+exit:
+  %lcssa = phi i32 [ %p, %loop ]
+  ret i32 %lcssa
+}
