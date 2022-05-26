@@ -72,6 +72,10 @@ Deprecations and Removals
   incidental transitive includes more aggressively, in particular regardless
   of the language version in use.
 
+- The legacy testing system for libc++, libc++abi and libunwind has been removed.
+  All known clients have been migrated to the new configuration system, but please
+  reach out to the libc++ developers if you find something missing in the new
+  configuration system.
 
 Upcoming Deprecations and Removals
 ----------------------------------

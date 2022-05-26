@@ -60,10 +60,6 @@ cmake_dependent_option(LIBUNWIND_INSTALL_STATIC_LIBRARY
 cmake_dependent_option(LIBUNWIND_INSTALL_SHARED_LIBRARY
   "Install the shared libunwind library." ON
   "LIBUNWIND_ENABLE_SHARED;LIBUNWIND_INSTALL_LIBRARY" OFF)
-set(LIBUNWIND_TEST_LINKER_FLAGS "" CACHE STRING
-    "Additional linker flags for test programs.")
-set(LIBUNWIND_TEST_COMPILER_FLAGS "" CACHE STRING
-    "Additional compiler flags for test programs.")
 
 # TODO: Remove this after branching for LLVM 15
 if(LIBUNWIND_SYSROOT OR LIBUNWIND_TARGET_TRIPLE OR LIBUNWIND_GCC_TOOLCHAIN)
