@@ -24,6 +24,10 @@
 // SESSION: "-cc1depscan" "-fdepscan=daemon" "-fdepscan-share-identifier"
 // SESSION: "-fcas-path" "[[PREFIX]]/cas" "-fcas-token-cache" "-greproducible"
 
+// Make sure `clang-cache-build-session` can invoke an executable script.
+// RUN: clang-cache-build-session %t/clang -c %s -o %t.o 2>&1 | FileCheck %s -check-prefix=SESSION-SCRIPT -DSRC=%s -DPREFIX=%t
+// SESSION-SCRIPT: run some compiler with opts -c [[SRC]] -o [[PREFIX]].o
+
 // 'clang-cache' launcher invokes a different clang, does normal non-caching launch.
 // RUN: env CLANG_CACHE_CAS_PATH=%t/cas clang-cache %t/clang -c %s -o %t.o 2>&1 | FileCheck %s -check-prefix=OTHERCLANG -DSRC=%s -DPREFIX=%t
 // OTHERCLANG: warning: clang-cache invokes a different clang binary than itself, it will perform a normal non-caching invocation of the compiler
