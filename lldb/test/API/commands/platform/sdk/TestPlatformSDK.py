@@ -85,7 +85,7 @@ class PlatformSDKTestCase(TestBase):
         lldbutil.wait_for_file_on_target(self, token)
 
         # Move the binary into the 'SDK'.
-        rel_exe_path = os.path.relpath(exe, '/')
+        rel_exe_path = os.path.relpath(os.path.realpath(exe), '/')
         exe_sdk_path = os.path.join(symbols_dir, rel_exe_path)
         lldbutil.mkdir_p(os.path.dirname(exe_sdk_path))
         shutil.move(exe, exe_sdk_path)
