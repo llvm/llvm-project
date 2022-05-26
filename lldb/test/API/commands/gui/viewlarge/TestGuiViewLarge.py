@@ -13,7 +13,6 @@ class GuiViewLargeCommandTest(PExpectTest):
 
     # PExpect uses many timeouts internally and doesn't play well
     # under ASAN on a loaded machine..
-    @expectedFailureAll()
     @skipIfAsan
     @skipIfCursesSupportMissing
     @skipIfRemote # "run" command will not work correctly for remote debug
