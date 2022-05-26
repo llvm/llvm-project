@@ -10,7 +10,7 @@
 // what pthread_cancel does.
 
 // UNSUPPORTED: c++03
-// UNSUPPORTED: libcxxabi-no-threads
+// UNSUPPORTED: libcpp-has-no-threads
 // UNSUPPORTED: no-exceptions
 
 #include <assert.h>

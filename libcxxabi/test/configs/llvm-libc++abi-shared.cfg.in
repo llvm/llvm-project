@@ -1,4 +1,5 @@
-# Testing configuration for Apple's system libc++abi.
+# This testing configuration handles running the test suite against LLVM's libc++abi
+# using a shared library.
 
 lit_config.load_config(config, '@CMAKE_CURRENT_BINARY_DIR@/cmake-bridge.cfg')
 
@@ -6,19 +7,18 @@ config.substitutions.append(('%{flags}',
     '-isysroot {}'.format('@CMAKE_OSX_SYSROOT@') if '@CMAKE_OSX_SYSROOT@' else ''
 ))
 config.substitutions.append(('%{compile_flags}',
-    '-nostdinc++ -I %{include} -I %{cxx-include} -I %{cxx-target-include} %{maybe-include-libunwind} -D_LIBCPP_ENABLE_CXX17_REMOVED_UNEXPECTED_FUNCTIONS ' +
-    '-I %{libcxx}/test/support -I %{libcxx}/src'
+    '-nostdinc++ -I %{include} -I %{cxx-include} -I %{cxx-target-include} %{maybe-include-libunwind} -I %{libcxx}/test/support -I %{libcxx}/src -D_LIBCPP_ENABLE_CXX17_REMOVED_UNEXPECTED_FUNCTIONS'
 ))
 config.substitutions.append(('%{link_flags}',
-    '-nostdlib++ -L %{lib} -lc++ -lc++abi'
+    '-nostdlib++ -L %{lib} -Wl,-rpath,%{lib} -lc++ -lc++abi -pthread'
 ))
 config.substitutions.append(('%{exec}',
-    '%{executor} --execdir %T --env DYLD_LIBRARY_PATH=%{lib} -- '
+    '%{executor} --execdir %T -- '
 ))
 
 import os, site
 site.addsitedir(os.path.join('@LIBCXXABI_LIBCXX_PATH@', 'utils'))
-import libcxx.test.params, libcxx.test.newconfig, libcxx.test.newconfig
+import libcxx.test.params, libcxx.test.newconfig
 libcxx.test.newconfig.configure(
     libcxx.test.params.DEFAULT_PARAMETERS,
     libcxx.test.features.DEFAULT_FEATURES,
