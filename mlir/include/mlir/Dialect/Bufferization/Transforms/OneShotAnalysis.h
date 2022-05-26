@@ -10,7 +10,6 @@
 #define MLIR_DIALECT_BUFFERIZATION_TRANSFORMS_ONESHOTANALYSIS_H
 
 #include "mlir/Dialect/Bufferization/IR/BufferizableOpInterface.h"
-#include "mlir/IR/BuiltinOps.h"
 #include "llvm/ADT/EquivalenceClasses.h"
 
 namespace mlir {
