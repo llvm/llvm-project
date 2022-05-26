@@ -106,8 +106,8 @@ constexpr bool all_the_algorithms()
 #if TEST_STD_VER > 20
     //(void)std::ranges::ends_with(first, last, first2, last2, Equal(&copies)); assert(copies == 0);
 #endif
-    //(void)std::ranges::equal(first, last, first2, last2, Equal(&copies)); assert(copies == 0);
-    //(void)std::ranges::equal(a, b, Equal(&copies)); assert(copies == 0);
+    (void)std::ranges::equal(first, last, first2, last2, Equal(&copies)); assert(copies == 0);
+    (void)std::ranges::equal(a, b, Equal(&copies)); assert(copies == 0);
     //(void)std::ranges::equal_range(first, last, value, Less(&copies)); assert(copies == 0);
     //(void)std::ranges::equal_range(a, value, Less(&copies)); assert(copies == 0);
     //(void)std::ranges::find_end(first, last, first2, mid2, Equal(&copies)); assert(copies == 0);
