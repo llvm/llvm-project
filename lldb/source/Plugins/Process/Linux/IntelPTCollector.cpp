@@ -32,101 +32,6 @@ using namespace lldb_private;
 using namespace process_linux;
 using namespace llvm;
 
-/// IntelPTThreadTraceCollection
-
-bool IntelPTThreadTraceCollection::TracesThread(lldb::tid_t tid) const {
-  return m_thread_traces.count(tid);
-}
-
-Error IntelPTThreadTraceCollection::TraceStop(lldb::tid_t tid) {
-  auto it = m_thread_traces.find(tid);
-  if (it == m_thread_traces.end())
-    return createStringError(inconvertibleErrorCode(),
-                             "Thread %" PRIu64 " not currently traced", tid);
-  m_total_buffer_size -= it->second->GetTraceBufferSize();
-  m_thread_traces.erase(tid);
-  return Error::success();
-}
-
-Error IntelPTThreadTraceCollection::TraceStart(
-    lldb::tid_t tid, const TraceIntelPTStartRequest &request) {
-  if (TracesThread(tid))
-    return createStringError(inconvertibleErrorCode(),
-                             "Thread %" PRIu64 " already traced", tid);
-
-  Expected<IntelPTSingleBufferTraceUP> trace_up =
-      IntelPTSingleBufferTrace::Start(request, tid, /*core_id=*/None,
-                                      TraceCollectionState::Running);
-  if (!trace_up)
-    return trace_up.takeError();
-
-  m_total_buffer_size += (*trace_up)->GetTraceBufferSize();
-  m_thread_traces.try_emplace(tid, std::move(*trace_up));
-  return Error::success();
-}
-
-size_t IntelPTThreadTraceCollection::GetTotalBufferSize() const {
-  return m_total_buffer_size;
-}
-
-std::vector<TraceThreadState>
-IntelPTThreadTraceCollection::GetThreadStates() const {
-  std::vector<TraceThreadState> states;
-  for (const auto &it : m_thread_traces)
-    states.push_back({it.first,
-                      {TraceBinaryData{IntelPTDataKinds::kTraceBuffer,
-                                       it.second->GetTraceBufferSize()}}});
-  return states;
-}
-
-Expected<IntelPTSingleBufferTrace &>
-IntelPTThreadTraceCollection::GetTracedThread(lldb::tid_t tid) {
-  auto it = m_thread_traces.find(tid);
-  if (it == m_thread_traces.end())
-    return createStringError(inconvertibleErrorCode(),
-                             "Thread %" PRIu64 " not currently traced", tid);
-  return *it->second.get();
-}
-
-void IntelPTThreadTraceCollection::Clear() {
-  m_thread_traces.clear();
-  m_total_buffer_size = 0;
-}
-
-size_t IntelPTThreadTraceCollection::GetTracedThreadsCount() const {
-  return m_thread_traces.size();
-}
-
-/// IntelPTPerThreadProcessTrace
-
-bool IntelPTPerThreadProcessTrace::TracesThread(lldb::tid_t tid) const {
-  return m_thread_traces.TracesThread(tid);
-}
-
-Error IntelPTPerThreadProcessTrace::TraceStop(lldb::tid_t tid) {
-  return m_thread_traces.TraceStop(tid);
-}
-
-Error IntelPTPerThreadProcessTrace::TraceStart(lldb::tid_t tid) {
-  if (m_thread_traces.GetTotalBufferSize() +
-          m_tracing_params.trace_buffer_size >
-      static_cast<size_t>(*m_tracing_params.process_buffer_size_limit))
-    return createStringError(
-        inconvertibleErrorCode(),
-        "Thread %" PRIu64 " can't be traced as the process trace size limit "
-        "has been reached. Consider retracing with a higher "
-        "limit.",
-        tid);
-
-  return m_thread_traces.TraceStart(tid, m_tracing_params);
-}
-
-IntelPTThreadTraceCollection &IntelPTPerThreadProcessTrace::GetThreadTraces() {
-  return m_thread_traces;
-}
-
-/// IntelPTCollector
-
 IntelPTCollector::IntelPTCollector(NativeProcessProtocol &process)
     : m_process(process) {
   if (Expected<LinuxPerfZeroTscConversion> tsc_conversion =
@@ -245,7 +150,7 @@ Error IntelPTCollector::OnThreadDestroyed(lldb::tid_t tid) {
   return Error::success();
 }
 
-Expected<json::Value> IntelPTCollector::GetState() const {
+Expected<json::Value> IntelPTCollector::GetState() {
   Expected<ArrayRef<uint8_t>> cpu_info = GetProcfsCpuInfo();
   if (!cpu_info)
     return cpu_info.takeError();
@@ -254,17 +159,24 @@ Expected<json::Value> IntelPTCollector::GetState() const {
   state.process_binary_data.push_back(
       {IntelPTDataKinds::kProcFsCpuInfo, cpu_info->size()});
 
-  std::vector<TraceThreadState> thread_states =
-      m_thread_traces.GetThreadStates();
-  state.traced_threads.insert(state.traced_threads.end(), thread_states.begin(),
-                              thread_states.end());
+  m_thread_traces.ForEachThread(
+      [&](lldb::tid_t tid, const IntelPTSingleBufferTrace &thread_trace) {
+        state.traced_threads.push_back({tid,
+                                        {{IntelPTDataKinds::kTraceBuffer,
+                                          thread_trace.GetTraceBufferSize()}}});
+      });
 
   if (m_per_thread_process_trace_up) {
-    thread_states =
-        m_per_thread_process_trace_up->GetThreadTraces().GetThreadStates();
-    state.traced_threads.insert(state.traced_threads.end(),
-                                thread_states.begin(), thread_states.end());
-  } else if (m_per_core_process_trace_up) {
+    m_per_thread_process_trace_up->GetThreadTraces().ForEachThread(
+        [&](lldb::tid_t tid, const IntelPTSingleBufferTrace &thread_trace) {
+          state.traced_threads.push_back(
+              {tid,
+               {{IntelPTDataKinds::kTraceBuffer,
+                 thread_trace.GetTraceBufferSize()}}});
+        });
+  }
+
+  if (m_per_core_process_trace_up) {
     for (size_t i = 0; m_process.GetThreadAtIndex(i); i++)
       state.traced_threads.push_back(
           TraceThreadState{m_process.GetThreadAtIndex(i)->GetID(), {}});
