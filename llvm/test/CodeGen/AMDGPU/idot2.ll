@@ -2104,16 +2104,15 @@ define amdgpu_kernel void @udot2_MultipleUses_mul1(<2 x i16> addrspace(1)* %src1
 ; GFX10-DL-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x24
 ; GFX10-DL-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
 ; GFX10-DL-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x34
-; GFX10-DL-NEXT:    s_mov_b32 s3, 0xffff
 ; GFX10-DL-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX10-DL-NEXT:    s_clause 0x1
 ; GFX10-DL-NEXT:    global_load_dword v1, v0, s[4:5]
 ; GFX10-DL-NEXT:    global_load_dword v2, v0, s[6:7]
 ; GFX10-DL-NEXT:    s_load_dword s2, s[0:1], 0x0
 ; GFX10-DL-NEXT:    s_waitcnt vmcnt(1)
-; GFX10-DL-NEXT:    v_and_b32_e32 v0, s3, v1
+; GFX10-DL-NEXT:    v_and_b32_e32 v0, 0xffff, v1
 ; GFX10-DL-NEXT:    s_waitcnt vmcnt(0)
-; GFX10-DL-NEXT:    v_and_b32_e32 v3, s3, v2
+; GFX10-DL-NEXT:    v_and_b32_e32 v3, 0xffff, v2
 ; GFX10-DL-NEXT:    v_mul_u32_u24_sdwa v1, v2, v1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
 ; GFX10-DL-NEXT:    v_mul_u32_u24_e32 v2, v3, v0
 ; GFX10-DL-NEXT:    s_waitcnt lgkmcnt(0)

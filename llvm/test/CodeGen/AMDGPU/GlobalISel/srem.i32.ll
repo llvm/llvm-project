@@ -377,13 +377,13 @@ define <2 x i32> @v_srem_v2i32_pow2k_denom(<2 x i32> %num) {
 ; CGP-NEXT:    v_sub_i32_e32 v0, vcc, v0, v3
 ; CGP-NEXT:    v_sub_i32_e32 v1, vcc, v1, v4
 ; CGP-NEXT:    v_subrev_i32_e32 v3, vcc, s4, v0
-; CGP-NEXT:    v_sub_i32_e32 v4, vcc, v1, v5
+; CGP-NEXT:    v_subrev_i32_e32 v4, vcc, 0x1000, v1
 ; CGP-NEXT:    v_cmp_le_u32_e32 vcc, s4, v0
 ; CGP-NEXT:    v_cndmask_b32_e32 v0, v0, v3, vcc
 ; CGP-NEXT:    v_cmp_ge_u32_e32 vcc, v1, v5
 ; CGP-NEXT:    v_cndmask_b32_e32 v1, v1, v4, vcc
 ; CGP-NEXT:    v_subrev_i32_e32 v3, vcc, s4, v0
-; CGP-NEXT:    v_sub_i32_e32 v4, vcc, v1, v5
+; CGP-NEXT:    v_subrev_i32_e32 v4, vcc, 0x1000, v1
 ; CGP-NEXT:    v_cmp_le_u32_e32 vcc, s4, v0
 ; CGP-NEXT:    v_cndmask_b32_e32 v0, v0, v3, vcc
 ; CGP-NEXT:    v_cmp_ge_u32_e32 vcc, v1, v5
@@ -508,13 +508,13 @@ define <2 x i32> @v_srem_v2i32_oddk_denom(<2 x i32> %num) {
 ; CGP-NEXT:    v_sub_i32_e32 v0, vcc, v0, v3
 ; CGP-NEXT:    v_sub_i32_e32 v1, vcc, v1, v4
 ; CGP-NEXT:    v_subrev_i32_e32 v3, vcc, s4, v0
-; CGP-NEXT:    v_sub_i32_e32 v4, vcc, v1, v5
+; CGP-NEXT:    v_subrev_i32_e32 v4, vcc, 0x12d8fb, v1
 ; CGP-NEXT:    v_cmp_le_u32_e32 vcc, s4, v0
 ; CGP-NEXT:    v_cndmask_b32_e32 v0, v0, v3, vcc
 ; CGP-NEXT:    v_cmp_ge_u32_e32 vcc, v1, v5
 ; CGP-NEXT:    v_cndmask_b32_e32 v1, v1, v4, vcc
 ; CGP-NEXT:    v_subrev_i32_e32 v3, vcc, s4, v0
-; CGP-NEXT:    v_sub_i32_e32 v4, vcc, v1, v5
+; CGP-NEXT:    v_subrev_i32_e32 v4, vcc, 0x12d8fb, v1
 ; CGP-NEXT:    v_cmp_le_u32_e32 vcc, s4, v0
 ; CGP-NEXT:    v_cndmask_b32_e32 v0, v0, v3, vcc
 ; CGP-NEXT:    v_cmp_ge_u32_e32 vcc, v1, v5

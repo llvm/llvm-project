@@ -1205,7 +1205,6 @@ define amdgpu_kernel void @load_v4i8_to_v4f32_2_uses(<4 x float> addrspace(1)* n
 ; VI-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x34
 ; VI-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
 ; VI-NEXT:    v_mov_b32_e32 v5, 9
-; VI-NEXT:    s_movk_i32 s8, 0x900
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
 ; VI-NEXT:    v_mov_b32_e32 v1, s3
 ; VI-NEXT:    v_add_u32_e32 v0, vcc, s2, v0
@@ -1232,8 +1231,8 @@ define amdgpu_kernel void @load_v4i8_to_v4f32_2_uses(<4 x float> addrspace(1)* n
 ; VI-NEXT:    v_lshlrev_b16_e32 v1, 8, v6
 ; VI-NEXT:    v_or_b32_sdwa v0, v7, v8 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:BYTE_0
 ; VI-NEXT:    v_or_b32_sdwa v1, v1, v4 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:BYTE_0
-; VI-NEXT:    v_mov_b32_e32 v2, s8
-; VI-NEXT:    v_add_u16_e32 v0, s8, v0
+; VI-NEXT:    v_mov_b32_e32 v2, 0x900
+; VI-NEXT:    v_add_u16_e32 v0, 0x900, v0
 ; VI-NEXT:    v_add_u16_sdwa v1, v1, v2 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
 ; VI-NEXT:    v_or_b32_e32 v0, v0, v1
 ; VI-NEXT:    buffer_store_dword v0, off, s[0:3], 0
@@ -1250,7 +1249,6 @@ define amdgpu_kernel void @load_v4i8_to_v4f32_2_uses(<4 x float> addrspace(1)* n
 ; GFX10-NEXT:    s_waitcnt_depctr 0xffe3
 ; GFX10-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x24
 ; GFX10-NEXT:    s_load_dwordx2 s[4:5], s[0:1], 0x2c
-; GFX10-NEXT:    s_movk_i32 s0, 0x900
 ; GFX10-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-NEXT:    v_lshrrev_b32_e32 v2, 16, v0
 ; GFX10-NEXT:    v_lshrrev_b32_sdwa v1, v1, v0 dst_sel:BYTE_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
@@ -1261,8 +1259,8 @@ define amdgpu_kernel void @load_v4i8_to_v4f32_2_uses(<4 x float> addrspace(1)* n
 ; GFX10-NEXT:    v_or_b32_sdwa v2, v3, v4 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:BYTE_0
 ; GFX10-NEXT:    v_mov_b32_e32 v4, 0
 ; GFX10-NEXT:    v_cvt_f32_ubyte3_e32 v3, v0
-; GFX10-NEXT:    v_add_nc_u16 v1, v1, s0
-; GFX10-NEXT:    v_add_nc_u16 v5, v2, s0
+; GFX10-NEXT:    v_add_nc_u16 v1, v1, 0x900
+; GFX10-NEXT:    v_add_nc_u16 v5, v2, 0x900
 ; GFX10-NEXT:    v_cvt_f32_ubyte2_e32 v2, v0
 ; GFX10-NEXT:    v_lshlrev_b32_e32 v6, 16, v1
 ; GFX10-NEXT:    v_cvt_f32_ubyte1_e32 v1, v0
