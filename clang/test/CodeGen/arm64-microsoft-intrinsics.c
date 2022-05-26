@@ -119,5 +119,73 @@ unsigned __int64 check__getReg(void) {
 
 // CHECK-MSVC: call i64 @llvm.read_register.i64(metadata ![[MD2:.*]])
 // CHECK-MSVC: call i64 @llvm.read_register.i64(metadata ![[MD3:.*]])
+
+void check__writex18byte(unsigned long offset, unsigned char data) {
+  __writex18byte(offset, data);
+}
+
+// CHECK-MSVC: %[[DATA_ADDR:.*]] = alloca i8, align 1
+// CHECK-MSVC: %[[OFFSET_ADDR:.*]] = alloca i32, align 4
+// CHECK-MSVC: store i8 %data, i8* %[[DATA_ADDR]], align 1
+// CHECK-MSVC: store i32 %offset, i32* %[[OFFSET_ADDR]], align 4
+// CHECK-MSVC: %[[X18:.*]] = call i64 @llvm.read_register.i64(metadata ![[MD2]])
+// CHECK-MSVC: %[[X18_AS_PTR:.*]] = inttoptr i64 %[[X18]] to i8*
+// CHECK-MSVC: %[[OFFSET:.*]] = load i32, i32* %[[OFFSET_ADDR]], align 4
+// CHECK-MSVC: %[[ZEXT_OFFSET:.*]] = zext i32 %[[OFFSET]] to i64
+// CHECK-MSVC: %[[PTR:.*]] = getelementptr i8, i8* %[[X18_AS_PTR]], i64 %[[ZEXT_OFFSET]]
+// CHECK-MSVC: %[[DATA:.*]] = load i8, i8* %[[DATA_ADDR]], align 1
+// CHECK-MSVC: store i8 %[[DATA]], i8* %[[PTR]], align 1
+
+void check__writex18word(unsigned long offset, unsigned short data) {
+  __writex18word(offset, data);
+}
+
+// CHECK-MSVC: %[[DATA_ADDR:.*]] = alloca i16, align 2
+// CHECK-MSVC: %[[OFFSET_ADDR:.*]] = alloca i32, align 4
+// CHECK-MSVC: store i16 %data, i16* %[[DATA_ADDR]], align 2
+// CHECK-MSVC: store i32 %offset, i32* %[[OFFSET_ADDR]], align 4
+// CHECK-MSVC: %[[X18:.*]] = call i64 @llvm.read_register.i64(metadata ![[MD2]])
+// CHECK-MSVC: %[[X18_AS_PTR:.*]] = inttoptr i64 %[[X18]] to i8*
+// CHECK-MSVC: %[[OFFSET:.*]] = load i32, i32* %[[OFFSET_ADDR]], align 4
+// CHECK-MSVC: %[[ZEXT_OFFSET:.*]] = zext i32 %[[OFFSET]] to i64
+// CHECK-MSVC: %[[PTR:.*]] = getelementptr i8, i8* %[[X18_AS_PTR]], i64 %[[ZEXT_OFFSET]]
+// CHECK-MSVC: %[[BITCAST_PTR:.*]] = bitcast i8* %[[PTR]] to i16*
+// CHECK-MSVC: %[[DATA:.*]] = load i16, i16* %[[DATA_ADDR]], align 2
+// CHECK-MSVC: store i16 %[[DATA]], i16* %[[BITCAST_PTR]], align 1
+
+void check__writex18dword(unsigned long offset, unsigned long data) {
+  __writex18dword(offset, data);
+}
+
+// CHECK-MSVC: %[[DATA_ADDR:.*]] = alloca i32, align 4
+// CHECK-MSVC: %[[OFFSET_ADDR:.*]] = alloca i32, align 4
+// CHECK-MSVC: store i32 %data, i32* %[[DATA_ADDR]], align 4
+// CHECK-MSVC: store i32 %offset, i32* %[[OFFSET_ADDR]], align 4
+// CHECK-MSVC: %[[X18:.*]] = call i64 @llvm.read_register.i64(metadata ![[MD2]])
+// CHECK-MSVC: %[[X18_AS_PTR:.*]] = inttoptr i64 %[[X18]] to i8*
+// CHECK-MSVC: %[[OFFSET:.*]] = load i32, i32* %[[OFFSET_ADDR]], align 4
+// CHECK-MSVC: %[[ZEXT_OFFSET:.*]] = zext i32 %[[OFFSET]] to i64
+// CHECK-MSVC: %[[PTR:.*]] = getelementptr i8, i8* %[[X18_AS_PTR]], i64 %[[ZEXT_OFFSET]]
+// CHECK-MSVC: %[[BITCAST_PTR:.*]] = bitcast i8* %[[PTR]] to i32*
+// CHECK-MSVC: %[[DATA:.*]] = load i32, i32* %[[DATA_ADDR]], align 4
+// CHECK-MSVC: store i32 %[[DATA]], i32* %[[BITCAST_PTR]], align 1
+
+void check__writex18qword(unsigned long offset, unsigned __int64 data) {
+  __writex18qword(offset, data);
+}
+
+// CHECK-MSVC: %[[DATA_ADDR:.*]] = alloca i64, align 8
+// CHECK-MSVC: %[[OFFSET_ADDR:.*]] = alloca i32, align 4
+// CHECK-MSVC: store i64 %data, i64* %[[DATA_ADDR]], align 8
+// CHECK-MSVC: store i32 %offset, i32* %[[OFFSET_ADDR]], align 4
+// CHECK-MSVC: %[[X18:.*]] = call i64 @llvm.read_register.i64(metadata ![[MD2]])
+// CHECK-MSVC: %[[X18_AS_PTR:.*]] = inttoptr i64 %[[X18]] to i8*
+// CHECK-MSVC: %[[OFFSET:.*]] = load i32, i32* %[[OFFSET_ADDR]], align 4
+// CHECK-MSVC: %[[ZEXT_OFFSET:.*]] = zext i32 %[[OFFSET]] to i64
+// CHECK-MSVC: %[[PTR:.*]] = getelementptr i8, i8* %[[X18_AS_PTR]], i64 %[[ZEXT_OFFSET]]
+// CHECK-MSVC: %[[BITCAST_PTR:.*]] = bitcast i8* %[[PTR]] to i64*
+// CHECK-MSVC: %[[DATA:.*]] = load i64, i64* %[[DATA_ADDR]], align 8
+// CHECK-MSVC: store i64 %[[DATA]], i64* %[[BITCAST_PTR]], align 1
+
 // CHECK-MSVC: ![[MD2]] = !{!"x18"}
 // CHECK-MSVC: ![[MD3]] = !{!"sp"}
