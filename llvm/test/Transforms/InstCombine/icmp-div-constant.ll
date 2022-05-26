@@ -284,3 +284,82 @@ define i1 @udiv_eq_umax_use(i32 %x, i32 %y) {
   %r = icmp eq i32 %d, -1
   ret i1 %r
 }
+
+define i1 @sdiv_eq_smin(i8 %x, i8 %y) {
+; CHECK-LABEL: @sdiv_eq_smin(
+; CHECK-NEXT:    [[D:%.*]] = sdiv i8 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = icmp eq i8 [[D]], -128
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %d = sdiv i8 %x, %y
+  %r = icmp eq i8 %d, -128
+  ret i1 %r
+}
+
+define <2 x i1> @sdiv_ne_smin(<2 x i5> %x, <2 x i5> %y) {
+; CHECK-LABEL: @sdiv_ne_smin(
+; CHECK-NEXT:    [[D:%.*]] = sdiv <2 x i5> [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = icmp ne <2 x i5> [[D]], <i5 -16, i5 -16>
+; CHECK-NEXT:    ret <2 x i1> [[R]]
+;
+  %d = sdiv <2 x i5> %x, %y
+  %r = icmp ne <2 x i5> %d, <i5 -16, i5 -16>
+  ret <2 x i1> %r
+}
+
+define i1 @sdiv_eq_small(i8 %x, i8 %y) {
+; CHECK-LABEL: @sdiv_eq_small(
+; CHECK-NEXT:    [[D:%.*]] = sdiv i8 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = icmp eq i8 [[D]], -127
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %d = sdiv i8 %x, %y
+  %r = icmp eq i8 %d, -127
+  ret i1 %r
+}
+
+define i1 @sdiv_ne_big(i8 %x, i8 %y) {
+; CHECK-LABEL: @sdiv_ne_big(
+; CHECK-NEXT:    [[D:%.*]] = sdiv i8 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = icmp ne i8 [[D]], 127
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %d = sdiv i8 %x, %y
+  %r = icmp ne i8 %d, 127
+  ret i1 %r
+}
+
+define i1 @sdiv_eq_not_big(i8 %x, i8 %y) {
+; CHECK-LABEL: @sdiv_eq_not_big(
+; CHECK-NEXT:    [[D:%.*]] = sdiv i8 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = icmp eq i8 [[D]], 100
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %d = sdiv i8 %x, %y
+  %r = icmp eq i8 %d, 100
+  ret i1 %r
+}
+
+define i1 @sdiv_ult_smin(i8 %x, i8 %y) {
+; CHECK-LABEL: @sdiv_ult_smin(
+; CHECK-NEXT:    [[D:%.*]] = sdiv i8 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = icmp sgt i8 [[D]], -1
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %d = sdiv i8 %x, %y
+  %r = icmp ult i8 %d, 128
+  ret i1 %r
+}
+
+define i1 @sdiv_eq_smin_use(i32 %x, i32 %y) {
+; CHECK-LABEL: @sdiv_eq_smin_use(
+; CHECK-NEXT:    [[D:%.*]] = sdiv i32 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    call void @use(i32 [[D]])
+; CHECK-NEXT:    [[R:%.*]] = icmp eq i32 [[D]], -2147483648
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %d = sdiv i32 %x, %y
+  call void @use(i32 %d)
+  %r = icmp eq i32 %d, -2147483648
+  ret i1 %r
+}
