@@ -29,7 +29,7 @@
 ; NEOVERSE-N2: LV: Vector loop of width vscale x 4 costs: 3 (assuming a minimum vscale of 1).
 
 ; VF-4: <4 x i32>
-; VF-VSCALE4: <vscale x 4 x i32>
+; VF-VSCALE4: <16 x i32>
 define void @test0(i32* %a, i8* %b, i32* %c) #0 {
 entry:
   br label %loop
