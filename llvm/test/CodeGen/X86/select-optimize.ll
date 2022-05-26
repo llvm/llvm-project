@@ -211,8 +211,300 @@ define i32 @expensive_val_operand4(i32 %a, i32* nocapture %b, i32 %x, i1 %cmp) {
   ret i32 %add
 }
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Test loop heuristic: loop-level critical-path analysis
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+;; Use of cmov in this test would put a load and a fsub on the critical path.
+;; Loop-level analysis should decide to form a branch.
+;;
+;;double cmov_on_critical_path(int n, double x, double *a) {
+;;  for (int i = 0; i < n; i++) {
+;;    double r = a[i];
+;;    if (x > r)
+;; 			// 50% of iterations
+;;   		x -= r;
+;;  }
+;;  return x;
+;;}
+define double @cmov_on_critical_path(i32 %n, double %x, double* nocapture %a) {
+; CHECK-LABEL: @cmov_on_critical_path(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp sgt i32 [[N:%.*]], 0
+; CHECK-NEXT:    br i1 [[CMP1]], label [[FOR_BODY_PREHEADER:%.*]], label [[FOR_COND_CLEANUP:%.*]]
+; CHECK:       for.cond.cleanup:
+; CHECK-NEXT:    ret double [[X:%.*]]
+; CHECK:       for.body.preheader:
+; CHECK-NEXT:    [[WIDE_TRIP_COUNT:%.*]] = zext i32 [[N]] to i64
+; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
+; CHECK:       for.body:
+; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[INDVARS_IV_NEXT:%.*]], [[SELECT_END:%.*]] ], [ 0, [[FOR_BODY_PREHEADER]] ]
+; CHECK-NEXT:    [[X1:%.*]] = phi double [ [[X2:%.*]], [[SELECT_END]] ], [ [[X]], [[FOR_BODY_PREHEADER]] ]
+; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds double, double* [[A:%.*]], i64 [[INDVARS_IV]]
+; CHECK-NEXT:    [[R:%.*]] = load double, double* [[ARRAYIDX]], align 8
+; CHECK-NEXT:    [[SUB:%.*]] = fsub double [[X1]], [[R]]
+; CHECK-NEXT:    [[CMP2:%.*]] = fcmp ogt double [[X1]], [[R]]
+; CHECK-NEXT:    [[X2_FROZEN:%.*]] = freeze i1 [[CMP2]]
+; CHECK-NEXT:    br i1 [[X2_FROZEN]], label [[SELECT_END]], label [[SELECT_FALSE:%.*]], !prof [[PROF27:![0-9]+]]
+; CHECK:       select.false:
+; CHECK-NEXT:    br label [[SELECT_END]]
+; CHECK:       select.end:
+; CHECK-NEXT:    [[X2]] = phi double [ [[SUB]], [[FOR_BODY]] ], [ [[X1]], [[SELECT_FALSE]] ]
+; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
+; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i64 [[INDVARS_IV_NEXT]], [[WIDE_TRIP_COUNT]]
+; CHECK-NEXT:    br i1 [[EXITCOND]], label [[FOR_EXIT:%.*]], label [[FOR_BODY]]
+; CHECK:       for.exit:
+; CHECK-NEXT:    ret double [[X2]]
+;
+entry:
+  %cmp1 = icmp sgt i32 %n, 0
+  br i1 %cmp1, label %for.body.preheader, label %for.cond.cleanup
+
+for.cond.cleanup:                                 ; preds = %entry
+  ret double %x
+
+for.body.preheader:                               ; preds = %entry
+  %wide.trip.count = zext i32 %n to i64
+  br label %for.body
+
+for.body:                                         ; preds = %for.body.preheader, %for.body
+  %indvars.iv = phi i64 [ %indvars.iv.next, %for.body ], [ 0, %for.body.preheader ]
+  %x1 = phi double [ %x2, %for.body ], [ %x, %for.body.preheader ]
+  %arrayidx = getelementptr inbounds double, double* %a, i64 %indvars.iv
+  %r = load double, double* %arrayidx, align 8
+  %sub = fsub double %x1, %r
+  %cmp2 = fcmp ogt double %x1, %r
+  %x2 = select i1 %cmp2, double %sub, double %x1, !prof !18
+  %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
+  %exitcond = icmp eq i64 %indvars.iv.next, %wide.trip.count
+  br i1 %exitcond, label %for.exit, label %for.body
+
+for.exit:                                         ; preds = %for.body
+  ret double %x2
+}
+
+;; The common path includes expensive operations (load and fsub) making
+;; branch similarly expensive to cmov, and thus the gain is small.
+;; Loop-level analysis should decide on not forming a branch.
+;;
+;;double small_gain(int n, double x, double *a) {
+;;  for (int i = 0; i < n; i++) {
+;;    double r = a[i];
+;;    if (x > r)
+;;      // 99% of iterations
+;;      x -= r;
+;;  }
+;;  return x;
+;;}
+define double @small_gain(i32 %n, double %x, double* nocapture %a) {
+; CHECK-LABEL: @small_gain(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp sgt i32 [[N:%.*]], 0
+; CHECK-NEXT:    br i1 [[CMP1]], label [[FOR_BODY_PREHEADER:%.*]], label [[FOR_COND_CLEANUP:%.*]]
+; CHECK:       for.cond.cleanup:
+; CHECK-NEXT:    ret double [[X:%.*]]
+; CHECK:       for.body.preheader:
+; CHECK-NEXT:    [[WIDE_TRIP_COUNT:%.*]] = zext i32 [[N]] to i64
+; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
+; CHECK:       for.body:
+; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[INDVARS_IV_NEXT:%.*]], [[FOR_BODY]] ], [ 0, [[FOR_BODY_PREHEADER]] ]
+; CHECK-NEXT:    [[X1:%.*]] = phi double [ [[X2:%.*]], [[FOR_BODY]] ], [ [[X]], [[FOR_BODY_PREHEADER]] ]
+; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds double, double* [[A:%.*]], i64 [[INDVARS_IV]]
+; CHECK-NEXT:    [[R:%.*]] = load double, double* [[ARRAYIDX]], align 8
+; CHECK-NEXT:    [[SUB:%.*]] = fsub double [[X1]], [[R]]
+; CHECK-NEXT:    [[CMP2:%.*]] = fcmp ole double [[X1]], [[R]]
+; CHECK-NEXT:    [[X2]] = select i1 [[CMP2]], double [[X1]], double [[SUB]], !prof [[PROF18]]
+; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
+; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i64 [[INDVARS_IV_NEXT]], [[WIDE_TRIP_COUNT]]
+; CHECK-NEXT:    br i1 [[EXITCOND]], label [[FOR_EXIT:%.*]], label [[FOR_BODY]]
+; CHECK:       for.exit:
+; CHECK-NEXT:    ret double [[X2]]
+;
+entry:
+  %cmp1 = icmp sgt i32 %n, 0
+  br i1 %cmp1, label %for.body.preheader, label %for.cond.cleanup
+
+for.cond.cleanup:                                 ; preds = %entry
+  ret double %x
+
+for.body.preheader:                               ; preds = %entry
+  %wide.trip.count = zext i32 %n to i64
+  br label %for.body
+
+for.body:                                         ; preds = %for.body.preheader, %for.body
+  %indvars.iv = phi i64 [ %indvars.iv.next, %for.body ], [ 0, %for.body.preheader ]
+  %x1 = phi double [ %x2, %for.body ], [ %x, %for.body.preheader ]
+  %arrayidx = getelementptr inbounds double, double* %a, i64 %indvars.iv
+  %r = load double, double* %arrayidx, align 8
+  %sub = fsub double %x1, %r
+  %cmp2 = fcmp ole double %x1, %r
+  %x2 = select i1 %cmp2, double %x1, double %sub, !prof !17
+  %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
+  %exitcond = icmp eq i64 %indvars.iv.next, %wide.trip.count
+  br i1 %exitcond, label %for.exit, label %for.body
+
+for.exit:                                         ; preds = %for.body
+  ret double %x2
+}
+
+;; Use of a branch in this test would avoid executing a load and several
+;; floating-point operations for most cases (70% of the time).
+;; Yet, the gain is not increasing much per iteration (small gradient gain).
+;; Loop-level analysis should decide not to form a branch.
+;;
+;;double small_gradient(int n, double x, double *a) {
+;;  for (int i = 0; i < n; i++) {
+;;    double r = 2 * a[i] + i;
+;;    if (r > 0)
+;;      // 30% of iterations
+;;      x -= r;
+;;  }
+;;  return x;
+;;}
+define double @small_gradient(i32 %n, double %x, double* nocapture %a) {
+; CHECK-LABEL: @small_gradient(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[CMP8:%.*]] = icmp sgt i32 [[N:%.*]], 0
+; CHECK-NEXT:    br i1 [[CMP8]], label [[FOR_BODY_PREHEADER:%.*]], label [[FOR_COND_CLEANUP:%.*]]
+; CHECK:       for.body.preheader:
+; CHECK-NEXT:    [[WIDE_TRIP_COUNT:%.*]] = zext i32 [[N]] to i64
+; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
+; CHECK:       for.cond.cleanup:
+; CHECK-NEXT:    [[X_ADDR_0_LCSSA:%.*]] = phi double [ [[X:%.*]], [[ENTRY:%.*]] ], [ [[X_ADDR_1:%.*]], [[FOR_BODY]] ]
+; CHECK-NEXT:    ret double [[X_ADDR_0_LCSSA]]
+; CHECK:       for.body:
+; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ 0, [[FOR_BODY_PREHEADER]] ], [ [[INDVARS_IV_NEXT:%.*]], [[FOR_BODY]] ]
+; CHECK-NEXT:    [[X_ADDR_010:%.*]] = phi double [ [[X]], [[FOR_BODY_PREHEADER]] ], [ [[X_ADDR_1]], [[FOR_BODY]] ]
+; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds double, double* [[A:%.*]], i64 [[INDVARS_IV]]
+; CHECK-NEXT:    [[TMP0:%.*]] = load double, double* [[ARRAYIDX]], align 8
+; CHECK-NEXT:    [[TMP1:%.*]] = call double @llvm.fmuladd.f64(double [[TMP0]], double 2.000000e+00, double 1.000000e+00)
+; CHECK-NEXT:    [[CMP1:%.*]] = fcmp ogt double [[TMP1]], 0.000000e+00
+; CHECK-NEXT:    [[SUB:%.*]] = select i1 [[CMP1]], double [[TMP1]], double 0.000000e+00, !prof [[PROF28:![0-9]+]]
+; CHECK-NEXT:    [[X_ADDR_1]] = fsub double [[X_ADDR_010]], [[SUB]]
+; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
+; CHECK-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[INDVARS_IV_NEXT]], [[WIDE_TRIP_COUNT]]
+; CHECK-NEXT:    br i1 [[EXITCOND_NOT]], label [[FOR_COND_CLEANUP]], label [[FOR_BODY]]
+;
+entry:
+  %cmp8 = icmp sgt i32 %n, 0
+  br i1 %cmp8, label %for.body.preheader, label %for.cond.cleanup
+
+for.body.preheader:                               ; preds = %entry
+  %wide.trip.count = zext i32 %n to i64
+  br label %for.body
+
+for.cond.cleanup:                                 ; preds = %for.body, %entry
+  %x.addr.0.lcssa = phi double [ %x, %entry ], [ %x.addr.1, %for.body ]
+  ret double %x.addr.0.lcssa
+
+for.body:                                         ; preds = %for.body.preheader, %for.body
+  %indvars.iv = phi i64 [ 0, %for.body.preheader ], [ %indvars.iv.next, %for.body ]
+  %x.addr.010 = phi double [ %x, %for.body.preheader ], [ %x.addr.1, %for.body ]
+  %arrayidx = getelementptr inbounds double, double* %a, i64 %indvars.iv
+  %0 = load double, double* %arrayidx, align 8
+  %1 = call double @llvm.fmuladd.f64(double %0, double 2.000000e+00, double 1.000000e+00)
+  %cmp1 = fcmp ogt double %1, 0.000000e+00
+  %sub = select i1 %cmp1, double %1, double 0.000000e+00, !prof !28
+  %x.addr.1 = fsub double %x.addr.010, %sub
+  %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
+  %exitcond.not = icmp eq i64 %indvars.iv.next, %wide.trip.count
+  br i1 %exitcond.not, label %for.cond.cleanup, label %for.body
+}
+
+;; One select on the critical path and one off the critical path.
+;; Loop-level analysis should decide to form a branch only for
+;; the select on the critical path.
+;;
+;;double loop_select_groups(int n, double x, double *a, int k) {
+;;  int c = 0;
+;;  for (int i = 0; i < n; i++) {
+;;    double r = a[i];
+;;    if (x > r)
+;;      x -= r;
+;;    if (i == k)
+;;      c += n;
+;;  }
+;;  return x + c;
+;;}
+define double @loop_select_groups(i32 %n, double %x, double* nocapture %a, i32 %k) {
+; CHECK-LABEL: @loop_select_groups(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[CMP19:%.*]] = icmp sgt i32 [[N:%.*]], 0
+; CHECK-NEXT:    br i1 [[CMP19]], label [[FOR_BODY_PREHEADER:%.*]], label [[FOR_COND_CLEANUP:%.*]]
+; CHECK:       for.body.preheader:
+; CHECK-NEXT:    [[WIDE_TRIP_COUNT:%.*]] = zext i32 [[N]] to i64
+; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
+; CHECK:       for.cond.cleanup.loopexit:
+; CHECK-NEXT:    [[PHI_CAST:%.*]] = sitofp i32 [[C_1:%.*]] to double
+; CHECK-NEXT:    br label [[FOR_COND_CLEANUP]]
+; CHECK:       for.cond.cleanup:
+; CHECK-NEXT:    [[C_0_LCSSA:%.*]] = phi double [ 0.000000e+00, [[ENTRY:%.*]] ], [ [[PHI_CAST]], [[FOR_COND_CLEANUP_LOOPEXIT:%.*]] ]
+; CHECK-NEXT:    [[X_ADDR_0_LCSSA:%.*]] = phi double [ [[X:%.*]], [[ENTRY]] ], [ [[X_ADDR_1:%.*]], [[FOR_COND_CLEANUP_LOOPEXIT]] ]
+; CHECK-NEXT:    [[ADD5:%.*]] = fadd double [[X_ADDR_0_LCSSA]], [[C_0_LCSSA]]
+; CHECK-NEXT:    ret double [[ADD5]]
+; CHECK:       for.body:
+; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ 0, [[FOR_BODY_PREHEADER]] ], [ [[INDVARS_IV_NEXT:%.*]], [[SELECT_END:%.*]] ]
+; CHECK-NEXT:    [[X_ADDR_022:%.*]] = phi double [ [[X]], [[FOR_BODY_PREHEADER]] ], [ [[X_ADDR_1]], [[SELECT_END]] ]
+; CHECK-NEXT:    [[C_020:%.*]] = phi i32 [ 0, [[FOR_BODY_PREHEADER]] ], [ [[C_1]], [[SELECT_END]] ]
+; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds double, double* [[A:%.*]], i64 [[INDVARS_IV]]
+; CHECK-NEXT:    [[TMP0:%.*]] = load double, double* [[ARRAYIDX]], align 8
+; CHECK-NEXT:    [[CMP1:%.*]] = fcmp ogt double [[X_ADDR_022]], [[TMP0]]
+; CHECK-NEXT:    [[SUB_FROZEN:%.*]] = freeze i1 [[CMP1]]
+; CHECK-NEXT:    br i1 [[SUB_FROZEN]], label [[SELECT_END]], label [[SELECT_FALSE:%.*]]
+; CHECK:       select.false:
+; CHECK-NEXT:    br label [[SELECT_END]]
+; CHECK:       select.end:
+; CHECK-NEXT:    [[SUB:%.*]] = phi double [ [[TMP0]], [[FOR_BODY]] ], [ 0.000000e+00, [[SELECT_FALSE]] ]
+; CHECK-NEXT:    [[X_ADDR_1]] = fsub double [[X_ADDR_022]], [[SUB]]
+; CHECK-NEXT:    [[TMP1:%.*]] = trunc i64 [[INDVARS_IV]] to i32
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp eq i32 [[K:%.*]], [[N]]
+; CHECK-NEXT:    [[ADD:%.*]] = select i1 [[CMP2]], i32 [[N]], i32 0
+; CHECK-NEXT:    [[C_1]] = add nsw i32 [[ADD]], [[C_020]]
+; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
+; CHECK-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[INDVARS_IV_NEXT]], [[WIDE_TRIP_COUNT]]
+; CHECK-NEXT:    br i1 [[EXITCOND_NOT]], label [[FOR_COND_CLEANUP_LOOPEXIT]], label [[FOR_BODY]]
+;
+entry:
+  %cmp19 = icmp sgt i32 %n, 0
+  br i1 %cmp19, label %for.body.preheader, label %for.cond.cleanup
+
+for.body.preheader:                               ; preds = %entry
+  %wide.trip.count = zext i32 %n to i64
+  br label %for.body
+
+for.cond.cleanup.loopexit:                        ; preds = %for.body
+  %phi.cast = sitofp i32 %c.1 to double
+  br label %for.cond.cleanup
+
+for.cond.cleanup:                                 ; preds = %for.cond.cleanup.loopexit, %entry
+  %c.0.lcssa = phi double [ 0.000000e+00, %entry ], [ %phi.cast, %for.cond.cleanup.loopexit ]
+  %x.addr.0.lcssa = phi double [ %x, %entry ], [ %x.addr.1, %for.cond.cleanup.loopexit ]
+  %add5 = fadd double %x.addr.0.lcssa, %c.0.lcssa
+  ret double %add5
+
+for.body:                                         ; preds = %for.body.preheader, %for.body
+  %indvars.iv = phi i64 [ 0, %for.body.preheader ], [ %indvars.iv.next, %for.body ]
+  %x.addr.022 = phi double [ %x, %for.body.preheader ], [ %x.addr.1, %for.body ]
+  %c.020 = phi i32 [ 0, %for.body.preheader ], [ %c.1, %for.body ]
+  %arrayidx = getelementptr inbounds double, double* %a, i64 %indvars.iv
+  %0 = load double, double* %arrayidx, align 8
+  %cmp1 = fcmp ogt double %x.addr.022, %0
+  %sub = select i1 %cmp1, double %0, double 0.000000e+00
+  %x.addr.1 = fsub double %x.addr.022, %sub
+  %1 = trunc i64 %indvars.iv to i32
+  %cmp2 = icmp eq i32 %k, %n
+  %add = select i1 %cmp2, i32 %n, i32 0
+  %c.1 = add nsw i32 %add, %c.020
+  %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
+  %exitcond.not = icmp eq i64 %indvars.iv.next, %wide.trip.count
+  br i1 %exitcond.not, label %for.cond.cleanup.loopexit, label %for.body
+}
+
 ; Function Attrs: nounwind readnone speculatable willreturn
 declare void @llvm.dbg.value(metadata, metadata, metadata)
+
+; Function Attrs: mustprogress nofree nosync nounwind readnone speculatable willreturn
+declare double @llvm.fmuladd.f64(double, double, double)
 
 !llvm.module.flags = !{!0, !26, !27}
 !0 = !{i32 1, !"ProfileSummary", !1}
@@ -243,3 +535,4 @@ declare void @llvm.dbg.value(metadata, metadata, metadata)
 !25 = !{}
 !26 = !{i32 2, !"Dwarf Version", i32 4}
 !27 = !{i32 1, !"Debug Info Version", i32 3}
+!28 = !{!"branch_weights", i32 30, i32 70}

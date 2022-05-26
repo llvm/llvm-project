@@ -10,6 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/BlockFrequencyInfo.h"
@@ -30,6 +31,7 @@
 #include "llvm/IR/Instruction.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
+#include "llvm/Support/ScaledNumber.h"
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Transforms/Utils/SizeOpts.h"
 #include <algorithm>
@@ -52,6 +54,8 @@ STATISTIC(NumSelectUnPred,
           "Number of select groups not converted due to unpredictability");
 STATISTIC(NumSelectColdBB,
           "Number of select groups not converted due to cold basic block");
+STATISTIC(NumSelectConvertedLoop,
+          "Number of select groups converted due to loop-level analysis");
 STATISTIC(NumSelectsConverted, "Number of selects converted");
 
 static cl::opt<unsigned> ColdOperandThreshold(
@@ -64,6 +68,31 @@ static cl::opt<unsigned> ColdOperandMaxCostMultiplier(
     cl::desc("Maximum cost multiplier of TCC_expensive for the dependence "
              "slice of a cold operand to be considered inexpensive."),
     cl::init(1), cl::Hidden);
+
+static cl::opt<unsigned>
+    GainGradientThreshold("select-opti-loop-gradient-gain-threshold",
+                          cl::desc("Gradient gain threshold (%)."),
+                          cl::init(25), cl::Hidden);
+
+static cl::opt<unsigned>
+    GainCycleThreshold("select-opti-loop-cycle-gain-threshold",
+                       cl::desc("Minimum gain per loop (in cycles) threshold."),
+                       cl::init(4), cl::Hidden);
+
+static cl::opt<unsigned> GainRelativeThreshold(
+    "select-opti-loop-relative-gain-threshold",
+    cl::desc(
+        "Minimum relative gain per loop threshold (1/X). Defaults to 12.5%"),
+    cl::init(8), cl::Hidden);
+
+static cl::opt<unsigned> MispredictDefaultRate(
+    "mispredict-default-rate", cl::Hidden, cl::init(25),
+    cl::desc("Default mispredict rate (initialized to 25%)."));
+
+static cl::opt<bool>
+    DisableLoopLevelHeuristics("disable-loop-level-heuristics", cl::Hidden,
+                               cl::init(false),
+                               cl::desc("Disable loop-level heuristics."));
 
 namespace {
 
@@ -78,6 +107,7 @@ class SelectOptimize : public FunctionPass {
   std::unique_ptr<BranchProbabilityInfo> BPI;
   ProfileSummaryInfo *PSI;
   OptimizationRemarkEmitter *ORE;
+  TargetSchedModel TSchedModel;
 
 public:
   static char ID;
@@ -103,6 +133,15 @@ private:
   using SelectGroup = SmallVector<SelectInst *, 2>;
   using SelectGroups = SmallVector<SelectGroup, 2>;
 
+  using Scaled64 = ScaledNumber<uint64_t>;
+
+  struct CostInfo {
+    /// Predicated cost (with selects as conditional moves).
+    Scaled64 PredCost;
+    /// Non-predicated cost (with selects converted to branches).
+    Scaled64 NonPredCost;
+  };
+
   // Converts select instructions of a function to conditional jumps when deemed
   // profitable. Returns true if at least one select was converted.
   bool optimizeSelects(Function &F);
@@ -122,9 +161,12 @@ private:
   void collectSelectGroups(BasicBlock &BB, SelectGroups &SIGroups);
 
   // Determines for which select groups it is profitable converting to branches
-  // (base heuristics).
+  // (base and inner-most-loop heuristics).
   void findProfitableSIGroupsBase(SelectGroups &SIGroups,
                                   SelectGroups &ProfSIGroups);
+  void findProfitableSIGroupsInnerLoops(const Loop *L, SelectGroups &SIGroups,
+                                        SelectGroups &ProfSIGroups);
+
   // Determines if a select group should be converted to a branch (base
   // heuristics).
   bool isConvertToBranchProfitableBase(const SmallVector<SelectInst *, 2> &ASI);
@@ -142,6 +184,29 @@ private:
 
   // Returns true if the condition of the select is highly predictable.
   bool isSelectHighlyPredictable(const SelectInst *SI);
+
+  // Loop-level checks to determine if a non-predicated version (with branches)
+  // of the given loop is more profitable than its predicated version.
+  bool checkLoopHeuristics(const Loop *L, const CostInfo LoopDepth[2]);
+
+  // Computes instruction and loop-critical-path costs for both the predicated
+  // and non-predicated version of the given loop.
+  bool computeLoopCosts(const Loop *L, const SelectGroups &SIGroups,
+                        DenseMap<const Instruction *, CostInfo> &InstCostMap,
+                        CostInfo *LoopCost);
+
+  // Returns a set of all the select instructions in the given select groups.
+  SmallPtrSet<const Instruction *, 2> getSIset(const SelectGroups &SIGroups);
+
+  // Returns the latency cost of a given instruction.
+  Optional<uint64_t> computeInstCost(const Instruction *I);
+
+  // Returns the misprediction cost of a given select when converted to branch.
+  Scaled64 getMispredictionCost(const SelectInst *SI, const Scaled64 CondCost);
+
+  // Returns the cost of a branch when the prediction is correct.
+  Scaled64 getPredictedPathCost(Scaled64 TrueCost, Scaled64 FalseCost,
+                                const SelectInst *SI);
 
   // Returns true if the target architecture supports lowering a given select.
   bool isSelectKindSupported(SelectInst *SI);
@@ -183,6 +248,7 @@ bool SelectOptimize::runOnFunction(Function &F) {
   BFI.reset(new BlockFrequencyInfo(F, *BPI, *LI));
   PSI = &getAnalysis<ProfileSummaryInfoWrapperPass>().getPSI();
   ORE = &getAnalysis<OptimizationRemarkEmitterWrapperPass>().getORE();
+  TSchedModel.init(TSI);
 
   // When optimizing for size, selects are preferable over branches.
   if (F.hasOptSize() || llvm::shouldOptimizeForSize(&F, PSI, BFI.get()))
@@ -224,7 +290,24 @@ void SelectOptimize::optimizeSelectsBase(Function &F,
 }
 
 void SelectOptimize::optimizeSelectsInnerLoops(Function &F,
-                                               SelectGroups &ProfSIGroups) {}
+                                               SelectGroups &ProfSIGroups) {
+  SmallVector<Loop *, 4> Loops(LI->begin(), LI->end());
+  // Need to check size on each iteration as we accumulate child loops.
+  for (unsigned long i = 0; i < Loops.size(); ++i)
+    for (Loop *ChildL : Loops[i]->getSubLoops())
+      Loops.push_back(ChildL);
+
+  for (Loop *L : Loops) {
+    if (!L->isInnermost())
+      continue;
+
+    SelectGroups SIGroups;
+    for (BasicBlock *BB : L->getBlocks())
+      collectSelectGroups(*BB, SIGroups);
+
+    findProfitableSIGroupsInnerLoops(L, SIGroups, ProfSIGroups);
+  }
+}
 
 /// If \p isTrue is true, return the true value of \p SI, otherwise return
 /// false value of \p SI. If the true/false value of \p SI is defined by any
@@ -373,6 +456,53 @@ void SelectOptimize::findProfitableSIGroupsBase(SelectGroups &SIGroups,
     ++NumSelectOptAnalyzed;
     if (isConvertToBranchProfitableBase(ASI))
       ProfSIGroups.push_back(ASI);
+  }
+}
+
+void SelectOptimize::findProfitableSIGroupsInnerLoops(
+    const Loop *L, SelectGroups &SIGroups, SelectGroups &ProfSIGroups) {
+  NumSelectOptAnalyzed += SIGroups.size();
+  // For each select group in an inner-most loop,
+  // a branch is more preferable than a select/conditional-move if:
+  // i) conversion to branches for all the select groups of the loop satisfies
+  //    loop-level heuristics including reducing the loop's critical path by
+  //    some threshold (see SelectOptimize::checkLoopHeuristics); and
+  // ii) the total cost of the select group is cheaper with a branch compared
+  //     to its predicated version. The cost is in terms of latency and the cost
+  //     of a select group is the cost of its most expensive select instruction
+  //     (assuming infinite resources and thus fully leveraging available ILP).
+
+  DenseMap<const Instruction *, CostInfo> InstCostMap;
+  CostInfo LoopCost[2] = {{Scaled64::getZero(), Scaled64::getZero()},
+                          {Scaled64::getZero(), Scaled64::getZero()}};
+  if (!computeLoopCosts(L, SIGroups, InstCostMap, LoopCost) ||
+      !checkLoopHeuristics(L, LoopCost)) {
+    return;
+  }
+
+  for (SelectGroup &ASI : SIGroups) {
+    // Assuming infinite resources, the cost of a group of instructions is the
+    // cost of the most expensive instruction of the group.
+    Scaled64 SelectCost = Scaled64::getZero(), BranchCost = Scaled64::getZero();
+    for (SelectInst *SI : ASI) {
+      SelectCost = std::max(SelectCost, InstCostMap[SI].PredCost);
+      BranchCost = std::max(BranchCost, InstCostMap[SI].NonPredCost);
+    }
+    if (BranchCost < SelectCost) {
+      OptimizationRemark OR(DEBUG_TYPE, "SelectOpti", ASI.front());
+      OR << "Profitable to convert to branch (loop analysis). BranchCost="
+         << BranchCost.toString() << ", SelectCost=" << SelectCost.toString()
+         << ". ";
+      ORE->emit(OR);
+      ++NumSelectConvertedLoop;
+      ProfSIGroups.push_back(ASI);
+    } else {
+      OptimizationRemarkMissed ORmiss(DEBUG_TYPE, "SelectOpti", ASI.front());
+      ORmiss << "Select is more profitable (loop analysis). BranchCost="
+             << BranchCost.toString()
+             << ", SelectCost=" << SelectCost.toString() << ". ";
+      ORE->emit(ORmiss);
+    }
   }
 }
 
@@ -527,6 +657,220 @@ bool SelectOptimize::isSelectHighlyPredictable(const SelectInst *SI) {
     }
   }
   return false;
+}
+
+bool SelectOptimize::checkLoopHeuristics(const Loop *L,
+                                         const CostInfo LoopCost[2]) {
+  // Loop-level checks to determine if a non-predicated version (with branches)
+  // of the loop is more profitable than its predicated version.
+
+  if (DisableLoopLevelHeuristics)
+    return true;
+
+  OptimizationRemarkMissed ORmissL(DEBUG_TYPE, "SelectOpti",
+                                   L->getHeader()->getFirstNonPHI());
+
+  if (LoopCost[0].NonPredCost > LoopCost[0].PredCost ||
+      LoopCost[1].NonPredCost >= LoopCost[1].PredCost) {
+    ORmissL << "No select conversion in the loop due to no reduction of loop's "
+               "critical path. ";
+    ORE->emit(ORmissL);
+    return false;
+  }
+
+  Scaled64 Gain[2] = {LoopCost[0].PredCost - LoopCost[0].NonPredCost,
+                      LoopCost[1].PredCost - LoopCost[1].NonPredCost};
+
+  // Profitably converting to branches need to reduce the loop's critical path
+  // by at least some threshold (absolute gain of GainCycleThreshold cycles and
+  // relative gain of 12.5%).
+  if (Gain[1] < Scaled64::get(GainCycleThreshold) ||
+      Gain[1] * Scaled64::get(GainRelativeThreshold) < LoopCost[1].PredCost) {
+    Scaled64 RelativeGain = Scaled64::get(100) * Gain[1] / LoopCost[1].PredCost;
+    ORmissL << "No select conversion in the loop due to small reduction of "
+               "loop's critical path. Gain="
+            << Gain[1].toString()
+            << ", RelativeGain=" << RelativeGain.toString() << "%. ";
+    ORE->emit(ORmissL);
+    return false;
+  }
+
+  // If the loop's critical path involves loop-carried dependences, the gradient
+  // of the gain needs to be at least GainGradientThreshold% (defaults to 25%).
+  // This check ensures that the latency reduction for the loop's critical path
+  // keeps decreasing with sufficient rate beyond the two analyzed loop
+  // iterations.
+  if (Gain[1] > Gain[0]) {
+    Scaled64 GradientGain = Scaled64::get(100) * (Gain[1] - Gain[0]) /
+                            (LoopCost[1].PredCost - LoopCost[0].PredCost);
+    if (GradientGain < Scaled64::get(GainGradientThreshold)) {
+      ORmissL << "No select conversion in the loop due to small gradient gain. "
+                 "GradientGain="
+              << GradientGain.toString() << "%. ";
+      ORE->emit(ORmissL);
+      return false;
+    }
+  }
+  // If the gain decreases it is not profitable to convert.
+  else if (Gain[1] < Gain[0]) {
+    ORmissL
+        << "No select conversion in the loop due to negative gradient gain. ";
+    ORE->emit(ORmissL);
+    return false;
+  }
+
+  // Non-predicated version of the loop is more profitable than its
+  // predicated version.
+  return true;
+}
+
+// Computes instruction and loop-critical-path costs for both the predicated
+// and non-predicated version of the given loop.
+// Returns false if unable to compute these costs due to invalid cost of loop
+// instruction(s).
+bool SelectOptimize::computeLoopCosts(
+    const Loop *L, const SelectGroups &SIGroups,
+    DenseMap<const Instruction *, CostInfo> &InstCostMap, CostInfo *LoopCost) {
+  const auto &SIset = getSIset(SIGroups);
+  // Compute instruction and loop-critical-path costs across two iterations for
+  // both predicated and non-predicated version.
+  const unsigned Iterations = 2;
+  for (unsigned Iter = 0; Iter < Iterations; ++Iter) {
+    // Cost of the loop's critical path.
+    CostInfo &MaxCost = LoopCost[Iter];
+    for (BasicBlock *BB : L->getBlocks()) {
+      for (const Instruction &I : *BB) {
+        if (I.isDebugOrPseudoInst())
+          continue;
+        // Compute the predicated and non-predicated cost of the instruction.
+        Scaled64 IPredCost = Scaled64::getZero(),
+                 INonPredCost = Scaled64::getZero();
+
+        // Assume infinite resources that allow to fully exploit the available
+        // instruction-level parallelism.
+        // InstCost = InstLatency + max(Op1Cost, Op2Cost, … OpNCost)
+        for (const Use &U : I.operands()) {
+          auto UI = dyn_cast<Instruction>(U.get());
+          if (!UI)
+            continue;
+          if (InstCostMap.count(UI)) {
+            IPredCost = std::max(IPredCost, InstCostMap[UI].PredCost);
+            INonPredCost = std::max(INonPredCost, InstCostMap[UI].NonPredCost);
+          }
+        }
+        auto ILatency = computeInstCost(&I);
+        if (!ILatency.hasValue()) {
+          OptimizationRemarkMissed ORmissL(DEBUG_TYPE, "SelectOpti", &I);
+          ORmissL << "Invalid instruction cost preventing analysis and "
+                     "optimization of the inner-most loop containing this "
+                     "instruction. ";
+          ORE->emit(ORmissL);
+          return false;
+        }
+        IPredCost += Scaled64::get(ILatency.getValue());
+        INonPredCost += Scaled64::get(ILatency.getValue());
+
+        // For a select that can be converted to branch,
+        // compute its cost as a branch (non-predicated cost).
+        //
+        // BranchCost = PredictedPathCost + MispredictCost
+        // PredictedPathCost = TrueOpCost * TrueProb + FalseOpCost * FalseProb
+        // MispredictCost = max(MispredictPenalty, CondCost) * MispredictRate
+        if (SIset.contains(&I)) {
+          auto SI = dyn_cast<SelectInst>(&I);
+
+          Scaled64 TrueOpCost = Scaled64::getZero(),
+                   FalseOpCost = Scaled64::getZero();
+          if (auto *TI = dyn_cast<Instruction>(SI->getTrueValue()))
+            if (InstCostMap.count(TI))
+              TrueOpCost = InstCostMap[TI].NonPredCost;
+          if (auto *FI = dyn_cast<Instruction>(SI->getFalseValue()))
+            if (InstCostMap.count(FI))
+              FalseOpCost = InstCostMap[FI].NonPredCost;
+          Scaled64 PredictedPathCost =
+              getPredictedPathCost(TrueOpCost, FalseOpCost, SI);
+
+          Scaled64 CondCost = Scaled64::getZero();
+          if (auto *CI = dyn_cast<Instruction>(SI->getCondition()))
+            if (InstCostMap.count(CI))
+              CondCost = InstCostMap[CI].NonPredCost;
+          Scaled64 MispredictCost = getMispredictionCost(SI, CondCost);
+
+          INonPredCost = PredictedPathCost + MispredictCost;
+        }
+
+        InstCostMap[&I] = {IPredCost, INonPredCost};
+        MaxCost.PredCost = std::max(MaxCost.PredCost, IPredCost);
+        MaxCost.NonPredCost = std::max(MaxCost.NonPredCost, INonPredCost);
+      }
+    }
+  }
+  return true;
+}
+
+SmallPtrSet<const Instruction *, 2>
+SelectOptimize::getSIset(const SelectGroups &SIGroups) {
+  SmallPtrSet<const Instruction *, 2> SIset;
+  for (const SelectGroup &ASI : SIGroups)
+    for (const SelectInst *SI : ASI)
+      SIset.insert(SI);
+  return SIset;
+}
+
+Optional<uint64_t> SelectOptimize::computeInstCost(const Instruction *I) {
+  InstructionCost ICost =
+      TTI->getInstructionCost(I, TargetTransformInfo::TCK_Latency);
+  if (auto OC = ICost.getValue())
+    return Optional<uint64_t>(OC.getValue());
+  return Optional<uint64_t>(None);
+}
+
+ScaledNumber<uint64_t>
+SelectOptimize::getMispredictionCost(const SelectInst *SI,
+                                     const Scaled64 CondCost) {
+  uint64_t MispredictPenalty = TSchedModel.getMCSchedModel()->MispredictPenalty;
+
+  // Account for the default misprediction rate when using a branch
+  // (conservatively set to 25% by default).
+  uint64_t MispredictRate = MispredictDefaultRate;
+  // If the select condition is obviously predictable, then the misprediction
+  // rate is zero.
+  if (isSelectHighlyPredictable(SI))
+    MispredictRate = 0;
+
+  // CondCost is included to account for cases where the computation of the
+  // condition is part of a long dependence chain (potentially loop-carried)
+  // that would delay detection of a misprediction and increase its cost.
+  Scaled64 MispredictCost =
+      std::max(Scaled64::get(MispredictPenalty), CondCost) *
+      Scaled64::get(MispredictRate);
+  MispredictCost /= Scaled64::get(100);
+
+  return MispredictCost;
+}
+
+// Returns the cost of a branch when the prediction is correct.
+// TrueCost * TrueProbability + FalseCost * FalseProbability.
+ScaledNumber<uint64_t>
+SelectOptimize::getPredictedPathCost(Scaled64 TrueCost, Scaled64 FalseCost,
+                                     const SelectInst *SI) {
+  Scaled64 PredPathCost;
+  uint64_t TrueWeight, FalseWeight;
+  if (SI->extractProfMetadata(TrueWeight, FalseWeight)) {
+    uint64_t SumWeight = TrueWeight + FalseWeight;
+    if (SumWeight != 0) {
+      PredPathCost = TrueCost * Scaled64::get(TrueWeight) +
+                     FalseCost * Scaled64::get(FalseWeight);
+      PredPathCost /= Scaled64::get(SumWeight);
+      return PredPathCost;
+    }
+  }
+  // Without branch weight metadata, we assume 75% for the one path and 25% for
+  // the other, and pick the result with the biggest cost.
+  PredPathCost = std::max(TrueCost * Scaled64::get(3) + FalseCost,
+                          FalseCost * Scaled64::get(3) + TrueCost);
+  PredPathCost /= Scaled64::get(4);
+  return PredPathCost;
 }
 
 bool SelectOptimize::isSelectKindSupported(SelectInst *SI) {
