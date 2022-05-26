@@ -49,7 +49,7 @@ for line in log.split('\n'):
 # Gets the expected errors and their line number
 errors = []
 for i, line in enumerate(src, 1):
-    m = re.search(r"(?:^\s*!ERROR: )(.*)", line)
+    m = re.search(r"(?:^\s*!\s*ERROR: )(.*)", line)
     if m:
         errors.append(m.group(1))
         continue
