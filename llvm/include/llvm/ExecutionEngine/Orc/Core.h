@@ -1389,8 +1389,12 @@ public:
   /// object.
   ExecutionSession(std::unique_ptr<ExecutorProcessControl> EPC);
 
+  /// Destroy an ExecutionSession. Verifies that endSession was called prior to
+  /// destruction.
+  ~ExecutionSession();
+
   /// End the session. Closes all JITDylibs and disconnects from the
-  /// executor.
+  /// executor. Clients must call this method before destroying the session.
   Error endSession();
 
   /// Get the ExecutorProcessControl object associated with this

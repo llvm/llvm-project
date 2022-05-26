@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "OrcTestCommon.h"
+#include "llvm/ADT/ScopeExit.h"
 #include "llvm/Config/llvm-config.h"
 #include "llvm/ExecutionEngine/Orc/Core.h"
 #include "llvm/ExecutionEngine/Orc/Shared/OrcError.h"
@@ -1410,6 +1411,7 @@ TEST(JITDylibTest, GetDFSLinkOrderTree) {
   // form a tree.
 
   ExecutionSession ES{std::make_unique<UnsupportedExecutorProcessControl>()};
+  auto _ = make_scope_exit([&]() { cantFail(ES.endSession()); });
 
   auto &LibA = ES.createBareJITDylib("A");
   auto &LibB = ES.createBareJITDylib("B");
@@ -1451,6 +1453,8 @@ TEST(JITDylibTest, GetDFSLinkOrderDiamond) {
   // contain a diamond.
 
   ExecutionSession ES{std::make_unique<UnsupportedExecutorProcessControl>()};
+  auto _ = make_scope_exit([&]() { cantFail(ES.endSession()); });
+
   auto &LibA = ES.createBareJITDylib("A");
   auto &LibB = ES.createBareJITDylib("B");
   auto &LibC = ES.createBareJITDylib("C");
@@ -1473,6 +1477,8 @@ TEST(JITDylibTest, GetDFSLinkOrderCycle) {
   // contain a cycle.
 
   ExecutionSession ES{std::make_unique<UnsupportedExecutorProcessControl>()};
+  auto _ = make_scope_exit([&]() { cantFail(ES.endSession()); });
+
   auto &LibA = ES.createBareJITDylib("A");
   auto &LibB = ES.createBareJITDylib("B");
   auto &LibC = ES.createBareJITDylib("C");
