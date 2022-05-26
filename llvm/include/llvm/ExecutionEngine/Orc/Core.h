@@ -420,12 +420,15 @@ class FailedToMaterialize : public ErrorInfo<FailedToMaterialize> {
 public:
   static char ID;
 
-  FailedToMaterialize(std::shared_ptr<SymbolDependenceMap> Symbols);
+  FailedToMaterialize(std::shared_ptr<SymbolStringPool> SSP,
+                      std::shared_ptr<SymbolDependenceMap> Symbols);
+  ~FailedToMaterialize();
   std::error_code convertToErrorCode() const override;
   void log(raw_ostream &OS) const override;
   const SymbolDependenceMap &getSymbols() const { return *Symbols; }
 
 private:
+  std::shared_ptr<SymbolStringPool> SSP;
   std::shared_ptr<SymbolDependenceMap> Symbols;
 };
 
