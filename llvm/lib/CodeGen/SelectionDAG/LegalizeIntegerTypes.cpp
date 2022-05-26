@@ -98,6 +98,7 @@ void DAGTypeLegalizer::PromoteIntegerResult(SDNode *N, unsigned ResNo) {
   case ISD::VP_ASHR:     Res = PromoteIntRes_SRA(N); break;
   case ISD::SRL:
   case ISD::VP_LSHR:     Res = PromoteIntRes_SRL(N); break;
+  case ISD::VP_TRUNCATE:
   case ISD::TRUNCATE:    Res = PromoteIntRes_TRUNCATE(N); break;
   case ISD::UNDEF:       Res = PromoteIntRes_UNDEF(N); break;
   case ISD::VAARG:       Res = PromoteIntRes_VAARG(N); break;
@@ -1349,11 +1350,23 @@ SDValue DAGTypeLegalizer::PromoteIntRes_TRUNCATE(SDNode *N) {
 
     EVT HalfNVT = EVT::getVectorVT(*DAG.getContext(), NVT.getScalarType(),
                                    NumElts.divideCoefficientBy(2));
-    EOp1 = DAG.getNode(ISD::TRUNCATE, dl, HalfNVT, EOp1);
-    EOp2 = DAG.getNode(ISD::TRUNCATE, dl, HalfNVT, EOp2);
-
+    if (N->getOpcode() == ISD::TRUNCATE) {
+      EOp1 = DAG.getNode(ISD::TRUNCATE, dl, HalfNVT, EOp1);
+      EOp2 = DAG.getNode(ISD::TRUNCATE, dl, HalfNVT, EOp2);
+    } else {
+      assert(N->getOpcode() == ISD::VP_TRUNCATE &&
+             "Expected VP_TRUNCATE opcode");
+      SDValue MaskLo, MaskHi, EVLLo, EVLHi;
+      std::tie(MaskLo, MaskHi) = SplitMask(N->getOperand(1));
+      std::tie(EVLLo, EVLHi) =
+          DAG.SplitEVL(N->getOperand(2), N->getValueType(0), dl);
+      EOp1 = DAG.getNode(ISD::VP_TRUNCATE, dl, HalfNVT, EOp1, MaskLo, EVLLo);
+      EOp2 = DAG.getNode(ISD::VP_TRUNCATE, dl, HalfNVT, EOp2, MaskHi, EVLHi);
+    }
     return DAG.getNode(ISD::CONCAT_VECTORS, dl, NVT, EOp1, EOp2);
   }
+  // TODO: VP_TRUNCATE need to handle when TypeWidenVector access to some
+  // targets.
   case TargetLowering::TypeWidenVector: {
     SDValue WideInOp = GetWidenedVector(InOp);
 
@@ -1375,6 +1388,9 @@ SDValue DAGTypeLegalizer::PromoteIntRes_TRUNCATE(SDNode *N) {
   }
 
   // Truncate to NVT instead of VT
+  if (N->getOpcode() == ISD::VP_TRUNCATE)
+    return DAG.getNode(ISD::VP_TRUNCATE, dl, NVT, Res, N->getOperand(1),
+                       N->getOperand(2));
   return DAG.getNode(ISD::TRUNCATE, dl, NVT, Res);
 }
 
@@ -1627,6 +1643,7 @@ bool DAGTypeLegalizer::PromoteIntegerOperand(SDNode *N, unsigned OpNo) {
                                                  OpNo); break;
   case ISD::MSCATTER: Res = PromoteIntOp_MSCATTER(cast<MaskedScatterSDNode>(N),
                                                   OpNo); break;
+  case ISD::VP_TRUNCATE:
   case ISD::TRUNCATE:     Res = PromoteIntOp_TRUNCATE(N); break;
   case ISD::FP16_TO_FP:
   case ISD::UINT_TO_FP:   Res = PromoteIntOp_UINT_TO_FP(N); break;
@@ -2077,6 +2094,9 @@ SDValue DAGTypeLegalizer::PromoteIntOp_MSCATTER(MaskedScatterSDNode *N,
 
 SDValue DAGTypeLegalizer::PromoteIntOp_TRUNCATE(SDNode *N) {
   SDValue Op = GetPromotedInteger(N->getOperand(0));
+  if (N->getOpcode() == ISD::VP_TRUNCATE)
+    return DAG.getNode(ISD::VP_TRUNCATE, SDLoc(N), N->getValueType(0), Op,
+                       N->getOperand(1), N->getOperand(2));
   return DAG.getNode(ISD::TRUNCATE, SDLoc(N), N->getValueType(0), Op);
 }
 
