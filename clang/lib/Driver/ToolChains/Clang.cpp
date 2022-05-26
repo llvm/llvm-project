@@ -7869,7 +7869,6 @@ void ClangAs::ConstructJob(Compilation &C, const JobAction &JA,
   renderDwarfFormat(D, Triple, Args, CmdArgs, DwarfVersion);
   RenderDebugInfoCompressionArgs(Args, CmdArgs, D, getToolChain());
 
-
   // Handle -fPIC et al -- the relocation-model affects the assembler
   // for some targets.
   llvm::Reloc::Model RelocationModel;
