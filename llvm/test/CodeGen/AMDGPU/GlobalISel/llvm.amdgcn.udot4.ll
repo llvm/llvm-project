@@ -46,14 +46,14 @@ define i32 @v_udot4_cast_v4i8(<4 x i8> %a, <4 x i8> %b, i32 %c) {
 ; GFX906-NEXT:    s_movk_i32 s4, 0xff
 ; GFX906-NEXT:    v_lshlrev_b32_sdwa v1, s5, v1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:BYTE_0
 ; GFX906-NEXT:    v_and_or_b32 v0, v0, s4, v1
-; GFX906-NEXT:    v_and_b32_e32 v1, s4, v2
-; GFX906-NEXT:    v_and_b32_e32 v2, s4, v3
+; GFX906-NEXT:    v_and_b32_e32 v1, 0xff, v2
+; GFX906-NEXT:    v_and_b32_e32 v2, 0xff, v3
 ; GFX906-NEXT:    v_lshlrev_b32_e32 v1, 16, v1
 ; GFX906-NEXT:    v_lshlrev_b32_e32 v2, 24, v2
 ; GFX906-NEXT:    v_or3_b32 v0, v0, v1, v2
 ; GFX906-NEXT:    v_lshlrev_b32_sdwa v1, s5, v5 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:BYTE_0
-; GFX906-NEXT:    v_and_b32_e32 v2, s4, v6
-; GFX906-NEXT:    v_and_b32_e32 v3, s4, v7
+; GFX906-NEXT:    v_and_b32_e32 v2, 0xff, v6
+; GFX906-NEXT:    v_and_b32_e32 v3, 0xff, v7
 ; GFX906-NEXT:    v_and_or_b32 v1, v4, s4, v1
 ; GFX906-NEXT:    v_lshlrev_b32_e32 v2, 16, v2
 ; GFX906-NEXT:    v_lshlrev_b32_e32 v3, 24, v3

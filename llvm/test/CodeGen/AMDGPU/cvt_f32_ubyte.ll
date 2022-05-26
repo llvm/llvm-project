@@ -1172,7 +1172,6 @@ define amdgpu_kernel void @load_v4i8_to_v4f32_2_uses(<4 x float> addrspace(1)* n
 ; SI-NEXT:    s_load_dwordx2 s[4:5], s[0:1], 0x9
 ; SI-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0xb
 ; SI-NEXT:    s_mov_b32 s2, -1
-; SI-NEXT:    s_movk_i32 s8, 0xff
 ; SI-NEXT:    s_mov_b32 s6, s2
 ; SI-NEXT:    s_waitcnt vmcnt(0)
 ; SI-NEXT:    v_lshrrev_b32_e32 v5, 16, v4
@@ -1186,11 +1185,11 @@ define amdgpu_kernel void @load_v4i8_to_v4f32_2_uses(<4 x float> addrspace(1)* n
 ; SI-NEXT:    s_waitcnt lgkmcnt(0)
 ; SI-NEXT:    buffer_store_dwordx4 v[0:3], off, s[4:7], 0
 ; SI-NEXT:    s_waitcnt expcnt(0)
-; SI-NEXT:    v_and_b32_e32 v0, s8, v4
+; SI-NEXT:    v_and_b32_e32 v0, 0xff, v4
 ; SI-NEXT:    v_add_i32_e32 v2, vcc, 9, v5
 ; SI-NEXT:    v_lshlrev_b32_e32 v1, 8, v6
 ; SI-NEXT:    v_or_b32_e32 v0, v7, v0
-; SI-NEXT:    v_and_b32_e32 v2, s8, v2
+; SI-NEXT:    v_and_b32_e32 v2, 0xff, v2
 ; SI-NEXT:    v_add_i32_e32 v0, vcc, 0x900, v0
 ; SI-NEXT:    v_or_b32_e32 v1, v1, v2
 ; SI-NEXT:    v_and_b32_e32 v0, 0xffff, v0
@@ -1297,7 +1296,7 @@ define amdgpu_kernel void @load_v4i8_to_v4f32_2_uses(<4 x float> addrspace(1)* n
 ; GFX9-NEXT:    v_lshlrev_b16_e32 v1, 8, v7
 ; GFX9-NEXT:    v_or_b32_sdwa v0, v8, v9 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:BYTE_0
 ; GFX9-NEXT:    v_or_b32_sdwa v1, v1, v4 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:BYTE_0
-; GFX9-NEXT:    v_add_u16_e32 v0, s4, v0
+; GFX9-NEXT:    v_add_u16_e32 v0, 0x900, v0
 ; GFX9-NEXT:    v_add_u16_sdwa v1, v1, s4 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
 ; GFX9-NEXT:    v_or_b32_e32 v0, v0, v1
 ; GFX9-NEXT:    global_store_dword v5, v0, s[2:3]

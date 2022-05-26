@@ -38,9 +38,8 @@ define i16 @v_mul_i16(i16 %num, i16 %den) {
 ; GFX7-LABEL: v_mul_i16:
 ; GFX7:       ; %bb.0:
 ; GFX7-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX7-NEXT:    s_mov_b32 s4, 0xffff
-; GFX7-NEXT:    v_and_b32_e32 v0, s4, v0
-; GFX7-NEXT:    v_and_b32_e32 v1, s4, v1
+; GFX7-NEXT:    v_and_b32_e32 v0, 0xffff, v0
+; GFX7-NEXT:    v_and_b32_e32 v1, 0xffff, v1
 ; GFX7-NEXT:    v_mul_u32_u24_e32 v0, v0, v1
 ; GFX7-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -169,9 +168,8 @@ define signext i16 @v_mul_i16_signext(i16 signext %num, i16 signext %den) {
 ; GFX7-LABEL: v_mul_i16_signext:
 ; GFX7:       ; %bb.0:
 ; GFX7-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX7-NEXT:    s_mov_b32 s4, 0xffff
-; GFX7-NEXT:    v_and_b32_e32 v0, s4, v0
-; GFX7-NEXT:    v_and_b32_e32 v1, s4, v1
+; GFX7-NEXT:    v_and_b32_e32 v0, 0xffff, v0
+; GFX7-NEXT:    v_and_b32_e32 v1, 0xffff, v1
 ; GFX7-NEXT:    v_mul_u32_u24_e32 v0, v0, v1
 ; GFX7-NEXT:    v_bfe_i32 v0, v0, 0, 16
 ; GFX7-NEXT:    s_setpc_b64 s[30:31]
