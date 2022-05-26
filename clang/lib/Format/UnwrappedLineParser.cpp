@@ -2587,10 +2587,13 @@ FormatToken *UnwrappedLineParser::parseIfThenElse(IfStmtKind *IfKind,
       FormatTok->setFinalizedType(TT_ElseLBrace);
       ElseLeftBrace = FormatTok;
       CompoundStatementIndenter Indenter(this, Style, Line->Level);
-      if (parseBlock(/*MustBeDeclaration=*/false, /*AddLevels=*/1u,
-                     /*MunchSemi=*/true,
-                     KeepElseBraces) == IfStmtKind::IfOnly) {
-        Kind = IfStmtKind::IfElseIf;
+      const IfStmtKind ElseBlockKind =
+          parseBlock(/*MustBeDeclaration=*/false, /*AddLevels=*/1u,
+                     /*MunchSemi=*/true, KeepElseBraces);
+      if ((ElseBlockKind == IfStmtKind::IfOnly ||
+           ElseBlockKind == IfStmtKind::IfElseIf) &&
+          FormatTok->is(tok::kw_else)) {
+        KeepElseBraces = true;
       }
       addUnwrappedLine();
     } else if (FormatTok->is(tok::kw_if)) {
