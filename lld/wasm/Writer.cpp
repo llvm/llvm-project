@@ -592,7 +592,8 @@ static bool shouldImport(Symbol *sym) {
   // When a symbol is weakly defined in a shared library we need to allow
   // it to be overridden by another module so need to both import
   // and export the symbol.
-  if (config->shared && sym->isDefined() && sym->isWeak())
+  if (config->shared && sym->isWeak() && !sym->isUndefined() &&
+      !sym->isHidden())
     return true;
   if (!sym->isUndefined())
     return false;

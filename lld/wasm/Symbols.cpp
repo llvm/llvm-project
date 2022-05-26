@@ -217,14 +217,14 @@ void Symbol::setHidden(bool isHidden) {
 }
 
 bool Symbol::isExported() const {
+  if (!isDefined() || isLocal())
+    return false;
+
   // Shared libraries must export all weakly defined symbols
   // in case they contain the version that will be chosen by
   // the dynamic linker.
-  if (config->shared && isLive() && isDefined() && isWeak())
+  if (config->shared && isLive() && isWeak() && !isHidden())
     return true;
-
-  if (!isDefined() || isLocal())
-    return false;
 
   if (config->exportAll || (config->exportDynamic && !isHidden()))
     return true;
