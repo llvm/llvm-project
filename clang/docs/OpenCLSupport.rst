@@ -25,9 +25,19 @@ Clang also supports :ref:`the C++ for OpenCL kernel language <cxx_for_opencl_imp
 There are also other :ref:`new and experimental features <opencl_experimenal>`
 available.
 
-For general issues and bugs with OpenCL in clang refer to `the GitHub issue
-list
-<https://github.com/llvm/llvm-project/issues?q=is%3Aopen+is%3Aissue+label%3Aopencl>`__.
+
+
+Missing features or with limited support
+========================================
+
+- For general issues and bugs with OpenCL in clang refer to `the GitHub issue
+  list
+  <https://github.com/llvm/llvm-project/issues?q=is%3Aopen+is%3Aissue+label%3Aopencl>`__.
+
+- Command-line flag :ref:`-cl-ext <opencl_cl_ext>` (used to override extensions/
+  features supported by a target) is missing support of some functionality i.e. that is
+  implemented fully through libraries (see :ref:`library-based features and
+  extensions <opencl_ext_libs>`).
 
 Internals Manual
 ================
@@ -213,17 +223,21 @@ indicating the presence of the extension should be added to clang.
 
 The default flow for adding a new extension into the frontend is to
 modify `OpenCLExtensions.def
-<https://github.com/llvm/llvm-project/blob/main/clang/include/clang/Basic/OpenCLExtensions.def>`_
+<https://github.com/llvm/llvm-project/blob/main/clang/include/clang/Basic/OpenCLExtensions.def>`__,
+containing the list of all extensions and optional features supported by
+the frontend.
 
 This will add the macro automatically and also add a field in the target
 options ``clang::TargetOptions::OpenCLFeaturesMap`` to control the exposure
 of the new extension during the compilation.
 
-Note that by default targets like `SPIR` or `X86` expose all the OpenCL
+Note that by default targets like `SPIR-V`, `SPIR` or `X86` expose all the OpenCL
 extensions. For all other targets the configuration has to be made explicitly.
 
 Note that the target extension support performed by clang can be overridden
 with :ref:`-cl-ext <opencl_cl_ext>` command-line flags.
+
+.. _opencl_ext_libs:
 
 **Library functionality**
 
@@ -239,7 +253,9 @@ for more details refer to
 :ref:`the section on the OpenCL Header <opencl_header>`. The macros indicating
 the presence of such extensions can be added in the standard header files
 conditioned on target specific predefined macros or/and language version
-predefined macros.
+predefined macros (see `feature/extension preprocessor macros defined in
+opencl-c-base.h
+<https://github.com/llvm/llvm-project/blob/main/clang/lib/Headers/opencl-c-base.h>`__).
 
 **Pragmas**
 
@@ -336,8 +352,9 @@ user should specify both (extension and feature) in command-line flag:
 
    .. code-block:: console
 
-     $ clang -cc1 -cl-std=CL3.0 -cl-ext=+cl_khr_fp64,+__opencl_c_fp64 ...
-     $ clang -cc1 -cl-std=CL3.0 -cl-ext=-cl_khr_fp64,-__opencl_c_fp64 ...
+     $ clang -cl-std=CL3.0 -cl-ext=+cl_khr_fp64,+__opencl_c_fp64 ...
+     $ clang -cl-std=CL3.0 -cl-ext=-cl_khr_fp64,-__opencl_c_fp64 ...
+
 
 
 OpenCL C 3.0 Implementation Status
