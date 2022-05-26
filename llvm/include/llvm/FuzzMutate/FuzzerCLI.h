@@ -16,7 +16,6 @@
 
 #include "llvm/Support/DataTypes.h"
 #include <stddef.h>
-#include <memory>
 
 namespace llvm {
 
