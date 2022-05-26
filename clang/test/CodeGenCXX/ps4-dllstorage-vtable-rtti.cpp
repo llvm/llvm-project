@@ -39,6 +39,7 @@
 // RUN: %clang_cc1 -no-opaque-pointers -I%S -fdeclspec -triple x86_64-unknown-windows-itanium -emit-llvm -o - %s -fhalf-no-semantic-interposition | FileCheck %s -check-prefix=WI
 // RUN: %clang_cc1 -no-opaque-pointers -I%S -fdeclspec -triple x86_64-scei-windows-itanium -emit-llvm -o - %s -fhalf-no-semantic-interposition | FileCheck %s --check-prefixes=PS4,SCEI_WI
 // RUN: %clang_cc1 -no-opaque-pointers -I%S -fdeclspec -triple x86_64-scei-ps4 -emit-llvm -o - %s -fhalf-no-semantic-interposition | FileCheck %s --check-prefixes=PS4,SCEI_PS4
+// RUN: %clang_cc1 -no-opaque-pointers -I%S -fdeclspec -triple x86_64-sie-ps5  -emit-llvm -o - %s -fhalf-no-semantic-interposition | FileCheck %s --check-prefixes=PS4,SCEI_PS4
 
 #include <typeinfo>
 
