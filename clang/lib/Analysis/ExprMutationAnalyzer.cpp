@@ -194,7 +194,8 @@ const Stmt *ExprMutationAnalyzer::tryEachDeclRef(const Decl *Dec,
   return nullptr;
 }
 
-bool ExprMutationAnalyzer::isUnevaluated(const Expr *Exp) {
+bool ExprMutationAnalyzer::isUnevaluated(const Expr *Exp, const Stmt &Stm,
+                                         ASTContext &Context) {
   return selectFirst<Expr>(
              NodeID<Expr>::value,
              match(
@@ -223,6 +224,10 @@ bool ExprMutationAnalyzer::isUnevaluated(const Expr *Exp) {
                                   cxxNoexceptExpr())))))
                          .bind(NodeID<Expr>::value)),
                  Stm, Context)) != nullptr;
+}
+
+bool ExprMutationAnalyzer::isUnevaluated(const Expr *Exp) {
+  return isUnevaluated(Exp, Stm, Context);
 }
 
 const Stmt *
