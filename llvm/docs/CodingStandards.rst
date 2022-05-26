@@ -1584,22 +1584,23 @@ faraway places in the file to tell that the function is local.
 Don't Use Braces on Simple Single-Statement Bodies of if/else/loop Statements
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-When writing the body of an ``if``, ``else``, or loop statement, we prefer to
-omit the braces to avoid unnecessary line noise. However, braces should be used
-in cases where the omission of braces harm the readability and maintainability
-of the code.
+When writing the body of an ``if``, ``else``, or for/while loop statement, we
+prefer to omit the braces to avoid unnecessary line noise. However, braces
+should be used in cases where the omission of braces harm the readability and
+maintainability of the code.
 
 We consider that readability is harmed when omitting the brace in the presence
 of a single statement that is accompanied by a comment (assuming the comment
 can't be hoisted above the ``if`` or loop statement, see below).
+
 Similarly, braces should be used when a single-statement body is complex enough
 that it becomes difficult to see where the block containing the following
 statement began. An ``if``/``else`` chain or a loop is considered a single
 statement for this rule, and this rule applies recursively.
 
-This list is not exhaustive, for example, readability is also harmed if an
+This list is not exhaustive. For example, readability is also harmed if an
 ``if``/``else`` chain does not use braced bodies for either all or none of its
-members, with complex conditionals, deep nesting, etc. The examples below
+members, or has complex conditionals, deep nesting, etc. The examples below
 intend to provide some guidelines.
 
 Maintainability is harmed if the body of an ``if`` ends with a (directly or
@@ -1609,12 +1610,12 @@ would help to avoid running into a "dangling else" situation.
 
 .. code-block:: c++
 
-  // Omit the braces, since the body is simple and clearly associated with the if.
+  // Omit the braces since the body is simple and clearly associated with the
+  // `if`.
   if (isa<FunctionDecl>(D))
     handleFunctionDecl(D);
   else if (isa<VarDecl>(D))
     handleVarDecl(D);
-
 
   // Here we document the condition itself and not the body.
   if (isa<VarDecl>(D)) {
@@ -1622,51 +1623,59 @@ would help to avoid running into a "dangling else" situation.
     // comment, so it would be unclear without the braces whether the following
     // statement is in the scope of the `if`.
     // Because the condition is documented, we can't really hoist this
-    // comment that applies to the body above the if.
+    // comment that applies to the body above the `if`.
     handleOtherDecl(D);
   }
 
-  // Use braces on the outer `if` to avoid a potential dangling else situation.
+  // Use braces on the outer `if` to avoid a potential dangling `else`
+  // situation.
   if (isa<VarDecl>(D)) {
-    for (auto *A : D.attrs())
-      if (shouldProcessAttr(A))
-        handleAttr(A);
+    if (shouldProcessAttr(A))
+      handleAttr(A);
   }
 
-  // Use braces for the `if` block to keep it uniform with the else block.
+  // Use braces for the `if` block to keep it uniform with the `else` block.
   if (isa<FunctionDecl>(D)) {
     handleFunctionDecl(D);
   } else {
-    // In this else case, it is necessary that we explain the situation with this
-    // surprisingly long comment, so it would be unclear without the braces whether
-    // the following statement is in the scope of the `if`.
+    // In this `else` case, it is necessary that we explain the situation with
+    // this surprisingly long comment, so it would be unclear without the braces
+    // whether the following statement is in the scope of the `if`.
     handleOtherDecl(D);
   }
 
-  // This should also omit braces.  The `for` loop contains only a single statement,
-  // so it shouldn't have braces.  The `if` also only contains a single simple
-  // statement (the for loop), so it also should omit braces.
+  // This should also omit braces.  The `for` loop contains only a single
+  // statement, so it shouldn't have braces.  The `if` also only contains a
+  // single simple statement (the `for` loop), so it also should omit braces.
   if (isa<FunctionDecl>(D))
     for (auto *A : D.attrs())
       handleAttr(A);
 
+  // Use braces for a `do-while` loop and its enclosing statement.
+  if (Tok->is(tok::l_brace)) {
+    do {
+      Tok = Tok->Next;
+    } while (Tok);
+  }
+
   // Use braces for the outer `if` since the nested `for` is braced.
   if (isa<FunctionDecl>(D)) {
     for (auto *A : D.attrs()) {
-      // In this for loop body, it is necessary that we explain the situation
+      // In this `for` loop body, it is necessary that we explain the situation
       // with this surprisingly long comment, forcing braces on the `for` block.
       handleAttr(A);
     }
   }
 
-  // Use braces on the outer block because there are more than two levels of nesting.
+  // Use braces on the outer block because there are more than two levels of
+  // nesting.
   if (isa<FunctionDecl>(D)) {
     for (auto *A : D.attrs())
       for (ssize_t i : llvm::seq<ssize_t>(count))
-         handleAttrOnDecl(D, A, i);
+        handleAttrOnDecl(D, A, i);
   }
 
-  // Use braces on the outer block because of a nested `if`, otherwise the
+  // Use braces on the outer block because of a nested `if`; otherwise the
   // compiler would warn: `add explicit braces to avoid dangling else`
   if (auto *D = dyn_cast<FunctionDecl>(D)) {
     if (shouldProcess(D))
