@@ -3054,27 +3054,26 @@ Value *InstCombinerImpl::foldXorOfICmps(ICmpInst *LHS, ICmpInst *RHS,
   assert(I.getOpcode() == Instruction::Xor && I.getOperand(0) == LHS &&
          I.getOperand(1) == RHS && "Should be 'xor' with these operands");
 
-  if (predicatesFoldable(LHS->getPredicate(), RHS->getPredicate())) {
-    if (LHS->getOperand(0) == RHS->getOperand(1) &&
-        LHS->getOperand(1) == RHS->getOperand(0))
-      LHS->swapOperands();
-    if (LHS->getOperand(0) == RHS->getOperand(0) &&
-        LHS->getOperand(1) == RHS->getOperand(1)) {
+  ICmpInst::Predicate PredL = LHS->getPredicate(), PredR = RHS->getPredicate();
+  Value *LHS0 = LHS->getOperand(0), *LHS1 = LHS->getOperand(1);
+  Value *RHS0 = RHS->getOperand(0), *RHS1 = RHS->getOperand(1);
+
+  if (predicatesFoldable(PredL, PredR)) {
+    if (LHS0 == RHS1 && LHS1 == RHS0) {
+      std::swap(LHS0, LHS1);
+      PredL = ICmpInst::getSwappedPredicate(PredL);
+    }
+    if (LHS0 == RHS0 && LHS1 == RHS1) {
       // (icmp1 A, B) ^ (icmp2 A, B) --> (icmp3 A, B)
-      Value *Op0 = LHS->getOperand(0), *Op1 = LHS->getOperand(1);
-      unsigned Code =
-          getICmpCode(LHS->getPredicate()) ^ getICmpCode(RHS->getPredicate());
+      unsigned Code = getICmpCode(PredL) ^ getICmpCode(PredR);
       bool IsSigned = LHS->isSigned() || RHS->isSigned();
-      return getNewICmpValue(Code, IsSigned, Op0, Op1, Builder);
+      return getNewICmpValue(Code, IsSigned, LHS0, LHS1, Builder);
     }
   }
 
   // TODO: This can be generalized to compares of non-signbits using
   // decomposeBitTestICmp(). It could be enhanced more by using (something like)
   // foldLogOpOfMaskedICmps().
-  ICmpInst::Predicate PredL = LHS->getPredicate(), PredR = RHS->getPredicate();
-  Value *LHS0 = LHS->getOperand(0), *LHS1 = LHS->getOperand(1);
-  Value *RHS0 = RHS->getOperand(0), *RHS1 = RHS->getOperand(1);
   if ((LHS->hasOneUse() || RHS->hasOneUse()) &&
       LHS0->getType() == RHS0->getType() &&
       LHS0->getType()->isIntOrIntVectorTy()) {
