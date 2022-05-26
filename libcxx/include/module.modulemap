@@ -315,6 +315,8 @@ module std [system] {
       module ranges_for_each          { private header "__algorithm/ranges_for_each.h" }
       module ranges_for_each_n        { private header "__algorithm/ranges_for_each_n.h" }
       module ranges_is_partitioned    { private header "__algorithm/ranges_is_partitioned.h" }
+      module ranges_is_sorted         { private header "__algorithm/ranges_is_sorted.h" }
+      module ranges_is_sorted_until   { private header "__algorithm/ranges_is_sorted_until.h" }
       module ranges_max               { private header "__algorithm/ranges_max.h" }
       module ranges_max_element       { private header "__algorithm/ranges_max_element.h" }
       module ranges_min               { private header "__algorithm/ranges_min.h" }

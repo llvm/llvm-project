@@ -142,6 +142,49 @@ public:
 static_assert(!std::movable<WeaklyIncrementableNotMovable>);
 static_assert(!std::weakly_incrementable<WeaklyIncrementableNotMovable>);
 
+// almost a forward_iterator
+class ForwardIteratorNotDerivedFrom {
+public:
+  using difference_type = long;
+  using value_type = int;
+  using iterator_category = std::input_iterator_tag;
+
+  ForwardIteratorNotDerivedFrom& operator++();
+  ForwardIteratorNotDerivedFrom operator++(int);
+  const int& operator*() const;
+  bool operator==(const ForwardIteratorNotDerivedFrom&) const = default;
+};
+
+using ForwardRangeNotDerivedFrom = UncheckedRange<ForwardIteratorNotDerivedFrom>;
+
+static_assert(std::input_iterator<ForwardIteratorNotDerivedFrom>);
+static_assert(std::incrementable<ForwardIteratorNotDerivedFrom>);
+static_assert(std::sentinel_for<ForwardIteratorNotDerivedFrom, ForwardIteratorNotDerivedFrom>);
+static_assert(!std::forward_iterator<ForwardIteratorNotDerivedFrom>);
+
+class ForwardIteratorNotIncrementable {
+public:
+  using difference_type = long;
+  using value_type = int;
+  using iterator_category = std::forward_iterator_tag;
+
+  ForwardIteratorNotIncrementable& operator++();
+  int operator++(int);
+  const int& operator*() const;
+  bool operator==(const ForwardIteratorNotIncrementable&) const = default;
+};
+
+using ForwardRangeNotIncrementable = UncheckedRange<ForwardIteratorNotIncrementable>;
+
+static_assert(std::input_iterator<ForwardIteratorNotIncrementable>);
+static_assert(!std::incrementable<ForwardIteratorNotIncrementable>);
+static_assert(std::sentinel_for<ForwardIteratorNotIncrementable, ForwardIteratorNotIncrementable>);
+static_assert(!std::forward_iterator<ForwardIteratorNotIncrementable>);
+
+using ForwardRangeNotSentinelSemiregular = UncheckedRange<forward_iterator<int*>, SentinelForNotSemiregular>;
+using ForwardRangeNotSentinelEqualityComparableWith =
+    UncheckedRange<forward_iterator<int*>, SentinelForNotWeaklyEqualityComparableWith>;
+
 class BidirectionalIteratorNotDerivedFrom {
 public:
   using difference_type = long;
