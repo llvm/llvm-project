@@ -1828,13 +1828,17 @@ $fix[[  $diag[[#include "unused.h"]]
   Cfg.Diagnostics.Includes.IgnoreHeader.emplace_back(
       [](llvm::StringRef Header) { return Header.endswith("ignore.h"); });
   WithContextValue WithCfg(Config::Key, std::move(Cfg));
+  auto AST = TU.build();
   EXPECT_THAT(
-      *TU.build().getDiagnostics(),
+      *AST.getDiagnostics(),
       UnorderedElementsAre(AllOf(
           Diag(Test.range("diag"),
                "included header unused.h is not used directly"),
           withTag(DiagnosticTag::Unnecessary), diagSource(Diag::Clangd),
           withFix(Fix(Test.range("fix"), "", "remove #include directive")))));
+  auto &Diag = AST.getDiagnostics()->front();
+  EXPECT_EQ(getDiagnosticDocURI(Diag.Source, Diag.ID, Diag.Name),
+            std::string("https://clangd.llvm.org/guides/include-cleaner"));
   Cfg.Diagnostics.SuppressAll = true;
   WithContextValue SuppressAllWithCfg(Config::Key, std::move(Cfg));
   EXPECT_THAT(*TU.build().getDiagnostics(), IsEmpty());
