@@ -147,7 +147,7 @@ bool MprotectReadOnly(uptr addr, uptr size) {
   return 0 == internal_mprotect((void *)addr, size, PROT_READ);
 }
 
-#if !SANITIZER_MAC
+#if !SANITIZER_APPLE
 void MprotectMallocZones(void *addr, int prot) {}
 #endif
 
@@ -240,7 +240,7 @@ bool MemoryRangeIsAvailable(uptr range_start, uptr range_end) {
   return true;
 }
 
-#if !SANITIZER_MAC
+#if !SANITIZER_APPLE
 void DumpProcessMap() {
   MemoryMappingLayout proc_maps(/*cache_enabled*/true);
   const sptr kBufSize = 4095;
