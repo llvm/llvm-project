@@ -12,7 +12,7 @@ target triple = "powerpc64le-unknown-linux-gnu"
 ; }
 
 ; CHECK: Loop 'for.i' has cost = 20600
-; CHECK: Loop 'for.j' has cost = 800
+; CHECK-NEXT: Loop 'for.j' has cost = 800
 
 define void @foo(i64 %n, i64 %m, i32* %A, i32* %B, i32* %C) {
 entry:

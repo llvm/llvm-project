@@ -3,9 +3,9 @@
 target datalayout = "e-m:e-i64:64-n32:64-S128-v256:256:256-v512:512:512"
 target triple = "powerpc64le-unknown-linux-gnu"
 
-; CHECK-DAG: Loop 'for.j' has cost = 201000000
-; CHECK-DAG: Loop 'for.i' has cost = 102000000
-; CHECK-DAG: Loop 'for.k' has cost = 90000
+; CHECK: Loop 'for.j' has cost = 201000000
+; CHECK-NEXT: Loop 'for.i' has cost = 102000000
+; CHECK-NEXT: Loop 'for.k' has cost = 90000
 
 ;; Test to make sure when we have multiple conflicting access patterns, the 
 ;; chosen loop configuration favours the majority of those accesses. 
