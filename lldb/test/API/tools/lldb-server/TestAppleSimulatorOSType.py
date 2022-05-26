@@ -72,7 +72,7 @@ class TestAppleSimulatorOSType(gdbremote_testcase.GdbRemoteTestCaseBase):
                 'ARCH': arch,
                 'ARCH_CFLAGS': '-target {} {}'.format(triple, version_min),
             })
-        exe_path = self.getBuildArtifact(exe_name)
+        exe_path = os.path.realpath(self.getBuildArtifact(exe_name))
         cmd = [
             'xcrun', 'simctl', 'spawn', '-s', deviceUDID, exe_path,
             'print-pid', 'sleep:10'
