@@ -3473,6 +3473,72 @@ BoUpSLP::findReusedOrderedScalars(const BoUpSLP::TreeEntry &TE) {
   return None;
 }
 
+namespace {
+/// Tracks the state we can represent the loads in the given sequence.
+enum class LoadsState { Gather, Vectorize, ScatterVectorize };
+} // anonymous namespace
+
+/// Checks if the given array of loads can be represented as a vectorized,
+/// scatter or just simple gather.
+static LoadsState canVectorizeLoads(ArrayRef<Value *> VL, const Value *VL0,
+                                    const TargetTransformInfo &TTI,
+                                    const DataLayout &DL, ScalarEvolution &SE,
+                                    SmallVectorImpl<unsigned> &Order,
+                                    SmallVectorImpl<Value *> &PointerOps) {
+  // Check that a vectorized load would load the same memory as a scalar
+  // load. For example, we don't want to vectorize loads that are smaller
+  // than 8-bit. Even though we have a packed struct {<i2, i2, i2, i2>} LLVM
+  // treats loading/storing it as an i8 struct. If we vectorize loads/stores
+  // from such a struct, we read/write packed bits disagreeing with the
+  // unvectorized version.
+  Type *ScalarTy = VL0->getType();
+
+  if (DL.getTypeSizeInBits(ScalarTy) != DL.getTypeAllocSizeInBits(ScalarTy))
+    return LoadsState::Gather;
+
+  // Make sure all loads in the bundle are simple - we can't vectorize
+  // atomic or volatile loads.
+  PointerOps.clear();
+  PointerOps.resize(VL.size());
+  auto *POIter = PointerOps.begin();
+  for (Value *V : VL) {
+    auto *L = cast<LoadInst>(V);
+    if (!L->isSimple())
+      return LoadsState::Gather;
+    *POIter = L->getPointerOperand();
+    ++POIter;
+  }
+
+  Order.clear();
+  // Check the order of pointer operands.
+  if (llvm::sortPtrAccesses(PointerOps, ScalarTy, DL, SE, Order)) {
+    Value *Ptr0;
+    Value *PtrN;
+    if (Order.empty()) {
+      Ptr0 = PointerOps.front();
+      PtrN = PointerOps.back();
+    } else {
+      Ptr0 = PointerOps[Order.front()];
+      PtrN = PointerOps[Order.back()];
+    }
+    Optional<int> Diff =
+        getPointersDiff(ScalarTy, Ptr0, ScalarTy, PtrN, DL, SE);
+    // Check that the sorted loads are consecutive.
+    if (static_cast<unsigned>(*Diff) == VL.size() - 1)
+      return LoadsState::Vectorize;
+    Align CommonAlignment = cast<LoadInst>(VL0)->getAlign();
+    for (Value *V : VL)
+      CommonAlignment =
+          commonAlignment(CommonAlignment, cast<LoadInst>(V)->getAlign());
+    auto *VecTy = FixedVectorType::get(ScalarTy, VL.size());
+    if (TTI.isLegalMaskedGather(VecTy, CommonAlignment) &&
+        !TTI.forceScalarizeMaskedGather(VecTy, CommonAlignment))
+      return LoadsState::ScatterVectorize;
+  }
+
+  return LoadsState::Gather;
+}
+
 bool clusterSortPtrAccesses(ArrayRef<Value *> VL, Type *ElemTy,
                             const DataLayout &DL, ScalarEvolution &SE,
                             SmallVectorImpl<unsigned> &SortedIndices) {
@@ -4304,72 +4370,6 @@ void BoUpSLP::buildTree(ArrayRef<Value *> Roots) {
   if (!allSameType(Roots))
     return;
   buildTree_rec(Roots, 0, EdgeInfo());
-}
-
-namespace {
-/// Tracks the state we can represent the loads in the given sequence.
-enum class LoadsState { Gather, Vectorize, ScatterVectorize };
-} // anonymous namespace
-
-/// Checks if the given array of loads can be represented as a vectorized,
-/// scatter or just simple gather.
-static LoadsState canVectorizeLoads(ArrayRef<Value *> VL, const Value *VL0,
-                                    const TargetTransformInfo &TTI,
-                                    const DataLayout &DL, ScalarEvolution &SE,
-                                    SmallVectorImpl<unsigned> &Order,
-                                    SmallVectorImpl<Value *> &PointerOps) {
-  // Check that a vectorized load would load the same memory as a scalar
-  // load. For example, we don't want to vectorize loads that are smaller
-  // than 8-bit. Even though we have a packed struct {<i2, i2, i2, i2>} LLVM
-  // treats loading/storing it as an i8 struct. If we vectorize loads/stores
-  // from such a struct, we read/write packed bits disagreeing with the
-  // unvectorized version.
-  Type *ScalarTy = VL0->getType();
-
-  if (DL.getTypeSizeInBits(ScalarTy) != DL.getTypeAllocSizeInBits(ScalarTy))
-    return LoadsState::Gather;
-
-  // Make sure all loads in the bundle are simple - we can't vectorize
-  // atomic or volatile loads.
-  PointerOps.clear();
-  PointerOps.resize(VL.size());
-  auto *POIter = PointerOps.begin();
-  for (Value *V : VL) {
-    auto *L = cast<LoadInst>(V);
-    if (!L->isSimple())
-      return LoadsState::Gather;
-    *POIter = L->getPointerOperand();
-    ++POIter;
-  }
-
-  Order.clear();
-  // Check the order of pointer operands.
-  if (llvm::sortPtrAccesses(PointerOps, ScalarTy, DL, SE, Order)) {
-    Value *Ptr0;
-    Value *PtrN;
-    if (Order.empty()) {
-      Ptr0 = PointerOps.front();
-      PtrN = PointerOps.back();
-    } else {
-      Ptr0 = PointerOps[Order.front()];
-      PtrN = PointerOps[Order.back()];
-    }
-    Optional<int> Diff =
-        getPointersDiff(ScalarTy, Ptr0, ScalarTy, PtrN, DL, SE);
-    // Check that the sorted loads are consecutive.
-    if (static_cast<unsigned>(*Diff) == VL.size() - 1)
-      return LoadsState::Vectorize;
-    Align CommonAlignment = cast<LoadInst>(VL0)->getAlign();
-    for (Value *V : VL)
-      CommonAlignment =
-          commonAlignment(CommonAlignment, cast<LoadInst>(V)->getAlign());
-    auto *VecTy = FixedVectorType::get(ScalarTy, VL.size());
-    if (TTI.isLegalMaskedGather(VecTy, CommonAlignment) &&
-        !TTI.forceScalarizeMaskedGather(VecTy, CommonAlignment))
-      return LoadsState::ScatterVectorize;
-  }
-
-  return LoadsState::Gather;
 }
 
 /// \return true if the specified list of values has only one instruction that
