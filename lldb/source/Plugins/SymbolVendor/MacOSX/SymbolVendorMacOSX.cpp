@@ -237,13 +237,6 @@ SymbolVendorMacOSX::CreateInstance(const lldb::ModuleSP &module_sp,
                                   !original_DBGSourcePath_value.empty()) {
                                 DBGSourcePath = original_DBGSourcePath_value;
                               }
-                              if (DBGSourcePath[0] == '~') {
-                                FileSpec resolved_source_path(
-                                    DBGSourcePath.c_str());
-                                FileSystem::Instance().Resolve(
-                                    resolved_source_path);
-                                DBGSourcePath = resolved_source_path.GetPath();
-                              }
                               module_sp->GetSourceMappingList().Append(
                                   key.GetStringRef(), DBGSourcePath, true);
                               // With version 2 of DBGSourcePathRemapping, we
@@ -275,11 +268,6 @@ SymbolVendorMacOSX::CreateInstance(const lldb::ModuleSP &module_sp,
                                            DBGBuildSourcePath);
                     plist.GetValueAsString("DBGSourcePath", DBGSourcePath);
                     if (!DBGBuildSourcePath.empty() && !DBGSourcePath.empty()) {
-                      if (DBGSourcePath[0] == '~') {
-                        FileSpec resolved_source_path(DBGSourcePath.c_str());
-                        FileSystem::Instance().Resolve(resolved_source_path);
-                        DBGSourcePath = resolved_source_path.GetPath();
-                      }
                       module_sp->GetSourceMappingList().Append(
                           DBGBuildSourcePath, DBGSourcePath, true);
                     }
