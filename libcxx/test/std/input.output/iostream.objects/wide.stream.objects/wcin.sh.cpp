@@ -10,7 +10,7 @@
 
 // istream wcin;
 
-// XFAIL: libcpp-has-no-wide-characters
+// XFAIL: no-wide-characters
 
 // UNSUPPORTED: executor-has-no-bash
 // FILE_DEPENDENCIES: ../send-stdin.sh

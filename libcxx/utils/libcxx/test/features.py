@@ -174,17 +174,20 @@ DEFAULT_FEATURES = [
 # is defined after including <__config_site>, add a Lit feature called
 # `libcpp-xxx-yyy-zzz`. When a macro is defined to a specific value
 # (e.g. `_LIBCPP_ABI_VERSION=2`), the feature is `libcpp-xxx-yyy-zzz=<value>`.
+#
+# Note that features that are more strongly tied to libc++ are named libcpp-foo,
+# while features that are more general in nature are not prefixed with 'libcpp-'.
 macros = {
-  '_LIBCPP_HAS_NO_MONOTONIC_CLOCK': 'libcpp-has-no-monotonic-clock',
-  '_LIBCPP_HAS_NO_THREADS': 'libcpp-has-no-threads',
+  '_LIBCPP_HAS_NO_MONOTONIC_CLOCK': 'no-monotonic-clock',
+  '_LIBCPP_HAS_NO_THREADS': 'no-threads',
   '_LIBCPP_HAS_THREAD_API_EXTERNAL': 'libcpp-has-thread-api-external',
   '_LIBCPP_HAS_THREAD_API_PTHREAD': 'libcpp-has-thread-api-pthread',
   '_LIBCPP_NO_VCRUNTIME': 'libcpp-no-vcruntime',
   '_LIBCPP_ABI_VERSION': 'libcpp-abi-version',
-  '_LIBCPP_HAS_NO_FILESYSTEM_LIBRARY': 'libcpp-has-no-filesystem-library',
-  '_LIBCPP_HAS_NO_RANDOM_DEVICE': 'libcpp-has-no-random-device',
-  '_LIBCPP_HAS_NO_LOCALIZATION': 'libcpp-has-no-localization',
-  '_LIBCPP_HAS_NO_WIDE_CHARACTERS': 'libcpp-has-no-wide-characters',
+  '_LIBCPP_HAS_NO_FILESYSTEM_LIBRARY': 'no-filesystem',
+  '_LIBCPP_HAS_NO_RANDOM_DEVICE': 'no-random-device',
+  '_LIBCPP_HAS_NO_LOCALIZATION': 'no-localization',
+  '_LIBCPP_HAS_NO_WIDE_CHARACTERS': 'no-wide-characters',
   '_LIBCPP_HAS_NO_INCOMPLETE_FORMAT': 'libcpp-has-no-incomplete-format',
   '_LIBCPP_HAS_NO_INCOMPLETE_RANGES': 'libcpp-has-no-incomplete-ranges',
   '_LIBCPP_HAS_NO_UNICODE': 'libcpp-has-no-unicode',

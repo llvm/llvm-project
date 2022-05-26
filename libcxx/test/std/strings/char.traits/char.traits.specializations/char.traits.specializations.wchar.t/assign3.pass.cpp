@@ -12,7 +12,7 @@
 
 // static char_type* assign(char_type* s, size_t n, char_type a);
 
-// UNSUPPORTED: libcpp-has-no-wide-characters
+// UNSUPPORTED: no-wide-characters
 
 #include <string>
 #include <cassert>

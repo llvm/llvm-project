@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-// UNSUPPORTED: libcpp-has-no-threads
+// UNSUPPORTED: no-threads
 // REQUIRES: c++03 || c++11 || c++14 || c++17 || c++20
 
 // This test ensures that we issue a reasonable diagnostic when including <atomic> after

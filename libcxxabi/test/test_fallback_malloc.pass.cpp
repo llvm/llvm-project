@@ -11,7 +11,7 @@
 
 #include <__threading_support>
 
-// UNSUPPORTED: modules-build && libcpp-has-no-threads
+// UNSUPPORTED: modules-build && no-threads
 
 // Necessary because we include a private source file of libc++abi, which
 // only understands _LIBCXXABI_HAS_NO_THREADS.

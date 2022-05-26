@@ -7,7 +7,7 @@
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17
 // UNSUPPORTED: libcpp-has-no-incomplete-format
-// XFAIL: libcpp-has-no-wide-characters
+// XFAIL: no-wide-characters
 
 // <format>
 

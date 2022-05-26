@@ -10,7 +10,7 @@
 
 // typedef regex_iterator<const wchar_t*>   wcregex_iterator;
 
-// XFAIL: libcpp-has-no-wide-characters
+// XFAIL: no-wide-characters
 
 #include <regex>
 #include <type_traits>

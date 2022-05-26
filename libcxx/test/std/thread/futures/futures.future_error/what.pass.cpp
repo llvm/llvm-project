@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// UNSUPPORTED: libcpp-has-no-threads
+// UNSUPPORTED: no-threads
 
 // LWG 2056 changed the values of future_errc, so if we're using new headers
 // with an old library we'll get incorrect messages.
