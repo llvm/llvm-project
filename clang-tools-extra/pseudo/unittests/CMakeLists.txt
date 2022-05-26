@@ -23,4 +23,5 @@ clang_target_link_libraries(ClangPseudoTests
 target_link_libraries(ClangPseudoTests
   PRIVATE
   clangPseudo
+  clangPseudoGrammar
   )

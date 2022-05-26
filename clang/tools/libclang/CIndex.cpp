@@ -1511,8 +1511,7 @@ bool CursorVisitor::VisitTemplateParameters(
   }
 
   if (const auto *E = Params->getRequiresClause()) {
-    if (Visit(MakeCXCursor(Params->getRequiresClause(), nullptr, TU,
-                           RegionOfInterest)))
+    if (Visit(MakeCXCursor(E, nullptr, TU, RegionOfInterest)))
       return true;
   }
 
@@ -2367,8 +2366,6 @@ void OMPClauseEnqueue::VisitOMPUpdateClause(const OMPUpdateClause *) {}
 void OMPClauseEnqueue::VisitOMPCaptureClause(const OMPCaptureClause *) {}
 
 void OMPClauseEnqueue::VisitOMPCompareClause(const OMPCompareClause *) {}
-
-void OMPClauseEnqueue::VisitOMPFailClause(const OMPFailClause *) {}
 
 void OMPClauseEnqueue::VisitOMPSeqCstClause(const OMPSeqCstClause *) {}
 

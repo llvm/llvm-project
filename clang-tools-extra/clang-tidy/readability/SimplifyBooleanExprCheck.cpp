@@ -558,7 +558,8 @@ public:
     if (!BinaryOp || !BinaryOp->isLogicalOp() ||
         !BinaryOp->getType()->isBooleanType())
       return Base::TraverseUnaryOperator(Op);
-    if (checkEitherSide(BinaryOp, isUnaryLNot) ||
+    if (Check->SimplifyDeMorganRelaxed ||
+        checkEitherSide(BinaryOp, isUnaryLNot) ||
         checkEitherSide(BinaryOp,
                         [](const Expr *E) { return nestedDemorgan(E, 1); })) {
       if (Check->reportDeMorgan(Context, Op, BinaryOp, !IsProcessing, parent(),
@@ -584,7 +585,13 @@ SimplifyBooleanExprCheck::SimplifyBooleanExprCheck(StringRef Name,
       ChainedConditionalReturn(Options.get("ChainedConditionalReturn", false)),
       ChainedConditionalAssignment(
           Options.get("ChainedConditionalAssignment", false)),
-      SimplifyDeMorgan(Options.get("SimplifyDeMorgan", true)) {}
+      SimplifyDeMorgan(Options.get("SimplifyDeMorgan", true)),
+      SimplifyDeMorganRelaxed(Options.get("SimplifyDeMorganRelaxed", false)) {
+  if (SimplifyDeMorganRelaxed && !SimplifyDeMorgan)
+    configurationDiag("%0: 'SimplifyDeMorganRelaxed' cannot be enabled "
+                      "without 'SimplifyDeMorgan' enabled")
+        << Name;
+}
 
 static bool containsBoolLiteral(const Expr *E) {
   if (!E)
@@ -667,6 +674,7 @@ void SimplifyBooleanExprCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
   Options.store(Opts, "ChainedConditionalAssignment",
                 ChainedConditionalAssignment);
   Options.store(Opts, "SimplifyDeMorgan", SimplifyDeMorgan);
+  Options.store(Opts, "SimplifyDeMorganRelaxed", SimplifyDeMorganRelaxed);
 }
 
 void SimplifyBooleanExprCheck::registerMatchers(MatchFinder *Finder) {

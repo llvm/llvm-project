@@ -354,10 +354,10 @@ define arm_aapcs_vfpcc <8 x half> @vmovn32_trunc1(<4 x float> %src1, <4 x float>
 ; CHECK-MVE-LABEL: vmovn32_trunc1:
 ; CHECK-MVE:       @ %bb.0: @ %entry
 ; CHECK-MVE-NEXT:    vcvtb.f16.f32 s0, s0
+; CHECK-MVE-NEXT:    vcvtb.f16.f32 s1, s1
 ; CHECK-MVE-NEXT:    vcvtb.f16.f32 s2, s2
+; CHECK-MVE-NEXT:    vcvtb.f16.f32 s3, s3
 ; CHECK-MVE-NEXT:    vcvtt.f16.f32 s0, s4
-; CHECK-MVE-NEXT:    vcvtb.f16.f32 s4, s1
-; CHECK-MVE-NEXT:    vcvtb.f16.f32 s4, s3
 ; CHECK-MVE-NEXT:    vcvtt.f16.f32 s1, s5
 ; CHECK-MVE-NEXT:    vcvtt.f16.f32 s2, s6
 ; CHECK-MVE-NEXT:    vcvtt.f16.f32 s3, s7
@@ -377,14 +377,15 @@ entry:
 define arm_aapcs_vfpcc <8 x half> @vmovn32_trunc2(<4 x float> %src1, <4 x float> %src2) {
 ; CHECK-MVE-LABEL: vmovn32_trunc2:
 ; CHECK-MVE:       @ %bb.0: @ %entry
-; CHECK-MVE-NEXT:    vcvtt.f16.f32 s0, s0
-; CHECK-MVE-NEXT:    vcvtt.f16.f32 s1, s1
-; CHECK-MVE-NEXT:    vcvtt.f16.f32 s2, s2
-; CHECK-MVE-NEXT:    vcvtt.f16.f32 s3, s3
-; CHECK-MVE-NEXT:    vcvtb.f16.f32 s4, s4
-; CHECK-MVE-NEXT:    vcvtb.f16.f32 s4, s5
-; CHECK-MVE-NEXT:    vcvtb.f16.f32 s4, s6
-; CHECK-MVE-NEXT:    vcvtb.f16.f32 s4, s7
+; CHECK-MVE-NEXT:    vmov q2, q0
+; CHECK-MVE-NEXT:    vcvtb.f16.f32 s0, s4
+; CHECK-MVE-NEXT:    vcvtb.f16.f32 s1, s5
+; CHECK-MVE-NEXT:    vcvtb.f16.f32 s2, s6
+; CHECK-MVE-NEXT:    vcvtb.f16.f32 s3, s7
+; CHECK-MVE-NEXT:    vcvtt.f16.f32 s0, s8
+; CHECK-MVE-NEXT:    vcvtt.f16.f32 s1, s9
+; CHECK-MVE-NEXT:    vcvtt.f16.f32 s2, s10
+; CHECK-MVE-NEXT:    vcvtt.f16.f32 s3, s11
 ; CHECK-MVE-NEXT:    bx lr
 ;
 ; CHECK-MVEFP-LABEL: vmovn32_trunc2:

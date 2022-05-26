@@ -5,6 +5,11 @@
 // On Darwin LSan reports a false positive
 // XFAIL: darwin && lsan
 
+// FIXME: https://github.com/llvm/llvm-project/issues/55460
+// On Linux its possible for symbolizer output to be truncated and to match the
+// check below. Remove when the underlying problem has been addressed.
+// UNSUPPORTED: linux
+
 #include <sanitizer/common_interface_defs.h>
 #include <vector>
 

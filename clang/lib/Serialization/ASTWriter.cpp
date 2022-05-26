@@ -6327,14 +6327,6 @@ void OMPClauseWriter::VisitOMPCaptureClause(OMPCaptureClause *) {}
 
 void OMPClauseWriter::VisitOMPCompareClause(OMPCompareClause *) {}
 
-void OMPClauseWriter::VisitOMPFailClause(OMPFailClause *C) {
-  // Record.AddSourceLocation(C->getLParenLoc());
-  // Copied from VisitOMPUpdateClause
-  Record.AddSourceLocation(C->getLParenLoc());
-  Record.AddSourceLocation(C->getArgumentLoc());
-  Record.writeEnum(C->getMemOrderClauseKind());
-}
-
 void OMPClauseWriter::VisitOMPSeqCstClause(OMPSeqCstClause *) {}
 
 void OMPClauseWriter::VisitOMPAcqRelClause(OMPAcqRelClause *) {}

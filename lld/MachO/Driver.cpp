@@ -938,26 +938,29 @@ bool SymbolPatterns::match(StringRef symbolName) const {
   return matchLiteral(symbolName) || matchGlob(symbolName);
 }
 
+static void handleSymbolPatternsListHelper(const Arg *arg,
+                                           SymbolPatterns &symbolPatterns) {
+  StringRef path = arg->getValue();
+  Optional<MemoryBufferRef> buffer = readFile(path);
+  if (!buffer) {
+    error("Could not read symbol file: " + path);
+    return;
+  }
+  MemoryBufferRef mbref = *buffer;
+  for (StringRef line : args::getLines(mbref)) {
+    line = line.take_until([](char c) { return c == '#'; }).trim();
+    if (!line.empty())
+      symbolPatterns.insert(line);
+  }
+}
 static void handleSymbolPatterns(InputArgList &args,
                                  SymbolPatterns &symbolPatterns,
                                  unsigned singleOptionCode,
                                  unsigned listFileOptionCode) {
   for (const Arg *arg : args.filtered(singleOptionCode))
     symbolPatterns.insert(arg->getValue());
-  for (const Arg *arg : args.filtered(listFileOptionCode)) {
-    StringRef path = arg->getValue();
-    Optional<MemoryBufferRef> buffer = readFile(path);
-    if (!buffer) {
-      error("Could not read symbol file: " + path);
-      continue;
-    }
-    MemoryBufferRef mbref = *buffer;
-    for (StringRef line : args::getLines(mbref)) {
-      line = line.take_until([](char c) { return c == '#'; }).trim();
-      if (!line.empty())
-        symbolPatterns.insert(line);
-    }
-  }
+  for (const Arg *arg : args.filtered(listFileOptionCode))
+    handleSymbolPatternsListHelper(arg, symbolPatterns);
 }
 
 static void createFiles(const InputArgList &args) {
@@ -1406,9 +1409,53 @@ bool macho::link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
           ">>> ignoring unexports");
     config->unexportedSymbols.clear();
   }
+
+  // Imitating LD64's:
+  // -non_global_symbols_no_strip_list and -non_global_symbols_strip_list can't
+  // both be present.
+  // But -x can be used with either of these two, in which case, the last arg
+  // takes effect.
+  // (TODO: This is kind of confusing - considering disallowing using them
+  // together for a more straightforward behaviour)
+  {
+    bool includeLocal = false;
+    bool excludeLocal = false;
+    for (const Arg *arg :
+         args.filtered(OPT_x, OPT_non_global_symbols_no_strip_list,
+                       OPT_non_global_symbols_strip_list)) {
+      switch (arg->getOption().getID()) {
+      case OPT_x:
+        config->localSymbolsPresence = SymtabPresence::None;
+
+        break;
+      case OPT_non_global_symbols_no_strip_list:
+        if (excludeLocal) {
+          error("cannot use both -non_global_symbols_no_strip_list and "
+                "-non_global_symbols_strip_list");
+        } else {
+          includeLocal = true;
+          config->localSymbolsPresence = SymtabPresence::SelectivelyIncluded;
+          handleSymbolPatternsListHelper(arg, config->localSymbolPatterns);
+        }
+        break;
+      case OPT_non_global_symbols_strip_list:
+        if (includeLocal) {
+          error("cannot use both -non_global_symbols_no_strip_list and "
+                "-non_global_symbols_strip_list");
+        } else {
+          excludeLocal = true;
+          config->localSymbolsPresence = SymtabPresence::SelectivelyExcluded;
+          handleSymbolPatternsListHelper(arg, config->localSymbolPatterns);
+        }
+        break;
+      default:
+        llvm_unreachable("unexpected option");
+      }
+    }
+  }
   // Explicitly-exported literal symbols must be defined, but might
-  // languish in an archive if unreferenced elsewhere. Light a fire
-  // under those lazy symbols!
+  // languish in an archive if unreferenced elsewhere or if they are in the
+  // non-global strip list. Light a fire under those lazy symbols!
   for (const CachedHashStringRef &cachedName : config->exportedSymbols.literals)
     symtab->addUndefined(cachedName.val(), /*file=*/nullptr,
                          /*isWeakRef=*/false);

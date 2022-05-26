@@ -220,8 +220,8 @@ define i32 @long_red(float* noalias %A, float* noalias %B, i32 %n) {
 ; ALL-NEXT:    [[TMP7:%.*]] = load float, float* [[ARRAYIDX48]], align 4
 ; ALL-NEXT:    [[MUL49:%.*]] = fmul fast float [[TMP2]], [[TMP7]]
 ; ALL-NEXT:    [[TMP8:%.*]] = call fast float @llvm.vector.reduce.fadd.v8f32(float -0.000000e+00, <8 x float> [[TMP6]])
-; ALL-NEXT:    [[TMP9:%.*]] = fadd fast float [[TMP8]], [[MUL49]]
-; ALL-NEXT:    [[ADD51]] = fadd fast float [[SUM_082]], [[TMP9]]
+; ALL-NEXT:    [[OP_RDX:%.*]] = fadd fast float [[TMP8]], [[MUL49]]
+; ALL-NEXT:    [[ADD51]] = fadd fast float [[SUM_082]], [[OP_RDX]]
 ; ALL-NEXT:    [[INC]] = add nsw i64 [[I_083]], 1
 ; ALL-NEXT:    [[EXITCOND:%.*]] = icmp eq i64 [[INC]], [[TMP3]]
 ; ALL-NEXT:    br i1 [[EXITCOND]], label [[FOR_COND_FOR_END_CRIT_EDGE:%.*]], label [[FOR_BODY]]
@@ -341,19 +341,19 @@ define i32 @chain_red(float* noalias %A, float* noalias %B, i32 %n) {
 ; ALL-NEXT:    br label [[FOR_BODY:%.*]]
 ; ALL:       for.body:
 ; ALL-NEXT:    [[I_043:%.*]] = phi i64 [ 0, [[FOR_BODY_LR_PH]] ], [ [[INC:%.*]], [[FOR_BODY]] ]
-; ALL-NEXT:    [[SUM_042:%.*]] = phi float [ 0.000000e+00, [[FOR_BODY_LR_PH]] ], [ [[OP_EXTRA:%.*]], [[FOR_BODY]] ]
+; ALL-NEXT:    [[SUM_042:%.*]] = phi float [ 0.000000e+00, [[FOR_BODY_LR_PH]] ], [ [[OP_RDX:%.*]], [[FOR_BODY]] ]
 ; ALL-NEXT:    [[MUL:%.*]] = shl nsw i64 [[I_043]], 2
 ; ALL-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds float, float* [[A:%.*]], i64 [[MUL]]
 ; ALL-NEXT:    [[TMP3:%.*]] = bitcast float* [[ARRAYIDX2]] to <4 x float>*
 ; ALL-NEXT:    [[TMP4:%.*]] = load <4 x float>, <4 x float>* [[TMP3]], align 4
 ; ALL-NEXT:    [[TMP5:%.*]] = fmul fast <4 x float> [[TMP1]], [[TMP4]]
 ; ALL-NEXT:    [[TMP6:%.*]] = call fast float @llvm.vector.reduce.fadd.v4f32(float -0.000000e+00, <4 x float> [[TMP5]])
-; ALL-NEXT:    [[OP_EXTRA]] = fadd fast float [[TMP6]], [[SUM_042]]
+; ALL-NEXT:    [[OP_RDX]] = fadd fast float [[TMP6]], [[SUM_042]]
 ; ALL-NEXT:    [[INC]] = add nsw i64 [[I_043]], 1
 ; ALL-NEXT:    [[EXITCOND:%.*]] = icmp eq i64 [[INC]], [[TMP2]]
 ; ALL-NEXT:    br i1 [[EXITCOND]], label [[FOR_COND_FOR_END_CRIT_EDGE:%.*]], label [[FOR_BODY]]
 ; ALL:       for.cond.for.end_crit_edge:
-; ALL-NEXT:    [[PHITMP:%.*]] = fptosi float [[OP_EXTRA]] to i32
+; ALL-NEXT:    [[PHITMP:%.*]] = fptosi float [[OP_RDX]] to i32
 ; ALL-NEXT:    br label [[FOR_END]]
 ; ALL:       for.end:
 ; ALL-NEXT:    [[SUM_0_LCSSA:%.*]] = phi i32 [ [[PHITMP]], [[FOR_COND_FOR_END_CRIT_EDGE]] ], [ 0, [[ENTRY:%.*]] ]
@@ -1461,6 +1461,41 @@ define float @fadd_v4f32_fmf_intersect(float* %p) {
   %add2 = fadd ninf reassoc nsz nnan arcp float %t2, %add1
   %add3 = fadd ninf reassoc nsz contract float %t3, %add2
   ret float %add3
+}
+
+; FIXME: Can't preserve no-wrap guarantees with reassociated math.
+; This must not propagate 'nsw' to a new add instruction.
+
+define void @nsw_propagation_v4i32(i32* %res, i32 %start) {
+; CHECK-LABEL: @nsw_propagation_v4i32(
+; CHECK-NEXT:    [[T0:%.*]] = load i32, i32* getelementptr inbounds ([32 x i32], [32 x i32]* @arr_i32, i64 0, i64 0), align 16
+; CHECK-NEXT:    [[T1:%.*]] = load i32, i32* getelementptr inbounds ([32 x i32], [32 x i32]* @arr_i32, i64 0, i64 1), align 4
+; CHECK-NEXT:    [[T2:%.*]] = load i32, i32* getelementptr inbounds ([32 x i32], [32 x i32]* @arr_i32, i64 0, i64 2), align 8
+; CHECK-NEXT:    [[T3:%.*]] = load i32, i32* getelementptr inbounds ([32 x i32], [32 x i32]* @arr_i32, i64 0, i64 3), align 4
+; CHECK-NEXT:    [[S:%.*]] = add nsw i32 [[START:%.*]], [[T0]]
+; CHECK-NEXT:    [[ADD:%.*]] = add nsw i32 [[T1]], [[S]]
+; CHECK-NEXT:    [[ADD_1:%.*]] = add nsw i32 [[T2]], [[ADD]]
+; CHECK-NEXT:    [[ADD_2:%.*]] = add nsw i32 [[T3]], [[ADD_1]]
+; CHECK-NEXT:    store i32 [[ADD_2]], i32* [[RES:%.*]], align 16
+; CHECK-NEXT:    ret void
+;
+; STORE-LABEL: @nsw_propagation_v4i32(
+; STORE-NEXT:    [[TMP1:%.*]] = load <4 x i32>, <4 x i32>* bitcast ([32 x i32]* @arr_i32 to <4 x i32>*), align 16
+; STORE-NEXT:    [[TMP2:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[TMP1]])
+; STORE-NEXT:    [[OP_RDX:%.*]] = add nsw i32 [[TMP2]], [[START:%.*]]
+; STORE-NEXT:    store i32 [[OP_RDX]], i32* [[RES:%.*]], align 16
+; STORE-NEXT:    ret void
+;
+  %t0 = load i32, i32* getelementptr inbounds ([32 x i32], [32 x i32]* @arr_i32, i64 0, i64 0), align 16
+  %t1 = load i32, i32* getelementptr inbounds ([32 x i32], [32 x i32]* @arr_i32, i64 0, i64 1), align 4
+  %t2 = load i32, i32* getelementptr inbounds ([32 x i32], [32 x i32]* @arr_i32, i64 0, i64 2), align 8
+  %t3 = load i32, i32* getelementptr inbounds ([32 x i32], [32 x i32]* @arr_i32, i64 0, i64 3), align 4
+  %s = add nsw i32 %start, %t0
+  %add = add nsw i32 %t1, %s
+  %add.1 = add nsw i32 %t2, %add
+  %add.2 = add nsw i32 %t3, %add.1
+  store i32 %add.2, i32* %res, align 16
+  ret void
 }
 
 declare i32 @__gxx_personality_v0(...)
