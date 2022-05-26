@@ -553,7 +553,7 @@ define i32 @test_chr_5_1(i32* %i, i32 %sum0) !prof !14 {
 ; CHECK-NEXT:    [[TMP2:%.*]] = icmp ne i32 [[TMP1]], 0
 ; CHECK-NEXT:    [[TMP3:%.*]] = and i32 [[DOTFR1]], 11
 ; CHECK-NEXT:    [[TMP4:%.*]] = icmp eq i32 [[TMP3]], 11
-; CHECK-NEXT:    [[TMP5:%.*]] = and i1 [[TMP4]], [[TMP2]]
+; CHECK-NEXT:    [[TMP5:%.*]] = select i1 [[TMP4]], i1 [[TMP2]], i1 false
 ; CHECK-NEXT:    br i1 [[TMP5]], label [[BB0:%.*]], label [[ENTRY_SPLIT_NONCHR:%.*]], !prof [[PROF15]]
 ; CHECK:       bb0:
 ; CHECK-NEXT:    [[TMP6:%.*]] = add i32 [[SUM0]], 85
@@ -655,7 +655,7 @@ define i32 @test_chr_6(i32* %i, i32* %j, i32 %sum0) !prof !14 {
 ; CHECK-NEXT:    [[V10:%.*]] = icmp ne i32 [[V9]], 0
 ; CHECK-NEXT:    [[TMP0:%.*]] = and i32 [[I0_FR]], 10
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i32 [[TMP0]], 10
-; CHECK-NEXT:    [[TMP2:%.*]] = and i1 [[TMP1]], [[V10]]
+; CHECK-NEXT:    [[TMP2:%.*]] = select i1 [[TMP1]], i1 [[V10]], i1 false
 ; CHECK-NEXT:    br i1 [[TMP2]], label [[BB0:%.*]], label [[ENTRY_SPLIT_NONCHR:%.*]], !prof [[PROF15]]
 ; CHECK:       bb0:
 ; CHECK-NEXT:    [[V8:%.*]] = add i32 [[SUM0:%.*]], 43
@@ -1123,7 +1123,7 @@ define void @test_chr_11(i32* %i, i32 %x) !prof !14 {
 ; CHECK-NEXT:    [[MUL16:%.*]] = fmul double [[DIV]], [[CONV]]
 ; CHECK-NEXT:    [[CONV717:%.*]] = fptosi double [[MUL16]] to i32
 ; CHECK-NEXT:    [[CMP18:%.*]] = icmp sgt i32 [[CONV717]], 0
-; CHECK-NEXT:    [[TMP3:%.*]] = and i1 [[TMP2]], [[CMP18]]
+; CHECK-NEXT:    [[TMP3:%.*]] = select i1 [[TMP2]], i1 [[CMP18]], i1 false
 ; CHECK-NEXT:    br i1 [[TMP3]], label [[BB0:%.*]], label [[ENTRY_SPLIT_NONCHR:%.*]], !prof [[PROF15]]
 ; CHECK:       bb0:
 ; CHECK-NEXT:    call void @foo()
@@ -1919,8 +1919,8 @@ define i32 @test_chr_21(i64 %i, i64 %k, i64 %j) !prof !14 {
 ; CHECK-NEXT:    [[CMP0:%.*]] = icmp ne i64 [[J:%.*]], [[K:%.*]]
 ; CHECK-NEXT:    [[CMP3:%.*]] = icmp ne i64 [[J]], [[I:%.*]]
 ; CHECK-NEXT:    [[CMP_I:%.*]] = icmp ne i64 [[I]], 86
-; CHECK-NEXT:    [[TMP0:%.*]] = and i1 [[CMP0]], [[CMP3]]
-; CHECK-NEXT:    [[TMP1:%.*]] = and i1 [[TMP0]], [[CMP_I]]
+; CHECK-NEXT:    [[TMP0:%.*]] = select i1 [[CMP0]], i1 [[CMP3]], i1 false
+; CHECK-NEXT:    [[TMP1:%.*]] = select i1 [[TMP0]], i1 [[CMP_I]], i1 false
 ; CHECK-NEXT:    br i1 [[TMP1]], label [[BB1:%.*]], label [[ENTRY_SPLIT_NONCHR:%.*]], !prof [[PROF15]]
 ; CHECK:       bb1:
 ; CHECK-NEXT:    [[CMP2:%.*]] = icmp ne i64 [[I]], 2
