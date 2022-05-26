@@ -130,16 +130,11 @@ define <4 x i32> @bitcasts_and_bitcast(<4 x i32> %a, <8 x i16> %b) {
   ret <4 x i32> %bc3
 }
 
-; The destination must have an integer element type.
-; FIXME: We can still eliminate one bitcast in this test by doing the logic op
-; in the type of the input that has an integer element type.
-
 define <4 x float> @bitcasts_and_bitcast_to_fp(<4 x float> %a, <8 x i16> %b) {
 ; CHECK-LABEL: @bitcasts_and_bitcast_to_fp(
-; CHECK-NEXT:    [[BC1:%.*]] = bitcast <4 x float> [[A:%.*]] to <2 x i64>
-; CHECK-NEXT:    [[BC2:%.*]] = bitcast <8 x i16> [[B:%.*]] to <2 x i64>
-; CHECK-NEXT:    [[AND:%.*]] = and <2 x i64> [[BC2]], [[BC1]]
-; CHECK-NEXT:    [[BC3:%.*]] = bitcast <2 x i64> [[AND]] to <4 x float>
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <4 x float> [[A:%.*]] to <8 x i16>
+; CHECK-NEXT:    [[TMP2:%.*]] = and <8 x i16> [[TMP1]], [[B:%.*]]
+; CHECK-NEXT:    [[BC3:%.*]] = bitcast <8 x i16> [[TMP2]] to <4 x float>
 ; CHECK-NEXT:    ret <4 x float> [[BC3]]
 ;
   %bc1 = bitcast <4 x float> %a to <2 x i64>
