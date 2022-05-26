@@ -1433,6 +1433,13 @@ protected:
   void printDialectAttribute(Attribute attr);
   void printDialectType(Type type);
 
+  /// Print an escaped string, wrapped with "".
+  void printEscapedString(StringRef str);
+
+  /// Print a hex string, wrapped with "".
+  void printHexString(StringRef str);
+  void printHexString(ArrayRef<char> data);
+
   /// This enum is used to represent the binding strength of the enclosing
   /// context that an AffineExprStorage is being printed in, so we can
   /// intelligently produce parens.
@@ -1479,19 +1486,14 @@ void AsmPrinter::Impl::printLocationInternal(LocationAttr loc, bool pretty) {
           os << "unknown";
       })
       .Case<FileLineColLoc>([&](FileLineColLoc loc) {
-        if (pretty) {
+        if (pretty)
           os << loc.getFilename().getValue();
-        } else {
-          os << "\"";
-          printEscapedString(loc.getFilename(), os);
-          os << "\"";
-        }
+        else
+          printEscapedString(loc.getFilename());
         os << ':' << loc.getLine() << ':' << loc.getColumn();
       })
       .Case<NameLoc>([&](NameLoc loc) {
-        os << '\"';
-        printEscapedString(loc.getName(), os);
-        os << '\"';
+        printEscapedString(loc.getName());
 
         // Print the child if it isn't unknown.
         auto childLoc = loc.getChildLoc();
@@ -1800,9 +1802,7 @@ void AsmPrinter::Impl::printAttribute(Attribute attr,
       return;
 
   } else if (auto strAttr = attr.dyn_cast<StringAttr>()) {
-    os << '"';
-    printEscapedString(strAttr.getValue(), os);
-    os << '"';
+    printEscapedString(strAttr.getValue());
 
   } else if (auto arrayAttr = attr.dyn_cast<ArrayAttr>()) {
     os << '[';
@@ -1841,8 +1841,9 @@ void AsmPrinter::Impl::printAttribute(Attribute attr,
     if (printerFlags.shouldElideElementsAttr(opaqueAttr)) {
       printElidedElementsAttr(os);
     } else {
-      os << "opaque<" << opaqueAttr.getDialect() << ", \"0x"
-         << llvm::toHex(opaqueAttr.getValue()) << "\">";
+      os << "opaque<" << opaqueAttr.getDialect() << ", ";
+      printHexString(opaqueAttr.getValue());
+      os << ">";
     }
 
   } else if (auto intOrFpEltAttr = attr.dyn_cast<DenseIntOrFPElementsAttr>()) {
@@ -1974,12 +1975,9 @@ void AsmPrinter::Impl::printDenseIntOrFPElementsAttr(
       MutableArrayRef<char> convRawData(outDataVec);
       DenseIntOrFPElementsAttr::convertEndianOfArrayRefForBEmachine(
           rawData, convRawData, type);
-      os << '"' << "0x"
-         << llvm::toHex(StringRef(convRawData.data(), convRawData.size()))
-         << "\"";
+      printHexString(convRawData);
     } else {
-      os << '"' << "0x"
-         << llvm::toHex(StringRef(rawData.data(), rawData.size())) << "\"";
+      printHexString(rawData);
     }
 
     return;
@@ -2030,11 +2028,7 @@ void AsmPrinter::Impl::printDenseIntOrFPElementsAttr(
 void AsmPrinter::Impl::printDenseStringElementsAttr(
     DenseStringElementsAttr attr) {
   ArrayRef<StringRef> data = attr.getRawStringData();
-  auto printFn = [&](unsigned index) {
-    os << "\"";
-    printEscapedString(data[index], os);
-    os << "\"";
-  };
+  auto printFn = [&](unsigned index) { printEscapedString(data[index]); };
   printDenseElementsAttrImpl(attr.isSplat(), attr.getType(), os, printFn);
 }
 
@@ -2238,6 +2232,19 @@ void AsmPrinter::Impl::printDialectType(Type type) {
     dialect.printType(type, printer);
   }
   printDialectSymbol(os, "!", dialect.getNamespace(), typeName);
+}
+
+void AsmPrinter::Impl::printEscapedString(StringRef str) {
+  os << "\"";
+  llvm::printEscapedString(str, os);
+  os << "\"";
+}
+
+void AsmPrinter::Impl::printHexString(StringRef str) {
+  os << "\"0x" << llvm::toHex(str) << "\"";
+}
+void AsmPrinter::Impl::printHexString(ArrayRef<char> data) {
+  printHexString(StringRef(data.data(), data.size()));
 }
 
 //===--------------------------------------------------------------------===//
@@ -2722,7 +2729,8 @@ void OperationPrinter::printOperation(Operation *op) {
         // ambiguities.
         if (name.count('.') == 1)
           name.consume_front((defaultDialectStack.back() + ".").str());
-        printEscapedString(name, os);
+        os << name;
+
         // Print the rest of the op now.
         opPrinter(op, *this);
         return;
@@ -2809,11 +2817,8 @@ void OperationPrinter::printUserIDs(Operation *user, bool prefixComma) {
 }
 
 void OperationPrinter::printGenericOp(Operation *op, bool printOpName) {
-  if (printOpName) {
-    os << '"';
-    printEscapedString(op->getName().getStringRef(), os);
-    os << '"';
-  }
+  if (printOpName)
+    printEscapedString(op->getName().getStringRef());
   os << '(';
   interleaveComma(op->getOperands(), [&](Value value) { printValueID(value); });
   os << ')';
