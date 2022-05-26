@@ -19597,6 +19597,13 @@ TEST_F(FormatTest, UnderstandPragmaOption) {
   EXPECT_EQ("#pragma option -C -A", format("#pragma    option   -C   -A"));
 }
 
+TEST_F(FormatTest, UnderstandPragmaRegion) {
+  auto Style = getLLVMStyleWithColumns(0);
+  verifyFormat("#pragma region TEST(FOO : BAR)", Style);
+
+  EXPECT_EQ("#pragma region TEST(FOO : BAR)", format("#pragma region TEST(FOO : BAR)", Style));
+}
+
 TEST_F(FormatTest, OptimizeBreakPenaltyVsExcess) {
   FormatStyle Style = getLLVMStyleWithColumns(20);
 
