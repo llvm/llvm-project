@@ -8572,12 +8572,12 @@ VPRecipeBuilder::tryToCreateWidenRecipe(Instruction *Instr,
       PhiRecipe = new VPFirstOrderRecurrencePHIRecipe(Phi, *StartV);
     }
 
-      // Record the incoming value from the backedge, so we can add the incoming
-      // value from the backedge after all recipes have been created.
-      recordRecipeOf(cast<Instruction>(
-          Phi->getIncomingValueForBlock(OrigLoop->getLoopLatch())));
-      PhisToFix.push_back(PhiRecipe);
-      return toVPRecipeResult(PhiRecipe);
+    // Record the incoming value from the backedge, so we can add the incoming
+    // value from the backedge after all recipes have been created.
+    recordRecipeOf(cast<Instruction>(
+        Phi->getIncomingValueForBlock(OrigLoop->getLoopLatch())));
+    PhisToFix.push_back(PhiRecipe);
+    return toVPRecipeResult(PhiRecipe);
   }
 
   if (isa<TruncInst>(Instr) &&
