@@ -157,7 +157,7 @@ FlatAffineValueConstraints::FlatAffineValueConstraints(IntegerSet set)
                                                      /*numLocals=*/0)) {
 
   // Resize values.
-  values.resize(getNumIds(), None);
+  values.resize(getNumDimAndSymbolIds(), None);
 
   // Flatten expressions and add them to the constraint system.
   std::vector<SmallVector<int64_t, 8>> flatExprs;
@@ -294,14 +294,20 @@ unsigned FlatAffineValueConstraints::insertSymbolId(unsigned pos,
 unsigned FlatAffineValueConstraints::insertId(IdKind kind, unsigned pos,
                                               unsigned num) {
   unsigned absolutePos = IntegerPolyhedron::insertId(kind, pos, num);
-  values.insert(values.begin() + absolutePos, num, None);
-  assert(values.size() == getNumIds());
+
+  if (kind != IdKind::Local) {
+    values.insert(values.begin() + absolutePos, num, None);
+    assert(values.size() == getNumDimAndSymbolIds());
+  }
+
   return absolutePos;
 }
 
 unsigned FlatAffineValueConstraints::insertId(IdKind kind, unsigned pos,
                                               ValueRange vals) {
-  assert(!vals.empty() && "expected ValueRange with Values");
+  assert(!vals.empty() && "expected ValueRange with Values.");
+  assert(kind != IdKind::Local &&
+         "values cannot be attached to local identifiers.");
   unsigned num = vals.size();
   unsigned absolutePos = IntegerPolyhedron::insertId(kind, pos, num);
 
@@ -310,7 +316,7 @@ unsigned FlatAffineValueConstraints::insertId(IdKind kind, unsigned pos,
     values.insert(values.begin() + absolutePos + i,
                   vals[i] ? Optional<Value>(vals[i]) : None);
 
-  assert(values.size() == getNumIds());
+  assert(values.size() == getNumDimAndSymbolIds());
   return absolutePos;
 }
 
@@ -342,8 +348,9 @@ bool FlatAffineValueConstraints::areIdsAlignedWithOther(
 static bool LLVM_ATTRIBUTE_UNUSED areIdsUnique(
     const FlatAffineValueConstraints &cst, unsigned start, unsigned end) {
 
-  assert(start <= cst.getNumIds() && "Start position out of bounds");
-  assert(end <= cst.getNumIds() && "End position out of bounds");
+  assert(start <= cst.getNumDimAndSymbolIds() &&
+         "Start position out of bounds");
+  assert(end <= cst.getNumDimAndSymbolIds() && "End position out of bounds");
 
   if (start >= end)
     return true;
@@ -361,7 +368,7 @@ static bool LLVM_ATTRIBUTE_UNUSED areIdsUnique(
 /// Checks if the SSA values associated with `cst`'s identifiers are unique.
 static bool LLVM_ATTRIBUTE_UNUSED
 areIdsUnique(const FlatAffineValueConstraints &cst) {
-  return areIdsUnique(cst, 0, cst.getNumIds());
+  return areIdsUnique(cst, 0, cst.getNumDimAndSymbolIds());
 }
 
 /// Checks if the SSA values associated with `cst`'s identifiers of kind `kind`
@@ -373,8 +380,6 @@ areIdsUnique(const FlatAffineValueConstraints &cst, IdKind kind) {
     return areIdsUnique(cst, 0, cst.getNumDimIds());
   if (kind == IdKind::Symbol)
     return areIdsUnique(cst, cst.getNumDimIds(), cst.getNumDimAndSymbolIds());
-  if (kind == IdKind::Local)
-    return areIdsUnique(cst, cst.getNumDimAndSymbolIds(), cst.getNumIds());
   llvm_unreachable("Unexpected IdKind");
 }
 
@@ -395,11 +400,11 @@ static void mergeAndAlignIds(unsigned offset, FlatAffineValueConstraints *a,
   assert(areIdsUnique(*b) && "B's values aren't unique");
 
   assert(std::all_of(a->getMaybeValues().begin() + offset,
-                     a->getMaybeValues().begin() + a->getNumDimAndSymbolIds(),
+                     a->getMaybeValues().end(),
                      [](Optional<Value> id) { return id.hasValue(); }));
 
   assert(std::all_of(b->getMaybeValues().begin() + offset,
-                     b->getMaybeValues().begin() + b->getNumDimAndSymbolIds(),
+                     b->getMaybeValues().end(),
                      [](Optional<Value> id) { return id.hasValue(); }));
 
   SmallVector<Value, 4> aDimValues;
@@ -703,15 +708,18 @@ void FlatAffineValueConstraints::addAffineIfOpDomain(AffineIfOp ifOp) {
 
 bool FlatAffineValueConstraints::hasConsistentState() const {
   return IntegerPolyhedron::hasConsistentState() &&
-         values.size() == getNumIds();
+         values.size() == getNumDimAndSymbolIds();
 }
 
 void FlatAffineValueConstraints::removeIdRange(IdKind kind, unsigned idStart,
                                                unsigned idLimit) {
   IntegerPolyhedron::removeIdRange(kind, idStart, idLimit);
   unsigned offset = getIdKindOffset(kind);
-  values.erase(values.begin() + idStart + offset,
-               values.begin() + idLimit + offset);
+
+  if (kind != IdKind::Local) {
+    values.erase(values.begin() + idStart + offset,
+                 values.begin() + idLimit + offset);
+  }
 }
 
 // Determine whether the identifier at 'pos' (say id_r) can be expressed as
@@ -1339,7 +1347,17 @@ bool FlatAffineValueConstraints::containsId(Value val) const {
 
 void FlatAffineValueConstraints::swapId(unsigned posA, unsigned posB) {
   IntegerPolyhedron::swapId(posA, posB);
-  std::swap(values[posA], values[posB]);
+
+  if (getIdKindAt(posA) == IdKind::Local && getIdKindAt(posB) == IdKind::Local)
+    return;
+
+  // Treat value of a local identifer as None.
+  if (getIdKindAt(posA) == IdKind::Local)
+    values[posB] = None;
+  else if (getIdKindAt(posB) == IdKind::Local)
+    values[posA] = None;
+  else
+    std::swap(values[posA], values[posB]);
 }
 
 void FlatAffineValueConstraints::addBound(BoundType type, Value val,
@@ -1354,12 +1372,16 @@ void FlatAffineValueConstraints::addBound(BoundType type, Value val,
 void FlatAffineValueConstraints::printSpace(raw_ostream &os) const {
   IntegerPolyhedron::printSpace(os);
   os << "(";
-  for (unsigned i = 0, e = getNumIds(); i < e; i++) {
+  for (unsigned i = 0, e = getNumDimAndSymbolIds(); i < e; i++) {
     if (hasValue(i))
       os << "Value ";
     else
       os << "None ";
   }
+  for (unsigned i = getIdKindOffset(IdKind::Local),
+                e = getIdKindEnd(IdKind::Local);
+       i < e; ++i)
+    os << "Local ";
   os << " const)\n";
 }
 
@@ -1372,21 +1394,20 @@ void FlatAffineValueConstraints::clearAndCopyFrom(
   } else {
     *static_cast<IntegerRelation *>(this) = other;
     values.clear();
-    values.resize(getNumIds(), None);
+    values.resize(getNumDimAndSymbolIds(), None);
   }
 }
 
 void FlatAffineValueConstraints::fourierMotzkinEliminate(
     unsigned pos, bool darkShadow, bool *isResultIntegerExact) {
-  SmallVector<Optional<Value>, 8> newVals;
-  newVals.reserve(getNumIds() - 1);
-  newVals.append(values.begin(), values.begin() + pos);
-  newVals.append(values.begin() + pos + 1, values.end());
+  SmallVector<Optional<Value>, 8> newVals = values;
+  if (getIdKindAt(pos) != IdKind::Local)
+    newVals.erase(newVals.begin() + pos);
   // Note: Base implementation discards all associated Values.
   IntegerPolyhedron::fourierMotzkinEliminate(pos, darkShadow,
                                              isResultIntegerExact);
   values = newVals;
-  assert(values.size() == getNumIds());
+  assert(values.size() == getNumDimAndSymbolIds());
 }
 
 void FlatAffineValueConstraints::projectOut(Value val) {
