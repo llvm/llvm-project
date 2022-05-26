@@ -33,7 +33,7 @@ entry:
 fail:                                             ; preds = %entry
   ret void
 
-preheader:                                        ; preds = %bb
+preheader:                                        ; preds = %entry
   br label %loop
 
 loop:                                             ; preds = %loop, %preheader
