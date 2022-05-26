@@ -418,33 +418,61 @@ namespace std
 */
 #include <__assert> // all public C++ headers provide the assertion handler
 #include <__config>
+#include <__type_traits/add_const.h>
+#include <__type_traits/add_cv.h>
+#include <__type_traits/add_lvalue_reference.h>
 #include <__type_traits/add_pointer.h>
+#include <__type_traits/add_rvalue_reference.h>
+#include <__type_traits/add_volatile.h>
 #include <__type_traits/conditional.h>
 #include <__type_traits/decay.h>
 #include <__type_traits/enable_if.h>
+#include <__type_traits/extent.h>
 #include <__type_traits/integral_constant.h>
+#include <__type_traits/is_abstract.h>
+#include <__type_traits/is_aggregate.h>
+#include <__type_traits/is_arithmetic.h>
 #include <__type_traits/is_array.h>
 #include <__type_traits/is_base_of.h>
+#include <__type_traits/is_bounded_array.h>
 #include <__type_traits/is_callable.h>
+#include <__type_traits/is_class.h>
+#include <__type_traits/is_compound.h>
 #include <__type_traits/is_const.h>
 #include <__type_traits/is_convertible.h>
+#include <__type_traits/is_empty.h>
+#include <__type_traits/is_enum.h>
+#include <__type_traits/is_final.h>
 #include <__type_traits/is_floating_point.h>
 #include <__type_traits/is_function.h>
+#include <__type_traits/is_fundamental.h>
 #include <__type_traits/is_integral.h>
 #include <__type_traits/is_member_function_pointer.h>
 #include <__type_traits/is_member_object_pointer.h>
+#include <__type_traits/is_member_pointer.h>
 #include <__type_traits/is_null_pointer.h>
+#include <__type_traits/is_object.h>
+#include <__type_traits/is_pointer.h>
 #include <__type_traits/is_reference.h>
 #include <__type_traits/is_reference_wrapper.h>
 #include <__type_traits/is_referenceable.h>
 #include <__type_traits/is_same.h>
+#include <__type_traits/is_scalar.h>
+#include <__type_traits/is_signed.h>
+#include <__type_traits/is_unbounded_array.h>
+#include <__type_traits/is_union.h>
+#include <__type_traits/is_unsigned.h>
 #include <__type_traits/is_void.h>
 #include <__type_traits/is_volatile.h>
+#include <__type_traits/rank.h>
+#include <__type_traits/remove_all_extents.h>
 #include <__type_traits/remove_const.h>
 #include <__type_traits/remove_cv.h>
 #include <__type_traits/remove_extent.h>
+#include <__type_traits/remove_pointer.h>
 #include <__type_traits/remove_reference.h>
 #include <__type_traits/remove_volatile.h>
+#include <__type_traits/type_identity.h>
 #include <__utility/declval.h>
 #include <cstddef>
 #include <version>
@@ -558,327 +586,6 @@ template <> struct __libcpp_is_unsigned_integer<unsigned long long> : public tru
 template <> struct __libcpp_is_unsigned_integer<__uint128_t>        : public true_type {};
 #endif
 
-// is_pointer
-
-// Before AppleClang 12.0.5, __is_pointer didn't work for Objective-C types.
-#if __has_keyword(__is_pointer) &&                                             \
-    !(defined(_LIBCPP_APPLE_CLANG_VER) && _LIBCPP_APPLE_CLANG_VER < 1205)
-
-template<class _Tp>
-struct _LIBCPP_TEMPLATE_VIS is_pointer : _BoolConstant<__is_pointer(_Tp)> { };
-
-#if _LIBCPP_STD_VER > 14
-template <class _Tp>
-inline constexpr bool is_pointer_v = __is_pointer(_Tp);
-#endif
-
-#else // __has_keyword(__is_pointer)
-
-template <class _Tp> struct __libcpp_is_pointer       : public false_type {};
-template <class _Tp> struct __libcpp_is_pointer<_Tp*> : public true_type {};
-
-template <class _Tp> struct __libcpp_remove_objc_qualifiers { typedef _Tp type; };
-#if defined(_LIBCPP_HAS_OBJC_ARC)
-template <class _Tp> struct __libcpp_remove_objc_qualifiers<_Tp __strong> { typedef _Tp type; };
-template <class _Tp> struct __libcpp_remove_objc_qualifiers<_Tp __weak> { typedef _Tp type; };
-template <class _Tp> struct __libcpp_remove_objc_qualifiers<_Tp __autoreleasing> { typedef _Tp type; };
-template <class _Tp> struct __libcpp_remove_objc_qualifiers<_Tp __unsafe_unretained> { typedef _Tp type; };
-#endif
-
-template <class _Tp> struct _LIBCPP_TEMPLATE_VIS is_pointer
-    : public __libcpp_is_pointer<typename __libcpp_remove_objc_qualifiers<typename remove_cv<_Tp>::type>::type> {};
-
-#if _LIBCPP_STD_VER > 14
-template <class _Tp>
-inline constexpr bool is_pointer_v = is_pointer<_Tp>::value;
-#endif
-
-#endif // __has_keyword(__is_pointer)
-
-// is_union
-
-#if __has_feature(is_union) || defined(_LIBCPP_COMPILER_GCC)
-
-template <class _Tp> struct _LIBCPP_TEMPLATE_VIS is_union
-    : public integral_constant<bool, __is_union(_Tp)> {};
-
-#else
-
-template <class _Tp> struct __libcpp_union : public false_type {};
-template <class _Tp> struct _LIBCPP_TEMPLATE_VIS is_union
-    : public __libcpp_union<typename remove_cv<_Tp>::type> {};
-
-#endif
-
-#if _LIBCPP_STD_VER > 14
-template <class _Tp>
-inline constexpr bool is_union_v = is_union<_Tp>::value;
-#endif
-
-// is_class
-
-#if __has_feature(is_class) || defined(_LIBCPP_COMPILER_GCC)
-
-template <class _Tp> struct _LIBCPP_TEMPLATE_VIS is_class
-    : public integral_constant<bool, __is_class(_Tp)> {};
-
-#else
-
-namespace __is_class_imp
-{
-template <class _Tp> char  __test(int _Tp::*);
-template <class _Tp> __two __test(...);
-}
-
-template <class _Tp> struct _LIBCPP_TEMPLATE_VIS is_class
-    : public integral_constant<bool, sizeof(__is_class_imp::__test<_Tp>(0)) == 1 && !is_union<_Tp>::value> {};
-
-#endif
-
-#if _LIBCPP_STD_VER > 14
-template <class _Tp>
-inline constexpr bool is_class_v = is_class<_Tp>::value;
-#endif
-
-// is_member_pointer
-
-#if __has_keyword(__is_member_pointer)
-
-template<class _Tp>
-struct _LIBCPP_TEMPLATE_VIS is_member_pointer : _BoolConstant<__is_member_pointer(_Tp)> { };
-
-#if _LIBCPP_STD_VER > 14
-template <class _Tp>
-inline constexpr bool is_member_pointer_v = __is_member_pointer(_Tp);
-#endif
-
-#else // __has_keyword(__is_member_pointer)
-
-template <class _Tp> struct _LIBCPP_TEMPLATE_VIS is_member_pointer
- : public _BoolConstant< __libcpp_is_member_pointer<typename remove_cv<_Tp>::type>::__is_member > {};
-
-#if _LIBCPP_STD_VER > 14
-template <class _Tp>
-inline constexpr bool is_member_pointer_v = is_member_pointer<_Tp>::value;
-#endif
-
-#endif // __has_keyword(__is_member_pointer)
-
-// is_enum
-
-#if __has_feature(is_enum) || defined(_LIBCPP_COMPILER_GCC)
-
-template <class _Tp> struct _LIBCPP_TEMPLATE_VIS is_enum
-    : public integral_constant<bool, __is_enum(_Tp)> {};
-
-#if _LIBCPP_STD_VER > 14
-template <class _Tp>
-inline constexpr bool is_enum_v = __is_enum(_Tp);
-#endif
-
-#else
-
-template <class _Tp> struct _LIBCPP_TEMPLATE_VIS is_enum
-    : public integral_constant<bool, !is_void<_Tp>::value             &&
-                                     !is_integral<_Tp>::value         &&
-                                     !is_floating_point<_Tp>::value   &&
-                                     !is_array<_Tp>::value            &&
-                                     !is_pointer<_Tp>::value          &&
-                                     !is_reference<_Tp>::value        &&
-                                     !is_member_pointer<_Tp>::value   &&
-                                     !is_union<_Tp>::value            &&
-                                     !is_class<_Tp>::value            &&
-                                     !is_function<_Tp>::value         > {};
-
-#if _LIBCPP_STD_VER > 14
-template <class _Tp>
-inline constexpr bool is_enum_v = is_enum<_Tp>::value;
-#endif
-
-#endif // __has_feature(is_enum) || defined(_LIBCPP_COMPILER_GCC)
-
-// is_arithmetic
-
-
-template <class _Tp> struct _LIBCPP_TEMPLATE_VIS is_arithmetic
-    : public integral_constant<bool, is_integral<_Tp>::value      ||
-                                     is_floating_point<_Tp>::value> {};
-
-#if _LIBCPP_STD_VER > 14
-template <class _Tp>
-inline constexpr bool is_arithmetic_v = is_arithmetic<_Tp>::value;
-#endif
-
-// is_fundamental
-
-// Before Clang 10, __is_fundamental didn't work for nullptr_t.
-// In C++03 nullptr_t is library-provided but must still count as "fundamental."
-#if __has_keyword(__is_fundamental) &&                                         \
-    !(defined(_LIBCPP_CLANG_VER) && _LIBCPP_CLANG_VER < 1000) &&               \
-    !defined(_LIBCPP_CXX03_LANG)
-
-template<class _Tp>
-struct _LIBCPP_TEMPLATE_VIS is_fundamental : _BoolConstant<__is_fundamental(_Tp)> { };
-
-#if _LIBCPP_STD_VER > 14
-template <class _Tp>
-inline constexpr bool is_fundamental_v = __is_fundamental(_Tp);
-#endif
-
-#else // __has_keyword(__is_fundamental)
-
-template <class _Tp> struct _LIBCPP_TEMPLATE_VIS is_fundamental
-    : public integral_constant<bool, is_void<_Tp>::value        ||
-                                     __is_nullptr_t<_Tp>::value ||
-                                     is_arithmetic<_Tp>::value> {};
-
-#if _LIBCPP_STD_VER > 14
-template <class _Tp>
-inline constexpr bool is_fundamental_v = is_fundamental<_Tp>::value;
-#endif
-
-#endif // __has_keyword(__is_fundamental)
-
-// is_scalar
-
-// In C++03 nullptr_t is library-provided but must still count as "scalar."
-#if __has_keyword(__is_scalar) && !defined(_LIBCPP_CXX03_LANG)
-
-template<class _Tp>
-struct _LIBCPP_TEMPLATE_VIS is_scalar : _BoolConstant<__is_scalar(_Tp)> { };
-
-#if _LIBCPP_STD_VER > 14
-template <class _Tp>
-inline constexpr bool is_scalar_v = __is_scalar(_Tp);
-#endif
-
-#else // __has_keyword(__is_scalar)
-
-template <class _Tp> struct __is_block : false_type {};
-#if defined(_LIBCPP_HAS_EXTENSION_BLOCKS)
-template <class _Rp, class ..._Args> struct __is_block<_Rp (^)(_Args...)> : true_type {};
-#endif
-
-template <class _Tp> struct _LIBCPP_TEMPLATE_VIS is_scalar
-    : public integral_constant<bool, is_arithmetic<_Tp>::value     ||
-                                     is_member_pointer<_Tp>::value ||
-                                     is_pointer<_Tp>::value        ||
-                                     __is_nullptr_t<_Tp>::value    ||
-                                     __is_block<_Tp>::value        ||
-                                     is_enum<_Tp>::value           > {};
-
-template <> struct _LIBCPP_TEMPLATE_VIS is_scalar<nullptr_t> : public true_type {};
-
-#if _LIBCPP_STD_VER > 14
-template <class _Tp>
-inline constexpr bool is_scalar_v = is_scalar<_Tp>::value;
-#endif
-
-#endif // __has_keyword(__is_scalar)
-
-// is_object
-
-#if __has_keyword(__is_object)
-
-template<class _Tp>
-struct _LIBCPP_TEMPLATE_VIS is_object : _BoolConstant<__is_object(_Tp)> { };
-
-#if _LIBCPP_STD_VER > 14
-template <class _Tp>
-inline constexpr bool is_object_v = __is_object(_Tp);
-#endif
-
-#else // __has_keyword(__is_object)
-
-template <class _Tp> struct _LIBCPP_TEMPLATE_VIS is_object
-    : public integral_constant<bool, is_scalar<_Tp>::value ||
-                                     is_array<_Tp>::value  ||
-                                     is_union<_Tp>::value  ||
-                                     is_class<_Tp>::value  > {};
-
-#if _LIBCPP_STD_VER > 14
-template <class _Tp>
-inline constexpr bool is_object_v = is_object<_Tp>::value;
-#endif
-
-#endif // __has_keyword(__is_object)
-
-// is_compound
-
-// >= 11 because in C++03 nullptr isn't actually nullptr
-#if __has_keyword(__is_compound) && !defined(_LIBCPP_CXX03_LANG)
-
-template<class _Tp>
-struct _LIBCPP_TEMPLATE_VIS is_compound : _BoolConstant<__is_compound(_Tp)> { };
-
-#if _LIBCPP_STD_VER > 14
-template <class _Tp>
-inline constexpr bool is_compound_v = __is_compound(_Tp);
-#endif
-
-#else // __has_keyword(__is_compound)
-
-template <class _Tp> struct _LIBCPP_TEMPLATE_VIS is_compound
-    : public integral_constant<bool, !is_fundamental<_Tp>::value> {};
-
-#if _LIBCPP_STD_VER > 14
-template <class _Tp>
-inline constexpr bool is_compound_v = is_compound<_Tp>::value;
-#endif
-
-#endif // __has_keyword(__is_compound)
-
-// add_const
-
-template <class _Tp> struct _LIBCPP_TEMPLATE_VIS add_const {
-  typedef _LIBCPP_NODEBUG const _Tp type;
-};
-
-#if _LIBCPP_STD_VER > 11
-template <class _Tp> using add_const_t = typename add_const<_Tp>::type;
-#endif
-
-// add_volatile
-
-template <class _Tp> struct _LIBCPP_TEMPLATE_VIS add_volatile {
-  typedef _LIBCPP_NODEBUG volatile _Tp type;
-};
-
-#if _LIBCPP_STD_VER > 11
-template <class _Tp> using add_volatile_t = typename add_volatile<_Tp>::type;
-#endif
-
-// add_cv
-template <class _Tp> struct _LIBCPP_TEMPLATE_VIS add_cv {
-  typedef _LIBCPP_NODEBUG const volatile _Tp type;
-};
-
-#if _LIBCPP_STD_VER > 11
-template <class _Tp> using add_cv_t = typename add_cv<_Tp>::type;
-#endif
-
-// add_lvalue_reference
-
-template <class _Tp, bool = __is_referenceable<_Tp>::value> struct __add_lvalue_reference_impl            { typedef _LIBCPP_NODEBUG _Tp  type; };
-template <class _Tp                                       > struct __add_lvalue_reference_impl<_Tp, true> { typedef _LIBCPP_NODEBUG _Tp& type; };
-
-template <class _Tp> struct _LIBCPP_TEMPLATE_VIS add_lvalue_reference
-{typedef _LIBCPP_NODEBUG typename  __add_lvalue_reference_impl<_Tp>::type type;};
-
-#if _LIBCPP_STD_VER > 11
-template <class _Tp> using add_lvalue_reference_t = typename add_lvalue_reference<_Tp>::type;
-#endif
-
-template <class _Tp, bool = __is_referenceable<_Tp>::value> struct __add_rvalue_reference_impl            { typedef _LIBCPP_NODEBUG _Tp   type; };
-template <class _Tp                                       > struct __add_rvalue_reference_impl<_Tp, true> { typedef _LIBCPP_NODEBUG _Tp&& type; };
-
-template <class _Tp> struct _LIBCPP_TEMPLATE_VIS add_rvalue_reference
-{typedef _LIBCPP_NODEBUG typename __add_rvalue_reference_impl<_Tp>::type type;};
-
-#if _LIBCPP_STD_VER > 11
-template <class _Tp> using add_rvalue_reference_t = typename add_rvalue_reference<_Tp>::type;
-#endif
-
 template <class _Tp>
 struct __unconstref {
     typedef _LIBCPP_NODEBUG typename remove_const<typename remove_reference<_Tp>::type>::type type;
@@ -907,221 +614,6 @@ struct __any
 {
     __any(...);
 };
-
-// remove_pointer
-
-template <class _Tp> struct _LIBCPP_TEMPLATE_VIS remove_pointer                      {typedef _LIBCPP_NODEBUG _Tp type;};
-template <class _Tp> struct _LIBCPP_TEMPLATE_VIS remove_pointer<_Tp*>                {typedef _LIBCPP_NODEBUG _Tp type;};
-template <class _Tp> struct _LIBCPP_TEMPLATE_VIS remove_pointer<_Tp* const>          {typedef _LIBCPP_NODEBUG _Tp type;};
-template <class _Tp> struct _LIBCPP_TEMPLATE_VIS remove_pointer<_Tp* volatile>       {typedef _LIBCPP_NODEBUG _Tp type;};
-template <class _Tp> struct _LIBCPP_TEMPLATE_VIS remove_pointer<_Tp* const volatile> {typedef _LIBCPP_NODEBUG _Tp type;};
-
-#if _LIBCPP_STD_VER > 11
-template <class _Tp> using remove_pointer_t = typename remove_pointer<_Tp>::type;
-#endif
-
-// add_pointer
-
-// type_identity
-
-template <class _Tp>
-struct __type_identity { typedef _Tp type; };
-
-template <class _Tp>
-using __type_identity_t _LIBCPP_NODEBUG = typename __type_identity<_Tp>::type;
-
-#if _LIBCPP_STD_VER > 17
-template<class _Tp> struct type_identity { typedef _Tp type; };
-template<class _Tp> using type_identity_t = typename type_identity<_Tp>::type;
-#endif
-
-// is_signed
-
-#if __has_keyword(__is_signed)
-
-template<class _Tp>
-struct _LIBCPP_TEMPLATE_VIS is_signed : _BoolConstant<__is_signed(_Tp)> { };
-
-#if _LIBCPP_STD_VER > 14
-template <class _Tp>
-inline constexpr bool is_signed_v = __is_signed(_Tp);
-#endif
-
-#else // __has_keyword(__is_signed)
-
-template <class _Tp, bool = is_integral<_Tp>::value>
-struct __libcpp_is_signed_impl : public _BoolConstant<(_Tp(-1) < _Tp(0))> {};
-
-template <class _Tp>
-struct __libcpp_is_signed_impl<_Tp, false> : public true_type {};  // floating point
-
-template <class _Tp, bool = is_arithmetic<_Tp>::value>
-struct __libcpp_is_signed : public __libcpp_is_signed_impl<_Tp> {};
-
-template <class _Tp> struct __libcpp_is_signed<_Tp, false> : public false_type {};
-
-template <class _Tp> struct _LIBCPP_TEMPLATE_VIS is_signed : public __libcpp_is_signed<_Tp> {};
-
-#if _LIBCPP_STD_VER > 14
-template <class _Tp>
-inline constexpr bool is_signed_v = is_signed<_Tp>::value;
-#endif
-
-#endif // __has_keyword(__is_signed)
-
-// is_unsigned
-
-// Before Clang 13, __is_unsigned returned true for enums with signed underlying type.
-// No currently-released version of AppleClang contains the fixed intrinsic.
-#if __has_keyword(__is_unsigned) &&                                            \
-    !(defined(_LIBCPP_CLANG_VER) && _LIBCPP_CLANG_VER < 1300) &&               \
-    !defined(_LIBCPP_APPLE_CLANG_VER)
-
-template<class _Tp>
-struct _LIBCPP_TEMPLATE_VIS is_unsigned : _BoolConstant<__is_unsigned(_Tp)> { };
-
-#if _LIBCPP_STD_VER > 14
-template <class _Tp>
-inline constexpr bool is_unsigned_v = __is_unsigned(_Tp);
-#endif
-
-#else // __has_keyword(__is_unsigned)
-
-template <class _Tp, bool = is_integral<_Tp>::value>
-struct __libcpp_is_unsigned_impl : public _BoolConstant<(_Tp(0) < _Tp(-1))> {};
-
-template <class _Tp>
-struct __libcpp_is_unsigned_impl<_Tp, false> : public false_type {};  // floating point
-
-template <class _Tp, bool = is_arithmetic<_Tp>::value>
-struct __libcpp_is_unsigned : public __libcpp_is_unsigned_impl<_Tp> {};
-
-template <class _Tp> struct __libcpp_is_unsigned<_Tp, false> : public false_type {};
-
-template <class _Tp> struct _LIBCPP_TEMPLATE_VIS is_unsigned : public __libcpp_is_unsigned<_Tp> {};
-
-#if _LIBCPP_STD_VER > 14
-template <class _Tp>
-inline constexpr bool is_unsigned_v = is_unsigned<_Tp>::value;
-#endif
-
-#endif // __has_keyword(__is_unsigned)
-
-// rank
-
-template <class _Tp> struct _LIBCPP_TEMPLATE_VIS rank
-    : public integral_constant<size_t, 0> {};
-template <class _Tp> struct _LIBCPP_TEMPLATE_VIS rank<_Tp[]>
-    : public integral_constant<size_t, rank<_Tp>::value + 1> {};
-template <class _Tp, size_t _Np> struct _LIBCPP_TEMPLATE_VIS rank<_Tp[_Np]>
-    : public integral_constant<size_t, rank<_Tp>::value + 1> {};
-
-#if _LIBCPP_STD_VER > 14
-template <class _Tp>
-inline constexpr size_t rank_v = rank<_Tp>::value;
-#endif
-
-// extent
-
-#if __has_keyword(__array_extent)
-
-template<class _Tp, size_t _Dim = 0>
-struct _LIBCPP_TEMPLATE_VIS extent
-    : integral_constant<size_t, __array_extent(_Tp, _Dim)> { };
-
-#if _LIBCPP_STD_VER > 14
-template <class _Tp, unsigned _Ip = 0>
-inline constexpr size_t extent_v = __array_extent(_Tp, _Ip);
-#endif
-
-#else // __has_keyword(__array_extent)
-
-template <class _Tp, unsigned _Ip = 0> struct _LIBCPP_TEMPLATE_VIS extent
-    : public integral_constant<size_t, 0> {};
-template <class _Tp> struct _LIBCPP_TEMPLATE_VIS extent<_Tp[], 0>
-    : public integral_constant<size_t, 0> {};
-template <class _Tp, unsigned _Ip> struct _LIBCPP_TEMPLATE_VIS extent<_Tp[], _Ip>
-    : public integral_constant<size_t, extent<_Tp, _Ip-1>::value> {};
-template <class _Tp, size_t _Np> struct _LIBCPP_TEMPLATE_VIS extent<_Tp[_Np], 0>
-    : public integral_constant<size_t, _Np> {};
-template <class _Tp, size_t _Np, unsigned _Ip> struct _LIBCPP_TEMPLATE_VIS extent<_Tp[_Np], _Ip>
-    : public integral_constant<size_t, extent<_Tp, _Ip-1>::value> {};
-
-#if _LIBCPP_STD_VER > 14
-template <class _Tp, unsigned _Ip = 0>
-inline constexpr size_t extent_v = extent<_Tp, _Ip>::value;
-#endif
-
-#endif // __has_keyword(__array_extent)
-
-// remove_all_extents
-
-template <class _Tp> struct _LIBCPP_TEMPLATE_VIS remove_all_extents
-    {typedef _Tp type;};
-template <class _Tp> struct _LIBCPP_TEMPLATE_VIS remove_all_extents<_Tp[]>
-    {typedef typename remove_all_extents<_Tp>::type type;};
-template <class _Tp, size_t _Np> struct _LIBCPP_TEMPLATE_VIS remove_all_extents<_Tp[_Np]>
-    {typedef typename remove_all_extents<_Tp>::type type;};
-
-#if _LIBCPP_STD_VER > 11
-template <class _Tp> using remove_all_extents_t = typename remove_all_extents<_Tp>::type;
-#endif
-
-#if _LIBCPP_STD_VER > 17
-// is_bounded_array
-
-template <class>                 struct _LIBCPP_TEMPLATE_VIS is_bounded_array           : false_type {};
-template <class _Tp, size_t _Np> struct _LIBCPP_TEMPLATE_VIS is_bounded_array<_Tp[_Np]> : true_type {};
-
-template <class _Tp>
-inline constexpr
-bool is_bounded_array_v  = is_bounded_array<_Tp>::value;
-
-// is_unbounded_array
-
-template <class>     struct _LIBCPP_TEMPLATE_VIS is_unbounded_array        : false_type {};
-template <class _Tp> struct _LIBCPP_TEMPLATE_VIS is_unbounded_array<_Tp[]> : true_type {};
-
-template <class _Tp>
-inline constexpr
-bool is_unbounded_array_v  = is_unbounded_array<_Tp>::value;
-#endif
-
-// is_abstract
-
-template <class _Tp> struct _LIBCPP_TEMPLATE_VIS is_abstract
-    : public integral_constant<bool, __is_abstract(_Tp)> {};
-
-#if _LIBCPP_STD_VER > 14
-template <class _Tp>
-inline constexpr bool is_abstract_v = is_abstract<_Tp>::value;
-#endif
-
-// is_final
-
-template <class _Tp> struct _LIBCPP_TEMPLATE_VIS
-__libcpp_is_final : public integral_constant<bool, __is_final(_Tp)> {};
-
-#if _LIBCPP_STD_VER > 11
-template <class _Tp> struct _LIBCPP_TEMPLATE_VIS
-is_final : public integral_constant<bool, __is_final(_Tp)> {};
-#endif
-
-#if _LIBCPP_STD_VER > 14
-template <class _Tp>
-inline constexpr bool is_final_v = is_final<_Tp>::value;
-#endif
-
-// is_aggregate
-#if _LIBCPP_STD_VER > 14
-
-template <class _Tp> struct _LIBCPP_TEMPLATE_VIS
-is_aggregate : public integral_constant<bool, __is_aggregate(_Tp)> {};
-
-template <class _Tp>
-inline constexpr bool is_aggregate_v = is_aggregate<_Tp>::value;
-
-#endif // _LIBCPP_STD_VER > 14
 
 // __is_core_convertible
 
@@ -1163,42 +655,6 @@ template <typename _Fm, typename _To>
 inline constexpr bool is_nothrow_convertible_v = is_nothrow_convertible<_Fm, _To>::value;
 
 #endif // _LIBCPP_STD_VER > 17
-
-// is_empty
-
-#if __has_feature(is_empty) || defined(_LIBCPP_COMPILER_GCC)
-
-template <class _Tp>
-struct _LIBCPP_TEMPLATE_VIS is_empty
-    : public integral_constant<bool, __is_empty(_Tp)> {};
-
-#else  // __has_feature(is_empty)
-
-template <class _Tp>
-struct __is_empty1
-    : public _Tp
-{
-    double __lx;
-};
-
-struct __is_empty2
-{
-    double __lx;
-};
-
-template <class _Tp, bool = is_class<_Tp>::value>
-struct __libcpp_empty : public integral_constant<bool, sizeof(__is_empty1<_Tp>) == sizeof(__is_empty2)> {};
-
-template <class _Tp> struct __libcpp_empty<_Tp, false> : public false_type {};
-
-template <class _Tp> struct _LIBCPP_TEMPLATE_VIS is_empty : public __libcpp_empty<_Tp> {};
-
-#endif // __has_feature(is_empty)
-
-#if _LIBCPP_STD_VER > 14
-template <class _Tp>
-inline constexpr bool is_empty_v = is_empty<_Tp>::value;
-#endif
 
 // is_polymorphic
 
