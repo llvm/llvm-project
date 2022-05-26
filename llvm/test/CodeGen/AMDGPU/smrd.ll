@@ -396,12 +396,12 @@ main_body:
 ;
 ; GCN: s_buffer_load_dwordx2
 ; SICIVI: s_mov_b32 m0
-; SICIVI_DAG: v_interp_p1_f32
-; SICIVI_DAG: v_interp_p1_f32
-; SICIVI_DAG: v_interp_p1_f32
-; SICIVI_DAG: v_interp_p2_f32
-; SICIVI_DAG: v_interp_p2_f32
-; SICIVI_DAG: v_interp_p2_f32
+; SICIVI-DAG: v_interp_p1_f32
+; SICIVI-DAG: v_interp_p1_f32
+; SICIVI-DAG: v_interp_p1_f32
+; SICIVI-DAG: v_interp_p2_f32
+; SICIVI-DAG: v_interp_p2_f32
+; SICIVI-DAG: v_interp_p2_f32
 ;
 ; extractelement does not result in movrels anymore for vectors gitting 8 dwords
 ; SICIVI-NOT: s_mov_b32 m0

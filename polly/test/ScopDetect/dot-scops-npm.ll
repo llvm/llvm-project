@@ -30,35 +30,35 @@ define void @func(i32 %n, i32 %m, double* noalias nonnull %A) {
 ; CHECK-NEXT: Node0x[[OUTER_EXIT]] -> Node0x[[RETURN_ID:.*]];
 ; CHECK-NEXT: Node0x[[RETURN_ID]] [shape=record,label="{return:
 ; CHECK-NEXT: colorscheme = "paired12"
-; CHECK_NEXT: subgraph cluster_0x[[:.*]] {
-; CHECK_NEXT: label = "";
-; CHECK_NEXT: style = solid;
-; CHECK_NEXT: color = 1
-; CHECK_NEXT: subgraph cluster_0x[[:.*]] {
-; CHECK_NEXT: label = "";
-; CHECK_NEXT: style = filled;
-; CHECK_NEXT: color = 3            subgraph cluster_0x7152c40 {
-; CHECK_NEXT: label = "";
-; CHECK_NEXT: style = solid;
-; CHECK_NEXT: color = 5
-; CHECK_NEXT: subgraph cluster_0x[[:.*]] {
-; CHECK_NEXT: label = "";
-; CHECK_NEXT: style = solid;
-; CHECK_NEXT: color = 7
-; CHECK_NEXT: Node0x[[INNER_FOR_ID]];
-; CHECK_NEXT: Node0x[[BABY1_ID]];
-; CHECK_NEXT: Node0x[[INNER_INC_ID]];
-; CHECK_NEXT: }
-; CHECK_NEXT: Node0x[[OUTER_FOR_ID]];
-; CHECK_NEXT: Node0x[[INNER_EXIT_ID]];
-; CHECK_NEXT: Node0x[[OUTER_INC_ID]];
-; CHECK_NEXT: }
-; CHECK_NEXT: Node0x[[OUTER_EXIT]];
-; CHECK_NEXT: }
-; CHECK_NEXT: Node0x[[EntryID]];
-; CHECK_NEXT: Node0x[[RETURN_ID]];
-; CHECK_NEXT: }
-; CHECK_NEXT: }
+; CHECK-NEXT: subgraph cluster_0x{{.*}} {
+; CHECK-NEXT: label = "";
+; CHECK-NEXT: style = solid;
+; CHECK-NEXT: color = 1
+; CHECK-NEXT: subgraph cluster_0x{{.*}} {
+; CHECK-NEXT: label = "";
+; CHECK-NEXT: style = filled;
+; CHECK-NEXT: color = 3            subgraph cluster_0x{{.*}} {
+; CHECK-NEXT: label = "";
+; CHECK-NEXT: style = solid;
+; CHECK-NEXT: color = 5
+; CHECK-NEXT: subgraph cluster_0x{{.*}} {
+; CHECK-NEXT: label = "";
+; CHECK-NEXT: style = solid;
+; CHECK-NEXT: color = 7
+; CHECK-NEXT: Node0x[[INNER_FOR_ID]];
+; CHECK-NEXT: Node0x[[BABY1_ID]];
+; CHECK-NEXT: Node0x[[INNER_INC_ID]];
+; CHECK-NEXT: }
+; CHECK-NEXT: Node0x[[OUTER_FOR_ID]];
+; CHECK-NEXT: Node0x[[INNER_EXIT_ID]];
+; CHECK-NEXT: Node0x[[OUTER_INC_ID]];
+; CHECK-NEXT: }
+; CHECK-NEXT: Node0x[[OUTER_EXIT]];
+; CHECK-NEXT: }
+; CHECK-NEXT: Node0x[[EntryID]];
+; CHECK-NEXT: Node0x[[RETURN_ID]];
+; CHECK-NEXT: }
+; CHECK-NEXT: }
 
 entry:
   br label %outer.for

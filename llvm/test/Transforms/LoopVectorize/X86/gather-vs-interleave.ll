@@ -19,7 +19,7 @@ target triple = "x86_64-unknown-linux-gnu"
 @B = global [10240 x i64] zeroinitializer, align 16
 
 
-; CHECK_LABEL: strided_load_i64
+; CHECK-LABEL: strided_load_i64
 ; CHECK: masked.gather
 define void @strided_load_i64() {
   br label %1

@@ -1651,6 +1651,8 @@ std::string Check::FileCheckType::getDescription(StringRef Prefix) const {
   switch (Kind) {
   case Check::CheckNone:
     return "invalid";
+  case Check::CheckMisspelled:
+    return "misspelled";
   case Check::CheckPlain:
     if (Count > 1)
       return WithModifiers("-COUNT");
@@ -1680,7 +1682,8 @@ std::string Check::FileCheckType::getDescription(StringRef Prefix) const {
 }
 
 static std::pair<Check::FileCheckType, StringRef>
-FindCheckType(const FileCheckRequest &Req, StringRef Buffer, StringRef Prefix) {
+FindCheckType(const FileCheckRequest &Req, StringRef Buffer, StringRef Prefix,
+              bool &Misspelled) {
   if (Buffer.size() <= Prefix.size())
     return {Check::CheckNone, StringRef()};
 
@@ -1722,7 +1725,9 @@ FindCheckType(const FileCheckRequest &Req, StringRef Buffer, StringRef Prefix) {
   if (Rest.front() == '{')
     return ConsumeModifiers(Check::CheckPlain);
 
-  if (!Rest.consume_front("-"))
+  if (Rest.consume_front("_"))
+    Misspelled = true;
+  else if (!Rest.consume_front("-"))
     return {Check::CheckNone, StringRef()};
 
   if (Rest.consume_front("COUNT-")) {
@@ -1764,6 +1769,15 @@ FindCheckType(const FileCheckRequest &Req, StringRef Buffer, StringRef Prefix) {
     return ConsumeModifiers(Check::CheckEmpty);
 
   return {Check::CheckNone, Rest};
+}
+
+static std::pair<Check::FileCheckType, StringRef>
+FindCheckType(const FileCheckRequest &Req, StringRef Buffer, StringRef Prefix) {
+  bool Misspelled = false;
+  auto Res = FindCheckType(Req, Buffer, Prefix, Misspelled);
+  if (Res.first != Check::CheckNone && Misspelled)
+    return {Check::CheckMisspelled, Res.second};
+  return Res;
 }
 
 // From the given position, find the next character after the word.
@@ -1938,6 +1952,16 @@ bool FileCheck::readCheckFile(
     // suffix was processed).
     Buffer = AfterSuffix.empty() ? Buffer.drop_front(UsedPrefix.size())
                                  : AfterSuffix;
+
+    // Complain about misspelled directives.
+    if (CheckTy == Check::CheckMisspelled) {
+      StringRef UsedDirective(UsedPrefix.data(),
+                              AfterSuffix.data() - UsedPrefix.data());
+      SM.PrintMessage(SMLoc::getFromPointer(UsedDirective.data()),
+                      SourceMgr::DK_Error,
+                      "misspelled directive '" + UsedDirective + "'");
+      return true;
+    }
 
     // Complain about useful-looking but unsupported suffixes.
     if (CheckTy == Check::CheckBadNot) {
