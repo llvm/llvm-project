@@ -6266,6 +6266,7 @@ cc_library(
         ":TosaDialect",
         ":TosaToLinalg",
         ":TransformDialect",
+        ":TransformDialectTransforms",
         ":Transforms",
         ":TransformsPassIncGen",
         ":VectorOps",
@@ -7876,6 +7877,7 @@ td_library(
     name = "TransformDialectTdFiles",
     srcs = glob(["include/mlir/Dialect/Transform/IR/*.td"]),
     deps = [
+        ":ControlFlowInterfacesTdFiles",
         ":OpBaseTdFiles",
         ":PDLDialectTdFiles",
         ":SideEffectInterfacesTdFiles",
@@ -7949,6 +7951,7 @@ cc_library(
     srcs = glob(["lib/Dialect/Transform/IR/*.cpp"]),
     hdrs = glob(["include/mlir/Dialect/Transform/IR/*.h"]),
     deps = [
+        ":ControlFlowInterfaces",
         ":IR",
         ":PDLDialect",
         ":PDLInterpDialect",
@@ -7958,6 +7961,47 @@ cc_library(
         ":TransformDialectIncGen",
         ":TransformDialectInterfacesIncGen",
         ":TransformOpsIncGen",
+        "//llvm:Support",
+    ],
+)
+
+td_library(
+    name = "TransformDialectTransformsTdFiles",
+    srcs = glob(["include/mlir/Dialect/Transform/Transforms/*.td"]),
+    deps = [
+        ":PassBaseTdFiles",
+        ":TransformDialectTdFiles",
+    ],
+)
+
+gentbl_cc_library(
+    name = "TransformDialectTransformsIncGen",
+    strip_include_prefix = "include",
+    tbl_outs = [
+        (
+            [
+                "-gen-pass-decls",
+                "-name=Transform",
+            ],
+            "include/mlir/Dialect/Transform/Transforms/Passes.h.inc",
+        ),
+    ],
+    tblgen = ":mlir-tblgen",
+    td_file = "include/mlir/Dialect/Transform/Transforms/Passes.td",
+    deps = [":TransformDialectTransformsTdFiles"],
+)
+
+cc_library(
+    name = "TransformDialectTransforms",
+    srcs = glob(["lib/Dialect/Transform/Transforms/*.cpp"]),
+    hdrs = glob(["include/mlir/Dialect/Transform/Transforms/*.h"]),
+    deps = [
+        ":Analysis",
+        ":IR",
+        ":Pass",
+        ":SideEffectInterfaces",
+        ":TransformDialect",
+        ":TransformDialectTransformsIncGen",
         "//llvm:Support",
     ],
 )
