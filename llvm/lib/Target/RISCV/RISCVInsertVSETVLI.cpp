@@ -1242,6 +1242,29 @@ void RISCVInsertVSETVLI::doLocalPrepass(MachineBasicBlock &MBB) {
             }
           }
         }
+
+        // If AVL is defined by a vsetvli with the same vtype, we can
+        // replace the AVL operand with the AVL of the defining vsetvli.
+        // We avoid general register AVLs to avoid extending live ranges
+        // without being sure we can kill the original source reg entirely.
+        // TODO: We can ignore policy bits here, we only need VL to be the same.
+        if (Require.hasAVLReg() && Require.getAVLReg().isVirtual()) {
+          if (MachineInstr *DefMI = MRI->getVRegDef(Require.getAVLReg())) {
+            if (isVectorConfigInstr(*DefMI)) {
+              VSETVLIInfo DefInfo = getInfoForVSETVLI(*DefMI);
+              if (DefInfo.hasSameVTYPE(Require) &&
+                  (DefInfo.hasAVLImm() || DefInfo.getAVLReg() == RISCV::X0)) {
+                MachineOperand &VLOp = MI.getOperand(getVLOpNum(MI));
+                if (DefInfo.hasAVLImm())
+                  VLOp.ChangeToImmediate(DefInfo.getAVLImm());
+                else
+                  VLOp.ChangeToRegister(DefInfo.getAVLReg(), /*IsDef*/ false);
+                CurInfo = computeInfoForInstr(MI, TSFlags, MRI);
+                continue;
+              }
+            }
+          }
+        }
       }
       CurInfo = computeInfoForInstr(MI, TSFlags, MRI);
       continue;
