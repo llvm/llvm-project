@@ -12,6 +12,7 @@
 
 #include <__availability>
 #include <__config>
+#include <__iterator/concepts.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -26,6 +27,10 @@ class _LIBCPP_TEMPLATE_VIS _LIBCPP_AVAILABILITY_FORMAT basic_format_arg;
 
 template <class _Context, class... _Args>
 struct _LIBCPP_TEMPLATE_VIS __format_arg_store;
+
+template <class _OutIt, class _CharT>
+  requires output_iterator<_OutIt, const _CharT&>
+class _LIBCPP_TEMPLATE_VIS _LIBCPP_AVAILABILITY_FORMAT basic_format_context;
 
 template <class _Tp, class _CharT = char>
 struct _LIBCPP_TEMPLATE_VIS _LIBCPP_AVAILABILITY_FORMAT formatter;
