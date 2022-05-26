@@ -2110,7 +2110,7 @@ bool ARMLoadStoreOpt::runOnMachineFunction(MachineFunction &Fn) {
     return false;
 
   MF = &Fn;
-  STI = &static_cast<const ARMSubtarget &>(Fn.getSubtarget());
+  STI = &Fn.getSubtarget<ARMSubtarget>();
   TL = STI->getTargetLowering();
   AFI = Fn.getInfo<ARMFunctionInfo>();
   TII = STI->getInstrInfo();
@@ -2201,7 +2201,7 @@ bool ARMPreAllocLoadStoreOpt::runOnMachineFunction(MachineFunction &Fn) {
     return false;
 
   TD = &Fn.getDataLayout();
-  STI = &static_cast<const ARMSubtarget &>(Fn.getSubtarget());
+  STI = &Fn.getSubtarget<ARMSubtarget>();
   TII = STI->getInstrInfo();
   TRI = STI->getRegisterInfo();
   MRI = &Fn.getRegInfo();

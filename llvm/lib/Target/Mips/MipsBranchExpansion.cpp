@@ -879,7 +879,7 @@ bool MipsBranchExpansion::runOnMachineFunction(MachineFunction &MF) {
   const TargetMachine &TM = MF.getTarget();
   IsPIC = TM.isPositionIndependent();
   ABI = static_cast<const MipsTargetMachine &>(TM).getABI();
-  STI = &static_cast<const MipsSubtarget &>(MF.getSubtarget());
+  STI = &MF.getSubtarget<MipsSubtarget>();
   TII = static_cast<const MipsInstrInfo *>(STI->getInstrInfo());
 
   if (IsPIC && ABI.IsO32() &&
