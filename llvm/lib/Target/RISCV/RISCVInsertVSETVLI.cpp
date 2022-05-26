@@ -453,8 +453,12 @@ public:
   StringRef getPassName() const override { return RISCV_INSERT_VSETVLI_NAME; }
 
 private:
-  bool needVSETVLI(const VSETVLIInfo &Require, const VSETVLIInfo &CurInfo);
-  bool needVSETVLIPHI(const VSETVLIInfo &Require, const MachineBasicBlock &MBB);
+  bool needVSETVLI(const VSETVLIInfo &Require,
+                   const VSETVLIInfo &CurInfo) const;
+  bool needVSETVLI(const MachineInstr &MI, const VSETVLIInfo &Require,
+                   const VSETVLIInfo &CurInfo) const;
+  bool needVSETVLIPHI(const VSETVLIInfo &Require,
+                      const MachineBasicBlock &MBB) const;
   void insertVSETVLI(MachineBasicBlock &MBB, MachineInstr &MI,
                      const VSETVLIInfo &Info, const VSETVLIInfo &PrevInfo);
   void insertVSETVLI(MachineBasicBlock &MBB,
@@ -715,7 +719,7 @@ static VSETVLIInfo getInfoForVSETVLI(const MachineInstr &MI) {
 }
 
 bool RISCVInsertVSETVLI::needVSETVLI(const VSETVLIInfo &Require,
-                                     const VSETVLIInfo &CurInfo) {
+                                     const VSETVLIInfo &CurInfo) const {
   if (CurInfo.isCompatible(Require))
     return false;
 
@@ -934,6 +938,15 @@ bool canSkipVSETVLIForLoadStore(const MachineInstr &MI,
   return CurInfo.isCompatibleWithLoadStoreEEW(EEW, Require);
 }
 
+bool RISCVInsertVSETVLI::needVSETVLI(const MachineInstr &MI, const VSETVLIInfo &Require,
+                                     const VSETVLIInfo &CurInfo) const {
+  if (!needVSETVLI(Require, CurInfo))
+    return false;
+  // If this is a unit-stride or strided load/store, we may be able to use the
+  // EMUL=(EEW/SEW)*LMUL relationship to avoid changing VTYPE.
+  return !canSkipVSETVLIForLoadStore(MI, Require, CurInfo);
+}
+
 bool RISCVInsertVSETVLI::computeVLVTYPEChanges(const MachineBasicBlock &MBB) {
   bool HadVectorOp = false;
 
@@ -958,13 +971,10 @@ bool RISCVInsertVSETVLI::computeVLVTYPEChanges(const MachineBasicBlock &MBB) {
       } else {
         // If this instruction isn't compatible with the previous VL/VTYPE
         // we need to insert a VSETVLI.
-        // If this is a unit-stride or strided load/store, we may be able to use
-        // the EMUL=(EEW/SEW)*LMUL relationship to avoid changing vtype.
         // NOTE: We only do this if the vtype we're comparing against was
         // created in this block. We need the first and third phase to treat
         // the store the same way.
-        if (!canSkipVSETVLIForLoadStore(MI, NewInfo, BBInfo.Change) &&
-            needVSETVLI(NewInfo, BBInfo.Change))
+        if (needVSETVLI(MI, NewInfo, BBInfo.Change))
           BBInfo.Change = NewInfo;
       }
     }
@@ -1033,7 +1043,7 @@ void RISCVInsertVSETVLI::computeIncomingVLVTYPE(const MachineBasicBlock &MBB) {
 // be/ unneeded if the AVL is a phi node where all incoming values are VL
 // outputs from the last VSETVLI in their respective basic blocks.
 bool RISCVInsertVSETVLI::needVSETVLIPHI(const VSETVLIInfo &Require,
-                                        const MachineBasicBlock &MBB) {
+                                        const MachineBasicBlock &MBB) const {
   if (DisableInsertVSETVLPHIOpt)
     return true;
 
@@ -1128,13 +1138,10 @@ void RISCVInsertVSETVLI::emitVSETVLIs(MachineBasicBlock &MBB) {
       } else {
         // If this instruction isn't compatible with the previous VL/VTYPE
         // we need to insert a VSETVLI.
-        // If this is a unit-stride or strided load/store, we may be able to use
-        // the EMUL=(EEW/SEW)*LMUL relationship to avoid changing vtype.
         // NOTE: We can't use predecessor information for the store. We must
         // treat it the same as the first phase so that we produce the correct
         // vl/vtype for succesor blocks.
-        if (!canSkipVSETVLIForLoadStore(MI, NewInfo, CurInfo) &&
-            needVSETVLI(NewInfo, CurInfo)) {
+        if (needVSETVLI(MI, NewInfo, CurInfo)) {
           insertVSETVLI(MBB, MI, NewInfo, CurInfo);
           CurInfo = NewInfo;
         }
