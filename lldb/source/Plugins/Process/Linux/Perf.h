@@ -109,13 +109,16 @@ public:
   ///     Configuration information for the event.
   ///
   /// \param[in] pid
-  ///     The process to be monitored by the event.
+  ///     The process or thread to be monitored by the event. If \b None, then
+  ///     all processes and threads are monitored.
   ///
   /// \param[in] cpu
-  ///     The cpu to be monitored by the event.
+  ///     The cpu to be monitored by the event. If \b None, then all cpus are
+  ///     monitored.
   ///
   /// \param[in] group_fd
-  ///     File descriptor of the group leader.
+  ///     File descriptor of the group leader. If \b None, then this perf_event
+  ///     doesn't belong to a preexisting group.
   ///
   /// \param[in] flags
   ///     Bitmask of additional configuration flags.
@@ -123,8 +126,10 @@ public:
   /// \return
   ///     If the perf_event_open syscall was successful, a minimal \a PerfEvent
   ///     instance, or an \a llvm::Error otherwise.
-  static llvm::Expected<PerfEvent> Init(perf_event_attr &attr, lldb::pid_t pid,
-                                        int cpu, int group_fd,
+  static llvm::Expected<PerfEvent> Init(perf_event_attr &attr,
+                                        llvm::Optional<lldb::pid_t> pid,
+                                        llvm::Optional<lldb::core_id_t> cpu,
+                                        llvm::Optional<int> group_fd,
                                         unsigned long flags);
 
   /// Create a new performance monitoring event via the perf_event_open syscall
@@ -137,8 +142,11 @@ public:
   ///     Configuration information for the event.
   ///
   /// \param[in] pid
-  ///     The process to be monitored by the event.
-  static llvm::Expected<PerfEvent> Init(perf_event_attr &attr, lldb::pid_t pid);
+  ///     The process or thread to be monitored by the event. If \b None, then
+  ///     all threads and processes are monitored.
+  static llvm::Expected<PerfEvent>
+  Init(perf_event_attr &attr, llvm::Optional<lldb::pid_t> pid,
+       llvm::Optional<lldb::core_id_t> core = llvm::None);
 
   /// Mmap the metadata page and the data and aux buffers of the perf event and
   /// expose them through \a PerfEvent::GetMetadataPage() , \a

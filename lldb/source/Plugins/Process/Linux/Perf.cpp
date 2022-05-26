@@ -117,10 +117,13 @@ void resource_handle::FileDescriptorDeleter::operator()(long *ptr) {
 }
 
 llvm::Expected<PerfEvent> PerfEvent::Init(perf_event_attr &attr,
-                                          lldb::pid_t pid, int cpu,
-                                          int group_fd, unsigned long flags) {
+                                          Optional<lldb::pid_t> pid,
+                                          Optional<lldb::core_id_t> cpu,
+                                          Optional<int> group_fd,
+                                          unsigned long flags) {
   errno = 0;
-  long fd = syscall(SYS_perf_event_open, &attr, pid, cpu, group_fd, flags);
+  long fd = syscall(SYS_perf_event_open, &attr, pid.getValueOr(-1),
+                    cpu.getValueOr(-1), group_fd.getValueOr(-1), flags);
   if (fd == -1) {
     std::string err_msg =
         llvm::formatv("perf event syscall failed: {0}", std::strerror(errno));
@@ -130,8 +133,9 @@ llvm::Expected<PerfEvent> PerfEvent::Init(perf_event_attr &attr,
 }
 
 llvm::Expected<PerfEvent> PerfEvent::Init(perf_event_attr &attr,
-                                          lldb::pid_t pid) {
-  return Init(attr, pid, -1, -1, 0);
+                                          Optional<lldb::pid_t> pid,
+                                          Optional<lldb::core_id_t> cpu) {
+  return Init(attr, pid, cpu, -1, 0);
 }
 
 llvm::Expected<resource_handle::MmapUP>

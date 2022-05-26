@@ -252,7 +252,7 @@ void TraceIntelPT::DoRefreshLiveProcessState(
     return;
   }
 
-  for (const TraceThreadState &thread_state : state->tracedThreads) {
+  for (const TraceThreadState &thread_state : state->traced_threads) {
     ThreadSP thread_sp =
         m_live_process->GetThreadList().FindThreadByID(thread_state.tid);
     m_thread_decoders.emplace(
@@ -354,9 +354,9 @@ llvm::Error TraceIntelPT::Start(llvm::ArrayRef<lldb::tid_t> tids,
 
 Error TraceIntelPT::Start(llvm::ArrayRef<lldb::tid_t> tids,
                           StructuredData::ObjectSP configuration) {
-  size_t trace_buffer_size = kDefaultTraceBufferSize;
+  uint64_t trace_buffer_size = kDefaultTraceBufferSize;
   bool enable_tsc = kDefaultEnableTscValue;
-  Optional<size_t> psb_period = kDefaultPsbPeriod;
+  Optional<uint64_t> psb_period = kDefaultPsbPeriod;
 
   if (configuration) {
     if (StructuredData::Dictionary *dict = configuration->GetAsDictionary()) {
