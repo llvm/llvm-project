@@ -340,7 +340,7 @@ define void @f_8(i32 %x, i32* %length_buf) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[LENGTH:%.*]] = load i32, i32* [[LENGTH_BUF:%.*]], align 4, !range [[RNG0]]
 ; CHECK-NEXT:    [[CHK0:%.*]] = icmp ult i32 [[X:%.*]], [[LENGTH]]
-; CHECK-NEXT:    [[X_INC1:%.*]] = add nuw nsw i32 [[X]], 1
+; CHECK-NEXT:    [[X_INC1:%.*]] = add i32 [[X]], 1
 ; CHECK-NEXT:    [[CHK1:%.*]] = icmp ult i32 [[X_INC1]], [[LENGTH]]
 ; CHECK-NEXT:    [[WIDE_CHK:%.*]] = and i1 [[CHK0]], [[CHK1]]
 ; CHECK-NEXT:    call void (i1, ...) @llvm.experimental.guard(i1 [[WIDE_CHK]]) [ "deopt"() ]
