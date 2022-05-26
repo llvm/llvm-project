@@ -613,8 +613,9 @@ static VSETVLIInfo computeInfoForInstr(const MachineInstr &MI, uint64_t TSFlags,
     } else {
       InstrInfo.setAVLReg(VLOp.getReg());
     }
-  } else
+  } else {
     InstrInfo.setAVLReg(RISCV::NoRegister);
+  }
   InstrInfo.setVTYPE(VLMul, SEW, TailAgnostic, MaskAgnostic, MaskRegOp, StoreOp,
                      ScalarMovOp);
 
