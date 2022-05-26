@@ -647,6 +647,15 @@ bool VPRecipeBase::mayHaveSideEffects() const {
   }
 }
 
+void VPLiveOut::fixPhi(VPlan &Plan, VPTransformState &State) {
+  auto Lane = VPLane::getLastLaneForVF(State.VF);
+  VPValue *ExitValue = getOperand(0);
+  if (Plan.isUniformAfterVectorization(ExitValue))
+    Lane = VPLane::getFirstLane();
+  Phi->addIncoming(State.get(ExitValue, VPIteration(State.UF - 1, Lane)),
+                   State.Builder.GetInsertBlock());
+}
+
 void VPRecipeBase::insertBefore(VPRecipeBase *InsertPos) {
   assert(!Parent && "Recipe already in some VPBasicBlock");
   assert(InsertPos->getParent() &&
@@ -1065,6 +1074,17 @@ void VPlan::print(raw_ostream &O) const {
     O << '\n';
     Block->print(O, "", SlotTracker);
   }
+
+  if (!LiveOuts.empty())
+    O << "\n";
+  for (auto &KV : LiveOuts) {
+    O << "Live-out ";
+    KV.second->getPhi()->printAsOperand(O);
+    O << " = ";
+    KV.second->getOperand(0)->printAsOperand(O, SlotTracker);
+    O << "\n";
+  }
+
   O << "}\n";
 }
 
@@ -1077,6 +1097,11 @@ void VPlan::printDOT(raw_ostream &O) const {
 LLVM_DUMP_METHOD
 void VPlan::dump() const { print(dbgs()); }
 #endif
+
+void VPlan::addLiveOut(PHINode *PN, VPValue *V) {
+  assert(LiveOuts.count(PN) == 0 && "an exit value for PN already exists");
+  LiveOuts.insert({PN, new VPLiveOut(PN, V)});
+}
 
 void VPlan::updateDominatorTree(DominatorTree *DT, BasicBlock *LoopHeaderBB,
                                 BasicBlock *LoopLatchBB,
