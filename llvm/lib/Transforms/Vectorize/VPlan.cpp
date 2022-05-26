@@ -1006,9 +1006,7 @@ void VPlan::execute(VPTransformState *State) {
         auto *WidenPhi = cast<VPWidenPointerInductionRecipe>(&R);
         // TODO: Split off the case that all users of a pointer phi are scalar
         // from the VPWidenPointerInductionRecipe.
-        if (all_of(WidenPhi->users(), [WidenPhi](const VPUser *U) {
-              return U->usesScalars(WidenPhi);
-            }))
+        if (WidenPhi->onlyScalarsGenerated(State->VF))
           continue;
 
         auto *GEP = cast<GetElementPtrInst>(State->get(WidenPhi, 0));
@@ -1516,6 +1514,13 @@ void VPCanonicalIVPHIRecipe::print(raw_ostream &O, const Twine &Indent,
   O << " = CANONICAL-INDUCTION";
 }
 #endif
+
+bool VPWidenPointerInductionRecipe::onlyScalarsGenerated(ElementCount VF) {
+  bool IsUniform = vputils::onlyFirstLaneUsed(this);
+  return all_of(users(),
+                [&](const VPUser *U) { return U->usesScalars(this); }) &&
+         (IsUniform || !VF.isScalable());
+}
 
 void VPExpandSCEVRecipe::execute(VPTransformState &State) {
   assert(!State.Instance && "cannot be used in per-lane");
