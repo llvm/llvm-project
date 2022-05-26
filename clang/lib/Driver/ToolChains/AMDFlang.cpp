@@ -374,8 +374,8 @@ void AMDFlang::ConstructJob(Compilation &C, const JobAction &JA,
     CommonCmdArgs.push_back("-x");
     CommonCmdArgs.push_back("120");
 
-    if (!GDwarfArg) // -g without -gdwarf-X produces default (DWARFv4)
-      CommonCmdArgs.push_back("0x1000000");
+    if (!GDwarfArg) // -g without -gdwarf-X produces default (DWARFv5)
+      CommonCmdArgs.push_back("0x2000000");
     else if (GDwarfArg->getOption().matches(options::OPT_gdwarf_2)) // -gdwarf-2
       CommonCmdArgs.push_back("0x200");
     else if (GDwarfArg->getOption().matches(options::OPT_gdwarf_3)) // -gdwarf-3
