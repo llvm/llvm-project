@@ -9,6 +9,7 @@
 #include "flang/Semantics/expression.h"
 #include "check-call.h"
 #include "pointer-assignment.h"
+#include "resolve-names-utils.h"
 #include "resolve-names.h"
 #include "flang/Common/Fortran.h"
 #include "flang/Common/idioms.h"
@@ -1911,8 +1912,8 @@ static const Symbol *GetBindingResolution(
 }
 
 auto ExpressionAnalyzer::AnalyzeProcedureComponentRef(
-    const parser::ProcComponentRef &pcr, ActualArguments &&arguments)
-    -> std::optional<CalleeAndArguments> {
+    const parser::ProcComponentRef &pcr, ActualArguments &&arguments,
+    bool isSubroutine) -> std::optional<CalleeAndArguments> {
   const parser::StructureComponent &sc{pcr.v.thing};
   if (MaybeExpr base{Analyze(sc.base)}) {
     if (const Symbol * sym{sc.component.symbol}) {
@@ -1935,7 +1936,7 @@ auto ExpressionAnalyzer::AnalyzeProcedureComponentRef(
                 }
                 return true;
               }};
-          auto pair{ResolveGeneric(*sym, arguments, adjustment)};
+          auto pair{ResolveGeneric(*sym, arguments, adjustment, isSubroutine)};
           sym = pair.first;
           if (sym) {
             // re-resolve the name to the specific binding
@@ -2060,67 +2061,94 @@ bool ExpressionAnalyzer::ResolveForward(const Symbol &symbol) {
 // adjustActuals is called on procedure bindings to handle pass arg.
 std::pair<const Symbol *, bool> ExpressionAnalyzer::ResolveGeneric(
     const Symbol &symbol, const ActualArguments &actuals,
-    const AdjustActuals &adjustActuals, bool mightBeStructureConstructor) {
+    const AdjustActuals &adjustActuals, bool isSubroutine,
+    bool mightBeStructureConstructor) {
   const Symbol *elemental{nullptr}; // matching elemental specific proc
   const Symbol *nonElemental{nullptr}; // matching non-elemental specific
-  const auto &details{symbol.GetUltimate().get<semantics::GenericDetails>()};
-  bool anyBareNullActual{
-      std::find_if(actuals.begin(), actuals.end(), [](auto iter) {
-        return IsBareNullPointer(iter->UnwrapExpr());
-      }) != actuals.end()};
-  for (const Symbol &specific : details.specificProcs()) {
-    if (!ResolveForward(specific)) {
-      continue;
+  const Symbol &ultimate{symbol.GetUltimate()};
+  // Check for a match with an explicit INTRINSIC
+  if (ultimate.attrs().test(semantics::Attr::INTRINSIC)) {
+    parser::Messages buffer;
+    auto restorer{foldingContext_.messages().SetMessages(buffer)};
+    ActualArguments localActuals{actuals};
+    if (context_.intrinsics().Probe(
+            CallCharacteristics{ultimate.name().ToString(), isSubroutine},
+            localActuals, foldingContext_) &&
+        !buffer.AnyFatalError()) {
+      return {&ultimate, false};
     }
-    if (std::optional<characteristics::Procedure> procedure{
-            characteristics::Procedure::Characterize(
-                ProcedureDesignator{specific}, context_.foldingContext())}) {
-      ActualArguments localActuals{actuals};
-      if (specific.has<semantics::ProcBindingDetails>()) {
-        if (!adjustActuals.value()(specific, localActuals)) {
-          continue;
-        }
+  }
+  if (const auto *details{ultimate.detailsIf<semantics::GenericDetails>()}) {
+    bool anyBareNullActual{
+        std::find_if(actuals.begin(), actuals.end(), [](auto iter) {
+          return IsBareNullPointer(iter->UnwrapExpr());
+        }) != actuals.end()};
+    for (const Symbol &specific : details->specificProcs()) {
+      if (!ResolveForward(specific)) {
+        continue;
       }
-      if (semantics::CheckInterfaceForGeneric(*procedure, localActuals,
-              GetFoldingContext(), false /* no integer conversions */) &&
-          CheckCompatibleArguments(*procedure, localActuals)) {
-        if ((procedure->IsElemental() && elemental) ||
-            (!procedure->IsElemental() && nonElemental)) {
-          // 16.9.144(6): a bare NULL() is not allowed as an actual
-          // argument to a generic procedure if the specific procedure
-          // cannot be unambiguously distinguished
-          return {nullptr, true /* due to NULL actuals */};
-        }
-        if (!procedure->IsElemental()) {
-          // takes priority over elemental match
-          nonElemental = &specific;
-          if (!anyBareNullActual) {
-            break; // unambiguous case
+      if (std::optional<characteristics::Procedure> procedure{
+              characteristics::Procedure::Characterize(
+                  ProcedureDesignator{specific}, context_.foldingContext())}) {
+        ActualArguments localActuals{actuals};
+        if (specific.has<semantics::ProcBindingDetails>()) {
+          if (!adjustActuals.value()(specific, localActuals)) {
+            continue;
           }
-        } else {
-          elemental = &specific;
+        }
+        if (semantics::CheckInterfaceForGeneric(*procedure, localActuals,
+                GetFoldingContext(), false /* no integer conversions */) &&
+            CheckCompatibleArguments(*procedure, localActuals)) {
+          if ((procedure->IsElemental() && elemental) ||
+              (!procedure->IsElemental() && nonElemental)) {
+            // 16.9.144(6): a bare NULL() is not allowed as an actual
+            // argument to a generic procedure if the specific procedure
+            // cannot be unambiguously distinguished
+            return {nullptr, true /* due to NULL actuals */};
+          }
+          if (!procedure->IsElemental()) {
+            // takes priority over elemental match
+            nonElemental = &specific;
+            if (!anyBareNullActual) {
+              break; // unambiguous case
+            }
+          } else {
+            elemental = &specific;
+          }
         }
       }
     }
-  }
-  if (nonElemental) {
-    return {&AccessSpecific(symbol, *nonElemental), false};
-  } else if (elemental) {
-    return {&AccessSpecific(symbol, *elemental), false};
-  }
-  // Check parent derived type
-  if (const auto *parentScope{symbol.owner().GetDerivedTypeParent()}) {
-    if (const Symbol * extended{parentScope->FindComponent(symbol.name())}) {
-      if (extended->GetUltimate().has<semantics::GenericDetails>()) {
-        auto pair{ResolveGeneric(*extended, actuals, adjustActuals, false)};
+    if (nonElemental) {
+      return {&AccessSpecific(symbol, *nonElemental), false};
+    } else if (elemental) {
+      return {&AccessSpecific(symbol, *elemental), false};
+    }
+    // Check parent derived type
+    if (const auto *parentScope{symbol.owner().GetDerivedTypeParent()}) {
+      if (const Symbol * extended{parentScope->FindComponent(symbol.name())}) {
+        auto pair{ResolveGeneric(
+            *extended, actuals, adjustActuals, isSubroutine, false)};
         if (pair.first) {
           return pair;
         }
       }
     }
+    if (mightBeStructureConstructor && details->derivedType()) {
+      return {details->derivedType(), false};
+    }
   }
-  if (mightBeStructureConstructor && details.derivedType()) {
-    return {details.derivedType(), false};
+  // Check for generic or explicit INTRINSIC of the same name in outer scopes.
+  // See 15.5.5.2 for details.
+  if (!symbol.owner().IsGlobal() && !symbol.owner().IsDerivedType()) {
+    for (const std::string &n : GetAllNames(context_, symbol.name())) {
+      if (const Symbol * outer{symbol.owner().parent().FindSymbol(n)}) {
+        auto pair{ResolveGeneric(*outer, actuals, adjustActuals, isSubroutine,
+            mightBeStructureConstructor)};
+        if (pair.first) {
+          return pair;
+        }
+      }
+    }
   }
   return {nullptr, false};
 }
@@ -2179,7 +2207,8 @@ auto ExpressionAnalyzer::GetCalleeAndArguments(
                 isSubroutine, mightBeStructureConstructor);
           },
           [&](const parser::ProcComponentRef &pcr) {
-            return AnalyzeProcedureComponentRef(pcr, std::move(arguments));
+            return AnalyzeProcedureComponentRef(
+                pcr, std::move(arguments), isSubroutine);
           },
       },
       pd.u);
@@ -2196,28 +2225,26 @@ auto ExpressionAnalyzer::GetCalleeAndArguments(const parser::Name &name,
   CheckForBadRecursion(name.source, ultimate);
   bool dueToNullActual{false};
   bool isGenericInterface{ultimate.has<semantics::GenericDetails>()};
+  bool isExplicitIntrinsic{ultimate.attrs().test(semantics::Attr::INTRINSIC)};
   const Symbol *resolution{nullptr};
-  if (isGenericInterface) {
+  if (isGenericInterface || isExplicitIntrinsic) {
     ExpressionAnalyzer::AdjustActuals noAdjustment;
-    auto pair{ResolveGeneric(
-        *symbol, arguments, noAdjustment, mightBeStructureConstructor)};
+    auto pair{ResolveGeneric(*symbol, arguments, noAdjustment, isSubroutine,
+        mightBeStructureConstructor)};
     resolution = pair.first;
     dueToNullActual = pair.second;
     if (resolution) {
       // re-resolve name to the specific procedure
       name.symbol = const_cast<Symbol *>(resolution);
     }
+  } else {
+    resolution = symbol;
   }
-  if (!resolution) {
+  if (!resolution || resolution->attrs().test(semantics::Attr::INTRINSIC)) {
     // Not generic, or no resolution; may be intrinsic
-    bool isIntrinsic{symbol->attrs().test(semantics::Attr::INTRINSIC)};
-    if (!isIntrinsic && !isGenericInterface) {
-      resolution = symbol;
-    } else if (std::optional<SpecificCall> specificCall{
-                   context_.intrinsics().Probe(
-                       CallCharacteristics{
-                           ultimate.name().ToString(), isSubroutine},
-                       arguments, GetFoldingContext())}) {
+    if (std::optional<SpecificCall> specificCall{context_.intrinsics().Probe(
+            CallCharacteristics{ultimate.name().ToString(), isSubroutine},
+            arguments, GetFoldingContext())}) {
       CheckBadExplicitType(*specificCall, *symbol);
       return CalleeAndArguments{
           ProcedureDesignator{std::move(specificCall->specificIntrinsic)},
@@ -3507,7 +3534,7 @@ std::optional<ProcedureRef> ArgumentAnalyzer::GetDefinedAssignmentProc() {
   const auto &scope{context_.context().FindScope(source_)};
   if (const Symbol * symbol{scope.FindSymbol(oprName)}) {
     ExpressionAnalyzer::AdjustActuals noAdjustment;
-    auto pair{context_.ResolveGeneric(*symbol, actuals_, noAdjustment)};
+    auto pair{context_.ResolveGeneric(*symbol, actuals_, noAdjustment, true)};
     if (pair.first) {
       proc = pair.first;
     } else {
@@ -3615,7 +3642,7 @@ const Symbol *ArgumentAnalyzer::FindBoundOp(
       [&](const Symbol &proc, ActualArguments &) {
         return passIndex == GetPassIndex(proc);
       }};
-  auto pair{context_.ResolveGeneric(*symbol, actuals_, adjustment)};
+  auto pair{context_.ResolveGeneric(*symbol, actuals_, adjustment, false)};
   if (!pair.first) {
     context_.EmitGenericResolutionError(*symbol, pair.second);
   }

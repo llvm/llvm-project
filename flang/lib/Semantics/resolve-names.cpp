@@ -593,6 +593,10 @@ public:
             derivedType =
                 &currScope().MakeSymbol(name, attrs, std::move(details));
             d->set_derivedType(*derivedType);
+          } else if (derivedType->CanReplaceDetails(details)) {
+            // was forward-referenced
+            derivedType->attrs() |= attrs;
+            derivedType->set_details(std::move(details));
           } else {
             SayAlreadyDeclared(name, *derivedType);
           }
@@ -4048,11 +4052,13 @@ bool DeclarationVisitor::Pre(const parser::IntentStmt &x) {
 bool DeclarationVisitor::Pre(const parser::IntrinsicStmt &x) {
   HandleAttributeStmt(Attr::INTRINSIC, x.v);
   for (const auto &name : x.v) {
+    if (!IsIntrinsic(name.source, std::nullopt)) {
+      Say(name.source, "'%s' is not a known intrinsic procedure"_err_en_US);
+    }
     auto &symbol{DEREF(FindSymbol(name))};
     if (symbol.has<GenericDetails>()) {
       // Generic interface is extending intrinsic; ok
-    } else if (!symbol.has<HostAssocDetails>() &&
-        !ConvertToProcEntity(symbol)) {
+    } else if (!ConvertToProcEntity(symbol)) {
       SayWithDecl(
           name, symbol, "INTRINSIC attribute not allowed on '%s'"_err_en_US);
     } else if (symbol.attrs().test(Attr::EXTERNAL)) { // C840
@@ -4096,25 +4102,6 @@ bool DeclarationVisitor::HandleAttributeStmt(
 }
 Symbol &DeclarationVisitor::HandleAttributeStmt(
     Attr attr, const parser::Name &name) {
-  if (attr == Attr::INTRINSIC) {
-    if (!IsIntrinsic(name.source, std::nullopt)) {
-      Say(name.source, "'%s' is not a known intrinsic procedure"_err_en_US);
-    } else if (currScope().kind() == Scope::Kind::Subprogram ||
-        currScope().kind() == Scope::Kind::Block) {
-      if (auto *symbol{FindSymbol(name)}) {
-        if (symbol->GetUltimate().has<GenericDetails>() &&
-            symbol->owner() != currScope()) {
-          // Declaring a name INTRINSIC when there is a generic
-          // interface of the same name in the host scope.
-          // Host-associate the generic and mark it INTRINSIC
-          // rather than completely overriding the generic.
-          symbol = &MakeHostAssocSymbol(name, *symbol);
-          symbol->attrs().set(Attr::INTRINSIC);
-          return *symbol;
-        }
-      }
-    }
-  }
   auto *symbol{FindInScope(name)};
   if (attr == Attr::ASYNCHRONOUS || attr == Attr::VOLATILE) {
     // these can be set on a symbol that is host-assoc or use-assoc
@@ -5626,13 +5613,28 @@ void DeclarationVisitor::SetType(
 
 std::optional<DerivedTypeSpec> DeclarationVisitor::ResolveDerivedType(
     const parser::Name &name) {
-  Symbol *symbol{FindSymbol(NonDerivedTypeScope(), name)};
-  if (!symbol || symbol->has<UnknownDetails>()) {
+  Scope &outer{NonDerivedTypeScope()};
+  Symbol *symbol{FindSymbol(outer, name)};
+  Symbol *ultimate{symbol ? &symbol->GetUltimate() : nullptr};
+  auto *generic{ultimate ? ultimate->detailsIf<GenericDetails>() : nullptr};
+  if (generic) {
+    if (Symbol * genDT{generic->derivedType()}) {
+      symbol = genDT;
+      generic = nullptr;
+    }
+  }
+  if (!symbol || symbol->has<UnknownDetails>() ||
+      (generic && &ultimate->owner() == &outer)) {
     if (allowForwardReferenceToDerivedType()) {
       if (!symbol) {
-        symbol = &MakeSymbol(InclusiveScope(), name.source, Attrs{});
+        symbol = &MakeSymbol(outer, name.source, Attrs{});
         Resolve(name, *symbol);
-      };
+      } else if (generic) {
+        // forward ref to type with later homonymous generic
+        symbol = &outer.MakeSymbol(name.source, Attrs{}, UnknownDetails{});
+        generic->set_derivedType(*symbol);
+        name.symbol = symbol;
+      }
       DerivedTypeDetails details;
       details.set_isForwardReferenced(true);
       symbol->set_details(std::move(details));
@@ -5645,11 +5647,6 @@ std::optional<DerivedTypeSpec> DeclarationVisitor::ResolveDerivedType(
     return std::nullopt;
   }
   symbol = &symbol->GetUltimate();
-  if (auto *details{symbol->detailsIf<GenericDetails>()}) {
-    if (details->derivedType()) {
-      symbol = &details->derivedType()->GetUltimate();
-    }
-  }
   if (symbol->has<DerivedTypeDetails>()) {
     return DerivedTypeSpec{name.source, *symbol};
   } else {
@@ -7056,39 +7053,37 @@ void ResolveNamesVisitor::CreateGeneric(const parser::GenericSpec &x) {
   Symbol *existing{nullptr};
   // Check all variants of names, e.g. "operator(.ne.)" for "operator(/=)"
   for (const std::string &n : GetAllNames(context(), symbolName)) {
-    existing = currScope().FindSymbol(n);
-    if (existing) {
+    if (auto iter{currScope().find(n)}; iter != currScope().end()) {
+      existing = &*iter->second;
       break;
     }
   }
   if (existing) {
     Symbol &ultimate{existing->GetUltimate()};
     if (const auto *existingGeneric{ultimate.detailsIf<GenericDetails>()}) {
-      if (&ultimate.owner() != &currScope()) {
-        // Create a local copy of a host or use associated generic so that
+      if (const auto *existingUse{existing->detailsIf<UseDetails>()}) {
+        // Create a local copy of a use associated generic so that
         // it can be locally extended without corrupting the original.
         genericDetails.CopyFrom(*existingGeneric);
-        if (const auto *use{existing->detailsIf<UseDetails>()}) {
-          AddGenericUse(genericDetails, existing->name(), use->symbol());
-          EraseSymbol(*existing);
-        }
-        existing = &MakeSymbol(symbolName, Attrs{}, std::move(genericDetails));
+        AddGenericUse(genericDetails, existing->name(), existingUse->symbol());
+      } else if (existing == &ultimate) {
+        // Extending an extant generic in the same scope
+        info.Resolve(existing);
+        return;
+      } else {
+        // Host association of a generic is handled in ResolveGeneric()
+        CHECK(existing->has<HostAssocDetails>());
       }
-      info.Resolve(existing);
+    } else if (ultimate.has<SubprogramDetails>() ||
+        ultimate.has<SubprogramNameDetails>()) {
+      genericDetails.set_specific(ultimate);
+    } else if (ultimate.has<DerivedTypeDetails>()) {
+      genericDetails.set_derivedType(ultimate);
+    } else {
+      SayAlreadyDeclared(symbolName, *existing);
       return;
     }
-    if (&existing->owner() == &currScope()) {
-      if (ultimate.has<SubprogramDetails>() ||
-          ultimate.has<SubprogramNameDetails>()) {
-        genericDetails.set_specific(ultimate);
-      } else if (ultimate.has<DerivedTypeDetails>()) {
-        genericDetails.set_derivedType(ultimate);
-      } else {
-        SayAlreadyDeclared(symbolName, *existing);
-        return;
-      }
-      EraseSymbol(*existing);
-    }
+    EraseSymbol(*existing);
   }
   info.Resolve(&MakeSymbol(symbolName, Attrs{}, std::move(genericDetails)));
 }

@@ -336,7 +336,7 @@ private:
   };
 
   std::optional<CalleeAndArguments> AnalyzeProcedureComponentRef(
-      const parser::ProcComponentRef &, ActualArguments &&);
+      const parser::ProcComponentRef &, ActualArguments &&, bool isSubroutine);
   std::optional<characteristics::Procedure> CheckCall(
       parser::CharBlock, const ProcedureDesignator &, ActualArguments &);
   using AdjustActuals =
@@ -344,7 +344,7 @@ private:
   bool ResolveForward(const Symbol &);
   std::pair<const Symbol *, bool /* failure due to NULL() actuals */>
   ResolveGeneric(const Symbol &, const ActualArguments &, const AdjustActuals &,
-      bool mightBeStructureConstructor = false);
+      bool isSubroutine, bool mightBeStructureConstructor = false);
   void EmitGenericResolutionError(const Symbol &, bool dueToNullActuals);
   const Symbol &AccessSpecific(
       const Symbol &originalGeneric, const Symbol &specific);
