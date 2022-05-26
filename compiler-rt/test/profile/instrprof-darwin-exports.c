@@ -1,5 +1,7 @@
 // REQUIRES: osx-ld64-live_support
 
+// REQUIRES: rdar93376238
+
 // Compiling with PGO/code coverage on Darwin should raise no warnings or errors
 // when using an exports list.
 
