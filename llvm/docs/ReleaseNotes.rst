@@ -170,6 +170,11 @@ Changes to the LLVM tools
 Changes to LLDB
 ---------------------------------
 
+* The "memory region" command now has a "--all" option to list all
+  memory regions (including unmapped ranges). This is the equivalent
+  of using address 0 then repeating the command until all regions
+  have been listed.
+
 Changes to Sanitizers
 ---------------------
 
