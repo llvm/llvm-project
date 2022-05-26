@@ -381,7 +381,7 @@ struct NVGPUAsyncCopyLowering
                                                     scrPtr);
     int64_t numElements = adaptor.numElements().getZExtValue();
     int64_t sizeInBytes =
-        (dstMemrefType.getElementTypeBitWidth() / 8) * numElements;
+        (dstMemrefType.getElementTypeBitWidth() * numElements) / 8;
     // bypass L1 is only supported for byte sizes of 16, we drop the hint
     // otherwise.
     UnitAttr bypassL1 = sizeInBytes == 16 ? adaptor.bypassL1Attr() : UnitAttr();
