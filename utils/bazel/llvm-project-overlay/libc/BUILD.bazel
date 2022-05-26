@@ -85,10 +85,7 @@ cc_library(
     hdrs = [
         "src/__support/CPP/UInt.h",
     ],
-    deps = [
-        "__support_cpp_array",
-        ":libc_root",
-    ],
+    deps = [":libc_root","__support_cpp_array"],
 )
 
 cc_library(
@@ -96,10 +93,7 @@ cc_library(
     hdrs = [
         "src/__support/CPP/TypeTraits.h",
     ],
-    deps = [
-        "__support_cpp_uint",
-        ":libc_root",
-    ],
+    deps = [":libc_root","__support_cpp_uint"],
 )
 
 cc_library(
@@ -812,6 +806,12 @@ libc_function(
     name = "memcpy",
     srcs = ["src/string/memcpy.cpp"],
     hdrs = ["src/string/memcpy.h"],
+    copts = [
+        "-fno-builtin-memcpy",
+        "-fno-builtin-memmove",
+        "-mllvm -combiner-global-alias-analysis",
+        "-mllvm --tail-merge-threshold=0",
+    ],
     features = no_sanitize_features,
     deps = [
         ":__support_common",
@@ -823,6 +823,10 @@ libc_function(
     name = "memset",
     srcs = ["src/string/memset.cpp"],
     hdrs = ["src/string/memset.h"],
+    copts = [
+        "-fno-builtin-memset",
+        "-mllvm -combiner-global-alias-analysis",
+    ],
     features = no_sanitize_features,
     deps = [
         ":__support_common",
@@ -834,6 +838,10 @@ libc_function(
     name = "memmove",
     srcs = ["src/string/memmove.cpp"],
     hdrs = ["src/string/memmove.h"],
+    copts = [
+        "-fno-builtin-memmove",
+        "-mllvm -combiner-global-alias-analysis",
+    ],
     features = no_sanitize_features,
     deps = [
         ":__support_common",
@@ -847,6 +855,10 @@ libc_function(
     name = "memcmp",
     srcs = ["src/string/memcmp.cpp"],
     hdrs = ["src/string/memcmp.h"],
+    copts = [
+        "-fno-builtin-memcmp",
+        "-mllvm -combiner-global-alias-analysis",
+    ],
     features = no_sanitize_features,
     deps = [
         ":__support_common",
@@ -859,6 +871,10 @@ libc_function(
     name = "bcmp",
     srcs = ["src/string/bcmp.cpp"],
     hdrs = ["src/string/bcmp.h"],
+    copts = [
+        "-fno-builtin-bcmp",
+        "-fno-builtin-memcmp",
+    ],
     features = no_sanitize_features,
     deps = [
         ":__support_common",
@@ -870,6 +886,11 @@ libc_function(
     name = "bzero",
     srcs = ["src/string/bzero.cpp"],
     hdrs = ["src/string/bzero.h"],
+    copts = [
+        "-fno-builtin-bzero",
+        "-fno-builtin-memset",
+        "-mllvm -combiner-global-alias-analysis",
+    ],
     features = no_sanitize_features,
     deps = [
         ":__support_common",
