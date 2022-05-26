@@ -122,9 +122,8 @@ public:
   /// writing to the provided \p Buffer.
   DXILBitcodeWriter(const Module &M, SmallVectorImpl<char> &Buffer,
                     StringTableBuilder &StrtabBuilder, BitstreamWriter &Stream)
-      : Stream(Stream), StrtabBuilder(StrtabBuilder), M(M),
-        VE(M, true), Buffer(Buffer),
-        BitcodeStartBit(Stream.GetCurrentBitNo()) {
+      : Stream(Stream), StrtabBuilder(StrtabBuilder), M(M), VE(M, true),
+        Buffer(Buffer), BitcodeStartBit(Stream.GetCurrentBitNo()) {
     GlobalValueId = VE.getValues().size();
   }
 
@@ -342,7 +341,8 @@ using namespace llvm::dxil;
 /// Begin dxil::BitcodeWriter Implementation
 ////////////////////////////////////////////////////////////////////////////////
 
-dxil::BitcodeWriter::BitcodeWriter(SmallVectorImpl<char> &Buffer, raw_fd_stream *FS)
+dxil::BitcodeWriter::BitcodeWriter(SmallVectorImpl<char> &Buffer,
+                                   raw_fd_stream *FS)
     : Buffer(Buffer), Stream(new BitstreamWriter(Buffer, FS, 512)) {
   // Emit the file header.
   Stream->Emit((unsigned)'B', 8);
@@ -794,29 +794,40 @@ unsigned DXILBitcodeWriter::getEncodedLinkage(const GlobalValue &GV) {
 
 unsigned DXILBitcodeWriter::getEncodedVisibility(const GlobalValue &GV) {
   switch (GV.getVisibility()) {
-  case GlobalValue::DefaultVisibility:   return 0;
-  case GlobalValue::HiddenVisibility:    return 1;
-  case GlobalValue::ProtectedVisibility: return 2;
+  case GlobalValue::DefaultVisibility:
+    return 0;
+  case GlobalValue::HiddenVisibility:
+    return 1;
+  case GlobalValue::ProtectedVisibility:
+    return 2;
   }
   llvm_unreachable("Invalid visibility");
 }
 
 unsigned DXILBitcodeWriter::getEncodedDLLStorageClass(const GlobalValue &GV) {
   switch (GV.getDLLStorageClass()) {
-  case GlobalValue::DefaultStorageClass:   return 0;
-  case GlobalValue::DLLImportStorageClass: return 1;
-  case GlobalValue::DLLExportStorageClass: return 2;
+  case GlobalValue::DefaultStorageClass:
+    return 0;
+  case GlobalValue::DLLImportStorageClass:
+    return 1;
+  case GlobalValue::DLLExportStorageClass:
+    return 2;
   }
   llvm_unreachable("Invalid DLL storage class");
 }
 
 unsigned DXILBitcodeWriter::getEncodedThreadLocalMode(const GlobalValue &GV) {
   switch (GV.getThreadLocalMode()) {
-    case GlobalVariable::NotThreadLocal:         return 0;
-    case GlobalVariable::GeneralDynamicTLSModel: return 1;
-    case GlobalVariable::LocalDynamicTLSModel:   return 2;
-    case GlobalVariable::InitialExecTLSModel:    return 3;
-    case GlobalVariable::LocalExecTLSModel:      return 4;
+  case GlobalVariable::NotThreadLocal:
+    return 0;
+  case GlobalVariable::GeneralDynamicTLSModel:
+    return 1;
+  case GlobalVariable::LocalDynamicTLSModel:
+    return 2;
+  case GlobalVariable::InitialExecTLSModel:
+    return 3;
+  case GlobalVariable::LocalExecTLSModel:
+    return 4;
   }
   llvm_unreachable("Invalid TLS model");
 }
