@@ -115,6 +115,7 @@ private:
   void DoEndfile(IoErrorHandler &);
   void CommitWrites();
   bool CheckDirectAccess(IoErrorHandler &);
+  void HitEndOnRead(IoErrorHandler &);
 
   int unitNumber_{-1};
   Direction direction_{Direction::Output};
