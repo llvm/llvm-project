@@ -816,7 +816,6 @@ define <vscale x 4 x i32> @cross_block_mutate(<vscale x 4 x i32> %a, <vscale x 4
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetivli a0, 6, e32, m2, tu, mu
 ; CHECK-NEXT:    vmv.s.x v8, a0
-; CHECK-NEXT:    vsetvli zero, a0, e32, m2, tu, mu
 ; CHECK-NEXT:    vadd.vv v8, v8, v10, v0.t
 ; CHECK-NEXT:    ret
                                          <vscale x 4 x i1> %mask) {
