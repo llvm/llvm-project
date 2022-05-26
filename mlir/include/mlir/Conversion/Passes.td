@@ -197,6 +197,21 @@ def ConvertComplexToLLVM : Pass<"convert-complex-to-llvm"> {
 }
 
 //===----------------------------------------------------------------------===//
+// ComplexToLibm
+//===----------------------------------------------------------------------===//
+
+def ConvertComplexToLibm : Pass<"convert-complex-to-libm", "ModuleOp"> {
+  let summary = "Convert Complex dialect to libm calls";
+  let description = [{
+    This pass converts supported Complex ops to libm calls.
+  }];
+  let constructor = "mlir::createConvertComplexToLibmPass()";
+  let dependentDialects = [
+    "func::FuncDialect",
+  ];
+}
+
+//===----------------------------------------------------------------------===//
 // ComplexToStandard
 //===----------------------------------------------------------------------===//
 
