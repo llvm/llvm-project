@@ -102,9 +102,9 @@
 ; PASSIVE-MERGE-NEXT:      - Index:           2
 ; PASSIVE-MERGE-NEXT:        Name:            __wasm_init_memory
 
-; RUN: wasm-ld -no-gc-sections --no-entry --shared-memory --max-memory=131072 -no-merge-data-segments -o %t.separate.passive.wasm %t.passive.o
+; RUN: wasm-ld -no-gc-sections --no-entry --shared-memory --max-memory=131072 --no-merge-data-segments -o %t.separate.passive.wasm %t.passive.o
 ; RUN: obj2yaml %t.separate.passive.wasm | FileCheck %s --check-prefix=PASSIVE-SEPARATE
-; RUN: wasm-ld -mwasm64 -no-gc-sections --no-entry --shared-memory --max-memory=131072 -no-merge-data-segments -o %t.separate.passive64.wasm %t.passive64.o
+; RUN: wasm-ld -mwasm64 -no-gc-sections --no-entry --shared-memory --max-memory=131072 --no-merge-data-segments -o %t.separate.passive64.wasm %t.passive64.o
 ; RUN: obj2yaml %t.separate.passive64.wasm | FileCheck %s --check-prefix=PASSIVE-SEPARATE
 
 ; PASSIVE-SEPARATE-LABEL: - Type:            DATACOUNT
