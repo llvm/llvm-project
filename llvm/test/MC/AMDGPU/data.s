@@ -16,7 +16,7 @@
 // CHECK: v_mov_b32
 // CHECK: v_mov_b32
 // CHECK: .long 0xabadc0de
-// CHECK_SAME: : ABADC0DE
+// CHECK-SAME: : ABADC0DE
 // CHECK: s_endpgm
 // CHECK: .long 0xabadc0d1
 // CHECK: .long 0xabadc0d2

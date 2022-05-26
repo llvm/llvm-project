@@ -4,7 +4,7 @@
 @y = global i64 20, align 8
 @z = global i64 20, align 8
 
-; CHECK_LABEL:	main:
+; CHECK-LABEL:	main:
 ; CHECK:	ldr [[R2:r[0-9]+]], [[[R1:r[0-9]+]]]
 ; CHECK-NEXT:	ldr [[R1]], [[[R1]], #4]
 ; CHECK:	mov [[R4:r[0-9]+]], [[R1]]

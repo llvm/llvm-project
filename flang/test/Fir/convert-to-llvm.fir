@@ -774,7 +774,7 @@ func.func @test_constc4() -> !fir.complex<4> {
 }
 
 // CHECK-LABEL: @test_constc4
-// CHECK_SAME: () -> !llvm.struct<(f32, f32)>
+// CHECK-SAME: () -> !llvm.struct<(f32, f32)>
 // CHECK-DAG: [[rp:%.*]] = llvm.mlir.constant(1.400000e+00 : f32) : f32
 // CHECK-DAG: [[ip:%.*]] = llvm.mlir.constant(2.300000e+00 : f32) : f32
 // CHECK: [[undef:%.*]] = llvm.mlir.undef : !llvm.struct<(f32, f32)>
@@ -788,7 +788,7 @@ func.func @test_constc8() -> !fir.complex<8> {
 }
 
 // CHECK-LABEL: @test_constc8
-// CHECK_SAME: () -> !llvm.struct<(f64, f64)>
+// CHECK-SAME: () -> !llvm.struct<(f64, f64)>
 // CHECK-DAG: [[rp:%.*]] = llvm.mlir.constant(1.800000e+00 : f64) : f64
 // CHECK-DAG: [[ip:%.*]] = llvm.mlir.constant(2.300000e+00 : f64) : f64
 // CHECK: [[undef:%.*]] = llvm.mlir.undef : !llvm.struct<(f64, f64)>

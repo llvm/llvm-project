@@ -39,7 +39,7 @@ func.func @fuse_by_collapsing(%arg0 : tensor<2x12x5x336x9xi32>,
 // CHECK-SAME:       indexing_maps = [#[[MAP0]], #[[MAP1]], #[[MAP2]], #[[MAP0]]]
 // CHECK-SAME:       iterator_types = ["parallel", "parallel", "parallel", "parallel", "parallel"]
 // CHECK-SAME:       ins(%[[ARG0]], %[[ARG1_RESHAPE]], %[[ARG2_RESHAPE]] :
-// CHECK_SAME:       outs(%[[INIT_RESHAPE]] :
+// CHECK-SAME:       outs(%[[INIT_RESHAPE]] :
 //      CHECK:   %[[RESULT_RESHAPE:.+]] = tensor.expand_shape %[[COLLAPSED_OP]] {{\[}}[0], [1, 2], [3], [4, 5, 6], [7]{{\]}}
 //      CHECK:   return %[[RESULT_RESHAPE]]
 
@@ -153,7 +153,7 @@ func.func @fuse_by_collapsing_change_reshape_order(%arg0 : tensor<9x56x2x60x6xi3
 // CHECK-SAME:       indexing_maps = [#[[MAP0]], #[[MAP1]], #[[MAP2]], #[[MAP3]]]
 // CHECK-SAME:       iterator_types = ["parallel", "parallel", "parallel", "parallel", "parallel"]
 // CHECK-SAME:       ins(%[[ARG0]], %[[ARG1_RESHAPE]], %[[ARG2_RESHAPE]] :
-// CHECK_SAME:       outs(%[[INIT_RESHAPE]] :
+// CHECK-SAME:       outs(%[[INIT_RESHAPE]] :
 //      CHECK:   %[[RESULT_RESHAPE:.+]] = tensor.expand_shape %[[COLLAPSED_OP]] {{\[}}[0], [1, 2, 3], [4], [5, 6], [7]{{\]}}
 //      CHECK:   return %[[RESULT_RESHAPE]]
 

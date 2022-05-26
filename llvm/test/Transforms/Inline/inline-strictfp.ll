@@ -14,7 +14,7 @@ entry:
   %0 = call float @inlined_01(float %a) #0
   %add = call float @llvm.experimental.constrained.fadd.f32(float %0, float 2.000000e+00, metadata !"round.dynamic", metadata !"fpexcept.strict") #0
   ret float %add
-; CHECK_LABEL: @host_02
+; CHECK-LABEL: @host_02
 ; CHECK: call float @llvm.experimental.constrained.fadd.f32(float {{.*}}, float {{.*}}, metadata !"round.tonearest", metadata !"fpexcept.ignore") #0
 ; CHECK: call float @llvm.experimental.constrained.fadd.f32(float {{.*}}, float 2.000000e+00, metadata !"round.dynamic", metadata !"fpexcept.strict") #0
 }
@@ -33,7 +33,7 @@ entry:
   %0 = call float @inlined_03(float %a) #0
   %add = call float @llvm.experimental.constrained.fadd.f32(float %0, float 2.000000e+00, metadata !"round.dynamic", metadata !"fpexcept.strict") #0
   ret float %add
-; CHECK_LABEL: @host_04
+; CHECK-LABEL: @host_04
 ; CHECK: call float @llvm.experimental.constrained.fadd.f32(float {{.*}}, float {{.*}}, metadata !"round.downward", metadata !"fpexcept.maytrap") #0
 ; CHECK: call float @llvm.experimental.constrained.fadd.f32(float {{.*}}, float 2.000000e+00, metadata !"round.dynamic", metadata !"fpexcept.strict") #0
 }
@@ -52,7 +52,7 @@ entry:
   %0 = call float @inlined_05(float %a)
   %add = fadd float %0, 2.000000e+00
   ret float %add
-; CHECK_LABEL: @host_06
+; CHECK-LABEL: @host_06
 ; CHECK: call float @inlined_05(float %a)
 ; CHECK: fadd float %0, 2.000000e+00
 }
@@ -75,7 +75,7 @@ entry:
   %0 = call float @inlined_07(float %a) #0
   %add = call float @llvm.experimental.constrained.fadd.f32(float %0, float 2.000000e+00, metadata !"round.dynamic", metadata !"fpexcept.strict") #0
   ret float %add
-; CHECK_LABEL: @host_08
+; CHECK-LABEL: @host_08
 ; CHECK: call float @func_ext(float {{.*}}) #0
 ; CHECK: call float @llvm.experimental.constrained.fadd.f32(float {{.*}}, float {{.*}}, metadata !"round.tonearest", metadata !"fpexcept.ignore") #0
 ; CHECK: call float @llvm.experimental.constrained.fadd.f32(float {{.*}}, float 2.000000e+00, metadata !"round.dynamic", metadata !"fpexcept.strict") #0
@@ -96,7 +96,7 @@ entry:
   %0 = call double @inlined_09(float %a) #0
   %add = call double @llvm.experimental.constrained.fadd.f64(double %0, double 2.000000e+00, metadata !"round.dynamic", metadata !"fpexcept.strict") #0
   ret double %add
-; CHECK_LABEL: @host_10
+; CHECK-LABEL: @host_10
 ; CHECK: call double @llvm.experimental.constrained.fpext.f64.f32(float {{.*}}, metadata !"fpexcept.ignore") #0
 ; CHECK: call double @llvm.experimental.constrained.fadd.f64(double {{.*}}, double 2.000000e+00, metadata !"round.dynamic", metadata !"fpexcept.strict") #0
 }
@@ -113,7 +113,7 @@ entry:
   %add = call float @llvm.experimental.constrained.fadd.f32(float %a, float %b, metadata !"round.dynamic", metadata !"fpexcept.strict") #0
   %cmp = call i1 @inlined_11(float %a, float %b) #0
   ret i1 %cmp
-; CHECK_LABEL: @host_12
+; CHECK-LABEL: @host_12
 ; CHECK: call float @llvm.experimental.constrained.fadd.f32(float %a, float %b, metadata !"round.dynamic", metadata !"fpexcept.strict") #0
 ; CHECK: call i1 @llvm.experimental.constrained.fcmp.f32(float {{.*}}, metadata !"oeq", metadata !"fpexcept.ignore") #0
 }
@@ -130,7 +130,7 @@ entry:
   %0 = call float @inlined_13(float %a) #0
   %add = call float @llvm.experimental.constrained.fadd.f32(float %0, float 2.000000e+00, metadata !"round.dynamic", metadata !"fpexcept.strict") #0
   ret float %add
-; CHECK_LABEL: @host_14
+; CHECK-LABEL: @host_14
 ; CHECK: call float @llvm.experimental.constrained.ceil.f32(float %a, metadata !"fpexcept.ignore") #0
 ; CHECK: call float @llvm.experimental.constrained.fadd.f32(float {{.*}}, float 2.000000e+00, metadata !"round.dynamic", metadata !"fpexcept.strict") #0
 }

@@ -14,7 +14,7 @@
 ; A strong backing function had to be created for the weak-weak pair
 
 ; CHECK: define private void @0(i32* %a) unnamed_addr
-; CHECK_NEXT: call void @dummy4()
+; CHECK-NEXT: call void @dummy4()
 
 ; These internal functions are dropped in favor of the external ones
 
