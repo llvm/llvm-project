@@ -1281,7 +1281,7 @@ define i1 @bitwise_and_bitwise_and_icmps(i8 %x, i8 %y) {
 ; CHECK-LABEL: @bitwise_and_bitwise_and_icmps(
 ; CHECK-NEXT:    [[C1:%.*]] = icmp eq i8 [[Y:%.*]], 42
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i8 [[X:%.*]], 0
-; CHECK-NEXT:    [[TMP2:%.*]] = and i1 [[TMP1]], [[C1]]
+; CHECK-NEXT:    [[TMP2:%.*]] = and i1 [[C1]], [[TMP1]]
 ; CHECK-NEXT:    ret i1 [[TMP2]]
 ;
   %c1 = icmp eq i8 %y, 42
@@ -1296,7 +1296,7 @@ define i1 @bitwise_and_bitwise_and_icmps_comm1(i8 %x, i8 %y) {
 ; CHECK-LABEL: @bitwise_and_bitwise_and_icmps_comm1(
 ; CHECK-NEXT:    [[C1:%.*]] = icmp eq i8 [[Y:%.*]], 42
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i8 [[X:%.*]], 0
-; CHECK-NEXT:    [[TMP2:%.*]] = and i1 [[TMP1]], [[C1]]
+; CHECK-NEXT:    [[TMP2:%.*]] = and i1 [[C1]], [[TMP1]]
 ; CHECK-NEXT:    ret i1 [[TMP2]]
 ;
   %c1 = icmp eq i8 %y, 42
@@ -1409,7 +1409,7 @@ define i1 @logical_and_bitwise_and_icmps(i8 %x, i8 %y) {
 ; CHECK-LABEL: @logical_and_bitwise_and_icmps(
 ; CHECK-NEXT:    [[C1:%.*]] = icmp eq i8 [[Y:%.*]], 42
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i8 [[X:%.*]], 0
-; CHECK-NEXT:    [[TMP2:%.*]] = and i1 [[TMP1]], [[C1]]
+; CHECK-NEXT:    [[TMP2:%.*]] = and i1 [[C1]], [[TMP1]]
 ; CHECK-NEXT:    ret i1 [[TMP2]]
 ;
   %c1 = icmp eq i8 %y, 42
@@ -1539,7 +1539,7 @@ define i1 @bitwise_or_bitwise_or_icmps(i8 %x, i8 %y) {
 ; CHECK-LABEL: @bitwise_or_bitwise_or_icmps(
 ; CHECK-NEXT:    [[C1:%.*]] = icmp eq i8 [[Y:%.*]], 42
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp ne i8 [[X:%.*]], 0
-; CHECK-NEXT:    [[TMP2:%.*]] = or i1 [[TMP1]], [[C1]]
+; CHECK-NEXT:    [[TMP2:%.*]] = or i1 [[C1]], [[TMP1]]
 ; CHECK-NEXT:    ret i1 [[TMP2]]
 ;
   %c1 = icmp eq i8 %y, 42
@@ -1554,7 +1554,7 @@ define i1 @bitwise_or_bitwise_or_icmps_comm1(i8 %x, i8 %y) {
 ; CHECK-LABEL: @bitwise_or_bitwise_or_icmps_comm1(
 ; CHECK-NEXT:    [[C1:%.*]] = icmp eq i8 [[Y:%.*]], 42
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp ne i8 [[X:%.*]], 0
-; CHECK-NEXT:    [[TMP2:%.*]] = or i1 [[TMP1]], [[C1]]
+; CHECK-NEXT:    [[TMP2:%.*]] = or i1 [[C1]], [[TMP1]]
 ; CHECK-NEXT:    ret i1 [[TMP2]]
 ;
   %c1 = icmp eq i8 %y, 42
@@ -1667,7 +1667,7 @@ define i1 @logical_or_bitwise_or_icmps(i8 %x, i8 %y) {
 ; CHECK-LABEL: @logical_or_bitwise_or_icmps(
 ; CHECK-NEXT:    [[C1:%.*]] = icmp eq i8 [[Y:%.*]], 42
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp ne i8 [[X:%.*]], 0
-; CHECK-NEXT:    [[TMP2:%.*]] = or i1 [[TMP1]], [[C1]]
+; CHECK-NEXT:    [[TMP2:%.*]] = or i1 [[C1]], [[TMP1]]
 ; CHECK-NEXT:    ret i1 [[TMP2]]
 ;
   %c1 = icmp eq i8 %y, 42
