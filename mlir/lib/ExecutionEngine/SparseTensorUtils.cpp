@@ -1627,31 +1627,12 @@ void _mlir_ciface_lexInsertC32(void *tensor,
 FOREVERY_V(IMPL_EXPINSERT)
 #undef IMPL_EXPINSERT
 
-// TODO: move this into the next section, since it doesn't depend on memrefs.
-#define IMPL_OUTSPARSETENSOR(VNAME, V)                                         \
-  void outSparseTensor##VNAME(void *coo, void *dest, bool sort) {              \
-    return outSparseTensor<V>(coo, dest, sort);                                \
-  }
-FOREVERY_V(IMPL_OUTSPARSETENSOR)
-#undef IMPL_OUTSPARSETENSOR
-
 //===----------------------------------------------------------------------===//
 //
 // Public functions which accept only C-style data structures to interact
 // with sparse tensors (which are only visible as opaque pointers externally).
 //
 //===----------------------------------------------------------------------===//
-
-// TODO: move this lower down (after `delSparseTensorCOO`) since it's
-// independent of our sparse-tensor formats.
-char *getTensorFilename(index_type id) {
-  char var[80];
-  sprintf(var, "TENSOR%" PRIu64, id);
-  char *env = getenv(var);
-  if (!env)
-    FATAL("Environment variable %s is not set\n", var);
-  return env;
-}
 
 index_type sparseDimSize(void *tensor, index_type d) {
   return static_cast<SparseTensorStorageBase *>(tensor)->getDimSize(d);
@@ -1660,6 +1641,13 @@ index_type sparseDimSize(void *tensor, index_type d) {
 void endInsert(void *tensor) {
   return static_cast<SparseTensorStorageBase *>(tensor)->endInsert();
 }
+
+#define IMPL_OUTSPARSETENSOR(VNAME, V)                                         \
+  void outSparseTensor##VNAME(void *coo, void *dest, bool sort) {              \
+    return outSparseTensor<V>(coo, dest, sort);                                \
+  }
+FOREVERY_V(IMPL_OUTSPARSETENSOR)
+#undef IMPL_OUTSPARSETENSOR
 
 void delSparseTensor(void *tensor) {
   delete static_cast<SparseTensorStorageBase *>(tensor);
@@ -1671,6 +1659,15 @@ void delSparseTensor(void *tensor) {
   }
 FOREVERY_V(IMPL_DELCOO)
 #undef IMPL_DELCOO
+
+char *getTensorFilename(index_type id) {
+  char var[80];
+  sprintf(var, "TENSOR%" PRIu64, id);
+  char *env = getenv(var);
+  if (!env)
+    FATAL("Environment variable %s is not set\n", var);
+  return env;
+}
 
 // TODO: generalize beyond 64-bit indices.
 #define IMPL_CONVERTTOMLIRSPARSETENSOR(VNAME, V)                               \
