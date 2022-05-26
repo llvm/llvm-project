@@ -9,6 +9,7 @@ set(ORC_SOURCES
   macho_platform.cpp
   elfnix_platform.cpp
   run_program_wrapper.cpp
+  dlfcn_wrapper.cpp
   )
 
 # Implementation files for all ORC architectures.
