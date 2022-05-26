@@ -5418,29 +5418,27 @@ SDValue DAGCombiner::foldLogicOfSetCCs(bool IsAnd, SDValue N0, SDValue N1,
     }
 
     // Turn compare of constants whose difference is 1 bit into add+and+setcc.
-    // TODO - support non-uniform vector amounts.
     if ((IsAnd && CC1 == ISD::SETNE) || (!IsAnd && CC1 == ISD::SETEQ)) {
       // Match a shared variable operand and 2 non-opaque constant operands.
-      ConstantSDNode *C0 = isConstOrConstSplat(LR);
-      ConstantSDNode *C1 = isConstOrConstSplat(RR);
-      if (LL == RL && C0 && C1 && !C0->isOpaque() && !C1->isOpaque()) {
+      auto MatchDiffPow2 = [&](ConstantSDNode *C0, ConstantSDNode *C1) {
+        // The difference of the constants must be a single bit.
         const APInt &CMax =
             APIntOps::umax(C0->getAPIntValue(), C1->getAPIntValue());
         const APInt &CMin =
             APIntOps::umin(C0->getAPIntValue(), C1->getAPIntValue());
-        // The difference of the constants must be a single bit.
-        if ((CMax - CMin).isPowerOf2()) {
-          // and/or (setcc X, CMax, ne), (setcc X, CMin, ne/eq) -->
-          // setcc ((sub X, CMin), ~(CMax - CMin)), 0, ne/eq
-          SDValue Max = DAG.getNode(ISD::UMAX, DL, OpVT, LR, RR);
-          SDValue Min = DAG.getNode(ISD::UMIN, DL, OpVT, LR, RR);
-          SDValue Offset = DAG.getNode(ISD::SUB, DL, OpVT, LL, Min);
-          SDValue Diff = DAG.getNode(ISD::SUB, DL, OpVT, Max, Min);
-          SDValue Mask = DAG.getNOT(DL, Diff, OpVT);
-          SDValue And = DAG.getNode(ISD::AND, DL, OpVT, Offset, Mask);
-          SDValue Zero = DAG.getConstant(0, DL, OpVT);
-          return DAG.getSetCC(DL, VT, And, Zero, CC0);
-        }
+        return !C0->isOpaque() && !C1->isOpaque() && (CMax - CMin).isPowerOf2();
+      };
+      if (LL == RL && ISD::matchBinaryPredicate(LR, RR, MatchDiffPow2)) {
+        // and/or (setcc X, CMax, ne), (setcc X, CMin, ne/eq) -->
+        // setcc ((sub X, CMin), ~(CMax - CMin)), 0, ne/eq
+        SDValue Max = DAG.getNode(ISD::UMAX, DL, OpVT, LR, RR);
+        SDValue Min = DAG.getNode(ISD::UMIN, DL, OpVT, LR, RR);
+        SDValue Offset = DAG.getNode(ISD::SUB, DL, OpVT, LL, Min);
+        SDValue Diff = DAG.getNode(ISD::SUB, DL, OpVT, Max, Min);
+        SDValue Mask = DAG.getNOT(DL, Diff, OpVT);
+        SDValue And = DAG.getNode(ISD::AND, DL, OpVT, Offset, Mask);
+        SDValue Zero = DAG.getConstant(0, DL, OpVT);
+        return DAG.getSetCC(DL, VT, And, Zero, CC0);
       }
     }
   }
