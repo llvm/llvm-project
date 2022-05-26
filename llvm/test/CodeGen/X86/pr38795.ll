@@ -32,14 +32,13 @@ define dso_local void @fn() {
 ; CHECK-NEXT:    # implicit-def: $ebp
 ; CHECK-NEXT:    jmp .LBB0_1
 ; CHECK-NEXT:    .p2align 4, 0x90
-; CHECK-NEXT:  .LBB0_15: # %for.inc
+; CHECK-NEXT:  .LBB0_16: # %for.inc
 ; CHECK-NEXT:    # in Loop: Header=BB0_1 Depth=1
-; CHECK-NEXT:    movl %esi, %ecx
 ; CHECK-NEXT:    movb %dl, {{[-0-9]+}}(%e{{[sb]}}p) # 1-byte Spill
 ; CHECK-NEXT:    movb %dh, %dl
 ; CHECK-NEXT:  .LBB0_1: # %for.cond
 ; CHECK-NEXT:    # =>This Loop Header: Depth=1
-; CHECK-NEXT:    # Child Loop BB0_19 Depth 2
+; CHECK-NEXT:    # Child Loop BB0_20 Depth 2
 ; CHECK-NEXT:    cmpb $8, %dl
 ; CHECK-NEXT:    movb %dl, {{[-0-9]+}}(%e{{[sb]}}p) # 1-byte Spill
 ; CHECK-NEXT:    ja .LBB0_3
@@ -56,7 +55,7 @@ define dso_local void @fn() {
 ; CHECK-NEXT:    movb %cl, %dh
 ; CHECK-NEXT:    movl $0, h
 ; CHECK-NEXT:    cmpb $8, %dl
-; CHECK-NEXT:    jg .LBB0_9
+; CHECK-NEXT:    jg .LBB0_8
 ; CHECK-NEXT:  # %bb.5: # %if.then13
 ; CHECK-NEXT:    # in Loop: Header=BB0_1 Depth=1
 ; CHECK-NEXT:    movl %eax, %esi
@@ -65,10 +64,12 @@ define dso_local void @fn() {
 ; CHECK-NEXT:    calll printf
 ; CHECK-NEXT:    movb {{[-0-9]+}}(%e{{[sb]}}p), %dh # 1-byte Reload
 ; CHECK-NEXT:    testb %bl, %bl
+; CHECK-NEXT:    movl %esi, %ecx
 ; CHECK-NEXT:    # implicit-def: $eax
-; CHECK-NEXT:    movb {{[-0-9]+}}(%e{{[sb]}}p), %cl # 1-byte Reload
+; CHECK-NEXT:    movb {{[-0-9]+}}(%e{{[sb]}}p), %dl # 1-byte Reload
+; CHECK-NEXT:    movb %dl, {{[-0-9]+}}(%e{{[sb]}}p) # 1-byte Spill
 ; CHECK-NEXT:    movb %dh, %dl
-; CHECK-NEXT:    jne .LBB0_15
+; CHECK-NEXT:    jne .LBB0_16
 ; CHECK-NEXT:    jmp .LBB0_6
 ; CHECK-NEXT:    .p2align 4, 0x90
 ; CHECK-NEXT:  .LBB0_3: # %if.then
@@ -77,82 +78,82 @@ define dso_local void @fn() {
 ; CHECK-NEXT:    calll printf
 ; CHECK-NEXT:    movb {{[-0-9]+}}(%e{{[sb]}}p), %dl # 1-byte Reload
 ; CHECK-NEXT:    # implicit-def: $eax
-; CHECK-NEXT:    movb {{[-0-9]+}}(%e{{[sb]}}p), %cl # 1-byte Reload
-; CHECK-NEXT:    jmp .LBB0_6
-; CHECK-NEXT:    .p2align 4, 0x90
-; CHECK-NEXT:  .LBB0_9: # %if.end21
-; CHECK-NEXT:    # in Loop: Header=BB0_1 Depth=1
-; CHECK-NEXT:    # implicit-def: $ebp
-; CHECK-NEXT:    jmp .LBB0_10
-; CHECK-NEXT:    .p2align 4, 0x90
 ; CHECK-NEXT:  .LBB0_6: # %for.cond35
 ; CHECK-NEXT:    # in Loop: Header=BB0_1 Depth=1
-; CHECK-NEXT:    movb %dl, %dh
 ; CHECK-NEXT:    testl %edi, %edi
-; CHECK-NEXT:    movl %edi, %esi
-; CHECK-NEXT:    movl $0, %edi
-; CHECK-NEXT:    movb %cl, %dl
-; CHECK-NEXT:    je .LBB0_19
-; CHECK-NEXT:  # %bb.7: # %af
+; CHECK-NEXT:    je .LBB0_7
+; CHECK-NEXT:  .LBB0_11: # %af
 ; CHECK-NEXT:    # in Loop: Header=BB0_1 Depth=1
 ; CHECK-NEXT:    testb %bl, %bl
-; CHECK-NEXT:    jne .LBB0_8
-; CHECK-NEXT:  .LBB0_16: # %if.end39
+; CHECK-NEXT:    jne .LBB0_12
+; CHECK-NEXT:  .LBB0_17: # %if.end39
 ; CHECK-NEXT:    # in Loop: Header=BB0_1 Depth=1
 ; CHECK-NEXT:    testl %eax, %eax
-; CHECK-NEXT:    je .LBB0_18
-; CHECK-NEXT:  # %bb.17: # %if.then41
+; CHECK-NEXT:    je .LBB0_19
+; CHECK-NEXT:  # %bb.18: # %if.then41
 ; CHECK-NEXT:    # in Loop: Header=BB0_1 Depth=1
 ; CHECK-NEXT:    movl $0, {{[0-9]+}}(%esp)
 ; CHECK-NEXT:    movl $fn, {{[0-9]+}}(%esp)
 ; CHECK-NEXT:    movl $.str, (%esp)
 ; CHECK-NEXT:    calll printf
-; CHECK-NEXT:  .LBB0_18: # %for.end46
+; CHECK-NEXT:  .LBB0_19: # %for.end46
 ; CHECK-NEXT:    # in Loop: Header=BB0_1 Depth=1
-; CHECK-NEXT:    movl %esi, %edi
 ; CHECK-NEXT:    # implicit-def: $dl
 ; CHECK-NEXT:    # implicit-def: $dh
 ; CHECK-NEXT:    # implicit-def: $ebp
+; CHECK-NEXT:    jmp .LBB0_20
 ; CHECK-NEXT:    .p2align 4, 0x90
-; CHECK-NEXT:  .LBB0_19: # %for.cond47
+; CHECK-NEXT:  .LBB0_8: # %if.end21
+; CHECK-NEXT:    # in Loop: Header=BB0_1 Depth=1
+; CHECK-NEXT:    # implicit-def: $ebp
+; CHECK-NEXT:    jmp .LBB0_9
+; CHECK-NEXT:    .p2align 4, 0x90
+; CHECK-NEXT:  .LBB0_7: # in Loop: Header=BB0_1 Depth=1
+; CHECK-NEXT:    xorl %edi, %edi
+; CHECK-NEXT:    movb %dl, %dh
+; CHECK-NEXT:    movb {{[-0-9]+}}(%e{{[sb]}}p), %dl # 1-byte Reload
+; CHECK-NEXT:    .p2align 4, 0x90
+; CHECK-NEXT:  .LBB0_20: # %for.cond47
 ; CHECK-NEXT:    # Parent Loop BB0_1 Depth=1
 ; CHECK-NEXT:    # => This Inner Loop Header: Depth=2
 ; CHECK-NEXT:    testb %bl, %bl
-; CHECK-NEXT:    jne .LBB0_19
-; CHECK-NEXT:  # %bb.20: # %for.cond47
-; CHECK-NEXT:    # in Loop: Header=BB0_19 Depth=2
+; CHECK-NEXT:    jne .LBB0_20
+; CHECK-NEXT:  # %bb.21: # %for.cond47
+; CHECK-NEXT:    # in Loop: Header=BB0_20 Depth=2
 ; CHECK-NEXT:    testb %bl, %bl
-; CHECK-NEXT:    jne .LBB0_19
-; CHECK-NEXT:  .LBB0_10: # %ae
+; CHECK-NEXT:    jne .LBB0_20
+; CHECK-NEXT:  .LBB0_9: # %ae
 ; CHECK-NEXT:    # in Loop: Header=BB0_1 Depth=1
 ; CHECK-NEXT:    testb %bl, %bl
-; CHECK-NEXT:    jne .LBB0_11
-; CHECK-NEXT:  # %bb.12: # %if.end26
-; CHECK-NEXT:    # in Loop: Header=BB0_1 Depth=1
-; CHECK-NEXT:    xorl %esi, %esi
-; CHECK-NEXT:    testb %dl, %dl
-; CHECK-NEXT:    je .LBB0_15
+; CHECK-NEXT:    jne .LBB0_10
 ; CHECK-NEXT:  # %bb.13: # %if.end26
 ; CHECK-NEXT:    # in Loop: Header=BB0_1 Depth=1
-; CHECK-NEXT:    testl %ebp, %ebp
-; CHECK-NEXT:    jne .LBB0_15
-; CHECK-NEXT:  # %bb.14: # %if.then31
+; CHECK-NEXT:    xorl %ecx, %ecx
+; CHECK-NEXT:    testb %dl, %dl
+; CHECK-NEXT:    je .LBB0_16
+; CHECK-NEXT:  # %bb.14: # %if.end26
 ; CHECK-NEXT:    # in Loop: Header=BB0_1 Depth=1
-; CHECK-NEXT:    xorl %esi, %esi
+; CHECK-NEXT:    testl %ebp, %ebp
+; CHECK-NEXT:    jne .LBB0_16
+; CHECK-NEXT:  # %bb.15: # %if.then31
+; CHECK-NEXT:    # in Loop: Header=BB0_1 Depth=1
+; CHECK-NEXT:    xorl %ecx, %ecx
 ; CHECK-NEXT:    xorl %ebp, %ebp
-; CHECK-NEXT:    jmp .LBB0_15
+; CHECK-NEXT:    jmp .LBB0_16
 ; CHECK-NEXT:    .p2align 4, 0x90
-; CHECK-NEXT:  .LBB0_11: # in Loop: Header=BB0_1 Depth=1
-; CHECK-NEXT:    movl %edi, %esi
+; CHECK-NEXT:  .LBB0_10: # in Loop: Header=BB0_1 Depth=1
 ; CHECK-NEXT:    # implicit-def: $eax
 ; CHECK-NEXT:    testb %bl, %bl
-; CHECK-NEXT:    je .LBB0_16
-; CHECK-NEXT:  .LBB0_8: # in Loop: Header=BB0_1 Depth=1
+; CHECK-NEXT:    je .LBB0_17
+; CHECK-NEXT:  .LBB0_12: # in Loop: Header=BB0_1 Depth=1
 ; CHECK-NEXT:    # implicit-def: $edi
 ; CHECK-NEXT:    # implicit-def: $cl
+; CHECK-NEXT:    # kill: killed $cl
 ; CHECK-NEXT:    # implicit-def: $dl
 ; CHECK-NEXT:    # implicit-def: $ebp
-; CHECK-NEXT:    jmp .LBB0_6
+; CHECK-NEXT:    testl %edi, %edi
+; CHECK-NEXT:    jne .LBB0_11
+; CHECK-NEXT:    jmp .LBB0_7
 entry:
   br label %for.cond
 
