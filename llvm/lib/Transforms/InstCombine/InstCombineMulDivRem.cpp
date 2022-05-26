@@ -363,17 +363,15 @@ Instruction *InstCombinerImpl::visitMul(BinaryOperator &I) {
     return SelectInst::Create(X, NegC, ConstantInt::getNullValue(I.getType()));
   }
 
-  // (lshr X, 31) * Y --> (ashr X, 31) & Y
-  // Y * (lshr X, 31) --> (ashr X, 31) & Y
+  // (lshr X, 31) * Y --> (X < 0) ? Y : 0
   // TODO: We are not checking one-use because the elimination of the multiply
   //       is better for analysis?
-  // TODO: Should we canonicalize to '(X < 0) ? Y : 0' instead? That would be
-  //       more similar to what we're doing above.
   const APInt *C;
-  if (match(Op0, m_LShr(m_Value(X), m_APInt(C))) && *C == C->getBitWidth() - 1)
-    return BinaryOperator::CreateAnd(Builder.CreateAShr(X, *C), Op1);
-  if (match(Op1, m_LShr(m_Value(X), m_APInt(C))) && *C == C->getBitWidth() - 1)
-    return BinaryOperator::CreateAnd(Builder.CreateAShr(X, *C), Op0);
+  if (match(&I, m_c_Mul(m_LShr(m_Value(X), m_APInt(C)), m_Value(Y))) &&
+      *C == C->getBitWidth() - 1) {
+    Value *IsNeg = Builder.CreateIsNeg(X, "isneg");
+    return SelectInst::Create(IsNeg, Y, ConstantInt::getNullValue(I.getType()));
+  }
 
   // ((ashr X, 31) | 1) * X --> abs(X)
   // X * ((ashr X, 31) | 1) --> abs(X)
