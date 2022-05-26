@@ -2232,11 +2232,12 @@ static void unswitchNontrivialInvariants(
       BasicBlock *ClonedPH = ClonedPHs.begin()->second;
       BI->setSuccessor(ClonedSucc, ClonedPH);
       BI->setSuccessor(1 - ClonedSucc, LoopPH);
+      Value *Cond = skipTrivialSelect(BI->getCondition());
       if (InsertFreeze) {
-        auto Cond = skipTrivialSelect(BI->getCondition());
         if (!isGuaranteedNotToBeUndefOrPoison(Cond, &AC, BI, &DT))
-          BI->setCondition(new FreezeInst(Cond, Cond->getName() + ".fr", BI));
+          Cond = new FreezeInst(Cond, Cond->getName() + ".fr", BI);
       }
+      BI->setCondition(Cond);
       DTUpdates.push_back({DominatorTree::Insert, SplitBB, ClonedPH});
     } else {
       assert(SI && "Must either be a branch or switch!");
