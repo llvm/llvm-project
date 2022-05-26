@@ -2335,8 +2335,7 @@ bool AArch64InstructionSelector::select(MachineInstr &I) {
   MachineFunction &MF = *MBB.getParent();
   MachineRegisterInfo &MRI = MF.getRegInfo();
 
-  const AArch64Subtarget *Subtarget =
-      &static_cast<const AArch64Subtarget &>(MF.getSubtarget());
+  const AArch64Subtarget *Subtarget = &MF.getSubtarget<AArch64Subtarget>();
   if (Subtarget->requiresStrictAlign()) {
     // We don't support this feature yet.
     LLVM_DEBUG(dbgs() << "AArch64 GISel does not support strict-align yet\n");

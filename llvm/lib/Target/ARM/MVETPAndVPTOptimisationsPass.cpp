@@ -1052,8 +1052,7 @@ bool MVETPAndVPTOptimisations::HintDoLoopStartReg(MachineBasicBlock &MBB) {
 }
 
 bool MVETPAndVPTOptimisations::runOnMachineFunction(MachineFunction &Fn) {
-  const ARMSubtarget &STI =
-      static_cast<const ARMSubtarget &>(Fn.getSubtarget());
+  const ARMSubtarget &STI = Fn.getSubtarget<ARMSubtarget>();
 
   if (!STI.isThumb2() || !STI.hasLOB())
     return false;
