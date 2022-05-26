@@ -144,8 +144,8 @@ public:
         COFF::IMAGE_SYM_DTYPE_FUNCTION << COFF::SCT_COMPLEX_TYPE_SHIFT;
 
       OutStreamer->BeginCOFFSymbolDef(CurrentFnSym);
-      OutStreamer->EmitCOFFSymbolStorageClass(Scl);
-      OutStreamer->EmitCOFFSymbolType(Type);
+      OutStreamer->emitCOFFSymbolStorageClass(Scl);
+      OutStreamer->emitCOFFSymbolType(Type);
       OutStreamer->EndCOFFSymbolDef();
     }
 
@@ -205,8 +205,8 @@ void AArch64AsmPrinter::emitStartOfAsmFile(Module &M) {
     // compiler features bitfield read by link.exe.
     MCSymbol *S = MMI->getContext().getOrCreateSymbol(StringRef("@feat.00"));
     OutStreamer->BeginCOFFSymbolDef(S);
-    OutStreamer->EmitCOFFSymbolStorageClass(COFF::IMAGE_SYM_CLASS_STATIC);
-    OutStreamer->EmitCOFFSymbolType(COFF::IMAGE_SYM_DTYPE_NULL);
+    OutStreamer->emitCOFFSymbolStorageClass(COFF::IMAGE_SYM_CLASS_STATIC);
+    OutStreamer->emitCOFFSymbolType(COFF::IMAGE_SYM_DTYPE_NULL);
     OutStreamer->EndCOFFSymbolDef();
     int64_t Feat00Flags = 0;
 

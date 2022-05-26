@@ -49,13 +49,13 @@ void WinException::endModule() {
   const Module *M = MMI->getModule();
   for (const Function &F : *M)
     if (F.hasFnAttribute("safeseh"))
-      OS.EmitCOFFSafeSEH(Asm->getSymbol(&F));
+      OS.emitCOFFSafeSEH(Asm->getSymbol(&F));
 
   if (M->getModuleFlag("ehcontguard") && !EHContTargets.empty()) {
     // Emit the symbol index of each ehcont target.
     OS.SwitchSection(Asm->OutContext.getObjectFileInfo()->getGEHContSection());
     for (const MCSymbol *S : EHContTargets) {
-      OS.EmitCOFFSymbolIndex(S);
+      OS.emitCOFFSymbolIndex(S);
     }
   }
 }
@@ -116,7 +116,7 @@ void WinException::beginFunction(const MachineFunction *MF) {
 void WinException::markFunctionEnd() {
   if (isAArch64 && CurrentFuncletEntry &&
       (shouldEmitMoves || shouldEmitPersonality))
-    Asm->OutStreamer->EmitWinCFIFuncletOrFuncEnd();
+    Asm->OutStreamer->emitWinCFIFuncletOrFuncEnd();
 }
 
 /// endFunction - Gather and emit post-function exception information.
@@ -206,8 +206,8 @@ void WinException::beginFunclet(const MachineBasicBlock &MBB,
 
     // Describe our funclet symbol as a function with internal linkage.
     Asm->OutStreamer->BeginCOFFSymbolDef(Sym);
-    Asm->OutStreamer->EmitCOFFSymbolStorageClass(COFF::IMAGE_SYM_CLASS_STATIC);
-    Asm->OutStreamer->EmitCOFFSymbolType(COFF::IMAGE_SYM_DTYPE_FUNCTION
+    Asm->OutStreamer->emitCOFFSymbolStorageClass(COFF::IMAGE_SYM_CLASS_STATIC);
+    Asm->OutStreamer->emitCOFFSymbolType(COFF::IMAGE_SYM_DTYPE_FUNCTION
                                          << COFF::SCT_COMPLEX_TYPE_SHIFT);
     Asm->OutStreamer->EndCOFFSymbolDef();
 
@@ -223,7 +223,7 @@ void WinException::beginFunclet(const MachineBasicBlock &MBB,
   // Mark 'Sym' as starting our funclet.
   if (shouldEmitMoves || shouldEmitPersonality) {
     CurrentFuncletTextSection = Asm->OutStreamer->getCurrentSectionOnly();
-    Asm->OutStreamer->EmitWinCFIStartProc(Sym);
+    Asm->OutStreamer->emitWinCFIStartProc(Sym);
   }
 
   if (shouldEmitPersonality) {
@@ -242,7 +242,7 @@ void WinException::beginFunclet(const MachineBasicBlock &MBB,
     // inliner doesn't allow inlining them, this isn't a major problem in
     // practice.
     if (!CurrentFuncletEntry->isCleanupFuncletEntry())
-      Asm->OutStreamer->EmitWinEHHandler(PersHandlerSym, true, true);
+      Asm->OutStreamer->emitWinEHHandler(PersHandlerSym, true, true);
   }
 }
 
@@ -250,7 +250,7 @@ void WinException::endFunclet() {
   if (isAArch64 && CurrentFuncletEntry &&
       (shouldEmitMoves || shouldEmitPersonality)) {
     Asm->OutStreamer->SwitchSection(CurrentFuncletTextSection);
-    Asm->OutStreamer->EmitWinCFIFuncletOrFuncEnd();
+    Asm->OutStreamer->emitWinCFIFuncletOrFuncEnd();
   }
   endFuncletImpl();
 }
@@ -270,7 +270,7 @@ void WinException::endFuncletImpl() {
     if (Per == EHPersonality::MSVC_CXX && shouldEmitPersonality &&
         !CurrentFuncletEntry->isCleanupFuncletEntry()) {
       // Emit an UNWIND_INFO struct describing the prologue.
-      Asm->OutStreamer->EmitWinEHHandlerData();
+      Asm->OutStreamer->emitWinEHHandlerData();
 
       // If this is a C++ catch funclet (or the parent function),
       // emit a reference to the LSDA for the parent function.
@@ -281,14 +281,14 @@ void WinException::endFuncletImpl() {
     } else if (Per == EHPersonality::MSVC_TableSEH && MF->hasEHFunclets() &&
                !CurrentFuncletEntry->isEHFuncletEntry()) {
       // Emit an UNWIND_INFO struct describing the prologue.
-      Asm->OutStreamer->EmitWinEHHandlerData();
+      Asm->OutStreamer->emitWinEHHandlerData();
 
       // If this is the parent function in Win64 SEH, emit the LSDA immediately
       // following .seh_handlerdata.
       emitCSpecificHandlerTable(MF);
     } else if (shouldEmitPersonality || shouldEmitLSDA) {
       // Emit an UNWIND_INFO struct describing the prologue.
-      Asm->OutStreamer->EmitWinEHHandlerData();
+      Asm->OutStreamer->emitWinEHHandlerData();
       // In these cases, no further info is written to the .xdata section
       // right here, but is written by e.g. emitExceptionTable in endFunction()
       // above.
@@ -302,7 +302,7 @@ void WinException::endFuncletImpl() {
     // writing to .xdata, and emit an .seh_endproc directive to mark the end of
     // the function.
     Asm->OutStreamer->SwitchSection(CurrentFuncletTextSection);
-    Asm->OutStreamer->EmitWinCFIEndProc();
+    Asm->OutStreamer->emitWinCFIEndProc();
   }
 
   // Let's make sure we don't try to end the same funclet twice.

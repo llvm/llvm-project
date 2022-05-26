@@ -5097,7 +5097,7 @@ bool X86AsmParser::parseDirectiveSEHPushReg(SMLoc Loc) {
     return TokError("unexpected token in directive");
 
   getParser().Lex();
-  getStreamer().EmitWinCFIPushReg(Reg, Loc);
+  getStreamer().emitWinCFIPushReg(Reg, Loc);
   return false;
 }
 
@@ -5117,7 +5117,7 @@ bool X86AsmParser::parseDirectiveSEHSetFrame(SMLoc Loc) {
     return TokError("unexpected token in directive");
 
   getParser().Lex();
-  getStreamer().EmitWinCFISetFrame(Reg, Off, Loc);
+  getStreamer().emitWinCFISetFrame(Reg, Off, Loc);
   return false;
 }
 
@@ -5137,7 +5137,7 @@ bool X86AsmParser::parseDirectiveSEHSaveReg(SMLoc Loc) {
     return TokError("unexpected token in directive");
 
   getParser().Lex();
-  getStreamer().EmitWinCFISaveReg(Reg, Off, Loc);
+  getStreamer().emitWinCFISaveReg(Reg, Off, Loc);
   return false;
 }
 
@@ -5157,7 +5157,7 @@ bool X86AsmParser::parseDirectiveSEHSaveXMM(SMLoc Loc) {
     return TokError("unexpected token in directive");
 
   getParser().Lex();
-  getStreamer().EmitWinCFISaveXMM(Reg, Off, Loc);
+  getStreamer().emitWinCFISaveXMM(Reg, Off, Loc);
   return false;
 }
 
@@ -5178,7 +5178,7 @@ bool X86AsmParser::parseDirectiveSEHPushFrame(SMLoc Loc) {
     return TokError("unexpected token in directive");
 
   getParser().Lex();
-  getStreamer().EmitWinCFIPushFrame(Code, Loc);
+  getStreamer().emitWinCFIPushFrame(Code, Loc);
   return false;
 }
 
