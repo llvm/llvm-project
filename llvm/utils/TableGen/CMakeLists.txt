@@ -8,7 +8,6 @@ add_tablegen(llvm-tblgen LLVM
   AsmWriterInst.cpp
   Attributes.cpp
   CallingConvEmitter.cpp
-  CodeBeadsGen.cpp
   CodeEmitterGen.cpp
   CodeGenDAGPatterns.cpp
   CodeGenHwModes.cpp
