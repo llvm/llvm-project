@@ -1822,10 +1822,7 @@ public:
   OperandMatchResultTy parseEndpgmOp(OperandVector &Operands);
   AMDGPUOperand::Ptr defaultEndpgmImmOperands() const;
 
-  OperandMatchResultTy parseWaitVDST(OperandVector &Operands);
   AMDGPUOperand::Ptr defaultWaitVDST() const;
-
-  OperandMatchResultTy parseWaitEXP(OperandVector &Operands);
   AMDGPUOperand::Ptr defaultWaitEXP() const;
   OperandMatchResultTy parseVOPD(OperandVector &Operands);
 };
