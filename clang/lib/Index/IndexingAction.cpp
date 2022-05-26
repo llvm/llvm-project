@@ -11,6 +11,7 @@
 #include "FileIndexRecord.h"
 #include "IndexDataStoreUtils.h"
 #include "IndexingContext.h"
+#include "clang/Basic/PathRemapper.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Frontend/FrontendAction.h"
 #include "clang/Frontend/FrontendDiagnostic.h"
@@ -828,11 +829,18 @@ static void writeUnitData(const CompilerInstance &CI,
         return Mod;
     return nullptr;
   };
+  PathRemapper Remapper;
+  auto &PrefixMap = CI.getCodeGenOpts().DebugPrefixMap;
+  // We need to add in reverse order since the `DebugPrefixMap` currently sorts
+  // ascending instead of descending, but we want `foo/subpath/` to come before
+  // `foo/`.
+  for (auto It = PrefixMap.rbegin(); It != PrefixMap.rend(); ++It)
+    Remapper.addMapping(It->first, It->second);
 
   IndexUnitWriter UnitWriter(
       CI.getFileManager(), DataPath, "clang", getClangVersion(), OutputFile,
       ModuleName, RootFile, IsSystemUnit, IsModuleUnit, IsDebugCompilation,
-      CI.getTargetOpts().Triple, SysrootPath, getModuleInfo);
+      CI.getTargetOpts().Triple, SysrootPath, Remapper, getModuleInfo);
 
   DepProvider.visitFileDependencies(
       CI, [&](const FileEntry *FE, bool isSystemFile) {
