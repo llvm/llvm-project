@@ -127,11 +127,6 @@ bool shouldSkipTypedef(const TypedefNameDecl *TD) {
 //      template<class X> using pvec = vector<x*>; pvec<int> x;
 //    There's no Decl `pvec<int>`, we must choose `pvec<X>` or `vector<int*>`
 //    and both are lossy. We must know upfront what the caller ultimately wants.
-//
-// FIXME: improve common dependent scope using name lookup in primary templates.
-// We currently handle several dependent constructs, but some others remain to
-// be handled:
-//  - UnresolvedUsingTypenameDecl
 struct TargetFinder {
   using RelSet = DeclRelationSet;
   using Rel = DeclRelation;
@@ -207,6 +202,10 @@ public:
         }
       }
       Flags |= Rel::Alias; // continue with the alias
+    } else if (isa<UnresolvedUsingTypenameDecl>(D)) {
+      // FIXME: improve common dependent scope using name lookup in primary
+      // templates.
+      Flags |= Rel::Alias;
     } else if (const UsingShadowDecl *USD = dyn_cast<UsingShadowDecl>(D)) {
       // Include the Introducing decl, but don't traverse it. This may end up
       // including *all* shadows, which we don't want.
@@ -381,6 +380,9 @@ public:
         // FIXME: In practice this doesn't work: the AutoType you find inside
         // TypeLoc never has a deduced type. https://llvm.org/PR42914
         Outer.add(DT->getDeducedType(), Flags);
+      }
+      void VisitUnresolvedUsingType(const UnresolvedUsingType *UUT) {
+        Outer.add(UUT->getDecl(), Flags);
       }
       void VisitDeducedTemplateSpecializationType(
           const DeducedTemplateSpecializationType *DTST) {
