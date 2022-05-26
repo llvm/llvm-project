@@ -1,15 +1,20 @@
 ; RUN: opt %loadNPMPolly "-passes=polly-scop-printer" -disable-output < %s
-; RUN: FileCheck %s -input-file=scops.func.dot
+; RUN: FileCheck %s -input-file=scops.func_npm.dot
 ;
 ; Check that the ScopPrinter does not crash.
 ; ScopPrinter needs the ScopDetection pass, which should depend on
 ; ScalarEvolution transitively.
+;
+; FIXME: polly-scop-printer always prints to the same hardcoded filename
+;        scops.<functionname>.dot. If there is another test with the same
+;        function name and printing a dot file there will be a race condition
+;        when running tests in parallel.
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 
-define void @func(i32 %n, i32 %m, double* noalias nonnull %A) {
-; CHECK:      digraph "Scop Graph for 'func' function"
-; CHECK-NEXT: label="Scop Graph for 'func' function"
+define void @func_npm(i32 %n, i32 %m, double* noalias nonnull %A) {
+; CHECK:      digraph "Scop Graph for 'func_npm' function"
+; CHECK-NEXT: label="Scop Graph for 'func_npm' function"
 ; CHECK:      Node0x[[EntryID:.*]] [shape=record,label="{entry:\l  br label %outer.for\l}"];
 ; CHECK-NEXT: Node0x[[EntryID]] -> Node0x[[OUTER_FOR_ID:.*]];
 ; CHECK-NEXT: Node0x[[OUTER_FOR_ID]] [shape=record,label="{outer.for:
