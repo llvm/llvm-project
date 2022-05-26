@@ -122,6 +122,8 @@ public:
   }
 
   SourceLocation getBeginLoc() const LLVM_READONLY {
+    if (auto QualifierLoc = getNestedNameSpecifierLoc())
+      return QualifierLoc.getBeginLoc();
     return ConceptName.getBeginLoc();
   }
 

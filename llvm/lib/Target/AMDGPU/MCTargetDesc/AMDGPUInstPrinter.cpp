@@ -144,7 +144,7 @@ void AMDGPUInstPrinter::printFlatOffset(const MCInst *MI, unsigned OpNo,
     if (IsFlatSeg) { // Unsigned offset
       printU16ImmDecOperand(MI, OpNo, O);
     } else {         // Signed offset
-      if (AMDGPU::isGFX10Plus(STI)) {
+      if (AMDGPU::isGFX10(STI)) {
         O << formatDec(SignExtend32<12>(MI->getOperand(OpNo).getImm()));
       } else {
         O << formatDec(SignExtend32<13>(MI->getOperand(OpNo).getImm()));
@@ -605,6 +605,17 @@ void AMDGPUInstPrinter::printWaitVDST(const MCInst *MI, unsigned OpNo,
   }
 }
 
+void AMDGPUInstPrinter::printWaitEXP(const MCInst *MI, unsigned OpNo,
+                                    const MCSubtargetInfo &STI,
+                                    raw_ostream &O) {
+  uint8_t Imm = MI->getOperand(OpNo).getImm();
+  if (Imm != 0) {
+    O << " wait_exp:";
+    printU4ImmDecOperand(MI, OpNo, O);
+  }
+}
+
+// Print default vcc/vcc_lo operand of VOPC.
 void AMDGPUInstPrinter::printOperand(const MCInst *MI, unsigned OpNo,
                                      const MCSubtargetInfo &STI,
                                      raw_ostream &O) {

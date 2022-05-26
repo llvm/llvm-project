@@ -10,7 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-class EXPe_vi : EXPe {
+class EXPe_vi : EXPe_ComprVM {
   let Inst{31-26} = 0x31; //encoding
 }
 
