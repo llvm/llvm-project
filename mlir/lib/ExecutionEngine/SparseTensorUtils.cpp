@@ -885,7 +885,7 @@ private:
       const uint64_t pstop = static_cast<uint64_t>(pointers_d[parentPos + 1]);
       // Loop-invariant code for looking up the `d`-level coordinates/indices.
       const std::vector<I> &indices_d = src.indices[d];
-      assert(pstop - 1 < indices_d.size() && "Index position is out of bounds");
+      assert(pstop <= indices_d.size() && "Index position is out of bounds");
       uint64_t &cursor_reord_d = this->cursor[this->reord[d]];
       for (uint64_t pos = pstart; pos < pstop; pos++) {
         cursor_reord_d = static_cast<uint64_t>(indices_d[pos]);
