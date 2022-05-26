@@ -7,9 +7,12 @@
 
 # CHECK:      d1
 # CHECK-NEXT: 0 8
+# CHECK-NEXT: ??:?
 # CHECK-EMPTY:
 # CHECK-NEXT: d2
 # CHECK-NEXT: 8 4
+# CHECK-NEXT: ??:?
+# CHECK-EMPTY:
 
 d1:
     .quad 0x1122334455667788

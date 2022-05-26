@@ -64,6 +64,13 @@ DILineInfo PDBContext::getLineInfoForAddress(object::SectionedAddress Address,
   return Result;
 }
 
+DILineInfo
+PDBContext::getLineInfoForDataAddress(object::SectionedAddress Address) {
+  // Unimplemented. S_GDATA and S_LDATA in CodeView (used to describe global
+  // variables) aren't capable of carrying line information.
+  return DILineInfo();
+}
+
 DILineInfoTable
 PDBContext::getLineInfoForAddressRange(object::SectionedAddress Address,
                                        uint64_t Size,
