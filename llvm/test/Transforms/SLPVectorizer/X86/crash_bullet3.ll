@@ -36,17 +36,15 @@ define void @_ZN11HullLibrary15CleanupVerticesEjPK9btVector3jRjPS0_fRS0_(%class.
 ; CHECK:       if.then325:
 ; CHECK-NEXT:    br label [[IF_END327]]
 ; CHECK:       if.end327:
-; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <2 x float> [[TMP1]], i32 0
-; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <2 x float> <float poison, float undef>, float [[TMP4]], i32 0
 ; CHECK-NEXT:    br i1 undef, label [[IF_THEN329:%.*]], label [[IF_END332]]
 ; CHECK:       if.then329:
 ; CHECK-NEXT:    br label [[IF_END332]]
 ; CHECK:       if.end332:
-; CHECK-NEXT:    [[TMP6:%.*]] = phi <2 x float> [ [[TMP5]], [[IF_THEN329]] ], [ [[TMP5]], [[IF_END327]] ], [ <float 0x3F847AE140000000, float 0x3F847AE140000000>, [[IF_THEN291]] ]
-; CHECK-NEXT:    [[TMP7:%.*]] = fsub <2 x float> [[TMP3]], [[TMP6]]
+; CHECK-NEXT:    [[TMP4:%.*]] = phi <2 x float> [ [[TMP1]], [[IF_THEN329]] ], [ [[TMP1]], [[IF_END327]] ], [ <float 0x3F847AE140000000, float 0x3F847AE140000000>, [[IF_THEN291]] ]
+; CHECK-NEXT:    [[TMP5:%.*]] = fsub <2 x float> [[TMP3]], [[TMP4]]
 ; CHECK-NEXT:    [[ARRAYIDX_I_I606:%.*]] = getelementptr inbounds [[CLASS_BTVECTOR3_23_221_463_485_507_573_595_683_727_749_815_837_991_1585_1607_1629_1651_1849_2047_2069_2091_2113:%.*]], %class.btVector3.23.221.463.485.507.573.595.683.727.749.815.837.991.1585.1607.1629.1651.1849.2047.2069.2091.2113* [[VERTICES:%.*]], i64 0, i32 0, i64 0
-; CHECK-NEXT:    [[TMP8:%.*]] = bitcast float* [[ARRAYIDX_I_I606]] to <2 x float>*
-; CHECK-NEXT:    store <2 x float> [[TMP7]], <2 x float>* [[TMP8]], align 4
+; CHECK-NEXT:    [[TMP6:%.*]] = bitcast float* [[ARRAYIDX_I_I606]] to <2 x float>*
+; CHECK-NEXT:    store <2 x float> [[TMP5]], <2 x float>* [[TMP6]], align 4
 ; CHECK-NEXT:    br label [[RETURN]]
 ; CHECK:       return:
 ; CHECK-NEXT:    ret void
