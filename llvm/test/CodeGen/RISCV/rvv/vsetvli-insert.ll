@@ -521,6 +521,20 @@ declare { <vscale x 1 x i64>, i64 } @llvm.riscv.vleff.nxv1i64.i64(
 declare <vscale x 1 x i1> @llvm.riscv.vmseq.nxv1i64.i64.i64(
   <vscale x 1 x i64>, i64, i64)
 
+; Ensure AVL register is alive when forwarding an AVL immediate that does not fit in 5 bits
+define <vscale x 2 x i32> @avl_forward5(<vscale x 2 x i32>* %addr) {
+; CHECK-LABEL: avl_forward5:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    li a1, 32
+; CHECK-NEXT:    vsetvli zero, a1, e8, m4, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e32, m1, ta, mu
+; CHECK-NEXT:    vle32.v v8, (a0)
+; CHECK-NEXT:    ret
+  %gvl = tail call i64 @llvm.riscv.vsetvli.i64(i64 32, i64 0, i64 2)
+  %ret = tail call <vscale x 2 x i32> @llvm.riscv.vle.nxv2i32.i64(<vscale x 2 x i32> undef, <vscale x 2 x i32>* %addr, i64 %gvl)
+  ret <vscale x 2 x i32> %ret
+}
+
 declare <vscale x 1 x i64> @llvm.riscv.vadd.mask.nxv1i64.nxv1i64(
   <vscale x 1 x i64>,
   <vscale x 1 x i64>,
