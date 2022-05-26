@@ -4975,9 +4975,13 @@ static bool checkNestingOfRegions(Sema &SemaRef, const DSAStackTy *Stack,
       // omp_get_num_teams() regions, and omp_get_team_num() regions are the
       // only OpenMP regions that may be strictly nested inside the teams
       // region.
+      //
+      // As an extension, we permit atomic within teams as well.
       NestingProhibited = !isOpenMPParallelDirective(CurrentRegion) &&
                           !isOpenMPDistributeDirective(CurrentRegion) &&
-                          CurrentRegion != OMPD_loop;
+                          CurrentRegion != OMPD_loop &&
+                          !(SemaRef.getLangOpts().OpenMPExtensions &&
+                            CurrentRegion == OMPD_atomic);
       Recommend = ShouldBeInParallelRegion;
     }
     if (!NestingProhibited && CurrentRegion == OMPD_loop) {
