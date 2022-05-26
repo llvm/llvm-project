@@ -6668,23 +6668,6 @@ static bool isFirstInsertElement(const InsertElementInst *IE1,
   llvm_unreachable("Two different buildvectors not expected.");
 }
 
-namespace {
-/// Returns incoming Value *, if the requested type is Value * too, or a default
-/// value, otherwise.
-struct ValueSelect {
-  template <typename U>
-  static typename std::enable_if<std::is_same<Value *, U>::value, Value *>::type
-  get(Value *V) {
-    return V;
-  }
-  template <typename U>
-  static typename std::enable_if<!std::is_same<Value *, U>::value, U>::type
-  get(Value *) {
-    return U();
-  }
-};
-} // namespace
-
 /// Does the analysis of the provided shuffle masks and performs the requested
 /// actions on the vectors with the given shuffle masks. It tries to do it in
 /// several steps.
@@ -6717,10 +6700,6 @@ static T *performExtractsShuffleAction(
       else
         Mask[Idx] = (Res.second ? Idx : Mask[Idx]) + VF;
     }
-    auto *V = ValueSelect::get<T *>(Base);
-    (void)V;
-    assert((!V || GetVF(V) == Mask.size()) &&
-           "Expected base vector of VF number of elements.");
     Prev = Action(Mask, {nullptr, Res.first});
   } else if (ShuffleMask.size() == 1) {
     // Base is undef and only 1 vector is shuffled - perform the action only for
@@ -8126,17 +8105,6 @@ Value *BoUpSLP::vectorizeTree() {
   return vectorizeTree(ExternallyUsedValues);
 }
 
-namespace {
-/// Data type for handling buildvector sequences with the reused scalars from
-/// other tree entries.
-struct ShuffledInsertData {
-  /// List of insertelements to be replaced by shuffles.
-  SmallVector<InsertElementInst *> InsertElements;
-  /// The parent vectors and shuffle mask for the given list of inserts.
-  MapVector<Value *, SmallVector<int>> ValueMasks;
-};
-} // namespace
-
 Value *
 BoUpSLP::vectorizeTree(ExtraValueToDebugLocsMap &ExternallyUsedValues) {
   // All blocks must be scheduled before any instructions are inserted.
@@ -8170,9 +8138,6 @@ BoUpSLP::vectorizeTree(ExtraValueToDebugLocsMap &ExternallyUsedValues) {
   LLVM_DEBUG(dbgs() << "SLP: Extracting " << ExternalUses.size()
                     << " values .\n");
 
-  SmallVector<ShuffledInsertData> ShuffledInserts;
-  // Maps vector instruction to original insertelement instruction
-  DenseMap<Value *, InsertElementInst *> VectorToInsertElement;
   // Extract all of the elements with the external uses.
   for (const auto &ExternalUse : ExternalUses) {
     Value *Scalar = ExternalUse.Scalar;
@@ -8212,8 +8177,6 @@ BoUpSLP::vectorizeTree(ExtraValueToDebugLocsMap &ExternallyUsedValues) {
       assert(isa<FixedVectorType>(Scalar->getType()) &&
              isa<InsertElementInst>(Scalar) &&
              "In-tree scalar of vector type is not insertelement?");
-      auto *IE = cast<InsertElementInst>(Scalar);
-      VectorToInsertElement.try_emplace(Vec, IE);
       return Vec;
     };
     // If User == nullptr, the Scalar is used as extra arg. Generate
@@ -8240,64 +8203,6 @@ BoUpSLP::vectorizeTree(ExtraValueToDebugLocsMap &ExternallyUsedValues) {
       // Required to update internally referenced instructions.
       Scalar->replaceAllUsesWith(NewInst);
       continue;
-    }
-
-    if (auto *VU = dyn_cast<InsertElementInst>(User)) {
-      if (!Scalar->getType()->isVectorTy()) {
-        if (auto *FTy = dyn_cast<FixedVectorType>(User->getType())) {
-          Optional<unsigned> InsertIdx = getInsertIndex(VU);
-          if (InsertIdx) {
-            auto *It =
-                find_if(ShuffledInserts, [VU](const ShuffledInsertData &Data) {
-                  // Checks if 2 insertelements are from the same buildvector.
-                  InsertElementInst *VecInsert = Data.InsertElements.front();
-                  return areTwoInsertFromSameBuildVector(VU, VecInsert);
-                });
-            unsigned Idx = *InsertIdx;
-            if (It == ShuffledInserts.end()) {
-              (void)ShuffledInserts.emplace_back();
-              It = std::next(ShuffledInserts.begin(),
-                             ShuffledInserts.size() - 1);
-              SmallVectorImpl<int> &Mask = It->ValueMasks[Vec];
-              if (Mask.empty())
-                Mask.assign(FTy->getNumElements(), UndefMaskElem);
-              // Find the insertvector, vectorized in tree, if any.
-              Value *Base = VU;
-              while (auto *IEBase = dyn_cast<InsertElementInst>(Base)) {
-                if (IEBase != User &&
-                    (!IEBase->hasOneUse() ||
-                     getInsertIndex(IEBase).getValueOr(Idx) == Idx))
-                  break;
-                // Build the mask for the vectorized insertelement instructions.
-                if (const TreeEntry *E = getTreeEntry(IEBase)) {
-                  do {
-                    IEBase = cast<InsertElementInst>(Base);
-                    int IEIdx = *getInsertIndex(IEBase);
-                    assert(Mask[Idx] == UndefMaskElem &&
-                           "InsertElementInstruction used already.");
-                    Mask[IEIdx] = IEIdx;
-                    Base = IEBase->getOperand(0);
-                  } while (E == getTreeEntry(Base));
-                  break;
-                }
-                Base = cast<InsertElementInst>(Base)->getOperand(0);
-                // After the vectorization the def-use chain has changed, need
-                // to look through original insertelement instructions, if they
-                // get replaced by vector instructions.
-                auto It = VectorToInsertElement.find(Base);
-                if (It != VectorToInsertElement.end())
-                  Base = It->second;
-              }
-            }
-            SmallVectorImpl<int> &Mask = It->ValueMasks[Vec];
-            if (Mask.empty())
-              Mask.assign(FTy->getNumElements(), UndefMaskElem);
-            Mask[Idx] = ExternalUse.Lane;
-            It->InsertElements.push_back(cast<InsertElementInst>(User));
-            continue;
-          }
-        }
-      }
     }
 
     // Generate extracts for out-of-tree users.
@@ -8333,219 +8238,6 @@ BoUpSLP::vectorizeTree(ExtraValueToDebugLocsMap &ExternallyUsedValues) {
     }
 
     LLVM_DEBUG(dbgs() << "SLP: Replaced:" << *User << ".\n");
-  }
-
-  // Checks if the mask is an identity mask.
-  auto &&IsIdentityMask = [](ArrayRef<int> Mask, FixedVectorType *VecTy) {
-    int Limit = Mask.size();
-    return VecTy->getNumElements() == Mask.size() &&
-           all_of(Mask, [Limit](int Idx) { return Idx < Limit; }) &&
-           ShuffleVectorInst::isIdentityMask(Mask);
-  };
-  // Tries to combine 2 different masks into single one.
-  auto &&CombineMasks = [](SmallVectorImpl<int> &Mask, ArrayRef<int> ExtMask) {
-    SmallVector<int> NewMask(ExtMask.size(), UndefMaskElem);
-    for (int I = 0, Sz = ExtMask.size(); I < Sz; ++I) {
-      if (ExtMask[I] == UndefMaskElem)
-        continue;
-      NewMask[I] = Mask[ExtMask[I]];
-    }
-    Mask.swap(NewMask);
-  };
-  // Peek through shuffles, trying to simplify the final shuffle code.
-  auto &&PeekThroughShuffles =
-      [&IsIdentityMask, &CombineMasks](Value *&V, SmallVectorImpl<int> &Mask,
-                                       bool CheckForLengthChange = false) {
-        while (auto *SV = dyn_cast<ShuffleVectorInst>(V)) {
-          // Exit if not a fixed vector type or changing size shuffle.
-          if (!isa<FixedVectorType>(SV->getType()) ||
-              (CheckForLengthChange && SV->changesLength()))
-            break;
-          // Exit if the identity or broadcast mask is found.
-          if (IsIdentityMask(Mask, cast<FixedVectorType>(SV->getType())) ||
-              SV->isZeroEltSplat())
-            break;
-          bool IsOp1Undef = isUndefVector(SV->getOperand(0));
-          bool IsOp2Undef = isUndefVector(SV->getOperand(1));
-          if (!IsOp1Undef && !IsOp2Undef)
-            break;
-          SmallVector<int> ShuffleMask(SV->getShuffleMask().begin(),
-                                       SV->getShuffleMask().end());
-          CombineMasks(ShuffleMask, Mask);
-          Mask.swap(ShuffleMask);
-          if (IsOp2Undef)
-            V = SV->getOperand(0);
-          else
-            V = SV->getOperand(1);
-        }
-      };
-  // Smart shuffle instruction emission, walks through shuffles trees and
-  // tries to find the best matching vector for the actual shuffle
-  // instruction.
-  auto &&CreateShuffle = [this, &IsIdentityMask, &PeekThroughShuffles,
-                          &CombineMasks](Value *V1, Value *V2,
-                                         ArrayRef<int> Mask) -> Value * {
-    assert(V1 && "Expected at least one vector value.");
-    if (V2 && !isUndefVector(V2)) {
-      // Peek through shuffles.
-      Value *Op1 = V1;
-      Value *Op2 = V2;
-      int VF =
-          cast<VectorType>(V1->getType())->getElementCount().getKnownMinValue();
-      SmallVector<int> CombinedMask1(Mask.size(), UndefMaskElem);
-      SmallVector<int> CombinedMask2(Mask.size(), UndefMaskElem);
-      for (int I = 0, E = Mask.size(); I < E; ++I) {
-        if (Mask[I] < VF)
-          CombinedMask1[I] = Mask[I];
-        else
-          CombinedMask2[I] = Mask[I] - VF;
-      }
-      Value *PrevOp1;
-      Value *PrevOp2;
-      do {
-        PrevOp1 = Op1;
-        PrevOp2 = Op2;
-        PeekThroughShuffles(Op1, CombinedMask1, /*CheckForLengthChange=*/true);
-        PeekThroughShuffles(Op2, CombinedMask2, /*CheckForLengthChange=*/true);
-        // Check if we have 2 resizing shuffles - need to peek through operands
-        // again.
-        if (auto *SV1 = dyn_cast<ShuffleVectorInst>(Op1))
-          if (auto *SV2 = dyn_cast<ShuffleVectorInst>(Op2))
-            if (SV1->getOperand(0)->getType() ==
-                    SV2->getOperand(0)->getType() &&
-                SV1->getOperand(0)->getType() != SV1->getType() &&
-                isUndefVector(SV1->getOperand(1)) &&
-                isUndefVector(SV2->getOperand(1))) {
-              Op1 = SV1->getOperand(0);
-              Op2 = SV2->getOperand(0);
-              SmallVector<int> ShuffleMask1(SV1->getShuffleMask().begin(),
-                                            SV1->getShuffleMask().end());
-              CombineMasks(ShuffleMask1, CombinedMask1);
-              CombinedMask1.swap(ShuffleMask1);
-              SmallVector<int> ShuffleMask2(SV2->getShuffleMask().begin(),
-                                            SV2->getShuffleMask().end());
-              CombineMasks(ShuffleMask2, CombinedMask2);
-              CombinedMask2.swap(ShuffleMask2);
-            }
-      } while (PrevOp1 != Op1 || PrevOp2 != Op2);
-      VF = cast<VectorType>(Op1->getType())
-               ->getElementCount()
-               .getKnownMinValue();
-      for (int I = 0, E = Mask.size(); I < E; ++I) {
-        if (CombinedMask2[I] != UndefMaskElem) {
-          assert(CombinedMask1[I] == UndefMaskElem &&
-                 "Expected undefined mask element");
-          CombinedMask1[I] = CombinedMask2[I] + (Op1 == Op2 ? 0 : VF);
-        }
-      }
-      Value *Vec = Builder.CreateShuffleVector(
-          Op1, Op1 == Op2 ? PoisonValue::get(Op1->getType()) : Op2,
-          CombinedMask1);
-      if (auto *I = dyn_cast<Instruction>(Vec)) {
-        GatherShuffleSeq.insert(I);
-        CSEBlocks.insert(I->getParent());
-      }
-      return Vec;
-    }
-    if (isa<PoisonValue>(V1))
-      return PoisonValue::get(FixedVectorType::get(
-          cast<VectorType>(V1->getType())->getElementType(), Mask.size()));
-    Value *Op = V1;
-    SmallVector<int> CombinedMask(Mask.begin(), Mask.end());
-    PeekThroughShuffles(Op, CombinedMask);
-    if (!isa<FixedVectorType>(Op->getType()) ||
-        !IsIdentityMask(CombinedMask, cast<FixedVectorType>(Op->getType()))) {
-      Value *Vec = Builder.CreateShuffleVector(Op, CombinedMask);
-      if (auto *I = dyn_cast<Instruction>(Vec)) {
-        GatherShuffleSeq.insert(I);
-        CSEBlocks.insert(I->getParent());
-      }
-      return Vec;
-    }
-    return Op;
-  };
-
-  auto &&ResizeToVF = [&CreateShuffle](Value *Vec, ArrayRef<int> Mask) {
-    unsigned VF = Mask.size();
-    unsigned VecVF = cast<FixedVectorType>(Vec->getType())->getNumElements();
-    if (VF != VecVF) {
-      if (any_of(Mask, [VF](int Idx) { return Idx >= static_cast<int>(VF); })) {
-        Vec = CreateShuffle(Vec, nullptr, Mask);
-        return std::make_pair(Vec, true);
-      }
-      SmallVector<int> ResizeMask(VF, UndefMaskElem);
-      for (unsigned I = 0; I < VF; ++I) {
-        if (Mask[I] != UndefMaskElem)
-          ResizeMask[Mask[I]] = Mask[I];
-      }
-      Vec = CreateShuffle(Vec, nullptr, ResizeMask);
-    }
-
-    return std::make_pair(Vec, false);
-  };
-  // Perform shuffling of the vectorize tree entries for better handling of
-  // external extracts.
-  for (int I = 0, E = ShuffledInserts.size(); I < E; ++I) {
-    // Find the first and the last instruction in the list of insertelements.
-    sort(ShuffledInserts[I].InsertElements, isFirstInsertElement);
-    InsertElementInst *FirstInsert = ShuffledInserts[I].InsertElements.front();
-    InsertElementInst *LastInsert = ShuffledInserts[I].InsertElements.back();
-    Builder.SetInsertPoint(LastInsert);
-    auto Vector = ShuffledInserts[I].ValueMasks.takeVector();
-    Value *NewInst = performExtractsShuffleAction<Value>(
-        makeMutableArrayRef(Vector.data(), Vector.size()),
-        FirstInsert->getOperand(0),
-        [](Value *Vec) {
-          return cast<VectorType>(Vec->getType())
-              ->getElementCount()
-              .getKnownMinValue();
-        },
-        ResizeToVF,
-        [FirstInsert, &CreateShuffle](ArrayRef<int> Mask,
-                                      ArrayRef<Value *> Vals) {
-          assert((Vals.size() == 1 || Vals.size() == 2) &&
-                 "Expected exactly 1 or 2 input values.");
-          if (Vals.size() == 1) {
-            // Do not create shuffle if the mask is a simple identity
-            // non-resizing mask.
-            if (Mask.size() != cast<FixedVectorType>(Vals.front()->getType())
-                                   ->getNumElements() ||
-                !ShuffleVectorInst::isIdentityMask(Mask))
-              return CreateShuffle(Vals.front(), nullptr, Mask);
-            return Vals.front();
-          }
-          return CreateShuffle(Vals.front() ? Vals.front()
-                                            : FirstInsert->getOperand(0),
-                               Vals.back(), Mask);
-        });
-    auto It = ShuffledInserts[I].InsertElements.rbegin();
-    // Rebuild buildvector chain.
-    InsertElementInst *II = nullptr;
-    if (It != ShuffledInserts[I].InsertElements.rend())
-      II = *It;
-    SmallVector<Instruction *> Inserts;
-    while (It != ShuffledInserts[I].InsertElements.rend()) {
-      assert(II && "Must be an insertelement instruction.");
-      if (*It == II)
-        ++It;
-      else
-        Inserts.push_back(cast<Instruction>(II));
-      II = dyn_cast<InsertElementInst>(II->getOperand(0));
-    }
-    for (Instruction *II : reverse(Inserts)) {
-      II->replaceUsesOfWith(II->getOperand(0), NewInst);
-      if (auto *NewI = dyn_cast<Instruction>(NewInst))
-        if (II->getParent() == NewI->getParent() && II->comesBefore(NewI))
-          II->moveAfter(NewI);
-      NewInst = II;
-    }
-    LastInsert->replaceAllUsesWith(NewInst);
-    for (InsertElementInst *IE : reverse(ShuffledInserts[I].InsertElements)) {
-      IE->replaceUsesOfWith(IE->getOperand(1),
-                            PoisonValue::get(IE->getOperand(1)->getType()));
-      eraseInstruction(IE);
-    }
-    CSEBlocks.insert(LastInsert->getParent());
   }
 
   // For each vectorized value:

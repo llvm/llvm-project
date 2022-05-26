@@ -474,9 +474,12 @@ define <4 x float> @reschedule_extract(<4 x float> %a, <4 x float> %b) {
 ; NOTHRESHOLD-NEXT:    ret <4 x float> [[TMP1]]
 ;
 ; MINTREESIZE-LABEL: @reschedule_extract(
-; MINTREESIZE-NEXT:    [[TMP1:%.*]] = shufflevector <4 x float> [[A:%.*]], <4 x float> [[B:%.*]], <2 x i32> <i32 3, i32 7>
-; MINTREESIZE-NEXT:    [[TMP2:%.*]] = fadd <4 x float> [[A]], [[B]]
-; MINTREESIZE-NEXT:    ret <4 x float> [[TMP2]]
+; MINTREESIZE-NEXT:    [[TMP1:%.*]] = extractelement <4 x float> [[B:%.*]], i32 3
+; MINTREESIZE-NEXT:    [[TMP2:%.*]] = extractelement <4 x float> [[A:%.*]], i32 3
+; MINTREESIZE-NEXT:    [[TMP3:%.*]] = insertelement <2 x float> poison, float [[TMP2]], i32 0
+; MINTREESIZE-NEXT:    [[TMP4:%.*]] = insertelement <2 x float> [[TMP3]], float [[TMP1]], i32 1
+; MINTREESIZE-NEXT:    [[TMP5:%.*]] = fadd <4 x float> [[A]], [[B]]
+; MINTREESIZE-NEXT:    ret <4 x float> [[TMP5]]
 ;
   %a0 = extractelement <4 x float> %a, i32 0
   %b0 = extractelement <4 x float> %b, i32 0
@@ -509,9 +512,12 @@ define <4 x float> @take_credit(<4 x float> %a, <4 x float> %b) {
 ; NOTHRESHOLD-NEXT:    ret <4 x float> [[TMP1]]
 ;
 ; MINTREESIZE-LABEL: @take_credit(
-; MINTREESIZE-NEXT:    [[TMP1:%.*]] = shufflevector <4 x float> [[A:%.*]], <4 x float> [[B:%.*]], <2 x i32> <i32 3, i32 7>
-; MINTREESIZE-NEXT:    [[TMP2:%.*]] = fadd <4 x float> [[A]], [[B]]
-; MINTREESIZE-NEXT:    ret <4 x float> [[TMP2]]
+; MINTREESIZE-NEXT:    [[TMP1:%.*]] = extractelement <4 x float> [[B:%.*]], i32 3
+; MINTREESIZE-NEXT:    [[TMP2:%.*]] = extractelement <4 x float> [[A:%.*]], i32 3
+; MINTREESIZE-NEXT:    [[TMP3:%.*]] = insertelement <2 x float> poison, float [[TMP2]], i32 0
+; MINTREESIZE-NEXT:    [[TMP4:%.*]] = insertelement <2 x float> [[TMP3]], float [[TMP1]], i32 1
+; MINTREESIZE-NEXT:    [[TMP5:%.*]] = fadd <4 x float> [[A]], [[B]]
+; MINTREESIZE-NEXT:    ret <4 x float> [[TMP5]]
 ;
   %a0 = extractelement <4 x float> %a, i32 0
   %b0 = extractelement <4 x float> %b, i32 0
@@ -568,9 +574,12 @@ define <8 x float> @_vadd256(<8 x float> %a, <8 x float> %b) local_unnamed_addr 
 ; NOTHRESHOLD-NEXT:    ret <8 x float> [[TMP1]]
 ;
 ; MINTREESIZE-LABEL: @_vadd256(
-; MINTREESIZE-NEXT:    [[TMP1:%.*]] = shufflevector <8 x float> [[A:%.*]], <8 x float> [[B:%.*]], <2 x i32> <i32 7, i32 15>
-; MINTREESIZE-NEXT:    [[TMP2:%.*]] = fadd <8 x float> [[A]], [[B]]
-; MINTREESIZE-NEXT:    ret <8 x float> [[TMP2]]
+; MINTREESIZE-NEXT:    [[TMP1:%.*]] = extractelement <8 x float> [[B:%.*]], i32 7
+; MINTREESIZE-NEXT:    [[TMP2:%.*]] = extractelement <8 x float> [[A:%.*]], i32 7
+; MINTREESIZE-NEXT:    [[TMP3:%.*]] = insertelement <2 x float> poison, float [[TMP2]], i32 0
+; MINTREESIZE-NEXT:    [[TMP4:%.*]] = insertelement <2 x float> [[TMP3]], float [[TMP1]], i32 1
+; MINTREESIZE-NEXT:    [[TMP5:%.*]] = fadd <8 x float> [[A]], [[B]]
+; MINTREESIZE-NEXT:    ret <8 x float> [[TMP5]]
 ;
   %vecext = extractelement <8 x float> %a, i32 0
   %vecext1 = extractelement <8 x float> %b, i32 0
