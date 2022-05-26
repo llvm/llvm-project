@@ -147,7 +147,13 @@ _Static_assert(__builtin_types_compatible_p(struct S { int a; }, union U { int a
 void dr031(int i) {
   switch (i) {
   case __INT_MAX__ + 1: break; /* expected-warning {{overflow in expression; result is -2147483648 with type 'int'}} */
+  #pragma clang diagnostic push
+  #pragma clang diagnostic ignored "-Wswitch"
+  /* Silence the targets which issue:
+   * warning: overflow converting case value to switch condition type (2147483649 to 18446744071562067969)
+   */
   case __INT_MAX__ + 2ul: break;
+  #pragma clang diagnostic pop
   case (__INT_MAX__ * 4) / 4: break; /* expected-warning {{overflow in expression; result is -4 with type 'int'}} */
   }
 }
@@ -158,4 +164,4 @@ void dr031(int i) {
  * This should issue a diagnostic because a constant-expression is a
  * conditional-expression, which excludes the comma operator.
  */
-int dr032 = (1, 2);
+int dr032 = (1, 2); /* expected-warning {{left operand of comma operator has no effect}} */
