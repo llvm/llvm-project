@@ -10,6 +10,8 @@
 
 #include "Procfs.h"
 
+#include "Plugins/Process/POSIX/ProcessPOSIXLog.h"
+
 using namespace lldb;
 using namespace lldb_private;
 using namespace process_linux;
@@ -46,7 +48,8 @@ Expected<IntelPTMultiCoreTraceUP> IntelPTMultiCoreTrace::StartOnAllCores(
   llvm::DenseMap<core_id_t, IntelPTSingleBufferTraceUP> buffers;
   for (core_id_t core_id : *core_ids) {
     if (Expected<IntelPTSingleBufferTraceUP> core_trace =
-            IntelPTSingleBufferTrace::Start(request, /*tid=*/None, core_id))
+            IntelPTSingleBufferTrace::Start(request, /*tid=*/None, core_id,
+                                            TraceCollectionState::Paused))
       buffers.try_emplace(core_id, std::move(*core_trace));
     else
       return IncludePerfEventParanoidMessageInError(core_trace.takeError());
@@ -56,9 +59,38 @@ Expected<IntelPTMultiCoreTraceUP> IntelPTMultiCoreTrace::StartOnAllCores(
 }
 
 void IntelPTMultiCoreTrace::ForEachCore(
-    std::function<void(core_id_t core_id,
-                       const IntelPTSingleBufferTrace &core_trace)>
+    std::function<void(core_id_t core_id, IntelPTSingleBufferTrace &core_trace)>
         callback) {
   for (auto &it : m_traces_per_core)
     callback(it.first, *it.second);
+}
+
+void IntelPTMultiCoreTrace::OnProcessStateChanged(lldb::StateType state) {
+  if (m_process_state == state)
+    return;
+  switch (state) {
+  case eStateStopped:
+  case eStateExited: {
+    ForEachCore([](core_id_t core_id, IntelPTSingleBufferTrace &core_trace) {
+      if (Error err =
+              core_trace.ChangeCollectionState(TraceCollectionState::Paused)) {
+        LLDB_LOG_ERROR(GetLog(POSIXLog::Trace), std::move(err),
+                       "Unable to pause the core trace for core {0}", core_id);
+      }
+    });
+    break;
+  }
+  case eStateRunning: {
+    ForEachCore([](core_id_t core_id, IntelPTSingleBufferTrace &core_trace) {
+      if (Error err =
+              core_trace.ChangeCollectionState(TraceCollectionState::Running)) {
+        LLDB_LOG_ERROR(GetLog(POSIXLog::Trace), std::move(err),
+                       "Unable to resume the core trace for core {0}", core_id);
+      }
+    });
+    break;
+  }
+  default:
+    break;
+  }
 }

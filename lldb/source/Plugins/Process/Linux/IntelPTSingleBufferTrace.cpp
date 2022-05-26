@@ -18,7 +18,6 @@
 #include <sstream>
 
 #include <linux/perf_event.h>
-#include <sys/ioctl.h>
 #include <sys/syscall.h>
 #include <unistd.h>
 
@@ -209,29 +208,48 @@ size_t IntelPTSingleBufferTrace::GetTraceBufferSize() const {
   return m_perf_event.GetAuxBuffer().size();
 }
 
+Error IntelPTSingleBufferTrace::ChangeCollectionState(
+    TraceCollectionState new_state) {
+  if (new_state == m_collection_state)
+    return Error::success();
+
+  switch (new_state) {
+  case TraceCollectionState::Paused:
+    if (Error err = m_perf_event.DisableWithIoctl())
+      return err;
+    break;
+  case TraceCollectionState::Running:
+    if (Error err = m_perf_event.EnableWithIoctl())
+      return err;
+    break;
+  }
+  m_collection_state = new_state;
+  return Error::success();
+}
+
 Expected<std::vector<uint8_t>>
-IntelPTSingleBufferTrace::GetTraceBuffer(size_t offset, size_t size) const {
-  auto fd = m_perf_event.GetFd();
-  perf_event_mmap_page &mmap_metadata = m_perf_event.GetMetadataPage();
+IntelPTSingleBufferTrace::GetTraceBuffer(size_t offset, size_t size) {
   // Disable the perf event to force a flush out of the CPU's internal buffer.
   // Besides, we can guarantee that the CPU won't override any data as we are
   // reading the buffer.
-  //
   // The Intel documentation says:
   //
-  // Packets are first buffered internally and then written out asynchronously.
-  // To collect packet output for postprocessing, a collector needs first to
-  // ensure that all packet data has been flushed from internal buffers.
-  // Software can ensure this by stopping packet generation by clearing
-  // IA32_RTIT_CTL.TraceEn (see “Disabling Packet Generation” in
+  // Packets are first buffered internally and then written out
+  // asynchronously. To collect packet output for postprocessing, a collector
+  // needs first to ensure that all packet data has been flushed from internal
+  // buffers. Software can ensure this by stopping packet generation by
+  // clearing IA32_RTIT_CTL.TraceEn (see “Disabling Packet Generation” in
   // Section 35.2.7.2).
   //
-  // This is achieved by the PERF_EVENT_IOC_DISABLE ioctl request, as mentioned
-  // in the man page of perf_event_open.
-  ioctl(fd, PERF_EVENT_IOC_DISABLE);
+  // This is achieved by the PERF_EVENT_IOC_DISABLE ioctl request, as
+  // mentioned in the man page of perf_event_open.
+  TraceCollectionState previous_state = m_collection_state;
+  if (Error err = ChangeCollectionState(TraceCollectionState::Paused))
+    return std::move(err);
 
+  std::vector<uint8_t> data(size, 0);
+  perf_event_mmap_page &mmap_metadata = m_perf_event.GetMetadataPage();
   Log *log = GetLog(POSIXLog::Trace);
-  Status error;
   uint64_t head = mmap_metadata.aux_head;
 
   LLDB_LOG(log, "Aux size -{0} , Head - {1}", mmap_metadata.aux_size, head);
@@ -248,20 +266,19 @@ IntelPTSingleBufferTrace::GetTraceBuffer(size_t offset, size_t size) const {
    *
    * */
 
-  std::vector<uint8_t> data(size, 0);
   MutableArrayRef<uint8_t> buffer(data);
   ReadCyclicBuffer(buffer, m_perf_event.GetAuxBuffer(),
                    static_cast<size_t>(head), offset);
 
-  // Reenable tracing now we have read the buffer
-  ioctl(fd, PERF_EVENT_IOC_ENABLE);
+  if (Error err = ChangeCollectionState(previous_state))
+    return std::move(err);
+
   return data;
 }
 
-Expected<IntelPTSingleBufferTraceUP>
-IntelPTSingleBufferTrace::Start(const TraceIntelPTStartRequest &request,
-                                Optional<lldb::tid_t> tid,
-                                Optional<core_id_t> core_id) {
+Expected<IntelPTSingleBufferTraceUP> IntelPTSingleBufferTrace::Start(
+    const TraceIntelPTStartRequest &request, Optional<lldb::tid_t> tid,
+    Optional<core_id_t> core_id, TraceCollectionState initial_state) {
 #ifndef PERF_ATTR_SIZE_VER5
   return createStringError(inconvertibleErrorCode(),
                            "Intel PT Linux perf event not supported");
@@ -289,6 +306,7 @@ IntelPTSingleBufferTrace::Start(const TraceIntelPTStartRequest &request,
       }));
   if (!attr)
     return attr.takeError();
+  attr->disabled = initial_state == TraceCollectionState::Paused;
 
   LLDB_LOG(log, "Will create trace buffer of size {0}",
            request.trace_buffer_size);
@@ -298,8 +316,9 @@ IntelPTSingleBufferTrace::Start(const TraceIntelPTStartRequest &request,
                                                             buffer_numpages)) {
       return std::move(mmap_err);
     }
-    return IntelPTSingleBufferTraceUP(
-        new IntelPTSingleBufferTrace(std::move(*perf_event)));
+    IntelPTSingleBufferTraceUP trace_up(
+        new IntelPTSingleBufferTrace(std::move(*perf_event), initial_state));
+    return trace_up;
   } else {
     return perf_event.takeError();
   }
