@@ -66,9 +66,8 @@ define void @test32(i8* nocapture readonly %pix2, i32 signext %i_pix2) {
 ; P9BE: lxsiwzx [[REG:[0-9]+]]
 ; P9BE: vperm {{[0-9]+}}, {{[0-9]+}}, [[REG]]
 ; P9BE-32-LABEL: test32:
-; P9BE-32: lwzx [[REG1:[0-9]+]]
-; P9BE-32: mtvsrwz [[REG2:[0-9]+]], [[REG1]]
-; P9BE-32: vperm {{[0-9]+}}, {{[0-9]+}}, [[REG2]]
+; P9BE-32: lxsiwzx [[REG:[0-9]+]]
+; P9BE-32: vperm {{[0-9]+}}, {{[0-9]+}}, [[REG]]
 entry:
   %idx.ext63 = sext i32 %i_pix2 to i64
   %add.ptr64 = getelementptr inbounds i8, i8* %pix2, i64 %idx.ext63

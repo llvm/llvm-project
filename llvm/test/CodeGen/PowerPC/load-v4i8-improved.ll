@@ -28,8 +28,7 @@ define <16 x i8> @test(i32* %s, i32* %t) {
 ;
 ; CHECK-AIX-32-LABEL: test:
 ; CHECK-AIX-32:       # %bb.0: # %entry
-; CHECK-AIX-32-NEXT:    lwz r3, 0(r3)
-; CHECK-AIX-32-NEXT:    mtfprwz f0, r3
+; CHECK-AIX-32-NEXT:    lfiwzx f0, 0, r3
 ; CHECK-AIX-32-NEXT:    xxspltw v2, vs0, 1
 ; CHECK-AIX-32-NEXT:    blr
 

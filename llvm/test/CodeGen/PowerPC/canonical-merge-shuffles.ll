@@ -974,8 +974,7 @@ define dso_local <4 x i32> @testSplat4hi(<8 x i8>* nocapture readonly %ptr) loca
 ;
 ; P8-AIX-32-LABEL: testSplat4hi:
 ; P8-AIX-32:       # %bb.0: # %entry
-; P8-AIX-32-NEXT:    lwz r3, 0(r3)
-; P8-AIX-32-NEXT:    mtfprwz f0, r3
+; P8-AIX-32-NEXT:    lfiwzx f0, 0, r3
 ; P8-AIX-32-NEXT:    xxspltw v2, vs0, 1
 ; P8-AIX-32-NEXT:    blr
 entry:

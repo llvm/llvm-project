@@ -659,15 +659,14 @@ define <4 x float> @testFloatImm2(<4 x float> %a, i32* %b) {
 ;
 ; AIX-P8-32-LABEL: testFloatImm2:
 ; AIX-P8-32:       # %bb.0: # %entry
-; AIX-P8-32-NEXT:    lfs f0, 0(r3)
 ; AIX-P8-32-NEXT:    lwz r4, L..C8(r2) # %const.0
-; AIX-P8-32-NEXT:    xscvdpspn v3, f0
+; AIX-P8-32-NEXT:    lxsiwzx v3, 0, r3
+; AIX-P8-32-NEXT:    li r5, 4
 ; AIX-P8-32-NEXT:    lxvw4x v4, 0, r4
-; AIX-P8-32-NEXT:    lfs f0, 4(r3)
-; AIX-P8-32-NEXT:    lwz r3, L..C9(r2) # %const.1
+; AIX-P8-32-NEXT:    lwz r4, L..C9(r2) # %const.1
 ; AIX-P8-32-NEXT:    vperm v2, v3, v2, v4
-; AIX-P8-32-NEXT:    lxvw4x v4, 0, r3
-; AIX-P8-32-NEXT:    xscvdpspn v3, f0
+; AIX-P8-32-NEXT:    lxsiwzx v3, r3, r5
+; AIX-P8-32-NEXT:    lxvw4x v4, 0, r4
 ; AIX-P8-32-NEXT:    vperm v2, v2, v3, v4
 ; AIX-P8-32-NEXT:    blr
 entry:
@@ -732,17 +731,15 @@ define <4 x float> @testFloatImm3(<4 x float> %a, i32* %b) {
 ;
 ; AIX-P8-32-LABEL: testFloatImm3:
 ; AIX-P8-32:       # %bb.0: # %entry
-; AIX-P8-32-NEXT:    lis r4, 4
-; AIX-P8-32-NEXT:    lfsx f0, r3, r4
 ; AIX-P8-32-NEXT:    lwz r4, L..C10(r2) # %const.0
-; AIX-P8-32-NEXT:    xscvdpspn v3, f0
+; AIX-P8-32-NEXT:    lis r5, 4
+; AIX-P8-32-NEXT:    lxsiwzx v3, r3, r5
 ; AIX-P8-32-NEXT:    lxvw4x v4, 0, r4
-; AIX-P8-32-NEXT:    lfs f0, 0(r3)
-; AIX-P8-32-NEXT:    lwz r3, L..C11(r2) # %const.1
+; AIX-P8-32-NEXT:    lwz r4, L..C11(r2) # %const.1
 ; AIX-P8-32-NEXT:    vperm v2, v3, v2, v4
-; AIX-P8-32-NEXT:    lxvw4x v4, 0, r3
-; AIX-P8-32-NEXT:    xscvdpspn v3, f0
-; AIX-P8-32-NEXT:    vperm v2, v2, v3, v4
+; AIX-P8-32-NEXT:    lxvw4x v3, 0, r4
+; AIX-P8-32-NEXT:    lxsiwzx v4, 0, r3
+; AIX-P8-32-NEXT:    vperm v2, v2, v4, v3
 ; AIX-P8-32-NEXT:    blr
 entry:
   %add.ptr = getelementptr inbounds i32, i32* %b, i64 65536

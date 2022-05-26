@@ -10,16 +10,16 @@
 
 ; RUN: llc -mcpu=pwr9 -verify-machineinstrs -ppc-vsr-nums-as-vr -ppc-asm-full-reg-names \
 ; RUN:    -mtriple=powerpc64-ibm-aix-xcoff< %s | FileCheck %s \
-; RUN:    --check-prefixes=P9-AIX,P9-AIX-64
+; RUN:    --check-prefixes=AIX,P9-AIX,P9-AIX-64
 ; RUN: llc -mcpu=pwr9 -verify-machineinstrs -ppc-vsr-nums-as-vr -ppc-asm-full-reg-names \
 ; RUN:    -mtriple=powerpc-ibm-aix-xcoff < %s | FileCheck %s \
-; RUN:    --check-prefixes=P9-AIX,P9-AIX-32
+; RUN:    --check-prefixes=AIX,P9-AIX,P9-AIX-32
 ; RUN: llc -mcpu=pwr8 -verify-machineinstrs -ppc-vsr-nums-as-vr -ppc-asm-full-reg-names \
 ; RUN:    -mtriple=powerpc64-ibm-aix-xcoff < %s | FileCheck %s \
-; RUN:    --check-prefixes=P8-AIX-64
+; RUN:    --check-prefixes=AIX,P8-AIX-64
 ; RUN: llc -mcpu=pwr8 -verify-machineinstrs -ppc-vsr-nums-as-vr -ppc-asm-full-reg-names \
 ; RUN:    -mtriple=powerpc-ibm-aix-xcoff < %s | FileCheck %s \
-; RUN:    --check-prefixes=P8-AIX-32
+; RUN:    --check-prefixes=AIX,P8-AIX-32
 
 ; Function Attrs: norecurse nounwind readonly
 define <4 x i32> @s2v_test1(i32* nocapture readonly %int32, <4 x i32> %vec)  {
@@ -422,9 +422,8 @@ define <4 x float> @s2v_test_f1(float* nocapture readonly %f64, <4 x float> %vec
 ;
 ; P8-AIX-32-LABEL: s2v_test_f1:
 ; P8-AIX-32:       # %bb.0: # %entry
-; P8-AIX-32-NEXT:    lfs f0, 0(r3)
 ; P8-AIX-32-NEXT:    lwz r4, L..C5(r2) # %const.0
-; P8-AIX-32-NEXT:    xscvdpspn v3, f0
+; P8-AIX-32-NEXT:    lxsiwzx v3, 0, r3
 ; P8-AIX-32-NEXT:    lxvw4x v4, 0, r4
 ; P8-AIX-32-NEXT:    vperm v2, v3, v2, v4
 ; P8-AIX-32-NEXT:    blr
@@ -466,33 +465,12 @@ define <2 x float> @s2v_test_f2(float* nocapture readonly %f64, <2 x float> %vec
 ; P8BE-NEXT:    vmrgow v2, v3, v2
 ; P8BE-NEXT:    blr
 ;
-; P9-AIX-64-LABEL: s2v_test_f2:
-; P9-AIX-64:       # %bb.0: # %entry
-; P9-AIX-64-NEXT:    addi r3, r3, 4
-; P9-AIX-64-NEXT:    lxsiwzx v3, 0, r3
-; P9-AIX-64-NEXT:    vmrgow v2, v3, v2
-; P9-AIX-64-NEXT:    blr
-;
-; P9-AIX-32-LABEL: s2v_test_f2:
-; P9-AIX-32:       # %bb.0: # %entry
-; P9-AIX-32-NEXT:    lfs f0, 4(r3)
-; P9-AIX-32-NEXT:    xscvdpspn v3, f0
-; P9-AIX-32-NEXT:    vmrgow v2, v3, v2
-; P9-AIX-32-NEXT:    blr
-;
-; P8-AIX-64-LABEL: s2v_test_f2:
-; P8-AIX-64:       # %bb.0: # %entry
-; P8-AIX-64-NEXT:    addi r3, r3, 4
-; P8-AIX-64-NEXT:    lxsiwzx v3, 0, r3
-; P8-AIX-64-NEXT:    vmrgow v2, v3, v2
-; P8-AIX-64-NEXT:    blr
-;
-; P8-AIX-32-LABEL: s2v_test_f2:
-; P8-AIX-32:       # %bb.0: # %entry
-; P8-AIX-32-NEXT:    lfs f0, 4(r3)
-; P8-AIX-32-NEXT:    xscvdpspn v3, f0
-; P8-AIX-32-NEXT:    vmrgow v2, v3, v2
-; P8-AIX-32-NEXT:    blr
+; AIX-LABEL: s2v_test_f2:
+; AIX:       # %bb.0: # %entry
+; AIX-NEXT:    addi r3, r3, 4
+; AIX-NEXT:    lxsiwzx v3, 0, r3
+; AIX-NEXT:    vmrgow v2, v3, v2
+; AIX-NEXT:    blr
 entry:
   %arrayidx = getelementptr inbounds float, float* %f64, i64 1
   %0 = load float, float* %arrayidx, align 8
@@ -542,8 +520,7 @@ define <2 x float> @s2v_test_f3(float* nocapture readonly %f64, <2 x float> %vec
 ; P9-AIX-32-LABEL: s2v_test_f3:
 ; P9-AIX-32:       # %bb.0: # %entry
 ; P9-AIX-32-NEXT:    slwi r4, r4, 2
-; P9-AIX-32-NEXT:    lfsx f0, r3, r4
-; P9-AIX-32-NEXT:    xscvdpspn v3, f0
+; P9-AIX-32-NEXT:    lxsiwzx v3, r3, r4
 ; P9-AIX-32-NEXT:    vmrgow v2, v3, v2
 ; P9-AIX-32-NEXT:    blr
 ;
@@ -557,8 +534,7 @@ define <2 x float> @s2v_test_f3(float* nocapture readonly %f64, <2 x float> %vec
 ; P8-AIX-32-LABEL: s2v_test_f3:
 ; P8-AIX-32:       # %bb.0: # %entry
 ; P8-AIX-32-NEXT:    slwi r4, r4, 2
-; P8-AIX-32-NEXT:    lfsx f0, r3, r4
-; P8-AIX-32-NEXT:    xscvdpspn v3, f0
+; P8-AIX-32-NEXT:    lxsiwzx v3, r3, r4
 ; P8-AIX-32-NEXT:    vmrgow v2, v3, v2
 ; P8-AIX-32-NEXT:    blr
 entry:
@@ -601,33 +577,12 @@ define <2 x float> @s2v_test_f4(float* nocapture readonly %f64, <2 x float> %vec
 ; P8BE-NEXT:    vmrgow v2, v3, v2
 ; P8BE-NEXT:    blr
 ;
-; P9-AIX-64-LABEL: s2v_test_f4:
-; P9-AIX-64:       # %bb.0: # %entry
-; P9-AIX-64-NEXT:    addi r3, r3, 4
-; P9-AIX-64-NEXT:    lxsiwzx v3, 0, r3
-; P9-AIX-64-NEXT:    vmrgow v2, v3, v2
-; P9-AIX-64-NEXT:    blr
-;
-; P9-AIX-32-LABEL: s2v_test_f4:
-; P9-AIX-32:       # %bb.0: # %entry
-; P9-AIX-32-NEXT:    lfs f0, 4(r3)
-; P9-AIX-32-NEXT:    xscvdpspn v3, f0
-; P9-AIX-32-NEXT:    vmrgow v2, v3, v2
-; P9-AIX-32-NEXT:    blr
-;
-; P8-AIX-64-LABEL: s2v_test_f4:
-; P8-AIX-64:       # %bb.0: # %entry
-; P8-AIX-64-NEXT:    addi r3, r3, 4
-; P8-AIX-64-NEXT:    lxsiwzx v3, 0, r3
-; P8-AIX-64-NEXT:    vmrgow v2, v3, v2
-; P8-AIX-64-NEXT:    blr
-;
-; P8-AIX-32-LABEL: s2v_test_f4:
-; P8-AIX-32:       # %bb.0: # %entry
-; P8-AIX-32-NEXT:    lfs f0, 4(r3)
-; P8-AIX-32-NEXT:    xscvdpspn v3, f0
-; P8-AIX-32-NEXT:    vmrgow v2, v3, v2
-; P8-AIX-32-NEXT:    blr
+; AIX-LABEL: s2v_test_f4:
+; AIX:       # %bb.0: # %entry
+; AIX-NEXT:    addi r3, r3, 4
+; AIX-NEXT:    lxsiwzx v3, 0, r3
+; AIX-NEXT:    vmrgow v2, v3, v2
+; AIX-NEXT:    blr
 entry:
   %arrayidx = getelementptr inbounds float, float* %f64, i64 1
   %0 = load float, float* %arrayidx, align 8
@@ -663,31 +618,11 @@ define <2 x float> @s2v_test_f5(<2 x float> %vec, float* nocapture readonly %ptr
 ; P8BE-NEXT:    vmrgow v2, v3, v2
 ; P8BE-NEXT:    blr
 ;
-; P9-AIX-64-LABEL: s2v_test_f5:
-; P9-AIX-64:       # %bb.0: # %entry
-; P9-AIX-64-NEXT:    lxsiwzx v3, 0, r3
-; P9-AIX-64-NEXT:    vmrgow v2, v3, v2
-; P9-AIX-64-NEXT:    blr
-;
-; P9-AIX-32-LABEL: s2v_test_f5:
-; P9-AIX-32:       # %bb.0: # %entry
-; P9-AIX-32-NEXT:    lfs f0, 0(r3)
-; P9-AIX-32-NEXT:    xscvdpspn v3, f0
-; P9-AIX-32-NEXT:    vmrgow v2, v3, v2
-; P9-AIX-32-NEXT:    blr
-;
-; P8-AIX-64-LABEL: s2v_test_f5:
-; P8-AIX-64:       # %bb.0: # %entry
-; P8-AIX-64-NEXT:    lxsiwzx v3, 0, r3
-; P8-AIX-64-NEXT:    vmrgow v2, v3, v2
-; P8-AIX-64-NEXT:    blr
-;
-; P8-AIX-32-LABEL: s2v_test_f5:
-; P8-AIX-32:       # %bb.0: # %entry
-; P8-AIX-32-NEXT:    lfs f0, 0(r3)
-; P8-AIX-32-NEXT:    xscvdpspn v3, f0
-; P8-AIX-32-NEXT:    vmrgow v2, v3, v2
-; P8-AIX-32-NEXT:    blr
+; AIX-LABEL: s2v_test_f5:
+; AIX:       # %bb.0: # %entry
+; AIX-NEXT:    lxsiwzx v3, 0, r3
+; AIX-NEXT:    vmrgow v2, v3, v2
+; AIX-NEXT:    blr
 entry:
   %0 = load float, float* %ptr1, align 8
   %vecins = insertelement <2 x float> %vec, float %0, i32 0
