@@ -153,6 +153,9 @@ public:
   SVal makeSymExprValNN(BinaryOperator::Opcode op,
                         NonLoc lhs, NonLoc rhs, QualType resultTy);
 
+  SVal evalUnaryOp(ProgramStateRef state, UnaryOperator::Opcode opc,
+                 SVal operand, QualType type);
+
   SVal evalBinOp(ProgramStateRef state, BinaryOperator::Opcode op,
                  SVal lhs, SVal rhs, QualType type);
 
@@ -349,6 +352,9 @@ public:
 
   nonloc::SymbolVal makeNonLoc(const SymExpr *lhs, BinaryOperator::Opcode op,
                                const SymExpr *rhs, QualType type);
+
+  NonLoc makeNonLoc(const SymExpr *operand, UnaryOperator::Opcode op,
+                    QualType type);
 
   /// Create a NonLoc value for cast.
   nonloc::SymbolVal makeNonLoc(const SymExpr *operand, QualType fromTy,

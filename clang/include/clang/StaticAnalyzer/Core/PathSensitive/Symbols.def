@@ -33,6 +33,8 @@
 #define SYMBOL_RANGE(Id, First, Last)
 #endif
 
+SYMBOL(UnarySymExpr, SymExpr)
+
 ABSTRACT_SYMBOL(BinarySymExpr, SymExpr)
   SYMBOL(IntSymExpr, BinarySymExpr)
   SYMBOL(SymIntExpr, BinarySymExpr)
