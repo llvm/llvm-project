@@ -288,27 +288,11 @@ stoi(const string& str, size_t* idx, int base)
     return as_integer<int>( "stoi", str, idx, base );
 }
 
-#ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
-int
-stoi(const wstring& str, size_t* idx, int base)
-{
-    return as_integer<int>( "stoi", str, idx, base );
-}
-#endif
-
 long
 stol(const string& str, size_t* idx, int base)
 {
     return as_integer<long>( "stol", str, idx, base );
 }
-
-#ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
-long
-stol(const wstring& str, size_t* idx, int base)
-{
-    return as_integer<long>( "stol", str, idx, base );
-}
-#endif
 
 unsigned long
 stoul(const string& str, size_t* idx, int base)
@@ -316,27 +300,11 @@ stoul(const string& str, size_t* idx, int base)
     return as_integer<unsigned long>( "stoul", str, idx, base );
 }
 
-#ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
-unsigned long
-stoul(const wstring& str, size_t* idx, int base)
-{
-    return as_integer<unsigned long>( "stoul", str, idx, base );
-}
-#endif
-
 long long
 stoll(const string& str, size_t* idx, int base)
 {
     return as_integer<long long>( "stoll", str, idx, base );
 }
-
-#ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
-long long
-stoll(const wstring& str, size_t* idx, int base)
-{
-    return as_integer<long long>( "stoll", str, idx, base );
-}
-#endif
 
 unsigned long long
 stoull(const string& str, size_t* idx, int base)
@@ -344,41 +312,17 @@ stoull(const string& str, size_t* idx, int base)
     return as_integer<unsigned long long>( "stoull", str, idx, base );
 }
 
-#ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
-unsigned long long
-stoull(const wstring& str, size_t* idx, int base)
-{
-    return as_integer<unsigned long long>( "stoull", str, idx, base );
-}
-#endif
-
 float
 stof(const string& str, size_t* idx)
 {
     return as_float<float>( "stof", str, idx );
 }
 
-#ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
-float
-stof(const wstring& str, size_t* idx)
-{
-    return as_float<float>( "stof", str, idx );
-}
-#endif
-
 double
 stod(const string& str, size_t* idx)
 {
     return as_float<double>( "stod", str, idx );
 }
-
-#ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
-double
-stod(const wstring& str, size_t* idx)
-{
-    return as_float<double>( "stod", str, idx );
-}
-#endif
 
 long double
 stold(const string& str, size_t* idx)
@@ -387,12 +331,54 @@ stold(const string& str, size_t* idx)
 }
 
 #ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
+int
+stoi(const wstring& str, size_t* idx, int base)
+{
+    return as_integer<int>( "stoi", str, idx, base );
+}
+
+long
+stol(const wstring& str, size_t* idx, int base)
+{
+    return as_integer<long>( "stol", str, idx, base );
+}
+
+unsigned long
+stoul(const wstring& str, size_t* idx, int base)
+{
+    return as_integer<unsigned long>( "stoul", str, idx, base );
+}
+
+long long
+stoll(const wstring& str, size_t* idx, int base)
+{
+    return as_integer<long long>( "stoll", str, idx, base );
+}
+
+unsigned long long
+stoull(const wstring& str, size_t* idx, int base)
+{
+    return as_integer<unsigned long long>( "stoull", str, idx, base );
+}
+
+float
+stof(const wstring& str, size_t* idx)
+{
+    return as_float<float>( "stof", str, idx );
+}
+
+double
+stod(const wstring& str, size_t* idx)
+{
+    return as_float<double>( "stod", str, idx );
+}
+
 long double
 stold(const wstring& str, size_t* idx)
 {
     return as_float<long double>( "stold", str, idx );
 }
-#endif
+#endif // !_LIBCPP_HAS_NO_WIDE_CHARACTERS
 
 // to_string
 
