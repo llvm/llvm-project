@@ -79,7 +79,6 @@ __shared_weak_count::__release_shared() noexcept
     if (__shared_count::__release_shared())
         __release_weak();
 }
-
 #endif // _LIBCPP_SHARED_PTR_DEFINE_LEGACY_INLINE_FUNCTIONS
 
 void
