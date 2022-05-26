@@ -61,8 +61,8 @@ auto odd = [](int x) { return x % 2 != 0; };
 // [algorithm.syn]
 
 //static_assert(test(std::ranges::adjacent_find, a));
-//static_assert(test(std::ranges::all_of, a, odd));
-//static_assert(test(std::ranges::any_of, a, odd));
+static_assert(test(std::ranges::all_of, a, odd));
+static_assert(test(std::ranges::any_of, a, odd));
 //static_assert(test(std::ranges::binary_search, a, 42));
 //static_assert(test(std::ranges::clamp, 42, 42, 42));
 //static_assert(test(std::ranges::copy, a, a));
@@ -107,7 +107,7 @@ static_assert(test(std::ranges::mismatch, a, a));
 //static_assert(test(std::ranges::move, a, a));
 //static_assert(test(std::ranges::move_backward, a, a));
 //static_assert(test(std::ranges::next_permutation, a));
-//static_assert(test(std::ranges::none_of, a, odd));
+static_assert(test(std::ranges::none_of, a, odd));
 //static_assert(test(std::ranges::nth_element, a, a+5));
 //static_assert(test(std::ranges::partial_sort, a, a+5));
 //static_assert(test(std::ranges::partial_sort_copy, a, a));

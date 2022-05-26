@@ -74,10 +74,10 @@ constexpr bool all_the_algorithms()
     int copies = 0;
     //(void)std::ranges::adjacent_find(first, last, Equal(), Proj(&copies)); assert(copies == 0);
     //(void)std::ranges::adjacent_find(a, Equal(), Proj(&copies)); assert(copies == 0);
-    //(void)std::ranges::all_of(first, last, UnaryTrue(), Proj(&copies)); assert(copies == 0);
-    //(void)std::ranges::all_of(a, UnaryTrue(), Proj(&copies)); assert(copies == 0);
-    //(void)std::ranges::any_of(first, last, UnaryTrue(), Proj(&copies)); assert(copies == 0);
-    //(void)std::ranges::any_of(a, UnaryTrue(), Proj(&copies)); assert(copies == 0);
+    (void)std::ranges::all_of(first, last, UnaryTrue(), Proj(&copies)); assert(copies == 0);
+    (void)std::ranges::all_of(a, UnaryTrue(), Proj(&copies)); assert(copies == 0);
+    (void)std::ranges::any_of(first, last, UnaryTrue(), Proj(&copies)); assert(copies == 0);
+    (void)std::ranges::any_of(a, UnaryTrue(), Proj(&copies)); assert(copies == 0);
     //(void)std::ranges::binary_search(first, last, value, Less(), Proj(&copies)); assert(copies == 0);
     //(void)std::ranges::binary_search(a, value, Less(), Proj(&copies)); assert(copies == 0);
     //(void)std::ranges::clamp(T(), T(), T(), Less(), Proj(&copies)); assert(copies == 0);
@@ -150,8 +150,8 @@ constexpr bool all_the_algorithms()
     (void)std::ranges::mismatch(a, b, Equal(), Proj(&copies), Proj(&copies)); assert(copies == 0);
     //(void)std::ranges::next_permutation(first, last, Less(), Proj(&copies)); assert(copies == 0);
     //(void)std::ranges::next_permutation(a, Less(), Proj(&copies)); assert(copies == 0);
-    //(void)std::ranges::none_of(first, last, UnaryTrue(), Proj(&copies)); assert(copies == 0);
-    //(void)std::ranges::none_of(a, UnaryTrue(), Proj(&copies)); assert(copies == 0);
+    (void)std::ranges::none_of(first, last, UnaryTrue(), Proj(&copies)); assert(copies == 0);
+    (void)std::ranges::none_of(a, UnaryTrue(), Proj(&copies)); assert(copies == 0);
     //(void)std::ranges::nth_element(first, mid, last, Less(), Proj(&copies)); assert(copies == 0);
     //(void)std::ranges::nth_element(a, mid, Less(), Proj(&copies)); assert(copies == 0);
     //(void)std::ranges::partial_sort(first, mid, last, Less(), Proj(&copies)); assert(copies == 0);
