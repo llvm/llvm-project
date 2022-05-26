@@ -72,29 +72,6 @@ foreach(link ${CLANG_LINKS_TO_CREATE})
   add_clang_symlink(${link} clang)
 endforeach()
 
-# Add clang-cache-build-session file into usr/bin
-set(clang_cache_build_session_src "${CMAKE_CURRENT_SOURCE_DIR}/clang-cache-build-session")
-set(clang_cache_build_session_dest "${CMAKE_BINARY_DIR}/bin/clang-cache-build-session")
-
-add_custom_command(OUTPUT "${clang_cache_build_session_dest}"
-                   COMMAND ${CMAKE_COMMAND} -E copy
-                     "${clang_cache_build_session_src}"
-                     "${clang_cache_build_session_dest}"
-                   DEPENDS "${clang_cache_build_session_src}")
-
-add_custom_target(clang-cache-build-session DEPENDS "${clang_cache_build_session_dest}")
-add_dependencies(clang clang-cache-build-session)
-if (CLANG_BUILD_TOOLS)
-  install(PROGRAMS "${clang_cache_build_session_dest}"
-          DESTINATION "${CMAKE_INSTALL_BINDIR}"
-          COMPONENT clang)
-  if(NOT LLVM_ENABLE_IDE)
-    add_llvm_install_targets(install-clang-cache-build-session
-                             DEPENDS clang-cache-build-session
-                             COMPONENT clang)
-  endif()
-endif()
-
 # Configure plist creation for OS X.
 set (TOOL_INFO_PLIST "Info.plist" CACHE STRING "Plist name")
 if (APPLE)
