@@ -83,46 +83,49 @@ void DAGTypeLegalizer::PerformExpensiveChecks() {
       auto ResId = ValueToIdMap.lookup(Res);
 
       unsigned Mapped = 0;
-      if (ResId && ReplacedValues.count(ResId)) {
-        Mapped |= 1;
-        // Check that remapped values are only used by nodes marked NewNode.
-        for (SDNode::use_iterator UI = Node.use_begin(), UE = Node.use_end();
-             UI != UE; ++UI)
-          if (UI.getUse().getResNo() == i)
-            assert(UI->getNodeId() == NewNode &&
-                   "Remapped value has non-trivial use!");
+      if (ResId) {
+        auto I = ReplacedValues.find(ResId);
+        if (I != ReplacedValues.end()) {
+          Mapped |= 1;
+          // Check that remapped values are only used by nodes marked NewNode.
+          for (SDNode::use_iterator UI = Node.use_begin(), UE = Node.use_end();
+               UI != UE; ++UI)
+            if (UI.getUse().getResNo() == i)
+              assert(UI->getNodeId() == NewNode &&
+                     "Remapped value has non-trivial use!");
 
-        // Check that the final result of applying ReplacedValues is not
-        // marked NewNode.
-        auto NewValId = ReplacedValues[ResId];
-        auto I = ReplacedValues.find(NewValId);
-        while (I != ReplacedValues.end()) {
-          NewValId = I->second;
+          // Check that the final result of applying ReplacedValues is not
+          // marked NewNode.
+          auto NewValId = I->second;
           I = ReplacedValues.find(NewValId);
+          while (I != ReplacedValues.end()) {
+            NewValId = I->second;
+            I = ReplacedValues.find(NewValId);
+          }
+          SDValue NewVal = getSDValue(NewValId);
+          (void)NewVal;
+          assert(NewVal.getNode()->getNodeId() != NewNode &&
+                 "ReplacedValues maps to a new node!");
         }
-        SDValue NewVal = getSDValue(NewValId);
-        (void)NewVal;
-        assert(NewVal.getNode()->getNodeId() != NewNode &&
-               "ReplacedValues maps to a new node!");
+        if (PromotedIntegers.count(ResId))
+          Mapped |= 2;
+        if (SoftenedFloats.count(ResId))
+          Mapped |= 4;
+        if (ScalarizedVectors.count(ResId))
+          Mapped |= 8;
+        if (ExpandedIntegers.count(ResId))
+          Mapped |= 16;
+        if (ExpandedFloats.count(ResId))
+          Mapped |= 32;
+        if (SplitVectors.count(ResId))
+          Mapped |= 64;
+        if (WidenedVectors.count(ResId))
+          Mapped |= 128;
+        if (PromotedFloats.count(ResId))
+          Mapped |= 256;
+        if (SoftPromotedHalfs.count(ResId))
+          Mapped |= 512;
       }
-      if (ResId && PromotedIntegers.count(ResId))
-        Mapped |= 2;
-      if (ResId && SoftenedFloats.count(ResId))
-        Mapped |= 4;
-      if (ResId && ScalarizedVectors.count(ResId))
-        Mapped |= 8;
-      if (ResId && ExpandedIntegers.count(ResId))
-        Mapped |= 16;
-      if (ResId && ExpandedFloats.count(ResId))
-        Mapped |= 32;
-      if (ResId && SplitVectors.count(ResId))
-        Mapped |= 64;
-      if (ResId && WidenedVectors.count(ResId))
-        Mapped |= 128;
-      if (ResId && PromotedFloats.count(ResId))
-        Mapped |= 256;
-      if (ResId && SoftPromotedHalfs.count(ResId))
-        Mapped |= 512;
 
       if (Node.getNodeId() != Processed) {
         // Since we allow ReplacedValues to map deleted nodes, it may map nodes
