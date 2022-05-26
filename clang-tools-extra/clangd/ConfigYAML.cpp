@@ -184,6 +184,10 @@ private:
       F.External.emplace(std::move(External));
       F.External->Range = N.getSourceRange();
     });
+    Dict.handle("StandardLibrary", [&](Node &N) {
+      if (auto StandardLibrary = boolValue(N, "StandardLibrary"))
+        F.StandardLibrary = *StandardLibrary;
+    });
     Dict.parse(N);
   }
 
