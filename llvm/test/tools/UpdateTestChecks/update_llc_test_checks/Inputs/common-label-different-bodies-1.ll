@@ -2,7 +2,6 @@
 ; RUN: llc < %s -mtriple=x86_64-unknown-linux-gnu | FileCheck %s --allow-unused-prefixes=true --check-prefixes=C,A,UNUSED
 
 declare <2 x i64> @llvm.bswap.v2i64(<2 x i64>)
-; A: declare <2 x i64> @llvm.bswap.v2i64(<2 x i64>)
 
 define <2 x i64> @fold_v2i64() {
 entry:
