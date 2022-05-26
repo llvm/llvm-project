@@ -55,6 +55,8 @@ template <typename T> struct ProgramStateTrait {
   }
 };
 
+class RangeSet;
+
 /// \class ProgramState
 /// ProgramState - This class encapsulates:
 ///
@@ -79,7 +81,6 @@ private:
   friend class ExplodedGraph;
   friend class ExplodedNode;
   friend class NodeBuilder;
-  friend class ConstraintManager;
 
   ProgramStateManager *stateMgr;
   Environment Env;           // Maps a Stmt to its current SVal.
@@ -113,6 +114,16 @@ private:
   // posteriorly over-constrained. These parents are handled with special care:
   // we do not allow transitions to exploded nodes with such states.
   bool PosteriorlyOverconstrained = false;
+  // Make internal constraint solver entities friends so they can access the
+  // overconstrained-related functions. We want to keep this API inaccessible
+  // for Checkers.
+  friend class ConstraintManager;
+  friend ProgramStateRef reAssume(ProgramStateRef State,
+                                  const RangeSet *Constraint, SVal TheValue);
+  bool isPosteriorlyOverconstrained() const {
+    return PosteriorlyOverconstrained;
+  }
+  ProgramStateRef cloneAsPosteriorlyOverconstrained() const;
 
   unsigned refCount;
 
@@ -121,11 +132,6 @@ private:
   ProgramStateRef makeWithStore(const StoreRef &store) const;
 
   void setStore(const StoreRef &storeRef);
-
-  ProgramStateRef cloneAsPosteriorlyOverconstrained() const;
-  bool isPosteriorlyOverconstrained() const {
-    return PosteriorlyOverconstrained;
-  }
 
 public:
   /// This ctor is used when creating the first ProgramState object.
