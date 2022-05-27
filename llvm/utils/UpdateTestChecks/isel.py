@@ -52,6 +52,6 @@ def add_checks(output_lines, comment_marker, prefix_list, func_dict, func_name,
                global_vars_seen_dict, is_filtered):
   # Label format is based on iSel string.
   check_label_format = '{} %s-LABEL: %s%s%s'.format(comment_marker)
-  common.add_checks(output_lines, comment_marker, prefix_list, func_dict,
-                    func_name, check_label_format, True, False,
-                    global_vars_seen_dict, is_filtered = is_filtered)
+  return common.add_checks(output_lines, comment_marker, prefix_list, func_dict,
+                           func_name, check_label_format, True, False,
+                           global_vars_seen_dict, is_filtered=is_filtered)
