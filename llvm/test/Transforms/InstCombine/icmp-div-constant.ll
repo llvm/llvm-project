@@ -287,8 +287,9 @@ define i1 @udiv_eq_umax_use(i32 %x, i32 %y) {
 
 define i1 @sdiv_eq_smin(i8 %x, i8 %y) {
 ; CHECK-LABEL: @sdiv_eq_smin(
-; CHECK-NEXT:    [[D:%.*]] = sdiv i8 [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    [[R:%.*]] = icmp eq i8 [[D]], -128
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i8 [[X:%.*]], -128
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i8 [[Y:%.*]], 1
+; CHECK-NEXT:    [[R:%.*]] = and i1 [[TMP1]], [[TMP2]]
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %d = sdiv i8 %x, %y
@@ -298,14 +299,17 @@ define i1 @sdiv_eq_smin(i8 %x, i8 %y) {
 
 define <2 x i1> @sdiv_ne_smin(<2 x i5> %x, <2 x i5> %y) {
 ; CHECK-LABEL: @sdiv_ne_smin(
-; CHECK-NEXT:    [[D:%.*]] = sdiv <2 x i5> [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    [[R:%.*]] = icmp ne <2 x i5> [[D]], <i5 -16, i5 -16>
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ne <2 x i5> [[X:%.*]], <i5 -16, i5 -16>
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp ne <2 x i5> [[Y:%.*]], <i5 1, i5 1>
+; CHECK-NEXT:    [[R:%.*]] = or <2 x i1> [[TMP1]], [[TMP2]]
 ; CHECK-NEXT:    ret <2 x i1> [[R]]
 ;
   %d = sdiv <2 x i5> %x, %y
   %r = icmp ne <2 x i5> %d, <i5 -16, i5 -16>
   ret <2 x i1> %r
 }
+
+; negative test - must be SMIN
 
 define i1 @sdiv_eq_small(i8 %x, i8 %y) {
 ; CHECK-LABEL: @sdiv_eq_small(
@@ -318,6 +322,8 @@ define i1 @sdiv_eq_small(i8 %x, i8 %y) {
   ret i1 %r
 }
 
+; negative test - must be SMIN
+
 define i1 @sdiv_ne_big(i8 %x, i8 %y) {
 ; CHECK-LABEL: @sdiv_ne_big(
 ; CHECK-NEXT:    [[D:%.*]] = sdiv i8 [[X:%.*]], [[Y:%.*]]
@@ -328,6 +334,8 @@ define i1 @sdiv_ne_big(i8 %x, i8 %y) {
   %r = icmp ne i8 %d, 127
   ret i1 %r
 }
+
+; negative test - must be SMIN
 
 define i1 @sdiv_eq_not_big(i8 %x, i8 %y) {
 ; CHECK-LABEL: @sdiv_eq_not_big(
@@ -340,6 +348,8 @@ define i1 @sdiv_eq_not_big(i8 %x, i8 %y) {
   ret i1 %r
 }
 
+; negative test - must be equality predicate
+
 define i1 @sdiv_ult_smin(i8 %x, i8 %y) {
 ; CHECK-LABEL: @sdiv_ult_smin(
 ; CHECK-NEXT:    [[D:%.*]] = sdiv i8 [[X:%.*]], [[Y:%.*]]
@@ -350,6 +360,8 @@ define i1 @sdiv_ult_smin(i8 %x, i8 %y) {
   %r = icmp ult i8 %d, 128
   ret i1 %r
 }
+
+; negative test - extra use
 
 define i1 @sdiv_eq_smin_use(i32 %x, i32 %y) {
 ; CHECK-LABEL: @sdiv_eq_smin_use(

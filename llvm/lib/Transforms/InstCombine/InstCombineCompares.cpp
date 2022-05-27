@@ -2388,17 +2388,6 @@ Instruction *InstCombinerImpl::foldICmpUDivConstant(ICmpInst &Cmp,
   Value *Y = UDiv->getOperand(1);
   Type *Ty = UDiv->getType();
 
-  // If the compare constant is bigger than UMAX/2 (negative), there's only one
-  // pair of values that satisfies an equality check, so eliminate the division:
-  // (X u/ Y) == C --> (X == C) && (Y == 1)
-  // (X u/ Y) != C --> (X != C) || (Y != 1)
-  if (Cmp.isEquality() && UDiv->hasOneUse() && C.isSignBitSet()) {
-    Value *XBig = Builder.CreateICmp(Pred, X, ConstantInt::get(Ty, C));
-    Value *YOne = Builder.CreateICmp(Pred, Y, ConstantInt::get(Ty, 1));
-    auto Logic = Pred == ICmpInst::ICMP_EQ ? Instruction::And : Instruction::Or;
-    return BinaryOperator::Create(Logic, XBig, YOne);
-  }
-
   const APInt *C2;
   if (!match(X, m_APInt(C2)))
     return nullptr;
@@ -2431,6 +2420,23 @@ Instruction *InstCombinerImpl::foldICmpDivConstant(ICmpInst &Cmp,
   Value *X = Div->getOperand(0);
   Value *Y = Div->getOperand(1);
   Type *Ty = Div->getType();
+  bool DivIsSigned = Div->getOpcode() == Instruction::SDiv;
+
+  // If unsigned division and the compare constant is bigger than
+  // UMAX/2 (negative), there's only one pair of values that satisfies an
+  // equality check, so eliminate the division:
+  // (X u/ Y) == C --> (X == C) && (Y == 1)
+  // (X u/ Y) != C --> (X != C) || (Y != 1)
+  // Similarly, if signed division and the compare constant is exactly SMIN:
+  // (X s/ Y) == SMIN --> (X == SMIN) && (Y == 1)
+  // (X s/ Y) != SMIN --> (X != SMIN) || (Y != 1)
+  if (Cmp.isEquality() && Div->hasOneUse() && C.isSignBitSet() &&
+      (!DivIsSigned || C.isMinSignedValue()))   {
+    Value *XBig = Builder.CreateICmp(Pred, X, ConstantInt::get(Ty, C));
+    Value *YOne = Builder.CreateICmp(Pred, Y, ConstantInt::get(Ty, 1));
+    auto Logic = Pred == ICmpInst::ICMP_EQ ? Instruction::And : Instruction::Or;
+    return BinaryOperator::Create(Logic, XBig, YOne);
+  }
 
   // Fold: icmp pred ([us]div X, C2), C -> range test
   // Fold this div into the comparison, producing a range check.
@@ -2450,7 +2456,6 @@ Instruction *InstCombinerImpl::foldICmpDivConstant(ICmpInst &Cmp,
   // (x /u C2) <u C.  Simply casting the operands and result won't
   // work. :(  The if statement below tests that condition and bails
   // if it finds it.
-  bool DivIsSigned = Div->getOpcode() == Instruction::SDiv;
   if (!Cmp.isEquality() && DivIsSigned != Cmp.isSigned())
     return nullptr;
 
