@@ -104,3 +104,70 @@ func.func @_QPsb(%arr: !fir.box<!fir.array<?xi32>> {fir.bindc_name = "arr"}) {
 // CHECK:        omp.yield
 // CHECK:      omp.terminator
 // CHECK:    llvm.return
+
+// -----
+
+func.func private @foo()
+func.func private @bar()
+
+func.func @sections_no_data() {
+  omp.sections {
+    omp.section {
+      fir.call @foo() : () -> ()
+      omp.terminator
+    }
+    omp.section {
+      fir.call @bar() : () -> ()
+      omp.terminator
+    }
+    omp.terminator
+  }
+  return
+}
+
+// CHECK-LABEL: llvm.func @sections_no_data
+// CHECK: omp.sections {
+// CHECK:   omp.section {
+// CHECK:     llvm.call @foo() : () -> ()
+// CHECK:     omp.terminator
+// CHECK:   }
+// CHECK:   omp.section {
+// CHECK:     llvm.call @bar() : () -> ()
+// CHECK:     omp.terminator
+// CHECK:   }
+// CHECK:   omp.terminator
+// CHECK: }
+
+// -----
+
+func.func private @foo(!fir.ref<i32>)
+func.func private @bar(!fir.ref<i32>, !fir.ref<i32>)
+
+func.func @sections_data_without_clauses(%arg0: !fir.ref<i32> {fir.bindc_name = "a"}, %arg1: !fir.ref<i32> {fir.bindc_name = "b"}) {
+  omp.sections {
+    omp.section {
+      fir.call @foo(%arg0) : (!fir.ref<i32>) -> ()
+      omp.terminator
+    }
+    omp.section {
+      fir.call @bar(%arg0, %arg1) : (!fir.ref<i32>, !fir.ref<i32>) -> ()
+      omp.terminator
+    }
+    omp.terminator
+  }
+  return
+}
+
+// CHECK-LABEL: llvm.func @sections_data_without_clauses
+// CHECK-SAME:            (%[[ARG0:.+]]: !llvm.ptr<i32> {fir.bindc_name = "a"}, %[[ARG1:.+]]: !llvm.ptr<i32> {fir.bindc_name = "b"})
+// CHECK: omp.sections {
+// CHECK:   omp.section {
+// CHECK:     llvm.call @foo(%arg0) : (!llvm.ptr<i32>) -> ()
+// CHECK:     omp.terminator
+// CHECK:   }
+// CHECK:   omp.section {
+// CHECK:     llvm.call @bar(%[[ARG0]], %[[ARG1]]) : (!llvm.ptr<i32>, !llvm.ptr<i32>) -> ()
+// CHECK:     omp.terminator
+// CHECK:   }
+// CHECK:   omp.terminator
+// CHECK: }
