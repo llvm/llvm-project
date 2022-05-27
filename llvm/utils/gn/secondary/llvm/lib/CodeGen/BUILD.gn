@@ -22,6 +22,7 @@ static_library("CodeGen") {
     "Analysis.cpp",
     "AtomicExpandPass.cpp",
     "BasicBlockSections.cpp",
+    "BasicBlockSectionsProfileReader.cpp",
     "BasicTargetTransformInfo.cpp",
     "BranchFolding.cpp",
     "BranchRelaxation.cpp",
