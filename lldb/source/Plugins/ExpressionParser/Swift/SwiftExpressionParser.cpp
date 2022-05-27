@@ -1369,7 +1369,6 @@ static llvm::Expected<ParsedExpression> ParseAndImport(
   invocation.getLangOptions().EnableExperimentalStringProcessing =
       enable_bare_slash_regex_literals;
 
-  swift_ast_context.LoadImplicitModules(sc.target_sp, process_sp);
 
   auto should_use_prestable_abi = [&]() {
     lldb::StackFrameSP this_frame_sp(stack_frame_wp.lock());
