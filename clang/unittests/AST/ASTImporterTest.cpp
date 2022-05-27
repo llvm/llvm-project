@@ -4279,6 +4279,10 @@ TEST_P(DeclContextTest,
   // This asserts in the old implementation.
   DC->removeDecl(A0);
   EXPECT_FALSE(DC->containsDecl(A0));
+
+  // Make sure we do not leave a StoredDeclsList with no entries.
+  DC->removeDecl(A1);
+  ASSERT_EQ(Map->find(A1->getDeclName()), Map->end());
 }
 
 struct ImportFunctionTemplateSpecializations
