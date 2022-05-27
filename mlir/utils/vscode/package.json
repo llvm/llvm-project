@@ -156,6 +156,11 @@
           "type": "string",
           "description": "The file path of the tblgen-lsp-server executable."
         },
+        "mlir.tablegen_compilation_databases": {
+          "scope": "resource",
+          "type": "array",
+          "description": "A list of `tablegen_compile_commands.yml` database files containing information about .td files processed by the server."
+        },
         "mlir.onSettingsChanged": {
           "type": "string",
           "default": "prompt",
