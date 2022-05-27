@@ -113,34 +113,33 @@ define amdgpu_ps void @load_1d_vgpr_vaddr__vgpr_srsrc(<8 x i32> %rsrc, i32 %s) {
   ; FAST-NEXT:   [[COPY8:%[0-9]+]]:vgpr(s32) = COPY $vgpr8
   ; FAST-NEXT:   [[DEF:%[0-9]+]]:sgpr(p1) = G_IMPLICIT_DEF
   ; FAST-NEXT:   [[DEF1:%[0-9]+]]:sreg_64_xexec = IMPLICIT_DEF
-  ; FAST-NEXT:   [[UV:%[0-9]+]]:vreg_64(s64), [[UV1:%[0-9]+]]:vreg_64(s64), [[UV2:%[0-9]+]]:vreg_64(s64), [[UV3:%[0-9]+]]:vreg_64(s64) = G_UNMERGE_VALUES [[BUILD_VECTOR]](<8 x s32>)
   ; FAST-NEXT:   [[S_MOV_B64_:%[0-9]+]]:sreg_64_xexec = S_MOV_B64 $exec
   ; FAST-NEXT: {{  $}}
   ; FAST-NEXT: bb.2:
   ; FAST-NEXT:   successors: %bb.3(0x80000000)
   ; FAST-NEXT: {{  $}}
   ; FAST-NEXT:   [[PHI:%[0-9]+]]:sreg_64_xexec = PHI [[DEF1]], %bb.1, %17, %bb.3
-  ; FAST-NEXT:   [[V_READFIRSTLANE_B32_:%[0-9]+]]:sreg_32_xm0(s32) = V_READFIRSTLANE_B32 [[UV]].sub0(s64), implicit $exec
-  ; FAST-NEXT:   [[V_READFIRSTLANE_B32_1:%[0-9]+]]:sreg_32_xm0(s32) = V_READFIRSTLANE_B32 [[UV]].sub1(s64), implicit $exec
-  ; FAST-NEXT:   [[MV:%[0-9]+]]:sreg_64_xexec(s64) = G_MERGE_VALUES [[V_READFIRSTLANE_B32_]](s32), [[V_READFIRSTLANE_B32_1]](s32)
-  ; FAST-NEXT:   [[V_CMP_EQ_U64_e64_:%[0-9]+]]:sreg_64_xexec = V_CMP_EQ_U64_e64 [[MV]](s64), [[UV]](s64), implicit $exec
-  ; FAST-NEXT:   [[V_READFIRSTLANE_B32_2:%[0-9]+]]:sreg_32_xm0(s32) = V_READFIRSTLANE_B32 [[UV1]].sub0(s64), implicit $exec
-  ; FAST-NEXT:   [[V_READFIRSTLANE_B32_3:%[0-9]+]]:sreg_32_xm0(s32) = V_READFIRSTLANE_B32 [[UV1]].sub1(s64), implicit $exec
-  ; FAST-NEXT:   [[MV1:%[0-9]+]]:sreg_64_xexec(s64) = G_MERGE_VALUES [[V_READFIRSTLANE_B32_2]](s32), [[V_READFIRSTLANE_B32_3]](s32)
-  ; FAST-NEXT:   [[V_CMP_EQ_U64_e64_1:%[0-9]+]]:sreg_64_xexec = V_CMP_EQ_U64_e64 [[MV1]](s64), [[UV1]](s64), implicit $exec
-  ; FAST-NEXT:   [[S_AND_B64_:%[0-9]+]]:sreg_64_xexec = S_AND_B64 [[V_CMP_EQ_U64_e64_1]], [[V_CMP_EQ_U64_e64_]], implicit-def $scc
-  ; FAST-NEXT:   [[V_READFIRSTLANE_B32_4:%[0-9]+]]:sreg_32_xm0(s32) = V_READFIRSTLANE_B32 [[UV2]].sub0(s64), implicit $exec
-  ; FAST-NEXT:   [[V_READFIRSTLANE_B32_5:%[0-9]+]]:sreg_32_xm0(s32) = V_READFIRSTLANE_B32 [[UV2]].sub1(s64), implicit $exec
-  ; FAST-NEXT:   [[MV2:%[0-9]+]]:sreg_64_xexec(s64) = G_MERGE_VALUES [[V_READFIRSTLANE_B32_4]](s32), [[V_READFIRSTLANE_B32_5]](s32)
-  ; FAST-NEXT:   [[V_CMP_EQ_U64_e64_2:%[0-9]+]]:sreg_64_xexec = V_CMP_EQ_U64_e64 [[MV2]](s64), [[UV2]](s64), implicit $exec
-  ; FAST-NEXT:   [[S_AND_B64_1:%[0-9]+]]:sreg_64_xexec = S_AND_B64 [[V_CMP_EQ_U64_e64_2]], [[S_AND_B64_]], implicit-def $scc
-  ; FAST-NEXT:   [[V_READFIRSTLANE_B32_6:%[0-9]+]]:sreg_32_xm0(s32) = V_READFIRSTLANE_B32 [[UV3]].sub0(s64), implicit $exec
-  ; FAST-NEXT:   [[V_READFIRSTLANE_B32_7:%[0-9]+]]:sreg_32_xm0(s32) = V_READFIRSTLANE_B32 [[UV3]].sub1(s64), implicit $exec
-  ; FAST-NEXT:   [[MV3:%[0-9]+]]:sreg_64_xexec(s64) = G_MERGE_VALUES [[V_READFIRSTLANE_B32_6]](s32), [[V_READFIRSTLANE_B32_7]](s32)
-  ; FAST-NEXT:   [[V_CMP_EQ_U64_e64_3:%[0-9]+]]:sreg_64_xexec = V_CMP_EQ_U64_e64 [[MV3]](s64), [[UV3]](s64), implicit $exec
-  ; FAST-NEXT:   [[S_AND_B64_2:%[0-9]+]]:sreg_64_xexec = S_AND_B64 [[V_CMP_EQ_U64_e64_3]], [[S_AND_B64_1]], implicit-def $scc
+  ; FAST-NEXT:   [[UV:%[0-9]+]]:vgpr_32(s32), [[UV1:%[0-9]+]]:vgpr_32(s32), [[UV2:%[0-9]+]]:vgpr_32(s32), [[UV3:%[0-9]+]]:vgpr_32(s32), [[UV4:%[0-9]+]]:vgpr_32(s32), [[UV5:%[0-9]+]]:vgpr_32(s32), [[UV6:%[0-9]+]]:vgpr_32(s32), [[UV7:%[0-9]+]]:vgpr_32(s32) = G_UNMERGE_VALUES [[BUILD_VECTOR]](<8 x s32>)
+  ; FAST-NEXT:   [[V_READFIRSTLANE_B32_:%[0-9]+]]:sreg_32(s32) = V_READFIRSTLANE_B32 [[UV]](s32), implicit $exec
+  ; FAST-NEXT:   [[V_READFIRSTLANE_B32_1:%[0-9]+]]:sreg_32(s32) = V_READFIRSTLANE_B32 [[UV1]](s32), implicit $exec
+  ; FAST-NEXT:   [[V_READFIRSTLANE_B32_2:%[0-9]+]]:sreg_32(s32) = V_READFIRSTLANE_B32 [[UV2]](s32), implicit $exec
+  ; FAST-NEXT:   [[V_READFIRSTLANE_B32_3:%[0-9]+]]:sreg_32(s32) = V_READFIRSTLANE_B32 [[UV3]](s32), implicit $exec
+  ; FAST-NEXT:   [[V_READFIRSTLANE_B32_4:%[0-9]+]]:sreg_32(s32) = V_READFIRSTLANE_B32 [[UV4]](s32), implicit $exec
+  ; FAST-NEXT:   [[V_READFIRSTLANE_B32_5:%[0-9]+]]:sreg_32(s32) = V_READFIRSTLANE_B32 [[UV5]](s32), implicit $exec
+  ; FAST-NEXT:   [[V_READFIRSTLANE_B32_6:%[0-9]+]]:sreg_32(s32) = V_READFIRSTLANE_B32 [[UV6]](s32), implicit $exec
+  ; FAST-NEXT:   [[V_READFIRSTLANE_B32_7:%[0-9]+]]:sreg_32(s32) = V_READFIRSTLANE_B32 [[UV7]](s32), implicit $exec
   ; FAST-NEXT:   [[BUILD_VECTOR1:%[0-9]+]]:sgpr(<8 x s32>) = G_BUILD_VECTOR [[V_READFIRSTLANE_B32_]](s32), [[V_READFIRSTLANE_B32_1]](s32), [[V_READFIRSTLANE_B32_2]](s32), [[V_READFIRSTLANE_B32_3]](s32), [[V_READFIRSTLANE_B32_4]](s32), [[V_READFIRSTLANE_B32_5]](s32), [[V_READFIRSTLANE_B32_6]](s32), [[V_READFIRSTLANE_B32_7]](s32)
-  ; FAST-NEXT:   [[S_AND_SAVEEXEC_B64_:%[0-9]+]]:sreg_64_xexec = S_AND_SAVEEXEC_B64 killed [[S_AND_B64_2]], implicit-def $exec, implicit-def $scc, implicit $exec
+  ; FAST-NEXT:   [[UV8:%[0-9]+]]:vgpr(s64), [[UV9:%[0-9]+]]:vgpr(s64), [[UV10:%[0-9]+]]:vgpr(s64), [[UV11:%[0-9]+]]:vgpr(s64) = G_UNMERGE_VALUES [[BUILD_VECTOR]](<8 x s32>)
+  ; FAST-NEXT:   [[UV12:%[0-9]+]]:sgpr(s64), [[UV13:%[0-9]+]]:sgpr(s64), [[UV14:%[0-9]+]]:sgpr(s64), [[UV15:%[0-9]+]]:sgpr(s64) = G_UNMERGE_VALUES [[BUILD_VECTOR1]](<8 x s32>)
+  ; FAST-NEXT:   [[ICMP:%[0-9]+]]:vcc(s1) = G_ICMP intpred(eq), [[UV12]](s64), [[UV8]]
+  ; FAST-NEXT:   [[ICMP1:%[0-9]+]]:vcc(s1) = G_ICMP intpred(eq), [[UV13]](s64), [[UV9]]
+  ; FAST-NEXT:   [[AND:%[0-9]+]]:vcc(s1) = G_AND [[ICMP]], [[ICMP1]]
+  ; FAST-NEXT:   [[ICMP2:%[0-9]+]]:vcc(s1) = G_ICMP intpred(eq), [[UV14]](s64), [[UV10]]
+  ; FAST-NEXT:   [[AND1:%[0-9]+]]:vcc(s1) = G_AND [[AND]], [[ICMP2]]
+  ; FAST-NEXT:   [[ICMP3:%[0-9]+]]:vcc(s1) = G_ICMP intpred(eq), [[UV15]](s64), [[UV11]]
+  ; FAST-NEXT:   [[AND2:%[0-9]+]]:vcc(s1) = G_AND [[AND1]], [[ICMP3]]
+  ; FAST-NEXT:   [[INT:%[0-9]+]]:sreg_64_xexec(s64) = G_INTRINSIC intrinsic(@llvm.amdgcn.ballot), [[AND2]](s1)
+  ; FAST-NEXT:   [[S_AND_SAVEEXEC_B64_:%[0-9]+]]:sreg_64_xexec = S_AND_SAVEEXEC_B64 killed [[INT]](s64), implicit-def $exec, implicit-def $scc, implicit $exec
   ; FAST-NEXT: {{  $}}
   ; FAST-NEXT: bb.3:
   ; FAST-NEXT:   successors: %bb.4(0x40000000), %bb.2(0x40000000)
@@ -175,34 +174,33 @@ define amdgpu_ps void @load_1d_vgpr_vaddr__vgpr_srsrc(<8 x i32> %rsrc, i32 %s) {
   ; GREEDY-NEXT:   [[COPY8:%[0-9]+]]:vgpr(s32) = COPY $vgpr8
   ; GREEDY-NEXT:   [[DEF:%[0-9]+]]:sgpr(p1) = G_IMPLICIT_DEF
   ; GREEDY-NEXT:   [[DEF1:%[0-9]+]]:sreg_64_xexec = IMPLICIT_DEF
-  ; GREEDY-NEXT:   [[UV:%[0-9]+]]:vreg_64(s64), [[UV1:%[0-9]+]]:vreg_64(s64), [[UV2:%[0-9]+]]:vreg_64(s64), [[UV3:%[0-9]+]]:vreg_64(s64) = G_UNMERGE_VALUES [[BUILD_VECTOR]](<8 x s32>)
   ; GREEDY-NEXT:   [[S_MOV_B64_:%[0-9]+]]:sreg_64_xexec = S_MOV_B64 $exec
   ; GREEDY-NEXT: {{  $}}
   ; GREEDY-NEXT: bb.2:
   ; GREEDY-NEXT:   successors: %bb.3(0x80000000)
   ; GREEDY-NEXT: {{  $}}
   ; GREEDY-NEXT:   [[PHI:%[0-9]+]]:sreg_64_xexec = PHI [[DEF1]], %bb.1, %17, %bb.3
-  ; GREEDY-NEXT:   [[V_READFIRSTLANE_B32_:%[0-9]+]]:sreg_32_xm0(s32) = V_READFIRSTLANE_B32 [[UV]].sub0(s64), implicit $exec
-  ; GREEDY-NEXT:   [[V_READFIRSTLANE_B32_1:%[0-9]+]]:sreg_32_xm0(s32) = V_READFIRSTLANE_B32 [[UV]].sub1(s64), implicit $exec
-  ; GREEDY-NEXT:   [[MV:%[0-9]+]]:sreg_64_xexec(s64) = G_MERGE_VALUES [[V_READFIRSTLANE_B32_]](s32), [[V_READFIRSTLANE_B32_1]](s32)
-  ; GREEDY-NEXT:   [[V_CMP_EQ_U64_e64_:%[0-9]+]]:sreg_64_xexec = V_CMP_EQ_U64_e64 [[MV]](s64), [[UV]](s64), implicit $exec
-  ; GREEDY-NEXT:   [[V_READFIRSTLANE_B32_2:%[0-9]+]]:sreg_32_xm0(s32) = V_READFIRSTLANE_B32 [[UV1]].sub0(s64), implicit $exec
-  ; GREEDY-NEXT:   [[V_READFIRSTLANE_B32_3:%[0-9]+]]:sreg_32_xm0(s32) = V_READFIRSTLANE_B32 [[UV1]].sub1(s64), implicit $exec
-  ; GREEDY-NEXT:   [[MV1:%[0-9]+]]:sreg_64_xexec(s64) = G_MERGE_VALUES [[V_READFIRSTLANE_B32_2]](s32), [[V_READFIRSTLANE_B32_3]](s32)
-  ; GREEDY-NEXT:   [[V_CMP_EQ_U64_e64_1:%[0-9]+]]:sreg_64_xexec = V_CMP_EQ_U64_e64 [[MV1]](s64), [[UV1]](s64), implicit $exec
-  ; GREEDY-NEXT:   [[S_AND_B64_:%[0-9]+]]:sreg_64_xexec = S_AND_B64 [[V_CMP_EQ_U64_e64_1]], [[V_CMP_EQ_U64_e64_]], implicit-def $scc
-  ; GREEDY-NEXT:   [[V_READFIRSTLANE_B32_4:%[0-9]+]]:sreg_32_xm0(s32) = V_READFIRSTLANE_B32 [[UV2]].sub0(s64), implicit $exec
-  ; GREEDY-NEXT:   [[V_READFIRSTLANE_B32_5:%[0-9]+]]:sreg_32_xm0(s32) = V_READFIRSTLANE_B32 [[UV2]].sub1(s64), implicit $exec
-  ; GREEDY-NEXT:   [[MV2:%[0-9]+]]:sreg_64_xexec(s64) = G_MERGE_VALUES [[V_READFIRSTLANE_B32_4]](s32), [[V_READFIRSTLANE_B32_5]](s32)
-  ; GREEDY-NEXT:   [[V_CMP_EQ_U64_e64_2:%[0-9]+]]:sreg_64_xexec = V_CMP_EQ_U64_e64 [[MV2]](s64), [[UV2]](s64), implicit $exec
-  ; GREEDY-NEXT:   [[S_AND_B64_1:%[0-9]+]]:sreg_64_xexec = S_AND_B64 [[V_CMP_EQ_U64_e64_2]], [[S_AND_B64_]], implicit-def $scc
-  ; GREEDY-NEXT:   [[V_READFIRSTLANE_B32_6:%[0-9]+]]:sreg_32_xm0(s32) = V_READFIRSTLANE_B32 [[UV3]].sub0(s64), implicit $exec
-  ; GREEDY-NEXT:   [[V_READFIRSTLANE_B32_7:%[0-9]+]]:sreg_32_xm0(s32) = V_READFIRSTLANE_B32 [[UV3]].sub1(s64), implicit $exec
-  ; GREEDY-NEXT:   [[MV3:%[0-9]+]]:sreg_64_xexec(s64) = G_MERGE_VALUES [[V_READFIRSTLANE_B32_6]](s32), [[V_READFIRSTLANE_B32_7]](s32)
-  ; GREEDY-NEXT:   [[V_CMP_EQ_U64_e64_3:%[0-9]+]]:sreg_64_xexec = V_CMP_EQ_U64_e64 [[MV3]](s64), [[UV3]](s64), implicit $exec
-  ; GREEDY-NEXT:   [[S_AND_B64_2:%[0-9]+]]:sreg_64_xexec = S_AND_B64 [[V_CMP_EQ_U64_e64_3]], [[S_AND_B64_1]], implicit-def $scc
+  ; GREEDY-NEXT:   [[UV:%[0-9]+]]:vgpr_32(s32), [[UV1:%[0-9]+]]:vgpr_32(s32), [[UV2:%[0-9]+]]:vgpr_32(s32), [[UV3:%[0-9]+]]:vgpr_32(s32), [[UV4:%[0-9]+]]:vgpr_32(s32), [[UV5:%[0-9]+]]:vgpr_32(s32), [[UV6:%[0-9]+]]:vgpr_32(s32), [[UV7:%[0-9]+]]:vgpr_32(s32) = G_UNMERGE_VALUES [[BUILD_VECTOR]](<8 x s32>)
+  ; GREEDY-NEXT:   [[V_READFIRSTLANE_B32_:%[0-9]+]]:sreg_32(s32) = V_READFIRSTLANE_B32 [[UV]](s32), implicit $exec
+  ; GREEDY-NEXT:   [[V_READFIRSTLANE_B32_1:%[0-9]+]]:sreg_32(s32) = V_READFIRSTLANE_B32 [[UV1]](s32), implicit $exec
+  ; GREEDY-NEXT:   [[V_READFIRSTLANE_B32_2:%[0-9]+]]:sreg_32(s32) = V_READFIRSTLANE_B32 [[UV2]](s32), implicit $exec
+  ; GREEDY-NEXT:   [[V_READFIRSTLANE_B32_3:%[0-9]+]]:sreg_32(s32) = V_READFIRSTLANE_B32 [[UV3]](s32), implicit $exec
+  ; GREEDY-NEXT:   [[V_READFIRSTLANE_B32_4:%[0-9]+]]:sreg_32(s32) = V_READFIRSTLANE_B32 [[UV4]](s32), implicit $exec
+  ; GREEDY-NEXT:   [[V_READFIRSTLANE_B32_5:%[0-9]+]]:sreg_32(s32) = V_READFIRSTLANE_B32 [[UV5]](s32), implicit $exec
+  ; GREEDY-NEXT:   [[V_READFIRSTLANE_B32_6:%[0-9]+]]:sreg_32(s32) = V_READFIRSTLANE_B32 [[UV6]](s32), implicit $exec
+  ; GREEDY-NEXT:   [[V_READFIRSTLANE_B32_7:%[0-9]+]]:sreg_32(s32) = V_READFIRSTLANE_B32 [[UV7]](s32), implicit $exec
   ; GREEDY-NEXT:   [[BUILD_VECTOR1:%[0-9]+]]:sgpr(<8 x s32>) = G_BUILD_VECTOR [[V_READFIRSTLANE_B32_]](s32), [[V_READFIRSTLANE_B32_1]](s32), [[V_READFIRSTLANE_B32_2]](s32), [[V_READFIRSTLANE_B32_3]](s32), [[V_READFIRSTLANE_B32_4]](s32), [[V_READFIRSTLANE_B32_5]](s32), [[V_READFIRSTLANE_B32_6]](s32), [[V_READFIRSTLANE_B32_7]](s32)
-  ; GREEDY-NEXT:   [[S_AND_SAVEEXEC_B64_:%[0-9]+]]:sreg_64_xexec = S_AND_SAVEEXEC_B64 killed [[S_AND_B64_2]], implicit-def $exec, implicit-def $scc, implicit $exec
+  ; GREEDY-NEXT:   [[UV8:%[0-9]+]]:vgpr(s64), [[UV9:%[0-9]+]]:vgpr(s64), [[UV10:%[0-9]+]]:vgpr(s64), [[UV11:%[0-9]+]]:vgpr(s64) = G_UNMERGE_VALUES [[BUILD_VECTOR]](<8 x s32>)
+  ; GREEDY-NEXT:   [[UV12:%[0-9]+]]:sgpr(s64), [[UV13:%[0-9]+]]:sgpr(s64), [[UV14:%[0-9]+]]:sgpr(s64), [[UV15:%[0-9]+]]:sgpr(s64) = G_UNMERGE_VALUES [[BUILD_VECTOR1]](<8 x s32>)
+  ; GREEDY-NEXT:   [[ICMP:%[0-9]+]]:vcc(s1) = G_ICMP intpred(eq), [[UV12]](s64), [[UV8]]
+  ; GREEDY-NEXT:   [[ICMP1:%[0-9]+]]:vcc(s1) = G_ICMP intpred(eq), [[UV13]](s64), [[UV9]]
+  ; GREEDY-NEXT:   [[AND:%[0-9]+]]:vcc(s1) = G_AND [[ICMP]], [[ICMP1]]
+  ; GREEDY-NEXT:   [[ICMP2:%[0-9]+]]:vcc(s1) = G_ICMP intpred(eq), [[UV14]](s64), [[UV10]]
+  ; GREEDY-NEXT:   [[AND1:%[0-9]+]]:vcc(s1) = G_AND [[AND]], [[ICMP2]]
+  ; GREEDY-NEXT:   [[ICMP3:%[0-9]+]]:vcc(s1) = G_ICMP intpred(eq), [[UV15]](s64), [[UV11]]
+  ; GREEDY-NEXT:   [[AND2:%[0-9]+]]:vcc(s1) = G_AND [[AND1]], [[ICMP3]]
+  ; GREEDY-NEXT:   [[INT:%[0-9]+]]:sreg_64_xexec(s64) = G_INTRINSIC intrinsic(@llvm.amdgcn.ballot), [[AND2]](s1)
+  ; GREEDY-NEXT:   [[S_AND_SAVEEXEC_B64_:%[0-9]+]]:sreg_64_xexec = S_AND_SAVEEXEC_B64 killed [[INT]](s64), implicit-def $exec, implicit-def $scc, implicit $exec
   ; GREEDY-NEXT: {{  $}}
   ; GREEDY-NEXT: bb.3:
   ; GREEDY-NEXT:   successors: %bb.4(0x40000000), %bb.2(0x40000000)
@@ -245,34 +243,33 @@ define amdgpu_ps void @load_1d_sgpr_vaddr__vgpr_srsrc(<8 x i32> %rsrc, i32 inreg
   ; FAST-NEXT:   [[DEF:%[0-9]+]]:sgpr(p1) = G_IMPLICIT_DEF
   ; FAST-NEXT:   [[COPY9:%[0-9]+]]:vgpr(s32) = COPY [[COPY8]](s32)
   ; FAST-NEXT:   [[DEF1:%[0-9]+]]:sreg_64_xexec = IMPLICIT_DEF
-  ; FAST-NEXT:   [[UV:%[0-9]+]]:vreg_64(s64), [[UV1:%[0-9]+]]:vreg_64(s64), [[UV2:%[0-9]+]]:vreg_64(s64), [[UV3:%[0-9]+]]:vreg_64(s64) = G_UNMERGE_VALUES [[BUILD_VECTOR]](<8 x s32>)
   ; FAST-NEXT:   [[S_MOV_B64_:%[0-9]+]]:sreg_64_xexec = S_MOV_B64 $exec
   ; FAST-NEXT: {{  $}}
   ; FAST-NEXT: bb.2:
   ; FAST-NEXT:   successors: %bb.3(0x80000000)
   ; FAST-NEXT: {{  $}}
   ; FAST-NEXT:   [[PHI:%[0-9]+]]:sreg_64_xexec = PHI [[DEF1]], %bb.1, %18, %bb.3
-  ; FAST-NEXT:   [[V_READFIRSTLANE_B32_:%[0-9]+]]:sreg_32_xm0(s32) = V_READFIRSTLANE_B32 [[UV]].sub0(s64), implicit $exec
-  ; FAST-NEXT:   [[V_READFIRSTLANE_B32_1:%[0-9]+]]:sreg_32_xm0(s32) = V_READFIRSTLANE_B32 [[UV]].sub1(s64), implicit $exec
-  ; FAST-NEXT:   [[MV:%[0-9]+]]:sreg_64_xexec(s64) = G_MERGE_VALUES [[V_READFIRSTLANE_B32_]](s32), [[V_READFIRSTLANE_B32_1]](s32)
-  ; FAST-NEXT:   [[V_CMP_EQ_U64_e64_:%[0-9]+]]:sreg_64_xexec = V_CMP_EQ_U64_e64 [[MV]](s64), [[UV]](s64), implicit $exec
-  ; FAST-NEXT:   [[V_READFIRSTLANE_B32_2:%[0-9]+]]:sreg_32_xm0(s32) = V_READFIRSTLANE_B32 [[UV1]].sub0(s64), implicit $exec
-  ; FAST-NEXT:   [[V_READFIRSTLANE_B32_3:%[0-9]+]]:sreg_32_xm0(s32) = V_READFIRSTLANE_B32 [[UV1]].sub1(s64), implicit $exec
-  ; FAST-NEXT:   [[MV1:%[0-9]+]]:sreg_64_xexec(s64) = G_MERGE_VALUES [[V_READFIRSTLANE_B32_2]](s32), [[V_READFIRSTLANE_B32_3]](s32)
-  ; FAST-NEXT:   [[V_CMP_EQ_U64_e64_1:%[0-9]+]]:sreg_64_xexec = V_CMP_EQ_U64_e64 [[MV1]](s64), [[UV1]](s64), implicit $exec
-  ; FAST-NEXT:   [[S_AND_B64_:%[0-9]+]]:sreg_64_xexec = S_AND_B64 [[V_CMP_EQ_U64_e64_1]], [[V_CMP_EQ_U64_e64_]], implicit-def $scc
-  ; FAST-NEXT:   [[V_READFIRSTLANE_B32_4:%[0-9]+]]:sreg_32_xm0(s32) = V_READFIRSTLANE_B32 [[UV2]].sub0(s64), implicit $exec
-  ; FAST-NEXT:   [[V_READFIRSTLANE_B32_5:%[0-9]+]]:sreg_32_xm0(s32) = V_READFIRSTLANE_B32 [[UV2]].sub1(s64), implicit $exec
-  ; FAST-NEXT:   [[MV2:%[0-9]+]]:sreg_64_xexec(s64) = G_MERGE_VALUES [[V_READFIRSTLANE_B32_4]](s32), [[V_READFIRSTLANE_B32_5]](s32)
-  ; FAST-NEXT:   [[V_CMP_EQ_U64_e64_2:%[0-9]+]]:sreg_64_xexec = V_CMP_EQ_U64_e64 [[MV2]](s64), [[UV2]](s64), implicit $exec
-  ; FAST-NEXT:   [[S_AND_B64_1:%[0-9]+]]:sreg_64_xexec = S_AND_B64 [[V_CMP_EQ_U64_e64_2]], [[S_AND_B64_]], implicit-def $scc
-  ; FAST-NEXT:   [[V_READFIRSTLANE_B32_6:%[0-9]+]]:sreg_32_xm0(s32) = V_READFIRSTLANE_B32 [[UV3]].sub0(s64), implicit $exec
-  ; FAST-NEXT:   [[V_READFIRSTLANE_B32_7:%[0-9]+]]:sreg_32_xm0(s32) = V_READFIRSTLANE_B32 [[UV3]].sub1(s64), implicit $exec
-  ; FAST-NEXT:   [[MV3:%[0-9]+]]:sreg_64_xexec(s64) = G_MERGE_VALUES [[V_READFIRSTLANE_B32_6]](s32), [[V_READFIRSTLANE_B32_7]](s32)
-  ; FAST-NEXT:   [[V_CMP_EQ_U64_e64_3:%[0-9]+]]:sreg_64_xexec = V_CMP_EQ_U64_e64 [[MV3]](s64), [[UV3]](s64), implicit $exec
-  ; FAST-NEXT:   [[S_AND_B64_2:%[0-9]+]]:sreg_64_xexec = S_AND_B64 [[V_CMP_EQ_U64_e64_3]], [[S_AND_B64_1]], implicit-def $scc
+  ; FAST-NEXT:   [[UV:%[0-9]+]]:vgpr_32(s32), [[UV1:%[0-9]+]]:vgpr_32(s32), [[UV2:%[0-9]+]]:vgpr_32(s32), [[UV3:%[0-9]+]]:vgpr_32(s32), [[UV4:%[0-9]+]]:vgpr_32(s32), [[UV5:%[0-9]+]]:vgpr_32(s32), [[UV6:%[0-9]+]]:vgpr_32(s32), [[UV7:%[0-9]+]]:vgpr_32(s32) = G_UNMERGE_VALUES [[BUILD_VECTOR]](<8 x s32>)
+  ; FAST-NEXT:   [[V_READFIRSTLANE_B32_:%[0-9]+]]:sreg_32(s32) = V_READFIRSTLANE_B32 [[UV]](s32), implicit $exec
+  ; FAST-NEXT:   [[V_READFIRSTLANE_B32_1:%[0-9]+]]:sreg_32(s32) = V_READFIRSTLANE_B32 [[UV1]](s32), implicit $exec
+  ; FAST-NEXT:   [[V_READFIRSTLANE_B32_2:%[0-9]+]]:sreg_32(s32) = V_READFIRSTLANE_B32 [[UV2]](s32), implicit $exec
+  ; FAST-NEXT:   [[V_READFIRSTLANE_B32_3:%[0-9]+]]:sreg_32(s32) = V_READFIRSTLANE_B32 [[UV3]](s32), implicit $exec
+  ; FAST-NEXT:   [[V_READFIRSTLANE_B32_4:%[0-9]+]]:sreg_32(s32) = V_READFIRSTLANE_B32 [[UV4]](s32), implicit $exec
+  ; FAST-NEXT:   [[V_READFIRSTLANE_B32_5:%[0-9]+]]:sreg_32(s32) = V_READFIRSTLANE_B32 [[UV5]](s32), implicit $exec
+  ; FAST-NEXT:   [[V_READFIRSTLANE_B32_6:%[0-9]+]]:sreg_32(s32) = V_READFIRSTLANE_B32 [[UV6]](s32), implicit $exec
+  ; FAST-NEXT:   [[V_READFIRSTLANE_B32_7:%[0-9]+]]:sreg_32(s32) = V_READFIRSTLANE_B32 [[UV7]](s32), implicit $exec
   ; FAST-NEXT:   [[BUILD_VECTOR1:%[0-9]+]]:sgpr(<8 x s32>) = G_BUILD_VECTOR [[V_READFIRSTLANE_B32_]](s32), [[V_READFIRSTLANE_B32_1]](s32), [[V_READFIRSTLANE_B32_2]](s32), [[V_READFIRSTLANE_B32_3]](s32), [[V_READFIRSTLANE_B32_4]](s32), [[V_READFIRSTLANE_B32_5]](s32), [[V_READFIRSTLANE_B32_6]](s32), [[V_READFIRSTLANE_B32_7]](s32)
-  ; FAST-NEXT:   [[S_AND_SAVEEXEC_B64_:%[0-9]+]]:sreg_64_xexec = S_AND_SAVEEXEC_B64 killed [[S_AND_B64_2]], implicit-def $exec, implicit-def $scc, implicit $exec
+  ; FAST-NEXT:   [[UV8:%[0-9]+]]:vgpr(s64), [[UV9:%[0-9]+]]:vgpr(s64), [[UV10:%[0-9]+]]:vgpr(s64), [[UV11:%[0-9]+]]:vgpr(s64) = G_UNMERGE_VALUES [[BUILD_VECTOR]](<8 x s32>)
+  ; FAST-NEXT:   [[UV12:%[0-9]+]]:sgpr(s64), [[UV13:%[0-9]+]]:sgpr(s64), [[UV14:%[0-9]+]]:sgpr(s64), [[UV15:%[0-9]+]]:sgpr(s64) = G_UNMERGE_VALUES [[BUILD_VECTOR1]](<8 x s32>)
+  ; FAST-NEXT:   [[ICMP:%[0-9]+]]:vcc(s1) = G_ICMP intpred(eq), [[UV12]](s64), [[UV8]]
+  ; FAST-NEXT:   [[ICMP1:%[0-9]+]]:vcc(s1) = G_ICMP intpred(eq), [[UV13]](s64), [[UV9]]
+  ; FAST-NEXT:   [[AND:%[0-9]+]]:vcc(s1) = G_AND [[ICMP]], [[ICMP1]]
+  ; FAST-NEXT:   [[ICMP2:%[0-9]+]]:vcc(s1) = G_ICMP intpred(eq), [[UV14]](s64), [[UV10]]
+  ; FAST-NEXT:   [[AND1:%[0-9]+]]:vcc(s1) = G_AND [[AND]], [[ICMP2]]
+  ; FAST-NEXT:   [[ICMP3:%[0-9]+]]:vcc(s1) = G_ICMP intpred(eq), [[UV15]](s64), [[UV11]]
+  ; FAST-NEXT:   [[AND2:%[0-9]+]]:vcc(s1) = G_AND [[AND1]], [[ICMP3]]
+  ; FAST-NEXT:   [[INT:%[0-9]+]]:sreg_64_xexec(s64) = G_INTRINSIC intrinsic(@llvm.amdgcn.ballot), [[AND2]](s1)
+  ; FAST-NEXT:   [[S_AND_SAVEEXEC_B64_:%[0-9]+]]:sreg_64_xexec = S_AND_SAVEEXEC_B64 killed [[INT]](s64), implicit-def $exec, implicit-def $scc, implicit $exec
   ; FAST-NEXT: {{  $}}
   ; FAST-NEXT: bb.3:
   ; FAST-NEXT:   successors: %bb.4(0x40000000), %bb.2(0x40000000)
@@ -308,34 +305,33 @@ define amdgpu_ps void @load_1d_sgpr_vaddr__vgpr_srsrc(<8 x i32> %rsrc, i32 inreg
   ; GREEDY-NEXT:   [[DEF:%[0-9]+]]:sgpr(p1) = G_IMPLICIT_DEF
   ; GREEDY-NEXT:   [[COPY9:%[0-9]+]]:vgpr(s32) = COPY [[COPY8]](s32)
   ; GREEDY-NEXT:   [[DEF1:%[0-9]+]]:sreg_64_xexec = IMPLICIT_DEF
-  ; GREEDY-NEXT:   [[UV:%[0-9]+]]:vreg_64(s64), [[UV1:%[0-9]+]]:vreg_64(s64), [[UV2:%[0-9]+]]:vreg_64(s64), [[UV3:%[0-9]+]]:vreg_64(s64) = G_UNMERGE_VALUES [[BUILD_VECTOR]](<8 x s32>)
   ; GREEDY-NEXT:   [[S_MOV_B64_:%[0-9]+]]:sreg_64_xexec = S_MOV_B64 $exec
   ; GREEDY-NEXT: {{  $}}
   ; GREEDY-NEXT: bb.2:
   ; GREEDY-NEXT:   successors: %bb.3(0x80000000)
   ; GREEDY-NEXT: {{  $}}
   ; GREEDY-NEXT:   [[PHI:%[0-9]+]]:sreg_64_xexec = PHI [[DEF1]], %bb.1, %18, %bb.3
-  ; GREEDY-NEXT:   [[V_READFIRSTLANE_B32_:%[0-9]+]]:sreg_32_xm0(s32) = V_READFIRSTLANE_B32 [[UV]].sub0(s64), implicit $exec
-  ; GREEDY-NEXT:   [[V_READFIRSTLANE_B32_1:%[0-9]+]]:sreg_32_xm0(s32) = V_READFIRSTLANE_B32 [[UV]].sub1(s64), implicit $exec
-  ; GREEDY-NEXT:   [[MV:%[0-9]+]]:sreg_64_xexec(s64) = G_MERGE_VALUES [[V_READFIRSTLANE_B32_]](s32), [[V_READFIRSTLANE_B32_1]](s32)
-  ; GREEDY-NEXT:   [[V_CMP_EQ_U64_e64_:%[0-9]+]]:sreg_64_xexec = V_CMP_EQ_U64_e64 [[MV]](s64), [[UV]](s64), implicit $exec
-  ; GREEDY-NEXT:   [[V_READFIRSTLANE_B32_2:%[0-9]+]]:sreg_32_xm0(s32) = V_READFIRSTLANE_B32 [[UV1]].sub0(s64), implicit $exec
-  ; GREEDY-NEXT:   [[V_READFIRSTLANE_B32_3:%[0-9]+]]:sreg_32_xm0(s32) = V_READFIRSTLANE_B32 [[UV1]].sub1(s64), implicit $exec
-  ; GREEDY-NEXT:   [[MV1:%[0-9]+]]:sreg_64_xexec(s64) = G_MERGE_VALUES [[V_READFIRSTLANE_B32_2]](s32), [[V_READFIRSTLANE_B32_3]](s32)
-  ; GREEDY-NEXT:   [[V_CMP_EQ_U64_e64_1:%[0-9]+]]:sreg_64_xexec = V_CMP_EQ_U64_e64 [[MV1]](s64), [[UV1]](s64), implicit $exec
-  ; GREEDY-NEXT:   [[S_AND_B64_:%[0-9]+]]:sreg_64_xexec = S_AND_B64 [[V_CMP_EQ_U64_e64_1]], [[V_CMP_EQ_U64_e64_]], implicit-def $scc
-  ; GREEDY-NEXT:   [[V_READFIRSTLANE_B32_4:%[0-9]+]]:sreg_32_xm0(s32) = V_READFIRSTLANE_B32 [[UV2]].sub0(s64), implicit $exec
-  ; GREEDY-NEXT:   [[V_READFIRSTLANE_B32_5:%[0-9]+]]:sreg_32_xm0(s32) = V_READFIRSTLANE_B32 [[UV2]].sub1(s64), implicit $exec
-  ; GREEDY-NEXT:   [[MV2:%[0-9]+]]:sreg_64_xexec(s64) = G_MERGE_VALUES [[V_READFIRSTLANE_B32_4]](s32), [[V_READFIRSTLANE_B32_5]](s32)
-  ; GREEDY-NEXT:   [[V_CMP_EQ_U64_e64_2:%[0-9]+]]:sreg_64_xexec = V_CMP_EQ_U64_e64 [[MV2]](s64), [[UV2]](s64), implicit $exec
-  ; GREEDY-NEXT:   [[S_AND_B64_1:%[0-9]+]]:sreg_64_xexec = S_AND_B64 [[V_CMP_EQ_U64_e64_2]], [[S_AND_B64_]], implicit-def $scc
-  ; GREEDY-NEXT:   [[V_READFIRSTLANE_B32_6:%[0-9]+]]:sreg_32_xm0(s32) = V_READFIRSTLANE_B32 [[UV3]].sub0(s64), implicit $exec
-  ; GREEDY-NEXT:   [[V_READFIRSTLANE_B32_7:%[0-9]+]]:sreg_32_xm0(s32) = V_READFIRSTLANE_B32 [[UV3]].sub1(s64), implicit $exec
-  ; GREEDY-NEXT:   [[MV3:%[0-9]+]]:sreg_64_xexec(s64) = G_MERGE_VALUES [[V_READFIRSTLANE_B32_6]](s32), [[V_READFIRSTLANE_B32_7]](s32)
-  ; GREEDY-NEXT:   [[V_CMP_EQ_U64_e64_3:%[0-9]+]]:sreg_64_xexec = V_CMP_EQ_U64_e64 [[MV3]](s64), [[UV3]](s64), implicit $exec
-  ; GREEDY-NEXT:   [[S_AND_B64_2:%[0-9]+]]:sreg_64_xexec = S_AND_B64 [[V_CMP_EQ_U64_e64_3]], [[S_AND_B64_1]], implicit-def $scc
+  ; GREEDY-NEXT:   [[UV:%[0-9]+]]:vgpr_32(s32), [[UV1:%[0-9]+]]:vgpr_32(s32), [[UV2:%[0-9]+]]:vgpr_32(s32), [[UV3:%[0-9]+]]:vgpr_32(s32), [[UV4:%[0-9]+]]:vgpr_32(s32), [[UV5:%[0-9]+]]:vgpr_32(s32), [[UV6:%[0-9]+]]:vgpr_32(s32), [[UV7:%[0-9]+]]:vgpr_32(s32) = G_UNMERGE_VALUES [[BUILD_VECTOR]](<8 x s32>)
+  ; GREEDY-NEXT:   [[V_READFIRSTLANE_B32_:%[0-9]+]]:sreg_32(s32) = V_READFIRSTLANE_B32 [[UV]](s32), implicit $exec
+  ; GREEDY-NEXT:   [[V_READFIRSTLANE_B32_1:%[0-9]+]]:sreg_32(s32) = V_READFIRSTLANE_B32 [[UV1]](s32), implicit $exec
+  ; GREEDY-NEXT:   [[V_READFIRSTLANE_B32_2:%[0-9]+]]:sreg_32(s32) = V_READFIRSTLANE_B32 [[UV2]](s32), implicit $exec
+  ; GREEDY-NEXT:   [[V_READFIRSTLANE_B32_3:%[0-9]+]]:sreg_32(s32) = V_READFIRSTLANE_B32 [[UV3]](s32), implicit $exec
+  ; GREEDY-NEXT:   [[V_READFIRSTLANE_B32_4:%[0-9]+]]:sreg_32(s32) = V_READFIRSTLANE_B32 [[UV4]](s32), implicit $exec
+  ; GREEDY-NEXT:   [[V_READFIRSTLANE_B32_5:%[0-9]+]]:sreg_32(s32) = V_READFIRSTLANE_B32 [[UV5]](s32), implicit $exec
+  ; GREEDY-NEXT:   [[V_READFIRSTLANE_B32_6:%[0-9]+]]:sreg_32(s32) = V_READFIRSTLANE_B32 [[UV6]](s32), implicit $exec
+  ; GREEDY-NEXT:   [[V_READFIRSTLANE_B32_7:%[0-9]+]]:sreg_32(s32) = V_READFIRSTLANE_B32 [[UV7]](s32), implicit $exec
   ; GREEDY-NEXT:   [[BUILD_VECTOR1:%[0-9]+]]:sgpr(<8 x s32>) = G_BUILD_VECTOR [[V_READFIRSTLANE_B32_]](s32), [[V_READFIRSTLANE_B32_1]](s32), [[V_READFIRSTLANE_B32_2]](s32), [[V_READFIRSTLANE_B32_3]](s32), [[V_READFIRSTLANE_B32_4]](s32), [[V_READFIRSTLANE_B32_5]](s32), [[V_READFIRSTLANE_B32_6]](s32), [[V_READFIRSTLANE_B32_7]](s32)
-  ; GREEDY-NEXT:   [[S_AND_SAVEEXEC_B64_:%[0-9]+]]:sreg_64_xexec = S_AND_SAVEEXEC_B64 killed [[S_AND_B64_2]], implicit-def $exec, implicit-def $scc, implicit $exec
+  ; GREEDY-NEXT:   [[UV8:%[0-9]+]]:vgpr(s64), [[UV9:%[0-9]+]]:vgpr(s64), [[UV10:%[0-9]+]]:vgpr(s64), [[UV11:%[0-9]+]]:vgpr(s64) = G_UNMERGE_VALUES [[BUILD_VECTOR]](<8 x s32>)
+  ; GREEDY-NEXT:   [[UV12:%[0-9]+]]:sgpr(s64), [[UV13:%[0-9]+]]:sgpr(s64), [[UV14:%[0-9]+]]:sgpr(s64), [[UV15:%[0-9]+]]:sgpr(s64) = G_UNMERGE_VALUES [[BUILD_VECTOR1]](<8 x s32>)
+  ; GREEDY-NEXT:   [[ICMP:%[0-9]+]]:vcc(s1) = G_ICMP intpred(eq), [[UV12]](s64), [[UV8]]
+  ; GREEDY-NEXT:   [[ICMP1:%[0-9]+]]:vcc(s1) = G_ICMP intpred(eq), [[UV13]](s64), [[UV9]]
+  ; GREEDY-NEXT:   [[AND:%[0-9]+]]:vcc(s1) = G_AND [[ICMP]], [[ICMP1]]
+  ; GREEDY-NEXT:   [[ICMP2:%[0-9]+]]:vcc(s1) = G_ICMP intpred(eq), [[UV14]](s64), [[UV10]]
+  ; GREEDY-NEXT:   [[AND1:%[0-9]+]]:vcc(s1) = G_AND [[AND]], [[ICMP2]]
+  ; GREEDY-NEXT:   [[ICMP3:%[0-9]+]]:vcc(s1) = G_ICMP intpred(eq), [[UV15]](s64), [[UV11]]
+  ; GREEDY-NEXT:   [[AND2:%[0-9]+]]:vcc(s1) = G_AND [[AND1]], [[ICMP3]]
+  ; GREEDY-NEXT:   [[INT:%[0-9]+]]:sreg_64_xexec(s64) = G_INTRINSIC intrinsic(@llvm.amdgcn.ballot), [[AND2]](s1)
+  ; GREEDY-NEXT:   [[S_AND_SAVEEXEC_B64_:%[0-9]+]]:sreg_64_xexec = S_AND_SAVEEXEC_B64 killed [[INT]](s64), implicit-def $exec, implicit-def $scc, implicit $exec
   ; GREEDY-NEXT: {{  $}}
   ; GREEDY-NEXT: bb.3:
   ; GREEDY-NEXT:   successors: %bb.4(0x40000000), %bb.2(0x40000000)
