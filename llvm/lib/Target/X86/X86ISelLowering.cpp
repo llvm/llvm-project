@@ -26078,8 +26078,7 @@ static SDValue recoverFramePointer(SelectionDAG &DAG, const Function *Fn,
 
   // Return EntryEBP + ParentFrameOffset for x64. This adjusts from RSP after
   // prologue to RBP in the parent function.
-  const X86Subtarget &Subtarget =
-      static_cast<const X86Subtarget &>(DAG.getSubtarget());
+  const X86Subtarget &Subtarget = DAG.getSubtarget<X86Subtarget>();
   if (Subtarget.is64Bit())
     return DAG.getNode(ISD::ADD, dl, PtrVT, EntryEBP, ParentFrameOffset);
 
@@ -39122,8 +39121,7 @@ static SDValue combineCommutableSHUFP(SDValue N, MVT VT, const SDLoc &DL,
     SDValue N0 = V.getOperand(0);
     SDValue N1 = V.getOperand(1);
     unsigned Imm = V.getConstantOperandVal(2);
-    const X86Subtarget &Subtarget =
-        static_cast<const X86Subtarget &>(DAG.getSubtarget());
+    const X86Subtarget &Subtarget = DAG.getSubtarget<X86Subtarget>();
     if (!X86::mayFoldLoad(peekThroughOneUseBitcasts(N0), Subtarget) ||
         X86::mayFoldLoad(peekThroughOneUseBitcasts(N1), Subtarget))
       return SDValue();

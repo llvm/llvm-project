@@ -550,17 +550,18 @@ struct CounterCoverageMappingBuilder
   Counter GapRegionCounter;
 
   /// Return a counter for the subtraction of \c RHS from \c LHS
-  Counter subtractCounters(Counter LHS, Counter RHS) {
-    return Builder.subtract(LHS, RHS);
+  Counter subtractCounters(Counter LHS, Counter RHS, bool Simplify = true) {
+    return Builder.subtract(LHS, RHS, Simplify);
   }
 
   /// Return a counter for the sum of \c LHS and \c RHS.
-  Counter addCounters(Counter LHS, Counter RHS) {
-    return Builder.add(LHS, RHS);
+  Counter addCounters(Counter LHS, Counter RHS, bool Simplify = true) {
+    return Builder.add(LHS, RHS, Simplify);
   }
 
-  Counter addCounters(Counter C1, Counter C2, Counter C3) {
-    return addCounters(addCounters(C1, C2), C3);
+  Counter addCounters(Counter C1, Counter C2, Counter C3,
+                      bool Simplify = true) {
+    return addCounters(addCounters(C1, C2, Simplify), C3, Simplify);
   }
 
   /// Return the region counter for the given statement.
@@ -1317,11 +1318,16 @@ struct CounterCoverageMappingBuilder
     const SwitchCase *Case = S->getSwitchCaseList();
     for (; Case; Case = Case->getNextSwitchCase()) {
       HasDefaultCase = HasDefaultCase || isa<DefaultStmt>(Case);
-      CaseCountSum = addCounters(CaseCountSum, getRegionCounter(Case));
+      CaseCountSum =
+          addCounters(CaseCountSum, getRegionCounter(Case), /*Simplify=*/false);
       createSwitchCaseRegion(
           Case, getRegionCounter(Case),
           subtractCounters(ParentCount, getRegionCounter(Case)));
     }
+    // Simplify is skipped while building the counters above: it can get really
+    // slow on top of switches with thousands of cases. Instead, trigger
+    // simplification by adding zero to the last counter.
+    CaseCountSum = addCounters(CaseCountSum, Counter::getZero());
 
     // If no explicit default case exists, create a branch region to represent
     // the hidden branch, which will be added later by the CodeGen. This region

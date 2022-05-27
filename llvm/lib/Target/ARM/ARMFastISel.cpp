@@ -122,8 +122,7 @@ class ARMFastISel final : public FastISel {
     explicit ARMFastISel(FunctionLoweringInfo &funcInfo,
                          const TargetLibraryInfo *libInfo)
         : FastISel(funcInfo, libInfo),
-          Subtarget(
-              &static_cast<const ARMSubtarget &>(funcInfo.MF->getSubtarget())),
+          Subtarget(&funcInfo.MF->getSubtarget<ARMSubtarget>()),
           M(const_cast<Module &>(*funcInfo.Fn->getParent())),
           TM(funcInfo.MF->getTarget()), TII(*Subtarget->getInstrInfo()),
           TLI(*Subtarget->getTargetLowering()) {
@@ -156,7 +155,7 @@ class ARMFastISel final : public FastISel {
                              const LoadInst *LI) override;
     bool fastLowerArguments() override;
 
-  #include "ARMGenFastISel.inc"
+#include "ARMGenFastISel.inc"
 
     // Instruction selection routines.
 

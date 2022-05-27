@@ -309,6 +309,55 @@ public:
   }
 };
 
+/// Represents a symbolic expression involving a unary operator.
+class UnarySymExpr : public SymExpr {
+  const SymExpr *Operand;
+  UnaryOperator::Opcode Op;
+  QualType T;
+
+public:
+  UnarySymExpr(const SymExpr *In, UnaryOperator::Opcode Op, QualType T)
+      : SymExpr(UnarySymExprKind), Operand(In), Op(Op), T(T) {
+    // Note, some unary operators are modeled as a binary operator. E.g. ++x is
+    // modeled as x + 1.
+    assert((Op == UO_Minus || Op == UO_Not) && "non-supported unary expression");
+    // Unary expressions are results of arithmetic. Pointer arithmetic is not
+    // handled by unary expressions, but it is instead handled by applying
+    // sub-regions to regions.
+    assert(isValidTypeForSymbol(T) && "non-valid type for unary symbol");
+    assert(!Loc::isLocType(T) && "unary symbol should be nonloc");
+  }
+
+  unsigned computeComplexity() const override {
+    if (Complexity == 0)
+      Complexity = 1 + Operand->computeComplexity();
+    return Complexity;
+  }
+
+  const SymExpr *getOperand() const { return Operand; }
+  UnaryOperator::Opcode getOpcode() const { return Op; }
+  QualType getType() const override { return T; }
+
+  void dumpToStream(raw_ostream &os) const override;
+
+  static void Profile(llvm::FoldingSetNodeID &ID, const SymExpr *In,
+                      UnaryOperator::Opcode Op, QualType T) {
+    ID.AddInteger((unsigned)UnarySymExprKind);
+    ID.AddPointer(In);
+    ID.AddInteger(Op);
+    ID.Add(T);
+  }
+
+  void Profile(llvm::FoldingSetNodeID &ID) override {
+    Profile(ID, Operand, Op, T);
+  }
+
+  // Implement isa<T> support.
+  static bool classof(const SymExpr *SE) {
+    return SE->getKind() == UnarySymExprKind;
+  }
+};
+
 /// Represents a symbolic expression involving a binary operator
 class BinarySymExpr : public SymExpr {
   BinaryOperator::Opcode Op;
@@ -485,6 +534,9 @@ public:
 
   const SymSymExpr *getSymSymExpr(const SymExpr *lhs, BinaryOperator::Opcode op,
                                   const SymExpr *rhs, QualType t);
+
+  const UnarySymExpr *getUnarySymExpr(const SymExpr *operand,
+                                      UnaryOperator::Opcode op, QualType t);
 
   QualType getType(const SymExpr *SE) const {
     return SE->getType();

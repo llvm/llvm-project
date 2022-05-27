@@ -134,7 +134,7 @@ BitVector StackAllocationAnalysis::computeNext(const MCInst &Point,
     else
       FP = std::make_pair(0, 0);
     int64_t Output;
-    if (!MIB->evaluateSimple(Point, Output, SP, FP))
+    if (!MIB->evaluateStackOffsetExpr(Point, Output, SP, FP))
       return Next;
 
     if (SPOffset < Output) {

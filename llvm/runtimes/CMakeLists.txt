@@ -219,11 +219,13 @@ function(runtime_default_target)
   endforeach()
 
   if(LLVM_INCLUDE_TESTS)
-    include(${LLVM_BINARY_DIR}/runtimes/Tests.cmake OPTIONAL)
+    include(${LLVM_BINARY_DIR}/runtimes/Tests.cmake OPTIONAL RESULT_VARIABLE have_tests)
     set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS ${LLVM_BINARY_DIR}/runtimes/Tests.cmake)
-    set_property(GLOBAL APPEND PROPERTY LLVM_ALL_LIT_TESTSUITES ${SUB_LIT_TESTSUITES})
-    set_property(GLOBAL APPEND PROPERTY LLVM_ALL_LIT_PARAMS ${SUB_LIT_PARAMS})
-    set_property(GLOBAL APPEND PROPERTY LLVM_ALL_LIT_EXTRA_ARGS ${SUB_LIT_EXTRA_ARGS})
+    if(have_tests)
+      set_property(GLOBAL APPEND PROPERTY LLVM_ALL_LIT_TESTSUITES ${SUB_LIT_TESTSUITES})
+      set_property(GLOBAL APPEND PROPERTY LLVM_ALL_LIT_PARAMS ${SUB_LIT_PARAMS})
+      set_property(GLOBAL APPEND PROPERTY LLVM_ALL_LIT_EXTRA_ARGS ${SUB_LIT_EXTRA_ARGS})
+    endif()
     list(APPEND test_targets runtimes-test-depends check-runtimes)
   endif()
 
@@ -258,7 +260,6 @@ function(runtime_default_target)
                                          ${SUB_INSTALL_TARGETS}
                            USE_TOOLCHAIN
                            TARGET_TRIPLE ${LLVM_TARGET_TRIPLE}
-                           BYPRODUCTS ${LLVM_BINARY_DIR}/runtimes/Tests.cmake
                            ${EXTRA_ARGS})
 endfunction()
 
@@ -300,11 +301,13 @@ function(runtime_register_target name target)
   endforeach()
 
   if(LLVM_INCLUDE_TESTS)
-    include(${LLVM_BINARY_DIR}/runtimes/${name}/Tests.cmake OPTIONAL)
+    include(${LLVM_BINARY_DIR}/runtimes/${name}/Tests.cmake OPTIONAL RESULT_VARIABLE have_tests)
     set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS ${LLVM_BINARY_DIR}/runtimes/${name}/Tests.cmake)
-    set_property(GLOBAL APPEND PROPERTY LLVM_ALL_LIT_TESTSUITES ${SUB_LIT_TESTSUITES})
-    set_property(GLOBAL APPEND PROPERTY LLVM_ALL_LIT_PARAMS ${SUB_LIT_PARAMS})
-    set_property(GLOBAL APPEND PROPERTY LLVM_ALL_LIT_EXTRA_ARGS ${SUB_LIT_EXTRA_ARGS})
+    if(have_tests)
+      set_property(GLOBAL APPEND PROPERTY LLVM_ALL_LIT_TESTSUITES ${SUB_LIT_TESTSUITES})
+      set_property(GLOBAL APPEND PROPERTY LLVM_ALL_LIT_PARAMS ${SUB_LIT_PARAMS})
+      set_property(GLOBAL APPEND PROPERTY LLVM_ALL_LIT_EXTRA_ARGS ${SUB_LIT_EXTRA_ARGS})
+    endif()
     set(runtimes-test-depends-${name} runtimes-test-depends)
     set(check-runtimes-${name} check-runtimes)
     list(APPEND ${name}_test_targets runtimes-test-depends-${name} check-runtimes-${name})
@@ -364,7 +367,6 @@ function(runtime_register_target name target)
                                          ${${name}_test_targets}
                            USE_TOOLCHAIN
                            TARGET_TRIPLE ${target}
-                           BYPRODUCTS ${LLVM_BINARY_DIR}/runtimes/${name}/Tests.cmake
                            ${EXTRA_ARGS})
 endfunction()
 

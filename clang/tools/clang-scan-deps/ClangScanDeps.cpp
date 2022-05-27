@@ -116,15 +116,15 @@ static llvm::cl::opt<ScanningMode> ScanMode(
     "mode",
     llvm::cl::desc("The preprocessing mode used to compute the dependencies"),
     llvm::cl::values(
-        clEnumValN(ScanningMode::MinimizedSourcePreprocessing,
-                   "preprocess-minimized-sources",
-                   "The set of dependencies is computed by preprocessing the "
-                   "source files that were minimized to only include the "
-                   "contents that might affect the dependencies"),
+        clEnumValN(ScanningMode::DependencyDirectivesScan,
+                   "preprocess-dependency-directives",
+                   "The set of dependencies is computed by preprocessing with "
+                   "special lexing after scanning the source files to get the "
+                   "directives that might affect the dependencies"),
         clEnumValN(ScanningMode::CanonicalPreprocessing, "preprocess",
                    "The set of dependencies is computed by preprocessing the "
-                   "unmodified source files")),
-    llvm::cl::init(ScanningMode::MinimizedSourcePreprocessing),
+                   "source files")),
+    llvm::cl::init(ScanningMode::DependencyDirectivesScan),
     llvm::cl::cat(DependencyScannerCategory));
 
 static llvm::cl::opt<ScanningOutputFormat> Format(

@@ -143,8 +143,16 @@ void DAGTypeLegalizer::PerformExpensiveChecks() {
         }
       } else {
         if (Mapped == 0) {
-          dbgs() << "Processed value not in any map!";
-          Failed = true;
+          SDValue NodeById = IdToValueMap.lookup(ResId);
+          // It is possible the node has been remapped to another node and had
+          // its Id updated in the Value to Id table. The node it remapped to
+          // may not have been processed yet. Look up the Id in the Id to Value
+          // table and re-check the Processed state. If the node hasn't been
+          // remapped we'll get the same state as we got earlier.
+          if (NodeById->getNodeId() == Processed) {
+            dbgs() << "Processed value not in any map!";
+            Failed = true;
+          }
         } else if (Mapped & (Mapped - 1)) {
           dbgs() << "Value in multiple maps!";
           Failed = true;

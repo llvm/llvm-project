@@ -92,10 +92,10 @@ constexpr bool all_the_algorithms()
     int copies = 0;
     //(void)std::ranges::adjacent_find(first, last, Equal(&copies)); assert(copies == 0);
     //(void)std::ranges::adjacent_find(a, Equal(&copies)); assert(copies == 0);
-    //(void)std::ranges::all_of(first, last, UnaryTrue(&copies)); assert(copies == 0);
-    //(void)std::ranges::all_of(a, UnaryTrue(&copies)); assert(copies == 0);
-    //(void)std::ranges::any_of(first, last, UnaryTrue(&copies)); assert(copies == 0);
-    //(void)std::ranges::any_of(a, UnaryTrue(&copies)); assert(copies == 0);
+    (void)std::ranges::all_of(first, last, UnaryTrue(&copies)); assert(copies == 0);
+    (void)std::ranges::all_of(a, UnaryTrue(&copies)); assert(copies == 0);
+    (void)std::ranges::any_of(first, last, UnaryTrue(&copies)); assert(copies == 0);
+    (void)std::ranges::any_of(a, UnaryTrue(&copies)); assert(copies == 0);
     //(void)std::ranges::binary_search(first, last, value, Less(&copies)); assert(copies == 0);
     //(void)std::ranges::binary_search(a, value, Less(&copies)); assert(copies == 0);
     //(void)std::ranges::clamp(value, value, value, Less(&copies)); assert(copies == 0);
@@ -167,8 +167,8 @@ constexpr bool all_the_algorithms()
     (void)std::ranges::mismatch(a, b, Equal(&copies)); assert(copies == 0);
     //(void)std::ranges::next_permutation(first, last, Less(&copies)); assert(copies == 0);
     //(void)std::ranges::next_permutation(a, Less(&copies)); assert(copies == 0);
-    //(void)std::ranges::none_of(first, last, UnaryTrue(&copies)); assert(copies == 0);
-    //(void)std::ranges::none_of(a, UnaryTrue(&copies)); assert(copies == 0);
+    (void)std::ranges::none_of(first, last, UnaryTrue(&copies)); assert(copies == 0);
+    (void)std::ranges::none_of(a, UnaryTrue(&copies)); assert(copies == 0);
     //(void)std::ranges::nth_element(first, mid, last, Less(&copies)); assert(copies == 0);
     //(void)std::ranges::nth_element(a, mid, Less(&copies)); assert(copies == 0);
     //(void)std::ranges::partial_sort(first, mid, last, Less(&copies)); assert(copies == 0);
