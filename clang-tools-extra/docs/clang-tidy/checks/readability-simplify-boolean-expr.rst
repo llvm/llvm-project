@@ -96,3 +96,23 @@ Options
 
    If `true`, DeMorgan's Theorem will be applied to simplify negated
    conjunctions and disjunctions.  Default is `true`.
+
+.. option:: SimplifyDeMorganRelaxed
+
+   If `true`, :option:`SimplifyDeMorgan` will also transform negated 
+   conjunctions and disjunctions where there is no negation on either operand. 
+   Default is `false`.
+
+   When Enabled:
+
+   .. code-block::
+
+      bool X = !(A && B)
+      bool Y = !(A || B)
+
+   Would be transformed to:
+
+   .. code-block::
+
+      bool X = !A || !B
+      bool Y = !A && !B
