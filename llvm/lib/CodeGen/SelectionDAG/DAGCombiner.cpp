@@ -9286,8 +9286,10 @@ SDValue DAGCombiner::visitSRA(SDNode *N) {
       unsigned TruncBits = LargeVT.getScalarSizeInBits() - OpSizeInBits;
       if (LargeShift->getAPIntValue() == TruncBits) {
         SDLoc DL(N);
-        SDValue Amt = DAG.getConstant(N1C->getZExtValue() + TruncBits, DL,
-                                      getShiftAmountTy(LargeVT));
+        EVT LargeShiftVT = getShiftAmountTy(LargeVT);
+        SDValue Amt = DAG.getZExtOrTrunc(N1, DL, LargeShiftVT);
+        Amt = DAG.getNode(ISD::ADD, DL, LargeShiftVT, Amt,
+                          DAG.getConstant(TruncBits, DL, LargeShiftVT));
         SDValue SRA =
             DAG.getNode(ISD::SRA, DL, LargeVT, N0Op0.getOperand(0), Amt);
         return DAG.getNode(ISD::TRUNCATE, DL, VT, SRA);
