@@ -1331,7 +1331,7 @@ bool AddressSanitizer::ignoreAccess(Instruction *Inst, Value *Ptr) {
 void AddressSanitizer::getInterestingMemoryOperands(
     Instruction *I, SmallVectorImpl<InterestingMemoryOperand> &Interesting) {
   // Skip memory accesses inserted by another instrumentation.
-  if (I->hasMetadata("nosanitize"))
+  if (I->hasMetadata(LLVMContext::MD_nosanitize))
     return;
 
   // Do not instrument the load fetching the dynamic shadow address.
@@ -2771,7 +2771,8 @@ bool AddressSanitizer::instrumentFunction(Function &F,
         if (auto *CB = dyn_cast<CallBase>(&Inst)) {
           // A call inside BB.
           TempsToInstrument.clear();
-          if (CB->doesNotReturn() && !CB->hasMetadata("nosanitize"))
+          if (CB->doesNotReturn() &&
+              !CB->hasMetadata(LLVMContext::MD_nosanitize))
             NoReturnCalls.push_back(CB);
         }
         if (CallInst *CI = dyn_cast<CallInst>(&Inst))

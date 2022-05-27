@@ -715,7 +715,7 @@ bool HWAddressSanitizer::ignoreAccess(Instruction *Inst, Value *Ptr) {
 void HWAddressSanitizer::getInterestingMemoryOperands(
     Instruction *I, SmallVectorImpl<InterestingMemoryOperand> &Interesting) {
   // Skip memory accesses inserted by another instrumentation.
-  if (I->hasMetadata("nosanitize"))
+  if (I->hasMetadata(LLVMContext::MD_nosanitize))
     return;
 
   // Do not instrument the load fetching the dynamic shadow address.
