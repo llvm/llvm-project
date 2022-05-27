@@ -5589,10 +5589,12 @@ def warn_strict_prototypes : Extension<
   "a %select{function|block}0 declaration without a prototype is deprecated "
   "%select{in all versions of C|}0">, InGroup<StrictPrototypes>;
 def warn_non_prototype_changes_behavior : Warning<
-  "a function declaration without a prototype is deprecated in all versions of "
-  "C and is not supported in C2x">, InGroup<DeprecatedNonPrototype>;
-def note_func_decl_changes_behavior : Note<
-  "a function declaration without a prototype is not supported in C2x">;
+  "a function %select{declaration|definition}0 without a prototype is "
+  "deprecated in all versions of C %select{and is not supported in C2x|and is "
+  "treated as a zero-parameter prototype in C2x, conflicting with a "
+  "%select{previous|subsequent}2 %select{declaration|definition}3}1">,
+  InGroup<DeprecatedNonPrototype>;
+def note_conflicting_prototype : Note<"conflicting prototype is here">;
 def warn_missing_variable_declarations : Warning<
   "no previous extern declaration for non-static variable %0">,
   InGroup<DiagGroup<"missing-variable-declarations">>, DefaultIgnore;
