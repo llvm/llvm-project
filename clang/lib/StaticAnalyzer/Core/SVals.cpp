@@ -177,8 +177,7 @@ QualType SVal::getType(const ASTContext &Context) const {
 }
 
 const MemRegion *loc::MemRegionVal::stripCasts(bool StripBaseCasts) const {
-  const MemRegion *R = getRegion();
-  return R ?  R->StripCasts(StripBaseCasts) : nullptr;
+  return getRegion()->StripCasts(StripBaseCasts);
 }
 
 const void *nonloc::LazyCompoundVal::getStore() const {
