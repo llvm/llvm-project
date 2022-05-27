@@ -15,7 +15,7 @@
 //--- cdb.json.template
 [{
   "directory" : "DIR",
-  "command" : "clang -c DIR/test.cpp -o DIR/test.o",
+  "command" : "clang -target x86_64-apple-macosx10.7 -c DIR/test.cpp -o DIR/test.o",
   "file" : "DIR/test.o"
 }]
 
