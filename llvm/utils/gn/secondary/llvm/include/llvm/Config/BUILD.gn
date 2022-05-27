@@ -50,7 +50,7 @@ declare_args() {
 
   # glibc is at least 2.33 which has mallinfo2.
   # TODO: remove this once nobody using the gn build is building against an old glibc.
-  llvm_have_mallinfo2 = false
+  llvm_have_mallinfo2 = true
 }
 
 write_cmake_config("abi-breaking") {
