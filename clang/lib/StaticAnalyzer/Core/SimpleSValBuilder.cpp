@@ -851,6 +851,8 @@ SVal SimpleSValBuilder::evalBinOpLL(ProgramStateRef state,
     return UnknownVal();
 
   case loc::ConcreteIntKind: {
+    auto L = lhs.castAs<loc::ConcreteInt>();
+
     // If one of the operands is a symbol and the other is a constant,
     // build an expression for use by the constraint manager.
     if (SymbolRef rSym = rhs.getAsLocSymbol()) {
@@ -859,19 +861,17 @@ SVal SimpleSValBuilder::evalBinOpLL(ProgramStateRef state,
       if (!BinaryOperator::isComparisonOp(op) || op == BO_Cmp)
         return UnknownVal();
 
-      const llvm::APSInt &lVal = lhs.castAs<loc::ConcreteInt>().getValue();
       op = BinaryOperator::reverseComparisonOp(op);
-      return makeNonLoc(rSym, op, lVal, resultTy);
+      return makeNonLoc(rSym, op, L.getValue(), resultTy);
     }
 
     // If both operands are constants, just perform the operation.
     if (Optional<loc::ConcreteInt> rInt = rhs.getAs<loc::ConcreteInt>()) {
-      SVal ResultVal =
-          lhs.castAs<loc::ConcreteInt>().evalBinOp(BasicVals, op, *rInt);
-      if (Optional<NonLoc> Result = ResultVal.getAs<NonLoc>())
-        return evalCast(*Result, resultTy, QualType{});
+      assert(BinaryOperator::isComparisonOp(op) || op == BO_Sub);
 
-      assert(!ResultVal.getAs<Loc>() && "Loc-Loc ops should not produce Locs");
+      if (const auto *ResultInt =
+              BasicVals.evalAPSInt(op, L.getValue(), rInt->getValue()))
+        return evalCast(nonloc::ConcreteInt(*ResultInt), resultTy, QualType{});
       return UnknownVal();
     }
 
