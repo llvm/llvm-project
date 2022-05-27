@@ -4,4 +4,5 @@ set(LLVM_LINK_COMPONENTS
 
 add_clang_tool(clang-cache-build-session
   ClangCacheBuildSession.cpp
+  CMakeFileAPI.cpp
 )

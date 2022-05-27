@@ -12,19 +12,130 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "CMakeFileAPI.h"
+#include "llvm/ADT/StringSet.h"
+#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/InitLLVM.h"
+#include "llvm/Support/Path.h"
 #include "llvm/Support/Process.h"
+#include "llvm/Support/StringSaver.h"
 
 using namespace llvm;
+
+static Error inferCMakePathPrefixes(StringRef CMakeBuildPath,
+                                    SmallVectorImpl<StringRef> &PrefixMaps,
+                                    StringSaver &Saver) {
+  cmake_file_api::Index Index;
+  if (Error E = cmake_file_api::Index::fromPath(CMakeBuildPath).moveInto(Index))
+    return E;
+  cmake_file_api::CodeModel CodeModel;
+  if (Error E = Index.getCodeModel().moveInto(CodeModel))
+    return E;
+  StringRef BuildPath;
+  if (Error E = CodeModel.getBuildPath().moveInto(BuildPath))
+    return E;
+  StringRef SourcePath;
+  if (Error E = CodeModel.getSourcePath().moveInto(SourcePath))
+    return E;
+  SmallVector<StringRef, 8> ExtraSourcePaths;
+  if (Error E = CodeModel.getExtraTopLevelSourcePaths(ExtraSourcePaths))
+    return E;
+
+  StringSet<> SeenMapNames;
+  auto getUniqueMapName = [&](StringRef SourcePath) -> StringRef {
+    StringRef Filename = sys::path::filename(SourcePath);
+    StringRef MapName = Filename;
+    unsigned Count = 0;
+    while (SeenMapNames.contains(MapName)) {
+      MapName = Saver.save(Filename + "-" + utostr(++Count));
+    }
+    SeenMapNames.insert(MapName);
+    return MapName;
+  };
+
+  PrefixMaps.push_back(Saver.save(BuildPath + "=/^build"));
+  PrefixMaps.push_back(Saver.save(SourcePath + "=/^src"));
+  for (StringRef SourcePath : ExtraSourcePaths) {
+    PrefixMaps.push_back(
+        Saver.save(SourcePath + "=/^src-" + getUniqueMapName(SourcePath)));
+  }
+  return Error::success();
+}
 
 int main(int Argc, const char **Argv) {
   InitLLVM X(Argc, Argv);
 
-  SmallVector<const char *, 256> CmdArgs(Argv + 1, Argv + Argc);
+  cl::OptionCategory OptCategory("clang-cache-build-session options");
+  cl::extrahelp MoreHelp("\n"
+                         "Accepts a command that triggers a build and, while "
+                         "the command is running,\n"
+                         "all the clang invocations that are part of that "
+                         "build will share the same\n"
+                         "dependency scanning daemon.\n"
+                         "\n");
 
+  cl::opt<bool> InferCMakePrefixMaps(
+      "prefix-map-cmake",
+      cl::desc("Infer source and build prefixes from a CMake build directory"),
+      cl::cat(OptCategory));
+  cl::opt<bool> Verbose("v", cl::desc("Verbose output"), cl::cat(OptCategory));
+  // This is here only to improve the help message (for "USAGE:" line).
+  cl::list<std::string> Inputs(cl::Positional, cl::desc("command ..."));
+
+  int CmdArgsI = 1;
+  while (CmdArgsI < Argc && Argv[CmdArgsI][0] == '-')
+    ++CmdArgsI;
+
+  cl::HideUnrelatedOptions(OptCategory);
+  cl::ParseCommandLineOptions(CmdArgsI, Argv, "clang-cache-build-session");
+
+  SmallVector<const char *, 256> CmdArgs(Argv + CmdArgsI, Argv + Argc);
   if (CmdArgs.empty()) {
-    errs() << "Usage: clang-cache-build-session command ...\n";
+    cl::PrintHelpMessage();
     return 1;
+  }
+
+  auto setEnvVar = [&Verbose](const char *Var, const char *Value) {
+    ::setenv(Var, Value, 1);
+    if (Verbose) {
+      errs() << "note: setting " << Var << '=' << Value << '\n';
+    }
+  };
+
+  BumpPtrAllocator Alloc;
+  StringSaver Saver(Alloc);
+
+  if (InferCMakePrefixMaps) {
+    SmallString<128> WorkingDirectory;
+    if (Error E = errorCodeToError(sys::fs::current_path(WorkingDirectory))) {
+      errs() << "error: failed getting working directory: "
+             << toString(std::move(E)) << '\n';
+      return 1;
+    }
+    SmallVector<StringRef, 8> PrefixMaps;
+    if (Error E = inferCMakePathPrefixes(WorkingDirectory, PrefixMaps, Saver)) {
+      errs() << "error: could not infer prefix map for CMake build: "
+             << toString(std::move(E)) << '\n';
+      return 1;
+    }
+    if (!PrefixMaps.empty()) {
+      constexpr const char *PrefixMapEnvVar = "CLANG_CACHE_PREFIX_MAPS";
+      SmallString<128> PrefixMapsConcat;
+      const char *PriorPrefixMaps = ::getenv(PrefixMapEnvVar);
+      if (PriorPrefixMaps) {
+        // Merge the derived prefix maps with the pre-existing ones from the
+        // environment variable.
+        PrefixMapsConcat.append(PriorPrefixMaps);
+        PrefixMapsConcat.push_back(';');
+      }
+      for (StringRef PrefixMap : PrefixMaps) {
+        PrefixMapsConcat.append(PrefixMap);
+        PrefixMapsConcat.push_back(';');
+      }
+      assert(PrefixMapsConcat.back() == ';');
+      PrefixMapsConcat.pop_back();
+      setEnvVar(PrefixMapEnvVar, Saver.save(PrefixMapsConcat.str()).data());
+    }
   }
 
   // Set 'CLANG_CACHE_BUILD_SESSION_ID' to a unique identifier so that clang
@@ -38,7 +149,7 @@ int main(int Argc, const char **Argv) {
   raw_svector_ostream(SessionId)
       << sys::Process::getProcessId() << '-'
       << std::chrono::system_clock::now().time_since_epoch().count();
-  ::setenv("CLANG_CACHE_BUILD_SESSION_ID", SessionId.c_str(), 1);
+  setEnvVar("CLANG_CACHE_BUILD_SESSION_ID", SessionId.c_str());
 
   ErrorOr<std::string> ExecPathOrErr = sys::findProgramByName(CmdArgs.front());
   if (!ExecPathOrErr) {
