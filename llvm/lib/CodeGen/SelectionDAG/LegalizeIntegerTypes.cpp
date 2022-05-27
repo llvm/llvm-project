@@ -1949,10 +1949,9 @@ SDValue DAGTypeLegalizer::PromoteIntOp_SETCC(SDNode *N, unsigned OpNo) {
   PromoteSetCCOperands(LHS, RHS, cast<CondCodeSDNode>(N->getOperand(2))->get());
 
   // The CC (#2) is always legal.
-  if (N->getNumOperands() == 3)
+  if (N->getOpcode() == ISD::SETCC)
     return SDValue(DAG.UpdateNodeOperands(N, LHS, RHS, N->getOperand(2)), 0);
 
-  assert(N->getNumOperands() == 5 && "Unexpected number of operands!");
   assert(N->getOpcode() == ISD::VP_SETCC && "Expected VP_SETCC opcode");
 
   return SDValue(DAG.UpdateNodeOperands(N, LHS, RHS, N->getOperand(2),
