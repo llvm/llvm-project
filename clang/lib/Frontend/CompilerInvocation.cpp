@@ -3897,10 +3897,11 @@ bool CompilerInvocation::ParseLangArgs(LangOptions &Opts, ArgList &Args,
       getLastArgIntValue(Args, options::OPT_fopenmp_gpu_threads_per_team_EQ,
                          Opts.OpenMPGPUThreadsPerTeam, Diags);
 
+  // Turn ON at -O3 (and above) and -Ofast
   Opts.OpenMPTargetIgnoreEnvVars =
       Args.hasFlag(options::OPT_fopenmp_target_ignore_env_vars,
                    options::OPT_fno_openmp_target_ignore_env_vars,
-                   /*Default=*/false);
+                   getOptimizationLevel(Args, IK, Diags) > 2);
 
   // Set the value of the debugging flag used in the new offloading device RTL.
   // Set either by a specific value or to a default if not specified.

@@ -770,6 +770,36 @@ static bool shouldEnableVectorizerAtOLevel(const ArgList &Args, bool isSlpVec) {
   return false;
 }
 
+/// Ignore possibility of runtime environment variables during kernel code
+/// generation at -O3 (and above) and -Ofast
+static bool shouldIgnoreEnvVars(const ArgList &Args) {
+  if (Arg *A = Args.getLastArg(options::OPT_O_Group)) {
+    if (A->getOption().matches(options::OPT_O4) ||
+        A->getOption().matches(options::OPT_Ofast))
+      return true;
+
+    if (A->getOption().matches(options::OPT_O0))
+      return false;
+
+    assert(A->getOption().matches(options::OPT_O) && "Must have a -O flag");
+
+    StringRef S(A->getValue());
+    if (S == "s")
+      return false;
+
+    if (S == "z")
+      return false;
+
+    unsigned OptLevel = 0;
+    if (S.getAsInteger(10, OptLevel))
+      return false;
+
+    return OptLevel > 2;
+  }
+
+  return false;
+}
+
 /// Add -x lang to \p CmdArgs for \p Input.
 static void addDashXForInput(const ArgList &Args, const InputInfo &Input,
                              ArgStringList &CmdArgs) {
@@ -6069,8 +6099,10 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
 
       if (Args.hasFlag(options::OPT_fopenmp_target_ignore_env_vars,
                        options::OPT_fno_openmp_target_ignore_env_vars,
-                       /*Default=*/false))
+                       shouldIgnoreEnvVars(Args)))
         CmdArgs.push_back("-fopenmp-target-ignore-env-vars");
+      else
+        CmdArgs.push_back("-fno-openmp-target-ignore-env-vars");
 
       // When in OpenMP offloading mode with NVPTX target, forward
       // cuda-mode flag
