@@ -198,8 +198,9 @@ exit:
 
 define i1 @udiv_eq_umax(i8 %x, i8 %y) {
 ; CHECK-LABEL: @udiv_eq_umax(
-; CHECK-NEXT:    [[D:%.*]] = udiv i8 [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    [[R:%.*]] = icmp eq i8 [[D]], -1
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i8 [[X:%.*]], -1
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i8 [[Y:%.*]], 1
+; CHECK-NEXT:    [[R:%.*]] = and i1 [[TMP1]], [[TMP2]]
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %d = udiv i8 %x, %y
@@ -209,8 +210,9 @@ define i1 @udiv_eq_umax(i8 %x, i8 %y) {
 
 define <2 x i1> @udiv_ne_umax(<2 x i5> %x, <2 x i5> %y) {
 ; CHECK-LABEL: @udiv_ne_umax(
-; CHECK-NEXT:    [[D:%.*]] = udiv <2 x i5> [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    [[R:%.*]] = icmp ne <2 x i5> [[D]], <i5 -1, i5 -1>
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ne <2 x i5> [[X:%.*]], <i5 -1, i5 -1>
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp ne <2 x i5> [[Y:%.*]], <i5 1, i5 1>
+; CHECK-NEXT:    [[R:%.*]] = or <2 x i1> [[TMP1]], [[TMP2]]
 ; CHECK-NEXT:    ret <2 x i1> [[R]]
 ;
   %d = udiv <2 x i5> %x, %y
@@ -220,8 +222,9 @@ define <2 x i1> @udiv_ne_umax(<2 x i5> %x, <2 x i5> %y) {
 
 define i1 @udiv_eq_big(i8 %x, i8 %y) {
 ; CHECK-LABEL: @udiv_eq_big(
-; CHECK-NEXT:    [[D:%.*]] = udiv i8 [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    [[R:%.*]] = icmp eq i8 [[D]], -128
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i8 [[X:%.*]], -128
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i8 [[Y:%.*]], 1
+; CHECK-NEXT:    [[R:%.*]] = and i1 [[TMP1]], [[TMP2]]
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %d = udiv i8 %x, %y
@@ -231,14 +234,17 @@ define i1 @udiv_eq_big(i8 %x, i8 %y) {
 
 define i1 @udiv_ne_big(i8 %x, i8 %y) {
 ; CHECK-LABEL: @udiv_ne_big(
-; CHECK-NEXT:    [[D:%.*]] = udiv i8 [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    [[R:%.*]] = icmp ne i8 [[D]], -128
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ne i8 [[X:%.*]], -128
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp ne i8 [[Y:%.*]], 1
+; CHECK-NEXT:    [[R:%.*]] = or i1 [[TMP1]], [[TMP2]]
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %d = udiv i8 %x, %y
   %r = icmp ne i8 %d, 128
   ret i1 %r
 }
+
+; negative test - must have negative compare constant
 
 define i1 @udiv_eq_not_big(i8 %x, i8 %y) {
 ; CHECK-LABEL: @udiv_eq_not_big(
@@ -251,6 +257,8 @@ define i1 @udiv_eq_not_big(i8 %x, i8 %y) {
   ret i1 %r
 }
 
+; negative test - must be equality predicate
+
 define i1 @udiv_slt_umax(i8 %x, i8 %y) {
 ; CHECK-LABEL: @udiv_slt_umax(
 ; CHECK-NEXT:    [[D:%.*]] = udiv i8 [[X:%.*]], [[Y:%.*]]
@@ -261,6 +269,8 @@ define i1 @udiv_slt_umax(i8 %x, i8 %y) {
   %r = icmp slt i8 %d, 255
   ret i1 %r
 }
+
+; negative test - extra use
 
 define i1 @udiv_eq_umax_use(i32 %x, i32 %y) {
 ; CHECK-LABEL: @udiv_eq_umax_use(
