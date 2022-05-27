@@ -505,7 +505,19 @@ public:
   /// Return a set corresponding to all points in the range of the relation.
   IntegerPolyhedron getRangeSet() const;
 
-  /// Invert the relation i.e., swap it's domain and range.
+  /// Intersect the given `poly` with the domain in-place.
+  ///
+  /// Formally, let the relation `this` be R: A -> B and poly is C, then this
+  /// operation modifies R to be (A intersection C) -> B.
+  void intersectDomain(const IntegerPolyhedron &poly);
+
+  /// Intersect the given `poly` with the range in-place.
+  ///
+  /// Formally, let the relation `this` be R: A -> B and poly is C, then this
+  /// operation modifies R to be A -> (B intersection C).
+  void intersectRange(const IntegerPolyhedron &poly);
+
+  /// Invert the relation i.e., swap its domain and range.
   ///
   /// Formally, let the relation `this` be R: A -> B, then this operation
   /// modifies R to be B -> A.

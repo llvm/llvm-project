@@ -57,3 +57,37 @@ TEST(IntegerRelationTest, inverse) {
 
   EXPECT_TRUE(rel.isEqual(inverseRel));
 }
+
+TEST(IntegerRelationTest, intersectDomainAndRange) {
+  IntegerRelation rel = parseRelationFromSet(
+      "(x, y, z)[N, M]: (y floordiv 2 - N >= 0, z floordiv 5 - M"
+      ">= 0, x + y + z floordiv 7 == 0)",
+      1);
+
+  {
+    IntegerPolyhedron poly = parsePoly("(x)[N, M] : (x >= 0, M - x - 1 >= 0)");
+
+    IntegerRelation expectedRel = parseRelationFromSet(
+        "(x, y, z)[N, M]: (y floordiv 2 - N >= 0, z floordiv 5 - M"
+        ">= 0, x + y + z floordiv 7 == 0, x >= 0, M - x - 1 >= 0)",
+        1);
+
+    IntegerRelation copyRel = rel;
+    copyRel.intersectDomain(poly);
+    EXPECT_TRUE(copyRel.isEqual(expectedRel));
+  }
+
+  {
+    IntegerPolyhedron poly =
+        parsePoly("(y, z)[N, M] : (y >= 0, M - y - 1 >= 0, y + z == 0)");
+
+    IntegerRelation expectedRel = parseRelationFromSet(
+        "(x, y, z)[N, M]: (y floordiv 2 - N >= 0, z floordiv 5 - M"
+        ">= 0, x + y + z floordiv 7 == 0, y >= 0, M - y - 1 >= 0, y + z == 0)",
+        1);
+
+    IntegerRelation copyRel = rel;
+    copyRel.intersectRange(poly);
+    EXPECT_TRUE(copyRel.isEqual(expectedRel));
+  }
+}
