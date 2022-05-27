@@ -100,7 +100,7 @@ void CodeGenFunction::EmitNoLoopKernel(const Stmt *S, SourceLocation Loc) {
     llvm::Value *GpuThreadId = RT.getGPUThreadID(*CGFunc);
 
     // workgroup_size
-    llvm::Value *WorkGroupSize = RT.getGPUNumThreads(*CGFunc);
+    llvm::Value *WorkGroupSize = RT.getGPUCompleteBlockSize(*CGFunc);
 
     // workgroup_id
     llvm::Value *WorkGroupId = RT.getGPUBlockID(*CGFunc);

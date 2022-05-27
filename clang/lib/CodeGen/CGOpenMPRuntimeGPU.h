@@ -190,6 +190,10 @@ public:
   /// Get the block id of the current thread on the GPU
   llvm::Value *getGPUBlockID(CodeGenFunction &CGF);
 
+  /// Get the complete block size in use on the GPU. If there is a
+  /// partial block, that information is not returned.
+  llvm::Value *getGPUCompleteBlockSize(CodeGenFunction &CGF);
+
   /// Returns whether the current architecture supports fast FP atomics
   bool supportFastFPAtomics() override;
 

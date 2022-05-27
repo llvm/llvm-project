@@ -4173,7 +4173,25 @@ llvm::Value *CGOpenMPRuntimeGPU::getGPUBlockID(CodeGenFunction &CGF) {
   CGBuilderTy &Bld = CGF.Builder;
   llvm::Function *F =
       CGF.CGM.getIntrinsic(llvm::Intrinsic::amdgcn_workgroup_id_x);
-  return Bld.CreateCall(F, llvm::None, "nvptx_block_id");
+  return Bld.CreateCall(F, llvm::None, "gpu_block_id");
+}
+
+llvm::Value *CGOpenMPRuntimeGPU::getGPUCompleteBlockSize(CodeGenFunction &CGF) {
+  // TODO handle kernel specific block size based on thread_limit
+
+  // The following logic does not consider generic kernels, so use this
+  // interface for SPMD kernels only.
+
+  // Honor block-size provided by command-line option. This logic must be kept
+  // in sync with metadata generation
+  unsigned CmdLineWorkGroupSz = CGM.getLangOpts().OpenMPGPUThreadsPerTeam;
+  // Sanitize the workgroup size received from the command line. Its default
+  // value is GV_Default_WG_Size.
+  if (CmdLineWorkGroupSz < CGM.getTarget().getGridValue().GV_Default_WG_Size ||
+      CmdLineWorkGroupSz > CGM.getTarget().getGridValue().GV_Max_WG_Size)
+    CmdLineWorkGroupSz = CGM.getTarget().getGridValue().GV_Default_WG_Size;
+
+  return llvm::ConstantInt::get(CGF.Int32Ty, CmdLineWorkGroupSz);
 }
 
 bool CGOpenMPRuntimeGPU::supportFastFPAtomics() {
