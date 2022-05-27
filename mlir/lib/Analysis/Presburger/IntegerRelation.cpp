@@ -2102,6 +2102,35 @@ IntegerPolyhedron IntegerRelation::getRangeSet() const {
   return IntegerPolyhedron(std::move(copyRel));
 }
 
+void IntegerRelation::intersectDomain(const IntegerPolyhedron &poly) {
+  assert(getDomainSet().getSpace().isCompatible(poly.getSpace()) &&
+         "Domain set is not compatible with poly");
+
+  // Treating the poly as a relation, convert it from `0 -> R` to `R -> 0`.
+  IntegerRelation rel = poly;
+  rel.inverse();
+
+  // Append dummy range variables to make the spaces compatible.
+  rel.appendId(IdKind::Range, getNumRangeIds());
+
+  // Intersect in place.
+  mergeLocalIds(rel);
+  append(rel);
+}
+
+void IntegerRelation::intersectRange(const IntegerPolyhedron &poly) {
+  assert(getRangeSet().getSpace().isCompatible(poly.getSpace()) &&
+         "Range set is not compatible with poly");
+
+  IntegerRelation rel = poly;
+
+  // Append dummy domain variables to make the spaces compatible.
+  rel.appendId(IdKind::Domain, getNumDomainIds());
+
+  mergeLocalIds(rel);
+  append(rel);
+}
+
 void IntegerRelation::inverse() {
   unsigned numRangeIds = getNumIdKind(IdKind::Range);
   convertIdKind(IdKind::Domain, 0, getIdKindEnd(IdKind::Domain), IdKind::Range);
