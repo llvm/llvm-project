@@ -369,7 +369,7 @@ bool X86PreTileConfig::runOnMachineFunction(MachineFunction &MF) {
       // multi insert.
       if (VisitedOrInserted.insert(I).second) {
         auto II = I.MI ? I.MI->getIterator() : I.MBB->instr_begin();
-        addFrameReference(BuildMI(*I.MBB, ++II, DL, TII->get(X86::LDTILECFG)),
+        addFrameReference(BuildMI(*I.MBB, ++II, DL, TII->get(X86::PLDTILECFGV)),
                           SS);
       }
     }

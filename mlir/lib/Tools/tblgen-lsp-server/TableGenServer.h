@@ -17,6 +17,10 @@
 namespace mlir {
 namespace lsp {
 struct Diagnostic;
+struct DocumentLink;
+struct Hover;
+struct Location;
+struct Position;
 class URIForFile;
 
 /// This class implements all of the TableGen related functionality necessary
@@ -24,7 +28,20 @@ class URIForFile;
 /// logic separate from the logic that involves LSP server/client communication.
 class TableGenServer {
 public:
-  TableGenServer();
+  struct Options {
+    Options(const std::vector<std::string> &compilationDatabases,
+            const std::vector<std::string> &extraDirs)
+        : compilationDatabases(compilationDatabases), extraDirs(extraDirs) {}
+
+    /// The filenames for databases containing compilation commands for TableGen
+    /// files passed to the server.
+    const std::vector<std::string> &compilationDatabases;
+
+    /// Additional list of include directories to search.
+    const std::vector<std::string> &extraDirs;
+  };
+
+  TableGenServer(const Options &options);
   ~TableGenServer();
 
   /// Add or update the document, with the provided `version`, at the given URI.
@@ -38,6 +55,22 @@ public:
   /// document, or None if the uri did not have a corresponding document within
   /// the server.
   Optional<int64_t> removeDocument(const URIForFile &uri);
+
+  /// Return the locations of the object pointed at by the given position.
+  void getLocationsOf(const URIForFile &uri, const Position &defPos,
+                      std::vector<Location> &locations);
+
+  /// Find all references of the object pointed at by the given position.
+  void findReferencesOf(const URIForFile &uri, const Position &pos,
+                        std::vector<Location> &references);
+
+  /// Return the document links referenced by the given file.
+  void getDocumentLinks(const URIForFile &uri,
+                        std::vector<DocumentLink> &documentLinks);
+
+  /// Find a hover description for the given hover position, or None if one
+  /// couldn't be found.
+  Optional<Hover> findHover(const URIForFile &uri, const Position &hoverPos);
 
 private:
   struct Impl;

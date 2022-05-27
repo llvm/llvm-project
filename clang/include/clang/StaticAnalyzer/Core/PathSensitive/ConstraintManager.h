@@ -112,6 +112,7 @@ public:
   ///
   /// Note that a ConstraintManager is not obligated to return a concretized
   /// value for a symbol, even if it is perfectly constrained.
+  /// It might return null.
   virtual const llvm::APSInt* getSymVal(ProgramStateRef state,
                                         SymbolRef sym) const {
     return nullptr;

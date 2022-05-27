@@ -147,6 +147,10 @@ def StringAPI : PublicAPI<"string.h"> {
 }
 
 def StdIOAPI : PublicAPI<"stdio.h"> {
+  let Macros = [
+    SimpleMacroDef<"stderr", "stderr">,
+    SimpleMacroDef<"stdout", "stdout">,
+  ];
   let Types = ["size_t", "FILE", "cookie_io_functions_t"];
 }
 
