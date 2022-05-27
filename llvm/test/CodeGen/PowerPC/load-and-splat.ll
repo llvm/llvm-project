@@ -560,8 +560,7 @@ define <16 x i8> @unadjusted_lxvwsx(i32* %s, i32* %t) {
 ;
 ; P8-AIX32-LABEL: unadjusted_lxvwsx:
 ; P8-AIX32:       # %bb.0: # %entry
-; P8-AIX32-NEXT:    lwz r3, 0(r3)
-; P8-AIX32-NEXT:    mtfprwz f0, r3
+; P8-AIX32-NEXT:    lfiwzx f0, 0, r3
 ; P8-AIX32-NEXT:    xxspltw v2, vs0, 1
 ; P8-AIX32-NEXT:    blr
 ;
