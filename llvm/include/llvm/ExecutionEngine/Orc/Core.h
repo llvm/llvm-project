@@ -339,7 +339,11 @@ public:
   /// Sort the lookup set by pointer value. This sort is fast but sensitive to
   /// allocation order and so should not be used where a consistent order is
   /// required.
-  void sortByAddress() { llvm::sort(Symbols, llvm::less_first()); }
+  void sortByAddress() {
+    llvm::sort(Symbols, [](const value_type &LHS, const value_type &RHS) {
+      return LHS.first < RHS.first;
+    });
+  }
 
   /// Sort the lookup set lexicographically. This sort is slow but the order
   /// is unaffected by allocation order.

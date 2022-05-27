@@ -158,8 +158,10 @@ AttributeList convertAttributeRefVecToAttributeList(
                   V.first, convertAttributeRefToAttributeSet(C, V.second));
             });
 
-  // All values are unique.
-  sort(SetVec, llvm::less_first());
+  sort(SetVec, [](const std::pair<unsigned, AttributeSet> &LHS,
+                  const std::pair<unsigned, AttributeSet> &RHS) {
+    return LHS.first < RHS.first; // All values are unique.
+  });
 
   return AttributeList::get(C, SetVec);
 }

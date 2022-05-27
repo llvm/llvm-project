@@ -299,7 +299,9 @@ STRING_LOCATION_STDPAIR(MethodDecl, getTypeSpecStartLoc())
 
   auto ExpectedRanges = FormatExpected<SourceRange>(Result.RangeAccessors);
 
-  llvm::sort(ExpectedRanges, llvm::less_first());
+  llvm::sort(ExpectedRanges, [](const auto &LHS, const auto &RHS) {
+    return LHS.first < RHS.first;
+  });
 
   // clang-format off
   EXPECT_EQ(
