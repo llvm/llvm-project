@@ -823,7 +823,7 @@ def AtomicReadOp : OpenMP_Op<"atomic.read", [AllTypesMatch<["x", "v"]>]> {
 
     /// The i-th variable operand passed.
     Value getVariableOperand(unsigned i) {
-      assert(0 <= i < 2 && "invalid index position for an operand");
+      assert(0 <= i && i < 2 && "invalid index position for an operand");
       return i == 0 ? x() : v();
     }
   }];
@@ -871,7 +871,7 @@ def AtomicWriteOp : OpenMP_Op<"atomic.write"> {
 
     /// The i-th variable operand passed.
     Value getVariableOperand(unsigned i) {
-      assert(0 <= i < 2 && "invalid index position for an operand");
+      assert(0 <= i && i < 2 && "invalid index position for an operand");
       return i == 0 ? address() : value();
     }
   }];
