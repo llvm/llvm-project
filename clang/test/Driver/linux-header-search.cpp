@@ -16,6 +16,22 @@
 // CHECK-BASIC-LIBCXX-SYSROOT: "-internal-isystem" "[[SYSROOT]]/usr/include/x86_64-unknown-linux-gnu/c++/v1"
 // CHECK-BASIC-LIBCXX-SYSROOT: "-internal-isystem" "[[SYSROOT]]/usr/include/c++/v1"
 // CHECK-BASIC-LIBCXX-SYSROOT: "-internal-isystem" "[[SYSROOT]]/usr/local/include"
+
+// Test include paths when the sysroot path ends with `/`.
+// RUN: %clang -### %s -fsyntax-only 2>&1 \
+// RUN:     --target=x86_64-unknown-linux-gnu \
+// RUN:     -stdlib=libc++ \
+// RUN:     -ccc-install-dir %S/Inputs/basic_linux_tree/usr/bin \
+// RUN:     -resource-dir=%S/Inputs/resource_dir \
+// RUN:     --sysroot=%S/Inputs/basic_linux_libcxx_tree/ \
+// RUN:     --gcc-toolchain="" \
+// RUN:   | FileCheck --check-prefix=CHECK-BASIC-LIBCXX-SYSROOT-SLASH %s
+// CHECK-BASIC-LIBCXX-SYSROOT-SLASH: "-cc1"
+// CHECK-BASIC-LIBCXX-SYSROOT-SLASH-SAME: "-isysroot" "[[SYSROOT:[^"]+/]]"
+// CHECK-BASIC-LIBCXX-SYSROOT-SLASH-SAME: "-internal-isystem" "[[SYSROOT]]usr/include/x86_64-unknown-linux-gnu/c++/v1"
+// CHECK-BASIC-LIBCXX-SYSROOT-SLASH-SAME: "-internal-isystem" "[[SYSROOT]]usr/include/c++/v1"
+// CHECK-BASIC-LIBCXX-SYSROOT-SLASH-SAME: "-internal-isystem" "[[SYSROOT]]usr/local/include"
+
 // RUN: %clang -### %s -fsyntax-only 2>&1 \
 // RUN:     --target=x86_64-unknown-linux-gnu \
 // RUN:     -stdlib=libc++ \
@@ -56,7 +72,20 @@
 // CHECK-BASIC-LIBCXXV2-INSTALL: "-internal-isystem" "[[SYSROOT]]/usr/bin/../include/x86_64-unknown-linux-gnu/c++/v2"
 // CHECK-BASIC-LIBCXXV2-INSTALL: "-internal-isystem" "[[SYSROOT]]/usr/bin/../include/c++/v2"
 // CHECK-BASIC-LIBCXXV2-INSTALL: "-internal-isystem" "[[SYSROOT]]/usr/local/include"
-//
+
+// Test Linux with libstdc++ when the sysroot path ends with `/`.
+// RUN: %clang -### %s -fsyntax-only 2>&1 \
+// RUN:     --target=x86_64-unknown-linux-gnu \
+// RUN:     -stdlib=libstdc++ \
+// RUN:     -ccc-install-dir %S/Inputs/basic_linux_tree/usr/bin \
+// RUN:     -resource-dir=%S/Inputs/resource_dir \
+// RUN:     --sysroot=%S/Inputs/basic_linux_libstdcxx_tree/ \
+// RUN:     --gcc-toolchain="" \
+// RUN:   | FileCheck --check-prefix=CHECK-BASIC-LIBSTDCXX-SYSROOT-SLASH %s
+// CHECK-BASIC-LIBSTDCXX-SYSROOT-SLASH: "-cc1"
+// CHECK-BASIC-LIBSTDCXX-SYSROOT-SLASH-SAME: "-isysroot" "[[SYSROOT:[^"]+/]]"
+// CHECK-BASIC-LIBSTDCXX-SYSROOT-SLASH-SAME: "-internal-isystem" "[[SYSROOT]]usr/lib/gcc/x86_64-unknown-linux-gnu/4.8/../../../../x86_64-unknown-linux-gnu/include"
+
 // Test Linux with both libc++ and libstdc++ installed.
 // RUN: %clang -### %s -fsyntax-only 2>&1 \
 // RUN:     --target=x86_64-unknown-linux-gnu \
