@@ -215,9 +215,9 @@ TEST(DependencyScanningFilesystem, IgnoredFilesAreCachedSeparately1) {
   ExcludedPreprocessorDirectiveSkipMapping Mappings;
   DependencyScanningWorkerFilesystem DepFS(SharedCache, VFS, Mappings);
 
-  DepFS.enableMinimizationOfAllFiles(); // Let's be explicit for clarity.
+  DepFS.enableDirectivesScanningOfAllFiles(); // Let's be explicit for clarity.
   auto StatusMinimized0 = DepFS.status("/mod.h");
-  DepFS.disableMinimization("/mod.h");
+  DepFS.disableDirectivesScanning("/mod.h");
   auto StatusFull1 = DepFS.status("/mod.h");
 
   EXPECT_TRUE(StatusMinimized0);
@@ -238,9 +238,9 @@ TEST(DependencyScanningFilesystem, IgnoredFilesAreCachedSeparately2) {
   ExcludedPreprocessorDirectiveSkipMapping Mappings;
   DependencyScanningWorkerFilesystem DepFS(SharedCache, VFS, Mappings);
 
-  DepFS.disableMinimization("/mod.h");
+  DepFS.disableDirectivesScanning("/mod.h");
   auto StatusFull0 = DepFS.status("/mod.h");
-  DepFS.enableMinimizationOfAllFiles();
+  DepFS.enableDirectivesScanningOfAllFiles();
   auto StatusMinimized1 = DepFS.status("/mod.h");
 
   EXPECT_TRUE(StatusFull0);

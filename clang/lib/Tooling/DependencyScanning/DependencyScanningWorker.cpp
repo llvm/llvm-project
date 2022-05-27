@@ -183,19 +183,19 @@ public:
 
     // Use the dependency scanning optimized file system if requested to do so.
     if (DepFS) {
-      DepFS->enableMinimizationOfAllFiles();
+      DepFS->enableDirectivesScanningOfAllFiles();
       // Don't minimize any files that contributed to prebuilt modules. The
       // implicit build validates the modules by comparing the reported sizes of
       // their inputs to the current state of the filesystem. Minimization would
       // throw this mechanism off.
       for (const auto &File : PrebuiltModulesInputFiles)
-        DepFS->disableMinimization(File.getKey());
+        DepFS->disableDirectivesScanning(File.getKey());
       // Don't minimize any files that were explicitly passed in the build
       // settings and that might be opened.
       for (const auto &E : ScanInstance.getHeaderSearchOpts().UserEntries)
-        DepFS->disableMinimization(E.Path);
+        DepFS->disableDirectivesScanning(E.Path);
       for (const auto &F : ScanInstance.getHeaderSearchOpts().VFSOverlayFiles)
-        DepFS->disableMinimization(F);
+        DepFS->disableDirectivesScanning(F);
 
       // Support for virtual file system overlays on top of the caching
       // filesystem.
@@ -287,7 +287,7 @@ DependencyScanningWorker::DependencyScanningWorker(
   OverlayFS->pushOverlay(InMemoryFS);
   RealFS = OverlayFS;
 
-  if (Service.getMode() == ScanningMode::MinimizedSourcePreprocessing)
+  if (Service.getMode() == ScanningMode::DependencyDirectivesScan)
     DepFS = new DependencyScanningWorkerFilesystem(Service.getSharedCache(),
                                                    RealFS, PPSkipMappings);
   if (Service.canReuseFileManager())

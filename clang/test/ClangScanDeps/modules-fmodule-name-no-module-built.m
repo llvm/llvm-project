@@ -10,7 +10,7 @@
 // RUN: sed -e "s|DIR|%/t.dir|g" %S/Inputs/module_fmodule_name_cdb.json > %t.cdb
 
 // RUN: clang-scan-deps -compilation-database %t.cdb -j 1 -format experimental-full \
-// RUN:   -generate-modules-path-args -mode preprocess-minimized-sources > %t.result
+// RUN:   -generate-modules-path-args -mode preprocess-dependency-directives > %t.result
 // RUN: cat %t.result | sed 's:\\\\\?:/:g' | FileCheck -DPREFIX=%/t.dir --check-prefixes=CHECK %s
 
 #import "header3.h"

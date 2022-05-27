@@ -1,4 +1,4 @@
-//===- clang/Lex/DependencyDirectivesSourceMinimizer.h -  ----------*- C++ -*-//
+//===- clang/Lex/DependencyDirectivesScanner.h ---------------------*- C++ -*-//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -7,15 +7,15 @@
 //===----------------------------------------------------------------------===//
 ///
 /// \file
-/// This is the interface for minimizing header and source files to the
+/// This is the interface for scanning header and source files to get the
 /// minimum necessary preprocessor directives for evaluating includes. It
 /// reduces the source down to #define, #include, #import, @import, and any
 /// conditional preprocessor logic that contains one of those.
 ///
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_LEX_DEPENDENCYDIRECTIVESSOURCEMINIMIZER_H
-#define LLVM_CLANG_LEX_DEPENDENCYDIRECTIVESSOURCEMINIMIZER_H
+#ifndef LLVM_CLANG_LEX_DEPENDENCYDIRECTIVESSCANNER_H
+#define LLVM_CLANG_LEX_DEPENDENCYDIRECTIVESSCANNER_H
 
 #include "clang/Basic/SourceLocation.h"
 #include "llvm/ADT/ArrayRef.h"
@@ -26,11 +26,11 @@ namespace clang {
 
 class DiagnosticsEngine;
 
-namespace minimize_source_to_dependency_directives {
+namespace dependency_directives_scan {
 
 /// Represents the kind of preprocessor directive or a module declaration that
-/// is tracked by the source minimizer in its token output.
-enum TokenKind {
+/// is tracked by the scanner in its token output.
+enum DirectiveKind : uint8_t {
   pp_none,
   pp_include,
   pp___include_macros,
@@ -58,17 +58,17 @@ enum TokenKind {
   pp_eof,
 };
 
-/// Represents a simplified token that's lexed as part of the source
-/// minimization. It's used to track the location of various preprocessor
-/// directives that could potentially have an effect on the depedencies.
-struct Token {
+/// Represents a directive that's lexed as part of the dependency directives
+/// scanning. It's used to track various preprocessor directives that could
+/// potentially have an effect on the depedencies.
+struct Directive {
   /// The kind of token.
-  TokenKind K = pp_none;
+  DirectiveKind Kind = pp_none;
 
   /// Offset into the output byte stream of where the directive begins.
   int Offset = -1;
 
-  Token(TokenKind K, int Offset) : K(K), Offset(Offset) {}
+  Directive(DirectiveKind K, int Offset) : Kind(K), Offset(Offset) {}
 };
 
 /// Simplified token range to track the range of a potentially skippable PP
@@ -86,10 +86,10 @@ struct SkippedRange {
 /// when skipping a directive like #if, #ifdef or #elsif.
 ///
 /// \returns false on success, true on error.
-bool computeSkippedRanges(ArrayRef<Token> Input,
+bool computeSkippedRanges(ArrayRef<Directive> Input,
                           llvm::SmallVectorImpl<SkippedRange> &Range);
 
-} // end namespace minimize_source_to_dependency_directives
+} // end namespace dependency_directives_scan
 
 /// Minimize the input down to the preprocessor directives that might have
 /// an effect on the dependencies for a compilation unit.
@@ -103,13 +103,12 @@ bool computeSkippedRanges(ArrayRef<Token> Input,
 /// \returns false on success, true on error. If the diagnostic engine is not
 /// null, an appropriate error is reported using the given input location
 /// with the offset that corresponds to the minimizer's current buffer offset.
-bool minimizeSourceToDependencyDirectives(
+bool scanSourceForDependencyDirectives(
     llvm::StringRef Input, llvm::SmallVectorImpl<char> &Output,
-    llvm::SmallVectorImpl<minimize_source_to_dependency_directives::Token>
-        &Tokens,
+    llvm::SmallVectorImpl<dependency_directives_scan::Directive> &Directives,
     DiagnosticsEngine *Diags = nullptr,
     SourceLocation InputSourceLoc = SourceLocation());
 
 } // end namespace clang
 
-#endif // LLVM_CLANG_LEX_DEPENDENCYDIRECTIVESSOURCEMINIMIZER_H
+#endif // LLVM_CLANG_LEX_DEPENDENCYDIRECTIVESSCANNER_H
