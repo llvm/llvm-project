@@ -421,7 +421,7 @@ public:
     return static_cast<const LazyCompoundValData *>(Data);
   }
 
-  LLVM_ATTRIBUTE_RETURNS_NONNULL
+  /// It might return null.
   const void *getStore() const;
 
   LLVM_ATTRIBUTE_RETURNS_NONNULL
