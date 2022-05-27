@@ -2075,6 +2075,33 @@ void IntegerRelation::removeIndependentConstraints(unsigned pos, unsigned num) {
     removeEquality(nbIndex);
 }
 
+IntegerPolyhedron IntegerRelation::getDomainSet() const {
+  IntegerRelation copyRel = *this;
+
+  // Convert Range variables to Local variables.
+  copyRel.convertIdKind(IdKind::Range, 0, getNumIdKind(IdKind::Range),
+                        IdKind::Local);
+
+  // Convert Domain variables to SetDim(Range) variables.
+  copyRel.convertIdKind(IdKind::Domain, 0, getNumIdKind(IdKind::Domain),
+                        IdKind::SetDim);
+
+  return IntegerPolyhedron(std::move(copyRel));
+}
+
+IntegerPolyhedron IntegerRelation::getRangeSet() const {
+  IntegerRelation copyRel = *this;
+
+  // Convert Domain variables to Local variables.
+  copyRel.convertIdKind(IdKind::Domain, 0, getNumIdKind(IdKind::Domain),
+                        IdKind::Local);
+
+  // We do not need to do anything to Range variables since they are already in
+  // SetDim position.
+
+  return IntegerPolyhedron(std::move(copyRel));
+}
+
 void IntegerRelation::printSpace(raw_ostream &os) const {
   space.print(os);
   os << getNumConstraints() << " constraints\n";
