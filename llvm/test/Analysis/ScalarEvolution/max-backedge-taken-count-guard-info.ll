@@ -819,6 +819,43 @@ exit:
   ret void
 }
 
+define void @test_guard_assume_and(i32* nocapture readonly %data, i64 %count) {
+; CHECK-LABEL: 'test_guard_assume_and'
+; CHECK-NEXT:  Classifying expressions for: @test_guard_assume_and
+; CHECK-NEXT:    %cmp.and = and i1 %cmp.ult, %cmp.ne
+; CHECK-NEXT:    --> (%cmp.ult umin %cmp.ne) U: full-set S: full-set
+; CHECK-NEXT:    %iv = phi i64 [ %iv.next, %loop ], [ 0, %entry ]
+; CHECK-NEXT:    --> {0,+,1}<nuw><%loop> U: [0,-1) S: [0,-1) Exits: (-1 + %count) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    %idx = getelementptr inbounds i32, i32* %data, i64 %iv
+; CHECK-NEXT:    --> {%data,+,4}<%loop> U: full-set S: full-set Exits: (-4 + (4 * %count) + %data) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    %iv.next = add nuw i64 %iv, 1
+; CHECK-NEXT:    --> {1,+,1}<nuw><%loop> U: [1,0) S: [1,0) Exits: %count LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:  Determining loop execution counts for: @test_guard_assume_and
+; CHECK-NEXT:  Loop %loop: backedge-taken count is (-1 + %count)
+; CHECK-NEXT:  Loop %loop: max backedge-taken count is -2
+; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is (-1 + %count)
+; CHECK-NEXT:   Predicates:
+; CHECK:       Loop %loop: Trip multiple is 1
+;
+entry:
+  %cmp.ult = icmp ult i64 %count, 5
+  %cmp.ne = icmp ne i64 %count, 0
+  %cmp.and = and i1 %cmp.ult, %cmp.ne
+  call void @llvm.assume(i1 %cmp.and)
+  br label %loop
+
+loop:
+  %iv = phi i64 [ %iv.next, %loop ], [ 0, %entry ]
+  %idx = getelementptr inbounds i32, i32* %data, i64 %iv
+  store i32 1, i32* %idx, align 4
+  %iv.next = add nuw i64 %iv, 1
+  %exitcond.not = icmp eq i64 %iv.next, %count
+  br i1 %exitcond.not, label %exit, label %loop
+
+exit:
+  ret void
+}
+
 ; Function Attrs: nounwind willreturn
 declare void @llvm.assume(i1 noundef)
 
