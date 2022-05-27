@@ -21,7 +21,6 @@
 ; CHECK-NEXT: Assumption Cache Tracker
 ; CHECK-NEXT: Profile summary info
 ; CHECK-NEXT: Create Garbage Collector Module Metadata
-; CHECK-NEXT: Basic Block Sections Profile Reader
 ; CHECK-NEXT: Machine Branch Probability Analysis
 ; CHECK-NEXT: Default Regalloc Eviction Advisor
 ; CHECK-NEXT:   ModulePass Manager

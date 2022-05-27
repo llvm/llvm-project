@@ -15,5 +15,5 @@ define dso_local i32 @foo(i1 zeroext %0, i1 zeroext %1)  !annotation !1 {
 
 !1 = !{!"instr_prof_hash_mismatch"}
 
-; SOURCE-DRIFT-NOT: .section .text{{.*}}.foo
-; HASH-CHECK-DISABLED: .section .text.hot.foo
+; SOURCE-DRIFT-NOT: .section .text
+; HASH-CHECK-DISABLED: .section .text

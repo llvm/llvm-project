@@ -31,7 +31,6 @@
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/Analysis/VectorUtils.h"
 #include "llvm/CodeGen/Analysis.h"
-#include "llvm/CodeGen/BasicBlockSectionsProfileReader.h"
 #include "llvm/CodeGen/ISDOpcodes.h"
 #include "llvm/CodeGen/SelectionDAGNodes.h"
 #include "llvm/CodeGen/TargetLowering.h"
@@ -187,15 +186,6 @@ static cl::opt<bool> ProfileUnknownInSpecialSection(
              "to handle it in a different way than .text section, to save "
              "RAM for example. "));
 
-static cl::opt<bool> BBSectionsGuidedSectionPrefix(
-    "bbsections-guided-section-prefix", cl::Hidden, cl::init(true),
-    cl::desc("Use the basic-block-sections profile to determine the text "
-             "section prefix for hot functions. Functions with "
-             "basic-block-sections profile will be placed in `.text.hot` "
-             "regardless of their FDO profile info. Other functions won't be "
-             "impacted, i.e., their prefixes will be decided by FDO/sampleFDO "
-             "profiles."));
-
 static cl::opt<unsigned> FreqRatioToSkipMerge(
     "cgp-freq-ratio-to-skip-merge", cl::Hidden, cl::init(2),
     cl::desc("Skip merging empty blocks if (frequency of empty block) / "
@@ -282,7 +272,6 @@ class TypePromotionTransaction;
     const TargetLowering *TLI = nullptr;
     const TargetRegisterInfo *TRI;
     const TargetTransformInfo *TTI = nullptr;
-    const BasicBlockSectionsProfileReader *BBSectionsProfileReader = nullptr;
     const TargetLibraryInfo *TLInfo;
     const LoopInfo *LI;
     std::unique_ptr<BlockFrequencyInfo> BFI;
@@ -358,7 +347,6 @@ class TypePromotionTransaction;
       AU.addRequired<TargetPassConfig>();
       AU.addRequired<TargetTransformInfoWrapperPass>();
       AU.addRequired<LoopInfoWrapperPass>();
-      AU.addRequired<BasicBlockSectionsProfileReader>();
     }
 
   private:
@@ -459,7 +447,6 @@ INITIALIZE_PASS_DEPENDENCY(ProfileSummaryInfoWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(TargetLibraryInfoWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(TargetPassConfig)
 INITIALIZE_PASS_DEPENDENCY(TargetTransformInfoWrapperPass)
-INITIALIZE_PASS_DEPENDENCY(BasicBlockSectionsProfileReader)
 INITIALIZE_PASS_END(CodeGenPrepare, DEBUG_TYPE,
                     "Optimize for code generation", false, false)
 
@@ -486,14 +473,8 @@ bool CodeGenPrepare::runOnFunction(Function &F) {
   BPI.reset(new BranchProbabilityInfo(F, *LI));
   BFI.reset(new BlockFrequencyInfo(F, *BPI, *LI));
   PSI = &getAnalysis<ProfileSummaryInfoWrapperPass>().getPSI();
-  BBSectionsProfileReader =
-      getAnalysisIfAvailable<BasicBlockSectionsProfileReader>();
   OptSize = F.hasOptSize();
-  // Use the basic-block-sections profile to promote hot functions to .text.hot if requested.
-  if (BBSectionsGuidedSectionPrefix && BBSectionsProfileReader &&
-      BBSectionsProfileReader->isFunctionHot(F.getName())) {
-    F.setSectionPrefix("hot");
-  } else if (ProfileGuidedSectionPrefix) {
+  if (ProfileGuidedSectionPrefix) {
     // The hot attribute overwrites profile count based hotness while profile
     // counts based hotness overwrite the cold attribute.
     // This is a conservative behabvior.

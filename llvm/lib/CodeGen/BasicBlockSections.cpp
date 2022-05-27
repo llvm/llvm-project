@@ -69,17 +69,25 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ADT/Optional.h"
+#include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/CodeGen/BasicBlockSectionsProfileReader.h"
 #include "llvm/CodeGen/BasicBlockSectionUtils.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/Passes.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/InitializePasses.h"
+#include "llvm/Support/Error.h"
+#include "llvm/Support/LineIterator.h"
+#include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Target/TargetMachine.h"
 
+using llvm::SmallSet;
+using llvm::SmallVector;
+using llvm::StringMap;
+using llvm::StringRef;
 using namespace llvm;
 
 // Placing the cold clusters in a separate section mitigates against poor
@@ -99,11 +107,41 @@ cl::opt<bool> BBSectionsDetectSourceDrift(
 
 namespace {
 
+// This struct represents the cluster information for a machine basic block.
+struct BBClusterInfo {
+  // MachineBasicBlock ID.
+  unsigned MBBNumber;
+  // Cluster ID this basic block belongs to.
+  unsigned ClusterID;
+  // Position of basic block within the cluster.
+  unsigned PositionInCluster;
+};
+
+using ProgramBBClusterInfoMapTy = StringMap<SmallVector<BBClusterInfo, 4>>;
+
 class BasicBlockSections : public MachineFunctionPass {
 public:
   static char ID;
 
-  BasicBlockSectionsProfileReader *BBSectionsProfileReader = nullptr;
+  // This contains the basic-block-sections profile.
+  const MemoryBuffer *MBuf = nullptr;
+
+  // This encapsulates the BB cluster information for the whole program.
+  //
+  // For every function name, it contains the cluster information for (all or
+  // some of) its basic blocks. The cluster information for every basic block
+  // includes its cluster ID along with the position of the basic block in that
+  // cluster.
+  ProgramBBClusterInfoMapTy ProgramBBClusterInfo;
+
+  // Some functions have alias names. We use this map to find the main alias
+  // name for which we have mapping in ProgramBBClusterInfo.
+  StringMap<StringRef> FuncAliasMap;
+
+  BasicBlockSections(const MemoryBuffer *Buf)
+      : MachineFunctionPass(ID), MBuf(Buf) {
+    initializeBasicBlockSectionsPass(*PassRegistry::getPassRegistry());
+  };
 
   BasicBlockSections() : MachineFunctionPass(ID) {
     initializeBasicBlockSectionsPass(*PassRegistry::getPassRegistry());
@@ -114,6 +152,9 @@ public:
   }
 
   void getAnalysisUsage(AnalysisUsage &AU) const override;
+
+  /// Read profiles of basic blocks if available here.
+  bool doInitialization(Module &M) override;
 
   /// Identify basic blocks that need separate sections and prepare to emit them
   /// accordingly.
@@ -164,18 +205,21 @@ static void updateBranches(
 
 // This function provides the BBCluster information associated with a function.
 // Returns true if a valid association exists and false otherwise.
-bool getBBClusterInfoForFunction(
-    const MachineFunction &MF,
-    BasicBlockSectionsProfileReader *BBSectionsProfileReader,
+static bool getBBClusterInfoForFunction(
+    const MachineFunction &MF, const StringMap<StringRef> FuncAliasMap,
+    const ProgramBBClusterInfoMapTy &ProgramBBClusterInfo,
     std::vector<Optional<BBClusterInfo>> &V) {
+  // Get the main alias name for the function.
+  auto FuncName = MF.getName();
+  auto R = FuncAliasMap.find(FuncName);
+  StringRef AliasName = R == FuncAliasMap.end() ? FuncName : R->second;
 
   // Find the assoicated cluster information.
-  std::pair<bool, SmallVector<BBClusterInfo, 4>> P =
-      BBSectionsProfileReader->getBBClusterInfoForFunction(MF.getName());
-  if (!P.first)
+  auto P = ProgramBBClusterInfo.find(AliasName);
+  if (P == ProgramBBClusterInfo.end())
     return false;
 
-  if (P.second.empty()) {
+  if (P->second.empty()) {
     // This indicates that sections are desired for all basic blocks of this
     // function. We clear the BBClusterInfo vector to denote this.
     V.clear();
@@ -183,7 +227,7 @@ bool getBBClusterInfoForFunction(
   }
 
   V.resize(MF.getNumBlockIDs());
-  for (auto bbClusterInfo : P.second) {
+  for (auto bbClusterInfo : P->second) {
     // Bail out if the cluster information contains invalid MBB numbers.
     if (bbClusterInfo.MBBNumber >= MF.getNumBlockIDs())
       return false;
@@ -332,11 +376,9 @@ bool BasicBlockSections::runOnMachineFunction(MachineFunction &MF) {
     return true;
   }
 
-  BBSectionsProfileReader = &getAnalysis<BasicBlockSectionsProfileReader>();
-
   std::vector<Optional<BBClusterInfo>> FuncBBClusterInfo;
   if (BBSectionsType == BasicBlockSection::List &&
-      !getBBClusterInfoForFunction(MF, BBSectionsProfileReader,
+      !getBBClusterInfoForFunction(MF, FuncAliasMap, ProgramBBClusterInfo,
                                    FuncBBClusterInfo))
     return true;
   MF.setBBSectionsType(BBSectionsType);
@@ -384,12 +426,107 @@ bool BasicBlockSections::runOnMachineFunction(MachineFunction &MF) {
   return true;
 }
 
+// Basic Block Sections can be enabled for a subset of machine basic blocks.
+// This is done by passing a file containing names of functions for which basic
+// block sections are desired.  Additionally, machine basic block ids of the
+// functions can also be specified for a finer granularity. Moreover, a cluster
+// of basic blocks could be assigned to the same section.
+// A file with basic block sections for all of function main and three blocks
+// for function foo (of which 1 and 2 are placed in a cluster) looks like this:
+// ----------------------------
+// list.txt:
+// !main
+// !foo
+// !!1 2
+// !!4
+static Error getBBClusterInfo(const MemoryBuffer *MBuf,
+                              ProgramBBClusterInfoMapTy &ProgramBBClusterInfo,
+                              StringMap<StringRef> &FuncAliasMap) {
+  assert(MBuf);
+  line_iterator LineIt(*MBuf, /*SkipBlanks=*/true, /*CommentMarker=*/'#');
+
+  auto invalidProfileError = [&](auto Message) {
+    return make_error<StringError>(
+        Twine("Invalid profile " + MBuf->getBufferIdentifier() + " at line " +
+              Twine(LineIt.line_number()) + ": " + Message),
+        inconvertibleErrorCode());
+  };
+
+  auto FI = ProgramBBClusterInfo.end();
+
+  // Current cluster ID corresponding to this function.
+  unsigned CurrentCluster = 0;
+  // Current position in the current cluster.
+  unsigned CurrentPosition = 0;
+
+  // Temporary set to ensure every basic block ID appears once in the clusters
+  // of a function.
+  SmallSet<unsigned, 4> FuncBBIDs;
+
+  for (; !LineIt.is_at_eof(); ++LineIt) {
+    StringRef S(*LineIt);
+    if (S[0] == '@')
+      continue;
+    // Check for the leading "!"
+    if (!S.consume_front("!") || S.empty())
+      break;
+    // Check for second "!" which indicates a cluster of basic blocks.
+    if (S.consume_front("!")) {
+      if (FI == ProgramBBClusterInfo.end())
+        return invalidProfileError(
+            "Cluster list does not follow a function name specifier.");
+      SmallVector<StringRef, 4> BBIndexes;
+      S.split(BBIndexes, ' ');
+      // Reset current cluster position.
+      CurrentPosition = 0;
+      for (auto BBIndexStr : BBIndexes) {
+        unsigned long long BBIndex;
+        if (getAsUnsignedInteger(BBIndexStr, 10, BBIndex))
+          return invalidProfileError(Twine("Unsigned integer expected: '") +
+                                     BBIndexStr + "'.");
+        if (!FuncBBIDs.insert(BBIndex).second)
+          return invalidProfileError(Twine("Duplicate basic block id found '") +
+                                     BBIndexStr + "'.");
+        if (!BBIndex && CurrentPosition)
+          return invalidProfileError("Entry BB (0) does not begin a cluster.");
+
+        FI->second.emplace_back(BBClusterInfo{
+            ((unsigned)BBIndex), CurrentCluster, CurrentPosition++});
+      }
+      CurrentCluster++;
+    } else { // This is a function name specifier.
+      // Function aliases are separated using '/'. We use the first function
+      // name for the cluster info mapping and delegate all other aliases to
+      // this one.
+      SmallVector<StringRef, 4> Aliases;
+      S.split(Aliases, '/');
+      for (size_t i = 1; i < Aliases.size(); ++i)
+        FuncAliasMap.try_emplace(Aliases[i], Aliases.front());
+
+      // Prepare for parsing clusters of this function name.
+      // Start a new cluster map for this function name.
+      FI = ProgramBBClusterInfo.try_emplace(Aliases.front()).first;
+      CurrentCluster = 0;
+      FuncBBIDs.clear();
+    }
+  }
+  return Error::success();
+}
+
+bool BasicBlockSections::doInitialization(Module &M) {
+  if (!MBuf)
+    return false;
+  if (auto Err = getBBClusterInfo(MBuf, ProgramBBClusterInfo, FuncAliasMap))
+    report_fatal_error(std::move(Err));
+  return false;
+}
+
 void BasicBlockSections::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.setPreservesAll();
-  AU.addRequired<BasicBlockSectionsProfileReader>();
   MachineFunctionPass::getAnalysisUsage(AU);
 }
 
-MachineFunctionPass *llvm::createBasicBlockSectionsPass() {
-  return new BasicBlockSections();
+MachineFunctionPass *
+llvm::createBasicBlockSectionsPass(const MemoryBuffer *Buf) {
+  return new BasicBlockSections(Buf);
 }
