@@ -43,25 +43,6 @@ using namespace ento;
 // Utility methods.
 //===----------------------------------------------------------------------===//
 
-bool SVal::hasConjuredSymbol() const {
-  if (Optional<nonloc::SymbolVal> SV = getAs<nonloc::SymbolVal>()) {
-    SymbolRef sym = SV->getSymbol();
-    if (isa<SymbolConjured>(sym))
-      return true;
-  }
-
-  if (Optional<loc::MemRegionVal> RV = getAs<loc::MemRegionVal>()) {
-    const MemRegion *R = RV->getRegion();
-    if (const auto *SR = dyn_cast<SymbolicRegion>(R)) {
-      SymbolRef sym = SR->getSymbol();
-      if (isa<SymbolConjured>(sym))
-        return true;
-    }
-  }
-
-  return false;
-}
-
 const FunctionDecl *SVal::getAsFunctionDecl() const {
   if (Optional<loc::MemRegionVal> X = getAs<loc::MemRegionVal>()) {
     const MemRegion* R = X->getRegion();

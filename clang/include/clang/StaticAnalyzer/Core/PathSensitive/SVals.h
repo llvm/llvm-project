@@ -154,9 +154,6 @@ public:
 
   bool isZeroConstant() const;
 
-  /// hasConjuredSymbol - If this SVal wraps a conjured symbol, return true;
-  bool hasConjuredSymbol() const;
-
   /// getAsFunctionDecl - If this SVal is a MemRegionVal and wraps a
   /// CodeTextRegion wrapping a FunctionDecl, return that FunctionDecl.
   /// Otherwise return 0.
