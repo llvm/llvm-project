@@ -471,7 +471,10 @@ def StdC : StandardSpec<"stdc"> {
 
   HeaderSpec StdIO = HeaderSpec<
       "stdio.h",
-      [], // Macros
+      [
+          Macro<"stderr">,
+          Macro<"stdout">,
+      ], // Macros
       [ // Types
           SizeTType,
           FILE,
@@ -559,6 +562,16 @@ def StdC : StandardSpec<"stdc"> {
               [ArgSpec<FILERestrictedPtr>,
                ArgSpec<ConstCharRestrictedPtr>,
                ArgSpec<VarArgType>]
+          >,
+      ],
+      [
+          ObjectSpec<
+              "stdout",
+              "FILE *"
+          >,
+          ObjectSpec<
+              "stderr",
+              "FILE *"
           >,
       ]
   >;

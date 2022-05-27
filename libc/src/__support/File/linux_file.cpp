@@ -165,4 +165,18 @@ File *openfile(const char *path, const char *mode) {
   return file;
 }
 
+// TODO: Use the appropriate buffering modes for the standard streams below
+// the different buffering modes are available.
+constexpr size_t STDOUT_BUFFER_SIZE = 1024;
+char stdout_buffer[STDOUT_BUFFER_SIZE];
+static LinuxFile StdOut(1, stdout_buffer, STDOUT_BUFFER_SIZE, 0, false,
+                        File::ModeFlags(File::OpenMode::APPEND));
+File *stdout = &StdOut;
+
+constexpr size_t STDERR_BUFFER_SIZE = 1024;
+char stderr_buffer[STDERR_BUFFER_SIZE];
+static LinuxFile StdErr(2, stderr_buffer, STDERR_BUFFER_SIZE, 0, false,
+                        File::ModeFlags(File::OpenMode::APPEND));
+File *stderr = &StdErr;
+
 } // namespace __llvm_libc
