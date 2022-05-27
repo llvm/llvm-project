@@ -50,7 +50,7 @@ typedef struct _NSZone NSZone;
 // Actual test case:
 //
 // The analyzer currently doesn't reason about ObjCKVCRefExpr.  Have both
-// GRExprEngine::Visit and GRExprEngine::VisitLValue have such expressions
+// ExprEngine::Visit and ExprEngine::VisitLValue have such expressions
 // evaluate to UnknownVal.
 //===----------------------------------------------------------------------===//
 
