@@ -35,6 +35,15 @@ def LinkageAttr : LLVM_Attr<"Linkage"> {
   let hasCustomAssemblyFormat = 1;
 }
 
+// Attribute definition for the LLVM Linkage enum.
+def CConvAttr : LLVM_Attr<"CConv"> {
+  let mnemonic = "cconv";
+  let parameters = (ins
+    "CConv":$CConv
+  );
+  let hasCustomAssemblyFormat = 1;
+}
+
 def LoopOptionsAttr : LLVM_Attr<"LoopOptions"> {
   let mnemonic = "loopopts";
 

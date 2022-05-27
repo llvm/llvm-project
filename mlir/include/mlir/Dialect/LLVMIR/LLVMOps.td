@@ -67,6 +67,134 @@ def LoopOptionCase : I32EnumAttr<
   let cppNamespace = "::mlir::LLVM";
 }
 
+// These values must match llvm::CallingConv ones.
+// See https://llvm.org/doxygen/namespacellvm_1_1CallingConv.html for full list
+// of supported calling conventions.
+def CConvC : LLVM_EnumAttrCase<"C", "ccc", "C", 0>;
+def CConvFast : LLVM_EnumAttrCase<"Fast", "fastcc", "Fast", 8>;
+def CConvCold : LLVM_EnumAttrCase<"Cold", "coldcc", "Cold", 9>;
+def CConvGHC : LLVM_EnumAttrCase<"GHC", "cc_10", "GHC", 10>;
+def CConvHiPE : LLVM_EnumAttrCase<"HiPE", "cc_11", "HiPE", 11>;
+def CConvWebKitJS : LLVM_EnumAttrCase<"WebKit_JS", "webkit_jscc",
+                                      "WebKit_JS", 12>;
+def CConvAnyReg : LLVM_EnumAttrCase<"AnyReg", "anyregcc", "AnyReg", 13>;
+def CConvPreserveMost : LLVM_EnumAttrCase<"PreserveMost", "preserve_mostcc",
+                                          "PreserveMost", 14>;
+def CConvPreserveAll : LLVM_EnumAttrCase<"PreserveAll", "preserve_allcc",
+                                         "PreserveAll", 15>;
+def CConvSwift : LLVM_EnumAttrCase<"Swift", "swiftcc", "Swift", 16>;
+def CConvCXXFastTLS : LLVM_EnumAttrCase<"CXX_FAST_TLS", "cxx_fast_tlscc",
+                                        "CXX_FAST_TLS", 17>;
+def CConvTail : LLVM_EnumAttrCase<"Tail", "tailcc", "Tail", 18>;
+def CConvCFGuard_Check : LLVM_EnumAttrCase<"CFGuard_Check",
+                                            "cfguard_checkcc",
+                                            "CFGuard_Check", 19>;
+def CConvSwiftTail : LLVM_EnumAttrCase<"SwiftTail", "swifttailcc",
+                                       "SwiftTail", 20>;
+def CConvX86_StdCall : LLVM_EnumAttrCase<"X86_StdCall", "x86_stdcallcc",
+                                         "X86_StdCall", 64>;
+def CConvX86_FastCall : LLVM_EnumAttrCase<"X86_FastCall", "x86_fastcallcc",
+                                          "X86_FastCall", 65>;
+def CConvARM_APCS : LLVM_EnumAttrCase<"ARM_APCS", "arm_apcscc", "ARM_APCS", 66>;
+def CConvARM_AAPCS : LLVM_EnumAttrCase<"ARM_AAPCS", "arm_aapcscc", "ARM_AAPCS",
+                                       67>;
+def CConvARM_AAPCS_VFP : LLVM_EnumAttrCase<"ARM_AAPCS_VFP", "arm_aapcs_vfpcc",
+                                           "ARM_AAPCS_VFP", 68>;
+def CConvMSP430_INTR : LLVM_EnumAttrCase<"MSP430_INTR", "msp430_intrcc",
+                                          "MSP430_INTR", 69>;
+def CConvX86_ThisCall : LLVM_EnumAttrCase<"X86_ThisCall", "x86_thiscallcc",
+                                          "X86_ThisCall", 70>;
+def CConvPTX_Kernel : LLVM_EnumAttrCase<"PTX_Kernel", "ptx_kernelcc",
+                                        "PTX_Kernel", 71>;
+def CConvPTX_Device : LLVM_EnumAttrCase<"PTX_Device", "ptx_devicecc",
+                                        "PTX_Device", 72>;
+def CConvSPIR_FUNC : LLVM_EnumAttrCase<"SPIR_FUNC", "spir_funccc",
+                                       "SPIR_FUNC", 75>;
+def CConvSPIR_KERNEL : LLVM_EnumAttrCase<"SPIR_KERNEL", "spir_kernelcc",
+                                         "SPIR_KERNEL", 76>;
+def CConvIntel_OCL_BI : LLVM_EnumAttrCase<"Intel_OCL_BI", "intel_ocl_bicc",
+                                          "Intel_OCL_BI", 77>;
+def CConvX86_64_SysV : LLVM_EnumAttrCase<"X86_64_SysV", "x86_64_sysvcc",
+                                         "X86_64_SysV", 78>;
+def CConvWin64 : LLVM_EnumAttrCase<"Win64", "win64cc", "Win64", 79>;
+def CConvX86_VectorCall : LLVM_EnumAttrCase<"X86_VectorCall",
+                                            "x86_vectorcallcc",
+                                            "X86_VectorCall", 80>;
+def CConvHHVM : LLVM_EnumAttrCase<"HHVM", "hhvmcc", "HHVM", 81>;
+def CConvHHVM_C : LLVM_EnumAttrCase<"HHVM_C", "hhvm_ccc", "HHVM_C", 82>;
+def CConvX86_INTR : LLVM_EnumAttrCase<"X86_INTR", "x86_intrcc", "X86_INTR", 83>;
+def CConvAVR_INTR : LLVM_EnumAttrCase<"AVR_INTR", "avr_intrcc", "AVR_INTR", 84>;
+def CConvAVR_SIGNAL : LLVM_EnumAttrCase<"AVR_SIGNAL", "avr_signalcc",
+                                        "AVR_SIGNAL", 85>;
+def CConvAVR_BUILTIN : LLVM_EnumAttrCase<"AVR_BUILTIN", "avr_builtincc",
+                                         "AVR_BUILTIN", 86>;
+def CConvAMDGPU_VS : LLVM_EnumAttrCase<"AMDGPU_VS", "amdgpu_vscc", "AMDGPU_VS",
+                                       87>;
+def CConvAMDGPU_GS : LLVM_EnumAttrCase<"AMDGPU_GS", "amdgpu_gscc", "AMDGPU_GS",
+                                       88>;
+def CConvAMDGPU_PS : LLVM_EnumAttrCase<"AMDGPU_PS", "amdgpu_pscc", "AMDGPU_PS",
+                                       89>;
+def CConvAMDGPU_CS : LLVM_EnumAttrCase<"AMDGPU_CS", "amdgpu_cscc", "AMDGPU_CS",
+                                       90>;
+def CConvAMDGPU_KERNEL : LLVM_EnumAttrCase<"AMDGPU_KERNEL", "amdgpu_kernelcc",
+                                           "AMDGPU_KERNEL", 91>;
+def CConvX86_RegCall : LLVM_EnumAttrCase<"X86_RegCall", "x86_regcallcc",
+                                         "X86_RegCall", 92>;
+def CConvAMDGPU_HS : LLVM_EnumAttrCase<"AMDGPU_HS", "amdgpu_hscc", "AMDGPU_HS",
+                                       93>;
+def CConvMSP430_BUILTIN : LLVM_EnumAttrCase<"MSP430_BUILTIN",
+                                             "msp430_builtincc",
+                                             "MSP430_BUILTIN", 94>;
+def CConvAMDGPU_LS : LLVM_EnumAttrCase<"AMDGPU_LS", "amdgpu_lscc", "AMDGPU_LS",
+                                       95>;
+def CConvAMDGPU_ES : LLVM_EnumAttrCase<"AMDGPU_ES", "amdgpu_escc", "AMDGPU_ES",
+                                       96>;
+def CConvAArch64_VectorCall : LLVM_EnumAttrCase<"AArch64_VectorCall",
+                                                "aarch64_vectorcallcc",
+                                                "AArch64_VectorCall", 97>;
+def CConvAArch64_SVE_VectorCall : LLVM_EnumAttrCase<"AArch64_SVE_VectorCall",
+                                                    "aarch64_sve_vectorcallcc",
+                                                    "AArch64_SVE_VectorCall",
+                                                    98>;
+def CConvWASM_EmscriptenInvoke : LLVM_EnumAttrCase<"WASM_EmscriptenInvoke",
+                                                   "wasm_emscripten_invokecc",
+                                                   "WASM_EmscriptenInvoke", 99>;
+def CConvAMDGPU_Gfx : LLVM_EnumAttrCase<"AMDGPU_Gfx", "amdgpu_gfxcc",
+                                        "AMDGPU_Gfx", 100>;
+def CConvM68k_INTR : LLVM_EnumAttrCase<"M68k_INTR", "m68k_intrcc", "M68k_INTR",
+                                       101>;
+
+def CConvEnum : LLVM_CEnumAttr<
+    "CConv",
+    "::llvm::CallingConv",
+    "Calling Conventions",
+    [CConvC, CConvFast, CConvCold, CConvGHC, CConvHiPE, CConvWebKitJS,
+     CConvAnyReg, CConvPreserveMost, CConvPreserveAll, CConvSwift,
+     CConvCXXFastTLS, CConvTail, CConvCFGuard_Check, CConvSwiftTail,
+     CConvX86_StdCall, CConvX86_FastCall, CConvARM_APCS,
+     CConvARM_AAPCS, CConvARM_AAPCS_VFP, CConvMSP430_INTR, CConvX86_ThisCall,
+     CConvPTX_Kernel, CConvPTX_Device, CConvSPIR_FUNC, CConvSPIR_KERNEL,
+     CConvIntel_OCL_BI, CConvX86_64_SysV, CConvWin64, CConvX86_VectorCall,
+     CConvHHVM, CConvHHVM_C, CConvX86_INTR, CConvAVR_INTR, CConvAVR_BUILTIN,
+     CConvAMDGPU_VS, CConvAMDGPU_GS, CConvAMDGPU_CS, CConvAMDGPU_KERNEL,
+     CConvX86_RegCall, CConvAMDGPU_HS, CConvMSP430_BUILTIN, CConvAMDGPU_LS,
+     CConvAMDGPU_ES, CConvAArch64_VectorCall, CConvAArch64_SVE_VectorCall,
+     CConvWASM_EmscriptenInvoke, CConvAMDGPU_Gfx, CConvM68k_INTR
+    ]> {
+  let cppNamespace = "::mlir::LLVM::cconv";
+}
+
+def CConv : DialectAttr<
+    LLVM_Dialect,
+    CPred<"$_self.isa<::mlir::LLVM::CConvAttr>()">,
+    "LLVM Calling Convention specification"> {
+  let storageType = "::mlir::LLVM::CConvAttr";
+  let returnType = "::mlir::LLVM::cconv::CConv";
+  let convertFromStorage = "$_self.getCConv()";
+  let constBuilderCall =
+          "::mlir::LLVM::CConvAttr::get($_builder.getContext(), $0)";
+}
+
 class LLVM_Builder<string builder> {
   string llvmBuilder = builder;
 }
@@ -1233,6 +1361,7 @@ def LLVM_LLVMFuncOp : LLVM_Op<"func", [
     TypeAttrOf<LLVM_FunctionType>:$function_type,
     DefaultValuedAttr<Linkage, "Linkage::External">:$linkage,
     UnitAttr:$dso_local,
+    DefaultValuedAttr<CConv, "CConv::C">:$CConv,
     OptionalAttr<FlatSymbolRefAttr>:$personality,
     OptionalAttr<StrAttr>:$garbageCollector,
     OptionalAttr<ArrayAttr>:$passthrough
@@ -1246,6 +1375,7 @@ def LLVM_LLVMFuncOp : LLVM_Op<"func", [
     OpBuilder<(ins "StringRef":$name, "Type":$type,
       CArg<"Linkage", "Linkage::External">:$linkage,
       CArg<"bool", "false">:$dsoLocal,
+      CArg<"CConv", "CConv::C">:$cconv,
       CArg<"ArrayRef<NamedAttribute>", "{}">:$attrs,
       CArg<"ArrayRef<DictionaryAttr>", "{}">:$argAttrs)>
   ];
