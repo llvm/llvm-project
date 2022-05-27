@@ -66,6 +66,9 @@ enum : uint64_t {
   // LDSDIR instruction format.
   LDSDIR = 1 << 26,
 
+  // VINTERP instruction format.
+  VINTERP = 1 << 27,
+
   // High bits - other information.
   VM_CNT = UINT64_C(1) << 32,
   EXP_CNT = UINT64_C(1) << 33,
