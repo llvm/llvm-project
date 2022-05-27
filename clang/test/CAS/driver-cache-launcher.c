@@ -24,6 +24,25 @@
 // SESSION: "-cc1depscan" "-fdepscan=daemon" "-fdepscan-share-identifier"
 // SESSION: "-fcas-path" "[[PREFIX]]/cas" "-fcas-token-cache" "-greproducible"
 
+// RUN: cp -R %S/Inputs/cmake-build %t/cmake-build
+// RUN: pushd %t/cmake-build
+// RUN: clang-cache-build-session -prefix-map-cmake -v echo 2>&1 | FileCheck %s -check-prefix=SESSION-CMAKE-PREFIX
+// RUN: env CLANG_CACHE_CAS_PATH=%t/cas clang-cache-build-session -prefix-map-cmake clang-cache %clang -c %s -o %t.o -### 2>&1 | FileCheck %s -check-prefix=CLANG-CMAKE-PREFIX -DPREFIX=%t
+// RUN: popd
+
+// SESSION-CMAKE-PREFIX: note: setting CLANG_CACHE_PREFIX_MAPS=/llvm/build=/^build;/llvm/llvm-project/llvm=/^src;/llvm/llvm-project/clang=/^src-clang;/llvm/llvm-project/clang-tools-extra=/^src-clang-tools-extra;/llvm/llvm-project/third-party/benchmark=/^src-benchmark;/llvm/llvm-project/other/benchmark=/^src-benchmark-1;/llvm/llvm-project/another/benchmark=/^src-benchmark-2{{$}}
+// SESSION-CMAKE-PREFIX: note: setting CLANG_CACHE_BUILD_SESSION_ID=
+
+// CLANG-CMAKE-PREFIX: "-cc1depscan" "-fdepscan=daemon" "-fdepscan-share-identifier"
+// CLANG-CMAKE-PREFIX: "-fdepscan-prefix-map-sdk=/^sdk" "-fdepscan-prefix-map-toolchain=/^toolchain"
+// CLANG-CMAKE-PREFIX: "-fdepscan-prefix-map=/llvm/build=/^build"
+// CLANG-CMAKE-PREFIX: "-fdepscan-prefix-map=/llvm/llvm-project/llvm=/^src"
+// CLANG-CMAKE-PREFIX: "-fdepscan-prefix-map=/llvm/llvm-project/clang=/^src-clang"
+// CLANG-CMAKE-PREFIX: "-fdepscan-prefix-map=/llvm/llvm-project/clang-tools-extra=/^src-clang-tools-extra"
+// CLANG-CMAKE-PREFIX: "-fdepscan-prefix-map=/llvm/llvm-project/third-party/benchmark=/^src-benchmark"
+// CLANG-CMAKE-PREFIX: "-fdepscan-prefix-map=/llvm/llvm-project/other/benchmark=/^src-benchmark-1"
+// CLANG-CMAKE-PREFIX: "-fdepscan-prefix-map=/llvm/llvm-project/another/benchmark=/^src-benchmark-2"
+
 // Make sure `clang-cache-build-session` can invoke an executable script.
 // RUN: clang-cache-build-session %t/clang -c %s -o %t.o 2>&1 | FileCheck %s -check-prefix=SESSION-SCRIPT -DSRC=%s -DPREFIX=%t
 // SESSION-SCRIPT: run some compiler with opts -c [[SRC]] -o [[PREFIX]].o

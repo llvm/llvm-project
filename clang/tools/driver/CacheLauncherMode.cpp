@@ -79,6 +79,17 @@ clang::handleClangCacheInvocation(SmallVectorImpl<const char *> &Args,
     } else {
       Args.push_back("-fdepscan");
     }
+    if (const char *PrefixMaps = ::getenv("CLANG_CACHE_PREFIX_MAPS")) {
+      Args.append({"-fdepscan-prefix-map-sdk=/^sdk",
+                   "-fdepscan-prefix-map-toolchain=/^toolchain"});
+      StringRef PrefixMap, Remaining = PrefixMaps;
+      while (true) {
+        std::tie(PrefixMap, Remaining) = Remaining.split(';');
+        if (PrefixMap.empty())
+          break;
+        Args.push_back(Saver.save("-fdepscan-prefix-map=" + PrefixMap).data());
+      }
+    }
     if (const char *CASPath = ::getenv("CLANG_CACHE_CAS_PATH")) {
       Args.append({"-Xclang", "-fcas-path", "-Xclang", CASPath});
     }
