@@ -747,7 +747,6 @@ define void @vector_init_vsetvli_fv2(i64 %N, double* %c) {
 ; CHECK-LABEL: vector_init_vsetvli_fv2:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    li a2, 0
-; CHECK-NEXT:    vsetivli zero, 4, e64, m1, ta, mu
 ; CHECK-NEXT:    vsetvli a3, zero, e64, m1, ta, mu
 ; CHECK-NEXT:    vmv.v.i v8, 0
 ; CHECK-NEXT:  .LBB15_1: # %for.body
@@ -812,14 +811,13 @@ for.end:                                          ; preds = %for.body
 ; Demonstrates a case where mutation in phase3 is problematic.  We mutate the
 ; vsetvli without considering that it changes the compatibility result of the
 ; vadd in the second block.
-; FIXME: This currently crashes with strict asserts enabled.
 define <vscale x 4 x i32> @cross_block_mutate(<vscale x 4 x i32> %a, <vscale x 4 x i32> %b,
 ; CHECK-LABEL: cross_block_mutate:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetivli a0, 6, e32, m2, tu, mu
 ; CHECK-NEXT:    vmv.s.x v8, a0
-; CHECK-NEXT:    vadd.vv v8, v8, v10, v0.t
 ; CHECK-NEXT:    vsetvli zero, a0, e32, m2, tu, mu
+; CHECK-NEXT:    vadd.vv v8, v8, v10, v0.t
 ; CHECK-NEXT:    ret
                                          <vscale x 4 x i1> %mask) {
 entry:
