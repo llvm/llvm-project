@@ -42,7 +42,7 @@ def P9Model : SchedMachineModel {
   // Power 9, paired vector mem ops, MMA, PC relative mem ops, or instructions
   // introduced in ISA 3.1.
   let UnsupportedFeatures = [HasSPE, PrefixInstrs, PairedVectorMemops, MMA,
-                             PCRelativeMemops, IsISA3_1];
+                             PCRelativeMemops, IsISA3_1, IsISAFuture];
 }
 
 let SchedModel = P9Model in {
