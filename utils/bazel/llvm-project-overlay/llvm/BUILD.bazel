@@ -2878,6 +2878,23 @@ cc_binary(
 )
 
 cc_binary(
+    name = "llvm-debuginfod-find",
+    srcs = glob([
+        "tools/llvm-debuginfod-find/*.cpp",
+        "tools/llvm-debuginfod-find/*.h",
+    ]),
+    copts = llvm_copts,
+    stamp = 0,
+    deps = [
+        ":Symbolize",
+        ":BitReader",
+        ":Core",
+        ":Support",
+        ":Debuginfod",
+    ],
+)
+
+cc_binary(
     name = "llvm-dis",
     srcs = glob([
         "tools/llvm-dis/*.cpp",
