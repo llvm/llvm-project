@@ -1,6 +1,7 @@
 // RUN: %clang_cc1 -triple x86_64-windows-gnu     -fdeclspec -emit-llvm -o - %s | FileCheck %s -DDSO_ATTRS="dso_local dllexport"
 // RUN: %clang_cc1 -triple x86_64-windows-itanium -fdeclspec -emit-llvm -o - %s | FileCheck %s -DDSO_ATTRS="dso_local dllexport"
 // RUN: %clang_cc1 -triple x86_64-scei-ps4        -fdeclspec -emit-llvm -o - %s | FileCheck %s -DDSO_ATTRS=dllexport
+// RUN: %clang_cc1 -triple x86_64-sie-ps5         -fdeclspec -emit-llvm -o - %s | FileCheck %s -DDSO_ATTRS=dllexport
 
 struct __declspec(dllexport) A {
   virtual void m();
