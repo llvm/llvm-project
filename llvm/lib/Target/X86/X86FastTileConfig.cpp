@@ -110,15 +110,15 @@ bool X86FastTileConfig::configBasicBlock(MachineBasicBlock &MBB) {
   bool Change = false;
   SmallVector<std::pair<unsigned, ShapeT>, 6> ShapeInfos;
   for (MachineInstr &MI : reverse(MBB)) {
-    if (!isTileDef(MRI, MI) && MI.getOpcode() != X86::LDTILECFG)
+    if (!isTileDef(MRI, MI) && MI.getOpcode() != X86::PLDTILECFGV)
       continue;
     // AMX instructions that define tile register.
-    if (MI.getOpcode() != X86::LDTILECFG) {
+    if (MI.getOpcode() != X86::PLDTILECFGV) {
       MachineOperand &Row = MI.getOperand(1);
       MachineOperand &Col = MI.getOperand(2);
       unsigned TMMIdx = MI.getOperand(0).getReg() - X86::TMM0;
       ShapeInfos.push_back({TMMIdx, ShapeT(&Row, &Col)});
-    } else { // LDTILECFG
+    } else { // PLDTILECFGV
       // Rewrite the shape information to memory. Stack slot should have
       // been initialized to zero in pre config.
       int SS = MI.getOperand(0).getIndex(); // tile config stack slot.

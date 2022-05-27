@@ -515,7 +515,7 @@ bool X86FastPreTileConfig::configBasicBlock(MachineBasicBlock &MBB) {
       CfgSS = MFI->CreateStackObject(ST->getTileConfigSize(),
                                      ST->getTileConfigAlignment(), false);
     LastTileCfg = addFrameReference(
-        BuildMI(MBB, Before, DebugLoc(), TII->get(X86::LDTILECFG)), CfgSS);
+        BuildMI(MBB, Before, DebugLoc(), TII->get(X86::PLDTILECFGV)), CfgSS);
     LastShapeMI = nullptr;
     Change = true;
   };
