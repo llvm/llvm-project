@@ -32,6 +32,7 @@ namespace ento {
 DynamicTypeInfo getDynamicTypeInfo(ProgramStateRef State, const MemRegion *MR);
 
 /// Get raw dynamic type information for the region \p MR.
+/// It might return null.
 const DynamicTypeInfo *getRawDynamicTypeInfo(ProgramStateRef State,
                                              const MemRegion *MR);
 

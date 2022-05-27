@@ -271,6 +271,7 @@ public:
   ConditionTruthVal areEqual(SVal Lhs, SVal Rhs) const;
 
   /// Utility method for getting regions.
+  LLVM_ATTRIBUTE_RETURNS_NONNULL
   const VarRegion* getRegion(const VarDecl *D, const LocationContext *LC) const;
 
   //==---------------------------------------------------------------------==//

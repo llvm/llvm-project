@@ -48,6 +48,7 @@ public:
     assert(isValidTypeForSymbol(r->getValueType()));
   }
 
+  LLVM_ATTRIBUTE_RETURNS_NONNULL
   const TypedValueRegion* getRegion() const { return R; }
 
   static void Profile(llvm::FoldingSetNodeID& profile, const TypedValueRegion* R) {
@@ -95,8 +96,10 @@ public:
     assert(isValidTypeForSymbol(t));
   }
 
+  /// It might return null.
   const Stmt *getStmt() const { return S; }
   unsigned getCount() const { return Count; }
+  /// It might return null.
   const void *getTag() const { return SymbolTag; }
 
   QualType getType() const override;
@@ -140,7 +143,9 @@ public:
     assert(isValidTypeForSymbol(r->getValueType()));
   }
 
+  LLVM_ATTRIBUTE_RETURNS_NONNULL
   SymbolRef getParentSymbol() const { return parentSymbol; }
+  LLVM_ATTRIBUTE_RETURNS_NONNULL
   const TypedValueRegion *getRegion() const { return R; }
 
   QualType getType() const override;
@@ -179,6 +184,7 @@ public:
     assert(r);
   }
 
+  LLVM_ATTRIBUTE_RETURNS_NONNULL
   const SubRegion *getRegion() const { return R; }
 
   QualType getType() const override;
@@ -226,29 +232,37 @@ public:
       assert(tag);
     }
 
-  const MemRegion *getRegion() const { return R; }
-  const Stmt *getStmt() const { return S; }
-  const LocationContext *getLocationContext() const { return LCtx; }
-  unsigned getCount() const { return Count; }
-  const void *getTag() const { return Tag; }
+    LLVM_ATTRIBUTE_RETURNS_NONNULL
+    const MemRegion *getRegion() const { return R; }
 
-  QualType getType() const override;
+    LLVM_ATTRIBUTE_RETURNS_NONNULL
+    const Stmt *getStmt() const { return S; }
 
-  StringRef getKindStr() const override;
+    LLVM_ATTRIBUTE_RETURNS_NONNULL
+    const LocationContext *getLocationContext() const { return LCtx; }
 
-  void dumpToStream(raw_ostream &os) const override;
+    unsigned getCount() const { return Count; }
 
-  static void Profile(llvm::FoldingSetNodeID& profile, const MemRegion *R,
-                      const Stmt *S, QualType T, const LocationContext *LCtx,
-                      unsigned Count, const void *Tag) {
-    profile.AddInteger((unsigned) SymbolMetadataKind);
-    profile.AddPointer(R);
-    profile.AddPointer(S);
-    profile.Add(T);
-    profile.AddPointer(LCtx);
-    profile.AddInteger(Count);
-    profile.AddPointer(Tag);
-  }
+    LLVM_ATTRIBUTE_RETURNS_NONNULL
+    const void *getTag() const { return Tag; }
+
+    QualType getType() const override;
+
+    StringRef getKindStr() const override;
+
+    void dumpToStream(raw_ostream &os) const override;
+
+    static void Profile(llvm::FoldingSetNodeID &profile, const MemRegion *R,
+                        const Stmt *S, QualType T, const LocationContext *LCtx,
+                        unsigned Count, const void *Tag) {
+      profile.AddInteger((unsigned)SymbolMetadataKind);
+      profile.AddPointer(R);
+      profile.AddPointer(S);
+      profile.Add(T);
+      profile.AddPointer(LCtx);
+      profile.AddInteger(Count);
+      profile.AddPointer(Tag);
+    }
 
   void Profile(llvm::FoldingSetNodeID& profile) override {
     Profile(profile, R, S, T, LCtx, Count, Tag);
@@ -287,6 +301,7 @@ public:
 
   QualType getType() const override { return ToTy; }
 
+  LLVM_ATTRIBUTE_RETURNS_NONNULL
   const SymExpr *getOperand() const { return Operand; }
 
   void dumpToStream(raw_ostream &os) const override;
@@ -587,6 +602,7 @@ public:
                SymbolManager &symmgr, StoreManager &storeMgr)
       : LCtx(Ctx), Loc(s), SymMgr(symmgr), reapedStore(nullptr, storeMgr) {}
 
+  /// It might return null.
   const LocationContext *getLocationContext() const { return LCtx; }
 
   bool isLive(SymbolRef sym);
