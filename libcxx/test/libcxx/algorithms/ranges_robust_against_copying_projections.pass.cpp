@@ -63,13 +63,13 @@ constexpr bool all_the_algorithms()
     T b[10] = {};
     //T half[5] = {};
     T *first = a;
-    //T *mid = a+5;
+    T *mid = a+5;
     T *last = a+10;
     T *first2 = b;
     //T *mid2 = b+5;
     T *last2 = b+10;
     void *value = nullptr;
-    //int count = 1;
+    int count = 1;
 
     int copies = 0;
     //(void)std::ranges::adjacent_find(first, last, Equal(), Proj(&copies)); assert(copies == 0);
@@ -85,8 +85,8 @@ constexpr bool all_the_algorithms()
     (void)std::ranges::count(a, value, Proj(&copies)); assert(copies == 0);
     (void)std::ranges::count_if(first, last, UnaryTrue(), Proj(&copies)); assert(copies == 0);
     (void)std::ranges::count_if(a, UnaryTrue(), Proj(&copies)); assert(copies == 0);
-    //(void)std::ranges::copy_if(first, last, first2, UnaryTrue(), Proj(&copies)); assert(copies == 0);
-    //(void)std::ranges::copy_if(a, first2, UnaryTrue(), Proj(&copies)); assert(copies == 0);
+    (void)std::ranges::copy_if(first, last, first2, UnaryTrue(), Proj(&copies)); assert(copies == 0);
+    (void)std::ranges::copy_if(a, first2, UnaryTrue(), Proj(&copies)); assert(copies == 0);
 #if TEST_STD_VER > 20
     //(void)std::ranges::ends_with(first, last, first2, last2, Equal(), Proj(&copies), Proj(&copies)); assert(copies == 0);
 #endif
@@ -104,17 +104,17 @@ constexpr bool all_the_algorithms()
     (void)std::ranges::find_if(a, UnaryTrue(), Proj(&copies)); assert(copies == 0);
     (void)std::ranges::find_if_not(first, last, UnaryTrue(), Proj(&copies)); assert(copies == 0);
     (void)std::ranges::find_if_not(a, UnaryTrue(), Proj(&copies)); assert(copies == 0);
-    //(void)std::ranges::for_each(first, last, UnaryVoid(), Proj(&copies)); assert(copies == 1); copies = 0;
-    //(void)std::ranges::for_each(a, UnaryVoid(), Proj(&copies)); assert(copies == 1); copies = 0;
-    //(void)std::ranges::for_each_n(first, count, UnaryVoid(), Proj(&copies)); assert(copies == 0);
+    (void)std::ranges::for_each(first, last, UnaryVoid(), Proj(&copies)); assert(copies == 0);
+    (void)std::ranges::for_each(a, UnaryVoid(), Proj(&copies)); assert(copies == 0);
+    (void)std::ranges::for_each_n(first, count, UnaryVoid(), Proj(&copies)); assert(copies == 0);
     //(void)std::ranges::includes(first, last, first2, last2, Less(), Proj(&copies), Proj(&copies)); assert(copies == 0);
     //(void)std::ranges::includes(a, b, Less(), Proj(&copies), Proj(&copies)); assert(copies == 0);
     //(void)std::ranges::is_heap(first, last, Less(), Proj(&copies)); assert(copies == 0);
     //(void)std::ranges::is_heap(a, Less(), Proj(&copies)); assert(copies == 0);
     //(void)std::ranges::is_heap_until(first, last, Less(), Proj(&copies)); assert(copies == 0);
     //(void)std::ranges::is_heap_until(a, Less(), Proj(&copies)); assert(copies == 0);
-    //(void)std::ranges::is_partitioned(first, last, UnaryTrue(), Proj(&copies)); assert(copies == 0);
-    //(void)std::ranges::is_partitioned(a, UnaryTrue(), Proj(&copies)); assert(copies == 0);
+    (void)std::ranges::is_partitioned(first, last, UnaryTrue(), Proj(&copies)); assert(copies == 0);
+    (void)std::ranges::is_partitioned(a, UnaryTrue(), Proj(&copies)); assert(copies == 0);
     //(void)std::ranges::is_permutation(first, last, first2, last2, Equal(), Proj(&copies), Proj(&copies)); assert(copies == 0);
     //(void)std::ranges::is_permutation(a, b, Equal(), Proj(&copies), Proj(&copies)); assert(copies == 0);
     (void)std::ranges::is_sorted(first, last, Less(), Proj(&copies)); assert(copies == 0);
@@ -129,16 +129,16 @@ constexpr bool all_the_algorithms()
     //(void)std::ranges::lower_bound(a, value, Less(), Proj(&copies)); assert(copies == 0);
     //(void)std::ranges::make_heap(first, last, Less(), Proj(&copies)); assert(copies == 0);
     //(void)std::ranges::make_heap(a, Less(), Proj(&copies)); assert(copies == 0);
-    //(void)std::ranges::max(T(), T(), Less(), Proj(&copies)); assert(copies == 0);
-    //(void)std::ranges::max({ T(), T() }, Less(), Proj(&copies)); assert(copies == 0);
-    //(void)std::ranges::max(a, Less(), Proj(&copies)); assert(copies == 0);
+    (void)std::ranges::max(T(), T(), Less(), Proj(&copies)); assert(copies == 0);
+    (void)std::ranges::max({ T(), T() }, Less(), Proj(&copies)); assert(copies == 0);
+    (void)std::ranges::max(a, Less(), Proj(&copies)); assert(copies == 0);
     (void)std::ranges::max_element(first, last, Less(), Proj(&copies)); assert(copies == 0);
     (void)std::ranges::max_element(a, Less(), Proj(&copies)); assert(copies == 0);
     //(void)std::ranges::merge(first, mid, mid, last, first2, Less(), Proj(&copies), Proj(&copies)); assert(copies == 0);
     //(void)std::ranges::merge(half, half, b, Less(), Proj(&copies), Proj(&copies)); assert(copies == 0);
-    //(void)std::ranges::min(T(), T(), Less(), Proj(&copies)); assert(copies == 0);
-    //(void)std::ranges::min({ T(), T() }, Less(), Proj(&copies)); assert(copies == 0);
-    //(void)std::ranges::min(a, Less(), Proj(&copies)); assert(copies == 0);
+    (void)std::ranges::min(T(), T(), Less(), Proj(&copies)); assert(copies == 0);
+    (void)std::ranges::min({ T(), T() }, Less(), Proj(&copies)); assert(copies == 0);
+    (void)std::ranges::min(a, Less(), Proj(&copies)); assert(copies == 0);
     (void)std::ranges::min_element(first, last, Less(), Proj(&copies)); assert(copies == 0);
     (void)std::ranges::min_element(a, Less(), Proj(&copies)); assert(copies == 0);
     (void)std::ranges::minmax(T(), T(), Less(), Proj(&copies)); assert(copies == 0);
@@ -209,10 +209,10 @@ constexpr bool all_the_algorithms()
 #if TEST_STD_VER > 20
     //(void)std::ranges::starts_with(first, last, first2, last2, Equal(), Proj(&copies), Proj(&copies)); assert(copies == 0);
 #endif
-    //(void)std::ranges::transform(first, last, first2, UnaryTransform(), Proj(&copies)); assert(copies == 0);
-    //(void)std::ranges::transform(a, first2, UnaryTransform(), Proj(&copies)); assert(copies == 0);
-    //(void)std::ranges::transform(first, mid, mid, last, first2, BinaryTransform(), Proj(&copies), Proj(&copies)); assert(copies == 0);
-    //(void)std::ranges::transform(a, b, first2, BinaryTransform(), Proj(&copies), Proj(&copies)); assert(copies == 0);
+    (void)std::ranges::transform(first, last, first2, UnaryTransform(), Proj(&copies)); assert(copies == 0);
+    (void)std::ranges::transform(a, first2, UnaryTransform(), Proj(&copies)); assert(copies == 0);
+    (void)std::ranges::transform(first, mid, mid, last, first2, BinaryTransform(), Proj(&copies), Proj(&copies)); assert(copies == 0);
+    (void)std::ranges::transform(a, b, first2, BinaryTransform(), Proj(&copies), Proj(&copies)); assert(copies == 0);
     //(void)std::ranges::unique(first, last, Equal(), Proj(&copies)); assert(copies == 0);
     //(void)std::ranges::unique(a, Equal(), Proj(&copies)); assert(copies == 0);
     //(void)std::ranges::unique_copy(first, last, first2, Equal(), Proj(&copies)); assert(copies == 0);
