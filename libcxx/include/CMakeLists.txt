@@ -66,6 +66,8 @@ set(files
   __algorithm/pop_heap.h
   __algorithm/prev_permutation.h
   __algorithm/push_heap.h
+  __algorithm/ranges_all_of.h
+  __algorithm/ranges_any_of.h
   __algorithm/ranges_copy.h
   __algorithm/ranges_copy_backward.h
   __algorithm/ranges_copy_if.h
@@ -88,6 +90,7 @@ set(files
   __algorithm/ranges_minmax.h
   __algorithm/ranges_minmax_element.h
   __algorithm/ranges_mismatch.h
+  __algorithm/ranges_none_of.h
   __algorithm/ranges_reverse.h
   __algorithm/ranges_swap_ranges.h
   __algorithm/ranges_transform.h
