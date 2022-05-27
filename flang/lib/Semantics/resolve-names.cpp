@@ -826,7 +826,7 @@ public:
       const ProgramTree::EntryStmtList * = nullptr);
   bool BeginMpSubprogram(const parser::Name &);
   void PushBlockDataScope(const parser::Name &);
-  void EndSubprogram(
+  void EndSubprogram(std::optional<parser::CharBlock> stmtSource = std::nullopt,
       const std::optional<parser::LanguageBindingSpec> * = nullptr);
 
 protected:
@@ -3237,8 +3237,9 @@ bool SubprogramVisitor::Pre(const parser::InterfaceBody::Subroutine &x) {
   return BeginSubprogram(name, Symbol::Flag::Subroutine);
 }
 void SubprogramVisitor::Post(const parser::InterfaceBody::Subroutine &x) {
-  EndSubprogram(&std::get<std::optional<parser::LanguageBindingSpec>>(
-      std::get<parser::Statement<parser::SubroutineStmt>>(x.t).statement.t));
+  const auto &stmt{std::get<parser::Statement<parser::SubroutineStmt>>(x.t)};
+  EndSubprogram(stmt.source,
+      &std::get<std::optional<parser::LanguageBindingSpec>>(stmt.statement.t));
 }
 bool SubprogramVisitor::Pre(const parser::InterfaceBody::Function &x) {
   const auto &name{std::get<parser::Name>(
@@ -3246,9 +3247,10 @@ bool SubprogramVisitor::Pre(const parser::InterfaceBody::Function &x) {
   return BeginSubprogram(name, Symbol::Flag::Function);
 }
 void SubprogramVisitor::Post(const parser::InterfaceBody::Function &x) {
-  const auto &maybeSuffix{std::get<std::optional<parser::Suffix>>(
-      std::get<parser::Statement<parser::FunctionStmt>>(x.t).statement.t)};
-  EndSubprogram(maybeSuffix ? &maybeSuffix->binding : nullptr);
+  const auto &stmt{std::get<parser::Statement<parser::FunctionStmt>>(x.t)};
+  const auto &maybeSuffix{
+      std::get<std::optional<parser::Suffix>>(stmt.statement.t)};
+  EndSubprogram(stmt.source, maybeSuffix ? &maybeSuffix->binding : nullptr);
 }
 
 bool SubprogramVisitor::Pre(const parser::SubroutineStmt &stmt) {
@@ -3598,15 +3600,19 @@ bool SubprogramVisitor::BeginSubprogram(const parser::Name &name,
 }
 
 void SubprogramVisitor::EndSubprogram(
+    std::optional<parser::CharBlock> stmtSource,
     const std::optional<parser::LanguageBindingSpec> *binding) {
   if (binding && *binding && currScope().symbol()) {
     // Finally process the BIND(C,NAME=name) now that symbols in the name
     // expression will resolve local names.
     auto flagRestorer{common::ScopedSet(inSpecificationPart_, false)};
+    auto originalStmtSource{messageHandler().currStmtSource()};
+    messageHandler().set_currStmtSource(stmtSource);
     BeginAttrs();
     Walk(**binding);
     SetBindNameOn(*currScope().symbol());
     currScope().symbol()->attrs() |= EndAttrs();
+    messageHandler().set_currStmtSource(originalStmtSource);
   }
   PopScope();
 }
@@ -7438,27 +7444,31 @@ bool ResolveNamesVisitor::BeginScopeForNode(const ProgramTree &node) {
 }
 
 void ResolveNamesVisitor::EndScopeForNode(const ProgramTree &node) {
-  using BindingPtr = const std::optional<parser::LanguageBindingSpec> *;
-  EndSubprogram(common::visit(
+  std::optional<parser::CharBlock> stmtSource;
+  const std::optional<parser::LanguageBindingSpec> *binding{nullptr};
+  common::visit(
       common::visitors{
-          [](const parser::Statement<parser::FunctionStmt> *stmt) {
+          [&](const parser::Statement<parser::FunctionStmt> *stmt) {
             if (stmt) {
+              stmtSource = stmt->source;
               if (const auto &maybeSuffix{
                       std::get<std::optional<parser::Suffix>>(
                           stmt->statement.t)}) {
-                return &maybeSuffix->binding;
+                binding = &maybeSuffix->binding;
               }
             }
-            return BindingPtr{};
           },
-          [](const parser::Statement<parser::SubroutineStmt> *stmt) {
-            return stmt ? &std::get<std::optional<parser::LanguageBindingSpec>>(
-                              stmt->statement.t)
-                        : BindingPtr{};
+          [&](const parser::Statement<parser::SubroutineStmt> *stmt) {
+            if (stmt) {
+              stmtSource = stmt->source;
+              binding = &std::get<std::optional<parser::LanguageBindingSpec>>(
+                  stmt->statement.t);
+            }
           },
-          [](const auto *) { return BindingPtr{}; },
+          [](const auto *) {},
       },
-      node.stmt()));
+      node.stmt());
+  EndSubprogram(stmtSource, binding);
 }
 
 // Some analyses and checks, such as the processing of initializers of
