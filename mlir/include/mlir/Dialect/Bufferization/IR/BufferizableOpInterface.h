@@ -280,14 +280,6 @@ struct BufferizationOptions {
   /// computation. Whether this pays off or not can be very input IR-specific.
   bool alwaysAliasingWithDest = true;
 
-  /// If set to `true`, try to hoist allocations out of blocks as much as
-  /// possible. An allocation is not hoisted across allocation hoisting barriers
-  /// as indicated by `BufferizableOpInterface::isAllocationHoistingBarrier`.
-  ///
-  /// Examples of allocation hoisting barriers are parallel loops or ops where
-  /// SSA values cannot be captured from the outside.
-  bool hoistAllocations = true;
-
   /// Buffer alignment for new memory allocations.
   unsigned int bufferAlignment = 128;
 
@@ -617,10 +609,6 @@ BaseMemRefType getMemRefTypeWithFullyDynamicLayout(TensorType tensorType,
 BaseMemRefType
 getMemRefTypeWithStaticIdentityLayout(TensorType tensorType,
                                       Attribute memorySpace = {});
-
-/// Try to hoist all new buffer allocations until the next hoisting barrier.
-LogicalResult hoistBufferAllocations(Operation *op,
-                                     const BufferizationOptions &options);
 
 /// Create alloc/dealloc ops as specified in the bufferization options. If
 /// `onlyLeakingAlloc`, only those buffer allocations are processed for which no
