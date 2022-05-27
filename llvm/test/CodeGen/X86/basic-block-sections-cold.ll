@@ -24,14 +24,14 @@ declare i32 @_Z3barv() #1
 
 declare i32 @_Z3foov() #1
 
-; LINUX-SECTIONS: .section        .text.hot._Z3bazb,"ax",@progbits
+; LINUX-SECTIONS: .section        .text._Z3bazb,"ax",@progbits
 ; LINUX-SECTIONS: _Z3bazb:
 ; Check that the basic block with id 1 doesn't get a section.
-; LINUX-SECTIONS-NOT: .section        .text{{.*}}._Z3bazb.1,"ax",@progbits,unique
+; LINUX-SECTIONS-NOT: .section        .text._Z3bazb._Z3bazb.1,"ax",@progbits,unique
 ; Check that a single cold section is started here and id 1 and 2 blocks are placed here.
 ; LINUX-SECTIONS: .section	.text.split._Z3bazb,"ax",@progbits
 ; LINUX-SECTIONS: _Z3bazb.cold:
-; LINUX-SECTIONS-NOT: .section        .text.hot._Z3bazb._Z3bazb.2,"ax",@progbits,unique
+; LINUX-SECTIONS-NOT: .section        .text._Z3bazb._Z3bazb.2,"ax",@progbits,unique
 ; LINUX-SECTIONS: .LBB0_2:
 ; LINUX-SECTIONS: .size   _Z3bazb, .Lfunc_end{{[0-9]}}-_Z3bazb
 
