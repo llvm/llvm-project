@@ -18,8 +18,8 @@
 # RUN: llvm-dwarfdump %t1 -debug-str | \
 # RUN:   FileCheck %s --check-prefix=DEBUGSTR
 # DEBUGSTR:     .debug_str contents:
-# DEBUGSTR-NEXT:  AAAAAAAAAAAAAAAAAAAAAAAAAAA
 # DEBUGSTR-NEXT:  BBBBBBBBBBBBBBBBBBBBBBBBBBB
+# DEBUGSTR-NEXT:  AAAAAAAAAAAAAAAAAAAAAAAAAAA
 
 ## Test alias.
 # RUN: ld.lld %t.o -o %t2 --compress-debug-sections zlib
