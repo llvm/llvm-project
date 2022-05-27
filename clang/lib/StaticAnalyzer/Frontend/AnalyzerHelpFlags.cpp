@@ -101,7 +101,10 @@ OPTIONS:
 #undef ANALYZER_OPTION_DEPENDS_ON_USER_MODE
   };
 
-  llvm::sort(PrintableOptions, llvm::less_first());
+  llvm::sort(PrintableOptions, [](const OptionAndDescriptionTy &LHS,
+                                  const OptionAndDescriptionTy &RHS) {
+    return LHS.first < RHS.first;
+  });
 
   for (const auto &Pair : PrintableOptions) {
     AnalyzerOptions::printFormattedEntry(out, Pair, /*InitialPad*/ 2,

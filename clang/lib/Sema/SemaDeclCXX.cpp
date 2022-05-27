@@ -5430,7 +5430,8 @@ static void DiagnoseBaseOrMemInitializerOrder(
     return;
 
   // Sort based on the ideal order, first in the pair.
-  llvm::sort(CorrelatedInitOrder, llvm::less_first());
+  llvm::sort(CorrelatedInitOrder,
+             [](auto &LHS, auto &RHS) { return LHS.first < RHS.first; });
 
   // Introduce a new scope as SemaDiagnosticBuilder needs to be destroyed to
   // emit the diagnostic before we can try adding notes.
