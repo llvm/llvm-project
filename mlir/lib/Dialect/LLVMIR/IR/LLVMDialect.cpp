@@ -2958,10 +2958,10 @@ Attribute LinkageAttr::parse(AsmParser &parser, Type type) {
 
 void CConvAttr::print(AsmPrinter &printer) const {
   printer << "<";
-  if (static_cast<uint64_t>(getCConv()) <= cconv::getMaxEnumValForCConv())
-    printer << stringifyEnum(getCConv());
+  if (static_cast<uint64_t>(getCallingConv()) <= cconv::getMaxEnumValForCConv())
+    printer << stringifyEnum(getCallingConv());
   else
-    printer << "INVALID_cc_" << static_cast<uint64_t>(getCConv());
+    printer << "INVALID_cc_" << static_cast<uint64_t>(getCallingConv());
   printer << ">";
 }
 

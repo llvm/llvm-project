@@ -39,7 +39,7 @@ def LinkageAttr : LLVM_Attr<"Linkage"> {
 def CConvAttr : LLVM_Attr<"CConv"> {
   let mnemonic = "cconv";
   let parameters = (ins
-    "CConv":$CConv
+    "CConv":$CallingConv
   );
   let hasCustomAssemblyFormat = 1;
 }
