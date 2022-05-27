@@ -42,10 +42,11 @@ protected:
   template <typename Matcher>
   void runDataflow(llvm::StringRef Code, Matcher Match,
                    LangStandard::Kind Std = LangStandard::lang_cxx17,
-                   bool ApplyBuiltinTransfer = true) {
+                   bool ApplyBuiltinTransfer = true,
+                   llvm::StringRef TargetFun = "target") {
     ASSERT_THAT_ERROR(
         test::checkDataflow<NoopAnalysis>(
-            Code, "target",
+            Code, TargetFun,
             [ApplyBuiltinTransfer](ASTContext &C, Environment &) {
               return NoopAnalysis(C, ApplyBuiltinTransfer);
             },
@@ -3173,6 +3174,29 @@ TEST_F(TransferTest, LoopWithStructReferenceAssignmentConverges) {
         EXPECT_NE(&LVal->getPointeeLoc(),
                   OuterEnv.getStorageLocation(*ValDecl, SkipPast::Reference));
 });
+}
+
+TEST_F(TransferTest, DoesNotCrashOnUnionThisExpr) {
+  std::string Code = R"(
+    union Union {
+      int A;
+      float B;
+    };
+
+    void foo() {
+      Union A;
+      Union B;
+      A = B;
+    }
+  )";
+  // This is a crash regression test when calling the transfer function on a
+  // `CXXThisExpr` that refers to a union.
+  runDataflow(
+      Code,
+      [](llvm::ArrayRef<
+             std::pair<std::string, DataflowAnalysisState<NoopLattice>>>,
+         ASTContext &) {},
+      LangStandard::lang_cxx17, /*ApplyBuiltinTransfer=*/true, "operator=");
 }
 
 } // namespace
