@@ -1376,15 +1376,15 @@ void MergeInputSection::splitStrings(StringRef s, size_t entSize) {
   if (entSize == 1) {
     // Optimize the common case.
     do {
-      size_t size = strlen(p) + 1;
+      size_t size = strlen(p);
       pieces.emplace_back(p - s.begin(), xxHash64(StringRef(p, size)), live);
-      p += size;
+      p += size + 1;
     } while (p != end);
   } else {
     do {
-      size_t size = findNull(StringRef(p, end - p), entSize) + entSize;
+      size_t size = findNull(StringRef(p, end - p), entSize);
       pieces.emplace_back(p - s.begin(), xxHash64(StringRef(p, size)), live);
-      p += size;
+      p += size + entSize;
     } while (p != end);
   }
 }
