@@ -16,8 +16,8 @@
 ;  } 
 ; }
 
-; CHECK: %.lcssa = phi i32
-; CHECK-NEXT: store i32 %.lcssa, i32* getelementptr inbounds ([2 x i32], [2 x i32]* @g_390, i64 0, i64 1), align 4, !dbg [[storeLocation:![0-9]+]] 
+; CHECK: bb22:
+; CHECK-NEXT: store i32 0, i32* getelementptr inbounds ([2 x i32], [2 x i32]* @g_390, i64 0, i64 1), align 4, !dbg [[storeLocation:![0-9]+]] 
 ; CHECK: [[storeLocation]] = !DILocation(line: 0
 
 target datalayout = "e-m:o-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
