@@ -51,6 +51,7 @@
 #include "lldb/Target/SystemRuntime.h"
 #include "lldb/Target/Thread.h"
 #include "lldb/Target/ThreadSpec.h"
+#include "lldb/Target/UnixSignals.h"
 #include "lldb/Utility/Event.h"
 #include "lldb/Utility/FileSpec.h"
 #include "lldb/Utility/LLDBAssert.h"
@@ -106,7 +107,7 @@ Target::Target(Debugger &debugger, const ArchSpec &target_arch,
   SetEventName(eBroadcastBitModulesUnloaded, "modules-unloaded");
   SetEventName(eBroadcastBitWatchpointChanged, "watchpoint-changed");
   SetEventName(eBroadcastBitSymbolsLoaded, "symbols-loaded");
-
+  
   CheckInWithManager();
 
   LLDB_LOG(GetLog(LLDBLog::Object), "{0} Target::Target()",
@@ -147,6 +148,8 @@ void Target::PrimeFromDummyTarget(Target &target) {
 
   m_frame_recognizer_manager_up = std::make_unique<StackFrameRecognizerManager>(
       *target.m_frame_recognizer_manager_up);
+
+  m_dummy_signals = target.m_dummy_signals;
 }
 
 void Target::Dump(Stream *s, lldb::DescriptionLevel description_level) {
@@ -287,6 +290,8 @@ void Target::Destroy() {
   m_stop_hooks.clear();
   m_stop_hook_next_id = 0;
   m_suppress_stop_hooks = false;
+  Args signal_args;
+  ClearDummySignals(signal_args);
 }
 
 llvm::StringRef Target::GetABIName() const {
@@ -3353,6 +3358,129 @@ void Target::FinalizeFileActions(ProcessLaunchInfo &info) {
         llvm::Error Err = info.SetUpPtyRedirection();
         LLDB_LOG_ERROR(log, std::move(Err), "SetUpPtyRedirection failed: {0}");
       }
+    }
+  }
+}
+
+void Target::AddDummySignal(llvm::StringRef name, LazyBool pass, LazyBool notify, 
+                            LazyBool stop) {
+    if (name.empty())
+      return;
+    // Don't add a signal if all the actions are trivial:
+    if (pass == eLazyBoolCalculate && notify == eLazyBoolCalculate
+        && stop == eLazyBoolCalculate)
+      return;
+
+    auto& elem = m_dummy_signals[name];
+    elem.pass = pass;
+    elem.notify = notify;
+    elem.stop = stop;
+}
+
+bool Target::UpdateSignalFromDummy(UnixSignalsSP signals_sp, 
+                                          const DummySignalElement &elem) {
+  if (!signals_sp)
+    return false;
+
+  int32_t signo 
+      = signals_sp->GetSignalNumberFromName(elem.first().str().c_str());
+  if (signo == LLDB_INVALID_SIGNAL_NUMBER)
+    return false;
+    
+  if (elem.second.pass == eLazyBoolYes)
+    signals_sp->SetShouldSuppress(signo, false);
+  else if (elem.second.pass == eLazyBoolNo)
+    signals_sp->SetShouldSuppress(signo, true);
+  
+  if (elem.second.notify == eLazyBoolYes)
+    signals_sp->SetShouldNotify(signo, true);
+  else if (elem.second.notify == eLazyBoolNo)
+    signals_sp->SetShouldNotify(signo, false);
+  
+  if (elem.second.stop == eLazyBoolYes)
+    signals_sp->SetShouldStop(signo, true);
+  else if (elem.second.stop == eLazyBoolNo)
+    signals_sp->SetShouldStop(signo, false);
+  return true;  
+}
+
+bool Target::ResetSignalFromDummy(UnixSignalsSP signals_sp, 
+                                          const DummySignalElement &elem) {
+  if (!signals_sp)
+    return false;
+  int32_t signo 
+      = signals_sp->GetSignalNumberFromName(elem.first().str().c_str());
+  if (signo == LLDB_INVALID_SIGNAL_NUMBER)
+    return false;
+  bool do_pass = elem.second.pass != eLazyBoolCalculate;
+  bool do_stop = elem.second.stop != eLazyBoolCalculate;
+  bool do_notify = elem.second.notify != eLazyBoolCalculate;
+  signals_sp->ResetSignal(signo, do_stop, do_notify, do_pass);
+  return true;
+}
+
+void Target::UpdateSignalsFromDummy(UnixSignalsSP signals_sp, 
+                                    StreamSP warning_stream_sp) {
+  if (!signals_sp)
+    return;
+
+  for (const auto &elem : m_dummy_signals) {
+    if (!UpdateSignalFromDummy(signals_sp, elem))
+      warning_stream_sp->Printf("Target signal '%s' not found in process\n", 
+          elem.first().str().c_str());
+  }
+}
+
+void Target::ClearDummySignals(Args &signal_names) {
+  ProcessSP process_sp = GetProcessSP();
+  // The simplest case, delete them all with no process to update.
+  if (signal_names.GetArgumentCount() == 0 && !process_sp) {
+    m_dummy_signals.clear();
+    return;
+  }
+  UnixSignalsSP signals_sp;
+  if (process_sp)
+    signals_sp = process_sp->GetUnixSignals();
+
+  for (const Args::ArgEntry &entry : signal_names) {
+    const char *signal_name = entry.c_str();
+    auto elem = m_dummy_signals.find(signal_name);
+    // If we didn't find it go on.
+    // FIXME: Should I pipe error handling through here?
+    if (elem == m_dummy_signals.end()) {
+      continue;
+    }
+    if (signals_sp)
+      ResetSignalFromDummy(signals_sp, *elem);
+    m_dummy_signals.erase(elem);
+  }
+}
+
+void Target::PrintDummySignals(Stream &strm, Args &signal_args) {
+  strm.Printf("NAME         PASS     STOP     NOTIFY\n");
+  strm.Printf("===========  =======  =======  =======\n");
+  
+  auto str_for_lazy = [] (LazyBool lazy) -> const char * {
+    switch (lazy) {
+      case eLazyBoolCalculate: return "not set";
+      case eLazyBoolYes: return "true   ";
+      case eLazyBoolNo: return "false  ";
+    }
+  };
+  size_t num_args = signal_args.GetArgumentCount();
+  for (const auto &elem : m_dummy_signals) {
+    bool print_it = false;
+    for (size_t idx = 0; idx < num_args; idx++) {
+      if (elem.first() == signal_args.GetArgumentAtIndex(idx)) {
+        print_it = true;
+        break;
+      }
+    }
+    if (print_it) {
+      strm.Printf("%-11s  ", elem.first().str().c_str());
+      strm.Printf("%s  %s  %s\n", str_for_lazy(elem.second.pass),
+                  str_for_lazy(elem.second.stop),
+                  str_for_lazy(elem.second.notify));
     }
   }
 }
