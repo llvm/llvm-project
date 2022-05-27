@@ -3775,9 +3775,9 @@ define void @sink_splat_mul_lmul2(i64* nocapture %a, i64 signext %x) {
 ; CHECK-LABEL: sink_splat_mul_lmul2:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    li a2, 1024
+; CHECK-NEXT:    vsetivli zero, 4, e64, m2, ta, mu
 ; CHECK-NEXT:  .LBB67_1: # %vector.body
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    vsetivli zero, 4, e64, m2, ta, mu
 ; CHECK-NEXT:    vle64.v v8, (a0)
 ; CHECK-NEXT:    vmul.vx v8, v8, a1
 ; CHECK-NEXT:    vse64.v v8, (a0)
@@ -3811,9 +3811,9 @@ define void @sink_splat_add_lmul2(i64* nocapture %a, i64 signext %x) {
 ; CHECK-LABEL: sink_splat_add_lmul2:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    li a2, 1024
+; CHECK-NEXT:    vsetivli zero, 4, e64, m2, ta, mu
 ; CHECK-NEXT:  .LBB68_1: # %vector.body
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    vsetivli zero, 4, e64, m2, ta, mu
 ; CHECK-NEXT:    vle64.v v8, (a0)
 ; CHECK-NEXT:    vadd.vx v8, v8, a1
 ; CHECK-NEXT:    vse64.v v8, (a0)
@@ -3847,9 +3847,9 @@ define void @sink_splat_sub_lmul2(i64* nocapture %a, i64 signext %x) {
 ; CHECK-LABEL: sink_splat_sub_lmul2:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    li a2, 1024
+; CHECK-NEXT:    vsetivli zero, 4, e64, m2, ta, mu
 ; CHECK-NEXT:  .LBB69_1: # %vector.body
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    vsetivli zero, 4, e64, m2, ta, mu
 ; CHECK-NEXT:    vle64.v v8, (a0)
 ; CHECK-NEXT:    vsub.vx v8, v8, a1
 ; CHECK-NEXT:    vse64.v v8, (a0)
@@ -3883,9 +3883,9 @@ define void @sink_splat_rsub_lmul2(i64* nocapture %a, i64 signext %x) {
 ; CHECK-LABEL: sink_splat_rsub_lmul2:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    li a2, 1024
+; CHECK-NEXT:    vsetivli zero, 4, e64, m2, ta, mu
 ; CHECK-NEXT:  .LBB70_1: # %vector.body
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    vsetivli zero, 4, e64, m2, ta, mu
 ; CHECK-NEXT:    vle64.v v8, (a0)
 ; CHECK-NEXT:    vrsub.vx v8, v8, a1
 ; CHECK-NEXT:    vse64.v v8, (a0)
@@ -3919,9 +3919,9 @@ define void @sink_splat_and_lmul2(i64* nocapture %a, i64 signext %x) {
 ; CHECK-LABEL: sink_splat_and_lmul2:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    li a2, 1024
+; CHECK-NEXT:    vsetivli zero, 4, e64, m2, ta, mu
 ; CHECK-NEXT:  .LBB71_1: # %vector.body
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    vsetivli zero, 4, e64, m2, ta, mu
 ; CHECK-NEXT:    vle64.v v8, (a0)
 ; CHECK-NEXT:    vand.vx v8, v8, a1
 ; CHECK-NEXT:    vse64.v v8, (a0)
@@ -3955,9 +3955,9 @@ define void @sink_splat_or_lmul2(i64* nocapture %a, i64 signext %x) {
 ; CHECK-LABEL: sink_splat_or_lmul2:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    li a2, 1024
+; CHECK-NEXT:    vsetivli zero, 4, e64, m2, ta, mu
 ; CHECK-NEXT:  .LBB72_1: # %vector.body
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    vsetivli zero, 4, e64, m2, ta, mu
 ; CHECK-NEXT:    vle64.v v8, (a0)
 ; CHECK-NEXT:    vor.vx v8, v8, a1
 ; CHECK-NEXT:    vse64.v v8, (a0)
@@ -3991,9 +3991,9 @@ define void @sink_splat_xor_lmul2(i64* nocapture %a, i64 signext %x) {
 ; CHECK-LABEL: sink_splat_xor_lmul2:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    li a2, 1024
+; CHECK-NEXT:    vsetivli zero, 4, e64, m2, ta, mu
 ; CHECK-NEXT:  .LBB73_1: # %vector.body
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    vsetivli zero, 4, e64, m2, ta, mu
 ; CHECK-NEXT:    vle64.v v8, (a0)
 ; CHECK-NEXT:    vxor.vx v8, v8, a1
 ; CHECK-NEXT:    vse64.v v8, (a0)
