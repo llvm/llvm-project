@@ -28,7 +28,7 @@ namespace {
 struct LinalgBufferizePass : public LinalgBufferizeBase<LinalgBufferizePass> {
   void runOnOperation() override {
     BufferizationOptions options = getPartialBufferizationOptions();
-    options.allowDialectInFilter<linalg::LinalgDialect>();
+    options.opFilter.allowDialect<linalg::LinalgDialect>();
 
     if (failed(bufferizeOp(getOperation(), options)))
       signalPassFailure();
