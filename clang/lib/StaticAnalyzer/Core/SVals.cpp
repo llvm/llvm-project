@@ -299,23 +299,6 @@ nonloc::ConcreteInt::evalMinus(SValBuilder &svalBuilder) const {
 }
 
 //===----------------------------------------------------------------------===//
-// Transfer function dispatch for Locs.
-//===----------------------------------------------------------------------===//
-
-SVal loc::ConcreteInt::evalBinOp(BasicValueFactory& BasicVals,
-                                 BinaryOperator::Opcode Op,
-                                 const loc::ConcreteInt& R) const {
-  assert(BinaryOperator::isComparisonOp(Op) || Op == BO_Sub);
-
-  const llvm::APSInt *X = BasicVals.evalAPSInt(Op, getValue(), R.getValue());
-
-  if (X)
-    return nonloc::ConcreteInt(*X);
-  else
-    return UndefinedVal();
-}
-
-//===----------------------------------------------------------------------===//
 // Pretty-Printing.
 //===----------------------------------------------------------------------===//
 

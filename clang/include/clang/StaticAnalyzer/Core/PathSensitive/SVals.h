@@ -645,10 +645,6 @@ public:
     return *static_cast<const llvm::APSInt *>(Data);
   }
 
-  // Transfer functions for binary/unary operations on ConcreteInts.
-  SVal evalBinOp(BasicValueFactory& BasicVals, BinaryOperator::Opcode Op,
-                 const ConcreteInt& R) const;
-
 private:
   friend class SVal;
 
