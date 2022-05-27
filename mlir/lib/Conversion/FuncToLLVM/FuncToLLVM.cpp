@@ -139,7 +139,8 @@ static void wrapForExternalCallers(OpBuilder &rewriter, Location loc,
     prependResAttrsToArgAttrs(rewriter, attributes, funcOp.getNumArguments());
   auto wrapperFuncOp = rewriter.create<LLVM::LLVMFuncOp>(
       loc, llvm::formatv("_mlir_ciface_{0}", funcOp.getName()).str(),
-      wrapperFuncType, LLVM::Linkage::External, /*dsoLocal*/ false, attributes);
+      wrapperFuncType, LLVM::Linkage::External, /*dsoLocal*/ false,
+      /*cconv*/ LLVM::CConv::C, attributes);
 
   OpBuilder::InsertionGuard guard(rewriter);
   rewriter.setInsertionPointToStart(wrapperFuncOp.addEntryBlock());
@@ -206,7 +207,8 @@ static void wrapExternalFunction(OpBuilder &builder, Location loc,
   // Create the auxiliary function.
   auto wrapperFunc = builder.create<LLVM::LLVMFuncOp>(
       loc, llvm::formatv("_mlir_ciface_{0}", funcOp.getName()).str(),
-      wrapperType, LLVM::Linkage::External, /*dsoLocal*/ false, attributes);
+      wrapperType, LLVM::Linkage::External, /*dsoLocal*/ false,
+      /*cconv*/ LLVM::CConv::C, attributes);
 
   builder.setInsertionPointToStart(newFuncOp.addEntryBlock());
 
@@ -345,7 +347,7 @@ protected:
     }
     auto newFuncOp = rewriter.create<LLVM::LLVMFuncOp>(
         funcOp.getLoc(), funcOp.getName(), llvmType, linkage,
-        /*dsoLocal*/ false, attributes);
+        /*dsoLocal*/ false, /*cconv*/ LLVM::CConv::C, attributes);
     rewriter.inlineRegionBefore(funcOp.getBody(), newFuncOp.getBody(),
                                 newFuncOp.end());
     if (failed(rewriter.convertRegionTypes(&newFuncOp.getBody(), *typeConverter,
