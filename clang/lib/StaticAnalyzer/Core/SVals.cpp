@@ -276,18 +276,6 @@ bool SVal::isZeroConstant() const {
 // Transfer function dispatch for Non-Locs.
 //===----------------------------------------------------------------------===//
 
-SVal nonloc::ConcreteInt::evalBinOp(SValBuilder &svalBuilder,
-                                    BinaryOperator::Opcode Op,
-                                    const nonloc::ConcreteInt& R) const {
-  const llvm::APSInt* X =
-    svalBuilder.getBasicValueFactory().evalAPSInt(Op, getValue(), R.getValue());
-
-  if (X)
-    return nonloc::ConcreteInt(*X);
-  else
-    return UndefinedVal();
-}
-
 nonloc::ConcreteInt
 nonloc::ConcreteInt::evalComplement(SValBuilder &svalBuilder) const {
   return svalBuilder.makeIntVal(~getValue());
