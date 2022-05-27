@@ -590,10 +590,6 @@ public:
     return X.isValid() ? svalBuilder.evalMinus(X.castAs<NonLoc>()) : X;
   }
 
-  SVal evalComplement(SVal X) {
-    return X.isValid() ? svalBuilder.evalComplement(X.castAs<NonLoc>()) : X;
-  }
-
   ProgramStateRef handleLValueBitCast(ProgramStateRef state, const Expr *Ex,
                                       const LocationContext *LCtx, QualType T,
                                       QualType ExTy, const CastExpr *CastE,
