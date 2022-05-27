@@ -52,7 +52,23 @@ struct RegionLessOpConversion : public ConvertOpToLLVMPattern<T> {
   LogicalResult
   matchAndRewrite(T curOp, typename T::Adaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
-    rewriter.replaceOpWithNewOp<T>(curOp, TypeRange(), adaptor.getOperands(),
+    TypeConverter *converter = ConvertToLLVMPattern::getTypeConverter();
+    SmallVector<Type> resTypes;
+    if (failed(converter->convertTypes(curOp->getResultTypes(), resTypes)))
+      return failure();
+    SmallVector<Value> convertedOperands;
+    for (unsigned idx = 0; idx < curOp.getNumVariableOperands(); ++idx) {
+      Value originalVariableOperand = curOp.getVariableOperand(idx);
+      if (!originalVariableOperand)
+        return failure();
+      if (originalVariableOperand.getType().isa<MemRefType>()) {
+        // TODO: Support memref type in variable operands
+        rewriter.notifyMatchFailure(curOp, "memref is not supported yet");
+      } else {
+        convertedOperands.emplace_back(adaptor.getOperands()[idx]);
+      }
+    }
+    rewriter.replaceOpWithNewOp<T>(curOp, resTypes, convertedOperands,
                                    curOp->getAttrs());
     return success();
   }
@@ -65,10 +81,10 @@ void mlir::configureOpenMPToLLVMConversionLegality(
                                mlir::omp::MasterOp>(
       [&](Operation *op) { return typeConverter.isLegal(&op->getRegion(0)); });
   target
-      .addDynamicallyLegalOp<mlir::omp::AtomicReadOp, mlir::omp::AtomicWriteOp>(
-          [&](Operation *op) {
-            return typeConverter.isLegal(op->getOperandTypes());
-          });
+      .addDynamicallyLegalOp<mlir::omp::AtomicReadOp, mlir::omp::AtomicWriteOp,
+                             mlir::omp::ThreadprivateOp>([&](Operation *op) {
+        return typeConverter.isLegal(op->getOperandTypes());
+      });
 }
 
 void mlir::populateOpenMPToLLVMConversionPatterns(LLVMTypeConverter &converter,
@@ -77,7 +93,8 @@ void mlir::populateOpenMPToLLVMConversionPatterns(LLVMTypeConverter &converter,
                RegionOpConversion<omp::ParallelOp>,
                RegionOpConversion<omp::WsLoopOp>,
                RegionLessOpConversion<omp::AtomicReadOp>,
-               RegionLessOpConversion<omp::AtomicWriteOp>>(converter);
+               RegionLessOpConversion<omp::AtomicWriteOp>,
+               RegionLessOpConversion<omp::ThreadprivateOp>>(converter);
 }
 
 namespace {
