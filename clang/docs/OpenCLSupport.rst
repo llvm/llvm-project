@@ -25,7 +25,7 @@ Clang also supports :ref:`the C++ for OpenCL kernel language <cxx_for_opencl_imp
 There are also other :ref:`new and experimental features <opencl_experimenal>`
 available.
 
-
+Details about usage of clang for OpenCL can be found in :doc:`UsersManual`.
 
 Missing features or with limited support
 ========================================

@@ -36,17 +36,17 @@ to specify the target triple:
 
   .. table:: SPIR-V Subarchitectures
 
-     ============ ==============================================================
-     Architecture Description
-     ============ ==============================================================
-     *<empty>*     SPIR-V version deduced by tools based on the compiled input.
-     ``v1.0``      SPIR-V version 1.0.
-     ``v1.1``      SPIR-V version 1.1.
-     ``v1.2``      SPIR-V version 1.2.
-     ``v1.3``      SPIR-V version 1.3.
-     ``v1.4``      SPIR-V version 1.4.
-     ``v1.5``      SPIR-V version 1.5.
-     ============ ==============================================================
+     =============== ==============================================================
+     Subarchitecture Description
+     =============== ==============================================================
+     *<empty>*        SPIR-V version deduced by tools based on the compiled input.
+     ``v1.0``         SPIR-V version 1.0.
+     ``v1.1``         SPIR-V version 1.1.
+     ``v1.2``         SPIR-V version 1.2.
+     ``v1.3``         SPIR-V version 1.3.
+     ``v1.4``         SPIR-V version 1.4.
+     ``v1.5``         SPIR-V version 1.5.
+     =============== ==============================================================
 
   .. table:: SPIR-V Vendors
 
@@ -71,3 +71,7 @@ to specify the target triple:
      ===================== ==============================================================
      *<empty>*/``unknown``  Defaults to the OpenCL environment.
      ===================== ==============================================================
+
+Example:
+
+``-target spirv64v1.0`` can be used to compile for SPIR-V version 1.0 with 64-bit pointer width.
