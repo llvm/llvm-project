@@ -83,6 +83,8 @@ set(files
   __algorithm/ranges_for_each.h
   __algorithm/ranges_for_each_n.h
   __algorithm/ranges_is_partitioned.h
+  __algorithm/ranges_is_sorted.h
+  __algorithm/ranges_is_sorted_until.h
   __algorithm/ranges_max.h
   __algorithm/ranges_max_element.h
   __algorithm/ranges_min.h
