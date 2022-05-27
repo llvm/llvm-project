@@ -76,8 +76,8 @@ public:
                                OptimizationRemarkEmitter *ORE);
   void getPeelingPreferences(Loop *L, ScalarEvolution &SE,
                              TTI::PeelingPreferences &PP);
-  bool isLSRCostLess(TargetTransformInfo::LSRCost &C1,
-                     TargetTransformInfo::LSRCost &C2);
+  bool isLSRCostLess(const TargetTransformInfo::LSRCost &C1,
+                     const TargetTransformInfo::LSRCost &C2);
   bool isNumRegsMajorCostOfLSR();
   bool shouldBuildRelLookupTables() const;
   /// @}

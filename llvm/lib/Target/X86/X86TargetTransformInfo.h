@@ -225,8 +225,8 @@ public:
   InstructionCost getIntImmCostIntrin(Intrinsic::ID IID, unsigned Idx,
                                       const APInt &Imm, Type *Ty,
                                       TTI::TargetCostKind CostKind);
-  bool isLSRCostLess(TargetTransformInfo::LSRCost &C1,
-                     TargetTransformInfo::LSRCost &C2);
+  bool isLSRCostLess(const TargetTransformInfo::LSRCost &C1,
+                     const TargetTransformInfo::LSRCost &C2);
   bool canMacroFuseCmp();
   bool isLegalMaskedLoad(Type *DataType, Align Alignment);
   bool isLegalMaskedStore(Type *DataType, Align Alignment);
