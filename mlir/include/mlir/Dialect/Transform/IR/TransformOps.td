@@ -9,6 +9,7 @@
 #ifndef MLIR_DIALECT_TRANSFORM_IR_TRANSFORMOPS
 #define MLIR_DIALECT_TRANSFORM_IR_TRANSFORMOPS
 
+include "mlir/Interfaces/ControlFlowInterfaces.td"
 include "mlir/IR/OpAsmInterface.td"
 include "mlir/IR/SymbolInterfaces.td"
 include "mlir/Dialect/PDL/IR/PDLTypes.td"
@@ -48,7 +49,10 @@ def PDLMatchOp : TransformDialectOp<"pdl_match",
 }
 
 def SequenceOp : TransformDialectOp<"sequence",
-    [DeclareOpInterfaceMethods<TransformOpInterface>,
+    [DeclareOpInterfaceMethods<RegionBranchOpInterface,
+        ["getSuccessorEntryOperands", "getSuccessorRegions",
+         "getRegionInvocationBounds"]>,
+     DeclareOpInterfaceMethods<TransformOpInterface>,
      DeclareOpInterfaceMethods<MemoryEffectsOpInterface>,
      OpAsmOpInterface, PossibleTopLevelTransformOpTrait,
      SingleBlockImplicitTerminator<"::mlir::transform::YieldOp">]> {
