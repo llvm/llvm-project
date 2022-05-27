@@ -7,7 +7,7 @@
 ; CHECK: v_cmp_{{..}}_u32_e{{32|64}} [[COND:s\[[0-9]+:[0-9]+\]|vcc]]
 ; CHECK: BB0_1:
 ; CHECK-NOT: v_cmp
-; CHECK_NOT: v_cndmask
+; CHECK-NOT: v_cndmask
 ; CHECK: s_and_saveexec_b64 s[{{[0-9]+:[0-9]+}}], [[COND]]
 ; CHECK: ; %bb.2:
 

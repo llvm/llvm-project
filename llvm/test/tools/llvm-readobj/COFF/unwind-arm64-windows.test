@@ -27,7 +27,7 @@ UNWIND1-NEXT:        0xd2c2              ; ldr x30, [sp, #16]
 UNWIND1-NEXT:        0x28                ; ldp x19, x20, [sp], #64
 UNWIND1-NEXT:        0xe4                ; end
 UNWIND1-NEXT:      ]
-UNWIND1_NEXT:    }
+UNWIND1-NEXT:    }
 
 
 UNWIND2:         ExceptionData {

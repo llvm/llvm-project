@@ -182,7 +182,7 @@ func.func @two_bands() {
       // The inner pair of loops is coalesced separately.
       // CHECK: scf.for
       scf.for %k = %i to %j step %c1 {
-        // CHECK_NOT: scf.for
+        // CHECK-NOT: scf.for
         scf.for %l = %i to %j step %c1 {
           "foo"() : () -> ()
         }
