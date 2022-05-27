@@ -464,8 +464,8 @@ define <2 x i32> @signbit_mul_vec_commute(<2 x i32> %a, <2 x i32> %b) {
 
 define i32 @signsplat_mul(i32 %x) {
 ; CHECK-LABEL: @signsplat_mul(
-; CHECK-NEXT:    [[ASH:%.*]] = ashr i32 [[X:%.*]], 31
-; CHECK-NEXT:    [[MUL:%.*]] = mul nsw i32 [[ASH]], 42
+; CHECK-NEXT:    [[ISNEG:%.*]] = icmp slt i32 [[X:%.*]], 0
+; CHECK-NEXT:    [[MUL:%.*]] = select i1 [[ISNEG]], i32 -42, i32 0
 ; CHECK-NEXT:    ret i32 [[MUL]]
 ;
   %ash = ashr i32 %x, 31
@@ -475,14 +475,16 @@ define i32 @signsplat_mul(i32 %x) {
 
 define <2 x i32> @signsplat_mul_vec(<2 x i32> %x) {
 ; CHECK-LABEL: @signsplat_mul_vec(
-; CHECK-NEXT:    [[ASH:%.*]] = ashr <2 x i32> [[X:%.*]], <i32 31, i32 31>
-; CHECK-NEXT:    [[MUL:%.*]] = mul nsw <2 x i32> [[ASH]], <i32 42, i32 -3>
+; CHECK-NEXT:    [[ISNEG:%.*]] = icmp slt <2 x i32> [[X:%.*]], zeroinitializer
+; CHECK-NEXT:    [[MUL:%.*]] = select <2 x i1> [[ISNEG]], <2 x i32> <i32 -42, i32 3>, <2 x i32> zeroinitializer
 ; CHECK-NEXT:    ret <2 x i32> [[MUL]]
 ;
   %ash = ashr <2 x i32> %x, <i32 31, i32 31>
   %mul = mul <2 x i32> %ash, <i32 42, i32 -3>
   ret <2 x i32> %mul
 }
+
+; negative test - wrong shift amount
 
 define i32 @not_signsplat_mul(i32 %x) {
 ; CHECK-LABEL: @not_signsplat_mul(
@@ -494,6 +496,8 @@ define i32 @not_signsplat_mul(i32 %x) {
   %mul = mul i32 %ash, 42
   ret i32 %mul
 }
+
+; negative test - extra use
 
 define i32 @signsplat_mul_use(i32 %x) {
 ; CHECK-LABEL: @signsplat_mul_use(

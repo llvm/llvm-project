@@ -356,12 +356,22 @@ Instruction *InstCombinerImpl::visitMul(BinaryOperator &I) {
   if (match(Op1, m_ZExt(m_Value(X))) && X->getType()->isIntOrIntVectorTy(1))
     return SelectInst::Create(X, Op0, ConstantInt::getNullValue(Ty));
 
-  // (sext bool X) * C --> X ? -C : 0
   Constant *ImmC;
-  if (match(Op0, m_SExt(m_Value(X))) && X->getType()->isIntOrIntVectorTy(1) &&
-      match(Op1, m_ImmConstant(ImmC))) {
-    Constant *NegC = ConstantExpr::getNeg(ImmC);
-    return SelectInst::Create(X, NegC, ConstantInt::getNullValue(Ty));
+  if (match(Op1, m_ImmConstant(ImmC))) {
+    // (sext bool X) * C --> X ? -C : 0
+    if (match(Op0, m_SExt(m_Value(X))) && X->getType()->isIntOrIntVectorTy(1)) {
+      Constant *NegC = ConstantExpr::getNeg(ImmC);
+      return SelectInst::Create(X, NegC, ConstantInt::getNullValue(Ty));
+    }
+
+    // (ashr i32 X, 31) * C --> (X < 0) ? -C : 0
+    const APInt *C;
+    if (match(Op0, m_OneUse(m_AShr(m_Value(X), m_APInt(C)))) &&
+        *C == C->getBitWidth() - 1) {
+      Constant *NegC = ConstantExpr::getNeg(ImmC);
+      Value *IsNeg = Builder.CreateIsNeg(X, "isneg");
+      return SelectInst::Create(IsNeg, NegC, ConstantInt::getNullValue(Ty));
+    }
   }
 
   // (lshr X, 31) * Y --> (X < 0) ? Y : 0
