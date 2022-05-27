@@ -132,7 +132,7 @@ public:
 
   bool runOnMachineFunction(MachineFunction &MF) override {
     AArch64FI = MF.getInfo<AArch64FunctionInfo>();
-    STI = static_cast<const AArch64Subtarget*>(&MF.getSubtarget());
+    STI = &MF.getSubtarget<AArch64Subtarget>();
 
     SetupMachineFunction(MF);
 
