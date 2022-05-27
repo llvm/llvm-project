@@ -11,7 +11,7 @@ unittest("LexTests") {
     "//llvm/lib/Support",
   ]
   sources = [
-    "DependencyDirectivesSourceMinimizerTest.cpp",
+    "DependencyDirectivesScannerTest.cpp",
     "HeaderMapTest.cpp",
     "HeaderSearchTest.cpp",
     "LexerTest.cpp",

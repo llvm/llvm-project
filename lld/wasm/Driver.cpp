@@ -184,6 +184,9 @@ opt::InputArgList WasmOptTable::parse(ArrayRef<const char *> argv) {
   args = this->ParseArgs(vec, missingIndex, missingCount);
 
   handleColorDiagnostics(args);
+  if (missingCount)
+    error(Twine(args.getArgString(missingIndex)) + ": missing argument");
+
   for (auto *arg : args.filtered(OPT_UNKNOWN))
     error("unknown argument: " + arg->getAsString(args));
   return args;

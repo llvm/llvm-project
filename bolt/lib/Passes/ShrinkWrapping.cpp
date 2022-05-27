@@ -246,7 +246,7 @@ void StackLayoutModifier::checkFramePointerInitialization(MCInst &Point) {
     SP = std::make_pair(0, 0);
 
   int64_t Output;
-  if (!BC.MIB->evaluateSimple(Point, Output, SP, FP))
+  if (!BC.MIB->evaluateStackOffsetExpr(Point, Output, SP, FP))
     return;
 
   // Not your regular frame pointer initialization... bail
@@ -294,7 +294,7 @@ void StackLayoutModifier::checkStackPointerRestore(MCInst &Point) {
     SP = std::make_pair(0, 0);
 
   int64_t Output;
-  if (!BC.MIB->evaluateSimple(Point, Output, SP, FP))
+  if (!BC.MIB->evaluateStackOffsetExpr(Point, Output, SP, FP))
     return;
 
   // If the value is the same of FP, no need to adjust it

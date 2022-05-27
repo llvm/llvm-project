@@ -158,11 +158,6 @@ Preprocessor::Preprocessor(std::shared_ptr<PreprocessorOptions> PPOpts,
   if (this->PPOpts->GeneratePreamble)
     PreambleConditionalStack.startRecording();
 
-  ExcludedConditionalDirectiveSkipMappings =
-      this->PPOpts->ExcludedConditionalDirectiveSkipMappings;
-  if (ExcludedConditionalDirectiveSkipMappings)
-    ExcludedConditionalDirectiveSkipMappings->clear();
-
   MaxTokens = LangOpts.MaxTokens;
 }
 
@@ -382,7 +377,9 @@ StringRef Preprocessor::getLastMacroWithSpelling(
 
 void Preprocessor::recomputeCurLexerKind() {
   if (CurLexer)
-    CurLexerKind = CLK_Lexer;
+    CurLexerKind = CurLexer->isDependencyDirectivesLexer()
+                       ? CLK_DependencyDirectivesLexer
+                       : CLK_Lexer;
   else if (CurTokenLexer)
     CurLexerKind = CLK_TokenLexer;
   else
@@ -645,6 +642,9 @@ void Preprocessor::SkipTokensWhileUsingPCH() {
     case CLK_CachingLexer:
       CachingLex(Tok);
       break;
+    case CLK_DependencyDirectivesLexer:
+      CurLexer->LexDependencyDirectiveToken(Tok);
+      break;
     case CLK_LexAfterModuleImport:
       LexAfterModuleImport(Tok);
       break;
@@ -905,6 +905,9 @@ void Preprocessor::Lex(Token &Result) {
     case CLK_CachingLexer:
       CachingLex(Result);
       ReturnedToken = true;
+      break;
+    case CLK_DependencyDirectivesLexer:
+      ReturnedToken = CurLexer->LexDependencyDirectiveToken(Result);
       break;
     case CLK_LexAfterModuleImport:
       ReturnedToken = LexAfterModuleImport(Result);

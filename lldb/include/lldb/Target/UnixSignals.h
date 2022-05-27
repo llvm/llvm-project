@@ -55,6 +55,9 @@ public:
   bool SetShouldNotify(int32_t signo, bool value);
 
   bool SetShouldNotify(const char *signal_name, bool value);
+  
+  bool ResetSignal(int32_t signo, bool reset_stop = true, 
+                   bool reset_notify = true, bool reset_suppress = true);
 
   // These provide an iterator through the signals available on this system.
   // Call GetFirstSignalNumber to get the first entry, then iterate on
@@ -114,11 +117,13 @@ protected:
     std::string m_description;
     uint32_t m_hit_count = 0;
     bool m_suppress : 1, m_stop : 1, m_notify : 1;
+    bool m_default_suppress : 1, m_default_stop : 1, m_default_notify : 1;
 
     Signal(const char *name, bool default_suppress, bool default_stop,
            bool default_notify, const char *description, const char *alias);
 
     ~Signal() = default;
+    void Reset(bool reset_stop, bool reset_notify, bool reset_suppress);
   };
 
   virtual void Reset();

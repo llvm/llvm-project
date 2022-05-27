@@ -6385,17 +6385,9 @@ SDValue RISCVTargetLowering::lowerMaskedGather(SDValue Op,
 
   MVT ContainerVT = VT;
   if (VT.isFixedLengthVector()) {
-    // We need to use the larger of the result and index type to determine the
-    // scalable type to use so we don't increase LMUL for any operand/result.
-    if (VT.bitsGE(IndexVT)) {
-      ContainerVT = getContainerForFixedLengthVector(VT);
-      IndexVT = MVT::getVectorVT(IndexVT.getVectorElementType(),
-                                 ContainerVT.getVectorElementCount());
-    } else {
-      IndexVT = getContainerForFixedLengthVector(IndexVT);
-      ContainerVT = MVT::getVectorVT(ContainerVT.getVectorElementType(),
-                                     IndexVT.getVectorElementCount());
-    }
+    ContainerVT = getContainerForFixedLengthVector(VT);
+    IndexVT = MVT::getVectorVT(IndexVT.getVectorElementType(),
+                               ContainerVT.getVectorElementCount());
 
     Index = convertToScalableVector(IndexVT, Index, DAG, Subtarget);
 
@@ -6495,17 +6487,9 @@ SDValue RISCVTargetLowering::lowerMaskedScatter(SDValue Op,
 
   MVT ContainerVT = VT;
   if (VT.isFixedLengthVector()) {
-    // We need to use the larger of the value and index type to determine the
-    // scalable type to use so we don't increase LMUL for any operand/result.
-    if (VT.bitsGE(IndexVT)) {
-      ContainerVT = getContainerForFixedLengthVector(VT);
-      IndexVT = MVT::getVectorVT(IndexVT.getVectorElementType(),
-                                 ContainerVT.getVectorElementCount());
-    } else {
-      IndexVT = getContainerForFixedLengthVector(IndexVT);
-      ContainerVT = MVT::getVectorVT(VT.getVectorElementType(),
-                                     IndexVT.getVectorElementCount());
-    }
+    ContainerVT = getContainerForFixedLengthVector(VT);
+    IndexVT = MVT::getVectorVT(IndexVT.getVectorElementType(),
+                               ContainerVT.getVectorElementCount());
 
     Index = convertToScalableVector(IndexVT, Index, DAG, Subtarget);
     Val = convertToScalableVector(ContainerVT, Val, DAG, Subtarget);
@@ -11803,9 +11787,13 @@ bool RISCVTargetLowering::isMulAddWithConstProfitable(SDValue AddNode,
 bool RISCVTargetLowering::allowsMisalignedMemoryAccesses(
     EVT VT, unsigned AddrSpace, Align Alignment, MachineMemOperand::Flags Flags,
     bool *Fast) const {
-  if (!VT.isVector())
-    return false;
+  if (!VT.isVector()) {
+    if (Fast)
+      *Fast = false;
+    return Subtarget.enableUnalignedScalarMem();
+  }
 
+  // All vector implementations must support element alignment
   EVT ElemVT = VT.getVectorElementType();
   if (Alignment >= ElemVT.getStoreSize()) {
     if (Fast)

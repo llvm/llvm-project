@@ -115,7 +115,7 @@ protected:
       else
         FP = std::make_pair(0, 0);
       int64_t Output;
-      if (!MIB->evaluateSimple(Point, Output, SP, FP)) {
+      if (!MIB->evaluateStackOffsetExpr(Point, Output, SP, FP)) {
         if (SPVal == EMPTY && FPVal == EMPTY)
           return SPVal;
         return SUPERPOSITION;
@@ -150,7 +150,7 @@ protected:
       else
         SP = std::make_pair(0, 0);
       int64_t Output;
-      if (!MIB->evaluateSimple(Point, Output, SP, FP)) {
+      if (!MIB->evaluateStackOffsetExpr(Point, Output, SP, FP)) {
         if (SPVal == EMPTY && FPVal == EMPTY)
           return FPVal;
         return SUPERPOSITION;

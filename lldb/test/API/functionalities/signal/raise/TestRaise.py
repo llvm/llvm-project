@@ -36,6 +36,10 @@ class RaiseTestCase(TestBase):
 
     def launch(self, target, signal):
         # launch the process, do not stop at entry point.
+        # If we have gotten the default for this signal, reset that as well.
+        if len(self.default_pass) != 0:
+            lldbutil.set_actions_for_signal(self, signal, self.default_pass, self.default_stop, self.default_notify)
+
         process = target.LaunchSimple(
             [signal], None, self.get_process_working_directory())
         self.assertTrue(process, PROCESS_IS_VALID)
@@ -64,27 +68,19 @@ class RaiseTestCase(TestBase):
         target = self.dbg.CreateTarget(exe)
         self.assertTrue(target, VALID_TARGET)
         lldbutil.run_break_set_by_symbol(self, "main")
+        self.default_pass = ""
+        self.default_stop = ""
+        self.default_notify = ""
 
         # launch
         process = self.launch(target, signal)
         signo = process.GetUnixSignals().GetSignalNumberFromName(signal)
 
         # retrieve default signal disposition
-        return_obj = lldb.SBCommandReturnObject()
-        self.dbg.GetCommandInterpreter().HandleCommand(
-            "process handle %s " % signal, return_obj)
-        match = re.match(
-            'NAME *PASS *STOP *NOTIFY.*(false|true) *(false|true) *(false|true)',
-            return_obj.GetOutput(),
-            re.IGNORECASE | re.DOTALL)
-        if not match:
-            self.fail('Unable to retrieve default signal disposition.')
-        default_pass = match.group(1)
-        default_stop = match.group(2)
-        default_notify = match.group(3)
+        (self.default_pass, self.default_stop, self.default_notify) = lldbutil.get_actions_for_signal(self, signal)
 
         # Make sure we stop at the signal
-        self.set_handle(signal, "false", "true", "true")
+        lldbutil.set_actions_for_signal(self, signal, "false", "true", "true")
         process.Continue()
         self.assertEqual(process.GetState(), lldb.eStateStopped)
         thread = lldbutil.get_stopped_thread(process, lldb.eStopReasonSignal)
@@ -102,12 +98,11 @@ class RaiseTestCase(TestBase):
         self.assertEqual(process.GetState(), lldb.eStateExited)
         self.assertEqual(process.GetExitStatus(), 0)
 
-        # launch again
         process = self.launch(target, signal)
 
         # Make sure we do not stop at the signal. We should still get the
         # notification.
-        self.set_handle(signal, "false", "false", "true")
+        lldbutil.set_actions_for_signal(self, signal, "false", "false", "true")
         self.expect(
             "process continue",
             substrs=[
@@ -121,7 +116,7 @@ class RaiseTestCase(TestBase):
 
         # Make sure we do not stop at the signal, and we do not get the
         # notification.
-        self.set_handle(signal, "false", "false", "false")
+        lldbutil.set_actions_for_signal(self, signal, "false", "false", "false")
         self.expect(
             "process continue",
             substrs=["stopped and restarted"],
@@ -131,14 +126,14 @@ class RaiseTestCase(TestBase):
 
         if not test_passing:
             # reset signal handling to default
-            self.set_handle(signal, default_pass, default_stop, default_notify)
+            lldbutil.set_actions_for_signal(self, signal, self.default_pass, self.default_stop, self.default_notify)
             return
 
         # launch again
         process = self.launch(target, signal)
 
         # Make sure we stop at the signal
-        self.set_handle(signal, "true", "true", "true")
+        lldbutil.set_actions_for_signal(self, signal, "true", "true", "true")
         process.Continue()
         self.assertEqual(process.GetState(), lldb.eStateStopped)
         thread = lldbutil.get_stopped_thread(process, lldb.eStopReasonSignal)
@@ -164,7 +159,7 @@ class RaiseTestCase(TestBase):
 
         # Make sure we do not stop at the signal. We should still get the notification. Process
         # should receive the signal.
-        self.set_handle(signal, "true", "false", "true")
+        lldbutil.set_actions_for_signal(self, signal, "true", "false", "true")
         self.expect(
             "process continue",
             substrs=[
@@ -178,7 +173,7 @@ class RaiseTestCase(TestBase):
 
         # Make sure we do not stop at the signal, and we do not get the notification. Process
         # should receive the signal.
-        self.set_handle(signal, "true", "false", "false")
+        lldbutil.set_actions_for_signal(self, signal, "true", "false", "false")
         self.expect(
             "process continue",
             substrs=["stopped and restarted"],
@@ -187,4 +182,4 @@ class RaiseTestCase(TestBase):
         self.assertEqual(process.GetExitStatus(), signo)
 
         # reset signal handling to default
-        self.set_handle(signal, default_pass, default_stop, default_notify)
+        lldbutil.set_actions_for_signal(self, signal, self.default_pass, self.default_stop, self.default_notify)

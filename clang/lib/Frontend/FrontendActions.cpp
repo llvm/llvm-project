@@ -18,7 +18,7 @@
 #include "clang/Frontend/FrontendDiagnostic.h"
 #include "clang/Frontend/MultiplexConsumer.h"
 #include "clang/Frontend/Utils.h"
-#include "clang/Lex/DependencyDirectivesSourceMinimizer.h"
+#include "clang/Lex/DependencyDirectivesScanner.h"
 #include "clang/Lex/HeaderSearch.h"
 #include "clang/Lex/Preprocessor.h"
 #include "clang/Lex/PreprocessorOptions.h"
@@ -1157,10 +1157,10 @@ void PrintDependencyDirectivesSourceMinimizerAction::ExecuteAction() {
   SourceManager &SM = CI.getPreprocessor().getSourceManager();
   llvm::MemoryBufferRef FromFile = SM.getBufferOrFake(SM.getMainFileID());
 
-  llvm::SmallString<1024> Output;
-  llvm::SmallVector<minimize_source_to_dependency_directives::Token, 32> Toks;
-  if (minimizeSourceToDependencyDirectives(
-          FromFile.getBuffer(), Output, Toks, &CI.getDiagnostics(),
+  llvm::SmallVector<dependency_directives_scan::Token, 16> Tokens;
+  llvm::SmallVector<dependency_directives_scan::Directive, 32> Directives;
+  if (scanSourceForDependencyDirectives(
+          FromFile.getBuffer(), Tokens, Directives, &CI.getDiagnostics(),
           SM.getLocForStartOfFile(SM.getMainFileID()))) {
     assert(CI.getDiagnostics().hasErrorOccurred() &&
            "no errors reported for failure");
@@ -1179,7 +1179,8 @@ void PrintDependencyDirectivesSourceMinimizerAction::ExecuteAction() {
     }
     return;
   }
-  llvm::outs() << Output;
+  printDependencyDirectivesAsSource(FromFile.getBuffer(), Directives,
+                                    llvm::outs());
 }
 
 void GetDependenciesByModuleNameAction::ExecuteAction() {

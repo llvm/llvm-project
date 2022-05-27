@@ -29,9 +29,9 @@ namespace {
 
 bool getStackAdjustmentSize(const BinaryContext &BC, const MCInst &Inst,
                             int64_t &Adjustment) {
-  return BC.MIB->evaluateSimple(Inst, Adjustment,
-                                std::make_pair(BC.MIB->getStackPointer(), 0LL),
-                                std::make_pair(0, 0LL));
+  return BC.MIB->evaluateStackOffsetExpr(
+      Inst, Adjustment, std::make_pair(BC.MIB->getStackPointer(), 0LL),
+      std::make_pair(0, 0LL));
 }
 
 bool isIndifferentToSP(const MCInst &Inst, const BinaryContext &BC) {

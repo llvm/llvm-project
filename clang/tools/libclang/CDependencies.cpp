@@ -54,7 +54,7 @@ void clang_experimental_ModuleDependencySet_dispose(
 CXDependencyScannerService
 clang_experimental_DependencyScannerService_create_v0(CXDependencyMode Format) {
   return wrap(new DependencyScanningService(
-      ScanningMode::MinimizedSourcePreprocessing, unwrap(Format),
+      ScanningMode::DependencyDirectivesScan, unwrap(Format),
       /*ReuseFilemanager=*/false));
 }
 

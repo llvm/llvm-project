@@ -985,7 +985,8 @@ LogicalResult CancelOp::verify() {
     if (cast<WsLoopOp>(parentOp).nowaitAttr()) {
       return emitError() << "A worksharing construct that is canceled "
                          << "must not have a nowait clause";
-    } else if (cast<WsLoopOp>(parentOp).ordered_valAttr()) {
+    }
+    if (cast<WsLoopOp>(parentOp).ordered_valAttr()) {
       return emitError() << "A worksharing construct that is canceled "
                          << "must not have an ordered clause";
     }
