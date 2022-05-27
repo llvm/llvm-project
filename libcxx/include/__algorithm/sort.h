@@ -14,8 +14,10 @@
 #include <__algorithm/min_element.h>
 #include <__algorithm/partial_sort.h>
 #include <__algorithm/unwrap_iter.h>
+#include <__bits>
 #include <__config>
 #include <__utility/swap.h>
+#include <climits>
 #include <memory>
 
 #if defined(_LIBCPP_DEBUG_RANDOMIZE_UNSPECIFIED_STABILITY)
@@ -498,6 +500,15 @@ void __introsort(_RandomAccessIterator __first, _RandomAccessIterator __last, _C
 
 template <typename _Number>
 inline _LIBCPP_HIDE_FROM_ABI _Number __log2i(_Number __n) {
+  if (__n == 0)
+    return 0;
+  if (sizeof(__n) <= sizeof(unsigned))
+    return sizeof(unsigned) * CHAR_BIT - 1 - __libcpp_clz(static_cast<unsigned>(__n));
+  if (sizeof(__n) <= sizeof(unsigned long))
+    return sizeof(unsigned long) * CHAR_BIT - 1 - __libcpp_clz(static_cast<unsigned long>(__n));
+  if (sizeof(__n) <= sizeof(unsigned long long))
+    return sizeof(unsigned long long) * CHAR_BIT - 1 - __libcpp_clz(static_cast<unsigned long long>(__n));
+
   _Number __log2 = 0;
   while (__n > 1) {
     __log2++;
