@@ -232,9 +232,7 @@ class RISCVELFStreamer : public MCELFStreamer {
   }
 
   void reset() override {
-    MCTargetStreamer &TS = *getTargetStreamer();
-    RISCVTargetStreamer &RTS = static_cast<RISCVTargetStreamer &>(TS);
-    RTS.reset();
+    static_cast<RISCVTargetStreamer *>(getTargetStreamer())->reset();
     MCELFStreamer::reset();
   }
 
