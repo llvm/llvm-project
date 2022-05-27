@@ -871,30 +871,33 @@ UnwrappedLineParser::IfStmtKind UnwrappedLineParser::parseBlock(
     return IfKind;
   }
 
-  if (SimpleBlock && !KeepBraces) {
+  auto RemoveBraces = [=]() mutable {
+    if (KeepBraces || !SimpleBlock)
+      return false;
     assert(Tok->isOneOf(TT_ControlStatementLBrace, TT_ElseLBrace));
     assert(FormatTok->is(tok::r_brace));
+    const bool WrappedOpeningBrace = !Tok->Previous;
+    if (WrappedOpeningBrace && FollowedByComment)
+      return false;
     const FormatToken *Previous = Tokens->getPreviousToken();
     assert(Previous);
-    if (Previous->isNot(tok::r_brace) || Previous->Optional) {
-      assert(!CurrentLines->empty());
-      const FormatToken *OpeningBrace = Tok;
-      if (!Tok->Previous) { // Wrapped l_brace.
-        if (FollowedByComment) {
-          KeepBraces = true;
-        } else {
-          assert(Index > 0);
-          --Index; // The line above the wrapped l_brace.
-          OpeningBrace = nullptr;
-        }
-      }
-      if (!KeepBraces && mightFitOnOneLine(CurrentLines->back()) &&
-          (Tok->is(TT_ElseLBrace) ||
-           mightFitOnOneLine((*CurrentLines)[Index], OpeningBrace))) {
-        Tok->MatchingParen = FormatTok;
-        FormatTok->MatchingParen = Tok;
-      }
+    if (Previous->is(tok::r_brace) && !Previous->Optional)
+      return false;
+    assert(!CurrentLines->empty());
+    if (!mightFitOnOneLine(CurrentLines->back()))
+      return false;
+    if (Tok->is(TT_ElseLBrace))
+      return true;
+    if (WrappedOpeningBrace) {
+      assert(Index > 0);
+      --Index; // The line above the wrapped l_brace.
+      Tok = nullptr;
     }
+    return mightFitOnOneLine((*CurrentLines)[Index], Tok);
+  };
+  if (RemoveBraces()) {
+    Tok->MatchingParen = FormatTok;
+    FormatTok->MatchingParen = Tok;
   }
 
   size_t PPEndHash = computePPHash();
