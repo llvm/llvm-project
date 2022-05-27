@@ -257,6 +257,11 @@ static void transferCFGInitializer(const CFGInitializer &CfgInit,
   const CXXCtorInitializer *Initializer = CfgInit.getInitializer();
   assert(Initializer != nullptr);
 
+  const FieldDecl *Member = Initializer->getMember();
+  if (Member == nullptr)
+    // Not a field initializer.
+    return;
+
   auto *InitStmt = Initializer->getInit();
   assert(InitStmt != nullptr);
 
@@ -268,9 +273,6 @@ static void transferCFGInitializer(const CFGInitializer &CfgInit,
   auto *InitStmtVal = State.Env.getValue(*InitStmtLoc);
   if (InitStmtVal == nullptr)
     return;
-
-  const FieldDecl *Member = Initializer->getMember();
-  assert(Member != nullptr);
 
   if (Member->getType()->isReferenceType()) {
     auto &MemberLoc = ThisLoc.getChild(*Member);
