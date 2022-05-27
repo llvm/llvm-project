@@ -106,7 +106,9 @@
           "text.html.markdown"
         ],
         "embeddedLanguages": {
-          "meta.embedded.block.mlir": "mlir"
+          "meta.embedded.block.mlir": "mlir",
+          "meta.embedded.block.pdll": "pdll",
+          "meta.embedded.block.tablegen": "tablegen"
         }
       },
       {
