@@ -646,13 +646,13 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
     int64_t Imm = ConstNode->getSExtValue();
     // If the upper XLen-16 bits are not used, try to convert this to a simm12
     // by sign extending bit 15.
-    if (isUInt<16>(Imm) && isInt<12>(SignExtend64(Imm, 16)) &&
+    if (isUInt<16>(Imm) && isInt<12>(SignExtend64<16>(Imm)) &&
         hasAllHUsers(Node))
-      Imm = SignExtend64(Imm, 16);
+      Imm = SignExtend64<16>(Imm);
     // If the upper 32-bits are not used try to convert this into a simm32 by
     // sign extending bit 32.
     if (!isInt<32>(Imm) && isUInt<32>(Imm) && hasAllWUsers(Node))
-      Imm = SignExtend64(Imm, 32);
+      Imm = SignExtend64<32>(Imm);
 
     ReplaceNode(Node, selectImm(CurDAG, DL, VT, Imm, *Subtarget));
     return;
@@ -970,7 +970,7 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
     uint64_t ShiftedC1 = C1 << ConstantShift;
     // If this RV32, we need to sign extend the constant.
     if (XLen == 32)
-      ShiftedC1 = SignExtend64(ShiftedC1, 32);
+      ShiftedC1 = SignExtend64<32>(ShiftedC1);
 
     // Create (mulhu (slli X, lzcnt(C2)), C1 << (XLen - lzcnt(C2))).
     SDNode *Imm = selectImm(CurDAG, DL, VT, ShiftedC1, *Subtarget);
@@ -2168,7 +2168,7 @@ bool RISCVDAGToDAGISel::doPeepholeLoadStoreADDI(SDNode *N) {
       // First the LUI.
       uint64_t Imm = Op1.getOperand(0).getConstantOperandVal(0);
       Imm <<= 12;
-      Imm = SignExtend64(Imm, 32);
+      Imm = SignExtend64<32>(Imm);
 
       // Then the ADDI.
       uint64_t LoImm = cast<ConstantSDNode>(Op1.getOperand(1))->getSExtValue();

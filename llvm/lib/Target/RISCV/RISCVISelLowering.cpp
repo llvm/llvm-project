@@ -1991,7 +1991,7 @@ static SDValue lowerBUILD_VECTOR(SDValue Op, SelectionDAG &DAG,
         // our vector and clear our accumulated data.
         if (I != 0 && I % NumViaIntegerBits == 0) {
           if (NumViaIntegerBits <= 32)
-            Bits = SignExtend64(Bits, 32);
+            Bits = SignExtend64<32>(Bits);
           SDValue Elt = DAG.getConstant(Bits, DL, XLenVT);
           Vec = DAG.getNode(ISD::INSERT_VECTOR_ELT, DL, IntegerViaVecVT, Vec,
                             Elt, DAG.getConstant(IntegerEltIdx, DL, XLenVT));
@@ -2007,7 +2007,7 @@ static SDValue lowerBUILD_VECTOR(SDValue Op, SelectionDAG &DAG,
       // Insert the (remaining) scalar value into position in our integer
       // vector type.
       if (NumViaIntegerBits <= 32)
-        Bits = SignExtend64(Bits, 32);
+        Bits = SignExtend64<32>(Bits);
       SDValue Elt = DAG.getConstant(Bits, DL, XLenVT);
       Vec = DAG.getNode(ISD::INSERT_VECTOR_ELT, DL, IntegerViaVecVT, Vec, Elt,
                         DAG.getConstant(IntegerEltIdx, DL, XLenVT));
@@ -2155,7 +2155,7 @@ static SDValue lowerBUILD_VECTOR(SDValue Op, SelectionDAG &DAG,
     // On RV64, sign-extend from 32 to 64 bits where possible in order to
     // achieve better constant materializion.
     if (Subtarget.is64Bit() && ViaIntVT == MVT::i32)
-      SplatValue = SignExtend64(SplatValue, 32);
+      SplatValue = SignExtend64<32>(SplatValue);
 
     // Since we can't introduce illegal i64 types at this stage, we can only
     // perform an i64 splat on RV32 if it is its own sign-extended value. That
