@@ -155,6 +155,9 @@ Bug Fixes
   a coroutine will no longer generate a call to a global allocation function
   with the signature (std::size_t, p0, ..., pn).
   This fixes Issue `Issue 54881 <https://github.com/llvm/llvm-project/issues/54881>`_.
+- Implement `CWG 2394 <https://wg21.link/cwg2394>`_: Const class members
+  may be initialized with a defaulted default constructor under the same
+  conditions it would be allowed for a const object elsewhere.
 
 Improvements to Clang's diagnostics
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
