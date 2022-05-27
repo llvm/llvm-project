@@ -351,6 +351,17 @@ struct FrameDataInfo {
     FieldAlignMap.insert({V, Align});
   }
 
+  uint64_t getDynamicAlign(Value *V) const {
+    auto Iter = FieldDynamicAlignMap.find(V);
+    assert(Iter != FieldDynamicAlignMap.end());
+    return Iter->second;
+  }
+
+  void setDynamicAlign(Value *V, uint64_t Align) {
+    assert(FieldDynamicAlignMap.count(V) == 0);
+    FieldDynamicAlignMap.insert({V, Align});
+  }
+
   uint64_t getOffset(Value *V) const {
     auto Iter = FieldOffsetMap.find(V);
     assert(Iter != FieldOffsetMap.end());
@@ -376,6 +387,7 @@ private:
   // Map from values to their alignment on the frame. They would be set after
   // the frame is built.
   DenseMap<Value *, uint64_t> FieldAlignMap;
+  DenseMap<Value *, uint64_t> FieldDynamicAlignMap;
   // Map from values to their offset on the frame. They would be set after
   // the frame is built.
   DenseMap<Value *, uint64_t> FieldOffsetMap;
@@ -416,6 +428,7 @@ private:
     FieldIDType LayoutFieldIndex;
     Align Alignment;
     Align TyAlignment;
+    uint64_t DynamicAlignBuffer;
   };
 
   const DataLayout &DL;
@@ -510,6 +523,18 @@ public:
       FieldAlignment = TyAlignment;
     }
 
+    // The field alignment could be bigger than the max frame case, in that case
+    // we request additional storage to be able to dynamically align the
+    // pointer.
+    uint64_t DynamicAlignBuffer = 0;
+    if (MaxFrameAlignment &&
+        (FieldAlignment.valueOrOne() > *MaxFrameAlignment)) {
+      DynamicAlignBuffer =
+          offsetToAlignment((*MaxFrameAlignment).value(), *FieldAlignment);
+      FieldAlignment = *MaxFrameAlignment;
+      FieldSize = FieldSize + DynamicAlignBuffer;
+    }
+
     // Lay out header fields immediately.
     uint64_t Offset;
     if (IsHeader) {
@@ -521,7 +546,8 @@ public:
       Offset = OptimizedStructLayoutField::FlexibleOffset;
     }
 
-    Fields.push_back({FieldSize, Offset, Ty, 0, *FieldAlignment, TyAlignment});
+    Fields.push_back({FieldSize, Offset, Ty, 0, *FieldAlignment, TyAlignment,
+                      DynamicAlignBuffer});
     return Fields.size() - 1;
   }
 
@@ -555,6 +581,11 @@ void FrameDataInfo::updateLayoutIndex(FrameTypeBuilder &B) {
     auto Field = B.getLayoutField(getFieldIndex(I));
     setFieldIndex(I, Field.LayoutFieldIndex);
     setAlign(I, Field.Alignment.value());
+    uint64_t dynamicAlign =
+        Field.DynamicAlignBuffer
+            ? Field.DynamicAlignBuffer + Field.Alignment.value()
+            : 0;
+    setDynamicAlign(I, dynamicAlign);
     setOffset(I, Field.Offset);
   };
   LayoutIndexUpdateStarted = true;
@@ -748,6 +779,10 @@ void FrameTypeBuilder::finish(StructType *Ty) {
     F.LayoutFieldIndex = FieldTypes.size();
 
     FieldTypes.push_back(F.Ty);
+    if (F.DynamicAlignBuffer) {
+      FieldTypes.push_back(
+          ArrayType::get(Type::getInt8Ty(Context), F.DynamicAlignBuffer));
+    }
     LastOffset = Offset + F.Size;
   }
 
@@ -1543,7 +1578,17 @@ static void insertSpills(const FrameDataInfo &FrameData, coro::Shape &Shape) {
 
     auto GEP = cast<GetElementPtrInst>(
         Builder.CreateInBoundsGEP(FrameTy, FramePtr, Indices));
-    if (isa<AllocaInst>(Orig)) {
+    if (auto *AI = dyn_cast<AllocaInst>(Orig)) {
+      if (FrameData.getDynamicAlign(Orig) != 0) {
+        assert(FrameData.getDynamicAlign(Orig) == AI->getAlignment());
+        auto *M = AI->getModule();
+        auto *IntPtrTy = M->getDataLayout().getIntPtrType(AI->getType());
+        auto *PtrValue = Builder.CreatePtrToInt(GEP, IntPtrTy);
+        auto *AlignMask = ConstantInt::get(IntPtrTy, AI->getAlignment() - 1);
+        PtrValue = Builder.CreateAdd(PtrValue, AlignMask);
+        PtrValue = Builder.CreateAnd(PtrValue, Builder.CreateNot(AlignMask));
+        return Builder.CreateIntToPtr(PtrValue, AI->getType());
+      }
       // If the type of GEP is not equal to the type of AllocaInst, it implies
       // that the AllocaInst may be reused in the Frame slot of other
       // AllocaInst. So We cast GEP to the AllocaInst here to re-use
