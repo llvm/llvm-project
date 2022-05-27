@@ -180,14 +180,14 @@ public:
 
   void emitSymbolDesc(MCSymbol *Symbol, unsigned DescValue) override;
   void BeginCOFFSymbolDef(const MCSymbol *Symbol) override;
-  void EmitCOFFSymbolStorageClass(int StorageClass) override;
-  void EmitCOFFSymbolType(int Type) override;
+  void emitCOFFSymbolStorageClass(int StorageClass) override;
+  void emitCOFFSymbolType(int Type) override;
   void EndCOFFSymbolDef() override;
-  void EmitCOFFSafeSEH(MCSymbol const *Symbol) override;
-  void EmitCOFFSymbolIndex(MCSymbol const *Symbol) override;
-  void EmitCOFFSectionIndex(MCSymbol const *Symbol) override;
-  void EmitCOFFSecRel32(MCSymbol const *Symbol, uint64_t Offset) override;
-  void EmitCOFFImgRel32(MCSymbol const *Symbol, int64_t Offset) override;
+  void emitCOFFSafeSEH(MCSymbol const *Symbol) override;
+  void emitCOFFSymbolIndex(MCSymbol const *Symbol) override;
+  void emitCOFFSectionIndex(MCSymbol const *Symbol) override;
+  void emitCOFFSecRel32(MCSymbol const *Symbol, uint64_t Offset) override;
+  void emitCOFFImgRel32(MCSymbol const *Symbol, int64_t Offset) override;
   void emitXCOFFLocalCommonSymbol(MCSymbol *LabelSym, uint64_t Size,
                                   MCSymbol *CsectSym,
                                   unsigned ByteAlign) override;
@@ -277,11 +277,11 @@ public:
                              StringRef FileName) override;
   MCSymbol *getDwarfLineTableSymbol(unsigned CUID) override;
 
-  bool EmitCVFileDirective(unsigned FileNo, StringRef Filename,
+  bool emitCVFileDirective(unsigned FileNo, StringRef Filename,
                            ArrayRef<uint8_t> Checksum,
                            unsigned ChecksumKind) override;
-  bool EmitCVFuncIdDirective(unsigned FuncId) override;
-  bool EmitCVInlineSiteIdDirective(unsigned FunctionId, unsigned IAFunc,
+  bool emitCVFuncIdDirective(unsigned FuncId) override;
+  bool emitCVInlineSiteIdDirective(unsigned FunctionId, unsigned IAFunc,
                                    unsigned IAFile, unsigned IALine,
                                    unsigned IACol, SMLoc Loc) override;
   void emitCVLocDirective(unsigned FunctionId, unsigned FileNo, unsigned Line,
@@ -317,7 +317,7 @@ public:
   void emitCVStringTableDirective() override;
   void emitCVFileChecksumsDirective() override;
   void emitCVFileChecksumOffsetDirective(unsigned FileNo) override;
-  void EmitCVFPOData(const MCSymbol *ProcSym, SMLoc L) override;
+  void emitCVFPOData(const MCSymbol *ProcSym, SMLoc L) override;
 
   void emitIdent(StringRef IdentString) override;
   void emitCFIBKeyFrame() override;
@@ -345,25 +345,25 @@ public:
   void emitCFINegateRAState() override;
   void emitCFIReturnColumn(int64_t Register) override;
 
-  void EmitWinCFIStartProc(const MCSymbol *Symbol, SMLoc Loc) override;
-  void EmitWinCFIEndProc(SMLoc Loc) override;
-  void EmitWinCFIFuncletOrFuncEnd(SMLoc Loc) override;
-  void EmitWinCFIStartChained(SMLoc Loc) override;
-  void EmitWinCFIEndChained(SMLoc Loc) override;
-  void EmitWinCFIPushReg(MCRegister Register, SMLoc Loc) override;
-  void EmitWinCFISetFrame(MCRegister Register, unsigned Offset,
+  void emitWinCFIStartProc(const MCSymbol *Symbol, SMLoc Loc) override;
+  void emitWinCFIEndProc(SMLoc Loc) override;
+  void emitWinCFIFuncletOrFuncEnd(SMLoc Loc) override;
+  void emitWinCFIStartChained(SMLoc Loc) override;
+  void emitWinCFIEndChained(SMLoc Loc) override;
+  void emitWinCFIPushReg(MCRegister Register, SMLoc Loc) override;
+  void emitWinCFISetFrame(MCRegister Register, unsigned Offset,
                           SMLoc Loc) override;
-  void EmitWinCFIAllocStack(unsigned Size, SMLoc Loc) override;
-  void EmitWinCFISaveReg(MCRegister Register, unsigned Offset,
+  void emitWinCFIAllocStack(unsigned Size, SMLoc Loc) override;
+  void emitWinCFISaveReg(MCRegister Register, unsigned Offset,
                          SMLoc Loc) override;
-  void EmitWinCFISaveXMM(MCRegister Register, unsigned Offset,
+  void emitWinCFISaveXMM(MCRegister Register, unsigned Offset,
                          SMLoc Loc) override;
-  void EmitWinCFIPushFrame(bool Code, SMLoc Loc) override;
-  void EmitWinCFIEndProlog(SMLoc Loc) override;
+  void emitWinCFIPushFrame(bool Code, SMLoc Loc) override;
+  void emitWinCFIEndProlog(SMLoc Loc) override;
 
-  void EmitWinEHHandler(const MCSymbol *Sym, bool Unwind, bool Except,
+  void emitWinEHHandler(const MCSymbol *Sym, bool Unwind, bool Except,
                         SMLoc Loc) override;
-  void EmitWinEHHandlerData(SMLoc Loc) override;
+  void emitWinEHHandlerData(SMLoc Loc) override;
 
   void emitCGProfileEntry(const MCSymbolRefExpr *From,
                           const MCSymbolRefExpr *To, uint64_t Count) override;
@@ -797,12 +797,12 @@ void MCAsmStreamer::BeginCOFFSymbolDef(const MCSymbol *Symbol) {
   EmitEOL();
 }
 
-void MCAsmStreamer::EmitCOFFSymbolStorageClass (int StorageClass) {
+void MCAsmStreamer::emitCOFFSymbolStorageClass(int StorageClass) {
   OS << "\t.scl\t" << StorageClass << ';';
   EmitEOL();
 }
 
-void MCAsmStreamer::EmitCOFFSymbolType (int Type) {
+void MCAsmStreamer::emitCOFFSymbolType(int Type) {
   OS << "\t.type\t" << Type << ';';
   EmitEOL();
 }
@@ -812,25 +812,25 @@ void MCAsmStreamer::EndCOFFSymbolDef() {
   EmitEOL();
 }
 
-void MCAsmStreamer::EmitCOFFSafeSEH(MCSymbol const *Symbol) {
+void MCAsmStreamer::emitCOFFSafeSEH(MCSymbol const *Symbol) {
   OS << "\t.safeseh\t";
   Symbol->print(OS, MAI);
   EmitEOL();
 }
 
-void MCAsmStreamer::EmitCOFFSymbolIndex(MCSymbol const *Symbol) {
+void MCAsmStreamer::emitCOFFSymbolIndex(MCSymbol const *Symbol) {
   OS << "\t.symidx\t";
   Symbol->print(OS, MAI);
   EmitEOL();
 }
 
-void MCAsmStreamer::EmitCOFFSectionIndex(MCSymbol const *Symbol) {
+void MCAsmStreamer::emitCOFFSectionIndex(MCSymbol const *Symbol) {
   OS << "\t.secidx\t";
   Symbol->print(OS, MAI);
   EmitEOL();
 }
 
-void MCAsmStreamer::EmitCOFFSecRel32(MCSymbol const *Symbol, uint64_t Offset) {
+void MCAsmStreamer::emitCOFFSecRel32(MCSymbol const *Symbol, uint64_t Offset) {
   OS << "\t.secrel32\t";
   Symbol->print(OS, MAI);
   if (Offset != 0)
@@ -838,7 +838,7 @@ void MCAsmStreamer::EmitCOFFSecRel32(MCSymbol const *Symbol, uint64_t Offset) {
   EmitEOL();
 }
 
-void MCAsmStreamer::EmitCOFFImgRel32(MCSymbol const *Symbol, int64_t Offset) {
+void MCAsmStreamer::emitCOFFImgRel32(MCSymbol const *Symbol, int64_t Offset) {
   OS << "\t.rva\t";
   Symbol->print(OS, MAI);
   if (Offset > 0)
@@ -1654,7 +1654,7 @@ MCSymbol *MCAsmStreamer::getDwarfLineTableSymbol(unsigned CUID) {
   return MCStreamer::getDwarfLineTableSymbol(0);
 }
 
-bool MCAsmStreamer::EmitCVFileDirective(unsigned FileNo, StringRef Filename,
+bool MCAsmStreamer::emitCVFileDirective(unsigned FileNo, StringRef Filename,
                                         ArrayRef<uint8_t> Checksum,
                                         unsigned ChecksumKind) {
   if (!getContext().getCVContext().addFile(*this, FileNo, Filename, Checksum,
@@ -1677,19 +1677,19 @@ bool MCAsmStreamer::EmitCVFileDirective(unsigned FileNo, StringRef Filename,
   return true;
 }
 
-bool MCAsmStreamer::EmitCVFuncIdDirective(unsigned FuncId) {
+bool MCAsmStreamer::emitCVFuncIdDirective(unsigned FuncId) {
   OS << "\t.cv_func_id " << FuncId << '\n';
-  return MCStreamer::EmitCVFuncIdDirective(FuncId);
+  return MCStreamer::emitCVFuncIdDirective(FuncId);
 }
 
-bool MCAsmStreamer::EmitCVInlineSiteIdDirective(unsigned FunctionId,
+bool MCAsmStreamer::emitCVInlineSiteIdDirective(unsigned FunctionId,
                                                 unsigned IAFunc,
                                                 unsigned IAFile,
                                                 unsigned IALine, unsigned IACol,
                                                 SMLoc Loc) {
   OS << "\t.cv_inline_site_id " << FunctionId << " within " << IAFunc
      << " inlined_at " << IAFile << ' ' << IALine << ' ' << IACol << '\n';
-  return MCStreamer::EmitCVInlineSiteIdDirective(FunctionId, IAFunc, IAFile,
+  return MCStreamer::emitCVInlineSiteIdDirective(FunctionId, IAFunc, IAFile,
                                                  IALine, IACol, Loc);
 }
 
@@ -1806,7 +1806,7 @@ void MCAsmStreamer::emitCVFileChecksumOffsetDirective(unsigned FileNo) {
   EmitEOL();
 }
 
-void MCAsmStreamer::EmitCVFPOData(const MCSymbol *ProcSym, SMLoc L) {
+void MCAsmStreamer::emitCVFPOData(const MCSymbol *ProcSym, SMLoc L) {
   OS << "\t.cv_fpo_data\t";
   ProcSym->print(OS, MAI);
   EmitEOL();
@@ -2027,45 +2027,45 @@ void MCAsmStreamer::emitCFIBKeyFrame() {
   EmitEOL();
 }
 
-void MCAsmStreamer::EmitWinCFIStartProc(const MCSymbol *Symbol, SMLoc Loc) {
-  MCStreamer::EmitWinCFIStartProc(Symbol, Loc);
+void MCAsmStreamer::emitWinCFIStartProc(const MCSymbol *Symbol, SMLoc Loc) {
+  MCStreamer::emitWinCFIStartProc(Symbol, Loc);
 
   OS << ".seh_proc ";
   Symbol->print(OS, MAI);
   EmitEOL();
 }
 
-void MCAsmStreamer::EmitWinCFIEndProc(SMLoc Loc) {
-  MCStreamer::EmitWinCFIEndProc(Loc);
+void MCAsmStreamer::emitWinCFIEndProc(SMLoc Loc) {
+  MCStreamer::emitWinCFIEndProc(Loc);
 
   OS << "\t.seh_endproc";
   EmitEOL();
 }
 
-void MCAsmStreamer::EmitWinCFIFuncletOrFuncEnd(SMLoc Loc) {
-  MCStreamer::EmitWinCFIFuncletOrFuncEnd(Loc);
+void MCAsmStreamer::emitWinCFIFuncletOrFuncEnd(SMLoc Loc) {
+  MCStreamer::emitWinCFIFuncletOrFuncEnd(Loc);
 
   OS << "\t.seh_endfunclet";
   EmitEOL();
 }
 
-void MCAsmStreamer::EmitWinCFIStartChained(SMLoc Loc) {
-  MCStreamer::EmitWinCFIStartChained(Loc);
+void MCAsmStreamer::emitWinCFIStartChained(SMLoc Loc) {
+  MCStreamer::emitWinCFIStartChained(Loc);
 
   OS << "\t.seh_startchained";
   EmitEOL();
 }
 
-void MCAsmStreamer::EmitWinCFIEndChained(SMLoc Loc) {
-  MCStreamer::EmitWinCFIEndChained(Loc);
+void MCAsmStreamer::emitWinCFIEndChained(SMLoc Loc) {
+  MCStreamer::emitWinCFIEndChained(Loc);
 
   OS << "\t.seh_endchained";
   EmitEOL();
 }
 
-void MCAsmStreamer::EmitWinEHHandler(const MCSymbol *Sym, bool Unwind,
+void MCAsmStreamer::emitWinEHHandler(const MCSymbol *Sym, bool Unwind,
                                      bool Except, SMLoc Loc) {
-  MCStreamer::EmitWinEHHandler(Sym, Unwind, Except, Loc);
+  MCStreamer::emitWinEHHandler(Sym, Unwind, Except, Loc);
 
   OS << "\t.seh_handler ";
   Sym->print(OS, MAI);
@@ -2076,8 +2076,8 @@ void MCAsmStreamer::EmitWinEHHandler(const MCSymbol *Sym, bool Unwind,
   EmitEOL();
 }
 
-void MCAsmStreamer::EmitWinEHHandlerData(SMLoc Loc) {
-  MCStreamer::EmitWinEHHandlerData(Loc);
+void MCAsmStreamer::emitWinEHHandlerData(SMLoc Loc) {
+  MCStreamer::emitWinEHHandlerData(Loc);
 
   // Switch sections. Don't call SwitchSection directly, because that will
   // cause the section switch to be visible in the emitted assembly.
@@ -2098,17 +2098,17 @@ void MCAsmStreamer::EmitWinEHHandlerData(SMLoc Loc) {
   EmitEOL();
 }
 
-void MCAsmStreamer::EmitWinCFIPushReg(MCRegister Register, SMLoc Loc) {
-  MCStreamer::EmitWinCFIPushReg(Register, Loc);
+void MCAsmStreamer::emitWinCFIPushReg(MCRegister Register, SMLoc Loc) {
+  MCStreamer::emitWinCFIPushReg(Register, Loc);
 
   OS << "\t.seh_pushreg ";
   InstPrinter->printRegName(OS, Register);
   EmitEOL();
 }
 
-void MCAsmStreamer::EmitWinCFISetFrame(MCRegister Register, unsigned Offset,
+void MCAsmStreamer::emitWinCFISetFrame(MCRegister Register, unsigned Offset,
                                        SMLoc Loc) {
-  MCStreamer::EmitWinCFISetFrame(Register, Offset, Loc);
+  MCStreamer::emitWinCFISetFrame(Register, Offset, Loc);
 
   OS << "\t.seh_setframe ";
   InstPrinter->printRegName(OS, Register);
@@ -2116,16 +2116,16 @@ void MCAsmStreamer::EmitWinCFISetFrame(MCRegister Register, unsigned Offset,
   EmitEOL();
 }
 
-void MCAsmStreamer::EmitWinCFIAllocStack(unsigned Size, SMLoc Loc) {
-  MCStreamer::EmitWinCFIAllocStack(Size, Loc);
+void MCAsmStreamer::emitWinCFIAllocStack(unsigned Size, SMLoc Loc) {
+  MCStreamer::emitWinCFIAllocStack(Size, Loc);
 
   OS << "\t.seh_stackalloc " << Size;
   EmitEOL();
 }
 
-void MCAsmStreamer::EmitWinCFISaveReg(MCRegister Register, unsigned Offset,
+void MCAsmStreamer::emitWinCFISaveReg(MCRegister Register, unsigned Offset,
                                       SMLoc Loc) {
-  MCStreamer::EmitWinCFISaveReg(Register, Offset, Loc);
+  MCStreamer::emitWinCFISaveReg(Register, Offset, Loc);
 
   OS << "\t.seh_savereg ";
   InstPrinter->printRegName(OS, Register);
@@ -2133,9 +2133,9 @@ void MCAsmStreamer::EmitWinCFISaveReg(MCRegister Register, unsigned Offset,
   EmitEOL();
 }
 
-void MCAsmStreamer::EmitWinCFISaveXMM(MCRegister Register, unsigned Offset,
+void MCAsmStreamer::emitWinCFISaveXMM(MCRegister Register, unsigned Offset,
                                       SMLoc Loc) {
-  MCStreamer::EmitWinCFISaveXMM(Register, Offset, Loc);
+  MCStreamer::emitWinCFISaveXMM(Register, Offset, Loc);
 
   OS << "\t.seh_savexmm ";
   InstPrinter->printRegName(OS, Register);
@@ -2143,8 +2143,8 @@ void MCAsmStreamer::EmitWinCFISaveXMM(MCRegister Register, unsigned Offset,
   EmitEOL();
 }
 
-void MCAsmStreamer::EmitWinCFIPushFrame(bool Code, SMLoc Loc) {
-  MCStreamer::EmitWinCFIPushFrame(Code, Loc);
+void MCAsmStreamer::emitWinCFIPushFrame(bool Code, SMLoc Loc) {
+  MCStreamer::emitWinCFIPushFrame(Code, Loc);
 
   OS << "\t.seh_pushframe";
   if (Code)
@@ -2152,8 +2152,8 @@ void MCAsmStreamer::EmitWinCFIPushFrame(bool Code, SMLoc Loc) {
   EmitEOL();
 }
 
-void MCAsmStreamer::EmitWinCFIEndProlog(SMLoc Loc) {
-  MCStreamer::EmitWinCFIEndProlog(Loc);
+void MCAsmStreamer::emitWinCFIEndProlog(SMLoc Loc) {
+  MCStreamer::emitWinCFIEndProlog(Loc);
 
   OS << "\t.seh_endprologue";
   EmitEOL();
