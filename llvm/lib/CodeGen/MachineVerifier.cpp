@@ -32,6 +32,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Analysis/EHPersonalities.h"
+#include "llvm/CodeGen/CodeGenCommonISel.h"
 #include "llvm/CodeGen/LiveInterval.h"
 #include "llvm/CodeGen/LiveIntervals.h"
 #include "llvm/CodeGen/LiveRangeCalc.h"
@@ -1648,6 +1649,43 @@ void MachineVerifier::verifyPreISelGenericInstruction(const MachineInstr *MI) {
   case TargetOpcode::G_LLROUND:
   case TargetOpcode::G_LROUND: {
     verifyAllRegOpsScalar(*MI, *MRI);
+    break;
+  }
+  case TargetOpcode::G_IS_FPCLASS: {
+    LLT DestTy = MRI->getType(MI->getOperand(0).getReg());
+    LLT DestEltTy = DestTy.getScalarType();
+    if (!DestEltTy.isScalar()) {
+      report("Destination must be a scalar or vector of scalars", MI);
+      break;
+    }
+    LLT SrcTy = MRI->getType(MI->getOperand(1).getReg());
+    LLT SrcEltTy = SrcTy.getScalarType();
+    if (!SrcEltTy.isScalar()) {
+      report("Source must be a scalar or vector of scalars", MI);
+      break;
+    }
+    if (!verifyVectorElementMatch(DestTy, SrcTy, MI))
+      break;
+    const MachineOperand &TestMO = MI->getOperand(2);
+    if (!TestMO.isImm()) {
+      report("floating-point class set (operand 2) must be an immediate", MI);
+      break;
+    }
+    int64_t Test = TestMO.getImm();
+    if (Test < 0 || Test > fcAllFlags) {
+      report("Incorrect floating-point class set (operand 2)", MI);
+      break;
+    }
+    const MachineOperand &SemanticsMO = MI->getOperand(3);
+    if (!SemanticsMO.isImm()) {
+      report("floating-point semantics (operand 3) must be an immediate", MI);
+      break;
+    }
+    int64_t Semantics = SemanticsMO.getImm();
+    if (Semantics < 0 || Semantics > APFloat::S_MaxSemantics) {
+      report("Incorrect floating-point semantics (operand 3)", MI);
+      break;
+    }
     break;
   }
   default:

@@ -484,6 +484,9 @@
 # DEBUG-NEXT: G_FCOPYSIGN (opcode {{[0-9]+}}): 2 type indices
 # DEBUG-NEXT: .. type index coverage check SKIPPED: no rules defined
 # DEBUG-NEXT: .. imm index coverage check SKIPPED: no rules defined
+# DEBUG-NEXT: G_IS_FPCLASS (opcode {{[0-9]+}}): 2 type indices, 0 imm indices
+# DEBUG-NEXT: .. type index coverage check SKIPPED: no rules defined
+# DEBUG-NEXT: .. imm index coverage check SKIPPED: no rules defined
 # DEBUG-NEXT: G_FCANONICALIZE (opcode {{[0-9]+}}): 1 type index, 0 imm indices
 # DEBUG-NEXT: .. type index coverage check SKIPPED: no rules defined
 # DEBUG-NEXT: .. imm index coverage check SKIPPED: no rules defined
