@@ -478,7 +478,12 @@ namespace {
 class AlwaysCopyAnalysisState : public AnalysisState {
 public:
   AlwaysCopyAnalysisState(const BufferizationOptions &options)
-      : AnalysisState(options) {}
+      : AnalysisState(options) {
+    // Note: Allocations must be deallocated with a subsequent run of the buffer
+    // deallocation pass.
+    assert(!options.createDeallocs &&
+           "cannot create deallocs with AlwaysCopyBufferizationState");
+  }
 
   AlwaysCopyAnalysisState(const AlwaysCopyAnalysisState &) = delete;
 
@@ -496,6 +501,19 @@ public:
     // There is no analysis, so we do not know if the values are equivalent. The
     // conservative answer is "false".
     return false;
+  }
+
+  /// Return `true` if the given tensor has undefined contents.
+  bool hasUndefinedContents(OpOperand *opOperand) const override {
+    // There is no analysis, so the conservative answer is "false".
+    return false;
+  }
+
+  /// Return true if the given tensor (or an aliasing tensor) is yielded from
+  /// the containing block. Also include all aliasing tensors in the same block.
+  bool isTensorYielded(Value tensor) const override {
+    // There is no analysis, so conservatively answer "true".
+    return true;
   }
 };
 } // namespace

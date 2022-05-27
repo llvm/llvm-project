@@ -374,43 +374,6 @@ void bufferization::replaceOpWithBufferizedValues(RewriterBase &rewriter,
   rewriter.replaceOp(op, replacements);
 }
 
-AlwaysCopyAnalysisState::AlwaysCopyAnalysisState(
-    const BufferizationOptions &options)
-    : AnalysisState(options) {
-  // Note: Allocations must be deallocated with a subsequent run of the buffer
-  // deallocation pass.
-  assert(!options.createDeallocs &&
-         "cannot create deallocs with AlwaysCopyBufferizationState");
-}
-
-/// Return `true` if the given OpResult has been decided to bufferize inplace.
-bool AlwaysCopyAnalysisState::isInPlace(OpOperand &opOperand) const {
-  // OpOperands that bufferize to a memory write are out-of-place, i.e., an
-  // alloc and copy is inserted.
-  return !bufferizesToMemoryWrite(opOperand);
-}
-
-/// Return true if `v1` and `v2` bufferize to equivalent buffers.
-bool AlwaysCopyAnalysisState::areEquivalentBufferizedValues(Value v1,
-                                                            Value v2) const {
-  // There is no analysis, so we do not know if the values are equivalent. The
-  // conservative answer is "false".
-  return false;
-}
-
-/// Return `true` if the given tensor has undefined contents.
-bool AlwaysCopyAnalysisState::hasUndefinedContents(OpOperand *opOperand) const {
-  // There is no analysis, so the conservative answer is "false".
-  return false;
-}
-
-/// Return true if the given tensor (or an aliasing tensor) is yielded from
-/// the containing block. Also include all aliasing tensors in the same block.
-bool AlwaysCopyAnalysisState::isTensorYielded(Value tensor) const {
-  // There is no analysis, so conservatively answer "true".
-  return true;
-}
-
 //===----------------------------------------------------------------------===//
 // Bufferization-specific scoped alloc/dealloc insertion support.
 //===----------------------------------------------------------------------===//

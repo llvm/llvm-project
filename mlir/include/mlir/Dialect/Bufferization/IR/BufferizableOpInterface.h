@@ -474,31 +474,6 @@ private:
   const BufferizationOptions &options;
 };
 
-/// This a "no analysis, always copy" AnalysisState. In the absence of an
-/// analysis, a buffer must be copied each time it is written to. Therefore, all
-/// OpOperands that bufferize to a memory write must bufferize out-of-place.
-class AlwaysCopyAnalysisState : public AnalysisState {
-public:
-  explicit AlwaysCopyAnalysisState(const BufferizationOptions &options);
-
-  AlwaysCopyAnalysisState(const AlwaysCopyAnalysisState &) = delete;
-
-  virtual ~AlwaysCopyAnalysisState() = default;
-
-  /// Return `true` if the given OpResult has been decided to bufferize inplace.
-  bool isInPlace(OpOperand &opOperand) const override;
-
-  /// Return true if `v1` and `v2` bufferize to equivalent buffers.
-  bool areEquivalentBufferizedValues(Value v1, Value v2) const override;
-
-  /// Return `true` if the given tensor has undefined contents.
-  bool hasUndefinedContents(OpOperand *opOperand) const override;
-
-  /// Return true if the given tensor (or an aliasing tensor) is yielded from
-  /// the containing block. Also include all aliasing tensors in the same block.
-  bool isTensorYielded(Value tensor) const override;
-};
-
 /// BufferizationState provides helper functions for performing bufferization
 /// rewrites and handling memref buffers.
 struct BufferizationState {
