@@ -3110,6 +3110,19 @@ def G_AMDGPU_CLAMP : AMDGPUGenericInstruction {
   let hasSideEffects = 0;
 }
 
+// Integer multiply-add: arg0 * arg1 + arg2.
+//
+// arg0 and arg1 are 32-bit integers (interpreted as signed or unsigned),
+// arg2 is a 64-bit integer. Result is a 64-bit integer and a 1-bit carry-out.
+class G_AMDGPU_MAD_64_32 : AMDGPUGenericInstruction {
+  let OutOperandList = (outs type0:$dst, type1:$carry_out);
+  let InOperandList = (ins type2:$arg0, type2:$arg1, type0:$arg2);
+  let hasSideEffects = 0;
+}
+
+def G_AMDGPU_MAD_U64_U32 : G_AMDGPU_MAD_64_32;
+def G_AMDGPU_MAD_I64_I32 : G_AMDGPU_MAD_64_32;
+
 // Atomic cmpxchg. $cmpval ad $newval are packed in a single vector
 // operand Expects a MachineMemOperand in addition to explicit
 // operands.

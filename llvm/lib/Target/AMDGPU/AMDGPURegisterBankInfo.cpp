@@ -1555,6 +1555,157 @@ bool AMDGPURegisterBankInfo::applyMappingBFE(const OperandsMapper &OpdMapper,
   return true;
 }
 
+bool AMDGPURegisterBankInfo::applyMappingMAD_64_32(
+    const OperandsMapper &OpdMapper) const {
+  MachineInstr &MI = OpdMapper.getMI();
+  MachineRegisterInfo &MRI = OpdMapper.getMRI();
+
+  // Insert basic copies.
+  applyDefaultMapping(OpdMapper);
+
+  Register Dst0 = MI.getOperand(0).getReg();
+  Register Dst1 = MI.getOperand(1).getReg();
+  Register Src0 = MI.getOperand(2).getReg();
+  Register Src1 = MI.getOperand(3).getReg();
+  Register Src2 = MI.getOperand(4).getReg();
+
+  if (MRI.getRegBankOrNull(Src0) == &AMDGPU::VGPRRegBank)
+    return true;
+
+  bool IsUnsigned = MI.getOpcode() == AMDGPU::G_AMDGPU_MAD_U64_U32;
+  LLT S1 = LLT::scalar(1);
+  LLT S32 = LLT::scalar(32);
+
+  bool DstOnValu = MRI.getRegBankOrNull(Src2) == &AMDGPU::VGPRRegBank;
+  bool Accumulate = true;
+
+  if (!DstOnValu) {
+    if (mi_match(Src2, MRI, m_ZeroInt()))
+      Accumulate = false;
+  }
+
+  // Keep the multiplication on the SALU.
+  MachineIRBuilder B(MI);
+
+  Register DstHi;
+  Register DstLo = B.buildMul(S32, Src0, Src1).getReg(0);
+  bool MulHiInVgpr = false;
+
+  MRI.setRegBank(DstLo, AMDGPU::SGPRRegBank);
+
+  if (Subtarget.hasSMulHi()) {
+    DstHi = IsUnsigned ? B.buildUMulH(S32, Src0, Src1).getReg(0)
+                       : B.buildSMulH(S32, Src0, Src1).getReg(0);
+    MRI.setRegBank(DstHi, AMDGPU::SGPRRegBank);
+  } else {
+    Register VSrc0 = B.buildCopy(S32, Src0).getReg(0);
+    Register VSrc1 = B.buildCopy(S32, Src1).getReg(0);
+
+    MRI.setRegBank(VSrc0, AMDGPU::VGPRRegBank);
+    MRI.setRegBank(VSrc1, AMDGPU::VGPRRegBank);
+
+    DstHi = IsUnsigned ? B.buildUMulH(S32, VSrc0, VSrc1).getReg(0)
+                       : B.buildSMulH(S32, VSrc0, VSrc1).getReg(0);
+    MRI.setRegBank(DstHi, AMDGPU::VGPRRegBank);
+
+    if (!DstOnValu) {
+      DstHi = buildReadFirstLane(B, MRI, DstHi);
+    } else {
+      MulHiInVgpr = true;
+    }
+  }
+
+  // Accumulate and produce the "carry-out" bit.
+  //
+  // The "carry-out" is defined as bit 64 of the result when computed as a
+  // big integer. For unsigned multiply-add, this matches the usual definition
+  // of carry-out. For signed multiply-add, bit 64 is the sign bit of the
+  // result, which is determined as:
+  //   sign(Src0 * Src1) + sign(Src2) + carry-out from unsigned 64-bit add
+  LLT CarryType = DstOnValu ? S1 : S32;
+  const RegisterBank &CarryBank =
+      DstOnValu ? AMDGPU::VCCRegBank : AMDGPU::SGPRRegBank;
+  const RegisterBank &DstBank =
+      DstOnValu ? AMDGPU::VGPRRegBank : AMDGPU::SGPRRegBank;
+  Register Carry;
+  Register Zero;
+
+  if (!IsUnsigned) {
+    Zero = B.buildConstant(S32, 0).getReg(0);
+    MRI.setRegBank(Zero,
+                   MulHiInVgpr ? AMDGPU::VGPRRegBank : AMDGPU::SGPRRegBank);
+
+    Carry = B.buildICmp(CmpInst::ICMP_SLT, MulHiInVgpr ? S1 : S32, DstHi, Zero)
+                .getReg(0);
+    MRI.setRegBank(Carry, MulHiInVgpr ? AMDGPU::VCCRegBank
+                                      : AMDGPU::SGPRRegBank);
+
+    if (DstOnValu && !MulHiInVgpr) {
+      Carry = B.buildTrunc(S1, Carry).getReg(0);
+      MRI.setRegBank(Carry, AMDGPU::VCCRegBank);
+    }
+  }
+
+  if (Accumulate) {
+    if (DstOnValu) {
+      DstLo = B.buildCopy(S32, DstLo).getReg(0);
+      DstHi = B.buildCopy(S32, DstHi).getReg(0);
+      MRI.setRegBank(DstLo, AMDGPU::VGPRRegBank);
+      MRI.setRegBank(DstHi, AMDGPU::VGPRRegBank);
+    }
+
+    auto Unmerge = B.buildUnmerge(S32, Src2);
+    Register Src2Lo = Unmerge.getReg(0);
+    Register Src2Hi = Unmerge.getReg(1);
+    MRI.setRegBank(Src2Lo, DstBank);
+    MRI.setRegBank(Src2Hi, DstBank);
+
+    if (!IsUnsigned) {
+      auto Src2Sign = B.buildICmp(CmpInst::ICMP_SLT, CarryType, Src2Hi, Zero);
+      MRI.setRegBank(Src2Sign.getReg(0), CarryBank);
+
+      Carry = B.buildXor(CarryType, Carry, Src2Sign).getReg(0);
+      MRI.setRegBank(Carry, CarryBank);
+    }
+
+    auto AddLo = B.buildUAddo(S32, CarryType, DstLo, Src2Lo);
+    DstLo = AddLo.getReg(0);
+    Register CarryLo = AddLo.getReg(1);
+    MRI.setRegBank(DstLo, DstBank);
+    MRI.setRegBank(CarryLo, CarryBank);
+
+    auto AddHi = B.buildUAdde(S32, CarryType, DstHi, Src2Hi, CarryLo);
+    DstHi = AddHi.getReg(0);
+    MRI.setRegBank(DstHi, DstBank);
+
+    Register CarryHi = AddHi.getReg(1);
+    MRI.setRegBank(CarryHi, CarryBank);
+
+    if (IsUnsigned) {
+      Carry = CarryHi;
+    } else {
+      Carry = B.buildXor(CarryType, Carry, CarryHi).getReg(0);
+      MRI.setRegBank(Carry, CarryBank);
+    }
+  } else {
+    if (IsUnsigned) {
+      Carry = B.buildConstant(CarryType, 0).getReg(0);
+      MRI.setRegBank(Carry, CarryBank);
+    }
+  }
+
+  B.buildMerge(Dst0, {DstLo, DstHi});
+
+  if (DstOnValu) {
+    B.buildCopy(Dst1, Carry);
+  } else {
+    B.buildTrunc(Dst1, Carry);
+  }
+
+  MI.eraseFromParent();
+  return true;
+}
+
 // Return a suitable opcode for extending the operands of Opc when widening.
 static unsigned getExtendOp(unsigned Opc) {
   switch (Opc) {
@@ -3093,6 +3244,10 @@ void AMDGPURegisterBankInfo::applyMappingImpl(
   case AMDGPU::G_UBFX:
     applyMappingBFE(OpdMapper, /*Signed*/ false);
     return;
+  case AMDGPU::G_AMDGPU_MAD_U64_U32:
+  case AMDGPU::G_AMDGPU_MAD_I64_I32:
+    applyMappingMAD_64_32(OpdMapper);
+    return;
   default:
     break;
   }
@@ -3617,6 +3772,48 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
     if (Subtarget.hasScalarMulHiInsts() && isSALUMapping(MI))
       return getDefaultMappingSOP(MI);
     return getDefaultMappingVOP(MI);
+  }
+  case AMDGPU::G_AMDGPU_MAD_U64_U32:
+  case AMDGPU::G_AMDGPU_MAD_I64_I32: {
+    // Three possible mappings:
+    //
+    //  - Default SOP
+    //  - Default VOP
+    //  - Scalar multiply: src0 and src1 are SGPRs, the rest is VOP.
+    //
+    // This allows instruction selection to keep the multiplication part of the
+    // instruction on the SALU.
+    bool AllSalu = true;
+    bool MulSalu = true;
+    for (unsigned i = 0; i < 5; ++i) {
+      Register Reg = MI.getOperand(i).getReg();
+      if (const RegisterBank *Bank = getRegBank(Reg, MRI, *TRI)) {
+        if (Bank->getID() != AMDGPU::SGPRRegBankID) {
+          AllSalu = false;
+          if (i == 2 || i == 3) {
+            MulSalu = false;
+            break;
+          }
+        }
+      }
+    }
+
+    if (AllSalu)
+      return getDefaultMappingSOP(MI);
+
+    // If the multiply-add is full-rate in VALU, use that even if the
+    // multiplication part is scalar. Accumulating separately on the VALU would
+    // take two instructions.
+    if (!MulSalu || Subtarget.hasFullRate64Ops())
+      return getDefaultMappingVOP(MI);
+
+    // Keep the multiplication on the SALU, then accumulate on the VALU.
+    OpdsMapping[0] = AMDGPU::getValueMapping(AMDGPU::VGPRRegBankID, 64);
+    OpdsMapping[1] = AMDGPU::getValueMapping(AMDGPU::VCCRegBankID, 1);
+    OpdsMapping[2] = AMDGPU::getValueMapping(AMDGPU::SGPRRegBankID, 32);
+    OpdsMapping[3] = AMDGPU::getValueMapping(AMDGPU::SGPRRegBankID, 32);
+    OpdsMapping[4] = AMDGPU::getValueMapping(AMDGPU::VGPRRegBankID, 64);
+    break;
   }
   case AMDGPU::G_IMPLICIT_DEF: {
     unsigned Size = MRI.getType(MI.getOperand(0).getReg()).getSizeInBits();
