@@ -25386,6 +25386,30 @@ TEST_F(FormatTest, RemoveBraces) {
                Style);
 
   verifyFormat("if (a)\n"
+               "  if (b)\n"
+               "    c;\n"
+               "  else {\n"
+               "    if (d)\n"
+               "      e;\n"
+               "  }\n"
+               "else\n"
+               "  f;",
+               Style);
+
+  verifyFormat("if (a)\n"
+               "  if (b)\n"
+               "    c;\n"
+               "  else {\n"
+               "    if (d)\n"
+               "      e;\n"
+               "    else if (f)\n"
+               "      g;\n"
+               "  }\n"
+               "else\n"
+               "  h;",
+               Style);
+
+  verifyFormat("if (a)\n"
                "  b;\n"
                "else if (c)\n"
                "  while (d)\n"
