@@ -11,7 +11,7 @@
 // necessary for correctness. See https://llvm.org/D94718 for details.
 
 // UNSUPPORTED: libcxx-no-debug-mode
-// UNSUPPORTED: libcpp-has-no-localization
+// UNSUPPORTED: no-localization
 // UNSUPPORTED: cant-build-shared-library
 
 // This test relies on linking a shared library and then passing that shared

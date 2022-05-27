@@ -12,7 +12,7 @@
 
 // static constexpr char_type to_char_type(int_type c);
 
-// UNSUPPORTED: libcpp-has-no-wide-characters
+// UNSUPPORTED: no-wide-characters
 
 #include <string>
 #include <cassert>

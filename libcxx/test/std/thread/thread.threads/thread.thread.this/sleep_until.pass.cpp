@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// UNSUPPORTED: libcpp-has-no-threads
+// UNSUPPORTED: no-threads
 
 // <thread>
 

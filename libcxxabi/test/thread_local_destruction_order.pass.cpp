@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 // UNSUPPORTED: c++03
-// UNSUPPORTED: libcpp-has-no-threads
+// UNSUPPORTED: no-threads
 
 #include <cassert>
 #include <thread>

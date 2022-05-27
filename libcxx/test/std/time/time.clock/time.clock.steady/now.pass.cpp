@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// UNSUPPORTED: libcpp-has-no-monotonic-clock
+// UNSUPPORTED: no-monotonic-clock
 
 // <chrono>
 

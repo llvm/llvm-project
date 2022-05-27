@@ -14,7 +14,7 @@
 // template<class Sseq> explicit subtract_with_carry_engine(Sseq& q);
 
 // Serializing/deserializing the state of the RNG requires iostreams
-// UNSUPPORTED: libcpp-has-no-localization
+// UNSUPPORTED: no-localization
 
 #include <random>
 #include <sstream>

@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-// UNSUPPORTED: libcpp-has-no-filesystem-library
+// UNSUPPORTED: no-filesystem
 
 // std::filesystem is unavailable prior to macOS 10.15
 // XFAIL: use_system_cxx_lib && target={{.+}}-apple-macosx10.{{9|10|11|12|13|14}}

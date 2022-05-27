@@ -96,7 +96,7 @@ class LinuxLocalTI(DefaultTargetInfo):
                   '-D__STDC_CONSTANT_MACROS']
 
     def add_cxx_link_flags(self, flags):
-        enable_threads = ('libcpp-has-no-threads' not in
+        enable_threads = ('no-threads' not in
                           self.full_config.config.available_features)
         llvm_unwinder = self.full_config.get_lit_bool('llvm_unwinder', False)
         shared_libcxx = self.full_config.get_lit_bool('enable_shared', True)

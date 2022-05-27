@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// UNSUPPORTED: libcpp-has-no-threads, c++03
+// UNSUPPORTED: no-threads, c++03
 
 // <mutex>
 

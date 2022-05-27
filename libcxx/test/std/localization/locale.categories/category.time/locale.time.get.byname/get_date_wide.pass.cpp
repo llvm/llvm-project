@@ -9,7 +9,7 @@
 // NetBSD does not support LC_TIME at the moment
 // XFAIL: netbsd
 
-// XFAIL: libcpp-has-no-wide-characters
+// XFAIL: no-wide-characters
 // XFAIL: LIBCXX-AIX-FIXME
 
 // REQUIRES: locale.en_US.UTF-8

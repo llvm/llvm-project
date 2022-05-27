@@ -12,7 +12,7 @@
 
 // size_t converted() const;
 
-// XFAIL: libcpp-has-no-wide-characters
+// XFAIL: no-wide-characters
 
 #include <locale>
 #include <codecvt>
