@@ -1727,29 +1727,11 @@ void WasmObjectFile::moveSectionNext(DataRefImpl &Sec) const { Sec.d.a++; }
 
 Expected<StringRef> WasmObjectFile::getSectionName(DataRefImpl Sec) const {
   const WasmSection &S = Sections[Sec.d.a];
-#define ECase(X)                                                               \
-  case wasm::WASM_SEC_##X:                                                     \
-    return #X;
-  switch (S.Type) {
-    ECase(TYPE);
-    ECase(IMPORT);
-    ECase(FUNCTION);
-    ECase(TABLE);
-    ECase(MEMORY);
-    ECase(GLOBAL);
-    ECase(TAG);
-    ECase(EXPORT);
-    ECase(START);
-    ECase(ELEM);
-    ECase(CODE);
-    ECase(DATA);
-    ECase(DATACOUNT);
-  case wasm::WASM_SEC_CUSTOM:
+  if (S.Type == wasm::WASM_SEC_CUSTOM)
     return S.Name;
-  default:
+  if (S.Type > wasm::WASM_SEC_TAG)
     return createStringError(object_error::invalid_section_index, "");
-  }
-#undef ECase
+  return wasm::sectionTypeToString(S.Type);
 }
 
 uint64_t WasmObjectFile::getSectionAddress(DataRefImpl Sec) const { return 0; }
