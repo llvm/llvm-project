@@ -717,9 +717,7 @@ StmtResult Sema::ActOnGCCAsmStmt(SourceLocation AsmLoc, bool IsSimple,
           std::make_pair(Names[i]->getName(), Exprs[i]));
   // Sort NamedOperandList.
   std::stable_sort(NamedOperandList.begin(), NamedOperandList.end(),
-              [](const NamedOperand &LHS, const NamedOperand &RHS) {
-                return LHS.first < RHS.first;
-              });
+                   llvm::less_first());
   // Find adjacent duplicate operand.
   SmallVector<NamedOperand, 4>::iterator Found =
       std::adjacent_find(begin(NamedOperandList), end(NamedOperandList),
