@@ -10769,6 +10769,10 @@ public:
   /// encountered.
   void ActOnFinishedOpenMPDeclareTargetContext(DeclareTargetContextInfo &DTCI);
 
+  /// Report unterminated 'omp declare target' or 'omp begin declare target' at
+  /// the end of a compilation unit.
+  void DiagnoseUnterminatedOpenMPDeclareTarget();
+
   /// Searches for the provided declaration name for OpenMP declare target
   /// directive.
   NamedDecl *lookupOpenMPDeclareTargetName(Scope *CurScope,
