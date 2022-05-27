@@ -24,7 +24,20 @@ class URIForFile;
 /// logic separate from the logic that involves LSP server/client communication.
 class TableGenServer {
 public:
-  TableGenServer();
+  struct Options {
+    Options(const std::vector<std::string> &compilationDatabases,
+            const std::vector<std::string> &extraDirs)
+        : compilationDatabases(compilationDatabases), extraDirs(extraDirs) {}
+
+    /// The filenames for databases containing compilation commands for TableGen
+    /// files passed to the server.
+    const std::vector<std::string> &compilationDatabases;
+
+    /// Additional list of include directories to search.
+    const std::vector<std::string> &extraDirs;
+  };
+
+  TableGenServer(const Options &options);
   ~TableGenServer();
 
   /// Add or update the document, with the provided `version`, at the given URI.

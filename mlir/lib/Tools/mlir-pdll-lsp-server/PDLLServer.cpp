@@ -8,9 +8,9 @@
 
 #include "PDLLServer.h"
 
+#include "../lsp-server-support/CompilationDatabase.h"
 #include "../lsp-server-support/Logging.h"
 #include "../lsp-server-support/Protocol.h"
-#include "CompilationDatabase.h"
 #include "mlir/Tools/PDLL/AST/Context.h"
 #include "mlir/Tools/PDLL/AST/Nodes.h"
 #include "mlir/Tools/PDLL/AST/Types.h"
@@ -1422,9 +1422,10 @@ lsp::PDLLServer::~PDLLServer() = default;
 void lsp::PDLLServer::addOrUpdateDocument(
     const URIForFile &uri, StringRef contents, int64_t version,
     std::vector<Diagnostic> &diagnostics) {
+  // Build the set of additional include directories.
   std::vector<std::string> additionalIncludeDirs = impl->options.extraDirs;
-  if (auto *fileInfo = impl->compilationDatabase.getFileInfo(uri.file()))
-    llvm::append_range(additionalIncludeDirs, fileInfo->includeDirs);
+  const auto &fileInfo = impl->compilationDatabase.getFileInfo(uri.file());
+  llvm::append_range(additionalIncludeDirs, fileInfo.includeDirs);
 
   impl->files[uri.file()] = std::make_unique<PDLTextFile>(
       uri, contents, version, additionalIncludeDirs, diagnostics);
