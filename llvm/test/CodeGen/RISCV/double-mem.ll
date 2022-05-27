@@ -59,10 +59,10 @@ define dso_local double @fld_fsd_global(double %a, double %b) nounwind {
 ; RV32IFD-NEXT:    fadd.d fa0, fa0, fa1
 ; RV32IFD-NEXT:    lui a0, %hi(G)
 ; RV32IFD-NEXT:    fld ft0, %lo(G)(a0)
+; RV32IFD-NEXT:    addi a1, a0, %lo(G)
 ; RV32IFD-NEXT:    fsd fa0, %lo(G)(a0)
-; RV32IFD-NEXT:    addi a0, a0, %lo(G)
-; RV32IFD-NEXT:    fld ft0, 72(a0)
-; RV32IFD-NEXT:    fsd fa0, 72(a0)
+; RV32IFD-NEXT:    fld ft0, 72(a1)
+; RV32IFD-NEXT:    fsd fa0, 72(a1)
 ; RV32IFD-NEXT:    ret
 ;
 ; RV64IFD-LABEL: fld_fsd_global:
@@ -70,10 +70,10 @@ define dso_local double @fld_fsd_global(double %a, double %b) nounwind {
 ; RV64IFD-NEXT:    fadd.d fa0, fa0, fa1
 ; RV64IFD-NEXT:    lui a0, %hi(G)
 ; RV64IFD-NEXT:    fld ft0, %lo(G)(a0)
+; RV64IFD-NEXT:    addi a1, a0, %lo(G)
 ; RV64IFD-NEXT:    fsd fa0, %lo(G)(a0)
-; RV64IFD-NEXT:    addi a0, a0, %lo(G)
-; RV64IFD-NEXT:    fld ft0, 72(a0)
-; RV64IFD-NEXT:    fsd fa0, 72(a0)
+; RV64IFD-NEXT:    fld ft0, 72(a1)
+; RV64IFD-NEXT:    fsd fa0, 72(a1)
 ; RV64IFD-NEXT:    ret
 ; Use %a and %b in an FP op to ensure floating point registers are used, even
 ; for the soft float ABI

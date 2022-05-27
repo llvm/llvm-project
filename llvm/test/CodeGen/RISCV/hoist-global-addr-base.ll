@@ -99,11 +99,11 @@ define dso_local i32* @big_offset_one_use() local_unnamed_addr nounwind {
 ;
 ; RV64-LABEL: big_offset_one_use:
 ; RV64:       # %bb.0: # %entry
-; RV64-NEXT:    lui a0, 4
-; RV64-NEXT:    addiw a0, a0, 188
-; RV64-NEXT:    lui a1, %hi(s)
-; RV64-NEXT:    addi a1, a1, %lo(s)
-; RV64-NEXT:    add a0, a1, a0
+; RV64-NEXT:    lui a0, %hi(s)
+; RV64-NEXT:    addi a0, a0, %lo(s)
+; RV64-NEXT:    lui a1, 4
+; RV64-NEXT:    addiw a1, a1, 188
+; RV64-NEXT:    add a0, a0, a1
 ; RV64-NEXT:    ret
 entry:
   ret i32* getelementptr inbounds (%struct.S, %struct.S* @s, i32 0, i32 5)
