@@ -32,3 +32,6 @@ v_interp_p10_f32 v0, v1, v2, v3 wait_exp:8
 
 v_interp_p2_f32 v0, -v1, v2, v3 wait_exp
 // GFX11: [[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+
+global_atomic_cmpswap_x2 v[1:4], v3, v[5:8], off offset:2047 glc
+// GFX11: [[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
