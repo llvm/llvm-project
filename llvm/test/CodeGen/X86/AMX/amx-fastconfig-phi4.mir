@@ -52,7 +52,7 @@ body:             |
   ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:gr32 = COPY killed [[COPY]]
   ; CHECK-NEXT:   %r0:gr16 = MOV16ri 64
   ; CHECK-NEXT:   %c0:gr16 = MOV16ri 16
-  ; CHECK-NEXT:   LDTILECFG %stack.1, 1, $noreg, 0, $noreg, implicit-def $tmm0, implicit-def $tmm1, implicit-def $tmm2, implicit-def $tmm3, implicit-def $tmm4, implicit-def $tmm5, implicit-def $tmm6, implicit-def $tmm7 :: (load store (s512) on %stack.1, align 4)
+  ; CHECK-NEXT:   PLDTILECFGV %stack.1, 1, $noreg, 0, $noreg, implicit-def $tmm0, implicit-def $tmm1, implicit-def $tmm2, implicit-def $tmm3, implicit-def $tmm4, implicit-def $tmm5, implicit-def $tmm6, implicit-def $tmm7 :: (load (s512) from %stack.1, align 4)
   ; CHECK-NEXT:   [[LEA64r:%[0-9]+]]:gr64_nosp = LEA64r %stack.0, 1, $noreg, 0, $noreg
   ; CHECK-NEXT:   [[LEA64r1:%[0-9]+]]:gr64_nosp = LEA64r %stack.0, 1, $noreg, 0, $noreg
   ; CHECK-NEXT:   %t0:tile = PTILEZEROV %r0, %c0
@@ -68,7 +68,7 @@ body:             |
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[MOV16ri:%[0-9]+]]:gr16 = MOV16ri 64
   ; CHECK-NEXT:   [[MOV16ri1:%[0-9]+]]:gr16 = MOV16ri 16
-  ; CHECK-NEXT:   LDTILECFG %stack.1, 1, $noreg, 0, $noreg, implicit-def $tmm0, implicit-def $tmm1, implicit-def $tmm2, implicit-def $tmm3, implicit-def $tmm4, implicit-def $tmm5, implicit-def $tmm6, implicit-def $tmm7 :: (load store (s512) on %stack.1, align 4)
+  ; CHECK-NEXT:   PLDTILECFGV %stack.1, 1, $noreg, 0, $noreg, implicit-def $tmm0, implicit-def $tmm1, implicit-def $tmm2, implicit-def $tmm3, implicit-def $tmm4, implicit-def $tmm5, implicit-def $tmm6, implicit-def $tmm7 :: (load (s512) from %stack.1, align 4)
   ; CHECK-NEXT:   [[PTILEZEROV:%[0-9]+]]:tile = PTILEZEROV killed [[MOV16ri1]], killed [[MOV16ri]]
   ; CHECK-NEXT:   JMP_1 %bb.3
   ; CHECK-NEXT: {{  $}}
@@ -81,14 +81,14 @@ body:             |
   ; CHECK-NEXT:   [[PHI3:%[0-9]+]]:gr16 = PHI %c0, %bb.0, %11, %bb.3, %17, %bb.2
   ; CHECK-NEXT:   [[PHI4:%[0-9]+]]:gr16 = PHI %r0, %bb.0, %12, %bb.3, %18, %bb.2
   ; CHECK-NEXT:   [[PHI5:%[0-9]+]]:gr64_nosp = PHI [[LEA64r]], %bb.0, %24, %bb.3, %25, %bb.2
-  ; CHECK-NEXT:   LDTILECFG %stack.1, 1, $noreg, 0, $noreg, implicit-def $tmm0, implicit-def $tmm1, implicit-def $tmm2, implicit-def $tmm3, implicit-def $tmm4, implicit-def $tmm5, implicit-def $tmm6, implicit-def $tmm7 :: (load store (s512) on %stack.1, align 4)
+  ; CHECK-NEXT:   PLDTILECFGV %stack.1, 1, $noreg, 0, $noreg, implicit-def $tmm0, implicit-def $tmm1, implicit-def $tmm2, implicit-def $tmm3, implicit-def $tmm4, implicit-def $tmm5, implicit-def $tmm6, implicit-def $tmm7 :: (load (s512) from %stack.1, align 4)
   ; CHECK-NEXT:   [[MOV64ri1:%[0-9]+]]:gr64_nosp = MOV64ri 64
   ; CHECK-NEXT:   [[PTILELOADDV:%[0-9]+]]:tile = PTILELOADDV [[PHI1]], [[PHI]], [[PHI2]], 1, killed [[MOV64ri1]], 0, $noreg
   ; CHECK-NEXT:   [[MOV64ri2:%[0-9]+]]:gr64_nosp = MOV64ri 64
   ; CHECK-NEXT:   [[PTILELOADDV1:%[0-9]+]]:tile = PTILELOADDV [[PHI4]], [[PHI3]], [[PHI5]], 1, killed [[MOV64ri2]], 0, $noreg
   ; CHECK-NEXT:   [[MOV16ri2:%[0-9]+]]:gr16 = MOV16ri 64
   ; CHECK-NEXT:   [[MOV16ri3:%[0-9]+]]:gr16 = MOV16ri 16
-  ; CHECK-NEXT:   LDTILECFG %stack.1, 1, $noreg, 0, $noreg, implicit-def $tmm0, implicit-def $tmm1, implicit-def $tmm2, implicit-def $tmm3, implicit-def $tmm4, implicit-def $tmm5, implicit-def $tmm6, implicit-def $tmm7 :: (load store (s512) on %stack.1, align 4)
+  ; CHECK-NEXT:   PLDTILECFGV %stack.1, 1, $noreg, 0, $noreg, implicit-def $tmm0, implicit-def $tmm1, implicit-def $tmm2, implicit-def $tmm3, implicit-def $tmm4, implicit-def $tmm5, implicit-def $tmm6, implicit-def $tmm7 :: (load (s512) from %stack.1, align 4)
   ; CHECK-NEXT:   [[LEA64r2:%[0-9]+]]:gr64_nosp = LEA64r %stack.3, 1, $noreg, 0, $noreg
   ; CHECK-NEXT:   [[LEA64r3:%[0-9]+]]:gr64_nosp = LEA64r %stack.3, 1, $noreg, 0, $noreg
   ; CHECK-NEXT:   [[PTILEZEROV1:%[0-9]+]]:tile = PTILEZEROV [[MOV16ri3]], [[MOV16ri2]]
@@ -102,7 +102,7 @@ body:             |
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[MOV16ri4:%[0-9]+]]:gr16 = MOV16ri 64
   ; CHECK-NEXT:   [[MOV16ri5:%[0-9]+]]:gr16 = MOV16ri 16
-  ; CHECK-NEXT:   LDTILECFG %stack.1, 1, $noreg, 0, $noreg, implicit-def $tmm0, implicit-def $tmm1, implicit-def $tmm2, implicit-def $tmm3, implicit-def $tmm4, implicit-def $tmm5, implicit-def $tmm6, implicit-def $tmm7 :: (load store (s512) on %stack.1, align 4)
+  ; CHECK-NEXT:   PLDTILECFGV %stack.1, 1, $noreg, 0, $noreg, implicit-def $tmm0, implicit-def $tmm1, implicit-def $tmm2, implicit-def $tmm3, implicit-def $tmm4, implicit-def $tmm5, implicit-def $tmm6, implicit-def $tmm7 :: (load (s512) from %stack.1, align 4)
   ; CHECK-NEXT:   [[LEA64r4:%[0-9]+]]:gr64_nosp = LEA64r %stack.2, 1, $noreg, 0, $noreg
   ; CHECK-NEXT:   [[LEA64r5:%[0-9]+]]:gr64_nosp = LEA64r %stack.2, 1, $noreg, 0, $noreg
   ; CHECK-NEXT:   [[PTILEZEROV2:%[0-9]+]]:tile = PTILEZEROV [[MOV16ri5]], [[MOV16ri4]]

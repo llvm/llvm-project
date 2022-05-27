@@ -34,7 +34,7 @@ body:             |
     ; CHECK-NEXT: [[LEA64r:%[0-9]+]]:gr64 = LEA64r %stack.0, 1, $noreg, 0, $noreg
     ; CHECK-NEXT: [[MOV16ri:%[0-9]+]]:gr16 = MOV16ri 32
     ; CHECK-NEXT: [[MOV16ri1:%[0-9]+]]:gr16 = MOV16ri 8
-    ; CHECK-NEXT: LDTILECFG %stack.2, 1, $noreg, 0, $noreg, implicit-def $tmm0, implicit-def $tmm1, implicit-def $tmm2, implicit-def $tmm3, implicit-def $tmm4, implicit-def $tmm5, implicit-def $tmm6, implicit-def $tmm7 :: (load store (s512) on %stack.2, align 4)
+    ; CHECK-NEXT: PLDTILECFGV %stack.2, 1, $noreg, 0, $noreg, implicit-def $tmm0, implicit-def $tmm1, implicit-def $tmm2, implicit-def $tmm3, implicit-def $tmm4, implicit-def $tmm5, implicit-def $tmm6, implicit-def $tmm7 :: (load (s512) from %stack.2, align 4)
     ; CHECK-NEXT: $tmm0 = TILELOADD [[LEA64r]], 1, [[MOV32ri64_]], 0, $noreg
     ; CHECK-NEXT: [[PTILELOADDV:%[0-9]+]]:tile = PTILELOADDV [[MOV16ri1]], [[MOV16ri]], [[LEA64r]], 1, [[MOV32ri64_]], 0, $noreg
     ; CHECK-NEXT: [[PTILELOADDV1:%[0-9]+]]:tile = PTILELOADDV [[MOV16ri1]], [[MOV16ri]], [[LEA64r]], 1, [[MOV32ri64_]], 0, $noreg
