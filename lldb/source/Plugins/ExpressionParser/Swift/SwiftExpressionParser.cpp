@@ -1309,6 +1309,7 @@ static llvm::Expected<ParsedExpression> ParseAndImport(
   lldb::ProcessSP process_sp;
   if (lldb::StackFrameSP this_frame_sp = stack_frame_wp.lock())
     process_sp = this_frame_sp->CalculateProcess();
+  swift_ast_context.LoadImplicitModules(sc.target_sp, process_sp, exe_scope);
   if (!SwiftASTContext::GetImplicitImports(swift_ast_context, sc, exe_scope,
                                            process_sp, additional_imports,
                                            implicit_import_error)) {
@@ -1368,7 +1369,6 @@ static llvm::Expected<ParsedExpression> ParseAndImport(
   invocation.getLangOptions().EnableExperimentalStringProcessing =
       enable_bare_slash_regex_literals;
 
-  swift_ast_context.LoadImplicitModules(sc.target_sp, process_sp);
 
   auto should_use_prestable_abi = [&]() {
     lldb::StackFrameSP this_frame_sp(stack_frame_wp.lock());
