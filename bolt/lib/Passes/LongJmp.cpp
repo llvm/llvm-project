@@ -91,10 +91,15 @@ LongJmpPass::createNewStub(BinaryBasicBlock &SourceBB, const MCSymbol *TgtSym,
   // Register this in stubs maps
   auto registerInMap = [&](StubGroupsTy &Map) {
     StubGroupTy &StubGroup = Map[TgtSym];
-    StubGroup.insert(std::lower_bound(StubGroup.begin(), StubGroup.end(),
-                                      std::make_pair(AtAddress, nullptr),
-                                      llvm::less_first()),
-                     std::make_pair(AtAddress, StubBB.get()));
+    StubGroup.insert(
+        std::lower_bound(
+            StubGroup.begin(), StubGroup.end(),
+            std::make_pair(AtAddress, nullptr),
+            [&](const std::pair<uint64_t, BinaryBasicBlock *> &LHS,
+                const std::pair<uint64_t, BinaryBasicBlock *> &RHS) {
+              return LHS.first < RHS.first;
+            }),
+        std::make_pair(AtAddress, StubBB.get()));
   };
 
   Stubs[&Func].insert(StubBB.get());
@@ -124,9 +129,12 @@ BinaryBasicBlock *LongJmpPass::lookupStubFromGroup(
   const StubGroupTy &Candidates = CandidatesIter->second;
   if (Candidates.empty())
     return nullptr;
-  auto Cand =
-      std::lower_bound(Candidates.begin(), Candidates.end(),
-                       std::make_pair(DotAddress, nullptr), llvm::less_first());
+  auto Cand = std::lower_bound(
+      Candidates.begin(), Candidates.end(), std::make_pair(DotAddress, nullptr),
+      [&](const std::pair<uint64_t, BinaryBasicBlock *> &LHS,
+          const std::pair<uint64_t, BinaryBasicBlock *> &RHS) {
+        return LHS.first < RHS.first;
+      });
   if (Cand == Candidates.end())
     return nullptr;
   if (Cand != Candidates.begin()) {
@@ -251,7 +259,11 @@ void LongJmpPass::updateStubGroups() {
     for (auto &KeyVal : StubGroups) {
       for (StubTy &Elem : KeyVal.second)
         Elem.first = BBAddresses[Elem.second];
-      std::sort(KeyVal.second.begin(), KeyVal.second.end(), llvm::less_first());
+      std::sort(KeyVal.second.begin(), KeyVal.second.end(),
+                [&](const std::pair<uint64_t, BinaryBasicBlock *> &LHS,
+                    const std::pair<uint64_t, BinaryBasicBlock *> &RHS) {
+                  return LHS.first < RHS.first;
+                });
     }
   };
 
