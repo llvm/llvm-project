@@ -41,3 +41,19 @@ TEST(IntegerRelationTest, getDomainAndRangeSet) {
 
   EXPECT_TRUE(rangeSet.isEqual(expectedRangeSet));
 }
+
+TEST(IntegerRelationTest, inverse) {
+  IntegerRelation rel =
+      parseRelationFromSet("(x, y, z)[N, M] : (z - x - y == 0, x >= 0, N - x "
+                           ">= 0, y >= 0, M - y >= 0)",
+                           2);
+
+  IntegerRelation inverseRel =
+      parseRelationFromSet("(z, x, y)[N, M]  : (x >= 0, N - x >= 0, y >= 0, M "
+                           "- y >= 0, x + y - z == 0)",
+                           1);
+
+  rel.inverse();
+
+  EXPECT_TRUE(rel.isEqual(inverseRel));
+}
