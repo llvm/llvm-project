@@ -12736,6 +12736,11 @@ bool AArch64TargetLowering::shouldSinkOperands(
       }
       LLVM_FALLTHROUGH;
 
+    case Intrinsic::fma:
+      if (cast<VectorType>(I->getType())->getElementType()->isHalfTy() &&
+          !Subtarget->hasFullFP16())
+        return false;
+      LLVM_FALLTHROUGH;
     case Intrinsic::aarch64_neon_sqdmull:
     case Intrinsic::aarch64_neon_sqdmulh:
     case Intrinsic::aarch64_neon_sqrdmulh:
@@ -12759,7 +12764,6 @@ bool AArch64TargetLowering::shouldSinkOperands(
       Ops.push_back(&II->getArgOperandUse(0));
       Ops.push_back(&II->getArgOperandUse(1));
       return true;
-
     default:
       return false;
     }
