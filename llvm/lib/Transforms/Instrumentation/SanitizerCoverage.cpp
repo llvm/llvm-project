@@ -241,8 +241,7 @@ private:
                                                 Type *Ty);
 
   void SetNoSanitizeMetadata(Instruction *I) {
-    I->setMetadata(I->getModule()->getMDKindID("nosanitize"),
-                   MDNode::get(*C, None));
+    I->setMetadata(LLVMContext::MD_nosanitize, MDNode::get(*C, None));
   }
 
   std::string getSectionName(const std::string &Section) const;
