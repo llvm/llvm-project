@@ -137,12 +137,11 @@ public:
   DependencyScanningAction(
       StringRef WorkingDirectory, DependencyConsumer &Consumer,
       llvm::IntrusiveRefCntPtr<DependencyScanningWorkerFilesystem> DepFS,
-      ExcludedPreprocessorDirectiveSkipMapping &PPSkipMappings,
       ScanningOutputFormat Format, bool OptimizeArgs,
       llvm::Optional<StringRef> ModuleName = None)
       : WorkingDirectory(WorkingDirectory), Consumer(Consumer),
-        DepFS(std::move(DepFS)), PPSkipMappings(PPSkipMappings), Format(Format),
-        OptimizeArgs(OptimizeArgs), ModuleName(ModuleName) {}
+        DepFS(std::move(DepFS)), Format(Format), OptimizeArgs(OptimizeArgs),
+        ModuleName(ModuleName) {}
 
   bool runInvocation(std::shared_ptr<CompilerInvocation> Invocation,
                      FileManager *FileMgr,
@@ -183,29 +182,21 @@ public:
 
     // Use the dependency scanning optimized file system if requested to do so.
     if (DepFS) {
-      DepFS->enableDirectivesScanningOfAllFiles();
-      // Don't minimize any files that contributed to prebuilt modules. The
-      // implicit build validates the modules by comparing the reported sizes of
-      // their inputs to the current state of the filesystem. Minimization would
-      // throw this mechanism off.
-      for (const auto &File : PrebuiltModulesInputFiles)
-        DepFS->disableDirectivesScanning(File.getKey());
-      // Don't minimize any files that were explicitly passed in the build
-      // settings and that might be opened.
-      for (const auto &E : ScanInstance.getHeaderSearchOpts().UserEntries)
-        DepFS->disableDirectivesScanning(E.Path);
-      for (const auto &F : ScanInstance.getHeaderSearchOpts().VFSOverlayFiles)
-        DepFS->disableDirectivesScanning(F);
-
       // Support for virtual file system overlays on top of the caching
       // filesystem.
       FileMgr->setVirtualFileSystem(createVFSFromCompilerInvocation(
           ScanInstance.getInvocation(), ScanInstance.getDiagnostics(), DepFS));
 
-      // Pass the skip mappings which should speed up excluded conditional block
-      // skipping in the preprocessor.
-      ScanInstance.getPreprocessorOpts()
-          .ExcludedConditionalDirectiveSkipMappings = &PPSkipMappings;
+      llvm::IntrusiveRefCntPtr<DependencyScanningWorkerFilesystem> LocalDepFS =
+          DepFS;
+      ScanInstance.getPreprocessorOpts().DependencyDirectivesForFile =
+          [LocalDepFS = std::move(LocalDepFS)](FileEntryRef File)
+          -> Optional<ArrayRef<dependency_directives_scan::Directive>> {
+        if (llvm::ErrorOr<EntryRef> Entry =
+                LocalDepFS->getOrCreateFileSystemEntry(File.getName()))
+          return Entry->getDirectiveTokens();
+        return None;
+      };
     }
 
     // Create the dependency collector that will collect the produced
@@ -262,7 +253,6 @@ private:
   StringRef WorkingDirectory;
   DependencyConsumer &Consumer;
   llvm::IntrusiveRefCntPtr<DependencyScanningWorkerFilesystem> DepFS;
-  ExcludedPreprocessorDirectiveSkipMapping &PPSkipMappings;
   ScanningOutputFormat Format;
   bool OptimizeArgs;
   llvm::Optional<StringRef> ModuleName;
@@ -289,7 +279,7 @@ DependencyScanningWorker::DependencyScanningWorker(
 
   if (Service.getMode() == ScanningMode::DependencyDirectivesScan)
     DepFS = new DependencyScanningWorkerFilesystem(Service.getSharedCache(),
-                                                   RealFS, PPSkipMappings);
+                                                   RealFS);
   if (Service.canReuseFileManager())
     Files = new FileManager(FileSystemOptions(), RealFS);
 }
@@ -340,8 +330,8 @@ llvm::Error DependencyScanningWorker::computeDependencies(
   return runWithDiags(CreateAndPopulateDiagOpts(FinalCCommandLine).release(),
                       [&](DiagnosticConsumer &DC, DiagnosticOptions &DiagOpts) {
                         DependencyScanningAction Action(
-                            WorkingDirectory, Consumer, DepFS, PPSkipMappings,
-                            Format, OptimizeArgs, ModuleName);
+                            WorkingDirectory, Consumer, DepFS, Format,
+                            OptimizeArgs, ModuleName);
                         // Create an invocation that uses the underlying file
                         // system to ensure that any file system requests that
                         // are made by the driver do not go through the
