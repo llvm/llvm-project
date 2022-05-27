@@ -218,11 +218,7 @@ inline raw_ostream &operator<<(raw_ostream &os, clang::ento::SVal V) {
 class UndefinedVal : public SVal {
 public:
   UndefinedVal() : SVal(UndefinedValKind) {}
-
   static bool classof(SVal V) { return V.getBaseKind() == UndefinedValKind; }
-
-private:
-  friend class SVal;
 };
 
 class DefinedOrUnknownSVal : public SVal {
@@ -239,9 +235,6 @@ protected:
   explicit DefinedOrUnknownSVal(const void *d, bool isLoc, unsigned ValKind)
       : SVal(d, isLoc, ValKind) {}
   explicit DefinedOrUnknownSVal(BaseKind k, void *D = nullptr) : SVal(k, D) {}
-
-private:
-  friend class SVal;
 };
 
 class UnknownVal : public DefinedOrUnknownSVal {
@@ -249,9 +242,6 @@ public:
   explicit UnknownVal() : DefinedOrUnknownSVal(UnknownValKind) {}
 
   static bool classof(SVal V) { return V.getBaseKind() == UnknownValKind; }
-
-private:
-  friend class SVal;
 };
 
 class DefinedSVal : public DefinedOrUnknownSVal {
@@ -268,14 +258,10 @@ protected:
   DefinedSVal() = default;
   explicit DefinedSVal(const void *d, bool isLoc, unsigned ValKind)
       : DefinedOrUnknownSVal(d, isLoc, ValKind) {}
-
-private:
-  friend class SVal;
 };
 
 /// Represents an SVal that is guaranteed to not be UnknownVal.
 class KnownSVal : public SVal {
-  friend class SVal;
   KnownSVal() = default;
 
 public:
@@ -299,9 +285,6 @@ public:
   }
 
   static bool classof(SVal V) { return V.getBaseKind() == NonLocKind; }
-
-private:
-  friend class SVal;
 };
 
 class Loc : public DefinedSVal {
@@ -319,9 +302,6 @@ public:
   }
 
   static bool classof(SVal V) { return V.getBaseKind() == LocKind; }
-
-private:
-  friend class SVal;
 };
 
 //==------------------------------------------------------------------------==//
@@ -352,9 +332,6 @@ public:
   }
 
   static bool classof(NonLoc V) { return V.getSubKind() == SymbolValKind; }
-
-private:
-  friend class SVal;
 };
 
 /// Value representing integer constant.
@@ -378,7 +355,6 @@ public:
   static bool classof(NonLoc V) { return V.getSubKind() == ConcreteIntKind; }
 
 private:
-  friend class SVal;
   ConcreteInt() = default;
 };
 
@@ -414,7 +390,6 @@ public:
   static bool classof(NonLoc V) { return V.getSubKind() == LocAsIntegerKind; }
 
 private:
-  friend class SVal;
   LocAsInteger() = default;
 };
 
@@ -440,7 +415,6 @@ public:
   static bool classof(NonLoc V) { return V.getSubKind() == CompoundValKind; }
 
 private:
-  friend class SVal;
   CompoundVal() = default;
 };
 
@@ -468,7 +442,6 @@ public:
   }
 
 private:
-  friend class SVal;
   LazyCompoundVal() = default;
 };
 
@@ -517,8 +490,6 @@ public:
   }
 
 private:
-  friend class SVal;
-
   PointerToMember() = default;
   explicit PointerToMember(const PTMDataType D)
       : NonLoc(PointerToMemberKind, D.getOpaqueValue()) {}
@@ -549,7 +520,6 @@ public:
   static bool classof(Loc V) { return V.getSubKind() == GotoLabelKind; }
 
 private:
-  friend class SVal;
   GotoLabel() = default;
 };
 
@@ -587,7 +557,6 @@ public:
   static bool classof(Loc V) { return V.getSubKind() == MemRegionValKind; }
 
 private:
-  friend class SVal;
   MemRegionVal() = default;
 };
 
@@ -606,7 +575,6 @@ public:
   static bool classof(Loc V) { return V.getSubKind() == ConcreteIntKind; }
 
 private:
-  friend class SVal;
   ConcreteInt() = default;
 };
 
