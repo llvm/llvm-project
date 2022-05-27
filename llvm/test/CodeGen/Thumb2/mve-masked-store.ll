@@ -1204,7 +1204,7 @@ define arm_aapcs_vfpcc void @masked_v4f16_align4(<4 x half> *%dest, <4 x float> 
 ; CHECK-LE-NEXT:    vmrs APSR_nzcv, fpscr
 ; CHECK-LE-NEXT:    vcmp.f32 s1, #0
 ; CHECK-LE-NEXT:    vcvtb.f16.f32 s4, s0
-; CHECK-LE-NEXT:    vcvtb.f16.f32 s6, s2
+; CHECK-LE-NEXT:    vcvtb.f16.f32 s5, s2
 ; CHECK-LE-NEXT:    vcvtt.f16.f32 s4, s1
 ; CHECK-LE-NEXT:    vcvtt.f16.f32 s5, s3
 ; CHECK-LE-NEXT:    csetm r2, gt
@@ -1263,8 +1263,8 @@ define arm_aapcs_vfpcc void @masked_v4f16_align4(<4 x half> *%dest, <4 x float> 
 ; CHECK-BE-NEXT:    vcvtb.f16.f32 s0, s4
 ; CHECK-BE-NEXT:    vmrs APSR_nzcv, fpscr
 ; CHECK-BE-NEXT:    vcmp.f32 s6, #0
+; CHECK-BE-NEXT:    vcvtb.f16.f32 s1, s6
 ; CHECK-BE-NEXT:    vcvtt.f16.f32 s0, s5
-; CHECK-BE-NEXT:    vcvtb.f16.f32 s2, s6
 ; CHECK-BE-NEXT:    vcvtt.f16.f32 s1, s7
 ; CHECK-BE-NEXT:    csetm r2, gt
 ; CHECK-BE-NEXT:    vmrs APSR_nzcv, fpscr
@@ -1328,7 +1328,7 @@ define arm_aapcs_vfpcc void @masked_v4f16_align2(<4 x half> *%dest, <4 x float> 
 ; CHECK-LE-NEXT:    vmrs APSR_nzcv, fpscr
 ; CHECK-LE-NEXT:    vcmp.f32 s1, #0
 ; CHECK-LE-NEXT:    vcvtb.f16.f32 s4, s0
-; CHECK-LE-NEXT:    vcvtb.f16.f32 s6, s2
+; CHECK-LE-NEXT:    vcvtb.f16.f32 s5, s2
 ; CHECK-LE-NEXT:    vcvtt.f16.f32 s4, s1
 ; CHECK-LE-NEXT:    vcvtt.f16.f32 s5, s3
 ; CHECK-LE-NEXT:    csetm r2, gt
@@ -1387,8 +1387,8 @@ define arm_aapcs_vfpcc void @masked_v4f16_align2(<4 x half> *%dest, <4 x float> 
 ; CHECK-BE-NEXT:    vcvtb.f16.f32 s0, s4
 ; CHECK-BE-NEXT:    vmrs APSR_nzcv, fpscr
 ; CHECK-BE-NEXT:    vcmp.f32 s6, #0
+; CHECK-BE-NEXT:    vcvtb.f16.f32 s1, s6
 ; CHECK-BE-NEXT:    vcvtt.f16.f32 s0, s5
-; CHECK-BE-NEXT:    vcvtb.f16.f32 s2, s6
 ; CHECK-BE-NEXT:    vcvtt.f16.f32 s1, s7
 ; CHECK-BE-NEXT:    csetm r2, gt
 ; CHECK-BE-NEXT:    vmrs APSR_nzcv, fpscr
@@ -1452,7 +1452,7 @@ define arm_aapcs_vfpcc void @masked_v4f16_align1(<4 x half> *%dest, <4 x float> 
 ; CHECK-LE-NEXT:    vmrs APSR_nzcv, fpscr
 ; CHECK-LE-NEXT:    vcmp.f32 s1, #0
 ; CHECK-LE-NEXT:    vcvtb.f16.f32 s4, s0
-; CHECK-LE-NEXT:    vcvtb.f16.f32 s6, s2
+; CHECK-LE-NEXT:    vcvtb.f16.f32 s5, s2
 ; CHECK-LE-NEXT:    vcvtt.f16.f32 s4, s1
 ; CHECK-LE-NEXT:    vcvtt.f16.f32 s5, s3
 ; CHECK-LE-NEXT:    csetm r2, gt
@@ -1519,8 +1519,8 @@ define arm_aapcs_vfpcc void @masked_v4f16_align1(<4 x half> *%dest, <4 x float> 
 ; CHECK-BE-NEXT:    vcvtb.f16.f32 s0, s4
 ; CHECK-BE-NEXT:    vmrs APSR_nzcv, fpscr
 ; CHECK-BE-NEXT:    vcmp.f32 s6, #0
+; CHECK-BE-NEXT:    vcvtb.f16.f32 s1, s6
 ; CHECK-BE-NEXT:    vcvtt.f16.f32 s0, s5
-; CHECK-BE-NEXT:    vcvtb.f16.f32 s2, s6
 ; CHECK-BE-NEXT:    vcvtt.f16.f32 s1, s7
 ; CHECK-BE-NEXT:    csetm r2, gt
 ; CHECK-BE-NEXT:    vmrs APSR_nzcv, fpscr

@@ -1418,12 +1418,11 @@ define arm_aapcs_vfpcc void @aese_setf16_cond_via_ptr(i1 zeroext %0, half* %1, <
 ; CHECK-FIX-NOSCHED-NEXT:    vmov r0, r1, d0
 ; CHECK-FIX-NOSCHED-NEXT:    vcvtb.f16.f32 s5, s5
 ; CHECK-FIX-NOSCHED-NEXT:    vmov r3, r7, d1
-; CHECK-FIX-NOSCHED-NEXT:    vcvtb.f16.f32 s14, s14
 ; CHECK-FIX-NOSCHED-NEXT:    vcvtb.f16.f32 s12, s12
 ; CHECK-FIX-NOSCHED-NEXT:    vcvtb.f16.f32 s8, s8
 ; CHECK-FIX-NOSCHED-NEXT:    vmov s1, r1
 ; CHECK-FIX-NOSCHED-NEXT:    lsr r1, r1, #16
-; CHECK-FIX-NOSCHED-NEXT:    vcvtb.f32.f16 s3, s1
+; CHECK-FIX-NOSCHED-NEXT:    vcvtb.f32.f16 s9, s1
 ; CHECK-FIX-NOSCHED-NEXT:    vmov s1, r0
 ; CHECK-FIX-NOSCHED-NEXT:    lsr r0, r0, #16
 ; CHECK-FIX-NOSCHED-NEXT:    vmov s13, r1
@@ -1436,31 +1435,32 @@ define arm_aapcs_vfpcc void @aese_setf16_cond_via_ptr(i1 zeroext %0, half* %1, <
 ; CHECK-FIX-NOSCHED-NEXT:    vmov s2, r3
 ; CHECK-FIX-NOSCHED-NEXT:    lsr r3, r3, #16
 ; CHECK-FIX-NOSCHED-NEXT:    vcvtb.f16.f32 s5, s15
-; CHECK-FIX-NOSCHED-NEXT:    vmov s9, r3
-; CHECK-FIX-NOSCHED-NEXT:    vcvtb.f16.f32 s11, s11
+; CHECK-FIX-NOSCHED-NEXT:    vmov s3, r3
 ; CHECK-FIX-NOSCHED-NEXT:    vmov r3, s5
+; CHECK-FIX-NOSCHED-NEXT:    vcvtb.f16.f32 s11, s11
 ; CHECK-FIX-NOSCHED-NEXT:    vcvtb.f32.f16 s13, s13
+; CHECK-FIX-NOSCHED-NEXT:    vcvtb.f16.f32 s5, s9
 ; CHECK-FIX-NOSCHED-NEXT:    vcvtb.f32.f16 s2, s2
-; CHECK-FIX-NOSCHED-NEXT:    vcvtb.f32.f16 s9, s9
+; CHECK-FIX-NOSCHED-NEXT:    vcvtb.f32.f16 s3, s3
 ; CHECK-FIX-NOSCHED-NEXT:    vcvtb.f16.f32 s2, s2
 ; CHECK-FIX-NOSCHED-NEXT:    vmov s0, r7
 ; CHECK-FIX-NOSCHED-NEXT:    lsr r7, r7, #16
 ; CHECK-FIX-NOSCHED-NEXT:    vcvtb.f32.f16 s0, s0
 ; CHECK-FIX-NOSCHED-NEXT:    vmov s1, r7
-; CHECK-FIX-NOSCHED-NEXT:    vcvtb.f32.f16 s1, s1
 ; CHECK-FIX-NOSCHED-NEXT:    vcvtb.f16.f32 s0, s0
+; CHECK-FIX-NOSCHED-NEXT:    vcvtb.f32.f16 s1, s1
 ; CHECK-FIX-NOSCHED-NEXT:    pkhbt r0, r0, r1, lsl #16
 ; CHECK-FIX-NOSCHED-NEXT:    vmov r1, s11
 ; CHECK-FIX-NOSCHED-NEXT:    vmov.32 d16[0], r0
 ; CHECK-FIX-NOSCHED-NEXT:    pkhbt r0, r1, r3, lsl #16
 ; CHECK-FIX-NOSCHED-NEXT:    vmov r1, s12
-; CHECK-FIX-NOSCHED-NEXT:    vcvtb.f16.f32 s12, s3
+; CHECK-FIX-NOSCHED-NEXT:    vcvtb.f16.f32 s12, s14
 ; CHECK-FIX-NOSCHED-NEXT:    vmov.32 d18[0], r0
-; CHECK-FIX-NOSCHED-NEXT:    vmov r0, s14
-; CHECK-FIX-NOSCHED-NEXT:    pkhbt r0, r1, r0, lsl #16
-; CHECK-FIX-NOSCHED-NEXT:    vmov r1, s12
+; CHECK-FIX-NOSCHED-NEXT:    vmov r0, s12
 ; CHECK-FIX-NOSCHED-NEXT:    vcvtb.f16.f32 s12, s13
 ; CHECK-FIX-NOSCHED-NEXT:    vmov r3, s12
+; CHECK-FIX-NOSCHED-NEXT:    pkhbt r0, r1, r0, lsl #16
+; CHECK-FIX-NOSCHED-NEXT:    vmov r1, s5
 ; CHECK-FIX-NOSCHED-NEXT:    vmov.32 d16[1], r0
 ; CHECK-FIX-NOSCHED-NEXT:    pkhbt r1, r1, r3, lsl #16
 ; CHECK-FIX-NOSCHED-NEXT:    vmov.32 d18[1], r1
@@ -1469,7 +1469,7 @@ define arm_aapcs_vfpcc void @aese_setf16_cond_via_ptr(i1 zeroext %0, half* %1, <
 ; CHECK-FIX-NOSCHED-NEXT:    vmov r3, s8
 ; CHECK-FIX-NOSCHED-NEXT:    pkhbt r0, r1, r3, lsl #16
 ; CHECK-FIX-NOSCHED-NEXT:    vmov r1, s2
-; CHECK-FIX-NOSCHED-NEXT:    vcvtb.f16.f32 s2, s9
+; CHECK-FIX-NOSCHED-NEXT:    vcvtb.f16.f32 s2, s3
 ; CHECK-FIX-NOSCHED-NEXT:    vmov r3, s2
 ; CHECK-FIX-NOSCHED-NEXT:    vmov.32 d17[0], r0
 ; CHECK-FIX-NOSCHED-NEXT:    vcvtb.f16.f32 s2, s4
@@ -1746,13 +1746,12 @@ define arm_aapcs_vfpcc void @aese_setf16_cond_via_val(i1 zeroext %0, half %1, <1
 ; CHECK-FIX-NOSCHED-NEXT:    vmov r0, r2, d2
 ; CHECK-FIX-NOSCHED-NEXT:    vcvtb.f16.f32 s1, s1
 ; CHECK-FIX-NOSCHED-NEXT:    vmov r3, r7, d3
-; CHECK-FIX-NOSCHED-NEXT:    vcvtb.f16.f32 s14, s14
 ; CHECK-FIX-NOSCHED-NEXT:    vcvtb.f16.f32 s12, s12
 ; CHECK-FIX-NOSCHED-NEXT:    vcvtb.f16.f32 s8, s8
 ; CHECK-FIX-NOSCHED-NEXT:    vcvtb.f16.f32 s0, s0
 ; CHECK-FIX-NOSCHED-NEXT:    vmov s5, r2
 ; CHECK-FIX-NOSCHED-NEXT:    lsr r2, r2, #16
-; CHECK-FIX-NOSCHED-NEXT:    vcvtb.f32.f16 s7, s5
+; CHECK-FIX-NOSCHED-NEXT:    vcvtb.f32.f16 s9, s5
 ; CHECK-FIX-NOSCHED-NEXT:    vmov s5, r0
 ; CHECK-FIX-NOSCHED-NEXT:    lsr r0, r0, #16
 ; CHECK-FIX-NOSCHED-NEXT:    vmov s13, r2
@@ -1765,31 +1764,32 @@ define arm_aapcs_vfpcc void @aese_setf16_cond_via_val(i1 zeroext %0, half %1, <1
 ; CHECK-FIX-NOSCHED-NEXT:    vmov s6, r3
 ; CHECK-FIX-NOSCHED-NEXT:    lsr r3, r3, #16
 ; CHECK-FIX-NOSCHED-NEXT:    vcvtb.f16.f32 s1, s15
-; CHECK-FIX-NOSCHED-NEXT:    vmov s9, r3
-; CHECK-FIX-NOSCHED-NEXT:    vcvtb.f16.f32 s11, s11
+; CHECK-FIX-NOSCHED-NEXT:    vmov s7, r3
 ; CHECK-FIX-NOSCHED-NEXT:    vmov r3, s1
+; CHECK-FIX-NOSCHED-NEXT:    vcvtb.f16.f32 s11, s11
 ; CHECK-FIX-NOSCHED-NEXT:    vcvtb.f32.f16 s13, s13
+; CHECK-FIX-NOSCHED-NEXT:    vcvtb.f16.f32 s1, s9
 ; CHECK-FIX-NOSCHED-NEXT:    vcvtb.f32.f16 s6, s6
-; CHECK-FIX-NOSCHED-NEXT:    vcvtb.f32.f16 s9, s9
+; CHECK-FIX-NOSCHED-NEXT:    vcvtb.f32.f16 s7, s7
 ; CHECK-FIX-NOSCHED-NEXT:    vcvtb.f16.f32 s6, s6
 ; CHECK-FIX-NOSCHED-NEXT:    vmov s4, r7
 ; CHECK-FIX-NOSCHED-NEXT:    lsr r7, r7, #16
 ; CHECK-FIX-NOSCHED-NEXT:    vcvtb.f32.f16 s4, s4
 ; CHECK-FIX-NOSCHED-NEXT:    vmov s5, r7
-; CHECK-FIX-NOSCHED-NEXT:    vcvtb.f32.f16 s5, s5
 ; CHECK-FIX-NOSCHED-NEXT:    vcvtb.f16.f32 s4, s4
+; CHECK-FIX-NOSCHED-NEXT:    vcvtb.f32.f16 s5, s5
 ; CHECK-FIX-NOSCHED-NEXT:    pkhbt r0, r0, r2, lsl #16
 ; CHECK-FIX-NOSCHED-NEXT:    vmov r2, s11
 ; CHECK-FIX-NOSCHED-NEXT:    vmov.32 d16[0], r0
 ; CHECK-FIX-NOSCHED-NEXT:    pkhbt r0, r2, r3, lsl #16
 ; CHECK-FIX-NOSCHED-NEXT:    vmov r2, s12
-; CHECK-FIX-NOSCHED-NEXT:    vcvtb.f16.f32 s12, s7
+; CHECK-FIX-NOSCHED-NEXT:    vcvtb.f16.f32 s12, s14
 ; CHECK-FIX-NOSCHED-NEXT:    vmov.32 d18[0], r0
-; CHECK-FIX-NOSCHED-NEXT:    vmov r0, s14
-; CHECK-FIX-NOSCHED-NEXT:    pkhbt r0, r2, r0, lsl #16
-; CHECK-FIX-NOSCHED-NEXT:    vmov r2, s12
+; CHECK-FIX-NOSCHED-NEXT:    vmov r0, s12
 ; CHECK-FIX-NOSCHED-NEXT:    vcvtb.f16.f32 s12, s13
 ; CHECK-FIX-NOSCHED-NEXT:    vmov r3, s12
+; CHECK-FIX-NOSCHED-NEXT:    pkhbt r0, r2, r0, lsl #16
+; CHECK-FIX-NOSCHED-NEXT:    vmov r2, s1
 ; CHECK-FIX-NOSCHED-NEXT:    vmov.32 d16[1], r0
 ; CHECK-FIX-NOSCHED-NEXT:    pkhbt r2, r2, r3, lsl #16
 ; CHECK-FIX-NOSCHED-NEXT:    vmov.32 d18[1], r2
@@ -1798,7 +1798,7 @@ define arm_aapcs_vfpcc void @aese_setf16_cond_via_val(i1 zeroext %0, half %1, <1
 ; CHECK-FIX-NOSCHED-NEXT:    vmov r3, s8
 ; CHECK-FIX-NOSCHED-NEXT:    pkhbt r0, r2, r3, lsl #16
 ; CHECK-FIX-NOSCHED-NEXT:    vmov r2, s6
-; CHECK-FIX-NOSCHED-NEXT:    vcvtb.f16.f32 s6, s9
+; CHECK-FIX-NOSCHED-NEXT:    vcvtb.f16.f32 s6, s7
 ; CHECK-FIX-NOSCHED-NEXT:    vmov r3, s6
 ; CHECK-FIX-NOSCHED-NEXT:    vmov.32 d17[0], r0
 ; CHECK-FIX-NOSCHED-NEXT:    pkhbt r0, r2, r3, lsl #16
@@ -3788,12 +3788,11 @@ define arm_aapcs_vfpcc void @aesd_setf16_cond_via_ptr(i1 zeroext %0, half* %1, <
 ; CHECK-FIX-NOSCHED-NEXT:    vmov r0, r1, d0
 ; CHECK-FIX-NOSCHED-NEXT:    vcvtb.f16.f32 s5, s5
 ; CHECK-FIX-NOSCHED-NEXT:    vmov r3, r7, d1
-; CHECK-FIX-NOSCHED-NEXT:    vcvtb.f16.f32 s14, s14
 ; CHECK-FIX-NOSCHED-NEXT:    vcvtb.f16.f32 s12, s12
 ; CHECK-FIX-NOSCHED-NEXT:    vcvtb.f16.f32 s8, s8
 ; CHECK-FIX-NOSCHED-NEXT:    vmov s1, r1
 ; CHECK-FIX-NOSCHED-NEXT:    lsr r1, r1, #16
-; CHECK-FIX-NOSCHED-NEXT:    vcvtb.f32.f16 s3, s1
+; CHECK-FIX-NOSCHED-NEXT:    vcvtb.f32.f16 s9, s1
 ; CHECK-FIX-NOSCHED-NEXT:    vmov s1, r0
 ; CHECK-FIX-NOSCHED-NEXT:    lsr r0, r0, #16
 ; CHECK-FIX-NOSCHED-NEXT:    vmov s13, r1
@@ -3806,31 +3805,32 @@ define arm_aapcs_vfpcc void @aesd_setf16_cond_via_ptr(i1 zeroext %0, half* %1, <
 ; CHECK-FIX-NOSCHED-NEXT:    vmov s2, r3
 ; CHECK-FIX-NOSCHED-NEXT:    lsr r3, r3, #16
 ; CHECK-FIX-NOSCHED-NEXT:    vcvtb.f16.f32 s5, s15
-; CHECK-FIX-NOSCHED-NEXT:    vmov s9, r3
-; CHECK-FIX-NOSCHED-NEXT:    vcvtb.f16.f32 s11, s11
+; CHECK-FIX-NOSCHED-NEXT:    vmov s3, r3
 ; CHECK-FIX-NOSCHED-NEXT:    vmov r3, s5
+; CHECK-FIX-NOSCHED-NEXT:    vcvtb.f16.f32 s11, s11
 ; CHECK-FIX-NOSCHED-NEXT:    vcvtb.f32.f16 s13, s13
+; CHECK-FIX-NOSCHED-NEXT:    vcvtb.f16.f32 s5, s9
 ; CHECK-FIX-NOSCHED-NEXT:    vcvtb.f32.f16 s2, s2
-; CHECK-FIX-NOSCHED-NEXT:    vcvtb.f32.f16 s9, s9
+; CHECK-FIX-NOSCHED-NEXT:    vcvtb.f32.f16 s3, s3
 ; CHECK-FIX-NOSCHED-NEXT:    vcvtb.f16.f32 s2, s2
 ; CHECK-FIX-NOSCHED-NEXT:    vmov s0, r7
 ; CHECK-FIX-NOSCHED-NEXT:    lsr r7, r7, #16
 ; CHECK-FIX-NOSCHED-NEXT:    vcvtb.f32.f16 s0, s0
 ; CHECK-FIX-NOSCHED-NEXT:    vmov s1, r7
-; CHECK-FIX-NOSCHED-NEXT:    vcvtb.f32.f16 s1, s1
 ; CHECK-FIX-NOSCHED-NEXT:    vcvtb.f16.f32 s0, s0
+; CHECK-FIX-NOSCHED-NEXT:    vcvtb.f32.f16 s1, s1
 ; CHECK-FIX-NOSCHED-NEXT:    pkhbt r0, r0, r1, lsl #16
 ; CHECK-FIX-NOSCHED-NEXT:    vmov r1, s11
 ; CHECK-FIX-NOSCHED-NEXT:    vmov.32 d16[0], r0
 ; CHECK-FIX-NOSCHED-NEXT:    pkhbt r0, r1, r3, lsl #16
 ; CHECK-FIX-NOSCHED-NEXT:    vmov r1, s12
-; CHECK-FIX-NOSCHED-NEXT:    vcvtb.f16.f32 s12, s3
+; CHECK-FIX-NOSCHED-NEXT:    vcvtb.f16.f32 s12, s14
 ; CHECK-FIX-NOSCHED-NEXT:    vmov.32 d18[0], r0
-; CHECK-FIX-NOSCHED-NEXT:    vmov r0, s14
-; CHECK-FIX-NOSCHED-NEXT:    pkhbt r0, r1, r0, lsl #16
-; CHECK-FIX-NOSCHED-NEXT:    vmov r1, s12
+; CHECK-FIX-NOSCHED-NEXT:    vmov r0, s12
 ; CHECK-FIX-NOSCHED-NEXT:    vcvtb.f16.f32 s12, s13
 ; CHECK-FIX-NOSCHED-NEXT:    vmov r3, s12
+; CHECK-FIX-NOSCHED-NEXT:    pkhbt r0, r1, r0, lsl #16
+; CHECK-FIX-NOSCHED-NEXT:    vmov r1, s5
 ; CHECK-FIX-NOSCHED-NEXT:    vmov.32 d16[1], r0
 ; CHECK-FIX-NOSCHED-NEXT:    pkhbt r1, r1, r3, lsl #16
 ; CHECK-FIX-NOSCHED-NEXT:    vmov.32 d18[1], r1
@@ -3839,7 +3839,7 @@ define arm_aapcs_vfpcc void @aesd_setf16_cond_via_ptr(i1 zeroext %0, half* %1, <
 ; CHECK-FIX-NOSCHED-NEXT:    vmov r3, s8
 ; CHECK-FIX-NOSCHED-NEXT:    pkhbt r0, r1, r3, lsl #16
 ; CHECK-FIX-NOSCHED-NEXT:    vmov r1, s2
-; CHECK-FIX-NOSCHED-NEXT:    vcvtb.f16.f32 s2, s9
+; CHECK-FIX-NOSCHED-NEXT:    vcvtb.f16.f32 s2, s3
 ; CHECK-FIX-NOSCHED-NEXT:    vmov r3, s2
 ; CHECK-FIX-NOSCHED-NEXT:    vmov.32 d17[0], r0
 ; CHECK-FIX-NOSCHED-NEXT:    vcvtb.f16.f32 s2, s4
@@ -4116,13 +4116,12 @@ define arm_aapcs_vfpcc void @aesd_setf16_cond_via_val(i1 zeroext %0, half %1, <1
 ; CHECK-FIX-NOSCHED-NEXT:    vmov r0, r2, d2
 ; CHECK-FIX-NOSCHED-NEXT:    vcvtb.f16.f32 s1, s1
 ; CHECK-FIX-NOSCHED-NEXT:    vmov r3, r7, d3
-; CHECK-FIX-NOSCHED-NEXT:    vcvtb.f16.f32 s14, s14
 ; CHECK-FIX-NOSCHED-NEXT:    vcvtb.f16.f32 s12, s12
 ; CHECK-FIX-NOSCHED-NEXT:    vcvtb.f16.f32 s8, s8
 ; CHECK-FIX-NOSCHED-NEXT:    vcvtb.f16.f32 s0, s0
 ; CHECK-FIX-NOSCHED-NEXT:    vmov s5, r2
 ; CHECK-FIX-NOSCHED-NEXT:    lsr r2, r2, #16
-; CHECK-FIX-NOSCHED-NEXT:    vcvtb.f32.f16 s7, s5
+; CHECK-FIX-NOSCHED-NEXT:    vcvtb.f32.f16 s9, s5
 ; CHECK-FIX-NOSCHED-NEXT:    vmov s5, r0
 ; CHECK-FIX-NOSCHED-NEXT:    lsr r0, r0, #16
 ; CHECK-FIX-NOSCHED-NEXT:    vmov s13, r2
@@ -4135,31 +4134,32 @@ define arm_aapcs_vfpcc void @aesd_setf16_cond_via_val(i1 zeroext %0, half %1, <1
 ; CHECK-FIX-NOSCHED-NEXT:    vmov s6, r3
 ; CHECK-FIX-NOSCHED-NEXT:    lsr r3, r3, #16
 ; CHECK-FIX-NOSCHED-NEXT:    vcvtb.f16.f32 s1, s15
-; CHECK-FIX-NOSCHED-NEXT:    vmov s9, r3
-; CHECK-FIX-NOSCHED-NEXT:    vcvtb.f16.f32 s11, s11
+; CHECK-FIX-NOSCHED-NEXT:    vmov s7, r3
 ; CHECK-FIX-NOSCHED-NEXT:    vmov r3, s1
+; CHECK-FIX-NOSCHED-NEXT:    vcvtb.f16.f32 s11, s11
 ; CHECK-FIX-NOSCHED-NEXT:    vcvtb.f32.f16 s13, s13
+; CHECK-FIX-NOSCHED-NEXT:    vcvtb.f16.f32 s1, s9
 ; CHECK-FIX-NOSCHED-NEXT:    vcvtb.f32.f16 s6, s6
-; CHECK-FIX-NOSCHED-NEXT:    vcvtb.f32.f16 s9, s9
+; CHECK-FIX-NOSCHED-NEXT:    vcvtb.f32.f16 s7, s7
 ; CHECK-FIX-NOSCHED-NEXT:    vcvtb.f16.f32 s6, s6
 ; CHECK-FIX-NOSCHED-NEXT:    vmov s4, r7
 ; CHECK-FIX-NOSCHED-NEXT:    lsr r7, r7, #16
 ; CHECK-FIX-NOSCHED-NEXT:    vcvtb.f32.f16 s4, s4
 ; CHECK-FIX-NOSCHED-NEXT:    vmov s5, r7
-; CHECK-FIX-NOSCHED-NEXT:    vcvtb.f32.f16 s5, s5
 ; CHECK-FIX-NOSCHED-NEXT:    vcvtb.f16.f32 s4, s4
+; CHECK-FIX-NOSCHED-NEXT:    vcvtb.f32.f16 s5, s5
 ; CHECK-FIX-NOSCHED-NEXT:    pkhbt r0, r0, r2, lsl #16
 ; CHECK-FIX-NOSCHED-NEXT:    vmov r2, s11
 ; CHECK-FIX-NOSCHED-NEXT:    vmov.32 d16[0], r0
 ; CHECK-FIX-NOSCHED-NEXT:    pkhbt r0, r2, r3, lsl #16
 ; CHECK-FIX-NOSCHED-NEXT:    vmov r2, s12
-; CHECK-FIX-NOSCHED-NEXT:    vcvtb.f16.f32 s12, s7
+; CHECK-FIX-NOSCHED-NEXT:    vcvtb.f16.f32 s12, s14
 ; CHECK-FIX-NOSCHED-NEXT:    vmov.32 d18[0], r0
-; CHECK-FIX-NOSCHED-NEXT:    vmov r0, s14
-; CHECK-FIX-NOSCHED-NEXT:    pkhbt r0, r2, r0, lsl #16
-; CHECK-FIX-NOSCHED-NEXT:    vmov r2, s12
+; CHECK-FIX-NOSCHED-NEXT:    vmov r0, s12
 ; CHECK-FIX-NOSCHED-NEXT:    vcvtb.f16.f32 s12, s13
 ; CHECK-FIX-NOSCHED-NEXT:    vmov r3, s12
+; CHECK-FIX-NOSCHED-NEXT:    pkhbt r0, r2, r0, lsl #16
+; CHECK-FIX-NOSCHED-NEXT:    vmov r2, s1
 ; CHECK-FIX-NOSCHED-NEXT:    vmov.32 d16[1], r0
 ; CHECK-FIX-NOSCHED-NEXT:    pkhbt r2, r2, r3, lsl #16
 ; CHECK-FIX-NOSCHED-NEXT:    vmov.32 d18[1], r2
@@ -4168,7 +4168,7 @@ define arm_aapcs_vfpcc void @aesd_setf16_cond_via_val(i1 zeroext %0, half %1, <1
 ; CHECK-FIX-NOSCHED-NEXT:    vmov r3, s8
 ; CHECK-FIX-NOSCHED-NEXT:    pkhbt r0, r2, r3, lsl #16
 ; CHECK-FIX-NOSCHED-NEXT:    vmov r2, s6
-; CHECK-FIX-NOSCHED-NEXT:    vcvtb.f16.f32 s6, s9
+; CHECK-FIX-NOSCHED-NEXT:    vcvtb.f16.f32 s6, s7
 ; CHECK-FIX-NOSCHED-NEXT:    vmov r3, s6
 ; CHECK-FIX-NOSCHED-NEXT:    vmov.32 d17[0], r0
 ; CHECK-FIX-NOSCHED-NEXT:    pkhbt r0, r2, r3, lsl #16
