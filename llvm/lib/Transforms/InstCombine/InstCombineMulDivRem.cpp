@@ -301,8 +301,9 @@ Instruction *InstCombinerImpl::visitMul(BinaryOperator &I) {
     }
   }
 
-  /// i1 mul -> i1 and.
-  if (I.getType()->isIntOrIntVectorTy(1))
+  // i1 mul -> i1 and.
+  Type *Ty = I.getType();
+  if (Ty->isIntOrIntVectorTy(1))
     return BinaryOperator::CreateAnd(Op0, Op1);
 
   // X*(1 << Y) --> X << Y
@@ -335,7 +336,7 @@ Instruction *InstCombinerImpl::visitMul(BinaryOperator &I) {
       X->getType()->isIntOrIntVectorTy(1) && X->getType() == Y->getType() &&
       (Op0->hasOneUse() || Op1->hasOneUse() || X == Y)) {
     Value *And = Builder.CreateAnd(X, Y, "mulbool");
-    return CastInst::Create(Instruction::ZExt, And, I.getType());
+    return CastInst::Create(Instruction::ZExt, And, Ty);
   }
   // (sext bool X) * (zext bool Y) --> sext (and X, Y)
   // (zext bool X) * (sext bool Y) --> sext (and X, Y)
@@ -345,22 +346,22 @@ Instruction *InstCombinerImpl::visitMul(BinaryOperator &I) {
       X->getType()->isIntOrIntVectorTy(1) && X->getType() == Y->getType() &&
       (Op0->hasOneUse() || Op1->hasOneUse())) {
     Value *And = Builder.CreateAnd(X, Y, "mulbool");
-    return CastInst::Create(Instruction::SExt, And, I.getType());
+    return CastInst::Create(Instruction::SExt, And, Ty);
   }
 
   // (zext bool X) * Y --> X ? Y : 0
   // Y * (zext bool X) --> X ? Y : 0
   if (match(Op0, m_ZExt(m_Value(X))) && X->getType()->isIntOrIntVectorTy(1))
-    return SelectInst::Create(X, Op1, ConstantInt::get(I.getType(), 0));
+    return SelectInst::Create(X, Op1, ConstantInt::getNullValue(Ty));
   if (match(Op1, m_ZExt(m_Value(X))) && X->getType()->isIntOrIntVectorTy(1))
-    return SelectInst::Create(X, Op0, ConstantInt::get(I.getType(), 0));
+    return SelectInst::Create(X, Op0, ConstantInt::getNullValue(Ty));
 
   // (sext bool X) * C --> X ? -C : 0
   Constant *ImmC;
   if (match(Op0, m_SExt(m_Value(X))) && X->getType()->isIntOrIntVectorTy(1) &&
       match(Op1, m_ImmConstant(ImmC))) {
     Constant *NegC = ConstantExpr::getNeg(ImmC);
-    return SelectInst::Create(X, NegC, ConstantInt::getNullValue(I.getType()));
+    return SelectInst::Create(X, NegC, ConstantInt::getNullValue(Ty));
   }
 
   // (lshr X, 31) * Y --> (X < 0) ? Y : 0
@@ -370,7 +371,7 @@ Instruction *InstCombinerImpl::visitMul(BinaryOperator &I) {
   if (match(&I, m_c_Mul(m_LShr(m_Value(X), m_APInt(C)), m_Value(Y))) &&
       *C == C->getBitWidth() - 1) {
     Value *IsNeg = Builder.CreateIsNeg(X, "isneg");
-    return SelectInst::Create(IsNeg, Y, ConstantInt::getNullValue(I.getType()));
+    return SelectInst::Create(IsNeg, Y, ConstantInt::getNullValue(Ty));
   }
 
   // ((ashr X, 31) | 1) * X --> abs(X)
