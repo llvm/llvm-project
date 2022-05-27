@@ -42,6 +42,14 @@ struct LSPServer {
   void onDocumentDidClose(const DidCloseTextDocumentParams &params);
   void onDocumentDidChange(const DidChangeTextDocumentParams &params);
 
+  //===--------------------------------------------------------------------===//
+  // Definitions and References
+
+  void onGoToDefinition(const TextDocumentPositionParams &params,
+                        Callback<std::vector<Location>> reply);
+  void onReference(const ReferenceParams &params,
+                   Callback<std::vector<Location>> reply);
+
   //===----------------------------------------------------------------------===//
   // DocumentLink
 
@@ -84,6 +92,8 @@ void LSPServer::onInitialize(const InitializeParams &params,
            {"change", (int)TextDocumentSyncKind::Full},
            {"save", true},
        }},
+      {"definitionProvider", true},
+      {"referencesProvider", true},
       {"documentLinkProvider",
        llvm::json::Object{
            {"resolveProvider", false},
@@ -143,6 +153,23 @@ void LSPServer::onDocumentDidChange(const DidChangeTextDocumentParams &params) {
 }
 
 //===----------------------------------------------------------------------===//
+// Definitions and References
+
+void LSPServer::onGoToDefinition(const TextDocumentPositionParams &params,
+                                 Callback<std::vector<Location>> reply) {
+  std::vector<Location> locations;
+  server.getLocationsOf(params.textDocument.uri, params.position, locations);
+  reply(std::move(locations));
+}
+
+void LSPServer::onReference(const ReferenceParams &params,
+                            Callback<std::vector<Location>> reply) {
+  std::vector<Location> locations;
+  server.findReferencesOf(params.textDocument.uri, params.position, locations);
+  reply(std::move(locations));
+}
+
+//===----------------------------------------------------------------------===//
 // DocumentLink
 
 void LSPServer::onDocumentLink(const DocumentLinkParams &params,
@@ -182,6 +209,12 @@ LogicalResult mlir::lsp::runTableGenLSPServer(TableGenServer &server,
                               &LSPServer::onDocumentDidClose);
   messageHandler.notification("textDocument/didChange", &lspServer,
                               &LSPServer::onDocumentDidChange);
+
+  // Definitions and References
+  messageHandler.method("textDocument/definition", &lspServer,
+                        &LSPServer::onGoToDefinition);
+  messageHandler.method("textDocument/references", &lspServer,
+                        &LSPServer::onReference);
 
   // Document Link
   messageHandler.method("textDocument/documentLink", &lspServer,
