@@ -3380,6 +3380,7 @@ SwiftASTContext::CreateModule(const SourceModule &module, Status &error,
     return nullptr;
   }
 
+
   swift::Identifier module_id(
       ast->getIdentifier(module.path.front().GetCString()));
   auto *module_decl = swift::ModuleDecl::create(module_id, *ast, importInfo);
