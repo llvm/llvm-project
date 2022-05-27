@@ -431,6 +431,60 @@ define double @bitcast_extelt4(i128 %A) {
   ret double %bc2
 }
 
+define <2 x i32> @bitcast_extelt5(<1 x i64> %A) {
+; CHECK-LABEL: @bitcast_extelt5(
+; CHECK-NEXT:    [[EXT:%.*]] = extractelement <1 x i64> [[A:%.*]], i64 0
+; CHECK-NEXT:    [[BC:%.*]] = bitcast i64 [[EXT]] to <2 x i32>
+; CHECK-NEXT:    ret <2 x i32> [[BC]]
+;
+  %ext = extractelement <1 x i64> %A, i32 0
+  %bc = bitcast i64 %ext to <2 x i32>
+  ret <2 x i32> %bc
+}
+
+define <2 x i32> @bitcast_extelt5_scalable(<vscale x 1 x i64> %A) {
+; CHECK-LABEL: @bitcast_extelt5_scalable(
+; CHECK-NEXT:    [[EXT:%.*]] = extractelement <vscale x 1 x i64> [[A:%.*]], i64 0
+; CHECK-NEXT:    [[BC:%.*]] = bitcast i64 [[EXT]] to <2 x i32>
+; CHECK-NEXT:    ret <2 x i32> [[BC]]
+;
+  %ext = extractelement <vscale x 1 x i64> %A, i32 0
+  %bc = bitcast i64 %ext to <2 x i32>
+  ret <2 x i32> %bc
+}
+
+define <2 x i32> @bitcast_extelt6(<2 x i64> %A) {
+; CHECK-LABEL: @bitcast_extelt6(
+; CHECK-NEXT:    [[EXT:%.*]] = extractelement <2 x i64> [[A:%.*]], i64 0
+; CHECK-NEXT:    [[BC:%.*]] = bitcast i64 [[EXT]] to <2 x i32>
+; CHECK-NEXT:    ret <2 x i32> [[BC]]
+;
+  %ext = extractelement <2 x i64> %A, i32 0
+  %bc = bitcast i64 %ext to <2 x i32>
+  ret <2 x i32> %bc
+}
+
+define double @bitcast_extelt7(<1 x i64> %A) {
+; CHECK-LABEL: @bitcast_extelt7(
+; CHECK-NEXT:    [[BC1:%.*]] = bitcast <1 x i64> [[A:%.*]] to <1 x double>
+; CHECK-NEXT:    [[BC:%.*]] = extractelement <1 x double> [[BC1]], i64 0
+; CHECK-NEXT:    ret double [[BC]]
+;
+  %ext = extractelement <1 x i64> %A, i32 0
+  %bc = bitcast i64 %ext to double
+  ret double %bc
+}
+
+define double @bitcast_extelt8(<1 x i64> %A) {
+; CHECK-LABEL: @bitcast_extelt8(
+; CHECK-NEXT:    [[BC1:%.*]] = bitcast <1 x i64> [[A:%.*]] to <1 x double>
+; CHECK-NEXT:    [[BC:%.*]] = extractelement <1 x double> [[BC1]], i64 0
+; CHECK-NEXT:    ret double [[BC]]
+;
+  %bc = bitcast <1 x i64> %A to double
+  ret double %bc
+}
+
 define <2 x i32> @test4(i32 %A, i32 %B){
 ; CHECK-LABEL: @test4(
 ; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x i32> poison, i32 [[A:%.*]], i64 0
