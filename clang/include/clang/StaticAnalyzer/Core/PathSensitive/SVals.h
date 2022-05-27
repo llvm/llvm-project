@@ -231,7 +231,6 @@ public:
   static bool classof(SVal V) { return !V.isUndef(); }
 
 protected:
-  DefinedOrUnknownSVal() = default;
   explicit DefinedOrUnknownSVal(const void *d, bool isLoc, unsigned ValKind)
       : SVal(d, isLoc, ValKind) {}
   explicit DefinedOrUnknownSVal(BaseKind k, void *D = nullptr) : SVal(k, D) {}
@@ -255,15 +254,12 @@ public:
   static bool classof(SVal V) { return !V.isUnknownOrUndef(); }
 
 protected:
-  DefinedSVal() = default;
   explicit DefinedSVal(const void *d, bool isLoc, unsigned ValKind)
       : DefinedOrUnknownSVal(d, isLoc, ValKind) {}
 };
 
 /// Represents an SVal that is guaranteed to not be UnknownVal.
 class KnownSVal : public SVal {
-  KnownSVal() = default;
-
 public:
   KnownSVal(const DefinedSVal &V) : SVal(V) {}
   KnownSVal(const UndefinedVal &V) : SVal(V) {}
@@ -272,7 +268,6 @@ public:
 
 class NonLoc : public DefinedSVal {
 protected:
-  NonLoc() = default;
   explicit NonLoc(unsigned SubKind, const void *d)
       : DefinedSVal(d, false, SubKind) {}
 
@@ -289,7 +284,6 @@ public:
 
 class Loc : public DefinedSVal {
 protected:
-  Loc() = default;
   explicit Loc(unsigned SubKind, const void *D)
       : DefinedSVal(const_cast<void *>(D), true, SubKind) {}
 
@@ -353,9 +347,6 @@ public:
   }
 
   static bool classof(NonLoc V) { return V.getSubKind() == ConcreteIntKind; }
-
-private:
-  ConcreteInt() = default;
 };
 
 class LocAsInteger : public NonLoc {
@@ -388,9 +379,6 @@ public:
   }
 
   static bool classof(NonLoc V) { return V.getSubKind() == LocAsIntegerKind; }
-
-private:
-  LocAsInteger() = default;
 };
 
 class CompoundVal : public NonLoc {
@@ -413,9 +401,6 @@ public:
   }
 
   static bool classof(NonLoc V) { return V.getSubKind() == CompoundValKind; }
-
-private:
-  CompoundVal() = default;
 };
 
 class LazyCompoundVal : public NonLoc {
@@ -440,9 +425,6 @@ public:
   static bool classof(NonLoc V) {
     return V.getSubKind() == LazyCompoundValKind;
   }
-
-private:
-  LazyCompoundVal() = default;
 };
 
 /// Value representing pointer-to-member.
@@ -490,7 +472,6 @@ public:
   }
 
 private:
-  PointerToMember() = default;
   explicit PointerToMember(const PTMDataType D)
       : NonLoc(PointerToMemberKind, D.getOpaqueValue()) {}
 };
@@ -518,9 +499,6 @@ public:
   }
 
   static bool classof(Loc V) { return V.getSubKind() == GotoLabelKind; }
-
-private:
-  GotoLabel() = default;
 };
 
 class MemRegionVal : public Loc {
@@ -555,9 +533,6 @@ public:
   }
 
   static bool classof(Loc V) { return V.getSubKind() == MemRegionValKind; }
-
-private:
-  MemRegionVal() = default;
 };
 
 class ConcreteInt : public Loc {
@@ -573,9 +548,6 @@ public:
   }
 
   static bool classof(Loc V) { return V.getSubKind() == ConcreteIntKind; }
-
-private:
-  ConcreteInt() = default;
 };
 
 } // namespace loc
