@@ -1290,14 +1290,17 @@ static bool hasFixedResult(const VSETVLIInfo &Info, const RISCVSubtarget &ST) {
     // vreg def placement.
     return RISCV::X0 == Info.getAVLReg();
 
-  if (RISCVII::LMUL_1 != Info.getVLMUL())
-    // TODO: Generalize the code below to account for LMUL
-    return false;
-
   unsigned AVL = Info.getAVLImm();
   unsigned SEW = Info.getSEW();
   unsigned AVLInBits = AVL * SEW;
-  return ST.getRealMinVLen() >= AVLInBits;
+
+  unsigned LMul;
+  bool Fractional;
+  std::tie(LMul, Fractional) = RISCVVType::decodeVLMUL(Info.getVLMUL());
+
+  if (Fractional)
+    return ST.getRealMinVLen() / LMul >= AVLInBits;
+  return ST.getRealMinVLen() * LMul >= AVLInBits;
 }
 
 /// Perform simple partial redundancy elimination of the VSETVLI instructions
