@@ -15,15 +15,12 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/ExecutionEngine/SparseTensorUtils.h"
-#include "mlir/ExecutionEngine/CRunnerUtils.h"
 
 #ifdef MLIR_CRUNNERUTILS_DEFINE_FUNCTIONS
 
 #include <algorithm>
 #include <cassert>
-#include <complex>
 #include <cctype>
-#include <cinttypes>
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
@@ -32,10 +29,6 @@
 #include <iostream>
 #include <limits>
 #include <numeric>
-#include <vector>
-
-using complex64 = std::complex<double>;
-using complex32 = std::complex<float>;
 
 //===----------------------------------------------------------------------===//
 //
@@ -245,49 +238,6 @@ private:
   bool iteratorLocked = false;
   unsigned iteratorPos = 0;
 };
-
-// See <https://en.wikipedia.org/wiki/X_Macro>
-//
-// `FOREVERY_SIMPLEX_V` only specifies the non-complex `V` types, because
-// the ABI for complex types has compiler/architecture dependent complexities
-// we need to work around.  Namely, when a function takes a parameter of
-// C/C++ type `complex32` (per se), then there is additional padding that
-// causes it not to match the LLVM type `!llvm.struct<(f32, f32)>`.  This
-// only happens with the `complex32` type itself, not with pointers/arrays
-// of complex values.  So far `complex64` doesn't exhibit this ABI
-// incompatibility, but we exclude it anyways just to be safe.
-#define FOREVERY_SIMPLEX_V(DO)                                                 \
-  DO(F64, double)                                                              \
-  DO(F32, float)                                                               \
-  DO(I64, int64_t)                                                             \
-  DO(I32, int32_t)                                                             \
-  DO(I16, int16_t)                                                             \
-  DO(I8, int8_t)
-
-#define FOREVERY_V(DO)                                                         \
-  FOREVERY_SIMPLEX_V(DO)                                                       \
-  DO(C64, complex64)                                                           \
-  DO(C32, complex32)
-
-// This x-macro calls its argument on every overhead type which has
-// fixed-width.  It excludes `index_type` because that type is often
-// handled specially (e.g., by translating it into the architecture-dependent
-// equivalent fixed-width overhead type).
-#define FOREVERY_FIXED_O(DO)                                                   \
-  DO(64, uint64_t)                                                             \
-  DO(32, uint32_t)                                                             \
-  DO(16, uint16_t)                                                             \
-  DO(8, uint8_t)
-
-// This x-macro calls its argument on every overhead type, including
-// `index_type`.  Our naming convention uses an empty suffix for
-// `index_type`, so the missing first argument when we call `DO`
-// gets resolved to the empty token which can then be concatenated
-// as intended.  (This behavior is standard per C99 6.10.3/4 and
-// C++11 N3290 16.3/4; whereas in C++03 16.3/10 it was undefined behavior.)
-#define FOREVERY_O(DO)                                                         \
-  FOREVERY_FIXED_O(DO)                                                         \
-  DO(, index_type)
 
 // Forward.
 template <typename V>
@@ -1267,7 +1217,7 @@ static SparseTensorCOO<V> *openSparseTensorCOO(char *filename, uint64_t rank,
   return tensor;
 }
 
-/// Writes the sparse tensor to extended FROSTT format.
+/// Writes the sparse tensor to `dest` in extended FROSTT format.
 template <typename V>
 static void outSparseTensor(void *tensor, void *dest, bool sort) {
   assert(tensor && dest);
@@ -1372,18 +1322,14 @@ static void fromMLIRSparseTensor(void *tensor, uint64_t *pRank, uint64_t *pNse,
   *pIndices = indices;
 }
 
-} // namespace
+} // anonymous namespace
 
 extern "C" {
 
 //===----------------------------------------------------------------------===//
 //
-// Public API with methods that operate on MLIR buffers (memrefs) to interact
-// with sparse tensors, which are only visible as opaque pointers externally.
-// These methods should be used exclusively by MLIR compiler-generated code.
-//
-// Some macro magic is used to generate implementations for all required type
-// combinations that can be called from MLIR compiler-generated code.
+// Public functions which operate on MLIR buffers (memrefs) to interact
+// with sparse tensors (which are only visible as opaque pointers externally).
 //
 //===----------------------------------------------------------------------===//
 
@@ -1429,16 +1375,6 @@ extern "C" {
 static_assert(std::is_same<index_type, uint64_t>::value,
               "Expected index_type == uint64_t");
 
-/// Constructs a new sparse tensor. This is the "swiss army knife"
-/// method for materializing sparse tensors into the computation.
-///
-/// Action:
-/// kEmpty = returns empty storage to fill later
-/// kFromFile = returns storage, where ptr contains filename to read
-/// kFromCOO = returns storage, where ptr contains coordinate scheme to assign
-/// kEmptyCOO = returns empty coordinate scheme to fill and use with kFromCOO
-/// kToCOO = returns coordinate scheme from storage in ptr to use with kFromCOO
-/// kToIterator = returns iterator from storage in ptr (call getNext() to use)
 void *
 _mlir_ciface_newSparseTensor(StridedMemRefType<DimLevelType, 1> *aref, // NOLINT
                              StridedMemRefType<index_type, 1> *sref,
@@ -1534,12 +1470,15 @@ _mlir_ciface_newSparseTensor(StridedMemRefType<DimLevelType, 1> *aref, // NOLINT
   CASE_SECSAME(OverheadType::kU64, PrimaryType::kI32, uint64_t, int32_t);
   CASE_SECSAME(OverheadType::kU64, PrimaryType::kI16, uint64_t, int16_t);
   CASE_SECSAME(OverheadType::kU64, PrimaryType::kI8, uint64_t, int8_t);
+  CASE_SECSAME(OverheadType::kU32, PrimaryType::kI64, uint32_t, int64_t);
   CASE_SECSAME(OverheadType::kU32, PrimaryType::kI32, uint32_t, int32_t);
   CASE_SECSAME(OverheadType::kU32, PrimaryType::kI16, uint32_t, int16_t);
   CASE_SECSAME(OverheadType::kU32, PrimaryType::kI8, uint32_t, int8_t);
+  CASE_SECSAME(OverheadType::kU16, PrimaryType::kI64, uint16_t, int64_t);
   CASE_SECSAME(OverheadType::kU16, PrimaryType::kI32, uint16_t, int32_t);
   CASE_SECSAME(OverheadType::kU16, PrimaryType::kI16, uint16_t, int16_t);
   CASE_SECSAME(OverheadType::kU16, PrimaryType::kI8, uint16_t, int8_t);
+  CASE_SECSAME(OverheadType::kU8, PrimaryType::kI64, uint8_t, int64_t);
   CASE_SECSAME(OverheadType::kU8, PrimaryType::kI32, uint8_t, int32_t);
   CASE_SECSAME(OverheadType::kU8, PrimaryType::kI16, uint8_t, int16_t);
   CASE_SECSAME(OverheadType::kU8, PrimaryType::kI8, uint8_t, int8_t);
@@ -1557,7 +1496,6 @@ _mlir_ciface_newSparseTensor(StridedMemRefType<DimLevelType, 1> *aref, // NOLINT
 #undef CASE
 #undef CASE_SECSAME
 
-/// Methods that provide direct access to values.
 #define IMPL_SPARSEVALUES(VNAME, V)                                            \
   void _mlir_ciface_sparseValues##VNAME(StridedMemRefType<V, 1> *ref,          \
                                         void *tensor) {                        \
@@ -1583,20 +1521,17 @@ FOREVERY_V(IMPL_SPARSEVALUES)
     ref->sizes[0] = v->size();                                                 \
     ref->strides[0] = 1;                                                       \
   }
-/// Methods that provide direct access to pointers.
 #define IMPL_SPARSEPOINTERS(PNAME, P)                                          \
   IMPL_GETOVERHEAD(sparsePointers##PNAME, P, getPointers)
 FOREVERY_O(IMPL_SPARSEPOINTERS)
 #undef IMPL_SPARSEPOINTERS
 
-/// Methods that provide direct access to indices.
 #define IMPL_SPARSEINDICES(INAME, I)                                           \
   IMPL_GETOVERHEAD(sparseIndices##INAME, I, getIndices)
 FOREVERY_O(IMPL_SPARSEINDICES)
 #undef IMPL_SPARSEINDICES
 #undef IMPL_GETOVERHEAD
 
-/// Helper to add value to coordinate scheme, one per value type.
 #define IMPL_ADDELT(VNAME, V)                                                  \
   void *_mlir_ciface_addElt##VNAME(void *coo, V value,                         \
                                    StridedMemRefType<index_type, 1> *iref,     \
@@ -1614,18 +1549,19 @@ FOREVERY_O(IMPL_SPARSEINDICES)
     return coo;                                                                \
   }
 FOREVERY_SIMPLEX_V(IMPL_ADDELT)
-// `complex64` apparently doesn't encounter any ABI issues (yet).
 IMPL_ADDELT(C64, complex64)
-// TODO: cleaner way to avoid ABI padding problem?
-IMPL_ADDELT(C32ABI, complex32)
+// Marked static because it's not part of the public API.
+// (The `static` keyword confuses clang-format, so the extraneous trailing
+// semicolon is required to teach clang-format not to indent the prototype
+// of `_mlir_ciface_addEltC32` below.)
+static IMPL_ADDELT(C32ABI, complex32);
+#undef IMPL_ADDELT
 void *_mlir_ciface_addEltC32(void *coo, float r, float i,
                              StridedMemRefType<index_type, 1> *iref,
                              StridedMemRefType<index_type, 1> *pref) {
   return _mlir_ciface_addEltC32ABI(coo, complex32(r, i), iref, pref);
 }
-#undef IMPL_ADDELT
 
-/// Helper to enumerate elements of coordinate scheme, one per value type.
 #define IMPL_GETNEXT(VNAME, V)                                                 \
   bool _mlir_ciface_getNext##VNAME(void *coo,                                  \
                                    StridedMemRefType<index_type, 1> *iref,     \
@@ -1647,7 +1583,6 @@ void *_mlir_ciface_addEltC32(void *coo, float r, float i,
 FOREVERY_V(IMPL_GETNEXT)
 #undef IMPL_GETNEXT
 
-/// Insert elements in lexicographical index order, one per value type.
 #define IMPL_LEXINSERT(VNAME, V)                                               \
   void _mlir_ciface_lexInsert##VNAME(                                          \
       void *tensor, StridedMemRefType<index_type, 1> *cref, V val) {           \
@@ -1658,18 +1593,19 @@ FOREVERY_V(IMPL_GETNEXT)
     static_cast<SparseTensorStorageBase *>(tensor)->lexInsert(cursor, val);    \
   }
 FOREVERY_SIMPLEX_V(IMPL_LEXINSERT)
-// `complex64` apparently doesn't encounter any ABI issues (yet).
 IMPL_LEXINSERT(C64, complex64)
-// TODO: cleaner way to avoid ABI padding problem?
-IMPL_LEXINSERT(C32ABI, complex32)
+// Marked static because it's not part of the public API.
+// (The `static` keyword confuses clang-format, so the extraneous trailing
+// semicolon is required to teach clang-format not to indent the prototype
+// of `_mlir_ciface_lexInsertC32` below.)
+static IMPL_LEXINSERT(C32ABI, complex32);
+#undef IMPL_LEXINSERT
 void _mlir_ciface_lexInsertC32(void *tensor,
                                StridedMemRefType<index_type, 1> *cref, float r,
                                float i) {
   _mlir_ciface_lexInsertC32ABI(tensor, cref, complex32(r, i));
 }
-#undef IMPL_LEXINSERT
 
-/// Insert using expansion, one per value type.
 #define IMPL_EXPINSERT(VNAME, V)                                               \
   void _mlir_ciface_expInsert##VNAME(                                          \
       void *tensor, StridedMemRefType<index_type, 1> *cref,                    \
@@ -1691,7 +1627,7 @@ void _mlir_ciface_lexInsertC32(void *tensor,
 FOREVERY_V(IMPL_EXPINSERT)
 #undef IMPL_EXPINSERT
 
-/// Output a sparse tensor, one per value type.
+// TODO: move this into the next section, since it doesn't depend on memrefs.
 #define IMPL_OUTSPARSETENSOR(VNAME, V)                                         \
   void outSparseTensor##VNAME(void *coo, void *dest, bool sort) {              \
     return outSparseTensor<V>(coo, dest, sort);                                \
@@ -1701,15 +1637,13 @@ FOREVERY_V(IMPL_OUTSPARSETENSOR)
 
 //===----------------------------------------------------------------------===//
 //
-// Public API with methods that accept C-style data structures to interact
-// with sparse tensors, which are only visible as opaque pointers externally.
-// These methods can be used both by MLIR compiler-generated code as well as by
-// an external runtime that wants to interact with MLIR compiler-generated code.
+// Public functions which accept only C-style data structures to interact
+// with sparse tensors (which are only visible as opaque pointers externally).
 //
 //===----------------------------------------------------------------------===//
 
-/// Helper method to read a sparse tensor filename from the environment,
-/// defined with the naming convention ${TENSOR0}, ${TENSOR1}, etc.
+// TODO: move this lower down (after `delSparseTensorCOO`) since it's
+// independent of our sparse-tensor formats.
 char *getTensorFilename(index_type id) {
   char var[80];
   sprintf(var, "TENSOR%" PRIu64, id);
@@ -1719,22 +1653,18 @@ char *getTensorFilename(index_type id) {
   return env;
 }
 
-/// Returns size of sparse tensor in given dimension.
 index_type sparseDimSize(void *tensor, index_type d) {
   return static_cast<SparseTensorStorageBase *>(tensor)->getDimSize(d);
 }
 
-/// Finalizes lexicographic insertions.
 void endInsert(void *tensor) {
   return static_cast<SparseTensorStorageBase *>(tensor)->endInsert();
 }
 
-/// Releases sparse tensor storage.
 void delSparseTensor(void *tensor) {
   delete static_cast<SparseTensorStorageBase *>(tensor);
 }
 
-/// Releases sparse tensor coordinate scheme.
 #define IMPL_DELCOO(VNAME, V)                                                  \
   void delSparseTensorCOO##VNAME(void *coo) {                                  \
     delete static_cast<SparseTensorCOO<V> *>(coo);                             \
@@ -1742,29 +1672,7 @@ void delSparseTensor(void *tensor) {
 FOREVERY_V(IMPL_DELCOO)
 #undef IMPL_DELCOO
 
-/// Initializes sparse tensor from a COO-flavored format expressed using C-style
-/// data structures. The expected parameters are:
-///
-///   rank:    rank of tensor
-///   nse:     number of specified elements (usually the nonzeros)
-///   shape:   array with dimension size for each rank
-///   values:  a "nse" array with values for all specified elements
-///   indices: a flat "nse x rank" array with indices for all specified elements
-///   perm:    the permutation of the dimensions in the storage
-///   sparse:  the sparsity for the dimensions
-///
-/// For example, the sparse matrix
-///     | 1.0 0.0 0.0 |
-///     | 0.0 5.0 3.0 |
-/// can be passed as
-///      rank    = 2
-///      nse     = 3
-///      shape   = [2, 3]
-///      values  = [1.0, 5.0, 3.0]
-///      indices = [ 0, 0,  1, 1,  1, 2]
-//
 // TODO: generalize beyond 64-bit indices.
-//
 #define IMPL_CONVERTTOMLIRSPARSETENSOR(VNAME, V)                               \
   void *convertToMLIRSparseTensor##VNAME(                                      \
       uint64_t rank, uint64_t nse, uint64_t *shape, V *values,                 \
@@ -1775,26 +1683,12 @@ FOREVERY_V(IMPL_DELCOO)
 FOREVERY_V(IMPL_CONVERTTOMLIRSPARSETENSOR)
 #undef IMPL_CONVERTTOMLIRSPARSETENSOR
 
-/// Converts a sparse tensor to COO-flavored format expressed using C-style
-/// data structures. The expected output parameters are pointers for these
-/// values:
-///
-///   rank:    rank of tensor
-///   nse:     number of specified elements (usually the nonzeros)
-///   shape:   array with dimension size for each rank
-///   values:  a "nse" array with values for all specified elements
-///   indices: a flat "nse x rank" array with indices for all specified elements
-///
-/// The input is a pointer to SparseTensorStorage<P, I, V>, typically returned
-/// from convertToMLIRSparseTensor.
-///
-//  TODO: Currently, values are copied from SparseTensorStorage to
-//  SparseTensorCOO, then to the output. We may want to reduce the number of
-//  copies.
+// TODO: Currently, values are copied from SparseTensorStorage to
+// SparseTensorCOO, then to the output.  We may want to reduce the number
+// of copies.
 //
 // TODO: generalize beyond 64-bit indices, no dim ordering, all dimensions
 // compressed
-//
 #define IMPL_CONVERTFROMMLIRSPARSETENSOR(VNAME, V)                             \
   void convertFromMLIRSparseTensor##VNAME(void *tensor, uint64_t *pRank,       \
                                           uint64_t *pNse, uint64_t **pShape,   \
