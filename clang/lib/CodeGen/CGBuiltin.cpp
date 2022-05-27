@@ -19105,6 +19105,9 @@ Value *CodeGenFunction::EmitRISCVBuiltinExpr(unsigned BuiltinID,
   Intrinsic::ID ID = Intrinsic::not_intrinsic;
   unsigned NF = 1;
   constexpr unsigned TAIL_UNDISTURBED = 0;
+  constexpr unsigned TAIL_AGNOSTIC = 1;
+  constexpr unsigned TAIL_AGNOSTIC_MASK_AGNOSTIC = 3;
+  int DefaultPolicy = TAIL_UNDISTURBED;
 
   // Required for overloaded intrinsics.
   llvm::SmallVector<llvm::Type *, 2> IntrinsicTypes;

@@ -131,12 +131,12 @@
 // There are a number of attributes that are used to constraint the number and
 // shape of the builtins generated. Refer to the comments below for them.
 
-class Policy<int val>{
+class PolicyScheme<int val>{
   int Value = val;
 }
-def NonePolicy : Policy<0>;
-def HasPassthruOperand : Policy<1>;
-def HasPolicyOperand : Policy<2>;
+def NonePolicy : PolicyScheme<0>;
+def HasPassthruOperand : PolicyScheme<1>;
+def HasPolicyOperand : PolicyScheme<2>;
 
 class RVVBuiltin<string suffix, string prototype, string type_range,
                  string overloaded_suffix = ""> {
@@ -186,7 +186,7 @@ class RVVBuiltin<string suffix, string prototype, string type_range,
   // HasPolicyOperand: Has a policy operand. 0 is tail and mask undisturbed, 1 is
   // tail agnostic, 2 is mask undisturbed, and 3 is tail and mask agnostic. The
   // policy operand is located at the last position.
-  Policy MaskedPolicyScheme = HasPolicyOperand;
+  PolicyScheme MaskedPolicyScheme = HasPolicyOperand;
 
   // The policy scheme for unmasked intrinsic IR.
   // It could be NonePolicy, HasPassthruOperand or HasPolicyOperand.
@@ -194,11 +194,21 @@ class RVVBuiltin<string suffix, string prototype, string type_range,
   // undef, tail policy is tail agnostic, otherwise policy is tail undisturbed.
   // HasPolicyOperand: Has a policy operand. 1 is tail agnostic and 0 is tail
   // undisturbed.
-  Policy UnMaskedPolicyScheme = NonePolicy;
+  PolicyScheme UnMaskedPolicyScheme = NonePolicy;
 
-  // This builtin supports non-masked function overloading api.
-  // All masked operations support overloading api.
-  bit HasUnMaskedOverloaded = true;
+  // This builtin support tail agnostic and undisturbed policy.
+  bit HasTailPolicy = true;
+  // This builtin support mask agnostic and undisturbed policy.
+  bit HasMaskPolicy = true;
+
+  // This builtin prototype is tail undisturbed policy. It also means the
+  // default polcy without suffix is tail undisturbed.
+  bit IsPrototypeDefaultTU = false;
+
+  // This builtin prototype with TA or TAMA policy could not support overloading
+  // API. Other policy intrinsic functions would support overloading API with
+  // suffix `_tu`, `tumu`, `tuma`, `tamu` and `tama`.
+  bit SupportOverloading = true;
 
   // This builtin is valid for the given Log2LMULs.
   list<int> Log2LMUL = [0, 1, 2, 3, -1, -2, -3];
@@ -435,7 +445,7 @@ class RVVMaskUnaryBuiltin : RVVOutBuiltin<"m", "mm", "c"> {
 class RVVMaskNullaryBuiltin : RVVOutBuiltin<"m", "m", "c"> {
   let Name = NAME # "_m";
   let HasMasked = false;
-  let HasUnMaskedOverloaded = false;
+  let SupportOverloading = false;
 }
 
 class RVVMaskOp0Builtin<string prototype> : RVVOp0Builtin<"m", prototype, "c"> {
@@ -444,7 +454,8 @@ class RVVMaskOp0Builtin<string prototype> : RVVOp0Builtin<"m", prototype, "c"> {
 }
 
 let UnMaskedPolicyScheme = HasPolicyOperand,
-    HasMaskedOffOperand = false in {
+    HasMaskedOffOperand = false,
+    IsPrototypeDefaultTU = true in {
   multiclass RVVSlideBuiltinSet {
     defm "" : RVVOutBuiltinSet<NAME, "csilxfd",
                                [["vx","v", "vvvz"]]>;
@@ -581,7 +592,7 @@ class IsFloat<string type> {
   bit val = !or(!eq(type, "x"), !eq(type, "f"), !eq(type, "d"));
 }
 
-let HasUnMaskedOverloaded = false,
+let SupportOverloading = false,
     MaskedPolicyScheme = NonePolicy in {
   class RVVVLEMaskBuiltin : RVVOutBuiltin<"m", "mPCUe", "c"> {
     let Name = "vlm_v";
@@ -590,7 +601,7 @@ let HasUnMaskedOverloaded = false,
   }
 }
 
-let HasUnMaskedOverloaded = false,
+let SupportOverloading = false,
     UnMaskedPolicyScheme = HasPassthruOperand in {
   multiclass RVVVLEBuiltin<list<string> types> {
     let Name = NAME # "_v",
@@ -610,14 +621,16 @@ multiclass RVVVLEFFBuiltin<list<string> types> {
   let Name = NAME # "_v",
       IRName = "vleff",
       MaskedIRName = "vleff_mask",
-      HasUnMaskedOverloaded = false,
+      SupportOverloading = false,
+      UnMaskedPolicyScheme = HasPassthruOperand,
       ManualCodegen = [{
       {
-        IntrinsicTypes = {ResultType, Ops[2]->getType()};
-        Ops[0] = Builder.CreateBitCast(Ops[0], ResultType->getPointerTo());
-        Value *NewVL = Ops[1];
-        Ops.erase(Ops.begin() + 1);
-        Ops.insert(Ops.begin(), llvm::UndefValue::get(ResultType));
+        if (DefaultPolicy == TAIL_AGNOSTIC)
+          Ops.insert(Ops.begin(), llvm::UndefValue::get(ResultType));
+        IntrinsicTypes = {ResultType, Ops[3]->getType()};
+        Ops[1] = Builder.CreateBitCast(Ops[1], ResultType->getPointerTo());
+        Value *NewVL = Ops[2];
+        Ops.erase(Ops.begin() + 2);
         llvm::Function *F = CGM.getIntrinsic(ID, IntrinsicTypes);
         llvm::Value *LoadValue = Builder.CreateCall(F, Ops, "");
         llvm::Value *V = Builder.CreateExtractValue(LoadValue, {0});
@@ -633,7 +646,9 @@ multiclass RVVVLEFFBuiltin<list<string> types> {
       {
         // Move mask to right before vl.
         std::rotate(Ops.begin(), Ops.begin() + 1, Ops.end() - 1);
-        Ops.push_back(ConstantInt::get(Ops.back()->getType(), TAIL_UNDISTURBED));
+        if (DefaultPolicy == TAIL_AGNOSTIC_MASK_AGNOSTIC)
+          Ops.insert(Ops.begin(), llvm::UndefValue::get(ResultType));
+        Ops.push_back(ConstantInt::get(Ops.back()->getType(), DefaultPolicy));
         IntrinsicTypes = {ResultType, Ops[4]->getType()};
         Ops[1] = Builder.CreateBitCast(Ops[1], ResultType->getPointerTo());
         Value *NewVL = Ops[2];
@@ -642,8 +657,8 @@ multiclass RVVVLEFFBuiltin<list<string> types> {
         llvm::Value *LoadValue = Builder.CreateCall(F, Ops, "");
         llvm::Value *V = Builder.CreateExtractValue(LoadValue, {0});
         // Store new_vl.
-        clang::CharUnits Align =
-            CGM.getNaturalPointeeTypeAlignment(E->getArg(3)->getType());
+        clang::CharUnits Align = CGM.getNaturalPointeeTypeAlignment(
+            E->getArg(E->getNumArgs()-2)->getType());
         llvm::Value *Val = Builder.CreateExtractValue(LoadValue, {1});
         Builder.CreateStore(Val, Address(NewVL, Val->getType(), Align));
         return V;
@@ -663,7 +678,7 @@ multiclass RVVVLSEBuiltin<list<string> types> {
   let Name = NAME # "_v",
       IRName = "vlse",
       MaskedIRName ="vlse_mask",
-      HasUnMaskedOverloaded = false,
+      SupportOverloading = false,
       UnMaskedPolicyScheme = HasPassthruOperand in {
     foreach type = types in {
       def : RVVOutBuiltin<"v", "vPCet", type>;
@@ -826,7 +841,7 @@ multiclass RVVUnitStridedSegLoad<string op> {
             IRName = op # nf,
             MaskedIRName = op # nf # "_mask",
             NF = nf,
-            HasUnMaskedOverloaded = false,
+            SupportOverloading = false,
             ManualCodegen = [{
     {
       // builtin: (val0 address, val1 address, ..., ptr, vl)
@@ -901,7 +916,7 @@ multiclass RVVUnitStridedSegLoadFF<string op> {
             IRName = op # nf # "ff",
             MaskedIRName = op # nf # "ff_mask",
             NF = nf,
-            HasUnMaskedOverloaded = false,
+            SupportOverloading = false,
             ManualCodegen = [{
     {
       // builtin: (val0 address, val1 address, ..., ptr, new_vl, vl)
@@ -980,7 +995,7 @@ multiclass RVVStridedSegLoad<string op> {
             IRName = op # nf,
             MaskedIRName = op # nf # "_mask",
             NF = nf,
-            HasUnMaskedOverloaded = false,
+            SupportOverloading = false,
             ManualCodegen = [{
     {
       // builtin: (val0 address, val1 address, ..., ptr, stride, vl)
@@ -1357,20 +1372,22 @@ multiclass RVVPseudoVFUnaryBuiltin<string IR, string type_range> {
         IntrinsicTypes = {ResultType,
                           Ops[0]->getType(), Ops[1]->getType()};
         Ops.insert(Ops.begin() + 1, Ops[0]);
-        // insert undef passthru
-        Ops.insert(Ops.begin(), llvm::UndefValue::get(ResultType));
+        if (DefaultPolicy == TAIL_AGNOSTIC)
+          Ops.insert(Ops.begin(), llvm::UndefValue::get(ResultType));
         break;
       }
       }],
       MaskedManualCodegen = [{
       {
         std::rotate(Ops.begin(), Ops.begin() + 1, Ops.end() - 1);
-        Ops.push_back(ConstantInt::get(Ops.back()->getType(), TAIL_UNDISTURBED));
+        Ops.push_back(ConstantInt::get(Ops.back()->getType(), DefaultPolicy));
         // maskedoff, op1, mask, vl
         IntrinsicTypes = {ResultType,
                           Ops[1]->getType(),
                           Ops[3]->getType()};
         Ops.insert(Ops.begin() + 2, Ops[1]);
+        if (DefaultPolicy == TAIL_AGNOSTIC_MASK_AGNOSTIC)
+          Ops.insert(Ops.begin(), llvm::UndefValue::get(ResultType));
         break;
       }
       }] in {
@@ -1392,21 +1409,23 @@ multiclass RVVPseudoVWCVTBuiltin<string IR, string MName, string type_range,
                           cast<llvm::VectorType>(Ops[0]->getType())->getElementType(),
                           Ops[1]->getType()};
         Ops.insert(Ops.begin() + 1, llvm::Constant::getNullValue(IntrinsicTypes[2]));
-        // insert undef passthru
-        Ops.insert(Ops.begin(), llvm::UndefValue::get(ResultType));
+        if (DefaultPolicy == TAIL_AGNOSTIC)
+          Ops.insert(Ops.begin(), llvm::UndefValue::get(ResultType));
         break;
       }
       }],
       MaskedManualCodegen = [{
       {
         std::rotate(Ops.begin(), Ops.begin() + 1, Ops.end() - 1);
-        Ops.push_back(ConstantInt::get(Ops.back()->getType(), TAIL_UNDISTURBED));
+        Ops.push_back(ConstantInt::get(Ops.back()->getType(), DefaultPolicy));
         // maskedoff, op1, mask, vl
         IntrinsicTypes = {ResultType,
                           Ops[1]->getType(),
                           cast<llvm::VectorType>(Ops[1]->getType())->getElementType(),
                           Ops[3]->getType()};
         Ops.insert(Ops.begin() + 2, llvm::Constant::getNullValue(IntrinsicTypes[2]));
+        if (DefaultPolicy == TAIL_AGNOSTIC_MASK_AGNOSTIC)
+          Ops.insert(Ops.begin(), llvm::UndefValue::get(ResultType));
         break;
       }
       }] in {
@@ -1430,21 +1449,23 @@ multiclass RVVPseudoVNCVTBuiltin<string IR, string MName, string type_range,
                           Ops[1]->getType(),
                           Ops[1]->getType()};
         Ops.insert(Ops.begin() + 1, llvm::Constant::getNullValue(IntrinsicTypes[2]));
-        // insert undef passthru
-        Ops.insert(Ops.begin(), llvm::UndefValue::get(ResultType));
+        if (DefaultPolicy == TAIL_AGNOSTIC)
+          Ops.insert(Ops.begin(), llvm::UndefValue::get(ResultType));
         break;
       }
       }],
       MaskedManualCodegen = [{
       {
         std::rotate(Ops.begin(), Ops.begin() + 1, Ops.end() - 1);
-        Ops.push_back(ConstantInt::get(Ops.back()->getType(), TAIL_UNDISTURBED));
+        Ops.push_back(ConstantInt::get(Ops.back()->getType(), DefaultPolicy));
         // maskedoff, op1, mask, vl
         IntrinsicTypes = {ResultType,
                           Ops[1]->getType(),
                           Ops[3]->getType(),
                           Ops[3]->getType()};
         Ops.insert(Ops.begin() + 2, llvm::Constant::getNullValue(IntrinsicTypes[2]));
+        if (DefaultPolicy == TAIL_AGNOSTIC_MASK_AGNOSTIC)
+          Ops.insert(Ops.begin(), llvm::UndefValue::get(ResultType));
         break;
       }
       }] in {
@@ -1615,6 +1636,9 @@ defm vle32ff: RVVVLEFFBuiltin<["i", "f"]>;
 defm vle64ff: RVVVLEFFBuiltin<["l", "d"]>;
 
 // 7.8 Vector Load/Store Segment Instructions
+// TODO: Support policy function for segment load.
+let UnMaskedPolicyScheme = NonePolicy,
+    MaskedPolicyScheme = NonePolicy in {
 defm : RVVUnitStridedSegLoad<"vlseg">;
 defm : RVVUnitStridedSegLoadFF<"vlseg">;
 defm : RVVStridedSegLoad<"vlsseg">;
@@ -1624,6 +1648,7 @@ defm : RVVUnitStridedSegStore<"vsseg">;
 defm : RVVStridedSegStore<"vssseg">;
 defm : RVVIndexedSegStore<"vsuxseg">;
 defm : RVVIndexedSegStore<"vsoxseg">;
+}
 
 // 12. Vector Integer Arithmetic Instructions
 // 12.1. Vector Single-Width Integer Add and Subtract
@@ -1758,7 +1783,8 @@ defm vwmulsu : RVVOutOp0Op1BuiltinSet<"vwmulsu", "csi",
 }
 
 // 12.13. Vector Single-Width Integer Multiply-Add Instructions
-let UnMaskedPolicyScheme = HasPolicyOperand in {
+let UnMaskedPolicyScheme = HasPolicyOperand,
+    IsPrototypeDefaultTU = true in {
 defm vmacc  : RVVIntTerBuiltinSet;
 defm vnmsac : RVVIntTerBuiltinSet;
 defm vmadd  : RVVIntTerBuiltinSet;
@@ -1800,14 +1826,13 @@ let HasMasked = false, MaskedPolicyScheme = NonePolicy,
 // 12.16. Vector Integer Move Instructions
 let HasMasked = false,
     UnMaskedPolicyScheme = HasPassthruOperand,
-    MaskedPolicyScheme = NonePolicy in {
-  let OverloadedName = "vmv_v" in {
+    MaskedPolicyScheme = NonePolicy,
+    OverloadedName = "vmv_v" in {
     defm vmv_v : RVVOutBuiltinSet<"vmv_v_v", "csil",
                                    [["v", "Uv", "UvUv"]]>;
     defm vmv_v : RVVOutBuiltinSet<"vmv_v_v", "csilxfd",
                                    [["v", "v", "vv"]]>;
-  }
-  let HasUnMaskedOverloaded = false in
+  let SupportOverloading = false in
     defm vmv_v : RVVOutBuiltinSet<"vmv_v_x", "csil",
                                    [["x", "v", "ve"],
                                     ["x", "Uv", "UvUe"]]>;
@@ -1868,7 +1893,8 @@ let Log2LMUL = [-2, -1, 0, 1, 2] in {
 }
 
 // 14.6. Vector Single-Width Floating-Point Fused Multiply-Add Instructions
-let UnMaskedPolicyScheme = HasPolicyOperand in {
+let UnMaskedPolicyScheme = HasPolicyOperand,
+    IsPrototypeDefaultTU = true in {
 defm vfmacc  : RVVFloatingTerBuiltinSet;
 defm vfnmacc : RVVFloatingTerBuiltinSet;
 defm vfmsac  : RVVFloatingTerBuiltinSet;
@@ -1937,8 +1963,11 @@ let HasMasked = false, MaskedPolicyScheme = NonePolicy,
 }
 
 // 14.16. Vector Floating-Point Move Instruction
-let HasMasked = false, UnMaskedPolicyScheme = HasPassthruOperand,
-    HasUnMaskedOverloaded = false, MaskedPolicyScheme = NonePolicy in
+let HasMasked = false,
+    UnMaskedPolicyScheme = HasPassthruOperand,
+    SupportOverloading = false,
+    MaskedPolicyScheme = NonePolicy,
+    OverloadedName = "vfmv_v" in
   defm vfmv_v : RVVOutBuiltinSet<"vfmv_v_f", "xfd",
                                   [["f", "v", "ve"]]>;
 
@@ -1977,7 +2006,9 @@ let Log2LMUL = [-3, -2, -1, 0, 1, 2] in {
 
 // 15. Vector Reduction Operations
 // 15.1. Vector Single-Width Integer Reduction Instructions
-let MaskedPolicyScheme = NonePolicy in {
+let MaskedPolicyScheme = NonePolicy,
+    IsPrototypeDefaultTU = true,
+    HasMaskPolicy = false in {
 defm vredsum : RVVIntReductionBuiltinSet;
 defm vredmaxu : RVVUnsignedReductionBuiltin;
 defm vredmax : RVVSignedReductionBuiltin;
@@ -2040,7 +2071,7 @@ def vmsif : RVVMaskUnaryBuiltin;
 def vmsof : RVVMaskUnaryBuiltin;
 }
 
-let UnMaskedPolicyScheme = HasPassthruOperand, HasUnMaskedOverloaded = false in {
+let UnMaskedPolicyScheme = HasPassthruOperand, SupportOverloading = false in {
   // 16.8. Vector Iota Instruction
   defm viota : RVVOutBuiltinSet<"viota", "csil", [["m", "Uv", "Uvm"]]>;
 
@@ -2056,7 +2087,9 @@ let HasMasked = false, MaskedPolicyScheme = NonePolicy in {
     defm vmv_x : RVVOp0BuiltinSet<"vmv_x_s", "csil",
                                    [["s", "ve", "ev"],
                                     ["s", "UvUe", "UeUv"]]>;
-  let OverloadedName = "vmv_s" in
+  let OverloadedName = "vmv_s", IsPrototypeDefaultTU = true,
+      UnMaskedPolicyScheme = HasPassthruOperand,
+      SupportOverloading = false in
     defm vmv_s : RVVOutBuiltinSet<"vmv_s_x", "csil",
                                    [["x", "v", "vve"],
                                     ["x", "Uv", "UvUvUe"]]>;
@@ -2067,7 +2100,9 @@ let HasMasked = false, MaskedPolicyScheme = NonePolicy in {
   let HasVL = false, OverloadedName = "vfmv_f" in
     defm vfmv_f : RVVOp0BuiltinSet<"vfmv_f_s", "xfd",
                                      [["s", "ve", "ev"]]>;
-  let OverloadedName = "vfmv_s" in
+  let OverloadedName = "vfmv_s", IsPrototypeDefaultTU = true,
+      UnMaskedPolicyScheme = HasPassthruOperand,
+      SupportOverloading = false in
     defm vfmv_s : RVVOutBuiltinSet<"vfmv_s_f", "xfd",
                                      [["f", "v", "vve"],
                                       ["x", "Uv", "UvUvUe"]]>;
@@ -2143,7 +2178,7 @@ let HasMasked = false, HasVL = false, IRName = "" in {
     }
   }
 
-  let Name = "vundefined", HasUnMaskedOverloaded = false,
+  let Name = "vundefined", SupportOverloading = false,
       MaskedPolicyScheme = NonePolicy,
       ManualCodegen = [{
         return llvm::UndefValue::get(ResultType);
