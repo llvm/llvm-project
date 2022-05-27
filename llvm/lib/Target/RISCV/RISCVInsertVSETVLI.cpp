@@ -202,6 +202,9 @@ public:
   }
 
   // Check if the VTYPE for these two VSETVLIInfos produce the same VLMAX.
+  // Note that having the same VLMAX ensures that both share the same
+  // function from AVL to VL; that is, they must produce the same VL value
+  // for any given AVL value.
   bool hasSameVLMAX(const VSETVLIInfo &Other) const {
     assert(isValid() && Other.isValid() &&
            "Can't compare invalid VSETVLIInfos");
@@ -717,7 +720,7 @@ bool RISCVInsertVSETVLI::needVSETVLI(const VSETVLIInfo &Require,
     return false;
 
   // We didn't find a compatible value. If our AVL is a virtual register,
-  // it might be defined by a VSET(I)VLI. If it has the same VTYPE we need
+  // it might be defined by a VSET(I)VLI. If it has the same VLMAX we need
   // and the last VL/VTYPE we observed is the same, we don't need a
   // VSETVLI here.
   if (!CurInfo.isUnknown() && Require.hasAVLReg() &&
@@ -726,7 +729,7 @@ bool RISCVInsertVSETVLI::needVSETVLI(const VSETVLIInfo &Require,
     if (MachineInstr *DefMI = MRI->getVRegDef(Require.getAVLReg())) {
       if (isVectorConfigInstr(*DefMI)) {
         VSETVLIInfo DefInfo = getInfoForVSETVLI(*DefMI);
-        if (DefInfo.hasSameAVL(CurInfo) && DefInfo.hasSameVTYPE(CurInfo))
+        if (DefInfo.hasSameAVL(CurInfo) && DefInfo.hasSameVLMAX(CurInfo))
           return false;
       }
     }
@@ -1237,7 +1240,7 @@ void RISCVInsertVSETVLI::doLocalPrepass(MachineBasicBlock &MBB) {
           }
         }
 
-        // If AVL is defined by a vsetvli with the same vtype, we can
+        // If AVL is defined by a vsetvli with the same VLMAX, we can
         // replace the AVL operand with the AVL of the defining vsetvli.
         // We avoid general register AVLs to avoid extending live ranges
         // without being sure we can kill the original source reg entirely.
@@ -1246,7 +1249,7 @@ void RISCVInsertVSETVLI::doLocalPrepass(MachineBasicBlock &MBB) {
           if (MachineInstr *DefMI = MRI->getVRegDef(Require.getAVLReg())) {
             if (isVectorConfigInstr(*DefMI)) {
               VSETVLIInfo DefInfo = getInfoForVSETVLI(*DefMI);
-              if (DefInfo.hasSameVTYPE(Require) &&
+              if (DefInfo.hasSameVLMAX(Require) &&
                   (DefInfo.hasAVLImm() || DefInfo.getAVLReg() == RISCV::X0)) {
                 MachineOperand &VLOp = MI.getOperand(getVLOpNum(MI));
                 if (DefInfo.hasAVLImm())
