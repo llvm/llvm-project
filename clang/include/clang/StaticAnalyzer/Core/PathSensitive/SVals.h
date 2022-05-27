@@ -313,6 +313,7 @@ public:
     assert(!Loc::isLocType(sym->getType()));
   }
 
+  LLVM_ATTRIBUTE_RETURNS_NONNULL
   SymbolRef getSymbol() const {
     return (const SymExpr *) Data;
   }
@@ -384,9 +385,12 @@ public:
 class CompoundVal : public NonLoc {
   friend class ento::SValBuilder;
 
-  explicit CompoundVal(const CompoundValData* D) : NonLoc(CompoundValKind, D) {}
+  explicit CompoundVal(const CompoundValData *D) : NonLoc(CompoundValKind, D) {
+    assert(D);
+  }
 
 public:
+  LLVM_ATTRIBUTE_RETURNS_NONNULL
   const CompoundValData* getValue() const {
     return static_cast<const CompoundValData *>(Data);
   }
@@ -407,14 +411,20 @@ class LazyCompoundVal : public NonLoc {
   friend class ento::SValBuilder;
 
   explicit LazyCompoundVal(const LazyCompoundValData *D)
-      : NonLoc(LazyCompoundValKind, D) {}
+      : NonLoc(LazyCompoundValKind, D) {
+    assert(D);
+  }
 
 public:
+  LLVM_ATTRIBUTE_RETURNS_NONNULL
   const LazyCompoundValData *getCVData() const {
     return static_cast<const LazyCompoundValData *>(Data);
   }
 
+  LLVM_ATTRIBUTE_RETURNS_NONNULL
   const void *getStore() const;
+
+  LLVM_ATTRIBUTE_RETURNS_NONNULL
   const TypedValueRegion *getRegion() const;
 
   static bool classof(SVal V) {

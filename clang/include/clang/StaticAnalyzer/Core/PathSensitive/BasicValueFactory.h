@@ -66,10 +66,14 @@ class LazyCompoundValData : public llvm::FoldingSetNode {
 public:
   LazyCompoundValData(const StoreRef &st, const TypedValueRegion *r)
       : store(st), region(r) {
+    assert(r);
     assert(NonLoc::isCompoundType(r->getValueType()));
   }
 
+  /// It might return null.
   const void *getStore() const { return store.getStore(); }
+
+  LLVM_ATTRIBUTE_RETURNS_NONNULL
   const TypedValueRegion *getRegion() const { return region; }
 
   static void Profile(llvm::FoldingSetNodeID& ID,
@@ -86,7 +90,9 @@ class PointerToMemberData : public llvm::FoldingSetNode {
 public:
   PointerToMemberData(const NamedDecl *D,
                       llvm::ImmutableList<const CXXBaseSpecifier *> L)
-      : D(D), L(L) {}
+      : D(D), L(L) {
+    assert(D);
+  }
 
   using iterator = llvm::ImmutableList<const CXXBaseSpecifier *>::iterator;
 
@@ -97,6 +103,8 @@ public:
                       llvm::ImmutableList<const CXXBaseSpecifier *> L);
 
   void Profile(llvm::FoldingSetNodeID &ID) { Profile(ID, D, L); }
+
+  LLVM_ATTRIBUTE_RETURNS_NONNULL
   const NamedDecl *getDeclaratorDecl() const { return D; }
 
   llvm::ImmutableList<const CXXBaseSpecifier *> getCXXBaseList() const {
