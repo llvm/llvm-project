@@ -1,11 +1,12 @@
-// RUN: not llvm-mc -arch=amdgcn %s 2>&1 | FileCheck -check-prefix=GCN --implicit-check-not=error: %s
-// RUN: not llvm-mc -arch=amdgcn -mcpu=tonga %s 2>&1 | FileCheck -check-prefix=GCN --implicit-check-not=error: %s
+// RUN: not llvm-mc -arch=amdgcn %s 2>&1 | FileCheck -check-prefixes=GCN,GFX68 --implicit-check-not=error: %s
+// RUN: not llvm-mc -arch=amdgcn -mcpu=tonga %s 2>&1 | FileCheck -check-prefixes=GCN,GFX68 --implicit-check-not=error: %s
+// RUN: not llvm-mc -arch=amdgcn -mcpu=gfx1100 %s 2>&1 | FileCheck -check-prefixes=GCN,GFX11 --implicit-check-not=error: %s
 
 exp mrt8 v3, v2, v1, v0
 // GCN: :5: error: invalid exp target
 
 exp pos4 v3, v2, v1, v0
-// GCN: :5: error: exp target is not supported on this GPU
+// GFX68: :5: error: exp target is not supported on this GPU
 
 exp pos5 v3, v2, v1, v0
 // GCN: :5: error: invalid exp target
@@ -117,3 +118,18 @@ exp mrt0 v0, v0, 0x12345678, v0
 
 exp mrt0 v0, v0, v0, 0x12345678
 // GCN: 22: error: invalid operand for instruction
+
+exp null v4, v3, v2, v1
+// GFX11: :[[@LINE-1]]:{{[0-9]+}}: error: exp target is not supported on this GPU
+
+exp param0 v4, v3, v2, v1
+// GFX11: :[[@LINE-1]]:{{[0-9]+}}: error: exp target is not supported on this GPU
+
+exp param31 v4, v3, v2, v1
+// GFX11: :[[@LINE-1]]:{{[0-9]+}}: error: exp target is not supported on this GPU
+
+exp mrt0 v4, v3, v2, v1 vm
+// GFX11: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+
+exp mrtz, v3, v3, off, off compr
+// GFX11: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
