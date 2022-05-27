@@ -12,14 +12,8 @@
 #include <llvm-libc-types/__futex_word.h>
 
 typedef struct {
-  struct {
-    void *__stack;
-    unsigned long long __stack_size;
-    unsigned char __managed_stack;
-    int __retval;
-    int __tid;
-  } __attrib;
-  __futex_word __clear_tid;
+  void *__attribs;
+  void *__platform_attribs;
 } thrd_t;
 
 #endif // __LLVM_LIBC_TYPES_THRD_T_H__
