@@ -44,11 +44,11 @@
 
 // CONFLICT: "-msign-return-address=none"
 
-// BAD-RA-PROTECTION: invalid branch protection option 'foo' in '-msign-return-address={{.*}}'
-// BAD-BP-PROTECTION: invalid branch protection option 'bar' in '-mbranch-protection={{.*}}'
+// BAD-RA-PROTECTION: unsupported argument 'foo' to option '-msign-return-address='
+// BAD-BP-PROTECTION: unsupported argument 'bar' to option '-mbranch-protection='
 
-// BAD-B-KEY-COMBINATION: invalid branch protection option 'b-key' in '-mbranch-protection={{.*}}'
-// BAD-LEAF-COMBINATION: invalid branch protection option 'leaf' in '-mbranch-protection={{.*}}'
+// BAD-B-KEY-COMBINATION: unsupported argument 'b-key' to option '-mbranch-protection='
+// BAD-LEAF-COMBINATION: unsupported argument 'leaf' to option '-mbranch-protection='
 
 // Check that the linker driver doesn't warn about -mbranch-protection=standard
 // as an unused option.

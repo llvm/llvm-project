@@ -424,8 +424,6 @@ def warn_ignoring_verify_debuginfo_preserve_export : Warning<
   "ignoring -fverify-debuginfo-preserve-export=%0 because "
   "-fverify-debuginfo-preserve wasn't enabled">,
   InGroup<UnusedCommandLineArgument>;
-def err_invalid_branch_protection: Error <
-  "invalid branch protection option '%0' in '%1'">;
 def warn_unsupported_branch_protection: Warning <
   "invalid branch protection option '%0' in '%1'">, InGroup<BranchProtection>;
 def err_sls_hardening_arm_not_supported : Error<

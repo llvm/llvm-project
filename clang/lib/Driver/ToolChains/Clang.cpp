@@ -1693,18 +1693,17 @@ static void CollectARMPACBTIOptions(const ToolChain &TC, const ArgList &Args,
 
   if (A->getOption().matches(options::OPT_msign_return_address_EQ)) {
     Scope = A->getValue();
-    if (!Scope.equals("none") && !Scope.equals("non-leaf") &&
-        !Scope.equals("all"))
-      D.Diag(diag::err_invalid_branch_protection)
-          << Scope << A->getAsString(Args);
+    if (Scope != "none" && Scope != "non-leaf" && Scope != "all")
+      D.Diag(diag::err_drv_unsupported_option_argument)
+          << A->getOption().getName() << Scope;
     Key = "a_key";
     IndirectBranches = false;
   } else {
     StringRef DiagMsg;
     llvm::ARM::ParsedBranchProtection PBP;
     if (!llvm::ARM::parseBranchProtection(A->getValue(), PBP, DiagMsg))
-      D.Diag(diag::err_invalid_branch_protection)
-          << DiagMsg << A->getAsString(Args);
+      D.Diag(diag::err_drv_unsupported_option_argument)
+          << A->getOption().getName() << DiagMsg;
     if (!isAArch64 && PBP.Key == "b_key")
       D.Diag(diag::warn_unsupported_branch_protection)
           << "b-key" << A->getAsString(Args);
