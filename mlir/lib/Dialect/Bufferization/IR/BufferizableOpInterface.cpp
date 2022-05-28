@@ -45,6 +45,29 @@ static const char *kBufferAllocationAttr = "bufferization.allocation";
 static const char *kSkipDeallocAttr = "bufferization.skip_dealloc";
 
 //===----------------------------------------------------------------------===//
+// OpFilter
+//===----------------------------------------------------------------------===//
+
+bool OpFilter::isOpAllowed(Operation *op) const {
+  // All other ops: Allow/disallow according to filter.
+  bool isAllowed = !hasAllowRule();
+  for (const Entry &entry : entries) {
+    bool filterResult = entry.fn(op);
+    switch (entry.type) {
+    case Entry::ALLOW:
+      isAllowed |= filterResult;
+      break;
+    case Entry::DENY:
+      if (filterResult)
+        // DENY filter matches. This op is no allowed. (Even if other ALLOW
+        // filters may match.)
+        return false;
+    };
+  }
+  return isAllowed;
+}
+
+//===----------------------------------------------------------------------===//
 // BufferizationOptions
 //===----------------------------------------------------------------------===//
 
@@ -58,22 +81,7 @@ bool BufferizationOptions::isOpAllowed(Operation *op) const {
   if (!bufferizeFunctionBoundaries && isFuncBoundaryOp)
     return false;
 
-  // All other ops: Allow/disallow according to filter.
-  bool isAllowed = !filterHasAllowRule();
-  for (const OpFilterEntry &entry : opFilter) {
-    bool filterResult = entry.fn(op);
-    switch (entry.type) {
-    case OpFilterEntry::ALLOW:
-      isAllowed |= filterResult;
-      break;
-    case OpFilterEntry::DENY:
-      if (filterResult)
-        // DENY filter matches. This op is no allowed. (Even if other ALLOW
-        // filters may match.)
-        return false;
-    };
-  }
-  return isAllowed;
+  return opFilter.isOpAllowed(op);
 }
 
 BufferizableOpInterface

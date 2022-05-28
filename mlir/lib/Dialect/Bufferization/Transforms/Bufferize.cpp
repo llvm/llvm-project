@@ -194,7 +194,7 @@ struct OneShotBufferizePass
       opt.promoteBufferResultsToOutParams = promoteBufferResultsToOutParams;
       opt.unknownTypeConversion = parseLayoutMapOption(unknownTypeConversion);
 
-      BufferizationOptions::OpFilterEntry::FilterFn filterFn =
+      OpFilter::Entry::FilterFn filterFn =
           [&](Operation *op) {
             // Filter may be specified via options.
             if (this->dialectFilter.hasValue())
@@ -204,7 +204,7 @@ struct OneShotBufferizePass
             // No filter specified: All other ops are allowed.
             return true;
           };
-      opt.allowOperationInFilter(filterFn);
+      opt.opFilter.allowOperation(filterFn);
     } else {
       opt = *options;
     }
@@ -242,7 +242,7 @@ struct BufferizationBufferizePass
     : public BufferizationBufferizeBase<BufferizationBufferizePass> {
   void runOnOperation() override {
     BufferizationOptions options = getPartialBufferizationOptions();
-    options.allowDialectInFilter<BufferizationDialect>();
+    options.opFilter.allowDialect<BufferizationDialect>();
 
     if (failed(bufferizeOp(getOperation(), options)))
       signalPassFailure();
