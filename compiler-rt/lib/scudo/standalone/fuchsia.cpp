@@ -17,6 +17,7 @@
 #include <lib/sync/mutex.h> // for sync_mutex_t
 #include <stdlib.h>         // for getenv()
 #include <zircon/compiler.h>
+#include <zircon/process.h>
 #include <zircon/sanitizer.h>
 #include <zircon/syscalls.h>
 
