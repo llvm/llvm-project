@@ -380,15 +380,15 @@ static void foldMemRefCasts(func::FuncOp funcOp) {
   funcOp.setType(newFuncType);
 }
 
-LogicalResult mlir::bufferization::runOneShotModuleBufferize(
-    ModuleOp moduleOp, OneShotBufferizationOptions options) {
+LogicalResult
+mlir::bufferization::analyzeModuleOp(ModuleOp moduleOp,
+                                     OneShotAnalysisState &state) {
+  OneShotBufferizationOptions options =
+      static_cast<const OneShotBufferizationOptions &>(state.getOptions());
   assert(options.bufferizeFunctionBoundaries &&
          "expected that function boundary bufferization is activated");
-  IRRewriter rewriter(moduleOp.getContext());
-  OneShotAnalysisState analysisState(moduleOp, options);
-  BufferizationState bufferizationState(analysisState);
-  FuncAnalysisState &funcState = getFuncAnalysisState(analysisState);
-  BufferizationAliasInfo &aliasInfo = analysisState.getAliasInfo();
+  FuncAnalysisState &funcState = getFuncAnalysisState(state);
+  BufferizationAliasInfo &aliasInfo = state.getAliasInfo();
 
   // A list of functions in the order in which they are analyzed + bufferized.
   SmallVector<func::FuncOp> orderedFuncOps;
@@ -412,12 +412,12 @@ LogicalResult mlir::bufferization::runOneShotModuleBufferize(
     equivalenceAnalysis(funcOp, aliasInfo, funcState);
 
     // Analyze funcOp.
-    if (failed(analyzeOp(funcOp, analysisState)))
+    if (failed(analyzeOp(funcOp, state)))
       return failure();
 
     // Run some extra function analyses.
-    if (failed(aliasingFuncOpBBArgsAnalysis(funcOp, analysisState)) ||
-        failed(funcOpBbArgReadWriteAnalysis(funcOp, analysisState)))
+    if (failed(aliasingFuncOpBBArgsAnalysis(funcOp, state)) ||
+        failed(funcOpBbArgReadWriteAnalysis(funcOp, state)))
       return failure();
 
     // Mark op as fully analyzed.
@@ -425,11 +425,29 @@ LogicalResult mlir::bufferization::runOneShotModuleBufferize(
 
     // Add annotations to function arguments.
     if (options.testAnalysisOnly)
-      annotateOpsWithBufferizationMarkers(funcOp, analysisState);
+      annotateOpsWithBufferizationMarkers(funcOp, state);
   }
 
-  if (options.testAnalysisOnly)
-    return success();
+  return success();
+}
+
+LogicalResult mlir::bufferization::bufferizeModuleOp(
+    ModuleOp moduleOp, const OneShotAnalysisState &analysisState) {
+  auto const &options = static_cast<const OneShotBufferizationOptions &>(
+      analysisState.getOptions());
+  assert(options.bufferizeFunctionBoundaries &&
+         "expected that function boundary bufferization is activated");
+  IRRewriter rewriter(moduleOp.getContext());
+  BufferizationState bufferizationState(analysisState);
+
+  // A list of functions in the order in which they are analyzed + bufferized.
+  SmallVector<func::FuncOp> orderedFuncOps;
+
+  // A mapping of FuncOps to their callers.
+  FuncCallerMap callerMap;
+
+  if (failed(getFuncOpsOrderedByCalls(moduleOp, orderedFuncOps, callerMap)))
+    return failure();
 
   // Bufferize functions.
   for (func::FuncOp funcOp : orderedFuncOps) {
@@ -464,5 +482,19 @@ LogicalResult mlir::bufferization::runOneShotModuleBufferize(
       removeBufferizationAttributes(bbArg);
   });
 
+  return success();
+}
+
+LogicalResult mlir::bufferization::runOneShotModuleBufferize(
+    ModuleOp moduleOp, OneShotBufferizationOptions options) {
+  assert(options.bufferizeFunctionBoundaries &&
+         "expected that function boundary bufferization is activated");
+  OneShotAnalysisState analysisState(moduleOp, options);
+  if (failed(analyzeModuleOp(moduleOp, analysisState)))
+    return failure();
+  if (options.testAnalysisOnly)
+    return success();
+  if (failed(bufferizeModuleOp(moduleOp, analysisState)))
+    return failure();
   return success();
 }
