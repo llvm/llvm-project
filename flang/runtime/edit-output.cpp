@@ -260,7 +260,11 @@ bool RealOutputEditing<binaryPrecision>::EditEorDOutput(const DataEdit &edit) {
   }
   if (editWidth == 0) { // "the processor selects the field width"
     if (edit.digits.has_value()) { // E0.d
-      editWidth = editDigits + 6; // -.666E+ee
+      if (editDigits == 0) { // E0.0
+        editWidth = 7; // -.0E+ee
+      } else {
+        editWidth = editDigits + 6; // -.666E+ee
+      }
     } else { // E0
       flags |= decimal::Minimize;
       significantDigits =
