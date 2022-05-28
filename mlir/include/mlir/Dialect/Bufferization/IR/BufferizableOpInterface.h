@@ -409,6 +409,9 @@ public:
   /// Return true if `v1` and `v2` bufferize to equivalent buffers.
   virtual bool areEquivalentBufferizedValues(Value v1, Value v2) const = 0;
 
+  /// Return true if `v1` and `v2` may bufferize to aliasing buffers.
+  virtual bool areAliasingBufferizedValues(Value v1, Value v2) const = 0;
+
   /// Return `true` if the given tensor has undefined contents.
   virtual bool hasUndefinedContents(OpOperand *opOperand) const = 0;
 
