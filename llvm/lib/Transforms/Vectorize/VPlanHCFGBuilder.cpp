@@ -329,7 +329,7 @@ VPRegionBlock *PlainCFGBuilder::buildPlainCFG() {
   // 5. Final Top Region setup. Set outermost loop pre-header and single exit as
   // Top Region entry and exit.
   TopRegion->setEntry(PreheaderVPBB);
-  TopRegion->setExit(LoopExitVPBB);
+  TopRegion->setExiting(LoopExitVPBB);
   return TopRegion;
 }
 
