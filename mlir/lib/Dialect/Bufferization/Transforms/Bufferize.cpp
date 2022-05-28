@@ -345,9 +345,10 @@ class BufferizationRewriter : public IRRewriter {
 public:
   BufferizationRewriter(MLIRContext *ctx, DenseSet<Operation *> &erasedOps,
                         DenseSet<Operation *> &toMemrefOps,
-                        const BufferizationOptions &options)
+                        const BufferizationOptions &options,
+                        const OpFilter *opFilter)
       : IRRewriter(ctx), erasedOps(erasedOps), toMemrefOps(toMemrefOps),
-        options(options) {}
+        options(options), opFilter(opFilter) {}
 
 protected:
   void notifyOperationRemoved(Operation *op) override {
@@ -370,10 +371,18 @@ protected:
     if (isa<ToTensorOp>(op))
       return;
 
+    // Skip non-tensor ops.
+    if (!hasTensorSemantics(op))
+      return;
+
+    // Skip ops that are not allowed.
+    if (!options.isOpAllowed(op) || (opFilter && !opFilter->isOpAllowed(op)))
+      return;
+
     // Adding new bufferizable ops is not allowed during bufferization. Such ops
     // would not be analyzed and can lead to surprising behavior.
-    assert((!hasTensorSemantics(op) || !options.isOpAllowed(op)) &&
-           "creating new tensor ops is not allowed during bufferization");
+    llvm_unreachable(
+        "creating new tensor ops is not allowed during bufferization");
   }
 
 private:
@@ -387,12 +396,14 @@ private:
   /// Used for debug modes.
   LLVM_ATTRIBUTE_UNUSED
   const BufferizationOptions &options;
+
+  const OpFilter *opFilter;
 };
 } // namespace
 
-LogicalResult
-bufferization::bufferizeOp(Operation *op,
-                           BufferizationState &bufferizationState) {
+LogicalResult bufferization::bufferizeOp(Operation *op,
+                                         BufferizationState &bufferizationState,
+                                         const OpFilter *opFilter) {
   const auto &options = bufferizationState.getOptions();
   assert(options.unknownTypeConversion !=
              BufferizationOptions::LayoutMapOption::InferLayoutMap &&
@@ -420,7 +431,7 @@ bufferization::bufferizeOp(Operation *op,
 
   // Bufferize all ops.
   BufferizationRewriter rewriter(op->getContext(), erasedOps, toMemrefOps,
-                                 bufferizationState.getOptions());
+                                 bufferizationState.getOptions(), opFilter);
   for (unsigned i = 0; i < worklist.size(); ++i) {
     Operation *op = worklist[i];
     // Skip ops that were erased.
@@ -429,6 +440,8 @@ bufferization::bufferizeOp(Operation *op,
     // Skip ops that are not bufferizable or not allowed.
     auto bufferizableOp = options.dynCastBufferizableOp(op);
     if (!bufferizableOp)
+      continue;
+    if (opFilter && !opFilter->isOpAllowed(op))
       continue;
     // Skip ops that no longer have tensor semantics.
     if (!hasTensorSemantics(op))
@@ -461,6 +474,8 @@ bufferization::bufferizeOp(Operation *op,
       continue;
     // Continue ops that are not allowed.
     if (!options.isOpAllowed(op))
+      continue;
+    if (opFilter && !opFilter->isOpAllowed(op))
       continue;
     // Ops without any uses and no side effects will fold away.
     if (op->getUses().empty() && MemoryEffectOpInterface::hasNoEffect(op))
