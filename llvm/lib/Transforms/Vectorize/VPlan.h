@@ -493,11 +493,11 @@ public:
   const VPBasicBlock *getEntryBasicBlock() const;
   VPBasicBlock *getEntryBasicBlock();
 
-  /// \return the VPBasicBlock that is the exit of this VPBlockBase,
+  /// \return the VPBasicBlock that is the exiting this VPBlockBase,
   /// recursively, if the latter is a VPRegionBlock. Otherwise, if this
   /// VPBlockBase is a VPBasicBlock, it is returned.
-  const VPBasicBlock *getExitBasicBlock() const;
-  VPBasicBlock *getExitBasicBlock();
+  const VPBasicBlock *getExitingBasicBlock() const;
+  VPBasicBlock *getExitingBasicBlock();
 
   const VPBlocksTy &getSuccessors() const { return Successors; }
   VPBlocksTy &getSuccessors() { return Successors; }
@@ -2109,7 +2109,7 @@ private:
 };
 
 /// VPRegionBlock represents a collection of VPBasicBlocks and VPRegionBlocks
-/// which form a Single-Entry-Single-Exit subgraph of the output IR CFG.
+/// which form a Single-Entry-Single-Exiting subgraph of the output IR CFG.
 /// A VPRegionBlock may indicate that its contents are to be replicated several
 /// times. This is designed to support predicated scalarization, in which a
 /// scalar if-then code structure needs to be generated VF * UF times. Having
@@ -2120,25 +2120,26 @@ class VPRegionBlock : public VPBlockBase {
   /// Hold the Single Entry of the SESE region modelled by the VPRegionBlock.
   VPBlockBase *Entry;
 
-  /// Hold the Single Exit of the SESE region modelled by the VPRegionBlock.
-  VPBlockBase *Exit;
+  /// Hold the Single Exiting block of the SESE region modelled by the
+  /// VPRegionBlock.
+  VPBlockBase *Exiting;
 
   /// An indicator whether this region is to generate multiple replicated
   /// instances of output IR corresponding to its VPBlockBases.
   bool IsReplicator;
 
 public:
-  VPRegionBlock(VPBlockBase *Entry, VPBlockBase *Exit,
+  VPRegionBlock(VPBlockBase *Entry, VPBlockBase *Exiting,
                 const std::string &Name = "", bool IsReplicator = false)
-      : VPBlockBase(VPRegionBlockSC, Name), Entry(Entry), Exit(Exit),
+      : VPBlockBase(VPRegionBlockSC, Name), Entry(Entry), Exiting(Exiting),
         IsReplicator(IsReplicator) {
     assert(Entry->getPredecessors().empty() && "Entry block has predecessors.");
-    assert(Exit->getSuccessors().empty() && "Exit block has successors.");
+    assert(Exiting->getSuccessors().empty() && "Exit block has successors.");
     Entry->setParent(this);
-    Exit->setParent(this);
+    Exiting->setParent(this);
   }
   VPRegionBlock(const std::string &Name = "", bool IsReplicator = false)
-      : VPBlockBase(VPRegionBlockSC, Name), Entry(nullptr), Exit(nullptr),
+      : VPBlockBase(VPRegionBlockSC, Name), Entry(nullptr), Exiting(nullptr),
         IsReplicator(IsReplicator) {}
 
   ~VPRegionBlock() override {
@@ -2172,22 +2173,22 @@ public:
   // DominatorTreeBase representing the Graph type.
   VPBlockBase &front() const { return *Entry; }
 
-  const VPBlockBase *getExit() const { return Exit; }
-  VPBlockBase *getExit() { return Exit; }
+  const VPBlockBase *getExiting() const { return Exiting; }
+  VPBlockBase *getExiting() { return Exiting; }
 
-  /// Set \p ExitBlock as the exit VPBlockBase of this VPRegionBlock. \p
-  /// ExitBlock must have no successors.
-  void setExit(VPBlockBase *ExitBlock) {
-    assert(ExitBlock->getSuccessors().empty() &&
+  /// Set \p ExitingBlock as the exiting VPBlockBase of this VPRegionBlock. \p
+  /// ExitingBlock must have no successors.
+  void setExiting(VPBlockBase *ExitingBlock) {
+    assert(ExitingBlock->getSuccessors().empty() &&
            "Exit block cannot have successors.");
-    Exit = ExitBlock;
-    ExitBlock->setParent(this);
+    Exiting = ExitingBlock;
+    ExitingBlock->setParent(this);
   }
 
   /// Returns the pre-header VPBasicBlock of the loop region.
   VPBasicBlock *getPreheaderVPBB() {
     assert(!isReplicator() && "should only get pre-header of loop regions");
-    return getSinglePredecessor()->getExitBasicBlock();
+    return getSinglePredecessor()->getExitingBasicBlock();
   }
 
   /// An indicator whether this region is to generate multiple replicated
@@ -2321,11 +2322,11 @@ struct GraphTraits<Inverse<VPRegionBlock *>>
   using nodes_iterator = df_iterator<NodeRef>;
 
   static NodeRef getEntryNode(Inverse<GraphRef> N) {
-    return N.Graph->getExit();
+    return N.Graph->getExiting();
   }
 
   static nodes_iterator nodes_begin(GraphRef N) {
-    return nodes_iterator::begin(N->getExit());
+    return nodes_iterator::begin(N->getExiting());
   }
 
   static nodes_iterator nodes_end(GraphRef N) {
@@ -2871,8 +2872,8 @@ public:
       R.moveBefore(*PredVPBB, PredVPBB->end());
     VPBlockUtils::disconnectBlocks(PredVPBB, VPBB);
     auto *ParentRegion = cast<VPRegionBlock>(Block->getParent());
-    if (ParentRegion->getExit() == Block)
-      ParentRegion->setExit(PredVPBB);
+    if (ParentRegion->getExiting() == Block)
+      ParentRegion->setExiting(PredVPBB);
     SmallVector<VPBlockBase *> Successors(Block->successors());
     for (auto *Succ : Successors) {
       VPBlockUtils::disconnectBlocks(Block, Succ);

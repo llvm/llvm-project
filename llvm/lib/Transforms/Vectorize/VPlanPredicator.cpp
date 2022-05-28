@@ -130,9 +130,9 @@ VPlanPredicator::getEdgeTypeBetween(VPBlockBase *FromBlock,
 // predecessor blocks.
 void VPlanPredicator::createOrPropagatePredicates(VPBlockBase *CurrBlock,
                                                   VPRegionBlock *Region) {
-  // Blocks that dominate region exit inherit the predicate from the region.
+  // Blocks that dominate region exiting inherit the predicate from the region.
   // Return after setting the predicate.
-  if (VPDomTree.dominates(CurrBlock, Region->getExit())) {
+  if (VPDomTree.dominates(CurrBlock, Region->getExiting())) {
     VPValue *RegionBP = Region->getPredicate();
     CurrBlock->setPredicate(RegionBP);
     return;
