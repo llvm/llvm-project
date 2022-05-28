@@ -35,6 +35,8 @@ Types:
 
 #include <__assert> // all public C++ headers provide the assertion handler
 #include <__config>
+#include <__type_traits/enable_if.h>
+#include <__type_traits/integral_constant.h>
 #include <__type_traits/is_integral.h>
 #include <stddef.h>
 #include <version>
@@ -59,11 +61,6 @@ _LIBCPP_END_NAMESPACE_STD
 namespace std  // purposefully not versioned
 {
 enum class byte : unsigned char {};
-
-
-template <bool> struct __enable_if_integral_imp {};
-template <> struct __enable_if_integral_imp<true> { using type = byte; };
-template <class _Tp> using _EnableByteOverload = typename __enable_if_integral_imp<__libcpp_is_integral<_Tp>::value>::type;
 
 constexpr byte  operator| (byte  __lhs, byte __rhs) noexcept
 {
@@ -105,6 +102,10 @@ constexpr byte  operator~ (byte __b) noexcept
         ~static_cast<unsigned int>(__b)
     ));
 }
+
+template <class _Tp>
+using _EnableByteOverload = __enable_if_t<is_integral<_Tp>::value, byte>;
+
 template <class _Integer>
   constexpr _EnableByteOverload<_Integer> &
   operator<<=(byte& __lhs, _Integer __shift) noexcept
