@@ -62,3 +62,6 @@ import libcxx.test.config
 configuration = libcxx.test.config.Configuration(lit_config, config)
 configuration.configure()
 configuration.print_config_info()
+
+lit_config.warning("This is a legacy testing configuration which will be removed in LLVM 16. "
+                   "Please use one of the configurations in libcxx/test/configs or define your own.")

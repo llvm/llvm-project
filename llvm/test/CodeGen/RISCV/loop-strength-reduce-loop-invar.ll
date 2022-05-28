@@ -54,10 +54,10 @@ define void @test(i32 signext %row, i32 signext %N.in) nounwind {
 ; RV64-NEXT:    blez a1, .LBB0_3
 ; RV64-NEXT:  # %bb.1: # %cond_true.preheader
 ; RV64-NEXT:    li a4, 0
+; RV64-NEXT:    slli a0, a0, 6
 ; RV64-NEXT:    lui a2, %hi(A)
 ; RV64-NEXT:    addi a2, a2, %lo(A)
-; RV64-NEXT:    slli a0, a0, 6
-; RV64-NEXT:    add a0, a0, a2
+; RV64-NEXT:    add a0, a2, a0
 ; RV64-NEXT:    li a2, 4
 ; RV64-NEXT:    li a3, 5
 ; RV64-NEXT:  .LBB0_2: # %cond_true

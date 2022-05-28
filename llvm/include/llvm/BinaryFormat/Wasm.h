@@ -470,8 +470,9 @@ inline bool operator==(const WasmTableType &LHS, const WasmTableType &RHS) {
   return LHS.ElemType == RHS.ElemType && LHS.Limits == RHS.Limits;
 }
 
-std::string toString(WasmSymbolType type);
-std::string relocTypetoString(uint32_t type);
+llvm::StringRef toString(WasmSymbolType type);
+llvm::StringRef relocTypetoString(uint32_t type);
+llvm::StringRef sectionTypeToString(uint32_t type);
 bool relocTypeHasAddend(uint32_t type);
 
 } // end namespace wasm

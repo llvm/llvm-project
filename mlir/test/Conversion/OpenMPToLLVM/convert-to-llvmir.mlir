@@ -1,4 +1,4 @@
-// RUN: mlir-opt -convert-openmp-to-llvm %s  -split-input-file | FileCheck %s
+// RUN: mlir-opt -convert-openmp-to-llvm -split-input-file %s | FileCheck %s
 
 // CHECK-LABEL: llvm.func @master_block_arg
 func.func @master_block_arg() {
@@ -14,6 +14,8 @@ func.func @master_block_arg() {
   }
   return
 }
+
+// -----
 
 // CHECK-LABEL: llvm.func @branch_loop
 func.func @branch_loop() {
@@ -44,6 +46,8 @@ func.func @branch_loop() {
   return
 }
 
+// -----
+
 // CHECK-LABEL: @wsloop
 // CHECK: (%[[ARG0:.*]]: i64, %[[ARG1:.*]]: i64, %[[ARG2:.*]]: i64, %[[ARG3:.*]]: i64, %[[ARG4:.*]]: i64, %[[ARG5:.*]]: i64)
 func.func @wsloop(%arg0: index, %arg1: index, %arg2: index, %arg3: index, %arg4: index, %arg5: index) {
@@ -60,5 +64,37 @@ func.func @wsloop(%arg0: index, %arg1: index, %arg2: index, %arg3: index, %arg4:
     }) {operand_segment_sizes = dense<[2, 2, 2, 0, 0, 0, 0]> : vector<7xi32>} : (index, index, index, index, index, index) -> ()
     omp.terminator
   }
+  return
+}
+
+// -----
+
+// CHECK-LABEL: @atomic_write
+// CHECK: (%[[ARG0:.*]]: !llvm.ptr<i32>)
+// CHECK: %[[VAL0:.*]] = llvm.mlir.constant(1 : i32) : i32
+// CHECK: omp.atomic.write %[[ARG0]] = %[[VAL0]] hint(none) memory_order(relaxed) : !llvm.ptr<i32>, i32
+func.func @atomic_write(%a: !llvm.ptr<i32>) -> () {
+  %1 = arith.constant 1 : i32
+  omp.atomic.write %a = %1 hint(none) memory_order(relaxed) : !llvm.ptr<i32>, i32
+  return
+}
+
+// -----
+
+// CHECK-LABEL: @atomic_read
+// CHECK: (%[[ARG0:.*]]: !llvm.ptr<i32>, %[[ARG1:.*]]: !llvm.ptr<i32>)
+// CHECK: omp.atomic.read %[[ARG1]] = %[[ARG0]] memory_order(acquire) hint(contended) : !llvm.ptr<i32>
+func.func @atomic_read(%a: !llvm.ptr<i32>, %b: !llvm.ptr<i32>) -> () {
+  omp.atomic.read %b = %a memory_order(acquire) hint(contended) : !llvm.ptr<i32>
+  return
+}
+
+// -----
+
+// CHECK-LABEL: @threadprivate
+// CHECK: (%[[ARG0:.*]]: !llvm.ptr<i32>)
+// CHECK: %[[VAL0:.*]] = omp.threadprivate %[[ARG0]] : !llvm.ptr<i32> -> !llvm.ptr<i32>
+func.func @threadprivate(%a: !llvm.ptr<i32>) -> () {
+  %1 = omp.threadprivate %a : !llvm.ptr<i32> -> !llvm.ptr<i32>
   return
 }

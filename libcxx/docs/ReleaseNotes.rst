@@ -148,7 +148,8 @@ Build System Changes
   its own headers.
 
 - The legacy testing configuration is now deprecated and will be removed in the next release. For
-  most users, this should not have any impact. However, if you are testing libc++ in a configuration
-  or on a platform that used to be supported by the legacy testing configuration and isn't supported
-  by one of the configurations in ``libcxx/test/configs``, please reach out to the libc++ developers
-  to get your configuration supported officially.
+  most users, this should not have any impact. However, if you are testing libc++, libc++abi or
+  libunwind in a configuration or on a platform that used to be supported by the legacy testing
+  configuration and isn't supported by one of the configurations in ``libcxx/test/configs``,
+  ``libcxxabi/test/configs`` or ``libunwind/test/configs``, please move to one of those
+  configurations or define your own.

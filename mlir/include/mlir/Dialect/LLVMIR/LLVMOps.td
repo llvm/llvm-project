@@ -190,7 +190,7 @@ def CConv : DialectAttr<
     "LLVM Calling Convention specification"> {
   let storageType = "::mlir::LLVM::CConvAttr";
   let returnType = "::mlir::LLVM::cconv::CConv";
-  let convertFromStorage = "$_self.getCConv()";
+  let convertFromStorage = "$_self.getCallingConv()";
   let constBuilderCall =
           "::mlir::LLVM::CConvAttr::get($_builder.getContext(), $0)";
 }
