@@ -519,6 +519,7 @@ template <class Key, class T, class Hash, class Pred, class Alloc>
 #include <__config>
 #include <__debug>
 #include <__functional/is_transparent.h>
+#include <__functional/operations.h>
 #include <__hash_table>
 #include <__iterator/iterator_traits.h>
 #include <__memory/addressof.h>

@@ -85,9 +85,9 @@
 // BTE-OFF-NOT: "-mbranch-target-enforce"
 // BTE-ON: "-mbranch-target-enforce"
 
-// BAD-BP-PROTECTION: invalid branch protection option 'bar' in '-mbranch-protection={{.*}}'
+// BAD-BP-PROTECTION: unsupported argument 'bar' to option '-mbranch-protection='
 
-// BAD-B-KEY-COMBINATION: invalid branch protection option 'b-key' in '-mbranch-protection={{.*}}'
-// BAD-LEAF-COMBINATION: invalid branch protection option 'leaf' in '-mbranch-protection={{.*}}'
+// BAD-B-KEY-COMBINATION: unsupported argument 'b-key' to option '-mbranch-protection='
+// BAD-LEAF-COMBINATION: unsupported argument 'leaf' to option '-mbranch-protection='
 
 // INCOMPATIBLE-ARCH: '-mbranch-protection=' option is incompatible with the '{{.*}}' architecture

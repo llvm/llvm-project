@@ -23,6 +23,7 @@
 #include <utility>
 #include <cstdint>
 #include <cassert>
+#include <functional>
 
 #include "test_macros.h"
 

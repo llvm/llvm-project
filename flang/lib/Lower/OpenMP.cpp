@@ -841,11 +841,7 @@ genOmpAtomicWrite(Fortran::lower::AbstractConverter &converter,
                   const Fortran::parser::OmpAtomicWrite &atomicWrite) {
   auto &firOpBuilder = converter.getFirOpBuilder();
   auto currentLocation = converter.getCurrentLocation();
-  mlir::Value address;
-  // If no hint clause is specified, the effect is as if
-  // hint(omp_sync_hint_none) had been specified.
-  mlir::IntegerAttr hint = nullptr;
-  mlir::omp::ClauseMemoryOrderKindAttr memory_order = nullptr;
+  // Get the value and address of atomic write operands.
   const Fortran::parser::OmpAtomicClauseList &rightHandClauseList =
       std::get<2>(atomicWrite.t);
   const Fortran::parser::OmpAtomicClauseList &leftHandClauseList =
@@ -855,16 +851,14 @@ genOmpAtomicWrite(Fortran::lower::AbstractConverter &converter,
   const auto &assignmentStmtVariable = std::get<Fortran::parser::Variable>(
       std::get<3>(atomicWrite.t).statement.t);
   Fortran::lower::StatementContext stmtCtx;
-  auto value = fir::getBase(converter.genExprValue(
+  mlir::Value value = fir::getBase(converter.genExprValue(
       *Fortran::semantics::GetExpr(assignmentStmtExpr), stmtCtx));
-  if (auto varDesignator = std::get_if<
-          Fortran::common::Indirection<Fortran::parser::Designator>>(
-          &assignmentStmtVariable.u)) {
-    if (const auto *name = getDesignatorNameIfDataRef(varDesignator->value())) {
-      address = converter.getSymbolAddress(*name->symbol);
-    }
-  }
-
+  mlir::Value address = fir::getBase(converter.genExprAddr(
+      *Fortran::semantics::GetExpr(assignmentStmtVariable), stmtCtx));
+  // If no hint clause is specified, the effect is as if
+  // hint(omp_sync_hint_none) had been specified.
+  mlir::IntegerAttr hint = nullptr;
+  mlir::omp::ClauseMemoryOrderKindAttr memory_order = nullptr;
   genOmpAtomicHintAndMemoryOrderClauses(converter, leftHandClauseList, hint,
                                         memory_order);
   genOmpAtomicHintAndMemoryOrderClauses(converter, rightHandClauseList, hint,
@@ -878,12 +872,7 @@ static void genOmpAtomicRead(Fortran::lower::AbstractConverter &converter,
                              const Fortran::parser::OmpAtomicRead &atomicRead) {
   auto &firOpBuilder = converter.getFirOpBuilder();
   auto currentLocation = converter.getCurrentLocation();
-  mlir::Value to_address;
-  mlir::Value from_address;
-  // If no hint clause is specified, the effect is as if
-  // hint(omp_sync_hint_none) had been specified.
-  mlir::IntegerAttr hint = nullptr;
-  mlir::omp::ClauseMemoryOrderKindAttr memory_order = nullptr;
+  // Get the address of atomic read operands.
   const Fortran::parser::OmpAtomicClauseList &rightHandClauseList =
       std::get<2>(atomicRead.t);
   const Fortran::parser::OmpAtomicClauseList &leftHandClauseList =
@@ -892,23 +881,15 @@ static void genOmpAtomicRead(Fortran::lower::AbstractConverter &converter,
       std::get<Fortran::parser::Expr>(std::get<3>(atomicRead.t).statement.t);
   const auto &assignmentStmtVariable = std::get<Fortran::parser::Variable>(
       std::get<3>(atomicRead.t).statement.t);
-  if (auto exprDesignator = std::get_if<
-          Fortran::common::Indirection<Fortran::parser::Designator>>(
-          &assignmentStmtExpr.u)) {
-    if (const auto *name =
-            getDesignatorNameIfDataRef(exprDesignator->value())) {
-      from_address = converter.getSymbolAddress(*name->symbol);
-    }
-  }
-
-  if (auto varDesignator = std::get_if<
-          Fortran::common::Indirection<Fortran::parser::Designator>>(
-          &assignmentStmtVariable.u)) {
-    if (const auto *name = getDesignatorNameIfDataRef(varDesignator->value())) {
-      to_address = converter.getSymbolAddress(*name->symbol);
-    }
-  }
-
+  Fortran::lower::StatementContext stmtCtx;
+  mlir::Value from_address = fir::getBase(converter.genExprAddr(
+      *Fortran::semantics::GetExpr(assignmentStmtExpr), stmtCtx));
+  mlir::Value to_address = fir::getBase(converter.genExprAddr(
+      *Fortran::semantics::GetExpr(assignmentStmtVariable), stmtCtx));
+  // If no hint clause is specified, the effect is as if
+  // hint(omp_sync_hint_none) had been specified.
+  mlir::IntegerAttr hint = nullptr;
+  mlir::omp::ClauseMemoryOrderKindAttr memory_order = nullptr;
   genOmpAtomicHintAndMemoryOrderClauses(converter, leftHandClauseList, hint,
                                         memory_order);
   genOmpAtomicHintAndMemoryOrderClauses(converter, rightHandClauseList, hint,
