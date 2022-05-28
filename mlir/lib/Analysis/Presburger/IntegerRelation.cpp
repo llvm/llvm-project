@@ -1184,16 +1184,16 @@ void IntegerRelation::removeRedundantLocalVars() {
 }
 
 void IntegerRelation::convertIdKind(IdKind srcKind, unsigned idStart,
-                                    unsigned idLimit, IdKind dstKind) {
+                                    unsigned idLimit, IdKind dstKind,
+                                    unsigned pos) {
   assert(idLimit <= getNumIdKind(srcKind) && "Invalid id range");
 
   if (idStart >= idLimit)
     return;
 
   // Append new local variables corresponding to the dimensions to be converted.
-  unsigned newIdsBegin = getIdKindEnd(dstKind);
   unsigned convertCount = idLimit - idStart;
-  appendId(dstKind, convertCount);
+  unsigned newIdsBegin = insertId(dstKind, pos, convertCount);
 
   // Swap the new local variables with dimensions.
   //
@@ -2136,6 +2136,40 @@ void IntegerRelation::inverse() {
   convertIdKind(IdKind::Domain, 0, getIdKindEnd(IdKind::Domain), IdKind::Range);
   convertIdKind(IdKind::Range, 0, numRangeIds, IdKind::Domain);
 }
+
+void IntegerRelation::compose(const IntegerRelation &rel) {
+  assert(getRangeSet().getSpace().isCompatible(rel.getDomainSet().getSpace()) &&
+         "Range of `this` should be compatible with Domain of `rel`");
+
+  IntegerRelation copyRel = rel;
+
+  // Let relation `this` be R1: A -> B, and `rel` be R2: B -> C.
+  // We convert R1 to A -> (B X C), and R2 to B X C then intersect the range of
+  // R1 with R2. After this, we get R1: A -> C, by projecting out B.
+  // TODO: Using nested spaces here would help, since we could directly
+  // intersect the range with another relation.
+  unsigned numBIds = getNumRangeIds();
+
+  // Convert R1 from A -> B to A -> (B X C).
+  appendId(IdKind::Range, copyRel.getNumRangeIds());
+
+  // Convert R2 to B X C.
+  copyRel.convertIdKind(IdKind::Domain, 0, numBIds, IdKind::Range, 0);
+
+  // Intersect R2 to range of R1.
+  intersectRange(IntegerPolyhedron(copyRel));
+
+  // Project out B in R1.
+  convertIdKind(IdKind::Range, 0, numBIds, IdKind::Local);
+}
+
+void IntegerRelation::applyDomain(const IntegerRelation &rel) {
+  inverse();
+  compose(rel);
+  inverse();
+}
+
+void IntegerRelation::applyRange(const IntegerRelation &rel) { compose(rel); }
 
 void IntegerRelation::printSpace(raw_ostream &os) const {
   space.print(os);

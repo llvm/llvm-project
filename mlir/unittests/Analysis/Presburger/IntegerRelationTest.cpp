@@ -91,3 +91,34 @@ TEST(IntegerRelationTest, intersectDomainAndRange) {
     EXPECT_TRUE(copyRel.isEqual(expectedRel));
   }
 }
+
+TEST(IntegerRelationTest, applyDomainAndRange) {
+
+  {
+    IntegerRelation map1 = parseRelationFromSet(
+        "(x, y, a, b)[N] : (a - x - N == 0, b - y + N == 0)", 2);
+    IntegerRelation map2 =
+        parseRelationFromSet("(x, y, a)[N] : (a - x - y == 0)", 2);
+
+    map1.applyRange(map2);
+
+    IntegerRelation map3 =
+        parseRelationFromSet("(x, y, a)[N] : (a - x - y == 0)", 2);
+
+    EXPECT_TRUE(map1.isEqual(map3));
+  }
+
+  {
+    IntegerRelation map1 = parseRelationFromSet(
+        "(x, y, a, b)[N] : (a - x + N == 0, b - y - N == 0)", 2);
+    IntegerRelation map2 =
+        parseRelationFromSet("(x, y, a, b)[N] : (a - N == 0, b - N == 0)", 2);
+
+    IntegerRelation map3 =
+        parseRelationFromSet("(x, y, a, b)[N] : (x - N == 0, y - N == 0)", 2);
+
+    map1.applyDomain(map2);
+
+    EXPECT_TRUE(map1.isEqual(map3));
+  }
+}
