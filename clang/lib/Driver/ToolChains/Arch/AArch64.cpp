@@ -324,8 +324,8 @@ void aarch64::getAArch64TargetFeatures(const Driver &D,
           DisableComdat = true;
           continue;
         }
-        D.Diag(diag::err_invalid_sls_hardening)
-            << Scope << A->getAsString(Args);
+        D.Diag(diag::err_drv_unsupported_option_argument)
+            << A->getOption().getName() << Scope;
         break;
       }
     }
