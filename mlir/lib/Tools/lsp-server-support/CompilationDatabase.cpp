@@ -1,4 +1,4 @@
-//===- CompilationDatabase.cpp - PDLL Compilation Database ----------------===//
+//===- CompilationDatabase.cpp - LSP Compilation Database -----------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -10,6 +10,7 @@
 #include "../lsp-server-support/Logging.h"
 #include "../lsp-server-support/Protocol.h"
 #include "mlir/Support/FileUtilities.h"
+#include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/YAMLTraits.h"
 
@@ -17,16 +18,29 @@ using namespace mlir;
 using namespace mlir::lsp;
 
 //===----------------------------------------------------------------------===//
+// YamlFileInfo
+//===----------------------------------------------------------------------===//
+
+namespace {
+struct YamlFileInfo {
+  /// The absolute path to the file.
+  std::string filename;
+  /// The include directories available for the file.
+  std::vector<std::string> includeDirs;
+};
+} // namespace
+
+//===----------------------------------------------------------------------===//
 // CompilationDatabase
 //===----------------------------------------------------------------------===//
 
-LLVM_YAML_IS_DOCUMENT_LIST_VECTOR(CompilationDatabase::FileInfo)
+LLVM_YAML_IS_DOCUMENT_LIST_VECTOR(YamlFileInfo)
 
 namespace llvm {
 namespace yaml {
 template <>
-struct MappingTraits<CompilationDatabase::FileInfo> {
-  static void mapping(IO &io, CompilationDatabase::FileInfo &info) {
+struct MappingTraits<YamlFileInfo> {
+  static void mapping(IO &io, YamlFileInfo &info) {
     // Parse the filename and normalize it to the form we will expect from
     // incoming URIs.
     io.mapRequired("filepath", info.filename);
@@ -54,10 +68,10 @@ CompilationDatabase::CompilationDatabase(ArrayRef<std::string> databases) {
     loadDatabase(filename);
 }
 
-const CompilationDatabase::FileInfo *
+const CompilationDatabase::FileInfo &
 CompilationDatabase::getFileInfo(StringRef filename) const {
   auto it = files.find(filename);
-  return it == files.end() ? nullptr : &it->second;
+  return it == files.end() ? defaultFileInfo : it->second;
 }
 
 void CompilationDatabase::loadDatabase(StringRef filename) {
@@ -75,15 +89,30 @@ void CompilationDatabase::loadDatabase(StringRef filename) {
   llvm::yaml::Input yaml(inputFile->getBuffer());
 
   // Parse the yaml description and add any new files to the database.
-  std::vector<FileInfo> parsedFiles;
+  std::vector<YamlFileInfo> parsedFiles;
   yaml >> parsedFiles;
+
+  SetVector<StringRef> knownIncludes;
   for (auto &file : parsedFiles) {
-    auto it = files.try_emplace(file.filename, std::move(file));
+    auto it = files.try_emplace(file.filename, std::move(file.includeDirs));
 
     // If we encounter a duplicate file, log a warning and ignore it.
     if (!it.second) {
-      Logger::info("Duplicate .pdll file in compilation database: {0}",
+      Logger::info("Duplicate file in compilation database: {0}",
                    file.filename);
+      continue;
     }
+
+    // Track the includes for the file.
+    for (StringRef include : it.first->second.includeDirs)
+      knownIncludes.insert(include);
   }
+
+  // Add all of the known includes to the default file info. We don't know any
+  // information about how to treat these files, but these may be project files
+  // that we just don't yet have information for. In these cases, providing some
+  // heuristic information provides a better user experience, and generally
+  // shouldn't lead to any negative side effects.
+  for (StringRef include : knownIncludes)
+    defaultFileInfo.includeDirs.push_back(include.str());
 }

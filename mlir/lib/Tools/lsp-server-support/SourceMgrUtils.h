@@ -19,11 +19,38 @@
 
 namespace mlir {
 namespace lsp {
+//===----------------------------------------------------------------------===//
+// Utils
+//===----------------------------------------------------------------------===//
 
 /// Returns the range of a lexical token given a SMLoc corresponding to the
 /// start of an token location. The range is computed heuristically, and
 /// supports identifier-like tokens, strings, etc.
 SMRange convertTokenLocToRange(SMLoc loc);
+
+//===----------------------------------------------------------------------===//
+// SourceMgrInclude
+//===----------------------------------------------------------------------===//
+
+/// This class represents a single include within a root file.
+struct SourceMgrInclude {
+  SourceMgrInclude(const lsp::URIForFile &uri, const lsp::Range &range)
+      : uri(uri), range(range) {}
+
+  /// Build a hover for the current include file.
+  Hover buildHover() const;
+
+  /// The URI of the file that is included.
+  lsp::URIForFile uri;
+
+  /// The range of the include directive.
+  lsp::Range range;
+};
+
+/// Given a source manager, gather all of the processed include files. These are
+/// assumed to be all of the files other than the main root file.
+void gatherIncludeFiles(llvm::SourceMgr &sourceMgr,
+                        SmallVectorImpl<SourceMgrInclude> &includes);
 
 } // namespace lsp
 } // namespace mlir

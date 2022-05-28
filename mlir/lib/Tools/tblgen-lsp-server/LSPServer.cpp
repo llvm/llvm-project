@@ -43,6 +43,26 @@ struct LSPServer {
   void onDocumentDidChange(const DidChangeTextDocumentParams &params);
 
   //===--------------------------------------------------------------------===//
+  // Definitions and References
+
+  void onGoToDefinition(const TextDocumentPositionParams &params,
+                        Callback<std::vector<Location>> reply);
+  void onReference(const ReferenceParams &params,
+                   Callback<std::vector<Location>> reply);
+
+  //===----------------------------------------------------------------------===//
+  // DocumentLink
+
+  void onDocumentLink(const DocumentLinkParams &params,
+                      Callback<std::vector<DocumentLink>> reply);
+
+  //===--------------------------------------------------------------------===//
+  // Hover
+
+  void onHover(const TextDocumentPositionParams &params,
+               Callback<Optional<Hover>> reply);
+
+  //===--------------------------------------------------------------------===//
   // Fields
   //===--------------------------------------------------------------------===//
 
@@ -72,6 +92,13 @@ void LSPServer::onInitialize(const InitializeParams &params,
            {"change", (int)TextDocumentSyncKind::Full},
            {"save", true},
        }},
+      {"definitionProvider", true},
+      {"referencesProvider", true},
+      {"documentLinkProvider",
+       llvm::json::Object{
+           {"resolveProvider", false},
+       }},
+      {"hoverProvider", true},
   };
 
   llvm::json::Object result{
@@ -126,6 +153,41 @@ void LSPServer::onDocumentDidChange(const DidChangeTextDocumentParams &params) {
 }
 
 //===----------------------------------------------------------------------===//
+// Definitions and References
+
+void LSPServer::onGoToDefinition(const TextDocumentPositionParams &params,
+                                 Callback<std::vector<Location>> reply) {
+  std::vector<Location> locations;
+  server.getLocationsOf(params.textDocument.uri, params.position, locations);
+  reply(std::move(locations));
+}
+
+void LSPServer::onReference(const ReferenceParams &params,
+                            Callback<std::vector<Location>> reply) {
+  std::vector<Location> locations;
+  server.findReferencesOf(params.textDocument.uri, params.position, locations);
+  reply(std::move(locations));
+}
+
+//===----------------------------------------------------------------------===//
+// DocumentLink
+
+void LSPServer::onDocumentLink(const DocumentLinkParams &params,
+                               Callback<std::vector<DocumentLink>> reply) {
+  std::vector<DocumentLink> links;
+  server.getDocumentLinks(params.textDocument.uri, links);
+  reply(std::move(links));
+}
+
+//===----------------------------------------------------------------------===//
+// Hover
+
+void LSPServer::onHover(const TextDocumentPositionParams &params,
+                        Callback<Optional<Hover>> reply) {
+  reply(server.findHover(params.textDocument.uri, params.position));
+}
+
+//===----------------------------------------------------------------------===//
 // Entry Point
 //===----------------------------------------------------------------------===//
 
@@ -147,6 +209,19 @@ LogicalResult mlir::lsp::runTableGenLSPServer(TableGenServer &server,
                               &LSPServer::onDocumentDidClose);
   messageHandler.notification("textDocument/didChange", &lspServer,
                               &LSPServer::onDocumentDidChange);
+
+  // Definitions and References
+  messageHandler.method("textDocument/definition", &lspServer,
+                        &LSPServer::onGoToDefinition);
+  messageHandler.method("textDocument/references", &lspServer,
+                        &LSPServer::onReference);
+
+  // Document Link
+  messageHandler.method("textDocument/documentLink", &lspServer,
+                        &LSPServer::onDocumentLink);
+
+  // Hover
+  messageHandler.method("textDocument/hover", &lspServer, &LSPServer::onHover);
 
   // Diagnostics
   lspServer.publishDiagnostics =

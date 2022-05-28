@@ -234,6 +234,14 @@ class LLVM_EnumAttr<string name, string llvmName, string description,
   string llvmClassName = llvmName;
 }
 
+// LLVM_CEnumAttr is functionally identical to LLVM_EnumAttr, but to be used for
+// non-class enums.
+class LLVM_CEnumAttr<string name, string llvmNS, string description,
+      list<LLVM_EnumAttrCase> cases> :
+    I64EnumAttr<name, description, cases> {
+  string llvmClassName = llvmNS;
+}
+
 // For every value in the list, substitutes the value in the place of "$0" in
 // "pattern" and stores the list of strings as "lst".
 class ListIntSubst<string pattern, list<int> values> {
