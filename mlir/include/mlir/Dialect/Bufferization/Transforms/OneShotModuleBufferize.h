@@ -15,7 +15,18 @@ struct LogicalResult;
 class ModuleOp;
 
 namespace bufferization {
+struct BufferizationState;
+class OneShotAnalysisState;
 struct OneShotBufferizationOptions;
+
+/// Analyze `moduleOp` and its nested ops. Bufferization decisions are stored in
+/// `state`.
+LogicalResult analyzeModuleOp(ModuleOp moduleOp, OneShotAnalysisState &state);
+
+/// Bufferize `op` and its nested ops that implement `BufferizableOpInterface`.
+/// Whether buffer copies are needed or not is queried from the given state.
+LogicalResult bufferizeModuleOp(ModuleOp moduleOp,
+                                const OneShotAnalysisState &analysisState);
 
 /// Run One-Shot Module Bufferization on the given module. Performs a simple
 /// function call analysis to determine which function arguments are
