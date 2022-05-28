@@ -40,7 +40,7 @@ public:
   }
 
   _LIBCPP_HIDE_FROM_ABI auto format(basic_string_view<_CharT> __str, auto& __ctx) const -> decltype(__ctx.out()) {
-    return __formatter::__write_unicode(__str, __ctx.out(), __parser_.__get_parsed_std_specifications(__ctx));
+    return __formatter::__write_string(__str, __ctx.out(), __parser_.__get_parsed_std_specifications(__ctx));
   }
 
   __format_spec::__parser<_CharT> __parser_;
@@ -69,7 +69,7 @@ struct _LIBCPP_TEMPLATE_VIS _LIBCPP_AVAILABILITY_FORMAT formatter<const _CharT*,
     // TODO FMT Implement these improvements.
     __format_spec::__parsed_specifications<_CharT> __specs = _Base::__parser_.__get_parsed_std_specifications(__ctx);
     if (__specs.__has_width() || __specs.__has_precision())
-      return __formatter::__write_unicode(basic_string_view<_CharT>{__str}, __ctx.out(), __specs);
+      return __formatter::__write_string(basic_string_view<_CharT>{__str}, __ctx.out(), __specs);
 
     // No formatting required, copy the string to the output.
     auto __out_it = __ctx.out();
