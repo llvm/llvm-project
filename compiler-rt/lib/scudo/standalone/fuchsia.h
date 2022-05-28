@@ -13,7 +13,8 @@
 
 #if SCUDO_FUCHSIA
 
-#include <zircon/process.h>
+#include <stdint.h>
+#include <zircon/types.h>
 
 namespace scudo {
 
