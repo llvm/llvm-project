@@ -782,13 +782,30 @@ an optional ``unnamed_addr`` attribute, a return type, an optional
 :ref:`parameter attribute <paramattrs>` for the return type, a function
 name, a (possibly empty) argument list (each with optional :ref:`parameter
 attributes <paramattrs>`), optional :ref:`function attributes <fnattrs>`,
-an optional address space, an optional section, an optional alignment,
-an optional :ref:`comdat <langref_comdats>`,
+an optional address space, an optional section, an optional partition,
+an optional alignment, an optional :ref:`comdat <langref_comdats>`,
 an optional :ref:`garbage collector name <gc>`, an optional :ref:`prefix <prefixdata>`,
 an optional :ref:`prologue <prologuedata>`,
 an optional :ref:`personality <personalityfn>`,
 an optional list of attached :ref:`metadata <metadata>`,
 an opening curly brace, a list of basic blocks, and a closing curly brace.
+
+Syntax::
+
+    define [linkage] [PreemptionSpecifier] [visibility] [DLLStorageClass]
+           [cconv] [ret attrs]
+           <ResultType> @<FunctionName> ([argument list])
+           [(unnamed_addr|local_unnamed_addr)] [AddrSpace] [fn Attrs]
+           [section "name"] [partition "name"] [comdat [($name)]] [align N]
+           [gc] [prefix Constant] [prologue Constant] [personality Constant]
+           (!name !N)* { ... }
+
+The argument list is a comma separated sequence of arguments where each
+argument is of the following form:
+
+Syntax::
+
+   <type> [parameter Attrs] [name]
 
 LLVM function declarations consist of the "``declare``" keyword, an
 optional :ref:`linkage type <linkage>`, an optional :ref:`visibility style
@@ -799,6 +816,14 @@ an optional :ref:`parameter attribute <paramattrs>` for the return type, a funct
 empty list of arguments, an optional alignment, an optional :ref:`garbage
 collector name <gc>`, an optional :ref:`prefix <prefixdata>`, and an optional
 :ref:`prologue <prologuedata>`.
+
+Syntax::
+
+    declare [linkage] [visibility] [DLLStorageClass]
+            [cconv] [ret attrs]
+            <ResultType> @<FunctionName> ([argument list])
+            [(unnamed_addr|local_unnamed_addr)] [align N] [gc]
+            [prefix Constant] [prologue Constant]
 
 A function definition contains a list of basic blocks, forming the CFG (Control
 Flow Graph) for the function. Each basic block may optionally start with a label
@@ -836,24 +861,6 @@ not be significant within the module.
 
 If an explicit address space is not given, it will default to the program
 address space from the :ref:`datalayout string<langref_datalayout>`.
-
-Syntax::
-
-    define [linkage] [PreemptionSpecifier] [visibility] [DLLStorageClass]
-           [cconv] [ret attrs]
-           <ResultType> @<FunctionName> ([argument list])
-           [(unnamed_addr|local_unnamed_addr)] [AddrSpace] [fn Attrs]
-           [section "name"] [partition "name"] [comdat [($name)]] [align N]
-           [gc] [prefix Constant] [prologue Constant] [personality Constant]
-           (!name !N)* { ... }
-
-The argument list is a comma separated sequence of arguments where each
-argument is of the following form:
-
-Syntax::
-
-   <type> [parameter Attrs] [name]
-
 
 .. _langref_aliases:
 
@@ -10263,8 +10270,8 @@ operation. The operation must be one of the following keywords:
 For most of these operations, the type of '<value>' must be an integer
 type whose bit width is a power of two greater than or equal to eight
 and less than or equal to a target-specific size limit. For xchg, this
-may also be a floating point type with the same size constraints as
-integers.  For fadd/fsub, this must be a floating point type.  The
+may also be a floating point or a pointer type with the same size constraints
+as integers.  For fadd/fsub, this must be a floating point type.  The
 type of the '``<pointer>``' operand must be a pointer to that type. If
 the ``atomicrmw`` is marked as ``volatile``, then the optimizer is not
 allowed to modify the number or order of execution of this
@@ -15857,7 +15864,7 @@ multiplication can be represented as
         ; Expands to
         %a2 = sext i4 %a to i8
         %b2 = sext i4 %b to i8
-        %mul = mul nsw nuw i8 %a, %b
+        %mul = mul nsw nuw i8 %a2, %b2
         %scale2 = trunc i32 %scale to i8
         %r = ashr i8 %mul, i8 %scale2  ; this is for a target rounding down towards negative infinity
         %result = trunc i8 %r to i4

@@ -660,6 +660,7 @@ struct ForOpIterArgsFolder : public OpRewritePattern<scf::ForOp> {
     scf::ForOp newForOp = rewriter.create<scf::ForOp>(
         forOp.getLoc(), forOp.getLowerBound(), forOp.getUpperBound(),
         forOp.getStep(), newIterArgs);
+    newForOp->setAttrs(forOp->getAttrs());
     Block &newBlock = newForOp.getRegion().front();
 
     // Replace the null placeholders with newly constructed values.
@@ -802,6 +803,7 @@ static ForOp replaceTensorCastForOpIterArg(PatternRewriter &rewriter,
   scf::ForOp newForOp = rewriter.create<scf::ForOp>(
       forOp.getLoc(), forOp.getLowerBound(), forOp.getUpperBound(),
       forOp.getStep(), newIterOperands);
+  newForOp->setAttrs(forOp->getAttrs());
   Block &newBlock = newForOp.getRegion().front();
   SmallVector<Value, 4> newBlockTransferArgs(newBlock.getArguments().begin(),
                                              newBlock.getArguments().end());
@@ -2032,15 +2034,13 @@ ParseResult ParallelOp::parse(OpAsmParser &parser, OperationState &result) {
                                 static_cast<int32_t>(initVals.size())}));
 
   // Parse attributes.
-  if (parser.parseOptionalAttrDict(result.attributes))
+  if (parser.parseOptionalAttrDict(result.attributes) ||
+      parser.resolveOperands(initVals, result.types, parser.getNameLoc(),
+                             result.operands))
     return failure();
 
-  if (!initVals.empty())
-    parser.resolveOperands(initVals, result.types, parser.getNameLoc(),
-                           result.operands);
   // Add a terminator if none was parsed.
   ForOp::ensureTerminator(*body, builder, result.location);
-
   return success();
 }
 

@@ -251,7 +251,7 @@ func.func @simple_load_missing_operand() -> () {
 
 func.func @simple_load_missing_rettype() -> () {
   %0 = spv.Variable : !spv.ptr<f32, Function>
-  // expected-error @+2 {{expected ':'}}
+  // expected-error @+1 {{expected ':'}}
   %1 = spv.Load "Function" %0
   return
 }
@@ -342,7 +342,7 @@ func.func @aligned_load_incorrect_attributes() -> () {
 spv.module Logical GLSL450 {
   spv.GlobalVariable @var0 : !spv.ptr<f32, Input>
   spv.GlobalVariable @var1 : !spv.ptr<!spv.sampled_image<!spv.image<f32, Dim2D, IsDepth, Arrayed, SingleSampled, NeedSampler, Unknown>>, UniformConstant>
-  // CHECK_LABEL: @simple_load
+  // CHECK-LABEL: @simple_load
   spv.func @simple_load() -> () "None" {
     // CHECK: spv.Load "Input" {{%.*}} : f32
     %0 = spv.mlir.addressof @var0 : !spv.ptr<f32, Input>
@@ -367,7 +367,7 @@ func.func @simple_store(%arg0 : f32) -> () {
   return
 }
 
-// CHECK_LABEL: @volatile_store
+// CHECK-LABEL: @volatile_store
 func.func @volatile_store(%arg0 : f32) -> () {
   %0 = spv.Variable : !spv.ptr<f32, Function>
   // CHECK: spv.Store  "Function" %0, %arg0 ["Volatile"] : f32
@@ -375,7 +375,7 @@ func.func @volatile_store(%arg0 : f32) -> () {
   return
 }
 
-// CHECK_LABEL: @aligned_store
+// CHECK-LABEL: @aligned_store
 func.func @aligned_store(%arg0 : f32) -> () {
   %0 = spv.Variable : !spv.ptr<f32, Function>
   // CHECK: spv.Store  "Function" %0, %arg0 ["Aligned", 4] : f32
@@ -396,7 +396,7 @@ func.func @simple_store_missing_ptr_type(%arg0 : f32) -> () {
 
 func.func @simple_store_missing_operand(%arg0 : f32) -> () {
   %0 = spv.Variable : !spv.ptr<f32, Function>
-  // expected-error @+1 {{custom op 'spv.Store' invalid operand}} : f32
+  // expected-error @+1 {{expected operand}}
   spv.Store  "Function" , %arg0 : f32
   return
 }

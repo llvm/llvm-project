@@ -562,6 +562,27 @@ cl::opt<bool>
 cl::opt<bool> DumpFpo("fpo", cl::desc("dump FPO records"),
                       cl::cat(SymbolOptions), cl::sub(DumpSubcommand));
 
+cl::opt<uint32_t> DumpSymbolOffset(
+    "symbol-offset", cl::Optional,
+    cl::desc("only dump symbol record with the specified symbol offset"),
+    cl::cat(SymbolOptions), cl::sub(DumpSubcommand));
+cl::opt<bool> DumpParents("show-parents",
+                          cl::desc("dump the symbols record's all parents."),
+                          cl::cat(SymbolOptions), cl::sub(DumpSubcommand));
+cl::opt<uint32_t>
+    DumpParentDepth("parent-recurse-depth", cl::Optional, cl::init(-1U),
+                    cl::desc("only recurse to a depth of N when displaying "
+                             "parents of a symbol record."),
+                    cl::cat(SymbolOptions), cl::sub(DumpSubcommand));
+cl::opt<bool> DumpChildren("show-children",
+                           cl::desc("dump the symbols record's all children."),
+                           cl::cat(SymbolOptions), cl::sub(DumpSubcommand));
+cl::opt<uint32_t>
+    DumpChildrenDepth("children-recurse-depth", cl::Optional, cl::init(-1U),
+                      cl::desc("only recurse to a depth of N when displaying "
+                               "children of a symbol record."),
+                      cl::cat(SymbolOptions), cl::sub(DumpSubcommand));
+
 // MODULE & FILE OPTIONS
 cl::opt<bool> DumpModules("modules", cl::desc("dump compiland information"),
                           cl::cat(FileOptions), cl::sub(DumpSubcommand));
@@ -1533,8 +1554,20 @@ int main(int Argc, const char **Argv) {
       errs().flush();
       exit(1);
     }
-    opts::Filters.NumOccurrences = opts::dump::DumpModi.getNumOccurrences();
     opts::Filters.DumpModi = opts::dump::DumpModi;
+  }
+  if (opts::dump::DumpSymbolOffset) {
+    if (opts::dump::DumpModi.getNumOccurrences() != 1) {
+      errs()
+          << "need to specify argument '-modi' when using '-symbol-offset'.\n";
+      errs().flush();
+      exit(1);
+    }
+    opts::Filters.SymbolOffset = opts::dump::DumpSymbolOffset;
+    if (opts::dump::DumpParents)
+      opts::Filters.ParentRecurseDepth = opts::dump::DumpParentDepth;
+    if (opts::dump::DumpChildren)
+      opts::Filters.ChildrenRecurseDepth = opts::dump::DumpChildrenDepth;
   }
 
   if (opts::PdbToYamlSubcommand) {

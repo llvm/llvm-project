@@ -4,8 +4,6 @@
 // RUN: %env_hwasan_opts=symbolize=0 not %run %t 2>&1 | hwasan_symbolize --html --linkify %t.linkify --symbols $(dirname %t) --index | FileCheck --check-prefixes=CHECK,LINKIFY %s
 // RUN: %env_hwasan_opts=symbolize=0 not %run %t 2>&1 | hwasan_symbolize --symbols $(dirname %t) --index | FileCheck %s
 
-// There are currently unrelated problems on x86_64, so skipping for now.
-// REQUIRES: android
 // REQUIRES: stable-runtime
 
 #include <sanitizer/hwasan_interface.h>

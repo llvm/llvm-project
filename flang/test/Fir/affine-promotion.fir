@@ -2,7 +2,7 @@
 
 // RUN: fir-opt --split-input-file --promote-to-affine --affine-loop-invariant-code-motion --cse %s | FileCheck %s
 
-!arr_d1 = type !fir.ref<!fir.array<?xf32>>
+!arr_d1 = !fir.ref<!fir.array<?xf32>>
 #arr_len = affine_map<()[j1,k1] -> (k1 - j1 + 1)>
 
 func.func @loop_with_load_and_store(%a1: !arr_d1, %a2: !arr_d1, %a3: !arr_d1) {
@@ -75,7 +75,7 @@ func.func @loop_with_load_and_store(%a1: !arr_d1, %a2: !arr_d1, %a3: !arr_d1) {
 
 // -----
 
-!arr_d1 = type !fir.ref<!fir.array<?xf32>>
+!arr_d1 = !fir.ref<!fir.array<?xf32>>
 #arr_len = affine_map<()[j1,k1] -> (k1 - j1 + 1)>
 
 func.func @loop_with_if(%a: !arr_d1, %v: f32) {

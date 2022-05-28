@@ -279,7 +279,10 @@ public:
 
   void VisitCXXThisExpr(const CXXThisExpr *S) {
     auto *ThisPointeeLoc = Env.getThisPointeeStorageLocation();
-    assert(ThisPointeeLoc != nullptr);
+    if (ThisPointeeLoc == nullptr)
+      // Unions are not supported yet, and will not have a location for the
+      // `this` expression's pointee.
+      return;
 
     auto &Loc = Env.createStorageLocation(*S);
     Env.setStorageLocation(*S, Loc);
@@ -571,12 +574,15 @@ private:
         return *Val;
     }
 
-    // Sub-expressions that are logic operators are not added in basic blocks
-    // (e.g. see CFG for `bool d = a && (b || c);`). If `SubExpr` is a logic
-    // operator, it isn't evaluated and assigned a value yet. In that case, we
-    // need to first visit `SubExpr` and then try to get the value that gets
-    // assigned to it.
-    Visit(&SubExpr);
+    if (Env.getStorageLocation(SubExpr, SkipPast::None) == nullptr) {
+      // Sub-expressions that are logic operators are not added in basic blocks
+      // (e.g. see CFG for `bool d = a && (b || c);`). If `SubExpr` is a logic
+      // operator, it may not have been evaluated and assigned a value yet. In
+      // that case, we need to first visit `SubExpr` and then try to get the
+      // value that gets assigned to it.
+      Visit(&SubExpr);
+    }
+
     if (auto *Val = dyn_cast_or_null<BoolValue>(
             Env.getValue(SubExpr, SkipPast::Reference)))
       return *Val;

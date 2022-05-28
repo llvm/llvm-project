@@ -542,6 +542,10 @@ def FeatureNoBTIAtReturnTwice : SubtargetFeature<"no-bti-at-return-twice",
                                                  "Don't place a BTI instruction "
                                                  "after a return-twice">;
 
+def FeatureFixCortexA57AES1742098 : SubtargetFeature<"fix-cortex-a57-aes-1742098",
+  "FixCortexA57AES1742098", "true",
+  "Work around Cortex-A57 Erratum 1742098 / Cortex-A72 Erratum 1655431 (AES)">;
+
 //===----------------------------------------------------------------------===//
 // ARM architecture class
 //
@@ -1467,13 +1471,15 @@ def : ProcessorModel<"cortex-a57",  CortexA57Model,     [ARMv8a, ProcA57,
                                                          FeatureCRC,
                                                          FeatureFPAO,
                                                          FeatureAvoidPartialCPSR,
-                                                         FeatureCheapPredicableCPSR]>;
+                                                         FeatureCheapPredicableCPSR,
+                                                         FeatureFixCortexA57AES1742098]>;
 
 def : ProcessorModel<"cortex-a72",  CortexA57Model,     [ARMv8a, ProcA72,
                                                          FeatureHWDivThumb,
                                                          FeatureHWDivARM,
                                                          FeatureCrypto,
-                                                         FeatureCRC]>;
+                                                         FeatureCRC,
+                                                         FeatureFixCortexA57AES1742098]>;
 
 def : ProcNoItin<"cortex-a73",                          [ARMv8a, ProcA73,
                                                          FeatureHWDivThumb,

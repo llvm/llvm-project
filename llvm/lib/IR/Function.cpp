@@ -1495,6 +1495,9 @@ static bool matchIntrinsicType(
       while (Infos.front().Kind == IITDescriptor::Pointer ||
              Infos.front().Kind == IITDescriptor::Vector)
         Infos = Infos.slice(1);
+      assert((Infos.front().Kind != IITDescriptor::Argument ||
+              Infos.front().getArgumentKind() == IITDescriptor::AK_MatchType) &&
+             "Unsupported polymorphic pointer type with opaque pointer");
       Infos = Infos.slice(1);
       return false;
     }

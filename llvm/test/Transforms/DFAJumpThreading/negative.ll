@@ -214,3 +214,52 @@ for.inc:
 for.end:
   ret i32 0
 }
+
+declare i32 @arbitrary_function()
+
+; Don't confuse %state.2 for the initial switch value.
+define i32 @negative6(i32 %init) {
+; REMARK: SwitchNotPredictable
+; REMARK-NEXT: negative6
+entry:
+  %cmp = icmp eq i32 %init, 0
+  br label %loop.2
+
+loop.2:
+  %state.2 = call i32 @arbitrary_function()
+  br label %loop.3
+
+loop.3:
+  %state = phi i32 [ %state.2, %loop.2 ], [ 3, %case2 ]
+  switch i32 %state, label %infloop.i [
+    i32 2, label %case2
+    i32 3, label %case3
+    i32 4, label %case4
+    i32 0, label %case0
+    i32 1, label %case1
+  ]
+
+case2:
+  br label %loop.3
+
+case3:
+  br i1 %cmp, label %loop.2.backedge, label %case4
+
+case4:
+  br label %loop.2.backedge
+
+loop.2.backedge:
+  br label %loop.2
+
+case0:
+  br label %exit
+
+case1:
+  br label %exit
+
+infloop.i:
+  br label %infloop.i
+
+exit:
+  ret i32 0
+}

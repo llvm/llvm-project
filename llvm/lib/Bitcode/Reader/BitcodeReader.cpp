@@ -1890,6 +1890,8 @@ Error BitcodeReader::parseTypeTableBody() {
       if (!ResultTy ||
           !PointerType::isValidElementType(ResultTy))
         return error("Invalid type");
+      if (LLVM_UNLIKELY(!Context.hasSetOpaquePointersValue()))
+        Context.setOpaquePointers(false);
       ContainedIDs.push_back(Record[0]);
       ResultTy = PointerType::get(ResultTy, AddressSpace);
       break;
@@ -5136,6 +5138,10 @@ Error BitcodeReader::parseFunctionBody(Function *F) {
         }
       }
 
+      // Upgrade the bundles if needed.
+      if (!OperandBundles.empty())
+        UpgradeOperandBundles(OperandBundles);
+
       I = InvokeInst::Create(FTy, Callee, NormalBB, UnwindBB, Ops,
                              OperandBundles);
       ResTypeID = getContainedTypeID(FTyID);
@@ -5232,6 +5238,10 @@ Error BitcodeReader::parseFunctionBody(Function *F) {
           ArgTyIDs.push_back(OpTypeID);
         }
       }
+
+      // Upgrade the bundles if needed.
+      if (!OperandBundles.empty())
+        UpgradeOperandBundles(OperandBundles);
 
       I = CallBrInst::Create(FTy, Callee, DefaultDest, IndirectDests, Args,
                              OperandBundles);
@@ -5843,6 +5853,10 @@ Error BitcodeReader::parseFunctionBody(Function *F) {
           ArgTyIDs.push_back(OpTypeID);
         }
       }
+
+      // Upgrade the bundles if needed.
+      if (!OperandBundles.empty())
+        UpgradeOperandBundles(OperandBundles);
 
       I = CallInst::Create(FTy, Callee, Args, OperandBundles);
       ResTypeID = getContainedTypeID(FTyID);

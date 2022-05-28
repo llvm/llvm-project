@@ -32,7 +32,6 @@ class Operation;
 class Pass;
 class PassInstrumentation;
 class PassInstrumentor;
-class StringAttr;
 
 namespace detail {
 struct OpPassManagerImpl;
@@ -45,14 +44,33 @@ struct PassExecutionState;
 // OpPassManager
 //===----------------------------------------------------------------------===//
 
-/// This class represents a pass manager that runs passes on a specific
-/// operation type. This class is not constructed directly, but nested within
-/// other OpPassManagers or the top-level PassManager.
+/// This class represents a pass manager that runs passes on either a specific
+/// operation type, or any isolated operation. This pass manager can not be run
+/// on an operation directly, but must be run either as part of a top-level
+/// `PassManager`(e.g. when constructed via `nest` calls), or dynamically within
+/// a pass by using the `Pass::runPipeline` API.
 class OpPassManager {
 public:
-  enum class Nesting { Implicit, Explicit };
-  OpPassManager(StringAttr name, Nesting nesting = Nesting::Explicit);
+  /// This enum represents the nesting behavior of the pass manager.
+  enum class Nesting {
+    /// Implicit nesting behavior. This allows for adding passes operating on
+    /// operations different from this pass manager, in which case a new pass
+    /// manager is implicitly nested for the operation type of the new pass.
+    Implicit,
+    /// Explicit nesting behavior. This requires that any passes added to this
+    /// pass manager support its operation type.
+    Explicit
+  };
+
+  /// Construct a new op-agnostic ("any") pass manager with the given operation
+  /// type and nesting behavior. This is the same as invoking:
+  /// `OpPassManager(getAnyOpAnchorName(), nesting)`.
+  OpPassManager(Nesting nesting = Nesting::Explicit);
+
+  /// Construct a new pass manager with the given anchor operation type and
+  /// nesting behavior.
   OpPassManager(StringRef name, Nesting nesting = Nesting::Explicit);
+  OpPassManager(OperationName name, Nesting nesting = Nesting::Explicit);
   OpPassManager(OpPassManager &&rhs);
   OpPassManager(const OpPassManager &rhs);
   ~OpPassManager();
@@ -78,11 +96,15 @@ public:
 
   /// Nest a new operation pass manager for the given operation kind under this
   /// pass manager.
-  OpPassManager &nest(StringAttr nestedName);
+  OpPassManager &nest(OperationName nestedName);
   OpPassManager &nest(StringRef nestedName);
   template <typename OpT> OpPassManager &nest() {
     return nest(OpT::getOperationName());
   }
+
+  /// Nest a new op-agnostic ("any") pass manager under this pass manager.
+  /// Note: This is the same as invoking `nest(getAnyOpAnchorName())`.
+  OpPassManager &nestAny();
 
   /// Add the given pass to this pass manager. If this pass has a concrete
   /// operation type, it must be the same type as this pass manager.
@@ -100,11 +122,22 @@ public:
   /// Returns the number of passes held by this manager.
   size_t size() const;
 
-  /// Return the operation name that this pass manager operates on.
-  OperationName getOpName(MLIRContext &context) const;
+  /// Return the operation name that this pass manager operates on, or None if
+  /// this is an op-agnostic pass manager.
+  Optional<OperationName> getOpName(MLIRContext &context) const;
 
-  /// Return the operation name that this pass manager operates on.
-  StringRef getOpName() const;
+  /// Return the operation name that this pass manager operates on, or None if
+  /// this is an op-agnostic pass manager.
+  Optional<StringRef> getOpName() const;
+
+  /// Return the name used to anchor this pass manager. This is either the name
+  /// of an operation, or the result of `getAnyOpAnchorName()` in the case of an
+  /// op-agnostic pass manager.
+  StringRef getOpAnchorName() const;
+
+  /// Return the string name used to anchor op-agnostic pass managers that
+  /// operate generically on any viable operation.
+  static StringRef getAnyOpAnchorName() { return "any"; }
 
   /// Returns the internal implementation instance.
   detail::OpPassManagerImpl &getImpl();
@@ -177,6 +210,8 @@ public:
   /// Create a new pass manager under the given context with a specific nesting
   /// style. The created pass manager can schedule operations that match
   /// `operationName`.
+  /// FIXME: We should make the specification of `builtin.module` explicit here,
+  /// so that we can have top-level op-agnostic pass managers.
   PassManager(MLIRContext *ctx, Nesting nesting = Nesting::Explicit,
               StringRef operationName = "builtin.module");
   PassManager(MLIRContext *ctx, StringRef operationName)

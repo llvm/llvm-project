@@ -41,3 +41,67 @@ ConditionTruthVal ConstraintManager::checkNull(ProgramStateRef State,
     return ConditionTruthVal(true);
   return {};
 }
+
+template <typename AssumeFunction>
+ConstraintManager::ProgramStatePair
+ConstraintManager::assumeDualImpl(ProgramStateRef &State,
+                                  AssumeFunction &Assume) {
+  ProgramStateRef StTrue = Assume(true);
+
+  if (!StTrue) {
+    ProgramStateRef StFalse = Assume(false);
+    if (LLVM_UNLIKELY(!StFalse)) { // both infeasible
+      ProgramStateRef StInfeasible = State->cloneAsPosteriorlyOverconstrained();
+      assert(StInfeasible->isPosteriorlyOverconstrained());
+      // Checkers might rely on the API contract that both returned states
+      // cannot be null. Thus, we return StInfeasible for both branches because
+      // it might happen that a Checker uncoditionally uses one of them if the
+      // other is a nullptr. This may also happen with the non-dual and
+      // adjacent `assume(true)` and `assume(false)` calls. By implementing
+      // assume in therms of assumeDual, we can keep our API contract there as
+      // well.
+      return ProgramStatePair(StInfeasible, StInfeasible);
+    }
+    return ProgramStatePair(nullptr, StFalse);
+  }
+
+  ProgramStateRef StFalse = Assume(false);
+  if (!StFalse) {
+    return ProgramStatePair(StTrue, nullptr);
+  }
+
+  return ProgramStatePair(StTrue, StFalse);
+}
+
+ConstraintManager::ProgramStatePair
+ConstraintManager::assumeDual(ProgramStateRef State, DefinedSVal Cond) {
+  auto AssumeFun = [&](bool Assumption) {
+    return assumeInternal(State, Cond, Assumption);
+  };
+  return assumeDualImpl(State, AssumeFun);
+}
+
+ConstraintManager::ProgramStatePair
+ConstraintManager::assumeInclusiveRangeDual(ProgramStateRef State, NonLoc Value,
+                                            const llvm::APSInt &From,
+                                            const llvm::APSInt &To) {
+  auto AssumeFun = [&](bool Assumption) {
+    return assumeInclusiveRangeInternal(State, Value, From, To, Assumption);
+  };
+  return assumeDualImpl(State, AssumeFun);
+}
+
+ProgramStateRef ConstraintManager::assume(ProgramStateRef State,
+                                          DefinedSVal Cond, bool Assumption) {
+  ConstraintManager::ProgramStatePair R = assumeDual(State, Cond);
+  return Assumption ? R.first : R.second;
+}
+
+ProgramStateRef
+ConstraintManager::assumeInclusiveRange(ProgramStateRef State, NonLoc Value,
+                                        const llvm::APSInt &From,
+                                        const llvm::APSInt &To, bool InBound) {
+  ConstraintManager::ProgramStatePair R =
+      assumeInclusiveRangeDual(State, Value, From, To);
+  return InBound ? R.first : R.second;
+}

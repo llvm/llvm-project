@@ -3382,7 +3382,7 @@ void AffineParallelOp::print(OpAsmPrinter &p) {
 /// unique operands. Also populates `replacements with affine expressions of
 /// `kind` that can be used to update affine maps previously accepting a
 /// `operands` to accept `uniqueOperands` instead.
-static void deduplicateAndResolveOperands(
+static ParseResult deduplicateAndResolveOperands(
     OpAsmParser &parser,
     ArrayRef<SmallVector<OpAsmParser::UnresolvedOperand>> operands,
     SmallVectorImpl<Value> &uniqueOperands,
@@ -3393,7 +3393,8 @@ static void deduplicateAndResolveOperands(
   Type indexType = parser.getBuilder().getIndexType();
   for (const auto &list : operands) {
     SmallVector<Value> valueOperands;
-    parser.resolveOperands(list, indexType, valueOperands);
+    if (parser.resolveOperands(list, indexType, valueOperands))
+      return failure();
     for (Value operand : valueOperands) {
       unsigned pos = std::distance(uniqueOperands.begin(),
                                    llvm::find(uniqueOperands, operand));
@@ -3405,6 +3406,7 @@ static void deduplicateAndResolveOperands(
               : getAffineSymbolExpr(pos, parser.getContext()));
     }
   }
+  return success();
 }
 
 namespace {
@@ -3454,7 +3456,7 @@ static ParseResult parseAffineMapWithMinMax(OpAsmParser &parser,
   SmallVector<SmallVector<OpAsmParser::UnresolvedOperand>> flatSymOperands;
   SmallVector<int32_t> numMapsPerGroup;
   SmallVector<OpAsmParser::UnresolvedOperand> mapOperands;
-  do {
+  auto parseOperands = [&]() {
     if (succeeded(parser.parseOptionalKeyword(
             kind == MinMaxKind::Min ? "min" : "max"))) {
       mapOperands.clear();
@@ -3482,9 +3484,9 @@ static ParseResult parseAffineMapWithMinMax(OpAsmParser &parser,
         return failure();
       numMapsPerGroup.push_back(1);
     }
-  } while (succeeded(parser.parseOptionalComma()));
-
-  if (failed(parser.parseRParen()))
+    return success();
+  };
+  if (parser.parseCommaSeparatedList(parseOperands) || parser.parseRParen())
     return failure();
 
   unsigned totalNumDims = 0;
@@ -3502,10 +3504,11 @@ static ParseResult parseAffineMapWithMinMax(OpAsmParser &parser,
   // Deduplicate map operands.
   SmallVector<Value> dimOperands, symOperands;
   SmallVector<AffineExpr> dimRplacements, symRepacements;
-  deduplicateAndResolveOperands(parser, flatDimOperands, dimOperands,
-                                dimRplacements, AffineExprKind::DimId);
-  deduplicateAndResolveOperands(parser, flatSymOperands, symOperands,
-                                symRepacements, AffineExprKind::SymbolId);
+  if (deduplicateAndResolveOperands(parser, flatDimOperands, dimOperands,
+                                    dimRplacements, AffineExprKind::DimId) ||
+      deduplicateAndResolveOperands(parser, flatSymOperands, symOperands,
+                                    symRepacements, AffineExprKind::SymbolId))
+    return failure();
 
   result.operands.append(dimOperands.begin(), dimOperands.end());
   result.operands.append(symOperands.begin(), symOperands.end());
@@ -3572,7 +3575,7 @@ ParseResult AffineParallelOp::parse(OpAsmParser &parser,
   if (succeeded(parser.parseOptionalKeyword("reduce"))) {
     if (parser.parseLParen())
       return failure();
-    do {
+    auto parseAttributes = [&]() -> ParseResult {
       // Parse a single quoted string via the attribute parsing, and then
       // verify it is a member of the enum and convert to it's integer
       // representation.
@@ -3589,8 +3592,9 @@ ParseResult AffineParallelOp::parse(OpAsmParser &parser,
       reductions.push_back(builder.getI64IntegerAttr(
           static_cast<int64_t>(reduction.getValue())));
       // While we keep getting commas, keep parsing.
-    } while (succeeded(parser.parseOptionalComma()));
-    if (parser.parseRParen())
+      return success();
+    };
+    if (parser.parseCommaSeparatedList(parseAttributes) || parser.parseRParen())
       return failure();
   }
   result.addAttribute(AffineParallelOp::getReductionsAttrName(),

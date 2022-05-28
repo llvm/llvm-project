@@ -211,8 +211,15 @@ defm SRC_SCC : SIRegLoHi16<"src_scc", 253>;
 // Should never be emitted.
 def SCC : SIReg<"scc">;
 
-defm M0 : SIRegLoHi16 <"m0", 124>;
-defm SGPR_NULL : SIRegLoHi16 <"null", 125>;
+// Encoding changes between subtarget generations.
+// See also Utils/AMDGPUBaseInfo.cpp MAP_REG2REG.
+defm M0_gfxpre11 : SIRegLoHi16 <"m0", 124>;
+defm M0_gfx11plus : SIRegLoHi16 <"m0", 125>;
+defm M0 : SIRegLoHi16 <"m0", 0>;
+
+defm SGPR_NULL_gfxpre11 : SIRegLoHi16 <"null", 125>;
+defm SGPR_NULL_gfx11plus : SIRegLoHi16 <"null", 124>;
+defm SGPR_NULL : SIRegLoHi16 <"null", 0>;
 
 defm SRC_SHARED_BASE : SIRegLoHi16<"src_shared_base", 235>;
 defm SRC_SHARED_LIMIT : SIRegLoHi16<"src_shared_limit", 236>;
@@ -1090,7 +1097,7 @@ defm VISrc_512  : RegInlineOperandAC<"VReg", "VISrc_512",  "_512">;
 defm VISrc_1024 : RegInlineOperandAC<"VReg", "VISrc_1024", "_1024">;
 
 //===----------------------------------------------------------------------===//
-//  AVSrc_* Operands with an AGPR or VGPR
+//  AVSrc_*, AVDst_*, AVLdSt_* Operands with an AGPR or VGPR
 //===----------------------------------------------------------------------===//
 
 def AVSrc_32 : RegisterOperand<AV_32> {
@@ -1108,8 +1115,13 @@ def AVSrc_128 : RegisterOperand<AV_128> {
   let EncoderMethod = "getAVOperandEncoding";
 }
 
-def AVSrc_512 : RegisterOperand<AV_512> {
-  let DecoderMethod = "DecodeAV_512RegisterClass";
+def AVDst_128 : RegisterOperand<AV_128> {
+  let DecoderMethod = "DecodeAVDst_128RegisterClass";
+  let EncoderMethod = "getAVOperandEncoding";
+}
+
+def AVDst_512 : RegisterOperand<AV_512> {
+  let DecoderMethod = "DecodeAVDst_512RegisterClass";
   let EncoderMethod = "getAVOperandEncoding";
 }
 

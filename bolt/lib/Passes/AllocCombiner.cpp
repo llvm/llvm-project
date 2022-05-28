@@ -29,9 +29,9 @@ namespace {
 
 bool getStackAdjustmentSize(const BinaryContext &BC, const MCInst &Inst,
                             int64_t &Adjustment) {
-  return BC.MIB->evaluateSimple(Inst, Adjustment,
-                                std::make_pair(BC.MIB->getStackPointer(), 0LL),
-                                std::make_pair(0, 0LL));
+  return BC.MIB->evaluateStackOffsetExpr(
+      Inst, Adjustment, std::make_pair(BC.MIB->getStackPointer(), 0LL),
+      std::make_pair(0, 0LL));
 }
 
 bool isIndifferentToSP(const MCInst &Inst, const BinaryContext &BC) {
@@ -44,11 +44,9 @@ bool isIndifferentToSP(const MCInst &Inst, const BinaryContext &BC) {
       II.hasImplicitUseOfPhysReg(BC.MIB->getStackPointer()))
     return false;
 
-  for (int I = 0, E = MCPlus::getNumPrimeOperands(Inst); I != E; ++I) {
-    const MCOperand &Operand = Inst.getOperand(I);
+  for (const MCOperand &Operand : MCPlus::primeOperands(Inst))
     if (Operand.isReg() && Operand.getReg() == BC.MIB->getStackPointer())
       return false;
-  }
   return true;
 }
 

@@ -3,7 +3,6 @@
 // include cycle.
 module std_config [system] [extern_c] {
   header "__config"
-  header "__config_site"
   export *
 }
 
@@ -51,6 +50,7 @@ module std [system] {
       export *
     }
     module stdatomic_h {
+      requires cplusplus23
       header "stdatomic.h"
       export *
     }
@@ -298,18 +298,25 @@ module std [system] {
       module pop_heap                 { private header "__algorithm/pop_heap.h" }
       module prev_permutation         { private header "__algorithm/prev_permutation.h" }
       module push_heap                { private header "__algorithm/push_heap.h" }
+      module ranges_all_of            { private header "__algorithm/ranges_all_of.h" }
+      module ranges_any_of            { private header "__algorithm/ranges_any_of.h" }
       module ranges_copy              { private header "__algorithm/ranges_copy.h" }
       module ranges_copy_backward     { private header "__algorithm/ranges_copy_backward.h" }
       module ranges_copy_if           { private header "__algorithm/ranges_copy_if.h" }
       module ranges_copy_n            { private header "__algorithm/ranges_copy_n.h" }
       module ranges_count             { private header "__algorithm/ranges_count.h" }
       module ranges_count_if          { private header "__algorithm/ranges_count_if.h" }
+      module ranges_equal             { private header "__algorithm/ranges_equal.h" }
+      module ranges_fill              { private header "__algorithm/ranges_fill.h" }
+      module ranges_fill_n            { private header "__algorithm/ranges_fill_n.h" }
       module ranges_find              { private header "__algorithm/ranges_find.h" }
       module ranges_find_if           { private header "__algorithm/ranges_find_if.h" }
       module ranges_find_if_not       { private header "__algorithm/ranges_find_if_not.h" }
       module ranges_for_each          { private header "__algorithm/ranges_for_each.h" }
       module ranges_for_each_n        { private header "__algorithm/ranges_for_each_n.h" }
       module ranges_is_partitioned    { private header "__algorithm/ranges_is_partitioned.h" }
+      module ranges_is_sorted         { private header "__algorithm/ranges_is_sorted.h" }
+      module ranges_is_sorted_until   { private header "__algorithm/ranges_is_sorted_until.h" }
       module ranges_max               { private header "__algorithm/ranges_max.h" }
       module ranges_max_element       { private header "__algorithm/ranges_max_element.h" }
       module ranges_min               { private header "__algorithm/ranges_min.h" }
@@ -317,6 +324,8 @@ module std [system] {
       module ranges_minmax            { private header "__algorithm/ranges_minmax.h" }
       module ranges_minmax_element    { private header "__algorithm/ranges_minmax_element.h" }
       module ranges_mismatch          { private header "__algorithm/ranges_mismatch.h" }
+      module ranges_none_of           { private header "__algorithm/ranges_none_of.h" }
+      module ranges_reverse           { private header "__algorithm/ranges_reverse.h" }
       module ranges_swap_ranges       { private header "__algorithm/ranges_swap_ranges.h" }
       module ranges_transform         { private header "__algorithm/ranges_transform.h" }
       module remove                   { private header "__algorithm/remove.h" }
@@ -368,7 +377,6 @@ module std [system] {
     export *
   }
   module barrier {
-    requires cplusplus14
     header "barrier"
     export *
   }
@@ -541,8 +549,10 @@ module std [system] {
 
     module __format {
       module buffer                   { private header "__format/buffer.h" }
+      module concepts                 { private header "__format/concepts.h" }
       module enable_insertable        { private header "__format/enable_insertable.h" }
       module format_arg               { private header "__format/format_arg.h" }
+      module format_arg_store         { private header "__format/format_arg_store.h" }
       module format_args              { private header "__format/format_args.h" }
       module format_context {
         private header "__format/format_context.h"
@@ -694,7 +704,6 @@ module std [system] {
     }
   }
   module latch {
-    requires cplusplus14
     header "latch"
     export *
   }
@@ -902,7 +911,6 @@ module std [system] {
     export *
   }
   module semaphore {
-    requires cplusplus14
     header "semaphore"
     export *
   }
@@ -979,8 +987,33 @@ module std [system] {
     export functional.__functional.unwrap_ref
     export *
 
-    module integral_constant { private header "__type_traits/integral_constant.h" }
-    module is_callable       { private header "__type_traits/is_callable.h" }
+    module add_pointer                { private header "__type_traits/add_pointer.h" }
+    module conditional                { private header "__type_traits/conditional.h" }
+    module decay                      { private header "__type_traits/decay.h" }
+    module enable_if                  { private header "__type_traits/enable_if.h" }
+    module integral_constant          { private header "__type_traits/integral_constant.h" }
+    module is_array                   { private header "__type_traits/is_array.h" }
+    module is_base_of                 { private header "__type_traits/is_base_of.h" }
+    module is_callable                { private header "__type_traits/is_callable.h" }
+    module is_const                   { private header "__type_traits/is_const.h" }
+    module is_convertible             { private header "__type_traits/is_convertible.h" }
+    module is_floating_point          { private header "__type_traits/is_floating_point.h" }
+    module is_function                { private header "__type_traits/is_function.h" }
+    module is_integral                { private header "__type_traits/is_integral.h" }
+    module is_member_function_pointer { private header "__type_traits/is_member_function_pointer.h" }
+    module is_member_object_pointer   { private header "__type_traits/is_member_object_pointer.h" }
+    module is_null_pointer            { private header "__type_traits/is_null_pointer.h" }
+    module is_reference               { private header "__type_traits/is_reference.h" }
+    module is_reference_wrapper       { private header "__type_traits/is_reference_wrapper.h" }
+    module is_referenceable           { private header "__type_traits/is_referenceable.h" }
+    module is_same                    { private header "__type_traits/is_same.h" }
+    module is_void                    { private header "__type_traits/is_void.h" }
+    module is_volatile                { private header "__type_traits/is_volatile.h" }
+    module remove_const               { private header "__type_traits/remove_const.h" }
+    module remove_cv                  { private header "__type_traits/remove_cv.h" }
+    module remove_extent              { private header "__type_traits/remove_extent.h" }
+    module remove_reference           { private header "__type_traits/remove_reference.h" }
+    module remove_volatile            { private header "__type_traits/remove_volatile.h" }
   }
   module typeindex {
     header "typeindex"

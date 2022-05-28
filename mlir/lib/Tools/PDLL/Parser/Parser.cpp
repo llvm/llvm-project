@@ -722,6 +722,18 @@ LogicalResult Parser::parseTdInclude(StringRef filename, llvm::SMRange fileLoc,
                                      SmallVectorImpl<ast::Decl *> &decls) {
   llvm::SourceMgr &parserSrcMgr = lexer.getSourceMgr();
 
+  // Use the source manager to open the file, but don't yet add it.
+  std::string includedFile;
+  llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>> includeBuffer =
+      parserSrcMgr.OpenIncludeFile(filename.str(), includedFile);
+  if (!includeBuffer)
+    return emitError(fileLoc, "unable to open include file `" + filename + "`");
+
+  // Setup the source manager for parsing the tablegen file.
+  llvm::SourceMgr tdSrcMgr;
+  tdSrcMgr.AddNewSourceBuffer(std::move(*includeBuffer), SMLoc());
+  tdSrcMgr.setIncludeDirs(parserSrcMgr.getIncludeDirs());
+
   // This class provides a context argument for the llvm::SourceMgr diagnostic
   // handler.
   struct DiagHandlerContext {
@@ -731,7 +743,7 @@ LogicalResult Parser::parseTdInclude(StringRef filename, llvm::SMRange fileLoc,
   } handlerContext{*this, filename, fileLoc};
 
   // Set the diagnostic handler for the tablegen source manager.
-  llvm::SrcMgr.setDiagHandler(
+  tdSrcMgr.setDiagHandler(
       [](const llvm::SMDiagnostic &diag, void *rawHandlerContext) {
         auto *ctx = reinterpret_cast<DiagHandlerContext *>(rawHandlerContext);
         (void)ctx->parser.emitError(
@@ -741,26 +753,18 @@ LogicalResult Parser::parseTdInclude(StringRef filename, llvm::SMRange fileLoc,
       },
       &handlerContext);
 
-  // Use the source manager to open the file, but don't yet add it.
-  std::string includedFile;
-  llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>> includeBuffer =
-      parserSrcMgr.OpenIncludeFile(filename.str(), includedFile);
-  if (!includeBuffer)
-    return emitError(fileLoc, "unable to open include file `" + filename + "`");
-
-  auto processFn = [&](llvm::RecordKeeper &records) {
-    processTdIncludeRecords(records, decls);
-
-    // After we are done processing, move all of the tablegen source buffers to
-    // the main parser source mgr. This allows for directly using source
-    // locations from the .td files without needing to remap them.
-    parserSrcMgr.takeSourceBuffersFrom(llvm::SrcMgr, fileLoc.End);
-    return false;
-  };
-  if (llvm::TableGenParseFile(std::move(*includeBuffer),
-                              parserSrcMgr.getIncludeDirs(), processFn))
+  // Parse the tablegen file.
+  llvm::RecordKeeper tdRecords;
+  if (llvm::TableGenParseFile(tdSrcMgr, tdRecords))
     return failure();
 
+  // Process the parsed records.
+  processTdIncludeRecords(tdRecords, decls);
+
+  // After we are done processing, move all of the tablegen source buffers to
+  // the main parser source mgr. This allows for directly using source locations
+  // from the .td files without needing to remap them.
+  parserSrcMgr.takeSourceBuffersFrom(tdSrcMgr, fileLoc.End);
   return success();
 }
 
@@ -1762,6 +1766,7 @@ FailureOr<ast::Expr *> Parser::parseAttributeExpr() {
   std::string attrExpr = curToken.getStringValue();
   consumeToken();
 
+  loc.End = curToken.getEndLoc();
   if (failed(
           parseToken(Token::greater, "expected `>` after attribute literal")))
     return failure();
@@ -1769,7 +1774,6 @@ FailureOr<ast::Expr *> Parser::parseAttributeExpr() {
 }
 
 FailureOr<ast::Expr *> Parser::parseCallExpr(ast::Expr *parentExpr) {
-  SMRange loc = curToken.getLoc();
   consumeToken(Token::l_paren);
 
   // Parse the arguments of the call.
@@ -1788,7 +1792,8 @@ FailureOr<ast::Expr *> Parser::parseCallExpr(ast::Expr *parentExpr) {
       arguments.push_back(*argument);
     } while (consumeIf(Token::comma));
   }
-  loc.End = curToken.getEndLoc();
+
+  SMRange loc(parentExpr->getLoc().Start, curToken.getEndLoc());
   if (failed(parseToken(Token::r_paren, "expected `)` after argument list")))
     return failure();
 
@@ -1842,7 +1847,7 @@ FailureOr<ast::Expr *> Parser::parseInlineRewriteLambdaExpr() {
 }
 
 FailureOr<ast::Expr *> Parser::parseMemberAccessExpr(ast::Expr *parentExpr) {
-  SMRange loc = curToken.getLoc();
+  SMRange dotLoc = curToken.getLoc();
   consumeToken(Token::dot);
 
   // Check for code completion of the member name.
@@ -1853,8 +1858,9 @@ FailureOr<ast::Expr *> Parser::parseMemberAccessExpr(ast::Expr *parentExpr) {
   Token memberNameTok = curToken;
   if (memberNameTok.isNot(Token::identifier, Token::integer) &&
       !memberNameTok.isKeyword())
-    return emitError(loc, "expected identifier or numeric member name");
+    return emitError(dotLoc, "expected identifier or numeric member name");
   StringRef memberName = memberNameTok.getSpelling();
+  SMRange loc(parentExpr->getLoc().Start, curToken.getEndLoc());
   consumeToken();
 
   return createMemberAccessExpr(parentExpr, memberName, loc);
@@ -2095,6 +2101,7 @@ FailureOr<ast::Expr *> Parser::parseTypeExpr() {
   std::string attrExpr = curToken.getStringValue();
   consumeToken();
 
+  loc.End = curToken.getEndLoc();
   if (failed(parseToken(Token::greater, "expected `>` after type literal")))
     return failure();
   return ast::TypeExpr::create(ctx, loc, attrExpr);
@@ -2676,8 +2683,11 @@ FailureOr<ast::Type> Parser::validateMemberAccess(ast::Expr *parentExpr,
       });
       if (it != results.end())
         return it->isVariadic() ? valueRangeTy : valueTy;
+    } else if (llvm::isDigit(name[0])) {
+      // Allow unchecked numeric indexing of the results of unregistered
+      // operations. It returns a single value.
+      return valueTy;
     }
-
   } else if (auto tupleType = parentType.dyn_cast<ast::TupleType>()) {
     // Handle indexed results.
     unsigned index = 0;

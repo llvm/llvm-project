@@ -283,8 +283,7 @@ public:
   explicit AArch64FastISel(FunctionLoweringInfo &FuncInfo,
                            const TargetLibraryInfo *LibInfo)
       : FastISel(FuncInfo, LibInfo, /*SkipTargetIndependentISel=*/true) {
-    Subtarget =
-        &static_cast<const AArch64Subtarget &>(FuncInfo.MF->getSubtarget());
+    Subtarget = &FuncInfo.MF->getSubtarget<AArch64Subtarget>();
     Context = &FuncInfo.Fn->getContext();
   }
 

@@ -319,6 +319,24 @@ entry:
   ret i32 %conv1
 }
 
+define i32 @icmp_minus_imm_noncanonicalcmp(i8* %a) {
+; CHECK-LABEL: @icmp_minus_imm_noncanonicalcmp(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = load i8, i8* [[A:%.*]], align 1
+; CHECK-NEXT:    [[TMP1:%.*]] = zext i8 [[TMP0]] to i32
+; CHECK-NEXT:    [[ADD_I:%.*]] = add i32 [[TMP1]], -7
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i32 -5, [[ADD_I]]
+; CHECK-NEXT:    [[CONV1:%.*]] = zext i1 [[CMP]] to i32
+; CHECK-NEXT:    ret i32 [[CONV1]]
+;
+entry:
+  %0 = load i8, i8* %a, align 1
+  %add.i = add i8 %0, -7
+  %cmp = icmp ult i8 -5, %add.i
+  %conv1 = zext i1 %cmp to i32
+  ret i32 %conv1
+}
+
 define void @mul_with_neg_imm(i32, i32* %b) {
 ; CHECK-LABEL: @mul_with_neg_imm(
 ; CHECK-NEXT:  entry:
@@ -347,4 +365,28 @@ if.then:
 
 if.end:
   ret void
+}
+
+define i32 @degenerateicmp() {
+; CHECK-LABEL: @degenerateicmp(
+; CHECK-NEXT:    [[TMP1:%.*]] = sub i32 190, 0
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp ugt i32 225, [[TMP1]]
+; CHECK-NEXT:    [[TMP3:%.*]] = select i1 [[TMP2]], i32 1, i32 0
+; CHECK-NEXT:    ret i32 [[TMP3]]
+;
+  %1 = sub i8 -66, 0
+  %2 = icmp ugt i8 -31, %1
+  %3 = select i1 %2, i32 1, i32 0
+  ret i32 %3
+}
+
+define i1 @pr55490() {
+; CHECK-LABEL: @pr55490(
+; CHECK-NEXT:    [[TMP1:%.*]] = sub i32 10, 8
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp ult i32 [[TMP1]], 3
+; CHECK-NEXT:    ret i1 [[TMP2]]
+;
+  %1 = sub i4 -6, -8
+  %2 = icmp ult i4 %1, 3
+  ret i1 %2
 }

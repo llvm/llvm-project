@@ -375,6 +375,30 @@ define <vscale x 1 x half> @vsitofp_nxv1i8_nxv1f16(<vscale x 1 x i8> %va) {
   ret <vscale x 1 x half> %evec
 }
 
+define <vscale x 1 x half> @vsitofp_nxv1i7_nxv1f16(<vscale x 1 x i7> %va) {
+; CHECK-LABEL: vsitofp_nxv1i7_nxv1f16:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli a0, zero, e8, mf8, ta, mu
+; CHECK-NEXT:    vadd.vv v8, v8, v8
+; CHECK-NEXT:    vsra.vi v9, v8, 1
+; CHECK-NEXT:    vfwcvt.f.x.v v8, v9
+; CHECK-NEXT:    ret
+  %evec = sitofp <vscale x 1 x i7> %va to <vscale x 1 x half>
+  ret <vscale x 1 x half> %evec
+}
+
+define <vscale x 1 x half> @vuitofp_nxv1i7_nxv1f16(<vscale x 1 x i7> %va) {
+; CHECK-LABEL: vuitofp_nxv1i7_nxv1f16:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    li a0, 127
+; CHECK-NEXT:    vsetvli a1, zero, e8, mf8, ta, mu
+; CHECK-NEXT:    vand.vx v9, v8, a0
+; CHECK-NEXT:    vfwcvt.f.xu.v v8, v9
+; CHECK-NEXT:    ret
+  %evec = uitofp <vscale x 1 x i7> %va to <vscale x 1 x half>
+  ret <vscale x 1 x half> %evec
+}
+
 define <vscale x 1 x half> @vuitofp_nxv1i8_nxv1f16(<vscale x 1 x i8> %va) {
 ; CHECK-LABEL: vuitofp_nxv1i8_nxv1f16:
 ; CHECK:       # %bb.0:

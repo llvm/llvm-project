@@ -34,7 +34,7 @@ static cl::opt<uint64_t> ProfileSymbolListCutOff(
              "will be used. This is very useful for performance debugging"));
 
 cl::opt<bool> GenerateMergedBaseProfiles(
-    "generate-merged-base-profiles", cl::init(true), cl::ZeroOrMore,
+    "generate-merged-base-profiles", cl::init(false), cl::ZeroOrMore,
     cl::desc("When generating nested context-sensitive profiles, always "
              "generate extra base profile for function with all its context "
              "profiles merged into it."));
@@ -518,6 +518,12 @@ void CSProfileConverter::convertProfiles(CSProfileConverter::FrameNode &Node) {
       auto &SamplesMap = NodeProfile->functionSamplesAt(ChildNode.CallSiteLoc);
       SamplesMap.emplace(OrigChildContext.getName().str(), *ChildProfile);
       NodeProfile->addTotalSamples(ChildProfile->getTotalSamples());
+      // Remove the corresponding body sample for the callsite and update the
+      // total weight.
+      auto Count = NodeProfile->removeCalledTargetAndBodySample(
+          ChildNode.CallSiteLoc.LineOffset, ChildNode.CallSiteLoc.Discriminator,
+          OrigChildContext.getName());
+      NodeProfile->removeTotalSamples(Count);
     }
 
     // Separate child profile to be a standalone profile, if the current parent

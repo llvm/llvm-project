@@ -2366,6 +2366,24 @@ TEST_F(ConstantRangeTest, FromKnownBitsExhaustive) {
   }
 }
 
+TEST_F(ConstantRangeTest, ToKnownBits) {
+  unsigned Bits = 4;
+  EnumerateConstantRanges(Bits, [&](const ConstantRange &CR) {
+    KnownBits Known = CR.toKnownBits();
+    KnownBits ExpectedKnown(Bits);
+    ExpectedKnown.Zero.setAllBits();
+    ExpectedKnown.One.setAllBits();
+    ForeachNumInConstantRange(CR, [&](const APInt &N) {
+      ExpectedKnown.One &= N;
+      ExpectedKnown.Zero &= ~N;
+    });
+    // For an empty CR any result would be legal.
+    if (!CR.isEmptySet()) {
+      EXPECT_EQ(ExpectedKnown, Known);
+    }
+  });
+}
+
 TEST_F(ConstantRangeTest, Negative) {
   // All elements in an empty set (of which there are none) are both negative
   // and non-negative. Empty & full sets checked explicitly for clarity, but
@@ -2510,6 +2528,76 @@ TEST_F(ConstantRangeTest, castOps) {
   EXPECT_TRUE(IntToPtr.isFullSet());
 }
 
+TEST_F(ConstantRangeTest, binaryAnd) {
+  // Single element ranges.
+  ConstantRange R16(APInt(8, 16));
+  ConstantRange R20(APInt(8, 20));
+  EXPECT_EQ(*R16.binaryAnd(R16).getSingleElement(), APInt(8, 16));
+  EXPECT_EQ(*R16.binaryAnd(R20).getSingleElement(), APInt(8, 16 & 20));
+
+  ConstantRange R16_32(APInt(8, 16), APInt(8, 32));
+  // 'And' with a high bits mask.
+  ConstantRange R32(APInt(8, 32));
+  EXPECT_TRUE(R16_32.binaryAnd(R32).getSingleElement()->isZero());
+  EXPECT_TRUE(R32.binaryAnd(R16_32).getSingleElement()->isZero());
+  // 'And' with a low bits mask. Handled conservatively for now.
+  ConstantRange R4(APInt(8, 4));
+  ConstantRange R0_5(APInt(8, 0), APInt(8, 5));
+  EXPECT_EQ(R16_32.binaryAnd(R4), R0_5);
+  EXPECT_EQ(R4.binaryAnd(R16_32), R0_5);
+
+  // Ranges with more than one element. Handled conservatively for now.
+  ConstantRange R0_99(APInt(8, 0), APInt(8, 99));
+  ConstantRange R0_32(APInt(8, 0), APInt(8, 32));
+  EXPECT_EQ(R16_32.binaryAnd(R0_99), R0_32);
+  EXPECT_EQ(R0_99.binaryAnd(R16_32), R0_32);
+
+  TestBinaryOpExhaustive(
+      [](const ConstantRange &CR1, const ConstantRange &CR2) {
+        return CR1.binaryAnd(CR2);
+      },
+      [](const APInt &N1, const APInt &N2) { return N1 & N2; }, PreferSmallest,
+      CheckSingleElementsOnly);
+}
+
+TEST_F(ConstantRangeTest, binaryOr) {
+  // Single element ranges.
+  ConstantRange R16(APInt(8, 16));
+  ConstantRange R20(APInt(8, 20));
+  EXPECT_EQ(*R16.binaryOr(R16).getSingleElement(), APInt(8, 16));
+  EXPECT_EQ(*R16.binaryOr(R20).getSingleElement(), APInt(8, 16 | 20));
+
+  ConstantRange R16_32(APInt(8, 16), APInt(8, 32));
+  // 'Or' with a high bits mask.
+  // KnownBits estimate is important, otherwise the maximum included element
+  // would be 2^8 - 1.
+  ConstantRange R32(APInt(8, 32));
+  ConstantRange R48_64(APInt(8, 48), APInt(8, 64));
+  EXPECT_EQ(R16_32.binaryOr(R32), R48_64);
+  EXPECT_EQ(R32.binaryOr(R16_32), R48_64);
+  // 'Or' with a low bits mask.
+  ConstantRange R4(APInt(8, 4));
+  ConstantRange R0_16(APInt(8, 0), APInt(8, 16));
+  ConstantRange R4_16(APInt(8, 4), APInt(8, 16));
+  EXPECT_EQ(R0_16.binaryOr(R4), R4_16);
+  EXPECT_EQ(R4.binaryOr(R0_16), R4_16);
+
+  // Ranges with more than one element. Handled conservatively for now.
+  // UMaxUMin estimate is important, otherwise the lower bound would be zero.
+  ConstantRange R0_64(APInt(8, 0), APInt(8, 64));
+  ConstantRange R5_32(APInt(8, 5), APInt(8, 32));
+  ConstantRange R5_64(APInt(8, 5), APInt(8, 64));
+  EXPECT_EQ(R0_64.binaryOr(R5_32), R5_64);
+  EXPECT_EQ(R5_32.binaryOr(R0_64), R5_64);
+
+  TestBinaryOpExhaustive(
+      [](const ConstantRange &CR1, const ConstantRange &CR2) {
+        return CR1.binaryOr(CR2);
+      },
+      [](const APInt &N1, const APInt &N2) { return N1 | N2; }, PreferSmallest,
+      CheckSingleElementsOnly);
+}
+
 TEST_F(ConstantRangeTest, binaryXor) {
   // Single element ranges.
   ConstantRange R16(APInt(8, 16));
@@ -2517,12 +2605,22 @@ TEST_F(ConstantRangeTest, binaryXor) {
   EXPECT_EQ(*R16.binaryXor(R16).getSingleElement(), APInt(8, 0));
   EXPECT_EQ(*R16.binaryXor(R20).getSingleElement(), APInt(8, 16 ^ 20));
 
-  // Ranges with more than a single element. Handled conservatively for now.
+  // Ranges with more than a single element.
   ConstantRange R16_35(APInt(8, 16), APInt(8, 35));
   ConstantRange R0_99(APInt(8, 0), APInt(8, 99));
-  EXPECT_TRUE(R16_35.binaryXor(R16_35).isFullSet());
-  EXPECT_TRUE(R16_35.binaryXor(R0_99).isFullSet());
-  EXPECT_TRUE(R0_99.binaryXor(R16_35).isFullSet());
+  EXPECT_EQ(R16_35.binaryXor(R16_35), ConstantRange(APInt(8, 0), APInt(8, 64)));
+  EXPECT_EQ(R16_35.binaryXor(R0_99), ConstantRange(APInt(8, 0), APInt(8, 128)));
+  EXPECT_EQ(R0_99.binaryXor(R16_35), ConstantRange(APInt(8, 0), APInt(8, 128)));
+
+  TestBinaryOpExhaustive(
+      [](const ConstantRange &CR1, const ConstantRange &CR2) {
+        return CR1.binaryXor(CR2);
+      },
+      [](const APInt &N1, const APInt &N2) {
+        return N1 ^ N2;
+      },
+      PreferSmallest,
+      CheckSingleElementsOnly);
 }
 
 TEST_F(ConstantRangeTest, binaryNot) {

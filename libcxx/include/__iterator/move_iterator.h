@@ -79,23 +79,21 @@ public:
     typedef typename iterator_traits<iterator_type>::difference_type difference_type;
     typedef iterator_type pointer;
 
-#ifndef _LIBCPP_CXX03_LANG
     typedef typename iterator_traits<iterator_type>::reference __reference;
     typedef typename conditional<
             is_reference<__reference>::value,
             typename remove_reference<__reference>::type&&,
             __reference
         >::type reference;
-#else
-    typedef typename iterator_traits<iterator_type>::reference reference;
-#endif
-
 #endif // _LIBCPP_STD_VER > 17
 
-#if _LIBCPP_STD_VER > 17
-    _LIBCPP_HIDE_FROM_ABI constexpr
+    _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_AFTER_CXX14
     explicit move_iterator(_Iter __i) : __current_(std::move(__i)) {}
 
+    _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_AFTER_CXX14
+    move_iterator& operator++() { ++__current_; return *this; }
+
+#if _LIBCPP_STD_VER > 17
     _LIBCPP_HIDE_FROM_ABI constexpr
     move_iterator() requires is_constructible_v<_Iter> : __current_() {}
 
@@ -123,9 +121,6 @@ public:
     reference operator[](difference_type __n) const { return ranges::iter_move(__current_ + __n); }
 
     _LIBCPP_HIDE_FROM_ABI constexpr
-    move_iterator& operator++() { ++__current_; return *this; }
-
-    _LIBCPP_HIDE_FROM_ABI constexpr
     auto operator++(int)
         requires forward_iterator<_Iter>
     {
@@ -135,9 +130,6 @@ public:
     _LIBCPP_HIDE_FROM_ABI constexpr
     void operator++(int) { ++__current_; }
 #else
-    _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_AFTER_CXX14
-    explicit move_iterator(_Iter __i) : __current_(std::move(__i)) {}
-
     _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_AFTER_CXX14
     move_iterator() : __current_() {}
 
@@ -168,8 +160,6 @@ public:
     _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_AFTER_CXX14
     reference operator[](difference_type __n) const { return static_cast<reference>(__current_[__n]); }
 
-    _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_AFTER_CXX14
-    move_iterator& operator++() { ++__current_; return *this; }
     _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_AFTER_CXX14
     move_iterator operator++(int) { move_iterator __tmp(*this); ++__current_; return __tmp; }
 #endif // _LIBCPP_STD_VER > 17

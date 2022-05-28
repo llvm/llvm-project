@@ -4,6 +4,40 @@
 ; RUN: sed 's/iXLen/i64/g' %s | llc -mtriple=riscv64 -mattr=+m,+v \
 ; RUN:   -verify-machineinstrs | FileCheck %s --check-prefixes=CHECK,RV64
 
+define <vscale x 3 x i1> @icmp_eq_vv_nxv3i8(<vscale x 3 x i8> %va, <vscale x 3 x i8> %vb) {
+; CHECK-LABEL: icmp_eq_vv_nxv3i8:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli a0, zero, e8, mf2, ta, mu
+; CHECK-NEXT:    vmseq.vv v0, v8, v9
+; CHECK-NEXT:    ret
+  %vc = icmp eq <vscale x 3 x i8> %va, %vb
+  ret <vscale x 3 x i1> %vc
+}
+
+define <vscale x 3 x i1> @icmp_eq_vx_nxv3i8(<vscale x 3 x i8> %va, i8 %b) {
+; CHECK-LABEL: icmp_eq_vx_nxv3i8:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli a1, zero, e8, mf2, ta, mu
+; CHECK-NEXT:    vmseq.vx v0, v8, a0
+; CHECK-NEXT:    ret
+  %head = insertelement <vscale x 3 x i8> poison, i8 %b, i32 0
+  %splat = shufflevector <vscale x 3 x i8> %head, <vscale x 3 x i8> poison, <vscale x 3 x i32> zeroinitializer
+  %vc = icmp eq <vscale x 3 x i8> %va, %splat
+  ret <vscale x 3 x i1> %vc
+}
+
+define <vscale x 3 x i1> @icmp_eq_xv_nxv3i8(<vscale x 3 x i8> %va, i8 %b) {
+; CHECK-LABEL: icmp_eq_xv_nxv3i8:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli a1, zero, e8, mf2, ta, mu
+; CHECK-NEXT:    vmseq.vx v0, v8, a0
+; CHECK-NEXT:    ret
+  %head = insertelement <vscale x 3 x i8> poison, i8 %b, i32 0
+  %splat = shufflevector <vscale x 3 x i8> %head, <vscale x 3 x i8> poison, <vscale x 3 x i32> zeroinitializer
+  %vc = icmp eq <vscale x 3 x i8> %splat, %va
+  ret <vscale x 3 x i1> %vc
+}
+
 define <vscale x 8 x i1> @icmp_eq_vv_nxv8i8(<vscale x 8 x i8> %va, <vscale x 8 x i8> %vb) {
 ; CHECK-LABEL: icmp_eq_vv_nxv8i8:
 ; CHECK:       # %bb.0:
@@ -3201,7 +3235,7 @@ define <vscale x 16 x i1> @icmp_eq_vi_nx16i64(<vscale x 16 x i64> %va) {
 ; CHECK-NEXT:    vsetvli a2, zero, e64, m8, ta, mu
 ; CHECK-NEXT:    vmseq.vi v24, v16, 0
 ; CHECK-NEXT:    vmseq.vi v0, v8, 0
-; CHECK-NEXT:    vsetvli zero, a1, e8, mf4, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e8, mf4, tu, mu
 ; CHECK-NEXT:    vslideup.vx v0, v24, a0
 ; CHECK-NEXT:    ret
   %vc = icmp eq <vscale x 16 x i64> %va, zeroinitializer

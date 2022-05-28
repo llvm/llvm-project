@@ -268,13 +268,17 @@ static bool mayConsiderUnused(const Inclusion &Inc, ParsedAST &AST,
       return true;
     return false;
   }
+  assert(Inc.HeaderID);
+  auto HID = static_cast<IncludeStructure::HeaderID>(*Inc.HeaderID);
+  // FIXME: Ignore the headers with IWYU export pragmas for now, remove this
+  // check when we have more precise tracking of exported headers.
+  if (AST.getIncludeStructure().hasIWYUExport(HID))
+    return false;
+  auto FE = AST.getSourceManager().getFileManager().getFileRef(
+      AST.getIncludeStructure().getRealPath(HID));
+  assert(FE);
   // Headers without include guards have side effects and are not
   // self-contained, skip them.
-  assert(Inc.HeaderID);
-  auto FE = AST.getSourceManager().getFileManager().getFileRef(
-      AST.getIncludeStructure().getRealPath(
-          static_cast<IncludeStructure::HeaderID>(*Inc.HeaderID)));
-  assert(FE);
   if (!AST.getPreprocessor().getHeaderSearchInfo().isFileMultipleIncludeGuarded(
           &FE->getFileEntry())) {
     dlog("{0} doesn't have header guard and will not be considered unused",
@@ -482,7 +486,7 @@ std::vector<Diag> issueUnusedIncludesDiagnostics(ParsedAST &AST,
   for (const auto *Inc : computeUnusedIncludes(AST)) {
     Diag D;
     D.Message =
-        llvm::formatv("included header {0} is not used",
+        llvm::formatv("included header {0} is not used directly",
                       llvm::sys::path::filename(
                           Inc->Written.substr(1, Inc->Written.size() - 2),
                           llvm::sys::path::Style::posix));

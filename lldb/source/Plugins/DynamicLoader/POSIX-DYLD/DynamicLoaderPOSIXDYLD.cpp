@@ -309,7 +309,7 @@ bool DynamicLoaderPOSIXDYLD::SetRendezvousBreakpoint() {
   addr_t break_addr;
   Target &target = m_process->GetTarget();
   BreakpointSP dyld_break;
-  if (m_rendezvous.IsValid()) {
+  if (m_rendezvous.IsValid() && m_rendezvous.GetBreakAddress() != 0) {
     break_addr = m_rendezvous.GetBreakAddress();
     LLDB_LOG(log, "Setting rendezvous break address for pid {0} at {1:x}",
              m_process ? m_process->GetID() : LLDB_INVALID_PROCESS_ID,
@@ -565,7 +565,7 @@ ModuleSP DynamicLoaderPOSIXDYLD::LoadInterpreterModule() {
   FileSpec file(info.GetName().GetCString());
   ModuleSpec module_spec(file, target.GetArchitecture());
 
-  if (ModuleSP module_sp = target.GetOrCreateModule(module_spec, 
+  if (ModuleSP module_sp = target.GetOrCreateModule(module_spec,
                                                     true /* notify */)) {
     UpdateLoadedSections(module_sp, LLDB_INVALID_ADDRESS, m_interpreter_base,
                          false);

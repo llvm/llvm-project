@@ -100,6 +100,10 @@ public:
 
   BlockT *getHeader() const { return Entries[0]; }
 
+  const SmallVectorImpl<BlockT *> & getEntries() const {
+    return Entries;
+  }
+
   /// \brief Return whether \p Block is an entry block of the cycle.
   bool isEntry(BlockT *Block) const { return is_contained(Entries, Block); }
 
@@ -123,6 +127,16 @@ public:
   /// These are the blocks _outside of the current cycle_ which are
   /// branched to.
   void getExitBlocks(SmallVectorImpl<BlockT *> &TmpStorage) const;
+
+  /// Return the preheader block for this cycle. Pre-header is well-defined for
+  /// reducible cycle in docs/LoopTerminology.rst as: the only one entering
+  /// block and its only edge is to the entry block. Return null for irreducible
+  /// cycles.
+  BlockT *getCyclePreheader() const;
+
+  /// If the cycle has exactly one entry with exactly one predecessor, return
+  /// it, otherwise return nullptr.
+  BlockT *getCyclePredecessor() const;
 
   /// Iteration over child cycles.
   //@{
@@ -178,6 +192,7 @@ public:
   iterator_range<const_entry_iterator> entries() const {
     return llvm::make_range(Entries.begin(), Entries.end());
   }
+  //@}
 
   Printable printEntries(const ContextT &Ctx) const {
     return Printable([this, &Ctx](raw_ostream &Out) {
@@ -238,6 +253,7 @@ public:
   const ContextT &getSSAContext() const { return Context; }
 
   CycleT *getCycle(const BlockT *Block) const;
+  unsigned getCycleDepth(const BlockT *Block) const;
   CycleT *getTopLevelParentCycle(const BlockT *Block) const;
 
   /// Move \p Child to \p NewParent by manipulating Children vectors.
@@ -248,7 +264,9 @@ public:
 
   /// Methods for debug and self-test.
   //@{
+#ifndef NDEBUG
   bool validateTree() const;
+#endif
   void print(raw_ostream &Out) const;
   void dump() const { print(dbgs()); }
   //@}

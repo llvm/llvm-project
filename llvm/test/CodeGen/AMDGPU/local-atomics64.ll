@@ -40,6 +40,19 @@ define amdgpu_kernel void @lds_atomic_xchg_ret_f64_offset(double addrspace(1)* %
   ret void
 }
 
+; GCN-LABEL: {{^}}lds_atomic_xchg_ret_pointer_offset:
+; SICIVI: s_mov_b32 m0
+; GFX9-NOT: m0
+
+; GCN: ds_wrxchg_rtn_b64 {{.*}} offset:32
+; GCN: s_endpgm
+define amdgpu_kernel void @lds_atomic_xchg_ret_pointer_offset(i8* addrspace(1)* %out, i8* addrspace(3)* %ptr) nounwind {
+  %gep = getelementptr i8*, i8* addrspace(3)* %ptr, i32 4
+  %result = atomicrmw xchg i8* addrspace(3)* %gep, i8* null seq_cst
+  store i8* %result, i8* addrspace(1)* %out, align 8
+  ret void
+}
+
 ; GCN-LABEL: {{^}}lds_atomic_add_ret_i64:
 ; SICIVI: s_mov_b32 m0
 ; GFX9-NOT: m0

@@ -138,12 +138,11 @@ define <2 x i32> @v_trunc_v4i32_to_v4i16(<4 x i32> %src) {
 ; GFX7-LABEL: v_trunc_v4i32_to_v4i16:
 ; GFX7:       ; %bb.0:
 ; GFX7-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX7-NEXT:    v_mov_b32_e32 v4, 0xffff
 ; GFX7-NEXT:    v_lshlrev_b32_e32 v1, 16, v1
-; GFX7-NEXT:    v_and_b32_e32 v0, v0, v4
+; GFX7-NEXT:    v_and_b32_e32 v0, 0xffff, v0
 ; GFX7-NEXT:    v_or_b32_e32 v0, v1, v0
 ; GFX7-NEXT:    v_lshlrev_b32_e32 v1, 16, v3
-; GFX7-NEXT:    v_and_b32_e32 v2, v2, v4
+; GFX7-NEXT:    v_and_b32_e32 v2, 0xffff, v2
 ; GFX7-NEXT:    v_or_b32_e32 v1, v1, v2
 ; GFX7-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -162,23 +161,21 @@ define <2 x i32> @v_trunc_v4i32_to_v4i16(<4 x i32> %src) {
 define amdgpu_ps <2 x i32> @s_trunc_v4i32_to_v4i16(<4 x i32> inreg %src) {
 ; GFX7-LABEL: s_trunc_v4i32_to_v4i16:
 ; GFX7:       ; %bb.0:
-; GFX7-NEXT:    s_mov_b32 s4, 0xffff
 ; GFX7-NEXT:    s_lshl_b32 s1, s1, 16
-; GFX7-NEXT:    s_and_b32 s0, s0, s4
+; GFX7-NEXT:    s_and_b32 s0, s0, 0xffff
 ; GFX7-NEXT:    s_or_b32 s0, s1, s0
 ; GFX7-NEXT:    s_lshl_b32 s1, s3, 16
-; GFX7-NEXT:    s_and_b32 s2, s2, s4
+; GFX7-NEXT:    s_and_b32 s2, s2, 0xffff
 ; GFX7-NEXT:    s_or_b32 s1, s1, s2
 ; GFX7-NEXT:    ; return to shader part epilog
 ;
 ; GFX8-LABEL: s_trunc_v4i32_to_v4i16:
 ; GFX8:       ; %bb.0:
-; GFX8-NEXT:    s_mov_b32 s4, 0xffff
 ; GFX8-NEXT:    s_lshl_b32 s1, s1, 16
-; GFX8-NEXT:    s_and_b32 s0, s0, s4
+; GFX8-NEXT:    s_and_b32 s0, s0, 0xffff
 ; GFX8-NEXT:    s_or_b32 s0, s1, s0
 ; GFX8-NEXT:    s_lshl_b32 s1, s3, 16
-; GFX8-NEXT:    s_and_b32 s2, s2, s4
+; GFX8-NEXT:    s_and_b32 s2, s2, 0xffff
 ; GFX8-NEXT:    s_or_b32 s1, s1, s2
 ; GFX8-NEXT:    ; return to shader part epilog
   %trunc = trunc <4 x i32> %src to <4 x i16>

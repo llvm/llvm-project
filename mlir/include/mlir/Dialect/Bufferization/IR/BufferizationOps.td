@@ -12,11 +12,83 @@
 include "mlir/Dialect/Bufferization/IR/AllocationOpInterface.td"
 include "mlir/Dialect/Bufferization/IR/BufferizableOpInterface.td"
 include "mlir/Dialect/Bufferization/IR/BufferizationBase.td"
+include "mlir/Interfaces/InferTypeOpInterface.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
 include "mlir/Interfaces/CopyOpInterface.td"
 
 class Bufferization_Op<string mnemonic, list<Trait> traits = []>
     : Op<Bufferization_Dialect, mnemonic, traits>;
+
+//===----------------------------------------------------------------------===//
+// AllocTensorOp
+//===----------------------------------------------------------------------===//
+
+def Bufferization_AllocTensorOp : Bufferization_Op<"alloc_tensor",
+    [BufferizableOpInterface,
+     DeclareOpInterfaceMethods<ReifyRankedShapedTypeOpInterface>]> {
+  let summary = "buffer allocation in tensor land";
+
+  let description = [{
+    `bufferization.alloc_tensor` is an operation that bufferizes to a buffer
+    allocation of a given shape. The shape could be dynamic or static.
+    Reading from the result of an `alloc_tensor` op yields an undefined value.
+
+    `alloc_tensor` is a helper op for bufferization. It marks the beginning of
+    a new tensor SSA use-def chain and is used to control in-place bufferization
+    decisions during One-Shot Bufferize.
+  }];
+
+  let arguments = (ins Variadic<Index>:$dynamicSizes);
+
+  let results = (outs AnyTensor:$result);
+
+  let assemblyFormat = "`(`$dynamicSizes`)` attr-dict `:` type($result)";
+
+  let extraClassDeclaration = [{
+    LogicalResult bufferize(RewriterBase &rewriter, BufferizationState &state);
+
+    bool isMemoryWrite(OpResult opResult, const AnalysisState &state) const {
+      // AllocTensorOps allocate but do not write.
+      return false;
+    }
+
+    RankedTensorType getType() {
+      return getResult().getType().cast<RankedTensorType>();
+    }
+
+    // Return true if the size of the tensor is dynamic at `idx`
+    bool isDynamicDim(unsigned idx) {
+      return getType().isDynamicDim(idx);
+    }
+
+    // Return the argument position that contains the dynamic size of
+    // the tensor at dimension `idx`. Asserts that the shape is
+    // dynamic at that `idx`.
+    unsigned getIndexOfDynamicSize(unsigned idx) {
+      assert(isDynamicDim(idx) && "expected dynamic size");
+      ArrayRef<int64_t> shape = getType().getShape();
+      return std::count_if(
+          shape.begin(), shape.begin() + idx,
+          [&](int64_t size) { return ShapedType::isDynamic(size); });
+    }
+
+    // Return the Value of the dynamic size of the tensor at dimension
+    // `idx`. Asserts that the shape is dynamic at that `idx.
+    Value getDynamicSize(unsigned idx) {
+      return getOperand(getIndexOfDynamicSize(idx));
+    }
+
+    // Assert that the size of the result tensor is static at `idx`
+    // and return the shape.
+    int64_t getStaticSize(unsigned idx) {
+      assert(!isDynamicDim(idx) && "expected static size");
+      return getType().getShape()[idx];
+    }
+  }];
+
+  let hasCanonicalizer = 1;
+  let hasVerifier = 1;
+}
 
 //===----------------------------------------------------------------------===//
 // CloneOp
@@ -133,7 +205,7 @@ def Bufferization_ToTensorOp : Bufferization_Op<"to_tensor", [
       // DCE away. In case of partial bufferization, to_memref(to_tensor(x))
       // constructs may be left over. These are folded by the canonicalizer or
       // FinalizingBufferize.
-      return failure();
+      return success();
     }
 
     bool isWritable(Value value, const AnalysisState &state) const {

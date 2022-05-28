@@ -24,7 +24,7 @@
 #include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/MC/MCFixedLenDisassembler.h"
+#include "llvm/MC/MCDecoderOps.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -236,11 +236,11 @@ static BitsInit &getBitsField(const Record &def, StringRef str) {
       Bits.push_back(const_cast<BitInit *>(BI));
     } else {
       for (unsigned Idx = 0U; Idx < SI.BitWidth; ++Idx)
-        Bits.push_back(UnsetInit::get());
+        Bits.push_back(UnsetInit::get(def.getRecords()));
     }
   }
 
-  return *BitsInit::get(Bits);
+  return *BitsInit::get(def.getRecords(), Bits);
 }
 
 // Representation of the instruction to work on.
@@ -2253,13 +2253,12 @@ static void emitFieldFromInstruction(formatted_raw_ostream &OS) {
      << "// InsnType must either be integral or an APInt-like object that "
         "must:\n"
      << "// * be default-constructible and copy-constructible\n"
-     << "// * be constructible from a uint64_t\n"
      << "// * be constructible from an APInt (this can be private)\n"
      << "// * Support insertBits(bits, startBit, numBits)\n"
      << "// * Support extractBitsAsZExtValue(numBits, startBit)\n"
-     << "// * be convertible to bool\n"
      << "// * Support the ~, &, ==, and != operators with other objects of "
         "the same type\n"
+     << "// * Support the != and bitwise & with uint64_t\n"
      << "// * Support put (<<) to raw_ostream&\n"
      << "template <typename InsnType>\n"
      << "#if defined(_MSC_VER) && !defined(__clang__)\n"

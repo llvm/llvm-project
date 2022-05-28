@@ -1,4 +1,4 @@
-//===- Bufferize.h - Bufferization utilities --------------------*- C++ -*-===//
+//===- Bufferize.h - Bufferization Utilities --------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -9,14 +9,10 @@
 // We use the term "bufferize" to mean conversion from tensor types to
 // memref types.
 //
-// Generally speaking, for each op that operates on tensor types, a conversion
-// pattern needs to be written. The infrastructure in this file assists in
-// defining these conversion patterns in a composable way.
-//
-// Bufferization conversion patterns should generally use the ordinary
-// conversion pattern classes (e.g. OpConversionPattern). A TypeConverter
-// (accessible with getTypeConverter()) is available if needed for converting
-// types.
+// Generally speaking, for each op that operates on tensor types, the
+// `BufferizableOpInterface` needs to be implemented. This file contains the
+// bufferization driver that is responsible for bufferizing the ops in the right
+// order, etc.
 //
 //===----------------------------------------------------------------------===//
 
@@ -31,6 +27,7 @@ namespace bufferization {
 class AnalysisState;
 struct BufferizationState;
 struct BufferizationOptions;
+class OpFilter;
 
 /// A helper type converter class that automatically populates the relevant
 /// materializations and type conversions for bufferization.
@@ -88,12 +85,11 @@ BufferizationOptions getPartialBufferizationOptions();
 /// Reuse an existing `BufferizationState`.
 ///
 /// Note: This function overload is useful for extending the bufferization.
-LogicalResult bufferizeOp(Operation *op,
-                          BufferizationState &bufferizationState);
+LogicalResult bufferizeOp(Operation *op, BufferizationState &bufferizationState,
+                          const OpFilter *opFilter = nullptr);
 
-/// Finalize all buffer allocations.
-/// * Hoist buffer allocations as much as possible.
-/// * Create alloc/dealloc ops as specified by the bufferization options.
+/// Finalize all buffer allocations: Create alloc/dealloc ops as specified by
+/// the bufferization options.
 LogicalResult finalizeBuffers(Operation *op,
                               const BufferizationOptions &options);
 } // namespace bufferization

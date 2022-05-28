@@ -213,6 +213,15 @@ def int_amdgcn_s_barrier : GCCBuiltin<"__builtin_amdgcn_s_barrier">,
 def int_amdgcn_wave_barrier : GCCBuiltin<"__builtin_amdgcn_wave_barrier">,
   Intrinsic<[], [], [IntrNoMem, IntrHasSideEffects, IntrConvergent, IntrWillReturn]>;
 
+// The 1st parameter is a mask for the types of instructions that may be allowed
+// to cross the SCHED_BARRIER during scheduling.
+//     MASK = 0: No instructions may be scheduled across SCHED_BARRIER.
+//     MASK = 1: Non-memory, non-side-effect producing instructions may be
+//               scheduled across SCHED_BARRIER, i.e. allow ALU instructions to pass.
+def int_amdgcn_sched_barrier : GCCBuiltin<"__builtin_amdgcn_sched_barrier">,
+  Intrinsic<[], [llvm_i32_ty], [ImmArg<ArgIndex<0>>, IntrNoMem,
+                                IntrHasSideEffects, IntrConvergent, IntrWillReturn]>;
+
 def int_amdgcn_s_waitcnt : GCCBuiltin<"__builtin_amdgcn_s_waitcnt">,
   Intrinsic<[], [llvm_i32_ty], [ImmArg<ArgIndex<0>>, IntrNoMem, IntrHasSideEffects, IntrWillReturn]>;
 
@@ -1261,6 +1270,40 @@ class AMDGPUBufferAtomicFP : Intrinsic <
 
 // Legacy form of the intrinsic. raw and struct forms should be preferred.
 def int_amdgcn_buffer_atomic_fadd : AMDGPUBufferAtomicFP;
+
+class AMDGPURawBufferLoadLDS : Intrinsic <
+  [],
+  [llvm_v4i32_ty,                      // rsrc(SGPR)
+   LLVMQualPointerType<llvm_i8_ty, 3>, // LDS base offset
+   llvm_i32_ty,                        // Data byte size: 1/2/4
+   llvm_i32_ty,                        // voffset(VGPR, included in bounds checking and swizzling)
+   llvm_i32_ty,                        // soffset(SGPR/imm, excluded from bounds checking and swizzling)
+   llvm_i32_ty,                        // imm offset(imm, included in bounds checking and swizzling)
+   llvm_i32_ty],                       // auxiliary data (imm, cachepolicy     (bit 0 = glc,
+                                       //                                       bit 1 = slc,
+                                       //                                       bit 2 = dlc on gfx10+))
+                                       //                      swizzled buffer (bit 3 = swz))
+  [IntrWillReturn, NoCapture<ArgIndex<1>>, ImmArg<ArgIndex<2>>, ImmArg<ArgIndex<5>>,
+   ImmArg<ArgIndex<6>>], "", [SDNPMemOperand]>, AMDGPURsrcIntrinsic<0>;
+def int_amdgcn_raw_buffer_load_lds : AMDGPURawBufferLoadLDS;
+
+class AMDGPUStructBufferLoadLDS : Intrinsic <
+  [],
+  [llvm_v4i32_ty,                      // rsrc(SGPR)
+   LLVMQualPointerType<llvm_i8_ty, 3>, // LDS base offset
+   llvm_i32_ty,                        // Data byte size: 1/2/4
+   llvm_i32_ty,                        // vindex(VGPR)
+   llvm_i32_ty,                        // voffset(VGPR, included in bounds checking and swizzling)
+   llvm_i32_ty,                        // soffset(SGPR/imm, excluded from bounds checking and swizzling)
+   llvm_i32_ty,                        // imm offset(imm, included in bounds checking and swizzling)
+   llvm_i32_ty],                       // auxiliary data (imm, cachepolicy     (bit 0 = glc,
+                                       //                                       bit 1 = slc,
+                                       //                                       bit 2 = dlc on gfx10+))
+                                       //                      swizzled buffer (bit 3 = swz))
+  [IntrWillReturn, NoCapture<ArgIndex<1>>, ImmArg<ArgIndex<2>>, ImmArg<ArgIndex<6>>,
+   ImmArg<ArgIndex<7>>], "", [SDNPMemOperand]>, AMDGPURsrcIntrinsic<0>;
+def int_amdgcn_struct_buffer_load_lds : AMDGPUStructBufferLoadLDS;
+
 } // defset AMDGPUBufferIntrinsics
 
 // Uses that do not set the done bit should set IntrWriteMem on the
@@ -1336,11 +1379,11 @@ def int_amdgcn_s_setprio :
   Intrinsic<[], [llvm_i16_ty], [ImmArg<ArgIndex<0>>, IntrNoMem,
                                 IntrHasSideEffects, IntrWillReturn]>;
 
+// This is IntrHasSideEffects so it can be used to read cycle counters.
 def int_amdgcn_s_getreg :
   GCCBuiltin<"__builtin_amdgcn_s_getreg">,
   Intrinsic<[llvm_i32_ty], [llvm_i32_ty],
-  [IntrInaccessibleMemOnly, IntrReadMem, IntrSpeculatable,
-   IntrWillReturn, ImmArg<ArgIndex<0>>]
+  [IntrNoMem, IntrHasSideEffects, IntrWillReturn, ImmArg<ArgIndex<0>>]
 >;
 
 // Note this can be used to set FP environment properties that are
@@ -1769,6 +1812,25 @@ def int_amdgcn_perm :
      [IntrNoMem, IntrSpeculatable, IntrWillReturn]>;
 
 //===----------------------------------------------------------------------===//
+// GFX9 Intrinsics
+//===----------------------------------------------------------------------===//
+
+class AMDGPUGlobalLoadLDS : Intrinsic <
+  [],
+  [LLVMQualPointerType<llvm_i8_ty, 1>, // Base global pointer to load from
+   LLVMQualPointerType<llvm_i8_ty, 3>, // LDS base pointer to store to
+   llvm_i32_ty,                        // Data byte size: 1/2/4
+   llvm_i32_ty,                        // imm offset (applied to both global and LDS address)
+   llvm_i32_ty],                       // auxiliary data (imm, cachepolicy (bit 0 = glc/sc0,
+                                       //                                   bit 1 = slc/sc1,
+                                       //                                   bit 2 = dlc on gfx10+))
+                                       //                                   bit 4 = scc/nt on gfx90a+))
+  [IntrWillReturn, NoCapture<ArgIndex<0>>, NoCapture<ArgIndex<1>>,
+   ImmArg<ArgIndex<2>>, ImmArg<ArgIndex<2>>, ImmArg<ArgIndex<3>>, ImmArg<ArgIndex<4>>],
+  "", [SDNPMemOperand]>;
+def int_amdgcn_global_load_lds : AMDGPUGlobalLoadLDS;
+
+//===----------------------------------------------------------------------===//
 // GFX10 Intrinsics
 //===----------------------------------------------------------------------===//
 
@@ -1798,7 +1860,7 @@ def int_amdgcn_mov_dpp8 :
 def int_amdgcn_s_get_waveid_in_workgroup :
   GCCBuiltin<"__builtin_amdgcn_s_get_waveid_in_workgroup">,
   Intrinsic<[llvm_i32_ty], [],
-    [IntrReadMem, IntrInaccessibleMemOnly, IntrWillReturn]>;
+    [IntrNoMem, IntrHasSideEffects, IntrWillReturn]>;
 
 class AMDGPUGlobalAtomicRtn<LLVMType vt> : Intrinsic <
   [vt],

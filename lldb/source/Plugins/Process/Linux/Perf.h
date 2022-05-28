@@ -74,6 +74,24 @@ using MmapUP = std::unique_ptr<void, resource_handle::MmapDeleter>;
 
 } // namespace resource_handle
 
+/// Read data from a cyclic buffer
+///
+/// \param[in] [out] buf
+///     Destination buffer, the buffer will be truncated to written size.
+///
+/// \param[in] src
+///     Source buffer which must be a cyclic buffer.
+///
+/// \param[in] src_cyc_index
+///     The index pointer (start of the valid data in the cyclic
+///     buffer).
+///
+/// \param[in] offset
+///     The offset to begin reading the data in the cyclic buffer.
+void ReadCyclicBuffer(llvm::MutableArrayRef<uint8_t> &dst,
+                      llvm::ArrayRef<uint8_t> src, size_t src_cyc_index,
+                      size_t offset);
+
 /// Thin wrapper of the perf_event_open API.
 ///
 /// Exposes the metadata page and data and aux buffers of a perf event.
@@ -91,13 +109,16 @@ public:
   ///     Configuration information for the event.
   ///
   /// \param[in] pid
-  ///     The process to be monitored by the event.
+  ///     The process or thread to be monitored by the event. If \b None, then
+  ///     all processes and threads are monitored.
   ///
   /// \param[in] cpu
-  ///     The cpu to be monitored by the event.
+  ///     The cpu to be monitored by the event. If \b None, then all cpus are
+  ///     monitored.
   ///
   /// \param[in] group_fd
-  ///     File descriptor of the group leader.
+  ///     File descriptor of the group leader. If \b None, then this perf_event
+  ///     doesn't belong to a preexisting group.
   ///
   /// \param[in] flags
   ///     Bitmask of additional configuration flags.
@@ -105,8 +126,10 @@ public:
   /// \return
   ///     If the perf_event_open syscall was successful, a minimal \a PerfEvent
   ///     instance, or an \a llvm::Error otherwise.
-  static llvm::Expected<PerfEvent> Init(perf_event_attr &attr, lldb::pid_t pid,
-                                        int cpu, int group_fd,
+  static llvm::Expected<PerfEvent> Init(perf_event_attr &attr,
+                                        llvm::Optional<lldb::pid_t> pid,
+                                        llvm::Optional<lldb::core_id_t> cpu,
+                                        llvm::Optional<int> group_fd,
                                         unsigned long flags);
 
   /// Create a new performance monitoring event via the perf_event_open syscall
@@ -119,8 +142,11 @@ public:
   ///     Configuration information for the event.
   ///
   /// \param[in] pid
-  ///     The process to be monitored by the event.
-  static llvm::Expected<PerfEvent> Init(perf_event_attr &attr, lldb::pid_t pid);
+  ///     The process or thread to be monitored by the event. If \b None, then
+  ///     all threads and processes are monitored.
+  static llvm::Expected<PerfEvent>
+  Init(perf_event_attr &attr, llvm::Optional<lldb::pid_t> pid,
+       llvm::Optional<lldb::core_id_t> core = llvm::None);
 
   /// Mmap the metadata page and the data and aux buffers of the perf event and
   /// expose them through \a PerfEvent::GetMetadataPage() , \a
@@ -186,6 +212,19 @@ public:
   /// \return
   ///   \a ArrayRef<uint8_t> extending \a aux_size bytes from \a aux_offset.
   llvm::ArrayRef<uint8_t> GetAuxBuffer() const;
+
+  /// Use the ioctl API to disable the perf event. This doesn't terminate the
+  /// perf event.
+  ///
+  /// \return
+  ///   An Error if the perf event couldn't be disabled.
+  llvm::Error DisableWithIoctl() const;
+
+  /// Use the ioctl API to enable the perf event.
+  ///
+  /// \return
+  ///   An Error if the perf event couldn't be enabled.
+  llvm::Error EnableWithIoctl() const;
 
 private:
   /// Create new \a PerfEvent.

@@ -83,6 +83,10 @@ ASAN_FLAG(
     int, sleep_after_init, 0,
     "Number of seconds to sleep after AddressSanitizer is initialized. "
     "Useful for debugging purposes (e.g. when one needs to attach gdb).")
+ASAN_FLAG(
+    int, sleep_before_init, 0,
+    "Number of seconds to sleep before AddressSanitizer starts initializing. "
+    "Useful for debugging purposes (e.g. when one needs to attach gdb).")
 ASAN_FLAG(bool, check_malloc_usable_size, true,
           "Allows the users to work around the bug in Nvidia drivers prior to "
           "295.*.")
@@ -118,7 +122,7 @@ ASAN_FLAG(bool, poison_array_cookie, true,
 // https://github.com/google/sanitizers/issues/309
 // TODO(glider,timurrrr): Fix known issues and enable this back.
 ASAN_FLAG(bool, alloc_dealloc_mismatch,
-          !SANITIZER_MAC && !SANITIZER_WINDOWS && !SANITIZER_ANDROID,
+          !SANITIZER_APPLE && !SANITIZER_WINDOWS && !SANITIZER_ANDROID,
           "Report errors on malloc/delete, new/free, new/delete[], etc.")
 
 ASAN_FLAG(bool, new_delete_type_mismatch, true,

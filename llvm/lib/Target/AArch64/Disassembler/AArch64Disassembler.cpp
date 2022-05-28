@@ -16,9 +16,10 @@
 #include "TargetInfo/AArch64TargetInfo.h"
 #include "Utils/AArch64BaseInfo.h"
 #include "llvm-c/Disassembler.h"
+#include "llvm/MC/MCDecoderOps.h"
 #include "llvm/MC/MCDisassembler/MCRelocationInfo.h"
-#include "llvm/MC/MCFixedLenDisassembler.h"
 #include "llvm/MC/MCInst.h"
+#include "llvm/MC/MCInstrDesc.h"
 #include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/MC/TargetRegistry.h"
@@ -283,7 +284,8 @@ static bool Check(DecodeStatus &Out, DecodeStatus In) {
 static MCDisassembler *createAArch64Disassembler(const Target &T,
                                                const MCSubtargetInfo &STI,
                                                MCContext &Ctx) {
-  return new AArch64Disassembler(STI, Ctx);
+
+  return new AArch64Disassembler(STI, Ctx, T.createMCInstrInfo());
 }
 
 DecodeStatus AArch64Disassembler::getInstruction(MCInst &MI, uint64_t &Size,
@@ -308,67 +310,37 @@ DecodeStatus AArch64Disassembler::getInstruction(MCInst &MI, uint64_t &Size,
     DecodeStatus Result =
         decodeInstruction(Table, MI, Insn, Address, this, STI);
 
-    switch (MI.getOpcode()) {
-    default:
-      break;
+    const MCInstrDesc &Desc = MCII->get(MI.getOpcode());
+
     // For Scalable Matrix Extension (SME) instructions that have an implicit
-    // operand for the accumulator (ZA) which isn't encoded, manually insert
-    // operand.
-    case AArch64::LDR_ZA:
-    case AArch64::STR_ZA: {
-      MI.insert(MI.begin(), MCOperand::createReg(AArch64::ZA));
-      // Spill and fill instructions have a single immediate used for both the
-      // vector select offset and optional memory offset. Replicate the decoded
-      // immediate.
+    // operand for the accumulator (ZA) or implicit immediate zero which isn't
+    // encoded, manually insert operand.
+    for (unsigned i = 0; i < Desc.getNumOperands(); i++) {
+      if (Desc.OpInfo[i].OperandType == MCOI::OPERAND_REGISTER) {
+        switch (Desc.OpInfo[i].RegClass) {
+        default:
+          break;
+        case AArch64::MPRRegClassID:
+          MI.insert(MI.begin() + i, MCOperand::createReg(AArch64::ZA));
+          break;
+        case AArch64::MPR8RegClassID:
+          MI.insert(MI.begin() + i, MCOperand::createReg(AArch64::ZAB0));
+          break;
+        }
+      } else if (Desc.OpInfo[i].OperandType ==
+                 AArch64::OPERAND_IMPLICIT_IMM_0) {
+        MI.insert(MI.begin() + i, MCOperand::createImm(0));
+      }
+    }
+
+    if (MI.getOpcode() == AArch64::LDR_ZA ||
+        MI.getOpcode() == AArch64::STR_ZA) {
+      // Spill and fill instructions have a single immediate used for both
+      // the vector select offset and optional memory offset. Replicate
+      // the decoded immediate.
       const MCOperand &Imm4Op = MI.getOperand(2);
       assert(Imm4Op.isImm() && "Unexpected operand type!");
       MI.addOperand(Imm4Op);
-      break;
-    }
-    case AArch64::LD1_MXIPXX_H_B:
-    case AArch64::LD1_MXIPXX_V_B:
-    case AArch64::ST1_MXIPXX_H_B:
-    case AArch64::ST1_MXIPXX_V_B:
-    case AArch64::INSERT_MXIPZ_H_B:
-    case AArch64::INSERT_MXIPZ_V_B:
-      // e.g.
-      // MOVA ZA0<HV>.B[<Ws>, <imm>], <Pg>/M, <Zn>.B
-      //      ^ insert implicit 8-bit element tile
-      MI.insert(MI.begin(), MCOperand::createReg(AArch64::ZAB0));
-      break;
-    case AArch64::EXTRACT_ZPMXI_H_B:
-    case AArch64::EXTRACT_ZPMXI_V_B:
-      // MOVA <Zd>.B, <Pg>/M, ZA0<HV>.B[<Ws>, <imm>]
-      //                      ^ insert implicit 8-bit element tile
-      MI.insert(MI.begin()+2, MCOperand::createReg(AArch64::ZAB0));
-      break;
-    case AArch64::LD1_MXIPXX_H_Q:
-    case AArch64::LD1_MXIPXX_V_Q:
-    case AArch64::ST1_MXIPXX_H_Q:
-    case AArch64::ST1_MXIPXX_V_Q:
-      // 128-bit load/store have implicit zero vector index.
-      MI.insert(MI.begin()+2, MCOperand::createImm(0));
-      break;
-    // 128-bit mova have implicit zero vector index.
-    case AArch64::INSERT_MXIPZ_H_Q:
-    case AArch64::INSERT_MXIPZ_V_Q:
-      MI.insert(MI.begin()+2, MCOperand::createImm(0));
-      break;
-    case AArch64::EXTRACT_ZPMXI_H_Q:
-    case AArch64::EXTRACT_ZPMXI_V_Q:
-      MI.addOperand(MCOperand::createImm(0));
-      break;
-    case AArch64::SMOVvi8to32_idx0:
-    case AArch64::SMOVvi8to64_idx0:
-    case AArch64::SMOVvi16to32_idx0:
-    case AArch64::SMOVvi16to64_idx0:
-    case AArch64::SMOVvi32to64_idx0:
-    case AArch64::UMOVvi8_idx0:
-    case AArch64::UMOVvi16_idx0:
-    case AArch64::UMOVvi32_idx0:
-    case AArch64::UMOVvi64_idx0:
-      MI.addOperand(MCOperand::createImm(0));
-      break;
     }
 
     if (Result != MCDisassembler::Fail)
@@ -777,7 +749,7 @@ static DecodeStatus DecodePCRelLabel19(MCInst &Inst, unsigned Imm,
     ImmVal |= ~((1LL << 19) - 1);
 
   if (!Decoder->tryAddingSymbolicOperand(
-          Inst, ImmVal * 4, Addr, Inst.getOpcode() != AArch64::LDRXl, 0, 4))
+          Inst, ImmVal * 4, Addr, Inst.getOpcode() != AArch64::LDRXl, 0, 0, 4))
     Inst.addOperand(MCOperand::createImm(ImmVal));
   return Success;
 }
@@ -1058,7 +1030,7 @@ DecodeUnsignedLdStInstruction(MCInst &Inst, uint32_t insn, uint64_t Addr,
   }
 
   DecodeGPR64spRegisterClass(Inst, Rn, Addr, Decoder);
-  if (!Decoder->tryAddingSymbolicOperand(Inst, offset, Addr, Fail, 0, 4))
+  if (!Decoder->tryAddingSymbolicOperand(Inst, offset, Addr, Fail, 0, 0, 4))
     Inst.addOperand(MCOperand::createImm(offset));
   return Success;
 }
@@ -1668,7 +1640,7 @@ static DecodeStatus DecodeAdrInstruction(MCInst &Inst, uint32_t insn,
     imm |= ~((1LL << 21) - 1);
 
   DecodeGPR64RegisterClass(Inst, Rd, Addr, Decoder);
-  if (!Decoder->tryAddingSymbolicOperand(Inst, imm, Addr, Fail, 0, 4))
+  if (!Decoder->tryAddingSymbolicOperand(Inst, imm, Addr, Fail, 0, 0, 4))
     Inst.addOperand(MCOperand::createImm(imm));
 
   return Success;
@@ -1703,7 +1675,7 @@ static DecodeStatus DecodeAddSubImmShift(MCInst &Inst, uint32_t insn,
     DecodeGPR32spRegisterClass(Inst, Rn, Addr, Decoder);
   }
 
-  if (!Decoder->tryAddingSymbolicOperand(Inst, Imm, Addr, Fail, 0, 4))
+  if (!Decoder->tryAddingSymbolicOperand(Inst, Imm, Addr, Fail, 0, 0, 4))
     Inst.addOperand(MCOperand::createImm(ImmVal));
   Inst.addOperand(MCOperand::createImm(12 * ShifterVal));
   return Success;
@@ -1718,7 +1690,7 @@ static DecodeStatus DecodeUnconditionalBranch(MCInst &Inst, uint32_t insn,
   if (imm & (1 << (26 - 1)))
     imm |= ~((1LL << 26) - 1);
 
-  if (!Decoder->tryAddingSymbolicOperand(Inst, imm * 4, Addr, true, 0, 4))
+  if (!Decoder->tryAddingSymbolicOperand(Inst, imm * 4, Addr, true, 0, 0, 4))
     Inst.addOperand(MCOperand::createImm(imm));
 
   return Success;
@@ -1770,7 +1742,7 @@ static DecodeStatus DecodeTestAndBranch(MCInst &Inst, uint32_t insn,
   else
     DecodeGPR64RegisterClass(Inst, Rt, Addr, Decoder);
   Inst.addOperand(MCOperand::createImm(bit));
-  if (!Decoder->tryAddingSymbolicOperand(Inst, dst * 4, Addr, true, 0, 4))
+  if (!Decoder->tryAddingSymbolicOperand(Inst, dst * 4, Addr, true, 0, 0, 4))
     Inst.addOperand(MCOperand::createImm(dst));
 
   return Success;

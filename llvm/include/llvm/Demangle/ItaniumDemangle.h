@@ -1381,8 +1381,6 @@ public:
     ScopedOverride<unsigned> LT(OB.GtIsGt, 0);
     OB += "<";
     Params.printWithComma(OB);
-    if (OB.back() == '>')
-      OB += " ";
     OB += ">";
   }
 };
@@ -1508,14 +1506,24 @@ enum class SpecialSubKind {
   iostream,
 };
 
-class ExpandedSpecialSubstitution final : public Node {
+class SpecialSubstitution;
+class ExpandedSpecialSubstitution : public Node {
+protected:
   SpecialSubKind SSK;
 
+  ExpandedSpecialSubstitution(SpecialSubKind SSK_, Kind K_)
+      : Node(K_), SSK(SSK_) {}
 public:
   ExpandedSpecialSubstitution(SpecialSubKind SSK_)
-      : Node(KExpandedSpecialSubstitution), SSK(SSK_) {}
+      : ExpandedSpecialSubstitution(SSK_, KExpandedSpecialSubstitution) {}
+  inline ExpandedSpecialSubstitution(SpecialSubstitution const *);
 
   template<typename Fn> void match(Fn F) const { F(SSK); }
+
+protected:
+  bool isInstantiation() const {
+    return unsigned(SSK) >= unsigned(SpecialSubKind::string);
+  }
 
   StringView getBaseName() const override {
     switch (SSK) {
@@ -1535,81 +1543,43 @@ public:
     DEMANGLE_UNREACHABLE;
   }
 
+private:
   void printLeft(OutputBuffer &OB) const override {
-    switch (SSK) {
-    case SpecialSubKind::allocator:
-      OB += "std::allocator";
-      break;
-    case SpecialSubKind::basic_string:
-      OB += "std::basic_string";
-      break;
-    case SpecialSubKind::string:
-      OB += "std::basic_string<char, std::char_traits<char>, "
-            "std::allocator<char> >";
-      break;
-    case SpecialSubKind::istream:
-      OB += "std::basic_istream<char, std::char_traits<char> >";
-      break;
-    case SpecialSubKind::ostream:
-      OB += "std::basic_ostream<char, std::char_traits<char> >";
-      break;
-    case SpecialSubKind::iostream:
-      OB += "std::basic_iostream<char, std::char_traits<char> >";
-      break;
+    OB << "std::" << getBaseName();
+    if (isInstantiation()) {
+      OB << "<char, std::char_traits<char>";
+      if (SSK == SpecialSubKind::string)
+        OB << ", std::allocator<char>";
+      OB << ">";
     }
   }
 };
 
-class SpecialSubstitution final : public Node {
+class SpecialSubstitution final : public ExpandedSpecialSubstitution {
 public:
-  SpecialSubKind SSK;
-
   SpecialSubstitution(SpecialSubKind SSK_)
-      : Node(KSpecialSubstitution), SSK(SSK_) {}
+      : ExpandedSpecialSubstitution(SSK_, KSpecialSubstitution) {}
 
   template<typename Fn> void match(Fn F) const { F(SSK); }
 
   StringView getBaseName() const override {
-    switch (SSK) {
-    case SpecialSubKind::allocator:
-      return StringView("allocator");
-    case SpecialSubKind::basic_string:
-      return StringView("basic_string");
-    case SpecialSubKind::string:
-      return StringView("string");
-    case SpecialSubKind::istream:
-      return StringView("istream");
-    case SpecialSubKind::ostream:
-      return StringView("ostream");
-    case SpecialSubKind::iostream:
-      return StringView("iostream");
+    auto SV = ExpandedSpecialSubstitution::getBaseName ();
+    if (isInstantiation()) {
+      // The instantiations are typedefs that drop the "basic_" prefix.
+      assert(SV.startsWith("basic_"));
+      SV = SV.dropFront(sizeof("basic_") - 1);
     }
-    DEMANGLE_UNREACHABLE;
+    return SV;
   }
 
   void printLeft(OutputBuffer &OB) const override {
-    switch (SSK) {
-    case SpecialSubKind::allocator:
-      OB += "std::allocator";
-      break;
-    case SpecialSubKind::basic_string:
-      OB += "std::basic_string";
-      break;
-    case SpecialSubKind::string:
-      OB += "std::string";
-      break;
-    case SpecialSubKind::istream:
-      OB += "std::istream";
-      break;
-    case SpecialSubKind::ostream:
-      OB += "std::ostream";
-      break;
-    case SpecialSubKind::iostream:
-      OB += "std::iostream";
-      break;
-    }
+    OB << "std::" << getBaseName();
   }
 };
+
+inline ExpandedSpecialSubstitution::ExpandedSpecialSubstitution(
+    SpecialSubstitution const *SS)
+    : ExpandedSpecialSubstitution(SS->SSK) {}
 
 class CtorDtorName final : public Node {
   const Node *Basename;
@@ -1903,8 +1873,6 @@ public:
       ScopedOverride<unsigned> LT(OB.GtIsGt, 0);
       OB += "<";
       To->printLeft(OB);
-      if (OB.back() == '>')
-        OB += " ";
       OB += ">";
     }
     OB.printOpen();
@@ -3132,19 +3100,11 @@ Node *
 AbstractManglingParser<Derived, Alloc>::parseCtorDtorName(Node *&SoFar,
                                                           NameState *State) {
   if (SoFar->getKind() == Node::KSpecialSubstitution) {
-    auto SSK = static_cast<SpecialSubstitution *>(SoFar)->SSK;
-    switch (SSK) {
-    case SpecialSubKind::string:
-    case SpecialSubKind::istream:
-    case SpecialSubKind::ostream:
-    case SpecialSubKind::iostream:
-      SoFar = make<ExpandedSpecialSubstitution>(SSK);
-      if (!SoFar)
-        return nullptr;
-      break;
-    default:
-      break;
-    }
+    // Expand the special substitution.
+    SoFar = make<ExpandedSpecialSubstitution>(
+        static_cast<SpecialSubstitution *>(SoFar));
+    if (!SoFar)
+      return nullptr;
   }
 
   if (consumeIf('C')) {
@@ -5139,7 +5099,7 @@ template <>
 struct FloatData<long double>
 {
 #if defined(__mips__) && defined(__mips_n64) || defined(__aarch64__) || \
-    defined(__wasm__)
+    defined(__wasm__) || defined(__riscv)
     static const size_t mangled_size = 32;
 #elif defined(__arm__) || defined(__mips__) || defined(__hexagon__)
     static const size_t mangled_size = 16;

@@ -208,7 +208,9 @@ identifiers::
    multiclass string        then          true
 
 .. warning::
-  The ``field`` reserved word is deprecated.
+  The ``field`` reserved word is deprecated, except when used with the
+  CodeEmitterGen backend where it's used to distinguish normal record
+  fields from encoding fields.
 
 Bang operators
 --------------
@@ -1223,8 +1225,6 @@ The statement list establishes an inner scope. Variables local to a
 ``foreach`` go out of scope at the end of each loop iteration, so their
 values do not carry over from one iteration to the next. Foreach loops may
 be nested.
-
-The ``foreach`` statement can also be used in a record :token:`Body`.
 
 .. Note that the productions involving RangeList and RangePiece have precedence
    over the more generic value parsing based on the first token.

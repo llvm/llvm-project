@@ -352,13 +352,8 @@ void RISCVTTIImpl::getUnrollingPreferences(Loop *L, ScalarEvolution &SE,
   // TODO: More tuning on benchmarks and metrics with changes as needed
   //       would apply to all settings below to enable performance.
 
-  // Support explicit targets enabled for SiFive with the unrolling preferences
-  // below
-  bool UseDefaultPreferences = true;
-  if (ST->getProcFamily() == RISCVSubtarget::SiFive7)
-    UseDefaultPreferences = false;
 
-  if (UseDefaultPreferences)
+  if (ST->enableDefaultUnroll())
     return BasicTTIImplBase::getUnrollingPreferences(L, SE, UP, ORE);
 
   // Enable Upper bound unrolling universally, not dependant upon the conditions
@@ -434,7 +429,7 @@ void RISCVTTIImpl::getPeelingPreferences(Loop *L, ScalarEvolution &SE,
   BaseT::getPeelingPreferences(L, SE, PP);
 }
 
-InstructionCost RISCVTTIImpl::getRegUsageForType(Type *Ty) {
+unsigned RISCVTTIImpl::getRegUsageForType(Type *Ty) {
   TypeSize Size = Ty->getPrimitiveSizeInBits();
   if (Ty->isVectorTy()) {
     if (Size.isScalable() && ST->hasVInstructions())

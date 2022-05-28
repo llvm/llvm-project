@@ -202,5 +202,12 @@ bool VPlanVerifier::verifyPlanIsValid(const VPlan &Plan) {
       return false;
     }
   }
+
+  for (auto &KV : Plan.getLiveOuts())
+    if (KV.second->getNumOperands() != 1) {
+      errs() << "live outs must have a single operand\n";
+      return false;
+    }
+
   return true;
 }

@@ -4158,7 +4158,8 @@ void Driver::BuildActions(Compilation &C, DerivedArgList &Args,
     // Check if this Linker Job should emit a static library.
     if (ShouldEmitStaticLibrary(Args)) {
       LA = C.MakeAction<StaticLibJobAction>(LinkerInputs, types::TY_Image);
-    } else if (UseNewOffloadingDriver) {
+    } else if (UseNewOffloadingDriver ||
+               Args.hasArg(options::OPT_offload_link)) {
       LA = C.MakeAction<LinkerWrapperJobAction>(LinkerInputs, types::TY_Image);
       LA->propagateHostOffloadInfo(C.getActiveOffloadKinds(),
                                    /*BoundArch=*/nullptr);
@@ -4377,11 +4378,14 @@ Action *Driver::BuildOffloadingActions(Compilation &C,
       Mode && Mode->getOption().matches(options::OPT_offload_device_only);
 
   // Don't build offloading actions if explicitly disabled or we do not have a
-  // compile action to embed it in. If preprocessing only ignore embedding.
-  if (HostOnly || !(isa<CompileJobAction>(HostAction) ||
-                    getFinalPhase(Args) == phases::Preprocess))
+  // valid source input and compile action to embed it in. If preprocessing only
+  // ignore embedding.
+  if (HostOnly || !types::isSrcFile(Input.first) ||
+      !(isa<CompileJobAction>(HostAction) ||
+        getFinalPhase(Args) == phases::Preprocess))
     return HostAction;
 
+  ActionList OffloadActions;
   OffloadAction::DeviceDependences DDeps;
 
   const Action::OffloadKind OffloadKinds[] = {
@@ -4457,6 +4461,9 @@ Action *Driver::BuildOffloadingActions(Compilation &C,
     auto TCAndArch = TCAndArchs.begin();
     for (Action *A : DeviceActions) {
       DDeps.add(*A, *TCAndArch->first, TCAndArch->second.data(), Kind);
+      OffloadAction::DeviceDependences DDep;
+      DDep.add(*A, *TCAndArch->first, TCAndArch->second.data(), Kind);
+      OffloadActions.push_back(C.MakeAction<OffloadAction>(DDep, A->getType()));
       ++TCAndArch;
     }
   }
@@ -4464,10 +4471,16 @@ Action *Driver::BuildOffloadingActions(Compilation &C,
   if (DeviceOnly)
     return C.MakeAction<OffloadAction>(DDeps, types::TY_Nothing);
 
+  Action *OffloadPackager =
+      C.MakeAction<OffloadPackagerJobAction>(OffloadActions, types::TY_Image);
+  OffloadAction::DeviceDependences DDep;
+  DDep.add(*OffloadPackager, *C.getSingleOffloadToolChain<Action::OFK_Host>(),
+           nullptr, Action::OFK_None);
   OffloadAction::HostDependence HDep(
       *HostAction, *C.getSingleOffloadToolChain<Action::OFK_Host>(),
-      /*BoundArch=*/nullptr, DDeps);
-  return C.MakeAction<OffloadAction>(HDep, DDeps);
+      /*BoundArch=*/nullptr, isa<CompileJobAction>(HostAction) ? DDep : DDeps);
+  return C.MakeAction<OffloadAction>(
+      HDep, isa<CompileJobAction>(HostAction) ? DDep : DDeps);
 }
 
 Action *Driver::ConstructPhaseAction(
@@ -5884,6 +5897,7 @@ const ToolChain &Driver::getToolChain(const ArgList &Args,
     case llvm::Triple::IOS:
     case llvm::Triple::TvOS:
     case llvm::Triple::WatchOS:
+    case llvm::Triple::DriverKit:
       TC = std::make_unique<toolchains::DarwinClang>(*this, Target, Args);
       break;
     case llvm::Triple::DragonFly:

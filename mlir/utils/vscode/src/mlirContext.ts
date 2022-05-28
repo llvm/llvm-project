@@ -42,6 +42,8 @@ export class MLIRContext implements vscode.Disposable {
         serverSettingName = 'server_path';
       } else if (document.languageId === 'pdll') {
         serverSettingName = 'pdll_server_path';
+      } else if (document.languageId === 'tablegen') {
+        serverSettingName = 'tablegen_server_path';
       } else {
         return;
       }
@@ -68,7 +70,9 @@ export class MLIRContext implements vscode.Disposable {
       }
     };
     // Process any existing documents.
-    vscode.workspace.textDocuments.forEach(startClientOnOpenDocument);
+    for (const textDoc of vscode.workspace.textDocuments) {
+      await startClientOnOpenDocument(textDoc);
+    }
 
     // Watch any new documents to spawn servers when necessary.
     this.subscriptions.push(
@@ -86,23 +90,22 @@ export class MLIRContext implements vscode.Disposable {
   }
 
   /**
-   *  Prepare the server options for a PDLL server, e.g. populating any
-   *  accessible compilation databases.
+   *  Prepare a compilation database option for a server.
    */
-  async preparePDLLServerOptions(workspaceFolder: vscode.WorkspaceFolder,
-                                 configsToWatch: string[],
-                                 pathsToWatch: string[],
-                                 additionalServerArgs: string[]) {
+  async prepareCompilationDatabaseServerOptions(
+      languageName: string, workspaceFolder: vscode.WorkspaceFolder,
+      configsToWatch: string[], pathsToWatch: string[],
+      additionalServerArgs: string[]) {
     // Process the compilation databases attached for the workspace folder.
-    let databases =
-        config.get<string[]>('pdll_compilation_databases', workspaceFolder);
+    let databases = config.get<string[]>(
+        `${languageName}_compilation_databases`, workspaceFolder, []);
 
     // If no databases were explicitly specified, default to a database in the
     // 'build' directory within the current workspace.
     if (databases.length === 0) {
       if (workspaceFolder) {
         databases.push(workspaceFolder.uri.fsPath +
-                       '/build/pdll_compile_commands.yml');
+                       `/build/${languageName}_compile_commands.yml`);
       }
 
       // Otherwise, try to resolve each of the paths.
@@ -112,14 +115,40 @@ export class MLIRContext implements vscode.Disposable {
       }
     }
 
-    configsToWatch.push('pdll_compilation_databases');
+    configsToWatch.push(`${languageName}_compilation_databases`);
     pathsToWatch.push(...databases);
 
     // Setup the compilation databases as additional arguments to pass to the
     // server.
     databases.filter(database => database !== '');
     additionalServerArgs.push(...databases.map(
-        (database) => `--pdll-compilation-database=${database}`));
+        (database) => `--${languageName}-compilation-database=${database}`));
+  }
+
+  /**
+   *  Prepare the server options for a PDLL server, e.g. populating any
+   *  accessible compilation databases.
+   */
+  async preparePDLLServerOptions(workspaceFolder: vscode.WorkspaceFolder,
+                                 configsToWatch: string[],
+                                 pathsToWatch: string[],
+                                 additionalServerArgs: string[]) {
+    await this.prepareCompilationDatabaseServerOptions(
+        'pdll', workspaceFolder, configsToWatch, pathsToWatch,
+        additionalServerArgs);
+  }
+
+  /**
+   *  Prepare the server options for a TableGen server, e.g. populating any
+   *  accessible compilation databases.
+   */
+  async prepareTableGenServerOptions(workspaceFolder: vscode.WorkspaceFolder,
+                                     configsToWatch: string[],
+                                     pathsToWatch: string[],
+                                     additionalServerArgs: string[]) {
+    await this.prepareCompilationDatabaseServerOptions(
+        'tablegen', workspaceFolder, configsToWatch, pathsToWatch,
+        additionalServerArgs);
   }
 
   /**
@@ -139,6 +168,10 @@ export class MLIRContext implements vscode.Disposable {
       await this.preparePDLLServerOptions(workspaceFolder, configsToWatch,
                                           filepathsToWatch,
                                           additionalServerArgs);
+    } else if (languageName == 'tablegen') {
+      await this.prepareTableGenServerOptions(workspaceFolder, configsToWatch,
+                                              filepathsToWatch,
+                                              additionalServerArgs);
     }
 
     // Try to activate the language client.
@@ -265,6 +298,9 @@ export class MLIRContext implements vscode.Disposable {
     }
     if (serverSettingName === 'server_path') {
       return 'mlir-lsp-server';
+    }
+    if (serverSettingName === 'tablegen_server_path') {
+      return 'tblgen-lsp-server';
     }
     return '';
   }

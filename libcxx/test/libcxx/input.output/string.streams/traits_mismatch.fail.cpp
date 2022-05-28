@@ -14,7 +14,7 @@
 //
 // The char type of the stream and the char_type of the traits have to match
 
-// UNSUPPORTED: libcpp-has-no-wide-characters
+// UNSUPPORTED: no-wide-characters
 
 #include <sstream>
 

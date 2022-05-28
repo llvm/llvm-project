@@ -1097,7 +1097,8 @@ Value *llvm::createOrderedReduction(IRBuilderBase &B,
   return B.CreateFAddReduce(Start, Src);
 }
 
-void llvm::propagateIRFlags(Value *I, ArrayRef<Value *> VL, Value *OpValue) {
+void llvm::propagateIRFlags(Value *I, ArrayRef<Value *> VL, Value *OpValue,
+                            bool IncludeWrapFlags) {
   auto *VecOp = dyn_cast<Instruction>(I);
   if (!VecOp)
     return;
@@ -1106,7 +1107,7 @@ void llvm::propagateIRFlags(Value *I, ArrayRef<Value *> VL, Value *OpValue) {
   if (!Intersection)
     return;
   const unsigned Opcode = Intersection->getOpcode();
-  VecOp->copyIRFlags(Intersection);
+  VecOp->copyIRFlags(Intersection, IncludeWrapFlags);
   for (auto *V : VL) {
     auto *Instr = dyn_cast<Instruction>(V);
     if (!Instr)
@@ -1598,6 +1599,40 @@ Value *llvm::addRuntimeChecks(
     Value *Cmp0 = ChkBuilder.CreateICmpULT(Start0, End1, "bound0");
     Value *Cmp1 = ChkBuilder.CreateICmpULT(Start1, End0, "bound1");
     Value *IsConflict = ChkBuilder.CreateAnd(Cmp0, Cmp1, "found.conflict");
+    if (MemoryRuntimeCheck) {
+      IsConflict =
+          ChkBuilder.CreateOr(MemoryRuntimeCheck, IsConflict, "conflict.rdx");
+    }
+    MemoryRuntimeCheck = IsConflict;
+  }
+
+  return MemoryRuntimeCheck;
+}
+
+Value *llvm::addDiffRuntimeChecks(
+    Instruction *Loc, Loop *TheLoop, ArrayRef<PointerDiffInfo> Checks,
+    SCEVExpander &Expander,
+    function_ref<Value *(IRBuilderBase &, unsigned)> GetVF, unsigned IC) {
+
+  LLVMContext &Ctx = Loc->getContext();
+  IRBuilder<InstSimplifyFolder> ChkBuilder(Ctx,
+                                           Loc->getModule()->getDataLayout());
+  ChkBuilder.SetInsertPoint(Loc);
+  // Our instructions might fold to a constant.
+  Value *MemoryRuntimeCheck = nullptr;
+
+  for (auto &C : Checks) {
+    Type *Ty = C.SinkStart->getType();
+    // Compute VF * IC * AccessSize.
+    auto *VFTimesUFTimesSize =
+        ChkBuilder.CreateMul(GetVF(ChkBuilder, Ty->getScalarSizeInBits()),
+                             ConstantInt::get(Ty, IC * C.AccessSize));
+    Value *Sink = Expander.expandCodeFor(C.SinkStart, Ty, Loc);
+    Value *Src = Expander.expandCodeFor(C.SrcStart, Ty, Loc);
+    Value *Diff = ChkBuilder.CreateSub(Sink, Src);
+    Value *IsConflict =
+        ChkBuilder.CreateICmpULT(Diff, VFTimesUFTimesSize, "diff.check");
+
     if (MemoryRuntimeCheck) {
       IsConflict =
           ChkBuilder.CreateOr(MemoryRuntimeCheck, IsConflict, "conflict.rdx");

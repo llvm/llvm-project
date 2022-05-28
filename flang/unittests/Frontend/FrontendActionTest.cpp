@@ -27,51 +27,51 @@ protected:
   // AllSources (which is used to manage files inside every compiler
   // instance), works with paths. So we need a filename and a path for the
   // input file.
-  // TODO: We could use `-` for inputFilePath_, but then we'd need a way to
+  // TODO: We could use `-` for inputFilePath, but then we'd need a way to
   // write to stdin that's then read by AllSources. Ideally, AllSources should
   // be capable of reading from any stream.
-  std::string inputFileName_;
-  std::string inputFilePath_;
+  std::string inputFileName;
+  std::string inputFilePath;
   // The output stream for the input file. Use this to populate the input.
-  std::unique_ptr<llvm::raw_fd_ostream> inputFileOs_;
+  std::unique_ptr<llvm::raw_fd_ostream> inputFileOs;
 
-  std::error_code ec_;
+  std::error_code ec;
 
-  CompilerInstance compInst_;
-  std::shared_ptr<CompilerInvocation> invocation_;
+  CompilerInstance compInst;
+  std::shared_ptr<CompilerInvocation> invoc;
 
   void SetUp() override {
     // Generate a unique test file name.
-    const testing::TestInfo *const test_info =
+    const testing::TestInfo *const testInfo =
         testing::UnitTest::GetInstance()->current_test_info();
-    inputFileName_ = std::string(test_info->name()) + "_test-file.f90";
+    inputFileName = std::string(testInfo->name()) + "_test-file.f90";
 
     // Create the input file stream. Note that this stream is populated
     // separately in every test (i.e. the input is test specific).
-    inputFileOs_ = std::make_unique<llvm::raw_fd_ostream>(
-        inputFileName_, ec_, llvm::sys::fs::OF_None);
-    if (ec_)
+    inputFileOs = std::make_unique<llvm::raw_fd_ostream>(
+        inputFileName, ec, llvm::sys::fs::OF_None);
+    if (ec)
       FAIL() << "Failed to create the input file";
 
     // Get the path of the input file.
     llvm::SmallString<256> cwd;
-    if (std::error_code ec_ = llvm::sys::fs::current_path(cwd))
+    if (std::error_code ec = llvm::sys::fs::current_path(cwd))
       FAIL() << "Failed to obtain the current working directory";
-    inputFilePath_ = cwd.c_str();
-    inputFilePath_ += "/" + inputFileName_;
+    inputFilePath = cwd.c_str();
+    inputFilePath += "/" + inputFileName;
 
     // Prepare the compiler (CompilerInvocation + CompilerInstance)
-    compInst_.CreateDiagnostics();
-    invocation_ = std::make_shared<CompilerInvocation>();
+    compInst.createDiagnostics();
+    invoc = std::make_shared<CompilerInvocation>();
 
-    compInst_.set_invocation(std::move(invocation_));
-    compInst_.frontendOpts().inputs.push_back(
-        FrontendInputFile(inputFilePath_, Language::Fortran));
+    compInst.setInvocation(std::move(invoc));
+    compInst.getFrontendOpts().inputs.push_back(
+        FrontendInputFile(inputFilePath, Language::Fortran));
   }
 
   void TearDown() override {
     // Clear the input file.
-    llvm::sys::fs::remove(inputFileName_);
+    llvm::sys::fs::remove(inputFileName);
 
     // Clear the output files.
     // Note that these tests use an output buffer (as opposed to an output
@@ -79,27 +79,27 @@ protected:
     // `EraseFiles` is set to `false`. Also, some actions (e.g.
     // `ParseSyntaxOnly`) don't generated output. In such cases there's no
     // output to clear and `ClearOutputFile` returns immediately.
-    compInst_.ClearOutputFiles(/*EraseFiles=*/false);
+    compInst.clearOutputFiles(/*EraseFiles=*/false);
   }
 };
 
 TEST_F(FrontendActionTest, TestInputOutput) {
   // Populate the input file with the pre-defined input and flush it.
-  *(inputFileOs_) << "End Program arithmetic";
-  inputFileOs_.reset();
+  *(inputFileOs) << "End Program arithmetic";
+  inputFileOs.reset();
 
   // Set-up the action kind.
-  compInst_.invocation().frontendOpts().programAction = InputOutputTest;
+  compInst.getInvocation().getFrontendOpts().programAction = InputOutputTest;
 
   // Set-up the output stream. Using output buffer wrapped as an output
   // stream, as opposed to an actual file (or a file descriptor).
   llvm::SmallVector<char, 256> outputFileBuffer;
   std::unique_ptr<llvm::raw_pwrite_stream> outputFileStream(
       new llvm::raw_svector_ostream(outputFileBuffer));
-  compInst_.set_outputStream(std::move(outputFileStream));
+  compInst.setOutputStream(std::move(outputFileStream));
 
   // Execute the action.
-  bool success = ExecuteCompilerInvocation(&compInst_);
+  bool success = executeCompilerInvocation(&compInst);
 
   // Validate the expected output.
   EXPECT_TRUE(success);
@@ -110,26 +110,27 @@ TEST_F(FrontendActionTest, TestInputOutput) {
 
 TEST_F(FrontendActionTest, PrintPreprocessedInput) {
   // Populate the input file with the pre-defined input and flush it.
-  *(inputFileOs_) << "#ifdef NEW\n"
-                  << "  Program A \n"
-                  << "#else\n"
-                  << "  Program B\n"
-                  << "#endif";
-  inputFileOs_.reset();
+  *(inputFileOs) << "#ifdef NEW\n"
+                 << "  Program A \n"
+                 << "#else\n"
+                 << "  Program B\n"
+                 << "#endif";
+  inputFileOs.reset();
 
   // Set-up the action kind.
-  compInst_.invocation().frontendOpts().programAction = PrintPreprocessedInput;
-  compInst_.invocation().preprocessorOpts().noReformat = true;
+  compInst.getInvocation().getFrontendOpts().programAction =
+      PrintPreprocessedInput;
+  compInst.getInvocation().getPreprocessorOpts().noReformat = true;
 
   // Set-up the output stream. We are using output buffer wrapped as an output
   // stream, as opposed to an actual file (or a file descriptor).
   llvm::SmallVector<char, 256> outputFileBuffer;
   std::unique_ptr<llvm::raw_pwrite_stream> outputFileStream(
       new llvm::raw_svector_ostream(outputFileBuffer));
-  compInst_.set_outputStream(std::move(outputFileStream));
+  compInst.setOutputStream(std::move(outputFileStream));
 
   // Execute the action.
-  bool success = ExecuteCompilerInvocation(&compInst_);
+  bool success = executeCompilerInvocation(&compInst);
 
   // Validate the expected output.
   EXPECT_TRUE(success);
@@ -140,21 +141,21 @@ TEST_F(FrontendActionTest, PrintPreprocessedInput) {
 
 TEST_F(FrontendActionTest, ParseSyntaxOnly) {
   // Populate the input file with the pre-defined input and flush it.
-  *(inputFileOs_) << "IF (A > 0.0) IF (B < 0.0) A = LOG (A)\n"
-                  << "END";
-  inputFileOs_.reset();
+  *(inputFileOs) << "IF (A > 0.0) IF (B < 0.0) A = LOG (A)\n"
+                 << "END";
+  inputFileOs.reset();
 
   // Set-up the action kind.
-  compInst_.invocation().frontendOpts().programAction = ParseSyntaxOnly;
+  compInst.getInvocation().getFrontendOpts().programAction = ParseSyntaxOnly;
 
   // Set-up the output stream for the semantic diagnostics.
   llvm::SmallVector<char, 256> outputDiagBuffer;
   std::unique_ptr<llvm::raw_pwrite_stream> outputStream(
       new llvm::raw_svector_ostream(outputDiagBuffer));
-  compInst_.set_semaOutputStream(std::move(outputStream));
+  compInst.setSemaOutputStream(std::move(outputStream));
 
   // Execute the action.
-  bool success = ExecuteCompilerInvocation(&compInst_);
+  bool success = executeCompilerInvocation(&compInst);
 
   // Validate the expected output.
   EXPECT_FALSE(success);
@@ -167,14 +168,14 @@ TEST_F(FrontendActionTest, ParseSyntaxOnly) {
 
 TEST_F(FrontendActionTest, EmitLLVM) {
   // Populate the input file with the pre-defined input and flush it.
-  *(inputFileOs_) << "end program";
-  inputFileOs_.reset();
+  *(inputFileOs) << "end program";
+  inputFileOs.reset();
 
   // Set-up the action kind.
-  compInst_.invocation().frontendOpts().programAction = EmitLLVM;
+  compInst.getInvocation().getFrontendOpts().programAction = EmitLLVM;
 
   // Set-up default target triple.
-  compInst_.invocation().targetOpts().triple =
+  compInst.getInvocation().getTargetOpts().triple =
       llvm::Triple::normalize(llvm::sys::getDefaultTargetTriple());
 
   // Set-up the output stream. We are using output buffer wrapped as an output
@@ -182,10 +183,10 @@ TEST_F(FrontendActionTest, EmitLLVM) {
   llvm::SmallVector<char> outputFileBuffer;
   std::unique_ptr<llvm::raw_pwrite_stream> outputFileStream(
       new llvm::raw_svector_ostream(outputFileBuffer));
-  compInst_.set_outputStream(std::move(outputFileStream));
+  compInst.setOutputStream(std::move(outputFileStream));
 
   // Execute the action.
-  bool success = ExecuteCompilerInvocation(&compInst_);
+  bool success = executeCompilerInvocation(&compInst);
 
   // Validate the expected output.
   EXPECT_TRUE(success);
@@ -197,14 +198,14 @@ TEST_F(FrontendActionTest, EmitLLVM) {
 
 TEST_F(FrontendActionTest, EmitAsm) {
   // Populate the input file with the pre-defined input and flush it.
-  *(inputFileOs_) << "end program";
-  inputFileOs_.reset();
+  *(inputFileOs) << "end program";
+  inputFileOs.reset();
 
   // Set-up the action kind.
-  compInst_.invocation().frontendOpts().programAction = EmitAssembly;
+  compInst.getInvocation().getFrontendOpts().programAction = EmitAssembly;
 
   // Set-up default target triple.
-  compInst_.invocation().targetOpts().triple =
+  compInst.getInvocation().getTargetOpts().triple =
       llvm::Triple::normalize(llvm::sys::getDefaultTargetTriple());
 
   // Initialise LLVM backend
@@ -217,10 +218,10 @@ TEST_F(FrontendActionTest, EmitAsm) {
   llvm::SmallVector<char, 256> outputFileBuffer;
   std::unique_ptr<llvm::raw_pwrite_stream> outputFileStream(
       new llvm::raw_svector_ostream(outputFileBuffer));
-  compInst_.set_outputStream(std::move(outputFileStream));
+  compInst.setOutputStream(std::move(outputFileStream));
 
   // Execute the action.
-  bool success = ExecuteCompilerInvocation(&compInst_);
+  bool success = executeCompilerInvocation(&compInst);
 
   // Validate the expected output.
   EXPECT_TRUE(success);

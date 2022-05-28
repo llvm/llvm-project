@@ -1,7 +1,7 @@
 // RUN: mlir-opt %s -allow-unregistered-dialect -one-shot-bufferize="allow-return-allocs allow-unknown-ops" -split-input-file | FileCheck %s
 
 // Test bufferization using memref types that have no layout map.
-// RUN: mlir-opt %s -allow-unregistered-dialect -one-shot-bufferize="allow-return-allocs allow-unknown-ops fully-dynamic-layout-maps=0" -split-input-file | FileCheck %s --check-prefix=CHECK-NO-LAYOUT-MAP
+// RUN: mlir-opt %s -allow-unregistered-dialect -one-shot-bufferize="allow-return-allocs allow-unknown-ops unknown-type-conversion=identity-layout-map" -split-input-file | FileCheck %s --check-prefix=CHECK-NO-LAYOUT-MAP
 
 // Run fuzzer with different seeds.
 // RUN: mlir-opt %s -allow-unregistered-dialect -one-shot-bufferize="allow-return-allocs test-analysis-only analysis-fuzzer-seed=23" -split-input-file -o /dev/null
@@ -138,11 +138,11 @@ func.func @unknown_op_may_read(%v: vector<5xf32>)
   %idx = arith.constant 0 : index
   %cst = arith.constant 5.0 : f32
 
-  // One alloc for the init_tensor, another one because the transfer_write
+  // One alloc for the alloc_tensor, another one because the transfer_write
   // bufferizes out-of-place.
   // CHECK: %[[m1:.*]] = memref.alloc() {{.*}} : memref<10xf32>
   // CHECK: %[[alloc:.*]] = memref.alloc() {{.*}} : memref<10xf32>
-  %t1 = linalg.init_tensor [10] : tensor<10xf32>
+  %t1 = bufferization.alloc_tensor() : tensor<10xf32>
 
   // CHECK: linalg.fill ins(%{{.*}}{{.*}}outs(%[[m1]]
   // CHECK: %[[filled_tensor:.*]] = bufferization.to_tensor %[[m1]]

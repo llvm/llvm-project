@@ -1,5 +1,4 @@
 set(LLVM_LINK_COMPONENTS
-  BOLTUtils
   DebugInfoDWARF
   Demangle
   MC
@@ -25,4 +24,9 @@ add_llvm_library(LLVMBOLTCore
 
   LINK_LIBS
   ${LLVM_PTHREAD_LIB}
+  )
+
+target_link_libraries(LLVMBOLTCore
+  PRIVATE
+  LLVMBOLTUtils
   )

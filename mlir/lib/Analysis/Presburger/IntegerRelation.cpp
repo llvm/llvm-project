@@ -61,12 +61,12 @@ IntegerRelation IntegerRelation::intersect(IntegerRelation other) const {
 }
 
 bool IntegerRelation::isEqual(const IntegerRelation &other) const {
-  assert(space.isEqual(other.getSpace()) && "Spaces must be equal.");
+  assert(space.isCompatible(other.getSpace()) && "Spaces must be compatible.");
   return PresburgerRelation(*this).isEqual(PresburgerRelation(other));
 }
 
 bool IntegerRelation::isSubsetOf(const IntegerRelation &other) const {
-  assert(space.isEqual(other.getSpace()) && "Spaces must be equal.");
+  assert(space.isCompatible(other.getSpace()) && "Spaces must be compatible.");
   return PresburgerRelation(*this).isSubsetOf(PresburgerRelation(other));
 }
 
@@ -2073,6 +2073,68 @@ void IntegerRelation::removeIndependentConstraints(unsigned pos, unsigned num) {
     removeInequality(nbIndex);
   for (auto nbIndex : llvm::reverse(nbEqIndices))
     removeEquality(nbIndex);
+}
+
+IntegerPolyhedron IntegerRelation::getDomainSet() const {
+  IntegerRelation copyRel = *this;
+
+  // Convert Range variables to Local variables.
+  copyRel.convertIdKind(IdKind::Range, 0, getNumIdKind(IdKind::Range),
+                        IdKind::Local);
+
+  // Convert Domain variables to SetDim(Range) variables.
+  copyRel.convertIdKind(IdKind::Domain, 0, getNumIdKind(IdKind::Domain),
+                        IdKind::SetDim);
+
+  return IntegerPolyhedron(std::move(copyRel));
+}
+
+IntegerPolyhedron IntegerRelation::getRangeSet() const {
+  IntegerRelation copyRel = *this;
+
+  // Convert Domain variables to Local variables.
+  copyRel.convertIdKind(IdKind::Domain, 0, getNumIdKind(IdKind::Domain),
+                        IdKind::Local);
+
+  // We do not need to do anything to Range variables since they are already in
+  // SetDim position.
+
+  return IntegerPolyhedron(std::move(copyRel));
+}
+
+void IntegerRelation::intersectDomain(const IntegerPolyhedron &poly) {
+  assert(getDomainSet().getSpace().isCompatible(poly.getSpace()) &&
+         "Domain set is not compatible with poly");
+
+  // Treating the poly as a relation, convert it from `0 -> R` to `R -> 0`.
+  IntegerRelation rel = poly;
+  rel.inverse();
+
+  // Append dummy range variables to make the spaces compatible.
+  rel.appendId(IdKind::Range, getNumRangeIds());
+
+  // Intersect in place.
+  mergeLocalIds(rel);
+  append(rel);
+}
+
+void IntegerRelation::intersectRange(const IntegerPolyhedron &poly) {
+  assert(getRangeSet().getSpace().isCompatible(poly.getSpace()) &&
+         "Range set is not compatible with poly");
+
+  IntegerRelation rel = poly;
+
+  // Append dummy domain variables to make the spaces compatible.
+  rel.appendId(IdKind::Domain, getNumDomainIds());
+
+  mergeLocalIds(rel);
+  append(rel);
+}
+
+void IntegerRelation::inverse() {
+  unsigned numRangeIds = getNumIdKind(IdKind::Range);
+  convertIdKind(IdKind::Domain, 0, getIdKindEnd(IdKind::Domain), IdKind::Range);
+  convertIdKind(IdKind::Range, 0, numRangeIds, IdKind::Domain);
 }
 
 void IntegerRelation::printSpace(raw_ostream &os) const {

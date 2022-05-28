@@ -581,47 +581,73 @@ static StringRef lookupOperationNameFromOpcode(unsigned opcode) {
 #define INST(llvm_n, mlir_n)                                                   \
   { llvm::Instruction::llvm_n, LLVM::mlir_n##Op::getOperationName() }
   static const DenseMap<unsigned, StringRef> opcMap = {
-      // Ret is handled specially.
+      // clang-format off
+      INST(Ret, Return),
       // Br is handled specially.
       // Switch is handled specially.
       // FIXME: indirectbr
-      // FIXME: invoke
+      // Invoke is handled specially.
       INST(Resume, Resume),
-      // FIXME: unreachable
+      INST(Unreachable, Unreachable),
       // FIXME: cleanupret
       // FIXME: catchret
       // FIXME: catchswitch
       // FIXME: callbr
-      // FIXME: fneg
-      INST(Add, Add), INST(FAdd, FAdd), INST(Sub, Sub), INST(FSub, FSub),
-      INST(Mul, Mul), INST(FMul, FMul), INST(UDiv, UDiv), INST(SDiv, SDiv),
-      INST(FDiv, FDiv), INST(URem, URem), INST(SRem, SRem), INST(FRem, FRem),
-      INST(Shl, Shl), INST(LShr, LShr), INST(AShr, AShr), INST(And, And),
-      INST(Or, Or), INST(Xor, XOr), INST(Alloca, Alloca), INST(Load, Load),
+      INST(FNeg, FNeg),
+      INST(Add, Add),
+      INST(FAdd, FAdd),
+      INST(Sub, Sub),
+      INST(FSub, FSub),
+      INST(Mul, Mul),
+      INST(FMul, FMul),
+      INST(UDiv, UDiv),
+      INST(SDiv, SDiv),
+      INST(FDiv, FDiv),
+      INST(URem, URem),
+      INST(SRem, SRem),
+      INST(FRem, FRem),
+      INST(Shl, Shl),
+      INST(LShr, LShr),
+      INST(AShr, AShr),
+      INST(And, And),
+      INST(Or, Or),
+      INST(Xor, XOr),
+      INST(ExtractElement, ExtractElement),
+      INST(InsertElement, InsertElement),
+      // ShuffleVector is handled specially.
+      // ExtractValue is handled specially.
+      // InsertValue is handled specially.
+      INST(Alloca, Alloca),
+      INST(Load, Load),
       INST(Store, Store),
-      // Getelementptr is handled specially.
-      INST(Ret, Return), INST(Fence, Fence),
+      INST(Fence, Fence),
       // FIXME: atomiccmpxchg
       // FIXME: atomicrmw
-      INST(Trunc, Trunc), INST(ZExt, ZExt), INST(SExt, SExt),
-      INST(FPToUI, FPToUI), INST(FPToSI, FPToSI), INST(UIToFP, UIToFP),
-      INST(SIToFP, SIToFP), INST(FPTrunc, FPTrunc), INST(FPExt, FPExt),
-      INST(PtrToInt, PtrToInt), INST(IntToPtr, IntToPtr),
-      INST(BitCast, Bitcast), INST(AddrSpaceCast, AddrSpaceCast),
-      // FIXME: cleanuppad
-      // FIXME: catchpad
+      // Getelementptr is handled specially.
+      INST(Trunc, Trunc),
+      INST(ZExt, ZExt),
+      INST(SExt, SExt),
+      INST(FPToUI, FPToUI),
+      INST(FPToSI, FPToSI),
+      INST(UIToFP, UIToFP),
+      INST(SIToFP, SIToFP),
+      INST(FPTrunc, FPTrunc),
+      INST(FPExt, FPExt),
+      INST(PtrToInt, PtrToInt),
+      INST(IntToPtr, IntToPtr),
+      INST(BitCast, Bitcast),
+      INST(AddrSpaceCast, AddrSpaceCast),
       // ICmp is handled specially.
       // FCmp is handled specially.
       // PHI is handled specially.
-      INST(Freeze, Freeze), INST(Call, Call),
-      // FIXME: select
+      INST(Select, Select),
+      INST(Freeze, Freeze),
+      INST(Call, Call),
       // FIXME: vaarg
-      // FIXME: extractelement
-      // FIXME: insertelement
-      // FIXME: shufflevector
-      // FIXME: extractvalue
-      // FIXME: insertvalue
       // FIXME: landingpad
+      // FIXME: catchpad
+      // FIXME: cleanuppad
+      // clang-format on
   };
 #undef INST
 
@@ -775,7 +801,12 @@ LogicalResult Importer::processInstruction(llvm::Instruction *inst) {
   case llvm::Instruction::IntToPtr:
   case llvm::Instruction::AddrSpaceCast:
   case llvm::Instruction::Freeze:
-  case llvm::Instruction::BitCast: {
+  case llvm::Instruction::BitCast:
+  case llvm::Instruction::ExtractElement:
+  case llvm::Instruction::InsertElement:
+  case llvm::Instruction::Select:
+  case llvm::Instruction::FNeg:
+  case llvm::Instruction::Unreachable: {
     OperationState state(loc, lookupOperationNameFromOpcode(inst->getOpcode()));
     SmallVector<Value, 4> ops;
     ops.reserve(inst->getNumOperands());
@@ -1002,33 +1033,75 @@ LogicalResult Importer::processInstruction(llvm::Instruction *inst) {
     // FIXME: Support inbounds GEPs.
     llvm::GetElementPtrInst *gep = cast<llvm::GetElementPtrInst>(inst);
     Value basePtr = processValue(gep->getOperand(0));
-    SmallVector<int32_t> staticIndices;
-    SmallVector<Value> dynamicIndices;
     Type sourceElementType = processType(gep->getSourceElementType());
-    SmallVector<unsigned> staticIndexPositions;
-    GEPOp::findKnownStructIndices(sourceElementType, staticIndexPositions);
 
-    for (const auto &en :
-         llvm::enumerate(llvm::drop_begin(gep->operand_values()))) {
-      llvm::Value *operand = en.value();
-      if (llvm::find(staticIndexPositions, en.index()) ==
-          staticIndexPositions.end()) {
-        staticIndices.push_back(GEPOp::kDynamicIndex);
-        dynamicIndices.push_back(processValue(operand));
-        if (!dynamicIndices.back())
-          return failure();
-      } else {
-        auto *constantInt = cast<llvm::ConstantInt>(operand);
-        staticIndices.push_back(
-            static_cast<int32_t>(constantInt->getValue().getZExtValue()));
-      }
+    SmallVector<Value> indices;
+    for (llvm::Value *operand : llvm::drop_begin(gep->operand_values())) {
+      indices.push_back(processValue(operand));
+      if (!indices.back())
+        return failure();
     }
+    // Treat every indices as dynamic since GEPOp::build will refine those
+    // indices into static attributes later. One small downside of this
+    // approach is that many unused `llvm.mlir.constant` would be emitted
+    // at first place.
+    SmallVector<int32_t> structIndices(indices.size(),
+                                       LLVM::GEPOp::kDynamicIndex);
 
     Type type = processType(inst->getType());
     if (!type)
       return failure();
     instMap[inst] = b.create<GEPOp>(loc, type, sourceElementType, basePtr,
-                                    dynamicIndices, staticIndices);
+                                    indices, structIndices);
+    return success();
+  }
+  case llvm::Instruction::InsertValue: {
+    auto *ivInst = cast<llvm::InsertValueInst>(inst);
+    Value inserted = processValue(ivInst->getInsertedValueOperand());
+    if (!inserted)
+      return failure();
+    Value aggOperand = processValue(ivInst->getAggregateOperand());
+    if (!aggOperand)
+      return failure();
+
+    SmallVector<int32_t> idxValues;
+    for (unsigned idx : ivInst->getIndices())
+      idxValues.push_back(static_cast<int32_t>(idx));
+    ArrayAttr indices = b.getI32ArrayAttr(idxValues);
+
+    instMap[inst] = b.create<InsertValueOp>(loc, aggOperand, inserted, indices);
+    return success();
+  }
+  case llvm::Instruction::ExtractValue: {
+    auto *evInst = cast<llvm::ExtractValueInst>(inst);
+    Value aggOperand = processValue(evInst->getAggregateOperand());
+    if (!aggOperand)
+      return failure();
+
+    Type type = processType(inst->getType());
+    if (!type)
+      return failure();
+
+    SmallVector<int32_t> idxValues;
+    for (unsigned idx : evInst->getIndices())
+      idxValues.push_back(static_cast<int32_t>(idx));
+    ArrayAttr indices = b.getI32ArrayAttr(idxValues);
+
+    instMap[inst] = b.create<ExtractValueOp>(loc, type, aggOperand, indices);
+    return success();
+  }
+  case llvm::Instruction::ShuffleVector: {
+    auto *svInst = cast<llvm::ShuffleVectorInst>(inst);
+    Value vec1 = processValue(svInst->getOperand(0));
+    if (!vec1)
+      return failure();
+    Value vec2 = processValue(svInst->getOperand(1));
+    if (!vec2)
+      return failure();
+
+    ArrayAttr mask = b.getI32ArrayAttr(svInst->getShuffleMask());
+
+    instMap[inst] = b.create<ShuffleVectorOp>(loc, vec1, vec2, mask);
     return success();
   }
   }
@@ -1066,10 +1139,13 @@ LogicalResult Importer::processFunction(llvm::Function *f) {
   if (!functionType)
     return failure();
 
+  bool dsoLocal = f->hasLocalLinkage();
+  CConv cconv = convertCConvFromLLVM(f->getCallingConv());
+
   b.setInsertionPoint(module.getBody(), getFuncInsertPt());
-  LLVMFuncOp fop =
-      b.create<LLVMFuncOp>(UnknownLoc::get(context), f->getName(), functionType,
-                           convertLinkageFromLLVM(f->getLinkage()));
+  LLVMFuncOp fop = b.create<LLVMFuncOp>(
+      UnknownLoc::get(context), f->getName(), functionType,
+      convertLinkageFromLLVM(f->getLinkage()), dsoLocal, cconv);
 
   if (FlatSymbolRefAttr personality = getPersonalityAsAttr(f))
     fop->setAttr(b.getStringAttr("personality"), personality);

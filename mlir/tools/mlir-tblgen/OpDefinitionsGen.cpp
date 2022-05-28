@@ -1631,7 +1631,7 @@ void OpEmitter::genInferredTypeCollectiveParamBuilder() {
 
   // Result types
   body << formatv(R"(
-  ::mlir::SmallVector<::mlir::Type, 2> inferredReturnTypes;
+  ::llvm::SmallVector<::mlir::Type, 2> inferredReturnTypes;
   if (::mlir::succeeded({0}::inferReturnTypes(odsBuilder.getContext(),
           {1}.location, operands,
           {1}.attributes.getDictionary({1}.getContext()),
@@ -2271,7 +2271,7 @@ void OpEmitter::genSideEffectInterfaceMethods() {
 
   for (auto &it : interfaceEffects) {
     // Generate the 'getEffects' method.
-    std::string type = llvm::formatv("::mlir::SmallVectorImpl<::mlir::"
+    std::string type = llvm::formatv("::llvm::SmallVectorImpl<::mlir::"
                                      "SideEffects::EffectInstance<{0}>> &",
                                      it.first())
                            .str();
@@ -2647,7 +2647,7 @@ static void addSizeCountTrait(OpClass &opClass, StringRef traitKind,
   }
   switch (numTotal) {
   case 0:
-    opClass.addTrait("::mlir::OpTrait::Zero" + traitKind);
+    opClass.addTrait("::mlir::OpTrait::Zero" + traitKind + "s");
     break;
   case 1:
     opClass.addTrait("::mlir::OpTrait::One" + traitKind);
@@ -2687,26 +2687,7 @@ void OpEmitter::genTraits() {
   int numVariadicOperands = op.getNumVariableLengthOperands();
 
   // Add operand size trait.
-  if (numVariadicOperands != 0) {
-    if (numOperands == numVariadicOperands)
-      opClass.addTrait("::mlir::OpTrait::VariadicOperands");
-    else
-      opClass.addTrait("::mlir::OpTrait::AtLeastNOperands<" +
-                       Twine(numOperands - numVariadicOperands) + ">::Impl");
-  } else {
-    switch (numOperands) {
-    case 0:
-      opClass.addTrait("::mlir::OpTrait::ZeroOperands");
-      break;
-    case 1:
-      opClass.addTrait("::mlir::OpTrait::OneOperand");
-      break;
-    default:
-      opClass.addTrait("::mlir::OpTrait::NOperands<" + Twine(numOperands) +
-                       ">::Impl");
-      break;
-    }
-  }
+  addSizeCountTrait(opClass, "Operand", numOperands, numVariadicOperands);
 
   // The op traits defined internal are ensured that they can be verified
   // earlier.

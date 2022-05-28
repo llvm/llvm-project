@@ -39,20 +39,26 @@ namespace SendMsg {
 const CustomOperand<const MCSubtargetInfo &> Msg[] = {
   {{""}},
   {{"MSG_INTERRUPT"},           ID_INTERRUPT},
-  {{"MSG_GS"},                  ID_GS},
-  {{"MSG_GS_DONE"},             ID_GS_DONE},
-  {{"MSG_SAVEWAVE"},            ID_SAVEWAVE,            isGFX8Plus},
-  {{"MSG_STALL_WAVE_GEN"},      ID_STALL_WAVE_GEN,      isGFX9Plus},
-  {{"MSG_HALT_WAVES"},          ID_HALT_WAVES,          isGFX9Plus},
-  {{"MSG_ORDERED_PS_DONE"},     ID_ORDERED_PS_DONE,     isGFX9Plus},
-  {{"MSG_EARLY_PRIM_DEALLOC"},  ID_EARLY_PRIM_DEALLOC,  isGFX9},
-  {{"MSG_GS_ALLOC_REQ"},        ID_GS_ALLOC_REQ,        isGFX9Plus},
-  {{"MSG_GET_DOORBELL"},        ID_GET_DOORBELL,        isGFX9Plus},
-  {{"MSG_GET_DDID"},            ID_GET_DDID,            isGFX10Plus},
-  {{""}},
-  {{""}},
+  {{"MSG_GS"},                  ID_GS_PreGFX11,             isNotGFX11Plus},
+  {{"MSG_GS_DONE"},             ID_GS_DONE_PreGFX11,        isNotGFX11Plus},
+  {{"MSG_SAVEWAVE"},            ID_SAVEWAVE,                isGFX8_GFX9_GFX10},
+  {{"MSG_STALL_WAVE_GEN"},      ID_STALL_WAVE_GEN,          isGFX9Plus},
+  {{"MSG_HALT_WAVES"},          ID_HALT_WAVES,              isGFX9Plus},
+  {{"MSG_ORDERED_PS_DONE"},     ID_ORDERED_PS_DONE,         isGFX9Plus},
+  {{"MSG_EARLY_PRIM_DEALLOC"},  ID_EARLY_PRIM_DEALLOC,      isGFX9_GFX10},
+  {{"MSG_GS_ALLOC_REQ"},        ID_GS_ALLOC_REQ,            isGFX9Plus},
+  {{"MSG_GET_DOORBELL"},        ID_GET_DOORBELL,            isGFX9_GFX10},
+  {{"MSG_GET_DDID"},            ID_GET_DDID,                isGFX10},
+  {{"MSG_HS_TESSFACTOR"},       ID_HS_TESSFACTOR_GFX11Plus, isGFX11Plus},
+  {{"MSG_DEALLOC_VGPRS"},       ID_DEALLOC_VGPRS_GFX11Plus, isGFX11Plus},
   {{""}},
   {{"MSG_SYSMSG"},              ID_SYSMSG},
+  {{"MSG_RTN_GET_DOORBELL"},    ID_RTN_GET_DOORBELL,        isGFX11Plus},
+  {{"MSG_RTN_GET_DDID"},        ID_RTN_GET_DDID,            isGFX11Plus},
+  {{"MSG_RTN_GET_TMA"},         ID_RTN_GET_TMA,             isGFX11Plus},
+  {{"MSG_RTN_GET_REALTIME"},    ID_RTN_GET_REALTIME,        isGFX11Plus},
+  {{"MSG_RTN_SAVE_WAVE"},       ID_RTN_SAVE_WAVE,           isGFX11Plus},
+  {{"MSG_RTN_GET_TBA"},         ID_RTN_GET_TBA,             isGFX11Plus},
 };
 // NOLINTEND
 
@@ -184,7 +190,7 @@ StringLiteral const NfmtSymbolicVI[] = {    // VI and GFX9
   "BUF_NUM_FORMAT_FLOAT"
 };
 
-StringLiteral const UfmtSymbolic[] = {
+StringLiteral const UfmtSymbolicGFX10[] = {
   "BUF_FMT_INVALID",
 
   "BUF_FMT_8_UNORM",
@@ -278,7 +284,7 @@ StringLiteral const UfmtSymbolic[] = {
   "BUF_FMT_32_32_32_32_FLOAT"
 };
 
-unsigned const DfmtNfmt2UFmt[] = {
+unsigned const DfmtNfmt2UFmtGFX10[] = {
   DFMT_INVALID     | (NFMT_UNORM   << NFMT_SHIFT),
 
   DFMT_8           | (NFMT_UNORM   << NFMT_SHIFT),
@@ -335,6 +341,166 @@ unsigned const DfmtNfmt2UFmt[] = {
   DFMT_10_10_10_2  | (NFMT_SNORM   << NFMT_SHIFT),
   DFMT_10_10_10_2  | (NFMT_USCALED << NFMT_SHIFT),
   DFMT_10_10_10_2  | (NFMT_SSCALED << NFMT_SHIFT),
+  DFMT_10_10_10_2  | (NFMT_UINT    << NFMT_SHIFT),
+  DFMT_10_10_10_2  | (NFMT_SINT    << NFMT_SHIFT),
+
+  DFMT_2_10_10_10  | (NFMT_UNORM   << NFMT_SHIFT),
+  DFMT_2_10_10_10  | (NFMT_SNORM   << NFMT_SHIFT),
+  DFMT_2_10_10_10  | (NFMT_USCALED << NFMT_SHIFT),
+  DFMT_2_10_10_10  | (NFMT_SSCALED << NFMT_SHIFT),
+  DFMT_2_10_10_10  | (NFMT_UINT    << NFMT_SHIFT),
+  DFMT_2_10_10_10  | (NFMT_SINT    << NFMT_SHIFT),
+
+  DFMT_8_8_8_8     | (NFMT_UNORM   << NFMT_SHIFT),
+  DFMT_8_8_8_8     | (NFMT_SNORM   << NFMT_SHIFT),
+  DFMT_8_8_8_8     | (NFMT_USCALED << NFMT_SHIFT),
+  DFMT_8_8_8_8     | (NFMT_SSCALED << NFMT_SHIFT),
+  DFMT_8_8_8_8     | (NFMT_UINT    << NFMT_SHIFT),
+  DFMT_8_8_8_8     | (NFMT_SINT    << NFMT_SHIFT),
+
+  DFMT_32_32       | (NFMT_UINT    << NFMT_SHIFT),
+  DFMT_32_32       | (NFMT_SINT    << NFMT_SHIFT),
+  DFMT_32_32       | (NFMT_FLOAT   << NFMT_SHIFT),
+
+  DFMT_16_16_16_16 | (NFMT_UNORM   << NFMT_SHIFT),
+  DFMT_16_16_16_16 | (NFMT_SNORM   << NFMT_SHIFT),
+  DFMT_16_16_16_16 | (NFMT_USCALED << NFMT_SHIFT),
+  DFMT_16_16_16_16 | (NFMT_SSCALED << NFMT_SHIFT),
+  DFMT_16_16_16_16 | (NFMT_UINT    << NFMT_SHIFT),
+  DFMT_16_16_16_16 | (NFMT_SINT    << NFMT_SHIFT),
+  DFMT_16_16_16_16 | (NFMT_FLOAT   << NFMT_SHIFT),
+
+  DFMT_32_32_32    | (NFMT_UINT    << NFMT_SHIFT),
+  DFMT_32_32_32    | (NFMT_SINT    << NFMT_SHIFT),
+  DFMT_32_32_32    | (NFMT_FLOAT   << NFMT_SHIFT),
+  DFMT_32_32_32_32 | (NFMT_UINT    << NFMT_SHIFT),
+  DFMT_32_32_32_32 | (NFMT_SINT    << NFMT_SHIFT),
+  DFMT_32_32_32_32 | (NFMT_FLOAT   << NFMT_SHIFT)
+};
+
+StringLiteral const UfmtSymbolicGFX11[] = {
+  "BUF_FMT_INVALID",
+
+  "BUF_FMT_8_UNORM",
+  "BUF_FMT_8_SNORM",
+  "BUF_FMT_8_USCALED",
+  "BUF_FMT_8_SSCALED",
+  "BUF_FMT_8_UINT",
+  "BUF_FMT_8_SINT",
+
+  "BUF_FMT_16_UNORM",
+  "BUF_FMT_16_SNORM",
+  "BUF_FMT_16_USCALED",
+  "BUF_FMT_16_SSCALED",
+  "BUF_FMT_16_UINT",
+  "BUF_FMT_16_SINT",
+  "BUF_FMT_16_FLOAT",
+
+  "BUF_FMT_8_8_UNORM",
+  "BUF_FMT_8_8_SNORM",
+  "BUF_FMT_8_8_USCALED",
+  "BUF_FMT_8_8_SSCALED",
+  "BUF_FMT_8_8_UINT",
+  "BUF_FMT_8_8_SINT",
+
+  "BUF_FMT_32_UINT",
+  "BUF_FMT_32_SINT",
+  "BUF_FMT_32_FLOAT",
+
+  "BUF_FMT_16_16_UNORM",
+  "BUF_FMT_16_16_SNORM",
+  "BUF_FMT_16_16_USCALED",
+  "BUF_FMT_16_16_SSCALED",
+  "BUF_FMT_16_16_UINT",
+  "BUF_FMT_16_16_SINT",
+  "BUF_FMT_16_16_FLOAT",
+
+  "BUF_FMT_10_11_11_FLOAT",
+
+  "BUF_FMT_11_11_10_FLOAT",
+
+  "BUF_FMT_10_10_10_2_UNORM",
+  "BUF_FMT_10_10_10_2_SNORM",
+  "BUF_FMT_10_10_10_2_UINT",
+  "BUF_FMT_10_10_10_2_SINT",
+
+  "BUF_FMT_2_10_10_10_UNORM",
+  "BUF_FMT_2_10_10_10_SNORM",
+  "BUF_FMT_2_10_10_10_USCALED",
+  "BUF_FMT_2_10_10_10_SSCALED",
+  "BUF_FMT_2_10_10_10_UINT",
+  "BUF_FMT_2_10_10_10_SINT",
+
+  "BUF_FMT_8_8_8_8_UNORM",
+  "BUF_FMT_8_8_8_8_SNORM",
+  "BUF_FMT_8_8_8_8_USCALED",
+  "BUF_FMT_8_8_8_8_SSCALED",
+  "BUF_FMT_8_8_8_8_UINT",
+  "BUF_FMT_8_8_8_8_SINT",
+
+  "BUF_FMT_32_32_UINT",
+  "BUF_FMT_32_32_SINT",
+  "BUF_FMT_32_32_FLOAT",
+
+  "BUF_FMT_16_16_16_16_UNORM",
+  "BUF_FMT_16_16_16_16_SNORM",
+  "BUF_FMT_16_16_16_16_USCALED",
+  "BUF_FMT_16_16_16_16_SSCALED",
+  "BUF_FMT_16_16_16_16_UINT",
+  "BUF_FMT_16_16_16_16_SINT",
+  "BUF_FMT_16_16_16_16_FLOAT",
+
+  "BUF_FMT_32_32_32_UINT",
+  "BUF_FMT_32_32_32_SINT",
+  "BUF_FMT_32_32_32_FLOAT",
+  "BUF_FMT_32_32_32_32_UINT",
+  "BUF_FMT_32_32_32_32_SINT",
+  "BUF_FMT_32_32_32_32_FLOAT"
+};
+
+unsigned const DfmtNfmt2UFmtGFX11[] = {
+  DFMT_INVALID     | (NFMT_UNORM   << NFMT_SHIFT),
+
+  DFMT_8           | (NFMT_UNORM   << NFMT_SHIFT),
+  DFMT_8           | (NFMT_SNORM   << NFMT_SHIFT),
+  DFMT_8           | (NFMT_USCALED << NFMT_SHIFT),
+  DFMT_8           | (NFMT_SSCALED << NFMT_SHIFT),
+  DFMT_8           | (NFMT_UINT    << NFMT_SHIFT),
+  DFMT_8           | (NFMT_SINT    << NFMT_SHIFT),
+
+  DFMT_16          | (NFMT_UNORM   << NFMT_SHIFT),
+  DFMT_16          | (NFMT_SNORM   << NFMT_SHIFT),
+  DFMT_16          | (NFMT_USCALED << NFMT_SHIFT),
+  DFMT_16          | (NFMT_SSCALED << NFMT_SHIFT),
+  DFMT_16          | (NFMT_UINT    << NFMT_SHIFT),
+  DFMT_16          | (NFMT_SINT    << NFMT_SHIFT),
+  DFMT_16          | (NFMT_FLOAT   << NFMT_SHIFT),
+
+  DFMT_8_8         | (NFMT_UNORM   << NFMT_SHIFT),
+  DFMT_8_8         | (NFMT_SNORM   << NFMT_SHIFT),
+  DFMT_8_8         | (NFMT_USCALED << NFMT_SHIFT),
+  DFMT_8_8         | (NFMT_SSCALED << NFMT_SHIFT),
+  DFMT_8_8         | (NFMT_UINT    << NFMT_SHIFT),
+  DFMT_8_8         | (NFMT_SINT    << NFMT_SHIFT),
+
+  DFMT_32          | (NFMT_UINT    << NFMT_SHIFT),
+  DFMT_32          | (NFMT_SINT    << NFMT_SHIFT),
+  DFMT_32          | (NFMT_FLOAT   << NFMT_SHIFT),
+
+  DFMT_16_16       | (NFMT_UNORM   << NFMT_SHIFT),
+  DFMT_16_16       | (NFMT_SNORM   << NFMT_SHIFT),
+  DFMT_16_16       | (NFMT_USCALED << NFMT_SHIFT),
+  DFMT_16_16       | (NFMT_SSCALED << NFMT_SHIFT),
+  DFMT_16_16       | (NFMT_UINT    << NFMT_SHIFT),
+  DFMT_16_16       | (NFMT_SINT    << NFMT_SHIFT),
+  DFMT_16_16       | (NFMT_FLOAT   << NFMT_SHIFT),
+
+  DFMT_10_11_11    | (NFMT_FLOAT   << NFMT_SHIFT),
+
+  DFMT_11_11_10    | (NFMT_FLOAT   << NFMT_SHIFT),
+
+  DFMT_10_10_10_2  | (NFMT_UNORM   << NFMT_SHIFT),
+  DFMT_10_10_10_2  | (NFMT_SNORM   << NFMT_SHIFT),
   DFMT_10_10_10_2  | (NFMT_UINT    << NFMT_SHIFT),
   DFMT_10_10_10_2  | (NFMT_SINT    << NFMT_SHIFT),
 

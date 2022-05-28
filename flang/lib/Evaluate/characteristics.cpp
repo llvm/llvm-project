@@ -485,6 +485,11 @@ static std::optional<Procedure> CharacterizeProcedure(
           [&](const semantics::UseDetails &use) {
             return CharacterizeProcedure(use.symbol(), context, seenProcs);
           },
+          [](const semantics::UseErrorDetails &) {
+            // Ambiguous use-association will be handled later during symbol
+            // checks, ignore UseErrorDetails here without actual symbol usage.
+            return std::optional<Procedure>{};
+          },
           [&](const semantics::HostAssocDetails &assoc) {
             return CharacterizeProcedure(assoc.symbol(), context, seenProcs);
           },
@@ -788,7 +793,10 @@ bool FunctionResult::IsCompatibleWith(const FunctionResult &actual) const {
     return false;
   } else if (const auto *ifaceTypeShape{std::get_if<TypeAndShape>(&u)}) {
     if (const auto *actualTypeShape{std::get_if<TypeAndShape>(&actual.u)}) {
-      if (ifaceTypeShape->shape() != actualTypeShape->shape()) {
+      if (ifaceTypeShape->Rank() != actualTypeShape->Rank()) {
+        return false;
+      } else if (!attrs.test(Attr::Allocatable) && !attrs.test(Attr::Pointer) &&
+          ifaceTypeShape->shape() != actualTypeShape->shape()) {
         return false;
       } else {
         return ifaceTypeShape->type().IsTkCompatibleWith(

@@ -832,7 +832,7 @@ func.func @unknown_dialect_type() -> !bar<""> {
 }
 
 // CHECK-LABEL: func @type_alias() -> i32 {
-!i32_type_alias = type i32
+!i32_type_alias = i32
 func.func @type_alias() -> !i32_type_alias {
 
   // Return a non-aliased i32 type.
@@ -1282,6 +1282,14 @@ func.func @default_dialect(%bool : i1) {
     // example.
     // CHECK:  "test.op_with_attr"() {test.attr = "test.value"} : () -> ()
     "test.op_with_attr"() {test.attr = "test.value"} : () -> ()
+    // Verify that the prefix is not stripped when it can lead to ambiguity.
+    // CHECK: test.op.with_dot_in_name
+    test.op.with_dot_in_name
+    // This is an unregistered operation, the printing/parsing is handled by the
+    // dialect, and the dialect prefix should not be stripped while printing
+    // because of potential ambiguity.
+    // CHECK: test.dialect_custom_printer.with.dot
+    test.dialect_custom_printer.with.dot
     "test.terminator"() : ()->()
   }
   // The same operation outside of the region does not have an func. prefix.

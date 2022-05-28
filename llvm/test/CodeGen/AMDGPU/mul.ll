@@ -73,7 +73,7 @@ define amdgpu_kernel void @v_trunc_i64_mul_to_i32(i32 addrspace(1)* %out, i64 ad
 ; FUNC-LABEL: {{^}}mul64_sext_c:
 ; EG-DAG: MULLO_INT
 ; EG-DAG: MULHI_INT
-; SI-DAG: s_mul_i32
+; SI-DAG: s_mulk_i32
 ; SI-DAG: v_mul_hi_i32
 ; VI: v_mad_i64_i32
 define amdgpu_kernel void @mul64_sext_c(i64 addrspace(1)* %out, i32 %in) {

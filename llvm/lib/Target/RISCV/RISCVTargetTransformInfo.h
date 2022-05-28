@@ -60,7 +60,7 @@ public:
 
   TypeSize getRegisterBitWidth(TargetTransformInfo::RegisterKind K) const;
 
-  InstructionCost getRegUsageForType(Type *Ty);
+  unsigned getRegUsageForType(Type *Ty);
 
   InstructionCost getMaskedMemoryOpCost(unsigned Opcode, Type *Src,
                                         Align Alignment, unsigned AddressSpace,
@@ -171,9 +171,6 @@ public:
 
   bool isLegalToVectorizeReduction(const RecurrenceDescriptor &RdxDesc,
                                    ElementCount VF) const {
-    if (!ST->hasVInstructions())
-      return false;
-
     if (!VF.isScalable())
       return true;
 

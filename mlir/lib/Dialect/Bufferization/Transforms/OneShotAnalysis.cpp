@@ -216,6 +216,11 @@ bool OneShotAnalysisState::areEquivalentBufferizedValues(Value v1,
   return aliasInfo.areEquivalentBufferizedValues(v1, v2);
 }
 
+bool OneShotAnalysisState::areAliasingBufferizedValues(Value v1,
+                                                       Value v2) const {
+  return aliasInfo.areAliasingBufferizedValues(v1, v2);
+}
+
 // Gather yielded tensors in `yieldedTensors` by querying all aliases. This is
 // to ensure that such information is available during bufferization time.
 // Alias information can no longer be queried through BufferizationAliasInfo
@@ -288,6 +293,16 @@ bool OneShotAnalysisState::hasUndefinedContents(OpOperand *opOperand) const {
 
 bool OneShotAnalysisState::isTensorYielded(Value tensor) const {
   return yieldedTensors.contains(tensor);
+}
+
+bool OneShotAnalysisState::isValueWritten(Value value) const {
+  bool isWritten = false;
+  aliasInfo.applyOnAliases(value, [&](Value val) {
+    for (OpOperand &use : val.getUses())
+      if (isInPlace(use) && bufferizesToMemoryWrite(use))
+        isWritten = true;
+  });
+  return isWritten;
 }
 
 //===----------------------------------------------------------------------===//
@@ -379,7 +394,7 @@ getCommonEnclosingRepetitiveRegion(ArrayRef<Value> values) {
 
 /// Return `true` if the given tensor value is a memory write. Most values are
 /// tensor writes, but ops that define a tensor SSA value without specifying its
-/// contents (e.g., init_tensor) are not.
+/// contents (e.g., alloc_tensor) are not.
 static bool isMemoryWrite(Value value, const AnalysisState &state) {
   auto opResult = value.dyn_cast<OpResult>();
   if (!opResult)
@@ -855,7 +870,7 @@ annotateOpsWithBufferizationMarkers(Operation *op,
 /// %1 = scf.if %c -> (tensor<?xf32>) {
 ///   scf.yield %0 : tensor<?xf32>
 /// } else {
-///   %t = linalg.init_tensor : tensor<?xf32>
+///   %t = linalg.alloc_tensor : tensor<?xf32>
 ///   scf.yield %t : tensor<?xf32>
 /// }
 /// ```
@@ -934,16 +949,6 @@ LogicalResult bufferization::analyzeOp(Operation *op,
                              options.analysisFuzzerSeed)))
     return failure();
   equivalenceAnalysis(op, aliasInfo, state);
-
-  for (const PostAnalysisStepFn &fn : options.postAnalysisSteps) {
-    SmallVector<Operation *> newOps;
-    if (failed(fn(op, state, aliasInfo, newOps)))
-      return failure();
-    // Analyze ops that were created by the PostAnalysisStepFn.
-    if (failed(inPlaceAnalysis(newOps, aliasInfo, state, domInfo)))
-      return failure();
-    equivalenceAnalysis(newOps, aliasInfo, state);
-  }
 
   bool failedAnalysis = false;
   if (!options.allowReturnAllocs) {

@@ -599,6 +599,9 @@ KEYWORD(pipe                        , KEYOPENCLC | KEYOPENCLCXX)
 // C++ for OpenCL s2.3.1: addrspace_cast operator
 KEYWORD(addrspace_cast              , KEYOPENCLCXX)
 
+// CUDA/HIP function attributes
+KEYWORD(__noinline__                , KEYCUDA)
+
 // OpenMP Type Traits
 UNARY_EXPR_OR_TYPE_TRAIT(__builtin_omp_required_simd_align, OpenMPRequiredSimdAlign, KEYALL)
 

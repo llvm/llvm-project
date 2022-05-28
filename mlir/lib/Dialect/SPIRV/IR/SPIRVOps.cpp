@@ -3115,7 +3115,7 @@ ParseResult spirv::ModuleOp::parse(OpAsmParser &parser, OperationState &state) {
 
   // If the name is present, parse it.
   StringAttr nameAttr;
-  parser.parseOptionalSymbolName(
+  (void)parser.parseOptionalSymbolName(
       nameAttr, mlir::SymbolTable::getSymbolAttrName(), state.attributes);
 
   // Parse attributes
@@ -3133,10 +3133,8 @@ ParseResult spirv::ModuleOp::parse(OpAsmParser &parser, OperationState &state) {
       return failure();
   }
 
-  if (parser.parseOptionalAttrDictWithKeyword(state.attributes))
-    return failure();
-
-  if (parser.parseRegion(*body, /*arguments=*/{}, /*argTypes=*/{}))
+  if (parser.parseOptionalAttrDictWithKeyword(state.attributes) ||
+      parser.parseRegion(*body, /*arguments=*/{}, /*argTypes=*/{}))
     return failure();
 
   // Make sure we have at least one block.

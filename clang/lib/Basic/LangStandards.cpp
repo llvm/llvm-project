@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/Basic/LangStandard.h"
+#include "clang/Config/config.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/ADT/Triple.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -57,27 +58,27 @@ LangStandard::Kind clang::getDefaultLanguageStandard(clang::Language Lang,
     return LangStandard::lang_cuda;
   case Language::Asm:
   case Language::C:
-#if defined(CLANG_DEFAULT_STD_C)
-    return CLANG_DEFAULT_STD_C;
-#else
+    if (CLANG_DEFAULT_STD_C != LangStandard::lang_unspecified)
+      return CLANG_DEFAULT_STD_C;
+
     // The PS4 uses C99 as the default C standard.
     if (T.isPS4())
       return LangStandard::lang_gnu99;
     return LangStandard::lang_gnu17;
-#endif
   case Language::ObjC:
-#if defined(CLANG_DEFAULT_STD_C)
-    return CLANG_DEFAULT_STD_C;
-#else
+    if (CLANG_DEFAULT_STD_C != LangStandard::lang_unspecified)
+      return CLANG_DEFAULT_STD_C;
+
     return LangStandard::lang_gnu11;
-#endif
   case Language::CXX:
   case Language::ObjCXX:
-#if defined(CLANG_DEFAULT_STD_CXX)
-    return CLANG_DEFAULT_STD_CXX;
-#else
-    return LangStandard::lang_gnucxx14;
-#endif
+    if (CLANG_DEFAULT_STD_CXX != LangStandard::lang_unspecified)
+      return CLANG_DEFAULT_STD_CXX;
+
+    if (T.isDriverKit())
+      return LangStandard::lang_gnucxx17;
+    else
+      return LangStandard::lang_gnucxx14;
   case Language::RenderScript:
     return LangStandard::lang_c99;
   case Language::HIP:

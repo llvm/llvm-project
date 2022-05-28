@@ -1831,10 +1831,10 @@ void AsmPrinter::emitGlobalAlias(Module &M, const GlobalAlias &GA) {
     OutStreamer->emitSymbolAttribute(Name, MCSA_ELF_TypeFunction);
     if (TM.getTargetTriple().isOSBinFormatCOFF()) {
       OutStreamer->BeginCOFFSymbolDef(Name);
-      OutStreamer->EmitCOFFSymbolStorageClass(
+      OutStreamer->emitCOFFSymbolStorageClass(
           GA.hasLocalLinkage() ? COFF::IMAGE_SYM_CLASS_STATIC
                                : COFF::IMAGE_SYM_CLASS_EXTERNAL);
-      OutStreamer->EmitCOFFSymbolType(COFF::IMAGE_SYM_DTYPE_FUNCTION
+      OutStreamer->emitCOFFSymbolType(COFF::IMAGE_SYM_DTYPE_FUNCTION
                                       << COFF::SCT_COMPLEX_TYPE_SHIFT);
       OutStreamer->EndCOFFSymbolDef();
     }
@@ -2645,7 +2645,7 @@ void AsmPrinter::emitLabelPlusOffset(const MCSymbol *Label, uint64_t Offset,
                                      unsigned Size,
                                      bool IsSectionRelative) const {
   if (MAI->needsDwarfSectionOffsetDirective() && IsSectionRelative) {
-    OutStreamer->EmitCOFFSecRel32(Label, Offset);
+    OutStreamer->emitCOFFSecRel32(Label, Offset);
     if (Size > 4)
       OutStreamer->emitZeros(Size - 4);
     return;
@@ -2893,7 +2893,7 @@ static int isRepeatedByteSequence(const Value *V, const DataLayout &DL) {
     assert(Size % 8 == 0);
 
     // Extend the element to take zero padding into account.
-    APInt Value = CI->getValue().zextOrSelf(Size);
+    APInt Value = CI->getValue().zext(Size);
     if (!Value.isSplat(8))
       return -1;
 

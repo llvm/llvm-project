@@ -78,10 +78,10 @@ raw_ostream &operator<<(raw_ostream &OS, const ARM::WinEH::ReturnType &RT) {
     OS << "pop {pc}";
     break;
   case ARM::WinEH::ReturnType::RT_B:
-    OS << "b target";
+    OS << "bx <reg>";
     break;
   case ARM::WinEH::ReturnType::RT_BW:
-    OS << "b.w target";
+    OS << "b.w <target>";
     break;
   case ARM::WinEH::ReturnType::RT_NoEpilogue:
     OS << "(no epilogue)";
@@ -174,26 +174,47 @@ const Decoder::RingEntry Decoder::Ring64[] = {
   { 0xff, 0xec, 1, &Decoder::opcode_clear_unwound_to_call },
 };
 
-void Decoder::printRegisters(const std::pair<uint16_t, uint32_t> &RegisterMask) {
-  static const char * const GPRRegisterNames[16] = {
-    "r0", "r1", "r2", "r3", "r4", "r5", "r6", "r7", "r8", "r9", "r10",
-    "r11", "ip", "sp", "lr", "pc",
-  };
+static void printRange(raw_ostream &OS, ListSeparator &LS, unsigned First,
+                       unsigned Last, char Letter) {
+  if (First == Last)
+    OS << LS << Letter << First;
+  else
+    OS << LS << Letter << First << "-" << Letter << Last;
+}
 
-  const uint16_t GPRMask = std::get<0>(RegisterMask);
-  const uint16_t VFPMask = std::get<1>(RegisterMask);
+static void printRange(raw_ostream &OS, uint32_t Mask, ListSeparator &LS,
+                       unsigned Start, unsigned End, char Letter) {
+  int First = -1;
+  for (unsigned RI = Start; RI <= End; ++RI) {
+    if (Mask & (1 << RI)) {
+      if (First < 0)
+        First = RI;
+    } else {
+      if (First >= 0) {
+        printRange(OS, LS, First, RI - 1, Letter);
+        First = -1;
+      }
+    }
+  }
+  if (First >= 0)
+    printRange(OS, LS, First, End, Letter);
+}
 
+void Decoder::printGPRMask(uint16_t GPRMask) {
   OS << '{';
   ListSeparator LS;
-  for (unsigned RI = 0, RE = 11; RI < RE; ++RI)
-    if (GPRMask & (1 << RI))
-      OS << LS << GPRRegisterNames[RI];
-  for (unsigned RI = 0, RE = 32; RI < RE; ++RI)
-    if (VFPMask & (1 << RI))
-      OS << LS << "d" << unsigned(RI);
-  for (unsigned RI = 11, RE = 16; RI < RE; ++RI)
-    if (GPRMask & (1 << RI))
-      OS << LS << GPRRegisterNames[RI];
+  printRange(OS, GPRMask, LS, 0, 12, 'r');
+  if (GPRMask & (1 << 14))
+    OS << LS << "lr";
+  if (GPRMask & (1 << 15))
+    OS << LS << "pc";
+  OS << '}';
+}
+
+void Decoder::printVFPMask(uint32_t VFPMask) {
+  OS << '{';
+  ListSeparator LS;
+  printRange(OS, VFPMask, LS, 0, 31, 'd');
   OS << '}';
 }
 
@@ -325,7 +346,7 @@ bool Decoder::opcode_10Lxxxxx(const uint8_t *OC, unsigned &Offset,
   SW.startLine() << format("0x%02x 0x%02x           ; %s.w ",
                            OC[Offset + 0], OC[Offset + 1],
                            Prologue ? "push" : "pop");
-  printRegisters(std::make_pair(RegisterMask, 0));
+  printGPRMask(RegisterMask);
   OS << '\n';
 
   Offset += 2;
@@ -346,7 +367,7 @@ bool Decoder::opcode_1100xxxx(const uint8_t *OC, unsigned &Offset,
 
 bool Decoder::opcode_11010Lxx(const uint8_t *OC, unsigned &Offset,
                               unsigned Length, bool Prologue) {
-  unsigned Link = (OC[Offset] & 0x4) >> 3;
+  unsigned Link = (OC[Offset] & 0x4) >> 2;
   unsigned Count = (OC[Offset] & 0x3);
 
   uint16_t GPRMask = (Link << (Prologue ? 14 : 15))
@@ -354,7 +375,7 @@ bool Decoder::opcode_11010Lxx(const uint8_t *OC, unsigned &Offset,
 
   SW.startLine() << format("0x%02x                ; %s ", OC[Offset],
                            Prologue ? "push" : "pop");
-  printRegisters(std::make_pair(GPRMask, 0));
+  printGPRMask(GPRMask);
   OS << '\n';
 
   ++Offset;
@@ -371,7 +392,7 @@ bool Decoder::opcode_11011Lxx(const uint8_t *OC, unsigned &Offset,
 
   SW.startLine() << format("0x%02x                ; %s.w ", OC[Offset],
                            Prologue ? "push" : "pop");
-  printRegisters(std::make_pair(GPRMask, 0));
+  printGPRMask(GPRMask);
   OS << '\n';
 
   ++Offset;
@@ -385,7 +406,7 @@ bool Decoder::opcode_11100xxx(const uint8_t *OC, unsigned &Offset,
 
   SW.startLine() << format("0x%02x                ; %s ", OC[Offset],
                            Prologue ? "vpush" : "vpop");
-  printRegisters(std::make_pair(0, VFPMask));
+  printVFPMask(VFPMask);
   OS << '\n';
 
   ++Offset;
@@ -407,12 +428,12 @@ bool Decoder::opcode_111010xx(const uint8_t *OC, unsigned &Offset,
 
 bool Decoder::opcode_1110110L(const uint8_t *OC, unsigned &Offset,
                               unsigned Length, bool Prologue) {
-  uint8_t GPRMask = ((OC[Offset + 0] & 0x01) << (Prologue ? 14 : 15))
-                  | ((OC[Offset + 1] & 0xff) << 0);
+  uint16_t GPRMask = ((OC[Offset + 0] & 0x01) << (Prologue ? 14 : 15))
+                   | ((OC[Offset + 1] & 0xff) << 0);
 
   SW.startLine() << format("0x%02x 0x%02x           ; %s ", OC[Offset + 0],
                            OC[Offset + 1], Prologue ? "push" : "pop");
-  printRegisters(std::make_pair(GPRMask, 0));
+  printGPRMask(GPRMask);
   OS << '\n';
 
   Offset += 2;
@@ -437,11 +458,13 @@ bool Decoder::opcode_11101110(const uint8_t *OC, unsigned &Offset,
 
 bool Decoder::opcode_11101111(const uint8_t *OC, unsigned &Offset,
                               unsigned Length, bool Prologue) {
-  assert(!Prologue && "may not be used in prologue");
-
   if (OC[Offset + 1] & 0xf0)
     SW.startLine() << format("0x%02x 0x%02x           ; reserved\n",
                              OC[Offset + 0], OC[Offset +  1]);
+  else if (Prologue)
+    SW.startLine()
+      << format("0x%02x 0x%02x           ; str.w lr, [sp, #-%u]!\n",
+                OC[Offset + 0], OC[Offset + 1], OC[Offset + 1] << 2);
   else
     SW.startLine()
       << format("0x%02x 0x%02x           ; ldr.w lr, [sp], #%u\n",
@@ -455,11 +478,11 @@ bool Decoder::opcode_11110101(const uint8_t *OC, unsigned &Offset,
                               unsigned Length, bool Prologue) {
   unsigned Start = (OC[Offset + 1] & 0xf0) >> 4;
   unsigned End = (OC[Offset + 1] & 0x0f) >> 0;
-  uint32_t VFPMask = ((1 << (End - Start)) - 1) << Start;
+  uint32_t VFPMask = ((1 << (End + 1 - Start)) - 1) << Start;
 
   SW.startLine() << format("0x%02x 0x%02x           ; %s ", OC[Offset + 0],
                            OC[Offset + 1], Prologue ? "vpush" : "vpop");
-  printRegisters(std::make_pair(0, VFPMask));
+  printVFPMask(VFPMask);
   OS << '\n';
 
   Offset += 2;
@@ -470,11 +493,11 @@ bool Decoder::opcode_11110110(const uint8_t *OC, unsigned &Offset,
                               unsigned Length, bool Prologue) {
   unsigned Start = (OC[Offset + 1] & 0xf0) >> 4;
   unsigned End = (OC[Offset + 1] & 0x0f) >> 0;
-  uint32_t VFPMask = ((1 << (End - Start)) - 1) << 16;
+  uint32_t VFPMask = ((1 << (End + 1 - Start)) - 1) << (16 + Start);
 
   SW.startLine() << format("0x%02x 0x%02x           ; %s ", OC[Offset + 0],
                            OC[Offset + 1], Prologue ? "vpush" : "vpop");
-  printRegisters(std::make_pair(0, VFPMask));
+  printVFPMask(VFPMask);
   OS << '\n';
 
   Offset += 2;
@@ -553,14 +576,14 @@ bool Decoder::opcode_11111100(const uint8_t *OC, unsigned &Offset,
 
 bool Decoder::opcode_11111101(const uint8_t *OC, unsigned &Offset,
                               unsigned Length, bool Prologue) {
-  SW.startLine() << format("0x%02x                ; b\n", OC[Offset]);
+  SW.startLine() << format("0x%02x                ; bx <reg>\n", OC[Offset]);
   ++Offset;
   return true;
 }
 
 bool Decoder::opcode_11111110(const uint8_t *OC, unsigned &Offset,
                               unsigned Length, bool Prologue) {
-  SW.startLine() << format("0x%02x                ; b.w\n", OC[Offset]);
+  SW.startLine() << format("0x%02x                ; b.w <target>\n", OC[Offset]);
   ++Offset;
   return true;
 }
@@ -948,7 +971,7 @@ bool Decoder::dumpXDataRecord(const COFFObjectFile &COFF,
 
   if (XData.E()) {
     ArrayRef<uint8_t> UC = XData.UnwindByteCode();
-    if (isAArch64 || !XData.F()) {
+    {
       ListScope PS(SW, "Prologue");
       decodeOpcodes(UC, 0, /*Prologue=*/true);
     }
@@ -971,8 +994,9 @@ bool Decoder::dumpXDataRecord(const COFFObjectFile &COFF,
       SW.printNumber("EpilogueStartIndex",
                      isAArch64 ? ES.EpilogueStartIndexAArch64()
                                : ES.EpilogueStartIndexARM());
-      if (ES.ES & ~0xffc3ffff)
-        SW.printNumber("ReservedBits", (ES.ES >> 18) & 0xF);
+      unsigned ReservedMask = isAArch64 ? 0xF : 0x3;
+      if ((ES.ES >> 18) & ReservedMask)
+        SW.printNumber("ReservedBits", (ES.ES >> 18) & ReservedMask);
 
       ListScope Opcodes(SW, "Opcodes");
       decodeOpcodes(XData.UnwindByteCode(),
@@ -1110,16 +1134,74 @@ bool Decoder::dumpPackedEntry(const object::COFFObjectFile &COFF,
 
   SW.printString("Function",
                  formatSymbol(FunctionName, FunctionAddress, FunctionOffset));
-  if (!isAArch64)
-    SW.printBoolean("Fragment",
-                    RF.Flag() == RuntimeFunctionFlag::RFF_PackedFragment);
+  SW.printBoolean("Fragment",
+                  RF.Flag() == RuntimeFunctionFlag::RFF_PackedFragment);
   SW.printNumber("FunctionLength", RF.FunctionLength());
   SW.startLine() << "ReturnType: " << RF.Ret() << '\n';
   SW.printBoolean("HomedParameters", RF.H());
-  SW.startLine() << "SavedRegisters: ";
-                 printRegisters(SavedRegisterMask(RF));
-  OS << '\n';
+  SW.printNumber("Reg", RF.Reg());
+  SW.printNumber("R", RF.R());
+  SW.printBoolean("LinkRegister", RF.L());
+  SW.printBoolean("Chaining", RF.C());
   SW.printNumber("StackAdjustment", StackAdjustment(RF) << 2);
+
+  {
+    ListScope PS(SW, "Prologue");
+
+    uint16_t GPRMask, VFPMask;
+    std::tie(GPRMask, VFPMask) = SavedRegisterMask(RF, /*Prologue=*/true);
+
+    if (StackAdjustment(RF) && !PrologueFolding(RF))
+      SW.startLine() << "sub sp, sp, #" << StackAdjustment(RF) * 4 << "\n";
+    if (VFPMask) {
+      SW.startLine() << "vpush ";
+      printVFPMask(VFPMask);
+      OS << "\n";
+    }
+    if (RF.C()) {
+      // Count the number of registers pushed below R11
+      int FpOffset = 4 * countPopulation(GPRMask & ((1U << 11) - 1));
+      if (FpOffset)
+        SW.startLine() << "add.w r11, sp, #" << FpOffset << "\n";
+      else
+        SW.startLine() << "mov r11, sp\n";
+    }
+    if (GPRMask) {
+      SW.startLine() << "push ";
+      printGPRMask(GPRMask);
+      OS << "\n";
+    }
+    if (RF.H())
+      SW.startLine() << "push {r0-r3}\n";
+  }
+
+  if (RF.Ret() != ReturnType::RT_NoEpilogue) {
+    ListScope PS(SW, "Epilogue");
+
+    uint16_t GPRMask, VFPMask;
+    std::tie(GPRMask, VFPMask) = SavedRegisterMask(RF, /*Prologue=*/false);
+
+    if (StackAdjustment(RF) && !EpilogueFolding(RF))
+      SW.startLine() << "add sp, sp, #" << StackAdjustment(RF) * 4 << "\n";
+    if (VFPMask) {
+      SW.startLine() << "vpop ";
+      printVFPMask(VFPMask);
+      OS << "\n";
+    }
+    if (GPRMask) {
+      SW.startLine() << "pop ";
+      printGPRMask(GPRMask);
+      OS << "\n";
+    }
+    if (RF.H()) {
+      if (RF.L() == 0 || RF.Ret() != ReturnType::RT_POP)
+        SW.startLine() << "add sp, sp, #16\n";
+      else
+        SW.startLine() << "ldr pc, [sp], #20\n";
+    }
+    if (RF.Ret() != ReturnType::RT_POP)
+      SW.startLine() << RF.Ret() << '\n';
+  }
 
   return true;
 }
@@ -1189,11 +1271,11 @@ bool Decoder::dumpPackedARM64Entry(const object::COFFObjectFile &COFF,
     SW.startLine() << format("sub sp, sp, #%d\n", LocSZ);
   }
   if (RF.H()) {
-    SW.startLine() << format("stp x6, x7, [sp, #%d]\n", IntSZ + FpSZ + 48);
-    SW.startLine() << format("stp x4, x5, [sp, #%d]\n", IntSZ + FpSZ + 32);
-    SW.startLine() << format("stp x2, x3, [sp, #%d]\n", IntSZ + FpSZ + 16);
+    SW.startLine() << format("stp x6, x7, [sp, #%d]\n", SavSZ - 16);
+    SW.startLine() << format("stp x4, x5, [sp, #%d]\n", SavSZ - 32);
+    SW.startLine() << format("stp x2, x3, [sp, #%d]\n", SavSZ - 48);
     if (RF.RegI() > 0 || RF.RegF() > 0 || RF.CR() == 1) {
-      SW.startLine() << format("stp x0, x1, [sp, #%d]\n", IntSZ + FpSZ);
+      SW.startLine() << format("stp x0, x1, [sp, #%d]\n", SavSZ - 64);
     } else {
       // This case isn't documented; if neither RegI nor RegF nor CR=1
       // have decremented the stack pointer by SavSZ, we need to do it here

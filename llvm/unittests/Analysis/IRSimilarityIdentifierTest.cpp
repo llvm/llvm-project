@@ -2619,6 +2619,29 @@ TEST(IRSimilarityIdentifier, CommutativeSimilarity) {
   }
 }
 
+// This test ensures that when the first instruction in a sequence is
+// a commutative instruction with the same value (mcomm_inst_same_val), but the
+// corresponding instruction (comm_inst_diff_val) is not, we mark the regions
+// and not similar.
+TEST(IRSimilarityIdentifier, CommutativeSameValueFirstMisMatch) {
+  StringRef ModuleString = R"(
+                          define void @v_1_0(i64 %v_33) {
+                            entry:
+                              %comm_inst_same_val = mul i64 undef, undef
+                              %add = add i64 %comm_inst_same_val, %v_33
+                              %comm_inst_diff_val = mul i64 0, undef
+                              %mul.i = add i64 %comm_inst_diff_val, %comm_inst_diff_val
+                              unreachable
+                            })";
+  LLVMContext Context;
+  std::unique_ptr<Module> M = makeLLVMModule(Context, ModuleString);
+
+  std::vector<std::vector<IRSimilarityCandidate>> SimilarityCandidates;
+  getSimilarities(*M, SimilarityCandidates);
+
+  ASSERT_TRUE(SimilarityCandidates.size() == 0);
+}
+
 // This test makes sure that intrinsic functions that are marked commutative
 // are still treated as non-commutative since they are function calls.
 TEST(IRSimilarityIdentifier, IntrinsicCommutative) {

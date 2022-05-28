@@ -235,6 +235,12 @@ def binop_left_undef_to_zero: GICombineRule<
          [{ return Helper.matchOperandIsUndef(*${root}, 1); }]),
   (apply [{ Helper.replaceInstWithConstant(*${root}, 0); }])>;
 
+def binop_right_undef_to_undef: GICombineRule<
+  (defs root:$root),
+  (match (wip_match_opcode G_SHL, G_ASHR, G_LSHR):$root,
+         [{ return Helper.matchOperandIsUndef(*${root}, 2); }]),
+  (apply [{ Helper.replaceInstWithUndef(*${root}); }])>;
+
 // Instructions where if any source operand is undef, the instruction can be
 // replaced with undef.
 def propagate_undef_any_op: GICombineRule<
@@ -885,10 +891,18 @@ def combine_fsub_fpext_fneg_fmul_to_fmad_or_fma: GICombineRule<
                                             *${root}, ${info}); }]),
   (apply [{ Helper.applyBuildFn(*${root}, ${info}); }])>;
 
+def combine_minmax_nan_matchinfo: GIDefMatchData<"unsigned">;
+def combine_minmax_nan: GICombineRule<
+  (defs root:$root, combine_minmax_nan_matchinfo:$info),
+  (match (wip_match_opcode G_FMINNUM, G_FMAXNUM, G_FMINIMUM, G_FMAXIMUM):$root,
+         [{ return Helper.matchCombineFMinMaxNaN(*${root}, ${info}); }]),
+  (apply [{ Helper.replaceSingleDefInstWithOperand(*${root}, ${info}); }])>;
+
 // FIXME: These should use the custom predicate feature once it lands.
 def undef_combines : GICombineGroup<[undef_to_fp_zero, undef_to_int_zero,
                                      undef_to_negative_one,
                                      binop_left_undef_to_zero,
+                                     binop_right_undef_to_undef,
                                      propagate_undef_any_op,
                                      propagate_undef_all_ops,
                                      propagate_undef_shuffle_mask,
@@ -903,7 +917,7 @@ def identity_combines : GICombineGroup<[select_same_val, right_identity_zero,
 
 def const_combines : GICombineGroup<[constant_fp_op, const_ptradd_to_i2p,
                                      overlapping_and, mulo_by_2, mulo_by_0,
-                                     addo_by_0]>;
+                                     addo_by_0, combine_minmax_nan]>;
 
 def known_bits_simplifications : GICombineGroup<[
   redundant_and, redundant_sext_inreg, redundant_or, urem_pow2_to_mask,

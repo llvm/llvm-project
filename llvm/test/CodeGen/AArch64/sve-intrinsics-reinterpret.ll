@@ -102,7 +102,22 @@ define <vscale x 16 x i1> @reinterpret_cmpgt(<vscale x 8 x i1> %p, <vscale x 8 x
   ret <vscale x 16 x i1> %2
 }
 
+; The first reinterpret should prevent the second one from being simplified as a nop
+define <vscale x 16 x i1> @chained_reinterpret() {
+; CHECK-LABEL: chained_reinterpret:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.b
+; CHECK-NEXT:    ptrue p1.d
+; CHECK-NEXT:    and p0.b, p0/z, p0.b, p1.b
+; CHECK-NEXT:    ret
+  %in = tail call <vscale x 16 x i1> @llvm.aarch64.sve.ptrue.nxv16i1(i32 31)
+  %cast2 = call <vscale x 2 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv2i1(<vscale x 16 x i1> %in)
+  %out = tail call <vscale x 16 x i1> @llvm.aarch64.sve.convert.to.svbool.nxv2i1(<vscale x 2 x i1> %cast2)
+  ret <vscale x 16 x i1> %out
+}
+
 declare <vscale x 8 x i1> @llvm.aarch64.sve.ptrue.nxv8i1(i32 immarg)
+declare <vscale x 16 x i1> @llvm.aarch64.sve.ptrue.nxv16i1(i32 immarg)
 declare <vscale x 8 x i1> @llvm.aarch64.sve.cmpgt.nxv8i16(<vscale x 8 x i1>, <vscale x 8 x i16>, <vscale x 8 x i16>)
 
 declare <vscale x 16 x i1> @llvm.aarch64.sve.convert.to.svbool.nxv16i1(<vscale x 16 x i1>)

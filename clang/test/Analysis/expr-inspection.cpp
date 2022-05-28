@@ -18,6 +18,8 @@ void foo(int x, unsigned y) {
   clang_analyzer_express(x); // expected-warning{{Unable to express}}
 
   clang_analyzer_denote(x, "$x");
+  clang_analyzer_express(-x); // expected-warning{{-$x}}
+
   clang_analyzer_denote(y, "$y");
   clang_analyzer_express(x + y); // expected-warning{{$x + $y}}
 

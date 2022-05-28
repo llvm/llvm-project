@@ -81,11 +81,19 @@ cc_library(
 )
 
 cc_library(
+    name = "__support_cpp_uint",
+    hdrs = [
+        "src/__support/CPP/UInt.h",
+    ],
+    deps = [":libc_root","__support_cpp_array"],
+)
+
+cc_library(
     name = "__support_cpp_type_traits",
     hdrs = [
         "src/__support/CPP/TypeTraits.h",
     ],
-    deps = [":libc_root"],
+    deps = [":libc_root","__support_cpp_uint"],
 )
 
 cc_library(
@@ -753,16 +761,6 @@ no_sanitize_features = [
 ]
 
 cc_library(
-    name = "string_utils",
-    hdrs = ["src/string/string_utils.h"],
-    deps = [
-        ":__support_common",
-        ":__support_cpp_bitset",
-        ":libc_root",
-    ],
-)
-
-cc_library(
     name = "string_memory_utils",
     hdrs = [
         "src/string/memory_utils/elements.h",
@@ -780,6 +778,17 @@ cc_library(
         ":__support_common",
         ":__support_cpp_bit",
         ":libc_root",
+    ],
+)
+
+cc_library(
+    name = "string_utils",
+    hdrs = ["src/string/string_utils.h"],
+    deps = [
+        ":__support_common",
+        ":__support_cpp_bitset",
+        ":libc_root",
+        ":string_memory_utils"
     ],
 )
 

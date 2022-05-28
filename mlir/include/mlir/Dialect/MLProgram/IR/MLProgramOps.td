@@ -97,6 +97,101 @@ def MLProgram_FuncOp : MLProgram_Op<"func", [
 }
 
 //===----------------------------------------------------------------------===//
+// GlobalOp
+//===----------------------------------------------------------------------===//
+
+def MLProgram_GlobalOp : MLProgram_Op<"global", [
+    Symbol
+  ]> {
+  let summary = "Module level declaration of a global variable";
+  let description = [{
+    Declares a named global variable (or constant).
+
+    A global contains a value of a specified type which can be accessed at
+    runtime via appropriate load/store operations. It can be mutable or
+    constant, optionally taking an initial value or declared as
+    extern (in which case, the initial value is found in external storage
+    by symbol name).
+
+    Generally, the type of the global and the type of the initial value
+    will be the same. However, for type hierarchies which can have a more
+    generalized bounding type that can be assigned from a narrow type, this
+    is allowed (but not verified).
+
+    Examples:
+
+    ```mlir
+    // Constant global.
+    ml_program.global @foobar(dense<4> : tensor<4xi32>) : tensor<?xi32>
+
+    // Constant with external linkage.
+    ml_program.global mutable @foobar(#ml_program.extern<tensor<4xi32>>)
+      : tensor<?xi32>
+
+    // Mutable global with an undefined initial value.
+    ml_program.global mutable @foobar : tensor<?xi32>
+    ```
+  }];
+
+  let arguments = (ins
+    SymbolNameAttr:$sym_name,
+    TypeAttr:$type,
+    UnitAttr:$is_mutable,
+    OptionalAttr<AnyAttr>:$value,
+    OptionalAttr<StrAttr>:$sym_visibility
+  );
+
+  let assemblyFormat = [{
+    custom<SymbolVisibility>($sym_visibility)
+    (`mutable` $is_mutable^)?
+    $sym_name ``
+    custom<TypedInitialValue>($type, $value)
+    attr-dict
+  }];
+
+  let hasVerifier = 1;
+}
+
+//===----------------------------------------------------------------------===//
+// GlobalLoadConstOp
+//===----------------------------------------------------------------------===//
+
+def MLProgram_GlobalLoadConstOp : MLProgram_Op<"global_load_const", [
+    NoSideEffect,
+    DeclareOpInterfaceMethods<SymbolUserOpInterface>
+  ]> {
+  let summary = "Direct load a constant value from a global";
+  let description = [{
+    Loads a constant (immutable) value from a global directly by symbol.
+
+    This op is only legal for globals that are not mutable and exists because
+    such a load can be considered to have no side effects.
+
+    Example:
+
+    ```mlir
+    %0 = ml_program.global_load_const @foobar : tensor<?xi32>
+    ```
+  }];
+
+  let arguments = (ins
+    FlatSymbolRefAttr:$global
+  );
+  let results = (outs
+    AnyType:$result
+  );
+
+  let assemblyFormat = [{
+    $global attr-dict `:` type($result)
+  }];
+
+  let extraClassDeclaration = [{
+    /// Gets the corresponding GlobalOp (or nullptr).
+    GlobalOp getGlobalOp(SymbolTableCollection &symbolTable);
+  }];
+}
+
+//===----------------------------------------------------------------------===//
 // SubgraphOp
 //===----------------------------------------------------------------------===//
 

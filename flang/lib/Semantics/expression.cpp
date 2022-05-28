@@ -1073,7 +1073,8 @@ MaybeExpr ExpressionAnalyzer::Analyze(const parser::StructureComponent &sc) {
     MiscKind kind{details->kind()};
     if (kind == MiscKind::ComplexPartRe || kind == MiscKind::ComplexPartIm) {
       if (auto *zExpr{std::get_if<Expr<SomeComplex>>(&base->u)}) {
-        if (std::optional<DataRef> dataRef{ExtractDataRef(std::move(*zExpr))}) {
+        if (std::optional<DataRef> dataRef{ExtractDataRef(*zExpr)}) {
+          // Represent %RE/%IM as a designator
           Expr<SomeReal> realExpr{common::visit(
               [&](const auto &z) {
                 using PartType = typename ResultType<decltype(z)>::Part;
@@ -1920,7 +1921,10 @@ auto ExpressionAnalyzer::AnalyzeProcedureComponentRef(
               }};
           auto pair{ResolveGeneric(*sym, arguments, adjustment)};
           sym = pair.first;
-          if (!sym) {
+          if (sym) {
+            // re-resolve the name to the specific binding
+            sc.component.symbol = const_cast<Symbol *>(sym);
+          } else {
             EmitGenericResolutionError(*sc.component.symbol, pair.second);
             return std::nullopt;
           }
@@ -2183,6 +2187,10 @@ auto ExpressionAnalyzer::GetCalleeAndArguments(const parser::Name &name,
         *symbol, arguments, noAdjustment, mightBeStructureConstructor)};
     resolution = pair.first;
     dueToNullActual = pair.second;
+    if (resolution) {
+      // re-resolve name to the specific procedure
+      name.symbol = const_cast<Symbol *>(resolution);
+    }
   }
   if (!resolution) {
     // Not generic, or no resolution; may be intrinsic
@@ -2265,6 +2273,7 @@ void ExpressionAnalyzer::CheckForBadRecursion(
         msg = Say("NON_RECURSIVE procedure '%s' cannot call itself"_err_en_US,
             callSite);
       } else if (IsAssumedLengthCharacter(proc) && IsExternal(proc)) {
+        // TODO: Also catch assumed PDT type parameters
         msg = Say( // 15.6.2.1(3)
             "Assumed-length CHARACTER(*) function '%s' cannot call itself"_err_en_US,
             callSite);
@@ -2515,18 +2524,21 @@ std::optional<characteristics::Procedure> ExpressionAnalyzer::CheckCall(
           DEREF(proc.GetSymbol()).name());
     }
     // Checks for ASSOCIATED() are done in intrinsic table processing
-    bool procIsAssociated{false};
-    if (const SpecificIntrinsic *
-        specificIntrinsic{proc.GetSpecificIntrinsic()}) {
-      if (specificIntrinsic->name == "associated") {
-        procIsAssociated = true;
-      }
-    }
+    const SpecificIntrinsic *specificIntrinsic{proc.GetSpecificIntrinsic()};
+    bool procIsAssociated{
+        specificIntrinsic && specificIntrinsic->name == "associated"};
     if (!procIsAssociated) {
+      const Symbol *procSymbol{proc.GetSymbol()};
+      bool procIsDummy{procSymbol && IsDummy(*procSymbol)};
+      if (chars->functionResult &&
+          chars->functionResult->IsAssumedLengthCharacter() &&
+          !specificIntrinsic && !procIsDummy) {
+        Say(callSite,
+            "Assumed-length character function must be defined with a length to be called"_err_en_US);
+      }
       semantics::CheckArguments(*chars, arguments, GetFoldingContext(),
           context_.FindScope(callSite), treatExternalAsImplicit,
-          proc.GetSpecificIntrinsic());
-      const Symbol *procSymbol{proc.GetSymbol()};
+          specificIntrinsic);
       if (procSymbol && !IsPureProcedure(*procSymbol)) {
         if (const semantics::Scope *
             pure{semantics::FindPureProcedureContaining(

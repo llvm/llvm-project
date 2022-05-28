@@ -120,6 +120,7 @@ DUMMY_FUNCTION_PASS("indirectbr-expand", IndirectBrExpandPass, ())
 DUMMY_FUNCTION_PASS("cfguard-dispatch", CFGuardDispatchPass, ())
 DUMMY_FUNCTION_PASS("cfguard-check", CFGuardCheckPass, ())
 DUMMY_FUNCTION_PASS("gc-info-printer", GCInfoPrinterPass, ())
+DUMMY_FUNCTION_PASS("select-optimize", SelectOptimizePass, ())
 #undef DUMMY_FUNCTION_PASS
 
 #ifndef DUMMY_MODULE_PASS
@@ -198,6 +199,5 @@ DUMMY_MACHINE_FUNCTION_PASS("regbankselect", RegBankSelectPass, ())
 DUMMY_MACHINE_FUNCTION_PASS("instruction-select", InstructionSelectPass, ())
 DUMMY_MACHINE_FUNCTION_PASS("reset-machine-function", ResetMachineFunctionPass, ())
 DUMMY_MACHINE_FUNCTION_PASS("machineverifier", MachineVerifierPass, ())
-DUMMY_MACHINE_FUNCTION_PASS("machine-cycles", MachineCycleInfoWrapperPass, ())
 DUMMY_MACHINE_FUNCTION_PASS("print-machine-cycles", MachineCycleInfoPrinterPass, ())
 #undef DUMMY_MACHINE_FUNCTION_PASS

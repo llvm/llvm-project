@@ -61,7 +61,7 @@ __attribute__((objc_non_runtime_protocol)) @protocol Beta<B>
 // NONFRAGILE-NOT: _OBJC_CLASS_PROTOCOLS_$_NonRuntimeImplementer
 // FRAGILE-NOT: OBJC_CLASS_NAME_.{{.*}}"Runtime\00"
 // FRAGILE-NOT: OBJC_PROTOCOL_NonRuntime
-// FRAGILE_NOT: OBJC_PROTOCOLS_NonRuntimeImplementer
+// FRAGILE-NOT: OBJC_PROTOCOLS_NonRuntimeImplementer
 // GNU-NOT: private unnamed_addr constant {{.*}} c"NonRuntimeProtocol\00"
 // GNU-NOT: @.objc_protocol {{.*}}
 // GNU2-NOT: private unnamed_addr constant {{.*}} c"NonRuntimeProtocol\00"

@@ -158,7 +158,7 @@ func.func @block_arg_no_type() {
 
 func.func @block_arg_no_close_paren() {
 ^bb42:
-  cf.br ^bb2( // expected-error@+1 {{expected ':'}}
+  cf.br ^bb2( // expected-error {{expected ':'}}
   return
 }
 
@@ -245,7 +245,7 @@ func.func @malformed_for_to() {
 
 func.func @incomplete_for() {
   affine.for %i = 1 to 10 step 2
-}        // expected-error {{expected '{' to begin a region}}
+}        // expected-error @-1 {{expected '{' to begin a region}}
 
 // -----
 
@@ -273,6 +273,13 @@ func.func @for_negative_stride() {
 
 func.func @non_operation() {
   test.asd   // expected-error {{custom op 'test.asd' is unknown}}
+}
+
+// -----
+
+func.func @non_operation() {
+  // expected-error@+1 {{custom op 'asd' is unknown (tried 'func.asd' as well)}}
+  asd
 }
 
 // -----
@@ -826,7 +833,7 @@ func.func @mixed_named_arguments(f32,
 func.func @f(f32) {
 ^bb0(%a : f32):
   %18 = arith.cmpi slt, %idx, %idx : index
-  tensor<42 x index  // expected-error {{custom op 'func.tensor' is unknown}}
+  tensor<42 x index  // expected-error {{custom op 'tensor' is unknown (tried 'func.tensor' as well)}}
   return
 }
 
@@ -874,20 +881,16 @@ func.func @type_alias_unknown(!unknown_alias) -> () { // expected-error {{undefi
 
 // -----
 
-!missing_eq_alias type i32 // expected-error {{expected '=' in type alias definition}}
+!missing_eq_alias i32 // expected-error {{expected '=' in type alias definition}}
 
 // -----
 
-!missing_kw_type_alias = i32 // expected-error {{expected 'type' in type alias definition}}
+!missing_type_alias = // expected-error {{expected non-function type}}
 
 // -----
 
-!missing_type_alias = type // expected-error@+1 {{expected non-function type}}
-
-// -----
-
-!redef_alias = type i32
-!redef_alias = type i32 // expected-error {{redefinition of type alias id 'redef_alias'}}
+!redef_alias = i32
+!redef_alias = i32 // expected-error {{redefinition of type alias id 'redef_alias'}}
 
 // -----
 
@@ -1099,7 +1102,7 @@ func.func @multi_result_missing_count() {
 // -----
 
 func.func @multi_result_zero_count() {
-  // expected-error@+1 {{expected named operation to have atleast 1 result}}
+  // expected-error@+1 {{expected named operation to have at least 1 result}}
   %0:0 = "foo" () : () -> (i32, i32)
   return
 }
@@ -1651,6 +1654,50 @@ func.func @foo() {} // expected-error {{expected non-empty function body}}
 
 // -----
 
-// expected-error@+2 {{expected ']'}}
+// expected-error@+1 {{expected ']'}}
 "f"() { b = [@m:
+
+// -----
+
+// This makes sure we emit an error at the end of the correct line, the : is
+// expected at the end of foo, not on the return line.
+func.func @error_at_end_of_line() {
+  // expected-error@+1 {{expected ':' followed by operation type}}
+  %0 = "foo"() 
+  return
+}
+
+// -----
+
+// This makes sure we emit an error at the end of the correct line, the : is
+// expected at the end of foo, not on the return line.
+func.func @error_at_end_of_line() {
+  %0 = "foo"() 
+  // expected-error@-1 {{expected ':' followed by operation type}}
+
+  // This is a comment and so is the thing above.
+  return
+}
+
+// -----
+
+// This makes sure we emit an error at the end of the correct line, the : is
+// expected at the end of foo, not on the return line.
+// This shows that it backs up to before the comment.
+func.func @error_at_end_of_line() {
+  %0 = "foo"()  // expected-error {{expected ':' followed by operation type}}
+  return
+}
+
+// -----
+
+@foo   // expected-error {{expected operation name in quotes}}
+
+// -----
+
+func.func @func() {
+  %c0 = arith.constant  // expected-error {{expected attribute value}}
+
+  %x = arith.constant 1 : i32
+}
 

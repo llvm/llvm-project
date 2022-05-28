@@ -97,6 +97,7 @@ private:
   bool selectG_AND_OR_XOR(MachineInstr &I) const;
   bool selectG_ADD_SUB(MachineInstr &I) const;
   bool selectG_UADDO_USUBO_UADDE_USUBE(MachineInstr &I) const;
+  bool selectG_AMDGPU_MAD_64_32(MachineInstr &I) const;
   bool selectG_EXTRACT(MachineInstr &I) const;
   bool selectG_MERGE_VALUES(MachineInstr &I) const;
   bool selectG_UNMERGE_VALUES(MachineInstr &I) const;
@@ -143,6 +144,8 @@ private:
   bool selectAMDGPU_BUFFER_ATOMIC_FADD(MachineInstr &I) const;
   bool selectGlobalAtomicFadd(MachineInstr &I, MachineOperand &AddrOp,
                               MachineOperand &DataOp) const;
+  bool selectBufferLoadLds(MachineInstr &MI) const;
+  bool selectGlobalLoadLds(MachineInstr &MI) const;
   bool selectBVHIntrinsic(MachineInstr &I) const;
   bool selectSMFMACIntrin(MachineInstr &I) const;
   bool selectWaveAddress(MachineInstr &I) const;

@@ -100,7 +100,12 @@ protected:
   void updateBodySamplesforFunctionProfile(FunctionSamples &FunctionProfile,
                                            const SampleContextFrame &LeafLoc,
                                            uint64_t Count);
+
+  void updateFunctionSamples();
+
   void updateTotalSamples();
+
+  void updateCallsiteSamples();
 
   StringRef getCalleeNameForOffset(uint64_t TargetOffset);
 
@@ -121,6 +126,8 @@ protected:
   uint64_t ColdCountThreshold;
 
   ProfiledBinary *Binary = nullptr;
+
+  std::unique_ptr<ProfileSummary> Summary;
 
   // Used by SampleProfileWriter
   SampleProfileMap ProfileMap;

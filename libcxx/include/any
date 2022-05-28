@@ -664,6 +664,7 @@ _RetType __pointer_or_func_cast(void*, /*IsFunction*/true_type) noexcept {
 }
 
 template <class _ValueType>
+_LIBCPP_HIDE_FROM_ABI
 add_pointer_t<_ValueType>
 any_cast(any * __any) _NOEXCEPT
 {

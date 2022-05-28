@@ -318,9 +318,8 @@ define <vscale x 1 x i8> @extract_nxv8i8_nxv1i8_7(<vscale x 8 x i8> %vec) {
 ; CHECK-LABEL: extract_nxv8i8_nxv1i8_7:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    csrr a0, vlenb
-; CHECK-NEXT:    srli a0, a0, 3
-; CHECK-NEXT:    slli a1, a0, 3
-; CHECK-NEXT:    sub a0, a1, a0
+; CHECK-NEXT:    srli a1, a0, 3
+; CHECK-NEXT:    sub a0, a0, a1
 ; CHECK-NEXT:    vsetvli a1, zero, e8, m1, ta, mu
 ; CHECK-NEXT:    vslidedown.vx v8, v8, a0
 ; CHECK-NEXT:    ret
@@ -482,10 +481,10 @@ define <vscale x 6 x half> @extract_nxv6f16_nxv12f16_6(<vscale x 12 x half> %in)
 ; CHECK-NEXT:    vsetvli a1, zero, e16, m1, ta, mu
 ; CHECK-NEXT:    vslidedown.vx v14, v10, a0
 ; CHECK-NEXT:    vslidedown.vx v12, v9, a0
-; CHECK-NEXT:    vsetvli zero, a0, e16, m1, ta, mu
+; CHECK-NEXT:    vsetvli zero, a0, e16, m1, tu, mu
 ; CHECK-NEXT:    vslideup.vi v13, v14, 0
 ; CHECK-NEXT:    add a1, a0, a0
-; CHECK-NEXT:    vsetvli zero, a1, e16, m1, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e16, m1, tu, mu
 ; CHECK-NEXT:    vslideup.vx v12, v10, a0
 ; CHECK-NEXT:    vmv2r.v v8, v12
 ; CHECK-NEXT:    ret

@@ -381,13 +381,24 @@ void ProfileGeneratorBase::updateBodySamplesforFunctionProfile(
 }
 
 void ProfileGeneratorBase::updateTotalSamples() {
-  if (!UpdateTotalSamples)
-    return;
-
   for (auto &Item : ProfileMap) {
     FunctionSamples &FunctionProfile = Item.second;
     FunctionProfile.updateTotalSamples();
   }
+}
+
+void ProfileGeneratorBase::updateCallsiteSamples() {
+  for (auto &Item : ProfileMap) {
+    FunctionSamples &FunctionProfile = Item.second;
+    FunctionProfile.updateCallsiteSamples();
+  }
+}
+
+void ProfileGeneratorBase::updateFunctionSamples() {
+  updateCallsiteSamples();
+
+  if (UpdateTotalSamples)
+    updateTotalSamples();
 }
 
 void ProfileGeneratorBase::collectProfiledFunctions() {
@@ -491,7 +502,7 @@ void ProfileGenerator::generateLineNumBasedProfile() {
   // Fill in boundary sample counts as well as call site samples for calls
   populateBoundarySamplesForAllFunctions(SC.BranchCounter);
 
-  updateTotalSamples();
+  updateFunctionSamples();
 }
 
 void ProfileGenerator::generateProbeBasedProfile() {
@@ -505,7 +516,7 @@ void ProfileGenerator::generateProbeBasedProfile() {
   // Fill in boundary sample counts as well as call site samples for calls
   populateBoundarySamplesWithProbesForAllFunctions(SC.BranchCounter);
 
-  updateTotalSamples();
+  updateFunctionSamples();
 }
 
 void ProfileGenerator::populateBodySamplesWithProbesForAllFunctions(
@@ -785,7 +796,7 @@ void CSProfileGenerator::generateLineNumBasedProfile() {
   // body sample.
   populateInferredFunctionSamples();
 
-  updateTotalSamples();
+  updateFunctionSamples();
 }
 
 void CSProfileGenerator::populateBodySamplesForFunction(
@@ -925,8 +936,7 @@ void CSProfileGenerator::postProcessProfiles() {
   // Run global pre-inliner to adjust/merge context profile based on estimated
   // inline decisions.
   if (EnableCSPreInliner) {
-    CSPreInliner(ProfileMap, *Binary, HotCountThreshold, ColdCountThreshold)
-        .run();
+    CSPreInliner(ProfileMap, *Binary, Summary.get()).run();
     // Turn off the profile merger by default unless it is explicitly enabled.
     if (!CSProfMergeColdContext.getNumOccurrences())
       CSProfMergeColdContext = false;
@@ -956,7 +966,7 @@ void CSProfileGenerator::postProcessProfiles() {
 
 void ProfileGeneratorBase::computeSummaryAndThreshold() {
   SampleProfileSummaryBuilder Builder(ProfileSummaryBuilder::DefaultCutoffs);
-  auto Summary = Builder.computeSummaryForProfiles(ProfileMap);
+  Summary = Builder.computeSummaryForProfiles(ProfileMap);
   HotCountThreshold = ProfileSummaryBuilder::getHotCountThreshold(
       (Summary->getDetailedSummary()));
   ColdCountThreshold = ProfileSummaryBuilder::getColdCountThreshold(

@@ -619,11 +619,10 @@ public:
 
     auto addInstrOperands = [&](const MCInst &Instr) {
       // Update Uses table
-      for (unsigned OpNum = 0, OpEnd = MCPlus::getNumPrimeOperands(Instr);
-           OpNum != OpEnd; ++OpNum) {
-        if (!Instr.getOperand(OpNum).isReg())
+      for (const MCOperand &Operand : MCPlus::primeOperands(Instr)) {
+        if (!Operand.isReg())
           continue;
-        unsigned Reg = Instr.getOperand(OpNum).getReg();
+        unsigned Reg = Operand.getReg();
         MCInst *AliasInst = RegAliasTable[Reg];
         Uses[&Instr].push_back(AliasInst);
         LLVM_DEBUG({
@@ -656,12 +655,10 @@ public:
       getWrittenRegs(Instr, Regs);
 
       // Update register definitions after this point
-      int Idx = Regs.find_first();
-      while (Idx != -1) {
+      for (int Idx : Regs.set_bits()) {
         RegAliasTable[Idx] = &Instr;
         LLVM_DEBUG(dbgs() << "Setting reg " << Idx
                           << " def to current instr.\n");
-        Idx = Regs.find_next(Idx);
       }
 
       TerminatorSeen = isTerminator(Instr);
@@ -766,6 +763,7 @@ public:
     assert(Adrp->getOperand(1).isImm() && "Unexpected adrp operand");
     bool Ret = evaluateMemOperandTarget(*Adrp, Base, AdrpPC, InstSize);
     assert(Ret && "Failed to evaluate adrp");
+    (void)Ret;
 
     return Base + Offset;
   }

@@ -142,7 +142,7 @@ static_library("Host") {
   #   list(APPEND EXTRA_LIBS ${CMAKE_DL_LIBS})
   # endif()
   # if (LLDB_ENABLE_LIBEDIT)
-  #   list(APPEND EXTRA_LIBS ${LibEdit_LIBRARIES})
+  #   list(APPEND EXTRA_LIBS LibEdit::LibEdit)
   # endif()
   # if (LLDB_ENABLE_LZMA)
   #   list(APPEND EXTRA_LIBS ${LIBLZMA_LIBRARIES})

@@ -76,6 +76,9 @@ private:
   std::optional<std::string> bindName_;
 };
 
+// A subroutine or function definition, or a subprogram interface defined
+// in an INTERFACE block as part of the definition of a dummy procedure
+// or a procedure pointer (with just POINTER).
 class SubprogramDetails : public WithBindName {
 public:
   bool isFunction() const { return result_ != nullptr; }
@@ -134,16 +137,10 @@ public:
   SubprogramNameDetails() = delete;
   SubprogramKind kind() const { return kind_; }
   ProgramTree &node() const { return *node_; }
-  bool isEntryStmt() const { return isEntryStmt_; }
-  SubprogramNameDetails &set_isEntryStmt(bool yes = true) {
-    isEntryStmt_ = yes;
-    return *this;
-  }
 
 private:
   SubprogramKind kind_;
   common::Reference<ProgramTree> node_;
-  bool isEntryStmt_{false};
 };
 
 // A name from an entity-decl -- could be object or function.
@@ -244,7 +241,9 @@ private:
   std::optional<SourceName> passName_;
 };
 
-// A procedure pointer, dummy procedure, or external procedure
+// A procedure pointer (other than one defined with POINTER and an
+// INTERFACE block), a dummy procedure (without an INTERFACE but with
+// EXTERNAL or use in a procedure reference), or external procedure.
 class ProcEntityDetails : public EntityDetails, public WithPassArg {
 public:
   ProcEntityDetails() = default;

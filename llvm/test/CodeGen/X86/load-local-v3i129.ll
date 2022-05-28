@@ -7,12 +7,14 @@ define void @_start() nounwind {
 ; FAST-SHLD:       # %bb.0: # %Entry
 ; FAST-SHLD-NEXT:    movq -40(%rsp), %rax
 ; FAST-SHLD-NEXT:    movq -32(%rsp), %rcx
-; FAST-SHLD-NEXT:    shrdq $2, %rcx, %rax
+; FAST-SHLD-NEXT:    movq %rcx, %rdx
+; FAST-SHLD-NEXT:    shlq $62, %rdx
 ; FAST-SHLD-NEXT:    shrq $2, %rcx
-; FAST-SHLD-NEXT:    leaq 1(,%rax,4), %rdx
-; FAST-SHLD-NEXT:    movq %rdx, -40(%rsp)
-; FAST-SHLD-NEXT:    shrdq $62, %rcx, %rax
-; FAST-SHLD-NEXT:    movq %rax, -32(%rsp)
+; FAST-SHLD-NEXT:    shldq $2, %rdx, %rcx
+; FAST-SHLD-NEXT:    andq $-4, %rax
+; FAST-SHLD-NEXT:    orq $1, %rax
+; FAST-SHLD-NEXT:    movq %rax, -40(%rsp)
+; FAST-SHLD-NEXT:    movq %rcx, -32(%rsp)
 ; FAST-SHLD-NEXT:    orq $-2, -56(%rsp)
 ; FAST-SHLD-NEXT:    movq $-1, -48(%rsp)
 ; FAST-SHLD-NEXT:    retq
@@ -20,17 +22,9 @@ define void @_start() nounwind {
 ; SLOW-SHLD-LABEL: _start:
 ; SLOW-SHLD:       # %bb.0: # %Entry
 ; SLOW-SHLD-NEXT:    movq -40(%rsp), %rax
-; SLOW-SHLD-NEXT:    movq -32(%rsp), %rcx
-; SLOW-SHLD-NEXT:    shrq $2, %rax
-; SLOW-SHLD-NEXT:    movq %rcx, %rdx
-; SLOW-SHLD-NEXT:    shlq $62, %rdx
-; SLOW-SHLD-NEXT:    orq %rax, %rdx
-; SLOW-SHLD-NEXT:    andq $-4, %rcx
-; SLOW-SHLD-NEXT:    leaq 1(,%rdx,4), %rax
+; SLOW-SHLD-NEXT:    andq $-4, %rax
+; SLOW-SHLD-NEXT:    orq $1, %rax
 ; SLOW-SHLD-NEXT:    movq %rax, -40(%rsp)
-; SLOW-SHLD-NEXT:    shrq $62, %rdx
-; SLOW-SHLD-NEXT:    orq %rcx, %rdx
-; SLOW-SHLD-NEXT:    movq %rdx, -32(%rsp)
 ; SLOW-SHLD-NEXT:    orq $-2, -56(%rsp)
 ; SLOW-SHLD-NEXT:    movq $-1, -48(%rsp)
 ; SLOW-SHLD-NEXT:    retq

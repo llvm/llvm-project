@@ -2,34 +2,27 @@
 cmake_minimum_required(VERSION 3.13.4)
 project(Runtimes C CXX ASM)
 
-set(LLVM_ALL_RUNTIMES "compiler-rt;libc;libcxx;libcxxabi;libunwind;openmp")
+# Add path for custom and the LLVM build's modules to the CMake module path.
+set(LLVM_COMMON_CMAKE_UTILS "${CMAKE_CURRENT_SOURCE_DIR}/../cmake")
+list(INSERT CMAKE_MODULE_PATH 0
+  "${CMAKE_CURRENT_SOURCE_DIR}/cmake"
+  "${CMAKE_CURRENT_SOURCE_DIR}/cmake/modules"
+  "${LLVM_COMMON_CMAKE_UTILS}"
+  "${LLVM_COMMON_CMAKE_UTILS}/Modules"
+  "${CMAKE_CURRENT_SOURCE_DIR}/../llvm/cmake"
+  "${CMAKE_CURRENT_SOURCE_DIR}/../llvm/cmake/modules"
+)
+
+# We order libraries to mirror roughly how they are layered, except that compiler-rt can depend
+# on libc++, so we put it after.
+set(LLVM_ALL_RUNTIMES "libc;libunwind;libcxxabi;libcxx;compiler-rt;openmp")
 set(LLVM_ENABLE_RUNTIMES "" CACHE STRING
   "Semicolon-separated list of runtimes to build (${LLVM_ALL_RUNTIMES}), or \"all\".")
 if(LLVM_ENABLE_RUNTIMES STREQUAL "all" )
   set(LLVM_ENABLE_RUNTIMES ${LLVM_ALL_RUNTIMES})
 endif()
-
-# Some of the runtimes will conditionally use the compiler-rt sanitizers.
-# To make this work smoothly, we ensure that compiler-rt is added first in
-# the list of sub-projects. This allows other sub-projects to have checks
-# like `if(TARGET asan)` to enable building with asan.
-if (compiler-rt IN_LIST LLVM_ENABLE_RUNTIMES)
-  list(REMOVE_ITEM LLVM_ENABLE_RUNTIMES compiler-rt)
-  if(NOT DEFINED LLVM_BUILD_COMPILER_RT OR LLVM_BUILD_COMPILER_RT)
-    list(PREPEND LLVM_ENABLE_RUNTIMES compiler-rt)
-  endif()
-endif()
-
-# If both libc++ and libc++abi are being built, always configure libc++abi before libc++.
-# This allows libc++ to depend on targets set up by libc++abi when it needs to.
-if (libcxx IN_LIST LLVM_ENABLE_RUNTIMES AND libcxxabi IN_LIST LLVM_ENABLE_RUNTIMES)
-  list(FIND LLVM_ENABLE_RUNTIMES libcxx _libcxx_index)
-  list(FIND LLVM_ENABLE_RUNTIMES libcxxabi _libcxxabi_index)
-  if (_libcxx_index LESS _libcxxabi_index)
-    list(TRANSFORM LLVM_ENABLE_RUNTIMES REPLACE "^libcxx$" "libcxxabi" AT ${_libcxx_index})
-    list(TRANSFORM LLVM_ENABLE_RUNTIMES REPLACE "^libcxxabi$" "libcxx" AT ${_libcxxabi_index})
-  endif()
-endif()
+include(SortSubset)
+sort_subset("${LLVM_ALL_RUNTIMES}" "${LLVM_ENABLE_RUNTIMES}" LLVM_ENABLE_RUNTIMES)
 
 foreach(proj ${LLVM_ENABLE_RUNTIMES})
   set(proj_dir "${CMAKE_CURRENT_SOURCE_DIR}/../${proj}")
@@ -49,18 +42,6 @@ endfunction()
 
 find_package(LLVM PATHS "${LLVM_BINARY_DIR}" NO_DEFAULT_PATH NO_CMAKE_FIND_ROOT_PATH)
 find_package(Clang PATHS "${LLVM_BINARY_DIR}" NO_DEFAULT_PATH NO_CMAKE_FIND_ROOT_PATH)
-
-set(LLVM_COMMON_CMAKE_UTILS "${CMAKE_CURRENT_SOURCE_DIR}/../cmake")
-
-# Add path for custom and the LLVM build's modules to the CMake module path.
-list(INSERT CMAKE_MODULE_PATH 0
-  "${CMAKE_CURRENT_SOURCE_DIR}/cmake"
-  "${CMAKE_CURRENT_SOURCE_DIR}/cmake/modules"
-  "${LLVM_COMMON_CMAKE_UTILS}"
-  "${LLVM_COMMON_CMAKE_UTILS}/Modules"
-  "${CMAKE_CURRENT_SOURCE_DIR}/../llvm/cmake"
-  "${CMAKE_CURRENT_SOURCE_DIR}/../llvm/cmake/modules"
-)
 
 set(LLVM_THIRD_PARTY_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../third-party")
 
@@ -102,7 +83,27 @@ if (NOT LLVM_RUNTIMES_LINKING_WORKS)
   # e.g. ASAN/TSAN.
   llvm_check_compiler_linker_flag(C "--unwindlib=none" CXX_SUPPORTS_UNWINDLIB_EQ_NONE_FLAG)
   if (CXX_SUPPORTS_UNWINDLIB_EQ_NONE_FLAG)
+    set(ORIG_CMAKE_REQUIRED_FLAGS "${CMAKE_REQUIRED_FLAGS}")
     set(CMAKE_REQUIRED_FLAGS "${CMAKE_REQUIRED_FLAGS} --unwindlib=none")
+    # TODO: When we can require CMake 3.14, we should use
+    # CMAKE_REQUIRED_LINK_OPTIONS here. Until then, we need a workaround:
+    # When using CMAKE_REQUIRED_FLAGS, this option gets added both to
+    # compilation and linking commands. That causes warnings in the
+    # compilation commands during cmake tests. This is normally benign, but
+    # when testing whether -Werror works, that test fails (due to the
+    # preexisting warning).
+    #
+    # Therefore, before we can use CMAKE_REQUIRED_LINK_OPTIONS, check if we
+    # can use --start-no-unused-arguments to silence the warnings about
+    # --unwindlib=none during compilation.
+    #
+    # We must first add --unwindlib=none to CMAKE_REQUIRED_FLAGS above, to
+    # allow this subsequent test to succeed, then rewrite CMAKE_REQUIRED_FLAGS
+    # below.
+    check_c_compiler_flag("--start-no-unused-arguments" C_SUPPORTS_START_NO_UNUSED_ARGUMENTS)
+    if (C_SUPPORTS_START_NO_UNUSED_ARGUMENTS)
+      set(CMAKE_REQUIRED_FLAGS "${ORIG_CMAKE_REQUIRED_FLAGS} --start-no-unused-arguments --unwindlib=none --end-no-unused-arguments")
+    endif()
   endif()
 endif()
 

@@ -7,10 +7,12 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
+#include "mlir/Dialect/Bufferization/IR/BufferizableOpInterface.h"
 #include "mlir/Dialect/Bufferization/IR/Bufferization.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/MemRef/Utils/MemRefUtils.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
+#include "mlir/IR/Matchers.h"
 
 using namespace mlir;
 using namespace mlir::bufferization;
@@ -124,6 +126,109 @@ LogicalResult mlir::bufferization::foldToMemrefToTensorPair(
          "expected that types are cast compatible");
   rewriter.replaceOpWithNewOp<memref::CastOp>(toMemref, destType,
                                               memrefToTensor.memref());
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
+// AllocTensorOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult AllocTensorOp::bufferize(RewriterBase &rewriter,
+                                       BufferizationState &state) {
+  // Nothing to do for dead AllocTensorOps.
+  if (getOperation()->getUses().empty())
+    return success();
+
+  FailureOr<Value> alloc = state.createAlloc(rewriter, getLoc(), getResult());
+  if (failed(alloc))
+    return failure();
+  replaceOpWithBufferizedValues(rewriter, getOperation(), *alloc);
+  return success();
+}
+
+LogicalResult AllocTensorOp::verify() {
+  if (getType().getNumDynamicDims() !=
+      static_cast<int64_t>(dynamicSizes().size()))
+    return emitError("expected ")
+           << getType().getNumDynamicDims() << " dynamic sizes";
+  return success();
+}
+
+namespace {
+/// Change the type of the result of a `bufferization.alloc_tensor` by making
+/// the result type statically sized along dimension that in the original
+/// operation where defined as dynamic, but the size was defined using a
+/// `constant` op. For example:
+///
+///  %c5 = arith.constant 5: index
+///  %0 = bufferization.alloc_tensor(%arg0, %c5) : tensor<?x?xf32>
+///
+///  to
+///
+///  %0 = bufferization.alloc_tensor(%arg0) : tensor<?x5xf32>
+struct ReplaceStaticShapeDims : OpRewritePattern<AllocTensorOp> {
+  using OpRewritePattern<AllocTensorOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(AllocTensorOp op,
+                                PatternRewriter &rewriter) const override {
+    SmallVector<int64_t> newShape = llvm::to_vector(op.getType().getShape());
+    SmallVector<Value> newDynamicSizes;
+    unsigned int dynValCounter = 0;
+    for (int64_t i = 0; i < op.getType().getRank(); ++i) {
+      if (!op.isDynamicDim(i))
+        continue;
+      Value value = op.dynamicSizes()[dynValCounter++];
+      APInt intVal;
+      if (matchPattern(value, m_ConstantInt(&intVal))) {
+        newShape[i] = intVal.getSExtValue();
+      } else {
+        newDynamicSizes.push_back(value);
+      }
+    }
+    RankedTensorType newType = RankedTensorType::get(
+        newShape, op.getType().getElementType(), op.getType().getEncoding());
+    if (newType == op.getType())
+      return failure();
+    auto newOp =
+        rewriter.create<AllocTensorOp>(op.getLoc(), newType, newDynamicSizes);
+    rewriter.replaceOpWithNewOp<tensor::CastOp>(op, op.getType(), newOp);
+    return success();
+  }
+};
+
+struct FoldDimOfAllocTensorOp : public OpRewritePattern<tensor::DimOp> {
+  using OpRewritePattern<tensor::DimOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(tensor::DimOp dimOp,
+                                PatternRewriter &rewriter) const override {
+    Optional<int64_t> maybeConstantIndex = dimOp.getConstantIndex();
+    auto allocTensorOp = dimOp.source().getDefiningOp<AllocTensorOp>();
+    if (!allocTensorOp || !maybeConstantIndex)
+      return failure();
+    if (!allocTensorOp.getType().isDynamicDim(*maybeConstantIndex))
+      return failure();
+    rewriter.replaceOp(dimOp,
+                       allocTensorOp.getDynamicSize(*maybeConstantIndex));
+    return success();
+  }
+};
+} // namespace
+
+void AllocTensorOp::getCanonicalizationPatterns(RewritePatternSet &results,
+                                                MLIRContext *ctx) {
+  results.add<FoldDimOfAllocTensorOp, ReplaceStaticShapeDims>(ctx);
+}
+
+LogicalResult AllocTensorOp::reifyResultShapes(
+    OpBuilder &builder, ReifiedRankedShapedTypeDims &reifiedReturnShapes) {
+  auto shapes = llvm::to_vector<4>(llvm::map_range(
+      llvm::seq<int64_t>(0, getType().getRank()), [&](int64_t dim) -> Value {
+        if (isDynamicDim(dim))
+          return getDynamicSize(dim);
+        return builder.create<arith::ConstantIndexOp>(getLoc(),
+                                                      getStaticSize(dim));
+      }));
+  reifiedReturnShapes.emplace_back(std::move(shapes));
   return success();
 }
 
@@ -354,7 +459,10 @@ void ToMemrefOp::getCanonicalizationPatterns(RewritePatternSet &results,
 LogicalResult ToMemrefOp::bufferize(RewriterBase &rewriter,
                                     BufferizationState &state) {
   // Fold to_memref(to_tensor(x)) to x. Insert a cast if necessary.
-  return foldToMemrefToTensorPair(rewriter, *this);
+  (void)foldToMemrefToTensorPair(rewriter, *this);
+  // Note: The return value of `bufferize` indicates whether there was an error
+  // or not. (And not whether the pattern matched or not.)
+  return success();
 }
 
 Optional<Operation *> CloneOp::buildDealloc(OpBuilder &builder, Value alloc) {

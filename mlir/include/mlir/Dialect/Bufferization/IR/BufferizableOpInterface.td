@@ -216,6 +216,13 @@ def BufferizableOpInterface : OpInterface<"BufferizableOpInterface"> {
 
           This method will never be called on ops that do not have at least one
           tensor operand/result.
+
+          The return value of this method indicates whether there was an error
+          while bufferizing this op (such as failing to create a new buffer
+          allocation op). The bufferization driver immediately stops bufferizing
+          the input IR and returns `failure` in that case. If this op is
+          expected to survive bufferization, `success` should be returned
+          (together with `allow-unknown-ops` enabled).
         }],
         /*retType=*/"LogicalResult",
         /*methodName=*/"bufferize",
@@ -250,22 +257,6 @@ def BufferizableOpInterface : OpInterface<"BufferizableOpInterface"> {
         /*methodBody=*/"",
         /*defaultImplementation=*/[{
           return value.isa<OpResult>();
-        }]
-      >,
-      InterfaceMethod<
-        /*desc=*/[{
-          Return `true` if the op is an allocation hoisting barrier. Buffer
-          allocations will never be beyond such ops. E.g., ops with certain
-          parallel semantics may be allocation hoisting barriers. The majority
-          of ops, however, is not a barrier. Therefore, this method returns
-          `false` by default.
-        }],
-        /*retType=*/"bool",
-        /*methodName=*/"isAllocationHoistingBarrier",
-        /*args=*/(ins),
-        /*methodBody=*/"",
-        /*defaultImplementation=*/[{
-          return false;
         }]
       >,
       InterfaceMethod<

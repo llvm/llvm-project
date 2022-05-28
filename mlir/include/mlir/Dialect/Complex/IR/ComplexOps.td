@@ -76,6 +76,24 @@ def AddOp : ComplexArithmeticOp<"add"> {
 }
 
 //===----------------------------------------------------------------------===//
+// Atan2
+//===----------------------------------------------------------------------===//
+
+def Atan2Op : ComplexArithmeticOp<"atan2"> {
+  let summary = "complex 2-argument arctangent";
+  let description = [{
+    For complex numbers it is expressed using complex logarithm
+    atan2(y, x) = -i * log((x + i * y) / sqrt(x**2 + y**2))
+
+    Example:
+
+    ```mlir
+    %a = complex.atan2 %b, %c : complex<f32>
+    ```
+  }];
+}
+
+//===----------------------------------------------------------------------===//
 // ConstantOp
 //===----------------------------------------------------------------------===//
 
@@ -223,6 +241,31 @@ def ExpOp : ComplexUnaryOp<"exp", [SameOperandsAndResultType]> {
 }
 
 //===----------------------------------------------------------------------===//
+// Expm1Op
+//===----------------------------------------------------------------------===//
+
+def Expm1Op : ComplexUnaryOp<"expm1", [SameOperandsAndResultType]> {
+  let summary = "computes exponential of a complex number minus 1";
+  let description = [{
+    Syntax:
+
+    ```
+    operation ::= ssa-id `=` `complex.expm1` ssa-use `:` type
+    ```
+
+    complex.expm1(x) := complex.exp(x) - 1
+
+    Example:
+
+    ```mlir
+    %a = complex.expm1 %b : complex<f32>
+    ```
+  }];
+
+  let results = (outs Complex<AnyFloat>:$result);
+}
+
+//===----------------------------------------------------------------------===//
 // ImOp
 //===----------------------------------------------------------------------===//
 
@@ -347,6 +390,24 @@ def NotEqualOp : Complex_Op<"neq",
 }
 
 //===----------------------------------------------------------------------===//
+// PowOp
+//===----------------------------------------------------------------------===//
+
+def PowOp : ComplexArithmeticOp<"pow"> {
+  let summary = "complex power function";
+  let description = [{
+    The `sqrt` operation takes a complex number raises it to the given complex
+    exponent.
+
+    Example:
+
+    ```mlir
+    %a = complex.pow %b, %c : complex<f32>
+    ```
+  }];
+}
+
+//===----------------------------------------------------------------------===//
 // ReOp
 //===----------------------------------------------------------------------===//
 
@@ -367,6 +428,25 @@ def ReOp : ComplexUnaryOp<"re",
 
   let results = (outs AnyFloat:$real);
   let hasFolder = 1;
+}
+
+//===----------------------------------------------------------------------===//
+// RsqrtOp
+//===----------------------------------------------------------------------===//
+
+def RsqrtOp : ComplexUnaryOp<"rsqrt", [SameOperandsAndResultType]> {
+  let summary = "complex reciprocal of square root";
+  let description = [{
+    The `rsqrt` operation computes reciprocal of square root.
+
+    Example:
+
+    ```mlir
+    %a = complex.rsqrt %b : complex<f32>
+    ```
+  }];
+
+  let results = (outs Complex<AnyFloat>:$result);
 }
 
 //===----------------------------------------------------------------------===//
@@ -410,6 +490,25 @@ def SinOp : ComplexUnaryOp<"sin", [SameOperandsAndResultType]> {
 }
 
 //===----------------------------------------------------------------------===//
+// SqrtOp
+//===----------------------------------------------------------------------===//
+
+def SqrtOp : ComplexUnaryOp<"sqrt", [SameOperandsAndResultType]> {
+  let summary = "complex square root";
+  let description = [{
+    The `sqrt` operation takes a complex number and returns its square root.
+
+    Example:
+
+    ```mlir
+    %a = complex.sqrt %b : complex<f32>
+    ```
+  }];
+
+  let results = (outs Complex<AnyFloat>:$result);
+}
+
+//===----------------------------------------------------------------------===//
 // SubOp
 //===----------------------------------------------------------------------===//
 
@@ -424,6 +523,26 @@ def SubOp : ComplexArithmeticOp<"sub"> {
     %a = complex.sub %b, %c : complex<f32>
     ```
   }];
+}
+
+//===----------------------------------------------------------------------===//
+// TanhOp
+//===----------------------------------------------------------------------===//
+
+def TanhOp : ComplexUnaryOp<"tanh", [SameOperandsAndResultType]> {
+  let summary = "complex hyperbolic tangent";
+  let description = [{
+    The `tanh` operation takes a complex number and returns its hyperbolic
+    tangent.
+
+    Example:
+
+    ```mlir
+    %a = complex.tanh %b : complex<f32>
+    ```
+  }];
+
+  let results = (outs Complex<AnyFloat>:$result);
 }
 
 #endif // COMPLEX_OPS

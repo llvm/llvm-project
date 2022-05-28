@@ -12,9 +12,9 @@ define void @wombat(i32* %ptr, i32* %ptr1) {
 ; CHECK-NEXT:    [[SHRINK_SHUFFLE:%.*]] = shufflevector <4 x i32> [[SHUFFLE]], <4 x i32> poison, <2 x i32> <i32 0, i32 1>
 ; CHECK-NEXT:    [[TMP2:%.*]] = add nsw <2 x i32> [[SHRINK_SHUFFLE]], <i32 -1, i32 -1>
 ; CHECK-NEXT:    [[SHUFFLE1:%.*]] = shufflevector <2 x i32> [[TMP2]], <2 x i32> poison, <4 x i32> <i32 0, i32 1, i32 0, i32 1>
-; CHECK-NEXT:    [[TMP3:%.*]] = icmp sgt <4 x i32> [[SHUFFLE]], poison
-; CHECK-NEXT:    [[TMP4:%.*]] = select <4 x i1> [[TMP3]], <4 x i32> poison, <4 x i32> [[SHUFFLE1]]
-; CHECK-NEXT:    [[TMP5:%.*]] = select <4 x i1> poison, <4 x i32> zeroinitializer, <4 x i32> [[TMP4]]
+; CHECK-NEXT:    [[TMP3:%.*]] = icmp sgt <4 x i32> [[SHUFFLE]], undef
+; CHECK-NEXT:    [[TMP4:%.*]] = select <4 x i1> [[TMP3]], <4 x i32> undef, <4 x i32> [[SHUFFLE1]]
+; CHECK-NEXT:    [[TMP5:%.*]] = select <4 x i1> zeroinitializer, <4 x i32> zeroinitializer, <4 x i32> [[TMP4]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = bitcast i32* [[TMP27]] to <4 x i32>*
 ; CHECK-NEXT:    store <4 x i32> [[TMP5]], <4 x i32>* [[TMP6]], align 8
 ; CHECK-NEXT:    ret void

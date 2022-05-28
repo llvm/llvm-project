@@ -6,13 +6,21 @@
 ; RUN: llc -mtriple=mips64-mti-linux-gnu -mcpu=mips3 < %s -asm-show-inst | FileCheck %s --check-prefix=MIPS3
 ; RUN: llc -mtriple=mips64-mti-linux-gnu -mcpu=mips64 < %s -asm-show-inst | FileCheck %s --check-prefix=MIPS64
 ; RUN: llc -mtriple=mips64-img-linux-gnu -mcpu=mips64r6 < %s -asm-show-inst | FileCheck %s --check-prefix=MIPS64R6
+; RUN: llc -mtriple=mips-mti-linux-gnu -mcpu=mips32r2 -mattr=+micromips,+fp64 < %s -asm-show-inst | FileCheck %s --check-prefix=MMR5FP64
+; RUN: llc -mtriple=mips-mti-linux-gnu -mcpu=mips32r5 -mattr=+fp64 < %s -asm-show-inst | FileCheck %s --check-prefix=MIPS32R5FP643
 
-; Test subword and word loads.
+; Test subword and word loads. We use -asm-show-inst to test that the produced
+; instructions match the expected ISA.
+
+; NOTE: As the -asm-show-inst shows the internal numbering of instructions
+;       and registers, these numbers have been replaced with wildcard regexes.
 
 @a = common global i8 0, align 4
 @b = common global i16 0, align 4
 @c = common global i32 0, align 4
 @d = common global i64 0, align 8
+@e = common global float 0.0, align 4
+@f = common global double 0.0, align 8
 
 define i8 @f1() {
 ; MIPS32-LABEL: f1:
@@ -29,7 +37,7 @@ define i8 @f1() {
 ;
 ; MMR3-LABEL: f1:
 ; MMR3:       # %bb.0: # %entry
-; MMR3-NEXT:    lui $1, %hi(a) # <MCInst #{{[0-9]+}} LUi
+; MMR3-NEXT:    lui $1, %hi(a) # <MCInst #{{[0-9]+}} LUi_MM
 ; MMR3-NEXT:    # <MCOperand Reg:{{[0-9]+}}>
 ; MMR3-NEXT:    # <MCOperand Expr:(%hi(a))>>
 ; MMR3-NEXT:    jr $ra # <MCInst #{{[0-9]+}} JR_MM
@@ -54,7 +62,7 @@ define i8 @f1() {
 ;
 ; MMR6-LABEL: f1:
 ; MMR6:       # %bb.0: # %entry
-; MMR6-NEXT:    lui $1, %hi(a) # <MCInst #{{[0-9]+}} LUi
+; MMR6-NEXT:    lui $1, %hi(a) # <MCInst #{{[0-9]+}} LUi_MM
 ; MMR6-NEXT:    # <MCOperand Reg:{{[0-9]+}}>
 ; MMR6-NEXT:    # <MCOperand Expr:(%hi(a))>>
 ; MMR6-NEXT:    lbu $2, %lo(a)($1) # <MCInst #{{[0-9]+}} LBu_MM
@@ -148,6 +156,30 @@ define i8 @f1() {
 ; MIPS64R6-NEXT:    # <MCOperand Reg:{{[0-9]+}}>
 ; MIPS64R6-NEXT:    # <MCOperand Reg:{{[0-9]+}}>
 ; MIPS64R6-NEXT:    # <MCOperand Expr:(%lo(a))>>
+;
+; MMR5FP64-LABEL: f1:
+; MMR5FP64:       # %bb.0: # %entry
+; MMR5FP64-NEXT:    lui $1, %hi(a) # <MCInst #{{[0-9]+}} LUi_MM
+; MMR5FP64-NEXT:    # <MCOperand Reg:{{[0-9]+}}>
+; MMR5FP64-NEXT:    # <MCOperand Expr:(%hi(a))>>
+; MMR5FP64-NEXT:    jr $ra # <MCInst #{{[0-9]+}} JR_MM
+; MMR5FP64-NEXT:    # <MCOperand Reg:{{[0-9]+}}>>
+; MMR5FP64-NEXT:    lbu $2, %lo(a)($1) # <MCInst #{{[0-9]+}} LBu_MM
+; MMR5FP64-NEXT:    # <MCOperand Reg:{{[0-9]+}}>
+; MMR5FP64-NEXT:    # <MCOperand Reg:{{[0-9]+}}>
+; MMR5FP64-NEXT:    # <MCOperand Expr:(%lo(a))>>
+;
+; MIPS32R5FP643-LABEL: f1:
+; MIPS32R5FP643:       # %bb.0: # %entry
+; MIPS32R5FP643-NEXT:    lui $1, %hi(a) # <MCInst #{{[0-9]+}} LUi
+; MIPS32R5FP643-NEXT:    # <MCOperand Reg:{{[0-9]+}}>
+; MIPS32R5FP643-NEXT:    # <MCOperand Expr:(%hi(a))>>
+; MIPS32R5FP643-NEXT:    jr $ra # <MCInst #{{[0-9]+}} JR
+; MIPS32R5FP643-NEXT:    # <MCOperand Reg:{{[0-9]+}}>>
+; MIPS32R5FP643-NEXT:    lbu $2, %lo(a)($1) # <MCInst #{{[0-9]+}} LBu
+; MIPS32R5FP643-NEXT:    # <MCOperand Reg:{{[0-9]+}}>
+; MIPS32R5FP643-NEXT:    # <MCOperand Reg:{{[0-9]+}}>
+; MIPS32R5FP643-NEXT:    # <MCOperand Expr:(%lo(a))>>
 entry:
   %0 = load i8, i8 * @a
   ret i8 %0
@@ -168,7 +200,7 @@ define i32 @f2() {
 ;
 ; MMR3-LABEL: f2:
 ; MMR3:       # %bb.0: # %entry
-; MMR3-NEXT:    lui $1, %hi(a) # <MCInst #{{[0-9]+}} LUi
+; MMR3-NEXT:    lui $1, %hi(a) # <MCInst #{{[0-9]+}} LUi_MM
 ; MMR3-NEXT:    # <MCOperand Reg:{{[0-9]+}}>
 ; MMR3-NEXT:    # <MCOperand Expr:(%hi(a))>>
 ; MMR3-NEXT:    jr $ra # <MCInst #{{[0-9]+}} JR_MM
@@ -193,7 +225,7 @@ define i32 @f2() {
 ;
 ; MMR6-LABEL: f2:
 ; MMR6:       # %bb.0: # %entry
-; MMR6-NEXT:    lui $1, %hi(a) # <MCInst #{{[0-9]+}} LUi
+; MMR6-NEXT:    lui $1, %hi(a) # <MCInst #{{[0-9]+}} LUi_MM
 ; MMR6-NEXT:    # <MCOperand Reg:{{[0-9]+}}>
 ; MMR6-NEXT:    # <MCOperand Expr:(%hi(a))>>
 ; MMR6-NEXT:    lb $2, %lo(a)($1) # <MCInst #{{[0-9]+}} LB_MM
@@ -287,6 +319,30 @@ define i32 @f2() {
 ; MIPS64R6-NEXT:    # <MCOperand Reg:{{[0-9]+}}>
 ; MIPS64R6-NEXT:    # <MCOperand Reg:{{[0-9]+}}>
 ; MIPS64R6-NEXT:    # <MCOperand Expr:(%lo(a))>>
+;
+; MMR5FP64-LABEL: f2:
+; MMR5FP64:       # %bb.0: # %entry
+; MMR5FP64-NEXT:    lui $1, %hi(a) # <MCInst #{{[0-9]+}} LUi_MM
+; MMR5FP64-NEXT:    # <MCOperand Reg:{{[0-9]+}}>
+; MMR5FP64-NEXT:    # <MCOperand Expr:(%hi(a))>>
+; MMR5FP64-NEXT:    jr $ra # <MCInst #{{[0-9]+}} JR_MM
+; MMR5FP64-NEXT:    # <MCOperand Reg:{{[0-9]+}}>>
+; MMR5FP64-NEXT:    lb $2, %lo(a)($1) # <MCInst #{{[0-9]+}} LB_MM
+; MMR5FP64-NEXT:    # <MCOperand Reg:{{[0-9]+}}>
+; MMR5FP64-NEXT:    # <MCOperand Reg:{{[0-9]+}}>
+; MMR5FP64-NEXT:    # <MCOperand Expr:(%lo(a))>>
+;
+; MIPS32R5FP643-LABEL: f2:
+; MIPS32R5FP643:       # %bb.0: # %entry
+; MIPS32R5FP643-NEXT:    lui $1, %hi(a) # <MCInst #{{[0-9]+}} LUi
+; MIPS32R5FP643-NEXT:    # <MCOperand Reg:{{[0-9]+}}>
+; MIPS32R5FP643-NEXT:    # <MCOperand Expr:(%hi(a))>>
+; MIPS32R5FP643-NEXT:    jr $ra # <MCInst #{{[0-9]+}} JR
+; MIPS32R5FP643-NEXT:    # <MCOperand Reg:{{[0-9]+}}>>
+; MIPS32R5FP643-NEXT:    lb $2, %lo(a)($1) # <MCInst #{{[0-9]+}} LB
+; MIPS32R5FP643-NEXT:    # <MCOperand Reg:{{[0-9]+}}>
+; MIPS32R5FP643-NEXT:    # <MCOperand Reg:{{[0-9]+}}>
+; MIPS32R5FP643-NEXT:    # <MCOperand Expr:(%lo(a))>>
 entry:
   %0 = load i8, i8 * @a
   %1 = sext i8 %0 to i32
@@ -308,7 +364,7 @@ define i16 @f3() {
 ;
 ; MMR3-LABEL: f3:
 ; MMR3:       # %bb.0: # %entry
-; MMR3-NEXT:    lui $1, %hi(b) # <MCInst #{{[0-9]+}} LUi
+; MMR3-NEXT:    lui $1, %hi(b) # <MCInst #{{[0-9]+}} LUi_MM
 ; MMR3-NEXT:    # <MCOperand Reg:{{[0-9]+}}>
 ; MMR3-NEXT:    # <MCOperand Expr:(%hi(b))>>
 ; MMR3-NEXT:    jr $ra # <MCInst #{{[0-9]+}} JR_MM
@@ -333,7 +389,7 @@ define i16 @f3() {
 ;
 ; MMR6-LABEL: f3:
 ; MMR6:       # %bb.0: # %entry
-; MMR6-NEXT:    lui $1, %hi(b) # <MCInst #{{[0-9]+}} LUi
+; MMR6-NEXT:    lui $1, %hi(b) # <MCInst #{{[0-9]+}} LUi_MM
 ; MMR6-NEXT:    # <MCOperand Reg:{{[0-9]+}}>
 ; MMR6-NEXT:    # <MCOperand Expr:(%hi(b))>>
 ; MMR6-NEXT:    lhu $2, %lo(b)($1) # <MCInst #{{[0-9]+}} LHu_MM
@@ -427,6 +483,30 @@ define i16 @f3() {
 ; MIPS64R6-NEXT:    # <MCOperand Reg:{{[0-9]+}}>
 ; MIPS64R6-NEXT:    # <MCOperand Reg:{{[0-9]+}}>
 ; MIPS64R6-NEXT:    # <MCOperand Expr:(%lo(b))>>
+;
+; MMR5FP64-LABEL: f3:
+; MMR5FP64:       # %bb.0: # %entry
+; MMR5FP64-NEXT:    lui $1, %hi(b) # <MCInst #{{[0-9]+}} LUi_MM
+; MMR5FP64-NEXT:    # <MCOperand Reg:{{[0-9]+}}>
+; MMR5FP64-NEXT:    # <MCOperand Expr:(%hi(b))>>
+; MMR5FP64-NEXT:    jr $ra # <MCInst #{{[0-9]+}} JR_MM
+; MMR5FP64-NEXT:    # <MCOperand Reg:{{[0-9]+}}>>
+; MMR5FP64-NEXT:    lhu $2, %lo(b)($1) # <MCInst #{{[0-9]+}} LHu_MM
+; MMR5FP64-NEXT:    # <MCOperand Reg:{{[0-9]+}}>
+; MMR5FP64-NEXT:    # <MCOperand Reg:{{[0-9]+}}>
+; MMR5FP64-NEXT:    # <MCOperand Expr:(%lo(b))>>
+;
+; MIPS32R5FP643-LABEL: f3:
+; MIPS32R5FP643:       # %bb.0: # %entry
+; MIPS32R5FP643-NEXT:    lui $1, %hi(b) # <MCInst #{{[0-9]+}} LUi
+; MIPS32R5FP643-NEXT:    # <MCOperand Reg:{{[0-9]+}}>
+; MIPS32R5FP643-NEXT:    # <MCOperand Expr:(%hi(b))>>
+; MIPS32R5FP643-NEXT:    jr $ra # <MCInst #{{[0-9]+}} JR
+; MIPS32R5FP643-NEXT:    # <MCOperand Reg:{{[0-9]+}}>>
+; MIPS32R5FP643-NEXT:    lhu $2, %lo(b)($1) # <MCInst #{{[0-9]+}} LHu
+; MIPS32R5FP643-NEXT:    # <MCOperand Reg:{{[0-9]+}}>
+; MIPS32R5FP643-NEXT:    # <MCOperand Reg:{{[0-9]+}}>
+; MIPS32R5FP643-NEXT:    # <MCOperand Expr:(%lo(b))>>
 entry:
   %0 = load i16, i16 * @b
   ret i16 %0
@@ -447,7 +527,7 @@ define i32 @f4() {
 ;
 ; MMR3-LABEL: f4:
 ; MMR3:       # %bb.0: # %entry
-; MMR3-NEXT:    lui $1, %hi(b) # <MCInst #{{[0-9]+}} LUi
+; MMR3-NEXT:    lui $1, %hi(b) # <MCInst #{{[0-9]+}} LUi_MM
 ; MMR3-NEXT:    # <MCOperand Reg:{{[0-9]+}}>
 ; MMR3-NEXT:    # <MCOperand Expr:(%hi(b))>>
 ; MMR3-NEXT:    jr $ra # <MCInst #{{[0-9]+}} JR_MM
@@ -472,7 +552,7 @@ define i32 @f4() {
 ;
 ; MMR6-LABEL: f4:
 ; MMR6:       # %bb.0: # %entry
-; MMR6-NEXT:    lui $1, %hi(b) # <MCInst #{{[0-9]+}} LUi
+; MMR6-NEXT:    lui $1, %hi(b) # <MCInst #{{[0-9]+}} LUi_MM
 ; MMR6-NEXT:    # <MCOperand Reg:{{[0-9]+}}>
 ; MMR6-NEXT:    # <MCOperand Expr:(%hi(b))>>
 ; MMR6-NEXT:    lh $2, %lo(b)($1) # <MCInst #{{[0-9]+}} LH_MM
@@ -566,6 +646,30 @@ define i32 @f4() {
 ; MIPS64R6-NEXT:    # <MCOperand Reg:{{[0-9]+}}>
 ; MIPS64R6-NEXT:    # <MCOperand Reg:{{[0-9]+}}>
 ; MIPS64R6-NEXT:    # <MCOperand Expr:(%lo(b))>>
+;
+; MMR5FP64-LABEL: f4:
+; MMR5FP64:       # %bb.0: # %entry
+; MMR5FP64-NEXT:    lui $1, %hi(b) # <MCInst #{{[0-9]+}} LUi_MM
+; MMR5FP64-NEXT:    # <MCOperand Reg:{{[0-9]+}}>
+; MMR5FP64-NEXT:    # <MCOperand Expr:(%hi(b))>>
+; MMR5FP64-NEXT:    jr $ra # <MCInst #{{[0-9]+}} JR_MM
+; MMR5FP64-NEXT:    # <MCOperand Reg:{{[0-9]+}}>>
+; MMR5FP64-NEXT:    lh $2, %lo(b)($1) # <MCInst #{{[0-9]+}} LH_MM
+; MMR5FP64-NEXT:    # <MCOperand Reg:{{[0-9]+}}>
+; MMR5FP64-NEXT:    # <MCOperand Reg:{{[0-9]+}}>
+; MMR5FP64-NEXT:    # <MCOperand Expr:(%lo(b))>>
+;
+; MIPS32R5FP643-LABEL: f4:
+; MIPS32R5FP643:       # %bb.0: # %entry
+; MIPS32R5FP643-NEXT:    lui $1, %hi(b) # <MCInst #{{[0-9]+}} LUi
+; MIPS32R5FP643-NEXT:    # <MCOperand Reg:{{[0-9]+}}>
+; MIPS32R5FP643-NEXT:    # <MCOperand Expr:(%hi(b))>>
+; MIPS32R5FP643-NEXT:    jr $ra # <MCInst #{{[0-9]+}} JR
+; MIPS32R5FP643-NEXT:    # <MCOperand Reg:{{[0-9]+}}>>
+; MIPS32R5FP643-NEXT:    lh $2, %lo(b)($1) # <MCInst #{{[0-9]+}} LH
+; MIPS32R5FP643-NEXT:    # <MCOperand Reg:{{[0-9]+}}>
+; MIPS32R5FP643-NEXT:    # <MCOperand Reg:{{[0-9]+}}>
+; MIPS32R5FP643-NEXT:    # <MCOperand Expr:(%lo(b))>>
 entry:
   %0 = load i16, i16 * @b
   %1 = sext i16 %0 to i32
@@ -587,7 +691,7 @@ define i32 @f5() {
 ;
 ; MMR3-LABEL: f5:
 ; MMR3:       # %bb.0: # %entry
-; MMR3-NEXT:    lui $1, %hi(c) # <MCInst #{{[0-9]+}} LUi
+; MMR3-NEXT:    lui $1, %hi(c) # <MCInst #{{[0-9]+}} LUi_MM
 ; MMR3-NEXT:    # <MCOperand Reg:{{[0-9]+}}>
 ; MMR3-NEXT:    # <MCOperand Expr:(%hi(c))>>
 ; MMR3-NEXT:    jr $ra # <MCInst #{{[0-9]+}} JR_MM
@@ -612,7 +716,7 @@ define i32 @f5() {
 ;
 ; MMR6-LABEL: f5:
 ; MMR6:       # %bb.0: # %entry
-; MMR6-NEXT:    lui $1, %hi(c) # <MCInst #{{[0-9]+}} LUi
+; MMR6-NEXT:    lui $1, %hi(c) # <MCInst #{{[0-9]+}} LUi_MM
 ; MMR6-NEXT:    # <MCOperand Reg:{{[0-9]+}}>
 ; MMR6-NEXT:    # <MCOperand Expr:(%hi(c))>>
 ; MMR6-NEXT:    lw $2, %lo(c)($1) # <MCInst #{{[0-9]+}} LW_MM
@@ -706,6 +810,30 @@ define i32 @f5() {
 ; MIPS64R6-NEXT:    # <MCOperand Reg:{{[0-9]+}}>
 ; MIPS64R6-NEXT:    # <MCOperand Reg:{{[0-9]+}}>
 ; MIPS64R6-NEXT:    # <MCOperand Expr:(%lo(c))>>
+;
+; MMR5FP64-LABEL: f5:
+; MMR5FP64:       # %bb.0: # %entry
+; MMR5FP64-NEXT:    lui $1, %hi(c) # <MCInst #{{[0-9]+}} LUi_MM
+; MMR5FP64-NEXT:    # <MCOperand Reg:{{[0-9]+}}>
+; MMR5FP64-NEXT:    # <MCOperand Expr:(%hi(c))>>
+; MMR5FP64-NEXT:    jr $ra # <MCInst #{{[0-9]+}} JR_MM
+; MMR5FP64-NEXT:    # <MCOperand Reg:{{[0-9]+}}>>
+; MMR5FP64-NEXT:    lw $2, %lo(c)($1) # <MCInst #{{[0-9]+}} LW_MM
+; MMR5FP64-NEXT:    # <MCOperand Reg:{{[0-9]+}}>
+; MMR5FP64-NEXT:    # <MCOperand Reg:{{[0-9]+}}>
+; MMR5FP64-NEXT:    # <MCOperand Expr:(%lo(c))>>
+;
+; MIPS32R5FP643-LABEL: f5:
+; MIPS32R5FP643:       # %bb.0: # %entry
+; MIPS32R5FP643-NEXT:    lui $1, %hi(c) # <MCInst #{{[0-9]+}} LUi
+; MIPS32R5FP643-NEXT:    # <MCOperand Reg:{{[0-9]+}}>
+; MIPS32R5FP643-NEXT:    # <MCOperand Expr:(%hi(c))>>
+; MIPS32R5FP643-NEXT:    jr $ra # <MCInst #{{[0-9]+}} JR
+; MIPS32R5FP643-NEXT:    # <MCOperand Reg:{{[0-9]+}}>>
+; MIPS32R5FP643-NEXT:    lw $2, %lo(c)($1) # <MCInst #{{[0-9]+}} LW
+; MIPS32R5FP643-NEXT:    # <MCOperand Reg:{{[0-9]+}}>
+; MIPS32R5FP643-NEXT:    # <MCOperand Reg:{{[0-9]+}}>
+; MIPS32R5FP643-NEXT:    # <MCOperand Expr:(%lo(c))>>
 entry:
   %0 = load i32, i32 * @c
   ret i32 %0
@@ -730,7 +858,7 @@ define i64 @f6() {
 ;
 ; MMR3-LABEL: f6:
 ; MMR3:       # %bb.0: # %entry
-; MMR3-NEXT:    lui $1, %hi(c) # <MCInst #{{[0-9]+}} LUi
+; MMR3-NEXT:    lui $1, %hi(c) # <MCInst #{{[0-9]+}} LUi_MM
 ; MMR3-NEXT:    # <MCOperand Reg:{{[0-9]+}}>
 ; MMR3-NEXT:    # <MCOperand Expr:(%hi(c))>>
 ; MMR3-NEXT:    li16 $2, 0 # <MCInst #{{[0-9]+}} LI16_MM
@@ -762,7 +890,7 @@ define i64 @f6() {
 ;
 ; MMR6-LABEL: f6:
 ; MMR6:       # %bb.0: # %entry
-; MMR6-NEXT:    lui $1, %hi(c) # <MCInst #{{[0-9]+}} LUi
+; MMR6-NEXT:    lui $1, %hi(c) # <MCInst #{{[0-9]+}} LUi_MM
 ; MMR6-NEXT:    # <MCOperand Reg:{{[0-9]+}}>
 ; MMR6-NEXT:    # <MCOperand Expr:(%hi(c))>>
 ; MMR6-NEXT:    lw $3, %lo(c)($1) # <MCInst #{{[0-9]+}} LW_MM
@@ -859,6 +987,37 @@ define i64 @f6() {
 ; MIPS64R6-NEXT:    # <MCOperand Reg:{{[0-9]+}}>
 ; MIPS64R6-NEXT:    # <MCOperand Reg:{{[0-9]+}}>
 ; MIPS64R6-NEXT:    # <MCOperand Expr:(%lo(c))>>
+;
+; MMR5FP64-LABEL: f6:
+; MMR5FP64:       # %bb.0: # %entry
+; MMR5FP64-NEXT:    lui $1, %hi(c) # <MCInst #{{[0-9]+}} LUi_MM
+; MMR5FP64-NEXT:    # <MCOperand Reg:{{[0-9]+}}>
+; MMR5FP64-NEXT:    # <MCOperand Expr:(%hi(c))>>
+; MMR5FP64-NEXT:    li16 $2, 0 # <MCInst #{{[0-9]+}} LI16_MM
+; MMR5FP64-NEXT:    # <MCOperand Reg:{{[0-9]+}}>
+; MMR5FP64-NEXT:    # <MCOperand Imm:0>>
+; MMR5FP64-NEXT:    jr $ra # <MCInst #{{[0-9]+}} JR_MM
+; MMR5FP64-NEXT:    # <MCOperand Reg:{{[0-9]+}}>>
+; MMR5FP64-NEXT:    lw $3, %lo(c)($1) # <MCInst #{{[0-9]+}} LW_MM
+; MMR5FP64-NEXT:    # <MCOperand Reg:{{[0-9]+}}>
+; MMR5FP64-NEXT:    # <MCOperand Reg:{{[0-9]+}}>
+; MMR5FP64-NEXT:    # <MCOperand Expr:(%lo(c))>>
+;
+; MIPS32R5FP643-LABEL: f6:
+; MIPS32R5FP643:       # %bb.0: # %entry
+; MIPS32R5FP643-NEXT:    lui $1, %hi(c) # <MCInst #{{[0-9]+}} LUi
+; MIPS32R5FP643-NEXT:    # <MCOperand Reg:{{[0-9]+}}>
+; MIPS32R5FP643-NEXT:    # <MCOperand Expr:(%hi(c))>>
+; MIPS32R5FP643-NEXT:    lw $3, %lo(c)($1) # <MCInst #{{[0-9]+}} LW
+; MIPS32R5FP643-NEXT:    # <MCOperand Reg:{{[0-9]+}}>
+; MIPS32R5FP643-NEXT:    # <MCOperand Reg:{{[0-9]+}}>
+; MIPS32R5FP643-NEXT:    # <MCOperand Expr:(%lo(c))>>
+; MIPS32R5FP643-NEXT:    jr $ra # <MCInst #{{[0-9]+}} JR
+; MIPS32R5FP643-NEXT:    # <MCOperand Reg:{{[0-9]+}}>>
+; MIPS32R5FP643-NEXT:    addiu $2, $zero, 0 # <MCInst #{{[0-9]+}} ADDiu
+; MIPS32R5FP643-NEXT:    # <MCOperand Reg:{{[0-9]+}}>
+; MIPS32R5FP643-NEXT:    # <MCOperand Reg:{{[0-9]+}}>
+; MIPS32R5FP643-NEXT:    # <MCOperand Imm:0>>
 entry:
   %0 = load i32, i32 * @c
   %1 = zext i32 %0 to i64
@@ -884,7 +1043,7 @@ define i64 @f7() {
 ;
 ; MMR3-LABEL: f7:
 ; MMR3:       # %bb.0: # %entry
-; MMR3-NEXT:    lui $1, %hi(c) # <MCInst #{{[0-9]+}} LUi
+; MMR3-NEXT:    lui $1, %hi(c) # <MCInst #{{[0-9]+}} LUi_MM
 ; MMR3-NEXT:    # <MCOperand Reg:{{[0-9]+}}>
 ; MMR3-NEXT:    # <MCOperand Expr:(%hi(c))>>
 ; MMR3-NEXT:    lw $3, %lo(c)($1) # <MCInst #{{[0-9]+}} LW_MM
@@ -917,7 +1076,7 @@ define i64 @f7() {
 ;
 ; MMR6-LABEL: f7:
 ; MMR6:       # %bb.0: # %entry
-; MMR6-NEXT:    lui $1, %hi(c) # <MCInst #{{[0-9]+}} LUi
+; MMR6-NEXT:    lui $1, %hi(c) # <MCInst #{{[0-9]+}} LUi_MM
 ; MMR6-NEXT:    # <MCOperand Reg:{{[0-9]+}}>
 ; MMR6-NEXT:    # <MCOperand Expr:(%hi(c))>>
 ; MMR6-NEXT:    lw $3, %lo(c)($1) # <MCInst #{{[0-9]+}} LW_MM
@@ -1015,8 +1174,366 @@ define i64 @f7() {
 ; MIPS64R6-NEXT:    # <MCOperand Reg:{{[0-9]+}}>
 ; MIPS64R6-NEXT:    # <MCOperand Reg:{{[0-9]+}}>
 ; MIPS64R6-NEXT:    # <MCOperand Expr:(%lo(c))>>
+;
+; MMR5FP64-LABEL: f7:
+; MMR5FP64:       # %bb.0: # %entry
+; MMR5FP64-NEXT:    lui $1, %hi(c) # <MCInst #{{[0-9]+}} LUi_MM
+; MMR5FP64-NEXT:    # <MCOperand Reg:{{[0-9]+}}>
+; MMR5FP64-NEXT:    # <MCOperand Expr:(%hi(c))>>
+; MMR5FP64-NEXT:    lw $3, %lo(c)($1) # <MCInst #{{[0-9]+}} LW_MM
+; MMR5FP64-NEXT:    # <MCOperand Reg:{{[0-9]+}}>
+; MMR5FP64-NEXT:    # <MCOperand Reg:{{[0-9]+}}>
+; MMR5FP64-NEXT:    # <MCOperand Expr:(%lo(c))>>
+; MMR5FP64-NEXT:    jr $ra # <MCInst #{{[0-9]+}} JR_MM
+; MMR5FP64-NEXT:    # <MCOperand Reg:{{[0-9]+}}>>
+; MMR5FP64-NEXT:    sra $2, $3, 31 # <MCInst #{{[0-9]+}} SRA_MM
+; MMR5FP64-NEXT:    # <MCOperand Reg:{{[0-9]+}}>
+; MMR5FP64-NEXT:    # <MCOperand Reg:{{[0-9]+}}>
+; MMR5FP64-NEXT:    # <MCOperand Imm:31>>
+;
+; MIPS32R5FP643-LABEL: f7:
+; MIPS32R5FP643:       # %bb.0: # %entry
+; MIPS32R5FP643-NEXT:    lui $1, %hi(c) # <MCInst #{{[0-9]+}} LUi
+; MIPS32R5FP643-NEXT:    # <MCOperand Reg:{{[0-9]+}}>
+; MIPS32R5FP643-NEXT:    # <MCOperand Expr:(%hi(c))>>
+; MIPS32R5FP643-NEXT:    lw $3, %lo(c)($1) # <MCInst #{{[0-9]+}} LW
+; MIPS32R5FP643-NEXT:    # <MCOperand Reg:{{[0-9]+}}>
+; MIPS32R5FP643-NEXT:    # <MCOperand Reg:{{[0-9]+}}>
+; MIPS32R5FP643-NEXT:    # <MCOperand Expr:(%lo(c))>>
+; MIPS32R5FP643-NEXT:    jr $ra # <MCInst #{{[0-9]+}} JR
+; MIPS32R5FP643-NEXT:    # <MCOperand Reg:{{[0-9]+}}>>
+; MIPS32R5FP643-NEXT:    sra $2, $3, 31 # <MCInst #{{[0-9]+}} SRA
+; MIPS32R5FP643-NEXT:    # <MCOperand Reg:{{[0-9]+}}>
+; MIPS32R5FP643-NEXT:    # <MCOperand Reg:{{[0-9]+}}>
+; MIPS32R5FP643-NEXT:    # <MCOperand Imm:31>>
 entry:
   %0 = load i32, i32 * @c
   %1 = sext i32 %0 to i64
   ret i64 %1
+}
+
+define float @f8() {
+; MIPS32-LABEL: f8:
+; MIPS32:       # %bb.0: # %entry
+; MIPS32-NEXT:    lui $1, %hi(e) # <MCInst #{{[0-9]+}} LUi
+; MIPS32-NEXT:    # <MCOperand Reg:{{[0-9]+}}>
+; MIPS32-NEXT:    # <MCOperand Expr:(%hi(e))>>
+; MIPS32-NEXT:    jr $ra # <MCInst #{{[0-9]+}} JR
+; MIPS32-NEXT:    # <MCOperand Reg:{{[0-9]+}}>>
+; MIPS32-NEXT:    lwc1 $f0, %lo(e)($1) # <MCInst #{{[0-9]+}} LWC1
+; MIPS32-NEXT:    # <MCOperand Reg:{{[0-9]+}}>
+; MIPS32-NEXT:    # <MCOperand Reg:{{[0-9]+}}>
+; MIPS32-NEXT:    # <MCOperand Expr:(%lo(e))>>
+;
+; MMR3-LABEL: f8:
+; MMR3:       # %bb.0: # %entry
+; MMR3-NEXT:    lui $1, %hi(e) # <MCInst #{{[0-9]+}} LUi_MM
+; MMR3-NEXT:    # <MCOperand Reg:{{[0-9]+}}>
+; MMR3-NEXT:    # <MCOperand Expr:(%hi(e))>>
+; MMR3-NEXT:    jr $ra # <MCInst #{{[0-9]+}} JR_MM
+; MMR3-NEXT:    # <MCOperand Reg:{{[0-9]+}}>>
+; MMR3-NEXT:    lwc1 $f0, %lo(e)($1) # <MCInst #{{[0-9]+}} LWC1_MM
+; MMR3-NEXT:    # <MCOperand Reg:{{[0-9]+}}>
+; MMR3-NEXT:    # <MCOperand Reg:{{[0-9]+}}>
+; MMR3-NEXT:    # <MCOperand Expr:(%lo(e))>>
+;
+; MIPS32R6-LABEL: f8:
+; MIPS32R6:       # %bb.0: # %entry
+; MIPS32R6-NEXT:    lui $1, %hi(e) # <MCInst #{{[0-9]+}} LUi
+; MIPS32R6-NEXT:    # <MCOperand Reg:{{[0-9]+}}>
+; MIPS32R6-NEXT:    # <MCOperand Expr:(%hi(e))>>
+; MIPS32R6-NEXT:    jr $ra # <MCInst #{{[0-9]+}} JALR
+; MIPS32R6-NEXT:    # <MCOperand Reg:{{[0-9]+}}>
+; MIPS32R6-NEXT:    # <MCOperand Reg:{{[0-9]+}}>>
+; MIPS32R6-NEXT:    lwc1 $f0, %lo(e)($1) # <MCInst #{{[0-9]+}} LWC1
+; MIPS32R6-NEXT:    # <MCOperand Reg:{{[0-9]+}}>
+; MIPS32R6-NEXT:    # <MCOperand Reg:{{[0-9]+}}>
+; MIPS32R6-NEXT:    # <MCOperand Expr:(%lo(e))>>
+;
+; MMR6-LABEL: f8:
+; MMR6:       # %bb.0: # %entry
+; MMR6-NEXT:    lui $1, %hi(e) # <MCInst #{{[0-9]+}} LUi_MM
+; MMR6-NEXT:    # <MCOperand Reg:{{[0-9]+}}>
+; MMR6-NEXT:    # <MCOperand Expr:(%hi(e))>>
+; MMR6-NEXT:    lwc1 $f0, %lo(e)($1) # <MCInst #{{[0-9]+}} LWC1_MM
+; MMR6-NEXT:    # <MCOperand Reg:{{[0-9]+}}>
+; MMR6-NEXT:    # <MCOperand Reg:{{[0-9]+}}>
+; MMR6-NEXT:    # <MCOperand Expr:(%lo(e))>>
+; MMR6-NEXT:    jrc $ra # <MCInst #{{[0-9]+}} JRC16_MM
+; MMR6-NEXT:    # <MCOperand Reg:{{[0-9]+}}>>
+;
+; MIPS3-LABEL: f8:
+; MIPS3:       # %bb.0: # %entry
+; MIPS3-NEXT:    lui $1, %highest(e) # <MCInst #{{[0-9]+}} LUi64
+; MIPS3-NEXT:    # <MCOperand Reg:{{[0-9]+}}>
+; MIPS3-NEXT:    # <MCOperand Expr:(%highest(e))>>
+; MIPS3-NEXT:    daddiu $1, $1, %higher(e) # <MCInst #{{[0-9]+}} DADDiu
+; MIPS3-NEXT:    # <MCOperand Reg:{{[0-9]+}}>
+; MIPS3-NEXT:    # <MCOperand Reg:{{[0-9]+}}>
+; MIPS3-NEXT:    # <MCOperand Expr:(%higher(e))>>
+; MIPS3-NEXT:    dsll $1, $1, 16 # <MCInst #{{[0-9]+}} DSLL
+; MIPS3-NEXT:    # <MCOperand Reg:{{[0-9]+}}>
+; MIPS3-NEXT:    # <MCOperand Reg:{{[0-9]+}}>
+; MIPS3-NEXT:    # <MCOperand Imm:16>>
+; MIPS3-NEXT:    daddiu $1, $1, %hi(e) # <MCInst #{{[0-9]+}} DADDiu
+; MIPS3-NEXT:    # <MCOperand Reg:{{[0-9]+}}>
+; MIPS3-NEXT:    # <MCOperand Reg:{{[0-9]+}}>
+; MIPS3-NEXT:    # <MCOperand Expr:(%hi(e))>>
+; MIPS3-NEXT:    dsll $1, $1, 16 # <MCInst #{{[0-9]+}} DSLL
+; MIPS3-NEXT:    # <MCOperand Reg:{{[0-9]+}}>
+; MIPS3-NEXT:    # <MCOperand Reg:{{[0-9]+}}>
+; MIPS3-NEXT:    # <MCOperand Imm:16>>
+; MIPS3-NEXT:    jr $ra # <MCInst #{{[0-9]+}} JR
+; MIPS3-NEXT:    # <MCOperand Reg:{{[0-9]+}}>>
+; MIPS3-NEXT:    lwc1 $f0, %lo(e)($1) # <MCInst #{{[0-9]+}} LWC1
+; MIPS3-NEXT:    # <MCOperand Reg:{{[0-9]+}}>
+; MIPS3-NEXT:    # <MCOperand Reg:{{[0-9]+}}>
+; MIPS3-NEXT:    # <MCOperand Expr:(%lo(e))>>
+;
+; MIPS64-LABEL: f8:
+; MIPS64:       # %bb.0: # %entry
+; MIPS64-NEXT:    lui $1, %highest(e) # <MCInst #{{[0-9]+}} LUi64
+; MIPS64-NEXT:    # <MCOperand Reg:{{[0-9]+}}>
+; MIPS64-NEXT:    # <MCOperand Expr:(%highest(e))>>
+; MIPS64-NEXT:    daddiu $1, $1, %higher(e) # <MCInst #{{[0-9]+}} DADDiu
+; MIPS64-NEXT:    # <MCOperand Reg:{{[0-9]+}}>
+; MIPS64-NEXT:    # <MCOperand Reg:{{[0-9]+}}>
+; MIPS64-NEXT:    # <MCOperand Expr:(%higher(e))>>
+; MIPS64-NEXT:    dsll $1, $1, 16 # <MCInst #{{[0-9]+}} DSLL
+; MIPS64-NEXT:    # <MCOperand Reg:{{[0-9]+}}>
+; MIPS64-NEXT:    # <MCOperand Reg:{{[0-9]+}}>
+; MIPS64-NEXT:    # <MCOperand Imm:16>>
+; MIPS64-NEXT:    daddiu $1, $1, %hi(e) # <MCInst #{{[0-9]+}} DADDiu
+; MIPS64-NEXT:    # <MCOperand Reg:{{[0-9]+}}>
+; MIPS64-NEXT:    # <MCOperand Reg:{{[0-9]+}}>
+; MIPS64-NEXT:    # <MCOperand Expr:(%hi(e))>>
+; MIPS64-NEXT:    dsll $1, $1, 16 # <MCInst #{{[0-9]+}} DSLL
+; MIPS64-NEXT:    # <MCOperand Reg:{{[0-9]+}}>
+; MIPS64-NEXT:    # <MCOperand Reg:{{[0-9]+}}>
+; MIPS64-NEXT:    # <MCOperand Imm:16>>
+; MIPS64-NEXT:    jr $ra # <MCInst #{{[0-9]+}} JR
+; MIPS64-NEXT:    # <MCOperand Reg:{{[0-9]+}}>>
+; MIPS64-NEXT:    lwc1 $f0, %lo(e)($1) # <MCInst #{{[0-9]+}} LWC1
+; MIPS64-NEXT:    # <MCOperand Reg:{{[0-9]+}}>
+; MIPS64-NEXT:    # <MCOperand Reg:{{[0-9]+}}>
+; MIPS64-NEXT:    # <MCOperand Expr:(%lo(e))>>
+;
+; MIPS64R6-LABEL: f8:
+; MIPS64R6:       # %bb.0: # %entry
+; MIPS64R6-NEXT:    lui $1, %highest(e) # <MCInst #{{[0-9]+}} LUi64
+; MIPS64R6-NEXT:    # <MCOperand Reg:{{[0-9]+}}>
+; MIPS64R6-NEXT:    # <MCOperand Expr:(%highest(e))>>
+; MIPS64R6-NEXT:    daddiu $1, $1, %higher(e) # <MCInst #{{[0-9]+}} DADDiu
+; MIPS64R6-NEXT:    # <MCOperand Reg:{{[0-9]+}}>
+; MIPS64R6-NEXT:    # <MCOperand Reg:{{[0-9]+}}>
+; MIPS64R6-NEXT:    # <MCOperand Expr:(%higher(e))>>
+; MIPS64R6-NEXT:    dsll $1, $1, 16 # <MCInst #{{[0-9]+}} DSLL
+; MIPS64R6-NEXT:    # <MCOperand Reg:{{[0-9]+}}>
+; MIPS64R6-NEXT:    # <MCOperand Reg:{{[0-9]+}}>
+; MIPS64R6-NEXT:    # <MCOperand Imm:16>>
+; MIPS64R6-NEXT:    daddiu $1, $1, %hi(e) # <MCInst #{{[0-9]+}} DADDiu
+; MIPS64R6-NEXT:    # <MCOperand Reg:{{[0-9]+}}>
+; MIPS64R6-NEXT:    # <MCOperand Reg:{{[0-9]+}}>
+; MIPS64R6-NEXT:    # <MCOperand Expr:(%hi(e))>>
+; MIPS64R6-NEXT:    dsll $1, $1, 16 # <MCInst #{{[0-9]+}} DSLL
+; MIPS64R6-NEXT:    # <MCOperand Reg:{{[0-9]+}}>
+; MIPS64R6-NEXT:    # <MCOperand Reg:{{[0-9]+}}>
+; MIPS64R6-NEXT:    # <MCOperand Imm:16>>
+; MIPS64R6-NEXT:    jr $ra # <MCInst #{{[0-9]+}} JALR64
+; MIPS64R6-NEXT:    # <MCOperand Reg:{{[0-9]+}}>
+; MIPS64R6-NEXT:    # <MCOperand Reg:{{[0-9]+}}>>
+; MIPS64R6-NEXT:    lwc1 $f0, %lo(e)($1) # <MCInst #{{[0-9]+}} LWC1
+; MIPS64R6-NEXT:    # <MCOperand Reg:{{[0-9]+}}>
+; MIPS64R6-NEXT:    # <MCOperand Reg:{{[0-9]+}}>
+; MIPS64R6-NEXT:    # <MCOperand Expr:(%lo(e))>>
+;
+; MMR5FP64-LABEL: f8:
+; MMR5FP64:       # %bb.0: # %entry
+; MMR5FP64-NEXT:    lui $1, %hi(e) # <MCInst #{{[0-9]+}} LUi_MM
+; MMR5FP64-NEXT:    # <MCOperand Reg:{{[0-9]+}}>
+; MMR5FP64-NEXT:    # <MCOperand Expr:(%hi(e))>>
+; MMR5FP64-NEXT:    jr $ra # <MCInst #{{[0-9]+}} JR_MM
+; MMR5FP64-NEXT:    # <MCOperand Reg:{{[0-9]+}}>>
+; MMR5FP64-NEXT:    lwc1 $f0, %lo(e)($1) # <MCInst #{{[0-9]+}} LWC1_MM
+; MMR5FP64-NEXT:    # <MCOperand Reg:{{[0-9]+}}>
+; MMR5FP64-NEXT:    # <MCOperand Reg:{{[0-9]+}}>
+; MMR5FP64-NEXT:    # <MCOperand Expr:(%lo(e))>>
+;
+; MIPS32R5FP643-LABEL: f8:
+; MIPS32R5FP643:       # %bb.0: # %entry
+; MIPS32R5FP643-NEXT:    lui $1, %hi(e) # <MCInst #{{[0-9]+}} LUi
+; MIPS32R5FP643-NEXT:    # <MCOperand Reg:{{[0-9]+}}>
+; MIPS32R5FP643-NEXT:    # <MCOperand Expr:(%hi(e))>>
+; MIPS32R5FP643-NEXT:    jr $ra # <MCInst #{{[0-9]+}} JR
+; MIPS32R5FP643-NEXT:    # <MCOperand Reg:{{[0-9]+}}>>
+; MIPS32R5FP643-NEXT:    lwc1 $f0, %lo(e)($1) # <MCInst #{{[0-9]+}} LWC1
+; MIPS32R5FP643-NEXT:    # <MCOperand Reg:{{[0-9]+}}>
+; MIPS32R5FP643-NEXT:    # <MCOperand Reg:{{[0-9]+}}>
+; MIPS32R5FP643-NEXT:    # <MCOperand Expr:(%lo(e))>>
+entry:
+  %0 = load float, float * @e
+  ret float %0
+}
+
+define double @f9() {
+; MIPS32-LABEL: f9:
+; MIPS32:       # %bb.0: # %entry
+; MIPS32-NEXT:    lui $1, %hi(f) # <MCInst #{{[0-9]+}} LUi
+; MIPS32-NEXT:    # <MCOperand Reg:{{[0-9]+}}>
+; MIPS32-NEXT:    # <MCOperand Expr:(%hi(f))>>
+; MIPS32-NEXT:    jr $ra # <MCInst #{{[0-9]+}} JR
+; MIPS32-NEXT:    # <MCOperand Reg:{{[0-9]+}}>>
+; MIPS32-NEXT:    ldc1 $f0, %lo(f)($1) # <MCInst #{{[0-9]+}} LDC1
+; MIPS32-NEXT:    # <MCOperand Reg:{{[0-9]+}}>
+; MIPS32-NEXT:    # <MCOperand Reg:{{[0-9]+}}>
+; MIPS32-NEXT:    # <MCOperand Expr:(%lo(f))>>
+;
+; MMR3-LABEL: f9:
+; MMR3:       # %bb.0: # %entry
+; MMR3-NEXT:    lui $1, %hi(f) # <MCInst #{{[0-9]+}} LUi_MM
+; MMR3-NEXT:    # <MCOperand Reg:{{[0-9]+}}>
+; MMR3-NEXT:    # <MCOperand Expr:(%hi(f))>>
+; MMR3-NEXT:    jr $ra # <MCInst #{{[0-9]+}} JR_MM
+; MMR3-NEXT:    # <MCOperand Reg:{{[0-9]+}}>>
+; MMR3-NEXT:    ldc1 $f0, %lo(f)($1) # <MCInst #{{[0-9]+}} LDC1_MM_D32
+; MMR3-NEXT:    # <MCOperand Reg:{{[0-9]+}}>
+; MMR3-NEXT:    # <MCOperand Reg:{{[0-9]+}}>
+; MMR3-NEXT:    # <MCOperand Expr:(%lo(f))>>
+;
+; MIPS32R6-LABEL: f9:
+; MIPS32R6:       # %bb.0: # %entry
+; MIPS32R6-NEXT:    lui $1, %hi(f) # <MCInst #{{[0-9]+}} LUi
+; MIPS32R6-NEXT:    # <MCOperand Reg:{{[0-9]+}}>
+; MIPS32R6-NEXT:    # <MCOperand Expr:(%hi(f))>>
+; MIPS32R6-NEXT:    jr $ra # <MCInst #{{[0-9]+}} JALR
+; MIPS32R6-NEXT:    # <MCOperand Reg:{{[0-9]+}}>
+; MIPS32R6-NEXT:    # <MCOperand Reg:{{[0-9]+}}>>
+; MIPS32R6-NEXT:    ldc1 $f0, %lo(f)($1) # <MCInst #{{[0-9]+}} LDC164
+; MIPS32R6-NEXT:    # <MCOperand Reg:{{[0-9]+}}>
+; MIPS32R6-NEXT:    # <MCOperand Reg:{{[0-9]+}}>
+; MIPS32R6-NEXT:    # <MCOperand Expr:(%lo(f))>>
+;
+; MMR6-LABEL: f9:
+; MMR6:       # %bb.0: # %entry
+; MMR6-NEXT:    lui $1, %hi(f) # <MCInst #{{[0-9]+}} LUi_MM
+; MMR6-NEXT:    # <MCOperand Reg:{{[0-9]+}}>
+; MMR6-NEXT:    # <MCOperand Expr:(%hi(f))>>
+; MMR6-NEXT:    ldc1 $f0, %lo(f)($1) # <MCInst #{{[0-9]+}} LDC1_D64_MMR6
+; MMR6-NEXT:    # <MCOperand Reg:{{[0-9]+}}>
+; MMR6-NEXT:    # <MCOperand Reg:{{[0-9]+}}>
+; MMR6-NEXT:    # <MCOperand Expr:(%lo(f))>>
+; MMR6-NEXT:    jrc $ra # <MCInst #{{[0-9]+}} JRC16_MM
+; MMR6-NEXT:    # <MCOperand Reg:{{[0-9]+}}>>
+;
+; MIPS3-LABEL: f9:
+; MIPS3:       # %bb.0: # %entry
+; MIPS3-NEXT:    lui $1, %highest(f) # <MCInst #{{[0-9]+}} LUi64
+; MIPS3-NEXT:    # <MCOperand Reg:{{[0-9]+}}>
+; MIPS3-NEXT:    # <MCOperand Expr:(%highest(f))>>
+; MIPS3-NEXT:    daddiu $1, $1, %higher(f) # <MCInst #{{[0-9]+}} DADDiu
+; MIPS3-NEXT:    # <MCOperand Reg:{{[0-9]+}}>
+; MIPS3-NEXT:    # <MCOperand Reg:{{[0-9]+}}>
+; MIPS3-NEXT:    # <MCOperand Expr:(%higher(f))>>
+; MIPS3-NEXT:    dsll $1, $1, 16 # <MCInst #{{[0-9]+}} DSLL
+; MIPS3-NEXT:    # <MCOperand Reg:{{[0-9]+}}>
+; MIPS3-NEXT:    # <MCOperand Reg:{{[0-9]+}}>
+; MIPS3-NEXT:    # <MCOperand Imm:16>>
+; MIPS3-NEXT:    daddiu $1, $1, %hi(f) # <MCInst #{{[0-9]+}} DADDiu
+; MIPS3-NEXT:    # <MCOperand Reg:{{[0-9]+}}>
+; MIPS3-NEXT:    # <MCOperand Reg:{{[0-9]+}}>
+; MIPS3-NEXT:    # <MCOperand Expr:(%hi(f))>>
+; MIPS3-NEXT:    dsll $1, $1, 16 # <MCInst #{{[0-9]+}} DSLL
+; MIPS3-NEXT:    # <MCOperand Reg:{{[0-9]+}}>
+; MIPS3-NEXT:    # <MCOperand Reg:{{[0-9]+}}>
+; MIPS3-NEXT:    # <MCOperand Imm:16>>
+; MIPS3-NEXT:    jr $ra # <MCInst #{{[0-9]+}} JR
+; MIPS3-NEXT:    # <MCOperand Reg:{{[0-9]+}}>>
+; MIPS3-NEXT:    ldc1 $f0, %lo(f)($1) # <MCInst #{{[0-9]+}} LDC164
+; MIPS3-NEXT:    # <MCOperand Reg:{{[0-9]+}}>
+; MIPS3-NEXT:    # <MCOperand Reg:{{[0-9]+}}>
+; MIPS3-NEXT:    # <MCOperand Expr:(%lo(f))>>
+;
+; MIPS64-LABEL: f9:
+; MIPS64:       # %bb.0: # %entry
+; MIPS64-NEXT:    lui $1, %highest(f) # <MCInst #{{[0-9]+}} LUi64
+; MIPS64-NEXT:    # <MCOperand Reg:{{[0-9]+}}>
+; MIPS64-NEXT:    # <MCOperand Expr:(%highest(f))>>
+; MIPS64-NEXT:    daddiu $1, $1, %higher(f) # <MCInst #{{[0-9]+}} DADDiu
+; MIPS64-NEXT:    # <MCOperand Reg:{{[0-9]+}}>
+; MIPS64-NEXT:    # <MCOperand Reg:{{[0-9]+}}>
+; MIPS64-NEXT:    # <MCOperand Expr:(%higher(f))>>
+; MIPS64-NEXT:    dsll $1, $1, 16 # <MCInst #{{[0-9]+}} DSLL
+; MIPS64-NEXT:    # <MCOperand Reg:{{[0-9]+}}>
+; MIPS64-NEXT:    # <MCOperand Reg:{{[0-9]+}}>
+; MIPS64-NEXT:    # <MCOperand Imm:16>>
+; MIPS64-NEXT:    daddiu $1, $1, %hi(f) # <MCInst #{{[0-9]+}} DADDiu
+; MIPS64-NEXT:    # <MCOperand Reg:{{[0-9]+}}>
+; MIPS64-NEXT:    # <MCOperand Reg:{{[0-9]+}}>
+; MIPS64-NEXT:    # <MCOperand Expr:(%hi(f))>>
+; MIPS64-NEXT:    dsll $1, $1, 16 # <MCInst #{{[0-9]+}} DSLL
+; MIPS64-NEXT:    # <MCOperand Reg:{{[0-9]+}}>
+; MIPS64-NEXT:    # <MCOperand Reg:{{[0-9]+}}>
+; MIPS64-NEXT:    # <MCOperand Imm:16>>
+; MIPS64-NEXT:    jr $ra # <MCInst #{{[0-9]+}} JR
+; MIPS64-NEXT:    # <MCOperand Reg:{{[0-9]+}}>>
+; MIPS64-NEXT:    ldc1 $f0, %lo(f)($1) # <MCInst #{{[0-9]+}} LDC164
+; MIPS64-NEXT:    # <MCOperand Reg:{{[0-9]+}}>
+; MIPS64-NEXT:    # <MCOperand Reg:{{[0-9]+}}>
+; MIPS64-NEXT:    # <MCOperand Expr:(%lo(f))>>
+;
+; MIPS64R6-LABEL: f9:
+; MIPS64R6:       # %bb.0: # %entry
+; MIPS64R6-NEXT:    lui $1, %highest(f) # <MCInst #{{[0-9]+}} LUi64
+; MIPS64R6-NEXT:    # <MCOperand Reg:{{[0-9]+}}>
+; MIPS64R6-NEXT:    # <MCOperand Expr:(%highest(f))>>
+; MIPS64R6-NEXT:    daddiu $1, $1, %higher(f) # <MCInst #{{[0-9]+}} DADDiu
+; MIPS64R6-NEXT:    # <MCOperand Reg:{{[0-9]+}}>
+; MIPS64R6-NEXT:    # <MCOperand Reg:{{[0-9]+}}>
+; MIPS64R6-NEXT:    # <MCOperand Expr:(%higher(f))>>
+; MIPS64R6-NEXT:    dsll $1, $1, 16 # <MCInst #{{[0-9]+}} DSLL
+; MIPS64R6-NEXT:    # <MCOperand Reg:{{[0-9]+}}>
+; MIPS64R6-NEXT:    # <MCOperand Reg:{{[0-9]+}}>
+; MIPS64R6-NEXT:    # <MCOperand Imm:16>>
+; MIPS64R6-NEXT:    daddiu $1, $1, %hi(f) # <MCInst #{{[0-9]+}} DADDiu
+; MIPS64R6-NEXT:    # <MCOperand Reg:{{[0-9]+}}>
+; MIPS64R6-NEXT:    # <MCOperand Reg:{{[0-9]+}}>
+; MIPS64R6-NEXT:    # <MCOperand Expr:(%hi(f))>>
+; MIPS64R6-NEXT:    dsll $1, $1, 16 # <MCInst #{{[0-9]+}} DSLL
+; MIPS64R6-NEXT:    # <MCOperand Reg:{{[0-9]+}}>
+; MIPS64R6-NEXT:    # <MCOperand Reg:{{[0-9]+}}>
+; MIPS64R6-NEXT:    # <MCOperand Imm:16>>
+; MIPS64R6-NEXT:    jr $ra # <MCInst #{{[0-9]+}} JALR64
+; MIPS64R6-NEXT:    # <MCOperand Reg:{{[0-9]+}}>
+; MIPS64R6-NEXT:    # <MCOperand Reg:{{[0-9]+}}>>
+; MIPS64R6-NEXT:    ldc1 $f0, %lo(f)($1) # <MCInst #{{[0-9]+}} LDC164
+; MIPS64R6-NEXT:    # <MCOperand Reg:{{[0-9]+}}>
+; MIPS64R6-NEXT:    # <MCOperand Reg:{{[0-9]+}}>
+; MIPS64R6-NEXT:    # <MCOperand Expr:(%lo(f))>>
+;
+; MMR5FP64-LABEL: f9:
+; MMR5FP64:       # %bb.0: # %entry
+; MMR5FP64-NEXT:    lui $1, %hi(f) # <MCInst #{{[0-9]+}} LUi_MM
+; MMR5FP64-NEXT:    # <MCOperand Reg:{{[0-9]+}}>
+; MMR5FP64-NEXT:    # <MCOperand Expr:(%hi(f))>>
+; MMR5FP64-NEXT:    jr $ra # <MCInst #{{[0-9]+}} JR_MM
+; MMR5FP64-NEXT:    # <MCOperand Reg:{{[0-9]+}}>>
+; MMR5FP64-NEXT:    ldc1 $f0, %lo(f)($1) # <MCInst #{{[0-9]+}} LDC1_MM_D64
+; MMR5FP64-NEXT:    # <MCOperand Reg:{{[0-9]+}}>
+; MMR5FP64-NEXT:    # <MCOperand Reg:{{[0-9]+}}>
+; MMR5FP64-NEXT:    # <MCOperand Expr:(%lo(f))>>
+;
+; MIPS32R5FP643-LABEL: f9:
+; MIPS32R5FP643:       # %bb.0: # %entry
+; MIPS32R5FP643-NEXT:    lui $1, %hi(f) # <MCInst #{{[0-9]+}} LUi
+; MIPS32R5FP643-NEXT:    # <MCOperand Reg:{{[0-9]+}}>
+; MIPS32R5FP643-NEXT:    # <MCOperand Expr:(%hi(f))>>
+; MIPS32R5FP643-NEXT:    jr $ra # <MCInst #{{[0-9]+}} JR
+; MIPS32R5FP643-NEXT:    # <MCOperand Reg:{{[0-9]+}}>>
+; MIPS32R5FP643-NEXT:    ldc1 $f0, %lo(f)($1) # <MCInst #{{[0-9]+}} LDC164
+; MIPS32R5FP643-NEXT:    # <MCOperand Reg:{{[0-9]+}}>
+; MIPS32R5FP643-NEXT:    # <MCOperand Reg:{{[0-9]+}}>
+; MIPS32R5FP643-NEXT:    # <MCOperand Expr:(%lo(f))>>
+entry:
+  %0 = load double, double * @f
+  ret double %0
 }

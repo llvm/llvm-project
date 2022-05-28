@@ -34,6 +34,7 @@
 #include "polly/PruneUnprofitable.h"
 #include "polly/ScheduleOptimizer.h"
 #include "polly/ScopDetection.h"
+#include "polly/ScopGraphPrinter.h"
 #include "polly/ScopInfo.h"
 #include "polly/Simplify.h"
 #include "polly/Support/DumpFunctionPass.h"
@@ -233,8 +234,7 @@ namespace {
 /// We use the constructor of a statically declared object to initialize the
 /// different Polly passes right after the Polly library is loaded. This ensures
 /// that the Polly passes are available e.g. in the 'opt' tool.
-class StaticInitializer {
-public:
+struct StaticInitializer {
   StaticInitializer() {
     llvm::PassRegistry &Registry = *llvm::PassRegistry::getPassRegistry();
     polly::initializePollyPasses(Registry);
@@ -331,14 +331,13 @@ static void registerPollyPasses(llvm::legacy::PassManagerBase &PM,
     return;
 
   if (PollyViewer)
-    PM.add(polly::createDOTViewerPass());
+    PM.add(polly::createDOTViewerWrapperPass());
   if (PollyOnlyViewer)
-    PM.add(polly::createDOTOnlyViewerPass());
+    PM.add(polly::createDOTOnlyViewerWrapperPass());
   if (PollyPrinter)
-    PM.add(polly::createDOTPrinterPass());
+    PM.add(polly::createDOTPrinterWrapperPass());
   if (PollyOnlyPrinter)
-    PM.add(polly::createDOTOnlyPrinterPass());
-
+    PM.add(polly::createDOTOnlyPrinterWrapperPass());
   PM.add(polly::createScopInfoRegionPassPass());
   if (EnablePolyhedralInfo)
     PM.add(polly::createPolyhedralInfoPass());
@@ -509,16 +508,13 @@ static void buildCommonPollyPipeline(FunctionPassManager &PM,
   }
 
   if (PollyViewer)
-    llvm::report_fatal_error("Option -polly-show not supported with NPM",
-                             false);
+    PM.addPass(ScopViewer());
   if (PollyOnlyViewer)
-    llvm::report_fatal_error("Option -polly-show-only not supported with NPM",
-                             false);
+    PM.addPass(ScopOnlyViewer());
   if (PollyPrinter)
-    llvm::report_fatal_error("Option -polly-dot not supported with NPM", false);
+    PM.addPass(ScopPrinter());
   if (PollyOnlyPrinter)
-    llvm::report_fatal_error("Option -polly-dot-only not supported with NPM",
-                             false);
+    PM.addPass(ScopOnlyPrinter());
   if (EnablePolyhedralInfo)
     llvm::report_fatal_error(
         "Option -polly-enable-polyhedralinfo not supported with NPM", false);

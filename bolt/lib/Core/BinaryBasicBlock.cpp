@@ -328,6 +328,7 @@ void BinaryBasicBlock::removePredecessor(BinaryBasicBlock *Pred,
     }
   }
   assert(Erased && "Pred is not a predecessor of this block!");
+  (void)Erased;
 }
 
 void BinaryBasicBlock::removeDuplicateConditionalSuccessor(MCInst *CondBranch) {

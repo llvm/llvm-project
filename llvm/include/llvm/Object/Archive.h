@@ -340,6 +340,7 @@ public:
 
   Kind kind() const { return (Kind)Format; }
   bool isThin() const { return IsThin; }
+  static object::Archive::Kind getDefaultKindForHost();
 
   child_iterator child_begin(Error &Err, bool SkipInternal = true) const;
   child_iterator child_end() const;
@@ -359,7 +360,7 @@ public:
   // check if a symbol is in the archive
   Expected<Optional<Child>> findSym(StringRef name) const;
 
-  bool isEmpty() const;
+  virtual bool isEmpty() const;
   bool hasSymbolTable() const;
   StringRef getSymbolTable() const { return SymbolTable; }
   StringRef getStringTable() const { return StringTable; }
@@ -391,6 +392,7 @@ private:
 };
 
 class BigArchive : public Archive {
+public:
   /// Fixed-Length Header.
   struct FixLenHdr {
     char Magic[sizeof(BigArchiveMagic) - 1]; ///< Big archive magic string.
@@ -411,6 +413,9 @@ public:
   BigArchive(MemoryBufferRef Source, Error &Err);
   uint64_t getFirstChildOffset() const override { return FirstChildOffset; }
   uint64_t getLastChildOffset() const { return LastChildOffset; }
+  bool isEmpty() const override {
+    return Data.getBufferSize() == sizeof(FixLenHdr);
+  };
 };
 
 } // end namespace object

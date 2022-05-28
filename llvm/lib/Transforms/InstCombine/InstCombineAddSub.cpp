@@ -1688,7 +1688,8 @@ Value *InstCombinerImpl::OptimizePointerDifference(Value *LHS, Value *RHS,
   // Require at least one GEP with a common base pointer on both sides.
   if (auto *LHSGEP = dyn_cast<GEPOperator>(LHS)) {
     // (gep X, ...) - X
-    if (LHSGEP->getOperand(0) == RHS) {
+    if (LHSGEP->getOperand(0)->stripPointerCasts() ==
+        RHS->stripPointerCasts()) {
       GEP1 = LHSGEP;
     } else if (auto *RHSGEP = dyn_cast<GEPOperator>(RHS)) {
       // (gep X, ...) - (gep X, ...)
@@ -2031,14 +2032,17 @@ Instruction *InstCombinerImpl::visitSub(BinaryOperator &I) {
 
     {
       // sub(add(X,Y),umin(Y,Z)) --> add(X,usub.sat(Y,Z))
-      // sub(add(X,Z),umin(Y,Z)) --> add(X,usub.sat(Y,Z))
+      // sub(add(X,Z),umin(Y,Z)) --> add(X,usub.sat(Z,Y))
       Value *X, *Y, *Z;
-      if (match(Op1, m_OneUse(m_UMin(m_Value(Y), m_Value(Z)))) &&
-          (match(Op0, m_OneUse(m_c_Add(m_Specific(Y), m_Value(X)))) ||
-           match(Op0, m_OneUse(m_c_Add(m_Specific(Z), m_Value(X)))))) {
-        Value *USub =
-            Builder.CreateIntrinsic(Intrinsic::usub_sat, I.getType(), {Y, Z});
-        return BinaryOperator::CreateAdd(X, USub);
+      if (match(Op1, m_OneUse(m_UMin(m_Value(Y), m_Value(Z))))) {
+        if (match(Op0, m_OneUse(m_c_Add(m_Specific(Y), m_Value(X)))))
+          return BinaryOperator::CreateAdd(
+              X, Builder.CreateIntrinsic(Intrinsic::usub_sat, I.getType(),
+                                         {Y, Z}));
+        if (match(Op0, m_OneUse(m_c_Add(m_Specific(Z), m_Value(X)))))
+          return BinaryOperator::CreateAdd(
+              X, Builder.CreateIntrinsic(Intrinsic::usub_sat, I.getType(),
+                                         {Z, Y}));
       }
     }
   }
@@ -2148,11 +2152,11 @@ Instruction *InstCombinerImpl::visitSub(BinaryOperator &I) {
     // B = ashr i32 A, 31 ; smear the sign bit
     // sub (xor A, B), B  ; flip bits if negative and subtract -1 (add 1)
     // --> (A < 0) ? -A : A
-    Value *Cmp = Builder.CreateICmpSLT(A, ConstantInt::getNullValue(Ty));
+    Value *IsNeg = Builder.CreateIsNeg(A);
     // Copy the nuw/nsw flags from the sub to the negate.
-    Value *Neg = Builder.CreateNeg(A, "", I.hasNoUnsignedWrap(),
-                                   I.hasNoSignedWrap());
-    return SelectInst::Create(Cmp, Neg, A);
+    Value *NegA = Builder.CreateNeg(A, "", I.hasNoUnsignedWrap(),
+                                    I.hasNoSignedWrap());
+    return SelectInst::Create(IsNeg, NegA, A);
   }
 
   // If we are subtracting a low-bit masked subset of some value from an add

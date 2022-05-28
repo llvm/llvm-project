@@ -4,7 +4,8 @@ readability-simplify-boolean-expr
 =================================
 
 Looks for boolean expressions involving boolean constants and simplifies
-them to use the appropriate boolean expression directly.
+them to use the appropriate boolean expression directly.  Simplifies
+boolean expressions by application of DeMorgan's Theorem.
 
 Examples:
 
@@ -27,6 +28,12 @@ Initial expression                           Result
 ``if (e) b = false; else b = true;``           ``b = !e;``
 ``if (e) return true; return false;``          ``return e;``
 ``if (e) return false; return true;``          ``return !e;``
+``!(!a || b)``                                 ``a && !b``
+``!(a || !b)``                                 ``!a && b``
+``!(!a || !b)``                                ``a && b``
+``!(!a && b)``                                 ``a || !b``
+``!(a && !b)``                                 ``!a || b``
+``!(!a && !b)``                                ``a || b``
 ===========================================  ================
 
 The resulting expression ``e`` is modified as follows:
@@ -84,3 +91,29 @@ Options
 
    If `true`, conditional boolean assignments at the end of an ``if/else
    if`` chain will be transformed. Default is `false`.
+
+.. option:: SimplifyDeMorgan
+
+   If `true`, DeMorgan's Theorem will be applied to simplify negated
+   conjunctions and disjunctions.  Default is `true`.
+
+.. option:: SimplifyDeMorganRelaxed
+
+   If `true`, :option:`SimplifyDeMorgan` will also transform negated 
+   conjunctions and disjunctions where there is no negation on either operand. 
+   This option has no effect if :option:`SimplifyDeMorgan` is `false`.
+   Default is `false`.
+
+   When Enabled:
+
+   .. code-block::
+
+      bool X = !(A && B)
+      bool Y = !(A || B)
+
+   Would be transformed to:
+
+   .. code-block::
+
+      bool X = !A || !B
+      bool Y = !A && !B

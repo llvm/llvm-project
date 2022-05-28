@@ -16,8 +16,8 @@
 #include "MCTargetDesc/ARCMCTargetDesc.h"
 #include "TargetInfo/ARCTargetInfo.h"
 #include "llvm/MC/MCContext.h"
+#include "llvm/MC/MCDecoderOps.h"
 #include "llvm/MC/MCDisassembler/MCDisassembler.h"
-#include "llvm/MC/MCFixedLenDisassembler.h"
 #include "llvm/MC/MCInst.h"
 #include "llvm/MC/MCInstrInfo.h"
 #include "llvm/MC/MCSubtargetInfo.h"
@@ -181,7 +181,7 @@ static bool DecodeSymbolicOperand(MCInst &Inst, uint64_t Address,
                                   const MCDisassembler *Decoder) {
   static const uint64_t AtLeast = 2;
   return (nullptr != Decoder && Decoder->tryAddingSymbolicOperand(
-                                    Inst, Value, Address, true, 0, AtLeast));
+                                    Inst, Value, Address, true, 0, AtLeast, 0));
 }
 
 static void DecodeSymbolicOperandOff(MCInst &Inst, uint64_t Address,

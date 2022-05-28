@@ -82,6 +82,7 @@ static void printArHelp(StringRef ToolName) {
     =gnu                -   gnu
     =darwin             -   darwin
     =bsd                -   bsd
+    =aix                -   aix (big archive)
   --plugin=<string>     - ignored for compatibility
   -h --help             - display this help and exit
   --rsp-quoting         - quoting style for response files
@@ -187,7 +188,7 @@ static SmallVector<const char *, 256> PositionalArgs;
 static bool MRI;
 
 namespace {
-enum Format { Default, GNU, BSD, DARWIN, Unknown };
+enum Format { Default, GNU, BSD, DARWIN, BIGARCHIVE, Unknown };
 }
 
 static Format FormatType = Default;
@@ -879,48 +880,6 @@ computeNewArchiveMembers(ArchiveOperation Operation,
   return Ret;
 }
 
-static object::Archive::Kind getDefaultForHost() {
-  Triple HostTriple(sys::getProcessTriple());
-  return HostTriple.isOSDarwin()
-             ? object::Archive::K_DARWIN
-             : (HostTriple.isOSAIX() ? object::Archive::K_AIXBIG
-                                     : object::Archive::K_GNU);
-}
-
-static object::Archive::Kind getKindFromMember(const NewArchiveMember &Member) {
-  auto MemBufferRef = Member.Buf->getMemBufferRef();
-  Expected<std::unique_ptr<object::ObjectFile>> OptionalObject =
-      object::ObjectFile::createObjectFile(MemBufferRef);
-
-  if (OptionalObject)
-    return isa<object::MachOObjectFile>(**OptionalObject)
-               ? object::Archive::K_DARWIN
-               : (isa<object::XCOFFObjectFile>(**OptionalObject)
-                      ? object::Archive::K_AIXBIG
-                      : object::Archive::K_GNU);
-
-  // squelch the error in case we had a non-object file
-  consumeError(OptionalObject.takeError());
-
-  // If we're adding a bitcode file to the archive, detect the Archive kind
-  // based on the target triple.
-  LLVMContext Context;
-  if (identify_magic(MemBufferRef.getBuffer()) == file_magic::bitcode) {
-    if (auto ObjOrErr = object::SymbolicFile::createSymbolicFile(
-            MemBufferRef, file_magic::bitcode, &Context)) {
-      auto &IRObject = cast<object::IRObjectFile>(**ObjOrErr);
-      return Triple(IRObject.getTargetTriple()).isOSDarwin()
-                 ? object::Archive::K_DARWIN
-                 : object::Archive::K_GNU;
-    } else {
-      // Squelch the error in case this was not a SymbolicFile.
-      consumeError(ObjOrErr.takeError());
-    }
-  }
-
-  return getDefaultForHost();
-}
-
 static void performWriteOperation(ArchiveOperation Operation,
                                   object::Archive *OldArchive,
                                   std::unique_ptr<MemoryBuffer> OldArchiveBuf,
@@ -942,16 +901,23 @@ static void performWriteOperation(ArchiveOperation Operation,
   case Default:
     if (Thin)
       Kind = object::Archive::K_GNU;
-    else if (OldArchive)
+    else if (OldArchive) {
       Kind = OldArchive->kind();
-    else if (NewMembersP)
-      Kind = !NewMembersP->empty() ? getKindFromMember(NewMembersP->front())
-                                   : getDefaultForHost();
+      if (Kind == object::Archive::K_BSD) {
+        auto InferredKind = object::Archive::K_BSD;
+        if (NewMembersP && !NewMembersP->empty())
+          InferredKind = NewMembersP->front().detectKindFromObject();
+        else if (!NewMembers.empty())
+          InferredKind = NewMembers.front().detectKindFromObject();
+        if (InferredKind == object::Archive::K_DARWIN)
+          Kind = object::Archive::K_DARWIN;
+      }
+    } else if (NewMembersP)
+      Kind = !NewMembersP->empty() ? NewMembersP->front().detectKindFromObject()
+                                   : object::Archive::getDefaultKindForHost();
     else
-      Kind = !NewMembers.empty() ? getKindFromMember(NewMembers.front())
-                                 : getDefaultForHost();
-    if (Kind == object::Archive::K_AIXBIG)
-      fail("big archive writer operation on AIX not yet supported");
+      Kind = !NewMembers.empty() ? NewMembers.front().detectKindFromObject()
+                                 : object::Archive::getDefaultKindForHost();
     break;
   case GNU:
     Kind = object::Archive::K_GNU;
@@ -965,6 +931,11 @@ static void performWriteOperation(ArchiveOperation Operation,
     if (Thin)
       fail("only the gnu format has a thin mode");
     Kind = object::Archive::K_DARWIN;
+    break;
+  case BIGARCHIVE:
+    if (Thin)
+      fail("only the gnu format has a thin mode");
+    Kind = object::Archive::K_AIXBIG;
     break;
   case Unknown:
     llvm_unreachable("");
@@ -1134,7 +1105,8 @@ static void runMRIScript() {
 
   // Nothing to do if not saved.
   if (Saved)
-    performOperation(ReplaceOrInsert, &NewMembers);
+    performOperation(ReplaceOrInsert, /*OldArchive=*/nullptr,
+                     /*OldArchiveBuf=*/nullptr, &NewMembers);
   exit(0);
 }
 
@@ -1237,6 +1209,7 @@ static int ar_main(int argc, char **argv) {
                        .Case("gnu", GNU)
                        .Case("darwin", DARWIN)
                        .Case("bsd", BSD)
+                       .Case("bigarchive", BIGARCHIVE)
                        .Default(Unknown);
       if (FormatType == Unknown)
         fail(std::string("Invalid format ") + Match);
