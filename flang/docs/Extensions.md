@@ -95,6 +95,7 @@ end
   "not yet implemented" message.
 * Structure field access with `.field`
 * `BYTE` as synonym for `INTEGER(KIND=1)`; but not when spelled `TYPE(BYTE)`.
+* When kind-param is used for REAL literals, allow a matching exponent letter
 * Quad precision REAL literals with `Q`
 * `X` prefix/suffix as synonym for `Z` on hexadecimal literals
 * `B`, `O`, `Z`, and `X` accepted as suffixes as well as prefixes
