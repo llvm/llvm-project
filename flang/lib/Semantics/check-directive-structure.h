@@ -58,7 +58,6 @@ public:
       CheckConstructNameBranching("EXIT");
     }
   }
-  void Post(const parser::StopStmt &) { EmitBranchOutError("STOP"); }
   void Post(const parser::CycleStmt &cycleStmt) {
     if (const auto &cycleName{cycleStmt.v}) {
       CheckConstructNameBranching("CYCLE", cycleName.value());
