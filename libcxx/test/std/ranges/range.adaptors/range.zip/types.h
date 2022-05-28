@@ -9,6 +9,7 @@
 #ifndef TEST_STD_RANGES_RANGE_ADAPTORS_RANGE_ZIP_TYPES_H
 #define TEST_STD_RANGES_RANGE_ADAPTORS_RANGE_ZIP_TYPES_H
 
+#include <functional>
 #include <ranges>
 
 #include "test_macros.h"

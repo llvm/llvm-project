@@ -15,6 +15,7 @@
 
 #include <cassert>
 #include <concepts>
+#include <functional>
 #include <ranges>
 
 #include "../types.h"

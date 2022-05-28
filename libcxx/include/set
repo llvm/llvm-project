@@ -476,6 +476,7 @@ erase_if(multiset<Key, Compare, Allocator>& c, Predicate pred);  // C++20
 #include <__assert> // all public C++ headers provide the assertion handler
 #include <__config>
 #include <__functional/is_transparent.h>
+#include <__functional/operations.h>
 #include <__iterator/iterator_traits.h>
 #include <__node_handle>
 #include <__tree>
