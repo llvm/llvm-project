@@ -74,6 +74,11 @@ end
   `CFI_section`, `CFI_setpointer` or `CFI_allocate`, the lower
   bound on that dimension will be set to 1 for consistency with
   the `LBOUND()` intrinsic function.
+* `-2147483648_4` is, strictly speaking, a non-conforming literal
+  constant on a machine with 32-bit two's-complement integers as
+  kind 4, because the grammar of Fortran expressions parses it as a
+  negation of a literal constant, not a negative literal constant.
+  This compiler accepts it with a portability warning.
 
 ## Extensions, deletions, and legacy features supported by default
 

@@ -423,8 +423,21 @@ struct IntTypeVisitor {
   template <typename T> Result Test() {
     if (T::kind >= kind) {
       const char *p{digits.begin()};
-      auto value{T::Scalar::Read(p, 10, true /*signed*/)};
-      if (!value.overflow) {
+      using Int = typename T::Scalar;
+      typename Int::ValueWithOverflow num{0, false};
+      if (isNegated) {
+        auto unsignedNum{Int::Read(p, 10, false /*unsigned*/)};
+        num.value = unsignedNum.value.Negate().value;
+        num.overflow = unsignedNum.overflow || num.value > Int{0};
+        if (!num.overflow && num.value.Negate().overflow &&
+            !analyzer.context().IsInModuleFile(digits)) {
+          analyzer.Say(digits,
+              "negated maximum INTEGER(KIND=%d) literal"_port_en_US, T::kind);
+        }
+      } else {
+        num = Int::Read(p, 10, true /*signed*/);
+      }
+      if (!num.overflow) {
         if (T::kind > kind) {
           if (!isDefaultKind ||
               !analyzer.context().IsEnabled(LanguageFeature::BigIntLiterals)) {
@@ -438,7 +451,7 @@ struct IntTypeVisitor {
           }
         }
         return Expr<SomeType>{
-            Expr<SomeInteger>{Expr<T>{Constant<T>{std::move(value.value)}}}};
+            Expr<SomeInteger>{Expr<T>{Constant<T>{std::move(num.value)}}}};
       }
     }
     return std::nullopt;
@@ -447,17 +460,19 @@ struct IntTypeVisitor {
   parser::CharBlock digits;
   int kind;
   bool isDefaultKind;
+  bool isNegated;
 };
 
 template <typename PARSED>
-MaybeExpr ExpressionAnalyzer::IntLiteralConstant(const PARSED &x) {
+MaybeExpr ExpressionAnalyzer::IntLiteralConstant(
+    const PARSED &x, bool isNegated) {
   const auto &kindParam{std::get<std::optional<parser::KindParam>>(x.t)};
   bool isDefaultKind{!kindParam};
   int kind{AnalyzeKindParam(kindParam, GetDefaultKind(TypeCategory::Integer))};
   if (CheckIntrinsicKind(TypeCategory::Integer, kind)) {
     auto digits{std::get<parser::CharBlock>(x.t)};
     if (MaybeExpr result{common::SearchTypes(
-            IntTypeVisitor{*this, digits, kind, isDefaultKind})}) {
+            IntTypeVisitor{*this, digits, kind, isDefaultKind, isNegated})}) {
       return result;
     } else if (isDefaultKind) {
       Say(digits,
@@ -471,10 +486,11 @@ MaybeExpr ExpressionAnalyzer::IntLiteralConstant(const PARSED &x) {
   return std::nullopt;
 }
 
-MaybeExpr ExpressionAnalyzer::Analyze(const parser::IntLiteralConstant &x) {
+MaybeExpr ExpressionAnalyzer::Analyze(
+    const parser::IntLiteralConstant &x, bool isNegated) {
   auto restorer{
       GetContextualMessages().SetLocation(std::get<parser::CharBlock>(x.t))};
-  return IntLiteralConstant(x);
+  return IntLiteralConstant(x, isNegated);
 }
 
 MaybeExpr ExpressionAnalyzer::Analyze(
@@ -2595,6 +2611,13 @@ MaybeExpr ExpressionAnalyzer::Analyze(const parser::Expr::UnaryPlus &x) {
 }
 
 MaybeExpr ExpressionAnalyzer::Analyze(const parser::Expr::Negate &x) {
+  if (const auto *litConst{
+          std::get_if<parser::LiteralConstant>(&x.v.value().u)}) {
+    if (const auto *intConst{
+            std::get_if<parser::IntLiteralConstant>(&litConst->u)}) {
+      return Analyze(*intConst, true);
+    }
+  }
   return NumericUnaryHelper(*this, NumericOperator::Subtract, x);
 }
 
@@ -3462,10 +3485,10 @@ bool ArgumentAnalyzer::OkLogicalIntegerAssignment(
   std::optional<parser::MessageFixedText> msg;
   if (lhs == TypeCategory::Integer && rhs == TypeCategory::Logical) {
     // allow assignment to LOGICAL from INTEGER as a legacy extension
-    msg = "nonstandard usage: assignment of LOGICAL to INTEGER"_port_en_US;
+    msg = "assignment of LOGICAL to INTEGER"_port_en_US;
   } else if (lhs == TypeCategory::Logical && rhs == TypeCategory::Integer) {
     // ... and assignment to LOGICAL from INTEGER
-    msg = "nonstandard usage: assignment of INTEGER to LOGICAL"_port_en_US;
+    msg = "assignment of INTEGER to LOGICAL"_port_en_US;
   } else {
     return false;
   }

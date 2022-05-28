@@ -1018,9 +1018,13 @@ Scope *ModFileReader::Read(const SourceName &name,
   if (!pair.second) {
     return nullptr;
   }
+  // Process declarations from the module file
   Symbol &modSymbol{*pair.first->second};
   modSymbol.set(Symbol::Flag::ModFile);
+  bool wasInModuleFile{context_.foldingContext().inModuleFile()};
+  context_.foldingContext().set_inModuleFile(true);
   ResolveNames(context_, parseTree, topScope);
+  context_.foldingContext().set_inModuleFile(wasInModuleFile);
   CHECK(modSymbol.has<ModuleDetails>());
   CHECK(modSymbol.test(Symbol::Flag::ModFile));
   if (isIntrinsic.value_or(false)) {
