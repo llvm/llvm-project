@@ -188,7 +188,7 @@ IncrementalParser::ParseOrWrapTopLevelDecl() {
     S.TUScope->setEntity(PreviousTU);
 
     // Clean up the lookup table
-    if (StoredDeclsMap *Map = PreviousTU->getLookupPtr()) {
+    if (StoredDeclsMap *Map = PreviousTU->getPrimaryContext()->getLookupPtr()) {
       for (auto I = Map->begin(); I != Map->end(); ++I) {
         StoredDeclsList &List = I->second;
         DeclContextLookupResult R = List.getLookupResult();
