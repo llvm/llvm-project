@@ -15147,6 +15147,11 @@ static SDValue tryCombineFixedPointConvert(SDNode *N,
 // It also supports immediate DUP-like nodes (MOVI/MVNi), which we can fold
 // similarly here.
 static SDValue tryExtendDUPToExtractHigh(SDValue N, SelectionDAG &DAG) {
+  MVT VT = N.getSimpleValueType();
+  if (N.getOpcode() == ISD::EXTRACT_SUBVECTOR &&
+      N.getConstantOperandVal(1) == 0)
+    N = N.getOperand(0);
+
   switch (N.getOpcode()) {
   case AArch64ISD::DUP:
   case AArch64ISD::DUPLANE8:
@@ -15167,18 +15172,19 @@ static SDValue tryExtendDUPToExtractHigh(SDValue N, SelectionDAG &DAG) {
     return SDValue();
   }
 
-  MVT NarrowTy = N.getSimpleValueType();
-  if (!NarrowTy.is64BitVector())
+  if (!VT.is64BitVector())
     return SDValue();
 
-  MVT ElementTy = NarrowTy.getVectorElementType();
-  unsigned NumElems = NarrowTy.getVectorNumElements();
-  MVT NewVT = MVT::getVectorVT(ElementTy, NumElems * 2);
+  SDLoc DL(N);
+  unsigned NumElems = VT.getVectorNumElements();
+  if (N.getValueType().is64BitVector()) {
+    MVT ElementTy = VT.getVectorElementType();
+    MVT NewVT = MVT::getVectorVT(ElementTy, NumElems * 2);
+    N = DAG.getNode(N->getOpcode(), DL, NewVT, N->ops());
+  }
 
-  SDLoc dl(N);
-  return DAG.getNode(ISD::EXTRACT_SUBVECTOR, dl, NarrowTy,
-                     DAG.getNode(N->getOpcode(), dl, NewVT, N->ops()),
-                     DAG.getConstant(NumElems, dl, MVT::i64));
+  return DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, VT, N,
+                     DAG.getConstant(NumElems, DL, MVT::i64));
 }
 
 static bool isEssentiallyExtractHighSubvector(SDValue N) {
@@ -18225,6 +18231,24 @@ static SDValue performSelectCombine(SDNode *N,
   return DAG.getSelect(DL, ResVT, Mask, N->getOperand(1), N->getOperand(2));
 }
 
+static SDValue performDUPCombine(SDNode *N,
+                                 TargetLowering::DAGCombinerInfo &DCI) {
+  EVT VT = N->getValueType(0);
+  // If "v2i32 DUP(x)" and "v4i32 DUP(x)" both exist, use an extract from the
+  // 128bit vector version.
+  if (VT.is64BitVector() && DCI.isAfterLegalizeDAG()) {
+    EVT LVT = VT.getDoubleNumVectorElementsVT(*DCI.DAG.getContext());
+    if (SDNode *LN = DCI.DAG.getNodeIfExists(
+            N->getOpcode(), DCI.DAG.getVTList(LVT), {N->getOperand(0)})) {
+      SDLoc DL(N);
+      return DCI.DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, VT, SDValue(LN, 0),
+                             DCI.DAG.getConstant(0, DL, MVT::i64));
+    }
+  }
+
+  return performPostLD1Combine(N, DCI, false);
+}
+
 /// Get rid of unnecessary NVCASTs (that don't change the type).
 static SDValue performNVCASTCombine(SDNode *N) {
   if (N->getValueType(0) == N->getOperand(0).getValueType())
@@ -18948,7 +18972,7 @@ SDValue AArch64TargetLowering::PerformDAGCombine(SDNode *N,
   case AArch64ISD::CSEL:
     return performCSELCombine(N, DCI, DAG);
   case AArch64ISD::DUP:
-    return performPostLD1Combine(N, DCI, false);
+    return performDUPCombine(N, DCI);
   case AArch64ISD::NVCAST:
     return performNVCASTCombine(N);
   case AArch64ISD::SPLICE:
