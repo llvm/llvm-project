@@ -2,6 +2,7 @@
 ; RUN: opt < %s -passes=instcombine -S | FileCheck %s
 
 declare void @use8(i8)
+declare void @use16(i16)
 declare void @use32(i32)
 
 ; There should be no 'and' instructions left in any test.
@@ -1619,4 +1620,143 @@ define i8 @not_lshr_bitwidth_mask(i8 %x, i8 %y) {
   %not = xor i8 %sign, -1
   %r = and i8 %not, %y
   ret i8 %r
+}
+
+define i16 @shl_lshr_pow2_const(i16 %x) {
+; CHECK-LABEL: @shl_lshr_pow2_const(
+; CHECK-NEXT:    [[SHL:%.*]] = shl i16 4, [[X:%.*]]
+; CHECK-NEXT:    [[LSHR:%.*]] = lshr i16 [[SHL]], 6
+; CHECK-NEXT:    [[R:%.*]] = and i16 [[LSHR]], 8
+; CHECK-NEXT:    ret i16 [[R]]
+;
+  %shl = shl i16 4, %x
+  %lshr = lshr i16 %shl, 6
+  %r = and i16 %lshr, 8
+  ret i16 %r
+}
+
+define i16 @shl_lshr_pow2_const_negative_oneuse(i16 %x) {
+; CHECK-LABEL: @shl_lshr_pow2_const_negative_oneuse(
+; CHECK-NEXT:    [[SHL:%.*]] = shl i16 4, [[X:%.*]]
+; CHECK-NEXT:    [[LSHR:%.*]] = lshr i16 [[SHL]], 6
+; CHECK-NEXT:    call void @use16(i16 [[LSHR]])
+; CHECK-NEXT:    [[R:%.*]] = and i16 [[LSHR]], 8
+; CHECK-NEXT:    ret i16 [[R]]
+;
+  %shl = shl i16 4, %x
+  %lshr = lshr i16 %shl, 6
+  call void @use16(i16 %lshr)
+  %r = and i16 %lshr, 8
+  ret i16 %r
+}
+
+
+define i16 @shl_lshr_pow2_const_negative_nopow2_1(i16 %x) {
+; CHECK-LABEL: @shl_lshr_pow2_const_negative_nopow2_1(
+; CHECK-NEXT:    [[SHL:%.*]] = shl i16 3, [[X:%.*]]
+; CHECK-NEXT:    [[LSHR:%.*]] = lshr i16 [[SHL]], 6
+; CHECK-NEXT:    [[R:%.*]] = and i16 [[LSHR]], 8
+; CHECK-NEXT:    ret i16 [[R]]
+;
+  %shl = shl i16 3, %x
+  %lshr = lshr i16 %shl, 6
+  %r = and i16 %lshr, 8
+  ret i16 %r
+}
+
+define i16 @shl_lshr_pow2_const_negative_nopow2_2(i16 %x) {
+; CHECK-LABEL: @shl_lshr_pow2_const_negative_nopow2_2(
+; CHECK-NEXT:    [[SHL:%.*]] = shl i16 3, [[X:%.*]]
+; CHECK-NEXT:    [[LSHR:%.*]] = lshr i16 [[SHL]], 6
+; CHECK-NEXT:    [[R:%.*]] = and i16 [[LSHR]], 7
+; CHECK-NEXT:    ret i16 [[R]]
+;
+  %shl = shl i16 3, %x
+  %lshr = lshr i16 %shl, 6
+  %r = and i16 %lshr, 7
+  ret i16 %r
+}
+
+define i16 @shl_lshr_pow2_const_negative_overflow1(i16 %x) {
+; CHECK-LABEL: @shl_lshr_pow2_const_negative_overflow1(
+; CHECK-NEXT:    ret i16 0
+;
+  %shl = shl i16 4096, %x
+  %lshr = lshr i16 %shl, 6
+  %r = and i16 %lshr, 8
+  ret i16 %r
+}
+
+define i16 @shl_lshr_pow2_const_negative_overflow2(i16 %x) {
+; CHECK-LABEL: @shl_lshr_pow2_const_negative_overflow2(
+; CHECK-NEXT:    ret i16 0
+;
+  %shl = shl i16 8, %x
+  %lshr = lshr i16 %shl, 6
+  %r = and i16 %lshr, 32768
+  ret i16 %r
+}
+
+define i16 @lshr_lshr_pow2_const(i16 %x) {
+; CHECK-LABEL: @lshr_lshr_pow2_const(
+; CHECK-NEXT:    [[LSHR1:%.*]] = lshr i16 2048, [[X:%.*]]
+; CHECK-NEXT:    [[LSHR2:%.*]] = lshr i16 [[LSHR1]], 6
+; CHECK-NEXT:    [[R:%.*]] = and i16 [[LSHR2]], 4
+; CHECK-NEXT:    ret i16 [[R]]
+;
+  %lshr1 = lshr i16 2048, %x
+  %lshr2 = lshr i16 %lshr1, 6
+  %r = and i16 %lshr2, 4
+  ret i16 %r
+}
+
+define i16 @lshr_lshr_pow2_const_negative_oneuse(i16 %x) {
+; CHECK-LABEL: @lshr_lshr_pow2_const_negative_oneuse(
+; CHECK-NEXT:    [[LSHR1:%.*]] = lshr i16 2048, [[X:%.*]]
+; CHECK-NEXT:    [[LSHR2:%.*]] = lshr i16 [[LSHR1]], 6
+; CHECK-NEXT:    call void @use16(i16 [[LSHR2]])
+; CHECK-NEXT:    [[R:%.*]] = and i16 [[LSHR2]], 4
+; CHECK-NEXT:    ret i16 [[R]]
+;
+  %lshr1 = lshr i16 2048, %x
+  %lshr2 = lshr i16 %lshr1, 6
+  call void @use16(i16 %lshr2)
+  %r = and i16 %lshr2, 4
+  ret i16 %r
+}
+
+define i16 @lshr_lshr_pow2_const_negative_nopow2_1(i16 %x) {
+; CHECK-LABEL: @lshr_lshr_pow2_const_negative_nopow2_1(
+; CHECK-NEXT:    [[LSHR1:%.*]] = lshr i16 2047, [[X:%.*]]
+; CHECK-NEXT:    [[LSHR2:%.*]] = lshr i16 [[LSHR1]], 6
+; CHECK-NEXT:    [[R:%.*]] = and i16 [[LSHR2]], 4
+; CHECK-NEXT:    ret i16 [[R]]
+;
+  %lshr1 = lshr i16 2047, %x
+  %lshr2 = lshr i16 %lshr1, 6
+  %r = and i16 %lshr2, 4
+  ret i16 %r
+}
+
+define i16 @lshr_lshr_pow2_const_negative_nopow2_2(i16 %x) {
+; CHECK-LABEL: @lshr_lshr_pow2_const_negative_nopow2_2(
+; CHECK-NEXT:    [[LSHR1:%.*]] = lshr i16 8192, [[X:%.*]]
+; CHECK-NEXT:    [[LSHR2:%.*]] = lshr i16 [[LSHR1]], 6
+; CHECK-NEXT:    [[R:%.*]] = and i16 [[LSHR2]], 3
+; CHECK-NEXT:    ret i16 [[R]]
+;
+  %lshr1 = lshr i16 8192, %x
+  %lshr2 = lshr i16 %lshr1, 6
+  %r = and i16 %lshr2, 3
+  ret i16 %r
+}
+
+define i16 @lshr_lshr_pow2_const_negative_overflow(i16 %x) {
+; CHECK-LABEL: @lshr_lshr_pow2_const_negative_overflow(
+; CHECK-NEXT:    ret i16 0
+;
+  %lshr1 = lshr i16 32768, %x
+  %lshr2 = lshr i16 %lshr1, 15
+  %r = and i16 %lshr2, 4
+  ret i16 %r
 }
