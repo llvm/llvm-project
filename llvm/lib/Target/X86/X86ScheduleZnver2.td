@@ -393,14 +393,17 @@ defm : X86WriteRes<WriteVecMoveToGpr,    [Zn2FPU2], 2, [1], 1>;
 defm : X86WriteRes<WriteVecMoveFromGpr,  [Zn2FPU2], 3, [1], 1>;
 defm : X86WriteRes<WriteEMMS,            [Zn2FPU], 2, [1], 1>;
 
-defm : Zn2WriteResFpuPair<WriteVecShift,   [Zn2FPU],   1>;
+defm : Zn2WriteResFpuPair<WriteVecShift,   [Zn2FPU2],  1>;
 defm : Zn2WriteResFpuPair<WriteVecShiftX,  [Zn2FPU2],  1>;
 defm : Zn2WriteResFpuPair<WriteVecShiftY,  [Zn2FPU2],  1>;
 defm : X86WriteResPairUnsupported<WriteVecShiftZ>;
-defm : Zn2WriteResFpuPair<WriteVecShiftImm,  [Zn2FPU], 1>;
-defm : Zn2WriteResFpuPair<WriteVecShiftImmX, [Zn2FPU], 1>;
-defm : Zn2WriteResFpuPair<WriteVecShiftImmY, [Zn2FPU], 1>;
+defm : Zn2WriteResFpuPair<WriteVecShiftImm,  [Zn2FPU2], 1>;
+defm : Zn2WriteResFpuPair<WriteVecShiftImmX, [Zn2FPU2], 1>;
+defm : Zn2WriteResFpuPair<WriteVecShiftImmY, [Zn2FPU2], 1>;
 defm : X86WriteResPairUnsupported<WriteVecShiftImmZ>;
+defm : Zn2WriteResFpuPair<WriteVarVecShift,  [Zn2FPU1], 3, [2], 1>;
+defm : Zn2WriteResFpuPair<WriteVarVecShiftY, [Zn2FPU1], 3, [2], 1>;
+defm : X86WriteResPairUnsupported<WriteVarVecShiftZ>;
 defm : Zn2WriteResFpuPair<WriteVecLogic,   [Zn2FPU],   1>;
 defm : Zn2WriteResFpuPair<WriteVecLogicX,  [Zn2FPU],   1>;
 defm : Zn2WriteResFpuPair<WriteVecLogicY,  [Zn2FPU],   1>;
@@ -438,11 +441,6 @@ defm : Zn2WriteResFpuPair<WritePSADBWX,    [Zn2FPU0],  3>;
 defm : Zn2WriteResFpuPair<WritePSADBWY,    [Zn2FPU0],  3>;
 defm : X86WriteResPairUnsupported<WritePSADBWZ>;
 defm : Zn2WriteResFpuPair<WritePHMINPOS,   [Zn2FPU0],  4>;
-
-// Vector Shift Operations
-defm : Zn2WriteResFpuPair<WriteVarVecShift,  [Zn2FPU12], 3>;
-defm : Zn2WriteResFpuPair<WriteVarVecShiftY, [Zn2FPU12], 3>;
-defm : X86WriteResPairUnsupported<WriteVarVecShiftZ>;
 
 // Vector insert/extract operations.
 defm : Zn2WriteResFpuPair<WriteVecInsert,   [Zn2FPU],   1>;
