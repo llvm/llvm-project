@@ -139,7 +139,7 @@ const std::string &CIndexer::getClangResourcesPath() {
   } else {
     // It's rather unlikely we end up here. But it could happen, so report an
     // error instead of crashing.
-    llvm::report_fatal_error("Could not locate Clang resource path");
+    llvm::report_fatal_error("could not locate Clang resource path");
   }
 
 #endif
