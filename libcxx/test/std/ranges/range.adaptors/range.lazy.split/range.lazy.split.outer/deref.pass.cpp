@@ -13,14 +13,16 @@
 
 #include <ranges>
 
+#include <algorithm>
 #include <cassert>
+#include <string>
 #include <string_view>
 #include <type_traits>
-#include "../small_string.h"
 #include "../types.h"
 
 template <class View, class Separator>
 constexpr void test_one(Separator sep) {
+  using namespace std::string_literals;
   using namespace std::string_view_literals;
 
   View v("abc def ghi"sv, sep);
@@ -29,16 +31,16 @@ constexpr void test_one(Separator sep) {
   {
     auto i = v.begin();
     static_assert(!std::is_reference_v<decltype(*i)>);
-    assert(SmallString(*i) == "abc"_str);
-    assert(SmallString(*(++i)) == "def"_str);
-    assert(SmallString(*(++i)) == "ghi"_str);
+    assert(std::ranges::equal(*i, "abc"s));
+    assert(std::ranges::equal(*(++i), "def"s));
+    assert(std::ranges::equal(*(++i), "ghi"s));
   }
 
   // Const iterator.
   {
     const auto ci = v.begin();
     static_assert(!std::is_reference_v<decltype(*ci)>);
-    assert(SmallString(*ci) == "abc"_str);
+    assert(std::ranges::equal(*ci, "abc"s));
   }
 }
 
