@@ -14075,9 +14075,7 @@ static QualType getCommonNonSugarTypeNode(ASTContext &Ctx, const Type *X,
   case Type::Pipe: {
     const auto *PX = cast<PipeType>(X), *PY = cast<PipeType>(Y);
     assert(PX->isReadOnly() == PY->isReadOnly());
-    auto MP = PX->isReadOnly() ? &ASTContext::getReadPipeType
-                               : &ASTContext::getWritePipeType;
-    return (Ctx.*MP)(getCommonElementType(Ctx, PX, PY));
+    return Ctx.getPipeType(getCommonElementType(Ctx, PX, PY), PX->isReadOnly());
   }
   case Type::TemplateTypeParm: {
     const auto *TX = cast<TemplateTypeParmType>(X),

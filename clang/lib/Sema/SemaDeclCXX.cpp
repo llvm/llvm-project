@@ -1246,7 +1246,7 @@ static QualType getTupleLikeElementType(Sema &S, SourceLocation Loc,
       S.Diag(R.getRepresentativeDecl()->getLocation(), diag::note_declared_at);
     return QualType();
   }
-
+  // FIXME: resugar
   return S.Context.getTypeDeclType(TD);
 }
 
