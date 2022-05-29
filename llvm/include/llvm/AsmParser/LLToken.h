@@ -88,7 +88,6 @@ enum Kind {
   kw_triple,
   kw_source_filename,
   kw_unwind,
-  kw_deplibs, // FIXME: Remove in 4.0
   kw_datalayout,
   kw_volatile,
   kw_atomic,

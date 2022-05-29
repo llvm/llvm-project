@@ -170,6 +170,8 @@ public:
   const Scope &FindScope(parser::CharBlock) const;
   Scope &FindScope(parser::CharBlock);
 
+  bool IsInModuleFile(parser::CharBlock) const;
+
   const ConstructStack &constructStack() const { return constructStack_; }
   template <typename N> void PushConstruct(const N &node) {
     constructStack_.emplace_back(&node);
