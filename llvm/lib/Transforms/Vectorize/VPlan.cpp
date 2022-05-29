@@ -158,25 +158,25 @@ void VPBlockBase::setPlan(VPlan *ParentPlan) {
 }
 
 /// \return the VPBasicBlock that is the exit of Block, possibly indirectly.
-const VPBasicBlock *VPBlockBase::getExitBasicBlock() const {
+const VPBasicBlock *VPBlockBase::getExitingBasicBlock() const {
   const VPBlockBase *Block = this;
   while (const VPRegionBlock *Region = dyn_cast<VPRegionBlock>(Block))
-    Block = Region->getExit();
+    Block = Region->getExiting();
   return cast<VPBasicBlock>(Block);
 }
 
-VPBasicBlock *VPBlockBase::getExitBasicBlock() {
+VPBasicBlock *VPBlockBase::getExitingBasicBlock() {
   VPBlockBase *Block = this;
   while (VPRegionBlock *Region = dyn_cast<VPRegionBlock>(Block))
-    Block = Region->getExit();
+    Block = Region->getExiting();
   return cast<VPBasicBlock>(Block);
 }
 
 VPBlockBase *VPBlockBase::getEnclosingBlockWithSuccessors() {
   if (!Successors.empty() || !Parent)
     return this;
-  assert(Parent->getExit() == this &&
-         "Block w/o successors not the exit of its parent.");
+  assert(Parent->getExiting() == this &&
+         "Block w/o successors not the exiting block of its parent.");
   return Parent->getEnclosingBlockWithSuccessors();
 }
 
@@ -261,7 +261,7 @@ VPBasicBlock::createEmptyBasicBlock(VPTransformState::CFGState &CFG) {
 
   // Hook up the new basic block to its predecessors.
   for (VPBlockBase *PredVPBlock : getHierarchicalPredecessors()) {
-    VPBasicBlock *PredVPBB = PredVPBlock->getExitBasicBlock();
+    VPBasicBlock *PredVPBB = PredVPBlock->getExitingBasicBlock();
     auto &PredVPSuccessors = PredVPBB->getSuccessors();
     BasicBlock *PredBB = CFG.VPBB2IRBB[PredVPBB];
 
@@ -298,14 +298,14 @@ VPBasicBlock::createEmptyBasicBlock(VPTransformState::CFGState &CFG) {
              "Trying to reset an existing successor block.");
       PredBBTerminator->setSuccessor(idx, NewBB);
     } else {
-      // PredVPBB is the exit block of a loop region. Connect its successor
+      // PredVPBB is the exiting block of a loop region. Connect its successor
       // outside the region.
       auto *LoopRegion = cast<VPRegionBlock>(PredVPBB->getParent());
       assert(!LoopRegion->isReplicator() &&
              "predecessor must be in a loop region");
       assert(PredVPSuccessors.empty() &&
-             LoopRegion->getExitBasicBlock() == PredVPBB &&
-             "PredVPBB must be the exit block of its parent region");
+             LoopRegion->getExitingBasicBlock() == PredVPBB &&
+             "PredVPBB must be the exiting block of its parent region");
       assert(this == LoopRegion->getSingleSuccessor() &&
              "the current block must be the single successor of the region");
       PredBBTerminator->setSuccessor(0, NewBB);
@@ -334,7 +334,7 @@ void VPBasicBlock::execute(VPTransformState *State) {
     State->CFG.PrevBB = NewBB;
   } else if (PrevVPBB && /* A */
              !((SingleHPred = getSingleHierarchicalPredecessor()) &&
-               SingleHPred->getExitBasicBlock() == PrevVPBB &&
+               SingleHPred->getExitingBasicBlock() == PrevVPBB &&
                PrevVPBB->getSingleHierarchicalSuccessor() &&
                (SingleHPred->getParent() == getEnclosingLoopRegion() &&
                 !IsLoopRegion(SingleHPred))) &&         /* B */
@@ -345,7 +345,7 @@ void VPBasicBlock::execute(VPTransformState *State) {
     //    is PrevVPBB and the latter has a single (hierarchical) successor which
     //    both are in the same non-replicator region; and
     // C. when the current VPBB is an entry of a region replica - where PrevVPBB
-    //    is the exit of this region from a previous instance, or the
+    //    is the exiting VPBB of this region from a previous instance, or the
     //    predecessor of this region.
 
     NewBB = createEmptyBasicBlock(State->CFG);
@@ -986,7 +986,7 @@ void VPlan::execute(VPTransformState *State) {
     }
   }
 
-  VPBasicBlock *LatchVPBB = getVectorLoopRegion()->getExitBasicBlock();
+  VPBasicBlock *LatchVPBB = getVectorLoopRegion()->getExitingBasicBlock();
   BasicBlock *VectorLatchBB = State->CFG.VPBB2IRBB[LatchVPBB];
 
   // Fix the latch value of canonical, reduction and first-order recurrences
@@ -1187,8 +1187,8 @@ void VPlanPrinter::dumpBlock(const VPBlockBase *Block) {
 void VPlanPrinter::drawEdge(const VPBlockBase *From, const VPBlockBase *To,
                             bool Hidden, const Twine &Label) {
   // Due to "dot" we print an edge between two regions as an edge between the
-  // exit basic block and the entry basic of the respective regions.
-  const VPBlockBase *Tail = From->getExitBasicBlock();
+  // exiting basic block and the entry basic of the respective regions.
+  const VPBlockBase *Tail = From->getExitingBasicBlock();
   const VPBlockBase *Head = To->getEntryBasicBlock();
   OS << Indent << getUID(Tail) << " -> " << getUID(Head);
   OS << " [ label=\"" << Label << '\"';
