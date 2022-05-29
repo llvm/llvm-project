@@ -434,6 +434,11 @@ DataEdit FormatControl<CONTEXT>::GetNextDataEdit(
   } else if (edit.descriptor != DataEdit::DefinedDerivedType) {
     edit.width = GetIntField(context);
   }
+  if constexpr (std::is_base_of_v<InputStatementState, CONTEXT>) {
+    if (edit.width.value_or(-1) == 0) {
+      ReportBadFormat(context, "Input field width is zero", start);
+    }
+  }
   if (edit.descriptor != DataEdit::DefinedDerivedType && PeekNext() == '.') {
     ++offset_;
     edit.digits = GetIntField(context);
