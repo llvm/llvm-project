@@ -750,7 +750,7 @@ namespace cwg656 { // cwg656: 2.8
   void f() {
     accept<const A&>(x);
     accept<const A&>(y);
-    // expected-error@-1 {{cannot cast 'const Y' to its private base class 'const cwg656::A'}}
+    // expected-error@-1 {{cannot cast 'const Y' to its private base class 'const A'}}
     //   expected-note@#cwg656-Y {{declared private here}}
     accept<const A&>(vy); // #cwg656-vy
     // expected-error@-1 {{call to deleted function 'accept'}}
