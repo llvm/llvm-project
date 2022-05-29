@@ -644,10 +644,9 @@ define void @test_sink_store_only() writeonly {
 ; CHECK: Function Attrs: writeonly
 ; CHECK-LABEL: @test_sink_store_only(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[GLB_PROMOTED:%.*]] = load i8, i8* @glb, align 1
 ; CHECK-NEXT:    br label [[LOOP_HEADER:%.*]]
 ; CHECK:       loop.header:
-; CHECK-NEXT:    [[DIV1:%.*]] = phi i8 [ [[GLB_PROMOTED]], [[ENTRY:%.*]] ], [ [[DIV:%.*]], [[LOOP_LATCH:%.*]] ]
+; CHECK-NEXT:    [[DIV1:%.*]] = phi i8 [ poison, [[ENTRY:%.*]] ], [ [[DIV:%.*]], [[LOOP_LATCH:%.*]] ]
 ; CHECK-NEXT:    [[I:%.*]] = phi i8 [ 0, [[ENTRY]] ], [ [[ADD:%.*]], [[LOOP_LATCH]] ]
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i8 [[I]], 4
 ; CHECK-NEXT:    br i1 [[CMP]], label [[LOOP_LATCH]], label [[EXIT:%.*]]
@@ -683,10 +682,9 @@ define void @test_sink_store_to_local_object_only_loop_must_execute() writeonly 
 ; CHECK-LABEL: @test_sink_store_to_local_object_only_loop_must_execute(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[A:%.*]] = alloca i8, align 1
-; CHECK-NEXT:    [[A_PROMOTED:%.*]] = load i8, i8* [[A]], align 1
 ; CHECK-NEXT:    br label [[LOOP_HEADER:%.*]]
 ; CHECK:       loop.header:
-; CHECK-NEXT:    [[DIV1:%.*]] = phi i8 [ [[A_PROMOTED]], [[ENTRY:%.*]] ], [ [[DIV:%.*]], [[LOOP_LATCH:%.*]] ]
+; CHECK-NEXT:    [[DIV1:%.*]] = phi i8 [ poison, [[ENTRY:%.*]] ], [ [[DIV:%.*]], [[LOOP_LATCH:%.*]] ]
 ; CHECK-NEXT:    [[I:%.*]] = phi i8 [ 0, [[ENTRY]] ], [ [[ADD:%.*]], [[LOOP_LATCH]] ]
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i8 [[I]], 4
 ; CHECK-NEXT:    br i1 [[CMP]], label [[LOOP_LATCH]], label [[EXIT:%.*]]
@@ -842,17 +840,16 @@ define void @sink_store_lcssa_phis(i32* %ptr, i1 %c) {
 ; CHECK:       loop.2.header:
 ; CHECK-NEXT:    br i1 false, label [[LOOP_3_HEADER_PREHEADER:%.*]], label [[LOOP_1_LATCH:%.*]]
 ; CHECK:       loop.3.header.preheader:
-; CHECK-NEXT:    [[PTR_PROMOTED:%.*]] = load i32, i32* [[PTR:%.*]], align 4
 ; CHECK-NEXT:    br label [[LOOP_3_HEADER:%.*]]
 ; CHECK:       loop.3.header:
-; CHECK-NEXT:    [[I_11:%.*]] = phi i32 [ [[I_1:%.*]], [[LOOP_3_LATCH:%.*]] ], [ [[PTR_PROMOTED]], [[LOOP_3_HEADER_PREHEADER]] ]
+; CHECK-NEXT:    [[I_11:%.*]] = phi i32 [ [[I_1:%.*]], [[LOOP_3_LATCH:%.*]] ], [ poison, [[LOOP_3_HEADER_PREHEADER]] ]
 ; CHECK-NEXT:    [[I_1]] = phi i32 [ 1, [[LOOP_3_LATCH]] ], [ 0, [[LOOP_3_HEADER_PREHEADER]] ]
 ; CHECK-NEXT:    br i1 true, label [[LOOP_3_LATCH]], label [[LOOP_2_LATCH:%.*]]
 ; CHECK:       loop.3.latch:
 ; CHECK-NEXT:    br label [[LOOP_3_HEADER]]
 ; CHECK:       loop.2.latch:
 ; CHECK-NEXT:    [[I_11_LCSSA:%.*]] = phi i32 [ [[I_11]], [[LOOP_3_HEADER]] ]
-; CHECK-NEXT:    store i32 [[I_11_LCSSA]], i32* [[PTR]], align 4
+; CHECK-NEXT:    store i32 [[I_11_LCSSA]], i32* [[PTR:%.*]], align 4
 ; CHECK-NEXT:    br label [[LOOP_2_HEADER]]
 ; CHECK:       loop.1.latch:
 ; CHECK-NEXT:    br i1 [[C:%.*]], label [[LOOP_1_HEADER]], label [[EXIT:%.*]]
