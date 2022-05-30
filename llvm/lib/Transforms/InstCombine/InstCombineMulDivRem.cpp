@@ -301,9 +301,15 @@ Instruction *InstCombinerImpl::visitMul(BinaryOperator &I) {
     }
   }
 
-  // i1 mul -> i1 and.
+  // Fold the following two scenarios:
+  //   1) i1 mul -> i1 and.
+  //   2) X * Y --> X & Y, iff X, Y can be only {0,1}.
+  // Note: We could use known bits to generalize this and related patterns with
+  // shifts/truncs
   Type *Ty = I.getType();
-  if (Ty->isIntOrIntVectorTy(1))
+  if (Ty->isIntOrIntVectorTy(1) ||
+      (match(Op0, m_And(m_Value(), m_One())) &&
+       match(Op1, m_And(m_Value(), m_One()))))
     return BinaryOperator::CreateAnd(Op0, Op1);
 
   // X*(1 << Y) --> X << Y
