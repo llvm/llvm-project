@@ -95,6 +95,10 @@
     br label %for.cond
   }
 
+  define void @extracopy(<2 x float> %shuf, <2 x float> %mu, <2 x float> %ad, <2 x float>* %ret) #0 {
+    unreachable
+  }
+
   attributes #0 = { "target-cpu"="cortex-a57" }
 
 ...
@@ -542,6 +546,74 @@ body:             |
     %15:fpr64 = FMULv2f32 %7, %0
     %16:fpr64 = FADDv2f32 killed %15, %8
     STRDui killed %16, %4, 0 :: (store (s64) into %ir.ret, align 16)
+    B %bb.1
+
+...
+---
+name:            extracopy
+alignment:       16
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: fpr64 }
+  - { id: 1, class: fpr64 }
+  - { id: 2, class: fpr64 }
+  - { id: 3, class: fpr64 }
+  - { id: 4, class: gpr64common }
+  - { id: 5, class: fpr64 }
+  - { id: 6, class: fpr64 }
+  - { id: 7, class: fpr128 }
+  - { id: 8, class: fpr128 }
+  - { id: 9, class: fpr64 }
+  - { id: 10, class: fpr64 }
+  - { id: 11, class: fpr64 }
+liveins:
+  - { reg: '$d0', virtual-reg: '%1' }
+  - { reg: '$d1', virtual-reg: '%2' }
+  - { reg: '$d2', virtual-reg: '%3' }
+  - { reg: '$x0', virtual-reg: '%4' }
+frameInfo:
+  maxAlignment:    1
+  maxCallFrameSize: 0
+machineFunctionInfo: {}
+body:             |
+  ; CHECK-LABEL: name: extracopy
+  ; CHECK: bb.0:
+  ; CHECK-NEXT:   liveins: $d0, $d1, $d2, $x0
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:gpr64common = COPY $x0
+  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:fpr64 = COPY $d2
+  ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:fpr64 = COPY $d1
+  ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:fpr64 = COPY $d0
+  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:fpr128 = IMPLICIT_DEF
+  ; CHECK-NEXT:   [[INSERT_SUBREG:%[0-9]+]]:fpr128 = INSERT_SUBREG [[DEF]], [[COPY3]], %subreg.dsub
+  ; CHECK-NEXT:   [[COPY4:%[0-9]+]]:fpr64 = COPY [[COPY1]]
+  ; CHECK-NEXT:   [[COPY5:%[0-9]+]]:fpr64 = COPY [[COPY2]]
+  ; CHECK-NEXT:   [[DUPv2i32lane:%[0-9]+]]:fpr64 = DUPv2i32lane killed [[INSERT_SUBREG]], 0
+  ; CHECK-NEXT:   [[COPY6:%[0-9]+]]:fpr64 = COPY [[DUPv2i32lane]]
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.1:
+  ; CHECK-NEXT:   [[FMULv2f32_:%[0-9]+]]:fpr64 = FMULv2f32 [[COPY5]], [[COPY6]]
+  ; CHECK-NEXT:   [[FADDv2f32_:%[0-9]+]]:fpr64 = FADDv2f32 killed [[FMULv2f32_]], [[COPY4]]
+  ; CHECK-NEXT:   STRDui killed [[FADDv2f32_]], [[COPY]], 0 :: (store (s64), align 16)
+  ; CHECK-NEXT:   B %bb.1
+  bb.0:
+    liveins: $d0, $d1, $d2, $x0
+
+    %4:gpr64common = COPY $x0
+    %3:fpr64 = COPY $d2
+    %2:fpr64 = COPY $d1
+    %1:fpr64 = COPY $d0
+    %8:fpr128 = IMPLICIT_DEF
+    %7:fpr128 = INSERT_SUBREG %8, %1, %subreg.dsub
+    %6:fpr64 = COPY %3
+    %5:fpr64 = COPY %2
+    %11:fpr64 = DUPv2i32lane killed %7, 0
+    %0:fpr64 = COPY %11
+
+  bb.1:
+    %9:fpr64 = FMULv2f32 %5, %0
+    %10:fpr64 = FADDv2f32 killed %9, %6
+    STRDui killed %10, %4, 0 :: (store 8, align 16)
     B %bb.1
 
 ...
