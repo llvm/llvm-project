@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17
-// UNSUPPORTED: gcc-11
 // UNSUPPORTED: libcpp-has-no-incomplete-ranges
 
 // Tests that <value_> is a <copyable-box>.
