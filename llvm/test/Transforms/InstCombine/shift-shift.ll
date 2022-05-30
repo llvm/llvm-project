@@ -325,7 +325,7 @@ define i32 @shl_shl_constants_use(i32 %x) {
 ; CHECK-LABEL: @shl_shl_constants_use(
 ; CHECK-NEXT:    [[S:%.*]] = shl i32 -2013265920, [[X:%.*]]
 ; CHECK-NEXT:    call void @use32(i32 [[S]])
-; CHECK-NEXT:    [[R:%.*]] = shl i32 [[S]], 3
+; CHECK-NEXT:    [[R:%.*]] = shl i32 1073741824, [[X]]
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %s = shl i32 2281701376, %x ; 0x8800_0000
