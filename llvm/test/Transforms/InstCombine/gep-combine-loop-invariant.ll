@@ -21,8 +21,8 @@ define i32 @foo(i8* nocapture readnone %match, i32 %cur_match, i32 %best_len, i3
 ; CHECK:       do.body:
 ; CHECK-NEXT:    [[IDX_EXT:%.*]] = zext i32 [[TMP4:%.*]] to i64
 ; CHECK-NEXT:    [[ADD_PTR1:%.*]] = getelementptr inbounds i8, i8* [[WIN]], i64 [[IDX_EXT1]]
-; CHECK-NEXT:    [[ADD_PTR22:%.*]] = getelementptr inbounds i8, i8* [[ADD_PTR1]], i64 -1
-; CHECK-NEXT:    [[ADD_PTR3:%.*]] = getelementptr inbounds i8, i8* [[ADD_PTR22]], i64 [[IDX_EXT]]
+; CHECK-NEXT:    [[ADD_PTR22:%.*]] = getelementptr i8, i8* [[ADD_PTR1]], i64 -1
+; CHECK-NEXT:    [[ADD_PTR3:%.*]] = getelementptr i8, i8* [[ADD_PTR22]], i64 [[IDX_EXT]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = bitcast i8* [[ADD_PTR3]] to i32*
 ; CHECK-NEXT:    [[TMP3:%.*]] = load i32, i32* [[TMP2]], align 4
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[TMP3]], [[SCAN_END]]
@@ -195,7 +195,7 @@ define void @PR51485(<2 x i64> %v) {
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[SL1:%.*]] = shl nuw nsw <2 x i64> [[V:%.*]], <i64 7, i64 7>
-; CHECK-NEXT:    [[E6:%.*]] = getelementptr inbounds i8, i8* getelementptr inbounds (i8, i8* bitcast (void (<2 x i64>)* @PR51485 to i8*), i64 80), <2 x i64> [[SL1]]
+; CHECK-NEXT:    [[E6:%.*]] = getelementptr i8, i8* getelementptr (i8, i8* bitcast (void (<2 x i64>)* @PR51485 to i8*), i64 80), <2 x i64> [[SL1]]
 ; CHECK-NEXT:    call void @blackhole(<2 x i8*> [[E6]])
 ; CHECK-NEXT:    br label [[LOOP]]
 ;
@@ -292,9 +292,9 @@ define void @both_inbounds_one_neg(i8* %ptr, i1 %c, i32 noundef %arg) {
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[ARG_EXT:%.*]] = zext i32 [[ARG:%.*]] to i64
-; CHECK-NEXT:    [[PTR21:%.*]] = getelementptr inbounds i8, i8* [[PTR:%.*]], i64 -1
-; CHECK-NEXT:    [[PTR3:%.*]] = getelementptr inbounds i8, i8* [[PTR21]], i64 [[ARG_EXT]]
-; CHECK-NEXT:    call void @use(i8* nonnull [[PTR3]])
+; CHECK-NEXT:    [[PTR21:%.*]] = getelementptr i8, i8* [[PTR:%.*]], i64 -1
+; CHECK-NEXT:    [[PTR3:%.*]] = getelementptr i8, i8* [[PTR21]], i64 [[ARG_EXT]]
+; CHECK-NEXT:    call void @use(i8* [[PTR3]])
 ; CHECK-NEXT:    br i1 [[C:%.*]], label [[LOOP]], label [[EXIT:%.*]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret void
