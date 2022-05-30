@@ -1,5 +1,5 @@
 // RUN: rm -rf %t
-// RUN: pp-trace -callbacks '*,-FileChanged,-MacroDefined' %s -- -x objective-c++ -undef -target x86_64 -std=c++11 -fmodules -fcxx-modules -fmodules-cache-path=%t -I%S -I%S/Input | FileCheck --strict-whitespace %s
+// RUN: pp-trace -callbacks '*,-FileChanged,-MacroDefined' %s -- -x objective-c++ -undef -target x86_64 -std=c++11 -fmodules -fmodules-cache-path=%t -I%S -I%S/Input | FileCheck --strict-whitespace %s
 
 // CHECK: ---
 
