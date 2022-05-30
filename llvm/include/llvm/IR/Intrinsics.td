@@ -1415,11 +1415,11 @@ def int_vp_gather: DefaultAttrsIntrinsic<[ llvm_anyvector_ty],
                              [ IntrReadMem, IntrNoSync, IntrWillReturn, IntrArgMemOnly ]>;
 
 def int_vp_scatter: DefaultAttrsIntrinsic<[],
-                              [ llvm_anyvector_ty,
-                                LLVMVectorOfAnyPointersToElt<0>,
-                                LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>,
-                                llvm_i32_ty],
-                              [ IntrArgMemOnly, IntrNoSync, IntrWillReturn ]>; // TODO allow IntrNoCapture for vectors of pointers
+                             [ llvm_anyvector_ty,
+                               LLVMVectorOfAnyPointersToElt<0>,
+                               LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>,
+                               llvm_i32_ty],
+                             [ IntrArgMemOnly, IntrNoSync, IntrWillReturn ]>; // TODO allow IntrNoCapture for vectors of pointers
 
 // Experimental strided memory accesses
 def int_experimental_vp_strided_store : DefaultAttrsIntrinsic<[],
@@ -1437,8 +1437,9 @@ def int_experimental_vp_strided_load  : DefaultAttrsIntrinsic<[llvm_anyvector_ty
                                llvm_i32_ty],
                              [ NoCapture<ArgIndex<0>>, IntrNoSync, IntrReadMem, IntrWillReturn, IntrArgMemOnly ]>;
 
-// Speculatable Binary operators
-let IntrProperties = [IntrSpeculatable, IntrNoMem, IntrNoSync, IntrWillReturn] in {
+// Operators
+let IntrProperties = [IntrNoMem, IntrNoSync, IntrWillReturn] in {
+  // Integer arithmetic
   def int_vp_add : DefaultAttrsIntrinsic<[ llvm_anyvector_ty ],
                              [ LLVMMatchType<0>,
                                LLVMMatchType<0>,
@@ -1450,30 +1451,30 @@ let IntrProperties = [IntrSpeculatable, IntrNoMem, IntrNoSync, IntrWillReturn] i
                                LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>,
                                llvm_i32_ty]>;
   def int_vp_mul  : DefaultAttrsIntrinsic<[ llvm_anyvector_ty ],
-                              [ LLVMMatchType<0>,
-                                LLVMMatchType<0>,
-                                LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>,
-                                llvm_i32_ty]>;
+                             [ LLVMMatchType<0>,
+                               LLVMMatchType<0>,
+                               LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>,
+                               llvm_i32_ty]>;
   def int_vp_ashr : DefaultAttrsIntrinsic<[ llvm_anyvector_ty ],
-                              [ LLVMMatchType<0>,
-                                LLVMMatchType<0>,
-                                LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>,
-                                llvm_i32_ty]>;
+                             [ LLVMMatchType<0>,
+                               LLVMMatchType<0>,
+                               LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>,
+                               llvm_i32_ty]>;
   def int_vp_lshr : DefaultAttrsIntrinsic<[ llvm_anyvector_ty ],
-                              [ LLVMMatchType<0>,
-                                LLVMMatchType<0>,
-                                LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>,
-                                llvm_i32_ty]>;
+                             [ LLVMMatchType<0>,
+                               LLVMMatchType<0>,
+                               LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>,
+                               llvm_i32_ty]>;
   def int_vp_shl : DefaultAttrsIntrinsic<[ llvm_anyvector_ty ],
                              [ LLVMMatchType<0>,
                                LLVMMatchType<0>,
                                LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>,
                                llvm_i32_ty]>;
   def int_vp_or : DefaultAttrsIntrinsic<[ llvm_anyvector_ty ],
-                            [ LLVMMatchType<0>,
-                              LLVMMatchType<0>,
-                              LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>,
-                              llvm_i32_ty]>;
+                             [ LLVMMatchType<0>,
+                               LLVMMatchType<0>,
+                               LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>,
+                               llvm_i32_ty]>;
   def int_vp_and : DefaultAttrsIntrinsic<[ llvm_anyvector_ty ],
                              [ LLVMMatchType<0>,
                                LLVMMatchType<0>,
@@ -1484,35 +1485,28 @@ let IntrProperties = [IntrSpeculatable, IntrNoMem, IntrNoSync, IntrWillReturn] i
                                LLVMMatchType<0>,
                                LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>,
                                llvm_i32_ty]>;
-}
-
-// Non-speculatable binary operators.
-let IntrProperties = [IntrNoMem, IntrNoSync, IntrWillReturn] in {
   def int_vp_sdiv : DefaultAttrsIntrinsic<[ llvm_anyvector_ty ],
-                              [ LLVMMatchType<0>,
-                                LLVMMatchType<0>,
-                                LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>,
-                                llvm_i32_ty]>;
+                             [ LLVMMatchType<0>,
+                               LLVMMatchType<0>,
+                               LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>,
+                               llvm_i32_ty]>;
   def int_vp_udiv : DefaultAttrsIntrinsic<[ llvm_anyvector_ty ],
-                              [ LLVMMatchType<0>,
-                                LLVMMatchType<0>,
-                                LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>,
-                                llvm_i32_ty]>;
+                             [ LLVMMatchType<0>,
+                               LLVMMatchType<0>,
+                               LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>,
+                               llvm_i32_ty]>;
   def int_vp_srem : DefaultAttrsIntrinsic<[ llvm_anyvector_ty ],
-                              [ LLVMMatchType<0>,
-                                LLVMMatchType<0>,
-                                LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>,
-                                llvm_i32_ty]>;
+                             [ LLVMMatchType<0>,
+                               LLVMMatchType<0>,
+                               LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>,
+                               llvm_i32_ty]>;
   def int_vp_urem : DefaultAttrsIntrinsic<[ llvm_anyvector_ty ],
-                              [ LLVMMatchType<0>,
-                                LLVMMatchType<0>,
-                                LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>,
-                                llvm_i32_ty]>;
-}
+                             [ LLVMMatchType<0>,
+                               LLVMMatchType<0>,
+                               LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>,
+                               llvm_i32_ty]>;
 
-// Floating-point arithmetic.
-let IntrProperties =
-    [IntrSpeculatable, IntrNoMem, IntrNoSync, IntrWillReturn] in {
+  // Floating-point arithmetic
   def int_vp_fadd : DefaultAttrsIntrinsic<[ llvm_anyvector_ty ],
                              [ LLVMMatchType<0>,
                                LLVMMatchType<0>,
@@ -1524,177 +1518,169 @@ let IntrProperties =
                                LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>,
                                llvm_i32_ty]>;
   def int_vp_fmul  : DefaultAttrsIntrinsic<[ llvm_anyvector_ty ],
-                              [ LLVMMatchType<0>,
-                                LLVMMatchType<0>,
-                                LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>,
-                                llvm_i32_ty]>;
+                             [ LLVMMatchType<0>,
+                               LLVMMatchType<0>,
+                               LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>,
+                               llvm_i32_ty]>;
   def int_vp_fdiv : DefaultAttrsIntrinsic<[ llvm_anyvector_ty ],
-                              [ LLVMMatchType<0>,
-                                LLVMMatchType<0>,
-                                LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>,
-                                llvm_i32_ty]>;
+                             [ LLVMMatchType<0>,
+                               LLVMMatchType<0>,
+                               LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>,
+                               llvm_i32_ty]>;
   def int_vp_frem : DefaultAttrsIntrinsic<[ llvm_anyvector_ty ],
-                              [ LLVMMatchType<0>,
-                                LLVMMatchType<0>,
-                                LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>,
-                                llvm_i32_ty]>;
-
+                             [ LLVMMatchType<0>,
+                               LLVMMatchType<0>,
+                               LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>,
+                               llvm_i32_ty]>;
   def int_vp_fneg : DefaultAttrsIntrinsic<[ llvm_anyvector_ty ],
-                              [ LLVMMatchType<0>,
-                                LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>,
-                                llvm_i32_ty]>;
-
+                             [ LLVMMatchType<0>,
+                               LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>,
+                               llvm_i32_ty]>;
   def int_vp_fma : DefaultAttrsIntrinsic<[ llvm_anyvector_ty ],
-                              [ LLVMMatchType<0>,
-                                LLVMMatchType<0>,
-                                LLVMMatchType<0>,
-                                LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>,
-                                llvm_i32_ty]>;
-}
+                             [ LLVMMatchType<0>,
+                               LLVMMatchType<0>,
+                               LLVMMatchType<0>,
+                               LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>,
+                               llvm_i32_ty]>;
 
-// Casts.
-def int_vp_trunc : DefaultAttrsIntrinsic<[ llvm_anyvector_ty ],
-                            [ llvm_anyvector_ty,
-                              LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>,
-                              llvm_i32_ty]>;
-def int_vp_zext : DefaultAttrsIntrinsic<[ llvm_anyvector_ty ],
-                            [ llvm_anyvector_ty,
-                              LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>,
-                              llvm_i32_ty]>;
-def int_vp_sext : DefaultAttrsIntrinsic<[ llvm_anyvector_ty ],
-                            [ llvm_anyvector_ty,
-                              LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>,
-                              llvm_i32_ty]>;
-def int_vp_fptrunc : DefaultAttrsIntrinsic<[ llvm_anyvector_ty ],
-                            [ llvm_anyvector_ty,
-                              LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>,
-                              llvm_i32_ty]>;
-def int_vp_fpext : DefaultAttrsIntrinsic<[ llvm_anyvector_ty ],
-                            [ llvm_anyvector_ty,
-                              LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>,
-                              llvm_i32_ty]>;
-def int_vp_fptoui : DefaultAttrsIntrinsic<[ llvm_anyvector_ty ],
-                            [ llvm_anyvector_ty,
-                              LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>,
-                              llvm_i32_ty]>;
-def int_vp_fptosi : DefaultAttrsIntrinsic<[ llvm_anyvector_ty ],
-                            [ llvm_anyvector_ty,
-                              LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>,
-                              llvm_i32_ty]>;
-def int_vp_uitofp : DefaultAttrsIntrinsic<[ llvm_anyvector_ty ],
-                            [ llvm_anyvector_ty,
-                              LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>,
-                              llvm_i32_ty]>;
-def int_vp_sitofp : DefaultAttrsIntrinsic<[ llvm_anyvector_ty ],
-                            [ llvm_anyvector_ty,
-                              LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>,
-                              llvm_i32_ty]>;
-def int_vp_ptrtoint : DefaultAttrsIntrinsic<[ llvm_anyvector_ty ],
-                            [ llvm_anyvector_ty,
-                              LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>,
-                              llvm_i32_ty]>;
-def int_vp_inttoptr : DefaultAttrsIntrinsic<[ llvm_anyvector_ty ],
-                            [ llvm_anyvector_ty,
-                              LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>,
-                              llvm_i32_ty]>;
+  // Casts
+  def int_vp_trunc : DefaultAttrsIntrinsic<[ llvm_anyvector_ty ],
+                             [ llvm_anyvector_ty,
+                               LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>,
+                               llvm_i32_ty]>;
+  def int_vp_zext : DefaultAttrsIntrinsic<[ llvm_anyvector_ty ],
+                             [ llvm_anyvector_ty,
+                               LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>,
+                               llvm_i32_ty]>;
+  def int_vp_sext : DefaultAttrsIntrinsic<[ llvm_anyvector_ty ],
+                             [ llvm_anyvector_ty,
+                               LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>,
+                               llvm_i32_ty]>;
+  def int_vp_fptrunc : DefaultAttrsIntrinsic<[ llvm_anyvector_ty ],
+                             [ llvm_anyvector_ty,
+                               LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>,
+                               llvm_i32_ty]>;
+  def int_vp_fpext : DefaultAttrsIntrinsic<[ llvm_anyvector_ty ],
+                             [ llvm_anyvector_ty,
+                               LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>,
+                               llvm_i32_ty]>;
+  def int_vp_fptoui : DefaultAttrsIntrinsic<[ llvm_anyvector_ty ],
+                             [ llvm_anyvector_ty,
+                               LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>,
+                               llvm_i32_ty]>;
+  def int_vp_fptosi : DefaultAttrsIntrinsic<[ llvm_anyvector_ty ],
+                             [ llvm_anyvector_ty,
+                               LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>,
+                               llvm_i32_ty]>;
+  def int_vp_uitofp : DefaultAttrsIntrinsic<[ llvm_anyvector_ty ],
+                             [ llvm_anyvector_ty,
+                               LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>,
+                               llvm_i32_ty]>;
+  def int_vp_sitofp : DefaultAttrsIntrinsic<[ llvm_anyvector_ty ],
+                             [ llvm_anyvector_ty,
+                               LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>,
+                               llvm_i32_ty]>;
+  def int_vp_ptrtoint : DefaultAttrsIntrinsic<[ llvm_anyvector_ty ],
+                             [ llvm_anyvector_ty,
+                               LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>,
+                               llvm_i32_ty]>;
+  def int_vp_inttoptr : DefaultAttrsIntrinsic<[ llvm_anyvector_ty ],
+                             [ llvm_anyvector_ty,
+                               LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>,
+                               llvm_i32_ty]>;
 
-// Shuffles.
-def int_vp_select : DefaultAttrsIntrinsic<[ llvm_anyvector_ty ],
-                              [ LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>,
-                                LLVMMatchType<0>,
-                                LLVMMatchType<0>,
-                                llvm_i32_ty]>;
+  // Shuffles
+  def int_vp_select : DefaultAttrsIntrinsic<[ llvm_anyvector_ty ],
+                             [ LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>,
+                               LLVMMatchType<0>,
+                               LLVMMatchType<0>,
+                               llvm_i32_ty]>;
+  def int_vp_merge : DefaultAttrsIntrinsic<[ llvm_anyvector_ty ],
+                             [ LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>,
+                               LLVMMatchType<0>,
+                               LLVMMatchType<0>,
+                               llvm_i32_ty]>;
 
-def int_vp_merge : DefaultAttrsIntrinsic<[ llvm_anyvector_ty ],
-                              [ LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>,
-                                LLVMMatchType<0>,
-                                LLVMMatchType<0>,
-                                llvm_i32_ty]>;
-
-// Comparisons.
-let IntrProperties = [IntrNoMem, IntrNoSync, IntrWillReturn] in {
+  // Comparisons
   def int_vp_fcmp : DefaultAttrsIntrinsic<[ LLVMScalarOrSameVectorWidth<0, llvm_i1_ty> ],
-                                [ llvm_anyvector_ty,
-                                  LLVMMatchType<0>,
-                                  llvm_metadata_ty,
-                                  LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>,
-                                  llvm_i32_ty]>;
-
+                             [ llvm_anyvector_ty,
+                               LLVMMatchType<0>,
+                               llvm_metadata_ty,
+                               LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>,
+                               llvm_i32_ty]>;
   def int_vp_icmp : DefaultAttrsIntrinsic<[ LLVMScalarOrSameVectorWidth<0, llvm_i1_ty> ],
-                                [ llvm_anyvector_ty,
-                                  LLVMMatchType<0>,
-                                  llvm_metadata_ty,
-                                  LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>,
-                                  llvm_i32_ty]>;
-}
+                             [ llvm_anyvector_ty,
+                               LLVMMatchType<0>,
+                               llvm_metadata_ty,
+                               LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>,
+                               llvm_i32_ty]>;
 
-// Reductions
-let IntrProperties = [IntrSpeculatable, IntrNoMem, IntrNoSync, IntrWillReturn] in {
+  // Reductions
   def int_vp_reduce_fadd : DefaultAttrsIntrinsic<[LLVMVectorElementType<0>],
-                                    [LLVMVectorElementType<0>,
-                                     llvm_anyvector_ty,
-                                     LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>,
-                                     llvm_i32_ty]>;
+                             [ LLVMVectorElementType<0>,
+                               llvm_anyvector_ty,
+                               LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>,
+                               llvm_i32_ty]>;
   def int_vp_reduce_fmul : DefaultAttrsIntrinsic<[LLVMVectorElementType<0>],
-                                    [LLVMVectorElementType<0>,
-                                     llvm_anyvector_ty,
-                                     LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>,
-                                     llvm_i32_ty]>;
+                             [ LLVMVectorElementType<0>,
+                               llvm_anyvector_ty,
+                               LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>,
+                               llvm_i32_ty]>;
   def int_vp_reduce_add  : DefaultAttrsIntrinsic<[LLVMVectorElementType<0>],
-                                    [LLVMVectorElementType<0>,
-                                     llvm_anyvector_ty,
-                                     LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>,
-                                     llvm_i32_ty]>;
+                             [ LLVMVectorElementType<0>,
+                               llvm_anyvector_ty,
+                               LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>,
+                               llvm_i32_ty]>;
   def int_vp_reduce_mul : DefaultAttrsIntrinsic<[LLVMVectorElementType<0>],
-                                    [LLVMVectorElementType<0>,
-                                     llvm_anyvector_ty,
-                                     LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>,
-                                     llvm_i32_ty]>;
+                             [ LLVMVectorElementType<0>,
+                               llvm_anyvector_ty,
+                               LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>,
+                               llvm_i32_ty]>;
   def int_vp_reduce_and : DefaultAttrsIntrinsic<[LLVMVectorElementType<0>],
-                                    [LLVMVectorElementType<0>,
-                                     llvm_anyvector_ty,
-                                     LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>,
-                                     llvm_i32_ty]>;
+                             [ LLVMVectorElementType<0>,
+                               llvm_anyvector_ty,
+                               LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>,
+                               llvm_i32_ty]>;
   def int_vp_reduce_or : DefaultAttrsIntrinsic<[LLVMVectorElementType<0>],
-                                    [LLVMVectorElementType<0>,
-                                     llvm_anyvector_ty,
-                                     LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>,
-                                     llvm_i32_ty]>;
+                             [ LLVMVectorElementType<0>,
+                               llvm_anyvector_ty,
+                               LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>,
+                               llvm_i32_ty]>;
   def int_vp_reduce_xor : DefaultAttrsIntrinsic<[LLVMVectorElementType<0>],
-                                    [LLVMVectorElementType<0>,
-                                     llvm_anyvector_ty,
-                                     LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>,
-                                     llvm_i32_ty]>;
+                             [ LLVMVectorElementType<0>,
+                               llvm_anyvector_ty,
+                               LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>,
+                               llvm_i32_ty]>;
   def int_vp_reduce_smax : DefaultAttrsIntrinsic<[LLVMVectorElementType<0>],
-                                    [LLVMVectorElementType<0>,
-                                     llvm_anyvector_ty,
-                                     LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>,
-                                     llvm_i32_ty]>;
+                             [ LLVMVectorElementType<0>,
+                               llvm_anyvector_ty,
+                               LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>,
+                               llvm_i32_ty]>;
   def int_vp_reduce_smin : DefaultAttrsIntrinsic<[LLVMVectorElementType<0>],
-                                    [LLVMVectorElementType<0>,
-                                     llvm_anyvector_ty,
-                                     LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>,
-                                     llvm_i32_ty]>;
+                             [ LLVMVectorElementType<0>,
+                               llvm_anyvector_ty,
+                               LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>,
+                               llvm_i32_ty]>;
   def int_vp_reduce_umax : DefaultAttrsIntrinsic<[LLVMVectorElementType<0>],
-                                    [LLVMVectorElementType<0>,
-                                     llvm_anyvector_ty,
-                                     LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>,
-                                     llvm_i32_ty]>;
+                             [ LLVMVectorElementType<0>,
+                               llvm_anyvector_ty,
+                               LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>,
+                               llvm_i32_ty]>;
   def int_vp_reduce_umin : DefaultAttrsIntrinsic<[LLVMVectorElementType<0>],
-                                    [LLVMVectorElementType<0>,
-                                     llvm_anyvector_ty,
-                                     LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>,
-                                     llvm_i32_ty]>;
+                             [ LLVMVectorElementType<0>,
+                               llvm_anyvector_ty,
+                               LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>,
+                               llvm_i32_ty]>;
   def int_vp_reduce_fmax : DefaultAttrsIntrinsic<[LLVMVectorElementType<0>],
-                                    [LLVMVectorElementType<0>,
-                                     llvm_anyvector_ty,
-                                     LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>,
-                                     llvm_i32_ty]>;
+                             [ LLVMVectorElementType<0>,
+                               llvm_anyvector_ty,
+                               LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>,
+                               llvm_i32_ty]>;
   def int_vp_reduce_fmin : DefaultAttrsIntrinsic<[LLVMVectorElementType<0>],
-                                    [LLVMVectorElementType<0>,
-                                     llvm_anyvector_ty,
-                                     LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>,
-                                     llvm_i32_ty]>;
+                             [ LLVMVectorElementType<0>,
+                               llvm_anyvector_ty,
+                               LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>,
+                               llvm_i32_ty]>;
 }
 
 def int_get_active_lane_mask:
