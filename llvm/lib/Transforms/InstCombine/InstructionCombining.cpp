@@ -1969,14 +1969,15 @@ Instruction *InstCombinerImpl::visitGEPOfGEP(GetElementPtrInst &GEP,
         // invariant: this breaks the dependence between GEPs and allows LICM
         // to hoist the invariant part out of the loop.
         if (L->isLoopInvariant(GO1) && !L->isLoopInvariant(SO1)) {
+          bool IsInBounds = Src->isInBounds() && GEP.isInBounds();
           // Put NewSrc at same location as %src.
           Builder.SetInsertPoint(cast<Instruction>(Src));
           Value *NewSrc = Builder.CreateGEP(GEP.getSourceElementType(),
                                             Src->getPointerOperand(), GO1,
-                                            Src->getName(), Src->isInBounds());
+                                            Src->getName(), IsInBounds);
           GetElementPtrInst *NewGEP = GetElementPtrInst::Create(
               GEP.getSourceElementType(), NewSrc, {SO1});
-          NewGEP->setIsInBounds(GEP.isInBounds());
+          NewGEP->setIsInBounds(IsInBounds);
           return NewGEP;
         }
       }

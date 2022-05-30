@@ -264,7 +264,7 @@ define void @only_one_inbounds(i8* %ptr, i1 %c, i32 noundef %arg1, i32 noundef %
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[ARG1_EXT:%.*]] = zext i32 [[ARG1:%.*]] to i64
-; CHECK-NEXT:    [[PTR21:%.*]] = getelementptr inbounds i8, i8* [[PTR:%.*]], i64 [[ARG2_EXT]]
+; CHECK-NEXT:    [[PTR21:%.*]] = getelementptr i8, i8* [[PTR:%.*]], i64 [[ARG2_EXT]]
 ; CHECK-NEXT:    [[PTR3:%.*]] = getelementptr i8, i8* [[PTR21]], i64 [[ARG1_EXT]]
 ; CHECK-NEXT:    call void @use(i8* [[PTR3]])
 ; CHECK-NEXT:    br i1 [[C:%.*]], label [[LOOP]], label [[EXIT:%.*]]
