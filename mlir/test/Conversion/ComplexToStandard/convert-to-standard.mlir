@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s --convert-complex-to-standard --split-input-file | FileCheck %s
+// RUN: mlir-opt %s -pass-pipeline="func.func(convert-complex-to-standard)" | FileCheck %s
 
 // CHECK-LABEL: func @complex_abs
 // CHECK-SAME: %[[ARG:.*]]: complex<f32>
@@ -14,17 +14,6 @@ func.func @complex_abs(%arg: complex<f32>) -> f32 {
 // CHECK: %[[NORM:.*]] = math.sqrt %[[SQ_NORM]] : f32
 // CHECK: return %[[NORM]] : f32
 
-// -----
-
-// CHECK-LABEL: func @complex_atan2
-func.func @complex_atan2(%lhs: complex<f32>,
-                         %rhs: complex<f32>) -> complex<f32> {
-  %atan2 = complex.atan2 %lhs, %rhs : complex<f32>
-  return %atan2 : complex<f32>
-}
-
-// -----
-
 // CHECK-LABEL: func @complex_add
 // CHECK-SAME: (%[[LHS:.*]]: complex<f32>, %[[RHS:.*]]: complex<f32>)
 func.func @complex_add(%lhs: complex<f32>, %rhs: complex<f32>) -> complex<f32> {
@@ -39,8 +28,6 @@ func.func @complex_add(%lhs: complex<f32>, %rhs: complex<f32>) -> complex<f32> {
 // CHECK: %[[RESULT_IMAG:.*]] = arith.addf %[[IMAG_LHS]], %[[IMAG_RHS]] : f32
 // CHECK: %[[RESULT:.*]] = complex.create %[[RESULT_REAL]], %[[RESULT_IMAG]] : complex<f32>
 // CHECK: return %[[RESULT]] : complex<f32>
-
-// -----
 
 // CHECK-LABEL: func @complex_cos
 // CHECK-SAME: %[[ARG:.*]]: complex<f32>
@@ -62,8 +49,6 @@ func.func @complex_cos(%arg: complex<f32>) -> complex<f32> {
 // CHECK-DAG: %[[RESULT_IMAG:.*]] = arith.mulf %[[EXP_DIFF]], %[[SIN]]
 // CHECK-DAG: %[[RESULT:.*]] = complex.create %[[RESULT_REAL]], %[[RESULT_IMAG]] : complex<f32>
 // CHECK:     return %[[RESULT]]
-
-// -----
 
 // CHECK-LABEL: func @complex_div
 // CHECK-SAME: (%[[LHS:.*]]: complex<f32>, %[[RHS:.*]]: complex<f32>)
@@ -174,8 +159,6 @@ func.func @complex_div(%lhs: complex<f32>, %rhs: complex<f32>) -> complex<f32> {
 // CHECK: %[[RESULT:.*]] = complex.create %[[RESULT_REAL_WITH_SPECIAL_CASES]], %[[RESULT_IMAG_WITH_SPECIAL_CASES]] : complex<f32>
 // CHECK: return %[[RESULT]] : complex<f32>
 
-// -----
-
 // CHECK-LABEL: func @complex_eq
 // CHECK-SAME: %[[LHS:.*]]: complex<f32>, %[[RHS:.*]]: complex<f32>
 func.func @complex_eq(%lhs: complex<f32>, %rhs: complex<f32>) -> i1 {
@@ -190,8 +173,6 @@ func.func @complex_eq(%lhs: complex<f32>, %rhs: complex<f32>) -> i1 {
 // CHECK-DAG: %[[IMAG_EQUAL:.*]] = arith.cmpf oeq, %[[IMAG_LHS]], %[[IMAG_RHS]] : f32
 // CHECK: %[[EQUAL:.*]] = arith.andi %[[REAL_EQUAL]], %[[IMAG_EQUAL]] : i1
 // CHECK: return %[[EQUAL]] : i1
-
-// -----
 
 // CHECK-LABEL: func @complex_exp
 // CHECK-SAME: %[[ARG:.*]]: complex<f32>
@@ -208,8 +189,6 @@ func.func @complex_exp(%arg: complex<f32>) -> complex<f32> {
 // CHECK-DAG: %[[RESULT_IMAG:.*]] = arith.mulf %[[EXP_REAL]], %[[SIN_IMAG]] : f32
 // CHECK: %[[RESULT:.*]] = complex.create %[[RESULT_REAL]], %[[RESULT_IMAG]] : complex<f32>
 // CHECK: return %[[RESULT]] : complex<f32>
-
-// -----
 
 // CHECK-LABEL:   func.func @complex_expm1(
 // CHECK-SAME:                             %[[ARG:.*]]: complex<f32>) -> complex<f32> {
@@ -232,8 +211,6 @@ func.func @complex_expm1(%arg: complex<f32>) -> complex<f32> {
 // CHECK: %[[RES:.*]] = complex.create %[[REAL_M1]], %[[IMAG]] : complex<f32>
 // CHECK: return %[[RES]] : complex<f32>
 
-// -----
-
 // CHECK-LABEL: func @complex_log
 // CHECK-SAME: %[[ARG:.*]]: complex<f32>
 func.func @complex_log(%arg: complex<f32>) -> complex<f32> {
@@ -252,8 +229,6 @@ func.func @complex_log(%arg: complex<f32>) -> complex<f32> {
 // CHECK: %[[RESULT_IMAG:.*]] = math.atan2 %[[IMAG2]], %[[REAL2]] : f32
 // CHECK: %[[RESULT:.*]] = complex.create %[[RESULT_REAL]], %[[RESULT_IMAG]] : complex<f32>
 // CHECK: return %[[RESULT]] : complex<f32>
-
-// -----
 
 // CHECK-LABEL: func @complex_log1p
 // CHECK-SAME: %[[ARG:.*]]: complex<f32>
@@ -278,8 +253,6 @@ func.func @complex_log1p(%arg: complex<f32>) -> complex<f32> {
 // CHECK: %[[RESULT_IMAG:.*]] = math.atan2 %[[IMAG2]], %[[REAL2]] : f32
 // CHECK: %[[RESULT:.*]] = complex.create %[[RESULT_REAL]], %[[RESULT_IMAG]] : complex<f32>
 // CHECK: return %[[RESULT]] : complex<f32>
-
-// -----
 
 // CHECK-LABEL: func @complex_mul
 // CHECK-SAME: (%[[LHS:.*]]: complex<f32>, %[[RHS:.*]]: complex<f32>)
@@ -399,8 +372,6 @@ func.func @complex_mul(%lhs: complex<f32>, %rhs: complex<f32>) -> complex<f32> {
 // CHECK: %[[RESULT:.*]] = complex.create %[[FINAL_REAL]], %[[FINAL_IMAG]] : complex<f32>
 // CHECK: return %[[RESULT]] : complex<f32>
 
-// -----
-
 // CHECK-LABEL: func @complex_neg
 // CHECK-SAME: %[[ARG:.*]]: complex<f32>
 func.func @complex_neg(%arg: complex<f32>) -> complex<f32> {
@@ -413,8 +384,6 @@ func.func @complex_neg(%arg: complex<f32>) -> complex<f32> {
 // CHECK-DAG: %[[NEG_IMAG:.*]] = arith.negf %[[IMAG]] : f32
 // CHECK: %[[RESULT:.*]] = complex.create %[[NEG_REAL]], %[[NEG_IMAG]] : complex<f32>
 // CHECK: return %[[RESULT]] : complex<f32>
-
-// -----
 
 // CHECK-LABEL: func @complex_neq
 // CHECK-SAME: %[[LHS:.*]]: complex<f32>, %[[RHS:.*]]: complex<f32>
@@ -430,8 +399,6 @@ func.func @complex_neq(%lhs: complex<f32>, %rhs: complex<f32>) -> i1 {
 // CHECK-DAG: %[[IMAG_NOT_EQUAL:.*]] = arith.cmpf une, %[[IMAG_LHS]], %[[IMAG_RHS]] : f32
 // CHECK: %[[NOT_EQUAL:.*]] = arith.ori %[[REAL_NOT_EQUAL]], %[[IMAG_NOT_EQUAL]] : i1
 // CHECK: return %[[NOT_EQUAL]] : i1
-
-// -----
 
 // CHECK-LABEL: func @complex_sin
 // CHECK-SAME: %[[ARG:.*]]: complex<f32>
@@ -453,8 +420,6 @@ func.func @complex_sin(%arg: complex<f32>) -> complex<f32> {
 // CHECK-DAG: %[[RESULT_IMAG:.*]] = arith.mulf %[[EXP_DIFF]], %[[COS]]
 // CHECK-DAG: %[[RESULT:.*]] = complex.create %[[RESULT_REAL]], %[[RESULT_IMAG]] : complex<f32>
 // CHECK:     return %[[RESULT]]
-
-// -----
 
 // CHECK-LABEL: func @complex_sign
 // CHECK-SAME: %[[ARG:.*]]: complex<f32>
@@ -480,8 +445,6 @@ func.func @complex_sign(%arg: complex<f32>) -> complex<f32> {
 // CHECK: %[[RESULT:.*]] = arith.select %[[IS_ZERO]], %[[ARG]], %[[SIGN]] : complex<f32>
 // CHECK: return %[[RESULT]] : complex<f32>
 
-// -----
-
 // CHECK-LABEL: func @complex_sub
 // CHECK-SAME: (%[[LHS:.*]]: complex<f32>, %[[RHS:.*]]: complex<f32>)
 func.func @complex_sub(%lhs: complex<f32>, %rhs: complex<f32>) -> complex<f32> {
@@ -496,11 +459,3 @@ func.func @complex_sub(%lhs: complex<f32>, %rhs: complex<f32>) -> complex<f32> {
 // CHECK: %[[RESULT_IMAG:.*]] = arith.subf %[[IMAG_LHS]], %[[IMAG_RHS]] : f32
 // CHECK: %[[RESULT:.*]] = complex.create %[[RESULT_REAL]], %[[RESULT_IMAG]] : complex<f32>
 // CHECK: return %[[RESULT]] : complex<f32>
-
-// -----
-
-// CHECK-LABEL: func @complex_sqrt
-func.func @complex_sqrt(%arg: complex<f32>) -> complex<f32> {
-  %sqrt = complex.sqrt %arg : complex<f32>
-  return %sqrt : complex<f32>
-}
