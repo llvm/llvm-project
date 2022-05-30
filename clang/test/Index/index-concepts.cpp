@@ -1,5 +1,5 @@
 // RUN: c-index-test -test-load-source all %s -std=gnu++20 -fno-delayed-template-parsing | FileCheck %s
-// UNSUPPORTED: aix
+
 template<class T>
 struct type_trait {
     const static bool value = false;
