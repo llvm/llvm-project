@@ -2363,13 +2363,20 @@ static Instruction *canonicalizeBitCastExtElt(BitCastInst &BitCast,
   // The bitcast must be to a vectorizable type, otherwise we can't make a new
   // type to extract from.
   Type *DestType = BitCast.getType();
-  if (!VectorType::isValidElementType(DestType))
-    return nullptr;
+  VectorType *VecType = cast<VectorType>(VecOp->getType());
+  if (VectorType::isValidElementType(DestType)) {
+    auto *NewVecType = VectorType::get(DestType, VecType);
+    auto *NewBC = IC.Builder.CreateBitCast(VecOp, NewVecType, "bc");
+    return ExtractElementInst::Create(NewBC, Index);
+  }
 
-  auto *NewVecType =
-      VectorType::get(DestType, cast<VectorType>(VecOp->getType()));
-  auto *NewBC = IC.Builder.CreateBitCast(VecOp, NewVecType, "bc");
-  return ExtractElementInst::Create(NewBC, Index);
+  // Only solve DestType is vector to avoid inverse transform in visitBitCast.
+  // bitcast (extractelement <1 x elt>, dest) -> bitcast(<1 x elt>, dest)
+  auto *FixedVType = dyn_cast<FixedVectorType>(VecType);
+  if (DestType->isVectorTy() && FixedVType && FixedVType->getNumElements() == 1)
+    return CastInst::Create(Instruction::BitCast, VecOp, DestType);
+
+  return nullptr;
 }
 
 /// Change the type of a bitwise logic operation if we can eliminate a bitcast.
