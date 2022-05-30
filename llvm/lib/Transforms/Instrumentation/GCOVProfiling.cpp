@@ -81,7 +81,7 @@ GCOVOptions GCOVOptions::getDefault() {
 
   if (DefaultGCOVVersion.size() != 4) {
     llvm::report_fatal_error(Twine("Invalid -default-gcov-version: ") +
-                             DefaultGCOVVersion);
+                             DefaultGCOVVersion, /*GenCrashDiag=*/false);
   }
   memcpy(Options.Version, DefaultGCOVVersion.c_str(), 4);
   return Options;
