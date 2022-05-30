@@ -29,4 +29,11 @@ def GpuAsyncRegionPass : Pass<"gpu-async-region", "func::FuncOp"> {
   let dependentDialects = ["async::AsyncDialect"];
 }
 
+def GpuMapParallelLoopsPass
+    : Pass<"gpu-map-parallel-loops", "mlir::func::FuncOp"> {
+  let summary = "Greedily maps loops to GPU hardware dimensions.";
+  let constructor = "mlir::createGpuMapParallelLoopsPass()";
+  let description = "Greedily maps loops to GPU hardware dimensions.";
+}
+
 #endif // MLIR_DIALECT_GPU_PASSES

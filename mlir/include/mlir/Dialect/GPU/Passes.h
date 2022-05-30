@@ -39,6 +39,13 @@ createGpuKernelOutliningPass(StringRef dataLayoutStr = StringRef());
 /// Rewrites a function region so that GPU ops execute asynchronously.
 std::unique_ptr<OperationPass<func::FuncOp>> createGpuAsyncRegionPass();
 
+/// Maps the parallel loops found in the given function to workgroups. The first
+/// loop encountered will be mapped to the global workgroup and the second loop
+/// encountered to the local workgroup. Within each mapping, the first three
+/// dimensions are mapped to x/y/z hardware ids and all following dimensions are
+/// mapped to sequential loops.
+std::unique_ptr<OperationPass<func::FuncOp>> createGpuMapParallelLoopsPass();
+
 /// Collect a set of patterns to rewrite all-reduce ops within the GPU dialect.
 void populateGpuAllReducePatterns(RewritePatternSet &patterns);
 
