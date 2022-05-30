@@ -152,9 +152,9 @@ define i8 @shl_trunc_bigger_lshr(i32 %x) {
 
 define i8 @shl_trunc_smaller_lshr(i32 %x) {
 ; CHECK-LABEL: @shl_trunc_smaller_lshr(
-; CHECK-NEXT:    [[X_TR:%.*]] = trunc i32 [[X:%.*]] to i8
-; CHECK-NEXT:    [[TR_SH_DIFF:%.*]] = shl i8 [[X_TR]], 2
-; CHECK-NEXT:    [[LT:%.*]] = and i8 [[TR_SH_DIFF]], -32
+; CHECK-NEXT:    [[TMP1:%.*]] = trunc i32 [[X:%.*]] to i8
+; CHECK-NEXT:    [[TMP2:%.*]] = shl i8 [[TMP1]], 2
+; CHECK-NEXT:    [[LT:%.*]] = and i8 [[TMP2]], -32
 ; CHECK-NEXT:    ret i8 [[LT]]
 ;
   %rt = lshr i32 %x, 3
@@ -178,9 +178,9 @@ define i24 @shl_trunc_bigger_ashr(i32 %x) {
 
 define i24 @shl_trunc_smaller_ashr(i32 %x) {
 ; CHECK-LABEL: @shl_trunc_smaller_ashr(
-; CHECK-NEXT:    [[X_TR:%.*]] = trunc i32 [[X:%.*]] to i24
-; CHECK-NEXT:    [[TR_SH_DIFF:%.*]] = shl i24 [[X_TR]], 3
-; CHECK-NEXT:    [[LT:%.*]] = and i24 [[TR_SH_DIFF]], -8192
+; CHECK-NEXT:    [[TMP1:%.*]] = trunc i32 [[X:%.*]] to i24
+; CHECK-NEXT:    [[TMP2:%.*]] = shl i24 [[TMP1]], 3
+; CHECK-NEXT:    [[LT:%.*]] = and i24 [[TMP2]], -8192
 ; CHECK-NEXT:    ret i24 [[LT]]
 ;
   %rt = ashr i32 %x, 10
@@ -271,4 +271,154 @@ define i8 @shl_trunc_smaller_lshr_use2(i32 %x) {
   call void @use8(i8 %tr)
   %lt = shl i8 %tr, 5
   ret i8 %lt
+}
+
+define i32 @ashr_ashr_constants_use(i32 %x) {
+; CHECK-LABEL: @ashr_ashr_constants_use(
+; CHECK-NEXT:    [[S:%.*]] = ashr i32 -33, [[X:%.*]]
+; CHECK-NEXT:    call void @use32(i32 [[S]])
+; CHECK-NEXT:    [[R:%.*]] = ashr i32 [[S]], 3
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %s = ashr i32 -33, %x
+  call void @use32(i32 %s)
+  %r = ashr i32 %s, 3
+  ret i32 %r
+}
+
+define <3 x i8> @ashr_ashr_constants_vec(<3 x i8> %x) {
+; CHECK-LABEL: @ashr_ashr_constants_vec(
+; CHECK-NEXT:    [[S:%.*]] = ashr <3 x i8> <i8 33, i8 -2, i8 -128>, [[X:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = ashr <3 x i8> [[S]], <i8 3, i8 -1, i8 7>
+; CHECK-NEXT:    ret <3 x i8> [[R]]
+;
+  %s = ashr <3 x i8> <i8 33, i8 -2, i8 -128>, %x
+  %r = ashr <3 x i8> %s, <i8 3, i8 -1, i8 7>
+  ret <3 x i8> %r
+}
+
+define i32 @lshr_lshr_constants_use(i32 %x) {
+; CHECK-LABEL: @lshr_lshr_constants_use(
+; CHECK-NEXT:    [[S:%.*]] = lshr i32 -33, [[X:%.*]]
+; CHECK-NEXT:    call void @use32(i32 [[S]])
+; CHECK-NEXT:    [[R:%.*]] = lshr i32 [[S]], 3
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %s = lshr i32 -33, %x
+  call void @use32(i32 %s)
+  %r = lshr i32 %s, 3
+  ret i32 %r
+}
+
+define <3 x i8> @lshr_lshr_constants_vec(<3 x i8> %x) {
+; CHECK-LABEL: @lshr_lshr_constants_vec(
+; CHECK-NEXT:    [[S:%.*]] = lshr <3 x i8> <i8 33, i8 -2, i8 1>, [[X:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = lshr <3 x i8> [[S]], <i8 3, i8 -1, i8 7>
+; CHECK-NEXT:    ret <3 x i8> [[R]]
+;
+  %s = lshr <3 x i8> <i8 33, i8 -2, i8 1>, %x
+  %r = lshr <3 x i8> %s, <i8 3, i8 -1, i8 7>
+  ret <3 x i8> %r
+}
+
+define i32 @shl_shl_constants_use(i32 %x) {
+; CHECK-LABEL: @shl_shl_constants_use(
+; CHECK-NEXT:    [[S:%.*]] = shl i32 -2013265920, [[X:%.*]]
+; CHECK-NEXT:    call void @use32(i32 [[S]])
+; CHECK-NEXT:    [[R:%.*]] = shl i32 [[S]], 3
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %s = shl i32 2281701376, %x ; 0x8800_0000
+  call void @use32(i32 %s)
+  %r = shl i32 %s, 3
+  ret i32 %r
+}
+
+define <3 x i8> @shl_shl_constants_vec(<3 x i8> %x) {
+; CHECK-LABEL: @shl_shl_constants_vec(
+; CHECK-NEXT:    [[R:%.*]] = shl <3 x i8> <i8 8, i8 poison, i8 0>, [[X:%.*]]
+; CHECK-NEXT:    ret <3 x i8> [[R]]
+;
+  %s = shl <3 x i8> <i8 33, i8 -2, i8 -128>, %x
+  %r = shl <3 x i8> %s, <i8 3, i8 -1, i8 7>
+  ret <3 x i8> %r
+}
+
+; PR9809
+define i32 @shl_shl_constants_div(i32 %a, i32 %b) {
+; CHECK-LABEL: @shl_shl_constants_div(
+; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[B:%.*]], 2
+; CHECK-NEXT:    [[DIV1:%.*]] = lshr i32 [[A:%.*]], [[TMP1]]
+; CHECK-NEXT:    ret i32 [[DIV1]]
+;
+  %shl1 = shl i32 1, %b
+  %shl2 = shl i32 %shl1, 2
+  %div = udiv i32 %a, %shl2
+  ret i32 %div
+}
+
+define i32 @ashr_lshr_constants(i32 %x) {
+; CHECK-LABEL: @ashr_lshr_constants(
+; CHECK-NEXT:    [[S:%.*]] = ashr i32 -33, [[X:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = lshr i32 [[S]], 3
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %s = ashr i32 -33, %x
+  %r = lshr i32 %s, 3
+  ret i32 %r
+}
+
+define i32 @ashr_shl_constants(i32 %x) {
+; CHECK-LABEL: @ashr_shl_constants(
+; CHECK-NEXT:    [[S:%.*]] = ashr i32 -33, [[X:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = shl nsw i32 [[S]], 3
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %s = ashr i32 -33, %x
+  %r = shl i32 %s, 3
+  ret i32 %r
+}
+
+define i32 @lshr_ashr_constants(i32 %x) {
+; CHECK-LABEL: @lshr_ashr_constants(
+; CHECK-NEXT:    [[S:%.*]] = lshr i32 -33, [[X:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = ashr i32 [[S]], 3
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %s = lshr i32 -33, %x
+  %r = ashr i32 %s, 3
+  ret i32 %r
+}
+
+define i32 @lshr_shl_constants(i32 %x) {
+; CHECK-LABEL: @lshr_shl_constants(
+; CHECK-NEXT:    [[S:%.*]] = lshr i32 -33, [[X:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = shl i32 [[S]], 3
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %s = lshr i32 -33, %x
+  %r = shl i32 %s, 3
+  ret i32 %r
+}
+
+define i32 @shl_ashr_constants(i32 %x) {
+; CHECK-LABEL: @shl_ashr_constants(
+; CHECK-NEXT:    [[S:%.*]] = shl i32 -33, [[X:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = ashr i32 [[S]], 3
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %s = shl i32 -33, %x
+  %r = ashr i32 %s, 3
+  ret i32 %r
+}
+
+define i32 @shl_lshr_constants(i32 %x) {
+; CHECK-LABEL: @shl_lshr_constants(
+; CHECK-NEXT:    [[S:%.*]] = shl i32 -33, [[X:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = lshr i32 [[S]], 3
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %s = shl i32 -33, %x
+  %r = lshr i32 %s, 3
+  ret i32 %r
 }
