@@ -28,7 +28,7 @@
 #   $ docker push ldionne/libcxx-builder
 #
 
-FROM ubuntu:focal
+FROM ubuntu:jammy
 
 # Make sure apt-get doesn't try to prompt for stuff like our time zone, etc.
 ENV DEBIAN_FRONTEND=noninteractive
@@ -55,11 +55,18 @@ RUN printf "fr_CA ISO-8859-1\ncs_CZ ISO-8859-2" >> /usr/local/share/i1en/SUPPORT
 RUN locale-gen
 
 # Install Clang <latest>, <latest-1> and ToT, which are the ones we support.
-# We also install <latest-2> to allow smooth CI transitions around release points.
+# We also install <latest-2> because we need to support the "latest-1" of the
+# current LLVM release branch, which is effectively the <latest-2> of the
+# tip-of-trunk LLVM. For example, after branching LLVM 14 but before branching
+# LLVM 15, we still need to have Clang 12 in this Docker image because the LLVM
+# 14 release branch CI uses it. The tip-of-trunk CI will never use Clang 12,
+# though.
 ENV LLVM_LATEST_VERSION=14
 RUN apt-get update && apt-get install -y lsb-release wget software-properties-common
 RUN wget https://apt.llvm.org/llvm.sh -O /tmp/llvm.sh
-RUN bash /tmp/llvm.sh $(($LLVM_LATEST_VERSION - 2)) # for CI transitions
+# TODO Use the apt.llvm.org version after branching to LLVM 15
+RUN apt-get update && apt-get install -y clang-$(($LLVM_LATEST_VERSION - 2))
+#RUN bash /tmp/llvm.sh $(($LLVM_LATEST_VERSION - 2)) # for CI transitions
 RUN bash /tmp/llvm.sh $(($LLVM_LATEST_VERSION - 1)) # previous release
 RUN bash /tmp/llvm.sh $LLVM_LATEST_VERSION          # latest release
 RUN bash /tmp/llvm.sh $(($LLVM_LATEST_VERSION + 1)) # current ToT
@@ -79,9 +86,9 @@ RUN ln -s /usr/bin/git-clang-format-$LLVM_LATEST_VERSION /usr/bin/git-clang-form
 RUN apt-get install -y clang-tidy-$LLVM_LATEST_VERSION
 RUN ln -s /usr/bin/clang-tidy-$LLVM_LATEST_VERSION /usr/bin/clang-tidy && [ -e $(readlink /usr/bin/clang-tidy) ]
 
-# Install the most recent GCC
-ENV GCC_LATEST_VERSION=11
-RUN add-apt-repository ppa:ubuntu-toolchain-r/test
+# Install the most recent GCC, like clang install the previous version as a transition.
+ENV GCC_LATEST_VERSION=12
+RUN apt-get update && apt install -y gcc-$((GCC_LATEST_VERSION - 1)) g++-$((GCC_LATEST_VERSION - 1))
 RUN apt-get update && apt install -y gcc-$GCC_LATEST_VERSION g++-$GCC_LATEST_VERSION
 
 # Install a recent CMake
