@@ -1,10 +1,10 @@
-RUN: not FileCheck --check-prefix=P1 %s 2>&1 | FileCheck --check-prefix=CHECK1 %s
-RUN: not FileCheck --check-prefix=P2 %s 2>&1 | FileCheck --check-prefix=CHECK2 %s
-RUN: not FileCheck --check-prefix=P3 %s 2>&1 | FileCheck --check-prefix=CHECK3 %s
-RUN: not FileCheck --check-prefix=P4 %s 2>&1 | FileCheck --check-prefix=CHECK4 %s
-RUN: not FileCheck --check-prefix=P5 %s 2>&1 | FileCheck --check-prefix=CHECK5 %s
-RUN: not FileCheck --check-prefix=P6 %s 2>&1 | FileCheck --check-prefix=CHECK6 %s
-RUN: not FileCheck --check-prefix=P7 %s 2>&1 | FileCheck --check-prefix=CHECK7 %s
+RUN: %ProtectFileCheckOutput not FileCheck --check-prefix=P1 %s 2>&1 | FileCheck --check-prefix=CHECK1 %s
+RUN: %ProtectFileCheckOutput not FileCheck --check-prefix=P2 %s 2>&1 | FileCheck --check-prefix=CHECK2 %s
+RUN: %ProtectFileCheckOutput not FileCheck --check-prefix=P3 %s 2>&1 | FileCheck --check-prefix=CHECK3 %s
+RUN: %ProtectFileCheckOutput not FileCheck --check-prefix=P4 %s 2>&1 | FileCheck --check-prefix=CHECK4 %s
+RUN: %ProtectFileCheckOutput not FileCheck --check-prefix=P5 %s 2>&1 | FileCheck --check-prefix=CHECK5 %s
+RUN: %ProtectFileCheckOutput not FileCheck --check-prefix=P6 %s 2>&1 | FileCheck --check-prefix=CHECK6 %s
+RUN: %ProtectFileCheckOutput not FileCheck --check-prefix=P7 %s 2>&1 | FileCheck --check-prefix=CHECK7 %s
 
 P1_LABEL: foo
 CHECK1: error: misspelled directive 'P1_LABEL:'
