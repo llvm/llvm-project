@@ -1699,8 +1699,7 @@ define i16 @shl_lshr_pow2_const_negative_overflow2(i16 %x) {
 
 define i16 @lshr_lshr_pow2_const(i16 %x) {
 ; CHECK-LABEL: @lshr_lshr_pow2_const(
-; CHECK-NEXT:    [[LSHR1:%.*]] = lshr i16 2048, [[X:%.*]]
-; CHECK-NEXT:    [[LSHR2:%.*]] = lshr i16 [[LSHR1]], 6
+; CHECK-NEXT:    [[LSHR2:%.*]] = lshr i16 32, [[X:%.*]]
 ; CHECK-NEXT:    [[R:%.*]] = and i16 [[LSHR2]], 4
 ; CHECK-NEXT:    ret i16 [[R]]
 ;
@@ -1712,8 +1711,7 @@ define i16 @lshr_lshr_pow2_const(i16 %x) {
 
 define i16 @lshr_lshr_pow2_const_negative_oneuse(i16 %x) {
 ; CHECK-LABEL: @lshr_lshr_pow2_const_negative_oneuse(
-; CHECK-NEXT:    [[LSHR1:%.*]] = lshr i16 2048, [[X:%.*]]
-; CHECK-NEXT:    [[LSHR2:%.*]] = lshr i16 [[LSHR1]], 6
+; CHECK-NEXT:    [[LSHR2:%.*]] = lshr i16 32, [[X:%.*]]
 ; CHECK-NEXT:    call void @use16(i16 [[LSHR2]])
 ; CHECK-NEXT:    [[R:%.*]] = and i16 [[LSHR2]], 4
 ; CHECK-NEXT:    ret i16 [[R]]
@@ -1727,8 +1725,7 @@ define i16 @lshr_lshr_pow2_const_negative_oneuse(i16 %x) {
 
 define i16 @lshr_lshr_pow2_const_negative_nopow2_1(i16 %x) {
 ; CHECK-LABEL: @lshr_lshr_pow2_const_negative_nopow2_1(
-; CHECK-NEXT:    [[LSHR1:%.*]] = lshr i16 2047, [[X:%.*]]
-; CHECK-NEXT:    [[LSHR2:%.*]] = lshr i16 [[LSHR1]], 6
+; CHECK-NEXT:    [[LSHR2:%.*]] = lshr i16 31, [[X:%.*]]
 ; CHECK-NEXT:    [[R:%.*]] = and i16 [[LSHR2]], 4
 ; CHECK-NEXT:    ret i16 [[R]]
 ;
@@ -1740,8 +1737,7 @@ define i16 @lshr_lshr_pow2_const_negative_nopow2_1(i16 %x) {
 
 define i16 @lshr_lshr_pow2_const_negative_nopow2_2(i16 %x) {
 ; CHECK-LABEL: @lshr_lshr_pow2_const_negative_nopow2_2(
-; CHECK-NEXT:    [[LSHR1:%.*]] = lshr i16 8192, [[X:%.*]]
-; CHECK-NEXT:    [[LSHR2:%.*]] = lshr i16 [[LSHR1]], 6
+; CHECK-NEXT:    [[LSHR2:%.*]] = lshr i16 128, [[X:%.*]]
 ; CHECK-NEXT:    [[R:%.*]] = and i16 [[LSHR2]], 3
 ; CHECK-NEXT:    ret i16 [[R]]
 ;

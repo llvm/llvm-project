@@ -277,7 +277,7 @@ define i32 @ashr_ashr_constants_use(i32 %x) {
 ; CHECK-LABEL: @ashr_ashr_constants_use(
 ; CHECK-NEXT:    [[S:%.*]] = ashr i32 -33, [[X:%.*]]
 ; CHECK-NEXT:    call void @use32(i32 [[S]])
-; CHECK-NEXT:    [[R:%.*]] = ashr i32 [[S]], 3
+; CHECK-NEXT:    [[R:%.*]] = ashr i32 -5, [[X]]
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %s = ashr i32 -33, %x
@@ -288,8 +288,7 @@ define i32 @ashr_ashr_constants_use(i32 %x) {
 
 define <3 x i8> @ashr_ashr_constants_vec(<3 x i8> %x) {
 ; CHECK-LABEL: @ashr_ashr_constants_vec(
-; CHECK-NEXT:    [[S:%.*]] = ashr <3 x i8> <i8 33, i8 -2, i8 -128>, [[X:%.*]]
-; CHECK-NEXT:    [[R:%.*]] = ashr <3 x i8> [[S]], <i8 3, i8 -1, i8 7>
+; CHECK-NEXT:    [[R:%.*]] = ashr <3 x i8> <i8 4, i8 poison, i8 -1>, [[X:%.*]]
 ; CHECK-NEXT:    ret <3 x i8> [[R]]
 ;
   %s = ashr <3 x i8> <i8 33, i8 -2, i8 -128>, %x
@@ -301,7 +300,7 @@ define i32 @lshr_lshr_constants_use(i32 %x) {
 ; CHECK-LABEL: @lshr_lshr_constants_use(
 ; CHECK-NEXT:    [[S:%.*]] = lshr i32 -33, [[X:%.*]]
 ; CHECK-NEXT:    call void @use32(i32 [[S]])
-; CHECK-NEXT:    [[R:%.*]] = lshr i32 [[S]], 3
+; CHECK-NEXT:    [[R:%.*]] = lshr i32 536870907, [[X]]
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %s = lshr i32 -33, %x
@@ -312,8 +311,7 @@ define i32 @lshr_lshr_constants_use(i32 %x) {
 
 define <3 x i8> @lshr_lshr_constants_vec(<3 x i8> %x) {
 ; CHECK-LABEL: @lshr_lshr_constants_vec(
-; CHECK-NEXT:    [[S:%.*]] = lshr <3 x i8> <i8 33, i8 -2, i8 1>, [[X:%.*]]
-; CHECK-NEXT:    [[R:%.*]] = lshr <3 x i8> [[S]], <i8 3, i8 -1, i8 7>
+; CHECK-NEXT:    [[R:%.*]] = lshr <3 x i8> <i8 4, i8 poison, i8 0>, [[X:%.*]]
 ; CHECK-NEXT:    ret <3 x i8> [[R]]
 ;
   %s = lshr <3 x i8> <i8 33, i8 -2, i8 1>, %x
