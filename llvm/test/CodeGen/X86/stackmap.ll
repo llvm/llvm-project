@@ -9,11 +9,11 @@
 ; CHECK-NEXT:   .byte 0
 ; CHECK-NEXT:   .short 0
 ; Num Functions
-; CHECK-NEXT:   .long 16
+; CHECK-NEXT:   .long 17
 ; Num LargeConstants
 ; CHECK-NEXT:   .long 4
 ; Num Callsites
-; CHECK-NEXT:   .long 20
+; CHECK-NEXT:   .long 21
 
 ; Functions and stack size
 ; CHECK-NEXT:   .quad _constantargs
@@ -63,6 +63,9 @@
 ; CHECK-NEXT:   .quad 1
 ; CHECK-NEXT:   .quad _needsStackRealignment
 ; CHECK-NEXT:   .quad -1
+; CHECK-NEXT:   .quad 1
+; CHECK-NEXT:   .quad _floats
+; CHECK-NEXT:   .quad 24
 ; CHECK-NEXT:   .quad 1
 
 ; Large Constants
@@ -584,6 +587,60 @@ define void @needsStackRealignment() {
   ret void
 }
 declare void @escape_values(...)
+
+; CHECK-LABEL:  .long L{{.*}}-_floats
+; CHECK-NEXT:   .short 0
+; Num Locations
+; CHECK-NEXT:   .short 6
+; Loc 0: constant float stored to FP register
+; CHECK-NEXT:   .byte   1
+; CHECK-NEXT:   .byte   0
+; CHECK-NEXT:   .short  16
+; CHECK-NEXT:   .short  {{.*}}
+; CHECK-NEXT:   .short  0
+; CHECK-NEXT:   .long   0
+; Loc 0: constant double stored to FP register
+; CHECK-NEXT:   .byte   1
+; CHECK-NEXT:   .byte   0
+; CHECK-NEXT:   .short  16
+; CHECK-NEXT:   .short  {{.*}}
+; CHECK-NEXT:   .short  0
+; CHECK-NEXT:   .long   0
+; Loc 1: float value in FP register
+; CHECK-NEXT:   .byte   1
+; CHECK-NEXT:   .byte   0
+; CHECK-NEXT:   .short  16
+; CHECK-NEXT:   .short  {{.*}}
+; CHECK-NEXT:   .short  0
+; CHECK-NEXT:   .long   0
+; Loc 2: double value in FP register
+; CHECK-NEXT:   .byte   1
+; CHECK-NEXT:   .byte   0
+; CHECK-NEXT:   .short  16
+; CHECK-NEXT:   .short  {{.*}}
+; CHECK-NEXT:   .short  0
+; CHECK-NEXT:   .long   0
+; Loc 3: float on stack
+; CHECK-NEXT:   .byte   2
+; CHECK-NEXT:   .byte   0
+; CHECK-NEXT:   .short  8
+; CHECK-NEXT:   .short  {{.*}}
+; CHECK-NEXT:   .short  0
+; CHECK-NEXT:   .long   -{{.*}}
+; Loc 4: double on stack
+; CHECK-NEXT:   .byte   2
+; CHECK-NEXT:   .byte   0
+; CHECK-NEXT:   .short  8
+; CHECK-NEXT:   .short  {{.*}}
+; CHECK-NEXT:   .short  0
+; CHECK-NEXT:   .long   -{{.*}}
+define void @floats(float %f, double %g) {
+  %ff = alloca float
+  %gg = alloca double
+  call void (i64, i32, ...) @llvm.experimental.stackmap(i64 888, i32 0, float 1.25,
+    double 1.5, float %f, double %g, float* %ff, double* %gg)
+  ret void
+}
 
 declare void @llvm.experimental.stackmap(i64, i32, ...)
 declare void @llvm.experimental.patchpoint.void(i64, i32, i8*, i32, ...)
