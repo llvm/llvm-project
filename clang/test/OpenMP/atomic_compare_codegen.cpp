@@ -1979,21 +1979,21 @@ void foo(void) {
 // CHECK-NEXT:    [[ULLE:%.*]] = alloca i64, align 8
 // CHECK-NEXT:    [[ULLD:%.*]] = alloca i64, align 8
 // CHECK-NEXT:    [[TMP0:%.*]] = load i8, i8* [[CE]], align 1
-// CHECK-NEXT:    [[TMP1:%.*]] = atomicrmw umin i8* [[CX]], i8 [[TMP0]] monotonic, align 1
+// CHECK-NEXT:    [[TMP1:%.*]] = atomicrmw min i8* [[CX]], i8 [[TMP0]] monotonic, align 1
 // CHECK-NEXT:    [[TMP2:%.*]] = load i8, i8* [[CE]], align 1
-// CHECK-NEXT:    [[TMP3:%.*]] = atomicrmw umax i8* [[CX]], i8 [[TMP2]] monotonic, align 1
+// CHECK-NEXT:    [[TMP3:%.*]] = atomicrmw max i8* [[CX]], i8 [[TMP2]] monotonic, align 1
 // CHECK-NEXT:    [[TMP4:%.*]] = load i8, i8* [[CE]], align 1
-// CHECK-NEXT:    [[TMP5:%.*]] = atomicrmw umax i8* [[CX]], i8 [[TMP4]] monotonic, align 1
+// CHECK-NEXT:    [[TMP5:%.*]] = atomicrmw max i8* [[CX]], i8 [[TMP4]] monotonic, align 1
 // CHECK-NEXT:    [[TMP6:%.*]] = load i8, i8* [[CE]], align 1
-// CHECK-NEXT:    [[TMP7:%.*]] = atomicrmw umin i8* [[CX]], i8 [[TMP6]] monotonic, align 1
+// CHECK-NEXT:    [[TMP7:%.*]] = atomicrmw min i8* [[CX]], i8 [[TMP6]] monotonic, align 1
 // CHECK-NEXT:    [[TMP8:%.*]] = load i8, i8* [[CE]], align 1
-// CHECK-NEXT:    [[TMP9:%.*]] = atomicrmw umin i8* [[CX]], i8 [[TMP8]] monotonic, align 1
+// CHECK-NEXT:    [[TMP9:%.*]] = atomicrmw min i8* [[CX]], i8 [[TMP8]] monotonic, align 1
 // CHECK-NEXT:    [[TMP10:%.*]] = load i8, i8* [[CE]], align 1
-// CHECK-NEXT:    [[TMP11:%.*]] = atomicrmw umax i8* [[CX]], i8 [[TMP10]] monotonic, align 1
+// CHECK-NEXT:    [[TMP11:%.*]] = atomicrmw max i8* [[CX]], i8 [[TMP10]] monotonic, align 1
 // CHECK-NEXT:    [[TMP12:%.*]] = load i8, i8* [[CE]], align 1
-// CHECK-NEXT:    [[TMP13:%.*]] = atomicrmw umax i8* [[CX]], i8 [[TMP12]] monotonic, align 1
+// CHECK-NEXT:    [[TMP13:%.*]] = atomicrmw max i8* [[CX]], i8 [[TMP12]] monotonic, align 1
 // CHECK-NEXT:    [[TMP14:%.*]] = load i8, i8* [[CE]], align 1
-// CHECK-NEXT:    [[TMP15:%.*]] = atomicrmw umin i8* [[CX]], i8 [[TMP14]] monotonic, align 1
+// CHECK-NEXT:    [[TMP15:%.*]] = atomicrmw min i8* [[CX]], i8 [[TMP14]] monotonic, align 1
 // CHECK-NEXT:    [[TMP16:%.*]] = load i8, i8* [[CE]], align 1
 // CHECK-NEXT:    [[TMP17:%.*]] = load i8, i8* [[CD]], align 1
 // CHECK-NEXT:    [[TMP18:%.*]] = cmpxchg i8* [[CX]], i8 [[TMP16]], i8 [[TMP17]] monotonic monotonic, align 1
@@ -2035,28 +2035,28 @@ void foo(void) {
 // CHECK-NEXT:    [[TMP54:%.*]] = load i8, i8* [[UCD]], align 1
 // CHECK-NEXT:    [[TMP55:%.*]] = cmpxchg i8* [[UCX]], i8 [[TMP53]], i8 [[TMP54]] monotonic monotonic, align 1
 // CHECK-NEXT:    [[TMP56:%.*]] = load i8, i8* [[CE]], align 1
-// CHECK-NEXT:    [[TMP57:%.*]] = atomicrmw umin i8* [[CX]], i8 [[TMP56]] acq_rel, align 1
+// CHECK-NEXT:    [[TMP57:%.*]] = atomicrmw min i8* [[CX]], i8 [[TMP56]] acq_rel, align 1
 // CHECK-NEXT:    call void @__kmpc_flush(%struct.ident_t* @[[GLOB1:[0-9]+]])
 // CHECK-NEXT:    [[TMP58:%.*]] = load i8, i8* [[CE]], align 1
-// CHECK-NEXT:    [[TMP59:%.*]] = atomicrmw umax i8* [[CX]], i8 [[TMP58]] acq_rel, align 1
+// CHECK-NEXT:    [[TMP59:%.*]] = atomicrmw max i8* [[CX]], i8 [[TMP58]] acq_rel, align 1
 // CHECK-NEXT:    call void @__kmpc_flush(%struct.ident_t* @[[GLOB1]])
 // CHECK-NEXT:    [[TMP60:%.*]] = load i8, i8* [[CE]], align 1
-// CHECK-NEXT:    [[TMP61:%.*]] = atomicrmw umax i8* [[CX]], i8 [[TMP60]] acq_rel, align 1
+// CHECK-NEXT:    [[TMP61:%.*]] = atomicrmw max i8* [[CX]], i8 [[TMP60]] acq_rel, align 1
 // CHECK-NEXT:    call void @__kmpc_flush(%struct.ident_t* @[[GLOB1]])
 // CHECK-NEXT:    [[TMP62:%.*]] = load i8, i8* [[CE]], align 1
-// CHECK-NEXT:    [[TMP63:%.*]] = atomicrmw umin i8* [[CX]], i8 [[TMP62]] acq_rel, align 1
+// CHECK-NEXT:    [[TMP63:%.*]] = atomicrmw min i8* [[CX]], i8 [[TMP62]] acq_rel, align 1
 // CHECK-NEXT:    call void @__kmpc_flush(%struct.ident_t* @[[GLOB1]])
 // CHECK-NEXT:    [[TMP64:%.*]] = load i8, i8* [[CE]], align 1
-// CHECK-NEXT:    [[TMP65:%.*]] = atomicrmw umin i8* [[CX]], i8 [[TMP64]] acq_rel, align 1
+// CHECK-NEXT:    [[TMP65:%.*]] = atomicrmw min i8* [[CX]], i8 [[TMP64]] acq_rel, align 1
 // CHECK-NEXT:    call void @__kmpc_flush(%struct.ident_t* @[[GLOB1]])
 // CHECK-NEXT:    [[TMP66:%.*]] = load i8, i8* [[CE]], align 1
-// CHECK-NEXT:    [[TMP67:%.*]] = atomicrmw umax i8* [[CX]], i8 [[TMP66]] acq_rel, align 1
+// CHECK-NEXT:    [[TMP67:%.*]] = atomicrmw max i8* [[CX]], i8 [[TMP66]] acq_rel, align 1
 // CHECK-NEXT:    call void @__kmpc_flush(%struct.ident_t* @[[GLOB1]])
 // CHECK-NEXT:    [[TMP68:%.*]] = load i8, i8* [[CE]], align 1
-// CHECK-NEXT:    [[TMP69:%.*]] = atomicrmw umax i8* [[CX]], i8 [[TMP68]] acq_rel, align 1
+// CHECK-NEXT:    [[TMP69:%.*]] = atomicrmw max i8* [[CX]], i8 [[TMP68]] acq_rel, align 1
 // CHECK-NEXT:    call void @__kmpc_flush(%struct.ident_t* @[[GLOB1]])
 // CHECK-NEXT:    [[TMP70:%.*]] = load i8, i8* [[CE]], align 1
-// CHECK-NEXT:    [[TMP71:%.*]] = atomicrmw umin i8* [[CX]], i8 [[TMP70]] acq_rel, align 1
+// CHECK-NEXT:    [[TMP71:%.*]] = atomicrmw min i8* [[CX]], i8 [[TMP70]] acq_rel, align 1
 // CHECK-NEXT:    call void @__kmpc_flush(%struct.ident_t* @[[GLOB1]])
 // CHECK-NEXT:    [[TMP72:%.*]] = load i8, i8* [[CE]], align 1
 // CHECK-NEXT:    [[TMP73:%.*]] = load i8, i8* [[CD]], align 1
@@ -2115,21 +2115,21 @@ void foo(void) {
 // CHECK-NEXT:    [[TMP111:%.*]] = cmpxchg i8* [[UCX]], i8 [[TMP109]], i8 [[TMP110]] acq_rel acquire, align 1
 // CHECK-NEXT:    call void @__kmpc_flush(%struct.ident_t* @[[GLOB1]])
 // CHECK-NEXT:    [[TMP112:%.*]] = load i8, i8* [[CE]], align 1
-// CHECK-NEXT:    [[TMP113:%.*]] = atomicrmw umin i8* [[CX]], i8 [[TMP112]] acquire, align 1
+// CHECK-NEXT:    [[TMP113:%.*]] = atomicrmw min i8* [[CX]], i8 [[TMP112]] acquire, align 1
 // CHECK-NEXT:    [[TMP114:%.*]] = load i8, i8* [[CE]], align 1
-// CHECK-NEXT:    [[TMP115:%.*]] = atomicrmw umax i8* [[CX]], i8 [[TMP114]] acquire, align 1
+// CHECK-NEXT:    [[TMP115:%.*]] = atomicrmw max i8* [[CX]], i8 [[TMP114]] acquire, align 1
 // CHECK-NEXT:    [[TMP116:%.*]] = load i8, i8* [[CE]], align 1
-// CHECK-NEXT:    [[TMP117:%.*]] = atomicrmw umax i8* [[CX]], i8 [[TMP116]] acquire, align 1
+// CHECK-NEXT:    [[TMP117:%.*]] = atomicrmw max i8* [[CX]], i8 [[TMP116]] acquire, align 1
 // CHECK-NEXT:    [[TMP118:%.*]] = load i8, i8* [[CE]], align 1
-// CHECK-NEXT:    [[TMP119:%.*]] = atomicrmw umin i8* [[CX]], i8 [[TMP118]] acquire, align 1
+// CHECK-NEXT:    [[TMP119:%.*]] = atomicrmw min i8* [[CX]], i8 [[TMP118]] acquire, align 1
 // CHECK-NEXT:    [[TMP120:%.*]] = load i8, i8* [[CE]], align 1
-// CHECK-NEXT:    [[TMP121:%.*]] = atomicrmw umin i8* [[CX]], i8 [[TMP120]] acquire, align 1
+// CHECK-NEXT:    [[TMP121:%.*]] = atomicrmw min i8* [[CX]], i8 [[TMP120]] acquire, align 1
 // CHECK-NEXT:    [[TMP122:%.*]] = load i8, i8* [[CE]], align 1
-// CHECK-NEXT:    [[TMP123:%.*]] = atomicrmw umax i8* [[CX]], i8 [[TMP122]] acquire, align 1
+// CHECK-NEXT:    [[TMP123:%.*]] = atomicrmw max i8* [[CX]], i8 [[TMP122]] acquire, align 1
 // CHECK-NEXT:    [[TMP124:%.*]] = load i8, i8* [[CE]], align 1
-// CHECK-NEXT:    [[TMP125:%.*]] = atomicrmw umax i8* [[CX]], i8 [[TMP124]] acquire, align 1
+// CHECK-NEXT:    [[TMP125:%.*]] = atomicrmw max i8* [[CX]], i8 [[TMP124]] acquire, align 1
 // CHECK-NEXT:    [[TMP126:%.*]] = load i8, i8* [[CE]], align 1
-// CHECK-NEXT:    [[TMP127:%.*]] = atomicrmw umin i8* [[CX]], i8 [[TMP126]] acquire, align 1
+// CHECK-NEXT:    [[TMP127:%.*]] = atomicrmw min i8* [[CX]], i8 [[TMP126]] acquire, align 1
 // CHECK-NEXT:    [[TMP128:%.*]] = load i8, i8* [[CE]], align 1
 // CHECK-NEXT:    [[TMP129:%.*]] = load i8, i8* [[CD]], align 1
 // CHECK-NEXT:    [[TMP130:%.*]] = cmpxchg i8* [[CX]], i8 [[TMP128]], i8 [[TMP129]] acquire acquire, align 1
@@ -2171,21 +2171,21 @@ void foo(void) {
 // CHECK-NEXT:    [[TMP166:%.*]] = load i8, i8* [[UCD]], align 1
 // CHECK-NEXT:    [[TMP167:%.*]] = cmpxchg i8* [[UCX]], i8 [[TMP165]], i8 [[TMP166]] acquire acquire, align 1
 // CHECK-NEXT:    [[TMP168:%.*]] = load i8, i8* [[CE]], align 1
-// CHECK-NEXT:    [[TMP169:%.*]] = atomicrmw umin i8* [[CX]], i8 [[TMP168]] monotonic, align 1
+// CHECK-NEXT:    [[TMP169:%.*]] = atomicrmw min i8* [[CX]], i8 [[TMP168]] monotonic, align 1
 // CHECK-NEXT:    [[TMP170:%.*]] = load i8, i8* [[CE]], align 1
-// CHECK-NEXT:    [[TMP171:%.*]] = atomicrmw umax i8* [[CX]], i8 [[TMP170]] monotonic, align 1
+// CHECK-NEXT:    [[TMP171:%.*]] = atomicrmw max i8* [[CX]], i8 [[TMP170]] monotonic, align 1
 // CHECK-NEXT:    [[TMP172:%.*]] = load i8, i8* [[CE]], align 1
-// CHECK-NEXT:    [[TMP173:%.*]] = atomicrmw umax i8* [[CX]], i8 [[TMP172]] monotonic, align 1
+// CHECK-NEXT:    [[TMP173:%.*]] = atomicrmw max i8* [[CX]], i8 [[TMP172]] monotonic, align 1
 // CHECK-NEXT:    [[TMP174:%.*]] = load i8, i8* [[CE]], align 1
-// CHECK-NEXT:    [[TMP175:%.*]] = atomicrmw umin i8* [[CX]], i8 [[TMP174]] monotonic, align 1
+// CHECK-NEXT:    [[TMP175:%.*]] = atomicrmw min i8* [[CX]], i8 [[TMP174]] monotonic, align 1
 // CHECK-NEXT:    [[TMP176:%.*]] = load i8, i8* [[CE]], align 1
-// CHECK-NEXT:    [[TMP177:%.*]] = atomicrmw umin i8* [[CX]], i8 [[TMP176]] monotonic, align 1
+// CHECK-NEXT:    [[TMP177:%.*]] = atomicrmw min i8* [[CX]], i8 [[TMP176]] monotonic, align 1
 // CHECK-NEXT:    [[TMP178:%.*]] = load i8, i8* [[CE]], align 1
-// CHECK-NEXT:    [[TMP179:%.*]] = atomicrmw umax i8* [[CX]], i8 [[TMP178]] monotonic, align 1
+// CHECK-NEXT:    [[TMP179:%.*]] = atomicrmw max i8* [[CX]], i8 [[TMP178]] monotonic, align 1
 // CHECK-NEXT:    [[TMP180:%.*]] = load i8, i8* [[CE]], align 1
-// CHECK-NEXT:    [[TMP181:%.*]] = atomicrmw umax i8* [[CX]], i8 [[TMP180]] monotonic, align 1
+// CHECK-NEXT:    [[TMP181:%.*]] = atomicrmw max i8* [[CX]], i8 [[TMP180]] monotonic, align 1
 // CHECK-NEXT:    [[TMP182:%.*]] = load i8, i8* [[CE]], align 1
-// CHECK-NEXT:    [[TMP183:%.*]] = atomicrmw umin i8* [[CX]], i8 [[TMP182]] monotonic, align 1
+// CHECK-NEXT:    [[TMP183:%.*]] = atomicrmw min i8* [[CX]], i8 [[TMP182]] monotonic, align 1
 // CHECK-NEXT:    [[TMP184:%.*]] = load i8, i8* [[CE]], align 1
 // CHECK-NEXT:    [[TMP185:%.*]] = load i8, i8* [[CD]], align 1
 // CHECK-NEXT:    [[TMP186:%.*]] = cmpxchg i8* [[CX]], i8 [[TMP184]], i8 [[TMP185]] monotonic monotonic, align 1
@@ -2227,28 +2227,28 @@ void foo(void) {
 // CHECK-NEXT:    [[TMP222:%.*]] = load i8, i8* [[UCD]], align 1
 // CHECK-NEXT:    [[TMP223:%.*]] = cmpxchg i8* [[UCX]], i8 [[TMP221]], i8 [[TMP222]] monotonic monotonic, align 1
 // CHECK-NEXT:    [[TMP224:%.*]] = load i8, i8* [[CE]], align 1
-// CHECK-NEXT:    [[TMP225:%.*]] = atomicrmw umin i8* [[CX]], i8 [[TMP224]] release, align 1
+// CHECK-NEXT:    [[TMP225:%.*]] = atomicrmw min i8* [[CX]], i8 [[TMP224]] release, align 1
 // CHECK-NEXT:    call void @__kmpc_flush(%struct.ident_t* @[[GLOB1]])
 // CHECK-NEXT:    [[TMP226:%.*]] = load i8, i8* [[CE]], align 1
-// CHECK-NEXT:    [[TMP227:%.*]] = atomicrmw umax i8* [[CX]], i8 [[TMP226]] release, align 1
+// CHECK-NEXT:    [[TMP227:%.*]] = atomicrmw max i8* [[CX]], i8 [[TMP226]] release, align 1
 // CHECK-NEXT:    call void @__kmpc_flush(%struct.ident_t* @[[GLOB1]])
 // CHECK-NEXT:    [[TMP228:%.*]] = load i8, i8* [[CE]], align 1
-// CHECK-NEXT:    [[TMP229:%.*]] = atomicrmw umax i8* [[CX]], i8 [[TMP228]] release, align 1
+// CHECK-NEXT:    [[TMP229:%.*]] = atomicrmw max i8* [[CX]], i8 [[TMP228]] release, align 1
 // CHECK-NEXT:    call void @__kmpc_flush(%struct.ident_t* @[[GLOB1]])
 // CHECK-NEXT:    [[TMP230:%.*]] = load i8, i8* [[CE]], align 1
-// CHECK-NEXT:    [[TMP231:%.*]] = atomicrmw umin i8* [[CX]], i8 [[TMP230]] release, align 1
+// CHECK-NEXT:    [[TMP231:%.*]] = atomicrmw min i8* [[CX]], i8 [[TMP230]] release, align 1
 // CHECK-NEXT:    call void @__kmpc_flush(%struct.ident_t* @[[GLOB1]])
 // CHECK-NEXT:    [[TMP232:%.*]] = load i8, i8* [[CE]], align 1
-// CHECK-NEXT:    [[TMP233:%.*]] = atomicrmw umin i8* [[CX]], i8 [[TMP232]] release, align 1
+// CHECK-NEXT:    [[TMP233:%.*]] = atomicrmw min i8* [[CX]], i8 [[TMP232]] release, align 1
 // CHECK-NEXT:    call void @__kmpc_flush(%struct.ident_t* @[[GLOB1]])
 // CHECK-NEXT:    [[TMP234:%.*]] = load i8, i8* [[CE]], align 1
-// CHECK-NEXT:    [[TMP235:%.*]] = atomicrmw umax i8* [[CX]], i8 [[TMP234]] release, align 1
+// CHECK-NEXT:    [[TMP235:%.*]] = atomicrmw max i8* [[CX]], i8 [[TMP234]] release, align 1
 // CHECK-NEXT:    call void @__kmpc_flush(%struct.ident_t* @[[GLOB1]])
 // CHECK-NEXT:    [[TMP236:%.*]] = load i8, i8* [[CE]], align 1
-// CHECK-NEXT:    [[TMP237:%.*]] = atomicrmw umax i8* [[CX]], i8 [[TMP236]] release, align 1
+// CHECK-NEXT:    [[TMP237:%.*]] = atomicrmw max i8* [[CX]], i8 [[TMP236]] release, align 1
 // CHECK-NEXT:    call void @__kmpc_flush(%struct.ident_t* @[[GLOB1]])
 // CHECK-NEXT:    [[TMP238:%.*]] = load i8, i8* [[CE]], align 1
-// CHECK-NEXT:    [[TMP239:%.*]] = atomicrmw umin i8* [[CX]], i8 [[TMP238]] release, align 1
+// CHECK-NEXT:    [[TMP239:%.*]] = atomicrmw min i8* [[CX]], i8 [[TMP238]] release, align 1
 // CHECK-NEXT:    call void @__kmpc_flush(%struct.ident_t* @[[GLOB1]])
 // CHECK-NEXT:    [[TMP240:%.*]] = load i8, i8* [[CE]], align 1
 // CHECK-NEXT:    [[TMP241:%.*]] = load i8, i8* [[CD]], align 1
@@ -2307,28 +2307,28 @@ void foo(void) {
 // CHECK-NEXT:    [[TMP279:%.*]] = cmpxchg i8* [[UCX]], i8 [[TMP277]], i8 [[TMP278]] release monotonic, align 1
 // CHECK-NEXT:    call void @__kmpc_flush(%struct.ident_t* @[[GLOB1]])
 // CHECK-NEXT:    [[TMP280:%.*]] = load i8, i8* [[CE]], align 1
-// CHECK-NEXT:    [[TMP281:%.*]] = atomicrmw umin i8* [[CX]], i8 [[TMP280]] seq_cst, align 1
+// CHECK-NEXT:    [[TMP281:%.*]] = atomicrmw min i8* [[CX]], i8 [[TMP280]] seq_cst, align 1
 // CHECK-NEXT:    call void @__kmpc_flush(%struct.ident_t* @[[GLOB1]])
 // CHECK-NEXT:    [[TMP282:%.*]] = load i8, i8* [[CE]], align 1
-// CHECK-NEXT:    [[TMP283:%.*]] = atomicrmw umax i8* [[CX]], i8 [[TMP282]] seq_cst, align 1
+// CHECK-NEXT:    [[TMP283:%.*]] = atomicrmw max i8* [[CX]], i8 [[TMP282]] seq_cst, align 1
 // CHECK-NEXT:    call void @__kmpc_flush(%struct.ident_t* @[[GLOB1]])
 // CHECK-NEXT:    [[TMP284:%.*]] = load i8, i8* [[CE]], align 1
-// CHECK-NEXT:    [[TMP285:%.*]] = atomicrmw umax i8* [[CX]], i8 [[TMP284]] seq_cst, align 1
+// CHECK-NEXT:    [[TMP285:%.*]] = atomicrmw max i8* [[CX]], i8 [[TMP284]] seq_cst, align 1
 // CHECK-NEXT:    call void @__kmpc_flush(%struct.ident_t* @[[GLOB1]])
 // CHECK-NEXT:    [[TMP286:%.*]] = load i8, i8* [[CE]], align 1
-// CHECK-NEXT:    [[TMP287:%.*]] = atomicrmw umin i8* [[CX]], i8 [[TMP286]] seq_cst, align 1
+// CHECK-NEXT:    [[TMP287:%.*]] = atomicrmw min i8* [[CX]], i8 [[TMP286]] seq_cst, align 1
 // CHECK-NEXT:    call void @__kmpc_flush(%struct.ident_t* @[[GLOB1]])
 // CHECK-NEXT:    [[TMP288:%.*]] = load i8, i8* [[CE]], align 1
-// CHECK-NEXT:    [[TMP289:%.*]] = atomicrmw umin i8* [[CX]], i8 [[TMP288]] seq_cst, align 1
+// CHECK-NEXT:    [[TMP289:%.*]] = atomicrmw min i8* [[CX]], i8 [[TMP288]] seq_cst, align 1
 // CHECK-NEXT:    call void @__kmpc_flush(%struct.ident_t* @[[GLOB1]])
 // CHECK-NEXT:    [[TMP290:%.*]] = load i8, i8* [[CE]], align 1
-// CHECK-NEXT:    [[TMP291:%.*]] = atomicrmw umax i8* [[CX]], i8 [[TMP290]] seq_cst, align 1
+// CHECK-NEXT:    [[TMP291:%.*]] = atomicrmw max i8* [[CX]], i8 [[TMP290]] seq_cst, align 1
 // CHECK-NEXT:    call void @__kmpc_flush(%struct.ident_t* @[[GLOB1]])
 // CHECK-NEXT:    [[TMP292:%.*]] = load i8, i8* [[CE]], align 1
-// CHECK-NEXT:    [[TMP293:%.*]] = atomicrmw umax i8* [[CX]], i8 [[TMP292]] seq_cst, align 1
+// CHECK-NEXT:    [[TMP293:%.*]] = atomicrmw max i8* [[CX]], i8 [[TMP292]] seq_cst, align 1
 // CHECK-NEXT:    call void @__kmpc_flush(%struct.ident_t* @[[GLOB1]])
 // CHECK-NEXT:    [[TMP294:%.*]] = load i8, i8* [[CE]], align 1
-// CHECK-NEXT:    [[TMP295:%.*]] = atomicrmw umin i8* [[CX]], i8 [[TMP294]] seq_cst, align 1
+// CHECK-NEXT:    [[TMP295:%.*]] = atomicrmw min i8* [[CX]], i8 [[TMP294]] seq_cst, align 1
 // CHECK-NEXT:    call void @__kmpc_flush(%struct.ident_t* @[[GLOB1]])
 // CHECK-NEXT:    [[TMP296:%.*]] = load i8, i8* [[CE]], align 1
 // CHECK-NEXT:    [[TMP297:%.*]] = load i8, i8* [[CD]], align 1
@@ -2387,21 +2387,21 @@ void foo(void) {
 // CHECK-NEXT:    [[TMP335:%.*]] = cmpxchg i8* [[UCX]], i8 [[TMP333]], i8 [[TMP334]] seq_cst seq_cst, align 1
 // CHECK-NEXT:    call void @__kmpc_flush(%struct.ident_t* @[[GLOB1]])
 // CHECK-NEXT:    [[TMP336:%.*]] = load i16, i16* [[SE]], align 2
-// CHECK-NEXT:    [[TMP337:%.*]] = atomicrmw umin i16* [[SX]], i16 [[TMP336]] monotonic, align 2
+// CHECK-NEXT:    [[TMP337:%.*]] = atomicrmw min i16* [[SX]], i16 [[TMP336]] monotonic, align 2
 // CHECK-NEXT:    [[TMP338:%.*]] = load i16, i16* [[SE]], align 2
-// CHECK-NEXT:    [[TMP339:%.*]] = atomicrmw umax i16* [[SX]], i16 [[TMP338]] monotonic, align 2
+// CHECK-NEXT:    [[TMP339:%.*]] = atomicrmw max i16* [[SX]], i16 [[TMP338]] monotonic, align 2
 // CHECK-NEXT:    [[TMP340:%.*]] = load i16, i16* [[SE]], align 2
-// CHECK-NEXT:    [[TMP341:%.*]] = atomicrmw umax i16* [[SX]], i16 [[TMP340]] monotonic, align 2
+// CHECK-NEXT:    [[TMP341:%.*]] = atomicrmw max i16* [[SX]], i16 [[TMP340]] monotonic, align 2
 // CHECK-NEXT:    [[TMP342:%.*]] = load i16, i16* [[SE]], align 2
-// CHECK-NEXT:    [[TMP343:%.*]] = atomicrmw umin i16* [[SX]], i16 [[TMP342]] monotonic, align 2
+// CHECK-NEXT:    [[TMP343:%.*]] = atomicrmw min i16* [[SX]], i16 [[TMP342]] monotonic, align 2
 // CHECK-NEXT:    [[TMP344:%.*]] = load i16, i16* [[SE]], align 2
-// CHECK-NEXT:    [[TMP345:%.*]] = atomicrmw umin i16* [[SX]], i16 [[TMP344]] monotonic, align 2
+// CHECK-NEXT:    [[TMP345:%.*]] = atomicrmw min i16* [[SX]], i16 [[TMP344]] monotonic, align 2
 // CHECK-NEXT:    [[TMP346:%.*]] = load i16, i16* [[SE]], align 2
-// CHECK-NEXT:    [[TMP347:%.*]] = atomicrmw umax i16* [[SX]], i16 [[TMP346]] monotonic, align 2
+// CHECK-NEXT:    [[TMP347:%.*]] = atomicrmw max i16* [[SX]], i16 [[TMP346]] monotonic, align 2
 // CHECK-NEXT:    [[TMP348:%.*]] = load i16, i16* [[SE]], align 2
-// CHECK-NEXT:    [[TMP349:%.*]] = atomicrmw umax i16* [[SX]], i16 [[TMP348]] monotonic, align 2
+// CHECK-NEXT:    [[TMP349:%.*]] = atomicrmw max i16* [[SX]], i16 [[TMP348]] monotonic, align 2
 // CHECK-NEXT:    [[TMP350:%.*]] = load i16, i16* [[SE]], align 2
-// CHECK-NEXT:    [[TMP351:%.*]] = atomicrmw umin i16* [[SX]], i16 [[TMP350]] monotonic, align 2
+// CHECK-NEXT:    [[TMP351:%.*]] = atomicrmw min i16* [[SX]], i16 [[TMP350]] monotonic, align 2
 // CHECK-NEXT:    [[TMP352:%.*]] = load i16, i16* [[SE]], align 2
 // CHECK-NEXT:    [[TMP353:%.*]] = load i16, i16* [[SD]], align 2
 // CHECK-NEXT:    [[TMP354:%.*]] = cmpxchg i16* [[SX]], i16 [[TMP352]], i16 [[TMP353]] monotonic monotonic, align 2
@@ -2443,28 +2443,28 @@ void foo(void) {
 // CHECK-NEXT:    [[TMP390:%.*]] = load i16, i16* [[USD]], align 2
 // CHECK-NEXT:    [[TMP391:%.*]] = cmpxchg i16* [[USX]], i16 [[TMP389]], i16 [[TMP390]] monotonic monotonic, align 2
 // CHECK-NEXT:    [[TMP392:%.*]] = load i16, i16* [[SE]], align 2
-// CHECK-NEXT:    [[TMP393:%.*]] = atomicrmw umin i16* [[SX]], i16 [[TMP392]] acq_rel, align 2
+// CHECK-NEXT:    [[TMP393:%.*]] = atomicrmw min i16* [[SX]], i16 [[TMP392]] acq_rel, align 2
 // CHECK-NEXT:    call void @__kmpc_flush(%struct.ident_t* @[[GLOB1]])
 // CHECK-NEXT:    [[TMP394:%.*]] = load i16, i16* [[SE]], align 2
-// CHECK-NEXT:    [[TMP395:%.*]] = atomicrmw umax i16* [[SX]], i16 [[TMP394]] acq_rel, align 2
+// CHECK-NEXT:    [[TMP395:%.*]] = atomicrmw max i16* [[SX]], i16 [[TMP394]] acq_rel, align 2
 // CHECK-NEXT:    call void @__kmpc_flush(%struct.ident_t* @[[GLOB1]])
 // CHECK-NEXT:    [[TMP396:%.*]] = load i16, i16* [[SE]], align 2
-// CHECK-NEXT:    [[TMP397:%.*]] = atomicrmw umax i16* [[SX]], i16 [[TMP396]] acq_rel, align 2
+// CHECK-NEXT:    [[TMP397:%.*]] = atomicrmw max i16* [[SX]], i16 [[TMP396]] acq_rel, align 2
 // CHECK-NEXT:    call void @__kmpc_flush(%struct.ident_t* @[[GLOB1]])
 // CHECK-NEXT:    [[TMP398:%.*]] = load i16, i16* [[SE]], align 2
-// CHECK-NEXT:    [[TMP399:%.*]] = atomicrmw umin i16* [[SX]], i16 [[TMP398]] acq_rel, align 2
+// CHECK-NEXT:    [[TMP399:%.*]] = atomicrmw min i16* [[SX]], i16 [[TMP398]] acq_rel, align 2
 // CHECK-NEXT:    call void @__kmpc_flush(%struct.ident_t* @[[GLOB1]])
 // CHECK-NEXT:    [[TMP400:%.*]] = load i16, i16* [[SE]], align 2
-// CHECK-NEXT:    [[TMP401:%.*]] = atomicrmw umin i16* [[SX]], i16 [[TMP400]] acq_rel, align 2
+// CHECK-NEXT:    [[TMP401:%.*]] = atomicrmw min i16* [[SX]], i16 [[TMP400]] acq_rel, align 2
 // CHECK-NEXT:    call void @__kmpc_flush(%struct.ident_t* @[[GLOB1]])
 // CHECK-NEXT:    [[TMP402:%.*]] = load i16, i16* [[SE]], align 2
-// CHECK-NEXT:    [[TMP403:%.*]] = atomicrmw umax i16* [[SX]], i16 [[TMP402]] acq_rel, align 2
+// CHECK-NEXT:    [[TMP403:%.*]] = atomicrmw max i16* [[SX]], i16 [[TMP402]] acq_rel, align 2
 // CHECK-NEXT:    call void @__kmpc_flush(%struct.ident_t* @[[GLOB1]])
 // CHECK-NEXT:    [[TMP404:%.*]] = load i16, i16* [[SE]], align 2
-// CHECK-NEXT:    [[TMP405:%.*]] = atomicrmw umax i16* [[SX]], i16 [[TMP404]] acq_rel, align 2
+// CHECK-NEXT:    [[TMP405:%.*]] = atomicrmw max i16* [[SX]], i16 [[TMP404]] acq_rel, align 2
 // CHECK-NEXT:    call void @__kmpc_flush(%struct.ident_t* @[[GLOB1]])
 // CHECK-NEXT:    [[TMP406:%.*]] = load i16, i16* [[SE]], align 2
-// CHECK-NEXT:    [[TMP407:%.*]] = atomicrmw umin i16* [[SX]], i16 [[TMP406]] acq_rel, align 2
+// CHECK-NEXT:    [[TMP407:%.*]] = atomicrmw min i16* [[SX]], i16 [[TMP406]] acq_rel, align 2
 // CHECK-NEXT:    call void @__kmpc_flush(%struct.ident_t* @[[GLOB1]])
 // CHECK-NEXT:    [[TMP408:%.*]] = load i16, i16* [[SE]], align 2
 // CHECK-NEXT:    [[TMP409:%.*]] = load i16, i16* [[SD]], align 2
@@ -2523,21 +2523,21 @@ void foo(void) {
 // CHECK-NEXT:    [[TMP447:%.*]] = cmpxchg i16* [[USX]], i16 [[TMP445]], i16 [[TMP446]] acq_rel acquire, align 2
 // CHECK-NEXT:    call void @__kmpc_flush(%struct.ident_t* @[[GLOB1]])
 // CHECK-NEXT:    [[TMP448:%.*]] = load i16, i16* [[SE]], align 2
-// CHECK-NEXT:    [[TMP449:%.*]] = atomicrmw umin i16* [[SX]], i16 [[TMP448]] acquire, align 2
+// CHECK-NEXT:    [[TMP449:%.*]] = atomicrmw min i16* [[SX]], i16 [[TMP448]] acquire, align 2
 // CHECK-NEXT:    [[TMP450:%.*]] = load i16, i16* [[SE]], align 2
-// CHECK-NEXT:    [[TMP451:%.*]] = atomicrmw umax i16* [[SX]], i16 [[TMP450]] acquire, align 2
+// CHECK-NEXT:    [[TMP451:%.*]] = atomicrmw max i16* [[SX]], i16 [[TMP450]] acquire, align 2
 // CHECK-NEXT:    [[TMP452:%.*]] = load i16, i16* [[SE]], align 2
-// CHECK-NEXT:    [[TMP453:%.*]] = atomicrmw umax i16* [[SX]], i16 [[TMP452]] acquire, align 2
+// CHECK-NEXT:    [[TMP453:%.*]] = atomicrmw max i16* [[SX]], i16 [[TMP452]] acquire, align 2
 // CHECK-NEXT:    [[TMP454:%.*]] = load i16, i16* [[SE]], align 2
-// CHECK-NEXT:    [[TMP455:%.*]] = atomicrmw umin i16* [[SX]], i16 [[TMP454]] acquire, align 2
+// CHECK-NEXT:    [[TMP455:%.*]] = atomicrmw min i16* [[SX]], i16 [[TMP454]] acquire, align 2
 // CHECK-NEXT:    [[TMP456:%.*]] = load i16, i16* [[SE]], align 2
-// CHECK-NEXT:    [[TMP457:%.*]] = atomicrmw umin i16* [[SX]], i16 [[TMP456]] acquire, align 2
+// CHECK-NEXT:    [[TMP457:%.*]] = atomicrmw min i16* [[SX]], i16 [[TMP456]] acquire, align 2
 // CHECK-NEXT:    [[TMP458:%.*]] = load i16, i16* [[SE]], align 2
-// CHECK-NEXT:    [[TMP459:%.*]] = atomicrmw umax i16* [[SX]], i16 [[TMP458]] acquire, align 2
+// CHECK-NEXT:    [[TMP459:%.*]] = atomicrmw max i16* [[SX]], i16 [[TMP458]] acquire, align 2
 // CHECK-NEXT:    [[TMP460:%.*]] = load i16, i16* [[SE]], align 2
-// CHECK-NEXT:    [[TMP461:%.*]] = atomicrmw umax i16* [[SX]], i16 [[TMP460]] acquire, align 2
+// CHECK-NEXT:    [[TMP461:%.*]] = atomicrmw max i16* [[SX]], i16 [[TMP460]] acquire, align 2
 // CHECK-NEXT:    [[TMP462:%.*]] = load i16, i16* [[SE]], align 2
-// CHECK-NEXT:    [[TMP463:%.*]] = atomicrmw umin i16* [[SX]], i16 [[TMP462]] acquire, align 2
+// CHECK-NEXT:    [[TMP463:%.*]] = atomicrmw min i16* [[SX]], i16 [[TMP462]] acquire, align 2
 // CHECK-NEXT:    [[TMP464:%.*]] = load i16, i16* [[SE]], align 2
 // CHECK-NEXT:    [[TMP465:%.*]] = load i16, i16* [[SD]], align 2
 // CHECK-NEXT:    [[TMP466:%.*]] = cmpxchg i16* [[SX]], i16 [[TMP464]], i16 [[TMP465]] acquire acquire, align 2
@@ -2579,21 +2579,21 @@ void foo(void) {
 // CHECK-NEXT:    [[TMP502:%.*]] = load i16, i16* [[USD]], align 2
 // CHECK-NEXT:    [[TMP503:%.*]] = cmpxchg i16* [[USX]], i16 [[TMP501]], i16 [[TMP502]] acquire acquire, align 2
 // CHECK-NEXT:    [[TMP504:%.*]] = load i16, i16* [[SE]], align 2
-// CHECK-NEXT:    [[TMP505:%.*]] = atomicrmw umin i16* [[SX]], i16 [[TMP504]] monotonic, align 2
+// CHECK-NEXT:    [[TMP505:%.*]] = atomicrmw min i16* [[SX]], i16 [[TMP504]] monotonic, align 2
 // CHECK-NEXT:    [[TMP506:%.*]] = load i16, i16* [[SE]], align 2
-// CHECK-NEXT:    [[TMP507:%.*]] = atomicrmw umax i16* [[SX]], i16 [[TMP506]] monotonic, align 2
+// CHECK-NEXT:    [[TMP507:%.*]] = atomicrmw max i16* [[SX]], i16 [[TMP506]] monotonic, align 2
 // CHECK-NEXT:    [[TMP508:%.*]] = load i16, i16* [[SE]], align 2
-// CHECK-NEXT:    [[TMP509:%.*]] = atomicrmw umax i16* [[SX]], i16 [[TMP508]] monotonic, align 2
+// CHECK-NEXT:    [[TMP509:%.*]] = atomicrmw max i16* [[SX]], i16 [[TMP508]] monotonic, align 2
 // CHECK-NEXT:    [[TMP510:%.*]] = load i16, i16* [[SE]], align 2
-// CHECK-NEXT:    [[TMP511:%.*]] = atomicrmw umin i16* [[SX]], i16 [[TMP510]] monotonic, align 2
+// CHECK-NEXT:    [[TMP511:%.*]] = atomicrmw min i16* [[SX]], i16 [[TMP510]] monotonic, align 2
 // CHECK-NEXT:    [[TMP512:%.*]] = load i16, i16* [[SE]], align 2
-// CHECK-NEXT:    [[TMP513:%.*]] = atomicrmw umin i16* [[SX]], i16 [[TMP512]] monotonic, align 2
+// CHECK-NEXT:    [[TMP513:%.*]] = atomicrmw min i16* [[SX]], i16 [[TMP512]] monotonic, align 2
 // CHECK-NEXT:    [[TMP514:%.*]] = load i16, i16* [[SE]], align 2
-// CHECK-NEXT:    [[TMP515:%.*]] = atomicrmw umax i16* [[SX]], i16 [[TMP514]] monotonic, align 2
+// CHECK-NEXT:    [[TMP515:%.*]] = atomicrmw max i16* [[SX]], i16 [[TMP514]] monotonic, align 2
 // CHECK-NEXT:    [[TMP516:%.*]] = load i16, i16* [[SE]], align 2
-// CHECK-NEXT:    [[TMP517:%.*]] = atomicrmw umax i16* [[SX]], i16 [[TMP516]] monotonic, align 2
+// CHECK-NEXT:    [[TMP517:%.*]] = atomicrmw max i16* [[SX]], i16 [[TMP516]] monotonic, align 2
 // CHECK-NEXT:    [[TMP518:%.*]] = load i16, i16* [[SE]], align 2
-// CHECK-NEXT:    [[TMP519:%.*]] = atomicrmw umin i16* [[SX]], i16 [[TMP518]] monotonic, align 2
+// CHECK-NEXT:    [[TMP519:%.*]] = atomicrmw min i16* [[SX]], i16 [[TMP518]] monotonic, align 2
 // CHECK-NEXT:    [[TMP520:%.*]] = load i16, i16* [[SE]], align 2
 // CHECK-NEXT:    [[TMP521:%.*]] = load i16, i16* [[SD]], align 2
 // CHECK-NEXT:    [[TMP522:%.*]] = cmpxchg i16* [[SX]], i16 [[TMP520]], i16 [[TMP521]] monotonic monotonic, align 2
@@ -2635,28 +2635,28 @@ void foo(void) {
 // CHECK-NEXT:    [[TMP558:%.*]] = load i16, i16* [[USD]], align 2
 // CHECK-NEXT:    [[TMP559:%.*]] = cmpxchg i16* [[USX]], i16 [[TMP557]], i16 [[TMP558]] monotonic monotonic, align 2
 // CHECK-NEXT:    [[TMP560:%.*]] = load i16, i16* [[SE]], align 2
-// CHECK-NEXT:    [[TMP561:%.*]] = atomicrmw umin i16* [[SX]], i16 [[TMP560]] release, align 2
+// CHECK-NEXT:    [[TMP561:%.*]] = atomicrmw min i16* [[SX]], i16 [[TMP560]] release, align 2
 // CHECK-NEXT:    call void @__kmpc_flush(%struct.ident_t* @[[GLOB1]])
 // CHECK-NEXT:    [[TMP562:%.*]] = load i16, i16* [[SE]], align 2
-// CHECK-NEXT:    [[TMP563:%.*]] = atomicrmw umax i16* [[SX]], i16 [[TMP562]] release, align 2
+// CHECK-NEXT:    [[TMP563:%.*]] = atomicrmw max i16* [[SX]], i16 [[TMP562]] release, align 2
 // CHECK-NEXT:    call void @__kmpc_flush(%struct.ident_t* @[[GLOB1]])
 // CHECK-NEXT:    [[TMP564:%.*]] = load i16, i16* [[SE]], align 2
-// CHECK-NEXT:    [[TMP565:%.*]] = atomicrmw umax i16* [[SX]], i16 [[TMP564]] release, align 2
+// CHECK-NEXT:    [[TMP565:%.*]] = atomicrmw max i16* [[SX]], i16 [[TMP564]] release, align 2
 // CHECK-NEXT:    call void @__kmpc_flush(%struct.ident_t* @[[GLOB1]])
 // CHECK-NEXT:    [[TMP566:%.*]] = load i16, i16* [[SE]], align 2
-// CHECK-NEXT:    [[TMP567:%.*]] = atomicrmw umin i16* [[SX]], i16 [[TMP566]] release, align 2
+// CHECK-NEXT:    [[TMP567:%.*]] = atomicrmw min i16* [[SX]], i16 [[TMP566]] release, align 2
 // CHECK-NEXT:    call void @__kmpc_flush(%struct.ident_t* @[[GLOB1]])
 // CHECK-NEXT:    [[TMP568:%.*]] = load i16, i16* [[SE]], align 2
-// CHECK-NEXT:    [[TMP569:%.*]] = atomicrmw umin i16* [[SX]], i16 [[TMP568]] release, align 2
+// CHECK-NEXT:    [[TMP569:%.*]] = atomicrmw min i16* [[SX]], i16 [[TMP568]] release, align 2
 // CHECK-NEXT:    call void @__kmpc_flush(%struct.ident_t* @[[GLOB1]])
 // CHECK-NEXT:    [[TMP570:%.*]] = load i16, i16* [[SE]], align 2
-// CHECK-NEXT:    [[TMP571:%.*]] = atomicrmw umax i16* [[SX]], i16 [[TMP570]] release, align 2
+// CHECK-NEXT:    [[TMP571:%.*]] = atomicrmw max i16* [[SX]], i16 [[TMP570]] release, align 2
 // CHECK-NEXT:    call void @__kmpc_flush(%struct.ident_t* @[[GLOB1]])
 // CHECK-NEXT:    [[TMP572:%.*]] = load i16, i16* [[SE]], align 2
-// CHECK-NEXT:    [[TMP573:%.*]] = atomicrmw umax i16* [[SX]], i16 [[TMP572]] release, align 2
+// CHECK-NEXT:    [[TMP573:%.*]] = atomicrmw max i16* [[SX]], i16 [[TMP572]] release, align 2
 // CHECK-NEXT:    call void @__kmpc_flush(%struct.ident_t* @[[GLOB1]])
 // CHECK-NEXT:    [[TMP574:%.*]] = load i16, i16* [[SE]], align 2
-// CHECK-NEXT:    [[TMP575:%.*]] = atomicrmw umin i16* [[SX]], i16 [[TMP574]] release, align 2
+// CHECK-NEXT:    [[TMP575:%.*]] = atomicrmw min i16* [[SX]], i16 [[TMP574]] release, align 2
 // CHECK-NEXT:    call void @__kmpc_flush(%struct.ident_t* @[[GLOB1]])
 // CHECK-NEXT:    [[TMP576:%.*]] = load i16, i16* [[SE]], align 2
 // CHECK-NEXT:    [[TMP577:%.*]] = load i16, i16* [[SD]], align 2
@@ -2715,28 +2715,28 @@ void foo(void) {
 // CHECK-NEXT:    [[TMP615:%.*]] = cmpxchg i16* [[USX]], i16 [[TMP613]], i16 [[TMP614]] release monotonic, align 2
 // CHECK-NEXT:    call void @__kmpc_flush(%struct.ident_t* @[[GLOB1]])
 // CHECK-NEXT:    [[TMP616:%.*]] = load i16, i16* [[SE]], align 2
-// CHECK-NEXT:    [[TMP617:%.*]] = atomicrmw umin i16* [[SX]], i16 [[TMP616]] seq_cst, align 2
+// CHECK-NEXT:    [[TMP617:%.*]] = atomicrmw min i16* [[SX]], i16 [[TMP616]] seq_cst, align 2
 // CHECK-NEXT:    call void @__kmpc_flush(%struct.ident_t* @[[GLOB1]])
 // CHECK-NEXT:    [[TMP618:%.*]] = load i16, i16* [[SE]], align 2
-// CHECK-NEXT:    [[TMP619:%.*]] = atomicrmw umax i16* [[SX]], i16 [[TMP618]] seq_cst, align 2
+// CHECK-NEXT:    [[TMP619:%.*]] = atomicrmw max i16* [[SX]], i16 [[TMP618]] seq_cst, align 2
 // CHECK-NEXT:    call void @__kmpc_flush(%struct.ident_t* @[[GLOB1]])
 // CHECK-NEXT:    [[TMP620:%.*]] = load i16, i16* [[SE]], align 2
-// CHECK-NEXT:    [[TMP621:%.*]] = atomicrmw umax i16* [[SX]], i16 [[TMP620]] seq_cst, align 2
+// CHECK-NEXT:    [[TMP621:%.*]] = atomicrmw max i16* [[SX]], i16 [[TMP620]] seq_cst, align 2
 // CHECK-NEXT:    call void @__kmpc_flush(%struct.ident_t* @[[GLOB1]])
 // CHECK-NEXT:    [[TMP622:%.*]] = load i16, i16* [[SE]], align 2
-// CHECK-NEXT:    [[TMP623:%.*]] = atomicrmw umin i16* [[SX]], i16 [[TMP622]] seq_cst, align 2
+// CHECK-NEXT:    [[TMP623:%.*]] = atomicrmw min i16* [[SX]], i16 [[TMP622]] seq_cst, align 2
 // CHECK-NEXT:    call void @__kmpc_flush(%struct.ident_t* @[[GLOB1]])
 // CHECK-NEXT:    [[TMP624:%.*]] = load i16, i16* [[SE]], align 2
-// CHECK-NEXT:    [[TMP625:%.*]] = atomicrmw umin i16* [[SX]], i16 [[TMP624]] seq_cst, align 2
+// CHECK-NEXT:    [[TMP625:%.*]] = atomicrmw min i16* [[SX]], i16 [[TMP624]] seq_cst, align 2
 // CHECK-NEXT:    call void @__kmpc_flush(%struct.ident_t* @[[GLOB1]])
 // CHECK-NEXT:    [[TMP626:%.*]] = load i16, i16* [[SE]], align 2
-// CHECK-NEXT:    [[TMP627:%.*]] = atomicrmw umax i16* [[SX]], i16 [[TMP626]] seq_cst, align 2
+// CHECK-NEXT:    [[TMP627:%.*]] = atomicrmw max i16* [[SX]], i16 [[TMP626]] seq_cst, align 2
 // CHECK-NEXT:    call void @__kmpc_flush(%struct.ident_t* @[[GLOB1]])
 // CHECK-NEXT:    [[TMP628:%.*]] = load i16, i16* [[SE]], align 2
-// CHECK-NEXT:    [[TMP629:%.*]] = atomicrmw umax i16* [[SX]], i16 [[TMP628]] seq_cst, align 2
+// CHECK-NEXT:    [[TMP629:%.*]] = atomicrmw max i16* [[SX]], i16 [[TMP628]] seq_cst, align 2
 // CHECK-NEXT:    call void @__kmpc_flush(%struct.ident_t* @[[GLOB1]])
 // CHECK-NEXT:    [[TMP630:%.*]] = load i16, i16* [[SE]], align 2
-// CHECK-NEXT:    [[TMP631:%.*]] = atomicrmw umin i16* [[SX]], i16 [[TMP630]] seq_cst, align 2
+// CHECK-NEXT:    [[TMP631:%.*]] = atomicrmw min i16* [[SX]], i16 [[TMP630]] seq_cst, align 2
 // CHECK-NEXT:    call void @__kmpc_flush(%struct.ident_t* @[[GLOB1]])
 // CHECK-NEXT:    [[TMP632:%.*]] = load i16, i16* [[SE]], align 2
 // CHECK-NEXT:    [[TMP633:%.*]] = load i16, i16* [[SD]], align 2
@@ -2795,21 +2795,21 @@ void foo(void) {
 // CHECK-NEXT:    [[TMP671:%.*]] = cmpxchg i16* [[USX]], i16 [[TMP669]], i16 [[TMP670]] seq_cst seq_cst, align 2
 // CHECK-NEXT:    call void @__kmpc_flush(%struct.ident_t* @[[GLOB1]])
 // CHECK-NEXT:    [[TMP672:%.*]] = load i32, i32* [[IE]], align 4
-// CHECK-NEXT:    [[TMP673:%.*]] = atomicrmw umin i32* [[IX]], i32 [[TMP672]] monotonic, align 4
+// CHECK-NEXT:    [[TMP673:%.*]] = atomicrmw min i32* [[IX]], i32 [[TMP672]] monotonic, align 4
 // CHECK-NEXT:    [[TMP674:%.*]] = load i32, i32* [[IE]], align 4
-// CHECK-NEXT:    [[TMP675:%.*]] = atomicrmw umax i32* [[IX]], i32 [[TMP674]] monotonic, align 4
+// CHECK-NEXT:    [[TMP675:%.*]] = atomicrmw max i32* [[IX]], i32 [[TMP674]] monotonic, align 4
 // CHECK-NEXT:    [[TMP676:%.*]] = load i32, i32* [[IE]], align 4
-// CHECK-NEXT:    [[TMP677:%.*]] = atomicrmw umax i32* [[IX]], i32 [[TMP676]] monotonic, align 4
+// CHECK-NEXT:    [[TMP677:%.*]] = atomicrmw max i32* [[IX]], i32 [[TMP676]] monotonic, align 4
 // CHECK-NEXT:    [[TMP678:%.*]] = load i32, i32* [[IE]], align 4
-// CHECK-NEXT:    [[TMP679:%.*]] = atomicrmw umin i32* [[IX]], i32 [[TMP678]] monotonic, align 4
+// CHECK-NEXT:    [[TMP679:%.*]] = atomicrmw min i32* [[IX]], i32 [[TMP678]] monotonic, align 4
 // CHECK-NEXT:    [[TMP680:%.*]] = load i32, i32* [[IE]], align 4
-// CHECK-NEXT:    [[TMP681:%.*]] = atomicrmw umin i32* [[IX]], i32 [[TMP680]] monotonic, align 4
+// CHECK-NEXT:    [[TMP681:%.*]] = atomicrmw min i32* [[IX]], i32 [[TMP680]] monotonic, align 4
 // CHECK-NEXT:    [[TMP682:%.*]] = load i32, i32* [[IE]], align 4
-// CHECK-NEXT:    [[TMP683:%.*]] = atomicrmw umax i32* [[IX]], i32 [[TMP682]] monotonic, align 4
+// CHECK-NEXT:    [[TMP683:%.*]] = atomicrmw max i32* [[IX]], i32 [[TMP682]] monotonic, align 4
 // CHECK-NEXT:    [[TMP684:%.*]] = load i32, i32* [[IE]], align 4
-// CHECK-NEXT:    [[TMP685:%.*]] = atomicrmw umax i32* [[IX]], i32 [[TMP684]] monotonic, align 4
+// CHECK-NEXT:    [[TMP685:%.*]] = atomicrmw max i32* [[IX]], i32 [[TMP684]] monotonic, align 4
 // CHECK-NEXT:    [[TMP686:%.*]] = load i32, i32* [[IE]], align 4
-// CHECK-NEXT:    [[TMP687:%.*]] = atomicrmw umin i32* [[IX]], i32 [[TMP686]] monotonic, align 4
+// CHECK-NEXT:    [[TMP687:%.*]] = atomicrmw min i32* [[IX]], i32 [[TMP686]] monotonic, align 4
 // CHECK-NEXT:    [[TMP688:%.*]] = load i32, i32* [[IE]], align 4
 // CHECK-NEXT:    [[TMP689:%.*]] = load i32, i32* [[ID]], align 4
 // CHECK-NEXT:    [[TMP690:%.*]] = cmpxchg i32* [[IX]], i32 [[TMP688]], i32 [[TMP689]] monotonic monotonic, align 4
@@ -2851,28 +2851,28 @@ void foo(void) {
 // CHECK-NEXT:    [[TMP726:%.*]] = load i32, i32* [[UID]], align 4
 // CHECK-NEXT:    [[TMP727:%.*]] = cmpxchg i32* [[UIX]], i32 [[TMP725]], i32 [[TMP726]] monotonic monotonic, align 4
 // CHECK-NEXT:    [[TMP728:%.*]] = load i32, i32* [[IE]], align 4
-// CHECK-NEXT:    [[TMP729:%.*]] = atomicrmw umin i32* [[IX]], i32 [[TMP728]] acq_rel, align 4
+// CHECK-NEXT:    [[TMP729:%.*]] = atomicrmw min i32* [[IX]], i32 [[TMP728]] acq_rel, align 4
 // CHECK-NEXT:    call void @__kmpc_flush(%struct.ident_t* @[[GLOB1]])
 // CHECK-NEXT:    [[TMP730:%.*]] = load i32, i32* [[IE]], align 4
-// CHECK-NEXT:    [[TMP731:%.*]] = atomicrmw umax i32* [[IX]], i32 [[TMP730]] acq_rel, align 4
+// CHECK-NEXT:    [[TMP731:%.*]] = atomicrmw max i32* [[IX]], i32 [[TMP730]] acq_rel, align 4
 // CHECK-NEXT:    call void @__kmpc_flush(%struct.ident_t* @[[GLOB1]])
 // CHECK-NEXT:    [[TMP732:%.*]] = load i32, i32* [[IE]], align 4
-// CHECK-NEXT:    [[TMP733:%.*]] = atomicrmw umax i32* [[IX]], i32 [[TMP732]] acq_rel, align 4
+// CHECK-NEXT:    [[TMP733:%.*]] = atomicrmw max i32* [[IX]], i32 [[TMP732]] acq_rel, align 4
 // CHECK-NEXT:    call void @__kmpc_flush(%struct.ident_t* @[[GLOB1]])
 // CHECK-NEXT:    [[TMP734:%.*]] = load i32, i32* [[IE]], align 4
-// CHECK-NEXT:    [[TMP735:%.*]] = atomicrmw umin i32* [[IX]], i32 [[TMP734]] acq_rel, align 4
+// CHECK-NEXT:    [[TMP735:%.*]] = atomicrmw min i32* [[IX]], i32 [[TMP734]] acq_rel, align 4
 // CHECK-NEXT:    call void @__kmpc_flush(%struct.ident_t* @[[GLOB1]])
 // CHECK-NEXT:    [[TMP736:%.*]] = load i32, i32* [[IE]], align 4
-// CHECK-NEXT:    [[TMP737:%.*]] = atomicrmw umin i32* [[IX]], i32 [[TMP736]] acq_rel, align 4
+// CHECK-NEXT:    [[TMP737:%.*]] = atomicrmw min i32* [[IX]], i32 [[TMP736]] acq_rel, align 4
 // CHECK-NEXT:    call void @__kmpc_flush(%struct.ident_t* @[[GLOB1]])
 // CHECK-NEXT:    [[TMP738:%.*]] = load i32, i32* [[IE]], align 4
-// CHECK-NEXT:    [[TMP739:%.*]] = atomicrmw umax i32* [[IX]], i32 [[TMP738]] acq_rel, align 4
+// CHECK-NEXT:    [[TMP739:%.*]] = atomicrmw max i32* [[IX]], i32 [[TMP738]] acq_rel, align 4
 // CHECK-NEXT:    call void @__kmpc_flush(%struct.ident_t* @[[GLOB1]])
 // CHECK-NEXT:    [[TMP740:%.*]] = load i32, i32* [[IE]], align 4
-// CHECK-NEXT:    [[TMP741:%.*]] = atomicrmw umax i32* [[IX]], i32 [[TMP740]] acq_rel, align 4
+// CHECK-NEXT:    [[TMP741:%.*]] = atomicrmw max i32* [[IX]], i32 [[TMP740]] acq_rel, align 4
 // CHECK-NEXT:    call void @__kmpc_flush(%struct.ident_t* @[[GLOB1]])
 // CHECK-NEXT:    [[TMP742:%.*]] = load i32, i32* [[IE]], align 4
-// CHECK-NEXT:    [[TMP743:%.*]] = atomicrmw umin i32* [[IX]], i32 [[TMP742]] acq_rel, align 4
+// CHECK-NEXT:    [[TMP743:%.*]] = atomicrmw min i32* [[IX]], i32 [[TMP742]] acq_rel, align 4
 // CHECK-NEXT:    call void @__kmpc_flush(%struct.ident_t* @[[GLOB1]])
 // CHECK-NEXT:    [[TMP744:%.*]] = load i32, i32* [[IE]], align 4
 // CHECK-NEXT:    [[TMP745:%.*]] = load i32, i32* [[ID]], align 4
@@ -2931,21 +2931,21 @@ void foo(void) {
 // CHECK-NEXT:    [[TMP783:%.*]] = cmpxchg i32* [[UIX]], i32 [[TMP781]], i32 [[TMP782]] acq_rel acquire, align 4
 // CHECK-NEXT:    call void @__kmpc_flush(%struct.ident_t* @[[GLOB1]])
 // CHECK-NEXT:    [[TMP784:%.*]] = load i32, i32* [[IE]], align 4
-// CHECK-NEXT:    [[TMP785:%.*]] = atomicrmw umin i32* [[IX]], i32 [[TMP784]] acquire, align 4
+// CHECK-NEXT:    [[TMP785:%.*]] = atomicrmw min i32* [[IX]], i32 [[TMP784]] acquire, align 4
 // CHECK-NEXT:    [[TMP786:%.*]] = load i32, i32* [[IE]], align 4
-// CHECK-NEXT:    [[TMP787:%.*]] = atomicrmw umax i32* [[IX]], i32 [[TMP786]] acquire, align 4
+// CHECK-NEXT:    [[TMP787:%.*]] = atomicrmw max i32* [[IX]], i32 [[TMP786]] acquire, align 4
 // CHECK-NEXT:    [[TMP788:%.*]] = load i32, i32* [[IE]], align 4
-// CHECK-NEXT:    [[TMP789:%.*]] = atomicrmw umax i32* [[IX]], i32 [[TMP788]] acquire, align 4
+// CHECK-NEXT:    [[TMP789:%.*]] = atomicrmw max i32* [[IX]], i32 [[TMP788]] acquire, align 4
 // CHECK-NEXT:    [[TMP790:%.*]] = load i32, i32* [[IE]], align 4
-// CHECK-NEXT:    [[TMP791:%.*]] = atomicrmw umin i32* [[IX]], i32 [[TMP790]] acquire, align 4
+// CHECK-NEXT:    [[TMP791:%.*]] = atomicrmw min i32* [[IX]], i32 [[TMP790]] acquire, align 4
 // CHECK-NEXT:    [[TMP792:%.*]] = load i32, i32* [[IE]], align 4
-// CHECK-NEXT:    [[TMP793:%.*]] = atomicrmw umin i32* [[IX]], i32 [[TMP792]] acquire, align 4
+// CHECK-NEXT:    [[TMP793:%.*]] = atomicrmw min i32* [[IX]], i32 [[TMP792]] acquire, align 4
 // CHECK-NEXT:    [[TMP794:%.*]] = load i32, i32* [[IE]], align 4
-// CHECK-NEXT:    [[TMP795:%.*]] = atomicrmw umax i32* [[IX]], i32 [[TMP794]] acquire, align 4
+// CHECK-NEXT:    [[TMP795:%.*]] = atomicrmw max i32* [[IX]], i32 [[TMP794]] acquire, align 4
 // CHECK-NEXT:    [[TMP796:%.*]] = load i32, i32* [[IE]], align 4
-// CHECK-NEXT:    [[TMP797:%.*]] = atomicrmw umax i32* [[IX]], i32 [[TMP796]] acquire, align 4
+// CHECK-NEXT:    [[TMP797:%.*]] = atomicrmw max i32* [[IX]], i32 [[TMP796]] acquire, align 4
 // CHECK-NEXT:    [[TMP798:%.*]] = load i32, i32* [[IE]], align 4
-// CHECK-NEXT:    [[TMP799:%.*]] = atomicrmw umin i32* [[IX]], i32 [[TMP798]] acquire, align 4
+// CHECK-NEXT:    [[TMP799:%.*]] = atomicrmw min i32* [[IX]], i32 [[TMP798]] acquire, align 4
 // CHECK-NEXT:    [[TMP800:%.*]] = load i32, i32* [[IE]], align 4
 // CHECK-NEXT:    [[TMP801:%.*]] = load i32, i32* [[ID]], align 4
 // CHECK-NEXT:    [[TMP802:%.*]] = cmpxchg i32* [[IX]], i32 [[TMP800]], i32 [[TMP801]] acquire acquire, align 4
@@ -2987,21 +2987,21 @@ void foo(void) {
 // CHECK-NEXT:    [[TMP838:%.*]] = load i32, i32* [[UID]], align 4
 // CHECK-NEXT:    [[TMP839:%.*]] = cmpxchg i32* [[UIX]], i32 [[TMP837]], i32 [[TMP838]] acquire acquire, align 4
 // CHECK-NEXT:    [[TMP840:%.*]] = load i32, i32* [[IE]], align 4
-// CHECK-NEXT:    [[TMP841:%.*]] = atomicrmw umin i32* [[IX]], i32 [[TMP840]] monotonic, align 4
+// CHECK-NEXT:    [[TMP841:%.*]] = atomicrmw min i32* [[IX]], i32 [[TMP840]] monotonic, align 4
 // CHECK-NEXT:    [[TMP842:%.*]] = load i32, i32* [[IE]], align 4
-// CHECK-NEXT:    [[TMP843:%.*]] = atomicrmw umax i32* [[IX]], i32 [[TMP842]] monotonic, align 4
+// CHECK-NEXT:    [[TMP843:%.*]] = atomicrmw max i32* [[IX]], i32 [[TMP842]] monotonic, align 4
 // CHECK-NEXT:    [[TMP844:%.*]] = load i32, i32* [[IE]], align 4
-// CHECK-NEXT:    [[TMP845:%.*]] = atomicrmw umax i32* [[IX]], i32 [[TMP844]] monotonic, align 4
+// CHECK-NEXT:    [[TMP845:%.*]] = atomicrmw max i32* [[IX]], i32 [[TMP844]] monotonic, align 4
 // CHECK-NEXT:    [[TMP846:%.*]] = load i32, i32* [[IE]], align 4
-// CHECK-NEXT:    [[TMP847:%.*]] = atomicrmw umin i32* [[IX]], i32 [[TMP846]] monotonic, align 4
+// CHECK-NEXT:    [[TMP847:%.*]] = atomicrmw min i32* [[IX]], i32 [[TMP846]] monotonic, align 4
 // CHECK-NEXT:    [[TMP848:%.*]] = load i32, i32* [[IE]], align 4
-// CHECK-NEXT:    [[TMP849:%.*]] = atomicrmw umin i32* [[IX]], i32 [[TMP848]] monotonic, align 4
+// CHECK-NEXT:    [[TMP849:%.*]] = atomicrmw min i32* [[IX]], i32 [[TMP848]] monotonic, align 4
 // CHECK-NEXT:    [[TMP850:%.*]] = load i32, i32* [[IE]], align 4
-// CHECK-NEXT:    [[TMP851:%.*]] = atomicrmw umax i32* [[IX]], i32 [[TMP850]] monotonic, align 4
+// CHECK-NEXT:    [[TMP851:%.*]] = atomicrmw max i32* [[IX]], i32 [[TMP850]] monotonic, align 4
 // CHECK-NEXT:    [[TMP852:%.*]] = load i32, i32* [[IE]], align 4
-// CHECK-NEXT:    [[TMP853:%.*]] = atomicrmw umax i32* [[IX]], i32 [[TMP852]] monotonic, align 4
+// CHECK-NEXT:    [[TMP853:%.*]] = atomicrmw max i32* [[IX]], i32 [[TMP852]] monotonic, align 4
 // CHECK-NEXT:    [[TMP854:%.*]] = load i32, i32* [[IE]], align 4
-// CHECK-NEXT:    [[TMP855:%.*]] = atomicrmw umin i32* [[IX]], i32 [[TMP854]] monotonic, align 4
+// CHECK-NEXT:    [[TMP855:%.*]] = atomicrmw min i32* [[IX]], i32 [[TMP854]] monotonic, align 4
 // CHECK-NEXT:    [[TMP856:%.*]] = load i32, i32* [[IE]], align 4
 // CHECK-NEXT:    [[TMP857:%.*]] = load i32, i32* [[ID]], align 4
 // CHECK-NEXT:    [[TMP858:%.*]] = cmpxchg i32* [[IX]], i32 [[TMP856]], i32 [[TMP857]] monotonic monotonic, align 4
@@ -3043,28 +3043,28 @@ void foo(void) {
 // CHECK-NEXT:    [[TMP894:%.*]] = load i32, i32* [[UID]], align 4
 // CHECK-NEXT:    [[TMP895:%.*]] = cmpxchg i32* [[UIX]], i32 [[TMP893]], i32 [[TMP894]] monotonic monotonic, align 4
 // CHECK-NEXT:    [[TMP896:%.*]] = load i32, i32* [[IE]], align 4
-// CHECK-NEXT:    [[TMP897:%.*]] = atomicrmw umin i32* [[IX]], i32 [[TMP896]] release, align 4
+// CHECK-NEXT:    [[TMP897:%.*]] = atomicrmw min i32* [[IX]], i32 [[TMP896]] release, align 4
 // CHECK-NEXT:    call void @__kmpc_flush(%struct.ident_t* @[[GLOB1]])
 // CHECK-NEXT:    [[TMP898:%.*]] = load i32, i32* [[IE]], align 4
-// CHECK-NEXT:    [[TMP899:%.*]] = atomicrmw umax i32* [[IX]], i32 [[TMP898]] release, align 4
+// CHECK-NEXT:    [[TMP899:%.*]] = atomicrmw max i32* [[IX]], i32 [[TMP898]] release, align 4
 // CHECK-NEXT:    call void @__kmpc_flush(%struct.ident_t* @[[GLOB1]])
 // CHECK-NEXT:    [[TMP900:%.*]] = load i32, i32* [[IE]], align 4
-// CHECK-NEXT:    [[TMP901:%.*]] = atomicrmw umax i32* [[IX]], i32 [[TMP900]] release, align 4
+// CHECK-NEXT:    [[TMP901:%.*]] = atomicrmw max i32* [[IX]], i32 [[TMP900]] release, align 4
 // CHECK-NEXT:    call void @__kmpc_flush(%struct.ident_t* @[[GLOB1]])
 // CHECK-NEXT:    [[TMP902:%.*]] = load i32, i32* [[IE]], align 4
-// CHECK-NEXT:    [[TMP903:%.*]] = atomicrmw umin i32* [[IX]], i32 [[TMP902]] release, align 4
+// CHECK-NEXT:    [[TMP903:%.*]] = atomicrmw min i32* [[IX]], i32 [[TMP902]] release, align 4
 // CHECK-NEXT:    call void @__kmpc_flush(%struct.ident_t* @[[GLOB1]])
 // CHECK-NEXT:    [[TMP904:%.*]] = load i32, i32* [[IE]], align 4
-// CHECK-NEXT:    [[TMP905:%.*]] = atomicrmw umin i32* [[IX]], i32 [[TMP904]] release, align 4
+// CHECK-NEXT:    [[TMP905:%.*]] = atomicrmw min i32* [[IX]], i32 [[TMP904]] release, align 4
 // CHECK-NEXT:    call void @__kmpc_flush(%struct.ident_t* @[[GLOB1]])
 // CHECK-NEXT:    [[TMP906:%.*]] = load i32, i32* [[IE]], align 4
-// CHECK-NEXT:    [[TMP907:%.*]] = atomicrmw umax i32* [[IX]], i32 [[TMP906]] release, align 4
+// CHECK-NEXT:    [[TMP907:%.*]] = atomicrmw max i32* [[IX]], i32 [[TMP906]] release, align 4
 // CHECK-NEXT:    call void @__kmpc_flush(%struct.ident_t* @[[GLOB1]])
 // CHECK-NEXT:    [[TMP908:%.*]] = load i32, i32* [[IE]], align 4
-// CHECK-NEXT:    [[TMP909:%.*]] = atomicrmw umax i32* [[IX]], i32 [[TMP908]] release, align 4
+// CHECK-NEXT:    [[TMP909:%.*]] = atomicrmw max i32* [[IX]], i32 [[TMP908]] release, align 4
 // CHECK-NEXT:    call void @__kmpc_flush(%struct.ident_t* @[[GLOB1]])
 // CHECK-NEXT:    [[TMP910:%.*]] = load i32, i32* [[IE]], align 4
-// CHECK-NEXT:    [[TMP911:%.*]] = atomicrmw umin i32* [[IX]], i32 [[TMP910]] release, align 4
+// CHECK-NEXT:    [[TMP911:%.*]] = atomicrmw min i32* [[IX]], i32 [[TMP910]] release, align 4
 // CHECK-NEXT:    call void @__kmpc_flush(%struct.ident_t* @[[GLOB1]])
 // CHECK-NEXT:    [[TMP912:%.*]] = load i32, i32* [[IE]], align 4
 // CHECK-NEXT:    [[TMP913:%.*]] = load i32, i32* [[ID]], align 4
@@ -3123,28 +3123,28 @@ void foo(void) {
 // CHECK-NEXT:    [[TMP951:%.*]] = cmpxchg i32* [[UIX]], i32 [[TMP949]], i32 [[TMP950]] release monotonic, align 4
 // CHECK-NEXT:    call void @__kmpc_flush(%struct.ident_t* @[[GLOB1]])
 // CHECK-NEXT:    [[TMP952:%.*]] = load i32, i32* [[IE]], align 4
-// CHECK-NEXT:    [[TMP953:%.*]] = atomicrmw umin i32* [[IX]], i32 [[TMP952]] seq_cst, align 4
+// CHECK-NEXT:    [[TMP953:%.*]] = atomicrmw min i32* [[IX]], i32 [[TMP952]] seq_cst, align 4
 // CHECK-NEXT:    call void @__kmpc_flush(%struct.ident_t* @[[GLOB1]])
 // CHECK-NEXT:    [[TMP954:%.*]] = load i32, i32* [[IE]], align 4
-// CHECK-NEXT:    [[TMP955:%.*]] = atomicrmw umax i32* [[IX]], i32 [[TMP954]] seq_cst, align 4
+// CHECK-NEXT:    [[TMP955:%.*]] = atomicrmw max i32* [[IX]], i32 [[TMP954]] seq_cst, align 4
 // CHECK-NEXT:    call void @__kmpc_flush(%struct.ident_t* @[[GLOB1]])
 // CHECK-NEXT:    [[TMP956:%.*]] = load i32, i32* [[IE]], align 4
-// CHECK-NEXT:    [[TMP957:%.*]] = atomicrmw umax i32* [[IX]], i32 [[TMP956]] seq_cst, align 4
+// CHECK-NEXT:    [[TMP957:%.*]] = atomicrmw max i32* [[IX]], i32 [[TMP956]] seq_cst, align 4
 // CHECK-NEXT:    call void @__kmpc_flush(%struct.ident_t* @[[GLOB1]])
 // CHECK-NEXT:    [[TMP958:%.*]] = load i32, i32* [[IE]], align 4
-// CHECK-NEXT:    [[TMP959:%.*]] = atomicrmw umin i32* [[IX]], i32 [[TMP958]] seq_cst, align 4
+// CHECK-NEXT:    [[TMP959:%.*]] = atomicrmw min i32* [[IX]], i32 [[TMP958]] seq_cst, align 4
 // CHECK-NEXT:    call void @__kmpc_flush(%struct.ident_t* @[[GLOB1]])
 // CHECK-NEXT:    [[TMP960:%.*]] = load i32, i32* [[IE]], align 4
-// CHECK-NEXT:    [[TMP961:%.*]] = atomicrmw umin i32* [[IX]], i32 [[TMP960]] seq_cst, align 4
+// CHECK-NEXT:    [[TMP961:%.*]] = atomicrmw min i32* [[IX]], i32 [[TMP960]] seq_cst, align 4
 // CHECK-NEXT:    call void @__kmpc_flush(%struct.ident_t* @[[GLOB1]])
 // CHECK-NEXT:    [[TMP962:%.*]] = load i32, i32* [[IE]], align 4
-// CHECK-NEXT:    [[TMP963:%.*]] = atomicrmw umax i32* [[IX]], i32 [[TMP962]] seq_cst, align 4
+// CHECK-NEXT:    [[TMP963:%.*]] = atomicrmw max i32* [[IX]], i32 [[TMP962]] seq_cst, align 4
 // CHECK-NEXT:    call void @__kmpc_flush(%struct.ident_t* @[[GLOB1]])
 // CHECK-NEXT:    [[TMP964:%.*]] = load i32, i32* [[IE]], align 4
-// CHECK-NEXT:    [[TMP965:%.*]] = atomicrmw umax i32* [[IX]], i32 [[TMP964]] seq_cst, align 4
+// CHECK-NEXT:    [[TMP965:%.*]] = atomicrmw max i32* [[IX]], i32 [[TMP964]] seq_cst, align 4
 // CHECK-NEXT:    call void @__kmpc_flush(%struct.ident_t* @[[GLOB1]])
 // CHECK-NEXT:    [[TMP966:%.*]] = load i32, i32* [[IE]], align 4
-// CHECK-NEXT:    [[TMP967:%.*]] = atomicrmw umin i32* [[IX]], i32 [[TMP966]] seq_cst, align 4
+// CHECK-NEXT:    [[TMP967:%.*]] = atomicrmw min i32* [[IX]], i32 [[TMP966]] seq_cst, align 4
 // CHECK-NEXT:    call void @__kmpc_flush(%struct.ident_t* @[[GLOB1]])
 // CHECK-NEXT:    [[TMP968:%.*]] = load i32, i32* [[IE]], align 4
 // CHECK-NEXT:    [[TMP969:%.*]] = load i32, i32* [[ID]], align 4
@@ -3203,21 +3203,21 @@ void foo(void) {
 // CHECK-NEXT:    [[TMP1007:%.*]] = cmpxchg i32* [[UIX]], i32 [[TMP1005]], i32 [[TMP1006]] seq_cst seq_cst, align 4
 // CHECK-NEXT:    call void @__kmpc_flush(%struct.ident_t* @[[GLOB1]])
 // CHECK-NEXT:    [[TMP1008:%.*]] = load i64, i64* [[LE]], align 8
-// CHECK-NEXT:    [[TMP1009:%.*]] = atomicrmw umin i64* [[LX]], i64 [[TMP1008]] monotonic, align 8
+// CHECK-NEXT:    [[TMP1009:%.*]] = atomicrmw min i64* [[LX]], i64 [[TMP1008]] monotonic, align 8
 // CHECK-NEXT:    [[TMP1010:%.*]] = load i64, i64* [[LE]], align 8
-// CHECK-NEXT:    [[TMP1011:%.*]] = atomicrmw umax i64* [[LX]], i64 [[TMP1010]] monotonic, align 8
+// CHECK-NEXT:    [[TMP1011:%.*]] = atomicrmw max i64* [[LX]], i64 [[TMP1010]] monotonic, align 8
 // CHECK-NEXT:    [[TMP1012:%.*]] = load i64, i64* [[LE]], align 8
-// CHECK-NEXT:    [[TMP1013:%.*]] = atomicrmw umax i64* [[LX]], i64 [[TMP1012]] monotonic, align 8
+// CHECK-NEXT:    [[TMP1013:%.*]] = atomicrmw max i64* [[LX]], i64 [[TMP1012]] monotonic, align 8
 // CHECK-NEXT:    [[TMP1014:%.*]] = load i64, i64* [[LE]], align 8
-// CHECK-NEXT:    [[TMP1015:%.*]] = atomicrmw umin i64* [[LX]], i64 [[TMP1014]] monotonic, align 8
+// CHECK-NEXT:    [[TMP1015:%.*]] = atomicrmw min i64* [[LX]], i64 [[TMP1014]] monotonic, align 8
 // CHECK-NEXT:    [[TMP1016:%.*]] = load i64, i64* [[LE]], align 8
-// CHECK-NEXT:    [[TMP1017:%.*]] = atomicrmw umin i64* [[LX]], i64 [[TMP1016]] monotonic, align 8
+// CHECK-NEXT:    [[TMP1017:%.*]] = atomicrmw min i64* [[LX]], i64 [[TMP1016]] monotonic, align 8
 // CHECK-NEXT:    [[TMP1018:%.*]] = load i64, i64* [[LE]], align 8
-// CHECK-NEXT:    [[TMP1019:%.*]] = atomicrmw umax i64* [[LX]], i64 [[TMP1018]] monotonic, align 8
+// CHECK-NEXT:    [[TMP1019:%.*]] = atomicrmw max i64* [[LX]], i64 [[TMP1018]] monotonic, align 8
 // CHECK-NEXT:    [[TMP1020:%.*]] = load i64, i64* [[LE]], align 8
-// CHECK-NEXT:    [[TMP1021:%.*]] = atomicrmw umax i64* [[LX]], i64 [[TMP1020]] monotonic, align 8
+// CHECK-NEXT:    [[TMP1021:%.*]] = atomicrmw max i64* [[LX]], i64 [[TMP1020]] monotonic, align 8
 // CHECK-NEXT:    [[TMP1022:%.*]] = load i64, i64* [[LE]], align 8
-// CHECK-NEXT:    [[TMP1023:%.*]] = atomicrmw umin i64* [[LX]], i64 [[TMP1022]] monotonic, align 8
+// CHECK-NEXT:    [[TMP1023:%.*]] = atomicrmw min i64* [[LX]], i64 [[TMP1022]] monotonic, align 8
 // CHECK-NEXT:    [[TMP1024:%.*]] = load i64, i64* [[LE]], align 8
 // CHECK-NEXT:    [[TMP1025:%.*]] = load i64, i64* [[LD]], align 8
 // CHECK-NEXT:    [[TMP1026:%.*]] = cmpxchg i64* [[LX]], i64 [[TMP1024]], i64 [[TMP1025]] monotonic monotonic, align 8
@@ -3259,28 +3259,28 @@ void foo(void) {
 // CHECK-NEXT:    [[TMP1062:%.*]] = load i64, i64* [[ULD]], align 8
 // CHECK-NEXT:    [[TMP1063:%.*]] = cmpxchg i64* [[ULX]], i64 [[TMP1061]], i64 [[TMP1062]] monotonic monotonic, align 8
 // CHECK-NEXT:    [[TMP1064:%.*]] = load i64, i64* [[LE]], align 8
-// CHECK-NEXT:    [[TMP1065:%.*]] = atomicrmw umin i64* [[LX]], i64 [[TMP1064]] acq_rel, align 8
+// CHECK-NEXT:    [[TMP1065:%.*]] = atomicrmw min i64* [[LX]], i64 [[TMP1064]] acq_rel, align 8
 // CHECK-NEXT:    call void @__kmpc_flush(%struct.ident_t* @[[GLOB1]])
 // CHECK-NEXT:    [[TMP1066:%.*]] = load i64, i64* [[LE]], align 8
-// CHECK-NEXT:    [[TMP1067:%.*]] = atomicrmw umax i64* [[LX]], i64 [[TMP1066]] acq_rel, align 8
+// CHECK-NEXT:    [[TMP1067:%.*]] = atomicrmw max i64* [[LX]], i64 [[TMP1066]] acq_rel, align 8
 // CHECK-NEXT:    call void @__kmpc_flush(%struct.ident_t* @[[GLOB1]])
 // CHECK-NEXT:    [[TMP1068:%.*]] = load i64, i64* [[LE]], align 8
-// CHECK-NEXT:    [[TMP1069:%.*]] = atomicrmw umax i64* [[LX]], i64 [[TMP1068]] acq_rel, align 8
+// CHECK-NEXT:    [[TMP1069:%.*]] = atomicrmw max i64* [[LX]], i64 [[TMP1068]] acq_rel, align 8
 // CHECK-NEXT:    call void @__kmpc_flush(%struct.ident_t* @[[GLOB1]])
 // CHECK-NEXT:    [[TMP1070:%.*]] = load i64, i64* [[LE]], align 8
-// CHECK-NEXT:    [[TMP1071:%.*]] = atomicrmw umin i64* [[LX]], i64 [[TMP1070]] acq_rel, align 8
+// CHECK-NEXT:    [[TMP1071:%.*]] = atomicrmw min i64* [[LX]], i64 [[TMP1070]] acq_rel, align 8
 // CHECK-NEXT:    call void @__kmpc_flush(%struct.ident_t* @[[GLOB1]])
 // CHECK-NEXT:    [[TMP1072:%.*]] = load i64, i64* [[LE]], align 8
-// CHECK-NEXT:    [[TMP1073:%.*]] = atomicrmw umin i64* [[LX]], i64 [[TMP1072]] acq_rel, align 8
+// CHECK-NEXT:    [[TMP1073:%.*]] = atomicrmw min i64* [[LX]], i64 [[TMP1072]] acq_rel, align 8
 // CHECK-NEXT:    call void @__kmpc_flush(%struct.ident_t* @[[GLOB1]])
 // CHECK-NEXT:    [[TMP1074:%.*]] = load i64, i64* [[LE]], align 8
-// CHECK-NEXT:    [[TMP1075:%.*]] = atomicrmw umax i64* [[LX]], i64 [[TMP1074]] acq_rel, align 8
+// CHECK-NEXT:    [[TMP1075:%.*]] = atomicrmw max i64* [[LX]], i64 [[TMP1074]] acq_rel, align 8
 // CHECK-NEXT:    call void @__kmpc_flush(%struct.ident_t* @[[GLOB1]])
 // CHECK-NEXT:    [[TMP1076:%.*]] = load i64, i64* [[LE]], align 8
-// CHECK-NEXT:    [[TMP1077:%.*]] = atomicrmw umax i64* [[LX]], i64 [[TMP1076]] acq_rel, align 8
+// CHECK-NEXT:    [[TMP1077:%.*]] = atomicrmw max i64* [[LX]], i64 [[TMP1076]] acq_rel, align 8
 // CHECK-NEXT:    call void @__kmpc_flush(%struct.ident_t* @[[GLOB1]])
 // CHECK-NEXT:    [[TMP1078:%.*]] = load i64, i64* [[LE]], align 8
-// CHECK-NEXT:    [[TMP1079:%.*]] = atomicrmw umin i64* [[LX]], i64 [[TMP1078]] acq_rel, align 8
+// CHECK-NEXT:    [[TMP1079:%.*]] = atomicrmw min i64* [[LX]], i64 [[TMP1078]] acq_rel, align 8
 // CHECK-NEXT:    call void @__kmpc_flush(%struct.ident_t* @[[GLOB1]])
 // CHECK-NEXT:    [[TMP1080:%.*]] = load i64, i64* [[LE]], align 8
 // CHECK-NEXT:    [[TMP1081:%.*]] = load i64, i64* [[LD]], align 8
@@ -3339,21 +3339,21 @@ void foo(void) {
 // CHECK-NEXT:    [[TMP1119:%.*]] = cmpxchg i64* [[ULX]], i64 [[TMP1117]], i64 [[TMP1118]] acq_rel acquire, align 8
 // CHECK-NEXT:    call void @__kmpc_flush(%struct.ident_t* @[[GLOB1]])
 // CHECK-NEXT:    [[TMP1120:%.*]] = load i64, i64* [[LE]], align 8
-// CHECK-NEXT:    [[TMP1121:%.*]] = atomicrmw umin i64* [[LX]], i64 [[TMP1120]] acquire, align 8
+// CHECK-NEXT:    [[TMP1121:%.*]] = atomicrmw min i64* [[LX]], i64 [[TMP1120]] acquire, align 8
 // CHECK-NEXT:    [[TMP1122:%.*]] = load i64, i64* [[LE]], align 8
-// CHECK-NEXT:    [[TMP1123:%.*]] = atomicrmw umax i64* [[LX]], i64 [[TMP1122]] acquire, align 8
+// CHECK-NEXT:    [[TMP1123:%.*]] = atomicrmw max i64* [[LX]], i64 [[TMP1122]] acquire, align 8
 // CHECK-NEXT:    [[TMP1124:%.*]] = load i64, i64* [[LE]], align 8
-// CHECK-NEXT:    [[TMP1125:%.*]] = atomicrmw umax i64* [[LX]], i64 [[TMP1124]] acquire, align 8
+// CHECK-NEXT:    [[TMP1125:%.*]] = atomicrmw max i64* [[LX]], i64 [[TMP1124]] acquire, align 8
 // CHECK-NEXT:    [[TMP1126:%.*]] = load i64, i64* [[LE]], align 8
-// CHECK-NEXT:    [[TMP1127:%.*]] = atomicrmw umin i64* [[LX]], i64 [[TMP1126]] acquire, align 8
+// CHECK-NEXT:    [[TMP1127:%.*]] = atomicrmw min i64* [[LX]], i64 [[TMP1126]] acquire, align 8
 // CHECK-NEXT:    [[TMP1128:%.*]] = load i64, i64* [[LE]], align 8
-// CHECK-NEXT:    [[TMP1129:%.*]] = atomicrmw umin i64* [[LX]], i64 [[TMP1128]] acquire, align 8
+// CHECK-NEXT:    [[TMP1129:%.*]] = atomicrmw min i64* [[LX]], i64 [[TMP1128]] acquire, align 8
 // CHECK-NEXT:    [[TMP1130:%.*]] = load i64, i64* [[LE]], align 8
-// CHECK-NEXT:    [[TMP1131:%.*]] = atomicrmw umax i64* [[LX]], i64 [[TMP1130]] acquire, align 8
+// CHECK-NEXT:    [[TMP1131:%.*]] = atomicrmw max i64* [[LX]], i64 [[TMP1130]] acquire, align 8
 // CHECK-NEXT:    [[TMP1132:%.*]] = load i64, i64* [[LE]], align 8
-// CHECK-NEXT:    [[TMP1133:%.*]] = atomicrmw umax i64* [[LX]], i64 [[TMP1132]] acquire, align 8
+// CHECK-NEXT:    [[TMP1133:%.*]] = atomicrmw max i64* [[LX]], i64 [[TMP1132]] acquire, align 8
 // CHECK-NEXT:    [[TMP1134:%.*]] = load i64, i64* [[LE]], align 8
-// CHECK-NEXT:    [[TMP1135:%.*]] = atomicrmw umin i64* [[LX]], i64 [[TMP1134]] acquire, align 8
+// CHECK-NEXT:    [[TMP1135:%.*]] = atomicrmw min i64* [[LX]], i64 [[TMP1134]] acquire, align 8
 // CHECK-NEXT:    [[TMP1136:%.*]] = load i64, i64* [[LE]], align 8
 // CHECK-NEXT:    [[TMP1137:%.*]] = load i64, i64* [[LD]], align 8
 // CHECK-NEXT:    [[TMP1138:%.*]] = cmpxchg i64* [[LX]], i64 [[TMP1136]], i64 [[TMP1137]] acquire acquire, align 8
@@ -3395,21 +3395,21 @@ void foo(void) {
 // CHECK-NEXT:    [[TMP1174:%.*]] = load i64, i64* [[ULD]], align 8
 // CHECK-NEXT:    [[TMP1175:%.*]] = cmpxchg i64* [[ULX]], i64 [[TMP1173]], i64 [[TMP1174]] acquire acquire, align 8
 // CHECK-NEXT:    [[TMP1176:%.*]] = load i64, i64* [[LE]], align 8
-// CHECK-NEXT:    [[TMP1177:%.*]] = atomicrmw umin i64* [[LX]], i64 [[TMP1176]] monotonic, align 8
+// CHECK-NEXT:    [[TMP1177:%.*]] = atomicrmw min i64* [[LX]], i64 [[TMP1176]] monotonic, align 8
 // CHECK-NEXT:    [[TMP1178:%.*]] = load i64, i64* [[LE]], align 8
-// CHECK-NEXT:    [[TMP1179:%.*]] = atomicrmw umax i64* [[LX]], i64 [[TMP1178]] monotonic, align 8
+// CHECK-NEXT:    [[TMP1179:%.*]] = atomicrmw max i64* [[LX]], i64 [[TMP1178]] monotonic, align 8
 // CHECK-NEXT:    [[TMP1180:%.*]] = load i64, i64* [[LE]], align 8
-// CHECK-NEXT:    [[TMP1181:%.*]] = atomicrmw umax i64* [[LX]], i64 [[TMP1180]] monotonic, align 8
+// CHECK-NEXT:    [[TMP1181:%.*]] = atomicrmw max i64* [[LX]], i64 [[TMP1180]] monotonic, align 8
 // CHECK-NEXT:    [[TMP1182:%.*]] = load i64, i64* [[LE]], align 8
-// CHECK-NEXT:    [[TMP1183:%.*]] = atomicrmw umin i64* [[LX]], i64 [[TMP1182]] monotonic, align 8
+// CHECK-NEXT:    [[TMP1183:%.*]] = atomicrmw min i64* [[LX]], i64 [[TMP1182]] monotonic, align 8
 // CHECK-NEXT:    [[TMP1184:%.*]] = load i64, i64* [[LE]], align 8
-// CHECK-NEXT:    [[TMP1185:%.*]] = atomicrmw umin i64* [[LX]], i64 [[TMP1184]] monotonic, align 8
+// CHECK-NEXT:    [[TMP1185:%.*]] = atomicrmw min i64* [[LX]], i64 [[TMP1184]] monotonic, align 8
 // CHECK-NEXT:    [[TMP1186:%.*]] = load i64, i64* [[LE]], align 8
-// CHECK-NEXT:    [[TMP1187:%.*]] = atomicrmw umax i64* [[LX]], i64 [[TMP1186]] monotonic, align 8
+// CHECK-NEXT:    [[TMP1187:%.*]] = atomicrmw max i64* [[LX]], i64 [[TMP1186]] monotonic, align 8
 // CHECK-NEXT:    [[TMP1188:%.*]] = load i64, i64* [[LE]], align 8
-// CHECK-NEXT:    [[TMP1189:%.*]] = atomicrmw umax i64* [[LX]], i64 [[TMP1188]] monotonic, align 8
+// CHECK-NEXT:    [[TMP1189:%.*]] = atomicrmw max i64* [[LX]], i64 [[TMP1188]] monotonic, align 8
 // CHECK-NEXT:    [[TMP1190:%.*]] = load i64, i64* [[LE]], align 8
-// CHECK-NEXT:    [[TMP1191:%.*]] = atomicrmw umin i64* [[LX]], i64 [[TMP1190]] monotonic, align 8
+// CHECK-NEXT:    [[TMP1191:%.*]] = atomicrmw min i64* [[LX]], i64 [[TMP1190]] monotonic, align 8
 // CHECK-NEXT:    [[TMP1192:%.*]] = load i64, i64* [[LE]], align 8
 // CHECK-NEXT:    [[TMP1193:%.*]] = load i64, i64* [[LD]], align 8
 // CHECK-NEXT:    [[TMP1194:%.*]] = cmpxchg i64* [[LX]], i64 [[TMP1192]], i64 [[TMP1193]] monotonic monotonic, align 8
@@ -3451,28 +3451,28 @@ void foo(void) {
 // CHECK-NEXT:    [[TMP1230:%.*]] = load i64, i64* [[ULD]], align 8
 // CHECK-NEXT:    [[TMP1231:%.*]] = cmpxchg i64* [[ULX]], i64 [[TMP1229]], i64 [[TMP1230]] monotonic monotonic, align 8
 // CHECK-NEXT:    [[TMP1232:%.*]] = load i64, i64* [[LE]], align 8
-// CHECK-NEXT:    [[TMP1233:%.*]] = atomicrmw umin i64* [[LX]], i64 [[TMP1232]] release, align 8
+// CHECK-NEXT:    [[TMP1233:%.*]] = atomicrmw min i64* [[LX]], i64 [[TMP1232]] release, align 8
 // CHECK-NEXT:    call void @__kmpc_flush(%struct.ident_t* @[[GLOB1]])
 // CHECK-NEXT:    [[TMP1234:%.*]] = load i64, i64* [[LE]], align 8
-// CHECK-NEXT:    [[TMP1235:%.*]] = atomicrmw umax i64* [[LX]], i64 [[TMP1234]] release, align 8
+// CHECK-NEXT:    [[TMP1235:%.*]] = atomicrmw max i64* [[LX]], i64 [[TMP1234]] release, align 8
 // CHECK-NEXT:    call void @__kmpc_flush(%struct.ident_t* @[[GLOB1]])
 // CHECK-NEXT:    [[TMP1236:%.*]] = load i64, i64* [[LE]], align 8
-// CHECK-NEXT:    [[TMP1237:%.*]] = atomicrmw umax i64* [[LX]], i64 [[TMP1236]] release, align 8
+// CHECK-NEXT:    [[TMP1237:%.*]] = atomicrmw max i64* [[LX]], i64 [[TMP1236]] release, align 8
 // CHECK-NEXT:    call void @__kmpc_flush(%struct.ident_t* @[[GLOB1]])
 // CHECK-NEXT:    [[TMP1238:%.*]] = load i64, i64* [[LE]], align 8
-// CHECK-NEXT:    [[TMP1239:%.*]] = atomicrmw umin i64* [[LX]], i64 [[TMP1238]] release, align 8
+// CHECK-NEXT:    [[TMP1239:%.*]] = atomicrmw min i64* [[LX]], i64 [[TMP1238]] release, align 8
 // CHECK-NEXT:    call void @__kmpc_flush(%struct.ident_t* @[[GLOB1]])
 // CHECK-NEXT:    [[TMP1240:%.*]] = load i64, i64* [[LE]], align 8
-// CHECK-NEXT:    [[TMP1241:%.*]] = atomicrmw umin i64* [[LX]], i64 [[TMP1240]] release, align 8
+// CHECK-NEXT:    [[TMP1241:%.*]] = atomicrmw min i64* [[LX]], i64 [[TMP1240]] release, align 8
 // CHECK-NEXT:    call void @__kmpc_flush(%struct.ident_t* @[[GLOB1]])
 // CHECK-NEXT:    [[TMP1242:%.*]] = load i64, i64* [[LE]], align 8
-// CHECK-NEXT:    [[TMP1243:%.*]] = atomicrmw umax i64* [[LX]], i64 [[TMP1242]] release, align 8
+// CHECK-NEXT:    [[TMP1243:%.*]] = atomicrmw max i64* [[LX]], i64 [[TMP1242]] release, align 8
 // CHECK-NEXT:    call void @__kmpc_flush(%struct.ident_t* @[[GLOB1]])
 // CHECK-NEXT:    [[TMP1244:%.*]] = load i64, i64* [[LE]], align 8
-// CHECK-NEXT:    [[TMP1245:%.*]] = atomicrmw umax i64* [[LX]], i64 [[TMP1244]] release, align 8
+// CHECK-NEXT:    [[TMP1245:%.*]] = atomicrmw max i64* [[LX]], i64 [[TMP1244]] release, align 8
 // CHECK-NEXT:    call void @__kmpc_flush(%struct.ident_t* @[[GLOB1]])
 // CHECK-NEXT:    [[TMP1246:%.*]] = load i64, i64* [[LE]], align 8
-// CHECK-NEXT:    [[TMP1247:%.*]] = atomicrmw umin i64* [[LX]], i64 [[TMP1246]] release, align 8
+// CHECK-NEXT:    [[TMP1247:%.*]] = atomicrmw min i64* [[LX]], i64 [[TMP1246]] release, align 8
 // CHECK-NEXT:    call void @__kmpc_flush(%struct.ident_t* @[[GLOB1]])
 // CHECK-NEXT:    [[TMP1248:%.*]] = load i64, i64* [[LE]], align 8
 // CHECK-NEXT:    [[TMP1249:%.*]] = load i64, i64* [[LD]], align 8
@@ -3531,28 +3531,28 @@ void foo(void) {
 // CHECK-NEXT:    [[TMP1287:%.*]] = cmpxchg i64* [[ULX]], i64 [[TMP1285]], i64 [[TMP1286]] release monotonic, align 8
 // CHECK-NEXT:    call void @__kmpc_flush(%struct.ident_t* @[[GLOB1]])
 // CHECK-NEXT:    [[TMP1288:%.*]] = load i64, i64* [[LE]], align 8
-// CHECK-NEXT:    [[TMP1289:%.*]] = atomicrmw umin i64* [[LX]], i64 [[TMP1288]] seq_cst, align 8
+// CHECK-NEXT:    [[TMP1289:%.*]] = atomicrmw min i64* [[LX]], i64 [[TMP1288]] seq_cst, align 8
 // CHECK-NEXT:    call void @__kmpc_flush(%struct.ident_t* @[[GLOB1]])
 // CHECK-NEXT:    [[TMP1290:%.*]] = load i64, i64* [[LE]], align 8
-// CHECK-NEXT:    [[TMP1291:%.*]] = atomicrmw umax i64* [[LX]], i64 [[TMP1290]] seq_cst, align 8
+// CHECK-NEXT:    [[TMP1291:%.*]] = atomicrmw max i64* [[LX]], i64 [[TMP1290]] seq_cst, align 8
 // CHECK-NEXT:    call void @__kmpc_flush(%struct.ident_t* @[[GLOB1]])
 // CHECK-NEXT:    [[TMP1292:%.*]] = load i64, i64* [[LE]], align 8
-// CHECK-NEXT:    [[TMP1293:%.*]] = atomicrmw umax i64* [[LX]], i64 [[TMP1292]] seq_cst, align 8
+// CHECK-NEXT:    [[TMP1293:%.*]] = atomicrmw max i64* [[LX]], i64 [[TMP1292]] seq_cst, align 8
 // CHECK-NEXT:    call void @__kmpc_flush(%struct.ident_t* @[[GLOB1]])
 // CHECK-NEXT:    [[TMP1294:%.*]] = load i64, i64* [[LE]], align 8
-// CHECK-NEXT:    [[TMP1295:%.*]] = atomicrmw umin i64* [[LX]], i64 [[TMP1294]] seq_cst, align 8
+// CHECK-NEXT:    [[TMP1295:%.*]] = atomicrmw min i64* [[LX]], i64 [[TMP1294]] seq_cst, align 8
 // CHECK-NEXT:    call void @__kmpc_flush(%struct.ident_t* @[[GLOB1]])
 // CHECK-NEXT:    [[TMP1296:%.*]] = load i64, i64* [[LE]], align 8
-// CHECK-NEXT:    [[TMP1297:%.*]] = atomicrmw umin i64* [[LX]], i64 [[TMP1296]] seq_cst, align 8
+// CHECK-NEXT:    [[TMP1297:%.*]] = atomicrmw min i64* [[LX]], i64 [[TMP1296]] seq_cst, align 8
 // CHECK-NEXT:    call void @__kmpc_flush(%struct.ident_t* @[[GLOB1]])
 // CHECK-NEXT:    [[TMP1298:%.*]] = load i64, i64* [[LE]], align 8
-// CHECK-NEXT:    [[TMP1299:%.*]] = atomicrmw umax i64* [[LX]], i64 [[TMP1298]] seq_cst, align 8
+// CHECK-NEXT:    [[TMP1299:%.*]] = atomicrmw max i64* [[LX]], i64 [[TMP1298]] seq_cst, align 8
 // CHECK-NEXT:    call void @__kmpc_flush(%struct.ident_t* @[[GLOB1]])
 // CHECK-NEXT:    [[TMP1300:%.*]] = load i64, i64* [[LE]], align 8
-// CHECK-NEXT:    [[TMP1301:%.*]] = atomicrmw umax i64* [[LX]], i64 [[TMP1300]] seq_cst, align 8
+// CHECK-NEXT:    [[TMP1301:%.*]] = atomicrmw max i64* [[LX]], i64 [[TMP1300]] seq_cst, align 8
 // CHECK-NEXT:    call void @__kmpc_flush(%struct.ident_t* @[[GLOB1]])
 // CHECK-NEXT:    [[TMP1302:%.*]] = load i64, i64* [[LE]], align 8
-// CHECK-NEXT:    [[TMP1303:%.*]] = atomicrmw umin i64* [[LX]], i64 [[TMP1302]] seq_cst, align 8
+// CHECK-NEXT:    [[TMP1303:%.*]] = atomicrmw min i64* [[LX]], i64 [[TMP1302]] seq_cst, align 8
 // CHECK-NEXT:    call void @__kmpc_flush(%struct.ident_t* @[[GLOB1]])
 // CHECK-NEXT:    [[TMP1304:%.*]] = load i64, i64* [[LE]], align 8
 // CHECK-NEXT:    [[TMP1305:%.*]] = load i64, i64* [[LD]], align 8
@@ -3611,21 +3611,21 @@ void foo(void) {
 // CHECK-NEXT:    [[TMP1343:%.*]] = cmpxchg i64* [[ULX]], i64 [[TMP1341]], i64 [[TMP1342]] seq_cst seq_cst, align 8
 // CHECK-NEXT:    call void @__kmpc_flush(%struct.ident_t* @[[GLOB1]])
 // CHECK-NEXT:    [[TMP1344:%.*]] = load i64, i64* [[LLE]], align 8
-// CHECK-NEXT:    [[TMP1345:%.*]] = atomicrmw umin i64* [[LLX]], i64 [[TMP1344]] monotonic, align 8
+// CHECK-NEXT:    [[TMP1345:%.*]] = atomicrmw min i64* [[LLX]], i64 [[TMP1344]] monotonic, align 8
 // CHECK-NEXT:    [[TMP1346:%.*]] = load i64, i64* [[LLE]], align 8
-// CHECK-NEXT:    [[TMP1347:%.*]] = atomicrmw umax i64* [[LLX]], i64 [[TMP1346]] monotonic, align 8
+// CHECK-NEXT:    [[TMP1347:%.*]] = atomicrmw max i64* [[LLX]], i64 [[TMP1346]] monotonic, align 8
 // CHECK-NEXT:    [[TMP1348:%.*]] = load i64, i64* [[LLE]], align 8
-// CHECK-NEXT:    [[TMP1349:%.*]] = atomicrmw umax i64* [[LLX]], i64 [[TMP1348]] monotonic, align 8
+// CHECK-NEXT:    [[TMP1349:%.*]] = atomicrmw max i64* [[LLX]], i64 [[TMP1348]] monotonic, align 8
 // CHECK-NEXT:    [[TMP1350:%.*]] = load i64, i64* [[LLE]], align 8
-// CHECK-NEXT:    [[TMP1351:%.*]] = atomicrmw umin i64* [[LLX]], i64 [[TMP1350]] monotonic, align 8
+// CHECK-NEXT:    [[TMP1351:%.*]] = atomicrmw min i64* [[LLX]], i64 [[TMP1350]] monotonic, align 8
 // CHECK-NEXT:    [[TMP1352:%.*]] = load i64, i64* [[LLE]], align 8
-// CHECK-NEXT:    [[TMP1353:%.*]] = atomicrmw umin i64* [[LLX]], i64 [[TMP1352]] monotonic, align 8
+// CHECK-NEXT:    [[TMP1353:%.*]] = atomicrmw min i64* [[LLX]], i64 [[TMP1352]] monotonic, align 8
 // CHECK-NEXT:    [[TMP1354:%.*]] = load i64, i64* [[LLE]], align 8
-// CHECK-NEXT:    [[TMP1355:%.*]] = atomicrmw umax i64* [[LLX]], i64 [[TMP1354]] monotonic, align 8
+// CHECK-NEXT:    [[TMP1355:%.*]] = atomicrmw max i64* [[LLX]], i64 [[TMP1354]] monotonic, align 8
 // CHECK-NEXT:    [[TMP1356:%.*]] = load i64, i64* [[LLE]], align 8
-// CHECK-NEXT:    [[TMP1357:%.*]] = atomicrmw umax i64* [[LLX]], i64 [[TMP1356]] monotonic, align 8
+// CHECK-NEXT:    [[TMP1357:%.*]] = atomicrmw max i64* [[LLX]], i64 [[TMP1356]] monotonic, align 8
 // CHECK-NEXT:    [[TMP1358:%.*]] = load i64, i64* [[LLE]], align 8
-// CHECK-NEXT:    [[TMP1359:%.*]] = atomicrmw umin i64* [[LLX]], i64 [[TMP1358]] monotonic, align 8
+// CHECK-NEXT:    [[TMP1359:%.*]] = atomicrmw min i64* [[LLX]], i64 [[TMP1358]] monotonic, align 8
 // CHECK-NEXT:    [[TMP1360:%.*]] = load i64, i64* [[LLE]], align 8
 // CHECK-NEXT:    [[TMP1361:%.*]] = load i64, i64* [[LLD]], align 8
 // CHECK-NEXT:    [[TMP1362:%.*]] = cmpxchg i64* [[LLX]], i64 [[TMP1360]], i64 [[TMP1361]] monotonic monotonic, align 8
@@ -3667,28 +3667,28 @@ void foo(void) {
 // CHECK-NEXT:    [[TMP1398:%.*]] = load i64, i64* [[ULLD]], align 8
 // CHECK-NEXT:    [[TMP1399:%.*]] = cmpxchg i64* [[ULLX]], i64 [[TMP1397]], i64 [[TMP1398]] monotonic monotonic, align 8
 // CHECK-NEXT:    [[TMP1400:%.*]] = load i64, i64* [[LLE]], align 8
-// CHECK-NEXT:    [[TMP1401:%.*]] = atomicrmw umin i64* [[LLX]], i64 [[TMP1400]] acq_rel, align 8
+// CHECK-NEXT:    [[TMP1401:%.*]] = atomicrmw min i64* [[LLX]], i64 [[TMP1400]] acq_rel, align 8
 // CHECK-NEXT:    call void @__kmpc_flush(%struct.ident_t* @[[GLOB1]])
 // CHECK-NEXT:    [[TMP1402:%.*]] = load i64, i64* [[LLE]], align 8
-// CHECK-NEXT:    [[TMP1403:%.*]] = atomicrmw umax i64* [[LLX]], i64 [[TMP1402]] acq_rel, align 8
+// CHECK-NEXT:    [[TMP1403:%.*]] = atomicrmw max i64* [[LLX]], i64 [[TMP1402]] acq_rel, align 8
 // CHECK-NEXT:    call void @__kmpc_flush(%struct.ident_t* @[[GLOB1]])
 // CHECK-NEXT:    [[TMP1404:%.*]] = load i64, i64* [[LLE]], align 8
-// CHECK-NEXT:    [[TMP1405:%.*]] = atomicrmw umax i64* [[LLX]], i64 [[TMP1404]] acq_rel, align 8
+// CHECK-NEXT:    [[TMP1405:%.*]] = atomicrmw max i64* [[LLX]], i64 [[TMP1404]] acq_rel, align 8
 // CHECK-NEXT:    call void @__kmpc_flush(%struct.ident_t* @[[GLOB1]])
 // CHECK-NEXT:    [[TMP1406:%.*]] = load i64, i64* [[LLE]], align 8
-// CHECK-NEXT:    [[TMP1407:%.*]] = atomicrmw umin i64* [[LLX]], i64 [[TMP1406]] acq_rel, align 8
+// CHECK-NEXT:    [[TMP1407:%.*]] = atomicrmw min i64* [[LLX]], i64 [[TMP1406]] acq_rel, align 8
 // CHECK-NEXT:    call void @__kmpc_flush(%struct.ident_t* @[[GLOB1]])
 // CHECK-NEXT:    [[TMP1408:%.*]] = load i64, i64* [[LLE]], align 8
-// CHECK-NEXT:    [[TMP1409:%.*]] = atomicrmw umin i64* [[LLX]], i64 [[TMP1408]] acq_rel, align 8
+// CHECK-NEXT:    [[TMP1409:%.*]] = atomicrmw min i64* [[LLX]], i64 [[TMP1408]] acq_rel, align 8
 // CHECK-NEXT:    call void @__kmpc_flush(%struct.ident_t* @[[GLOB1]])
 // CHECK-NEXT:    [[TMP1410:%.*]] = load i64, i64* [[LLE]], align 8
-// CHECK-NEXT:    [[TMP1411:%.*]] = atomicrmw umax i64* [[LLX]], i64 [[TMP1410]] acq_rel, align 8
+// CHECK-NEXT:    [[TMP1411:%.*]] = atomicrmw max i64* [[LLX]], i64 [[TMP1410]] acq_rel, align 8
 // CHECK-NEXT:    call void @__kmpc_flush(%struct.ident_t* @[[GLOB1]])
 // CHECK-NEXT:    [[TMP1412:%.*]] = load i64, i64* [[LLE]], align 8
-// CHECK-NEXT:    [[TMP1413:%.*]] = atomicrmw umax i64* [[LLX]], i64 [[TMP1412]] acq_rel, align 8
+// CHECK-NEXT:    [[TMP1413:%.*]] = atomicrmw max i64* [[LLX]], i64 [[TMP1412]] acq_rel, align 8
 // CHECK-NEXT:    call void @__kmpc_flush(%struct.ident_t* @[[GLOB1]])
 // CHECK-NEXT:    [[TMP1414:%.*]] = load i64, i64* [[LLE]], align 8
-// CHECK-NEXT:    [[TMP1415:%.*]] = atomicrmw umin i64* [[LLX]], i64 [[TMP1414]] acq_rel, align 8
+// CHECK-NEXT:    [[TMP1415:%.*]] = atomicrmw min i64* [[LLX]], i64 [[TMP1414]] acq_rel, align 8
 // CHECK-NEXT:    call void @__kmpc_flush(%struct.ident_t* @[[GLOB1]])
 // CHECK-NEXT:    [[TMP1416:%.*]] = load i64, i64* [[LLE]], align 8
 // CHECK-NEXT:    [[TMP1417:%.*]] = load i64, i64* [[LLD]], align 8
@@ -3747,21 +3747,21 @@ void foo(void) {
 // CHECK-NEXT:    [[TMP1455:%.*]] = cmpxchg i64* [[ULLX]], i64 [[TMP1453]], i64 [[TMP1454]] acq_rel acquire, align 8
 // CHECK-NEXT:    call void @__kmpc_flush(%struct.ident_t* @[[GLOB1]])
 // CHECK-NEXT:    [[TMP1456:%.*]] = load i64, i64* [[LLE]], align 8
-// CHECK-NEXT:    [[TMP1457:%.*]] = atomicrmw umin i64* [[LLX]], i64 [[TMP1456]] acquire, align 8
+// CHECK-NEXT:    [[TMP1457:%.*]] = atomicrmw min i64* [[LLX]], i64 [[TMP1456]] acquire, align 8
 // CHECK-NEXT:    [[TMP1458:%.*]] = load i64, i64* [[LLE]], align 8
-// CHECK-NEXT:    [[TMP1459:%.*]] = atomicrmw umax i64* [[LLX]], i64 [[TMP1458]] acquire, align 8
+// CHECK-NEXT:    [[TMP1459:%.*]] = atomicrmw max i64* [[LLX]], i64 [[TMP1458]] acquire, align 8
 // CHECK-NEXT:    [[TMP1460:%.*]] = load i64, i64* [[LLE]], align 8
-// CHECK-NEXT:    [[TMP1461:%.*]] = atomicrmw umax i64* [[LLX]], i64 [[TMP1460]] acquire, align 8
+// CHECK-NEXT:    [[TMP1461:%.*]] = atomicrmw max i64* [[LLX]], i64 [[TMP1460]] acquire, align 8
 // CHECK-NEXT:    [[TMP1462:%.*]] = load i64, i64* [[LLE]], align 8
-// CHECK-NEXT:    [[TMP1463:%.*]] = atomicrmw umin i64* [[LLX]], i64 [[TMP1462]] acquire, align 8
+// CHECK-NEXT:    [[TMP1463:%.*]] = atomicrmw min i64* [[LLX]], i64 [[TMP1462]] acquire, align 8
 // CHECK-NEXT:    [[TMP1464:%.*]] = load i64, i64* [[LLE]], align 8
-// CHECK-NEXT:    [[TMP1465:%.*]] = atomicrmw umin i64* [[LLX]], i64 [[TMP1464]] acquire, align 8
+// CHECK-NEXT:    [[TMP1465:%.*]] = atomicrmw min i64* [[LLX]], i64 [[TMP1464]] acquire, align 8
 // CHECK-NEXT:    [[TMP1466:%.*]] = load i64, i64* [[LLE]], align 8
-// CHECK-NEXT:    [[TMP1467:%.*]] = atomicrmw umax i64* [[LLX]], i64 [[TMP1466]] acquire, align 8
+// CHECK-NEXT:    [[TMP1467:%.*]] = atomicrmw max i64* [[LLX]], i64 [[TMP1466]] acquire, align 8
 // CHECK-NEXT:    [[TMP1468:%.*]] = load i64, i64* [[LLE]], align 8
-// CHECK-NEXT:    [[TMP1469:%.*]] = atomicrmw umax i64* [[LLX]], i64 [[TMP1468]] acquire, align 8
+// CHECK-NEXT:    [[TMP1469:%.*]] = atomicrmw max i64* [[LLX]], i64 [[TMP1468]] acquire, align 8
 // CHECK-NEXT:    [[TMP1470:%.*]] = load i64, i64* [[LLE]], align 8
-// CHECK-NEXT:    [[TMP1471:%.*]] = atomicrmw umin i64* [[LLX]], i64 [[TMP1470]] acquire, align 8
+// CHECK-NEXT:    [[TMP1471:%.*]] = atomicrmw min i64* [[LLX]], i64 [[TMP1470]] acquire, align 8
 // CHECK-NEXT:    [[TMP1472:%.*]] = load i64, i64* [[LLE]], align 8
 // CHECK-NEXT:    [[TMP1473:%.*]] = load i64, i64* [[LLD]], align 8
 // CHECK-NEXT:    [[TMP1474:%.*]] = cmpxchg i64* [[LLX]], i64 [[TMP1472]], i64 [[TMP1473]] acquire acquire, align 8
@@ -3803,21 +3803,21 @@ void foo(void) {
 // CHECK-NEXT:    [[TMP1510:%.*]] = load i64, i64* [[ULLD]], align 8
 // CHECK-NEXT:    [[TMP1511:%.*]] = cmpxchg i64* [[ULLX]], i64 [[TMP1509]], i64 [[TMP1510]] acquire acquire, align 8
 // CHECK-NEXT:    [[TMP1512:%.*]] = load i64, i64* [[LLE]], align 8
-// CHECK-NEXT:    [[TMP1513:%.*]] = atomicrmw umin i64* [[LLX]], i64 [[TMP1512]] monotonic, align 8
+// CHECK-NEXT:    [[TMP1513:%.*]] = atomicrmw min i64* [[LLX]], i64 [[TMP1512]] monotonic, align 8
 // CHECK-NEXT:    [[TMP1514:%.*]] = load i64, i64* [[LLE]], align 8
-// CHECK-NEXT:    [[TMP1515:%.*]] = atomicrmw umax i64* [[LLX]], i64 [[TMP1514]] monotonic, align 8
+// CHECK-NEXT:    [[TMP1515:%.*]] = atomicrmw max i64* [[LLX]], i64 [[TMP1514]] monotonic, align 8
 // CHECK-NEXT:    [[TMP1516:%.*]] = load i64, i64* [[LLE]], align 8
-// CHECK-NEXT:    [[TMP1517:%.*]] = atomicrmw umax i64* [[LLX]], i64 [[TMP1516]] monotonic, align 8
+// CHECK-NEXT:    [[TMP1517:%.*]] = atomicrmw max i64* [[LLX]], i64 [[TMP1516]] monotonic, align 8
 // CHECK-NEXT:    [[TMP1518:%.*]] = load i64, i64* [[LLE]], align 8
-// CHECK-NEXT:    [[TMP1519:%.*]] = atomicrmw umin i64* [[LLX]], i64 [[TMP1518]] monotonic, align 8
+// CHECK-NEXT:    [[TMP1519:%.*]] = atomicrmw min i64* [[LLX]], i64 [[TMP1518]] monotonic, align 8
 // CHECK-NEXT:    [[TMP1520:%.*]] = load i64, i64* [[LLE]], align 8
-// CHECK-NEXT:    [[TMP1521:%.*]] = atomicrmw umin i64* [[LLX]], i64 [[TMP1520]] monotonic, align 8
+// CHECK-NEXT:    [[TMP1521:%.*]] = atomicrmw min i64* [[LLX]], i64 [[TMP1520]] monotonic, align 8
 // CHECK-NEXT:    [[TMP1522:%.*]] = load i64, i64* [[LLE]], align 8
-// CHECK-NEXT:    [[TMP1523:%.*]] = atomicrmw umax i64* [[LLX]], i64 [[TMP1522]] monotonic, align 8
+// CHECK-NEXT:    [[TMP1523:%.*]] = atomicrmw max i64* [[LLX]], i64 [[TMP1522]] monotonic, align 8
 // CHECK-NEXT:    [[TMP1524:%.*]] = load i64, i64* [[LLE]], align 8
-// CHECK-NEXT:    [[TMP1525:%.*]] = atomicrmw umax i64* [[LLX]], i64 [[TMP1524]] monotonic, align 8
+// CHECK-NEXT:    [[TMP1525:%.*]] = atomicrmw max i64* [[LLX]], i64 [[TMP1524]] monotonic, align 8
 // CHECK-NEXT:    [[TMP1526:%.*]] = load i64, i64* [[LLE]], align 8
-// CHECK-NEXT:    [[TMP1527:%.*]] = atomicrmw umin i64* [[LLX]], i64 [[TMP1526]] monotonic, align 8
+// CHECK-NEXT:    [[TMP1527:%.*]] = atomicrmw min i64* [[LLX]], i64 [[TMP1526]] monotonic, align 8
 // CHECK-NEXT:    [[TMP1528:%.*]] = load i64, i64* [[LLE]], align 8
 // CHECK-NEXT:    [[TMP1529:%.*]] = load i64, i64* [[LLD]], align 8
 // CHECK-NEXT:    [[TMP1530:%.*]] = cmpxchg i64* [[LLX]], i64 [[TMP1528]], i64 [[TMP1529]] monotonic monotonic, align 8
@@ -3859,28 +3859,28 @@ void foo(void) {
 // CHECK-NEXT:    [[TMP1566:%.*]] = load i64, i64* [[ULLD]], align 8
 // CHECK-NEXT:    [[TMP1567:%.*]] = cmpxchg i64* [[ULLX]], i64 [[TMP1565]], i64 [[TMP1566]] monotonic monotonic, align 8
 // CHECK-NEXT:    [[TMP1568:%.*]] = load i64, i64* [[LLE]], align 8
-// CHECK-NEXT:    [[TMP1569:%.*]] = atomicrmw umin i64* [[LLX]], i64 [[TMP1568]] release, align 8
+// CHECK-NEXT:    [[TMP1569:%.*]] = atomicrmw min i64* [[LLX]], i64 [[TMP1568]] release, align 8
 // CHECK-NEXT:    call void @__kmpc_flush(%struct.ident_t* @[[GLOB1]])
 // CHECK-NEXT:    [[TMP1570:%.*]] = load i64, i64* [[LLE]], align 8
-// CHECK-NEXT:    [[TMP1571:%.*]] = atomicrmw umax i64* [[LLX]], i64 [[TMP1570]] release, align 8
+// CHECK-NEXT:    [[TMP1571:%.*]] = atomicrmw max i64* [[LLX]], i64 [[TMP1570]] release, align 8
 // CHECK-NEXT:    call void @__kmpc_flush(%struct.ident_t* @[[GLOB1]])
 // CHECK-NEXT:    [[TMP1572:%.*]] = load i64, i64* [[LLE]], align 8
-// CHECK-NEXT:    [[TMP1573:%.*]] = atomicrmw umax i64* [[LLX]], i64 [[TMP1572]] release, align 8
+// CHECK-NEXT:    [[TMP1573:%.*]] = atomicrmw max i64* [[LLX]], i64 [[TMP1572]] release, align 8
 // CHECK-NEXT:    call void @__kmpc_flush(%struct.ident_t* @[[GLOB1]])
 // CHECK-NEXT:    [[TMP1574:%.*]] = load i64, i64* [[LLE]], align 8
-// CHECK-NEXT:    [[TMP1575:%.*]] = atomicrmw umin i64* [[LLX]], i64 [[TMP1574]] release, align 8
+// CHECK-NEXT:    [[TMP1575:%.*]] = atomicrmw min i64* [[LLX]], i64 [[TMP1574]] release, align 8
 // CHECK-NEXT:    call void @__kmpc_flush(%struct.ident_t* @[[GLOB1]])
 // CHECK-NEXT:    [[TMP1576:%.*]] = load i64, i64* [[LLE]], align 8
-// CHECK-NEXT:    [[TMP1577:%.*]] = atomicrmw umin i64* [[LLX]], i64 [[TMP1576]] release, align 8
+// CHECK-NEXT:    [[TMP1577:%.*]] = atomicrmw min i64* [[LLX]], i64 [[TMP1576]] release, align 8
 // CHECK-NEXT:    call void @__kmpc_flush(%struct.ident_t* @[[GLOB1]])
 // CHECK-NEXT:    [[TMP1578:%.*]] = load i64, i64* [[LLE]], align 8
-// CHECK-NEXT:    [[TMP1579:%.*]] = atomicrmw umax i64* [[LLX]], i64 [[TMP1578]] release, align 8
+// CHECK-NEXT:    [[TMP1579:%.*]] = atomicrmw max i64* [[LLX]], i64 [[TMP1578]] release, align 8
 // CHECK-NEXT:    call void @__kmpc_flush(%struct.ident_t* @[[GLOB1]])
 // CHECK-NEXT:    [[TMP1580:%.*]] = load i64, i64* [[LLE]], align 8
-// CHECK-NEXT:    [[TMP1581:%.*]] = atomicrmw umax i64* [[LLX]], i64 [[TMP1580]] release, align 8
+// CHECK-NEXT:    [[TMP1581:%.*]] = atomicrmw max i64* [[LLX]], i64 [[TMP1580]] release, align 8
 // CHECK-NEXT:    call void @__kmpc_flush(%struct.ident_t* @[[GLOB1]])
 // CHECK-NEXT:    [[TMP1582:%.*]] = load i64, i64* [[LLE]], align 8
-// CHECK-NEXT:    [[TMP1583:%.*]] = atomicrmw umin i64* [[LLX]], i64 [[TMP1582]] release, align 8
+// CHECK-NEXT:    [[TMP1583:%.*]] = atomicrmw min i64* [[LLX]], i64 [[TMP1582]] release, align 8
 // CHECK-NEXT:    call void @__kmpc_flush(%struct.ident_t* @[[GLOB1]])
 // CHECK-NEXT:    [[TMP1584:%.*]] = load i64, i64* [[LLE]], align 8
 // CHECK-NEXT:    [[TMP1585:%.*]] = load i64, i64* [[LLD]], align 8
@@ -3939,28 +3939,28 @@ void foo(void) {
 // CHECK-NEXT:    [[TMP1623:%.*]] = cmpxchg i64* [[ULLX]], i64 [[TMP1621]], i64 [[TMP1622]] release monotonic, align 8
 // CHECK-NEXT:    call void @__kmpc_flush(%struct.ident_t* @[[GLOB1]])
 // CHECK-NEXT:    [[TMP1624:%.*]] = load i64, i64* [[LLE]], align 8
-// CHECK-NEXT:    [[TMP1625:%.*]] = atomicrmw umin i64* [[LLX]], i64 [[TMP1624]] seq_cst, align 8
+// CHECK-NEXT:    [[TMP1625:%.*]] = atomicrmw min i64* [[LLX]], i64 [[TMP1624]] seq_cst, align 8
 // CHECK-NEXT:    call void @__kmpc_flush(%struct.ident_t* @[[GLOB1]])
 // CHECK-NEXT:    [[TMP1626:%.*]] = load i64, i64* [[LLE]], align 8
-// CHECK-NEXT:    [[TMP1627:%.*]] = atomicrmw umax i64* [[LLX]], i64 [[TMP1626]] seq_cst, align 8
+// CHECK-NEXT:    [[TMP1627:%.*]] = atomicrmw max i64* [[LLX]], i64 [[TMP1626]] seq_cst, align 8
 // CHECK-NEXT:    call void @__kmpc_flush(%struct.ident_t* @[[GLOB1]])
 // CHECK-NEXT:    [[TMP1628:%.*]] = load i64, i64* [[LLE]], align 8
-// CHECK-NEXT:    [[TMP1629:%.*]] = atomicrmw umax i64* [[LLX]], i64 [[TMP1628]] seq_cst, align 8
+// CHECK-NEXT:    [[TMP1629:%.*]] = atomicrmw max i64* [[LLX]], i64 [[TMP1628]] seq_cst, align 8
 // CHECK-NEXT:    call void @__kmpc_flush(%struct.ident_t* @[[GLOB1]])
 // CHECK-NEXT:    [[TMP1630:%.*]] = load i64, i64* [[LLE]], align 8
-// CHECK-NEXT:    [[TMP1631:%.*]] = atomicrmw umin i64* [[LLX]], i64 [[TMP1630]] seq_cst, align 8
+// CHECK-NEXT:    [[TMP1631:%.*]] = atomicrmw min i64* [[LLX]], i64 [[TMP1630]] seq_cst, align 8
 // CHECK-NEXT:    call void @__kmpc_flush(%struct.ident_t* @[[GLOB1]])
 // CHECK-NEXT:    [[TMP1632:%.*]] = load i64, i64* [[LLE]], align 8
-// CHECK-NEXT:    [[TMP1633:%.*]] = atomicrmw umin i64* [[LLX]], i64 [[TMP1632]] seq_cst, align 8
+// CHECK-NEXT:    [[TMP1633:%.*]] = atomicrmw min i64* [[LLX]], i64 [[TMP1632]] seq_cst, align 8
 // CHECK-NEXT:    call void @__kmpc_flush(%struct.ident_t* @[[GLOB1]])
 // CHECK-NEXT:    [[TMP1634:%.*]] = load i64, i64* [[LLE]], align 8
-// CHECK-NEXT:    [[TMP1635:%.*]] = atomicrmw umax i64* [[LLX]], i64 [[TMP1634]] seq_cst, align 8
+// CHECK-NEXT:    [[TMP1635:%.*]] = atomicrmw max i64* [[LLX]], i64 [[TMP1634]] seq_cst, align 8
 // CHECK-NEXT:    call void @__kmpc_flush(%struct.ident_t* @[[GLOB1]])
 // CHECK-NEXT:    [[TMP1636:%.*]] = load i64, i64* [[LLE]], align 8
-// CHECK-NEXT:    [[TMP1637:%.*]] = atomicrmw umax i64* [[LLX]], i64 [[TMP1636]] seq_cst, align 8
+// CHECK-NEXT:    [[TMP1637:%.*]] = atomicrmw max i64* [[LLX]], i64 [[TMP1636]] seq_cst, align 8
 // CHECK-NEXT:    call void @__kmpc_flush(%struct.ident_t* @[[GLOB1]])
 // CHECK-NEXT:    [[TMP1638:%.*]] = load i64, i64* [[LLE]], align 8
-// CHECK-NEXT:    [[TMP1639:%.*]] = atomicrmw umin i64* [[LLX]], i64 [[TMP1638]] seq_cst, align 8
+// CHECK-NEXT:    [[TMP1639:%.*]] = atomicrmw min i64* [[LLX]], i64 [[TMP1638]] seq_cst, align 8
 // CHECK-NEXT:    call void @__kmpc_flush(%struct.ident_t* @[[GLOB1]])
 // CHECK-NEXT:    [[TMP1640:%.*]] = load i64, i64* [[LLE]], align 8
 // CHECK-NEXT:    [[TMP1641:%.*]] = load i64, i64* [[LLD]], align 8
