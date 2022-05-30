@@ -3627,12 +3627,6 @@ static void RenderModulesOptions(Compilation &C, const Driver &D,
     HaveModules = true;
   }
 
-  if (Args.hasFlag(options::OPT_fcxx_modules, options::OPT_fno_cxx_modules,
-                   false)) {
-    CmdArgs.push_back("-fcxx-modules");
-    HaveModules = true;
-  }
-
   // -fmodule-maps enables implicit reading of module map files. By default,
   // this is enabled if we are using Clang's flavor of precompiled modules.
   if (Args.hasFlag(options::OPT_fimplicit_module_maps,
