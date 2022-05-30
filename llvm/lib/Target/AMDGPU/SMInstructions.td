@@ -590,7 +590,7 @@ multiclass SM_Real_Loads_vi<bits<8> op, string ps> {
   }
 }
 
-class SMEM_Real_Store_Probe_vi <bits<8> op, SM_Pseudo ps> : SMEM_Real_vi <op, ps> {
+class SMEM_Real_Store_Base_vi <bits<8> op, SM_Pseudo ps> : SMEM_Real_vi <op, ps> {
   // encoding
   bits<7> sdata;
 
@@ -599,7 +599,7 @@ class SMEM_Real_Store_Probe_vi <bits<8> op, SM_Pseudo ps> : SMEM_Real_vi <op, ps
 }
 
 class SMEM_Real_Store_vi <bits<8> op, string ps, dag offsets>
-    : SMEM_Real_Store_Probe_vi <op, !cast<SM_Pseudo>(ps)> {
+    : SMEM_Real_Store_Base_vi <op, !cast<SM_Pseudo>(ps)> {
   RegisterClass SrcClass = !cast<SM_Store_Pseudo>(ps).SrcClass;
   RegisterClass BaseClass = !cast<SM_Store_Pseudo>(ps).BaseClass;
   let InOperandList = !con((ins SrcClass:$sdata, BaseClass:$sbase),
@@ -623,8 +623,8 @@ multiclass SM_Real_Stores_vi<bits<8> op, string ps> {
 }
 
 multiclass SM_Real_Probe_vi<bits<8> op, string ps> {
-  def _IMM_vi  : SMEM_Real_Store_Probe_vi <op, !cast<SM_Probe_Pseudo>(ps#_IMM)>;
-  def _SGPR_vi : SMEM_Real_Store_Probe_vi <op, !cast<SM_Probe_Pseudo>(ps#_SGPR)>;
+  def _IMM_vi  : SMEM_Real_Store_Base_vi <op, !cast<SM_Probe_Pseudo>(ps#_IMM)>;
+  def _SGPR_vi : SMEM_Real_Store_Base_vi <op, !cast<SM_Probe_Pseudo>(ps#_SGPR)>;
 }
 
 defm S_LOAD_DWORD           : SM_Real_Loads_vi <0x00, "S_LOAD_DWORD">;
