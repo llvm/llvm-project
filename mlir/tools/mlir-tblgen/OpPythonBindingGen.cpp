@@ -50,6 +50,10 @@ class _Dialect(_ods_ir.Dialect):
 
 )Py";
 
+constexpr const char *dialectExtensionTemplate = R"Py(
+from ._{0}_ops_gen import _Dialect
+)Py";
+
 /// Template for operation class:
 ///   {0} is the Python class name;
 ///   {1} is the operation name.
@@ -269,6 +273,10 @@ static llvm::cl::opt<std::string>
     clDialectName("bind-dialect",
                   llvm::cl::desc("The dialect to run the generator for"),
                   llvm::cl::init(""), llvm::cl::cat(clOpPythonBindingCat));
+
+static llvm::cl::opt<std::string> clDialectExtensionName(
+    "dialect-extension", llvm::cl::desc("The prefix of the dialect extension"),
+    llvm::cl::init(""), llvm::cl::cat(clOpPythonBindingCat));
 
 using AttributeClasses = DenseMap<StringRef, StringRef>;
 
@@ -1014,8 +1022,14 @@ static bool emitAllOps(const llvm::RecordKeeper &records, raw_ostream &os) {
   AttributeClasses attributeClasses;
   constructAttributeMapping(records, attributeClasses);
 
-  os << llvm::formatv(fileHeader, clDialectName.getValue());
-  os << llvm::formatv(dialectClassTemplate, clDialectName.getValue());
+  bool isExtension = !clDialectExtensionName.empty();
+  os << llvm::formatv(fileHeader, isExtension
+                                      ? clDialectExtensionName.getValue()
+                                      : clDialectName.getValue());
+  if (isExtension)
+    os << llvm::formatv(dialectExtensionTemplate, clDialectName.getValue());
+  else
+    os << llvm::formatv(dialectClassTemplate, clDialectName.getValue());
 
   for (const llvm::Record *rec : records.getAllDerivedDefinitions("Op")) {
     Operator op(rec);
