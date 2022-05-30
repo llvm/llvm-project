@@ -33,6 +33,11 @@ _warningFlags = [
   '-Wno-literal-suffix', # GCC
   '-Wno-user-defined-literals', # Clang
 
+  # GCC warns about this when TEST_IS_CONSTANT_EVALUATED is used on a non-constexpr
+  # function. (This mostely happens in C++11 mode.)
+  # TODO(mordante) investigate a solution for this issue.
+  '-Wno-tautological-compare',
+
   # These warnings should be enabled in order to support the MSVC
   # team using the test suite; They enable the warnings below and
   # expect the test suite to be clean.

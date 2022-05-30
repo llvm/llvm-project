@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 // This code triggers https://gcc.gnu.org/bugzilla/show_bug.cgi?id=104568
-// UNSUPPORTED: gcc-11
 // UNSUPPORTED: msvc
 
 // Test the fix for https://llvm.org/PR54100
