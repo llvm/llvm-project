@@ -62,11 +62,6 @@ set(hip_files
   __clang_hip_runtime_wrapper.h
   )
 
-set(hlsl_files
-  hlsl.h
-  hlsl/hlsl_basic_types.h
-  )
-
 set(mips_msa_files
   msa.h
   )
@@ -217,7 +212,6 @@ set(files
   ${cuda_files}
   ${hexagon_files}
   ${hip_files}
-  ${hlsl_files}
   ${mips_msa_files}
   ${opencl_files}
   ${ppc_files}
@@ -411,7 +405,6 @@ add_header_target("webassembly-resource-headers" "${webassembly_files}")
 add_header_target("x86-resource-headers" "${x86_files}")
 
 # Other header groupings
-add_header_target("hlsl-resource-headers" ${hlsl_files})
 add_header_target("opencl-resource-headers" ${opencl_files})
 add_header_target("openmp-resource-headers" ${openmp_wrapper_files})
 add_header_target("windows-resource-headers" ${windows_only_files})
@@ -546,12 +539,6 @@ install(
   COMPONENT x86-resource-headers)
 
 install(
-  FILES ${hlsl_files}
-  DESTINATION ${header_install_dir}
-  EXCLUDE_FROM_ALL
-  COMPONENT hlsl-resource-headers)
-
-install(
   FILES ${opencl_files}
   DESTINATION ${header_install_dir}
   EXCLUDE_FROM_ALL
@@ -627,9 +614,6 @@ if (NOT LLVM_ENABLE_IDE)
                            DEPENDS webassembly-resource-headers
                            COMPONENT webassembly-resource-headers)
 
-  add_llvm_install_targets(install-hlsl-resource-headers
-                           DEPENDS hlsl-resource-headers
-                           COMPONENT hlsl-resource-headers)
   add_llvm_install_targets(install-opencl-resource-headers
                            DEPENDS opencl-resource-headers
                            COMPONENT opencl-resource-headers)

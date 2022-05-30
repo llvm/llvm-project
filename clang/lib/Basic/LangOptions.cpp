@@ -117,8 +117,6 @@ void LangOptions::setLangDefaults(LangOptions &Opts, Language Lang,
   Opts.Digraphs = Std.hasDigraphs();
 
   Opts.HLSL = Lang == Language::HLSL;
-  if (Opts.HLSL && Opts.IncludeDefaultHeader)
-    Includes.push_back("hlsl.h");
 
   // Set OpenCL Version.
   Opts.OpenCL = Std.isOpenCL();
