@@ -74,3 +74,16 @@ namespace rdar8651930 {
   int array0[Outer<int>::Inner<int, int>::value? 1 : -1];
   int array1[Outer<int>::Inner<int, float>::value? -1 : 1];
 }
+
+namespace print_dependent_TemplateSpecializationType {
+
+template <class T, class U> struct Foo {
+  template <unsigned long, class X, class Y> struct Bar;
+  template <class Y> struct Bar<0, T, Y> {};
+  // expected-note-re@-1 {{previous declaration {{.*}} 'Bar<0UL, int, type-parameter-0-0>' is here}}
+  template <class Y> struct Bar<0, U, Y> {};
+  // expected-error@-1 {{partial specialization 'Bar<0, int, Y>' cannot be redeclared}}
+};
+template struct Foo<int, int>; // expected-note {{requested here}}
+
+} // namespace print_dependent_TemplateSpecializationType
