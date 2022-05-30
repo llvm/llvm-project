@@ -3,7 +3,6 @@ add_mlir_library(MLIRGPUTestPasses
   TestConvertGPUKernelToCubin.cpp
   TestConvertGPUKernelToHsaco.cpp
   TestGpuMemoryPromotion.cpp
-  TestGpuParallelLoopMapping.cpp
   TestGpuRewrite.cpp
 
   EXCLUDE_FROM_LIBMLIR

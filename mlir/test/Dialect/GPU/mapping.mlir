@@ -1,4 +1,4 @@
-// RUN: mlir-opt -test-gpu-greedy-parallel-loop-mapping -split-input-file %s | FileCheck %s
+// RUN: mlir-opt -gpu-map-parallel-loops -split-input-file %s | FileCheck %s
 
 func.func @parallel_loop(%arg0 : index, %arg1 : index, %arg2 : index,
                     %arg3 : index) {
