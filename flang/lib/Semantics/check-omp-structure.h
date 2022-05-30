@@ -191,6 +191,7 @@ public:
   }
 
 private:
+  void CheckMultListItems();
   bool HasInvalidWorksharingNesting(
       const parser::CharBlock &, const OmpDirectiveSet &);
   bool IsCloselyNestedRegion(const OmpDirectiveSet &set);
