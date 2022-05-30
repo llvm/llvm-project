@@ -82,11 +82,11 @@ body:             |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: $x15 = PseudoVSETVLI $x14, 82 /* e32, m4, ta, mu */, implicit-def $vl, implicit-def $vtype
     ; CHECK-NEXT: $v28m4 = PseudoVMV_V_I_M4 0, $noreg, 5 /* e32 */, implicit $vl, implicit $vtype
-    ; CHECK-NEXT: $v4m4 = PseudoVLE32FF_V_M4 $x16, $noreg, 5 /* e32 */, implicit-def $vl
+    ; CHECK-NEXT: $v4m4, $x0 = PseudoVLE32FF_V_M4 $x16, $noreg, 5 /* e32 */, implicit-def $vl
     ; CHECK-NEXT: $v12m4 = PseudoVMV4R_V $v28m4
     $x15 = PseudoVSETVLI $x14, 82, implicit-def $vl, implicit-def $vtype
     $v28m4 = PseudoVMV_V_I_M4 0, $noreg, 5, implicit $vl, implicit $vtype
-    $v4m4 = PseudoVLE32FF_V_M4 $x16, $noreg, 5, implicit-def $vl
+    $v4m4,$x0 = PseudoVLE32FF_V_M4 $x16, $noreg, 5, implicit-def $vl
     $v12m4 = COPY $v28m4
 ...
 ---
