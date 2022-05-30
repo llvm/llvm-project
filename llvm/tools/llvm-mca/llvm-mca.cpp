@@ -542,7 +542,8 @@ int main(int argc, char **argv) {
       LoweredSequence.emplace_back(std::move(Inst.get()));
     }
 
-    mca::SourceMgr S(LoweredSequence, PrintInstructionTables ? 1 : Iterations);
+    mca::CircularSourceMgr S(LoweredSequence,
+                             PrintInstructionTables ? 1 : Iterations);
 
     if (PrintInstructionTables) {
       //  Create a pipeline, stages, and a printer.
