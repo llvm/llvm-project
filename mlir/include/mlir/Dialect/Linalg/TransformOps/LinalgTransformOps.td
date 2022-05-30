@@ -117,4 +117,35 @@ def TileOp : Op<Transform_Dialect, "structured.tile",
   let hasCustomAssemblyFormat = 1;
 }
 
+def VectorizeOp : Op<Transform_Dialect, "structured.vectorize",
+    [FunctionalStyleTransformOpTrait, MemoryEffectsOpInterface,
+     TransformEachOpTrait, TransformOpInterface]> {
+  let description = [{
+    Indicates that the given `target` op all the ops it contains should be
+    vectorized with the configuration specified by the attributes of this op.
+    This vectorization only handles structured ops that operate on shaped types
+    and does not vectorize loops or straight-line. Internally, it applies a
+    set of rewrite patterns, some of which enable vectorization and some of
+    which clean up the results. Therefore, it can only be applied to an op with
+    the "isolated from above property". If finer granularity is required, it can
+    be achieved by outlining the target part of the payload IR into, e.g., a
+    function, performing the transformation, and inlining it back. This
+    transformation only fails if the entire pattern rewriting failed, i.e., it
+    does **not** fail when no ops were vectorized.
+
+    Note that this transformation is invalidating the handles to any payload IR
+    operation that is contained inside the vectoriztaion target.
+  }];
+
+  let arguments = (ins PDL_Operation:$target,
+                   DefaultValuedAttr<BoolAttr, "false">:$vectorize_padding);
+  let results = (outs PDL_Operation:$transformed);
+
+  let assemblyFormat = "$target attr-dict";
+
+  let extraClassDeclaration = [{
+    ::mlir::FailureOr<Operation *> applyToOne(::mlir::Operation *target);
+  }];
+}
+
 #endif // LINALG_TRANSFORM_OPS
