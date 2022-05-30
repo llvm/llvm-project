@@ -254,3 +254,88 @@ for.body.i:                                       ; preds = %for.cond.i
   %add11.i = add nsw i64 %idx, 1
   br label %for.cond.i
 }
+
+declare void @use(i8*)
+
+define void @only_one_inbounds(i8* %ptr, i1 %c, i32 noundef %arg1, i32 noundef %arg2) {
+; CHECK-LABEL: @only_one_inbounds(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[ARG2_EXT:%.*]] = zext i32 [[ARG2:%.*]] to i64
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[ARG1_EXT:%.*]] = zext i32 [[ARG1:%.*]] to i64
+; CHECK-NEXT:    [[PTR2:%.*]] = getelementptr inbounds i8, i8* [[PTR:%.*]], i64 [[ARG2_EXT]]
+; CHECK-NEXT:    [[PTR3:%.*]] = getelementptr i8, i8* [[PTR2]], i64 [[ARG1_EXT]]
+; CHECK-NEXT:    call void @use(i8* [[PTR3]])
+; CHECK-NEXT:    br i1 [[C:%.*]], label [[LOOP]], label [[EXIT:%.*]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret void
+;
+entry:
+  %arg2.ext = zext i32 %arg2 to i64
+  br label %loop
+
+loop:
+  %arg1.ext = zext i32 %arg1 to i64
+  %ptr2 = getelementptr inbounds i8, i8* %ptr, i64 %arg1.ext
+  %ptr3 = getelementptr i8, i8* %ptr2, i64 %arg2.ext
+  call void @use(i8* %ptr3)
+  br i1 %c, label %loop, label %exit
+
+exit:
+  ret void
+}
+
+define void @both_inbounds_one_neg(i8* %ptr, i1 %c, i32 noundef %arg) {
+; CHECK-LABEL: @both_inbounds_one_neg(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[ARG_EXT:%.*]] = zext i32 [[ARG:%.*]] to i64
+; CHECK-NEXT:    [[PTR2:%.*]] = getelementptr inbounds i8, i8* [[PTR:%.*]], i64 -1
+; CHECK-NEXT:    [[PTR3:%.*]] = getelementptr inbounds i8, i8* [[PTR2]], i64 [[ARG_EXT]]
+; CHECK-NEXT:    call void @use(i8* nonnull [[PTR3]])
+; CHECK-NEXT:    br i1 [[C:%.*]], label [[LOOP]], label [[EXIT:%.*]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret void
+;
+entry:
+  br label %loop
+
+loop:
+  %arg.ext = zext i32 %arg to i64
+  %ptr2 = getelementptr inbounds i8, i8* %ptr, i64 %arg.ext
+  %ptr3 = getelementptr inbounds i8, i8* %ptr2, i64 -1
+  call void @use(i8* %ptr3)
+  br i1 %c, label %loop, label %exit
+
+exit:
+  ret void
+}
+
+define void @both_inbounds_pos(i8* %ptr, i1 %c, i32 noundef %arg) {
+; CHECK-LABEL: @both_inbounds_pos(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[ARG_EXT:%.*]] = zext i32 [[ARG:%.*]] to i64
+; CHECK-NEXT:    [[PTR2:%.*]] = getelementptr inbounds i8, i8* [[PTR:%.*]], i64 1
+; CHECK-NEXT:    [[PTR3:%.*]] = getelementptr inbounds i8, i8* [[PTR2]], i64 [[ARG_EXT]]
+; CHECK-NEXT:    call void @use(i8* nonnull [[PTR3]])
+; CHECK-NEXT:    br i1 [[C:%.*]], label [[LOOP]], label [[EXIT:%.*]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret void
+;
+entry:
+  br label %loop
+
+loop:
+  %arg.ext = zext i32 %arg to i64
+  %ptr2 = getelementptr inbounds i8, i8* %ptr, i64 %arg.ext
+  %ptr3 = getelementptr inbounds i8, i8* %ptr2, i64 1
+  call void @use(i8* %ptr3)
+  br i1 %c, label %loop, label %exit
+
+exit:
+  ret void
+}
