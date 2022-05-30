@@ -385,9 +385,11 @@ extern const short *_tolower_tab_;
   if (common_flags()->intercept_strndup) {                                    \
     COMMON_INTERCEPTOR_READ_STRING(ctx, s, Min(size, copy_length + 1));       \
   }                                                                           \
-  COMMON_INTERCEPTOR_COPY_STRING(ctx, new_mem, s, copy_length);               \
-  internal_memcpy(new_mem, s, copy_length);                                   \
-  new_mem[copy_length] = '\0';                                                \
+  if (new_mem) {                                                              \
+    COMMON_INTERCEPTOR_COPY_STRING(ctx, new_mem, s, copy_length);             \
+    internal_memcpy(new_mem, s, copy_length);                                 \
+    new_mem[copy_length] = '\0';                                              \
+  }                                                                           \
   return new_mem;
 #endif
 
