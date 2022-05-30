@@ -118,10 +118,10 @@ static bool maySpeculateLanes(VPIntrinsic &VPI) {
   if (isa<VPReductionIntrinsic>(VPI))
     return false;
   // Fallback to whether the intrinsic is speculatable.
-  Optional<unsigned> OpcOpt = VPI.getFunctionalOpcode();
-  unsigned FunctionalOpc = OpcOpt.getValueOr((unsigned)Instruction::Call);
-  return isSafeToSpeculativelyExecuteWithOpcode(FunctionalOpc,
-                                                cast<Operator>(&VPI));
+  // FIXME: Check whether the replacing non-VP code will be speculatable
+  //        instead. VP intrinsics themselves are never speculatable because of
+  //        UB if %evl is greater than the runtime vector length.
+  return isSafeToSpeculativelyExecute(cast<Operator>(&VPI));
 }
 
 //// } Helpers
@@ -481,7 +481,7 @@ struct TransformJob {
 };
 
 void sanitizeStrategy(VPIntrinsic &VPI, VPLegalization &LegalizeStrat) {
-  // Operations with speculatable lanes do not strictly need predication.
+  // Speculatable instructions do not strictly need predication.
   if (maySpeculateLanes(VPI)) {
     // Converting a speculatable VP intrinsic means dropping %mask and %evl.
     // No need to expand %evl into the %mask only to ignore that code.

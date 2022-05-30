@@ -4599,38 +4599,13 @@ bool llvm::isSafeToSpeculativelyExecute(const Value *V,
   const Operator *Inst = dyn_cast<Operator>(V);
   if (!Inst)
     return false;
-  return isSafeToSpeculativelyExecuteWithOpcode(Inst->getOpcode(), Inst, CtxI, DT, TLI);
-}
-
-bool llvm::isSafeToSpeculativelyExecuteWithOpcode(unsigned Opcode,
-                                        const Operator *Inst,
-                                        const Instruction *CtxI,
-                                        const DominatorTree *DT,
-                                        const TargetLibraryInfo *TLI) {
-  if (Inst->getOpcode() != Opcode) {
-    // Check that the operands are actually compatible with the Opcode override.
-    auto hasEqualReturnAndLeadingOperandTypes =
-        [](const Operator *Inst, unsigned NumLeadingOperands) {
-          if (Inst->getNumOperands() < NumLeadingOperands)
-            return false;
-          const Type *ExpectedType = Inst->getType();
-          for (unsigned ItOp = 0; ItOp < NumLeadingOperands; ++ItOp)
-            if (Inst->getOperand(ItOp)->getType() != ExpectedType)
-              return false;
-          return true;
-        };
-    assert(!Instruction::isBinaryOp(Opcode) ||
-           hasEqualReturnAndLeadingOperandTypes(Inst, 2));
-    assert(!Instruction::isUnaryOp(Opcode) ||
-           hasEqualReturnAndLeadingOperandTypes(Inst, 1));
-  }
 
   for (unsigned i = 0, e = Inst->getNumOperands(); i != e; ++i)
     if (Constant *C = dyn_cast<Constant>(Inst->getOperand(i)))
       if (C->canTrap())
         return false;
 
-  switch (Opcode) {
+  switch (Inst->getOpcode()) {
   default:
     return true;
   case Instruction::UDiv:
@@ -4661,9 +4636,7 @@ bool llvm::isSafeToSpeculativelyExecuteWithOpcode(unsigned Opcode,
     return false;
   }
   case Instruction::Load: {
-    const LoadInst *LI = dyn_cast<LoadInst>(Inst);
-    if (!LI)
-      return false;
+    const LoadInst *LI = cast<LoadInst>(Inst);
     if (mustSuppressSpeculation(*LI))
       return false;
     const DataLayout &DL = LI->getModule()->getDataLayout();
@@ -4672,9 +4645,7 @@ bool llvm::isSafeToSpeculativelyExecuteWithOpcode(unsigned Opcode,
         TLI);
   }
   case Instruction::Call: {
-    auto *CI = dyn_cast<const CallInst>(Inst);
-    if (!CI)
-      return false;
+    auto *CI = cast<const CallInst>(Inst);
     const Function *Callee = CI->getCalledFunction();
 
     // The called function could have undefined behavior or side-effects, even
