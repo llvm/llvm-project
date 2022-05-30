@@ -486,7 +486,7 @@ LogicalResult mlir::bufferization::bufferizeModuleOp(
 }
 
 LogicalResult mlir::bufferization::runOneShotModuleBufferize(
-    ModuleOp moduleOp, OneShotBufferizationOptions options) {
+    ModuleOp moduleOp, const OneShotBufferizationOptions &options) {
   assert(options.bufferizeFunctionBoundaries &&
          "expected that function boundary bufferization is activated");
   OneShotAnalysisState analysisState(moduleOp, options);
