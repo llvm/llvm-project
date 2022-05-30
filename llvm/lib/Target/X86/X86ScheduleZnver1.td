@@ -439,7 +439,7 @@ defm : ZnWriteResFpuPair<WriteBlend,      [ZnFPU01], 1>;
 defm : ZnWriteResFpuPair<WriteBlendY,     [ZnFPU01], 1>;
 defm : X86WriteResPairUnsupported<WriteBlendZ>;
 defm : ZnWriteResFpuPair<WriteShuffle256, [ZnFPU],   2>;
-defm : ZnWriteResFpuPair<WriteVPMOV256,   [ZnFPU12],  1, [1], 2>;
+defm : ZnWriteResFpuPair<WriteVPMOV256,   [ZnFPU12],  1, [4], 3>;
 defm : ZnWriteResFpuPair<WriteVarShuffle256, [ZnFPU],   2>;
 defm : ZnWriteResFpuPair<WritePSADBW,     [ZnFPU0],  3>;
 defm : ZnWriteResFpuPair<WritePSADBWX,    [ZnFPU0],  3>;
