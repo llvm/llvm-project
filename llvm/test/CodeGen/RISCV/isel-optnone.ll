@@ -2,11 +2,9 @@
 ; RUN: llc < %s -O0 -mtriple=riscv64 -debug-only=isel 2>&1 | FileCheck %s
 
 define i32* @fooOptnone(i32* %p, i32* %q, i32** %z) #0 {
-; CHECK: Changing optimization level for Function fooOptnone
-; CHECL: Before: -O2 ; After: -O0
+; CHECK-NOT: Changing optimization level for Function fooOptnone
+; CHECK-NOT: Restoring optimization level for Function fooOptnone
 
-; CHECK: Restoring optimization level for Function fooOptnone
-; CHECK: Before: -O0 ; After: -O2
 entry:
   %r = load i32, i32* %p
   %s = load i32, i32* %q
