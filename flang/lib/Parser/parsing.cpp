@@ -35,9 +35,12 @@ const SourceFile *Parsing::Prescan(const std::string &path, Options options) {
   const SourceFile *sourceFile;
   if (path == "-") {
     sourceFile = allSources.ReadStandardInput(fileError);
+  } else if (options.isModuleFile) {
+    // Don't mess with intrinsic module search path
+    sourceFile = allSources.Open(path, fileError);
   } else {
-    std::optional<std::string> currentDirectory{"."};
-    sourceFile = allSources.Open(path, fileError, std::move(currentDirectory));
+    sourceFile =
+        allSources.Open(path, fileError, "."s /*prepend to search path*/);
   }
   if (!fileError.str().empty()) {
     ProvenanceRange range{allSources.AddCompilerInsertion(path)};

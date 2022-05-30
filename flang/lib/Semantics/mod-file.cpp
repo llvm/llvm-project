@@ -518,8 +518,14 @@ void ModFileWriter::PutGeneric(const Symbol &symbol) {
 void ModFileWriter::PutUse(const Symbol &symbol) {
   auto &details{symbol.get<UseDetails>()};
   auto &use{details.symbol()};
-  uses_ << "use " << GetUsedModule(details).name();
-  PutGenericName(uses_ << ",only:", symbol);
+  const Symbol &module{GetUsedModule(details)};
+  if (use.owner().parent().IsIntrinsicModules()) {
+    uses_ << "use,intrinsic::";
+  } else {
+    uses_ << "use ";
+  }
+  uses_ << module.name() << ",only:";
+  PutGenericName(uses_, symbol);
   // Can have intrinsic op with different local-name and use-name
   // (e.g. `operator(<)` and `operator(.lt.)`) but rename is not allowed
   if (!IsIntrinsicOp(symbol) && use.name() != symbol.name()) {
@@ -953,6 +959,7 @@ Scope *ModFileReader::Read(const SourceName &name,
       std::remove(options.searchDirectories.begin(),
           options.searchDirectories.end(), dir);
     }
+    options.searchDirectories.insert(options.searchDirectories.begin(), "."s);
   }
   if (isIntrinsic.value_or(true)) {
     for (const auto &dir : context_.intrinsicModuleDirectories()) {
