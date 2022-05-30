@@ -49,4 +49,13 @@ def TransformOpInterface : OpInterface<"TransformOpInterface"> {
   ];
 }
 
+def FunctionalStyleTransformOpTrait
+    : NativeOpTrait<"FunctionalStyleTransformOpTrait"> {
+  let cppNamespace = "::mlir::transform";
+}
+
+def TransformEachOpTrait : NativeOpTrait<"TransformEachOpTrait"> {
+  let cppNamespace = "::mlir::transform";
+}
+
 #endif // MLIR_DIALECT_TRANSFORM_IR_TRANSFORM_INTERFACES_TD
