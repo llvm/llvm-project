@@ -2163,6 +2163,11 @@ HexagonTargetLowering::getPreferredVectorAction(MVT VT) const {
   // Always widen (remaining) vectors of i1.
   if (ElemTy == MVT::i1)
     return TargetLoweringBase::TypeWidenVector;
+  // Widen non-power-of-2 vectors. Such types cannot be split right now,
+  // and computeRegisterProperties will override "split" with "widen",
+  // which can cause other issues.
+  if (!isPowerOf2_32(VecLen))
+    return TargetLoweringBase::TypeWidenVector;
 
   return TargetLoweringBase::TypeSplitVector;
 }
