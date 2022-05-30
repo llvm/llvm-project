@@ -317,7 +317,7 @@ bool JumpThreading::runOnFunction(Function &F) {
   std::unique_ptr<BlockFrequencyInfo> BFI;
   std::unique_ptr<BranchProbabilityInfo> BPI;
   if (F.hasProfileData()) {
-    LoopInfo LI{DominatorTree(F)};
+    LoopInfo LI{*DT};
     BPI.reset(new BranchProbabilityInfo(F, LI, TLI));
     BFI.reset(new BlockFrequencyInfo(F, *BPI, LI));
   }
