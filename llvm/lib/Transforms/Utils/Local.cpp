@@ -2350,7 +2350,7 @@ static bool markAliveBlocks(Function &F,
         changeToUnreachable(II, false, DTU);
         Changed = true;
       } else if (II->doesNotThrow() && canSimplifyInvokeNoUnwind(&F)) {
-        if (II->use_empty() && II->onlyReadsMemory()) {
+        if (II->use_empty() && !II->mayHaveSideEffects()) {
           // jump to the normal destination branch.
           BasicBlock *NormalDestBB = II->getNormalDest();
           BasicBlock *UnwindDestBB = II->getUnwindDest();
