@@ -12,7 +12,6 @@
 // REQUIRES: locale.ru_RU.UTF-8
 
 // XFAIL: glibc-old-ru_RU-decimal-point
-// XFAIL: LIBCXX-AIX-FIXME
 
 // <locale>
 
