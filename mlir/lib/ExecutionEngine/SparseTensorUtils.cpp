@@ -83,10 +83,10 @@ static inline uint64_t checkedMul(uint64_t lhs, uint64_t rhs) {
 // to track down whether an error is coming from our code vs somewhere else
 // in MLIR.)
 #define FATAL(...)                                                             \
-  {                                                                            \
+  do {                                                                         \
     fprintf(stderr, "SparseTensorUtils: " __VA_ARGS__);                        \
     exit(1);                                                                   \
-  }
+  } while (0)
 
 // TODO: try to unify this with `SparseTensorFile::assertMatchesShape`
 // which is used by `openSparseTensorCOO`.  It's easy enough to resolve
