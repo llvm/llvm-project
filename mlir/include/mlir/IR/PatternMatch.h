@@ -943,9 +943,13 @@ struct ProcessDerivedPDLValue : public ProcessPDLValueBasedOn<T, BaseT> {
                          " to be of type: " + llvm::getTypeName<T>());
         });
   }
+  using ProcessPDLValueBasedOn<T, BaseT>::verifyAsArg;
+
   static T processAsArg(BaseT baseValue) {
     return baseValue.template cast<T>();
   }
+  using ProcessPDLValueBasedOn<T, BaseT>::processAsArg;
+
   static void processAsResult(PatternRewriter &, PDLResultList &results,
                               T value) {
     results.push_back(value);
@@ -967,6 +971,8 @@ template <>
 struct ProcessPDLValue<StringRef>
     : public ProcessPDLValueBasedOn<StringRef, StringAttr> {
   static StringRef processAsArg(StringAttr value) { return value.getValue(); }
+  using ProcessPDLValueBasedOn<StringRef, StringAttr>::processAsArg;
+
   static void processAsResult(PatternRewriter &rewriter, PDLResultList &results,
                               StringRef value) {
     results.push_back(rewriter.getStringAttr(value));
