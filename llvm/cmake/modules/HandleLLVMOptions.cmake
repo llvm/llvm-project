@@ -814,12 +814,20 @@ macro(append_common_sanitizer_flags)
     if (uppercase_CMAKE_BUILD_TYPE STREQUAL "DEBUG" AND LLVM_OPTIMIZE_SANITIZED_BUILDS)
       add_flag_if_supported("-O1" O1)
     endif()
-  elseif (CLANG_CL)
-    # Keep frame pointers around.
-    append("/Oy-" CMAKE_C_FLAGS CMAKE_CXX_FLAGS)
+  else()
     # Always ask the linker to produce symbols with asan.
     append("/Z7" CMAKE_C_FLAGS CMAKE_CXX_FLAGS)
-    append("-debug" CMAKE_EXE_LINKER_FLAGS CMAKE_MODULE_LINKER_FLAGS CMAKE_SHARED_LINKER_FLAGS)
+    append("/debug" CMAKE_EXE_LINKER_FLAGS CMAKE_MODULE_LINKER_FLAGS CMAKE_SHARED_LINKER_FLAGS)
+    # Not compatible with /INCREMENTAL link.
+    foreach (flags_opt_to_scrub
+        CMAKE_EXE_LINKER_FLAGS CMAKE_MODULE_LINKER_FLAGS CMAKE_SHARED_LINKER_FLAGS)
+      string (REGEX REPLACE "(^| )/INCREMENTAL($| )" " /INCREMENTAL:NO "
+        "${flags_opt_to_scrub}" "${${flags_opt_to_scrub}}")
+    endforeach()
+    if (LLVM_HOST_TRIPLE MATCHES "i[2-6]86-.*")
+      # Keep frame pointers around.
+      append("/Oy-" CMAKE_C_FLAGS CMAKE_CXX_FLAGS)
+    endif()
   endif()
 endmacro()
 
@@ -875,7 +883,31 @@ if(LLVM_USE_SANITIZER)
   elseif(MSVC)
     if (LLVM_USE_SANITIZER STREQUAL "Address")
       append_common_sanitizer_flags()
-      append("-fsanitize=address" CMAKE_C_FLAGS CMAKE_CXX_FLAGS)
+      append("/fsanitize=address" CMAKE_C_FLAGS CMAKE_CXX_FLAGS)
+      if (NOT CLANG_CL)
+        # Not compatible with /RTC flags.
+        foreach (flags_opt_to_scrub
+            CMAKE_CXX_FLAGS_${uppercase_CMAKE_BUILD_TYPE} CMAKE_C_FLAGS_${uppercase_CMAKE_BUILD_TYPE})
+          string (REGEX REPLACE "(^| )/RTC[1csu]*($| )" " "
+            "${flags_opt_to_scrub}" "${${flags_opt_to_scrub}}")
+        endforeach()
+      endif()
+      if (LINKER_IS_LLD_LINK)
+        if (LLVM_HOST_TRIPLE MATCHES "i[2-6]86-.*")
+          set(arch "i386")
+        else()
+          set(arch "x86_64")
+        endif()
+        if (${LLVM_USE_CRT_${uppercase_CMAKE_BUILD_TYPE}} MATCHES "^(MT|MTd)$")
+          append("/wholearchive:clang_rt.asan-${arch}.lib /wholearchive:clang_rt.asan_cxx-${arch}.lib"
+            CMAKE_EXE_LINKER_FLAGS)
+          append("/wholearchive:clang_rt.asan_dll_thunk-${arch}.lib"
+            CMAKE_MODULE_LINKER_FLAGS CMAKE_SHARED_LINKER_FLAGS)
+        else()
+          append("clang_rt.asan_dynamic-${arch}.lib /wholearchive:clang_rt.asan_dynamic_runtime_thunk-${arch}.lib"
+            CMAKE_EXE_LINKER_FLAGS CMAKE_MODULE_LINKER_FLAGS CMAKE_SHARED_LINKER_FLAGS)
+        endif()
+      endif()
     else()
       message(FATAL_ERROR "This sanitizer not yet supported in the MSVC environment: ${LLVM_USE_SANITIZER}")
     endif()
