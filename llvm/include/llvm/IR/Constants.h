@@ -289,7 +289,8 @@ public:
                            APInt *Payload = nullptr);
   static Constant *getSNaN(Type *Ty, bool Negative = false,
                            APInt *Payload = nullptr);
-  static Constant *getNegativeZero(Type *Ty);
+  static Constant *getZero(Type *Ty, bool Negative = false);
+  static Constant *getNegativeZero(Type *Ty) { return getZero(Ty, true); }
   static Constant *getInfinity(Type *Ty, bool Negative = false);
 
   /// Return true if Ty is big enough to represent V.
@@ -1120,9 +1121,12 @@ public:
   /// commutative, callers can acquire the operand 1 identity constant by
   /// setting AllowRHSConstant to true. For example, any shift has a zero
   /// identity constant for operand 1: X shift 0 = X.
+  /// If this is a fadd/fsub operation and we don't care about signed zeros,
+  /// then setting NSZ to true returns the identity +0.0 instead of -0.0.
   /// Return nullptr if the operator does not have an identity constant.
   static Constant *getBinOpIdentity(unsigned Opcode, Type *Ty,
-                                    bool AllowRHSConstant = false);
+                                    bool AllowRHSConstant = false,
+                                    bool NSZ = false);
 
   /// Return the absorbing element for the given binary
   /// operation, i.e. a constant C such that X op C = C and C op X = C for
