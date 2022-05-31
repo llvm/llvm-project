@@ -6,11 +6,13 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "float.h"
 #include "terminator.h"
 #include "tools.h"
 #include "flang/Runtime/cpp-type.h"
 #include "flang/Runtime/descriptor.h"
 #include "flang/Runtime/reduction.h"
+#include <cfloat>
 #include <cinttypes>
 
 namespace Fortran::runtime {
@@ -178,13 +180,14 @@ double RTNAME(DotProductReal8)(
     const Descriptor &x, const Descriptor &y, const char *source, int line) {
   return DotProduct<TypeCategory::Real, 8>{}(x, y, source, line);
 }
-#if LONG_DOUBLE == 80
+#if LDBL_MANT_DIG == 64
 long double RTNAME(DotProductReal10)(
     const Descriptor &x, const Descriptor &y, const char *source, int line) {
   return DotProduct<TypeCategory::Real, 10>{}(x, y, source, line);
 }
-#elif LONG_DOUBLE == 128
-long double RTNAME(DotProductReal16)(
+#endif
+#if LDBL_MANT_DIG == 113 || HAS_FLOAT128
+CppTypeFor<TypeCategory::Real, 16> RTNAME(DotProductReal16)(
     const Descriptor &x, const Descriptor &y, const char *source, int line) {
   return DotProduct<TypeCategory::Real, 16>{}(x, y, source, line);
 }
@@ -200,13 +203,13 @@ void RTNAME(CppDotProductComplex8)(std::complex<double> &result,
     const Descriptor &x, const Descriptor &y, const char *source, int line) {
   result = DotProduct<TypeCategory::Complex, 8>{}(x, y, source, line);
 }
-#if LONG_DOUBLE == 80
+#if LDBL_MANT_DIG == 64
 void RTNAME(CppDotProductComplex10)(std::complex<long double> &result,
     const Descriptor &x, const Descriptor &y, const char *source, int line) {
   result = DotProduct<TypeCategory::Complex, 10>{}(x, y, source, line);
 }
-#elif LONG_DOUBLE == 128
-void RTNAME(CppDotProductComplex16)(std::complex<long double> &result,
+#elif LDBL_MANT_DIG == 113
+void RTNAME(CppDotProductComplex16)(std::complex<CppFloat128Type> &result,
     const Descriptor &x, const Descriptor &y, const char *source, int line) {
   result = DotProduct<TypeCategory::Complex, 16>{}(x, y, source, line);
 }
