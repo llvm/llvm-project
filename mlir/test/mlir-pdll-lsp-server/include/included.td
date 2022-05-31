@@ -1,4 +1,10 @@
 include "mlir/IR/OpBase.td"
 
-// This file is merely to test the processing of includes, it has
-// no other purpose or contents.
+def Test_Dialect : Dialect {
+  let name = "test";
+}
+
+def OpMulti : Op<Test_Dialect, "multi"> {
+  let arguments = (outs I64:$operand, I64:$operand2);
+  let results = (outs I64:$result, I64:$result2);
+}
