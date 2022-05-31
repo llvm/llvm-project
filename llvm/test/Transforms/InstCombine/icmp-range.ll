@@ -403,8 +403,8 @@ define i1 @and_ugt_sub(i8 %b, i8 %x, i8 %y) {
 
 define i1 @uge_sext(i1 %b, i8 %x) {
 ; CHECK-LABEL: @uge_sext(
-; CHECK-NEXT:    [[S:%.*]] = sext i1 [[B:%.*]] to i8
-; CHECK-NEXT:    [[R:%.*]] = icmp uge i8 [[S]], [[X:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i8 [[X:%.*]], 0
+; CHECK-NEXT:    [[R:%.*]] = or i1 [[TMP1]], [[B:%.*]]
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %s = sext i1 %b to i8
@@ -415,8 +415,8 @@ define i1 @uge_sext(i1 %b, i8 %x) {
 define <2 x i1> @ule_sext(<2 x i1> %b, <2 x i8> %p) {
 ; CHECK-LABEL: @ule_sext(
 ; CHECK-NEXT:    [[X:%.*]] = mul <2 x i8> [[P:%.*]], [[P]]
-; CHECK-NEXT:    [[S:%.*]] = sext <2 x i1> [[B:%.*]] to <2 x i8>
-; CHECK-NEXT:    [[R:%.*]] = icmp ule <2 x i8> [[X]], [[S]]
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq <2 x i8> [[X]], zeroinitializer
+; CHECK-NEXT:    [[R:%.*]] = or <2 x i1> [[TMP1]], [[B:%.*]]
 ; CHECK-NEXT:    ret <2 x i1> [[R]]
 ;
   %x = mul <2 x i8> %p, %p ; thwart complexity-based canonicalization
@@ -424,6 +424,8 @@ define <2 x i1> @ule_sext(<2 x i1> %b, <2 x i8> %p) {
   %r = icmp ule <2 x i8> %x, %s
   ret <2 x i1> %r
 }
+
+; negative test - need ule/uge
 
 define i1 @ugt_sext(i1 %b, i8 %x) {
 ; CHECK-LABEL: @ugt_sext(
@@ -435,6 +437,8 @@ define i1 @ugt_sext(i1 %b, i8 %x) {
   %r = icmp ugt i8 %s, %x
   ret i1 %r
 }
+
+; negative test - need ule/uge
 
 define i1 @ult_sext(i1 %b, i8 %p) {
 ; CHECK-LABEL: @ult_sext(
@@ -449,6 +453,8 @@ define i1 @ult_sext(i1 %b, i8 %p) {
   ret i1 %r
 }
 
+; negative test - extra use
+
 define i1 @uge_sext_use(i1 %b, i8 %x) {
 ; CHECK-LABEL: @uge_sext_use(
 ; CHECK-NEXT:    [[S:%.*]] = sext i1 [[B:%.*]] to i8
@@ -462,6 +468,8 @@ define i1 @uge_sext_use(i1 %b, i8 %x) {
   ret i1 %r
 }
 
+; negative test - must be sext of i1
+
 define i1 @ule_sext_not_i1(i2 %b, i8 %x) {
 ; CHECK-LABEL: @ule_sext_not_i1(
 ; CHECK-NEXT:    [[S:%.*]] = sext i2 [[B:%.*]] to i8
@@ -473,11 +481,12 @@ define i1 @ule_sext_not_i1(i2 %b, i8 %x) {
   ret i1 %r
 }
 
+; sub is eliminated
+
 define i1 @sub_ule_sext(i1 %b, i8 %x, i8 %y) {
 ; CHECK-LABEL: @sub_ule_sext(
-; CHECK-NEXT:    [[S:%.*]] = sext i1 [[B:%.*]] to i8
-; CHECK-NEXT:    [[D:%.*]] = sub i8 [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    [[R:%.*]] = icmp ule i8 [[D]], [[S]]
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i8 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = or i1 [[TMP1]], [[B:%.*]]
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %s = sext i1 %b to i8
@@ -489,8 +498,8 @@ define i1 @sub_ule_sext(i1 %b, i8 %x, i8 %y) {
 define i1 @sext_ule_sext(i1 %b, i8 %p) {
 ; CHECK-LABEL: @sext_ule_sext(
 ; CHECK-NEXT:    [[X:%.*]] = mul i8 [[P:%.*]], [[P]]
-; CHECK-NEXT:    [[TMP1:%.*]] = sext i1 [[B:%.*]] to i8
-; CHECK-NEXT:    [[R:%.*]] = icmp ule i8 [[X]], [[TMP1]]
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i8 [[X]], 0
+; CHECK-NEXT:    [[R:%.*]] = or i1 [[TMP1]], [[B:%.*]]
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %x = mul i8 %p, %p ; thwart complexity-based canonicalization
@@ -500,12 +509,14 @@ define i1 @sext_ule_sext(i1 %b, i8 %p) {
   ret i1 %r
 }
 
+; match and fold even if both sides are sexts (from different source types)
+
 define i1 @sext_uge_sext(i1 %b, i4 %x) {
 ; CHECK-LABEL: @sext_uge_sext(
 ; CHECK-NEXT:    [[SX:%.*]] = sext i4 [[X:%.*]] to i8
 ; CHECK-NEXT:    call void @use(i8 [[SX]])
-; CHECK-NEXT:    [[TMP1:%.*]] = sext i1 [[B:%.*]] to i4
-; CHECK-NEXT:    [[R:%.*]] = icmp uge i4 [[TMP1]], [[X]]
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i4 [[X]], 0
+; CHECK-NEXT:    [[R:%.*]] = or i1 [[TMP1]], [[B:%.*]]
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %s = sext i1 %b to i8
@@ -514,6 +525,8 @@ define i1 @sext_uge_sext(i1 %b, i4 %x) {
   %r = icmp uge i8 %s, %sx
   ret i1 %r
 }
+
+; negative test - must be sext of i1
 
 define i1 @sub_ule_sext_not_i1(i2 %b, i8 %x, i8 %y) {
 ; CHECK-LABEL: @sub_ule_sext_not_i1(
@@ -527,6 +540,8 @@ define i1 @sub_ule_sext_not_i1(i2 %b, i8 %x, i8 %y) {
   %r = icmp ule i8 %d, %s
   ret i1 %r
 }
+
+; negative test - extra use (but we could try harder to fold this)
 
 define i1 @sub_ule_sext_use1(i1 %b, i8 %x, i8 %y) {
 ; CHECK-LABEL: @sub_ule_sext_use1(
@@ -545,10 +560,10 @@ define i1 @sub_ule_sext_use1(i1 %b, i8 %x, i8 %y) {
 
 define <2 x i1> @sext_uge_sub_use2(<2 x i1> %b, <2 x i8> %x, <2 x i8> %y) {
 ; CHECK-LABEL: @sext_uge_sub_use2(
-; CHECK-NEXT:    [[S:%.*]] = sext <2 x i1> [[B:%.*]] to <2 x i8>
 ; CHECK-NEXT:    [[D:%.*]] = sub <2 x i8> [[X:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    call void @use_vec(<2 x i8> [[D]])
-; CHECK-NEXT:    [[R:%.*]] = icmp ule <2 x i8> [[D]], [[S]]
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq <2 x i8> [[X]], [[Y]]
+; CHECK-NEXT:    [[R:%.*]] = or <2 x i1> [[TMP1]], [[B:%.*]]
 ; CHECK-NEXT:    ret <2 x i1> [[R]]
 ;
   %s = sext <2 x i1> %b to <2 x i8>

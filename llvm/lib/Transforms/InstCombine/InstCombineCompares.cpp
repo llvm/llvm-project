@@ -5656,12 +5656,16 @@ static Instruction *foldICmpUsingBoolRange(ICmpInst &I,
   ICmpInst::Predicate Pred;
 
   // X must be 0 and bool must be true for "ULT":
-  // X <u (zext i1 Y) --> (X == 0) && Y
+  // X <u (zext i1 Y) --> (X == 0) & Y
   if (match(&I, m_c_ICmp(Pred, m_Value(X), m_OneUse(m_ZExt(m_Value(Y))))) &&
       Y->getType()->isIntOrIntVectorTy(1) && Pred == ICmpInst::ICMP_ULT)
     return BinaryOperator::CreateAnd(Builder.CreateIsNull(X), Y);
 
-  // TODO: Handle the related pattern with UGE/sext.
+  // X must be 0 or bool must be true for "ULE":
+  // X <=u (sext i1 Y) --> (X == 0) | Y
+  if (match(&I, m_c_ICmp(Pred, m_Value(X), m_OneUse(m_SExt(m_Value(Y))))) &&
+      Y->getType()->isIntOrIntVectorTy(1) && Pred == ICmpInst::ICMP_ULE)
+    return BinaryOperator::CreateOr(Builder.CreateIsNull(X), Y);
 
   return nullptr;
 }
