@@ -52,12 +52,30 @@ TYPE_PARSER(construct<OmpMapType>(
 TYPE_PARSER(construct<OmpMapClause>(
     maybe(Parser<OmpMapType>{}), Parser<OmpObjectList>{}))
 
-// 2.15.5.2 defaultmap -> DEFAULTMAP (TOFROM:SCALAR)
+// [OpenMP 5.0]
+// 2.19.7.2 defaultmap(implicit-behavior[:variable-category])
+//  implicit-behavior -> ALLOC | TO | FROM | TOFROM | FIRSRTPRIVATE | NONE |
+//  DEFAULT
+//  variable-category -> SCALAR | AGGREGATE | ALLOCATABLE | POINTER
 TYPE_PARSER(construct<OmpDefaultmapClause>(
     construct<OmpDefaultmapClause::ImplicitBehavior>(
-        "TOFROM" >> pure(OmpDefaultmapClause::ImplicitBehavior::Tofrom)),
-    maybe(":" >> construct<OmpDefaultmapClause::VariableCategory>("SCALAR" >>
-                     pure(OmpDefaultmapClause::VariableCategory::Scalar)))))
+        "ALLOC" >> pure(OmpDefaultmapClause::ImplicitBehavior::Alloc) ||
+        "TO"_id >> pure(OmpDefaultmapClause::ImplicitBehavior::To) ||
+        "FROM" >> pure(OmpDefaultmapClause::ImplicitBehavior::From) ||
+        "TOFROM" >> pure(OmpDefaultmapClause::ImplicitBehavior::Tofrom) ||
+        "FIRSTPRIVATE" >>
+            pure(OmpDefaultmapClause::ImplicitBehavior::Firstprivate) ||
+        "NONE" >> pure(OmpDefaultmapClause::ImplicitBehavior::None) ||
+        "DEFAULT" >> pure(OmpDefaultmapClause::ImplicitBehavior::Default)),
+    maybe(":" >>
+        construct<OmpDefaultmapClause::VariableCategory>(
+            "SCALAR" >> pure(OmpDefaultmapClause::VariableCategory::Scalar) ||
+            "AGGREGATE" >>
+                pure(OmpDefaultmapClause::VariableCategory::Aggregate) ||
+            "ALLOCATABLE" >>
+                pure(OmpDefaultmapClause::VariableCategory::Allocatable) ||
+            "POINTER" >>
+                pure(OmpDefaultmapClause::VariableCategory::Pointer)))))
 
 // 2.7.1 SCHEDULE ([modifier1 [, modifier2]:]kind[, chunk_size])
 //       Modifier ->  MONITONIC | NONMONOTONIC | SIMD
