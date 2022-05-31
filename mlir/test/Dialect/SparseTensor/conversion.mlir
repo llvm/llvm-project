@@ -365,7 +365,7 @@ func.func @sparse_convert_3d(%arg0: tensor<?x?x?xf64>) -> tensor<?x?x?xf64, #Spa
 // CHECK-LABEL: func @sparse_pointers(
 //  CHECK-SAME: %[[A:.*]]: !llvm.ptr<i8>)
 //       CHECK: %[[C:.*]] = arith.constant 0 : index
-//       CHECK: %[[T:.*]] = call @sparsePointers(%[[A]], %[[C]]) : (!llvm.ptr<i8>, index) -> memref<?xindex>
+//       CHECK: %[[T:.*]] = call @sparsePointers0(%[[A]], %[[C]]) : (!llvm.ptr<i8>, index) -> memref<?xindex>
 //       CHECK: return %[[T]] : memref<?xindex>
 func.func @sparse_pointers(%arg0: tensor<128xf64, #SparseVector>) -> memref<?xindex> {
   %c = arith.constant 0 : index
@@ -398,7 +398,7 @@ func.func @sparse_pointers32(%arg0: tensor<128xf64, #SparseVector32>) -> memref<
 // CHECK-LABEL: func @sparse_indices(
 //  CHECK-SAME: %[[A:.*]]: !llvm.ptr<i8>)
 //       CHECK: %[[C:.*]] = arith.constant 0 : index
-//       CHECK: %[[T:.*]] = call @sparseIndices(%[[A]], %[[C]]) : (!llvm.ptr<i8>, index) -> memref<?xindex>
+//       CHECK: %[[T:.*]] = call @sparseIndices0(%[[A]], %[[C]]) : (!llvm.ptr<i8>, index) -> memref<?xindex>
 //       CHECK: return %[[T]] : memref<?xindex>
 func.func @sparse_indices(%arg0: tensor<128xf64, #SparseVector>) -> memref<?xindex> {
   %c = arith.constant 0 : index
