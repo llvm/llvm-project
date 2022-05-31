@@ -10,11 +10,14 @@
 
 #include "../lsp-server-support/CompilationDatabase.h"
 #include "../lsp-server-support/Logging.h"
-#include "../lsp-server-support/Protocol.h"
 #include "../lsp-server-support/SourceMgrUtils.h"
+#include "Protocol.h"
+#include "mlir/IR/BuiltinOps.h"
 #include "mlir/Tools/PDLL/AST/Context.h"
 #include "mlir/Tools/PDLL/AST/Nodes.h"
 #include "mlir/Tools/PDLL/AST/Types.h"
+#include "mlir/Tools/PDLL/CodeGen/CPPGen.h"
+#include "mlir/Tools/PDLL/CodeGen/MLIRGen.h"
 #include "mlir/Tools/PDLL/ODS/Constraint.h"
 #include "mlir/Tools/PDLL/ODS/Context.h"
 #include "mlir/Tools/PDLL/ODS/Dialect.h"
@@ -303,6 +306,12 @@ struct PDLDocument {
 
   lsp::SignatureHelp getSignatureHelp(const lsp::URIForFile &uri,
                                       const lsp::Position &helpPos);
+
+  //===--------------------------------------------------------------------===//
+  // PDLL ViewOutput
+  //===--------------------------------------------------------------------===//
+
+  void getPDLLViewOutput(raw_ostream &os, lsp::PDLLViewOutputKind kind);
 
   //===--------------------------------------------------------------------===//
   // Fields
@@ -1086,6 +1095,39 @@ lsp::SignatureHelp PDLDocument::getSignatureHelp(const lsp::URIForFile &uri,
 }
 
 //===----------------------------------------------------------------------===//
+// PDLL ViewOutput
+//===----------------------------------------------------------------------===//
+
+void PDLDocument::getPDLLViewOutput(raw_ostream &os,
+                                    lsp::PDLLViewOutputKind kind) {
+  if (failed(astModule))
+    return;
+  if (kind == lsp::PDLLViewOutputKind::AST) {
+    (*astModule)->print(os);
+    return;
+  }
+
+  // Generate the MLIR for the ast module. We also capture diagnostics here to
+  // show to the user, which may be useful if PDLL isn't capturing constraints
+  // expected by PDL.
+  MLIRContext mlirContext;
+  SourceMgrDiagnosticHandler diagHandler(sourceMgr, &mlirContext, os);
+  OwningOpRef<ModuleOp> pdlModule =
+      codegenPDLLToMLIR(&mlirContext, astContext, sourceMgr, **astModule);
+  if (!pdlModule)
+    return;
+  if (kind == lsp::PDLLViewOutputKind::MLIR) {
+    pdlModule->print(os, OpPrintingFlags().enableDebugInfo());
+    return;
+  }
+
+  // Otherwise, generate the output for C++.
+  assert(kind == lsp::PDLLViewOutputKind::CPP &&
+         "unexpected PDLLViewOutputKind");
+  codegenPDLLToCPP(**astModule, *pdlModule, os);
+}
+
+//===----------------------------------------------------------------------===//
 // PDLTextFileChunk
 //===----------------------------------------------------------------------===//
 
@@ -1148,6 +1190,7 @@ public:
                                         lsp::Position completePos);
   lsp::SignatureHelp getSignatureHelp(const lsp::URIForFile &uri,
                                       lsp::Position helpPos);
+  lsp::PDLLViewOutputResult getPDLLViewOutput(lsp::PDLLViewOutputKind kind);
 
 private:
   /// Find the PDL document that contains the given position, and update the
@@ -1321,6 +1364,21 @@ lsp::SignatureHelp PDLTextFile::getSignatureHelp(const lsp::URIForFile &uri,
   return getChunkFor(helpPos).document.getSignatureHelp(uri, helpPos);
 }
 
+lsp::PDLLViewOutputResult
+PDLTextFile::getPDLLViewOutput(lsp::PDLLViewOutputKind kind) {
+  lsp::PDLLViewOutputResult result;
+  {
+    llvm::raw_string_ostream outputOS(result.output);
+    llvm::interleave(
+        llvm::make_pointee_range(chunks),
+        [&](PDLTextFileChunk &chunk) {
+          chunk.document.getPDLLViewOutput(outputOS, kind);
+        },
+        [&] { outputOS << "\n// -----\n\n"; });
+  }
+  return result;
+}
+
 PDLTextFileChunk &PDLTextFile::getChunkFor(lsp::Position &pos) {
   if (chunks.size() == 1)
     return *chunks.front();
@@ -1438,4 +1496,13 @@ lsp::SignatureHelp lsp::PDLLServer::getSignatureHelp(const URIForFile &uri,
   if (fileIt != impl->files.end())
     return fileIt->second->getSignatureHelp(uri, helpPos);
   return SignatureHelp();
+}
+
+Optional<lsp::PDLLViewOutputResult>
+lsp::PDLLServer::getPDLLViewOutput(const URIForFile &uri,
+                                   PDLLViewOutputKind kind) {
+  auto fileIt = impl->files.find(uri.file());
+  if (fileIt != impl->files.end())
+    return fileIt->second->getPDLLViewOutput(kind);
+  return llvm::None;
 }
