@@ -429,7 +429,8 @@ llvm::Optional<std::string> printExprValue(const Expr *E,
     return llvm::None;
 
   // Show enums symbolically, not numerically like APValue::printPretty().
-  if (T->isEnumeralType() && Constant.Val.getInt().getMinSignedBits() <= 64) {
+  if (T->isEnumeralType() && Constant.Val.isInt() &&
+      Constant.Val.getInt().getMinSignedBits() <= 64) {
     // Compare to int64_t to avoid bit-width match requirements.
     int64_t Val = Constant.Val.getInt().getExtValue();
     for (const EnumConstantDecl *ECD :
@@ -440,7 +441,7 @@ llvm::Optional<std::string> printExprValue(const Expr *E,
             .str();
   }
   // Show hex value of integers if they're at least 10 (or negative!)
-  if (T->isIntegralOrEnumerationType() &&
+  if (T->isIntegralOrEnumerationType() && Constant.Val.isInt() &&
       Constant.Val.getInt().getMinSignedBits() <= 64 &&
       Constant.Val.getInt().uge(10))
     return llvm::formatv("{0} ({1})", Constant.Val.getAsString(Ctx, T),
