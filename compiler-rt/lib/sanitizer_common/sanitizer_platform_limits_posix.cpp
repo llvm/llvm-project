@@ -152,7 +152,6 @@ typedef struct user_fpregs elf_fpregset_t;
 #include <linux/serial.h>
 #include <sys/msg.h>
 #include <sys/ipc.h>
-#include <crypt.h>
 #endif  // SANITIZER_ANDROID
 
 #include <link.h>
@@ -172,7 +171,12 @@ typedef struct user_fpregs elf_fpregset_t;
 // Include these after system headers to avoid name clashes and ambiguities.
 #  include "sanitizer_common.h"
 #  include "sanitizer_internal_defs.h"
+#  include "sanitizer_platform_interceptors.h"
 #  include "sanitizer_platform_limits_posix.h"
+
+#if SANITIZER_INTERCEPT_CRYPT_R
+#include <crypt.h>
+#endif
 
 namespace __sanitizer {
   unsigned struct_utsname_sz = sizeof(struct utsname);
@@ -271,8 +275,11 @@ namespace __sanitizer {
   unsigned struct_ustat_sz = SIZEOF_STRUCT_USTAT;
   unsigned struct_rlimit64_sz = sizeof(struct rlimit64);
   unsigned struct_statvfs64_sz = sizeof(struct statvfs64);
-  unsigned struct_crypt_data_sz = sizeof(struct crypt_data);
 #endif // SANITIZER_LINUX && !SANITIZER_ANDROID
+
+#if SANITIZER_INTERCEPT_CRYPT_R
+  unsigned struct_crypt_data_sz = sizeof(struct crypt_data);
+#endif
 
 #if SANITIZER_LINUX && !SANITIZER_ANDROID
   unsigned struct_timex_sz = sizeof(struct timex);
