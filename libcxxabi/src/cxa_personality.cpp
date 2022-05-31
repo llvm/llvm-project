@@ -1305,3 +1305,9 @@ _LIBCXXABI_FUNC_VIS _Unwind_Reason_Code __xlcxx_personality_v1(
 }  // extern "C"
 
 }  // __cxxabiv1
+
+#if defined(_AIX)
+// Include implementation of the personality and helper functions for the
+// state table based EH used by IBM legacy compilers xlC and xlclang++ on AIX.
+#  include "aix_state_tab_eh.inc"
+#endif
