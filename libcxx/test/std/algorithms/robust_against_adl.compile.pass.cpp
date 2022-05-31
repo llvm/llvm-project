@@ -60,7 +60,7 @@ TEST_CONSTEXPR_CXX20 bool all_the_algorithms()
 #endif
     (void)std::copy(first, last, first2);
     (void)std::copy_backward(first, last, last2);
-    // TODO FIXME (void)std::copy_n(first, count, first2);
+    (void)std::copy_n(first, count, first2);
     (void)std::count(first, last, value);
     (void)std::count_if(first, last, UnaryTrue());
     (void)std::distance(first, last);
@@ -75,8 +75,8 @@ TEST_CONSTEXPR_CXX20 bool all_the_algorithms()
     (void)std::fill(first, last, value);
     (void)std::fill_n(first, count, value);
     (void)std::find(first, last, value);
-    // TODO FIXME (void)std::find_end(first, last, first2, mid2);
-    // TODO FIXME (void)std::find_end(first, last, first2, mid2, std::equal_to<void*>());
+    (void)std::find_end(first, last, first2, mid2);
+    (void)std::find_end(first, last, first2, mid2, std::equal_to<void*>());
     (void)std::find_if(first, last, UnaryTrue());
     (void)std::find_if_not(first, last, UnaryTrue());
     (void)std::for_each(first, last, UnaryVoid());
@@ -110,8 +110,8 @@ TEST_CONSTEXPR_CXX20 bool all_the_algorithms()
     // TODO: lexicographical_compare_three_way
     (void)std::lower_bound(first, last, value);
     (void)std::lower_bound(first, last, value, std::less<void*>());
-    // RELIES ON ADL SWAP (void)std::make_heap(first, last);
-    // RELIES ON ADL SWAP (void)std::make_heap(first, last, std::less<void*>());
+    (void)std::make_heap(first, last);
+    (void)std::make_heap(first, last, std::less<void*>());
     (void)std::max(value, value);
     (void)std::max(value, value, std::less<void*>());
 #if TEST_STD_VER >= 11
@@ -155,17 +155,17 @@ TEST_CONSTEXPR_CXX20 bool all_the_algorithms()
     // RELIES ON ADL SWAP (void)std::nth_element(first, mid, last, std::less<void*>());
     // RELIES ON ADL SWAP (void)std::partial_sort(first, mid, last);
     // RELIES ON ADL SWAP (void)std::partial_sort(first, mid, last, std::less<void*>());
-    // RELIES ON ADL SWAP (void)std::partial_sort_copy(first, last, first2, mid2);
-    // RELIES ON ADL SWAP (void)std::partial_sort_copy(first, last, first2, mid2, std::less<void*>());
+    (void)std::partial_sort_copy(first, last, first2, mid2);
+    (void)std::partial_sort_copy(first, last, first2, mid2, std::less<void*>());
     // RELIES ON ADL SWAP (void)std::partition(first, last, UnaryTrue());
     (void)std::partition_copy(first, last, first2, last2, UnaryTrue());
     (void)std::partition_point(first, last, UnaryTrue());
-    // RELIES ON ADL SWAP (void)std::pop_heap(first, last);
-    // RELIES ON ADL SWAP (void)std::pop_heap(first, last, std::less<void*>());
+    (void)std::pop_heap(first, last);
+    (void)std::pop_heap(first, last, std::less<void*>());
     // RELIES ON ADL SWAP (void)std::prev_permutation(first, last);
     // RELIES ON ADL SWAP (void)std::prev_permutation(first, last, std::less<void*>());
-    // RELIES ON ADL SWAP (void)std::push_heap(first, last);
-    // RELIES ON ADL SWAP (void)std::push_heap(first, last, std::less<void*>());
+    (void)std::push_heap(first, last);
+    (void)std::push_heap(first, last, std::less<void*>());
     (void)std::remove(first, last, value);
     (void)std::remove_copy(first, last, first2, value);
     (void)std::remove_copy_if(first, last, first2, UnaryTrue());
@@ -175,7 +175,7 @@ TEST_CONSTEXPR_CXX20 bool all_the_algorithms()
     (void)std::replace_copy_if(first, last, first2, UnaryTrue(), value);
     (void)std::replace_if(first, last, UnaryTrue(), value);
     // RELIES ON ADL SWAP (void)std::reverse(first, last);
-    // RELIES ON ADL SWAP (void)std::reverse_copy(first, last, first2);
+    (void)std::reverse_copy(first, last, first2);
     // RELIES ON ADL SWAP (void)std::rotate(first, mid, last);
     (void)std::rotate_copy(first, mid, last, first2);
     (void)std::search(first, last, first2, mid2);
@@ -196,8 +196,8 @@ TEST_CONSTEXPR_CXX20 bool all_the_algorithms()
 #endif
     // RELIES ON ADL SWAP (void)std::sort(first, last);
     // RELIES ON ADL SWAP (void)std::sort(first, last, std::less<void*>());
-    // RELIES ON ADL SWAP (void)std::sort_heap(first, last);
-    // RELIES ON ADL SWAP (void)std::sort_heap(first, last, std::less<void*>());
+    (void)std::sort_heap(first, last);
+    (void)std::sort_heap(first, last, std::less<void*>());
     // RELIES ON ADL SWAP (void)std::stable_partition(first, last, UnaryTrue());
     // RELIES ON ADL SWAP (void)std::stable_sort(first, last);
     // RELIES ON ADL SWAP (void)std::stable_sort(first, last, std::less<void*>());
