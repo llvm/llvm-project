@@ -1654,7 +1654,18 @@ bool AMDGPUInstructionSelector::selectImageIntrinsic(
                                           : AMDGPU::MIMGEncGfx10Default,
                                    NumVDataDwords, NumVAddrDwords);
   } else {
-    if (STI.getGeneration() >= AMDGPUSubtarget::VOLCANIC_ISLANDS)
+    if (Subtarget->hasGFX90AInsts()) {
+      Opcode = AMDGPU::getMIMGOpcode(IntrOpcode, AMDGPU::MIMGEncGfx90a,
+                                     NumVDataDwords, NumVAddrDwords);
+      if (Opcode == -1) {
+        LLVM_DEBUG(
+            dbgs()
+            << "requested image instruction is not supported on this GPU\n");
+        return false;
+      }
+    }
+    if (Opcode == -1 &&
+        STI.getGeneration() >= AMDGPUSubtarget::VOLCANIC_ISLANDS)
       Opcode = AMDGPU::getMIMGOpcode(IntrOpcode, AMDGPU::MIMGEncGfx8,
                                      NumVDataDwords, NumVAddrDwords);
     if (Opcode == -1)
@@ -1712,7 +1723,11 @@ bool AMDGPUInstructionSelector::selectImageIntrinsic(
   if (IsGFX10Plus)
     MIB.addImm(IsA16 ? -1 : 0);
 
-  MIB.addImm(TFE); // tfe
+  if (!Subtarget->hasGFX90AInsts())
+    MIB.addImm(TFE); // tfe
+  else if (TFE)
+    report_fatal_error("TFE is not supported on this GPU");
+
   MIB.addImm(LWE); // lwe
   if (!IsGFX10Plus)
     MIB.addImm(DimInfo->DA ? -1 : 0);
