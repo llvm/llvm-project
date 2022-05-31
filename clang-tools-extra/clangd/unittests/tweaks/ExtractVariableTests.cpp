@@ -305,22 +305,7 @@ TEST_F(ExtractVariableTest, Test) {
     EXPECT_EQ(IO.second, apply(IO.first)) << IO.first;
   }
 
-  ExtraArgs = {"-xobjective-c"};
-  EXPECT_UNAVAILABLE(R"cpp(
-      __attribute__((objc_root_class))
-      @interface Foo
-      - (void)setMethod1:(int)a;
-      - (int)method1;
-      @property int prop1;
-      @end
-      @implementation Foo
-      - (void)method {
-        [[self.method1]] = 1;
-        [[self.method1]] += 1;
-        [[self.prop1]] = 1;
-        [[self.prop1]] += 1;
-      }
-      @end)cpp");
+  ExtraArgs = {"-xc"};
   InputOutputs = {
       // Function Pointers
       {R"cpp(struct Handlers {
@@ -345,6 +330,7 @@ TEST_F(ExtractVariableTest, Test) {
              void bar() {
                int (*placeholder)(int) = foo('c'); (void)placeholder;
              })cpp"},
+      // Arithmetic on typedef types yields plain integer types
       {R"cpp(typedef long NSInteger;
              void varDecl() {
                 NSInteger a = 2 * 5;
@@ -355,6 +341,28 @@ TEST_F(ExtractVariableTest, Test) {
                 NSInteger a = 2 * 5;
                 long placeholder = a * 7; NSInteger b = placeholder + 3;
              })cpp"},
+  };
+  for (const auto &IO : InputOutputs) {
+    EXPECT_EQ(IO.second, apply(IO.first)) << IO.first;
+  }
+
+  ExtraArgs = {"-xobjective-c"};
+  EXPECT_UNAVAILABLE(R"cpp(
+      __attribute__((objc_root_class))
+      @interface Foo
+      - (void)setMethod1:(int)a;
+      - (int)method1;
+      @property int prop1;
+      @end
+      @implementation Foo
+      - (void)method {
+        [[self.method1]] = 1;
+        [[self.method1]] += 1;
+        [[self.prop1]] = 1;
+        [[self.prop1]] += 1;
+      }
+      @end)cpp");
+  InputOutputs = {
       // Support ObjC property references (explicit property getter).
       {R"cpp(__attribute__((objc_root_class))
              @interface Foo
