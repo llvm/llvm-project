@@ -4025,6 +4025,10 @@ gentbl_cc_library(
             "include/mlir/Dialect/LLVMIR/LLVMConversions.inc",
         ),
         (
+            ["-gen-llvmintrinsic-to-llvmirop-pairs"],
+            "include/mlir/Dialect/LLVMIR/LLVMIntrinsicToLLVMIROpPairs.inc",
+        ),
+        (
             ["-gen-enum-to-llvmir-conversions"],
             "include/mlir/Dialect/LLVMIR/LLVMConversionEnumsToLLVM.inc",
         ),
