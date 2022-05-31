@@ -588,12 +588,12 @@ body:             |
   ; CHECK-NEXT:   [[INSERT_SUBREG:%[0-9]+]]:fpr128 = INSERT_SUBREG [[DEF]], [[COPY3]], %subreg.dsub
   ; CHECK-NEXT:   [[COPY4:%[0-9]+]]:fpr64 = COPY [[COPY1]]
   ; CHECK-NEXT:   [[COPY5:%[0-9]+]]:fpr64 = COPY [[COPY2]]
-  ; CHECK-NEXT:   [[DUPv2i32lane:%[0-9]+]]:fpr64 = DUPv2i32lane killed [[INSERT_SUBREG]], 0
+  ; CHECK-NEXT:   [[DUPv2i32lane:%[0-9]+]]:fpr64 = DUPv2i32lane [[INSERT_SUBREG]], 0
   ; CHECK-NEXT:   [[COPY6:%[0-9]+]]:fpr64 = COPY [[DUPv2i32lane]]
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.1:
-  ; CHECK-NEXT:   [[FMULv2f32_:%[0-9]+]]:fpr64 = FMULv2f32 [[COPY5]], [[COPY6]]
-  ; CHECK-NEXT:   [[FADDv2f32_:%[0-9]+]]:fpr64 = FADDv2f32 killed [[FMULv2f32_]], [[COPY4]]
+  ; CHECK-NEXT:   [[FMULv2i32_indexed:%[0-9]+]]:fpr64 = FMULv2i32_indexed [[COPY5]], [[INSERT_SUBREG]], 0
+  ; CHECK-NEXT:   [[FADDv2f32_:%[0-9]+]]:fpr64 = FADDv2f32 killed [[FMULv2i32_indexed]], [[COPY4]]
   ; CHECK-NEXT:   STRDui killed [[FADDv2f32_]], [[COPY]], 0 :: (store (s64), align 16)
   ; CHECK-NEXT:   B %bb.1
   bb.0:

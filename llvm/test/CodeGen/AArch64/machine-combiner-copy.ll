@@ -18,16 +18,15 @@ define void @fma_dup_f16(ptr noalias nocapture noundef readonly %A, half noundef
 ; CHECK-NEXT:    add x10, x1, #16
 ; CHECK-NEXT:    add x11, x0, #16
 ; CHECK-NEXT:    mov x12, x9
-; CHECK-NEXT:    dup v1.8h, v0.h[0]
 ; CHECK-NEXT:  .LBB0_4: // %vector.body
 ; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    ldp q2, q3, [x11, #-16]
+; CHECK-NEXT:    ldp q1, q2, [x11, #-16]
 ; CHECK-NEXT:    subs x12, x12, #16
 ; CHECK-NEXT:    add x11, x11, #32
-; CHECK-NEXT:    ldp q4, q5, [x10, #-16]
-; CHECK-NEXT:    fmla v4.8h, v2.8h, v1.8h
-; CHECK-NEXT:    fmla v5.8h, v3.8h, v0.h[0]
-; CHECK-NEXT:    stp q4, q5, [x10, #-16]
+; CHECK-NEXT:    ldp q3, q4, [x10, #-16]
+; CHECK-NEXT:    fmla v3.8h, v1.8h, v0.h[0]
+; CHECK-NEXT:    fmla v4.8h, v2.8h, v0.h[0]
+; CHECK-NEXT:    stp q3, q4, [x10, #-16]
 ; CHECK-NEXT:    add x10, x10, #32
 ; CHECK-NEXT:    b.ne .LBB0_4
 ; CHECK-NEXT:  // %bb.5: // %middle.block
