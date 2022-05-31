@@ -28607,11 +28607,12 @@ static SDValue LowerAVG(SDValue Op, const X86Subtarget &Subtarget,
   return SDValue();
 }
 
-static SDValue LowerMINMAX(SDValue Op, SelectionDAG &DAG) {
+static SDValue LowerMINMAX(SDValue Op, const X86Subtarget &Subtarget,
+                           SelectionDAG &DAG) {
   MVT VT = Op.getSimpleValueType();
 
-  // For AVX1 cases, split to use legal ops (everything but v4i64).
-  if (VT.getScalarType() != MVT::i64 && VT.is256BitVector())
+  // For AVX1 cases, split to use legal ops.
+  if (VT.is256BitVector() && !Subtarget.hasInt256())
     return splitVectorIntBinary(Op, DAG);
 
   if (VT == MVT::v32i16 || VT == MVT::v64i8)
@@ -31959,7 +31960,7 @@ SDValue X86TargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
   case ISD::SMAX:
   case ISD::SMIN:
   case ISD::UMAX:
-  case ISD::UMIN:               return LowerMINMAX(Op, DAG);
+  case ISD::UMIN:               return LowerMINMAX(Op, Subtarget, DAG);
   case ISD::ABS:                return LowerABS(Op, Subtarget, DAG);
   case ISD::AVGCEILU:           return LowerAVG(Op, Subtarget, DAG);
   case ISD::FSINCOS:            return LowerFSINCOS(Op, Subtarget, DAG);
@@ -53522,6 +53523,8 @@ static SDValue combineConcatVectorOps(const SDLoc &DL, MVT VT,
                            ConcatSubOperand(VT, Ops, 1), Op0.getOperand(2));
       }
       break;
+      // TODO: ISD::VSELECT and X86ISD::BLENDV handling if some of the args can
+      // be concatenated for free.
     }
   }
 
