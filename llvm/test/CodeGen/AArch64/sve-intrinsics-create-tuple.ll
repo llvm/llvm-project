@@ -1,5 +1,5 @@
 ; RUN: llc -mtriple aarch64 -mattr=+sve -asm-verbose=1 < %s | FileCheck %s
-; RUN: llc -mtriple aarch64 -mattr=+streaming-sve -asm-verbose=1 < %s | FileCheck %s
+; RUN: llc -mtriple aarch64 -mattr=+sme -asm-verbose=1 < %s | FileCheck %s
 
 ;
 ; SVCREATE2 (i8)

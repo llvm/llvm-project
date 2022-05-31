@@ -1,6 +1,6 @@
 // RUN: llvm-mc -triple=aarch64 -show-encoding -mattr=+sve,+bf16 < %s \
 // RUN:        | FileCheck %s --check-prefixes=CHECK-ENCODING,CHECK-INST
-// RUN: llvm-mc -triple=aarch64 -show-encoding -mattr=+streaming-sve,+bf16 < %s \
+// RUN: llvm-mc -triple=aarch64 -show-encoding -mattr=+sme,+bf16 < %s \
 // RUN:        | FileCheck %s --check-prefixes=CHECK-ENCODING,CHECK-INST
 // RUN: not llvm-mc -triple=aarch64 -show-encoding < %s 2>&1 \
 // RUN:        | FileCheck %s --check-prefix=CHECK-ERROR

@@ -1,5 +1,5 @@
 ; RUN: llc -mtriple=aarch64-linux-gnu -mattr=+sve -asm-verbose=0 < %s | FileCheck %s
-; RUN: llc -mtriple=aarch64-linux-gnu -mattr=+streaming-sve -asm-verbose=0 < %s | FileCheck %s
+; RUN: llc -mtriple=aarch64-linux-gnu -mattr=+sme -asm-verbose=0 < %s | FileCheck %s
 
 ; Since UQDEC{B|H|W|D|P} and UQINC{B|H|W|D|P} have identical semantics, the tests for
 ;   * @llvm.aarch64.sve.uqinc{b|h|w|d|p}, and

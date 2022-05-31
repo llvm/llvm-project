@@ -1,5 +1,5 @@
 ; RUN: llc -mtriple=aarch64--linux-gnu -mattr=sve < %s | FileCheck %s
-; RUN: llc -mtriple=aarch64--linux-gnu -mattr=streaming-sve < %s | FileCheck %s
+; RUN: llc -mtriple=aarch64--linux-gnu -mattr=sme < %s | FileCheck %s
 
 ; ld2b
 define <vscale x 32 x i8> @ld2.nxv32i8(<vscale x 16 x i1> %Pg, i8 *%addr, i64 %a) {
