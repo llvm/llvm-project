@@ -17,6 +17,64 @@ using namespace mlir::ml_program;
 // Custom asm helpers
 //===----------------------------------------------------------------------===//
 
+/// Parse and print an ordering clause for a variadic of consuming tokens
+/// and an optional producing token.
+///
+/// Syntax:
+///   ordering(%0, %1 -> !ml_program.token)
+///   ordering(() -> !ml_program.token)
+///   ordering(%0, %1)
+///
+/// If both the consuming and producing token are not present on the op, then
+/// the clause prints nothing.
+static ParseResult parseTokenOrdering(
+    OpAsmParser &parser,
+    SmallVectorImpl<OpAsmParser::UnresolvedOperand> &consumeTokens,
+    Type &produceTokenType) {
+  if (failed(parser.parseOptionalKeyword("ordering")) ||
+      failed(parser.parseLParen()))
+    return success();
+
+  // Parse consuming token list. If there are no consuming tokens, the
+  // '()' null list represents this.
+  if (succeeded(parser.parseOptionalLParen())) {
+    if (failed(parser.parseRParen()))
+      return failure();
+  } else {
+    if (failed(parser.parseOperandList(consumeTokens,
+                                       /*requiredOperandCount=*/-1)))
+      return failure();
+  }
+
+  // Parse optional producer token.
+  if (succeeded(parser.parseOptionalArrow()))
+    if (failed(parser.parseType(produceTokenType)))
+      return failure();
+
+  if (failed(parser.parseRParen()))
+    return failure();
+
+  return success();
+}
+
+static void printTokenOrdering(OpAsmPrinter &p, Operation *op,
+                               OperandRange consumeTokens,
+                               Type produceTokenType) {
+  if (consumeTokens.empty() && !produceTokenType)
+    return;
+
+  p << " ordering(";
+  if (consumeTokens.empty())
+    p << "()";
+  else
+    p.printOperands(consumeTokens);
+  if (produceTokenType) {
+    p << " -> ";
+    p.printType(produceTokenType);
+  }
+  p << ")";
+}
+
 /// some.op custom<TypeOrAttr>($type, $attr)
 ///
 /// Uninitialized:
@@ -112,6 +170,30 @@ LogicalResult GlobalOp::verify() {
 }
 
 //===----------------------------------------------------------------------===//
+// GlobalLoadOp
+//===----------------------------------------------------------------------===//
+
+GlobalOp GlobalLoadOp::getGlobalOp(SymbolTableCollection &symbolTable) {
+  return symbolTable.lookupNearestSymbolFrom<GlobalOp>(
+      getOperation()->getParentOp(), getGlobalAttr());
+}
+
+LogicalResult
+GlobalLoadOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
+  GlobalOp referrent = getGlobalOp(symbolTable);
+  if (!referrent)
+    return emitOpError() << "undefined global: " << getGlobal();
+
+  if (referrent.getType() != getResult().getType()) {
+    return emitOpError() << "cannot load from global typed "
+                         << referrent.getType() << " as "
+                         << getResult().getType();
+  }
+
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
 // GlobalLoadConstOp
 //===----------------------------------------------------------------------===//
 
@@ -134,6 +216,35 @@ GlobalLoadConstOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
     return emitOpError() << "cannot load from global typed "
                          << referrent.getType() << " as "
                          << getResult().getType();
+
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
+// GlobalStoreOp
+//===----------------------------------------------------------------------===//
+
+GlobalOp GlobalStoreOp::getGlobalOp(SymbolTableCollection &symbolTable) {
+  return symbolTable.lookupNearestSymbolFrom<GlobalOp>(
+      getOperation()->getParentOp(), getGlobalAttr());
+}
+
+LogicalResult
+GlobalStoreOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
+  GlobalOp referrent = getGlobalOp(symbolTable);
+  if (!referrent)
+    return emitOpError() << "undefined global: " << getGlobal();
+
+  if (!referrent.getIsMutable()) {
+    return emitOpError() << "cannot store to an immutable global "
+                         << getGlobal();
+  }
+
+  if (referrent.getType() != getValue().getType()) {
+    return emitOpError() << "cannot store to a global typed "
+                         << referrent.getType() << " from "
+                         << getValue().getType();
+  }
 
   return success();
 }
