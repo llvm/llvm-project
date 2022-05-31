@@ -1310,7 +1310,7 @@ public:
   /// RdxDesc. This is true if the -enable-strict-reductions flag is passed,
   /// the IsOrdered flag of RdxDesc is set and we do not allow reordering
   /// of FP operations.
-  bool useOrderedReductions(const RecurrenceDescriptor &RdxDesc) {
+  bool useOrderedReductions(const RecurrenceDescriptor &RdxDesc) const {
     return !Hints->allowReordering() && RdxDesc.isOrdered();
   }
 
