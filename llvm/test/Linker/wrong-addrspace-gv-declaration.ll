@@ -8,10 +8,10 @@
 @is_really_as1_gv_other_type = external global i32
 
 ; CHECK-LABEL: @foo(
-; CHECK: %load0 = load volatile i32, i32* addrspacecast (i32 addrspace(1)* @is_really_as1_gv to i32*), align 4
-; CHECK: %load1 = load volatile i32, i32* addrspacecast (i32 addrspace(1)* bitcast (float addrspace(1)* @is_really_as1_gv_other_type to i32 addrspace(1)*) to i32*), align 4
+; CHECK: %load0 = load volatile i32, ptr addrspacecast (ptr addrspace(1) @is_really_as1_gv to ptr), align 4
+; CHECK: %load1 = load volatile i32, ptr addrspacecast (ptr addrspace(1) @is_really_as1_gv_other_type to ptr), align 4
 define void @foo() {
-  %load0 = load volatile i32, i32* @is_really_as1_gv, align 4
-  %load1 = load volatile i32, i32* @is_really_as1_gv_other_type, align 4
+  %load0 = load volatile i32, ptr @is_really_as1_gv, align 4
+  %load1 = load volatile i32, ptr @is_really_as1_gv_other_type, align 4
   ret void
 }

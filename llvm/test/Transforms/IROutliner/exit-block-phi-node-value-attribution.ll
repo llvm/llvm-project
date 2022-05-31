@@ -42,21 +42,19 @@ bb5:
 ; CHECK-NEXT:  bb1:
 ; CHECK-NEXT:    [[PHINODE_CE_LOC1:%.*]] = alloca i32, align 4
 ; CHECK-NEXT:    [[PHINODE_CE_LOC:%.*]] = alloca i32, align 4
-; CHECK-NEXT:    [[LT_CAST:%.*]] = bitcast i32* [[PHINODE_CE_LOC]] to i8*
-; CHECK-NEXT:    call void @llvm.lifetime.start.p0i8(i64 -1, i8* [[LT_CAST]])
-; CHECK-NEXT:    call void @outlined_ir_func_0(i32* [[PHINODE_CE_LOC]], i32 0)
-; CHECK-NEXT:    [[PHINODE_CE_RELOAD:%.*]] = load i32, i32* [[PHINODE_CE_LOC]], align 4
-; CHECK-NEXT:    call void @llvm.lifetime.end.p0i8(i64 -1, i8* [[LT_CAST]])
+; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 -1, ptr [[PHINODE_CE_LOC]])
+; CHECK-NEXT:    call void @outlined_ir_func_0(ptr [[PHINODE_CE_LOC]], i32 0)
+; CHECK-NEXT:    [[PHINODE_CE_RELOAD:%.*]] = load i32, ptr [[PHINODE_CE_LOC]], align 4
+; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 -1, ptr [[PHINODE_CE_LOC]])
 ; CHECK-NEXT:    br label [[BB5:%.*]]
 ; CHECK:       placeholder:
 ; CHECK-NEXT:    [[A:%.*]] = sub i32 5, 4
 ; CHECK-NEXT:    br label [[BB5]]
 ; CHECK:       bb3:
-; CHECK-NEXT:    [[LT_CAST3:%.*]] = bitcast i32* [[PHINODE_CE_LOC1]] to i8*
-; CHECK-NEXT:    call void @llvm.lifetime.start.p0i8(i64 -1, i8* [[LT_CAST3]])
-; CHECK-NEXT:    call void @outlined_ir_func_0(i32* [[PHINODE_CE_LOC1]], i32 1)
-; CHECK-NEXT:    [[PHINODE_CE_RELOAD2:%.*]] = load i32, i32* [[PHINODE_CE_LOC1]], align 4
-; CHECK-NEXT:    call void @llvm.lifetime.end.p0i8(i64 -1, i8* [[LT_CAST3]])
+; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 -1, ptr [[PHINODE_CE_LOC1]])
+; CHECK-NEXT:    call void @outlined_ir_func_0(ptr [[PHINODE_CE_LOC1]], i32 1)
+; CHECK-NEXT:    [[PHINODE_CE_RELOAD2:%.*]] = load i32, ptr [[PHINODE_CE_LOC1]], align 4
+; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 -1, ptr [[PHINODE_CE_LOC1]])
 ; CHECK-NEXT:    br label [[BB5]]
 ; CHECK:       placeholder1:
 ; CHECK-NEXT:    [[B:%.*]] = add i32 5, 4
@@ -88,10 +86,10 @@ bb5:
 ; CHECK-NEXT:    i32 1, label [[OUTPUT_BLOCK_1_0:%.*]]
 ; CHECK-NEXT:    ]
 ; CHECK:       output_block_0_0:
-; CHECK-NEXT:    store i32 [[PHINODE_CE]], i32* [[TMP0:%.*]], align 4
+; CHECK-NEXT:    store i32 [[PHINODE_CE]], ptr [[TMP0:%.*]], align 4
 ; CHECK-NEXT:    br label [[FINAL_BLOCK_0]]
 ; CHECK:       output_block_1_0:
-; CHECK-NEXT:    store i32 [[TMP7]], i32* [[TMP0]], align 4
+; CHECK-NEXT:    store i32 [[TMP7]], ptr [[TMP0]], align 4
 ; CHECK-NEXT:    br label [[FINAL_BLOCK_0]]
 ; CHECK:       final_block_0:
 ; CHECK-NEXT:    ret void

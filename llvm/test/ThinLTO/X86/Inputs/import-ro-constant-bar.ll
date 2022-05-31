@@ -5,6 +5,6 @@ target triple = "x86_64-unknown-linux-gnu"
 @foo = external dso_local local_unnamed_addr constant i32, align 4
 define dso_local i32 @_Z3barv() local_unnamed_addr {
 entry:
-  %0 = load i32, i32* @foo, align 4
+  %0 = load i32, ptr @foo, align 4
   ret i32 %0
 }

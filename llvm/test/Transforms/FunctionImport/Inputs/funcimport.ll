@@ -5,11 +5,11 @@ target triple = "x86_64-apple-macosx10.11.0"
 @staticvar = internal global i32 1, align 4
 @staticconstvar = internal unnamed_addr constant [2 x i32] [i32 10, i32 20], align 4
 @commonvar = common global i32 0, align 4
-@P = internal global void ()* null, align 8
+@P = internal global ptr null, align 8
 
-@weakalias = weak alias void (...), bitcast (void ()* @globalfunc1 to void (...)*)
-@analias = alias void (...), bitcast (void ()* @globalfunc2 to void (...)*)
-@linkoncealias = alias void (...), bitcast (void ()* @linkoncefunc to void (...)*)
+@weakalias = weak alias void (...), ptr @globalfunc1
+@analias = alias void (...), ptr @globalfunc2
+@linkoncealias = alias void (...), ptr @linkoncefunc
 
 define void @globalfunc1() #0 {
 entry:
@@ -31,14 +31,14 @@ entry:
 define i32 @referencestatics(i32 %i) #0 {
 entry:
   %i.addr = alloca i32, align 4
-  store i32 %i, i32* %i.addr, align 4
+  store i32 %i, ptr %i.addr, align 4
   %call = call i32 @staticfunc()
-  %0 = load i32, i32* @staticvar, align 4
+  %0 = load i32, ptr @staticvar, align 4
   %add = add nsw i32 %call, %0
-  %1 = load i32, i32* %i.addr, align 4
+  %1 = load i32, ptr %i.addr, align 4
   %idxprom = sext i32 %1 to i64
-  %arrayidx = getelementptr inbounds [2 x i32], [2 x i32]* @staticconstvar, i64 0, i64 %idxprom
-  %2 = load i32, i32* %arrayidx, align 4
+  %arrayidx = getelementptr inbounds [2 x i32], ptr @staticconstvar, i64 0, i64 %idxprom
+  %2 = load i32, ptr %arrayidx, align 4
   %add1 = add nsw i32 %add, %2
   ret i32 %add1
 }
@@ -46,29 +46,29 @@ entry:
 define i32 @referenceglobals(i32 %i) #0 {
 entry:
   %i.addr = alloca i32, align 4
-  store i32 %i, i32* %i.addr, align 4
+  store i32 %i, ptr %i.addr, align 4
   call void @globalfunc1()
-  %0 = load i32, i32* @globalvar, align 4
+  %0 = load i32, ptr @globalvar, align 4
   ret i32 %0
 }
 
 define i32 @referencecommon(i32 %i) #0 {
 entry:
   %i.addr = alloca i32, align 4
-  store i32 %i, i32* %i.addr, align 4
-  %0 = load i32, i32* @commonvar, align 4
+  store i32 %i, ptr %i.addr, align 4
+  %0 = load i32, ptr @commonvar, align 4
   ret i32 %0
 }
 
 define void @setfuncptr() #0 {
 entry:
-  store void ()* @staticfunc2, void ()** @P, align 8
+  store ptr @staticfunc2, ptr @P, align 8
   ret void
 }
 
 define void @callfuncptr() #0 {
 entry:
-  %0 = load void ()*, void ()** @P, align 8
+  %0 = load ptr, ptr @P, align 8
   call void %0()
   ret void
 }
@@ -92,7 +92,7 @@ entry:
 declare i32 @__gxx_personality_v0(...)
 
 ; Add enough instructions to prevent import with inst limit of 5
-define internal void @funcwithpersonality() #2 personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*) {
+define internal void @funcwithpersonality() #2 personality ptr @__gxx_personality_v0 {
 entry:
   call void @globalfunc2()
   call void @globalfunc2()
@@ -159,10 +159,9 @@ define void @variadic_no_va_start(...) {
 ; Variadic function with va_start should not be imported because inliner
 ; doesn't handle it.
 define void @variadic_va_start(...) {
-    %ap = alloca i8*, align 8
-    %ap.0 = bitcast i8** %ap to i8*
-    call void @llvm.va_start(i8* %ap.0)
+    %ap = alloca ptr, align 8
+    call void @llvm.va_start(ptr %ap)
     ret void
 }
 
-declare void @llvm.va_start(i8*) nounwind
+declare void @llvm.va_start(ptr) nounwind

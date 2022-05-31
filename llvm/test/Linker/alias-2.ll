@@ -5,7 +5,7 @@
 ; erroneously renamed to A.1 and not linked to the declaration from
 ; the first module
 
-@C = alias void (), void ()* @A
+@C = alias void (), ptr @A
 
 define void @D() {
   call void @C()
@@ -16,7 +16,7 @@ define void @A() {
   ret void
 }
 
-; CHECK-DAG: @C = alias void (), void ()* @A
+; CHECK-DAG: @C = alias void (), ptr @A
 ; CHECK-DAG: define void @B()
 ; CHECK-DAG:   call void @A()
 ; CHECK-DAG: define void @D()

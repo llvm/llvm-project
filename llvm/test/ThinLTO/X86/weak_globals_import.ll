@@ -22,7 +22,7 @@ target triple = "x86_64-unknown-linux-gnu"
 @G = weak dso_local local_unnamed_addr global i32 0, align 4
 
 define dso_local i32 @main() local_unnamed_addr {
-  %1 = load i32, i32* @G, align 4
+  %1 = load i32, ptr @G, align 4
   ret i32 %1
 }
 

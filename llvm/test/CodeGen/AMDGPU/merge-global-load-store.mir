@@ -8,7 +8,7 @@ body:             |
 
     ; GCN-LABEL: name: merge_global_load_dword_2
     ; GCN: [[DEF:%[0-9]+]]:vreg_64_align2 = IMPLICIT_DEF
-    ; GCN-NEXT: [[GLOBAL_LOAD_DWORDX2_:%[0-9]+]]:vreg_64_align2 = GLOBAL_LOAD_DWORDX2 [[DEF]], 0, 0, implicit $exec :: (load (s64) from `float addrspace(1)* undef` + 4, align 4, addrspace 1)
+    ; GCN-NEXT: [[GLOBAL_LOAD_DWORDX2_:%[0-9]+]]:vreg_64_align2 = GLOBAL_LOAD_DWORDX2 [[DEF]], 0, 0, implicit $exec :: (load (s64) from `ptr addrspace(1) undef` + 4, align 4, addrspace 1)
     ; GCN-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY [[GLOBAL_LOAD_DWORDX2_]].sub0
     ; GCN-NEXT: [[COPY1:%[0-9]+]]:vgpr_32 = COPY killed [[GLOBAL_LOAD_DWORDX2_]].sub1
     ; GCN-NEXT: S_NOP 0, implicit [[COPY]], implicit [[COPY1]]
@@ -25,7 +25,7 @@ body:             |
 
     ; GCN-LABEL: name: merge_global_load_dword_3
     ; GCN: [[DEF:%[0-9]+]]:vreg_64_align2 = IMPLICIT_DEF
-    ; GCN-NEXT: [[GLOBAL_LOAD_DWORDX3_:%[0-9]+]]:vreg_96_align2 = GLOBAL_LOAD_DWORDX3 [[DEF]], 0, 1, implicit $exec :: (load (s96) from `i32 addrspace(1)* undef`, align 4, addrspace 1)
+    ; GCN-NEXT: [[GLOBAL_LOAD_DWORDX3_:%[0-9]+]]:vreg_96_align2 = GLOBAL_LOAD_DWORDX3 [[DEF]], 0, 1, implicit $exec :: (load (s96) from `ptr addrspace(1) undef`, align 4, addrspace 1)
     ; GCN-NEXT: [[COPY:%[0-9]+]]:vreg_64_align2 = COPY [[GLOBAL_LOAD_DWORDX3_]].sub0_sub1
     ; GCN-NEXT: [[COPY1:%[0-9]+]]:vgpr_32 = COPY killed [[GLOBAL_LOAD_DWORDX3_]].sub2
     ; GCN-NEXT: [[COPY2:%[0-9]+]]:vgpr_32 = COPY [[COPY]].sub0
@@ -45,7 +45,7 @@ body:             |
 
     ; GCN-LABEL: name: merge_global_load_dword_4
     ; GCN: [[DEF:%[0-9]+]]:vreg_64_align2 = IMPLICIT_DEF
-    ; GCN-NEXT: [[GLOBAL_LOAD_DWORDX4_:%[0-9]+]]:vreg_128_align2 = GLOBAL_LOAD_DWORDX4 [[DEF]], 0, 2, implicit $exec :: (load (s128) from `i32 addrspace(1)* undef`, align 4, addrspace 1)
+    ; GCN-NEXT: [[GLOBAL_LOAD_DWORDX4_:%[0-9]+]]:vreg_128_align2 = GLOBAL_LOAD_DWORDX4 [[DEF]], 0, 2, implicit $exec :: (load (s128) from `ptr addrspace(1) undef`, align 4, addrspace 1)
     ; GCN-NEXT: [[COPY:%[0-9]+]]:vreg_96_align2 = COPY [[GLOBAL_LOAD_DWORDX4_]].sub0_sub1_sub2
     ; GCN-NEXT: [[COPY1:%[0-9]+]]:vgpr_32 = COPY killed [[GLOBAL_LOAD_DWORDX4_]].sub3
     ; GCN-NEXT: [[COPY2:%[0-9]+]]:vreg_64_align2 = COPY [[COPY]].sub0_sub1
@@ -68,14 +68,14 @@ body:             |
 
     ; GCN-LABEL: name: merge_global_load_dword_5
     ; GCN: [[DEF:%[0-9]+]]:vreg_64_align2 = IMPLICIT_DEF
-    ; GCN-NEXT: [[GLOBAL_LOAD_DWORDX4_:%[0-9]+]]:vreg_128_align2 = GLOBAL_LOAD_DWORDX4 [[DEF]], 0, 3, implicit $exec :: (load (s128) from `i32 addrspace(1)* undef`, align 4, addrspace 1)
+    ; GCN-NEXT: [[GLOBAL_LOAD_DWORDX4_:%[0-9]+]]:vreg_128_align2 = GLOBAL_LOAD_DWORDX4 [[DEF]], 0, 3, implicit $exec :: (load (s128) from `ptr addrspace(1) undef`, align 4, addrspace 1)
     ; GCN-NEXT: [[COPY:%[0-9]+]]:vreg_96_align2 = COPY [[GLOBAL_LOAD_DWORDX4_]].sub0_sub1_sub2
     ; GCN-NEXT: [[COPY1:%[0-9]+]]:vgpr_32 = COPY killed [[GLOBAL_LOAD_DWORDX4_]].sub3
     ; GCN-NEXT: [[COPY2:%[0-9]+]]:vreg_64_align2 = COPY [[COPY]].sub0_sub1
     ; GCN-NEXT: [[COPY3:%[0-9]+]]:vgpr_32 = COPY killed [[COPY]].sub2
     ; GCN-NEXT: [[COPY4:%[0-9]+]]:vgpr_32 = COPY [[COPY2]].sub0
     ; GCN-NEXT: [[COPY5:%[0-9]+]]:vgpr_32 = COPY killed [[COPY2]].sub1
-    ; GCN-NEXT: [[GLOBAL_LOAD_DWORD:%[0-9]+]]:vgpr_32 = GLOBAL_LOAD_DWORD [[DEF]], 16, 3, implicit $exec :: (load (s32) from `i32 addrspace(1)* undef`, addrspace 1)
+    ; GCN-NEXT: [[GLOBAL_LOAD_DWORD:%[0-9]+]]:vgpr_32 = GLOBAL_LOAD_DWORD [[DEF]], 16, 3, implicit $exec :: (load (s32) from `ptr addrspace(1) undef`, addrspace 1)
     ; GCN-NEXT: S_NOP 0, implicit [[COPY4]], implicit [[COPY5]], implicit [[COPY3]], implicit [[COPY1]], implicit [[GLOBAL_LOAD_DWORD]]
     %0:vreg_64_align2 = IMPLICIT_DEF
     %1:vgpr_32 = GLOBAL_LOAD_DWORD %0, 0, 3, implicit $exec :: (load (s32) from `i32 addrspace(1)* undef`, align 4, addrspace 1)
@@ -93,14 +93,14 @@ body:             |
 
     ; GCN-LABEL: name: merge_global_load_dword_6
     ; GCN: [[DEF:%[0-9]+]]:vreg_64_align2 = IMPLICIT_DEF
-    ; GCN-NEXT: [[GLOBAL_LOAD_DWORDX4_:%[0-9]+]]:vreg_128_align2 = GLOBAL_LOAD_DWORDX4 [[DEF]], 0, 0, implicit $exec :: (load (s128) from `i32 addrspace(1)* undef`, align 4, addrspace 1)
+    ; GCN-NEXT: [[GLOBAL_LOAD_DWORDX4_:%[0-9]+]]:vreg_128_align2 = GLOBAL_LOAD_DWORDX4 [[DEF]], 0, 0, implicit $exec :: (load (s128) from `ptr addrspace(1) undef`, align 4, addrspace 1)
     ; GCN-NEXT: [[COPY:%[0-9]+]]:vreg_96_align2 = COPY [[GLOBAL_LOAD_DWORDX4_]].sub0_sub1_sub2
     ; GCN-NEXT: [[COPY1:%[0-9]+]]:vgpr_32 = COPY killed [[GLOBAL_LOAD_DWORDX4_]].sub3
     ; GCN-NEXT: [[COPY2:%[0-9]+]]:vreg_64_align2 = COPY [[COPY]].sub0_sub1
     ; GCN-NEXT: [[COPY3:%[0-9]+]]:vgpr_32 = COPY killed [[COPY]].sub2
     ; GCN-NEXT: [[COPY4:%[0-9]+]]:vgpr_32 = COPY [[COPY2]].sub0
     ; GCN-NEXT: [[COPY5:%[0-9]+]]:vgpr_32 = COPY killed [[COPY2]].sub1
-    ; GCN-NEXT: [[GLOBAL_LOAD_DWORDX2_:%[0-9]+]]:vreg_64_align2 = GLOBAL_LOAD_DWORDX2 [[DEF]], 16, 0, implicit $exec :: (load (s64) from `i32 addrspace(1)* undef`, align 4, addrspace 1)
+    ; GCN-NEXT: [[GLOBAL_LOAD_DWORDX2_:%[0-9]+]]:vreg_64_align2 = GLOBAL_LOAD_DWORDX2 [[DEF]], 16, 0, implicit $exec :: (load (s64) from `ptr addrspace(1) undef`, align 4, addrspace 1)
     ; GCN-NEXT: [[COPY6:%[0-9]+]]:vgpr_32 = COPY [[GLOBAL_LOAD_DWORDX2_]].sub0
     ; GCN-NEXT: [[COPY7:%[0-9]+]]:vgpr_32 = COPY killed [[GLOBAL_LOAD_DWORDX2_]].sub1
     ; GCN-NEXT: S_NOP 0, implicit [[COPY4]], implicit [[COPY5]], implicit [[COPY3]], implicit [[COPY1]], implicit [[COPY6]], implicit [[COPY7]]
@@ -121,7 +121,7 @@ body:             |
 
     ; GCN-LABEL: name: merge_global_load_dwordx2
     ; GCN: [[DEF:%[0-9]+]]:vreg_64_align2 = IMPLICIT_DEF
-    ; GCN-NEXT: [[GLOBAL_LOAD_DWORDX4_:%[0-9]+]]:vreg_128_align2 = GLOBAL_LOAD_DWORDX4 [[DEF]], 0, 0, implicit $exec :: (load (s128) from `i64 addrspace(1)* undef`, align 4, addrspace 1)
+    ; GCN-NEXT: [[GLOBAL_LOAD_DWORDX4_:%[0-9]+]]:vreg_128_align2 = GLOBAL_LOAD_DWORDX4 [[DEF]], 0, 0, implicit $exec :: (load (s128) from `ptr addrspace(1) undef`, align 4, addrspace 1)
     ; GCN-NEXT: [[COPY:%[0-9]+]]:vreg_64_align2 = COPY [[GLOBAL_LOAD_DWORDX4_]].sub0_sub1
     ; GCN-NEXT: [[COPY1:%[0-9]+]]:vreg_64_align2 = COPY killed [[GLOBAL_LOAD_DWORDX4_]].sub2_sub3
     ; GCN-NEXT: S_NOP 0, implicit [[COPY]], implicit [[COPY1]]
@@ -138,7 +138,7 @@ body:             |
 
     ; GCN-LABEL: name: merge_global_load_dwordx3_with_dwordx1
     ; GCN: [[DEF:%[0-9]+]]:vreg_64_align2 = IMPLICIT_DEF
-    ; GCN-NEXT: [[GLOBAL_LOAD_DWORDX4_:%[0-9]+]]:vreg_128_align2 = GLOBAL_LOAD_DWORDX4 [[DEF]], 12, 0, implicit $exec :: (load (s128) from `i128 addrspace(1)* undef`, align 8, addrspace 1)
+    ; GCN-NEXT: [[GLOBAL_LOAD_DWORDX4_:%[0-9]+]]:vreg_128_align2 = GLOBAL_LOAD_DWORDX4 [[DEF]], 12, 0, implicit $exec :: (load (s128) from `ptr addrspace(1) undef`, align 8, addrspace 1)
     ; GCN-NEXT: [[COPY:%[0-9]+]]:vreg_96_align2 = COPY [[GLOBAL_LOAD_DWORDX4_]].sub0_sub1_sub2
     ; GCN-NEXT: [[COPY1:%[0-9]+]]:vgpr_32 = COPY killed [[GLOBAL_LOAD_DWORDX4_]].sub3
     ; GCN-NEXT: S_NOP 0, implicit [[COPY]], implicit [[COPY1]]
@@ -155,7 +155,7 @@ body:             |
 
     ; GCN-LABEL: name: merge_global_load_dwordx1_with_dwordx2
     ; GCN: [[DEF:%[0-9]+]]:vreg_64_align2 = IMPLICIT_DEF
-    ; GCN-NEXT: [[GLOBAL_LOAD_DWORDX3_:%[0-9]+]]:vreg_96_align2 = GLOBAL_LOAD_DWORDX3 [[DEF]], 12, 0, implicit $exec :: (load (s96) from `i32 addrspace(1)* undef`, align 4, addrspace 1)
+    ; GCN-NEXT: [[GLOBAL_LOAD_DWORDX3_:%[0-9]+]]:vreg_96_align2 = GLOBAL_LOAD_DWORDX3 [[DEF]], 12, 0, implicit $exec :: (load (s96) from `ptr addrspace(1) undef`, align 4, addrspace 1)
     ; GCN-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY [[GLOBAL_LOAD_DWORDX3_]].sub0
     ; GCN-NEXT: [[COPY1:%[0-9]+]]:vreg_64_align2 = COPY killed [[GLOBAL_LOAD_DWORDX3_]].sub1_sub2
     ; GCN-NEXT: S_NOP 0, implicit [[COPY1]], implicit [[COPY]]
@@ -172,8 +172,8 @@ body:             |
 
     ; GCN-LABEL: name: no_merge_global_load_dword_agpr_with_vgpr
     ; GCN: [[DEF:%[0-9]+]]:vreg_64_align2 = IMPLICIT_DEF
-    ; GCN-NEXT: [[GLOBAL_LOAD_DWORD:%[0-9]+]]:vgpr_32 = GLOBAL_LOAD_DWORD [[DEF]], 0, 0, implicit $exec :: (load (s32) from `i32 addrspace(1)* undef`, addrspace 1)
-    ; GCN-NEXT: [[GLOBAL_LOAD_DWORD1:%[0-9]+]]:agpr_32 = GLOBAL_LOAD_DWORD [[DEF]], 4, 0, implicit $exec :: (load (s32) from `i32 addrspace(1)* undef`, addrspace 1)
+    ; GCN-NEXT: [[GLOBAL_LOAD_DWORD:%[0-9]+]]:vgpr_32 = GLOBAL_LOAD_DWORD [[DEF]], 0, 0, implicit $exec :: (load (s32) from `ptr addrspace(1) undef`, addrspace 1)
+    ; GCN-NEXT: [[GLOBAL_LOAD_DWORD1:%[0-9]+]]:agpr_32 = GLOBAL_LOAD_DWORD [[DEF]], 4, 0, implicit $exec :: (load (s32) from `ptr addrspace(1) undef`, addrspace 1)
     ; GCN-NEXT: S_NOP 0, implicit [[GLOBAL_LOAD_DWORD]], implicit [[GLOBAL_LOAD_DWORD1]]
     %0:vreg_64_align2 = IMPLICIT_DEF
     %1:vgpr_32 = GLOBAL_LOAD_DWORD %0, 0, 0, implicit $exec :: (load (s32) from `i32 addrspace(1)* undef`, align 4, addrspace 1)
@@ -188,8 +188,8 @@ body:             |
 
     ; GCN-LABEL: name: no_merge_global_load_dword_disjoint
     ; GCN: [[DEF:%[0-9]+]]:vreg_64_align2 = IMPLICIT_DEF
-    ; GCN-NEXT: [[GLOBAL_LOAD_DWORD:%[0-9]+]]:vgpr_32 = GLOBAL_LOAD_DWORD [[DEF]], 0, 0, implicit $exec :: (load (s32) from `i32 addrspace(1)* undef`, addrspace 1)
-    ; GCN-NEXT: [[GLOBAL_LOAD_DWORD1:%[0-9]+]]:vgpr_32 = GLOBAL_LOAD_DWORD [[DEF]], 8, 0, implicit $exec :: (load (s32) from `i32 addrspace(1)* undef`, addrspace 1)
+    ; GCN-NEXT: [[GLOBAL_LOAD_DWORD:%[0-9]+]]:vgpr_32 = GLOBAL_LOAD_DWORD [[DEF]], 0, 0, implicit $exec :: (load (s32) from `ptr addrspace(1) undef`, addrspace 1)
+    ; GCN-NEXT: [[GLOBAL_LOAD_DWORD1:%[0-9]+]]:vgpr_32 = GLOBAL_LOAD_DWORD [[DEF]], 8, 0, implicit $exec :: (load (s32) from `ptr addrspace(1) undef`, addrspace 1)
     ; GCN-NEXT: S_NOP 0, implicit [[GLOBAL_LOAD_DWORD]], implicit [[GLOBAL_LOAD_DWORD1]]
     %0:vreg_64_align2 = IMPLICIT_DEF
     %1:vgpr_32 = GLOBAL_LOAD_DWORD %0, 0, 0, implicit $exec :: (load (s32) from `i32 addrspace(1)* undef`, align 4, addrspace 1)
@@ -204,8 +204,8 @@ body:             |
 
     ; GCN-LABEL: name: no_merge_global_load_dword_overlap
     ; GCN: [[DEF:%[0-9]+]]:vreg_64_align2 = IMPLICIT_DEF
-    ; GCN-NEXT: [[GLOBAL_LOAD_DWORD:%[0-9]+]]:vgpr_32 = GLOBAL_LOAD_DWORD [[DEF]], 0, 0, implicit $exec :: (load (s32) from `i32 addrspace(1)* undef`, addrspace 1)
-    ; GCN-NEXT: [[GLOBAL_LOAD_DWORD1:%[0-9]+]]:vgpr_32 = GLOBAL_LOAD_DWORD [[DEF]], 3, 0, implicit $exec :: (load (s32) from `i32 addrspace(1)* undef`, addrspace 1)
+    ; GCN-NEXT: [[GLOBAL_LOAD_DWORD:%[0-9]+]]:vgpr_32 = GLOBAL_LOAD_DWORD [[DEF]], 0, 0, implicit $exec :: (load (s32) from `ptr addrspace(1) undef`, addrspace 1)
+    ; GCN-NEXT: [[GLOBAL_LOAD_DWORD1:%[0-9]+]]:vgpr_32 = GLOBAL_LOAD_DWORD [[DEF]], 3, 0, implicit $exec :: (load (s32) from `ptr addrspace(1) undef`, addrspace 1)
     ; GCN-NEXT: S_NOP 0, implicit [[GLOBAL_LOAD_DWORD]], implicit [[GLOBAL_LOAD_DWORD1]]
     %0:vreg_64_align2 = IMPLICIT_DEF
     %1:vgpr_32 = GLOBAL_LOAD_DWORD %0, 0, 0, implicit $exec :: (load (s32) from `i32 addrspace(1)* undef`, align 4, addrspace 1)
@@ -220,8 +220,8 @@ body:             |
 
     ; GCN-LABEL: name: no_merge_global_load_dword_different_cpol
     ; GCN: [[DEF:%[0-9]+]]:vreg_64_align2 = IMPLICIT_DEF
-    ; GCN-NEXT: [[GLOBAL_LOAD_DWORD:%[0-9]+]]:vgpr_32 = GLOBAL_LOAD_DWORD [[DEF]], 0, 1, implicit $exec :: (load (s32) from `i32 addrspace(1)* undef`, addrspace 1)
-    ; GCN-NEXT: [[GLOBAL_LOAD_DWORD1:%[0-9]+]]:vgpr_32 = GLOBAL_LOAD_DWORD [[DEF]], 4, 0, implicit $exec :: (load (s32) from `i32 addrspace(1)* undef`, addrspace 1)
+    ; GCN-NEXT: [[GLOBAL_LOAD_DWORD:%[0-9]+]]:vgpr_32 = GLOBAL_LOAD_DWORD [[DEF]], 0, 1, implicit $exec :: (load (s32) from `ptr addrspace(1) undef`, addrspace 1)
+    ; GCN-NEXT: [[GLOBAL_LOAD_DWORD1:%[0-9]+]]:vgpr_32 = GLOBAL_LOAD_DWORD [[DEF]], 4, 0, implicit $exec :: (load (s32) from `ptr addrspace(1) undef`, addrspace 1)
     ; GCN-NEXT: S_NOP 0, implicit [[GLOBAL_LOAD_DWORD]], implicit [[GLOBAL_LOAD_DWORD1]]
     %0:vreg_64_align2 = IMPLICIT_DEF
     %1:vgpr_32 = GLOBAL_LOAD_DWORD %0, 0, 1, implicit $exec :: (load (s32) from `i32 addrspace(1)* undef`, align 4, addrspace 1)
@@ -237,7 +237,7 @@ body:             |
     ; GCN-LABEL: name: merge_global_load_dword_saddr_2
     ; GCN: [[DEF:%[0-9]+]]:sreg_64_xexec = IMPLICIT_DEF
     ; GCN-NEXT: [[DEF1:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
-    ; GCN-NEXT: [[GLOBAL_LOAD_DWORDX2_SADDR:%[0-9]+]]:vreg_64_align2 = GLOBAL_LOAD_DWORDX2_SADDR [[DEF]], [[DEF1]], 0, 0, implicit $exec :: (load (s64) from `i32 addrspace(1)* undef`, align 4, addrspace 1)
+    ; GCN-NEXT: [[GLOBAL_LOAD_DWORDX2_SADDR:%[0-9]+]]:vreg_64_align2 = GLOBAL_LOAD_DWORDX2_SADDR [[DEF]], [[DEF1]], 0, 0, implicit $exec :: (load (s64) from `ptr addrspace(1) undef`, align 4, addrspace 1)
     ; GCN-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY [[GLOBAL_LOAD_DWORDX2_SADDR]].sub0
     ; GCN-NEXT: [[COPY1:%[0-9]+]]:vgpr_32 = COPY killed [[GLOBAL_LOAD_DWORDX2_SADDR]].sub1
     ; GCN-NEXT: S_NOP 0, implicit [[COPY]], implicit [[COPY1]]
@@ -256,7 +256,7 @@ body:             |
     ; GCN-LABEL: name: merge_global_load_dword_saddr_3
     ; GCN: [[DEF:%[0-9]+]]:sreg_64_xexec = IMPLICIT_DEF
     ; GCN-NEXT: [[DEF1:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
-    ; GCN-NEXT: [[GLOBAL_LOAD_DWORDX3_SADDR:%[0-9]+]]:vreg_96_align2 = GLOBAL_LOAD_DWORDX3_SADDR [[DEF]], [[DEF1]], 0, 1, implicit $exec :: (load (s96) from `i32 addrspace(1)* undef`, align 4, addrspace 1)
+    ; GCN-NEXT: [[GLOBAL_LOAD_DWORDX3_SADDR:%[0-9]+]]:vreg_96_align2 = GLOBAL_LOAD_DWORDX3_SADDR [[DEF]], [[DEF1]], 0, 1, implicit $exec :: (load (s96) from `ptr addrspace(1) undef`, align 4, addrspace 1)
     ; GCN-NEXT: [[COPY:%[0-9]+]]:vreg_64_align2 = COPY [[GLOBAL_LOAD_DWORDX3_SADDR]].sub0_sub1
     ; GCN-NEXT: [[COPY1:%[0-9]+]]:vgpr_32 = COPY killed [[GLOBAL_LOAD_DWORDX3_SADDR]].sub2
     ; GCN-NEXT: [[COPY2:%[0-9]+]]:vgpr_32 = COPY [[COPY]].sub0
@@ -278,7 +278,7 @@ body:             |
     ; GCN-LABEL: name: merge_global_load_dword_saddr_4
     ; GCN: [[DEF:%[0-9]+]]:sreg_64_xexec = IMPLICIT_DEF
     ; GCN-NEXT: [[DEF1:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
-    ; GCN-NEXT: [[GLOBAL_LOAD_DWORDX4_SADDR:%[0-9]+]]:vreg_128_align2 = GLOBAL_LOAD_DWORDX4_SADDR [[DEF]], [[DEF1]], 0, 2, implicit $exec :: (load (s128) from `i32 addrspace(1)* undef`, align 4, addrspace 1)
+    ; GCN-NEXT: [[GLOBAL_LOAD_DWORDX4_SADDR:%[0-9]+]]:vreg_128_align2 = GLOBAL_LOAD_DWORDX4_SADDR [[DEF]], [[DEF1]], 0, 2, implicit $exec :: (load (s128) from `ptr addrspace(1) undef`, align 4, addrspace 1)
     ; GCN-NEXT: [[COPY:%[0-9]+]]:vreg_96_align2 = COPY [[GLOBAL_LOAD_DWORDX4_SADDR]].sub0_sub1_sub2
     ; GCN-NEXT: [[COPY1:%[0-9]+]]:vgpr_32 = COPY killed [[GLOBAL_LOAD_DWORDX4_SADDR]].sub3
     ; GCN-NEXT: [[COPY2:%[0-9]+]]:vreg_64_align2 = COPY [[COPY]].sub0_sub1
@@ -303,14 +303,14 @@ body:             |
     ; GCN-LABEL: name: merge_global_load_dword_saddr_6
     ; GCN: [[DEF:%[0-9]+]]:sreg_64_xexec = IMPLICIT_DEF
     ; GCN-NEXT: [[DEF1:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
-    ; GCN-NEXT: [[GLOBAL_LOAD_DWORDX4_SADDR:%[0-9]+]]:vreg_128_align2 = GLOBAL_LOAD_DWORDX4_SADDR [[DEF]], [[DEF1]], 4, 3, implicit $exec :: (load (s128) from `i32 addrspace(1)* undef`, align 4, addrspace 1)
+    ; GCN-NEXT: [[GLOBAL_LOAD_DWORDX4_SADDR:%[0-9]+]]:vreg_128_align2 = GLOBAL_LOAD_DWORDX4_SADDR [[DEF]], [[DEF1]], 4, 3, implicit $exec :: (load (s128) from `ptr addrspace(1) undef`, align 4, addrspace 1)
     ; GCN-NEXT: [[COPY:%[0-9]+]]:vreg_96_align2 = COPY [[GLOBAL_LOAD_DWORDX4_SADDR]].sub0_sub1_sub2
     ; GCN-NEXT: [[COPY1:%[0-9]+]]:vgpr_32 = COPY killed [[GLOBAL_LOAD_DWORDX4_SADDR]].sub3
     ; GCN-NEXT: [[COPY2:%[0-9]+]]:vreg_64_align2 = COPY [[COPY]].sub0_sub1
     ; GCN-NEXT: [[COPY3:%[0-9]+]]:vgpr_32 = COPY killed [[COPY]].sub2
     ; GCN-NEXT: [[COPY4:%[0-9]+]]:vgpr_32 = COPY [[COPY2]].sub0
     ; GCN-NEXT: [[COPY5:%[0-9]+]]:vgpr_32 = COPY killed [[COPY2]].sub1
-    ; GCN-NEXT: [[GLOBAL_LOAD_DWORDX2_SADDR:%[0-9]+]]:vreg_64_align2 = GLOBAL_LOAD_DWORDX2_SADDR [[DEF]], [[DEF1]], 20, 3, implicit $exec :: (load (s64) from `i32 addrspace(1)* undef`, align 4, addrspace 1)
+    ; GCN-NEXT: [[GLOBAL_LOAD_DWORDX2_SADDR:%[0-9]+]]:vreg_64_align2 = GLOBAL_LOAD_DWORDX2_SADDR [[DEF]], [[DEF1]], 20, 3, implicit $exec :: (load (s64) from `ptr addrspace(1) undef`, align 4, addrspace 1)
     ; GCN-NEXT: [[COPY6:%[0-9]+]]:vgpr_32 = COPY [[GLOBAL_LOAD_DWORDX2_SADDR]].sub0
     ; GCN-NEXT: [[COPY7:%[0-9]+]]:vgpr_32 = COPY killed [[GLOBAL_LOAD_DWORDX2_SADDR]].sub1
     ; GCN-NEXT: S_NOP 0, implicit [[COPY4]], implicit [[COPY5]], implicit [[COPY3]], implicit [[COPY1]], implicit [[COPY6]], implicit [[COPY7]]
@@ -333,7 +333,7 @@ body:             |
     ; GCN-LABEL: name: merge_global_load_dwordx2_saddr
     ; GCN: [[DEF:%[0-9]+]]:sreg_64_xexec = IMPLICIT_DEF
     ; GCN-NEXT: [[DEF1:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
-    ; GCN-NEXT: [[GLOBAL_LOAD_DWORDX4_SADDR:%[0-9]+]]:vreg_128_align2 = GLOBAL_LOAD_DWORDX4_SADDR [[DEF]], [[DEF1]], 0, 0, implicit $exec :: (load (s128) from `i64 addrspace(1)* undef`, align 4, addrspace 1)
+    ; GCN-NEXT: [[GLOBAL_LOAD_DWORDX4_SADDR:%[0-9]+]]:vreg_128_align2 = GLOBAL_LOAD_DWORDX4_SADDR [[DEF]], [[DEF1]], 0, 0, implicit $exec :: (load (s128) from `ptr addrspace(1) undef`, align 4, addrspace 1)
     ; GCN-NEXT: [[COPY:%[0-9]+]]:vreg_64_align2 = COPY [[GLOBAL_LOAD_DWORDX4_SADDR]].sub0_sub1
     ; GCN-NEXT: [[COPY1:%[0-9]+]]:vreg_64_align2 = COPY killed [[GLOBAL_LOAD_DWORDX4_SADDR]].sub2_sub3
     ; GCN-NEXT: S_NOP 0, implicit [[COPY]], implicit [[COPY1]]
@@ -352,8 +352,8 @@ body:             |
     ; GCN-LABEL: name: no_merge_global_load_dword_and_global_load_dword_saddr
     ; GCN: [[DEF:%[0-9]+]]:sreg_64_xexec = IMPLICIT_DEF
     ; GCN-NEXT: [[DEF1:%[0-9]+]]:vreg_64_align2 = IMPLICIT_DEF
-    ; GCN-NEXT: [[GLOBAL_LOAD_DWORD:%[0-9]+]]:vgpr_32 = GLOBAL_LOAD_DWORD [[DEF1]], 0, 0, implicit $exec :: (load (s32) from `i32 addrspace(1)* undef`, addrspace 1)
-    ; GCN-NEXT: [[GLOBAL_LOAD_DWORD_SADDR:%[0-9]+]]:vgpr_32 = GLOBAL_LOAD_DWORD_SADDR [[DEF]], [[DEF1]].sub0, 4, 0, implicit $exec :: (load (s32) from `i32 addrspace(1)* undef`, addrspace 1)
+    ; GCN-NEXT: [[GLOBAL_LOAD_DWORD:%[0-9]+]]:vgpr_32 = GLOBAL_LOAD_DWORD [[DEF1]], 0, 0, implicit $exec :: (load (s32) from `ptr addrspace(1) undef`, addrspace 1)
+    ; GCN-NEXT: [[GLOBAL_LOAD_DWORD_SADDR:%[0-9]+]]:vgpr_32 = GLOBAL_LOAD_DWORD_SADDR [[DEF]], [[DEF1]].sub0, 4, 0, implicit $exec :: (load (s32) from `ptr addrspace(1) undef`, addrspace 1)
     ; GCN-NEXT: S_NOP 0, implicit [[GLOBAL_LOAD_DWORD]], implicit [[GLOBAL_LOAD_DWORD_SADDR]]
     %0:sreg_64_xexec = IMPLICIT_DEF
     %1:vreg_64_align2 = IMPLICIT_DEF
@@ -370,8 +370,8 @@ body:             |
     ; GCN-LABEL: name: no_merge_global_load_dword_saddr_different_saddr
     ; GCN: [[DEF:%[0-9]+]]:sgpr_128 = IMPLICIT_DEF
     ; GCN-NEXT: [[DEF1:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
-    ; GCN-NEXT: [[GLOBAL_LOAD_DWORD_SADDR:%[0-9]+]]:vgpr_32 = GLOBAL_LOAD_DWORD_SADDR [[DEF]].sub0_sub1, [[DEF1]], 0, 0, implicit $exec :: (load (s32) from `i32 addrspace(1)* undef`, addrspace 1)
-    ; GCN-NEXT: [[GLOBAL_LOAD_DWORD_SADDR1:%[0-9]+]]:vgpr_32 = GLOBAL_LOAD_DWORD_SADDR [[DEF]].sub2_sub3, [[DEF1]], 4, 0, implicit $exec :: (load (s32) from `i32 addrspace(1)* undef`, addrspace 1)
+    ; GCN-NEXT: [[GLOBAL_LOAD_DWORD_SADDR:%[0-9]+]]:vgpr_32 = GLOBAL_LOAD_DWORD_SADDR [[DEF]].sub0_sub1, [[DEF1]], 0, 0, implicit $exec :: (load (s32) from `ptr addrspace(1) undef`, addrspace 1)
+    ; GCN-NEXT: [[GLOBAL_LOAD_DWORD_SADDR1:%[0-9]+]]:vgpr_32 = GLOBAL_LOAD_DWORD_SADDR [[DEF]].sub2_sub3, [[DEF1]], 4, 0, implicit $exec :: (load (s32) from `ptr addrspace(1) undef`, addrspace 1)
     ; GCN-NEXT: S_NOP 0, implicit [[GLOBAL_LOAD_DWORD_SADDR]], implicit [[GLOBAL_LOAD_DWORD_SADDR1]]
     %0:sgpr_128 = IMPLICIT_DEF
     %1:vgpr_32 = IMPLICIT_DEF
@@ -388,8 +388,8 @@ body:             |
     ; GCN-LABEL: name: no_merge_global_load_dword_saddr_different_vaddr
     ; GCN: [[DEF:%[0-9]+]]:sreg_64_xexec = IMPLICIT_DEF
     ; GCN-NEXT: [[DEF1:%[0-9]+]]:vreg_64_align2 = IMPLICIT_DEF
-    ; GCN-NEXT: [[GLOBAL_LOAD_DWORD_SADDR:%[0-9]+]]:vgpr_32 = GLOBAL_LOAD_DWORD_SADDR [[DEF]], [[DEF1]].sub0, 0, 0, implicit $exec :: (load (s32) from `i32 addrspace(1)* undef`, addrspace 1)
-    ; GCN-NEXT: [[GLOBAL_LOAD_DWORD_SADDR1:%[0-9]+]]:vgpr_32 = GLOBAL_LOAD_DWORD_SADDR [[DEF]], [[DEF1]].sub1, 4, 0, implicit $exec :: (load (s32) from `i32 addrspace(1)* undef`, addrspace 1)
+    ; GCN-NEXT: [[GLOBAL_LOAD_DWORD_SADDR:%[0-9]+]]:vgpr_32 = GLOBAL_LOAD_DWORD_SADDR [[DEF]], [[DEF1]].sub0, 0, 0, implicit $exec :: (load (s32) from `ptr addrspace(1) undef`, addrspace 1)
+    ; GCN-NEXT: [[GLOBAL_LOAD_DWORD_SADDR1:%[0-9]+]]:vgpr_32 = GLOBAL_LOAD_DWORD_SADDR [[DEF]], [[DEF1]].sub1, 4, 0, implicit $exec :: (load (s32) from `ptr addrspace(1) undef`, addrspace 1)
     ; GCN-NEXT: S_NOP 0, implicit [[GLOBAL_LOAD_DWORD_SADDR]], implicit [[GLOBAL_LOAD_DWORD_SADDR1]]
     %0:sreg_64_xexec = IMPLICIT_DEF
     %1:vreg_64_align2 = IMPLICIT_DEF
@@ -404,7 +404,7 @@ body:             |
 
     ; GCN-LABEL: name: merge_global_load_dword_2_out_of_order
     ; GCN: [[DEF:%[0-9]+]]:vreg_64_align2 = IMPLICIT_DEF
-    ; GCN-NEXT: [[GLOBAL_LOAD_DWORDX2_:%[0-9]+]]:vreg_64_align2 = GLOBAL_LOAD_DWORDX2 [[DEF]], 0, 0, implicit $exec :: (load (s64) from `float addrspace(1)* undef`, align 4, addrspace 1)
+    ; GCN-NEXT: [[GLOBAL_LOAD_DWORDX2_:%[0-9]+]]:vreg_64_align2 = GLOBAL_LOAD_DWORDX2 [[DEF]], 0, 0, implicit $exec :: (load (s64) from `ptr addrspace(1) undef`, align 4, addrspace 1)
     ; GCN-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY [[GLOBAL_LOAD_DWORDX2_]].sub1
     ; GCN-NEXT: [[COPY1:%[0-9]+]]:vgpr_32 = COPY killed [[GLOBAL_LOAD_DWORDX2_]].sub0
     ; GCN-NEXT: S_NOP 0, implicit [[COPY]], implicit [[COPY1]]
@@ -421,7 +421,7 @@ body:             |
 
     ; GCN-LABEL: name: merge_global_load_dword_3_out_of_order
     ; GCN: [[DEF:%[0-9]+]]:vreg_64_align2 = IMPLICIT_DEF
-    ; GCN-NEXT: [[GLOBAL_LOAD_DWORDX3_:%[0-9]+]]:vreg_96_align2 = GLOBAL_LOAD_DWORDX3 [[DEF]], 0, 0, implicit $exec :: (load (s96) from `float addrspace(1)* undef`, align 16, addrspace 1)
+    ; GCN-NEXT: [[GLOBAL_LOAD_DWORDX3_:%[0-9]+]]:vreg_96_align2 = GLOBAL_LOAD_DWORDX3 [[DEF]], 0, 0, implicit $exec :: (load (s96) from `ptr addrspace(1) undef`, align 16, addrspace 1)
     ; GCN-NEXT: [[COPY:%[0-9]+]]:vreg_64_align2 = COPY [[GLOBAL_LOAD_DWORDX3_]].sub0_sub1
     ; GCN-NEXT: [[COPY1:%[0-9]+]]:vgpr_32 = COPY killed [[GLOBAL_LOAD_DWORDX3_]].sub2
     ; GCN-NEXT: [[COPY2:%[0-9]+]]:vgpr_32 = COPY [[COPY]].sub1
@@ -445,7 +445,7 @@ body:             |
     ; GCN-NEXT: [[DEF1:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
     ; GCN-NEXT: [[DEF2:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
     ; GCN-NEXT: [[REG_SEQUENCE:%[0-9]+]]:vreg_64_align2 = REG_SEQUENCE killed [[DEF1]], %subreg.sub0, killed [[DEF2]], %subreg.sub1
-    ; GCN-NEXT: GLOBAL_STORE_DWORDX2 [[DEF]], killed [[REG_SEQUENCE]], 0, 0, implicit $exec :: (store (s64) into `i32 addrspace(1)* undef`, align 4, addrspace 1)
+    ; GCN-NEXT: GLOBAL_STORE_DWORDX2 [[DEF]], killed [[REG_SEQUENCE]], 0, 0, implicit $exec :: (store (s64) into `ptr addrspace(1) undef`, align 4, addrspace 1)
     %0:vreg_64_align2 = IMPLICIT_DEF
     %1:vgpr_32 = IMPLICIT_DEF
     %2:vgpr_32 = IMPLICIT_DEF
@@ -465,7 +465,7 @@ body:             |
     ; GCN-NEXT: [[DEF3:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
     ; GCN-NEXT: [[REG_SEQUENCE:%[0-9]+]]:vreg_64_align2 = REG_SEQUENCE killed [[DEF1]], %subreg.sub0, killed [[DEF2]], %subreg.sub1
     ; GCN-NEXT: [[REG_SEQUENCE1:%[0-9]+]]:vreg_96_align2 = REG_SEQUENCE killed [[REG_SEQUENCE]], %subreg.sub0_sub1, killed [[DEF3]], %subreg.sub2
-    ; GCN-NEXT: GLOBAL_STORE_DWORDX3 [[DEF]], killed [[REG_SEQUENCE1]], 4, 1, implicit $exec :: (store (s96) into `i32 addrspace(1)* undef`, align 4, addrspace 1)
+    ; GCN-NEXT: GLOBAL_STORE_DWORDX3 [[DEF]], killed [[REG_SEQUENCE1]], 4, 1, implicit $exec :: (store (s96) into `ptr addrspace(1) undef`, align 4, addrspace 1)
     %0:vreg_64_align2 = IMPLICIT_DEF
     %1:vgpr_32 = IMPLICIT_DEF
     %2:vgpr_32 = IMPLICIT_DEF
@@ -486,7 +486,7 @@ body:             |
     ; GCN-NEXT: [[REG_SEQUENCE:%[0-9]+]]:vreg_64_align2 = REG_SEQUENCE [[DEF1]].sub1, %subreg.sub1, [[DEF1]].sub0, %subreg.sub0
     ; GCN-NEXT: [[REG_SEQUENCE1:%[0-9]+]]:vreg_96_align2 = REG_SEQUENCE [[DEF1]].sub2, %subreg.sub2, killed [[REG_SEQUENCE]], %subreg.sub0_sub1
     ; GCN-NEXT: [[REG_SEQUENCE2:%[0-9]+]]:vreg_128_align2 = REG_SEQUENCE [[DEF1]].sub3, %subreg.sub3, killed [[REG_SEQUENCE1]], %subreg.sub0_sub1_sub2
-    ; GCN-NEXT: GLOBAL_STORE_DWORDX4 [[DEF]], killed [[REG_SEQUENCE2]], 4, 2, implicit $exec :: (store (s128) into `i32 addrspace(1)* undef`, align 4, addrspace 1)
+    ; GCN-NEXT: GLOBAL_STORE_DWORDX4 [[DEF]], killed [[REG_SEQUENCE2]], 4, 2, implicit $exec :: (store (s128) into `ptr addrspace(1) undef`, align 4, addrspace 1)
     %0:vreg_64_align2 = IMPLICIT_DEF
     %1:vreg_128 = IMPLICIT_DEF
     GLOBAL_STORE_DWORD %0, %1.sub1, 8, 2, implicit $exec :: (store (s32) into `i32 addrspace(1)* undef`, align 4, addrspace 1)
@@ -510,8 +510,8 @@ body:             |
     ; GCN-NEXT: [[REG_SEQUENCE:%[0-9]+]]:areg_64_align2 = REG_SEQUENCE [[DEF1]], %subreg.sub0, [[DEF2]], %subreg.sub1
     ; GCN-NEXT: [[REG_SEQUENCE1:%[0-9]+]]:areg_96_align2 = REG_SEQUENCE killed [[REG_SEQUENCE]], %subreg.sub0_sub1, [[DEF3]], %subreg.sub2
     ; GCN-NEXT: [[REG_SEQUENCE2:%[0-9]+]]:areg_128_align2 = REG_SEQUENCE killed [[REG_SEQUENCE1]], %subreg.sub0_sub1_sub2, [[DEF4]], %subreg.sub3
-    ; GCN-NEXT: GLOBAL_STORE_DWORDX4 [[DEF]], killed [[REG_SEQUENCE2]], 4, 3, implicit $exec :: (store (s128) into `i32 addrspace(1)* undef`, align 4, addrspace 1)
-    ; GCN-NEXT: GLOBAL_STORE_DWORD [[DEF]], [[DEF5]], 20, 3, implicit $exec :: (store (s32) into `i32 addrspace(1)* undef`, addrspace 1)
+    ; GCN-NEXT: GLOBAL_STORE_DWORDX4 [[DEF]], killed [[REG_SEQUENCE2]], 4, 3, implicit $exec :: (store (s128) into `ptr addrspace(1) undef`, align 4, addrspace 1)
+    ; GCN-NEXT: GLOBAL_STORE_DWORD [[DEF]], [[DEF5]], 20, 3, implicit $exec :: (store (s32) into `ptr addrspace(1) undef`, addrspace 1)
     %0:vreg_64_align2 = IMPLICIT_DEF
     %1:agpr_32 = IMPLICIT_DEF
     %2:agpr_32 = IMPLICIT_DEF
@@ -541,9 +541,9 @@ body:             |
     ; GCN-NEXT: [[REG_SEQUENCE:%[0-9]+]]:vreg_64_align2 = REG_SEQUENCE [[DEF1]], %subreg.sub0, [[DEF2]], %subreg.sub1
     ; GCN-NEXT: [[REG_SEQUENCE1:%[0-9]+]]:vreg_96_align2 = REG_SEQUENCE killed [[REG_SEQUENCE]], %subreg.sub0_sub1, [[DEF3]], %subreg.sub2
     ; GCN-NEXT: [[REG_SEQUENCE2:%[0-9]+]]:vreg_128_align2 = REG_SEQUENCE killed [[REG_SEQUENCE1]], %subreg.sub0_sub1_sub2, [[DEF4]], %subreg.sub3
-    ; GCN-NEXT: GLOBAL_STORE_DWORDX4 [[DEF]], killed [[REG_SEQUENCE2]], 4, 0, implicit $exec :: (store (s128) into `i32 addrspace(1)* undef`, align 8, addrspace 1)
+    ; GCN-NEXT: GLOBAL_STORE_DWORDX4 [[DEF]], killed [[REG_SEQUENCE2]], 4, 0, implicit $exec :: (store (s128) into `ptr addrspace(1) undef`, align 8, addrspace 1)
     ; GCN-NEXT: [[REG_SEQUENCE3:%[0-9]+]]:vreg_64_align2 = REG_SEQUENCE [[DEF5]], %subreg.sub0, [[DEF6]], %subreg.sub1
-    ; GCN-NEXT: GLOBAL_STORE_DWORDX2 [[DEF]], killed [[REG_SEQUENCE3]], 20, 0, implicit $exec :: (store (s64) into `i32 addrspace(1)* undef`, align 4, addrspace 1)
+    ; GCN-NEXT: GLOBAL_STORE_DWORDX2 [[DEF]], killed [[REG_SEQUENCE3]], 20, 0, implicit $exec :: (store (s64) into `ptr addrspace(1) undef`, align 4, addrspace 1)
     %0:vreg_64_align2 = IMPLICIT_DEF
     %1:vgpr_32 = IMPLICIT_DEF
     %2:vgpr_32 = IMPLICIT_DEF
@@ -569,7 +569,7 @@ body:             |
     ; GCN-NEXT: [[DEF1:%[0-9]+]]:vreg_64_align2 = IMPLICIT_DEF
     ; GCN-NEXT: [[DEF2:%[0-9]+]]:vreg_64_align2 = IMPLICIT_DEF
     ; GCN-NEXT: [[REG_SEQUENCE:%[0-9]+]]:vreg_128_align2 = REG_SEQUENCE killed [[DEF1]], %subreg.sub0_sub1, killed [[DEF2]], %subreg.sub2_sub3
-    ; GCN-NEXT: GLOBAL_STORE_DWORDX4 [[DEF]], killed [[REG_SEQUENCE]], 4, 0, implicit $exec :: (store (s128) into `i64 addrspace(1)* undef`, align 4, addrspace 1)
+    ; GCN-NEXT: GLOBAL_STORE_DWORDX4 [[DEF]], killed [[REG_SEQUENCE]], 4, 0, implicit $exec :: (store (s128) into `ptr addrspace(1) undef`, align 4, addrspace 1)
     %0:vreg_64_align2 = IMPLICIT_DEF
     %1:vreg_64_align2 = IMPLICIT_DEF
     %2:vreg_64_align2 = IMPLICIT_DEF
@@ -587,7 +587,7 @@ body:             |
     ; GCN-NEXT: [[DEF1:%[0-9]+]]:vreg_96_align2 = IMPLICIT_DEF
     ; GCN-NEXT: [[DEF2:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
     ; GCN-NEXT: [[REG_SEQUENCE:%[0-9]+]]:vreg_128_align2 = REG_SEQUENCE killed [[DEF1]], %subreg.sub0_sub1_sub2, killed [[DEF2]], %subreg.sub3
-    ; GCN-NEXT: GLOBAL_STORE_DWORDX4 [[DEF]], killed [[REG_SEQUENCE]], 4, 0, implicit $exec :: (store (s128) into `i64 addrspace(1)* undef`, addrspace 1)
+    ; GCN-NEXT: GLOBAL_STORE_DWORDX4 [[DEF]], killed [[REG_SEQUENCE]], 4, 0, implicit $exec :: (store (s128) into `ptr addrspace(1) undef`, addrspace 1)
     %0:vreg_64_align2 = IMPLICIT_DEF
     %1:vreg_96_align2 = IMPLICIT_DEF
     %2:vgpr_32 = IMPLICIT_DEF
@@ -604,8 +604,8 @@ body:             |
     ; GCN: [[DEF:%[0-9]+]]:vreg_64_align2 = IMPLICIT_DEF
     ; GCN-NEXT: [[DEF1:%[0-9]+]]:agpr_32 = IMPLICIT_DEF
     ; GCN-NEXT: [[DEF2:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
-    ; GCN-NEXT: GLOBAL_STORE_DWORD [[DEF]], killed [[DEF1]], 0, 0, implicit $exec :: (store (s32) into `i32 addrspace(1)* undef`, addrspace 1)
-    ; GCN-NEXT: GLOBAL_STORE_DWORD killed [[DEF]], killed [[DEF2]], 4, 0, implicit $exec :: (store (s32) into `i32 addrspace(1)* undef`, addrspace 1)
+    ; GCN-NEXT: GLOBAL_STORE_DWORD [[DEF]], killed [[DEF1]], 0, 0, implicit $exec :: (store (s32) into `ptr addrspace(1) undef`, addrspace 1)
+    ; GCN-NEXT: GLOBAL_STORE_DWORD killed [[DEF]], killed [[DEF2]], 4, 0, implicit $exec :: (store (s32) into `ptr addrspace(1) undef`, addrspace 1)
     %0:vreg_64_align2 = IMPLICIT_DEF
     %1:agpr_32 = IMPLICIT_DEF
     %2:vgpr_32 = IMPLICIT_DEF
@@ -622,8 +622,8 @@ body:             |
     ; GCN: [[DEF:%[0-9]+]]:vreg_64_align2 = IMPLICIT_DEF
     ; GCN-NEXT: [[DEF1:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
     ; GCN-NEXT: [[DEF2:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
-    ; GCN-NEXT: GLOBAL_STORE_DWORD [[DEF]], killed [[DEF1]], 0, 0, implicit $exec :: (store (s32) into `i32 addrspace(1)* undef`, addrspace 1)
-    ; GCN-NEXT: GLOBAL_STORE_DWORD killed [[DEF]], killed [[DEF2]], 6, 0, implicit $exec :: (store (s32) into `i32 addrspace(1)* undef`, addrspace 1)
+    ; GCN-NEXT: GLOBAL_STORE_DWORD [[DEF]], killed [[DEF1]], 0, 0, implicit $exec :: (store (s32) into `ptr addrspace(1) undef`, addrspace 1)
+    ; GCN-NEXT: GLOBAL_STORE_DWORD killed [[DEF]], killed [[DEF2]], 6, 0, implicit $exec :: (store (s32) into `ptr addrspace(1) undef`, addrspace 1)
     %0:vreg_64_align2 = IMPLICIT_DEF
     %1:vgpr_32 = IMPLICIT_DEF
     %2:vgpr_32 = IMPLICIT_DEF
@@ -640,8 +640,8 @@ body:             |
     ; GCN: [[DEF:%[0-9]+]]:vreg_64_align2 = IMPLICIT_DEF
     ; GCN-NEXT: [[DEF1:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
     ; GCN-NEXT: [[DEF2:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
-    ; GCN-NEXT: GLOBAL_STORE_DWORD [[DEF]], killed [[DEF1]], 0, 0, implicit $exec :: (store (s32) into `i32 addrspace(1)* undef`, addrspace 1)
-    ; GCN-NEXT: GLOBAL_STORE_DWORD killed [[DEF]], killed [[DEF2]], 2, 0, implicit $exec :: (store (s32) into `i32 addrspace(1)* undef`, align 2, addrspace 1)
+    ; GCN-NEXT: GLOBAL_STORE_DWORD [[DEF]], killed [[DEF1]], 0, 0, implicit $exec :: (store (s32) into `ptr addrspace(1) undef`, addrspace 1)
+    ; GCN-NEXT: GLOBAL_STORE_DWORD killed [[DEF]], killed [[DEF2]], 2, 0, implicit $exec :: (store (s32) into `ptr addrspace(1) undef`, align 2, addrspace 1)
     %0:vreg_64_align2 = IMPLICIT_DEF
     %1:vgpr_32 = IMPLICIT_DEF
     %2:vgpr_32 = IMPLICIT_DEF
@@ -658,8 +658,8 @@ body:             |
     ; GCN: [[DEF:%[0-9]+]]:vreg_64_align2 = IMPLICIT_DEF
     ; GCN-NEXT: [[DEF1:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
     ; GCN-NEXT: [[DEF2:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
-    ; GCN-NEXT: GLOBAL_STORE_DWORD [[DEF]], killed [[DEF1]], 0, 1, implicit $exec :: (store (s32) into `i32 addrspace(1)* undef`, addrspace 1)
-    ; GCN-NEXT: GLOBAL_STORE_DWORD killed [[DEF]], killed [[DEF2]], 4, 0, implicit $exec :: (store (s32) into `i32 addrspace(1)* undef`, addrspace 1)
+    ; GCN-NEXT: GLOBAL_STORE_DWORD [[DEF]], killed [[DEF1]], 0, 1, implicit $exec :: (store (s32) into `ptr addrspace(1) undef`, addrspace 1)
+    ; GCN-NEXT: GLOBAL_STORE_DWORD killed [[DEF]], killed [[DEF2]], 4, 0, implicit $exec :: (store (s32) into `ptr addrspace(1) undef`, addrspace 1)
     %0:vreg_64_align2 = IMPLICIT_DEF
     %1:vgpr_32 = IMPLICIT_DEF
     %2:vgpr_32 = IMPLICIT_DEF
@@ -676,8 +676,8 @@ body:             |
     ; GCN: [[DEF:%[0-9]+]]:vreg_128_align2 = IMPLICIT_DEF
     ; GCN-NEXT: [[DEF1:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
     ; GCN-NEXT: [[DEF2:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
-    ; GCN-NEXT: GLOBAL_STORE_DWORD [[DEF]].sub0_sub1, killed [[DEF1]], 0, 0, implicit $exec :: (store (s32) into `i32 addrspace(1)* undef`, addrspace 1)
-    ; GCN-NEXT: GLOBAL_STORE_DWORD [[DEF]].sub2_sub3, killed [[DEF2]], 4, 0, implicit $exec :: (store (s32) into `i32 addrspace(1)* undef`, addrspace 1)
+    ; GCN-NEXT: GLOBAL_STORE_DWORD [[DEF]].sub0_sub1, killed [[DEF1]], 0, 0, implicit $exec :: (store (s32) into `ptr addrspace(1) undef`, addrspace 1)
+    ; GCN-NEXT: GLOBAL_STORE_DWORD [[DEF]].sub2_sub3, killed [[DEF2]], 4, 0, implicit $exec :: (store (s32) into `ptr addrspace(1) undef`, addrspace 1)
     %0:vreg_128_align2 = IMPLICIT_DEF
     %1:vgpr_32 = IMPLICIT_DEF
     %2:vgpr_32 = IMPLICIT_DEF
@@ -696,7 +696,7 @@ body:             |
     ; GCN-NEXT: [[DEF2:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
     ; GCN-NEXT: [[DEF3:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
     ; GCN-NEXT: [[REG_SEQUENCE:%[0-9]+]]:vreg_64_align2 = REG_SEQUENCE [[DEF2]], %subreg.sub0, [[DEF3]], %subreg.sub1
-    ; GCN-NEXT: GLOBAL_STORE_DWORDX2_SADDR [[DEF1]], killed [[REG_SEQUENCE]], [[DEF]], 0, 0, implicit $exec :: (store (s64) into `i32 addrspace(1)* undef`, align 4, addrspace 1)
+    ; GCN-NEXT: GLOBAL_STORE_DWORDX2_SADDR [[DEF1]], killed [[REG_SEQUENCE]], [[DEF]], 0, 0, implicit $exec :: (store (s64) into `ptr addrspace(1) undef`, align 4, addrspace 1)
     %0:sreg_64_xexec = IMPLICIT_DEF
     %1:vgpr_32 = IMPLICIT_DEF
     %2:vgpr_32 = IMPLICIT_DEF
@@ -718,7 +718,7 @@ body:             |
     ; GCN-NEXT: [[DEF4:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
     ; GCN-NEXT: [[REG_SEQUENCE:%[0-9]+]]:vreg_64_align2 = REG_SEQUENCE [[DEF2]], %subreg.sub0, [[DEF3]], %subreg.sub1
     ; GCN-NEXT: [[REG_SEQUENCE1:%[0-9]+]]:vreg_96_align2 = REG_SEQUENCE killed [[REG_SEQUENCE]], %subreg.sub0_sub1, [[DEF4]], %subreg.sub2
-    ; GCN-NEXT: GLOBAL_STORE_DWORDX3_SADDR [[DEF1]], killed [[REG_SEQUENCE1]], [[DEF]], 4, 1, implicit $exec :: (store (s96) into `i32 addrspace(1)* undef`, align 4, addrspace 1)
+    ; GCN-NEXT: GLOBAL_STORE_DWORDX3_SADDR [[DEF1]], killed [[REG_SEQUENCE1]], [[DEF]], 4, 1, implicit $exec :: (store (s96) into `ptr addrspace(1) undef`, align 4, addrspace 1)
     %0:sreg_64_xexec = IMPLICIT_DEF
     %1:vgpr_32 = IMPLICIT_DEF
     %2:vgpr_32 = IMPLICIT_DEF
@@ -744,7 +744,7 @@ body:             |
     ; GCN-NEXT: [[REG_SEQUENCE:%[0-9]+]]:vreg_64_align2 = REG_SEQUENCE [[DEF2]], %subreg.sub0, [[DEF3]], %subreg.sub1
     ; GCN-NEXT: [[REG_SEQUENCE1:%[0-9]+]]:vreg_96_align2 = REG_SEQUENCE killed [[REG_SEQUENCE]], %subreg.sub0_sub1, [[DEF4]], %subreg.sub2
     ; GCN-NEXT: [[REG_SEQUENCE2:%[0-9]+]]:vreg_128_align2 = REG_SEQUENCE killed [[REG_SEQUENCE1]], %subreg.sub0_sub1_sub2, [[DEF5]], %subreg.sub3
-    ; GCN-NEXT: GLOBAL_STORE_DWORDX4_SADDR [[DEF1]], killed [[REG_SEQUENCE2]], [[DEF]], 4, 2, implicit $exec :: (store (s128) into `i32 addrspace(1)* undef`, align 4, addrspace 1)
+    ; GCN-NEXT: GLOBAL_STORE_DWORDX4_SADDR [[DEF1]], killed [[REG_SEQUENCE2]], [[DEF]], 4, 2, implicit $exec :: (store (s128) into `ptr addrspace(1) undef`, align 4, addrspace 1)
     %0:sreg_64_xexec = IMPLICIT_DEF
     %1:vgpr_32 = IMPLICIT_DEF
     %2:vgpr_32 = IMPLICIT_DEF
@@ -774,9 +774,9 @@ body:             |
     ; GCN-NEXT: [[REG_SEQUENCE:%[0-9]+]]:vreg_64_align2 = REG_SEQUENCE [[DEF2]], %subreg.sub0, [[DEF3]], %subreg.sub1
     ; GCN-NEXT: [[REG_SEQUENCE1:%[0-9]+]]:vreg_96_align2 = REG_SEQUENCE killed [[REG_SEQUENCE]], %subreg.sub0_sub1, [[DEF4]], %subreg.sub2
     ; GCN-NEXT: [[REG_SEQUENCE2:%[0-9]+]]:vreg_128_align2 = REG_SEQUENCE killed [[REG_SEQUENCE1]], %subreg.sub0_sub1_sub2, [[DEF5]], %subreg.sub3
-    ; GCN-NEXT: GLOBAL_STORE_DWORDX4_SADDR [[DEF1]], killed [[REG_SEQUENCE2]], [[DEF]], 4, 3, implicit $exec :: (store (s128) into `i32 addrspace(1)* undef`, align 4, addrspace 1)
+    ; GCN-NEXT: GLOBAL_STORE_DWORDX4_SADDR [[DEF1]], killed [[REG_SEQUENCE2]], [[DEF]], 4, 3, implicit $exec :: (store (s128) into `ptr addrspace(1) undef`, align 4, addrspace 1)
     ; GCN-NEXT: [[REG_SEQUENCE3:%[0-9]+]]:vreg_64_align2 = REG_SEQUENCE [[DEF6]], %subreg.sub0, [[DEF7]], %subreg.sub1
-    ; GCN-NEXT: GLOBAL_STORE_DWORDX2_SADDR [[DEF1]], killed [[REG_SEQUENCE3]], [[DEF]], 20, 3, implicit $exec :: (store (s64) into `i32 addrspace(1)* undef`, align 4, addrspace 1)
+    ; GCN-NEXT: GLOBAL_STORE_DWORDX2_SADDR [[DEF1]], killed [[REG_SEQUENCE3]], [[DEF]], 20, 3, implicit $exec :: (store (s64) into `ptr addrspace(1) undef`, align 4, addrspace 1)
     %0:sreg_64_xexec = IMPLICIT_DEF
     %1:vgpr_32 = IMPLICIT_DEF
     %2:vgpr_32 = IMPLICIT_DEF
@@ -803,8 +803,8 @@ body:             |
     ; GCN-NEXT: [[DEF1:%[0-9]+]]:vreg_64_align2 = IMPLICIT_DEF
     ; GCN-NEXT: [[DEF2:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
     ; GCN-NEXT: [[DEF3:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
-    ; GCN-NEXT: GLOBAL_STORE_DWORD_SADDR [[DEF1]].sub0, [[DEF2]], [[DEF]], 0, 0, implicit $exec :: (store (s32) into `i32 addrspace(1)* undef`, addrspace 1)
-    ; GCN-NEXT: GLOBAL_STORE_DWORD [[DEF1]], [[DEF3]], 4, 0, implicit $exec :: (store (s32) into `i32 addrspace(1)* undef`, addrspace 1)
+    ; GCN-NEXT: GLOBAL_STORE_DWORD_SADDR [[DEF1]].sub0, [[DEF2]], [[DEF]], 0, 0, implicit $exec :: (store (s32) into `ptr addrspace(1) undef`, addrspace 1)
+    ; GCN-NEXT: GLOBAL_STORE_DWORD [[DEF1]], [[DEF3]], 4, 0, implicit $exec :: (store (s32) into `ptr addrspace(1) undef`, addrspace 1)
     %0:sreg_64_xexec = IMPLICIT_DEF
     %1:vreg_64_align2 = IMPLICIT_DEF
     %2:vgpr_32 = IMPLICIT_DEF
@@ -823,8 +823,8 @@ body:             |
     ; GCN-NEXT: [[DEF1:%[0-9]+]]:vreg_64_align2 = IMPLICIT_DEF
     ; GCN-NEXT: [[DEF2:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
     ; GCN-NEXT: [[DEF3:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
-    ; GCN-NEXT: GLOBAL_STORE_DWORD_SADDR [[DEF1]].sub0, [[DEF2]], [[DEF]], 0, 0, implicit $exec :: (store (s32) into `i32 addrspace(1)* undef`, addrspace 1)
-    ; GCN-NEXT: GLOBAL_STORE_DWORD_SADDR [[DEF1]].sub1, [[DEF3]], [[DEF]], 4, 0, implicit $exec :: (store (s32) into `i32 addrspace(1)* undef`, addrspace 1)
+    ; GCN-NEXT: GLOBAL_STORE_DWORD_SADDR [[DEF1]].sub0, [[DEF2]], [[DEF]], 0, 0, implicit $exec :: (store (s32) into `ptr addrspace(1) undef`, addrspace 1)
+    ; GCN-NEXT: GLOBAL_STORE_DWORD_SADDR [[DEF1]].sub1, [[DEF3]], [[DEF]], 4, 0, implicit $exec :: (store (s32) into `ptr addrspace(1) undef`, addrspace 1)
     %0:sreg_64_xexec = IMPLICIT_DEF
     %1:vreg_64_align2 = IMPLICIT_DEF
     %2:vgpr_32 = IMPLICIT_DEF
@@ -843,8 +843,8 @@ body:             |
     ; GCN-NEXT: [[DEF1:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
     ; GCN-NEXT: [[DEF2:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
     ; GCN-NEXT: [[DEF3:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
-    ; GCN-NEXT: GLOBAL_STORE_DWORD_SADDR [[DEF1]], [[DEF2]], [[DEF]].sub0_sub1, 0, 0, implicit $exec :: (store (s32) into `i32 addrspace(1)* undef`, addrspace 1)
-    ; GCN-NEXT: GLOBAL_STORE_DWORD_SADDR [[DEF1]], [[DEF3]], [[DEF]].sub2_sub3, 4, 0, implicit $exec :: (store (s32) into `i32 addrspace(1)* undef`, addrspace 1)
+    ; GCN-NEXT: GLOBAL_STORE_DWORD_SADDR [[DEF1]], [[DEF2]], [[DEF]].sub0_sub1, 0, 0, implicit $exec :: (store (s32) into `ptr addrspace(1) undef`, addrspace 1)
+    ; GCN-NEXT: GLOBAL_STORE_DWORD_SADDR [[DEF1]], [[DEF3]], [[DEF]].sub2_sub3, 4, 0, implicit $exec :: (store (s32) into `ptr addrspace(1) undef`, addrspace 1)
     %0:sgpr_128 = IMPLICIT_DEF
     %1:vgpr_32 = IMPLICIT_DEF
     %2:vgpr_32 = IMPLICIT_DEF

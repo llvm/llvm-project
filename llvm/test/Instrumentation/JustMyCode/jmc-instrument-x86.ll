@@ -3,18 +3,18 @@
 ; CHECK: $_JustMyCode_Default = comdat any
 
 ; CHECK: @"_A8764FDD_x@c" = internal unnamed_addr global i8 1, section ".msvcjmc", align 1, !dbg !0
-; CHECK: @llvm.used = appending global [1 x i8*] [i8* bitcast (void (i8*)* @_JustMyCode_Default to i8*)], section "llvm.metadata"
+; CHECK: @llvm.used = appending global [1 x ptr] [ptr @_JustMyCode_Default], section "llvm.metadata"
 
 ; CHECK: define void @w1() #0 !dbg !10 {
-; CHECK:   call x86_fastcallcc void @__CheckForDebuggerJustMyCode(i8* inreg noundef @"_A8764FDD_x@c")
+; CHECK:   call x86_fastcallcc void @__CheckForDebuggerJustMyCode(ptr inreg noundef @"_A8764FDD_x@c")
 ; CHECK:   ret void
 ; CHECK: }
 
-; CHECK: define void @_JustMyCode_Default(i8* inreg noundef %0) unnamed_addr comdat {
+; CHECK: define void @_JustMyCode_Default(ptr inreg noundef %0) unnamed_addr comdat {
 ; CHECK:   ret void
 ; CHECK: }
 
-; CHECK: declare x86_fastcallcc void @__CheckForDebuggerJustMyCode(i8* inreg noundef) unnamed_addr
+; CHECK: declare x86_fastcallcc void @__CheckForDebuggerJustMyCode(ptr inreg noundef) unnamed_addr
 
 ; CHECK: !0 = !DIGlobalVariableExpression(var: !1, expr: !DIExpression())
 ; CHECK: !1 = distinct !DIGlobalVariable(name: "_A8764FDD_x@c", scope: !2, file: !3, type: !5, isLocal: true, isDefinition: true)

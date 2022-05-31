@@ -14,7 +14,7 @@ declare i32 @llvm.get.active.lane.mask.i32.i32(i32, i32)
 
 define i32 @t2(i32 %IV, i32 %TC) {
 ; CHECK:      Intrinsic has incorrect return type!
-; CHECK-NEXT: i32 (i32, i32)* @llvm.get.active.lane.mask.i32.i32
+; CHECK-NEXT: ptr @llvm.get.active.lane.mask.i32.i32
 
   %res = call i32 @llvm.get.active.lane.mask.i32.i32(i32 %IV, i32 %TC)
   ret i32 %res

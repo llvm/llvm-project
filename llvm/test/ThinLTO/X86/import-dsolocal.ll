@@ -61,64 +61,64 @@ target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16
 target triple = "x86_64-unknown-linux-gnu"
 
 @a = dso_local global i32 42, align 4
-@b = dso_local global i32* @a, align 8
+@b = dso_local global ptr @a, align 8
 
 define dso_local void @extern() {
-  call i32 @extern_aux(i32* @a, i32** @b)
+  call i32 @extern_aux(ptr @a, ptr @b)
   ret void
 }
 
-define dso_local i32 @extern_aux(i32* %a, i32** %b) {
-  %p = load i32*, i32** %b, align 8
-  store i32 33, i32* %p, align 4
-  %v = load i32, i32* %a, align 4
+define dso_local i32 @extern_aux(ptr %a, ptr %b) {
+  %p = load ptr, ptr %b, align 8
+  store i32 33, ptr %p, align 4
+  %v = load i32, ptr %a, align 4
   ret i32 %v
 }
 
 define linkonce dso_local void @linkonce() {
-  call i32 @linkonce_aux(i32* @a, i32** @b)
+  call i32 @linkonce_aux(ptr @a, ptr @b)
   ret void
 }
 
-define linkonce i32 @linkonce_aux(i32* %a, i32** %b) {
-  %p = load i32*, i32** %b, align 8
-  store i32 33, i32* %p, align 4
-  %v = load i32, i32* %a, align 4
+define linkonce i32 @linkonce_aux(ptr %a, ptr %b) {
+  %p = load ptr, ptr %b, align 8
+  store i32 33, ptr %p, align 4
+  %v = load i32, ptr %a, align 4
   ret i32 %v
 }
 
 define linkonce_odr dso_local void @linkonceodr() {
-  call i32 @linkonceodr_aux(i32* @a, i32** @b)
+  call i32 @linkonceodr_aux(ptr @a, ptr @b)
   ret void
 }
 
-define linkonce_odr i32 @linkonceodr_aux(i32* %a, i32** %b) {
-  %p = load i32*, i32** %b, align 8
-  store i32 33, i32* %p, align 4
-  %v = load i32, i32* %a, align 4
+define linkonce_odr i32 @linkonceodr_aux(ptr %a, ptr %b) {
+  %p = load ptr, ptr %b, align 8
+  store i32 33, ptr %p, align 4
+  %v = load i32, ptr %a, align 4
   ret i32 %v
 }
 
 define weak dso_local void @weak() {
-  call i32 @weak_aux(i32* @a, i32** @b)
+  call i32 @weak_aux(ptr @a, ptr @b)
   ret void
 }
 
-define weak i32 @weak_aux(i32* %a, i32** %b) {
-  %p = load i32*, i32** %b, align 8
-  store i32 33, i32* %p, align 4
-  %v = load i32, i32* %a, align 4
+define weak i32 @weak_aux(ptr %a, ptr %b) {
+  %p = load ptr, ptr %b, align 8
+  store i32 33, ptr %p, align 4
+  %v = load i32, ptr %a, align 4
   ret i32 %v
 }
 
 define weak_odr dso_local void @weakodr() {
-  call i32 @weakodr_aux(i32* @a, i32** @b)
+  call i32 @weakodr_aux(ptr @a, ptr @b)
   ret void
 }
 
-define weak_odr i32 @weakodr_aux(i32* %a, i32** %b) {
-  %p = load i32*, i32** %b, align 8
-  store i32 33, i32* %p, align 4
-  %v = load i32, i32* %a, align 4
+define weak_odr i32 @weakodr_aux(ptr %a, ptr %b) {
+  %p = load ptr, ptr %b, align 8
+  store i32 33, ptr %p, align 4
+  %v = load i32, ptr %a, align 4
   ret i32 %v
 }
