@@ -6,6 +6,7 @@
 @s = common dso_local global %struct.S zeroinitializer, align 4
 @foo = global [6 x i16] [i16 1, i16 2, i16 3, i16 4, i16 5, i16 0], align 2
 @g = global [1048576 x i8] zeroinitializer, align 1
+@bar = external global [0 x i8], align 1
 
 
 define dso_local void @multiple_stores() local_unnamed_addr nounwind {
@@ -90,6 +91,15 @@ define i8* @big_offset_lui_tail() nounwind {
   ret i8* getelementptr inbounds ([1048576 x i8], [1048576 x i8]* @g, i32 0, i32 524288)
 }
 
+define i8* @big_offset_neg_lui_tail() {
+; CHECK-LABEL: big_offset_neg_lui_tail:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    lui a0, %hi(bar+4294959104)
+; CHECK-NEXT:    addi a0, a0, %lo(bar+4294959104)
+; CHECK-NEXT:    ret
+  ret i8* getelementptr inbounds ([0 x i8], [0 x i8]* @bar, i32 0, i32 -8192)
+}
+
 define dso_local i32* @big_offset_one_use() local_unnamed_addr nounwind {
 ; RV32-LABEL: big_offset_one_use:
 ; RV32:       # %bb.0: # %entry
@@ -125,11 +135,11 @@ define dso_local i32* @control_flow_no_mem(i32 %n) local_unnamed_addr nounwind {
 ; CHECK-NEXT:    lui a0, %hi(s)
 ; CHECK-NEXT:    addi a0, a0, %lo(s)
 ; CHECK-NEXT:    lw a1, 164(a0)
-; CHECK-NEXT:    beqz a1, .LBB6_2
+; CHECK-NEXT:    beqz a1, .LBB7_2
 ; CHECK-NEXT:  # %bb.1: # %if.end
 ; CHECK-NEXT:    addi a0, a0, 168
 ; CHECK-NEXT:    ret
-; CHECK-NEXT:  .LBB6_2: # %if.then
+; CHECK-NEXT:  .LBB7_2: # %if.then
 ; CHECK-NEXT:    addi a0, a0, 160
 ; CHECK-NEXT:    ret
 entry:
@@ -150,13 +160,13 @@ define dso_local i32 @load_half() nounwind {
 ; RV32-NEXT:    lui a0, %hi(foo+8)
 ; RV32-NEXT:    lhu a0, %lo(foo+8)(a0)
 ; RV32-NEXT:    li a1, 140
-; RV32-NEXT:    bne a0, a1, .LBB7_2
+; RV32-NEXT:    bne a0, a1, .LBB8_2
 ; RV32-NEXT:  # %bb.1: # %if.end
 ; RV32-NEXT:    li a0, 0
 ; RV32-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32-NEXT:    addi sp, sp, 16
 ; RV32-NEXT:    ret
-; RV32-NEXT:  .LBB7_2: # %if.then
+; RV32-NEXT:  .LBB8_2: # %if.then
 ; RV32-NEXT:    call abort@plt
 ;
 ; RV64-LABEL: load_half:
@@ -166,13 +176,13 @@ define dso_local i32 @load_half() nounwind {
 ; RV64-NEXT:    lui a0, %hi(foo+8)
 ; RV64-NEXT:    lhu a0, %lo(foo+8)(a0)
 ; RV64-NEXT:    li a1, 140
-; RV64-NEXT:    bne a0, a1, .LBB7_2
+; RV64-NEXT:    bne a0, a1, .LBB8_2
 ; RV64-NEXT:  # %bb.1: # %if.end
 ; RV64-NEXT:    li a0, 0
 ; RV64-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64-NEXT:    addi sp, sp, 16
 ; RV64-NEXT:    ret
-; RV64-NEXT:  .LBB7_2: # %if.then
+; RV64-NEXT:  .LBB8_2: # %if.then
 ; RV64-NEXT:    call abort@plt
 entry:
   %0 = load i16, i16* getelementptr inbounds ([6 x i16], [6 x i16]* @foo, i32 0, i32 4), align 2
@@ -199,4 +209,33 @@ define dso_local void @one_store() local_unnamed_addr nounwind {
 entry:
   store i32 10, i32* getelementptr inbounds (%struct.S, %struct.S* @s, i32 0, i32 1), align 4
   ret void
+}
+
+define i8* @neg_offset() {
+; RV32-LABEL: neg_offset:
+; RV32:       # %bb.0:
+; RV32-NEXT:    lui a0, %hi(bar+4294959105)
+; RV32-NEXT:    addi a0, a0, %lo(bar+4294959105)
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: neg_offset:
+; RV64:       # %bb.0:
+; RV64-NEXT:    lui a0, %hi(bar)
+; RV64-NEXT:    addi a0, a0, %lo(bar)
+; RV64-NEXT:    lui a1, 1048574
+; RV64-NEXT:    addiw a1, a1, 1
+; RV64-NEXT:    add a0, a0, a1
+; RV64-NEXT:    ret
+    ret i8* getelementptr inbounds ([0 x i8], [0 x i8]* @bar, i32 0, i32 -8191)
+}
+
+; This uses an LUI+ADDI on RV64 that does not produce a simm32. For RV32, we'll
+; truncate the offset.
+define i8* @neg_offset_not_simm32() {
+; CHECK-LABEL: neg_offset_not_simm32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    lui a0, %hi(bar+2147482283)
+; CHECK-NEXT:    addi a0, a0, %lo(bar+2147482283)
+; CHECK-NEXT:    ret
+    ret i8* getelementptr inbounds ([0 x i8], [0 x i8]* @bar, i32 0, i64 -2147485013)
 }
