@@ -402,14 +402,9 @@ define i64 @bitcast_extelt2(<4 x float> %A) {
   ret i64 %bc2
 }
 
-; TODO: This should return %A.
-
 define <2 x i32> @bitcast_extelt3(<2 x i32> %A) {
 ; CHECK-LABEL: @bitcast_extelt3(
-; CHECK-NEXT:    [[BC1:%.*]] = bitcast <2 x i32> [[A:%.*]] to <1 x i64>
-; CHECK-NEXT:    [[EXT:%.*]] = extractelement <1 x i64> [[BC1]], i64 0
-; CHECK-NEXT:    [[BC2:%.*]] = bitcast i64 [[EXT]] to <2 x i32>
-; CHECK-NEXT:    ret <2 x i32> [[BC2]]
+; CHECK-NEXT:    ret <2 x i32> [[A:%.*]]
 ;
   %bc1 = bitcast <2 x i32> %A to <1 x i64>
   %ext = extractelement <1 x i64> %bc1, i32 0
@@ -429,6 +424,59 @@ define double @bitcast_extelt4(i128 %A) {
   %ext = extractelement <2 x i64> %bc1, i32 0
   %bc2 = bitcast i64 %ext to double
   ret double %bc2
+}
+
+define <2 x i32> @bitcast_extelt5(<1 x i64> %A) {
+; CHECK-LABEL: @bitcast_extelt5(
+; CHECK-NEXT:    [[BC:%.*]] = bitcast <1 x i64> [[A:%.*]] to <2 x i32>
+; CHECK-NEXT:    ret <2 x i32> [[BC]]
+;
+  %ext = extractelement <1 x i64> %A, i32 0
+  %bc = bitcast i64 %ext to <2 x i32>
+  ret <2 x i32> %bc
+}
+
+define <2 x i32> @bitcast_extelt5_scalable(<vscale x 1 x i64> %A) {
+; CHECK-LABEL: @bitcast_extelt5_scalable(
+; CHECK-NEXT:    [[EXT:%.*]] = extractelement <vscale x 1 x i64> [[A:%.*]], i64 0
+; CHECK-NEXT:    [[BC:%.*]] = bitcast i64 [[EXT]] to <2 x i32>
+; CHECK-NEXT:    ret <2 x i32> [[BC]]
+;
+  %ext = extractelement <vscale x 1 x i64> %A, i32 0
+  %bc = bitcast i64 %ext to <2 x i32>
+  ret <2 x i32> %bc
+}
+
+define <2 x i32> @bitcast_extelt6(<2 x i64> %A) {
+; CHECK-LABEL: @bitcast_extelt6(
+; CHECK-NEXT:    [[EXT:%.*]] = extractelement <2 x i64> [[A:%.*]], i64 0
+; CHECK-NEXT:    [[BC:%.*]] = bitcast i64 [[EXT]] to <2 x i32>
+; CHECK-NEXT:    ret <2 x i32> [[BC]]
+;
+  %ext = extractelement <2 x i64> %A, i32 0
+  %bc = bitcast i64 %ext to <2 x i32>
+  ret <2 x i32> %bc
+}
+
+define double @bitcast_extelt7(<1 x i64> %A) {
+; CHECK-LABEL: @bitcast_extelt7(
+; CHECK-NEXT:    [[BC1:%.*]] = bitcast <1 x i64> [[A:%.*]] to <1 x double>
+; CHECK-NEXT:    [[BC:%.*]] = extractelement <1 x double> [[BC1]], i64 0
+; CHECK-NEXT:    ret double [[BC]]
+;
+  %ext = extractelement <1 x i64> %A, i32 0
+  %bc = bitcast i64 %ext to double
+  ret double %bc
+}
+
+define double @bitcast_extelt8(<1 x i64> %A) {
+; CHECK-LABEL: @bitcast_extelt8(
+; CHECK-NEXT:    [[BC1:%.*]] = bitcast <1 x i64> [[A:%.*]] to <1 x double>
+; CHECK-NEXT:    [[BC:%.*]] = extractelement <1 x double> [[BC1]], i64 0
+; CHECK-NEXT:    ret double [[BC]]
+;
+  %bc = bitcast <1 x i64> %A to double
+  ret double %bc
 }
 
 define <2 x i32> @test4(i32 %A, i32 %B){

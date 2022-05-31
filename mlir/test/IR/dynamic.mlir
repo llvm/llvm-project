@@ -11,7 +11,7 @@ func.func @succeededDynamicTypeVerifier() {
   "unregistered_op"() : () -> !test.dynamic_singleton
   // CHECK-NEXT: "unregistered_op"() : () -> !test.dynamic_pair<i32, f64>
   "unregistered_op"() : () -> !test.dynamic_pair<i32, f64>
-  // CHECK_NEXT: %{{.*}} = "unregistered_op"() : () -> !test.dynamic_pair<!test.dynamic_pair<i32, f64>, !test.dynamic_singleton>
+  // CHECK-NEXT: %{{.*}} = "unregistered_op"() : () -> !test.dynamic_pair<!test.dynamic_pair<i32, f64>, !test.dynamic_singleton>
   "unregistered_op"() : () -> !test.dynamic_pair<!test.dynamic_pair<i32, f64>, !test.dynamic_singleton>
   return
 }
@@ -53,7 +53,7 @@ func.func @succeededDynamicAttributeVerifier() {
   "unregistered_op"() {test_attr = #test.dynamic_singleton} : () -> ()
   // CHECK-NEXT: "unregistered_op"() {test_attr = #test.dynamic_pair<3 : i32, 5 : i32>} : () -> ()
   "unregistered_op"() {test_attr = #test.dynamic_pair<3 : i32, 5 : i32>} : () -> ()
-  // CHECK_NEXT: "unregistered_op"() {test_attr = #test.dynamic_pair<3 : i32, 5 : i32>} : () -> ()
+  // CHECK-NEXT: "unregistered_op"() {test_attr = #test.dynamic_pair<#test.dynamic_pair<3 : i32, 5 : i32>, f64>} : () -> ()
   "unregistered_op"() {test_attr = #test.dynamic_pair<#test.dynamic_pair<3 : i32, 5 : i32>, f64>} : () -> ()
   return
 }

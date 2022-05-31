@@ -2,6 +2,19 @@
 ; RUN: llc -mtriple=riscv32 -mattr=+m,+v,+zfh,+experimental-zvfh < %s | FileCheck %s
 ; RUN: llc -mtriple=riscv64 -mattr=+m,+v,+zfh,+experimental-zvfh < %s | FileCheck %s
 
+declare <vscale x 2 x i7> @llvm.vp.fptosi.v4i7.v4f16(<vscale x 2 x half>, <vscale x 2 x i1>, i32)
+
+define <vscale x 2 x i7> @vfptosi_v4i7_v4f16(<vscale x 2 x half> %va, <vscale x 2 x i1> %m, i32 zeroext %evl) {
+; CHECK-LABEL: vfptosi_v4i7_v4f16:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli zero, a0, e8, mf4, ta, mu
+; CHECK-NEXT:    vfncvt.rtz.x.f.w v9, v8, v0.t
+; CHECK-NEXT:    vmv1r.v v8, v9
+; CHECK-NEXT:    ret
+  %v = call <vscale x 2 x i7> @llvm.vp.fptosi.v4i7.v4f16(<vscale x 2 x half> %va, <vscale x 2 x i1> %m, i32 %evl)
+  ret <vscale x 2 x i7> %v
+}
+
 declare <vscale x 2 x i8> @llvm.vp.fptosi.nxv2i8.nxv2f16(<vscale x 2 x half>, <vscale x 2 x i1>, i32)
 
 define <vscale x 2 x i8> @vfptosi_nxv2i8_nxv2f16(<vscale x 2 x half> %va, <vscale x 2 x i1> %m, i32 zeroext %evl) {

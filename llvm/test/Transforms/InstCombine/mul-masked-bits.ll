@@ -169,13 +169,31 @@ define i33 @squared_demanded_3_low_bits(i33 %x) {
 ; Scalar tests
 define i64 @scalar_mul_bit_x0_y0(i64 %x, i64 %y) {
 ; CHECK-LABEL: @scalar_mul_bit_x0_y0(
-; CHECK-NEXT:    [[AND1:%.*]] = and i64 [[X:%.*]], 1
 ; CHECK-NEXT:    [[AND2:%.*]] = and i64 [[Y:%.*]], 1
-; CHECK-NEXT:    [[MUL:%.*]] = mul nuw nsw i64 [[AND1]], [[AND2]]
+; CHECK-NEXT:    [[MUL:%.*]] = and i64 [[AND2]], [[X:%.*]]
 ; CHECK-NEXT:    ret i64 [[MUL]]
 ;
   %and1 = and i64 %x, 1
   %and2 = and i64 %y, 1
+  %mul = mul i64 %and1, %and2
+  ret i64 %mul
+}
+
+declare void @use(i64)
+
+define i64 @scalar_mul_bit_x0_y0_uses(i64 %x, i64 %y) {
+; CHECK-LABEL: @scalar_mul_bit_x0_y0_uses(
+; CHECK-NEXT:    [[AND1:%.*]] = and i64 [[X:%.*]], 1
+; CHECK-NEXT:    call void @use(i64 [[AND1]])
+; CHECK-NEXT:    [[AND2:%.*]] = and i64 [[Y:%.*]], 1
+; CHECK-NEXT:    call void @use(i64 [[AND2]])
+; CHECK-NEXT:    [[MUL:%.*]] = and i64 [[AND2]], [[X]]
+; CHECK-NEXT:    ret i64 [[MUL]]
+;
+  %and1 = and i64 %x, 1
+  call void @use(i64 %and1)
+  %and2 = and i64 %y, 1
+  call void @use(i64 %and2)
   %mul = mul i64 %and1, %and2
   ret i64 %mul
 }
@@ -210,9 +228,8 @@ define i64 @scalar_mul_bit_x0_yC(i64 %x, i64 %y, i64 %c) {
 ; Vector tests
 define <2 x i64> @vector_mul_bit_x0_y0(<2 x i64> %x, <2 x i64> %y) {
 ; CHECK-LABEL: @vector_mul_bit_x0_y0(
-; CHECK-NEXT:    [[AND1:%.*]] = and <2 x i64> [[X:%.*]], <i64 1, i64 1>
 ; CHECK-NEXT:    [[AND2:%.*]] = and <2 x i64> [[Y:%.*]], <i64 1, i64 1>
-; CHECK-NEXT:    [[MUL:%.*]] = mul nuw nsw <2 x i64> [[AND1]], [[AND2]]
+; CHECK-NEXT:    [[MUL:%.*]] = and <2 x i64> [[AND2]], [[X:%.*]]
 ; CHECK-NEXT:    ret <2 x i64> [[MUL]]
 ;
   %and1 = and <2 x i64> %x, <i64 1, i64 1>

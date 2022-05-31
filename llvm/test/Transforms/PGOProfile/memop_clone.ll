@@ -1,7 +1,7 @@
 ; RUN: opt < %s -passes=pgo-memop-opt -verify-dom-info -S | FileCheck %s
 
 define i32 @test(i8* %a, i8* %b) !prof !1 {
-; CHECK_LABEL: test
+; CHECK-LABEL: test
 ; CHECK: MemOP.Case.3:
 ; CHECK: tail call void @llvm.memcpy.p0i8.p0i8.i32(i8* undef, i8* %a, i32 3, i1 false)
 ; CHECK: MemOP.Case.2:

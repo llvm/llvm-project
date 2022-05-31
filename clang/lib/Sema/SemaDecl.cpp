@@ -3940,59 +3940,29 @@ bool Sema::MergeFunctionDecl(FunctionDecl *New, NamedDecl *&OldD, Scope *S,
       }
 
       if (WithProto->getNumParams() != 0) {
-        // The function definition has parameters, so this will change
-        // behavior in C2x.
-        //
-        // If we already warned about about the function without a prototype
-        // being deprecated, add a note that it also changes behavior. If we
-        // didn't warn about it being deprecated (because the diagnostic is
-        // not enabled), warn now that it is deprecated and changes behavior.
-        bool AddNote = false;
-        if (Diags.isIgnored(diag::warn_strict_prototypes,
-                            WithoutProto->getLocation())) {
-          if (WithoutProto->getBuiltinID() == 0 &&
-              !WithoutProto->isImplicit() &&
-              SourceMgr.isBeforeInTranslationUnit(WithoutProto->getLocation(),
-                                                  WithProto->getLocation())) {
-            PartialDiagnostic PD =
-                PDiag(diag::warn_non_prototype_changes_behavior);
-            if (TypeSourceInfo *TSI = WithoutProto->getTypeSourceInfo()) {
-              if (auto FTL = TSI->getTypeLoc().getAs<FunctionNoProtoTypeLoc>())
-                PD << FixItHint::CreateInsertion(FTL.getRParenLoc(), "void");
-            }
-            Diag(WithoutProto->getLocation(), PD);
-          }
-        } else {
-          AddNote = true;
-        }
-
-        // Because the function with a prototype has parameters but a previous
-        // declaration had none, the function with the prototype will also
-        // change behavior in C2x.
-        if (WithProto->getBuiltinID() == 0 && !WithProto->isImplicit()) {
-          if (SourceMgr.isBeforeInTranslationUnit(
-                  WithProto->getLocation(), WithoutProto->getLocation())) {
-            // If the function with the prototype comes before the function
-            // without the prototype, we only want to diagnose the one without
-            // the prototype.
-            Diag(WithoutProto->getLocation(),
-                 diag::warn_non_prototype_changes_behavior);
-          } else {
-            // Otherwise, diagnose the one with the prototype, and potentially
-            // attach a note to the one without a prototype if needed.
-            Diag(WithProto->getLocation(),
-                 diag::warn_non_prototype_changes_behavior);
-            if (AddNote && WithoutProto->getBuiltinID() == 0)
-              Diag(WithoutProto->getLocation(),
-                   diag::note_func_decl_changes_behavior);
-          }
-        } else if (AddNote && WithoutProto->getBuiltinID() == 0 &&
-                   !WithoutProto->isImplicit()) {
-          // If we were supposed to add a note but the function with a
-          // prototype is a builtin or was implicitly declared, which means we
-          // have nothing to attach the note to, so we issue a warning instead.
+        if (WithoutProto->getBuiltinID() == 0 && !WithoutProto->isImplicit()) {
+          // The one without the prototype will be changing behavior in C2x, so
+          // warn about that one so long as it's a user-visible declaration.
+          bool IsWithoutProtoADef = false, IsWithProtoADef = false;
+          if (WithoutProto == New)
+            IsWithoutProtoADef = NewDeclIsDefn;
+          else
+            IsWithProtoADef = NewDeclIsDefn;
           Diag(WithoutProto->getLocation(),
-               diag::warn_non_prototype_changes_behavior);
+               diag::warn_non_prototype_changes_behavior)
+              << IsWithoutProtoADef << (WithoutProto->getNumParams() ? 0 : 1)
+              << (WithoutProto == Old) << IsWithProtoADef;
+
+          // The reason the one without the prototype will be changing behavior
+          // is because of the one with the prototype, so note that so long as
+          // it's a user-visible declaration. There is one exception to this:
+          // when the new declaration is a definition without a prototype, the
+          // old declaration with a prototype is not the cause of the issue,
+          // and that does not need to be noted because the one with a
+          // prototype will not change behavior in C2x.
+          if (WithProto->getBuiltinID() == 0 && !WithProto->isImplicit() &&
+              !IsWithoutProtoADef)
+            Diag(WithProto->getLocation(), diag::note_conflicting_prototype);
         }
       }
     }
@@ -15053,29 +15023,22 @@ Decl *Sema::ActOnFinishFunctionBody(Decl *dcl, Stmt *Body,
         // deprecated, add a note that it also changes behavior. If we didn't
         // warn about it being deprecated (because the diagnostic is not
         // enabled), warn now that it is deprecated and changes behavior.
-        bool AddNote = false;
-        if (PossiblePrototype) {
-          if (Diags.isIgnored(diag::warn_strict_prototypes,
-                              PossiblePrototype->getLocation())) {
 
-            PartialDiagnostic PD =
-                PDiag(diag::warn_non_prototype_changes_behavior);
-            if (TypeSourceInfo *TSI = PossiblePrototype->getTypeSourceInfo()) {
-              if (auto FTL = TSI->getTypeLoc().getAs<FunctionNoProtoTypeLoc>())
-                PD << FixItHint::CreateInsertion(FTL.getRParenLoc(), "void");
-            }
-            Diag(PossiblePrototype->getLocation(), PD);
-          } else {
-            AddNote = true;
-          }
-        }
+        // This K&R C function definition definitely changes behavior in C2x,
+        // so diagnose it.
+        Diag(FD->getLocation(), diag::warn_non_prototype_changes_behavior)
+            << /*definition*/ 1 << /* not supported in C2x */ 0;
 
-        // Because this function definition has no prototype and it has
-        // parameters, it will definitely change behavior in C2x.
-        Diag(FD->getLocation(), diag::warn_non_prototype_changes_behavior);
-        if (AddNote)
+        // If we have a possible prototype for the function which is a user-
+        // visible declaration, we already tested that it has no prototype.
+        // This will change behavior in C2x. This gets a warning rather than a
+        // note because it's the same behavior-changing problem as with the
+        // definition.
+        if (PossiblePrototype)
           Diag(PossiblePrototype->getLocation(),
-               diag::note_func_decl_changes_behavior);
+               diag::warn_non_prototype_changes_behavior)
+              << /*declaration*/ 0 << /* conflicting */ 1 << /*subsequent*/ 1
+              << /*definition*/ 1;
       }
 
       // Warn on CPUDispatch with an actual body.

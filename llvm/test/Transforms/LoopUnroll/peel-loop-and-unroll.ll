@@ -1,4 +1,4 @@
-; RUN: not --crash opt -loop-unroll -unroll-peel-count=2 -unroll-count=2 -S < %s 2>&1 | FileCheck %s
+; RUN: not opt -loop-unroll -unroll-peel-count=2 -unroll-count=2 -S < %s 2>&1 | FileCheck %s
 
 ; CHECK: LLVM ERROR: Cannot specify both explicit peel count and explicit unroll count
 

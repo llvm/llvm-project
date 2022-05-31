@@ -899,11 +899,11 @@ def err_pp_eof_in_assume_nonnull : Error<
 
 }
 
-let CategoryName = "Dependency Directive Source Minimization Issue" in {
+let CategoryName = "Dependency Directive Source Scanner Issue" in {
 
-def err_dep_source_minimizer_missing_sema_after_at_import : Error<
+def err_dep_source_scanner_missing_semi_after_at_import : Error<
   "could not find ';' after @import">;
-def err_dep_source_minimizer_unexpected_tokens_at_import : Error<
+def err_dep_source_scanner_unexpected_tokens_at_import : Error<
   "unexpected extra tokens at end of @import declaration">;
 
 }

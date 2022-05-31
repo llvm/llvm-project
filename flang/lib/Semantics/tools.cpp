@@ -668,7 +668,7 @@ bool HasImpureFinal(const DerivedTypeSpec &derived) {
           derived.typeSymbol().detailsIf<DerivedTypeDetails>()}) {
     const auto &finals{details->finals()};
     return std::any_of(finals.begin(), finals.end(),
-        [](const auto &x) { return !x.second->attrs().test(Attr::PURE); });
+        [](const auto &x) { return !IsPureProcedure(*x.second); });
   } else {
     return false;
   }

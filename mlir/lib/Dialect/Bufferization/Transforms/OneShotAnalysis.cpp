@@ -216,6 +216,11 @@ bool OneShotAnalysisState::areEquivalentBufferizedValues(Value v1,
   return aliasInfo.areEquivalentBufferizedValues(v1, v2);
 }
 
+bool OneShotAnalysisState::areAliasingBufferizedValues(Value v1,
+                                                       Value v2) const {
+  return aliasInfo.areAliasingBufferizedValues(v1, v2);
+}
+
 // Gather yielded tensors in `yieldedTensors` by querying all aliases. This is
 // to ensure that such information is available during bufferization time.
 // Alias information can no longer be queried through BufferizationAliasInfo
@@ -288,6 +293,16 @@ bool OneShotAnalysisState::hasUndefinedContents(OpOperand *opOperand) const {
 
 bool OneShotAnalysisState::isTensorYielded(Value tensor) const {
   return yieldedTensors.contains(tensor);
+}
+
+bool OneShotAnalysisState::isValueWritten(Value value) const {
+  bool isWritten = false;
+  aliasInfo.applyOnAliases(value, [&](Value val) {
+    for (OpOperand &use : val.getUses())
+      if (isInPlace(use) && bufferizesToMemoryWrite(use))
+        isWritten = true;
+  });
+  return isWritten;
 }
 
 //===----------------------------------------------------------------------===//
@@ -934,16 +949,6 @@ LogicalResult bufferization::analyzeOp(Operation *op,
                              options.analysisFuzzerSeed)))
     return failure();
   equivalenceAnalysis(op, aliasInfo, state);
-
-  for (const PostAnalysisStepFn &fn : options.postAnalysisSteps) {
-    SmallVector<Operation *> newOps;
-    if (failed(fn(op, state, aliasInfo, newOps)))
-      return failure();
-    // Analyze ops that were created by the PostAnalysisStepFn.
-    if (failed(inPlaceAnalysis(newOps, aliasInfo, state, domInfo)))
-      return failure();
-    equivalenceAnalysis(newOps, aliasInfo, state);
-  }
 
   bool failedAnalysis = false;
   if (!options.allowReturnAllocs) {

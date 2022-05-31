@@ -10,7 +10,6 @@
 #define _LIBCPP___TYPE_TRAITS_ENABLE_IF_H
 
 #include <__config>
-#include <cstddef>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header

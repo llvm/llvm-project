@@ -1,15 +1,20 @@
 ; RUN: opt %loadNPMPolly "-passes=polly-scop-printer" -disable-output < %s
-; RUN: FileCheck %s -input-file=scops.func.dot
+; RUN: FileCheck %s -input-file=scops.func_npm.dot
 ;
 ; Check that the ScopPrinter does not crash.
 ; ScopPrinter needs the ScopDetection pass, which should depend on
 ; ScalarEvolution transitively.
+;
+; FIXME: polly-scop-printer always prints to the same hardcoded filename
+;        scops.<functionname>.dot. If there is another test with the same
+;        function name and printing a dot file there will be a race condition
+;        when running tests in parallel.
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 
-define void @func(i32 %n, i32 %m, double* noalias nonnull %A) {
-; CHECK:      digraph "Scop Graph for 'func' function"
-; CHECK-NEXT: label="Scop Graph for 'func' function"
+define void @func_npm(i32 %n, i32 %m, double* noalias nonnull %A) {
+; CHECK:      digraph "Scop Graph for 'func_npm' function"
+; CHECK-NEXT: label="Scop Graph for 'func_npm' function"
 ; CHECK:      Node0x[[EntryID:.*]] [shape=record,label="{entry:\l  br label %outer.for\l}"];
 ; CHECK-NEXT: Node0x[[EntryID]] -> Node0x[[OUTER_FOR_ID:.*]];
 ; CHECK-NEXT: Node0x[[OUTER_FOR_ID]] [shape=record,label="{outer.for:
@@ -30,35 +35,35 @@ define void @func(i32 %n, i32 %m, double* noalias nonnull %A) {
 ; CHECK-NEXT: Node0x[[OUTER_EXIT]] -> Node0x[[RETURN_ID:.*]];
 ; CHECK-NEXT: Node0x[[RETURN_ID]] [shape=record,label="{return:
 ; CHECK-NEXT: colorscheme = "paired12"
-; CHECK_NEXT: subgraph cluster_0x[[:.*]] {
-; CHECK_NEXT: label = "";
-; CHECK_NEXT: style = solid;
-; CHECK_NEXT: color = 1
-; CHECK_NEXT: subgraph cluster_0x[[:.*]] {
-; CHECK_NEXT: label = "";
-; CHECK_NEXT: style = filled;
-; CHECK_NEXT: color = 3            subgraph cluster_0x7152c40 {
-; CHECK_NEXT: label = "";
-; CHECK_NEXT: style = solid;
-; CHECK_NEXT: color = 5
-; CHECK_NEXT: subgraph cluster_0x[[:.*]] {
-; CHECK_NEXT: label = "";
-; CHECK_NEXT: style = solid;
-; CHECK_NEXT: color = 7
-; CHECK_NEXT: Node0x[[INNER_FOR_ID]];
-; CHECK_NEXT: Node0x[[BABY1_ID]];
-; CHECK_NEXT: Node0x[[INNER_INC_ID]];
-; CHECK_NEXT: }
-; CHECK_NEXT: Node0x[[OUTER_FOR_ID]];
-; CHECK_NEXT: Node0x[[INNER_EXIT_ID]];
-; CHECK_NEXT: Node0x[[OUTER_INC_ID]];
-; CHECK_NEXT: }
-; CHECK_NEXT: Node0x[[OUTER_EXIT]];
-; CHECK_NEXT: }
-; CHECK_NEXT: Node0x[[EntryID]];
-; CHECK_NEXT: Node0x[[RETURN_ID]];
-; CHECK_NEXT: }
-; CHECK_NEXT: }
+; CHECK-NEXT: subgraph cluster_0x{{.*}} {
+; CHECK-NEXT: label = "";
+; CHECK-NEXT: style = solid;
+; CHECK-NEXT: color = 1
+; CHECK-NEXT: subgraph cluster_0x{{.*}} {
+; CHECK-NEXT: label = "";
+; CHECK-NEXT: style = filled;
+; CHECK-NEXT: color = 3            subgraph cluster_0x{{.*}} {
+; CHECK-NEXT: label = "";
+; CHECK-NEXT: style = solid;
+; CHECK-NEXT: color = 5
+; CHECK-NEXT: subgraph cluster_0x{{.*}} {
+; CHECK-NEXT: label = "";
+; CHECK-NEXT: style = solid;
+; CHECK-NEXT: color = 7
+; CHECK-NEXT: Node0x[[INNER_FOR_ID]];
+; CHECK-NEXT: Node0x[[BABY1_ID]];
+; CHECK-NEXT: Node0x[[INNER_INC_ID]];
+; CHECK-NEXT: }
+; CHECK-NEXT: Node0x[[OUTER_FOR_ID]];
+; CHECK-NEXT: Node0x[[INNER_EXIT_ID]];
+; CHECK-NEXT: Node0x[[OUTER_INC_ID]];
+; CHECK-NEXT: }
+; CHECK-NEXT: Node0x[[OUTER_EXIT]];
+; CHECK-NEXT: }
+; CHECK-NEXT: Node0x[[EntryID]];
+; CHECK-NEXT: Node0x[[RETURN_ID]];
+; CHECK-NEXT: }
+; CHECK-NEXT: }
 
 entry:
   br label %outer.for

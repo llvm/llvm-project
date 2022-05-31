@@ -42,7 +42,7 @@ define void @test(i32 signext %i) nounwind {
 ; RV32-NEXT:    addi a3, a3, 1
 ; RV32-NEXT:  .LBB0_2: # %bb
 ; RV32-NEXT:    # =>This Inner Loop Header: Depth=1
-; RV32-NEXT:    add a4, a1, a2
+; RV32-NEXT:    add a4, a2, a1
 ; RV32-NEXT:    add a1, a1, a0
 ; RV32-NEXT:    sb zero, 0(a4)
 ; RV32-NEXT:    blt a1, a3, .LBB0_2
@@ -65,7 +65,7 @@ define void @test(i32 signext %i) nounwind {
 ; RV64-NEXT:    addw a5, a5, a1
 ; RV64-NEXT:    slli a6, a5, 32
 ; RV64-NEXT:    srli a6, a6, 32
-; RV64-NEXT:    add a6, a6, a3
+; RV64-NEXT:    add a6, a3, a6
 ; RV64-NEXT:    sb zero, 0(a6)
 ; RV64-NEXT:    addw a5, a5, a0
 ; RV64-NEXT:    addiw a2, a2, 1

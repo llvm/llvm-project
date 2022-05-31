@@ -220,7 +220,7 @@ int main(int argc, char **argv) {
 // CHECK-DAG: call {{.+}}(%struct.S* {{.+}})
 // CHECK-DAG: br i1 %
 // CHECK-DAG: ret void
-// CHECK_DAG: }
+// CHECK-DAG: }
 
 // CHECK-DAG: define internal void @[[VLAINIT]](i8* noalias noundef %{{.+}}, i8* noalias noundef %{{.+}})
 // CHECK-DAG: call i32 @__kmpc_global_thread_num(%struct.ident_t* {{[^,]+}})
@@ -240,7 +240,7 @@ int main(int argc, char **argv) {
 // CHECK-DAG: add nsw i32 %
 // CHECK-DAG: trunc i32 %{{.+}} to i16
 // CHECK-DAG: store i16 %
-// CHECK_DAG: br i1 %
+// CHECK-DAG: br i1 %
 // CHECK-DAG: ret void
 // CHECK-DAG: }
 #endif

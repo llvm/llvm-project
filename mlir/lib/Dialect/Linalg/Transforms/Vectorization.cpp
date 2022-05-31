@@ -441,7 +441,7 @@ static bool isElementwise(Operation *op) {
     return false;
   // TODO: relax the restrictions on indexing map.
   for (OpOperand *opOperand : linalgOp.getOutputOperands()) {
-    if (!linalgOp.getTiedIndexingMap(opOperand).isIdentity())
+    if (!linalgOp.getTiedIndexingMap(opOperand).isPermutation())
       return false;
   }
   return hasOnlyScalarElementwiseOp(linalgOp->getRegion(0));

@@ -116,6 +116,8 @@ public:
   /// Returns a const reference to existing replacements.
   const Replacements &getReplacements() const { return Replaces; }
 
+  Replacements &getReplacements() { return Replaces; }
+
   llvm::ArrayRef<std::string> getInsertedHeaders() const {
     return InsertedHeaders;
   }

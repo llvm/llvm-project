@@ -119,6 +119,25 @@ declare_mlir_dialect_python_bindings(
 declare_mlir_dialect_python_bindings(
   ADD_TO_PARENT MLIRPythonSources.Dialects
   ROOT_DIR "${CMAKE_CURRENT_SOURCE_DIR}/mlir"
+  TD_FILE dialects/TransformOps.td
+  SOURCES
+    dialects/_transform_ops_ext.py
+    dialects/transform/__init__.py
+  DIALECT_NAME transform)
+
+declare_mlir_dialect_extension_python_bindings(
+  ADD_TO_PARENT MLIRPythonSources.Dialects
+  ROOT_DIR "${CMAKE_CURRENT_SOURCE_DIR}/mlir"
+  TD_FILE dialects/LinalgStructuredTransformOps.td
+  SOURCES
+    dialects/_structured_transform_ops_ext.py
+    dialects/transform/structured.py
+  DIALECT_NAME transform
+  EXTENSION_NAME structured_transform)
+
+declare_mlir_dialect_python_bindings(
+  ADD_TO_PARENT MLIRPythonSources.Dialects
+  ROOT_DIR "${CMAKE_CURRENT_SOURCE_DIR}/mlir"
   TD_FILE dialects/MathOps.td
   SOURCES dialects/math.py
   DIALECT_NAME math)

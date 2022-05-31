@@ -75,6 +75,12 @@ public:
   /// Return the name of this value.
   StringRef getName() const { return name; }
 
+  /// Returns true if this value is variable length, i.e. if it is Variadic or
+  /// Optional.
+  bool isVariableLength() const {
+    return variableLengthKind != VariableLengthKind::Single;
+  }
+
   /// Returns true if this value is variadic (Note this is false if the value is
   /// Optional).
   bool isVariadic() const {
@@ -148,6 +154,9 @@ public:
   /// Returns the description of the operation.
   StringRef getDescription() const { return description; }
 
+  /// Returns the native class name of the operation.
+  StringRef getNativeClassName() const { return nativeClassName; }
+
   /// Returns the attributes of this operation.
   ArrayRef<Attribute> getAttributes() const { return attributes; }
 
@@ -157,8 +166,12 @@ public:
   /// Returns the results of this operation.
   ArrayRef<OperandOrResult> getResults() const { return results; }
 
+  /// Return if the operation is known to support result type inferrence.
+  bool hasResultTypeInferrence() const { return supportsTypeInferrence; }
+
 private:
-  Operation(StringRef name, StringRef summary, StringRef desc, SMLoc loc);
+  Operation(StringRef name, StringRef summary, StringRef desc,
+            StringRef nativeClassName, bool supportsTypeInferrence, SMLoc loc);
 
   /// The name of the operation.
   std::string name;
@@ -166,6 +179,12 @@ private:
   /// The documentation of the operation.
   std::string summary;
   std::string description;
+
+  /// The native class name of the operation, used when generating native code.
+  std::string nativeClassName;
+
+  /// Flag indicating if the operation is known to support type inferrence.
+  bool supportsTypeInferrence;
 
   /// The source location of this operation.
   SMRange location;

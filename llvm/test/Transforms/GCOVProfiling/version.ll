@@ -7,7 +7,7 @@
 ; RUN: opt -passes=insert-gcov-profiling -disable-output < %t/2
 ; RUN: head -c8 %t/version.gcno | grep '^oncg.804'
 ; RUN: rm %t/version.gcno
-; RUN: not --crash opt -passes=insert-gcov-profiling -default-gcov-version=asdfasdf -disable-output < %t/2
+; RUN: not opt -passes=insert-gcov-profiling -default-gcov-version=asdfasdf -disable-output < %t/2
 ; RUN: opt -passes=insert-gcov-profiling -default-gcov-version='402*' -disable-output < %t/2
 ; RUN: head -c8 %t/version.gcno | grep '^oncg.204'
 ; RUN: rm %t/version.gcno

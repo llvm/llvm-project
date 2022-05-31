@@ -15,7 +15,7 @@
 // RUN: %{cxx} %{flags} %{compile_flags} %s %{link_flags} -DTU2 -c -o %t.tu2.o
 // RUN: %{cxx} %{flags} %t.tu1.o %t.tu2.o %{link_flags} -o %t.exe
 
-// UNSUPPORTED: libcpp-has-no-localization
+// UNSUPPORTED: no-localization
 
 #include <cstdint>
 #include <ios>

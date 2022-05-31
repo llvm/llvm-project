@@ -13,7 +13,7 @@
 // bool is(mask m, charT c) const;
 
 // REQUIRES: locale.en_US.UTF-8
-// XFAIL: libcpp-has-no-wide-characters
+// XFAIL: no-wide-characters
 
 #include <locale>
 #include <type_traits>
