@@ -10,6 +10,10 @@
 // The name of the new control point replacing the user's dummy control point.
 #define YK_NEW_CONTROL_POINT "__ykrt_control_point"
 
+// The name of the function which reconstructs the stackframe and jumps to the
+// right instruction in AOT from where to continue.
+#define YK_RECONSTRUCT_FRAMES "__ykrt_reconstruct_frames"
+
 namespace llvm {
 ModulePass *createYkControlPointPass();
 } // namespace llvm

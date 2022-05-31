@@ -38,7 +38,7 @@ public:
   enum { IDPos, NBytesPos };
 
 private:
-  const MachineInstr* MI;
+  const MachineInstr *MI;
 
 public:
   explicit StackMapOpers(const MachineInstr *MI);
@@ -204,6 +204,12 @@ public:
         : Reg(Reg), DwarfRegNum(DwarfRegNum), Size(Size) {}
   };
 
+  // Stores callee-saved register info.
+  struct CSR {
+    int Reg = 0;
+    int Offset = 0;
+  };
+
   // OpTypes are used to encode information about the following logical
   // operand (which may consist of several MachineOperands) for the
   // OpParser.
@@ -237,13 +243,19 @@ public:
   using LiveVarsVec = SmallVector<LocationVec, 8>;
   using LiveOutVec = SmallVector<LiveOutReg, 8>;
   using ConstantPool = MapVector<uint64_t, uint64_t>;
+  using CSRVec = SmallVector<CSR, 8>;
 
   struct FunctionInfo {
     uint64_t StackSize = 0;
     uint64_t RecordCount = 1;
+    bool HasFramePointer;
+    CSRVec SpilledRegisters;
 
     FunctionInfo() = default;
-    explicit FunctionInfo(uint64_t StackSize) : StackSize(StackSize) {}
+    explicit FunctionInfo(uint64_t StackSize, bool HasFramePointer,
+                          CSRVec SpilledRegisters)
+        : StackSize(StackSize), HasFramePointer(HasFramePointer),
+          SpilledRegisters(SpilledRegisters) {}
   };
 
   struct CallsiteInfo {
@@ -265,16 +277,13 @@ public:
   /// Generate a stackmap record for a stackmap instruction.
   ///
   /// MI must be a raw STACKMAP, not a PATCHPOINT.
-  void recordStackMap(const MCSymbol &L,
-                      const MachineInstr &MI);
+  void recordStackMap(const MCSymbol &L, const MachineInstr &MI);
 
   /// Generate a stackmap record for a patchpoint instruction.
-  void recordPatchPoint(const MCSymbol &L,
-                        const MachineInstr &MI);
+  void recordPatchPoint(const MCSymbol &L, const MachineInstr &MI);
 
   /// Generate a stackmap record for a statepoint instruction.
-  void recordStatepoint(const MCSymbol &L,
-                        const MachineInstr &MI);
+  void recordStatepoint(const MCSymbol &L, const MachineInstr &MI);
 
   /// If there is any stack map data, create a stack map section and serialize
   /// the map info into it. This clears the stack map data structures
@@ -294,6 +303,7 @@ private:
   CallsiteInfoList CSInfos;
   ConstantPool ConstPool;
   FnInfoMap FnInfos;
+  bool HasFramePointer;
 
   MachineInstr::const_mop_iterator
   parseOperand(MachineInstr::const_mop_iterator MOI,
@@ -321,10 +331,9 @@ private:
   /// STACKMAP, and PATCHPOINT the label is expected to immediately *preceed*
   /// lowering of the MI to MCInsts.  For STATEPOINT, it expected to
   /// immediately *follow*.  It's not clear this difference was intentional,
-  /// but it exists today.  
-  void recordStackMapOpers(const MCSymbol &L,
-                           const MachineInstr &MI, uint64_t ID,
-                           MachineInstr::const_mop_iterator MOI,
+  /// but it exists today.
+  void recordStackMapOpers(const MCSymbol &L, const MachineInstr &MI,
+                           uint64_t ID, MachineInstr::const_mop_iterator MOI,
                            MachineInstr::const_mop_iterator MOE,
                            bool recordResult = false);
 
@@ -339,6 +348,9 @@ private:
 
   /// Emit the callsite info for each stackmap/patchpoint intrinsic call.
   void emitCallsiteEntries(MCStreamer &OS);
+
+  /// Emit information about the function prologue.
+  void emitCSRInfo(MCStreamer &OS);
 
   void print(raw_ostream &OS);
   void debug() { print(dbgs()); }
