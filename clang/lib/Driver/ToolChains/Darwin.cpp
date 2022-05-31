@@ -1349,7 +1349,6 @@ void Darwin::addProfileRTLibs(const ArgList &Args,
       addExportedSymbol(CmdArgs, "___llvm_profile_filename");
       addExportedSymbol(CmdArgs, "___llvm_profile_raw_version");
     }
-    addExportedSymbol(CmdArgs, "_lprofDirMode");
   }
 
   // Align __llvm_prf_{cnts,data} sections to the maximum expected page
