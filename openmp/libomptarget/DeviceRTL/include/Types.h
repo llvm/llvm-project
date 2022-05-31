@@ -209,6 +209,13 @@ enum OMPTgtExecModeFlags : int8_t {
 #define CONSTANT(NAME)                                                         \
   NAME [[clang::loader_uninitialized, clang::address_space(4)]]
 
+// Attribute to keep alive certain definition for the bitcode library.
+#ifdef LIBOMPTARGET_BC_TARGET
+#define KEEP_ALIVE __attribute__((used, retain))
+#else
+#define KEEP_ALIVE
+#endif
+
 ///}
 
 #endif
