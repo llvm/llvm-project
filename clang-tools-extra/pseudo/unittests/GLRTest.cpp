@@ -393,6 +393,28 @@ TEST_F(GLRTest, GLRReduceOrder) {
             "[  0, end)     └─IDENTIFIER := tok[0]\n");
 }
 
+TEST(GSSTest, GC) {
+  //      ┌-A-┬-AB
+  //      ├-B-┘
+  // Root-+-C
+  //      ├-D
+  //      └-E
+  GSS GSStack;
+  auto *Root = GSStack.addNode(0, nullptr, {});
+  auto *A = GSStack.addNode(0, nullptr, {Root});
+  auto *B = GSStack.addNode(0, nullptr, {Root});
+  auto *C = GSStack.addNode(0, nullptr, {Root});
+  auto *D = GSStack.addNode(0, nullptr, {Root});
+  auto *AB = GSStack.addNode(0, nullptr, {A, B});
+
+  EXPECT_EQ(1u, GSStack.gc({AB, C})) << "D is destroyed";
+  EXPECT_EQ(0u, GSStack.gc({AB, C})) << "D is already gone";
+  auto *E = GSStack.addNode(0, nullptr, {Root});
+  EXPECT_EQ(D, E) << "Storage of GCed node D is reused for E";
+  EXPECT_EQ(3u, GSStack.gc({A, E})) << "Destroys B, AB, C";
+  EXPECT_EQ(1u, GSStack.gc({E})) << "Destroys A";
+}
+
 } // namespace
 } // namespace pseudo
 } // namespace clang

@@ -68,6 +68,8 @@ struct GSS {
   struct alignas(struct Node *) Node {
     // LR state describing how parsing should continue from this head.
     LRTable::StateID State;
+    // Used internally to track reachability during garbage collection.
+    bool GCParity;
     // Number of the parents of this node.
     // The parents hold previous parsed symbols, and may resume control after
     // this node is reduced.
@@ -76,10 +78,6 @@ struct GSS {
     // This symbol appears on the left of the dot in the parse state's items.
     // (In the literature, the node is attached to the *edge* to the parent).
     const ForestNode *Payload = nullptr;
-
-    // FIXME: Most nodes live a fairly short time, and are simply discarded.
-    // Is it worth refcounting them (we have empty padding) and returning to a
-    // freelist, to keep the working set small?
 
     llvm::ArrayRef<const Node *> parents() const {
       return llvm::makeArrayRef(reinterpret_cast<const Node *const *>(this + 1),
@@ -90,23 +88,26 @@ struct GSS {
 
   // Allocates a new node in the graph.
   const Node *addNode(LRTable::StateID State, const ForestNode *Symbol,
-                      llvm::ArrayRef<const Node *> Parents) {
-    ++NodeCount;
-    Node *Result = new (Arena.Allocate(
-        sizeof(Node) + Parents.size() * sizeof(Node *), alignof(Node)))
-        Node({State, static_cast<unsigned>(Parents.size())});
-    Result->Payload = Symbol;
-    if (!Parents.empty())
-      llvm::copy(Parents, reinterpret_cast<const Node **>(Result + 1));
-    return Result;
-  }
+                      llvm::ArrayRef<const Node *> Parents);
+  // Frees all nodes not reachable as ancestors of Roots, and returns the count.
+  // Calling this periodically prevents steady memory growth of the GSS.
+  unsigned gc(std::vector<const Node *> &&Roots);
 
   size_t bytes() const { return Arena.getTotalMemory() + sizeof(*this); }
-  size_t nodeCount() const { return NodeCount; }
+  size_t nodesCreated() const { return NodesCreated; }
 
 private:
+  // Nodes are recycled using freelists.
+  // They are variable size, so use one free-list per distinct #parents.
+  std::vector<std::vector<Node *>> FreeList;
+  Node *allocate(unsigned Parents);
+  void destroy(Node *N);
+  // The list of nodes created and not destroyed - our candidates for gc().
+  std::vector<Node *> Alive;
+  bool GCParity = false; // All nodes should match this, except during GC.
+
   llvm::BumpPtrAllocator Arena;
-  unsigned NodeCount = 0;
+  unsigned NodesCreated = 0;
 };
 llvm::raw_ostream &operator<<(llvm::raw_ostream &, const GSS::Node &);
 

@@ -12,6 +12,7 @@
 #include "clang/Basic/TokenKinds.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -65,6 +66,18 @@ const ForestNode &glrParse(const TokenStream &Tokens, const ParseParams &Params,
   std::vector<const GSS::Node *> NewHeads = {
       GSS.addNode(/*State=*/Params.Table.getStartState(StartSymbol),
                   /*ForestNode=*/nullptr, {})};
+  auto MaybeGC = [&, Roots(std::vector<const GSS::Node *>{}), I(0u)]() mutable {
+    assert(PendingShift.empty() && PendingReduce.empty() &&
+           PendingAccept.empty() && "Running GC at the wrong time!");
+
+    if (++I != 20) // Run periodically to balance CPU and memory usage.
+      return;
+    I = 0;
+
+    // We need to copy the list: Roots is consumed by the GC.
+    Roots = NewHeads;
+    GSS.gc(std::move(Roots));
+  };
   for (const ForestNode &Terminal : Terminals) {
     LLVM_DEBUG(llvm::dbgs() << llvm::formatv("Next token {0} (id={1})\n",
                                              G.symbolName(Terminal.symbol()),
@@ -80,6 +93,7 @@ const ForestNode &glrParse(const TokenStream &Tokens, const ParseParams &Params,
 
     glrShift(PendingShift, Terminal, Params,
              [&](const GSS::Node *NewHead) { NewHeads.push_back(NewHead); });
+    MaybeGC();
   }
   LLVM_DEBUG(llvm::dbgs() << llvm::formatv("Next is eof\n"));
   for (const auto *Heads : NewHeads)
@@ -371,6 +385,73 @@ void glrReduce(std::vector<ParseStep> &PendingReduce, const ParseParams &Params,
     PopPending();
   }
   assert(Sequences.empty());
+}
+
+const GSS::Node *GSS::addNode(LRTable::StateID State, const ForestNode *Symbol,
+                              llvm::ArrayRef<const Node *> Parents) {
+  Node *Result = new (allocate(Parents.size()))
+      Node({State, GCParity, static_cast<unsigned>(Parents.size())});
+  Alive.push_back(Result);
+  ++NodesCreated;
+  Result->Payload = Symbol;
+  if (!Parents.empty())
+    llvm::copy(Parents, reinterpret_cast<const Node **>(Result + 1));
+  return Result;
+}
+
+GSS::Node *GSS::allocate(unsigned Parents) {
+  if (FreeList.size() <= Parents)
+    FreeList.resize(Parents + 1);
+  auto &SizedList = FreeList[Parents];
+  if (!SizedList.empty()) {
+    auto *Result = SizedList.back();
+    SizedList.pop_back();
+    return Result;
+  }
+  return static_cast<Node *>(
+      Arena.Allocate(sizeof(Node) + Parents * sizeof(Node *), alignof(Node)));
+}
+
+void GSS::destroy(Node *N) {
+  unsigned ParentCount = N->ParentCount;
+  N->~Node();
+  assert(FreeList.size() > ParentCount && "established on construction!");
+  FreeList[ParentCount].push_back(N);
+}
+
+unsigned GSS::gc(std::vector<const Node *> &&Queue) {
+#ifndef NDEBUG
+  auto ParityMatches = [&](const Node *N) { return N->GCParity == GCParity; };
+  assert("Before GC" && llvm::all_of(Alive, ParityMatches));
+  auto Deferred = llvm::make_scope_exit(
+      [&] { assert("After GC" && llvm::all_of(Alive, ParityMatches)); });
+  assert(llvm::all_of(
+      Queue, [&](const Node *R) { return llvm::is_contained(Alive, R); }));
+#endif
+  unsigned InitialCount = Alive.size();
+
+  // Mark
+  GCParity = !GCParity;
+  while (!Queue.empty()) {
+    Node *N = const_cast<Node *>(Queue.back()); // Safe: we created these nodes.
+    Queue.pop_back();
+    if (N->GCParity != GCParity) { // Not seen yet
+      N->GCParity = GCParity;      // Mark as seen
+      for (const Node *P : N->parents()) // And walk parents
+        Queue.push_back(P);
+    }
+  }
+  // Sweep
+  llvm::erase_if(Alive, [&](Node *N) {
+    if (N->GCParity == GCParity) // Walk reached this node.
+      return false;
+    destroy(N);
+    return true;
+  });
+
+  LLVM_DEBUG(llvm::dbgs() << "GC pruned " << (InitialCount - Alive.size())
+                          << "/" << InitialCount << " GSS nodes\n");
+  return InitialCount - Alive.size();
 }
 
 } // namespace pseudo
