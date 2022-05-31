@@ -142,4 +142,10 @@ TEST(X86Disassembler, X86MCSymbolizerTest) {
   checkBytes({0x49, 0xc7, 0x04, 0x24, 0xf5, 0xfe, 0xff, 0xff});
   checkOperand(0, 0, 4, 0);
   checkOperand(1, 0xfffffffffffffef5, 4, 4);
+
+  // mov    %ax, 0x1568179(%rbx)
+  // Test that the displacement operand size is not affected by the operand
+  // size override prefix.
+  checkBytes({0x66, 0x89, 0x83, 0x79, 0x81, 0x56, 0x01});
+  checkOperand(0, 0x1568179, 3, 4);
 }
