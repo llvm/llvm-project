@@ -3216,8 +3216,10 @@ cc_library(
     ),
     includes = ["include"],
     deps = [
+        ":IR",
         ":MlirLspServerSupportLib",
         ":PDLLAST",
+        ":PDLLCodeGen",
         ":PDLLODS",
         ":PDLLParser",
         ":Support",
