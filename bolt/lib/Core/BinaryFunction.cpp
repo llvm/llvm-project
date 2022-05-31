@@ -3926,33 +3926,6 @@ void BinaryFunction::deleteConservativeEdges() {
   }
 }
 
-bool BinaryFunction::isDataMarker(const SymbolRef &Symbol,
-                                  uint64_t SymbolSize) const {
-  // For aarch64, the ABI defines mapping symbols so we identify data in the
-  // code section (see IHI0056B). $d identifies a symbol starting data contents.
-  if (BC.isAArch64() && Symbol.getType() &&
-      cantFail(Symbol.getType()) == SymbolRef::ST_Unknown && SymbolSize == 0 &&
-      Symbol.getName() &&
-      (cantFail(Symbol.getName()) == "$d" ||
-       cantFail(Symbol.getName()).startswith("$d.")))
-    return true;
-  return false;
-}
-
-bool BinaryFunction::isCodeMarker(const SymbolRef &Symbol,
-                                  uint64_t SymbolSize) const {
-  // For aarch64, the ABI defines mapping symbols so we identify data in the
-  // code section (see IHI0056B). $x identifies a symbol starting code or the
-  // end of a data chunk inside code.
-  if (BC.isAArch64() && Symbol.getType() &&
-      cantFail(Symbol.getType()) == SymbolRef::ST_Unknown && SymbolSize == 0 &&
-      Symbol.getName() &&
-      (cantFail(Symbol.getName()) == "$x" ||
-       cantFail(Symbol.getName()).startswith("$x.")))
-    return true;
-  return false;
-}
-
 bool BinaryFunction::isSymbolValidInScope(const SymbolRef &Symbol,
                                           uint64_t SymbolSize) const {
   // If this symbol is in a different section from the one where the
@@ -3963,7 +3936,7 @@ bool BinaryFunction::isSymbolValidInScope(const SymbolRef &Symbol,
 
   // Some symbols are tolerated inside function bodies, others are not.
   // The real function boundaries may not be known at this point.
-  if (isDataMarker(Symbol, SymbolSize) || isCodeMarker(Symbol, SymbolSize))
+  if (BC.isMarker(Symbol))
     return true;
 
   // It's okay to have a zero-sized symbol in the middle of non-zero-sized
