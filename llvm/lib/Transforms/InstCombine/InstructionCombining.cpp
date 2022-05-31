@@ -1969,7 +1969,12 @@ Instruction *InstCombinerImpl::visitGEPOfGEP(GetElementPtrInst &GEP,
         // invariant: this breaks the dependence between GEPs and allows LICM
         // to hoist the invariant part out of the loop.
         if (L->isLoopInvariant(GO1) && !L->isLoopInvariant(SO1)) {
-          bool IsInBounds = Src->isInBounds() && GEP.isInBounds();
+          // The swapped GEPs are inbounds if both original GEPs are inbounds
+          // and the sign of the offsets is the same. For simplicity, only
+          // handle both offsets being non-negative.
+          bool IsInBounds = Src->isInBounds() && GEP.isInBounds() &&
+                            isKnownNonNegative(SO1, DL, 0, &AC, &GEP, &DT) &&
+                            isKnownNonNegative(GO1, DL, 0, &AC, &GEP, &DT);
           // Put NewSrc at same location as %src.
           Builder.SetInsertPoint(cast<Instruction>(Src));
           Value *NewSrc = Builder.CreateGEP(GEP.getSourceElementType(),

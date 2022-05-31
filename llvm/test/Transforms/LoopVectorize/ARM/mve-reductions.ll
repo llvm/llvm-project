@@ -1370,8 +1370,8 @@ define i32 @reduction_interleave_group(i32 %n, i32* %arr) #0 {
 ; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi i32 [ 0, [[VECTOR_PH]] ], [ [[TMP10:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = shl i32 [[INDEX]], 1
 ; CHECK-NEXT:    [[TMP3:%.*]] = or i32 [[OFFSET_IDX]], 1
-; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i32, i32* [[ARR:%.*]], i32 -1
-; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i32, i32* [[TMP4]], i32 [[TMP3]]
+; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr i32, i32* [[ARR:%.*]], i32 -1
+; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr i32, i32* [[TMP4]], i32 [[TMP3]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = bitcast i32* [[TMP5]] to <8 x i32>*
 ; CHECK-NEXT:    [[WIDE_VEC:%.*]] = load <8 x i32>, <8 x i32>* [[TMP6]], align 4
 ; CHECK-NEXT:    [[STRIDED_VEC:%.*]] = shufflevector <8 x i32> [[WIDE_VEC]], <8 x i32> poison, <4 x i32> <i32 0, i32 2, i32 4, i32 6>
