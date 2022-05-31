@@ -76,7 +76,7 @@ along with some other integer information. The image kind lets us easily
 identify the type of image stored here without needing to inspect the binary.
 The offloading kind is used to determine which registration code or linking
 semantics are necessary for this image. These are stored as enumerations with
-the following values for the :ref:`offload kind<table-offload_kind` and the
+the following values for the :ref:`offload kind<table-offload_kind>` and the
 :ref:`image kind<table-image_kind>`.
 
 .. table:: Image Kind
