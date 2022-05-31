@@ -12,6 +12,7 @@
 #include "clang/Basic/Diagnostic.h"
 #include "clang/Basic/LLVM.h"
 #include "clang/Driver/Action.h"
+#include "clang/Driver/DriverDiagnostic.h"
 #include "clang/Driver/InputInfo.h"
 #include "clang/Driver/Options.h"
 #include "clang/Driver/Phases.h"
@@ -276,11 +277,6 @@ private:
   unsigned ProbePrecompiled : 1;
 
 public:
-  /// Force clang to emit reproducer for driver invocation. This is enabled
-  /// indirectly by setting FORCE_CLANG_DIAGNOSTICS_CRASH environment variable
-  /// or when using the -gen-reproducer driver flag.
-  unsigned GenReproducer : 1;
-
   // getFinalPhase - Determine which compilation mode we are in and record
   // which option we used to determine the final phase.
   // TODO: Much of what getFinalPhase returns are not actually true compiler
@@ -504,6 +500,35 @@ public:
       Compilation &C, const Command &FailingCommand,
       StringRef AdditionalInformation = "",
       CompilationDiagnosticReport *GeneratedReport = nullptr);
+
+  enum class CommandStatus {
+    Crash = 1,
+    Error,
+    Ok,
+  };
+
+  enum class ReproLevel {
+    Off = 0,
+    OnCrash = static_cast<int>(CommandStatus::Crash),
+    OnError = static_cast<int>(CommandStatus::Error),
+    Always = static_cast<int>(CommandStatus::Ok),
+  };
+
+  bool maybeGenerateCompilationDiagnostics(
+      CommandStatus CS, ReproLevel Level, Compilation &C,
+      const Command &FailingCommand, StringRef AdditionalInformation = "",
+      CompilationDiagnosticReport *GeneratedReport = nullptr) {
+    if (static_cast<int>(CS) > static_cast<int>(Level))
+      return false;
+    if (CS != CommandStatus::Crash)
+      Diags.Report(diag::err_drv_force_crash)
+          << !::getenv("FORCE_CLANG_DIAGNOSTICS_CRASH");
+    // Hack to ensure that diagnostic notes get emitted.
+    Diags.setLastDiagnosticIgnored(false);
+    generateCompilationDiagnostics(C, FailingCommand, AdditionalInformation,
+                                   GeneratedReport);
+    return true;
+  }
 
   /// @}
   /// @name Helper Methods
