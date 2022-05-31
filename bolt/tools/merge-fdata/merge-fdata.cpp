@@ -265,7 +265,7 @@ void mergeLegacyProfiles(const cl::list<std::string> &Filenames) {
             "cannot mix profile collected in BOLT and non-BOLT deployments");
     }
 
-    SmallVector<StringRef, 10> Lines;
+    SmallVector<StringRef> Lines;
     SplitString(Buf, Lines, "\n");
     for (StringRef Line : Lines) {
       size_t Pos = Line.rfind(" ");
