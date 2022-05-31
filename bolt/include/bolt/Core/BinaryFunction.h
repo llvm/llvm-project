@@ -1948,11 +1948,6 @@ public:
     return ColdLSDASymbol;
   }
 
-  /// True if the symbol is a mapping symbol used in AArch64 to delimit
-  /// data inside code section.
-  bool isDataMarker(const SymbolRef &Symbol, uint64_t SymbolSize) const;
-  bool isCodeMarker(const SymbolRef &Symbol, uint64_t SymbolSize) const;
-
   void setOutputDataAddress(uint64_t Address) { OutputDataOffset = Address; }
 
   uint64_t getOutputDataAddress() const { return OutputDataOffset; }
