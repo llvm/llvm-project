@@ -1,4 +1,4 @@
-executable("pseudo-gen") {
+executable("clang-pseudo-gen") {
   configs += [ "//llvm/utils/gn/build:clang_code" ]
   deps = [
     "//clang-tools-extra/pseudo/lib/grammar",
