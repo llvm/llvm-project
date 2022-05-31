@@ -117,7 +117,6 @@ __cpp_lib_map_try_emplace                               201411L <map>
 __cpp_lib_math_constants                                201907L <numbers>
 __cpp_lib_math_special_functions                        201603L <cmath>
 __cpp_lib_memory_resource                               201603L <memory_resource>
-__cpp_lib_monadic_optional                              202110L <optional>
 __cpp_lib_move_only_function                            202110L <functional>
 __cpp_lib_node_extract                                  201606L <map> <set> <unordered_map>
                                                                 <unordered_set>
@@ -127,7 +126,8 @@ __cpp_lib_nonmember_container_access                    201411L <array> <deque> 
                                                                 <unordered_map> <unordered_set> <vector>
 __cpp_lib_not_fn                                        201603L <functional>
 __cpp_lib_null_iterators                                201304L <iterator>
-__cpp_lib_optional                                      201606L <optional>
+__cpp_lib_optional                                      202110L <optional>
+                                                        201606L // C++17
 __cpp_lib_out_ptr                                       202106L <memory>
 __cpp_lib_parallel_algorithm                            201603L <algorithm> <numeric>
 __cpp_lib_polymorphic_allocator                         201902L <memory_resource>
@@ -382,8 +382,9 @@ __cpp_lib_void_t                                        201411L <type_traits>
 // # define __cpp_lib_constexpr_typeinfo                   202106L
 // # define __cpp_lib_invoke_r                             202106L
 # define __cpp_lib_is_scoped_enum                       202011L
-# define __cpp_lib_monadic_optional                     202110L
 // # define __cpp_lib_move_only_function                   202110L
+# undef  __cpp_lib_optional
+# define __cpp_lib_optional                             202110L
 // # define __cpp_lib_out_ptr                              202106L
 // # define __cpp_lib_ranges_chunk                         202202L
 // # define __cpp_lib_ranges_chunk_by                      202202L
