@@ -399,6 +399,221 @@ define i1 @and_ugt_sub(i8 %b, i8 %x, i8 %y) {
   ret i1 %r
 }
 
+; Repeat the zext set of tests with a sext instead.
+
+define i1 @uge_sext(i1 %b, i8 %x) {
+; CHECK-LABEL: @uge_sext(
+; CHECK-NEXT:    [[S:%.*]] = sext i1 [[B:%.*]] to i8
+; CHECK-NEXT:    [[R:%.*]] = icmp uge i8 [[S]], [[X:%.*]]
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %s = sext i1 %b to i8
+  %r = icmp uge i8 %s, %x
+  ret i1 %r
+}
+
+define <2 x i1> @ule_sext(<2 x i1> %b, <2 x i8> %p) {
+; CHECK-LABEL: @ule_sext(
+; CHECK-NEXT:    [[X:%.*]] = mul <2 x i8> [[P:%.*]], [[P]]
+; CHECK-NEXT:    [[S:%.*]] = sext <2 x i1> [[B:%.*]] to <2 x i8>
+; CHECK-NEXT:    [[R:%.*]] = icmp ule <2 x i8> [[X]], [[S]]
+; CHECK-NEXT:    ret <2 x i1> [[R]]
+;
+  %x = mul <2 x i8> %p, %p ; thwart complexity-based canonicalization
+  %s = sext <2 x i1> %b to <2 x i8>
+  %r = icmp ule <2 x i8> %x, %s
+  ret <2 x i1> %r
+}
+
+define i1 @ugt_sext(i1 %b, i8 %x) {
+; CHECK-LABEL: @ugt_sext(
+; CHECK-NEXT:    [[S:%.*]] = sext i1 [[B:%.*]] to i8
+; CHECK-NEXT:    [[R:%.*]] = icmp ugt i8 [[S]], [[X:%.*]]
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %s = sext i1 %b to i8
+  %r = icmp ugt i8 %s, %x
+  ret i1 %r
+}
+
+define i1 @ult_sext(i1 %b, i8 %p) {
+; CHECK-LABEL: @ult_sext(
+; CHECK-NEXT:    [[X:%.*]] = mul i8 [[P:%.*]], [[P]]
+; CHECK-NEXT:    [[S:%.*]] = sext i1 [[B:%.*]] to i8
+; CHECK-NEXT:    [[R:%.*]] = icmp ult i8 [[X]], [[S]]
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %x = mul i8 %p, %p ; thwart complexity-based canonicalization
+  %s = sext i1 %b to i8
+  %r = icmp ult i8 %x, %s
+  ret i1 %r
+}
+
+define i1 @uge_sext_use(i1 %b, i8 %x) {
+; CHECK-LABEL: @uge_sext_use(
+; CHECK-NEXT:    [[S:%.*]] = sext i1 [[B:%.*]] to i8
+; CHECK-NEXT:    call void @use(i8 [[S]])
+; CHECK-NEXT:    [[R:%.*]] = icmp uge i8 [[S]], [[X:%.*]]
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %s = sext i1 %b to i8
+  call void @use(i8 %s)
+  %r = icmp uge i8 %s, %x
+  ret i1 %r
+}
+
+define i1 @ule_sext_not_i1(i2 %b, i8 %x) {
+; CHECK-LABEL: @ule_sext_not_i1(
+; CHECK-NEXT:    [[S:%.*]] = sext i2 [[B:%.*]] to i8
+; CHECK-NEXT:    [[R:%.*]] = icmp uge i8 [[S]], [[X:%.*]]
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %s = sext i2 %b to i8
+  %r = icmp ule i8 %x, %s
+  ret i1 %r
+}
+
+define i1 @sub_ule_sext(i1 %b, i8 %x, i8 %y) {
+; CHECK-LABEL: @sub_ule_sext(
+; CHECK-NEXT:    [[S:%.*]] = sext i1 [[B:%.*]] to i8
+; CHECK-NEXT:    [[D:%.*]] = sub i8 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = icmp ule i8 [[D]], [[S]]
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %s = sext i1 %b to i8
+  %d = sub i8 %x, %y
+  %r = icmp ule i8 %d, %s
+  ret i1 %r
+}
+
+define i1 @sext_ule_sext(i1 %b, i8 %p) {
+; CHECK-LABEL: @sext_ule_sext(
+; CHECK-NEXT:    [[X:%.*]] = mul i8 [[P:%.*]], [[P]]
+; CHECK-NEXT:    [[TMP1:%.*]] = sext i1 [[B:%.*]] to i8
+; CHECK-NEXT:    [[R:%.*]] = icmp ule i8 [[X]], [[TMP1]]
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %x = mul i8 %p, %p ; thwart complexity-based canonicalization
+  %s = sext i1 %b to i16
+  %sx = sext i8 %x to i16
+  %r = icmp ule i16 %sx, %s
+  ret i1 %r
+}
+
+define i1 @sext_uge_sext(i1 %b, i4 %x) {
+; CHECK-LABEL: @sext_uge_sext(
+; CHECK-NEXT:    [[SX:%.*]] = sext i4 [[X:%.*]] to i8
+; CHECK-NEXT:    call void @use(i8 [[SX]])
+; CHECK-NEXT:    [[TMP1:%.*]] = sext i1 [[B:%.*]] to i4
+; CHECK-NEXT:    [[R:%.*]] = icmp uge i4 [[TMP1]], [[X]]
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %s = sext i1 %b to i8
+  %sx = sext i4 %x to i8
+  call void @use(i8 %sx)
+  %r = icmp uge i8 %s, %sx
+  ret i1 %r
+}
+
+define i1 @sub_ule_sext_not_i1(i2 %b, i8 %x, i8 %y) {
+; CHECK-LABEL: @sub_ule_sext_not_i1(
+; CHECK-NEXT:    [[S:%.*]] = sext i2 [[B:%.*]] to i8
+; CHECK-NEXT:    [[D:%.*]] = sub i8 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = icmp ule i8 [[D]], [[S]]
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %s = sext i2 %b to i8
+  %d = sub i8 %x, %y
+  %r = icmp ule i8 %d, %s
+  ret i1 %r
+}
+
+define i1 @sub_ule_sext_use1(i1 %b, i8 %x, i8 %y) {
+; CHECK-LABEL: @sub_ule_sext_use1(
+; CHECK-NEXT:    [[S:%.*]] = sext i1 [[B:%.*]] to i8
+; CHECK-NEXT:    call void @use(i8 [[S]])
+; CHECK-NEXT:    [[D:%.*]] = sub i8 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = icmp ule i8 [[D]], [[S]]
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %s = sext i1 %b to i8
+  call void @use(i8 %s)
+  %d = sub i8 %x, %y
+  %r = icmp ule i8 %d, %s
+  ret i1 %r
+}
+
+define <2 x i1> @sext_uge_sub_use2(<2 x i1> %b, <2 x i8> %x, <2 x i8> %y) {
+; CHECK-LABEL: @sext_uge_sub_use2(
+; CHECK-NEXT:    [[S:%.*]] = sext <2 x i1> [[B:%.*]] to <2 x i8>
+; CHECK-NEXT:    [[D:%.*]] = sub <2 x i8> [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    call void @use_vec(<2 x i8> [[D]])
+; CHECK-NEXT:    [[R:%.*]] = icmp ule <2 x i8> [[D]], [[S]]
+; CHECK-NEXT:    ret <2 x i1> [[R]]
+;
+  %s = sext <2 x i1> %b to <2 x i8>
+  %d = sub <2 x i8> %x, %y
+  call void @use_vec(<2 x i8> %d)
+  %r = icmp uge <2 x i8> %s, %d
+  ret <2 x i1> %r
+}
+
+define i1 @sub_ule_sext_use3(i1 %b, i8 %x, i8 %y) {
+; CHECK-LABEL: @sub_ule_sext_use3(
+; CHECK-NEXT:    [[S:%.*]] = sext i1 [[B:%.*]] to i8
+; CHECK-NEXT:    call void @use(i8 [[S]])
+; CHECK-NEXT:    [[D:%.*]] = sub i8 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    call void @use(i8 [[D]])
+; CHECK-NEXT:    [[R:%.*]] = icmp ule i8 [[D]], [[S]]
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %s = sext i1 %b to i8
+  call void @use(i8 %s)
+  %d = sub i8 %x, %y
+  call void @use(i8 %d)
+  %r = icmp ule i8 %d, %s
+  ret i1 %r
+}
+
+define i1 @sub_ult_sext(i1 %b, i8 %x, i8 %y) {
+; CHECK-LABEL: @sub_ult_sext(
+; CHECK-NEXT:    [[S:%.*]] = sext i1 [[B:%.*]] to i8
+; CHECK-NEXT:    [[D:%.*]] = sub i8 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = icmp ult i8 [[D]], [[S]]
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %s = sext i1 %b to i8
+  %d = sub i8 %x, %y
+  %r = icmp ult i8 %d, %s
+  ret i1 %r
+}
+
+define <2 x i1> @sub_ule_ashr(<2 x i8> %b, <2 x i8> %x, <2 x i8> %y) {
+; CHECK-LABEL: @sub_ule_ashr(
+; CHECK-NEXT:    [[A:%.*]] = ashr <2 x i8> [[B:%.*]], <i8 7, i8 7>
+; CHECK-NEXT:    [[S:%.*]] = sub <2 x i8> [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = icmp ule <2 x i8> [[S]], [[A]]
+; CHECK-NEXT:    ret <2 x i1> [[R]]
+;
+  %a = ashr <2 x i8> %b, <i8 7, i8 7>
+  %s = sub <2 x i8> %x, %y
+  %r = icmp ule <2 x i8> %s, %a
+  ret <2 x i1> %r
+}
+
+define i1 @ashr_uge_sub(i8 %b, i8 %x, i8 %y) {
+; CHECK-LABEL: @ashr_uge_sub(
+; CHECK-NEXT:    [[A:%.*]] = ashr i8 [[B:%.*]], 7
+; CHECK-NEXT:    [[S:%.*]] = sub i8 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = icmp uge i8 [[A]], [[S]]
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %a = ashr i8 %b, 7
+  %s = sub i8 %x, %y
+  %r = icmp uge i8 %a, %s
+  ret i1 %r
+}
+
 !0 = !{i32 1, i32 6}
 !1 = !{i32 0, i32 6}
 !2 = !{i8 0, i8 1}
