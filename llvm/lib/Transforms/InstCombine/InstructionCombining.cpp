@@ -2035,13 +2035,20 @@ Instruction *InstCombinerImpl::visitGEPOfGEP(GetElementPtrInst &GEP,
     if (!Offset.isZero() || (!IsFirstType && !ConstIndices[0].isZero()))
       return nullptr;
 
+    bool IsInBounds = isMergedGEPInBounds(*Src, *cast<GEPOperator>(&GEP));
     SmallVector<Value *> Indices;
     append_range(Indices, drop_end(Src->indices(),
                                    Src->getNumIndices() - NumVarIndices));
-    for (const APInt &Idx : drop_begin(ConstIndices, !IsFirstType))
+    for (const APInt &Idx : drop_begin(ConstIndices, !IsFirstType)) {
       Indices.push_back(ConstantInt::get(GEP.getContext(), Idx));
+      // Even if the total offset is inbounds, we may end up representing it
+      // by first performing a larger negative offset, and then a smaller
+      // positive one. The large negative offset might go out of bounds. Only
+      // preserve inbounds if all signs are the same.
+      IsInBounds &= Idx.isNonNegative() == ConstIndices[0].isNonNegative();
+    }
 
-    return isMergedGEPInBounds(*Src, *cast<GEPOperator>(&GEP))
+    return IsInBounds
                ? GetElementPtrInst::CreateInBounds(Src->getSourceElementType(),
                                                    Src->getOperand(0), Indices,
                                                    GEP.getName())
