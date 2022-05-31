@@ -40,6 +40,9 @@ target triple = "powerpc64-unknown-linux-gnu"
 ; CHECK-LABEL: clobberLR:
 ; CHECK: {{^}}.L[[clobberLR_BEGIN:.*]]:{{$}}
 
+; CHECK-LABEL: floats:
+; CHECK: {{^}}.L[[floats_BEGIN:.*]]:{{$}}
+
 
 ; CHECK-LABEL:  .section  .llvm_stackmaps
 ; CHECK-NEXT:  __LLVM_StackMaps:
@@ -48,11 +51,11 @@ target triple = "powerpc64-unknown-linux-gnu"
 ; CHECK-NEXT:   .byte 0
 ; CHECK-NEXT:   .short 0
 ; Num Functions
-; CHECK-NEXT:   .long 11
+; CHECK-NEXT:   .long 12
 ; Num LargeConstants
 ; CHECK-NEXT:   .long 3
 ; Num Callsites
-; CHECK-NEXT:   .long 11
+; CHECK-NEXT:   .long 12
 
 ; Functions and stack size
 ; CHECK-NEXT:   .quad constantargs
@@ -87,6 +90,9 @@ target triple = "powerpc64-unknown-linux-gnu"
 ; CHECK-NEXT:   .quad 1
 ; CHECK-NEXT:   .quad clobberLR
 ; CHECK-NEXT:   .quad 208
+; CHECK-NEXT:   .quad 1
+; CHECK-NEXT:   .quad floats
+; CHECK-NEXT:   .quad 80
 ; CHECK-NEXT:   .quad 1
 
 ; Num LargeConstants
@@ -379,6 +385,60 @@ define void @liveConstant() {
 define void @clobberLR(i32 %a) {
   tail call void asm sideeffect "nop", "~{r0},~{r3},~{r4},~{r5},~{r6},~{r7},~{r8},~{r9},~{r10},~{r11},~{r12},~{r14},~{r15},~{r16},~{r17},~{r18},~{r19},~{r20},~{r21},~{r22},~{r23},~{r24},~{r25},~{r26},~{r27},~{r28},~{r29},~{r30},~{r31}"() nounwind
   tail call void (i64, i32, ...) @llvm.experimental.stackmap(i64 16, i32 8, i32 %a)
+  ret void
+}
+
+; CHECK:  .long .L{{.*}}-.L[[floats_BEGIN]]
+; CHECK-NEXT:   .short 0
+; Num Locations
+; CHECK-NEXT:   .short 6
+; Loc 0: constant float stored to FP register
+; CHECK-NEXT:   .byte   1
+; CHECK-NEXT:   .byte   0
+; CHECK-NEXT:   .short  8
+; CHECK-NEXT:   .short  {{.*}}
+; CHECK-NEXT:   .short  0
+; CHECK-NEXT:   .long   0
+; Loc 0: constant double stored to FP register
+; CHECK-NEXT:   .byte   1
+; CHECK-NEXT:   .byte   0
+; CHECK-NEXT:   .short  8
+; CHECK-NEXT:   .short  {{.*}}
+; CHECK-NEXT:   .short  0
+; CHECK-NEXT:   .long   0
+; Loc 1: float value in FP register
+; CHECK-NEXT:   .byte   1
+; CHECK-NEXT:   .byte   0
+; CHECK-NEXT:   .short  8
+; CHECK-NEXT:   .short  {{.*}}
+; CHECK-NEXT:   .short  0
+; CHECK-NEXT:   .long   0
+; Loc 2: double value in FP register
+; CHECK-NEXT:   .byte   1
+; CHECK-NEXT:   .byte   0
+; CHECK-NEXT:   .short  8
+; CHECK-NEXT:   .short  {{.*}}
+; CHECK-NEXT:   .short  0
+; CHECK-NEXT:   .long   0
+; Loc 3: float on stack
+; CHECK-NEXT:   .byte   2
+; CHECK-NEXT:   .byte   0
+; CHECK-NEXT:   .short  8
+; CHECK-NEXT:   .short  {{.*}}
+; CHECK-NEXT:   .short  0
+; CHECK-NEXT:   .long   {{.*}}
+; Loc 4: double on stack
+; CHECK-NEXT:   .byte   2
+; CHECK-NEXT:   .byte   0
+; CHECK-NEXT:   .short  8
+; CHECK-NEXT:   .short  {{.*}}
+; CHECK-NEXT:   .short  0
+; CHECK-NEXT:   .long   {{.*}}
+define void @floats(float %f, double %g) {
+  %ff = alloca float
+  %gg = alloca double
+  call void (i64, i32, ...) @llvm.experimental.stackmap(i64 888, i32 0, float 1.25,
+    double 1.5, float %f, double %g, float* %ff, double* %gg)
   ret void
 }
 

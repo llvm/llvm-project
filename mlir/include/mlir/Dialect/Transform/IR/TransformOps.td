@@ -17,6 +17,32 @@ include "mlir/Dialect/Transform/IR/TransformDialect.td"
 include "mlir/Dialect/Transform/IR/TransformEffects.td"
 include "mlir/Dialect/Transform/IR/TransformInterfaces.td"
 
+def GetClosestIsolatedParentOp : TransformDialectOp<"get_closest_isolated_parent",
+    [DeclareOpInterfaceMethods<TransformOpInterface>,
+     DeclareOpInterfaceMethods<MemoryEffectsOpInterface>]> {
+  let summary = "Gets handles to the closest isolated-from-above parents";
+  let description = [{
+    The handles defined by this Transform op correspond to the closest isolated
+    from above ancestor of the Payload IR operations associated with its
+    operand. If any of the given Payload IR ops has no such parent (unlikely as
+    there usually is a top-level ModuleOp), the transformation is considered to
+    have failed.
+
+    Ancestor ops follow the same order as the ops assocaited with the
+    operand, except for potential duplicates (multiple Payload IR ops assocaited
+    with the operand have the same parent) for which the ancestor will only be
+    listed once for the first time it occurs. For example, given the list
+    "(childof(A), childof(B), childof(B), childof(A), childof(B))", the
+    resulting list will be just "(A, B)". Note that no other semantic ordering
+    is applied, e.g., "B" may itself be a parent of "A". This may have an impact
+    on the further transformation applied to the handle produced here.
+  }];
+
+  let arguments = (ins PDL_Operation:$target);
+  let results = (outs PDL_Operation:$parent);
+  let assemblyFormat = "$target attr-dict";
+}
+
 def PDLMatchOp : TransformDialectOp<"pdl_match",
     [DeclareOpInterfaceMethods<TransformOpInterface>]> {
   let summary = "Finds ops that match the named PDL pattern";

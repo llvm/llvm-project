@@ -270,10 +270,6 @@ private:
       if (T.Rules[RID] == T.Rules[RID + 1])
         Diagnostics.push_back(
             llvm::formatv("Duplicate rule: `{0}`", G.dumpRule(RID)));
-      // Warning for nullable nonterminals
-      if (T.Rules[RID].Size == 0)
-        Diagnostics.push_back(
-            llvm::formatv("Rule `{0}` has a nullable RHS", G.dumpRule(RID)));
     }
     // symbol-id -> used counts
     std::vector<unsigned> UseCounts(T.Nonterminals.size(), 0);

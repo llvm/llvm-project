@@ -44,6 +44,28 @@ define <2 x i1> @fp2si_v2f32_v2i1(<2 x float> %x) {
   ret <2 x i1> %z
 }
 
+define <2 x i15> @fp2si_v2f32_v2i15(<2 x float> %x) {
+; CHECK-LABEL: fp2si_v2f32_v2i15:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 2, e16, mf4, ta, mu
+; CHECK-NEXT:    vfncvt.rtz.x.f.w v9, v8
+; CHECK-NEXT:    vmv1r.v v8, v9
+; CHECK-NEXT:    ret
+  %z = fptosi <2 x float> %x to <2 x i15>
+  ret <2 x i15> %z
+}
+
+define <2 x i15> @fp2ui_v2f32_v2i15(<2 x float> %x) {
+; CHECK-LABEL: fp2ui_v2f32_v2i15:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 2, e16, mf4, ta, mu
+; CHECK-NEXT:    vfncvt.rtz.x.f.w v9, v8
+; CHECK-NEXT:    vmv1r.v v8, v9
+; CHECK-NEXT:    ret
+  %z = fptoui <2 x float> %x to <2 x i15>
+  ret <2 x i15> %z
+}
+
 define <2 x i1> @fp2ui_v2f32_v2i1(<2 x float> %x) {
 ; CHECK-LABEL: fp2ui_v2f32_v2i1:
 ; CHECK:       # %bb.0:
