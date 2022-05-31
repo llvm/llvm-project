@@ -1136,7 +1136,7 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
 
     // Legalize unpacked bitcasts to REINTERPRET_CAST.
     for (auto VT : {MVT::nxv2i16, MVT::nxv4i16, MVT::nxv2i32, MVT::nxv2bf16,
-                    MVT::nxv2f16, MVT::nxv4f16, MVT::nxv2f32})
+                    MVT::nxv4bf16, MVT::nxv2f16, MVT::nxv4f16, MVT::nxv2f32})
       setOperationAction(ISD::BITCAST, VT, Custom);
 
     for (auto VT :
