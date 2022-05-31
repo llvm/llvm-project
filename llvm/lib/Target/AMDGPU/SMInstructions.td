@@ -947,7 +947,8 @@ def : GCNPat <
 // GFX10.
 //===----------------------------------------------------------------------===//
 
-class SMEM_Real_10Plus_common<bits<8> op, SM_Pseudo ps, string opName, int subtarget> :
+class SMEM_Real_10Plus_common<bits<8> op, SM_Pseudo ps, string opName,
+                              int subtarget, RegisterWithSubRegs sgpr_null> :
     SM_Real<ps, opName>, SIMCInstr<ps.PseudoInstr, subtarget>, Enc64 {
   let Inst{5-0}   = !if(ps.has_sbase, sbase{6-1}, ?);
   let Inst{12-6}  = !if(ps.has_sdst, sdst{6-0}, ?);
@@ -956,18 +957,17 @@ class SMEM_Real_10Plus_common<bits<8> op, SM_Pseudo ps, string opName, int subta
   // There are SMEM instructions that do not employ any of the offset
   // fields, in which case we need them to remain undefined.
   let Inst{52-32} = !if(ps.has_offset, offset{20-0}, !if(ps.has_soffset, 0, ?));
+  let Inst{63-57} = !if(ps.has_soffset, soffset{6-0},
+                        !if(ps.has_offset, sgpr_null.HWEncoding{6-0}, ?));
 }
 
 class SMEM_Real_gfx10<bits<8> op, SM_Pseudo ps>
-    : SMEM_Real_10Plus_common<op, ps, ps.Mnemonic, SIEncodingFamily.GFX10> {
+    : SMEM_Real_10Plus_common<op, ps, ps.Mnemonic, SIEncodingFamily.GFX10,
+                              SGPR_NULL_gfxpre11> {
   let AssemblerPredicate = isGFX10Only;
   let DecoderNamespace = "GFX10";
   let Inst{14}    = !if(ps.has_dlc, cpol{CPolBit.DLC}, ?);
   let Inst{16}    = !if(ps.has_glc, cpol{CPolBit.GLC}, ?);
-  // There are SMEM instructions that do not employ any of the offset
-  // fields, in which case we need them to remain undefined.
-  let Inst{63-57} = !if(ps.has_soffset, soffset{6-0},
-                        !if(ps.has_offset, !cast<int>(SGPR_NULL_gfxpre11.HWEncoding), ?));
 }
 
 multiclass SM_Real_Loads_gfx10<bits<8> op, string ps,
@@ -1163,15 +1163,12 @@ def SMInfoTable : GenericTable {
 //===----------------------------------------------------------------------===//
 
 class SMEM_Real_gfx11<bits<8> op, SM_Pseudo ps, string opName = ps.Mnemonic> :
-    SMEM_Real_10Plus_common<op, ps, opName, SIEncodingFamily.GFX11> {
+    SMEM_Real_10Plus_common<op, ps, opName, SIEncodingFamily.GFX11,
+                            SGPR_NULL_gfx11plus> {
   let AssemblerPredicate = isGFX11Plus;
   let DecoderNamespace = "GFX11";
   let Inst{13}    = !if(ps.has_dlc, cpol{CPolBit.DLC}, 0);
   let Inst{14}    = !if(ps.has_glc, cpol{CPolBit.GLC}, 0);
-  // There are SMEM instructions that do not employ any of the offset
-  // fields, in which case we need them to remain undefined.
-  let Inst{63-57} = !if(ps.has_soffset, soffset{6-0},
-                        !if(ps.has_offset, !cast<int>(SGPR_NULL_gfx11plus.HWEncoding), ?));
 }
 
 class SMEM_Real_Load_gfx11<bits<8> op, string ps, string opName, dag offsets> :
