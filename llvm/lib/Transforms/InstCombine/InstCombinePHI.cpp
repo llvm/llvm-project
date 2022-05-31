@@ -1273,6 +1273,12 @@ static Value *simplifyUsingControlFlow(InstCombiner &Self, PHINode &PN,
   //      ...      ...
   //       \       /
   //    phi [true] [false]
+  // and
+  //        switch (cond)
+  // case v1: /       \ case v2:
+  //         ...      ...
+  //          \       /
+  //       phi [v1] [v2]
   // Make sure all inputs are constants.
   if (!all_of(PN.operands(), [](Value *V) { return isa<ConstantInt>(V); }))
     return nullptr;
@@ -1301,6 +1307,7 @@ static Value *simplifyUsingControlFlow(InstCombiner &Self, PHINode &PN,
     AddSucc(ConstantInt::getFalse(Context), BI->getSuccessor(1));
   } else if (auto *SI = dyn_cast<SwitchInst>(IDom->getTerminator())) {
     Cond = SI->getCondition();
+    ++SuccCount[SI->getDefaultDest()];
     for (auto Case : SI->cases())
       AddSucc(Case.getCaseValue(), Case.getCaseSuccessor());
   } else {

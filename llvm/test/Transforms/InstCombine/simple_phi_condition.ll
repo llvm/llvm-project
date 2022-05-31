@@ -585,3 +585,69 @@ merge:
   %ret = phi i8 [ 1, %sw.1 ], [ 7, %sw.7 ], [ 19, %sw.19 ], [ 42, %entry ]
   ret i8 %ret
 }
+
+define i8 @test_switch_default_edge_direct(i8 %cond) {
+; CHECK-LABEL: @test_switch_default_edge_direct(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    switch i8 [[COND:%.*]], label [[MERGE:%.*]] [
+; CHECK-NEXT:    i8 1, label [[SW_1:%.*]]
+; CHECK-NEXT:    i8 7, label [[SW_7:%.*]]
+; CHECK-NEXT:    i8 19, label [[MERGE]]
+; CHECK-NEXT:    ]
+; CHECK:       sw.1:
+; CHECK-NEXT:    br label [[MERGE]]
+; CHECK:       sw.7:
+; CHECK-NEXT:    br label [[MERGE]]
+; CHECK:       merge:
+; CHECK-NEXT:    [[RET:%.*]] = phi i8 [ 1, [[SW_1]] ], [ 7, [[SW_7]] ], [ 19, [[ENTRY:%.*]] ], [ 19, [[ENTRY]] ]
+; CHECK-NEXT:    ret i8 [[RET]]
+;
+entry:
+  switch i8 %cond, label %merge [
+  i8 1, label %sw.1
+  i8 7, label %sw.7
+  i8 19, label %merge
+  ]
+sw.1:
+  br label %merge
+sw.7:
+  br label %merge
+merge:
+  %ret = phi i8 [ 1, %sw.1 ], [ 7, %sw.7 ], [ 19, %entry ], [ 19, %entry ]
+  ret i8 %ret
+}
+
+define i8 @test_switch_default_edge_duplicate(i8 %cond) {
+; CHECK-LABEL: @test_switch_default_edge_duplicate(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    switch i8 [[COND:%.*]], label [[SW_19:%.*]] [
+; CHECK-NEXT:    i8 1, label [[SW_1:%.*]]
+; CHECK-NEXT:    i8 7, label [[SW_7:%.*]]
+; CHECK-NEXT:    i8 19, label [[SW_19]]
+; CHECK-NEXT:    ]
+; CHECK:       sw.1:
+; CHECK-NEXT:    br label [[MERGE:%.*]]
+; CHECK:       sw.7:
+; CHECK-NEXT:    br label [[MERGE]]
+; CHECK:       sw.19:
+; CHECK-NEXT:    br label [[MERGE]]
+; CHECK:       merge:
+; CHECK-NEXT:    [[RET:%.*]] = phi i8 [ 1, [[SW_1]] ], [ 7, [[SW_7]] ], [ 19, [[SW_19]] ]
+; CHECK-NEXT:    ret i8 [[RET]]
+;
+entry:
+  switch i8 %cond, label %sw.19 [
+  i8 1, label %sw.1
+  i8 7, label %sw.7
+  i8 19, label %sw.19
+  ]
+sw.1:
+  br label %merge
+sw.7:
+  br label %merge
+sw.19:
+  br label %merge
+merge:
+  %ret = phi i8 [ 1, %sw.1 ], [ 7, %sw.7 ], [ 19, %sw.19 ]
+  ret i8 %ret
+}
