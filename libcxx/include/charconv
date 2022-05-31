@@ -125,7 +125,6 @@ struct _LIBCPP_HIDDEN __traits_base
         return __t - (__v < __table<>::__pow10_64[__t]) + 1;
     }
 
-    _LIBCPP_AVAILABILITY_TO_CHARS
     static _LIBCPP_HIDE_FROM_ABI char* __convert(_Tp __v, char* __p)
     {
         return __itoa::__base_10_u64(__v, __p);
@@ -146,7 +145,6 @@ struct _LIBCPP_HIDDEN
         return __t - (__v < __table<>::__pow10_32[__t]) + 1;
     }
 
-    _LIBCPP_AVAILABILITY_TO_CHARS
     static _LIBCPP_HIDE_FROM_ABI char* __convert(_Tp __v, char* __p)
     {
         return __itoa::__base_10_u32(__v, __p);
@@ -243,7 +241,6 @@ __complement(_Tp __x)
 }
 
 template <typename _Tp>
-_LIBCPP_AVAILABILITY_TO_CHARS
 inline _LIBCPP_HIDE_FROM_ABI to_chars_result
 __to_chars_itoa(char* __first, char* __last, _Tp __value, true_type)
 {
@@ -258,7 +255,6 @@ __to_chars_itoa(char* __first, char* __last, _Tp __value, true_type)
 }
 
 template <typename _Tp>
-_LIBCPP_AVAILABILITY_TO_CHARS
 inline _LIBCPP_HIDE_FROM_ABI to_chars_result
 __to_chars_itoa(char* __first, char* __last, _Tp __value, false_type)
 {
@@ -272,7 +268,6 @@ __to_chars_itoa(char* __first, char* __last, _Tp __value, false_type)
 }
 
 template <typename _Tp>
-_LIBCPP_AVAILABILITY_TO_CHARS
 inline _LIBCPP_HIDE_FROM_ABI to_chars_result
 __to_chars_integral(char* __first, char* __last, _Tp __value, int __base,
                     true_type)
@@ -430,7 +425,7 @@ __to_chars_integral(char* __first, char* __last, _Tp __value) {
 }
 
 template <typename _Tp>
-_LIBCPP_AVAILABILITY_TO_CHARS _LIBCPP_HIDE_FROM_ABI int
+_LIBCPP_HIDE_FROM_ABI int
 __to_chars_integral_width(_Tp __value, unsigned __base) {
   _LIBCPP_ASSERT(__value >= 0, "The function requires a non-negative value.");
 
@@ -457,7 +452,6 @@ __to_chars_integral_width(_Tp __value, unsigned __base) {
 }
 
 template <typename _Tp>
-_LIBCPP_AVAILABILITY_TO_CHARS
 inline _LIBCPP_HIDE_FROM_ABI to_chars_result
 __to_chars_integral(char* __first, char* __last, _Tp __value, int __base,
                     false_type)
@@ -490,7 +484,6 @@ __to_chars_integral(char* __first, char* __last, _Tp __value, int __base,
 }
 
 template <typename _Tp, typename enable_if<is_integral<_Tp>::value, int>::type = 0>
-_LIBCPP_AVAILABILITY_TO_CHARS
 inline _LIBCPP_HIDE_FROM_ABI to_chars_result
 to_chars(char* __first, char* __last, _Tp __value)
 {
@@ -498,7 +491,6 @@ to_chars(char* __first, char* __last, _Tp __value)
 }
 
 template <typename _Tp, typename enable_if<is_integral<_Tp>::value, int>::type = 0>
-_LIBCPP_AVAILABILITY_TO_CHARS
 inline _LIBCPP_HIDE_FROM_ABI to_chars_result
 to_chars(char* __first, char* __last, _Tp __value, int __base)
 {

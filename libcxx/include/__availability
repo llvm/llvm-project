@@ -135,9 +135,6 @@
 #   define _LIBCPP_AVAILABILITY_FILESYSTEM_POP
 // #   define _LIBCPP_AVAILABILITY_DISABLE_FTM___cpp_lib_filesystem
 
-    // This controls the availability of std::to_chars for integral arguments.
-#   define _LIBCPP_AVAILABILITY_TO_CHARS
-
     // This controls the availability of floating-point std::to_chars functions.
     // These overloads were added later than the integer overloads.
 #   define _LIBCPP_AVAILABILITY_TO_CHARS_FLOATING_POINT
@@ -252,9 +249,6 @@
         (defined(__ENVIRONMENT_WATCH_OS_VERSION_MIN_REQUIRED__) && __ENVIRONMENT_WATCH_OS_VERSION_MIN_REQUIRED__ < 60000)
 #       define _LIBCPP_AVAILABILITY_DISABLE_FTM___cpp_lib_filesystem
 #   endif
-
-#   define _LIBCPP_AVAILABILITY_TO_CHARS                                        \
-        _LIBCPP_AVAILABILITY_FILESYSTEM
 
 #   define _LIBCPP_AVAILABILITY_TO_CHARS_FLOATING_POINT                         \
         __attribute__((unavailable))
