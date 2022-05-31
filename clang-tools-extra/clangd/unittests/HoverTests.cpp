@@ -3206,33 +3206,6 @@ TEST(Hover, HideBigInitializers) {
   ASSERT_TRUE(H);
   EXPECT_EQ(H->Definition, "int arr[]");
 }
-
-TEST(Hover, GlobalVarEnumeralCastNoCrash) {
-  Annotations T(R"cpp(
-    enum Test : unsigned long {};
-    unsigned global_var;
-    void foo() { Test v^al = (Test)(unsigned long)&global_var; }
-  )cpp");
-
-  TestTU TU = TestTU::withCode(T.code());
-  auto AST = TU.build();
-  auto HI = getHover(AST, T.point(), format::getLLVMStyle(), nullptr);
-  ASSERT_TRUE(HI);
-  EXPECT_EQ(*HI->Value, "&global_var");
-}
-
-TEST(Hover, GlobalVarIntCastNoCrash) {
-  Annotations T(R"cpp(
-    unsigned global_var;
-    int foo() { unsigned long a^ddress = (unsigned long)&global_var; }
-  )cpp");
-
-  TestTU TU = TestTU::withCode(T.code());
-  auto AST = TU.build();
-  auto HI = getHover(AST, T.point(), format::getLLVMStyle(), nullptr);
-  ASSERT_TRUE(HI);
-  EXPECT_EQ(*HI->Value, "&global_var");
-}
 } // namespace
 } // namespace clangd
 } // namespace clang
