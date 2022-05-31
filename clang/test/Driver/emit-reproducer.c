@@ -29,8 +29,8 @@
 // RUN: not %clang -gen-reproducer=badvalue 2>&1 | FileCheck %s --check-prefix=BAD-VALUE
 // BAD-VALUE: Unknown value for -gen-reproducer=: 'badvalue'
 
-// CHECK:   note: diagnostic msg: {{.*}}emit-reproducer-{{.*}}.c
-// NOT-NOT: note: diagnostic msg: {{.*}}emit-reproducer-{{.*}}.c
+// CHECK:   note: diagnostic msg: {{.*}}emit-reproducer{{.*}}.c
+// NOT-NOT: note: diagnostic msg: {{.*}}emit-reproducer{{.*}}.c
 
 #ifdef FATAL
 #pragma clang __debug crash
