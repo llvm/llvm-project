@@ -14,8 +14,7 @@ void foo(int i);
 // CHECK-NOT: main-path: SRC_ROOT{{/|\\}}print-unit-roundtrip-remapping.c
 // CHECK: main-path: {{.*}}{{/|\\}}print-unit-roundtrip-remapping.c
 // CHECK-NOT: work-dir: BUILD_ROOT
-// CHECK-NOT: out-file: SRC_ROOT{{/|\\}}print-unit-roundtrip-remapping.c.o
-// CHECK: out-file: {{.*}}{{/|\\}}print-unit-roundtrip-remapping.c.o
+// CHECK: out-file: SRC_ROOT{{/|\\}}print-unit-roundtrip-remapping.c.o
 // CHECK: target: x86_64-apple-macosx10.8
 // CHECK: is-debug: 1
 // CHECK: DEPEND START
