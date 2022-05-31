@@ -482,32 +482,37 @@ int main(int Argc, const char **Argv) {
   }
 
   std::unique_ptr<Compilation> C(TheDriver.BuildCompilation(Args));
+
+  Driver::ReproLevel ReproLevel = Driver::ReproLevel::OnCrash;
+  if (Arg *A = C->getArgs().getLastArg(options::OPT_gen_reproducer_eq)) {
+    auto Level = llvm::StringSwitch<Optional<Driver::ReproLevel>>(A->getValue())
+                     .Case("off", Driver::ReproLevel::Off)
+                     .Case("crash", Driver::ReproLevel::OnCrash)
+                     .Case("error", Driver::ReproLevel::OnError)
+                     .Case("always", Driver::ReproLevel::Always)
+                     .Default(None);
+    if (!Level) {
+      llvm::errs() << "Unknown value for " << A->getSpelling() << ": '"
+                   << A->getValue() << "'\n";
+      return 1;
+    }
+    ReproLevel = *Level;
+  }
+  if (!!::getenv("FORCE_CLANG_DIAGNOSTICS_CRASH"))
+    ReproLevel = Driver::ReproLevel::Always;
+
   int Res = 1;
   bool IsCrash = false;
+  Driver::CommandStatus CommandStatus = Driver::CommandStatus::Ok;
+  // Pretend the first command failed if ReproStatus is Always.
+  const Command *FailingCommand = &*C->getJobs().begin();
   if (C && !C->containsError()) {
     SmallVector<std::pair<int, const Command *>, 4> FailingCommands;
     Res = TheDriver.ExecuteCompilation(*C, FailingCommands);
 
-    // Force a crash to test the diagnostics.
-    if (TheDriver.GenReproducer) {
-      Diags.Report(diag::err_drv_force_crash)
-        << !::getenv("FORCE_CLANG_DIAGNOSTICS_CRASH");
-
-      // Pretend that every command failed.
-      FailingCommands.clear();
-      for (const auto &J : C->getJobs())
-        if (const Command *C = dyn_cast<Command>(&J))
-          FailingCommands.push_back(std::make_pair(-1, C));
-
-      // Print the bug report message that would be printed if we did actually
-      // crash, but only if we're crashing due to FORCE_CLANG_DIAGNOSTICS_CRASH.
-      if (::getenv("FORCE_CLANG_DIAGNOSTICS_CRASH"))
-        llvm::dbgs() << llvm::getBugReportMsg();
-    }
-
     for (const auto &P : FailingCommands) {
       int CommandRes = P.first;
-      const Command *FailingCommand = P.second;
+      FailingCommand = P.second;
       if (!Res)
         Res = CommandRes;
 
@@ -526,12 +531,20 @@ int main(int Argc, const char **Argv) {
       // https://pubs.opengroup.org/onlinepubs/9699919799/xrat/V4_xcu_chap02.html
       IsCrash |= CommandRes > 128;
 #endif
-      if (IsCrash) {
-        TheDriver.generateCompilationDiagnostics(*C, *FailingCommand);
+      CommandStatus =
+          IsCrash ? Driver::CommandStatus::Crash : Driver::CommandStatus::Error;
+      if (IsCrash)
         break;
-      }
     }
   }
+
+  // Print the bug report message that would be printed if we did actually
+  // crash, but only if we're crashing due to FORCE_CLANG_DIAGNOSTICS_CRASH.
+  if (::getenv("FORCE_CLANG_DIAGNOSTICS_CRASH"))
+    llvm::dbgs() << llvm::getBugReportMsg();
+  if (TheDriver.maybeGenerateCompilationDiagnostics(CommandStatus, ReproLevel,
+                                                    *C, *FailingCommand))
+    Res = 1;
 
   Diags.getClient()->finish();
 
