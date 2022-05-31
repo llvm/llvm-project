@@ -174,6 +174,9 @@ def err_stmtexpr_file_scope : Error<
   "statement expression not allowed at file scope">;
 def ext_gnu_statement_expr : Extension<
   "use of GNU statement expression extension">, InGroup<GNUStatementExpression>;
+def ext_gnu_statement_expr_macro : Extension<
+  "use of GNU statement expression extension from macro expansion">,
+  InGroup<GNUStatementExpressionFromMacroExpansion>;
 def ext_gnu_conditional_expr : Extension<
   "use of GNU ?: conditional expression extension, omitting middle operand">, InGroup<GNUConditionalOmittedOperand>;
 def ext_gnu_empty_initializer : Extension<
