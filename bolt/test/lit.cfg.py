@@ -88,7 +88,7 @@ tools = [
     ToolSubst('llvm-objcopy', unresolved='fatal'),
     ToolSubst('llvm-strip', unresolved='fatal'),
     ToolSubst('llvm-readelf', unresolved='fatal'),
-    ToolSubst('link_fdata', command=link_fdata_cmd, unresolved='fatal'),
+    ToolSubst('link_fdata', command=sys.executable, unresolved='fatal', extra_args=[link_fdata_cmd]),
     ToolSubst('merge-fdata', unresolved='fatal'),
     ToolSubst('llvm-readobj', unresolved='fatal'),
 ]
