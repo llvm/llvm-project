@@ -38,6 +38,10 @@ using namespace llvm;
 namespace {
 
 struct RISCVMergeBaseOffsetOpt : public MachineFunctionPass {
+private:
+  const RISCVSubtarget *ST = nullptr;
+
+public:
   static char ID;
   bool runOnMachineFunction(MachineFunction &Fn) override;
   bool detectLuiAddiGlobal(MachineInstr &LUI, MachineInstr *&ADDI);
@@ -107,6 +111,7 @@ bool RISCVMergeBaseOffsetOpt::detectLuiAddiGlobal(MachineInstr &HiLUI,
 void RISCVMergeBaseOffsetOpt::foldOffset(MachineInstr &HiLUI,
                                          MachineInstr &LoADDI,
                                          MachineInstr &Tail, int64_t Offset) {
+  assert(isInt<32>(Offset) && "Unexpected offset");
   // Put the offset back in HiLUI and the LoADDI
   HiLUI.getOperand(1).setOffset(Offset);
   LoADDI.getOperand(2).setOffset(Offset);
@@ -163,8 +168,14 @@ bool RISCVMergeBaseOffsetOpt::matchLargeOffset(MachineInstr &TailAdd,
         LuiImmOp.getTargetFlags() != RISCVII::MO_None ||
         !MRI->hasOneUse(OffsetLui.getOperand(0).getReg()))
       return false;
-    int64_t OffHi = OffsetLui.getOperand(1).getImm();
-    Offset = (OffHi << 12) + OffLo;
+    Offset = SignExtend64<32>(LuiImmOp.getImm() << 12);
+    Offset += OffLo;
+    // RV32 ignores the upper 32 bits.
+    if (!ST->is64Bit())
+       Offset = SignExtend64<32>(Offset);
+    // We can only fold simm32 offsets.
+    if (!isInt<32>(Offset))
+      return false;
     LLVM_DEBUG(dbgs() << "  Offset Instrs: " << OffsetTail
                       << "                 " << OffsetLui);
     DeadInstrs.insert(&OffsetTail);
@@ -174,7 +185,7 @@ bool RISCVMergeBaseOffsetOpt::matchLargeOffset(MachineInstr &TailAdd,
     // The offset value has all zero bits in the lower 12 bits. Only LUI
     // exists.
     LLVM_DEBUG(dbgs() << "  Offset Instr: " << OffsetTail);
-    Offset = OffsetTail.getOperand(1).getImm() << 12;
+    Offset = SignExtend64<32>(OffsetTail.getOperand(1).getImm() << 12);
     DeadInstrs.insert(&OffsetTail);
     return true;
   }
@@ -265,6 +276,8 @@ bool RISCVMergeBaseOffsetOpt::detectAndFoldOffset(MachineInstr &HiLUI,
 bool RISCVMergeBaseOffsetOpt::runOnMachineFunction(MachineFunction &Fn) {
   if (skipFunction(Fn.getFunction()))
     return false;
+
+  ST = &Fn.getSubtarget<RISCVSubtarget>();
 
   bool MadeChange = false;
   DeadInstrs.clear();

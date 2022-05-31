@@ -94,8 +94,8 @@ define i8* @big_offset_lui_tail() nounwind {
 define i8* @big_offset_neg_lui_tail() {
 ; CHECK-LABEL: big_offset_neg_lui_tail:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    lui a0, %hi(bar+4294959104)
-; CHECK-NEXT:    addi a0, a0, %lo(bar+4294959104)
+; CHECK-NEXT:    lui a0, %hi(bar-8192)
+; CHECK-NEXT:    addi a0, a0, %lo(bar-8192)
 ; CHECK-NEXT:    ret
   ret i8* getelementptr inbounds ([0 x i8], [0 x i8]* @bar, i32 0, i32 -8192)
 }
@@ -214,8 +214,8 @@ entry:
 define i8* @neg_offset() {
 ; RV32-LABEL: neg_offset:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    lui a0, %hi(bar+4294959105)
-; RV32-NEXT:    addi a0, a0, %lo(bar+4294959105)
+; RV32-NEXT:    lui a0, %hi(bar-8191)
+; RV32-NEXT:    addi a0, a0, %lo(bar-8191)
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: neg_offset:
@@ -232,10 +232,19 @@ define i8* @neg_offset() {
 ; This uses an LUI+ADDI on RV64 that does not produce a simm32. For RV32, we'll
 ; truncate the offset.
 define i8* @neg_offset_not_simm32() {
-; CHECK-LABEL: neg_offset_not_simm32:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    lui a0, %hi(bar+2147482283)
-; CHECK-NEXT:    addi a0, a0, %lo(bar+2147482283)
-; CHECK-NEXT:    ret
+; RV32-LABEL: neg_offset_not_simm32:
+; RV32:       # %bb.0:
+; RV32-NEXT:    lui a0, %hi(bar+2147482283)
+; RV32-NEXT:    addi a0, a0, %lo(bar+2147482283)
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: neg_offset_not_simm32:
+; RV64:       # %bb.0:
+; RV64-NEXT:    lui a0, %hi(bar)
+; RV64-NEXT:    addi a0, a0, %lo(bar)
+; RV64-NEXT:    lui a1, 524288
+; RV64-NEXT:    addi a1, a1, -1365
+; RV64-NEXT:    add a0, a0, a1
+; RV64-NEXT:    ret
     ret i8* getelementptr inbounds ([0 x i8], [0 x i8]* @bar, i32 0, i64 -2147485013)
 }
