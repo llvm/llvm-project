@@ -646,6 +646,9 @@ def index_unit_output_path : Separate<["-"], "index-unit-output-path">, MetaVarN
 def index_ignore_macros : Flag<["-"], "index-ignore-macros">, Flags<[CC1Option]>,
   HelpText<"Ignore macros during indexing">,
   MarshallingInfoFlag<FrontendOpts<"IndexIgnoreMacros">>;
+def index_ignore_pcms : Flag<["-"], "index-ignore-pcms">, Flags<[CC1Option]>,
+  HelpText<"Ignore symbols from imported pcm modules">,
+  MarshallingInfoFlag<FrontendOpts<"IndexIgnorePcms">>;
 
 // Make sure all other -ccc- options are rejected.
 def ccc_ : Joined<["-"], "ccc-">, Group<internal_Group>, Flags<[Unsupported]>;
