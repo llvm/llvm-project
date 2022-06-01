@@ -739,31 +739,6 @@ void TargetLoweringBase::initActions() {
   std::fill(std::begin(TargetDAGCombineArray),
             std::end(TargetDAGCombineArray), 0);
 
-  // We're somewhat special casing MVT::i2 and MVT::i4. Ideally we want to
-  // remove this and targets should individually set these types if not legal.
-  for (ISD::NodeType NT :
-       enum_seq_inclusive(ISD::DELETED_NODE, ISD::BUILTIN_OP_END,
-                          force_iteration_on_noniterable_enum)) {
-    for (MVT VT : {MVT::i2, MVT::i4})
-      OpActions[(unsigned)VT.SimpleTy][NT] = Expand;
-  }
-  for (MVT AVT : MVT::all_valuetypes()) {
-    for (MVT VT : {MVT::i2, MVT::i4, MVT::v128i2, MVT::v64i4}) {
-      setTruncStoreAction(AVT, VT, Expand);
-      setLoadExtAction(ISD::EXTLOAD, AVT, VT, Expand);
-      setLoadExtAction(ISD::ZEXTLOAD, AVT, VT, Expand);
-    }
-  }
-  for (unsigned IM = (unsigned)ISD::PRE_INC;
-       IM != (unsigned)ISD::LAST_INDEXED_MODE; ++IM) {
-    for (MVT VT : {MVT::i2, MVT::i4}) {
-      setIndexedLoadAction(IM, VT, Expand);
-      setIndexedStoreAction(IM, VT, Expand);
-      setIndexedMaskedLoadAction(IM, VT, Expand);
-      setIndexedMaskedStoreAction(IM, VT, Expand);
-    }
-  }
-
   for (MVT VT : MVT::fp_valuetypes()) {
     MVT IntVT = MVT::getIntegerVT(VT.getFixedSizeInBits());
     if (IntVT.isValid()) {
