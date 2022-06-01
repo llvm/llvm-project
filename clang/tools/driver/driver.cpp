@@ -505,7 +505,9 @@ int main(int Argc, const char **Argv) {
   bool IsCrash = false;
   Driver::CommandStatus CommandStatus = Driver::CommandStatus::Ok;
   // Pretend the first command failed if ReproStatus is Always.
-  const Command *FailingCommand = &*C->getJobs().begin();
+  const Command *FailingCommand = nullptr;
+  if (!C->getJobs().empty())
+    FailingCommand = &*C->getJobs().begin();
   if (C && !C->containsError()) {
     SmallVector<std::pair<int, const Command *>, 4> FailingCommands;
     Res = TheDriver.ExecuteCompilation(*C, FailingCommands);
@@ -542,8 +544,9 @@ int main(int Argc, const char **Argv) {
   // crash, but only if we're crashing due to FORCE_CLANG_DIAGNOSTICS_CRASH.
   if (::getenv("FORCE_CLANG_DIAGNOSTICS_CRASH"))
     llvm::dbgs() << llvm::getBugReportMsg();
-  if (TheDriver.maybeGenerateCompilationDiagnostics(CommandStatus, ReproLevel,
-                                                    *C, *FailingCommand))
+  if (FailingCommand != nullptr &&
+    TheDriver.maybeGenerateCompilationDiagnostics(CommandStatus, ReproLevel,
+                                                  *C, *FailingCommand))
     Res = 1;
 
   Diags.getClient()->finish();
