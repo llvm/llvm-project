@@ -38,13 +38,12 @@ env MEMPROF_OPTIONS=log_path=stdout ./memprof-inline.exe > inline.memprofraw
 RUN: llvm-profdata show --memory %p/Inputs/inline.memprofraw --profiled-binary %p/Inputs/inline.memprofexe | FileCheck %s
 
 CHECK:  MemprofProfile:
-CHECK-NEXT:  -
-CHECK-NEXT:  Header:
+CHECK-NEXT:  Summary:
 CHECK-NEXT:    Version: 1
-CHECK-NEXT:    TotalSizeBytes: 880
 CHECK-NEXT:    NumSegments: 9
 CHECK-NEXT:    NumMibInfo: 2
-CHECK-NEXT:    NumStackOffsets: 2
+CHECK-NEXT:    NumAllocFunctions: 2
+CHECK-NEXT:    NumStackOffsets: 1
 CHECK-NEXT:  Records:
 CHECK-NEXT:  -
 CHECK-NEXT:    FunctionGUID: 15505678318020221912
