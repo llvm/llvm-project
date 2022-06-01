@@ -402,14 +402,9 @@ define i64 @bitcast_extelt2(<4 x float> %A) {
   ret i64 %bc2
 }
 
-; TODO: This should return %A.
-
 define <2 x i32> @bitcast_extelt3(<2 x i32> %A) {
 ; CHECK-LABEL: @bitcast_extelt3(
-; CHECK-NEXT:    [[BC1:%.*]] = bitcast <2 x i32> [[A:%.*]] to <1 x i64>
-; CHECK-NEXT:    [[EXT:%.*]] = extractelement <1 x i64> [[BC1]], i64 0
-; CHECK-NEXT:    [[BC2:%.*]] = bitcast i64 [[EXT]] to <2 x i32>
-; CHECK-NEXT:    ret <2 x i32> [[BC2]]
+; CHECK-NEXT:    ret <2 x i32> [[A:%.*]]
 ;
   %bc1 = bitcast <2 x i32> %A to <1 x i64>
   %ext = extractelement <1 x i64> %bc1, i32 0
@@ -433,8 +428,7 @@ define double @bitcast_extelt4(i128 %A) {
 
 define <2 x i32> @bitcast_extelt5(<1 x i64> %A) {
 ; CHECK-LABEL: @bitcast_extelt5(
-; CHECK-NEXT:    [[EXT:%.*]] = extractelement <1 x i64> [[A:%.*]], i64 0
-; CHECK-NEXT:    [[BC:%.*]] = bitcast i64 [[EXT]] to <2 x i32>
+; CHECK-NEXT:    [[BC:%.*]] = bitcast <1 x i64> [[A:%.*]] to <2 x i32>
 ; CHECK-NEXT:    ret <2 x i32> [[BC]]
 ;
   %ext = extractelement <1 x i64> %A, i32 0
