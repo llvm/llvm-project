@@ -93,11 +93,11 @@ namespace std {
     template <class U, class... Args>
       constexpr explicit optional(in_place_t, initializer_list<U>, Args &&...);
     template <class U = T>
-      constexpr EXPLICIT optional(U &&);
+      constexpr explicit(see-below) optional(U &&);
     template <class U>
-      EXPLICIT optional(const optional<U> &);   // constexpr in C++20
+      explicit(see-below) optional(const optional<U> &);         // constexpr in C++20
     template <class U>
-      EXPLICIT optional(optional<U> &&);        // constexpr in C++20
+      explicit(see-below) optional(optional<U> &&);              // constexpr in C++20
 
     // 23.6.3.2, destructor
     ~optional(); // constexpr in C++20
