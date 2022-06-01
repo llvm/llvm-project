@@ -365,6 +365,9 @@ OPTIMISED_CASES
 #define OPTIMISED_CASE(n, lockfree, type) ATOMIC_RMW(n, lockfree, type, xor, ^)
 OPTIMISED_CASES
 #undef OPTIMISED_CASE
+// Allow build with clang without __c11_atomic_fetch_nand builtin (pre-14)
+#if __has_builtin(__c11_atomic_fetch_nand)
 #define OPTIMISED_CASE(n, lockfree, type) ATOMIC_RMW_NAND(n, lockfree, type)
 OPTIMISED_CASES
 #undef OPTIMISED_CASE
+#endif
