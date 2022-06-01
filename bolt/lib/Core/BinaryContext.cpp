@@ -1639,6 +1639,35 @@ void BinaryContext::printCFI(raw_ostream &OS, const MCCFIInstruction &Inst) {
   }
 }
 
+MarkerSymType BinaryContext::getMarkerType(const SymbolRef &Symbol) const {
+  // For aarch64, the ABI defines mapping symbols so we identify data in the
+  // code section (see IHI0056B). $x identifies a symbol starting code or the
+  // end of a data chunk inside code, $d indentifies start of data.
+  if (!isAArch64() || ELFSymbolRef(Symbol).getSize())
+    return MarkerSymType::NONE;
+
+  Expected<StringRef> NameOrError = Symbol.getName();
+  Expected<object::SymbolRef::Type> TypeOrError = Symbol.getType();
+
+  if (!TypeOrError || !NameOrError)
+    return MarkerSymType::NONE;
+
+  if (*TypeOrError != SymbolRef::ST_Unknown)
+    return MarkerSymType::NONE;
+
+  if (*NameOrError == "$x" || NameOrError->startswith("$x."))
+    return MarkerSymType::CODE;
+
+  if (*NameOrError == "$d" || NameOrError->startswith("$d."))
+    return MarkerSymType::DATA;
+
+  return MarkerSymType::NONE;
+}
+
+bool BinaryContext::isMarker(const SymbolRef &Symbol) const {
+  return getMarkerType(Symbol) != MarkerSymType::NONE;
+}
+
 void BinaryContext::printInstruction(raw_ostream &OS, const MCInst &Instruction,
                                      uint64_t Offset,
                                      const BinaryFunction *Function,
