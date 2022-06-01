@@ -28,6 +28,7 @@ def MLProgram_Dialect : Dialect {
   }];
 
   let useDefaultAttributePrinterParser = 1;
+  let useDefaultTypePrinterParser = 1;
   let emitAccessorPrefix = kEmitAccessorPrefix_Prefixed;
 }
 
