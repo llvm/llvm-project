@@ -54,7 +54,10 @@ struct FrameInfo {
   int LastFrameInst = -1;
   const FrameInfo *ChainedParent = nullptr;
   std::vector<Instruction> Instructions;
-  MapVector<MCSymbol*, std::vector<Instruction>> EpilogMap;
+  struct Epilog {
+    std::vector<Instruction> Instructions;
+  };
+  MapVector<MCSymbol *, Epilog> EpilogMap;
 
   FrameInfo() = default;
   FrameInfo(const MCSymbol *Function, const MCSymbol *BeginFuncEHLabel)
@@ -68,7 +71,7 @@ struct FrameInfo {
     if (!Instructions.empty())
       return false;
     for (const auto &E : EpilogMap)
-      if (!E.second.empty())
+      if (!E.second.Instructions.empty())
         return false;
     return true;
   }
