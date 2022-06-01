@@ -161,7 +161,7 @@ class TwoAddressInstructionPass : public MachineFunctionPass {
   bool collectTiedOperands(MachineInstr *MI, TiedOperandMap&);
   void processTiedPairs(MachineInstr *MI, TiedPairList&, unsigned &Dist);
   void eliminateRegSequence(MachineBasicBlock::iterator&);
-  void processStatepoint(MachineInstr *MI, TiedOperandMap &TiedOperands);
+  bool processStatepoint(MachineInstr *MI, TiedOperandMap &TiedOperands);
 
 public:
   static char ID; // Pass identification, replacement for typeid
@@ -1635,12 +1635,16 @@ TwoAddressInstructionPass::processTiedPairs(MachineInstr *MI,
 // and replaces all uses of RegA with RegB.
 // No extra COPY instruction is necessary because tied use is killed at
 // STATEPOINT.
-void TwoAddressInstructionPass::processStatepoint(
+bool TwoAddressInstructionPass::processStatepoint(
     MachineInstr *MI, TiedOperandMap &TiedOperands) {
 
+  bool NeedCopy = false;
   for (auto &TO : TiedOperands) {
     Register RegB = TO.first;
-    assert(TO.second.size() == 1 && "statepoints has single tied use");
+    if (TO.second.size() != 1) {
+      NeedCopy = true;
+      continue;
+    }
 
     unsigned SrcIdx = TO.second[0].first;
     unsigned DstIdx = TO.second[0].second;
@@ -1676,6 +1680,7 @@ void TwoAddressInstructionPass::processStatepoint(
         LV->addVirtualRegisterKilled(RegB, *KillMI, false);
     }
   }
+  return !NeedCopy;
 }
 
 /// Reduce two-address instructions to two operands.
@@ -1771,8 +1776,8 @@ bool TwoAddressInstructionPass::runOnMachineFunction(MachineFunction &Func) {
         }
       }
 
-      if (mi->getOpcode() == TargetOpcode::STATEPOINT) {
-        processStatepoint(&*mi, TiedOperands);
+      if (mi->getOpcode() == TargetOpcode::STATEPOINT &&
+          processStatepoint(&*mi, TiedOperands)) {
         TiedOperands.clear();
         LLVM_DEBUG(dbgs() << "\t\trewrite to:\t" << *mi);
         mi = nmi;

@@ -12,6 +12,7 @@
   declare i1 @return_i1()
 
   declare void @consume(i32 addrspace(1)*)
+  declare void @consume1(i8 addrspace(1)*, i64 addrspace(1)*)
 
   define i1 @test_relocate(i32 addrspace(1)* %a) gc "statepoint-example" {
   entry:
@@ -20,6 +21,10 @@
     %res1 = call zeroext i1 @llvm.experimental.gc.result.i1(token %safepoint_token)
     call void @consume(i32 addrspace(1)* %rel1)
     ret i1 %res1
+  }
+
+  define void @test_duplicate_gcregs(i8 addrspace(1)* %a) gc "statepoint-example" {
+    ret void
   }
 
   ; Function Attrs: nounwind readnone
@@ -61,4 +66,29 @@ body:             |
     $al = COPY killed %2
     RET 0, killed $al
 
+...
+---
+name:            test_duplicate_gcregs
+alignment:       16
+tracksRegLiveness: true
+liveins:
+  - { reg: '$rdi', virtual-reg: '%0' }
+body:             |
+  bb.0 (%ir-block.0):
+    liveins: $rdi
+
+    ; CHECK-LABEL: name: test_duplicate_gcregs
+    ; CHECK:   %1:gr64 = COPY %0
+    ; CHECK:   %2:gr64 = COPY %0
+    ; CHECK:   %1:gr64, %2:gr64 = STATEPOINT 0, 0, 0, target-flags(x86-plt) @return_i1, 2, 0, 2, 0, 2, 0, 2, 2, %1(tied-def 0), %2(tied-def 1), 2, 0, 2, 2, 0, 0, 1, 1, csr_64
+    ; CHECK:   $rdi = COPY killed %1
+    ; CHECK:   $rsi = COPY killed %2
+    ; CHECK:   CALL64pcrel32 target-flags(x86-plt) @consume1, csr_64, implicit $rsp, implicit $ssp, implicit killed $rdi, implicit killed $rsi, implicit-def $rsp, implicit-def $ssp
+    ; CHECK:   RET 0
+    %0:gr64 = COPY killed $rdi
+    %1:gr64, %2:gr64 = STATEPOINT 0, 0, 0, target-flags(x86-plt) @return_i1, 2, 0, 2, 0, 2, 0, 2, 2, killed %0(tied-def 0), killed %0(tied-def 1), 2, 0, 2, 2, 0, 0, 1, 1, csr_64, implicit-def $rsp, implicit-def $ssp, implicit-def dead $al
+    $rdi = COPY killed %1
+    $rsi = COPY killed %2
+    CALL64pcrel32 target-flags(x86-plt) @consume1, csr_64, implicit $rsp, implicit $ssp, implicit killed $rdi, implicit killed $rsi, implicit-def $rsp, implicit-def $ssp
+    RET 0
 ...
