@@ -72,14 +72,14 @@ public:
   /// Swap the given rows.
   void swapRows(unsigned row, unsigned otherRow);
 
-  unsigned getNumRows() const;
+  unsigned getNumRows() const { return nRows; }
 
-  unsigned getNumColumns() const;
+  unsigned getNumColumns() const { return nColumns; }
 
   /// Return the maximum number of rows/columns that can be added without
   /// incurring a reallocation.
   unsigned getNumReservedRows() const;
-  unsigned getNumReservedColumns() const;
+  unsigned getNumReservedColumns() const { return nReservedColumns; }
 
   /// Reserve enough space to resize to the specified number of rows without
   /// reallocations.
