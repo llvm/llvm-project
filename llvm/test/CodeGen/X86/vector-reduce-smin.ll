@@ -352,14 +352,14 @@ define i64 @test_v8i64(<8 x i64> %a0) {
 ;
 ; AVX1-LABEL: test_v8i64:
 ; AVX1:       # %bb.0:
-; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm2
-; AVX1-NEXT:    vextractf128 $1, %ymm1, %xmm3
-; AVX1-NEXT:    vpcmpgtq %xmm2, %xmm3, %xmm4
-; AVX1-NEXT:    vpcmpgtq %xmm0, %xmm1, %xmm5
-; AVX1-NEXT:    vblendvpd %xmm5, %xmm0, %xmm1, %xmm0
-; AVX1-NEXT:    vblendvpd %xmm4, %xmm2, %xmm3, %xmm1
 ; AVX1-NEXT:    vpcmpgtq %xmm0, %xmm1, %xmm2
-; AVX1-NEXT:    vblendvpd %xmm2, %xmm0, %xmm1, %xmm0
+; AVX1-NEXT:    vblendvpd %xmm2, %xmm0, %xmm1, %xmm2
+; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm0
+; AVX1-NEXT:    vextractf128 $1, %ymm1, %xmm1
+; AVX1-NEXT:    vpcmpgtq %xmm0, %xmm1, %xmm3
+; AVX1-NEXT:    vblendvpd %xmm3, %xmm0, %xmm1, %xmm0
+; AVX1-NEXT:    vpcmpgtq %xmm2, %xmm0, %xmm1
+; AVX1-NEXT:    vblendvpd %xmm1, %xmm2, %xmm0, %xmm0
 ; AVX1-NEXT:    vpermilps {{.*#+}} xmm1 = xmm0[2,3,2,3]
 ; AVX1-NEXT:    vpcmpgtq %xmm0, %xmm1, %xmm2
 ; AVX1-NEXT:    vblendvpd %xmm2, %xmm0, %xmm1, %xmm0
@@ -663,22 +663,22 @@ define i64 @test_v16i64(<16 x i64> %a0) {
 ;
 ; AVX1-LABEL: test_v16i64:
 ; AVX1:       # %bb.0:
-; AVX1-NEXT:    vpcmpgtq %xmm1, %xmm3, %xmm8
-; AVX1-NEXT:    vpcmpgtq %xmm0, %xmm2, %xmm9
-; AVX1-NEXT:    vextractf128 $1, %ymm1, %xmm11
-; AVX1-NEXT:    vextractf128 $1, %ymm3, %xmm7
-; AVX1-NEXT:    vpcmpgtq %xmm11, %xmm7, %xmm10
-; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm5
-; AVX1-NEXT:    vextractf128 $1, %ymm2, %xmm4
-; AVX1-NEXT:    vpcmpgtq %xmm5, %xmm4, %xmm6
-; AVX1-NEXT:    vblendvpd %xmm6, %xmm5, %xmm4, %xmm4
-; AVX1-NEXT:    vblendvpd %xmm10, %xmm11, %xmm7, %xmm5
+; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm4
+; AVX1-NEXT:    vextractf128 $1, %ymm2, %xmm5
 ; AVX1-NEXT:    vpcmpgtq %xmm4, %xmm5, %xmm6
-; AVX1-NEXT:    vblendvpd %xmm9, %xmm0, %xmm2, %xmm0
-; AVX1-NEXT:    vblendvpd %xmm8, %xmm1, %xmm3, %xmm1
+; AVX1-NEXT:    vblendvpd %xmm6, %xmm4, %xmm5, %xmm4
+; AVX1-NEXT:    vextractf128 $1, %ymm1, %xmm5
+; AVX1-NEXT:    vextractf128 $1, %ymm3, %xmm6
+; AVX1-NEXT:    vpcmpgtq %xmm5, %xmm6, %xmm7
+; AVX1-NEXT:    vblendvpd %xmm7, %xmm5, %xmm6, %xmm5
+; AVX1-NEXT:    vpcmpgtq %xmm0, %xmm2, %xmm6
+; AVX1-NEXT:    vblendvpd %xmm6, %xmm0, %xmm2, %xmm0
+; AVX1-NEXT:    vpcmpgtq %xmm1, %xmm3, %xmm2
+; AVX1-NEXT:    vblendvpd %xmm2, %xmm1, %xmm3, %xmm1
 ; AVX1-NEXT:    vpcmpgtq %xmm0, %xmm1, %xmm2
 ; AVX1-NEXT:    vblendvpd %xmm2, %xmm0, %xmm1, %xmm0
-; AVX1-NEXT:    vblendvpd %xmm6, %xmm4, %xmm5, %xmm1
+; AVX1-NEXT:    vpcmpgtq %xmm4, %xmm5, %xmm1
+; AVX1-NEXT:    vblendvpd %xmm1, %xmm4, %xmm5, %xmm1
 ; AVX1-NEXT:    vpcmpgtq %xmm0, %xmm1, %xmm2
 ; AVX1-NEXT:    vblendvpd %xmm2, %xmm0, %xmm1, %xmm0
 ; AVX1-NEXT:    vpermilps {{.*#+}} xmm1 = xmm0[2,3,2,3]
