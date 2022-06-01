@@ -13,7 +13,7 @@
 // static size_t length(const char_type* s);
 // constexpr in C++17
 
-// UNSUPPORTED: libcpp-has-no-wide-characters
+// UNSUPPORTED: no-wide-characters
 
 #include <string>
 #include <cassert>

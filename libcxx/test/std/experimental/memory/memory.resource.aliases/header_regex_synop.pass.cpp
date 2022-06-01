@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 // UNSUPPORTED: c++03
-// UNSUPPORTED: libcpp-has-no-localization
+// UNSUPPORTED: no-localization
 
 // <experimental/regex>
 
