@@ -520,3 +520,13 @@ func.func @execute_region() {
   }) : () -> ()
   return
 }
+
+// -----
+
+func.func @wrong_number_of_arguments() -> () {
+  %num_threads = arith.constant 100 : index
+  // expected-error @+1 {{region expects 2 arguments}}
+  scf.foreach_thread (%thread_idx) in (%num_threads, %num_threads) -> () {
+  }
+  return
+}
