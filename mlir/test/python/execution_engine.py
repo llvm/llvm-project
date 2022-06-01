@@ -64,7 +64,7 @@ run(testInvalidModule)
 def lowerToLLVM(module):
   import mlir.conversions
   pm = PassManager.parse(
-      "convert-memref-to-llvm,convert-func-to-llvm,reconcile-unrealized-casts")
+      "convert-complex-to-llvm,convert-memref-to-llvm,convert-func-to-llvm,reconcile-unrealized-casts")
   pm.run(module)
   return module
 
@@ -264,6 +264,102 @@ def testMemrefAdd():
 
 
 run(testMemrefAdd)
+
+
+# Test addition of two complex memrefs
+# CHECK-LABEL: TEST: testComplexMemrefAdd
+def testComplexMemrefAdd():
+  with Context():
+    module = Module.parse("""
+    module  {
+      func.func @main(%arg0: memref<1xcomplex<f64>>,
+                      %arg1: memref<1xcomplex<f64>>,
+                      %arg2: memref<1xcomplex<f64>>) attributes { llvm.emit_c_interface } {
+        %0 = arith.constant 0 : index
+        %1 = memref.load %arg0[%0] : memref<1xcomplex<f64>>
+        %2 = memref.load %arg1[%0] : memref<1xcomplex<f64>>
+        %3 = complex.add %1, %2 : complex<f64>
+        memref.store %3, %arg2[%0] : memref<1xcomplex<f64>>
+        return
+      }
+    } """)
+
+    arg1 = np.array([1.+2.j]).astype(np.complex128)
+    arg2 = np.array([3.+4.j]).astype(np.complex128)
+    arg3  = np.array([0.+0.j]).astype(np.complex128)
+
+    arg1_memref_ptr = ctypes.pointer(
+        ctypes.pointer(get_ranked_memref_descriptor(arg1)))
+    arg2_memref_ptr = ctypes.pointer(
+        ctypes.pointer(get_ranked_memref_descriptor(arg2)))
+    arg3_memref_ptr = ctypes.pointer(
+        ctypes.pointer(get_ranked_memref_descriptor(arg3)))
+
+    execution_engine = ExecutionEngine(lowerToLLVM(module))
+    execution_engine.invoke("main",
+                            arg1_memref_ptr,
+                            arg2_memref_ptr,
+                            arg3_memref_ptr)
+    # CHECK: [1.+2.j] + [3.+4.j] = [4.+6.j]
+    log("{0} + {1} = {2}".format(arg1, arg2, arg3))
+
+    # test to-numpy utility
+    # CHECK: [4.+6.j]
+    npout = ranked_memref_to_numpy(arg3_memref_ptr[0])
+    log(npout)
+
+
+run(testComplexMemrefAdd)
+
+
+# Test addition of two complex unranked memrefs
+# CHECK-LABEL: TEST: testComplexUnrankedMemrefAdd
+def testComplexUnrankedMemrefAdd():
+  with Context():
+    module = Module.parse("""
+    module  {
+      func.func @main(%arg0: memref<*xcomplex<f32>>,
+                      %arg1: memref<*xcomplex<f32>>,
+                      %arg2: memref<*xcomplex<f32>>) attributes { llvm.emit_c_interface } {
+        %A = memref.cast %arg0 : memref<*xcomplex<f32>> to memref<1xcomplex<f32>>
+        %B = memref.cast %arg1 : memref<*xcomplex<f32>> to memref<1xcomplex<f32>>
+        %C = memref.cast %arg2 : memref<*xcomplex<f32>> to memref<1xcomplex<f32>>
+        %0 = arith.constant 0 : index
+        %1 = memref.load %A[%0] : memref<1xcomplex<f32>>
+        %2 = memref.load %B[%0] : memref<1xcomplex<f32>>
+        %3 = complex.add %1, %2 : complex<f32>
+        memref.store %3, %C[%0] : memref<1xcomplex<f32>>
+        return
+      }
+    } """)
+
+    arg1 = np.array([5.+6.j]).astype(np.complex64)
+    arg2 = np.array([7.+8.j]).astype(np.complex64)
+    arg3  = np.array([0.+0.j]).astype(np.complex64)
+
+    arg1_memref_ptr = ctypes.pointer(
+        ctypes.pointer(get_unranked_memref_descriptor(arg1)))
+    arg2_memref_ptr = ctypes.pointer(
+        ctypes.pointer(get_unranked_memref_descriptor(arg2)))
+    arg3_memref_ptr = ctypes.pointer(
+        ctypes.pointer(get_unranked_memref_descriptor(arg3)))
+
+    execution_engine = ExecutionEngine(lowerToLLVM(module))
+    execution_engine.invoke("main",
+                            arg1_memref_ptr,
+                            arg2_memref_ptr,
+                            arg3_memref_ptr)
+    # CHECK: [5.+6.j] + [7.+8.j] = [12.+14.j]
+    log("{0} + {1} = {2}".format(arg1, arg2, arg3))
+
+    # test to-numpy utility
+    # CHECK: [12.+14.j]
+    npout = unranked_memref_to_numpy(arg3_memref_ptr[0],
+                                     np.dtype(np.complex64))
+    log(npout)
+
+
+run(testComplexUnrankedMemrefAdd)
 
 
 #  Test addition of two 2d_memref
