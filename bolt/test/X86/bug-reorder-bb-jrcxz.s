@@ -15,7 +15,7 @@
 # RUN: %clang %cflags %t.o -falign-labels -march=native -o %t.exe -Wl,-q
 
 # RUN:  llvm-bolt %t.exe -o %t.bolted -data %t.fdata \
-# RUN:    -reorder-blocks=cache+ -reorder-functions=hfsort \
+# RUN:    -reorder-blocks=ext-tsp -reorder-functions=hfsort \
 # RUN:    -split-functions=2 -split-all-cold -split-eh -dyno-stats \
 # RUN:    -print-finalized 2>&1 | FileCheck %s
 
