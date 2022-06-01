@@ -9,22 +9,23 @@
 #include "llvm/Object/OffloadBinary.h"
 
 #include "llvm/ADT/StringSwitch.h"
+#include "llvm/BinaryFormat/Magic.h"
 #include "llvm/MC/StringTableBuilder.h"
 #include "llvm/Object/Error.h"
 #include "llvm/Support/FileOutputBuffer.h"
 
-using namespace llvm;
-
 namespace llvm {
+
+namespace object {
 
 Expected<std::unique_ptr<OffloadBinary>>
 OffloadBinary::create(MemoryBufferRef Buf) {
   if (Buf.getBufferSize() < sizeof(Header) + sizeof(Entry))
-    return errorCodeToError(llvm::object::object_error::parse_failed);
+    return errorCodeToError(object_error::parse_failed);
 
   // Check for 0x10FF1OAD magic bytes.
-  if (!Buf.getBuffer().startswith("\x10\xFF\x10\xAD"))
-    return errorCodeToError(llvm::object::object_error::parse_failed);
+  if (identify_magic(Buf.getBuffer()) != file_magic::offload_binary)
+    return errorCodeToError(object_error::parse_failed);
 
   const char *Start = Buf.getBufferStart();
   const Header *TheHeader = reinterpret_cast<const Header *>(Start);
@@ -32,7 +33,7 @@ OffloadBinary::create(MemoryBufferRef Buf) {
       reinterpret_cast<const Entry *>(&Start[TheHeader->EntryOffset]);
 
   return std::unique_ptr<OffloadBinary>(
-      new OffloadBinary(Buf.getBufferStart(), TheHeader, TheEntry));
+      new OffloadBinary(Buf, TheHeader, TheEntry));
 }
 
 std::unique_ptr<MemoryBuffer>
@@ -140,5 +141,7 @@ StringRef getImageKindName(ImageKind Kind) {
     return "";
   }
 }
+
+} // namespace object
 
 } // namespace llvm

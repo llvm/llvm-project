@@ -19,11 +19,14 @@
 
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Object/Binary.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include <memory>
 
 namespace llvm {
+
+namespace object {
 
 /// The producer of the associated offloading image.
 enum OffloadKind : uint16_t {
@@ -54,7 +57,7 @@ enum ImageKind : uint16_t {
 /// detect ABI stability and the size is used to find other offloading entries
 /// that may exist in the same section. All offsets are given as absolute byte
 /// offsets from the beginning of the file.
-class OffloadBinary {
+class OffloadBinary : public Binary {
 public:
   /// The offloading metadata that will be serialized to a memory buffer.
   struct OffloadingImage {
@@ -87,6 +90,8 @@ public:
 
   StringRef getString(StringRef Key) const { return StringData.lookup(Key); }
 
+  static bool classof(const Binary *V) { return V->isOffloadFile(); }
+
 private:
   struct Header {
     uint8_t Magic[4] = {0x10, 0xFF, 0x10, 0xAD}; // 0x10FF10AD magic bytes.
@@ -111,10 +116,10 @@ private:
     uint64_t ValueOffset;
   };
 
-  OffloadBinary(const char *Buffer, const Header *TheHeader,
+  OffloadBinary(MemoryBufferRef Source, const Header *TheHeader,
                 const Entry *TheEntry)
-      : Buffer(Buffer), TheHeader(TheHeader), TheEntry(TheEntry) {
-
+      : Binary(Binary::ID_Offload, Source), Buffer(Source.getBufferStart()),
+        TheHeader(TheHeader), TheEntry(TheEntry) {
     const StringEntry *StringMapBegin =
         reinterpret_cast<const StringEntry *>(&Buffer[TheEntry->StringOffset]);
     for (uint64_t I = 0, E = TheEntry->NumStrings; I != E; ++I) {
@@ -127,7 +132,7 @@ private:
 
   /// Map from keys to offsets in the binary.
   StringMap<StringRef> StringData;
-  /// Pointer to the beginning of the memory buffer for convenience.
+  /// Raw pointer to the MemoryBufferRef for convenience.
   const char *Buffer;
   /// Location of the header within the binary.
   const Header *TheHeader;
@@ -146,6 +151,8 @@ OffloadKind getOffloadKind(StringRef Name);
 
 /// Convert an offload kind to its string representation.
 StringRef getOffloadKindName(OffloadKind Name);
+
+} // namespace object
 
 } // namespace llvm
 #endif
