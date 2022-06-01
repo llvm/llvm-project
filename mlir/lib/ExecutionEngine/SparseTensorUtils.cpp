@@ -867,25 +867,25 @@ private:
     } else if (src.isCompressedDim(d)) {
       // Look up the bounds of the `d`-level segment determined by the
       // `d-1`-level position `parentPos`.
-      const std::vector<P> &pointers_d = src.pointers[d];
-      assert(parentPos + 1 < pointers_d.size() &&
+      const std::vector<P> &pointersD = src.pointers[d];
+      assert(parentPos + 1 < pointersD.size() &&
              "Parent pointer position is out of bounds");
-      const uint64_t pstart = static_cast<uint64_t>(pointers_d[parentPos]);
-      const uint64_t pstop = static_cast<uint64_t>(pointers_d[parentPos + 1]);
+      const uint64_t pstart = static_cast<uint64_t>(pointersD[parentPos]);
+      const uint64_t pstop = static_cast<uint64_t>(pointersD[parentPos + 1]);
       // Loop-invariant code for looking up the `d`-level coordinates/indices.
-      const std::vector<I> &indices_d = src.indices[d];
-      assert(pstop <= indices_d.size() && "Index position is out of bounds");
-      uint64_t &cursor_reord_d = this->cursor[this->reord[d]];
+      const std::vector<I> &indicesD = src.indices[d];
+      assert(pstop <= indicesD.size() && "Index position is out of bounds");
+      uint64_t &cursorReordD = this->cursor[this->reord[d]];
       for (uint64_t pos = pstart; pos < pstop; pos++) {
-        cursor_reord_d = static_cast<uint64_t>(indices_d[pos]);
+        cursorReordD = static_cast<uint64_t>(indicesD[pos]);
         forallElements(yield, pos, d + 1);
       }
     } else { // Dense dimension.
       const uint64_t sz = src.getDimSizes()[d];
       const uint64_t pstart = parentPos * sz;
-      uint64_t &cursor_reord_d = this->cursor[this->reord[d]];
+      uint64_t &cursorReordD = this->cursor[this->reord[d]];
       for (uint64_t i = 0; i < sz; i++) {
-        cursor_reord_d = i;
+        cursorReordD = i;
         forallElements(yield, pstart + i, d + 1);
       }
     }
