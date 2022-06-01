@@ -398,6 +398,7 @@ struct MIMGInfo {
   uint8_t MIMGEncoding;
   uint8_t VDataDwords;
   uint8_t VAddrDwords;
+  uint8_t VAddrOperands;
 };
 
 LLVM_READONLY
