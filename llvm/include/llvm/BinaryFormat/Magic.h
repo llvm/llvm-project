@@ -52,6 +52,7 @@ struct file_magic {
     pdb,                 ///< Windows PDB debug info file
     tapi_file,           ///< Text-based Dynamic Library Stub file
     cuda_fatbinary,      ///< CUDA Fatbinary object file
+    offload_binary,      ///< LLVM offload object file
     dxcontainer_object,  ///< DirectX container file
   };
 

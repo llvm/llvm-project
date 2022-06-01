@@ -1231,6 +1231,6 @@ void clang::EmbedObject(llvm::Module *M, const CodeGenOptions &CGOpts,
     }
 
     llvm::embedBufferInModule(*M, **ObjectOrErr, ".llvm.offloading",
-                              Align(OffloadBinary::getAlignment()));
+                              Align(object::OffloadBinary::getAlignment()));
   }
 }
