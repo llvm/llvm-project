@@ -1,4 +1,4 @@
-# RUN: llc -march=aarch64 -run-pass=legalizer %s -o - -enable-cse-in-legalizer=1 -debug-only=cseinfo 2>&1 | FileCheck %s
+# RUN: llc -mtriple=aarch64 -run-pass=legalizer %s -o - -enable-cse-in-legalizer=1 -debug-only=cseinfo 2>&1 | FileCheck %s
 # Test the -debug-only=cseinfo option here to make sure we're recording new instructions and printing the hit count
 # at the end.
 # REQUIRES: asserts
