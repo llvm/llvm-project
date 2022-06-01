@@ -702,10 +702,18 @@ static bool canShiftBinOpWithConstantRHS(BinaryOperator &Shift,
   }
 }
 
-Instruction *InstCombinerImpl::FoldShiftByConstant(Value *Op0, Constant *Op1,
+Instruction *InstCombinerImpl::FoldShiftByConstant(Value *Op0, Constant *C1,
                                                    BinaryOperator &I) {
+  // (C2 << X) << C1 --> (C2 << C1) << X
+  // (C2 >> X) >> C1 --> (C2 >> C1) >> X
+  Constant *C2;
+  Value *X;
+  if (match(Op0, m_BinOp(I.getOpcode(), m_Constant(C2), m_Value(X))))
+    return BinaryOperator::Create(I.getOpcode(),
+                                  ConstantExpr::get(I.getOpcode(), C2, C1), X);
+
   const APInt *Op1C;
-  if (!match(Op1, m_APInt(Op1C)))
+  if (!match(C1, m_APInt(Op1C)))
     return nullptr;
 
   // See if we can propagate this shift into the input, this covers the trivial
@@ -743,10 +751,10 @@ Instruction *InstCombinerImpl::FoldShiftByConstant(Value *Op0, Constant *Op1,
     if (match(Op0BO->getOperand(1), m_APInt(Op0C))) {
       if (canShiftBinOpWithConstantRHS(I, Op0BO)) {
         Constant *NewRHS = ConstantExpr::get(
-            I.getOpcode(), cast<Constant>(Op0BO->getOperand(1)), Op1);
+            I.getOpcode(), cast<Constant>(Op0BO->getOperand(1)), C1);
 
         Value *NewShift =
-            Builder.CreateBinOp(I.getOpcode(), Op0BO->getOperand(0), Op1);
+            Builder.CreateBinOp(I.getOpcode(), Op0BO->getOperand(0), C1);
         NewShift->takeName(Op0BO);
 
         return BinaryOperator::Create(Op0BO->getOpcode(), NewShift, NewRHS);
@@ -772,9 +780,9 @@ Instruction *InstCombinerImpl::FoldShiftByConstant(Value *Op0, Constant *Op1,
         match(TBO->getOperand(1), m_APInt(C)) &&
         canShiftBinOpWithConstantRHS(I, TBO)) {
       Constant *NewRHS = ConstantExpr::get(
-          I.getOpcode(), cast<Constant>(TBO->getOperand(1)), Op1);
+          I.getOpcode(), cast<Constant>(TBO->getOperand(1)), C1);
 
-      Value *NewShift = Builder.CreateBinOp(I.getOpcode(), FalseVal, Op1);
+      Value *NewShift = Builder.CreateBinOp(I.getOpcode(), FalseVal, C1);
       Value *NewOp = Builder.CreateBinOp(TBO->getOpcode(), NewShift, NewRHS);
       return SelectInst::Create(Cond, NewOp, NewShift);
     }
@@ -789,9 +797,9 @@ Instruction *InstCombinerImpl::FoldShiftByConstant(Value *Op0, Constant *Op1,
         match(FBO->getOperand(1), m_APInt(C)) &&
         canShiftBinOpWithConstantRHS(I, FBO)) {
       Constant *NewRHS = ConstantExpr::get(
-          I.getOpcode(), cast<Constant>(FBO->getOperand(1)), Op1);
+          I.getOpcode(), cast<Constant>(FBO->getOperand(1)), C1);
 
-      Value *NewShift = Builder.CreateBinOp(I.getOpcode(), TrueVal, Op1);
+      Value *NewShift = Builder.CreateBinOp(I.getOpcode(), TrueVal, C1);
       Value *NewOp = Builder.CreateBinOp(FBO->getOpcode(), NewShift, NewRHS);
       return SelectInst::Create(Cond, NewShift, NewOp);
     }
@@ -1009,10 +1017,6 @@ Instruction *InstCombinerImpl::visitShl(BinaryOperator &I) {
   if (match(Op1, m_Constant(C1))) {
     Constant *C2;
     Value *X;
-    // (C2 << X) << C1 --> (C2 << C1) << X
-    if (match(Op0, m_Shl(m_Constant(C2), m_Value(X))))
-      return BinaryOperator::CreateShl(ConstantExpr::getShl(C2, C1), X);
-
     // (X * C2) << C1 --> X * (C2 << C1)
     if (match(Op0, m_Mul(m_Value(X), m_Constant(C2))))
       return BinaryOperator::CreateMul(X, ConstantExpr::getShl(C2, C1));
