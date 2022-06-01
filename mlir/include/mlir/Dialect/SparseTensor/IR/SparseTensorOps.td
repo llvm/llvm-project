@@ -49,29 +49,6 @@ def SparseTensor_NewOp : SparseTensor_Op<"new", [NoSideEffect]>,
   let hasVerifier = 1;
 }
 
-def SparseTensor_InitOp : SparseTensor_Op<"init", [NoSideEffect]>,
-    Arguments<(ins Variadic<Index>:$sizes)>,
-    Results<(outs AnyTensor:$result)> {
-  string summary = "Materializes an unitialized sparse tensor";
-  string description = [{
-    Materializes an uninitialized sparse tensor with given shape (either static
-    or dynamic). The operation is provided as an anchor that materializes a
-    properly typed but uninitialized sparse tensor into the output clause of
-    a subsequent operation that yields a sparse tensor as the result.
-
-    Example:
-
-    ```mlir
-    %c = sparse_tensor.init_tensor [%d1, %d2] : tensor<?x?xf32, #SparseMatrix>
-    %0 = linalg.matmul
-      ins(%a, %b: tensor<?x?xf32>, tensor<?x?xf32>)
-      outs(%c: tensor<?x?xf32, #SparseMatrix>) -> tensor<?x?xf32, #SparseMatrix>
-    ```
-  }];
-  let assemblyFormat = "`[` $sizes `]` attr-dict `:` type($result)";
-  let hasVerifier = 1;
-}
-
 def SparseTensor_ConvertOp : SparseTensor_Op<"convert",
   [NoSideEffect, SameOperandsAndResultElementType]>,
     Arguments<(ins AnyTensor:$source)>,
@@ -417,7 +394,7 @@ def SparseTensor_BinaryOp : SparseTensor_Op<"binary", [NoSideEffect]>,
 
       Example of isEqual applied to intersecting elements only.
       ```mlir
-      %C = sparse_tensor.init...
+      %C = bufferization.alloc_tensor...
       %0 = linalg.generic #trait
         ins(%A: tensor<?xf64, #SparseVec>, %B: tensor<?xf64, #SparseVec>)
         outs(%C: tensor<?xi8, #SparseVec>) {
@@ -438,7 +415,7 @@ def SparseTensor_BinaryOp : SparseTensor_Op<"binary", [NoSideEffect]>,
       Example of A+B in upper triangle, A-B in lower triangle
       (not working yet, but construct will be available soon).
       ```mlir
-      %C = sparse_tensor.init...
+      %C = bufferization.alloc_tensor...
       %1 = linalg.generic #trait
         ins(%A: tensor<?x?xf64, #CSR>, %B: tensor<?x?xf64, #CSR>
         outs(%C: tensor<?x?xf64, #CSR> {
@@ -470,7 +447,7 @@ def SparseTensor_BinaryOp : SparseTensor_Op<"binary", [NoSideEffect]>,
       is *not* overlapped by B. The element type of B can be different than A
       because we never use its values, only its sparse structure.
       ```mlir
-      %C = sparse_tensor.init...
+      %C = bufferization.alloc_tensor...
       %2 = linalg.generic #trait
         ins(%A: tensor<?x?xf64, #CSR>, %B: tensor<?x?xi32, #CSR>
         outs(%C: tensor<?x?xf64, #CSR> {
@@ -517,7 +494,7 @@ def SparseTensor_UnaryOp : SparseTensor_Op<"unary", [NoSideEffect]>,
 
       Example of A+1, restricted to existing elements:
       ```mlir
-      %C = sparse_tensor.init...
+      %C = bufferization.alloc_tensor...
       %0 = linalg.generic #trait
         ins(%A: tensor<?xf64, #SparseVec>)
         outs(%C: tensor<?xf64, #SparseVec>) {

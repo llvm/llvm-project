@@ -22,7 +22,7 @@ module {
                       -> tensor<?xcomplex<f64>, #SparseVector> {
     %c = arith.constant 0 : index
     %d = tensor.dim %arga, %c : tensor<?xcomplex<f64>, #SparseVector>
-    %xv = sparse_tensor.init [%d] : tensor<?xcomplex<f64>, #SparseVector>
+    %xv = bufferization.alloc_tensor(%d) : tensor<?xcomplex<f64>, #SparseVector>
     %0 = linalg.generic #trait_op
        ins(%arga, %argb: tensor<?xcomplex<f64>, #SparseVector>,
                          tensor<?xcomplex<f64>, #SparseVector>)
@@ -39,7 +39,7 @@ module {
                       -> tensor<?xcomplex<f64>, #SparseVector> {
     %c = arith.constant 0 : index
     %d = tensor.dim %arga, %c : tensor<?xcomplex<f64>, #SparseVector>
-    %xv = sparse_tensor.init [%d] : tensor<?xcomplex<f64>, #SparseVector>
+    %xv = bufferization.alloc_tensor(%d) : tensor<?xcomplex<f64>, #SparseVector>
     %0 = linalg.generic #trait_op
        ins(%arga, %argb: tensor<?xcomplex<f64>, #SparseVector>,
                          tensor<?xcomplex<f64>, #SparseVector>)

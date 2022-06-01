@@ -22,9 +22,7 @@ module {
   // Sparse kernel.
   func.func @sparse_mult_elt(
       %arga: tensor<32x16xf32, #DCSR>, %argb: tensor<32x16xf32, #DCSR>) -> tensor<32x16xf32, #DCSR> {
-    %c16 = arith.constant 16 : index
-    %c32 = arith.constant 32 : index
-    %argx = sparse_tensor.init [%c32, %c16] : tensor<32x16xf32, #DCSR>
+    %argx = bufferization.alloc_tensor() : tensor<32x16xf32, #DCSR>
     %0 = linalg.generic #trait_mult_elt
       ins(%arga, %argb: tensor<32x16xf32, #DCSR>, tensor<32x16xf32, #DCSR>)
       outs(%argx: tensor<32x16xf32, #DCSR>) {

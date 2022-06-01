@@ -214,28 +214,6 @@ LogicalResult NewOp::verify() {
   return success();
 }
 
-LogicalResult InitOp::verify() {
-  if (!getSparseTensorEncoding(result().getType()))
-    return emitError("expected a sparse tensor result");
-  RankedTensorType ttp = getType().cast<RankedTensorType>();
-  unsigned rank = ttp.getRank();
-  if (rank != sizes().size())
-    return emitError("unexpected mismatch between tensor rank and sizes: ")
-           << rank << " vs. " << sizes().size();
-  auto shape = ttp.getShape();
-  for (unsigned i = 0; i < rank; i++) {
-    if (shape[i] == ShapedType::kDynamicSize)
-      continue;
-    IntegerAttr constantAttr;
-    if (!matchPattern(sizes()[i], m_Constant(&constantAttr)) ||
-        constantAttr.getInt() != shape[i]) {
-      return emitError("unexpected mismatch with static dimension size ")
-             << shape[i];
-    }
-  }
-  return success();
-}
-
 LogicalResult ConvertOp::verify() {
   if (auto tp1 = source().getType().dyn_cast<RankedTensorType>()) {
     if (auto tp2 = dest().getType().dyn_cast<RankedTensorType>()) {
