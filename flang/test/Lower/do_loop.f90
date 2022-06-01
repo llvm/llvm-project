@@ -207,3 +207,40 @@ subroutine loop_with_non_default_integer(s,e,st)
   ! CHECK: %[[I_RES_CVT:.*]] = fir.convert %[[I_RES]] : (index) -> i64
   ! CHECK: fir.store %[[I_RES_CVT]] to %[[I_REF]] : !fir.ref<i64>
 end subroutine
+
+! Test real loop control.
+! CHECK-LABEL: loop_with_real_control
+! CHECK-SAME: (%[[S_REF:.*]]: !fir.ref<f32> {fir.bindc_name = "s"}, %[[E_REF:.*]]: !fir.ref<f32> {fir.bindc_name = "e"}, %[[ST_REF:.*]]: !fir.ref<f32> {fir.bindc_name = "st"}) {
+subroutine loop_with_real_control(s,e,st)
+  ! CHECK-DAG: %[[INDEX_REF:.*]] = fir.alloca index
+  ! CHECK-DAG: %[[X_REF:.*]] = fir.alloca f32 {bindc_name = "x", uniq_name = "_QFloop_with_real_controlEx"}
+  ! CHECK-DAG: %[[S:.*]] = fir.load %[[S_REF]] : !fir.ref<f32>
+  ! CHECK-DAG: %[[E:.*]] = fir.load %[[E_REF]] : !fir.ref<f32>
+  ! CHECK-DAG: %[[ST:.*]] = fir.load %[[ST_REF]] : !fir.ref<f32>
+  real :: x, s, e, st
+
+  ! CHECK: %[[DIFF:.*]] = arith.subf %[[E]], %[[S]] : f32
+  ! CHECK: %[[RANGE:.*]] = arith.addf %[[DIFF]], %[[ST]] : f32
+  ! CHECK: %[[HIGH:.*]] = arith.divf %[[RANGE]], %[[ST]] : f32
+  ! CHECK: %[[HIGH_INDEX:.*]] = fir.convert %[[HIGH]] : (f32) -> index
+  ! CHECK: fir.store %[[HIGH_INDEX]] to %[[INDEX_REF]] : !fir.ref<index>
+  ! CHECK: fir.store %[[S]] to %[[X_REF]] : !fir.ref<f32>
+
+  ! CHECK: br ^[[HDR:.*]]
+  ! CHECK: ^[[HDR]]:  // 2 preds: ^{{.*}}, ^[[EXIT:.*]]
+  ! CHECK-DAG: %[[INDEX:.*]] = fir.load %[[INDEX_REF]] : !fir.ref<index>
+  ! CHECK-DAG: %[[C0:.*]] = arith.constant 0 : index
+  ! CHECK: %[[COND:.*]] = arith.cmpi sgt, %[[INDEX]], %[[C0]] : index
+  ! CHECK: cond_br %[[COND]], ^[[BODY:.*]], ^[[EXIT:.*]]
+  do x=s,e,st
+    ! CHECK: ^[[BODY]]:  // pred: ^[[HDR]]
+    ! CHECK-DAG: %[[INDEX2:.*]] = fir.load %[[INDEX_REF]] : !fir.ref<index>
+    ! CHECK-DAG: %[[C1:.*]] = arith.constant 1 : index
+    ! CHECK: %[[INC:.*]] = arith.subi %[[INDEX2]], %[[C1]] : index
+    ! CHECK: fir.store %[[INC]] to %[[INDEX_REF]] : !fir.ref<index>
+    ! CHECK: %[[X2:.*]] = fir.load %[[X_REF]] : !fir.ref<f32>
+    ! CHECK: %[[XINC:.*]] = arith.addf %[[X2]], %[[ST]] : f32
+    ! CHECK: fir.store %[[XINC]] to %[[X_REF]] : !fir.ref<f32>
+    ! CHECK: br ^[[HDR]]
+  end do
+end subroutine

@@ -57,9 +57,9 @@ private:
   // are introduced.
   VPDominatorTree VPDomTree;
 
-  /// Build plain CFG for TheLoop. Return a new VPRegionBlock (TopRegion)
-  /// enclosing the plain CFG.
-  VPRegionBlock *buildPlainCFG();
+  /// Build plain CFG for TheLoop. Return the pre-header VPBasicBlock connected
+  /// to a new VPRegionBlock (TopRegion) enclosing the plain CFG.
+  VPBasicBlock *buildPlainCFG();
 
 public:
   VPlanHCFGBuilder(Loop *Lp, LoopInfo *LI, VPlan &P)

@@ -558,7 +558,10 @@ def arcmt_migrate_report_output : Separate<["-"], "arcmt-migrate-report-output">
 def arcmt_migrate_emit_arc_errors : Flag<["-"], "arcmt-migrate-emit-errors">,
   HelpText<"Emit ARC errors even if the migrator can fix them">, Flags<[CC1Option]>,
   MarshallingInfoFlag<FrontendOpts<"ARCMTMigrateEmitARCErrors">>;
+def gen_reproducer_eq: Joined<["-"], "gen-reproducer=">, Flags<[NoArgumentUnused, CoreOption]>,
+  HelpText<"Emit reproducer on (option: off, crash (default), error, always)">;
 def gen_reproducer: Flag<["-"], "gen-reproducer">, InternalDebugOpt,
+  Alias<gen_reproducer_eq>, AliasArgs<["always"]>,
   HelpText<"Auto-generates preprocessed source files and a reproduction script">;
 def gen_cdb_fragment_path: Separate<["-"], "gen-cdb-fragment-path">, InternalDebugOpt,
   HelpText<"Emit a compilation database fragment to the specified directory">;
@@ -1397,6 +1400,7 @@ def fexperimental_new_constant_interpreter : Flag<["-"], "fexperimental-new-cons
 def fconstexpr_backtrace_limit_EQ : Joined<["-"], "fconstexpr-backtrace-limit=">,
                                     Group<f_Group>;
 def fno_crash_diagnostics : Flag<["-"], "fno-crash-diagnostics">, Group<f_clang_Group>, Flags<[NoArgumentUnused, CoreOption]>,
+  Alias<gen_reproducer_eq>, AliasArgs<["off"]>,
   HelpText<"Disable auto-generation of preprocessed source files and a script for reproduction during a clang crash">;
 def fcrash_diagnostics_dir : Joined<["-"], "fcrash-diagnostics-dir=">,
   Group<f_clang_Group>, Flags<[NoArgumentUnused, CoreOption]>,
@@ -3521,7 +3525,10 @@ def mbranch_protection_EQ : Joined<["-"], "mbranch-protection=">,
   HelpText<"Enforce targets of indirect branches and function returns">;
 
 def mharden_sls_EQ : Joined<["-"], "mharden-sls=">,
-  HelpText<"Select straight-line speculation hardening scope">;
+  HelpText<"Select straight-line speculation hardening scope (ARM/AArch64/X86"
+           " only). <arg> must be: all, none, retbr(ARM/AArch64),"
+           " blr(ARM/AArch64), comdat(ARM/AArch64), nocomdat(ARM/AArch64),"
+           " return(X86), indirect-jmp(X86)">;
 
 def msimd128 : Flag<["-"], "msimd128">, Group<m_wasm_Features_Group>;
 def mno_simd128 : Flag<["-"], "mno-simd128">, Group<m_wasm_Features_Group>;
@@ -6051,7 +6058,7 @@ def fdefault_calling_conv_EQ : Joined<["-"], "fdefault-calling-conv=">,
 
 // These options cannot be marshalled, because they are used to set up the LangOptions defaults.
 def finclude_default_header : Flag<["-"], "finclude-default-header">,
-  HelpText<"Include default header file for OpenCL">;
+  HelpText<"Include default header file for OpenCL and HLSL">;
 def fdeclare_opencl_builtins : Flag<["-"], "fdeclare-opencl-builtins">,
   HelpText<"Add OpenCL builtin function declarations (experimental)">;
 
@@ -6780,6 +6787,8 @@ class DXCJoinedOrSeparate<string name> : Option<["/", "-"], name,
 def dxc_help : Option<["/", "-", "--"], "help", KIND_JOINED>,
   Group<dxc_Group>, Flags<[DXCOption, NoXarchOption]>, Alias<help>,
   HelpText<"Display available options">;
+def dxc_no_stdinc : DXCFlag<"hlsl-no-stdinc">,
+  HelpText<"HLSL only. Disables all standard includes containing non-native compiler types and functions.">;
 def Fo : DXCJoinedOrSeparate<"Fo">, Alias<o>,
   HelpText<"Output object file">;
 def dxil_validator_version : Option<["/", "-"], "validator-version", KIND_SEPARATE>,
@@ -6798,6 +6807,8 @@ def target_profile : DXCJoinedOrSeparate<"T">, MetaVarName<"<profile>">,
          "lib_6_3, lib_6_4, lib_6_5, lib_6_6, lib_6_7, lib_6_x,"
          "ms_6_5, ms_6_6, ms_6_7,"
          "as_6_5, as_6_6, as_6_7">;
+def dxc_D : Option<["--", "/", "-"], "D", KIND_JOINED_OR_SEPARATE>,
+  Group<dxc_Group>, Flags<[DXCOption, NoXarchOption]>, Alias<D>;
 def emit_pristine_llvm : DXCFlag<"emit-pristine-llvm">,
   HelpText<"Emit pristine LLVM IR from the frontend by not running any LLVM passes at all."
            "Same as -S + -emit-llvm + -disable-llvm-passes.">;

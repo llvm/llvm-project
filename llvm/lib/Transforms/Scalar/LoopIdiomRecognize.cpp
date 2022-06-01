@@ -1422,26 +1422,19 @@ bool LoopIdiomRecognize::processLoopStoreOfLoopLoad(
 
   // If the store is a memcpy instruction, we must check if it will write to
   // the load memory locations. So remove it from the ignored stores.
-  if (IsMemCpy)
-    IgnoredInsts.erase(TheStore);
   MemmoveVerifier Verifier(*LoadBasePtr, *StoreBasePtr, *DL);
+  if (IsMemCpy && !Verifier.IsSameObject)
+    IgnoredInsts.erase(TheStore);
   if (mayLoopAccessLocation(LoadBasePtr, ModRefInfo::Mod, CurLoop, BECount,
                             StoreSizeSCEV, *AA, IgnoredInsts)) {
-    if (!IsMemCpy) {
-      ORE.emit([&]() {
-        return OptimizationRemarkMissed(DEBUG_TYPE, "LoopMayAccessLoad",
-                                        TheLoad)
-               << ore::NV("Inst", InstRemark) << " in "
-               << ore::NV("Function", TheStore->getFunction())
-               << " function will not be hoisted: "
-               << ore::NV("Reason", "The loop may access load location");
-      });
-      return Changed;
-    }
-    // At this point loop may access load only for memcpy in same underlying
-    // object. If that's not the case bail out.
-    if (!Verifier.IsSameObject)
-      return Changed;
+    ORE.emit([&]() {
+      return OptimizationRemarkMissed(DEBUG_TYPE, "LoopMayAccessLoad", TheLoad)
+             << ore::NV("Inst", InstRemark) << " in "
+             << ore::NV("Function", TheStore->getFunction())
+             << " function will not be hoisted: "
+             << ore::NV("Reason", "The loop may access load location");
+    });
+    return Changed;
   }
 
   bool UseMemMove = IsMemCpy ? Verifier.IsSameObject : LoopAccessStore;

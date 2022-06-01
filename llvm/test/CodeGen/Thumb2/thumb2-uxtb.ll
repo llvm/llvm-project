@@ -158,29 +158,55 @@ define i32 @test9(i32 %x) {
 	ret i32 %tmp6
 }
 
+; FIXME: Failed to match uxtb16
 define i32 @test10(i32 %p0) {
 ; CHECK-DSP-LABEL: test10:
 ; CHECK-DSP:       @ %bb.0:
 ; CHECK-DSP-NEXT:    mov.w r1, #16253176
-; CHECK-DSP-NEXT:    and.w r0, r1, r0, lsr #7
-; CHECK-DSP-NEXT:    lsrs r1, r0, #5
-; CHECK-DSP-NEXT:    uxtb16 r1, r1
+; CHECK-DSP-NEXT:    mov.w r2, #458759
+; CHECK-DSP-NEXT:    and.w r1, r1, r0, lsr #7
+; CHECK-DSP-NEXT:    and.w r0, r2, r0, lsr #12
 ; CHECK-DSP-NEXT:    add r0, r1
 ; CHECK-DSP-NEXT:    bx lr
 ;
 ; CHECK-NO-DSP-LABEL: test10:
 ; CHECK-NO-DSP:       @ %bb.0:
 ; CHECK-NO-DSP-NEXT:    mov.w r1, #16253176
-; CHECK-NO-DSP-NEXT:    and.w r0, r1, r0, lsr #7
-; CHECK-NO-DSP-NEXT:    mov.w r1, #458759
-; CHECK-NO-DSP-NEXT:    and.w r1, r1, r0, lsr #5
+; CHECK-NO-DSP-NEXT:    mov.w r2, #458759
+; CHECK-NO-DSP-NEXT:    and.w r1, r1, r0, lsr #7
+; CHECK-NO-DSP-NEXT:    and.w r0, r2, r0, lsr #12
 ; CHECK-NO-DSP-NEXT:    add r0, r1
 ; CHECK-NO-DSP-NEXT:    bx lr
-
-	%tmp1 = lshr i32 %p0, 7		; <i32> [#uses=1]
-	%tmp2 = and i32 %tmp1, 16253176		; <i32> [#uses=2]
-	%tmp4 = lshr i32 %tmp2, 5		; <i32> [#uses=1]
-	%tmp5 = and i32 %tmp4, 458759		; <i32> [#uses=1]
-	%tmp7 = or i32 %tmp5, %tmp2		; <i32> [#uses=1]
+	%tmp1 = lshr i32 %p0, 7
+	%tmp2 = and i32 %tmp1, 16253176
+	%tmp4 = lshr i32 %p0, 12
+	%tmp5 = and i32 %tmp4, 458759
+	%tmp7 = or i32 %tmp5, %tmp2
 	ret i32 %tmp7
 }
+
+define i32 @test11(i32 %p0) {
+; CHECK-DSP-LABEL: test11:
+; CHECK-DSP:       @ %bb.0:
+; CHECK-DSP-NEXT:    and r0, r0, #3
+; CHECK-DSP-NEXT:    mov.w r1, #65537
+; CHECK-DSP-NEXT:    lsl.w r0, r1, r0
+; CHECK-DSP-NEXT:    lsrs r0, r0, #1
+; CHECK-DSP-NEXT:    uxtb16 r0, r0
+; CHECK-DSP-NEXT:    bx lr
+;
+; CHECK-NO-DSP-LABEL: test11:
+; CHECK-NO-DSP:       @ %bb.0:
+; CHECK-NO-DSP-NEXT:    and r0, r0, #3
+; CHECK-NO-DSP-NEXT:    mov.w r1, #65537
+; CHECK-NO-DSP-NEXT:    lsl.w r0, r1, r0
+; CHECK-NO-DSP-NEXT:    mov.w r1, #458759
+; CHECK-NO-DSP-NEXT:    and.w r0, r1, r0, lsr #1
+; CHECK-NO-DSP-NEXT:    bx lr
+	%p = and i32 %p0, 3
+	%a = shl i32 65537, %p
+	%b = lshr i32 %a, 1
+	%tmp7 = and i32 %b, 458759
+	ret i32 %tmp7
+}
+

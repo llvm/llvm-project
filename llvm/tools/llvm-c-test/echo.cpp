@@ -1401,8 +1401,7 @@ int llvm_echo(bool OpaquePointers) {
   size_t ModuleIdentLen;
   const char *ModuleName = LLVMGetModuleIdentifier(Src, &ModuleIdentLen);
   LLVMContextRef Ctx = LLVMContextCreate();
-  if (OpaquePointers)
-    LLVMContextSetOpaquePointers(Ctx, true);
+  LLVMContextSetOpaquePointers(Ctx, OpaquePointers);
   LLVMModuleRef M = LLVMModuleCreateWithNameInContext(ModuleName, Ctx);
 
   LLVMSetSourceFileName(M, SourceFileName, SourceFileLen);

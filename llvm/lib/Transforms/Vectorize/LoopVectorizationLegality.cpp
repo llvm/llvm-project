@@ -33,8 +33,6 @@ using namespace PatternMatch;
 #define LV_NAME "loop-vectorize"
 #define DEBUG_TYPE LV_NAME
 
-extern cl::opt<bool> EnableVPlanPredication;
-
 static cl::opt<bool>
     EnableIfConversion("enable-if-conversion", cl::init(true), cl::Hidden,
                        cl::desc("Enable if-conversion during vectorization."));
@@ -509,7 +507,7 @@ bool LoopVectorizationLegality::canVectorizeOuterLoop() {
     // FIXME: We skip these checks when VPlan predication is enabled as we
     // want to allow divergent branches. This whole check will be removed
     // once VPlan predication is on by default.
-    if (!EnableVPlanPredication && Br && Br->isConditional() &&
+    if (Br && Br->isConditional() &&
         !TheLoop->isLoopInvariant(Br->getCondition()) &&
         !LI->isLoopHeader(Br->getSuccessor(0)) &&
         !LI->isLoopHeader(Br->getSuccessor(1))) {

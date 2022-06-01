@@ -2,6 +2,7 @@ set(LLVM_LINK_COMPONENTS
   DebugInfoDWARF
   Demangle
   MC
+  MCDisassembler
   Object
   Support
   )

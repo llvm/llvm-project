@@ -1782,8 +1782,13 @@ bool tools::GetSDLFromOffloadArchive(
   for (auto LPath : LibraryPaths) {
     ArchiveOfBundles.clear();
 
-    AOBFileNames.push_back(Twine(LPath + "/libdevice/lib" + Lib + ".a").str());
-    AOBFileNames.push_back(Twine(LPath + "/lib" + Lib + ".a").str());
+    llvm::Triple Triple(D.getTargetTriple());
+    bool IsMSVC = Triple.isWindowsMSVCEnvironment();
+    for (auto Prefix : {"/libdevice/", "/"}) {
+      if (IsMSVC)
+        AOBFileNames.push_back(Twine(LPath + Prefix + Lib + ".lib").str());
+      AOBFileNames.push_back(Twine(LPath + Prefix + "lib" + Lib + ".a").str());
+    }
 
     for (auto AOB : AOBFileNames) {
       if (llvm::sys::fs::exists(AOB)) {

@@ -168,7 +168,7 @@ static void addDefaultIgnorelists(const Driver &D, SanitizerMask Kinds,
     else if (BL.Mask == SanitizerKind::CFI && DiagnoseErrors)
       // If cfi_ignorelist.txt cannot be found in the resource dir, driver
       // should fail.
-      D.Diag(clang::diag::err_drv_no_such_file) << Path;
+      D.Diag(clang::diag::err_drv_missing_sanitizer_ignorelist) << Path;
   }
   validateSpecialCaseListFormat(
       D, IgnorelistFiles, clang::diag::err_drv_malformed_sanitizer_ignorelist,

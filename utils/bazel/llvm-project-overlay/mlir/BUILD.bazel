@@ -1805,6 +1805,7 @@ td_library(
         ":ControlFlowInterfacesTdFiles",
         ":LoopLikeInterfaceTdFiles",
         ":SideEffectInterfacesTdFiles",
+        ":ViewLikeInterfaceTdFiles",
     ],
 )
 
@@ -2599,6 +2600,7 @@ cc_library(
     includes = ["include"],
     deps = [
         ":ArithmeticDialect",
+        ":ArithmeticUtils",
         ":BufferizationDialect",
         ":ControlFlowInterfaces",
         ":ControlFlowOps",
@@ -2611,6 +2613,7 @@ cc_library(
         ":SCFPassIncGen",
         ":Support",
         ":TensorDialect",
+        ":ViewLikeInterface",
         "//llvm:Support",
     ],
 )

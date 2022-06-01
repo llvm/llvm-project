@@ -4,32 +4,10 @@ target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
 
 ; CHECK-LABEL: function 'forked_ptrs_simple':
 ; CHECK-NEXT:  loop:
-; CHECK-NEXT:    Memory dependences are safe with run-time checks
+; CHECK-NEXT:    Report: cannot identify array bounds
 ; CHECK-NEXT:    Dependences:
 ; CHECK-NEXT:    Run-time memory checks:
-; CHECK-NEXT:    Check 0:
-; CHECK-NEXT:      Comparing group ([[G1:.+]]):
-; CHECK-NEXT:        %gep.Dest = getelementptr inbounds float, float* %Dest, i64 %iv
-; CHECK-NEXT:        %gep.Dest = getelementptr inbounds float, float* %Dest, i64 %iv
-; CHECK-NEXT:      Against group ([[G2:.+]]):
-; CHECK-NEXT:        %select = select i1 %cmp, float* %gep.1, float* %gep.2
-; CHECK-NEXT:    Check 1:
-; CHECK-NEXT:      Comparing group ([[G1]]):
-; CHECK-NEXT:        %gep.Dest = getelementptr inbounds float, float* %Dest, i64 %iv
-; CHECK-NEXT:        %gep.Dest = getelementptr inbounds float, float* %Dest, i64 %iv
-; CHECK-NEXT:      Against group ([[G3:.+]]):
-; CHECK-NEXT:        %select = select i1 %cmp, float* %gep.1, float* %gep.2
 ; CHECK-NEXT:    Grouped accesses:
-; CHECK-NEXT:      Group [[G1]]
-; CHECK-NEXT:        (Low: %Dest High: (400 + %Dest))
-; CHECK-NEXT:          Member: {%Dest,+,4}<nuw><%loop>
-; CHECK-NEXT:          Member: {%Dest,+,4}<nuw><%loop>
-; CHECK-NEXT:      Group [[G2]]:
-; CHECK-NEXT:        (Low: %Base1 High: (400 + %Base1))
-; CHECK-NEXT:          Member: {%Base1,+,4}<nw><%loop>
-; CHECK-NEXT:      Group [[G3]]:
-; CHECK-NEXT:        (Low: %Base2 High: (400 + %Base2))
-; CHECK-NEXT:          Member: {%Base2,+,4}<nw><%loop>
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    Non vectorizable stores to invariant address were not found in loop.
 ; CHECK-NEXT:    SCEV assumptions:

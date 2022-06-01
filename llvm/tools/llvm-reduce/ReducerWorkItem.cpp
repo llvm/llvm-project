@@ -496,6 +496,12 @@ static uint64_t computeMIRComplexityScoreImpl(const MachineFunction &MF) {
   // Add in the block count.
   Score += 2 * MF.size();
 
+  const MachineRegisterInfo &MRI = MF.getRegInfo();
+  for (unsigned I = 0, E = MRI.getNumVirtRegs(); I != E; ++I) {
+    Register Reg = Register::index2VirtReg(I);
+    Score += MRI.getRegAllocationHints(Reg).second.size();
+  }
+
   for (const MachineBasicBlock &MBB : MF) {
     for (const MachineInstr &MI : MBB) {
       const unsigned Opc = MI.getOpcode();

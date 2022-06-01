@@ -328,9 +328,6 @@ public:
                             Register SrcReg2, int64_t CmpMask, int64_t CmpValue,
                             const MachineRegisterInfo *MRI) const override;
 
-  unsigned getAddressSpaceForPseudoSourceKind(
-             unsigned Kind) const override;
-
   bool
   areMemAccessesTriviallyDisjoint(const MachineInstr &MIa,
                                   const MachineInstr &MIb) const override;

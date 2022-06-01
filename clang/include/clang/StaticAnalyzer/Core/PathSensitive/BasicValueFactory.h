@@ -90,9 +90,7 @@ class PointerToMemberData : public llvm::FoldingSetNode {
 public:
   PointerToMemberData(const NamedDecl *D,
                       llvm::ImmutableList<const CXXBaseSpecifier *> L)
-      : D(D), L(L) {
-    assert(D);
-  }
+      : D(D), L(L) {}
 
   using iterator = llvm::ImmutableList<const CXXBaseSpecifier *>::iterator;
 
@@ -104,7 +102,7 @@ public:
 
   void Profile(llvm::FoldingSetNodeID &ID) { Profile(ID, D, L); }
 
-  LLVM_ATTRIBUTE_RETURNS_NONNULL
+  /// It might return null.
   const NamedDecl *getDeclaratorDecl() const { return D; }
 
   llvm::ImmutableList<const CXXBaseSpecifier *> getCXXBaseList() const {
