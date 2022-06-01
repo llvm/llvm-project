@@ -2,7 +2,7 @@
 # See https://llvm.org/LICENSE.txt for license information.
 # SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 
-"""LLVM libc startlark rules for building individual functions."""
+"""LLVM libc starlark rules for building individual functions."""
 
 load(":platforms.bzl", "PLATFORM_CPU_ARM64", "PLATFORM_CPU_X86_64")
 load("@bazel_skylib//lib:selects.bzl", "selects")
