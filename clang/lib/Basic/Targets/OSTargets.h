@@ -596,6 +596,23 @@ public:
       : PSOSTargetInfo<Target>(Triple, Opts) {}
 };
 
+// PS5 Target
+template <typename Target>
+class LLVM_LIBRARY_VISIBILITY PS5OSTargetInfo : public PSOSTargetInfo<Target> {
+protected:
+  void getOSDefines(const LangOptions &Opts, const llvm::Triple &Triple,
+                    MacroBuilder &Builder) const override {
+    // Start with base class defines.
+    PSOSTargetInfo<Target>::getOSDefines(Opts, Triple, Builder);
+
+    Builder.defineMacro("__PROSPERO__");
+  }
+
+public:
+  PS5OSTargetInfo(const llvm::Triple &Triple, const TargetOptions &Opts)
+      : PSOSTargetInfo<Target>(Triple, Opts) {}
+};
+
 // RTEMS Target
 template <typename Target>
 class LLVM_LIBRARY_VISIBILITY RTEMSTargetInfo : public OSTargetInfo<Target> {
