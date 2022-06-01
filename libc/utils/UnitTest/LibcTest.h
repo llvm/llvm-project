@@ -89,6 +89,14 @@ protected:
     return internal::test(Ctx, Cond, LHS, RHS, LHSStr, RHSStr, File, Line);
   }
 
+  template <typename ValType,
+            cpp::EnableIfType<cpp::IsEnum<ValType>::Value, int> = 0>
+  bool test(TestCondition Cond, ValType LHS, ValType RHS, const char *LHSStr,
+            const char *RHSStr, const char *File, unsigned long Line) {
+    return internal::test(Ctx, Cond, (long long)LHS, (long long)RHS, LHSStr,
+                          RHSStr, File, Line);
+  }
+
   template <
       typename ValType,
       cpp::EnableIfType<cpp::IsPointerType<ValType>::Value, ValType> = nullptr>
