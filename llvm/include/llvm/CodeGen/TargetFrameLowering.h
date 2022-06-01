@@ -223,7 +223,7 @@ public:
   emitCalleeSavedFrameMovesFullCFA(MachineBasicBlock &MBB,
                                    MachineBasicBlock::iterator MBBI) const {}
 
-  /// Returns true if we may need to fix the unwind infportmation for the
+  /// Returns true if we may need to fix the unwind information for the
   /// function.
   virtual bool enableCFIFixup(MachineFunction &MF) const;
 
