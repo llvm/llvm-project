@@ -4223,6 +4223,7 @@ bool Lexer::LexDependencyDirectiveTokenWhileSkipping(Token &Result) {
       }
       break;
     case pp_eof:
+      NextDepDirectiveTokenIndex = 0;
       return LexEndOfFile(Result, BufferEnd);
     }
   } while (!Stop);
