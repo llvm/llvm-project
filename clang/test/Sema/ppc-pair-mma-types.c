@@ -209,7 +209,7 @@ void testBuiltinTypes2(__vector_pair *vpp, const __vector_pair *vp2, unsigned ch
 
 void testBuiltinTypes3(vector int v, __vector_pair *vp2, signed long l, unsigned short s) {
   __vector_pair vp = __builtin_vsx_lxvp(l, v); // expected-error {{passing '__vector int' (vector of 4 'int' values) to parameter of incompatible type 'const __vector_pair *'}}
-  __builtin_vsx_stxvp(vp, l, s);               // expected-error {{passing 'unsigned short' to parameter of incompatible type 'const __vector_pair *'}}
+  __builtin_vsx_stxvp(vp, l, s);               // expected-error {{passing 'unsigned short' to parameter of incompatible type '__vector_pair *'}}
 }
 
 void testRestrictQualifiedPointer1(int *__restrict acc) {
