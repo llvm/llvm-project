@@ -85,6 +85,16 @@ template <typename Type> struct IsArithmetic {
       IsIntegral<Type>::Value || IsFloatingPointType<Type>::Value;
 };
 
+// Compile time type selection.
+template <bool _, class TrueT, class FalseT> struct Conditional {
+  using type = TrueT;
+};
+template <class TrueT, class FalseT> struct Conditional<false, TrueT, FalseT> {
+  using type = FalseT;
+};
+template <bool Cond, typename TrueT, typename FalseT>
+using ConditionalType = typename Conditional<Cond, TrueT, FalseT>::type;
+
 } // namespace cpp
 } // namespace __llvm_libc
 
