@@ -356,6 +356,21 @@ export class MLIRContext implements vscode.Disposable {
     return this.resolvePath(serverPath, defaultPath, workspaceFolder);
   }
 
+  /**
+   * Return the language client for the given language and workspace folder, or
+   * null if no client is active.
+   */
+  getLanguageClient(workspaceFolder: vscode.WorkspaceFolder,
+                    languageName: string): vscodelc.LanguageClient {
+    let workspaceFolderStr =
+        workspaceFolder ? workspaceFolder.uri.toString() : "";
+    let folderContext = this.workspaceFolders.get(workspaceFolderStr);
+    if (!folderContext) {
+      return null;
+    }
+    return folderContext.clients.get(languageName);
+  }
+
   dispose() {
     this.subscriptions.forEach((d) => { d.dispose(); });
     this.subscriptions = [];

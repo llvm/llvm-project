@@ -1,6 +1,7 @@
 import * as vscode from 'vscode';
 
 import {MLIRContext} from './mlirContext';
+import {registerPDLLCommands} from './PDLL/pdll';
 
 /**
  *  This method is called when the extension is activated. The extension is
@@ -20,6 +21,7 @@ export function activate(context: vscode.ExtensionContext) {
         mlirContext.dispose();
         await mlirContext.activate(outputChannel);
       }));
+  registerPDLLCommands(context, mlirContext);
 
   mlirContext.activate(outputChannel);
 }
