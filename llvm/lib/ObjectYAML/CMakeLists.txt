@@ -9,6 +9,8 @@ add_llvm_component_library(LLVMObjectYAML
   COFFYAML.cpp
   DWARFEmitter.cpp
   DWARFYAML.cpp
+  DXContainerEmitter.cpp
+  DXContainerYAML.cpp
   ELFEmitter.cpp
   ELFYAML.cpp
   MachOEmitter.cpp
