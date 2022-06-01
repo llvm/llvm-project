@@ -1,10 +1,20 @@
 @echo off
 setlocal
 
-REM Script for building the LLVM installer on Windows,
-REM used for the the weekly snapshots at http://www.llvm.org/builds.
-REM
-REM Usage: build_llvm_package.bat <revision>
+if "%1"=="" goto usage
+goto begin
+
+:usage
+echo Script for building the LLVM installer on Windows,
+echo used for the releases at https://github.com/llvm/llvm-project/releases
+echo.
+echo Usage: build_llvm_release.bat ^<version^>
+echo.
+echo Example: build_llvm_release.bat 14.0.4
+echo.
+exit /b
+
+:begin
 
 REM Prerequisites:
 REM
@@ -24,12 +34,9 @@ set vsdevcmd=C:\Program Files (x86)\Microsoft Visual Studio\2019\Professional\Co
 set python32_dir=C:\Users\%USERNAME%\AppData\Local\Programs\Python\Python310-32
 set python64_dir=C:\Users\%USERNAME%\AppData\Local\Programs\Python\Python310
 
-for /f "usebackq" %%i in (`PowerShell ^(Get-Date^).ToString^('yyyyMMdd'^)`) do set datestamp=%%i
-
-set revision=%1
-set package_version=15.0.0-%revision:~0,8%
-set clang_format_vs_version=15.0.0.%datestamp%
-set build_dir=llvm_package_%revision:~0,8%
+set revision=llvmorg-%1
+set package_version=%1
+set build_dir=llvm_package_%package_version%
 
 echo Revision: %revision%
 echo Package version: %package_version%
