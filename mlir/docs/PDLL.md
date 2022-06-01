@@ -577,9 +577,10 @@ let root = op<>;
 #### Operands
 
 The operands section corresponds to the operands of the operation. This section
-of an operation expression may be elided, in which case the operands are not
-constrained in any way. When present, the operands of an operation expression
-are interpreted in the following ways:
+of an operation expression may be elided, which within a `match` section means
+that the operands are not constrained in any way. If elided within a `rewrite`
+section, the operation is treated as having no operands. When present, the
+operands of an operation expression are interpreted in the following ways:
 
 1) A single instance of type `ValueRange`:
 
@@ -612,10 +613,11 @@ let root = op<my_dialect.indirect_call>(call: Value, args: ValueRange);
 
 #### Results
 
-The results section corresponds to the result types of the operation. This
-section of an operation expression may be elided, in which case the result types
-are not constrained in any way. When present, the result types of an operation
-expression are interpreted in the following ways:
+The results section corresponds to the result types of the operation. This section
+of an operation expression may be elided, which within a `match` section means
+that the result types are not constrained in any way. If elided within a `rewrite`
+section, the results of the operation are [inferred](#inferred-results). When present,
+the result types of an operation expression are interpreted in the following ways:
 
 1) A single instance of type `TypeRange`:
 
@@ -645,6 +647,87 @@ We can match the result types as so:
 ```pdll
 let root = op<my_dialect.op> -> (result: Type, otherResults: TypeRange);
 ```
+
+#### Inferred Results
+
+Within the `rewrite` section of a pattern, the result types of an
+operation are inferred if they are elided or otherwise not
+previously bound. The ["variable binding"](#variable-binding) section above
+discusses the concept of "binding" in more detail. Below are various examples
+that build upon this to help showcase how a result type may be "bound":
+
+* Binding to a [constant](#type-expression):
+
+```pdll
+op<my_dialect.op> -> (type<"i32">);
+```
+
+* Binding to types within the `match` section:
+
+```pdll
+Pattern {
+  replace op<dialect.inputOp> -> (resultTypes: TypeRange)
+    with op<dialect.outputOp> -> (resultTypes);
+}
+```
+
+* Binding to previously inferred types:
+
+```pdll
+Pattern {
+  rewrite root: Op with {
+    // `resultTypes` here is *not* yet bound, and will be inferred when
+    // creating `dialect.op`. Any uses of `resultTypes` after this expression,
+    // will use the types inferred when creating this operation.
+    op<dialect.op> -> (resultTypes: TypeRange);
+
+    // `resultTypes` here is bound to the types inferred when creating `dialect.op`.
+    op<dialect.bar> -> (resultTypes);
+  };
+}
+```
+
+* Binding to a [`Native Rewrite`](#native-rewriters) method result:
+
+```pdll
+Rewrite BuildTypes() -> TypeRange;
+
+Pattern {
+  rewrite root: Op with {
+    op<dialect.op> -> (BuildTypes());
+  };
+}
+```
+
+Below are the set of contexts in which result type inferrence is supported:
+
+##### Inferred Results of Replacement Operation
+
+Replacements have the invariant that the types of the replacement values must
+match the result types of the input operation. This means that when replacing
+one operation with another, the result types of the replacement operation may
+be inferred from the result types of the operation being replaced. For example,
+consider the following pattern:
+
+```pdll
+Pattern => replace op<dialect.inputOp> with op<dialect.outputOp>;
+```
+
+This pattern could be written in a more explicit way as:
+
+```pdll
+Pattern {
+  replace op<dialect.inputOp> -> (resultTypes: TypeRange)
+    with op<dialect.outputOp> -> (resultTypes);
+}
+```
+
+##### Inferred Results with InferTypeOpInterface
+
+`InferTypeOpInterface` is an interface that enables operations to infer its result
+types from its input attributes, operands, regions, etc. When the result types of
+an operation cannot be inferred from any other context, this interface is invoked
+to infer the result types of the operation.
 
 #### Attributes
 
