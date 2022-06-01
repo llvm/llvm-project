@@ -8522,14 +8522,14 @@ VPRegionBlock *VPRecipeBuilder::createReplicateRegion(Instruction *Instr,
     Plan->removeVPValueFor(Instr);
     Plan->addVPValue(Instr, PHIRecipe);
   }
-  auto *Exit = new VPBasicBlock(Twine(RegionName) + ".continue", PHIRecipe);
+  auto *Exiting = new VPBasicBlock(Twine(RegionName) + ".continue", PHIRecipe);
   auto *Pred = new VPBasicBlock(Twine(RegionName) + ".if", PredRecipe);
-  VPRegionBlock *Region = new VPRegionBlock(Entry, Exit, RegionName, true);
+  VPRegionBlock *Region = new VPRegionBlock(Entry, Exiting, RegionName, true);
 
   // Note: first set Entry as region entry and then connect successors starting
   // from it in order, to propagate the "parent" of each VPBasicBlock.
-  VPBlockUtils::insertTwoBlocksAfter(Pred, Exit, BlockInMask, Entry);
-  VPBlockUtils::connectBlocks(Pred, Exit);
+  VPBlockUtils::insertTwoBlocksAfter(Pred, Exiting, BlockInMask, Entry);
+  VPBlockUtils::connectBlocks(Pred, Exiting);
 
   return Region;
 }
