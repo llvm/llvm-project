@@ -1,4 +1,5 @@
-// RUN: mlir-opt %s --convert-complex-to-standard --split-input-file | FileCheck %s
+// RUN: mlir-opt %s --convert-complex-to-standard --split-input-file |\
+// RUN: FileCheck %s
 
 // CHECK-LABEL: func @complex_abs
 // CHECK-SAME: %[[ARG:.*]]: complex<f32>
@@ -13,6 +14,15 @@ func.func @complex_abs(%arg: complex<f32>) -> f32 {
 // CHECK: %[[SQ_NORM:.*]] = arith.addf %[[REAL_SQ]], %[[IMAG_SQ]] : f32
 // CHECK: %[[NORM:.*]] = math.sqrt %[[SQ_NORM]] : f32
 // CHECK: return %[[NORM]] : f32
+
+// -----
+
+// CHECK-LABEL: func @complex_atan2
+func.func @complex_atan2(%lhs: complex<f32>,
+                         %rhs: complex<f32>) -> complex<f32> {
+  %atan2 = complex.atan2 %lhs, %rhs : complex<f32>
+  return %atan2 : complex<f32>
+}
 
 // -----
 
@@ -645,3 +655,11 @@ func.func @complex_tanh(%arg: complex<f32>) -> complex<f32> {
 // CHECK: %[[ONE:.*]] = arith.constant 1.000000e+00 : f32
 // CHECK: %[[MUL:.*]] = arith.mulf %[[TANH_A]], %[[TAN_B]] : f32
 // CHECK: %[[DENOM:.*]] = complex.create %[[ONE]], %[[MUL]] : complex<f32>
+
+// -----
+
+// CHECK-LABEL: func @complex_sqrt
+func.func @complex_sqrt(%arg: complex<f32>) -> complex<f32> {
+  %sqrt = complex.sqrt %arg : complex<f32>
+  return %sqrt : complex<f32>
+}
