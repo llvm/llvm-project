@@ -110,12 +110,12 @@ Bug Fixes
   `51414 <https://github.com/llvm/llvm-project/issues/51414>`_,
   `51416 <https://github.com/llvm/llvm-project/issues/51416>`_,
   and `51641 <https://github.com/llvm/llvm-project/issues/51641>`_.
-- The builtin function __builtin_dump_struct would crash clang when the target 
+- The builtin function __builtin_dump_struct would crash clang when the target
   struct contains a bitfield. It now correctly handles bitfields.
   This fixes Issue `Issue 54462 <https://github.com/llvm/llvm-project/issues/54462>`_.
 - Statement expressions are now disabled in default arguments in general.
   This fixes Issue `Issue 53488 <https://github.com/llvm/llvm-project/issues/53488>`_.
-- According to `CWG 1394 <https://wg21.link/cwg1394>`_ and 
+- According to `CWG 1394 <https://wg21.link/cwg1394>`_ and
   `C++20 [dcl.fct.def.general]p2 <https://timsong-cpp.github.io/cppwp/n4868/dcl.fct.def#general-2.sentence-3>`_,
   Clang should not diagnose incomplete types in function definitions if the function body is "= delete;".
   This fixes Issue `Issue 52802 <https://github.com/llvm/llvm-project/issues/52802>`_.
@@ -149,8 +149,8 @@ Bug Fixes
   because there is no way to fully qualify the enumerator name, so this
   "extension" was unintentional and useless. This fixes
   `Issue 42372 <https://github.com/llvm/llvm-project/issues/42372>`_.
-- Clang will now find and emit a call to an allocation function in a 
-  promise_type body for coroutines if there is any allocation function 
+- Clang will now find and emit a call to an allocation function in a
+  promise_type body for coroutines if there is any allocation function
   declaration in the scope of promise_type. Additionally, to implement CWG2585,
   a coroutine will no longer generate a call to a global allocation function
   with the signature (std::size_t, p0, ..., pn).
@@ -296,6 +296,8 @@ New Compiler Flags
   operations, such as division or float-to-integer conversion, on ``_BitInt``
   types with more than 128 bits currently crash clang. This option will be
   removed in the future once clang supports all such operations.
+- Added the ``-print-diagnostic-options`` option, which prints a list of
+  warnings the compiler supports.
 
 Deprecated Compiler Flags
 -------------------------
@@ -545,7 +547,7 @@ Static Analyzer
 
 - Added a new checker ``alpha.unix.cstring.UninitializedRead`` this will check for uninitialized reads
   from common memory copy/manipulation functions such as ``memcpy``, ``mempcpy``, ``memmove``, ``memcmp``, `
-  `strcmp``, ``strncmp``, ``strcpy``, ``strlen``, ``strsep`` and many more. Although 
+  `strcmp``, ``strncmp``, ``strcpy``, ``strlen``, ``strsep`` and many more. Although
   this checker currently is in list of alpha checkers due to a false positive.
 
 .. _release-notes-ubsan:
