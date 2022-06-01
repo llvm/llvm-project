@@ -45,6 +45,11 @@ DeclarationMatcher optionalClass() {
 
 auto hasOptionalType() { return hasType(optionalClass()); }
 
+auto hasOptionalOrAliasType() {
+  return hasUnqualifiedDesugaredType(
+      recordType(hasDeclaration(optionalClass())));
+}
+
 auto isOptionalMemberCallWithName(
     llvm::StringRef MemberName,
     llvm::Optional<StatementMatcher> Ignorable = llvm::None) {
@@ -156,6 +161,12 @@ auto isValueOrNotEqX() {
                          anyOf(ComparesToSame(cxxNullPtrLiteralExpr()),
                                ComparesToSame(stringLiteral(hasSize(0))),
                                ComparesToSame(integerLiteral(equals(0)))));
+}
+
+auto isCallReturningOptional() {
+  return callExpr(callee(functionDecl(
+      returns(anyOf(hasOptionalOrAliasType(),
+                    referenceType(pointee(hasOptionalOrAliasType())))))));
 }
 
 /// Creates a symbolic value for an `optional` value using `HasValueVal` as the
@@ -320,6 +331,18 @@ void transferValueOrNotEqX(const Expr *ComparisonExpr,
                         // details about the contents of `opt`.
                         return Env.makeImplication(ExprVal, HasValueVal);
                       });
+}
+
+void transferCallReturningOptional(const CallExpr *E,
+                                   const MatchFinder::MatchResult &Result,
+                                   LatticeTransferState &State) {
+  if (State.Env.getStorageLocation(*E, SkipPast::None) != nullptr)
+    return;
+
+  auto &Loc = State.Env.createStorageLocation(*E);
+  State.Env.setStorageLocation(*E, Loc);
+  State.Env.setValue(
+      Loc, createOptionalValue(State.Env, State.Env.makeAtomicBoolValue()));
 }
 
 void assignOptionalValue(const Expr &E, LatticeTransferState &State,
@@ -546,6 +569,10 @@ auto buildTransferMatchSwitch(
 
       // opt.value_or(X) != X
       .CaseOf<Expr>(isValueOrNotEqX(), transferValueOrNotEqX)
+
+      // returns optional
+      .CaseOf<CallExpr>(isCallReturningOptional(),
+                        transferCallReturningOptional)
 
       .Build();
 }
