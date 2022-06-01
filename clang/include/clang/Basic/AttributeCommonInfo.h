@@ -69,7 +69,7 @@ private:
   // Corresponds to the Kind enum.
   unsigned AttrKind : 16;
   /// Corresponds to the Syntax enum.
-  unsigned SyntaxUsed : 3;
+  unsigned SyntaxUsed : 4;
   unsigned SpellingIndex : 4;
 
 protected:
