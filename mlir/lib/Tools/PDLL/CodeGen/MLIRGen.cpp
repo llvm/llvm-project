@@ -316,11 +316,12 @@ Value CodeGen::genNonInitializerVar(const ast::VariableDecl *varDecl,
       Value typeValue =
           TypeSwitch<const ast::Node *, Value>(constraint.constraint)
               .Case<ast::AttrConstraintDecl, ast::ValueConstraintDecl,
-                    ast::ValueRangeConstraintDecl>([&, this](auto *cst) -> Value {
-                if (auto *typeConstraintExpr = cst->getTypeExpr())
-                  return this->genSingleExpr(typeConstraintExpr);
-                return Value();
-              })
+                    ast::ValueRangeConstraintDecl>(
+                  [&, this](auto *cst) -> Value {
+                    if (auto *typeConstraintExpr = cst->getTypeExpr())
+                      return this->genSingleExpr(typeConstraintExpr);
+                    return Value();
+                  })
               .Default(Value());
       if (typeValue)
         return typeValue;
@@ -442,16 +443,15 @@ Value CodeGen::genExprImpl(const ast::MemberAccessExpr *expr) {
       return builder.create<pdl::ResultsOp>(loc, mlirType, parentExprs[0]);
     }
 
-    assert(opType.getName() && "expected valid operation name");
-    const ods::Operation *odsOp = odsContext.lookupOperation(*opType.getName());
-
+    const ods::Operation *odsOp = opType.getODSOperation();
     if (!odsOp) {
-      assert(llvm::isDigit(name[0]) && "unregistered op only allows numeric indexing");
+      assert(llvm::isDigit(name[0]) &&
+             "unregistered op only allows numeric indexing");
       unsigned resultIndex;
       name.getAsInteger(/*Radix=*/10, resultIndex);
       IntegerAttr index = builder.getI32IntegerAttr(resultIndex);
       return builder.create<pdl::ResultOp>(loc, genType(expr->getType()),
-                                            parentExprs[0], index);
+                                           parentExprs[0], index);
     }
 
     // Find the result with the member name or by index.

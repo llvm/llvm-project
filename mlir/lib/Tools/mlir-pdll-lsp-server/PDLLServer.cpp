@@ -651,9 +651,7 @@ public:
   }
 
   void codeCompleteOperationMemberAccess(ast::OperationType opType) final {
-    Optional<StringRef> opName = opType.getName();
-    const ods::Operation *odsOp =
-        opName ? odsContext.lookupOperation(*opName) : nullptr;
+    const ods::Operation *odsOp = opType.getODSOperation();
     if (!odsOp)
       return;
 
