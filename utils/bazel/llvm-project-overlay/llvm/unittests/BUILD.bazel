@@ -45,6 +45,7 @@ cc_test(
         "//llvm:Analysis",
         "//llvm:AsmParser",
         "//llvm:Core",
+        "//llvm:Passes",
         "//llvm:Support",
         "//llvm:TestingSupport",
         "//llvm:TransformUtils",
