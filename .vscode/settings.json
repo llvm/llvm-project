@@ -1,0 +1,10 @@
+{
+    "cpp.clangdExecutable": "/usr/bin/clangd-10-rc1",
+    "cpp.clangTidy": true,
+    "cpp.trace.server": "verbose",
+    "cmake.useCMakeServer": false,
+    "cmake.configureOnOpen": true,
+    "cmake.sourceDirectory": "${workspaceFolder}/llvm",
+    "cmake.generator": "Ninja",
+    "C_Cpp.intelliSenseEngine": "Disabled"
+}

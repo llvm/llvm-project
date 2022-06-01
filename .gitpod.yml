@@ -1,0 +1,39 @@
+tasks:
+  - init: |
+      export CXX=`which clang++`
+      export CC=`which clang`
+      mkdir build
+      cmake -DCMAKE_INSTALL_PREFIX=/workspace/llvm-project/install \
+      -DCMAKE_EXPORT_COMPILE_COMMANDS:BOOL=TRUE -DCMAKE_BUILD_TYPE:STRING=Release \
+      -H/workspace/llvm-project/llvm -B/workspace/llvm-project/build -GNinja \
+      -DLLVM_TARGETS_TO_BUILD=X86 -DLLVM_ENABLE_PROJECTS="mlir" \
+      -DLLVM_PARALLEL_LINK_JOBS=1 -DLLVM_PARALLEL_COMPILE_JOBS=$(nproc) -DLLVM_USE_LINKER=gold
+      ln -s /workspace/llvm-project/build/compile_commands.json .
+      timeout 45m cmake --build /workspace/llvm-project/build/ || true
+
+      #image:
+      #  file: .gitpod.Dockerfile
+
+vscode:
+  extensions:
+    - ms-vscode.cmake-tools
+    - twxs.cmake
+
+github:
+  prebuilds:
+    # enable for the master/default branch (defaults to true)
+    master: true
+    # enable for all branches in this repo (defaults to false)
+    branches: false
+    # enable for pull requests coming from this repo (defaults to true)
+    pullRequests: true
+    # enable for pull requests coming from forks (defaults to false)
+    pullRequestsFromForks: false
+    # add a check to pull requests (defaults to true)
+    addCheck: true
+    # add a "Review in Gitpod" button as a comment to pull requests (defaults to false)
+    addComment: false
+    # add a "Review in Gitpod" button to the pull request's description (defaults to false)
+    addBadge: true
+    # add a label once the prebuild is ready to pull requests (defaults to false)
+    addLabel: true
