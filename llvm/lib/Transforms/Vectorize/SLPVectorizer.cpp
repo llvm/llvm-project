@@ -11330,14 +11330,47 @@ public:
       }
     }
     if (VectorizedTree) {
+      // Reorder operands of bool logical op in the natural order to avoid
+      // possible problem with poison propagation. If not possible to reorder
+      // (both operands are originally RHS), emit an extra freeze instruction
+      // for the LHS operand.
+      //I.e., if we have original code like this:
+      // RedOp1 = select i1 ?, i1 LHS, i1 false
+      // RedOp2 = select i1 RHS, i1 ?, i1 false
+
+      // Then, we swap LHS/RHS to create a new op that matches the poison
+      // semantics of the original code.
+
+      // If we have original code like this and both values could be poison:
+      // RedOp1 = select i1 ?, i1 LHS, i1 false
+      // RedOp2 = select i1 ?, i1 RHS, i1 false
+
+      // Then, we must freeze LHS in the new op.
+      auto &&FixBoolLogicalOps =
+          [&Builder, VectorizedTree](Value *&LHS, Value *&RHS,
+                                     Instruction *RedOp1, Instruction *RedOp2) {
+            if (!isBoolLogicOp(RedOp1))
+              return;
+            if (LHS == VectorizedTree || getRdxOperand(RedOp1, 0) == LHS ||
+                isGuaranteedNotToBePoison(LHS))
+              return;
+            if (!isBoolLogicOp(RedOp2))
+              return;
+            if (RHS == VectorizedTree || getRdxOperand(RedOp2, 0) == RHS ||
+                isGuaranteedNotToBePoison(RHS)) {
+              std::swap(LHS, RHS);
+              return;
+            }
+            LHS = Builder.CreateFreeze(LHS);
+          };
       // Finish the reduction.
       // Need to add extra arguments and not vectorized possible reduction
       // values.
       // Try to avoid dependencies between the scalar remainders after
       // reductions.
       auto &&FinalGen =
-          [this, &Builder,
-           &TrackedVals](ArrayRef<std::pair<Instruction *, Value *>> InstVals) {
+          [this, &Builder, &TrackedVals, &FixBoolLogicalOps](
+              ArrayRef<std::pair<Instruction *, Value *>> InstVals) {
             unsigned Sz = InstVals.size();
             SmallVector<std::pair<Instruction *, Value *>> ExtraReds(Sz / 2 +
                                                                      Sz % 2);
@@ -11354,6 +11387,11 @@ public:
               auto It2 = TrackedVals.find(RdxVal2);
               if (It2 != TrackedVals.end())
                 StableRdxVal2 = It2->second;
+              // To prevent poison from leaking across what used to be
+              // sequential, safe, scalar boolean logic operations, the
+              // reduction operand must be frozen.
+              FixBoolLogicalOps(StableRdxVal1, StableRdxVal2, InstVals[I].first,
+                                RedOp);
               Value *ExtraRed = createOp(Builder, RdxKind, StableRdxVal1,
                                          StableRdxVal2, "op.rdx", ReductionOps);
               ExtraReds[I / 2] = std::make_pair(InstVals[I].first, ExtraRed);
@@ -11363,6 +11401,8 @@ public:
             return ExtraReds;
           };
       SmallVector<std::pair<Instruction *, Value *>> ExtraReductions;
+      ExtraReductions.emplace_back(cast<Instruction>(ReductionRoot),
+                                   VectorizedTree);
       SmallPtrSet<Value *, 8> Visited;
       for (ArrayRef<Value *> Candidates : ReducedVals) {
         for (Value *RdxVal : Candidates) {
@@ -11382,22 +11422,12 @@ public:
       }
       // Iterate through all not-vectorized reduction values/extra arguments.
       while (ExtraReductions.size() > 1) {
+        VectorizedTree = ExtraReductions.front().second;
         SmallVector<std::pair<Instruction *, Value *>> NewReds =
             FinalGen(ExtraReductions);
         ExtraReductions.swap(NewReds);
       }
-      // Final reduction.
-      if (ExtraReductions.size() == 1) {
-        Instruction *RedOp = ExtraReductions.back().first;
-        Builder.SetCurrentDebugLocation(RedOp->getDebugLoc());
-        Value *RdxVal = ExtraReductions.back().second;
-        Value *StableRdxVal = RdxVal;
-        auto It = TrackedVals.find(RdxVal);
-        if (It != TrackedVals.end())
-          StableRdxVal = It->second;
-        VectorizedTree = createOp(Builder, RdxKind, VectorizedTree,
-                                  StableRdxVal, "op.rdx", ReductionOps);
-      }
+      VectorizedTree = ExtraReductions.front().second;
 
       ReductionRoot->replaceAllUsesWith(VectorizedTree);
 
