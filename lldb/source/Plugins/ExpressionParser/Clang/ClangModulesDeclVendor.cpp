@@ -604,7 +604,6 @@ ClangModulesDeclVendor::Create(Target &target) {
       "clang",
       "-fmodules",
       "-fimplicit-module-maps",
-      "-fcxx-modules",
       "-fsyntax-only",
       "-femit-all-decls",
       "-target",
