@@ -13,6 +13,7 @@
 #include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
 #include "mlir/Dialect/Math/IR/Math.h"
 #include "mlir/Dialect/Math/Transforms/Passes.h"
+#include "mlir/Dialect/SCF/SCF.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/Transforms/DialectConversion.h"
 
@@ -51,6 +52,67 @@ static LogicalResult convertTanhOp(math::TanhOp op, PatternRewriter &rewriter) {
   rewriter.replaceOpWithNewOp<arith::SelectOp>(op, cmpRes, positiveRes,
                                                negativeRes);
   return success();
+}
+
+static LogicalResult convertCtlzOp(math::CountLeadingZerosOp op,
+                                   PatternRewriter &rewriter) {
+  auto operand = op.getOperand();
+  auto elementTy = operand.getType();
+  auto resultTy = op.getType();
+  Location loc = op.getLoc();
+
+  int bitWidth = elementTy.getIntOrFloatBitWidth();
+  auto zero =
+      rewriter.create<arith::ConstantOp>(loc, IntegerAttr::get(elementTy, 0));
+  auto leadingZeros = rewriter.create<arith::ConstantOp>(
+      loc, IntegerAttr::get(elementTy, bitWidth));
+
+  SmallVector<Value> operands = {operand, leadingZeros, zero};
+  SmallVector<Type> types = {elementTy, elementTy, elementTy};
+  SmallVector<Location> locations = {loc, loc, loc};
+
+  auto whileOp = rewriter.create<scf::WhileOp>(loc, types, operands);
+  Block *before =
+      rewriter.createBlock(&whileOp.getBefore(), {}, types, locations);
+  Block *after =
+      rewriter.createBlock(&whileOp.getAfter(), {}, types, locations);
+
+  // The conditional block of the while loop.
+  {
+    rewriter.setInsertionPointToStart(&whileOp.getBefore().front());
+    Value input = before->getArgument(0);
+    Value zero = before->getArgument(2);
+
+    Value inputNotZero = rewriter.create<arith::CmpIOp>(
+        loc, arith::CmpIPredicate::ne, input, zero);
+    rewriter.create<scf::ConditionOp>(loc, inputNotZero,
+                                      before->getArguments());
+  }
+
+  // The body of the while loop: shift right until reaching a value of 0.
+  {
+    rewriter.setInsertionPointToStart(&whileOp.getAfter().front());
+    Value input = after->getArgument(0);
+    Value leadingZeros = after->getArgument(1);
+
+    auto one =
+        rewriter.create<arith::ConstantOp>(loc, IntegerAttr::get(elementTy, 1));
+    auto shifted = rewriter.create<arith::ShRUIOp>(loc, resultTy, input, one);
+    auto leadingZerosMinusOne =
+        rewriter.create<arith::SubIOp>(loc, resultTy, leadingZeros, one);
+
+    rewriter.create<scf::YieldOp>(
+        loc,
+        ValueRange({shifted, leadingZerosMinusOne, after->getArgument(2)}));
+  }
+
+  rewriter.setInsertionPointAfter(whileOp);
+  rewriter.replaceOp(op, whileOp->getResult(1));
+  return success();
+}
+
+void mlir::populateExpandCtlzPattern(RewritePatternSet &patterns) {
+  patterns.add(convertCtlzOp);
 }
 
 void mlir::populateExpandTanhPattern(RewritePatternSet &patterns) {

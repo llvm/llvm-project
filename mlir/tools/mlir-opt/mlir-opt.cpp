@@ -76,7 +76,7 @@ void registerTestDecomposeCallGraphTypes();
 void registerTestDiagnosticsPass();
 void registerTestDominancePass();
 void registerTestDynamicPipelinePass();
-void registerTestExpandTanhPass();
+void registerTestExpandMathPass();
 void registerTestComposeSubView();
 void registerTestMultiBuffering();
 void registerTestIRVisitorsPass();
@@ -172,7 +172,7 @@ void registerTestPasses() {
   mlir::test::registerTestDataLayoutQuery();
   mlir::test::registerTestDominancePass();
   mlir::test::registerTestDynamicPipelinePass();
-  mlir::test::registerTestExpandTanhPass();
+  mlir::test::registerTestExpandMathPass();
   mlir::test::registerTestComposeSubView();
   mlir::test::registerTestMultiBuffering();
   mlir::test::registerTestIRVisitorsPass();
