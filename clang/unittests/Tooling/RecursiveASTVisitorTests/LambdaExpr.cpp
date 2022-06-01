@@ -87,8 +87,8 @@ TEST(RecursiveASTVisitor, VisitsLambdaExprAndImplicitClass) {
 }
 
 TEST(RecursiveASTVisitor, VisitsAttributedLambdaExpr) {
-  if (llvm::Triple(llvm::sys::getDefaultTargetTriple()).isPS4())
-    GTEST_SKIP(); // PS4 does not support fastcall.
+  if (llvm::Triple(llvm::sys::getDefaultTargetTriple()).isPS())
+    GTEST_SKIP(); // PS4/PS5 do not support fastcall.
   LambdaExprVisitor Visitor;
   Visitor.ExpectMatch("", 1, 12);
   EXPECT_TRUE(Visitor.runOver(
