@@ -910,6 +910,20 @@ TEST_P(ImportDecl, ImportUsingEnumDecl) {
              functionDecl(hasDescendant(usingEnumDecl(hasName("bar")))));
 }
 
+const internal::VariadicDynCastAllOfMatcher<Decl, UsingPackDecl> usingPackDecl;
+
+TEST_P(ImportDecl, ImportUsingPackDecl) {
+  MatchVerifier<Decl> Verifier;
+  testImport(
+      "struct A { int operator()() { return 1; } };"
+      "struct B { int operator()() { return 2; } };"
+      "template<typename ...T> struct C : T... { using T::operator()...; };"
+      "C<A, B> declToImport;",
+      Lang_CXX20, "", Lang_CXX20, Verifier,
+      varDecl(hasType(templateSpecializationType(hasDeclaration(
+          classTemplateSpecializationDecl(hasDescendant(usingPackDecl())))))));
+}
+
 /// \brief Matches shadow declarations introduced into a scope by a
 ///        (resolved) using declaration.
 ///
@@ -1020,6 +1034,31 @@ TEST_P(ImportExpr, DependentSizedArrayType) {
              Lang_CXX03, "", Lang_CXX03, Verifier,
              classTemplateDecl(has(cxxRecordDecl(
                  has(fieldDecl(hasType(dependentSizedArrayType())))))));
+}
+
+TEST_P(ASTImporterOptionSpecificTestBase, ImportUsingPackDecl) {
+  Decl *FromTU = getTuDecl(
+      "struct A { int operator()() { return 1; } };"
+      "struct B { int operator()() { return 2; } };"
+      "template<typename ...T> struct C : T... { using T::operator()...; };"
+      "C<A, B> Var;",
+      Lang_CXX20);
+
+  auto From = FirstDeclMatcher<UsingPackDecl>().match(FromTU, usingPackDecl());
+  ASSERT_TRUE(From);
+  auto To = cast<UsingPackDecl>(Import(From, Lang_CXX20));
+  ASSERT_TRUE(To);
+
+  ArrayRef<NamedDecl *> FromExpansions = From->expansions();
+  ArrayRef<NamedDecl *> ToExpansions = To->expansions();
+  ASSERT_EQ(FromExpansions.size(), ToExpansions.size());
+  for (unsigned int I = 0; I < FromExpansions.size(); ++I) {
+    auto ImportedExpansion = Import(FromExpansions[I], Lang_CXX20);
+    EXPECT_EQ(ImportedExpansion, ToExpansions[I]);
+  }
+
+  auto ImportedDC = cast<Decl>(Import(From->getDeclContext(), Lang_CXX20));
+  EXPECT_EQ(ImportedDC, cast<Decl>(To->getDeclContext()));
 }
 
 TEST_P(ASTImporterOptionSpecificTestBase, TemplateTypeParmDeclNoDefaultArg) {
