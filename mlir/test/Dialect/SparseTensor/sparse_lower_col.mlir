@@ -62,8 +62,8 @@
 // CHECK-MIR-DAG:       %[[VAL_3:.*]] = arith.constant 64 : index
 // CHECK-MIR-DAG:       %[[VAL_5:.*]] = arith.constant 0 : index
 // CHECK-MIR-DAG:       %[[VAL_6:.*]] = arith.constant 1 : index
-// CHECK-MIR-DAG:       %[[VAL_7:.*]] = call @sparsePointers(%[[VAL_0]], %[[VAL_6]]) : (!llvm.ptr<i8>, index) -> memref<?xindex>
-// CHECK-MIR-DAG:       %[[VAL_8:.*]] = call @sparseIndices(%[[VAL_0]], %[[VAL_6]]) : (!llvm.ptr<i8>, index) -> memref<?xindex>
+// CHECK-MIR-DAG:       %[[VAL_7:.*]] = call @sparsePointers0(%[[VAL_0]], %[[VAL_6]]) : (!llvm.ptr<i8>, index) -> memref<?xindex>
+// CHECK-MIR-DAG:       %[[VAL_8:.*]] = call @sparseIndices0(%[[VAL_0]], %[[VAL_6]]) : (!llvm.ptr<i8>, index) -> memref<?xindex>
 // CHECK-MIR-DAG:       %[[VAL_9:.*]] = call @sparseValuesF64(%[[VAL_0]]) : (!llvm.ptr<i8>) -> memref<?xf64>
 // CHECK-MIR-DAG:       %[[VAL_10:.*]] = bufferization.to_memref %[[VAL_1]] : memref<64xf64>
 // CHECK-MIR-DAG:       %[[VAL_11:.*]] = bufferization.to_memref %[[VAL_2]] : memref<32xf64>
@@ -94,8 +94,8 @@
 // CHECK-LIR-DAG:       %[[VAL_3:.*]] = arith.constant 64 : index
 // CHECK-LIR-DAG:       %[[VAL_5:.*]] = arith.constant 0 : index
 // CHECK-LIR-DAG:       %[[VAL_6:.*]] = arith.constant 1 : index
-// CHECK-LIR-DAG:       %[[VAL_7:.*]] = call @sparsePointers(%[[VAL_0]], %[[VAL_6]]) : (!llvm.ptr<i8>, index) -> memref<?xindex>
-// CHECK-LIR-DAG:       %[[VAL_8:.*]] = call @sparseIndices(%[[VAL_0]], %[[VAL_6]]) : (!llvm.ptr<i8>, index) -> memref<?xindex>
+// CHECK-LIR-DAG:       %[[VAL_7:.*]] = call @sparsePointers0(%[[VAL_0]], %[[VAL_6]]) : (!llvm.ptr<i8>, index) -> memref<?xindex>
+// CHECK-LIR-DAG:       %[[VAL_8:.*]] = call @sparseIndices0(%[[VAL_0]], %[[VAL_6]]) : (!llvm.ptr<i8>, index) -> memref<?xindex>
 // CHECK-LIR-DAG:       %[[VAL_9:.*]] = call @sparseValuesF64(%[[VAL_0]]) : (!llvm.ptr<i8>) -> memref<?xf64>
 // CHECK-LIR-DAG:       %[[VAL_10:.*]] = memref.alloc() : memref<32xf64>
 // CHECK-LIR:           memref.copy %[[VAL_2]], %[[VAL_10]] : memref<32xf64> to memref<32xf64>

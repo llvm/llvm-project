@@ -58,8 +58,8 @@
 // CHECK-MIR-DAG:       %[[VAL_3:.*]] = arith.constant 32 : index
 // CHECK-MIR-DAG:       %[[VAL_4:.*]] = arith.constant 0 : index
 // CHECK-MIR-DAG:       %[[VAL_5:.*]] = arith.constant 1 : index
-// CHECK-MIR:           %[[VAL_6:.*]] = call @sparsePointers(%[[VAL_0]], %[[VAL_5]]) : (!llvm.ptr<i8>, index) -> memref<?xindex>
-// CHECK-MIR:           %[[VAL_7:.*]] = call @sparseIndices(%[[VAL_0]], %[[VAL_5]]) : (!llvm.ptr<i8>, index) -> memref<?xindex>
+// CHECK-MIR:           %[[VAL_6:.*]] = call @sparsePointers0(%[[VAL_0]], %[[VAL_5]]) : (!llvm.ptr<i8>, index) -> memref<?xindex>
+// CHECK-MIR:           %[[VAL_7:.*]] = call @sparseIndices0(%[[VAL_0]], %[[VAL_5]]) : (!llvm.ptr<i8>, index) -> memref<?xindex>
 // CHECK-MIR:           %[[VAL_8:.*]] = call @sparseValuesF64(%[[VAL_0]]) : (!llvm.ptr<i8>) -> memref<?xf64>
 // CHECK-MIR:           %[[VAL_9:.*]] = bufferization.to_memref %[[VAL_1]] : memref<64xf64>
 // CHECK-MIR:           %[[VAL_10:.*]] = bufferization.to_memref %[[VAL_2]] : memref<32xf64>
@@ -89,8 +89,8 @@
 // CHECK-LIR-DAG:       %[[VAL_3:.*]] = arith.constant 32 : index
 // CHECK-LIR-DAG:       %[[VAL_4:.*]] = arith.constant 0 : index
 // CHECK-LIR-DAG:       %[[VAL_5:.*]] = arith.constant 1 : index
-// CHECK-LIR:           %[[VAL_6:.*]] = call @sparsePointers(%[[VAL_0]], %[[VAL_5]]) : (!llvm.ptr<i8>, index) -> memref<?xindex>
-// CHECK-LIR:           %[[VAL_7:.*]] = call @sparseIndices(%[[VAL_0]], %[[VAL_5]]) : (!llvm.ptr<i8>, index) -> memref<?xindex>
+// CHECK-LIR:           %[[VAL_6:.*]] = call @sparsePointers0(%[[VAL_0]], %[[VAL_5]]) : (!llvm.ptr<i8>, index) -> memref<?xindex>
+// CHECK-LIR:           %[[VAL_7:.*]] = call @sparseIndices0(%[[VAL_0]], %[[VAL_5]]) : (!llvm.ptr<i8>, index) -> memref<?xindex>
 // CHECK-LIR:           %[[VAL_8:.*]] = call @sparseValuesF64(%[[VAL_0]]) : (!llvm.ptr<i8>) -> memref<?xf64>
 // CHECK-LIR:           scf.for %[[VAL_9:.*]] = %[[VAL_4]] to %[[VAL_3]] step %[[VAL_5]] {
 // CHECK-LIR-DAG:         %[[VAL_10:.*]] = memref.load %[[VAL_6]]{{\[}}%[[VAL_9]]] : memref<?xindex>

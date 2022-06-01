@@ -62,14 +62,10 @@ enum class OverheadType : uint32_t {
   DO(8, uint8_t)
 
 // This x-macro calls its argument on every overhead type, including
-// `index_type`.  Our naming convention uses an empty suffix for
-// `index_type`, so the missing first argument when we call `DO`
-// gets resolved to the empty token which can then be concatenated
-// as intended.  (This behavior is standard per C99 6.10.3/4 and
-// C++11 N3290 16.3/4; whereas in C++03 16.3/10 it was undefined behavior.)
+// `index_type`.
 #define FOREVERY_O(DO)                                                         \
   FOREVERY_FIXED_O(DO)                                                         \
-  DO(, index_type)
+  DO(0, index_type)
 
 // These are not just shorthands but indicate the particular
 // implementation used (e.g., as opposed to C99's `complex double`,
