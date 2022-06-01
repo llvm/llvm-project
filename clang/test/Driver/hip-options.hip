@@ -106,3 +106,13 @@
 // RUN:   --offload-arch=gfx906 -fopenmp -fopenmp-targets=amdgcn %s 2>&1 \
 // RUN:   | FileCheck -check-prefix=OMPTGT %s
 // OMPTGT: unsupported option '-fopenmp-targets=' for language mode 'HIP'
+
+// Check -Xoffload-linker option is passed to lld.
+
+// RUN: %clang -### --target=x86_64-unknown-linux-gnu -nogpuinc -nogpulib \
+// RUN:   --cuda-gpu-arch=gfx906 -fgpu-rdc -Xoffload-linker --build-id=md5 %s 2>&1 \
+// RUN:   | FileCheck -check-prefix=OFL-LINK %s
+// RUN: %clang -### --target=x86_64-unknown-linux-gnu -nogpuinc -nogpulib \
+// RUN:   --cuda-gpu-arch=gfx906 -Xoffload-linker --build-id=md5 %s 2>&1 \
+// RUN:   | FileCheck -check-prefix=OFL-LINK %s
+// OFL-LINK: lld{{.*}}"--build-id=md5"
