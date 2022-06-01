@@ -7232,23 +7232,47 @@ void BoUpSLP::reorderInputsAccordingToOpcode(ArrayRef<Value *> VL,
 
 void BoUpSLP::setInsertPointAfterBundle(const TreeEntry *E) {
   // Get the basic block this bundle is in. All instructions in the bundle
-  // should be in this block.
+  // should be in this block (except for extractelement-like instructions with
+  // constant indeces).
   auto *Front = E->getMainOp();
   auto *BB = Front->getParent();
   assert(llvm::all_of(E->Scalars, [=](Value *V) -> bool {
     auto *I = cast<Instruction>(V);
-    return !E->isOpcodeOrAlt(I) || I->getParent() == BB;
+    return !E->isOpcodeOrAlt(I) || I->getParent() == BB ||
+           isVectorLikeInstWithConstOps(I);
   }));
 
-  auto &&FindLastInst = [E, Front]() {
+  auto &&FindLastInst = [E, Front, this, &BB]() {
     Instruction *LastInst = Front;
     for (Value *V : E->Scalars) {
       auto *I = dyn_cast<Instruction>(V);
       if (!I)
         continue;
-      if (LastInst->comesBefore(I))
+      if (LastInst->getParent() == I->getParent()) {
+        if (LastInst->comesBefore(I))
+          LastInst = I;
+        continue;
+      }
+      assert(isVectorLikeInstWithConstOps(LastInst) &&
+             isVectorLikeInstWithConstOps(I) &&
+             "Expected vector-like insts only.");
+      if (!DT->isReachableFromEntry(LastInst->getParent())) {
+        LastInst = I;
+        continue;
+      }
+      if (!DT->isReachableFromEntry(I->getParent()))
+        continue;
+      auto *NodeA = DT->getNode(LastInst->getParent());
+      auto *NodeB = DT->getNode(I->getParent());
+      assert(NodeA && "Should only process reachable instructions");
+      assert(NodeB && "Should only process reachable instructions");
+      assert((NodeA == NodeB) ==
+                 (NodeA->getDFSNumIn() == NodeB->getDFSNumIn()) &&
+             "Different nodes should have different DFS numbers");
+      if (NodeA->getDFSNumIn() < NodeB->getDFSNumIn())
         LastInst = I;
     }
+    BB = LastInst->getParent();
     return LastInst;
   };
 

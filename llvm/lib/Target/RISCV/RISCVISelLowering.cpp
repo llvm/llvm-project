@@ -2969,6 +2969,30 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
     SDValue Op0 = Op.getOperand(0);
     EVT Op0VT = Op0.getValueType();
     MVT XLenVT = Subtarget.getXLenVT();
+    if (VT == MVT::f16 && Op0VT == MVT::i16 && Subtarget.hasStdExtZfh()) {
+      SDValue NewOp0 = DAG.getNode(ISD::ANY_EXTEND, DL, XLenVT, Op0);
+      SDValue FPConv = DAG.getNode(RISCVISD::FMV_H_X, DL, MVT::f16, NewOp0);
+      return FPConv;
+    }
+    if (VT == MVT::f32 && Op0VT == MVT::i32 && Subtarget.is64Bit() &&
+        Subtarget.hasStdExtF()) {
+      SDValue NewOp0 = DAG.getNode(ISD::ANY_EXTEND, DL, MVT::i64, Op0);
+      SDValue FPConv =
+          DAG.getNode(RISCVISD::FMV_W_X_RV64, DL, MVT::f32, NewOp0);
+      return FPConv;
+    }
+
+    // Consider other scalar<->scalar casts as legal if the types are legal.
+    // Otherwise expand them.
+    if (!VT.isVector() && !Op0VT.isVector()) {
+      if (isTypeLegal(VT) && isTypeLegal(Op0VT))
+        return Op;
+      return SDValue();
+    }
+
+    assert(!VT.isScalableVector() && !Op0VT.isScalableVector() &&
+           "Unexpected types");
+
     if (VT.isFixedLengthVector()) {
       // We can handle fixed length vector bitcasts with a simple replacement
       // in isel.
@@ -2997,18 +3021,6 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
       SDValue BVec = DAG.getBitcast(BVT, Op0);
       return DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, VT, BVec,
                          DAG.getConstant(0, DL, XLenVT));
-    }
-    if (VT == MVT::f16 && Op0VT == MVT::i16 && Subtarget.hasStdExtZfh()) {
-      SDValue NewOp0 = DAG.getNode(ISD::ANY_EXTEND, DL, XLenVT, Op0);
-      SDValue FPConv = DAG.getNode(RISCVISD::FMV_H_X, DL, MVT::f16, NewOp0);
-      return FPConv;
-    }
-    if (VT == MVT::f32 && Op0VT == MVT::i32 && Subtarget.is64Bit() &&
-        Subtarget.hasStdExtF()) {
-      SDValue NewOp0 = DAG.getNode(ISD::ANY_EXTEND, DL, MVT::i64, Op0);
-      SDValue FPConv =
-          DAG.getNode(RISCVISD::FMV_W_X_RV64, DL, MVT::f32, NewOp0);
-      return FPConv;
     }
     return SDValue();
   }

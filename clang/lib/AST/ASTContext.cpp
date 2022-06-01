@@ -2684,7 +2684,11 @@ getSubobjectSizeInBits(const FieldDecl *Field, const ASTContext &Context) {
     if (!RD->isUnion())
       return structHasUniqueObjectRepresentations(Context, RD);
   }
-  if (!Field->getType()->isReferenceType() &&
+
+  // A _BitInt type may not be unique if it has padding bits
+  // but if it is a bitfield the padding bits are not used.
+  bool IsBitIntType = Field->getType()->isBitIntType();
+  if (!Field->getType()->isReferenceType() && !IsBitIntType &&
       !Context.hasUniqueObjectRepresentations(Field->getType()))
     return llvm::None;
 
@@ -2692,9 +2696,17 @@ getSubobjectSizeInBits(const FieldDecl *Field, const ASTContext &Context) {
       Context.toBits(Context.getTypeSizeInChars(Field->getType()));
   if (Field->isBitField()) {
     int64_t BitfieldSize = Field->getBitWidthValue(Context);
-    if (BitfieldSize > FieldSizeInBits)
+    if (IsBitIntType) {
+      if ((unsigned)BitfieldSize >
+          cast<BitIntType>(Field->getType())->getNumBits())
+        return llvm::None;
+    } else if (BitfieldSize > FieldSizeInBits) {
       return llvm::None;
+    }
     FieldSizeInBits = BitfieldSize;
+  } else if (IsBitIntType &&
+             !Context.hasUniqueObjectRepresentations(Field->getType())) {
+    return llvm::None;
   }
   return FieldSizeInBits;
 }
@@ -2792,8 +2804,13 @@ bool ASTContext::hasUniqueObjectRepresentations(QualType Ty) const {
     return false;
 
   // All integrals and enums are unique.
-  if (Ty->isIntegralOrEnumerationType())
+  if (Ty->isIntegralOrEnumerationType()) {
+    // Except _BitInt types that have padding bits.
+    if (const auto *BIT = dyn_cast<BitIntType>(Ty))
+      return getTypeSize(BIT) == BIT->getNumBits();
+
     return true;
+  }
 
   // All other pointers are unique.
   if (Ty->isPointerType())

@@ -763,7 +763,7 @@ void Sema::ActOnPragmaMSAllocText(
     }
 
     DeclContext *DC = ND->getDeclContext();
-    if (!DC->isExternCContext()) {
+    if (getLangOpts().CPlusPlus && !DC->isExternCContext()) {
       Diag(Loc, diag::err_pragma_alloc_text_c_linkage);
       return;
     }
