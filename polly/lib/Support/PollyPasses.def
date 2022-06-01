@@ -43,4 +43,6 @@ SCOP_PASS("polly-prune-unprofitable", PruneUnprofitablePass())
 SCOP_PASS("polly-opt-isl", IslScheduleOptimizerPass())
 SCOP_PASS("print<polly-opt-isl>", IslScheduleOptimizerPrinterPass(llvm::outs()))
 SCOP_PASS("polly-dce", DeadCodeElimPass())
+SCOP_PASS("polly-mse", MaximalStaticExpansionPass())
+SCOP_PASS("print<polly-mse>", MaximalStaticExpansionPrinterPass(llvm::outs()))
 #undef SCOP_PASS
