@@ -5,6 +5,7 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+#include "AST.h"
 #include "ParsedAST.h"
 #include "Protocol.h"
 #include "Selection.h"
@@ -50,6 +51,7 @@ public:
 private:
   bool Extractable = false;
   const clang::Expr *Expr;
+  QualType VarType;
   const SelectionTree::Node *ExprNode;
   // Stmt before which we will extract
   const clang::Stmt *InsertionPoint = nullptr;
@@ -81,6 +83,31 @@ computeReferencedDecls(const clang::Expr *Expr) {
   return Visitor.ReferencedDecls;
 }
 
+static QualType computeVariableType(const Expr *Expr, const ASTContext &Ctx) {
+  if (Ctx.getLangOpts().CPlusPlus11)
+    return Ctx.getAutoDeductType();
+
+  if (Expr->hasPlaceholderType(BuiltinType::PseudoObject)) {
+    if (const auto *PR = dyn_cast<ObjCPropertyRefExpr>(Expr)) {
+      if (PR->isMessagingSetter()) {
+        // Don't support extracting a compound reference like `self.prop += 1`
+        // since the meaning changes after extraction since we'll no longer call
+        // the setter. Non compound access like `self.prop = 1` is invalid since
+        // it returns nil (setter method must have a void return type).
+        return QualType();
+      } else if (PR->isMessagingGetter()) {
+        if (PR->isExplicitProperty())
+          return PR->getExplicitProperty()->getType();
+        else
+          return PR->getImplicitPropertyGetter()->getReturnType();
+      }
+    } else {
+      return QualType();
+    }
+  }
+  return Expr->getType();
+}
+
 ExtractionContext::ExtractionContext(const SelectionTree::Node *Node,
                                      const SourceManager &SM,
                                      const ASTContext &Ctx)
@@ -90,6 +117,12 @@ ExtractionContext::ExtractionContext(const SelectionTree::Node *Node,
   InsertionPoint = computeInsertionPoint();
   if (InsertionPoint)
     Extractable = true;
+  VarType = computeVariableType(Expr, Ctx);
+  if (VarType.isNull())
+    Extractable = false;
+  else
+    // Strip the outer nullability since it's not common for local variables.
+    AttributedType::stripOuterNullability(VarType);
 }
 
 // checks whether extracting before InsertionPoint will take a
@@ -173,9 +206,9 @@ ExtractionContext::insertDeclaration(llvm::StringRef VarName,
       toHalfOpenFileRange(SM, Ctx.getLangOpts(),
                           InsertionPoint->getSourceRange())
           ->getBegin();
-  // FIXME: Replace auto with explicit type and add &/&& as necessary
-  std::string ExtractedVarDecl = std::string("auto ") + VarName.str() + " = " +
-                                 ExtractionCode.str() + "; ";
+  std::string ExtractedVarDecl =
+      printType(VarType, ExprNode->getDeclContext(), VarName) + " = " +
+      ExtractionCode.str() + "; ";
   return tooling::Replacement(SM, InsertionLoc, 0, ExtractedVarDecl);
 }
 
@@ -365,14 +398,26 @@ bool eligibleForExtraction(const SelectionTree::Node *N) {
     return false;
 
   // Void expressions can't be assigned to variables.
-  if (const Type *ExprType = E->getType().getTypePtrOrNull())
-    if (ExprType->isVoidType())
-      return false;
+  const Type *ExprType = E->getType().getTypePtrOrNull();
+  if (!ExprType || ExprType->isVoidType())
+    return false;
+
+  // Must know the type of the result in order to spell it, or instead use
+  // `auto` in C++.
+  if (!N->getDeclContext().getParentASTContext().getLangOpts().CPlusPlus11 &&
+      !ExprType)
+    return false;
 
   // A plain reference to a name (e.g. variable) isn't  worth extracting.
   // FIXME: really? What if it's e.g. `std::is_same<void, void>::value`?
-  if (llvm::isa<DeclRefExpr>(E) || llvm::isa<MemberExpr>(E))
+  if (llvm::isa<DeclRefExpr>(E))
     return false;
+
+  // Similarly disallow extraction for member exprs with an implicit `this`.
+  if (const auto *ME = dyn_cast<MemberExpr>(E))
+    if (const auto *TE = dyn_cast<CXXThisExpr>(ME->getBase()->IgnoreImpCasts()))
+      if (TE->isImplicit())
+        return false;
 
   // Extracting Exprs like a = 1 gives placeholder = a = 1 which isn't useful.
   // FIXME: we could still hoist the assignment, and leave the variable there?
@@ -460,10 +505,6 @@ bool ExtractVariable::prepare(const Selection &Inputs) {
   if (Inputs.SelectionBegin == Inputs.SelectionEnd)
     return false;
   const ASTContext &Ctx = Inputs.AST->getASTContext();
-  // FIXME: Enable non-C++ cases once we start spelling types explicitly instead
-  // of making use of auto.
-  if (!Ctx.getLangOpts().CPlusPlus)
-    return false;
   const SourceManager &SM = Inputs.AST->getSourceManager();
   if (const SelectionTree::Node *N =
           computeExtractedExpr(Inputs.ASTSelection.commonAncestor()))
