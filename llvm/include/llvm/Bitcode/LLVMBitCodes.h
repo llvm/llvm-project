@@ -684,6 +684,7 @@ enum AttributeKindCodes {
   ATTR_KIND_NO_SANITIZE_BOUNDS = 79,
   ATTR_KIND_ALLOC_ALIGN = 80,
   ATTR_KIND_ALLOCATED_POINTER = 81,
+  ATTR_KIND_ALLOC_KIND = 82,
 };
 
 enum ComdatSelectionKindCodes {
