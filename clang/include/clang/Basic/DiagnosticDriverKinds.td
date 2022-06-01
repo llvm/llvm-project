@@ -428,8 +428,6 @@ def err_invalid_branch_protection: Error <
   "invalid branch protection option '%0' in '%1'">;
 def warn_unsupported_branch_protection: Warning <
   "invalid branch protection option '%0' in '%1'">, InGroup<BranchProtection>;
-def err_invalid_sls_hardening : Error<
-  "invalid sls hardening option '%0' in '%1'">;
 def err_sls_hardening_arm_not_supported : Error<
   "-mharden-sls is only supported on armv7-a or later">;
 
