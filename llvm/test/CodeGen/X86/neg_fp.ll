@@ -81,3 +81,15 @@ define float @fdiv_extra_use_changes_cost(float %a0, float %a1, float %a2) nounw
   %div5 = fdiv fast float %sub4, %mul2
   ret float %div5
 }
+
+; FIXME: PR55758 - this is not -(-X)
+
+define <2 x i64> @fneg_mismatched_sizes(<4 x float> %x) {
+; CHECK-LABEL: fneg_mismatched_sizes:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    retl
+  %n = fneg <4 x float> %x
+  %b = bitcast <4 x float> %n to <2 x i64>
+  %r = xor <2 x i64> %b, <i64 -9223372036854775808, i64 -9223372036854775808>
+  ret <2 x i64> %r
+}
