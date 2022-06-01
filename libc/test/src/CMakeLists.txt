@@ -21,8 +21,8 @@ function(add_fp_unittest name)
 
   add_libc_unittest(
     ${name}
-    "${MATH_UNITTEST_UNPARSED_ARGUMENTS}"
     LINK_LIBRARIES "${MATH_UNITTEST_LINK_LIBRARIES}"
+    "${MATH_UNITTEST_UNPARSED_ARGUMENTS}"
   )
 endfunction(add_fp_unittest)
 
