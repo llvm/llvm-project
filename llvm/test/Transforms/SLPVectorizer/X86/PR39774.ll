@@ -6,55 +6,95 @@ define void @Test(i32) {
 ; CHECK-LABEL: @Test(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <8 x i32> poison, i32 [[TMP0:%.*]], i32 0
-; CHECK-NEXT:    [[SHUFFLE7:%.*]] = shufflevector <8 x i32> [[TMP1]], <8 x i32> poison, <8 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <16 x i32> poison, i32 [[TMP0]], i32 0
-; CHECK-NEXT:    [[SHUFFLE6:%.*]] = shufflevector <16 x i32> [[TMP2]], <16 x i32> poison, <16 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <8 x i32> [[TMP1]], i32 [[TMP0]], i32 1
+; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <8 x i32> [[TMP2]], i32 [[TMP0]], i32 2
+; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <8 x i32> [[TMP3]], i32 [[TMP0]], i32 3
+; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <8 x i32> [[TMP4]], i32 [[TMP0]], i32 4
+; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <8 x i32> [[TMP5]], i32 [[TMP0]], i32 5
+; CHECK-NEXT:    [[TMP7:%.*]] = insertelement <8 x i32> [[TMP6]], i32 [[TMP0]], i32 6
+; CHECK-NEXT:    [[TMP8:%.*]] = insertelement <8 x i32> [[TMP7]], i32 [[TMP0]], i32 7
+; CHECK-NEXT:    [[TMP9:%.*]] = insertelement <16 x i32> poison, i32 [[TMP0]], i32 0
+; CHECK-NEXT:    [[TMP10:%.*]] = insertelement <16 x i32> [[TMP9]], i32 [[TMP0]], i32 1
+; CHECK-NEXT:    [[TMP11:%.*]] = insertelement <16 x i32> [[TMP10]], i32 [[TMP0]], i32 2
+; CHECK-NEXT:    [[TMP12:%.*]] = insertelement <16 x i32> [[TMP11]], i32 [[TMP0]], i32 3
+; CHECK-NEXT:    [[TMP13:%.*]] = insertelement <16 x i32> [[TMP12]], i32 [[TMP0]], i32 4
+; CHECK-NEXT:    [[TMP14:%.*]] = insertelement <16 x i32> [[TMP13]], i32 [[TMP0]], i32 5
+; CHECK-NEXT:    [[TMP15:%.*]] = insertelement <16 x i32> [[TMP14]], i32 [[TMP0]], i32 6
+; CHECK-NEXT:    [[TMP16:%.*]] = insertelement <16 x i32> [[TMP15]], i32 [[TMP0]], i32 7
+; CHECK-NEXT:    [[TMP17:%.*]] = insertelement <16 x i32> [[TMP16]], i32 [[TMP0]], i32 8
+; CHECK-NEXT:    [[TMP18:%.*]] = insertelement <16 x i32> [[TMP17]], i32 [[TMP0]], i32 9
+; CHECK-NEXT:    [[TMP19:%.*]] = insertelement <16 x i32> [[TMP18]], i32 [[TMP0]], i32 10
+; CHECK-NEXT:    [[TMP20:%.*]] = insertelement <16 x i32> [[TMP19]], i32 [[TMP0]], i32 11
+; CHECK-NEXT:    [[TMP21:%.*]] = insertelement <16 x i32> [[TMP20]], i32 [[TMP0]], i32 12
+; CHECK-NEXT:    [[TMP22:%.*]] = insertelement <16 x i32> [[TMP21]], i32 [[TMP0]], i32 13
+; CHECK-NEXT:    [[TMP23:%.*]] = insertelement <16 x i32> [[TMP22]], i32 [[TMP0]], i32 14
+; CHECK-NEXT:    [[TMP24:%.*]] = insertelement <16 x i32> [[TMP23]], i32 [[TMP0]], i32 15
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
-; CHECK-NEXT:    [[TMP3:%.*]] = phi <2 x i32> [ [[TMP14:%.*]], [[LOOP]] ], [ zeroinitializer, [[ENTRY:%.*]] ]
-; CHECK-NEXT:    [[SHUFFLE:%.*]] = shufflevector <2 x i32> [[TMP3]], <2 x i32> poison, <8 x i32> <i32 0, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
-; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <8 x i32> [[SHUFFLE]], i32 1
-; CHECK-NEXT:    [[TMP5:%.*]] = add <8 x i32> [[SHUFFLE]], <i32 0, i32 55, i32 285, i32 1240, i32 1496, i32 8555, i32 12529, i32 13685>
-; CHECK-NEXT:    [[TMP6:%.*]] = call i32 @llvm.vector.reduce.and.v16i32(<16 x i32> [[SHUFFLE6]])
-; CHECK-NEXT:    [[TMP7:%.*]] = call i32 @llvm.vector.reduce.and.v8i32(<8 x i32> [[SHUFFLE7]])
-; CHECK-NEXT:    [[OP_RDX:%.*]] = and i32 [[TMP6]], [[TMP7]]
-; CHECK-NEXT:    [[TMP8:%.*]] = call i32 @llvm.vector.reduce.and.v8i32(<8 x i32> [[TMP5]])
-; CHECK-NEXT:    [[OP_RDX1:%.*]] = and i32 [[OP_RDX]], [[TMP8]]
+; CHECK-NEXT:    [[TMP25:%.*]] = phi <2 x i32> [ [[TMP36:%.*]], [[LOOP]] ], [ zeroinitializer, [[ENTRY:%.*]] ]
+; CHECK-NEXT:    [[SHUFFLE:%.*]] = shufflevector <2 x i32> [[TMP25]], <2 x i32> poison, <8 x i32> <i32 0, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
+; CHECK-NEXT:    [[TMP26:%.*]] = extractelement <8 x i32> [[SHUFFLE]], i32 1
+; CHECK-NEXT:    [[TMP27:%.*]] = add <8 x i32> [[SHUFFLE]], <i32 0, i32 55, i32 285, i32 1240, i32 1496, i32 8555, i32 12529, i32 13685>
+; CHECK-NEXT:    [[TMP28:%.*]] = call i32 @llvm.vector.reduce.and.v16i32(<16 x i32> [[TMP24]])
+; CHECK-NEXT:    [[TMP29:%.*]] = call i32 @llvm.vector.reduce.and.v8i32(<8 x i32> [[TMP8]])
+; CHECK-NEXT:    [[OP_RDX:%.*]] = and i32 [[TMP28]], [[TMP29]]
+; CHECK-NEXT:    [[TMP30:%.*]] = call i32 @llvm.vector.reduce.and.v8i32(<8 x i32> [[TMP27]])
+; CHECK-NEXT:    [[OP_RDX1:%.*]] = and i32 [[OP_RDX]], [[TMP30]]
 ; CHECK-NEXT:    [[OP_RDX2:%.*]] = and i32 [[TMP0]], [[TMP0]]
-; CHECK-NEXT:    [[OP_RDX3:%.*]] = and i32 [[TMP0]], [[TMP4]]
+; CHECK-NEXT:    [[OP_RDX3:%.*]] = and i32 [[TMP0]], [[TMP26]]
 ; CHECK-NEXT:    [[OP_RDX4:%.*]] = and i32 [[OP_RDX2]], [[OP_RDX3]]
-; CHECK-NEXT:    [[TMP9:%.*]] = insertelement <2 x i32> poison, i32 [[OP_RDX1]], i32 0
-; CHECK-NEXT:    [[TMP10:%.*]] = insertelement <2 x i32> [[TMP9]], i32 [[TMP4]], i32 1
-; CHECK-NEXT:    [[TMP11:%.*]] = insertelement <2 x i32> <i32 poison, i32 14910>, i32 [[OP_RDX4]], i32 0
-; CHECK-NEXT:    [[TMP12:%.*]] = and <2 x i32> [[TMP10]], [[TMP11]]
-; CHECK-NEXT:    [[TMP13:%.*]] = add <2 x i32> [[TMP10]], [[TMP11]]
-; CHECK-NEXT:    [[TMP14]] = shufflevector <2 x i32> [[TMP12]], <2 x i32> [[TMP13]], <2 x i32> <i32 0, i32 3>
+; CHECK-NEXT:    [[TMP31:%.*]] = insertelement <2 x i32> poison, i32 [[OP_RDX1]], i32 0
+; CHECK-NEXT:    [[TMP32:%.*]] = insertelement <2 x i32> [[TMP31]], i32 [[TMP26]], i32 1
+; CHECK-NEXT:    [[TMP33:%.*]] = insertelement <2 x i32> <i32 poison, i32 14910>, i32 [[OP_RDX4]], i32 0
+; CHECK-NEXT:    [[TMP34:%.*]] = and <2 x i32> [[TMP32]], [[TMP33]]
+; CHECK-NEXT:    [[TMP35:%.*]] = add <2 x i32> [[TMP32]], [[TMP33]]
+; CHECK-NEXT:    [[TMP36]] = shufflevector <2 x i32> [[TMP34]], <2 x i32> [[TMP35]], <2 x i32> <i32 0, i32 3>
 ; CHECK-NEXT:    br label [[LOOP]]
 ;
 ; FORCE_REDUCTION-LABEL: @Test(
 ; FORCE_REDUCTION-NEXT:  entry:
 ; FORCE_REDUCTION-NEXT:    [[TMP1:%.*]] = insertelement <8 x i32> poison, i32 [[TMP0:%.*]], i32 0
-; FORCE_REDUCTION-NEXT:    [[SHUFFLE7:%.*]] = shufflevector <8 x i32> [[TMP1]], <8 x i32> poison, <8 x i32> zeroinitializer
-; FORCE_REDUCTION-NEXT:    [[TMP2:%.*]] = insertelement <16 x i32> poison, i32 [[TMP0]], i32 0
-; FORCE_REDUCTION-NEXT:    [[SHUFFLE6:%.*]] = shufflevector <16 x i32> [[TMP2]], <16 x i32> poison, <16 x i32> zeroinitializer
+; FORCE_REDUCTION-NEXT:    [[TMP2:%.*]] = insertelement <8 x i32> [[TMP1]], i32 [[TMP0]], i32 1
+; FORCE_REDUCTION-NEXT:    [[TMP3:%.*]] = insertelement <8 x i32> [[TMP2]], i32 [[TMP0]], i32 2
+; FORCE_REDUCTION-NEXT:    [[TMP4:%.*]] = insertelement <8 x i32> [[TMP3]], i32 [[TMP0]], i32 3
+; FORCE_REDUCTION-NEXT:    [[TMP5:%.*]] = insertelement <8 x i32> [[TMP4]], i32 [[TMP0]], i32 4
+; FORCE_REDUCTION-NEXT:    [[TMP6:%.*]] = insertelement <8 x i32> [[TMP5]], i32 [[TMP0]], i32 5
+; FORCE_REDUCTION-NEXT:    [[TMP7:%.*]] = insertelement <8 x i32> [[TMP6]], i32 [[TMP0]], i32 6
+; FORCE_REDUCTION-NEXT:    [[TMP8:%.*]] = insertelement <8 x i32> [[TMP7]], i32 [[TMP0]], i32 7
+; FORCE_REDUCTION-NEXT:    [[TMP9:%.*]] = insertelement <16 x i32> poison, i32 [[TMP0]], i32 0
+; FORCE_REDUCTION-NEXT:    [[TMP10:%.*]] = insertelement <16 x i32> [[TMP9]], i32 [[TMP0]], i32 1
+; FORCE_REDUCTION-NEXT:    [[TMP11:%.*]] = insertelement <16 x i32> [[TMP10]], i32 [[TMP0]], i32 2
+; FORCE_REDUCTION-NEXT:    [[TMP12:%.*]] = insertelement <16 x i32> [[TMP11]], i32 [[TMP0]], i32 3
+; FORCE_REDUCTION-NEXT:    [[TMP13:%.*]] = insertelement <16 x i32> [[TMP12]], i32 [[TMP0]], i32 4
+; FORCE_REDUCTION-NEXT:    [[TMP14:%.*]] = insertelement <16 x i32> [[TMP13]], i32 [[TMP0]], i32 5
+; FORCE_REDUCTION-NEXT:    [[TMP15:%.*]] = insertelement <16 x i32> [[TMP14]], i32 [[TMP0]], i32 6
+; FORCE_REDUCTION-NEXT:    [[TMP16:%.*]] = insertelement <16 x i32> [[TMP15]], i32 [[TMP0]], i32 7
+; FORCE_REDUCTION-NEXT:    [[TMP17:%.*]] = insertelement <16 x i32> [[TMP16]], i32 [[TMP0]], i32 8
+; FORCE_REDUCTION-NEXT:    [[TMP18:%.*]] = insertelement <16 x i32> [[TMP17]], i32 [[TMP0]], i32 9
+; FORCE_REDUCTION-NEXT:    [[TMP19:%.*]] = insertelement <16 x i32> [[TMP18]], i32 [[TMP0]], i32 10
+; FORCE_REDUCTION-NEXT:    [[TMP20:%.*]] = insertelement <16 x i32> [[TMP19]], i32 [[TMP0]], i32 11
+; FORCE_REDUCTION-NEXT:    [[TMP21:%.*]] = insertelement <16 x i32> [[TMP20]], i32 [[TMP0]], i32 12
+; FORCE_REDUCTION-NEXT:    [[TMP22:%.*]] = insertelement <16 x i32> [[TMP21]], i32 [[TMP0]], i32 13
+; FORCE_REDUCTION-NEXT:    [[TMP23:%.*]] = insertelement <16 x i32> [[TMP22]], i32 [[TMP0]], i32 14
+; FORCE_REDUCTION-NEXT:    [[TMP24:%.*]] = insertelement <16 x i32> [[TMP23]], i32 [[TMP0]], i32 15
 ; FORCE_REDUCTION-NEXT:    br label [[LOOP:%.*]]
 ; FORCE_REDUCTION:       loop:
-; FORCE_REDUCTION-NEXT:    [[TMP3:%.*]] = phi <2 x i32> [ [[TMP10:%.*]], [[LOOP]] ], [ zeroinitializer, [[ENTRY:%.*]] ]
-; FORCE_REDUCTION-NEXT:    [[SHUFFLE:%.*]] = shufflevector <2 x i32> [[TMP3]], <2 x i32> poison, <8 x i32> <i32 0, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
-; FORCE_REDUCTION-NEXT:    [[TMP4:%.*]] = extractelement <8 x i32> [[SHUFFLE]], i32 1
-; FORCE_REDUCTION-NEXT:    [[TMP5:%.*]] = add <8 x i32> [[SHUFFLE]], <i32 0, i32 55, i32 285, i32 1240, i32 1496, i32 8555, i32 12529, i32 13685>
-; FORCE_REDUCTION-NEXT:    [[TMP6:%.*]] = call i32 @llvm.vector.reduce.and.v16i32(<16 x i32> [[SHUFFLE6]])
-; FORCE_REDUCTION-NEXT:    [[TMP7:%.*]] = call i32 @llvm.vector.reduce.and.v8i32(<8 x i32> [[SHUFFLE7]])
-; FORCE_REDUCTION-NEXT:    [[OP_RDX:%.*]] = and i32 [[TMP6]], [[TMP7]]
-; FORCE_REDUCTION-NEXT:    [[TMP8:%.*]] = call i32 @llvm.vector.reduce.and.v8i32(<8 x i32> [[TMP5]])
-; FORCE_REDUCTION-NEXT:    [[OP_RDX1:%.*]] = and i32 [[OP_RDX]], [[TMP8]]
+; FORCE_REDUCTION-NEXT:    [[TMP25:%.*]] = phi <2 x i32> [ [[TMP32:%.*]], [[LOOP]] ], [ zeroinitializer, [[ENTRY:%.*]] ]
+; FORCE_REDUCTION-NEXT:    [[SHUFFLE:%.*]] = shufflevector <2 x i32> [[TMP25]], <2 x i32> poison, <8 x i32> <i32 0, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
+; FORCE_REDUCTION-NEXT:    [[TMP26:%.*]] = extractelement <8 x i32> [[SHUFFLE]], i32 1
+; FORCE_REDUCTION-NEXT:    [[TMP27:%.*]] = add <8 x i32> [[SHUFFLE]], <i32 0, i32 55, i32 285, i32 1240, i32 1496, i32 8555, i32 12529, i32 13685>
+; FORCE_REDUCTION-NEXT:    [[TMP28:%.*]] = call i32 @llvm.vector.reduce.and.v16i32(<16 x i32> [[TMP24]])
+; FORCE_REDUCTION-NEXT:    [[TMP29:%.*]] = call i32 @llvm.vector.reduce.and.v8i32(<8 x i32> [[TMP8]])
+; FORCE_REDUCTION-NEXT:    [[OP_RDX:%.*]] = and i32 [[TMP28]], [[TMP29]]
+; FORCE_REDUCTION-NEXT:    [[TMP30:%.*]] = call i32 @llvm.vector.reduce.and.v8i32(<8 x i32> [[TMP27]])
+; FORCE_REDUCTION-NEXT:    [[OP_RDX1:%.*]] = and i32 [[OP_RDX]], [[TMP30]]
 ; FORCE_REDUCTION-NEXT:    [[OP_RDX2:%.*]] = and i32 [[TMP0]], [[TMP0]]
-; FORCE_REDUCTION-NEXT:    [[OP_RDX3:%.*]] = and i32 [[TMP0]], [[TMP4]]
+; FORCE_REDUCTION-NEXT:    [[OP_RDX3:%.*]] = and i32 [[TMP0]], [[TMP26]]
 ; FORCE_REDUCTION-NEXT:    [[OP_RDX4:%.*]] = and i32 [[OP_RDX2]], [[OP_RDX3]]
 ; FORCE_REDUCTION-NEXT:    [[OP_RDX5:%.*]] = and i32 [[OP_RDX1]], [[OP_RDX4]]
-; FORCE_REDUCTION-NEXT:    [[VAL_43:%.*]] = add i32 [[TMP4]], 14910
-; FORCE_REDUCTION-NEXT:    [[TMP9:%.*]] = insertelement <2 x i32> poison, i32 [[OP_RDX5]], i32 0
-; FORCE_REDUCTION-NEXT:    [[TMP10]] = insertelement <2 x i32> [[TMP9]], i32 [[VAL_43]], i32 1
+; FORCE_REDUCTION-NEXT:    [[VAL_43:%.*]] = add i32 [[TMP26]], 14910
+; FORCE_REDUCTION-NEXT:    [[TMP31:%.*]] = insertelement <2 x i32> poison, i32 [[OP_RDX5]], i32 0
+; FORCE_REDUCTION-NEXT:    [[TMP32]] = insertelement <2 x i32> [[TMP31]], i32 [[VAL_43]], i32 1
 ; FORCE_REDUCTION-NEXT:    br label [[LOOP]]
 ;
 entry:
