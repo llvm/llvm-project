@@ -1,0 +1,18 @@
+# RUN: not yaml2obj %s 2>&1 | FileCheck %s 
+
+# CHECK: yaml2obj: error: File size specified is too small.
+--- !dxcontainer
+Header:
+  Hash:            [ 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 
+                     0x0, 0x0, 0x0, 0x0, 0x0, 0x0 ]
+  Version:
+    Major:           1
+    Minor:           0
+  FileSize:        64
+  PartCount:       2
+Parts:
+  - Name:            SFI0
+    Size:            8
+  - Name:            ISG1
+    Size:            8
+...

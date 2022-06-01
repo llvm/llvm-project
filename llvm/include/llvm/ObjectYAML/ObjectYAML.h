@@ -11,6 +11,7 @@
 
 #include "llvm/ObjectYAML/ArchiveYAML.h"
 #include "llvm/ObjectYAML/COFFYAML.h"
+#include "llvm/ObjectYAML/DXContainerYAML.h"
 #include "llvm/ObjectYAML/ELFYAML.h"
 #include "llvm/ObjectYAML/MachOYAML.h"
 #include "llvm/ObjectYAML/MinidumpYAML.h"
@@ -33,6 +34,7 @@ struct YamlObjectFile {
   std::unique_ptr<MinidumpYAML::Object> Minidump;
   std::unique_ptr<WasmYAML::Object> Wasm;
   std::unique_ptr<XCOFFYAML::Object> Xcoff;
+  std::unique_ptr<DXContainerYAML::Object> DXContainer;
 };
 
 template <> struct MappingTraits<YamlObjectFile> {
