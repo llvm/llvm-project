@@ -64,7 +64,7 @@
 
 // If cfi_ignorelist.txt cannot be found in the resource dir, driver should fail.
 // RUN: %clang -target x86_64-linux-gnu -fsanitize=cfi -flto -fvisibility=default -resource-dir=/dev/null %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-MISSING-CFI-IGNORELIST
-// CHECK-MISSING-CFI-IGNORELIST: error: no such file or directory: '{{.*}}cfi_ignorelist.txt'
+// CHECK-MISSING-CFI-IGNORELIST: error: missing sanitizer ignorelist: '{{.*}}cfi_ignorelist.txt'
 
 // -fno-sanitize-ignorelist disables checking for cfi_ignorelist.txt in the resource dir.
 // RUN: %clang -target x86_64-linux-gnu -fsanitize=cfi -flto -fvisibility=default -fno-sanitize-ignorelist -resource-dir=/dev/null %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-MISSING-CFI-NO-IGNORELIST
