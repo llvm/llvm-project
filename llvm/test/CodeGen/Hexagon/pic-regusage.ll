@@ -1,4 +1,4 @@
-; RUN: llc  -march=hexagon -relocation-model=pic < %s | FileCheck %s
+; RUN: llc -mtriple=hexagon -relocation-model=pic < %s | FileCheck %s
 
 ; Force the use of R14 (by clobbering everything else in the inline asm).
 ; Make sure that R14 is not set before the __save call (which will clobber
