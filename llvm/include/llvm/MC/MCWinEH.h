@@ -59,6 +59,7 @@ struct FrameInfo {
   struct Epilog {
     std::vector<Instruction> Instructions;
     unsigned Condition;
+    MCSymbol *End;
   };
   MapVector<MCSymbol *, Epilog> EpilogMap;
 
