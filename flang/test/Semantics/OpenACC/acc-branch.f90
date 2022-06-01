@@ -93,8 +93,7 @@ program openacc_clause_validity
   do i = 1, N
     a(i) = 3.14
     if(i == N-1) THEN
-      !ERROR: STOP statement is not allowed in a PARALLEL construct
-      stop 999
+      stop 999 ! no error
     end if
   end do
   !$acc end parallel
@@ -120,8 +119,7 @@ program openacc_clause_validity
   do i = 1, N
     a(i) = 3.14
     if(i == N-1) THEN
-      !ERROR: STOP statement is not allowed in a KERNELS construct
-      stop 999
+      stop 999 ! no error
     end if
   end do
   !$acc end kernels
@@ -163,8 +161,7 @@ program openacc_clause_validity
   do i = 1, N
     a(i) = 3.14
     if(i == N-1) THEN
-      !ERROR: STOP statement is not allowed in a SERIAL construct
-      stop 999
+      stop 999 ! no error
     end if
   end do
   !$acc end serial

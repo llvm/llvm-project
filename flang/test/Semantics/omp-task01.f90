@@ -17,7 +17,6 @@ recursive subroutine traverse ( P )
     !$omp task
     call traverse(P%left)
     !CHECK: In the enclosing TASK directive branched into
-    !CHECK: STOP statement is not allowed in a TASK construct
     10 stop
     !$omp end task
   endif
