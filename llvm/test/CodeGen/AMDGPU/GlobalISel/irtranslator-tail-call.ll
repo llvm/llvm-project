@@ -35,7 +35,7 @@ define void @tail_call_void_func_void() {
   ; CHECK-NEXT:   $sgpr13 = COPY [[COPY13]](s32)
   ; CHECK-NEXT:   $sgpr14 = COPY [[COPY14]](s32)
   ; CHECK-NEXT:   $vgpr31 = COPY [[COPY15]](s32)
-  ; CHECK-NEXT:   SI_TCRETURN [[GV]](p0), @external_void_func_void, 0, csr_amdgpu_highregs, implicit $sgpr0_sgpr1_sgpr2_sgpr3, implicit $sgpr4_sgpr5, implicit $sgpr6_sgpr7, implicit $sgpr8_sgpr9, implicit $sgpr10_sgpr11, implicit $sgpr12, implicit $sgpr13, implicit $sgpr14, implicit $vgpr31
+  ; CHECK-NEXT:   SI_TCRETURN [[GV]](p0), @external_void_func_void, 0, csr_amdgpu, implicit $sgpr0_sgpr1_sgpr2_sgpr3, implicit $sgpr4_sgpr5, implicit $sgpr6_sgpr7, implicit $sgpr8_sgpr9, implicit $sgpr10_sgpr11, implicit $sgpr12, implicit $sgpr13, implicit $sgpr14, implicit $vgpr31
   tail call void @external_void_func_void()
   ret void
 }
