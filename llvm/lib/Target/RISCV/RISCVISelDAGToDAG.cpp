@@ -2436,6 +2436,7 @@ bool RISCVDAGToDAGISel::doPeepholeMaskedRVV(SDNode *N) {
 
 // This pass converts a legalized DAG into a RISCV-specific DAG, ready
 // for instruction scheduling.
-FunctionPass *llvm::createRISCVISelDag(RISCVTargetMachine &TM) {
-  return new RISCVDAGToDAGISel(TM);
+FunctionPass *llvm::createRISCVISelDag(RISCVTargetMachine &TM,
+                                       CodeGenOpt::Level OptLevel) {
+  return new RISCVDAGToDAGISel(TM, OptLevel);
 }
