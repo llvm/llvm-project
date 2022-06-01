@@ -1196,6 +1196,13 @@ define void @nsw_propagation_v4i32(i32* %res, i32 %start) {
 ; CHECK-NEXT:    store i32 [[OP_RDX]], i32* [[RES:%.*]], align 16
 ; CHECK-NEXT:    ret void
 ;
+
+; STORE-LABEL: @nsw_propagation_v4i32(
+; STORE-NEXT:    [[TMP1:%.*]] = load <4 x i32>, <4 x i32>* bitcast ([32 x i32]* @arr_i32 to <4 x i32>*), align 16
+; STORE-NEXT:    [[TMP2:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[TMP1]])
+; STORE-NEXT:    [[OP_RDX:%.*]] = add i32 [[START:%.*]], [[TMP2]]
+; STORE-NEXT:    store i32 [[OP_RDX]], i32* [[RES:%.*]], align 16
+; STORE-NEXT:    ret void
   %t0 = load i32, i32* getelementptr inbounds ([32 x i32], [32 x i32]* @arr_i32, i64 0, i64 0), align 16
   %t1 = load i32, i32* getelementptr inbounds ([32 x i32], [32 x i32]* @arr_i32, i64 0, i64 1), align 4
   %t2 = load i32, i32* getelementptr inbounds ([32 x i32], [32 x i32]* @arr_i32, i64 0, i64 2), align 8

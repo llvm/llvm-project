@@ -14,8 +14,8 @@ define i8 @reduce_and(%struct.buf* %a, %struct.buf* %b) {
 ; CHECK-NEXT:    [[TMP3:%.*]] = load <8 x i8>, <8 x i8>* [[TMP2]], align 1
 ; CHECK-NEXT:    [[TMP4:%.*]] = xor <8 x i8> [[TMP3]], [[TMP1]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = call i8 @llvm.vector.reduce.and.v8i8(<8 x i8> [[TMP4]])
-; CHECK-NEXT:    [[OP_EXTRA:%.*]] = and i8 [[TMP5]], 1
-; CHECK-NEXT:    ret i8 [[OP_EXTRA]]
+; CHECK-NEXT:    [[OP_RDX:%.*]] = and i8 [[TMP5]], 1
+; CHECK-NEXT:    ret i8 [[OP_RDX]]
 ;
 entry:
   %arrayidx = getelementptr inbounds %struct.buf, %struct.buf* %a, i64 0, i32 0, i64 0
