@@ -611,7 +611,6 @@ indexstore_store_get_unit_name_from_output_path(indexstore_t c_store,
                                                 const char *output_path,
                                                 char *name_buf,
                                                 size_t buf_size) {
-  IndexDataStore *store = static_cast<IndexDataStore*>(c_store);
   SmallString<256> unitName;
   // We intentionally don't use the index store's path remapper since it
   // maps from canonical -> local instead of local -> canonical. This means that
