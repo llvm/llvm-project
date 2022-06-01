@@ -8,10 +8,10 @@
 define void @foo(i64 %n) {
 ; CHECK:      VPlan 'HCFGBuilder: Plain CFG
 ; CHECK-NEXT: {
-; CHECK-NEXT: <x1> TopRegion: {
-; CHECK-NEXT:   entry:
-; CHECK-NEXT:   Successor(s): vector.body
+; CHECK-NEXT: vector.ph:
+; CHECK-NEXT: Successor(s): outer.header
 ; CHECK-EMPTY:
+; CHECK-NEXT: <x1> outer.header: {
 ; CHECK-NEXT:   vector.body:
 ; CHECK-NEXT:     WIDEN-PHI ir<%outer.iv> = phi ir<0>, ir<%outer.iv.next>
 ; CHECK-NEXT:     EMIT ir<%gep.1> = getelementptr ir<@arr2> ir<0> ir<%outer.iv>
@@ -19,25 +19,27 @@ define void @foo(i64 %n) {
 ; CHECK-NEXT:     EMIT ir<%add> = add ir<%outer.iv> ir<%n>
 ; CHECK-NEXT:   Successor(s): inner
 ; CHECK-EMPTY:
-; CHECK-NEXT:   inner:
-; CHECK-NEXT:     WIDEN-PHI ir<%inner.iv> = phi ir<0>, ir<%inner.iv.next>
-; CHECK-NEXT:     EMIT ir<%gep.2> = getelementptr ir<@arr> ir<0> ir<%inner.iv> ir<%outer.iv>
-; CHECK-NEXT:     EMIT store ir<%add> ir<%gep.2>
-; CHECK-NEXT:     EMIT ir<%inner.iv.next> = add ir<%inner.iv> ir<1>
-; CHECK-NEXT:     EMIT ir<%inner.ec> = icmp ir<%inner.iv.next> ir<8>
-; CHECK-NEXT:   Successor(s): outer.latch, inner
+; CHECK-NEXT:   <x1> inner: {
+; CHECK-NEXT:     inner:
+; CHECK-NEXT:       WIDEN-PHI ir<%inner.iv> = phi ir<0>, ir<%inner.iv.next>
+; CHECK-NEXT:       EMIT ir<%gep.2> = getelementptr ir<@arr> ir<0> ir<%inner.iv> ir<%outer.iv>
+; CHECK-NEXT:       EMIT store ir<%add> ir<%gep.2>
+; CHECK-NEXT:       EMIT ir<%inner.iv.next> = add ir<%inner.iv> ir<1>
+; CHECK-NEXT:       EMIT ir<%inner.ec> = icmp ir<%inner.iv.next> ir<8>
+; CHECK-NEXT:   No successors
 ; CHECK-NEXT:   CondBit: ir<%inner.ec> (inner)
+; CHECK-NEXT:  }
+; CHECK-NEXT:  Successor(s): outer.latch
 ; CHECK-EMPTY:
 ; CHECK-NEXT:   outer.latch:
 ; CHECK-NEXT:     EMIT ir<%outer.iv.next> = add ir<%outer.iv> ir<1>
 ; CHECK-NEXT:     EMIT ir<%outer.ec> = icmp ir<%outer.iv.next> ir<8>
-; CHECK-NEXT:   Successor(s): exit, vector.body
-; CHECK-NEXT:   CondBit: ir<%outer.ec> (outer.latch)
-; CHECK-EMPTY:
-; CHECK-NEXT:   exit:
-; CHECK-NEXT:     EMIT ret
 ; CHECK-NEXT:   No successors
-; CHECK-NEXT: }
+; CHECK-NEXT:   CondBit: ir<%outer.ec> (outer.latch)
+; CHECK-NEXT:  }
+; CHECK-NEXT: Successor(s): exit
+; CHECK-EMPTY:
+; CHECK-NEXT: exit:
 ; CHECK-NEXT: No successors
 ; CHECK-NEXT: }
 entry:
