@@ -83,6 +83,7 @@ lpad:
 define i32 @invoke_readonly_may_not_return() nounwind personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*) {
 ; CHECK-LABEL: @invoke_readonly_may_not_return(
 ; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[CALL:%.*]] = call i32 @readonly()
 ; CHECK-NEXT:    ret i32 3
 ;
 entry:
