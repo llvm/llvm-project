@@ -4,7 +4,7 @@
 # RUN:   %s -o %t.o
 # RUN: link_fdata %s %t.o %t.fdata
 # RUN: %clang %cflags %t.o -o %t.exe -Wl,-q
-# RUN: llvm-bolt %t.exe -data %t.fdata -reorder-blocks=cache+ -print-finalized \
+# RUN: llvm-bolt %t.exe -data %t.fdata -reorder-blocks=ext-tsp -print-finalized \
 # RUN:    -tail-duplication -tail-duplication-minimum-offset 1 -o %t.out | FileCheck %s
 # RUN: %t.exe; echo $?
 # RUN: %t.out; echo $?

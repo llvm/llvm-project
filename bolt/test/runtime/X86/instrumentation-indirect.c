@@ -56,7 +56,7 @@ RUN: %t.instrumented | FileCheck %s -check-prefix=CHECK-OUTPUT
 
 # Test that the instrumented data makes sense
 RUN:  llvm-bolt %t.exe -o %t.bolted -data %t.fdata \
-RUN:    -reorder-blocks=cache+ -reorder-functions=hfsort+ \
+RUN:    -reorder-blocks=ext-tsp -reorder-functions=hfsort+ \
 RUN:    -print-only=interp -print-finalized
 
 RUN: %t.bolted | FileCheck %s -check-prefix=CHECK-OUTPUT

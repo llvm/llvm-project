@@ -61,7 +61,7 @@ RUN: test -f %t.so.fdata
 
 # Test that the instrumented data makes sense
 RUN: llvm-bolt %t.so -o %t.so.bolted -data %t.so.fdata \
-RUN:    -reorder-blocks=cache+ -reorder-functions=hfsort+
+RUN:    -reorder-blocks=ext-tsp -reorder-functions=hfsort+
 
 RUN: %t.exe %t.so.bolted 1 2 | FileCheck %s -check-prefix=CHECK-OUTPUT
 

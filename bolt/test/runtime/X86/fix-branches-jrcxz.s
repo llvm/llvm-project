@@ -7,7 +7,7 @@
 # RUN: link_fdata %s %t.o %t.fdata
 # RUN: llvm-strip --strip-unneeded %t.o
 # RUN: %clang %cflags -no-pie %t.o -o %t.exe -Wl,-q
-# RUN: llvm-bolt %t.exe -relocs=1 -reorder-blocks=cache+ -print-finalized \
+# RUN: llvm-bolt %t.exe -relocs=1 -reorder-blocks=ext-tsp -print-finalized \
 # RUN:    -o %t.out -data %t.fdata | FileCheck %s
 # RUN: %t.out 1 2 3
 
