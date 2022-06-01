@@ -64,6 +64,12 @@ SuppressMergedDataOutput("q",
   cl::Optional,
   cl::cat(MergeFdataCategory));
 
+static cl::opt<std::string>
+OutputFilePath("o",
+  cl::value_desc("file"),
+  cl::desc("Write output to <file>"),
+  cl::cat(MergeFdataCategory));
+
 } // namespace opts
 
 namespace {
@@ -79,6 +85,18 @@ static void report_error(StringRef Message, std::error_code EC) {
 static void report_error(Twine Message, StringRef CustomError) {
   errs() << ToolName << ": '" << Message << "': " << CustomError << ".\n";
   exit(1);
+}
+
+static raw_fd_ostream &output() {
+  if (opts::OutputFilePath.empty() || opts::OutputFilePath == "-")
+    return outs();
+  else {
+    std::error_code EC;
+    static raw_fd_ostream Output(opts::OutputFilePath, EC);
+    if (EC)
+      report_error(opts::OutputFilePath, EC);
+    return Output;
+  }
 }
 
 void mergeProfileHeaders(BinaryProfileHeader &MergedHeader,
@@ -283,9 +301,9 @@ void mergeLegacyProfiles(const SmallVectorImpl<std::string> &Filenames) {
   }
 
   if (BoltedCollection)
-    outs() << "boltedcollection\n";
+    output() << "boltedcollection\n";
   for (const auto &Entry : Entries)
-    outs() << Entry.getKey() << " " << Entry.getValue() << "\n";
+    output() << Entry.getKey() << " " << Entry.getValue() << "\n";
 
   errs() << "Profile from " << Filenames.size() << " files merged.\n";
 }
@@ -375,7 +393,7 @@ int main(int argc, char **argv) {
   }
 
   if (!opts::SuppressMergedDataOutput) {
-    yaml::Output YamlOut(outs());
+    yaml::Output YamlOut(output());
 
     BinaryProfile MergedProfile;
     MergedProfile.Header = MergedHeader;
