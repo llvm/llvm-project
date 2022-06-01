@@ -385,9 +385,8 @@ define i32 @not_fshr_5(i32 %a, i32 %b, i32 %c) {
 ; CHECK:       fshbb:
 ; CHECK-NEXT:    br label [[END]]
 ; CHECK:       end:
-; CHECK-NEXT:    [[TMP0:%.*]] = freeze i32 [[C]]
-; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.fshr.i32(i32 [[TMP0]], i32 [[B:%.*]], i32 [[C]])
-; CHECK-NEXT:    ret i32 [[TMP1]]
+; CHECK-NEXT:    [[TMP0:%.*]] = call i32 @llvm.fshr.i32(i32 [[C]], i32 [[B:%.*]], i32 [[C]])
+; CHECK-NEXT:    ret i32 [[TMP0]]
 ;
 entry:
   %cmp = icmp eq i32 %c, 0

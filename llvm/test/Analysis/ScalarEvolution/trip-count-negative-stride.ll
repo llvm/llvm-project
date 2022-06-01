@@ -102,9 +102,9 @@ for.end:                                          ; preds = %for.body, %entry
 define void @ult_129_unknown_start(i8 %start) mustprogress {
 ; CHECK-LABEL: 'ult_129_unknown_start'
 ; CHECK-NEXT:  Determining loop execution counts for: @ult_129_unknown_start
-; CHECK-NEXT:  Loop %for.body: backedge-taken count is (((127 + (-1 * (1 umin (127 + (-1 * %start) + (-128 umax (-127 + %start)))))<nuw><nsw> + (-1 * %start) + (-128 umax (-127 + %start))) /u -127) + (1 umin (127 + (-1 * %start) + (-128 umax (-127 + %start)))))
-; CHECK-NEXT:  Loop %for.body: max backedge-taken count is 1
-; CHECK-NEXT:  Loop %for.body: Predicated backedge-taken count is (((127 + (-1 * (1 umin (127 + (-1 * %start) + (-128 umax (-127 + %start)))))<nuw><nsw> + (-1 * %start) + (-128 umax (-127 + %start))) /u -127) + (1 umin (127 + (-1 * %start) + (-128 umax (-127 + %start)))))
+; CHECK-NEXT:  Loop %for.body: backedge-taken count is 0
+; CHECK-NEXT:  Loop %for.body: max backedge-taken count is 0
+; CHECK-NEXT:  Loop %for.body: Predicated backedge-taken count is 0
 ; CHECK-NEXT:   Predicates:
 ; CHECK:       Loop %for.body: Trip multiple is 1
 ;
