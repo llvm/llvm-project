@@ -76,11 +76,8 @@ FOO;
 
 // Check the independent use of -fcxx-modules
 //
-// RUN: %clang -fcxx-modules -std=c++17 -### %s 2>&1 | FileCheck %s --check-prefix=CHECK-CXX17-MODULES
-// CHECK-CXX17-MODULES: "-fcxx-modules"
-// RUN: %clang -fcxx-modules -std=c++14 -### %s 2>&1 | FileCheck %s --check-prefix=CHECK-CXX14-MODULES
-// CHECK-CXX14-MODULES: "-fcxx-modules"
-// RUN: %clang -fcxx-modules -std=c++11 -### %s 2>&1 | FileCheck %s --check-prefix=CHECK-CXX11-MODULES
-// CHECK-CXX11-MODULES: "-fcxx-modules"
-// RUN: %clang -fcxx-modules -std=c++03 -### %s 2>&1 | FileCheck %s --check-prefix=CHECK-CXX03-MODULES
-// CHECK-CXX03-MODULES: "-fcxx-modules"
+// RUN: %clang -fcxx-modules -std=c++17 -### -c %s 2>&1 | FileCheck %s --check-prefix=CHECK-CXX-MODULES
+// RUN: %clang -fcxx-modules -std=c++14 -### -c %s 2>&1 | FileCheck %s --check-prefix=CHECK-CXX-MODULES
+// RUN: %clang -fcxx-modules -std=c++11 -### -c %s 2>&1 | FileCheck %s --check-prefix=CHECK-CXX-MODULES
+// RUN: %clang -fcxx-modules -std=c++03 -### -c %s 2>&1 | FileCheck %s --check-prefix=CHECK-CXX-MODULES
+// CHECK-CXX-MODULES: "-fcxx-modules"
