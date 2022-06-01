@@ -1,4 +1,5 @@
 // RUN: tco %s | FileCheck %s
+// RUN: %flang_fc1 -emit-llvm %s -o - | FileCheck %s
 
 // CHECK: @var_x = external global i32
 fir.global @var_x : !fir.int<4> {}

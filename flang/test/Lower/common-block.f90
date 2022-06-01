@@ -1,4 +1,5 @@
 ! RUN: bbc %s -o - | tco | FileCheck %s
+! RUN: %flang -emit-llvm -S -mmlir -disable-external-name-interop %s -o - | FileCheck %s
 
 ! CHECK: @_QB = common global [8 x i8] zeroinitializer
 ! CHECK: @_QBrien = common global [1 x i8] zeroinitializer

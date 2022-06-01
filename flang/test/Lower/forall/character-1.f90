@@ -1,4 +1,5 @@
 ! RUN: bbc %s -o - | tco | FileCheck %s
+! RUN: %flang -emit-llvm -S -mmlir -disable-external-name-interop %s -o - | FileCheck %s
 ! Test from Fortran source through to LLVM IR.
 ! UNSUPPORTED: system-windows
 
@@ -23,7 +24,7 @@ end program test
 ! CHECK: %[[elesize:.*]] = getelementptr { {{.*}}, [1 x [3 x i64]] }, ptr %[[arg]], i32 0, i32 1
 ! CHECK: %[[esval:.*]] = load i64, ptr %[[elesize]]
 ! CHECK: %[[mul:.*]] = mul i64 1, %[[esval]]
-! CHECK: %[[mul2:.*]] = mul i64 %[[mul]], %[[extval]], !dbg !17
+! CHECK: %[[mul2:.*]] = mul i64 %[[mul]], %[[extval]]
 ! CHECK: %[[buff:.*]] = call ptr @malloc(i64 %[[mul2]])
 ! CHECK: %[[to:.*]] = getelementptr i8, ptr %[[buff]], i64 %
 ! CHECK: call void @llvm.memmove.p0.p0.i64(ptr %[[to]], ptr %{{.*}}, i64 %{{.*}}, i1 false)
