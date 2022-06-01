@@ -118,6 +118,17 @@ void
 ARMTargetStreamer::AnnotateTLSDescriptorSequence(const MCSymbolRefExpr *SRE) {}
 void ARMTargetStreamer::emitThumbSet(MCSymbol *Symbol, const MCExpr *Value) {}
 
+void ARMTargetStreamer::emitARMWinCFIAllocStack(unsigned Size, bool Wide) {}
+void ARMTargetStreamer::emitARMWinCFISaveRegMask(unsigned Mask, bool Wide) {}
+void ARMTargetStreamer::emitARMWinCFISaveSP(unsigned Reg) {}
+void ARMTargetStreamer::emitARMWinCFISaveFRegs(unsigned First, unsigned Last) {}
+void ARMTargetStreamer::emitARMWinCFISaveLR(unsigned Offset) {}
+void ARMTargetStreamer::emitARMWinCFINop(bool Wide) {}
+void ARMTargetStreamer::emitARMWinCFIPrologEnd(bool Fragment) {}
+void ARMTargetStreamer::emitARMWinCFIEpilogStart(unsigned Condition) {}
+void ARMTargetStreamer::emitARMWinCFIEpilogEnd() {}
+void ARMTargetStreamer::emitARMWinCFICustom(unsigned Opcode) {}
+
 static ARMBuildAttrs::CPUArch getArchForCPU(const MCSubtargetInfo &STI) {
   if (STI.getCPU() == "xscale")
     return ARMBuildAttrs::v5TEJ;
@@ -306,4 +317,14 @@ void ARMTargetStreamer::emitTargetAttributes(const MCSubtargetInfo &STI) {
     emitAttribute(ARMBuildAttrs::PAC_extension, ARMBuildAttrs::AllowPAC);
     emitAttribute(ARMBuildAttrs::BTI_extension, ARMBuildAttrs::AllowBTI);
   }
+}
+
+MCTargetStreamer *
+llvm::createARMObjectTargetStreamer(MCStreamer &S, const MCSubtargetInfo &STI) {
+  const Triple &TT = STI.getTargetTriple();
+  if (TT.isOSBinFormatELF())
+    return createARMObjectTargetELFStreamer(S);
+  if (TT.isOSBinFormatCOFF())
+    return createARMObjectTargetWinCOFFStreamer(S);
+  return new ARMTargetStreamer(S);
 }

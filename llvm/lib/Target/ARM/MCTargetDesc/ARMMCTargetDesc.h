@@ -71,6 +71,8 @@ MCTargetStreamer *createARMTargetAsmStreamer(MCStreamer &S,
                                              bool isVerboseAsm);
 MCTargetStreamer *createARMObjectTargetStreamer(MCStreamer &S,
                                                 const MCSubtargetInfo &STI);
+MCTargetStreamer *createARMObjectTargetELFStreamer(MCStreamer &S);
+MCTargetStreamer *createARMObjectTargetWinCOFFStreamer(MCStreamer &S);
 
 MCCodeEmitter *createARMLEMCCodeEmitter(const MCInstrInfo &MCII,
                                         MCContext &Ctx);

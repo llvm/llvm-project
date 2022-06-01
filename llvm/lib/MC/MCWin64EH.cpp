@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/MC/MCWin64EH.h"
+#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCExpr.h"
@@ -250,8 +251,21 @@ void llvm::Win64EH::UnwindEmitter::EmitUnwindInfo(MCStreamer &Streamer,
   ::EmitUnwindInfo(Streamer, info);
 }
 
-static int64_t GetAbsDifference(MCStreamer &Streamer, const MCSymbol *LHS,
-                                const MCSymbol *RHS) {
+static const MCExpr *GetSubDivExpr(MCStreamer &Streamer, const MCSymbol *LHS,
+                                   const MCSymbol *RHS, int Div) {
+  MCContext &Context = Streamer.getContext();
+  const MCExpr *Expr =
+      MCBinaryExpr::createSub(MCSymbolRefExpr::create(LHS, Context),
+                              MCSymbolRefExpr::create(RHS, Context), Context);
+  if (Div != 1)
+    Expr = MCBinaryExpr::createDiv(Expr, MCConstantExpr::create(Div, Context),
+                                   Context);
+  return Expr;
+}
+
+static Optional<int64_t> GetOptionalAbsDifference(MCStreamer &Streamer,
+                                                  const MCSymbol *LHS,
+                                                  const MCSymbol *RHS) {
   MCContext &Context = Streamer.getContext();
   const MCExpr *Diff =
       MCBinaryExpr::createSub(MCSymbolRefExpr::create(LHS, Context),
@@ -262,8 +276,16 @@ static int64_t GetAbsDifference(MCStreamer &Streamer, const MCSymbol *LHS,
   // unusual constructs, like an inline asm with an alignment directive.
   int64_t value;
   if (!Diff->evaluateAsAbsolute(value, OS->getAssembler()))
-    report_fatal_error("Failed to evaluate function length in SEH unwind info");
+    return None;
   return value;
+}
+
+static int64_t GetAbsDifference(MCStreamer &Streamer, const MCSymbol *LHS,
+                                const MCSymbol *RHS) {
+  Optional<int64_t> MaybeDiff = GetOptionalAbsDifference(Streamer, LHS, RHS);
+  if (!MaybeDiff)
+    report_fatal_error("Failed to evaluate function length in SEH unwind info");
+  return *MaybeDiff;
 }
 
 static uint32_t ARM64CountOfUnwindCodes(ArrayRef<WinEH::Instruction> Insns) {
@@ -1102,8 +1124,395 @@ static void ARM64EmitUnwindInfo(MCStreamer &streamer, WinEH::FrameInfo *info,
         4);
 }
 
-static void ARM64EmitRuntimeFunction(MCStreamer &streamer,
-                                     const WinEH::FrameInfo *info) {
+static uint32_t ARMCountOfUnwindCodes(ArrayRef<WinEH::Instruction> Insns) {
+  uint32_t Count = 0;
+  for (const auto &I : Insns) {
+    switch (static_cast<Win64EH::UnwindOpcodes>(I.Operation)) {
+    default:
+      llvm_unreachable("Unsupported ARM unwind code");
+    case Win64EH::UOP_AllocSmall:
+      Count += 1;
+      break;
+    case Win64EH::UOP_AllocLarge:
+      Count += 3;
+      break;
+    case Win64EH::UOP_AllocHuge:
+      Count += 4;
+      break;
+    case Win64EH::UOP_WideAllocMedium:
+      Count += 2;
+      break;
+    case Win64EH::UOP_WideAllocLarge:
+      Count += 3;
+      break;
+    case Win64EH::UOP_WideAllocHuge:
+      Count += 4;
+      break;
+    case Win64EH::UOP_WideSaveRegMask:
+      Count += 2;
+      break;
+    case Win64EH::UOP_SaveSP:
+      Count += 1;
+      break;
+    case Win64EH::UOP_SaveRegsR4R7LR:
+      Count += 1;
+      break;
+    case Win64EH::UOP_WideSaveRegsR4R11LR:
+      Count += 1;
+      break;
+    case Win64EH::UOP_SaveFRegD8D15:
+      Count += 1;
+      break;
+    case Win64EH::UOP_SaveRegMask:
+      Count += 2;
+      break;
+    case Win64EH::UOP_SaveLR:
+      Count += 2;
+      break;
+    case Win64EH::UOP_SaveFRegD0D15:
+      Count += 2;
+      break;
+    case Win64EH::UOP_SaveFRegD16D31:
+      Count += 2;
+      break;
+    case Win64EH::UOP_Nop:
+    case Win64EH::UOP_WideNop:
+    case Win64EH::UOP_End:
+    case Win64EH::UOP_EndNop:
+    case Win64EH::UOP_WideEndNop:
+      Count += 1;
+      break;
+    case Win64EH::UOP_Custom: {
+      int J;
+      for (J = 3; J > 0; J--)
+        if (I.Offset & (0xffu << (8 * J)))
+          break;
+      Count += J + 1;
+      break;
+    }
+    }
+  }
+  return Count;
+}
+
+// Unwind opcode encodings and restrictions are documented at
+// https://docs.microsoft.com/en-us/cpp/build/arm-exception-handling
+static void ARMEmitUnwindCode(MCStreamer &streamer,
+                              const WinEH::Instruction &inst) {
+  uint32_t w, lr;
+  int i;
+  switch (static_cast<Win64EH::UnwindOpcodes>(inst.Operation)) {
+  default:
+    llvm_unreachable("Unsupported ARM unwind code");
+  case Win64EH::UOP_AllocSmall:
+    assert((inst.Offset & 3) == 0);
+    assert(inst.Offset / 4 <= 0x7f);
+    streamer.emitInt8(inst.Offset / 4);
+    break;
+  case Win64EH::UOP_WideSaveRegMask:
+    assert((inst.Register & ~0x5fff) == 0);
+    lr = (inst.Register >> 14) & 1;
+    w = 0x8000 | (inst.Register & 0x1fff) | (lr << 13);
+    streamer.emitInt8((w >> 8) & 0xff);
+    streamer.emitInt8((w >> 0) & 0xff);
+    break;
+  case Win64EH::UOP_SaveSP:
+    assert(inst.Register <= 0x0f);
+    streamer.emitInt8(0xc0 | inst.Register);
+    break;
+  case Win64EH::UOP_SaveRegsR4R7LR:
+    assert(inst.Register >= 4 && inst.Register <= 7);
+    assert(inst.Offset <= 1);
+    streamer.emitInt8(0xd0 | (inst.Register - 4) | (inst.Offset << 2));
+    break;
+  case Win64EH::UOP_WideSaveRegsR4R11LR:
+    assert(inst.Register >= 8 && inst.Register <= 11);
+    assert(inst.Offset <= 1);
+    streamer.emitInt8(0xd8 | (inst.Register - 8) | (inst.Offset << 2));
+    break;
+  case Win64EH::UOP_SaveFRegD8D15:
+    assert(inst.Register >= 8 && inst.Register <= 15);
+    streamer.emitInt8(0xe0 | (inst.Register - 8));
+    break;
+  case Win64EH::UOP_WideAllocMedium:
+    assert((inst.Offset & 3) == 0);
+    assert(inst.Offset / 4 <= 0x3ff);
+    w = 0xe800 | (inst.Offset / 4);
+    streamer.emitInt8((w >> 8) & 0xff);
+    streamer.emitInt8((w >> 0) & 0xff);
+    break;
+  case Win64EH::UOP_SaveRegMask:
+    assert((inst.Register & ~0x40ff) == 0);
+    lr = (inst.Register >> 14) & 1;
+    w = 0xec00 | (inst.Register & 0x0ff) | (lr << 8);
+    streamer.emitInt8((w >> 8) & 0xff);
+    streamer.emitInt8((w >> 0) & 0xff);
+    break;
+  case Win64EH::UOP_SaveLR:
+    assert((inst.Offset & 3) == 0);
+    assert(inst.Offset / 4 <= 0x0f);
+    streamer.emitInt8(0xef);
+    streamer.emitInt8(inst.Offset / 4);
+    break;
+  case Win64EH::UOP_SaveFRegD0D15:
+    assert(inst.Register <= 15);
+    assert(inst.Offset <= 15);
+    assert(inst.Register <= inst.Offset);
+    streamer.emitInt8(0xf5);
+    streamer.emitInt8((inst.Register << 4) | inst.Offset);
+    break;
+  case Win64EH::UOP_SaveFRegD16D31:
+    assert(inst.Register >= 16 && inst.Register <= 31);
+    assert(inst.Offset >= 16 && inst.Offset <= 31);
+    assert(inst.Register <= inst.Offset);
+    streamer.emitInt8(0xf6);
+    streamer.emitInt8(((inst.Register - 16) << 4) | (inst.Offset - 16));
+    break;
+  case Win64EH::UOP_AllocLarge:
+    assert((inst.Offset & 3) == 0);
+    assert(inst.Offset / 4 <= 0xffff);
+    w = inst.Offset / 4;
+    streamer.emitInt8(0xf7);
+    streamer.emitInt8((w >> 8) & 0xff);
+    streamer.emitInt8((w >> 0) & 0xff);
+    break;
+  case Win64EH::UOP_AllocHuge:
+    assert((inst.Offset & 3) == 0);
+    assert(inst.Offset / 4 <= 0xffffff);
+    w = inst.Offset / 4;
+    streamer.emitInt8(0xf8);
+    streamer.emitInt8((w >> 16) & 0xff);
+    streamer.emitInt8((w >> 8) & 0xff);
+    streamer.emitInt8((w >> 0) & 0xff);
+    break;
+  case Win64EH::UOP_WideAllocLarge:
+    assert((inst.Offset & 3) == 0);
+    assert(inst.Offset / 4 <= 0xffff);
+    w = inst.Offset / 4;
+    streamer.emitInt8(0xf9);
+    streamer.emitInt8((w >> 8) & 0xff);
+    streamer.emitInt8((w >> 0) & 0xff);
+    break;
+  case Win64EH::UOP_WideAllocHuge:
+    assert((inst.Offset & 3) == 0);
+    assert(inst.Offset / 4 <= 0xffffff);
+    w = inst.Offset / 4;
+    streamer.emitInt8(0xfa);
+    streamer.emitInt8((w >> 16) & 0xff);
+    streamer.emitInt8((w >> 8) & 0xff);
+    streamer.emitInt8((w >> 0) & 0xff);
+    break;
+  case Win64EH::UOP_Nop:
+    streamer.emitInt8(0xfb);
+    break;
+  case Win64EH::UOP_WideNop:
+    streamer.emitInt8(0xfc);
+    break;
+  case Win64EH::UOP_EndNop:
+    streamer.emitInt8(0xfd);
+    break;
+  case Win64EH::UOP_WideEndNop:
+    streamer.emitInt8(0xfe);
+    break;
+  case Win64EH::UOP_End:
+    streamer.emitInt8(0xff);
+    break;
+  case Win64EH::UOP_Custom:
+    for (i = 3; i > 0; i--)
+      if (inst.Offset & (0xffu << (8 * i)))
+        break;
+    for (; i >= 0; i--)
+      streamer.emitInt8((inst.Offset >> (8 * i)) & 0xff);
+    break;
+  }
+}
+
+// Populate the .xdata section.  The format of .xdata on ARM is documented at
+// https://docs.microsoft.com/en-us/cpp/build/arm-exception-handling
+static void ARMEmitUnwindInfo(MCStreamer &streamer, WinEH::FrameInfo *info,
+                              bool TryPacked = true) {
+  // If this UNWIND_INFO already has a symbol, it's already been emitted.
+  if (info->Symbol)
+    return;
+  // If there's no unwind info here (not even a terminating UOP_End), the
+  // unwind info is considered bogus and skipped. If this was done in
+  // response to an explicit .seh_handlerdata, the associated trailing
+  // handler data is left orphaned in the xdata section.
+  if (info->empty()) {
+    info->EmitAttempted = true;
+    return;
+  }
+  if (info->EmitAttempted) {
+    // If we tried to emit unwind info before (due to an explicit
+    // .seh_handlerdata directive), but skipped it (because there was no
+    // valid information to emit at the time), and it later got valid unwind
+    // opcodes, we can't emit it here, because the trailing handler data
+    // was already emitted elsewhere in the xdata section.
+    streamer.getContext().reportError(
+        SMLoc(), "Earlier .seh_handlerdata for " + info->Function->getName() +
+                     " skipped due to no unwind info at the time "
+                     "(.seh_handlerdata too early?), but the function later "
+                     "did get unwind info that can't be emitted");
+    return;
+  }
+
+  MCContext &context = streamer.getContext();
+  MCSymbol *Label = context.createTempSymbol();
+
+  streamer.emitValueToAlignment(4);
+  streamer.emitLabel(Label);
+  info->Symbol = Label;
+
+  Optional<int64_t> RawFuncLength;
+  const MCExpr *FuncLengthExpr = nullptr;
+  if (!info->FuncletOrFuncEnd) {
+    report_fatal_error("FuncletOrFuncEnd not set");
+  } else {
+    // As the size of many thumb2 instructions isn't known until later,
+    // we can't always rely on being able to calculate the absolute
+    // length of the function here. If we can't calculate it, defer it
+    // to a relocation.
+    //
+    // In such a case, we won't know if the function is too long so that
+    // the unwind info would need to be split (but this isn't implemented
+    // anyway).
+    RawFuncLength =
+        GetOptionalAbsDifference(streamer, info->FuncletOrFuncEnd, info->Begin);
+    if (!RawFuncLength)
+      FuncLengthExpr =
+          GetSubDivExpr(streamer, info->FuncletOrFuncEnd, info->Begin, 2);
+  }
+  uint32_t FuncLength = 0;
+  if (RawFuncLength)
+    FuncLength = (uint32_t)*RawFuncLength / 2;
+  if (FuncLength > 0x3FFFF)
+    report_fatal_error("SEH unwind data splitting not yet implemented");
+  uint32_t PrologCodeBytes = ARMCountOfUnwindCodes(info->Instructions);
+  uint32_t TotalCodeBytes = PrologCodeBytes;
+
+  // Process epilogs.
+  MapVector<MCSymbol *, uint32_t> EpilogInfo;
+  // Epilogs processed so far.
+  std::vector<MCSymbol *> AddedEpilogs;
+
+  for (auto &I : info->EpilogMap) {
+    MCSymbol *EpilogStart = I.first;
+    auto &EpilogInstrs = I.second.Instructions;
+    uint32_t CodeBytes = ARMCountOfUnwindCodes(EpilogInstrs);
+
+    MCSymbol *MatchingEpilog =
+        FindMatchingEpilog(EpilogInstrs, AddedEpilogs, info);
+    if (MatchingEpilog) {
+      assert(EpilogInfo.find(MatchingEpilog) != EpilogInfo.end() &&
+             "Duplicate epilog not found");
+      EpilogInfo[EpilogStart] = EpilogInfo.lookup(MatchingEpilog);
+      // Clear the unwind codes in the EpilogMap, so that they don't get output
+      // in the logic below.
+      EpilogInstrs.clear();
+    } else {
+      EpilogInfo[EpilogStart] = TotalCodeBytes;
+      TotalCodeBytes += CodeBytes;
+      AddedEpilogs.push_back(EpilogStart);
+    }
+  }
+
+  // Code Words, Epilog count, F, E, X, Vers, Function Length
+  uint32_t row1 = 0x0;
+  uint32_t CodeWords = TotalCodeBytes / 4;
+  uint32_t CodeWordsMod = TotalCodeBytes % 4;
+  if (CodeWordsMod)
+    CodeWords++;
+  uint32_t EpilogCount = info->EpilogMap.size();
+  bool ExtensionWord = EpilogCount > 31 || CodeWords > 15;
+  if (!ExtensionWord) {
+    row1 |= (EpilogCount & 0x1F) << 23;
+    row1 |= (CodeWords & 0x0F) << 28;
+  }
+  if (info->HandlesExceptions) // X
+    row1 |= 1 << 20;
+  if (info->Fragment) // F
+    row1 |= 1 << 22;
+  row1 |= FuncLength & 0x3FFFF;
+  if (RawFuncLength)
+    streamer.emitInt32(row1);
+  else
+    streamer.emitValue(
+        MCBinaryExpr::createOr(FuncLengthExpr,
+                               MCConstantExpr::create(row1, context), context),
+        4);
+
+  // Extended Code Words, Extended Epilog Count
+  if (ExtensionWord) {
+    // FIXME: We should be able to split unwind info into multiple sections.
+    if (CodeWords > 0xFF || EpilogCount > 0xFFFF)
+      report_fatal_error("SEH unwind data splitting not yet implemented");
+    uint32_t row2 = 0x0;
+    row2 |= (CodeWords & 0xFF) << 16;
+    row2 |= (EpilogCount & 0xFFFF);
+    streamer.emitInt32(row2);
+  }
+
+  // Epilog Start Index, Epilog Start Offset
+  for (auto &I : EpilogInfo) {
+    MCSymbol *EpilogStart = I.first;
+    uint32_t EpilogIndex = I.second;
+
+    Optional<int64_t> MaybeEpilogOffset =
+        GetOptionalAbsDifference(streamer, EpilogStart, info->Begin);
+    const MCExpr *OffsetExpr = nullptr;
+    uint32_t EpilogOffset = 0;
+    if (MaybeEpilogOffset)
+      EpilogOffset = *MaybeEpilogOffset / 2;
+    else
+      OffsetExpr = GetSubDivExpr(streamer, EpilogStart, info->Begin, 2);
+
+    assert(info->EpilogMap.find(EpilogStart) != info->EpilogMap.end());
+    unsigned Condition = info->EpilogMap[EpilogStart].Condition;
+    assert(Condition <= 0xf);
+
+    uint32_t row3 = EpilogOffset;
+    row3 |= Condition << 20;
+    row3 |= (EpilogIndex & 0x3FF) << 24;
+    if (MaybeEpilogOffset)
+      streamer.emitInt32(row3);
+    else
+      streamer.emitValue(
+          MCBinaryExpr::createOr(
+              OffsetExpr, MCConstantExpr::create(row3, context), context),
+          4);
+  }
+
+  // Emit prolog unwind instructions (in reverse order).
+  uint8_t numInst = info->Instructions.size();
+  for (uint8_t c = 0; c < numInst; ++c) {
+    WinEH::Instruction inst = info->Instructions.back();
+    info->Instructions.pop_back();
+    ARMEmitUnwindCode(streamer, inst);
+  }
+
+  // Emit epilog unwind instructions
+  for (auto &I : info->EpilogMap) {
+    auto &EpilogInstrs = I.second.Instructions;
+    for (uint32_t i = 0; i < EpilogInstrs.size(); i++) {
+      WinEH::Instruction inst = EpilogInstrs[i];
+      ARMEmitUnwindCode(streamer, inst);
+    }
+  }
+
+  int32_t BytesMod = CodeWords * 4 - TotalCodeBytes;
+  assert(BytesMod >= 0);
+  for (int i = 0; i < BytesMod; i++)
+    streamer.emitInt8(0xFB);
+
+  if (info->HandlesExceptions)
+    streamer.emitValue(
+        MCSymbolRefExpr::create(info->ExceptionHandler,
+                                MCSymbolRefExpr::VK_COFF_IMGREL32, context),
+        4);
+}
+
+static void ARMEmitRuntimeFunction(MCStreamer &streamer,
+                                   const WinEH::FrameInfo *info) {
   MCContext &context = streamer.getContext();
 
   streamer.emitValueToAlignment(4);
@@ -1138,7 +1547,7 @@ void llvm::Win64EH::ARM64UnwindEmitter::Emit(MCStreamer &Streamer) const {
       continue;
     MCSection *PData = Streamer.getAssociatedPDataSection(CFI->TextSection);
     Streamer.SwitchSection(PData);
-    ARM64EmitRuntimeFunction(Streamer, Info);
+    ARMEmitRuntimeFunction(Streamer, Info);
   }
 }
 
@@ -1160,4 +1569,49 @@ void llvm::Win64EH::ARM64UnwindEmitter::EmitUnwindInfo(MCStreamer &Streamer,
   MCSection *XData = Streamer.getAssociatedXDataSection(info->TextSection);
   Streamer.SwitchSection(XData);
   ARM64EmitUnwindInfo(Streamer, info, /* TryPacked = */ !HandlerData);
+}
+
+void llvm::Win64EH::ARMUnwindEmitter::Emit(MCStreamer &Streamer) const {
+  // Emit the unwind info structs first.
+  for (const auto &CFI : Streamer.getWinFrameInfos()) {
+    WinEH::FrameInfo *Info = CFI.get();
+    if (Info->empty())
+      continue;
+    MCSection *XData = Streamer.getAssociatedXDataSection(CFI->TextSection);
+    Streamer.SwitchSection(XData);
+    ARMEmitUnwindInfo(Streamer, Info);
+  }
+
+  // Now emit RUNTIME_FUNCTION entries.
+  for (const auto &CFI : Streamer.getWinFrameInfos()) {
+    WinEH::FrameInfo *Info = CFI.get();
+    // ARMEmitUnwindInfo above clears the info struct, so we can't check
+    // empty here. But if a Symbol is set, we should create the corresponding
+    // pdata entry.
+    if (!Info->Symbol)
+      continue;
+    MCSection *PData = Streamer.getAssociatedPDataSection(CFI->TextSection);
+    Streamer.SwitchSection(PData);
+    ARMEmitRuntimeFunction(Streamer, Info);
+  }
+}
+
+void llvm::Win64EH::ARMUnwindEmitter::EmitUnwindInfo(MCStreamer &Streamer,
+                                                     WinEH::FrameInfo *info,
+                                                     bool HandlerData) const {
+  // Called if there's an .seh_handlerdata directive before the end of the
+  // function. This forces writing the xdata record already here - and
+  // in this case, the function isn't actually ended already, but the xdata
+  // record needs to know the function length. In these cases, if the funclet
+  // end hasn't been marked yet, the xdata function length won't cover the
+  // whole function, only up to this point.
+  if (!info->FuncletOrFuncEnd) {
+    Streamer.SwitchSection(info->TextSection);
+    info->FuncletOrFuncEnd = Streamer.emitCFILabel();
+  }
+  // Switch sections (the static function above is meant to be called from
+  // here and from Emit().
+  MCSection *XData = Streamer.getAssociatedXDataSection(info->TextSection);
+  Streamer.SwitchSection(XData);
+  ARMEmitUnwindInfo(Streamer, info, /* TryPacked = */ !HandlerData);
 }

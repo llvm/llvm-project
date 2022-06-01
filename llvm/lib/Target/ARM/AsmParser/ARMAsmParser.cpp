@@ -453,6 +453,7 @@ class ARMAsmParser : public MCTargetAsmParser {
                          bool AllowRAAC = false);
   bool parseMemory(OperandVector &);
   bool parseOperand(OperandVector &, StringRef Mnemonic);
+  bool parseImmExpr(int64_t &Out);
   bool parsePrefix(ARMMCExpr::VariantKind &RefKind);
   bool parseMemRegOffsetShift(ARM_AM::ShiftOpc &ShiftType,
                               unsigned &ShiftAmount);
@@ -487,6 +488,17 @@ class ARMAsmParser : public MCTargetAsmParser {
   bool parseDirectiveArchExtension(SMLoc L);
   bool parseDirectiveAlign(SMLoc L);
   bool parseDirectiveThumbSet(SMLoc L);
+
+  bool parseDirectiveSEHAllocStack(SMLoc L, bool Wide);
+  bool parseDirectiveSEHSaveRegs(SMLoc L, bool Wide);
+  bool parseDirectiveSEHSaveSP(SMLoc L);
+  bool parseDirectiveSEHSaveFRegs(SMLoc L);
+  bool parseDirectiveSEHSaveLR(SMLoc L);
+  bool parseDirectiveSEHPrologEnd(SMLoc L, bool Fragment);
+  bool parseDirectiveSEHNop(SMLoc L, bool Wide);
+  bool parseDirectiveSEHEpilogStart(SMLoc L, bool Condition);
+  bool parseDirectiveSEHEpilogEnd(SMLoc L);
+  bool parseDirectiveSEHCustom(SMLoc L);
 
   bool isMnemonicVPTPredicable(StringRef Mnemonic, StringRef ExtraToken);
   StringRef splitMnemonic(StringRef Mnemonic, StringRef ExtraToken,
@@ -6317,6 +6329,18 @@ bool ARMAsmParser::parseOperand(OperandVector &Operands, StringRef Mnemonic) {
   }
 }
 
+bool ARMAsmParser::parseImmExpr(int64_t &Out) {
+  const MCExpr *Expr = nullptr;
+  SMLoc L = getParser().getTok().getLoc();
+  if (check(getParser().parseExpression(Expr), L, "expected expression"))
+    return true;
+  const MCConstantExpr *Value = dyn_cast_or_null<MCConstantExpr>(Expr);
+  if (check(!Value, L, "expected constant expression"))
+    return true;
+  Out = Value->getValue();
+  return false;
+}
+
 // parsePrefix - Parse ARM 16-bit relocations expression prefix, i.e.
 //  :lower16: and :upper16:.
 bool ARMAsmParser::parsePrefix(ARMMCExpr::VariantKind &RefKind) {
@@ -11082,6 +11106,39 @@ bool ARMAsmParser::ParseDirective(AsmToken DirectiveID) {
       parseDirectiveTLSDescSeq(DirectiveID.getLoc());
     else
       return true;
+  } else if (IsCOFF) {
+    if (IDVal == ".seh_stackalloc")
+      parseDirectiveSEHAllocStack(DirectiveID.getLoc(), /*Wide=*/false);
+    else if (IDVal == ".seh_stackalloc_w")
+      parseDirectiveSEHAllocStack(DirectiveID.getLoc(), /*Wide=*/true);
+    else if (IDVal == ".seh_save_regs")
+      parseDirectiveSEHSaveRegs(DirectiveID.getLoc(), /*Wide=*/false);
+    else if (IDVal == ".seh_save_regs_w")
+      parseDirectiveSEHSaveRegs(DirectiveID.getLoc(), /*Wide=*/true);
+    else if (IDVal == ".seh_save_sp")
+      parseDirectiveSEHSaveSP(DirectiveID.getLoc());
+    else if (IDVal == ".seh_save_fregs")
+      parseDirectiveSEHSaveFRegs(DirectiveID.getLoc());
+    else if (IDVal == ".seh_save_lr")
+      parseDirectiveSEHSaveLR(DirectiveID.getLoc());
+    else if (IDVal == ".seh_endprologue")
+      parseDirectiveSEHPrologEnd(DirectiveID.getLoc(), /*Fragment=*/false);
+    else if (IDVal == ".seh_endprologue_fragment")
+      parseDirectiveSEHPrologEnd(DirectiveID.getLoc(), /*Fragment=*/true);
+    else if (IDVal == ".seh_nop")
+      parseDirectiveSEHNop(DirectiveID.getLoc(), /*Wide=*/false);
+    else if (IDVal == ".seh_nop_w")
+      parseDirectiveSEHNop(DirectiveID.getLoc(), /*Wide=*/true);
+    else if (IDVal == ".seh_startepilogue")
+      parseDirectiveSEHEpilogStart(DirectiveID.getLoc(), /*Condition=*/false);
+    else if (IDVal == ".seh_startepilogue_cond")
+      parseDirectiveSEHEpilogStart(DirectiveID.getLoc(), /*Condition=*/true);
+    else if (IDVal == ".seh_endepilogue")
+      parseDirectiveSEHEpilogEnd(DirectiveID.getLoc());
+    else if (IDVal == ".seh_custom")
+      parseDirectiveSEHCustom(DirectiveID.getLoc());
+    else
+      return true;
   } else
     return true;
   return false;
@@ -12015,6 +12072,177 @@ bool ARMAsmParser::parseDirectiveThumbSet(SMLoc L) {
     return true;
 
   getTargetStreamer().emitThumbSet(Sym, Value);
+  return false;
+}
+
+/// parseDirectiveSEHAllocStack
+/// ::= .seh_stackalloc
+/// ::= .seh_stackalloc_w
+bool ARMAsmParser::parseDirectiveSEHAllocStack(SMLoc L, bool Wide) {
+  int64_t Size;
+  if (parseImmExpr(Size))
+    return true;
+  getTargetStreamer().emitARMWinCFIAllocStack(Size, Wide);
+  return false;
+}
+
+/// parseDirectiveSEHSaveRegs
+/// ::= .seh_save_regs
+/// ::= .seh_save_regs_w
+bool ARMAsmParser::parseDirectiveSEHSaveRegs(SMLoc L, bool Wide) {
+  SmallVector<std::unique_ptr<MCParsedAsmOperand>, 1> Operands;
+
+  if (parseRegisterList(Operands) ||
+      parseToken(AsmToken::EndOfStatement, "unexpected token in directive"))
+    return true;
+  ARMOperand &Op = (ARMOperand &)*Operands[0];
+  if (!Op.isRegList())
+    return Error(L, ".seh_save_regs{_w} expects GPR registers");
+  const SmallVectorImpl<unsigned> &RegList = Op.getRegList();
+  uint32_t Mask = 0;
+  for (size_t i = 0; i < RegList.size(); ++i) {
+    unsigned Reg = MRI->getEncodingValue(RegList[i]);
+    if (Reg == 15) // pc -> lr
+      Reg = 14;
+    if (Reg == 13)
+      return Error(L, ".seh_save_regs{_w} can't include SP");
+    assert(Reg < 16U && "Register out of range");
+    unsigned Bit = (1u << Reg);
+    Mask |= Bit;
+  }
+  if (!Wide && (Mask & 0x1f00) != 0)
+    return Error(L,
+                 ".seh_save_regs cannot save R8-R12, needs .seh_save_regs_w");
+  getTargetStreamer().emitARMWinCFISaveRegMask(Mask, Wide);
+  return false;
+}
+
+/// parseDirectiveSEHSaveSP
+/// ::= .seh_save_sp
+bool ARMAsmParser::parseDirectiveSEHSaveSP(SMLoc L) {
+  int Reg = tryParseRegister();
+  if (Reg == -1 || !MRI->getRegClass(ARM::GPRRegClassID).contains(Reg))
+    return Error(L, "expected GPR");
+  unsigned Index = MRI->getEncodingValue(Reg);
+  if (Index > 14 || Index == 13)
+    return Error(L, "invalid register for .seh_save_sp");
+  getTargetStreamer().emitARMWinCFISaveSP(Index);
+  return false;
+}
+
+/// parseDirectiveSEHSaveFRegs
+/// ::= .seh_save_fregs
+bool ARMAsmParser::parseDirectiveSEHSaveFRegs(SMLoc L) {
+  SmallVector<std::unique_ptr<MCParsedAsmOperand>, 1> Operands;
+
+  if (parseRegisterList(Operands) ||
+      parseToken(AsmToken::EndOfStatement, "unexpected token in directive"))
+    return true;
+  ARMOperand &Op = (ARMOperand &)*Operands[0];
+  if (!Op.isDPRRegList())
+    return Error(L, ".seh_save_fregs expects DPR registers");
+  const SmallVectorImpl<unsigned> &RegList = Op.getRegList();
+  uint32_t Mask = 0;
+  for (size_t i = 0; i < RegList.size(); ++i) {
+    unsigned Reg = MRI->getEncodingValue(RegList[i]);
+    assert(Reg < 32U && "Register out of range");
+    unsigned Bit = (1u << Reg);
+    Mask |= Bit;
+  }
+
+  if (Mask == 0)
+    return Error(L, ".seh_save_fregs missing registers");
+
+  unsigned First = 0;
+  while ((Mask & 1) == 0) {
+    First++;
+    Mask >>= 1;
+  }
+  if (((Mask + 1) & Mask) != 0)
+    return Error(L,
+                 ".seh_save_fregs must take a contiguous range of registers");
+  unsigned Last = First;
+  while ((Mask & 2) != 0) {
+    Last++;
+    Mask >>= 1;
+  }
+  if (First < 16 && Last >= 16)
+    return Error(L, ".seh_save_fregs must be all d0-d15 or d16-d31");
+  getTargetStreamer().emitARMWinCFISaveFRegs(First, Last);
+  return false;
+}
+
+/// parseDirectiveSEHSaveLR
+/// ::= .seh_save_lr
+bool ARMAsmParser::parseDirectiveSEHSaveLR(SMLoc L) {
+  int64_t Offset;
+  if (parseImmExpr(Offset))
+    return true;
+  getTargetStreamer().emitARMWinCFISaveLR(Offset);
+  return false;
+}
+
+/// parseDirectiveSEHPrologEnd
+/// ::= .seh_endprologue
+/// ::= .seh_endprologue_fragment
+bool ARMAsmParser::parseDirectiveSEHPrologEnd(SMLoc L, bool Fragment) {
+  getTargetStreamer().emitARMWinCFIPrologEnd(Fragment);
+  return false;
+}
+
+/// parseDirectiveSEHNop
+/// ::= .seh_nop
+/// ::= .seh_nop_w
+bool ARMAsmParser::parseDirectiveSEHNop(SMLoc L, bool Wide) {
+  getTargetStreamer().emitARMWinCFINop(Wide);
+  return false;
+}
+
+/// parseDirectiveSEHEpilogStart
+/// ::= .seh_startepilogue
+/// ::= .seh_startepilogue_cond
+bool ARMAsmParser::parseDirectiveSEHEpilogStart(SMLoc L, bool Condition) {
+  unsigned CC = ARMCC::AL;
+  if (Condition) {
+    MCAsmParser &Parser = getParser();
+    SMLoc S = Parser.getTok().getLoc();
+    const AsmToken &Tok = Parser.getTok();
+    if (!Tok.is(AsmToken::Identifier))
+      return Error(S, ".seh_startepilogue_cond missing condition");
+    CC = ARMCondCodeFromString(Tok.getString());
+    if (CC == ~0U)
+      return Error(S, "invalid condition");
+    Parser.Lex(); // Eat the token.
+  }
+
+  getTargetStreamer().emitARMWinCFIEpilogStart(CC);
+  return false;
+}
+
+/// parseDirectiveSEHEpilogEnd
+/// ::= .seh_endepilogue
+bool ARMAsmParser::parseDirectiveSEHEpilogEnd(SMLoc L) {
+  getTargetStreamer().emitARMWinCFIEpilogEnd();
+  return false;
+}
+
+/// parseDirectiveSEHCustom
+/// ::= .seh_custom
+bool ARMAsmParser::parseDirectiveSEHCustom(SMLoc L) {
+  unsigned Opcode = 0;
+  do {
+    int64_t Byte;
+    if (parseImmExpr(Byte))
+      return true;
+    if (Byte > 0xff || Byte < 0)
+      return Error(L, "Invalid byte value in .seh_custom");
+    if (Opcode > 0x00ffffff)
+      return Error(L, "Too many bytes in .seh_custom");
+    // Store the bytes as one big endian number in Opcode. In a multi byte
+    // opcode sequence, the first byte can't be zero.
+    Opcode = (Opcode << 8) | Byte;
+  } while (parseOptionalToken(AsmToken::Comma));
+  getTargetStreamer().emitARMWinCFICustom(Opcode);
   return false;
 }
 

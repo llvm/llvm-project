@@ -693,7 +693,12 @@ void WinException::emitCXXFrameHandler3Table(const MachineFunction *MF) {
   }
 
   int UnwindHelpOffset = 0;
-  if (Asm->MAI->usesWindowsCFI())
+  // TODO: The check for UnwindHelpFrameIdx against max() below (and the
+  // second check further below) can be removed if MS C++ unwinding is
+  // implemented for ARM, when test/CodeGen/ARM/Windows/wineh-basic.ll
+  // passes without the check.
+  if (Asm->MAI->usesWindowsCFI() &&
+      FuncInfo.UnwindHelpFrameIdx != std::numeric_limits<int>::max())
     UnwindHelpOffset =
         getFrameIndexOffset(FuncInfo.UnwindHelpFrameIdx, FuncInfo);
 
@@ -755,7 +760,8 @@ void WinException::emitCXXFrameHandler3Table(const MachineFunction *MF) {
   AddComment("IPToStateXData");
   OS.emitValue(create32bitRef(IPToStateXData), 4);
 
-  if (Asm->MAI->usesWindowsCFI()) {
+  if (Asm->MAI->usesWindowsCFI() &&
+      FuncInfo.UnwindHelpFrameIdx != std::numeric_limits<int>::max()) {
     AddComment("UnwindHelp");
     OS.emitInt32(UnwindHelpOffset);
   }

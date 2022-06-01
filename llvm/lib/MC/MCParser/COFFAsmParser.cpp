@@ -699,8 +699,8 @@ bool COFFAsmParser::ParseSEHDirectiveEndProlog(StringRef, SMLoc Loc) {
 
 bool COFFAsmParser::ParseAtUnwindOrAtExcept(bool &unwind, bool &except) {
   StringRef identifier;
-  if (getLexer().isNot(AsmToken::At))
-    return TokError("a handler attribute must begin with '@'");
+  if (getLexer().isNot(AsmToken::At) && getLexer().isNot(AsmToken::Percent))
+    return TokError("a handler attribute must begin with '@' or '%'");
   SMLoc startLoc = getLexer().getLoc();
   Lex();
   if (getParser().parseIdentifier(identifier))
