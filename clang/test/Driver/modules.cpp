@@ -73,11 +73,3 @@ import "foo.h";
 // CHECK-HEADER-UNIT-USE: BAR;
 FOO;
 #endif
-
-// Check the independent use of -fcxx-modules
-//
-// RUN: %clang -fcxx-modules -std=c++17 -### -c %s 2>&1 | FileCheck %s --check-prefix=CHECK-CXX-MODULES
-// RUN: %clang -fcxx-modules -std=c++14 -### -c %s 2>&1 | FileCheck %s --check-prefix=CHECK-CXX-MODULES
-// RUN: %clang -fcxx-modules -std=c++11 -### -c %s 2>&1 | FileCheck %s --check-prefix=CHECK-CXX-MODULES
-// RUN: %clang -fcxx-modules -std=c++03 -### -c %s 2>&1 | FileCheck %s --check-prefix=CHECK-CXX-MODULES
-// CHECK-CXX-MODULES: "-fcxx-modules"

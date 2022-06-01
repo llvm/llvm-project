@@ -162,7 +162,7 @@ void initializeManagedMemoryRewritePassPass(llvm::PassRegistry &);
 #endif
 void initializeIslScheduleOptimizerWrapperPassPass(llvm::PassRegistry &);
 void initializeIslScheduleOptimizerPrinterLegacyPassPass(llvm::PassRegistry &);
-void initializeMaximalStaticExpanderPass(llvm::PassRegistry &);
+void initializeMaximalStaticExpanderWrapperPassPass(llvm::PassRegistry &);
 void initializePollyCanonicalizePass(llvm::PassRegistry &);
 void initializeFlattenSchedulePass(llvm::PassRegistry &);
 void initializeFlattenSchedulePrinterLegacyPassPass(llvm::PassRegistry &);

@@ -8621,6 +8621,7 @@ td_library(
         "include/mlir/Dialect/MLProgram/IR/MLProgramAttributes.td",
         "include/mlir/Dialect/MLProgram/IR/MLProgramBase.td",
         "include/mlir/Dialect/MLProgram/IR/MLProgramOps.td",
+        "include/mlir/Dialect/MLProgram/IR/MLProgramTypes.td",
     ],
     includes = ["include"],
     deps = [
@@ -8677,6 +8678,24 @@ gentbl_cc_library(
     deps = [":MLProgramOpsTdFiles"],
 )
 
+gentbl_cc_library(
+    name = "MLProgramTypesIncGen",
+    strip_include_prefix = "include",
+    tbl_outs = [
+        (
+            ["-gen-typedef-decls"],
+            "include/mlir/Dialect/MLProgram/IR/MLProgramTypes.h.inc",
+        ),
+        (
+            ["-gen-typedef-defs"],
+            "include/mlir/Dialect/MLProgram/IR/MLProgramTypes.cpp.inc",
+        ),
+    ],
+    tblgen = ":mlir-tblgen",
+    td_file = "include/mlir/Dialect/MLProgram/IR/MLProgramTypes.td",
+    deps = [":MLProgramOpsTdFiles"],
+)
+
 cc_library(
     name = "MLProgramDialect",
     srcs = glob([
@@ -8692,6 +8711,7 @@ cc_library(
         ":IR",
         ":MLProgramAttributesIncGen",
         ":MLProgramOpsIncGen",
+        ":MLProgramTypesIncGen",
         ":Pass",
         ":Support",
         "//llvm:Support",

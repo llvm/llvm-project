@@ -25,15 +25,14 @@ define i1 @test_srem_odd(i29 %X) nounwind {
 define i1 @test_srem_even(i4 %X) nounwind {
 ; CHECK-LABEL: test_srem_even:
 ; CHECK:       @ %bb.0:
-; CHECK-NEXT:    movw r2, #43691
 ; CHECK-NEXT:    sbfx r1, r0, #0, #4
-; CHECK-NEXT:    movt r2, #10922
-; CHECK-NEXT:    lsls r0, r0, #28
-; CHECK-NEXT:    smmul r1, r1, r2
-; CHECK-NEXT:    add.w r1, r1, r1, lsr #31
 ; CHECK-NEXT:    add.w r1, r1, r1, lsl #1
-; CHECK-NEXT:    mvn.w r1, r1, lsl #1
-; CHECK-NEXT:    add.w r0, r1, r0, asr #28
+; CHECK-NEXT:    ubfx r2, r1, #7, #1
+; CHECK-NEXT:    add.w r1, r2, r1, lsr #4
+; CHECK-NEXT:    add.w r1, r1, r1, lsl #1
+; CHECK-NEXT:    sub.w r0, r0, r1, lsl #1
+; CHECK-NEXT:    and r0, r0, #15
+; CHECK-NEXT:    subs r0, #1
 ; CHECK-NEXT:    clz r0, r0
 ; CHECK-NEXT:    lsrs r0, r0, #5
 ; CHECK-NEXT:    bx lr

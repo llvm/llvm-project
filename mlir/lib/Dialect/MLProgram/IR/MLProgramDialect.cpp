@@ -20,6 +20,8 @@ using namespace mlir::ml_program;
 #include "mlir/Dialect/MLProgram/IR/MLProgramOpsDialect.cpp.inc"
 #define GET_ATTRDEF_CLASSES
 #include "mlir/Dialect/MLProgram/IR/MLProgramAttributes.cpp.inc"
+#define GET_TYPEDEF_CLASSES
+#include "mlir/Dialect/MLProgram/IR/MLProgramTypes.cpp.inc"
 
 namespace {
 struct MLProgramOpAsmDialectInterface : public OpAsmDialectInterface {
@@ -40,9 +42,16 @@ void ml_program::MLProgramDialect::initialize() {
   addAttributes<
 #include "mlir/Dialect/MLProgram/IR/MLProgramAttributes.cpp.inc"
       >();
+
+#define GET_TYPEDEF_LIST
+  addTypes<
+#include "mlir/Dialect/MLProgram/IR/MLProgramTypes.cpp.inc"
+      >();
+
   addOperations<
 #define GET_OP_LIST
 #include "mlir/Dialect/MLProgram/IR/MLProgramOps.cpp.inc"
       >();
+
   addInterfaces<MLProgramOpAsmDialectInterface>();
 }

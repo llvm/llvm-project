@@ -57,10 +57,6 @@ def defined_function_list(object):
 
 p = OptionParser()
 
-p.add_option('--only-explicit-files', action='store_true',
-             dest='only_explicit_files', default=True,
-             help='[DEPRECATED] Only process --lib-file, not the default libc libraries.')
-
 p.add_option('--lib-file', action='append', metavar='PATH',
              help='Specific library files to add.',
              default=[])
