@@ -1982,14 +1982,14 @@ Parser::parseOperationExpr(OpResultTypeContext inputResultTypeContext) {
           ast::ValueRangeConstraintDecl::create(ctx, loc), valueRangeTy));
     }
   } else if (!consumeIf(Token::r_paren)) {
-    // Check for operand signature code completion.
-    if (curToken.is(Token::code_complete)) {
-      codeCompleteOperationOperandsSignature(opName, operands.size());
-      return failure();
-    }
-
     // If the operand list was specified and non-empty, parse the operands.
     do {
+      // Check for operand signature code completion.
+      if (curToken.is(Token::code_complete)) {
+        codeCompleteOperationOperandsSignature(opName, operands.size());
+        return failure();
+      }
+
       FailureOr<ast::Expr *> operand = parseExpr();
       if (failed(operand))
         return failure();
