@@ -13,54 +13,49 @@
 #   LibEdit_LIBRARIES      - libraries to link
 #   LibEdit_VERSION_STRING - version number
 
-if(LibEdit_INCLUDE_DIRS AND LibEdit_LIBRARIES)
-  set(LibEdit_FOUND TRUE)
-else()
-  find_package(PkgConfig QUIET)
-  pkg_check_modules(PC_LIBEDIT QUIET libedit)
+find_package(PkgConfig QUIET)
+pkg_check_modules(PC_LIBEDIT QUIET libedit)
 
-  find_path(LibEdit_INCLUDE_DIRS
-            NAMES
-              histedit.h
-            HINTS
-              ${PC_LIBEDIT_INCLUDEDIR}
-              ${PC_LIBEDIT_INCLUDE_DIRS}
-              "${CMAKE_INSTALL_FULL_INCLUDEDIR}")
-  find_library(LibEdit_LIBRARIES
-               NAMES
-                 edit libedit
-               HINTS
-                 ${PC_LIBEDIT_LIBDIR}
-                 ${PC_LIBEDIT_LIBRARY_DIRS}
-                 "${CMAKE_INSTALL_FULL_LIBDIR}")
+find_path(LibEdit_INCLUDE_DIRS NAMES histedit.h HINTS ${PC_LIBEDIT_INCLUDE_DIRS})
+find_library(LibEdit_LIBRARIES NAMES edit HINTS ${PC_LIBEDIT_LIBRARY_DIRS})
 
-  if(LibEdit_INCLUDE_DIRS AND EXISTS "${LibEdit_INCLUDE_DIRS}/histedit.h")
+include(CheckIncludeFile)
+if(LibEdit_INCLUDE_DIRS AND EXISTS "${LibEdit_INCLUDE_DIRS}/histedit.h")
+  cmake_push_check_state()
+  list(APPEND CMAKE_REQUIRED_INCLUDES ${LibEdit_INCLUDE_DIRS})
+  list(APPEND CMAKE_REQUIRED_LIBRARIES ${LibEdit_LIBRARIES})
+  check_include_file(histedit.h HAVE_HISTEDIT_H)
+  cmake_pop_check_state()
+  if (HAVE_HISTEDIT_H)
     file(STRINGS "${LibEdit_INCLUDE_DIRS}/histedit.h"
-         libedit_major_version_str
-         REGEX "^#define[ \t]+LIBEDIT_MAJOR[ \t]+[0-9]+")
+          libedit_major_version_str
+          REGEX "^#define[ \t]+LIBEDIT_MAJOR[ \t]+[0-9]+")
     string(REGEX REPLACE "^#define[ \t]+LIBEDIT_MAJOR[ \t]+([0-9]+)" "\\1"
-           LIBEDIT_MAJOR_VERSION "${libedit_major_version_str}")
+            libedit_major_version "${libedit_major_version_str}")
 
     file(STRINGS "${LibEdit_INCLUDE_DIRS}/histedit.h"
-         libedit_minor_version_str
-         REGEX "^#define[ \t]+LIBEDIT_MINOR[ \t]+[0-9]+")
+          libedit_minor_version_str
+          REGEX "^#define[ \t]+LIBEDIT_MINOR[ \t]+[0-9]+")
     string(REGEX REPLACE "^#define[ \t]+LIBEDIT_MINOR[ \t]+([0-9]+)" "\\1"
-           LIBEDIT_MINOR_VERSION "${libedit_minor_version_str}")
+            libedit_minor_version "${libedit_minor_version_str}")
 
     set(LibEdit_VERSION_STRING "${libedit_major_version}.${libedit_minor_version}")
+  else()
+    set(LibEdit_INCLUDE_DIRS "")
+    set(LibEdit_LIBRARIES "")
   endif()
-
-  include(FindPackageHandleStandardArgs)
-  find_package_handle_standard_args(LibEdit
-                                    FOUND_VAR
-                                      LibEdit_FOUND
-                                    REQUIRED_VARS
-                                      LibEdit_INCLUDE_DIRS
-                                      LibEdit_LIBRARIES
-                                    VERSION_VAR
-                                      LibEdit_VERSION_STRING)
-  mark_as_advanced(LibEdit_INCLUDE_DIRS LibEdit_LIBRARIES)
 endif()
+
+include(FindPackageHandleStandardArgs)
+find_package_handle_standard_args(LibEdit
+                                  FOUND_VAR
+                                    LibEdit_FOUND
+                                  REQUIRED_VARS
+                                    LibEdit_INCLUDE_DIRS
+                                    LibEdit_LIBRARIES
+                                  VERSION_VAR
+                                    LibEdit_VERSION_STRING)
+mark_as_advanced(LibEdit_INCLUDE_DIRS LibEdit_LIBRARIES)
 
 if (LibEdit_FOUND AND NOT TARGET LibEdit::LibEdit)
   add_library(LibEdit::LibEdit UNKNOWN IMPORTED)
