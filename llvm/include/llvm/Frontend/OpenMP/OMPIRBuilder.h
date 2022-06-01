@@ -1462,7 +1462,7 @@ public:
                       bool IsPostfixUpdate, bool IsXBinopExpr);
 
   /// Emit atomic compare for constructs: --- Only scalar data types
-  /// cond-update-atomic:
+  /// cond-expr-stmt:
   /// x = x ordop expr ? expr : x;
   /// x = expr ordop x ? expr : x;
   /// x = x == e ? d : x;
@@ -1472,9 +1472,21 @@ public:
   /// if (expr ordop x) { x = expr; }
   /// if (x == e) { x = d; }
   /// if (e == x) { x = d; } (this one is not in the spec)
+  /// conditional-update-capture-atomic:
+  /// v = x; cond-update-stmt; (IsPostfixUpdate=true, IsFailOnly=false)
+  /// cond-update-stmt; v = x; (IsPostfixUpdate=false, IsFailOnly=false)
+  /// if (x == e) { x = d; } else { v = x; } (IsPostfixUpdate=false,
+  ///                                         IsFailOnly=true)
+  /// r = x == e; if (r) { x = d; } (IsPostfixUpdate=false, IsFailOnly=false)
+  /// r = x == e; if (r) { x = d; } else { v = x; } (IsPostfixUpdate=false,
+  ///                                                IsFailOnly=true)
   ///
   /// \param Loc          The insert and source location description.
   /// \param X            The target atomic pointer to be updated.
+  /// \param V            Memory address where to store captured value (for
+  ///                     compare capture only).
+  /// \param R            Memory address where to store comparison result
+  ///                     (for compare capture with '==' only).
   /// \param E            The expected value ('e') for forms that use an
   ///                     equality comparison or an expression ('expr') for
   ///                     forms that use 'ordop' (logically an atomic maximum or
@@ -1486,13 +1498,19 @@ public:
   /// \param Op           Atomic compare operation. It can only be ==, <, or >.
   /// \param IsXBinopExpr True if the conditional statement is in the form where
   ///                     x is on LHS. It only matters for < or >.
+  /// \param IsPostfixUpdate  True if original value of 'x' must be stored in
+  ///                         'v', not an updated one (for compare capture
+  ///                         only).
+  /// \param IsFailOnly   True if the original value of 'x' is stored to 'v'
+  ///                     only when the comparison fails. This is only valid for
+  ///                     the case the comparison is '=='.
   ///
   /// \return Insertion point after generated atomic capture IR.
-  InsertPointTy createAtomicCompare(const LocationDescription &Loc,
-                                    AtomicOpValue &X, Value *E, Value *D,
-                                    AtomicOrdering AO,
-                                    omp::OMPAtomicCompareOp Op,
-                                    bool IsXBinopExpr);
+  InsertPointTy
+  createAtomicCompare(const LocationDescription &Loc, AtomicOpValue &X,
+                      AtomicOpValue &V, AtomicOpValue &R, Value *E, Value *D,
+                      AtomicOrdering AO, omp::OMPAtomicCompareOp Op,
+                      bool IsXBinopExpr, bool IsPostfixUpdate, bool IsFailOnly);
 
   /// Create the control flow structure of a canonical OpenMP loop.
   ///
