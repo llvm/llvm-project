@@ -51,12 +51,14 @@ add_custom_target(module_files ALL DEPENDS ${MODULE_FILES})
 # This flang shell script will only work in a POSIX shell.
 if (NOT WIN32)
   add_custom_command(
-    OUTPUT ${CMAKE_BINARY_DIR}/bin/flang
-    DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/flang
-    COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_CURRENT_SOURCE_DIR}/flang ${CMAKE_BINARY_DIR}/bin)
-  add_custom_target(flang ALL DEPENDS ${CMAKE_BINARY_DIR}/bin/flang)
-  install(PROGRAMS ${CMAKE_BINARY_DIR}/bin/flang DESTINATION "${CMAKE_INSTALL_BINDIR}")
+    OUTPUT ${CMAKE_BINARY_DIR}/bin/flang-to-external-fc
+    DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/flang-to-external-fc
+    COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_CURRENT_SOURCE_DIR}/flang-to-external-fc ${CMAKE_BINARY_DIR}/bin)
+  add_custom_target(flang-to-external-fc ALL DEPENDS ${CMAKE_BINARY_DIR}/bin/flang-to-external-fc)
+  install(PROGRAMS ${CMAKE_BINARY_DIR}/bin/flang-to-external-fc DESTINATION "${CMAKE_INSTALL_BINDIR}")
 endif()
+add_custom_target(flang-slink ALL DEPENDS ${CMAKE_BINARY_DIR}/bin/flang-to-external-fc COMMAND ${CMAKE_COMMAND} -E create_symlink
+  ${CMAKE_BINARY_DIR}/bin/flang-to-external-fc ${CMAKE_BINARY_DIR}/bin/flang)
 
 # TODO Move this to a more suitable location
 file(COPY ${FLANG_SOURCE_DIR}/module/omp_lib.h DESTINATION "${CMAKE_BINARY_DIR}/include/flang/OpenMP/" FILE_PERMISSIONS OWNER_READ OWNER_WRITE)
