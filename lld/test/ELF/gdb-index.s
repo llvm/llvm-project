@@ -14,7 +14,7 @@
 # SECTION-NOT: .debug_gnu_pubnames
 # SECTION-NOT: .debug_gnu_pubtypes
 
-# RUN: llvm-mc -compress-debug-sections=zlib-gnu -filetype=obj -triple=x86_64-pc-linux \
+# RUN: llvm-mc -compress-debug-sections=zlib -filetype=obj -triple=x86_64-pc-linux \
 # RUN:   %p/Inputs/gdb-index.s -o %t2.o
 # RUN: ld.lld --gdb-index %t1.o %t2.o -o %t
 
