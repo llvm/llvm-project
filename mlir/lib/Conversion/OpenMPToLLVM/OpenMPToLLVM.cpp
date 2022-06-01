@@ -65,9 +65,8 @@ struct RegionLessOpConversion : public ConvertOpToLLVMPattern<T> {
         // TODO: Support memref type in variable operands
         return rewriter.notifyMatchFailure(curOp,
                                            "memref is not supported yet");
-      } else {
-        convertedOperands.emplace_back(adaptor.getOperands()[idx]);
       }
+      convertedOperands.emplace_back(adaptor.getOperands()[idx]);
     }
     rewriter.replaceOpWithNewOp<T>(curOp, resTypes, convertedOperands,
                                    curOp->getAttrs());
