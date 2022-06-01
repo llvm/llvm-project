@@ -541,8 +541,9 @@ public:
   }
 };
 
+// Common base class for PS4/PS5 targets.
 template <typename Target>
-class LLVM_LIBRARY_VISIBILITY PS4OSTargetInfo : public OSTargetInfo<Target> {
+class LLVM_LIBRARY_VISIBILITY PSOSTargetInfo : public OSTargetInfo<Target> {
 protected:
   void getOSDefines(const LangOptions &Opts, const llvm::Triple &Triple,
                     MacroBuilder &Builder) const override {
@@ -552,34 +553,47 @@ protected:
     DefineStd(Builder, "unix", Opts);
     Builder.defineMacro("__ELF__");
     Builder.defineMacro("__SCE__");
+  }
+
+public:
+  PSOSTargetInfo(const llvm::Triple &Triple, const TargetOptions &Opts)
+      : OSTargetInfo<Target>(Triple, Opts) {
+    this->WCharType = TargetInfo::UnsignedShort;
+
+    // On PS4/PS5, TLS variable cannot be aligned to more than 32 bytes (256
+    // bits).
+    this->MaxTLSAlign = 256;
+
+    // On PS4/PS5, do not honor explicit bit field alignment,
+    // as in "__attribute__((aligned(2))) int b : 1;".
+    this->UseExplicitBitFieldAlignment = false;
+
+    this->MCountName = ".mcount";
+    this->NewAlign = 256;
+    this->SuitableAlign = 256;
+  }
+
+  TargetInfo::CallingConvCheckResult
+  checkCallingConvention(CallingConv CC) const override {
+    return (CC == CC_C) ? TargetInfo::CCCR_OK : TargetInfo::CCCR_Error;
+  }
+};
+
+// PS4 Target
+template <typename Target>
+class LLVM_LIBRARY_VISIBILITY PS4OSTargetInfo : public PSOSTargetInfo<Target> {
+protected:
+  void getOSDefines(const LangOptions &Opts, const llvm::Triple &Triple,
+                    MacroBuilder &Builder) const override {
+    // Start with base class defines.
+    PSOSTargetInfo<Target>::getOSDefines(Opts, Triple, Builder);
+
     Builder.defineMacro("__ORBIS__");
   }
 
 public:
   PS4OSTargetInfo(const llvm::Triple &Triple, const TargetOptions &Opts)
-      : OSTargetInfo<Target>(Triple, Opts) {
-    this->WCharType = TargetInfo::UnsignedShort;
-
-    // On PS4, TLS variable cannot be aligned to more than 32 bytes (256 bits).
-    this->MaxTLSAlign = 256;
-
-    // On PS4, do not honor explicit bit field alignment,
-    // as in "__attribute__((aligned(2))) int b : 1;".
-    this->UseExplicitBitFieldAlignment = false;
-
-    switch (Triple.getArch()) {
-    default:
-    case llvm::Triple::x86_64:
-      this->MCountName = ".mcount";
-      this->NewAlign = 256;
-      this->SuitableAlign = 256;
-      break;
-    }
-  }
-  TargetInfo::CallingConvCheckResult
-  checkCallingConvention(CallingConv CC) const override {
-    return (CC == CC_C) ? TargetInfo::CCCR_OK : TargetInfo::CCCR_Error;
-  }
+      : PSOSTargetInfo<Target>(Triple, Opts) {}
 };
 
 // RTEMS Target
