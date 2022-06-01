@@ -67,6 +67,19 @@ static cl::opt<std::string> AAPipeline("aa-pipeline",
 
 static cl::opt<bool> SaveTemps("save-temps", cl::desc("Save temporary files"));
 
+static cl::list<std::string> SelectSaveTemps(
+    "select-save-temps",
+    cl::value_desc("One, or multiple of: "
+                   "resolution,preopt,promote,internalize,import,opt,precodegen"
+                   ",combinedindex"),
+    cl::desc("Save selected temporary files. Cannot be specified together with "
+             "-save-temps"),
+    cl::CommaSeparated);
+
+constexpr const char *SaveTempsValues[] = {
+    "resolution", "preopt", "promote",    "internalize",
+    "import",     "opt",    "precodegen", "combinedindex"};
+
 static cl::opt<bool>
     ThinLTODistributedIndexes("thinlto-distributed-indexes",
                               cl::desc("Write out individual index and "
@@ -258,9 +271,22 @@ static int run(int argc, char **argv) {
 
   Conf.DebugPassManager = DebugPassManager;
 
-  if (SaveTemps)
-    check(Conf.addSaveTemps(OutputFilename + "."),
+  if (SaveTemps && !SelectSaveTemps.empty()) {
+    llvm::errs() << "-save-temps cannot be specified with -select-save-temps\n";
+    return 1;
+  }
+  if (SaveTemps || !SelectSaveTemps.empty()) {
+    DenseSet<StringRef> SaveTempsArgs;
+    for (auto &S : SelectSaveTemps)
+      if (is_contained(SaveTempsValues, S))
+        SaveTempsArgs.insert(S);
+      else {
+        llvm::errs() << ("invalid -select-save-temps argument: " + S) << '\n';
+        return 1;
+      }
+    check(Conf.addSaveTemps(OutputFilename + ".", false, SaveTempsArgs),
           "Config::addSaveTemps failed");
+  }
 
   // Optimization remarks.
   Conf.RemarksFilename = RemarksFilename;
