@@ -329,8 +329,6 @@ namespace llvm {
   /// machine instructions.
   extern char &MachineCopyPropagationID;
 
-  MachineFunctionPass *createMachineCopyPropagationPass(bool UseCopyInstr);
-
   /// PeepholeOptimizer - This pass performs peephole optimizations -
   /// like extension and comparison eliminations.
   extern char &PeepholeOptimizerID;
