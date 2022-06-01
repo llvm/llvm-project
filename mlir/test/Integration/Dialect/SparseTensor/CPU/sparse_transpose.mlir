@@ -32,9 +32,7 @@ module {
   func.func @sparse_transpose(%arga: tensor<3x4xf64, #DCSR>) -> tensor<4x3xf64, #DCSR> {
     %t = sparse_tensor.convert %arga : tensor<3x4xf64, #DCSR> to tensor<3x4xf64, #DCSC>
 
-    %c3 = arith.constant 3 : index
-    %c4 = arith.constant 4 : index
-    %i = sparse_tensor.init [%c4, %c3] : tensor<4x3xf64, #DCSR>
+    %i = bufferization.alloc_tensor() : tensor<4x3xf64, #DCSR>
 
     %0 = linalg.generic #transpose_trait
        ins(%t: tensor<3x4xf64, #DCSC>)

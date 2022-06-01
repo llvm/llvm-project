@@ -34,6 +34,7 @@ from mlir import execution_engine
 from mlir import ir
 from mlir import runtime
 from mlir.dialects import arith
+from mlir.dialects import bufferization
 from mlir.dialects import builtin
 from mlir.dialects import func
 from mlir.dialects import linalg
@@ -889,8 +890,7 @@ class _StructOpInfo:
     mlir_type = _mlir_tensor_type(self.dst_dtype, self.dst_dims,
                                   self.dst_format.mlir_tensor_attr())
     index_type = ir.IndexType.get()
-    dims = [arith.ConstantOp(index_type, d).result for d in mlir_type.shape]
-    return sparse_tensor.InitOp(mlir_type, dims)
+    return bufferization.AllocTensorOp(mlir_type, [])
 
 
 class _Stats:

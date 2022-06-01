@@ -30,7 +30,7 @@ module {
                              -> tensor<?xf64, #SparseVector> {
     %c0 = arith.constant 0 : index
     %d = tensor.dim %arg0, %c0 : tensor<?xf64, #SparseVector>
-    %xin = sparse_tensor.init [%d] : tensor<?xf64, #SparseVector>
+    %xin = bufferization.alloc_tensor(%d) : tensor<?xf64, #SparseVector>
     %0 = linalg.generic #trait_op
       ins(%arg0: tensor<?xf64, #SparseVector>)
       outs(%xin: tensor<?xf64, #SparseVector>) {

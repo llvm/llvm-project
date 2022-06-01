@@ -293,7 +293,7 @@ static bool isInPlace(Value val) {
 /// Returns true if tensor materializes uninitialized into the computation.
 static bool isMaterializing(Value val) {
   return val.getDefiningOp<linalg::InitTensorOp>() ||
-         val.getDefiningOp<InitOp>();
+         val.getDefiningOp<bufferization::AllocTensorOp>();
 }
 
 /// Returns true when the tensor expression is admissable for codegen.

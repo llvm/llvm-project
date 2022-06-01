@@ -35,9 +35,7 @@ _KERNEL_STR = """
 
 func.func @sparse_add_elt(
     %arga: tensor<3x4xf64, #DCSR>, %argb: tensor<3x4xf64, #DCSR>) -> tensor<3x4xf64, #DCSR> {
-  %c3 = arith.constant 3 : index
-  %c4 = arith.constant 4 : index
-  %argx = sparse_tensor.init [%c3, %c4] : tensor<3x4xf64, #DCSR>
+  %argx = bufferization.alloc_tensor() : tensor<3x4xf64, #DCSR>
   %0 = linalg.generic #trait_add_elt
     ins(%arga, %argb: tensor<3x4xf64, #DCSR>, tensor<3x4xf64, #DCSR>)
     outs(%argx: tensor<3x4xf64, #DCSR>) {
