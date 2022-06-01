@@ -1163,3 +1163,56 @@ define zeroext i32 @sext_ashr_zext_i16(i16 %a) nounwind {
   %1 = ashr i32 %ext, 9
   ret i32 %1
 }
+
+; This the IR you get from InstCombine if take the difference of 2 pointers and
+; cast is to unsigned before using as an index.
+define signext i16 @sh1adduw_ptrdiff(i64 %diff, i16* %baseptr) {
+; CHECK-LABEL: sh1adduw_ptrdiff:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    li a2, 1
+; CHECK-NEXT:    slli a2, a2, 33
+; CHECK-NEXT:    addi a2, a2, -2
+; CHECK-NEXT:    and a0, a0, a2
+; CHECK-NEXT:    add a0, a1, a0
+; CHECK-NEXT:    lh a0, 0(a0)
+; CHECK-NEXT:    ret
+  %ptrdiff = lshr exact i64 %diff, 1
+  %cast = and i64 %ptrdiff, 4294967295
+  %ptr = getelementptr inbounds i16, i16* %baseptr, i64 %cast
+  %res = load i16, i16* %ptr
+  ret i16 %res
+}
+
+define signext i32 @sh2adduw_ptrdiff(i64 %diff, i32* %baseptr) {
+; CHECK-LABEL: sh2adduw_ptrdiff:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    li a2, 1
+; CHECK-NEXT:    slli a2, a2, 34
+; CHECK-NEXT:    addi a2, a2, -4
+; CHECK-NEXT:    and a0, a0, a2
+; CHECK-NEXT:    add a0, a1, a0
+; CHECK-NEXT:    lw a0, 0(a0)
+; CHECK-NEXT:    ret
+  %ptrdiff = lshr exact i64 %diff, 2
+  %cast = and i64 %ptrdiff, 4294967295
+  %ptr = getelementptr inbounds i32, i32* %baseptr, i64 %cast
+  %res = load i32, i32* %ptr
+  ret i32 %res
+}
+
+define i64 @sh3adduw_ptrdiff(i64 %diff, i64* %baseptr) {
+; CHECK-LABEL: sh3adduw_ptrdiff:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    li a2, 1
+; CHECK-NEXT:    slli a2, a2, 35
+; CHECK-NEXT:    addi a2, a2, -8
+; CHECK-NEXT:    and a0, a0, a2
+; CHECK-NEXT:    add a0, a1, a0
+; CHECK-NEXT:    ld a0, 0(a0)
+; CHECK-NEXT:    ret
+  %ptrdiff = lshr exact i64 %diff, 3
+  %cast = and i64 %ptrdiff, 4294967295
+  %ptr = getelementptr inbounds i64, i64* %baseptr, i64 %cast
+  %res = load i64, i64* %ptr
+  ret i64 %res
+}
