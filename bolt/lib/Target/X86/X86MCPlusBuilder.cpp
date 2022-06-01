@@ -13,6 +13,7 @@
 #include "MCTargetDesc/X86BaseInfo.h"
 #include "MCTargetDesc/X86InstrRelaxTables.h"
 #include "MCTargetDesc/X86MCTargetDesc.h"
+#include "X86MCSymbolizer.h"
 #include "bolt/Core/MCPlus.h"
 #include "bolt/Core/MCPlusBuilder.h"
 #include "llvm/BinaryFormat/ELF.h"
@@ -80,6 +81,11 @@ public:
   X86MCPlusBuilder(const MCInstrAnalysis *Analysis, const MCInstrInfo *Info,
                    const MCRegisterInfo *RegInfo)
       : MCPlusBuilder(Analysis, Info, RegInfo) {}
+
+  std::unique_ptr<MCSymbolizer>
+  createTargetSymbolizer(BinaryFunction &Function) const override {
+    return std::make_unique<X86MCSymbolizer>(Function);
+  }
 
   bool isBranch(const MCInst &Inst) const override {
     return Analysis->isBranch(Inst) && !isTailCall(Inst);

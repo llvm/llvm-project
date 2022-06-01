@@ -1,4 +1,4 @@
-; RUN: llc -hexagon-long-calls -march=hexagon -enable-save-restore-long=true < %s | FileCheck %s
+; RUN: llc -hexagon-long-calls -mtriple=hexagon -enable-save-restore-long=true < %s | FileCheck %s
 
 ; CHECK: call ##f1
 ; CHECK: jump ##__restore

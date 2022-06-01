@@ -25,7 +25,6 @@
 #ifndef LLVM_TRANSFORMS_VECTORIZE_VPLAN_H
 #define LLVM_TRANSFORMS_VECTORIZE_VPLAN_H
 
-#include "VPlanLoopInfo.h"
 #include "VPlanValue.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DepthFirstIterator.h"
@@ -38,6 +37,7 @@
 #include "llvm/ADT/Twine.h"
 #include "llvm/ADT/ilist.h"
 #include "llvm/ADT/ilist_node.h"
+#include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/VectorUtils.h"
 #include "llvm/IR/DebugLoc.h"
 #include "llvm/IR/FMF.h"
@@ -315,10 +315,6 @@ struct VPTransformState {
     /// A mapping of each VPBasicBlock to the corresponding BasicBlock. In case
     /// of replication, maps the BasicBlock of the last replica created.
     SmallDenseMap<VPBasicBlock *, BasicBlock *> VPBB2IRBB;
-
-    /// Vector of VPBasicBlocks whose terminator instruction needs to be fixed
-    /// up at the end of vector code generation.
-    SmallVector<VPBasicBlock *, 8> VPBBsToFix;
 
     CFGState() = default;
 
@@ -2507,9 +2503,6 @@ class VPlan {
   /// to be free when the plan's destructor is called.
   SmallVector<VPValue *, 16> VPValuesToFree;
 
-  /// Holds the VPLoopInfo analysis for this VPlan.
-  VPLoopInfo VPLInfo;
-
   /// Indicates whether it is safe use the Value2VPValue mapping or if the
   /// mapping cannot be used any longer, because it is stale.
   bool Value2VPValueEnabled = true;
@@ -2641,10 +2634,6 @@ public:
     Value2VPValue.erase(V);
   }
 
-  /// Return the VPLoopInfo analysis for this VPlan.
-  VPLoopInfo &getVPLoopInfo() { return VPLInfo; }
-  const VPLoopInfo &getVPLoopInfo() const { return VPLInfo; }
-
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   /// Print this VPlan to \p O.
   void print(raw_ostream &O) const;
@@ -2674,13 +2663,9 @@ public:
 
   /// Returns the VPRegionBlock of the vector loop.
   VPRegionBlock *getVectorLoopRegion() {
-    if (auto *R = dyn_cast<VPRegionBlock>(getEntry()))
-      return R;
     return cast<VPRegionBlock>(getEntry()->getSingleSuccessor());
   }
   const VPRegionBlock *getVectorLoopRegion() const {
-    if (auto *R = dyn_cast<VPRegionBlock>(getEntry()))
-      return R;
     return cast<VPRegionBlock>(getEntry()->getSingleSuccessor());
   }
 
@@ -2881,41 +2866,6 @@ public:
     }
     delete Block;
     return PredVPBB;
-  }
-
-  /// Returns true if the edge \p FromBlock -> \p ToBlock is a back-edge.
-  static bool isBackEdge(const VPBlockBase *FromBlock,
-                         const VPBlockBase *ToBlock, const VPLoopInfo *VPLI) {
-    assert(FromBlock->getParent() == ToBlock->getParent() &&
-           FromBlock->getParent() && "Must be in same region");
-    const VPLoop *FromLoop = VPLI->getLoopFor(FromBlock);
-    const VPLoop *ToLoop = VPLI->getLoopFor(ToBlock);
-    if (!FromLoop || !ToLoop || FromLoop != ToLoop)
-      return false;
-
-    // A back-edge is a branch from the loop latch to its header.
-    return ToLoop->isLoopLatch(FromBlock) && ToBlock == ToLoop->getHeader();
-  }
-
-  /// Returns true if \p Block is a loop latch
-  static bool blockIsLoopLatch(const VPBlockBase *Block,
-                               const VPLoopInfo *VPLInfo) {
-    if (const VPLoop *ParentVPL = VPLInfo->getLoopFor(Block))
-      return ParentVPL->isLoopLatch(Block);
-
-    return false;
-  }
-
-  /// Count and return the number of succesors of \p PredBlock excluding any
-  /// backedges.
-  static unsigned countSuccessorsNoBE(VPBlockBase *PredBlock,
-                                      VPLoopInfo *VPLI) {
-    unsigned Count = 0;
-    for (VPBlockBase *SuccBlock : PredBlock->getSuccessors()) {
-      if (!VPBlockUtils::isBackEdge(PredBlock, SuccBlock, VPLI))
-        Count++;
-    }
-    return Count;
   }
 
   /// Return an iterator range over \p Range which only includes \p BlockTy

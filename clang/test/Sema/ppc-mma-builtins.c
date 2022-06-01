@@ -11,7 +11,7 @@ void test2(unsigned char *vqp, unsigned char *vpp, vector unsigned char vc, unsi
   __builtin_vsx_disassemble_pair(resp, (__vector_pair*)vpp);
 }
 
-void test3(const __vector_pair *vpp, signed long offset, const __vector_pair *vp2) {
+void test3(const __vector_pair *vpp, signed long offset, __vector_pair *vp2) {
   __vector_pair vp = __builtin_vsx_lxvp(offset, vpp);
   __builtin_vsx_stxvp(vp, offset, vp2);
 }

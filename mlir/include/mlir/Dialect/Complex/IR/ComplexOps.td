@@ -545,4 +545,23 @@ def TanhOp : ComplexUnaryOp<"tanh", [SameOperandsAndResultType]> {
   let results = (outs Complex<AnyFloat>:$result);
 }
 
+//===----------------------------------------------------------------------===//
+// TanOp
+//===----------------------------------------------------------------------===//
+
+def TanOp : ComplexUnaryOp<"tan", [SameOperandsAndResultType]> {
+  let summary = "computes tangent of a complex number";
+  let description = [{
+    The `tan` op takes a single complex number and computes the tangent of
+    it, i.e. `tan(x)`, where `x` is the input value.
+
+    Example:
+
+    ```mlir
+    %a = complex.tan %b : complex<f32>
+    ```
+  }];
+  let results = (outs Complex<AnyFloat>:$result);
+}
+
 #endif // COMPLEX_OPS
