@@ -503,6 +503,13 @@ public:
     return false;
   }
 
+  /// Return true if `v1` and `v2` may bufferize to aliasing buffers.
+  bool areAliasingBufferizedValues(Value v1, Value v2) const override {
+    // There is no analysis, so we do not know if the values are equivalent. The
+    // conservative answer is "true".
+    return true;
+  }
+
   /// Return `true` if the given tensor has undefined contents.
   bool hasUndefinedContents(OpOperand *opOperand) const override {
     // There is no analysis, so the conservative answer is "false".

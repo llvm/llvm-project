@@ -19,29 +19,9 @@ struct OneShotBufferizationOptions;
 class BufferizationAliasInfo;
 class OneShotAnalysisState;
 
-/// PostAnalysisStepFns can be registered with `BufferizationOptions` and are
-/// executed after the analysis, but before bufferization. They can be used to
-/// implement custom dialect-specific optimizations. They may modify the IR, but
-/// must keep `aliasInfo` consistent. Newly created operations and operations
-/// that should be re-analyzed must be added to `newOps`.
-using PostAnalysisStepFn = std::function<LogicalResult(
-    Operation *, AnalysisState &, BufferizationAliasInfo &,
-    SmallVector<Operation *> &)>;
-
-using PostAnalysisStepList = SmallVector<PostAnalysisStepFn>;
-
 /// Options for analysis-enabled bufferization.
 struct OneShotBufferizationOptions : public BufferizationOptions {
   OneShotBufferizationOptions() = default;
-
-  /// Register a "post analysis" step. Such steps are executed after the
-  /// analysis, but before bufferization.
-  void addPostAnalysisStep(PostAnalysisStepFn fn) {
-    postAnalysisSteps.push_back(fn);
-  }
-
-  /// Registered post analysis steps.
-  PostAnalysisStepList postAnalysisSteps;
 
   /// Specifies whether returning newly allocated memrefs should be allowed.
   /// Otherwise, a pass failure is triggered.
@@ -165,6 +145,9 @@ public:
   /// Return true if `v1` and `v2` bufferize to equivalent buffers.
   bool areEquivalentBufferizedValues(Value v1, Value v2) const override;
 
+  /// Return true if `v1` and `v2` may bufferize to aliasing buffers.
+  bool areAliasingBufferizedValues(Value v1, Value v2) const override;
+
   /// Return `true` if the given tensor has undefined contents.
   bool hasUndefinedContents(OpOperand *opOperand) const override;
 
@@ -179,6 +162,10 @@ public:
   /// Find all tensors that are yielded/returned from a block and store them in
   /// `yieldedTensors`. Also include all aliasing tensors in the same block.
   void gatherYieldedTensors(Operation *op);
+
+  /// Return true if the buffer of the given tensor value is written to. Must
+  /// not be called for values inside not yet analyzed functions.
+  bool isValueWritten(Value value) const;
 
 private:
   /// `aliasInfo` keeps track of aliasing and equivalent values. Only internal

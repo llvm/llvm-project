@@ -16,7 +16,7 @@
 // respective callers.
 //
 // After analyzing a FuncOp, additional information about its bbArgs is
-// gathered through PostAnalysisStepFns and stored in `FuncAnalysisState`.
+// gathered and stored in `FuncAnalysisState`.
 //
 // * `aliasingFuncOpBBArgsAnalysis` determines the equivalent/aliasing bbArgs
 // for
@@ -155,14 +155,11 @@ static void annotateEquivalentReturnBbArg(OpOperand &returnVal,
 
 /// Store function BlockArguments that are equivalent to/aliasing a returned
 /// value in FuncAnalysisState.
-static LogicalResult
-aliasingFuncOpBBArgsAnalysis(Operation *op, AnalysisState &state,
-                             BufferizationAliasInfo &aliasInfo,
-                             SmallVector<Operation *> &newOps) {
+static LogicalResult aliasingFuncOpBBArgsAnalysis(FuncOp funcOp,
+                                                  OneShotAnalysisState &state) {
   FuncAnalysisState &funcState = getFuncAnalysisState(state);
 
   // Support only single return-terminated block in the function.
-  auto funcOp = cast<func::FuncOp>(op);
   func::ReturnOp returnOp = getAssumedUniqueReturnOp(funcOp);
   assert(returnOp && "expected func with single return op");
 
@@ -172,47 +169,18 @@ aliasingFuncOpBBArgsAnalysis(Operation *op, AnalysisState &state,
         if (bbArg.getType().isa<RankedTensorType>()) {
           int64_t returnIdx = returnVal.getOperandNumber();
           int64_t bbArgIdx = bbArg.getArgNumber();
-          if (aliasInfo.areEquivalentBufferizedValues(returnVal.get(), bbArg)) {
+          if (state.areEquivalentBufferizedValues(returnVal.get(), bbArg)) {
             funcState.equivalentFuncArgs[funcOp][returnIdx] = bbArgIdx;
             if (state.getOptions().testAnalysisOnly)
               annotateEquivalentReturnBbArg(returnVal, bbArg);
           }
-          if (aliasInfo.areAliasingBufferizedValues(returnVal.get(), bbArg)) {
+          if (state.areAliasingBufferizedValues(returnVal.get(), bbArg)) {
             funcState.aliasingFuncArgs[funcOp][returnIdx].push_back(bbArgIdx);
             funcState.aliasingReturnVals[funcOp][bbArgIdx].push_back(returnIdx);
           }
         }
 
   return success();
-}
-
-/// Return true if the buffer of the given tensor value is written to. Must not
-/// be called for values inside not yet analyzed functions. (Post-analysis
-/// steps do not have to be run yet, i.e., "in progress" is also OK.)
-static bool isValueWritten(Value value, const AnalysisState &state,
-                           const BufferizationAliasInfo &aliasInfo) {
-#ifndef NDEBUG
-  assert(value.getType().isa<TensorType>() && "expected TensorType");
-  func::FuncOp funcOp;
-  if (auto bbArg = value.dyn_cast<BlockArgument>()) {
-    Operation *owner = bbArg.getOwner()->getParentOp();
-    funcOp = isa<func::FuncOp>(owner) ? cast<func::FuncOp>(owner)
-                                      : owner->getParentOfType<func::FuncOp>();
-  } else {
-    funcOp = value.getDefiningOp()->getParentOfType<func::FuncOp>();
-  }
-  assert(getFuncOpAnalysisState(state, funcOp) !=
-             FuncOpAnalysisState::NotAnalyzed &&
-         "FuncOp must be fully analyzed or analysis in progress");
-#endif // NDEBUG
-
-  bool isWritten = false;
-  aliasInfo.applyOnAliases(value, [&](Value val) {
-    for (OpOperand &use : val.getUses())
-      if (state.isInPlace(use) && state.bufferizesToMemoryWrite(use))
-        isWritten = true;
-  });
-  return isWritten;
 }
 
 static void annotateFuncArgAccess(func::FuncOp funcOp, BlockArgument bbArg,
@@ -231,15 +199,12 @@ static void annotateFuncArgAccess(func::FuncOp funcOp, BlockArgument bbArg,
   funcOp.setArgAttr(bbArg.getArgNumber(), "bufferization.access", accessType);
 }
 
-/// Determine which FuncOp bbArgs are read and which are written. If this
-/// PostAnalysisStepFn is run on a function with unknown ops, it will
-/// conservatively assume that such ops bufferize to a read + write.
-static LogicalResult
-funcOpBbArgReadWriteAnalysis(Operation *op, AnalysisState &state,
-                             BufferizationAliasInfo &aliasInfo,
-                             SmallVector<Operation *> &newOps) {
+/// Determine which FuncOp bbArgs are read and which are written. When run on a
+/// function with unknown ops, we conservatively assume that such ops bufferize
+/// to a read + write.
+static LogicalResult funcOpBbArgReadWriteAnalysis(FuncOp funcOp,
+                                                  OneShotAnalysisState &state) {
   FuncAnalysisState &funcState = getFuncAnalysisState(state);
-  auto funcOp = cast<func::FuncOp>(op);
 
   // If the function has no body, conservatively assume that all args are
   // read + written.
@@ -256,7 +221,7 @@ funcOpBbArgReadWriteAnalysis(Operation *op, AnalysisState &state,
     if (!bbArg.getType().isa<TensorType>())
       continue;
     bool isRead = state.isValueRead(bbArg);
-    bool isWritten = isValueWritten(bbArg, state, aliasInfo);
+    bool isWritten = state.isValueWritten(bbArg);
     if (state.getOptions().testAnalysisOnly)
       annotateFuncArgAccess(funcOp, bbArg, isRead, isWritten);
     if (isRead)
@@ -434,10 +399,6 @@ LogicalResult mlir::bufferization::runOneShotModuleBufferize(
   if (failed(getFuncOpsOrderedByCalls(moduleOp, orderedFuncOps, callerMap)))
     return failure();
 
-  // Collect bbArg/return value information after the analysis.
-  options.addPostAnalysisStep(aliasingFuncOpBBArgsAnalysis);
-  options.addPostAnalysisStep(funcOpBbArgReadWriteAnalysis);
-
   // Analyze ops.
   for (func::FuncOp funcOp : orderedFuncOps) {
     // No body => no analysis.
@@ -452,6 +413,11 @@ LogicalResult mlir::bufferization::runOneShotModuleBufferize(
 
     // Analyze funcOp.
     if (failed(analyzeOp(funcOp, analysisState)))
+      return failure();
+
+    // Run some extra function analyses.
+    if (failed(aliasingFuncOpBBArgsAnalysis(funcOp, analysisState)) ||
+        failed(funcOpBbArgReadWriteAnalysis(funcOp, analysisState)))
       return failure();
 
     // Mark op as fully analyzed.
