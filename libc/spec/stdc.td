@@ -474,6 +474,9 @@ def StdC : StandardSpec<"stdc"> {
       [
           Macro<"stderr">,
           Macro<"stdout">,
+          Macro<"_IOFBF">,
+          Macro<"_IOLBF">,
+          Macro<"_IONBF">,
       ], // Macros
       [ // Types
           SizeTType,
