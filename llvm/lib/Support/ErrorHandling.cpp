@@ -119,7 +119,10 @@ void llvm::report_fatal_error(const Twine &Reason, bool GenCrashDiag) {
   // files registered with RemoveFileOnSignal.
   sys::RunInterruptHandlers();
 
-  abort();
+  if (GenCrashDiag)
+    abort();
+  else
+    exit(126);
 }
 
 void llvm::install_bad_alloc_error_handler(fatal_error_handler_t handler,
