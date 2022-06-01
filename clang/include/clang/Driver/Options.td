@@ -1414,7 +1414,7 @@ defm async_exceptions: BoolFOption<"async-exceptions",
   PosFlag<SetTrue, [CC1Option], "Enable EH Asynchronous exceptions">, NegFlag<SetFalse>>;
 defm cxx_modules : BoolFOption<"cxx-modules",
   LangOpts<"CPlusPlusModules">, Default<cpp20.KeyPath>,
-  NegFlag<SetFalse, [CC1Option], "Disable">, PosFlag<SetTrue, [CC1Option], "Enable">,
+  NegFlag<SetFalse, [CC1Option], "Disable">, PosFlag<SetTrue, [], "Enable">,
   BothFlags<[NoXarchOption], " modules for C++">>,
   ShouldParseIf<cplusplus.KeyPath>;
 def fdebug_pass_arguments : Flag<["-"], "fdebug-pass-arguments">, Group<f_Group>;
