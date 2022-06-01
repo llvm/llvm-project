@@ -9,7 +9,7 @@ load("@bazel_skylib//lib:selects.bzl", "selects")
 
 package(
     default_visibility = ["//visibility:public"],
-    features = ["-header_modules"],
+    features = ["-use_header_modules"],
     licenses = ["notice"],
 )
 
