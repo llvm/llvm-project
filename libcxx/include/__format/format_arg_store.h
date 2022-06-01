@@ -17,8 +17,6 @@
 #include <__config>
 #include <__format/concepts.h>
 #include <__format/format_arg.h>
-#include <__iterator/data.h>
-#include <__iterator/size.h>
 #include <cstring>
 #include <string>
 #include <string_view>
@@ -173,13 +171,15 @@ _LIBCPP_HIDE_FROM_ABI basic_format_arg<_Context> __create_format_arg(_Tp&& __val
   else if constexpr (__arg == __arg_t::__unsigned_long_long)
     return basic_format_arg<_Context>{__arg, static_cast<unsigned long long>(__value)};
   else if constexpr (__arg == __arg_t::__string_view)
-    // When the _Traits or _Allocator are different an implicit conversion will
-    // fail.
-    //
-    // Note since the input can be an array use the non-member functions to
-    // extract the constructor arguments.
-    return basic_format_arg<_Context>{
-        __arg, basic_string_view<typename _Context::char_type>{_VSTD::data(__value), _VSTD::size(__value)}};
+    // Using std::size on a character array will add the NUL-terminator to the size.
+    if constexpr (is_array_v<remove_cvref_t<_Tp>>)
+      return basic_format_arg<_Context>{
+          __arg, basic_string_view<typename _Context::char_type>{__value, extent_v<remove_cvref_t<_Tp>> - 1}};
+    else
+      // When the _Traits or _Allocator are different an implicit conversion will
+      // fail.
+      return basic_format_arg<_Context>{
+          __arg, basic_string_view<typename _Context::char_type>{__value.data(), __value.size()}};
   else if constexpr (__arg == __arg_t::__ptr)
     return basic_format_arg<_Context>{__arg, static_cast<const void*>(__value)};
   else if constexpr (__arg == __arg_t::__handle)
