@@ -1354,10 +1354,6 @@ bool BinaryFunction::disassemble() {
                 ItrE = Relocations.lower_bound(Offset + Size);
            Itr != ItrE; ++Itr) {
         const Relocation &Relocation = Itr->second;
-        uint64_t SymbolValue = Relocation.Value - Relocation.Addend;
-        if (Relocation.isPCRelative())
-          SymbolValue += getAddress() + Relocation.Offset;
-
         int64_t Value = Relocation.Value;
         const bool Result = BC.MIB->replaceImmWithSymbolRef(
             Instruction, Relocation.Symbol, Relocation.Addend, Ctx.get(), Value,
