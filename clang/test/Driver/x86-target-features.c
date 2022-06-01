@@ -304,3 +304,14 @@
 // RUN: %clang --target=i386 -march=i386 -mno-crc32 %s -### 2>&1 | FileCheck -check-prefix=NO-CRC32 %s
 // CRC32: "-target-feature" "+crc32"
 // NO-CRC32: "-target-feature" "-crc32"
+
+// RUN: %clang --target=i386 -march=i386 -mharden-sls=return %s -### -o %t.o 2>&1 | FileCheck -check-prefixes=SLS-RET,NO-SLS %s
+// RUN: %clang --target=i386 -march=i386 -mharden-sls=indirect-jmp %s -### -o %t.o 2>&1 | FileCheck -check-prefixes=SLS-IJMP,NO-SLS %s
+// RUN: %clang --target=i386 -march=i386 -mharden-sls=none -mharden-sls=all %s -### -o %t.o 2>&1 | FileCheck -check-prefixes=SLS-IJMP,SLS-RET %s
+// RUN: %clang --target=i386 -march=i386 -mharden-sls=all -mharden-sls=none %s -### -o %t.o 2>&1 | FileCheck -check-prefix=NO-SLS %s
+// RUN: %clang --target=i386 -march=i386 -mharden-sls=return,indirect-jmp %s -### -o %t.o 2>&1 | FileCheck -check-prefix=BAD-SLS %s
+// NO-SLS-NOT: "+harden-sls-
+// SLS-RET-DAG: "-target-feature" "+harden-sls-ret"
+// SLS-IJMP-DAG: "-target-feature" "+harden-sls-ijmp"
+// NO-SLS-NOT: "+harden-sls-
+// BAD-SLS: unsupported argument '{{[^']+}}' to option '-mharden-sls='
