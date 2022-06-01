@@ -53,8 +53,6 @@ define <2 x i1> @rotl_ne_n1(<2 x i5> %x, <2 x i5> %y) {
   ret <2 x i1> %r
 }
 
-; TODO: We filter out vector constants with undef elts, but that isn't needed for this transform.
-
 define <2 x i1> @rotl_ne_n1_undef(<2 x i5> %x, <2 x i5> %y) {
 ; CHECK-LABEL: @rotl_ne_n1_undef(
 ; CHECK-NEXT:    [[R:%.*]] = icmp ne <2 x i5> [[X:%.*]], <i5 -1, i5 undef>
