@@ -110,8 +110,8 @@ function(tf_find_and_compile model default_url default_path test_model_generator
     tf_compile(${LLVM_ML_MODELS_ABSOLUTE} ${tag_set} ${signature_def_key} ${fname} ${cpp_class} ${hdr_file} ${obj_file})
   endif()
 
-  set(GeneratedMLSources ${GeneratedMLSources} ${GENERATED_HEADERS} PARENT_SCOPE)
+  set(GeneratedMLSources ${GeneratedMLSources} ${GENERATED_OBJS} ${GENERATED_HEADERS} PARENT_SCOPE)
   set(MLDeps ${MLDeps} tf_xla_runtime PARENT_SCOPE)
-  set(MLLinkDeps ${MLLinkDeps} tf_xla_runtime ${GENERATED_OBJS} PARENT_SCOPE)
+  set(MLLinkDeps ${MLLinkDeps} tf_xla_runtime PARENT_SCOPE)
   add_definitions(-DLLVM_HAVE_TF_AOT_${fname_allcaps})
 endfunction()
