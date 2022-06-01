@@ -480,6 +480,7 @@ bool UnwrappedLineParser::parseLevel(const FormatToken *OpeningBrace,
                                   : TT_Unknown;
   const bool IsPrecededByCommentOrPPDirective =
       !Style.RemoveBracesLLVM || precededByCommentOrPPDirective();
+  bool HasDoWhile = false;
   bool HasLabel = false;
   unsigned StatementCount = 0;
   bool SwitchLabelEncountered = false;
@@ -495,8 +496,9 @@ bool UnwrappedLineParser::parseLevel(const FormatToken *OpeningBrace,
       kind = tok::r_brace;
 
     auto ParseDefault = [this, OpeningBrace, IfKind, NextLevelLBracesType,
-                         &HasLabel, &StatementCount] {
+                         &HasDoWhile, &HasLabel, &StatementCount] {
       parseStructuralElement(IfKind, !OpeningBrace, NextLevelLBracesType,
+                             HasDoWhile ? nullptr : &HasDoWhile,
                              HasLabel ? nullptr : &HasLabel);
       ++StatementCount;
       assert(StatementCount > 0 && "StatementCount overflow!");
@@ -536,7 +538,7 @@ bool UnwrappedLineParser::parseLevel(const FormatToken *OpeningBrace,
           return false;
         }
         if (FormatTok->isNot(tok::r_brace) || StatementCount != 1 || HasLabel ||
-            IsPrecededByCommentOrPPDirective ||
+            HasDoWhile || IsPrecededByCommentOrPPDirective ||
             precededByCommentOrPPDirective()) {
           return false;
         }
@@ -1415,6 +1417,7 @@ void UnwrappedLineParser::readTokenWithJavaScriptASI() {
 void UnwrappedLineParser::parseStructuralElement(IfStmtKind *IfKind,
                                                  bool IsTopLevel,
                                                  TokenType NextLBracesType,
+                                                 bool *HasDoWhile,
                                                  bool *HasLabel) {
   if (Style.Language == FormatStyle::LK_TableGen &&
       FormatTok->is(tok::pp_include)) {
@@ -1476,6 +1479,8 @@ void UnwrappedLineParser::parseStructuralElement(IfStmtKind *IfKind,
       break;
     }
     parseDoWhile();
+    if (HasDoWhile)
+      *HasDoWhile = true;
     return;
   case tok::kw_switch:
     if (Style.isJavaScript() && Line->MustBeDeclaration) {
