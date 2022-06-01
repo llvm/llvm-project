@@ -277,6 +277,6 @@ let Definition = "thread" in {
     DefaultFalse,
     Desc<"If true, this thread will single-step and log execution.">;
   def MaxBacktraceDepth: Property<"max-backtrace-depth", "UInt64">,
-    DefaultUnsignedValue<300000>,
+    DefaultUnsignedValue<600000>,
     Desc<"Maximum number of frames to backtrace.">;
 }
