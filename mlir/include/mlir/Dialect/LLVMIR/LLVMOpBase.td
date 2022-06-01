@@ -286,6 +286,7 @@ class LLVM_IntrOpBase<Dialect dialect, string opName, string enumName,
   string resultPattern = !if(!gt(numResults, 1),
                              LLVM_IntrPatterns.structResult,
                              LLVM_IntrPatterns.result);
+  string llvmEnumName = enumName;                           
   let llvmBuilder = [{
     llvm::Module *module = builder.GetInsertBlock()->getModule();
     llvm::Function *fn = llvm::Intrinsic::getDeclaration(
