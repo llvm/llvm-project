@@ -474,6 +474,7 @@ cc_library(
         "//mlir:MathDialect",
         "//mlir:MathTransforms",
         "//mlir:Pass",
+        "//mlir:SCFDialect",
         "//mlir:TransformUtils",
         "//mlir:VectorOps",
         "//mlir:X86Vector",
