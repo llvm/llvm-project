@@ -396,8 +396,10 @@ define i32 @test30(i32 %A) {
 
 define <2 x i32> @test30vec(<2 x i32> %A) {
 ; CHECK-LABEL: @test30vec(
-; CHECK-NEXT:    [[TMP1:%.*]] = and <2 x i32> [[A:%.*]], <i32 -58312, i32 -58312>
-; CHECK-NEXT:    [[E:%.*]] = or <2 x i32> [[TMP1]], <i32 32962, i32 32962>
+; CHECK-NEXT:    [[C:%.*]] = and <2 x i32> [[A:%.*]], <i32 -65536, i32 -65536>
+; CHECK-NEXT:    [[B:%.*]] = and <2 x i32> [[A]], <i32 7224, i32 7224>
+; CHECK-NEXT:    [[D:%.*]] = or <2 x i32> [[B]], <i32 32962, i32 32962>
+; CHECK-NEXT:    [[E:%.*]] = or <2 x i32> [[D]], [[C]]
 ; CHECK-NEXT:    ret <2 x i32> [[E]]
 ;
   %B = or <2 x i32> %A, <i32 32962, i32 32962>
