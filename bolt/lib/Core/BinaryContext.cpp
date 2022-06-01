@@ -251,6 +251,14 @@ BinaryContext::createBinaryContext(const ObjectFile *File, bool IsPIC,
 
   BC->HasFixedLoadAddress = !IsPIC;
 
+  BC->SymbolicDisAsm = std::unique_ptr<MCDisassembler>(
+      BC->TheTarget->createMCDisassembler(*BC->STI, *BC->Ctx));
+
+  if (!BC->SymbolicDisAsm)
+    return createStringError(
+        make_error_code(std::errc::not_supported),
+        Twine("BOLT-ERROR: no disassembler info for target ", TripleName));
+
   return std::move(BC);
 }
 
