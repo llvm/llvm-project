@@ -70,7 +70,7 @@ TEST(DXCFile, ParsePartMissingOffsets) {
       FailedWithMessage("Reading structure out of file bounds"));
 }
 
-#if defined(__ARM__)
+#if defined(__arm__)
 TEST(DXCFile, DISABLED_ParsePartInvalidOffsets) {
 #else
 TEST(DXCFile, ParsePartInvalidOffsets) {
