@@ -180,22 +180,19 @@ std::string EVT::getEVTString() const {
 /// specified EVT.  For integer types, this returns an unsigned type.  Note
 /// that this will abort for types that cannot be represented.
 Type *EVT::getTypeForEVT(LLVMContext &Context) const {
-  // clang-format off
   switch (V.SimpleTy) {
   default:
     assert(isExtended() && "Type is not extended!");
     return LLVMTy;
   case MVT::isVoid:  return Type::getVoidTy(Context);
   case MVT::i1:      return Type::getInt1Ty(Context);
-  case MVT::i2:      return Type::getIntNTy(Context, 2);
-  case MVT::i4:      return Type::getIntNTy(Context, 4);
   case MVT::i8:      return Type::getInt8Ty(Context);
   case MVT::i16:     return Type::getInt16Ty(Context);
   case MVT::i32:     return Type::getInt32Ty(Context);
   case MVT::i64:     return Type::getInt64Ty(Context);
   case MVT::i128:    return IntegerType::get(Context, 128);
   case MVT::f16:     return Type::getHalfTy(Context);
-  case MVT::bf16:    return Type::getBFloatTy(Context);
+  case MVT::bf16:     return Type::getBFloatTy(Context);
   case MVT::f32:     return Type::getFloatTy(Context);
   case MVT::f64:     return Type::getDoubleTy(Context);
   case MVT::f80:     return Type::getX86_FP80Ty(Context);
@@ -232,10 +229,6 @@ Type *EVT::getTypeForEVT(LLVMContext &Context) const {
     return FixedVectorType::get(Type::getInt1Ty(Context), 512);
   case MVT::v1024i1:
     return FixedVectorType::get(Type::getInt1Ty(Context), 1024);
-  case MVT::v128i2:
-    return FixedVectorType::get(Type::getIntNTy(Context, 2), 128);
-  case MVT::v64i4:
-    return FixedVectorType::get(Type::getIntNTy(Context, 4), 64);
   case MVT::v1i8:
     return FixedVectorType::get(Type::getInt8Ty(Context), 1);
   case MVT::v2i8:
@@ -528,7 +521,6 @@ Type *EVT::getTypeForEVT(LLVMContext &Context) const {
     return ScalableVectorType::get(Type::getDoubleTy(Context), 8);
   case MVT::Metadata: return Type::getMetadataTy(Context);
   }
-  // clang-format on
 }
 
 /// Return the value type corresponding to the specified type.  This returns all

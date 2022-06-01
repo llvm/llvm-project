@@ -927,25 +927,25 @@ std::string Intrinsic::getNameNoUnnamedTypes(ID Id, ArrayRef<Type *> Tys) {
 enum IIT_Info {
   // Common values should be encoded with 0-15.
   IIT_Done = 0,
-  IIT_I1 = 1,
-  IIT_I8 = 2,
-  IIT_I16 = 3,
-  IIT_I32 = 4,
-  IIT_I64 = 5,
-  IIT_F16 = 6,
-  IIT_F32 = 7,
-  IIT_F64 = 8,
-  IIT_V2 = 9,
-  IIT_V4 = 10,
-  IIT_V8 = 11,
-  IIT_V16 = 12,
-  IIT_V32 = 13,
-  IIT_PTR = 14,
-  IIT_ARG = 15,
+  IIT_I1   = 1,
+  IIT_I8   = 2,
+  IIT_I16  = 3,
+  IIT_I32  = 4,
+  IIT_I64  = 5,
+  IIT_F16  = 6,
+  IIT_F32  = 7,
+  IIT_F64  = 8,
+  IIT_V2   = 9,
+  IIT_V4   = 10,
+  IIT_V8   = 11,
+  IIT_V16  = 12,
+  IIT_V32  = 13,
+  IIT_PTR  = 14,
+  IIT_ARG  = 15,
 
   // Values from 16+ are only encodable with the inefficient encoding.
-  IIT_V64 = 16,
-  IIT_MMX = 17,
+  IIT_V64  = 16,
+  IIT_MMX  = 17,
   IIT_TOKEN = 18,
   IIT_METADATA = 19,
   IIT_EMPTYSTRUCT = 20,
@@ -956,7 +956,7 @@ enum IIT_Info {
   IIT_EXTEND_ARG = 25,
   IIT_TRUNC_ARG = 26,
   IIT_ANYPTR = 27,
-  IIT_V1 = 28,
+  IIT_V1   = 28,
   IIT_VARARG = 29,
   IIT_HALF_VEC_ARG = 30,
   IIT_SAME_VEC_WIDTH_ARG = 31,
@@ -979,14 +979,12 @@ enum IIT_Info {
   IIT_BF16 = 48,
   IIT_STRUCT9 = 49,
   IIT_V256 = 50,
-  IIT_AMX = 51,
+  IIT_AMX  = 51,
   IIT_PPCF128 = 52,
   IIT_V3 = 53,
   IIT_EXTERNREF = 54,
   IIT_FUNCREF = 55,
   IIT_ANYPTR_TO_ELT = 56,
-  IIT_I2 = 57,
-  IIT_I4 = 58,
 };
 
 static void DecodeIITType(unsigned &NextElt, ArrayRef<unsigned char> Infos,
@@ -1038,12 +1036,6 @@ static void DecodeIITType(unsigned &NextElt, ArrayRef<unsigned char> Infos,
     return;
   case IIT_I1:
     OutputTable.push_back(IITDescriptor::get(IITDescriptor::Integer, 1));
-    return;
-  case IIT_I2:
-    OutputTable.push_back(IITDescriptor::get(IITDescriptor::Integer, 2));
-    return;
-  case IIT_I4:
-    OutputTable.push_back(IITDescriptor::get(IITDescriptor::Integer, 4));
     return;
   case IIT_I8:
     OutputTable.push_back(IITDescriptor::get(IITDescriptor::Integer, 8));

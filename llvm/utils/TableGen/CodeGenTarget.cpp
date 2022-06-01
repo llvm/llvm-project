@@ -53,12 +53,9 @@ StringRef llvm::getName(MVT::SimpleValueType T) {
 }
 
 StringRef llvm::getEnumName(MVT::SimpleValueType T) {
-  // clang-format off
   switch (T) {
   case MVT::Other:    return "MVT::Other";
   case MVT::i1:       return "MVT::i1";
-  case MVT::i2:       return "MVT::i2";
-  case MVT::i4:       return "MVT::i4";
   case MVT::i8:       return "MVT::i8";
   case MVT::i16:      return "MVT::i16";
   case MVT::i32:      return "MVT::i32";
@@ -91,8 +88,6 @@ StringRef llvm::getEnumName(MVT::SimpleValueType T) {
   case MVT::v256i1:   return "MVT::v256i1";
   case MVT::v512i1:   return "MVT::v512i1";
   case MVT::v1024i1:  return "MVT::v1024i1";
-  case MVT::v128i2:   return "MVT::v128i2";
-  case MVT::v64i4:    return "MVT::v64i4";
   case MVT::v1i8:     return "MVT::v1i8";
   case MVT::v2i8:     return "MVT::v2i8";
   case MVT::v4i8:     return "MVT::v4i8";
@@ -247,7 +242,6 @@ StringRef llvm::getEnumName(MVT::SimpleValueType T) {
   case MVT::externref: return "MVT::externref";
   default: llvm_unreachable("ILLEGAL VALUE TYPE!");
   }
-  // clang-format on
 }
 
 /// getQualifiedName - Return the name of the specified record, with a

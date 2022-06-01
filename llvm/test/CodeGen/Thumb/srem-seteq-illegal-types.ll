@@ -33,22 +33,18 @@ define i1 @test_srem_odd(i29 %X) nounwind {
 define i1 @test_srem_even(i4 %X) nounwind {
 ; CHECK-LABEL: test_srem_even:
 ; CHECK:       @ %bb.0:
-; CHECK-NEXT:    lsls r1, r0, #28
-; CHECK-NEXT:    asrs r1, r1, #28
-; CHECK-NEXT:    movs r2, #3
-; CHECK-NEXT:    muls r2, r1, r2
-; CHECK-NEXT:    lsrs r1, r2, #31
-; CHECK-NEXT:    lsrs r2, r2, #4
-; CHECK-NEXT:    adds r1, r2, r1
-; CHECK-NEXT:    movs r2, #6
-; CHECK-NEXT:    muls r2, r1, r2
-; CHECK-NEXT:    subs r0, r0, r2
-; CHECK-NEXT:    movs r1, #15
-; CHECK-NEXT:    ands r1, r0
+; CHECK-NEXT:    .save {r7, lr}
+; CHECK-NEXT:    push {r7, lr}
+; CHECK-NEXT:    lsls r0, r0, #28
+; CHECK-NEXT:    asrs r0, r0, #28
+; CHECK-NEXT:    movs r1, #6
+; CHECK-NEXT:    bl __aeabi_idivmod
 ; CHECK-NEXT:    subs r1, r1, #1
 ; CHECK-NEXT:    rsbs r0, r1, #0
 ; CHECK-NEXT:    adcs r0, r1
-; CHECK-NEXT:    bx lr
+; CHECK-NEXT:    pop {r7}
+; CHECK-NEXT:    pop {r1}
+; CHECK-NEXT:    bx r1
   %srem = srem i4 %X, 6
   %cmp = icmp eq i4 %srem, 1
   ret i1 %cmp
