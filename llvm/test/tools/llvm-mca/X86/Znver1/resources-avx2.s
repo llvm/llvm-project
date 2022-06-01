@@ -681,52 +681,52 @@ vpxor           (%rax), %ymm1, %ymm2
 # CHECK-NEXT:  1      8     0.50    *                   vpsignd	(%rax), %ymm1, %ymm2
 # CHECK-NEXT:  1      1     0.25                        vpsignw	%ymm0, %ymm1, %ymm2
 # CHECK-NEXT:  1      8     0.50    *                   vpsignw	(%rax), %ymm1, %ymm2
-# CHECK-NEXT:  1      1     0.25                        vpslld	$1, %ymm0, %ymm2
-# CHECK-NEXT:  1      2     1.00                        vpslld	%xmm0, %ymm1, %ymm2
-# CHECK-NEXT:  1      9     1.00    *                   vpslld	(%rax), %ymm1, %ymm2
+# CHECK-NEXT:  2      1     2.00                        vpslld	$1, %ymm0, %ymm2
+# CHECK-NEXT:  2      1     2.00                        vpslld	%xmm0, %ymm1, %ymm2
+# CHECK-NEXT:  2      8     2.00    *                   vpslld	(%rax), %ymm1, %ymm2
 # CHECK-NEXT:  1      2     1.00                        vpslldq	$1, %ymm1, %ymm2
-# CHECK-NEXT:  1      1     0.25                        vpsllq	$1, %ymm0, %ymm2
-# CHECK-NEXT:  1      2     1.00                        vpsllq	%xmm0, %ymm1, %ymm2
-# CHECK-NEXT:  1      9     1.00    *                   vpsllq	(%rax), %ymm1, %ymm2
-# CHECK-NEXT:  1      1     0.50                        vpsllvd	%xmm0, %xmm1, %xmm2
-# CHECK-NEXT:  1      8     0.50    *                   vpsllvd	(%rax), %xmm1, %xmm2
-# CHECK-NEXT:  1      1     0.50                        vpsllvd	%ymm0, %ymm1, %ymm2
-# CHECK-NEXT:  1      8     0.50    *                   vpsllvd	(%rax), %ymm1, %ymm2
-# CHECK-NEXT:  1      1     0.50                        vpsllvq	%xmm0, %xmm1, %xmm2
-# CHECK-NEXT:  1      8     0.50    *                   vpsllvq	(%rax), %xmm1, %xmm2
-# CHECK-NEXT:  1      1     0.50                        vpsllvq	%ymm0, %ymm1, %ymm2
-# CHECK-NEXT:  1      8     0.50    *                   vpsllvq	(%rax), %ymm1, %ymm2
-# CHECK-NEXT:  1      1     0.25                        vpsllw	$1, %ymm0, %ymm2
-# CHECK-NEXT:  1      2     1.00                        vpsllw	%xmm0, %ymm1, %ymm2
-# CHECK-NEXT:  1      9     1.00    *                   vpsllw	(%rax), %ymm1, %ymm2
-# CHECK-NEXT:  1      1     0.25                        vpsrad	$1, %ymm0, %ymm2
-# CHECK-NEXT:  1      2     1.00                        vpsrad	%xmm0, %ymm1, %ymm2
-# CHECK-NEXT:  1      9     1.00    *                   vpsrad	(%rax), %ymm1, %ymm2
-# CHECK-NEXT:  1      1     0.50                        vpsravd	%xmm0, %xmm1, %xmm2
-# CHECK-NEXT:  1      8     0.50    *                   vpsravd	(%rax), %xmm1, %xmm2
-# CHECK-NEXT:  1      1     0.50                        vpsravd	%ymm0, %ymm1, %ymm2
-# CHECK-NEXT:  1      8     0.50    *                   vpsravd	(%rax), %ymm1, %ymm2
-# CHECK-NEXT:  1      1     0.25                        vpsraw	$1, %ymm0, %ymm2
-# CHECK-NEXT:  1      2     1.00                        vpsraw	%xmm0, %ymm1, %ymm2
-# CHECK-NEXT:  1      9     1.00    *                   vpsraw	(%rax), %ymm1, %ymm2
-# CHECK-NEXT:  1      1     0.25                        vpsrld	$1, %ymm0, %ymm2
-# CHECK-NEXT:  1      2     1.00                        vpsrld	%xmm0, %ymm1, %ymm2
-# CHECK-NEXT:  1      9     1.00    *                   vpsrld	(%rax), %ymm1, %ymm2
+# CHECK-NEXT:  2      1     2.00                        vpsllq	$1, %ymm0, %ymm2
+# CHECK-NEXT:  2      1     2.00                        vpsllq	%xmm0, %ymm1, %ymm2
+# CHECK-NEXT:  2      8     2.00    *                   vpsllq	(%rax), %ymm1, %ymm2
+# CHECK-NEXT:  1      3     2.00                        vpsllvd	%xmm0, %xmm1, %xmm2
+# CHECK-NEXT:  1      10    2.00    *                   vpsllvd	(%rax), %xmm1, %xmm2
+# CHECK-NEXT:  2      3     4.00                        vpsllvd	%ymm0, %ymm1, %ymm2
+# CHECK-NEXT:  2      10    4.00    *                   vpsllvd	(%rax), %ymm1, %ymm2
+# CHECK-NEXT:  1      3     2.00                        vpsllvq	%xmm0, %xmm1, %xmm2
+# CHECK-NEXT:  1      10    2.00    *                   vpsllvq	(%rax), %xmm1, %xmm2
+# CHECK-NEXT:  2      3     4.00                        vpsllvq	%ymm0, %ymm1, %ymm2
+# CHECK-NEXT:  2      10    4.00    *                   vpsllvq	(%rax), %ymm1, %ymm2
+# CHECK-NEXT:  2      1     2.00                        vpsllw	$1, %ymm0, %ymm2
+# CHECK-NEXT:  2      1     2.00                        vpsllw	%xmm0, %ymm1, %ymm2
+# CHECK-NEXT:  2      8     2.00    *                   vpsllw	(%rax), %ymm1, %ymm2
+# CHECK-NEXT:  2      1     2.00                        vpsrad	$1, %ymm0, %ymm2
+# CHECK-NEXT:  2      1     2.00                        vpsrad	%xmm0, %ymm1, %ymm2
+# CHECK-NEXT:  2      8     2.00    *                   vpsrad	(%rax), %ymm1, %ymm2
+# CHECK-NEXT:  1      3     2.00                        vpsravd	%xmm0, %xmm1, %xmm2
+# CHECK-NEXT:  1      10    2.00    *                   vpsravd	(%rax), %xmm1, %xmm2
+# CHECK-NEXT:  2      3     4.00                        vpsravd	%ymm0, %ymm1, %ymm2
+# CHECK-NEXT:  2      10    4.00    *                   vpsravd	(%rax), %ymm1, %ymm2
+# CHECK-NEXT:  2      1     2.00                        vpsraw	$1, %ymm0, %ymm2
+# CHECK-NEXT:  2      1     2.00                        vpsraw	%xmm0, %ymm1, %ymm2
+# CHECK-NEXT:  2      8     2.00    *                   vpsraw	(%rax), %ymm1, %ymm2
+# CHECK-NEXT:  2      1     2.00                        vpsrld	$1, %ymm0, %ymm2
+# CHECK-NEXT:  2      1     2.00                        vpsrld	%xmm0, %ymm1, %ymm2
+# CHECK-NEXT:  2      8     2.00    *                   vpsrld	(%rax), %ymm1, %ymm2
 # CHECK-NEXT:  1      2     1.00                        vpsrldq	$1, %ymm1, %ymm2
-# CHECK-NEXT:  1      1     0.25                        vpsrlq	$1, %ymm0, %ymm2
-# CHECK-NEXT:  1      2     1.00                        vpsrlq	%xmm0, %ymm1, %ymm2
-# CHECK-NEXT:  1      9     1.00    *                   vpsrlq	(%rax), %ymm1, %ymm2
-# CHECK-NEXT:  1      1     0.50                        vpsrlvd	%xmm0, %xmm1, %xmm2
-# CHECK-NEXT:  1      8     0.50    *                   vpsrlvd	(%rax), %xmm1, %xmm2
-# CHECK-NEXT:  1      1     0.50                        vpsrlvd	%ymm0, %ymm1, %ymm2
-# CHECK-NEXT:  1      8     0.50    *                   vpsrlvd	(%rax), %ymm1, %ymm2
-# CHECK-NEXT:  1      1     0.50                        vpsrlvq	%xmm0, %xmm1, %xmm2
-# CHECK-NEXT:  1      8     0.50    *                   vpsrlvq	(%rax), %xmm1, %xmm2
-# CHECK-NEXT:  1      1     0.50                        vpsrlvq	%ymm0, %ymm1, %ymm2
-# CHECK-NEXT:  1      8     0.50    *                   vpsrlvq	(%rax), %ymm1, %ymm2
-# CHECK-NEXT:  1      1     0.25                        vpsrlw	$1, %ymm0, %ymm2
-# CHECK-NEXT:  1      2     1.00                        vpsrlw	%xmm0, %ymm1, %ymm2
-# CHECK-NEXT:  1      9     1.00    *                   vpsrlw	(%rax), %ymm1, %ymm2
+# CHECK-NEXT:  2      1     2.00                        vpsrlq	$1, %ymm0, %ymm2
+# CHECK-NEXT:  2      1     2.00                        vpsrlq	%xmm0, %ymm1, %ymm2
+# CHECK-NEXT:  2      8     2.00    *                   vpsrlq	(%rax), %ymm1, %ymm2
+# CHECK-NEXT:  1      3     2.00                        vpsrlvd	%xmm0, %xmm1, %xmm2
+# CHECK-NEXT:  1      10    2.00    *                   vpsrlvd	(%rax), %xmm1, %xmm2
+# CHECK-NEXT:  2      3     4.00                        vpsrlvd	%ymm0, %ymm1, %ymm2
+# CHECK-NEXT:  2      10    4.00    *                   vpsrlvd	(%rax), %ymm1, %ymm2
+# CHECK-NEXT:  1      3     2.00                        vpsrlvq	%xmm0, %xmm1, %xmm2
+# CHECK-NEXT:  1      10    2.00    *                   vpsrlvq	(%rax), %xmm1, %xmm2
+# CHECK-NEXT:  2      3     4.00                        vpsrlvq	%ymm0, %ymm1, %ymm2
+# CHECK-NEXT:  2      10    4.00    *                   vpsrlvq	(%rax), %ymm1, %ymm2
+# CHECK-NEXT:  2      1     2.00                        vpsrlw	$1, %ymm0, %ymm2
+# CHECK-NEXT:  2      1     2.00                        vpsrlw	%xmm0, %ymm1, %ymm2
+# CHECK-NEXT:  2      8     2.00    *                   vpsrlw	(%rax), %ymm1, %ymm2
 # CHECK-NEXT:  1      1     0.25                        vpsubb	%ymm0, %ymm1, %ymm2
 # CHECK-NEXT:  1      8     0.50    *                   vpsubb	(%rax), %ymm1, %ymm2
 # CHECK-NEXT:  1      1     0.25                        vpsubd	%ymm0, %ymm1, %ymm2
@@ -778,7 +778,7 @@ vpxor           (%rax), %ymm1, %ymm2
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]
-# CHECK-NEXT: 67.00  67.00   -      -      -      -      -     73.17  75.67  85.00  43.17   -
+# CHECK-NEXT: 67.00  67.00   -      -      -      -      -     71.17  123.67 105.00 41.17   -
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   Instructions:
@@ -1003,52 +1003,52 @@ vpxor           (%rax), %ymm1, %ymm2
 # CHECK-NEXT: 0.50   0.50    -      -      -      -      -     0.25   0.25   0.25   0.25    -     vpsignd	(%rax), %ymm1, %ymm2
 # CHECK-NEXT:  -      -      -      -      -      -      -     0.25   0.25   0.25   0.25    -     vpsignw	%ymm0, %ymm1, %ymm2
 # CHECK-NEXT: 0.50   0.50    -      -      -      -      -     0.25   0.25   0.25   0.25    -     vpsignw	(%rax), %ymm1, %ymm2
-# CHECK-NEXT:  -      -      -      -      -      -      -     0.25   0.25   0.25   0.25    -     vpslld	$1, %ymm0, %ymm2
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -     vpslld	%xmm0, %ymm1, %ymm2
-# CHECK-NEXT: 0.50   0.50    -      -      -      -      -      -      -     1.00    -      -     vpslld	(%rax), %ymm1, %ymm2
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     2.00    -      -     vpslld	$1, %ymm0, %ymm2
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     2.00    -      -     vpslld	%xmm0, %ymm1, %ymm2
+# CHECK-NEXT: 0.50   0.50    -      -      -      -      -      -      -     2.00    -      -     vpslld	(%rax), %ymm1, %ymm2
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -     vpslldq	$1, %ymm1, %ymm2
-# CHECK-NEXT:  -      -      -      -      -      -      -     0.25   0.25   0.25   0.25    -     vpsllq	$1, %ymm0, %ymm2
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -     vpsllq	%xmm0, %ymm1, %ymm2
-# CHECK-NEXT: 0.50   0.50    -      -      -      -      -      -      -     1.00    -      -     vpsllq	(%rax), %ymm1, %ymm2
-# CHECK-NEXT:  -      -      -      -      -      -      -      -     0.50   0.50    -      -     vpsllvd	%xmm0, %xmm1, %xmm2
-# CHECK-NEXT: 0.50   0.50    -      -      -      -      -      -     0.50   0.50    -      -     vpsllvd	(%rax), %xmm1, %xmm2
-# CHECK-NEXT:  -      -      -      -      -      -      -      -     0.50   0.50    -      -     vpsllvd	%ymm0, %ymm1, %ymm2
-# CHECK-NEXT: 0.50   0.50    -      -      -      -      -      -     0.50   0.50    -      -     vpsllvd	(%rax), %ymm1, %ymm2
-# CHECK-NEXT:  -      -      -      -      -      -      -      -     0.50   0.50    -      -     vpsllvq	%xmm0, %xmm1, %xmm2
-# CHECK-NEXT: 0.50   0.50    -      -      -      -      -      -     0.50   0.50    -      -     vpsllvq	(%rax), %xmm1, %xmm2
-# CHECK-NEXT:  -      -      -      -      -      -      -      -     0.50   0.50    -      -     vpsllvq	%ymm0, %ymm1, %ymm2
-# CHECK-NEXT: 0.50   0.50    -      -      -      -      -      -     0.50   0.50    -      -     vpsllvq	(%rax), %ymm1, %ymm2
-# CHECK-NEXT:  -      -      -      -      -      -      -     0.25   0.25   0.25   0.25    -     vpsllw	$1, %ymm0, %ymm2
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -     vpsllw	%xmm0, %ymm1, %ymm2
-# CHECK-NEXT: 0.50   0.50    -      -      -      -      -      -      -     1.00    -      -     vpsllw	(%rax), %ymm1, %ymm2
-# CHECK-NEXT:  -      -      -      -      -      -      -     0.25   0.25   0.25   0.25    -     vpsrad	$1, %ymm0, %ymm2
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -     vpsrad	%xmm0, %ymm1, %ymm2
-# CHECK-NEXT: 0.50   0.50    -      -      -      -      -      -      -     1.00    -      -     vpsrad	(%rax), %ymm1, %ymm2
-# CHECK-NEXT:  -      -      -      -      -      -      -      -     0.50   0.50    -      -     vpsravd	%xmm0, %xmm1, %xmm2
-# CHECK-NEXT: 0.50   0.50    -      -      -      -      -      -     0.50   0.50    -      -     vpsravd	(%rax), %xmm1, %xmm2
-# CHECK-NEXT:  -      -      -      -      -      -      -      -     0.50   0.50    -      -     vpsravd	%ymm0, %ymm1, %ymm2
-# CHECK-NEXT: 0.50   0.50    -      -      -      -      -      -     0.50   0.50    -      -     vpsravd	(%rax), %ymm1, %ymm2
-# CHECK-NEXT:  -      -      -      -      -      -      -     0.25   0.25   0.25   0.25    -     vpsraw	$1, %ymm0, %ymm2
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -     vpsraw	%xmm0, %ymm1, %ymm2
-# CHECK-NEXT: 0.50   0.50    -      -      -      -      -      -      -     1.00    -      -     vpsraw	(%rax), %ymm1, %ymm2
-# CHECK-NEXT:  -      -      -      -      -      -      -     0.25   0.25   0.25   0.25    -     vpsrld	$1, %ymm0, %ymm2
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -     vpsrld	%xmm0, %ymm1, %ymm2
-# CHECK-NEXT: 0.50   0.50    -      -      -      -      -      -      -     1.00    -      -     vpsrld	(%rax), %ymm1, %ymm2
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     2.00    -      -     vpsllq	$1, %ymm0, %ymm2
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     2.00    -      -     vpsllq	%xmm0, %ymm1, %ymm2
+# CHECK-NEXT: 0.50   0.50    -      -      -      -      -      -      -     2.00    -      -     vpsllq	(%rax), %ymm1, %ymm2
+# CHECK-NEXT:  -      -      -      -      -      -      -      -     2.00    -      -      -     vpsllvd	%xmm0, %xmm1, %xmm2
+# CHECK-NEXT: 0.50   0.50    -      -      -      -      -      -     2.00    -      -      -     vpsllvd	(%rax), %xmm1, %xmm2
+# CHECK-NEXT:  -      -      -      -      -      -      -      -     4.00    -      -      -     vpsllvd	%ymm0, %ymm1, %ymm2
+# CHECK-NEXT: 0.50   0.50    -      -      -      -      -      -     4.00    -      -      -     vpsllvd	(%rax), %ymm1, %ymm2
+# CHECK-NEXT:  -      -      -      -      -      -      -      -     2.00    -      -      -     vpsllvq	%xmm0, %xmm1, %xmm2
+# CHECK-NEXT: 0.50   0.50    -      -      -      -      -      -     2.00    -      -      -     vpsllvq	(%rax), %xmm1, %xmm2
+# CHECK-NEXT:  -      -      -      -      -      -      -      -     4.00    -      -      -     vpsllvq	%ymm0, %ymm1, %ymm2
+# CHECK-NEXT: 0.50   0.50    -      -      -      -      -      -     4.00    -      -      -     vpsllvq	(%rax), %ymm1, %ymm2
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     2.00    -      -     vpsllw	$1, %ymm0, %ymm2
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     2.00    -      -     vpsllw	%xmm0, %ymm1, %ymm2
+# CHECK-NEXT: 0.50   0.50    -      -      -      -      -      -      -     2.00    -      -     vpsllw	(%rax), %ymm1, %ymm2
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     2.00    -      -     vpsrad	$1, %ymm0, %ymm2
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     2.00    -      -     vpsrad	%xmm0, %ymm1, %ymm2
+# CHECK-NEXT: 0.50   0.50    -      -      -      -      -      -      -     2.00    -      -     vpsrad	(%rax), %ymm1, %ymm2
+# CHECK-NEXT:  -      -      -      -      -      -      -      -     2.00    -      -      -     vpsravd	%xmm0, %xmm1, %xmm2
+# CHECK-NEXT: 0.50   0.50    -      -      -      -      -      -     2.00    -      -      -     vpsravd	(%rax), %xmm1, %xmm2
+# CHECK-NEXT:  -      -      -      -      -      -      -      -     4.00    -      -      -     vpsravd	%ymm0, %ymm1, %ymm2
+# CHECK-NEXT: 0.50   0.50    -      -      -      -      -      -     4.00    -      -      -     vpsravd	(%rax), %ymm1, %ymm2
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     2.00    -      -     vpsraw	$1, %ymm0, %ymm2
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     2.00    -      -     vpsraw	%xmm0, %ymm1, %ymm2
+# CHECK-NEXT: 0.50   0.50    -      -      -      -      -      -      -     2.00    -      -     vpsraw	(%rax), %ymm1, %ymm2
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     2.00    -      -     vpsrld	$1, %ymm0, %ymm2
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     2.00    -      -     vpsrld	%xmm0, %ymm1, %ymm2
+# CHECK-NEXT: 0.50   0.50    -      -      -      -      -      -      -     2.00    -      -     vpsrld	(%rax), %ymm1, %ymm2
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -     vpsrldq	$1, %ymm1, %ymm2
-# CHECK-NEXT:  -      -      -      -      -      -      -     0.25   0.25   0.25   0.25    -     vpsrlq	$1, %ymm0, %ymm2
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -     vpsrlq	%xmm0, %ymm1, %ymm2
-# CHECK-NEXT: 0.50   0.50    -      -      -      -      -      -      -     1.00    -      -     vpsrlq	(%rax), %ymm1, %ymm2
-# CHECK-NEXT:  -      -      -      -      -      -      -      -     0.50   0.50    -      -     vpsrlvd	%xmm0, %xmm1, %xmm2
-# CHECK-NEXT: 0.50   0.50    -      -      -      -      -      -     0.50   0.50    -      -     vpsrlvd	(%rax), %xmm1, %xmm2
-# CHECK-NEXT:  -      -      -      -      -      -      -      -     0.50   0.50    -      -     vpsrlvd	%ymm0, %ymm1, %ymm2
-# CHECK-NEXT: 0.50   0.50    -      -      -      -      -      -     0.50   0.50    -      -     vpsrlvd	(%rax), %ymm1, %ymm2
-# CHECK-NEXT:  -      -      -      -      -      -      -      -     0.50   0.50    -      -     vpsrlvq	%xmm0, %xmm1, %xmm2
-# CHECK-NEXT: 0.50   0.50    -      -      -      -      -      -     0.50   0.50    -      -     vpsrlvq	(%rax), %xmm1, %xmm2
-# CHECK-NEXT:  -      -      -      -      -      -      -      -     0.50   0.50    -      -     vpsrlvq	%ymm0, %ymm1, %ymm2
-# CHECK-NEXT: 0.50   0.50    -      -      -      -      -      -     0.50   0.50    -      -     vpsrlvq	(%rax), %ymm1, %ymm2
-# CHECK-NEXT:  -      -      -      -      -      -      -     0.25   0.25   0.25   0.25    -     vpsrlw	$1, %ymm0, %ymm2
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -     vpsrlw	%xmm0, %ymm1, %ymm2
-# CHECK-NEXT: 0.50   0.50    -      -      -      -      -      -      -     1.00    -      -     vpsrlw	(%rax), %ymm1, %ymm2
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     2.00    -      -     vpsrlq	$1, %ymm0, %ymm2
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     2.00    -      -     vpsrlq	%xmm0, %ymm1, %ymm2
+# CHECK-NEXT: 0.50   0.50    -      -      -      -      -      -      -     2.00    -      -     vpsrlq	(%rax), %ymm1, %ymm2
+# CHECK-NEXT:  -      -      -      -      -      -      -      -     2.00    -      -      -     vpsrlvd	%xmm0, %xmm1, %xmm2
+# CHECK-NEXT: 0.50   0.50    -      -      -      -      -      -     2.00    -      -      -     vpsrlvd	(%rax), %xmm1, %xmm2
+# CHECK-NEXT:  -      -      -      -      -      -      -      -     4.00    -      -      -     vpsrlvd	%ymm0, %ymm1, %ymm2
+# CHECK-NEXT: 0.50   0.50    -      -      -      -      -      -     4.00    -      -      -     vpsrlvd	(%rax), %ymm1, %ymm2
+# CHECK-NEXT:  -      -      -      -      -      -      -      -     2.00    -      -      -     vpsrlvq	%xmm0, %xmm1, %xmm2
+# CHECK-NEXT: 0.50   0.50    -      -      -      -      -      -     2.00    -      -      -     vpsrlvq	(%rax), %xmm1, %xmm2
+# CHECK-NEXT:  -      -      -      -      -      -      -      -     4.00    -      -      -     vpsrlvq	%ymm0, %ymm1, %ymm2
+# CHECK-NEXT: 0.50   0.50    -      -      -      -      -      -     4.00    -      -      -     vpsrlvq	(%rax), %ymm1, %ymm2
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     2.00    -      -     vpsrlw	$1, %ymm0, %ymm2
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     2.00    -      -     vpsrlw	%xmm0, %ymm1, %ymm2
+# CHECK-NEXT: 0.50   0.50    -      -      -      -      -      -      -     2.00    -      -     vpsrlw	(%rax), %ymm1, %ymm2
 # CHECK-NEXT:  -      -      -      -      -      -      -     0.25   0.25   0.25   0.25    -     vpsubb	%ymm0, %ymm1, %ymm2
 # CHECK-NEXT: 0.50   0.50    -      -      -      -      -     0.25   0.25   0.25   0.25    -     vpsubb	(%rax), %ymm1, %ymm2
 # CHECK-NEXT:  -      -      -      -      -      -      -     0.25   0.25   0.25   0.25    -     vpsubd	%ymm0, %ymm1, %ymm2
