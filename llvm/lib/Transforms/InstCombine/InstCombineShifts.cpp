@@ -1010,7 +1010,7 @@ Instruction *InstCombinerImpl::visitShl(BinaryOperator &I) {
     Constant *C2;
     Value *X;
     // (C2 << X) << C1 --> (C2 << C1) << X
-    if (match(Op0, m_OneUse(m_Shl(m_Constant(C2), m_Value(X)))))
+    if (match(Op0, m_Shl(m_Constant(C2), m_Value(X))))
       return BinaryOperator::CreateShl(ConstantExpr::getShl(C2, C1), X);
 
     // (X * C2) << C1 --> X * (C2 << C1)
