@@ -265,19 +265,6 @@ VPBasicBlock::createEmptyBasicBlock(VPTransformState::CFGState &CFG) {
     auto &PredVPSuccessors = PredVPBB->getSuccessors();
     BasicBlock *PredBB = CFG.VPBB2IRBB[PredVPBB];
 
-    // In outer loop vectorization scenario, the predecessor BBlock may not yet
-    // be visited(backedge). Mark the VPBasicBlock for fixup at the end of
-    // vectorization. We do not encounter this case in inner loop vectorization
-    // as we start out by building a loop skeleton with the vector loop header
-    // and latch blocks. As a result, we never enter this function for the
-    // header block in the non VPlan-native path.
-    if (!PredBB) {
-      assert(EnableVPlanNativePath &&
-             "Unexpected null predecessor in non VPlan-native path");
-      CFG.VPBBsToFix.push_back(PredVPBB);
-      continue;
-    }
-
     assert(PredBB && "Predecessor basic-block not found building successor.");
     auto *PredBBTerminator = PredBB->getTerminator();
     LLVM_DEBUG(dbgs() << "LV: draw edge from" << PredBB->getName() << '\n');
@@ -967,24 +954,6 @@ void VPlan::execute(VPTransformState *State) {
   // Generate code in the loop pre-header and body.
   for (VPBlockBase *Block : depth_first(Entry))
     Block->execute(State);
-
-  // Setup branch terminator successors for VPBBs in VPBBsToFix based on
-  // VPBB's successors.
-  for (auto VPBB : State->CFG.VPBBsToFix) {
-    assert(EnableVPlanNativePath &&
-           "Unexpected VPBBsToFix in non VPlan-native path");
-    BasicBlock *BB = State->CFG.VPBB2IRBB[VPBB];
-    assert(BB && "Unexpected null basic block for VPBB");
-
-    unsigned Idx = 0;
-    auto *BBTerminator = BB->getTerminator();
-
-    for (VPBlockBase *SuccVPBlock : VPBB->getHierarchicalSuccessors()) {
-      VPBasicBlock *SuccVPBB = SuccVPBlock->getEntryBasicBlock();
-      BBTerminator->setSuccessor(Idx, State->CFG.VPBB2IRBB[SuccVPBB]);
-      ++Idx;
-    }
-  }
 
   VPBasicBlock *LatchVPBB = getVectorLoopRegion()->getExitingBasicBlock();
   BasicBlock *VectorLatchBB = State->CFG.VPBB2IRBB[LatchVPBB];
