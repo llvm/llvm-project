@@ -24267,12 +24267,10 @@ static SDValue LowerVSETCC(SDValue Op, const X86Subtarget &Subtarget,
       // Since SSE has no unsigned integer comparisons, we need to flip the sign
       // bits of the inputs before performing those operations. The lower
       // compare is always unsigned.
-      SDValue SB;
-      if (FlipSigns) {
-        SB = DAG.getConstant(0x8000000080000000ULL, dl, MVT::v2i64);
-      } else {
-        SB = DAG.getConstant(0x0000000080000000ULL, dl, MVT::v2i64);
-      }
+      SDValue SB = DAG.getConstant(FlipSigns ? 0x8000000080000000ULL
+                                             : 0x0000000080000000ULL,
+                                   dl, MVT::v2i64);
+
       Op0 = DAG.getNode(ISD::XOR, dl, MVT::v2i64, Op0, SB);
       Op1 = DAG.getNode(ISD::XOR, dl, MVT::v2i64, Op1, SB);
 
