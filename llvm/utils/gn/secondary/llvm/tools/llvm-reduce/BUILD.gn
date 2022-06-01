@@ -35,6 +35,7 @@ executable("llvm-reduce") {
     "deltas/ReduceOperandsSkip.cpp",
     "deltas/ReduceOperandsToArgs.cpp",
     "deltas/ReduceSpecialGlobals.cpp",
+    "deltas/ReduceVirtualRegisters.cpp",
     "llvm-reduce.cpp",
   ]
 }
