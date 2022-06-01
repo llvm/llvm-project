@@ -1,7 +1,7 @@
 ; RUN: llc -mtriple=aarch64-linux-gnu -mattr=+sve < %s | FileCheck %s
 ; RUN: llc -O0 -mtriple=aarch64-linux-gnu -mattr=+sve < %s | FileCheck %s
-; RUN: llc -mtriple=aarch64-linux-gnu -mattr=+streaming-sve < %s | FileCheck %s
-; RUN: llc -O0 -mtriple=aarch64-linux-gnu -mattr=+streaming-sve < %s | FileCheck %s
+; RUN: llc -mtriple=aarch64-linux-gnu -mattr=+sme < %s | FileCheck %s
+; RUN: llc -O0 -mtriple=aarch64-linux-gnu -mattr=+sme < %s | FileCheck %s
 
 ;
 ; ST1B

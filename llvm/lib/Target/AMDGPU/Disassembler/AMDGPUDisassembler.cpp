@@ -18,6 +18,8 @@
 
 #include "Disassembler/AMDGPUDisassembler.h"
 #include "MCTargetDesc/AMDGPUMCTargetDesc.h"
+#include "SIDefines.h"
+#include "SIRegisterInfo.h"
 #include "TargetInfo/AMDGPUTargetInfo.h"
 #include "Utils/AMDGPUBaseInfo.h"
 #include "llvm-c/DisassemblerTypes.h"
@@ -593,8 +595,10 @@ DecodeStatus AMDGPUDisassembler::getInstruction(MCInst &MI, uint64_t &Size,
         Res = MCDisassembler::Fail;
       } else {
         for (unsigned i = 0; i < NSAArgs; ++i) {
-          MI.insert(MI.begin() + VAddr0Idx + 1 + i,
-                    decodeOperand_VGPR_32(Bytes[i]));
+          const unsigned VAddrIdx = VAddr0Idx + 1 + i;
+          auto VAddrRCID = MCII->get(MI.getOpcode()).OpInfo[VAddrIdx].RegClass;
+          MI.insert(MI.begin() + VAddrIdx,
+                    createRegOperand(VAddrRCID, Bytes[i]));
         }
         Bytes = Bytes.slice(4 * NSAWords);
       }
@@ -741,7 +745,7 @@ DecodeStatus AMDGPUDisassembler::convertMIMGInst(MCInst &MI) const {
   bool IsNSA = false;
   unsigned AddrSize = Info->VAddrDwords;
 
-  if (STI.getFeatureBits()[AMDGPU::FeatureGFX10]) {
+  if (isGFX10Plus()) {
     unsigned DimIdx =
         AMDGPU::getNamedOperandIdx(MI.getOpcode(), AMDGPU::OpName::dim);
     int A16Idx =
@@ -753,7 +757,8 @@ DecodeStatus AMDGPUDisassembler::convertMIMGInst(MCInst &MI) const {
     AddrSize =
         AMDGPU::getAddrSizeMIMGOp(BaseOpcode, Dim, IsA16, AMDGPU::hasG16(STI));
 
-    IsNSA = Info->MIMGEncoding == AMDGPU::MIMGEncGfx10NSA;
+    IsNSA = Info->MIMGEncoding == AMDGPU::MIMGEncGfx10NSA ||
+            Info->MIMGEncoding == AMDGPU::MIMGEncGfx11NSA;
     if (!IsNSA) {
       if (AddrSize > 8)
         AddrSize = 16;
@@ -804,9 +809,9 @@ DecodeStatus AMDGPUDisassembler::convertMIMGInst(MCInst &MI) const {
     }
   }
 
+  // If not using NSA on GFX10+, widen address register to correct size.
   unsigned NewVAddr0 = AMDGPU::NoRegister;
-  if (STI.getFeatureBits()[AMDGPU::FeatureGFX10] && !IsNSA &&
-      AddrSize != Info->VAddrDwords) {
+  if (isGFX10Plus() && !IsNSA && AddrSize != Info->VAddrDwords) {
     unsigned VAddr0 = MI.getOperand(VAddr0Idx).getReg();
     unsigned VAddrSub0 = MRI.getSubReg(VAddr0, AMDGPU::sub0);
     VAddr0 = (VAddrSub0 != 0) ? VAddrSub0 : VAddr0;

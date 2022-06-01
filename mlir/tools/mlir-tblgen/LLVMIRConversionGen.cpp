@@ -377,6 +377,20 @@ static bool emitEnumConversionDefs(const RecordKeeper &recordKeeper,
   return false;
 }
 
+static void emitIntrOpPair(const Record &record, raw_ostream &os) {
+  auto op = tblgen::Operator(record);
+  os << "{llvm::Intrinsic::" << record.getValueAsString("llvmEnumName") << ", "
+     << op.getQualCppClassName() << "::getOperationName()},\n";
+}
+
+static bool emitIntrOpPairs(const RecordKeeper &recordKeeper, raw_ostream &os) {
+  for (const auto *def :
+       recordKeeper.getAllDerivedDefinitions("LLVM_IntrOpBase"))
+    emitIntrOpPair(*def, os);
+
+  return false;
+}
+
 static mlir::GenRegistration
     genLLVMIRConversions("gen-llvmir-conversions",
                          "Generate LLVM IR conversions", emitBuilders);
@@ -390,3 +404,8 @@ static mlir::GenRegistration
     genEnumFromLLVMConversion("gen-enum-from-llvmir-conversions",
                               "Generate conversions of EnumAttrs from LLVM IR",
                               emitEnumConversionDefs</*ConvertTo=*/false>);
+
+static mlir::GenRegistration
+    genLLVMIntrinsicToOpPairs("gen-llvmintrinsic-to-llvmirop-pairs",
+                              "Generate LLVM intrinsic to LLVMIR op pairs",
+                              emitIntrOpPairs);

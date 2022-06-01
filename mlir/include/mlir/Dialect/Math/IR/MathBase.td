@@ -13,7 +13,21 @@ def Math_Dialect : Dialect {
   let cppNamespace = "::mlir::math";
   let description = [{
     The math dialect is intended to hold mathematical operations on integer and
-    floating type beyond simple arithmetics.
+    floating types beyond simple arithmetics. Each operation works on scalar, vector
+    or tensor type. On vector and tensor type operations apply elementwise unless
+    explicitly specified otherwise. As an example, the floating point absolute value
+    can be expressed as:
+
+    ```mlir
+    // Scalar absolute value.
+    %a = math.abs %b : f64
+    
+    // Vector elementwise absolute value.
+    %f = math.abs %g : vector<4xf32>
+
+    // Tensor elementwise absolute value.
+    %x = math.abs %y : tensor<4x?xf8>
+    ```
   }];
   let hasConstantMaterializer = 1;
   let emitAccessorPrefix = kEmitAccessorPrefix_Prefixed;

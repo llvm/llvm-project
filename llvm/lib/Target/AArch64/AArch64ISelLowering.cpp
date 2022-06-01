@@ -289,7 +289,7 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
       addQRTypeForNEON(MVT::v8bf16);
   }
 
-  if (Subtarget->hasSVE() || Subtarget->hasStreamingSVE()) {
+  if (Subtarget->hasSVE() || Subtarget->hasSME()) {
     // Add legal sve predicate types
     addRegisterClass(MVT::nxv2i1, &AArch64::PPRRegClass);
     addRegisterClass(MVT::nxv4i1, &AArch64::PPRRegClass);
@@ -18867,8 +18867,7 @@ static SDValue performBSPExpandForSVE(SDNode *N, SelectionDAG &DAG,
   EVT VT = N->getValueType(0);
 
   // Don't expand for SVE2
-  if (!VT.isScalableVector() || Subtarget->hasSVE2() ||
-      Subtarget->hasStreamingSVE())
+  if (!VT.isScalableVector() || Subtarget->hasSVE2() || Subtarget->hasSME())
     return SDValue();
 
   // Don't expand for NEON

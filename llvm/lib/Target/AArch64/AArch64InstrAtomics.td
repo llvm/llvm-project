@@ -27,13 +27,6 @@ def : Pat<(atomic_fence (timm), (timm)), (DMB (i32 0xb))>;
 // supported, but when they're relaxed and anything can be used, all the
 // standard modes would be valid and may give efficiency gains.
 
-// A atomic load operation that actually needs acquire semantics.
-class acquiring_load<PatFrag base>
-  : PatFrag<(ops node:$ptr), (base node:$ptr)> {
-  let IsAtomic = 1;
-  let IsAtomicOrderingAcquireOrStronger = 1;
-}
-
 // An atomic load operation that does not need either acquire or release
 // semantics.
 class relaxed_load<PatFrag base>
@@ -42,7 +35,35 @@ class relaxed_load<PatFrag base>
   let IsAtomicOrderingAcquireOrStronger = 0;
 }
 
+// A atomic load operation that actually needs acquire semantics.
+class acquiring_load<PatFrag base>
+  : PatFrag<(ops node:$ptr), (base node:$ptr)> {
+  let IsAtomic = 1;
+  let IsAtomicOrderingAcquire = 1;
+}
+
+// An atomic load operation that needs sequential consistency.
+class seq_cst_load<PatFrag base>
+  : PatFrag<(ops node:$ptr), (base node:$ptr)> {
+  let IsAtomic = 1;
+  let IsAtomicOrderingSequentiallyConsistent = 1;
+}
+
+// RCPC extension, currently opt-in under a separate feature.
+let Predicates = [HasLDAPR] in {
+  // v8.3 Release Consistent Processor Consistent support, optional in v8.2.
+  // 8-bit loads
+  def : Pat<(acquiring_load<atomic_load_8> GPR64sp:$ptr), (LDAPRB GPR64sp:$ptr)>;
+  // 16-bit loads
+  def : Pat<(acquiring_load<atomic_load_16> GPR64sp:$ptr), (LDAPRH GPR64sp:$ptr)>;
+  // 32-bit loads
+  def : Pat<(acquiring_load<atomic_load_32> GPR64sp:$ptr), (LDAPRW GPR64sp:$ptr)>;
+  // 64-bit loads
+  def : Pat<(acquiring_load<atomic_load_64> GPR64sp:$ptr), (LDAPRX GPR64sp:$ptr)>;
+}
+
 // 8-bit loads
+def : Pat<(seq_cst_load<atomic_load_8>  GPR64sp:$ptr), (LDARB GPR64sp:$ptr)>;
 def : Pat<(acquiring_load<atomic_load_8>  GPR64sp:$ptr), (LDARB GPR64sp:$ptr)>;
 def : Pat<(relaxed_load<atomic_load_8> (ro_Windexed8 GPR64sp:$Rn, GPR32:$Rm,
                                                      ro_Wextend8:$offset)),
@@ -58,6 +79,7 @@ def : Pat<(relaxed_load<atomic_load_8>
           (LDURBBi GPR64sp:$Rn, simm9:$offset)>;
 
 // 16-bit loads
+def : Pat<(seq_cst_load<atomic_load_16> GPR64sp:$ptr), (LDARH GPR64sp:$ptr)>;
 def : Pat<(acquiring_load<atomic_load_16> GPR64sp:$ptr), (LDARH GPR64sp:$ptr)>;
 def : Pat<(relaxed_load<atomic_load_16> (ro_Windexed16 GPR64sp:$Rn, GPR32:$Rm,
                                                        ro_Wextend16:$extend)),
@@ -73,6 +95,7 @@ def : Pat<(relaxed_load<atomic_load_16>
           (LDURHHi GPR64sp:$Rn, simm9:$offset)>;
 
 // 32-bit loads
+def : Pat<(seq_cst_load<atomic_load_32> GPR64sp:$ptr), (LDARW GPR64sp:$ptr)>;
 def : Pat<(acquiring_load<atomic_load_32> GPR64sp:$ptr), (LDARW GPR64sp:$ptr)>;
 def : Pat<(relaxed_load<atomic_load_32> (ro_Windexed32 GPR64sp:$Rn, GPR32:$Rm,
                                                        ro_Wextend32:$extend)),
@@ -88,6 +111,7 @@ def : Pat<(relaxed_load<atomic_load_32>
           (LDURWi GPR64sp:$Rn, simm9:$offset)>;
 
 // 64-bit loads
+def : Pat<(seq_cst_load<atomic_load_64> GPR64sp:$ptr), (LDARX GPR64sp:$ptr)>;
 def : Pat<(acquiring_load<atomic_load_64> GPR64sp:$ptr), (LDARX GPR64sp:$ptr)>;
 def : Pat<(relaxed_load<atomic_load_64> (ro_Windexed64 GPR64sp:$Rn, GPR32:$Rm,
                                                        ro_Wextend64:$extend)),

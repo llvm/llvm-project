@@ -182,7 +182,20 @@
       {
         "command": "mlir.restart",
         "title": "mlir: Restart language server"
+      },
+      {
+        "command": "mlir.viewPDLLOutput",
+        "title": "mlir-pdll: View PDLL output"
       }
-    ]
+    ],
+    "menus": {
+      "editor/context": [
+        {
+          "command": "mlir.viewPDLLOutput",
+          "group": "z_commands",
+          "when": "editorLangId == pdll"
+        }
+      ]
+    }
   }
 }

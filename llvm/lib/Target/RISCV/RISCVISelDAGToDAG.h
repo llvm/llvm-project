@@ -24,8 +24,9 @@ class RISCVDAGToDAGISel : public SelectionDAGISel {
   const RISCVSubtarget *Subtarget = nullptr;
 
 public:
-  explicit RISCVDAGToDAGISel(RISCVTargetMachine &TargetMachine)
-      : SelectionDAGISel(TargetMachine) {}
+  explicit RISCVDAGToDAGISel(RISCVTargetMachine &TargetMachine,
+                             CodeGenOpt::Level OptLevel)
+      : SelectionDAGISel(TargetMachine, OptLevel) {}
 
   StringRef getPassName() const override {
     return "RISCV DAG->DAG Pattern Instruction Selection";
