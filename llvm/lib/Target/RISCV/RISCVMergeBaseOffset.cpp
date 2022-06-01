@@ -95,7 +95,7 @@ bool RISCVMergeBaseOffsetOpt::detectLuiAddiGlobal(MachineInstr &HiLUI,
       !MRI->hasOneUse(HiLUI.getOperand(0).getReg()))
     return false;
   Register HiLuiDestReg = HiLUI.getOperand(0).getReg();
-  LoADDI = MRI->use_begin(HiLuiDestReg)->getParent();
+  LoADDI = &*MRI->use_instr_begin(HiLuiDestReg);
   if (LoADDI->getOpcode() != RISCV::ADDI ||
       LoADDI->getOperand(2).getTargetFlags() != RISCVII::MO_LO ||
       LoADDI->getOperand(2).getType() != MachineOperand::MO_GlobalAddress ||
@@ -197,7 +197,7 @@ bool RISCVMergeBaseOffsetOpt::detectAndFoldOffset(MachineInstr &HiLUI,
   Register DestReg = LoADDI.getOperand(0).getReg();
   assert(MRI->hasOneUse(DestReg) && "expected one use for LoADDI");
   // LoADDI has only one use.
-  MachineInstr &Tail = *MRI->use_begin(DestReg)->getParent();
+  MachineInstr &Tail = *MRI->use_instr_begin(DestReg);
   switch (Tail.getOpcode()) {
   default:
     LLVM_DEBUG(dbgs() << "Don't know how to get offset from this instr:"
