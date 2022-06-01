@@ -2,9 +2,9 @@
 # See https://llvm.org/LICENSE.txt for license information.
 # SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 
-load(":write_cmake_config.bzl", "write_cmake_config")
+load(":template_rule.bzl", "template_rule")
 load(":tblgen.bzl", "gentbl")
-load(":config.bzl", "config_h_values", "llvm_config_h_values", "llvm_global_defines")
+load(":config.bzl", "llvm_config_defines")
 load(":targets.bzl", "llvm_targets")
 load(":enum_targets_gen.bzl", "enum_targets_gen")
 load(":binary_alias.bzl", "binary_alias")
@@ -101,30 +101,17 @@ genrule(
     cmd = "echo '#define LLVM_VERSION_INFO \"git\"' > $@",
 )
 
-write_cmake_config(
+template_rule(
     name = "abi_breaking_h_gen",
     src = "include/llvm/Config/abi-breaking.h.cmake",
     out = "include/llvm/Config/abi-breaking.h",
-    # Currently, in the Bazel build, we opt out of ABI breaking checks and
-    # reverse iteration.
-    values = [
-        "LLVM_ENABLE_ABI_BREAKING_CHECKS=",
-        "LLVM_ENABLE_REVERSE_ITERATION=",
-    ],
-)
+    substitutions = {
+        # Define to enable checks that alter the LLVM C++ ABI
+        "#cmakedefine01 LLVM_ENABLE_ABI_BREAKING_CHECKS": "#define LLVM_ENABLE_ABI_BREAKING_CHECKS 0",
 
-write_cmake_config(
-    name = "config_h_gen",
-    src = "include/llvm/Config/config.h.cmake",
-    out = "include/llvm/Config/config.h",
-    values = config_h_values,
-)
-
-write_cmake_config(
-    name = "llvm_config_h_gen",
-    src = "include/llvm/Config/llvm-config.h.cmake",
-    out = "include/llvm/Config/llvm-config.h",
-    values = llvm_config_h_values,
+        # Define to enable reverse iteration of unordered llvm containers
+        "#cmakedefine01 LLVM_ENABLE_REVERSE_ITERATION": "#define LLVM_ENABLE_REVERSE_ITERATION 0",
+    },
 )
 
 # To enable diff testing out of tree
@@ -142,7 +129,7 @@ cc_library(
         "include/llvm/Config/llvm-config.h",
     ],
     copts = llvm_copts,
-    defines = llvm_global_defines,
+    defines = llvm_config_defines,
     includes = ["include"],
     textual_hdrs = [
         "include/llvm/Config/AsmParsers.def",
@@ -2920,11 +2907,11 @@ cc_binary(
     copts = llvm_copts,
     stamp = 0,
     deps = [
+        ":Symbolize",
         ":BitReader",
         ":Core",
-        ":Debuginfod",
         ":Support",
-        ":Symbolize",
+        ":Debuginfod",
     ],
 )
 
@@ -4441,9 +4428,4 @@ cc_binary(
     deps = [
         ":Support",
     ],
-)
-
-py_binary(
-    name = "write_cmake_config",
-    srcs = ["utils/write_cmake_config.py"],
 )
