@@ -45,38 +45,39 @@ define i1 @test_srem_odd(i29 %X) nounwind {
 define i1 @test_srem_even(i4 %X) nounwind {
 ; PPC-LABEL: test_srem_even:
 ; PPC:       # %bb.0:
-; PPC-NEXT:    lis 4, 10922
-; PPC-NEXT:    slwi 3, 3, 28
-; PPC-NEXT:    ori 4, 4, 43691
-; PPC-NEXT:    srawi 3, 3, 28
-; PPC-NEXT:    mulhw 4, 3, 4
-; PPC-NEXT:    srwi 5, 4, 31
-; PPC-NEXT:    add 4, 4, 5
-; PPC-NEXT:    li 5, 0
-; PPC-NEXT:    mulli 4, 4, 6
-; PPC-NEXT:    sub 3, 3, 4
+; PPC-NEXT:    slwi 5, 3, 28
+; PPC-NEXT:    srawi 5, 5, 28
+; PPC-NEXT:    mulli 5, 5, 3
+; PPC-NEXT:    rlwinm 6, 5, 25, 31, 31
+; PPC-NEXT:    srwi 5, 5, 4
+; PPC-NEXT:    add 5, 5, 6
+; PPC-NEXT:    mulli 5, 5, 6
+; PPC-NEXT:    sub 3, 3, 5
+; PPC-NEXT:    clrlwi 3, 3, 28
+; PPC-NEXT:    li 4, 0
 ; PPC-NEXT:    cmpwi 3, 1
 ; PPC-NEXT:    li 3, 1
 ; PPC-NEXT:    bclr 12, 2, 0
 ; PPC-NEXT:  # %bb.1:
-; PPC-NEXT:    ori 3, 5, 0
+; PPC-NEXT:    ori 3, 4, 0
 ; PPC-NEXT:    blr
 ;
 ; PPC64LE-LABEL: test_srem_even:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:    lis 4, 10922
-; PPC64LE-NEXT:    slwi 3, 3, 28
-; PPC64LE-NEXT:    ori 4, 4, 43691
-; PPC64LE-NEXT:    srawi 3, 3, 28
-; PPC64LE-NEXT:    mulhw 4, 3, 4
-; PPC64LE-NEXT:    srwi 5, 4, 31
-; PPC64LE-NEXT:    add 4, 4, 5
-; PPC64LE-NEXT:    mulli 4, 4, 6
-; PPC64LE-NEXT:    sub 3, 3, 4
-; PPC64LE-NEXT:    li 4, 1
+; PPC64LE-NEXT:    slwi 5, 3, 28
+; PPC64LE-NEXT:    li 4, 0
+; PPC64LE-NEXT:    srawi 5, 5, 28
+; PPC64LE-NEXT:    slwi 6, 5, 1
+; PPC64LE-NEXT:    add 5, 5, 6
+; PPC64LE-NEXT:    rlwinm 6, 5, 25, 31, 31
+; PPC64LE-NEXT:    srwi 5, 5, 4
+; PPC64LE-NEXT:    add 5, 5, 6
+; PPC64LE-NEXT:    mulli 5, 5, 6
+; PPC64LE-NEXT:    sub 3, 3, 5
+; PPC64LE-NEXT:    clrlwi 3, 3, 28
 ; PPC64LE-NEXT:    cmpwi 3, 1
-; PPC64LE-NEXT:    li 3, 0
-; PPC64LE-NEXT:    iseleq 3, 4, 3
+; PPC64LE-NEXT:    li 3, 1
+; PPC64LE-NEXT:    iseleq 3, 3, 4
 ; PPC64LE-NEXT:    blr
   %srem = srem i4 %X, 6
   %cmp = icmp eq i4 %srem, 1

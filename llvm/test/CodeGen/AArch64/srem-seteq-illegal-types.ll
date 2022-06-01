@@ -23,15 +23,13 @@ define i1 @test_srem_odd(i29 %X) nounwind {
 define i1 @test_srem_even(i4 %X) nounwind {
 ; CHECK-LABEL: test_srem_even:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #43691
 ; CHECK-NEXT:    sbfx w9, w0, #0, #4
-; CHECK-NEXT:    movk w8, #10922, lsl #16
-; CHECK-NEXT:    smull x8, w9, w8
-; CHECK-NEXT:    lsr x10, x8, #63
-; CHECK-NEXT:    lsr x8, x8, #32
-; CHECK-NEXT:    add w8, w8, w10
-; CHECK-NEXT:    mov w10, #6
-; CHECK-NEXT:    msub w8, w8, w10, w9
+; CHECK-NEXT:    mov w8, #6
+; CHECK-NEXT:    add w9, w9, w9, lsl #1
+; CHECK-NEXT:    ubfx w10, w9, #7, #1
+; CHECK-NEXT:    add w9, w10, w9, lsr #4
+; CHECK-NEXT:    msub w8, w9, w8, w0
+; CHECK-NEXT:    and w8, w8, #0xf
 ; CHECK-NEXT:    cmp w8, #1
 ; CHECK-NEXT:    cset w0, eq
 ; CHECK-NEXT:    ret
