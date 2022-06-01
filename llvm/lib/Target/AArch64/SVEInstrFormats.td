@@ -332,7 +332,7 @@ multiclass sve_int_ptrue<bits<3> opc, string asm, SDPatternOperator op> {
 def SDT_AArch64PTrue : SDTypeProfile<1, 1, [SDTCisVec<0>, SDTCisVT<1, i32>]>;
 def AArch64ptrue : SDNode<"AArch64ISD::PTRUE", SDT_AArch64PTrue>;
 
-let Predicates = [HasSVEorStreamingSVE] in {
+let Predicates = [HasSVEorSME] in {
   defm PTRUE  : sve_int_ptrue<0b000, "ptrue", AArch64ptrue>;
   defm PTRUES : sve_int_ptrue<0b001, "ptrues", null_frag>;
 
@@ -995,7 +995,7 @@ class sve_int_pred_pattern_a<bits<3> opc, string asm>
 multiclass sve_int_pred_pattern_a<bits<3> opc, string asm,
                                   SDPatternOperator op,
                                   SDPatternOperator opcnt> {
-  let Predicates = [HasSVEorStreamingSVE] in {
+  let Predicates = [HasSVEorSME] in {
     def NAME : sve_int_pred_pattern_a<opc, asm>;
 
     def : InstAlias<asm # "\t$Rdn, $pattern",
@@ -1004,7 +1004,7 @@ multiclass sve_int_pred_pattern_a<bits<3> opc, string asm,
                     (!cast<Instruction>(NAME) GPR64:$Rdn, 0b11111, 1), 2>;
   }
 
-  let Predicates = [HasSVEorStreamingSVE, UseScalarIncVL] in {
+  let Predicates = [HasSVEorSME, UseScalarIncVL] in {
     def : Pat<(i64 (op GPR64:$Rdn, (opcnt sve_pred_enum:$pattern))),
               (!cast<Instruction>(NAME) GPR64:$Rdn, sve_pred_enum:$pattern, 1)>;
 
