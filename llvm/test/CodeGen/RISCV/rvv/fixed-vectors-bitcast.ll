@@ -426,11 +426,7 @@ define double @bitcast_v1i64_f64(<1 x i64> %a) {
 ;
 ; RV64ELEN32-LABEL: bitcast_v1i64_f64:
 ; RV64ELEN32:       # %bb.0:
-; RV64ELEN32-NEXT:    addi sp, sp, -16
-; RV64ELEN32-NEXT:    .cfi_def_cfa_offset 16
-; RV64ELEN32-NEXT:    sd a0, 8(sp)
-; RV64ELEN32-NEXT:    fld fa0, 8(sp)
-; RV64ELEN32-NEXT:    addi sp, sp, 16
+; RV64ELEN32-NEXT:    fmv.d.x fa0, a0
 ; RV64ELEN32-NEXT:    ret
   %b = bitcast <1 x i64> %a to double
   ret double %b
