@@ -1604,10 +1604,10 @@ vzeroupper
 # CHECK-NEXT:  1      8     0.50    *                   vpsubusw	(%rax), %xmm1, %xmm2
 # CHECK-NEXT:  1      1     0.25                        vpsubw	%xmm0, %xmm1, %xmm2
 # CHECK-NEXT:  1      8     0.50    *                   vpsubw	(%rax), %xmm1, %xmm2
-# CHECK-NEXT:  1      1     1.00                        vptest	%xmm0, %xmm1
-# CHECK-NEXT:  2      8     1.00    *                   vptest	(%rax), %xmm1
-# CHECK-NEXT:  1      1     1.00                        vptest	%ymm0, %ymm1
-# CHECK-NEXT:  2      8     1.00    *                   vptest	(%rax), %ymm1
+# CHECK-NEXT:  1      2     1.00                        vptest	%xmm0, %xmm1
+# CHECK-NEXT:  2      9     1.00    *                   vptest	(%rax), %xmm1
+# CHECK-NEXT:  3      4     2.00                        vptest	%ymm0, %ymm1
+# CHECK-NEXT:  5      11    2.00    *                   vptest	(%rax), %ymm1
 # CHECK-NEXT:  1      1     0.25                        vpunpckhbw	%xmm0, %xmm1, %xmm2
 # CHECK-NEXT:  1      8     0.50    *                   vpunpckhbw	(%rax), %xmm1, %xmm2
 # CHECK-NEXT:  1      1     0.25                        vpunpckhdq	%xmm0, %xmm1, %xmm2
@@ -1683,14 +1683,14 @@ vzeroupper
 # CHECK-NEXT:  1      10    0.50    *                   vsubsd	(%rax), %xmm1, %xmm2
 # CHECK-NEXT:  1      3     0.50                        vsubss	%xmm0, %xmm1, %xmm2
 # CHECK-NEXT:  1      10    0.50    *                   vsubss	(%rax), %xmm1, %xmm2
-# CHECK-NEXT:  1      1     1.00                        vtestpd	%xmm0, %xmm1
-# CHECK-NEXT:  2      8     1.00    *                   vtestpd	(%rax), %xmm1
-# CHECK-NEXT:  1      1     1.00                        vtestpd	%ymm0, %ymm1
-# CHECK-NEXT:  2      8     1.00    *                   vtestpd	(%rax), %ymm1
-# CHECK-NEXT:  1      1     1.00                        vtestps	%xmm0, %xmm1
-# CHECK-NEXT:  2      8     1.00    *                   vtestps	(%rax), %xmm1
-# CHECK-NEXT:  1      1     1.00                        vtestps	%ymm0, %ymm1
-# CHECK-NEXT:  2      8     1.00    *                   vtestps	(%rax), %ymm1
+# CHECK-NEXT:  1      2     1.00                        vtestpd	%xmm0, %xmm1
+# CHECK-NEXT:  2      9     1.00    *                   vtestpd	(%rax), %xmm1
+# CHECK-NEXT:  3      4     2.00                        vtestpd	%ymm0, %ymm1
+# CHECK-NEXT:  5      11    2.00    *                   vtestpd	(%rax), %ymm1
+# CHECK-NEXT:  1      2     1.00                        vtestps	%xmm0, %xmm1
+# CHECK-NEXT:  2      9     1.00    *                   vtestps	(%rax), %xmm1
+# CHECK-NEXT:  3      4     2.00                        vtestps	%ymm0, %ymm1
+# CHECK-NEXT:  5      11    2.00    *                   vtestps	(%rax), %ymm1
 # CHECK-NEXT:  2      3     1.00                        vucomisd	%xmm0, %xmm1
 # CHECK-NEXT:  2      10    1.00    *                   vucomisd	(%rax), %xmm1
 # CHECK-NEXT:  2      3     1.00                        vucomiss	%xmm0, %xmm1
@@ -1738,7 +1738,7 @@ vzeroupper
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]
-# CHECK-NEXT: 175.00 175.00  -      -      -      -      -     142.58 175.08 210.25 523.08  -
+# CHECK-NEXT: 175.00 175.00  -      -      -      -      -     142.58 181.08 216.25 523.08  -
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   Instructions:
@@ -2318,8 +2318,8 @@ vzeroupper
 # CHECK-NEXT: 0.50   0.50    -      -      -      -      -     0.25   0.25   0.25   0.25    -     vpsubw	(%rax), %xmm1, %xmm2
 # CHECK-NEXT:  -      -      -      -      -      -      -      -     1.00   1.00    -      -     vptest	%xmm0, %xmm1
 # CHECK-NEXT: 0.50   0.50    -      -      -      -      -      -     1.00   1.00    -      -     vptest	(%rax), %xmm1
-# CHECK-NEXT:  -      -      -      -      -      -      -      -     1.00   1.00    -      -     vptest	%ymm0, %ymm1
-# CHECK-NEXT: 0.50   0.50    -      -      -      -      -      -     1.00   1.00    -      -     vptest	(%rax), %ymm1
+# CHECK-NEXT:  -      -      -      -      -      -      -      -     2.00   2.00    -      -     vptest	%ymm0, %ymm1
+# CHECK-NEXT: 0.50   0.50    -      -      -      -      -      -     2.00   2.00    -      -     vptest	(%rax), %ymm1
 # CHECK-NEXT:  -      -      -      -      -      -      -     0.25   0.25   0.25   0.25    -     vpunpckhbw	%xmm0, %xmm1, %xmm2
 # CHECK-NEXT: 0.50   0.50    -      -      -      -      -     0.25   0.25   0.25   0.25    -     vpunpckhbw	(%rax), %xmm1, %xmm2
 # CHECK-NEXT:  -      -      -      -      -      -      -     0.25   0.25   0.25   0.25    -     vpunpckhdq	%xmm0, %xmm1, %xmm2
@@ -2397,12 +2397,12 @@ vzeroupper
 # CHECK-NEXT: 0.50   0.50    -      -      -      -      -      -      -     0.50   0.50    -     vsubss	(%rax), %xmm1, %xmm2
 # CHECK-NEXT:  -      -      -      -      -      -      -      -     1.00   1.00    -      -     vtestpd	%xmm0, %xmm1
 # CHECK-NEXT: 0.50   0.50    -      -      -      -      -      -     1.00   1.00    -      -     vtestpd	(%rax), %xmm1
-# CHECK-NEXT:  -      -      -      -      -      -      -      -     1.00   1.00    -      -     vtestpd	%ymm0, %ymm1
-# CHECK-NEXT: 0.50   0.50    -      -      -      -      -      -     1.00   1.00    -      -     vtestpd	(%rax), %ymm1
+# CHECK-NEXT:  -      -      -      -      -      -      -      -     2.00   2.00    -      -     vtestpd	%ymm0, %ymm1
+# CHECK-NEXT: 0.50   0.50    -      -      -      -      -      -     2.00   2.00    -      -     vtestpd	(%rax), %ymm1
 # CHECK-NEXT:  -      -      -      -      -      -      -      -     1.00   1.00    -      -     vtestps	%xmm0, %xmm1
 # CHECK-NEXT: 0.50   0.50    -      -      -      -      -      -     1.00   1.00    -      -     vtestps	(%rax), %xmm1
-# CHECK-NEXT:  -      -      -      -      -      -      -      -     1.00   1.00    -      -     vtestps	%ymm0, %ymm1
-# CHECK-NEXT: 0.50   0.50    -      -      -      -      -      -     1.00   1.00    -      -     vtestps	(%rax), %ymm1
+# CHECK-NEXT:  -      -      -      -      -      -      -      -     2.00   2.00    -      -     vtestps	%ymm0, %ymm1
+# CHECK-NEXT: 0.50   0.50    -      -      -      -      -      -     2.00   2.00    -      -     vtestps	(%rax), %ymm1
 # CHECK-NEXT:  -      -      -      -      -      -      -     0.50   0.50   1.00    -      -     vucomisd	%xmm0, %xmm1
 # CHECK-NEXT: 0.50   0.50    -      -      -      -      -     0.50   0.50   1.00    -      -     vucomisd	(%rax), %xmm1
 # CHECK-NEXT:  -      -      -      -      -      -      -     0.50   0.50   1.00    -      -     vucomiss	%xmm0, %xmm1
