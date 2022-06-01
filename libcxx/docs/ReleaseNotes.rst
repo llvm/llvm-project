@@ -163,8 +163,10 @@ Deprecations and Removals
   ``geometric_distribution``, ``negative_binomial_distribution``, ``poisson_distribution``,
   and ``uniform_int_distribution`` now conform to the Standard by rejecting
   template parameter types other than ``short``, ``int``, ``long``, ``long long``,
-  (as an extension) ``__int128_t``, and the unsigned versions thereof.
-  In particular, ``uniform_int_distribution<int8_t>`` is no longer supported.
+  and the unsigned versions thereof. As an extension, ``int8_t``, ``__int128_t`` and
+  their unsigned versions are supported too. In particular, instantiating these
+  distributions with non-integer types like ``bool`` and ``char`` will not compile
+  anymore.
 
 Upcoming Deprecations and Removals
 ----------------------------------
