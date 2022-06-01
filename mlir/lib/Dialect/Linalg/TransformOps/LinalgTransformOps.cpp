@@ -15,6 +15,7 @@
 #include "mlir/Dialect/Transform/IR/TransformDialect.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"
 #include "mlir/Parser/Parser.h"
+#include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 #include "llvm/Support/FormatVariadic.h"
 
 using namespace mlir;
@@ -339,6 +340,40 @@ void TileOp::getEffects(
 }
 
 //===----------------------------------------------------------------------===//
+// VectorizeOp
+//===----------------------------------------------------------------------===//
+
+FailureOr<Operation *> VectorizeOp::applyToOne(Operation *target) {
+  if (!target->hasTrait<OpTrait::IsIsolatedFromAbove>()) {
+    InFlightDiagnostic diag = emitOpError()
+                              << "applies only to isolated-from-above targets";
+    diag.attachNote(target->getLoc()) << "non-isolated target";
+    return diag;
+  }
+
+  MLIRContext *ctx = getContext();
+  RewritePatternSet patterns(ctx);
+  patterns.add<LinalgVectorizationPattern>(ctx);
+
+  vector::populateVectorTransferPermutationMapLoweringPatterns(patterns);
+  vector::populateVectorReductionToContractPatterns(patterns);
+  patterns.add<linalg::LinalgCopyVTRForwardingPattern,
+               linalg::LinalgCopyVTWForwardingPattern>(ctx,
+                                                       /*benefit=*/2);
+  vector::TransferReadOp::getCanonicalizationPatterns(patterns, ctx);
+  vector::TransferWriteOp::getCanonicalizationPatterns(patterns, ctx);
+  if (getVectorizePadding())
+    linalg::populatePadOpVectorizationPatterns(patterns);
+
+  if (failed(applyPatternsAndFoldGreedily(target, std::move(patterns)))) {
+    InFlightDiagnostic diag = emitError() << "failed to apply";
+    diag.attachNote(target->getLoc()) << "target op";
+    return diag;
+  }
+  return target;
+}
+
+//===----------------------------------------------------------------------===//
 // Transform op registration
 //===----------------------------------------------------------------------===//
 
@@ -352,6 +387,7 @@ public:
   LinalgTransformDialectExtension() {
     declareDependentDialect<pdl::PDLDialect>();
     declareDependentDialect<scf::SCFDialect>();
+    declareDependentDialect<vector::VectorDialect>();
     registerTransformOps<
 #define GET_OP_LIST
 #include "mlir/Dialect/Linalg/TransformOps/LinalgTransformOps.cpp.inc"
