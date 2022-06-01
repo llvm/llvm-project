@@ -382,6 +382,17 @@ def FeatureTaggedGlobals
           "Use an instruction sequence for taking the address of a global "
           "that allows a memory tag in the upper address bits.">;
 
+// Control codegen mitigation against Straight Line Speculation vulnerability.
+def FeatureHardenSlsRet
+    : SubtargetFeature<
+          "harden-sls-ret", "HardenSlsRet", "true",
+          "Harden against straight line speculation across RET instructions.">;
+
+def FeatureHardenSlsIJmp
+    : SubtargetFeature<
+          "harden-sls-ijmp", "HardenSlsIJmp", "true",
+          "Harden against straight line speculation across indirect JMP instructions.">;
+
 //===----------------------------------------------------------------------===//
 // X86 Subtarget Tuning features
 //===----------------------------------------------------------------------===//
