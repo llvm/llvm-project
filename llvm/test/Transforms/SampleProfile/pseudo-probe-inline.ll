@@ -1,9 +1,15 @@
-; RUN: opt < %s -passes=pseudo-probe,sample-profile -sample-profile-file=%S/Inputs/pseudo-probe-inline.prof -S -pass-remarks=sample-profile -sample-profile-prioritized-inline=0 -pass-remarks-output=%t.opt.yaml 2>&1 | FileCheck %s
-; RUN: FileCheck %s -check-prefix=YAML < %t.opt.yaml
+; RUN: opt < %s -passes=pseudo-probe,sample-profile  -sample-profile-file=%S/Inputs/pseudo-probe-inline.prof -S -pass-remarks=sample-profile -sample-profile-prioritized-inline=0 -pass-remarks-output=%t.opt.yaml 2>&1 | FileCheck %s
+; RUN: FileCheck %s -check-prefixes=YAML,YAML-NO-ANNOTATE < %t.opt.yaml
 
 ; RUN: llvm-profdata merge --sample --extbinary %S/Inputs/pseudo-probe-inline.prof -o %t2
-; RUN: opt < %s -passes=pseudo-probe,sample-profile -sample-profile-file=%t2 -S -pass-remarks=sample-profile -sample-profile-prioritized-inline=0 -pass-remarks-output=%t2.opt.yaml 2>&1 | FileCheck %s
-; RUN: FileCheck %s -check-prefix=YAML < %t2.opt.yaml
+; RUN: opt < %s -passes=pseudo-probe,sample-profile  -sample-profile-file=%t2 -S -pass-remarks=sample-profile -sample-profile-prioritized-inline=0 -pass-remarks-output=%t2.opt.yaml 2>&1 | FileCheck %s
+; RUN: FileCheck %s -check-prefixes=YAML,YAML-NO-ANNOTATE < %t2.opt.yaml
+
+; RUN: opt < %s -passes=pseudo-probe,sample-profile -annotate-sample-profile-inline-phase=true -sample-profile-file=%S/Inputs/pseudo-probe-inline.prof -S -pass-remarks=sample-profile -sample-profile-prioritized-inline=0 -pass-remarks-output=%t3.opt.yaml 2>&1 | FileCheck %s
+; RUN: FileCheck %s -check-prefixes=YAML,YAML-ANNOTATE < %t3.opt.yaml
+
+; RUN: opt < %s -passes=pseudo-probe,sample-profile -annotate-sample-profile-inline-phase=true -sample-profile-file=%t2 -S -pass-remarks=sample-profile -sample-profile-prioritized-inline=0 -pass-remarks-output=%t4.opt.yaml 2>&1 | FileCheck %s
+; RUN: FileCheck %s -check-prefixes=YAML,YAML-ANNOTATE < %t4.opt.yaml
 
 target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
@@ -74,7 +80,8 @@ if.end:
 
 ; Checking to see if YAML file is generated and contains remarks
 ;YAML: --- !Passed
-;YAML-NEXT:  Pass:            sample-profile-inline
+;YAML-NO-ANNOTATE-NEXT:  Pass:            sample-profile-inline
+;YAML-ANNOTATE-NEXT: Pass:    main-sample-profile-inline
 ;YAML-NEXT:  Name:            Inlined
 ;YAML-NEXT:  DebugLoc:        { File: test.cpp, Line: 10, Column: 11 }
 ;YAML-NEXT:  Function:        foo
