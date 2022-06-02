@@ -50129,10 +50129,14 @@ static SDValue isFNEG(SelectionDAG &DAG, SDNode *N, unsigned Depth = 0) {
         if (!UndefElts[I] && !EltBits[I].isSignMask())
           return SDValue();
 
-      return peekThroughBitcasts(Op0);
+      // Only allow bitcast from correctly-sized constant.
+      Op0 = peekThroughBitcasts(Op0);
+      if (Op0.getScalarValueSizeInBits() == ScalarSize)
+        return Op0;
     }
-  }
-  }
+    break;
+  } // case
+  } // switch
 
   return SDValue();
 }
