@@ -33,6 +33,7 @@ struct IndexingOptions {
   // callback is not available (e.g. after parsing has finished). Note that
   // macro references are not available in Preprocessor.
   bool IndexMacrosInPreprocessor = false;
+  bool IndexPcms = true;
   // Has no effect if IndexFunctionLocals are false.
   bool IndexParametersInDeclarations = false;
   bool IndexTemplateParameters = false;

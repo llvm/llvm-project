@@ -850,12 +850,15 @@ static void writeUnitData(const CompilerInstance &CI,
       [&](const FileEntry *Source, unsigned Line, const FileEntry *Target) {
         UnitWriter.addInclude(Source, Line, Target);
       });
+  bool IndexPcms = IndexOpts.IndexPcms;
+  bool WithoutUnitName = !IndexPcms;
   DepProvider.visitModuleImports(CI, [&](serialization::ModuleFile &Mod,
                                          bool isSystemMod) {
     Module *UnitMod = HS.lookupModule(Mod.ModuleName, Mod.ImportLoc,
                                       /*AllowSearch=*/false);
-    UnitWriter.addASTFileDependency(Mod.File, isSystemMod, UnitMod);
-    if (Mod.isModule()) {
+    UnitWriter.addASTFileDependency(Mod.File, isSystemMod, UnitMod,
+                                    WithoutUnitName);
+    if (Mod.isModule() && IndexPcms) {
       produceIndexDataForModuleFile(Mod, CI, IndexOpts, RecordOpts, UnitWriter);
     }
   });
@@ -1027,6 +1030,7 @@ getIndexOptionsFromFrontendOptions(const FrontendOptions &FEOpts) {
   }
   IndexOpts.IndexMacros = !FEOpts.IndexIgnoreMacros;
   IndexOpts.IndexMacrosInPreprocessor = !FEOpts.IndexIgnoreMacros;
+  IndexOpts.IndexPcms = !FEOpts.IndexIgnorePcms;
   RecordOpts.RecordSymbolCodeGenName = FEOpts.IndexRecordCodegenName;
   return {IndexOpts, RecordOpts};
 }
