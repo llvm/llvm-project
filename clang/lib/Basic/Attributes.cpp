@@ -85,6 +85,10 @@ bool AttributeCommonInfo::isGNUScope() const {
   return ScopeName && (ScopeName->isStr("gnu") || ScopeName->isStr("__gnu__"));
 }
 
+bool AttributeCommonInfo::isClangScope() const {
+  return ScopeName && (ScopeName->isStr("clang") || ScopeName->isStr("_Clang"));
+}
+
 #include "clang/Sema/AttrParsedAttrKinds.inc"
 
 static SmallString<64> normalizeName(const IdentifierInfo *Name,
