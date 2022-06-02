@@ -62,12 +62,12 @@ Opaque Pointers Mode
 ====================
 
 During the transition phase, LLVM can be used in two modes: In typed pointer
-mode (currently still the default) all pointer types have a pointee type and
-opaque pointers cannot be used. In opaque pointers mode, all pointers are
-opaque. The opaque pointer mode can be enabled using ``-opaque-pointers`` in
-LLVM tools like ``opt``, or ``-Xclang -opaque-pointers`` in clang. Additionally,
-opaque pointer mode is automatically enabled for IR and bitcode files that use
-the ``ptr`` type.
+mode all pointer types have a pointee type and opaque pointers cannot be used.
+In opaque pointers mode (the default), all pointers are opaque. The opaque
+pointer mode can be disabled using ``-opaque-pointers=0`` in
+LLVM tools like ``opt``, or ``-Xclang -no-opaque-pointers`` in clang.
+Additionally, opaque pointer mode is automatically disabled for IR and bitcode
+files that explicitly mention ``i8*`` style typed pointers.
 
 In opaque pointer mode, all typed pointers used in IR, bitcode, or created
 using ``PointerType::get()`` and similar APIs are automatically converted into
@@ -190,6 +190,9 @@ opaque pointer transition::
 
 Additionally, it will no longer be possible to call ``LLVMGetElementType()``
 on a pointer type.
+
+It is possible to control whether opaque pointers are used (if you want to
+override the default) using the ``LLVMContextSetOpaquePointers()`` API.
 
 Transition State
 ================
