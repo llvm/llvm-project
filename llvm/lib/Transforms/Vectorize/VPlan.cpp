@@ -793,11 +793,6 @@ void VPInstruction::generateInstruction(VPTransformState &State,
     auto *Plan = getParent()->getPlan();
     VPRegionBlock *TopRegion = Plan->getVectorLoopRegion();
     VPBasicBlock *Header = TopRegion->getEntry()->getEntryBasicBlock();
-    if (Header->empty()) {
-      assert(EnableVPlanNativePath &&
-             "empty entry block only expected in VPlanNativePath");
-      Header = cast<VPBasicBlock>(Header->getSingleSuccessor());
-    }
     // TODO: Once the exit block is modeled in VPlan, use it instead of going
     // through State.CFG.ExitBB.
     BasicBlock *Exit = State.CFG.ExitBB;
