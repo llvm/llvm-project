@@ -1693,6 +1693,9 @@ BUILTIN(__builtin_os_log_format, "v*v*cC*.", "p:0:nt")
 // CUDA/HIP
 LANGBUILTIN(__builtin_get_device_side_mangled_name, "cC*.", "ncT", CUDA_LANG)
 
+// HLSL
+LANGBUILTIN(WaveActiveCountBits, "Uib", "nc", HLSL_LANG)
+
 // Builtins for XRay
 BUILTIN(__xray_customevent, "vcC*z", "")
 BUILTIN(__xray_typedevent, "vzcC*z", "")
