@@ -1,0 +1,17 @@
+# RUN: yaml2obj %s -o %t
+# RUN: not llvm-objdump --offloading %t 2>&1 | FileCheck -DFILENAME=%t %s
+
+!ELF
+FileHeader:
+  Class:           ELFCLASS64
+  Data:            ELFDATA2LSB
+  Type:            ET_EXEC
+Sections:
+  - Name:            .llvm.offloading
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_EXCLUDE ]
+    Address:         0x0
+    AddressAlign:    0x0000000000000008
+    Content:         "10ffb0ad"
+
+# CHECK: error: '[[FILENAME]]': while extracting offloading files: Invalid data was encountered while parsing the file
