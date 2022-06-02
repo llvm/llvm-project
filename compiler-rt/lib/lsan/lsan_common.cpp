@@ -1032,13 +1032,11 @@ SANITIZER_INTERFACE_WEAK_DEF(const char *, __lsan_default_options, void) {
 }
 
 #if !SANITIZER_SUPPORTS_WEAK_HOOKS
-SANITIZER_INTERFACE_ATTRIBUTE SANITIZER_WEAK_ATTRIBUTE int
-__lsan_is_turned_off() {
+SANITIZER_INTERFACE_WEAK_DEF(int, __lsan_is_turned_off, void) {
   return 0;
 }
 
-SANITIZER_INTERFACE_ATTRIBUTE SANITIZER_WEAK_ATTRIBUTE const char *
-__lsan_default_suppressions() {
+SANITIZER_INTERFACE_WEAK_DEF(const char *, __lsan_default_suppressions, void) {
   return "";
 }
 #endif

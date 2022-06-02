@@ -3346,8 +3346,9 @@ struct OmpMapClause {
 // 2.15.5.2 defaultmap -> DEFAULTMAP (implicit-behavior[:variable-category])
 struct OmpDefaultmapClause {
   TUPLE_CLASS_BOILERPLATE(OmpDefaultmapClause);
-  ENUM_CLASS(ImplicitBehavior, Tofrom)
-  ENUM_CLASS(VariableCategory, Scalar)
+  ENUM_CLASS(
+      ImplicitBehavior, Alloc, To, From, Tofrom, Firstprivate, None, Default)
+  ENUM_CLASS(VariableCategory, Scalar, Aggregate, Allocatable, Pointer)
   std::tuple<ImplicitBehavior, std::optional<VariableCategory>> t;
 };
 
@@ -3753,7 +3754,6 @@ struct OpenMPCancelConstruct {
   CharBlock source;
   std::tuple<Verbatim, OmpCancelType, std::optional<If>> t;
 };
-
 
 // 2.17.8 flush -> FLUSH [memory-order-clause] [(variable-name-list)]
 struct OpenMPFlushConstruct {

@@ -58,6 +58,7 @@ if (NOT WIN32)
   install(PROGRAMS ${CMAKE_BINARY_DIR}/bin/flang-to-external-fc DESTINATION "${CMAKE_INSTALL_BINDIR}")
   add_custom_target(flang-slink ALL DEPENDS ${CMAKE_BINARY_DIR}/bin/flang-to-external-fc COMMAND ${CMAKE_COMMAND} -E create_symlink
     ${CMAKE_BINARY_DIR}/bin/flang-to-external-fc ${CMAKE_BINARY_DIR}/bin/flang)
+  install(PROGRAMS ${CMAKE_BINARY_DIR}/bin/flang DESTINATION "${CMAKE_INSTALL_BINDIR}")
 endif()
 
 # TODO Move this to a more suitable location

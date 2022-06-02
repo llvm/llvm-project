@@ -678,21 +678,15 @@ define i32 @load_multiple_extracts_with_variable_indices_large_vector_all_valid_
 }
 
 ; Test case from PR51992.
-; TODO: could handle by inserting freeze.
-define i8 @load_extract_safe_with_freeze(<8 x i8> %in, <16 x i8>* %src) {
-; CHECK-LABEL: @load_extract_safe_with_freeze(
+define i8 @load_extract_safe_due_to_branch_on_poison(<8 x i8> %in, <16 x i8>* %src) {
+; CHECK-LABEL: @load_extract_safe_due_to_branch_on_poison(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[EXT_IDX:%.*]] = extractelement <8 x i8> [[IN:%.*]], i32 0
-; CHECK-NEXT:    [[EXT_IDX_I32:%.*]] = zext i8 [[EXT_IDX]] to i32
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i8 [[EXT_IDX]], 99
 ; CHECK-NEXT:    br i1 [[CMP]], label [[THEN:%.*]], label [[EXIT:%.*]]
 ; CHECK:       then:
-; CHECK-NEXT:    [[LOAD:%.*]] = load <16 x i8>, <16 x i8>* [[SRC:%.*]], align 16
-; CHECK-NEXT:    [[AND:%.*]] = and i32 [[EXT_IDX_I32]], 15
-; CHECK-NEXT:    [[EXT:%.*]] = extractelement <16 x i8> [[LOAD]], i32 [[AND]]
 ; CHECK-NEXT:    br label [[EXIT]]
 ; CHECK:       exit:
-; CHECK-NEXT:    [[P:%.*]] = phi i8 [ 0, [[ENTRY:%.*]] ], [ [[EXT]], [[THEN]] ]
 ; CHECK-NEXT:    ret i8 0
 ;
 entry:

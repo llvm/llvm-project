@@ -101,6 +101,17 @@ class ARMTargetAsmStreamer : public ARMTargetStreamer {
   void AnnotateTLSDescriptorSequence(const MCSymbolRefExpr *SRE) override;
   void emitThumbSet(MCSymbol *Symbol, const MCExpr *Value) override;
 
+  void emitARMWinCFIAllocStack(unsigned Size, bool Wide) override;
+  void emitARMWinCFISaveRegMask(unsigned Mask, bool Wide) override;
+  void emitARMWinCFISaveSP(unsigned Reg) override;
+  void emitARMWinCFISaveFRegs(unsigned First, unsigned Last) override;
+  void emitARMWinCFISaveLR(unsigned Offset) override;
+  void emitARMWinCFIPrologEnd(bool Fragment) override;
+  void emitARMWinCFINop(bool Wide) override;
+  void emitARMWinCFIEpilogStart(unsigned Condition) override;
+  void emitARMWinCFIEpilogEnd() override;
+  void emitARMWinCFICustom(unsigned Opcode) override;
+
 public:
   ARMTargetAsmStreamer(MCStreamer &S, formatted_raw_ostream &OS,
                        MCInstPrinter &InstPrinter, bool VerboseAsm);
@@ -267,6 +278,101 @@ void ARMTargetAsmStreamer::emitUnwindRaw(int64_t Offset,
   for (uint8_t Opcode : Opcodes)
     OS << ", 0x" << Twine::utohexstr(Opcode);
   OS << '\n';
+}
+
+void ARMTargetAsmStreamer::emitARMWinCFIAllocStack(unsigned Size, bool Wide) {
+  if (Wide)
+    OS << "\t.seh_stackalloc_w\t" << Size << "\n";
+  else
+    OS << "\t.seh_stackalloc\t" << Size << "\n";
+}
+
+static void printRegs(formatted_raw_ostream &OS, ListSeparator &LS, int First,
+                      int Last) {
+  if (First != Last)
+    OS << LS << "r" << First << "-r" << Last;
+  else
+    OS << LS << "r" << First;
+}
+
+void ARMTargetAsmStreamer::emitARMWinCFISaveRegMask(unsigned Mask, bool Wide) {
+  if (Wide)
+    OS << "\t.seh_save_regs_w\t";
+  else
+    OS << "\t.seh_save_regs\t";
+  ListSeparator LS;
+  int First = -1;
+  OS << "{";
+  for (int I = 0; I <= 12; I++) {
+    if (Mask & (1 << I)) {
+      if (First < 0)
+        First = I;
+    } else {
+      if (First >= 0) {
+        printRegs(OS, LS, First, I - 1);
+        First = -1;
+      }
+    }
+  }
+  if (First >= 0)
+    printRegs(OS, LS, First, 12);
+  if (Mask & (1 << 14))
+    OS << LS << "lr";
+  OS << "}\n";
+}
+
+void ARMTargetAsmStreamer::emitARMWinCFISaveSP(unsigned Reg) {
+  OS << "\t.seh_save_sp\tr" << Reg << "\n";
+}
+
+void ARMTargetAsmStreamer::emitARMWinCFISaveFRegs(unsigned First,
+                                                  unsigned Last) {
+  if (First != Last)
+    OS << "\t.seh_save_fregs\t{d" << First << "-d" << Last << "}\n";
+  else
+    OS << "\t.seh_save_fregs\t{d" << First << "}\n";
+}
+
+void ARMTargetAsmStreamer::emitARMWinCFISaveLR(unsigned Offset) {
+  OS << "\t.seh_save_lr\t" << Offset << "\n";
+}
+
+void ARMTargetAsmStreamer::emitARMWinCFIPrologEnd(bool Fragment) {
+  if (Fragment)
+    OS << "\t.seh_endprologue_fragment\n";
+  else
+    OS << "\t.seh_endprologue\n";
+}
+
+void ARMTargetAsmStreamer::emitARMWinCFINop(bool Wide) {
+  if (Wide)
+    OS << "\t.seh_nop_w\n";
+  else
+    OS << "\t.seh_nop\n";
+}
+
+void ARMTargetAsmStreamer::emitARMWinCFIEpilogStart(unsigned Condition) {
+  if (Condition == ARMCC::AL)
+    OS << "\t.seh_startepilogue\n";
+  else
+    OS << "\t.seh_startepilogue_cond\t"
+       << ARMCondCodeToString(static_cast<ARMCC::CondCodes>(Condition)) << "\n";
+}
+
+void ARMTargetAsmStreamer::emitARMWinCFIEpilogEnd() {
+  OS << "\t.seh_endepilogue\n";
+}
+
+void ARMTargetAsmStreamer::emitARMWinCFICustom(unsigned Opcode) {
+  int I;
+  for (I = 3; I > 0; I--)
+    if (Opcode & (0xffu << (8 * I)))
+      break;
+  ListSeparator LS;
+  OS << "\t.seh_custom\t";
+  for (; I >= 0; I--)
+    OS << LS << ((Opcode >> (8 * I)) & 0xff);
+  OS << "\n";
 }
 
 class ARMTargetELFStreamer : public ARMTargetStreamer {
@@ -1369,12 +1475,8 @@ MCTargetStreamer *createARMNullTargetStreamer(MCStreamer &S) {
   return new ARMTargetStreamer(S);
 }
 
-MCTargetStreamer *createARMObjectTargetStreamer(MCStreamer &S,
-                                                const MCSubtargetInfo &STI) {
-  const Triple &TT = STI.getTargetTriple();
-  if (TT.isOSBinFormatELF())
-    return new ARMTargetELFStreamer(S);
-  return new ARMTargetStreamer(S);
+MCTargetStreamer *createARMObjectTargetELFStreamer(MCStreamer &S) {
+  return new ARMTargetELFStreamer(S);
 }
 
 MCELFStreamer *createARMELFStreamer(MCContext &Context,
