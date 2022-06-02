@@ -116,7 +116,7 @@ subroutine test_deferred_char_scalar(x)
 
 ! character assignment ...
 ! CHECK:  %[[VAL_24:.*]] = fir.convert %[[VAL_8]]#1 : (!fir.heap<!fir.char<1,?>>) -> !fir.ref<i8>
-! CHECK:  fir.call @llvm.memmove.p0i8.p0i8.i64(%[[VAL_24]], %{{.*}}, %{{.*}}, %{{.*}}) : (!fir.ref<i8>, !fir.ref<i8>, i64, i1) -> ()
+! CHECK:  fir.call @llvm.memmove.p0.p0.i64(%[[VAL_24]], %{{.*}}, %{{.*}}, %{{.*}}) : (!fir.ref<i8>, !fir.ref<i8>, i64, i1) -> ()
 ! character assignment ...
 
 ! CHECK:  fir.if %[[VAL_8]]#0 {
@@ -158,7 +158,7 @@ subroutine test_cst_char_scalar(x)
 
 ! character assignment ...
 ! CHECK:  %[[VAL_24:.*]] = fir.convert %[[VAL_9]]#1 : (!fir.heap<!fir.char<1,10>>) -> !fir.ref<i8>
-! CHECK:  fir.call @llvm.memmove.p0i8.p0i8.i64(%[[VAL_24]], %{{.*}}, %{{.*}}, %{{.*}}) : (!fir.ref<i8>, !fir.ref<i8>, i64, i1) -> ()
+! CHECK:  fir.call @llvm.memmove.p0.p0.i64(%[[VAL_24]], %{{.*}}, %{{.*}}, %{{.*}}) : (!fir.ref<i8>, !fir.ref<i8>, i64, i1) -> ()
 ! character assignment ...
 
 ! CHECK:  fir.if %[[VAL_9]]#0 {
@@ -207,7 +207,7 @@ subroutine test_dyn_char_scalar(x, n)
 
 ! character assignment ...
 ! CHECK:  %[[VAL_24:.*]] = fir.convert %[[VAL_10]]#1 : (!fir.heap<!fir.char<1,?>>) -> !fir.ref<i8>
-! CHECK:  fir.call @llvm.memmove.p0i8.p0i8.i64(%[[VAL_24]], %{{.*}}, %{{.*}}, %{{.*}}) : (!fir.ref<i8>, !fir.ref<i8>, i64, i1) -> ()
+! CHECK:  fir.call @llvm.memmove.p0.p0.i64(%[[VAL_24]], %{{.*}}, %{{.*}}, %{{.*}}) : (!fir.ref<i8>, !fir.ref<i8>, i64, i1) -> ()
 ! character assignment ...
 
 ! CHECK:  fir.if %[[VAL_10]]#0 {

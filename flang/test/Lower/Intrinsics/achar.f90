@@ -15,7 +15,7 @@
 ! CHECK: %[[C1_I64:.*]] = fir.convert %[[C1]] : (index) -> i64
 ! CHECK: %[[C_CVT:.*]] = fir.convert %[[C]]#0 : (!fir.ref<!fir.char<1,?>>) -> !fir.ref<i8>
 ! CHECK: %[[TEMP_WITH_XCHAR:.*]] = fir.convert %[[TEMP]] : (!fir.ref<!fir.char<1>>) -> !fir.ref<i8>
-! CHECK: fir.call @llvm.memmove.p0i8.p0i8.i64(%[[C_CVT]], %[[TEMP_WITH_XCHAR]], %[[C1_I64]], %[[FALSE]]) : (!fir.ref<i8>, !fir.ref<i8>, i64, i1) -> ()
+! CHECK: fir.call @llvm.memmove.p0.p0.i64(%[[C_CVT]], %[[TEMP_WITH_XCHAR]], %[[C1_I64]], %[[FALSE]]) : (!fir.ref<i8>, !fir.ref<i8>, i64, i1) -> ()
 subroutine test1(x, c)
   integer :: x
   character :: c

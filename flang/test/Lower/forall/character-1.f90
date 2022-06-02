@@ -16,16 +16,16 @@ contains
   end subroutine sub
 end program test
 
-! CHECK-LABEL: define void @_QFPsub({
-! CHECK-SAME: , [1 x [3 x i64]] }* %[[arg:.*]])
-! CHECK: %[[extent:.*]] = getelementptr { {{.*}}, [1 x [3 x i64]] }, { {{.*}}, [1 x [3 x i64]] }* %[[arg]], i32 0, i32 7, i64 0, i32 1
-! CHECK: %[[extval:.*]] = load i64, i64* %[[extent]]
-! CHECK: %[[elesize:.*]] = getelementptr { {{.*}}, [1 x [3 x i64]] }, { {{.*}}, [1 x [3 x i64]] }* %[[arg]], i32 0, i32 1
-! CHECK: %[[esval:.*]] = load i64, i64* %[[elesize]]
+! CHECK-LABEL: define void @_QFPsub(
+! CHECK-SAME: ptr %[[arg:.*]])
+! CHECK: %[[extent:.*]] = getelementptr { {{.*}}, [1 x [3 x i64]] }, ptr %[[arg]], i32 0, i32 7, i64 0, i32 1
+! CHECK: %[[extval:.*]] = load i64, ptr %[[extent]]
+! CHECK: %[[elesize:.*]] = getelementptr { {{.*}}, [1 x [3 x i64]] }, ptr %[[arg]], i32 0, i32 1
+! CHECK: %[[esval:.*]] = load i64, ptr %[[elesize]]
 ! CHECK: %[[mul:.*]] = mul i64 1, %[[esval]]
-! CHECK: %[[mul2:.*]] = mul i64 %[[mul]], %[[extval]], !dbg !18
-! CHECK: %[[buff:.*]] = call i8* @malloc(i64 %[[mul2]])
-! CHECK: %[[to:.*]] = getelementptr i8, i8* %[[buff]], i64 %
-! CHECK: call void @llvm.memmove.p0i8.p0i8.i64(i8* %[[to]], i8* %{{.*}}, i64 %{{.*}}, i1 false)
-! CHECK: call void @free(i8* %[[buff]])
-! CHECK: call i8* @_FortranAioBeginExternalListOutput
+! CHECK: %[[mul2:.*]] = mul i64 %[[mul]], %[[extval]], !dbg !17
+! CHECK: %[[buff:.*]] = call ptr @malloc(i64 %[[mul2]])
+! CHECK: %[[to:.*]] = getelementptr i8, ptr %[[buff]], i64 %
+! CHECK: call void @llvm.memmove.p0.p0.i64(ptr %[[to]], ptr %{{.*}}, i64 %{{.*}}, i1 false)
+! CHECK: call void @free(ptr %[[buff]])
+! CHECK: call ptr @_FortranAioBeginExternalListOutput
