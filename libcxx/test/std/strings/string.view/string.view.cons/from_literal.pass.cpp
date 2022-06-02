@@ -6,11 +6,12 @@
 //
 //===----------------------------------------------------------------------===//
 
+// UNSUPPORTED: !stdlib=libc++ && (c++03 || c++11 || c++14)
+
 // <string_view>
 
 // constexpr basic_string_view(const _CharT* _s)
 //    : __data (_s), __size(_Traits::length(_s)) {}
-
 
 #include <string_view>
 #include <string>
