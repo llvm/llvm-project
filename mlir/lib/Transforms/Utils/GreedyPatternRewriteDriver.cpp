@@ -539,10 +539,25 @@ private:
     }
   }
 
+  void notifyOperationInserted(Operation *op) override {
+    GreedyPatternRewriteDriver::notifyOperationInserted(op);
+    if (strictMode)
+      strictModeFilteredOps.insert(op);
+  }
+
   void notifyOperationRemoved(Operation *op) override {
     GreedyPatternRewriteDriver::notifyOperationRemoved(op);
     if (strictMode)
       strictModeFilteredOps.erase(op);
+  }
+
+  void notifyRootReplaced(Operation *op) override {
+    for (auto result : op->getResults()) {
+      for (auto *user : result.getUsers()) {
+        if (!strictMode || strictModeFilteredOps.contains(user))
+          addToWorklist(user);
+      }
+    }
   }
 
   /// If `strictMode` is true, any pre-existing ops outside of
@@ -592,6 +607,8 @@ bool MultiOpPatternRewriteDriver::simplifyLocally(ArrayRef<Operation *> ops) {
   SmallVector<Value, 8> originalOperands, resultValues;
   while (!worklist.empty()) {
     Operation *op = popFromWorklist();
+    assert((!strictMode || strictModeFilteredOps.contains(op)) &&
+           "unexpected op was inserted under strict mode");
 
     // Nulls get added to the worklist when operations are removed, ignore
     // them.
