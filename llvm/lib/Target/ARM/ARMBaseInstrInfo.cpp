@@ -2071,6 +2071,9 @@ bool ARMBaseInstrInfo::isSchedulingBoundary(const MachineInstr &MI,
   if (MI.getOpcode() == TargetOpcode::INLINEASM_BR)
     return true;
 
+  if (isSEHInstruction(MI))
+    return true;
+
   // Treat the start of the IT block as a scheduling boundary, but schedule
   // t2IT along with all instructions following it.
   // FIXME: This is a big hammer. But the alternative is to add all potential
