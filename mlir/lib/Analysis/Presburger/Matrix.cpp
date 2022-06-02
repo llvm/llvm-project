@@ -28,12 +28,6 @@ Matrix Matrix::identity(unsigned dimension) {
   return matrix;
 }
 
-unsigned Matrix::getNumRows() const { return nRows; }
-
-unsigned Matrix::getNumColumns() const { return nColumns; }
-
-unsigned Matrix::getNumReservedColumns() const { return nReservedColumns; }
-
 unsigned Matrix::getNumReservedRows() const {
   return data.capacity() / nReservedColumns;
 }
