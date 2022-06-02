@@ -114,88 +114,96 @@ define i1 @test_srem_odd(i29 %X) nounwind {
 define i1 @test_srem_even(i4 %X) nounwind {
 ; ARM5-LABEL: test_srem_even:
 ; ARM5:       @ %bb.0:
-; ARM5-NEXT:    lsl r1, r0, #28
-; ARM5-NEXT:    mov r2, #1
-; ARM5-NEXT:    asr r1, r1, #28
+; ARM5-NEXT:    ldr r2, .LCPI1_0
+; ARM5-NEXT:    lsl r0, r0, #28
+; ARM5-NEXT:    asr r12, r0, #28
+; ARM5-NEXT:    smull r3, r1, r12, r2
+; ARM5-NEXT:    add r1, r1, r1, lsr #31
 ; ARM5-NEXT:    add r1, r1, r1, lsl #1
-; ARM5-NEXT:    and r2, r2, r1, lsr #7
-; ARM5-NEXT:    add r1, r2, r1, lsr #4
-; ARM5-NEXT:    add r1, r1, r1, lsl #1
-; ARM5-NEXT:    sub r0, r0, r1, lsl #1
-; ARM5-NEXT:    and r0, r0, #15
-; ARM5-NEXT:    sub r0, r0, #1
+; ARM5-NEXT:    mvn r1, r1, lsl #1
+; ARM5-NEXT:    add r0, r1, r0, asr #28
 ; ARM5-NEXT:    clz r0, r0
 ; ARM5-NEXT:    lsr r0, r0, #5
 ; ARM5-NEXT:    bx lr
+; ARM5-NEXT:    .p2align 2
+; ARM5-NEXT:  @ %bb.1:
+; ARM5-NEXT:  .LCPI1_0:
+; ARM5-NEXT:    .long 715827883 @ 0x2aaaaaab
 ;
 ; ARM6-LABEL: test_srem_even:
 ; ARM6:       @ %bb.0:
-; ARM6-NEXT:    lsl r1, r0, #28
-; ARM6-NEXT:    mov r2, #1
-; ARM6-NEXT:    asr r1, r1, #28
+; ARM6-NEXT:    ldr r2, .LCPI1_0
+; ARM6-NEXT:    lsl r0, r0, #28
+; ARM6-NEXT:    asr r1, r0, #28
+; ARM6-NEXT:    smmul r1, r1, r2
+; ARM6-NEXT:    add r1, r1, r1, lsr #31
 ; ARM6-NEXT:    add r1, r1, r1, lsl #1
-; ARM6-NEXT:    and r2, r2, r1, lsr #7
-; ARM6-NEXT:    add r1, r2, r1, lsr #4
-; ARM6-NEXT:    add r1, r1, r1, lsl #1
-; ARM6-NEXT:    sub r0, r0, r1, lsl #1
-; ARM6-NEXT:    and r0, r0, #15
-; ARM6-NEXT:    sub r0, r0, #1
+; ARM6-NEXT:    mvn r1, r1, lsl #1
+; ARM6-NEXT:    add r0, r1, r0, asr #28
 ; ARM6-NEXT:    clz r0, r0
 ; ARM6-NEXT:    lsr r0, r0, #5
 ; ARM6-NEXT:    bx lr
+; ARM6-NEXT:    .p2align 2
+; ARM6-NEXT:  @ %bb.1:
+; ARM6-NEXT:  .LCPI1_0:
+; ARM6-NEXT:    .long 715827883 @ 0x2aaaaaab
 ;
 ; ARM7-LABEL: test_srem_even:
 ; ARM7:       @ %bb.0:
+; ARM7-NEXT:    movw r2, #43691
 ; ARM7-NEXT:    sbfx r1, r0, #0, #4
+; ARM7-NEXT:    movt r2, #10922
+; ARM7-NEXT:    lsl r0, r0, #28
+; ARM7-NEXT:    smmul r1, r1, r2
+; ARM7-NEXT:    add r1, r1, r1, lsr #31
 ; ARM7-NEXT:    add r1, r1, r1, lsl #1
-; ARM7-NEXT:    ubfx r2, r1, #7, #1
-; ARM7-NEXT:    add r1, r2, r1, lsr #4
-; ARM7-NEXT:    add r1, r1, r1, lsl #1
-; ARM7-NEXT:    sub r0, r0, r1, lsl #1
-; ARM7-NEXT:    and r0, r0, #15
-; ARM7-NEXT:    sub r0, r0, #1
+; ARM7-NEXT:    mvn r1, r1, lsl #1
+; ARM7-NEXT:    add r0, r1, r0, asr #28
 ; ARM7-NEXT:    clz r0, r0
 ; ARM7-NEXT:    lsr r0, r0, #5
 ; ARM7-NEXT:    bx lr
 ;
 ; ARM8-LABEL: test_srem_even:
 ; ARM8:       @ %bb.0:
+; ARM8-NEXT:    movw r2, #43691
 ; ARM8-NEXT:    sbfx r1, r0, #0, #4
+; ARM8-NEXT:    movt r2, #10922
+; ARM8-NEXT:    lsl r0, r0, #28
+; ARM8-NEXT:    smmul r1, r1, r2
+; ARM8-NEXT:    add r1, r1, r1, lsr #31
 ; ARM8-NEXT:    add r1, r1, r1, lsl #1
-; ARM8-NEXT:    ubfx r2, r1, #7, #1
-; ARM8-NEXT:    add r1, r2, r1, lsr #4
-; ARM8-NEXT:    add r1, r1, r1, lsl #1
-; ARM8-NEXT:    sub r0, r0, r1, lsl #1
-; ARM8-NEXT:    and r0, r0, #15
-; ARM8-NEXT:    sub r0, r0, #1
+; ARM8-NEXT:    mvn r1, r1, lsl #1
+; ARM8-NEXT:    add r0, r1, r0, asr #28
 ; ARM8-NEXT:    clz r0, r0
 ; ARM8-NEXT:    lsr r0, r0, #5
 ; ARM8-NEXT:    bx lr
 ;
 ; NEON7-LABEL: test_srem_even:
 ; NEON7:       @ %bb.0:
+; NEON7-NEXT:    movw r2, #43691
 ; NEON7-NEXT:    sbfx r1, r0, #0, #4
+; NEON7-NEXT:    movt r2, #10922
+; NEON7-NEXT:    lsl r0, r0, #28
+; NEON7-NEXT:    smmul r1, r1, r2
+; NEON7-NEXT:    add r1, r1, r1, lsr #31
 ; NEON7-NEXT:    add r1, r1, r1, lsl #1
-; NEON7-NEXT:    ubfx r2, r1, #7, #1
-; NEON7-NEXT:    add r1, r2, r1, lsr #4
-; NEON7-NEXT:    add r1, r1, r1, lsl #1
-; NEON7-NEXT:    sub r0, r0, r1, lsl #1
-; NEON7-NEXT:    and r0, r0, #15
-; NEON7-NEXT:    sub r0, r0, #1
+; NEON7-NEXT:    mvn r1, r1, lsl #1
+; NEON7-NEXT:    add r0, r1, r0, asr #28
 ; NEON7-NEXT:    clz r0, r0
 ; NEON7-NEXT:    lsr r0, r0, #5
 ; NEON7-NEXT:    bx lr
 ;
 ; NEON8-LABEL: test_srem_even:
 ; NEON8:       @ %bb.0:
+; NEON8-NEXT:    movw r2, #43691
 ; NEON8-NEXT:    sbfx r1, r0, #0, #4
+; NEON8-NEXT:    movt r2, #10922
+; NEON8-NEXT:    lsl r0, r0, #28
+; NEON8-NEXT:    smmul r1, r1, r2
+; NEON8-NEXT:    add r1, r1, r1, lsr #31
 ; NEON8-NEXT:    add r1, r1, r1, lsl #1
-; NEON8-NEXT:    ubfx r2, r1, #7, #1
-; NEON8-NEXT:    add r1, r2, r1, lsr #4
-; NEON8-NEXT:    add r1, r1, r1, lsl #1
-; NEON8-NEXT:    sub r0, r0, r1, lsl #1
-; NEON8-NEXT:    and r0, r0, #15
-; NEON8-NEXT:    sub r0, r0, #1
+; NEON8-NEXT:    mvn r1, r1, lsl #1
+; NEON8-NEXT:    add r0, r1, r0, asr #28
 ; NEON8-NEXT:    clz r0, r0
 ; NEON8-NEXT:    lsr r0, r0, #5
 ; NEON8-NEXT:    bx lr
