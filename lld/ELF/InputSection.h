@@ -387,7 +387,7 @@ static_assert(sizeof(InputSection) <= 160, "InputSection is too big");
 
 inline bool isDebugSection(const InputSectionBase &sec) {
   return (sec.flags & llvm::ELF::SHF_ALLOC) == 0 &&
-         (sec.name.startswith(".debug") || sec.name.startswith(".zdebug"));
+         sec.name.startswith(".debug");
 }
 
 // The list of all input sections.
