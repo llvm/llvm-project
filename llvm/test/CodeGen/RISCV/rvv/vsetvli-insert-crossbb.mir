@@ -941,8 +941,8 @@ body:             |
   ; CHECK-NEXT:   successors: %bb.3(0x80000000)
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[ADD1:%[0-9]+]]:gpr = ADD %src, [[PHI]]
-  ; CHECK-NEXT:   dead $x0 = PseudoVSETVLIX0 killed $x0, 69 /* e8, mf8, ta, mu */, implicit-def $vl, implicit-def $vtype, implicit $vl
   ; CHECK-NEXT:   [[PseudoVLE8_V_MF8_:%[0-9]+]]:vrnov0 = PseudoVLE8_V_MF8 killed [[ADD1]], -1, 3 /* e8 */, implicit $vl, implicit $vtype
+  ; CHECK-NEXT:   dead $x0 = PseudoVSETVLIX0 killed $x0, 69 /* e8, mf8, ta, mu */, implicit-def $vl, implicit-def $vtype, implicit $vl
   ; CHECK-NEXT:   [[PseudoVADD_VI_MF8_:%[0-9]+]]:vrnov0 = PseudoVADD_VI_MF8 [[PseudoVLE8_V_MF8_]], 4, -1, 3 /* e8 */, implicit $vl, implicit $vtype
   ; CHECK-NEXT:   [[ADD2:%[0-9]+]]:gpr = ADD %dst, [[PHI]]
   ; CHECK-NEXT:   PseudoVSE8_V_MF8 killed [[PseudoVADD_VI_MF8_]], killed [[ADD2]], -1, 3 /* e8 */, implicit $vl, implicit $vtype
