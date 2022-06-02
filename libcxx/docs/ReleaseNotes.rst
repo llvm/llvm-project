@@ -63,11 +63,11 @@ New Features
   "heapsort with bounce" to reduce the number of comparisons, and rearranges
   elements using move-assignment instead of `swap`.
 
- - Libc++ now supports a variety of assertions that can be turned on to help catch
-   undefined behavior in user code. This new support is now separate from the old
-   (and incomplete) Debug Mode. Vendors can select whether the library they ship
-   should include assertions or not by default. For details, see
-   :ref:`the documentation <assertions-mode>` about this new feature.
+- Libc++ now supports a variety of assertions that can be turned on to help catch
+  undefined behavior in user code. This new support is now separate from the old
+  (and incomplete) Debug Mode. Vendors can select whether the library they ship
+  should include assertions or not by default. For details, see
+  :ref:`the documentation <assertions-mode>` about this new feature.
 
 API Changes
 -----------
