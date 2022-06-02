@@ -692,6 +692,82 @@ define float @fnmadd_s_2(float %a, float %b, float %c) nounwind {
   ret float %1
 }
 
+define float @fnmadd_s_3(float %a, float %b, float %c) nounwind {
+; RV32IF-LABEL: fnmadd_s_3:
+; RV32IF:       # %bb.0:
+; RV32IF-NEXT:    fmadd.s ft0, fa0, fa1, fa2
+; RV32IF-NEXT:    fneg.s fa0, ft0
+; RV32IF-NEXT:    ret
+;
+; RV64IF-LABEL: fnmadd_s_3:
+; RV64IF:       # %bb.0:
+; RV64IF-NEXT:    fmadd.s ft0, fa0, fa1, fa2
+; RV64IF-NEXT:    fneg.s fa0, ft0
+; RV64IF-NEXT:    ret
+;
+; RV32I-LABEL: fnmadd_s_3:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    addi sp, sp, -16
+; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32I-NEXT:    call fmaf@plt
+; RV32I-NEXT:    lui a1, 524288
+; RV32I-NEXT:    xor a0, a0, a1
+; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    addi sp, sp, 16
+; RV32I-NEXT:    ret
+;
+; RV64I-LABEL: fnmadd_s_3:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    addi sp, sp, -16
+; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64I-NEXT:    call fmaf@plt
+; RV64I-NEXT:    lui a1, 524288
+; RV64I-NEXT:    xor a0, a0, a1
+; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    addi sp, sp, 16
+; RV64I-NEXT:    ret
+  %1 = call float @llvm.fma.f32(float %a, float %b, float %c)
+  %neg = fneg float %1
+  ret float %neg
+}
+
+define float @fnmadd_nsz(float %a, float %b, float %c) nounwind {
+; RV32IF-LABEL: fnmadd_nsz:
+; RV32IF:       # %bb.0:
+; RV32IF-NEXT:    fnmadd.s fa0, fa0, fa1, fa2
+; RV32IF-NEXT:    ret
+;
+; RV64IF-LABEL: fnmadd_nsz:
+; RV64IF:       # %bb.0:
+; RV64IF-NEXT:    fnmadd.s fa0, fa0, fa1, fa2
+; RV64IF-NEXT:    ret
+;
+; RV32I-LABEL: fnmadd_nsz:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    addi sp, sp, -16
+; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32I-NEXT:    call fmaf@plt
+; RV32I-NEXT:    lui a1, 524288
+; RV32I-NEXT:    xor a0, a0, a1
+; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    addi sp, sp, 16
+; RV32I-NEXT:    ret
+;
+; RV64I-LABEL: fnmadd_nsz:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    addi sp, sp, -16
+; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64I-NEXT:    call fmaf@plt
+; RV64I-NEXT:    lui a1, 524288
+; RV64I-NEXT:    xor a0, a0, a1
+; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    addi sp, sp, 16
+; RV64I-NEXT:    ret
+  %1 = call nsz float @llvm.fma.f32(float %a, float %b, float %c)
+  %neg = fneg nsz float %1
+  ret float %neg
+}
+
 define float @fnmsub_s(float %a, float %b, float %c) nounwind {
 ; RV32IF-LABEL: fnmsub_s:
 ; RV32IF:       # %bb.0:
