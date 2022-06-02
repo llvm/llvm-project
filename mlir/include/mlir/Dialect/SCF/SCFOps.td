@@ -544,6 +544,8 @@ def ParallelInsertSliceOp : SCF_Op<"foreach_thread.parallel_insert_slice", [
       "ValueRange":$offsets, "ValueRange":$sizes, "ValueRange":$strides,
       CArg<"ArrayRef<NamedAttribute>", "{}">:$attrs)>
   ];
+  
+  let hasCanonicalizer = 1;
 }
 
 //===----------------------------------------------------------------------===//
