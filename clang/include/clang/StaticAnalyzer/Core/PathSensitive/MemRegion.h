@@ -1364,6 +1364,7 @@ public:
   ~MemRegionManager();
 
   ASTContext &getContext() { return Ctx; }
+  const ASTContext &getContext() const { return Ctx; }
 
   llvm::BumpPtrAllocator &getAllocator() { return A; }
 
