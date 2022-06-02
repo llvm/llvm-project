@@ -1047,6 +1047,8 @@ void DAGTypeLegalizer::SplitVectorResult(SDNode *N, unsigned ResNo) {
   case ISD::ANY_EXTEND:
   case ISD::SIGN_EXTEND:
   case ISD::ZERO_EXTEND:
+  case ISD::VP_SIGN_EXTEND:
+  case ISD::VP_ZERO_EXTEND:
     SplitVecRes_ExtendOp(N, Lo, Hi);
     break;
 
@@ -2201,14 +2203,34 @@ void DAGTypeLegalizer::SplitVecRes_ExtendOp(SDNode *N, SDValue &Lo,
         TLI.isTypeLegal(NewSrcVT) && TLI.isTypeLegal(SplitLoVT)) {
       LLVM_DEBUG(dbgs() << "Split vector extend via incremental extend:";
                  N->dump(&DAG); dbgs() << "\n");
+      if (!N->isVPOpcode()) {
+        // Extend the source vector by one step.
+        SDValue NewSrc =
+            DAG.getNode(N->getOpcode(), dl, NewSrcVT, N->getOperand(0));
+        // Get the low and high halves of the new, extended one step, vector.
+        std::tie(Lo, Hi) = DAG.SplitVector(NewSrc, dl);
+        // Extend those vector halves the rest of the way.
+        Lo = DAG.getNode(N->getOpcode(), dl, LoVT, Lo);
+        Hi = DAG.getNode(N->getOpcode(), dl, HiVT, Hi);
+        return;
+      }
+
       // Extend the source vector by one step.
       SDValue NewSrc =
-          DAG.getNode(N->getOpcode(), dl, NewSrcVT, N->getOperand(0));
+          DAG.getNode(N->getOpcode(), dl, NewSrcVT, N->getOperand(0),
+                      N->getOperand(1), N->getOperand(2));
       // Get the low and high halves of the new, extended one step, vector.
       std::tie(Lo, Hi) = DAG.SplitVector(NewSrc, dl);
+
+      SDValue MaskLo, MaskHi;
+      std::tie(MaskLo, MaskHi) = SplitMask(N->getOperand(1));
+
+      SDValue EVLLo, EVLHi;
+      std::tie(EVLLo, EVLHi) =
+          DAG.SplitEVL(N->getOperand(2), N->getValueType(0), dl);
       // Extend those vector halves the rest of the way.
-      Lo = DAG.getNode(N->getOpcode(), dl, LoVT, Lo);
-      Hi = DAG.getNode(N->getOpcode(), dl, HiVT, Hi);
+      Lo = DAG.getNode(N->getOpcode(), dl, LoVT, {Lo, MaskLo, EVLLo});
+      Hi = DAG.getNode(N->getOpcode(), dl, HiVT, {Hi, MaskHi, EVLHi});
       return;
     }
   }
@@ -3773,11 +3795,13 @@ void DAGTypeLegalizer::WidenVectorResult(SDNode *N, unsigned ResNo) {
   case ISD::FP_TO_SINT:
   case ISD::FP_TO_UINT:
   case ISD::SIGN_EXTEND:
+  case ISD::VP_SIGN_EXTEND:
   case ISD::SINT_TO_FP:
   case ISD::VP_TRUNCATE:
   case ISD::TRUNCATE:
   case ISD::UINT_TO_FP:
   case ISD::ZERO_EXTEND:
+  case ISD::VP_ZERO_EXTEND:
     Res = WidenVecRes_Convert(N);
     break;
 
