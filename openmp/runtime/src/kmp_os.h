@@ -87,6 +87,12 @@
 #define KMP_GROUP_AFFINITY 0
 #endif
 
+#if (KMP_OS_LINUX || (KMP_OS_FREEBSD && __FreeBSD_version >= 1301000))
+#define KMP_HAVE_SCHED_GETCPU 1
+#else
+#define KMP_HAVE_SCHED_GETCPU 0
+#endif
+
 /* Check for quad-precision extension. */
 #define KMP_HAVE_QUAD 0
 #if KMP_ARCH_X86 || KMP_ARCH_X86_64
