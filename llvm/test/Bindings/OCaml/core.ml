@@ -37,9 +37,6 @@ let m = create_module context filename
 (*===-- Contained types  --------------------------------------------------===*)
 
 let test_contained_types () =
-  let pointer_i32 = pointer_type i32_type in
-  insist (i32_type = (Array.get (subtypes pointer_i32) 0));
-
   let ar = struct_type context [| i32_type; i8_type |] in
   insist (i32_type = (Array.get (subtypes ar)) 0);
   insist (i8_type = (Array.get (subtypes ar)) 1)
@@ -1100,7 +1097,7 @@ let test_builder () =
      * CHECK: %build_insertvalue0 = insertvalue{{.*}}%bl, i32 1, 0
      * CHECK: %build_extractvalue = extractvalue{{.*}}%build_insertvalue1, 1
      *)
-    let ci = build_call fn [| p2; p1 |] "build_call" atentry in
+    let ci = build_call2 fty fn [| p2; p1 |] "build_call" atentry in
     insist (CallConv.c = instruction_call_conv ci);
     set_instruction_call_conv 63 ci;
     insist (63 = instruction_call_conv ci);
