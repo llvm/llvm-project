@@ -10,6 +10,7 @@
 ; RUN:     -pass-remarks='loop-interchange' -S -da-disable-delinearization-checks
 ; RUN: cat %t |  FileCheck --check-prefix=DELIN %s
 
+target triple = "powerpc64le-unknown-linux-gnu"
 @A = common global [100 x [100 x i32]] zeroinitializer
 @B = common global [100 x [100 x i32]] zeroinitializer
 @C = common global [100 x i32] zeroinitializer
@@ -71,11 +72,7 @@ for.end19:
 ; DELIN-NEXT: Name:            InterchangeNotProfitable
 ; DELIN-NEXT: Function:        test01
 ; DELIN-NEXT: Args:
-; DELIN-NEXT:   - String:          'Interchanging loops is too costly (cost='
-; DELIN-NEXT:   - Cost:            '2'
-; DELIN-NEXT:   - String:          ', threshold='
-; DELIN-NEXT:   - Threshold:       '0'
-; DELIN-NEXT:   - String:          ') and it does not improve parallelism.'
+; DELIN-NEXT:   - String:          Interchanging loops is too costly and it does not improve parallelism.
 ; DELIN-NEXT: ...
 
 ;;--------------------------------------Test case 02------------------------------------
