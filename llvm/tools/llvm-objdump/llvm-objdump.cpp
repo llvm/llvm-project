@@ -20,6 +20,7 @@
 #include "ELFDump.h"
 #include "MachODump.h"
 #include "ObjdumpOptID.h"
+#include "OffloadDump.h"
 #include "SourcePrinter.h"
 #include "WasmDump.h"
 #include "XCOFFDump.h"
@@ -58,6 +59,7 @@
 #include "llvm/Object/MachO.h"
 #include "llvm/Object/MachOUniversal.h"
 #include "llvm/Object/ObjectFile.h"
+#include "llvm/Object/OffloadBinary.h"
 #include "llvm/Object/Wasm.h"
 #include "llvm/Option/Arg.h"
 #include "llvm/Option/ArgList.h"
@@ -198,6 +200,7 @@ std::string objdump::MCPU;
 std::vector<std::string> objdump::MAttrs;
 bool objdump::ShowRawInsn;
 bool objdump::LeadingAddr;
+static bool Offloading;
 static bool RawClangAST;
 bool objdump::Relocations;
 bool objdump::PrintImmHex;
@@ -2480,6 +2483,8 @@ static void dumpObject(ObjectFile *O, const Archive *A = nullptr,
     printRawClangAST(O);
   if (FaultMapSection)
     printFaultMaps(O);
+  if (Offloading)
+    dumpOffloadBinary(*O);
 }
 
 static void dumpObject(const COFFImportFile *I, const Archive *A,
@@ -2543,6 +2548,8 @@ static void dumpInput(StringRef file) {
     dumpObject(O);
   else if (MachOUniversalBinary *UB = dyn_cast<MachOUniversalBinary>(&Binary))
     parseInputMachO(UB);
+  else if (OffloadBinary *OB = dyn_cast<OffloadBinary>(&Binary))
+    dumpOffloadSections(*OB);
   else
     reportError(errorCodeToError(object_error::invalid_file_type), file);
 }
@@ -2646,6 +2653,7 @@ static void parseObjdumpOptions(const llvm::opt::InputArgList &InputArgs) {
   }
   DynamicRelocations = InputArgs.hasArg(OBJDUMP_dynamic_reloc);
   FaultMapSection = InputArgs.hasArg(OBJDUMP_fault_map_section);
+  Offloading = InputArgs.hasArg(OBJDUMP_offloading);
   FileHeaders = InputArgs.hasArg(OBJDUMP_file_headers);
   SectionContents = InputArgs.hasArg(OBJDUMP_full_contents);
   PrintLines = InputArgs.hasArg(OBJDUMP_line_numbers);
@@ -2813,7 +2821,7 @@ int main(int argc, char **argv) {
   if (!ArchiveHeaders && !Disassemble && DwarfDumpType == DIDT_Null &&
       !DynamicRelocations && !FileHeaders && !PrivateHeaders && !RawClangAST &&
       !Relocations && !SectionHeaders && !SectionContents && !SymbolTable &&
-      !DynamicSymbolTable && !UnwindInfo && !FaultMapSection &&
+      !DynamicSymbolTable && !UnwindInfo && !FaultMapSection && !Offloading &&
       !(MachOOpt && (Bind || DataInCode || DyldInfo || DylibId || DylibsUsed ||
                      ExportsTrie || FirstPrivateHeader || FunctionStarts ||
                      IndirectSymbols || InfoPlist || LazyBind || LinkOptHints ||
