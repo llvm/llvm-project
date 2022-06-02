@@ -43,39 +43,41 @@ define i1 @test_srem_odd(i29 %X) nounwind {
 define i1 @test_srem_even(i4 %X) nounwind {
 ; MIPSEL-LABEL: test_srem_even:
 ; MIPSEL:       # %bb.0:
-; MIPSEL-NEXT:    lui $1, 10922
-; MIPSEL-NEXT:    ori $1, $1, 43691
-; MIPSEL-NEXT:    sll $2, $4, 28
-; MIPSEL-NEXT:    sra $2, $2, 28
-; MIPSEL-NEXT:    mult $2, $1
-; MIPSEL-NEXT:    mfhi $1
-; MIPSEL-NEXT:    srl $3, $1, 31
-; MIPSEL-NEXT:    addu $1, $1, $3
+; MIPSEL-NEXT:    sll $1, $4, 28
+; MIPSEL-NEXT:    sra $1, $1, 28
+; MIPSEL-NEXT:    sll $2, $1, 1
+; MIPSEL-NEXT:    addu $1, $2, $1
+; MIPSEL-NEXT:    srl $2, $1, 4
+; MIPSEL-NEXT:    srl $1, $1, 7
+; MIPSEL-NEXT:    andi $1, $1, 1
 ; MIPSEL-NEXT:    addiu $3, $zero, 1
-; MIPSEL-NEXT:    sll $4, $1, 1
+; MIPSEL-NEXT:    addu $1, $2, $1
+; MIPSEL-NEXT:    sll $2, $1, 1
 ; MIPSEL-NEXT:    sll $1, $1, 2
-; MIPSEL-NEXT:    addu $1, $1, $4
-; MIPSEL-NEXT:    subu $1, $2, $1
+; MIPSEL-NEXT:    addu $1, $1, $2
+; MIPSEL-NEXT:    subu $1, $4, $1
+; MIPSEL-NEXT:    andi $1, $1, 15
 ; MIPSEL-NEXT:    xor $1, $1, $3
 ; MIPSEL-NEXT:    jr $ra
 ; MIPSEL-NEXT:    sltiu $2, $1, 1
 ;
 ; MIPS64EL-LABEL: test_srem_even:
 ; MIPS64EL:       # %bb.0:
-; MIPS64EL-NEXT:    lui $1, 10922
-; MIPS64EL-NEXT:    ori $1, $1, 43691
-; MIPS64EL-NEXT:    sll $2, $4, 0
-; MIPS64EL-NEXT:    sll $2, $2, 28
+; MIPS64EL-NEXT:    sll $1, $4, 0
+; MIPS64EL-NEXT:    sll $2, $1, 28
 ; MIPS64EL-NEXT:    sra $2, $2, 28
-; MIPS64EL-NEXT:    mult $2, $1
-; MIPS64EL-NEXT:    mfhi $1
+; MIPS64EL-NEXT:    sll $3, $2, 1
+; MIPS64EL-NEXT:    addu $2, $3, $2
 ; MIPS64EL-NEXT:    addiu $3, $zero, 1
-; MIPS64EL-NEXT:    srl $4, $1, 31
-; MIPS64EL-NEXT:    addu $1, $1, $4
-; MIPS64EL-NEXT:    sll $4, $1, 1
-; MIPS64EL-NEXT:    sll $1, $1, 2
-; MIPS64EL-NEXT:    addu $1, $1, $4
-; MIPS64EL-NEXT:    subu $1, $2, $1
+; MIPS64EL-NEXT:    srl $4, $2, 4
+; MIPS64EL-NEXT:    srl $2, $2, 7
+; MIPS64EL-NEXT:    andi $2, $2, 1
+; MIPS64EL-NEXT:    addu $2, $4, $2
+; MIPS64EL-NEXT:    sll $4, $2, 1
+; MIPS64EL-NEXT:    sll $2, $2, 2
+; MIPS64EL-NEXT:    addu $2, $2, $4
+; MIPS64EL-NEXT:    subu $1, $1, $2
+; MIPS64EL-NEXT:    andi $1, $1, 15
 ; MIPS64EL-NEXT:    xor $1, $1, $3
 ; MIPS64EL-NEXT:    jr $ra
 ; MIPS64EL-NEXT:    sltiu $2, $1, 1
