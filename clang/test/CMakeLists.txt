@@ -80,6 +80,7 @@ list(APPEND CLANG_TEST_DEPS
   clang-offload-packager
   diagtool
   hmaptool
+  mlir-translate
   )
   
 if(CLANG_ENABLE_STATIC_ANALYZER)
