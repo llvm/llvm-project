@@ -130,20 +130,10 @@ public:
   /// Convenience method to query the state to see if a symbol is null or
   /// not null, or if neither assumption can be made.
   ConditionTruthVal isNull(ProgramStateRef State, SymbolRef Sym) {
-    SaveAndRestore<bool> DisableNotify(NotifyAssumeClients, false);
-
     return checkNull(State, Sym);
   }
 
 protected:
-  /// A flag to indicate that clients should be notified of assumptions.
-  /// By default this is the case, but sometimes this needs to be restricted
-  /// to avoid infinite recursions within the ConstraintManager.
-  ///
-  /// Note that this flag allows the ConstraintManager to be re-entrant,
-  /// but not thread-safe.
-  bool NotifyAssumeClients = true;
-
   /// A helper class to simulate the call stack of nested assume calls.
   class AssumeStackTy {
   public:
