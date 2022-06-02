@@ -316,10 +316,6 @@ struct VPTransformState {
     /// of replication, maps the BasicBlock of the last replica created.
     SmallDenseMap<VPBasicBlock *, BasicBlock *> VPBB2IRBB;
 
-    /// Vector of VPBasicBlocks whose terminator instruction needs to be fixed
-    /// up at the end of vector code generation.
-    SmallVector<VPBasicBlock *, 8> VPBBsToFix;
-
     CFGState() = default;
 
     /// Returns the BasicBlock* mapped to the pre-header of the loop region
@@ -2667,13 +2663,9 @@ public:
 
   /// Returns the VPRegionBlock of the vector loop.
   VPRegionBlock *getVectorLoopRegion() {
-    if (auto *R = dyn_cast<VPRegionBlock>(getEntry()))
-      return R;
     return cast<VPRegionBlock>(getEntry()->getSingleSuccessor());
   }
   const VPRegionBlock *getVectorLoopRegion() const {
-    if (auto *R = dyn_cast<VPRegionBlock>(getEntry()))
-      return R;
     return cast<VPRegionBlock>(getEntry()->getSingleSuccessor());
   }
 

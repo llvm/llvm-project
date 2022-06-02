@@ -9089,31 +9089,6 @@ VPlanPtr LoopVectorizationPlanner::buildVPlan(VFRange &Range) {
       [this](PHINode *P) { return Legal->getIntOrFpInductionDescriptor(P); },
       DeadInstructions, *PSE.getSE());
 
-  // Update plan to be compatible with the inner loop vectorizer for
-  // code-generation.
-  VPRegionBlock *LoopRegion = Plan->getVectorLoopRegion();
-  VPBasicBlock *Preheader = LoopRegion->getEntryBasicBlock();
-  VPBasicBlock *Exiting = LoopRegion->getExitingBasicBlock();
-  VPBlockBase *Latch = Exiting->getSinglePredecessor();
-  VPBlockBase *Header = Preheader->getSingleSuccessor();
-
-  // 1. Move preheader block out of main vector loop.
-  Preheader->setParent(LoopRegion->getParent());
-  VPBlockUtils::disconnectBlocks(Preheader, Header);
-  VPBlockUtils::connectBlocks(Preheader, LoopRegion);
-  Plan->setEntry(Preheader);
-
-  // 2. Disconnect backedge and exiting block.
-  VPBlockUtils::disconnectBlocks(Latch, Header);
-  VPBlockUtils::disconnectBlocks(Latch, Exiting);
-
-  // 3. Update entry and exiting of main vector loop region.
-  LoopRegion->setEntry(Header);
-  LoopRegion->setExiting(Latch);
-
-  // 4. Remove exiting block.
-  delete Exiting;
-
   addCanonicalIVRecipes(*Plan, Legal->getWidestInductionType(), DebugLoc(),
                         true, true);
   return Plan;
