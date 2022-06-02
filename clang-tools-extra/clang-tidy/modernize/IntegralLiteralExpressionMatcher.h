@@ -16,15 +16,27 @@ namespace clang {
 namespace tidy {
 namespace modernize {
 
+enum class LiteralSize {
+  Unknown = 0,
+  Int,
+  UnsignedInt,
+  Long,
+  UnsignedLong,
+  LongLong,
+  UnsignedLongLong
+};
+
 // Parses an array of tokens and returns true if they conform to the rules of
 // C++ for whole expressions involving integral literals.  Follows the operator
-// precedence rules of C++.
+// precedence rules of C++.  Optionally exclude comma operator expressions.
 class IntegralLiteralExpressionMatcher {
 public:
-  IntegralLiteralExpressionMatcher(ArrayRef<Token> Tokens)
-      : Current(Tokens.begin()), End(Tokens.end()) {}
+  IntegralLiteralExpressionMatcher(ArrayRef<Token> Tokens, bool CommaAllowed)
+      : Current(Tokens.begin()), End(Tokens.end()), CommaAllowed(CommaAllowed) {
+  }
 
   bool match();
+  LiteralSize largestLiteralSize() const;
 
 private:
   bool advance();
@@ -64,6 +76,8 @@ private:
 
   ArrayRef<Token>::iterator Current;
   ArrayRef<Token>::iterator End;
+  LiteralSize LargestSize{LiteralSize::Unknown};
+  bool CommaAllowed;
 };
 
 } // namespace modernize

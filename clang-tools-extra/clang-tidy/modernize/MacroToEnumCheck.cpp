@@ -321,8 +321,14 @@ void MacroToEnumCallbacks::FileChanged(SourceLocation Loc,
 
 bool MacroToEnumCallbacks::isInitializer(ArrayRef<Token> MacroTokens)
 {
-  IntegralLiteralExpressionMatcher Matcher(MacroTokens);
-  return Matcher.match();
+  IntegralLiteralExpressionMatcher Matcher(MacroTokens, LangOpts.C99 == 0);
+  bool Matched = Matcher.match();
+  bool isC = !LangOpts.CPlusPlus;
+  if (isC && (Matcher.largestLiteralSize() != LiteralSize::Int &&
+              Matcher.largestLiteralSize() != LiteralSize::UnsignedInt))
+    return false;
+
+  return Matched;
 }
 
 
