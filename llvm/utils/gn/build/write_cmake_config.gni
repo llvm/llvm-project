@@ -28,7 +28,7 @@ template("write_cmake_config") {
   assert(defined(invoker.values), "must set 'values' in $target_name")
 
   action(target_name) {
-    script = "//llvm/utils/gn/build/write_cmake_config.py"
+    script = "//llvm/utils/write_cmake_config.py"
 
     sources = [ invoker.input ]
     outputs = [ invoker.output ]
