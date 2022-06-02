@@ -411,7 +411,7 @@ TEST_F(FileManagerTest, getVirtualFileWithDifferentName) {
 #endif  // !_WIN32
 
 static StringRef getSystemRoot() {
-  return is_style_windows(llvm::sys::path::Style::native) ? "C:/" : "/";
+  return is_style_windows(llvm::sys::path::Style::native) ? "C:\\" : "/";
 }
 
 TEST_F(FileManagerTest, makeAbsoluteUsesVFS) {
