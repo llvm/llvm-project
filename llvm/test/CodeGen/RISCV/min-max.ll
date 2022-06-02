@@ -620,3 +620,40 @@ define signext i32 @umax_undef_i32() {
   ret i32 %c
 }
 
+define signext i32 @smax_i32_pos_constant(i32 signext %a) {
+; RV32I-LABEL: smax_i32_pos_constant:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    li a1, 10
+; RV32I-NEXT:    blt a1, a0, .LBB24_2
+; RV32I-NEXT:  # %bb.1:
+; RV32I-NEXT:    li a0, 10
+; RV32I-NEXT:  .LBB24_2:
+; RV32I-NEXT:    ret
+;
+; RV64I-LABEL: smax_i32_pos_constant:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    li a1, 10
+; RV64I-NEXT:    blt a1, a0, .LBB24_2
+; RV64I-NEXT:  # %bb.1:
+; RV64I-NEXT:    li a0, 10
+; RV64I-NEXT:  .LBB24_2:
+; RV64I-NEXT:    slli a0, a0, 32
+; RV64I-NEXT:    srli a0, a0, 32
+; RV64I-NEXT:    ret
+;
+; RV32ZBB-LABEL: smax_i32_pos_constant:
+; RV32ZBB:       # %bb.0:
+; RV32ZBB-NEXT:    li a1, 10
+; RV32ZBB-NEXT:    max a0, a0, a1
+; RV32ZBB-NEXT:    ret
+;
+; RV64ZBB-LABEL: smax_i32_pos_constant:
+; RV64ZBB:       # %bb.0:
+; RV64ZBB-NEXT:    li a1, 10
+; RV64ZBB-NEXT:    max a0, a0, a1
+; RV64ZBB-NEXT:    slli a0, a0, 32
+; RV64ZBB-NEXT:    srli a0, a0, 32
+; RV64ZBB-NEXT:    ret
+  %c = call i32 @llvm.smax.i32(i32 %a, i32 10)
+  ret i32 %c
+}
