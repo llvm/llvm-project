@@ -452,17 +452,6 @@ private:
   MCPhysReg getNextSystemSGPR() const;
 
 public:
-  struct SpilledReg {
-    Register VGPR;
-    int Lane = -1;
-
-    SpilledReg() = default;
-    SpilledReg(Register R, int L) : VGPR (R), Lane (L) {}
-
-    bool hasLane() { return Lane != -1;}
-    bool hasReg() { return VGPR != 0;}
-  };
-
   struct SGPRSpillVGPR {
     // VGPR used for SGPR spills
     Register VGPR;
@@ -501,7 +490,7 @@ public:
 private:
   // Track VGPR + wave index for each subregister of the SGPR spilled to
   // frameindex key.
-  DenseMap<int, std::vector<SpilledReg>> SGPRToVGPRSpills;
+  DenseMap<int, std::vector<SIRegisterInfo::SpilledReg>> SGPRToVGPRSpills;
   unsigned NumVGPRSpillLanes = 0;
   SmallVector<SGPRSpillVGPR, 2> SpillVGPRs;
 
@@ -554,10 +543,12 @@ public:
     WWMReservedRegs.insert(Reg);
   }
 
-  ArrayRef<SpilledReg> getSGPRToVGPRSpills(int FrameIndex) const {
+  ArrayRef<SIRegisterInfo::SpilledReg>
+  getSGPRToVGPRSpills(int FrameIndex) const {
     auto I = SGPRToVGPRSpills.find(FrameIndex);
-    return (I == SGPRToVGPRSpills.end()) ?
-      ArrayRef<SpilledReg>() : makeArrayRef(I->second);
+    return (I == SGPRToVGPRSpills.end())
+               ? ArrayRef<SIRegisterInfo::SpilledReg>()
+               : makeArrayRef(I->second);
   }
 
   ArrayRef<SGPRSpillVGPR> getSGPRSpillVGPRs() const { return SpillVGPRs; }
