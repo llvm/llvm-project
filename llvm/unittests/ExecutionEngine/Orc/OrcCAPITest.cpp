@@ -84,7 +84,7 @@ public:
       return;
     }
 
-    LLVMOrcDisposeLLJIT(J);
+    (void)LLVMOrcDisposeLLJIT(J);
     TargetSupported = true;
   }
 
@@ -110,7 +110,7 @@ public:
     // Check whether Jit has already been torn down -- we allow clients to do
     // this manually to check teardown behavior.
     if (Jit) {
-      LLVMOrcDisposeLLJIT(Jit);
+      (void)LLVMOrcDisposeLLJIT(Jit);
       Jit = nullptr;
     }
   }
@@ -441,7 +441,7 @@ TEST_F(OrcCAPITestBase, ResourceTrackerDefinitionLifetime) {
     FAIL() << "Symbol \"sum\" was not added into JIT (triple = " << TargetTriple
            << "): " << toString(E);
   ASSERT_TRUE(!!TestFnAddr);
-  LLVMOrcResourceTrackerRemove(RT);
+  (void)LLVMOrcResourceTrackerRemove(RT);
   LLVMOrcJITTargetAddress OutAddr;
   LLVMErrorRef Err = LLVMOrcLLJITLookup(Jit, &OutAddr, "sum");
   ASSERT_TRUE(Err);
@@ -576,7 +576,7 @@ void Materialize(void *Ctx, LLVMOrcMaterializationResponsibilityRef MR) {
       {OtherSymbol, Flags},
       {DependencySymbol, Flags},
   };
-  LLVMOrcMaterializationResponsibilityDefineMaterializing(MR, NewSymbols, 2);
+  (void)LLVMOrcMaterializationResponsibilityDefineMaterializing(MR, NewSymbols, 2);
 
   LLVMOrcRetainSymbolStringPoolEntry(OtherSymbol);
   LLVMOrcMaterializationResponsibilityRef OtherMR = NULL;
@@ -636,13 +636,13 @@ void Materialize(void *Ctx, LLVMOrcMaterializationResponsibilityRef MR) {
 
   // See FIXME above
   LLVMOrcCSymbolMapPair Pair = {DependencySymbol, Sym};
-  LLVMOrcMaterializationResponsibilityNotifyResolved(MR, &Pair, 1);
+  (void)LLVMOrcMaterializationResponsibilityNotifyResolved(MR, &Pair, 1);
   // DependencySymbol no longer owned by us
 
   Pair = {TargetSym.Name, Sym};
-  LLVMOrcMaterializationResponsibilityNotifyResolved(MR, &Pair, 1);
+  (void)LLVMOrcMaterializationResponsibilityNotifyResolved(MR, &Pair, 1);
 
-  LLVMOrcMaterializationResponsibilityNotifyEmitted(MR);
+  (void)LLVMOrcMaterializationResponsibilityNotifyEmitted(MR);
   LLVMOrcDisposeMaterializationResponsibility(MR);
 }
 
@@ -655,7 +655,7 @@ TEST_F(OrcCAPITestBase, MaterializationResponsibility) {
   LLVMOrcMaterializationUnitRef MU = LLVMOrcCreateCustomMaterializationUnit(
       "MU", (void *)Jit, &Sym, 1, NULL, &Materialize, NULL, &Destroy);
   LLVMOrcJITDylibRef JD = LLVMOrcLLJITGetMainJITDylib(Jit);
-  LLVMOrcJITDylibDefine(JD, MU);
+  (void)LLVMOrcJITDylibDefine(JD, MU);
 
   LLVMOrcJITTargetAddress Addr;
   if (LLVMErrorRef Err = LLVMOrcLLJITLookup(Jit, &Addr, "foo")) {
@@ -777,7 +777,7 @@ TEST_F(OrcCAPITestBase, SuspendedLookup) {
   LLVMOrcReleaseSymbolStringPoolEntry(Ctx.NameToGenerate);
 
   // Explicitly tear down the JIT.
-  LLVMOrcDisposeLLJIT(Jit);
+  (void)LLVMOrcDisposeLLJIT(Jit);
   Jit = nullptr;
 
   // Check that the generator context was "destroyed".
