@@ -890,7 +890,9 @@ void SymtabSection::emitStabs() {
     stabs.emplace_back(std::move(astStab));
   }
 
-  std::vector<Defined *> symbolsNeedingStabs;
+  // Cache the file ID for each symbol in an std::pair for faster sorting.
+  using SortingPair = std::pair<Defined *, int>;
+  std::vector<SortingPair> symbolsNeedingStabs;
   for (const SymtabEntry &entry :
        concat<SymtabEntry>(localSymbols, externalSymbols)) {
     Symbol *sym = entry.sym;
@@ -913,19 +915,20 @@ void SymtabSection::emitStabs() {
       if (!file || !file->compileUnit)
         continue;
 
-      symbolsNeedingStabs.push_back(defined);
+      symbolsNeedingStabs.emplace_back(defined, defined->isec->getFile()->id);
     }
   }
 
-  llvm::stable_sort(symbolsNeedingStabs, [&](Defined *a, Defined *b) {
-    return a->isec->getFile()->id < b->isec->getFile()->id;
+  llvm::stable_sort(symbolsNeedingStabs, [&](const SortingPair &a, const SortingPair &b) {
+    return a.second < b.second;
   });
 
   // Emit STABS symbols so that dsymutil and/or the debugger can map address
   // regions in the final binary to the source and object files from which they
   // originated.
   InputFile *lastFile = nullptr;
-  for (Defined *defined : symbolsNeedingStabs) {
+  for (SortingPair &pair : symbolsNeedingStabs) {
+    Defined *defined = pair.first;
     InputSection *isec = defined->isec;
     ObjFile *file = cast<ObjFile>(isec->getFile());
 
