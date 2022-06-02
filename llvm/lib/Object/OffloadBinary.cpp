@@ -14,9 +14,8 @@
 #include "llvm/Object/Error.h"
 #include "llvm/Support/FileOutputBuffer.h"
 
-namespace llvm {
-
-namespace object {
+using namespace llvm;
+using namespace llvm::object;
 
 Expected<std::unique_ptr<OffloadBinary>>
 OffloadBinary::create(MemoryBufferRef Buf) {
@@ -94,7 +93,7 @@ OffloadBinary::write(const OffloadingImage &OffloadingData) {
   return MemoryBuffer::getMemBufferCopy(OS.str());
 }
 
-OffloadKind getOffloadKind(StringRef Name) {
+OffloadKind object::getOffloadKind(StringRef Name) {
   return llvm::StringSwitch<OffloadKind>(Name)
       .Case("openmp", OFK_OpenMP)
       .Case("cuda", OFK_Cuda)
@@ -102,7 +101,7 @@ OffloadKind getOffloadKind(StringRef Name) {
       .Default(OFK_None);
 }
 
-StringRef getOffloadKindName(OffloadKind Kind) {
+StringRef object::getOffloadKindName(OffloadKind Kind) {
   switch (Kind) {
   case OFK_OpenMP:
     return "openmp";
@@ -115,7 +114,7 @@ StringRef getOffloadKindName(OffloadKind Kind) {
   }
 }
 
-ImageKind getImageKind(StringRef Name) {
+ImageKind object::getImageKind(StringRef Name) {
   return llvm::StringSwitch<ImageKind>(Name)
       .Case("o", IMG_Object)
       .Case("bc", IMG_Bitcode)
@@ -125,7 +124,7 @@ ImageKind getImageKind(StringRef Name) {
       .Default(IMG_None);
 }
 
-StringRef getImageKindName(ImageKind Kind) {
+StringRef object::getImageKindName(ImageKind Kind) {
   switch (Kind) {
   case IMG_Object:
     return "o";
@@ -141,7 +140,3 @@ StringRef getImageKindName(ImageKind Kind) {
     return "";
   }
 }
-
-} // namespace object
-
-} // namespace llvm
