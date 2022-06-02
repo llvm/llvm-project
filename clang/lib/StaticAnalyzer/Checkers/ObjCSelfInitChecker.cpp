@@ -94,7 +94,7 @@ enum SelfFlagEnum {
 };
 }
 
-REGISTER_MAP_WITH_PROGRAMSTATE(SelfFlag, SymbolRef, unsigned)
+REGISTER_MAP_WITH_PROGRAMSTATE(SelfFlag, SymbolRef, SelfFlagEnum)
 REGISTER_TRAIT_WITH_PROGRAMSTATE(CalledInit, bool)
 
 /// A call receiving a reference to 'self' invalidates the object that
@@ -105,8 +105,8 @@ REGISTER_TRAIT_WITH_PROGRAMSTATE(PreCallSelfFlags, SelfFlagEnum)
 
 static SelfFlagEnum getSelfFlags(SVal val, ProgramStateRef state) {
   if (SymbolRef sym = val.getAsSymbol())
-    if (const unsigned *attachedFlags = state->get<SelfFlag>(sym))
-      return (SelfFlagEnum)*attachedFlags;
+    if (const SelfFlagEnum *attachedFlags = state->get<SelfFlag>(sym))
+      return *attachedFlags;
   return SelfFlag_None;
 }
 
@@ -118,7 +118,8 @@ static void addSelfFlag(ProgramStateRef state, SVal val,
                         SelfFlagEnum flag, CheckerContext &C) {
   // We tag the symbol that the SVal wraps.
   if (SymbolRef sym = val.getAsSymbol()) {
-    state = state->set<SelfFlag>(sym, getSelfFlags(val, state) | flag);
+    state = state->set<SelfFlag>(sym,
+                                 SelfFlagEnum(getSelfFlags(val, state) | flag));
     C.addTransition(state);
   }
 }
@@ -271,7 +272,7 @@ void ObjCSelfInitChecker::checkPostCall(const CallEvent &CE,
     return;
 
   ProgramStateRef state = C.getState();
-  SelfFlagEnum prevFlags = (SelfFlagEnum)state->get<PreCallSelfFlags>();
+  SelfFlagEnum prevFlags = state->get<PreCallSelfFlags>();
   if (!prevFlags)
     return;
   state = state->remove<PreCallSelfFlags>();
@@ -339,7 +340,7 @@ void ObjCSelfInitChecker::printState(raw_ostream &Out, ProgramStateRef State,
                                      const char *NL, const char *Sep) const {
   SelfFlagTy FlagMap = State->get<SelfFlag>();
   bool DidCallInit = State->get<CalledInit>();
-  SelfFlagEnum PreCallFlags = (SelfFlagEnum)State->get<PreCallSelfFlags>();
+  SelfFlagEnum PreCallFlags = State->get<PreCallSelfFlags>();
 
   if (FlagMap.isEmpty() && !DidCallInit && !PreCallFlags)
     return;

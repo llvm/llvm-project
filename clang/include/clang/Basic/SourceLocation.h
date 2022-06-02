@@ -24,7 +24,7 @@
 namespace llvm {
 
 class FoldingSetNodeID;
-template <typename T> struct FoldingSetTrait;
+template <typename T, typename Enable> struct FoldingSetTrait;
 
 } // namespace llvm
 
@@ -87,7 +87,7 @@ class SourceLocation {
   friend class ASTReader;
   friend class ASTWriter;
   friend class SourceManager;
-  friend struct llvm::FoldingSetTrait<SourceLocation>;
+  friend struct llvm::FoldingSetTrait<SourceLocation, void>;
 
 public:
   using UIntTy = uint32_t;
@@ -507,7 +507,7 @@ namespace llvm {
   };
 
   // Allow calling FoldingSetNodeID::Add with SourceLocation object as parameter
-  template <> struct FoldingSetTrait<clang::SourceLocation> {
+  template <> struct FoldingSetTrait<clang::SourceLocation, void> {
     static void Profile(const clang::SourceLocation &X, FoldingSetNodeID &ID);
   };
 

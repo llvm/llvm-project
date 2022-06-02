@@ -58,7 +58,7 @@ class Pass;
 class Type;
 template <class GraphType> struct GraphTraits;
 template <typename T, unsigned int N> class SmallSetVector;
-template <typename T> struct FoldingSetTrait;
+template <typename T, typename Enable> struct FoldingSetTrait;
 class AAResults;
 class BlockAddress;
 class BlockFrequencyInfo;
