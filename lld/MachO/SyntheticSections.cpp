@@ -919,9 +919,10 @@ void SymtabSection::emitStabs() {
     }
   }
 
-  llvm::stable_sort(symbolsNeedingStabs, [&](const SortingPair &a, const SortingPair &b) {
-    return a.second < b.second;
-  });
+  llvm::stable_sort(symbolsNeedingStabs,
+                    [&](const SortingPair &a, const SortingPair &b) {
+                      return a.second < b.second;
+                    });
 
   // Emit STABS symbols so that dsymutil and/or the debugger can map address
   // regions in the final binary to the source and object files from which they
