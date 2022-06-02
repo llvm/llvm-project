@@ -116,6 +116,10 @@
 #  define _LIBCPP_ABI_DO_NOT_EXPORT_VECTOR_BASE_COMMON
 // According to the Standard, `bitset::operator[] const` returns bool
 #  define _LIBCPP_ABI_BITSET_VECTOR_BOOL_CONST_SUBSCRIPT_RETURN_BOOL
+// Remove the base 10 implementation of std::to_chars from the dylib.
+// The implementation moved to the header, but we still export the symbols from
+// the dylib for backwards compatibility.
+#  define _LIBCPP_ABI_DO_NOT_EXPORT_TO_CHARS_BASE_10
 #elif _LIBCPP_ABI_VERSION == 1
 #  if !defined(_LIBCPP_OBJECT_FORMAT_COFF)
 // Enable compiling copies of now inline methods into the dylib to support
