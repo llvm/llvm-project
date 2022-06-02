@@ -22,7 +22,7 @@
 // CHECK-NEXT:   }
 // CHECK:        Section {
 // CHECK:          Name: .xdata
-// CHECK:          RawDataSize: 120
+// CHECK:          RawDataSize: 100
 // CHECK:          RelocationCount: 1
 // CHECK:          Characteristics [
 // CHECK-NEXT:       ALIGN_4BYTES
@@ -46,7 +46,7 @@
 // CHECK-NEXT:     0x5C IMAGE_REL_ARM_BRANCH24T tailcall
 // CHECK-NEXT:   }
 // CHECK-NEXT:   Section (4) .xdata {
-// CHECK-NEXT:     0x38 IMAGE_REL_ARM_ADDR32NB __C_specific_handler
+// CHECK-NEXT:     0x34 IMAGE_REL_ARM_ADDR32NB __C_specific_handler
 // CHECK-NEXT:   }
 // CHECK-NEXT:   Section (5) .pdata {
 // CHECK-NEXT:     0x0 IMAGE_REL_ARM_ADDR32NB .text
@@ -68,7 +68,9 @@
 // CHECK-NEXT:     ExceptionRecord: .xdata
 // CHECK-NEXT:     ExceptionData {
 // CHECK-NEXT:       FunctionLength: 86
+// CHECK:            EpiloguePacked: Yes
 // CHECK:            Fragment: No
+// CHECK:            EpilogueOffset: 31
 // CHECK:            Prologue [
 // CHECK-NEXT:         0xed 0xf8           ; push {r3-r7, lr}
 // CHECK-NEXT:         0xf6 0x27           ; vpush {d18-d23}
@@ -89,22 +91,15 @@
 // CHECK-NEXT:         0xe8 0x80           ; sub.w sp, #(128 * 4)
 // CHECK-NEXT:         0x06                ; sub sp, #(6 * 4)
 // CHECK-NEXT:       ]
-// CHECK-NEXT:       EpilogueScopes [
-// CHECK-NEXT:         EpilogueScope {
-// CHECK-NEXT:           StartOffset: 31
-// CHECK-NEXT:           Condition: 14
-// CHECK-NEXT:           EpilogueStartIndex: 31
-// CHECK-NEXT:           Opcodes [
-// CHECK-NEXT:             0xfc                ; nop.w
-// CHECK-NEXT:             0xf7 0x00 0x80      ; add sp, sp, #(128 * 4)
-// CHECK-NEXT:             0xfc                ; nop.w
-// CHECK-NEXT:             0xfc                ; nop.w
-// CHECK-NEXT:             0xf8 0x01 0x00 0x00 ; add sp, sp, #(65536 * 4)
-// CHECK-NEXT:             0x06                ; add sp, #(6 * 4)
-// CHECK-NEXT:             0xef 0x04           ; ldr.w lr, [sp], #16
-// CHECK-NEXT:             0xfd                ; bx <reg>
-// CHECK-NEXT:           ]
-// CHECK-NEXT:         }
+// CHECK-NEXT:       Epilogue [
+// CHECK-NEXT:         0xfc                ; nop.w
+// CHECK-NEXT:         0xf7 0x00 0x80      ; add sp, sp, #(128 * 4)
+// CHECK-NEXT:         0xfc                ; nop.w
+// CHECK-NEXT:         0xfc                ; nop.w
+// CHECK-NEXT:         0xf8 0x01 0x00 0x00 ; add sp, sp, #(65536 * 4)
+// CHECK-NEXT:         0x06                ; add sp, #(6 * 4)
+// CHECK-NEXT:         0xef 0x04           ; ldr.w lr, [sp], #16
+// CHECK-NEXT:         0xfd                ; bx <reg>
 // CHECK-NEXT:       ]
 // CHECK-NEXT:       ExceptionHandler [
 // CHECK-NEXT:         Routine: __C_specific_handler
@@ -117,31 +112,21 @@
 // CHECK:            Prologue [
 // CHECK-NEXT:         0xd3                ; push {r4-r7}
 // CHECK-NEXT:       ]
-// CHECK-NEXT:       EpilogueScopes [
-// CHECK-NEXT:         EpilogueScope {
-// CHECK:                Opcodes [
-// CHECK-NEXT:             0xd2                ; pop {r4-r6}
-// CHECK-NEXT:             0xfe                ; b.w <target>
-// CHECK-NEXT:           ]
-// CHECK-NEXT:         }
+// CHECK-NEXT:       Epilogue [
+// CHECK-NEXT:         0xd2                ; pop {r4-r6}
+// CHECK-NEXT:         0xfe                ; b.w <target>
 // CHECK-NEXT:       ]
 // CHECK-NEXT:     }
 // CHECK-NEXT:   }
 // CHECK-NEXT:   RuntimeFunction {
 // CHECK-NEXT:     Function: func3
 // CHECK:            FunctionLength: 8
+// CHECK:            EpilogueOffset: 2
 // CHECK:            Prologue [
 // CHECK-NEXT:         0xd5                ; push {r4-r5, lr}
 // CHECK-NEXT:       ]
-// CHECK-NEXT:       EpilogueScopes [
-// CHECK-NEXT:         EpilogueScope {
-// CHECK-NEXT:           StartOffset: 3
-// CHECK-NEXT:           Condition: 14
-// CHECK-NEXT:           EpilogueStartIndex: 2
-// CHECK-NEXT:           Opcodes [
-// CHECK-NEXT:             0xd6                ; pop {r4-r6, pc}
-// CHECK-NEXT:           ]
-// CHECK-NEXT:         }
+// CHECK-NEXT:       Epilogue [
+// CHECK-NEXT:         0xd6                ; pop {r4-r6, pc}
 // CHECK-NEXT:       ]
 // CHECK-NEXT:     }
 // CHECK-NEXT:   }
@@ -154,16 +139,9 @@
 // CHECK-NEXT:         0x10                ; sub sp, #(16 * 4)
 // CHECK-NEXT:         0xd5                ; push {r4-r5, lr}
 // CHECK-NEXT:       ]
-// CHECK-NEXT:       EpilogueScopes [
-// CHECK-NEXT:         EpilogueScope {
-// CHECK-NEXT:           StartOffset: 1
-// CHECK-NEXT:           Condition: 14
-// CHECK-NEXT:           EpilogueStartIndex: 4
-// CHECK-NEXT:           Opcodes [
-// CHECK-NEXT:             0x10                ; add sp, #(16 * 4)
-// CHECK-NEXT:             0xd5                ; pop {r4-r5, pc}
-// CHECK-NEXT:           ]
-// CHECK-NEXT:         }
+// CHECK-NEXT:       Epilogue [
+// CHECK-NEXT:         0x10                ; add sp, #(16 * 4)
+// CHECK-NEXT:         0xd5                ; pop {r4-r5, pc}
 // CHECK-NEXT:       ]
 // CHECK-NEXT:     }
 // CHECK-NEXT:   }
@@ -177,7 +155,7 @@
 // CHECK-NEXT:         EpilogueScope {
 // CHECK-NEXT:           StartOffset: 3
 // CHECK-NEXT:           Condition: 10
-// CHECK-NEXT:           EpilogueStartIndex: 2
+// CHECK-NEXT:           EpilogueStartIndex: 0
 // CHECK-NEXT:           Opcodes [
 // CHECK-NEXT:             0xd5                ; pop {r4-r5, pc}
 // CHECK-NEXT:           ]
