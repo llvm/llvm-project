@@ -781,6 +781,7 @@ def Arith_DivFOp : Arith_FloatBinaryOp<"divf"> {
 
 def Arith_RemFOp : Arith_FloatBinaryOp<"remf"> {
   let summary = "floating point division remainder operation";
+  let hasFolder = 1;
 }
 
 //===----------------------------------------------------------------------===//
