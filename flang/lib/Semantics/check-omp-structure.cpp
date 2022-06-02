@@ -922,6 +922,8 @@ void OmpStructureChecker::CheckThreadprivateOrDeclareTargetVar(
         common::visitors{
             [&](const parser::Designator &) {
               if (const auto *name{parser::Unwrap<parser::Name>(ompObject)}) {
+                const auto &useScope{
+                    context_.FindScope(GetContext().directiveSource)};
                 const auto &declScope{
                     GetProgramUnitContaining(name->symbol->GetUltimate())};
                 const auto *sym =
@@ -966,6 +968,12 @@ void OmpStructureChecker::CheckThreadprivateOrDeclareTargetVar(
                       "A variable that appears in a %s directive must be "
                       "declared in the scope of a module or have the SAVE "
                       "attribute, either explicitly or implicitly"_err_en_US,
+                      ContextDirectiveAsFortran());
+                } else if (useScope != declScope) {
+                  context_.Say(name->source,
+                      "The %s directive and the common block or variable in it "
+                      "must appear in the same declaration section of a "
+                      "scoping unit"_err_en_US,
                       ContextDirectiveAsFortran());
                 } else if (FindEquivalenceSet(*name->symbol)) {
                   context_.Say(name->source,
