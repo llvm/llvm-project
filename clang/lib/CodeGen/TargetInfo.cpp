@@ -2364,7 +2364,7 @@ class X86_64ABIInfo : public SwiftABIInfo {
       return false;
 
     const llvm::Triple &Triple = getTarget().getTriple();
-    if (Triple.isOSDarwin() || Triple.getOS() == llvm::Triple::PS4)
+    if (Triple.isOSDarwin() || Triple.isPS())
       return false;
     if (Triple.isOSFreeBSD() && Triple.getOSMajorVersion() >= 10)
       return false;
