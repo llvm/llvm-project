@@ -1,4 +1,4 @@
-set(PACKAGE_PREFIX lib/cmake/AMDDeviceLibs)
+set(PACKAGE_PREFIX ${CMAKE_INSTALL_LIBDIR}/cmake/AMDDeviceLibs)
 
 # Generate the build-tree package.
 # We know the absolute path to the build tree, so we leave
