@@ -3007,28 +3007,31 @@ std::string formatEscapes(const std::string &Str) {
 } // namespace
 
 void BinaryFunction::dumpGraph(raw_ostream &OS) const {
-  OS << "strict digraph \"" << getPrintName() << "\" {\n";
+  OS << "digraph \"" << getPrintName() << "\" {\n";
+  OS << R"(node [fontname="courier"])" << '\n';
   uint64_t Offset = Address;
   for (BinaryBasicBlock *BB : BasicBlocks) {
     auto LayoutPos =
         std::find(BasicBlocksLayout.begin(), BasicBlocksLayout.end(), BB);
     unsigned Layout = LayoutPos - BasicBlocksLayout.begin();
     const char *ColdStr = BB->isCold() ? " (cold)" : "";
-    OS << format("\"%s\" [label=\"%s%s\\n(C:%lu,O:%lu,I:%u,L:%u:CFI:%u)\"]\n",
-                 BB->getName().data(), BB->getName().data(), ColdStr,
-                 (BB->ExecutionCount != BinaryBasicBlock::COUNT_NO_PROFILE
-                      ? BB->ExecutionCount
-                      : 0),
-                 BB->getOffset(), getIndex(BB), Layout, BB->getCFIState());
     OS << format("\"%s\" [shape=box]\n", BB->getName().data());
+    OS << format("\"%s\" [label=\"%s%s\\n(C:%lu,O:%lu,I:%u,L:%u,CFI:%u)\\n",
+                 BB->getName().data(), BB->getName().data(), ColdStr,
+                 BB->getKnownExecutionCount(), BB->getOffset(), getIndex(BB),
+                 Layout, BB->getCFIState());
+
     if (opts::DotToolTipCode) {
       std::string Str;
       raw_string_ostream CS(Str);
-      Offset = BC.printInstructions(CS, BB->begin(), BB->end(), Offset, this);
-      const std::string Code = formatEscapes(CS.str());
-      OS << format("\"%s\" [tooltip=\"%s\"]\n", BB->getName().data(),
-                   Code.c_str());
+      Offset = BC.printInstructions(CS, BB->begin(), BB->end(), Offset, this,
+                                    /* PrintMCInst = */ false,
+                                    /* PrintMemData = */ false,
+                                    /* PrintRelocations = */ false,
+                                    /* Endl = */ R"(\\l)");
+      OS << formatEscapes(CS.str()) << '\n';
     }
+    OS << "\"]\n";
 
     // analyzeBranch is just used to get the names of the branch
     // opcodes.
