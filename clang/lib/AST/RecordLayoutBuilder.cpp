@@ -1223,7 +1223,7 @@ ItaniumRecordLayoutBuilder::LayoutBase(const BaseSubobjectInfo *Base) {
     // Per GCC's documentation, it only applies to non-static data members.
     return (Packed && ((Context.getLangOpts().getClangABICompat() <=
                         LangOptions::ClangABI::Ver6) ||
-                       Context.getTargetInfo().getTriple().isPS4() ||
+                       Context.getTargetInfo().getTriple().isPS() ||
                        Context.getTargetInfo().getTriple().isOSAIX()))
                ? CharUnits::One()
                : UnpackedAlign;
