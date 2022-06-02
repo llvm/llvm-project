@@ -14,6 +14,7 @@
 #include "lldb/Symbol/SymbolFile.h"
 #include "lldb/Symbol/CompilerDecl.h"
 #include "lldb/Symbol/CompilerDeclContext.h"
+#include "lldb/lldb-enumerations.h"
 
 class DWARFDIE;
 namespace lldb_private {
@@ -54,6 +55,8 @@ public:
   static llvm::Optional<lldb_private::SymbolFile::ArrayInfo>
   ParseChildArrayInfo(const DWARFDIE &parent_die,
                       const lldb_private::ExecutionContext *exe_ctx = nullptr);
+
+  static lldb::AccessType GetAccessTypeFromDWARF(uint32_t dwarf_accessibility);
 };
 
 #endif // LLDB_SOURCE_PLUGINS_SYMBOLFILE_DWARF_DWARFASTPARSER_H
