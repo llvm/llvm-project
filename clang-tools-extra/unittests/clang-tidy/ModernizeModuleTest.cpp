@@ -267,7 +267,7 @@ static const SizeParam SizeParams[] = {
 
 TEST_P(SizeTest, TokenSize) {
   EXPECT_EQ(sizeText(GetParam().Text), GetParam().Size);
-};
+}
 
 INSTANTIATE_TEST_SUITE_P(IntegralLiteralExpressionMatcherTests, SizeTest,
                          ::testing::ValuesIn(SizeParams));
