@@ -260,7 +260,7 @@ install(FILES
   "LICENSE.txt"
   "NOTICES.txt"
   COMPONENT amd-comgr
-  DESTINATION ${CMAKE_INSTALL_DATADIR}/doc/amd_comgr)
+  DESTINATION ${CMAKE_INSTALL_DOCDIR})
 
 # Generate the install-tree package.
 set(AMD_COMGR_PREFIX_CODE "
