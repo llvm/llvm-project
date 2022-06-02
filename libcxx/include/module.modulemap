@@ -403,6 +403,8 @@ module std [system] {
     module __charconv {
       module chars_format      { private header "__charconv/chars_format.h" }
       module from_chars_result { private header "__charconv/from_chars_result.h" }
+      module tables            { private header "__charconv/tables.h" }
+      module to_chars_base_10  { private header "__charconv/to_chars_base_10.h" }
       module to_chars_result   { private header "__charconv/to_chars_result.h" }
     }
 

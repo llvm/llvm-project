@@ -85,7 +85,7 @@ append8_no_zeros(char* buffer, T v) noexcept
     return buffer;
 }
 
-char*
+_LIBCPP_FUNC_VIS char*
 __u32toa(uint32_t value, char* buffer) noexcept
 {
     if (value < 100000000)
@@ -106,7 +106,7 @@ __u32toa(uint32_t value, char* buffer) noexcept
     return buffer;
 }
 
-char*
+_LIBCPP_FUNC_VIS char*
 __u64toa(uint64_t value, char* buffer) noexcept
 {
     if (value < 100000000)

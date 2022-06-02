@@ -82,6 +82,8 @@ namespace std {
 #include <__bits>
 #include <__charconv/chars_format.h>
 #include <__charconv/from_chars_result.h>
+#include <__charconv/tables.h>
+#include <__charconv/to_chars_base_10.h>
 #include <__charconv/to_chars_result.h>
 #include <__config>
 #include <__debug>
@@ -104,11 +106,6 @@ _LIBCPP_PUSH_MACROS
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 #ifndef _LIBCPP_CXX03_LANG
-
-namespace __itoa {
-_LIBCPP_AVAILABILITY_TO_CHARS _LIBCPP_FUNC_VIS char* __u64toa(uint64_t __value, char* __buffer) noexcept;
-_LIBCPP_AVAILABILITY_TO_CHARS _LIBCPP_FUNC_VIS char* __u32toa(uint32_t __value, char* __buffer) noexcept;
-} // namespace __itoa
 
 to_chars_result to_chars(char*, char*, bool, int = 10) = delete;
 from_chars_result from_chars(const char*, const char*, bool, int = 10) = delete;
@@ -160,7 +157,7 @@ struct _LIBCPP_HIDDEN __traits_base
     _LIBCPP_AVAILABILITY_TO_CHARS
     static _LIBCPP_HIDE_FROM_ABI char* __convert(_Tp __v, char* __p)
     {
-        return __u64toa(__v, __p);
+        return __itoa::__base_10_u64(__v, __p);
     }
 
     static _LIBCPP_HIDE_FROM_ABI decltype(__pow10_64)& __pow() { return __pow10_64; }
@@ -181,7 +178,7 @@ struct _LIBCPP_HIDDEN
     _LIBCPP_AVAILABILITY_TO_CHARS
     static _LIBCPP_HIDE_FROM_ABI char* __convert(_Tp __v, char* __p)
     {
-        return __u32toa(__v, __p);
+        return __itoa::__base_10_u32(__v, __p);
     }
 
     static _LIBCPP_HIDE_FROM_ABI decltype(__pow10_32)& __pow() { return __pow10_32; }
