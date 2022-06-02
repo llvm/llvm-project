@@ -21,21 +21,21 @@
 ; RUN: llvm-dis %t2.1.3.import.bc -o - | FileCheck %s --check-prefixes=DEST,DEST2
 
 ; DEST:      @a = available_externally global i32 42, align 4
-; DEST-NEXT: @b = external global i32*, align 8
+; DEST-NEXT: @b = external global ptr, align 8
 ; DEST:      declare void @linkonce()
 ; DEST:      declare void @weak()
 ; DEST:      define dso_local i32 @main()
 ; DEST:      define available_externally void @extern()
 
-; DEST1:     declare i32 @extern_aux(i32*, i32**)
-; DEST1:     declare i32 @linkonceodr_aux(i32*, i32**)
-; DEST2:     define available_externally i32 @extern_aux(i32* %a, i32** %b)
-; DEST2:     define available_externally i32 @linkonceodr_aux(i32* %a, i32** %b)
+; DEST1:     declare i32 @extern_aux(ptr, ptr)
+; DEST1:     declare i32 @linkonceodr_aux(ptr, ptr)
+; DEST2:     define available_externally i32 @extern_aux(ptr %a, ptr %b)
+; DEST2:     define available_externally i32 @linkonceodr_aux(ptr %a, ptr %b)
 
 ; DEST:      define available_externally void @weakodr()
 
-; DEST1:     declare i32 @weakodr_aux(i32*, i32**)
-; DEST2:     define available_externally i32 @weakodr_aux(i32* %a, i32** %b)
+; DEST1:     declare i32 @weakodr_aux(ptr, ptr)
+; DEST2:     define available_externally i32 @weakodr_aux(ptr %a, ptr %b)
 
 ;--- a.ll
 target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"

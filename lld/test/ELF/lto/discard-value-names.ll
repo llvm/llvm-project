@@ -7,7 +7,7 @@
 ; CHECK: @GlobalValueName
 ; CHECK: @foo(i32 %in)
 ; CHECK: somelabel:
-; CHECK:  %GV = load i32, i32* @GlobalValueName
+; CHECK:  %GV = load i32, ptr @GlobalValueName
 ; CHECK:  %add = add i32 %in, %GV
 ; CHECK:  ret i32 %add
 

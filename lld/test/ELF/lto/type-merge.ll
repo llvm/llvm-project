@@ -14,13 +14,13 @@ define void @foo()  {
 declare void @bar(i8*)
 
 ; CHECK:      define void @foo() {
-; CHECK-NEXT:   call void @bar(i8* null)
+; CHECK-NEXT:   call void @bar(ptr null)
 ; CHECK-NEXT:   ret void
 ; CHECK-NEXT: }
 
-; CHECK: declare void @bar(i8*)
+; CHECK: declare void @bar(ptr)
 
 ; CHECK:      define void @zed() {
-; CHECK-NEXT:   call void bitcast (void (i8*)* @bar to void ()*)()
+; CHECK-NEXT:   call void @bar()
 ; CHECK-NEXT:   ret void
 ; CHECK-NEXT: }

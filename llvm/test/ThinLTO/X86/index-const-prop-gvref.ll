@@ -12,13 +12,13 @@
 ; RUN: llvm-dis %t4.2.3.import.bc -o - | FileCheck %s --check-prefix=DEST_DSO
 
 ; No variable in the source module should have been internalized
-; SRC:      @b = dso_local global i32* @a
+; SRC:      @b = dso_local global ptr @a
 ; SRC-NEXT: @a = dso_local global i32 42
 
 ; We can't internalize globals referenced by other live globals
-; DEST:          @b = external dso_local global i32*
+; DEST:          @b = external dso_local global ptr
 ; DEST-NEXT:     @a = available_externally dso_local global i32 42, align 4
-; DEST_DSO:      @b = external global i32*
+; DEST_DSO:      @b = external global ptr
 ; DEST_DSO-NEXT: @a = available_externally global i32 42, align 4
 
 ;; Test old API.

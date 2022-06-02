@@ -33,7 +33,7 @@
 ; RUN:  -r %t.summ1.bc,PreemptableAliasWrite1,px \
 ; RUN:  -r %t.summ1.bc,Write1,px
 
-; RUN: llvm-lto2 run %t.summ0.bc %t.summ1.bc -o %t.lto -stack-safety-print -stack-safety-run -save-temps -thinlto-threads 1 -O0 \
+; RUN: llvm-lto2 run -opaque-pointers=0 %t.summ0.bc %t.summ1.bc -o %t.lto -stack-safety-print -stack-safety-run -save-temps -thinlto-threads 1 -O0 \
 ; RUN:  $(cat %t.res.txt) \
 ; RUN:    2>&1 | FileCheck %s --check-prefixes=CHECK,GLOBAL,LTO
 

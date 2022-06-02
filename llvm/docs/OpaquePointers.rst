@@ -205,6 +205,9 @@ For users of the clang cc1 interface, ``-no-opaque-pointers`` can be passed.
 Note that the ``CLANG_ENABLE_OPAQUE_POINTERS`` cmake option has no effect on
 the cc1 interface.
 
+Usage for LTO can be disabled by passing ``-Wl,-plugin-opt=no-opaque-pointers``
+to the clang driver.
+
 The next steps for the opaque pointer migration are:
 
 * Migrate Clang/LLVM tests to use opaque pointers.

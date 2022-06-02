@@ -6,9 +6,9 @@
 ; Verify that we haven't imported GV containing blockaddress
 ; CHECK: @label_addr.llvm.0 = external hidden constant
 ; Verify that bar is not imported since it has address-taken block that is target of indirect branch
-; CHECK: declare [1 x i8*]* @bar()
+; CHECK: declare ptr @bar()
 ; Verify that foo is imported
-; CHECK: available_externally [1 x i8*]* @foo
+; CHECK: available_externally ptr @foo
 
 target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
