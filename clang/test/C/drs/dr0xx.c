@@ -9,6 +9,9 @@
 /* The following are DRs which do not require tests to demonstrate
  * conformance or nonconformance.
  *
+ * WG14 DR001: yes
+ * Do functions return values by copying?
+ *
  * WG14 DR005: yes
  * May a conforming implementation define and recognize a pragma which would
  * change the semantics of the language?
