@@ -411,7 +411,7 @@ class MaximalStaticExpansionImpl {
 public:
   MaximalStaticExpansionImpl(Scop &S, isl::union_map &Dependences,
                              OptimizationRemarkEmitter &ORE)
-      : S(S), ORE(ORE), Dependences(Dependences) {}
+      : ORE(ORE), S(S), Dependences(Dependences) {}
 
   /// Expand the accesses of the SCoP
   ///
