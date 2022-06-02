@@ -6,11 +6,12 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef __LLVM_LIBC_TYPES_THRD_T_H__
-#define __LLVM_LIBC_TYPES_THRD_T_H__
+#ifndef __LLVM_LIBC_TYPES_THREAD_TYPE_H__
+#define __LLVM_LIBC_TYPES_THREAD_TYPE_H__
 
-#include <llvm-libc-types/__thread_type.h>
+typedef struct {
+  void *__attrib;
+  void *__platform_attrib;
+} __thread_type;
 
-typedef __thread_type thrd_t;
-
-#endif // __LLVM_LIBC_TYPES_THRD_T_H__
+#endif // __LLVM_LIBC_TYPES_THREAD_TYPE_H__

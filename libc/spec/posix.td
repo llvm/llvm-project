@@ -10,6 +10,8 @@ def ConstStructSigactionPtr : ConstType<StructSigactionPtr>;
 def RestrictedStructSigactionPtr : RestrictedPtrType<StructSigaction>;
 def ConstRestrictedStructSigactionPtr : ConstType<RestrictedStructSigactionPtr>;
 
+def PThreadStartT : NamedType<"__pthread_start_t">;
+
 def POSIX : StandardSpec<"POSIX"> {
   PtrType CharPtr = PtrType<CharType>;
   RestrictedPtrType RestrictedCharPtr = RestrictedPtrType<CharType>;
@@ -38,6 +40,10 @@ def POSIX : StandardSpec<"POSIX"> {
   RestrictedPtrType RestrictedPThreadMutexTPtr = RestrictedPtrType<PThreadMutexTType>;
   ConstType ConstPThreadMutexTPtr = ConstType<PThreadMutexTPtr>;
   ConstType ConstRestrictedPThreadMutexTPtr = ConstType<RestrictedPThreadMutexTPtr>;
+
+  NamedType PThreadTType = NamedType<"pthread_t">;
+  PtrType PThreadTPtr = PtrType<PThreadTType>;
+  RestrictedPtrType RestrictedPThreadTPtr = RestrictedPtrType<PThreadTType>;
 
   HeaderSpec Errno = HeaderSpec<
       "errno.h",
@@ -392,7 +398,7 @@ def POSIX : StandardSpec<"POSIX"> {
   HeaderSpec PThread = HeaderSpec<
     "pthread.h",
     [], // Macros
-    [PThreadAttrTType, PThreadMutexAttrTType, PThreadMutexTType], // Types
+    [PThreadAttrTType, PThreadMutexAttrTType, PThreadMutexTType, PThreadStartT, PThreadTType], // Types
     [], // Enumerations
     [
       FunctionSpec<
@@ -444,6 +450,16 @@ def POSIX : StandardSpec<"POSIX"> {
           "pthread_attr_setstack",
           RetValSpec<IntType>,
           [ArgSpec<PThreadAttrTPtr>, ArgSpec<VoidPtr>, ArgSpec<SizeTType>]
+      >,
+      FunctionSpec<
+          "pthread_create",
+          RetValSpec<IntType>,
+          [ArgSpec<RestrictedPThreadTPtr>, ArgSpec<ConstRestrictedPThreadAttrTPtr>, ArgSpec<PThreadStartT>, ArgSpec<VoidPtr>]
+      >,
+      FunctionSpec<
+          "pthread_join",
+          RetValSpec<IntType>,
+          [ArgSpec<PThreadTType>, ArgSpec<VoidPtrPtr>]
       >,
       FunctionSpec<
           "pthread_mutexattr_init",

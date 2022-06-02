@@ -11,10 +11,8 @@
 #include "src/pthread/pthread_mutex_lock.h"
 #include "src/pthread/pthread_mutex_unlock.h"
 
-// TODO: When pthread_t type is available, use it to spawn threads instead of
-// thrd_t.
-#include "src/threads/thrd_create.h"
-#include "src/threads/thrd_join.h"
+#include "src/pthread/pthread_create.h"
+#include "src/pthread/pthread_join.h"
 
 #include "utils/UnitTest/Test.h"
 
@@ -26,7 +24,7 @@ constexpr int MAX = 10000;
 pthread_mutex_t mutex;
 static int shared_int = START;
 
-int counter(void *arg) {
+void *counter(void *arg) {
   int last_count = START;
   while (true) {
     __llvm_libc::pthread_mutex_lock(&mutex);
@@ -38,7 +36,7 @@ int counter(void *arg) {
     if (last_count >= MAX)
       break;
   }
-  return 0;
+  return nullptr;
 }
 
 TEST(LlvmLibcMutexTest, RelayCounter) {
@@ -46,8 +44,8 @@ TEST(LlvmLibcMutexTest, RelayCounter) {
 
   // The idea of this test is that two competing threads will update
   // a counter only if the other thread has updated it.
-  thrd_t thread;
-  __llvm_libc::thrd_create(&thread, counter, nullptr);
+  pthread_t thread;
+  __llvm_libc::pthread_create(&thread, nullptr, counter, nullptr);
 
   int last_count = START;
   while (true) {
@@ -65,9 +63,9 @@ TEST(LlvmLibcMutexTest, RelayCounter) {
       break;
   }
 
-  int retval = 123;
-  __llvm_libc::thrd_join(&thread, &retval);
-  ASSERT_EQ(retval, 0);
+  void *retval = reinterpret_cast<void *>(123);
+  __llvm_libc::pthread_join(thread, &retval);
+  ASSERT_EQ(uintptr_t(retval), uintptr_t(nullptr));
 
   __llvm_libc::pthread_mutex_destroy(&mutex);
 }
@@ -75,7 +73,7 @@ TEST(LlvmLibcMutexTest, RelayCounter) {
 pthread_mutex_t start_lock, step_lock;
 bool started, step;
 
-int stepper(void *arg) {
+void *stepper(void *arg) {
   __llvm_libc::pthread_mutex_lock(&start_lock);
   started = true;
   __llvm_libc::pthread_mutex_unlock(&start_lock);
@@ -83,7 +81,7 @@ int stepper(void *arg) {
   __llvm_libc::pthread_mutex_lock(&step_lock);
   step = true;
   __llvm_libc::pthread_mutex_unlock(&step_lock);
-  return 0;
+  return nullptr;
 }
 
 TEST(LlvmLibcMutexTest, WaitAndStep) {
@@ -97,8 +95,8 @@ TEST(LlvmLibcMutexTest, WaitAndStep) {
   started = false;
   ASSERT_EQ(__llvm_libc::pthread_mutex_lock(&step_lock), 0);
 
-  thrd_t thread;
-  __llvm_libc::thrd_create(&thread, stepper, nullptr);
+  pthread_t thread;
+  __llvm_libc::pthread_create(&thread, nullptr, stepper, nullptr);
 
   while (true) {
     // Make sure the thread actually started.
@@ -123,9 +121,9 @@ TEST(LlvmLibcMutexTest, WaitAndStep) {
       break;
   }
 
-  int retval = 123;
-  __llvm_libc::thrd_join(&thread, &retval);
-  ASSERT_EQ(retval, 0);
+  void *retval = reinterpret_cast<void *>(123);
+  __llvm_libc::pthread_join(thread, &retval);
+  ASSERT_EQ(uintptr_t(retval), uintptr_t(nullptr));
 
   __llvm_libc::pthread_mutex_destroy(&start_lock);
   __llvm_libc::pthread_mutex_destroy(&step_lock);
@@ -136,7 +134,7 @@ static pthread_mutex_t multiple_waiter_lock;
 static pthread_mutex_t counter_lock;
 static int wait_count = 0;
 
-int waiter_func(void *) {
+void *waiter_func(void *) {
   __llvm_libc::pthread_mutex_lock(&counter_lock);
   ++wait_count;
   __llvm_libc::pthread_mutex_unlock(&counter_lock);
@@ -150,7 +148,7 @@ int waiter_func(void *) {
   --wait_count;
   __llvm_libc::pthread_mutex_unlock(&counter_lock);
 
-  return 0;
+  return nullptr;
 }
 
 TEST(LlvmLibcMutexTest, MultipleWaiters) {
@@ -158,9 +156,9 @@ TEST(LlvmLibcMutexTest, MultipleWaiters) {
   __llvm_libc::pthread_mutex_init(&counter_lock, nullptr);
 
   __llvm_libc::pthread_mutex_lock(&multiple_waiter_lock);
-  thrd_t waiters[THREAD_COUNT];
+  pthread_t waiters[THREAD_COUNT];
   for (int i = 0; i < THREAD_COUNT; ++i) {
-    __llvm_libc::thrd_create(waiters + i, waiter_func, nullptr);
+    __llvm_libc::pthread_create(waiters + i, nullptr, waiter_func, nullptr);
   }
 
   // Spin until the counter is incremented to the desired
@@ -176,9 +174,9 @@ TEST(LlvmLibcMutexTest, MultipleWaiters) {
 
   __llvm_libc::pthread_mutex_unlock(&multiple_waiter_lock);
 
-  int retval;
+  void *retval;
   for (int i = 0; i < THREAD_COUNT; ++i) {
-    __llvm_libc::thrd_join(waiters + i, &retval);
+    __llvm_libc::pthread_join(waiters[i], &retval);
   }
 
   ASSERT_EQ(wait_count, 0);
