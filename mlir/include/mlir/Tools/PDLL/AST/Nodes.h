@@ -635,6 +635,13 @@ public:
   /// Provide type casting support.
   static bool classof(const Node *node);
 
+  /// Set the documentation comment for this decl.
+  void setDocComment(Context &ctx, StringRef comment);
+
+  /// Return the documentation comment attached to this decl if it has been set.
+  /// Otherwise, returns None.
+  Optional<StringRef> getDocComment() const { return docComment; }
+
 protected:
   Decl(TypeID typeID, SMRange loc, const Name *name = nullptr)
       : Node(typeID, loc), name(name) {}
@@ -643,6 +650,10 @@ private:
   /// The name of the decl. This is optional for some decls, such as
   /// PatternDecl.
   const Name *name;
+
+  /// The documentation comment attached to this decl. Defaults to None if
+  /// the comment is unset/unknown.
+  Optional<StringRef> docComment;
 };
 
 //===----------------------------------------------------------------------===//

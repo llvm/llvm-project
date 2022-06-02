@@ -20,10 +20,7 @@ using namespace mlir::pdll::ods;
 Operation::Operation(StringRef name, StringRef summary, StringRef desc,
                      StringRef nativeClassName, bool supportsTypeInferrence,
                      llvm::SMLoc loc)
-    : name(name.str()), summary(summary.str()),
+    : name(name.str()), summary(summary.str()), description(desc.str()),
       nativeClassName(nativeClassName.str()),
       supportsTypeInferrence(supportsTypeInferrence),
-      location(loc, llvm::SMLoc::getFromPointer(loc.getPointer() + 1)) {
-  llvm::raw_string_ostream descOS(description);
-  raw_indented_ostream(descOS).printReindented(desc.rtrim(" \t"));
-}
+      location(loc, llvm::SMLoc::getFromPointer(loc.getPointer() + 1)) {}

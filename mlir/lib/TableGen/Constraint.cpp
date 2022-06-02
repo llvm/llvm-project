@@ -57,6 +57,10 @@ StringRef Constraint::getSummary() const {
   return def->getName();
 }
 
+StringRef Constraint::getDescription() const {
+  return def->getValueAsOptionalString("description").getValueOr("");
+}
+
 StringRef Constraint::getDefName() const {
   if (Optional<StringRef> baseDefName = getBaseDefName())
     return *baseDefName;
