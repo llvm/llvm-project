@@ -45,9 +45,9 @@ STATISTIC(NumNotCapturedBefore, "Number of pointers not captured before");
 /// use it where possible. The caching version can use much higher limit or
 /// don't have this cap at all.
 static cl::opt<unsigned>
-DefaultMaxUsesToExplore("capture-tracking-max-uses-to-explore", cl::Hidden,
-                        cl::desc("Maximal number of uses to explore."),
-                        cl::init(20));
+    DefaultMaxUsesToExplore("capture-tracking-max-uses-to-explore", cl::Hidden,
+                            cl::desc("Maximal number of uses to explore."),
+                            cl::init(100));
 
 unsigned llvm::getDefaultMaxUsesToExploreForCaptureTracking() {
   return DefaultMaxUsesToExplore;
@@ -445,11 +445,10 @@ void llvm::PointerMayBeCaptured(const Value *V, CaptureTracker *Tracker,
   SmallSet<const Use *, 20> Visited;
 
   auto AddUses = [&](const Value *V) {
-    unsigned Count = 0;
     for (const Use &U : V->uses()) {
       // If there are lots of uses, conservatively say that the value
       // is captured to avoid taking too much compile time.
-      if (Count++ >= MaxUsesToExplore) {
+      if (Visited.size()  >= MaxUsesToExplore) {
         Tracker->tooManyUses();
         return false;
       }
