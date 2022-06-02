@@ -115,6 +115,7 @@ private:
   void parseStructuralElement(IfStmtKind *IfKind = nullptr,
                               bool IsTopLevel = false,
                               TokenType NextLBracesType = TT_Unknown,
+                              bool *HasDoWhile = nullptr,
                               bool *HasLabel = nullptr);
   bool tryToParseBracedList();
   bool parseBracedList(bool ContinueOnSemicolons = false, bool IsEnum = false,
