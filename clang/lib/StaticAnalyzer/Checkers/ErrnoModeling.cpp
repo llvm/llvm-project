@@ -68,13 +68,7 @@ private:
 
 /// Store a MemRegion that contains the 'errno' integer value.
 /// The value is null if the 'errno' value was not recognized in the AST.
-REGISTER_TRAIT_WITH_PROGRAMSTATE(ErrnoRegion, const void *)
-
-/// An internal function accessing the errno region.
-/// Returns null if there isn't any associated memory region.
-static const MemRegion *getErrnoRegion(ProgramStateRef State) {
-  return reinterpret_cast<const MemRegion *>(State->get<ErrnoRegion>());
-}
+REGISTER_TRAIT_WITH_PROGRAMSTATE(ErrnoRegion, const MemRegion *)
 
 /// Search for a variable called "errno" in the AST.
 /// Return nullptr if not found.
@@ -185,7 +179,7 @@ bool ErrnoModeling::evalCall(const CallEvent &Call, CheckerContext &C) const {
   if (ErrnoLocationCalls.contains(Call)) {
     ProgramStateRef State = C.getState();
 
-    const MemRegion *ErrnoR = getErrnoRegion(State);
+    const MemRegion *ErrnoR = State->get<ErrnoRegion>();
     if (!ErrnoR)
       return false;
 
@@ -201,7 +195,7 @@ bool ErrnoModeling::evalCall(const CallEvent &Call, CheckerContext &C) const {
 void ErrnoModeling::checkLiveSymbols(ProgramStateRef State,
                                      SymbolReaper &SR) const {
   // The special errno region should never garbage collected.
-  if (const auto *ErrnoR = getErrnoRegion(State))
+  if (const MemRegion *ErrnoR = State->get<ErrnoRegion>())
     SR.markLive(ErrnoR);
 }
 
@@ -210,7 +204,7 @@ namespace ento {
 namespace errno_modeling {
 
 Optional<SVal> getErrnoValue(ProgramStateRef State) {
-  const MemRegion *ErrnoR = getErrnoRegion(State);
+  const MemRegion *ErrnoR = State->get<ErrnoRegion>();
   if (!ErrnoR)
     return {};
   QualType IntTy = State->getAnalysisManager().getASTContext().IntTy;
@@ -219,7 +213,7 @@ Optional<SVal> getErrnoValue(ProgramStateRef State) {
 
 ProgramStateRef setErrnoValue(ProgramStateRef State,
                               const LocationContext *LCtx, SVal Value) {
-  const MemRegion *ErrnoR = getErrnoRegion(State);
+  const MemRegion *ErrnoR = State->get<ErrnoRegion>();
   if (!ErrnoR)
     return State;
   return State->bindLoc(loc::MemRegionVal{ErrnoR}, Value, LCtx);
@@ -227,7 +221,7 @@ ProgramStateRef setErrnoValue(ProgramStateRef State,
 
 ProgramStateRef setErrnoValue(ProgramStateRef State, CheckerContext &C,
                               uint64_t Value) {
-  const MemRegion *ErrnoR = getErrnoRegion(State);
+  const MemRegion *ErrnoR = State->get<ErrnoRegion>();
   if (!ErrnoR)
     return State;
   return State->bindLoc(
