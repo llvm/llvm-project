@@ -29,22 +29,16 @@ define amdgpu_ps <8 x i32> @dyn_insertelement_v8i32_s_s_s(<8 x i32> inreg %vec, 
 ;
 ; MOVREL-LABEL: dyn_insertelement_v8i32_s_s_s:
 ; MOVREL:       ; %bb.0: ; %entry
-; MOVREL-NEXT:    s_cmp_eq_u32 s11, 0
-; MOVREL-NEXT:    s_cselect_b32 s0, s10, s2
-; MOVREL-NEXT:    s_cmp_eq_u32 s11, 1
-; MOVREL-NEXT:    s_cselect_b32 s1, s10, s3
-; MOVREL-NEXT:    s_cmp_eq_u32 s11, 2
-; MOVREL-NEXT:    s_cselect_b32 s2, s10, s4
-; MOVREL-NEXT:    s_cmp_eq_u32 s11, 3
-; MOVREL-NEXT:    s_cselect_b32 s3, s10, s5
-; MOVREL-NEXT:    s_cmp_eq_u32 s11, 4
-; MOVREL-NEXT:    s_cselect_b32 s4, s10, s6
-; MOVREL-NEXT:    s_cmp_eq_u32 s11, 5
-; MOVREL-NEXT:    s_cselect_b32 s5, s10, s7
-; MOVREL-NEXT:    s_cmp_eq_u32 s11, 6
-; MOVREL-NEXT:    s_cselect_b32 s6, s10, s8
-; MOVREL-NEXT:    s_cmp_eq_u32 s11, 7
-; MOVREL-NEXT:    s_cselect_b32 s7, s10, s9
+; MOVREL-NEXT:    s_mov_b32 s0, s2
+; MOVREL-NEXT:    s_mov_b32 m0, s11
+; MOVREL-NEXT:    s_mov_b32 s1, s3
+; MOVREL-NEXT:    s_mov_b32 s2, s4
+; MOVREL-NEXT:    s_mov_b32 s3, s5
+; MOVREL-NEXT:    s_mov_b32 s4, s6
+; MOVREL-NEXT:    s_mov_b32 s5, s7
+; MOVREL-NEXT:    s_mov_b32 s6, s8
+; MOVREL-NEXT:    s_mov_b32 s7, s9
+; MOVREL-NEXT:    s_movreld_b32 s0, s10
 ; MOVREL-NEXT:    ; return to shader part epilog
 entry:
   %insert = insertelement <8 x i32> %vec, i32 %val, i32 %idx
@@ -74,22 +68,16 @@ define amdgpu_ps <8 x i8 addrspace(3)*> @dyn_insertelement_v8p3i8_s_s_s(<8 x i8 
 ;
 ; MOVREL-LABEL: dyn_insertelement_v8p3i8_s_s_s:
 ; MOVREL:       ; %bb.0: ; %entry
-; MOVREL-NEXT:    s_cmp_eq_u32 s11, 0
-; MOVREL-NEXT:    s_cselect_b32 s0, s10, s2
-; MOVREL-NEXT:    s_cmp_eq_u32 s11, 1
-; MOVREL-NEXT:    s_cselect_b32 s1, s10, s3
-; MOVREL-NEXT:    s_cmp_eq_u32 s11, 2
-; MOVREL-NEXT:    s_cselect_b32 s2, s10, s4
-; MOVREL-NEXT:    s_cmp_eq_u32 s11, 3
-; MOVREL-NEXT:    s_cselect_b32 s3, s10, s5
-; MOVREL-NEXT:    s_cmp_eq_u32 s11, 4
-; MOVREL-NEXT:    s_cselect_b32 s4, s10, s6
-; MOVREL-NEXT:    s_cmp_eq_u32 s11, 5
-; MOVREL-NEXT:    s_cselect_b32 s5, s10, s7
-; MOVREL-NEXT:    s_cmp_eq_u32 s11, 6
-; MOVREL-NEXT:    s_cselect_b32 s6, s10, s8
-; MOVREL-NEXT:    s_cmp_eq_u32 s11, 7
-; MOVREL-NEXT:    s_cselect_b32 s7, s10, s9
+; MOVREL-NEXT:    s_mov_b32 s0, s2
+; MOVREL-NEXT:    s_mov_b32 m0, s11
+; MOVREL-NEXT:    s_mov_b32 s1, s3
+; MOVREL-NEXT:    s_mov_b32 s2, s4
+; MOVREL-NEXT:    s_mov_b32 s3, s5
+; MOVREL-NEXT:    s_mov_b32 s4, s6
+; MOVREL-NEXT:    s_mov_b32 s5, s7
+; MOVREL-NEXT:    s_mov_b32 s6, s8
+; MOVREL-NEXT:    s_mov_b32 s7, s9
+; MOVREL-NEXT:    s_movreld_b32 s0, s10
 ; MOVREL-NEXT:    ; return to shader part epilog
 entry:
   %insert = insertelement <8 x i8 addrspace(3)*> %vec, i8 addrspace(3)* %val, i32 %idx
@@ -300,39 +288,25 @@ define amdgpu_ps <8 x float> @dyn_insertelement_v8f32_s_v_s(<8 x float> inreg %v
 ;
 ; MOVREL-LABEL: dyn_insertelement_v8f32_s_v_s:
 ; MOVREL:       ; %bb.0: ; %entry
-; MOVREL-NEXT:    s_mov_b32 s1, s3
-; MOVREL-NEXT:    s_mov_b32 s3, s5
-; MOVREL-NEXT:    s_mov_b32 s5, s7
-; MOVREL-NEXT:    s_mov_b32 s7, s9
 ; MOVREL-NEXT:    s_mov_b32 s0, s2
+; MOVREL-NEXT:    s_mov_b32 s1, s3
 ; MOVREL-NEXT:    s_mov_b32 s2, s4
+; MOVREL-NEXT:    s_mov_b32 s3, s5
 ; MOVREL-NEXT:    s_mov_b32 s4, s6
+; MOVREL-NEXT:    s_mov_b32 s5, s7
 ; MOVREL-NEXT:    s_mov_b32 s6, s8
-; MOVREL-NEXT:    v_mov_b32_e32 v15, s7
-; MOVREL-NEXT:    v_mov_b32_e32 v8, s0
-; MOVREL-NEXT:    v_cmp_eq_u32_e64 vcc_lo, s10, 0
-; MOVREL-NEXT:    v_mov_b32_e32 v9, s1
-; MOVREL-NEXT:    v_mov_b32_e32 v10, s2
-; MOVREL-NEXT:    v_mov_b32_e32 v11, s3
-; MOVREL-NEXT:    v_mov_b32_e32 v12, s4
-; MOVREL-NEXT:    v_cndmask_b32_e32 v8, v8, v0, vcc_lo
-; MOVREL-NEXT:    v_cmp_eq_u32_e64 vcc_lo, s10, 1
-; MOVREL-NEXT:    v_mov_b32_e32 v13, s5
-; MOVREL-NEXT:    v_mov_b32_e32 v14, s6
-; MOVREL-NEXT:    v_cndmask_b32_e32 v1, v9, v0, vcc_lo
-; MOVREL-NEXT:    v_cmp_eq_u32_e64 vcc_lo, s10, 2
-; MOVREL-NEXT:    v_cndmask_b32_e32 v2, v10, v0, vcc_lo
-; MOVREL-NEXT:    v_cmp_eq_u32_e64 vcc_lo, s10, 3
-; MOVREL-NEXT:    v_cndmask_b32_e32 v3, v11, v0, vcc_lo
-; MOVREL-NEXT:    v_cmp_eq_u32_e64 vcc_lo, s10, 4
-; MOVREL-NEXT:    v_cndmask_b32_e32 v4, v12, v0, vcc_lo
-; MOVREL-NEXT:    v_cmp_eq_u32_e64 vcc_lo, s10, 5
-; MOVREL-NEXT:    v_cndmask_b32_e32 v5, v13, v0, vcc_lo
-; MOVREL-NEXT:    v_cmp_eq_u32_e64 vcc_lo, s10, 6
-; MOVREL-NEXT:    v_cndmask_b32_e32 v6, v14, v0, vcc_lo
-; MOVREL-NEXT:    v_cmp_eq_u32_e64 vcc_lo, s10, 7
-; MOVREL-NEXT:    v_cndmask_b32_e32 v7, v15, v0, vcc_lo
-; MOVREL-NEXT:    v_mov_b32_e32 v0, v8
+; MOVREL-NEXT:    s_mov_b32 s7, s9
+; MOVREL-NEXT:    v_mov_b32_e32 v8, v0
+; MOVREL-NEXT:    v_mov_b32_e32 v0, s0
+; MOVREL-NEXT:    s_mov_b32 m0, s10
+; MOVREL-NEXT:    v_mov_b32_e32 v1, s1
+; MOVREL-NEXT:    v_mov_b32_e32 v2, s2
+; MOVREL-NEXT:    v_mov_b32_e32 v3, s3
+; MOVREL-NEXT:    v_mov_b32_e32 v4, s4
+; MOVREL-NEXT:    v_mov_b32_e32 v5, s5
+; MOVREL-NEXT:    v_mov_b32_e32 v6, s6
+; MOVREL-NEXT:    v_mov_b32_e32 v7, s7
+; MOVREL-NEXT:    v_movreld_b32_e32 v0, v8
 ; MOVREL-NEXT:    ; return to shader part epilog
 entry:
   %insert = insertelement <8 x float> %vec, float %val, i32 %idx
@@ -363,22 +337,8 @@ define amdgpu_ps <8 x float> @dyn_insertelement_v8f32_v_s_s(<8 x float> %vec, fl
 ;
 ; MOVREL-LABEL: dyn_insertelement_v8f32_v_s_s:
 ; MOVREL:       ; %bb.0: ; %entry
-; MOVREL-NEXT:    v_cmp_eq_u32_e64 s0, s3, 0
-; MOVREL-NEXT:    v_cndmask_b32_e64 v0, v0, s2, s0
-; MOVREL-NEXT:    v_cmp_eq_u32_e64 s0, s3, 1
-; MOVREL-NEXT:    v_cndmask_b32_e64 v1, v1, s2, s0
-; MOVREL-NEXT:    v_cmp_eq_u32_e64 s0, s3, 2
-; MOVREL-NEXT:    v_cndmask_b32_e64 v2, v2, s2, s0
-; MOVREL-NEXT:    v_cmp_eq_u32_e64 s0, s3, 3
-; MOVREL-NEXT:    v_cndmask_b32_e64 v3, v3, s2, s0
-; MOVREL-NEXT:    v_cmp_eq_u32_e64 s0, s3, 4
-; MOVREL-NEXT:    v_cndmask_b32_e64 v4, v4, s2, s0
-; MOVREL-NEXT:    v_cmp_eq_u32_e64 s0, s3, 5
-; MOVREL-NEXT:    v_cndmask_b32_e64 v5, v5, s2, s0
-; MOVREL-NEXT:    v_cmp_eq_u32_e64 s0, s3, 6
-; MOVREL-NEXT:    v_cndmask_b32_e64 v6, v6, s2, s0
-; MOVREL-NEXT:    v_cmp_eq_u32_e64 s0, s3, 7
-; MOVREL-NEXT:    v_cndmask_b32_e64 v7, v7, s2, s0
+; MOVREL-NEXT:    s_mov_b32 m0, s3
+; MOVREL-NEXT:    v_movreld_b32_e32 v0, s2
 ; MOVREL-NEXT:    ; return to shader part epilog
 entry:
   %insert = insertelement <8 x float> %vec, float %val, i32 %idx
@@ -535,22 +495,8 @@ define amdgpu_ps <8 x float> @dyn_insertelement_v8f32_v_v_s(<8 x float> %vec, fl
 ;
 ; MOVREL-LABEL: dyn_insertelement_v8f32_v_v_s:
 ; MOVREL:       ; %bb.0: ; %entry
-; MOVREL-NEXT:    v_cmp_eq_u32_e64 vcc_lo, s2, 0
-; MOVREL-NEXT:    v_cndmask_b32_e32 v0, v0, v8, vcc_lo
-; MOVREL-NEXT:    v_cmp_eq_u32_e64 vcc_lo, s2, 1
-; MOVREL-NEXT:    v_cndmask_b32_e32 v1, v1, v8, vcc_lo
-; MOVREL-NEXT:    v_cmp_eq_u32_e64 vcc_lo, s2, 2
-; MOVREL-NEXT:    v_cndmask_b32_e32 v2, v2, v8, vcc_lo
-; MOVREL-NEXT:    v_cmp_eq_u32_e64 vcc_lo, s2, 3
-; MOVREL-NEXT:    v_cndmask_b32_e32 v3, v3, v8, vcc_lo
-; MOVREL-NEXT:    v_cmp_eq_u32_e64 vcc_lo, s2, 4
-; MOVREL-NEXT:    v_cndmask_b32_e32 v4, v4, v8, vcc_lo
-; MOVREL-NEXT:    v_cmp_eq_u32_e64 vcc_lo, s2, 5
-; MOVREL-NEXT:    v_cndmask_b32_e32 v5, v5, v8, vcc_lo
-; MOVREL-NEXT:    v_cmp_eq_u32_e64 vcc_lo, s2, 6
-; MOVREL-NEXT:    v_cndmask_b32_e32 v6, v6, v8, vcc_lo
-; MOVREL-NEXT:    v_cmp_eq_u32_e64 vcc_lo, s2, 7
-; MOVREL-NEXT:    v_cndmask_b32_e32 v7, v7, v8, vcc_lo
+; MOVREL-NEXT:    s_mov_b32 m0, s2
+; MOVREL-NEXT:    v_movreld_b32_e32 v0, v8
 ; MOVREL-NEXT:    ; return to shader part epilog
 entry:
   %insert = insertelement <8 x float> %vec, float %val, i32 %idx
@@ -580,22 +526,8 @@ define amdgpu_ps <8 x float> @dyn_insertelement_v8p3i8_v_v_s(<8 x i8 addrspace(3
 ;
 ; MOVREL-LABEL: dyn_insertelement_v8p3i8_v_v_s:
 ; MOVREL:       ; %bb.0: ; %entry
-; MOVREL-NEXT:    v_cmp_eq_u32_e64 vcc_lo, s2, 0
-; MOVREL-NEXT:    v_cndmask_b32_e32 v0, v0, v8, vcc_lo
-; MOVREL-NEXT:    v_cmp_eq_u32_e64 vcc_lo, s2, 1
-; MOVREL-NEXT:    v_cndmask_b32_e32 v1, v1, v8, vcc_lo
-; MOVREL-NEXT:    v_cmp_eq_u32_e64 vcc_lo, s2, 2
-; MOVREL-NEXT:    v_cndmask_b32_e32 v2, v2, v8, vcc_lo
-; MOVREL-NEXT:    v_cmp_eq_u32_e64 vcc_lo, s2, 3
-; MOVREL-NEXT:    v_cndmask_b32_e32 v3, v3, v8, vcc_lo
-; MOVREL-NEXT:    v_cmp_eq_u32_e64 vcc_lo, s2, 4
-; MOVREL-NEXT:    v_cndmask_b32_e32 v4, v4, v8, vcc_lo
-; MOVREL-NEXT:    v_cmp_eq_u32_e64 vcc_lo, s2, 5
-; MOVREL-NEXT:    v_cndmask_b32_e32 v5, v5, v8, vcc_lo
-; MOVREL-NEXT:    v_cmp_eq_u32_e64 vcc_lo, s2, 6
-; MOVREL-NEXT:    v_cndmask_b32_e32 v6, v6, v8, vcc_lo
-; MOVREL-NEXT:    v_cmp_eq_u32_e64 vcc_lo, s2, 7
-; MOVREL-NEXT:    v_cndmask_b32_e32 v7, v7, v8, vcc_lo
+; MOVREL-NEXT:    s_mov_b32 m0, s2
+; MOVREL-NEXT:    v_movreld_b32_e32 v0, v8
 ; MOVREL-NEXT:    ; return to shader part epilog
 entry:
   %insert = insertelement <8 x i8 addrspace(3)*> %vec, i8 addrspace(3)* %val, i32 %idx
@@ -1814,30 +1746,23 @@ define amdgpu_ps <8 x float> @dyn_insertelement_v8f32_s_s_s_add_1(<8 x float> in
 ;
 ; MOVREL-LABEL: dyn_insertelement_v8f32_s_s_s_add_1:
 ; MOVREL:       ; %bb.0: ; %entry
-; MOVREL-NEXT:    s_add_i32 s11, s11, 1
-; MOVREL-NEXT:    s_cmp_eq_u32 s11, 0
-; MOVREL-NEXT:    s_cselect_b32 s0, s10, s2
-; MOVREL-NEXT:    s_cmp_eq_u32 s11, 1
+; MOVREL-NEXT:    s_mov_b32 s1, s3
+; MOVREL-NEXT:    s_mov_b32 m0, s11
+; MOVREL-NEXT:    s_mov_b32 s0, s2
+; MOVREL-NEXT:    s_mov_b32 s2, s4
+; MOVREL-NEXT:    s_mov_b32 s3, s5
+; MOVREL-NEXT:    s_mov_b32 s4, s6
+; MOVREL-NEXT:    s_mov_b32 s5, s7
+; MOVREL-NEXT:    s_mov_b32 s6, s8
+; MOVREL-NEXT:    s_mov_b32 s7, s9
+; MOVREL-NEXT:    s_movreld_b32 s1, s10
 ; MOVREL-NEXT:    v_mov_b32_e32 v0, s0
-; MOVREL-NEXT:    s_cselect_b32 s1, s10, s3
-; MOVREL-NEXT:    s_cmp_eq_u32 s11, 2
 ; MOVREL-NEXT:    v_mov_b32_e32 v1, s1
-; MOVREL-NEXT:    s_cselect_b32 s2, s10, s4
-; MOVREL-NEXT:    s_cmp_eq_u32 s11, 3
 ; MOVREL-NEXT:    v_mov_b32_e32 v2, s2
-; MOVREL-NEXT:    s_cselect_b32 s3, s10, s5
-; MOVREL-NEXT:    s_cmp_eq_u32 s11, 4
 ; MOVREL-NEXT:    v_mov_b32_e32 v3, s3
-; MOVREL-NEXT:    s_cselect_b32 s4, s10, s6
-; MOVREL-NEXT:    s_cmp_eq_u32 s11, 5
 ; MOVREL-NEXT:    v_mov_b32_e32 v4, s4
-; MOVREL-NEXT:    s_cselect_b32 s5, s10, s7
-; MOVREL-NEXT:    s_cmp_eq_u32 s11, 6
 ; MOVREL-NEXT:    v_mov_b32_e32 v5, s5
-; MOVREL-NEXT:    s_cselect_b32 s6, s10, s8
-; MOVREL-NEXT:    s_cmp_eq_u32 s11, 7
 ; MOVREL-NEXT:    v_mov_b32_e32 v6, s6
-; MOVREL-NEXT:    s_cselect_b32 s7, s10, s9
 ; MOVREL-NEXT:    v_mov_b32_e32 v7, s7
 ; MOVREL-NEXT:    ; return to shader part epilog
 entry:
@@ -1878,30 +1803,23 @@ define amdgpu_ps <8 x float> @dyn_insertelement_v8f32_s_s_s_add_7(<8 x float> in
 ;
 ; MOVREL-LABEL: dyn_insertelement_v8f32_s_s_s_add_7:
 ; MOVREL:       ; %bb.0: ; %entry
-; MOVREL-NEXT:    s_add_i32 s11, s11, 7
-; MOVREL-NEXT:    s_cmp_eq_u32 s11, 0
-; MOVREL-NEXT:    s_cselect_b32 s0, s10, s2
-; MOVREL-NEXT:    s_cmp_eq_u32 s11, 1
+; MOVREL-NEXT:    s_mov_b32 s1, s3
+; MOVREL-NEXT:    s_mov_b32 s3, s5
+; MOVREL-NEXT:    s_mov_b32 s5, s7
+; MOVREL-NEXT:    s_mov_b32 s7, s9
+; MOVREL-NEXT:    s_mov_b32 m0, s11
+; MOVREL-NEXT:    s_mov_b32 s0, s2
+; MOVREL-NEXT:    s_mov_b32 s2, s4
+; MOVREL-NEXT:    s_mov_b32 s4, s6
+; MOVREL-NEXT:    s_mov_b32 s6, s8
+; MOVREL-NEXT:    s_movreld_b32 s7, s10
 ; MOVREL-NEXT:    v_mov_b32_e32 v0, s0
-; MOVREL-NEXT:    s_cselect_b32 s1, s10, s3
-; MOVREL-NEXT:    s_cmp_eq_u32 s11, 2
 ; MOVREL-NEXT:    v_mov_b32_e32 v1, s1
-; MOVREL-NEXT:    s_cselect_b32 s2, s10, s4
-; MOVREL-NEXT:    s_cmp_eq_u32 s11, 3
 ; MOVREL-NEXT:    v_mov_b32_e32 v2, s2
-; MOVREL-NEXT:    s_cselect_b32 s3, s10, s5
-; MOVREL-NEXT:    s_cmp_eq_u32 s11, 4
 ; MOVREL-NEXT:    v_mov_b32_e32 v3, s3
-; MOVREL-NEXT:    s_cselect_b32 s4, s10, s6
-; MOVREL-NEXT:    s_cmp_eq_u32 s11, 5
 ; MOVREL-NEXT:    v_mov_b32_e32 v4, s4
-; MOVREL-NEXT:    s_cselect_b32 s5, s10, s7
-; MOVREL-NEXT:    s_cmp_eq_u32 s11, 6
 ; MOVREL-NEXT:    v_mov_b32_e32 v5, s5
-; MOVREL-NEXT:    s_cselect_b32 s6, s10, s8
-; MOVREL-NEXT:    s_cmp_eq_u32 s11, 7
 ; MOVREL-NEXT:    v_mov_b32_e32 v6, s6
-; MOVREL-NEXT:    s_cselect_b32 s7, s10, s9
 ; MOVREL-NEXT:    v_mov_b32_e32 v7, s7
 ; MOVREL-NEXT:    ; return to shader part epilog
 entry:

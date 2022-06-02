@@ -1939,7 +1939,7 @@ bool AMDGPURegisterBankInfo::foldExtractEltToCmpSelect(
   unsigned NumElem = VecTy.getNumElements();
 
   if (!SITargetLowering::shouldExpandVectorDynExt(EltSize, NumElem,
-                                                  IsDivergentIdx))
+                                                  IsDivergentIdx, &Subtarget))
     return false;
 
   MachineIRBuilder B(MI);
@@ -2037,7 +2037,7 @@ bool AMDGPURegisterBankInfo::foldInsertEltToCmpSelect(
   unsigned NumElem = VecTy.getNumElements();
 
   if (!SITargetLowering::shouldExpandVectorDynExt(EltSize, NumElem,
-                                                  IsDivergentIdx))
+                                                  IsDivergentIdx, &Subtarget))
     return false;
 
   MachineIRBuilder B(MI);
