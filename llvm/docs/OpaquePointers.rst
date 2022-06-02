@@ -192,7 +192,8 @@ Additionally, it will no longer be possible to call ``LLVMGetElementType()``
 on a pointer type.
 
 It is possible to control whether opaque pointers are used (if you want to
-override the default) using the ``LLVMContextSetOpaquePointers()`` API.
+override the default) using ``LLVMContext::setOpaquePointers`` or
+``LLVMContextSetOpaquePointers()``.
 
 Transition State
 ================
