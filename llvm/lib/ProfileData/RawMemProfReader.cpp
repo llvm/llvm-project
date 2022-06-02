@@ -18,6 +18,7 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/DebugInfo/DWARF/DWARFContext.h"
 #include "llvm/DebugInfo/Symbolize/SymbolizableModule.h"
 #include "llvm/DebugInfo/Symbolize/SymbolizableObjectFile.h"
@@ -150,6 +151,21 @@ bool isRuntimePath(const StringRef Path) {
   return StringRef(llvm::sys::path::convert_to_slash(Path))
       .contains("memprof/memprof_");
 }
+
+std::string getBuildIdString(const SegmentEntry &Entry) {
+  constexpr size_t Size = sizeof(Entry.BuildId) / sizeof(uint8_t);
+  constexpr uint8_t Zeros[Size] = {0};
+  // If the build id is unset print a helpful string instead of all zeros.
+  if (memcmp(Entry.BuildId, Zeros, Size) == 0)
+    return "<None>";
+
+  std::string Str;
+  raw_string_ostream OS(Str);
+  for (size_t I = 0; I < Size; I++) {
+    OS << format_hex_no_prefix(Entry.BuildId[I], 2);
+  }
+  return OS.str();
+}
 } // namespace
 
 Expected<std::unique_ptr<RawMemProfReader>>
@@ -217,6 +233,15 @@ void RawMemProfReader::printYAML(raw_ostream &OS) {
   OS << "    NumMibInfo: " << NumMibInfo << "\n";
   OS << "    NumAllocFunctions: " << NumAllocFunctions << "\n";
   OS << "    NumStackOffsets: " << StackMap.size() << "\n";
+  // Print out the segment information.
+  OS << "  Segments:\n";
+  for (const auto &Entry : SegmentInfo) {
+    OS << "  -\n";
+    OS << "    BuildId: " << getBuildIdString(Entry) << "\n";
+    OS << "    Start: 0x" << llvm::utohexstr(Entry.Start) << "\n";
+    OS << "    End: 0x" << llvm::utohexstr(Entry.End) << "\n";
+    OS << "    Offset: 0x" << llvm::utohexstr(Entry.Offset) << "\n";
+  }
   // Print out the merged contents of the profiles.
   OS << "  Records:\n";
   for (const auto &Entry : *this) {
