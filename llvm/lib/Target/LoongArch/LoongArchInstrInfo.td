@@ -392,6 +392,7 @@ def BSTRPICK_D : FmtBSTR_D<0b0000000011, (outs GPR:$rd),
 
 // Common Memory Access Instructions for 64-bits
 def LD_WU : LOAD_2RI12<0b0010101010, "ld.wu">;
+def LD_D  : LOAD_2RI12<0b0010100011, "ld.d">;
 def ST_D : STORE_2RI12<0b0010100111, "st.d">;
 def LDX_B  : LOAD_3R<0b00111000000000000, "ldx.b">;
 def LDX_H  : LOAD_3R<0b00111000000001000, "ldx.h">;

@@ -36,6 +36,8 @@ lu52i.d $a0, $a0, -2049
 # CHECK: :[[#@LINE-1]]:19: error: immediate must be an integer in the range [-2048, 2047]
 ld.wu $a0, $a0, 2048
 # CHECK: :[[#@LINE-1]]:17: error: immediate must be an integer in the range [-2048, 2047]
+ld.d $a0, $a0, 2048
+# CHECK: :[[#@LINE-1]]:16: error: immediate must be an integer in the range [-2048, 2047]
 st.d $a0, $a0, 2048
 # CHECK: :[[#@LINE-1]]:16: error: immediate must be an integer in the range [-2048, 2047]
 
