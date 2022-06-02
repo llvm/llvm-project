@@ -1,6 +1,10 @@
 ; REQUIRES: asserts
 ; RUN: opt -loop-vectorize -mtriple riscv64-linux-gnu \
 ; RUN:   -mattr=+v,+d -debug-only=loop-vectorize \
+; RUN:   -riscv-v-vector-bits-min=128 -force-vector-width=1 \
+; RUN:   -S < %s 2>&1 | FileCheck %s --check-prefix=CHECK-SCALAR
+; RUN: opt -loop-vectorize -mtriple riscv64-linux-gnu \
+; RUN:   -mattr=+v,+d -debug-only=loop-vectorize \
 ; RUN:   -riscv-v-vector-bits-min=128 -riscv-v-register-bit-width-lmul=1 \
 ; RUN:   -S < %s 2>&1 | FileCheck %s --check-prefix=CHECK-LMUL1
 ; RUN: opt -loop-vectorize -mtriple riscv64-linux-gnu \
@@ -18,26 +22,31 @@
 
 define void @add(float* noalias nocapture readonly %src1, float* noalias nocapture readonly %src2, i32 signext %size, float* noalias nocapture writeonly %result) {
 ; CHECK-LABEL: add
-; CHECK-LMUL1:      LV(REG): Found max usage: 2 item
-; CHECK-LMUL1-NEXT: LV(REG): RegisterClass: Generic::ScalarRC, 2 registers
-; CHECK-LMUL1-NEXT: LV(REG): RegisterClass: Generic::VectorRC, 2 registers
-; CHECK-LMUL1-NEXT: LV(REG): Found invariant usage: 1 item
-; CHECK-LMUL1-NEXT: LV(REG): RegisterClass: Generic::VectorRC, 2 registers
-; CHECK-LMUL2:      LV(REG): Found max usage: 2 item
-; CHECK-LMUL2-NEXT: LV(REG): RegisterClass: Generic::ScalarRC, 2 registers
-; CHECK-LMUL2-NEXT: LV(REG): RegisterClass: Generic::VectorRC, 4 registers
-; CHECK-LMUL2-NEXT: LV(REG): Found invariant usage: 1 item
-; CHECK-LMUL2-NEXT: LV(REG): RegisterClass: Generic::VectorRC, 4 registers
-; CHECK-LMUL4:      LV(REG): Found max usage: 2 item
-; CHECK-LMUL4-NEXT: LV(REG): RegisterClass: Generic::ScalarRC, 2 registers
-; CHECK-LMUL4-NEXT: LV(REG): RegisterClass: Generic::VectorRC, 8 registers
-; CHECK-LMUL4-NEXT: LV(REG): Found invariant usage: 1 item
-; CHECK-LMUL4-NEXT: LV(REG): RegisterClass: Generic::VectorRC, 8 registers
-; CHECK-LMUL8:      LV(REG): Found max usage: 2 item
-; CHECK-LMUL8-NEXT: LV(REG): RegisterClass: Generic::ScalarRC, 2 registers
-; CHECK-LMUL8-NEXT: LV(REG): RegisterClass: Generic::VectorRC, 16 registers
-; CHECK-LMUL8-NEXT: LV(REG): Found invariant usage: 1 item
-; CHECK-LMUL8-NEXT: LV(REG): RegisterClass: Generic::VectorRC, 16 registers
+; CHECK-SCALAR:      LV(REG): Found max usage: 2 item
+; CHECK-SCALAR-NEXT: LV(REG): RegisterClass: RISCV::GPRRC, 2 registers
+; CHECK-SCALAR-NEXT: LV(REG): RegisterClass: RISCV::FPRRC, 2 registers
+; CHECK-SCALAR-NEXT: LV(REG): Found invariant usage: 1 item
+; CHECK-SCALAR-NEXT: LV(REG): RegisterClass: RISCV::GPRRC, 1 registers
+; CHECK-LMUL1:       LV(REG): Found max usage: 2 item
+; CHECK-LMUL1-NEXT:  LV(REG): RegisterClass: RISCV::GPRRC, 2 registers
+; CHECK-LMUL1-NEXT:  LV(REG): RegisterClass: RISCV::VRRC, 2 registers
+; CHECK-LMUL1-NEXT:  LV(REG): Found invariant usage: 1 item
+; CHECK-LMUL1-NEXT:  LV(REG): RegisterClass: RISCV::VRRC, 2 registers
+; CHECK-LMUL2:       LV(REG): Found max usage: 2 item
+; CHECK-LMUL2-NEXT:  LV(REG): RegisterClass: RISCV::GPRRC, 2 registers
+; CHECK-LMUL2-NEXT:  LV(REG): RegisterClass: RISCV::VRRC, 4 registers
+; CHECK-LMUL2-NEXT:  LV(REG): Found invariant usage: 1 item
+; CHECK-LMUL2-NEXT:  LV(REG): RegisterClass: RISCV::VRRC, 4 registers
+; CHECK-LMUL4:       LV(REG): Found max usage: 2 item
+; CHECK-LMUL4-NEXT:  LV(REG): RegisterClass: RISCV::GPRRC, 2 registers
+; CHECK-LMUL4-NEXT:  LV(REG): RegisterClass: RISCV::VRRC, 8 registers
+; CHECK-LMUL4-NEXT:  LV(REG): Found invariant usage: 1 item
+; CHECK-LMUL4-NEXT:  LV(REG): RegisterClass: RISCV::VRRC, 8 registers
+; CHECK-LMUL8:       LV(REG): Found max usage: 2 item
+; CHECK-LMUL8-NEXT:  LV(REG): RegisterClass: RISCV::GPRRC, 2 registers
+; CHECK-LMUL8-NEXT:  LV(REG): RegisterClass: RISCV::VRRC, 16 registers
+; CHECK-LMUL8-NEXT:  LV(REG): Found invariant usage: 1 item
+; CHECK-LMUL8-NEXT:  LV(REG): RegisterClass: RISCV::VRRC, 16 registers
 
 entry:
   %conv = zext i32 %size to i64
