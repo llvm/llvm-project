@@ -5,6 +5,7 @@
 ; Inner loop only reductions are not supported currently. See discussion at
 ; D53027 for more information on the required checks.
 
+target triple = "powerpc64le-unknown-linux-gnu"
 @A = common global [500 x [500 x i32]] zeroinitializer
 @X = common global i32 0
 @B = common global [500 x [500 x i32]] zeroinitializer
