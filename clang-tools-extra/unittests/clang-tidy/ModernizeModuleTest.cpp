@@ -36,177 +36,241 @@ static std::vector<Token> tokenify(const char *Text) {
   return Tokens;
 }
 
-static bool matchText(const char *Text) {
+static bool matchText(const char *Text, bool AllowComma) {
   std::vector<Token> Tokens{tokenify(Text)};
-  modernize::IntegralLiteralExpressionMatcher Matcher(Tokens);
+  modernize::IntegralLiteralExpressionMatcher Matcher(Tokens, AllowComma);
 
   return Matcher.match();
 }
 
+static modernize::LiteralSize sizeText(const char *Text) {
+  std::vector<Token> Tokens{tokenify(Text)};
+  modernize::IntegralLiteralExpressionMatcher Matcher(Tokens, true);
+  if (Matcher.match())
+    return Matcher.largestLiteralSize();
+  return modernize::LiteralSize::Unknown;
+}
+
+static const char *toString(modernize::LiteralSize Value) {
+  switch (Value) {
+  case modernize::LiteralSize::Int:
+    return "Int";
+  case modernize::LiteralSize::UnsignedInt:
+    return "UnsignedInt";
+  case modernize::LiteralSize::Long:
+    return "Long";
+  case modernize::LiteralSize::UnsignedLong:
+    return "UnsignedLong";
+  case modernize::LiteralSize::LongLong:
+    return "LongLong";
+  case modernize::LiteralSize::UnsignedLongLong:
+    return "UnsignedLongLong";
+  default:
+    return "Unknown";
+  }
+}
+
 namespace {
 
-struct Param {
+struct MatchParam {
+  bool AllowComma;
   bool Matched;
   const char *Text;
 
-  friend std::ostream &operator<<(std::ostream &Str, const Param &Value) {
-    return Str << "Matched: " << std::boolalpha << Value.Matched << ", Text: '"
-               << Value.Text << "'";
+  friend std::ostream &operator<<(std::ostream &Str, const MatchParam &Value) {
+    return Str << "Allow operator,: " << std::boolalpha << Value.AllowComma
+               << ", Matched: " << std::boolalpha << Value.Matched
+               << ", Text: '" << Value.Text << '\'';
   }
 };
 
-class MatcherTest : public ::testing::TestWithParam<Param> {};
+struct SizeParam {
+  modernize::LiteralSize Size;
+  const char *Text;
+
+  friend std::ostream &operator<<(std::ostream &Str, const SizeParam &Value) {
+    return Str << "Size: " << toString(Value.Size) << ", Text: '" << Value.Text << '\'';
+  }
+};
+
+class MatcherTest : public ::testing::TestWithParam<MatchParam> {};
+
+class SizeTest : public ::testing::TestWithParam<SizeParam> {};
 
 } // namespace
 
-static const Param Params[] = {
+static const MatchParam MatchParams[] = {
     // Accept integral literals.
-    {true, "1"},
-    {true, "0177"},
-    {true, "0xdeadbeef"},
-    {true, "0b1011"},
-    {true, "'c'"},
+    {true, true, "1"},
+    {true, true, "0177"},
+    {true, true, "0xdeadbeef"},
+    {true, true, "0b1011"},
+    {true, true, "'c'"},
     // Reject non-integral literals.
-    {false, "1.23"},
-    {false, "0x1p3"},
-    {false, R"("string")"},
-    {false, "1i"},
+    {true, false, "1.23"},
+    {true, false, "0x1p3"},
+    {true, false, R"("string")"},
+    {true, false, "1i"},
 
     // Accept literals with these unary operators.
-    {true, "-1"},
-    {true, "+1"},
-    {true, "~1"},
-    {true, "!1"},
+    {true, true, "-1"},
+    {true, true, "+1"},
+    {true, true, "~1"},
+    {true, true, "!1"},
     // Reject invalid unary operators.
-    {false, "1-"},
-    {false, "1+"},
-    {false, "1~"},
-    {false, "1!"},
+    {true, false, "1-"},
+    {true, false, "1+"},
+    {true, false, "1~"},
+    {true, false, "1!"},
 
     // Accept valid binary operators.
-    {true, "1+1"},
-    {true, "1-1"},
-    {true, "1*1"},
-    {true, "1/1"},
-    {true, "1%2"},
-    {true, "1<<1"},
-    {true, "1>>1"},
-    {true, "1<=>1"},
-    {true, "1<1"},
-    {true, "1>1"},
-    {true, "1<=1"},
-    {true, "1>=1"},
-    {true, "1==1"},
-    {true, "1!=1"},
-    {true, "1&1"},
-    {true, "1^1"},
-    {true, "1|1"},
-    {true, "1&&1"},
-    {true, "1||1"},
-    {true, "1+ +1"}, // A space is needed to avoid being tokenized as ++ or --.
-    {true, "1- -1"},
-    {true, "1,1"},
+    {true, true, "1+1"},
+    {true, true, "1-1"},
+    {true, true, "1*1"},
+    {true, true, "1/1"},
+    {true, true, "1%2"},
+    {true, true, "1<<1"},
+    {true, true, "1>>1"},
+    {true, true, "1<=>1"},
+    {true, true, "1<1"},
+    {true, true, "1>1"},
+    {true, true, "1<=1"},
+    {true, true, "1>=1"},
+    {true, true, "1==1"},
+    {true, true, "1!=1"},
+    {true, true, "1&1"},
+    {true, true, "1^1"},
+    {true, true, "1|1"},
+    {true, true, "1&&1"},
+    {true, true, "1||1"},
+    {true, true, "1+ +1"}, // A space is needed to avoid being tokenized as ++ or --.
+    {true, true, "1- -1"},
+    // Comma is only valid when inside parentheses.
+    {true, true, "(1,1)"},
     // Reject invalid binary operators.
-    {false, "1+"},
-    {false, "1-"},
-    {false, "1*"},
-    {false, "1/"},
-    {false, "1%"},
-    {false, "1<<"},
-    {false, "1>>"},
-    {false, "1<=>"},
-    {false, "1<"},
-    {false, "1>"},
-    {false, "1<="},
-    {false, "1>="},
-    {false, "1=="},
-    {false, "1!="},
-    {false, "1&"},
-    {false, "1^"},
-    {false, "1|"},
-    {false, "1&&"},
-    {false, "1||"},
-    {false, "1,"},
-    {false, ",1"},
+    {true, false, "1+"},
+    {true, false, "1-"},
+    {true, false, "1*"},
+    {true, false, "1/"},
+    {true, false, "1%"},
+    {true, false, "1<<"},
+    {true, false, "1>>"},
+    {true, false, "1<=>"},
+    {true, false, "1<"},
+    {true, false, "1>"},
+    {true, false, "1<="},
+    {true, false, "1>="},
+    {true, false, "1=="},
+    {true, false, "1!="},
+    {true, false, "1&"},
+    {true, false, "1^"},
+    {true, false, "1|"},
+    {true, false, "1&&"},
+    {true, false, "1||"},
+    {true, false, "1,"},
+    {true, false, ",1"},
+    {true, false, "1,1"},
 
     // Accept valid ternary operators.
-    {true, "1?1:1"},
-    {true, "1?:1"}, // A gcc extension treats x ? : y as x ? x : y.
+    {true, true, "1?1:1"},
+    {true, true, "1?:1"}, // A gcc extension treats x ? : y as x ? x : y.
     // Reject invalid ternary operators.
-    {false, "?"},
-    {false, "?1"},
-    {false, "?:"},
-    {false, "?:1"},
-    {false, "?1:"},
-    {false, "?1:1"},
-    {false, "1?"},
-    {false, "1?1"},
-    {false, "1?:"},
-    {false, "1?1:"},
+    {true, false, "?"},
+    {true, false, "?1"},
+    {true, false, "?:"},
+    {true, false, "?:1"},
+    {true, false, "?1:"},
+    {true, false, "?1:1"},
+    {true, false, "1?"},
+    {true, false, "1?1"},
+    {true, false, "1?:"},
+    {true, false, "1?1:"},
 
     // Accept parenthesized expressions.
-    {true, "(1)"},
-    {true, "((+1))"},
-    {true, "((+(1)))"},
-    {true, "(-1)"},
-    {true, "-(1)"},
-    {true, "(+1)"},
-    {true, "((+1))"},
-    {true, "+(1)"},
-    {true, "(~1)"},
-    {true, "~(1)"},
-    {true, "(!1)"},
-    {true, "!(1)"},
-    {true, "(1+1)"},
-    {true, "(1-1)"},
-    {true, "(1*1)"},
-    {true, "(1/1)"},
-    {true, "(1%2)"},
-    {true, "(1<<1)"},
-    {true, "(1>>1)"},
-    {true, "(1<=>1)"},
-    {true, "(1<1)"},
-    {true, "(1>1)"},
-    {true, "(1<=1)"},
-    {true, "(1>=1)"},
-    {true, "(1==1)"},
-    {true, "(1!=1)"},
-    {true, "(1&1)"},
-    {true, "(1^1)"},
-    {true, "(1|1)"},
-    {true, "(1&&1)"},
-    {true, "(1||1)"},
-    {true, "(1?1:1)"},
+    {true, true, "(1)"},
+    {true, true, "((+1))"},
+    {true, true, "((+(1)))"},
+    {true, true, "(-1)"},
+    {true, true, "-(1)"},
+    {true, true, "(+1)"},
+    {true, true, "((+1))"},
+    {true, true, "+(1)"},
+    {true, true, "(~1)"},
+    {true, true, "~(1)"},
+    {true, true, "(!1)"},
+    {true, true, "!(1)"},
+    {true, true, "(1+1)"},
+    {true, true, "(1-1)"},
+    {true, true, "(1*1)"},
+    {true, true, "(1/1)"},
+    {true, true, "(1%2)"},
+    {true, true, "(1<<1)"},
+    {true, true, "(1>>1)"},
+    {true, true, "(1<=>1)"},
+    {true, true, "(1<1)"},
+    {true, true, "(1>1)"},
+    {true, true, "(1<=1)"},
+    {true, true, "(1>=1)"},
+    {true, true, "(1==1)"},
+    {true, true, "(1!=1)"},
+    {true, true, "(1&1)"},
+    {true, true, "(1^1)"},
+    {true, true, "(1|1)"},
+    {true, true, "(1&&1)"},
+    {true, true, "(1||1)"},
+    {true, true, "(1?1:1)"},
 
     // Accept more complicated "chained" expressions.
-    {true, "1+1+1"},
-    {true, "1+1+1+1"},
-    {true, "1+1+1+1+1"},
-    {true, "1*1*1"},
-    {true, "1*1*1*1"},
-    {true, "1*1*1*1*1"},
-    {true, "1<<1<<1"},
-    {true, "4U>>1>>1"},
-    {true, "1<1<1"},
-    {true, "1>1>1"},
-    {true, "1<=1<=1"},
-    {true, "1>=1>=1"},
-    {true, "1==1==1"},
-    {true, "1!=1!=1"},
-    {true, "1&1&1"},
-    {true, "1^1^1"},
-    {true, "1|1|1"},
-    {true, "1&&1&&1"},
-    {true, "1||1||1"},
-    {true, "1,1,1"},
+    {true, true, "1+1+1"},
+    {true, true, "1+1+1+1"},
+    {true, true, "1+1+1+1+1"},
+    {true, true, "1*1*1"},
+    {true, true, "1*1*1*1"},
+    {true, true, "1*1*1*1*1"},
+    {true, true, "1<<1<<1"},
+    {true, true, "4U>>1>>1"},
+    {true, true, "1<1<1"},
+    {true, true, "1>1>1"},
+    {true, true, "1<=1<=1"},
+    {true, true, "1>=1>=1"},
+    {true, true, "1==1==1"},
+    {true, true, "1!=1!=1"},
+    {true, true, "1&1&1"},
+    {true, true, "1^1^1"},
+    {true, true, "1|1|1"},
+    {true, true, "1&&1&&1"},
+    {true, true, "1||1||1"},
+    {true, true, "(1,1,1)"},
+
+    // Optionally reject comma operator
+    {false, false, "1,1"}
 };
 
 TEST_P(MatcherTest, MatchResult) {
-  EXPECT_TRUE(matchText(GetParam().Text) == GetParam().Matched);
+  const MatchParam &Param = GetParam();
+ 
+  EXPECT_TRUE(matchText(Param.Text, Param.AllowComma) == Param.Matched);
 }
 
-INSTANTIATE_TEST_SUITE_P(TokenExpressionParserTests, MatcherTest,
-                         ::testing::ValuesIn(Params));
+INSTANTIATE_TEST_SUITE_P(IntegralLiteralExpressionMatcherTests, MatcherTest,
+                         ::testing::ValuesIn(MatchParams));
+
+static const SizeParam SizeParams[] = {
+    {modernize::LiteralSize::Int, "1"},
+    {modernize::LiteralSize::UnsignedInt, "1U"},
+    {modernize::LiteralSize::Long, "1L"},
+    {modernize::LiteralSize::UnsignedLong, "1UL"},
+    {modernize::LiteralSize::UnsignedLong, "1LU"},
+    {modernize::LiteralSize::LongLong, "1LL"},
+    {modernize::LiteralSize::UnsignedLongLong, "1ULL"},
+    {modernize::LiteralSize::UnsignedLongLong, "1LLU"}};
+
+TEST_P(SizeTest, TokenSize) {
+  EXPECT_EQ(sizeText(GetParam().Text), GetParam().Size);
+};
+
+INSTANTIATE_TEST_SUITE_P(IntegralLiteralExpressionMatcherTests, SizeTest,
+                         ::testing::ValuesIn(SizeParams));
 
 } // namespace test
 } // namespace tidy
