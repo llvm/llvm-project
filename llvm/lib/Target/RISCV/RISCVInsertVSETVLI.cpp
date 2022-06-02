@@ -453,8 +453,6 @@ public:
   StringRef getPassName() const override { return RISCV_INSERT_VSETVLI_NAME; }
 
 private:
-  bool needVSETVLI(const VSETVLIInfo &Require,
-                   const VSETVLIInfo &CurInfo) const;
   bool needVSETVLI(const MachineInstr &MI, const VSETVLIInfo &Require,
                    const VSETVLIInfo &CurInfo) const;
   bool needVSETVLIPHI(const VSETVLIInfo &Require,
@@ -718,30 +716,6 @@ static VSETVLIInfo getInfoForVSETVLI(const MachineInstr &MI) {
   return NewInfo;
 }
 
-bool RISCVInsertVSETVLI::needVSETVLI(const VSETVLIInfo &Require,
-                                     const VSETVLIInfo &CurInfo) const {
-  if (CurInfo.isCompatible(Require))
-    return false;
-
-  // We didn't find a compatible value. If our AVL is a virtual register,
-  // it might be defined by a VSET(I)VLI. If it has the same VLMAX we need
-  // and the last VL/VTYPE we observed is the same, we don't need a
-  // VSETVLI here.
-  if (!CurInfo.isUnknown() && Require.hasAVLReg() &&
-      Require.getAVLReg().isVirtual() && !CurInfo.hasSEWLMULRatioOnly() &&
-      CurInfo.hasCompatibleVTYPE(Require)) {
-    if (MachineInstr *DefMI = MRI->getVRegDef(Require.getAVLReg())) {
-      if (isVectorConfigInstr(*DefMI)) {
-        VSETVLIInfo DefInfo = getInfoForVSETVLI(*DefMI);
-        if (DefInfo.hasSameAVL(CurInfo) && DefInfo.hasSameVLMAX(CurInfo))
-          return false;
-      }
-    }
-  }
-
-  return true;
-}
-
 bool canSkipVSETVLIForLoadStore(const MachineInstr &MI,
                                 const VSETVLIInfo &Require,
                                 const VSETVLIInfo &CurInfo) {
@@ -940,8 +914,25 @@ bool canSkipVSETVLIForLoadStore(const MachineInstr &MI,
 
 bool RISCVInsertVSETVLI::needVSETVLI(const MachineInstr &MI, const VSETVLIInfo &Require,
                                      const VSETVLIInfo &CurInfo) const {
-  if (!needVSETVLI(Require, CurInfo))
+  if (CurInfo.isCompatible(Require))
     return false;
+
+  // We didn't find a compatible value. If our AVL is a virtual register,
+  // it might be defined by a VSET(I)VLI. If it has the same VLMAX we need
+  // and the last VL/VTYPE we observed is the same, we don't need a
+  // VSETVLI here.
+  if (!CurInfo.isUnknown() && Require.hasAVLReg() &&
+      Require.getAVLReg().isVirtual() && !CurInfo.hasSEWLMULRatioOnly() &&
+      CurInfo.hasCompatibleVTYPE(Require)) {
+    if (MachineInstr *DefMI = MRI->getVRegDef(Require.getAVLReg())) {
+      if (isVectorConfigInstr(*DefMI)) {
+        VSETVLIInfo DefInfo = getInfoForVSETVLI(*DefMI);
+        if (DefInfo.hasSameAVL(CurInfo) && DefInfo.hasSameVLMAX(CurInfo))
+          return false;
+      }
+    }
+  }
+
   // If this is a unit-stride or strided load/store, we may be able to use the
   // EMUL=(EEW/SEW)*LMUL relationship to avoid changing VTYPE.
   return !canSkipVSETVLIForLoadStore(MI, Require, CurInfo);
