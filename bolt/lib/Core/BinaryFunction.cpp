@@ -3007,15 +3007,33 @@ std::string formatEscapes(const std::string &Str) {
 } // namespace
 
 void BinaryFunction::dumpGraph(raw_ostream &OS) const {
-  OS << "digraph \"" << getPrintName() << "\" {\n";
-  OS << R"(node [fontname="courier"])" << '\n';
+  OS << "digraph \"" << getPrintName() << "\" {\n"
+     << "node [fontname=courier, shape=box, style=filled, colorscheme=brbg9]\n";
   uint64_t Offset = Address;
   for (BinaryBasicBlock *BB : BasicBlocks) {
     auto LayoutPos =
         std::find(BasicBlocksLayout.begin(), BasicBlocksLayout.end(), BB);
     unsigned Layout = LayoutPos - BasicBlocksLayout.begin();
     const char *ColdStr = BB->isCold() ? " (cold)" : "";
-    OS << format("\"%s\" [shape=box]\n", BB->getName().data());
+    std::vector<std::string> Attrs;
+    // Bold box for entry points
+    if (isEntryPoint(*BB))
+      Attrs.push_back("penwidth=2");
+    if (BLI && BLI->getLoopFor(BB)) {
+      // Distinguish innermost loops
+      const BinaryLoop *Loop = BLI->getLoopFor(BB);
+      if (Loop->isInnermost())
+        Attrs.push_back("fillcolor=6");
+      else // some outer loop
+        Attrs.push_back("fillcolor=4");
+    } else { // non-loopy code
+      Attrs.push_back("fillcolor=5");
+    }
+    ListSeparator LS;
+    OS << "\"" << BB->getName() << "\" [";
+    for (StringRef Attr : Attrs)
+      OS << LS << Attr;
+    OS << "]\n";
     OS << format("\"%s\" [label=\"%s%s\\n(C:%lu,O:%lu,I:%u,L:%u,CFI:%u)\\n",
                  BB->getName().data(), BB->getName().data(), ColdStr,
                  BB->getKnownExecutionCount(), BB->getOffset(), getIndex(BB),
