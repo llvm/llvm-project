@@ -22,36 +22,10 @@
 # ZLIB-NEXT:   EntrySize: 1
 # ZLIB-NEXT: }
 
-# RUN: llvm-mc -compress-debug-sections=zlib-gnu -filetype=obj -triple=x86_64-unknown-linux %s -o %t2
-# RUN: llvm-mc -compress-debug-sections=zlib-gnu -filetype=obj -triple=powerpc64-unknown-unknown %s -o %t2-be
-# RUN: llvm-readobj --sections %t2 | FileCheck -check-prefix=GNU %s
-# RUN: llvm-readobj --sections %t2-be | FileCheck -check-prefix=GNU %s
-# GNU:      Section {
-# GNU:        Index: 2
-# GNU:        Name: .zdebug_str
-# GNU-NEXT:   Type: SHT_PROGBITS
-# GNU-NEXT:   Flags [
-# GNU-NEXT:     SHF_MERGE (0x10)
-# GNU-NEXT:     SHF_STRINGS (0x20)
-# GNU-NEXT:   ]
-# GNU-NEXT:   Address:
-# GNU-NEXT:   Offset:
-# GNU-NEXT:   Size:
-# GNU-NEXT:   Link:
-# GNU-NEXT:   Info:
-# GNU-NEXT:   AddressAlignment: 1
-# GNU-NEXT:   EntrySize: 1
-# GNU-NEXT: }
-
 # RUN: ld.lld --hash-style=sysv %t -o %t.so -shared
 # RUN: llvm-readobj --sections --section-data %t.so | FileCheck -check-prefix=DATA %s
 # RUN: ld.lld --hash-style=sysv %t-be -o %t-be.so -shared
 # RUN: llvm-readobj --sections --section-data %t-be.so | FileCheck -check-prefix=DATA %s
-
-# RUN: ld.lld --hash-style=sysv %t2 -o %t2.so -shared
-# RUN: llvm-readobj --sections --section-data %t2.so | FileCheck -check-prefix=DATA %s
-# RUN: ld.lld --hash-style=sysv %t2-be -o %t2-be.so -shared
-# RUN: llvm-readobj --sections --section-data %t2-be.so | FileCheck -check-prefix=DATA %s
 
 # DATA:      Section {
 # DATA:        Index: 6
