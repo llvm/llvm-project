@@ -736,14 +736,45 @@ struct TanOpConversion : public OpConversionPattern<complex::TanOp> {
   matchAndRewrite(complex::TanOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
     auto loc = op.getLoc();
-
     Value cos = rewriter.create<complex::CosOp>(loc, adaptor.getComplex());
     Value sin = rewriter.create<complex::SinOp>(loc, adaptor.getComplex());
     rewriter.replaceOpWithNewOp<complex::DivOp>(op, sin, cos);
-
     return success();
   }
 };
+
+struct TanhOpConversion : public OpConversionPattern<complex::TanhOp> {
+  using OpConversionPattern<complex::TanhOp>::OpConversionPattern;
+
+  LogicalResult
+  matchAndRewrite(complex::TanhOp op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    auto loc = op.getLoc();
+    auto type = adaptor.getComplex().getType().cast<ComplexType>();
+    auto elementType = type.getElementType().cast<FloatType>();
+
+    // The hyperbolic tangent for complex number can be calculated as follows.
+    // tanh(x + i * y) = (tanh(x) + i * tan(y)) / (1 + tanh(x) * tan(y))
+    // See: https://proofwiki.org/wiki/Hyperbolic_Tangent_of_Complex_Number
+    Value real =
+        rewriter.create<complex::ReOp>(loc, elementType, adaptor.getComplex());
+    Value imag =
+        rewriter.create<complex::ImOp>(loc, elementType, adaptor.getComplex());
+    Value tanhA = rewriter.create<math::TanhOp>(loc, real);
+    Value cosB = rewriter.create<math::CosOp>(loc, imag);
+    Value sinB = rewriter.create<math::SinOp>(loc, imag);
+    Value tanB = rewriter.create<arith::DivFOp>(loc, sinB, cosB);
+    Value numerator =
+        rewriter.create<complex::CreateOp>(loc, type, tanhA, tanB);
+    Value one = rewriter.create<arith::ConstantOp>(
+        loc, elementType, rewriter.getFloatAttr(elementType, 1));
+    Value mul = rewriter.create<arith::MulFOp>(loc, tanhA, tanB);
+    Value denominator = rewriter.create<complex::CreateOp>(loc, type, one, mul);
+    rewriter.replaceOpWithNewOp<complex::DivOp>(op, numerator, denominator);
+    return success();
+  }
+};
+
 } // namespace
 
 void mlir::populateComplexToStandardConversionPatterns(
@@ -765,7 +796,8 @@ void mlir::populateComplexToStandardConversionPatterns(
       NegOpConversion,
       SignOpConversion,
       SinOpConversion,
-      TanOpConversion>(patterns.getContext());
+      TanOpConversion,
+      TanhOpConversion>(patterns.getContext());
   // clang-format on
 }
 
