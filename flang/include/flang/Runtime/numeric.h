@@ -214,48 +214,66 @@ bool RTNAME(IsNaN16)(CppTypeFor<TypeCategory::Real, 16>);
 
 // MOD & MODULO
 CppTypeFor<TypeCategory::Integer, 1> RTNAME(ModInteger1)(
-    CppTypeFor<TypeCategory::Integer, 1>, CppTypeFor<TypeCategory::Integer, 1>);
+    CppTypeFor<TypeCategory::Integer, 1>, CppTypeFor<TypeCategory::Integer, 1>,
+    const char *sourceFile = nullptr, int sourceLine = 0);
 CppTypeFor<TypeCategory::Integer, 2> RTNAME(ModInteger2)(
-    CppTypeFor<TypeCategory::Integer, 2>, CppTypeFor<TypeCategory::Integer, 2>);
+    CppTypeFor<TypeCategory::Integer, 2>, CppTypeFor<TypeCategory::Integer, 2>,
+    const char *sourceFile = nullptr, int sourceLine = 0);
 CppTypeFor<TypeCategory::Integer, 4> RTNAME(ModInteger4)(
-    CppTypeFor<TypeCategory::Integer, 4>, CppTypeFor<TypeCategory::Integer, 4>);
+    CppTypeFor<TypeCategory::Integer, 4>, CppTypeFor<TypeCategory::Integer, 4>,
+    const char *sourceFile = nullptr, int sourceLine = 0);
 CppTypeFor<TypeCategory::Integer, 8> RTNAME(ModInteger8)(
-    CppTypeFor<TypeCategory::Integer, 8>, CppTypeFor<TypeCategory::Integer, 8>);
+    CppTypeFor<TypeCategory::Integer, 8>, CppTypeFor<TypeCategory::Integer, 8>,
+    const char *sourceFile = nullptr, int sourceLine = 0);
 #ifdef __SIZEOF_INT128__
 CppTypeFor<TypeCategory::Integer, 16> RTNAME(ModInteger16)(
     CppTypeFor<TypeCategory::Integer, 16>,
-    CppTypeFor<TypeCategory::Integer, 16>);
+    CppTypeFor<TypeCategory::Integer, 16>, const char *sourceFile = nullptr,
+    int sourceLine = 0);
 #endif
 CppTypeFor<TypeCategory::Real, 4> RTNAME(ModReal4)(
-    CppTypeFor<TypeCategory::Real, 4>, CppTypeFor<TypeCategory::Real, 4>);
+    CppTypeFor<TypeCategory::Real, 4>, CppTypeFor<TypeCategory::Real, 4>,
+    const char *sourceFile = nullptr, int sourceLine = 0);
 CppTypeFor<TypeCategory::Real, 8> RTNAME(ModReal8)(
-    CppTypeFor<TypeCategory::Real, 8>, CppTypeFor<TypeCategory::Real, 8>);
+    CppTypeFor<TypeCategory::Real, 8>, CppTypeFor<TypeCategory::Real, 8>,
+    const char *sourceFile = nullptr, int sourceLine = 0);
 CppTypeFor<TypeCategory::Real, 10> RTNAME(ModReal10)(
-    CppTypeFor<TypeCategory::Real, 10>, CppTypeFor<TypeCategory::Real, 10>);
+    CppTypeFor<TypeCategory::Real, 10>, CppTypeFor<TypeCategory::Real, 10>,
+    const char *sourceFile = nullptr, int sourceLine = 0);
 CppTypeFor<TypeCategory::Real, 16> RTNAME(ModReal16)(
-    CppTypeFor<TypeCategory::Real, 16>, CppTypeFor<TypeCategory::Real, 16>);
+    CppTypeFor<TypeCategory::Real, 16>, CppTypeFor<TypeCategory::Real, 16>,
+    const char *sourceFile = nullptr, int sourceLine = 0);
 
 CppTypeFor<TypeCategory::Integer, 1> RTNAME(ModuloInteger1)(
-    CppTypeFor<TypeCategory::Integer, 1>, CppTypeFor<TypeCategory::Integer, 1>);
+    CppTypeFor<TypeCategory::Integer, 1>, CppTypeFor<TypeCategory::Integer, 1>,
+    const char *sourceFile = nullptr, int sourceLine = 0);
 CppTypeFor<TypeCategory::Integer, 2> RTNAME(ModuloInteger2)(
-    CppTypeFor<TypeCategory::Integer, 2>, CppTypeFor<TypeCategory::Integer, 2>);
+    CppTypeFor<TypeCategory::Integer, 2>, CppTypeFor<TypeCategory::Integer, 2>,
+    const char *sourceFile = nullptr, int sourceLine = 0);
 CppTypeFor<TypeCategory::Integer, 4> RTNAME(ModuloInteger4)(
-    CppTypeFor<TypeCategory::Integer, 4>, CppTypeFor<TypeCategory::Integer, 4>);
+    CppTypeFor<TypeCategory::Integer, 4>, CppTypeFor<TypeCategory::Integer, 4>,
+    const char *sourceFile = nullptr, int sourceLine = 0);
 CppTypeFor<TypeCategory::Integer, 8> RTNAME(ModuloInteger8)(
-    CppTypeFor<TypeCategory::Integer, 8>, CppTypeFor<TypeCategory::Integer, 8>);
+    CppTypeFor<TypeCategory::Integer, 8>, CppTypeFor<TypeCategory::Integer, 8>,
+    const char *sourceFile = nullptr, int sourceLine = 0);
 #ifdef __SIZEOF_INT128__
 CppTypeFor<TypeCategory::Integer, 16> RTNAME(ModuloInteger16)(
     CppTypeFor<TypeCategory::Integer, 16>,
-    CppTypeFor<TypeCategory::Integer, 16>);
+    CppTypeFor<TypeCategory::Integer, 16>, const char *sourceFile = nullptr,
+    int sourceLine = 0);
 #endif
 CppTypeFor<TypeCategory::Real, 4> RTNAME(ModuloReal4)(
-    CppTypeFor<TypeCategory::Real, 4>, CppTypeFor<TypeCategory::Real, 4>);
+    CppTypeFor<TypeCategory::Real, 4>, CppTypeFor<TypeCategory::Real, 4>,
+    const char *sourceFile = nullptr, int sourceLine = 0);
 CppTypeFor<TypeCategory::Real, 8> RTNAME(ModuloReal8)(
-    CppTypeFor<TypeCategory::Real, 8>, CppTypeFor<TypeCategory::Real, 8>);
+    CppTypeFor<TypeCategory::Real, 8>, CppTypeFor<TypeCategory::Real, 8>,
+    const char *sourceFile = nullptr, int sourceLine = 0);
 CppTypeFor<TypeCategory::Real, 10> RTNAME(ModuloReal10)(
-    CppTypeFor<TypeCategory::Real, 10>, CppTypeFor<TypeCategory::Real, 10>);
+    CppTypeFor<TypeCategory::Real, 10>, CppTypeFor<TypeCategory::Real, 10>,
+    const char *sourceFile = nullptr, int sourceLine = 0);
 CppTypeFor<TypeCategory::Real, 16> RTNAME(ModuloReal16)(
-    CppTypeFor<TypeCategory::Real, 16>, CppTypeFor<TypeCategory::Real, 16>);
+    CppTypeFor<TypeCategory::Real, 16>, CppTypeFor<TypeCategory::Real, 16>,
+    const char *sourceFile = nullptr, int sourceLine = 0);
 
 // NINT
 CppTypeFor<TypeCategory::Integer, 1> RTNAME(Nint4_1)(

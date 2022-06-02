@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "terminator.h"
 #include "flang/Runtime/numeric.h"
 #include "flang/Common/long-double.h"
 #include <climits>
@@ -62,14 +63,24 @@ template <typename T> inline T Fraction(T x) {
 }
 
 // MOD & MODULO (16.9.135, .136)
-template <bool IS_MODULO, typename T> inline T IntMod(T x, T p) {
+template <bool IS_MODULO, typename T>
+inline T IntMod(T x, T p, const char *sourceFile, int sourceLine) {
+  if (p == 0) {
+    Terminator{sourceFile, sourceLine}.Crash(
+        IS_MODULO ? "MODULO with P==0" : "MOD with P==0");
+  }
   auto mod{x - (x / p) * p};
   if (IS_MODULO && (x > 0) != (p > 0)) {
     mod += p;
   }
   return mod;
 }
-template <bool IS_MODULO, typename T> inline T RealMod(T x, T p) {
+template <bool IS_MODULO, typename T>
+inline T RealMod(T x, T p, const char *sourceFile, int sourceLine) {
+  if (p == 0) {
+    Terminator{sourceFile, sourceLine}.Crash(
+        IS_MODULO ? "MODULO with P==0" : "MOD with P==0");
+  }
   if constexpr (IS_MODULO) {
     return x - std::floor(x / p) * p;
   } else {
@@ -542,99 +553,113 @@ bool RTNAME(IsNaN16)(CppTypeFor<TypeCategory::Real, 16> x) {
 
 CppTypeFor<TypeCategory::Integer, 1> RTNAME(ModInteger1)(
     CppTypeFor<TypeCategory::Integer, 1> x,
-    CppTypeFor<TypeCategory::Integer, 1> p) {
-  return IntMod<false>(x, p);
+    CppTypeFor<TypeCategory::Integer, 1> p, const char *sourceFile,
+    int sourceLine) {
+  return IntMod<false>(x, p, sourceFile, sourceLine);
 }
 CppTypeFor<TypeCategory::Integer, 2> RTNAME(ModInteger2)(
     CppTypeFor<TypeCategory::Integer, 2> x,
-    CppTypeFor<TypeCategory::Integer, 2> p) {
-  return IntMod<false>(x, p);
+    CppTypeFor<TypeCategory::Integer, 2> p, const char *sourceFile,
+    int sourceLine) {
+  return IntMod<false>(x, p, sourceFile, sourceLine);
 }
 CppTypeFor<TypeCategory::Integer, 4> RTNAME(ModInteger4)(
     CppTypeFor<TypeCategory::Integer, 4> x,
-    CppTypeFor<TypeCategory::Integer, 4> p) {
-  return IntMod<false>(x, p);
+    CppTypeFor<TypeCategory::Integer, 4> p, const char *sourceFile,
+    int sourceLine) {
+  return IntMod<false>(x, p, sourceFile, sourceLine);
 }
 CppTypeFor<TypeCategory::Integer, 8> RTNAME(ModInteger8)(
     CppTypeFor<TypeCategory::Integer, 8> x,
-    CppTypeFor<TypeCategory::Integer, 8> p) {
-  return IntMod<false>(x, p);
+    CppTypeFor<TypeCategory::Integer, 8> p, const char *sourceFile,
+    int sourceLine) {
+  return IntMod<false>(x, p, sourceFile, sourceLine);
 }
 #ifdef __SIZEOF_INT128__
 CppTypeFor<TypeCategory::Integer, 16> RTNAME(ModInteger16)(
     CppTypeFor<TypeCategory::Integer, 16> x,
-    CppTypeFor<TypeCategory::Integer, 16> p) {
-  return IntMod<false>(x, p);
+    CppTypeFor<TypeCategory::Integer, 16> p, const char *sourceFile,
+    int sourceLine) {
+  return IntMod<false>(x, p, sourceFile, sourceLine);
 }
 #endif
 CppTypeFor<TypeCategory::Real, 4> RTNAME(ModReal4)(
-    CppTypeFor<TypeCategory::Real, 4> x, CppTypeFor<TypeCategory::Real, 4> p) {
-  return RealMod<false>(x, p);
+    CppTypeFor<TypeCategory::Real, 4> x, CppTypeFor<TypeCategory::Real, 4> p,
+    const char *sourceFile, int sourceLine) {
+  return RealMod<false>(x, p, sourceFile, sourceLine);
 }
 CppTypeFor<TypeCategory::Real, 8> RTNAME(ModReal8)(
-    CppTypeFor<TypeCategory::Real, 8> x, CppTypeFor<TypeCategory::Real, 8> p) {
-  return RealMod<false>(x, p);
+    CppTypeFor<TypeCategory::Real, 8> x, CppTypeFor<TypeCategory::Real, 8> p,
+    const char *sourceFile, int sourceLine) {
+  return RealMod<false>(x, p, sourceFile, sourceLine);
 }
 #if LONG_DOUBLE == 80
 CppTypeFor<TypeCategory::Real, 10> RTNAME(ModReal10)(
-    CppTypeFor<TypeCategory::Real, 10> x,
-    CppTypeFor<TypeCategory::Real, 10> p) {
-  return RealMod<false>(x, p);
+    CppTypeFor<TypeCategory::Real, 10> x, CppTypeFor<TypeCategory::Real, 10> p,
+    const char *sourceFile, int sourceLine) {
+  return RealMod<false>(x, p, sourceFile, sourceLine);
 }
 #elif LONG_DOUBLE == 128
 CppTypeFor<TypeCategory::Real, 16> RTNAME(ModReal16)(
-    CppTypeFor<TypeCategory::Real, 16> x,
-    CppTypeFor<TypeCategory::Real, 16> p) {
-  return RealMod<false>(x, p);
+    CppTypeFor<TypeCategory::Real, 16> x, CppTypeFor<TypeCategory::Real, 16> p,
+    const char *sourceFile, int sourceLine) {
+  return RealMod<false>(x, p, sourceFile, sourceLine);
 }
 #endif
 
 CppTypeFor<TypeCategory::Integer, 1> RTNAME(ModuloInteger1)(
     CppTypeFor<TypeCategory::Integer, 1> x,
-    CppTypeFor<TypeCategory::Integer, 1> p) {
-  return IntMod<true>(x, p);
+    CppTypeFor<TypeCategory::Integer, 1> p, const char *sourceFile,
+    int sourceLine) {
+  return IntMod<true>(x, p, sourceFile, sourceLine);
 }
 CppTypeFor<TypeCategory::Integer, 2> RTNAME(ModuloInteger2)(
     CppTypeFor<TypeCategory::Integer, 2> x,
-    CppTypeFor<TypeCategory::Integer, 2> p) {
-  return IntMod<true>(x, p);
+    CppTypeFor<TypeCategory::Integer, 2> p, const char *sourceFile,
+    int sourceLine) {
+  return IntMod<true>(x, p, sourceFile, sourceLine);
 }
 CppTypeFor<TypeCategory::Integer, 4> RTNAME(ModuloInteger4)(
     CppTypeFor<TypeCategory::Integer, 4> x,
-    CppTypeFor<TypeCategory::Integer, 4> p) {
-  return IntMod<true>(x, p);
+    CppTypeFor<TypeCategory::Integer, 4> p, const char *sourceFile,
+    int sourceLine) {
+  return IntMod<true>(x, p, sourceFile, sourceLine);
 }
 CppTypeFor<TypeCategory::Integer, 8> RTNAME(ModuloInteger8)(
     CppTypeFor<TypeCategory::Integer, 8> x,
-    CppTypeFor<TypeCategory::Integer, 8> p) {
-  return IntMod<true>(x, p);
+    CppTypeFor<TypeCategory::Integer, 8> p, const char *sourceFile,
+    int sourceLine) {
+  return IntMod<true>(x, p, sourceFile, sourceLine);
 }
 #ifdef __SIZEOF_INT128__
 CppTypeFor<TypeCategory::Integer, 16> RTNAME(ModuloInteger16)(
     CppTypeFor<TypeCategory::Integer, 16> x,
-    CppTypeFor<TypeCategory::Integer, 16> p) {
-  return IntMod<true>(x, p);
+    CppTypeFor<TypeCategory::Integer, 16> p, const char *sourceFile,
+    int sourceLine) {
+  return IntMod<true>(x, p, sourceFile, sourceLine);
 }
 #endif
 CppTypeFor<TypeCategory::Real, 4> RTNAME(ModuloReal4)(
-    CppTypeFor<TypeCategory::Real, 4> x, CppTypeFor<TypeCategory::Real, 4> p) {
-  return RealMod<true>(x, p);
+    CppTypeFor<TypeCategory::Real, 4> x, CppTypeFor<TypeCategory::Real, 4> p,
+    const char *sourceFile, int sourceLine) {
+  return RealMod<true>(x, p, sourceFile, sourceLine);
 }
 CppTypeFor<TypeCategory::Real, 8> RTNAME(ModuloReal8)(
-    CppTypeFor<TypeCategory::Real, 8> x, CppTypeFor<TypeCategory::Real, 8> p) {
-  return RealMod<true>(x, p);
+    CppTypeFor<TypeCategory::Real, 8> x, CppTypeFor<TypeCategory::Real, 8> p,
+    const char *sourceFile, int sourceLine) {
+  return RealMod<true>(x, p, sourceFile, sourceLine);
 }
 #if LONG_DOUBLE == 80
 CppTypeFor<TypeCategory::Real, 10> RTNAME(ModuloReal10)(
-    CppTypeFor<TypeCategory::Real, 10> x,
-    CppTypeFor<TypeCategory::Real, 10> p) {
-  return RealMod<true>(x, p);
+    CppTypeFor<TypeCategory::Real, 10> x, CppTypeFor<TypeCategory::Real, 10> p,
+    const char *sourceFile, int sourceLine) {
+  return RealMod<true>(x, p, sourceFile, sourceLine);
 }
 #elif LONG_DOUBLE == 128
 CppTypeFor<TypeCategory::Real, 16> RTNAME(ModuloReal16)(
-    CppTypeFor<TypeCategory::Real, 16> x,
-    CppTypeFor<TypeCategory::Real, 16> p) {
-  return RealMod<true>(x, p);
+    CppTypeFor<TypeCategory::Real, 16> x, CppTypeFor<TypeCategory::Real, 16> p,
+    const char *sourceFile, int sourceLine) {
+  return RealMod<true>(x, p, sourceFile, sourceLine);
 }
 #endif
 
