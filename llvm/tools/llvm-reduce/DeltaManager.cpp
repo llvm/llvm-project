@@ -35,6 +35,7 @@
 #include "deltas/ReduceOperandsSkip.h"
 #include "deltas/ReduceOperandsToArgs.h"
 #include "deltas/ReduceSpecialGlobals.h"
+#include "deltas/ReduceVirtualRegisters.h"
 #include "llvm/Support/CommandLine.h"
 
 using namespace llvm;
@@ -74,7 +75,8 @@ static cl::opt<std::string>
              reduceIRInstructionReferencesDeltaPass)                           \
   DELTA_PASS("ir-block-references", reduceIRBlockReferencesDeltaPass)          \
   DELTA_PASS("ir-function-references", reduceIRFunctionReferencesDeltaPass)    \
-  DELTA_PASS("instruction-flags", reduceInstructionFlagsMIRDeltaPass)
+  DELTA_PASS("instruction-flags", reduceInstructionFlagsMIRDeltaPass)          \
+  DELTA_PASS("register-hints", reduceVirtualRegisterHintsDeltaPass)
 
 static void runAllDeltaPasses(TestRunner &Tester) {
 #define DELTA_PASS(NAME, FUNC) FUNC(Tester);
