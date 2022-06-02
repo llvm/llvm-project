@@ -79,7 +79,6 @@ void registerTestDynamicPipelinePass();
 void registerTestExpandMathPass();
 void registerTestComposeSubView();
 void registerTestMultiBuffering();
-void registerTestIntRangeInference();
 void registerTestIRVisitorsPass();
 void registerTestGenericIRVisitorsPass();
 void registerTestGenericIRVisitorsInterruptPass();
@@ -176,7 +175,6 @@ void registerTestPasses() {
   mlir::test::registerTestExpandMathPass();
   mlir::test::registerTestComposeSubView();
   mlir::test::registerTestMultiBuffering();
-  mlir::test::registerTestIntRangeInference();
   mlir::test::registerTestIRVisitorsPass();
   mlir::test::registerTestGenericIRVisitorsPass();
   mlir::test::registerTestInterfaces();
