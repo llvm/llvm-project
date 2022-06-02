@@ -138,6 +138,7 @@
 #include "llvm/IR/CallingConv.h"
 #include "llvm/IR/DebugLoc.h"
 #include "llvm/IR/Function.h"
+#include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCDwarf.h"
 #include "llvm/MC/MCInstrDesc.h"
@@ -270,6 +271,187 @@ static int getArgumentStackToRestore(MachineFunction &MF,
   }
 
   return ArgumentPopSize;
+}
+
+static bool needsWinCFI(const MachineFunction &MF) {
+  const Function &F = MF.getFunction();
+  return MF.getTarget().getMCAsmInfo()->usesWindowsCFI() &&
+         F.needsUnwindTableEntry();
+}
+
+// Given a load or a store instruction, generate an appropriate unwinding SEH
+// code on Windows.
+static MachineBasicBlock::iterator insertSEH(MachineBasicBlock::iterator MBBI,
+                                             const TargetInstrInfo &TII,
+                                             unsigned Flags) {
+  unsigned Opc = MBBI->getOpcode();
+  MachineBasicBlock *MBB = MBBI->getParent();
+  MachineFunction &MF = *MBB->getParent();
+  DebugLoc DL = MBBI->getDebugLoc();
+  MachineInstrBuilder MIB;
+  const ARMSubtarget &Subtarget = MF.getSubtarget<ARMSubtarget>();
+  const ARMBaseRegisterInfo *RegInfo = Subtarget.getRegisterInfo();
+
+  Flags |= MachineInstr::NoMerge;
+
+  switch (Opc) {
+  default:
+    report_fatal_error("No SEH Opcode for instruction " + TII.getName(Opc));
+    break;
+  case ARM::t2ADDri:   // add.w r11, sp, #xx
+  case ARM::t2ADDri12: // add.w r11, sp, #xx
+  case ARM::t2SUBri:   // sub.w r4, r11, #xx
+  case ARM::t2MOVTi16: // movt  r4, #xx
+  case ARM::t2MOVi16:  // movw  r4, #xx
+  case ARM::tBL:       // bl __chkstk
+    // These are harmless if used for just setting up a frame pointer,
+    // but that frame pointer can't be relied upon for unwinding, unless
+    // set up with SEH_SaveSP.
+    MIB = BuildMI(MF, DL, TII.get(ARM::SEH_Nop))
+              .addImm(/*Wide=*/1)
+              .setMIFlags(Flags);
+    break;
+
+  case ARM::tBLXr: // blx r12 (__chkstk)
+    MIB = BuildMI(MF, DL, TII.get(ARM::SEH_Nop))
+              .addImm(/*Wide=*/0)
+              .setMIFlags(Flags);
+    break;
+
+  case ARM::t2MOVi32imm: // movw+movt
+    // This pseudo instruction expands into two mov instructions. If the
+    // second operand is a symbol reference, this will stay as two wide
+    // instructions, movw+movt. If they're immediates, the first one can
+    // end up as a narrow mov though.
+    // As two SEH instructions are appended here, they won't get interleaved
+    // between the two final movw/movt instructions, but it doesn't make any
+    // practical difference.
+    MIB = BuildMI(MF, DL, TII.get(ARM::SEH_Nop))
+              .addImm(/*Wide=*/1)
+              .setMIFlags(Flags);
+    MBB->insertAfter(MBBI, MIB);
+    MIB = BuildMI(MF, DL, TII.get(ARM::SEH_Nop))
+              .addImm(/*Wide=*/1)
+              .setMIFlags(Flags);
+    break;
+
+  case ARM::t2LDMIA_RET:
+  case ARM::t2LDMIA_UPD:
+  case ARM::t2STMDB_UPD: {
+    unsigned Mask = 0;
+    for (unsigned i = 4, NumOps = MBBI->getNumOperands(); i != NumOps; ++i) {
+      const MachineOperand &MO = MBBI->getOperand(i);
+      if (!MO.isReg() || MO.isImplicit())
+        continue;
+      unsigned Reg = RegInfo->getSEHRegNum(MO.getReg());
+      if (Reg == 15)
+        Reg = 14;
+      Mask |= 1 << Reg;
+    }
+    unsigned SEHOpc =
+        (Opc == ARM::t2LDMIA_RET) ? ARM::SEH_SaveRegs_Ret : ARM::SEH_SaveRegs;
+    MIB = BuildMI(MF, DL, TII.get(SEHOpc))
+              .addImm(Mask)
+              .addImm(/*Wide=*/1)
+              .setMIFlags(Flags);
+    break;
+  }
+  case ARM::VSTMDDB_UPD:
+  case ARM::VLDMDIA_UPD: {
+    int First = -1, Last = 0;
+    for (unsigned i = 4, NumOps = MBBI->getNumOperands(); i != NumOps; ++i) {
+      const MachineOperand &MO = MBBI->getOperand(i);
+      unsigned Reg = RegInfo->getSEHRegNum(MO.getReg());
+      if (First == -1)
+        First = Reg;
+      Last = Reg;
+    }
+    MIB = BuildMI(MF, DL, TII.get(ARM::SEH_SaveFRegs))
+              .addImm(First)
+              .addImm(Last)
+              .setMIFlags(Flags);
+    break;
+  }
+  case ARM::tSUBspi:
+  case ARM::tADDspi:
+    MIB = BuildMI(MF, DL, TII.get(ARM::SEH_StackAlloc))
+              .addImm(MBBI->getOperand(2).getImm() * 4)
+              .addImm(/*Wide=*/0)
+              .setMIFlags(Flags);
+    break;
+  case ARM::t2SUBspImm:
+  case ARM::t2SUBspImm12:
+  case ARM::t2ADDspImm:
+  case ARM::t2ADDspImm12:
+    MIB = BuildMI(MF, DL, TII.get(ARM::SEH_StackAlloc))
+              .addImm(MBBI->getOperand(2).getImm())
+              .addImm(/*Wide=*/1)
+              .setMIFlags(Flags);
+    break;
+
+  case ARM::tMOVr:
+    if (MBBI->getOperand(1).getReg() == ARM::SP &&
+        (Flags & MachineInstr::FrameSetup)) {
+      unsigned Reg = RegInfo->getSEHRegNum(MBBI->getOperand(0).getReg());
+      MIB = BuildMI(MF, DL, TII.get(ARM::SEH_SaveSP))
+                .addImm(Reg)
+                .setMIFlags(Flags);
+    } else if (MBBI->getOperand(0).getReg() == ARM::SP &&
+               (Flags & MachineInstr::FrameDestroy)) {
+      unsigned Reg = RegInfo->getSEHRegNum(MBBI->getOperand(1).getReg());
+      MIB = BuildMI(MF, DL, TII.get(ARM::SEH_SaveSP))
+                .addImm(Reg)
+                .setMIFlags(Flags);
+    } else {
+      report_fatal_error("No SEH Opcode for MOV");
+    }
+    break;
+
+  case ARM::tBX_RET:
+  case ARM::TCRETURNri:
+    MIB = BuildMI(MF, DL, TII.get(ARM::SEH_Nop_Ret))
+              .addImm(/*Wide=*/0)
+              .setMIFlags(Flags);
+    break;
+
+  case ARM::TCRETURNdi:
+    MIB = BuildMI(MF, DL, TII.get(ARM::SEH_Nop_Ret))
+              .addImm(/*Wide=*/1)
+              .setMIFlags(Flags);
+    break;
+  }
+  return MBB->insertAfter(MBBI, MIB);
+}
+
+static MachineBasicBlock::iterator
+initMBBRange(MachineBasicBlock &MBB, const MachineBasicBlock::iterator &MBBI) {
+  if (MBBI == MBB.begin())
+    return MachineBasicBlock::iterator();
+  return std::prev(MBBI);
+}
+
+static void insertSEHRange(MachineBasicBlock &MBB,
+                           MachineBasicBlock::iterator Start,
+                           const MachineBasicBlock::iterator &End,
+                           const ARMBaseInstrInfo &TII, unsigned MIFlags) {
+  if (Start.isValid())
+    Start = std::next(Start);
+  else
+    Start = MBB.begin();
+
+  for (auto MI = Start; MI != End;) {
+    auto Next = std::next(MI);
+    // Check if this instruction already has got a SEH opcode added. In that
+    // case, don't do this generic mapping.
+    if (Next != End && isSEHInstruction(*Next)) {
+      MI = std::next(Next);
+      while (MI != End && isSEHInstruction(*MI))
+        ++MI;
+      continue;
+    }
+    insertSEH(MI, TII, MIFlags);
+    MI = Next;
+  }
 }
 
 static void emitRegPlusImmediate(
@@ -481,6 +663,7 @@ void ARMFrameLowering::emitPrologue(MachineFunction &MF,
   unsigned NumBytes = MFI.getStackSize();
   const std::vector<CalleeSavedInfo> &CSI = MFI.getCalleeSavedInfo();
   int FPCXTSaveSize = 0;
+  bool NeedsWinCFI = needsWinCFI(MF);
 
   // Debug location must be unknown since the first debug location is used
   // to determine the end of the prologue.
@@ -509,7 +692,14 @@ void ARMFrameLowering::emitPrologue(MachineFunction &MF,
                    MachineInstr::FrameSetup);
       DefCFAOffsetCandidates.addInst(std::prev(MBBI), NumBytes, true);
     }
-    DefCFAOffsetCandidates.emitDefCFAOffsets(MBB, dl, TII, HasFP);
+    if (!NeedsWinCFI)
+      DefCFAOffsetCandidates.emitDefCFAOffsets(MBB, dl, TII, HasFP);
+    if (NeedsWinCFI && MBBI != MBB.begin()) {
+      insertSEHRange(MBB, {}, MBBI, TII, MachineInstr::FrameSetup);
+      BuildMI(MBB, MBBI, dl, TII.get(ARM::SEH_PrologEnd))
+          .setMIFlag(MachineInstr::FrameSetup);
+      MF.setHasWinCFI(true);
+    }
     return;
   }
 
@@ -646,15 +836,25 @@ void ARMFrameLowering::emitPrologue(MachineFunction &MF,
   if (STI.isTargetWindows() && WindowsRequiresStackProbe(MF, NumBytes)) {
     uint32_t NumWords = NumBytes >> 2;
 
-    if (NumWords < 65536)
+    if (NumWords < 65536) {
       BuildMI(MBB, MBBI, dl, TII.get(ARM::t2MOVi16), ARM::R4)
           .addImm(NumWords)
           .setMIFlags(MachineInstr::FrameSetup)
           .add(predOps(ARMCC::AL));
-    else
-      BuildMI(MBB, MBBI, dl, TII.get(ARM::t2MOVi32imm), ARM::R4)
-        .addImm(NumWords)
-        .setMIFlags(MachineInstr::FrameSetup);
+    } else {
+      // Split into two instructions here, instead of using t2MOVi32imm,
+      // to allow inserting accurate SEH instructions (including accurate
+      // instruction size for each of them).
+      BuildMI(MBB, MBBI, dl, TII.get(ARM::t2MOVi16), ARM::R4)
+          .addImm(NumWords & 0xffff)
+          .setMIFlags(MachineInstr::FrameSetup)
+          .add(predOps(ARMCC::AL));
+      BuildMI(MBB, MBBI, dl, TII.get(ARM::t2MOVTi16), ARM::R4)
+          .addReg(ARM::R4)
+          .addImm(NumWords >> 16)
+          .setMIFlags(MachineInstr::FrameSetup)
+          .add(predOps(ARMCC::AL));
+    }
 
     switch (TM.getCodeModel()) {
     case CodeModel::Tiny:
@@ -681,12 +881,20 @@ void ARMFrameLowering::emitPrologue(MachineFunction &MF,
       break;
     }
 
-    BuildMI(MBB, MBBI, dl, TII.get(ARM::t2SUBrr), ARM::SP)
-        .addReg(ARM::SP, RegState::Kill)
-        .addReg(ARM::R4, RegState::Kill)
-        .setMIFlags(MachineInstr::FrameSetup)
-        .add(predOps(ARMCC::AL))
-        .add(condCodeOp());
+    MachineInstrBuilder Instr, SEH;
+    Instr = BuildMI(MBB, MBBI, dl, TII.get(ARM::t2SUBrr), ARM::SP)
+                .addReg(ARM::SP, RegState::Kill)
+                .addReg(ARM::R4, RegState::Kill)
+                .setMIFlags(MachineInstr::FrameSetup)
+                .add(predOps(ARMCC::AL))
+                .add(condCodeOp());
+    if (NeedsWinCFI) {
+      SEH = BuildMI(MF, dl, TII.get(ARM::SEH_StackAlloc))
+                .addImm(NumBytes)
+                .addImm(/*Wide=*/1)
+                .setMIFlags(MachineInstr::FrameSetup);
+      MBB.insertAfter(Instr, SEH);
+    }
     NumBytes = 0;
   }
 
@@ -726,27 +934,38 @@ void ARMFrameLowering::emitPrologue(MachineFunction &MF,
                          dl, TII, FramePtr, ARM::SP,
                          PushSize + FramePtrOffsetInPush,
                          MachineInstr::FrameSetup);
-    if (FramePtrOffsetInPush + PushSize != 0) {
-      unsigned CFIIndex = MF.addFrameInst(MCCFIInstruction::cfiDefCfa(
-          nullptr, MRI->getDwarfRegNum(FramePtr, true),
-          FPCXTSaveSize + ArgRegsSaveSize - FramePtrOffsetInPush));
-      BuildMI(MBB, AfterPush, dl, TII.get(TargetOpcode::CFI_INSTRUCTION))
-          .addCFIIndex(CFIIndex)
-          .setMIFlags(MachineInstr::FrameSetup);
-    } else {
-      unsigned CFIIndex =
-          MF.addFrameInst(MCCFIInstruction::createDefCfaRegister(
-              nullptr, MRI->getDwarfRegNum(FramePtr, true)));
-      BuildMI(MBB, AfterPush, dl, TII.get(TargetOpcode::CFI_INSTRUCTION))
-          .addCFIIndex(CFIIndex)
-          .setMIFlags(MachineInstr::FrameSetup);
+    if (!NeedsWinCFI) {
+      if (FramePtrOffsetInPush + PushSize != 0) {
+        unsigned CFIIndex = MF.addFrameInst(MCCFIInstruction::cfiDefCfa(
+            nullptr, MRI->getDwarfRegNum(FramePtr, true),
+            FPCXTSaveSize + ArgRegsSaveSize - FramePtrOffsetInPush));
+        BuildMI(MBB, AfterPush, dl, TII.get(TargetOpcode::CFI_INSTRUCTION))
+            .addCFIIndex(CFIIndex)
+            .setMIFlags(MachineInstr::FrameSetup);
+      } else {
+        unsigned CFIIndex =
+            MF.addFrameInst(MCCFIInstruction::createDefCfaRegister(
+                nullptr, MRI->getDwarfRegNum(FramePtr, true)));
+        BuildMI(MBB, AfterPush, dl, TII.get(TargetOpcode::CFI_INSTRUCTION))
+            .addCFIIndex(CFIIndex)
+            .setMIFlags(MachineInstr::FrameSetup);
+      }
     }
+  }
+
+  // Emit a SEH opcode indicating the prologue end. The rest of the prologue
+  // instructions below don't need to be replayed to unwind the stack.
+  if (NeedsWinCFI && MBBI != MBB.begin()) {
+    insertSEHRange(MBB, {}, MBBI, TII, MachineInstr::FrameSetup);
+    BuildMI(MBB, MBBI, dl, TII.get(ARM::SEH_PrologEnd))
+        .setMIFlag(MachineInstr::FrameSetup);
+    MF.setHasWinCFI(true);
   }
 
   // Now that the prologue's actual instructions are finalised, we can insert
   // the necessary DWARF cf instructions to describe the situation. Start by
   // recording where each register ended up:
-  if (GPRCS1Size > 0) {
+  if (GPRCS1Size > 0 && !NeedsWinCFI) {
     MachineBasicBlock::iterator Pos = std::next(GPRCS1Push);
     int CFIIndex;
     for (const auto &Entry : CSI) {
@@ -780,7 +999,7 @@ void ARMFrameLowering::emitPrologue(MachineFunction &MF,
     }
   }
 
-  if (GPRCS2Size > 0) {
+  if (GPRCS2Size > 0 && !NeedsWinCFI) {
     MachineBasicBlock::iterator Pos = std::next(GPRCS2Push);
     for (const auto &Entry : CSI) {
       Register Reg = Entry.getReg();
@@ -806,7 +1025,7 @@ void ARMFrameLowering::emitPrologue(MachineFunction &MF,
     }
   }
 
-  if (DPRCSSize > 0) {
+  if (DPRCSSize > 0 && !NeedsWinCFI) {
     // Since vpush register list cannot have gaps, there may be multiple vpush
     // instructions in the prologue.
     MachineBasicBlock::iterator Pos = std::next(LastPush);
@@ -830,7 +1049,8 @@ void ARMFrameLowering::emitPrologue(MachineFunction &MF,
   // throughout the process. If we have a frame pointer, it takes over the job
   // half-way through, so only the first few .cfi_def_cfa_offset instructions
   // actually get emitted.
-  DefCFAOffsetCandidates.emitDefCFAOffsets(MBB, dl, TII, HasFP);
+  if (!NeedsWinCFI)
+    DefCFAOffsetCandidates.emitDefCFAOffsets(MBB, dl, TII, HasFP);
 
   if (STI.isTargetELF() && hasFP(MF))
     MFI.setOffsetAdjustment(MFI.getOffsetAdjustment() -
@@ -927,7 +1147,14 @@ void ARMFrameLowering::emitEpilogue(MachineFunction &MF,
   MachineBasicBlock::iterator MBBI = MBB.getFirstTerminator();
   DebugLoc dl = MBBI != MBB.end() ? MBBI->getDebugLoc() : DebugLoc();
 
+  MachineBasicBlock::iterator RangeStart;
   if (!AFI->hasStackFrame()) {
+    if (MF.hasWinCFI()) {
+      BuildMI(MBB, MBBI, dl, TII.get(ARM::SEH_EpilogStart))
+          .setMIFlag(MachineInstr::FrameDestroy);
+      RangeStart = initMBBRange(MBB, MBBI);
+    }
+
     if (NumBytes + IncomingArgStackToRestore != 0)
       emitSPUpdate(isARM, MBB, MBBI, dl, TII,
                    NumBytes + IncomingArgStackToRestore,
@@ -941,6 +1168,12 @@ void ARMFrameLowering::emitEpilogue(MachineFunction &MF,
                MBBI->getFlag(MachineInstr::FrameDestroy));
       if (!MBBI->getFlag(MachineInstr::FrameDestroy))
         ++MBBI;
+    }
+
+    if (MF.hasWinCFI()) {
+      BuildMI(MBB, MBBI, dl, TII.get(ARM::SEH_EpilogStart))
+          .setMIFlag(MachineInstr::FrameDestroy);
+      RangeStart = initMBBRange(MBB, MBBI);
     }
 
     // Move SP to start of FP callee save spill area.
@@ -1028,6 +1261,12 @@ void ARMFrameLowering::emitEpilogue(MachineFunction &MF,
     // entry, before saving, resp. after restoring, FPCXTNS.
     if (AFI->shouldSignReturnAddress() && !AFI->isCmseNSEntryFunction())
       BuildMI(MBB, MBBI, DebugLoc(), STI.getInstrInfo()->get(ARM::t2AUT));
+  }
+
+  if (MF.hasWinCFI()) {
+    insertSEHRange(MBB, RangeStart, MBB.end(), TII, MachineInstr::FrameDestroy);
+    BuildMI(MBB, MBB.end(), dl, TII.get(ARM::SEH_EpilogEnd))
+        .setMIFlag(MachineInstr::FrameDestroy);
   }
 }
 
@@ -2596,17 +2835,19 @@ void ARMFrameLowering::adjustForSegmentedStacks(
 
   // Emit the relevant DWARF information about the change in stack pointer as
   // well as where to find both r4 and r5 (the callee-save registers)
-  CFIIndex = MF.addFrameInst(MCCFIInstruction::cfiDefCfaOffset(nullptr, 8));
-  BuildMI(PrevStackMBB, DL, TII.get(TargetOpcode::CFI_INSTRUCTION))
-      .addCFIIndex(CFIIndex);
-  CFIIndex = MF.addFrameInst(MCCFIInstruction::createOffset(
-      nullptr, MRI->getDwarfRegNum(ScratchReg1, true), -4));
-  BuildMI(PrevStackMBB, DL, TII.get(TargetOpcode::CFI_INSTRUCTION))
-      .addCFIIndex(CFIIndex);
-  CFIIndex = MF.addFrameInst(MCCFIInstruction::createOffset(
-      nullptr, MRI->getDwarfRegNum(ScratchReg0, true), -8));
-  BuildMI(PrevStackMBB, DL, TII.get(TargetOpcode::CFI_INSTRUCTION))
-      .addCFIIndex(CFIIndex);
+  if (!MF.getTarget().getMCAsmInfo()->usesWindowsCFI()) {
+    CFIIndex = MF.addFrameInst(MCCFIInstruction::cfiDefCfaOffset(nullptr, 8));
+    BuildMI(PrevStackMBB, DL, TII.get(TargetOpcode::CFI_INSTRUCTION))
+        .addCFIIndex(CFIIndex);
+    CFIIndex = MF.addFrameInst(MCCFIInstruction::createOffset(
+        nullptr, MRI->getDwarfRegNum(ScratchReg1, true), -4));
+    BuildMI(PrevStackMBB, DL, TII.get(TargetOpcode::CFI_INSTRUCTION))
+        .addCFIIndex(CFIIndex);
+    CFIIndex = MF.addFrameInst(MCCFIInstruction::createOffset(
+        nullptr, MRI->getDwarfRegNum(ScratchReg0, true), -8));
+    BuildMI(PrevStackMBB, DL, TII.get(TargetOpcode::CFI_INSTRUCTION))
+        .addCFIIndex(CFIIndex);
+  }
 
   // mov SR1, sp
   if (Thumb) {
@@ -2808,13 +3049,15 @@ void ARMFrameLowering::adjustForSegmentedStacks(
 
   // Emit the DWARF info about the change in stack as well as where to find the
   // previous link register
-  CFIIndex = MF.addFrameInst(MCCFIInstruction::cfiDefCfaOffset(nullptr, 12));
-  BuildMI(AllocMBB, DL, TII.get(TargetOpcode::CFI_INSTRUCTION))
-      .addCFIIndex(CFIIndex);
-  CFIIndex = MF.addFrameInst(MCCFIInstruction::createOffset(
+  if (!MF.getTarget().getMCAsmInfo()->usesWindowsCFI()) {
+    CFIIndex = MF.addFrameInst(MCCFIInstruction::cfiDefCfaOffset(nullptr, 12));
+    BuildMI(AllocMBB, DL, TII.get(TargetOpcode::CFI_INSTRUCTION))
+        .addCFIIndex(CFIIndex);
+    CFIIndex = MF.addFrameInst(MCCFIInstruction::createOffset(
         nullptr, MRI->getDwarfRegNum(ARM::LR, true), -12));
-  BuildMI(AllocMBB, DL, TII.get(TargetOpcode::CFI_INSTRUCTION))
-      .addCFIIndex(CFIIndex);
+    BuildMI(AllocMBB, DL, TII.get(TargetOpcode::CFI_INSTRUCTION))
+        .addCFIIndex(CFIIndex);
+  }
 
   // Call __morestack().
   if (Thumb) {
@@ -2870,9 +3113,11 @@ void ARMFrameLowering::adjustForSegmentedStacks(
   }
 
   // Update the CFA offset now that we've popped
-  CFIIndex = MF.addFrameInst(MCCFIInstruction::cfiDefCfaOffset(nullptr, 0));
-  BuildMI(AllocMBB, DL, TII.get(TargetOpcode::CFI_INSTRUCTION))
-      .addCFIIndex(CFIIndex);
+  if (!MF.getTarget().getMCAsmInfo()->usesWindowsCFI()) {
+    CFIIndex = MF.addFrameInst(MCCFIInstruction::cfiDefCfaOffset(nullptr, 0));
+    BuildMI(AllocMBB, DL, TII.get(TargetOpcode::CFI_INSTRUCTION))
+        .addCFIIndex(CFIIndex);
+  }
 
   // Return from this function.
   BuildMI(AllocMBB, DL, TII.get(ST->getReturnOpcode())).add(predOps(ARMCC::AL));
@@ -2894,20 +3139,22 @@ void ARMFrameLowering::adjustForSegmentedStacks(
   }
 
   // Update the CFA offset now that we've popped
-  CFIIndex = MF.addFrameInst(MCCFIInstruction::cfiDefCfaOffset(nullptr, 0));
-  BuildMI(PostStackMBB, DL, TII.get(TargetOpcode::CFI_INSTRUCTION))
-      .addCFIIndex(CFIIndex);
+  if (!MF.getTarget().getMCAsmInfo()->usesWindowsCFI()) {
+    CFIIndex = MF.addFrameInst(MCCFIInstruction::cfiDefCfaOffset(nullptr, 0));
+    BuildMI(PostStackMBB, DL, TII.get(TargetOpcode::CFI_INSTRUCTION))
+        .addCFIIndex(CFIIndex);
 
-  // Tell debuggers that r4 and r5 are now the same as they were in the
-  // previous function, that they're the "Same Value".
-  CFIIndex = MF.addFrameInst(MCCFIInstruction::createSameValue(
-      nullptr, MRI->getDwarfRegNum(ScratchReg0, true)));
-  BuildMI(PostStackMBB, DL, TII.get(TargetOpcode::CFI_INSTRUCTION))
-      .addCFIIndex(CFIIndex);
-  CFIIndex = MF.addFrameInst(MCCFIInstruction::createSameValue(
-      nullptr, MRI->getDwarfRegNum(ScratchReg1, true)));
-  BuildMI(PostStackMBB, DL, TII.get(TargetOpcode::CFI_INSTRUCTION))
-      .addCFIIndex(CFIIndex);
+    // Tell debuggers that r4 and r5 are now the same as they were in the
+    // previous function, that they're the "Same Value".
+    CFIIndex = MF.addFrameInst(MCCFIInstruction::createSameValue(
+        nullptr, MRI->getDwarfRegNum(ScratchReg0, true)));
+    BuildMI(PostStackMBB, DL, TII.get(TargetOpcode::CFI_INSTRUCTION))
+        .addCFIIndex(CFIIndex);
+    CFIIndex = MF.addFrameInst(MCCFIInstruction::createSameValue(
+        nullptr, MRI->getDwarfRegNum(ScratchReg1, true)));
+    BuildMI(PostStackMBB, DL, TII.get(TargetOpcode::CFI_INSTRUCTION))
+        .addCFIIndex(CFIIndex);
+  }
 
   // Organizing MBB lists
   PostStackMBB->addSuccessor(&PrologueMBB);
