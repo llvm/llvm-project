@@ -16,6 +16,49 @@ include "mlir/Dialect/PDL/IR/PDLTypes.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
 include "mlir/IR/OpBase.td"
 
+def DecomposeOp : Op<Transform_Dialect, "structured.decompose",
+    [FunctionalStyleTransformOpTrait, MemoryEffectsOpInterface,
+     TransformOpInterface, TransformEachOpTrait]> {
+  let description = [{
+    Decomposes named complex operations, such as higher-dimensional
+    (depthwise) convolutions, into combinations of lower-dimensional equivalents
+    when possible. The operand handle must point to a list of such operations.
+    The returning handle points to the main produced computational operation,
+    such as the lower-dimensional convolution.
+  }];
+
+  let arguments = (ins PDL_Operation:$target);
+  let results = (outs PDL_Operation:$transformed);
+  let assemblyFormat = "$target attr-dict";
+
+  let extraClassDeclaration = [{
+    ::mlir::FailureOr<::mlir::linalg::LinalgOp> applyToOne(
+        ::mlir::linalg::LinalgOp target);
+  }];
+}
+
+def GeneralizeOp : Op<Transform_Dialect, "structured.generalize",
+    [FunctionalStyleTransformOpTrait, MemoryEffectsOpInterface,
+     TransformOpInterface, TransformEachOpTrait]> {
+  let description = [{
+    Transforms a named structued operation into the generic form with the
+    explicit attached region. The operand handle must point to a list of
+    structured operations, it is consumed by the transformation and is not
+    expected to be used afterwards. The resulting handle points to the list
+    of equivalent generic operations, in the same order as the original named
+    operations.
+  }];
+
+  let arguments = (ins PDL_Operation:$target);
+  let results = (outs PDL_Operation:$transformed);
+  let assemblyFormat = "$target attr-dict";
+
+  let extraClassDeclaration = [{
+    ::mlir::FailureOr<::mlir::linalg::LinalgOp> applyToOne(
+        ::mlir::linalg::LinalgOp target);
+  }];
+}
+
 def InterchangeOp : Op<Transform_Dialect, "structured.interchange",
     [FunctionalStyleTransformOpTrait, MemoryEffectsOpInterface,
     TransformOpInterface, TransformEachOpTrait]> {

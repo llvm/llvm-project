@@ -69,6 +69,28 @@ def _get_int_int_array_attr(
   return ArrayAttr.get([_get_int_array_attr(value) for value in values])
 
 
+class DecomposeOp:
+  """Specialization for DecomposeOp class."""
+
+  def __init__(self, target: Union[Operation, Value], *, loc=None, ip=None):
+    super().__init__(
+        pdl.OperationType.get(),
+        _get_op_result_or_value(target),
+        loc=loc,
+        ip=ip)
+
+
+class GeneralizeOp:
+  """Specialization for GeneralizeOp class."""
+
+  def __init__(self, target: Union[Operation, Value], *, loc=None, ip=None):
+    super().__init__(
+        pdl.OperationType.get(),
+        _get_op_result_or_value(target),
+        loc=loc,
+        ip=ip)
+
+
 class InterchangeOp:
   """Specialization for InterchangeOp class."""
 

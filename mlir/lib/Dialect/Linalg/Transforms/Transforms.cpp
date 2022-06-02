@@ -945,7 +945,6 @@ LogicalResult ExtractSliceOfPadTensorSwapPattern::matchAndRewrite(
   return success();
 }
 
-namespace {
 // The following are patterns for downscaling convolution ops with size-1
 // window dimensions.
 //
@@ -954,179 +953,145 @@ namespace {
 // and then turning back to named ops. But for now it's fine to have a few
 // patterns matching special ops to get started.
 
-/// Rewrites 2-D convolution ops with size-1 window dimensions into 1-D
-/// convolution ops.
-struct DownscaleSizeOneWindowed2DConvolution final
-    : public OpRewritePattern<Conv2DNhwcHwcfOp> {
-  DownscaleSizeOneWindowed2DConvolution(
-      MLIRContext *context,
-      LinalgTransformationFilter f = LinalgTransformationFilter(),
-      PatternBenefit benefit = 1)
-      : OpRewritePattern<Conv2DNhwcHwcfOp>(context, benefit),
-        filter(std::move(f)) {}
+FailureOr<Conv1DNwcWcfOp>
+DownscaleSizeOneWindowed2DConvolution::returningMatchAndRewrite(
+    linalg::Conv2DNhwcHwcfOp convOp, PatternRewriter &rewriter) const {
+  if (failed(filter.checkAndNotify(rewriter, convOp)))
+    return failure();
+  if (convOp.hasBufferSemantics())
+    return failure(); // To be implemented.
 
-  LogicalResult matchAndRewrite(linalg::Conv2DNhwcHwcfOp convOp,
-                                PatternRewriter &rewriter) const override {
-    if (failed(filter.checkAndNotify(rewriter, convOp)))
-      return failure();
-    if (convOp.hasBufferSemantics())
-      return failure(); // To be implemented
+  Value input = convOp.inputs().front();
+  Value kernel = convOp.inputs().back();
+  Value output = convOp.outputs().front();
 
-    Value input = convOp.inputs().front();
-    Value kernel = convOp.inputs().back();
-    Value output = convOp.outputs().front();
+  auto inputType = input.getType().dyn_cast<RankedTensorType>();
+  auto kernelType = kernel.getType().dyn_cast<RankedTensorType>();
+  auto outputType = output.getType().dyn_cast<RankedTensorType>();
 
-    auto inputType = input.getType().dyn_cast<RankedTensorType>();
-    auto kernelType = kernel.getType().dyn_cast<RankedTensorType>();
-    auto outputType = output.getType().dyn_cast<RankedTensorType>();
+  auto kernelShape = kernelType.getShape();
+  auto outputShape = outputType.getShape();
 
-    auto kernelShape = kernelType.getShape();
-    auto outputShape = outputType.getShape();
+  // Only handle the case where at least one of the window dimensions is
+  // of size 1. Other cases can rely on tiling to reduce to such cases.
+  int64_t khSize = kernelShape[0], kwSize = kernelShape[1];
+  int64_t ohSize = outputShape[1], owSize = outputShape[2];
+  bool removeH = (khSize == 1 && ohSize == 1);
+  bool removeW = (kwSize == 1 && owSize == 1);
+  if (!removeH && !removeW)
+    return failure();
 
-    // Only handle the case where at least one of the window dimensions is
-    // of size 1. Other cases can rely on tiling to reduce to such cases.
-    int64_t khSize = kernelShape[0], kwSize = kernelShape[1];
-    int64_t ohSize = outputShape[1], owSize = outputShape[2];
-    bool removeH = (khSize == 1 && ohSize == 1);
-    bool removeW = (kwSize == 1 && owSize == 1);
-    if (!removeH && !removeW)
-      return failure();
+  // Get new shapes and types for all operands by removing the size-1
+  // dimension.
+  using RTTBuilder = RankedTensorType::Builder;
+  RankedTensorType newInputType =
+      RTTBuilder(inputType).dropDim((removeH ? 1 : 2));
+  RankedTensorType newKernelType =
+      RTTBuilder(kernelType).dropDim((removeH ? 0 : 1));
+  RankedTensorType newOutputType =
+      RTTBuilder(outputType).dropDim(removeH ? 1 : 2);
 
-    // Get new shapes and types for all operands by removing the size-1
-    // dimension.
-    using RTTBuilder = RankedTensorType::Builder;
-    RankedTensorType newInputType =
-        RTTBuilder(inputType).dropDim((removeH ? 1 : 2));
-    RankedTensorType newKernelType =
-        RTTBuilder(kernelType).dropDim((removeH ? 0 : 1));
-    RankedTensorType newOutputType =
-        RTTBuilder(outputType).dropDim(removeH ? 1 : 2);
+  // Rank-reduce operands.
+  Location loc = convOp.getLoc();
+  Value newInput = tensor::createCanonicalRankReducingExtractSliceOp(
+      rewriter, loc, input, newInputType);
+  Value newKernel = tensor::createCanonicalRankReducingExtractSliceOp(
+      rewriter, loc, kernel, newKernelType);
+  Value newOutput = tensor::createCanonicalRankReducingExtractSliceOp(
+      rewriter, loc, output, newOutputType);
 
-    // Rank-reduce operands.
-    Location loc = convOp.getLoc();
-    Value newInput = tensor::createCanonicalRankReducingExtractSliceOp(
-        rewriter, loc, input, newInputType);
-    Value newKernel = tensor::createCanonicalRankReducingExtractSliceOp(
-        rewriter, loc, kernel, newKernelType);
-    Value newOutput = tensor::createCanonicalRankReducingExtractSliceOp(
-        rewriter, loc, output, newOutputType);
+  // Rank-reduce strides and dilations too.
+  // TODO: dropDim 1-liner helper.
+  auto strides = llvm::to_vector<4>(convOp.strides().getValues<int64_t>());
+  strides.erase(strides.begin() + (removeH ? 0 : 1));
+  auto stridesAttr = rewriter.getI64VectorAttr(strides);
 
-    // Rank-reduce strides and dilations too.
-    // TODO: dropDim 1-liner helper.
-    auto strides = llvm::to_vector<4>(convOp.strides().getValues<int64_t>());
-    strides.erase(strides.begin() + (removeH ? 0 : 1));
-    auto stridesAttr = rewriter.getI64VectorAttr(strides);
+  auto dilations = llvm::to_vector<4>(convOp.dilations().getValues<int64_t>());
+  dilations.erase(dilations.begin() + (removeH ? 0 : 1));
+  auto dilationsAttr = rewriter.getI64VectorAttr(dilations);
 
-    auto dilations =
-        llvm::to_vector<4>(convOp.dilations().getValues<int64_t>());
-    dilations.erase(dilations.begin() + (removeH ? 0 : 1));
-    auto dilationsAttr = rewriter.getI64VectorAttr(dilations);
+  auto conv1DOp = rewriter.create<linalg::Conv1DNwcWcfOp>(
+      loc, newOutputType, ValueRange{newInput, newKernel},
+      ValueRange{newOutput}, stridesAttr, dilationsAttr);
 
-    auto conv1DOp = rewriter.create<linalg::Conv1DNwcWcfOp>(
-        loc, newOutputType, ValueRange{newInput, newKernel},
-        ValueRange{newOutput}, stridesAttr, dilationsAttr);
+  // Insert back.
+  Value inserted = tensor::createCanonicalRankReducingInsertSliceOp(
+      rewriter, loc, conv1DOp.getResult(0), output);
+  rewriter.replaceOp(convOp, inserted);
 
-    // Insert back.
-    Value inserted = tensor::createCanonicalRankReducingInsertSliceOp(
-        rewriter, loc, conv1DOp.getResult(0), output);
-    rewriter.replaceOp(convOp, inserted);
+  filter.replaceLinalgTransformationFilter(rewriter, conv1DOp);
+  return conv1DOp;
+}
 
-    filter.replaceLinalgTransformationFilter(rewriter, conv1DOp);
-    return success();
-  };
+FailureOr<DepthwiseConv1DNwcWcOp>
+DownscaleDepthwiseConv2DNhwcHwcOp::returningMatchAndRewrite(
+    DepthwiseConv2DNhwcHwcOp convOp, PatternRewriter &rewriter) const {
+  if (failed(filter.checkAndNotify(rewriter, convOp)))
+    return failure();
+  if (convOp.hasBufferSemantics())
+    return failure(); // To be implemented.
 
-private:
-  /// LinalgTransformMarker handles special attribute manipulations.
-  LinalgTransformationFilter filter;
-};
+  Value input = convOp.inputs().front();
+  Value kernel = convOp.inputs().back();
+  Value output = convOp.outputs().front();
 
-/// Rewrites 2-D depthwise convolution ops with size-1 (w, kw) or (h, kh)
-/// dimensions into 1-D depthwise convolution ops.
-struct DownscaleDepthwiseConv2DNhwcHwcOp final
-    : public OpRewritePattern<DepthwiseConv2DNhwcHwcOp> {
-  DownscaleDepthwiseConv2DNhwcHwcOp(
-      MLIRContext *context,
-      LinalgTransformationFilter f = LinalgTransformationFilter(),
-      PatternBenefit benefit = 1)
-      : OpRewritePattern<DepthwiseConv2DNhwcHwcOp>(context, benefit),
-        filter(std::move(f)) {}
+  auto inputType = input.getType().dyn_cast<RankedTensorType>();
+  auto kernelType = kernel.getType().dyn_cast<RankedTensorType>();
+  auto outputType = output.getType().dyn_cast<RankedTensorType>();
 
-  LogicalResult matchAndRewrite(DepthwiseConv2DNhwcHwcOp convOp,
-                                PatternRewriter &rewriter) const override {
-    if (failed(filter.checkAndNotify(rewriter, convOp)))
-      return failure();
-    if (convOp.hasBufferSemantics())
-      return failure(); // To be implemented
+  auto kernelShape = kernelType.getShape();
+  auto outputShape = outputType.getShape();
 
-    Value input = convOp.inputs().front();
-    Value kernel = convOp.inputs().back();
-    Value output = convOp.outputs().front();
+  // Only handle the case where at least one of the window dimensions is
+  // of size 1. Other cases can rely on tiling to reduce to such cases.
+  int64_t khSize = kernelShape[0], kwSize = kernelShape[1];
+  int64_t ohSize = outputShape[1], owSize = outputShape[2];
+  bool removeH = (khSize == 1 && ohSize == 1);
+  bool removeW = (kwSize == 1 && owSize == 1);
+  if (!removeH && !removeW)
+    return failure();
 
-    auto inputType = input.getType().dyn_cast<RankedTensorType>();
-    auto kernelType = kernel.getType().dyn_cast<RankedTensorType>();
-    auto outputType = output.getType().dyn_cast<RankedTensorType>();
+  // Get new shapes and types for all operands by removing the size-1
+  // dimension.
+  using RTTBuilder = RankedTensorType::Builder;
+  RankedTensorType newInputType =
+      RTTBuilder(inputType).dropDim((removeH ? 1 : 2));
+  RankedTensorType newKernelType =
+      RTTBuilder(kernelType).dropDim((removeH ? 0 : 1));
+  RankedTensorType newOutputType =
+      RTTBuilder(outputType).dropDim(removeH ? 1 : 2);
 
-    auto kernelShape = kernelType.getShape();
-    auto outputShape = outputType.getShape();
+  // Rank-reduce operands.
+  Location loc = convOp.getLoc();
+  Value newInput = tensor::createCanonicalRankReducingExtractSliceOp(
+      rewriter, loc, input, newInputType);
+  Value newKernel = tensor::createCanonicalRankReducingExtractSliceOp(
+      rewriter, loc, kernel, newKernelType);
+  Value newOutput = tensor::createCanonicalRankReducingExtractSliceOp(
+      rewriter, loc, output, newOutputType);
 
-    // Only handle the case where at least one of the window dimensions is
-    // of size 1. Other cases can rely on tiling to reduce to such cases.
-    int64_t khSize = kernelShape[0], kwSize = kernelShape[1];
-    int64_t ohSize = outputShape[1], owSize = outputShape[2];
-    bool removeH = (khSize == 1 && ohSize == 1);
-    bool removeW = (kwSize == 1 && owSize == 1);
-    if (!removeH && !removeW)
-      return failure();
+  // Rank-reduce strides and dilations too.
+  // TODO: dropDim 1-liner helper.
+  auto strides = llvm::to_vector<4>(convOp.strides().getValues<int64_t>());
+  strides.erase(strides.begin() + (removeH ? 0 : 1));
+  auto stridesAttr = rewriter.getI64VectorAttr(strides);
 
-    // Get new shapes and types for all operands by removing the size-1
-    // dimension.
-    using RTTBuilder = RankedTensorType::Builder;
-    RankedTensorType newInputType =
-        RTTBuilder(inputType).dropDim((removeH ? 1 : 2));
-    RankedTensorType newKernelType =
-        RTTBuilder(kernelType).dropDim((removeH ? 0 : 1));
-    RankedTensorType newOutputType =
-        RTTBuilder(outputType).dropDim(removeH ? 1 : 2);
+  auto dilations = llvm::to_vector<4>(convOp.dilations().getValues<int64_t>());
+  dilations.erase(dilations.begin() + (removeH ? 0 : 1));
+  auto dilationsAttr = rewriter.getI64VectorAttr(dilations);
 
-    // Rank-reduce operands.
-    Location loc = convOp.getLoc();
-    Value newInput = tensor::createCanonicalRankReducingExtractSliceOp(
-        rewriter, loc, input, newInputType);
-    Value newKernel = tensor::createCanonicalRankReducingExtractSliceOp(
-        rewriter, loc, kernel, newKernelType);
-    Value newOutput = tensor::createCanonicalRankReducingExtractSliceOp(
-        rewriter, loc, output, newOutputType);
+  auto conv1DOp = rewriter.create<DepthwiseConv1DNwcWcOp>(
+      loc, newOutputType, ValueRange{newInput, newKernel},
+      ValueRange{newOutput}, stridesAttr, dilationsAttr);
 
-    // Rank-reduce strides and dilations too.
-    // TODO: dropDim 1-liner helper.
-    auto strides = llvm::to_vector<4>(convOp.strides().getValues<int64_t>());
-    strides.erase(strides.begin() + (removeH ? 0 : 1));
-    auto stridesAttr = rewriter.getI64VectorAttr(strides);
+  // Insert back.
+  Value inserted = tensor::createCanonicalRankReducingInsertSliceOp(
+      rewriter, loc, conv1DOp.getResult(0), output);
+  rewriter.replaceOp(convOp, inserted);
 
-    auto dilations =
-        llvm::to_vector<4>(convOp.dilations().getValues<int64_t>());
-    dilations.erase(dilations.begin() + (removeH ? 0 : 1));
-    auto dilationsAttr = rewriter.getI64VectorAttr(dilations);
-
-    auto conv1DOp = rewriter.create<DepthwiseConv1DNwcWcOp>(
-        loc, newOutputType, ValueRange{newInput, newKernel},
-        ValueRange{newOutput}, stridesAttr, dilationsAttr);
-
-    // Insert back.
-    Value inserted = tensor::createCanonicalRankReducingInsertSliceOp(
-        rewriter, loc, conv1DOp.getResult(0), output);
-    rewriter.replaceOp(convOp, inserted);
-
-    filter.replaceLinalgTransformationFilter(rewriter, conv1DOp);
-    return success();
-  };
-
-private:
-  /// LinalgTransformMarker handles special attribute manipulations.
-  LinalgTransformationFilter filter;
-};
-
-} // namespace
+  filter.replaceLinalgTransformationFilter(rewriter, conv1DOp);
+  return conv1DOp;
+}
 
 void linalg::populateDecomposeConvolutionPatterns(
     RewritePatternSet &patterns, const LinalgTransformationFilter &filter,

@@ -50,6 +50,68 @@ public:
 };
 } // namespace
 
+/// Attempts to apply the pattern specified as template argument to the given
+/// operation. The pattern is expected to have a `returningMatchAndRewrite`
+/// function that returns the "main" result or failure. Returns failure if the
+/// pattern failed to apply. Extra arguments are forwarded to the pattern
+/// constructor.
+template <typename PatternTy, typename... Args>
+static FailureOr<LinalgOp> tryApply(Operation *operation, Args &&...args) {
+  // Check if the given operation has the type expected by the pattern.
+  using OpTy = typename llvm::function_traits<
+      decltype(&PatternTy::returningMatchAndRewrite)>::template arg_t<0>;
+  auto op = dyn_cast<OpTy>(operation);
+  if (!op)
+    return failure();
+
+  // Apply the pattern directly to the op.
+  PatternTy pattern(operation->getContext(), std::forward<Args>(args)...);
+  SimpleRewriter rewriter(operation->getContext());
+  rewriter.setInsertionPoint(operation);
+  auto result = pattern.returningMatchAndRewrite(op, rewriter);
+  if (failed(result))
+    return failure();
+  return cast<LinalgOp>(result->getOperation());
+}
+
+//===----------------------------------------------------------------------===//
+// DecomposeOp
+//===----------------------------------------------------------------------===//
+
+FailureOr<LinalgOp> transform::DecomposeOp::applyToOne(LinalgOp target) {
+  FailureOr<LinalgOp> windowed =
+      tryApply<DownscaleSizeOneWindowed2DConvolution>(target);
+  if (succeeded(windowed))
+    return windowed;
+
+  FailureOr<LinalgOp> depthwise =
+      tryApply<DownscaleDepthwiseConv2DNhwcHwcOp>(target);
+  if (succeeded(depthwise))
+    return depthwise;
+
+  InFlightDiagnostic diag = emitError() << "failed to apply";
+  diag.attachNote(target.getLoc()) << "attempted to apply to this op";
+  return diag;
+}
+
+//===----------------------------------------------------------------------===//
+// GeneralizeOp
+//===----------------------------------------------------------------------===//
+
+FailureOr<LinalgOp> transform::GeneralizeOp::applyToOne(LinalgOp target) {
+  // Exit early if no transformation is needed.
+  if (isa<GenericOp>(target))
+    return target;
+
+  FailureOr<LinalgOp> generic = tryApply<LinalgGeneralizationPattern>(target);
+  if (succeeded(generic))
+    return generic;
+
+  InFlightDiagnostic diag = emitError() << "failed to apply";
+  diag.attachNote(target.getLoc()) << "attempted to apply to this op";
+  return diag;
+}
+
 //===----------------------------------------------------------------------===//
 // InterchangeOp
 //===----------------------------------------------------------------------===//
@@ -70,15 +132,7 @@ FailureOr<LinalgOp> transform::InterchangeOp::applyToOne(LinalgOp target) {
     return diag;
   }
 
-  GenericOpInterchangePattern pattern(getContext(), interchangeVector);
-  SimpleRewriter rewriter(getContext());
-  rewriter.setInsertionPoint(target);
-  FailureOr<GenericOp> result =
-      pattern.returningMatchAndRewrite(genericTarget, rewriter);
-  if (failed(result))
-    return failure();
-
-  return cast<LinalgOp>(result->getOperation());
+  return tryApply<GenericOpInterchangePattern>(target, interchangeVector);
 }
 
 LogicalResult transform::InterchangeOp::verify() {
@@ -147,18 +201,15 @@ FailureOr<LinalgOp> transform::PadOp::applyToOne(LinalgOp target) {
   paddingOptions.setHoistPaddings(extractI64Array(getHoistPaddings()));
   paddingOptions.setTransposePaddings(transposePaddings);
 
-  LinalgPaddingPattern pattern(getContext(), paddingOptions);
-  SimpleRewriter rewriter(getContext());
-  rewriter.setInsertionPoint(target);
-  FailureOr<LinalgOp> patternResult =
-      pattern.returningMatchAndRewrite(target, rewriter);
-  if (failed(patternResult)) {
-    InFlightDiagnostic diag = emitError()
-                              << "failed to apply pattern to target op";
-    diag.attachNote(target.getLoc()) << "target op";
-    return diag;
-  }
-  return patternResult;
+  FailureOr<LinalgOp> result =
+      tryApply<LinalgPaddingPattern>(target, paddingOptions);
+  if (succeeded(result))
+    return result;
+
+  InFlightDiagnostic diag = emitError()
+                            << "failed to apply pattern to target op";
+  diag.attachNote(target.getLoc()) << "target op";
+  return diag;
 }
 
 LogicalResult transform::PadOp::verify() {
