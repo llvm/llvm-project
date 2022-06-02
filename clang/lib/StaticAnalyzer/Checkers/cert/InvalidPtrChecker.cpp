@@ -82,9 +82,7 @@ public:
 REGISTER_SET_WITH_PROGRAMSTATE(InvalidMemoryRegions, const MemRegion *)
 
 // Stores the region of the environment pointer of 'main' (if present).
-// Note: This pointer has type 'const MemRegion *', however the trait is only
-// specialized to 'const void*' and 'void*'
-REGISTER_TRAIT_WITH_PROGRAMSTATE(EnvPtrRegion, const void *)
+REGISTER_TRAIT_WITH_PROGRAMSTATE(EnvPtrRegion, const MemRegion *)
 
 // Stores key-value pairs, where key is function declaration and value is
 // pointer to memory region returned by previous call of this function
@@ -95,11 +93,9 @@ void InvalidPtrChecker::EnvpInvalidatingCall(const CallEvent &Call,
                                              CheckerContext &C) const {
   StringRef FunctionName = Call.getCalleeIdentifier()->getName();
   ProgramStateRef State = C.getState();
-  const auto *Reg = State->get<EnvPtrRegion>();
-  if (!Reg)
+  const MemRegion *SymbolicEnvPtrRegion = State->get<EnvPtrRegion>();
+  if (!SymbolicEnvPtrRegion)
     return;
-  const auto *SymbolicEnvPtrRegion =
-      reinterpret_cast<const MemRegion *>(const_cast<const void *>(Reg));
 
   State = State->add<InvalidMemoryRegions>(SymbolicEnvPtrRegion);
 
@@ -245,9 +241,7 @@ void InvalidPtrChecker::checkBeginFunction(CheckerContext &C) const {
 
   // Save the memory region pointed by the environment pointer parameter of
   // 'main'.
-  State = State->set<EnvPtrRegion>(
-      reinterpret_cast<void *>(const_cast<MemRegion *>(EnvpReg)));
-  C.addTransition(State);
+  C.addTransition(State->set<EnvPtrRegion>(EnvpReg));
 }
 
 // Check if invalidated region is being dereferenced.
