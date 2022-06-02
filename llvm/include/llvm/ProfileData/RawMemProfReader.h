@@ -38,8 +38,6 @@ using CallStackMap = llvm::DenseMap<uint64_t, llvm::SmallVector<uint64_t>>;
 
 class RawMemProfReader {
 public:
-  RawMemProfReader(std::unique_ptr<MemoryBuffer> DataBuffer)
-      : DataBuffer(std::move(DataBuffer)) {}
   RawMemProfReader(const RawMemProfReader &) = delete;
   RawMemProfReader &operator=(const RawMemProfReader &) = delete;
 
@@ -103,12 +101,12 @@ public:
   }
 
 private:
-  RawMemProfReader(std::unique_ptr<MemoryBuffer> DataBuffer,
-                   object::OwningBinary<object::Binary> &&Bin, bool KeepName)
-      : DataBuffer(std::move(DataBuffer)), Binary(std::move(Bin)),
-        KeepSymbolName(KeepName) {}
-  Error initialize();
-  Error readRawProfile();
+  RawMemProfReader(object::OwningBinary<object::Binary> &&Bin, bool KeepName)
+      : Binary(std::move(Bin)), KeepSymbolName(KeepName) {}
+  // Initializes the RawMemProfReader with the contents in `DataBuffer`.
+  Error initialize(std::unique_ptr<MemoryBuffer> DataBuffer);
+  // Read and parse the contents of the `DataBuffer` as a binary format profile.
+  Error readRawProfile(std::unique_ptr<MemoryBuffer> DataBuffer);
   // Symbolize and cache all the virtual addresses we encounter in the
   // callstacks from the raw profile. Also prune callstack frames which we can't
   // symbolize or those that belong to the runtime. For profile entries where
@@ -127,11 +125,7 @@ private:
   }
 
   object::SectionedAddress getModuleOffset(uint64_t VirtualAddress);
-  // Prints aggregate counts for each raw profile parsed from the DataBuffer in
-  // YAML format.
-  void printSummaries(raw_ostream &OS) const;
 
-  std::unique_ptr<MemoryBuffer> DataBuffer;
   object::OwningBinary<object::Binary> Binary;
   std::unique_ptr<llvm::symbolize::SymbolizableModule> Symbolizer;
 
