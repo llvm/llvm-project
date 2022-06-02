@@ -99,6 +99,11 @@ Improvements to clang-tidy
 New checks
 ^^^^^^^^^^
 
+- New :doc:`cppcoreguidelines-avoid-const-or-ref-data-members
+  <clang-tidy/checks/cppcoreguidelines/avoid-const-or-ref-data-members>` check.
+
+  Warns when a struct or class uses const or reference (lvalue or rvalue) data members.
+
 New check aliases
 ^^^^^^^^^^^^^^^^^
 
