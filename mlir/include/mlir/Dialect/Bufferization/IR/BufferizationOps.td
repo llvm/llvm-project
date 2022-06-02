@@ -48,9 +48,9 @@ def Bufferization_AllocTensorOp : Bufferization_Op<"alloc_tensor",
     another op. E.g.:
 
     ```mlir
-    %c = sparse_tensor.init_tensor [%d1, %d2] : tensor<?x?xf32, #SparseMatrix>
+    %c = bufferization.alloc_tensor [%d1, %d2] : tensor<?x?xf32, #SparseMatrix>
     %0 = linalg.matmul
-      ins(%a, %b: tensor<?x?xf32>, tensor<?x?xf32>)
+      ins(%a, %b: tensor<?x?xf32, #SparseMatrix>, tensor<?x?xf32, #SparseMatrix>)
       outs(%c: tensor<?x?xf32, #SparseMatrix>) -> tensor<?x?xf32, #SparseMatrix>
     ```
   }];
