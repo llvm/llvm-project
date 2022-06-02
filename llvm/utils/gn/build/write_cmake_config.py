@@ -2,8 +2,8 @@
 r"""Emulates the bits of CMake's configure_file() function needed in LLVM.
 
 The CMake build uses configure_file() for several things.  This emulates that
-function for alternative build systems such as GN and Bazel.  In both GN and
-Bazel, config file generation happens during the build rather than before it.
+function for the GN build.  In the GN build, this runs at build time instead
+of at generator time.
 
 Takes a list of KEY=VALUE pairs (where VALUE can be empty).
 
@@ -28,9 +28,8 @@ empty string, which is falsy, but FOO=0 sets it to '0' which is truthy):
         #define FOO [...]
         /* #undef FOO */
 
-To ensure that config file changes do not go unnoticed, this script fails if
-any of the KEY=VALUE arguments aren't needed for processing the input file, or
-if the input file references keys that weren't passed in.
+Fails if any of the KEY=VALUE arguments aren't needed for processing the
+input file, or if the input file references keys that weren't passed in.
 """
 
 import argparse
