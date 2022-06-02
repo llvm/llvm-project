@@ -37,4 +37,4 @@ add_custom_target(ompd_gdb_plugin ALL
                   DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/python-module/loadompd.py
                   COMMENT "Building the OMPD GDB plugin")
 
-install(DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/python-module/ompd  DESTINATION "${DEVEL_PACKAGE}/${OPENMP_INSTALL_LIBDIR}")
+install(DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/python-module/ompd  DESTINATION "${DEVEL_PACKAGE}${OPENMP_INSTALL_LIBDIR}")
