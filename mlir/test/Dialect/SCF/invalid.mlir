@@ -520,3 +520,55 @@ func.func @execute_region() {
   }) : () -> ()
   return
 }
+
+// -----
+
+func.func @wrong_num_results(%in: tensor<100xf32>, %out: tensor<100xf32>) {
+  %c1 = arith.constant 1 : index
+  %num_threads = arith.constant 100 : index
+
+  // expected-error @+1 {{produces 2 results, but its terminator yields 1 value(s)}}
+  %result:2 = scf.foreach_thread (%thread_idx) in (%num_threads) -> (tensor<100xf32>, tensor<100xf32>) {
+      %1 = tensor.extract_slice %in[%thread_idx][1][1] : tensor<100xf32> to tensor<1xf32>
+      scf.foreach_thread.perform_concurrently {
+        scf.foreach_thread.parallel_insert_slice %1 into %out[%thread_idx][1][1] :
+          tensor<1xf32> into tensor<100xf32>
+      }
+  }
+  return
+}
+
+// -----
+
+func.func @wrong_type_result(%in: tensor<100xf32>, %out: tensor<100xf32>) {
+  %c1 = arith.constant 1 : index
+  %num_threads = arith.constant 100 : index
+
+  // expected-error @+1 {{type mismatch between result 0 ('tensor<?xf32>') and terminator ('tensor<100xf32>')}}
+  %result = scf.foreach_thread (%thread_idx) in (%num_threads) -> (tensor<?xf32>) {
+      %1 = tensor.extract_slice %in[%thread_idx][1][1] : tensor<100xf32> to tensor<1xf32>
+      scf.foreach_thread.perform_concurrently {
+        scf.foreach_thread.parallel_insert_slice %1 into %out[%thread_idx][1][1] :
+          tensor<1xf32> into tensor<100xf32>
+      }
+  }
+  return
+}
+
+// -----
+
+func.func @wrong_terminator_op(%in: tensor<100xf32>, %out: tensor<100xf32>) {
+  %c1 = arith.constant 1 : index
+  %num_threads = arith.constant 100 : index
+
+  %result = scf.foreach_thread (%thread_idx) in (%num_threads) -> (tensor<100xf32>) {
+      %1 = tensor.extract_slice %in[%thread_idx][1][1] : tensor<100xf32> to tensor<1xf32>
+      // expected-error @+1 {{expected only scf.foreach_thread.parallel_insert_slice ops}}
+      scf.foreach_thread.perform_concurrently {
+        scf.foreach_thread.parallel_insert_slice %1 into %out[%thread_idx][1][1] :
+          tensor<1xf32> into tensor<100xf32>
+        %0 = arith.constant 1: index
+      }
+  }
+  return
+}
