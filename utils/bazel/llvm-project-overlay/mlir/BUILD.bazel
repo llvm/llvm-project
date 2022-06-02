@@ -8440,6 +8440,7 @@ cc_library(
         ":FuncDialect",
         ":IR",
         ":MathDialect",
+        ":SCFDialect",
         ":Transforms",
         ":VectorOps",
         ":VectorUtils",
