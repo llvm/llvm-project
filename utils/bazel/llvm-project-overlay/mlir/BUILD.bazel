@@ -1805,6 +1805,7 @@ td_library(
         ":ControlFlowInterfacesTdFiles",
         ":LoopLikeInterfaceTdFiles",
         ":SideEffectInterfacesTdFiles",
+        ":ViewLikeInterfaceTdFiles",
     ],
 )
 
@@ -2611,6 +2612,7 @@ cc_library(
         ":SCFPassIncGen",
         ":Support",
         ":TensorDialect",
+        ":ViewLikeInterface",
         "//llvm:Support",
     ],
 )
