@@ -12734,7 +12734,7 @@ the entry of the current function calling this intrinsic.
 Semantics:
 """"""""""
 
-Note this intrinsic is only verified on AArch64.
+Note this intrinsic is only verified on AArch64 and ARM.
 
 '``llvm.frameaddress``' Intrinsic
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
