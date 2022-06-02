@@ -1,0 +1,25 @@
+# Configuration file for running the libunwind tests on AIX.
+#
+
+lit_config.load_config(config, '@CMAKE_CURRENT_BINARY_DIR@/cmake-bridge.cfg')
+
+config.substitutions.append(('%{flags}', ''))
+config.substitutions.append(('%{compile_flags}',
+    '-nostdinc++ -I %{include} -I %{cxx-include}'
+))
+config.substitutions.append(('%{link_flags}',
+    '-nostdlib++ -L %{lib} -lunwind -ldl -Wl,-bbigtoc'
+))
+config.substitutions.append(('%{exec}',
+    '%{executor} --execdir %T --env LIBPATH=%{lib} -- '
+))
+
+import os, site
+site.addsitedir(os.path.join('@LIBUNWIND_LIBCXX_PATH@', 'utils'))
+import libcxx.test.params, libcxx.test.newconfig, libcxx.test.newconfig
+libcxx.test.newconfig.configure(
+    libcxx.test.params.DEFAULT_PARAMETERS,
+    libcxx.test.features.DEFAULT_FEATURES,
+    config,
+    lit_config
+)
