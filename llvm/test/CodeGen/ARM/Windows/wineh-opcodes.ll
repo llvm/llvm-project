@@ -250,7 +250,7 @@ entry:
 ; CHECK-NEXT:         push.w  {r4, r5, r6, lr}
 ; CHECK-NEXT:         .seh_save_regs_w  {r4-r6, lr}
 ; CHECK-NEXT:         movw    r4, #0
-; CHECK-NEXT:         .seh_nop
+; CHECK-NEXT:         .seh_nop_w
 ; CHECK-NEXT:         movt    r4, #1
 ; CHECK-NEXT:         .seh_nop_w
 ; CHECK-NEXT:         bl      __chkstk
