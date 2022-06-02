@@ -385,18 +385,21 @@ define void @umul_with_overflow_test(i32 %0, i32 %1, <8 x i32> %2, <8 x i32> %3)
   ret void
 }
 
-; TODO : support token type.
-; define void @coro_id(i32 %0, i8* %1) {
-;   %3 = call token @llvm.coro.id(i32 %0, i8* %1, i8* %1, i8* null)
-;   ret void
-; }
+; CHECK-LABEL:  llvm.func @coro_id
+define void @coro_id(i32 %0, i8* %1) {
+  ; CHECK: llvm.intr.coro.id %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}} : !llvm.token
+  %3 = call token @llvm.coro.id(i32 %0, i8* %1, i8* %1, i8* null)
+  ret void
+}
 
-; TODO : support token type.
-; define void @coro_begin(i32 %0, i8* %1) {
-;   %3 = call token @llvm.coro.id(i32 %0, i8* %1, i8* %1, i8* null)
-;   %4 = call i8* @llvm.coro.begin(token %3, i8* %1)
-;   ret void
-; }
+; CHECK-LABEL:  llvm.func @coro_begin
+define void @coro_begin(i32 %0, i8* %1) {
+  ; CHECK: llvm.intr.coro.id %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}} : !llvm.token
+  %3 = call token @llvm.coro.id(i32 %0, i8* %1, i8* %1, i8* null)
+  ; CHECK: llvm.intr.coro.begin %{{.*}}, %{{.*}} : !llvm.ptr<i8>
+  %4 = call i8* @llvm.coro.begin(token %3, i8* %1)
+  ret void
+}
 
 ; CHECK-LABEL:  llvm.func @coro_size()
 define void @coro_size() {
@@ -415,18 +418,21 @@ define void @coro_align() {
   ret void
 }
 
-; TODO : support token type.
-; define void @coro_save(i8* %0) {
-;   %2 = call token @llvm.coro.save(i8* %0)
-;   ret void
-; }
+; CHECK-LABEL:  llvm.func @coro_save
+define void @coro_save(i8* %0) {
+  ; CHECK: llvm.intr.coro.save %{{.*}} : !llvm.token
+  %2 = call token @llvm.coro.save(i8* %0)
+  ret void
+}
 
-; TODO : support token type.
-; define void @coro_suspend(i32 %0, i1 %1, i8* %2) {
-;   %4 = call token @llvm.coro.id(i32 %0, i8* %2, i8* %2, i8* null)
-;   %5 = call i8 @llvm.coro.suspend(token %4, i1 %1)
-;   ret void
-; }
+; CHECK-LABEL:  llvm.func @coro_suspend
+define void @coro_suspend(i32 %0, i1 %1, i8* %2) {
+  ; CHECK: llvm.intr.coro.id %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}} : !llvm.token
+  %4 = call token @llvm.coro.id(i32 %0, i8* %2, i8* %2, i8* null)
+  ; CHECK: llvm.intr.coro.suspend %{{.*}}, %{{.*}} : i8
+  %5 = call i8 @llvm.coro.suspend(token %4, i1 %1)
+  ret void
+}
 
 ; CHECK-LABEL:  llvm.func @coro_end
 define void @coro_end(i8* %0, i1 %1) {
@@ -435,12 +441,14 @@ define void @coro_end(i8* %0, i1 %1) {
   ret void
 }
 
-; TODO : support token type.
-; define void @coro_free(i32 %0, i8* %1) {
-;   %3 = call token @llvm.coro.id(i32 %0, i8* %1, i8* %1, i8* null)
-;   %4 = call i8* @llvm.coro.free(token %3, i8* %1)
-;   ret void
-; }
+; CHECK-LABEL:  llvm.func @coro_free
+define void @coro_free(i32 %0, i8* %1) {
+  ; CHECK: llvm.intr.coro.id %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}} : !llvm.token
+  %3 = call token @llvm.coro.id(i32 %0, i8* %1, i8* %1, i8* null)
+  ; CHECK: llvm.intr.coro.free %{{.*}}, %{{.*}} : !llvm.ptr<i8>
+  %4 = call i8* @llvm.coro.free(token %3, i8* %1)
+  ret void
+}
 
 ; CHECK-LABEL:  llvm.func @coro_resume
 define void @coro_resume(i8* %0) {
@@ -664,16 +672,16 @@ declare { i32, i1 } @llvm.smul.with.overflow.i32(i32, i32)
 declare { <8 x i32>, <8 x i1> } @llvm.smul.with.overflow.v8i32(<8 x i32>, <8 x i32>)
 declare { i32, i1 } @llvm.umul.with.overflow.i32(i32, i32)
 declare { <8 x i32>, <8 x i1> } @llvm.umul.with.overflow.v8i32(<8 x i32>, <8 x i32>)
-; declare token @llvm.coro.id(i32, i8* readnone, i8* nocapture readonly, i8*)
-; declare i8* @llvm.coro.begin(token, i8* writeonly)
+declare token @llvm.coro.id(i32, i8* readnone, i8* nocapture readonly, i8*)
+declare i8* @llvm.coro.begin(token, i8* writeonly)
 declare i64 @llvm.coro.size.i64()
 declare i32 @llvm.coro.size.i32()
 declare i64 @llvm.coro.align.i64()
 declare i32 @llvm.coro.align.i32()
-; declare token @llvm.coro.save(i8*)
-; declare i8 @llvm.coro.suspend(token, i1)
+declare token @llvm.coro.save(i8*)
+declare i8 @llvm.coro.suspend(token, i1)
 declare i1 @llvm.coro.end(i8*, i1)
-; declare i8* @llvm.coro.free(token, i8* nocapture readonly)
+declare i8* @llvm.coro.free(token, i8* nocapture readonly)
 declare void @llvm.coro.resume(i8*)
 declare i32 @llvm.eh.typeid.for(i8*)
 declare i8* @llvm.stacksave()
