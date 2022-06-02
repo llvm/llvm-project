@@ -193,7 +193,7 @@ class ReleaseWorkflow:
 
     def check_if_pull_request_exists(self, repo:github.Repository.Repository, head:str) -> bool:
         pulls = repo.get_pulls(head=head)
-        return pulls != None
+        return pulls.totalCount != 0
 
     def create_pull_request(self, owner:str, branch:str) -> bool:
         """
