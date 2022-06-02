@@ -15,17 +15,29 @@ because replacing ``insert`` with ``emplace`` may result in
 By default only ``std::vector``, ``std::deque``, ``std::list`` are considered.
 This list can be modified using the :option:`ContainersWithPushBack` option.
 
+This check also reports when an ``emplace``-like method is improperly used,
+for example using ``emplace_back`` while also calling a constructor. This
+creates a temporary that requires at best a move and at worst a copy. Almost all
+``emplace``-like functions in the STL are covered by this, with ``try_emplace``
+on ``std::map`` and ``std::unordered_map`` being the exception as it behaves
+slightly differently than all the others. More containers can be added with the
+:option:`EmplacyFunctions` option, so long as the container defines a
+``value_type`` type, and the ``emplace``-like functions construct a
+``value_type`` object.
+
 Before:
 
 .. code-block:: c++
 
     std::vector<MyClass> v;
     v.push_back(MyClass(21, 37));
+    v.emplace_back(MyClass(21, 37));
 
     std::vector<std::pair<int, int>> w;
 
     w.push_back(std::pair<int, int>(21, 37));
     w.push_back(std::make_pair(21L, 37L));
+    w.emplace_back(std::make_pair(21L, 37L));
 
 After:
 
@@ -33,9 +45,11 @@ After:
 
     std::vector<MyClass> v;
     v.emplace_back(21, 37);
+    v.emplace_back(21, 37);
 
     std::vector<std::pair<int, int>> w;
     w.emplace_back(21, 37);
+    w.emplace_back(21L, 37L);
     w.emplace_back(21L, 37L);
 
 By default, the check is able to remove unnecessary ``std::make_pair`` and
@@ -128,6 +142,13 @@ Options
     function calls will be removed from ``push_back`` calls and turned into
     ``emplace_back``.
 
+.. option:: EmplacyFunctions
+
+    Semicolon-separated list of containers without their template parameters
+    and some ``emplace``-like method of the container. Example:
+    ``vector::emplace_back``. Those methods will be checked for improper use and
+    the check will report when a temporary is unnecessarily created.
+
 Example
 ^^^^^^^
 
@@ -135,6 +156,7 @@ Example
 
   std::vector<MyTuple<int, bool, char>> x;
   x.push_back(MakeMyTuple(1, false, 'x'));
+  x.emplace_back(MakeMyTuple(1, false, 'x'));
 
 transforms to:
 
@@ -142,6 +164,8 @@ transforms to:
 
   std::vector<MyTuple<int, bool, char>> x;
   x.emplace_back(1, false, 'x');
+  x.emplace_back(1, false, 'x');
 
-when :option:`TupleTypes` is set to ``MyTuple`` and :option:`TupleMakeFunctions`
-is set to ``MakeMyTuple``.
+when :option:`TupleTypes` is set to ``MyTuple``, :option:`TupleMakeFunctions`
+is set to ``MakeMyTuple``, and :option:`EmplacyFunctions` is set to
+``vector::emplace_back``.

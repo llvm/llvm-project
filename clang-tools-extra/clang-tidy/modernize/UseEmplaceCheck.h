@@ -40,6 +40,7 @@ private:
   const std::vector<StringRef> SmartPointers;
   const std::vector<StringRef> TupleTypes;
   const std::vector<StringRef> TupleMakeFunctions;
+  const std::vector<StringRef> EmplacyFunctions;
 };
 
 } // namespace modernize
