@@ -47,11 +47,7 @@ public:
       : CGCXXABI(CGM), BaseClassDescriptorType(nullptr),
         ClassHierarchyDescriptorType(nullptr),
         CompleteObjectLocatorType(nullptr), CatchableTypeType(nullptr),
-        ThrowInfoType(nullptr) {
-    assert(!(CGM.getLangOpts().isExplicitDefaultVisibilityExportMapping() ||
-             CGM.getLangOpts().isAllDefaultVisibilityExportMapping()) &&
-           "visibility export mapping option unimplemented in this ABI");
-  }
+        ThrowInfoType(nullptr) {}
 
   bool HasThisReturn(GlobalDecl GD) const override;
   bool hasMostDerivedReturn(GlobalDecl GD) const override;
