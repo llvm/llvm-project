@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon -mcpu=hexagonv55 -enable-stackovf-sanitizer < %s | FileCheck %s
+; RUN: llc -mtriple=hexagon -mcpu=hexagonv55 -enable-stackovf-sanitizer < %s | FileCheck %s
 
 ; CHECK-LABEL: foo_1
 ; CHECK: __runtime_stack_check
