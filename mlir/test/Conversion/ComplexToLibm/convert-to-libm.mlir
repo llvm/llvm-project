@@ -6,6 +6,8 @@
 // CHECK-DAG: @csqrt(complex<f64>) -> complex<f64>
 // CHECK-DAG: @ctanhf(complex<f32>) -> complex<f32>
 // CHECK-DAG: @ctanh(complex<f64>) -> complex<f64>
+// CHECK-DAG: @ccos(complex<f64>) -> complex<f64>
+// CHECK-DAG: @csin(complex<f64>) -> complex<f64>
 
 // CHECK-LABEL: func @cpow_caller
 // CHECK-SAME: %[[FLOAT:.*]]: complex<f32>
@@ -39,6 +41,30 @@ func.func @ctanh_caller(%float: complex<f32>, %double: complex<f64>) -> (complex
   %float_result = complex.tanh %float : complex<f32>
   // CHECK-DAG: %[[DOUBLE_RESULT:.*]] = call @ctanh(%[[DOUBLE]]) : (complex<f64>) -> complex<f64>
   %double_result = complex.tanh %double : complex<f64>
+  // CHECK: return %[[FLOAT_RESULT]], %[[DOUBLE_RESULT]]
+  return %float_result, %double_result : complex<f32>, complex<f64>
+}
+
+// CHECK-LABEL: func @ccos_caller
+// CHECK-SAME: %[[FLOAT:.*]]: complex<f32>
+// CHECK-SAME: %[[DOUBLE:.*]]: complex<f64>
+func.func @ccos_caller(%float: complex<f32>, %double: complex<f64>) -> (complex<f32>, complex<f64>)  {
+  // CHECK: %[[FLOAT_RESULT:.*]] = call @ccosf(%[[FLOAT]])
+  %float_result = complex.cos %float : complex<f32>
+  // CHECK: %[[DOUBLE_RESULT:.*]] = call @ccos(%[[DOUBLE]])
+  %double_result = complex.cos %double : complex<f64>
+  // CHECK: return %[[FLOAT_RESULT]], %[[DOUBLE_RESULT]]
+  return %float_result, %double_result : complex<f32>, complex<f64>
+}
+
+// CHECK-LABEL: func @csin_caller
+// CHECK-SAME: %[[FLOAT:.*]]: complex<f32>
+// CHECK-SAME: %[[DOUBLE:.*]]: complex<f64>
+func.func @csin_caller(%float: complex<f32>, %double: complex<f64>) -> (complex<f32>, complex<f64>)  {
+  // CHECK: %[[FLOAT_RESULT:.*]] = call @csinf(%[[FLOAT]])
+  %float_result = complex.sin %float : complex<f32>
+  // CHECK: %[[DOUBLE_RESULT:.*]] = call @csin(%[[DOUBLE]])
+  %double_result = complex.sin %double : complex<f64>
   // CHECK: return %[[FLOAT_RESULT]], %[[DOUBLE_RESULT]]
   return %float_result, %double_result : complex<f32>, complex<f64>
 }
