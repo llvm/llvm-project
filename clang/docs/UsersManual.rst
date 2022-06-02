@@ -3626,23 +3626,6 @@ Clang expects the GCC executable "gcc.exe" compiled for
 `Some tests might fail <https://bugs.llvm.org/show_bug.cgi?id=9072>`_ on
 ``x86_64-w64-mingw32``.
 
-AIX
-^^^
-
-The ``-mdefault-visibility-export-mapping=`` option can be used to control
-mapping of default visibility to an explicit shared object export
-(i.e. XCOFF exported visibility). Three values are provided for the option:
-
-* ``-mdefault-visibility-export-mapping=none``: no additional export
-  information is created for entities with default visibility.
-* ``-mdefault-visibility-export-mapping=explicit``: mark entities for export
-  if they have explict (e.g. via an attribute) default visibility from the
-  source, including RTTI.
-* ``-mdefault-visibility-export-mapping=all``: set XCOFF exported visibility
-  for all entities with default visibility from any source. This gives a
-  export behavior similar to ELF platforms where all entities with default
-  visibility are exported.
-
 .. _spir-v:
 
 SPIR-V support
