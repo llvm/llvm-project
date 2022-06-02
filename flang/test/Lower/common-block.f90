@@ -11,7 +11,7 @@
 subroutine s0
   common // a0, b0
 
-  ! CHECK: call void @_QPs(float* bitcast ([8 x i8]* @_QB to float*), float* bitcast (i8* getelementptr inbounds ([8 x i8], [8 x i8]* @_QB, i32 0, i64 4) to float*))
+  ! CHECK: call void @_QPs(ptr @_QB, ptr getelementptr (i8, ptr @_QB, i64 4))
   call s(a0, b0)
 end subroutine s0
 
@@ -20,7 +20,7 @@ subroutine s1
   common /x/ a1, b1
   data a1 /1.0/, b1 /2.0/
 
-  ! CHECK: call void @_QPs(float* getelementptr inbounds ({ float, float }, { float, float }* @_QBx, i32 0, i32 0), float* bitcast (i8* getelementptr (i8, i8* bitcast ({ float, float }* @_QBx to i8*), i64 4) to float*))
+  ! CHECK: call void @_QPs(ptr @_QBx, ptr getelementptr (i8, ptr @_QBx, i64 4))
   call s(a1, b1)
 end subroutine s1
 
@@ -28,7 +28,7 @@ end subroutine s1
 subroutine s2
   common /y/ a2, b2, c2
 
-  ! CHECK: call void @_QPs(float* bitcast ([12 x i8]* @_QBy to float*), float* bitcast (i8* getelementptr inbounds ([12 x i8], [12 x i8]* @_QBy, i32 0, i64 4) to float*))
+  ! CHECK: call void @_QPs(ptr @_QBy, ptr getelementptr (i8, ptr @_QBy, i64 4))
   call s(a2, b2)
 end subroutine s2
 
@@ -53,9 +53,9 @@ end module
 ! CHECK-LABEL: _QPs4
 subroutine s4
   use mod_with_common
-  ! CHECK: load i32, i32* bitcast ([8 x i8]* @_QBc_in_mod to i32*)
+  ! CHECK: load i32, ptr @_QBc_in_mod
   print *, i
-  ! CHECK: load i32, i32* bitcast (i8* getelementptr inbounds ([8 x i8], [8 x i8]* @_QBc_in_mod, i32 0, i64 4) to i32*)
+  ! CHECK: load i32, ptr getelementptr (i8, ptr @_QBc_in_mod, i64 4)
   print *, j
 end subroutine s4
 
