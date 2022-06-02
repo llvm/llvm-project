@@ -118,8 +118,6 @@ private:
   // overconstrained-related functions. We want to keep this API inaccessible
   // for Checkers.
   friend class ConstraintManager;
-  friend ProgramStateRef reAssume(ProgramStateRef State,
-                                  const RangeSet *Constraint, SVal TheValue);
   bool isPosteriorlyOverconstrained() const {
     return PosteriorlyOverconstrained;
   }

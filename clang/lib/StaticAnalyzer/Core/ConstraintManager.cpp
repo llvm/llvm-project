@@ -46,6 +46,9 @@ template <typename AssumeFunction>
 ConstraintManager::ProgramStatePair
 ConstraintManager::assumeDualImpl(ProgramStateRef &State,
                                   AssumeFunction &Assume) {
+  if (State->isPosteriorlyOverconstrained())
+    return {State, State};
+
   ProgramStateRef StTrue = Assume(true);
 
   if (!StTrue) {

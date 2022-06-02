@@ -20,8 +20,8 @@
 #include "llvm/ADT/FoldingSet.h"
 #include "llvm/ADT/ImmutableSet.h"
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/SmallSet.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
@@ -2535,19 +2535,10 @@ EquivalenceClass::removeMember(ProgramStateRef State, const SymbolRef Old) {
   return State;
 }
 
-// We must declare reAssume in clang::ento, otherwise we could not declare that
-// as a friend in ProgramState. More precisely, the call of reAssume would be
-// ambiguous (one in the global namespace and an other which is declared in
-// ProgramState is in clang::ento).
-namespace clang {
-namespace ento {
 // Re-evaluate an SVal with top-level `State->assume` logic.
 LLVM_NODISCARD ProgramStateRef reAssume(ProgramStateRef State,
                                         const RangeSet *Constraint,
                                         SVal TheValue) {
-  assert(State);
-  if (State->isPosteriorlyOverconstrained())
-    return nullptr;
   if (!Constraint)
     return State;
 
@@ -2570,8 +2561,6 @@ LLVM_NODISCARD ProgramStateRef reAssume(ProgramStateRef State,
   return State->assumeInclusiveRange(DefinedVal, Constraint->getMinValue(),
                                      Constraint->getMaxValue(), true);
 }
-} // namespace ento
-} // namespace clang
 
 // Iterate over all symbols and try to simplify them. Once a symbol is
 // simplified then we check if we can merge the simplified symbol's equivalence
