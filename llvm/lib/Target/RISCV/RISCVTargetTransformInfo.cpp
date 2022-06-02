@@ -440,8 +440,19 @@ InstructionCost RISCVTTIImpl::getMemoryOpCost(unsigned Opcode, Type *Src,
                                               TTI::TargetCostKind CostKind,
                                               TTI::OperandValueKind OpdInfo,
                                               const Instruction *I) {
-  return BaseT::getMemoryOpCost(Opcode, Src, Alignment, AddressSpace, CostKind,
-                                OpdInfo, I);
+  InstructionCost Cost = 0;
+  if (Opcode == Instruction::Store && isa<VectorType>(Src) &&
+      (OpdInfo == TTI::OK_UniformConstantValue ||
+       OpdInfo == TTI::OK_NonUniformConstantValue)) {
+    APInt PseudoAddr = APInt::getAllOnes(DL.getPointerSizeInBits());
+    // Add a cost of address load + the cost of the vector load.
+    Cost += RISCVMatInt::getIntMatCost(PseudoAddr, DL.getPointerSizeInBits(),
+                                       getST()->getFeatureBits()) +
+            getMemoryOpCost(Instruction::Load, Src, DL.getABITypeAlign(Src),
+                            /*AddressSpace=*/0, CostKind);
+  }
+  return Cost + BaseT::getMemoryOpCost(Opcode, Src, Alignment, AddressSpace,
+                                       CostKind, OpdInfo, I);
 }
 
 void RISCVTTIImpl::getUnrollingPreferences(Loop *L, ScalarEvolution &SE,
