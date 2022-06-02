@@ -143,7 +143,8 @@ PreservedAnalyses ModuleInlinerPass::run(Module &M,
   // the SCC inliner, which need some refactoring.
   std::unique_ptr<InlineOrder<std::pair<CallBase *, int>>> Calls;
   if (InlineEnablePriorityOrder)
-    Calls = std::make_unique<PriorityInlineOrder<InlineSizePriority>>();
+    Calls = std::make_unique<PriorityInlineOrder>(
+              std::make_unique<SizePriority>());
   else
     Calls = std::make_unique<DefaultInlineOrder<std::pair<CallBase *, int>>>();
   assert(Calls != nullptr && "Expected an initialized InlineOrder");
