@@ -34,7 +34,7 @@ body:             |
   ; CHECK-NEXT:   [[FCVTHSr:%[0-9]+]]:fpr16 = nofpexcept FCVTHSr [[COPY]]
   ; CHECK-NEXT:   [[SUBREG_TO_REG:%[0-9]+]]:fpr32 = SUBREG_TO_REG 0, [[FCVTHSr]], %subreg.hsub
   ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:gpr32all = COPY [[SUBREG_TO_REG]]
-  ; CHECK-NEXT:   STRHHui [[PHI]], [[DEF1]], 0 :: (store (s16) into `half* undef`)
+  ; CHECK-NEXT:   STRHHui [[PHI]], [[DEF1]], 0 :: (store (s16) into `ptr undef`)
   ; CHECK-NEXT:   B %bb.2
   bb.0:
     successors: %bb.1(0x80000000)
@@ -55,7 +55,7 @@ body:             |
 
     %3:gpr(s16) = G_PHI %1(s16), %bb.1, %5(s16), %bb.2
     %5:fpr(s16) = G_FPTRUNC %8(s32)
-    G_STORE %3(s16), %4(p0) :: (store (s16) into `half* undef`)
+    G_STORE %3(s16), %4(p0) :: (store (s16) into `ptr undef`)
     G_BR %bb.2
 
 ...
@@ -93,7 +93,7 @@ body:             |
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[PHI:%[0-9]+]]:fpr16 = PHI %7, %bb.2, [[COPY2]], %bb.1
   ; CHECK-NEXT:   [[FCVTHSr:%[0-9]+]]:fpr16 = nofpexcept FCVTHSr [[COPY]]
-  ; CHECK-NEXT:   STRHui [[PHI]], [[DEF1]], 0 :: (store (s16) into `half* undef`)
+  ; CHECK-NEXT:   STRHui [[PHI]], [[DEF1]], 0 :: (store (s16) into `ptr undef`)
   ; CHECK-NEXT:   B %bb.2
   bb.0:
     successors: %bb.1(0x80000000)
@@ -114,7 +114,7 @@ body:             |
 
     %3:fpr(s16) = G_PHI %5(s16), %bb.2, %1(s16), %bb.1
     %5:fpr(s16) = G_FPTRUNC %8(s32)
-    G_STORE %3(s16), %4(p0) :: (store (s16) into `half* undef`)
+    G_STORE %3(s16), %4(p0) :: (store (s16) into `ptr undef`)
     G_BR %bb.2
 
 ...

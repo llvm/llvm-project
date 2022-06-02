@@ -9,10 +9,10 @@ target triple = "x86_64-unknown-linux-gnu"
 define i32 @phiop(i32 %a, i32 %b, i1 %c) {
   ; CHECK: @phiop.dfsan
   ; CHECK: entry:
-  ; CHECK: [[BO:%.*]] = load i32, i32* getelementptr inbounds ([200 x i32], [200 x i32]* @__dfsan_arg_origin_tls, i64 0, i64 1), align 4
-  ; CHECK: [[AO:%.*]] = load i32, i32* getelementptr inbounds ([200 x i32], [200 x i32]* @__dfsan_arg_origin_tls, i64 0, i64 0), align 4
-  ; CHECK: [[BS:%.*]] = load i[[#SBITS]], i[[#SBITS]]* inttoptr (i64 add (i64 ptrtoint ([[TLS_ARR]]* @__dfsan_arg_tls to i64), i64 2) to i[[#SBITS]]*), align [[ALIGN:2]]
-  ; CHECK: [[AS:%.*]] = load i[[#SBITS]], i[[#SBITS]]* bitcast ([[TLS_ARR]]* @__dfsan_arg_tls to i[[#SBITS]]*), align [[ALIGN]]
+  ; CHECK: [[BO:%.*]] = load i32, ptr getelementptr inbounds ([200 x i32], ptr @__dfsan_arg_origin_tls, i64 0, i64 1), align 4
+  ; CHECK: [[AO:%.*]] = load i32, ptr @__dfsan_arg_origin_tls, align 4
+  ; CHECK: [[BS:%.*]] = load i[[#SBITS]], ptr inttoptr (i64 add (i64 ptrtoint (ptr @__dfsan_arg_tls to i64), i64 2) to ptr), align [[ALIGN:2]]
+  ; CHECK: [[AS:%.*]] = load i[[#SBITS]], ptr @__dfsan_arg_tls, align [[ALIGN]]
   ; CHECK: br i1 %c, label %next, label %done
   ; CHECK: next:
   ; CHECK: br i1 %c, label %T, label %F
@@ -26,7 +26,7 @@ define i32 @phiop(i32 %a, i32 %b, i1 %c) {
   ; CHECK: br label %done
   ; CHECK: done:
   ; CHECK: [[PO:%.*]] = phi i32 [ [[BAO_T]], %T ], [ [[BAO_F]], %F ], [ [[AO]], %entry ]
-  ; CHECK: store i32 [[PO]], i32* @__dfsan_retval_origin_tls, align 4
+  ; CHECK: store i32 [[PO]], ptr @__dfsan_retval_origin_tls, align 4
 
 entry:
   br i1 %c, label %next, label %done

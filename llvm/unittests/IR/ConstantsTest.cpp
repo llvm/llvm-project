@@ -233,13 +233,13 @@ TEST(ConstantsTest, AsInstructionsTest) {
   Constant *Undef64 = UndefValue::get(Int64Ty);
   Constant *PoisonV16 = PoisonValue::get(P6->getType());
 
-#define P0STR "ptrtoint (i32** @dummy to i32)"
-#define P1STR "uitofp (i32 ptrtoint (i32** @dummy to i32) to float)"
-#define P2STR "uitofp (i32 ptrtoint (i32** @dummy to i32) to double)"
-#define P3STR "ptrtoint (i32** @dummy to i1)"
-#define P4STR "ptrtoint (i32** @dummy2 to i32)"
-#define P5STR "uitofp (i32 ptrtoint (i32** @dummy2 to i32) to float)"
-#define P6STR "bitcast (i32 ptrtoint (i32** @dummy2 to i32) to <2 x i16>)"
+#define P0STR "ptrtoint (ptr @dummy to i32)"
+#define P1STR "uitofp (i32 ptrtoint (ptr @dummy to i32) to float)"
+#define P2STR "uitofp (i32 ptrtoint (ptr @dummy to i32) to double)"
+#define P3STR "ptrtoint (ptr @dummy to i1)"
+#define P4STR "ptrtoint (ptr @dummy2 to i32)"
+#define P5STR "uitofp (i32 ptrtoint (ptr @dummy2 to i32) to float)"
+#define P6STR "bitcast (i32 ptrtoint (ptr @dummy2 to i32) to <2 x i16>)"
 
   CHECK(ConstantExpr::getNeg(P0), "sub i32 0, " P0STR);
   CHECK(ConstantExpr::getFNeg(P1), "fneg float " P1STR);
@@ -298,7 +298,7 @@ TEST(ConstantsTest, AsInstructionsTest) {
   //      "getelementptr i32*, i32** @dummy, i32 1");
   CHECK(ConstantExpr::getInBoundsGetElementPtr(PointerType::getUnqual(Int32Ty),
                                                Global, V),
-        "getelementptr inbounds i32*, i32** @dummy, i32 1");
+        "getelementptr inbounds ptr, ptr @dummy, i32 1");
 
   CHECK(ConstantExpr::getExtractElement(P6, One),
         "extractelement <2 x i16> " P6STR ", i32 1");

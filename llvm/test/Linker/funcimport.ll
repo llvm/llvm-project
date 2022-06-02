@@ -16,7 +16,7 @@
 ; EXPORTSTATIC-DAG: @staticvar.llvm.{{.*}} = hidden global
 ; Eventually @staticconstvar can be exported as a copy and not promoted
 ; EXPORTSTATIC-DAG: @staticconstvar.llvm.0 = hidden unnamed_addr constant
-; EXPORTSTATIC-DAG: @P.llvm.{{.*}} = hidden global void ()* null
+; EXPORTSTATIC-DAG: @P.llvm.{{.*}} = hidden global ptr null
 ; EXPORTSTATIC-DAG: define hidden i32 @staticfunc.llvm.
 ; EXPORTSTATIC-DAG: define hidden void @staticfunc2.llvm.
 
@@ -72,7 +72,7 @@
 ; IMPORTSTATIC-DAG: @staticconstvar.llvm.{{.*}} = external hidden unnamed_addr constant
 ; IMPORTSTATIC-DAG: define available_externally i32 @referencestatics
 ; IMPORTSTATIC-DAG: %call = call i32 @staticfunc.llvm.
-; IMPORTSTATIC-DAG: %0 = load i32, i32* @staticvar.llvm.
+; IMPORTSTATIC-DAG: %0 = load i32, ptr @staticvar.llvm.
 ; IMPORTSTATIC-DAG: declare hidden i32 @staticfunc.llvm.
 
 ; Ensure that imported global (external) function and variable references
@@ -90,9 +90,9 @@
 
 ; Ensure that imported static function pointer correctly promoted and renamed.
 ; RUN: llvm-link %t2.bc -summary-index=%t3.thinlto.bc -import=callfuncptr:%t.bc -S | FileCheck %s --check-prefix=IMPORTFUNCPTR
-; IMPORTFUNCPTR-DAG: @P.llvm.{{.*}} = external hidden global void ()*
+; IMPORTFUNCPTR-DAG: @P.llvm.{{.*}} = external hidden global ptr
 ; IMPORTFUNCPTR-DAG: define available_externally void @callfuncptr
-; IMPORTFUNCPTR-DAG: %0 = load void ()*, void ()** @P.llvm.
+; IMPORTFUNCPTR-DAG: %0 = load ptr, ptr @P.llvm.
 
 ; Ensure that imported weak function reference/definition handled properly.
 ; Imported weak_any definition should be skipped with warning, and imported
@@ -107,11 +107,11 @@
 @staticvar = internal global i32 1, align 4
 @staticconstvar = internal unnamed_addr constant [2 x i32] [i32 10, i32 20], align 4
 @commonvar = common global i32 0, align 4
-@P = internal global void ()* null, align 8
+@P = internal global ptr null, align 8
 
-@weakalias = weak alias void (...), bitcast (void ()* @globalfunc1 to void (...)*)
-@analias = alias void (...), bitcast (void ()* @globalfunc2 to void (...)*)
-@linkoncealias = alias void (...), bitcast (void ()* @linkoncefunc to void (...)*)
+@weakalias = weak alias void (...), ptr @globalfunc1
+@analias = alias void (...), ptr @globalfunc2
+@linkoncealias = alias void (...), ptr @linkoncefunc
 
 define void @globalfunc1() #0 {
 entry:
@@ -131,14 +131,14 @@ entry:
 define i32 @referencestatics(i32 %i) #0 {
 entry:
   %i.addr = alloca i32, align 4
-  store i32 %i, i32* %i.addr, align 4
+  store i32 %i, ptr %i.addr, align 4
   %call = call i32 @staticfunc()
-  %0 = load i32, i32* @staticvar, align 4
+  %0 = load i32, ptr @staticvar, align 4
   %add = add nsw i32 %call, %0
-  %1 = load i32, i32* %i.addr, align 4
+  %1 = load i32, ptr %i.addr, align 4
   %idxprom = sext i32 %1 to i64
-  %arrayidx = getelementptr inbounds [2 x i32], [2 x i32]* @staticconstvar, i64 0, i64 %idxprom
-  %2 = load i32, i32* %arrayidx, align 4
+  %arrayidx = getelementptr inbounds [2 x i32], ptr @staticconstvar, i64 0, i64 %idxprom
+  %2 = load i32, ptr %arrayidx, align 4
   %add1 = add nsw i32 %add, %2
   ret i32 %add1
 }
@@ -146,29 +146,29 @@ entry:
 define i32 @referenceglobals(i32 %i) #0 {
 entry:
   %i.addr = alloca i32, align 4
-  store i32 %i, i32* %i.addr, align 4
+  store i32 %i, ptr %i.addr, align 4
   call void @globalfunc1()
-  %0 = load i32, i32* @globalvar, align 4
+  %0 = load i32, ptr @globalvar, align 4
   ret i32 %0
 }
 
 define i32 @referencecommon(i32 %i) #0 {
 entry:
   %i.addr = alloca i32, align 4
-  store i32 %i, i32* %i.addr, align 4
-  %0 = load i32, i32* @commonvar, align 4
+  store i32 %i, ptr %i.addr, align 4
+  %0 = load i32, ptr @commonvar, align 4
   ret i32 %0
 }
 
 define void @setfuncptr() #0 {
 entry:
-  store void ()* @staticfunc2, void ()** @P, align 8
+  store ptr @staticfunc2, ptr @P, align 8
   ret void
 }
 
 define void @callfuncptr() #0 {
 entry:
-  %0 = load void ()*, void ()** @P, align 8
+  %0 = load ptr, ptr @P, align 8
   call void %0()
   ret void
 }

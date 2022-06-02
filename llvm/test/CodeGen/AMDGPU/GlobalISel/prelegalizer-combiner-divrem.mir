@@ -303,8 +303,8 @@ body: |
     ; CHECK: %ptr2:_(p1) = G_IMPLICIT_DEF
     ; CHECK: %ptr3:_(p1) = COPY $vgpr2_vgpr3
     ; CHECK: %ptr4:_(p1) = COPY $vgpr4_vgpr5
-    ; CHECK: G_STORE %src1(s32), %ptr1(p1) :: (volatile store (s32) into `i32 addrspace(1)* undef`, addrspace 1)
-    ; CHECK: G_STORE %src2(s32), %ptr2(p1) :: (volatile store (s32) into `i32 addrspace(1)* undef`, addrspace 1)
+    ; CHECK: G_STORE %src1(s32), %ptr1(p1) :: (volatile store (s32) into `ptr addrspace(1) undef`, addrspace 1)
+    ; CHECK: G_STORE %src2(s32), %ptr2(p1) :: (volatile store (s32) into `ptr addrspace(1) undef`, addrspace 1)
     ; CHECK: %div:_(s32), %rem:_ = G_SDIVREM %src1, %src2
     ; CHECK: G_STORE %div(s32), %ptr3(p1) :: (store (s32), addrspace 1)
     ; CHECK: G_STORE %rem(s32), %ptr4(p1) :: (store (s32), addrspace 1)

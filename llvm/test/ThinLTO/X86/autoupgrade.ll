@@ -10,7 +10,7 @@
 ; RUN:     | llvm-bcanalyzer -dump | FileCheck %s
 
 ; CHECK: <STRTAB_BLOCK
-; CHECK-NEXT: blob data = 'mainglobalfunc1llvm.invariant.start.p0i8{{.*}}'
+; CHECK-NEXT: blob data = 'mainglobalfunc1llvm.invariant.start.p0{{.*}}'
 
 ; Check that the summary is able to print the names despite the lack of
 ; string table in the legacy bitcode.

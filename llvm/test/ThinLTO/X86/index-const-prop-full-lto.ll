@@ -18,7 +18,7 @@ declare i32 @foo()
 
 define i32 @main() {
   %v = call i32 @foo()
-  %v2 = load i32, i32* @g
+  %v2 = load i32, ptr @g
   %v3 = add i32 %v, %v2
   ret i32 %v3
 }

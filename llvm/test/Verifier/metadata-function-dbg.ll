@@ -23,7 +23,7 @@ define void @f4() !dbg !4 {
 
 ; CHECK-NOT:  !dbg
 ; CHECK:      function !dbg attachment must be a subprogram
-; CHECK-NEXT: void ()* @bar
+; CHECK-NEXT: ptr @bar
 ; CHECK-NEXT: !{{[0-9]+}} = !{}
 define void @bar() !dbg !3 {
   unreachable

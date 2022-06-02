@@ -23,11 +23,11 @@ target triple = "x86_64-pc-linux-gnu"
 
 declare void @foo()
 
-define void @bar() personality i32 (i32, i32, i64, i8*, i8*)* @personality_routine {
+define void @bar() personality ptr @personality_routine {
  ret void
 }
 
-define internal i32 @personality_routine(i32, i32, i64, i8*, i8*) {
+define internal i32 @personality_routine(i32, i32, i64, ptr, ptr) {
   call void @foo()
   ret i32 0
 }

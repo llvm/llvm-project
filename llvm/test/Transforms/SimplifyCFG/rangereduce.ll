@@ -13,8 +13,8 @@ define i32 @test1(i32 %a) {
 ; CHECK-NEXT:    [[TMP5:%.*]] = icmp ult i32 [[TMP4]], 4
 ; CHECK-NEXT:    br i1 [[TMP5]], label [[SWITCH_LOOKUP:%.*]], label [[COMMON_RET:%.*]]
 ; CHECK:       switch.lookup:
-; CHECK-NEXT:    [[SWITCH_GEP:%.*]] = getelementptr inbounds [4 x i32], [4 x i32]* @switch.table.test1, i32 0, i32 [[TMP4]]
-; CHECK-NEXT:    [[SWITCH_LOAD:%.*]] = load i32, i32* [[SWITCH_GEP]], align 4
+; CHECK-NEXT:    [[SWITCH_GEP:%.*]] = getelementptr inbounds [4 x i32], ptr @switch.table.test1, i32 0, i32 [[TMP4]]
+; CHECK-NEXT:    [[SWITCH_LOAD:%.*]] = load i32, ptr [[SWITCH_GEP]], align 4
 ; CHECK-NEXT:    br label [[COMMON_RET]]
 ; CHECK:       common.ret:
 ; CHECK-NEXT:    [[COMMON_RET_OP:%.*]] = phi i32 [ [[SWITCH_LOAD]], [[SWITCH_LOOKUP]] ], [ 8867, [[TMP0:%.*]] ]
@@ -82,8 +82,8 @@ define i32 @test3(i32 %a) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp ult i32 [[SWITCH_TABLEIDX]], 3
 ; CHECK-NEXT:    br i1 [[TMP1]], label [[SWITCH_LOOKUP:%.*]], label [[COMMON_RET:%.*]]
 ; CHECK:       switch.lookup:
-; CHECK-NEXT:    [[SWITCH_GEP:%.*]] = getelementptr inbounds [3 x i32], [3 x i32]* @switch.table.test3, i32 0, i32 [[SWITCH_TABLEIDX]]
-; CHECK-NEXT:    [[SWITCH_LOAD:%.*]] = load i32, i32* [[SWITCH_GEP]], align 4
+; CHECK-NEXT:    [[SWITCH_GEP:%.*]] = getelementptr inbounds [3 x i32], ptr @switch.table.test3, i32 0, i32 [[SWITCH_TABLEIDX]]
+; CHECK-NEXT:    [[SWITCH_LOAD:%.*]] = load i32, ptr [[SWITCH_GEP]], align 4
 ; CHECK-NEXT:    br label [[COMMON_RET]]
 ; CHECK:       common.ret:
 ; CHECK-NEXT:    [[COMMON_RET_OP:%.*]] = phi i32 [ [[SWITCH_LOAD]], [[SWITCH_LOOKUP]] ], [ 8867, [[TMP0:%.*]] ]
@@ -189,8 +189,8 @@ define i32 @test6(i32 %a) optsize {
 ; CHECK-NEXT:    [[TMP5:%.*]] = icmp ult i32 [[TMP4]], 4
 ; CHECK-NEXT:    br i1 [[TMP5]], label [[SWITCH_LOOKUP:%.*]], label [[COMMON_RET:%.*]]
 ; CHECK:       switch.lookup:
-; CHECK-NEXT:    [[SWITCH_GEP:%.*]] = getelementptr inbounds [4 x i32], [4 x i32]* @switch.table.test6, i32 0, i32 [[TMP4]]
-; CHECK-NEXT:    [[SWITCH_LOAD:%.*]] = load i32, i32* [[SWITCH_GEP]], align 4
+; CHECK-NEXT:    [[SWITCH_GEP:%.*]] = getelementptr inbounds [4 x i32], ptr @switch.table.test6, i32 0, i32 [[TMP4]]
+; CHECK-NEXT:    [[SWITCH_LOAD:%.*]] = load i32, ptr [[SWITCH_GEP]], align 4
 ; CHECK-NEXT:    br label [[COMMON_RET]]
 ; CHECK:       common.ret:
 ; CHECK-NEXT:    [[COMMON_RET_OP:%.*]] = phi i32 [ [[SWITCH_LOAD]], [[SWITCH_LOOKUP]] ], [ 8867, [[TMP0:%.*]] ]
@@ -256,8 +256,8 @@ define i32 @test8(i32 %a) optsize {
 ; CHECK-NEXT:    [[TMP5:%.*]] = icmp ult i32 [[TMP4]], 5
 ; CHECK-NEXT:    br i1 [[TMP5]], label [[SWITCH_LOOKUP:%.*]], label [[COMMON_RET:%.*]]
 ; CHECK:       switch.lookup:
-; CHECK-NEXT:    [[SWITCH_GEP:%.*]] = getelementptr inbounds [5 x i32], [5 x i32]* @switch.table.test8, i32 0, i32 [[TMP4]]
-; CHECK-NEXT:    [[SWITCH_LOAD:%.*]] = load i32, i32* [[SWITCH_GEP]], align 4
+; CHECK-NEXT:    [[SWITCH_GEP:%.*]] = getelementptr inbounds [5 x i32], ptr @switch.table.test8, i32 0, i32 [[TMP4]]
+; CHECK-NEXT:    [[SWITCH_LOAD:%.*]] = load i32, ptr [[SWITCH_GEP]], align 4
 ; CHECK-NEXT:    br label [[COMMON_RET]]
 ; CHECK:       common.ret:
 ; CHECK-NEXT:    [[COMMON_RET_OP:%.*]] = phi i32 [ [[SWITCH_LOAD]], [[SWITCH_LOOKUP]] ], [ 8867, [[TMP0:%.*]] ]
@@ -290,8 +290,8 @@ define i32 @test9(i32 %a) {
 ; CHECK-NEXT:    [[TMP5:%.*]] = icmp ult i32 [[TMP4]], 8
 ; CHECK-NEXT:    br i1 [[TMP5]], label [[SWITCH_LOOKUP:%.*]], label [[COMMON_RET:%.*]]
 ; CHECK:       switch.lookup:
-; CHECK-NEXT:    [[SWITCH_GEP:%.*]] = getelementptr inbounds [8 x i32], [8 x i32]* @switch.table.test9, i32 0, i32 [[TMP4]]
-; CHECK-NEXT:    [[SWITCH_LOAD:%.*]] = load i32, i32* [[SWITCH_GEP]], align 4
+; CHECK-NEXT:    [[SWITCH_GEP:%.*]] = getelementptr inbounds [8 x i32], ptr @switch.table.test9, i32 0, i32 [[TMP4]]
+; CHECK-NEXT:    [[SWITCH_LOAD:%.*]] = load i32, ptr [[SWITCH_GEP]], align 4
 ; CHECK-NEXT:    br label [[COMMON_RET]]
 ; CHECK:       common.ret:
 ; CHECK-NEXT:    [[COMMON_RET_OP:%.*]] = phi i32 [ [[SWITCH_LOAD]], [[SWITCH_LOOKUP]] ], [ 8867, [[TMP0:%.*]] ]

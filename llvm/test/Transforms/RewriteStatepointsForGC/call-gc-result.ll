@@ -21,7 +21,7 @@ define i32 @test1(i1 %cond, i32 %a) gc "statepoint-example" {
 ; CHECK-NEXT:    br label [[MERGE]]
 ; CHECK:       merge:
 ; CHECK-NEXT:    [[PHI:%.*]] = phi i32 [ [[A]], [[BRANCH2]] ], [ [[B]], [[BRANCH1]] ]
-; CHECK-NEXT:    [[STATEPOINT_TOKEN:%.*]] = call token (i64, i32, i32 ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_i32f(i64 2882400000, i32 0, i32 ()* elementtype(i32 ()) @foo, i32 0, i32 0, i32 0, i32 0)
+; CHECK-NEXT:    [[STATEPOINT_TOKEN:%.*]] = call token (i64, i32, ptr, i32, i32, ...) @llvm.experimental.gc.statepoint.p0(i64 2882400000, i32 0, ptr elementtype(i32 ()) @foo, i32 0, i32 0, i32 0, i32 0)
 ; CHECK-NEXT:    [[RET1:%.*]] = call i32 @llvm.experimental.gc.result.i32(token [[STATEPOINT_TOKEN]])
 ; CHECK-NEXT:    ret i32 [[RET1]]
 ;
