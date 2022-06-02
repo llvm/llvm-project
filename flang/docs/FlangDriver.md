@@ -13,12 +13,6 @@
    :local:
 ```
 
-
-> **_NOTE:_** This document assumes that Flang's drivers can already generate code and
-> produce executables. However, this is still work-in-progress. By making this
-> assumption, we are able to prepare this document ahead-of-time and to provide
-> an overview of the design that we are working towards.
-
 There are two main drivers in Flang:
 * the compiler driver, `flang-new`
 * the frontend driver, `flang-new -fc1`
@@ -336,6 +330,24 @@ the `ExecuteCompilerInvocation.cpp` file. Here's an example for
 ```
 At this point you should be able to trigger that frontend action that you have
 just added using your new frontend option.
+
+
+# CMake Support
+As of [#7246](https://gitlab.kitware.com/cmake/cmake/-/merge_requests/7246)
+(and soon to be released CMake 3.24.0), `cmake` can detect `flang-new` as a
+supported Fortran compiler. You can configure your CMake projects to use
+`flang-new` as follows:
+```bash
+cmake -DCMAKE_Fortran_FLAGS="-flang-experimental-exec" -DCMAKE_Fortran_COMPILER=<path/to/flang-new> <src/dir>
+```
+You should see the following in the output:
+```
+-- The Fortran compiler identification is LLVMFlang <version>
+```
+where `<version>` corresponds to the LLVM Flang version. Note that while
+generating executables remains experimental, you will need to inform CMake to
+use the `-flang-experimental-exec` flag when invoking `flang-new` as in the
+example above.
 
 # Testing
 In LIT, we define two variables that you can use to invoke Flang's drivers:
