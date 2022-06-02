@@ -280,7 +280,7 @@ protected:
   Unknown &unknownFromRow(unsigned row);
 
   /// Add a new row to the tableau and the associated data structures. The row
-  /// is initialized to zero.
+  /// is initialized to zero. Returns the index of the added row.
   unsigned addZeroRow(bool makeRestricted = false);
 
   /// Add a new row to the tableau and the associated data structures.
@@ -316,16 +316,11 @@ protected:
   /// Return the number of fixed columns, as described in the constructor above,
   /// this is the number of columns beyond those for the variables in var.
   unsigned getNumFixedCols() const { return usingBigM ? 3u : 2u; }
+  unsigned getNumRows() const { return tableau.getNumRows(); }
+  unsigned getNumColumns() const { return tableau.getNumColumns(); }
 
   /// Stores whether or not a big M column is present in the tableau.
   bool usingBigM;
-
-  /// The number of rows in the tableau.
-  unsigned nRow;
-
-  /// The number of columns in the tableau, including the common denominator
-  /// and the constant column.
-  unsigned nCol;
 
   /// The number of redundant rows in the tableau. These are the first
   /// nRedundant rows.
