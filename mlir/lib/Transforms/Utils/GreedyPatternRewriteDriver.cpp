@@ -607,13 +607,14 @@ bool MultiOpPatternRewriteDriver::simplifyLocally(ArrayRef<Operation *> ops) {
   SmallVector<Value, 8> originalOperands, resultValues;
   while (!worklist.empty()) {
     Operation *op = popFromWorklist();
-    assert((!strictMode || strictModeFilteredOps.contains(op)) &&
-           "unexpected op was inserted under strict mode");
 
     // Nulls get added to the worklist when operations are removed, ignore
     // them.
     if (op == nullptr)
       continue;
+
+    assert((!strictMode || strictModeFilteredOps.contains(op)) &&
+           "unexpected op was inserted under strict mode");
 
     // If the operation is trivially dead - remove it.
     if (isOpTriviallyDead(op)) {
