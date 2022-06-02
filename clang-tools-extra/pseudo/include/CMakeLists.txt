@@ -17,7 +17,7 @@ add_custom_command(OUTPUT ${cxx_symbols_inc}
      --emit-symbol-list
      -o ${cxx_symbols_inc}
    COMMENT "Generating nonterminal symbol file for cxx grammar..."
-   DEPENDS ${pseudo_gen_target}
+   DEPENDS ${pseudo_gen_target} ${cxx_bnf}
    VERBATIM)
 
 set(cxx_bnf_inc ${CMAKE_CURRENT_BINARY_DIR}/CXXBNF.inc)
@@ -27,7 +27,7 @@ add_custom_command(OUTPUT ${cxx_bnf_inc}
      --emit-grammar-content
      -o ${cxx_bnf_inc}
    COMMENT "Generating bnf string file for cxx grammar..."
-   DEPENDS ${pseudo_gen_target}
+   DEPENDS ${pseudo_gen_target} ${cxx_bnf}
    VERBATIM)
 
 # add_custom_command does not create a new target, we need to deine a target
