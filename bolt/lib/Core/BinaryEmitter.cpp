@@ -328,10 +328,9 @@ bool BinaryEmitter::emitFunction(BinaryFunction &Function, bool EmitColdPart) {
   // Emit CFI start
   if (Function.hasCFI()) {
     Streamer.emitCFIStartProc(/*IsSimple=*/false);
-    if (Function.getPersonalityFunction() != nullptr) {
+    if (Function.getPersonalityFunction() != nullptr)
       Streamer.emitCFIPersonality(Function.getPersonalityFunction(),
                                   Function.getPersonalityEncoding());
-    }
     MCSymbol *LSDASymbol =
         EmitColdPart ? Function.getColdLSDASymbol() : Function.getLSDASymbol();
     if (LSDASymbol)
@@ -414,10 +413,9 @@ void BinaryEmitter::emitFunctionBody(BinaryFunction &BF, bool EmitColdPart,
       continue;
 
     if ((opts::AlignBlocks || opts::PreserveBlocksAlignment) &&
-        BB->getAlignment() > 1) {
+        BB->getAlignment() > 1)
       Streamer.emitCodeAlignment(BB->getAlignment(), &*BC.STI,
                                  BB->getAlignmentMaxBytes());
-    }
     Streamer.emitLabel(BB->getLabel());
     if (!EmitCodeOnly) {
       if (MCSymbol *EntrySymbol = BF.getSecondaryEntryPointSymbol(*BB))
@@ -540,15 +538,14 @@ void BinaryEmitter::emitConstantIslands(BinaryFunction &BF, bool EmitColdPart,
     auto NextData = std::next(DataIter);
     auto CodeIter = Islands.CodeOffsets.lower_bound(*DataIter);
     if (CodeIter == Islands.CodeOffsets.end() &&
-        NextData == Islands.DataOffsets.end()) {
+        NextData == Islands.DataOffsets.end())
       EndOffset = BF.getMaxSize();
-    } else if (CodeIter == Islands.CodeOffsets.end()) {
+    else if (CodeIter == Islands.CodeOffsets.end())
       EndOffset = *NextData;
-    } else if (NextData == Islands.DataOffsets.end()) {
+    else if (NextData == Islands.DataOffsets.end())
       EndOffset = *CodeIter;
-    } else {
+    else
       EndOffset = (*CodeIter > *NextData) ? *NextData : *CodeIter;
-    }
 
     if (FunctionOffset == EndOffset)
       continue; // Size is zero, nothing to emit
@@ -874,9 +871,8 @@ void BinaryEmitter::emitCFIInstruction(const MCCFIInstruction &Inst) const {
 void BinaryEmitter::emitLSDA(BinaryFunction &BF, bool EmitColdPart) {
   const BinaryFunction::CallSitesType *Sites =
       EmitColdPart ? &BF.getColdCallSites() : &BF.getCallSites();
-  if (Sites->empty()) {
+  if (Sites->empty())
     return;
-  }
 
   // Calculate callsite table size. Size of each callsite entry is:
   //
@@ -886,9 +882,8 @@ void BinaryEmitter::emitLSDA(BinaryFunction &BF, bool EmitColdPart) {
   //
   //  sizeof(dwarf::DW_EH_PE_data4) * 3 + sizeof(uleb128(action))
   uint64_t CallSiteTableLength = Sites->size() * 4 * 3;
-  for (const BinaryFunction::CallSite &CallSite : *Sites) {
+  for (const BinaryFunction::CallSite &CallSite : *Sites)
     CallSiteTableLength += getULEB128Size(CallSite.Action);
-  }
 
   Streamer.SwitchSection(BC.MOFI->getLSDASection());
 
