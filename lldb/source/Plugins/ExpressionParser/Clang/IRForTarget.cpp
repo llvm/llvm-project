@@ -615,29 +615,7 @@ bool IRForTarget::RewriteObjCConstStrings() {
         return false;
       }
 
-      ConstantExpr *nsstring_expr = dyn_cast<ConstantExpr>(nsstring_member);
-
-      if (!nsstring_expr) {
-        LLDB_LOG(log,
-                 "NSString initializer's str element is not a ConstantExpr");
-
-        m_error_stream.Printf("Internal error [IRForTarget]: An Objective-C "
-                              "constant string's string initializer is not "
-                              "constant\n");
-
-        return false;
-      }
-
-      GlobalVariable *cstr_global = nullptr;
-
-      if (nsstring_expr->getOpcode() == Instruction::GetElementPtr) {
-        Constant *nsstring_cstr = nsstring_expr->getOperand(0);
-        cstr_global = dyn_cast<GlobalVariable>(nsstring_cstr);
-      } else if (nsstring_expr->getOpcode() == Instruction::BitCast) {
-        Constant *nsstring_cstr = nsstring_expr->getOperand(0);
-        cstr_global = dyn_cast<GlobalVariable>(nsstring_cstr);
-      }
-
+      auto *cstr_global = dyn_cast<GlobalVariable>(nsstring_member);
       if (!cstr_global) {
         LLDB_LOG(log,
                  "NSString initializer's str element is not a GlobalVariable");
