@@ -107,7 +107,7 @@ subroutine substring_assignment(a,b)
   ! CHECK:         %[[VAL_37:.*]] = arith.constant false
   ! CHECK:         %[[VAL_38:.*]] = fir.convert %[[VAL_26]] : (!fir.ref<!fir.char<1,?>>) -> !fir.ref<i8>
   ! CHECK:         %[[VAL_39:.*]] = fir.convert %[[VAL_12]] : (!fir.ref<!fir.char<1,?>>) -> !fir.ref<i8>
-  ! CHECK:         fir.call @llvm.memmove.p0i8.p0i8.i64(%[[VAL_38]], %[[VAL_39]], %[[VAL_36]], %[[VAL_37]]) : (!fir.ref<i8>, !fir.ref<i8>, i64, i1) -> ()
+  ! CHECK:         fir.call @llvm.memmove.p0.p0.i64(%[[VAL_38]], %[[VAL_39]], %[[VAL_36]], %[[VAL_37]]) : (!fir.ref<i8>, !fir.ref<i8>, i64, i1) -> ()
   ! CHECK:         %[[VAL_40:.*]] = arith.constant 1 : index
   ! CHECK:         %[[VAL_41:.*]] = arith.subi %[[VAL_31]], %[[VAL_40]] : index
   ! CHECK:         %[[VAL_42:.*]] = arith.constant 32 : i8
@@ -195,7 +195,7 @@ end subroutine substring_assignment
 ! CHECK:           %[[VAL_61:.*]] = arith.constant false
 ! CHECK:           %[[VAL_62:.*]] = fir.convert %[[VAL_35]] : (!fir.ref<!fir.char<1,?>>) -> !fir.ref<i8>
 ! CHECK:           %[[VAL_63:.*]] = fir.convert %[[VAL_18]] : (!fir.ref<!fir.char<1,3>>) -> !fir.ref<i8>
-! CHECK:           fir.call @llvm.memmove.p0i8.p0i8.i64(%[[VAL_62]], %[[VAL_63]], %[[VAL_60]], %[[VAL_61]]) : (!fir.ref<i8>, !fir.ref<i8>, i64, i1) -> ()
+! CHECK:           fir.call @llvm.memmove.p0.p0.i64(%[[VAL_62]], %[[VAL_63]], %[[VAL_60]], %[[VAL_61]]) : (!fir.ref<i8>, !fir.ref<i8>, i64, i1) -> ()
 ! CHECK:           %[[VAL_64:.*]] = arith.constant 1 : index
 ! CHECK:           %[[VAL_65:.*]] = arith.subi %[[VAL_40]], %[[VAL_64]] : index
 ! CHECK:           %[[VAL_66:.*]] = arith.constant 32 : i8
@@ -283,7 +283,7 @@ end subroutine array_substring_assignment
 ! CHECK:           %[[VAL_50:.*]] = arith.constant false
 ! CHECK:           %[[VAL_51:.*]] = fir.convert %[[VAL_24]] : (!fir.ref<!fir.char<1,?>>) -> !fir.ref<i8>
 ! CHECK:           %[[VAL_52:.*]] = fir.convert %[[VAL_7]] : (!fir.ref<!fir.char<1,4>>) -> !fir.ref<i8>
-! CHECK:           fir.call @llvm.memmove.p0i8.p0i8.i64(%[[VAL_51]], %[[VAL_52]], %[[VAL_49]], %[[VAL_50]]) : (!fir.ref<i8>, !fir.ref<i8>, i64, i1) -> ()
+! CHECK:           fir.call @llvm.memmove.p0.p0.i64(%[[VAL_51]], %[[VAL_52]], %[[VAL_49]], %[[VAL_50]]) : (!fir.ref<i8>, !fir.ref<i8>, i64, i1) -> ()
 ! CHECK:           %[[VAL_53:.*]] = arith.constant 1 : index
 ! CHECK:           %[[VAL_54:.*]] = arith.subi %[[VAL_29]], %[[VAL_53]] : index
 ! CHECK:           %[[VAL_55:.*]] = arith.constant 32 : i8
@@ -393,7 +393,7 @@ end subroutine array_substring_assignment2
 ! CHECK:           %[[VAL_70:.*]] = arith.constant false
 ! CHECK:           %[[VAL_71:.*]] = fir.convert %[[VAL_44]] : (!fir.ref<!fir.char<1,?>>) -> !fir.ref<i8>
 ! CHECK:           %[[VAL_72:.*]] = fir.convert %[[VAL_29]] : (!fir.ref<!fir.char<1,?>>) -> !fir.ref<i8>
-! CHECK:           fir.call @llvm.memmove.p0i8.p0i8.i64(%[[VAL_71]], %[[VAL_72]], %[[VAL_69]], %[[VAL_70]]) : (!fir.ref<i8>, !fir.ref<i8>, i64, i1) -> ()
+! CHECK:           fir.call @llvm.memmove.p0.p0.i64(%[[VAL_71]], %[[VAL_72]], %[[VAL_69]], %[[VAL_70]]) : (!fir.ref<i8>, !fir.ref<i8>, i64, i1) -> ()
 ! CHECK:           %[[VAL_73:.*]] = arith.constant 1 : index
 ! CHECK:           %[[VAL_74:.*]] = arith.subi %[[VAL_49]], %[[VAL_73]] : index
 ! CHECK:           %[[VAL_75:.*]] = arith.constant 32 : i8

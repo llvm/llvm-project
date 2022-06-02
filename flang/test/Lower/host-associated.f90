@@ -493,7 +493,7 @@ end subroutine test_proc_dummy_other
 ! CHECK:         %[[VAL_18:.*]] = fir.convert %[[VAL_2]] : (index) -> i64
 ! CHECK:         %[[VAL_19:.*]] = fir.convert %[[VAL_12]] : (!fir.ref<!fir.char<1,10>>) -> !fir.ref<i8>
 ! CHECK:         %[[VAL_20:.*]] = fir.convert %[[VAL_17]] : (!fir.ref<!fir.char<1,9>>) -> !fir.ref<i8>
-! CHECK:         fir.call @llvm.memmove.p0i8.p0i8.i64(%[[VAL_19]], %[[VAL_20]], %[[VAL_18]], %[[VAL_3]]) : (!fir.ref<i8>, !fir.ref<i8>, i64, i1) -> ()
+! CHECK:         fir.call @llvm.memmove.p0.p0.i64(%[[VAL_19]], %[[VAL_20]], %[[VAL_18]], %[[VAL_3]]) : (!fir.ref<i8>, !fir.ref<i8>, i64, i1) -> ()
 ! CHECK:         %[[VAL_21:.*]] = fir.undefined !fir.char<1>
 ! CHECK:         %[[VAL_22:.*]] = fir.insert_value %[[VAL_21]], %[[VAL_5]], [0 : index] : (!fir.char<1>, i8) -> !fir.char<1>
 ! CHECK:         br ^bb1(%[[VAL_2]], %[[VAL_4]] : index, index)
@@ -545,7 +545,7 @@ end subroutine test_proc_dummy_other
 ! CHECK:         %[[VAL_15:.*]] = fir.convert %[[VAL_14]] : (index) -> i64
 ! CHECK:         %[[VAL_16:.*]] = fir.convert %[[VAL_12]] : (!fir.ref<!fir.char<1,?>>) -> !fir.ref<i8>
 ! CHECK:         %[[VAL_17:.*]] = fir.convert %[[VAL_11]]#0 : (!fir.ref<!fir.char<1,?>>) -> !fir.ref<i8>
-! CHECK:         fir.call @llvm.memmove.p0i8.p0i8.i64(%[[VAL_16]], %[[VAL_17]], %[[VAL_15]], %[[VAL_5]]) : (!fir.ref<i8>, !fir.ref<i8>, i64, i1) -> ()
+! CHECK:         fir.call @llvm.memmove.p0.p0.i64(%[[VAL_16]], %[[VAL_17]], %[[VAL_15]], %[[VAL_5]]) : (!fir.ref<i8>, !fir.ref<i8>, i64, i1) -> ()
 ! CHECK:         %[[VAL_18:.*]] = fir.undefined !fir.char<1>
 ! CHECK:         %[[VAL_19:.*]] = fir.insert_value %[[VAL_18]], %[[VAL_7]], [0 : index] : (!fir.char<1>, i8) -> !fir.char<1>
 ! CHECK:         %[[VAL_20:.*]] = arith.subi %[[VAL_4]], %[[VAL_14]] : index
@@ -590,7 +590,7 @@ end subroutine test_proc_dummy_other
 ! CHECK:         %[[VAL_21:.*]] = fir.convert %[[VAL_4]] : (index) -> i64
 ! CHECK:         %[[VAL_22:.*]] = fir.convert %[[VAL_20]] : (!fir.ref<!fir.char<1,?>>) -> !fir.ref<i8>
 ! CHECK:         %[[VAL_23:.*]] = fir.convert %[[VAL_10]] : (!fir.ref<!fir.char<1,12>>) -> !fir.ref<i8>
-! CHECK:         fir.call @llvm.memmove.p0i8.p0i8.i64(%[[VAL_22]], %[[VAL_23]], %[[VAL_21]], %[[VAL_5]]) : (!fir.ref<i8>, !fir.ref<i8>, i64, i1) -> ()
+! CHECK:         fir.call @llvm.memmove.p0.p0.i64(%[[VAL_22]], %[[VAL_23]], %[[VAL_21]], %[[VAL_5]]) : (!fir.ref<i8>, !fir.ref<i8>, i64, i1) -> ()
 ! CHECK:         br ^bb1(%[[VAL_4]], %[[VAL_17]] : index, index)
 ! CHECK:       ^bb1(%[[VAL_24:.*]]: index, %[[VAL_25:.*]]: index):
 ! CHECK:         %[[VAL_26:.*]] = arith.cmpi sgt, %[[VAL_25]], %[[VAL_8]] : index
@@ -611,7 +611,7 @@ end subroutine test_proc_dummy_other
 ! CHECK:         %[[VAL_36:.*]] = arith.select %[[VAL_35]], %[[VAL_3]], %[[VAL_19]] : index
 ! CHECK:         %[[VAL_37:.*]] = fir.convert %[[VAL_36]] : (index) -> i64
 ! CHECK:         %[[VAL_38:.*]] = fir.convert %[[VAL_9]] : (!fir.ref<!fir.char<1,?>>) -> !fir.ref<i8>
-! CHECK:         fir.call @llvm.memmove.p0i8.p0i8.i64(%[[VAL_38]], %[[VAL_22]], %[[VAL_37]], %[[VAL_5]]) : (!fir.ref<i8>, !fir.ref<i8>, i64, i1) -> ()
+! CHECK:         fir.call @llvm.memmove.p0.p0.i64(%[[VAL_38]], %[[VAL_22]], %[[VAL_37]], %[[VAL_5]]) : (!fir.ref<i8>, !fir.ref<i8>, i64, i1) -> ()
 ! CHECK:         %[[VAL_39:.*]] = fir.undefined !fir.char<1>
 ! CHECK:         %[[VAL_40:.*]] = fir.insert_value %[[VAL_39]], %[[VAL_7]], [0 : index] : (!fir.char<1>, i8) -> !fir.char<1>
 ! CHECK:         %[[VAL_41:.*]] = arith.subi %[[VAL_3]], %[[VAL_36]] : index
