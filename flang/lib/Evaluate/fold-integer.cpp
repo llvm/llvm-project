@@ -436,6 +436,17 @@ static std::optional<Constant<SubscriptInteger>> FoldLocationCall(
     ActualArguments &arg, FoldingContext &context) {
   if (arg[0]) {
     if (auto type{arg[0]->GetType()}) {
+      if constexpr (which == WhichLocation::Findloc) {
+        // Both ARRAY and VALUE are susceptible to conversion to a common
+        // comparison type.
+        if (arg[1]) {
+          if (auto valType{arg[1]->GetType()}) {
+            if (auto compareType{ComparisonType(*type, *valType)}) {
+              type = compareType;
+            }
+          }
+        }
+      }
       return common::SearchTypes(
           LocationHelper<which>{std::move(*type), arg, context});
     }
