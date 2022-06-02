@@ -4,6 +4,7 @@
 
 ; Outer loop only reductions are not supported currently.
 
+target triple = "powerpc64le-unknown-linux-gnu"
 @A = common global [500 x [500 x i32]] zeroinitializer
 
 ;; global X

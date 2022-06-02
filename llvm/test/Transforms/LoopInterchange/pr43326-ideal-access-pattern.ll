@@ -14,6 +14,8 @@
 ;   }
 ; }
 
+target triple = "powerpc64le-unknown-linux-gnu"
+
 ; REMARKS: --- !Passed
 ; REMARKS-NEXT: Pass:            loop-interchange
 ; REMARKS-NEXT: Name:            Interchanged

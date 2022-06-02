@@ -2,6 +2,8 @@
 ; RUN:     -verify-dom-info -verify-loop-info -verify-loop-lcssa 2>&1
 ; RUN: FileCheck --input-file=%t --check-prefix=REMARKS %s
 
+target triple = "powerpc64le-unknown-linux-gnu"
+
 ; REMARKS: --- !Passed
 ; REMARKS-NEXT: Pass:            loop-interchange
 ; REMARKS-NEXT: Name:            Interchanged
