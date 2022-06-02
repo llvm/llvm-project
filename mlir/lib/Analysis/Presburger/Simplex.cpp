@@ -83,16 +83,13 @@ Simplex::Unknown &SimplexBase::unknownFromRow(unsigned row) {
 
 unsigned SimplexBase::addZeroRow(bool makeRestricted) {
   ++nRow;
-  // If the tableau is not big enough to accomodate the extra row, we extend it.
-  if (nRow >= tableau.getNumRows())
-    tableau.resizeVertically(nRow);
+  // Resize the tableau to accommodate the extra row.
+  tableau.resizeVertically(nRow);
+  // TODO: consider eliminating nRow, as it stores redundant information.
+  assert(tableau.getNumRows() == nRow && "Inconsistent tableau size");
   rowUnknown.push_back(~con.size());
   con.emplace_back(Orientation::Row, makeRestricted, nRow - 1);
   undoLog.push_back(UndoLogEntry::RemoveLastConstraint);
-
-  // Zero out the new row.
-  tableau.fillRow(nRow - 1, 0);
-
   tableau(nRow - 1, 0) = 1;
   return con.size() - 1;
 }
@@ -1123,6 +1120,7 @@ void SimplexBase::removeLastConstraintRowOrientation() {
   // maintain the invariant that the tableau has exactly nRow rows.
   tableau.resizeVertically(nRow - 1);
   nRow--;
+  assert(tableau.getNumRows() == nRow && "inconsistent tableau size!");
   rowUnknown.pop_back();
   con.pop_back();
 }
@@ -1217,6 +1215,7 @@ void SimplexBase::undo(UndoLogEntry entry) {
     var.pop_back();
     colUnknown.pop_back();
     nCol--;
+    assert(tableau.getNumColumns() == nCol && "inconsistent tableau size!");
   } else if (entry == UndoLogEntry::UnmarkEmpty) {
     empty = false;
   } else if (entry == UndoLogEntry::UnmarkLastRedundant) {
@@ -1293,6 +1292,7 @@ void SimplexBase::appendVariable(unsigned count) {
     colUnknown.push_back(var.size() - 1);
   }
   tableau.resizeHorizontally(nCol);
+  assert(tableau.getNumColumns() == nCol);
   undoLog.insert(undoLog.end(), count, UndoLogEntry::RemoveLastVariable);
 }
 
@@ -1526,6 +1526,10 @@ Simplex Simplex::makeProduct(const Simplex &a, const Simplex &b) {
   for (unsigned row = b.nRedundant; row < b.nRow; ++row)
     appendRowFromB(row);
 
+  assert(result.tableau.getNumRows() == result.nRow &&
+         "inconsistent row size!");
+  assert(result.tableau.getNumColumns() == result.nCol &&
+         "inconsistent row size!");
   return result;
 }
 
