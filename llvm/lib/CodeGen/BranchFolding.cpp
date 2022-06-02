@@ -104,6 +104,11 @@ namespace {
       AU.addRequired<TargetPassConfig>();
       MachineFunctionPass::getAnalysisUsage(AU);
     }
+
+    MachineFunctionProperties getRequiredProperties() const override {
+      return MachineFunctionProperties().set(
+          MachineFunctionProperties::Property::NoPHIs);
+    }
   };
 
 } // end anonymous namespace
