@@ -60,6 +60,10 @@ class RegisterClassInfo {
   // Map register alias to the callee saved Register.
   SmallVector<MCPhysReg, 4> CalleeSavedAliases;
 
+  // Indicate if a specified callee saved register be in the allocation order
+  // exactly as written in the tablegen descriptions or listed later.
+  BitVector IgnoreCSRForAllocOrder;
+
   // Reserved registers in the current MF.
   BitVector Reserved;
 
