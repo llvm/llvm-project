@@ -12,11 +12,13 @@ target triple = "riscv64"
 define void @foo(i64* nocapture writeonly %da) {
 ; CHECK-128-LABEL: @foo(
 ; CHECK-128-NEXT:  entry:
-; CHECK-128-NEXT:    [[TMP0:%.*]] = bitcast i64* [[DA:%.*]] to <2 x i64>*
-; CHECK-128-NEXT:    store <2 x i64> <i64 0, i64 1>, <2 x i64>* [[TMP0]], align 8
+; CHECK-128-NEXT:    store i64 0, i64* [[DA:%.*]], align 8
+; CHECK-128-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr inbounds i64, i64* [[DA]], i64 1
+; CHECK-128-NEXT:    store i64 1, i64* [[ARRAYIDX1]], align 8
 ; CHECK-128-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds i64, i64* [[DA]], i64 2
-; CHECK-128-NEXT:    [[TMP1:%.*]] = bitcast i64* [[ARRAYIDX2]] to <2 x i64>*
-; CHECK-128-NEXT:    store <2 x i64> <i64 2, i64 3>, <2 x i64>* [[TMP1]], align 8
+; CHECK-128-NEXT:    store i64 2, i64* [[ARRAYIDX2]], align 8
+; CHECK-128-NEXT:    [[ARRAYIDX3:%.*]] = getelementptr inbounds i64, i64* [[DA]], i64 3
+; CHECK-128-NEXT:    store i64 3, i64* [[ARRAYIDX3]], align 8
 ; CHECK-128-NEXT:    ret void
 ;
 ; CHECK-256-LABEL: @foo(
@@ -45,8 +47,9 @@ entry:
 define void @foo8(i8* nocapture writeonly %da) {
 ; CHECK-LABEL: @foo8(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = bitcast i8* [[DA:%.*]] to <2 x i8>*
-; CHECK-NEXT:    store <2 x i8> <i8 0, i8 1>, <2 x i8>* [[TMP0]], align 8
+; CHECK-NEXT:    store i8 0, i8* [[DA:%.*]], align 8
+; CHECK-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr inbounds i8, i8* [[DA]], i8 1
+; CHECK-NEXT:    store i8 1, i8* [[ARRAYIDX1]], align 8
 ; CHECK-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds i8, i8* [[DA]], i8 2
 ; CHECK-NEXT:    ret void
 ;

@@ -6414,6 +6414,12 @@ InstructionCost BoUpSLP::getEntryCost(const TreeEntry *E,
         CommonCost -= (EntryVF - VL.size()) * ScalarEltCost;
       }
       InstructionCost ScalarCost = VecTy->getNumElements() * ScalarEltCost;
+      for (unsigned I = 0, Num = VL0->getNumOperands(); I < Num; ++I) {
+        if (all_of(VL, [I](Value *V) {
+              return isConstant(cast<Instruction>(V)->getOperand(I));
+            }))
+          Operands[I] = ConstantVector::getNullValue(VecTy);
+      }
       InstructionCost VecCost =
           TTI->getArithmeticInstrCost(E->getOpcode(), VecTy, CostKind, Op1VK,
                                       Op2VK, Op1VP, Op2VP, Operands, VL0);

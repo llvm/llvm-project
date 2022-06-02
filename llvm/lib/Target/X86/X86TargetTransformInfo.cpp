@@ -1079,7 +1079,8 @@ InstructionCost X86TTIImpl::getArithmeticInstrCost(
   }
 
   // Fallback to the default implementation.
-  return BaseT::getArithmeticInstrCost(Opcode, Ty, CostKind, Op1Info, Op2Info);
+  return BaseT::getArithmeticInstrCost(Opcode, Ty, CostKind, Op1Info, Op2Info,
+                                       Opd1PropInfo, Opd2PropInfo, Args, CxtI);
 }
 
 InstructionCost X86TTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
@@ -4077,19 +4078,27 @@ InstructionCost X86TTIImpl::getMemoryOpCost(unsigned Opcode, Type *Src,
 
   auto *VTy = dyn_cast<FixedVectorType>(Src);
 
+  InstructionCost Cost = 0;
+
+  // Add a cost for constant load to vector.
+  if (Opcode == Instruction::Store &&
+      (OpdInfo == TTI::OK_UniformConstantValue ||
+       OpdInfo == TTI::OK_NonUniformConstantValue))
+    Cost += getMemoryOpCost(Instruction::Load, Src, DL.getABITypeAlign(Src),
+                            /*AddressSpace=*/0, CostKind);
+
   // Handle the simple case of non-vectors.
   // NOTE: this assumes that legalization never creates vector from scalars!
-  if (!VTy || !LT.second.isVector())
+  if (!VTy || !LT.second.isVector()) {
     // Each load/store unit costs 1.
-    return LT.first * 1;
+    return (LT.second.isFloatingPoint() ? Cost : 0) + LT.first * 1;
+  }
 
   bool IsLoad = Opcode == Instruction::Load;
 
   Type *EltTy = VTy->getElementType();
 
   const int EltTyBits = DL.getTypeSizeInBits(EltTy);
-
-  InstructionCost Cost = 0;
 
   // Source of truth: how many elements were there in the original IR vector?
   const unsigned SrcNumElt = VTy->getNumElements();
