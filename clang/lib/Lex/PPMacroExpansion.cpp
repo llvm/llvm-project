@@ -1895,9 +1895,9 @@ void Preprocessor::processPathForFileMacro(SmallVectorImpl<char> &Path,
   LangOpts.remapPathPrefix(Path);
   if (LangOpts.UseTargetPathSeparator) {
     if (TI.getTriple().isOSWindows())
-      llvm::sys::path::make_preferred(
-          Path, llvm::sys::path::Style::windows_backslash);
+      llvm::sys::path::remove_dots(Path, false,
+                                   llvm::sys::path::Style::windows_backslash);
     else
-      llvm::sys::path::make_preferred(Path, llvm::sys::path::Style::posix);
+      llvm::sys::path::remove_dots(Path, false, llvm::sys::path::Style::posix);
   }
 }
