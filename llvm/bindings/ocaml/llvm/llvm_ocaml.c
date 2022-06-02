@@ -2245,6 +2245,14 @@ LLVMValueRef llvm_build_call(LLVMValueRef Fn, value Params, value Name,
                        Wosize_val(Params), String_val(Name));
 }
 
+/* lltype -> llvalue -> llvalue array -> string -> llbuilder -> llvalue */
+LLVMValueRef llvm_build_call2(LLVMTypeRef FnTy, LLVMValueRef Fn, value Params,
+                              value Name, value B) {
+  return LLVMBuildCall2(Builder_val(B), FnTy, Fn,
+                        (LLVMValueRef *)Op_val(Params), Wosize_val(Params),
+                        String_val(Name));
+}
+
 /* llvalue -> llvalue -> llvalue -> string -> llbuilder -> llvalue */
 LLVMValueRef llvm_build_select(LLVMValueRef If, LLVMValueRef Then,
                                LLVMValueRef Else, value Name, value B) {

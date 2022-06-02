@@ -152,9 +152,9 @@ let test_get_function m dibuilder file_di m_di =
     ( Llvm_debuginfo.get_metadata_kind f_di
     = Llvm_debuginfo.MetadataKind.DISubprogramMetadataKind );
   insist (Llvm_debuginfo.di_subprogram_get_line f_di = 10);
-  (f, f_di)
+  (fty, f, f_di)
 
-let test_bbinstr f f_di file_di dibuilder =
+let test_bbinstr fty f f_di file_di dibuilder =
   group "basic_block and instructions tests";
   (* Create this pattern:
    *   if (arg0 != 0) {
@@ -169,11 +169,7 @@ let test_bbinstr f f_di file_di dibuilder =
   let truebb = Llvm.append_block context "truebb" f in
   let falsebb = Llvm.append_block context "falsebb" f in
   let _ = Llvm.build_cond_br cmpi truebb falsebb builder in
-  let foodecl =
-    Llvm.declare_function "foo"
-      (Llvm.element_type (Llvm.type_of f))
-      (Llvm.global_parent f)
-  in
+  let foodecl = Llvm.declare_function "foo" fty (Llvm.global_parent f) in
   let _ =
     Llvm.position_at_end truebb builder;
     let scope =
@@ -187,7 +183,7 @@ let test_bbinstr f f_di file_di dibuilder =
       | Some file_of_f_di', Some file_of_scope' ->
           file_of_f_di' = file_di && file_of_scope' = file_di
       | _ -> false );
-    let foocall = Llvm.build_call foodecl [| arg0 |] "" builder in
+    let foocall = Llvm.build_call2 fty foodecl [| arg0 |] "" builder in
     let foocall_loc =
       Llvm_debuginfo.dibuild_create_debug_location context ~line:10 ~column:12
         ~scope
@@ -290,7 +286,7 @@ let test_variables f dibuilder file_di fun_di =
     ~location ~instr:entry_term
   in
   let () = Printf.printf "%s\n" (Llvm.string_of_llvalue vdi) in
-  (* CHECK: call void @llvm.dbg.declare(metadata i64* %my_alloca, metadata {{![0-9]+}}, metadata !DIExpression()), !dbg {{\![0-9]+}}
+  (* CHECK: call void @llvm.dbg.declare(metadata ptr %my_alloca, metadata {{![0-9]+}}, metadata !DIExpression()), !dbg {{\![0-9]+}}
   *)
   let arg0 = (Llvm.params f).(0) in
   let arg_var = Llvm_debuginfo.dibuild_create_parameter_variable dibuilder ~scope:fun_di
@@ -446,8 +442,8 @@ let test_types dibuilder file_di m_di =
 
 let () =
   let m, dibuilder, file_di, m_di = test_get_module () in
-  let f, fun_di = test_get_function m dibuilder file_di m_di in
-  let () = test_bbinstr f fun_di file_di dibuilder in
+  let fty, f, fun_di = test_get_function m dibuilder file_di m_di in
+  let () = test_bbinstr fty f fun_di file_di dibuilder in
   let () = test_global_variable_expression dibuilder file_di m_di in
   let () = test_variables f dibuilder file_di fun_di in
   let () = test_types dibuilder file_di m_di in

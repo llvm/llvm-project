@@ -1370,6 +1370,8 @@ external build_empty_phi : lltype -> string -> llbuilder -> llvalue
                          = "llvm_build_empty_phi"
 external build_call : llvalue -> llvalue array -> string -> llbuilder -> llvalue
                     = "llvm_build_call"
+external build_call2 : lltype -> llvalue -> llvalue array -> string ->
+                       llbuilder -> llvalue = "llvm_build_call2"
 external build_select : llvalue -> llvalue -> llvalue -> string -> llbuilder ->
                         llvalue = "llvm_build_select"
 external build_va_arg : llvalue -> lltype -> string -> llbuilder -> llvalue
