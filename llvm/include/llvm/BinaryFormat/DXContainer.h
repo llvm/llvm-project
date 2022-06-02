@@ -13,6 +13,7 @@
 #ifndef LLVM_BINARYFORMAT_DXCONTAINER_H
 #define LLVM_BINARYFORMAT_DXCONTAINER_H
 
+#include "llvm/ADT/StringRef.h"
 #include "llvm/Support/SwapByteOrder.h"
 
 #include <stdint.h>
@@ -84,6 +85,9 @@ struct PartHeader {
   uint32_t Size;
 
   void swapBytes() { sys::swapByteOrder(Size); }
+  StringRef getName() const {
+    return StringRef(reinterpret_cast<const char *>(&Name[0]), 4);
+  }
   // Structure is followed directly by part data: uint8_t PartData[PartSize].
 };
 
