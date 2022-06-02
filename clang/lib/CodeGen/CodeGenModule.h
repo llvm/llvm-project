@@ -798,7 +798,6 @@ public:
 
   void setDSOLocal(llvm::GlobalValue *GV) const;
 
-  bool shouldMapVisibilityToDLLExport(const NamedDecl *D) const;
   void setDLLImportDLLExport(llvm::GlobalValue *GV, GlobalDecl D) const;
   void setDLLImportDLLExport(llvm::GlobalValue *GV, const NamedDecl *D) const;
   /// Set visibility, dllimport/dllexport and dso_local.

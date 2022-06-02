@@ -3680,12 +3680,12 @@ llvm::Constant *ItaniumRTTIBuilder::BuildTypeInfo(QualType Ty) {
 
   llvm::GlobalValue::DLLStorageClassTypes DLLStorageClass =
       llvm::GlobalValue::DefaultStorageClass;
-  if (auto RD = Ty->getAsCXXRecordDecl()) {
-    if ((CGM.getTriple().isWindowsItaniumEnvironment() &&
-         RD->hasAttr<DLLExportAttr>()) ||
-        CGM.shouldMapVisibilityToDLLExport(RD))
+  if (CGM.getTriple().isWindowsItaniumEnvironment()) {
+    auto RD = Ty->getAsCXXRecordDecl();
+    if (RD && RD->hasAttr<DLLExportAttr>())
       DLLStorageClass = llvm::GlobalValue::DLLExportStorageClass;
   }
+
   return BuildTypeInfo(Ty, Linkage, llvmVisibility, DLLStorageClass);
 }
 
@@ -4168,9 +4168,9 @@ void ItaniumCXXABI::EmitFundamentalRTTIDescriptors(const CXXRecordDecl *RD) {
       getContext().Char32Ty
   };
   llvm::GlobalValue::DLLStorageClassTypes DLLStorageClass =
-      RD->hasAttr<DLLExportAttr>() || CGM.shouldMapVisibilityToDLLExport(RD)
-          ? llvm::GlobalValue::DLLExportStorageClass
-          : llvm::GlobalValue::DefaultStorageClass;
+      RD->hasAttr<DLLExportAttr>()
+      ? llvm::GlobalValue::DLLExportStorageClass
+      : llvm::GlobalValue::DefaultStorageClass;
   llvm::GlobalValue::VisibilityTypes Visibility =
       CodeGenModule::GetLLVMVisibility(RD->getVisibility());
   for (const QualType &FundamentalType : FundamentalTypes) {
