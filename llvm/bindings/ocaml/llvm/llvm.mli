@@ -1219,6 +1219,12 @@ val const_ashr : llvalue -> llvalue -> llvalue
     See the method [llvm::ConstantExpr::getGetElementPtr]. *)
 val const_gep : llvalue -> llvalue array -> llvalue
 
+(** [const_gep2 srcty pc indices] returns the constant [getElementPtr] of [pc]
+    with source element type [srcty] and the constant integers indices from the
+    array [indices].
+    See the method [llvm::ConstantExpr::getGetElementPtr]. *)
+val const_gep2 : lltype -> llvalue -> llvalue array -> llvalue
+
 (** [const_in_bounds_gep pc indices] returns the constant [getElementPtr] of [pc]
     with the constant integers indices from the array [indices].
     See the method [llvm::ConstantExpr::getInBoundsGetElementPtr]. *)
@@ -1564,6 +1570,10 @@ val set_externally_initialized : bool -> llvalue -> unit
     See the constructor for [llvm::GlobalAlias]. *)
 val add_alias : llmodule -> lltype -> llvalue -> string -> llvalue
 
+(** [add_alias m vt as a n] inserts an alias in the module [m] with the value
+    type [vt] the address space [as] the aliasee [a] with the name [n].
+    See the constructor for [llvm::GlobalAlias]. *)
+val add_alias2 : llmodule -> lltype -> int -> llvalue -> string -> llvalue
 
 (** {7 Operations on functions} *)
 
@@ -2150,6 +2160,13 @@ val add_destination : llvalue -> llbasicblock -> unit
 val build_invoke : llvalue -> llvalue array -> llbasicblock ->
                         llbasicblock -> string -> llbuilder -> llvalue
 
+(** [build_invoke2 fnty fn args tobb unwindbb name b] creates an
+    [%name = invoke %fn(args) to %tobb unwind %unwindbb]
+    instruction at the position specified by the instruction builder [b].
+    See the method [llvm::LLVMBuilder::CreateInvoke]. *)
+val build_invoke2 : lltype -> llvalue -> llvalue array -> llbasicblock ->
+                        llbasicblock -> string -> llbuilder -> llvalue
+
 (** [build_landingpad ty persfn numclauses name b] creates an
     [landingpad]
     instruction at the position specified by the instruction builder [b].
@@ -2390,6 +2407,12 @@ val build_array_alloca : lltype -> llvalue -> string -> llbuilder ->
     See the method [llvm::LLVMBuilder::CreateLoad]. *)
 val build_load : llvalue -> string -> llbuilder -> llvalue
 
+(** [build_load2 ty v name b] creates a
+    [%name = load %ty, %v]
+    instruction at the position specified by the instruction builder [b].
+    See the method [llvm::LLVMBuilder::CreateLoad]. *)
+val build_load2 : lltype -> llvalue -> string -> llbuilder -> llvalue
+
 (** [build_store v p b] creates a
     [store %v, %p]
     instruction at the position specified by the instruction builder [b].
@@ -2410,6 +2433,13 @@ val build_atomicrmw : AtomicRMWBinOp.t -> llvalue -> llvalue ->
     See the method [llvm::LLVMBuilder::CreateGetElementPtr]. *)
 val build_gep : llvalue -> llvalue array -> string -> llbuilder -> llvalue
 
+(** [build_gep2 srcty p indices name b] creates a
+    [%name = getelementptr srcty, %p, indices...]
+    instruction at the position specified by the instruction builder [b].
+    See the method [llvm::LLVMBuilder::CreateGetElementPtr]. *)
+val build_gep2 : lltype -> llvalue -> llvalue array -> string -> llbuilder ->
+                       llvalue
+
 (** [build_in_bounds_gep p indices name b] creates a
     [%name = gelementptr inbounds %p, indices...]
     instruction at the position specified by the instruction builder [b].
@@ -2417,11 +2447,25 @@ val build_gep : llvalue -> llvalue array -> string -> llbuilder -> llvalue
 val build_in_bounds_gep : llvalue -> llvalue array -> string -> llbuilder ->
                                llvalue
 
+(** [build_in_bounds_gep2 srcty p indices name b] creates a
+    [%name = gelementptr inbounds srcty, %p, indices...]
+    instruction at the position specified by the instruction builder [b].
+    See the method [llvm::LLVMBuilder::CreateInBoundsGetElementPtr]. *)
+val build_in_bounds_gep2 : lltype -> llvalue -> llvalue array -> string ->
+                                llbuilder -> llvalue
+
 (** [build_struct_gep p idx name b] creates a
     [%name = getelementptr %p, 0, idx]
     instruction at the position specified by the instruction builder [b].
     See the method [llvm::LLVMBuilder::CreateStructGetElementPtr]. *)
 val build_struct_gep : llvalue -> int -> string -> llbuilder ->
+                            llvalue
+
+(** [build_struct_gep2 srcty p idx name b] creates a
+    [%name = getelementptr srcty, %p, 0, idx]
+    instruction at the position specified by the instruction builder [b].
+    See the method [llvm::LLVMBuilder::CreateStructGetElementPtr]. *)
+val build_struct_gep2 : lltype -> llvalue -> int -> string -> llbuilder ->
                             llvalue
 
 (** [build_global_string str name b] creates a series of instructions that adds
@@ -2655,6 +2699,13 @@ val build_is_not_null : llvalue -> string -> llbuilder -> llvalue
     instruction builder [b].
     See the method [llvm::LLVMBuilder::CreatePtrDiff]. *)
 val build_ptrdiff : llvalue -> llvalue -> string -> llbuilder -> llvalue
+
+(** [build_ptrdiff2 elemty lhs rhs name b] creates a series of instructions
+    that measure the difference between two pointer values in multiples of
+    [elemty] at the position specified by the instruction builder [b].
+    See the method [llvm::LLVMBuilder::CreatePtrDiff]. *)
+val build_ptrdiff2 : lltype -> llvalue -> llvalue -> string -> llbuilder ->
+                     llvalue
 
 (** [build_freeze x name b] creates a
     [%name = freeze %x]
