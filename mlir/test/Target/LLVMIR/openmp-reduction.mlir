@@ -46,15 +46,15 @@ llvm.func @simple_reduction(%lb : i64, %ub : i64, %step : i64) {
 
 // Private reduction variable and its initialization.
 // CHECK: %[[PRIVATE:.+]] = alloca float
-// CHECK: store float 0.000000e+00, float* %[[PRIVATE]]
+// CHECK: store float 0.000000e+00, ptr %[[PRIVATE]]
 
 // Call to the reduction function.
 // CHECK: call i32 @__kmpc_reduce
 // CHECK-SAME: @[[REDFUNC:[A-Za-z_.][A-Za-z0-9_.]*]]
 
 // Atomic reduction.
-// CHECK: %[[PARTIAL:.+]] = load float, float* %[[PRIVATE]]
-// CHECK: atomicrmw fadd float* %{{.*}}, float %[[PARTIAL]]
+// CHECK: %[[PARTIAL:.+]] = load float, ptr %[[PRIVATE]]
+// CHECK: atomicrmw fadd ptr %{{.*}}, float %[[PARTIAL]]
 
 // Non-atomic reduction:
 // CHECK: fadd float
@@ -66,9 +66,9 @@ llvm.func @simple_reduction(%lb : i64, %ub : i64, %step : i64) {
 
 // Update of the private variable using the reduction region
 // (the body block currently comes after all the other blocks).
-// CHECK: %[[PARTIAL:.+]] = load float, float* %[[PRIVATE]]
+// CHECK: %[[PARTIAL:.+]] = load float, ptr %[[PRIVATE]]
 // CHECK: %[[UPDATED:.+]] = fadd float %[[PARTIAL]], 2.000000e+00
-// CHECK: store float %[[UPDATED]], float* %[[PRIVATE]]
+// CHECK: store float %[[UPDATED]], ptr %[[PRIVATE]]
 
 // Reduction function.
 // CHECK: define internal void @[[REDFUNC]]
@@ -125,18 +125,18 @@ llvm.func @reuse_declaration(%lb : i64, %ub : i64, %step : i64) {
 // Private reduction variable and its initialization.
 // CHECK: %[[PRIVATE1:.+]] = alloca float
 // CHECK: %[[PRIVATE2:.+]] = alloca float
-// CHECK: store float 0.000000e+00, float* %[[PRIVATE1]]
-// CHECK: store float 0.000000e+00, float* %[[PRIVATE2]]
+// CHECK: store float 0.000000e+00, ptr %[[PRIVATE1]]
+// CHECK: store float 0.000000e+00, ptr %[[PRIVATE2]]
 
 // Call to the reduction function.
 // CHECK: call i32 @__kmpc_reduce
 // CHECK-SAME: @[[REDFUNC:[A-Za-z_.][A-Za-z0-9_.]*]]
 
 // Atomic reduction.
-// CHECK: %[[PARTIAL1:.+]] = load float, float* %[[PRIVATE1]]
-// CHECK: atomicrmw fadd float* %{{.*}}, float %[[PARTIAL1]]
-// CHECK: %[[PARTIAL2:.+]] = load float, float* %[[PRIVATE2]]
-// CHECK: atomicrmw fadd float* %{{.*}}, float %[[PARTIAL2]]
+// CHECK: %[[PARTIAL1:.+]] = load float, ptr %[[PRIVATE1]]
+// CHECK: atomicrmw fadd ptr %{{.*}}, float %[[PARTIAL1]]
+// CHECK: %[[PARTIAL2:.+]] = load float, ptr %[[PRIVATE2]]
+// CHECK: atomicrmw fadd ptr %{{.*}}, float %[[PARTIAL2]]
 
 // Non-atomic reduction:
 // CHECK: fadd float
@@ -149,12 +149,12 @@ llvm.func @reuse_declaration(%lb : i64, %ub : i64, %step : i64) {
 
 // Update of the private variable using the reduction region
 // (the body block currently comes after all the other blocks).
-// CHECK: %[[PARTIAL1:.+]] = load float, float* %[[PRIVATE1]]
+// CHECK: %[[PARTIAL1:.+]] = load float, ptr %[[PRIVATE1]]
 // CHECK: %[[UPDATED1:.+]] = fadd float %[[PARTIAL1]], 2.000000e+00
-// CHECK: store float %[[UPDATED1]], float* %[[PRIVATE1]]
-// CHECK: %[[PARTIAL2:.+]] = load float, float* %[[PRIVATE2]]
+// CHECK: store float %[[UPDATED1]], ptr %[[PRIVATE1]]
+// CHECK: %[[PARTIAL2:.+]] = load float, ptr %[[PRIVATE2]]
 // CHECK: %[[UPDATED2:.+]] = fadd float %[[PARTIAL2]], 2.000000e+00
-// CHECK: store float %[[UPDATED2]], float* %[[PRIVATE2]]
+// CHECK: store float %[[UPDATED2]], ptr %[[PRIVATE2]]
 
 // Reduction function.
 // CHECK: define internal void @[[REDFUNC]]
@@ -210,18 +210,18 @@ llvm.func @missing_omp_reduction(%lb : i64, %ub : i64, %step : i64) {
 // Private reduction variable and its initialization.
 // CHECK: %[[PRIVATE1:.+]] = alloca float
 // CHECK: %[[PRIVATE2:.+]] = alloca float
-// CHECK: store float 0.000000e+00, float* %[[PRIVATE1]]
-// CHECK: store float 0.000000e+00, float* %[[PRIVATE2]]
+// CHECK: store float 0.000000e+00, ptr %[[PRIVATE1]]
+// CHECK: store float 0.000000e+00, ptr %[[PRIVATE2]]
 
 // Call to the reduction function.
 // CHECK: call i32 @__kmpc_reduce
 // CHECK-SAME: @[[REDFUNC:[A-Za-z_.][A-Za-z0-9_.]*]]
 
 // Atomic reduction.
-// CHECK: %[[PARTIAL1:.+]] = load float, float* %[[PRIVATE1]]
-// CHECK: atomicrmw fadd float* %{{.*}}, float %[[PARTIAL1]]
-// CHECK: %[[PARTIAL2:.+]] = load float, float* %[[PRIVATE2]]
-// CHECK: atomicrmw fadd float* %{{.*}}, float %[[PARTIAL2]]
+// CHECK: %[[PARTIAL1:.+]] = load float, ptr %[[PRIVATE1]]
+// CHECK: atomicrmw fadd ptr %{{.*}}, float %[[PARTIAL1]]
+// CHECK: %[[PARTIAL2:.+]] = load float, ptr %[[PRIVATE2]]
+// CHECK: atomicrmw fadd ptr %{{.*}}, float %[[PARTIAL2]]
 
 // Non-atomic reduction:
 // CHECK: fadd float
@@ -234,10 +234,10 @@ llvm.func @missing_omp_reduction(%lb : i64, %ub : i64, %step : i64) {
 
 // Update of the private variable using the reduction region
 // (the body block currently comes after all the other blocks).
-// CHECK: %[[PARTIAL1:.+]] = load float, float* %[[PRIVATE1]]
+// CHECK: %[[PARTIAL1:.+]] = load float, ptr %[[PRIVATE1]]
 // CHECK: %[[UPDATED1:.+]] = fadd float %[[PARTIAL1]], 2.000000e+00
-// CHECK: store float %[[UPDATED1]], float* %[[PRIVATE1]]
-// CHECK-NOT: %{{.*}} = load float, float* %[[PRIVATE2]]
+// CHECK: store float %[[UPDATED1]], ptr %[[PRIVATE1]]
+// CHECK-NOT: %{{.*}} = load float, ptr %[[PRIVATE2]]
 // CHECK-NOT: %{{.*}} = fadd float %[[PARTIAL2]], 2.000000e+00
 
 // Reduction function.
@@ -293,15 +293,15 @@ llvm.func @double_reference(%lb : i64, %ub : i64, %step : i64) {
 
 // Private reduction variable and its initialization.
 // CHECK: %[[PRIVATE:.+]] = alloca float
-// CHECK: store float 0.000000e+00, float* %[[PRIVATE]]
+// CHECK: store float 0.000000e+00, ptr %[[PRIVATE]]
 
 // Call to the reduction function.
 // CHECK: call i32 @__kmpc_reduce
 // CHECK-SAME: @[[REDFUNC:[A-Za-z_.][A-Za-z0-9_.]*]]
 
 // Atomic reduction.
-// CHECK: %[[PARTIAL:.+]] = load float, float* %[[PRIVATE]]
-// CHECK: atomicrmw fadd float* %{{.*}}, float %[[PARTIAL]]
+// CHECK: %[[PARTIAL:.+]] = load float, ptr %[[PRIVATE]]
+// CHECK: atomicrmw fadd ptr %{{.*}}, float %[[PARTIAL]]
 
 // Non-atomic reduction:
 // CHECK: fadd float
@@ -313,12 +313,12 @@ llvm.func @double_reference(%lb : i64, %ub : i64, %step : i64) {
 
 // Update of the private variable using the reduction region
 // (the body block currently comes after all the other blocks).
-// CHECK: %[[PARTIAL:.+]] = load float, float* %[[PRIVATE]]
+// CHECK: %[[PARTIAL:.+]] = load float, ptr %[[PRIVATE]]
 // CHECK: %[[UPDATED:.+]] = fadd float %[[PARTIAL]], 2.000000e+00
-// CHECK: store float %[[UPDATED]], float* %[[PRIVATE]]
-// CHECK: %[[PARTIAL:.+]] = load float, float* %[[PRIVATE]]
+// CHECK: store float %[[UPDATED]], ptr %[[PRIVATE]]
+// CHECK: %[[PARTIAL:.+]] = load float, ptr %[[PRIVATE]]
 // CHECK: %[[UPDATED:.+]] = fadd float %[[PARTIAL]], 2.000000e+00
-// CHECK: store float %[[UPDATED]], float* %[[PRIVATE]]
+// CHECK: store float %[[UPDATED]], ptr %[[PRIVATE]]
 
 // Reduction function.
 // CHECK: define internal void @[[REDFUNC]]
@@ -384,8 +384,8 @@ llvm.func @no_atomic(%lb : i64, %ub : i64, %step : i64) {
 // Private reduction variable and its initialization.
 // CHECK: %[[PRIVATE1:.+]] = alloca float
 // CHECK: %[[PRIVATE2:.+]] = alloca float
-// CHECK: store float 0.000000e+00, float* %[[PRIVATE1]]
-// CHECK: store float 1.000000e+00, float* %[[PRIVATE2]]
+// CHECK: store float 0.000000e+00, ptr %[[PRIVATE1]]
+// CHECK: store float 1.000000e+00, ptr %[[PRIVATE2]]
 
 // Call to the reduction function.
 // CHECK: call i32 @__kmpc_reduce
@@ -405,12 +405,12 @@ llvm.func @no_atomic(%lb : i64, %ub : i64, %step : i64) {
 
 // Update of the private variable using the reduction region
 // (the body block currently comes after all the other blocks).
-// CHECK: %[[PARTIAL1:.+]] = load float, float* %[[PRIVATE1]]
+// CHECK: %[[PARTIAL1:.+]] = load float, ptr %[[PRIVATE1]]
 // CHECK: %[[UPDATED1:.+]] = fadd float %[[PARTIAL1]], 2.000000e+00
-// CHECK: store float %[[UPDATED1]], float* %[[PRIVATE1]]
-// CHECK: %[[PARTIAL2:.+]] = load float, float* %[[PRIVATE2]]
+// CHECK: store float %[[UPDATED1]], ptr %[[PRIVATE1]]
+// CHECK: %[[PARTIAL2:.+]] = load float, ptr %[[PRIVATE2]]
 // CHECK: %[[UPDATED2:.+]] = fmul float %[[PARTIAL2]], 2.000000e+00
-// CHECK: store float %[[UPDATED2]], float* %[[PRIVATE2]]
+// CHECK: store float %[[UPDATED2]], ptr %[[PRIVATE2]]
 
 // Reduction function.
 // CHECK: define internal void @[[REDFUNC]]
