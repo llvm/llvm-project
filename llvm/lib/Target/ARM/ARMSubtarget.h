@@ -447,6 +447,8 @@ public:
            isThumb1Only();
   }
 
+  bool splitFramePointerPush(const MachineFunction &MF) const;
+
   bool useStride4VFPs() const;
 
   bool useMovt() const;
