@@ -1522,6 +1522,11 @@ const Attr *CallExpr::getUnusedResultAttr(const ASTContext &Ctx) const {
     if (const auto *A = TD->getAttr<WarnUnusedResultAttr>())
       return A;
 
+  for (const auto *TD = getCallReturnType(Ctx)->getAs<TypedefType>(); TD;
+       TD = TD->desugar()->getAs<TypedefType>())
+    if (const auto *A = TD->getDecl()->getAttr<WarnUnusedResultAttr>())
+      return A;
+
   // Otherwise, see if the callee is marked nodiscard and return that attribute
   // instead.
   const Decl *D = getCalleeDecl();

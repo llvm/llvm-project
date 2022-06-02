@@ -254,3 +254,35 @@ __attribute__((warn_unused_result)) bool (*h)();
 
 void i([[nodiscard]] bool (*fp)()); // expected-warning {{'nodiscard' attribute only applies to functions, classes, or enumerations}}
 }
+
+namespace unused_typedef_result {
+[[clang::warn_unused_result]] typedef void *a;
+typedef a indirect;
+a af1();
+indirect indirectf1();
+void af2() {
+  af1(); // expected-warning {{ignoring return value}}
+  void *(*a1)();
+  a1(); // no warning
+  a (*a2)();
+  a2(); // expected-warning {{ignoring return value}}
+  indirectf1(); // expected-warning {{ignoring return value}}
+}
+[[nodiscard]] typedef void *b1; // expected-warning {{'[[nodiscard]]' attribute ignored when applied to a typedef; consider using '__attribute__((warn_unused_result))' or '[[clang::warn_unused_result]]' instead}}
+[[gnu::warn_unused_result]] typedef void *b2; // expected-warning {{'[[gnu::warn_unused_result]]' attribute ignored when applied to a typedef; consider using '__attribute__((warn_unused_result))' or '[[clang::warn_unused_result]]' instead}}
+b1 b1f1();
+b2 b2f1();
+void bf2() {
+  b1f1(); // no warning
+  b2f1(); // no warning
+}
+__attribute__((warn_unused_result)) typedef void *c;
+c cf1();
+void cf2() {
+  cf1(); // expected-warning {{ignoring return value}}
+  void *(*c1)();
+  c1();
+  c (*c2)();
+  c2(); // expected-warning {{ignoring return value}}
+}
+}
