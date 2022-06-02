@@ -983,8 +983,13 @@ private:
     mlir::Block *exitBlock = doStmtEval.parentConstruct->constructExit->block;
     IncrementLoopNestInfo incrementLoopNestInfo;
     const Fortran::parser::ScalarLogicalExpr *whileCondition = nullptr;
-    if ((whileCondition = std::get_if<Fortran::parser::ScalarLogicalExpr>(
-             &loopControl->u))) {
+    bool infiniteLoop = !loopControl.has_value();
+    if (infiniteLoop) {
+      assert(unstructuredContext && "infinite loop must be unstructured");
+      startBlock(headerBlock);
+    } else if ((whileCondition =
+                    std::get_if<Fortran::parser::ScalarLogicalExpr>(
+                        &loopControl->u))) {
       assert(unstructuredContext && "while loop must be unstructured");
       maybeStartBlock(preheaderBlock); // no block or empty block
       startBlock(headerBlock);
@@ -1008,9 +1013,8 @@ private:
       TODO(toLocation(), "infinite/unstructured loop/concurrent loop");
     }
 
-    // Increment loop begin code.  (TODO: Infinite/while code was already
-    // generated.)
-    if (!whileCondition)
+    // Increment loop begin code.  (Infinite/while code was already generated.)
+    if (!infiniteLoop && !whileCondition)
       genFIRIncrementLoopBegin(incrementLoopNestInfo);
 
     // Loop body code - NonLabelDoStmt and EndDoStmt code is generated here.
@@ -1018,8 +1022,8 @@ private:
     for (Fortran::lower::pft::Evaluation &e : eval.getNestedEvaluations())
       genFIR(e, unstructuredContext);
 
-    // Loop end code. (TODO: infinite loop)
-    if (whileCondition)
+    // Loop end code.
+    if (infiniteLoop || whileCondition)
       genFIRBranch(headerBlock);
     else
       genFIRIncrementLoopEnd(incrementLoopNestInfo);
