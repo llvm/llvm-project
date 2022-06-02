@@ -85,6 +85,7 @@ TEST(GlobalTest, CreateAddressSpace) {
 
   // Make sure the address space isn't dropped when returning this.
   Constant *DummyCast1 = M->getOrInsertGlobal("dummy_cast", Int8Ty);
+  EXPECT_EQ(DummyCast0, DummyCast1);
   EXPECT_EQ(1u, DummyCast1->getType()->getPointerAddressSpace());
 }
 
