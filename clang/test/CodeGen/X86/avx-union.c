@@ -5,6 +5,7 @@
 // RUN: %clang_cc1 -no-opaque-pointers -w -ffreestanding -triple x86_64-linux-gnu -target-feature +avx -fclang-abi-compat=10.0 -emit-llvm -o - %s | FileCheck %s --check-prefixes=CHECK-LEGACY,AVX
 // RUN: %clang_cc1 -no-opaque-pointers -w -ffreestanding -triple x86_64-linux-gnu -target-feature +avx512f -fclang-abi-compat=11.0 -emit-llvm -o - %s | FileCheck %s --check-prefixes=CHECK-LEGACY,AVX512-LEGACY
 // RUN: %clang_cc1 -no-opaque-pointers -w -ffreestanding -triple x86_64-scei-ps4 -target-feature +avx -emit-llvm -o - %s | FileCheck %s --check-prefix=CHECK-LEGACY
+// RUN: %clang_cc1 -no-opaque-pointers -w -ffreestanding -triple x86_64-sie-ps5  -target-feature +avx -emit-llvm -o - %s | FileCheck %s --check-prefix=CHECK-LEGACY
 
 // This tests verifies that a union parameter should pass by a vector regitster whose first eightbyte is SSE and the other eightbytes are SSEUP.
 
