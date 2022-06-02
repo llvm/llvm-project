@@ -585,13 +585,6 @@ endmacro(add_compiler_rt_script src name)
 #                   CFLAGS <list of compile flags>
 #                   USE_TOOLCHAIN)
 macro(add_custom_libcxx name prefix)
-  if(NOT COMPILER_RT_LIBCXX_PATH)
-    message(FATAL_ERROR "libcxx not found!")
-  endif()
-  if(NOT COMPILER_RT_LIBCXXABI_PATH)
-    message(FATAL_ERROR "libcxxabi not found!")
-  endif()
-
   cmake_parse_arguments(LIBCXX "USE_TOOLCHAIN" "" "DEPS;CFLAGS;CMAKE_ARGS" ${ARGN})
 
   if(LIBCXX_USE_TOOLCHAIN)
