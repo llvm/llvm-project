@@ -9,6 +9,7 @@
 #ifndef LLVM_MC_MCWINEH_H
 #define LLVM_MC_MCWINEH_H
 
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/MapVector.h"
 #include <vector>
 
@@ -50,12 +51,14 @@ struct FrameInfo {
   bool HandlesUnwind = false;
   bool HandlesExceptions = false;
   bool EmitAttempted = false;
+  bool Fragment = false;
 
   int LastFrameInst = -1;
   const FrameInfo *ChainedParent = nullptr;
   std::vector<Instruction> Instructions;
   struct Epilog {
     std::vector<Instruction> Instructions;
+    unsigned Condition;
   };
   MapVector<MCSymbol *, Epilog> EpilogMap;
 
