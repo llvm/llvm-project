@@ -1036,6 +1036,92 @@ let Predicates = [HasSVE] in {
   defm GLDFF1W_D  : sve_mem_64b_gld_sv_32_scaled<0b1011, "ldff1w",  AArch64ldff1_gather_sxtw_scaled_z,  AArch64ldff1_gather_uxtw_scaled_z,  ZPR64ExtSXTW32, ZPR64ExtUXTW32, nxv2i32>;
   defm GLD1D      : sve_mem_64b_gld_sv_32_scaled<0b1110, "ld1d",    AArch64ld1_gather_sxtw_scaled_z,    AArch64ld1_gather_uxtw_scaled_z,    ZPR64ExtSXTW64, ZPR64ExtUXTW64, nxv2i64>;
   defm GLDFF1D    : sve_mem_64b_gld_sv_32_scaled<0b1111, "ldff1d",  AArch64ldff1_gather_sxtw_scaled_z,  AArch64ldff1_gather_uxtw_scaled_z,  ZPR64ExtSXTW64, ZPR64ExtUXTW64, nxv2i64>;
+
+  multiclass sve_masked_gather_x2_scaled<ValueType Ty, SDPatternOperator Load, string Inst> {
+    // base + vector of scaled offsets
+    def : Pat<(Ty (Load (SVEDup0Undef), (nxv2i1 PPR:$gp), GPR64:$base, (nxv2i64 ZPR:$offs))),
+              (!cast<Instruction>(Inst # _SCALED) PPR:$gp, GPR64:$base, ZPR:$offs)>;
+    // base + vector of signed 32bit scaled offsets
+    def : Pat<(Ty (Load (SVEDup0Undef), (nxv2i1 PPR:$gp), GPR64:$base, (sext_inreg (nxv2i64 ZPR:$offs), nxv2i32))),
+              (!cast<Instruction>(Inst # _SXTW_SCALED) PPR:$gp, GPR64:$base, ZPR:$offs)>;
+    // base + vector of unsigned 32bit scaled offsets
+    def : Pat<(Ty (Load (SVEDup0Undef), (nxv2i1 PPR:$gp), GPR64:$base, (and (nxv2i64 ZPR:$offs), (nxv2i64 (AArch64dup (i64 0xFFFFFFFF)))))),
+              (!cast<Instruction>(Inst # _UXTW_SCALED) PPR:$gp, GPR64:$base, ZPR:$offs)>;
+  }
+
+  multiclass sve_masked_gather_x2_unscaled<ValueType Ty, SDPatternOperator Load, string Inst, Operand ImmTy> {
+    // vector of pointers + immediate offset (includes zero)
+    def : Pat<(Ty (Load (SVEDup0Undef), (nxv2i1 PPR:$gp), (i64 ImmTy:$imm), (nxv2i64 ZPR:$ptrs))),
+              (!cast<Instruction>(Inst # _IMM) PPR:$gp, ZPR:$ptrs, ImmTy:$imm)>;
+    // base + vector of offsets
+    def : Pat<(Ty (Load (SVEDup0Undef), (nxv2i1 PPR:$gp), GPR64:$base, (nxv2i64 ZPR:$offs))),
+              (!cast<Instruction>(Inst) PPR:$gp, GPR64:$base, ZPR:$offs)>;
+    // base + vector of signed 32bit offsets
+    def : Pat<(Ty (Load (SVEDup0Undef), (nxv2i1 PPR:$gp), GPR64:$base, (sext_inreg (nxv2i64 ZPR:$offs), nxv2i32))),
+              (!cast<Instruction>(Inst # _SXTW) PPR:$gp, GPR64:$base, ZPR:$offs)>;
+    // base + vector of unsigned 32bit offsets
+    def : Pat<(Ty (Load (SVEDup0Undef), (nxv2i1 PPR:$gp), GPR64:$base, (and (nxv2i64 ZPR:$offs), (nxv2i64 (AArch64dup (i64 0xFFFFFFFF)))))),
+              (!cast<Instruction>(Inst # _UXTW) PPR:$gp, GPR64:$base, ZPR:$offs)>;
+  }
+
+  multiclass sve_masked_gather_x4<ValueType Ty, SDPatternOperator Load, Instruction Inst> {
+    def : Pat<(Ty (Load (SVEDup0Undef), (nxv4i1 PPR:$gp), GPR64:$base, (nxv4i32 ZPR:$offs))),
+              (Inst PPR:$gp, GPR64:$base, ZPR:$offs)>;
+  }
+
+  defm : sve_masked_gather_x2_scaled<nxv2i64,  azext_masked_gather_i16_signed_scaled, "GLD1H_D">;
+  defm : sve_masked_gather_x2_scaled<nxv2i64,  sext_masked_gather_i16_signed_scaled,  "GLD1SH_D">;
+  defm : sve_masked_gather_x2_scaled<nxv2i64,  azext_masked_gather_i32_signed_scaled, "GLD1W_D">;
+  defm : sve_masked_gather_x2_scaled<nxv2i64,  sext_masked_gather_i32_signed_scaled,  "GLD1SW_D">;
+  defm : sve_masked_gather_x2_scaled<nxv2i64,  nonext_masked_gather_signed_scaled,    "GLD1D">;
+  defm : sve_masked_gather_x2_scaled<nxv2f16,  nonext_masked_gather_signed_scaled,    "GLD1H_D">;
+  defm : sve_masked_gather_x2_scaled<nxv2f32,  nonext_masked_gather_signed_scaled,    "GLD1W_D">;
+  defm : sve_masked_gather_x2_scaled<nxv2f64,  nonext_masked_gather_signed_scaled,    "GLD1D">;
+  defm : sve_masked_gather_x2_scaled<nxv2bf16, nonext_masked_gather_signed_scaled,    "GLD1H_D">;
+
+  defm : sve_masked_gather_x2_unscaled<nxv2i64,  azext_masked_gather_i8_signed_unscaled,  "GLD1B_D" , imm0_31>;
+  defm : sve_masked_gather_x2_unscaled<nxv2i64,  sext_masked_gather_i8_signed_unscaled,   "GLD1SB_D", imm0_31>;
+  defm : sve_masked_gather_x2_unscaled<nxv2i64,  azext_masked_gather_i16_signed_unscaled, "GLD1H_D",  uimm5s2>;
+  defm : sve_masked_gather_x2_unscaled<nxv2i64,  sext_masked_gather_i16_signed_unscaled,  "GLD1SH_D", uimm5s2>;
+  defm : sve_masked_gather_x2_unscaled<nxv2i64,  azext_masked_gather_i32_signed_unscaled, "GLD1W_D",  uimm5s4>;
+  defm : sve_masked_gather_x2_unscaled<nxv2i64,  sext_masked_gather_i32_signed_unscaled,  "GLD1SW_D", uimm5s4>;
+  defm : sve_masked_gather_x2_unscaled<nxv2i64,  nonext_masked_gather_signed_unscaled,    "GLD1D",    uimm5s8>;
+  defm : sve_masked_gather_x2_unscaled<nxv2f16,  nonext_masked_gather_signed_unscaled,    "GLD1H_D",  uimm5s2>;
+  defm : sve_masked_gather_x2_unscaled<nxv2f32,  nonext_masked_gather_signed_unscaled,    "GLD1W_D",  uimm5s4>;
+  defm : sve_masked_gather_x2_unscaled<nxv2f64,  nonext_masked_gather_signed_unscaled,    "GLD1D",    uimm5s8>;
+  defm : sve_masked_gather_x2_unscaled<nxv2bf16, nonext_masked_gather_signed_unscaled,    "GLD1H_D",  uimm5s2>;
+
+  defm : sve_masked_gather_x4<nxv4i32,  azext_masked_gather_i16_signed_scaled, GLD1H_S_SXTW_SCALED>;
+  defm : sve_masked_gather_x4<nxv4i32,  sext_masked_gather_i16_signed_scaled,  GLD1SH_S_SXTW_SCALED>;
+  defm : sve_masked_gather_x4<nxv4i32,  nonext_masked_gather_signed_scaled,    GLD1W_SXTW_SCALED>;
+  defm : sve_masked_gather_x4<nxv4f16,  nonext_masked_gather_signed_scaled,    GLD1H_S_SXTW_SCALED>;
+  defm : sve_masked_gather_x4<nxv4f32,  nonext_masked_gather_signed_scaled,    GLD1W_SXTW_SCALED>;
+  defm : sve_masked_gather_x4<nxv4bf16, nonext_masked_gather_signed_scaled,    GLD1H_S_SXTW_SCALED>;
+
+  defm : sve_masked_gather_x4<nxv4i32,  azext_masked_gather_i8_signed_unscaled,  GLD1B_S_SXTW>;
+  defm : sve_masked_gather_x4<nxv4i32,  sext_masked_gather_i8_signed_unscaled,   GLD1SB_S_SXTW>;
+  defm : sve_masked_gather_x4<nxv4i32,  azext_masked_gather_i16_signed_unscaled, GLD1H_S_SXTW>;
+  defm : sve_masked_gather_x4<nxv4i32,  sext_masked_gather_i16_signed_unscaled,  GLD1SH_S_SXTW>;
+  defm : sve_masked_gather_x4<nxv4i32,  nonext_masked_gather_signed_unscaled,    GLD1W_SXTW>;
+  defm : sve_masked_gather_x4<nxv4f16,  nonext_masked_gather_signed_unscaled,    GLD1H_S_SXTW>;
+  defm : sve_masked_gather_x4<nxv4f32,  nonext_masked_gather_signed_unscaled,    GLD1W_SXTW>;
+  defm : sve_masked_gather_x4<nxv4bf16, nonext_masked_gather_signed_unscaled,    GLD1H_S_SXTW>;
+
+  defm : sve_masked_gather_x4<nxv4i32,  azext_masked_gather_i16_unsigned_scaled, GLD1H_S_UXTW_SCALED>;
+  defm : sve_masked_gather_x4<nxv4i32,  sext_masked_gather_i16_unsigned_scaled,  GLD1SH_S_UXTW_SCALED>;
+  defm : sve_masked_gather_x4<nxv4i32,  nonext_masked_gather_unsigned_scaled,    GLD1W_UXTW_SCALED>;
+  defm : sve_masked_gather_x4<nxv4f16,  nonext_masked_gather_unsigned_scaled,    GLD1H_S_UXTW_SCALED>;
+  defm : sve_masked_gather_x4<nxv4f32,  nonext_masked_gather_unsigned_scaled,    GLD1W_UXTW_SCALED>;
+  defm : sve_masked_gather_x4<nxv4bf16, nonext_masked_gather_unsigned_scaled,    GLD1H_S_UXTW_SCALED>;
+
+  defm : sve_masked_gather_x4<nxv4i32,  azext_masked_gather_i8_unsigned_unscaled,  GLD1B_S_UXTW>;
+  defm : sve_masked_gather_x4<nxv4i32,  sext_masked_gather_i8_unsigned_unscaled,   GLD1SB_S_UXTW>;
+  defm : sve_masked_gather_x4<nxv4i32,  azext_masked_gather_i16_unsigned_unscaled, GLD1H_S_UXTW>;
+  defm : sve_masked_gather_x4<nxv4i32,  sext_masked_gather_i16_unsigned_unscaled,  GLD1SH_S_UXTW>;
+  defm : sve_masked_gather_x4<nxv4i32,  nonext_masked_gather_unsigned_unscaled,    GLD1W_UXTW>;
+  defm : sve_masked_gather_x4<nxv4f16,  nonext_masked_gather_unsigned_unscaled,    GLD1H_S_UXTW>;
+  defm : sve_masked_gather_x4<nxv4f32,  nonext_masked_gather_unsigned_unscaled,    GLD1W_UXTW>;
+  defm : sve_masked_gather_x4<nxv4bf16, nonext_masked_gather_unsigned_unscaled,    GLD1H_S_UXTW>;
 } // End HasSVE
 
 let Predicates = [HasSVEorSME] in {
@@ -1126,6 +1212,81 @@ let Predicates = [HasSVE] in {
   defm SST1H_D : sve_mem_sst_sv_64_scaled<0b01, "st1h", AArch64st1_scatter_scaled, ZPR64ExtLSL16, nxv2i16>;
   defm SST1W_D : sve_mem_sst_sv_64_scaled<0b10, "st1w", AArch64st1_scatter_scaled, ZPR64ExtLSL32, nxv2i32>;
   defm SST1D   : sve_mem_sst_sv_64_scaled<0b11, "st1d", AArch64st1_scatter_scaled, ZPR64ExtLSL64, nxv2i64>;
+
+  multiclass sve_masked_scatter_x2_scaled<ValueType Ty, SDPatternOperator Store, string Inst> {
+    // base + vector of scaled offsets
+    def : Pat<(Store (Ty ZPR:$data), (nxv2i1 PPR:$gp), GPR64:$base, (nxv2i64 ZPR:$offs)),
+              (!cast<Instruction>(Inst # _SCALED) ZPR:$data, PPR:$gp, GPR64:$base, ZPR:$offs)>;
+    // base + vector of signed 32bit scaled offsets
+    def : Pat<(Store (Ty ZPR:$data), (nxv2i1 PPR:$gp), GPR64:$base, (sext_inreg (nxv2i64 ZPR:$offs), nxv2i32)),
+              (!cast<Instruction>(Inst # _SXTW_SCALED) ZPR:$data, PPR:$gp, GPR64:$base, ZPR:$offs)>;
+    // base + vector of unsigned 32bit scaled offsets
+    def : Pat<(Store (Ty ZPR:$data), (nxv2i1 PPR:$gp), GPR64:$base, (and (nxv2i64 ZPR:$offs), (nxv2i64 (AArch64dup (i64 0xFFFFFFFF))))),
+              (!cast<Instruction>(Inst # _UXTW_SCALED) ZPR:$data, PPR:$gp, GPR64:$base, ZPR:$offs)>;
+  }
+
+  multiclass sve_masked_scatter_x2_unscaled<ValueType Ty, SDPatternOperator Store, string Inst, Operand ImmTy> {
+    // vector of pointers + immediate offset (includes zero)
+    def : Pat<(Store (Ty ZPR:$data), (nxv2i1 PPR:$gp), (i64 ImmTy:$imm), (nxv2i64 ZPR:$ptrs)),
+              (!cast<Instruction>(Inst # _IMM) ZPR:$data, PPR:$gp, ZPR:$ptrs, ImmTy:$imm)>;
+    // base + vector of offsets
+    def : Pat<(Store (Ty ZPR:$data), (nxv2i1 PPR:$gp), GPR64:$base, (nxv2i64 ZPR:$offs)),
+              (!cast<Instruction>(Inst) ZPR:$data, PPR:$gp, GPR64:$base, ZPR:$offs)>;
+    // base + vector of signed 32bit offsets
+    def : Pat<(Store (Ty ZPR:$data), (nxv2i1 PPR:$gp), GPR64:$base, (sext_inreg (nxv2i64 ZPR:$offs), nxv2i32)),
+              (!cast<Instruction>(Inst # _SXTW) ZPR:$data, PPR:$gp, GPR64:$base, ZPR:$offs)>;
+    // base + vector of unsigned 32bit offsets
+    def : Pat<(Store (Ty ZPR:$data), (nxv2i1 PPR:$gp), GPR64:$base, (and (nxv2i64 ZPR:$offs), (nxv2i64 (AArch64dup (i64 0xFFFFFFFF))))),
+              (!cast<Instruction>(Inst # _UXTW) ZPR:$data, PPR:$gp, GPR64:$base, ZPR:$offs)>;
+  }
+
+  multiclass sve_masked_scatter_x4<ValueType Ty, SDPatternOperator Store, Instruction Inst> {
+    def : Pat<(Store (Ty ZPR:$data), (nxv4i1 PPR:$gp), GPR64:$base, (nxv4i32 ZPR:$offs)),
+              (Inst ZPR:$data, PPR:$gp, GPR64:$base, ZPR:$offs)>;
+  }
+
+  defm : sve_masked_scatter_x2_scaled<nxv2i64,  trunc_masked_scatter_i16_signed_scaled, "SST1H_D">;
+  defm : sve_masked_scatter_x2_scaled<nxv2i64,  trunc_masked_scatter_i32_signed_scaled, "SST1W_D">;
+  defm : sve_masked_scatter_x2_scaled<nxv2i64,  nontrunc_masked_scatter_signed_scaled,  "SST1D">;
+  defm : sve_masked_scatter_x2_scaled<nxv2f16,  nontrunc_masked_scatter_signed_scaled,  "SST1H_D">;
+  defm : sve_masked_scatter_x2_scaled<nxv2f32,  nontrunc_masked_scatter_signed_scaled,  "SST1W_D">;
+  defm : sve_masked_scatter_x2_scaled<nxv2f64,  nontrunc_masked_scatter_signed_scaled,  "SST1D">;
+  defm : sve_masked_scatter_x2_scaled<nxv2bf16, nontrunc_masked_scatter_signed_scaled,  "SST1H_D">;
+
+  defm : sve_masked_scatter_x2_unscaled<nxv2i64,  trunc_masked_scatter_i8_signed_unscaled,  "SST1B_D" , imm0_31>;
+  defm : sve_masked_scatter_x2_unscaled<nxv2i64,  trunc_masked_scatter_i16_signed_unscaled, "SST1H_D",  uimm5s2>;
+  defm : sve_masked_scatter_x2_unscaled<nxv2i64,  trunc_masked_scatter_i32_signed_unscaled, "SST1W_D",  uimm5s4>;
+  defm : sve_masked_scatter_x2_unscaled<nxv2i64,  nontrunc_masked_scatter_signed_unscaled,  "SST1D",    uimm5s8>;
+  defm : sve_masked_scatter_x2_unscaled<nxv2f16,  nontrunc_masked_scatter_signed_unscaled,  "SST1H_D",  uimm5s2>;
+  defm : sve_masked_scatter_x2_unscaled<nxv2f32,  nontrunc_masked_scatter_signed_unscaled,  "SST1W_D",  uimm5s4>;
+  defm : sve_masked_scatter_x2_unscaled<nxv2f64,  nontrunc_masked_scatter_signed_unscaled,  "SST1D",    uimm5s8>;
+  defm : sve_masked_scatter_x2_unscaled<nxv2bf16, nontrunc_masked_scatter_signed_unscaled,  "SST1H_D",  uimm5s2>;
+
+  defm : sve_masked_scatter_x4<nxv4i32,  trunc_masked_scatter_i16_signed_scaled, SST1H_S_SXTW_SCALED>;
+  defm : sve_masked_scatter_x4<nxv4i32,  nontrunc_masked_scatter_signed_scaled,  SST1W_SXTW_SCALED>;
+  defm : sve_masked_scatter_x4<nxv4f16,  nontrunc_masked_scatter_signed_scaled,  SST1H_S_SXTW_SCALED>;
+  defm : sve_masked_scatter_x4<nxv4f32,  nontrunc_masked_scatter_signed_scaled,  SST1W_SXTW_SCALED>;
+  defm : sve_masked_scatter_x4<nxv4bf16, nontrunc_masked_scatter_signed_scaled,  SST1H_S_SXTW_SCALED>;
+
+  defm : sve_masked_scatter_x4<nxv4i32,  trunc_masked_scatter_i8_signed_unscaled,  SST1B_S_SXTW>;
+  defm : sve_masked_scatter_x4<nxv4i32,  trunc_masked_scatter_i16_signed_unscaled, SST1H_S_SXTW>;
+  defm : sve_masked_scatter_x4<nxv4i32,  nontrunc_masked_scatter_signed_unscaled,  SST1W_SXTW>;
+  defm : sve_masked_scatter_x4<nxv4f16,  nontrunc_masked_scatter_signed_unscaled,  SST1H_S_SXTW>;
+  defm : sve_masked_scatter_x4<nxv4f32,  nontrunc_masked_scatter_signed_unscaled,  SST1W_SXTW>;
+  defm : sve_masked_scatter_x4<nxv4bf16, nontrunc_masked_scatter_signed_unscaled,  SST1H_S_SXTW>;
+
+  defm : sve_masked_scatter_x4<nxv4i32,  trunc_masked_scatter_i16_unsigned_scaled, SST1H_S_UXTW_SCALED>;
+  defm : sve_masked_scatter_x4<nxv4i32,  nontrunc_masked_scatter_unsigned_scaled,  SST1W_UXTW_SCALED>;
+  defm : sve_masked_scatter_x4<nxv4f16,  nontrunc_masked_scatter_unsigned_scaled,  SST1H_S_UXTW_SCALED>;
+  defm : sve_masked_scatter_x4<nxv4f32,  nontrunc_masked_scatter_unsigned_scaled,  SST1W_UXTW_SCALED>;
+  defm : sve_masked_scatter_x4<nxv4bf16, nontrunc_masked_scatter_unsigned_scaled,  SST1H_S_UXTW_SCALED>;
+
+  defm : sve_masked_scatter_x4<nxv4i32,  trunc_masked_scatter_i8_unsigned_unscaled,  SST1B_S_UXTW>;
+  defm : sve_masked_scatter_x4<nxv4i32,  trunc_masked_scatter_i16_unsigned_unscaled, SST1H_S_UXTW>;
+  defm : sve_masked_scatter_x4<nxv4i32,  nontrunc_masked_scatter_unsigned_unscaled,  SST1W_UXTW>;
+  defm : sve_masked_scatter_x4<nxv4f16,  nontrunc_masked_scatter_unsigned_unscaled,  SST1H_S_UXTW>;
+  defm : sve_masked_scatter_x4<nxv4f32,  nontrunc_masked_scatter_unsigned_unscaled,  SST1W_UXTW>;
+  defm : sve_masked_scatter_x4<nxv4bf16, nontrunc_masked_scatter_unsigned_unscaled,  SST1H_S_UXTW>;
 } // End HasSVE
 
 let Predicates = [HasSVEorSME] in {
