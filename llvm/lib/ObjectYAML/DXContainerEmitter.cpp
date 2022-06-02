@@ -96,11 +96,13 @@ void DXContainerWriter::writeHeader(raw_ostream &OS) {
   if (sys::IsBigEndianHost)
     Header.swapBytes();
   OS.write(reinterpret_cast<char *>(&Header), sizeof(Header));
-  for (auto &O : *ObjectFile.Header.PartOffsets)
-    if (sys::IsBigEndianHost)
+  SmallVector<uint32_t> Offsets(ObjectFile.Header.PartOffsets->begin(),
+                                ObjectFile.Header.PartOffsets->end());
+  if (sys::IsBigEndianHost)
+    for (auto &O : Offsets)
       sys::swapByteOrder(O);
-  OS.write(reinterpret_cast<char *>(ObjectFile.Header.PartOffsets->data()),
-           ObjectFile.Header.PartOffsets->size() * sizeof(uint32_t));
+  OS.write(reinterpret_cast<char *>(Offsets.data()),
+           Offsets.size() * sizeof(uint32_t));
 }
 void DXContainerWriter::writeParts(raw_ostream &OS) {
   uint32_t RollingOffset =
