@@ -60,17 +60,6 @@ private:
   const std::unique_ptr<BoundNodesCallback> FindResultReviewer;
 };
 
-inline ArrayRef<TestLanguage> langAnyC() {
-  static const TestLanguage Result[] = {Lang_C89, Lang_C99};
-  return ArrayRef<TestLanguage>(Result);
-}
-
-inline ArrayRef<TestLanguage> langAnyCxx() {
-  static const TestLanguage Result[] = {Lang_CXX03, Lang_CXX11, Lang_CXX14,
-                                        Lang_CXX17, Lang_CXX20};
-  return ArrayRef<TestLanguage>(Result);
-}
-
 inline ArrayRef<TestLanguage> langCxx11OrLater() {
   static const TestLanguage Result[] = {Lang_CXX11, Lang_CXX14, Lang_CXX17,
                                         Lang_CXX20};
