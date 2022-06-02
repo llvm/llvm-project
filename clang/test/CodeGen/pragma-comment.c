@@ -4,6 +4,7 @@
 // RUN: %clang_cc1 %s -triple thumbv7-linux-gnueabihf -fms-extensions -emit-llvm -o - | FileCheck -check-prefix ELF %s --implicit-check-not llvm.linker.options
 // RUN: %clang_cc1 %s -triple i686-pc-linux -fms-extensions -emit-llvm -o - | FileCheck -check-prefix ELF %s --implicit-check-not llvm.linker.options
 // RUN: %clang_cc1 %s -triple x86_64-scei-ps4 -fms-extensions -emit-llvm -o - | FileCheck -check-prefix ELF %s --implicit-check-not llvm.linker.options
+// RUN: %clang_cc1 %s -triple x86_64-sie-ps5 -fms-extensions -emit-llvm -o - | FileCheck -check-prefix ELF %s --implicit-check-not llvm.linker.options
 // RUN: %clang_cc1 %s -triple aarch64-windows-msvc -fms-extensions -emit-llvm -o - | FileCheck %s
 
 #pragma comment(lib, "msvcrt.lib")

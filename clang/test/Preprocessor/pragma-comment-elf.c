@@ -1,6 +1,8 @@
-// RUN: %clang_cc1 %s -triple x86_64-scei-ps4 -fsyntax-only -verify -fms-extensions 
+// RUN: %clang_cc1 %s -fsyntax-only -verify -fms-extensions -triple x86_64-scei-ps4
+// RUN: %clang_cc1 %s -fsyntax-only -verify -fms-extensions -triple x86_64-sie-ps5
+// RUN: %clang_cc1 %s -fsyntax-only -verify -fms-extensions -triple i686-unknown-linux-gnu
 
-// On PS4, issue a diagnostic that pragma comments are ignored except:
+// On ELF targets, issue a diagnostic that pragma comments are ignored except:
 //   #pragma comment lib
 
 #pragma comment(lib)
