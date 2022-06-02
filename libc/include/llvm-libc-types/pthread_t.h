@@ -1,4 +1,4 @@
-//===-- Definition of thrd_t type -----------------------------------------===//
+//===-- Definition of pthread_t type --------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,11 +6,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef __LLVM_LIBC_TYPES_THRD_T_H__
-#define __LLVM_LIBC_TYPES_THRD_T_H__
+#ifndef __LLVM_LIBC_TYPES_PTHREAD_T_H__
+#define __LLVM_LIBC_TYPES_PTHREAD_T_H__
 
 #include <llvm-libc-types/__thread_type.h>
 
-typedef __thread_type thrd_t;
+typedef __thread_type pthread_t;
 
-#endif // __LLVM_LIBC_TYPES_THRD_T_H__
+#endif // __LLVM_LIBC_TYPES_PTHREAD_T_H__
