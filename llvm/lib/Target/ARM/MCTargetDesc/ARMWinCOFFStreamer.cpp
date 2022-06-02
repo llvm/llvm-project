@@ -11,6 +11,7 @@
 #include "llvm/MC/MCAsmBackend.h"
 #include "llvm/MC/MCAssembler.h"
 #include "llvm/MC/MCCodeEmitter.h"
+#include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCObjectWriter.h"
 #include "llvm/MC/MCWin64EH.h"
 #include "llvm/MC/MCWinCOFFStreamer.h"
@@ -237,6 +238,12 @@ void ARMTargetWinCOFFStreamer::emitARMWinCFIEpilogEnd() {
   if (!CurFrame)
     return;
 
+  if (!CurrentEpilog) {
+    S.getContext().reportError(SMLoc(), "Stray .seh_endepilogue in " +
+                                            CurFrame->Function->getName());
+    return;
+  }
+
   std::vector<WinEH::Instruction> &Epilog =
       CurFrame->EpilogMap[CurrentEpilog].Instructions;
 
@@ -255,6 +262,8 @@ void ARMTargetWinCOFFStreamer::emitARMWinCFIEpilogEnd() {
   InEpilogCFI = false;
   WinEH::Instruction Inst = WinEH::Instruction(UnwindCode, nullptr, -1, 0);
   CurFrame->EpilogMap[CurrentEpilog].Instructions.push_back(Inst);
+  MCSymbol *Label = S.emitCFILabel();
+  CurFrame->EpilogMap[CurrentEpilog].End = Label;
   CurrentEpilog = nullptr;
 }
 
