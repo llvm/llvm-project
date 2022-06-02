@@ -1,21 +1,21 @@
 // RUN: tco %s | FileCheck %s
 
 
-// CHECK-LABEL: define void @_QPtest_callee({ i32*, i64, i32, i8, i8, i8, i8, [1 x [3 x i64]] }* %0)
+// CHECK-LABEL: define void @_QPtest_callee(ptr %0)
 func.func @_QPtest_callee(%arg0: !fir.box<!fir.array<?xi32>>) {
   return
 }
 
 // CHECK-LABEL: define void @_QPtest_slice()
 func.func @_QPtest_slice() {
-// CHECK:  %[[a1:.*]] = alloca { i32*, i64, i32, i8, i8, i8, i8, [1 x [3 x i64]] }, align 8,
+// CHECK:  %[[a1:.*]] = alloca { ptr, i64, i32, i8, i8, i8, i8, [1 x [3 x i64]] }, align 8,
 // CHECK:  %[[a2:.*]] = alloca [20 x i32], i64 1, align 4,
-// CHECK:  %[[a3:.*]] = getelementptr [20 x i32], [20 x i32]* %[[a2]], i64 0, i64 0,
-// CHECK:  %[[a4:.*]] = insertvalue { i32*, i64, i32, i8, i8, i8, i8, [1 x [3 x i64]] }
-// CHECK:  { i32* undef, i64 4, i32 20180515, i8 1, i8 9, i8 0, i8 0, [1 x [3 x i64]]
-// CHECK: [i64 1, i64 5, i64 8]] }, i32* %[[a3]], 0,
-// CHECK:  store { i32*, i64, i32, i8, i8, i8, i8, [1 x [3 x i64]] } %[[a4]], { i32*, i64, i32, i8, i8, i8, i8, [1 x [3 x i64]] }* %[[a1]], align 8
-// CHECK:  call void @_QPtest_callee({ i32*, i64, i32, i8, i8, i8, i8, [1 x [3 x i64]] }* %[[a1]]),
+// CHECK:  %[[a3:.*]] = getelementptr [20 x i32], ptr %[[a2]], i64 0, i64 0,
+// CHECK:  %[[a4:.*]] = insertvalue { ptr, i64, i32, i8, i8, i8, i8, [1 x [3 x i64]] }
+// CHECK:  { ptr undef, i64 4, i32 20180515, i8 1, i8 9, i8 0, i8 0, [1 x [3 x i64]]
+// CHECK: [i64 1, i64 5, i64 8]] }, ptr %[[a3]], 0,
+// CHECK:  store { ptr, i64, i32, i8, i8, i8, i8, [1 x [3 x i64]] } %[[a4]], ptr %[[a1]], align 8
+// CHECK:  call void @_QPtest_callee(ptr %[[a1]]),
   %c20 = arith.constant 20 : index
   %c1_i64 = arith.constant 1 : i64
   %c10_i64 = arith.constant 10 : i64
@@ -28,24 +28,24 @@ func.func @_QPtest_slice() {
   return
 }
 
-// CHECK-LABEL: define void @_QPtest_dt_callee({ i32*, i64, i32, i8, i8, i8, i8, [1 x [3 x i64]] }* %0)
+// CHECK-LABEL: define void @_QPtest_dt_callee(ptr %0)
 func.func @_QPtest_dt_callee(%arg0: !fir.box<!fir.array<?xi32>>) {
   return
 }
 
 // CHECK-LABEL: define void @_QPtest_dt_slice()
 func.func @_QPtest_dt_slice() {
-// CHECK:  %[[a1:.*]] = alloca { i32*, i64, i32, i8, i8, i8, i8, [1 x [3 x i64]] }, align 8,
+// CHECK:  %[[a1:.*]] = alloca { ptr, i64, i32, i8, i8, i8, i8, [1 x [3 x i64]] }, align 8,
 // CHECK:  %[[a3:.*]] = alloca [20 x %_QFtest_dt_sliceTt], i64 1, align 8,
-// CHECK:  %[[a4:.*]] = getelementptr [20 x %_QFtest_dt_sliceTt], [20 x %_QFtest_dt_sliceTt]* %[[a3]], i64 0, i64 0, i32 0,
-// CHECK: %[[a5:.*]] = insertvalue { i32*, i64, i32, i8, i8, i8, i8, [1 x [3 x i64]] }
-// CHECK-SAME: { i32* undef, i64 4, i32 20180515, i8 1, i8 9, i8 0, i8 0, [1 x [3 x i64]]
+// CHECK:  %[[a4:.*]] = getelementptr [20 x %_QFtest_dt_sliceTt], ptr %[[a3]], i64 0, i64 0, i32 0,
+// CHECK: %[[a5:.*]] = insertvalue { ptr, i64, i32, i8, i8, i8, i8, [1 x [3 x i64]] }
+// CHECK-SAME: { ptr undef, i64 4, i32 20180515, i8 1, i8 9, i8 0, i8 0, [1 x [3 x i64]]
 // CHECK-SAME: [i64 1, i64 5, i64 mul
-// CHECK-SAME: (i64 ptrtoint (%_QFtest_dt_sliceTt* getelementptr (%_QFtest_dt_sliceTt, %_QFtest_dt_sliceTt* null, i64 1) to i64), i64 2)]] }
-// CHECK-SAME: , i32* %[[a4]], 0
+// CHECK-SAME: (i64 ptrtoint (ptr getelementptr (%_QFtest_dt_sliceTt, ptr null, i64 1) to i64), i64 2)]] }
+// CHECK-SAME: , ptr %[[a4]], 0
 
-// CHECK: store { i32*, i64, i32, i8, i8, i8, i8, [1 x [3 x i64]] } %[[a5]], { i32*, i64, i32, i8, i8, i8, i8, [1 x [3 x i64]] }* %[[a1]], align 8,
-// CHECK:  call void @_QPtest_dt_callee({ i32*, i64, i32, i8, i8, i8, i8, [1 x [3 x i64]] }* %[[a1]]),
+// CHECK: store { ptr, i64, i32, i8, i8, i8, i8, [1 x [3 x i64]] } %[[a5]], ptr %[[a1]], align 8,
+// CHECK:  call void @_QPtest_dt_callee(ptr %[[a1]]),
   %c20 = arith.constant 20 : index
   %c1_i64 = arith.constant 1 : i64
   %c10_i64 = arith.constant 10 : i64
@@ -62,7 +62,7 @@ func.func @_QPtest_dt_slice() {
 
 func.func private @do_something(!fir.box<!fir.array<?xf32>>) -> ()
 // CHECK: define void @fir_dev_issue_1416
-// CHECK-SAME: [40 x float]* %[[base_addr:.*]], i64 %[[low:.*]], i64 %[[up:.*]], i64 %[[at:.*]])
+// CHECK-SAME: ptr %[[base_addr:.*]], i64 %[[low:.*]], i64 %[[up:.*]], i64 %[[at:.*]])
 func.func @fir_dev_issue_1416(%arg0: !fir.ref<!fir.array<40x?xf32>>, %low: index, %up: index, %at : index) {
     // Test fir.embox with a constant interior array shape.
     %c1 = arith.constant 1 : index
@@ -73,9 +73,9 @@ func.func @fir_dev_issue_1416(%arg0: !fir.ref<!fir.array<40x?xf32>>, %low: index
 // CHECK: %[[diff:.*]] = sub i64 %[[at]], %[[low]]
 // CHECK: %[[mul:.*]] = mul i64 %[[diff]], 1
 // CHECK: %[[offset:.*]] = add i64 %[[mul]], 0
-// CHECK: %[[addr:.*]] = getelementptr [40 x float], [40 x float]* %0, i64 %[[offset]], i64 0
-// CHECK: %[[box:.*]] = insertvalue { float*, i64, i32, i8, i8, i8, i8, [1 x [3 x i64]] }
-// CHECK-SAME: { float* undef, i64 4, i32 20180515, i8 1, i8 27, i8 0, i8 0, [1 x [3 x i64]] [{{.*}} [i64 1, i64 40, i64 4]] }, float* %[[addr]], 0
+// CHECK: %[[addr:.*]] = getelementptr [40 x float], ptr %0, i64 %[[offset]], i64 0
+// CHECK: %[[box:.*]] = insertvalue { ptr, i64, i32, i8, i8, i8, i8, [1 x [3 x i64]] }
+// CHECK-SAME: { ptr undef, i64 4, i32 20180515, i8 1, i8 27, i8 0, i8 0, [1 x [3 x i64]] [{{.*}} [i64 1, i64 40, i64 4]] }, ptr %[[addr]], 0
     %3 = fir.embox %arg0(%1) [%2] : (!fir.ref<!fir.array<40x?xf32>>, !fir.shapeshift<2>, !fir.slice<2>) -> !fir.box<!fir.array<?xf32>>
     fir.call @do_something(%3) : (!fir.box<!fir.array<?xf32>>) -> ()
     return

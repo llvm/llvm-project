@@ -14,8 +14,8 @@ func.func @test_embox(%addr: !fir.ref<!some_freestyle_type>) {
   return
 }
 // CHECK-LABEL: define void @test_embox(
-// CHECK-SAME: %some_not_mangled_type* %[[ADDR:.*]])
-// CHECK: insertvalue { %some_not_mangled_type*, i64, i32, i8, i8, i8, i8, i8*, [1 x i64] }
-// CHECK-SAME: { %some_not_mangled_type* undef, i64 ptrtoint (%some_not_mangled_type* getelementptr (%some_not_mangled_type, %some_not_mangled_type* null, i32 1) to i64),
-// CHECK-SAME: i32 20180515, i8 0, i8 42, i8 0, i8 1, i8* null, [1 x i64] undef },
-// CHECK-SAME: %some_not_mangled_type* %[[ADDR]], 0,
+// CHECK-SAME: ptr %[[ADDR:.*]])
+// CHECK: insertvalue { ptr, i64, i32, i8, i8, i8, i8, ptr, [1 x i64] }
+// CHECK-SAME: { ptr undef, i64 ptrtoint (ptr getelementptr (%some_not_mangled_type, ptr null, i32 1) to i64),
+// CHECK-SAME: i32 20180515, i8 0, i8 42, i8 0, i8 1, ptr null, [1 x i64] undef },
+// CHECK-SAME: ptr %[[ADDR]], 0,
