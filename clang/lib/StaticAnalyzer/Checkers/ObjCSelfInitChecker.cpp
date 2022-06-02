@@ -101,7 +101,7 @@ REGISTER_TRAIT_WITH_PROGRAMSTATE(CalledInit, bool)
 /// 'self' contains. This keeps the "self flags" assigned to the 'self'
 /// object before the call so we can assign them to the new object that 'self'
 /// points to after the call.
-REGISTER_TRAIT_WITH_PROGRAMSTATE(PreCallSelfFlags, unsigned)
+REGISTER_TRAIT_WITH_PROGRAMSTATE(PreCallSelfFlags, SelfFlagEnum)
 
 static SelfFlagEnum getSelfFlags(SVal val, ProgramStateRef state) {
   if (SymbolRef sym = val.getAsSymbol())
@@ -251,11 +251,12 @@ void ObjCSelfInitChecker::checkPreCall(const CallEvent &CE,
   for (unsigned i = 0; i < NumArgs; ++i) {
     SVal argV = CE.getArgSVal(i);
     if (isSelfVar(argV, C)) {
-      unsigned selfFlags = getSelfFlags(state->getSVal(argV.castAs<Loc>()), C);
+      SelfFlagEnum selfFlags =
+          getSelfFlags(state->getSVal(argV.castAs<Loc>()), C);
       C.addTransition(state->set<PreCallSelfFlags>(selfFlags));
       return;
     } else if (hasSelfFlag(argV, SelfFlag_Self, C)) {
-      unsigned selfFlags = getSelfFlags(argV, C);
+      SelfFlagEnum selfFlags = getSelfFlags(argV, C);
       C.addTransition(state->set<PreCallSelfFlags>(selfFlags));
       return;
     }
