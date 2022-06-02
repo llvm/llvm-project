@@ -1,17 +1,17 @@
 ! Test unstructured code adjacent to and inside OpenMP constructs.
 
-! RUN: bbc %s -fopenmp -o "-" | FileCheck %s
+! RUN: bbc %s -fopenmp -emit-fir -o "-" | FileCheck %s
 
 ! CHECK-LABEL: func @_QPss1{{.*}} {
 ! CHECK:   br ^bb1
-! CHECK: ^bb1:  // 2 preds: ^bb0, ^bb3
-! CHECK:   cond_br %{{[0-9]*}}, ^bb2, ^bb4
+! CHECK: ^bb1:  // 2 preds: ^bb0, ^bb4
+! CHECK:   cond_br %{{[0-9]*}}, ^bb2, ^bb5
 ! CHECK: ^bb2:  // pred: ^bb1
-! CHECK:   cond_br %{{[0-9]*}}, ^bb4, ^bb3
-! CHECK: ^bb3:  // pred: ^bb2
-! CHECK:   @_FortranAioBeginExternalListOutput
+! CHECK:   cond_br %{{[0-9]*}}, ^bb3, ^bb4
+! CHECK: ^bb4:  // pred: ^bb2
+! CHECK:   fir.call @_FortranAioBeginExternalListOutput
 ! CHECK:   br ^bb1
-! CHECK: ^bb4:  // 2 preds: ^bb1, ^bb2
+! CHECK: ^bb5:  // 2 preds: ^bb1, ^bb3
 ! CHECK:   omp.master  {
 ! CHECK:     @_FortranAioBeginExternalListOutput
 ! CHECK:     omp.terminator
@@ -33,14 +33,14 @@ end
 ! CHECK:   omp.master  {
 ! CHECK:     @_FortranAioBeginExternalListOutput
 ! CHECK:     br ^bb1
-! CHECK:   ^bb1:  // 2 preds: ^bb0, ^bb3
-! CHECK:     cond_br %{{[0-9]*}}, ^bb2, ^bb4
+! CHECK:   ^bb1:  // 2 preds: ^bb0, ^bb4
+! CHECK:     cond_br %{{[0-9]*}}, ^bb2, ^bb5
 ! CHECK:   ^bb2:  // pred: ^bb1
-! CHECK:     cond_br %{{[0-9]*}}, ^bb4, ^bb3
+! CHECK:     cond_br %{{[0-9]*}}, ^bb3, ^bb4
 ! CHECK:   ^bb3:  // pred: ^bb2
 ! CHECK:     @_FortranAioBeginExternalListOutput
 ! CHECK:     br ^bb1
-! CHECK:   ^bb4:  // 2 preds: ^bb1, ^bb2
+! CHECK:   ^bb5:  // 2 preds: ^bb1, ^bb3
 ! CHECK:     omp.terminator
 ! CHECK:   }
 ! CHECK:   @_FortranAioBeginExternalListOutput
@@ -59,29 +59,38 @@ subroutine ss2(n) ! unstructured OpenMP construct; loop exit inside construct
 end
 
 ! CHECK-LABEL: func @_QPss3{{.*}} {
-! CHECK:   omp.parallel  {
+! CHECK:     %[[ALLOCA_K:.*]] = fir.alloca i32 {bindc_name = "k", {{.*}}}
+! CHECK:   omp.parallel {
+! CHECK:     %[[ALLOCA_1:.*]] = fir.alloca i32 {{{.*}}, pinned}
+! CHECK:     %[[ALLOCA_2:.*]] = fir.alloca i32 {{{.*}}, pinned}
 ! CHECK:     br ^bb1
-! CHECK:   ^bb1:  // 2 preds: ^bb0, ^bb2
-! CHECK:     cond_br %{{[0-9]*}}, ^bb2, ^bb3
+! CHECK:   ^bb1:  // 2 preds: ^bb0, ^bb3
+! CHECK:     cond_br %{{[0-9]*}}, ^bb2, ^bb4
 ! CHECK:   ^bb2:  // pred: ^bb1
-! CHECK:     omp.wsloop {{.*}} {
+! CHECK:     omp.wsloop for (%[[ARG1:.*]]) : {{.*}} {
+! CHECK:       fir.store %[[ARG1]] to %[[ALLOCA_2]] : !fir.ref<i32>
 ! CHECK:     @_FortranAioBeginExternalListOutput
+! CHECK:       %[[LOAD_1:.*]] = fir.load %[[ALLOCA_2]] : !fir.ref<i32>
+! CHECK:     @_FortranAioOutputInteger32(%{{.*}}, %[[LOAD_1]])
 ! CHECK:       omp.yield
 ! CHECK:     }
-! CHECK:     omp.wsloop {{.*}} {
+! CHECK:     omp.wsloop for (%[[ARG2:.*]]) : {{.*}} {
+! CHECK:       fir.store %[[ARG2]] to %[[ALLOCA_1]] : !fir.ref<i32>
 ! CHECK:       br ^bb1
-! CHECK:     ^bb1:  // 2 preds: ^bb0, ^bb3
-! CHECK:       cond_br %{{[0-9]*}}, ^bb2, ^bb4
-! CHECK:     ^bb2:  // pred: ^bb1
-! CHECK:       cond_br %{{[0-9]*}}, ^bb4, ^bb3
+! CHECK:     ^bb2:  // 2 preds: ^bb1, ^bb5
+! CHECK:       cond_br %{{[0-9]*}}, ^bb3, ^bb6
 ! CHECK:     ^bb3:  // pred: ^bb2
+! CHECK:       cond_br %{{[0-9]*}}, ^bb4, ^bb5
+! CHECK:     ^bb4:  // pred: ^bb3
 ! CHECK:       @_FortranAioBeginExternalListOutput
-! CHECK:       br ^bb1
-! CHECK:     ^bb4:  // 2 preds: ^bb1, ^bb2
+! CHECK:       %[[LOAD_2:.*]] = fir.load %[[ALLOCA_K]] : !fir.ref<i32>
+! CHECK:     @_FortranAioOutputInteger32(%{{.*}}, %[[LOAD_2]])
+! CHECK:       br ^bb2
+! CHECK:     ^bb6:  // 2 preds: ^bb2, ^bb4
 ! CHECK:       omp.yield
 ! CHECK:     }
 ! CHECK:     br ^bb1
-! CHECK:   ^bb3:  // pred: ^bb1
+! CHECK:   ^bb4:  // pred: ^bb1
 ! CHECK:     omp.terminator
 ! CHECK:   }
 ! CHECK: }
@@ -107,13 +116,17 @@ end
 
 ! CHECK-LABEL: func @_QPss4{{.*}} {
 ! CHECK:       omp.parallel {
+! CHECK:         %[[ALLOCA:.*]] = fir.alloca i32 {{{.*}}, pinned}
 ! CHECK:         omp.wsloop for (%[[ARG:.*]]) : {{.*}} {
-! CHECK:           cond_br %{{.*}}, ^bb1, ^bb2
-! CHECK:          ^bb1:
+! CHECK:           fir.store %[[ARG]] to %[[ALLOCA]] : !fir.ref<i32>
+! CHECK:           %[[COND:.*]] = arith.cmpi eq, %{{.*}}, %{{.*}}
+! CHECK:           %[[COND_XOR:.*]] = arith.xori %[[COND]], %{{.*}}
+! CHECK:          fir.if %[[COND_XOR]] {
 ! CHECK:           @_FortranAioBeginExternalListOutput
-! CHECK:           @_FortranAioOutputInteger32(%{{.*}}, %[[ARG]])
-! CHECK:           br ^bb2
-! CHECK:         ^bb2:
+! CHECK:           %[[LOAD:.*]] = fir.load %[[ALLOCA]] : !fir.ref<i32>
+! CHECK:           @_FortranAioOutputInteger32(%{{.*}}, %[[LOAD]])
+! CHECK:          } else {
+! CHECK:          }
 ! CHECK-NEXT:      omp.yield
 ! CHECK-NEXT:  }
 ! CHECK:       omp.terminator
@@ -136,12 +149,16 @@ end
 ! CHECK:    omp.wsloop {{.*}} {
 ! CHECK:      br ^[[BB1:.*]]
 ! CHECK:    ^[[BB1]]:
-! CHECK:      cond_br %{{.*}}, ^[[BB2:.*]], ^[[BB4:.*]]
+! CHECK:      br ^[[BB2:.*]]
 ! CHECK:    ^[[BB2]]:
-! CHECK:      cond_br %{{.*}}, ^[[BB4]], ^[[BB3:.*]]
+! CHECK:      cond_br %{{.*}}, ^[[BB3:.*]], ^[[BB6:.*]]
 ! CHECK:    ^[[BB3]]:
-! CHECK:      br ^[[BB1]]
+! CHECK:      cond_br %{{.*}}, ^[[BB4:.*]], ^[[BB3:.*]]
 ! CHECK:    ^[[BB4]]:
+! CHECK:      br ^[[BB6]]
+! CHECK:    ^[[BB3]]:
+! CHECK:      br ^[[BB2]]
+! CHECK:    ^[[BB6]]:
 ! CHECK:      omp.yield
 ! CHECK:    }
 ! CHECK:    omp.terminator
@@ -172,12 +189,16 @@ end
 ! CHECK:    omp.wsloop {{.*}} {
 ! CHECK:      br ^[[BB1:.*]]
 ! CHECK:    ^[[BB1]]:
-! CHECK:      cond_br %{{.*}}, ^[[BB2:.*]], ^[[BB4:.*]]
+! CHECK:      br ^[[BB2:.*]]
 ! CHECK:    ^[[BB2]]:
-! CHECK:      cond_br %{{.*}}, ^[[BB4]], ^[[BB3:.*]]
+! CHECK:      cond_br %{{.*}}, ^[[BB3:.*]], ^[[BB6:.*]]
 ! CHECK:    ^[[BB3]]:
-! CHECK:      br ^[[BB1]]
+! CHECK:      cond_br %{{.*}}, ^[[BB4:.*]], ^[[BB5:.*]]
 ! CHECK:    ^[[BB4]]:
+! CHECK:      br ^[[BB6]]
+! CHECK:    ^[[BB5]]
+! CHECK:      br ^[[BB2]]
+! CHECK:    ^[[BB6]]:
 ! CHECK:      omp.yield
 ! CHECK:    }
 ! CHECK:    br ^[[BB1_OUTER]]
@@ -212,12 +233,16 @@ end
 ! CHECK:     omp.wsloop {{.*}} {
 ! CHECK:       br ^[[BB1:.*]]
 ! CHECK-NEXT:     ^[[BB1]]:
-! CHECK:       cond_br %{{.*}}, ^[[BB2:.*]], ^[[BB4:.*]]
+! CHECK:       br ^[[BB2:.*]]
 ! CHECK-NEXT:     ^[[BB2]]:
-! CHECK:       cond_br %{{.*}}, ^[[BB4]], ^[[BB3:.*]]
+! CHECK:       cond_br %{{.*}}, ^[[BB3:.*]], ^[[BB6:.*]]
 ! CHECK-NEXT:     ^[[BB3]]:
-! CHECK:       br ^bb1
+! CHECK:       cond_br %{{.*}}, ^[[BB4:.*]], ^[[BB5:.*]]
 ! CHECK-NEXT:     ^[[BB4]]:
+! CHECK:       br ^[[BB6]]
+! CHECK-NEXT:     ^[[BB5]]:
+! CHECK:       br ^[[BB2]]
+! CHECK-NEXT:     ^[[BB6]]:
 ! CHECK:       omp.yield
 ! CHECK:     }
 ! CHECK:     omp.terminator
@@ -245,13 +270,17 @@ end
 ! CHECK:  omp.parallel  {
 ! CHECK:    omp.wsloop {{.*}} {
 ! CHECK:      br ^[[BB1:.*]]
-! CHECK:    ^[[BB1]]:
-! CHECK:      cond_br %{{.*}}, ^[[BB2:.*]], ^[[BB4:.*]]
+! CHECK-NEXT:    ^[[BB1]]:
+! CHECK:      br ^[[BB2:.*]]
 ! CHECK:    ^[[BB2]]:
-! CHECK:      cond_br %{{.*}}, ^[[BB4]], ^[[BB3:.*]]
+! CHECK:      cond_br %{{.*}}, ^[[BB3:.*]], ^[[BB6:.*]]
 ! CHECK:    ^[[BB3]]:
-! CHECK:      br ^[[BB1]]
+! CHECK:      cond_br %{{.*}}, ^[[BB4:.*]], ^[[BB5:.*]]
 ! CHECK:    ^[[BB4]]:
+! CHECK-NEXT:    br ^[[BB6]]
+! CHECK:    ^[[BB5]]:
+! CHECK:      br ^[[BB2]]
+! CHECK-NEXT:    ^[[BB6]]:
 ! CHECK:      omp.yield
 ! CHECK:    }
 ! CHECK:    omp.terminator
@@ -275,12 +304,14 @@ end
 ! CHECK-NEXT:    omp.parallel  {
 ! CHECK:      br ^[[BB1:.*]]
 ! CHECK:         ^[[BB1]]:
-! CHECK:      cond_br %{{.*}}, ^[[BB2:.*]], ^[[BB4:.*]]
+! CHECK:      cond_br %{{.*}}, ^[[BB2:.*]], ^[[BB5:.*]]
 ! CHECK-NEXT:    ^[[BB2]]:
-! CHECK:      cond_br %{{.*}}, ^[[BB4]], ^[[BB3:.*]]
+! CHECK:      cond_br %{{.*}}, ^[[BB3:.*]], ^[[BB4:.*]]
 ! CHECK-NEXT:    ^[[BB3]]:
-! CHECK:      br ^[[BB1]]
+! CHECK-NEXT:    br ^[[BB5]]
 ! CHECK-NEXT:    ^[[BB4]]:
+! CHECK:      br ^[[BB1]]
+! CHECK-NEXT:    ^[[BB5]]:
 ! CHECK:      omp.terminator
 ! CHECK-NEXT:    }
 ! CHECK:    omp.terminator
