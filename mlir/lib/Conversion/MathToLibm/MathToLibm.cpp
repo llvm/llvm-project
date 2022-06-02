@@ -152,6 +152,8 @@ void mlir::populateMathToLibmConversionPatterns(RewritePatternSet &patterns,
                                                   "expm1f", "expm1", benefit);
   patterns.add<ScalarOpToLibmCall<math::TanhOp>>(patterns.getContext(), "tanhf",
                                                  "tanh", benefit);
+  patterns.add<ScalarOpToLibmCall<math::RoundOp>>(patterns.getContext(),
+                                                  "roundf", "round", benefit);
 }
 
 namespace {

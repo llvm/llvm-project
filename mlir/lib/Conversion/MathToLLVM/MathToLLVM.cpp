@@ -37,6 +37,8 @@ using LogOpLowering = VectorConvertToLLVMPattern<math::LogOp, LLVM::LogOp>;
 using PowFOpLowering = VectorConvertToLLVMPattern<math::PowFOp, LLVM::PowOp>;
 using SinOpLowering = VectorConvertToLLVMPattern<math::SinOp, LLVM::SinOp>;
 using SqrtOpLowering = VectorConvertToLLVMPattern<math::SqrtOp, LLVM::SqrtOp>;
+using RoundOpLowering =
+    VectorConvertToLLVMPattern<math::RoundOp, LLVM::RoundOp>;
 
 // A `CtLz/CtTz(a)` is converted into `CtLz/CtTz(a, false)`.
 template <typename MathOp, typename LLVMOp>
@@ -285,7 +287,8 @@ void mlir::populateMathToLLVMConversionPatterns(LLVMTypeConverter &converter,
     PowFOpLowering,
     RsqrtOpLowering,
     SinOpLowering,
-    SqrtOpLowering
+    SqrtOpLowering,
+    RoundOpLowering
   >(converter);
   // clang-format on
 }
