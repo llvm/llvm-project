@@ -275,7 +275,7 @@ bool SIMachineFunctionInfo::haveFreeLanesForSGPRSpill(const MachineFunction &MF,
 /// Reserve a slice of a VGPR to support spilling for FrameIndex \p FI.
 bool SIMachineFunctionInfo::allocateSGPRSpillToVGPR(MachineFunction &MF,
                                                     int FI) {
-  std::vector<SpilledReg> &SpillLanes = SGPRToVGPRSpills[FI];
+  std::vector<SIRegisterInfo::SpilledReg> &SpillLanes = SGPRToVGPRSpills[FI];
 
   // This has already been allocated.
   if (!SpillLanes.empty())
@@ -338,7 +338,7 @@ bool SIMachineFunctionInfo::allocateSGPRSpillToVGPR(MachineFunction &MF,
       LaneVGPR = SpillVGPRs.back().VGPR;
     }
 
-    SpillLanes.push_back(SpilledReg(LaneVGPR, VGPRIndex));
+    SpillLanes.push_back(SIRegisterInfo::SpilledReg(LaneVGPR, VGPRIndex));
   }
 
   return true;

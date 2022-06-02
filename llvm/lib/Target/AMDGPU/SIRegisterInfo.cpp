@@ -1673,8 +1673,7 @@ bool SIRegisterInfo::spillSGPR(MachineBasicBlock::iterator MI,
                                bool OnlyToVGPR) const {
   SGPRSpillBuilder SB(*this, *ST.getInstrInfo(), isWave32, MI, Index, RS);
 
-  ArrayRef<SIMachineFunctionInfo::SpilledReg> VGPRSpills =
-      SB.MFI.getSGPRToVGPRSpills(Index);
+  ArrayRef<SpilledReg> VGPRSpills = SB.MFI.getSGPRToVGPRSpills(Index);
   bool SpillToVGPR = !VGPRSpills.empty();
   if (OnlyToVGPR && !SpillToVGPR)
     return false;
@@ -1692,7 +1691,7 @@ bool SIRegisterInfo::spillSGPR(MachineBasicBlock::iterator MI,
           SB.NumSubRegs == 1
               ? SB.SuperReg
               : Register(getSubReg(SB.SuperReg, SB.SplitParts[i]));
-      SIMachineFunctionInfo::SpilledReg Spill = VGPRSpills[i];
+      SpilledReg Spill = VGPRSpills[i];
 
       bool UseKill = SB.IsKill && i == SB.NumSubRegs - 1;
 
@@ -1793,8 +1792,7 @@ bool SIRegisterInfo::restoreSGPR(MachineBasicBlock::iterator MI,
                                  bool OnlyToVGPR) const {
   SGPRSpillBuilder SB(*this, *ST.getInstrInfo(), isWave32, MI, Index, RS);
 
-  ArrayRef<SIMachineFunctionInfo::SpilledReg> VGPRSpills =
-      SB.MFI.getSGPRToVGPRSpills(Index);
+  ArrayRef<SpilledReg> VGPRSpills = SB.MFI.getSGPRToVGPRSpills(Index);
   bool SpillToVGPR = !VGPRSpills.empty();
   if (OnlyToVGPR && !SpillToVGPR)
     return false;
@@ -1806,7 +1804,7 @@ bool SIRegisterInfo::restoreSGPR(MachineBasicBlock::iterator MI,
               ? SB.SuperReg
               : Register(getSubReg(SB.SuperReg, SB.SplitParts[i]));
 
-      SIMachineFunctionInfo::SpilledReg Spill = VGPRSpills[i];
+      SpilledReg Spill = VGPRSpills[i];
       auto MIB = BuildMI(*SB.MBB, MI, SB.DL, SB.TII.get(AMDGPU::V_READLANE_B32),
                          SubReg)
                      .addReg(Spill.VGPR)

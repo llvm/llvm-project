@@ -51,6 +51,17 @@ private:
 public:
   SIRegisterInfo(const GCNSubtarget &ST);
 
+  struct SpilledReg {
+    Register VGPR;
+    int Lane = -1;
+
+    SpilledReg() = default;
+    SpilledReg(Register R, int L) : VGPR(R), Lane(L) {}
+
+    bool hasLane() { return Lane != -1; }
+    bool hasReg() { return VGPR != 0; }
+  };
+
   /// \returns the sub reg enum value for the given \p Channel
   /// (e.g. getSubRegFromChannel(0) -> AMDGPU::sub0)
   static unsigned getSubRegFromChannel(unsigned Channel, unsigned NumRegs = 1);
