@@ -148,57 +148,32 @@ def CSR_AMDGPU_VGPRs : CalleeSavedRegs<
     (sequence "VGPR%u", 248, 255))
 >;
 
-def CSR_AMDGPU_AGPRs_32_255 : CalleeSavedRegs<
+def CSR_AMDGPU_AGPRs : CalleeSavedRegs<
   (sequence "AGPR%u", 32, 255)
 >;
 
-def CSR_AMDGPU_SGPRs_30_31 : CalleeSavedRegs<
-  (sequence "SGPR%u", 30, 31)
+def CSR_AMDGPU_SGPRs : CalleeSavedRegs<
+  (sequence "SGPR%u", 30, 105)
 >;
 
-def CSR_AMDGPU_SGPRs_32_105 : CalleeSavedRegs<
-  (sequence "SGPR%u", 32, 105)
+def CSR_AMDGPU_SI_Gfx_SGPRs : CalleeSavedRegs<
+  (add (sequence "SGPR%u", 4, 31), (sequence "SGPR%u", 64, 105))
 >;
 
-def CSR_AMDGPU_SI_Gfx_SGPRs_4_29 : CalleeSavedRegs<
-  (sequence "SGPR%u", 4, 29)
+def CSR_AMDGPU : CalleeSavedRegs<
+  (add CSR_AMDGPU_VGPRs, CSR_AMDGPU_SGPRs)
 >;
 
-def CSR_AMDGPU_SI_Gfx_SGPRs_64_105 : CalleeSavedRegs<
-  (sequence "SGPR%u", 64, 105)
->;
-
-// Just to get the regmask, not for calling convention purposes.
-def CSR_AMDGPU_AllVGPRs : CalleeSavedRegs<
-  (sequence "VGPR%u", 0, 255)
->;
-
-def CSR_AMDGPU_AllAGPRs : CalleeSavedRegs<
-  (sequence "AGPR%u", 0, 255)
->;
-def CSR_AMDGPU_AllVectorRegs : CalleeSavedRegs<
-  (add CSR_AMDGPU_AllVGPRs, CSR_AMDGPU_AllAGPRs)
->;
-
-// Just to get the regmask, not for calling convention purposes.
-def CSR_AMDGPU_AllAllocatableSRegs : CalleeSavedRegs<
-  (add (sequence "SGPR%u", 0, 105), VCC_LO, VCC_HI)
->;
-
-def CSR_AMDGPU_HighRegs : CalleeSavedRegs<
-  (add CSR_AMDGPU_VGPRs, CSR_AMDGPU_SGPRs_30_31, CSR_AMDGPU_SGPRs_32_105)
->;
-
-def CSR_AMDGPU_HighRegs_With_AGPRs : CalleeSavedRegs<
-  (add CSR_AMDGPU_HighRegs, CSR_AMDGPU_AGPRs_32_255)
+def CSR_AMDGPU_GFX90AInsts : CalleeSavedRegs<
+  (add CSR_AMDGPU, CSR_AMDGPU_AGPRs)
 >;
 
 def CSR_AMDGPU_SI_Gfx : CalleeSavedRegs<
-  (add CSR_AMDGPU_VGPRs, CSR_AMDGPU_SI_Gfx_SGPRs_4_29, CSR_AMDGPU_SGPRs_30_31, CSR_AMDGPU_SI_Gfx_SGPRs_64_105)
+  (add CSR_AMDGPU_VGPRs, CSR_AMDGPU_SI_Gfx_SGPRs)
 >;
 
-def CSR_AMDGPU_SI_Gfx_With_AGPRs : CalleeSavedRegs<
-  (add CSR_AMDGPU_SI_Gfx, CSR_AMDGPU_AGPRs_32_255)
+def CSR_AMDGPU_SI_Gfx_GFX90AInsts : CalleeSavedRegs<
+  (add CSR_AMDGPU_SI_Gfx, CSR_AMDGPU_AGPRs)
 >;
 
 def CSR_AMDGPU_NoRegs : CalleeSavedRegs<(add)>;
@@ -237,3 +212,24 @@ def CC_AMDGPU : CallingConv<[
            "AMDGPUSubtarget::SOUTHERN_ISLANDS && State.getCallingConv() == CallingConv::C",
         CCDelegateTo<CC_AMDGPU_Func>>
 ]>;
+
+// Trivial class to denote when a def is used only to get a RegMask, i.e.
+// SaveList is ignored and the def is not used as part of any calling
+// convention.
+class RegMask<dag mask> : CalleeSavedRegs<mask>;
+
+def AMDGPU_AllVGPRs : RegMask<
+  (sequence "VGPR%u", 0, 255)
+>;
+
+def AMDGPU_AllAGPRs : RegMask<
+  (sequence "AGPR%u", 0, 255)
+>;
+
+def AMDGPU_AllVectorRegs : RegMask<
+  (add AMDGPU_AllVGPRs, AMDGPU_AllAGPRs)
+>;
+
+def AMDGPU_AllAllocatableSRegs : RegMask<
+  (add (sequence "SGPR%u", 0, 105), VCC_LO, VCC_HI)
+>;

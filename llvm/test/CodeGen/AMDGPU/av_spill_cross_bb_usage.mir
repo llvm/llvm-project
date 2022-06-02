@@ -64,7 +64,7 @@ body:             |
   ; GCN-NEXT:   BUFFER_STORE_DWORD_OFFSET killed $vgpr15, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 60, 0, 0, 0, implicit $exec, implicit killed $vgpr14_vgpr15 :: (store (s32) into %stack.1 + 4, addrspace 5)
   ; GCN-NEXT:   BUFFER_STORE_DWORD_OFFSET killed $vgpr10, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 64, 0, 0, 0, implicit $exec, implicit-def $vgpr10_vgpr11, implicit $vgpr10_vgpr11 :: (store (s32) into %stack.2, addrspace 5)
   ; GCN-NEXT:   BUFFER_STORE_DWORD_OFFSET killed $vgpr11, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 68, 0, 0, 0, implicit $exec, implicit killed $vgpr10_vgpr11 :: (store (s32) into %stack.2 + 4, addrspace 5)
-  ; GCN-NEXT:   dead $sgpr30_sgpr31 = SI_CALL killed renamable $sgpr16_sgpr17, 0, csr_amdgpu_highregs, implicit-def dead $vgpr0
+  ; GCN-NEXT:   dead $sgpr30_sgpr31 = SI_CALL killed renamable $sgpr16_sgpr17, 0, csr_amdgpu, implicit-def dead $vgpr0
   ; GCN-NEXT:   $vgpr14 = BUFFER_LOAD_DWORD_OFFSET $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 56, 0, 0, 0, implicit $exec, implicit-def $vgpr14_vgpr15 :: (load (s32) from %stack.1, addrspace 5)
   ; GCN-NEXT:   $vgpr15 = BUFFER_LOAD_DWORD_OFFSET $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 60, 0, 0, 0, implicit $exec, implicit-def $vgpr14_vgpr15 :: (load (s32) from %stack.1 + 4, addrspace 5)
   ; GCN-NEXT:   renamable $vgpr0_vgpr1 = nofpexcept V_FMA_F64_e64 0, killed $vgpr45_vgpr46, 0, killed $vgpr41_vgpr42, 0, killed $vgpr60_vgpr61, 0, 0, implicit $mode, implicit $exec
@@ -122,7 +122,7 @@ body:             |
     renamable $sgpr16_sgpr17 = IMPLICIT_DEF
     $vgpr40 = V_WRITELANE_B32 $sgpr30, 0, $vgpr40, implicit-def $sgpr30_sgpr31, implicit $sgpr30_sgpr31
     $vgpr40 = V_WRITELANE_B32 killed $sgpr31, 1, $vgpr40, implicit killed $sgpr30_sgpr31
-    dead $sgpr30_sgpr31 = SI_CALL killed renamable $sgpr16_sgpr17, 0, csr_amdgpu_highregs, implicit-def dead $vgpr0
+    dead $sgpr30_sgpr31 = SI_CALL killed renamable $sgpr16_sgpr17, 0, csr_amdgpu, implicit-def dead $vgpr0
     %8:vreg_64 = nofpexcept V_FMA_F64_e64 0, %7, 0, %6, 0, %5, 0, 0, implicit $mode, implicit $exec
     ADJCALLSTACKDOWN 0, 0, implicit-def dead $scc, implicit-def $sgpr32, implicit $sgpr32
     FLAT_STORE_DWORDX2 %4, %8, 0, 0, implicit $exec, implicit $flat_scr :: (store (s64))
