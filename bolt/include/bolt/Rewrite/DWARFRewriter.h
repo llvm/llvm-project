@@ -16,6 +16,7 @@
 #include <mutex>
 #include <set>
 #include <unordered_map>
+#include <unordered_set>
 #include <vector>
 
 namespace llvm {
@@ -25,8 +26,12 @@ namespace bolt {
 class BinaryContext;
 
 class DWARFRewriter {
+public:
   DWARFRewriter() = delete;
+  using DebugTypesSignaturesPerCUMap =
+      std::unordered_map<uint64_t, std::unordered_set<uint64_t>>;
 
+private:
   BinaryContext &BC;
 
   std::mutex DebugInfoPatcherMutex;
@@ -74,6 +79,9 @@ class DWARFRewriter {
       std::unordered_map<uint64_t, std::unique_ptr<SimpleBinaryPatcher>>;
   /// Binary patchers for DWO debug_info sections.
   DebugInfoDWOPatchers BinaryDWODebugInfoPatchers;
+
+  /// Stores all the Type Signatures for DWO CU.
+  DebugTypesSignaturesPerCUMap TypeSignaturesPerCU;
 
   std::mutex LocListDebugInfoPatchesMutex;
 

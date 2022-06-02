@@ -91,6 +91,7 @@ tools = [
     ToolSubst('link_fdata', command=sys.executable, unresolved='fatal', extra_args=[link_fdata_cmd]),
     ToolSubst('merge-fdata', unresolved='fatal'),
     ToolSubst('llvm-readobj', unresolved='fatal'),
+    ToolSubst('llvm-dwp', unresolved='fatal'),
 ]
 llvm_config.add_tool_substitutions(tools, tool_dirs)
 

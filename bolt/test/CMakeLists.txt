@@ -40,6 +40,7 @@ list(APPEND BOLT_TEST_DEPS
   llvm-boltdiff
   llvm-bolt-heatmap
   llvm-dwarfdump
+  llvm-dwp
   llvm-mc
   llvm-nm
   llvm-objdump
