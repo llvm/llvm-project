@@ -2583,6 +2583,13 @@ val build_empty_phi : lltype -> string -> llbuilder -> llvalue
     See the method [llvm::LLVMBuilder::CreateCall]. *)
 val build_call : llvalue -> llvalue array -> string -> llbuilder -> llvalue
 
+(** [build_call2 fnty fn args name b] creates a
+    [%name = call %fn(args...)]
+    instruction at the position specified by the instruction builder [b].
+    See the method [llvm::LLVMBuilder::CreateCall]. *)
+val build_call2 : lltype -> llvalue -> llvalue array -> string -> llbuilder ->
+                        llvalue
+
 (** [build_select cond thenv elsev name b] creates a
     [%name = select %cond, %thenv, %elsev]
     instruction at the position specified by the instruction builder [b].
