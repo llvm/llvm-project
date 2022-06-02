@@ -531,7 +531,7 @@ try_grow_num_recordable_slabs(__global heap_t *hp, kind_t k)
 {
     uint aid = __ockl_activelane_u32();
     O0(aid);
-    uint nrs;
+    uint nrs = 0;
     if (aid == 0)
         nrs = AL(&hp->num_recordable_slabs[k].value, memory_order_relaxed);
     nrs = first(nrs);
@@ -552,7 +552,7 @@ try_grow_num_recordable_slabs(__global heap_t *hp, kind_t k)
     if (ret == GROW_BUSY)
         return ret;
 
-    ulong sa;
+    ulong sa = 0;
     if (aid == 0)
         sa = obtain_new_array();
     sa = first(sa);
@@ -653,7 +653,8 @@ try_allocate_new_slab(__global heap_t *hp, kind_t k)
 
     for (;;) {
         O0(aid);
-        uint nas, nrs;
+        uint nas = 0;
+        uint nrs = 0;;
 
         if (aid == 0)
             nas = AL(&hp->num_allocated_slabs[k].value, memory_order_relaxed);
@@ -691,7 +692,7 @@ try_allocate_new_slab(__global heap_t *hp, kind_t k)
         if (ret)
             return ret;
 
-        ulong saddr;
+        ulong saddr = 0;
         if (aid == 0)
             saddr = obtain_new_slab();
         saddr = first(saddr);
@@ -753,7 +754,7 @@ normal_slab_find(__global heap_t *hp, kind_t k, uint nas)
         if (nas > 0) {
             int nleft = nas;
 
-            uint i;
+            uint i = 0;
             if (aid == 0)
                 i = AL(&hp->start[k].value, memory_order_relaxed);
             i = (first(i) + aid) % nas;
@@ -799,7 +800,7 @@ final_slab_find(__global heap_t *hp, kind_t k0)
         __global sdata_t *sda = hp->sdata[k];
         int nleft = MAX_RECORDABLE_SLABS;
 
-        uint i;
+        uint i = 0;
         if (aid == 0)
             i = AL(&hp->start[k].value, memory_order_relaxed);
         i = (first(i) + aid) % MAX_RECORDABLE_SLABS;
@@ -867,7 +868,7 @@ block_find(__global sdata_t *sdp)
     __global slab_t *sp = (__global slab_t *)sdp->saddr;
     kind_t k = sp->k;
 
-    uint i;
+    uint i = 0;
     if (aid == 0)
         i = AFA(&sp->start, nactive, memory_order_relaxed);
     i = ((first(i) + aid) * spread_factor(k) % num_blocks(k)) >> 5;
