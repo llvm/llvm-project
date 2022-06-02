@@ -52,7 +52,7 @@ conformance.</p>
     <td><a href="http://www.open-std.org/jtc1/sc22/wg14/www/docs/dr_001.html">1</a></td>
     <td>C89</td>
     <td>Do functions return values by copying?</td>
-    <td class="unknown" align="center">Unknown</td>
+    <td class="full" align="center">Yes</td>
   </tr>
   <tr id="2">
     <td><a href="http://www.open-std.org/jtc1/sc22/wg14/www/docs/dr_002.html">2</a></td>
@@ -654,38 +654,38 @@ conformance.</p>
   <tr id="100">
     <td><a href="http://www.open-std.org/jtc1/sc22/wg14/www/docs/dr_100.html">100</a></td>
     <td>Dup</td>
-    <td>ANSI/ISO C Defect report #rfg7</td>
-    <td class="unknown" align="center">Duplicate of <a href="#1">1</a></td>
+    <td>Defect with the return statement</td>
+    <td class="full" align="center">Duplicate of <a href="#1">1</a></td>
   </tr>
   <tr id="101">
     <td><a href="http://www.open-std.org/jtc1/sc22/wg14/www/docs/dr_101.html">101</a></td>
     <td>C89</td>
-    <td>ANSI/ISO C Defect report #rfg8</td>
-    <td class="unknown" align="center">Unknown</td>
+    <td>Type qualifiers and "as if by assignment"</td>
+    <td class="full" align="center">Yes</td>
   </tr>
   <tr id="102">
     <td><a href="http://www.open-std.org/jtc1/sc22/wg14/www/docs/dr_102.html">102</a></td>
     <td>NAD</td>
-    <td>ANSI/ISO C Defect report #rfg9</td>
-    <td class="unknown" align="center">Unknown</td>
+    <td>Tag redeclaration constraints</td>
+    <td class="full" align="center">Yes</td>
   </tr>
   <tr id="103">
     <td><a href="http://www.open-std.org/jtc1/sc22/wg14/www/docs/dr_103.html">103</a></td>
     <td>NAD</td>
-    <td>ANSI/ISO C Defect report #rfg10</td>
-    <td class="unknown" align="center">Unknown</td>
+    <td>Formal parameters of incomplete type</td>
+    <td class="full" align="center">Yes</td>
   </tr>
   <tr id="104">
     <td><a href="http://www.open-std.org/jtc1/sc22/wg14/www/docs/dr_104.html">104</a></td>
     <td>Dup</td>
-    <td>ANSI/ISO C Defect report #rfg11</td>
-    <td class="unknown" align="center">Duplicate of <a href="#84">84</a></td>
+    <td>Incomplete tag types in a parameter list</td>
+    <td class="full" align="center">Duplicate of <a href="#84">84</a></td>
   </tr>
   <tr id="105">
     <td><a href="http://www.open-std.org/jtc1/sc22/wg14/www/docs/dr_105.html">105</a></td>
     <td>Dup</td>
-    <td>ANSI/ISO C Defect report #rfg12</td>
-    <td class="unknown" align="center">Duplicate of <a href="#17">17</a></td>
+    <td>Precedence of requirements on compatible types</td>
+    <td class="full" align="center">Duplicate of <a href="#17">17</a></td>
   </tr>
   <tr id="106">
     <td><a href="http://www.open-std.org/jtc1/sc22/wg14/www/docs/dr_106.html">106</a></td>
@@ -2137,7 +2137,12 @@ conformance.</p>
     <td><a href="https://www.open-std.org/jtc1/sc22/wg14/www/docs/n2148.htm#dr_423">423</a></td>
     <td>C11</td>
     <td>Defect Report relative to n1570: underspecification for qualified rvalues</td>
-    <td class="unreleased" align="center">Clang 15</td>
+    <td class="partial" align="center">
+      <details><summary>Partial</summary>
+        Clang properly handles dropping qualifiers from cast operations, but
+        does not yet handle dropping qualifiers from the function return type.
+      </details>
+    </td>
   </tr>
   <tr id="424">
     <td><a href="https://www.open-std.org/jtc1/sc22/wg14/www/docs/n2148.htm#dr_424">424</a></td>
