@@ -15,7 +15,9 @@ namespace __llvm_libc {
 namespace cpp {
 
 template <bool B, typename T> struct EnableIf;
-template <typename T> struct EnableIf<true, T> { typedef T Type; };
+template <typename T> struct EnableIf<true, T> {
+  typedef T Type;
+};
 
 template <bool B, typename T>
 using EnableIfType = typename EnableIf<B, T>::Type;
@@ -28,7 +30,9 @@ struct FalseValue {
   static constexpr bool Value = false;
 };
 
-template <typename T> struct TypeIdentity { typedef T Type; };
+template <typename T> struct TypeIdentity {
+  typedef T Type;
+};
 
 template <typename T1, typename T2> struct IsSame : public FalseValue {};
 template <typename T> struct IsSame<T, T> : public TrueValue {};
@@ -57,6 +61,10 @@ template <typename Type> struct IsIntegral {
       || IsSameV<__uint128_t, TypeNoCV> || IsSameV<__int128_t, TypeNoCV>
 #endif
       ;
+};
+
+template <typename Type> struct IsEnum {
+  static constexpr bool Value = __is_enum(Type);
 };
 
 template <typename T> struct IsPointerTypeNoCV : public FalseValue {};
