@@ -1404,9 +1404,9 @@ static void handlePackedAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
                                 FD->isBitField() &&
                                 S.Context.getTypeAlign(FD->getType()) <= 8);
 
-    if (S.getASTContext().getTargetInfo().getTriple().isPS4()) {
+    if (S.getASTContext().getTargetInfo().getTriple().isPS()) {
       if (BitfieldByteAligned)
-        // The PS4 target needs to maintain ABI backwards compatibility.
+        // The PS4/PS5 targets need to maintain ABI backwards compatibility.
         S.Diag(AL.getLoc(), diag::warn_attribute_ignored_for_field_of_type)
             << AL << FD->getType();
       else
