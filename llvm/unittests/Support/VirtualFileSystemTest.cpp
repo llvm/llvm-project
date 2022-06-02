@@ -199,7 +199,7 @@ class ErrorDummyFileSystem : public DummyFileSystem {
 };
 
 /// Replace back-slashes by front-slashes.
-std::string getPosixPath(std::string S) {
+std::string getPosixPath(const Twine &S) {
   SmallString<128> Result;
   llvm::sys::path::native(S, Result, llvm::sys::path::Style::posix);
   return std::string(Result.str());
@@ -923,11 +923,11 @@ TEST(ProxyFileSystemTest, Basic) {
 
   auto PWD = PFS.getCurrentWorkingDirectory();
   ASSERT_FALSE(PWD.getError());
-  ASSERT_EQ("/", *PWD);
+  ASSERT_EQ("/", getPosixPath(*PWD));
 
   SmallString<16> Path;
   ASSERT_FALSE(PFS.getRealPath("a", Path));
-  ASSERT_EQ("/a", Path);
+  ASSERT_EQ("/a", getPosixPath(Path));
 
   bool Local = true;
   ASSERT_FALSE(PFS.isLocal("/a", Local));
@@ -1343,7 +1343,8 @@ TEST_F(InMemoryFileSystemTest, UniqueID) {
   EXPECT_NE(FS.status("/a")->getUniqueID(), FS.status("/e")->getUniqueID());
 
   // Recreating the "same" FS yields the same UniqueIDs.
-  vfs::InMemoryFileSystem FS2;
+  // Note: FS2 should match FS with respect to path normalization.
+  vfs::InMemoryFileSystem FS2(/*UseNormalizedPath=*/false);
   ASSERT_TRUE(FS2.addFile("/a/b", 0, MemoryBuffer::getMemBuffer("text")));
   EXPECT_EQ(FS.status("/a/b")->getUniqueID(),
             FS2.status("/a/b")->getUniqueID());
