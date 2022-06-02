@@ -98,3 +98,18 @@ DWARFASTParser::ParseChildArrayInfo(const DWARFDIE &parent_die,
   }
   return array_info;
 }
+
+AccessType
+DWARFASTParser::GetAccessTypeFromDWARF(uint32_t dwarf_accessibility) {
+  switch (dwarf_accessibility) {
+  case DW_ACCESS_public:
+    return eAccessPublic;
+  case DW_ACCESS_private:
+    return eAccessPrivate;
+  case DW_ACCESS_protected:
+    return eAccessProtected;
+  default:
+    break;
+  }
+  return eAccessNone;
+}
