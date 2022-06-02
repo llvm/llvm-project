@@ -351,10 +351,4 @@ void VPlanHCFGBuilder::buildHierarchicalCFG() {
   VPDomTree.recalculate(*TopRegion);
   LLVM_DEBUG(dbgs() << "Dominator Tree after building the plain CFG.\n";
              VPDomTree.print(dbgs()));
-
-  // Compute VPLInfo and keep it in Plan.
-  VPLoopInfo &VPLInfo = Plan.getVPLoopInfo();
-  VPLInfo.analyze(VPDomTree);
-  LLVM_DEBUG(dbgs() << "VPLoop Info After buildPlainCFG:\n";
-             VPLInfo.print(dbgs()));
 }
