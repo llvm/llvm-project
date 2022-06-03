@@ -18764,6 +18764,7 @@ SDValue DAGCombiner::replaceStoreOfFPConstant(StoreSDNode *ST) {
   default:
     llvm_unreachable("Unknown FP type");
   case MVT::f16:    // We don't do this for these yet.
+  case MVT::bf16:
   case MVT::f80:
   case MVT::f128:
   case MVT::ppcf128:
@@ -18771,7 +18772,6 @@ SDValue DAGCombiner::replaceStoreOfFPConstant(StoreSDNode *ST) {
   case MVT::f32:
     if ((isTypeLegal(MVT::i32) && !LegalOperations && ST->isSimple()) ||
         TLI.isOperationLegalOrCustom(ISD::STORE, MVT::i32)) {
-      ;
       Tmp = DAG.getConstant((uint32_t)CFP->getValueAPF().
                             bitcastToAPInt().getZExtValue(), SDLoc(CFP),
                             MVT::i32);
@@ -18783,7 +18783,6 @@ SDValue DAGCombiner::replaceStoreOfFPConstant(StoreSDNode *ST) {
     if ((TLI.isTypeLegal(MVT::i64) && !LegalOperations &&
          ST->isSimple()) ||
         TLI.isOperationLegalOrCustom(ISD::STORE, MVT::i64)) {
-      ;
       Tmp = DAG.getConstant(CFP->getValueAPF().bitcastToAPInt().
                             getZExtValue(), SDLoc(CFP), MVT::i64);
       return DAG.getStore(Chain, DL, Tmp,
