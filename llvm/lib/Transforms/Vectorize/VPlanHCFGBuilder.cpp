@@ -307,11 +307,9 @@ VPBasicBlock *PlainCFGBuilder::buildPlainCFG() {
 
       // Get VPBB's condition bit.
       assert(isa<BranchInst>(TI) && "Unsupported terminator!");
-      auto *Br = cast<BranchInst>(TI);
-      Value *BrCond = Br->getCondition();
       // Look up the branch condition to get the corresponding VPValue
       // representing the condition bit in VPlan (which may be in another VPBB).
-      assert(IRDef2VPValue.count(BrCond) &&
+      assert(IRDef2VPValue.count(cast<BranchInst>(TI)->getCondition()) &&
              "Missing condition bit in IRDef2VPValue!");
 
       // Link successors.
