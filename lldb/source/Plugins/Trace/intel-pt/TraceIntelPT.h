@@ -163,6 +163,15 @@ public:
 private:
   friend class TraceIntelPTSessionFileParser;
 
+  /// Create post-mortem threads associated with the processes traced by this
+  /// instance using the context switch traces.
+  ///
+  /// This does nothing if the threads already exist.
+  ///
+  /// \return
+  ///   An \a llvm::Error in case of failures.
+  llvm::Error CreateThreadsFromContextSwitches();
+
   llvm::Expected<pt_cpu> GetCPUInfoForLiveProcess();
 
   /// Postmortem trace constructor
@@ -176,7 +185,7 @@ private:
   /// \param[in] trace_threads
   ///     The threads traced in the live session. They must belong to the
   ///     processes mentioned above.
-  TraceIntelPT(JSONTraceSession &session,
+  TraceIntelPT(JSONTraceSession &session, const FileSpec &session_file_dir,
                llvm::ArrayRef<lldb::ProcessSP> traced_processes,
                llvm::ArrayRef<lldb::ThreadPostMortemTraceSP> traced_threads);
 
@@ -208,6 +217,8 @@ private:
   /// counters to and from nanos. It might not be available on all hosts.
   llvm::Optional<LinuxPerfZeroTscConversion> m_tsc_conversion;
 };
+
+using TraceIntelPTSP = std::shared_ptr<TraceIntelPT>;
 
 } // namespace trace_intel_pt
 } // namespace lldb_private

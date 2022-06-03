@@ -52,7 +52,7 @@ public:
   ///   errors, return a null pointer.
   llvm::Expected<lldb::TraceSP> Parse();
 
-  lldb::TraceSP
+  llvm::Expected<lldb::TraceSP>
   CreateTraceIntelPTInstance(JSONTraceSession &session,
                              std::vector<ParsedProcess> &parsed_processes);
 
@@ -64,6 +64,11 @@ private:
   lldb::ThreadPostMortemTraceSP ParseThread(lldb::ProcessSP &process_sp,
                                             const JSONThread &thread);
 
+  /// Create the corresponding Threads and Process objects given the JSON
+  /// process definition.
+  ///
+  /// \param[in] process
+  ///   The JSON process definition
   llvm::Expected<ParsedProcess> ParseProcess(const JSONProcess &process);
 
   llvm::Error ParseModule(lldb::TargetSP &target_sp, const JSONModule &module);
@@ -82,6 +87,8 @@ private:
   llvm::Error CreateJSONError(llvm::json::Path::Root &root,
                               const llvm::json::Value &value);
 
+  /// Create the corresponding Process, Thread and Module objects given this
+  /// session file.
   llvm::Expected<std::vector<ParsedProcess>>
   ParseSessionFile(const JSONTraceSession &session);
 

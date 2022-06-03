@@ -75,6 +75,7 @@ Expected<TraceSP> TraceIntelPT::CreateInstanceForLiveProcess(Process &process) {
 }
 
 TraceIntelPT::TraceIntelPT(JSONTraceSession &session,
+                           const FileSpec &session_file_dir,
                            ArrayRef<ProcessSP> traced_processes,
                            ArrayRef<ThreadPostMortemTraceSP> traced_threads)
     : Trace(traced_processes, session.GetCoreIds()),
@@ -92,11 +93,19 @@ TraceIntelPT::TraceIntelPT(JSONTraceSession &session,
     std::vector<core_id_t> cores;
 
     for (const JSONCore &core : *session.cores) {
+      FileSpec trace_buffer(core.trace_buffer);
+      if (trace_buffer.IsRelative())
+        trace_buffer.PrependPathComponent(session_file_dir);
+
       SetPostMortemCoreDataFile(core.core_id, IntelPTDataKinds::kTraceBuffer,
-                                FileSpec(core.trace_buffer));
+                                trace_buffer);
+
+      FileSpec context_switch(core.context_switch_trace);
+      if (context_switch.IsRelative())
+        context_switch.PrependPathComponent(session_file_dir);
       SetPostMortemCoreDataFile(core.core_id,
                                 IntelPTDataKinds::kPerfContextSwitchTrace,
-                                FileSpec(core.context_switch_trace));
+                                context_switch);
       cores.push_back(core.core_id);
     }
 
@@ -473,3 +482,45 @@ Error TraceIntelPT::OnThreadBufferRead(lldb::tid_t tid,
 }
 
 TaskTimer &TraceIntelPT::GetTimer() { return m_task_timer; }
+
+Error TraceIntelPT::CreateThreadsFromContextSwitches() {
+  DenseMap<lldb::pid_t, DenseSet<lldb::tid_t>> pids_to_tids;
+
+  for (core_id_t core_id : GetTracedCores()) {
+    Error err = OnCoreBinaryDataRead(
+        core_id, IntelPTDataKinds::kPerfContextSwitchTrace,
+        [&](ArrayRef<uint8_t> data) -> Error {
+          Expected<std::vector<ThreadContinuousExecution>> executions =
+              DecodePerfContextSwitchTrace(data, core_id, *m_tsc_conversion);
+          if (!executions)
+            return executions.takeError();
+          for (const ThreadContinuousExecution &execution : *executions)
+            pids_to_tids[execution.pid].insert(execution.tid);
+          return Error::success();
+        });
+    if (err)
+      return err;
+  }
+
+  DenseMap<lldb::pid_t, Process *> processes;
+  for (Process *proc : GetTracedProcesses())
+    processes.try_emplace(proc->GetID(), proc);
+
+  for (const auto &pid_to_tids : pids_to_tids) {
+    lldb::pid_t pid = pid_to_tids.first;
+    auto it = processes.find(pid);
+    if (it == processes.end())
+      continue;
+
+    Process &process = *it->second;
+    ThreadList &thread_list = process.GetThreadList();
+
+    for (lldb::tid_t tid : pid_to_tids.second) {
+      if (!thread_list.FindThreadByID(tid)) {
+        thread_list.AddThread(std::make_shared<ThreadPostMortemTrace>(
+            process, tid, /*trace_file*/ None));
+      }
+    }
+  }
+  return Error::success();
+}
