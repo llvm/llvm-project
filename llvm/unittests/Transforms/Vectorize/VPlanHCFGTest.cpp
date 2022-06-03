@@ -45,7 +45,6 @@ TEST_F(VPlanHCFGTest, testBuildHCFGInnerLoop) {
   EXPECT_NE(nullptr, Entry->getSingleSuccessor());
   EXPECT_EQ(0u, Entry->getNumPredecessors());
   EXPECT_EQ(1u, Entry->getNumSuccessors());
-  EXPECT_EQ(nullptr, Entry->getCondBit());
 
   // Check that the region following the preheader is a single basic-block
   // region (loop).
@@ -91,7 +90,6 @@ TEST_F(VPlanHCFGTest, testBuildHCFGInnerLoop) {
   EXPECT_EQ(Instruction::ICmp, ICmp->getOpcode());
   EXPECT_EQ(2u, ICmp->getNumOperands());
   EXPECT_EQ(IndvarAdd, ICmp->getOperand(0));
-  EXPECT_EQ(VecBB->getCondBit(), ICmp);
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   // Add an external value to check we do not print the list of external values,
@@ -123,7 +121,6 @@ compound=true
       "  EMIT ir\<%indvars.iv.next\> = add ir\<%indvars.iv\> ir\<1\>\l" +
       "  EMIT ir\<%exitcond\> = icmp ir\<%indvars.iv.next\> ir\<%N\>\l" +
       "No successors\l" +
-      "CondBit: ir\<%exitcond\> (vector.body)\l"
     ]
   }
   N1 -> N3 [ label="" ltail=cluster_N2]

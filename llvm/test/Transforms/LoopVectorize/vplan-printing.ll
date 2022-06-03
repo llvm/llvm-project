@@ -215,7 +215,6 @@ define void @print_replicate_predicated_phi(i64 %n, i64* %x) {
 ; CHECK-NEXT:   pred.udiv.entry:
 ; CHECK-NEXT:     BRANCH-ON-MASK ir<%cmp>
 ; CHECK-NEXT:   Successor(s): pred.udiv.if, pred.udiv.continue
-; CHECK-NEXT:   CondBit: ir<%cmp>
 ; CHECK-EMPTY:
 ; CHECK-NEXT:   pred.udiv.if:
 ; CHECK-NEXT:     REPLICATE ir<%tmp4> = udiv ir<%n>, vp<[[STEPS]]> (S->V)
@@ -420,7 +419,6 @@ define void @debug_loc_vpinstruction(i32* nocapture %asd, i32* nocapture %bsd) !
 ; CHECK-NEXT:    pred.sdiv.entry:
 ; CHECK-NEXT:      BRANCH-ON-MASK vp<[[OR1]]>
 ; CHECK-NEXT:    Successor(s): pred.sdiv.if, pred.sdiv.continue
-; CHECK-NEXT:    CondBit: vp<[[OR1]]> (if.then)
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    pred.sdiv.if:
 ; CHECK-NEXT:      REPLICATE ir<%sd1> = sdiv ir<%psd>, ir<%lsd> (S->V)

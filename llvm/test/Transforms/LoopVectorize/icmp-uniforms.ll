@@ -58,7 +58,6 @@ for.end:
 ; CHECK-NEXT:    pred.store.entry:
 ; CHECK-NEXT:      BRANCH-ON-MASK vp<[[COND]]>
 ; CHECK-NEXT:    Successor(s): pred.store.if, pred.store.continue
-; CHECK-NEXT:    CondBit: vp<[[COND]]> (vector.body)
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    pred.store.if:
 ; CHECK-NEXT:      REPLICATE ir<%gep> = getelementptr ir<%ptr>, vp<[[STEPS]]>
