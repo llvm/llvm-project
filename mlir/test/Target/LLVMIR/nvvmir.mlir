@@ -33,6 +33,13 @@ llvm.func @nvvm_special_regs() -> i32 {
   llvm.return %1 : i32
 }
 
+// CHECK-LABEL: @nvvm_rcp
+llvm.func @nvvm_rcp(%0: f32) -> f32 {
+  // CHECK: call float @llvm.nvvm.rcp.approx.ftz.f
+  %1 = nvvm.rcp.approx.ftz.f %0 : f32
+  llvm.return %1 : f32
+}
+
 // CHECK-LABEL: @llvm_nvvm_barrier0
 llvm.func @llvm_nvvm_barrier0() {
   // CHECK: call void @llvm.nvvm.barrier0()
