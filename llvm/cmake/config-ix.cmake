@@ -539,9 +539,6 @@ else()
   set(LLVM_ENABLE_DIA_SDK 0)
 endif( MSVC )
 
-# FIXME: Signal handler return type, currently hardcoded to 'void'
-set(RETSIGTYPE void)
-
 if( LLVM_ENABLE_THREADS )
   # Check if threading primitives aren't supported on this platform
   if( NOT HAVE_PTHREAD_H AND NOT WIN32 )

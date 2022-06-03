@@ -129,7 +129,6 @@ write_cmake_config("config") {
     "PACKAGE_STRING=LLVM ${llvm_version}git",
     "PACKAGE_VERSION=${llvm_version}git",
     "PACKAGE_VENDOR=",
-    "RETSIGTYPE=void",
     "LLVM_GISEL_COV_ENABLED=",
     "LLVM_GISEL_COV_PREFIX=",
 
