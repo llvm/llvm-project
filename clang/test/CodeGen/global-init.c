@@ -9,13 +9,19 @@ int a = 242;
 
 // This should get normal weak linkage.
 int c __attribute__((weak))= 0;
-// CHECK: @c = weak{{.*}} global i32 0
+// CHECK: @c = weak global i32 0
 
-
-// Since this is marked const, it should get weak_odr linkage, since all
-// definitions have to be the same.
-// CHECK: @d = weak_odr constant i32 0
+// Even though is marked const, it should get still get "weak"
+// linkage, not "weak_odr" as the weak attribute makes it possible
+// that there is a strong definition that changes the value linktime,
+// so the value must not be considered constant.
+// CHECK: @d = weak constant i32 0
 const int d __attribute__((weak))= 0;
+
+// However, "selectany" is similar to "weak", but isn't interposable
+// by a strong definition, and should appear as weak_odr.
+// CHECK: @e = weak_odr constant i32 17
+const int e __attribute__((selectany)) = 17;
 
 // PR6168 "too many undefs"
 struct ManyFields {

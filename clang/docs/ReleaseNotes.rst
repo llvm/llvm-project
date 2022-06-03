@@ -336,6 +336,9 @@ Attribute Changes in Clang
   builtins (corresponding to the specific names listed in the attribute) in the
   body of the function the attribute is on.
 
+- When the ``weak`` attribute is applied to a const qualified variable clang no longer
+  tells the backend it is allowed to optimize based on initializer value.
+
 Windows Support
 ---------------
 

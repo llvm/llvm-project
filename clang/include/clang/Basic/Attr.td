@@ -3021,7 +3021,7 @@ def WarnUnusedResult : InheritableAttr {
 def Weak : InheritableAttr {
   let Spellings = [GCC<"weak">];
   let Subjects = SubjectList<[Var, Function, CXXRecord]>;
-  let Documentation = [Undocumented];
+  let Documentation = [WeakDocs];
   let SimpleHandler = 1;
 }
 
