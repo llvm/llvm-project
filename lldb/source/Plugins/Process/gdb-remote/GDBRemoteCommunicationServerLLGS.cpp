@@ -1654,7 +1654,7 @@ GDBRemoteCommunication::PacketResult
 GDBRemoteCommunicationServerLLGS::Handle_vCont_actions(
     StringExtractorGDBRemote &packet) {
   StreamString response;
-  response.Printf("vCont;c;C;s;S");
+  response.Printf("vCont;c;C;s;S;t");
 
   return SendPacketNoLock(response.GetString());
 }
@@ -1721,6 +1721,11 @@ GDBRemoteCommunicationServerLLGS::Handle_vCont(
     case 's':
       // Step
       thread_action.state = eStateStepping;
+      break;
+
+    case 't':
+      // Stop
+      thread_action.state = eStateSuspended;
       break;
 
     default:
