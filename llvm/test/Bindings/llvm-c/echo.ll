@@ -2,8 +2,8 @@
 ; RUN: llvm-as < %s | llvm-c-test --echo --no-opaque-pointers > %t.echo
 ; RUN: diff -w %t.orig %t.echo
 ;
-; RUN: llvm-as -opaque-pointers < %s | llvm-dis -opaque-pointers > %t.orig_opaque
-; RUN: llvm-as -opaque-pointers < %s | llvm-c-test --echo --opaque-pointers > %t.echo_opaque
+; RUN: llvm-as -opaque-pointers < %s | llvm-dis > %t.orig_opaque
+; RUN: llvm-as -opaque-pointers < %s | llvm-c-test --echo > %t.echo_opaque
 ; RUN: diff -w %t.orig_opaque %t.echo_opaque
 
 source_filename = "/test/Bindings/echo.ll"
