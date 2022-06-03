@@ -750,3 +750,8 @@ export-keyword := IDENTIFIER
 #! split it into two tokens to make the GLR parser aware of the nested-template
 #! case.
 greatergreater := > >
+
+#! C++ predefined identifier, __func__ [dcl.fct.def.general] p8
+#! FIXME: add other (MSVC, GNU extension) predefined identifiers.
+primary-expression := predefined-expression
+predefined-expression := __FUNC__
