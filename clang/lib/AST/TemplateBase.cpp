@@ -617,6 +617,17 @@ ASTTemplateArgumentListInfo::Create(const ASTContext &C,
   return new (Mem) ASTTemplateArgumentListInfo(List);
 }
 
+const ASTTemplateArgumentListInfo *
+ASTTemplateArgumentListInfo::Create(const ASTContext &C,
+                                    const ASTTemplateArgumentListInfo *List) {
+  if (!List)
+    return nullptr;
+  std::size_t size =
+      totalSizeToAlloc<TemplateArgumentLoc>(List->getNumTemplateArgs());
+  void *Mem = C.Allocate(size, alignof(ASTTemplateArgumentListInfo));
+  return new (Mem) ASTTemplateArgumentListInfo(List);
+}
+
 ASTTemplateArgumentListInfo::ASTTemplateArgumentListInfo(
     const TemplateArgumentListInfo &Info) {
   LAngleLoc = Info.getLAngleLoc();
@@ -626,6 +637,17 @@ ASTTemplateArgumentListInfo::ASTTemplateArgumentListInfo(
   TemplateArgumentLoc *ArgBuffer = getTrailingObjects<TemplateArgumentLoc>();
   for (unsigned i = 0; i != NumTemplateArgs; ++i)
     new (&ArgBuffer[i]) TemplateArgumentLoc(Info[i]);
+}
+
+ASTTemplateArgumentListInfo::ASTTemplateArgumentListInfo(
+    const ASTTemplateArgumentListInfo *Info) {
+  LAngleLoc = Info->getLAngleLoc();
+  RAngleLoc = Info->getRAngleLoc();
+  NumTemplateArgs = Info->getNumTemplateArgs();
+
+  TemplateArgumentLoc *ArgBuffer = getTrailingObjects<TemplateArgumentLoc>();
+  for (unsigned i = 0; i != NumTemplateArgs; ++i)
+    new (&ArgBuffer[i]) TemplateArgumentLoc((*Info)[i]);
 }
 
 void ASTTemplateKWAndArgsInfo::initializeFrom(

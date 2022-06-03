@@ -53,8 +53,10 @@ getTemplateSpecializationArgLocs(const NamedDecl &ND) {
                  llvm::dyn_cast<VarTemplatePartialSpecializationDecl>(&ND)) {
     if (auto *Args = Var->getTemplateArgsAsWritten())
       return Args->arguments();
-  } else if (auto *Var = llvm::dyn_cast<VarTemplateSpecializationDecl>(&ND))
-    return Var->getTemplateArgsInfo().arguments();
+  } else if (auto *Var = llvm::dyn_cast<VarTemplateSpecializationDecl>(&ND)) {
+    if (auto *Args = Var->getTemplateArgsInfo())
+      return Args->arguments();
+  }
   // We return None for ClassTemplateSpecializationDecls because it does not
   // contain TemplateArgumentLoc information.
   return llvm::None;
