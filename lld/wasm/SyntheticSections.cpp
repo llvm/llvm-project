@@ -735,7 +735,7 @@ unsigned NameSection::numNamedFunctions() const {
   unsigned numNames = out.importSec->getNumImportedFunctions();
 
   for (const InputFunction *f : out.functionSec->inputFunctions)
-    if (!f->getName().empty() || !f->getDebugName().empty())
+    if (!f->name.empty() || !f->debugName.empty())
       ++numNames;
 
   return numNames;
@@ -779,12 +779,12 @@ void NameSection::writeBody() {
       }
     }
     for (const InputFunction *f : out.functionSec->inputFunctions) {
-      if (!f->getName().empty()) {
+      if (!f->name.empty()) {
         writeUleb128(sub.os, f->getFunctionIndex(), "func index");
-        if (!f->getDebugName().empty()) {
-          writeStr(sub.os, f->getDebugName(), "symbol name");
+        if (!f->debugName.empty()) {
+          writeStr(sub.os, f->debugName, "symbol name");
         } else {
-          writeStr(sub.os, maybeDemangleSymbol(f->getName()), "symbol name");
+          writeStr(sub.os, maybeDemangleSymbol(f->name), "symbol name");
         }
       }
     }

@@ -49,8 +49,6 @@ public:
   StringRef name;
   StringRef debugName;
 
-  StringRef getName() const { return name; }
-  StringRef getDebugName() const { return debugName; }
   Kind kind() const { return (Kind)sectionKind; }
 
   uint32_t getSize() const;
