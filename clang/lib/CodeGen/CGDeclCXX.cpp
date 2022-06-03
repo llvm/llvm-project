@@ -880,9 +880,11 @@ CodeGenModule::EmitCXXGlobalInitFunc() {
 
   // Include the filename in the symbol name. Including "sub_" matches gcc
   // and makes sure these symbols appear lexicographically behind the symbols
-  // with priority emitted above.
+  // with priority emitted above.  Module implementation units behave the same
+  // way as a non-modular TU with imports.
   llvm::Function *Fn;
-  if (CXX20ModuleInits && getContext().getNamedModuleForCodeGen()) {
+  if (CXX20ModuleInits && getContext().getNamedModuleForCodeGen() &&
+      !getContext().getNamedModuleForCodeGen()->isModuleImplementation()) {
     SmallString<256> InitFnName;
     llvm::raw_svector_ostream Out(InitFnName);
     cast<ItaniumMangleContext>(getCXXABI().getMangleContext())
