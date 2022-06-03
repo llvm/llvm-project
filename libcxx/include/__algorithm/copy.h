@@ -56,24 +56,40 @@ pair<_InValueT*, _OutValueT*> __copy_impl(_InValueT* __first, _InValueT* __last,
   return std::make_pair(__first + __n, __result + __n);
 }
 
-template <class _InValueT,
-          class _OutValueT,
-          class = __enable_if_t<is_same<typename remove_const<_InValueT>::type, _OutValueT>::value
-                             && is_trivially_copy_assignable<_OutValueT>::value> >
+template <class _Iter>
+using __is_trivially_copy_assignable_unwrapped =
+    _And<__is_cpp17_contiguous_iterator<_Iter>, is_trivially_copy_assignable<__iter_value_type<_Iter> > >;
+
+template <class _InIter,
+          class _OutIter,
+          class = __enable_if_t<is_same<typename remove_const<typename iterator_traits<_InIter>::value_type>::type,
+                                        typename iterator_traits<_OutIter>::value_type>::value
+                             && __is_trivially_copy_assignable_unwrapped<_InIter>::value
+                             && __is_trivially_copy_assignable_unwrapped<_OutIter>::value> >
 inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_AFTER_CXX11
-pair<reverse_iterator<_InValueT*>, reverse_iterator<_OutValueT*> >
-__copy_impl(reverse_iterator<_InValueT*> __first,
-            reverse_iterator<_InValueT*> __last,
-            reverse_iterator<_OutValueT*> __result) {
-  auto __first_base = __first.base();
-  auto __last_base = __last.base();
-  auto __result_base = __result.base();
+pair<reverse_iterator<_InIter>, reverse_iterator<_OutIter> >
+__copy_impl(reverse_iterator<_InIter> __first,
+            reverse_iterator<_InIter> __last,
+            reverse_iterator<_OutIter> __result) {
+  auto __first_base = std::__unwrap_iter(__first.base());
+  auto __last_base = std::__unwrap_iter(__last.base());
+  auto __result_base = std::__unwrap_iter(__result.base());
   auto __result_first = __result_base - (__first_base - __last_base);
   std::__copy_impl(__last_base, __first_base, __result_first);
-  return std::make_pair(__last, reverse_iterator<_OutValueT*>(__result_first));
+  return std::make_pair(__last, reverse_iterator<_OutIter>(std::__rewrap_iter(__result.base(), __result_first)));
 }
 
 template <class _InIter, class _Sent, class _OutIter>
+inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_AFTER_CXX11
+pair<reverse_iterator<reverse_iterator<_InIter> >, reverse_iterator<reverse_iterator<_OutIter> > >
+__copy_impl(reverse_iterator<reverse_iterator<_InIter> > __first,
+            reverse_iterator<reverse_iterator<_Sent> > __last,
+            reverse_iterator<reverse_iterator<_OutIter> > __result);
+
+template <class _InIter, class _Sent, class _OutIter,
+          __enable_if_t<!(is_copy_constructible<_InIter>::value
+                       && is_copy_constructible<_Sent>::value
+                       && is_copy_constructible<_OutIter>::value), int> = 0 >
 inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_AFTER_CXX11
 pair<_InIter, _OutIter> __copy(_InIter __first, _Sent __last, _OutIter __result) {
   return std::__copy_impl(std::move(__first), std::move(__last), std::move(__result));
@@ -82,11 +98,24 @@ pair<_InIter, _OutIter> __copy(_InIter __first, _Sent __last, _OutIter __result)
 template <class _InIter, class _Sent, class _OutIter,
           __enable_if_t<is_copy_constructible<_InIter>::value
                      && is_copy_constructible<_Sent>::value
-                     && is_copy_constructible<_OutIter>::value> >
+                     && is_copy_constructible<_OutIter>::value, int> = 0>
 inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_AFTER_CXX11
-pair<_InIter, _OutIter> __copy(_InIter __first, _Sent __last, _OutIter __result) {
+pair<_InIter, _OutIter>
+__copy(_InIter __first, _Sent __last, _OutIter __result) {
   auto __ret = std::__copy_impl(std::__unwrap_iter(__first), std::__unwrap_iter(__last), std::__unwrap_iter(__result));
   return std::make_pair(std::__rewrap_iter(__first, __ret.first), std::__rewrap_iter(__result, __ret.second));
+}
+
+// __unwrap_iter can't unwrap random_access_iterators, so we need to unwrap two reverse_iterators manually
+template <class _InIter, class _Sent, class _OutIter>
+inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_AFTER_CXX11
+pair<reverse_iterator<reverse_iterator<_InIter> >, reverse_iterator<reverse_iterator<_OutIter> > >
+__copy_impl(reverse_iterator<reverse_iterator<_InIter> > __first,
+            reverse_iterator<reverse_iterator<_Sent> > __last,
+            reverse_iterator<reverse_iterator<_OutIter> > __result) {
+  auto __ret = std::__copy(__first.base().base(), __last.base().base(), __result.base().base());
+  return std::make_pair(reverse_iterator<reverse_iterator<_InIter> >(reverse_iterator<_InIter>(__ret.first)),
+                        reverse_iterator<reverse_iterator<_OutIter> >(reverse_iterator<_OutIter>(__ret.second)));
 }
 
 template <class _InputIterator, class _OutputIterator>
