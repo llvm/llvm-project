@@ -39,7 +39,7 @@ DwarfStringPool::getEntryImpl(AsmPrinter &Asm, StringRef Str) {
 DwarfStringPool::EntryRef DwarfStringPool::getEntry(AsmPrinter &Asm,
                                                     StringRef Str) {
   auto &MapEntry = getEntryImpl(Asm, Str);
-  return EntryRef(MapEntry, false);
+  return EntryRef(MapEntry);
 }
 
 DwarfStringPool::EntryRef DwarfStringPool::getIndexedEntry(AsmPrinter &Asm,
@@ -47,7 +47,7 @@ DwarfStringPool::EntryRef DwarfStringPool::getIndexedEntry(AsmPrinter &Asm,
   auto &MapEntry = getEntryImpl(Asm, Str);
   if (!MapEntry.getValue().isIndexed())
     MapEntry.getValue().Index = NumIndexedStrings++;
-  return EntryRef(MapEntry, true);
+  return EntryRef(MapEntry);
 }
 
 void DwarfStringPool::emitStringOffsetsTableHeader(AsmPrinter &Asm,
