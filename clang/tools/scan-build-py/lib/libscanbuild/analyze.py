@@ -357,6 +357,7 @@ def report_directory(hint, keep, output_format):
     try:
         yield name
     finally:
+        args = (name,)
         if os.listdir(name):
             if output_format not in ['sarif', 'sarif-html']: # FIXME:
                 # 'scan-view' currently does not support sarif format.
@@ -364,6 +365,7 @@ def report_directory(hint, keep, output_format):
             elif output_format == 'sarif-html':
                 msg = "Run 'scan-view %s' to examine bug reports or see " \
                     "merged sarif results at %s/results-merged.sarif."
+                args = (name, name)
             else:
                 msg = "View merged sarif results at %s/results-merged.sarif."
             keep = True
@@ -372,7 +374,7 @@ def report_directory(hint, keep, output_format):
                 msg = "Report directory '%s' contains no report, but kept."
             else:
                 msg = "Removing directory '%s' because it contains no report."
-        logging.warning(msg, name)
+        logging.warning(msg, *args)
 
         if not keep:
             os.rmdir(name)
