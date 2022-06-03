@@ -786,7 +786,7 @@ static Error ignoreStrippedErrors(Error E) {
     consumeError(std::move(E));
     return Error::success();
   }
-  return std::move(E);
+  return E;
 }
 
 Error COFFObjectFile::initialize() {
