@@ -317,3 +317,39 @@ entry:
   %0 = load i64, i64* inttoptr (i64 2044 to i64*)
   ret i64 %0
 }
+
+define dso_local i32 @load_const_medium() nounwind {
+; RV32I-LABEL: load_const_medium:
+; RV32I:       # %bb.0: # %entry
+; RV32I-NEXT:    lui a0, 1
+; RV32I-NEXT:    lw a0, -16(a0)
+; RV32I-NEXT:    ret
+;
+; RV64I-LABEL: load_const_medium:
+; RV64I:       # %bb.0: # %entry
+; RV64I-NEXT:    lui a0, 1
+; RV64I-NEXT:    addiw a0, a0, -16
+; RV64I-NEXT:    lw a0, 0(a0)
+; RV64I-NEXT:    ret
+entry:
+  %0 = load i32, i32* inttoptr (i64 4080 to i32*)
+  ret i32 %0
+}
+
+define dso_local i32 @load_const_large() nounwind {
+; RV32I-LABEL: load_const_large:
+; RV32I:       # %bb.0: # %entry
+; RV32I-NEXT:    lui a0, 524288
+; RV32I-NEXT:    lw a0, -2048(a0)
+; RV32I-NEXT:    ret
+;
+; RV64I-LABEL: load_const_large:
+; RV64I:       # %bb.0: # %entry
+; RV64I-NEXT:    lui a0, 524288
+; RV64I-NEXT:    addiw a0, a0, -2048
+; RV64I-NEXT:    lw a0, 0(a0)
+; RV64I-NEXT:    ret
+entry:
+  %0 = load i32, i32* inttoptr (i64 2147481600 to i32*)
+  ret i32 %0
+}
