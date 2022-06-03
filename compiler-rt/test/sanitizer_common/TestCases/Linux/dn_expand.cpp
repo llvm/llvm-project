@@ -1,5 +1,8 @@
 // RUN: %clangxx %s -o %t -lresolv && %run %t %p
 
+// -lresolv fails on Android.
+// UNSUPPORTED: android
+
 #include <assert.h>
 #include <resolv.h>
 #include <string.h>
