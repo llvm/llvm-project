@@ -18,7 +18,8 @@
 #cmakedefine LLVM_ENABLE_DUMP
 
 /* Target triple LLVM will generate code for by default */
-#cmakedefine LLVM_DEFAULT_TARGET_TRIPLE "${LLVM_DEFAULT_TARGET_TRIPLE}"
+/* Doesn't use `cmakedefine` because it is allowed to be empty. */
+#define LLVM_DEFAULT_TARGET_TRIPLE "${LLVM_DEFAULT_TARGET_TRIPLE}"
 
 /* Define if threads enabled */
 #cmakedefine01 LLVM_ENABLE_THREADS
