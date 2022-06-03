@@ -222,12 +222,12 @@ public:
   }
 
   /// Parse a '|' token.
-  virtual ParseResult parseVerticalBar() override {
+  ParseResult parseVerticalBar() override {
     return parser.parseToken(Token::vertical_bar, "expected '|'");
   }
 
   /// Parse a '|' token if present.
-  virtual ParseResult parseOptionalVerticalBar() override {
+  ParseResult parseOptionalVerticalBar() override {
     return success(parser.consumeIf(Token::vertical_bar));
   }
 
