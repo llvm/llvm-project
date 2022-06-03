@@ -34,6 +34,15 @@ LLVM_LIBC_FUNCTION(float, expm1f, (float x)) {
     return 0x1.8dbe62p-3f;
   }
 
+#if !defined(LIBC_TARGET_HAS_FMA)
+  if (unlikely(x_u == 0xbdc1'c6cbU)) { // x = -0x1.838d96p-4f
+    int round_mode = fputil::get_round();
+    if (round_mode == FE_TONEAREST || round_mode == FE_DOWNWARD)
+      return -0x1.71c884p-4f;
+    return -0x1.71c882p-4f;
+  }
+#endif // LIBC_TARGET_HAS_FMA
+
   // When |x| > 25*log(2), or nan
   if (unlikely(x_abs >= 0x418a'a123U)) {
     // x < log(2^-25)
@@ -70,19 +79,30 @@ LLVM_LIBC_FUNCTION(float, expm1f, (float x)) {
       // x = -0.0f
       if (unlikely(xbits.uintval() == 0x8000'0000U))
         return x;
-      // When |x| < 2^-25, the relative error of the approximation e^x - 1 ~ x
-      // is:
-      //   |(e^x - 1) - x| / |e^x - 1| < |x^2| / |x|
-      //                               = |x|
-      //                               < 2^-25
-      //                               < epsilon(1)/2.
-      // So the correctly rounded values of expm1(x) are:
-      //   = x + eps(x) if rounding mode = FE_UPWARD,
-      //                   or (rounding mode = FE_TOWARDZERO and x is negative),
-      //   = x otherwise.
-      // To simplify the rounding decision and make it more efficient, we use
-      //   fma(x, x, x) ~ x + x^2 instead.
-      return fputil::multiply_add(x, x, x);
+        // When |x| < 2^-25, the relative error of the approximation e^x - 1 ~ x
+        // is:
+        //   |(e^x - 1) - x| / |e^x - 1| < |x^2| / |x|
+        //                               = |x|
+        //                               < 2^-25
+        //                               < epsilon(1)/2.
+        // So the correctly rounded values of expm1(x) are:
+        //   = x + eps(x) if rounding mode = FE_UPWARD,
+        //                   or (rounding mode = FE_TOWARDZERO and x is
+        //                   negative),
+        //   = x otherwise.
+        // To simplify the rounding decision and make it more efficient, we use
+        //   fma(x, x, x) ~ x + x^2 instead.
+        // Note: to use the formula x + x^2 to decide the correct rounding, we
+        // do need fma(x, x, x) to prevent underflow caused by x*x when |x| <
+        // 2^-76. For targets without FMA instructions, we simply use double for
+        // intermediate results as it is more efficient than using an emulated
+        // version of FMA.
+#if defined(LIBC_TARGET_HAS_FMA)
+      return fputil::fma(x, x, x);
+#else
+      double xd = x;
+      return static_cast<float>(fputil::multiply_add(xd, xd, xd));
+#endif // LIBC_TARGET_HAS_FMA
     }
 
     // 2^-25 <= |x| < 2^-4
