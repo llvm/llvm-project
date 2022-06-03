@@ -92,6 +92,8 @@ const char *IostatErrorString(int iostat) {
     return "B/O/Z input value overflows variable";
   case IostatIntegerInputOverflow:
     return "Integer input value overflows variable";
+  case IostatRealInputOverflow:
+    return "Real or complex input value overflows type";
   default:
     return nullptr;
   }
