@@ -43,9 +43,14 @@ processBuffer(raw_ostream &os, std::unique_ptr<llvm::MemoryBuffer> chunkBuffer,
   sourceMgr.setIncludeDirs(includeDirs);
   sourceMgr.AddNewSourceBuffer(std::move(chunkBuffer), SMLoc());
 
+  // If we are dumping ODS information, also enable documentation to ensure the
+  // summary and description information is imported as well.
+  bool enableDocumentation = dumpODS;
+
   ods::Context odsContext;
   ast::Context astContext(odsContext);
-  FailureOr<ast::Module *> module = parsePDLAST(astContext, sourceMgr);
+  FailureOr<ast::Module *> module =
+      parsePDLLAST(astContext, sourceMgr, enableDocumentation);
   if (failed(module))
     return failure();
 
