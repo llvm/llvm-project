@@ -6477,3 +6477,69 @@ is only supported in compute shaders.
 The full documentation is available here: https://docs.microsoft.com/en-us/windows/win32/direct3dhlsl/sv-groupindex
   }];
 }
+
+def WeakDocs : Documentation {
+  let Category = DocCatDecl;
+  let Content = [{
+
+In supported output formats the ``weak`` attribute can be used to
+specify that a variable or function should be emitted as a symbol with
+``weak`` (if a definition) or ``extern_weak`` (if a declaration of an
+external symbol) `linkage
+<https://llvm.org/docs/LangRef.html#linkage-types>`_.
+
+If there is a non-weak definition of the symbol the linker will select
+that over the weak. They must have same type and alignment (variables
+must also have the same size), but may have a different value.
+
+If there are multiple weak definitions of same symbol, but no non-weak
+definition, they should have same type, size, alignment and value, the
+linker will select one of them (see also selectany_ attribute).
+
+If the ``weak`` attribute is applied to a ``const`` qualified variable
+definition that variable is no longer consider a compiletime constant
+as its value can change during linking (or dynamic linking). This
+means that it can e.g no longer be part of an initializer expression.
+
+.. code-block:: c
+
+  const int ANSWER __attribute__ ((weak)) = 42;
+
+  /* This function may be replaced link-time */
+  __attribute__ ((weak)) void debug_log(const char *msg)
+  {
+      fprintf(stderr, "DEBUG: %s\n", msg);
+  }
+
+  int main(int argc, const char **argv)
+  {
+      debug_log ("Starting up...");
+
+      /* This may print something else than "6 * 7 = 42",
+         if there is a non-weak definition of "ANSWER" in
+	 an object linked in */
+      printf("6 * 7 = %d\n", ANSWER);
+
+      return 0;
+   }
+
+If an external declaration is marked weak and that symbol does not
+exist during linking (possibly dynamic) the address of the symbol will
+evaluate to NULL.
+
+.. code-block:: c
+
+  void may_not_exist(void) __attribute__ ((weak));
+
+  int main(int argc, const char **argv)
+  {
+      if (may_not_exist) {
+          may_not_exist();
+      } else {
+          printf("Function did not exist\n");
+      }
+      return 0;
+  }
+
+  }];
+}
