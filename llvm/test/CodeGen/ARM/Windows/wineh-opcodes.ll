@@ -30,14 +30,14 @@ entry:
 ; CHECK-LABEL: clobberR4NoFrame:
 ; CHECK-NEXT: .seh_proc clobberR4NoFrame
 ; CHECK-NEXT: @ %bb.0:                                @ %entry
-; CHECK-NEXT:         push.w  {r4, lr}
-; CHECK-NEXT:         .seh_save_regs_w  {r4, lr}
+; CHECK-NEXT:         push    {r4, lr}
+; CHECK-NEXT:         .seh_save_regs  {r4, lr}
 ; CHECK-NEXT:         .seh_endprologue
 ; CHECK-NEXT:         bl      other
 
 ; CHECK:              .seh_startepilogue
-; CHECK-NEXT:         pop.w   {r4, pc}
-; CHECK-NEXT:         .seh_save_regs_w  {r4, lr}
+; CHECK-NEXT:         pop     {r4, pc}
+; CHECK-NEXT:         .seh_save_regs  {r4, lr}
 ; CHECK-NEXT:         .seh_endepilogue
 ; CHECK-NEXT:         .seh_endproc
 
@@ -51,8 +51,8 @@ entry:
 ; CHECK-LABEL: clobberR4Tail:
 ; CHECK-NEXT: .seh_proc clobberR4Tail
 ; CHECK-NEXT: @ %bb.0:                                @ %entry
-; CHECK-NEXT:         push.w  {r4, lr}
-; CHECK-NEXT:         .seh_save_regs_w  {r4, lr}
+; CHECK-NEXT:         push    {r4, lr}
+; CHECK-NEXT:         .seh_save_regs  {r4, lr}
 ; CHECK-NEXT:         .seh_endprologue
 
 ; CHECK:              .seh_startepilogue
@@ -215,8 +215,8 @@ entry:
 ; CHECK-LABEL: func5000:
 ; CHECK-NEXT: .seh_proc func5000
 ; CHECK-NEXT: @ %bb.0:                                @ %entry
-; CHECK-NEXT:         push.w  {r4, r5, r6, lr}
-; CHECK-NEXT:         .seh_save_regs_w  {r4-r6, lr}
+; CHECK-NEXT:         push    {r4, r5, r6, lr}
+; CHECK-NEXT:         .seh_save_regs  {r4-r6, lr}
 ; CHECK-NEXT:         movw    r4, #1250
 ; CHECK-NEXT:         .seh_nop_w
 ; CHECK-NEXT:         bl      __chkstk
@@ -230,8 +230,8 @@ entry:
 ; CHECK-NEXT:         .seh_stackalloc_w       4992
 ; CHECK-NEXT:         add     sp, #8
 ; CHECK-NEXT:         .seh_stackalloc 8
-; CHECK-NEXT:         pop.w   {r4, r5, r6, pc}
-; CHECK-NEXT:         .seh_save_regs_w  {r4-r6, lr}
+; CHECK-NEXT:         pop     {r4, r5, r6, pc}
+; CHECK-NEXT:         .seh_save_regs  {r4-r6, lr}
 ; CHECK-NEXT:         .seh_endepilogue
 ; CHECK-NEXT:         .seh_endproc
 
@@ -247,8 +247,8 @@ entry:
 ; CHECK-LABEL: func262144:
 ; CHECK-NEXT: .seh_proc func262144
 ; CHECK-NEXT: @ %bb.0:                                @ %entry
-; CHECK-NEXT:         push.w  {r4, r5, r6, lr}
-; CHECK-NEXT:         .seh_save_regs_w  {r4-r6, lr}
+; CHECK-NEXT:         push    {r4, r5, r6, lr}
+; CHECK-NEXT:         .seh_save_regs  {r4-r6, lr}
 ; CHECK-NEXT:         movw    r4, #0
 ; CHECK-NEXT:         .seh_nop_w
 ; CHECK-NEXT:         movt    r4, #1
@@ -262,8 +262,8 @@ entry:
 ; CHECK:              .seh_startepilogue
 ; CHECK-NEXT:         add.w   sp, sp, #262144
 ; CHECK-NEXT:         .seh_stackalloc_w       262144
-; CHECK-NEXT:         pop.w   {r4, r5, r6, pc}
-; CHECK-NEXT:         .seh_save_regs_w  {r4-r6, lr}
+; CHECK-NEXT:         pop     {r4, r5, r6, pc}
+; CHECK-NEXT:         .seh_save_regs  {r4-r6, lr}
 ; CHECK-NEXT:         .seh_endepilogue
 ; CHECK-NEXT:         .seh_endproc
 
@@ -279,8 +279,8 @@ entry:
 ; CHECK-LABEL: func270000:
 ; CHECK-NEXT: .seh_proc func270000
 ; CHECK-NEXT: @ %bb.0:                                @ %entry
-; CHECK-NEXT:         push.w  {r4, r5, r6, lr}
-; CHECK-NEXT:         .seh_save_regs_w  {r4-r6, lr}
+; CHECK-NEXT:         push    {r4, r5, r6, lr}
+; CHECK-NEXT:         .seh_save_regs  {r4-r6, lr}
 ; CHECK-NEXT:         movw    r4, #1964
 ; CHECK-NEXT:         .seh_nop_w
 ; CHECK-NEXT:         movt    r4, #1
@@ -296,8 +296,8 @@ entry:
 ; CHECK-NEXT:         .seh_stackalloc_w       268288
 ; CHECK-NEXT:         add.w   sp, sp, #1712
 ; CHECK-NEXT:         .seh_stackalloc_w       1712
-; CHECK-NEXT:         pop.w   {r4, r5, r6, pc}
-; CHECK-NEXT:         .seh_save_regs_w  {r4-r6, lr}
+; CHECK-NEXT:         pop     {r4, r5, r6, pc}
+; CHECK-NEXT:         .seh_save_regs  {r4-r6, lr}
 ; CHECK-NEXT:         .seh_endepilogue
 ; CHECK-NEXT:         .seh_endproc
 
