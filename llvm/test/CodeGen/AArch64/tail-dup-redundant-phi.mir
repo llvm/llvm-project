@@ -338,20 +338,18 @@ body:             |
   ; CHECK-NEXT: bb.17.bb49:
   ; CHECK-NEXT:   successors:{{ $}}
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[PHI2:%[0-9]+]]:gpr64 = PHI [[PHI]], %bb.14, [[PHI]], %bb.15
-  ; CHECK-NEXT:   [[PHI3:%[0-9]+]]:gpr64all = PHI [[PHI1]], %bb.14, [[PHI1]], %bb.15
   ; CHECK-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def dead $sp, implicit $sp
   ; CHECK-NEXT:   [[MOVi32imm5:%[0-9]+]]:gpr32 = MOVi32imm 10
   ; CHECK-NEXT:   $w0 = COPY [[MOVi32imm5]]
-  ; CHECK-NEXT:   [[STATEPOINT2:%[0-9]+]]:gpr64all, [[STATEPOINT3:%[0-9]+]]:gpr64all = STATEPOINT 2882400000, 0, 1, @wombat, $w0, 2, 0, 2, 0, 2, 3, [[PHI3]], [[PHI2]], [[PHI]], 2, 2, [[PHI1]](tied-def 0), [[PHI]](tied-def 1), 2, 0, 2, 2, 0, 0, 1, 1, csr_aarch64_aapcs, implicit-def $sp, implicit-def dead early-clobber $lr
+  ; CHECK-NEXT:   [[STATEPOINT2:%[0-9]+]]:gpr64all, [[STATEPOINT3:%[0-9]+]]:gpr64all = STATEPOINT 2882400000, 0, 1, @wombat, $w0, 2, 0, 2, 0, 2, 3, [[PHI1]], [[PHI]], [[PHI]], 2, 2, [[PHI1]](tied-def 0), [[PHI]](tied-def 1), 2, 0, 2, 2, 0, 0, 1, 1, csr_aarch64_aapcs, implicit-def $sp, implicit-def dead early-clobber $lr
   ; CHECK-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def dead $sp, implicit $sp
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.18.bb51:
-  ; CHECK-NEXT:   [[PHI4:%[0-9]+]]:gpr64all = PHI [[COPY10]], %bb.8, [[COPY13]], %bb.9
+  ; CHECK-NEXT:   [[PHI2:%[0-9]+]]:gpr64all = PHI [[COPY10]], %bb.8, [[COPY13]], %bb.9
   ; CHECK-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def dead $sp, implicit $sp
   ; CHECK-NEXT:   [[MOVi32imm6:%[0-9]+]]:gpr32 = MOVi32imm 24
   ; CHECK-NEXT:   $w0 = COPY [[MOVi32imm6]]
-  ; CHECK-NEXT:   [[STATEPOINT4:%[0-9]+]]:gpr64all = STATEPOINT 2882400000, 0, 1, @wombat, $w0, 2, 0, 2, 0, 2, 1, [[PHI4]], 2, 1, [[PHI4]](tied-def 0), 2, 0, 2, 1, 0, 0, csr_aarch64_aapcs, implicit-def $sp, implicit-def dead early-clobber $lr
+  ; CHECK-NEXT:   [[STATEPOINT4:%[0-9]+]]:gpr64all = STATEPOINT 2882400000, 0, 1, @wombat, $w0, 2, 0, 2, 0, 2, 1, [[PHI2]], 2, 1, [[PHI2]](tied-def 0), 2, 0, 2, 1, 0, 0, csr_aarch64_aapcs, implicit-def $sp, implicit-def dead early-clobber $lr
   ; CHECK-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def dead $sp, implicit $sp
   bb.0.bb:
     successors: %bb.2(0x2aaaaaab), %bb.15(0x55555555)
