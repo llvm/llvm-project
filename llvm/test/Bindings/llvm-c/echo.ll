@@ -1,5 +1,5 @@
 ; RUN: llvm-as < %s | llvm-dis > %t.orig
-; RUN: llvm-as < %s | llvm-c-test --echo > %t.echo
+; RUN: llvm-as < %s | llvm-c-test --echo --no-opaque-pointers > %t.echo
 ; RUN: diff -w %t.orig %t.echo
 ;
 ; RUN: llvm-as -opaque-pointers < %s | llvm-dis -opaque-pointers > %t.orig_opaque
