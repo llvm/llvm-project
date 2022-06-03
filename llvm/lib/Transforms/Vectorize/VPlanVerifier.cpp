@@ -49,11 +49,14 @@ static void verifyBlocksInRegion(const VPRegionBlock *Region) {
     // Check block's parent.
     assert(VPB->getParent() == Region && "VPBlockBase has wrong parent");
 
+    auto *VPBB = dyn_cast<VPBasicBlock>(VPB);
     // Check block's condition bit.
-    if (VPB->getNumSuccessors() > 1 || Region->getExitingBasicBlock() == VPB)
-      assert(VPB->getCondBit() && "Missing condition bit!");
+    if (VPB->getNumSuccessors() > 1 || (VPBB && VPBB->isExiting()))
+      assert(VPBB && VPBB->getTerminator() &&
+             "Block has multiple successors but doesn't "
+             "have a proper branch recipe!");
     else
-      assert(!VPB->getCondBit() && "Unexpected condition bit!");
+      assert((!VPBB || !VPBB->getTerminator()) && "Unexpected branch recipe!");
 
     // Check block's successors.
     const auto &Successors = VPB->getSuccessors();

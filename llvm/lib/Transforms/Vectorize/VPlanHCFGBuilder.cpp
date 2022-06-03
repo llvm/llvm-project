@@ -216,10 +216,13 @@ void PlainCFGBuilder::createVPInstructionsForVPBB(VPBasicBlock *VPBB,
            "Instruction shouldn't have been visited.");
 
     if (auto *Br = dyn_cast<BranchInst>(Inst)) {
-      // Branch instruction is not explicitly represented in VPlan but we need
-      // to represent its condition bit when it's conditional.
-      if (Br->isConditional())
-        getOrCreateVPOperand(Br->getCondition());
+      // Conditional branch instruction are represented using BranchOnCond
+      // recipes.
+      if (Br->isConditional()) {
+        VPValue *Cond = getOrCreateVPOperand(Br->getCondition());
+        VPBB->appendRecipe(
+            new VPInstruction(VPInstruction::BranchOnCond, {Cond}));
+      }
 
       // Skip the rest of the Instruction processing for Branch instructions.
       continue;
@@ -310,10 +313,9 @@ VPBasicBlock *PlainCFGBuilder::buildPlainCFG() {
       // representing the condition bit in VPlan (which may be in another VPBB).
       assert(IRDef2VPValue.count(BrCond) &&
              "Missing condition bit in IRDef2VPValue!");
-      VPValue *VPCondBit = IRDef2VPValue[BrCond];
 
-      // Link successors using condition bit.
-      VPBB->setTwoSuccessors(SuccVPBB0, SuccVPBB1, VPCondBit);
+      // Link successors.
+      VPBB->setTwoSuccessors(SuccVPBB0, SuccVPBB1);
     } else
       llvm_unreachable("Number of successors not supported.");
 
