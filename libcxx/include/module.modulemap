@@ -996,7 +996,9 @@ module std [system] {
     module add_rvalue_reference       { private header "__type_traits/add_rvalue_reference.h" }
     module add_volatile               { private header "__type_traits/add_volatile.h" }
     module conditional                { private header "__type_traits/conditional.h" }
+    module conjunction                { private header "__type_traits/conjunction.h" }
     module decay                      { private header "__type_traits/decay.h" }
+    module disjunction                { private header "__type_traits/disjunction.h" }
     module enable_if                  { private header "__type_traits/enable_if.h" }
     module extent                     { private header "__type_traits/extent.h" }
     module integral_constant          { private header "__type_traits/integral_constant.h" }

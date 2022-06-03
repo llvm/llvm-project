@@ -459,7 +459,9 @@ END-SCRIPT
 #include <__type_traits/add_rvalue_reference.h> // expected-error@*:* {{use of private header from outside its module: '__type_traits/add_rvalue_reference.h'}}
 #include <__type_traits/add_volatile.h> // expected-error@*:* {{use of private header from outside its module: '__type_traits/add_volatile.h'}}
 #include <__type_traits/conditional.h> // expected-error@*:* {{use of private header from outside its module: '__type_traits/conditional.h'}}
+#include <__type_traits/conjunction.h> // expected-error@*:* {{use of private header from outside its module: '__type_traits/conjunction.h'}}
 #include <__type_traits/decay.h> // expected-error@*:* {{use of private header from outside its module: '__type_traits/decay.h'}}
+#include <__type_traits/disjunction.h> // expected-error@*:* {{use of private header from outside its module: '__type_traits/disjunction.h'}}
 #include <__type_traits/enable_if.h> // expected-error@*:* {{use of private header from outside its module: '__type_traits/enable_if.h'}}
 #include <__type_traits/extent.h> // expected-error@*:* {{use of private header from outside its module: '__type_traits/extent.h'}}
 #include <__type_traits/integral_constant.h> // expected-error@*:* {{use of private header from outside its module: '__type_traits/integral_constant.h'}}
