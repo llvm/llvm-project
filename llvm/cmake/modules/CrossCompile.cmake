@@ -26,7 +26,7 @@ function(llvm_create_cross_target project_name target_name toolchain buildtype)
 
   # project specific version of the flags up above
   set(CROSS_TOOLCHAIN_FLAGS_${project_name}_${target_name} ""
-    CACHE STRING "Toolchain configuration for ${Pproject_name}_${target_name}")
+    CACHE STRING "Toolchain configuration for ${project_name}_${target_name}")
 
   if (buildtype)
     set(build_type_flags "-DCMAKE_BUILD_TYPE=${buildtype}")
