@@ -14,25 +14,25 @@ define amdgpu_kernel void @reduced_nested_loop_conditions(i64 addrspace(3)* noca
 ; GCN-NEXT:    s_load_dword s0, s[0:1], 0x9
 ; GCN-NEXT:    v_lshlrev_b32_e32 v0, 3, v0
 ; GCN-NEXT:    s_mov_b32 m0, -1
-; GCN-NEXT:    s_mov_b64 s[2:3], -1
+; GCN-NEXT:    s_and_b64 s[2:3], exec, -1
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    v_add_i32_e32 v0, vcc, s0, v0
 ; GCN-NEXT:    ds_read_b64 v[0:1], v0
-; GCN-NEXT:    s_and_b64 s[0:1], exec, -1
+; GCN-NEXT:    s_and_b64 s[0:1], exec, 0
 ; GCN-NEXT:    s_branch .LBB0_2
-; GCN-NEXT:  .LBB0_1: ; %bb10
+; GCN-NEXT:  .LBB0_1: ; %Flow
 ; GCN-NEXT:    ; in Loop: Header=BB0_2 Depth=1
-; GCN-NEXT:    s_mov_b64 s[4:5], 0
-; GCN-NEXT:    s_andn2_b64 vcc, exec, s[2:3]
+; GCN-NEXT:    s_mov_b64 vcc, s[0:1]
 ; GCN-NEXT:    s_cbranch_vccz .LBB0_4
 ; GCN-NEXT:  .LBB0_2: ; %bb5
 ; GCN-NEXT:    ; =>This Inner Loop Header: Depth=1
-; GCN-NEXT:    s_mov_b64 vcc, s[0:1]
-; GCN-NEXT:    s_cbranch_vccnz .LBB0_1
-; GCN-NEXT:  ; %bb.3: ; in Loop: Header=BB0_2 Depth=1
 ; GCN-NEXT:    s_mov_b64 s[4:5], -1
-; GCN-NEXT:    s_andn2_b64 vcc, exec, s[2:3]
-; GCN-NEXT:    s_cbranch_vccnz .LBB0_2
+; GCN-NEXT:    s_mov_b64 vcc, s[2:3]
+; GCN-NEXT:    s_cbranch_vccz .LBB0_1
+; GCN-NEXT:  ; %bb.3: ; %bb10
+; GCN-NEXT:    ; in Loop: Header=BB0_2 Depth=1
+; GCN-NEXT:    s_mov_b64 s[4:5], 0
+; GCN-NEXT:    s_branch .LBB0_1
 ; GCN-NEXT:  .LBB0_4: ; %loop.exit.guard
 ; GCN-NEXT:    s_and_b64 vcc, exec, s[4:5]
 ; GCN-NEXT:    s_cbranch_vccz .LBB0_7
