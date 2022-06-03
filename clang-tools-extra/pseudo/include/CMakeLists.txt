@@ -1,7 +1,13 @@
 # The cxx.bnf grammar file
 set(cxx_bnf ${CMAKE_CURRENT_SOURCE_DIR}/../lib/cxx.bnf)
 
-if(LLVM_USE_HOST_TOOLS)
+set(CLANG_PSEUDO_GEN "clang-pseudo-gen" CACHE
+  STRING "Host clang-pseudo-gen executable. Saves building if cross-compiling.")
+
+if(NOT CLANG_PSEUDO_GEN STREQUAL "clang-pseudo-gen")
+  set(pseudo_gen ${CLANG_PSEUDO_GEN})
+  set(pseudo_gen_target ${CLANG_PSEUDO_GEN})
+elseif(LLVM_USE_HOST_TOOLS)
   build_native_tool(clang-pseudo-gen pseudo_gen)
   set(pseudo_gen_target "${pseudo_gen}")
 else()
