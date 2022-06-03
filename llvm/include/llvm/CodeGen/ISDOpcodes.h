@@ -898,6 +898,13 @@ enum NodeType {
   STRICT_FP16_TO_FP,
   STRICT_FP_TO_FP16,
 
+  /// BF16_TO_FP, FP_TO_BF16 - These operators are used to perform promotions
+  /// and truncation for bfloat16. These nodes form a semi-softened interface
+  /// for dealing with bf16 (as an i16), which is often a storage-only type but
+  /// has native conversions.
+  BF16_TO_FP,
+  FP_TO_BF16,
+
   /// Perform various unary floating-point operations inspired by libm. For
   /// FPOWI, the result is undefined if if the integer operand doesn't fit into
   /// sizeof(int).

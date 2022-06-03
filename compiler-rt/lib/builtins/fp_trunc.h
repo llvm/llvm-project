@@ -59,6 +59,12 @@ typedef uint16_t dst_rep_t;
 #define DST_REP_C UINT16_C
 static const int dstSigBits = 10;
 
+#elif defined DST_BFLOAT
+typedef uint16_t dst_t;
+typedef uint16_t dst_rep_t;
+#define DST_REP_C UINT16_C
+static const int dstSigBits = 7;
+
 #else
 #error Destination should be single precision or double precision!
 #endif // end destination precision

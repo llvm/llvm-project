@@ -998,6 +998,7 @@ void SelectionDAGLegalize::LegalizeOp(SDNode *Node) {
       Action = TLI.getOperationAction(Node->getOpcode(), MVT::Other);
     break;
   case ISD::FP_TO_FP16:
+  case ISD::FP_TO_BF16:
   case ISD::SINT_TO_FP:
   case ISD::UINT_TO_FP:
   case ISD::EXTRACT_VECTOR_ELT:
@@ -2904,6 +2905,18 @@ bool SelectionDAGLegalize::ExpandNode(SDNode *Node) {
                                  Node->getValueType(0), dl)))
       Results.push_back(Tmp1);
     break;
+  case ISD::BF16_TO_FP: {
+    // Always expand bf16 to f32 casts, they lower to ext + shift.
+    SDValue Op = DAG.getNode(ISD::BITCAST, dl, MVT::i16, Node->getOperand(0));
+    Op = DAG.getNode(ISD::ANY_EXTEND, dl, MVT::i32, Op);
+    Op = DAG.getNode(
+        ISD::SHL, dl, MVT::i32, Op,
+        DAG.getConstant(16, dl,
+                        TLI.getShiftAmountTy(MVT::i32, DAG.getDataLayout())));
+    Op = DAG.getNode(ISD::BITCAST, dl, MVT::f32, Op);
+    Results.push_back(Op);
+    break;
+  }
   case ISD::SIGN_EXTEND_INREG: {
     EVT ExtraVT = cast<VTSDNode>(Node->getOperand(1))->getVT();
     EVT VT = Node->getValueType(0);
@@ -4213,6 +4226,13 @@ void SelectionDAGLegalize::ConvertNodeToLibcall(SDNode *Node) {
     RTLIB::Libcall LC =
         RTLIB::getFPROUND(Node->getOperand(0).getValueType(), MVT::f16);
     assert(LC != RTLIB::UNKNOWN_LIBCALL && "Unable to expand fp_to_fp16");
+    Results.push_back(ExpandLibCall(LC, Node, false));
+    break;
+  }
+  case ISD::FP_TO_BF16: {
+    RTLIB::Libcall LC =
+        RTLIB::getFPROUND(Node->getOperand(0).getValueType(), MVT::bf16);
+    assert(LC != RTLIB::UNKNOWN_LIBCALL && "Unable to expand fp_to_bf16");
     Results.push_back(ExpandLibCall(LC, Node, false));
     break;
   }

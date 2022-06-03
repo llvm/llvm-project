@@ -167,6 +167,7 @@ set(GENERIC_SOURCES
   trampoline_setup.c
   truncdfhf2.c
   truncdfsf2.c
+  truncsfbf2.c
   truncsfhf2.c
   ucmpdi2.c
   ucmpti2.c
