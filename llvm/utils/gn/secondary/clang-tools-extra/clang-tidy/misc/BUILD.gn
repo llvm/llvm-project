@@ -1,7 +1,26 @@
+action("Confusables.inc") {
+  gen_target = "ConfusableTable:make_confusable_table($host_toolchain)"
+  gen_executable = get_label_info(gen_target, "root_out_dir") +
+                    "/bin/" + get_label_info(gen_target, "name")
+  deps = [ gen_target ]
+
+  # FIXME: Rename this script, now that it's used for other things.
+  script = "//llvm/utils/gn/build/run_tablegen.py"
+  sources = [ "ConfusableTable/confusables.txt" ]
+  outputs = [ "$target_gen_dir/$target_name" ]
+  args = [
+    rebase_path(gen_executable, root_build_dir),
+    rebase_path(sources[0], root_build_dir),
+    rebase_path(outputs[0], root_build_dir),
+  ]
+}
+
 static_library("misc") {
   output_name = "clangTidyMiscModule"
   configs += [ "//llvm/utils/gn/build:clang_code" ]
+  include_dirs = [ target_gen_dir ]
   deps = [
+    ":Confusables.inc",
     "//clang-tools-extra/clang-tidy",
     "//clang-tools-extra/clang-tidy/utils",
     "//clang/lib/AST",
@@ -15,6 +34,7 @@ static_library("misc") {
   ]
   sources = [
     "DefinitionsInHeadersCheck.cpp",
+    "Homoglyph.cpp",
     "MiscTidyModule.cpp",
     "MisleadingBidirectional.cpp",
     "MisleadingIdentifier.cpp",
