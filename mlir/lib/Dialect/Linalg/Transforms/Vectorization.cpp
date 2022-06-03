@@ -432,6 +432,14 @@ static bool hasOnlyScalarElementwiseOp(Region &r) {
   return true;
 }
 
+/// Returns `true` if all indexing maps of the linalg op are projected
+/// permutations.
+static bool allIndexingsAreProjectedPermutation(LinalgOp op) {
+  return llvm::all_of(op.getIndexingMaps(), [](AffineMap m) {
+    return m.isProjectedPermutation(/*allowZeroInResults=*/true);
+  });
+}
+
 // Return true if the op is an element-wise linalg op.
 static bool isElementwise(Operation *op) {
   auto linalgOp = dyn_cast<linalg::LinalgOp>(op);
@@ -439,6 +447,10 @@ static bool isElementwise(Operation *op) {
     return false;
   if (linalgOp.getNumLoops() != linalgOp.getNumParallelLoops())
     return false;
+
+  if (!allIndexingsAreProjectedPermutation(linalgOp))
+    return false;
+
   // TODO: relax the restrictions on indexing map.
   for (OpOperand *opOperand : linalgOp.getOutputOperands()) {
     if (!linalgOp.getTiedIndexingMap(opOperand).isPermutation())
@@ -562,17 +574,6 @@ vectorizeAsLinalgGeneric(OpBuilder &b, LinalgOp linalgOp,
   }
 
   return success();
-}
-
-/// Helper function to vectorize a `linalgOp` with contraction semantics in a
-/// generic fashion.
-/// This helper is needed atm because the truly generic implementation requires
-/// good vector.multi_reduce folding patterns that are currently NYI.
-// TODO: drop reliance on a specific pattern.
-static bool allIndexingsAreProjectedPermutation(LinalgOp op) {
-  return llvm::all_of(op.getIndexingMaps(), [](AffineMap m) {
-    return m.isProjectedPermutation(/*allowZeroInResults=*/true);
-  });
 }
 
 // TODO: probably need some extra checks for reduction followed by consumer
