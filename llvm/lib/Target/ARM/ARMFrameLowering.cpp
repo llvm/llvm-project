@@ -338,6 +338,7 @@ static MachineBasicBlock::iterator insertSEH(MachineBasicBlock::iterator MBBI,
   case ARM::t2LDMIA_UPD:
   case ARM::t2STMDB_UPD: {
     unsigned Mask = 0;
+    bool Wide = false;
     for (unsigned i = 4, NumOps = MBBI->getNumOperands(); i != NumOps; ++i) {
       const MachineOperand &MO = MBBI->getOperand(i);
       if (!MO.isReg() || MO.isImplicit())
@@ -345,13 +346,40 @@ static MachineBasicBlock::iterator insertSEH(MachineBasicBlock::iterator MBBI,
       unsigned Reg = RegInfo->getSEHRegNum(MO.getReg());
       if (Reg == 15)
         Reg = 14;
+      if (Reg >= 8 && Reg <= 13)
+        Wide = true;
+      else if (Opc == ARM::t2LDMIA_UPD && Reg == 14)
+        Wide = true;
       Mask |= 1 << Reg;
+    }
+    if (!Wide) {
+      unsigned NewOpc;
+      switch (Opc) {
+      case ARM::t2LDMIA_RET:
+        NewOpc = ARM::tPOP_RET;
+        break;
+      case ARM::t2LDMIA_UPD:
+        NewOpc = ARM::tPOP;
+        break;
+      case ARM::t2STMDB_UPD:
+        NewOpc = ARM::tPUSH;
+        break;
+      default:
+        llvm_unreachable("");
+      }
+      MachineInstrBuilder NewInstr =
+          BuildMI(MF, DL, TII.get(NewOpc)).setMIFlags(MBBI->getFlags());
+      for (unsigned i = 2, NumOps = MBBI->getNumOperands(); i != NumOps; ++i)
+        NewInstr.add(MBBI->getOperand(i));
+      MachineBasicBlock::iterator NewMBBI = MBB->insertAfter(MBBI, NewInstr);
+      MBB->erase(MBBI);
+      MBBI = NewMBBI;
     }
     unsigned SEHOpc =
         (Opc == ARM::t2LDMIA_RET) ? ARM::SEH_SaveRegs_Ret : ARM::SEH_SaveRegs;
     MIB = BuildMI(MF, DL, TII.get(SEHOpc))
               .addImm(Mask)
-              .addImm(/*Wide=*/1)
+              .addImm(Wide ? 1 : 0)
               .setMIFlags(Flags);
     break;
   }
