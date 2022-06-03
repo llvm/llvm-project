@@ -2214,6 +2214,23 @@ TEST_P(UncheckedOptionalAccessTest, CallReturningOptional) {
       UnorderedElementsAre(Pair("check-4", "unsafe: input.cc:10:7")));
 }
 
+// Verifies that the model sees through aliases.
+TEST_P(UncheckedOptionalAccessTest, WithAlias) {
+  ExpectLatticeChecksFor(
+      R"(
+    #include "unchecked_optional_access_test.h"
+
+    template <typename T>
+    using MyOptional = $ns::$optional<T>;
+
+    void target(MyOptional<int> opt) {
+      opt.value();
+      /*[[check]]*/
+    }
+  )",
+      UnorderedElementsAre(Pair("check", "unsafe: input.cc:8:7")));
+}
+
 // FIXME: Add support for:
 // - constructors (copy, move)
 // - assignment operators (default, copy, move)
