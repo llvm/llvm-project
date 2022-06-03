@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -fsyntax-only -pedantic -std=c++11 -verify -triple x86_64-apple-darwin %s
+// RUN: %clang_cc1 -fsyntax-only -pedantic -std=c++17 -verify -triple x86_64-apple-darwin %s
 
 enum class E1 {
   Val1 = 1L
@@ -31,10 +32,22 @@ static_assert(sizeof(E3) == 1, "bad size");
 int x2 = Val2;
 
 int a1[Val2];
-int a2[E1::Val1]; // expected-error{{size of array has non-integer type}}
+int a2[E1::Val1];
+
+#if __cplusplus >= 201703L
+// expected-error@-3 {{type 'E1' is not implicitly convertible to 'unsigned long'}}
+#else
+// expected-error@-5 {{size of array has non-integer type}}
+#endif
 
 int* p1 = new int[Val2];
-int* p2 = new int[E1::Val1]; // expected-error{{array size expression must have integral or unscoped enumeration type, not 'E1'}}
+int* p2 = new int[E1::Val1];
+
+#if __cplusplus >= 201703L
+// expected-error@-3 {{converting 'E1' to incompatible type 'unsigned long'}}
+#else
+// expected-error@-5 {{array size expression must have integral or unscoped enumeration type, not 'E1'}}
+#endif
 
 enum class E4 {
   e1 = -2147483648, // ok
@@ -317,3 +330,11 @@ namespace PR35586 {
   enum C { R, G, B };
   enum B { F = (enum C) -1, T}; // this should compile cleanly, it used to assert.
 };
+
+namespace test12 {
+// Check that clang rejects this code without crashing in c++17.
+enum class A;
+enum class B;
+A a;
+B b{a}; // expected-error {{cannot initialize}}
+}
