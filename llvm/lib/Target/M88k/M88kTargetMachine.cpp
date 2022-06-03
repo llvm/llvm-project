@@ -31,9 +31,9 @@ static cl::opt<bool>
     BranchRelaxation("m88k-enable-branch-relax", cl::Hidden, cl::init(true),
                      cl::desc("Relax out of range conditional branches"));
 
-static cl::opt<bool>
-    DisableDelaySlotFiller("disable-m88k-delay-slot-filler", cl::init(true),
-                           cl::desc("Do not fill delay slots."), cl::Hidden);
+static cl::opt<cl::boolOrDefault>
+    EnableDelaySlotFiller("m88k-enable-delay-slot-filler",
+                          cl::desc("Fill delay slots."), cl::Hidden);
 
 extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeM88kTarget() {
   // Register the target and target specific passes.
@@ -166,7 +166,12 @@ void M88kPassConfig::addPreEmitPass() {
   if (BranchRelaxation)
     addPass(&BranchRelaxationPassID);
 
-  if (!DisableDelaySlotFiller)
+  // Enable the delay slot filler for optimizing builds or if explicitly
+  // requested.
+  // TODO: When targetting MC88110 it might be better to not enable it.
+  if ((getOptLevel() != CodeGenOpt::None &&
+       EnableDelaySlotFiller != cl::BOU_FALSE) ||
+      EnableDelaySlotFiller == cl::BOU_TRUE)
     addPass(createM88kDelaySlotFiller());
 }
 

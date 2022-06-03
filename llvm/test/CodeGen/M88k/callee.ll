@@ -1,7 +1,7 @@
 ; Test argument passing and stack frame construction, callee side.
 ;
-; RUN: llc < %s -mtriple=m88k-openbsd -mcpu=mc88100 | FileCheck %s
-; RUN: llc < %s -mtriple=m88k-openbsd -mcpu=mc88110 | FileCheck %s
+; RUN: llc < %s -mtriple=m88k-openbsd -mcpu=mc88100 -O0 | FileCheck %s
+; RUN: llc < %s -mtriple=m88k-openbsd -mcpu=mc88110 -O0 | FileCheck %s
 
 ; Registers r2 to r9 used, no parameter passed on stack.
 define i32 @f1(i32 %a, i32 %b, i32 %c, i32 %d, i32 %e, i32 %f, i32 %g, i32 %h) {
