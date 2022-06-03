@@ -360,19 +360,15 @@ public:
         {return !(__x == __y);}
 
 private:
-#if _LIBCPP_DEBUG_LEVEL == 2
     _LIBCPP_INLINE_VISIBILITY
     explicit __hash_iterator(__next_pointer __node, const void* __c) _NOEXCEPT
         : __node_(__node)
         {
+            (void)__c;
+#if _LIBCPP_DEBUG_LEVEL == 2
             __get_db()->__insert_ic(this, __c);
-        }
-#else
-    _LIBCPP_INLINE_VISIBILITY
-    explicit __hash_iterator(__next_pointer __node) _NOEXCEPT
-        : __node_(__node)
-        {}
 #endif
+        }
     template <class, class, class, class> friend class __hash_table;
     template <class> friend class _LIBCPP_TEMPLATE_VIS __hash_const_iterator;
     template <class> friend class _LIBCPP_TEMPLATE_VIS __hash_map_iterator;
@@ -478,19 +474,15 @@ public:
         {return !(__x == __y);}
 
 private:
-#if _LIBCPP_DEBUG_LEVEL == 2
     _LIBCPP_INLINE_VISIBILITY
     explicit __hash_const_iterator(__next_pointer __node, const void* __c) _NOEXCEPT
         : __node_(__node)
         {
+            (void)__c;
+#if _LIBCPP_DEBUG_LEVEL == 2
             __get_db()->__insert_ic(this, __c);
-        }
-#else
-    _LIBCPP_INLINE_VISIBILITY
-    explicit __hash_const_iterator(__next_pointer __node) _NOEXCEPT
-        : __node_(__node)
-        {}
 #endif
+        }
     template <class, class, class, class> friend class __hash_table;
     template <class> friend class _LIBCPP_TEMPLATE_VIS __hash_map_const_iterator;
     template <class, class, class, class, class> friend class _LIBCPP_TEMPLATE_VIS unordered_map;
@@ -591,7 +583,6 @@ public:
         {return !(__x == __y);}
 
 private:
-#if _LIBCPP_DEBUG_LEVEL == 2
     _LIBCPP_INLINE_VISIBILITY
     explicit __hash_local_iterator(__next_pointer __node, size_t __bucket,
                                    size_t __bucket_count, const void* __c) _NOEXCEPT
@@ -599,22 +590,13 @@ private:
           __bucket_(__bucket),
           __bucket_count_(__bucket_count)
         {
+            (void)__c;
+#if _LIBCPP_DEBUG_LEVEL == 2
             __get_db()->__insert_ic(this, __c);
-            if (__node_ != nullptr)
-                __node_ = __node_->__next_;
-        }
-#else
-    _LIBCPP_INLINE_VISIBILITY
-    explicit __hash_local_iterator(__next_pointer __node, size_t __bucket,
-                                   size_t __bucket_count) _NOEXCEPT
-        : __node_(__node),
-          __bucket_(__bucket),
-          __bucket_count_(__bucket_count)
-        {
-            if (__node_ != nullptr)
-                __node_ = __node_->__next_;
-        }
 #endif
+            if (__node_ != nullptr)
+                __node_ = __node_->__next_;
+        }
     template <class, class, class, class> friend class __hash_table;
     template <class> friend class _LIBCPP_TEMPLATE_VIS __hash_const_local_iterator;
     template <class> friend class _LIBCPP_TEMPLATE_VIS __hash_map_iterator;
@@ -734,7 +716,6 @@ public:
         {return !(__x == __y);}
 
 private:
-#if _LIBCPP_DEBUG_LEVEL == 2
     _LIBCPP_INLINE_VISIBILITY
     explicit __hash_const_local_iterator(__next_pointer __node_ptr, size_t __bucket,
                                          size_t __bucket_count, const void* __c) _NOEXCEPT
@@ -742,22 +723,13 @@ private:
           __bucket_(__bucket),
           __bucket_count_(__bucket_count)
         {
+            (void)__c;
+#if _LIBCPP_DEBUG_LEVEL == 2
             __get_db()->__insert_ic(this, __c);
-            if (__node_ != nullptr)
-                __node_ = __node_->__next_;
-        }
-#else
-    _LIBCPP_INLINE_VISIBILITY
-    explicit __hash_const_local_iterator(__next_pointer __node_ptr, size_t __bucket,
-                                         size_t __bucket_count) _NOEXCEPT
-        : __node_(__node_ptr),
-          __bucket_(__bucket),
-          __bucket_count_(__bucket_count)
-        {
-            if (__node_ != nullptr)
-                __node_ = __node_->__next_;
-        }
 #endif
+            if (__node_ != nullptr)
+                __node_ = __node_->__next_;
+        }
     template <class, class, class, class> friend class __hash_table;
     template <class> friend class _LIBCPP_TEMPLATE_VIS __hash_map_const_iterator;
 };
@@ -1279,11 +1251,7 @@ public:
     {
         _LIBCPP_ASSERT(__n < bucket_count(),
             "unordered container::begin(n) called with n >= bucket_count()");
-#if _LIBCPP_DEBUG_LEVEL == 2
         return local_iterator(__bucket_list_[__n], __n, bucket_count(), this);
-#else
-        return local_iterator(__bucket_list_[__n], __n, bucket_count());
-#endif
     }
 
     _LIBCPP_INLINE_VISIBILITY
@@ -1292,11 +1260,7 @@ public:
     {
         _LIBCPP_ASSERT(__n < bucket_count(),
             "unordered container::end(n) called with n >= bucket_count()");
-#if _LIBCPP_DEBUG_LEVEL == 2
         return local_iterator(nullptr, __n, bucket_count(), this);
-#else
-        return local_iterator(nullptr, __n, bucket_count());
-#endif
     }
 
     _LIBCPP_INLINE_VISIBILITY
@@ -1305,11 +1269,7 @@ public:
     {
         _LIBCPP_ASSERT(__n < bucket_count(),
             "unordered container::cbegin(n) called with n >= bucket_count()");
-#if _LIBCPP_DEBUG_LEVEL == 2
         return const_local_iterator(__bucket_list_[__n], __n, bucket_count(), this);
-#else
-        return const_local_iterator(__bucket_list_[__n], __n, bucket_count());
-#endif
     }
 
     _LIBCPP_INLINE_VISIBILITY
@@ -1318,11 +1278,7 @@ public:
     {
         _LIBCPP_ASSERT(__n < bucket_count(),
             "unordered container::cend(n) called with n >= bucket_count()");
-#if _LIBCPP_DEBUG_LEVEL == 2
         return const_local_iterator(nullptr, __n, bucket_count(), this);
-#else
-        return const_local_iterator(nullptr, __n, bucket_count());
-#endif
     }
 
 #if _LIBCPP_DEBUG_LEVEL == 2
@@ -1765,11 +1721,7 @@ inline
 typename __hash_table<_Tp, _Hash, _Equal, _Alloc>::iterator
 __hash_table<_Tp, _Hash, _Equal, _Alloc>::begin() _NOEXCEPT
 {
-#if _LIBCPP_DEBUG_LEVEL == 2
     return iterator(__p1_.first().__next_, this);
-#else
-    return iterator(__p1_.first().__next_);
-#endif
 }
 
 template <class _Tp, class _Hash, class _Equal, class _Alloc>
@@ -1777,11 +1729,7 @@ inline
 typename __hash_table<_Tp, _Hash, _Equal, _Alloc>::iterator
 __hash_table<_Tp, _Hash, _Equal, _Alloc>::end() _NOEXCEPT
 {
-#if _LIBCPP_DEBUG_LEVEL == 2
     return iterator(nullptr, this);
-#else
-    return iterator(nullptr);
-#endif
 }
 
 template <class _Tp, class _Hash, class _Equal, class _Alloc>
@@ -1789,11 +1737,7 @@ inline
 typename __hash_table<_Tp, _Hash, _Equal, _Alloc>::const_iterator
 __hash_table<_Tp, _Hash, _Equal, _Alloc>::begin() const _NOEXCEPT
 {
-#if _LIBCPP_DEBUG_LEVEL == 2
     return const_iterator(__p1_.first().__next_, this);
-#else
-    return const_iterator(__p1_.first().__next_);
-#endif
 }
 
 template <class _Tp, class _Hash, class _Equal, class _Alloc>
@@ -1801,11 +1745,7 @@ inline
 typename __hash_table<_Tp, _Hash, _Equal, _Alloc>::const_iterator
 __hash_table<_Tp, _Hash, _Equal, _Alloc>::end() const _NOEXCEPT
 {
-#if _LIBCPP_DEBUG_LEVEL == 2
     return const_iterator(nullptr, this);
-#else
-    return const_iterator(nullptr);
-#endif
 }
 
 template <class _Tp, class _Hash, class _Equal, class _Alloc>
@@ -1910,11 +1850,7 @@ __hash_table<_Tp, _Hash, _Equal, _Alloc>::__node_insert_unique(__node_pointer __
         __existing_node = __nd->__ptr();
         __inserted = true;
     }
-#if _LIBCPP_DEBUG_LEVEL == 2
     return pair<iterator, bool>(iterator(__existing_node, this), __inserted);
-#else
-    return pair<iterator, bool>(iterator(__existing_node), __inserted);
-#endif
 }
 
 // Prepare the container for an insertion of the value __cp_val with the hash
@@ -2008,11 +1944,7 @@ __hash_table<_Tp, _Hash, _Equal, _Alloc>::__node_insert_multi(__node_pointer __c
     __next_pointer __pn = __node_insert_multi_prepare(__cp->__hash(), __cp->__value_);
     __node_insert_multi_perform(__cp, __pn);
 
-#if _LIBCPP_DEBUG_LEVEL == 2
     return iterator(__cp->__ptr(), this);
-#else
-    return iterator(__cp->__ptr());
-#endif
 }
 
 template <class _Tp, class _Hash, class _Equal, class _Alloc>
@@ -2041,11 +1973,7 @@ __hash_table<_Tp, _Hash, _Equal, _Alloc>::__node_insert_multi(
         __cp->__next_ = __np;
         __pp->__next_ = static_cast<__next_pointer>(__cp);
         ++size();
-#if _LIBCPP_DEBUG_LEVEL == 2
         return iterator(static_cast<__next_pointer>(__cp), this);
-#else
-        return iterator(static_cast<__next_pointer>(__cp));
-#endif
     }
     return __node_insert_multi(__cp);
 }
@@ -2111,11 +2039,7 @@ __hash_table<_Tp, _Hash, _Equal, _Alloc>::__emplace_unique_key_args(_Key const& 
         __inserted = true;
     }
 __done:
-#if _LIBCPP_DEBUG_LEVEL == 2
     return pair<iterator, bool>(iterator(__nd, this), __inserted);
-#else
-    return pair<iterator, bool>(iterator(__nd), __inserted);
-#endif
 }
 
 template <class _Tp, class _Hash, class _Equal, class _Alloc>
@@ -2386,11 +2310,7 @@ __hash_table<_Tp, _Hash, _Equal, _Alloc>::find(const _Key& __k)
             {
                 if ((__nd->__hash() == __hash)
                     && key_eq()(__nd->__upcast()->__value_, __k))
-#if _LIBCPP_DEBUG_LEVEL == 2
                     return iterator(__nd, this);
-#else
-                    return iterator(__nd);
-#endif
             }
         }
     }
@@ -2417,11 +2337,7 @@ __hash_table<_Tp, _Hash, _Equal, _Alloc>::find(const _Key& __k) const
             {
                 if ((__nd->__hash() == __hash)
                     && key_eq()(__nd->__upcast()->__value_, __k))
-#if _LIBCPP_DEBUG_LEVEL == 2
                     return const_iterator(__nd, this);
-#else
-                    return const_iterator(__nd);
-#endif
             }
         }
 
@@ -2474,11 +2390,7 @@ __hash_table<_Tp, _Hash, _Equal, _Alloc>::erase(const_iterator __p)
                          " referring to this container");
     _LIBCPP_ASSERT(__p != end(),
                    "unordered container erase(iterator) called with a non-dereferenceable iterator");
-#if _LIBCPP_DEBUG_LEVEL == 2
     iterator __r(__np, this);
-#else
-    iterator __r(__np);
-#endif
     ++__r;
     remove(__p);
     return __r;
@@ -2501,11 +2413,7 @@ __hash_table<_Tp, _Hash, _Equal, _Alloc>::erase(const_iterator __first,
         erase(__p);
     }
     __next_pointer __np = __last.__node_;
-#if _LIBCPP_DEBUG_LEVEL == 2
     return iterator (__np, this);
-#else
-    return iterator (__np);
-#endif
 }
 
 template <class _Tp, class _Hash, class _Equal, class _Alloc>
