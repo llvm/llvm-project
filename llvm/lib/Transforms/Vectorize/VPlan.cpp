@@ -397,6 +397,7 @@ static bool hasConditionalTerminator(const VPBasicBlock *VPBB) {
       isa<VPBranchOnMaskRecipe>(R) ||
       (VPI && (VPI->getOpcode() == VPInstruction::BranchOnCond ||
                VPI->getOpcode() == VPInstruction::BranchOnCount));
+  (void)IsCondBranch;
 
   if (VPBB->getNumSuccessors() >= 2 || VPBB->isExiting()) {
     assert(IsCondBranch && "block with multiple successors not terminated by "
