@@ -6,7 +6,7 @@
 # RUN: llvm-strip --strip-unneeded %t.o
 # RUN: ld.lld %t.o -o %t.exe -q -nostdlib
 # RUN: llvm-bolt %t.exe -o %t.out -data %t.fdata -relocs \
-# RUN:   -tail-duplication=1 -tail-duplication-aggressive=1 \
+# RUN:   -tail-duplication=aggressive \
 # RUN:   -tail-duplication-const-copy-propagation=1
 
   .text
