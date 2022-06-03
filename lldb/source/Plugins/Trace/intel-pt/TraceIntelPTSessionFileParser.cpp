@@ -164,6 +164,10 @@ StringRef TraceIntelPTSessionFileParser::GetSchema() {
       "triple"?: string,
           // Optional clang/llvm target triple.
       "threads": [
+          // A list of known threads for the given process. When context switch
+          // data is provided, LLDB will automatically create threads for the
+          // this process whenever it finds new threads when traversing the
+          // context switches.
         {
           "tid": integer,
           "traceBuffer"?: string
@@ -205,6 +209,10 @@ StringRef TraceIntelPTSessionFileParser::GetSchema() {
     "timeShift": integer,
     "timeZero": integer,
   }
+  "dontCreateThreadsFromContextSwitches"?: boolean,
+    // If this is true, then the automatic creation of threads from context switch
+    // data is disabled, and thus only the threads provided in the "processes.threads"
+    // section will be created.
 }
 
 Notes:
@@ -217,7 +225,7 @@ Notes:
   return schema;
 }
 
-TraceSP TraceIntelPTSessionFileParser::CreateTraceIntelPTInstance(
+Expected<TraceSP> TraceIntelPTSessionFileParser::CreateTraceIntelPTInstance(
     JSONTraceSession &session, std::vector<ParsedProcess> &parsed_processes) {
   std::vector<ThreadPostMortemTraceSP> threads;
   std::vector<ProcessSP> processes;
@@ -227,9 +235,15 @@ TraceSP TraceIntelPTSessionFileParser::CreateTraceIntelPTInstance(
                    parsed_process.threads.end());
   }
 
-  TraceSP trace_instance(new TraceIntelPT(session, processes, threads));
+  TraceIntelPTSP trace_instance(new TraceIntelPT(
+      session, FileSpec(m_session_file_dir), processes, threads));
   for (const ParsedProcess &parsed_process : parsed_processes)
     parsed_process.target_sp->SetTrace(trace_instance);
+
+  if (session.cores) {
+    if (Error err = trace_instance->CreateThreadsFromContextSwitches())
+      return std::move(err);
+  }
 
   return trace_instance;
 }

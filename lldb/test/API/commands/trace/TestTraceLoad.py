@@ -21,6 +21,18 @@ class TestTraceLoad(TraceIntelPTTestCaseBase):
           substrs=["67910: [tsc=0x008fb5211bfdf270] 0x0000000000400bd7    addl   $0x1, -0x4(%rbp)",
                    "m.out`bar() + 26 at multi_thread.cpp:20:6"])
 
+    def testLoadMultiCoreTraceWithMissingThreads(self):
+        src_dir = self.getSourceDir()
+        trace_definition_file = os.path.join(src_dir, "intelpt-multi-core-trace", "trace_missing_threads.json")
+        self.expect("trace load -v " + trace_definition_file, substrs=["intel-pt"])
+        self.expect("thread trace dump instructions 3 -t",
+          substrs=["19521: [tsc=0x008fb5211c143fd8] error: expected tracing enabled event",
+                   "m.out`foo() + 65 at multi_thread.cpp:12:21",
+                   "19520: [tsc=0x008fb5211bfbc69e] 0x0000000000400ba7    jg     0x400bb3"])
+        self.expect("thread trace dump instructions 2 -t",
+          substrs=["67910: [tsc=0x008fb5211bfdf270] 0x0000000000400bd7    addl   $0x1, -0x4(%rbp)",
+                   "m.out`bar() + 26 at multi_thread.cpp:20:6"])
+
     def testLoadTrace(self):
         src_dir = self.getSourceDir()
         trace_definition_file = os.path.join(src_dir, "intelpt-trace", "trace.json")
