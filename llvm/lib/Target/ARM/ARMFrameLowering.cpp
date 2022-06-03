@@ -301,7 +301,6 @@ static MachineBasicBlock::iterator insertSEH(MachineBasicBlock::iterator MBBI,
   case ARM::t2ADDri:   // add.w r11, sp, #xx
   case ARM::t2ADDri12: // add.w r11, sp, #xx
   case ARM::t2MOVTi16: // movt  r4, #xx
-  case ARM::t2MOVi16:  // movw  r4, #xx
   case ARM::tBL:       // bl __chkstk
     // These are harmless if used for just setting up a frame pointer,
     // but that frame pointer can't be relied upon for unwinding, unless
@@ -310,6 +309,23 @@ static MachineBasicBlock::iterator insertSEH(MachineBasicBlock::iterator MBBI,
               .addImm(/*Wide=*/1)
               .setMIFlags(Flags);
     break;
+
+  case ARM::t2MOVi16: { // mov(w) r4, #xx
+    bool Wide = MBBI->getOperand(1).getImm() >= 256;
+    if (!Wide) {
+      MachineInstrBuilder NewInstr =
+          BuildMI(MF, DL, TII.get(ARM::tMOVi8)).setMIFlags(MBBI->getFlags());
+      NewInstr.add(MBBI->getOperand(0));
+      NewInstr.add(t1CondCodeOp(/*isDead=*/true));
+      for (unsigned i = 1, NumOps = MBBI->getNumOperands(); i != NumOps; ++i)
+        NewInstr.add(MBBI->getOperand(i));
+      MachineBasicBlock::iterator NewMBBI = MBB->insertAfter(MBBI, NewInstr);
+      MBB->erase(MBBI);
+      MBBI = NewMBBI;
+    }
+    MIB = BuildMI(MF, DL, TII.get(ARM::SEH_Nop)).addImm(Wide).setMIFlags(Flags);
+    break;
+  }
 
   case ARM::tBLXr: // blx r12 (__chkstk)
     MIB = BuildMI(MF, DL, TII.get(ARM::SEH_Nop))
