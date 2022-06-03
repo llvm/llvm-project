@@ -34,7 +34,7 @@ for.body:                                     ; preds = %for.cond
 
 for.cond2:                                     ; preds = %for.body2, %for.cond
   %phi2 = phi %mystruct* [ undef, %for.body2 ], [ null, %for.cond ]
-  br i1 undef, label %for.end, label %for.body2
+  br i1 false, label %for.end, label %for.body2
 
 for.body2:                                     ; preds = %for.cond2
   %arrayidx = getelementptr inbounds %mystruct, %mystruct* %phi2, i64 0, i32 1, i64 3
