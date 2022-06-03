@@ -2,11 +2,11 @@
 set(cxx_bnf ${CMAKE_CURRENT_SOURCE_DIR}/../lib/cxx.bnf)
 
 if(LLVM_USE_HOST_TOOLS)
-  build_native_tool(pseudo-gen pseudo_gen)
+  build_native_tool(clang-pseudo-gen pseudo_gen)
   set(pseudo_gen_target "${pseudo_gen}")
 else()
-  set(pseudo_gen $<TARGET_FILE:pseudo-gen>)
-  set(pseudo_gen_target pseudo-gen)
+  set(pseudo_gen $<TARGET_FILE:clang-pseudo-gen>)
+  set(pseudo_gen_target clang-pseudo-gen)
 endif()
 
 # Generate inc files.
