@@ -467,3 +467,102 @@ E.g.
    char Shape::ID = 0;
    char Square::ID = 0;
    char Circle::ID = 0;
+
+Advanced Use Cases
+==================
+
+The underlying implementation of isa/cast/dyn_cast is all controlled through a
+struct called ``CastInfo``. ``CastInfo`` provides 4 methods, ``isPossible``,
+``doCast``, ``castFailed``, and ``doCastIfPossible``. These are for ``isa``,
+``cast``, and ``dyn_cast``, in order. You can control the way your cast is
+performed by creating a specialization of the ``CastInfo`` struct (to your
+desired types) that provides the same static methods as the base ``CastInfo``
+struct.
+
+This can be a lot of boilerplate, so we also have what we call Cast Traits.
+These are structs that provide one or more of the above methods so you can
+factor out common casting patterns in your project. We provide a few in the
+header file ready to be used, and we'll show a few examples motivating their
+usage. These examples are not exhaustive, and adding new cast traits is easy
+so users should feel free to add them to their project, or contribute them if
+they're particularly useful!
+
+Value to value casting
+----------------------
+In this case, we have a struct that is what we call 'nullable' - i.e. it is
+constructible from ``nullptr`` and that results in a value you can tell is
+invalid.
+
+.. code-block:: c++
+  class SomeValue {
+  public:
+    SomeValue(void *ptr) : ptr(ptr) {}
+    void *getPointer() const { return ptr; }
+    bool isValid() const { return ptr != nullptr; }
+  private:
+    void *ptr;
+  };
+
+Given something like this, we want to pass this object around by value, and we
+would like to cast from objects of this type to some other set of objects. For
+now, we assume that the types we want to cast *to* all provide ``classof``. So
+we can use some provided cast traits like so:
+
+.. code-block:: c++
+  template<typename T>
+  struct CastInfo<T, SomeValue>
+    : public CastIsPossible<T, SomeValue>,
+      public NullableValueCastFailed<T>,
+      public DefaultDoCastIfPossible<T, SomeValue, CastInfo<T, SomeValue>> {
+    static T doCast(SomeValue v) {
+      return T(v.getPointer());
+    }
+  };
+
+Pointer to value casting
+------------------------
+Now given the value above ``SomeValue``, maybe we'd like to be able to cast to
+that type from a char pointer type. So what we would do in that case is:
+
+.. code-block:: c++
+  template<typename T>
+  struct CastInfo<SomeValue, T *>
+    : public NullableValueCastFailed<SomeValue>,
+      public DefaultDoCastIfPossible<SomeValue, T *,
+                                     CastInfo<SomeValue, T *>> {
+    static bool isPossible(const T *t) {
+      return std::is_same<T, char>::value;
+    }
+    static SomeValue doCast(const T *t) {
+      return SomeValue((void *)t);
+    }
+  };
+
+This would enable us to cast from a ``char *`` to a SomeValue, if we wanted to.
+
+Optional value casting
+----------------------
+When your types are not constructible from ``nullptr`` or there isn't a simple
+way to tell when an object is invalid, you may want to use ``llvm::Optional``.
+In those cases, you probably want something like this:
+
+.. code-block:: c++
+  template<typename T>
+  struct CastInfo<T, SomeValue>
+    : public OptionalValueCast<T, SomeValue> {};
+
+That cast trait requires that ``T`` is constructible from ``const SomeValue &``
+but it enables casting like so:
+
+.. code-block:: c++
+  SomeValue someVal = ...;
+  Optional<AnotherValue> valOr = dyn_cast<AnotherValue>(someVal);
+
+With the ``_is_present`` variants, you can even do optional chaining like this:
+
+.. code-block:: c++
+  Optional<SomeValue> someVal = ...;
+  Optional<AnotherValue> valOr = dyn_cast_if_present<AnotherValue>(someVal);
+
+and ``valOr`` will be ``None`` if either ``someVal`` cannot be converted *or*
+if ``someVal`` was also ``None``.
