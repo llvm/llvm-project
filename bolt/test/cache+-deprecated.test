@@ -1,0 +1,8 @@
+
+
+REQUIRES: system-linux
+
+RUN: %clangxx %p/Inputs/bolt_icf.cpp -g -Wl,-q -o %t.exe
+RUN: llvm-bolt %t.exe -reorder-blocks=cache+ -relocs -o %t 2>&1 | FileCheck %s
+
+CHECK: '-reorder-blocks=cache+' is deprecated, please use '-reorder-blocks=ext-tsp' instead

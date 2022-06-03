@@ -142,6 +142,8 @@ public:
     /// LT_OPTIMIZE_CACHE piggybacks on the idea from Ispike paper (CGO '04)
     /// that suggests putting frequently executed chains first in the layout.
     LT_OPTIMIZE_CACHE,
+    // CACHE_PLUS and EXT_TSP are synonyms, emit warning of deprecation.
+    LT_OPTIMIZE_CACHE_PLUS,
     /// Block reordering guided by the extended TSP metric.
     LT_OPTIMIZE_EXT_TSP,
     /// Create clusters and use random order for them.
