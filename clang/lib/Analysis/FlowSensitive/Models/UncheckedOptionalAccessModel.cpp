@@ -43,12 +43,13 @@ DeclarationMatcher optionalClass() {
       hasTemplateArgument(0, refersToType(type().bind("T"))));
 }
 
-auto hasOptionalType() { return hasType(optionalClass()); }
-
-auto hasOptionalOrAliasType() {
+auto optionalOrAliasType() {
   return hasUnqualifiedDesugaredType(
       recordType(hasDeclaration(optionalClass())));
 }
+
+/// Matches any of the spellings of the optional types and sugar, aliases, etc.
+auto hasOptionalType() { return hasType(optionalOrAliasType()); }
 
 auto isOptionalMemberCallWithName(
     llvm::StringRef MemberName,
@@ -164,9 +165,8 @@ auto isValueOrNotEqX() {
 }
 
 auto isCallReturningOptional() {
-  return callExpr(callee(functionDecl(
-      returns(anyOf(hasOptionalOrAliasType(),
-                    referenceType(pointee(hasOptionalOrAliasType())))))));
+  return callExpr(callee(functionDecl(returns(anyOf(
+      optionalOrAliasType(), referenceType(pointee(optionalOrAliasType())))))));
 }
 
 /// Creates a symbolic value for an `optional` value using `HasValueVal` as the
@@ -485,8 +485,9 @@ auto buildTransferMatchSwitch(
   return MatchSwitchBuilder<LatticeTransferState>()
       // Attach a symbolic "has_value" state to optional values that we see for
       // the first time.
-      .CaseOf<Expr>(expr(anyOf(declRefExpr(), memberExpr()), hasOptionalType()),
-                    initializeOptionalReference)
+      .CaseOf<Expr>(
+          expr(anyOf(declRefExpr(), memberExpr()), hasOptionalType()),
+          initializeOptionalReference)
 
       // make_optional
       .CaseOf<CallExpr>(isMakeOptionalCall(), transferMakeOptionalCall)
