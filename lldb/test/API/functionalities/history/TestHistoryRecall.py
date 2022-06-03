@@ -1,5 +1,5 @@
 """
-Make sure the !N and !-N commands work properly.
+Test some features of "session history" and history recall.
 """
 
 
@@ -20,9 +20,25 @@ class TestHistoryRecall(TestBase):
 
     def test_history_recall(self):
         """Test the !N and !-N functionality of the command interpreter."""
-        self.sample_test()
+        self.do_bang_N_test()
 
-    def sample_test(self):
+    def test_regex_history(self):
+        """Test the regex commands don't add two elements to the history"""
+        self.do_regex_history_test()
+
+    def do_regex_history_test(self):
+        interp = self.dbg.GetCommandInterpreter()
+        result = lldb.SBCommandReturnObject()
+        command = "_regexp-break foo.c:12"
+        self.runCmd(command, msg="Run the regex break command", inHistory = True)
+        interp.HandleCommand("session history", result, True)
+        self.assertTrue(result.Succeeded(), "session history ran successfully")
+        results = result.GetOutput()
+        self.assertIn(command, results, "Recorded the actual command")
+        self.assertNotIn("breakpoint set --file 'foo.c' --line 12", results,
+                         "Didn't record the resolved command")
+        
+    def do_bang_N_test(self):
         interp = self.dbg.GetCommandInterpreter()
         result = lldb.SBCommandReturnObject()
         interp.HandleCommand("session history", result, True)
