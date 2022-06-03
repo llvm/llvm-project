@@ -4,7 +4,8 @@ Nullability Checks
 
 This document is a high level description of the nullablility checks.
 These checks intended to use the annotations that is described in this
-RFC: http://lists.cs.uiuc.edu/pipermail/cfe-dev/2015-March/041798.html.
+RFC: https://discourse.llvm.org/t/rfc-nullability-qualifiers/35672
+(`Mailman <https://lists.llvm.org/pipermail/cfe-dev/2015-March/041779.html>`_)
 
 Let's consider the following 2 categories:
 
