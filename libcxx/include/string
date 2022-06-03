@@ -524,6 +524,7 @@ basic_string<char32_t> operator "" s( const char32_t *str, size_t len );        
 #include <__config>
 #include <__debug>
 #include <__format/enable_insertable.h>
+#include <__functional/unary_function.h>
 #include <__ios/fpos.h>
 #include <__iterator/wrap_iter.h>
 #include <__memory/allocate_at_least.h>
@@ -547,12 +548,6 @@ basic_string<char32_t> operator "" s( const char32_t *str, size_t len );        
 #include <version>
 
 // TODO: remove these headers
-#include <__functional/binary_function.h>
-#include <__functional/invoke.h>
-#include <__functional/operations.h>
-#include <__functional/reference_wrapper.h>
-#include <__functional/unary_function.h>
-#include <__functional/weak_result_type.h>
 #include <new>
 #include <typeinfo>
 

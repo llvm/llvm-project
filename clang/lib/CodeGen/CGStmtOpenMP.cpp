@@ -6183,16 +6183,29 @@ static void emitOMPAtomicCompareExpr(CodeGenFunction &CGF,
 
   LValue XLVal = CGF.EmitLValue(X);
   Address XAddr = XLVal.getAddress(CGF);
-  llvm::Value *EVal = CGF.EmitScalarExpr(E);
-  llvm::Value *DVal = D ? CGF.EmitScalarExpr(D) : nullptr;
+
+  auto EmitRValueWithCastIfNeeded = [&CGF, Loc](const Expr *X, const Expr *E) {
+    if (X->getType() == E->getType())
+      return CGF.EmitScalarExpr(E);
+    const Expr *NewE = E->IgnoreImplicitAsWritten();
+    llvm::Value *V = CGF.EmitScalarExpr(NewE);
+    if (NewE->getType() == X->getType())
+      return V;
+    return CGF.EmitScalarConversion(V, NewE->getType(), X->getType(), Loc);
+  };
+
+  llvm::Value *EVal = EmitRValueWithCastIfNeeded(X, E);
+  llvm::Value *DVal = D ? EmitRValueWithCastIfNeeded(X, D) : nullptr;
 
   llvm::OpenMPIRBuilder::AtomicOpValue XOpVal{
       XAddr.getPointer(), XAddr.getElementType(),
-      X->getType().isVolatileQualified(),
-      X->getType()->hasSignedIntegerRepresentation()};
+      X->getType()->hasSignedIntegerRepresentation(),
+      X->getType().isVolatileQualified()};
+  llvm::OpenMPIRBuilder::AtomicOpValue VOpVal, ROpVal;
 
   CGF.Builder.restoreIP(OMPBuilder.createAtomicCompare(
-      CGF.Builder, XOpVal, EVal, DVal, AO, Op, IsXBinopExpr));
+      CGF.Builder, XOpVal, VOpVal, ROpVal, EVal, DVal, AO, Op, IsXBinopExpr,
+      /* IsPostfixUpdate */ false, /* IsFailOnly */ false));
 }
 
 static void emitOMPAtomicExpr(CodeGenFunction &CGF, OpenMPClauseKind Kind,

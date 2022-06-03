@@ -2,7 +2,7 @@
   "name": "vscode-mlir",
   "displayName": "MLIR",
   "description": "MLIR Language Extension",
-  "version": "0.0.7",
+  "version": "0.0.8",
   "publisher": "llvm-vs-code-extensions",
   "homepage": "https://mlir.llvm.org/",
   "icon": "icon.png",
@@ -182,7 +182,20 @@
       {
         "command": "mlir.restart",
         "title": "mlir: Restart language server"
+      },
+      {
+        "command": "mlir.viewPDLLOutput",
+        "title": "mlir-pdll: View PDLL output"
       }
-    ]
+    ],
+    "menus": {
+      "editor/context": [
+        {
+          "command": "mlir.viewPDLLOutput",
+          "group": "z_commands",
+          "when": "editorLangId == pdll"
+        }
+      ]
+    }
   }
 }

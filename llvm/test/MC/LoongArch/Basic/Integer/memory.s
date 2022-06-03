@@ -60,6 +60,10 @@ preld 10, $zero, 23
 # CHECK64-ASM: encoding: [0x6e,0x7e,0x80,0x2a]
 ld.wu $t2, $t7, 31
 
+# CHECK: ld.d $t6, $t8, 159
+# CHECK: encoding: [0x92,0x7e,0xc2,0x28]
+ld.d $t6, $t8, 159
+
 # CHECK64-ASM-AND-OBJ: st.d $s7, $s7, 60
 # CHECK64-ASM: encoding: [0xde,0xf3,0xc0,0x29]
 st.d $s7, $s7, 60

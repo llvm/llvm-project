@@ -948,13 +948,14 @@ bool SITargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
 
     SIMachineFunctionInfo *MFI = MF.getInfo<SIMachineFunctionInfo>();
 
+    const GCNTargetMachine &TM =
+        static_cast<const GCNTargetMachine &>(getTargetMachine());
+
     if (RsrcIntr->IsImage) {
-      Info.ptrVal =
-          MFI->getImagePSV(*MF.getSubtarget<GCNSubtarget>().getInstrInfo());
+      Info.ptrVal = MFI->getImagePSV(TM);
       Info.align.reset();
     } else {
-      Info.ptrVal =
-          MFI->getBufferPSV(*MF.getSubtarget<GCNSubtarget>().getInstrInfo());
+      Info.ptrVal = MFI->getBufferPSV(TM);
     }
 
     Info.flags |= MachineMemOperand::MODereferenceable;
@@ -1043,10 +1044,12 @@ bool SITargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
   case Intrinsic::amdgcn_buffer_atomic_fadd: {
     SIMachineFunctionInfo *MFI = MF.getInfo<SIMachineFunctionInfo>();
 
+    const GCNTargetMachine &TM =
+        static_cast<const GCNTargetMachine &>(getTargetMachine());
+
     Info.opc = ISD::INTRINSIC_W_CHAIN;
     Info.memVT = MVT::getVT(CI.getOperand(0)->getType());
-    Info.ptrVal =
-        MFI->getBufferPSV(*MF.getSubtarget<GCNSubtarget>().getInstrInfo());
+    Info.ptrVal = MFI->getBufferPSV(TM);
     Info.align.reset();
     Info.flags |= MachineMemOperand::MOLoad | MachineMemOperand::MOStore;
 
@@ -1084,8 +1087,11 @@ bool SITargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
     SIMachineFunctionInfo *MFI = MF.getInfo<SIMachineFunctionInfo>();
     Info.opc = ISD::INTRINSIC_W_CHAIN;
     Info.memVT = MVT::getVT(CI.getType()); // XXX: what is correct VT?
-    Info.ptrVal =
-        MFI->getImagePSV(*MF.getSubtarget<GCNSubtarget>().getInstrInfo());
+
+    const GCNTargetMachine &TM =
+        static_cast<const GCNTargetMachine &>(getTargetMachine());
+
+    Info.ptrVal = MFI->getImagePSV(TM);
     Info.align.reset();
     Info.flags |= MachineMemOperand::MOLoad |
                   MachineMemOperand::MODereferenceable;
@@ -1117,9 +1123,11 @@ bool SITargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
   case Intrinsic::amdgcn_ds_gws_sema_release_all: {
     Info.opc = ISD::INTRINSIC_VOID;
 
+    const GCNTargetMachine &TM =
+        static_cast<const GCNTargetMachine &>(getTargetMachine());
+
     SIMachineFunctionInfo *MFI = MF.getInfo<SIMachineFunctionInfo>();
-    Info.ptrVal =
-        MFI->getGWSPSV(*MF.getSubtarget<GCNSubtarget>().getInstrInfo());
+    Info.ptrVal = MFI->getGWSPSV(TM);
 
     // This is an abstract access, but we need to specify a type and size.
     Info.memVT = MVT::i32;
@@ -10402,7 +10410,8 @@ SDValue SITargetLowering::performCvtPkRTZCombine(SDNode *N,
 // expanded into a set of cmp/select instructions.
 bool SITargetLowering::shouldExpandVectorDynExt(unsigned EltSize,
                                                 unsigned NumElem,
-                                                bool IsDivergentIdx) {
+                                                bool IsDivergentIdx,
+                                                const GCNSubtarget *Subtarget) {
   if (UseDivergentRegisterIndexing)
     return false;
 
@@ -10424,10 +10433,18 @@ bool SITargetLowering::shouldExpandVectorDynExt(unsigned EltSize,
   // Large vectors would yield too many compares and v_cndmask_b32 instructions.
   unsigned NumInsts = NumElem /* Number of compares */ +
                       ((EltSize + 31) / 32) * NumElem /* Number of cndmasks */;
-  return NumInsts <= 16;
+
+  // On some architectures (GFX9) movrel is not available and it's better
+  // to expand.
+  if (!Subtarget->hasMovrel())
+    return NumInsts <= 16;
+
+  // If movrel is available, use it instead of expanding for vector of 8
+  // elements.
+  return NumInsts <= 15;
 }
 
-static bool shouldExpandVectorDynExt(SDNode *N) {
+bool SITargetLowering::shouldExpandVectorDynExt(SDNode *N) const {
   SDValue Idx = N->getOperand(N->getNumOperands() - 1);
   if (isa<ConstantSDNode>(Idx))
     return false;
@@ -10438,8 +10455,8 @@ static bool shouldExpandVectorDynExt(SDNode *N) {
   unsigned EltSize = EltVT.getSizeInBits();
   unsigned NumElem = VecVT.getVectorNumElements();
 
-  return SITargetLowering::shouldExpandVectorDynExt(EltSize, NumElem,
-                                                    Idx->isDivergent());
+  return SITargetLowering::shouldExpandVectorDynExt(
+      EltSize, NumElem, Idx->isDivergent(), getSubtarget());
 }
 
 SDValue SITargetLowering::performExtractVectorEltCombine(
@@ -10503,7 +10520,7 @@ SDValue SITargetLowering::performExtractVectorEltCombine(
   unsigned EltSize = EltVT.getSizeInBits();
 
   // EXTRACT_VECTOR_ELT (<n x e>, var-idx) => n x select (e, const-idx)
-  if (::shouldExpandVectorDynExt(N)) {
+  if (shouldExpandVectorDynExt(N)) {
     SDLoc SL(N);
     SDValue Idx = N->getOperand(1);
     SDValue V;
@@ -10566,7 +10583,7 @@ SITargetLowering::performInsertVectorEltCombine(SDNode *N,
 
   // INSERT_VECTOR_ELT (<n x e>, var-idx)
   // => BUILD_VECTOR n x select (e, const-idx)
-  if (!::shouldExpandVectorDynExt(N))
+  if (!shouldExpandVectorDynExt(N))
     return SDValue();
 
   SelectionDAG &DAG = DCI.DAG;

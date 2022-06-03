@@ -3,6 +3,7 @@
 ; Test case for PR41725. The induction variables in the latches escape the
 ; loops and we must move some PHIs around.
 
+target triple = "powerpc64le-unknown-linux-gnu"
 @a = common dso_local global i64 0, align 4
 @b = common dso_local global i64 0, align 4
 @c = common dso_local global [10 x [10 x i32 ]] zeroinitializer, align 16
@@ -157,7 +158,7 @@ exit:                                             ; preds = %outer.latch
 ; Make sure we do not crash for loops without reachable exits.
 define void @no_reachable_exits() {
 ; Check we interchanged.
-; CHECK-LABEL: @no_reachable_exits() {
+; CHECK-LABEL: @no_reachable_exits()
 ; CHECK-NEXT:  bb:
 ; CHECK-NEXT:    br label %inner.ph
 ; CHECK-LABEL: outer.ph:

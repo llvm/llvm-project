@@ -182,29 +182,22 @@ entry:
 }
 
 ; GCN-LABEL: {{^}}float8_extelt:
-; GCN-NOT: buffer_
-; GCN-DAG: s_cmp_eq_u32 [[IDX:s[0-9]+]], 1
-; GCN-DAG: s_cselect_b64 [[C1:[^,]+]], -1, 0
-; GCN-DAG: s_cmp_lg_u32 [[IDX]], 2
-; GCN-DAG: s_cselect_b64 [[C2:[^,]+]], -1, 0
-; GCN-DAG: s_cmp_lg_u32 [[IDX]], 3
-; GCN-DAG: s_cselect_b64 [[C3:[^,]+]], -1, 0
-; GCN-DAG: s_cmp_lg_u32 [[IDX]], 4
-; GCN-DAG: s_cselect_b64 [[C4:[^,]+]], -1, 0
-; GCN-DAG: s_cmp_lg_u32 [[IDX]], 5
-; GCN-DAG: s_cselect_b64 [[C5:[^,]+]], -1, 0
-; GCN-DAG: s_cmp_lg_u32 [[IDX]], 6
-; GCN-DAG: s_cselect_b64 [[C6:[^,]+]], -1, 0
-; GCN-DAG: s_cmp_lg_u32 [[IDX]], 7
-; GCN-DAG: s_cselect_b64 [[C7:[^,]+]], -1, 0
-; GCN-DAG: v_cndmask_b32_e{{32|64}} [[V1:v[0-9]+]], {{[^,]+}}, {{[^,]+}}, [[C1]]
-; GCN-DAG: v_cndmask_b32_e{{32|64}} [[V2:v[0-9]+]], {{[^,]+}}, [[V1]], [[C2]]
-; GCN-DAG: v_cndmask_b32_e{{32|64}} [[V3:v[0-9]+]], {{[^,]+}}, [[V2]], [[C3]]
-; GCN-DAG: v_cndmask_b32_e{{32|64}} [[V4:v[0-9]+]], {{[^,]+}}, [[V3]], [[C4]]
-; GCN-DAG: v_cndmask_b32_e{{32|64}} [[V5:v[0-9]+]], {{[^,]+}}, [[V4]], [[C5]]
-; GCN-DAG: v_cndmask_b32_e{{32|64}} [[V6:v[0-9]+]], {{[^,]+}}, [[V5]], [[C6]]
-; GCN-DAG: v_cndmask_b32_e{{32|64}} [[V7:v[0-9]+]], {{[^,]+}}, [[V6]], [[C7]]
-; GCN:     store_dword v[{{[0-9:]+}}], [[V7]]
+; GCN-DAG: s_load_dwordx2 s[2:3], s[0:1], 0x24
+; GCN-DAG: s_load_dword [[S0:s[0-9]+]], s[0:1], 0x2c
+; GCN-DAG: v_mov_b32_e32 v{{[0-9]+}}, 1.0
+; GCN-DAG: v_mov_b32_e32 v{{[0-9]+}}, 2.0
+; GCN-DAG: v_mov_b32_e32 v{{[0-9]+}}, 0x40400000
+; GCN-DAG: v_mov_b32_e32 v{{[0-9]+}}, 4.0
+; GCN-DAG: s_waitcnt lgkmcnt(0)
+; GCN-DAG: s_mov_b32 m0, [[S0]]
+; GCN-DAG: v_mov_b32_e32 v{{[0-9]+}}, 0x40a00000
+; GCN-DAG: v_mov_b32_e32 v{{[0-9]+}}, 0x40c00000
+; GCN-DAG: v_mov_b32_e32 v{{[0-9]+}}, 0x40e00000
+; GCN-DAG: v_mov_b32_e32 v{{[0-9]+}}, 0x41000000
+; GCN-DAG: v_movrels_b32_e32 [[RES:v[0-9]+]], v{{[0-9]+}}
+; GCN-DAG: v_mov_b32_e32 v{{[0-9]+}}, s{{[0-9]+}}
+; GCN-DAG: v_mov_b32_e32 v{{[0-9]+}}, s{{[0-9]+}}
+; GCN:     flat_store_dword v[{{[0-9:]+}}], [[RES]]
 define amdgpu_kernel void @float8_extelt(float addrspace(1)* %out, i32 %sel) {
 entry:
   %ext = extractelement <8 x float> <float 1.0, float 2.0, float 3.0, float 4.0, float 5.0, float 6.0, float 7.0, float 8.0>, i32 %sel

@@ -2,6 +2,7 @@
 // RUN: %clang_cc1 -triple x86_64-unknown-unknown %s -fsyntax-only -verify -std=c++11 -Wno-inaccessible-base
 // RUN: %clang_cc1 -triple x86_64-apple-darwin    %s -fsyntax-only -verify -std=c++11 -Wno-inaccessible-base -DCLANG_ABI_COMPAT=14
 // RUN: %clang_cc1 -triple x86_64-scei-ps4        %s -fsyntax-only -verify -std=c++11 -Wno-inaccessible-base -DCLANG_ABI_COMPAT=6
+// RUN: %clang_cc1 -triple x86_64-sie-ps5         %s -fsyntax-only -verify -std=c++11 -Wno-inaccessible-base -DCLANG_ABI_COMPAT=6
 // RUN: %clang_cc1 -triple x86_64-unknown-unknown %s -fsyntax-only -verify -std=c++11 -Wno-inaccessible-base -fclang-abi-compat=6 -DCLANG_ABI_COMPAT=6
 // RUN: %clang_cc1 -triple x86_64-unknown-unknown %s -fsyntax-only -verify -std=c++11 -Wno-inaccessible-base -fclang-abi-compat=14 -DCLANG_ABI_COMPAT=14
 // expected-no-diagnostics

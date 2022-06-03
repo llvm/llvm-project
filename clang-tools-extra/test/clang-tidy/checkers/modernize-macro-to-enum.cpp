@@ -213,6 +213,13 @@
 // CHECK-FIXES-NEXT: COMPLEX_PAREN6 = ((+1))
 // CHECK-FIXES-NEXT: };
 
+#define GOOD_COMMA (1, 2)
+// CHECK-MESSAGES: :[[@LINE-1]]:1: warning: replace macro with enum
+// CHECK-MESSAGES: :[[@LINE-2]]:9: warning: macro 'GOOD_COMMA' defines an integral constant; prefer an enum instead
+// CHECK-FIXES: enum {
+// CHECK-FIXES-NEXT: GOOD_COMMA = (1, 2)
+// CHECK-FIXES-NEXT: };
+
 // Macros appearing in conditional expressions can't be replaced
 // by enums.
 #define USE_FOO 1
@@ -321,6 +328,9 @@ inline void used_ifndef() {}
 #define EPS1 1.0F
 #define EPS2 1e5
 #define EPS3 1.
+
+// Ignore macros invoking comma operator unless they are inside parens.
+#define BAD_COMMA 1, 2
 
 extern void draw(unsigned int Color);
 

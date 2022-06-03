@@ -25,7 +25,6 @@
 #ifndef LLVM_TRANSFORMS_VECTORIZE_VPLAN_H
 #define LLVM_TRANSFORMS_VECTORIZE_VPLAN_H
 
-#include "VPlanLoopInfo.h"
 #include "VPlanValue.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DepthFirstIterator.h"
@@ -38,6 +37,7 @@
 #include "llvm/ADT/Twine.h"
 #include "llvm/ADT/ilist.h"
 #include "llvm/ADT/ilist_node.h"
+#include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/VectorUtils.h"
 #include "llvm/IR/DebugLoc.h"
 #include "llvm/IR/FMF.h"
@@ -316,10 +316,6 @@ struct VPTransformState {
     /// of replication, maps the BasicBlock of the last replica created.
     SmallDenseMap<VPBasicBlock *, BasicBlock *> VPBB2IRBB;
 
-    /// Vector of VPBasicBlocks whose terminator instruction needs to be fixed
-    /// up at the end of vector code generation.
-    SmallVector<VPBasicBlock *, 8> VPBBsToFix;
-
     CFGState() = default;
 
     /// Returns the BasicBlock* mapped to the pre-header of the loop region
@@ -493,11 +489,11 @@ public:
   const VPBasicBlock *getEntryBasicBlock() const;
   VPBasicBlock *getEntryBasicBlock();
 
-  /// \return the VPBasicBlock that is the exit of this VPBlockBase,
+  /// \return the VPBasicBlock that is the exiting this VPBlockBase,
   /// recursively, if the latter is a VPRegionBlock. Otherwise, if this
   /// VPBlockBase is a VPBasicBlock, it is returned.
-  const VPBasicBlock *getExitBasicBlock() const;
-  VPBasicBlock *getExitBasicBlock();
+  const VPBasicBlock *getExitingBasicBlock() const;
+  VPBasicBlock *getExitingBasicBlock();
 
   const VPBlocksTy &getSuccessors() const { return Successors; }
   VPBlocksTy &getSuccessors() { return Successors; }
@@ -2109,7 +2105,7 @@ private:
 };
 
 /// VPRegionBlock represents a collection of VPBasicBlocks and VPRegionBlocks
-/// which form a Single-Entry-Single-Exit subgraph of the output IR CFG.
+/// which form a Single-Entry-Single-Exiting subgraph of the output IR CFG.
 /// A VPRegionBlock may indicate that its contents are to be replicated several
 /// times. This is designed to support predicated scalarization, in which a
 /// scalar if-then code structure needs to be generated VF * UF times. Having
@@ -2120,25 +2116,26 @@ class VPRegionBlock : public VPBlockBase {
   /// Hold the Single Entry of the SESE region modelled by the VPRegionBlock.
   VPBlockBase *Entry;
 
-  /// Hold the Single Exit of the SESE region modelled by the VPRegionBlock.
-  VPBlockBase *Exit;
+  /// Hold the Single Exiting block of the SESE region modelled by the
+  /// VPRegionBlock.
+  VPBlockBase *Exiting;
 
   /// An indicator whether this region is to generate multiple replicated
   /// instances of output IR corresponding to its VPBlockBases.
   bool IsReplicator;
 
 public:
-  VPRegionBlock(VPBlockBase *Entry, VPBlockBase *Exit,
+  VPRegionBlock(VPBlockBase *Entry, VPBlockBase *Exiting,
                 const std::string &Name = "", bool IsReplicator = false)
-      : VPBlockBase(VPRegionBlockSC, Name), Entry(Entry), Exit(Exit),
+      : VPBlockBase(VPRegionBlockSC, Name), Entry(Entry), Exiting(Exiting),
         IsReplicator(IsReplicator) {
     assert(Entry->getPredecessors().empty() && "Entry block has predecessors.");
-    assert(Exit->getSuccessors().empty() && "Exit block has successors.");
+    assert(Exiting->getSuccessors().empty() && "Exit block has successors.");
     Entry->setParent(this);
-    Exit->setParent(this);
+    Exiting->setParent(this);
   }
   VPRegionBlock(const std::string &Name = "", bool IsReplicator = false)
-      : VPBlockBase(VPRegionBlockSC, Name), Entry(nullptr), Exit(nullptr),
+      : VPBlockBase(VPRegionBlockSC, Name), Entry(nullptr), Exiting(nullptr),
         IsReplicator(IsReplicator) {}
 
   ~VPRegionBlock() override {
@@ -2172,22 +2169,22 @@ public:
   // DominatorTreeBase representing the Graph type.
   VPBlockBase &front() const { return *Entry; }
 
-  const VPBlockBase *getExit() const { return Exit; }
-  VPBlockBase *getExit() { return Exit; }
+  const VPBlockBase *getExiting() const { return Exiting; }
+  VPBlockBase *getExiting() { return Exiting; }
 
-  /// Set \p ExitBlock as the exit VPBlockBase of this VPRegionBlock. \p
-  /// ExitBlock must have no successors.
-  void setExit(VPBlockBase *ExitBlock) {
-    assert(ExitBlock->getSuccessors().empty() &&
+  /// Set \p ExitingBlock as the exiting VPBlockBase of this VPRegionBlock. \p
+  /// ExitingBlock must have no successors.
+  void setExiting(VPBlockBase *ExitingBlock) {
+    assert(ExitingBlock->getSuccessors().empty() &&
            "Exit block cannot have successors.");
-    Exit = ExitBlock;
-    ExitBlock->setParent(this);
+    Exiting = ExitingBlock;
+    ExitingBlock->setParent(this);
   }
 
   /// Returns the pre-header VPBasicBlock of the loop region.
   VPBasicBlock *getPreheaderVPBB() {
     assert(!isReplicator() && "should only get pre-header of loop regions");
-    return getSinglePredecessor()->getExitBasicBlock();
+    return getSinglePredecessor()->getExitingBasicBlock();
   }
 
   /// An indicator whether this region is to generate multiple replicated
@@ -2321,11 +2318,11 @@ struct GraphTraits<Inverse<VPRegionBlock *>>
   using nodes_iterator = df_iterator<NodeRef>;
 
   static NodeRef getEntryNode(Inverse<GraphRef> N) {
-    return N.Graph->getExit();
+    return N.Graph->getExiting();
   }
 
   static nodes_iterator nodes_begin(GraphRef N) {
-    return nodes_iterator::begin(N->getExit());
+    return nodes_iterator::begin(N->getExiting());
   }
 
   static nodes_iterator nodes_end(GraphRef N) {
@@ -2506,9 +2503,6 @@ class VPlan {
   /// to be free when the plan's destructor is called.
   SmallVector<VPValue *, 16> VPValuesToFree;
 
-  /// Holds the VPLoopInfo analysis for this VPlan.
-  VPLoopInfo VPLInfo;
-
   /// Indicates whether it is safe use the Value2VPValue mapping or if the
   /// mapping cannot be used any longer, because it is stale.
   bool Value2VPValueEnabled = true;
@@ -2640,10 +2634,6 @@ public:
     Value2VPValue.erase(V);
   }
 
-  /// Return the VPLoopInfo analysis for this VPlan.
-  VPLoopInfo &getVPLoopInfo() { return VPLInfo; }
-  const VPLoopInfo &getVPLoopInfo() const { return VPLInfo; }
-
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   /// Print this VPlan to \p O.
   void print(raw_ostream &O) const;
@@ -2673,13 +2663,9 @@ public:
 
   /// Returns the VPRegionBlock of the vector loop.
   VPRegionBlock *getVectorLoopRegion() {
-    if (auto *R = dyn_cast<VPRegionBlock>(getEntry()))
-      return R;
     return cast<VPRegionBlock>(getEntry()->getSingleSuccessor());
   }
   const VPRegionBlock *getVectorLoopRegion() const {
-    if (auto *R = dyn_cast<VPRegionBlock>(getEntry()))
-      return R;
     return cast<VPRegionBlock>(getEntry()->getSingleSuccessor());
   }
 
@@ -2871,8 +2857,8 @@ public:
       R.moveBefore(*PredVPBB, PredVPBB->end());
     VPBlockUtils::disconnectBlocks(PredVPBB, VPBB);
     auto *ParentRegion = cast<VPRegionBlock>(Block->getParent());
-    if (ParentRegion->getExit() == Block)
-      ParentRegion->setExit(PredVPBB);
+    if (ParentRegion->getExiting() == Block)
+      ParentRegion->setExiting(PredVPBB);
     SmallVector<VPBlockBase *> Successors(Block->successors());
     for (auto *Succ : Successors) {
       VPBlockUtils::disconnectBlocks(Block, Succ);
@@ -2880,41 +2866,6 @@ public:
     }
     delete Block;
     return PredVPBB;
-  }
-
-  /// Returns true if the edge \p FromBlock -> \p ToBlock is a back-edge.
-  static bool isBackEdge(const VPBlockBase *FromBlock,
-                         const VPBlockBase *ToBlock, const VPLoopInfo *VPLI) {
-    assert(FromBlock->getParent() == ToBlock->getParent() &&
-           FromBlock->getParent() && "Must be in same region");
-    const VPLoop *FromLoop = VPLI->getLoopFor(FromBlock);
-    const VPLoop *ToLoop = VPLI->getLoopFor(ToBlock);
-    if (!FromLoop || !ToLoop || FromLoop != ToLoop)
-      return false;
-
-    // A back-edge is a branch from the loop latch to its header.
-    return ToLoop->isLoopLatch(FromBlock) && ToBlock == ToLoop->getHeader();
-  }
-
-  /// Returns true if \p Block is a loop latch
-  static bool blockIsLoopLatch(const VPBlockBase *Block,
-                               const VPLoopInfo *VPLInfo) {
-    if (const VPLoop *ParentVPL = VPLInfo->getLoopFor(Block))
-      return ParentVPL->isLoopLatch(Block);
-
-    return false;
-  }
-
-  /// Count and return the number of succesors of \p PredBlock excluding any
-  /// backedges.
-  static unsigned countSuccessorsNoBE(VPBlockBase *PredBlock,
-                                      VPLoopInfo *VPLI) {
-    unsigned Count = 0;
-    for (VPBlockBase *SuccBlock : PredBlock->getSuccessors()) {
-      if (!VPBlockUtils::isBackEdge(PredBlock, SuccBlock, VPLI))
-        Count++;
-    }
-    return Count;
   }
 
   /// Return an iterator range over \p Range which only includes \p BlockTy

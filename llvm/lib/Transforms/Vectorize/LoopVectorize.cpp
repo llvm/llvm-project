@@ -58,7 +58,6 @@
 #include "VPRecipeBuilder.h"
 #include "VPlan.h"
 #include "VPlanHCFGBuilder.h"
-#include "VPlanPredicator.h"
 #include "VPlanTransforms.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/ArrayRef.h"
@@ -343,13 +342,6 @@ static cl::opt<bool> PreferPredicatedReductionSelect(
 cl::opt<bool> EnableVPlanNativePath(
     "enable-vplan-native-path", cl::init(false), cl::Hidden,
     cl::desc("Enable VPlan-native vectorization path with "
-             "support for outer loop vectorization."));
-
-// FIXME: Remove this switch once we have divergence analysis. Currently we
-// assume divergent non-backedge branches when this switch is true.
-cl::opt<bool> EnableVPlanPredication(
-    "enable-vplan-predication", cl::init(false), cl::Hidden,
-    cl::desc("Enable VPlan-native vectorization path predicator with "
              "support for outer loop vectorization."));
 
 // This flag enables the stress testing of the VPlan H-CFG construction in the
@@ -1310,7 +1302,7 @@ public:
   /// RdxDesc. This is true if the -enable-strict-reductions flag is passed,
   /// the IsOrdered flag of RdxDesc is set and we do not allow reordering
   /// of FP operations.
-  bool useOrderedReductions(const RecurrenceDescriptor &RdxDesc) {
+  bool useOrderedReductions(const RecurrenceDescriptor &RdxDesc) const {
     return !Hints->allowReordering() && RdxDesc.isOrdered();
   }
 
@@ -3694,7 +3686,7 @@ void InnerLoopVectorizer::fixVectorizedLoop(VPTransformState &State,
   // Forget the original basic block.
   PSE.getSE()->forgetLoop(OrigLoop);
 
-  VPBasicBlock *LatchVPBB = Plan.getVectorLoopRegion()->getExitBasicBlock();
+  VPBasicBlock *LatchVPBB = Plan.getVectorLoopRegion()->getExitingBasicBlock();
   Loop *VectorLoop = LI->getLoopFor(State.CFG.VPBB2IRBB[LatchVPBB]);
   if (Cost->requiresScalarEpilogue(VF)) {
     // No edge from the middle block to the unique exit block has been inserted
@@ -3905,7 +3897,7 @@ void InnerLoopVectorizer::fixReduction(VPReductionPHIRecipe *PhiR,
   Type *PhiTy = OrigPhi->getType();
 
   VPBasicBlock *LatchVPBB =
-      PhiR->getParent()->getEnclosingLoopRegion()->getExitBasicBlock();
+      PhiR->getParent()->getEnclosingLoopRegion()->getExitingBasicBlock();
   BasicBlock *VectorLoopLatch = State.CFG.VPBB2IRBB[LatchVPBB];
   // If tail is folded by masking, the vector value to leave the loop should be
   // a Select choosing between the vectorized LoopExitInst and vectorized Phi,
@@ -8530,14 +8522,14 @@ VPRegionBlock *VPRecipeBuilder::createReplicateRegion(Instruction *Instr,
     Plan->removeVPValueFor(Instr);
     Plan->addVPValue(Instr, PHIRecipe);
   }
-  auto *Exit = new VPBasicBlock(Twine(RegionName) + ".continue", PHIRecipe);
+  auto *Exiting = new VPBasicBlock(Twine(RegionName) + ".continue", PHIRecipe);
   auto *Pred = new VPBasicBlock(Twine(RegionName) + ".if", PredRecipe);
-  VPRegionBlock *Region = new VPRegionBlock(Entry, Exit, RegionName, true);
+  VPRegionBlock *Region = new VPRegionBlock(Entry, Exiting, RegionName, true);
 
   // Note: first set Entry as region entry and then connect successors starting
   // from it in order, to propagate the "parent" of each VPBasicBlock.
-  VPBlockUtils::insertTwoBlocksAfter(Pred, Exit, BlockInMask, Entry);
-  VPBlockUtils::connectBlocks(Pred, Exit);
+  VPBlockUtils::insertTwoBlocksAfter(Pred, Exiting, BlockInMask, Entry);
+  VPBlockUtils::connectBlocks(Pred, Exiting);
 
   return Region;
 }
@@ -8684,7 +8676,7 @@ static void addCanonicalIVRecipes(VPlan &Plan, Type *IdxTy, DebugLoc DL,
                         {CanonicalIVPHI}, DL);
   CanonicalIVPHI->addOperand(CanonicalIVIncrement);
 
-  VPBasicBlock *EB = TopRegion->getExitBasicBlock();
+  VPBasicBlock *EB = TopRegion->getExitingBasicBlock();
   if (IsVPlanNative)
     EB->setCondBit(nullptr);
   EB->appendRecipe(CanonicalIVIncrement);
@@ -8978,7 +8970,7 @@ VPlanPtr LoopVectorizationPlanner::buildVPlanWithVPRecipes(
     Ind->moveBefore(*HeaderVPBB, HeaderVPBB->getFirstNonPhi());
 
   // Adjust the recipes for any inloop reductions.
-  adjustRecipesForReductions(cast<VPBasicBlock>(TopRegion->getExit()), Plan,
+  adjustRecipesForReductions(cast<VPBasicBlock>(TopRegion->getExiting()), Plan,
                              RecipeBuilder, Range.Start);
 
   // Introduce a recipe to combine the incoming and previous values of a
@@ -9066,7 +9058,7 @@ VPlanPtr LoopVectorizationPlanner::buildVPlanWithVPRecipes(
   // Fold Exit block into its predecessor if possible.
   // TODO: Fold block earlier once all VPlan transforms properly maintain a
   // VPBasicBlock as exit.
-  VPBlockUtils::tryToMergeBlockIntoPredecessor(TopRegion->getExit());
+  VPBlockUtils::tryToMergeBlockIntoPredecessor(TopRegion->getExiting());
 
   assert(VPlanVerifier::verifyPlanIsValid(*Plan) && "VPlan is invalid");
   return Plan;
@@ -9091,45 +9083,11 @@ VPlanPtr LoopVectorizationPlanner::buildVPlan(VFRange &Range) {
        VF *= 2)
     Plan->addVF(VF);
 
-  if (EnableVPlanPredication) {
-    VPlanPredicator VPP(*Plan);
-    VPP.predicate();
-
-    // Avoid running transformation to recipes until masked code generation in
-    // VPlan-native path is in place.
-    return Plan;
-  }
-
   SmallPtrSet<Instruction *, 1> DeadInstructions;
   VPlanTransforms::VPInstructionsToVPRecipes(
       OrigLoop, Plan,
       [this](PHINode *P) { return Legal->getIntOrFpInductionDescriptor(P); },
       DeadInstructions, *PSE.getSE());
-
-  // Update plan to be compatible with the inner loop vectorizer for
-  // code-generation.
-  VPRegionBlock *LoopRegion = Plan->getVectorLoopRegion();
-  VPBasicBlock *Preheader = LoopRegion->getEntryBasicBlock();
-  VPBasicBlock *Exit = LoopRegion->getExitBasicBlock();
-  VPBlockBase *Latch = Exit->getSinglePredecessor();
-  VPBlockBase *Header = Preheader->getSingleSuccessor();
-
-  // 1. Move preheader block out of main vector loop.
-  Preheader->setParent(LoopRegion->getParent());
-  VPBlockUtils::disconnectBlocks(Preheader, Header);
-  VPBlockUtils::connectBlocks(Preheader, LoopRegion);
-  Plan->setEntry(Preheader);
-
-  // 2. Disconnect backedge and exit block.
-  VPBlockUtils::disconnectBlocks(Latch, Header);
-  VPBlockUtils::disconnectBlocks(Latch, Exit);
-
-  // 3. Update entry and exit of main vector loop region.
-  LoopRegion->setEntry(Header);
-  LoopRegion->setExit(Latch);
-
-  // 4. Remove exit block.
-  delete Exit;
 
   addCanonicalIVRecipes(*Plan, Legal->getWidestInductionType(), DebugLoc(),
                         true, true);
@@ -10248,8 +10206,7 @@ static bool processLoopInVPlanNativePath(
   // If we are stress testing VPlan builds, do not attempt to generate vector
   // code. Masked vector code generation support will follow soon.
   // Also, do not attempt to vectorize if no vector code will be produced.
-  if (VPlanBuildStressTest || EnableVPlanPredication ||
-      VectorizationFactor::Disabled() == VF)
+  if (VPlanBuildStressTest || VectorizationFactor::Disabled() == VF)
     return false;
 
   VPlan &BestPlan = LVP.getBestPlanFor(VF.Width);

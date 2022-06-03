@@ -161,6 +161,7 @@ class TwoAddressInstructionPass : public MachineFunctionPass {
   bool collectTiedOperands(MachineInstr *MI, TiedOperandMap&);
   void processTiedPairs(MachineInstr *MI, TiedPairList&, unsigned &Dist);
   void eliminateRegSequence(MachineBasicBlock::iterator&);
+  bool processStatepoint(MachineInstr *MI, TiedOperandMap &TiedOperands);
 
 public:
   static char ID; // Pass identification, replacement for typeid
@@ -1627,6 +1628,61 @@ TwoAddressInstructionPass::processTiedPairs(MachineInstr *MI,
   }
 }
 
+// For every tied operand pair this function transforms statepoint from
+//    RegA = STATEPOINT ... RegB(tied-def N)
+// to
+//    RegB = STATEPOINT ... RegB(tied-def N)
+// and replaces all uses of RegA with RegB.
+// No extra COPY instruction is necessary because tied use is killed at
+// STATEPOINT.
+bool TwoAddressInstructionPass::processStatepoint(
+    MachineInstr *MI, TiedOperandMap &TiedOperands) {
+
+  bool NeedCopy = false;
+  for (auto &TO : TiedOperands) {
+    Register RegB = TO.first;
+    if (TO.second.size() != 1) {
+      NeedCopy = true;
+      continue;
+    }
+
+    unsigned SrcIdx = TO.second[0].first;
+    unsigned DstIdx = TO.second[0].second;
+
+    MachineOperand &DstMO = MI->getOperand(DstIdx);
+    Register RegA = DstMO.getReg();
+
+    assert(RegB == MI->getOperand(SrcIdx).getReg());
+
+    if (RegA == RegB)
+      continue;
+
+    MRI->replaceRegWith(RegA, RegB);
+
+    if (LIS) {
+      VNInfo::Allocator &A = LIS->getVNInfoAllocator();
+      LiveInterval &LI = LIS->getInterval(RegB);
+      for (auto &S : LIS->getInterval(RegA)) {
+        VNInfo *VNI = LI.getNextValue(S.start, A);
+        LiveRange::Segment NewSeg(S.start, S.end, VNI);
+        LI.addSegment(NewSeg);
+      }
+      LIS->removeInterval(RegA);
+    }
+
+    if (LV) {
+      if (MI->getOperand(SrcIdx).isKill())
+        LV->removeVirtualRegisterKilled(RegB, *MI);
+      LiveVariables::VarInfo &SrcInfo = LV->getVarInfo(RegB);
+      LiveVariables::VarInfo &DstInfo = LV->getVarInfo(RegA);
+      SrcInfo.AliveBlocks |= DstInfo.AliveBlocks;
+      for (auto *KillMI : DstInfo.Kills)
+        LV->addVirtualRegisterKilled(RegB, *KillMI, false);
+    }
+  }
+  return !NeedCopy;
+}
+
 /// Reduce two-address instructions to two operands.
 bool TwoAddressInstructionPass::runOnMachineFunction(MachineFunction &Func) {
   MF = &Func;
@@ -1718,6 +1774,14 @@ bool TwoAddressInstructionPass::runOnMachineFunction(MachineFunction &Func) {
             continue;
           }
         }
+      }
+
+      if (mi->getOpcode() == TargetOpcode::STATEPOINT &&
+          processStatepoint(&*mi, TiedOperands)) {
+        TiedOperands.clear();
+        LLVM_DEBUG(dbgs() << "\t\trewrite to:\t" << *mi);
+        mi = nmi;
+        continue;
       }
 
       // Now iterate over the information collected above.

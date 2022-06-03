@@ -757,6 +757,19 @@ OpFoldResult arith::DivFOp::fold(ArrayRef<Attribute> operands) {
 }
 
 //===----------------------------------------------------------------------===//
+// RemFOp
+//===----------------------------------------------------------------------===//
+
+OpFoldResult arith::RemFOp::fold(ArrayRef<Attribute> operands) {
+  return constFoldBinaryOp<FloatAttr>(operands,
+                                      [](const APFloat &a, const APFloat &b) {
+                                        APFloat Result(a);
+                                        (void)Result.remainder(b);
+                                        return Result;
+                                      });
+}
+
+//===----------------------------------------------------------------------===//
 // Utility functions for verifying cast ops
 //===----------------------------------------------------------------------===//
 

@@ -27,6 +27,7 @@
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/IR/DebugLoc.h"
 #include "llvm/IR/Function.h"
+#include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCInstrDesc.h"
 #include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/Support/CommandLine.h"
@@ -205,11 +206,11 @@ namespace {
                         bool IsSelfLoop);
 
     /// ReduceMI - Attempt to reduce MI, return true on success.
-    bool ReduceMI(MachineBasicBlock &MBB, MachineInstr *MI,
-                  bool LiveCPSR, bool IsSelfLoop);
+    bool ReduceMI(MachineBasicBlock &MBB, MachineInstr *MI, bool LiveCPSR,
+                  bool IsSelfLoop, bool SkipPrologueEpilogue);
 
     /// ReduceMBB - Reduce width of instructions in the specified basic block.
-    bool ReduceMBB(MachineBasicBlock &MBB);
+    bool ReduceMBB(MachineBasicBlock &MBB, bool SkipPrologueEpilogue);
 
     bool OptimizeSize;
     bool MinimizeSize;
@@ -1012,10 +1013,14 @@ static bool UpdateCPSRUse(MachineInstr &MI, bool LiveCPSR) {
 }
 
 bool Thumb2SizeReduce::ReduceMI(MachineBasicBlock &MBB, MachineInstr *MI,
-                                bool LiveCPSR, bool IsSelfLoop) {
+                                bool LiveCPSR, bool IsSelfLoop,
+                                bool SkipPrologueEpilogue) {
   unsigned Opcode = MI->getOpcode();
   DenseMap<unsigned, unsigned>::iterator OPI = ReduceOpcodeMap.find(Opcode);
   if (OPI == ReduceOpcodeMap.end())
+    return false;
+  if (SkipPrologueEpilogue && (MI->getFlag(MachineInstr::FrameSetup) ||
+                               MI->getFlag(MachineInstr::FrameDestroy)))
     return false;
   const ReduceEntry &Entry = ReduceTable[OPI->second];
 
@@ -1036,7 +1041,8 @@ bool Thumb2SizeReduce::ReduceMI(MachineBasicBlock &MBB, MachineInstr *MI,
   return false;
 }
 
-bool Thumb2SizeReduce::ReduceMBB(MachineBasicBlock &MBB) {
+bool Thumb2SizeReduce::ReduceMBB(MachineBasicBlock &MBB,
+                                 bool SkipPrologueEpilogue) {
   bool Modified = false;
 
   // Yes, CPSR could be livein.
@@ -1080,7 +1086,7 @@ bool Thumb2SizeReduce::ReduceMBB(MachineBasicBlock &MBB) {
     // Does NextMII belong to the same bundle as MI?
     bool NextInSameBundle = NextMII != E && NextMII->isBundledWithPred();
 
-    if (ReduceMI(MBB, MI, LiveCPSR, IsSelfLoop)) {
+    if (ReduceMI(MBB, MI, LiveCPSR, IsSelfLoop, SkipPrologueEpilogue)) {
       Modified = true;
       MachineBasicBlock::instr_iterator I = std::prev(NextMII);
       MI = &*I;
@@ -1147,8 +1153,10 @@ bool Thumb2SizeReduce::runOnMachineFunction(MachineFunction &MF) {
   // predecessors.
   ReversePostOrderTraversal<MachineFunction*> RPOT(&MF);
   bool Modified = false;
+  bool NeedsWinCFI = MF.getTarget().getMCAsmInfo()->usesWindowsCFI() &&
+                     MF.getFunction().needsUnwindTableEntry();
   for (MachineBasicBlock *MBB : RPOT)
-    Modified |= ReduceMBB(*MBB);
+    Modified |= ReduceMBB(*MBB, /*SkipPrologueEpilogue=*/NeedsWinCFI);
   return Modified;
 }
 

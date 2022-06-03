@@ -60,13 +60,5 @@ ParallelLoopDimMapping getParallelLoopDimMappingAttr(Processor processor,
 LogicalResult setMappingAttr(scf::ParallelOp ploopOp,
                              ArrayRef<ParallelLoopDimMapping> mapping);
 } // namespace gpu
-
-/// Maps the parallel loops found in the given function to workgroups. The first
-/// loop encountered will be mapped to the global workgroup and the second loop
-/// encountered to the local workgroup. Within each mapping, the first three
-/// dimensions are mapped to x/y/z hardware ids and all following dimensions are
-/// mapped to sequential loops.
-void greedilyMapParallelSCFToGPU(Region &region);
-
 } // namespace mlir
 #endif // MLIR_DIALECT_GPU_PARALLELLOOPMAPPER_H

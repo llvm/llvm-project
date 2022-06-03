@@ -4202,6 +4202,10 @@ static void GeneratePreprocessorArgs(PreprocessorOptions &Opts,
         ((LangOpts.DeclareOpenCLBuiltins && I == "opencl-c-base.h") ||
          I == "opencl-c.h"))
       continue;
+    // Don't generate HLSL includes. They are implied by other flags that are
+    // generated elsewhere.
+    if (LangOpts.HLSL && I == "hlsl.h")
+      continue;
 
     GenerateArg(Args, OPT_include, I, SA);
   }

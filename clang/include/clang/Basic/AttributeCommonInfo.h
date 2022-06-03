@@ -69,7 +69,7 @@ private:
   // Corresponds to the Kind enum.
   unsigned AttrKind : 16;
   /// Corresponds to the Syntax enum.
-  unsigned SyntaxUsed : 3;
+  unsigned SyntaxUsed : 4;
   unsigned SpellingIndex : 4;
 
 protected:
@@ -146,6 +146,7 @@ public:
   bool isMicrosoftAttribute() const { return SyntaxUsed == AS_Microsoft; }
 
   bool isGNUScope() const;
+  bool isClangScope() const;
 
   bool isAlignasAttribute() const {
     // FIXME: Use a better mechanism to determine this.
@@ -163,6 +164,8 @@ public:
   bool isStandardAttributeSyntax() const {
     return isCXX11Attribute() || isC2xAttribute();
   }
+
+  bool isGNUAttribute() const { return SyntaxUsed == AS_GNU; }
 
   bool isKeywordAttribute() const {
     return SyntaxUsed == AS_Keyword || SyntaxUsed == AS_ContextSensitiveKeyword;

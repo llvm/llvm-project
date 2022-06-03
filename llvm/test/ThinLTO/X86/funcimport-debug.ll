@@ -27,7 +27,7 @@ target triple = "x86_64-apple-macosx10.11.0"
 define i32 @main() #0 {
 entry:
   call void (...) @foo()
-  %0 = load i32, i32* @baz, align 4
+  %0 = load i32, ptr @baz, align 4
   ret i32 %0
 }
 

@@ -241,8 +241,8 @@ roundss     $1, (%rax), %xmm2
 # CHECK-NEXT:  1      11    1.00    *                   pmuldq	(%rax), %xmm2
 # CHECK-NEXT:  1      4     1.00                        pmulld	%xmm0, %xmm2
 # CHECK-NEXT:  2      11    1.00    *                   pmulld	(%rax), %xmm2
-# CHECK-NEXT:  1      1     1.00                        ptest	%xmm0, %xmm1
-# CHECK-NEXT:  2      8     1.00    *                   ptest	(%rax), %xmm1
+# CHECK-NEXT:  1      2     1.00                        ptest	%xmm0, %xmm1
+# CHECK-NEXT:  2      9     1.00    *                   ptest	(%rax), %xmm1
 # CHECK-NEXT:  1      4     1.00                        roundpd	$1, %xmm0, %xmm2
 # CHECK-NEXT:  2      11    1.00    *                   roundpd	$1, (%rax), %xmm2
 # CHECK-NEXT:  1      4     1.00                        roundps	$1, %xmm0, %xmm2

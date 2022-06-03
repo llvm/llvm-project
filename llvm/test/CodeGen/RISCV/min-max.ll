@@ -620,3 +620,21 @@ define signext i32 @umax_undef_i32() {
   ret i32 %c
 }
 
+define signext i32 @smax_i32_pos_constant(i32 signext %a) {
+; NOZBB-LABEL: smax_i32_pos_constant:
+; NOZBB:       # %bb.0:
+; NOZBB-NEXT:    li a1, 10
+; NOZBB-NEXT:    blt a1, a0, .LBB24_2
+; NOZBB-NEXT:  # %bb.1:
+; NOZBB-NEXT:    li a0, 10
+; NOZBB-NEXT:  .LBB24_2:
+; NOZBB-NEXT:    ret
+;
+; ZBB-LABEL: smax_i32_pos_constant:
+; ZBB:       # %bb.0:
+; ZBB-NEXT:    li a1, 10
+; ZBB-NEXT:    max a0, a0, a1
+; ZBB-NEXT:    ret
+  %c = call i32 @llvm.smax.i32(i32 %a, i32 10)
+  ret i32 %c
+}

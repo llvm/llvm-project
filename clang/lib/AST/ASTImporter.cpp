@@ -548,6 +548,7 @@ namespace clang {
     ExpectedDecl VisitUsingDecl(UsingDecl *D);
     ExpectedDecl VisitUsingShadowDecl(UsingShadowDecl *D);
     ExpectedDecl VisitUsingDirectiveDecl(UsingDirectiveDecl *D);
+    ExpectedDecl VisitUsingPackDecl(UsingPackDecl *D);
     ExpectedDecl ImportUsingShadowDecls(BaseUsingDecl *D, BaseUsingDecl *ToSI);
     ExpectedDecl VisitUsingEnumDecl(UsingEnumDecl *D);
     ExpectedDecl VisitUnresolvedUsingValueDecl(UnresolvedUsingValueDecl *D);
@@ -4830,6 +4831,35 @@ ExpectedDecl ASTNodeImporter::VisitUsingDirectiveDecl(UsingDirectiveDecl *D) {
   LexicalDC->addDeclInternal(ToUsingDir);
 
   return ToUsingDir;
+}
+
+ExpectedDecl ASTNodeImporter::VisitUsingPackDecl(UsingPackDecl *D) {
+  DeclContext *DC, *LexicalDC;
+  DeclarationName Name;
+  SourceLocation Loc;
+  NamedDecl *ToD = nullptr;
+  if (Error Err = ImportDeclParts(D, DC, LexicalDC, Name, ToD, Loc))
+    return std::move(Err);
+  if (ToD)
+    return ToD;
+
+  auto ToInstantiatedFromUsingOrErr =
+      Importer.Import(D->getInstantiatedFromUsingDecl());
+  if (!ToInstantiatedFromUsingOrErr)
+    return ToInstantiatedFromUsingOrErr.takeError();
+  SmallVector<NamedDecl *, 4> Expansions(D->expansions().size());
+  if (Error Err = ImportArrayChecked(D->expansions(), Expansions.begin()))
+    return std::move(Err);
+
+  UsingPackDecl *ToUsingPack;
+  if (GetImportedOrCreateDecl(ToUsingPack, D, Importer.getToContext(), DC,
+                              cast<NamedDecl>(*ToInstantiatedFromUsingOrErr),
+                              Expansions))
+    return ToUsingPack;
+
+  addDeclToContexts(D, ToUsingPack);
+
+  return ToUsingPack;
 }
 
 ExpectedDecl ASTNodeImporter::VisitUnresolvedUsingValueDecl(

@@ -15,6 +15,7 @@
 
 #include "AMDGPUArgumentUsageInfo.h"
 #include "AMDGPUMachineFunction.h"
+#include "AMDGPUTargetMachine.h"
 #include "MCTargetDesc/AMDGPUMCTargetDesc.h"
 #include "SIInstrInfo.h"
 #include "llvm/ADT/SetVector.h"
@@ -39,8 +40,8 @@ public:
   };
 
 protected:
-  AMDGPUPseudoSourceValue(unsigned Kind, const TargetInstrInfo &TII)
-      : PseudoSourceValue(Kind, TII) {}
+  AMDGPUPseudoSourceValue(unsigned Kind, const AMDGPUTargetMachine &TM)
+      : PseudoSourceValue(Kind, TM) {}
 
 public:
   bool isConstant(const MachineFrameInfo *) const override {
@@ -60,8 +61,8 @@ public:
 
 class AMDGPUBufferPseudoSourceValue final : public AMDGPUPseudoSourceValue {
 public:
-  explicit AMDGPUBufferPseudoSourceValue(const TargetInstrInfo &TII)
-      : AMDGPUPseudoSourceValue(PSVBuffer, TII) {}
+  explicit AMDGPUBufferPseudoSourceValue(const AMDGPUTargetMachine &TM)
+      : AMDGPUPseudoSourceValue(PSVBuffer, TM) {}
 
   static bool classof(const PseudoSourceValue *V) {
     return V->kind() == PSVBuffer;
@@ -73,8 +74,8 @@ public:
 class AMDGPUImagePseudoSourceValue final : public AMDGPUPseudoSourceValue {
 public:
   // TODO: Is the img rsrc useful?
-  explicit AMDGPUImagePseudoSourceValue(const TargetInstrInfo &TII)
-      : AMDGPUPseudoSourceValue(PSVImage, TII) {}
+  explicit AMDGPUImagePseudoSourceValue(const AMDGPUTargetMachine &TM)
+      : AMDGPUPseudoSourceValue(PSVImage, TM) {}
 
   static bool classof(const PseudoSourceValue *V) {
     return V->kind() == PSVImage;
@@ -85,8 +86,8 @@ public:
 
 class AMDGPUGWSResourcePseudoSourceValue final : public AMDGPUPseudoSourceValue {
 public:
-  explicit AMDGPUGWSResourcePseudoSourceValue(const TargetInstrInfo &TII)
-      : AMDGPUPseudoSourceValue(GWSResource, TII) {}
+  explicit AMDGPUGWSResourcePseudoSourceValue(const AMDGPUTargetMachine &TM)
+      : AMDGPUPseudoSourceValue(GWSResource, TM) {}
 
   static bool classof(const PseudoSourceValue *V) {
     return V->kind() == GWSResource;
@@ -451,17 +452,6 @@ private:
   MCPhysReg getNextSystemSGPR() const;
 
 public:
-  struct SpilledReg {
-    Register VGPR;
-    int Lane = -1;
-
-    SpilledReg() = default;
-    SpilledReg(Register R, int L) : VGPR (R), Lane (L) {}
-
-    bool hasLane() { return Lane != -1;}
-    bool hasReg() { return VGPR != 0;}
-  };
-
   struct SGPRSpillVGPR {
     // VGPR used for SGPR spills
     Register VGPR;
@@ -500,7 +490,7 @@ public:
 private:
   // Track VGPR + wave index for each subregister of the SGPR spilled to
   // frameindex key.
-  DenseMap<int, std::vector<SpilledReg>> SGPRToVGPRSpills;
+  DenseMap<int, std::vector<SIRegisterInfo::SpilledReg>> SGPRToVGPRSpills;
   unsigned NumVGPRSpillLanes = 0;
   SmallVector<SGPRSpillVGPR, 2> SpillVGPRs;
 
@@ -553,10 +543,12 @@ public:
     WWMReservedRegs.insert(Reg);
   }
 
-  ArrayRef<SpilledReg> getSGPRToVGPRSpills(int FrameIndex) const {
+  ArrayRef<SIRegisterInfo::SpilledReg>
+  getSGPRToVGPRSpills(int FrameIndex) const {
     auto I = SGPRToVGPRSpills.find(FrameIndex);
-    return (I == SGPRToVGPRSpills.end()) ?
-      ArrayRef<SpilledReg>() : makeArrayRef(I->second);
+    return (I == SGPRToVGPRSpills.end())
+               ? ArrayRef<SIRegisterInfo::SpilledReg>()
+               : makeArrayRef(I->second);
   }
 
   ArrayRef<SGPRSpillVGPR> getSGPRSpillVGPRs() const { return SpillVGPRs; }
@@ -929,24 +921,26 @@ public:
     llvm_unreachable("unexpected dimension");
   }
 
-  const AMDGPUBufferPseudoSourceValue *getBufferPSV(const SIInstrInfo &TII) {
+  const AMDGPUBufferPseudoSourceValue *
+  getBufferPSV(const AMDGPUTargetMachine &TM) {
     if (!BufferPSV)
-      BufferPSV = std::make_unique<AMDGPUBufferPseudoSourceValue>(TII);
+      BufferPSV = std::make_unique<AMDGPUBufferPseudoSourceValue>(TM);
 
     return BufferPSV.get();
   }
 
-  const AMDGPUImagePseudoSourceValue *getImagePSV(const SIInstrInfo &TII) {
+  const AMDGPUImagePseudoSourceValue *
+  getImagePSV(const AMDGPUTargetMachine &TM) {
     if (!ImagePSV)
-      ImagePSV = std::make_unique<AMDGPUImagePseudoSourceValue>(TII);
+      ImagePSV = std::make_unique<AMDGPUImagePseudoSourceValue>(TM);
 
     return ImagePSV.get();
   }
 
-  const AMDGPUGWSResourcePseudoSourceValue *getGWSPSV(const SIInstrInfo &TII) {
+  const AMDGPUGWSResourcePseudoSourceValue *
+  getGWSPSV(const AMDGPUTargetMachine &TM) {
     if (!GWSResourcePSV) {
-      GWSResourcePSV =
-          std::make_unique<AMDGPUGWSResourcePseudoSourceValue>(TII);
+      GWSResourcePSV = std::make_unique<AMDGPUGWSResourcePseudoSourceValue>(TM);
     }
 
     return GWSResourcePSV.get();

@@ -104,7 +104,7 @@ private:
     }
   }
   bool IsResultOkToDiffer(const FunctionResult &);
-  void CheckBindCName(const Symbol &);
+  void CheckBindC(const Symbol &);
   // Check functions for defined I/O procedures
   void CheckDefinedIoProc(
       const Symbol &, const GenericDetails &, GenericKind::DefinedIo);
@@ -236,7 +236,7 @@ void CheckHelper::Check(const Symbol &symbol) {
   if (symbol.attrs().test(Attr::VOLATILE)) {
     CheckVolatile(symbol, derived);
   }
-  CheckBindCName(symbol);
+  CheckBindC(symbol);
   if (isDone) {
     return; // following checks do not apply
   }
@@ -351,6 +351,10 @@ void CheckHelper::Check(const Symbol &symbol) {
           "A dummy argument may not have the SAVE attribute"_err_en_US);
     }
   } else if (IsFunctionResult(symbol)) {
+    if (IsNamedConstant(symbol)) {
+      messages_.Say(
+          "A function result may not also be a named constant"_err_en_US);
+    }
     if (!symbol.test(Symbol::Flag::InDataStmt) /*caught elsewhere*/ &&
         IsSaved(symbol)) {
       messages_.Say(
@@ -1869,8 +1873,15 @@ static const std::string *DefinesBindCName(const Symbol &symbol) {
   }
 }
 
-// Check that BIND(C) names are distinct
-void CheckHelper::CheckBindCName(const Symbol &symbol) {
+void CheckHelper::CheckBindC(const Symbol &symbol) {
+  if (!symbol.attrs().test(Attr::BIND_C)) {
+    return;
+  }
+  CheckConflicting(symbol, Attr::BIND_C, Attr::PARAMETER);
+  if (symbol.has<ObjectEntityDetails>() && !symbol.owner().IsModule()) {
+    messages_.Say(symbol.name(),
+        "A variable with BIND(C) attribute may only appear in the specification part of a module"_err_en_US);
+  }
   if (const std::string * name{DefinesBindCName(symbol)}) {
     auto pair{bindC_.emplace(*name, symbol)};
     if (!pair.second) {

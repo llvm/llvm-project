@@ -16,7 +16,7 @@
 #include "AMDGPU.h"
 #include "AMDGPUAliasAnalysis.h"
 #include "AMDGPUExportClustering.h"
-#include "AMDGPUMFMAClustering.h"
+#include "AMDGPUMFMAIGroupLP.h"
 #include "AMDGPUMacroFusion.h"
 #include "AMDGPUTargetObjectFile.h"
 #include "AMDGPUTargetTransformInfo.h"
@@ -399,7 +399,7 @@ createGCNMaxOccupancyMachineScheduler(MachineSchedContext *C) {
   ScheduleDAGMILive *DAG =
     new GCNScheduleDAGMILive(C, std::make_unique<GCNMaxOccupancySchedStrategy>(C));
   DAG->addMutation(createLoadClusterDAGMutation(DAG->TII, DAG->TRI));
-  DAG->addMutation(createMFMAClusterDAGMutation());
+  DAG->addMutation(createMFMAIGroupLPDAGMutation());
   DAG->addMutation(createAMDGPUMacroFusionDAGMutation());
   DAG->addMutation(createAMDGPUExportClusteringDAGMutation());
   return DAG;
@@ -808,6 +808,23 @@ AMDGPUTargetMachine::getPredicatedAddrSpace(const Value *V) const {
   return std::make_pair(nullptr, -1);
 }
 
+unsigned
+AMDGPUTargetMachine::getAddressSpaceForPseudoSourceKind(unsigned Kind) const {
+  switch (Kind) {
+  case PseudoSourceValue::Stack:
+  case PseudoSourceValue::FixedStack:
+    return AMDGPUAS::PRIVATE_ADDRESS;
+  case PseudoSourceValue::ConstantPool:
+  case PseudoSourceValue::GOT:
+  case PseudoSourceValue::JumpTable:
+  case PseudoSourceValue::GlobalValueCallEntry:
+  case PseudoSourceValue::ExternalSymbolCallEntry:
+  case PseudoSourceValue::TargetCustom:
+    return AMDGPUAS::CONSTANT_ADDRESS;
+  }
+  return AMDGPUAS::FLAT_ADDRESS;
+}
+
 //===----------------------------------------------------------------------===//
 // GCN Target Machine (SI+)
 //===----------------------------------------------------------------------===//
@@ -881,7 +898,7 @@ public:
     const GCNSubtarget &ST = C->MF->getSubtarget<GCNSubtarget>();
     DAG->addMutation(createLoadClusterDAGMutation(DAG->TII, DAG->TRI));
     DAG->addMutation(ST.createFillMFMAShadowMutation(DAG->TII));
-    DAG->addMutation(createMFMAClusterDAGMutation());
+    DAG->addMutation(createMFMAIGroupLPDAGMutation());
     return DAG;
   }
 

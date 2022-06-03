@@ -364,6 +364,21 @@ nv
 
 See a description :ref:`here<amdgpu_synid_nv>`.
 
+sc0
+~~~
+
+See a description :ref:`here<amdgpu_synid_sc0>`.
+
+sc1
+~~~
+
+See a description :ref:`here<amdgpu_synid_sc1>`.
+
+nt
+~~
+
+See a description :ref:`here<amdgpu_synid_nt>`.
+
 MIMG Modifiers
 --------------
 
@@ -656,6 +671,48 @@ See AMD documentation for details.
     Syntax                                   Description
     ======================================== ================================================
     tfe                                      Set tfe bit to 1.
+    ======================================== ================================================
+
+.. _amdgpu_synid_sc0:
+
+sc0
+~~~
+
+For atomics, sc0 indicates that the atomic operation returns a value.
+For other opcodes is is used together with :ref:`sc1<amdgpu_synid_sc1>` to specify cache
+policy. See AMD documentation for details.
+
+    ======================================== ================================================
+    Syntax                                   Description
+    ======================================== ================================================
+    sc0                                      Set sc0 bit to 1.
+    ======================================== ================================================
+
+.. _amdgpu_synid_sc1:
+
+sc1
+~~~
+
+This modifier is used together with :ref:`sc0<amdgpu_synid_sc0>` to specify cache
+policy.
+
+    ======================================== ================================================
+    Syntax                                   Description
+    ======================================== ================================================
+    sc1                                      Set sc1 bit to 1.
+    ======================================== ================================================
+
+.. _amdgpu_synid_nt:
+
+nt
+~~
+
+Indicates an operation with non-temporal data.
+
+    ======================================== ================================================
+    Syntax                                   Description
+    ======================================== ================================================
+    nt                                       Set nt bit to 1.
     ======================================== ================================================
 
 MUBUF/MTBUF Modifiers
@@ -1955,3 +2012,34 @@ Note: numeric value may be specified as either
 an :ref:`integer number<amdgpu_synid_integer_number>` or
 an :ref:`absolute expression<amdgpu_synid_absolute_expression>`.
 
+.. _amdgpu_synid_mfma_neg:
+
+neg
+~~~
+
+Indicates operands that must be negated before the operation.
+The number of values specified by this modifier must match the number of source
+operands. First value controls src0, second value controls src1 and so on.
+
+The value 0 indicates that the corresponding operand value is used unmodified,
+the value 1 indicates that the operand value must be negated before the operation.
+
+By default, operand values are used unmodified.
+
+This modifier is valid for floating point operands only.
+
+    =============================== ==================================================================
+    Syntax                          Description
+    =============================== ==================================================================
+    neg:[{0..1},{0..1},{0..1}]      Select operands which must be negated before the operation.
+    =============================== ==================================================================
+
+Note: numeric values may be specified as either
+:ref:`integer numbers<amdgpu_synid_integer_number>` or
+:ref:`absolute expressions<amdgpu_synid_absolute_expression>`.
+
+Examples:
+
+.. parsed-literal::
+
+  neg:[0,1,1]

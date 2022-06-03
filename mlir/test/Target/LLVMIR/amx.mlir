@@ -1,8 +1,8 @@
 // RUN: mlir-translate --mlir-to-llvmir %s | FileCheck %s
 
-// CHECK-LABEL: define void @target(i8* %0)
+// CHECK-LABEL: define void @target(ptr %0)
 // CHECK: %[[c:.*]] = call x86_amx @llvm.x86.tilezero.internal(i16 16, i16 16)
-// CHECK: call void @llvm.x86.tilestored64.internal(i16 16, i16 16, i8* %0, i64 32, x86_amx %[[c]]
+// CHECK: call void @llvm.x86.tilestored64.internal(i16 16, i16 16, ptr %0, i64 32, x86_amx %[[c]]
 llvm.func @target(%ptr: !llvm.ptr<i8>) {
   %c = llvm.mlir.constant(16 : i16) : i16
   %s = llvm.mlir.constant(32 : i64) : i64

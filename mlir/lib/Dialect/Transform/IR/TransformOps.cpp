@@ -116,6 +116,39 @@ LogicalResult PatternApplicatorExtension::findAllMatches(
 } // namespace
 
 //===----------------------------------------------------------------------===//
+// GetClosestIsolatedParentOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult transform::GetClosestIsolatedParentOp::apply(
+    transform::TransformResults &results, transform::TransformState &state) {
+  SetVector<Operation *> parents;
+  for (Operation *target : state.getPayloadOps(getTarget())) {
+    Operation *parent =
+        target->getParentWithTrait<OpTrait::IsIsolatedFromAbove>();
+    if (!parent) {
+      InFlightDiagnostic diag =
+          emitError() << "could not find an isolated-from-above parent op";
+      diag.attachNote(target->getLoc()) << "target op";
+      return diag;
+    }
+    parents.insert(parent);
+  }
+  results.set(getResult().cast<OpResult>(), parents.getArrayRef());
+  return success();
+}
+
+void transform::GetClosestIsolatedParentOp::getEffects(
+    SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
+  effects.emplace_back(MemoryEffects::Read::get(), getTarget(),
+                       TransformMappingResource::get());
+  effects.emplace_back(MemoryEffects::Allocate::get(), getParent(),
+                       TransformMappingResource::get());
+  effects.emplace_back(MemoryEffects::Write::get(), getParent(),
+                       TransformMappingResource::get());
+  effects.emplace_back(MemoryEffects::Read::get(), PayloadIRResource::get());
+}
+
+//===----------------------------------------------------------------------===//
 // PDLMatchOp
 //===----------------------------------------------------------------------===//
 

@@ -215,7 +215,7 @@ PROGRAM do_issue_458
 
 ! Invalid initial expression
 !ERROR: Integer literal is too large for INTEGER(KIND=4)
-  DO ivar = -2147483648_4, 10, 3
+  DO ivar = -2147483649_4, 10, 3
     PRINT *, "ivar is: ", ivar
   END DO
 
@@ -257,7 +257,7 @@ PROGRAM do_issue_458
 
 ! Invalid final expression
 !ERROR: Integer literal is too large for INTEGER(KIND=4)
-  DO ivar = 1, -2147483648_4, 3
+  DO ivar = 1, -2147483649_4, 3
     PRINT *, "ivar is: ", ivar
   END DO
 
@@ -299,7 +299,7 @@ PROGRAM do_issue_458
 
 ! Invalid step expression
 !ERROR: Integer literal is too large for INTEGER(KIND=4)
-  DO ivar = 1, 10, -2147483648_4
+  DO ivar = 1, 10, -2147483649_4
     PRINT *, "ivar is: ", ivar
   END DO
 

@@ -1805,6 +1805,7 @@ td_library(
         ":ControlFlowInterfacesTdFiles",
         ":LoopLikeInterfaceTdFiles",
         ":SideEffectInterfacesTdFiles",
+        ":ViewLikeInterfaceTdFiles",
     ],
 )
 
@@ -2599,6 +2600,7 @@ cc_library(
     includes = ["include"],
     deps = [
         ":ArithmeticDialect",
+        ":ArithmeticUtils",
         ":BufferizationDialect",
         ":ControlFlowInterfaces",
         ":ControlFlowOps",
@@ -2611,6 +2613,7 @@ cc_library(
         ":SCFPassIncGen",
         ":Support",
         ":TensorDialect",
+        ":ViewLikeInterface",
         "//llvm:Support",
     ],
 )
@@ -3216,8 +3219,10 @@ cc_library(
     ),
     includes = ["include"],
     deps = [
+        ":IR",
         ":MlirLspServerSupportLib",
         ":PDLLAST",
+        ":PDLLCodeGen",
         ":PDLLODS",
         ":PDLLParser",
         ":Support",
@@ -4043,6 +4048,10 @@ gentbl_cc_library(
         (
             ["-gen-llvmir-conversions"],
             "include/mlir/Dialect/LLVMIR/LLVMIntrinsicConversions.inc",
+        ),
+        (
+            ["-gen-llvmintrinsic-to-llvmirop-pairs"],
+            "include/mlir/Dialect/LLVMIR/LLVMIntrinsicToLLVMIROpPairs.inc",
         ),
     ],
     tblgen = ":mlir-tblgen",
@@ -6063,6 +6072,7 @@ cc_library(
         ":IR",
         ":LLVMConversionIncGen",
         ":LLVMDialect",
+        ":LLVMIntrinsicConversionIncGen",
         ":Support",
         ":Translation",
         "//llvm:Core",
@@ -7381,6 +7391,7 @@ cc_library(
         ":Parser",
         ":SideEffectInterfaces",
         ":TransformDialect",
+        ":TransformUtils",
         "//llvm:Support",
     ],
 )
@@ -8429,6 +8440,7 @@ cc_library(
         ":FuncDialect",
         ":IR",
         ":MathDialect",
+        ":SCFDialect",
         ":Transforms",
         ":VectorOps",
         ":VectorUtils",
@@ -8610,6 +8622,7 @@ td_library(
         "include/mlir/Dialect/MLProgram/IR/MLProgramAttributes.td",
         "include/mlir/Dialect/MLProgram/IR/MLProgramBase.td",
         "include/mlir/Dialect/MLProgram/IR/MLProgramOps.td",
+        "include/mlir/Dialect/MLProgram/IR/MLProgramTypes.td",
     ],
     includes = ["include"],
     deps = [
@@ -8666,6 +8679,24 @@ gentbl_cc_library(
     deps = [":MLProgramOpsTdFiles"],
 )
 
+gentbl_cc_library(
+    name = "MLProgramTypesIncGen",
+    strip_include_prefix = "include",
+    tbl_outs = [
+        (
+            ["-gen-typedef-decls"],
+            "include/mlir/Dialect/MLProgram/IR/MLProgramTypes.h.inc",
+        ),
+        (
+            ["-gen-typedef-defs"],
+            "include/mlir/Dialect/MLProgram/IR/MLProgramTypes.cpp.inc",
+        ),
+    ],
+    tblgen = ":mlir-tblgen",
+    td_file = "include/mlir/Dialect/MLProgram/IR/MLProgramTypes.td",
+    deps = [":MLProgramOpsTdFiles"],
+)
+
 cc_library(
     name = "MLProgramDialect",
     srcs = glob([
@@ -8681,6 +8712,7 @@ cc_library(
         ":IR",
         ":MLProgramAttributesIncGen",
         ":MLProgramOpsIncGen",
+        ":MLProgramTypesIncGen",
         ":Pass",
         ":Support",
         "//llvm:Support",

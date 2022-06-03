@@ -11429,11 +11429,11 @@ bool OpenMPAtomicCompareChecker::checkCondUpdateStmt(IfStmt *S,
   switch (Cond->getOpcode()) {
   case BO_EQ: {
     C = Cond;
-    D = BO->getRHS()->IgnoreImpCasts();
+    D = BO->getRHS();
     if (checkIfTwoExprsAreSame(ContextRef, X, Cond->getLHS())) {
-      E = Cond->getRHS()->IgnoreImpCasts();
+      E = Cond->getRHS();
     } else if (checkIfTwoExprsAreSame(ContextRef, X, Cond->getRHS())) {
-      E = Cond->getLHS()->IgnoreImpCasts();
+      E = Cond->getLHS();
     } else {
       ErrorInfo.Error = ErrorTy::InvalidComparison;
       ErrorInfo.ErrorLoc = ErrorInfo.NoteLoc = Cond->getExprLoc();
@@ -11444,7 +11444,7 @@ bool OpenMPAtomicCompareChecker::checkCondUpdateStmt(IfStmt *S,
   }
   case BO_LT:
   case BO_GT: {
-    E = BO->getRHS()->IgnoreImpCasts();
+    E = BO->getRHS();
     if (checkIfTwoExprsAreSame(ContextRef, X, Cond->getLHS()) &&
         checkIfTwoExprsAreSame(ContextRef, E, Cond->getRHS())) {
       C = Cond;
@@ -11524,11 +11524,11 @@ bool OpenMPAtomicCompareChecker::checkCondExprStmt(Stmt *S,
   switch (Cond->getOpcode()) {
   case BO_EQ: {
     C = Cond;
-    D = CO->getTrueExpr()->IgnoreImpCasts();
+    D = CO->getTrueExpr();
     if (checkIfTwoExprsAreSame(ContextRef, X, Cond->getLHS())) {
-      E = Cond->getRHS()->IgnoreImpCasts();
+      E = Cond->getRHS();
     } else if (checkIfTwoExprsAreSame(ContextRef, X, Cond->getRHS())) {
-      E = Cond->getLHS()->IgnoreImpCasts();
+      E = Cond->getLHS();
     } else {
       ErrorInfo.Error = ErrorTy::InvalidComparison;
       ErrorInfo.ErrorLoc = ErrorInfo.NoteLoc = Cond->getExprLoc();
@@ -11539,7 +11539,7 @@ bool OpenMPAtomicCompareChecker::checkCondExprStmt(Stmt *S,
   }
   case BO_LT:
   case BO_GT: {
-    E = CO->getTrueExpr()->IgnoreImpCasts();
+    E = CO->getTrueExpr();
     if (checkIfTwoExprsAreSame(ContextRef, X, Cond->getLHS()) &&
         checkIfTwoExprsAreSame(ContextRef, E, Cond->getRHS())) {
       C = Cond;

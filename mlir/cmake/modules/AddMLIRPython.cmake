@@ -355,6 +355,61 @@ function(declare_mlir_dialect_python_bindings)
   endif()
 endfunction()
 
+# Function: declare_mlir_dialect_extension_python_bindings
+# Helper to generate source groups for dialect extensions, including both
+# static source files and a TD_FILE to generate wrappers.
+#
+# This will generate a source group named ${ADD_TO_PARENT}.${EXTENSION_NAME}.
+#
+# Arguments:
+#   ROOT_DIR: Same as for declare_mlir_python_sources().
+#   ADD_TO_PARENT: Same as for declare_mlir_python_sources(). Unique names
+#     for the subordinate source groups are derived from this.
+#   TD_FILE: Tablegen file to generate source for (relative to ROOT_DIR).
+#   DIALECT_NAME: Python name of the dialect.
+#   EXTENSION_NAME: Python name of the dialect extension.
+#   SOURCES: Same as declare_mlir_python_sources().
+#   SOURCES_GLOB: Same as declare_mlir_python_sources().
+#   DEPENDS: Additional dependency targets.
+function(declare_mlir_dialect_extension_python_bindings)
+  cmake_parse_arguments(ARG
+    ""
+    "ROOT_DIR;ADD_TO_PARENT;TD_FILE;DIALECT_NAME;EXTENSION_NAME"
+    "SOURCES;SOURCES_GLOB;DEPENDS"
+    ${ARGN})
+  # Source files.
+  set(_extension_target "${ARG_ADD_TO_PARENT}.${ARG_EXTENSION_NAME}")
+  declare_mlir_python_sources(${_extension_target}
+    ROOT_DIR "${ARG_ROOT_DIR}"
+    ADD_TO_PARENT "${ARG_ADD_TO_PARENT}"
+    SOURCES "${ARG_SOURCES}"
+    SOURCES_GLOB "${ARG_SOURCES_GLOB}"
+  )
+
+  # Tablegen
+  if(ARG_TD_FILE)
+    set(tblgen_target "${ARG_ADD_TO_PARENT}.${ARG_EXTENSION_NAME}.tablegen")
+    set(td_file "${ARG_ROOT_DIR}/${ARG_TD_FILE}")
+    get_filename_component(relative_td_directory "${ARG_TD_FILE}" DIRECTORY)
+    file(MAKE_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/${relative_td_directory}")
+    set(output_filename "${relative_td_directory}/_${ARG_EXTENSION_NAME}_ops_gen.py")
+    set(LLVM_TARGET_DEFINITIONS ${td_file})
+    mlir_tablegen("${output_filename}" -gen-python-op-bindings
+                  -bind-dialect=${ARG_DIALECT_NAME}
+                  -dialect-extension=${ARG_EXTENSION_NAME})
+    add_public_tablegen_target(${tblgen_target})
+    if(ARG_DEPENDS)
+      add_dependencies(${tblgen_target} ${ARG_DEPENDS})
+    endif()
+
+    declare_mlir_python_sources("${_extension_target}.ops_gen"
+      ROOT_DIR "${CMAKE_CURRENT_BINARY_DIR}"
+      ADD_TO_PARENT "${_extension_target}"
+      SOURCES "${output_filename}"
+    )
+  endif()
+endfunction()
+
 # Function: mlir_python_setup_extension_rpath
 # Sets RPATH properties on a target, assuming that it is being output to
 # an _mlir_libs directory with all other libraries. For static linkage,

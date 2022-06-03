@@ -84,13 +84,12 @@ static cl::opt<unsigned> DomConditionsMaxUses("dom-conditions-max-uses",
 
 // According to the LangRef, branching on a poison condition is absolutely
 // immediate full UB.  However, historically we haven't implemented that
-// consistently as we have an important transformation (non-trivial unswitch)
-// which introduces instances of branch on poison/undef to otherwise well
-// defined programs.  This flag exists to let us test optimization benefit
-// of exploiting the specified behavior (in combination with enabling the
-// unswitch fix.)
+// consistently as we had an important transformation (non-trivial unswitch)
+// which introduced instances of branch on poison/undef to otherwise well
+// defined programs.  This issue has since been fixed, but the flag is
+// temporarily retained to easily diagnose potential regressions.
 static cl::opt<bool> BranchOnPoisonAsUB("branch-on-poison-as-ub",
-                                        cl::Hidden, cl::init(false));
+                                        cl::Hidden, cl::init(true));
 
 
 /// Returns the bitwidth of the given scalar or pointer type. For vector types,
@@ -4599,13 +4598,40 @@ bool llvm::isSafeToSpeculativelyExecute(const Value *V,
   const Operator *Inst = dyn_cast<Operator>(V);
   if (!Inst)
     return false;
+  return isSafeToSpeculativelyExecuteWithOpcode(Inst->getOpcode(), Inst, CtxI, DT, TLI);
+}
+
+bool llvm::isSafeToSpeculativelyExecuteWithOpcode(unsigned Opcode,
+                                        const Operator *Inst,
+                                        const Instruction *CtxI,
+                                        const DominatorTree *DT,
+                                        const TargetLibraryInfo *TLI) {
+#ifndef NDEBUG
+  if (Inst->getOpcode() != Opcode) {
+    // Check that the operands are actually compatible with the Opcode override.
+    auto hasEqualReturnAndLeadingOperandTypes =
+        [](const Operator *Inst, unsigned NumLeadingOperands) {
+          if (Inst->getNumOperands() < NumLeadingOperands)
+            return false;
+          const Type *ExpectedType = Inst->getType();
+          for (unsigned ItOp = 0; ItOp < NumLeadingOperands; ++ItOp)
+            if (Inst->getOperand(ItOp)->getType() != ExpectedType)
+              return false;
+          return true;
+        };
+    assert(!Instruction::isBinaryOp(Opcode) ||
+           hasEqualReturnAndLeadingOperandTypes(Inst, 2));
+    assert(!Instruction::isUnaryOp(Opcode) ||
+           hasEqualReturnAndLeadingOperandTypes(Inst, 1));
+  }
+#endif
 
   for (unsigned i = 0, e = Inst->getNumOperands(); i != e; ++i)
     if (Constant *C = dyn_cast<Constant>(Inst->getOperand(i)))
       if (C->canTrap())
         return false;
 
-  switch (Inst->getOpcode()) {
+  switch (Opcode) {
   default:
     return true;
   case Instruction::UDiv:
@@ -4636,7 +4662,9 @@ bool llvm::isSafeToSpeculativelyExecute(const Value *V,
     return false;
   }
   case Instruction::Load: {
-    const LoadInst *LI = cast<LoadInst>(Inst);
+    const LoadInst *LI = dyn_cast<LoadInst>(Inst);
+    if (!LI)
+      return false;
     if (mustSuppressSpeculation(*LI))
       return false;
     const DataLayout &DL = LI->getModule()->getDataLayout();
@@ -4645,7 +4673,9 @@ bool llvm::isSafeToSpeculativelyExecute(const Value *V,
         TLI);
   }
   case Instruction::Call: {
-    auto *CI = cast<const CallInst>(Inst);
+    auto *CI = dyn_cast<const CallInst>(Inst);
+    if (!CI)
+      return false;
     const Function *Callee = CI->getCalledFunction();
 
     // The called function could have undefined behavior or side-effects, even

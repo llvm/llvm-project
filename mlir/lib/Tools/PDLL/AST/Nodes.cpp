@@ -298,17 +298,18 @@ MemberAccessExpr *MemberAccessExpr::create(Context &ctx, SMRange loc,
 // OperationExpr
 //===----------------------------------------------------------------------===//
 
-OperationExpr *OperationExpr::create(
-    Context &ctx, SMRange loc, const OpNameDecl *name,
-    ArrayRef<Expr *> operands, ArrayRef<Expr *> resultTypes,
-    ArrayRef<NamedAttributeDecl *> attributes) {
+OperationExpr *
+OperationExpr::create(Context &ctx, SMRange loc, const ods::Operation *odsOp,
+                      const OpNameDecl *name, ArrayRef<Expr *> operands,
+                      ArrayRef<Expr *> resultTypes,
+                      ArrayRef<NamedAttributeDecl *> attributes) {
   unsigned allocSize =
       OperationExpr::totalSizeToAlloc<Expr *, NamedAttributeDecl *>(
           operands.size() + resultTypes.size(), attributes.size());
   void *rawData =
       ctx.getAllocator().Allocate(allocSize, alignof(OperationExpr));
 
-  Type resultType = OperationType::get(ctx, name->getName());
+  Type resultType = OperationType::get(ctx, name->getName(), odsOp);
   OperationExpr *opExpr = new (rawData)
       OperationExpr(loc, resultType, name, operands.size(), resultTypes.size(),
                     attributes.size(), name->getLoc());
@@ -352,6 +353,14 @@ TupleExpr *TupleExpr::create(Context &ctx, SMRange loc,
 TypeExpr *TypeExpr::create(Context &ctx, SMRange loc, StringRef value) {
   return new (ctx.getAllocator().Allocate<TypeExpr>())
       TypeExpr(ctx, loc, copyStringWithNull(ctx, value));
+}
+
+//===----------------------------------------------------------------------===//
+// Decl
+//===----------------------------------------------------------------------===//
+
+void Decl::setDocComment(Context &ctx, StringRef comment) {
+  docComment = comment.copy(ctx.getAllocator());
 }
 
 //===----------------------------------------------------------------------===//
@@ -426,23 +435,41 @@ ValueRangeConstraintDecl *ValueRangeConstraintDecl::create(Context &ctx,
 // UserConstraintDecl
 //===----------------------------------------------------------------------===//
 
+Optional<StringRef>
+UserConstraintDecl::getNativeInputType(unsigned index) const {
+  return hasNativeInputTypes ? getTrailingObjects<StringRef>()[index]
+                             : Optional<StringRef>();
+}
+
 UserConstraintDecl *UserConstraintDecl::createImpl(
     Context &ctx, const Name &name, ArrayRef<VariableDecl *> inputs,
-    ArrayRef<VariableDecl *> results, Optional<StringRef> codeBlock,
-    const CompoundStmt *body, Type resultType) {
-  unsigned allocSize = UserConstraintDecl::totalSizeToAlloc<VariableDecl *>(
-      inputs.size() + results.size());
+    ArrayRef<StringRef> nativeInputTypes, ArrayRef<VariableDecl *> results,
+    Optional<StringRef> codeBlock, const CompoundStmt *body, Type resultType) {
+  bool hasNativeInputTypes = !nativeInputTypes.empty();
+  assert(!hasNativeInputTypes || nativeInputTypes.size() == inputs.size());
+
+  unsigned allocSize =
+      UserConstraintDecl::totalSizeToAlloc<VariableDecl *, StringRef>(
+          inputs.size() + results.size(),
+          hasNativeInputTypes ? inputs.size() : 0);
   void *rawData =
       ctx.getAllocator().Allocate(allocSize, alignof(UserConstraintDecl));
   if (codeBlock)
     codeBlock = codeBlock->copy(ctx.getAllocator());
 
-  UserConstraintDecl *decl = new (rawData) UserConstraintDecl(
-      name, inputs.size(), results.size(), codeBlock, body, resultType);
+  UserConstraintDecl *decl = new (rawData)
+      UserConstraintDecl(name, inputs.size(), hasNativeInputTypes,
+                         results.size(), codeBlock, body, resultType);
   std::uninitialized_copy(inputs.begin(), inputs.end(),
                           decl->getInputs().begin());
   std::uninitialized_copy(results.begin(), results.end(),
                           decl->getResults().begin());
+  if (hasNativeInputTypes) {
+    StringRef *nativeInputTypesPtr = decl->getTrailingObjects<StringRef>();
+    for (unsigned i = 0, e = inputs.size(); i < e; ++i)
+      nativeInputTypesPtr[i] = nativeInputTypes[i].copy(ctx.getAllocator());
+  }
+
   return decl;
 }
 

@@ -453,8 +453,6 @@ public:
   StringRef getPassName() const override { return RISCV_INSERT_VSETVLI_NAME; }
 
 private:
-  bool needVSETVLI(const VSETVLIInfo &Require,
-                   const VSETVLIInfo &CurInfo) const;
   bool needVSETVLI(const MachineInstr &MI, const VSETVLIInfo &Require,
                    const VSETVLIInfo &CurInfo) const;
   bool needVSETVLIPHI(const VSETVLIInfo &Require,
@@ -718,30 +716,6 @@ static VSETVLIInfo getInfoForVSETVLI(const MachineInstr &MI) {
   return NewInfo;
 }
 
-bool RISCVInsertVSETVLI::needVSETVLI(const VSETVLIInfo &Require,
-                                     const VSETVLIInfo &CurInfo) const {
-  if (CurInfo.isCompatible(Require))
-    return false;
-
-  // We didn't find a compatible value. If our AVL is a virtual register,
-  // it might be defined by a VSET(I)VLI. If it has the same VLMAX we need
-  // and the last VL/VTYPE we observed is the same, we don't need a
-  // VSETVLI here.
-  if (!CurInfo.isUnknown() && Require.hasAVLReg() &&
-      Require.getAVLReg().isVirtual() && !CurInfo.hasSEWLMULRatioOnly() &&
-      CurInfo.hasCompatibleVTYPE(Require)) {
-    if (MachineInstr *DefMI = MRI->getVRegDef(Require.getAVLReg())) {
-      if (isVectorConfigInstr(*DefMI)) {
-        VSETVLIInfo DefInfo = getInfoForVSETVLI(*DefMI);
-        if (DefInfo.hasSameAVL(CurInfo) && DefInfo.hasSameVLMAX(CurInfo))
-          return false;
-      }
-    }
-  }
-
-  return true;
-}
-
 bool canSkipVSETVLIForLoadStore(const MachineInstr &MI,
                                 const VSETVLIInfo &Require,
                                 const VSETVLIInfo &CurInfo) {
@@ -940,8 +914,25 @@ bool canSkipVSETVLIForLoadStore(const MachineInstr &MI,
 
 bool RISCVInsertVSETVLI::needVSETVLI(const MachineInstr &MI, const VSETVLIInfo &Require,
                                      const VSETVLIInfo &CurInfo) const {
-  if (!needVSETVLI(Require, CurInfo))
+  if (CurInfo.isCompatible(Require))
     return false;
+
+  // We didn't find a compatible value. If our AVL is a virtual register,
+  // it might be defined by a VSET(I)VLI. If it has the same VLMAX we need
+  // and the last VL/VTYPE we observed is the same, we don't need a
+  // VSETVLI here.
+  if (!CurInfo.isUnknown() && Require.hasAVLReg() &&
+      Require.getAVLReg().isVirtual() && !CurInfo.hasSEWLMULRatioOnly() &&
+      CurInfo.hasCompatibleVTYPE(Require)) {
+    if (MachineInstr *DefMI = MRI->getVRegDef(Require.getAVLReg())) {
+      if (isVectorConfigInstr(*DefMI)) {
+        VSETVLIInfo DefInfo = getInfoForVSETVLI(*DefMI);
+        if (DefInfo.hasSameAVL(CurInfo) && DefInfo.hasSameVLMAX(CurInfo))
+          return false;
+      }
+    }
+  }
+
   // If this is a unit-stride or strided load/store, we may be able to use the
   // EMUL=(EEW/SEW)*LMUL relationship to avoid changing VTYPE.
   return !canSkipVSETVLIForLoadStore(MI, Require, CurInfo);
@@ -1040,7 +1031,7 @@ void RISCVInsertVSETVLI::computeIncomingVLVTYPE(const MachineBasicBlock &MBB) {
 }
 
 // If we weren't able to prove a vsetvli was directly unneeded, it might still
-// be/ unneeded if the AVL is a phi node where all incoming values are VL
+// be unneeded if the AVL is a phi node where all incoming values are VL
 // outputs from the last VSETVLI in their respective basic blocks.
 bool RISCVInsertVSETVLI::needVSETVLIPHI(const VSETVLIInfo &Require,
                                         const MachineBasicBlock &MBB) const {
@@ -1123,7 +1114,7 @@ void RISCVInsertVSETVLI::emitVSETVLIs(MachineBasicBlock &MBB) {
         // use the predecessor information.
         CurInfo = BlockInfo[MBB.getNumber()].Pred;
         assert(CurInfo.isValid() && "Expected a valid predecessor state.");
-        if (needVSETVLI(NewInfo, CurInfo)) {
+        if (needVSETVLI(MI, NewInfo, CurInfo)) {
           // If this is the first implicit state change, and the state change
           // requested can be proven to produce the same register contents, we
           // can skip emitting the actual state change and continue as if we
@@ -1286,8 +1277,8 @@ void RISCVInsertVSETVLI::doLocalPrepass(MachineBasicBlock &MBB) {
 static bool hasFixedResult(const VSETVLIInfo &Info, const RISCVSubtarget &ST) {
   if (!Info.hasAVLImm())
     // VLMAX is always the same value.
-    // TODO: Could extend to other registers by looking at the associated
-    // vreg def placement.
+    // TODO: Could extend to other registers by looking at the associated vreg
+    // def placement.
     return RISCV::X0 == Info.getAVLReg();
 
   unsigned AVL = Info.getAVLImm();
@@ -1330,12 +1321,12 @@ void RISCVInsertVSETVLI::doPRE(MachineBasicBlock &MBB) {
     }
   }
 
-  // unreachable, single pred, or full redundancy.  Note that FRE
-  // is handled by phase 3.
+  // Unreachable, single pred, or full redundancy. Note that FRE is handled by
+  // phase 3.
   if (!UnavailablePred || !AvailableInfo.isValid())
     return;
 
-  // critical edge - TODO: consider splitting?
+  // Critical edge - TODO: consider splitting?
   if (UnavailablePred->succ_size() != 1)
     return;
 
