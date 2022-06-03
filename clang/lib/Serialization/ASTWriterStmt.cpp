@@ -2319,6 +2319,7 @@ void ASTStmtWriter::VisitOMPAtomicDirective(OMPAtomicDirective *D) {
   VisitOMPExecutableDirective(D);
   Record.writeBool(D->isXLHSInRHSPart());
   Record.writeBool(D->isPostfixUpdate());
+  Record.writeBool(D->isFailOnly());
   Code = serialization::STMT_OMP_ATOMIC_DIRECTIVE;
 }
 
