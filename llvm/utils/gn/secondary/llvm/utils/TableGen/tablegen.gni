@@ -24,6 +24,8 @@
 #     td_file = "AttributesCompatFunc.td"
 #   }
 
+import("//llvm/utils/gn/build/compiled_action.gni")
+
 template("tablegen") {
   assert(defined(invoker.args), "must set 'args' in $target_name")
 
@@ -33,25 +35,20 @@ template("tablegen") {
     include_dirs = [ target_gen_dir ]
   }
 
-  action(target_name) {
+  compiled_action(target_name) {
     forward_variables_from(invoker, [ "visibility" ])
 
     if (defined(invoker.tblgen_target)) {
-      tblgen_target = invoker.tblgen_target
+      tool = invoker.tblgen_target
     } else {
-      tblgen_target = "//llvm/utils/TableGen:llvm-tblgen"
+      tool = "//llvm/utils/TableGen:llvm-tblgen"
     }
-    tblgen_target += "($host_toolchain)"
-    tblgen_executable = get_label_info(tblgen_target, "root_out_dir") +
-                        "/bin/" + get_label_info(tblgen_target, "name")
-    deps = [ tblgen_target ]
     if (defined(invoker.td_file)) {
       td_file = invoker.td_file
     } else {
       td_file = "$target_name.td"
     }
-    sources = [ td_file ]
-    script = "//llvm/utils/gn/build/run_tablegen.py"
+    inputs = [ td_file ]
     if (defined(invoker.output_name)) {
       gen_output = "$target_gen_dir/" + invoker.output_name
     } else {
@@ -61,7 +58,6 @@ template("tablegen") {
     td_file = rebase_path(td_file, root_build_dir)
 
     args = [
-             rebase_path(tblgen_executable, root_build_dir),
              "--write-if-changed",
 
              "-I",

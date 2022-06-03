@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Runs tablegen."""
+"""Runs a built binary."""
 
 import subprocess
 import sys
