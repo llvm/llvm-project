@@ -49,7 +49,7 @@ TEST_F(VPlanHCFGTest, testBuildHCFGInnerLoop) {
   // Check that the region following the preheader is a single basic-block
   // region (loop).
   VPBasicBlock *VecBB = Entry->getSingleSuccessor()->getEntryBasicBlock();
-  EXPECT_EQ(7u, VecBB->size());
+  EXPECT_EQ(8u, VecBB->size());
   EXPECT_EQ(0u, VecBB->getNumPredecessors());
   EXPECT_EQ(0u, VecBB->getNumSuccessors());
   EXPECT_EQ(VecBB->getParent()->getEntryBasicBlock(), VecBB);
@@ -120,7 +120,8 @@ compound=true
       "  EMIT store ir\<%res\> ir\<%arr.idx\>\l" +
       "  EMIT ir\<%indvars.iv.next\> = add ir\<%indvars.iv\> ir\<1\>\l" +
       "  EMIT ir\<%exitcond\> = icmp ir\<%indvars.iv.next\> ir\<%N\>\l" +
-      "No successors\l" +
+      "  EMIT branch-on-cond ir\<%exitcond\>\l" +
+      "No successors\l"
     ]
   }
   N1 -> N3 [ label="" ltail=cluster_N2]
@@ -176,7 +177,7 @@ TEST_F(VPlanHCFGTest, testVPInstructionToVPRecipesInner) {
   // Check that the region following the preheader is a single basic-block
   // region (loop).
   VPBasicBlock *VecBB = Entry->getSingleSuccessor()->getEntryBasicBlock();
-  EXPECT_EQ(7u, VecBB->size());
+  EXPECT_EQ(8u, VecBB->size());
   EXPECT_EQ(0u, VecBB->getNumPredecessors());
   EXPECT_EQ(0u, VecBB->getNumSuccessors());
   EXPECT_EQ(VecBB->getParent()->getEntryBasicBlock(), VecBB);
@@ -190,6 +191,7 @@ TEST_F(VPlanHCFGTest, testVPInstructionToVPRecipesInner) {
   EXPECT_NE(nullptr, dyn_cast<VPWidenMemoryInstructionRecipe>(&*Iter++));
   EXPECT_NE(nullptr, dyn_cast<VPWidenRecipe>(&*Iter++));
   EXPECT_NE(nullptr, dyn_cast<VPWidenRecipe>(&*Iter++));
+  EXPECT_NE(nullptr, dyn_cast<VPInstruction>(&*Iter++));
   EXPECT_EQ(VecBB->end(), Iter);
 }
 
