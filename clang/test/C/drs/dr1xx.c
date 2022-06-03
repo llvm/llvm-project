@@ -177,8 +177,16 @@ void dr118(void) {
 	/* The enum isn't a complete type until the closing }, but an
 	 * implementation may complete the type earlier if it has sufficient type
 	 * information to calculate size or alignment, etc.
+	 *
+	 * On Microsoft targets, an enum is always implicit int sized, so the type
+	 * is sufficiently complete there. On other platforms, it is an incomplete
+	 * type at this point.
 	 */
     Val = sizeof(enum E)
+    #ifndef _WIN32
+    /* expected-error@-2 {{invalid application of 'sizeof' to an incomplete type 'enum E'}} */
+    /* expected-note@-12 {{definition of 'enum E' is not complete until the closing '}'}} */
+    #endif
   };
 }
 
