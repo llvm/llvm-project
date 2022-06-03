@@ -400,7 +400,8 @@ void UseAfterMoveCheck::registerMatchers(MatchFinder *Finder) {
   auto CallMoveMatcher =
       callExpr(callee(functionDecl(hasName("::std::move"))), argumentCountIs(1),
                hasArgument(0, declRefExpr().bind("arg")),
-               anyOf(hasAncestor(lambdaExpr().bind("containing-lambda")),
+               anyOf(hasAncestor(compoundStmt(
+                         hasParent(lambdaExpr().bind("containing-lambda")))),
                      hasAncestor(functionDecl().bind("containing-func"))),
                unless(inDecltypeOrTemplateArg()),
                // try_emplace is a common maybe-moving function that returns a
