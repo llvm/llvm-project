@@ -239,7 +239,7 @@ The improvements are...
 Improvements to pp-trace
 ------------------------
 
-The improvements are...
+- Added `HashLoc` information to `InclusionDirective` callback output.
 
 Clang-tidy Visual Studio plugin
 -------------------------------
