@@ -83,7 +83,7 @@ Defined *SymbolTable::addDefined(StringRef name, InputFile *file,
           concatIsec->symbols.erase(llvm::find(concatIsec->symbols, defined));
         }
       } else {
-        error("duplicate symbol: " + name + "\n>>> defined in " +
+        error("duplicate symbol: " + toString(*defined) + "\n>>> defined in " +
               toString(defined->getFile()) + "\n>>> defined in " +
               toString(file));
       }
