@@ -2848,6 +2848,9 @@ class OMPAtomicDirective : public OMPExecutableDirective {
     /// This field is 1 for the first(postfix) form of the expression and 0
     /// otherwise.
     uint8_t IsPostfixUpdate : 1;
+    /// 1 if 'v' is updated only when the condition is false (compare capture
+    /// only).
+    uint8_t IsFailOnly : 1;
   } Flags;
 
   /// Build directive with the given start and end location.
@@ -2872,6 +2875,7 @@ class OMPAtomicDirective : public OMPExecutableDirective {
     POS_UpdateExpr,
     POS_D,
     POS_Cond,
+    POS_R,
   };
 
   /// Set 'x' part of the associated expression/statement.
@@ -2884,6 +2888,8 @@ class OMPAtomicDirective : public OMPExecutableDirective {
   }
   /// Set 'v' part of the associated expression/statement.
   void setV(Expr *V) { Data->getChildren()[DataPositionTy::POS_V] = V; }
+  /// Set 'r' part of the associated expression/statement.
+  void setR(Expr *R) { Data->getChildren()[DataPositionTy::POS_R] = R; }
   /// Set 'expr' part of the associated expression/statement.
   void setExpr(Expr *E) { Data->getChildren()[DataPositionTy::POS_E] = E; }
   /// Set 'd' part of the associated expression/statement.
@@ -2897,6 +2903,8 @@ public:
     Expr *X = nullptr;
     /// 'v' part of the associated expression/statement.
     Expr *V = nullptr;
+    // 'r' part of the associated expression/statement.
+    Expr *R = nullptr;
     /// 'expr' part of the associated expression/statement.
     Expr *E = nullptr;
     /// UE Helper expression of the form:
@@ -2911,6 +2919,9 @@ public:
     bool IsXLHSInRHSPart;
     /// True if original value of 'x' must be stored in 'v', not an updated one.
     bool IsPostfixUpdate;
+    /// True if 'v' is updated only when the condition is false (compare capture
+    /// only).
+    bool IsFailOnly;
   };
 
   /// Creates directive with a list of \a Clauses and 'x', 'v' and 'expr'
@@ -2963,12 +2974,22 @@ public:
   /// Return true if 'v' expression must be updated to original value of
   /// 'x', false if 'v' must be updated to the new value of 'x'.
   bool isPostfixUpdate() const { return Flags.IsPostfixUpdate; }
+  /// Return true if 'v' is updated only when the condition is evaluated false
+  /// (compare capture only).
+  bool isFailOnly() const { return Flags.IsFailOnly; }
   /// Get 'v' part of the associated expression/statement.
   Expr *getV() {
     return cast_or_null<Expr>(Data->getChildren()[DataPositionTy::POS_V]);
   }
   const Expr *getV() const {
     return cast_or_null<Expr>(Data->getChildren()[DataPositionTy::POS_V]);
+  }
+  /// Get 'r' part of the associated expression/statement.
+  Expr *getR() {
+    return cast_or_null<Expr>(Data->getChildren()[DataPositionTy::POS_R]);
+  }
+  const Expr *getR() const {
+    return cast_or_null<Expr>(Data->getChildren()[DataPositionTy::POS_R]);
   }
   /// Get 'expr' part of the associated expression/statement.
   Expr *getExpr() {

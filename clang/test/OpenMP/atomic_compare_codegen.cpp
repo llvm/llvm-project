@@ -1945,6 +1945,7759 @@ void foo(void) {
     ullx = ulld;
 }
 
+void bar() {
+  char cx, cv, cr, ce, cd;
+  unsigned char ucx, ucv, ucr, uce, ucd;
+  short sx, sv, sr, se, sd;
+  unsigned short usx, usv, usr, use, usd;
+  int ix, iv, ir, ie, id;
+  unsigned int uix, uiv, uir, uie, uid;
+  long lx, lv, lr, le, ld;
+  unsigned long ulx, ulv, ulr, ule, uld;
+  long long llx, llv, llr, lle, lld;
+  unsigned long long ullx, ullv, ullr, ulle, ulld;
+
+#pragma omp atomic compare capture
+  {
+    cv = cx;
+    if (ce > cx) {
+      cx = ce;
+    }
+  }
+#pragma omp atomic compare capture
+  {
+    cv = cx;
+    if (cx > ce) {
+      cx = ce;
+    }
+  }
+#pragma omp atomic compare capture
+  {
+    cv = cx;
+    if (ce < cx) {
+      cx = ce;
+    }
+  }
+#pragma omp atomic compare capture
+  {
+    cv = cx;
+    if (cx < ce) {
+      cx = ce;
+    }
+  }
+#pragma omp atomic compare capture
+  {
+    cv = cx;
+    if (cx == ce) {
+      cx = cd;
+    }
+  }
+#pragma omp atomic compare capture
+  {
+    cv = cx;
+    if (ce == cx) {
+      cx = cd;
+    }
+  }
+#pragma omp atomic compare capture
+  {
+    if (ce > cx) {
+      cx = ce;
+    }
+    cv = cx;
+  }
+#pragma omp atomic compare capture
+  {
+    if (cx > ce) {
+      cx = ce;
+    }
+    cv = cx;
+  }
+#pragma omp atomic compare capture
+  {
+    if (ce < cx) {
+      cx = ce;
+    }
+    cv = cx;
+  }
+#pragma omp atomic compare capture
+  {
+    if (cx < ce) {
+      cx = ce;
+    }
+    cv = cx;
+  }
+#pragma omp atomic compare capture
+  {
+    if (cx == ce) {
+      cx = cd;
+    }
+    cv = cx;
+  }
+#pragma omp atomic compare capture
+  {
+    if (ce == cx) {
+      cx = cd;
+    }
+    cv = cx;
+  }
+#pragma omp atomic compare capture
+  if (cx == ce) {
+    cx = cd;
+  } else {
+    cv = cx;
+  }
+#pragma omp atomic compare capture
+  if (ce == cx) {
+    cx = cd;
+  } else {
+    cv = cx;
+  }
+#pragma omp atomic compare capture
+  {
+    cr = cx == ce;
+    if (cr) {
+      cx = cd;
+    }
+  }
+#pragma omp atomic compare capture
+  {
+    cr = ce == cx;
+    if (cr) {
+      cx = cd;
+    }
+  }
+#pragma omp atomic compare capture
+  {
+    cr = cx == ce;
+    if (cr) {
+      cx = cd;
+    } else {
+      cv = cx;
+    }
+  }
+#pragma omp atomic compare capture
+  {
+    cr = ce == cx;
+    if (cr) {
+      cx = cd;
+    } else {
+      cv = cx;
+    }
+  }
+
+#pragma omp atomic compare capture acq_rel
+  {
+    cv = cx;
+    if (ce > cx) {
+      cx = ce;
+    }
+  }
+#pragma omp atomic compare capture acq_rel
+  {
+    cv = cx;
+    if (cx > ce) {
+      cx = ce;
+    }
+  }
+#pragma omp atomic compare capture acq_rel
+  {
+    cv = cx;
+    if (ce < cx) {
+      cx = ce;
+    }
+  }
+#pragma omp atomic compare capture acq_rel
+  {
+    cv = cx;
+    if (cx < ce) {
+      cx = ce;
+    }
+  }
+#pragma omp atomic compare capture acq_rel
+  {
+    cv = cx;
+    if (cx == ce) {
+      cx = cd;
+    }
+  }
+#pragma omp atomic compare capture acq_rel
+  {
+    cv = cx;
+    if (ce == cx) {
+      cx = cd;
+    }
+  }
+#pragma omp atomic compare capture acq_rel
+  {
+    if (ce > cx) {
+      cx = ce;
+    }
+    cv = cx;
+  }
+#pragma omp atomic compare capture acq_rel
+  {
+    if (cx > ce) {
+      cx = ce;
+    }
+    cv = cx;
+  }
+#pragma omp atomic compare capture acq_rel
+  {
+    if (ce < cx) {
+      cx = ce;
+    }
+    cv = cx;
+  }
+#pragma omp atomic compare capture acq_rel
+  {
+    if (cx < ce) {
+      cx = ce;
+    }
+    cv = cx;
+  }
+#pragma omp atomic compare capture acq_rel
+  {
+    if (cx == ce) {
+      cx = cd;
+    }
+    cv = cx;
+  }
+#pragma omp atomic compare capture acq_rel
+  {
+    if (ce == cx) {
+      cx = cd;
+    }
+    cv = cx;
+  }
+#pragma omp atomic compare capture acq_rel
+  if (cx == ce) {
+    cx = cd;
+  } else {
+    cv = cx;
+  }
+#pragma omp atomic compare capture acq_rel
+  if (ce == cx) {
+    cx = cd;
+  } else {
+    cv = cx;
+  }
+#pragma omp atomic compare capture acq_rel
+  {
+    cr = cx == ce;
+    if (cr) {
+      cx = cd;
+    }
+  }
+#pragma omp atomic compare capture acq_rel
+  {
+    cr = ce == cx;
+    if (cr) {
+      cx = cd;
+    }
+  }
+#pragma omp atomic compare capture acq_rel
+  {
+    cr = cx == ce;
+    if (cr) {
+      cx = cd;
+    } else {
+      cv = cx;
+    }
+  }
+#pragma omp atomic compare capture acq_rel
+  {
+    cr = ce == cx;
+    if (cr) {
+      cx = cd;
+    } else {
+      cv = cx;
+    }
+  }
+
+#pragma omp atomic compare capture acquire
+  {
+    cv = cx;
+    if (ce > cx) {
+      cx = ce;
+    }
+  }
+#pragma omp atomic compare capture acquire
+  {
+    cv = cx;
+    if (cx > ce) {
+      cx = ce;
+    }
+  }
+#pragma omp atomic compare capture acquire
+  {
+    cv = cx;
+    if (ce < cx) {
+      cx = ce;
+    }
+  }
+#pragma omp atomic compare capture acquire
+  {
+    cv = cx;
+    if (cx < ce) {
+      cx = ce;
+    }
+  }
+#pragma omp atomic compare capture acquire
+  {
+    cv = cx;
+    if (cx == ce) {
+      cx = cd;
+    }
+  }
+#pragma omp atomic compare capture acquire
+  {
+    cv = cx;
+    if (ce == cx) {
+      cx = cd;
+    }
+  }
+#pragma omp atomic compare capture acquire
+  {
+    if (ce > cx) {
+      cx = ce;
+    }
+    cv = cx;
+  }
+#pragma omp atomic compare capture acquire
+  {
+    if (cx > ce) {
+      cx = ce;
+    }
+    cv = cx;
+  }
+#pragma omp atomic compare capture acquire
+  {
+    if (ce < cx) {
+      cx = ce;
+    }
+    cv = cx;
+  }
+#pragma omp atomic compare capture acquire
+  {
+    if (cx < ce) {
+      cx = ce;
+    }
+    cv = cx;
+  }
+#pragma omp atomic compare capture acquire
+  {
+    if (cx == ce) {
+      cx = cd;
+    }
+    cv = cx;
+  }
+#pragma omp atomic compare capture acquire
+  {
+    if (ce == cx) {
+      cx = cd;
+    }
+    cv = cx;
+  }
+#pragma omp atomic compare capture acquire
+  if (cx == ce) {
+    cx = cd;
+  } else {
+    cv = cx;
+  }
+#pragma omp atomic compare capture acquire
+  if (ce == cx) {
+    cx = cd;
+  } else {
+    cv = cx;
+  }
+#pragma omp atomic compare capture acquire
+  {
+    cr = cx == ce;
+    if (cr) {
+      cx = cd;
+    }
+  }
+#pragma omp atomic compare capture acquire
+  {
+    cr = ce == cx;
+    if (cr) {
+      cx = cd;
+    }
+  }
+#pragma omp atomic compare capture acquire
+  {
+    cr = cx == ce;
+    if (cr) {
+      cx = cd;
+    } else {
+      cv = cx;
+    }
+  }
+#pragma omp atomic compare capture acquire
+  {
+    cr = ce == cx;
+    if (cr) {
+      cx = cd;
+    } else {
+      cv = cx;
+    }
+  }
+
+#pragma omp atomic compare capture relaxed
+  {
+    cv = cx;
+    if (ce > cx) {
+      cx = ce;
+    }
+  }
+#pragma omp atomic compare capture relaxed
+  {
+    cv = cx;
+    if (cx > ce) {
+      cx = ce;
+    }
+  }
+#pragma omp atomic compare capture relaxed
+  {
+    cv = cx;
+    if (ce < cx) {
+      cx = ce;
+    }
+  }
+#pragma omp atomic compare capture relaxed
+  {
+    cv = cx;
+    if (cx < ce) {
+      cx = ce;
+    }
+  }
+#pragma omp atomic compare capture relaxed
+  {
+    cv = cx;
+    if (cx == ce) {
+      cx = cd;
+    }
+  }
+#pragma omp atomic compare capture relaxed
+  {
+    cv = cx;
+    if (ce == cx) {
+      cx = cd;
+    }
+  }
+#pragma omp atomic compare capture relaxed
+  {
+    if (ce > cx) {
+      cx = ce;
+    }
+    cv = cx;
+  }
+#pragma omp atomic compare capture relaxed
+  {
+    if (cx > ce) {
+      cx = ce;
+    }
+    cv = cx;
+  }
+#pragma omp atomic compare capture relaxed
+  {
+    if (ce < cx) {
+      cx = ce;
+    }
+    cv = cx;
+  }
+#pragma omp atomic compare capture relaxed
+  {
+    if (cx < ce) {
+      cx = ce;
+    }
+    cv = cx;
+  }
+#pragma omp atomic compare capture relaxed
+  {
+    if (cx == ce) {
+      cx = cd;
+    }
+    cv = cx;
+  }
+#pragma omp atomic compare capture relaxed
+  {
+    if (ce == cx) {
+      cx = cd;
+    }
+    cv = cx;
+  }
+#pragma omp atomic compare capture relaxed
+  if (cx == ce) {
+    cx = cd;
+  } else {
+    cv = cx;
+  }
+#pragma omp atomic compare capture relaxed
+  if (ce == cx) {
+    cx = cd;
+  } else {
+    cv = cx;
+  }
+#pragma omp atomic compare capture relaxed
+  {
+    cr = cx == ce;
+    if (cr) {
+      cx = cd;
+    }
+  }
+#pragma omp atomic compare capture relaxed
+  {
+    cr = ce == cx;
+    if (cr) {
+      cx = cd;
+    }
+  }
+#pragma omp atomic compare capture relaxed
+  {
+    cr = cx == ce;
+    if (cr) {
+      cx = cd;
+    } else {
+      cv = cx;
+    }
+  }
+#pragma omp atomic compare capture relaxed
+  {
+    cr = ce == cx;
+    if (cr) {
+      cx = cd;
+    } else {
+      cv = cx;
+    }
+  }
+
+#pragma omp atomic compare capture release
+  {
+    cv = cx;
+    if (ce > cx) {
+      cx = ce;
+    }
+  }
+#pragma omp atomic compare capture release
+  {
+    cv = cx;
+    if (cx > ce) {
+      cx = ce;
+    }
+  }
+#pragma omp atomic compare capture release
+  {
+    cv = cx;
+    if (ce < cx) {
+      cx = ce;
+    }
+  }
+#pragma omp atomic compare capture release
+  {
+    cv = cx;
+    if (cx < ce) {
+      cx = ce;
+    }
+  }
+#pragma omp atomic compare capture release
+  {
+    cv = cx;
+    if (cx == ce) {
+      cx = cd;
+    }
+  }
+#pragma omp atomic compare capture release
+  {
+    cv = cx;
+    if (ce == cx) {
+      cx = cd;
+    }
+  }
+#pragma omp atomic compare capture release
+  {
+    if (ce > cx) {
+      cx = ce;
+    }
+    cv = cx;
+  }
+#pragma omp atomic compare capture release
+  {
+    if (cx > ce) {
+      cx = ce;
+    }
+    cv = cx;
+  }
+#pragma omp atomic compare capture release
+  {
+    if (ce < cx) {
+      cx = ce;
+    }
+    cv = cx;
+  }
+#pragma omp atomic compare capture release
+  {
+    if (cx < ce) {
+      cx = ce;
+    }
+    cv = cx;
+  }
+#pragma omp atomic compare capture release
+  {
+    if (cx == ce) {
+      cx = cd;
+    }
+    cv = cx;
+  }
+#pragma omp atomic compare capture release
+  {
+    if (ce == cx) {
+      cx = cd;
+    }
+    cv = cx;
+  }
+#pragma omp atomic compare capture release
+  if (cx == ce) {
+    cx = cd;
+  } else {
+    cv = cx;
+  }
+#pragma omp atomic compare capture release
+  if (ce == cx) {
+    cx = cd;
+  } else {
+    cv = cx;
+  }
+#pragma omp atomic compare capture release
+  {
+    cr = cx == ce;
+    if (cr) {
+      cx = cd;
+    }
+  }
+#pragma omp atomic compare capture release
+  {
+    cr = ce == cx;
+    if (cr) {
+      cx = cd;
+    }
+  }
+#pragma omp atomic compare capture release
+  {
+    cr = cx == ce;
+    if (cr) {
+      cx = cd;
+    } else {
+      cv = cx;
+    }
+  }
+#pragma omp atomic compare capture release
+  {
+    cr = ce == cx;
+    if (cr) {
+      cx = cd;
+    } else {
+      cv = cx;
+    }
+  }
+
+#pragma omp atomic compare capture seq_cst
+  {
+    cv = cx;
+    if (ce > cx) {
+      cx = ce;
+    }
+  }
+#pragma omp atomic compare capture seq_cst
+  {
+    cv = cx;
+    if (cx > ce) {
+      cx = ce;
+    }
+  }
+#pragma omp atomic compare capture seq_cst
+  {
+    cv = cx;
+    if (ce < cx) {
+      cx = ce;
+    }
+  }
+#pragma omp atomic compare capture seq_cst
+  {
+    cv = cx;
+    if (cx < ce) {
+      cx = ce;
+    }
+  }
+#pragma omp atomic compare capture seq_cst
+  {
+    cv = cx;
+    if (cx == ce) {
+      cx = cd;
+    }
+  }
+#pragma omp atomic compare capture seq_cst
+  {
+    cv = cx;
+    if (ce == cx) {
+      cx = cd;
+    }
+  }
+#pragma omp atomic compare capture seq_cst
+  {
+    if (ce > cx) {
+      cx = ce;
+    }
+    cv = cx;
+  }
+#pragma omp atomic compare capture seq_cst
+  {
+    if (cx > ce) {
+      cx = ce;
+    }
+    cv = cx;
+  }
+#pragma omp atomic compare capture seq_cst
+  {
+    if (ce < cx) {
+      cx = ce;
+    }
+    cv = cx;
+  }
+#pragma omp atomic compare capture seq_cst
+  {
+    if (cx < ce) {
+      cx = ce;
+    }
+    cv = cx;
+  }
+#pragma omp atomic compare capture seq_cst
+  {
+    if (cx == ce) {
+      cx = cd;
+    }
+    cv = cx;
+  }
+#pragma omp atomic compare capture seq_cst
+  {
+    if (ce == cx) {
+      cx = cd;
+    }
+    cv = cx;
+  }
+#pragma omp atomic compare capture seq_cst
+  if (cx == ce) {
+    cx = cd;
+  } else {
+    cv = cx;
+  }
+#pragma omp atomic compare capture seq_cst
+  if (ce == cx) {
+    cx = cd;
+  } else {
+    cv = cx;
+  }
+#pragma omp atomic compare capture seq_cst
+  {
+    cr = cx == ce;
+    if (cr) {
+      cx = cd;
+    }
+  }
+#pragma omp atomic compare capture seq_cst
+  {
+    cr = ce == cx;
+    if (cr) {
+      cx = cd;
+    }
+  }
+#pragma omp atomic compare capture seq_cst
+  {
+    cr = cx == ce;
+    if (cr) {
+      cx = cd;
+    } else {
+      cv = cx;
+    }
+  }
+#pragma omp atomic compare capture seq_cst
+  {
+    cr = ce == cx;
+    if (cr) {
+      cx = cd;
+    } else {
+      cv = cx;
+    }
+  }
+
+#pragma omp atomic compare capture
+  {
+    ucv = ucx;
+    if (uce > ucx) {
+      ucx = uce;
+    }
+  }
+#pragma omp atomic compare capture
+  {
+    ucv = ucx;
+    if (ucx > uce) {
+      ucx = uce;
+    }
+  }
+#pragma omp atomic compare capture
+  {
+    ucv = ucx;
+    if (uce < ucx) {
+      ucx = uce;
+    }
+  }
+#pragma omp atomic compare capture
+  {
+    ucv = ucx;
+    if (ucx < uce) {
+      ucx = uce;
+    }
+  }
+#pragma omp atomic compare capture
+  {
+    ucv = ucx;
+    if (ucx == uce) {
+      ucx = ucd;
+    }
+  }
+#pragma omp atomic compare capture
+  {
+    ucv = ucx;
+    if (uce == ucx) {
+      ucx = ucd;
+    }
+  }
+#pragma omp atomic compare capture
+  {
+    if (uce > ucx) {
+      ucx = uce;
+    }
+    ucv = ucx;
+  }
+#pragma omp atomic compare capture
+  {
+    if (ucx > uce) {
+      ucx = uce;
+    }
+    ucv = ucx;
+  }
+#pragma omp atomic compare capture
+  {
+    if (uce < ucx) {
+      ucx = uce;
+    }
+    ucv = ucx;
+  }
+#pragma omp atomic compare capture
+  {
+    if (ucx < uce) {
+      ucx = uce;
+    }
+    ucv = ucx;
+  }
+#pragma omp atomic compare capture
+  {
+    if (ucx == uce) {
+      ucx = ucd;
+    }
+    ucv = ucx;
+  }
+#pragma omp atomic compare capture
+  {
+    if (uce == ucx) {
+      ucx = ucd;
+    }
+    ucv = ucx;
+  }
+#pragma omp atomic compare capture
+  if (ucx == uce) {
+    ucx = ucd;
+  } else {
+    ucv = ucx;
+  }
+#pragma omp atomic compare capture
+  if (uce == ucx) {
+    ucx = ucd;
+  } else {
+    ucv = ucx;
+  }
+#pragma omp atomic compare capture
+  {
+    ucr = ucx == uce;
+    if (ucr) {
+      ucx = ucd;
+    }
+  }
+#pragma omp atomic compare capture
+  {
+    ucr = uce == ucx;
+    if (ucr) {
+      ucx = ucd;
+    }
+  }
+#pragma omp atomic compare capture
+  {
+    ucr = ucx == uce;
+    if (ucr) {
+      ucx = ucd;
+    } else {
+      ucv = ucx;
+    }
+  }
+#pragma omp atomic compare capture
+  {
+    ucr = uce == ucx;
+    if (ucr) {
+      ucx = ucd;
+    } else {
+      ucv = ucx;
+    }
+  }
+
+#pragma omp atomic compare capture acq_rel
+  {
+    ucv = ucx;
+    if (uce > ucx) {
+      ucx = uce;
+    }
+  }
+#pragma omp atomic compare capture acq_rel
+  {
+    ucv = ucx;
+    if (ucx > uce) {
+      ucx = uce;
+    }
+  }
+#pragma omp atomic compare capture acq_rel
+  {
+    ucv = ucx;
+    if (uce < ucx) {
+      ucx = uce;
+    }
+  }
+#pragma omp atomic compare capture acq_rel
+  {
+    ucv = ucx;
+    if (ucx < uce) {
+      ucx = uce;
+    }
+  }
+#pragma omp atomic compare capture acq_rel
+  {
+    ucv = ucx;
+    if (ucx == uce) {
+      ucx = ucd;
+    }
+  }
+#pragma omp atomic compare capture acq_rel
+  {
+    ucv = ucx;
+    if (uce == ucx) {
+      ucx = ucd;
+    }
+  }
+#pragma omp atomic compare capture acq_rel
+  {
+    if (uce > ucx) {
+      ucx = uce;
+    }
+    ucv = ucx;
+  }
+#pragma omp atomic compare capture acq_rel
+  {
+    if (ucx > uce) {
+      ucx = uce;
+    }
+    ucv = ucx;
+  }
+#pragma omp atomic compare capture acq_rel
+  {
+    if (uce < ucx) {
+      ucx = uce;
+    }
+    ucv = ucx;
+  }
+#pragma omp atomic compare capture acq_rel
+  {
+    if (ucx < uce) {
+      ucx = uce;
+    }
+    ucv = ucx;
+  }
+#pragma omp atomic compare capture acq_rel
+  {
+    if (ucx == uce) {
+      ucx = ucd;
+    }
+    ucv = ucx;
+  }
+#pragma omp atomic compare capture acq_rel
+  {
+    if (uce == ucx) {
+      ucx = ucd;
+    }
+    ucv = ucx;
+  }
+#pragma omp atomic compare capture acq_rel
+  if (ucx == uce) {
+    ucx = ucd;
+  } else {
+    ucv = ucx;
+  }
+#pragma omp atomic compare capture acq_rel
+  if (uce == ucx) {
+    ucx = ucd;
+  } else {
+    ucv = ucx;
+  }
+#pragma omp atomic compare capture acq_rel
+  {
+    ucr = ucx == uce;
+    if (ucr) {
+      ucx = ucd;
+    }
+  }
+#pragma omp atomic compare capture acq_rel
+  {
+    ucr = uce == ucx;
+    if (ucr) {
+      ucx = ucd;
+    }
+  }
+#pragma omp atomic compare capture acq_rel
+  {
+    ucr = ucx == uce;
+    if (ucr) {
+      ucx = ucd;
+    } else {
+      ucv = ucx;
+    }
+  }
+#pragma omp atomic compare capture acq_rel
+  {
+    ucr = uce == ucx;
+    if (ucr) {
+      ucx = ucd;
+    } else {
+      ucv = ucx;
+    }
+  }
+
+#pragma omp atomic compare capture acquire
+  {
+    ucv = ucx;
+    if (uce > ucx) {
+      ucx = uce;
+    }
+  }
+#pragma omp atomic compare capture acquire
+  {
+    ucv = ucx;
+    if (ucx > uce) {
+      ucx = uce;
+    }
+  }
+#pragma omp atomic compare capture acquire
+  {
+    ucv = ucx;
+    if (uce < ucx) {
+      ucx = uce;
+    }
+  }
+#pragma omp atomic compare capture acquire
+  {
+    ucv = ucx;
+    if (ucx < uce) {
+      ucx = uce;
+    }
+  }
+#pragma omp atomic compare capture acquire
+  {
+    ucv = ucx;
+    if (ucx == uce) {
+      ucx = ucd;
+    }
+  }
+#pragma omp atomic compare capture acquire
+  {
+    ucv = ucx;
+    if (uce == ucx) {
+      ucx = ucd;
+    }
+  }
+#pragma omp atomic compare capture acquire
+  {
+    if (uce > ucx) {
+      ucx = uce;
+    }
+    ucv = ucx;
+  }
+#pragma omp atomic compare capture acquire
+  {
+    if (ucx > uce) {
+      ucx = uce;
+    }
+    ucv = ucx;
+  }
+#pragma omp atomic compare capture acquire
+  {
+    if (uce < ucx) {
+      ucx = uce;
+    }
+    ucv = ucx;
+  }
+#pragma omp atomic compare capture acquire
+  {
+    if (ucx < uce) {
+      ucx = uce;
+    }
+    ucv = ucx;
+  }
+#pragma omp atomic compare capture acquire
+  {
+    if (ucx == uce) {
+      ucx = ucd;
+    }
+    ucv = ucx;
+  }
+#pragma omp atomic compare capture acquire
+  {
+    if (uce == ucx) {
+      ucx = ucd;
+    }
+    ucv = ucx;
+  }
+#pragma omp atomic compare capture acquire
+  if (ucx == uce) {
+    ucx = ucd;
+  } else {
+    ucv = ucx;
+  }
+#pragma omp atomic compare capture acquire
+  if (uce == ucx) {
+    ucx = ucd;
+  } else {
+    ucv = ucx;
+  }
+#pragma omp atomic compare capture acquire
+  {
+    ucr = ucx == uce;
+    if (ucr) {
+      ucx = ucd;
+    }
+  }
+#pragma omp atomic compare capture acquire
+  {
+    ucr = uce == ucx;
+    if (ucr) {
+      ucx = ucd;
+    }
+  }
+#pragma omp atomic compare capture acquire
+  {
+    ucr = ucx == uce;
+    if (ucr) {
+      ucx = ucd;
+    } else {
+      ucv = ucx;
+    }
+  }
+#pragma omp atomic compare capture acquire
+  {
+    ucr = uce == ucx;
+    if (ucr) {
+      ucx = ucd;
+    } else {
+      ucv = ucx;
+    }
+  }
+
+#pragma omp atomic compare capture relaxed
+  {
+    ucv = ucx;
+    if (uce > ucx) {
+      ucx = uce;
+    }
+  }
+#pragma omp atomic compare capture relaxed
+  {
+    ucv = ucx;
+    if (ucx > uce) {
+      ucx = uce;
+    }
+  }
+#pragma omp atomic compare capture relaxed
+  {
+    ucv = ucx;
+    if (uce < ucx) {
+      ucx = uce;
+    }
+  }
+#pragma omp atomic compare capture relaxed
+  {
+    ucv = ucx;
+    if (ucx < uce) {
+      ucx = uce;
+    }
+  }
+#pragma omp atomic compare capture relaxed
+  {
+    ucv = ucx;
+    if (ucx == uce) {
+      ucx = ucd;
+    }
+  }
+#pragma omp atomic compare capture relaxed
+  {
+    ucv = ucx;
+    if (uce == ucx) {
+      ucx = ucd;
+    }
+  }
+#pragma omp atomic compare capture relaxed
+  {
+    if (uce > ucx) {
+      ucx = uce;
+    }
+    ucv = ucx;
+  }
+#pragma omp atomic compare capture relaxed
+  {
+    if (ucx > uce) {
+      ucx = uce;
+    }
+    ucv = ucx;
+  }
+#pragma omp atomic compare capture relaxed
+  {
+    if (uce < ucx) {
+      ucx = uce;
+    }
+    ucv = ucx;
+  }
+#pragma omp atomic compare capture relaxed
+  {
+    if (ucx < uce) {
+      ucx = uce;
+    }
+    ucv = ucx;
+  }
+#pragma omp atomic compare capture relaxed
+  {
+    if (ucx == uce) {
+      ucx = ucd;
+    }
+    ucv = ucx;
+  }
+#pragma omp atomic compare capture relaxed
+  {
+    if (uce == ucx) {
+      ucx = ucd;
+    }
+    ucv = ucx;
+  }
+#pragma omp atomic compare capture relaxed
+  if (ucx == uce) {
+    ucx = ucd;
+  } else {
+    ucv = ucx;
+  }
+#pragma omp atomic compare capture relaxed
+  if (uce == ucx) {
+    ucx = ucd;
+  } else {
+    ucv = ucx;
+  }
+#pragma omp atomic compare capture relaxed
+  {
+    ucr = ucx == uce;
+    if (ucr) {
+      ucx = ucd;
+    }
+  }
+#pragma omp atomic compare capture relaxed
+  {
+    ucr = uce == ucx;
+    if (ucr) {
+      ucx = ucd;
+    }
+  }
+#pragma omp atomic compare capture relaxed
+  {
+    ucr = ucx == uce;
+    if (ucr) {
+      ucx = ucd;
+    } else {
+      ucv = ucx;
+    }
+  }
+#pragma omp atomic compare capture relaxed
+  {
+    ucr = uce == ucx;
+    if (ucr) {
+      ucx = ucd;
+    } else {
+      ucv = ucx;
+    }
+  }
+
+#pragma omp atomic compare capture release
+  {
+    ucv = ucx;
+    if (uce > ucx) {
+      ucx = uce;
+    }
+  }
+#pragma omp atomic compare capture release
+  {
+    ucv = ucx;
+    if (ucx > uce) {
+      ucx = uce;
+    }
+  }
+#pragma omp atomic compare capture release
+  {
+    ucv = ucx;
+    if (uce < ucx) {
+      ucx = uce;
+    }
+  }
+#pragma omp atomic compare capture release
+  {
+    ucv = ucx;
+    if (ucx < uce) {
+      ucx = uce;
+    }
+  }
+#pragma omp atomic compare capture release
+  {
+    ucv = ucx;
+    if (ucx == uce) {
+      ucx = ucd;
+    }
+  }
+#pragma omp atomic compare capture release
+  {
+    ucv = ucx;
+    if (uce == ucx) {
+      ucx = ucd;
+    }
+  }
+#pragma omp atomic compare capture release
+  {
+    if (uce > ucx) {
+      ucx = uce;
+    }
+    ucv = ucx;
+  }
+#pragma omp atomic compare capture release
+  {
+    if (ucx > uce) {
+      ucx = uce;
+    }
+    ucv = ucx;
+  }
+#pragma omp atomic compare capture release
+  {
+    if (uce < ucx) {
+      ucx = uce;
+    }
+    ucv = ucx;
+  }
+#pragma omp atomic compare capture release
+  {
+    if (ucx < uce) {
+      ucx = uce;
+    }
+    ucv = ucx;
+  }
+#pragma omp atomic compare capture release
+  {
+    if (ucx == uce) {
+      ucx = ucd;
+    }
+    ucv = ucx;
+  }
+#pragma omp atomic compare capture release
+  {
+    if (uce == ucx) {
+      ucx = ucd;
+    }
+    ucv = ucx;
+  }
+#pragma omp atomic compare capture release
+  if (ucx == uce) {
+    ucx = ucd;
+  } else {
+    ucv = ucx;
+  }
+#pragma omp atomic compare capture release
+  if (uce == ucx) {
+    ucx = ucd;
+  } else {
+    ucv = ucx;
+  }
+#pragma omp atomic compare capture release
+  {
+    ucr = ucx == uce;
+    if (ucr) {
+      ucx = ucd;
+    }
+  }
+#pragma omp atomic compare capture release
+  {
+    ucr = uce == ucx;
+    if (ucr) {
+      ucx = ucd;
+    }
+  }
+#pragma omp atomic compare capture release
+  {
+    ucr = ucx == uce;
+    if (ucr) {
+      ucx = ucd;
+    } else {
+      ucv = ucx;
+    }
+  }
+#pragma omp atomic compare capture release
+  {
+    ucr = uce == ucx;
+    if (ucr) {
+      ucx = ucd;
+    } else {
+      ucv = ucx;
+    }
+  }
+
+#pragma omp atomic compare capture seq_cst
+  {
+    ucv = ucx;
+    if (uce > ucx) {
+      ucx = uce;
+    }
+  }
+#pragma omp atomic compare capture seq_cst
+  {
+    ucv = ucx;
+    if (ucx > uce) {
+      ucx = uce;
+    }
+  }
+#pragma omp atomic compare capture seq_cst
+  {
+    ucv = ucx;
+    if (uce < ucx) {
+      ucx = uce;
+    }
+  }
+#pragma omp atomic compare capture seq_cst
+  {
+    ucv = ucx;
+    if (ucx < uce) {
+      ucx = uce;
+    }
+  }
+#pragma omp atomic compare capture seq_cst
+  {
+    ucv = ucx;
+    if (ucx == uce) {
+      ucx = ucd;
+    }
+  }
+#pragma omp atomic compare capture seq_cst
+  {
+    ucv = ucx;
+    if (uce == ucx) {
+      ucx = ucd;
+    }
+  }
+#pragma omp atomic compare capture seq_cst
+  {
+    if (uce > ucx) {
+      ucx = uce;
+    }
+    ucv = ucx;
+  }
+#pragma omp atomic compare capture seq_cst
+  {
+    if (ucx > uce) {
+      ucx = uce;
+    }
+    ucv = ucx;
+  }
+#pragma omp atomic compare capture seq_cst
+  {
+    if (uce < ucx) {
+      ucx = uce;
+    }
+    ucv = ucx;
+  }
+#pragma omp atomic compare capture seq_cst
+  {
+    if (ucx < uce) {
+      ucx = uce;
+    }
+    ucv = ucx;
+  }
+#pragma omp atomic compare capture seq_cst
+  {
+    if (ucx == uce) {
+      ucx = ucd;
+    }
+    ucv = ucx;
+  }
+#pragma omp atomic compare capture seq_cst
+  {
+    if (uce == ucx) {
+      ucx = ucd;
+    }
+    ucv = ucx;
+  }
+#pragma omp atomic compare capture seq_cst
+  if (ucx == uce) {
+    ucx = ucd;
+  } else {
+    ucv = ucx;
+  }
+#pragma omp atomic compare capture seq_cst
+  if (uce == ucx) {
+    ucx = ucd;
+  } else {
+    ucv = ucx;
+  }
+#pragma omp atomic compare capture seq_cst
+  {
+    ucr = ucx == uce;
+    if (ucr) {
+      ucx = ucd;
+    }
+  }
+#pragma omp atomic compare capture seq_cst
+  {
+    ucr = uce == ucx;
+    if (ucr) {
+      ucx = ucd;
+    }
+  }
+#pragma omp atomic compare capture seq_cst
+  {
+    ucr = ucx == uce;
+    if (ucr) {
+      ucx = ucd;
+    } else {
+      ucv = ucx;
+    }
+  }
+#pragma omp atomic compare capture seq_cst
+  {
+    ucr = uce == ucx;
+    if (ucr) {
+      ucx = ucd;
+    } else {
+      ucv = ucx;
+    }
+  }
+
+#pragma omp atomic compare capture
+  {
+    sv = sx;
+    if (se > sx) {
+      sx = se;
+    }
+  }
+#pragma omp atomic compare capture
+  {
+    sv = sx;
+    if (sx > se) {
+      sx = se;
+    }
+  }
+#pragma omp atomic compare capture
+  {
+    sv = sx;
+    if (se < sx) {
+      sx = se;
+    }
+  }
+#pragma omp atomic compare capture
+  {
+    sv = sx;
+    if (sx < se) {
+      sx = se;
+    }
+  }
+#pragma omp atomic compare capture
+  {
+    sv = sx;
+    if (sx == se) {
+      sx = sd;
+    }
+  }
+#pragma omp atomic compare capture
+  {
+    sv = sx;
+    if (se == sx) {
+      sx = sd;
+    }
+  }
+#pragma omp atomic compare capture
+  {
+    if (se > sx) {
+      sx = se;
+    }
+    sv = sx;
+  }
+#pragma omp atomic compare capture
+  {
+    if (sx > se) {
+      sx = se;
+    }
+    sv = sx;
+  }
+#pragma omp atomic compare capture
+  {
+    if (se < sx) {
+      sx = se;
+    }
+    sv = sx;
+  }
+#pragma omp atomic compare capture
+  {
+    if (sx < se) {
+      sx = se;
+    }
+    sv = sx;
+  }
+#pragma omp atomic compare capture
+  {
+    if (sx == se) {
+      sx = sd;
+    }
+    sv = sx;
+  }
+#pragma omp atomic compare capture
+  {
+    if (se == sx) {
+      sx = sd;
+    }
+    sv = sx;
+  }
+#pragma omp atomic compare capture
+  if (sx == se) {
+    sx = sd;
+  } else {
+    sv = sx;
+  }
+#pragma omp atomic compare capture
+  if (se == sx) {
+    sx = sd;
+  } else {
+    sv = sx;
+  }
+#pragma omp atomic compare capture
+  {
+    sr = sx == se;
+    if (sr) {
+      sx = sd;
+    }
+  }
+#pragma omp atomic compare capture
+  {
+    sr = se == sx;
+    if (sr) {
+      sx = sd;
+    }
+  }
+#pragma omp atomic compare capture
+  {
+    sr = sx == se;
+    if (sr) {
+      sx = sd;
+    } else {
+      sv = sx;
+    }
+  }
+#pragma omp atomic compare capture
+  {
+    sr = se == sx;
+    if (sr) {
+      sx = sd;
+    } else {
+      sv = sx;
+    }
+  }
+
+#pragma omp atomic compare capture acq_rel
+  {
+    sv = sx;
+    if (se > sx) {
+      sx = se;
+    }
+  }
+#pragma omp atomic compare capture acq_rel
+  {
+    sv = sx;
+    if (sx > se) {
+      sx = se;
+    }
+  }
+#pragma omp atomic compare capture acq_rel
+  {
+    sv = sx;
+    if (se < sx) {
+      sx = se;
+    }
+  }
+#pragma omp atomic compare capture acq_rel
+  {
+    sv = sx;
+    if (sx < se) {
+      sx = se;
+    }
+  }
+#pragma omp atomic compare capture acq_rel
+  {
+    sv = sx;
+    if (sx == se) {
+      sx = sd;
+    }
+  }
+#pragma omp atomic compare capture acq_rel
+  {
+    sv = sx;
+    if (se == sx) {
+      sx = sd;
+    }
+  }
+#pragma omp atomic compare capture acq_rel
+  {
+    if (se > sx) {
+      sx = se;
+    }
+    sv = sx;
+  }
+#pragma omp atomic compare capture acq_rel
+  {
+    if (sx > se) {
+      sx = se;
+    }
+    sv = sx;
+  }
+#pragma omp atomic compare capture acq_rel
+  {
+    if (se < sx) {
+      sx = se;
+    }
+    sv = sx;
+  }
+#pragma omp atomic compare capture acq_rel
+  {
+    if (sx < se) {
+      sx = se;
+    }
+    sv = sx;
+  }
+#pragma omp atomic compare capture acq_rel
+  {
+    if (sx == se) {
+      sx = sd;
+    }
+    sv = sx;
+  }
+#pragma omp atomic compare capture acq_rel
+  {
+    if (se == sx) {
+      sx = sd;
+    }
+    sv = sx;
+  }
+#pragma omp atomic compare capture acq_rel
+  if (sx == se) {
+    sx = sd;
+  } else {
+    sv = sx;
+  }
+#pragma omp atomic compare capture acq_rel
+  if (se == sx) {
+    sx = sd;
+  } else {
+    sv = sx;
+  }
+#pragma omp atomic compare capture acq_rel
+  {
+    sr = sx == se;
+    if (sr) {
+      sx = sd;
+    }
+  }
+#pragma omp atomic compare capture acq_rel
+  {
+    sr = se == sx;
+    if (sr) {
+      sx = sd;
+    }
+  }
+#pragma omp atomic compare capture acq_rel
+  {
+    sr = sx == se;
+    if (sr) {
+      sx = sd;
+    } else {
+      sv = sx;
+    }
+  }
+#pragma omp atomic compare capture acq_rel
+  {
+    sr = se == sx;
+    if (sr) {
+      sx = sd;
+    } else {
+      sv = sx;
+    }
+  }
+
+#pragma omp atomic compare capture acquire
+  {
+    sv = sx;
+    if (se > sx) {
+      sx = se;
+    }
+  }
+#pragma omp atomic compare capture acquire
+  {
+    sv = sx;
+    if (sx > se) {
+      sx = se;
+    }
+  }
+#pragma omp atomic compare capture acquire
+  {
+    sv = sx;
+    if (se < sx) {
+      sx = se;
+    }
+  }
+#pragma omp atomic compare capture acquire
+  {
+    sv = sx;
+    if (sx < se) {
+      sx = se;
+    }
+  }
+#pragma omp atomic compare capture acquire
+  {
+    sv = sx;
+    if (sx == se) {
+      sx = sd;
+    }
+  }
+#pragma omp atomic compare capture acquire
+  {
+    sv = sx;
+    if (se == sx) {
+      sx = sd;
+    }
+  }
+#pragma omp atomic compare capture acquire
+  {
+    if (se > sx) {
+      sx = se;
+    }
+    sv = sx;
+  }
+#pragma omp atomic compare capture acquire
+  {
+    if (sx > se) {
+      sx = se;
+    }
+    sv = sx;
+  }
+#pragma omp atomic compare capture acquire
+  {
+    if (se < sx) {
+      sx = se;
+    }
+    sv = sx;
+  }
+#pragma omp atomic compare capture acquire
+  {
+    if (sx < se) {
+      sx = se;
+    }
+    sv = sx;
+  }
+#pragma omp atomic compare capture acquire
+  {
+    if (sx == se) {
+      sx = sd;
+    }
+    sv = sx;
+  }
+#pragma omp atomic compare capture acquire
+  {
+    if (se == sx) {
+      sx = sd;
+    }
+    sv = sx;
+  }
+#pragma omp atomic compare capture acquire
+  if (sx == se) {
+    sx = sd;
+  } else {
+    sv = sx;
+  }
+#pragma omp atomic compare capture acquire
+  if (se == sx) {
+    sx = sd;
+  } else {
+    sv = sx;
+  }
+#pragma omp atomic compare capture acquire
+  {
+    sr = sx == se;
+    if (sr) {
+      sx = sd;
+    }
+  }
+#pragma omp atomic compare capture acquire
+  {
+    sr = se == sx;
+    if (sr) {
+      sx = sd;
+    }
+  }
+#pragma omp atomic compare capture acquire
+  {
+    sr = sx == se;
+    if (sr) {
+      sx = sd;
+    } else {
+      sv = sx;
+    }
+  }
+#pragma omp atomic compare capture acquire
+  {
+    sr = se == sx;
+    if (sr) {
+      sx = sd;
+    } else {
+      sv = sx;
+    }
+  }
+
+#pragma omp atomic compare capture relaxed
+  {
+    sv = sx;
+    if (se > sx) {
+      sx = se;
+    }
+  }
+#pragma omp atomic compare capture relaxed
+  {
+    sv = sx;
+    if (sx > se) {
+      sx = se;
+    }
+  }
+#pragma omp atomic compare capture relaxed
+  {
+    sv = sx;
+    if (se < sx) {
+      sx = se;
+    }
+  }
+#pragma omp atomic compare capture relaxed
+  {
+    sv = sx;
+    if (sx < se) {
+      sx = se;
+    }
+  }
+#pragma omp atomic compare capture relaxed
+  {
+    sv = sx;
+    if (sx == se) {
+      sx = sd;
+    }
+  }
+#pragma omp atomic compare capture relaxed
+  {
+    sv = sx;
+    if (se == sx) {
+      sx = sd;
+    }
+  }
+#pragma omp atomic compare capture relaxed
+  {
+    if (se > sx) {
+      sx = se;
+    }
+    sv = sx;
+  }
+#pragma omp atomic compare capture relaxed
+  {
+    if (sx > se) {
+      sx = se;
+    }
+    sv = sx;
+  }
+#pragma omp atomic compare capture relaxed
+  {
+    if (se < sx) {
+      sx = se;
+    }
+    sv = sx;
+  }
+#pragma omp atomic compare capture relaxed
+  {
+    if (sx < se) {
+      sx = se;
+    }
+    sv = sx;
+  }
+#pragma omp atomic compare capture relaxed
+  {
+    if (sx == se) {
+      sx = sd;
+    }
+    sv = sx;
+  }
+#pragma omp atomic compare capture relaxed
+  {
+    if (se == sx) {
+      sx = sd;
+    }
+    sv = sx;
+  }
+#pragma omp atomic compare capture relaxed
+  if (sx == se) {
+    sx = sd;
+  } else {
+    sv = sx;
+  }
+#pragma omp atomic compare capture relaxed
+  if (se == sx) {
+    sx = sd;
+  } else {
+    sv = sx;
+  }
+#pragma omp atomic compare capture relaxed
+  {
+    sr = sx == se;
+    if (sr) {
+      sx = sd;
+    }
+  }
+#pragma omp atomic compare capture relaxed
+  {
+    sr = se == sx;
+    if (sr) {
+      sx = sd;
+    }
+  }
+#pragma omp atomic compare capture relaxed
+  {
+    sr = sx == se;
+    if (sr) {
+      sx = sd;
+    } else {
+      sv = sx;
+    }
+  }
+#pragma omp atomic compare capture relaxed
+  {
+    sr = se == sx;
+    if (sr) {
+      sx = sd;
+    } else {
+      sv = sx;
+    }
+  }
+
+#pragma omp atomic compare capture release
+  {
+    sv = sx;
+    if (se > sx) {
+      sx = se;
+    }
+  }
+#pragma omp atomic compare capture release
+  {
+    sv = sx;
+    if (sx > se) {
+      sx = se;
+    }
+  }
+#pragma omp atomic compare capture release
+  {
+    sv = sx;
+    if (se < sx) {
+      sx = se;
+    }
+  }
+#pragma omp atomic compare capture release
+  {
+    sv = sx;
+    if (sx < se) {
+      sx = se;
+    }
+  }
+#pragma omp atomic compare capture release
+  {
+    sv = sx;
+    if (sx == se) {
+      sx = sd;
+    }
+  }
+#pragma omp atomic compare capture release
+  {
+    sv = sx;
+    if (se == sx) {
+      sx = sd;
+    }
+  }
+#pragma omp atomic compare capture release
+  {
+    if (se > sx) {
+      sx = se;
+    }
+    sv = sx;
+  }
+#pragma omp atomic compare capture release
+  {
+    if (sx > se) {
+      sx = se;
+    }
+    sv = sx;
+  }
+#pragma omp atomic compare capture release
+  {
+    if (se < sx) {
+      sx = se;
+    }
+    sv = sx;
+  }
+#pragma omp atomic compare capture release
+  {
+    if (sx < se) {
+      sx = se;
+    }
+    sv = sx;
+  }
+#pragma omp atomic compare capture release
+  {
+    if (sx == se) {
+      sx = sd;
+    }
+    sv = sx;
+  }
+#pragma omp atomic compare capture release
+  {
+    if (se == sx) {
+      sx = sd;
+    }
+    sv = sx;
+  }
+#pragma omp atomic compare capture release
+  if (sx == se) {
+    sx = sd;
+  } else {
+    sv = sx;
+  }
+#pragma omp atomic compare capture release
+  if (se == sx) {
+    sx = sd;
+  } else {
+    sv = sx;
+  }
+#pragma omp atomic compare capture release
+  {
+    sr = sx == se;
+    if (sr) {
+      sx = sd;
+    }
+  }
+#pragma omp atomic compare capture release
+  {
+    sr = se == sx;
+    if (sr) {
+      sx = sd;
+    }
+  }
+#pragma omp atomic compare capture release
+  {
+    sr = sx == se;
+    if (sr) {
+      sx = sd;
+    } else {
+      sv = sx;
+    }
+  }
+#pragma omp atomic compare capture release
+  {
+    sr = se == sx;
+    if (sr) {
+      sx = sd;
+    } else {
+      sv = sx;
+    }
+  }
+
+#pragma omp atomic compare capture seq_cst
+  {
+    sv = sx;
+    if (se > sx) {
+      sx = se;
+    }
+  }
+#pragma omp atomic compare capture seq_cst
+  {
+    sv = sx;
+    if (sx > se) {
+      sx = se;
+    }
+  }
+#pragma omp atomic compare capture seq_cst
+  {
+    sv = sx;
+    if (se < sx) {
+      sx = se;
+    }
+  }
+#pragma omp atomic compare capture seq_cst
+  {
+    sv = sx;
+    if (sx < se) {
+      sx = se;
+    }
+  }
+#pragma omp atomic compare capture seq_cst
+  {
+    sv = sx;
+    if (sx == se) {
+      sx = sd;
+    }
+  }
+#pragma omp atomic compare capture seq_cst
+  {
+    sv = sx;
+    if (se == sx) {
+      sx = sd;
+    }
+  }
+#pragma omp atomic compare capture seq_cst
+  {
+    if (se > sx) {
+      sx = se;
+    }
+    sv = sx;
+  }
+#pragma omp atomic compare capture seq_cst
+  {
+    if (sx > se) {
+      sx = se;
+    }
+    sv = sx;
+  }
+#pragma omp atomic compare capture seq_cst
+  {
+    if (se < sx) {
+      sx = se;
+    }
+    sv = sx;
+  }
+#pragma omp atomic compare capture seq_cst
+  {
+    if (sx < se) {
+      sx = se;
+    }
+    sv = sx;
+  }
+#pragma omp atomic compare capture seq_cst
+  {
+    if (sx == se) {
+      sx = sd;
+    }
+    sv = sx;
+  }
+#pragma omp atomic compare capture seq_cst
+  {
+    if (se == sx) {
+      sx = sd;
+    }
+    sv = sx;
+  }
+#pragma omp atomic compare capture seq_cst
+  if (sx == se) {
+    sx = sd;
+  } else {
+    sv = sx;
+  }
+#pragma omp atomic compare capture seq_cst
+  if (se == sx) {
+    sx = sd;
+  } else {
+    sv = sx;
+  }
+#pragma omp atomic compare capture seq_cst
+  {
+    sr = sx == se;
+    if (sr) {
+      sx = sd;
+    }
+  }
+#pragma omp atomic compare capture seq_cst
+  {
+    sr = se == sx;
+    if (sr) {
+      sx = sd;
+    }
+  }
+#pragma omp atomic compare capture seq_cst
+  {
+    sr = sx == se;
+    if (sr) {
+      sx = sd;
+    } else {
+      sv = sx;
+    }
+  }
+#pragma omp atomic compare capture seq_cst
+  {
+    sr = se == sx;
+    if (sr) {
+      sx = sd;
+    } else {
+      sv = sx;
+    }
+  }
+
+#pragma omp atomic compare capture
+  {
+    usv = usx;
+    if (use > usx) {
+      usx = use;
+    }
+  }
+#pragma omp atomic compare capture
+  {
+    usv = usx;
+    if (usx > use) {
+      usx = use;
+    }
+  }
+#pragma omp atomic compare capture
+  {
+    usv = usx;
+    if (use < usx) {
+      usx = use;
+    }
+  }
+#pragma omp atomic compare capture
+  {
+    usv = usx;
+    if (usx < use) {
+      usx = use;
+    }
+  }
+#pragma omp atomic compare capture
+  {
+    usv = usx;
+    if (usx == use) {
+      usx = usd;
+    }
+  }
+#pragma omp atomic compare capture
+  {
+    usv = usx;
+    if (use == usx) {
+      usx = usd;
+    }
+  }
+#pragma omp atomic compare capture
+  {
+    if (use > usx) {
+      usx = use;
+    }
+    usv = usx;
+  }
+#pragma omp atomic compare capture
+  {
+    if (usx > use) {
+      usx = use;
+    }
+    usv = usx;
+  }
+#pragma omp atomic compare capture
+  {
+    if (use < usx) {
+      usx = use;
+    }
+    usv = usx;
+  }
+#pragma omp atomic compare capture
+  {
+    if (usx < use) {
+      usx = use;
+    }
+    usv = usx;
+  }
+#pragma omp atomic compare capture
+  {
+    if (usx == use) {
+      usx = usd;
+    }
+    usv = usx;
+  }
+#pragma omp atomic compare capture
+  {
+    if (use == usx) {
+      usx = usd;
+    }
+    usv = usx;
+  }
+#pragma omp atomic compare capture
+  if (usx == use) {
+    usx = usd;
+  } else {
+    usv = usx;
+  }
+#pragma omp atomic compare capture
+  if (use == usx) {
+    usx = usd;
+  } else {
+    usv = usx;
+  }
+#pragma omp atomic compare capture
+  {
+    usr = usx == use;
+    if (usr) {
+      usx = usd;
+    }
+  }
+#pragma omp atomic compare capture
+  {
+    usr = use == usx;
+    if (usr) {
+      usx = usd;
+    }
+  }
+#pragma omp atomic compare capture
+  {
+    usr = usx == use;
+    if (usr) {
+      usx = usd;
+    } else {
+      usv = usx;
+    }
+  }
+#pragma omp atomic compare capture
+  {
+    usr = use == usx;
+    if (usr) {
+      usx = usd;
+    } else {
+      usv = usx;
+    }
+  }
+
+#pragma omp atomic compare capture acq_rel
+  {
+    usv = usx;
+    if (use > usx) {
+      usx = use;
+    }
+  }
+#pragma omp atomic compare capture acq_rel
+  {
+    usv = usx;
+    if (usx > use) {
+      usx = use;
+    }
+  }
+#pragma omp atomic compare capture acq_rel
+  {
+    usv = usx;
+    if (use < usx) {
+      usx = use;
+    }
+  }
+#pragma omp atomic compare capture acq_rel
+  {
+    usv = usx;
+    if (usx < use) {
+      usx = use;
+    }
+  }
+#pragma omp atomic compare capture acq_rel
+  {
+    usv = usx;
+    if (usx == use) {
+      usx = usd;
+    }
+  }
+#pragma omp atomic compare capture acq_rel
+  {
+    usv = usx;
+    if (use == usx) {
+      usx = usd;
+    }
+  }
+#pragma omp atomic compare capture acq_rel
+  {
+    if (use > usx) {
+      usx = use;
+    }
+    usv = usx;
+  }
+#pragma omp atomic compare capture acq_rel
+  {
+    if (usx > use) {
+      usx = use;
+    }
+    usv = usx;
+  }
+#pragma omp atomic compare capture acq_rel
+  {
+    if (use < usx) {
+      usx = use;
+    }
+    usv = usx;
+  }
+#pragma omp atomic compare capture acq_rel
+  {
+    if (usx < use) {
+      usx = use;
+    }
+    usv = usx;
+  }
+#pragma omp atomic compare capture acq_rel
+  {
+    if (usx == use) {
+      usx = usd;
+    }
+    usv = usx;
+  }
+#pragma omp atomic compare capture acq_rel
+  {
+    if (use == usx) {
+      usx = usd;
+    }
+    usv = usx;
+  }
+#pragma omp atomic compare capture acq_rel
+  if (usx == use) {
+    usx = usd;
+  } else {
+    usv = usx;
+  }
+#pragma omp atomic compare capture acq_rel
+  if (use == usx) {
+    usx = usd;
+  } else {
+    usv = usx;
+  }
+#pragma omp atomic compare capture acq_rel
+  {
+    usr = usx == use;
+    if (usr) {
+      usx = usd;
+    }
+  }
+#pragma omp atomic compare capture acq_rel
+  {
+    usr = use == usx;
+    if (usr) {
+      usx = usd;
+    }
+  }
+#pragma omp atomic compare capture acq_rel
+  {
+    usr = usx == use;
+    if (usr) {
+      usx = usd;
+    } else {
+      usv = usx;
+    }
+  }
+#pragma omp atomic compare capture acq_rel
+  {
+    usr = use == usx;
+    if (usr) {
+      usx = usd;
+    } else {
+      usv = usx;
+    }
+  }
+
+#pragma omp atomic compare capture acquire
+  {
+    usv = usx;
+    if (use > usx) {
+      usx = use;
+    }
+  }
+#pragma omp atomic compare capture acquire
+  {
+    usv = usx;
+    if (usx > use) {
+      usx = use;
+    }
+  }
+#pragma omp atomic compare capture acquire
+  {
+    usv = usx;
+    if (use < usx) {
+      usx = use;
+    }
+  }
+#pragma omp atomic compare capture acquire
+  {
+    usv = usx;
+    if (usx < use) {
+      usx = use;
+    }
+  }
+#pragma omp atomic compare capture acquire
+  {
+    usv = usx;
+    if (usx == use) {
+      usx = usd;
+    }
+  }
+#pragma omp atomic compare capture acquire
+  {
+    usv = usx;
+    if (use == usx) {
+      usx = usd;
+    }
+  }
+#pragma omp atomic compare capture acquire
+  {
+    if (use > usx) {
+      usx = use;
+    }
+    usv = usx;
+  }
+#pragma omp atomic compare capture acquire
+  {
+    if (usx > use) {
+      usx = use;
+    }
+    usv = usx;
+  }
+#pragma omp atomic compare capture acquire
+  {
+    if (use < usx) {
+      usx = use;
+    }
+    usv = usx;
+  }
+#pragma omp atomic compare capture acquire
+  {
+    if (usx < use) {
+      usx = use;
+    }
+    usv = usx;
+  }
+#pragma omp atomic compare capture acquire
+  {
+    if (usx == use) {
+      usx = usd;
+    }
+    usv = usx;
+  }
+#pragma omp atomic compare capture acquire
+  {
+    if (use == usx) {
+      usx = usd;
+    }
+    usv = usx;
+  }
+#pragma omp atomic compare capture acquire
+  if (usx == use) {
+    usx = usd;
+  } else {
+    usv = usx;
+  }
+#pragma omp atomic compare capture acquire
+  if (use == usx) {
+    usx = usd;
+  } else {
+    usv = usx;
+  }
+#pragma omp atomic compare capture acquire
+  {
+    usr = usx == use;
+    if (usr) {
+      usx = usd;
+    }
+  }
+#pragma omp atomic compare capture acquire
+  {
+    usr = use == usx;
+    if (usr) {
+      usx = usd;
+    }
+  }
+#pragma omp atomic compare capture acquire
+  {
+    usr = usx == use;
+    if (usr) {
+      usx = usd;
+    } else {
+      usv = usx;
+    }
+  }
+#pragma omp atomic compare capture acquire
+  {
+    usr = use == usx;
+    if (usr) {
+      usx = usd;
+    } else {
+      usv = usx;
+    }
+  }
+
+#pragma omp atomic compare capture relaxed
+  {
+    usv = usx;
+    if (use > usx) {
+      usx = use;
+    }
+  }
+#pragma omp atomic compare capture relaxed
+  {
+    usv = usx;
+    if (usx > use) {
+      usx = use;
+    }
+  }
+#pragma omp atomic compare capture relaxed
+  {
+    usv = usx;
+    if (use < usx) {
+      usx = use;
+    }
+  }
+#pragma omp atomic compare capture relaxed
+  {
+    usv = usx;
+    if (usx < use) {
+      usx = use;
+    }
+  }
+#pragma omp atomic compare capture relaxed
+  {
+    usv = usx;
+    if (usx == use) {
+      usx = usd;
+    }
+  }
+#pragma omp atomic compare capture relaxed
+  {
+    usv = usx;
+    if (use == usx) {
+      usx = usd;
+    }
+  }
+#pragma omp atomic compare capture relaxed
+  {
+    if (use > usx) {
+      usx = use;
+    }
+    usv = usx;
+  }
+#pragma omp atomic compare capture relaxed
+  {
+    if (usx > use) {
+      usx = use;
+    }
+    usv = usx;
+  }
+#pragma omp atomic compare capture relaxed
+  {
+    if (use < usx) {
+      usx = use;
+    }
+    usv = usx;
+  }
+#pragma omp atomic compare capture relaxed
+  {
+    if (usx < use) {
+      usx = use;
+    }
+    usv = usx;
+  }
+#pragma omp atomic compare capture relaxed
+  {
+    if (usx == use) {
+      usx = usd;
+    }
+    usv = usx;
+  }
+#pragma omp atomic compare capture relaxed
+  {
+    if (use == usx) {
+      usx = usd;
+    }
+    usv = usx;
+  }
+#pragma omp atomic compare capture relaxed
+  if (usx == use) {
+    usx = usd;
+  } else {
+    usv = usx;
+  }
+#pragma omp atomic compare capture relaxed
+  if (use == usx) {
+    usx = usd;
+  } else {
+    usv = usx;
+  }
+#pragma omp atomic compare capture relaxed
+  {
+    usr = usx == use;
+    if (usr) {
+      usx = usd;
+    }
+  }
+#pragma omp atomic compare capture relaxed
+  {
+    usr = use == usx;
+    if (usr) {
+      usx = usd;
+    }
+  }
+#pragma omp atomic compare capture relaxed
+  {
+    usr = usx == use;
+    if (usr) {
+      usx = usd;
+    } else {
+      usv = usx;
+    }
+  }
+#pragma omp atomic compare capture relaxed
+  {
+    usr = use == usx;
+    if (usr) {
+      usx = usd;
+    } else {
+      usv = usx;
+    }
+  }
+
+#pragma omp atomic compare capture release
+  {
+    usv = usx;
+    if (use > usx) {
+      usx = use;
+    }
+  }
+#pragma omp atomic compare capture release
+  {
+    usv = usx;
+    if (usx > use) {
+      usx = use;
+    }
+  }
+#pragma omp atomic compare capture release
+  {
+    usv = usx;
+    if (use < usx) {
+      usx = use;
+    }
+  }
+#pragma omp atomic compare capture release
+  {
+    usv = usx;
+    if (usx < use) {
+      usx = use;
+    }
+  }
+#pragma omp atomic compare capture release
+  {
+    usv = usx;
+    if (usx == use) {
+      usx = usd;
+    }
+  }
+#pragma omp atomic compare capture release
+  {
+    usv = usx;
+    if (use == usx) {
+      usx = usd;
+    }
+  }
+#pragma omp atomic compare capture release
+  {
+    if (use > usx) {
+      usx = use;
+    }
+    usv = usx;
+  }
+#pragma omp atomic compare capture release
+  {
+    if (usx > use) {
+      usx = use;
+    }
+    usv = usx;
+  }
+#pragma omp atomic compare capture release
+  {
+    if (use < usx) {
+      usx = use;
+    }
+    usv = usx;
+  }
+#pragma omp atomic compare capture release
+  {
+    if (usx < use) {
+      usx = use;
+    }
+    usv = usx;
+  }
+#pragma omp atomic compare capture release
+  {
+    if (usx == use) {
+      usx = usd;
+    }
+    usv = usx;
+  }
+#pragma omp atomic compare capture release
+  {
+    if (use == usx) {
+      usx = usd;
+    }
+    usv = usx;
+  }
+#pragma omp atomic compare capture release
+  if (usx == use) {
+    usx = usd;
+  } else {
+    usv = usx;
+  }
+#pragma omp atomic compare capture release
+  if (use == usx) {
+    usx = usd;
+  } else {
+    usv = usx;
+  }
+#pragma omp atomic compare capture release
+  {
+    usr = usx == use;
+    if (usr) {
+      usx = usd;
+    }
+  }
+#pragma omp atomic compare capture release
+  {
+    usr = use == usx;
+    if (usr) {
+      usx = usd;
+    }
+  }
+#pragma omp atomic compare capture release
+  {
+    usr = usx == use;
+    if (usr) {
+      usx = usd;
+    } else {
+      usv = usx;
+    }
+  }
+#pragma omp atomic compare capture release
+  {
+    usr = use == usx;
+    if (usr) {
+      usx = usd;
+    } else {
+      usv = usx;
+    }
+  }
+
+#pragma omp atomic compare capture seq_cst
+  {
+    usv = usx;
+    if (use > usx) {
+      usx = use;
+    }
+  }
+#pragma omp atomic compare capture seq_cst
+  {
+    usv = usx;
+    if (usx > use) {
+      usx = use;
+    }
+  }
+#pragma omp atomic compare capture seq_cst
+  {
+    usv = usx;
+    if (use < usx) {
+      usx = use;
+    }
+  }
+#pragma omp atomic compare capture seq_cst
+  {
+    usv = usx;
+    if (usx < use) {
+      usx = use;
+    }
+  }
+#pragma omp atomic compare capture seq_cst
+  {
+    usv = usx;
+    if (usx == use) {
+      usx = usd;
+    }
+  }
+#pragma omp atomic compare capture seq_cst
+  {
+    usv = usx;
+    if (use == usx) {
+      usx = usd;
+    }
+  }
+#pragma omp atomic compare capture seq_cst
+  {
+    if (use > usx) {
+      usx = use;
+    }
+    usv = usx;
+  }
+#pragma omp atomic compare capture seq_cst
+  {
+    if (usx > use) {
+      usx = use;
+    }
+    usv = usx;
+  }
+#pragma omp atomic compare capture seq_cst
+  {
+    if (use < usx) {
+      usx = use;
+    }
+    usv = usx;
+  }
+#pragma omp atomic compare capture seq_cst
+  {
+    if (usx < use) {
+      usx = use;
+    }
+    usv = usx;
+  }
+#pragma omp atomic compare capture seq_cst
+  {
+    if (usx == use) {
+      usx = usd;
+    }
+    usv = usx;
+  }
+#pragma omp atomic compare capture seq_cst
+  {
+    if (use == usx) {
+      usx = usd;
+    }
+    usv = usx;
+  }
+#pragma omp atomic compare capture seq_cst
+  if (usx == use) {
+    usx = usd;
+  } else {
+    usv = usx;
+  }
+#pragma omp atomic compare capture seq_cst
+  if (use == usx) {
+    usx = usd;
+  } else {
+    usv = usx;
+  }
+#pragma omp atomic compare capture seq_cst
+  {
+    usr = usx == use;
+    if (usr) {
+      usx = usd;
+    }
+  }
+#pragma omp atomic compare capture seq_cst
+  {
+    usr = use == usx;
+    if (usr) {
+      usx = usd;
+    }
+  }
+#pragma omp atomic compare capture seq_cst
+  {
+    usr = usx == use;
+    if (usr) {
+      usx = usd;
+    } else {
+      usv = usx;
+    }
+  }
+#pragma omp atomic compare capture seq_cst
+  {
+    usr = use == usx;
+    if (usr) {
+      usx = usd;
+    } else {
+      usv = usx;
+    }
+  }
+
+#pragma omp atomic compare capture
+  {
+    iv = ix;
+    if (ie > ix) {
+      ix = ie;
+    }
+  }
+#pragma omp atomic compare capture
+  {
+    iv = ix;
+    if (ix > ie) {
+      ix = ie;
+    }
+  }
+#pragma omp atomic compare capture
+  {
+    iv = ix;
+    if (ie < ix) {
+      ix = ie;
+    }
+  }
+#pragma omp atomic compare capture
+  {
+    iv = ix;
+    if (ix < ie) {
+      ix = ie;
+    }
+  }
+#pragma omp atomic compare capture
+  {
+    iv = ix;
+    if (ix == ie) {
+      ix = id;
+    }
+  }
+#pragma omp atomic compare capture
+  {
+    iv = ix;
+    if (ie == ix) {
+      ix = id;
+    }
+  }
+#pragma omp atomic compare capture
+  {
+    if (ie > ix) {
+      ix = ie;
+    }
+    iv = ix;
+  }
+#pragma omp atomic compare capture
+  {
+    if (ix > ie) {
+      ix = ie;
+    }
+    iv = ix;
+  }
+#pragma omp atomic compare capture
+  {
+    if (ie < ix) {
+      ix = ie;
+    }
+    iv = ix;
+  }
+#pragma omp atomic compare capture
+  {
+    if (ix < ie) {
+      ix = ie;
+    }
+    iv = ix;
+  }
+#pragma omp atomic compare capture
+  {
+    if (ix == ie) {
+      ix = id;
+    }
+    iv = ix;
+  }
+#pragma omp atomic compare capture
+  {
+    if (ie == ix) {
+      ix = id;
+    }
+    iv = ix;
+  }
+#pragma omp atomic compare capture
+  if (ix == ie) {
+    ix = id;
+  } else {
+    iv = ix;
+  }
+#pragma omp atomic compare capture
+  if (ie == ix) {
+    ix = id;
+  } else {
+    iv = ix;
+  }
+#pragma omp atomic compare capture
+  {
+    ir = ix == ie;
+    if (ir) {
+      ix = id;
+    }
+  }
+#pragma omp atomic compare capture
+  {
+    ir = ie == ix;
+    if (ir) {
+      ix = id;
+    }
+  }
+#pragma omp atomic compare capture
+  {
+    ir = ix == ie;
+    if (ir) {
+      ix = id;
+    } else {
+      iv = ix;
+    }
+  }
+#pragma omp atomic compare capture
+  {
+    ir = ie == ix;
+    if (ir) {
+      ix = id;
+    } else {
+      iv = ix;
+    }
+  }
+
+#pragma omp atomic compare capture acq_rel
+  {
+    iv = ix;
+    if (ie > ix) {
+      ix = ie;
+    }
+  }
+#pragma omp atomic compare capture acq_rel
+  {
+    iv = ix;
+    if (ix > ie) {
+      ix = ie;
+    }
+  }
+#pragma omp atomic compare capture acq_rel
+  {
+    iv = ix;
+    if (ie < ix) {
+      ix = ie;
+    }
+  }
+#pragma omp atomic compare capture acq_rel
+  {
+    iv = ix;
+    if (ix < ie) {
+      ix = ie;
+    }
+  }
+#pragma omp atomic compare capture acq_rel
+  {
+    iv = ix;
+    if (ix == ie) {
+      ix = id;
+    }
+  }
+#pragma omp atomic compare capture acq_rel
+  {
+    iv = ix;
+    if (ie == ix) {
+      ix = id;
+    }
+  }
+#pragma omp atomic compare capture acq_rel
+  {
+    if (ie > ix) {
+      ix = ie;
+    }
+    iv = ix;
+  }
+#pragma omp atomic compare capture acq_rel
+  {
+    if (ix > ie) {
+      ix = ie;
+    }
+    iv = ix;
+  }
+#pragma omp atomic compare capture acq_rel
+  {
+    if (ie < ix) {
+      ix = ie;
+    }
+    iv = ix;
+  }
+#pragma omp atomic compare capture acq_rel
+  {
+    if (ix < ie) {
+      ix = ie;
+    }
+    iv = ix;
+  }
+#pragma omp atomic compare capture acq_rel
+  {
+    if (ix == ie) {
+      ix = id;
+    }
+    iv = ix;
+  }
+#pragma omp atomic compare capture acq_rel
+  {
+    if (ie == ix) {
+      ix = id;
+    }
+    iv = ix;
+  }
+#pragma omp atomic compare capture acq_rel
+  if (ix == ie) {
+    ix = id;
+  } else {
+    iv = ix;
+  }
+#pragma omp atomic compare capture acq_rel
+  if (ie == ix) {
+    ix = id;
+  } else {
+    iv = ix;
+  }
+#pragma omp atomic compare capture acq_rel
+  {
+    ir = ix == ie;
+    if (ir) {
+      ix = id;
+    }
+  }
+#pragma omp atomic compare capture acq_rel
+  {
+    ir = ie == ix;
+    if (ir) {
+      ix = id;
+    }
+  }
+#pragma omp atomic compare capture acq_rel
+  {
+    ir = ix == ie;
+    if (ir) {
+      ix = id;
+    } else {
+      iv = ix;
+    }
+  }
+#pragma omp atomic compare capture acq_rel
+  {
+    ir = ie == ix;
+    if (ir) {
+      ix = id;
+    } else {
+      iv = ix;
+    }
+  }
+
+#pragma omp atomic compare capture acquire
+  {
+    iv = ix;
+    if (ie > ix) {
+      ix = ie;
+    }
+  }
+#pragma omp atomic compare capture acquire
+  {
+    iv = ix;
+    if (ix > ie) {
+      ix = ie;
+    }
+  }
+#pragma omp atomic compare capture acquire
+  {
+    iv = ix;
+    if (ie < ix) {
+      ix = ie;
+    }
+  }
+#pragma omp atomic compare capture acquire
+  {
+    iv = ix;
+    if (ix < ie) {
+      ix = ie;
+    }
+  }
+#pragma omp atomic compare capture acquire
+  {
+    iv = ix;
+    if (ix == ie) {
+      ix = id;
+    }
+  }
+#pragma omp atomic compare capture acquire
+  {
+    iv = ix;
+    if (ie == ix) {
+      ix = id;
+    }
+  }
+#pragma omp atomic compare capture acquire
+  {
+    if (ie > ix) {
+      ix = ie;
+    }
+    iv = ix;
+  }
+#pragma omp atomic compare capture acquire
+  {
+    if (ix > ie) {
+      ix = ie;
+    }
+    iv = ix;
+  }
+#pragma omp atomic compare capture acquire
+  {
+    if (ie < ix) {
+      ix = ie;
+    }
+    iv = ix;
+  }
+#pragma omp atomic compare capture acquire
+  {
+    if (ix < ie) {
+      ix = ie;
+    }
+    iv = ix;
+  }
+#pragma omp atomic compare capture acquire
+  {
+    if (ix == ie) {
+      ix = id;
+    }
+    iv = ix;
+  }
+#pragma omp atomic compare capture acquire
+  {
+    if (ie == ix) {
+      ix = id;
+    }
+    iv = ix;
+  }
+#pragma omp atomic compare capture acquire
+  if (ix == ie) {
+    ix = id;
+  } else {
+    iv = ix;
+  }
+#pragma omp atomic compare capture acquire
+  if (ie == ix) {
+    ix = id;
+  } else {
+    iv = ix;
+  }
+#pragma omp atomic compare capture acquire
+  {
+    ir = ix == ie;
+    if (ir) {
+      ix = id;
+    }
+  }
+#pragma omp atomic compare capture acquire
+  {
+    ir = ie == ix;
+    if (ir) {
+      ix = id;
+    }
+  }
+#pragma omp atomic compare capture acquire
+  {
+    ir = ix == ie;
+    if (ir) {
+      ix = id;
+    } else {
+      iv = ix;
+    }
+  }
+#pragma omp atomic compare capture acquire
+  {
+    ir = ie == ix;
+    if (ir) {
+      ix = id;
+    } else {
+      iv = ix;
+    }
+  }
+
+#pragma omp atomic compare capture relaxed
+  {
+    iv = ix;
+    if (ie > ix) {
+      ix = ie;
+    }
+  }
+#pragma omp atomic compare capture relaxed
+  {
+    iv = ix;
+    if (ix > ie) {
+      ix = ie;
+    }
+  }
+#pragma omp atomic compare capture relaxed
+  {
+    iv = ix;
+    if (ie < ix) {
+      ix = ie;
+    }
+  }
+#pragma omp atomic compare capture relaxed
+  {
+    iv = ix;
+    if (ix < ie) {
+      ix = ie;
+    }
+  }
+#pragma omp atomic compare capture relaxed
+  {
+    iv = ix;
+    if (ix == ie) {
+      ix = id;
+    }
+  }
+#pragma omp atomic compare capture relaxed
+  {
+    iv = ix;
+    if (ie == ix) {
+      ix = id;
+    }
+  }
+#pragma omp atomic compare capture relaxed
+  {
+    if (ie > ix) {
+      ix = ie;
+    }
+    iv = ix;
+  }
+#pragma omp atomic compare capture relaxed
+  {
+    if (ix > ie) {
+      ix = ie;
+    }
+    iv = ix;
+  }
+#pragma omp atomic compare capture relaxed
+  {
+    if (ie < ix) {
+      ix = ie;
+    }
+    iv = ix;
+  }
+#pragma omp atomic compare capture relaxed
+  {
+    if (ix < ie) {
+      ix = ie;
+    }
+    iv = ix;
+  }
+#pragma omp atomic compare capture relaxed
+  {
+    if (ix == ie) {
+      ix = id;
+    }
+    iv = ix;
+  }
+#pragma omp atomic compare capture relaxed
+  {
+    if (ie == ix) {
+      ix = id;
+    }
+    iv = ix;
+  }
+#pragma omp atomic compare capture relaxed
+  if (ix == ie) {
+    ix = id;
+  } else {
+    iv = ix;
+  }
+#pragma omp atomic compare capture relaxed
+  if (ie == ix) {
+    ix = id;
+  } else {
+    iv = ix;
+  }
+#pragma omp atomic compare capture relaxed
+  {
+    ir = ix == ie;
+    if (ir) {
+      ix = id;
+    }
+  }
+#pragma omp atomic compare capture relaxed
+  {
+    ir = ie == ix;
+    if (ir) {
+      ix = id;
+    }
+  }
+#pragma omp atomic compare capture relaxed
+  {
+    ir = ix == ie;
+    if (ir) {
+      ix = id;
+    } else {
+      iv = ix;
+    }
+  }
+#pragma omp atomic compare capture relaxed
+  {
+    ir = ie == ix;
+    if (ir) {
+      ix = id;
+    } else {
+      iv = ix;
+    }
+  }
+
+#pragma omp atomic compare capture release
+  {
+    iv = ix;
+    if (ie > ix) {
+      ix = ie;
+    }
+  }
+#pragma omp atomic compare capture release
+  {
+    iv = ix;
+    if (ix > ie) {
+      ix = ie;
+    }
+  }
+#pragma omp atomic compare capture release
+  {
+    iv = ix;
+    if (ie < ix) {
+      ix = ie;
+    }
+  }
+#pragma omp atomic compare capture release
+  {
+    iv = ix;
+    if (ix < ie) {
+      ix = ie;
+    }
+  }
+#pragma omp atomic compare capture release
+  {
+    iv = ix;
+    if (ix == ie) {
+      ix = id;
+    }
+  }
+#pragma omp atomic compare capture release
+  {
+    iv = ix;
+    if (ie == ix) {
+      ix = id;
+    }
+  }
+#pragma omp atomic compare capture release
+  {
+    if (ie > ix) {
+      ix = ie;
+    }
+    iv = ix;
+  }
+#pragma omp atomic compare capture release
+  {
+    if (ix > ie) {
+      ix = ie;
+    }
+    iv = ix;
+  }
+#pragma omp atomic compare capture release
+  {
+    if (ie < ix) {
+      ix = ie;
+    }
+    iv = ix;
+  }
+#pragma omp atomic compare capture release
+  {
+    if (ix < ie) {
+      ix = ie;
+    }
+    iv = ix;
+  }
+#pragma omp atomic compare capture release
+  {
+    if (ix == ie) {
+      ix = id;
+    }
+    iv = ix;
+  }
+#pragma omp atomic compare capture release
+  {
+    if (ie == ix) {
+      ix = id;
+    }
+    iv = ix;
+  }
+#pragma omp atomic compare capture release
+  if (ix == ie) {
+    ix = id;
+  } else {
+    iv = ix;
+  }
+#pragma omp atomic compare capture release
+  if (ie == ix) {
+    ix = id;
+  } else {
+    iv = ix;
+  }
+#pragma omp atomic compare capture release
+  {
+    ir = ix == ie;
+    if (ir) {
+      ix = id;
+    }
+  }
+#pragma omp atomic compare capture release
+  {
+    ir = ie == ix;
+    if (ir) {
+      ix = id;
+    }
+  }
+#pragma omp atomic compare capture release
+  {
+    ir = ix == ie;
+    if (ir) {
+      ix = id;
+    } else {
+      iv = ix;
+    }
+  }
+#pragma omp atomic compare capture release
+  {
+    ir = ie == ix;
+    if (ir) {
+      ix = id;
+    } else {
+      iv = ix;
+    }
+  }
+
+#pragma omp atomic compare capture seq_cst
+  {
+    iv = ix;
+    if (ie > ix) {
+      ix = ie;
+    }
+  }
+#pragma omp atomic compare capture seq_cst
+  {
+    iv = ix;
+    if (ix > ie) {
+      ix = ie;
+    }
+  }
+#pragma omp atomic compare capture seq_cst
+  {
+    iv = ix;
+    if (ie < ix) {
+      ix = ie;
+    }
+  }
+#pragma omp atomic compare capture seq_cst
+  {
+    iv = ix;
+    if (ix < ie) {
+      ix = ie;
+    }
+  }
+#pragma omp atomic compare capture seq_cst
+  {
+    iv = ix;
+    if (ix == ie) {
+      ix = id;
+    }
+  }
+#pragma omp atomic compare capture seq_cst
+  {
+    iv = ix;
+    if (ie == ix) {
+      ix = id;
+    }
+  }
+#pragma omp atomic compare capture seq_cst
+  {
+    if (ie > ix) {
+      ix = ie;
+    }
+    iv = ix;
+  }
+#pragma omp atomic compare capture seq_cst
+  {
+    if (ix > ie) {
+      ix = ie;
+    }
+    iv = ix;
+  }
+#pragma omp atomic compare capture seq_cst
+  {
+    if (ie < ix) {
+      ix = ie;
+    }
+    iv = ix;
+  }
+#pragma omp atomic compare capture seq_cst
+  {
+    if (ix < ie) {
+      ix = ie;
+    }
+    iv = ix;
+  }
+#pragma omp atomic compare capture seq_cst
+  {
+    if (ix == ie) {
+      ix = id;
+    }
+    iv = ix;
+  }
+#pragma omp atomic compare capture seq_cst
+  {
+    if (ie == ix) {
+      ix = id;
+    }
+    iv = ix;
+  }
+#pragma omp atomic compare capture seq_cst
+  if (ix == ie) {
+    ix = id;
+  } else {
+    iv = ix;
+  }
+#pragma omp atomic compare capture seq_cst
+  if (ie == ix) {
+    ix = id;
+  } else {
+    iv = ix;
+  }
+#pragma omp atomic compare capture seq_cst
+  {
+    ir = ix == ie;
+    if (ir) {
+      ix = id;
+    }
+  }
+#pragma omp atomic compare capture seq_cst
+  {
+    ir = ie == ix;
+    if (ir) {
+      ix = id;
+    }
+  }
+#pragma omp atomic compare capture seq_cst
+  {
+    ir = ix == ie;
+    if (ir) {
+      ix = id;
+    } else {
+      iv = ix;
+    }
+  }
+#pragma omp atomic compare capture seq_cst
+  {
+    ir = ie == ix;
+    if (ir) {
+      ix = id;
+    } else {
+      iv = ix;
+    }
+  }
+
+#pragma omp atomic compare capture
+  {
+    uiv = uix;
+    if (uie > uix) {
+      uix = uie;
+    }
+  }
+#pragma omp atomic compare capture
+  {
+    uiv = uix;
+    if (uix > uie) {
+      uix = uie;
+    }
+  }
+#pragma omp atomic compare capture
+  {
+    uiv = uix;
+    if (uie < uix) {
+      uix = uie;
+    }
+  }
+#pragma omp atomic compare capture
+  {
+    uiv = uix;
+    if (uix < uie) {
+      uix = uie;
+    }
+  }
+#pragma omp atomic compare capture
+  {
+    uiv = uix;
+    if (uix == uie) {
+      uix = uid;
+    }
+  }
+#pragma omp atomic compare capture
+  {
+    uiv = uix;
+    if (uie == uix) {
+      uix = uid;
+    }
+  }
+#pragma omp atomic compare capture
+  {
+    if (uie > uix) {
+      uix = uie;
+    }
+    uiv = uix;
+  }
+#pragma omp atomic compare capture
+  {
+    if (uix > uie) {
+      uix = uie;
+    }
+    uiv = uix;
+  }
+#pragma omp atomic compare capture
+  {
+    if (uie < uix) {
+      uix = uie;
+    }
+    uiv = uix;
+  }
+#pragma omp atomic compare capture
+  {
+    if (uix < uie) {
+      uix = uie;
+    }
+    uiv = uix;
+  }
+#pragma omp atomic compare capture
+  {
+    if (uix == uie) {
+      uix = uid;
+    }
+    uiv = uix;
+  }
+#pragma omp atomic compare capture
+  {
+    if (uie == uix) {
+      uix = uid;
+    }
+    uiv = uix;
+  }
+#pragma omp atomic compare capture
+  if (uix == uie) {
+    uix = uid;
+  } else {
+    uiv = uix;
+  }
+#pragma omp atomic compare capture
+  if (uie == uix) {
+    uix = uid;
+  } else {
+    uiv = uix;
+  }
+#pragma omp atomic compare capture
+  {
+    uir = uix == uie;
+    if (uir) {
+      uix = uid;
+    }
+  }
+#pragma omp atomic compare capture
+  {
+    uir = uie == uix;
+    if (uir) {
+      uix = uid;
+    }
+  }
+#pragma omp atomic compare capture
+  {
+    uir = uix == uie;
+    if (uir) {
+      uix = uid;
+    } else {
+      uiv = uix;
+    }
+  }
+#pragma omp atomic compare capture
+  {
+    uir = uie == uix;
+    if (uir) {
+      uix = uid;
+    } else {
+      uiv = uix;
+    }
+  }
+
+#pragma omp atomic compare capture acq_rel
+  {
+    uiv = uix;
+    if (uie > uix) {
+      uix = uie;
+    }
+  }
+#pragma omp atomic compare capture acq_rel
+  {
+    uiv = uix;
+    if (uix > uie) {
+      uix = uie;
+    }
+  }
+#pragma omp atomic compare capture acq_rel
+  {
+    uiv = uix;
+    if (uie < uix) {
+      uix = uie;
+    }
+  }
+#pragma omp atomic compare capture acq_rel
+  {
+    uiv = uix;
+    if (uix < uie) {
+      uix = uie;
+    }
+  }
+#pragma omp atomic compare capture acq_rel
+  {
+    uiv = uix;
+    if (uix == uie) {
+      uix = uid;
+    }
+  }
+#pragma omp atomic compare capture acq_rel
+  {
+    uiv = uix;
+    if (uie == uix) {
+      uix = uid;
+    }
+  }
+#pragma omp atomic compare capture acq_rel
+  {
+    if (uie > uix) {
+      uix = uie;
+    }
+    uiv = uix;
+  }
+#pragma omp atomic compare capture acq_rel
+  {
+    if (uix > uie) {
+      uix = uie;
+    }
+    uiv = uix;
+  }
+#pragma omp atomic compare capture acq_rel
+  {
+    if (uie < uix) {
+      uix = uie;
+    }
+    uiv = uix;
+  }
+#pragma omp atomic compare capture acq_rel
+  {
+    if (uix < uie) {
+      uix = uie;
+    }
+    uiv = uix;
+  }
+#pragma omp atomic compare capture acq_rel
+  {
+    if (uix == uie) {
+      uix = uid;
+    }
+    uiv = uix;
+  }
+#pragma omp atomic compare capture acq_rel
+  {
+    if (uie == uix) {
+      uix = uid;
+    }
+    uiv = uix;
+  }
+#pragma omp atomic compare capture acq_rel
+  if (uix == uie) {
+    uix = uid;
+  } else {
+    uiv = uix;
+  }
+#pragma omp atomic compare capture acq_rel
+  if (uie == uix) {
+    uix = uid;
+  } else {
+    uiv = uix;
+  }
+#pragma omp atomic compare capture acq_rel
+  {
+    uir = uix == uie;
+    if (uir) {
+      uix = uid;
+    }
+  }
+#pragma omp atomic compare capture acq_rel
+  {
+    uir = uie == uix;
+    if (uir) {
+      uix = uid;
+    }
+  }
+#pragma omp atomic compare capture acq_rel
+  {
+    uir = uix == uie;
+    if (uir) {
+      uix = uid;
+    } else {
+      uiv = uix;
+    }
+  }
+#pragma omp atomic compare capture acq_rel
+  {
+    uir = uie == uix;
+    if (uir) {
+      uix = uid;
+    } else {
+      uiv = uix;
+    }
+  }
+
+#pragma omp atomic compare capture acquire
+  {
+    uiv = uix;
+    if (uie > uix) {
+      uix = uie;
+    }
+  }
+#pragma omp atomic compare capture acquire
+  {
+    uiv = uix;
+    if (uix > uie) {
+      uix = uie;
+    }
+  }
+#pragma omp atomic compare capture acquire
+  {
+    uiv = uix;
+    if (uie < uix) {
+      uix = uie;
+    }
+  }
+#pragma omp atomic compare capture acquire
+  {
+    uiv = uix;
+    if (uix < uie) {
+      uix = uie;
+    }
+  }
+#pragma omp atomic compare capture acquire
+  {
+    uiv = uix;
+    if (uix == uie) {
+      uix = uid;
+    }
+  }
+#pragma omp atomic compare capture acquire
+  {
+    uiv = uix;
+    if (uie == uix) {
+      uix = uid;
+    }
+  }
+#pragma omp atomic compare capture acquire
+  {
+    if (uie > uix) {
+      uix = uie;
+    }
+    uiv = uix;
+  }
+#pragma omp atomic compare capture acquire
+  {
+    if (uix > uie) {
+      uix = uie;
+    }
+    uiv = uix;
+  }
+#pragma omp atomic compare capture acquire
+  {
+    if (uie < uix) {
+      uix = uie;
+    }
+    uiv = uix;
+  }
+#pragma omp atomic compare capture acquire
+  {
+    if (uix < uie) {
+      uix = uie;
+    }
+    uiv = uix;
+  }
+#pragma omp atomic compare capture acquire
+  {
+    if (uix == uie) {
+      uix = uid;
+    }
+    uiv = uix;
+  }
+#pragma omp atomic compare capture acquire
+  {
+    if (uie == uix) {
+      uix = uid;
+    }
+    uiv = uix;
+  }
+#pragma omp atomic compare capture acquire
+  if (uix == uie) {
+    uix = uid;
+  } else {
+    uiv = uix;
+  }
+#pragma omp atomic compare capture acquire
+  if (uie == uix) {
+    uix = uid;
+  } else {
+    uiv = uix;
+  }
+#pragma omp atomic compare capture acquire
+  {
+    uir = uix == uie;
+    if (uir) {
+      uix = uid;
+    }
+  }
+#pragma omp atomic compare capture acquire
+  {
+    uir = uie == uix;
+    if (uir) {
+      uix = uid;
+    }
+  }
+#pragma omp atomic compare capture acquire
+  {
+    uir = uix == uie;
+    if (uir) {
+      uix = uid;
+    } else {
+      uiv = uix;
+    }
+  }
+#pragma omp atomic compare capture acquire
+  {
+    uir = uie == uix;
+    if (uir) {
+      uix = uid;
+    } else {
+      uiv = uix;
+    }
+  }
+
+#pragma omp atomic compare capture relaxed
+  {
+    uiv = uix;
+    if (uie > uix) {
+      uix = uie;
+    }
+  }
+#pragma omp atomic compare capture relaxed
+  {
+    uiv = uix;
+    if (uix > uie) {
+      uix = uie;
+    }
+  }
+#pragma omp atomic compare capture relaxed
+  {
+    uiv = uix;
+    if (uie < uix) {
+      uix = uie;
+    }
+  }
+#pragma omp atomic compare capture relaxed
+  {
+    uiv = uix;
+    if (uix < uie) {
+      uix = uie;
+    }
+  }
+#pragma omp atomic compare capture relaxed
+  {
+    uiv = uix;
+    if (uix == uie) {
+      uix = uid;
+    }
+  }
+#pragma omp atomic compare capture relaxed
+  {
+    uiv = uix;
+    if (uie == uix) {
+      uix = uid;
+    }
+  }
+#pragma omp atomic compare capture relaxed
+  {
+    if (uie > uix) {
+      uix = uie;
+    }
+    uiv = uix;
+  }
+#pragma omp atomic compare capture relaxed
+  {
+    if (uix > uie) {
+      uix = uie;
+    }
+    uiv = uix;
+  }
+#pragma omp atomic compare capture relaxed
+  {
+    if (uie < uix) {
+      uix = uie;
+    }
+    uiv = uix;
+  }
+#pragma omp atomic compare capture relaxed
+  {
+    if (uix < uie) {
+      uix = uie;
+    }
+    uiv = uix;
+  }
+#pragma omp atomic compare capture relaxed
+  {
+    if (uix == uie) {
+      uix = uid;
+    }
+    uiv = uix;
+  }
+#pragma omp atomic compare capture relaxed
+  {
+    if (uie == uix) {
+      uix = uid;
+    }
+    uiv = uix;
+  }
+#pragma omp atomic compare capture relaxed
+  if (uix == uie) {
+    uix = uid;
+  } else {
+    uiv = uix;
+  }
+#pragma omp atomic compare capture relaxed
+  if (uie == uix) {
+    uix = uid;
+  } else {
+    uiv = uix;
+  }
+#pragma omp atomic compare capture relaxed
+  {
+    uir = uix == uie;
+    if (uir) {
+      uix = uid;
+    }
+  }
+#pragma omp atomic compare capture relaxed
+  {
+    uir = uie == uix;
+    if (uir) {
+      uix = uid;
+    }
+  }
+#pragma omp atomic compare capture relaxed
+  {
+    uir = uix == uie;
+    if (uir) {
+      uix = uid;
+    } else {
+      uiv = uix;
+    }
+  }
+#pragma omp atomic compare capture relaxed
+  {
+    uir = uie == uix;
+    if (uir) {
+      uix = uid;
+    } else {
+      uiv = uix;
+    }
+  }
+
+#pragma omp atomic compare capture release
+  {
+    uiv = uix;
+    if (uie > uix) {
+      uix = uie;
+    }
+  }
+#pragma omp atomic compare capture release
+  {
+    uiv = uix;
+    if (uix > uie) {
+      uix = uie;
+    }
+  }
+#pragma omp atomic compare capture release
+  {
+    uiv = uix;
+    if (uie < uix) {
+      uix = uie;
+    }
+  }
+#pragma omp atomic compare capture release
+  {
+    uiv = uix;
+    if (uix < uie) {
+      uix = uie;
+    }
+  }
+#pragma omp atomic compare capture release
+  {
+    uiv = uix;
+    if (uix == uie) {
+      uix = uid;
+    }
+  }
+#pragma omp atomic compare capture release
+  {
+    uiv = uix;
+    if (uie == uix) {
+      uix = uid;
+    }
+  }
+#pragma omp atomic compare capture release
+  {
+    if (uie > uix) {
+      uix = uie;
+    }
+    uiv = uix;
+  }
+#pragma omp atomic compare capture release
+  {
+    if (uix > uie) {
+      uix = uie;
+    }
+    uiv = uix;
+  }
+#pragma omp atomic compare capture release
+  {
+    if (uie < uix) {
+      uix = uie;
+    }
+    uiv = uix;
+  }
+#pragma omp atomic compare capture release
+  {
+    if (uix < uie) {
+      uix = uie;
+    }
+    uiv = uix;
+  }
+#pragma omp atomic compare capture release
+  {
+    if (uix == uie) {
+      uix = uid;
+    }
+    uiv = uix;
+  }
+#pragma omp atomic compare capture release
+  {
+    if (uie == uix) {
+      uix = uid;
+    }
+    uiv = uix;
+  }
+#pragma omp atomic compare capture release
+  if (uix == uie) {
+    uix = uid;
+  } else {
+    uiv = uix;
+  }
+#pragma omp atomic compare capture release
+  if (uie == uix) {
+    uix = uid;
+  } else {
+    uiv = uix;
+  }
+#pragma omp atomic compare capture release
+  {
+    uir = uix == uie;
+    if (uir) {
+      uix = uid;
+    }
+  }
+#pragma omp atomic compare capture release
+  {
+    uir = uie == uix;
+    if (uir) {
+      uix = uid;
+    }
+  }
+#pragma omp atomic compare capture release
+  {
+    uir = uix == uie;
+    if (uir) {
+      uix = uid;
+    } else {
+      uiv = uix;
+    }
+  }
+#pragma omp atomic compare capture release
+  {
+    uir = uie == uix;
+    if (uir) {
+      uix = uid;
+    } else {
+      uiv = uix;
+    }
+  }
+
+#pragma omp atomic compare capture seq_cst
+  {
+    uiv = uix;
+    if (uie > uix) {
+      uix = uie;
+    }
+  }
+#pragma omp atomic compare capture seq_cst
+  {
+    uiv = uix;
+    if (uix > uie) {
+      uix = uie;
+    }
+  }
+#pragma omp atomic compare capture seq_cst
+  {
+    uiv = uix;
+    if (uie < uix) {
+      uix = uie;
+    }
+  }
+#pragma omp atomic compare capture seq_cst
+  {
+    uiv = uix;
+    if (uix < uie) {
+      uix = uie;
+    }
+  }
+#pragma omp atomic compare capture seq_cst
+  {
+    uiv = uix;
+    if (uix == uie) {
+      uix = uid;
+    }
+  }
+#pragma omp atomic compare capture seq_cst
+  {
+    uiv = uix;
+    if (uie == uix) {
+      uix = uid;
+    }
+  }
+#pragma omp atomic compare capture seq_cst
+  {
+    if (uie > uix) {
+      uix = uie;
+    }
+    uiv = uix;
+  }
+#pragma omp atomic compare capture seq_cst
+  {
+    if (uix > uie) {
+      uix = uie;
+    }
+    uiv = uix;
+  }
+#pragma omp atomic compare capture seq_cst
+  {
+    if (uie < uix) {
+      uix = uie;
+    }
+    uiv = uix;
+  }
+#pragma omp atomic compare capture seq_cst
+  {
+    if (uix < uie) {
+      uix = uie;
+    }
+    uiv = uix;
+  }
+#pragma omp atomic compare capture seq_cst
+  {
+    if (uix == uie) {
+      uix = uid;
+    }
+    uiv = uix;
+  }
+#pragma omp atomic compare capture seq_cst
+  {
+    if (uie == uix) {
+      uix = uid;
+    }
+    uiv = uix;
+  }
+#pragma omp atomic compare capture seq_cst
+  if (uix == uie) {
+    uix = uid;
+  } else {
+    uiv = uix;
+  }
+#pragma omp atomic compare capture seq_cst
+  if (uie == uix) {
+    uix = uid;
+  } else {
+    uiv = uix;
+  }
+#pragma omp atomic compare capture seq_cst
+  {
+    uir = uix == uie;
+    if (uir) {
+      uix = uid;
+    }
+  }
+#pragma omp atomic compare capture seq_cst
+  {
+    uir = uie == uix;
+    if (uir) {
+      uix = uid;
+    }
+  }
+#pragma omp atomic compare capture seq_cst
+  {
+    uir = uix == uie;
+    if (uir) {
+      uix = uid;
+    } else {
+      uiv = uix;
+    }
+  }
+#pragma omp atomic compare capture seq_cst
+  {
+    uir = uie == uix;
+    if (uir) {
+      uix = uid;
+    } else {
+      uiv = uix;
+    }
+  }
+
+#pragma omp atomic compare capture
+  {
+    lv = lx;
+    if (le > lx) {
+      lx = le;
+    }
+  }
+#pragma omp atomic compare capture
+  {
+    lv = lx;
+    if (lx > le) {
+      lx = le;
+    }
+  }
+#pragma omp atomic compare capture
+  {
+    lv = lx;
+    if (le < lx) {
+      lx = le;
+    }
+  }
+#pragma omp atomic compare capture
+  {
+    lv = lx;
+    if (lx < le) {
+      lx = le;
+    }
+  }
+#pragma omp atomic compare capture
+  {
+    lv = lx;
+    if (lx == le) {
+      lx = ld;
+    }
+  }
+#pragma omp atomic compare capture
+  {
+    lv = lx;
+    if (le == lx) {
+      lx = ld;
+    }
+  }
+#pragma omp atomic compare capture
+  {
+    if (le > lx) {
+      lx = le;
+    }
+    lv = lx;
+  }
+#pragma omp atomic compare capture
+  {
+    if (lx > le) {
+      lx = le;
+    }
+    lv = lx;
+  }
+#pragma omp atomic compare capture
+  {
+    if (le < lx) {
+      lx = le;
+    }
+    lv = lx;
+  }
+#pragma omp atomic compare capture
+  {
+    if (lx < le) {
+      lx = le;
+    }
+    lv = lx;
+  }
+#pragma omp atomic compare capture
+  {
+    if (lx == le) {
+      lx = ld;
+    }
+    lv = lx;
+  }
+#pragma omp atomic compare capture
+  {
+    if (le == lx) {
+      lx = ld;
+    }
+    lv = lx;
+  }
+#pragma omp atomic compare capture
+  if (lx == le) {
+    lx = ld;
+  } else {
+    lv = lx;
+  }
+#pragma omp atomic compare capture
+  if (le == lx) {
+    lx = ld;
+  } else {
+    lv = lx;
+  }
+#pragma omp atomic compare capture
+  {
+    lr = lx == le;
+    if (lr) {
+      lx = ld;
+    }
+  }
+#pragma omp atomic compare capture
+  {
+    lr = le == lx;
+    if (lr) {
+      lx = ld;
+    }
+  }
+#pragma omp atomic compare capture
+  {
+    lr = lx == le;
+    if (lr) {
+      lx = ld;
+    } else {
+      lv = lx;
+    }
+  }
+#pragma omp atomic compare capture
+  {
+    lr = le == lx;
+    if (lr) {
+      lx = ld;
+    } else {
+      lv = lx;
+    }
+  }
+
+#pragma omp atomic compare capture acq_rel
+  {
+    lv = lx;
+    if (le > lx) {
+      lx = le;
+    }
+  }
+#pragma omp atomic compare capture acq_rel
+  {
+    lv = lx;
+    if (lx > le) {
+      lx = le;
+    }
+  }
+#pragma omp atomic compare capture acq_rel
+  {
+    lv = lx;
+    if (le < lx) {
+      lx = le;
+    }
+  }
+#pragma omp atomic compare capture acq_rel
+  {
+    lv = lx;
+    if (lx < le) {
+      lx = le;
+    }
+  }
+#pragma omp atomic compare capture acq_rel
+  {
+    lv = lx;
+    if (lx == le) {
+      lx = ld;
+    }
+  }
+#pragma omp atomic compare capture acq_rel
+  {
+    lv = lx;
+    if (le == lx) {
+      lx = ld;
+    }
+  }
+#pragma omp atomic compare capture acq_rel
+  {
+    if (le > lx) {
+      lx = le;
+    }
+    lv = lx;
+  }
+#pragma omp atomic compare capture acq_rel
+  {
+    if (lx > le) {
+      lx = le;
+    }
+    lv = lx;
+  }
+#pragma omp atomic compare capture acq_rel
+  {
+    if (le < lx) {
+      lx = le;
+    }
+    lv = lx;
+  }
+#pragma omp atomic compare capture acq_rel
+  {
+    if (lx < le) {
+      lx = le;
+    }
+    lv = lx;
+  }
+#pragma omp atomic compare capture acq_rel
+  {
+    if (lx == le) {
+      lx = ld;
+    }
+    lv = lx;
+  }
+#pragma omp atomic compare capture acq_rel
+  {
+    if (le == lx) {
+      lx = ld;
+    }
+    lv = lx;
+  }
+#pragma omp atomic compare capture acq_rel
+  if (lx == le) {
+    lx = ld;
+  } else {
+    lv = lx;
+  }
+#pragma omp atomic compare capture acq_rel
+  if (le == lx) {
+    lx = ld;
+  } else {
+    lv = lx;
+  }
+#pragma omp atomic compare capture acq_rel
+  {
+    lr = lx == le;
+    if (lr) {
+      lx = ld;
+    }
+  }
+#pragma omp atomic compare capture acq_rel
+  {
+    lr = le == lx;
+    if (lr) {
+      lx = ld;
+    }
+  }
+#pragma omp atomic compare capture acq_rel
+  {
+    lr = lx == le;
+    if (lr) {
+      lx = ld;
+    } else {
+      lv = lx;
+    }
+  }
+#pragma omp atomic compare capture acq_rel
+  {
+    lr = le == lx;
+    if (lr) {
+      lx = ld;
+    } else {
+      lv = lx;
+    }
+  }
+
+#pragma omp atomic compare capture acquire
+  {
+    lv = lx;
+    if (le > lx) {
+      lx = le;
+    }
+  }
+#pragma omp atomic compare capture acquire
+  {
+    lv = lx;
+    if (lx > le) {
+      lx = le;
+    }
+  }
+#pragma omp atomic compare capture acquire
+  {
+    lv = lx;
+    if (le < lx) {
+      lx = le;
+    }
+  }
+#pragma omp atomic compare capture acquire
+  {
+    lv = lx;
+    if (lx < le) {
+      lx = le;
+    }
+  }
+#pragma omp atomic compare capture acquire
+  {
+    lv = lx;
+    if (lx == le) {
+      lx = ld;
+    }
+  }
+#pragma omp atomic compare capture acquire
+  {
+    lv = lx;
+    if (le == lx) {
+      lx = ld;
+    }
+  }
+#pragma omp atomic compare capture acquire
+  {
+    if (le > lx) {
+      lx = le;
+    }
+    lv = lx;
+  }
+#pragma omp atomic compare capture acquire
+  {
+    if (lx > le) {
+      lx = le;
+    }
+    lv = lx;
+  }
+#pragma omp atomic compare capture acquire
+  {
+    if (le < lx) {
+      lx = le;
+    }
+    lv = lx;
+  }
+#pragma omp atomic compare capture acquire
+  {
+    if (lx < le) {
+      lx = le;
+    }
+    lv = lx;
+  }
+#pragma omp atomic compare capture acquire
+  {
+    if (lx == le) {
+      lx = ld;
+    }
+    lv = lx;
+  }
+#pragma omp atomic compare capture acquire
+  {
+    if (le == lx) {
+      lx = ld;
+    }
+    lv = lx;
+  }
+#pragma omp atomic compare capture acquire
+  if (lx == le) {
+    lx = ld;
+  } else {
+    lv = lx;
+  }
+#pragma omp atomic compare capture acquire
+  if (le == lx) {
+    lx = ld;
+  } else {
+    lv = lx;
+  }
+#pragma omp atomic compare capture acquire
+  {
+    lr = lx == le;
+    if (lr) {
+      lx = ld;
+    }
+  }
+#pragma omp atomic compare capture acquire
+  {
+    lr = le == lx;
+    if (lr) {
+      lx = ld;
+    }
+  }
+#pragma omp atomic compare capture acquire
+  {
+    lr = lx == le;
+    if (lr) {
+      lx = ld;
+    } else {
+      lv = lx;
+    }
+  }
+#pragma omp atomic compare capture acquire
+  {
+    lr = le == lx;
+    if (lr) {
+      lx = ld;
+    } else {
+      lv = lx;
+    }
+  }
+
+#pragma omp atomic compare capture relaxed
+  {
+    lv = lx;
+    if (le > lx) {
+      lx = le;
+    }
+  }
+#pragma omp atomic compare capture relaxed
+  {
+    lv = lx;
+    if (lx > le) {
+      lx = le;
+    }
+  }
+#pragma omp atomic compare capture relaxed
+  {
+    lv = lx;
+    if (le < lx) {
+      lx = le;
+    }
+  }
+#pragma omp atomic compare capture relaxed
+  {
+    lv = lx;
+    if (lx < le) {
+      lx = le;
+    }
+  }
+#pragma omp atomic compare capture relaxed
+  {
+    lv = lx;
+    if (lx == le) {
+      lx = ld;
+    }
+  }
+#pragma omp atomic compare capture relaxed
+  {
+    lv = lx;
+    if (le == lx) {
+      lx = ld;
+    }
+  }
+#pragma omp atomic compare capture relaxed
+  {
+    if (le > lx) {
+      lx = le;
+    }
+    lv = lx;
+  }
+#pragma omp atomic compare capture relaxed
+  {
+    if (lx > le) {
+      lx = le;
+    }
+    lv = lx;
+  }
+#pragma omp atomic compare capture relaxed
+  {
+    if (le < lx) {
+      lx = le;
+    }
+    lv = lx;
+  }
+#pragma omp atomic compare capture relaxed
+  {
+    if (lx < le) {
+      lx = le;
+    }
+    lv = lx;
+  }
+#pragma omp atomic compare capture relaxed
+  {
+    if (lx == le) {
+      lx = ld;
+    }
+    lv = lx;
+  }
+#pragma omp atomic compare capture relaxed
+  {
+    if (le == lx) {
+      lx = ld;
+    }
+    lv = lx;
+  }
+#pragma omp atomic compare capture relaxed
+  if (lx == le) {
+    lx = ld;
+  } else {
+    lv = lx;
+  }
+#pragma omp atomic compare capture relaxed
+  if (le == lx) {
+    lx = ld;
+  } else {
+    lv = lx;
+  }
+#pragma omp atomic compare capture relaxed
+  {
+    lr = lx == le;
+    if (lr) {
+      lx = ld;
+    }
+  }
+#pragma omp atomic compare capture relaxed
+  {
+    lr = le == lx;
+    if (lr) {
+      lx = ld;
+    }
+  }
+#pragma omp atomic compare capture relaxed
+  {
+    lr = lx == le;
+    if (lr) {
+      lx = ld;
+    } else {
+      lv = lx;
+    }
+  }
+#pragma omp atomic compare capture relaxed
+  {
+    lr = le == lx;
+    if (lr) {
+      lx = ld;
+    } else {
+      lv = lx;
+    }
+  }
+
+#pragma omp atomic compare capture release
+  {
+    lv = lx;
+    if (le > lx) {
+      lx = le;
+    }
+  }
+#pragma omp atomic compare capture release
+  {
+    lv = lx;
+    if (lx > le) {
+      lx = le;
+    }
+  }
+#pragma omp atomic compare capture release
+  {
+    lv = lx;
+    if (le < lx) {
+      lx = le;
+    }
+  }
+#pragma omp atomic compare capture release
+  {
+    lv = lx;
+    if (lx < le) {
+      lx = le;
+    }
+  }
+#pragma omp atomic compare capture release
+  {
+    lv = lx;
+    if (lx == le) {
+      lx = ld;
+    }
+  }
+#pragma omp atomic compare capture release
+  {
+    lv = lx;
+    if (le == lx) {
+      lx = ld;
+    }
+  }
+#pragma omp atomic compare capture release
+  {
+    if (le > lx) {
+      lx = le;
+    }
+    lv = lx;
+  }
+#pragma omp atomic compare capture release
+  {
+    if (lx > le) {
+      lx = le;
+    }
+    lv = lx;
+  }
+#pragma omp atomic compare capture release
+  {
+    if (le < lx) {
+      lx = le;
+    }
+    lv = lx;
+  }
+#pragma omp atomic compare capture release
+  {
+    if (lx < le) {
+      lx = le;
+    }
+    lv = lx;
+  }
+#pragma omp atomic compare capture release
+  {
+    if (lx == le) {
+      lx = ld;
+    }
+    lv = lx;
+  }
+#pragma omp atomic compare capture release
+  {
+    if (le == lx) {
+      lx = ld;
+    }
+    lv = lx;
+  }
+#pragma omp atomic compare capture release
+  if (lx == le) {
+    lx = ld;
+  } else {
+    lv = lx;
+  }
+#pragma omp atomic compare capture release
+  if (le == lx) {
+    lx = ld;
+  } else {
+    lv = lx;
+  }
+#pragma omp atomic compare capture release
+  {
+    lr = lx == le;
+    if (lr) {
+      lx = ld;
+    }
+  }
+#pragma omp atomic compare capture release
+  {
+    lr = le == lx;
+    if (lr) {
+      lx = ld;
+    }
+  }
+#pragma omp atomic compare capture release
+  {
+    lr = lx == le;
+    if (lr) {
+      lx = ld;
+    } else {
+      lv = lx;
+    }
+  }
+#pragma omp atomic compare capture release
+  {
+    lr = le == lx;
+    if (lr) {
+      lx = ld;
+    } else {
+      lv = lx;
+    }
+  }
+
+#pragma omp atomic compare capture seq_cst
+  {
+    lv = lx;
+    if (le > lx) {
+      lx = le;
+    }
+  }
+#pragma omp atomic compare capture seq_cst
+  {
+    lv = lx;
+    if (lx > le) {
+      lx = le;
+    }
+  }
+#pragma omp atomic compare capture seq_cst
+  {
+    lv = lx;
+    if (le < lx) {
+      lx = le;
+    }
+  }
+#pragma omp atomic compare capture seq_cst
+  {
+    lv = lx;
+    if (lx < le) {
+      lx = le;
+    }
+  }
+#pragma omp atomic compare capture seq_cst
+  {
+    lv = lx;
+    if (lx == le) {
+      lx = ld;
+    }
+  }
+#pragma omp atomic compare capture seq_cst
+  {
+    lv = lx;
+    if (le == lx) {
+      lx = ld;
+    }
+  }
+#pragma omp atomic compare capture seq_cst
+  {
+    if (le > lx) {
+      lx = le;
+    }
+    lv = lx;
+  }
+#pragma omp atomic compare capture seq_cst
+  {
+    if (lx > le) {
+      lx = le;
+    }
+    lv = lx;
+  }
+#pragma omp atomic compare capture seq_cst
+  {
+    if (le < lx) {
+      lx = le;
+    }
+    lv = lx;
+  }
+#pragma omp atomic compare capture seq_cst
+  {
+    if (lx < le) {
+      lx = le;
+    }
+    lv = lx;
+  }
+#pragma omp atomic compare capture seq_cst
+  {
+    if (lx == le) {
+      lx = ld;
+    }
+    lv = lx;
+  }
+#pragma omp atomic compare capture seq_cst
+  {
+    if (le == lx) {
+      lx = ld;
+    }
+    lv = lx;
+  }
+#pragma omp atomic compare capture seq_cst
+  if (lx == le) {
+    lx = ld;
+  } else {
+    lv = lx;
+  }
+#pragma omp atomic compare capture seq_cst
+  if (le == lx) {
+    lx = ld;
+  } else {
+    lv = lx;
+  }
+#pragma omp atomic compare capture seq_cst
+  {
+    lr = lx == le;
+    if (lr) {
+      lx = ld;
+    }
+  }
+#pragma omp atomic compare capture seq_cst
+  {
+    lr = le == lx;
+    if (lr) {
+      lx = ld;
+    }
+  }
+#pragma omp atomic compare capture seq_cst
+  {
+    lr = lx == le;
+    if (lr) {
+      lx = ld;
+    } else {
+      lv = lx;
+    }
+  }
+#pragma omp atomic compare capture seq_cst
+  {
+    lr = le == lx;
+    if (lr) {
+      lx = ld;
+    } else {
+      lv = lx;
+    }
+  }
+
+#pragma omp atomic compare capture
+  {
+    ulv = ulx;
+    if (ule > ulx) {
+      ulx = ule;
+    }
+  }
+#pragma omp atomic compare capture
+  {
+    ulv = ulx;
+    if (ulx > ule) {
+      ulx = ule;
+    }
+  }
+#pragma omp atomic compare capture
+  {
+    ulv = ulx;
+    if (ule < ulx) {
+      ulx = ule;
+    }
+  }
+#pragma omp atomic compare capture
+  {
+    ulv = ulx;
+    if (ulx < ule) {
+      ulx = ule;
+    }
+  }
+#pragma omp atomic compare capture
+  {
+    ulv = ulx;
+    if (ulx == ule) {
+      ulx = uld;
+    }
+  }
+#pragma omp atomic compare capture
+  {
+    ulv = ulx;
+    if (ule == ulx) {
+      ulx = uld;
+    }
+  }
+#pragma omp atomic compare capture
+  {
+    if (ule > ulx) {
+      ulx = ule;
+    }
+    ulv = ulx;
+  }
+#pragma omp atomic compare capture
+  {
+    if (ulx > ule) {
+      ulx = ule;
+    }
+    ulv = ulx;
+  }
+#pragma omp atomic compare capture
+  {
+    if (ule < ulx) {
+      ulx = ule;
+    }
+    ulv = ulx;
+  }
+#pragma omp atomic compare capture
+  {
+    if (ulx < ule) {
+      ulx = ule;
+    }
+    ulv = ulx;
+  }
+#pragma omp atomic compare capture
+  {
+    if (ulx == ule) {
+      ulx = uld;
+    }
+    ulv = ulx;
+  }
+#pragma omp atomic compare capture
+  {
+    if (ule == ulx) {
+      ulx = uld;
+    }
+    ulv = ulx;
+  }
+#pragma omp atomic compare capture
+  if (ulx == ule) {
+    ulx = uld;
+  } else {
+    ulv = ulx;
+  }
+#pragma omp atomic compare capture
+  if (ule == ulx) {
+    ulx = uld;
+  } else {
+    ulv = ulx;
+  }
+#pragma omp atomic compare capture
+  {
+    ulr = ulx == ule;
+    if (ulr) {
+      ulx = uld;
+    }
+  }
+#pragma omp atomic compare capture
+  {
+    ulr = ule == ulx;
+    if (ulr) {
+      ulx = uld;
+    }
+  }
+#pragma omp atomic compare capture
+  {
+    ulr = ulx == ule;
+    if (ulr) {
+      ulx = uld;
+    } else {
+      ulv = ulx;
+    }
+  }
+#pragma omp atomic compare capture
+  {
+    ulr = ule == ulx;
+    if (ulr) {
+      ulx = uld;
+    } else {
+      ulv = ulx;
+    }
+  }
+
+#pragma omp atomic compare capture acq_rel
+  {
+    ulv = ulx;
+    if (ule > ulx) {
+      ulx = ule;
+    }
+  }
+#pragma omp atomic compare capture acq_rel
+  {
+    ulv = ulx;
+    if (ulx > ule) {
+      ulx = ule;
+    }
+  }
+#pragma omp atomic compare capture acq_rel
+  {
+    ulv = ulx;
+    if (ule < ulx) {
+      ulx = ule;
+    }
+  }
+#pragma omp atomic compare capture acq_rel
+  {
+    ulv = ulx;
+    if (ulx < ule) {
+      ulx = ule;
+    }
+  }
+#pragma omp atomic compare capture acq_rel
+  {
+    ulv = ulx;
+    if (ulx == ule) {
+      ulx = uld;
+    }
+  }
+#pragma omp atomic compare capture acq_rel
+  {
+    ulv = ulx;
+    if (ule == ulx) {
+      ulx = uld;
+    }
+  }
+#pragma omp atomic compare capture acq_rel
+  {
+    if (ule > ulx) {
+      ulx = ule;
+    }
+    ulv = ulx;
+  }
+#pragma omp atomic compare capture acq_rel
+  {
+    if (ulx > ule) {
+      ulx = ule;
+    }
+    ulv = ulx;
+  }
+#pragma omp atomic compare capture acq_rel
+  {
+    if (ule < ulx) {
+      ulx = ule;
+    }
+    ulv = ulx;
+  }
+#pragma omp atomic compare capture acq_rel
+  {
+    if (ulx < ule) {
+      ulx = ule;
+    }
+    ulv = ulx;
+  }
+#pragma omp atomic compare capture acq_rel
+  {
+    if (ulx == ule) {
+      ulx = uld;
+    }
+    ulv = ulx;
+  }
+#pragma omp atomic compare capture acq_rel
+  {
+    if (ule == ulx) {
+      ulx = uld;
+    }
+    ulv = ulx;
+  }
+#pragma omp atomic compare capture acq_rel
+  if (ulx == ule) {
+    ulx = uld;
+  } else {
+    ulv = ulx;
+  }
+#pragma omp atomic compare capture acq_rel
+  if (ule == ulx) {
+    ulx = uld;
+  } else {
+    ulv = ulx;
+  }
+#pragma omp atomic compare capture acq_rel
+  {
+    ulr = ulx == ule;
+    if (ulr) {
+      ulx = uld;
+    }
+  }
+#pragma omp atomic compare capture acq_rel
+  {
+    ulr = ule == ulx;
+    if (ulr) {
+      ulx = uld;
+    }
+  }
+#pragma omp atomic compare capture acq_rel
+  {
+    ulr = ulx == ule;
+    if (ulr) {
+      ulx = uld;
+    } else {
+      ulv = ulx;
+    }
+  }
+#pragma omp atomic compare capture acq_rel
+  {
+    ulr = ule == ulx;
+    if (ulr) {
+      ulx = uld;
+    } else {
+      ulv = ulx;
+    }
+  }
+
+#pragma omp atomic compare capture acquire
+  {
+    ulv = ulx;
+    if (ule > ulx) {
+      ulx = ule;
+    }
+  }
+#pragma omp atomic compare capture acquire
+  {
+    ulv = ulx;
+    if (ulx > ule) {
+      ulx = ule;
+    }
+  }
+#pragma omp atomic compare capture acquire
+  {
+    ulv = ulx;
+    if (ule < ulx) {
+      ulx = ule;
+    }
+  }
+#pragma omp atomic compare capture acquire
+  {
+    ulv = ulx;
+    if (ulx < ule) {
+      ulx = ule;
+    }
+  }
+#pragma omp atomic compare capture acquire
+  {
+    ulv = ulx;
+    if (ulx == ule) {
+      ulx = uld;
+    }
+  }
+#pragma omp atomic compare capture acquire
+  {
+    ulv = ulx;
+    if (ule == ulx) {
+      ulx = uld;
+    }
+  }
+#pragma omp atomic compare capture acquire
+  {
+    if (ule > ulx) {
+      ulx = ule;
+    }
+    ulv = ulx;
+  }
+#pragma omp atomic compare capture acquire
+  {
+    if (ulx > ule) {
+      ulx = ule;
+    }
+    ulv = ulx;
+  }
+#pragma omp atomic compare capture acquire
+  {
+    if (ule < ulx) {
+      ulx = ule;
+    }
+    ulv = ulx;
+  }
+#pragma omp atomic compare capture acquire
+  {
+    if (ulx < ule) {
+      ulx = ule;
+    }
+    ulv = ulx;
+  }
+#pragma omp atomic compare capture acquire
+  {
+    if (ulx == ule) {
+      ulx = uld;
+    }
+    ulv = ulx;
+  }
+#pragma omp atomic compare capture acquire
+  {
+    if (ule == ulx) {
+      ulx = uld;
+    }
+    ulv = ulx;
+  }
+#pragma omp atomic compare capture acquire
+  if (ulx == ule) {
+    ulx = uld;
+  } else {
+    ulv = ulx;
+  }
+#pragma omp atomic compare capture acquire
+  if (ule == ulx) {
+    ulx = uld;
+  } else {
+    ulv = ulx;
+  }
+#pragma omp atomic compare capture acquire
+  {
+    ulr = ulx == ule;
+    if (ulr) {
+      ulx = uld;
+    }
+  }
+#pragma omp atomic compare capture acquire
+  {
+    ulr = ule == ulx;
+    if (ulr) {
+      ulx = uld;
+    }
+  }
+#pragma omp atomic compare capture acquire
+  {
+    ulr = ulx == ule;
+    if (ulr) {
+      ulx = uld;
+    } else {
+      ulv = ulx;
+    }
+  }
+#pragma omp atomic compare capture acquire
+  {
+    ulr = ule == ulx;
+    if (ulr) {
+      ulx = uld;
+    } else {
+      ulv = ulx;
+    }
+  }
+
+#pragma omp atomic compare capture relaxed
+  {
+    ulv = ulx;
+    if (ule > ulx) {
+      ulx = ule;
+    }
+  }
+#pragma omp atomic compare capture relaxed
+  {
+    ulv = ulx;
+    if (ulx > ule) {
+      ulx = ule;
+    }
+  }
+#pragma omp atomic compare capture relaxed
+  {
+    ulv = ulx;
+    if (ule < ulx) {
+      ulx = ule;
+    }
+  }
+#pragma omp atomic compare capture relaxed
+  {
+    ulv = ulx;
+    if (ulx < ule) {
+      ulx = ule;
+    }
+  }
+#pragma omp atomic compare capture relaxed
+  {
+    ulv = ulx;
+    if (ulx == ule) {
+      ulx = uld;
+    }
+  }
+#pragma omp atomic compare capture relaxed
+  {
+    ulv = ulx;
+    if (ule == ulx) {
+      ulx = uld;
+    }
+  }
+#pragma omp atomic compare capture relaxed
+  {
+    if (ule > ulx) {
+      ulx = ule;
+    }
+    ulv = ulx;
+  }
+#pragma omp atomic compare capture relaxed
+  {
+    if (ulx > ule) {
+      ulx = ule;
+    }
+    ulv = ulx;
+  }
+#pragma omp atomic compare capture relaxed
+  {
+    if (ule < ulx) {
+      ulx = ule;
+    }
+    ulv = ulx;
+  }
+#pragma omp atomic compare capture relaxed
+  {
+    if (ulx < ule) {
+      ulx = ule;
+    }
+    ulv = ulx;
+  }
+#pragma omp atomic compare capture relaxed
+  {
+    if (ulx == ule) {
+      ulx = uld;
+    }
+    ulv = ulx;
+  }
+#pragma omp atomic compare capture relaxed
+  {
+    if (ule == ulx) {
+      ulx = uld;
+    }
+    ulv = ulx;
+  }
+#pragma omp atomic compare capture relaxed
+  if (ulx == ule) {
+    ulx = uld;
+  } else {
+    ulv = ulx;
+  }
+#pragma omp atomic compare capture relaxed
+  if (ule == ulx) {
+    ulx = uld;
+  } else {
+    ulv = ulx;
+  }
+#pragma omp atomic compare capture relaxed
+  {
+    ulr = ulx == ule;
+    if (ulr) {
+      ulx = uld;
+    }
+  }
+#pragma omp atomic compare capture relaxed
+  {
+    ulr = ule == ulx;
+    if (ulr) {
+      ulx = uld;
+    }
+  }
+#pragma omp atomic compare capture relaxed
+  {
+    ulr = ulx == ule;
+    if (ulr) {
+      ulx = uld;
+    } else {
+      ulv = ulx;
+    }
+  }
+#pragma omp atomic compare capture relaxed
+  {
+    ulr = ule == ulx;
+    if (ulr) {
+      ulx = uld;
+    } else {
+      ulv = ulx;
+    }
+  }
+
+#pragma omp atomic compare capture release
+  {
+    ulv = ulx;
+    if (ule > ulx) {
+      ulx = ule;
+    }
+  }
+#pragma omp atomic compare capture release
+  {
+    ulv = ulx;
+    if (ulx > ule) {
+      ulx = ule;
+    }
+  }
+#pragma omp atomic compare capture release
+  {
+    ulv = ulx;
+    if (ule < ulx) {
+      ulx = ule;
+    }
+  }
+#pragma omp atomic compare capture release
+  {
+    ulv = ulx;
+    if (ulx < ule) {
+      ulx = ule;
+    }
+  }
+#pragma omp atomic compare capture release
+  {
+    ulv = ulx;
+    if (ulx == ule) {
+      ulx = uld;
+    }
+  }
+#pragma omp atomic compare capture release
+  {
+    ulv = ulx;
+    if (ule == ulx) {
+      ulx = uld;
+    }
+  }
+#pragma omp atomic compare capture release
+  {
+    if (ule > ulx) {
+      ulx = ule;
+    }
+    ulv = ulx;
+  }
+#pragma omp atomic compare capture release
+  {
+    if (ulx > ule) {
+      ulx = ule;
+    }
+    ulv = ulx;
+  }
+#pragma omp atomic compare capture release
+  {
+    if (ule < ulx) {
+      ulx = ule;
+    }
+    ulv = ulx;
+  }
+#pragma omp atomic compare capture release
+  {
+    if (ulx < ule) {
+      ulx = ule;
+    }
+    ulv = ulx;
+  }
+#pragma omp atomic compare capture release
+  {
+    if (ulx == ule) {
+      ulx = uld;
+    }
+    ulv = ulx;
+  }
+#pragma omp atomic compare capture release
+  {
+    if (ule == ulx) {
+      ulx = uld;
+    }
+    ulv = ulx;
+  }
+#pragma omp atomic compare capture release
+  if (ulx == ule) {
+    ulx = uld;
+  } else {
+    ulv = ulx;
+  }
+#pragma omp atomic compare capture release
+  if (ule == ulx) {
+    ulx = uld;
+  } else {
+    ulv = ulx;
+  }
+#pragma omp atomic compare capture release
+  {
+    ulr = ulx == ule;
+    if (ulr) {
+      ulx = uld;
+    }
+  }
+#pragma omp atomic compare capture release
+  {
+    ulr = ule == ulx;
+    if (ulr) {
+      ulx = uld;
+    }
+  }
+#pragma omp atomic compare capture release
+  {
+    ulr = ulx == ule;
+    if (ulr) {
+      ulx = uld;
+    } else {
+      ulv = ulx;
+    }
+  }
+#pragma omp atomic compare capture release
+  {
+    ulr = ule == ulx;
+    if (ulr) {
+      ulx = uld;
+    } else {
+      ulv = ulx;
+    }
+  }
+
+#pragma omp atomic compare capture seq_cst
+  {
+    ulv = ulx;
+    if (ule > ulx) {
+      ulx = ule;
+    }
+  }
+#pragma omp atomic compare capture seq_cst
+  {
+    ulv = ulx;
+    if (ulx > ule) {
+      ulx = ule;
+    }
+  }
+#pragma omp atomic compare capture seq_cst
+  {
+    ulv = ulx;
+    if (ule < ulx) {
+      ulx = ule;
+    }
+  }
+#pragma omp atomic compare capture seq_cst
+  {
+    ulv = ulx;
+    if (ulx < ule) {
+      ulx = ule;
+    }
+  }
+#pragma omp atomic compare capture seq_cst
+  {
+    ulv = ulx;
+    if (ulx == ule) {
+      ulx = uld;
+    }
+  }
+#pragma omp atomic compare capture seq_cst
+  {
+    ulv = ulx;
+    if (ule == ulx) {
+      ulx = uld;
+    }
+  }
+#pragma omp atomic compare capture seq_cst
+  {
+    if (ule > ulx) {
+      ulx = ule;
+    }
+    ulv = ulx;
+  }
+#pragma omp atomic compare capture seq_cst
+  {
+    if (ulx > ule) {
+      ulx = ule;
+    }
+    ulv = ulx;
+  }
+#pragma omp atomic compare capture seq_cst
+  {
+    if (ule < ulx) {
+      ulx = ule;
+    }
+    ulv = ulx;
+  }
+#pragma omp atomic compare capture seq_cst
+  {
+    if (ulx < ule) {
+      ulx = ule;
+    }
+    ulv = ulx;
+  }
+#pragma omp atomic compare capture seq_cst
+  {
+    if (ulx == ule) {
+      ulx = uld;
+    }
+    ulv = ulx;
+  }
+#pragma omp atomic compare capture seq_cst
+  {
+    if (ule == ulx) {
+      ulx = uld;
+    }
+    ulv = ulx;
+  }
+#pragma omp atomic compare capture seq_cst
+  if (ulx == ule) {
+    ulx = uld;
+  } else {
+    ulv = ulx;
+  }
+#pragma omp atomic compare capture seq_cst
+  if (ule == ulx) {
+    ulx = uld;
+  } else {
+    ulv = ulx;
+  }
+#pragma omp atomic compare capture seq_cst
+  {
+    ulr = ulx == ule;
+    if (ulr) {
+      ulx = uld;
+    }
+  }
+#pragma omp atomic compare capture seq_cst
+  {
+    ulr = ule == ulx;
+    if (ulr) {
+      ulx = uld;
+    }
+  }
+#pragma omp atomic compare capture seq_cst
+  {
+    ulr = ulx == ule;
+    if (ulr) {
+      ulx = uld;
+    } else {
+      ulv = ulx;
+    }
+  }
+#pragma omp atomic compare capture seq_cst
+  {
+    ulr = ule == ulx;
+    if (ulr) {
+      ulx = uld;
+    } else {
+      ulv = ulx;
+    }
+  }
+
+#pragma omp atomic compare capture
+  {
+    llv = llx;
+    if (lle > llx) {
+      llx = lle;
+    }
+  }
+#pragma omp atomic compare capture
+  {
+    llv = llx;
+    if (llx > lle) {
+      llx = lle;
+    }
+  }
+#pragma omp atomic compare capture
+  {
+    llv = llx;
+    if (lle < llx) {
+      llx = lle;
+    }
+  }
+#pragma omp atomic compare capture
+  {
+    llv = llx;
+    if (llx < lle) {
+      llx = lle;
+    }
+  }
+#pragma omp atomic compare capture
+  {
+    llv = llx;
+    if (llx == lle) {
+      llx = lld;
+    }
+  }
+#pragma omp atomic compare capture
+  {
+    llv = llx;
+    if (lle == llx) {
+      llx = lld;
+    }
+  }
+#pragma omp atomic compare capture
+  {
+    if (lle > llx) {
+      llx = lle;
+    }
+    llv = llx;
+  }
+#pragma omp atomic compare capture
+  {
+    if (llx > lle) {
+      llx = lle;
+    }
+    llv = llx;
+  }
+#pragma omp atomic compare capture
+  {
+    if (lle < llx) {
+      llx = lle;
+    }
+    llv = llx;
+  }
+#pragma omp atomic compare capture
+  {
+    if (llx < lle) {
+      llx = lle;
+    }
+    llv = llx;
+  }
+#pragma omp atomic compare capture
+  {
+    if (llx == lle) {
+      llx = lld;
+    }
+    llv = llx;
+  }
+#pragma omp atomic compare capture
+  {
+    if (lle == llx) {
+      llx = lld;
+    }
+    llv = llx;
+  }
+#pragma omp atomic compare capture
+  if (llx == lle) {
+    llx = lld;
+  } else {
+    llv = llx;
+  }
+#pragma omp atomic compare capture
+  if (lle == llx) {
+    llx = lld;
+  } else {
+    llv = llx;
+  }
+#pragma omp atomic compare capture
+  {
+    llr = llx == lle;
+    if (llr) {
+      llx = lld;
+    }
+  }
+#pragma omp atomic compare capture
+  {
+    llr = lle == llx;
+    if (llr) {
+      llx = lld;
+    }
+  }
+#pragma omp atomic compare capture
+  {
+    llr = llx == lle;
+    if (llr) {
+      llx = lld;
+    } else {
+      llv = llx;
+    }
+  }
+#pragma omp atomic compare capture
+  {
+    llr = lle == llx;
+    if (llr) {
+      llx = lld;
+    } else {
+      llv = llx;
+    }
+  }
+
+#pragma omp atomic compare capture acq_rel
+  {
+    llv = llx;
+    if (lle > llx) {
+      llx = lle;
+    }
+  }
+#pragma omp atomic compare capture acq_rel
+  {
+    llv = llx;
+    if (llx > lle) {
+      llx = lle;
+    }
+  }
+#pragma omp atomic compare capture acq_rel
+  {
+    llv = llx;
+    if (lle < llx) {
+      llx = lle;
+    }
+  }
+#pragma omp atomic compare capture acq_rel
+  {
+    llv = llx;
+    if (llx < lle) {
+      llx = lle;
+    }
+  }
+#pragma omp atomic compare capture acq_rel
+  {
+    llv = llx;
+    if (llx == lle) {
+      llx = lld;
+    }
+  }
+#pragma omp atomic compare capture acq_rel
+  {
+    llv = llx;
+    if (lle == llx) {
+      llx = lld;
+    }
+  }
+#pragma omp atomic compare capture acq_rel
+  {
+    if (lle > llx) {
+      llx = lle;
+    }
+    llv = llx;
+  }
+#pragma omp atomic compare capture acq_rel
+  {
+    if (llx > lle) {
+      llx = lle;
+    }
+    llv = llx;
+  }
+#pragma omp atomic compare capture acq_rel
+  {
+    if (lle < llx) {
+      llx = lle;
+    }
+    llv = llx;
+  }
+#pragma omp atomic compare capture acq_rel
+  {
+    if (llx < lle) {
+      llx = lle;
+    }
+    llv = llx;
+  }
+#pragma omp atomic compare capture acq_rel
+  {
+    if (llx == lle) {
+      llx = lld;
+    }
+    llv = llx;
+  }
+#pragma omp atomic compare capture acq_rel
+  {
+    if (lle == llx) {
+      llx = lld;
+    }
+    llv = llx;
+  }
+#pragma omp atomic compare capture acq_rel
+  if (llx == lle) {
+    llx = lld;
+  } else {
+    llv = llx;
+  }
+#pragma omp atomic compare capture acq_rel
+  if (lle == llx) {
+    llx = lld;
+  } else {
+    llv = llx;
+  }
+#pragma omp atomic compare capture acq_rel
+  {
+    llr = llx == lle;
+    if (llr) {
+      llx = lld;
+    }
+  }
+#pragma omp atomic compare capture acq_rel
+  {
+    llr = lle == llx;
+    if (llr) {
+      llx = lld;
+    }
+  }
+#pragma omp atomic compare capture acq_rel
+  {
+    llr = llx == lle;
+    if (llr) {
+      llx = lld;
+    } else {
+      llv = llx;
+    }
+  }
+#pragma omp atomic compare capture acq_rel
+  {
+    llr = lle == llx;
+    if (llr) {
+      llx = lld;
+    } else {
+      llv = llx;
+    }
+  }
+
+#pragma omp atomic compare capture acquire
+  {
+    llv = llx;
+    if (lle > llx) {
+      llx = lle;
+    }
+  }
+#pragma omp atomic compare capture acquire
+  {
+    llv = llx;
+    if (llx > lle) {
+      llx = lle;
+    }
+  }
+#pragma omp atomic compare capture acquire
+  {
+    llv = llx;
+    if (lle < llx) {
+      llx = lle;
+    }
+  }
+#pragma omp atomic compare capture acquire
+  {
+    llv = llx;
+    if (llx < lle) {
+      llx = lle;
+    }
+  }
+#pragma omp atomic compare capture acquire
+  {
+    llv = llx;
+    if (llx == lle) {
+      llx = lld;
+    }
+  }
+#pragma omp atomic compare capture acquire
+  {
+    llv = llx;
+    if (lle == llx) {
+      llx = lld;
+    }
+  }
+#pragma omp atomic compare capture acquire
+  {
+    if (lle > llx) {
+      llx = lle;
+    }
+    llv = llx;
+  }
+#pragma omp atomic compare capture acquire
+  {
+    if (llx > lle) {
+      llx = lle;
+    }
+    llv = llx;
+  }
+#pragma omp atomic compare capture acquire
+  {
+    if (lle < llx) {
+      llx = lle;
+    }
+    llv = llx;
+  }
+#pragma omp atomic compare capture acquire
+  {
+    if (llx < lle) {
+      llx = lle;
+    }
+    llv = llx;
+  }
+#pragma omp atomic compare capture acquire
+  {
+    if (llx == lle) {
+      llx = lld;
+    }
+    llv = llx;
+  }
+#pragma omp atomic compare capture acquire
+  {
+    if (lle == llx) {
+      llx = lld;
+    }
+    llv = llx;
+  }
+#pragma omp atomic compare capture acquire
+  if (llx == lle) {
+    llx = lld;
+  } else {
+    llv = llx;
+  }
+#pragma omp atomic compare capture acquire
+  if (lle == llx) {
+    llx = lld;
+  } else {
+    llv = llx;
+  }
+#pragma omp atomic compare capture acquire
+  {
+    llr = llx == lle;
+    if (llr) {
+      llx = lld;
+    }
+  }
+#pragma omp atomic compare capture acquire
+  {
+    llr = lle == llx;
+    if (llr) {
+      llx = lld;
+    }
+  }
+#pragma omp atomic compare capture acquire
+  {
+    llr = llx == lle;
+    if (llr) {
+      llx = lld;
+    } else {
+      llv = llx;
+    }
+  }
+#pragma omp atomic compare capture acquire
+  {
+    llr = lle == llx;
+    if (llr) {
+      llx = lld;
+    } else {
+      llv = llx;
+    }
+  }
+
+#pragma omp atomic compare capture relaxed
+  {
+    llv = llx;
+    if (lle > llx) {
+      llx = lle;
+    }
+  }
+#pragma omp atomic compare capture relaxed
+  {
+    llv = llx;
+    if (llx > lle) {
+      llx = lle;
+    }
+  }
+#pragma omp atomic compare capture relaxed
+  {
+    llv = llx;
+    if (lle < llx) {
+      llx = lle;
+    }
+  }
+#pragma omp atomic compare capture relaxed
+  {
+    llv = llx;
+    if (llx < lle) {
+      llx = lle;
+    }
+  }
+#pragma omp atomic compare capture relaxed
+  {
+    llv = llx;
+    if (llx == lle) {
+      llx = lld;
+    }
+  }
+#pragma omp atomic compare capture relaxed
+  {
+    llv = llx;
+    if (lle == llx) {
+      llx = lld;
+    }
+  }
+#pragma omp atomic compare capture relaxed
+  {
+    if (lle > llx) {
+      llx = lle;
+    }
+    llv = llx;
+  }
+#pragma omp atomic compare capture relaxed
+  {
+    if (llx > lle) {
+      llx = lle;
+    }
+    llv = llx;
+  }
+#pragma omp atomic compare capture relaxed
+  {
+    if (lle < llx) {
+      llx = lle;
+    }
+    llv = llx;
+  }
+#pragma omp atomic compare capture relaxed
+  {
+    if (llx < lle) {
+      llx = lle;
+    }
+    llv = llx;
+  }
+#pragma omp atomic compare capture relaxed
+  {
+    if (llx == lle) {
+      llx = lld;
+    }
+    llv = llx;
+  }
+#pragma omp atomic compare capture relaxed
+  {
+    if (lle == llx) {
+      llx = lld;
+    }
+    llv = llx;
+  }
+#pragma omp atomic compare capture relaxed
+  if (llx == lle) {
+    llx = lld;
+  } else {
+    llv = llx;
+  }
+#pragma omp atomic compare capture relaxed
+  if (lle == llx) {
+    llx = lld;
+  } else {
+    llv = llx;
+  }
+#pragma omp atomic compare capture relaxed
+  {
+    llr = llx == lle;
+    if (llr) {
+      llx = lld;
+    }
+  }
+#pragma omp atomic compare capture relaxed
+  {
+    llr = lle == llx;
+    if (llr) {
+      llx = lld;
+    }
+  }
+#pragma omp atomic compare capture relaxed
+  {
+    llr = llx == lle;
+    if (llr) {
+      llx = lld;
+    } else {
+      llv = llx;
+    }
+  }
+#pragma omp atomic compare capture relaxed
+  {
+    llr = lle == llx;
+    if (llr) {
+      llx = lld;
+    } else {
+      llv = llx;
+    }
+  }
+
+#pragma omp atomic compare capture release
+  {
+    llv = llx;
+    if (lle > llx) {
+      llx = lle;
+    }
+  }
+#pragma omp atomic compare capture release
+  {
+    llv = llx;
+    if (llx > lle) {
+      llx = lle;
+    }
+  }
+#pragma omp atomic compare capture release
+  {
+    llv = llx;
+    if (lle < llx) {
+      llx = lle;
+    }
+  }
+#pragma omp atomic compare capture release
+  {
+    llv = llx;
+    if (llx < lle) {
+      llx = lle;
+    }
+  }
+#pragma omp atomic compare capture release
+  {
+    llv = llx;
+    if (llx == lle) {
+      llx = lld;
+    }
+  }
+#pragma omp atomic compare capture release
+  {
+    llv = llx;
+    if (lle == llx) {
+      llx = lld;
+    }
+  }
+#pragma omp atomic compare capture release
+  {
+    if (lle > llx) {
+      llx = lle;
+    }
+    llv = llx;
+  }
+#pragma omp atomic compare capture release
+  {
+    if (llx > lle) {
+      llx = lle;
+    }
+    llv = llx;
+  }
+#pragma omp atomic compare capture release
+  {
+    if (lle < llx) {
+      llx = lle;
+    }
+    llv = llx;
+  }
+#pragma omp atomic compare capture release
+  {
+    if (llx < lle) {
+      llx = lle;
+    }
+    llv = llx;
+  }
+#pragma omp atomic compare capture release
+  {
+    if (llx == lle) {
+      llx = lld;
+    }
+    llv = llx;
+  }
+#pragma omp atomic compare capture release
+  {
+    if (lle == llx) {
+      llx = lld;
+    }
+    llv = llx;
+  }
+#pragma omp atomic compare capture release
+  if (llx == lle) {
+    llx = lld;
+  } else {
+    llv = llx;
+  }
+#pragma omp atomic compare capture release
+  if (lle == llx) {
+    llx = lld;
+  } else {
+    llv = llx;
+  }
+#pragma omp atomic compare capture release
+  {
+    llr = llx == lle;
+    if (llr) {
+      llx = lld;
+    }
+  }
+#pragma omp atomic compare capture release
+  {
+    llr = lle == llx;
+    if (llr) {
+      llx = lld;
+    }
+  }
+#pragma omp atomic compare capture release
+  {
+    llr = llx == lle;
+    if (llr) {
+      llx = lld;
+    } else {
+      llv = llx;
+    }
+  }
+#pragma omp atomic compare capture release
+  {
+    llr = lle == llx;
+    if (llr) {
+      llx = lld;
+    } else {
+      llv = llx;
+    }
+  }
+
+#pragma omp atomic compare capture seq_cst
+  {
+    llv = llx;
+    if (lle > llx) {
+      llx = lle;
+    }
+  }
+#pragma omp atomic compare capture seq_cst
+  {
+    llv = llx;
+    if (llx > lle) {
+      llx = lle;
+    }
+  }
+#pragma omp atomic compare capture seq_cst
+  {
+    llv = llx;
+    if (lle < llx) {
+      llx = lle;
+    }
+  }
+#pragma omp atomic compare capture seq_cst
+  {
+    llv = llx;
+    if (llx < lle) {
+      llx = lle;
+    }
+  }
+#pragma omp atomic compare capture seq_cst
+  {
+    llv = llx;
+    if (llx == lle) {
+      llx = lld;
+    }
+  }
+#pragma omp atomic compare capture seq_cst
+  {
+    llv = llx;
+    if (lle == llx) {
+      llx = lld;
+    }
+  }
+#pragma omp atomic compare capture seq_cst
+  {
+    if (lle > llx) {
+      llx = lle;
+    }
+    llv = llx;
+  }
+#pragma omp atomic compare capture seq_cst
+  {
+    if (llx > lle) {
+      llx = lle;
+    }
+    llv = llx;
+  }
+#pragma omp atomic compare capture seq_cst
+  {
+    if (lle < llx) {
+      llx = lle;
+    }
+    llv = llx;
+  }
+#pragma omp atomic compare capture seq_cst
+  {
+    if (llx < lle) {
+      llx = lle;
+    }
+    llv = llx;
+  }
+#pragma omp atomic compare capture seq_cst
+  {
+    if (llx == lle) {
+      llx = lld;
+    }
+    llv = llx;
+  }
+#pragma omp atomic compare capture seq_cst
+  {
+    if (lle == llx) {
+      llx = lld;
+    }
+    llv = llx;
+  }
+#pragma omp atomic compare capture seq_cst
+  if (llx == lle) {
+    llx = lld;
+  } else {
+    llv = llx;
+  }
+#pragma omp atomic compare capture seq_cst
+  if (lle == llx) {
+    llx = lld;
+  } else {
+    llv = llx;
+  }
+#pragma omp atomic compare capture seq_cst
+  {
+    llr = llx == lle;
+    if (llr) {
+      llx = lld;
+    }
+  }
+#pragma omp atomic compare capture seq_cst
+  {
+    llr = lle == llx;
+    if (llr) {
+      llx = lld;
+    }
+  }
+#pragma omp atomic compare capture seq_cst
+  {
+    llr = llx == lle;
+    if (llr) {
+      llx = lld;
+    } else {
+      llv = llx;
+    }
+  }
+#pragma omp atomic compare capture seq_cst
+  {
+    llr = lle == llx;
+    if (llr) {
+      llx = lld;
+    } else {
+      llv = llx;
+    }
+  }
+
+#pragma omp atomic compare capture
+  {
+    ullv = ullx;
+    if (ulle > ullx) {
+      ullx = ulle;
+    }
+  }
+#pragma omp atomic compare capture
+  {
+    ullv = ullx;
+    if (ullx > ulle) {
+      ullx = ulle;
+    }
+  }
+#pragma omp atomic compare capture
+  {
+    ullv = ullx;
+    if (ulle < ullx) {
+      ullx = ulle;
+    }
+  }
+#pragma omp atomic compare capture
+  {
+    ullv = ullx;
+    if (ullx < ulle) {
+      ullx = ulle;
+    }
+  }
+#pragma omp atomic compare capture
+  {
+    ullv = ullx;
+    if (ullx == ulle) {
+      ullx = ulld;
+    }
+  }
+#pragma omp atomic compare capture
+  {
+    ullv = ullx;
+    if (ulle == ullx) {
+      ullx = ulld;
+    }
+  }
+#pragma omp atomic compare capture
+  {
+    if (ulle > ullx) {
+      ullx = ulle;
+    }
+    ullv = ullx;
+  }
+#pragma omp atomic compare capture
+  {
+    if (ullx > ulle) {
+      ullx = ulle;
+    }
+    ullv = ullx;
+  }
+#pragma omp atomic compare capture
+  {
+    if (ulle < ullx) {
+      ullx = ulle;
+    }
+    ullv = ullx;
+  }
+#pragma omp atomic compare capture
+  {
+    if (ullx < ulle) {
+      ullx = ulle;
+    }
+    ullv = ullx;
+  }
+#pragma omp atomic compare capture
+  {
+    if (ullx == ulle) {
+      ullx = ulld;
+    }
+    ullv = ullx;
+  }
+#pragma omp atomic compare capture
+  {
+    if (ulle == ullx) {
+      ullx = ulld;
+    }
+    ullv = ullx;
+  }
+#pragma omp atomic compare capture
+  if (ullx == ulle) {
+    ullx = ulld;
+  } else {
+    ullv = ullx;
+  }
+#pragma omp atomic compare capture
+  if (ulle == ullx) {
+    ullx = ulld;
+  } else {
+    ullv = ullx;
+  }
+#pragma omp atomic compare capture
+  {
+    ullr = ullx == ulle;
+    if (ullr) {
+      ullx = ulld;
+    }
+  }
+#pragma omp atomic compare capture
+  {
+    ullr = ulle == ullx;
+    if (ullr) {
+      ullx = ulld;
+    }
+  }
+#pragma omp atomic compare capture
+  {
+    ullr = ullx == ulle;
+    if (ullr) {
+      ullx = ulld;
+    } else {
+      ullv = ullx;
+    }
+  }
+#pragma omp atomic compare capture
+  {
+    ullr = ulle == ullx;
+    if (ullr) {
+      ullx = ulld;
+    } else {
+      ullv = ullx;
+    }
+  }
+
+#pragma omp atomic compare capture acq_rel
+  {
+    ullv = ullx;
+    if (ulle > ullx) {
+      ullx = ulle;
+    }
+  }
+#pragma omp atomic compare capture acq_rel
+  {
+    ullv = ullx;
+    if (ullx > ulle) {
+      ullx = ulle;
+    }
+  }
+#pragma omp atomic compare capture acq_rel
+  {
+    ullv = ullx;
+    if (ulle < ullx) {
+      ullx = ulle;
+    }
+  }
+#pragma omp atomic compare capture acq_rel
+  {
+    ullv = ullx;
+    if (ullx < ulle) {
+      ullx = ulle;
+    }
+  }
+#pragma omp atomic compare capture acq_rel
+  {
+    ullv = ullx;
+    if (ullx == ulle) {
+      ullx = ulld;
+    }
+  }
+#pragma omp atomic compare capture acq_rel
+  {
+    ullv = ullx;
+    if (ulle == ullx) {
+      ullx = ulld;
+    }
+  }
+#pragma omp atomic compare capture acq_rel
+  {
+    if (ulle > ullx) {
+      ullx = ulle;
+    }
+    ullv = ullx;
+  }
+#pragma omp atomic compare capture acq_rel
+  {
+    if (ullx > ulle) {
+      ullx = ulle;
+    }
+    ullv = ullx;
+  }
+#pragma omp atomic compare capture acq_rel
+  {
+    if (ulle < ullx) {
+      ullx = ulle;
+    }
+    ullv = ullx;
+  }
+#pragma omp atomic compare capture acq_rel
+  {
+    if (ullx < ulle) {
+      ullx = ulle;
+    }
+    ullv = ullx;
+  }
+#pragma omp atomic compare capture acq_rel
+  {
+    if (ullx == ulle) {
+      ullx = ulld;
+    }
+    ullv = ullx;
+  }
+#pragma omp atomic compare capture acq_rel
+  {
+    if (ulle == ullx) {
+      ullx = ulld;
+    }
+    ullv = ullx;
+  }
+#pragma omp atomic compare capture acq_rel
+  if (ullx == ulle) {
+    ullx = ulld;
+  } else {
+    ullv = ullx;
+  }
+#pragma omp atomic compare capture acq_rel
+  if (ulle == ullx) {
+    ullx = ulld;
+  } else {
+    ullv = ullx;
+  }
+#pragma omp atomic compare capture acq_rel
+  {
+    ullr = ullx == ulle;
+    if (ullr) {
+      ullx = ulld;
+    }
+  }
+#pragma omp atomic compare capture acq_rel
+  {
+    ullr = ulle == ullx;
+    if (ullr) {
+      ullx = ulld;
+    }
+  }
+#pragma omp atomic compare capture acq_rel
+  {
+    ullr = ullx == ulle;
+    if (ullr) {
+      ullx = ulld;
+    } else {
+      ullv = ullx;
+    }
+  }
+#pragma omp atomic compare capture acq_rel
+  {
+    ullr = ulle == ullx;
+    if (ullr) {
+      ullx = ulld;
+    } else {
+      ullv = ullx;
+    }
+  }
+
+#pragma omp atomic compare capture acquire
+  {
+    ullv = ullx;
+    if (ulle > ullx) {
+      ullx = ulle;
+    }
+  }
+#pragma omp atomic compare capture acquire
+  {
+    ullv = ullx;
+    if (ullx > ulle) {
+      ullx = ulle;
+    }
+  }
+#pragma omp atomic compare capture acquire
+  {
+    ullv = ullx;
+    if (ulle < ullx) {
+      ullx = ulle;
+    }
+  }
+#pragma omp atomic compare capture acquire
+  {
+    ullv = ullx;
+    if (ullx < ulle) {
+      ullx = ulle;
+    }
+  }
+#pragma omp atomic compare capture acquire
+  {
+    ullv = ullx;
+    if (ullx == ulle) {
+      ullx = ulld;
+    }
+  }
+#pragma omp atomic compare capture acquire
+  {
+    ullv = ullx;
+    if (ulle == ullx) {
+      ullx = ulld;
+    }
+  }
+#pragma omp atomic compare capture acquire
+  {
+    if (ulle > ullx) {
+      ullx = ulle;
+    }
+    ullv = ullx;
+  }
+#pragma omp atomic compare capture acquire
+  {
+    if (ullx > ulle) {
+      ullx = ulle;
+    }
+    ullv = ullx;
+  }
+#pragma omp atomic compare capture acquire
+  {
+    if (ulle < ullx) {
+      ullx = ulle;
+    }
+    ullv = ullx;
+  }
+#pragma omp atomic compare capture acquire
+  {
+    if (ullx < ulle) {
+      ullx = ulle;
+    }
+    ullv = ullx;
+  }
+#pragma omp atomic compare capture acquire
+  {
+    if (ullx == ulle) {
+      ullx = ulld;
+    }
+    ullv = ullx;
+  }
+#pragma omp atomic compare capture acquire
+  {
+    if (ulle == ullx) {
+      ullx = ulld;
+    }
+    ullv = ullx;
+  }
+#pragma omp atomic compare capture acquire
+  if (ullx == ulle) {
+    ullx = ulld;
+  } else {
+    ullv = ullx;
+  }
+#pragma omp atomic compare capture acquire
+  if (ulle == ullx) {
+    ullx = ulld;
+  } else {
+    ullv = ullx;
+  }
+#pragma omp atomic compare capture acquire
+  {
+    ullr = ullx == ulle;
+    if (ullr) {
+      ullx = ulld;
+    }
+  }
+#pragma omp atomic compare capture acquire
+  {
+    ullr = ulle == ullx;
+    if (ullr) {
+      ullx = ulld;
+    }
+  }
+#pragma omp atomic compare capture acquire
+  {
+    ullr = ullx == ulle;
+    if (ullr) {
+      ullx = ulld;
+    } else {
+      ullv = ullx;
+    }
+  }
+#pragma omp atomic compare capture acquire
+  {
+    ullr = ulle == ullx;
+    if (ullr) {
+      ullx = ulld;
+    } else {
+      ullv = ullx;
+    }
+  }
+
+#pragma omp atomic compare capture relaxed
+  {
+    ullv = ullx;
+    if (ulle > ullx) {
+      ullx = ulle;
+    }
+  }
+#pragma omp atomic compare capture relaxed
+  {
+    ullv = ullx;
+    if (ullx > ulle) {
+      ullx = ulle;
+    }
+  }
+#pragma omp atomic compare capture relaxed
+  {
+    ullv = ullx;
+    if (ulle < ullx) {
+      ullx = ulle;
+    }
+  }
+#pragma omp atomic compare capture relaxed
+  {
+    ullv = ullx;
+    if (ullx < ulle) {
+      ullx = ulle;
+    }
+  }
+#pragma omp atomic compare capture relaxed
+  {
+    ullv = ullx;
+    if (ullx == ulle) {
+      ullx = ulld;
+    }
+  }
+#pragma omp atomic compare capture relaxed
+  {
+    ullv = ullx;
+    if (ulle == ullx) {
+      ullx = ulld;
+    }
+  }
+#pragma omp atomic compare capture relaxed
+  {
+    if (ulle > ullx) {
+      ullx = ulle;
+    }
+    ullv = ullx;
+  }
+#pragma omp atomic compare capture relaxed
+  {
+    if (ullx > ulle) {
+      ullx = ulle;
+    }
+    ullv = ullx;
+  }
+#pragma omp atomic compare capture relaxed
+  {
+    if (ulle < ullx) {
+      ullx = ulle;
+    }
+    ullv = ullx;
+  }
+#pragma omp atomic compare capture relaxed
+  {
+    if (ullx < ulle) {
+      ullx = ulle;
+    }
+    ullv = ullx;
+  }
+#pragma omp atomic compare capture relaxed
+  {
+    if (ullx == ulle) {
+      ullx = ulld;
+    }
+    ullv = ullx;
+  }
+#pragma omp atomic compare capture relaxed
+  {
+    if (ulle == ullx) {
+      ullx = ulld;
+    }
+    ullv = ullx;
+  }
+#pragma omp atomic compare capture relaxed
+  if (ullx == ulle) {
+    ullx = ulld;
+  } else {
+    ullv = ullx;
+  }
+#pragma omp atomic compare capture relaxed
+  if (ulle == ullx) {
+    ullx = ulld;
+  } else {
+    ullv = ullx;
+  }
+#pragma omp atomic compare capture relaxed
+  {
+    ullr = ullx == ulle;
+    if (ullr) {
+      ullx = ulld;
+    }
+  }
+#pragma omp atomic compare capture relaxed
+  {
+    ullr = ulle == ullx;
+    if (ullr) {
+      ullx = ulld;
+    }
+  }
+#pragma omp atomic compare capture relaxed
+  {
+    ullr = ullx == ulle;
+    if (ullr) {
+      ullx = ulld;
+    } else {
+      ullv = ullx;
+    }
+  }
+#pragma omp atomic compare capture relaxed
+  {
+    ullr = ulle == ullx;
+    if (ullr) {
+      ullx = ulld;
+    } else {
+      ullv = ullx;
+    }
+  }
+
+#pragma omp atomic compare capture release
+  {
+    ullv = ullx;
+    if (ulle > ullx) {
+      ullx = ulle;
+    }
+  }
+#pragma omp atomic compare capture release
+  {
+    ullv = ullx;
+    if (ullx > ulle) {
+      ullx = ulle;
+    }
+  }
+#pragma omp atomic compare capture release
+  {
+    ullv = ullx;
+    if (ulle < ullx) {
+      ullx = ulle;
+    }
+  }
+#pragma omp atomic compare capture release
+  {
+    ullv = ullx;
+    if (ullx < ulle) {
+      ullx = ulle;
+    }
+  }
+#pragma omp atomic compare capture release
+  {
+    ullv = ullx;
+    if (ullx == ulle) {
+      ullx = ulld;
+    }
+  }
+#pragma omp atomic compare capture release
+  {
+    ullv = ullx;
+    if (ulle == ullx) {
+      ullx = ulld;
+    }
+  }
+#pragma omp atomic compare capture release
+  {
+    if (ulle > ullx) {
+      ullx = ulle;
+    }
+    ullv = ullx;
+  }
+#pragma omp atomic compare capture release
+  {
+    if (ullx > ulle) {
+      ullx = ulle;
+    }
+    ullv = ullx;
+  }
+#pragma omp atomic compare capture release
+  {
+    if (ulle < ullx) {
+      ullx = ulle;
+    }
+    ullv = ullx;
+  }
+#pragma omp atomic compare capture release
+  {
+    if (ullx < ulle) {
+      ullx = ulle;
+    }
+    ullv = ullx;
+  }
+#pragma omp atomic compare capture release
+  {
+    if (ullx == ulle) {
+      ullx = ulld;
+    }
+    ullv = ullx;
+  }
+#pragma omp atomic compare capture release
+  {
+    if (ulle == ullx) {
+      ullx = ulld;
+    }
+    ullv = ullx;
+  }
+#pragma omp atomic compare capture release
+  if (ullx == ulle) {
+    ullx = ulld;
+  } else {
+    ullv = ullx;
+  }
+#pragma omp atomic compare capture release
+  if (ulle == ullx) {
+    ullx = ulld;
+  } else {
+    ullv = ullx;
+  }
+#pragma omp atomic compare capture release
+  {
+    ullr = ullx == ulle;
+    if (ullr) {
+      ullx = ulld;
+    }
+  }
+#pragma omp atomic compare capture release
+  {
+    ullr = ulle == ullx;
+    if (ullr) {
+      ullx = ulld;
+    }
+  }
+#pragma omp atomic compare capture release
+  {
+    ullr = ullx == ulle;
+    if (ullr) {
+      ullx = ulld;
+    } else {
+      ullv = ullx;
+    }
+  }
+#pragma omp atomic compare capture release
+  {
+    ullr = ulle == ullx;
+    if (ullr) {
+      ullx = ulld;
+    } else {
+      ullv = ullx;
+    }
+  }
+
+#pragma omp atomic compare capture seq_cst
+  {
+    ullv = ullx;
+    if (ulle > ullx) {
+      ullx = ulle;
+    }
+  }
+#pragma omp atomic compare capture seq_cst
+  {
+    ullv = ullx;
+    if (ullx > ulle) {
+      ullx = ulle;
+    }
+  }
+#pragma omp atomic compare capture seq_cst
+  {
+    ullv = ullx;
+    if (ulle < ullx) {
+      ullx = ulle;
+    }
+  }
+#pragma omp atomic compare capture seq_cst
+  {
+    ullv = ullx;
+    if (ullx < ulle) {
+      ullx = ulle;
+    }
+  }
+#pragma omp atomic compare capture seq_cst
+  {
+    ullv = ullx;
+    if (ullx == ulle) {
+      ullx = ulld;
+    }
+  }
+#pragma omp atomic compare capture seq_cst
+  {
+    ullv = ullx;
+    if (ulle == ullx) {
+      ullx = ulld;
+    }
+  }
+#pragma omp atomic compare capture seq_cst
+  {
+    if (ulle > ullx) {
+      ullx = ulle;
+    }
+    ullv = ullx;
+  }
+#pragma omp atomic compare capture seq_cst
+  {
+    if (ullx > ulle) {
+      ullx = ulle;
+    }
+    ullv = ullx;
+  }
+#pragma omp atomic compare capture seq_cst
+  {
+    if (ulle < ullx) {
+      ullx = ulle;
+    }
+    ullv = ullx;
+  }
+#pragma omp atomic compare capture seq_cst
+  {
+    if (ullx < ulle) {
+      ullx = ulle;
+    }
+    ullv = ullx;
+  }
+#pragma omp atomic compare capture seq_cst
+  {
+    if (ullx == ulle) {
+      ullx = ulld;
+    }
+    ullv = ullx;
+  }
+#pragma omp atomic compare capture seq_cst
+  {
+    if (ulle == ullx) {
+      ullx = ulld;
+    }
+    ullv = ullx;
+  }
+#pragma omp atomic compare capture seq_cst
+  if (ullx == ulle) {
+    ullx = ulld;
+  } else {
+    ullv = ullx;
+  }
+#pragma omp atomic compare capture seq_cst
+  if (ulle == ullx) {
+    ullx = ulld;
+  } else {
+    ullv = ullx;
+  }
+#pragma omp atomic compare capture seq_cst
+  {
+    ullr = ullx == ulle;
+    if (ullr) {
+      ullx = ulld;
+    }
+  }
+#pragma omp atomic compare capture seq_cst
+  {
+    ullr = ulle == ullx;
+    if (ullr) {
+      ullx = ulld;
+    }
+  }
+#pragma omp atomic compare capture seq_cst
+  {
+    ullr = ullx == ulle;
+    if (ullr) {
+      ullx = ulld;
+    } else {
+      ullv = ullx;
+    }
+  }
+#pragma omp atomic compare capture seq_cst
+  {
+    ullr = ulle == ullx;
+    if (ullr) {
+      ullx = ulld;
+    } else {
+      ullv = ullx;
+    }
+  }
+}
+
 #endif
 // CHECK-LABEL: @foo(
 // CHECK-NEXT:  entry:
