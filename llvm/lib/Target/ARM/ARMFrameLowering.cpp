@@ -1302,6 +1302,9 @@ void ARMFrameLowering::emitEpilogue(MachineFunction &MF,
                    MachineInstr::FrameDestroy);
 
     // Increment past our save areas.
+    if (AFI->getGPRCalleeSavedArea2Size() && STI.splitFramePointerPush(MF))
+      MBBI++;
+
     if (MBBI != MBB.end() && AFI->getDPRCalleeSavedAreaSize()) {
       MBBI++;
       // Since vpop register list cannot have gaps, there may be multiple vpop
@@ -1316,7 +1319,8 @@ void ARMFrameLowering::emitEpilogue(MachineFunction &MF,
                    MachineInstr::FrameDestroy);
     }
 
-    if (AFI->getGPRCalleeSavedArea2Size()) MBBI++;
+    if (AFI->getGPRCalleeSavedArea2Size() && !STI.splitFramePointerPush(MF))
+      MBBI++;
     if (AFI->getGPRCalleeSavedArea1Size()) MBBI++;
 
     if (ReservedArgStack || IncomingArgStackToRestore) {
