@@ -11,6 +11,16 @@ void a() {
   f = (char *)(f - (char *)0);         // expected-warning {{performing pointer subtraction with a null pointer may have undefined behavior}}
   f = (char *)((char *)0 - (char *)0); // valid in C++
 
+  if (1)
+    f = (char *)((char *)0 - f);         // expected-warning {{performing pointer subtraction with a null pointer may have undefined behavior}}
+  else
+    f = (char *)((char *)0 - f);
+
+  if (0)
+    f = (char *)((char *)0 - f);
+  else
+    f = (char *)((char *)0 - f);         // expected-warning {{performing pointer subtraction with a null pointer may have undefined behavior}}
+
 #ifndef SYSTEM_WARNINGS
   SYSTEM_MACRO(f);
 #else
