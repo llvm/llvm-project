@@ -367,8 +367,10 @@ def uimm6gt32 : ImmLeaf<XLenVT, [{
 
 // Addressing modes.
 // Necessary because a frameindex can't be matched directly in a pattern.
-def AddrFI : ComplexPattern<iPTR, 1, "SelectAddrFI">;
+def FrameAddrRegImm : ComplexPattern<iPTR, 2, "SelectFrameAddrRegImm",
+                                     [frameindex, or, add]>;
 def BaseAddr : ComplexPattern<iPTR, 1, "SelectBaseAddr">;
+def AddrRegImm : ComplexPattern<iPTR, 2, "SelectAddrRegImm">;
 
 // Return the negation of an immediate value.
 def NegImm : SDNodeXForm<imm, [{
@@ -1115,9 +1117,6 @@ class PatGprUimmLog2XLen<SDPatternOperator OpNode, RVInstIShift Inst>
 
 /// Predicates
 
-def IsOrAdd: PatFrag<(ops node:$A, node:$B), (or node:$A, node:$B), [{
-  return isOrEquivalentToAdd(N);
-}]>;
 def assertsexti32 : PatFrag<(ops node:$src), (assertsext node:$src), [{
   return cast<VTSDNode>(N->getOperand(1))->getVT().bitsLE(MVT::i32);
 }]>;
@@ -1205,10 +1204,8 @@ def PseudoAddTPRel : Pseudo<(outs GPR:$rd),
 
 /// FrameIndex calculations
 
-def : Pat<(add (XLenVT AddrFI:$Rs), simm12:$imm12),
-          (ADDI (XLenVT AddrFI:$Rs), simm12:$imm12)>;
-def : Pat<(IsOrAdd (XLenVT AddrFI:$Rs), simm12:$imm12),
-          (ADDI (XLenVT AddrFI:$Rs), simm12:$imm12)>;
+def : Pat<(FrameAddrRegImm GPR:$rs1, simm12:$imm12),
+          (ADDI GPR:$rs1, simm12:$imm12)>;
 
 /// Setcc
 
@@ -1397,11 +1394,8 @@ def PseudoZEXT_W : Pseudo<(outs GPR:$rd), (ins GPR:$rs), [], "zext.w", "$rd, $rs
 /// Loads
 
 multiclass LdPat<PatFrag LoadOp, RVInst Inst, ValueType vt = XLenVT> {
-  def : Pat<(vt (LoadOp BaseAddr:$rs1)), (Inst BaseAddr:$rs1, 0)>;
-  def : Pat<(vt (LoadOp (add BaseAddr:$rs1, simm12:$imm12))),
-            (Inst BaseAddr:$rs1, simm12:$imm12)>;
-  def : Pat<(vt (LoadOp (IsOrAdd AddrFI:$rs1, simm12:$imm12))),
-            (Inst AddrFI:$rs1, simm12:$imm12)>;
+  def : Pat<(vt (LoadOp (AddrRegImm GPR:$rs1, simm12:$imm12))),
+            (Inst GPR:$rs1, simm12:$imm12)>;
 }
 
 defm : LdPat<sextloadi8, LB>;
@@ -1416,12 +1410,8 @@ defm : LdPat<zextloadi16, LHU>;
 
 multiclass StPat<PatFrag StoreOp, RVInst Inst, RegisterClass StTy,
                  ValueType vt> {
-  def : Pat<(StoreOp (vt StTy:$rs2), BaseAddr:$rs1),
-            (Inst StTy:$rs2, BaseAddr:$rs1, 0)>;
-  def : Pat<(StoreOp (vt StTy:$rs2), (add BaseAddr:$rs1, simm12:$imm12)),
-            (Inst StTy:$rs2, BaseAddr:$rs1, simm12:$imm12)>;
-  def : Pat<(StoreOp (vt StTy:$rs2), (IsOrAdd AddrFI:$rs1, simm12:$imm12)),
-            (Inst StTy:$rs2, AddrFI:$rs1, simm12:$imm12)>;
+  def : Pat<(StoreOp (vt StTy:$rs2), (AddrRegImm GPR:$rs1, simm12:$imm12)),
+            (Inst StTy:$rs2, GPR:$rs1, simm12:$imm12)>;
 }
 
 defm : StPat<truncstorei8, SB, GPR, XLenVT>;
