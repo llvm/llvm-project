@@ -991,7 +991,9 @@ void SymtabSection::finalizeContents() {
 
   // Local symbols aren't in the SymbolTable, so we walk the list of object
   // files to gather them.
-  // But if `-x` is set, then we don't need to.
+  // But if `-x` is set, then we don't need to. localSymbolsHandler() will do
+  // the right thing regardless, but this check is a perf optimization because
+  // iterating through all the input files and their symbols is expensive.
   if (config->localSymbolsPresence != SymtabPresence::None) {
     for (const InputFile *file : inputFiles) {
       if (auto *objFile = dyn_cast<ObjFile>(file)) {
