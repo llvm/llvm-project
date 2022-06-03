@@ -23,6 +23,8 @@
 
 namespace llvm {
 
+class MachineFunction;
+
 struct Chunk {
   int Begin;
   int End;

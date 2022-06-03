@@ -9,9 +9,10 @@
 #ifndef LLVM_TOOLS_LLVMPDBDUMP_OUTPUTSTYLE_H
 #define LLVM_TOOLS_LLVMPDBDUMP_OUTPUTSTYLE_H
 
-#include "llvm/Support/Error.h"
-
 namespace llvm {
+
+class Error;
+
 namespace pdb {
 
 class OutputStyle {

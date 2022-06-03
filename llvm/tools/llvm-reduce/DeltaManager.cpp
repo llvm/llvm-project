@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "DeltaManager.h"
+#include "ReducerWorkItem.h"
 #include "TestRunner.h"
 #include "deltas/Delta.h"
 #include "deltas/ReduceAliases.h"

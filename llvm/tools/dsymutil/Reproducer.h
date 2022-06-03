@@ -9,7 +9,6 @@
 #ifndef LLVM_TOOLS_DSYMUTIL_REPRODUCER_H
 #define LLVM_TOOLS_DSYMUTIL_REPRODUCER_H
 
-#include "llvm/Support/Error.h"
 #include "llvm/Support/FileCollector.h"
 #include "llvm/Support/VirtualFileSystem.h"
 

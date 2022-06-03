@@ -7,6 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "TestRunner.h"
+#include "ReducerWorkItem.h"
+#include "llvm/CodeGen/MachineFunction.h"
 
 using namespace llvm;
 
@@ -44,4 +46,9 @@ int TestRunner::run(StringRef Filename) {
   }
 
   return !Result;
+}
+
+void TestRunner::setProgram(std::unique_ptr<ReducerWorkItem> P) {
+  assert(P && "Setting null program?");
+  Program = std::move(P);
 }
