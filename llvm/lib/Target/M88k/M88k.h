@@ -24,6 +24,7 @@ class M88kSubtarget;
 class M88kTargetMachine;
 class FunctionPass;
 class InstructionSelector;
+class PassRegistry;
 
 FunctionPass *createM88kISelDag(M88kTargetMachine &TM,
                                 CodeGenOpt::Level OptLevel);
