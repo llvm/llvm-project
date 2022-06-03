@@ -1863,19 +1863,17 @@ bool RISCVDAGToDAGISel::SelectFrameAddrRegImm(SDValue Addr, SDValue &Base,
     return true;
   }
 
-  // TODO: Use SelectionDAG::isBaseWithConstantOffset.
-  if (Addr.getOpcode() == ISD::ADD ||
-      (Addr.getOpcode() == ISD::OR && isOrEquivalentToAdd(Addr.getNode()))) {
-    if (auto *FIN = dyn_cast<FrameIndexSDNode>(Addr.getOperand(0))) {
-      if (auto *CN = dyn_cast<ConstantSDNode>(Addr.getOperand(1))) {
-        if (isInt<12>(CN->getSExtValue())) {
-          Base = CurDAG->getTargetFrameIndex(FIN->getIndex(),
-                                             Subtarget->getXLenVT());
-          Offset = CurDAG->getTargetConstant(CN->getSExtValue(), SDLoc(Addr),
-                                             Subtarget->getXLenVT());
-          return true;
-        }
-      }
+  if (!CurDAG->isBaseWithConstantOffset(Addr))
+    return false;
+
+  if (auto *FIN = dyn_cast<FrameIndexSDNode>(Addr.getOperand(0))) {
+    auto *CN = cast<ConstantSDNode>(Addr.getOperand(1));
+    if (isInt<12>(CN->getSExtValue())) {
+      Base = CurDAG->getTargetFrameIndex(FIN->getIndex(),
+                                         Subtarget->getXLenVT());
+      Offset = CurDAG->getTargetConstant(CN->getSExtValue(), SDLoc(Addr),
+                                         Subtarget->getXLenVT());
+      return true;
     }
   }
 
@@ -1894,29 +1892,12 @@ bool RISCVDAGToDAGISel::SelectBaseAddr(SDValue Addr, SDValue &Base) {
 
 bool RISCVDAGToDAGISel::SelectAddrRegImm(SDValue Addr, SDValue &Base,
                                          SDValue &Offset) {
-  if (Addr.getOpcode() == ISD::ADD) {
-    if (auto *CN = dyn_cast<ConstantSDNode>(Addr.getOperand(1))) {
-      if (isInt<12>(CN->getSExtValue())) {
-        SelectBaseAddr(Addr.getOperand(0), Base);
-        Offset = CurDAG->getTargetConstant(CN->getSExtValue(), SDLoc(Addr),
-                                           Subtarget->getXLenVT());
-        return true;
-      }
-    }
-  } else if (Addr.getOpcode() == ISD::OR) {
-    // We might be able to treat this OR as an ADD.
-    // TODO: Use SelectionDAG::isBaseWithConstantOffset.
-    if (auto *FIN = dyn_cast<FrameIndexSDNode>(Addr.getOperand(0))) {
-      if (auto *CN = dyn_cast<ConstantSDNode>(Addr.getOperand(1))) {
-        if (isInt<12>(CN->getSExtValue()) &&
-            isOrEquivalentToAdd(Addr.getNode())) {
-          Base = CurDAG->getTargetFrameIndex(FIN->getIndex(),
-                                             Subtarget->getXLenVT());
-          Offset = CurDAG->getTargetConstant(CN->getSExtValue(), SDLoc(Addr),
-                                             Subtarget->getXLenVT());
-          return true;
-        }
-      }
+  if (CurDAG->isBaseWithConstantOffset(Addr)) {
+    auto *CN = cast<ConstantSDNode>(Addr.getOperand(1));
+    if (isInt<12>(CN->getSExtValue())) {
+      Offset = CurDAG->getTargetConstant(CN->getSExtValue(), SDLoc(Addr),
+                                         Subtarget->getXLenVT());
+      return SelectBaseAddr(Addr.getOperand(0), Base);
     }
   }
 
