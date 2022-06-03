@@ -3,18 +3,8 @@ set(LLVM_LINK_COMPONENTS
   Support
   )
 
-add_subdirectory(ConfusableTable)
-
-add_custom_command(
-    OUTPUT Confusables.inc
-    COMMAND make_confusable_table ${CMAKE_CURRENT_SOURCE_DIR}/ConfusableTable/confusables.txt ${CMAKE_CURRENT_BINARY_DIR}/Confusables.inc
-    DEPENDS make_confusable_table ConfusableTable/confusables.txt)
-
-add_custom_target(genconfusable DEPENDS Confusables.inc)
-
 add_clang_library(clangTidyMiscModule
   DefinitionsInHeadersCheck.cpp
-  Homoglyph.cpp
   MiscTidyModule.cpp
   MisleadingBidirectional.cpp
   MisleadingIdentifier.cpp
@@ -38,7 +28,6 @@ add_clang_library(clangTidyMiscModule
 
   DEPENDS
   omp_gen
-  genconfusable
   )
 
 clang_target_link_libraries(clangTidyMiscModule
