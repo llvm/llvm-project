@@ -301,8 +301,8 @@ Sema::ActOnModuleDecl(SourceLocation StartLoc, SourceLocation ModuleLoc,
   const_cast<LangOptions&>(getLangOpts()).CurrentModule = ModuleName;
 
   auto &Map = PP.getHeaderSearchInfo().getModuleMap();
-  Module *Mod;
-
+  Module *Mod;                 // The module we are creating.
+  Module *Interface = nullptr; // The interface for an implementation.
   switch (MDK) {
   case ModuleDeclKind::Interface:
   case ModuleDeclKind::PartitionInterface: {
@@ -339,18 +339,19 @@ Sema::ActOnModuleDecl(SourceLocation StartLoc, SourceLocation ModuleLoc,
     // we're building if `LangOpts.CurrentModule` equals to 'ModuleName'.
     // Change the value for `LangOpts.CurrentModule` temporarily to make the
     // module loader work properly.
-    const_cast<LangOptions&>(getLangOpts()).CurrentModule = "";
-    Mod = getModuleLoader().loadModule(ModuleLoc, {ModuleNameLoc},
-                                       Module::AllVisible,
-                                       /*IsInclusionDirective=*/false);
+    const_cast<LangOptions &>(getLangOpts()).CurrentModule = "";
+    Interface = getModuleLoader().loadModule(ModuleLoc, {ModuleNameLoc},
+                                             Module::AllVisible,
+                                             /*IsInclusionDirective=*/false);
     const_cast<LangOptions&>(getLangOpts()).CurrentModule = ModuleName;
 
-    if (!Mod) {
+    if (!Interface) {
       Diag(ModuleLoc, diag::err_module_not_defined) << ModuleName;
       // Create an empty module interface unit for error recovery.
       Mod = Map.createModuleForInterfaceUnit(ModuleLoc, ModuleName);
+    } else {
+      Mod = Map.createModuleForImplementationUnit(ModuleLoc, ModuleName);
     }
-
   } break;
 
   case ModuleDeclKind::PartitionImplementation:
@@ -389,19 +390,31 @@ Sema::ActOnModuleDecl(SourceLocation StartLoc, SourceLocation ModuleLoc,
   // statements, so imports are allowed.
   ImportState = ModuleImportState::ImportAllowed;
 
-  // For an implementation, We already made an implicit import (its interface).
-  // Make and return the import decl to be added to the current TU.
-  if (MDK == ModuleDeclKind::Implementation) {
-    // Make the import decl for the interface.
-    ImportDecl *Import =
-        ImportDecl::Create(Context, CurContext, ModuleLoc, Mod, Path[0].second);
-    // and return it to be added.
+  getASTContext().setNamedModuleForCodeGen(Mod);
+
+  // We already potentially made an implicit import (in the case of a module
+  // implementation unit importing its interface).  Make this module visible
+  // and return the import decl to be added to the current TU.
+  if (Interface) {
+
+    VisibleModules.setVisible(Interface, ModuleLoc);
+
+    // Make the import decl for the interface in the impl module.
+    ImportDecl *Import = ImportDecl::Create(Context, CurContext, ModuleLoc,
+                                            Interface, Path[0].second);
+    CurContext->addDecl(Import);
+
+    // Sequence initialization of the imported module before that of the current
+    // module, if any.
+    Context.addModuleInitializer(ModuleScopes.back().Module, Import);
+    Mod->Imports.insert(Interface); // As if we imported it.
+    // Also save this as a shortcut to checking for decls in the interface
+    ThePrimaryInterface = Interface;
+    // If we made an implicit import of the module interface, then return the
+    // imported module decl.
     return ConvertDeclToDeclGroup(Import);
   }
 
-  getASTContext().setNamedModuleForCodeGen(Mod);
-
-  // FIXME: Create a ModuleDecl.
   return nullptr;
 }
 
@@ -427,19 +440,17 @@ Sema::ActOnPrivateModuleFragmentDecl(SourceLocation ModuleLoc,
     Diag(ModuleScopes.back().BeginLoc, diag::note_previous_definition);
     return nullptr;
 
-  case Module::ModuleInterfaceUnit:
-    break;
-  }
-
-  if (!ModuleScopes.back().ModuleInterface) {
+  case Module::ModuleImplementationUnit:
     Diag(PrivateLoc, diag::err_private_module_fragment_not_module_interface);
     Diag(ModuleScopes.back().BeginLoc,
          diag::note_not_module_interface_add_export)
         << FixItHint::CreateInsertion(ModuleScopes.back().BeginLoc, "export ");
     return nullptr;
+
+  case Module::ModuleInterfaceUnit:
+    break;
   }
 
-  // FIXME: Check this isn't a module interface partition.
   // FIXME: Check that this translation unit does not import any partitions;
   // such imports would violate [basic.link]/2's "shall be the only module unit"
   // restriction.
