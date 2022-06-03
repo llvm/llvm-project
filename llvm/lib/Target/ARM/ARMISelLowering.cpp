@@ -5553,7 +5553,7 @@ static SDValue bitcastf32Toi32(SDValue Op, SelectionDAG &DAG) {
 
   if (LoadSDNode *Ld = dyn_cast<LoadSDNode>(Op))
     return DAG.getLoad(MVT::i32, SDLoc(Op), Ld->getChain(), Ld->getBasePtr(),
-                       Ld->getPointerInfo(), Ld->getAlignment(),
+                       Ld->getPointerInfo(), Ld->getAlign(),
                        Ld->getMemOperand()->getFlags());
 
   llvm_unreachable("Unknown VFP cmp argument!");
@@ -5573,14 +5573,14 @@ static void expandf64Toi32(SDValue Op, SelectionDAG &DAG,
     SDValue Ptr = Ld->getBasePtr();
     RetVal1 =
         DAG.getLoad(MVT::i32, dl, Ld->getChain(), Ptr, Ld->getPointerInfo(),
-                    Ld->getAlignment(), Ld->getMemOperand()->getFlags());
+                    Ld->getAlign(), Ld->getMemOperand()->getFlags());
 
     EVT PtrType = Ptr.getValueType();
-    unsigned NewAlign = MinAlign(Ld->getAlignment(), 4);
     SDValue NewPtr = DAG.getNode(ISD::ADD, dl,
                                  PtrType, Ptr, DAG.getConstant(4, dl, PtrType));
     RetVal2 = DAG.getLoad(MVT::i32, dl, Ld->getChain(), NewPtr,
-                          Ld->getPointerInfo().getWithOffset(4), NewAlign,
+                          Ld->getPointerInfo().getWithOffset(4),
+                          commonAlignment(Ld->getAlign(), 4),
                           Ld->getMemOperand()->getFlags());
     return;
   }
@@ -9363,15 +9363,15 @@ static SDValue SkipLoadExtensionForVMULL(LoadSDNode *LD, SelectionDAG& DAG) {
   // The load already has the right type.
   if (ExtendedTy == LD->getMemoryVT())
     return DAG.getLoad(LD->getMemoryVT(), SDLoc(LD), LD->getChain(),
-                       LD->getBasePtr(), LD->getPointerInfo(),
-                       LD->getAlignment(), LD->getMemOperand()->getFlags());
+                       LD->getBasePtr(), LD->getPointerInfo(), LD->getAlign(),
+                       LD->getMemOperand()->getFlags());
 
   // We need to create a zextload/sextload. We cannot just create a load
   // followed by a zext/zext node because LowerMUL is also run during normal
   // operation legalization where we can't create illegal types.
   return DAG.getExtLoad(LD->getExtensionType(), SDLoc(LD), ExtendedTy,
                         LD->getChain(), LD->getBasePtr(), LD->getPointerInfo(),
-                        LD->getMemoryVT(), LD->getAlignment(),
+                        LD->getMemoryVT(), LD->getAlign(),
                         LD->getMemOperand()->getFlags());
 }
 
@@ -14787,14 +14787,14 @@ static SDValue PerformVMOVRRDCombine(SDNode *N,
     SDValue BasePtr = LD->getBasePtr();
     SDValue NewLD1 =
         DAG.getLoad(MVT::i32, DL, LD->getChain(), BasePtr, LD->getPointerInfo(),
-                    LD->getAlignment(), LD->getMemOperand()->getFlags());
+                    LD->getAlign(), LD->getMemOperand()->getFlags());
 
     SDValue OffsetPtr = DAG.getNode(ISD::ADD, DL, MVT::i32, BasePtr,
                                     DAG.getConstant(4, DL, MVT::i32));
 
     SDValue NewLD2 = DAG.getLoad(MVT::i32, DL, LD->getChain(), OffsetPtr,
                                  LD->getPointerInfo().getWithOffset(4),
-                                 std::min(4U, LD->getAlignment()),
+                                 commonAlignment(LD->getAlign(), 4),
                                  LD->getMemOperand()->getFlags());
 
     DAG.ReplaceAllUsesOfValueWith(SDValue(LD, 1), NewLD2.getValue(1));
@@ -15737,7 +15737,7 @@ static bool TryCombineBaseUpdate(struct BaseUpdateTarget &Target,
   // Now, create a _UPD node, taking care of not breaking alignment.
 
   EVT AlignedVecTy = VecTy;
-  unsigned Alignment = MemN->getAlignment();
+  Align Alignment = MemN->getAlign();
 
   // If this is a less-than-standard-aligned load/store, change the type to
   // match the standard alignment.
@@ -15754,10 +15754,8 @@ static bool TryCombineBaseUpdate(struct BaseUpdateTarget &Target,
   //   memory type to match the explicit alignment.  That way, we don't
   //   generate non-standard-aligned ARMISD::VLDx nodes.
   if (isa<LSBaseSDNode>(N)) {
-    if (Alignment == 0)
-      Alignment = 1;
-    if (Alignment < VecTy.getScalarSizeInBits() / 8) {
-      MVT EltTy = MVT::getIntegerVT(Alignment * 8);
+    if (Alignment.value() < VecTy.getScalarSizeInBits() / 8) {
+      MVT EltTy = MVT::getIntegerVT(Alignment.value() * 8);
       assert(NumVecs == 1 && "Unexpected multi-element generic load/store.");
       assert(!isLaneOp && "Unexpected generic load/store lane.");
       unsigned NumElts = NumBytes / (EltTy.getSizeInBits() / 8);
@@ -15770,7 +15768,7 @@ static bool TryCombineBaseUpdate(struct BaseUpdateTarget &Target,
     // alignment of the memory type.
     // Intrinsics, however, always get an explicit alignment, set to the
     // alignment of the MMO.
-    Alignment = 1;
+    Alignment = Align(1);
   }
 
   // Create the new updating load/store node.
@@ -15803,7 +15801,7 @@ static bool TryCombineBaseUpdate(struct BaseUpdateTarget &Target,
   }
 
   // For all node types, the alignment operand is always the last one.
-  Ops.push_back(DAG.getConstant(Alignment, dl, MVT::i32));
+  Ops.push_back(DAG.getConstant(Alignment.value(), dl, MVT::i32));
 
   // If this is a non-standard-aligned STORE, the penultimate operand is the
   // stored value.  Bitcast it to the aligned type.
@@ -16274,7 +16272,7 @@ static SDValue PerformVDUPCombine(SDNode *N, SelectionDAG &DAG,
   if (LD && Op.hasOneUse() && LD->isUnindexed() &&
       LD->getMemoryVT() == N->getValueType(0).getVectorElementType()) {
     SDValue Ops[] = {LD->getOperand(0), LD->getOperand(1),
-                     DAG.getConstant(LD->getAlignment(), SDLoc(N), MVT::i32)};
+                     DAG.getConstant(LD->getAlign().value(), SDLoc(N), MVT::i32)};
     SDVTList SDTys = DAG.getVTList(N->getValueType(0), MVT::Other);
     SDValue VLDDup =
         DAG.getMemIntrinsicNode(ARMISD::VLD1DUP, SDLoc(N), SDTys, Ops,
@@ -16376,7 +16374,7 @@ static SDValue PerformTruncatingStoreCombine(StoreSDNode *St,
                                  ShuffWide, DAG.getIntPtrConstant(I, DL));
     SDValue Ch =
         DAG.getStore(St->getChain(), DL, SubVec, BasePtr, St->getPointerInfo(),
-                     St->getAlignment(), St->getMemOperand()->getFlags());
+                     St->getAlign(), St->getMemOperand()->getFlags());
     BasePtr =
         DAG.getNode(ISD::ADD, DL, BasePtr.getValueType(), BasePtr, Increment);
     Chains.push_back(Ch);
@@ -16624,7 +16622,7 @@ static SDValue PerformSTORECombine(SDNode *N,
     DCI.AddToWorklist(ExtElt.getNode());
     DCI.AddToWorklist(V.getNode());
     return DAG.getStore(St->getChain(), dl, V, St->getBasePtr(),
-                        St->getPointerInfo(), St->getAlignment(),
+                        St->getPointerInfo(), St->getAlign(),
                         St->getMemOperand()->getFlags(), St->getAAInfo());
   }
 
@@ -21332,7 +21330,7 @@ bool ARMTargetLowering::lowerInterleavedLoad(
 
       SmallVector<Value *, 2> Ops;
       Ops.push_back(Builder.CreateBitCast(BaseAddr, Int8Ptr));
-      Ops.push_back(Builder.getInt32(LI->getAlignment()));
+      Ops.push_back(Builder.getInt32(LI->getAlign().value()));
 
       return Builder.CreateCall(VldnFunc, Ops, "vldN");
     } else {
@@ -21502,7 +21500,7 @@ bool ARMTargetLowering::lowerInterleavedStore(StoreInst *SI,
       SmallVector<Value *, 6> Ops;
       Ops.push_back(Builder.CreateBitCast(BaseAddr, Int8Ptr));
       append_range(Ops, Shuffles);
-      Ops.push_back(Builder.getInt32(SI->getAlignment()));
+      Ops.push_back(Builder.getInt32(SI->getAlign().value()));
       Builder.CreateCall(VstNFunc, Ops);
     } else {
       assert((Factor == 2 || Factor == 4) &&

@@ -149,7 +149,7 @@ CallInst *IRBuilderBase::CreateMemSet(Value *Ptr, Value *Val, Value *Size,
   CallInst *CI = createCallHelper(TheFn, Ops, this);
 
   if (Align)
-    cast<MemSetInst>(CI)->setDestAlignment(Align->value());
+    cast<MemSetInst>(CI)->setDestAlignment(*Align);
 
   // Set the TBAA info if present.
   if (TBAATag)
