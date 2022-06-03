@@ -33,6 +33,11 @@ func.func @sqrt(%arg: complex<f32>) -> complex<f32> {
   func.return %sqrt : complex<f32>
 }
 
+func.func @tanh(%arg: complex<f32>) -> complex<f32> {
+  %tanh = complex.tanh %arg : complex<f32>
+  func.return %tanh : complex<f32>
+}
+
 // %input contains pairs of lhs, rhs, i.e. [lhs_0, rhs_0, lhs_1, rhs_1,...]
 func.func @test_binary(%input: tensor<?xcomplex<f32>>,
                        %func: (complex<f32>, complex<f32>) -> complex<f32>) {
@@ -115,5 +120,37 @@ func.func @entry() {
   call @test_binary(%atan2_test_cast, %atan2_func)
     : (tensor<?xcomplex<f32>>, (complex<f32>, complex<f32>)
     -> complex<f32>) -> ()
+
+  // complex.tanh test
+  %tanh_test = arith.constant dense<[
+    (-1.0, -1.0),
+    // CHECK:      -1.08392
+    // CHECK-NEXT: -0.271753
+    (-1.0, 1.0),
+    // CHECK-NEXT:  -1.08392
+    // CHECK-NEXT:  0.271753
+    (0.0, 0.0),
+    // CHECK-NEXT:  0
+    // CHECK-NEXT:  0
+    (0.0, 1.0),
+    // CHECK-NEXT:  0
+    // CHECK-NEXT:  1.5574
+    (1.0, -1.0),
+    // CHECK-NEXT:  1.08392
+    // CHECK-NEXT:  -0.271753
+    (1.0, 0.0),
+    // CHECK-NEXT:  0.761594
+    // CHECK-NEXT:  0
+    (1.0, 1.0)
+    // CHECK-NEXT:  1.08392
+    // CHECK-NEXT:  0.271753
+  ]> : tensor<7xcomplex<f32>>
+  %tanh_test_cast = tensor.cast %tanh_test
+    :  tensor<7xcomplex<f32>> to tensor<?xcomplex<f32>>
+
+  %tanh_func = func.constant @tanh : (complex<f32>) -> complex<f32>
+  call @test_unary(%tanh_test_cast, %tanh_func)
+    : (tensor<?xcomplex<f32>>, (complex<f32>) -> complex<f32>) -> ()
+
   func.return
 }
