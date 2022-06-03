@@ -2,14 +2,13 @@
   "type": "intel-pt",
   "cpuInfo": {
     "vendor": "GenuineIntel",
-    "family": 6,
+    "family": "123",
     "model": 79,
     "stepping": 1
   },
   "processes": [
     {
       "pid": 1234,
-      "triple": "x86_64-*-linux",
       "threads": [
         {
           "tid": 5678,

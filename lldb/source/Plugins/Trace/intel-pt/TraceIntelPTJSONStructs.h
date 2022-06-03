@@ -36,7 +36,7 @@ struct JSONThread {
 
 struct JSONProcess {
   int64_t pid;
-  std::string triple;
+  llvm::Optional<std::string> triple;
   std::vector<JSONThread> threads;
   std::vector<JSONModule> modules;
 };
