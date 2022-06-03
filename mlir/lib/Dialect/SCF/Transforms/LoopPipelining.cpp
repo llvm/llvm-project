@@ -41,6 +41,8 @@ protected:
   int64_t lb;
   int64_t step;
   PipeliningOption::AnnotationlFnType annotateFn = nullptr;
+  bool peelEpilogue;
+  PipeliningOption::PredicateOpFn predicateFn = nullptr;
 
   // When peeling the kernel we generate several version of each value for
   // different stage of the prologue. This map tracks the mapping between
@@ -91,6 +93,10 @@ bool LoopPipelinerInternal::initializeLoopInfo(
   ub = upperBoundCst.value();
   lb = lowerBoundCst.value();
   step = stepCst.value();
+  peelEpilogue = options.peelEpilogue;
+  predicateFn = options.predicateFn;
+  if (!peelEpilogue && predicateFn == nullptr)
+    return false;
   int64_t numIteration = ceilDiv(ub - lb, step);
   std::vector<std::pair<Operation *, unsigned>> schedule;
   options.getScheduleFn(forOp, schedule);
@@ -226,10 +232,13 @@ scf::ForOp LoopPipelinerInternal::createKernelLoop(
     }
   }
 
-  // Create the new kernel loop. Since we need to peel `numStages - 1`
-  // iteration we change the upper bound to remove those iterations.
-  Value newUb = rewriter.create<arith::ConstantIndexOp>(forOp.getLoc(),
-                                                        ub - maxStage * step);
+  // Create the new kernel loop. When we peel the epilgue we need to peel
+  // `numStages - 1` iterations. Then we adjust the upper bound to remove those
+  // iterations.
+  Value newUb = forOp.getUpperBound();
+  if (peelEpilogue)
+    newUb = rewriter.create<arith::ConstantIndexOp>(forOp.getLoc(),
+                                                    ub - maxStage * step);
   auto newForOp =
       rewriter.create<scf::ForOp>(forOp.getLoc(), forOp.getLowerBound(), newUb,
                                   forOp.getStep(), newLoopArg);
@@ -251,6 +260,18 @@ void LoopPipelinerInternal::createKernel(
   mapping.map(forOp.getInductionVar(), newForOp.getInductionVar());
   for (const auto &arg : llvm::enumerate(forOp.getRegionIterArgs())) {
     mapping.map(arg.value(), newForOp.getRegionIterArgs()[arg.index()]);
+  }
+  SmallVector<Value> predicates(maxStage + 1, nullptr);
+  if (!peelEpilogue) {
+    // Create a predicate for each stage except the last stage.
+    for (unsigned i = 0; i < maxStage; i++) {
+      Value c = rewriter.create<arith::ConstantIndexOp>(
+          newForOp.getLoc(), ub - (maxStage - i) * step);
+      Value pred = rewriter.create<arith::CmpIOp>(
+          newForOp.getLoc(), arith::CmpIPredicate::slt,
+          newForOp.getInductionVar(), c);
+      predicates[i] = pred;
+    }
   }
   for (Operation *op : opOrder) {
     int64_t useStage = stages[op];
@@ -300,6 +321,13 @@ void LoopPipelinerInternal::createKernel(
       newOp->setOperand(operand.getOperandNumber(),
                         newForOp.getRegionIterArgs()[remap->second]);
     }
+    if (predicates[useStage]) {
+      newOp = predicateFn(newOp, predicates[useStage], rewriter);
+      // Remap the results to the new predicated one.
+      for (auto values : llvm::zip(op->getResults(), newOp->getResults()))
+        mapping.map(std::get<0>(values), std::get<1>(values));
+    }
+    rewriter.setInsertionPointAfter(newOp);
     if (annotateFn)
       annotateFn(newOp, PipeliningOption::PipelinerPart::Kernel, 0);
   }
@@ -455,10 +483,13 @@ struct ForLoopPipelining : public OpRewritePattern<ForOp> {
     // operands.
     pipeliner.createKernel(newForOp, crossStageValues, loopArgMap, rewriter);
 
-    // 4. Emit the epilogue after the new forOp.
-    rewriter.setInsertionPointAfter(newForOp);
-    llvm::SmallVector<Value> returnValues = pipeliner.emitEpilogue(rewriter);
-
+    llvm::SmallVector<Value> returnValues =
+        newForOp.getResults().take_front(forOp->getNumResults());
+    if (options.peelEpilogue) {
+      // 4. Emit the epilogue after the new forOp.
+      rewriter.setInsertionPointAfter(newForOp);
+      returnValues = pipeliner.emitEpilogue(rewriter);
+    }
     // 5. Erase the original loop and replace the uses with the epilogue output.
     if (forOp->getNumResults() > 0)
       rewriter.replaceOp(forOp, returnValues);

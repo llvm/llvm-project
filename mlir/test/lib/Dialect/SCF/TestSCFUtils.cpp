@@ -123,6 +123,11 @@ struct TestSCFPipeliningPass
       llvm::cl::desc("Annote operations during loop pipelining transformation"),
       llvm::cl::init(false)};
 
+  Option<bool> noEpiloguePeeling{
+      *this, "no-epilogue-peeling",
+      llvm::cl::desc("Use predicates instead of peeling the epilogue."),
+      llvm::cl::init(false)};
+
   static void
   getSchedule(scf::ForOp forOp,
               std::vector<std::pair<Operation *, unsigned>> &schedule) {
@@ -139,6 +144,29 @@ struct TestSCFPipeliningPass
             std::make_pair(op, unsigned(attrStage.getInt()));
       }
     });
+  }
+
+  /// Helper to generate "predicated" version of `op`. For simplicity we just
+  /// wrap the operation in a scf.ifOp operation.
+  static Operation *predicateOp(Operation *op, Value pred,
+                                PatternRewriter &rewriter) {
+    Location loc = op->getLoc();
+    auto ifOp =
+        rewriter.create<scf::IfOp>(loc, op->getResultTypes(), pred, true);
+    // True branch.
+    op->moveBefore(&ifOp.getThenRegion().front(),
+                   ifOp.getThenRegion().front().end());
+    rewriter.setInsertionPointAfter(op);
+    rewriter.create<scf::YieldOp>(loc, op->getResults());
+    // False branch.
+    rewriter.setInsertionPointToStart(&ifOp.getElseRegion().front());
+    SmallVector<Value> zeros;
+    for (Type type : op->getResultTypes()) {
+      zeros.push_back(
+          rewriter.create<arith::ConstantOp>(loc, rewriter.getZeroAttr(type)));
+    }
+    rewriter.create<scf::YieldOp>(loc, zeros);
+    return ifOp.getOperation();
   }
 
   static void annotate(Operation *op,
@@ -170,6 +198,10 @@ struct TestSCFPipeliningPass
     options.getScheduleFn = getSchedule;
     if (annotatePipeline)
       options.annotateFn = annotate;
+    if (noEpiloguePeeling) {
+      options.peelEpilogue = false;
+      options.predicateFn = predicateOp;
+    }
     scf::populateSCFLoopPipeliningPatterns(patterns, options);
     (void)applyPatternsAndFoldGreedily(getOperation(), std::move(patterns));
     getOperation().walk([](Operation *op) {
