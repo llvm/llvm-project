@@ -1,7 +1,22 @@
+import("//llvm/utils/gn/build/compiled_action.gni")
+
+compiled_action("Confusables.inc") {
+  tool = "ConfusableTable:make_confusable_table"
+
+  inputs = [ "ConfusableTable/confusables.txt" ]
+  outputs = [ "$target_gen_dir/$target_name" ]
+  args = [
+    rebase_path(inputs[0], root_build_dir),
+    rebase_path(outputs[0], root_build_dir),
+  ]
+}
+
 static_library("misc") {
   output_name = "clangTidyMiscModule"
   configs += [ "//llvm/utils/gn/build:clang_code" ]
+  include_dirs = [ target_gen_dir ]
   deps = [
+    ":Confusables.inc",
     "//clang-tools-extra/clang-tidy",
     "//clang-tools-extra/clang-tidy/utils",
     "//clang/lib/AST",
@@ -14,6 +29,7 @@ static_library("misc") {
     "//llvm/lib/Support",
   ]
   sources = [
+    "ConfusableIdentifierCheck.cpp",
     "DefinitionsInHeadersCheck.cpp",
     "MiscTidyModule.cpp",
     "MisleadingBidirectional.cpp",
