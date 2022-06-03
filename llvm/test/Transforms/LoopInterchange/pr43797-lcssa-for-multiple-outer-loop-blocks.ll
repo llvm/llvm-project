@@ -3,7 +3,6 @@
 
 ; Tests for PR43797.
 
-target triple = "powerpc64le-unknown-linux-gnu"
 @wdtdr = external dso_local global [5 x [5 x double]], align 16
 
 define void @test1() {

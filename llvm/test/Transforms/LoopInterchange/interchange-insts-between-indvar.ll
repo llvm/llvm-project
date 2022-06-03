@@ -1,7 +1,6 @@
 ; RUN: opt < %s -basic-aa -loop-interchange -verify-dom-info -verify-loop-info \
 ; RUN:     -S -pass-remarks=loop-interchange 2>&1 | FileCheck %s
 
-target triple = "powerpc64le-unknown-linux-gnu"
 @A10 = local_unnamed_addr global [3 x [3 x i32]] zeroinitializer, align 16
 
 ;; Test to make sure we can handle zext instructions introduced by
