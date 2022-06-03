@@ -2150,6 +2150,70 @@ TEST_P(UncheckedOptionalAccessTest, UniquePtrToStructWithOptionalField) {
       UnorderedElementsAre(Pair("check-1", "safe"), Pair("check-2", "safe")));
 }
 
+TEST_P(UncheckedOptionalAccessTest, CallReturningOptional) {
+  ExpectLatticeChecksFor(
+      R"(
+    #include "unchecked_optional_access_test.h"
+
+    $ns::$optional<int> MakeOpt();
+
+    void target() {
+      $ns::$optional<int> opt = 0;
+      opt = MakeOpt();
+      opt.value();
+      /*[[check-1]]*/
+    }
+  )",
+      UnorderedElementsAre(Pair("check-1", "unsafe: input.cc:9:7")));
+
+  ExpectLatticeChecksFor(
+      R"(
+    #include "unchecked_optional_access_test.h"
+
+    const $ns::$optional<int>& MakeOpt();
+
+    void target() {
+      $ns::$optional<int> opt = 0;
+      opt = MakeOpt();
+      opt.value();
+      /*[[check-2]]*/
+    }
+  )",
+      UnorderedElementsAre(Pair("check-2", "unsafe: input.cc:9:7")));
+
+  ExpectLatticeChecksFor(
+      R"(
+    #include "unchecked_optional_access_test.h"
+
+    using IntOpt = $ns::$optional<int>;
+    IntOpt MakeOpt();
+
+    void target() {
+      IntOpt opt = 0;
+      opt = MakeOpt();
+      opt.value();
+      /*[[check-3]]*/
+    }
+  )",
+      UnorderedElementsAre(Pair("check-3", "unsafe: input.cc:10:7")));
+
+  ExpectLatticeChecksFor(
+      R"(
+    #include "unchecked_optional_access_test.h"
+
+    using IntOpt = $ns::$optional<int>;
+    const IntOpt& MakeOpt();
+
+    void target() {
+      IntOpt opt = 0;
+      opt = MakeOpt();
+      opt.value();
+      /*[[check-4]]*/
+    }
+  )",
+      UnorderedElementsAre(Pair("check-4", "unsafe: input.cc:10:7")));
+}
+
 // FIXME: Add support for:
 // - constructors (copy, move)
 // - assignment operators (default, copy, move)
