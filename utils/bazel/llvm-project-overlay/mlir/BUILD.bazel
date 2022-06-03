@@ -1010,6 +1010,13 @@ td_library(
 )
 
 td_library(
+    name = "InferIntRangeInterfaceTdFiles",
+    srcs = ["include/mlir/Interfaces/InferIntRangeInterface.td"],
+    includes = ["include"],
+    deps = [":OpBaseTdFiles"],
+)
+
+td_library(
     name = "InferTypeOpInterfaceTdFiles",
     srcs = ["include/mlir/Interfaces/InferTypeOpInterface.td"],
     includes = ["include"],
@@ -5088,6 +5095,36 @@ cc_library(
     ],
 )
 
+gentbl_cc_library(
+    name = "InferIntRangeInterfaceIncGen",
+    strip_include_prefix = "include",
+    tbl_outs = [
+        (
+            ["-gen-op-interface-decls"],
+            "include/mlir/Interfaces/InferIntRangeInterface.h.inc",
+        ),
+        (
+            ["-gen-op-interface-defs"],
+            "include/mlir/Interfaces/InferIntRangeInterface.cpp.inc",
+        ),
+    ],
+    tblgen = ":mlir-tblgen",
+    td_file = "include/mlir/Interfaces/InferIntRangeInterface.td",
+    deps = [":InferIntRangeInterfaceTdFiles"],
+)
+
+cc_library(
+    name = "InferIntRangeInterface",
+    srcs = ["lib/Interfaces/InferIntRangeInterface.cpp"],
+    hdrs = ["include/mlir/Interfaces/InferIntRangeInterface.h"],
+    includes = ["include"],
+    deps = [
+        ":IR",
+        ":InferIntRangeInterfaceIncGen",
+        "//llvm:Support",
+    ],
+)
+
 td_library(
     name = "DataLayoutInterfacesTdFiles",
     srcs = ["include/mlir/Interfaces/DataLayoutInterfaces.td"],
@@ -5830,6 +5867,8 @@ cc_library(
         ":ControlFlowInterfaces",
         ":DataLayoutInterfaces",
         ":IR",
+        ":InferIntRangeInterface",
+        ":LoopLikeInterface",
         ":SideEffectInterfaces",
         ":Support",
         ":ViewLikeInterface",

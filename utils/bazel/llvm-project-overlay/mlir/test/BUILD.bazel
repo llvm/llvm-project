@@ -43,6 +43,7 @@ td_library(
         "//mlir:CopyOpInterfaceTdFiles",
         "//mlir:DLTIDialectTdFiles",
         "//mlir:DataLayoutInterfacesTdFiles",
+        "//mlir:InferIntRangeInterfaceTdFiles",
         "//mlir:InferTypeOpInterfaceTdFiles",
         "//mlir:LinalgStructuredOpsTdFiles",
         "//mlir:OpBaseTdFiles",
@@ -259,6 +260,7 @@ cc_library(
         "//mlir:Dialect",
         "//mlir:FuncDialect",
         "//mlir:IR",
+        "//mlir:InferIntRangeInterface",
         "//mlir:InferTypeOpInterface",
         "//mlir:LLVMDialect",
         "//mlir:LinalgInterfaces",
@@ -349,6 +351,7 @@ cc_library(
         "//mlir:Pass",
         "//mlir:SCFDialect",
         "//mlir:SPIRVDialect",
+        "//mlir:Support",
         "//mlir:TransformUtils",
     ],
 )
