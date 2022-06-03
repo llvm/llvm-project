@@ -30,6 +30,7 @@ class RewritePatternSet;
 class Operation;
 class Value;
 class ValueRange;
+class PatternRewriter;
 
 namespace scf {
 
@@ -140,7 +141,21 @@ struct PipeliningOption {
   using AnnotationlFnType =
       std::function<void(Operation *, PipelinerPart, unsigned)>;
   AnnotationlFnType annotateFn = nullptr;
-  // TODO: add option to decide if the prologue/epilogue should be peeled.
+
+  /// Control whether the epilogue should be peeled out of the loop or
+  /// operations should be predicated to skip the early stages in the last loop
+  /// iterations. If the epilogue is predicated; the user needs to provide a
+  /// lambda to generate the predicated version of operations.
+  bool peelEpilogue = true;
+
+  // Lamdba to predicate operations when the prologue or epilogue are not
+  // peeled. This takes the original operation, an i1 predicate value and the
+  // pattern rewriter.
+  using PredicateOpFn =
+      std::function<Operation *(Operation *, Value, PatternRewriter &)>;
+  PredicateOpFn predicateFn = nullptr;
+
+  // TODO: add option to decide if the prologue should be peeled.
 };
 
 /// Populate patterns for SCF software pipelining transformation.
