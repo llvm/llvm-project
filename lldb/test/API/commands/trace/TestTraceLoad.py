@@ -94,9 +94,9 @@ Schema:
     "stepping": integer
   },'''])
 
-        # Now we test a missing field in the global session file
+        # Now we test a wrong cpu family field in the global session file
         self.expect("trace load -v " + os.path.join(src_dir, "intelpt-trace", "trace_bad2.json"), error=True,
-            substrs=['error: missing value at traceSession.processes[1].triple', "Context", "Schema"])
+            substrs=['error: expected uint64_t at traceSession.cpuInfo.family', "Context", "Schema"])
 
         # Now we test a missing field in the intel-pt settings
         self.expect("trace load -v " + os.path.join(src_dir, "intelpt-trace", "trace_bad4.json"), error=True,
