@@ -27,6 +27,7 @@
 #include "AMDGPU.h"
 #include "GCNSubtarget.h"
 #include "SIMachineFunctionInfo.h"
+#include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/Analysis/CallGraph.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
@@ -105,15 +106,19 @@ bool AMDGPUResourceUsageAnalysis::runOnModule(Module &M) {
   const TargetMachine &TM = TPC->getTM<TargetMachine>();
   bool HasIndirectCall = false;
 
-  for (Function &F : M) {
-    if (F.isDeclaration())
+  CallGraph CG = CallGraph(M);
+  auto End = po_end(&CG);
+
+  for (auto IT = po_begin(&CG); IT != End; ++IT) {
+    Function *F = IT->getFunction();
+    if (!F || F->isDeclaration())
       continue;
 
-    MachineFunction *MF = MMI.getMachineFunction(F);
+    MachineFunction *MF = MMI.getMachineFunction(*F);
     assert(MF && "function must have been generated already");
 
     auto CI = CallGraphResourceInfo.insert(
-        std::make_pair(&F, SIFunctionResourceInfo()));
+        std::make_pair(F, SIFunctionResourceInfo()));
     SIFunctionResourceInfo &Info = CI.first->second;
     assert(CI.second && "should only be called once per function");
     Info = analyzeResourceUsage(*MF, TM);
