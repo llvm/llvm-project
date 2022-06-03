@@ -360,6 +360,11 @@ Changes in existing checks
   <clang-tidy/checks/readability-suspicious-call-argument>` related to passing
   arguments that refer to program elements without a trivial identifier.
 
+- Fixed a bug in :doc:`bugprone-use-after-move
+  <clang-tidy/checks/bugprone-use-after-move> where a move in a lambda capture
+  was treated as if it happened within the body of the lambda, not within the
+  function that defines the lambda.
+
 Removed checks
 ^^^^^^^^^^^^^^
 
