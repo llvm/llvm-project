@@ -71,11 +71,10 @@ bool CommandObjectRegexCommand::DoExecute(llvm::StringRef command,
       // Interpret the new command and return this as the result!
       if (m_interpreter.GetExpandRegexAliases())
         result.GetOutputStream().Printf("%s\n", new_command->c_str());
-      // Pass in true for "no context switching".  The command that called us
-      // should have set up the context appropriately, we shouldn't have to
-      // redo that.
+      // We don't have to pass an override_context here, as the command that 
+      // called us should have set up the context appropriately.
       return m_interpreter.HandleCommand(new_command->c_str(),
-                                         eLazyBoolCalculate, result);
+                                         eLazyBoolNo, result);
     }
   }
   result.SetStatus(eReturnStatusFailed);
