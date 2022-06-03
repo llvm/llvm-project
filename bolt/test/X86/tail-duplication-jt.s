@@ -7,9 +7,9 @@
 # RUN:   %s -o %t.o
 # RUN: link_fdata %s %t.o %t.fdata
 # RUN: llvm-strip --strip-unneeded %t.o
-# RUN: %clangxx %cflags -no-pie %t.o -o %t.exe -Wl,-q 
+# RUN: %clangxx %cflags -no-pie %t.o -o %t.exe -Wl,-q
 # RUN: llvm-bolt %t.exe -o %t.out -data %t.fdata -relocs \
-# RUN:   -tail-duplication=1 -tail-duplication-aggressive=1 \
+# RUN:   -tail-duplication=aggressive \
 # RUN:   -print-cfg | FileCheck %s
 # CHECK: Jump table {{.*}} for function a at {{.*}} with a total count of 3
   .globl main

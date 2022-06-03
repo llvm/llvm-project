@@ -239,11 +239,6 @@ VerifyCFG("verify-cfg",
   cl::init(false), cl::Hidden, cl::ZeroOrMore, cl::cat(BoltOptCategory));
 
 static cl::opt<bool>
-TailDuplicationFlag("tail-duplication",
-  cl::desc("duplicate unconditional branches that cross a cache line"),
-  cl::ZeroOrMore, cl::ReallyHidden, cl::cat(BoltOptCategory));
-
-static cl::opt<bool>
 ThreeWayBranchFlag("three-way-branch",
   cl::desc("reorder three way branches"),
   cl::ZeroOrMore, cl::ReallyHidden, cl::cat(BoltOptCategory));
@@ -396,8 +391,7 @@ void BinaryFunctionPassManager::runAllPasses(BinaryContext &BC) {
 
   Manager.registerPass(std::make_unique<LoopInversionPass>());
 
-  Manager.registerPass(std::make_unique<TailDuplication>(),
-                       opts::TailDuplicationFlag);
+  Manager.registerPass(std::make_unique<TailDuplication>());
 
   Manager.registerPass(std::make_unique<CMOVConversion>(),
                        opts::CMOVConversionFlag);

@@ -46,16 +46,19 @@ namespace bolt {
 /// Pass for duplicating blocks that would require a jump.
 class TailDuplication : public BinaryFunctionPass {
   /// Record how many possible tail duplications there can be.
-  uint64_t PossibleDuplications = 0;
+  uint64_t ModifiedFunctions = 0;
+
+  /// The number of duplicated basic blocks.
+  uint64_t DuplicatedBlockCount = 0;
+
+  /// The size (in bytes) of duplicated basic blocks.
+  uint64_t DuplicatedByteCount = 0;
 
   /// Record how many times these duplications would get used.
-  uint64_t PossibleDuplicationsDynamicCount = 0;
-
-  /// Record the execution count of all unconditional branches.
-  uint64_t UnconditionalBranchDynamicCount = 0;
+  uint64_t DuplicationsDynamicCount = 0;
 
   /// Record the execution count of all blocks.
-  uint64_t AllBlocksDynamicCount = 0;
+  uint64_t AllDynamicCount = 0;
 
   /// Record the number of instructions deleted because of propagation
   uint64_t StaticInstructionDeletionCount = 0;
@@ -87,25 +90,57 @@ class TailDuplication : public BinaryFunctionPass {
   constantAndCopyPropagate(BinaryBasicBlock &OriginalBB,
                            std::vector<BinaryBasicBlock *> &BlocksToPropagate);
 
-  /// True if Succ is in the same cache line as BB (approximately)
+  /// True if Tail is in the same cache line as BB (approximately)
   bool isInCacheLine(const BinaryBasicBlock &BB,
-                     const BinaryBasicBlock &Succ) const;
+                     const BinaryBasicBlock &Tail) const;
 
   /// Duplicates BlocksToDuplicate and places them after BB.
-  std::vector<BinaryBasicBlock *>
-  tailDuplicate(BinaryBasicBlock &BB,
-                const std::vector<BinaryBasicBlock *> &BlocksToDuplicate) const;
+  std::vector<BinaryBasicBlock *> duplicateBlocks(
+      BinaryBasicBlock &BB,
+      const std::vector<BinaryBasicBlock *> &BlocksToDuplicate) const;
 
+  /// Decide whether the tail basic blocks should be duplicated after BB.
+  bool shouldDuplicate(BinaryBasicBlock *BB, BinaryBasicBlock *Tail) const;
+
+  /// Compute the cache score for a jump (Src, Dst) with frequency Count.
+  /// The value is in the range [0..1] and quantifies how "cache-friendly"
+  /// the jump is. The score is close to 1 for "short" forward jumps and
+  /// it is 0 for "long" jumps exceeding a specified threshold; between the
+  /// bounds, the value decreases linearly. For backward jumps, the value is
+  /// scaled by a specified factor.
+  double cacheScore(uint64_t SrcAddr, uint64_t SrcSize, uint64_t DstAddr,
+                    uint64_t DstSize, uint64_t Count) const;
+
+  /// Decide whether the cache score has been improved after duplication.
+  bool cacheScoreImproved(const MCCodeEmitter *Emitter, BinaryFunction &BF,
+                          BinaryBasicBlock *Pred, BinaryBasicBlock *Tail) const;
+
+  /// A moderate strategy for tail duplication.
   /// Returns a vector of BinaryBasicBlock to copy after BB. If it's empty,
-  /// nothing should be duplicated
+  /// nothing should be duplicated.
   std::vector<BinaryBasicBlock *>
-  moderateCodeToDuplicate(BinaryBasicBlock &BB) const;
+  moderateDuplicate(BinaryBasicBlock &BB, BinaryBasicBlock &Tail) const;
+
+  /// An aggressive strategy for tail duplication.
   std::vector<BinaryBasicBlock *>
-  aggressiveCodeToDuplicate(BinaryBasicBlock &BB) const;
+  aggressiveDuplicate(BinaryBasicBlock &BB, BinaryBasicBlock &Tail) const;
+
+  /// A cache-aware strategy for tail duplication.
+  std::vector<BinaryBasicBlock *> cacheDuplicate(const MCCodeEmitter *Emitter,
+                                                 BinaryFunction &BF,
+                                                 BinaryBasicBlock *BB,
+                                                 BinaryBasicBlock *Tail) const;
 
   void runOnFunction(BinaryFunction &Function);
 
 public:
+  enum DuplicationMode : char {
+    TD_NONE = 0,
+    TD_AGGRESSIVE,
+    TD_MODERATE,
+    TD_CACHE
+  };
+
   explicit TailDuplication() : BinaryFunctionPass(false) {}
 
   const char *getName() const override { return "tail duplication"; }

@@ -11,7 +11,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "bolt/Passes/TailDuplication.h"
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/MC/MCRegisterInfo.h"
+
 #include <numeric>
 
 #define DEBUG_TYPE "taildup"
@@ -21,13 +23,21 @@ using namespace llvm;
 namespace opts {
 
 extern cl::OptionCategory BoltOptCategory;
+extern cl::opt<bool> NoThreads;
 
-static cl::opt<bool> TailDuplicationAggressive(
-    "tail-duplication-aggressive",
-    cl::desc("tail duplication should act aggressively in duplicating multiple "
-             "blocks per tail"),
-    cl::ZeroOrMore, cl::ReallyHidden, cl::init(false),
-    cl::cat(BoltOptCategory));
+cl::opt<bolt::TailDuplication::DuplicationMode> TailDuplicationMode(
+    "tail-duplication",
+    cl::desc("duplicate unconditional branches that cross a cache line"),
+    cl::init(bolt::TailDuplication::TD_NONE),
+    cl::values(clEnumValN(bolt::TailDuplication::TD_NONE, "none",
+                          "do not apply"),
+               clEnumValN(bolt::TailDuplication::TD_AGGRESSIVE, "aggressive",
+                          "aggressive strategy"),
+               clEnumValN(bolt::TailDuplication::TD_MODERATE, "moderate",
+                          "moderate strategy"),
+               clEnumValN(bolt::TailDuplication::TD_CACHE, "cache",
+                          "cache-aware duplication strategy")),
+    cl::ZeroOrMore, cl::Hidden, cl::cat(BoltOptCategory));
 
 static cl::opt<unsigned>
     TailDuplicationMinimumOffset("tail-duplication-minimum-offset",
@@ -38,18 +48,37 @@ static cl::opt<unsigned>
 
 static cl::opt<unsigned> TailDuplicationMaximumDuplication(
     "tail-duplication-maximum-duplication",
-    cl::desc("maximum size of duplicated blocks (in bytes)"), cl::ZeroOrMore,
-    cl::ReallyHidden, cl::init(64), cl::cat(BoltOptCategory));
+    cl::desc("tail blocks whose size (in bytes) exceeds the value are never "
+             "duplicated"),
+    cl::ZeroOrMore, cl::ReallyHidden, cl::init(24), cl::cat(BoltOptCategory));
+
+static cl::opt<unsigned> TailDuplicationMinimumDuplication(
+    "tail-duplication-minimum-duplication",
+    cl::desc("tail blocks with size (in bytes) not exceeding the value are "
+             "always duplicated"),
+    cl::ZeroOrMore, cl::ReallyHidden, cl::init(2), cl::cat(BoltOptCategory));
 
 static cl::opt<bool> TailDuplicationConstCopyPropagation(
     "tail-duplication-const-copy-propagation",
     cl::desc("enable const and copy propagation after tail duplication"),
     cl::ReallyHidden, cl::init(false), cl::cat(BoltOptCategory));
 
+static cl::opt<unsigned> TailDuplicationMaxCacheDistance(
+    "tail-duplication-max-cache-distance",
+    cl::desc("The weight of backward jumps for ExtTSP value"), cl::init(256),
+    cl::ReallyHidden, cl::ZeroOrMore, cl::cat(BoltOptCategory));
+
+static cl::opt<double> TailDuplicationCacheBackwardWeight(
+    "tail-duplication-cache-backward-weight",
+    cl::desc(
+        "The maximum distance (in bytes) of backward jumps for ExtTSP value"),
+    cl::init(0.5), cl::ReallyHidden, cl::ZeroOrMore, cl::cat(BoltOptCategory));
+
 } // namespace opts
 
 namespace llvm {
 namespace bolt {
+
 void TailDuplication::getCallerSavedRegs(const MCInst &Inst, BitVector &Regs,
                                          BinaryContext &BC) const {
   if (!BC.MIB->isCall(Inst))
@@ -242,24 +271,39 @@ bool TailDuplication::isInCacheLine(const BinaryBasicBlock &BB,
 }
 
 std::vector<BinaryBasicBlock *>
-TailDuplication::moderateCodeToDuplicate(BinaryBasicBlock &BB) const {
+TailDuplication::moderateDuplicate(BinaryBasicBlock &BB,
+                                   BinaryBasicBlock &Tail) const {
   std::vector<BinaryBasicBlock *> BlocksToDuplicate;
-  if (BB.hasJumpTable())
+  // The block must be hot
+  if (BB.getKnownExecutionCount() == 0)
     return BlocksToDuplicate;
-  if (BB.getOriginalSize() > opts::TailDuplicationMaximumDuplication)
+  // and its sucessor is not already in the same cache line
+  if (isInCacheLine(BB, Tail))
     return BlocksToDuplicate;
-  for (auto Itr = BB.succ_begin(); Itr != BB.succ_end(); ++Itr) {
-    if ((*Itr)->getLayoutIndex() == BB.getLayoutIndex() + 1)
-      // If duplicating would introduce a new branch, don't duplicate
+  // and its size do not exceed the maximum allowed size
+  if (Tail.getOriginalSize() > opts::TailDuplicationMaximumDuplication)
+    return BlocksToDuplicate;
+  // If duplicating would introduce a new branch, don't duplicate
+  for (auto Itr = Tail.succ_begin(); Itr != Tail.succ_end(); ++Itr) {
+    if ((*Itr)->getLayoutIndex() == Tail.getLayoutIndex() + 1)
       return BlocksToDuplicate;
   }
-  BlocksToDuplicate.push_back(&BB);
+
+  BlocksToDuplicate.push_back(&Tail);
   return BlocksToDuplicate;
 }
 
 std::vector<BinaryBasicBlock *>
-TailDuplication::aggressiveCodeToDuplicate(BinaryBasicBlock &BB) const {
+TailDuplication::aggressiveDuplicate(BinaryBasicBlock &BB,
+                                     BinaryBasicBlock &Tail) const {
   std::vector<BinaryBasicBlock *> BlocksToDuplicate;
+  // The block must be hot
+  if (BB.getKnownExecutionCount() == 0)
+    return BlocksToDuplicate;
+  // and its sucessor is not already in the same cache line
+  if (isInCacheLine(BB, Tail))
+    return BlocksToDuplicate;
+
   BinaryBasicBlock *CurrBB = &BB;
   while (CurrBB) {
     LLVM_DEBUG(dbgs() << "Aggressive tail duplication: adding "
@@ -297,10 +341,10 @@ TailDuplication::aggressiveCodeToDuplicate(BinaryBasicBlock &BB) const {
 
     // With one successor, if its a jump, we should duplicate all blocks in
     // BlocksToDuplicate. Otherwise, we should keep going
-    BinaryBasicBlock *Succ = CurrBB->getSuccessor();
-    if (Succ->getLayoutIndex() != CurrBB->getLayoutIndex() + 1)
+    BinaryBasicBlock *SuccBB = CurrBB->getSuccessor();
+    if (SuccBB->getLayoutIndex() != CurrBB->getLayoutIndex() + 1)
       break;
-    CurrBB = Succ;
+    CurrBB = SuccBB;
   }
   // Don't duplicate if its too much code
   unsigned DuplicationByteCount = std::accumulate(
@@ -319,7 +363,146 @@ TailDuplication::aggressiveCodeToDuplicate(BinaryBasicBlock &BB) const {
   return BlocksToDuplicate;
 }
 
-std::vector<BinaryBasicBlock *> TailDuplication::tailDuplicate(
+bool TailDuplication::shouldDuplicate(BinaryBasicBlock *Pred,
+                                      BinaryBasicBlock *Tail) const {
+  if (Pred == Tail)
+    return false;
+  // Cannot duplicate non-tail blocks
+  if (Tail->succ_size() != 0)
+    return false;
+  // The blocks are already in the order
+  if (Pred->getLayoutIndex() + 1 == Tail->getLayoutIndex())
+    return false;
+  // No tail duplication for blocks with jump tables
+  if (Pred->hasJumpTable())
+    return false;
+  if (Tail->hasJumpTable())
+    return false;
+
+  return true;
+}
+
+double TailDuplication::cacheScore(uint64_t SrcAddr, uint64_t SrcSize,
+                                   uint64_t DstAddr, uint64_t DstSize,
+                                   uint64_t Count) const {
+  assert(Count != BinaryBasicBlock::COUNT_NO_PROFILE);
+
+  bool IsForwardJump = SrcAddr <= DstAddr;
+  uint64_t JumpDistance = 0;
+  // Computing the length of the jump so that it takes the sizes of the two
+  // blocks into consideration
+  if (IsForwardJump) {
+    JumpDistance = (DstAddr + DstSize) - (SrcAddr);
+  } else {
+    JumpDistance = (SrcAddr + SrcSize) - (DstAddr);
+  }
+
+  if (JumpDistance >= opts::TailDuplicationMaxCacheDistance)
+    return 0;
+  double Prob = 1.0 - static_cast<double>(JumpDistance) /
+                          opts::TailDuplicationMaxCacheDistance;
+  return (IsForwardJump ? 1.0 : opts::TailDuplicationCacheBackwardWeight) *
+         Prob * Count;
+}
+
+bool TailDuplication::cacheScoreImproved(const MCCodeEmitter *Emitter,
+                                         BinaryFunction &BF,
+                                         BinaryBasicBlock *Pred,
+                                         BinaryBasicBlock *Tail) const {
+  // Collect (estimated) basic block sizes
+  DenseMap<BinaryBasicBlock *, uint64_t> BBSize;
+  for (BinaryBasicBlock *BB : BF.layout()) {
+    BBSize[BB] = std::max<uint64_t>(BB->estimateSize(Emitter), 1);
+  }
+
+  // Build current addresses of basic blocks starting at the entry block
+  DenseMap<BinaryBasicBlock *, uint64_t> CurAddr;
+  uint64_t Addr = 0;
+  for (BinaryBasicBlock *SrcBB : BF.layout()) {
+    CurAddr[SrcBB] = Addr;
+    Addr += BBSize[SrcBB];
+  }
+
+  // Build new addresses (after duplication) starting at the entry block
+  DenseMap<BinaryBasicBlock *, uint64_t> NewAddr;
+  Addr = 0;
+  for (BinaryBasicBlock *SrcBB : BF.layout()) {
+    NewAddr[SrcBB] = Addr;
+    Addr += BBSize[SrcBB];
+    if (SrcBB == Pred)
+      Addr += BBSize[Tail];
+  }
+
+  // Compute the cache score for the existing layout of basic blocks
+  double CurScore = 0;
+  for (BinaryBasicBlock *SrcBB : BF.layout()) {
+    auto BI = SrcBB->branch_info_begin();
+    for (BinaryBasicBlock *DstBB : SrcBB->successors()) {
+      if (SrcBB != DstBB) {
+        CurScore += cacheScore(CurAddr[SrcBB], BBSize[SrcBB], CurAddr[DstBB],
+                               BBSize[DstBB], BI->Count);
+      }
+      ++BI;
+    }
+  }
+
+  // Compute the cache score for the layout of blocks after tail duplication
+  double NewScore = 0;
+  for (BinaryBasicBlock *SrcBB : BF.layout()) {
+    auto BI = SrcBB->branch_info_begin();
+    for (BinaryBasicBlock *DstBB : SrcBB->successors()) {
+      if (SrcBB != DstBB) {
+        if (SrcBB == Pred && DstBB == Tail) {
+          NewScore += cacheScore(NewAddr[SrcBB], BBSize[SrcBB],
+                                 NewAddr[SrcBB] + BBSize[SrcBB], BBSize[DstBB],
+                                 BI->Count);
+        } else {
+          NewScore += cacheScore(NewAddr[SrcBB], BBSize[SrcBB], NewAddr[DstBB],
+                                 BBSize[DstBB], BI->Count);
+        }
+      }
+      ++BI;
+    }
+  }
+
+  return NewScore > CurScore;
+}
+
+std::vector<BinaryBasicBlock *>
+TailDuplication::cacheDuplicate(const MCCodeEmitter *Emitter,
+                                BinaryFunction &BF, BinaryBasicBlock *Pred,
+                                BinaryBasicBlock *Tail) const {
+  std::vector<BinaryBasicBlock *> BlocksToDuplicate;
+
+  // No need to duplicate cold basic blocks
+  if (Pred->isCold() || Tail->isCold()) {
+    return BlocksToDuplicate;
+  }
+  // Always duplicate "small" tail basic blocks, which might be beneficial for
+  // code size, since a jump instruction is eliminated
+  if (Tail->estimateSize(Emitter) <= opts::TailDuplicationMinimumDuplication) {
+    BlocksToDuplicate.push_back(Tail);
+    return BlocksToDuplicate;
+  }
+  // Never duplicate "large" tail basic blocks
+  if (Tail->estimateSize(Emitter) > opts::TailDuplicationMaximumDuplication) {
+    return BlocksToDuplicate;
+  }
+  // Do not append basic blocks after the last hot block in the current layout
+  auto NextBlock = BF.getBasicBlockAfter(Pred);
+  if (NextBlock == nullptr || (!Pred->isCold() && NextBlock->isCold())) {
+    return BlocksToDuplicate;
+  }
+
+  // Duplicate the tail only if it improves the cache score
+  if (cacheScoreImproved(Emitter, BF, Pred, Tail)) {
+    BlocksToDuplicate.push_back(Tail);
+  }
+
+  return BlocksToDuplicate;
+}
+
+std::vector<BinaryBasicBlock *> TailDuplication::duplicateBlocks(
     BinaryBasicBlock &BB,
     const std::vector<BinaryBasicBlock *> &BlocksToDuplicate) const {
   BinaryFunction *BF = BB.getFunction();
@@ -329,7 +512,7 @@ std::vector<BinaryBasicBlock *> TailDuplication::tailDuplicate(
   // successor's execution count.  Used to set this new branches execution count
   // and lower the old successor's execution count
   double ExecutionCountRatio =
-      BB.getExecutionCount() > BB.getSuccessor()->getExecutionCount()
+      BB.getExecutionCount() >= BB.getSuccessor()->getExecutionCount()
           ? 1.0
           : (double)BB.getExecutionCount() /
                 BB.getSuccessor()->getExecutionCount();
@@ -347,15 +530,15 @@ std::vector<BinaryBasicBlock *> TailDuplication::tailDuplicate(
   std::vector<std::unique_ptr<BinaryBasicBlock>> DuplicatedBlocks;
   std::vector<BinaryBasicBlock *> DuplicatedBlocksToReturn;
 
-  for (BinaryBasicBlock *CurrBB : BlocksToDuplicate) {
+  for (BinaryBasicBlock *CurBB : BlocksToDuplicate) {
     DuplicatedBlocks.emplace_back(
         BF->createBasicBlock(0, (BC.Ctx)->createNamedTempSymbol("tail-dup")));
     BinaryBasicBlock *NewBB = DuplicatedBlocks.back().get();
 
-    NewBB->addInstructions(CurrBB->begin(), CurrBB->end());
+    NewBB->addInstructions(CurBB->begin(), CurBB->end());
     // Set execution count as if it was just a copy of the original
-    NewBB->setExecutionCount(
-        std::max((uint64_t)1, CurrBB->getExecutionCount()));
+    NewBB->setExecutionCount(CurBB->getExecutionCount());
+    NewBB->setIsCold(CurBB->isCold());
     LastDuplicatedBB->addSuccessor(NewBB, LastBI);
 
     DuplicatedBlocksToReturn.push_back(NewBB);
@@ -367,10 +550,10 @@ std::vector<BinaryBasicBlock *> TailDuplication::tailDuplicate(
       LastDuplicatedBB->adjustExecutionCount(ExecutionCountRatio);
     }
 
-    if (CurrBB->succ_size() == 1)
-      LastBI = CurrBB->getBranchInfo(*(CurrBB->getSuccessor()));
+    if (CurBB->succ_size() == 1)
+      LastBI = CurBB->getBranchInfo(*(CurBB->getSuccessor()));
 
-    LastOriginalBB = CurrBB;
+    LastOriginalBB = CurBB;
     LastDuplicatedBB = NewBB;
   }
 
@@ -387,64 +570,73 @@ std::vector<BinaryBasicBlock *> TailDuplication::tailDuplicate(
 }
 
 void TailDuplication::runOnFunction(BinaryFunction &Function) {
+  // Create a separate MCCodeEmitter to allow lock-free execution
+  BinaryContext::IndependentCodeEmitter Emitter;
+  if (!opts::NoThreads) {
+    Emitter = Function.getBinaryContext().createIndependentMCCodeEmitter();
+  }
+
+  Function.updateLayoutIndices();
+
   // New blocks will be added and layout will change,
   // so make a copy here to iterate over the original layout
   BinaryFunction::BasicBlockOrderType BlockLayout = Function.getLayout();
+  bool ModifiedFunction = false;
   for (BinaryBasicBlock *BB : BlockLayout) {
-    if (BB->succ_size() == 1 &&
-        BB->getSuccessor()->getLayoutIndex() != BB->getLayoutIndex() + 1)
-      UnconditionalBranchDynamicCount += BB->getExecutionCount();
-    if (BB->succ_size() == 2 &&
-        BB->getFallthrough()->getLayoutIndex() != BB->getLayoutIndex() + 1)
-      UnconditionalBranchDynamicCount += BB->getFallthroughBranchInfo().Count;
-    AllBlocksDynamicCount += BB->getExecutionCount();
+    AllDynamicCount += BB->getKnownExecutionCount();
 
-    // The block must be hot
-    if (BB->getExecutionCount() == 0)
-      continue;
-    // with one successor
+    // The block must be with one successor
     if (BB->succ_size() != 1)
       continue;
-
-    // no jump table
-    if (BB->hasJumpTable())
+    BinaryBasicBlock *Tail = BB->getSuccessor();
+    // Verify that the tail should be duplicated
+    if (!shouldDuplicate(BB, Tail))
       continue;
 
-    // Skip not-in-layout, i.e. unreachable, blocks.
-    if (BB->getLayoutIndex() >= BlockLayout.size())
-      continue;
-
-    // and we are estimating that this sucessor is not already in the same cache
-    // line
-    BinaryBasicBlock *Succ = BB->getSuccessor();
-    if (isInCacheLine(*BB, *Succ))
-      continue;
     std::vector<BinaryBasicBlock *> BlocksToDuplicate;
-    if (opts::TailDuplicationAggressive)
-      BlocksToDuplicate = aggressiveCodeToDuplicate(*Succ);
-    else
-      BlocksToDuplicate = moderateCodeToDuplicate(*Succ);
-
-    if (BlocksToDuplicate.size() == 0)
-      continue;
-    PossibleDuplications++;
-    PossibleDuplicationsDynamicCount += BB->getExecutionCount();
-    std::vector<BinaryBasicBlock *> DuplicatedBlocks =
-        tailDuplicate(*BB, BlocksToDuplicate);
-    if (!opts::TailDuplicationConstCopyPropagation)
-      continue;
-
-    constantAndCopyPropagate(*BB, DuplicatedBlocks);
-    BinaryBasicBlock *FirstBB = BlocksToDuplicate[0];
-    if (FirstBB->pred_size() == 1) {
-      BinaryBasicBlock *PredBB = *FirstBB->pred_begin();
-      if (PredBB->succ_size() == 1)
-        constantAndCopyPropagate(*PredBB, BlocksToDuplicate);
+    if (opts::TailDuplicationMode == TailDuplication::TD_AGGRESSIVE) {
+      BlocksToDuplicate = aggressiveDuplicate(*BB, *Tail);
+    } else if (opts::TailDuplicationMode == TailDuplication::TD_MODERATE) {
+      BlocksToDuplicate = moderateDuplicate(*BB, *Tail);
+    } else if (opts::TailDuplicationMode == TailDuplication::TD_CACHE) {
+      BlocksToDuplicate = cacheDuplicate(Emitter.MCE.get(), Function, BB, Tail);
+    } else {
+      llvm_unreachable("unknown tail duplication mode");
     }
+
+    if (BlocksToDuplicate.empty())
+      continue;
+
+    // Apply the the duplication
+    ModifiedFunction = true;
+    DuplicationsDynamicCount += BB->getExecutionCount();
+    auto DuplicatedBlocks = duplicateBlocks(*BB, BlocksToDuplicate);
+    for (BinaryBasicBlock *BB : DuplicatedBlocks) {
+      DuplicatedBlockCount++;
+      DuplicatedByteCount += BB->estimateSize(Emitter.MCE.get());
+    }
+
+    if (opts::TailDuplicationConstCopyPropagation) {
+      constantAndCopyPropagate(*BB, DuplicatedBlocks);
+      BinaryBasicBlock *FirstBB = BlocksToDuplicate[0];
+      if (FirstBB->pred_size() == 1) {
+        BinaryBasicBlock *PredBB = *FirstBB->pred_begin();
+        if (PredBB->succ_size() == 1)
+          constantAndCopyPropagate(*PredBB, BlocksToDuplicate);
+      }
+    }
+
+    // Layout indices might be stale after duplication
+    Function.updateLayoutIndices();
   }
+  if (ModifiedFunction)
+    ModifiedFunctions++;
 }
 
 void TailDuplication::runOnFunctions(BinaryContext &BC) {
+  if (opts::TailDuplicationMode == TailDuplication::TD_NONE)
+    return;
+
   for (auto &It : BC.getBinaryFunctions()) {
     BinaryFunction &Function = It.second;
     if (!shouldOptimize(Function))
@@ -452,24 +644,23 @@ void TailDuplication::runOnFunctions(BinaryContext &BC) {
     runOnFunction(Function);
   }
 
-  outs() << "BOLT-INFO: tail duplication possible duplications: "
-         << PossibleDuplications << "\n";
-  outs() << "BOLT-INFO: tail duplication possible dynamic reductions: "
-         << PossibleDuplicationsDynamicCount << "\n";
-  outs() << "BOLT-INFO: tail duplication possible dynamic reductions to "
-            "unconditional branch execution : "
-         << format("%.1f", ((float)PossibleDuplicationsDynamicCount * 100.0f) /
-                               UnconditionalBranchDynamicCount)
-         << "%\n";
-  outs() << "BOLT-INFO: tail duplication possible dynamic reductions to all "
-            "blocks execution : "
-         << format("%.1f", ((float)PossibleDuplicationsDynamicCount * 100.0f) /
-                               AllBlocksDynamicCount)
-         << "%\n";
-  outs() << "BOLT-INFO: tail duplication static propagation deletions: "
-         << StaticInstructionDeletionCount << "\n";
-  outs() << "BOLT-INFO: tail duplication dynamic propagation deletions: "
-         << DynamicInstructionDeletionCount << "\n"; //
+  outs() << "BOLT-INFO: tail duplication"
+         << format(" modified %zu (%.2f%%) functions;", ModifiedFunctions,
+                   100.0 * ModifiedFunctions / BC.getBinaryFunctions().size())
+         << format(" duplicated %zu blocks (%zu bytes) responsible for",
+                   DuplicatedBlockCount, DuplicatedByteCount)
+         << format(" %zu dynamic executions (%.2f%% of all block executions)",
+                   DuplicationsDynamicCount,
+                   100.0 * DuplicationsDynamicCount / AllDynamicCount)
+         << "\n";
+
+  if (opts::TailDuplicationConstCopyPropagation) {
+    outs() << "BOLT-INFO: tail duplication "
+           << format("applied %zu static and %zu dynamic propagation deletions",
+                     StaticInstructionDeletionCount,
+                     DynamicInstructionDeletionCount)
+           << "\n";
+  }
 }
 
 } // end namespace bolt
