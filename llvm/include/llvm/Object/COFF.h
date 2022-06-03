@@ -1298,6 +1298,12 @@ struct FpoData {
   frame_type getFP() const { return static_cast<frame_type>(Attributes >> 14); }
 };
 
+class SectionStrippedError
+    : public ErrorInfo<SectionStrippedError, BinaryError> {
+public:
+  SectionStrippedError() { setErrorCode(object_error::section_stripped); }
+};
+
 } // end namespace object
 
 } // end namespace llvm
