@@ -28,8 +28,8 @@ public:
   using FileOffset = std::int64_t;
 
   const char *path() const { return path_.get(); }
-  void set_path(OwningPtr<char> &&, std::size_t bytes);
   std::size_t pathLength() const { return pathLength_; }
+  void set_path(OwningPtr<char> &&, std::size_t bytes);
   bool mayRead() const { return mayRead_; }
   bool mayWrite() const { return mayWrite_; }
   bool mayPosition() const { return mayPosition_; }
