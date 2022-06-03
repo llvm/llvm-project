@@ -160,6 +160,9 @@ Bug Fixes
   conditions it would be allowed for a const object elsewhere.
 - ``__has_unique_object_representations`` no longer reports that ``_BitInt`` types
   have unique object representations if they have padding bits.
+- Unscoped and scoped enumeration types can no longer be initialized from a
+  brace-init-list containing a single element of a different scoped enumeration
+  type.
 
 Improvements to Clang's diagnostics
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
