@@ -123,6 +123,9 @@ Bug Fixes
   a lambda expression that shares the name of a variable in a containing
   if/while/for/switch init statement as a redeclaration.
   This fixes `Issue 54913 <https://github.com/llvm/llvm-project/issues/54913>`_.
+- Unscoped and scoped enumeration types can no longer be initialized from a
+  brace-init-list containing a single element of a different scoped enumeration
+  type.
 
 Improvements to Clang's diagnostics
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
