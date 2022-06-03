@@ -449,7 +449,9 @@ set(files
   __type_traits/add_rvalue_reference.h
   __type_traits/add_volatile.h
   __type_traits/conditional.h
+  __type_traits/conjunction.h
   __type_traits/decay.h
+  __type_traits/disjunction.h
   __type_traits/enable_if.h
   __type_traits/extent.h
   __type_traits/integral_constant.h
