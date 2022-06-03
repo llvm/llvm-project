@@ -2,7 +2,7 @@
 ; RUN: FileCheck --input-file %t --check-prefix REMARK %s
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
-target triple = "powerpc64le-unknown-linux-gnu"
+target triple = "x86_64-unknown-linux-gnu"
 
 @A = common global [100 x [100 x i32]] zeroinitializer
 @C = common global [100 x [100 x i32]] zeroinitializer

@@ -6,8 +6,6 @@
 ; In the 2 test cases below, we have a LCSSA PHI in the inner loop exit, which
 ; is used in the outer loop latch. This is not supported.
 
-target triple = "powerpc64le-unknown-linux-gnu"
-
 define void @test1() {
 ; CHECK-LABEL: @test1(
 ; CHECK-NEXT:  entry:

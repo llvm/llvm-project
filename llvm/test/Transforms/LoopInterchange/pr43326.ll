@@ -2,7 +2,6 @@
 ; RUN:     -verify-dom-info -verify-loop-info -verify-loop-lcssa -stats 2>&1
 ; RUN: FileCheck --input-file=%t --check-prefix=REMARKS %s
 
-target triple = "powerpc64le-unknown-linux-gnu"
 @a = global i32 0
 @b = global i8 0
 @c = global i32 0

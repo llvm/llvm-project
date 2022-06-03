@@ -1,6 +1,5 @@
 ; RUN: opt -basic-aa -loop-interchange -verify-dom-info -verify-loop-info -verify-loop-lcssa -S %s | FileCheck %s
 
-target triple = "powerpc64le-unknown-linux-gnu"
 @b = global [3 x [5 x [8 x i16]]] [[5 x [8 x i16]] zeroinitializer, [5 x [8 x i16]] [[8 x i16] zeroinitializer, [8 x i16] [i16 0, i16 0, i16 0, i16 6, i16 1, i16 6, i16 0, i16 0], [8 x i16] zeroinitializer, [8 x i16] zeroinitializer, [8 x i16] zeroinitializer], [5 x [8 x i16]] zeroinitializer], align 2
 @a = common global i32 0, align 4
 @d = common dso_local local_unnamed_addr global [1 x [6 x i32]] zeroinitializer, align 4
