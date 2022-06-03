@@ -47,7 +47,6 @@ static constexpr double EXP_M[64] = {
     0x1.fa7c1819e90d8p0,
 };
 
-INLINE_FMA
 LLVM_LIBC_FUNCTION(float, exp2f, (float x)) {
   using FPBits = typename fputil::FPBits<float>;
   FPBits xbits(x);

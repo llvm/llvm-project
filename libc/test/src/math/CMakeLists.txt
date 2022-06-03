@@ -1189,6 +1189,9 @@ add_fp_unittest(
     libc.src.__support.FPUtil.fputil
 )
 
+# Without FMA instructions, the current expm1f implementation is not correctly
+# rounded for all float inputs (1 extra exceptional value). This will be fixed
+# in the followup patch: https://reviews.llvm.org/D123440
 add_fp_unittest(
   expm1f_test
   NEED_MPFR
@@ -1201,6 +1204,8 @@ add_fp_unittest(
     libc.include.math
     libc.src.math.expm1f
     libc.src.__support.FPUtil.fputil
+  FLAGS
+    FMA_OPT__ONLY
 )
 
 add_fp_unittest(

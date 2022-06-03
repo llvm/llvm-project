@@ -1,6 +1,14 @@
 set(OBJECT_LIBRARY_TARGET_TYPE "OBJECT_LIBRARY")
 
-function(_get_common_compile_options output_var)
+function(_get_common_compile_options output_var flags)
+  list(FIND flags ${FMA_OPT_FLAG} fma)
+  if(${fma} LESS 0)
+    list(FIND flags "${FMA_OPT_FLAG}__ONLY" fma)
+  endif()
+  if((${fma} GREATER -1) AND (LIBC_CPU_FEATURES MATCHES "FMA"))
+    set(ADD_FMA_FLAG TRUE)
+  endif()
+
   set(compile_options ${LIBC_COMPILE_OPTIONS_DEFAULT} ${ARGN})
   if(NOT ${LIBC_TARGET_OS} STREQUAL "windows")
     set(compile_options ${compile_options} -fpie -ffreestanding -fno-builtin)
@@ -10,9 +18,15 @@ function(_get_common_compile_options output_var)
     list(APPEND compile_options "-fno-unwind-tables")
     list(APPEND compile_options "-fno-asynchronous-unwind-tables")
     list(APPEND compile_options "-fno-rtti")
+    if(ADD_FMA_FLAG)
+      list(APPEND compile_options "-mfma")
+    endif()
   elseif(MSVC)
     list(APPEND compile_options "/EHs-c-")
     list(APPEND compile_options "/GR-")
+    if(ADD_FMA_FLAG)
+      list(APPEND compile_options "/arch:AVX2")
+    endif()
   endif()
   set(${output_var} ${compile_options} PARENT_SCOPE)
 endfunction()
@@ -54,7 +68,11 @@ function(create_object_library fq_target_name)
       ${LIBC_SOURCE_DIR}
       ${LIBC_BUILD_DIR}
   )
-  _get_common_compile_options(compile_options ${ADD_OBJECT_COMPILE_OPTIONS})
+  _get_common_compile_options(
+    compile_options
+    "${ADD_OBJECT_FLAGS}"
+    ${ADD_OBJECT_COMPILE_OPTIONS}
+  )
   target_compile_options(${fq_target_name} PRIVATE ${compile_options})
 
   get_fq_deps_list(fq_deps_list ${ADD_OBJECT_DEPENDS})
@@ -276,7 +294,11 @@ function(create_entrypoint_object fq_target_name)
     set(ADD_ENTRYPOINT_OBJ_CXX_STANDARD ${CMAKE_CXX_STANDARD})
   endif()
 
-  _get_common_compile_options(common_compile_options ${ADD_ENTRYPOINT_OBJ_COMPILE_OPTIONS})
+  _get_common_compile_options(
+    common_compile_options
+    "${ADD_ENTRYPOINT_OBJ_FLAGS}"
+    ${ADD_ENTRYPOINT_OBJ_COMPILE_OPTIONS}
+  )
   set(internal_target_name ${fq_target_name}.__internal__)
   set(include_dirs ${LIBC_BUILD_DIR}/include ${LIBC_SOURCE_DIR} ${LIBC_BUILD_DIR})
   get_fq_deps_list(fq_deps_list ${ADD_ENTRYPOINT_OBJ_DEPENDS})

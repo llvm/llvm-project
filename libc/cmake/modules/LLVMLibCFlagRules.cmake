@@ -131,3 +131,8 @@ endfunction(get_fq_dep_list_without_flag)
 
 # Special flags
 set(FMA_OPT_FLAG "FMA_OPT")
+
+# Skip FMA_OPT flag for targets that don't support fma.
+if(NOT(LIBC_TARGET_ARCHITECTURE_IS_X86 AND (LIBC_CPU_FEATURES MATCHES "FMA")))
+  set(SKIP_FLAG_EXPANSION_FMA_OPT TRUE)
+endif()

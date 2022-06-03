@@ -45,10 +45,4 @@
 #endif
 #endif
 
-#if (defined(LLVM_LIBC_ARCH_X86_64) && defined(LIBC_TARGET_HAS_FMA))
-#define INLINE_FMA __attribute__((target("fma")))
-#else
-#define INLINE_FMA
-#endif // LLVM_LIBC_ARCH_X86_64
-
 #endif // LLVM_LIBC_SUPPORT_ARCHITECTURES_H

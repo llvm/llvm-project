@@ -19,7 +19,6 @@
 
 namespace __llvm_libc {
 
-INLINE_FMA
 LLVM_LIBC_FUNCTION(float, expm1f, (float x)) {
   using FPBits = typename fputil::FPBits<float>;
   FPBits xbits(x);

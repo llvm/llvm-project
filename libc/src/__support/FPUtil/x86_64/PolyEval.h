@@ -23,8 +23,7 @@ namespace fputil {
 // Cubic polynomials:
 //   polyeval(x, a0, a1, a2, a3) = a3*x^3 + a2*x^2 + a1*x + a0
 template <>
-INLINE_FMA inline float polyeval(float x, float a0, float a1, float a2,
-                                 float a3) {
+inline float polyeval(float x, float a0, float a1, float a2, float a3) {
   __m128 xmm = _mm_set1_ps(x);                 // NOLINT
   __m128 a13 = _mm_set_ps(0.0f, x, a3, a1);    // NOLINT
   __m128 a02 = _mm_set_ps(0.0f, 0.0f, a2, a0); // NOLINT
@@ -35,8 +34,7 @@ INLINE_FMA inline float polyeval(float x, float a0, float a1, float a2,
 }
 
 template <>
-INLINE_FMA inline double polyeval(double x, double a0, double a1, double a2,
-                                  double a3) {
+inline double polyeval(double x, double a0, double a1, double a2, double a3) {
   __m256d xmm = _mm256_set1_pd(x);               // NOLINT
   __m256d a13 = _mm256_set_pd(0.0, x, a3, a1);   // NOLINT
   __m256d a02 = _mm256_set_pd(0.0, 0.0, a2, a0); // NOLINT
@@ -50,8 +48,8 @@ INLINE_FMA inline double polyeval(double x, double a0, double a1, double a2,
 //   polyeval(x, a0, a1, a2, a3, a4, a5) = a5*x^5 + a4*x^4 + a3*x^3 + a2*x^2 +
 //                                         + a1*x + a0
 template <>
-INLINE_FMA inline float polyeval(float x, float a0, float a1, float a2,
-                                 float a3, float a4, float a5) {
+inline float polyeval(float x, float a0, float a1, float a2, float a3, float a4,
+                      float a5) {
   __m128 xmm = _mm_set1_ps(x);                 // NOLINT
   __m128 a25 = _mm_set_ps(0.0f, x, a5, a2);    // NOLINT
   __m128 a14 = _mm_set_ps(0.0f, 0.0f, a4, a1); // NOLINT
@@ -65,8 +63,8 @@ INLINE_FMA inline float polyeval(float x, float a0, float a1, float a2,
 }
 
 template <>
-INLINE_FMA inline double polyeval(double x, double a0, double a1, double a2,
-                                  double a3, double a4, double a5) {
+inline double polyeval(double x, double a0, double a1, double a2, double a3,
+                       double a4, double a5) {
   __m256d xmm = _mm256_set1_pd(x);               // NOLINT
   __m256d a25 = _mm256_set_pd(0.0, x, a5, a2);   // NOLINT
   __m256d a14 = _mm256_set_pd(0.0, 0.0, a4, a1); // NOLINT
