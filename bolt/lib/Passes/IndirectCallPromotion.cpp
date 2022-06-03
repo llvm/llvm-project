@@ -127,12 +127,7 @@ static cl::opt<bool> ICPPeelForInline(
 
 } // namespace opts
 
-namespace llvm {
-namespace bolt {
-
-namespace {
-
-bool verifyProfile(std::map<uint64_t, BinaryFunction> &BFs) {
+static bool verifyProfile(std::map<uint64_t, BinaryFunction> &BFs) {
   bool IsValid = true;
   for (auto &BFI : BFs) {
     BinaryFunction &BF = BFI.second;
@@ -157,7 +152,8 @@ bool verifyProfile(std::map<uint64_t, BinaryFunction> &BFs) {
   return IsValid;
 }
 
-} // namespace
+namespace llvm {
+namespace bolt {
 
 IndirectCallPromotion::Callsite::Callsite(BinaryFunction &BF,
                                           const IndirectCallProfile &ICP)
