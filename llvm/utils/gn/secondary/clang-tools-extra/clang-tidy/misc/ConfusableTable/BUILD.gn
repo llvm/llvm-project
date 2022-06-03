@@ -1,4 +1,0 @@
-executable("make_confusable_table") {
-  deps = [ "//llvm/lib/Support" ]
-  sources = [ "build_confusable_table.cpp" ]
-}
