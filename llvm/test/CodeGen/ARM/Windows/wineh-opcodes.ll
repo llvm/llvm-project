@@ -249,8 +249,8 @@ entry:
 ; CHECK-NEXT: @ %bb.0:                                @ %entry
 ; CHECK-NEXT:         push    {r4, r5, r6, lr}
 ; CHECK-NEXT:         .seh_save_regs  {r4-r6, lr}
-; CHECK-NEXT:         movw    r4, #0
-; CHECK-NEXT:         .seh_nop_w
+; CHECK-NEXT:         movs    r4, #0
+; CHECK-NEXT:         .seh_nop
 ; CHECK-NEXT:         movt    r4, #1
 ; CHECK-NEXT:         .seh_nop_w
 ; CHECK-NEXT:         bl      __chkstk
