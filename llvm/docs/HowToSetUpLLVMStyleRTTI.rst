@@ -494,6 +494,7 @@ constructible from ``nullptr`` and that results in a value you can tell is
 invalid.
 
 .. code-block:: c++
+
   class SomeValue {
   public:
     SomeValue(void *ptr) : ptr(ptr) {}
@@ -509,6 +510,7 @@ now, we assume that the types we want to cast *to* all provide ``classof``. So
 we can use some provided cast traits like so:
 
 .. code-block:: c++
+
   template<typename T>
   struct CastInfo<T, SomeValue>
     : public CastIsPossible<T, SomeValue>,
@@ -525,6 +527,7 @@ Now given the value above ``SomeValue``, maybe we'd like to be able to cast to
 that type from a char pointer type. So what we would do in that case is:
 
 .. code-block:: c++
+
   template<typename T>
   struct CastInfo<SomeValue, T *>
     : public NullableValueCastFailed<SomeValue>,
@@ -547,6 +550,7 @@ way to tell when an object is invalid, you may want to use ``llvm::Optional``.
 In those cases, you probably want something like this:
 
 .. code-block:: c++
+
   template<typename T>
   struct CastInfo<T, SomeValue>
     : public OptionalValueCast<T, SomeValue> {};
@@ -555,12 +559,14 @@ That cast trait requires that ``T`` is constructible from ``const SomeValue &``
 but it enables casting like so:
 
 .. code-block:: c++
+
   SomeValue someVal = ...;
   Optional<AnotherValue> valOr = dyn_cast<AnotherValue>(someVal);
 
 With the ``_is_present`` variants, you can even do optional chaining like this:
 
 .. code-block:: c++
+
   Optional<SomeValue> someVal = ...;
   Optional<AnotherValue> valOr = dyn_cast_if_present<AnotherValue>(someVal);
 
