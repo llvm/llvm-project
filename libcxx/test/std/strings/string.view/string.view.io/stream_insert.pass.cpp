@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 // UNSUPPORTED: no-localization
+// UNSUPPORTED: !stdlib=libc++ && (c++03 || c++11 || c++14)
 
 // <string_view>
 
