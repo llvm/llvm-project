@@ -45,17 +45,17 @@ static cl::opt<int> OptComputeOut(
     "polly-dependences-computeout",
     cl::desc("Bound the dependence analysis by a maximal amount of "
              "computational steps (0 means no bound)"),
-    cl::Hidden, cl::init(500000), cl::ZeroOrMore, cl::cat(PollyCategory));
+    cl::Hidden, cl::init(500000), cl::cat(PollyCategory));
 
-static cl::opt<bool> LegalityCheckDisabled(
-    "disable-polly-legality", cl::desc("Disable polly legality check"),
-    cl::Hidden, cl::init(false), cl::ZeroOrMore, cl::cat(PollyCategory));
+static cl::opt<bool>
+    LegalityCheckDisabled("disable-polly-legality",
+                          cl::desc("Disable polly legality check"), cl::Hidden,
+                          cl::cat(PollyCategory));
 
 static cl::opt<bool>
     UseReductions("polly-dependences-use-reductions",
                   cl::desc("Exploit reductions in dependence analysis"),
-                  cl::Hidden, cl::init(true), cl::ZeroOrMore,
-                  cl::cat(PollyCategory));
+                  cl::Hidden, cl::init(true), cl::cat(PollyCategory));
 
 enum AnalysisType { VALUE_BASED_ANALYSIS, MEMORY_BASED_ANALYSIS };
 

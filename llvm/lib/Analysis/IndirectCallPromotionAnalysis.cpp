@@ -34,7 +34,7 @@ static cl::opt<unsigned> ICPRemainingPercentThreshold(
 // total call count) for it to be considered as the promotion target.
 static cl::opt<unsigned>
     ICPTotalPercentThreshold("icp-total-percent-threshold", cl::init(5),
-                             cl::Hidden, cl::ZeroOrMore,
+                             cl::Hidden,
                              cl::desc("The percentage threshold against total "
                                       "count for the promotion"));
 

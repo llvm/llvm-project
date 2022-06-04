@@ -109,8 +109,7 @@ static cl::opt<bool, true> XPollyProcessUnprofitable(
     "polly-process-unprofitable",
     cl::desc(
         "Process scops that are unlikely to benefit from Polly optimizations."),
-    cl::location(PollyProcessUnprofitable), cl::init(false), cl::ZeroOrMore,
-    cl::cat(PollyCategory));
+    cl::location(PollyProcessUnprofitable), cl::cat(PollyCategory));
 
 static cl::list<std::string> OnlyFunctions(
     "polly-only-func",
@@ -146,68 +145,63 @@ static cl::opt<std::string> OnlyRegion(
 static cl::opt<bool>
     IgnoreAliasing("polly-ignore-aliasing",
                    cl::desc("Ignore possible aliasing of the array bases"),
-                   cl::Hidden, cl::init(false), cl::ZeroOrMore,
-                   cl::cat(PollyCategory));
+                   cl::Hidden, cl::cat(PollyCategory));
 
 bool polly::PollyAllowUnsignedOperations;
 
 static cl::opt<bool, true> XPollyAllowUnsignedOperations(
     "polly-allow-unsigned-operations",
     cl::desc("Allow unsigned operations such as comparisons or zero-extends."),
-    cl::location(PollyAllowUnsignedOperations), cl::Hidden, cl::ZeroOrMore,
-    cl::init(true), cl::cat(PollyCategory));
+    cl::location(PollyAllowUnsignedOperations), cl::Hidden, cl::init(true),
+    cl::cat(PollyCategory));
 
 bool polly::PollyUseRuntimeAliasChecks;
 
 static cl::opt<bool, true> XPollyUseRuntimeAliasChecks(
     "polly-use-runtime-alias-checks",
     cl::desc("Use runtime alias checks to resolve possible aliasing."),
-    cl::location(PollyUseRuntimeAliasChecks), cl::Hidden, cl::ZeroOrMore,
-    cl::init(true), cl::cat(PollyCategory));
+    cl::location(PollyUseRuntimeAliasChecks), cl::Hidden, cl::init(true),
+    cl::cat(PollyCategory));
 
 static cl::opt<bool>
     ReportLevel("polly-report",
                 cl::desc("Print information about the activities of Polly"),
-                cl::init(false), cl::ZeroOrMore, cl::cat(PollyCategory));
+                cl::cat(PollyCategory));
 
 static cl::opt<bool> AllowDifferentTypes(
     "polly-allow-differing-element-types",
     cl::desc("Allow different element types for array accesses"), cl::Hidden,
-    cl::init(true), cl::ZeroOrMore, cl::cat(PollyCategory));
+    cl::init(true), cl::cat(PollyCategory));
 
 static cl::opt<bool>
     AllowNonAffine("polly-allow-nonaffine",
                    cl::desc("Allow non affine access functions in arrays"),
-                   cl::Hidden, cl::init(false), cl::ZeroOrMore,
-                   cl::cat(PollyCategory));
+                   cl::Hidden, cl::cat(PollyCategory));
 
 static cl::opt<bool>
     AllowModrefCall("polly-allow-modref-calls",
                     cl::desc("Allow functions with known modref behavior"),
-                    cl::Hidden, cl::init(false), cl::ZeroOrMore,
-                    cl::cat(PollyCategory));
+                    cl::Hidden, cl::cat(PollyCategory));
 
 static cl::opt<bool> AllowNonAffineSubRegions(
     "polly-allow-nonaffine-branches",
     cl::desc("Allow non affine conditions for branches"), cl::Hidden,
-    cl::init(true), cl::ZeroOrMore, cl::cat(PollyCategory));
+    cl::init(true), cl::cat(PollyCategory));
 
 static cl::opt<bool>
     AllowNonAffineSubLoops("polly-allow-nonaffine-loops",
                            cl::desc("Allow non affine conditions for loops"),
-                           cl::Hidden, cl::init(false), cl::ZeroOrMore,
-                           cl::cat(PollyCategory));
+                           cl::Hidden, cl::cat(PollyCategory));
 
 static cl::opt<bool, true>
     TrackFailures("polly-detect-track-failures",
                   cl::desc("Track failure strings in detecting scop regions"),
-                  cl::location(PollyTrackFailures), cl::Hidden, cl::ZeroOrMore,
-                  cl::init(true), cl::cat(PollyCategory));
+                  cl::location(PollyTrackFailures), cl::Hidden, cl::init(true),
+                  cl::cat(PollyCategory));
 
 static cl::opt<bool> KeepGoing("polly-detect-keep-going",
                                cl::desc("Do not fail on the first error."),
-                               cl::Hidden, cl::ZeroOrMore, cl::init(false),
-                               cl::cat(PollyCategory));
+                               cl::Hidden, cl::cat(PollyCategory));
 
 static cl::opt<bool, true>
     PollyDelinearizeX("polly-delinearize",
@@ -218,20 +212,20 @@ static cl::opt<bool, true>
 static cl::opt<bool>
     VerifyScops("polly-detect-verify",
                 cl::desc("Verify the detected SCoPs after each transformation"),
-                cl::Hidden, cl::init(false), cl::ZeroOrMore,
-                cl::cat(PollyCategory));
+                cl::Hidden, cl::cat(PollyCategory));
 
 bool polly::PollyInvariantLoadHoisting;
 
-static cl::opt<bool, true> XPollyInvariantLoadHoisting(
-    "polly-invariant-load-hoisting", cl::desc("Hoist invariant loads."),
-    cl::location(PollyInvariantLoadHoisting), cl::Hidden, cl::ZeroOrMore,
-    cl::init(false), cl::cat(PollyCategory));
+static cl::opt<bool, true>
+    XPollyInvariantLoadHoisting("polly-invariant-load-hoisting",
+                                cl::desc("Hoist invariant loads."),
+                                cl::location(PollyInvariantLoadHoisting),
+                                cl::Hidden, cl::cat(PollyCategory));
 
 static cl::opt<bool> PollyAllowErrorBlocks(
     "polly-allow-error-blocks",
     cl::desc("Allow to speculate on the execution of 'error blocks'."),
-    cl::Hidden, cl::init(true), cl::ZeroOrMore, cl::cat(PollyCategory));
+    cl::Hidden, cl::init(true), cl::cat(PollyCategory));
 
 /// The minimal trip count under which loops are considered unprofitable.
 static const unsigned MIN_LOOP_TRIP_COUNT = 8;

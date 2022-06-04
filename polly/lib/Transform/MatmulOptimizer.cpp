@@ -66,24 +66,24 @@ static cl::opt<int> ThroughputVectorFma(
 static cl::opt<int> FirstCacheLevelSize(
     "polly-target-1st-cache-level-size",
     cl::desc("The size of the first cache level specified in bytes."),
-    cl::Hidden, cl::init(-1), cl::ZeroOrMore, cl::cat(PollyCategory));
+    cl::Hidden, cl::init(-1), cl::cat(PollyCategory));
 
 static cl::opt<int> FirstCacheLevelDefaultSize(
     "polly-target-1st-cache-level-default-size",
     cl::desc("The default size of the first cache level specified in bytes"
              " (if not enough were provided by the TargetTransformInfo)."),
-    cl::Hidden, cl::init(32768), cl::ZeroOrMore, cl::cat(PollyCategory));
+    cl::Hidden, cl::init(32768), cl::cat(PollyCategory));
 
 static cl::opt<int> SecondCacheLevelSize(
     "polly-target-2nd-cache-level-size",
     cl::desc("The size of the second level specified in bytes."), cl::Hidden,
-    cl::init(-1), cl::ZeroOrMore, cl::cat(PollyCategory));
+    cl::init(-1), cl::cat(PollyCategory));
 
 static cl::opt<int> SecondCacheLevelDefaultSize(
     "polly-target-2nd-cache-level-default-size",
     cl::desc("The default size of the second cache level specified in bytes"
              " (if not enough were provided by the TargetTransformInfo)."),
-    cl::Hidden, cl::init(262144), cl::ZeroOrMore, cl::cat(PollyCategory));
+    cl::Hidden, cl::init(262144), cl::cat(PollyCategory));
 
 // This option, along with --polly-target-2nd-cache-level-associativity,
 // --polly-target-1st-cache-level-size, and --polly-target-2st-cache-level-size
@@ -95,36 +95,36 @@ static cl::opt<int> SecondCacheLevelDefaultSize(
 static cl::opt<int> FirstCacheLevelAssociativity(
     "polly-target-1st-cache-level-associativity",
     cl::desc("The associativity of the first cache level."), cl::Hidden,
-    cl::init(-1), cl::ZeroOrMore, cl::cat(PollyCategory));
+    cl::init(-1), cl::cat(PollyCategory));
 
 static cl::opt<int> FirstCacheLevelDefaultAssociativity(
     "polly-target-1st-cache-level-default-associativity",
     cl::desc("The default associativity of the first cache level"
              " (if not enough were provided by the TargetTransformInfo)."),
-    cl::Hidden, cl::init(8), cl::ZeroOrMore, cl::cat(PollyCategory));
+    cl::Hidden, cl::init(8), cl::cat(PollyCategory));
 
 static cl::opt<int> SecondCacheLevelAssociativity(
     "polly-target-2nd-cache-level-associativity",
     cl::desc("The associativity of the second cache level."), cl::Hidden,
-    cl::init(-1), cl::ZeroOrMore, cl::cat(PollyCategory));
+    cl::init(-1), cl::cat(PollyCategory));
 
 static cl::opt<int> SecondCacheLevelDefaultAssociativity(
     "polly-target-2nd-cache-level-default-associativity",
     cl::desc("The default associativity of the second cache level"
              " (if not enough were provided by the TargetTransformInfo)."),
-    cl::Hidden, cl::init(8), cl::ZeroOrMore, cl::cat(PollyCategory));
+    cl::Hidden, cl::init(8), cl::cat(PollyCategory));
 
 static cl::opt<int> VectorRegisterBitwidth(
     "polly-target-vector-register-bitwidth",
     cl::desc("The size in bits of a vector register (if not set, this "
              "information is taken from LLVM's target information."),
-    cl::Hidden, cl::init(-1), cl::ZeroOrMore, cl::cat(PollyCategory));
+    cl::Hidden, cl::init(-1), cl::cat(PollyCategory));
 
 static cl::opt<int> PollyPatternMatchingNcQuotient(
     "polly-pattern-matching-nc-quotient",
     cl::desc("Quotient that is obtained by dividing Nc, the parameter of the"
              "macro-kernel, by Nr, the parameter of the micro-kernel"),
-    cl::Hidden, cl::init(256), cl::ZeroOrMore, cl::cat(PollyCategory));
+    cl::Hidden, cl::init(256), cl::cat(PollyCategory));
 
 namespace {
 /// Parameters of the micro kernel.

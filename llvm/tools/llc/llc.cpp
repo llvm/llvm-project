@@ -213,7 +213,7 @@ static RunPassOption RunPassOpt;
 static cl::opt<RunPassOption, true, cl::parser<std::string>> RunPass(
     "run-pass",
     cl::desc("Run compiler only for specified passes (comma separated list)"),
-    cl::value_desc("pass-name"), cl::ZeroOrMore, cl::location(RunPassOpt));
+    cl::value_desc("pass-name"), cl::location(RunPassOpt));
 
 static int compileModule(char **, LLVMContext &);
 

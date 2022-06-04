@@ -183,7 +183,7 @@ static cl::opt<std::string>
     EntryPointName("entry", cl::desc("Symbol to call as main entry point"),
                    cl::init("entry"));
 
-static cl::list<std::string> InputObjects(cl::Positional, cl::ZeroOrMore,
+static cl::list<std::string> InputObjects(cl::Positional,
                                           cl::desc("input objects"));
 
 int main(int argc, char *argv[]) {

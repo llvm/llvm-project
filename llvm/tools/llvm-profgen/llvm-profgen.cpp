@@ -48,11 +48,9 @@ static cl::opt<std::string> UnsymbolizedProfFilename(
 static cl::alias UPA("up", cl::desc("Alias for --unsymbolized-profile"),
                      cl::aliasopt(UnsymbolizedProfFilename));
 
-static cl::opt<std::string>
-    SampleProfFilename("llvm-sample-profile",
-                       cl::value_desc("llvm sample profile"), cl::ZeroOrMore,
-                       cl::desc("Path of the LLVM sample profile"),
-                       cl::cat(ProfGenCategory));
+static cl::opt<std::string> SampleProfFilename(
+    "llvm-sample-profile", cl::value_desc("llvm sample profile"),
+    cl::desc("Path of the LLVM sample profile"), cl::cat(ProfGenCategory));
 
 static cl::opt<std::string>
     BinaryPath("binary", cl::value_desc("binary"), cl::Required,

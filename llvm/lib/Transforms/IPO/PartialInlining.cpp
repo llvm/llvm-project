@@ -135,7 +135,7 @@ static cl::opt<int> MaxNumPartialInlining(
 // produces larger value, the BFI value will be used.
 static cl::opt<int>
     OutlineRegionFreqPercent("outline-region-freq-percent", cl::init(75),
-                             cl::Hidden, cl::ZeroOrMore,
+                             cl::Hidden,
                              cl::desc("Relative frequency of outline region to "
                                       "the entry block"));
 

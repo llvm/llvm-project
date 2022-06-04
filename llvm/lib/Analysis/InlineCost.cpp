@@ -78,7 +78,7 @@ static cl::opt<int> HintThreshold(
 
 static cl::opt<int>
     ColdCallSiteThreshold("inline-cold-callsite-threshold", cl::Hidden,
-                          cl::init(45), cl::ZeroOrMore,
+                          cl::init(45),
                           cl::desc("Threshold for inlining cold callsites"));
 
 static cl::opt<bool> InlineEnableCostBenefitAnalysis(

@@ -275,8 +275,8 @@ TrapOldCode("trap-old-code",
 
 static cl::opt<std::string> DWPPathName("dwp",
                                         cl::desc("Path and name to DWP file."),
-                                        cl::Hidden, cl::ZeroOrMore,
-                                        cl::init(""), cl::cat(BoltCategory));
+                                        cl::Hidden, cl::init(""),
+                                        cl::cat(BoltCategory));
 
 static cl::opt<bool>
 UseGnuStack("use-gnu-stack",

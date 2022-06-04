@@ -86,7 +86,7 @@ enum class OpenMPBackend { GNU, LLVM };
 static cl::opt<bool> PollyGenerateRTCPrint(
     "polly-codegen-emit-rtc-print",
     cl::desc("Emit code that prints the runtime check result dynamically."),
-    cl::Hidden, cl::init(false), cl::ZeroOrMore, cl::cat(PollyCategory));
+    cl::Hidden, cl::cat(PollyCategory));
 
 // If this option is set we always use the isl AST generator to regenerate
 // memory accesses. Without this option set we regenerate expressions using the
@@ -95,12 +95,12 @@ static cl::opt<bool> PollyGenerateRTCPrint(
 static cl::opt<bool> PollyGenerateExpressions(
     "polly-codegen-generate-expressions",
     cl::desc("Generate AST expressions for unmodified and modified accesses"),
-    cl::Hidden, cl::init(false), cl::ZeroOrMore, cl::cat(PollyCategory));
+    cl::Hidden, cl::cat(PollyCategory));
 
 static cl::opt<int> PollyTargetFirstLevelCacheLineSize(
     "polly-target-first-level-cache-line-size",
     cl::desc("The size of the first level cache line size specified in bytes."),
-    cl::Hidden, cl::init(64), cl::ZeroOrMore, cl::cat(PollyCategory));
+    cl::Hidden, cl::init(64), cl::cat(PollyCategory));
 
 static cl::opt<OpenMPBackend> PollyOmpBackend(
     "polly-omp-backend", cl::desc("Choose the OpenMP library to use:"),

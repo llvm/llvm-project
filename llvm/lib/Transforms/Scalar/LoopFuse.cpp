@@ -128,7 +128,7 @@ static cl::opt<unsigned> FusionPeelMaxCount(
 static cl::opt<bool>
     VerboseFusionDebugging("loop-fusion-verbose-debug",
                            cl::desc("Enable verbose debugging for Loop Fusion"),
-                           cl::Hidden, cl::init(false), cl::ZeroOrMore);
+                           cl::Hidden, cl::init(false));
 #endif
 
 namespace {

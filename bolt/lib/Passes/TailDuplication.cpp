@@ -66,13 +66,13 @@ static cl::opt<bool> TailDuplicationConstCopyPropagation(
 static cl::opt<unsigned> TailDuplicationMaxCacheDistance(
     "tail-duplication-max-cache-distance",
     cl::desc("The weight of backward jumps for ExtTSP value"), cl::init(256),
-    cl::ReallyHidden, cl::ZeroOrMore, cl::cat(BoltOptCategory));
+    cl::ReallyHidden, cl::cat(BoltOptCategory));
 
 static cl::opt<double> TailDuplicationCacheBackwardWeight(
     "tail-duplication-cache-backward-weight",
     cl::desc(
         "The maximum distance (in bytes) of backward jumps for ExtTSP value"),
-    cl::init(0.5), cl::ReallyHidden, cl::ZeroOrMore, cl::cat(BoltOptCategory));
+    cl::init(0.5), cl::ReallyHidden, cl::cat(BoltOptCategory));
 
 } // namespace opts
 

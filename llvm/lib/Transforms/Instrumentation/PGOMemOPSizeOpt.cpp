@@ -68,7 +68,7 @@ static cl::opt<bool> DisableMemOPOPT("disable-memop-opt", cl::init(false),
 // The percent threshold to optimize memory intrinsic calls.
 static cl::opt<unsigned>
     MemOPPercentThreshold("pgo-memop-percent-threshold", cl::init(40),
-                          cl::Hidden, cl::ZeroOrMore,
+                          cl::Hidden,
                           cl::desc("The percentage threshold for the "
                                    "memory intrinsic calls optimization"));
 

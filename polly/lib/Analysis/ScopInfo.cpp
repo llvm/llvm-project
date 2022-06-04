@@ -126,7 +126,7 @@ static int const MaxDisjunktsInDefinedBehaviourContext = 8;
 static cl::opt<bool> PollyRemarksMinimal(
     "polly-remarks-minimal",
     cl::desc("Do not emit remarks about assumptions that are known"),
-    cl::Hidden, cl::ZeroOrMore, cl::init(false), cl::cat(PollyCategory));
+    cl::Hidden, cl::cat(PollyCategory));
 
 static cl::opt<bool>
     IslOnErrorAbort("polly-on-isl-error-abort",

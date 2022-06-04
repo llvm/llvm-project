@@ -50,7 +50,7 @@ static cl::opt<unsigned> ICPCallsRemainingPercentThreshold(
     "icp-calls-remaining-percent-threshold",
     cl::desc("The percentage threshold against remaining unpromoted indirect "
              "call count for the promotion for calls"),
-    cl::init(50), cl::ZeroOrMore, cl::Hidden, cl::cat(BoltOptCategory));
+    cl::init(50), cl::Hidden, cl::cat(BoltOptCategory));
 
 static cl::opt<unsigned> ICPCallsTotalPercentThreshold(
     "icp-calls-total-percent-threshold",
@@ -63,7 +63,7 @@ static cl::opt<unsigned> ICPMispredictThreshold(
     "indirect-call-promotion-mispredict-threshold",
     cl::desc("misprediction threshold for skipping ICP on an "
              "indirect call"),
-    cl::init(0), cl::ZeroOrMore, cl::cat(BoltOptCategory));
+    cl::init(0), cl::cat(BoltOptCategory));
 
 static cl::opt<bool> ICPUseMispredicts(
     "indirect-call-promotion-use-mispredicts",
@@ -77,31 +77,31 @@ static cl::opt<unsigned>
     ICPTopN("indirect-call-promotion-topn",
             cl::desc("limit number of targets to consider when doing indirect "
                      "call promotion. 0 = no limit"),
-            cl::init(3), cl::ZeroOrMore, cl::cat(BoltOptCategory));
+            cl::init(3), cl::cat(BoltOptCategory));
 
 static cl::opt<unsigned> ICPCallsTopN(
     "indirect-call-promotion-calls-topn",
     cl::desc("limit number of targets to consider when doing indirect "
              "call promotion on calls. 0 = no limit"),
-    cl::init(0), cl::ZeroOrMore, cl::cat(BoltOptCategory));
+    cl::init(0), cl::cat(BoltOptCategory));
 
 static cl::opt<unsigned> ICPJumpTablesTopN(
     "indirect-call-promotion-jump-tables-topn",
     cl::desc("limit number of targets to consider when doing indirect "
              "call promotion on jump tables. 0 = no limit"),
-    cl::init(0), cl::ZeroOrMore, cl::cat(BoltOptCategory));
+    cl::init(0), cl::cat(BoltOptCategory));
 
 static cl::opt<bool> EliminateLoads(
     "icp-eliminate-loads",
     cl::desc("enable load elimination using memory profiling data when "
              "performing ICP"),
-    cl::init(true), cl::ZeroOrMore, cl::cat(BoltOptCategory));
+    cl::init(true), cl::cat(BoltOptCategory));
 
 static cl::opt<unsigned> ICPTopCallsites(
     "icp-top-callsites",
     cl::desc("optimize hottest calls until at least this percentage of all "
              "indirect calls frequency is covered. 0 = all callsites"),
-    cl::init(99), cl::Hidden, cl::ZeroOrMore, cl::cat(BoltOptCategory));
+    cl::init(99), cl::Hidden, cl::cat(BoltOptCategory));
 
 static cl::list<std::string>
     ICPFuncsList("icp-funcs", cl::CommaSeparated,
@@ -112,18 +112,17 @@ static cl::list<std::string>
 static cl::opt<bool>
     ICPOldCodeSequence("icp-old-code-sequence",
                        cl::desc("use old code sequence for promoted calls"),
-                       cl::init(false), cl::ZeroOrMore, cl::Hidden,
-                       cl::cat(BoltOptCategory));
+                       cl::Hidden, cl::cat(BoltOptCategory));
 
 static cl::opt<bool> ICPJumpTablesByTarget(
     "icp-jump-tables-targets",
     cl::desc(
         "for jump tables, optimize indirect jmp targets instead of indices"),
-    cl::init(false), cl::ZeroOrMore, cl::Hidden, cl::cat(BoltOptCategory));
+    cl::Hidden, cl::cat(BoltOptCategory));
 
 static cl::opt<bool> ICPPeelForInline(
     "icp-inline", cl::desc("only promote call targets eligible for inlining"),
-    cl::init(false), cl::ZeroOrMore, cl::Hidden, cl::cat(BoltOptCategory));
+    cl::Hidden, cl::cat(BoltOptCategory));
 
 } // namespace opts
 

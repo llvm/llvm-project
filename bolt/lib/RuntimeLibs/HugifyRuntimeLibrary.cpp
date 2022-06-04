@@ -35,7 +35,7 @@ cl::opt<bool>
 
 static cl::opt<std::string> RuntimeHugifyLib(
     "runtime-hugify-lib",
-    cl::desc("specify file name of the runtime hugify library"), cl::ZeroOrMore,
+    cl::desc("specify file name of the runtime hugify library"),
     cl::init("libbolt_rt_hugify.a"), cl::cat(BoltOptCategory));
 
 } // namespace opts

@@ -71,7 +71,7 @@ static cl::opt<char>
     OptLevel("O",
              cl::desc("Optimization level. [-O0, -O1, -O2, or -O3] "
                       "(default = '-O2')"),
-             cl::Prefix, cl::ZeroOrMore, cl::init('2'), cl::cat(LTOCategory));
+             cl::Prefix, cl::init('2'), cl::cat(LTOCategory));
 
 static cl::opt<bool>
     IndexStats("thinlto-index-stats",

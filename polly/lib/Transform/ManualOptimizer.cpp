@@ -32,7 +32,7 @@ namespace {
 static cl::opt<bool> IgnoreDepcheck(
     "polly-pragma-ignore-depcheck",
     cl::desc("Skip the dependency check for pragma-based transformations"),
-    cl::init(false), cl::ZeroOrMore, cl::cat(PollyCategory));
+    cl::cat(PollyCategory));
 
 /// Same as llvm::hasUnrollTransformation(), but takes a LoopID as argument
 /// instead of a Loop.

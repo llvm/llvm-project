@@ -169,10 +169,9 @@ static cl::opt<bool> ExperimentalCodeGen(
 namespace llvm {
 
 // A command line option to enable the CopyToPhi DAG mutation.
-cl::opt<bool>
-    SwpEnableCopyToPhi("pipeliner-enable-copytophi", cl::ReallyHidden,
-                       cl::init(true), cl::ZeroOrMore,
-                       cl::desc("Enable CopyToPhi DAG Mutation"));
+cl::opt<bool> SwpEnableCopyToPhi("pipeliner-enable-copytophi", cl::ReallyHidden,
+                                 cl::init(true),
+                                 cl::desc("Enable CopyToPhi DAG Mutation"));
 
 } // end namespace llvm
 
