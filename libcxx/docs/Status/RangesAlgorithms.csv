@@ -8,7 +8,7 @@ Search,find_if_not,Nikolas Klauser,`D121248 <https://reviews.llvm.org/D121248>`_
 Search,find_first_of,Nikolas Klauser,`D126529 <https://reviews.llvm.org/D126529>`_,Under review
 Search,adjacent_find,Nikolas Klauser,`D126610 <https://reviews.llvm.org/D126610>`_,Under review
 Search,mismatch,Nikolas Klauser,`D117817 <https://llvm.org/D117817>`_,✅
-Search,equal,Nikolas Klauser,`D123681 <https://reviews.llvm.org/D123681>`,✅
+Search,equal,Nikolas Klauser,`D123681 <https://reviews.llvm.org/D123681>`_,✅
 Search,lexicographical_compare,Not assigned,n/a,Not started
 Search,partition_point,Christopher Di Bella,`D105794 <https://llvm.org/D105794>`_,Under review
 Search,lower_bound,Nikolas Klauser,`D121964 <https://llvm.org/D121964>`_,Under review
