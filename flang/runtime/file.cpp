@@ -97,12 +97,18 @@ void OpenFile::Open(OpenStatus status, std::optional<Action> action,
       flags |= O_TRUNC;
     }
     if (!action) {
-      // Try to open read/write, back off to read-only on failure
+      // Try to open read/write, back off to read-only or even write-only
+      // on failure
       fd_ = ::open(path_.get(), flags | O_RDWR, 0600);
       if (fd_ >= 0) {
         action = Action::ReadWrite;
       } else {
-        action = Action::Read;
+        fd_ = ::open(path_.get(), flags | O_RDONLY, 0600);
+        if (fd_ >= 0) {
+          action = Action::Read;
+        } else {
+          action = Action::Write;
+        }
       }
     }
     if (fd_ < 0) {
