@@ -75,6 +75,12 @@ bool M88kDelaySlotFiller::runOnMachineFunction(MachineFunction &MF) {
   bool Changed = false;
   for (MachineBasicBlock &MBB : MF)
     Changed |= runOnMachineBasicBlock(MBB);
+
+  // This pass invalidates liveness information when it reorders instructions to
+  // fill delay slot. Without this, -verify-machineinstrs will fail.
+  if (Changed)
+    MF.getRegInfo().invalidateLiveness();
+
   return Changed;
 }
 
@@ -90,24 +96,29 @@ bool M88kDelaySlotFiller::runOnMachineBasicBlock(MachineBasicBlock &MBB) {
          I->getDesc().isReturn()) &&
         (Opc = M88k::getOpcodeWithDelaySlot(I->getOpcode())) != -1) {
       MachineBasicBlock::instr_iterator InstrWithSlot = I;
-      MachineBasicBlock::instr_iterator J = I;
+      MachineBasicBlock::instr_iterator Filler = I;
 
-      if (!findDelayInstr(MBB, I, J))
+      // Try to find a suitable filler instruction for the delay slot.
+      if (!findDelayInstr(MBB, I, Filler))
         continue;
 
       // Replace the opcode.
       I->setDesc(TII->get(Opc));
-      MBB.splice(std::next(I), &MBB, J);
-      ++FilledSlots;
 
+      // Move the filler instruction into the delay slot position.
+      MBB.splice(std::next(I), &MBB, Filler);
+
+      // Update statistic count and record the change.
+      ++FilledSlots;
       Changed = true;
+
       // Record the filler instruction that filled the delay slot.
       // The instruction after it will be visited in the next iteration.
       LastFiller = ++I;
 
       // Bundle the delay slot filler to InstrWithSlot so that the machine
       // verifier doesn't expect this instruction to be a terminator.
-      MIBundleBuilder(MBB, InstrWithSlot, std::next(LastFiller));
+      InstrWithSlot->bundleWithSucc();
     }
   }
   return Changed;
@@ -126,7 +137,7 @@ bool M88kDelaySlotFiller::findDelayInstr(
 
   for (MachineBasicBlock::reverse_instr_iterator I = ++Slot.getReverse();
        I != MBB.instr_rend(); ++I) {
-    // skip debug value
+    // Skip debug value.
     if (I->isDebugInstr())
       continue;
 
@@ -176,15 +187,15 @@ bool M88kDelaySlotFiller::delayHasHazard(MachineBasicBlock::instr_iterator MI,
     Register Reg;
 
     if (!MO.isReg() || !(Reg = MO.getReg()))
-      continue; // skip
+      continue;
 
     if (MO.isDef()) {
-      // check whether Reg is defined or used before delay slot.
+      // Check whether Reg is defined or used before delay slot.
       if (isRegInSet(RegDefs, Reg) || isRegInSet(RegUses, Reg))
         return true;
     }
     if (MO.isUse()) {
-      // check whether Reg is defined before delay slot.
+      // Check whether Reg is defined before delay slot.
       if (isRegInSet(RegDefs, Reg))
         return true;
     }
@@ -196,11 +207,8 @@ bool M88kDelaySlotFiller::delayHasHazard(MachineBasicBlock::instr_iterator MI,
 void M88kDelaySlotFiller::insertDefsUses(MachineBasicBlock::instr_iterator MI,
                                          SmallSet<unsigned, 32> &RegDefs,
                                          SmallSet<unsigned, 32> &RegUses) {
-  // If MI is a call or return, just examine the explicit non-variadic operands.
-  MCInstrDesc MCID = MI->getDesc();
-  unsigned E = MI->isCall() || MI->isReturn() ? MCID.getNumOperands()
-                                              : MI->getNumOperands();
-  for (unsigned I = 0; I != E; ++I) {
+  // Only examine the explicit and non-variadic operands.
+  for (unsigned I = 0, E = MI->getDesc().getNumOperands(); I != E; ++I) {
     const MachineOperand &MO = MI->getOperand(I);
     Register Reg;
 
