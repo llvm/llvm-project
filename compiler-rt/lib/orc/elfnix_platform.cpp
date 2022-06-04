@@ -15,6 +15,7 @@
 #include "error.h"
 #include "wrapper_function_utils.h"
 
+#include <algorithm>
 #include <map>
 #include <mutex>
 #include <sstream>
@@ -132,12 +133,6 @@ private:
   Error initializeJITDylib(ELFNixJITDylibInitializers &MOJDIs);
 
   static ELFNixPlatformRuntimeState *MOPS;
-
-  using InitSectionHandler =
-      Error (*)(const std::vector<ExecutorAddrRange> &Sections,
-                const ELFNixJITDylibInitializers &MOJDIs);
-  const std::vector<std::pair<const char *, InitSectionHandler>> InitSections =
-      {{".init_array", runInitArray}};
 
   void *PlatformJDDSOHandle;
 
@@ -378,21 +373,29 @@ Expected<void *> ELFNixPlatformRuntimeState::dlopenInitialize(string_view Path,
   return JDS->Header;
 }
 
+long getPriority(const std::string &name) {
+  auto pos = name.find_last_not_of("0123456789");
+  if (pos == name.size() - 1)
+    return 65535;
+  else
+    return std::strtol(name.c_str() + pos + 1, nullptr, 10);
+}
+
 Error ELFNixPlatformRuntimeState::initializeJITDylib(
     ELFNixJITDylibInitializers &MOJDIs) {
 
   auto &JDS = getOrCreateJITDylibState(MOJDIs);
   ++JDS.RefCount;
 
-  for (auto &KV : InitSections) {
-    const auto &Name = KV.first;
-    const auto &Handler = KV.second;
-    auto I = MOJDIs.InitSections.find(Name);
-    if (I != MOJDIs.InitSections.end()) {
-      if (auto Err = Handler(I->second, MOJDIs))
-        return Err;
-    }
-  }
+  using SectionList = std::vector<ExecutorAddrRange>;
+  std::sort(MOJDIs.InitSections.begin(), MOJDIs.InitSections.end(),
+            [](const std::pair<std::string, SectionList> &LHS,
+               const std::pair<std::string, SectionList> &RHS) -> bool {
+              return getPriority(LHS.first) < getPriority(RHS.first);
+            });
+  for (auto &Entry : MOJDIs.InitSections)
+    if (auto Err = runInitArray(Entry.second, MOJDIs))
+      return Err;
 
   return Error::success();
 }
