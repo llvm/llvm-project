@@ -240,7 +240,7 @@ VPBasicBlock::createEmptyBasicBlock(VPTransformState::CFGState &CFG) {
   // Hook up the new basic block to its predecessors.
   for (VPBlockBase *PredVPBlock : getHierarchicalPredecessors()) {
     VPBasicBlock *PredVPBB = PredVPBlock->getExitingBasicBlock();
-    auto &PredVPSuccessors = PredVPBB->getSuccessors();
+    auto &PredVPSuccessors = PredVPBB->getHierarchicalSuccessors();
     BasicBlock *PredBB = CFG.VPBB2IRBB[PredVPBB];
 
     assert(PredBB && "Predecessor basic-block not found building successor.");
@@ -257,25 +257,13 @@ VPBasicBlock::createEmptyBasicBlock(VPTransformState::CFGState &CFG) {
       Br->setDebugLoc(DL);
     } else if (TermBr && !TermBr->isConditional()) {
       TermBr->setSuccessor(0, NewBB);
-    } else if (PredVPSuccessors.size() == 2) {
-      unsigned idx = PredVPSuccessors.front() == this ? 0 : 1;
-      assert(!PredBBTerminator->getSuccessor(idx) &&
-             "Trying to reset an existing successor block.");
-      PredBBTerminator->setSuccessor(idx, NewBB);
     } else {
-      // PredVPBB is the exiting block of a loop region. Connect its successor
-      // outside the region.
-      auto *LoopRegion = cast<VPRegionBlock>(PredVPBB->getParent());
-      assert(!LoopRegion->isReplicator() &&
-             "predecessor must be in a loop region");
-      assert(PredVPSuccessors.empty() &&
-             LoopRegion->getExitingBasicBlock() == PredVPBB &&
-             "PredVPBB must be the exiting block of its parent region");
-      assert(this == LoopRegion->getSingleSuccessor() &&
-             "the current block must be the single successor of the region");
-      PredBBTerminator->setSuccessor(0, NewBB);
-      PredBBTerminator->setSuccessor(
-          1, CFG.VPBB2IRBB[LoopRegion->getEntryBasicBlock()]);
+      // Set each forward successor here when it is created, excluding
+      // backedges. A backward successor is set when the branch is created.
+      unsigned idx = PredVPSuccessors.front() == this ? 0 : 1;
+      assert(!TermBr->getSuccessor(idx) &&
+             "Trying to reset an existing successor block.");
+      TermBr->setSuccessor(idx, NewBB);
     }
   }
   return NewBB;
@@ -297,6 +285,16 @@ void VPBasicBlock::execute(VPTransformState *State) {
     // ExitBB can be re-used for the exit block of the Plan.
     NewBB = State->CFG.ExitBB;
     State->CFG.PrevBB = NewBB;
+
+    // Update the branch instruction in the predecessor to branch to ExitBB.
+    VPBlockBase *PredVPB = getSingleHierarchicalPredecessor();
+    VPBasicBlock *ExitingVPBB = PredVPB->getExitingBasicBlock();
+    assert(PredVPB->getSingleSuccessor() == this &&
+           "predecessor must have the current block as only successor");
+    BasicBlock *ExitingBB = State->CFG.VPBB2IRBB[ExitingVPBB];
+    // The Exit block of a loop is always set to be successor 0 of the Exiting
+    // block.
+    cast<BranchInst>(ExitingBB->getTerminator())->setSuccessor(0, NewBB);
   } else if (PrevVPBB && /* A */
              !((SingleHPred = getSingleHierarchicalPredecessor()) &&
                SingleHPred->getExitingBasicBlock() == PrevVPBB &&
@@ -798,11 +796,15 @@ void VPInstruction::generateInstruction(VPTransformState &State,
     auto *Plan = getParent()->getPlan();
     VPRegionBlock *TopRegion = Plan->getVectorLoopRegion();
     VPBasicBlock *Header = TopRegion->getEntry()->getEntryBasicBlock();
-    // TODO: Once the exit block is modeled in VPlan, use it instead of going
-    // through State.CFG.ExitBB.
-    BasicBlock *Exit = State.CFG.ExitBB;
 
-    Builder.CreateCondBr(Cond, Exit, State.CFG.VPBB2IRBB[Header]);
+    // Replace the temporary unreachable terminator with a new conditional
+    // branch, hooking it up to backward destination (the header) now and to the
+    // forward destination (the exit/middle block) later when it is created.
+    // Note that CreateCondBr expects a valid BB as first argument, so we need
+    // to set it to nullptr later.
+    BranchInst *CondBr = Builder.CreateCondBr(Cond, Builder.GetInsertBlock(),
+                                              State.CFG.VPBB2IRBB[Header]);
+    CondBr->setSuccessor(0, nullptr);
     Builder.GetInsertBlock()->getTerminator()->eraseFromParent();
     break;
   }
