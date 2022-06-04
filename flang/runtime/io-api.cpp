@@ -172,7 +172,7 @@ Cookie BeginExternalListIO(
           *child, sourceFile, sourceLine);
     } else {
       return &child->BeginIoStatement<ErroneousIoStatementState>(
-          iostat, sourceFile, sourceLine);
+          iostat, nullptr /* no unit */, sourceFile, sourceLine);
     }
   } else {
     if (iostat == IostatOk && unit.access == Access::Direct) {
@@ -186,7 +186,7 @@ Cookie BeginExternalListIO(
           std::forward<A>(xs)..., unit, sourceFile, sourceLine);
     } else {
       return &unit.BeginIoStatement<ErroneousIoStatementState>(
-          iostat, sourceFile, sourceLine);
+          iostat, &unit, sourceFile, sourceLine);
     }
   }
 }
@@ -228,7 +228,7 @@ Cookie BeginExternalFormattedIO(const char *format, std::size_t formatLength,
           *child, format, formatLength, sourceFile, sourceLine);
     } else {
       return &child->BeginIoStatement<ErroneousIoStatementState>(
-          iostat, sourceFile, sourceLine);
+          iostat, nullptr /* no unit */, sourceFile, sourceLine);
     }
   } else {
     if (iostat == IostatOk) {
@@ -239,7 +239,7 @@ Cookie BeginExternalFormattedIO(const char *format, std::size_t formatLength,
           unit, format, formatLength, sourceFile, sourceLine);
     } else {
       return &unit.BeginIoStatement<ErroneousIoStatementState>(
-          iostat, sourceFile, sourceLine);
+          iostat, &unit, sourceFile, sourceLine);
     }
   }
 }
@@ -280,7 +280,7 @@ Cookie BeginUnformattedIO(
           *child, sourceFile, sourceLine);
     } else {
       return &child->BeginIoStatement<ErroneousIoStatementState>(
-          iostat, sourceFile, sourceLine);
+          iostat, nullptr /* no unit */, sourceFile, sourceLine);
     }
   } else {
     if (iostat == IostatOk) {
@@ -301,7 +301,7 @@ Cookie BeginUnformattedIO(
       return &io;
     } else {
       return &unit.BeginIoStatement<ErroneousIoStatementState>(
-          iostat, sourceFile, sourceLine);
+          iostat, &unit, sourceFile, sourceLine);
     }
   }
 }
