@@ -328,14 +328,16 @@ define dso_local i32 @load_const_medium() nounwind {
 ; RV64I-LABEL: load_const_medium:
 ; RV64I:       # %bb.0: # %entry
 ; RV64I-NEXT:    lui a0, 1
-; RV64I-NEXT:    addiw a0, a0, -16
-; RV64I-NEXT:    lw a0, 0(a0)
+; RV64I-NEXT:    lw a0, -16(a0)
 ; RV64I-NEXT:    ret
 entry:
   %0 = load i32, i32* inttoptr (i64 4080 to i32*)
   ret i32 %0
 }
 
+; The constant here is 0x7ffff800, this value requires LUI+ADDIW on RV64,
+; LUI+ADDI would produce a different constant so we can't fold into the load
+; offset.
 define dso_local i32 @load_const_large() nounwind {
 ; RV32I-LABEL: load_const_large:
 ; RV32I:       # %bb.0: # %entry
