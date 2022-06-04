@@ -109,5 +109,6 @@ bool IsExtant(const char *path);
 bool MayRead(const char *path);
 bool MayWrite(const char *path);
 bool MayReadAndWrite(const char *path);
+std::int64_t SizeInBytes(const char *path);
 } // namespace Fortran::runtime::io
 #endif // FORTRAN_RUNTIME_FILE_H_
