@@ -7,6 +7,17 @@ import subprocess
 import sys
 import textwrap
 
+def get_git_ref_or_rev(dir: str) -> str:
+    # Run 'git symbolic-ref -q --short HEAD || git rev-parse --short HEAD'
+    cmd_ref = 'git symbolic-ref -q --short HEAD'
+    ref = subprocess.run(shlex.split(cmd_ref), cwd=dir, text=True,
+                         stdout=subprocess.PIPE)
+    if not ref.returncode:
+        return ref.stdout.strip()
+    cmd_rev = 'git rev-parse --short HEAD'
+    return subprocess.check_output(shlex.split(cmd_rev), cwd=dir,
+                                   text=True).strip()
+
 
 def main():
     parser = argparse.ArgumentParser(description=textwrap.dedent('''
@@ -29,16 +40,22 @@ def main():
     if not source_dir:
         sys.exit("Source directory is not found")
 
-    wrapper_path = os.path.abspath(
-        f'{source_dir}/../bolt/utils/llvm-bolt-wrapper.py')
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    wrapper_path = f'{script_dir}/llvm-bolt-wrapper.py'
     # build the current commit
     subprocess.run(shlex.split("cmake --build . --target llvm-bolt"),
                    cwd=args.build_dir)
     # rename llvm-bolt
     os.replace(bolt_path, f'{bolt_path}.new')
+    # memorize the old hash for logging
+    old_ref = get_git_ref_or_rev(source_dir)
+
+    # save local changes before checkout
+    subprocess.run(shlex.split("git stash"), cwd=source_dir)
     # check out the previous commit
-    subprocess.run(shlex.split("git checkout -f HEAD^"),
-                   cwd=source_dir)
+    subprocess.run(shlex.split("git checkout -f HEAD^"), cwd=source_dir)
+    # get the parent commit hash for logging
+    new_ref = get_git_ref_or_rev(source_dir)
     # build the previous commit
     subprocess.run(shlex.split("cmake --build . --target llvm-bolt"),
                    cwd=args.build_dir)
@@ -53,6 +70,12 @@ def main():
         f.write(ini)
     # symlink llvm-bolt-wrapper
     os.symlink(wrapper_path, bolt_path)
+    print(f"The repository {source_dir} has been switched from rev {old_ref} "
+          f"to {new_ref}. Local changes were stashed. Switch back using\n\t"
+          f"git checkout {old_ref}\n"
+          "Current build directory is ready to run BOLT tests, e.g.\n\t"
+          "bin/llvm-lit -sv tools/bolt/test\nor\n\t"
+          "bin/llvm-lit -sv tools/bolttests")
 
 
 if __name__ == "__main__":
