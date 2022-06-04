@@ -68,11 +68,11 @@ static cl::opt<std::string> LinkerUserPath("linker-path", cl::Required,
                                            cl::cat(ClangLinkerWrapperCategory));
 
 static cl::opt<std::string>
-    TargetFeatures("target-feature", cl::ZeroOrMore,
+    TargetFeatures("target-feature",
                    cl::desc("Target features for triple"),
                    cl::cat(ClangLinkerWrapperCategory));
 
-static cl::opt<std::string> OptLevel("opt-level", cl::ZeroOrMore,
+static cl::opt<std::string> OptLevel("opt-level",
                                      cl::desc("Optimization level for LTO"),
                                      cl::init("O2"),
                                      cl::cat(ClangLinkerWrapperCategory));
@@ -83,22 +83,22 @@ static cl::list<std::string>
                      cl::cat(ClangLinkerWrapperCategory));
 
 static cl::opt<bool> EmbedBitcode(
-    "target-embed-bc", cl::ZeroOrMore,
+    "target-embed-bc",
     cl::desc("Embed linked bitcode instead of an executable device image"),
-    cl::init(false), cl::cat(ClangLinkerWrapperCategory));
+    cl::cat(ClangLinkerWrapperCategory));
 
 static cl::opt<bool> DryRun(
-    "dry-run", cl::ZeroOrMore,
+    "dry-run",
     cl::desc("List the linker commands to be run without executing them"),
-    cl::init(false), cl::cat(ClangLinkerWrapperCategory));
+    cl::cat(ClangLinkerWrapperCategory));
 
 static cl::opt<bool>
-    PrintWrappedModule("print-wrapped-module", cl::ZeroOrMore,
+    PrintWrappedModule("print-wrapped-module",
                        cl::desc("Print the wrapped module's IR for testing"),
-                       cl::init(false), cl::cat(ClangLinkerWrapperCategory));
+                       cl::cat(ClangLinkerWrapperCategory));
 
 static cl::opt<std::string>
-    HostTriple("host-triple", cl::ZeroOrMore,
+    HostTriple("host-triple",
                cl::desc("Triple to use for the host compilation"),
                cl::init(sys::getDefaultTargetTriple()),
                cl::cat(ClangLinkerWrapperCategory));
@@ -114,9 +114,9 @@ static cl::list<std::string>
                cl::value_desc("<value> or <triple>=<value>"),
                cl::cat(ClangLinkerWrapperCategory));
 
-static cl::opt<bool> Verbose("v", cl::ZeroOrMore,
+static cl::opt<bool> Verbose("v",
                              cl::desc("Verbose output from tools"),
-                             cl::init(false),
+                             
                              cl::cat(ClangLinkerWrapperCategory));
 
 static cl::opt<DebugKind> DebugInfo(
@@ -126,11 +126,11 @@ static cl::opt<DebugKind> DebugInfo(
                           "Direction information"),
                clEnumValN(FullDebugInfo, "g", "Full debugging support")));
 
-static cl::opt<bool> SaveTemps("save-temps", cl::ZeroOrMore,
+static cl::opt<bool> SaveTemps("save-temps",
                                cl::desc("Save intermediary results."),
                                cl::cat(ClangLinkerWrapperCategory));
 
-static cl::opt<std::string> CudaPath("cuda-path", cl::ZeroOrMore,
+static cl::opt<std::string> CudaPath("cuda-path",
                                      cl::desc("Save intermediary results."),
                                      cl::cat(ClangLinkerWrapperCategory));
 
