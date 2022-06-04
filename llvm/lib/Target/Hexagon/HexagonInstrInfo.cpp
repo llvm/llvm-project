@@ -97,9 +97,9 @@ static cl::opt<bool> BranchRelaxAsmLarge("branch-relax-asm-large",
                                          cl::init(true), cl::Hidden,
                                          cl::desc("branch relax asm"));
 
-static cl::opt<bool> UseDFAHazardRec("dfa-hazard-rec",
-  cl::init(true), cl::Hidden, cl::ZeroOrMore,
-  cl::desc("Use the DFA based hazard recognizer."));
+static cl::opt<bool>
+    UseDFAHazardRec("dfa-hazard-rec", cl::init(true), cl::Hidden,
+                    cl::desc("Use the DFA based hazard recognizer."));
 
 /// Constants for Hexagon instructions.
 const int Hexagon_MEMW_OFFSET_MAX = 4095;

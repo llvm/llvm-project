@@ -36,8 +36,8 @@ static cl::opt<bool>
     EnableCExtOpt("hexagon-cext", cl::Hidden, cl::init(true),
                   cl::desc("Enable Hexagon constant-extender optimization"));
 
-static cl::opt<bool> EnableRDFOpt("rdf-opt", cl::Hidden, cl::ZeroOrMore,
-  cl::init(true), cl::desc("Enable RDF-based optimizations"));
+static cl::opt<bool> EnableRDFOpt("rdf-opt", cl::Hidden, cl::init(true),
+                                  cl::desc("Enable RDF-based optimizations"));
 
 static cl::opt<bool> DisableHardwareLoops("disable-hexagon-hwloops",
   cl::Hidden, cl::desc("Disable Hardware Loops for Hexagon target"));
