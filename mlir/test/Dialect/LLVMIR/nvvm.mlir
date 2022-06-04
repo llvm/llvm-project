@@ -29,13 +29,6 @@ func.func @nvvm_special_regs() -> i32 {
   llvm.return %0 : i32
 }
 
-// CHECK-LABEL: @nvvm_rcp
-func.func @nvvm_rcp(%arg0: f32) -> f32 {
-  // CHECK: nvvm.rcp.approx.ftz.f %arg0 : f32
-  %0 = nvvm.rcp.approx.ftz.f %arg0 : f32
-  llvm.return %0 : f32
-}
-
 // CHECK-LABEL: @llvm_nvvm_barrier0
 func.func @llvm_nvvm_barrier0() {
   // CHECK: nvvm.barrier0
