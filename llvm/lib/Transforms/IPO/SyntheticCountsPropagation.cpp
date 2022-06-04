@@ -48,12 +48,12 @@ cl::opt<int>
 
 /// Initial synthetic count assigned to inline functions.
 static cl::opt<int> InlineSyntheticCount(
-    "inline-synthetic-count", cl::Hidden, cl::init(15), cl::ZeroOrMore,
+    "inline-synthetic-count", cl::Hidden, cl::init(15),
     cl::desc("Initial synthetic entry count for inline functions."));
 
 /// Initial synthetic count assigned to cold functions.
 static cl::opt<int> ColdSyntheticCount(
-    "cold-synthetic-count", cl::Hidden, cl::init(5), cl::ZeroOrMore,
+    "cold-synthetic-count", cl::Hidden, cl::init(5),
     cl::desc("Initial synthetic entry count for cold functions."));
 
 // Assign initial synthetic entry counts to functions.

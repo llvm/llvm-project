@@ -17,13 +17,12 @@
 using namespace llvm;
 
 static cl::opt<bool> SimplifyDDG(
-    "ddg-simplify", cl::init(true), cl::Hidden, cl::ZeroOrMore,
+    "ddg-simplify", cl::init(true), cl::Hidden,
     cl::desc(
         "Simplify DDG by merging nodes that have less interesting edges."));
 
-static cl::opt<bool>
-    CreatePiBlocks("ddg-pi-blocks", cl::init(true), cl::Hidden, cl::ZeroOrMore,
-                   cl::desc("Create pi-block nodes."));
+static cl::opt<bool> CreatePiBlocks("ddg-pi-blocks", cl::init(true), cl::Hidden,
+                                    cl::desc("Create pi-block nodes."));
 
 #define DEBUG_TYPE "ddg"
 

@@ -173,7 +173,7 @@ static cl::opt<bool> DisablePreheaderProtect(
     cl::desc("Disable protection against removing loop preheaders"));
 
 static cl::opt<bool> ProfileGuidedSectionPrefix(
-    "profile-guided-section-prefix", cl::Hidden, cl::init(true), cl::ZeroOrMore,
+    "profile-guided-section-prefix", cl::Hidden, cl::init(true),
     cl::desc("Use profile info to add section prefix for hot/cold functions"));
 
 static cl::opt<bool> ProfileUnknownInSpecialSection(

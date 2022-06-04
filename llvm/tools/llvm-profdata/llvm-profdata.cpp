@@ -979,7 +979,7 @@ static int merge_main(int argc, const char *argv[]) {
       cl::desc(
           "Trim context sample profiles whose count is below cold threshold"));
   cl::opt<uint32_t> SampleColdContextFrameDepth(
-      "sample-frame-depth-for-cold-context", cl::init(1), cl::ZeroOrMore,
+      "sample-frame-depth-for-cold-context", cl::init(1),
       cl::desc("Keep the last K frames while merging cold profile. 1 means the "
                "context-less base profile"));
   cl::opt<bool> GenPartialProfile(

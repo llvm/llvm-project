@@ -65,7 +65,7 @@ using namespace llvm;
 #define DEBUG_TYPE "aarch64-stack-tagging"
 
 static cl::opt<bool> ClMergeInit(
-    "stack-tagging-merge-init", cl::Hidden, cl::init(true), cl::ZeroOrMore,
+    "stack-tagging-merge-init", cl::Hidden, cl::init(true),
     cl::desc("merge stack variable initializers with tagging when possible"));
 
 static cl::opt<bool>

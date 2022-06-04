@@ -69,11 +69,11 @@ static cl::opt<bool> PrintInstructionComments(
     cl::desc("Prints comments for instruction based on inline cost analysis"));
 
 static cl::opt<int> InlineThreshold(
-    "inline-threshold", cl::Hidden, cl::init(225), cl::ZeroOrMore,
+    "inline-threshold", cl::Hidden, cl::init(225),
     cl::desc("Control the amount of inlining to perform (default = 225)"));
 
 static cl::opt<int> HintThreshold(
-    "inlinehint-threshold", cl::Hidden, cl::init(325), cl::ZeroOrMore,
+    "inlinehint-threshold", cl::Hidden, cl::init(325),
     cl::desc("Threshold for inlining functions with inline hint"));
 
 static cl::opt<int>
@@ -86,7 +86,7 @@ static cl::opt<bool> InlineEnableCostBenefitAnalysis(
     cl::desc("Enable the cost-benefit analysis for the inliner"));
 
 static cl::opt<int> InlineSavingsMultiplier(
-    "inline-savings-multiplier", cl::Hidden, cl::init(8), cl::ZeroOrMore,
+    "inline-savings-multiplier", cl::Hidden, cl::init(8),
     cl::desc("Multiplier to multiply cycle savings by during inlining"));
 
 static cl::opt<int>
@@ -99,7 +99,7 @@ static cl::opt<int>
 // PGO before we actually hook up inliner with analysis passes such as BPI and
 // BFI.
 static cl::opt<int> ColdThreshold(
-    "inlinecold-threshold", cl::Hidden, cl::init(45), cl::ZeroOrMore,
+    "inlinecold-threshold", cl::Hidden, cl::init(45),
     cl::desc("Threshold for inlining functions with cold attribute"));
 
 static cl::opt<int>
@@ -108,17 +108,17 @@ static cl::opt<int>
                          cl::desc("Threshold for hot callsites "));
 
 static cl::opt<int> LocallyHotCallSiteThreshold(
-    "locally-hot-callsite-threshold", cl::Hidden, cl::init(525), cl::ZeroOrMore,
+    "locally-hot-callsite-threshold", cl::Hidden, cl::init(525),
     cl::desc("Threshold for locally hot callsites "));
 
 static cl::opt<int> ColdCallSiteRelFreq(
-    "cold-callsite-rel-freq", cl::Hidden, cl::init(2), cl::ZeroOrMore,
+    "cold-callsite-rel-freq", cl::Hidden, cl::init(2),
     cl::desc("Maximum block frequency, expressed as a percentage of caller's "
              "entry frequency, for a callsite to be cold in the absence of "
              "profile information."));
 
 static cl::opt<int> HotCallSiteRelFreq(
-    "hot-callsite-rel-freq", cl::Hidden, cl::init(60), cl::ZeroOrMore,
+    "hot-callsite-rel-freq", cl::Hidden, cl::init(60),
     cl::desc("Minimum block frequency, expressed as a multiple of caller's "
              "entry frequency, for a callsite to be hot in the absence of "
              "profile information."));
@@ -128,7 +128,7 @@ static cl::opt<int> CallPenalty(
     cl::desc("Call penalty that is applied per callsite when inlining"));
 
 static cl::opt<bool> OptComputeFullInlineCost(
-    "inline-cost-full", cl::Hidden, cl::init(false), cl::ZeroOrMore,
+    "inline-cost-full", cl::Hidden,
     cl::desc("Compute the full inline cost of a call site even when the cost "
              "exceeds the threshold."));
 

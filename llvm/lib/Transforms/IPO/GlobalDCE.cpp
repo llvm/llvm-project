@@ -33,7 +33,7 @@ using namespace llvm;
 #define DEBUG_TYPE "globaldce"
 
 static cl::opt<bool>
-    ClEnableVFE("enable-vfe", cl::Hidden, cl::init(true), cl::ZeroOrMore,
+    ClEnableVFE("enable-vfe", cl::Hidden, cl::init(true),
                 cl::desc("Enable virtual function elimination"));
 
 STATISTIC(NumAliases  , "Number of global aliases removed");

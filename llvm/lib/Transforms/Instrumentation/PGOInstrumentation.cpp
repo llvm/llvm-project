@@ -172,14 +172,14 @@ static cl::opt<bool> DisableValueProfiling("disable-vp", cl::init(false),
 // Command line option to set the maximum number of VP annotations to write to
 // the metadata for a single indirect call callsite.
 static cl::opt<unsigned> MaxNumAnnotations(
-    "icp-max-annotations", cl::init(3), cl::Hidden, cl::ZeroOrMore,
+    "icp-max-annotations", cl::init(3), cl::Hidden,
     cl::desc("Max number of annotations for a single indirect "
              "call callsite"));
 
 // Command line option to set the maximum number of value annotations
 // to write to the metadata for a single memop intrinsic.
 static cl::opt<unsigned> MaxNumMemOPAnnotations(
-    "memop-max-annotations", cl::init(4), cl::Hidden, cl::ZeroOrMore,
+    "memop-max-annotations", cl::init(4), cl::Hidden,
     cl::desc("Max number of preicise value annotations for a single memop"
              "intrinsic"));
 
@@ -255,7 +255,7 @@ static cl::opt<bool> PGOInstrumentEntry(
     cl::desc("Force to instrument function entry basicblock."));
 
 static cl::opt<bool> PGOFunctionEntryCoverage(
-    "pgo-function-entry-coverage", cl::init(false), cl::Hidden, cl::ZeroOrMore,
+    "pgo-function-entry-coverage", cl::Hidden,
     cl::desc(
         "Use this option to enable function entry coverage instrumentation."));
 

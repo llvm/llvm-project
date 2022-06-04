@@ -39,7 +39,7 @@ cl::opt<bool> NoWarnSampleUnused(
              "samples but without debug information to use those samples. "));
 
 cl::opt<bool> SampleProfileUseProfi(
-    "sample-profile-use-profi", cl::init(false), cl::Hidden, cl::ZeroOrMore,
+    "sample-profile-use-profi", cl::Hidden,
     cl::desc("Use profi to infer block and edge counts."));
 
 cl::opt<bool> SampleProfileInferEntryCount(

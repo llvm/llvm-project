@@ -33,16 +33,14 @@ using namespace llvm;
 
 #define DEBUG_TYPE "hexagon-copy-combine"
 
-static
-cl::opt<bool> IsCombinesDisabled("disable-merge-into-combines",
-                                 cl::Hidden, cl::ZeroOrMore,
-                                 cl::init(false),
-                                 cl::desc("Disable merging into combines"));
-static
-cl::opt<bool> IsConst64Disabled("disable-const64",
-                                 cl::Hidden, cl::ZeroOrMore,
-                                 cl::init(false),
-                                 cl::desc("Disable generation of const64"));
+static cl::opt<bool>
+    IsCombinesDisabled("disable-merge-into-combines", cl::Hidden,
+
+                       cl::desc("Disable merging into combines"));
+static cl::opt<bool>
+    IsConst64Disabled("disable-const64", cl::Hidden,
+
+                      cl::desc("Disable generation of const64"));
 static
 cl::opt<unsigned>
 MaxNumOfInstsBetweenNewValueStoreAndTFR("max-num-inst-between-tfr-and-nv-store",

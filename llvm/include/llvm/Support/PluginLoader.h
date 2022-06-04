@@ -31,9 +31,9 @@ namespace llvm {
 
 #ifndef DONT_GET_PLUGIN_LOADER_OPTION
   // This causes operator= above to be invoked for every -load option.
-  static cl::opt<PluginLoader, false, cl::parser<std::string> >
-    LoadOpt("load", cl::ZeroOrMore, cl::value_desc("pluginfilename"),
-            cl::desc("Load the specified plugin"));
+  static cl::opt<PluginLoader, false, cl::parser<std::string>>
+      LoadOpt("load", cl::value_desc("pluginfilename"),
+              cl::desc("Load the specified plugin"));
 #endif
 }
 

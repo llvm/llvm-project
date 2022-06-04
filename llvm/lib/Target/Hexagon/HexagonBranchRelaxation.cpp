@@ -33,8 +33,9 @@ using namespace llvm;
 
 // Since we have no exact knowledge of code layout, allow some safety buffer
 // for jump target. This is measured in bytes.
-static cl::opt<uint32_t> BranchRelaxSafetyBuffer("branch-relax-safety-buffer",
-  cl::init(200), cl::Hidden, cl::ZeroOrMore, cl::desc("safety buffer size"));
+static cl::opt<uint32_t>
+    BranchRelaxSafetyBuffer("branch-relax-safety-buffer", cl::init(200),
+                            cl::Hidden, cl::desc("safety buffer size"));
 
 namespace llvm {
 

@@ -168,13 +168,14 @@ static cl::opt<bool> EnableStackOVFSanitizer("enable-stackovf-sanitizer",
     cl::Hidden, cl::desc("Enable runtime checks for stack overflow."),
     cl::init(false), cl::ZeroOrMore);
 
-static cl::opt<bool> EnableShrinkWrapping("hexagon-shrink-frame",
-    cl::init(true), cl::Hidden, cl::ZeroOrMore,
-    cl::desc("Enable stack frame shrink wrapping"));
+static cl::opt<bool>
+    EnableShrinkWrapping("hexagon-shrink-frame", cl::init(true), cl::Hidden,
+                         cl::desc("Enable stack frame shrink wrapping"));
 
-static cl::opt<unsigned> ShrinkLimit("shrink-frame-limit",
-    cl::init(std::numeric_limits<unsigned>::max()), cl::Hidden, cl::ZeroOrMore,
-    cl::desc("Max count of stack frame shrink-wraps"));
+static cl::opt<unsigned>
+    ShrinkLimit("shrink-frame-limit",
+                cl::init(std::numeric_limits<unsigned>::max()), cl::Hidden,
+                cl::desc("Max count of stack frame shrink-wraps"));
 
 static cl::opt<bool> EnableSaveRestoreLong("enable-save-restore-long",
     cl::Hidden, cl::desc("Enable long calls for save-restore stubs."),

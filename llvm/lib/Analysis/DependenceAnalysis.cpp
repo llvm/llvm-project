@@ -106,7 +106,7 @@ STATISTIC(BanerjeeIndependence, "Banerjee independence");
 STATISTIC(BanerjeeSuccesses, "Banerjee successes");
 
 static cl::opt<bool>
-    Delinearize("da-delinearize", cl::init(true), cl::Hidden, cl::ZeroOrMore,
+    Delinearize("da-delinearize", cl::init(true), cl::Hidden,
                 cl::desc("Try to delinearize array references."));
 static cl::opt<bool> DisableDelinearizationChecks(
     "da-disable-delinearization-checks", cl::init(false), cl::Hidden,
@@ -118,7 +118,7 @@ static cl::opt<bool> DisableDelinearizationChecks(
         "dimension to underflow or overflow into another dimension."));
 
 static cl::opt<unsigned> MIVMaxLevelThreshold(
-    "da-miv-max-level-threshold", cl::init(7), cl::Hidden, cl::ZeroOrMore,
+    "da-miv-max-level-threshold", cl::init(7), cl::Hidden,
     cl::desc("Maximum depth allowed for the recursive algorithm used to "
              "explore MIV direction vectors."));
 

@@ -23,7 +23,7 @@ using namespace llvm;
 #include "NVPTXGenSubtargetInfo.inc"
 
 static cl::opt<bool>
-    NoF16Math("nvptx-no-f16-math", cl::ZeroOrMore, cl::Hidden,
+    NoF16Math("nvptx-no-f16-math", cl::Hidden,
               cl::desc("NVPTX Specific: Disable generation of f16 math ops."),
               cl::init(false));
 

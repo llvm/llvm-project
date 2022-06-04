@@ -24,19 +24,19 @@ static cl::opt<bool> ShowMmapEvents("show-mmap-events", cl::init(false),
                                     cl::desc("Print binary load events."));
 
 static cl::opt<bool>
-    UseOffset("use-offset", cl::init(true), cl::ZeroOrMore,
+    UseOffset("use-offset", cl::init(true),
               cl::desc("Work with `--skip-symbolization` or "
                        "`--unsymbolized-profile` to write/read the "
                        "offset instead of virtual address."));
 
 static cl::opt<bool> UseLoadableSegmentAsBase(
-    "use-first-loadable-segment-as-base", cl::init(false), cl::ZeroOrMore,
+    "use-first-loadable-segment-as-base",
     cl::desc("Use first loadable segment address as base address "
              "for offsets in unsymbolized profile. By default "
              "first executable segment address is used"));
 
 static cl::opt<bool>
-    IgnoreStackSamples("ignore-stack-samples", cl::init(false), cl::ZeroOrMore,
+    IgnoreStackSamples("ignore-stack-samples",
                        cl::desc("Ignore call stack samples for hybrid samples "
                                 "and produce context-insensitive profile."));
 cl::opt<bool> ShowDetailedWarning("show-detailed-warning", cl::init(false),

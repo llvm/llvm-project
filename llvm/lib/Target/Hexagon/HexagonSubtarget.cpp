@@ -39,45 +39,46 @@ using namespace llvm;
 #define GET_SUBTARGETINFO_TARGET_DESC
 #include "HexagonGenSubtargetInfo.inc"
 
-static cl::opt<bool> EnableBSBSched("enable-bsb-sched",
-  cl::Hidden, cl::ZeroOrMore, cl::init(true));
+static cl::opt<bool> EnableBSBSched("enable-bsb-sched", cl::Hidden,
+                                    cl::init(true));
 
 static cl::opt<bool> EnableTCLatencySched("enable-tc-latency-sched",
   cl::Hidden, cl::ZeroOrMore, cl::init(false));
 
-static cl::opt<bool> EnableDotCurSched("enable-cur-sched",
-  cl::Hidden, cl::ZeroOrMore, cl::init(true),
-  cl::desc("Enable the scheduler to generate .cur"));
+static cl::opt<bool>
+    EnableDotCurSched("enable-cur-sched", cl::Hidden, cl::init(true),
+                      cl::desc("Enable the scheduler to generate .cur"));
 
-static cl::opt<bool> DisableHexagonMISched("disable-hexagon-misched",
-  cl::Hidden, cl::ZeroOrMore, cl::init(false),
-  cl::desc("Disable Hexagon MI Scheduling"));
+static cl::opt<bool>
+    DisableHexagonMISched("disable-hexagon-misched", cl::Hidden,
+                          cl::desc("Disable Hexagon MI Scheduling"));
 
-static cl::opt<bool> EnableSubregLiveness("hexagon-subreg-liveness",
-  cl::Hidden, cl::ZeroOrMore, cl::init(true),
-  cl::desc("Enable subregister liveness tracking for Hexagon"));
+static cl::opt<bool> EnableSubregLiveness(
+    "hexagon-subreg-liveness", cl::Hidden, cl::init(true),
+    cl::desc("Enable subregister liveness tracking for Hexagon"));
 
-static cl::opt<bool> OverrideLongCalls("hexagon-long-calls",
-  cl::Hidden, cl::ZeroOrMore, cl::init(false),
-  cl::desc("If present, forces/disables the use of long calls"));
+static cl::opt<bool> OverrideLongCalls(
+    "hexagon-long-calls", cl::Hidden,
+    cl::desc("If present, forces/disables the use of long calls"));
 
-static cl::opt<bool> EnablePredicatedCalls("hexagon-pred-calls",
-  cl::Hidden, cl::ZeroOrMore, cl::init(false),
-  cl::desc("Consider calls to be predicable"));
+static cl::opt<bool>
+    EnablePredicatedCalls("hexagon-pred-calls", cl::Hidden,
+                          cl::desc("Consider calls to be predicable"));
 
-static cl::opt<bool> SchedPredsCloser("sched-preds-closer",
-  cl::Hidden, cl::ZeroOrMore, cl::init(true));
+static cl::opt<bool> SchedPredsCloser("sched-preds-closer", cl::Hidden,
+                                      cl::init(true));
 
 static cl::opt<bool> SchedRetvalOptimization("sched-retval-optimization",
   cl::Hidden, cl::ZeroOrMore, cl::init(true));
 
-static cl::opt<bool> EnableCheckBankConflict("hexagon-check-bank-conflict",
-  cl::Hidden, cl::ZeroOrMore, cl::init(true),
-  cl::desc("Enable checking for cache bank conflicts"));
+static cl::opt<bool> EnableCheckBankConflict(
+    "hexagon-check-bank-conflict", cl::Hidden, cl::init(true),
+    cl::desc("Enable checking for cache bank conflicts"));
 
 static cl::opt<bool> EnableV68FloatCodeGen(
-    "force-hvx-float", cl::Hidden, cl::ZeroOrMore, cl::init(false),
-    cl::desc("Enable the code-generation for vector float instructions on v68."));
+    "force-hvx-float", cl::Hidden,
+    cl::desc(
+        "Enable the code-generation for vector float instructions on v68."));
 
 HexagonSubtarget::HexagonSubtarget(const Triple &TT, StringRef CPU,
                                    StringRef FS, const TargetMachine &TM)

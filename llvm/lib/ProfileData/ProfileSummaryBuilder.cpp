@@ -19,7 +19,7 @@
 using namespace llvm;
 
 cl::opt<bool> UseContextLessSummary(
-    "profile-summary-contextless", cl::Hidden, cl::init(false), cl::ZeroOrMore,
+    "profile-summary-contextless", cl::Hidden,
     cl::desc("Merge context profiles before calculating thresholds."));
 
 // The following two parameters determine the threshold for a count to be
@@ -30,12 +30,12 @@ cl::opt<bool> UseContextLessSummary(
 // threshold for determining cold count (everything <= this threshold is
 // considered cold).
 cl::opt<int> ProfileSummaryCutoffHot(
-    "profile-summary-cutoff-hot", cl::Hidden, cl::init(990000), cl::ZeroOrMore,
+    "profile-summary-cutoff-hot", cl::Hidden, cl::init(990000),
     cl::desc("A count is hot if it exceeds the minimum count to"
              " reach this percentile of total counts."));
 
 cl::opt<int> ProfileSummaryCutoffCold(
-    "profile-summary-cutoff-cold", cl::Hidden, cl::init(999999), cl::ZeroOrMore,
+    "profile-summary-cutoff-cold", cl::Hidden, cl::init(999999),
     cl::desc("A count is cold if it is below the minimum count"
              " to reach this percentile of total counts."));
 
@@ -56,12 +56,12 @@ cl::opt<unsigned> ProfileSummaryLargeWorkingSetSizeThreshold(
 // The next two options override the counts derived from summary computation and
 // are useful for debugging purposes.
 cl::opt<uint64_t> ProfileSummaryHotCount(
-    "profile-summary-hot-count", cl::ReallyHidden, cl::ZeroOrMore,
+    "profile-summary-hot-count", cl::ReallyHidden,
     cl::desc("A fixed hot count that overrides the count derived from"
              " profile-summary-cutoff-hot"));
 
 cl::opt<uint64_t> ProfileSummaryColdCount(
-    "profile-summary-cold-count", cl::ReallyHidden, cl::ZeroOrMore,
+    "profile-summary-cold-count", cl::ReallyHidden,
     cl::desc("A fixed cold count that overrides the count derived from"
              " profile-summary-cutoff-cold"));
 
