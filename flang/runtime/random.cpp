@@ -54,17 +54,23 @@ inline void Generate(const Descriptor &harvest) {
   {
     CriticalSection critical{lock};
     for (std::size_t j{0}; j < elements; ++j) {
-      Int fraction{generator()};
-      if constexpr (words > 1) {
-        for (std::size_t k{1}; k < words; ++k) {
-          static constexpr auto rangeMask{(GeneratedWord{1} << rangeBits) - 1};
-          GeneratedWord word{(generator() - generator.min()) & rangeMask};
-          fraction = (fraction << rangeBits) | word;
+      while (true) {
+        Int fraction{generator()};
+        if constexpr (words > 1) {
+          for (std::size_t k{1}; k < words; ++k) {
+            static constexpr auto rangeMask{
+                (GeneratedWord{1} << rangeBits) - 1};
+            GeneratedWord word{(generator() - generator.min()) & rangeMask};
+            fraction = (fraction << rangeBits) | word;
+          }
+        }
+        fraction >>= words * rangeBits - PREC;
+        REAL next{std::ldexp(static_cast<REAL>(fraction), -(PREC + 1))};
+        if (next >= 0.0 && next < 1.0) {
+          *harvest.Element<REAL>(at) = next;
+          break;
         }
       }
-      fraction >>= words * rangeBits - PREC;
-      *harvest.Element<REAL>(at) =
-          std::ldexp(static_cast<REAL>(fraction), -(PREC + 1));
       harvest.IncrementSubscripts(at);
     }
   }
