@@ -428,6 +428,9 @@ static bool TryFastPathRealInput(
   io.HandleRelativePosition(p - str);
   // Set FP exception flags
   if (converted.flags != decimal::ConversionResultFlags::Exact) {
+    if (converted.flags & decimal::ConversionResultFlags::Overflow) {
+      return false; // let slow path deal with it
+    }
     RaiseFPExceptions(converted.flags);
   }
   return true;
@@ -505,6 +508,10 @@ bool EditCommonRealInput(IoStatementState &io, const DataEdit &edit, void *n) {
       converted.binary;
   // Set FP exception flags
   if (converted.flags != decimal::ConversionResultFlags::Exact) {
+    if (converted.flags & decimal::ConversionResultFlags::Overflow) {
+      io.GetIoErrorHandler().SignalError(IostatRealInputOverflow);
+      return false;
+    }
     RaiseFPExceptions(converted.flags);
   }
   return true;
