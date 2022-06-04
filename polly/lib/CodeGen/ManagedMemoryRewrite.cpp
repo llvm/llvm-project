@@ -33,7 +33,7 @@ static cl::opt<bool> RewriteAllocas(
     "polly-acc-rewrite-allocas",
     cl::desc(
         "Ask the managed memory rewriter to also rewrite alloca instructions"),
-    cl::Hidden, cl::init(false), cl::ZeroOrMore, cl::cat(PollyCategory));
+    cl::Hidden, cl::cat(PollyCategory));
 
 static cl::opt<bool> IgnoreLinkageForGlobals(
     "polly-acc-rewrite-ignore-linkage-for-globals",

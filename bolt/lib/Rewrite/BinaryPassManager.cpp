@@ -55,9 +55,9 @@ DynoStatsAll("dyno-stats-all",
   cl::ZeroOrMore, cl::Hidden, cl::cat(BoltCategory));
 
 static cl::opt<bool>
-EliminateUnreachable("eliminate-unreachable",
-  cl::desc("eliminate unreachable code"),
-  cl::init(true), cl::ZeroOrMore, cl::cat(BoltOptCategory));
+    EliminateUnreachable("eliminate-unreachable",
+                         cl::desc("eliminate unreachable code"), cl::init(true),
+                         cl::cat(BoltOptCategory));
 
 cl::opt<bool>
 ICF("icf",
@@ -70,10 +70,8 @@ JTFootprintReductionFlag("jt-footprint-reduction",
            "instructions at jump sites"),
   cl::ZeroOrMore, cl::cat(BoltOptCategory));
 
-cl::opt<bool>
-NeverPrint("never-print",
-  cl::desc("never print"),
-  cl::init(false), cl::ZeroOrMore, cl::ReallyHidden, cl::cat(BoltOptCategory));
+cl::opt<bool> NeverPrint("never-print", cl::desc("never print"),
+                         cl::ReallyHidden, cl::cat(BoltOptCategory));
 
 cl::opt<bool>
 PrintAfterBranchFixup("print-after-branch-fixup",
@@ -160,10 +158,10 @@ PrintReorderedFunctions("print-reordered-functions",
   cl::desc("print functions after clustering"),
   cl::ZeroOrMore, cl::Hidden, cl::cat(BoltOptCategory));
 
-static cl::opt<bool>
-PrintRetpolineInsertion("print-retpoline-insertion",
-  cl::desc("print functions after retpoline insertion pass"),
-  cl::init(false), cl::ZeroOrMore, cl::cat(BoltCategory));
+static cl::opt<bool> PrintRetpolineInsertion(
+    "print-retpoline-insertion",
+    cl::desc("print functions after retpoline insertion pass"),
+    cl::cat(BoltCategory));
 
 static cl::opt<bool>
 PrintSCTC("print-sctc",
@@ -181,29 +179,29 @@ PrintSplit("print-split",
   cl::ZeroOrMore, cl::Hidden, cl::cat(BoltOptCategory));
 
 static cl::opt<bool>
-PrintStoke("print-stoke",
-  cl::desc("print functions after stoke analysis"),
-  cl::init(false), cl::ZeroOrMore, cl::cat(BoltOptCategory));
+    PrintStoke("print-stoke", cl::desc("print functions after stoke analysis"),
+               cl::cat(BoltOptCategory));
 
-static cl::opt<bool>
-PrintVeneerElimination("print-veneer-elimination",
-  cl::desc("print functions after veneer elimination pass"),
-  cl::init(false), cl::ZeroOrMore, cl::cat(BoltOptCategory));
+static cl::opt<bool> PrintVeneerElimination(
+    "print-veneer-elimination",
+    cl::desc("print functions after veneer elimination pass"),
+    cl::cat(BoltOptCategory));
 
 static cl::opt<bool>
 PrintUCE("print-uce",
   cl::desc("print functions after unreachable code elimination"),
   cl::ZeroOrMore, cl::Hidden, cl::cat(BoltOptCategory));
 
-static cl::opt<bool>
-RegReAssign("reg-reassign",
-  cl::desc("reassign registers so as to avoid using REX prefixes in hot code"),
-  cl::init(false), cl::ZeroOrMore, cl::cat(BoltOptCategory));
+static cl::opt<bool> RegReAssign(
+    "reg-reassign",
+    cl::desc(
+        "reassign registers so as to avoid using REX prefixes in hot code"),
+    cl::cat(BoltOptCategory));
 
-static cl::opt<bool>
-SimplifyConditionalTailCalls("simplify-conditional-tail-calls",
-  cl::desc("simplify conditional tail calls by removing unnecessary jumps"),
-  cl::init(true), cl::ZeroOrMore, cl::cat(BoltOptCategory));
+static cl::opt<bool> SimplifyConditionalTailCalls(
+    "simplify-conditional-tail-calls",
+    cl::desc("simplify conditional tail calls by removing unnecessary jumps"),
+    cl::init(true), cl::cat(BoltOptCategory));
 
 static cl::opt<bool>
 SimplifyRODataLoads("simplify-rodata-loads",
@@ -218,25 +216,22 @@ SpecializeMemcpy1("memcpy1-spec",
   cl::value_desc("func1,func2:cs1:cs2,func3:cs1,..."),
   cl::ZeroOrMore, cl::cat(BoltOptCategory));
 
-static cl::opt<bool>
-Stoke("stoke",
-  cl::desc("turn on the stoke analysis"),
-  cl::init(false), cl::ZeroOrMore, cl::cat(BoltOptCategory));
+static cl::opt<bool> Stoke("stoke", cl::desc("turn on the stoke analysis"),
+                           cl::cat(BoltOptCategory));
 
-static cl::opt<bool>
-StringOps("inline-memcpy",
-  cl::desc("inline memcpy using 'rep movsb' instruction (X86-only)"),
-  cl::init(false), cl::ZeroOrMore, cl::cat(BoltOptCategory));
+static cl::opt<bool> StringOps(
+    "inline-memcpy",
+    cl::desc("inline memcpy using 'rep movsb' instruction (X86-only)"),
+    cl::cat(BoltOptCategory));
 
-static cl::opt<bool>
-StripRepRet("strip-rep-ret",
-  cl::desc("strip 'repz' prefix from 'repz retq' sequence (on by default)"),
-  cl::init(true), cl::ZeroOrMore, cl::cat(BoltOptCategory));
+static cl::opt<bool> StripRepRet(
+    "strip-rep-ret",
+    cl::desc("strip 'repz' prefix from 'repz retq' sequence (on by default)"),
+    cl::init(true), cl::cat(BoltOptCategory));
 
-static cl::opt<bool>
-VerifyCFG("verify-cfg",
-  cl::desc("verify the CFG after every pass"),
-  cl::init(false), cl::Hidden, cl::ZeroOrMore, cl::cat(BoltOptCategory));
+static cl::opt<bool> VerifyCFG("verify-cfg",
+                               cl::desc("verify the CFG after every pass"),
+                               cl::Hidden, cl::cat(BoltOptCategory));
 
 static cl::opt<bool>
 ThreeWayBranchFlag("three-way-branch",

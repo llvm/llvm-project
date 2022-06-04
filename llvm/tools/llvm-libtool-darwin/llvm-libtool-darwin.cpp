@@ -46,9 +46,10 @@ static cl::list<std::string> InputFiles(cl::Positional,
                                         cl::ZeroOrMore,
                                         cl::cat(LibtoolCategory));
 
-static cl::opt<std::string> ArchType(
-    "arch_only", cl::desc("Specify architecture type for output library"),
-    cl::value_desc("arch_type"), cl::ZeroOrMore, cl::cat(LibtoolCategory));
+static cl::opt<std::string>
+    ArchType("arch_only",
+             cl::desc("Specify architecture type for output library"),
+             cl::value_desc("arch_type"), cl::cat(LibtoolCategory));
 
 enum class Operation { None, Static };
 

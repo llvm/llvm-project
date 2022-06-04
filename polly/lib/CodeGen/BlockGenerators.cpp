@@ -33,8 +33,7 @@ using namespace polly;
 
 static cl::opt<bool> Aligned("enable-polly-aligned",
                              cl::desc("Assumed aligned memory accesses."),
-                             cl::Hidden, cl::init(false), cl::ZeroOrMore,
-                             cl::cat(PollyCategory));
+                             cl::Hidden, cl::cat(PollyCategory));
 
 bool PollyDebugPrinting;
 static cl::opt<bool, true> DebugPrintingX(
@@ -46,13 +45,13 @@ static cl::opt<bool, true> DebugPrintingX(
 static cl::opt<bool> TraceStmts(
     "polly-codegen-trace-stmts",
     cl::desc("Add printf calls that print the statement being executed"),
-    cl::Hidden, cl::init(false), cl::ZeroOrMore, cl::cat(PollyCategory));
+    cl::Hidden, cl::cat(PollyCategory));
 
 static cl::opt<bool> TraceScalars(
     "polly-codegen-trace-scalars",
     cl::desc("Add printf calls that print the values of all scalar values "
              "used in a statement. Requires -polly-codegen-trace-stmts."),
-    cl::Hidden, cl::init(false), cl::ZeroOrMore, cl::cat(PollyCategory));
+    cl::Hidden, cl::cat(PollyCategory));
 
 BlockGenerator::BlockGenerator(
     PollyIRBuilder &B, LoopInfo &LI, ScalarEvolution &SE, DominatorTree &DT,
