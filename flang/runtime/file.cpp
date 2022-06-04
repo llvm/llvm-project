@@ -377,7 +377,7 @@ bool OpenFile::Seek(FileOffset at, IoErrorHandler &handler) {
     SetPosition(at);
     return true;
   } else {
-    handler.SignalErrno();
+    handler.SignalError(IostatCannotReposition);
     return false;
   }
 }
