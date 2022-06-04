@@ -93,4 +93,28 @@ def SparseTensorEncodingAttr : SparseTensor_Attr<"SparseTensorEncoding",
   }];
 }
 
+def IsSparseTensorPred
+  : CPred<"!!::mlir::sparse_tensor::getSparseTensorEncoding($_self)">;
+
+// The following four follow the same idiom as `TensorOf`, `AnyTensor`,
+// `RankedTensorOf`, `AnyRankedTensor`.
+
+class SparseTensorOf<list<Type> allowedTypes>
+  : ShapedContainerType<
+      allowedTypes,
+      And<[IsTensorTypePred, IsSparseTensorPred]>,
+      "sparse tensor",
+      "::mlir::TensorType">;
+
+def AnySparseTensor : SparseTensorOf<[AnyType]>;
+
+class RankedSparseTensorOf<list<Type> allowedTypes>
+  : ShapedContainerType<
+      allowedTypes,
+      And<[IsTensorTypePred, HasRankPred, IsSparseTensorPred]>,
+      "ranked sparse tensor",
+      "::mlir::TensorType">;
+
+def AnyRankedSparseTensor : RankedSparseTensorOf<[AnyType]>;
+
 #endif // SPARSETENSOR_ATTRDEFS

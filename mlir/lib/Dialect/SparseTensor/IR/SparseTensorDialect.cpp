@@ -208,12 +208,6 @@ static LogicalResult isMatchingWidth(Value result, unsigned width) {
   return failure();
 }
 
-LogicalResult NewOp::verify() {
-  if (!getSparseTensorEncoding(result().getType()))
-    return emitError("expected a sparse tensor result");
-  return success();
-}
-
 LogicalResult ConvertOp::verify() {
   if (auto tp1 = source().getType().dyn_cast<RankedTensorType>()) {
     if (auto tp2 = dest().getType().dyn_cast<RankedTensorType>()) {
@@ -240,74 +234,28 @@ OpFoldResult ConvertOp::fold(ArrayRef<Attribute> operands) {
 }
 
 LogicalResult ToPointersOp::verify() {
-  if (auto e = getSparseTensorEncoding(tensor().getType())) {
-    if (failed(isInBounds(dim(), tensor())))
-      return emitError("requested pointers dimension out of bounds");
-    if (failed(isMatchingWidth(result(), e.getPointerBitWidth())))
-      return emitError("unexpected type for pointers");
-    return success();
-  }
-  return emitError("expected a sparse tensor to get pointers");
+  auto e = getSparseTensorEncoding(tensor().getType());
+  if (failed(isInBounds(dim(), tensor())))
+    return emitError("requested pointers dimension out of bounds");
+  if (failed(isMatchingWidth(result(), e.getPointerBitWidth())))
+    return emitError("unexpected type for pointers");
+  return success();
 }
 
 LogicalResult ToIndicesOp::verify() {
-  if (auto e = getSparseTensorEncoding(tensor().getType())) {
-    if (failed(isInBounds(dim(), tensor())))
-      return emitError("requested indices dimension out of bounds");
-    if (failed(isMatchingWidth(result(), e.getIndexBitWidth())))
-      return emitError("unexpected type for indices");
-    return success();
-  }
-  return emitError("expected a sparse tensor to get indices");
+  auto e = getSparseTensorEncoding(tensor().getType());
+  if (failed(isInBounds(dim(), tensor())))
+    return emitError("requested indices dimension out of bounds");
+  if (failed(isMatchingWidth(result(), e.getIndexBitWidth())))
+    return emitError("unexpected type for indices");
+  return success();
 }
 
 LogicalResult ToValuesOp::verify() {
-  if (!getSparseTensorEncoding(tensor().getType()))
-    return emitError("expected a sparse tensor to get values");
   RankedTensorType ttp = tensor().getType().cast<RankedTensorType>();
   MemRefType mtp = result().getType().cast<MemRefType>();
   if (ttp.getElementType() != mtp.getElementType())
     return emitError("unexpected mismatch in element types");
-  return success();
-}
-
-//===----------------------------------------------------------------------===//
-// TensorDialect Management Operations.
-//===----------------------------------------------------------------------===//
-
-LogicalResult LexInsertOp::verify() {
-  if (!getSparseTensorEncoding(tensor().getType()))
-    return emitError("expected a sparse tensor for insertion");
-  return success();
-}
-
-LogicalResult ExpandOp::verify() {
-  if (!getSparseTensorEncoding(tensor().getType()))
-    return emitError("expected a sparse tensor for expansion");
-  return success();
-}
-
-LogicalResult CompressOp::verify() {
-  if (!getSparseTensorEncoding(tensor().getType()))
-    return emitError("expected a sparse tensor for compression");
-  return success();
-}
-
-LogicalResult LoadOp::verify() {
-  if (!getSparseTensorEncoding(tensor().getType()))
-    return emitError("expected a sparse tensor to materialize");
-  return success();
-}
-
-LogicalResult ReleaseOp::verify() {
-  if (!getSparseTensorEncoding(tensor().getType()))
-    return emitError("expected a sparse tensor to release");
-  return success();
-}
-
-LogicalResult OutOp::verify() {
-  if (!getSparseTensorEncoding(tensor().getType()))
-    return emitError("expected a sparse tensor for output");
   return success();
 }
 
