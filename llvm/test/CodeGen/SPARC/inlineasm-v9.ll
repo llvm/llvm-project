@@ -48,3 +48,13 @@ entry:
   %1 = tail call i64 asm "or $0, %lo($1), $0", "=r,i,r"(i64 4294967296, i64 %0)
   ret i64 %1
 }
+
+; Ensure that the input register value is not truncated to 32bit.
+; CHECK-LABEL: test_constraint_input_type
+; CHECK: ldx [%o0], %o0
+define void @test_constraint_input_type(i64* %arg1) {
+Entry:
+  %val = load i64, i64* %arg1
+  tail call void asm sideeffect "", "{o0}"(i64 %val)
+  ret void
+}

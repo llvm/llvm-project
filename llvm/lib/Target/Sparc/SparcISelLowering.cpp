@@ -3330,6 +3330,9 @@ std::pair<unsigned, const TargetRegisterClass *>
 SparcTargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
                                                   StringRef Constraint,
                                                   MVT VT) const {
+  if (Constraint.empty())
+    return std::make_pair(0U, nullptr);
+
   if (Constraint.size() == 1) {
     switch (Constraint[0]) {
     case 'r':
@@ -3358,46 +3361,60 @@ SparcTargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
       // This will generate an error message
       return std::make_pair(0U, nullptr);
     }
-  } else if (!Constraint.empty() && Constraint.size() <= 5
-              && Constraint[0] == '{' && *(Constraint.end()-1) == '}') {
-    // constraint = '{r<d>}'
-    // Remove the braces from around the name.
-    StringRef name(Constraint.data()+1, Constraint.size()-2);
-    // Handle register aliases:
-    //       r0-r7   -> g0-g7
-    //       r8-r15  -> o0-o7
-    //       r16-r23 -> l0-l7
-    //       r24-r31 -> i0-i7
-    uint64_t intVal = 0;
-    if (name.substr(0, 1).equals("r")
-        && !name.substr(1).getAsInteger(10, intVal) && intVal <= 31) {
-      const char regTypes[] = { 'g', 'o', 'l', 'i' };
-      char regType = regTypes[intVal/8];
-      char regIdx = '0' + (intVal % 8);
-      char tmp[] = { '{', regType, regIdx, '}', 0 };
-      std::string newConstraint = std::string(tmp);
-      return TargetLowering::getRegForInlineAsmConstraint(TRI, newConstraint,
-                                                          VT);
-    }
-    if (name.substr(0, 1).equals("f") &&
-        !name.substr(1).getAsInteger(10, intVal) && intVal <= 63) {
-      std::string newConstraint;
+  }
 
-      if (VT == MVT::f32 || VT == MVT::Other) {
-        newConstraint = "{f" + utostr(intVal) + "}";
-      } else if (VT == MVT::f64 && (intVal % 2 == 0)) {
-        newConstraint = "{d" + utostr(intVal / 2) + "}";
-      } else if (VT == MVT::f128 && (intVal % 4 == 0)) {
-        newConstraint = "{q" + utostr(intVal / 4) + "}";
-      } else {
-        return std::make_pair(0U, nullptr);
-      }
-      return TargetLowering::getRegForInlineAsmConstraint(TRI, newConstraint,
-                                                          VT);
+  if (Constraint.front() != '{')
+    return std::make_pair(0U, nullptr);
+
+  assert(Constraint.back() == '}' && "Not a brace enclosed constraint?");
+  StringRef RegName(Constraint.data() + 1, Constraint.size() - 2);
+  if (RegName.empty())
+    return std::make_pair(0U, nullptr);
+
+  unsigned long long RegNo;
+  // Handle numbered register aliases.
+  if (RegName[0] == 'r' &&
+      getAsUnsignedInteger(RegName.begin() + 1, 10, RegNo)) {
+    // r0-r7   -> g0-g7
+    // r8-r15  -> o0-o7
+    // r16-r23 -> l0-l7
+    // r24-r31 -> i0-i7
+    if (RegNo > 31)
+      return std::make_pair(0U, nullptr);
+    const char RegTypes[] = {'g', 'o', 'l', 'i'};
+    char RegType = RegTypes[RegNo / 8];
+    char RegIndex = '0' + (RegNo % 8);
+    char Tmp[] = {'{', RegType, RegIndex, '}', 0};
+    return getRegForInlineAsmConstraint(TRI, Tmp, VT);
+  }
+
+  // Rewrite the fN constraint according to the value type if needed.
+  if (VT != MVT::f32 && VT != MVT::Other && RegName[0] == 'f' &&
+      getAsUnsignedInteger(RegName.begin() + 1, 10, RegNo)) {
+    if (VT == MVT::f64 && (RegNo % 2 == 0)) {
+      return getRegForInlineAsmConstraint(
+          TRI, StringRef("{d" + utostr(RegNo / 2) + "}"), VT);
+    } else if (VT == MVT::f128 && (RegNo % 4 == 0)) {
+      return getRegForInlineAsmConstraint(
+          TRI, StringRef("{q" + utostr(RegNo / 4) + "}"), VT);
+    } else {
+      return std::make_pair(0U, nullptr);
     }
   }
 
-  return TargetLowering::getRegForInlineAsmConstraint(TRI, Constraint, VT);
+  auto ResultPair =
+      TargetLowering::getRegForInlineAsmConstraint(TRI, Constraint, VT);
+  if (!ResultPair.second)
+    return std::make_pair(0U, nullptr);
+
+  // Force the use of I64Regs over IntRegs for 64-bit values.
+  if (Subtarget->is64Bit() && VT == MVT::i64) {
+    assert(ResultPair.second == &SP::IntRegsRegClass &&
+           "Unexpected register class");
+    return std::make_pair(ResultPair.first, &SP::I64RegsRegClass);
+  }
+
+  return ResultPair;
 }
 
 bool
