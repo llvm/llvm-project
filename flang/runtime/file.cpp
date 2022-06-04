@@ -434,4 +434,17 @@ bool MayWrite(const char *path) { return ::access(path, W_OK) == 0; }
 bool MayReadAndWrite(const char *path) {
   return ::access(path, R_OK | W_OK) == 0;
 }
+
+std::int64_t SizeInBytes(const char *path) {
+#ifndef _WIN32
+  struct stat buf;
+  if (::stat(path, &buf) == 0) {
+    return buf.st_size;
+  }
+#else // TODO: _WIN32
+#endif
+  // No Fortran compiler signals an error
+  return -1;
+}
+
 } // namespace Fortran::runtime::io
