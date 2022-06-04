@@ -1,7 +1,7 @@
 ; Test conditionals.
 ;
-; RUN: llc < %s -mtriple=m88k-openbsd -mcpu=mc88100 | FileCheck %s
-; RUN: llc < %s -mtriple=m88k-openbsd -mcpu=mc88110 | FileCheck %s
+; RUN: llc < %s -mtriple=m88k-openbsd -mcpu=mc88100 -verify-machineinstrs | FileCheck %s
+; RUN: llc < %s -mtriple=m88k-openbsd -mcpu=mc88110 -verify-machineinstrs | FileCheck %s
 
 define i32 @f1(i32 %a, i32 %b) {
 ; CHECK-LABEL: f1:
