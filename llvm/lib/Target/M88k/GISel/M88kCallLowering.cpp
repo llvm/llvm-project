@@ -386,8 +386,8 @@ bool M88kCallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
     OutgoingValueAssigner ArgAssigner(RetCC_M88k);
     CallReturnHandler ReturnedArgHandler(MIRBuilder, MRI, MIB);
     if (!determineAndHandleAssignments(ReturnedArgHandler, ArgAssigner, InArgs,
-                                       MIRBuilder, Info.CallConv, Info.IsVarArg,
-                                       OutArgs[0].Regs[0]))
+                                       MIRBuilder, Info.CallConv,
+                                       Info.IsVarArg))
       return false;
   }
 
