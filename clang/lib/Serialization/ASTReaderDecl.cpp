@@ -830,7 +830,7 @@ void ASTDeclReader::VisitRecordDecl(RecordDecl *RD) {
     }
     if (OldDef) {
       Reader.MergedDeclContexts.insert(std::make_pair(RD, OldDef));
-      RD->setCompleteDefinition(false);
+      RD->demoteThisDefinitionToDeclaration();
       Reader.mergeDefinitionVisibility(OldDef, RD);
     } else {
       OldDef = RD;
