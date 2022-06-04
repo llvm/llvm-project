@@ -672,6 +672,24 @@ TEST(IOApiTests, FormatDoubleValues) {
         << "Failed to format " << format << ", expected " << expect << ", got "
         << got;
   }
+
+  // Problematic EN formatting edge cases with rounding
+  using IndividualENTestCaseTy = std::tuple<std::uint64_t, const char *>;
+  static const std::vector<IndividualENTestCaseTy> individualENTestCases{
+      {0x3E11183197785F8C, " 995.0E-12"}, // 0.9950312500000000115852E-09
+      {0x3E11180E68455D30, " 995.0E-12"}, // 0.9949999999999999761502E-09
+      {0x3E112BD8F4F6B0D7, " 999.5E-12"}, // 0.9994999999999999089118E-09
+      {0x3E45794883CA8782, "  10.0E-09"}, // 0.9999499999999999642266E-08
+      {0x3F506218230C7482, " 999.9E-06"}, // 0.9999499999999998840761E-03
+      {0x3FB99652BD3C3612, " 100.0E-03"}, // 0.9999500000000000055067E+00
+      {0x4023E66666666667, "  10.0E+00"}, // 0.9950000000000001065814E+01
+  };
+
+  for (auto const &[value, expect] : individualENTestCases) {
+    std::string got;
+    ASSERT_TRUE(CompareFormatReal("(EN10.1)", value, expect, got))
+        << "Failed to format EN10.1, expected " << expect << ", got " << got;
+  }
 }
 
 //------------------------------------------------------------------------------
