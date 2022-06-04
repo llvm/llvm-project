@@ -12,7 +12,7 @@ define void @set_mem32(i32 %val) {
 ; CHECK: or.u %r3, %r0, %hi16(mem32)
 ; CHECK-NEXT: jmp.n %r1
 ; CHECK-NEXT: st %r2, %r3, %lo16(mem32)
-  store i32 %val, i32* @mem32, align 4
+  store i32 %val, ptr @mem32, align 4
   ret void
 }
 
@@ -21,7 +21,7 @@ define void @set_mem16(i16 %val) {
 ; CHECK: or.u %r3, %r0, %hi16(mem16)
 ; CHECK-NEXT: jmp.n %r1
 ; CHECK-NEXT: st.h %r2, %r3, %lo16(mem16)
-  store i16 %val, i16* @mem16, align 2
+  store i16 %val, ptr @mem16, align 2
   ret void
 }
 
@@ -30,7 +30,7 @@ define void @set_mem8(i8 %val) {
 ; CHECK: or.u %r3, %r0, %hi16(mem8)
 ; CHECK-NEXT: jmp.n %r1
 ; CHECK-NEXT: st.b %r2, %r3, %lo16(mem8)
-  store i8 %val, i8* @mem8, align 1
+  store i8 %val, ptr @mem8, align 1
   ret void
 }
 
