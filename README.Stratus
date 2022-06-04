@@ -1,0 +1,5 @@
+This branch contains the Stratus port of LLVM.
+
+This includes 
+	endian support
+	KSU -- Kernel Safe Unwinder
