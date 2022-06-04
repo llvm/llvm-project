@@ -431,7 +431,9 @@ Cookie IONAME(BeginInquireFile)(const char *path, std::size_t pathLength,
   Terminator oom{sourceFile, sourceLine};
   auto trimmed{
       SaveDefaultCharacter(path, TrimTrailingSpaces(path, pathLength), oom)};
-  if (ExternalFileUnit * unit{ExternalFileUnit::LookUp(trimmed.get())}) {
+  if (ExternalFileUnit *
+      unit{ExternalFileUnit::LookUp(
+          trimmed.get(), std::strlen(trimmed.get()))}) {
     // INQUIRE(FILE=) to a connected unit
     return &unit->BeginIoStatement<InquireUnitState>(
         *unit, sourceFile, sourceLine);

@@ -73,8 +73,9 @@ ExternalFileUnit &ExternalFileUnit::LookUpOrCreateAnonymous(int unit,
   return result;
 }
 
-ExternalFileUnit *ExternalFileUnit::LookUp(const char *path) {
-  return GetUnitMap().LookUp(path);
+ExternalFileUnit *ExternalFileUnit::LookUp(
+    const char *path, std::size_t pathLen) {
+  return GetUnitMap().LookUp(path, pathLen);
 }
 
 ExternalFileUnit &ExternalFileUnit::CreateNew(
@@ -123,6 +124,16 @@ void ExternalFileUnit::OpenUnit(std::optional<OpenStatus> status,
     DoImpliedEndfile(handler);
     FlushOutput(handler);
     Close(CloseStatus::Keep, handler);
+  }
+  if (newPath.get() && newPathLength > 0) {
+    if (const auto *already{
+            GetUnitMap().LookUp(newPath.get(), newPathLength)}) {
+      handler.SignalError(IostatOpenAlreadyConnected,
+          "OPEN(UNIT=%d,FILE='%.*s'): file is already connected to unit %d",
+          unitNumber_, static_cast<int>(newPathLength), newPath.get(),
+          already->unitNumber_);
+      return;
+    }
   }
   set_path(std::move(newPath), newPathLength);
   Open(status.value_or(OpenStatus::Unknown), action, position, handler);
