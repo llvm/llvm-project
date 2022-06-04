@@ -16,9 +16,4 @@ def LLVMLegalizeForExport : Pass<"llvm-legalize-for-export"> {
   let constructor = "mlir::LLVM::createLegalizeForExportPass()";
 }
 
-def NVVMOptimizeForTarget : Pass<"llvm-optimize-for-nvvm-target"> {
-  let summary = "Optimize NVVM IR";
-  let constructor = "mlir::NVVM::createOptimizeForTargetPass()";
-}
-
 #endif // MLIR_DIALECT_LLVMIR_TRANSFORMS_PASSES
