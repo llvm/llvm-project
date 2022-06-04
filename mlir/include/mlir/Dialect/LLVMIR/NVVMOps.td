@@ -51,21 +51,21 @@ class NVVM_Op<string mnemonic, list<Trait> traits = []> :
 // NVVM intrinsic operations
 //===----------------------------------------------------------------------===//
 
-class NVVM_IntrOp<string mnem, list<int> overloadedResults,
-                  list<int> overloadedOperands, list<Trait> traits,
+class NVVM_IntrOp<string mnem, list<Trait> traits,
                   int numResults>
   : LLVM_IntrOpBase<NVVM_Dialect, mnem, "nvvm_" # !subst(".", "_", mnem),
-                    overloadedResults, overloadedOperands, traits, numResults>;
+                    /*list<int> overloadedResults=*/[],
+                    /*list<int> overloadedOperands=*/[],
+                    traits, numResults>;
 
 
 //===----------------------------------------------------------------------===//
 // NVVM special register op definitions
 //===----------------------------------------------------------------------===//
 
-class NVVM_SpecialRegisterOp<string mnemonic,
-    list<Trait> traits = []> :
-  NVVM_IntrOp<mnemonic, [], [], !listconcat(traits, [NoSideEffect]), 1>,
-  Arguments<(ins)> {
+class NVVM_SpecialRegisterOp<string mnemonic, list<Trait> traits = []> :
+  NVVM_IntrOp<mnemonic, !listconcat(traits, [NoSideEffect]), 1> {
+  let arguments = (ins);
   let assemblyFormat = "attr-dict `:` type($res)";
 }
 
@@ -91,6 +91,16 @@ def NVVM_BlockIdZOp : NVVM_SpecialRegisterOp<"read.ptx.sreg.ctaid.z">;
 def NVVM_GridDimXOp : NVVM_SpecialRegisterOp<"read.ptx.sreg.nctaid.x">;
 def NVVM_GridDimYOp : NVVM_SpecialRegisterOp<"read.ptx.sreg.nctaid.y">;
 def NVVM_GridDimZOp : NVVM_SpecialRegisterOp<"read.ptx.sreg.nctaid.z">;
+
+//===----------------------------------------------------------------------===//
+// NVVM approximate op definitions
+//===----------------------------------------------------------------------===//
+
+def NVVM_RcpApproxFtzF32Op : NVVM_IntrOp<"rcp.approx.ftz.f", [NoSideEffect], 1> {
+  let arguments = (ins F32:$arg);
+  let results = (outs F32:$res);
+  let assemblyFormat = "$arg attr-dict `:` type($res)";
+}
 
 //===----------------------------------------------------------------------===//
 // NVVM synchronization op definitions
