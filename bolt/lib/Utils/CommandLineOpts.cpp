@@ -77,7 +77,6 @@ EnableBAT("enable-bat",
   cl::cat(BoltCategory));
 
 cl::opt<bool> RemoveSymtab("remove-symtab", cl::desc("Remove .symtab section"),
-                           cl::init(false), cl::ZeroOrMore,
                            cl::cat(BoltCategory));
 
 cl::opt<unsigned>
