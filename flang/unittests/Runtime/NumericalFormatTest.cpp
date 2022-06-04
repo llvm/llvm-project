@@ -19,7 +19,7 @@ using namespace Fortran::runtime;
 using namespace Fortran::runtime::io;
 
 static bool CompareFormattedStrings(
-    const std::string &expect, const std::string &&got) {
+    const std::string &expect, const std::string &got) {
   std::string want{expect};
   want.resize(got.size(), ' ');
   return want == got;
@@ -32,24 +32,29 @@ static bool CompareFormattedStrings(
 
 // Perform format and compare the result with expected value
 static bool CompareFormatReal(
-    const char *format, double x, const char *expect) {
+    const char *format, double x, const char *expect, std::string &got) {
   char buffer[800];
   auto cookie{IONAME(BeginInternalFormattedOutput)(
       buffer, sizeof buffer, format, std::strlen(format))};
   EXPECT_TRUE(IONAME(OutputReal64)(cookie, x));
   auto status{IONAME(EndIoStatement)(cookie)};
   EXPECT_EQ(status, 0);
-  return CompareFormattedStrings(expect, std::string{buffer, sizeof buffer});
+  got = std::string{buffer, sizeof buffer};
+  auto lastNonBlank{got.find_last_not_of(" ")};
+  if (lastNonBlank != std::string::npos) {
+    got.resize(lastNonBlank + 1);
+  }
+  return CompareFormattedStrings(expect, got);
 }
 
 // Convert raw uint64 into double, perform format, and compare with expected
-static bool CompareFormatReal(
-    const char *format, std::uint64_t xInt, const char *expect) {
+static bool CompareFormatReal(const char *format, std::uint64_t xInt,
+    const char *expect, std::string &got) {
   double x;
   static_assert(sizeof(double) == sizeof(std::uint64_t),
       "Size of double != size of uint64_t!");
   std::memcpy(&x, &xInt, sizeof xInt);
-  return CompareFormatReal(format, x, expect);
+  return CompareFormatReal(format, x, expect, got);
 }
 
 struct IOApiTests : CrashHandlerFixture {};
@@ -273,8 +278,10 @@ TEST(IOApiTests, FormatZeroes) {
   };
 
   for (auto const &[format, expect] : zeroes) {
-    ASSERT_TRUE(CompareFormatReal(format, 0.0, expect))
-        << "Failed to format " << format << ", expected " << expect;
+    std::string got;
+    ASSERT_TRUE(CompareFormatReal(format, 0.0, expect, got))
+        << "Failed to format " << format << ", expected " << expect << ", got "
+        << got;
   }
 }
 
@@ -302,8 +309,10 @@ TEST(IOApiTests, FormatOnes) {
   };
 
   for (auto const &[format, expect] : ones) {
-    ASSERT_TRUE(CompareFormatReal(format, 1.0, expect))
-        << "Failed to format " << format << ", expected " << expect;
+    std::string got;
+    ASSERT_TRUE(CompareFormatReal(format, 1.0, expect, got))
+        << "Failed to format " << format << ", expected " << expect << ", got "
+        << got;
   }
 }
 
@@ -315,8 +324,10 @@ TEST(IOApiTests, FormatNegativeOnes) {
       {"(G0,';')", "-1.;"},
   };
   for (auto const &[format, expect] : negOnes) {
-    ASSERT_TRUE(CompareFormatReal(format, -1.0, expect))
-        << "Failed to format " << format << ", expected " << expect;
+    std::string got;
+    ASSERT_TRUE(CompareFormatReal(format, -1.0, expect, got))
+        << "Failed to format " << format << ", expected " << expect << ", got "
+        << got;
   }
 }
 
@@ -383,7 +394,7 @@ TEST(IOApiTests, FormatDoubleValues) {
               {"(E62.55,';')",
                   " 0.1000000000000000055511151231257827021181583404541015625E+"
                   "00;"},
-              {"(E0.0,';')", "0.E+00;"},
+              {"(E0.0,';')", " 0.E+00;"},
               {"(E0.55,';')",
                   "0.1000000000000000055511151231257827021181583404541015625E+"
                   "00;"},
@@ -611,8 +622,10 @@ TEST(IOApiTests, FormatDoubleValues) {
 
   for (auto const &[value, cases] : testCases) {
     for (auto const &[format, expect] : cases) {
-      ASSERT_TRUE(CompareFormatReal(format, value, expect))
-          << "Failed to format " << format << ", expected " << expect;
+      std::string got;
+      ASSERT_TRUE(CompareFormatReal(format, value, expect, got))
+          << "Failed to format " << format << ", expected " << expect
+          << ", got " << got;
     }
   }
 
@@ -654,8 +667,10 @@ TEST(IOApiTests, FormatDoubleValues) {
   };
 
   for (auto const &[format, value, expect] : individualTestCases) {
-    ASSERT_TRUE(CompareFormatReal(format, value, expect))
-        << "Failed to format " << format << ", expected " << expect;
+    std::string got;
+    ASSERT_TRUE(CompareFormatReal(format, value, expect, got))
+        << "Failed to format " << format << ", expected " << expect << ", got "
+        << got;
   }
 }
 
