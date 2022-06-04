@@ -2233,9 +2233,23 @@ bool RISCVDAGToDAGISel::doPeepholeLoadStoreADDI(SDNode *N) {
   if (!Base.isMachineOpcode())
     return false;
 
-  // If the base is an ADDI, we can merge it in to the load/store.
-  if (Base.getMachineOpcode() != RISCV::ADDI)
-    return false;
+  if (Base.getMachineOpcode() == RISCV::ADDI) {
+    // If the base is an ADDI, we can merge it in to the load/store.
+  } else if (Base.getMachineOpcode() == RISCV::ADDIW &&
+             isa<ConstantSDNode>(Base.getOperand(1)) &&
+             Base.getOperand(0).isMachineOpcode() &&
+             Base.getOperand(0).getMachineOpcode() == RISCV::LUI &&
+             isa<ConstantSDNode>(Base.getOperand(0).getOperand(0))) {
+    // ADDIW can be merged if it's part of LUI+ADDIW constant materialization
+    // and LUI+ADDI would have produced the same result. This is true for all
+    // simm32 values except 0x7ffff800-0x7fffffff.
+    int64_t Offset =
+      SignExtend64<32>(Base.getOperand(0).getConstantOperandVal(0) << 12);
+    Offset += cast<ConstantSDNode>(Base.getOperand(1))->getSExtValue();
+    if (!isInt<32>(Offset))
+      return false;
+  } else
+   return false;
 
   SDValue ImmOperand = Base.getOperand(1);
   uint64_t Offset2 = N->getConstantOperandVal(OffsetOpIdx);
