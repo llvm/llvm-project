@@ -132,7 +132,7 @@ void OpenFile::Open(OpenStatus status, std::optional<Action> action,
   RUNTIME_CHECK(handler, action.has_value());
   pending_.reset();
   if (position == Position::Append && !RawSeekToEnd()) {
-    handler.SignalErrno();
+    handler.SignalError(IostatOpenBadAppend);
   }
   isTerminal_ = ::isatty(fd_) == 1;
   mayRead_ = *action != Action::Write;

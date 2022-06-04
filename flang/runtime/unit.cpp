@@ -137,7 +137,7 @@ void ExternalFileUnit::OpenUnit(std::optional<OpenStatus> status,
           "OPEN(UNIT=%d,ACCESS='DIRECT',RECL=%jd): record length is invalid",
           unitNumber(), static_cast<std::intmax_t>(*openRecl));
     } else if (totalBytes && (*totalBytes % *openRecl != 0)) {
-      handler.SignalError(IostatOpenBadAppend,
+      handler.SignalError(IostatOpenBadRecl,
           "OPEN(UNIT=%d,ACCESS='DIRECT',RECL=%jd): record length is not an "
           "even divisor of the file size %jd",
           unitNumber(), static_cast<std::intmax_t>(*openRecl),
@@ -150,12 +150,17 @@ void ExternalFileUnit::OpenUnit(std::optional<OpenStatus> status,
   if (totalBytes && access == Access::Direct && openRecl.value_or(0) > 0) {
     endfileRecordNumber = 1 + (*totalBytes / *openRecl);
   }
-  if (position == Position::Append && access != Access::Stream) {
-    if (!endfileRecordNumber) {
-      // Fake it so that we can backspace relative from the end
-      endfileRecordNumber = std::numeric_limits<std::int64_t>::max() - 2;
+  if (position == Position::Append) {
+    if (totalBytes) {
+      frameOffsetInFile_ = *totalBytes;
     }
-    currentRecordNumber = *endfileRecordNumber;
+    if (access != Access::Stream) {
+      if (!endfileRecordNumber) {
+        // Fake it so that we can backspace relative from the end
+        endfileRecordNumber = std::numeric_limits<std::int64_t>::max() - 2;
+      }
+      currentRecordNumber = *endfileRecordNumber;
+    }
   }
 }
 
