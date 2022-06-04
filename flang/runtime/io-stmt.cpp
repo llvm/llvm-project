@@ -1520,6 +1520,9 @@ bool InquireIOLengthState::Emit(const char32_t *p, std::size_t n) {
 
 int ErroneousIoStatementState::EndIoStatement() {
   SignalPendingError();
+  if (unit_) {
+    unit_->EndIoStatement();
+  }
   return IoStatementBase::EndIoStatement();
 }
 

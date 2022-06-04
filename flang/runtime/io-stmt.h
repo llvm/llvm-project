@@ -711,9 +711,10 @@ private:
 
 class ErroneousIoStatementState : public IoStatementBase {
 public:
-  explicit ErroneousIoStatementState(
-      Iostat iostat, const char *sourceFile = nullptr, int sourceLine = 0)
-      : IoStatementBase{sourceFile, sourceLine} {
+  explicit ErroneousIoStatementState(Iostat iostat,
+      ExternalFileUnit *unit = nullptr, const char *sourceFile = nullptr,
+      int sourceLine = 0)
+      : IoStatementBase{sourceFile, sourceLine}, unit_{unit} {
     SetPendingError(iostat);
   }
   int EndIoStatement();
@@ -722,6 +723,7 @@ public:
 
 private:
   ConnectionState connection_;
+  ExternalFileUnit *unit_{nullptr};
 };
 
 extern template bool IoStatementState::EmitEncoded<char>(
