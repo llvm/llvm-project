@@ -140,8 +140,7 @@ static cl::opt<bool> ProfileSampleBlockAccurate(
              "them conservatively as unknown. "));
 
 static cl::opt<bool> ProfileAccurateForSymsInList(
-    "profile-accurate-for-symsinlist", cl::Hidden, cl::ZeroOrMore,
-    cl::init(true),
+    "profile-accurate-for-symsinlist", cl::Hidden, cl::init(true),
     cl::desc("For symbols in profile symbol list, regard their profiles to "
              "be accurate. It may be overriden by profile-sample-accurate. "));
 
@@ -217,19 +216,19 @@ static cl::opt<unsigned> ProfileICPRelativeHotnessSkip(
         "Skip relative hotness check for ICP up to given number of targets."));
 
 static cl::opt<bool> CallsitePrioritizedInline(
-    "sample-profile-prioritized-inline", cl::Hidden, cl::ZeroOrMore,
-    cl::init(false),
+    "sample-profile-prioritized-inline", cl::Hidden,
+
     cl::desc("Use call site prioritized inlining for sample profile loader."
              "Currently only CSSPGO is supported."));
 
 static cl::opt<bool> UsePreInlinerDecision(
-    "sample-profile-use-preinliner", cl::Hidden, cl::ZeroOrMore,
-    cl::init(false),
+    "sample-profile-use-preinliner", cl::Hidden,
+
     cl::desc("Use the preinliner decisions stored in profile context."));
 
 static cl::opt<bool> AllowRecursiveInline(
-    "sample-profile-recursive-inline", cl::Hidden, cl::ZeroOrMore,
-    cl::init(false),
+    "sample-profile-recursive-inline", cl::Hidden,
+
     cl::desc("Allow sample loader inliner to inline recursive calls."));
 
 static cl::opt<std::string> ProfileInlineReplayFile(

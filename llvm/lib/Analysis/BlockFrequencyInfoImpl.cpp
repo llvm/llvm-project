@@ -47,7 +47,7 @@ cl::opt<bool> CheckBFIUnknownBlockQueries(
              "for debugging missed BFI updates"));
 
 cl::opt<bool> UseIterativeBFIInference(
-    "use-iterative-bfi-inference", cl::init(false), cl::Hidden, cl::ZeroOrMore,
+    "use-iterative-bfi-inference", cl::Hidden,
     cl::desc("Apply an iterative post-processing to infer correct BFI counts"));
 
 cl::opt<unsigned> IterativeBFIMaxIterationsPerBlock(

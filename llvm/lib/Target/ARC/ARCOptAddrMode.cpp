@@ -36,7 +36,7 @@ using namespace llvm;
 namespace llvm {
 
 static cl::opt<unsigned> ArcKillAddrMode("arc-kill-addr-mode", cl::init(0),
-                                         cl::ReallyHidden, cl::ZeroOrMore);
+                                         cl::ReallyHidden);
 
 #define DUMP_BEFORE() ((ArcKillAddrMode & 0x0001) != 0)
 #define DUMP_AFTER() ((ArcKillAddrMode & 0x0002) != 0)

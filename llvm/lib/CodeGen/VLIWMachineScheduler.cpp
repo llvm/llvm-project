@@ -48,8 +48,7 @@ static cl::opt<bool> UseNewerCandidate("use-newer-candidate", cl::Hidden,
                                        cl::ZeroOrMore, cl::init(true));
 
 static cl::opt<unsigned> SchedDebugVerboseLevel("misched-verbose-level",
-                                                cl::Hidden, cl::ZeroOrMore,
-                                                cl::init(1));
+                                                cl::Hidden, cl::init(1));
 
 // Check if the scheduler should penalize instructions that are available to
 // early due to a zero-latency dependence.

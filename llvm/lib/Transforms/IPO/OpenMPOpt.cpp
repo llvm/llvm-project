@@ -58,17 +58,16 @@ using namespace omp;
 #define DEBUG_TYPE "openmp-opt"
 
 static cl::opt<bool> DisableOpenMPOptimizations(
-    "openmp-opt-disable", cl::ZeroOrMore,
-    cl::desc("Disable OpenMP specific optimizations."), cl::Hidden,
-    cl::init(false));
+    "openmp-opt-disable", cl::desc("Disable OpenMP specific optimizations."),
+    cl::Hidden, cl::init(false));
 
 static cl::opt<bool> EnableParallelRegionMerging(
-    "openmp-opt-enable-merging", cl::ZeroOrMore,
+    "openmp-opt-enable-merging",
     cl::desc("Enable the OpenMP region merging optimization."), cl::Hidden,
     cl::init(false));
 
 static cl::opt<bool>
-    DisableInternalization("openmp-opt-disable-internalization", cl::ZeroOrMore,
+    DisableInternalization("openmp-opt-disable-internalization",
                            cl::desc("Disable function internalization."),
                            cl::Hidden, cl::init(false));
 
@@ -84,47 +83,47 @@ static cl::opt<bool> HideMemoryTransferLatency(
     cl::Hidden, cl::init(false));
 
 static cl::opt<bool> DisableOpenMPOptDeglobalization(
-    "openmp-opt-disable-deglobalization", cl::ZeroOrMore,
+    "openmp-opt-disable-deglobalization",
     cl::desc("Disable OpenMP optimizations involving deglobalization."),
     cl::Hidden, cl::init(false));
 
 static cl::opt<bool> DisableOpenMPOptSPMDization(
-    "openmp-opt-disable-spmdization", cl::ZeroOrMore,
+    "openmp-opt-disable-spmdization",
     cl::desc("Disable OpenMP optimizations involving SPMD-ization."),
     cl::Hidden, cl::init(false));
 
 static cl::opt<bool> DisableOpenMPOptFolding(
-    "openmp-opt-disable-folding", cl::ZeroOrMore,
+    "openmp-opt-disable-folding",
     cl::desc("Disable OpenMP optimizations involving folding."), cl::Hidden,
     cl::init(false));
 
 static cl::opt<bool> DisableOpenMPOptStateMachineRewrite(
-    "openmp-opt-disable-state-machine-rewrite", cl::ZeroOrMore,
+    "openmp-opt-disable-state-machine-rewrite",
     cl::desc("Disable OpenMP optimizations that replace the state machine."),
     cl::Hidden, cl::init(false));
 
 static cl::opt<bool> DisableOpenMPOptBarrierElimination(
-    "openmp-opt-disable-barrier-elimination", cl::ZeroOrMore,
+    "openmp-opt-disable-barrier-elimination",
     cl::desc("Disable OpenMP optimizations that eliminate barriers."),
     cl::Hidden, cl::init(false));
 
 static cl::opt<bool> PrintModuleAfterOptimizations(
-    "openmp-opt-print-module-after", cl::ZeroOrMore,
+    "openmp-opt-print-module-after",
     cl::desc("Print the current module after OpenMP optimizations."),
     cl::Hidden, cl::init(false));
 
 static cl::opt<bool> PrintModuleBeforeOptimizations(
-    "openmp-opt-print-module-before", cl::ZeroOrMore,
+    "openmp-opt-print-module-before",
     cl::desc("Print the current module before OpenMP optimizations."),
     cl::Hidden, cl::init(false));
 
 static cl::opt<bool> AlwaysInlineDeviceFunctions(
-    "openmp-opt-inline-device", cl::ZeroOrMore,
+    "openmp-opt-inline-device",
     cl::desc("Inline all applicible functions on the device."), cl::Hidden,
     cl::init(false));
 
 static cl::opt<bool>
-    EnableVerboseRemarks("openmp-opt-verbose-remarks", cl::ZeroOrMore,
+    EnableVerboseRemarks("openmp-opt-verbose-remarks",
                          cl::desc("Enables more verbose remarks."), cl::Hidden,
                          cl::init(false));
 

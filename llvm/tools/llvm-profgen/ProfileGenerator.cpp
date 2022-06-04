@@ -54,23 +54,23 @@ static cl::opt<int32_t, true> RecursionCompression(
     cl::location(llvm::sampleprof::CSProfileGenerator::MaxCompressionSize));
 
 static cl::opt<bool>
-    TrimColdProfile("trim-cold-profile", cl::init(false), cl::ZeroOrMore,
+    TrimColdProfile("trim-cold-profile",
                     cl::desc("If the total count of the profile is smaller "
                              "than threshold, it will be trimmed."));
 
 static cl::opt<bool> CSProfMergeColdContext(
-    "csprof-merge-cold-context", cl::init(true), cl::ZeroOrMore,
+    "csprof-merge-cold-context", cl::init(true),
     cl::desc("If the total count of context profile is smaller than "
              "the threshold, it will be merged into context-less base "
              "profile."));
 
 static cl::opt<uint32_t> CSProfMaxColdContextDepth(
-    "csprof-max-cold-context-depth", cl::init(1), cl::ZeroOrMore,
+    "csprof-max-cold-context-depth", cl::init(1),
     cl::desc("Keep the last K contexts while merging cold profile. 1 means the "
              "context-less base profile"));
 
 static cl::opt<int, true> CSProfMaxContextDepth(
-    "csprof-max-context-depth", cl::ZeroOrMore,
+    "csprof-max-context-depth",
     cl::desc("Keep the last K contexts while merging profile. -1 means no "
              "depth limit."),
     cl::location(llvm::sampleprof::CSProfileGenerator::MaxContextDepth));

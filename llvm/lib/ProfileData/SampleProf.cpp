@@ -29,12 +29,12 @@ using namespace llvm;
 using namespace sampleprof;
 
 static cl::opt<uint64_t> ProfileSymbolListCutOff(
-    "profile-symbol-list-cutoff", cl::Hidden, cl::init(-1), cl::ZeroOrMore,
+    "profile-symbol-list-cutoff", cl::Hidden, cl::init(-1),
     cl::desc("Cutoff value about how many symbols in profile symbol list "
              "will be used. This is very useful for performance debugging"));
 
 cl::opt<bool> GenerateMergedBaseProfiles(
-    "generate-merged-base-profiles", cl::init(false), cl::ZeroOrMore,
+    "generate-merged-base-profiles",
     cl::desc("When generating nested context-sensitive profiles, always "
              "generate extra base profile for function with all its context "
              "profiles merged into it."));

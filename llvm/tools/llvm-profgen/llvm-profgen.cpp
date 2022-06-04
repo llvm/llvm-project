@@ -23,7 +23,7 @@
 static cl::OptionCategory ProfGenCategory("ProfGen Options");
 
 static cl::opt<std::string> PerfScriptFilename(
-    "perfscript", cl::value_desc("perfscript"), cl::ZeroOrMore,
+    "perfscript", cl::value_desc("perfscript"),
     llvm::cl::MiscFlags::CommaSeparated,
     cl::desc("Path of perf-script trace created by Linux perf tool with "
              "`script` command(the raw perf.data should be profiled with -b)"),
@@ -32,8 +32,7 @@ static cl::alias PSA("ps", cl::desc("Alias for --perfscript"),
                      cl::aliasopt(PerfScriptFilename));
 
 static cl::opt<std::string> PerfDataFilename(
-    "perfdata", cl::value_desc("perfdata"), cl::ZeroOrMore,
-    llvm::cl::MiscFlags::CommaSeparated,
+    "perfdata", cl::value_desc("perfdata"), llvm::cl::MiscFlags::CommaSeparated,
     cl::desc("Path of raw perf data created by Linux perf tool (it should be "
              "profiled with -b)"),
     cl::cat(ProfGenCategory));
@@ -61,12 +60,12 @@ static cl::opt<std::string>
                cl::cat(ProfGenCategory));
 
 static cl::opt<uint32_t>
-    ProcessId("pid", cl::value_desc("process Id"), cl::ZeroOrMore, cl::init(0),
+    ProcessId("pid", cl::value_desc("process Id"), cl::init(0),
               cl::desc("Process Id for the profiled executable binary."),
               cl::cat(ProfGenCategory));
 
 static cl::opt<std::string> DebugBinPath(
-    "debug-binary", cl::value_desc("debug-binary"), cl::ZeroOrMore,
+    "debug-binary", cl::value_desc("debug-binary"),
     cl::desc("Path of debug info binary, llvm-profgen will load the DWARF info "
              "from it instead of the executable binary."),
     cl::cat(ProfGenCategory));

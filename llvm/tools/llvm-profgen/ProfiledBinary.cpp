@@ -32,20 +32,20 @@ cl::opt<bool> ShowSourceLocations("show-source-locations", cl::init(false),
                                   cl::desc("Print source locations."));
 
 static cl::opt<bool>
-    ShowCanonicalFnName("show-canonical-fname", cl::init(false), cl::ZeroOrMore,
+    ShowCanonicalFnName("show-canonical-fname",
                         cl::desc("Print canonical function name."));
 
 static cl::opt<bool> ShowPseudoProbe(
-    "show-pseudo-probe", cl::init(false), cl::ZeroOrMore,
+    "show-pseudo-probe",
     cl::desc("Print pseudo probe section and disassembled info."));
 
 static cl::opt<bool> UseDwarfCorrelation(
-    "use-dwarf-correlation", cl::init(false), cl::ZeroOrMore,
+    "use-dwarf-correlation",
     cl::desc("Use dwarf for profile correlation even when binary contains "
              "pseudo probe."));
 
 static cl::opt<std::string>
-    DWPPath("dwp", cl::init(""), cl::ZeroOrMore,
+    DWPPath("dwp", cl::init(""),
             cl::desc("Path of .dwp file. When not specified, it will be "
                      "<binary>.dwp in the same directory as the main binary."));
 

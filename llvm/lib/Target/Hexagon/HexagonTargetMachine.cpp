@@ -32,8 +32,9 @@
 
 using namespace llvm;
 
-static cl::opt<bool> EnableCExtOpt("hexagon-cext", cl::Hidden, cl::ZeroOrMore,
-  cl::init(true), cl::desc("Enable Hexagon constant-extender optimization"));
+static cl::opt<bool>
+    EnableCExtOpt("hexagon-cext", cl::Hidden, cl::init(true),
+                  cl::desc("Enable Hexagon constant-extender optimization"));
 
 static cl::opt<bool> EnableRDFOpt("rdf-opt", cl::Hidden, cl::ZeroOrMore,
   cl::init(true), cl::desc("Enable RDF-based optimizations"));
@@ -41,13 +42,13 @@ static cl::opt<bool> EnableRDFOpt("rdf-opt", cl::Hidden, cl::ZeroOrMore,
 static cl::opt<bool> DisableHardwareLoops("disable-hexagon-hwloops",
   cl::Hidden, cl::desc("Disable Hardware Loops for Hexagon target"));
 
-static cl::opt<bool> DisableAModeOpt("disable-hexagon-amodeopt",
-  cl::Hidden, cl::ZeroOrMore, cl::init(false),
-  cl::desc("Disable Hexagon Addressing Mode Optimization"));
+static cl::opt<bool>
+    DisableAModeOpt("disable-hexagon-amodeopt", cl::Hidden,
+                    cl::desc("Disable Hexagon Addressing Mode Optimization"));
 
-static cl::opt<bool> DisableHexagonCFGOpt("disable-hexagon-cfgopt",
-  cl::Hidden, cl::ZeroOrMore, cl::init(false),
-  cl::desc("Disable Hexagon CFG Optimization"));
+static cl::opt<bool>
+    DisableHexagonCFGOpt("disable-hexagon-cfgopt", cl::Hidden,
+                         cl::desc("Disable Hexagon CFG Optimization"));
 
 static cl::opt<bool> DisableHCP("disable-hcp", cl::init(false), cl::Hidden,
   cl::ZeroOrMore, cl::desc("Disable Hexagon constant propagation"));
@@ -56,8 +57,8 @@ static cl::opt<bool> DisableStoreWidening("disable-store-widen",
   cl::Hidden, cl::init(false), cl::desc("Disable store widening"));
 
 static cl::opt<bool> EnableExpandCondsets("hexagon-expand-condsets",
-  cl::init(true), cl::Hidden, cl::ZeroOrMore,
-  cl::desc("Early expansion of MUX"));
+                                          cl::init(true), cl::Hidden,
+                                          cl::desc("Early expansion of MUX"));
 
 static cl::opt<bool> EnableEarlyIf("hexagon-eif", cl::init(true), cl::Hidden,
   cl::ZeroOrMore, cl::desc("Enable early if-conversion"));
@@ -65,8 +66,9 @@ static cl::opt<bool> EnableEarlyIf("hexagon-eif", cl::init(true), cl::Hidden,
 static cl::opt<bool> EnableGenInsert("hexagon-insert", cl::init(true),
   cl::Hidden, cl::desc("Generate \"insert\" instructions"));
 
-static cl::opt<bool> EnableCommGEP("hexagon-commgep", cl::init(true),
-  cl::Hidden, cl::ZeroOrMore, cl::desc("Enable commoning of GEP instructions"));
+static cl::opt<bool>
+    EnableCommGEP("hexagon-commgep", cl::init(true), cl::Hidden,
+                  cl::desc("Enable commoning of GEP instructions"));
 
 static cl::opt<bool> EnableGenExtract("hexagon-extract", cl::init(true),
   cl::Hidden, cl::desc("Generate \"extract\" instructions"));
@@ -78,9 +80,9 @@ static cl::opt<bool> EnableGenPred("hexagon-gen-pred", cl::init(true),
   cl::Hidden, cl::desc("Enable conversion of arithmetic operations to "
   "predicate instructions"));
 
-static cl::opt<bool> EnableLoopPrefetch("hexagon-loop-prefetch",
-  cl::init(false), cl::Hidden, cl::ZeroOrMore,
-  cl::desc("Enable loop data prefetch on Hexagon"));
+static cl::opt<bool>
+    EnableLoopPrefetch("hexagon-loop-prefetch", cl::Hidden,
+                       cl::desc("Enable loop data prefetch on Hexagon"));
 
 static cl::opt<bool> DisableHSDR("disable-hsdr", cl::init(false), cl::Hidden,
   cl::desc("Disable splitting double registers"));
@@ -94,9 +96,9 @@ static cl::opt<bool> EnableLoopResched("hexagon-loop-resched", cl::init(true),
 static cl::opt<bool> HexagonNoOpt("hexagon-noopt", cl::init(false),
   cl::Hidden, cl::desc("Disable backend optimizations"));
 
-static cl::opt<bool> EnableVectorPrint("enable-hexagon-vector-print",
-  cl::Hidden, cl::ZeroOrMore, cl::init(false),
-  cl::desc("Enable Hexagon Vector print instr pass"));
+static cl::opt<bool>
+    EnableVectorPrint("enable-hexagon-vector-print", cl::Hidden,
+                      cl::desc("Enable Hexagon Vector print instr pass"));
 
 static cl::opt<bool> EnableVExtractOpt("hexagon-opt-vextract", cl::Hidden,
   cl::ZeroOrMore, cl::init(true), cl::desc("Enable vextract optimization"));
@@ -104,9 +106,9 @@ static cl::opt<bool> EnableVExtractOpt("hexagon-opt-vextract", cl::Hidden,
 static cl::opt<bool> EnableVectorCombine("hexagon-vector-combine", cl::Hidden,
   cl::ZeroOrMore, cl::init(true), cl::desc("Enable HVX vector combining"));
 
-static cl::opt<bool> EnableInitialCFGCleanup("hexagon-initial-cfg-cleanup",
-  cl::Hidden, cl::ZeroOrMore, cl::init(true),
-  cl::desc("Simplify the CFG after atomic expansion pass"));
+static cl::opt<bool> EnableInitialCFGCleanup(
+    "hexagon-initial-cfg-cleanup", cl::Hidden, cl::init(true),
+    cl::desc("Simplify the CFG after atomic expansion pass"));
 
 static cl::opt<bool> EnableInstSimplify("hexagon-instsimplify", cl::Hidden,
                                         cl::ZeroOrMore, cl::init(true),

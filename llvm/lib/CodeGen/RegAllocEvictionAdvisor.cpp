@@ -26,7 +26,7 @@
 using namespace llvm;
 
 static cl::opt<RegAllocEvictionAdvisorAnalysis::AdvisorMode> Mode(
-    "regalloc-enable-advisor", cl::Hidden, cl::ZeroOrMore,
+    "regalloc-enable-advisor", cl::Hidden,
     cl::init(RegAllocEvictionAdvisorAnalysis::AdvisorMode::Default),
     cl::desc("Enable regalloc advisor mode"),
     cl::values(

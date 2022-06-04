@@ -182,7 +182,7 @@ static cl::list<std::string>
 /// visibility may be compromised.
 enum WPDCheckMode { None, Trap, Fallback };
 static cl::opt<WPDCheckMode> DevirtCheckMode(
-    "wholeprogramdevirt-check", cl::Hidden, cl::ZeroOrMore,
+    "wholeprogramdevirt-check", cl::Hidden,
     cl::desc("Type of checking for incorrect devirtualizations"),
     cl::values(clEnumValN(WPDCheckMode::None, "none", "No checking"),
                clEnumValN(WPDCheckMode::Trap, "trap", "Trap when incorrect"),

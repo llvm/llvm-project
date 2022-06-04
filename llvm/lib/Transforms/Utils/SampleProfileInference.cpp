@@ -33,15 +33,15 @@ static cl::opt<bool> SampleProfileEvenCountDistribution(
              "likely options."));
 
 static cl::opt<unsigned> SampleProfileMaxDfsCalls(
-    "sample-profile-max-dfs-calls", cl::init(10), cl::Hidden, cl::ZeroOrMore,
+    "sample-profile-max-dfs-calls", cl::init(10), cl::Hidden,
     cl::desc("Maximum number of dfs iterations for even count distribution."));
 
 static cl::opt<unsigned> SampleProfileProfiCostInc(
-    "sample-profile-profi-cost-inc", cl::init(10), cl::Hidden, cl::ZeroOrMore,
+    "sample-profile-profi-cost-inc", cl::init(10), cl::Hidden,
     cl::desc("A cost of increasing a block's count by one."));
 
 static cl::opt<unsigned> SampleProfileProfiCostDec(
-    "sample-profile-profi-cost-dec", cl::init(20), cl::Hidden, cl::ZeroOrMore,
+    "sample-profile-profi-cost-dec", cl::init(20), cl::Hidden,
     cl::desc("A cost of decreasing a block's count by one."));
 
 static cl::opt<unsigned> SampleProfileProfiCostIncZero(
