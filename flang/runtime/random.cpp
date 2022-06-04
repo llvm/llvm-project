@@ -40,6 +40,19 @@ static constexpr int rangeBits{
 
 static Lock lock;
 static Generator generator;
+static std::optional<GeneratedWord> nextValue;
+
+// Call only with lock held
+static GeneratedWord GetNextValue() {
+  GeneratedWord result;
+  if (nextValue.has_value()) {
+    result = *nextValue;
+    nextValue.reset();
+  } else {
+    result = generator();
+  }
+  return result;
+}
 
 template <typename REAL, int PREC>
 inline void Generate(const Descriptor &harvest) {
@@ -55,12 +68,12 @@ inline void Generate(const Descriptor &harvest) {
     CriticalSection critical{lock};
     for (std::size_t j{0}; j < elements; ++j) {
       while (true) {
-        Int fraction{generator()};
+        Int fraction{GetNextValue()};
         if constexpr (words > 1) {
           for (std::size_t k{1}; k < words; ++k) {
             static constexpr auto rangeMask{
                 (GeneratedWord{1} << rangeBits) - 1};
-            GeneratedWord word{(generator() - generator.min()) & rangeMask};
+            GeneratedWord word{(GetNextValue() - generator.min()) & rangeMask};
             fraction = (fraction << rangeBits) | word;
           }
         }
@@ -161,6 +174,7 @@ void RTNAME(RandomSeedPut)(
   {
     CriticalSection critical{lock};
     generator.seed(seed);
+    nextValue = seed;
   }
 }
 
@@ -183,8 +197,8 @@ void RTNAME(RandomSeedGet)(
   GeneratedWord seed;
   {
     CriticalSection critical{lock};
-    seed = generator();
-    generator.seed(seed);
+    seed = GetNextValue();
+    nextValue = seed;
   }
   switch (kind) {
   case 4:
