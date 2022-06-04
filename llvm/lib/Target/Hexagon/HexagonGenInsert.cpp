@@ -65,7 +65,7 @@ static cl::opt<unsigned> MaxIFMSize("insert-max-ifmap", cl::init(1024),
                                     cl::Hidden,
                                     cl::desc("Maximum size of IFMap"));
 
-static cl::opt<bool> OptTiming("insert-timing", cl::Hidden, cl::ZeroOrMore,
+static cl::opt<bool> OptTiming("insert-timing", cl::Hidden,
                                cl::desc("Enable timing of insert generation"));
 static cl::opt<bool>
     OptTimingDetail("insert-timing-detail", cl::Hidden,

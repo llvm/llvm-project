@@ -41,14 +41,14 @@ cl::opt<int> ProfileSummaryCutoffCold(
 
 cl::opt<unsigned> ProfileSummaryHugeWorkingSetSizeThreshold(
     "profile-summary-huge-working-set-size-threshold", cl::Hidden,
-    cl::init(15000), cl::ZeroOrMore,
+    cl::init(15000),
     cl::desc("The code working set size is considered huge if the number of"
              " blocks required to reach the -profile-summary-cutoff-hot"
              " percentile exceeds this count."));
 
 cl::opt<unsigned> ProfileSummaryLargeWorkingSetSizeThreshold(
     "profile-summary-large-working-set-size-threshold", cl::Hidden,
-    cl::init(12500), cl::ZeroOrMore,
+    cl::init(12500),
     cl::desc("The code working set size is considered large if the number of"
              " blocks required to reach the -profile-summary-cutoff-hot"
              " percentile exceeds this count."));

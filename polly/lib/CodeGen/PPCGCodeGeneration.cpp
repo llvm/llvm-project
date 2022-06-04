@@ -55,35 +55,29 @@ using namespace llvm;
 
 static cl::opt<bool> DumpSchedule("polly-acc-dump-schedule",
                                   cl::desc("Dump the computed GPU Schedule"),
-                                  cl::Hidden, cl::init(false), cl::ZeroOrMore,
-                                  cl::cat(PollyCategory));
+                                  cl::Hidden, cl::cat(PollyCategory));
 
 static cl::opt<bool>
     DumpCode("polly-acc-dump-code",
              cl::desc("Dump C code describing the GPU mapping"), cl::Hidden,
-             cl::init(false), cl::ZeroOrMore, cl::cat(PollyCategory));
+             cl::cat(PollyCategory));
 
 static cl::opt<bool> DumpKernelIR("polly-acc-dump-kernel-ir",
                                   cl::desc("Dump the kernel LLVM-IR"),
-                                  cl::Hidden, cl::init(false), cl::ZeroOrMore,
-                                  cl::cat(PollyCategory));
+                                  cl::Hidden, cl::cat(PollyCategory));
 
 static cl::opt<bool> DumpKernelASM("polly-acc-dump-kernel-asm",
                                    cl::desc("Dump the kernel assembly code"),
-                                   cl::Hidden, cl::init(false), cl::ZeroOrMore,
-                                   cl::cat(PollyCategory));
+                                   cl::Hidden, cl::cat(PollyCategory));
 
 static cl::opt<bool> FastMath("polly-acc-fastmath",
                               cl::desc("Allow unsafe math optimizations"),
-                              cl::Hidden, cl::init(false), cl::ZeroOrMore,
-                              cl::cat(PollyCategory));
+                              cl::Hidden, cl::cat(PollyCategory));
 static cl::opt<bool> SharedMemory("polly-acc-use-shared",
                                   cl::desc("Use shared memory"), cl::Hidden,
-                                  cl::init(false), cl::ZeroOrMore,
                                   cl::cat(PollyCategory));
 static cl::opt<bool> PrivateMemory("polly-acc-use-private",
                                    cl::desc("Use private memory"), cl::Hidden,
-                                   cl::init(false), cl::ZeroOrMore,
                                    cl::cat(PollyCategory));
 
 bool polly::PollyManagedMemory;
@@ -111,7 +105,7 @@ static cl::opt<std::string> CUDALibDevice(
 static cl::opt<std::string>
     CudaVersion("polly-acc-cuda-version",
                 cl::desc("The CUDA version to compile for"), cl::Hidden,
-                cl::init("sm_30"), cl::ZeroOrMore, cl::cat(PollyCategory));
+                cl::init("sm_30"), cl::cat(PollyCategory));
 
 static cl::opt<int>
     MinCompute("polly-acc-mincompute",

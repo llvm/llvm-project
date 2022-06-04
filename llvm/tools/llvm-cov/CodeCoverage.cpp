@@ -621,7 +621,7 @@ int CodeCoverageTool::run(Command Cmd, int argc, const char **argv) {
       cl::Positional, cl::desc("Covered executable or object file."));
 
   cl::list<std::string> CovFilenames(
-      "object", cl::desc("Coverage executable or object file"), cl::ZeroOrMore);
+      "object", cl::desc("Coverage executable or object file"));
 
   cl::opt<bool> DebugDumpCollectedObjects(
       "dump-collected-objects", cl::Optional, cl::Hidden,

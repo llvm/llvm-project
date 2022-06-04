@@ -144,13 +144,12 @@ static cl::opt<std::string> ClWriteSummary(
 
 static cl::opt<unsigned>
     ClThreshold("wholeprogramdevirt-branch-funnel-threshold", cl::Hidden,
-                cl::init(10), cl::ZeroOrMore,
+                cl::init(10),
                 cl::desc("Maximum number of call targets per "
                          "call site to enable branch funnels"));
 
 static cl::opt<bool>
     PrintSummaryDevirt("wholeprogramdevirt-print-index-based", cl::Hidden,
-                       cl::init(false), cl::ZeroOrMore,
                        cl::desc("Print index-based devirtualization messages"));
 
 /// Provide a way to force enable whole program visibility in tests.
@@ -158,8 +157,7 @@ static cl::opt<bool>
 /// !vcall_visibility metadata (the mere presense of type tests
 /// previously implied hidden visibility).
 static cl::opt<bool>
-    WholeProgramVisibility("whole-program-visibility", cl::init(false),
-                           cl::Hidden, cl::ZeroOrMore,
+    WholeProgramVisibility("whole-program-visibility", cl::Hidden,
                            cl::desc("Enable whole program visibility"));
 
 /// Provide a way to force disable whole program for debugging or workarounds,

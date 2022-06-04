@@ -37,9 +37,10 @@ using namespace lto;
 static codegen::RegisterCodeGenFlags CGF;
 
 static cl::opt<char>
-    OptLevel("O", cl::desc("Optimization level. [-O0, -O1, -O2, or -O3] "
-                           "(default = '-O2')"),
-             cl::Prefix, cl::ZeroOrMore, cl::init('2'));
+    OptLevel("O",
+             cl::desc("Optimization level. [-O0, -O1, -O2, or -O3] "
+                      "(default = '-O2')"),
+             cl::Prefix, cl::init('2'));
 
 static cl::opt<char> CGOptLevel(
     "cg-opt-level",
