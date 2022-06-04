@@ -62,10 +62,11 @@ static cl::opt<unsigned>
     MaxORLSize("insert-max-orl", cl::init(4096), cl::Hidden,
                cl::desc("Maximum size of OrderedRegisterList"));
 static cl::opt<unsigned> MaxIFMSize("insert-max-ifmap", cl::init(1024),
-  cl::Hidden, cl::ZeroOrMore, cl::desc("Maximum size of IFMap"));
+                                    cl::Hidden,
+                                    cl::desc("Maximum size of IFMap"));
 
-static cl::opt<bool> OptTiming("insert-timing", cl::init(false), cl::Hidden,
-  cl::ZeroOrMore, cl::desc("Enable timing of insert generation"));
+static cl::opt<bool> OptTiming("insert-timing", cl::Hidden, cl::ZeroOrMore,
+                               cl::desc("Enable timing of insert generation"));
 static cl::opt<bool>
     OptTimingDetail("insert-timing-detail", cl::Hidden,
                     cl::desc("Enable detailed timing of insert "

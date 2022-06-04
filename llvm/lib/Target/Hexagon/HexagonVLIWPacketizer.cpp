@@ -71,9 +71,9 @@ static cl::opt<bool>
     EnableGenAllInsnClass("enable-gen-insn", cl::Hidden,
                           cl::desc("Generate all instruction with TC"));
 
-static cl::opt<bool> DisableVecDblNVStores("disable-vecdbl-nv-stores",
-  cl::init(false), cl::Hidden, cl::ZeroOrMore,
-  cl::desc("Disable vector double new-value-stores"));
+static cl::opt<bool>
+    DisableVecDblNVStores("disable-vecdbl-nv-stores", cl::Hidden,
+                          cl::desc("Disable vector double new-value-stores"));
 
 extern cl::opt<bool> ScheduleInlineAsm;
 

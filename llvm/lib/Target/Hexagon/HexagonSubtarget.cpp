@@ -42,8 +42,8 @@ using namespace llvm;
 static cl::opt<bool> EnableBSBSched("enable-bsb-sched", cl::Hidden,
                                     cl::init(true));
 
-static cl::opt<bool> EnableTCLatencySched("enable-tc-latency-sched",
-  cl::Hidden, cl::ZeroOrMore, cl::init(false));
+static cl::opt<bool> EnableTCLatencySched("enable-tc-latency-sched", cl::Hidden,
+                                          cl::init(false));
 
 static cl::opt<bool>
     EnableDotCurSched("enable-cur-sched", cl::Hidden, cl::init(true),
@@ -69,7 +69,7 @@ static cl::opt<bool> SchedPredsCloser("sched-preds-closer", cl::Hidden,
                                       cl::init(true));
 
 static cl::opt<bool> SchedRetvalOptimization("sched-retval-optimization",
-  cl::Hidden, cl::ZeroOrMore, cl::init(true));
+                                             cl::Hidden, cl::init(true));
 
 static cl::opt<bool> EnableCheckBankConflict(
     "hexagon-check-bank-conflict", cl::Hidden, cl::init(true),
