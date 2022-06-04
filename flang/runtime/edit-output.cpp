@@ -21,7 +21,11 @@ static bool EditBOZOutput(IoStatementState &io, const DataEdit &edit,
     const unsigned char *data0, std::size_t bytes) {
   int digits{static_cast<int>((bytes * 8) / LOG2_BASE)};
   int get{static_cast<int>(bytes * 8) - digits * LOG2_BASE};
-  get = get ? get : LOG2_BASE;
+  if (get > 0) {
+    ++digits;
+  } else {
+    get = LOG2_BASE;
+  }
   int shift{7};
   int increment{isHostLittleEndian ? -1 : 1};
   const unsigned char *data{data0 + (isHostLittleEndian ? bytes - 1 : 0)};
