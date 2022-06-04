@@ -53,6 +53,10 @@ def riscv_any_fcvt_wu_rv64 : PatFrags<(ops node:$src, node:$frm),
                                       [(riscv_strict_fcvt_wu_rv64 node:$src, node:$frm),
                                        (riscv_fcvt_wu_rv64 node:$src, node:$frm)]>;
 
+def any_fma_nsz : PatFrag<(ops node:$rs1, node:$rs2, node:$rs3),
+                          (any_fma node:$rs1, node:$rs2, node:$rs3), [{
+  return N->getFlags().hasNoSignedZeros();
+}]>;
 //===----------------------------------------------------------------------===//
 // Operand and SDNode transformation definitions.
 //===----------------------------------------------------------------------===//
@@ -518,6 +522,10 @@ def : Pat<(any_fma (fneg FPR32:$rs1), FPR32:$rs2, FPR32:$rs3),
 
 // fnmadd: -rs1 * rs2 - rs3
 def : Pat<(any_fma (fneg FPR32:$rs1), FPR32:$rs2, (fneg FPR32:$rs3)),
+          (FNMADD_S FPR32:$rs1, FPR32:$rs2, FPR32:$rs3, 0b111)>;
+
+// fnmadd: -(rs1 * rs2 + rs3) (the nsz flag on the FMA)
+def : Pat<(fneg (any_fma_nsz FPR32:$rs1, FPR32:$rs2, FPR32:$rs3)),
           (FNMADD_S FPR32:$rs1, FPR32:$rs2, FPR32:$rs3, 0b111)>;
 
 // The ratified 20191213 ISA spec defines fmin and fmax in a way that matches
