@@ -24,6 +24,7 @@
 #include "InputElement.h"
 #include "SymbolTable.h"
 #include "Symbols.h"
+#include "lld/Common/Strings.h"
 
 #define DEBUG_TYPE "lld"
 
@@ -41,6 +42,7 @@ public:
 
 private:
   void enqueue(Symbol *sym);
+  void enqueue(InputChunk *chunk);
   void enqueueInitFunctions(const ObjFile *sym);
   void mark();
   bool isCallCtorsLive();
@@ -84,6 +86,12 @@ void MarkLive::enqueueInitFunctions(const ObjFile *obj) {
   }
 }
 
+void MarkLive::enqueue(InputChunk *chunk) {
+  LLVM_DEBUG(dbgs() << "markLive: " << chunk->getName() << "\n");
+  chunk->live = true;
+  queue.push_back(chunk);
+}
+
 void MarkLive::run() {
   // Add GC root symbols.
   if (!config->entry.empty())
@@ -97,10 +105,24 @@ void MarkLive::run() {
   if (WasmSym::callDtors)
     enqueue(WasmSym::callDtors);
 
-  // Enqueue constructors in objects explicitly live from the command-line.
-  for (const ObjFile *obj : symtab->objectFiles)
-    if (obj->isLive())
-      enqueueInitFunctions(obj);
+  for (const ObjFile *obj : symtab->objectFiles) {
+    if (!obj->isLive()) {
+      continue;
+    }
+    // Enqueue constructors in objects explicitly live from the command-line.
+    enqueueInitFunctions(obj);
+
+    // Enqueue data segments referenced through __start/__stop symbols.
+    for (InputChunk *segment : obj->segments) {
+      auto name = segment->name;
+      if (!isValidCIdentifier(name))
+        continue;
+      if (symtab->find(("__start_" + name).str()) ||
+          symtab->find(("__stop_" + name).str())) {
+        enqueue(segment);
+      }
+    }
+  }
 
   mark();
 
