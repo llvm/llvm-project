@@ -26,17 +26,17 @@ include "llvm/Target/Target.td"
 include "M88kRegisterInfo.td"
 include "GISel/M88kRegisterBanks.td"
 include "M88kCallingConv.td"
-include "M88kSchedule.td"
 include "M88kInstrFormats.td"
 include "M88kInstrInfo.td"
 include "M88kCombine.td"
+include "M88kSchedule.td"
 
 //===----------------------------------------------------------------------===//
 // M88k processors supported.
 //===----------------------------------------------------------------------===//
 
-def : ProcessorModel<"mc88100", M88kSchedModel, []>;
-def : ProcessorModel<"mc88110", M88kSchedModel, []>;
+def : ProcessorModel<"mc88100", M88100SchedModel, []>;
+def : ProcessorModel<"mc88110", M88110SchedModel, []>;
 
 //===----------------------------------------------------------------------===//
 // Declare the target which we are implementing
