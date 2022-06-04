@@ -168,13 +168,13 @@ std::vector<llvm::DenseSet<SymbolID>> followSets(const Grammar &G) {
 
 static llvm::ArrayRef<std::string> getTerminalNames() {
   static const auto &TerminalNames = []() {
-    auto &TerminalNames = *new std::array<std::string, NumTerminals>;
+    auto TerminalNames = new std::string[NumTerminals];
 #define PUNCTUATOR(Tok, Spelling) TerminalNames[tok::Tok] = Spelling;
 #define KEYWORD(Keyword, Condition)                                            \
   TerminalNames[tok::kw_##Keyword] = llvm::StringRef(#Keyword).upper();
 #define TOK(Tok) TerminalNames[tok::Tok] = llvm::StringRef(#Tok).upper();
 #include "clang/Basic/TokenKinds.def"
-    return TerminalNames;
+    return llvm::makeArrayRef(TerminalNames, NumTerminals);
   }();
   return TerminalNames;
 }
