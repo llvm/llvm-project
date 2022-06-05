@@ -163,7 +163,7 @@ defm ADDX    : F3_12<"add", 0b000000, add, I64Regs, i64, i64imm>;
 defm SUBX    : F3_12<"sub", 0b000100, sub, I64Regs, i64, i64imm>;
 
 def TLS_ADDXrr : F3_1<2, 0b000000, (outs I64Regs:$rd),
-                   (ins I64Regs:$rs1, I64Regs:$rs2, TLSSym:$sym),
+                   (ins I64Regs:$rs1, I64Regs:$rs2, TailRelocSymTLSAdd:$sym),
                    "add $rs1, $rs2, $rd, $sym",
                    [(set i64:$rd,
                        (tlsadd i64:$rs1, i64:$rs2, tglobaltlsaddr:$sym))]>;
@@ -238,12 +238,20 @@ let Predicates = [Is64Bit] in {
 let DecoderMethod = "DecodeLoadInt" in
   defm LDX   : Load<"ldx", 0b001011, load, I64Regs, i64>;
 
-let mayLoad = 1, isAsmParserOnly = 1 in
+let mayLoad = 1, isAsmParserOnly = 1 in {
   def TLS_LDXrr : F3_1<3, 0b001011,
-                       (outs IntRegs:$dst), (ins MEMrr:$addr, TLSSym:$sym),
+                       (outs IntRegs:$dst),
+                       (ins MEMrr:$addr, TailRelocSymTLSLoad:$sym),
                        "ldx [$addr], $dst, $sym",
                        [(set i64:$dst,
                            (tlsld ADDRrr:$addr, tglobaltlsaddr:$sym))]>;
+  def GDOP_LDXrr : F3_1<3, 0b001011,
+                       (outs I64Regs:$dst),
+                       (ins MEMrr:$addr, TailRelocSymGOTLoad:$sym),
+                       "ldx [$addr], $dst, $sym",
+                       [(set i64:$dst,
+                           (load_gdop ADDRrr:$addr, tglobaladdr:$sym))]>;
+}
 
 // Extending loads to i64.
 def : Pat<(i64 (zextloadi1 ADDRrr:$addr)), (LDUBrr ADDRrr:$addr)>;
