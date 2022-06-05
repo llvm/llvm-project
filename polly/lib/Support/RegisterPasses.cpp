@@ -96,8 +96,7 @@ static cl::opt<OptimizerChoice>
               cl::values(clEnumValN(OPTIMIZER_NONE, "none", "No optimizer"),
                          clEnumValN(OPTIMIZER_ISL, "isl",
                                     "The isl scheduling optimizer")),
-              cl::Hidden, cl::init(OPTIMIZER_ISL), cl::ZeroOrMore,
-              cl::cat(PollyCategory));
+              cl::Hidden, cl::init(OPTIMIZER_ISL), cl::cat(PollyCategory));
 
 enum CodeGenChoice { CODEGEN_FULL, CODEGEN_AST, CODEGEN_NONE };
 static cl::opt<CodeGenChoice> CodeGeneration(
@@ -210,7 +209,7 @@ static cl::opt<bool>
 static cl::list<std::string> DumpAfterFile(
     "polly-dump-after-file",
     cl::desc("Dump module after Polly transformations to the given file"),
-    cl::ZeroOrMore, cl::cat(PollyCategory));
+    cl::cat(PollyCategory));
 
 static cl::opt<bool>
     EnableDeLICM("polly-enable-delicm",

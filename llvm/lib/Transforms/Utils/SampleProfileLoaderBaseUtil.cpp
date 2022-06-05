@@ -44,7 +44,7 @@ cl::opt<bool> SampleProfileUseProfi(
 
 cl::opt<bool> SampleProfileInferEntryCount(
     "sample-profile-infer-entry-count", cl::init(true), cl::Hidden,
-    cl::ZeroOrMore, cl::desc("Use profi to infer function entry count."));
+    cl::desc("Use profi to infer function entry count."));
 
 namespace sampleprofutil {
 

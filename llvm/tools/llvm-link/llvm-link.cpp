@@ -48,7 +48,7 @@ static cl::list<std::string> InputFilenames(cl::Positional, cl::OneOrMore,
                                             cl::cat(LinkCategory));
 
 static cl::list<std::string> OverridingInputs(
-    "override", cl::ZeroOrMore, cl::value_desc("filename"),
+    "override", cl::value_desc("filename"),
     cl::desc(
         "input bitcode file which can override previously defined symbol(s)"),
     cl::cat(LinkCategory));

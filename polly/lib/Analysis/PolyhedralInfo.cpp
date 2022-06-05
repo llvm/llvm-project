@@ -40,8 +40,7 @@ static cl::opt<bool> CheckParallel("polly-check-parallel",
 
 static cl::opt<bool> CheckVectorizable("polly-check-vectorizable",
                                        cl::desc("Check for vectorizable loops"),
-                                       cl::Hidden, cl::init(false),
-                                       cl::ZeroOrMore, cl::cat(PollyCategory));
+                                       cl::Hidden, cl::cat(PollyCategory));
 
 void PolyhedralInfo::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.addRequiredTransitive<DependenceInfoWrapperPass>();

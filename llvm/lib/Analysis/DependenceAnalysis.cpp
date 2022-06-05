@@ -109,8 +109,7 @@ static cl::opt<bool>
     Delinearize("da-delinearize", cl::init(true), cl::Hidden,
                 cl::desc("Try to delinearize array references."));
 static cl::opt<bool> DisableDelinearizationChecks(
-    "da-disable-delinearization-checks", cl::init(false), cl::Hidden,
-    cl::ZeroOrMore,
+    "da-disable-delinearization-checks", cl::Hidden,
     cl::desc(
         "Disable checks that try to statically verify validity of "
         "delinearized subscripts. Enabling this option may result in incorrect "

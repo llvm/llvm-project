@@ -66,8 +66,7 @@ static cl::opt<bool>
 // ExtractFuncs - The functions to extract from the module.
 static cl::list<std::string>
     ExtractFuncs("func", cl::desc("Specify function to extract"),
-                 cl::ZeroOrMore, cl::value_desc("function"),
-                 cl::cat(ExtractCat));
+                 cl::value_desc("function"), cl::cat(ExtractCat));
 
 // ExtractRegExpFuncs - The functions, matched via regular expression, to
 // extract from the module.
@@ -75,8 +74,7 @@ static cl::list<std::string>
     ExtractRegExpFuncs("rfunc",
                        cl::desc("Specify function(s) to extract using a "
                                 "regular expression"),
-                       cl::ZeroOrMore, cl::value_desc("rfunction"),
-                       cl::cat(ExtractCat));
+                       cl::value_desc("rfunction"), cl::cat(ExtractCat));
 
 // ExtractBlocks - The blocks to extract from the module.
 static cl::list<std::string> ExtractBlocks(
@@ -96,8 +94,7 @@ static cl::list<std::string> ExtractBlocks(
 // ExtractAlias - The alias to extract from the module.
 static cl::list<std::string>
     ExtractAliases("alias", cl::desc("Specify alias to extract"),
-                   cl::ZeroOrMore, cl::value_desc("alias"),
-                   cl::cat(ExtractCat));
+                   cl::value_desc("alias"), cl::cat(ExtractCat));
 
 // ExtractRegExpAliases - The aliases, matched via regular expression, to
 // extract from the module.
@@ -105,14 +102,12 @@ static cl::list<std::string>
     ExtractRegExpAliases("ralias",
                          cl::desc("Specify alias(es) to extract using a "
                                   "regular expression"),
-                         cl::ZeroOrMore, cl::value_desc("ralias"),
-                         cl::cat(ExtractCat));
+                         cl::value_desc("ralias"), cl::cat(ExtractCat));
 
 // ExtractGlobals - The globals to extract from the module.
 static cl::list<std::string>
     ExtractGlobals("glob", cl::desc("Specify global to extract"),
-                   cl::ZeroOrMore, cl::value_desc("global"),
-                   cl::cat(ExtractCat));
+                   cl::value_desc("global"), cl::cat(ExtractCat));
 
 // ExtractRegExpGlobals - The globals, matched via regular expression, to
 // extract from the module...
@@ -120,8 +115,7 @@ static cl::list<std::string>
     ExtractRegExpGlobals("rglob",
                          cl::desc("Specify global(s) to extract using a "
                                   "regular expression"),
-                         cl::ZeroOrMore, cl::value_desc("rglobal"),
-                         cl::cat(ExtractCat));
+                         cl::value_desc("rglobal"), cl::cat(ExtractCat));
 
 static cl::opt<bool> OutputAssembly("S",
                                     cl::desc("Write output as LLVM assembly"),
