@@ -207,10 +207,8 @@ static void convertToParamAS(Value *OldUser, Value *Param) {
       // We've created a new instruction. Queue users of the old instruction to
       // be converted and the instruction itself to be deleted. We can't delete
       // the old instruction yet, because it's still in use by a load somewhere.
-      llvm::for_each(
-          I.OldInstruction->users(), [NewInst, &ItemsToConvert](Value *V) {
-            ItemsToConvert.push_back({cast<Instruction>(V), NewInst});
-          });
+      for (Value *V : I.OldInstruction->users())
+        ItemsToConvert.push_back({cast<Instruction>(V), NewInst});
 
       InstructionsToDelete.push_back(I.OldInstruction);
     }
@@ -223,8 +221,8 @@ static void convertToParamAS(Value *OldUser, Value *Param) {
   // E.g if we have Value = Load(BitCast(GEP(arg))), InstructionsToDelete will
   // have {GEP,BitCast}. GEP can't be deleted first, because it's still used by
   // the BitCast.
-  llvm::for_each(reverse(InstructionsToDelete),
-                 [](Instruction *I) { I->eraseFromParent(); });
+  for (Instruction *I : llvm::reverse(InstructionsToDelete))
+    I->eraseFromParent();
 }
 
 // Adjust alignment of arguments passed byval in .param address space. We can
@@ -351,9 +349,8 @@ void NVPTXLowerArgs::handleByValParam(Argument *Arg) {
     Value *ArgInParamAS = new AddrSpaceCastInst(
         Arg, PointerType::get(StructType, ADDRESS_SPACE_PARAM), Arg->getName(),
         FirstInst);
-    llvm::for_each(UsersToUpdate, [ArgInParamAS](Value *V) {
+    for (Value *V : UsersToUpdate)
       convertToParamAS(V, ArgInParamAS);
-    });
     LLVM_DEBUG(dbgs() << "No need to copy " << *Arg << "\n");
 
     // Further optimizations require target lowering info.

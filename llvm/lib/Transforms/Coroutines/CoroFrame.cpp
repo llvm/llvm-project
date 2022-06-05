@@ -855,10 +855,9 @@ static StringRef solveTypeName(Type *Ty) {
     auto Name = Ty->getStructName();
 
     SmallString<16> Buffer(Name);
-    for_each(Buffer, [](auto &Iter) {
+    for (auto &Iter : Buffer)
       if (Iter == '.' || Iter == ':')
         Iter = '_';
-    });
     auto *MDName = MDString::get(Ty->getContext(), Buffer.str());
     return MDName->getString();
   }
@@ -2794,10 +2793,9 @@ void coro::buildCoroutineFrame(Function &F, Shape &Shape) {
     auto *V = Iter.first;
     SmallVector<DbgValueInst *, 16> DVIs;
     findDbgValues(DVIs, V);
-    llvm::for_each(DVIs, [&](DbgValueInst *DVI) {
+    for (DbgValueInst *DVI : DVIs)
       if (Checker.isDefinitionAcrossSuspend(*V, DVI))
         FrameData.Spills[V].push_back(DVI);
-    });
   }
 
   LLVM_DEBUG(dumpSpills("Spills", FrameData.Spills));
