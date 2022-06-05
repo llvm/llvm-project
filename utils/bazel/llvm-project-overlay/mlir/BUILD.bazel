@@ -3386,7 +3386,9 @@ cc_library(
         ":IR",
         ":LLVMDialect",
         ":LLVMPassIncGen",
+        ":NVVMDialect",
         ":Pass",
+        ":Transforms",
     ],
 )
 
