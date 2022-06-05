@@ -148,6 +148,18 @@ const CriticalDependency &Instruction::computeCriticalRegDep() {
   return CriticalRegDep;
 }
 
+void Instruction::reset() {
+  // Note that this won't clear read/write descriptors
+  // or other non-trivial fields
+  Stage = IS_INVALID;
+  CyclesLeft = UNKNOWN_CYCLES;
+  clearOptimizableMove();
+  RCUTokenID = 0;
+  LSUTokenID = 0;
+  CriticalResourceMask = 0;
+  IsEliminated = false;
+}
+
 void Instruction::dispatch(unsigned RCUToken) {
   assert(Stage == IS_INVALID);
   Stage = IS_DISPATCHED;
