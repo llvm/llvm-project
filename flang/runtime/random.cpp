@@ -15,6 +15,7 @@
 #include "flang/Common/uint128.h"
 #include "flang/Runtime/cpp-type.h"
 #include "flang/Runtime/descriptor.h"
+#include "flang/Runtime/float128.h"
 #include <algorithm>
 #include <cmath>
 #include <cstdint>
@@ -113,23 +114,28 @@ void RTNAME(RandomNumber)(
   // TODO: REAL (2 & 3)
   case 4:
     Generate<CppTypeFor<TypeCategory::Real, 4>, 24>(harvest);
-    break;
+    return;
   case 8:
     Generate<CppTypeFor<TypeCategory::Real, 8>, 53>(harvest);
-    break;
-#if LONG_DOUBLE == 80
+    return;
   case 10:
-    Generate<CppTypeFor<TypeCategory::Real, 10>, 64>(harvest);
-    break;
-#elif LONG_DOUBLE == 128
-  case 16:
-    Generate<CppTypeFor<TypeCategory::Real, 16>, 113>(harvest);
-    break;
+    if constexpr (HasCppTypeFor<TypeCategory::Real, 10>) {
+#if LDBL_MANT_DIG == 64
+      Generate<CppTypeFor<TypeCategory::Real, 10>, 64>(harvest);
+      return;
 #endif
-  default:
-    terminator.Crash(
-        "not yet implemented: RANDOM_NUMBER(): REAL kind %d", kind);
+    }
+    break;
+  case 16:
+    if constexpr (HasCppTypeFor<TypeCategory::Real, 16>) {
+#if LDBL_MANT_DIG == 113
+      Generate<CppTypeFor<TypeCategory::Real, 16>, 113>(harvest);
+      return;
+#endif
+    }
+    break;
   }
+  terminator.Crash("not yet implemented: RANDOM_NUMBER(): REAL kind %d", kind);
 }
 
 void RTNAME(RandomSeedSize)(
