@@ -64,23 +64,18 @@ extern cl::opt<unsigned> Verbosity;
 
 extern bool processAllFunctions();
 
-cl::opt<bool>
-CheckEncoding("check-encoding",
-  cl::desc("perform verification of LLVM instruction encoding/decoding. "
-           "Every instruction in the input is decoded and re-encoded. "
-           "If the resulting bytes do not match the input, a warning message "
-           "is printed."),
-  cl::init(false),
-  cl::ZeroOrMore,
-  cl::Hidden,
-  cl::cat(BoltCategory));
+cl::opt<bool> CheckEncoding(
+    "check-encoding",
+    cl::desc("perform verification of LLVM instruction encoding/decoding. "
+             "Every instruction in the input is decoded and re-encoded. "
+             "If the resulting bytes do not match the input, a warning message "
+             "is printed."),
+    cl::Hidden, cl::cat(BoltCategory));
 
-static cl::opt<bool>
-DotToolTipCode("dot-tooltip-code",
-  cl::desc("add basic block instructions as tool tips on nodes"),
-  cl::ZeroOrMore,
-  cl::Hidden,
-  cl::cat(BoltCategory));
+static cl::opt<bool> DotToolTipCode(
+    "dot-tooltip-code",
+    cl::desc("add basic block instructions as tool tips on nodes"), cl::Hidden,
+    cl::cat(BoltCategory));
 
 cl::opt<JumpTableSupportLevel>
 JumpTables("jump-tables",
@@ -102,21 +97,17 @@ JumpTables("jump-tables",
   cl::ZeroOrMore,
   cl::cat(BoltOptCategory));
 
-static cl::opt<bool>
-NoScan("no-scan",
-  cl::desc("do not scan cold functions for external references (may result in "
-           "slower binary)"),
-  cl::init(false),
-  cl::ZeroOrMore,
-  cl::Hidden,
-  cl::cat(BoltOptCategory));
+static cl::opt<bool> NoScan(
+    "no-scan",
+    cl::desc(
+        "do not scan cold functions for external references (may result in "
+        "slower binary)"),
+    cl::Hidden, cl::cat(BoltOptCategory));
 
 cl::opt<bool>
-PreserveBlocksAlignment("preserve-blocks-alignment",
-  cl::desc("try to preserve basic block alignment"),
-  cl::init(false),
-  cl::ZeroOrMore,
-  cl::cat(BoltOptCategory));
+    PreserveBlocksAlignment("preserve-blocks-alignment",
+                            cl::desc("try to preserve basic block alignment"),
+                            cl::cat(BoltOptCategory));
 
 cl::opt<bool>
 PrintDynoStats("dyno-stats",
@@ -139,11 +130,9 @@ PrintOnly("print-only",
   cl::cat(BoltCategory));
 
 cl::opt<bool>
-TimeBuild("time-build",
-  cl::desc("print time spent constructing binary functions"),
-  cl::ZeroOrMore,
-  cl::Hidden,
-  cl::cat(BoltCategory));
+    TimeBuild("time-build",
+              cl::desc("print time spent constructing binary functions"),
+              cl::Hidden, cl::cat(BoltCategory));
 
 cl::opt<bool>
 TrapOnAVX512("trap-avx512",

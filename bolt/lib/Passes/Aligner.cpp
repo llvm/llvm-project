@@ -33,23 +33,19 @@ AlignBlocksMinSize("align-blocks-min-size",
   cl::Hidden,
   cl::cat(BoltOptCategory));
 
-cl::opt<unsigned>
-AlignBlocksThreshold("align-blocks-threshold",
-  cl::desc("align only blocks with frequency larger than containing function "
-           "execution frequency specified in percent. E.g. 1000 means aligning "
-           "blocks that are 10 times more frequently executed than the "
-           "containing function."),
-  cl::init(800),
-  cl::ZeroOrMore,
-  cl::Hidden,
-  cl::cat(BoltOptCategory));
+cl::opt<unsigned> AlignBlocksThreshold(
+    "align-blocks-threshold",
+    cl::desc(
+        "align only blocks with frequency larger than containing function "
+        "execution frequency specified in percent. E.g. 1000 means aligning "
+        "blocks that are 10 times more frequently executed than the "
+        "containing function."),
+    cl::init(800), cl::Hidden, cl::cat(BoltOptCategory));
 
-cl::opt<unsigned>
-AlignFunctionsMaxBytes("align-functions-max-bytes",
-  cl::desc("maximum number of bytes to use to align functions"),
-  cl::init(32),
-  cl::ZeroOrMore,
-  cl::cat(BoltOptCategory));
+cl::opt<unsigned> AlignFunctionsMaxBytes(
+    "align-functions-max-bytes",
+    cl::desc("maximum number of bytes to use to align functions"), cl::init(32),
+    cl::cat(BoltOptCategory));
 
 cl::opt<unsigned>
 BlockAlignment("block-alignment",
@@ -59,11 +55,9 @@ BlockAlignment("block-alignment",
   cl::cat(BoltOptCategory));
 
 cl::opt<bool>
-UseCompactAligner("use-compact-aligner",
-  cl::desc("Use compact approach for aligning functions"),
-  cl::init(true),
-  cl::ZeroOrMore,
-  cl::cat(BoltOptCategory));
+    UseCompactAligner("use-compact-aligner",
+                      cl::desc("Use compact approach for aligning functions"),
+                      cl::init(true), cl::cat(BoltOptCategory));
 
 } // end namespace opts
 

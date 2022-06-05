@@ -80,20 +80,17 @@ extern cl::list<std::string> ReorderData;
 extern cl::opt<bolt::ReorderFunctions::ReorderType> ReorderFunctions;
 extern cl::opt<bool> TimeBuild;
 
-static cl::opt<bool>
-ForceToDataRelocations("force-data-relocations",
-  cl::desc("force relocations to data sections to always be processed"),
-  cl::init(false),
-  cl::Hidden,
-  cl::ZeroOrMore,
-  cl::cat(BoltCategory));
+static cl::opt<bool> ForceToDataRelocations(
+    "force-data-relocations",
+    cl::desc("force relocations to data sections to always be processed"),
+
+    cl::Hidden, cl::cat(BoltCategory));
 
 cl::opt<std::string>
-BoltID("bolt-id",
-  cl::desc("add any string to tag this execution in the "
-           "output binary via bolt info section"),
-  cl::ZeroOrMore,
-  cl::cat(BoltCategory));
+    BoltID("bolt-id",
+           cl::desc("add any string to tag this execution in the "
+                    "output binary via bolt info section"),
+           cl::cat(BoltCategory));
 
 cl::opt<bool>
 AllowStripped("allow-stripped",
@@ -105,7 +102,7 @@ cl::opt<bool> DumpDotAll(
     "dump-dot-all",
     cl::desc("dump function CFGs to graphviz format after each stage;"
              "enable '-print-loops' for color-coded blocks"),
-    cl::ZeroOrMore, cl::Hidden, cl::cat(BoltCategory));
+    cl::Hidden, cl::cat(BoltCategory));
 
 static cl::list<std::string>
 ForceFunctionNames("funcs",
@@ -137,12 +134,8 @@ KeepTmp("keep-tmp",
   cl::Hidden,
   cl::cat(BoltCategory));
 
-cl::opt<bool>
-Lite("lite",
-  cl::desc("skip processing of cold functions"),
-  cl::init(false),
-  cl::ZeroOrMore,
-  cl::cat(BoltCategory));
+cl::opt<bool> Lite("lite", cl::desc("skip processing of cold functions"),
+                   cl::cat(BoltCategory));
 
 static cl::opt<unsigned>
 LiteThresholdPct("lite-threshold-pct",
@@ -155,72 +148,49 @@ LiteThresholdPct("lite-threshold-pct",
   cl::Hidden,
   cl::cat(BoltOptCategory));
 
-static cl::opt<unsigned>
-LiteThresholdCount("lite-threshold-count",
-  cl::desc("similar to '-lite-threshold-pct' but specify threshold using "
-           "absolute function call count. I.e. limit processing to functions "
-           "executed at least the specified number of times."),
-  cl::init(0),
-  cl::ZeroOrMore,
-  cl::Hidden,
-  cl::cat(BoltOptCategory));
+static cl::opt<unsigned> LiteThresholdCount(
+    "lite-threshold-count",
+    cl::desc("similar to '-lite-threshold-pct' but specify threshold using "
+             "absolute function call count. I.e. limit processing to functions "
+             "executed at least the specified number of times."),
+    cl::init(0), cl::Hidden, cl::cat(BoltOptCategory));
 
 static cl::opt<unsigned>
-MaxFunctions("max-funcs",
-  cl::desc("maximum number of functions to process"),
-  cl::ZeroOrMore,
-  cl::Hidden,
-  cl::cat(BoltCategory));
+    MaxFunctions("max-funcs",
+                 cl::desc("maximum number of functions to process"), cl::Hidden,
+                 cl::cat(BoltCategory));
 
-static cl::opt<unsigned>
-MaxDataRelocations("max-data-relocations",
-  cl::desc("maximum number of data relocations to process"),
-  cl::ZeroOrMore,
-  cl::Hidden,
-  cl::cat(BoltCategory));
+static cl::opt<unsigned> MaxDataRelocations(
+    "max-data-relocations",
+    cl::desc("maximum number of data relocations to process"), cl::Hidden,
+    cl::cat(BoltCategory));
 
-cl::opt<bool>
-PrintAll("print-all",
-  cl::desc("print functions after each stage"),
-  cl::ZeroOrMore,
-  cl::Hidden,
-  cl::cat(BoltCategory));
+cl::opt<bool> PrintAll("print-all",
+                       cl::desc("print functions after each stage"), cl::Hidden,
+                       cl::cat(BoltCategory));
 
-cl::opt<bool>
-PrintCFG("print-cfg",
-  cl::desc("print functions after CFG construction"),
-  cl::ZeroOrMore,
-  cl::Hidden,
-  cl::cat(BoltCategory));
+cl::opt<bool> PrintCFG("print-cfg",
+                       cl::desc("print functions after CFG construction"),
+                       cl::Hidden, cl::cat(BoltCategory));
 
 cl::opt<bool> PrintDisasm("print-disasm",
-  cl::desc("print function after disassembly"),
-  cl::ZeroOrMore,
-  cl::Hidden,
-  cl::cat(BoltCategory));
+                          cl::desc("print function after disassembly"),
+                          cl::Hidden, cl::cat(BoltCategory));
 
 static cl::opt<bool>
-PrintGlobals("print-globals",
-  cl::desc("print global symbols after disassembly"),
-  cl::ZeroOrMore,
-  cl::Hidden,
-  cl::cat(BoltCategory));
+    PrintGlobals("print-globals",
+                 cl::desc("print global symbols after disassembly"), cl::Hidden,
+                 cl::cat(BoltCategory));
 
 extern cl::opt<bool> PrintSections;
 
-static cl::opt<bool>
-PrintLoopInfo("print-loops",
-  cl::desc("print loop related information"),
-  cl::ZeroOrMore,
-  cl::Hidden,
-  cl::cat(BoltCategory));
+static cl::opt<bool> PrintLoopInfo("print-loops",
+                                   cl::desc("print loop related information"),
+                                   cl::Hidden, cl::cat(BoltCategory));
 
-static cl::opt<bool>
-PrintSDTMarkers("print-sdt",
-  cl::desc("print all SDT markers"),
-  cl::ZeroOrMore,
-  cl::Hidden,
-  cl::cat(BoltCategory));
+static cl::opt<bool> PrintSDTMarkers("print-sdt",
+                                     cl::desc("print all SDT markers"),
+                                     cl::Hidden, cl::cat(BoltCategory));
 
 enum PrintPseudoProbesOptions {
   PPP_None = 0,
@@ -242,11 +212,9 @@ cl::opt<PrintPseudoProbesOptions> PrintPseudoProbes(
                clEnumValN(PPP_All, "all", "enable all debugging printout")),
     cl::ZeroOrMore, cl::Hidden, cl::cat(BoltCategory));
 
-static cl::opt<cl::boolOrDefault>
-RelocationMode("relocs",
-  cl::desc("use relocations in the binary (default=autodetect)"),
-  cl::ZeroOrMore,
-  cl::cat(BoltCategory));
+static cl::opt<cl::boolOrDefault> RelocationMode(
+    "relocs", cl::desc("use relocations in the binary (default=autodetect)"),
+    cl::cat(BoltCategory));
 
 static cl::opt<std::string>
 SaveProfile("w",
@@ -286,11 +254,9 @@ UseGnuStack("use-gnu-stack",
   cl::cat(BoltCategory));
 
 static cl::opt<bool>
-TimeRewrite("time-rewrite",
-  cl::desc("print time spent in rewriting passes"),
-  cl::ZeroOrMore,
-  cl::Hidden,
-  cl::cat(BoltCategory));
+    TimeRewrite("time-rewrite",
+                cl::desc("print time spent in rewriting passes"), cl::Hidden,
+                cl::cat(BoltCategory));
 
 static cl::opt<bool>
 SequentialDisassembly("sequential-disassembly",
@@ -298,13 +264,9 @@ SequentialDisassembly("sequential-disassembly",
   cl::init(false),
   cl::cat(BoltOptCategory));
 
-static cl::opt<bool>
-WriteBoltInfoSection("bolt-info",
-  cl::desc("write bolt info section in the output binary"),
-  cl::init(true),
-  cl::ZeroOrMore,
-  cl::Hidden,
-  cl::cat(BoltOutputCategory));
+static cl::opt<bool> WriteBoltInfoSection(
+    "bolt-info", cl::desc("write bolt info section in the output binary"),
+    cl::init(true), cl::Hidden, cl::cat(BoltOutputCategory));
 
 } // namespace opts
 

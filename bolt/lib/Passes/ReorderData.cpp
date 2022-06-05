@@ -30,11 +30,9 @@ extern cl::OptionCategory BoltOptCategory;
 extern cl::opt<JumpTableSupportLevel> JumpTables;
 
 static cl::opt<bool>
-PrintReorderedData("print-reordered-data",
-  cl::desc("print section contents after reordering"),
-  cl::ZeroOrMore,
-  cl::Hidden,
-  cl::cat(BoltCategory));
+    PrintReorderedData("print-reordered-data",
+                       cl::desc("print section contents after reordering"),
+                       cl::Hidden, cl::cat(BoltCategory));
 
 cl::list<std::string>
 ReorderData("reorder-data",
@@ -63,18 +61,14 @@ ReorderAlgorithm("reorder-data-algo",
   cl::cat(BoltOptCategory));
 
 static cl::opt<unsigned>
-ReorderDataMaxSymbols("reorder-data-max-symbols",
-  cl::desc("maximum number of symbols to reorder"),
-  cl::ZeroOrMore,
-  cl::init(std::numeric_limits<unsigned>::max()),
-  cl::cat(BoltOptCategory));
+    ReorderDataMaxSymbols("reorder-data-max-symbols",
+                          cl::desc("maximum number of symbols to reorder"),
+                          cl::init(std::numeric_limits<unsigned>::max()),
+                          cl::cat(BoltOptCategory));
 
-static cl::opt<unsigned>
-ReorderDataMaxBytes("reorder-data-max-bytes",
-  cl::desc("maximum number of bytes to reorder"),
-  cl::ZeroOrMore,
-  cl::init(std::numeric_limits<unsigned>::max()),
-  cl::cat(BoltOptCategory));
+static cl::opt<unsigned> ReorderDataMaxBytes(
+    "reorder-data-max-bytes", cl::desc("maximum number of bytes to reorder"),
+    cl::init(std::numeric_limits<unsigned>::max()), cl::cat(BoltOptCategory));
 
 static cl::list<std::string>
 ReorderSymbols("reorder-symbols",
@@ -92,13 +86,10 @@ SkipSymbols("reorder-skip-symbols",
   cl::Hidden,
   cl::cat(BoltCategory));
 
-static cl::opt<bool>
-ReorderInplace("reorder-data-inplace",
-  cl::desc("reorder data sections in place"),
-  cl::init(false),
-  cl::ZeroOrMore,
-  cl::cat(BoltOptCategory));
+static cl::opt<bool> ReorderInplace("reorder-data-inplace",
+                                    cl::desc("reorder data sections in place"),
 
+                                    cl::cat(BoltOptCategory));
 }
 
 namespace llvm {

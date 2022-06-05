@@ -43,7 +43,7 @@ static cl::opt<unsigned>
     TailDuplicationMinimumOffset("tail-duplication-minimum-offset",
                                  cl::desc("minimum offset needed between block "
                                           "and successor to allow duplication"),
-                                 cl::ZeroOrMore, cl::ReallyHidden, cl::init(64),
+                                 cl::ReallyHidden, cl::init(64),
                                  cl::cat(BoltOptCategory));
 
 static cl::opt<unsigned> TailDuplicationMaximumDuplication(
@@ -56,7 +56,7 @@ static cl::opt<unsigned> TailDuplicationMinimumDuplication(
     "tail-duplication-minimum-duplication",
     cl::desc("tail blocks with size (in bytes) not exceeding the value are "
              "always duplicated"),
-    cl::ZeroOrMore, cl::ReallyHidden, cl::init(2), cl::cat(BoltOptCategory));
+    cl::ReallyHidden, cl::init(2), cl::cat(BoltOptCategory));
 
 static cl::opt<bool> TailDuplicationConstCopyPropagation(
     "tail-duplication-const-copy-propagation",

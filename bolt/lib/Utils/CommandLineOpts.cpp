@@ -40,12 +40,9 @@ cl::OptionCategory AggregatorCategory("Data aggregation options");
 cl::OptionCategory BoltInstrCategory("BOLT instrumentation options");
 cl::OptionCategory HeatmapCategory("Heatmap options");
 
-cl::opt<unsigned>
-AlignText("align-text",
-  cl::desc("alignment of .text section"),
-  cl::ZeroOrMore,
-  cl::Hidden,
-  cl::cat(BoltCategory));
+cl::opt<unsigned> AlignText("align-text",
+                            cl::desc("alignment of .text section"), cl::Hidden,
+                            cl::cat(BoltCategory));
 
 cl::opt<unsigned> AlignFunctions(
     "align-functions",
@@ -103,19 +100,15 @@ cl::opt<unsigned long long> HeatmapMinAddress(
     cl::desc("minimum address considered valid for heatmap (default 0)"),
     cl::Optional, cl::cat(HeatmapCategory));
 
-cl::opt<bool>
-HotData("hot-data",
-  cl::desc("hot data symbols support (relocation mode)"),
-  cl::ZeroOrMore,
-  cl::cat(BoltCategory));
+cl::opt<bool> HotData("hot-data",
+                      cl::desc("hot data symbols support (relocation mode)"),
+                      cl::cat(BoltCategory));
 
-cl::opt<bool>
-HotFunctionsAtEnd(
-  "hot-functions-at-end",
-  cl::desc(
-      "if reorder-functions is used, order functions putting hottest last"),
-  cl::ZeroOrMore,
-  cl::cat(BoltCategory));
+cl::opt<bool> HotFunctionsAtEnd(
+    "hot-functions-at-end",
+    cl::desc(
+        "if reorder-functions is used, order functions putting hottest last"),
+    cl::cat(BoltCategory));
 
 cl::opt<bool> HotText(
     "hot-text",
@@ -128,7 +121,7 @@ cl::opt<bool> HotText(
 cl::opt<bool>
     Instrument("instrument",
                cl::desc("instrument code to generate accurate profile data"),
-               cl::ZeroOrMore, cl::cat(BoltOptCategory));
+               cl::cat(BoltOptCategory));
 
 cl::opt<std::string>
 OutputFilename("o",
@@ -149,52 +142,37 @@ PerfDataA("p",
   cl::aliasopt(PerfData),
   cl::cat(AggregatorCategory));
 
-cl::opt<bool>
-PrintCacheMetrics("print-cache-metrics",
-  cl::desc("calculate and print various metrics for instruction cache"),
-  cl::init(false),
-  cl::ZeroOrMore,
-  cl::cat(BoltOptCategory));
+cl::opt<bool> PrintCacheMetrics(
+    "print-cache-metrics",
+    cl::desc("calculate and print various metrics for instruction cache"),
+    cl::cat(BoltOptCategory));
+
+cl::opt<bool> PrintSections("print-sections",
+                            cl::desc("print all registered sections"),
+                            cl::Hidden, cl::cat(BoltCategory));
+
+cl::opt<bool> SplitEH("split-eh", cl::desc("split C++ exception handling code"),
+                      cl::Hidden, cl::cat(BoltOptCategory));
 
 cl::opt<bool>
-  PrintSections("print-sections",
-  cl::desc("print all registered sections"),
-  cl::ZeroOrMore,
-  cl::Hidden,
-  cl::cat(BoltCategory));
+    StrictMode("strict",
+               cl::desc("trust the input to be from a well-formed source"),
 
-cl::opt<bool>
-SplitEH("split-eh",
-  cl::desc("split C++ exception handling code"),
-  cl::ZeroOrMore,
-  cl::Hidden,
-  cl::cat(BoltOptCategory));
+               cl::cat(BoltCategory));
 
-cl::opt<bool>
-StrictMode("strict",
-  cl::desc("trust the input to be from a well-formed source"),
-  cl::init(false),
-  cl::ZeroOrMore,
-  cl::cat(BoltCategory));
+llvm::cl::opt<bool> TimeOpts("time-opts",
+                             cl::desc("print time spent in each optimization"),
+                             cl::cat(BoltOptCategory));
 
-llvm::cl::opt<bool>
-TimeOpts("time-opts",
-  cl::desc("print time spent in each optimization"),
-  cl::init(false),
-  cl::ZeroOrMore,
-  cl::cat(BoltOptCategory));
+cl::opt<bool> UseOldText(
+    "use-old-text",
+    cl::desc("re-use space in old .text if possible (relocation mode)"),
+    cl::cat(BoltCategory));
 
-cl::opt<bool>
-UseOldText("use-old-text",
-  cl::desc("re-use space in old .text if possible (relocation mode)"),
-  cl::ZeroOrMore,
-  cl::cat(BoltCategory));
-
-cl::opt<bool>
-UpdateDebugSections("update-debug-sections",
-  cl::desc("update DWARF debug sections of the executable"),
-  cl::ZeroOrMore,
-  cl::cat(BoltCategory));
+cl::opt<bool> UpdateDebugSections(
+    "update-debug-sections",
+    cl::desc("update DWARF debug sections of the executable"),
+    cl::cat(BoltCategory));
 
 cl::opt<unsigned>
 Verbosity("v",

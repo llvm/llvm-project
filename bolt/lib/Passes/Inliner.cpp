@@ -38,10 +38,9 @@ namespace opts {
 extern cl::OptionCategory BoltOptCategory;
 
 static cl::opt<bool>
-AdjustProfile("inline-ap",
-  cl::desc("adjust function profile after inlining"),
-  cl::ZeroOrMore,
-  cl::cat(BoltOptCategory));
+    AdjustProfile("inline-ap",
+                  cl::desc("adjust function profile after inlining"),
+                  cl::cat(BoltOptCategory));
 
 static cl::list<std::string>
 ForceInlineFunctions("force-inline",
@@ -51,68 +50,46 @@ ForceInlineFunctions("force-inline",
   cl::Hidden,
   cl::cat(BoltOptCategory));
 
-static cl::opt<bool>
-InlineAll("inline-all",
-  cl::desc("inline all functions"),
-  cl::init(false),
-  cl::ZeroOrMore,
-  cl::cat(BoltOptCategory));
+static cl::opt<bool> InlineAll("inline-all", cl::desc("inline all functions"),
+                               cl::cat(BoltOptCategory));
 
-static cl::opt<bool>
-InlineIgnoreLeafCFI("inline-ignore-leaf-cfi",
-  cl::desc("inline leaf functions with CFI programs (can break unwinding)"),
-  cl::init(true),
-  cl::ZeroOrMore,
-  cl::ReallyHidden,
-  cl::cat(BoltOptCategory));
+static cl::opt<bool> InlineIgnoreLeafCFI(
+    "inline-ignore-leaf-cfi",
+    cl::desc("inline leaf functions with CFI programs (can break unwinding)"),
+    cl::init(true), cl::ReallyHidden, cl::cat(BoltOptCategory));
 
-static cl::opt<bool>
-InlineIgnoreCFI("inline-ignore-cfi",
-  cl::desc("inline functions with CFI programs (can break exception handling)"),
-  cl::init(false),
-  cl::ZeroOrMore,
-  cl::ReallyHidden,
-  cl::cat(BoltOptCategory));
+static cl::opt<bool> InlineIgnoreCFI(
+    "inline-ignore-cfi",
+    cl::desc(
+        "inline functions with CFI programs (can break exception handling)"),
+    cl::ReallyHidden, cl::cat(BoltOptCategory));
 
 static cl::opt<unsigned>
-InlineLimit("inline-limit",
-  cl::desc("maximum number of call sites to inline"),
-  cl::init(0),
-  cl::ZeroOrMore,
-  cl::Hidden,
-  cl::cat(BoltOptCategory));
+    InlineLimit("inline-limit",
+                cl::desc("maximum number of call sites to inline"), cl::init(0),
+                cl::Hidden, cl::cat(BoltOptCategory));
 
 static cl::opt<unsigned>
-InlineMaxIters("inline-max-iters",
-  cl::desc("maximum number of inline iterations"),
-  cl::init(3),
-  cl::ZeroOrMore,
-  cl::Hidden,
-  cl::cat(BoltOptCategory));
+    InlineMaxIters("inline-max-iters",
+                   cl::desc("maximum number of inline iterations"), cl::init(3),
+                   cl::Hidden, cl::cat(BoltOptCategory));
 
-static cl::opt<bool>
-InlineSmallFunctions("inline-small-functions",
-  cl::desc("inline functions if increase in size is less than defined by "
-           "-inline-small-functions-bytes"),
-  cl::init(false),
-  cl::ZeroOrMore,
-  cl::cat(BoltOptCategory));
+static cl::opt<bool> InlineSmallFunctions(
+    "inline-small-functions",
+    cl::desc("inline functions if increase in size is less than defined by "
+             "-inline-small-functions-bytes"),
+    cl::cat(BoltOptCategory));
 
-static cl::opt<unsigned>
-InlineSmallFunctionsBytes("inline-small-functions-bytes",
-  cl::desc("max number of bytes for the function to be considered small for "
-           "inlining purposes"),
-  cl::init(4),
-  cl::ZeroOrMore,
-  cl::Hidden,
-  cl::cat(BoltOptCategory));
+static cl::opt<unsigned> InlineSmallFunctionsBytes(
+    "inline-small-functions-bytes",
+    cl::desc("max number of bytes for the function to be considered small for "
+             "inlining purposes"),
+    cl::init(4), cl::Hidden, cl::cat(BoltOptCategory));
 
-static cl::opt<bool>
-NoInline("no-inline",
-  cl::desc("disable all inlining (overrides other inlining options)"),
-  cl::init(false),
-  cl::ZeroOrMore,
-  cl::cat(BoltOptCategory));
+static cl::opt<bool> NoInline(
+    "no-inline",
+    cl::desc("disable all inlining (overrides other inlining options)"),
+    cl::cat(BoltOptCategory));
 
 /// This function returns true if any of inlining options are specified and the
 /// inlining pass should be executed. Whenever a new inlining option is added,
