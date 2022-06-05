@@ -1810,8 +1810,7 @@ void SwingSchedulerDAG::addConnectedNodes(SUnit *SU, NodeSet &NewSet,
 static bool isIntersect(SmallSetVector<SUnit *, 8> &Set1, const NodeSet &Set2,
                         SmallSetVector<SUnit *, 8> &Result) {
   Result.clear();
-  for (unsigned i = 0, e = Set1.size(); i != e; ++i) {
-    SUnit *SU = Set1[i];
+  for (SUnit *SU : Set1) {
     if (Set2.count(SU) != 0)
       Result.insert(SU);
   }
