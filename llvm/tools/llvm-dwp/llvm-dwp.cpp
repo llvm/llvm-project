@@ -36,9 +36,8 @@ using namespace llvm::object;
 static mc::RegisterMCTargetOptionsFlags MCTargetOptionsFlags;
 
 cl::OptionCategory DwpCategory("Specific Options");
-static cl::list<std::string> InputFiles(cl::Positional, cl::ZeroOrMore,
-                                        cl::desc("<input files>"),
-                                        cl::cat(DwpCategory));
+static cl::list<std::string>
+    InputFiles(cl::Positional, cl::desc("<input files>"), cl::cat(DwpCategory));
 
 static cl::list<std::string> ExecFilenames(
     "e", cl::ZeroOrMore,

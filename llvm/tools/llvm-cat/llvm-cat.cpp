@@ -43,7 +43,7 @@ static cl::opt<std::string> OutputFilename("o", cl::Required,
                                            cl::value_desc("filename"),
                                            cl::cat(CatCategory));
 
-static cl::list<std::string> InputFilenames(cl::Positional, cl::ZeroOrMore,
+static cl::list<std::string> InputFilenames(cl::Positional,
                                             cl::desc("<input  files>"),
                                             cl::cat(CatCategory));
 

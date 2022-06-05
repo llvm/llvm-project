@@ -63,7 +63,7 @@ std::string FeaturesStr;
 
 static cl::list<std::string>
     FuzzerArgs("fuzzer-args", cl::Positional,
-               cl::desc("Options to pass to the fuzzer"), cl::ZeroOrMore,
+               cl::desc("Options to pass to the fuzzer"),
                cl::PositionalEatsArgs);
 static std::vector<char *> ModifiedArgv;
 

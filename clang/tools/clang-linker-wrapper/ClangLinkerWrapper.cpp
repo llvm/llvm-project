@@ -78,7 +78,7 @@ static cl::opt<std::string> OptLevel("opt-level",
                                      cl::cat(ClangLinkerWrapperCategory));
 
 static cl::list<std::string>
-    BitcodeLibraries("target-library", cl::ZeroOrMore,
+    BitcodeLibraries("target-library",
                      cl::desc("Path for the target bitcode library"),
                      cl::cat(ClangLinkerWrapperCategory));
 
@@ -104,7 +104,7 @@ static cl::opt<std::string>
                cl::cat(ClangLinkerWrapperCategory));
 
 static cl::list<std::string>
-    PtxasArgs("ptxas-args", cl::ZeroOrMore,
+    PtxasArgs("ptxas-args",
               cl::desc("Argument to pass to the ptxas invocation"),
               cl::cat(ClangLinkerWrapperCategory));
 
