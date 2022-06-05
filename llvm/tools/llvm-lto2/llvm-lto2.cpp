@@ -90,8 +90,7 @@ static cl::list<std::string> SymbolResolutions(
              "     runtime and is known to be in this linkage unit\n"
              " x - externally visible: the definition of this symbol is\n"
              "     visible outside of the LTO unit\n"
-             "A resolution for each symbol must be specified."),
-    cl::ZeroOrMore);
+             "A resolution for each symbol must be specified"));
 
 static cl::opt<std::string> OverrideTriple(
     "override-triple",

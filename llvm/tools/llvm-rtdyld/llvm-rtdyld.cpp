@@ -83,7 +83,7 @@ static cl::list<std::string> Dylibs("dylib", cl::desc("Add library."),
 
 static cl::list<std::string> InputArgv("args", cl::Positional,
                                        cl::desc("<program arguments>..."),
-                                       cl::ZeroOrMore, cl::PositionalEatsArgs,
+                                       cl::PositionalEatsArgs,
                                        cl::cat(RTDyldCategory));
 
 static cl::opt<std::string>

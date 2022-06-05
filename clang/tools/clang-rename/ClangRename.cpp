@@ -74,7 +74,7 @@ static cl::opt<bool> Inplace("i", cl::desc("Overwrite edited <file>s."),
 static cl::list<std::string>
     QualifiedNames("qualified-name",
                    cl::desc("The fully qualified name of the symbol."),
-                   cl::ZeroOrMore, cl::cat(ClangRenameOptions));
+                   cl::cat(ClangRenameOptions));
 
 static cl::list<std::string>
     NewNames("new-name", cl::desc("The new name to change the symbol to."),

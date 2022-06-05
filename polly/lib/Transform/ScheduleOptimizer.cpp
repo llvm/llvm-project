@@ -121,7 +121,7 @@ static cl::opt<int> FirstLevelDefaultTileSize(
     "polly-default-tile-size",
     cl::desc("The default tile size (if not enough were provided by"
              " --polly-tile-sizes)"),
-    cl::Hidden, cl::init(32), cl::ZeroOrMore, cl::cat(PollyCategory));
+    cl::Hidden, cl::init(32), cl::cat(PollyCategory));
 
 static cl::list<int>
     FirstLevelTileSizes("polly-tile-sizes",
@@ -155,7 +155,7 @@ static cl::opt<int> RegisterDefaultTileSize(
     "polly-register-tiling-default-tile-size",
     cl::desc("The default register tile size (if not enough were provided by"
              " --polly-register-tile-sizes)"),
-    cl::Hidden, cl::init(2), cl::ZeroOrMore, cl::cat(PollyCategory));
+    cl::Hidden, cl::init(2), cl::cat(PollyCategory));
 
 static cl::list<int>
     RegisterTileSizes("polly-register-tile-sizes",
@@ -188,7 +188,7 @@ static cl::opt<bool> OptimizedScops(
     cl::desc("Polly - Dump polyhedral description of Scops optimized with "
              "the isl scheduling optimizer and the set of post-scheduling "
              "transformations is applied on the schedule tree"),
-    cl::init(false), cl::ZeroOrMore, cl::cat(PollyCategory));
+    cl::cat(PollyCategory));
 
 STATISTIC(ScopsProcessed, "Number of scops processed");
 STATISTIC(ScopsRescheduled, "Number of scops rescheduled");

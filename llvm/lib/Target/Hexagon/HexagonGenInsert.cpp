@@ -72,14 +72,11 @@ static cl::opt<bool>
                     cl::desc("Enable detailed timing of insert "
                              "generation"));
 
-static cl::opt<bool> OptSelectAll0("insert-all0", cl::init(false), cl::Hidden,
-  cl::ZeroOrMore);
-static cl::opt<bool> OptSelectHas0("insert-has0", cl::init(false), cl::Hidden,
-  cl::ZeroOrMore);
+static cl::opt<bool> OptSelectAll0("insert-all0", cl::init(false), cl::Hidden);
+static cl::opt<bool> OptSelectHas0("insert-has0", cl::init(false), cl::Hidden);
 // Whether to construct constant values via "insert". Could eliminate constant
 // extenders, but often not practical.
-static cl::opt<bool> OptConst("insert-const", cl::init(false), cl::Hidden,
-  cl::ZeroOrMore);
+static cl::opt<bool> OptConst("insert-const", cl::init(false), cl::Hidden);
 
 // The preprocessor gets confused when the DEBUG macro is passed larger
 // chunks of code. Use this function to detect debugging.

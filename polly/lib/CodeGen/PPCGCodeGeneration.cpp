@@ -87,7 +87,7 @@ static cl::opt<bool, true>
                             " that all memory has been"
                             " declared as managed memory"),
                    cl::location(PollyManagedMemory), cl::Hidden,
-                   cl::init(false), cl::ZeroOrMore, cl::cat(PollyCategory));
+                   cl::init(false), cl::cat(PollyCategory));
 
 static cl::opt<bool>
     FailOnVerifyModuleFailure("polly-acc-fail-on-verify-module-failure",
@@ -112,14 +112,15 @@ static cl::opt<int>
                cl::Hidden, cl::init(10 * 512 * 512));
 
 GPURuntime polly::GPURuntimeChoice;
-static cl::opt<GPURuntime, true> XGPURuntimeChoice(
-    "polly-gpu-runtime", cl::desc("The GPU Runtime API to target"),
-    cl::values(clEnumValN(GPURuntime::CUDA, "libcudart",
-                          "use the CUDA Runtime API"),
-               clEnumValN(GPURuntime::OpenCL, "libopencl",
-                          "use the OpenCL Runtime API")),
-    cl::location(polly::GPURuntimeChoice), cl::init(GPURuntime::CUDA),
-    cl::ZeroOrMore, cl::cat(PollyCategory));
+static cl::opt<GPURuntime, true>
+    XGPURuntimeChoice("polly-gpu-runtime",
+                      cl::desc("The GPU Runtime API to target"),
+                      cl::values(clEnumValN(GPURuntime::CUDA, "libcudart",
+                                            "use the CUDA Runtime API"),
+                                 clEnumValN(GPURuntime::OpenCL, "libopencl",
+                                            "use the OpenCL Runtime API")),
+                      cl::location(polly::GPURuntimeChoice),
+                      cl::init(GPURuntime::CUDA), cl::cat(PollyCategory));
 
 GPUArch polly::GPUArchChoice;
 static cl::opt<GPUArch, true>
@@ -131,8 +132,7 @@ static cl::opt<GPUArch, true>
                               clEnumValN(GPUArch::SPIR64, "spir64",
                                          "target SPIR 64-bit architecture")),
                    cl::location(polly::GPUArchChoice),
-                   cl::init(GPUArch::NVPTX64), cl::ZeroOrMore,
-                   cl::cat(PollyCategory));
+                   cl::init(GPUArch::NVPTX64), cl::cat(PollyCategory));
 
 extern bool polly::PerfMonitoring;
 

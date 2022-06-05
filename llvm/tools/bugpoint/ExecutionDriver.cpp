@@ -119,7 +119,7 @@ cl::list<std::string> ToolArgv("tool-args", cl::Positional,
 
 cl::list<std::string> SafeToolArgv("safe-tool-args", cl::Positional,
                                    cl::desc("<safe-tool arguments>..."),
-                                   cl::ZeroOrMore, cl::PositionalEatsArgs);
+                                   cl::PositionalEatsArgs);
 
 cl::opt<std::string> CCBinary("gcc", cl::init(""),
                               cl::desc("The gcc binary to use."));

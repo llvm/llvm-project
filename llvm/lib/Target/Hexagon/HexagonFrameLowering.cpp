@@ -152,9 +152,10 @@ using namespace llvm;
 static cl::opt<bool> DisableDeallocRet("disable-hexagon-dealloc-ret",
     cl::Hidden, cl::desc("Disable Dealloc Return for Hexagon target"));
 
-static cl::opt<unsigned> NumberScavengerSlots("number-scavenger-slots",
-    cl::Hidden, cl::desc("Set the number of scavenger slots"), cl::init(2),
-    cl::ZeroOrMore);
+static cl::opt<unsigned>
+    NumberScavengerSlots("number-scavenger-slots", cl::Hidden,
+                         cl::desc("Set the number of scavenger slots"),
+                         cl::init(2));
 
 static cl::opt<int>
     SpillFuncThreshold("spill-func-threshold", cl::Hidden,

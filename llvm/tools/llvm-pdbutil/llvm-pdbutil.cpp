@@ -319,12 +319,14 @@ cl::list<std::string>
     ExcludeTypes("exclude-types",
                  cl::desc("Exclude types by regular expression"),
                  cl::cat(FilterCategory), cl::sub(PrettySubcommand));
-cl::list<std::string> ExcludeSymbols(
-    "exclude-symbols", cl::desc("Exclude symbols by regular expression"),
-    cl::ZeroOrMore, cl::cat(FilterCategory), cl::sub(PrettySubcommand));
-cl::list<std::string> ExcludeCompilands(
-    "exclude-compilands", cl::desc("Exclude compilands by regular expression"),
-    cl::ZeroOrMore, cl::cat(FilterCategory), cl::sub(PrettySubcommand));
+cl::list<std::string>
+    ExcludeSymbols("exclude-symbols",
+                   cl::desc("Exclude symbols by regular expression"),
+                   cl::cat(FilterCategory), cl::sub(PrettySubcommand));
+cl::list<std::string>
+    ExcludeCompilands("exclude-compilands",
+                      cl::desc("Exclude compilands by regular expression"),
+                      cl::cat(FilterCategory), cl::sub(PrettySubcommand));
 
 cl::list<std::string> IncludeTypes(
     "include-types",
@@ -333,7 +335,7 @@ cl::list<std::string> IncludeTypes(
 cl::list<std::string> IncludeSymbols(
     "include-symbols",
     cl::desc("Include only symbols which match a regular expression"),
-    cl::ZeroOrMore, cl::cat(FilterCategory), cl::sub(PrettySubcommand));
+    cl::cat(FilterCategory), cl::sub(PrettySubcommand));
 cl::list<std::string> IncludeCompilands(
     "include-compilands",
     cl::desc("Include only compilands those which match a regular expression"),
@@ -418,7 +420,7 @@ cl::list<uint32_t> TypeIndex(
     cl::CommaSeparated, cl::sub(BytesSubcommand), cl::cat(TypeCategory));
 cl::list<uint32_t>
     IdIndex("id", cl::desc("Dump the id record with the given type index"),
-            cl::ZeroOrMore, cl::CommaSeparated, cl::sub(BytesSubcommand),
+            cl::CommaSeparated, cl::sub(BytesSubcommand),
             cl::cat(TypeCategory));
 
 cl::opt<uint32_t> ModuleIndex(
