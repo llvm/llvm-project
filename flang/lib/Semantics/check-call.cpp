@@ -865,7 +865,7 @@ static bool CheckElementalConformance(parser::ContextualMessages &messages,
                          dummy.GetIntent() == common::Intent::InOut) &&
               hasArrayArg) {
             messages.Say(
-                "In an elemental procedure with at least one array arugment, actual argument %s that corresponds to an INTENT(OUT) or INTENT(INOUT) dummay argument must be an array"_err_en_US,
+                "In an elemental procedure reference with at least one array argument, actual argument %s that corresponds to an INTENT(OUT) or INTENT(INOUT) dummy argument must be an array"_err_en_US,
                 expr->AsFortran());
           }
         }

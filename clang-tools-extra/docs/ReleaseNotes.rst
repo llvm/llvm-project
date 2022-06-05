@@ -202,6 +202,10 @@ Changes in existing checks
   <clang-tidy/checks/readability-simplify-boolean-expr>` to simplify expressions
   using DeMorgan's Theorem.
 
+- Fixed a crash in :doc:`performance-unnecessary-value-param
+  <clang-tidy/checks/readability-suspicious-call-argument>` when the specialization
+  template has an unnecessary value paramter. Removed the fix for a template.
+
 Removed checks
 ^^^^^^^^^^^^^^
 

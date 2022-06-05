@@ -27,14 +27,26 @@ class BadAddressBreakpointTestCase(TestBase):
                                               "Set a breakpoint here",
                                               lldb.SBFileSpec("main.c"))
 
-        # Now see if we can read from 0.  If I can't do that, I don't
-        # have a good way to know what an illegal address is...
-        error = lldb.SBError()
 
-        ptr = process.ReadPointerFromMemory(0x0, error)
 
-        if not error.Success():
-            bkpt = target.BreakpointCreateByAddress(0x0)
+        # illegal_address will hold (optionally) an address that, if
+        # used as a breakpoint, will generate an unresolved breakpoint.
+        illegal_address = None
+
+        # Walk through all the memory regions in the process and
+        # find an address that is invalid.
+        regions = process.GetMemoryRegions()
+        for region_idx in range(regions.GetSize()):
+            region = lldb.SBMemoryRegionInfo()
+            regions.GetMemoryRegionAtIndex(region_idx, region)
+            if illegal_address == None or \
+                region.GetRegionEnd() > illegal_address:
+                illegal_address = region.GetRegionEnd()
+
+        if illegal_address is not None:
+            # Now, set a breakpoint at the address we know is illegal.
+            bkpt = target.BreakpointCreateByAddress(illegal_address)
+            # Verify that breakpoint is not resolved.
             for bp_loc in bkpt:
                 self.assertEquals(bp_loc.IsResolved(), False)
         else:

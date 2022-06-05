@@ -909,12 +909,22 @@ public:
     return false;
   }
 
-  /// Use \p Input1 or Input2 as the current value for the input register and
-  /// put in \p Output the changes incurred by executing \p Inst. Return false
-  /// if it was not possible to perform the evaluation.
-  virtual bool evaluateSimple(const MCInst &Inst, int64_t &Output,
-                              std::pair<MCPhysReg, int64_t> Input1,
-                              std::pair<MCPhysReg, int64_t> Input2) const {
+  /// Use \p Input1 or Input2 as the current value for the input
+  /// register and put in \p Output the changes incurred by executing
+  /// \p Inst. Return false if it was not possible to perform the
+  /// evaluation. evaluateStackOffsetExpr is restricted to operations
+  /// that have associativity with addition. Its intended usage is for
+  /// evaluating stack offset changes. In these cases, expressions
+  /// appear in the form of (x + offset) OP constant, where x is an
+  /// unknown base (such as stack base) but offset and constant are
+  /// known. In these cases, \p Output represents the new stack offset
+  /// after executing \p Inst. Because we don't know x, we can't
+  /// evaluate operations such as multiply or AND/OR, e.g. (x +
+  /// offset) OP constant is not the same as x + (offset OP constant).
+  virtual bool
+  evaluateStackOffsetExpr(const MCInst &Inst, int64_t &Output,
+                          std::pair<MCPhysReg, int64_t> Input1,
+                          std::pair<MCPhysReg, int64_t> Input2) const {
     llvm_unreachable("not implemented");
     return false;
   }

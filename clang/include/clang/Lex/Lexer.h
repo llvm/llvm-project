@@ -16,6 +16,7 @@
 #include "clang/Basic/LangOptions.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/TokenKinds.h"
+#include "clang/Lex/DependencyDirectivesScanner.h"
 #include "clang/Lex/PreprocessorLexer.h"
 #include "clang/Lex/Token.h"
 #include "llvm/ADT/Optional.h"
@@ -149,6 +150,13 @@ class Lexer : public PreprocessorLexer {
   // CurrentConflictMarkerState - The kind of conflict marker we are handling.
   ConflictMarkerKind CurrentConflictMarkerState;
 
+  /// Non-empty if this \p Lexer is \p isDependencyDirectivesLexer().
+  ArrayRef<dependency_directives_scan::Directive> DepDirectives;
+
+  /// If this \p Lexer is \p isDependencyDirectivesLexer(), it represents the
+  /// next token to use from the current dependency directive.
+  unsigned NextDepDirectiveTokenIndex = 0;
+
   void InitLexer(const char *BufStart, const char *BufPtr, const char *BufEnd);
 
 public:
@@ -194,6 +202,23 @@ private:
   /// Lex - Return the next token in the file.  If this is the end of file, it
   /// return the tok::eof token.  This implicitly involves the preprocessor.
   bool Lex(Token &Result);
+
+  /// Called when the preprocessor is in 'dependency scanning lexing mode'.
+  bool LexDependencyDirectiveToken(Token &Result);
+
+  /// Called when the preprocessor is in 'dependency scanning lexing mode' and
+  /// is skipping a conditional block.
+  bool LexDependencyDirectiveTokenWhileSkipping(Token &Result);
+
+  /// True when the preprocessor is in 'dependency scanning lexing mode' and
+  /// created this \p Lexer for lexing a set of dependency directive tokens.
+  bool isDependencyDirectivesLexer() const { return !DepDirectives.empty(); }
+
+  /// Initializes \p Result with data from \p DDTok and advances \p BufferPtr to
+  /// the position just after the token.
+  /// \returns the buffer pointer at the beginning of the token.
+  const char *convertDependencyDirectiveToken(
+      const dependency_directives_scan::Token &DDTok, Token &Result);
 
 public:
   /// isPragmaLexer - Returns true if this Lexer is being used to lex a pragma.
@@ -288,14 +313,8 @@ public:
     return BufferPtr - BufferStart;
   }
 
-  /// Skip over \p NumBytes bytes.
-  ///
-  /// If the skip is successful, the next token will be lexed from the new
-  /// offset. The lexer also assumes that we skipped to the start of the line.
-  ///
-  /// \returns true if the skip failed (new offset would have been past the
-  /// end of the buffer), false otherwise.
-  bool skipOver(unsigned NumBytes);
+  /// Set the lexer's buffer pointer to \p Offset.
+  void seek(unsigned Offset, bool IsAtStartOfLine);
 
   /// Stringify - Convert the specified string into a C string by i) escaping
   /// '\\' and " characters and ii) replacing newline character(s) with "\\n".

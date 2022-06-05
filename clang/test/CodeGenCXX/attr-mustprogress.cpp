@@ -125,7 +125,7 @@ void F() {
 // CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[TMP0]], [[TMP1]]
 // CHECK-NEXT:    br i1 [[CMP]], label %for.body, label %for.end
 // CHECK:       for.body:
-// CXX98_NOT:     br {{.*}} !llvm.loop
+// CXX98-NOT:     br {{.*}} !llvm.loop
 // CXX11-NEXT:    br label %for.cond, !llvm.loop [[LOOP6:!.*]]
 // FINITE-NEXT:   br label %for.cond, !llvm.loop [[LOOP6:!.*]]
 // CHECK:       for.end:

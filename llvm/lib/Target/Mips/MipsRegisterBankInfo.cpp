@@ -153,8 +153,7 @@ static bool isGprbTwoInstrUnalignedLoadOrStore(const MachineInstr *MI) {
   if (MI->getOpcode() == TargetOpcode::G_LOAD ||
       MI->getOpcode() == TargetOpcode::G_STORE) {
     auto MMO = *MI->memoperands_begin();
-    const MipsSubtarget &STI =
-        static_cast<const MipsSubtarget &>(MI->getMF()->getSubtarget());
+    const MipsSubtarget &STI = MI->getMF()->getSubtarget<MipsSubtarget>();
     if (MMO->getSize() == 4 && (!STI.systemSupportsUnalignedAccess() &&
                                 MMO->getAlign() < MMO->getSize()))
       return true;
@@ -398,7 +397,7 @@ void MipsRegisterBankInfo::TypeInfoForMF::cleanupIfNewFunction(
 
 static const MipsRegisterBankInfo::ValueMapping *
 getMSAMapping(const MachineFunction &MF) {
-  assert(static_cast<const MipsSubtarget &>(MF.getSubtarget()).hasMSA() &&
+  assert(MF.getSubtarget<MipsSubtarget>().hasMSA() &&
          "MSA mapping not available on target without MSA.");
   return &Mips::ValueMappings[Mips::MSAIdx];
 }

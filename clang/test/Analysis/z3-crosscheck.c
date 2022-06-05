@@ -14,6 +14,20 @@ int foo(int x)
   return 0;
 }
 
+int unary(int x, long l)
+{
+  int *z = 0;
+  int y = l;
+  if ((x & 1) && ((x & 1) ^ 1))
+    if (-y)
+#ifdef NO_CROSSCHECK
+        return *z; // expected-warning {{Dereference of null pointer (loaded from variable 'z')}}
+#else
+        return *z; // no-warning
+#endif
+  return 0;
+}
+
 void g(int d);
 
 void f(int *a, int *b) {

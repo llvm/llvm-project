@@ -392,8 +392,7 @@ static void emitAligningInstructions(MachineFunction &MF, ARMFunctionInfo *AFI,
                                      const DebugLoc &DL, const unsigned Reg,
                                      const Align Alignment,
                                      const bool MustBeSingleInstruction) {
-  const ARMSubtarget &AST =
-      static_cast<const ARMSubtarget &>(MF.getSubtarget());
+  const ARMSubtarget &AST = MF.getSubtarget<ARMSubtarget>();
   const bool CanUseBFC = AST.hasV6T2Ops() || AST.hasV7Ops();
   const unsigned AlignMask = Alignment.value() - 1U;
   const unsigned NrBitsToZero = Log2(Alignment);
@@ -1768,7 +1767,7 @@ checkNumAlignedDPRCS2Regs(MachineFunction &MF, BitVector &SavedRegs) {
     return;
 
   // We are planning to use NEON instructions vst1 / vld1.
-  if (!static_cast<const ARMSubtarget &>(MF.getSubtarget()).hasNEON())
+  if (!MF.getSubtarget<ARMSubtarget>().hasNEON())
     return;
 
   // Don't bother if the default stack alignment is sufficiently high.

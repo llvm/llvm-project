@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-// UNSUPPORTED: libcpp-has-no-threads
+// UNSUPPORTED: no-threads
 
 // This test ensures that we don't hijack the <stdatomic.h> header even when compiling
 // before C++23, since Clang used to provide that header before libc++ provided one.

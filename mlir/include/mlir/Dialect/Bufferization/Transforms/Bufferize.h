@@ -27,6 +27,7 @@ namespace bufferization {
 class AnalysisState;
 struct BufferizationState;
 struct BufferizationOptions;
+class OpFilter;
 
 /// A helper type converter class that automatically populates the relevant
 /// materializations and type conversions for bufferization.
@@ -84,8 +85,8 @@ BufferizationOptions getPartialBufferizationOptions();
 /// Reuse an existing `BufferizationState`.
 ///
 /// Note: This function overload is useful for extending the bufferization.
-LogicalResult bufferizeOp(Operation *op,
-                          BufferizationState &bufferizationState);
+LogicalResult bufferizeOp(Operation *op, BufferizationState &bufferizationState,
+                          const OpFilter *opFilter = nullptr);
 
 /// Finalize all buffer allocations: Create alloc/dealloc ops as specified by
 /// the bufferization options.

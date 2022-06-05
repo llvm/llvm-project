@@ -981,8 +981,16 @@ private:
     mlir::Block *bodyBlock = doStmtEval.lexicalSuccessor->block;
     mlir::Block *exitBlock = doStmtEval.parentConstruct->constructExit->block;
     IncrementLoopNestInfo incrementLoopNestInfo;
-    if (const auto *bounds = std::get_if<Fortran::parser::LoopControl::Bounds>(
-            &loopControl->u)) {
+    const Fortran::parser::ScalarLogicalExpr *whileCondition = nullptr;
+    if ((whileCondition = std::get_if<Fortran::parser::ScalarLogicalExpr>(
+             &loopControl->u))) {
+      assert(unstructuredContext && "while loop must be unstructured");
+      maybeStartBlock(preheaderBlock); // no block or empty block
+      startBlock(headerBlock);
+      genFIRConditionalBranch(*whileCondition, bodyBlock, exitBlock);
+    } else if (const auto *bounds =
+                   std::get_if<Fortran::parser::LoopControl::Bounds>(
+                       &loopControl->u)) {
       // Non-concurrent increment loop.
       IncrementLoopInfo &info = incrementLoopNestInfo.emplace_back(
           *bounds->name.thing.symbol, bounds->lower, bounds->upper,
@@ -999,15 +1007,19 @@ private:
 
     // Increment loop begin code.  (TODO: Infinite/while code was already
     // generated.)
-    genFIRIncrementLoopBegin(incrementLoopNestInfo);
+    if (!whileCondition)
+      genFIRIncrementLoopBegin(incrementLoopNestInfo);
 
     // Loop body code - NonLabelDoStmt and EndDoStmt code is generated here.
     // Their genFIR calls are nops except for block management in some cases.
     for (Fortran::lower::pft::Evaluation &e : eval.getNestedEvaluations())
       genFIR(e, unstructuredContext);
 
-    // Loop end code. (TODO: infinite/while loop)
-    genFIRIncrementLoopEnd(incrementLoopNestInfo);
+    // Loop end code. (TODO: infinite loop)
+    if (whileCondition)
+      genFIRBranch(headerBlock);
+    else
+      genFIRIncrementLoopEnd(incrementLoopNestInfo);
   }
 
   /// Generate FIR to begin a structured or unstructured increment loop nest.

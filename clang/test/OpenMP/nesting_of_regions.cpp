@@ -1,10 +1,11 @@
-// RUN: %clang_cc1 -fsyntax-only -fopenmp -fopenmp-version=45 -verify=expected,omp45,omp45warn %s
-// RUN: %clang_cc1 -fsyntax-only -fopenmp -verify=expected,omp50 %s
-// RUN: %clang_cc1 -fsyntax-only -fopenmp -fopenmp-version=45 -verify=expected,omp45 -Wno-openmp %s
-// RUN: %clang_cc1 -fsyntax-only -fopenmp -fopenmp-version=45 -verify=expected,omp45 -Wno-source-uses-openmp %s
+// RUN: %clang_cc1 -fsyntax-only -fopenmp -fopenmp-version=45 -fno-openmp-extensions -verify=expected,omp45,omp45warn,omp %s
+// RUN: %clang_cc1 -fsyntax-only -fopenmp -fno-openmp-extensions -verify=expected,omp50,omp %s
+// RUN: %clang_cc1 -fsyntax-only -fopenmp -fopenmp-extensions -verify=expected,omp50 %s
+// RUN: %clang_cc1 -fsyntax-only -fopenmp -fopenmp-version=45 -verify=expected,omp45,omp -fno-openmp-extensions -Wno-openmp %s
+// RUN: %clang_cc1 -fsyntax-only -fopenmp -fopenmp-version=45 -verify=expected,omp45,omp -fno-openmp-extensions -Wno-source-uses-openmp %s
 
-// RUN: %clang_cc1 -fsyntax-only -fopenmp-simd -fopenmp-version=45 -verify=expected,omp45,omp45warn %s
-// RUN: %clang_cc1 -fsyntax-only -fopenmp-simd -verify=expected,omp50 %s
+// RUN: %clang_cc1 -fsyntax-only -fopenmp-simd -fopenmp-version=45 -fno-openmp-extensions -verify=expected,omp45,omp45warn,omp %s
+// RUN: %clang_cc1 -fsyntax-only -fopenmp-simd -verify=expected,omp50,omp -fno-openmp-extensions %s
 // SIMD-ONLY0-NOT: {{__kmpc|__tgt}}
 
 void bar();
@@ -5264,7 +5265,7 @@ void foo() {
 #pragma omp target
 #pragma omp teams
   {
-#pragma omp atomic // expected-error {{region cannot be closely nested inside 'teams' region; perhaps you forget to enclose 'omp atomic' directive into a parallel region?}}
+#pragma omp atomic // omp-error {{region cannot be closely nested inside 'teams' region; perhaps you forget to enclose 'omp atomic' directive into a parallel region?}}
     ++a;
   }
 #pragma omp target
@@ -8422,7 +8423,7 @@ void foo() {
   }
 #pragma omp target teams
   {
-#pragma omp atomic // expected-error {{region cannot be closely nested inside 'target teams' region; perhaps you forget to enclose 'omp atomic' directive into a parallel region?}}
+#pragma omp atomic // omp-error {{region cannot be closely nested inside 'target teams' region; perhaps you forget to enclose 'omp atomic' directive into a parallel region?}}
     ++a;
   }
 #pragma omp target teams
@@ -14096,7 +14097,7 @@ void foo() {
 #pragma omp target
 #pragma omp teams
   {
-#pragma omp atomic // expected-error {{region cannot be closely nested inside 'teams' region; perhaps you forget to enclose 'omp atomic' directive into a parallel region?}}
+#pragma omp atomic // omp-error {{region cannot be closely nested inside 'teams' region; perhaps you forget to enclose 'omp atomic' directive into a parallel region?}}
     ++a;
   }
 #pragma omp target
@@ -17299,7 +17300,7 @@ void foo() {
   }
 #pragma omp target teams
   {
-#pragma omp atomic // expected-error {{region cannot be closely nested inside 'target teams' region; perhaps you forget to enclose 'omp atomic' directive into a parallel region?}}
+#pragma omp atomic // omp-error {{region cannot be closely nested inside 'target teams' region; perhaps you forget to enclose 'omp atomic' directive into a parallel region?}}
     ++a;
   }
 #pragma omp target teams

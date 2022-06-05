@@ -9,7 +9,7 @@
 // Make sure that std::random_device is not available in namespace std:: when
 // libc++ is built without support for random device.
 
-// REQUIRES: libcpp-has-no-random-device
+// REQUIRES: no-random-device
 
 #include <random>
 
