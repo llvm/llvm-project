@@ -26,18 +26,21 @@ llvm_all_targets = [
   "X86",
 ]
 
+# FIXME: This should be based off target_cpu once cross compiles work.
+if (host_cpu == "arm64") {
+  native_target = "AArch64"
+} else if (host_cpu == "arm") {
+  native_target = "ARM"
+} else if (host_cpu == "ppc" || host_cpu == "ppc64") {
+  native_target = "PowerPC"
+} else if (host_cpu == "x86" || host_cpu == "x64") {
+  native_target = "X86"
+} else {
+  assert(false, "add your host_cpu above")
+}
+
 if (llvm_targets_to_build == "host") {
-  if (host_cpu == "arm64") {
-    llvm_targets_to_build = [ "AArch64" ]
-  } else if (host_cpu == "arm") {
-    llvm_targets_to_build = [ "ARM" ]
-  } else if (host_cpu == "ppc" || host_cpu == "ppc64") {
-    llvm_targets_to_build = [ "PowerPC" ]
-  } else if (host_cpu == "x86" || host_cpu == "x64") {
-    llvm_targets_to_build = [ "X86" ]
-  } else {
-    assert(false, "add your host_cpu above")
-  }
+  llvm_targets_to_build = [ native_target ]
 } else if (llvm_targets_to_build == "all") {
   llvm_targets_to_build = llvm_all_targets
 }
@@ -54,7 +57,11 @@ llvm_build_PowerPC = false
 llvm_build_SystemZ = false
 llvm_build_WebAssembly = false
 llvm_build_X86 = false
+llvm_build_native = false
 foreach(target, llvm_targets_to_build) {
+  if (target == native_target) {
+    llvm_build_native = true
+  }
   if (target == "AArch64") {
     llvm_build_AArch64 = true
   } else if (target == "AMDGPU") {
@@ -85,19 +92,6 @@ foreach(target, llvm_targets_to_build) {
     assert(false, "Unknown target '$target' in llvm_targets_to_build. " +
                       "Known targets:" + all_targets_string)
   }
-}
-
-# FIXME: This should be based off target_cpu once cross compiles work.
-if (host_cpu == "arm64") {
-  native_target = "AArch64"
-} else if (host_cpu == "arm") {
-  native_target = "ARM"
-} else if (host_cpu == "ppc" || host_cpu == "ppc64") {
-  native_target = "PowerPC"
-} else if (host_cpu == "x86" || host_cpu == "x64") {
-  native_target = "X86"
-} else {
-  assert(false, "Unsuppored host_cpu '$host_cpu'.")
 }
 
 supported_android_toolchains = []
