@@ -46,7 +46,7 @@ using namespace llvm::object;
 
 static cl::OptionCategory RTDyldCategory("RTDyld Options");
 
-static cl::list<std::string> InputFileList(cl::Positional, cl::ZeroOrMore,
+static cl::list<std::string> InputFileList(cl::Positional,
                                            cl::desc("<input files>"),
                                            cl::cat(RTDyldCategory));
 

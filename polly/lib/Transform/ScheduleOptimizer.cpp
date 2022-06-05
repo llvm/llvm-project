@@ -127,8 +127,7 @@ static cl::list<int>
     FirstLevelTileSizes("polly-tile-sizes",
                         cl::desc("A tile size for each loop dimension, filled "
                                  "with --polly-default-tile-size"),
-                        cl::Hidden, cl::ZeroOrMore, cl::CommaSeparated,
-                        cl::cat(PollyCategory));
+                        cl::Hidden, cl::CommaSeparated, cl::cat(PollyCategory));
 
 static cl::opt<bool>
     SecondLevelTiling("polly-2nd-level-tiling",
@@ -145,7 +144,7 @@ static cl::list<int>
     SecondLevelTileSizes("polly-2nd-level-tile-sizes",
                          cl::desc("A tile size for each loop dimension, filled "
                                   "with --polly-default-tile-size"),
-                         cl::Hidden, cl::ZeroOrMore, cl::CommaSeparated,
+                         cl::Hidden, cl::CommaSeparated,
                          cl::cat(PollyCategory));
 
 static cl::opt<bool> RegisterTiling("polly-register-tiling",
@@ -162,8 +161,7 @@ static cl::list<int>
     RegisterTileSizes("polly-register-tile-sizes",
                       cl::desc("A tile size for each loop dimension, filled "
                                "with --polly-register-tile-size"),
-                      cl::Hidden, cl::ZeroOrMore, cl::CommaSeparated,
-                      cl::cat(PollyCategory));
+                      cl::Hidden, cl::CommaSeparated, cl::cat(PollyCategory));
 
 static cl::opt<bool> PragmaBasedOpts(
     "polly-pragma-based-opts",

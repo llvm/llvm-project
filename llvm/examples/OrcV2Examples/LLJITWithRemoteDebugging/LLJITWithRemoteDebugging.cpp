@@ -110,7 +110,7 @@ static cl::list<std::string> InputArgv("args", cl::Positional,
 // Given paths must exist on the remote target.
 static cl::list<std::string>
     Dylibs("dlopen", cl::desc("Dynamic libraries to load before linking"),
-           cl::value_desc("filename"), cl::ZeroOrMore);
+           cl::value_desc("filename"));
 
 // File path of the executable to launch for execution in a child process.
 // Inter-process communication will go through stdin/stdout pipes.
