@@ -65,7 +65,7 @@ static opt<bool> Verbose("verbose",
                          cat(GeneralOptions));
 
 static list<std::string> InputFilenames(Positional, desc("<input GSYM files>"),
-                                        ZeroOrMore, cat(GeneralOptions));
+                                        cat(GeneralOptions));
 
 static opt<std::string>
     ConvertFilename("convert", cl::init(""),

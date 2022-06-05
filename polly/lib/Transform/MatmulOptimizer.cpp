@@ -54,14 +54,14 @@ static cl::opt<int> LatencyVectorFma(
     cl::desc("The minimal number of cycles between issuing two "
              "dependent consecutive vector fused multiply-add "
              "instructions."),
-    cl::Hidden, cl::init(8), cl::ZeroOrMore, cl::cat(PollyCategory));
+    cl::Hidden, cl::init(8), cl::cat(PollyCategory));
 
 static cl::opt<int> ThroughputVectorFma(
     "polly-target-throughput-vector-fma",
     cl::desc("A throughput of the processor floating-point arithmetic units "
              "expressed in the number of vector fused multiply-add "
              "instructions per clock cycle."),
-    cl::Hidden, cl::init(1), cl::ZeroOrMore, cl::cat(PollyCategory));
+    cl::Hidden, cl::init(1), cl::cat(PollyCategory));
 
 static cl::opt<int> FirstCacheLevelSize(
     "polly-target-1st-cache-level-size",

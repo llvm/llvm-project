@@ -54,8 +54,7 @@ using namespace llvm;
 static cl::opt<bool> OptSpeculate("commgep-speculate", cl::init(true),
                                   cl::Hidden);
 
-static cl::opt<bool> OptEnableInv("commgep-inv", cl::init(true), cl::Hidden,
-  cl::ZeroOrMore);
+static cl::opt<bool> OptEnableInv("commgep-inv", cl::init(true), cl::Hidden);
 
 static cl::opt<bool> OptEnableConst("commgep-const", cl::init(true),
                                     cl::Hidden);

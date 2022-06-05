@@ -40,7 +40,7 @@ static cl::opt<bool> IgnoreLinkageForGlobals(
     cl::desc(
         "By default, we only rewrite globals with internal linkage. This flag "
         "enables rewriting of globals regardless of linkage"),
-    cl::Hidden, cl::init(false), cl::ZeroOrMore, cl::cat(PollyCategory));
+    cl::Hidden, cl::cat(PollyCategory));
 
 #define DEBUG_TYPE "polly-acc-rewrite-managed-memory"
 namespace {

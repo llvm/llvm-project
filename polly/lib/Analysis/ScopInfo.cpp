@@ -155,8 +155,7 @@ bool polly::UseInstructionNames;
 static cl::opt<bool, true> XUseInstructionNames(
     "polly-use-llvm-names",
     cl::desc("Use LLVM-IR names when deriving statement names"),
-    cl::location(UseInstructionNames), cl::Hidden, cl::init(false),
-    cl::ZeroOrMore, cl::cat(PollyCategory));
+    cl::location(UseInstructionNames), cl::Hidden, cl::cat(PollyCategory));
 
 static cl::opt<bool> PollyPrintInstructions(
     "polly-print-instructions", cl::desc("Output instructions per ScopStmt"),

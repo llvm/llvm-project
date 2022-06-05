@@ -78,7 +78,7 @@ static cl::list<std::string> Libraries(
         "l<x> searches for the library libx.a in the library search path. If"
         " the string 'x' ends with '.o', then the library 'x' is searched for"
         " without prepending 'lib' or appending '.a'"),
-    cl::ZeroOrMore, cl::Prefix, cl::cat(LibtoolCategory));
+    cl::Prefix, cl::cat(LibtoolCategory));
 
 static cl::list<std::string> LibrarySearchDirs(
     "L",

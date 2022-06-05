@@ -45,7 +45,7 @@ static cl::opt<bool> IgnoreBBRegPressure("ignore-bb-reg-pressure", cl::Hidden,
                                          cl::init(false));
 
 static cl::opt<bool> UseNewerCandidate("use-newer-candidate", cl::Hidden,
-                                       cl::ZeroOrMore, cl::init(true));
+                                       cl::init(true));
 
 static cl::opt<unsigned> SchedDebugVerboseLevel("misched-verbose-level",
                                                 cl::Hidden, cl::init(1));

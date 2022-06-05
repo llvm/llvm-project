@@ -122,7 +122,7 @@ static cl::list<std::string>
 
 static cl::list<std::string> InputArgv("args", cl::Positional,
                                        cl::desc("<program arguments>..."),
-                                       cl::ZeroOrMore, cl::PositionalEatsArgs,
+                                       cl::PositionalEatsArgs,
                                        cl::cat(JITLinkCategory));
 
 static cl::opt<bool>
@@ -142,7 +142,7 @@ static cl::list<std::string> AbsoluteDefs(
 
 static cl::list<std::string>
     Aliases("alias", cl::desc("Inject symbol aliases (syntax: <name>=<addr>)"),
-            cl::ZeroOrMore, cl::cat(JITLinkCategory));
+            cl::cat(JITLinkCategory));
 
 static cl::list<std::string> TestHarnesses("harness", cl::Positional,
                                            cl::desc("Test harness files"),

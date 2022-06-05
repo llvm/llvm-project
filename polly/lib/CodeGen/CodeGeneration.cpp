@@ -58,8 +58,8 @@ bool polly::PerfMonitoring;
 static cl::opt<bool, true>
     XPerfMonitoring("polly-codegen-perf-monitoring",
                     cl::desc("Add run-time performance monitoring"), cl::Hidden,
-                    cl::location(polly::PerfMonitoring), cl::init(false),
-                    cl::ZeroOrMore, cl::cat(PollyCategory));
+                    cl::location(polly::PerfMonitoring),
+                    cl::cat(PollyCategory));
 
 STATISTIC(ScopsProcessed, "Number of SCoP processed");
 STATISTIC(CodegenedScops, "Number of successfully generated SCoPs");

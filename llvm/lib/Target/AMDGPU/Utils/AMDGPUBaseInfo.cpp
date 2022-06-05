@@ -28,10 +28,10 @@
 #define GET_INSTRMAP_INFO
 #include "AMDGPUGenInstrInfo.inc"
 
-static llvm::cl::opt<unsigned> AmdhsaCodeObjectVersion(
-  "amdhsa-code-object-version", llvm::cl::Hidden,
-  llvm::cl::desc("AMDHSA Code Object Version"), llvm::cl::init(4),
-  llvm::cl::ZeroOrMore);
+static llvm::cl::opt<unsigned>
+    AmdhsaCodeObjectVersion("amdhsa-code-object-version", llvm::cl::Hidden,
+                            llvm::cl::desc("AMDHSA Code Object Version"),
+                            llvm::cl::init(4));
 
 namespace {
 

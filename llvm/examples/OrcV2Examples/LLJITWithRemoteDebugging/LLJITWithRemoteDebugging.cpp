@@ -105,7 +105,7 @@ static cl::list<std::string> InputFiles(cl::Positional, cl::OneOrMore,
 // Command line arguments to pass to the JITed main function.
 static cl::list<std::string> InputArgv("args", cl::Positional,
                                        cl::desc("<program arguments>..."),
-                                       cl::ZeroOrMore, cl::PositionalEatsArgs);
+                                       cl::PositionalEatsArgs);
 
 // Given paths must exist on the remote target.
 static cl::list<std::string>

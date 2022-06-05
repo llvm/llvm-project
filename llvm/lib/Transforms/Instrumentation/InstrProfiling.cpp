@@ -118,7 +118,7 @@ cl::opt<bool> DoCounterPromotion("do-counter-promotion",
                                  cl::desc("Do counter register promotion"),
                                  cl::init(false));
 cl::opt<unsigned> MaxNumOfPromotionsPerLoop(
-    cl::ZeroOrMore, "max-counter-promotions-per-loop", cl::init(20),
+    "max-counter-promotions-per-loop", cl::init(20),
     cl::desc("Max number counter promotions per loop to avoid"
              " increasing register pressure too much"));
 

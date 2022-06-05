@@ -117,7 +117,7 @@ static cl::list<std::string> OnlyFunctions(
              "Multiple regexes can be comma separated. "
              "Scop detection will run on all functions that match "
              "ANY of the regexes provided."),
-    cl::ZeroOrMore, cl::CommaSeparated, cl::cat(PollyCategory));
+    cl::CommaSeparated, cl::cat(PollyCategory));
 
 static cl::list<std::string> IgnoredFunctions(
     "polly-ignore-func",
@@ -125,7 +125,7 @@ static cl::list<std::string> IgnoredFunctions(
              "Multiple regexes can be comma separated. "
              "Scop detection will ignore all functions that match "
              "ANY of the regexes provided."),
-    cl::ZeroOrMore, cl::CommaSeparated, cl::cat(PollyCategory));
+    cl::CommaSeparated, cl::cat(PollyCategory));
 
 bool polly::PollyAllowFullFunction;
 
@@ -207,7 +207,7 @@ static cl::opt<bool, true>
     PollyDelinearizeX("polly-delinearize",
                       cl::desc("Delinearize array access functions"),
                       cl::location(PollyDelinearize), cl::Hidden,
-                      cl::ZeroOrMore, cl::init(true), cl::cat(PollyCategory));
+                      cl::init(true), cl::cat(PollyCategory));
 
 static cl::opt<bool>
     VerifyScops("polly-detect-verify",

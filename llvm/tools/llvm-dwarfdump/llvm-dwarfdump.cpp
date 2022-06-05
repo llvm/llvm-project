@@ -121,7 +121,7 @@ using namespace cl;
 OptionCategory DwarfDumpCategory("Specific Options");
 static list<std::string>
     InputFilenames(Positional, desc("<input object files or .dSYM bundles>"),
-                   ZeroOrMore, cat(DwarfDumpCategory));
+                   cat(DwarfDumpCategory));
 
 cl::OptionCategory SectionCategory("Section-specific Dump Options",
                                    "These control which sections are dumped. "
