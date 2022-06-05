@@ -2200,11 +2200,7 @@ bool LowerTypeTestsModule::lower() {
     }
     Sets.emplace_back(I, MaxUniqueId);
   }
-  llvm::sort(Sets,
-             [](const std::pair<GlobalClassesTy::iterator, unsigned> &S1,
-                const std::pair<GlobalClassesTy::iterator, unsigned> &S2) {
-               return S1.second < S2.second;
-             });
+  llvm::sort(Sets, llvm::less_second());
 
   // For each disjoint set we found...
   for (const auto &S : Sets) {

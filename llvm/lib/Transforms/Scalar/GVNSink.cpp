@@ -658,12 +658,7 @@ Optional<SinkingInstructionCandidate> GVNSink::analyzeInstructionForSinking(
     VNums[N]++;
   }
   unsigned VNumToSink =
-      std::max_element(VNums.begin(), VNums.end(),
-                       [](const std::pair<uint32_t, unsigned> &I,
-                          const std::pair<uint32_t, unsigned> &J) {
-                         return I.second < J.second;
-                       })
-          ->first;
+      std::max_element(VNums.begin(), VNums.end(), llvm::less_second())->first;
 
   if (VNums[VNumToSink] == 1)
     // Can't sink anything!

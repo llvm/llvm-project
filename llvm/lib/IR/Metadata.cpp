@@ -282,9 +282,7 @@ void ReplaceableMetadataImpl::replaceAllUsesWith(Metadata *MD) {
   // Copy out uses since UseMap will get touched below.
   using UseTy = std::pair<void *, std::pair<OwnerTy, uint64_t>>;
   SmallVector<UseTy, 8> Uses(UseMap.begin(), UseMap.end());
-  llvm::sort(Uses, [](const UseTy &L, const UseTy &R) {
-    return L.second.second < R.second.second;
-  });
+  llvm::sort(Uses, llvm::less_second());
   for (const auto &Pair : Uses) {
     // Check that this Ref hasn't disappeared after RAUW (when updating a
     // previous Ref).
