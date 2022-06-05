@@ -521,11 +521,7 @@ GlobalCtorDtorScraper::operator()(ThreadSafeModule TSM,
 
       for (auto E : COrDtors)
         InitsOrDeInits.push_back(std::make_pair(E.Func, E.Priority));
-      llvm::sort(InitsOrDeInits,
-                 [](const std::pair<Function *, unsigned> &LHS,
-                    const std::pair<Function *, unsigned> &RHS) {
-                   return LHS.second < RHS.second;
-                 });
+      llvm::sort(InitsOrDeInits, llvm::less_second());
 
       auto *InitOrDeInitFuncEntryBlock =
           BasicBlock::Create(Ctx, "entry", InitOrDeInitFunc);

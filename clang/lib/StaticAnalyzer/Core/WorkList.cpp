@@ -205,12 +205,6 @@ class UnexploredFirstPriorityQueue : public WorkList {
   using QueuePriority = std::pair<int, unsigned long>;
   using QueueItem = std::pair<WorkListUnit, QueuePriority>;
 
-  struct ExplorationComparator {
-    bool operator() (const QueueItem &LHS, const QueueItem &RHS) {
-      return LHS.second < RHS.second;
-    }
-  };
-
   // Number of inserted nodes, used to emulate DFS ordering in the priority
   // queue when insertions are equal.
   unsigned long Counter = 0;
@@ -219,7 +213,7 @@ class UnexploredFirstPriorityQueue : public WorkList {
   VisitedTimesMap NumReached;
 
   // The top item is the largest one.
-  llvm::PriorityQueue<QueueItem, std::vector<QueueItem>, ExplorationComparator>
+  llvm::PriorityQueue<QueueItem, std::vector<QueueItem>, llvm::less_second>
       queue;
 
 public:
@@ -267,12 +261,6 @@ class UnexploredFirstPriorityLocationQueue : public WorkList {
   using QueuePriority = std::pair<int, unsigned long>;
   using QueueItem = std::pair<WorkListUnit, QueuePriority>;
 
-  struct ExplorationComparator {
-    bool operator() (const QueueItem &LHS, const QueueItem &RHS) {
-      return LHS.second < RHS.second;
-    }
-  };
-
   // Number of inserted nodes, used to emulate DFS ordering in the priority
   // queue when insertions are equal.
   unsigned long Counter = 0;
@@ -281,7 +269,7 @@ class UnexploredFirstPriorityLocationQueue : public WorkList {
   VisitedTimesMap NumReached;
 
   // The top item is the largest one.
-  llvm::PriorityQueue<QueueItem, std::vector<QueueItem>, ExplorationComparator>
+  llvm::PriorityQueue<QueueItem, std::vector<QueueItem>, llvm::less_second>
       queue;
 
 public:
