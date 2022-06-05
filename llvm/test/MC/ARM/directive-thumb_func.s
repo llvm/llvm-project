@@ -10,13 +10,13 @@
 no_suffix:
 	bx lr
 
+// CHECK-EABI: :[[#@LINE+3]]:14: error: expected newline
+// CHECK-EABI: 	.thumb_func suffix
+// CHECK-EABI:              ^
 	.thumb_func suffix
 suffix:
 	bx lr
 
-// CHECK-EABI: error: unexpected token in '.thumb_func' directive
-// CHECK-EABI: 	.thumb_func suffix
-// CHECK-EABI:              ^
 
 // CHECK-EABI-NOT: error: invalid instruction
 
