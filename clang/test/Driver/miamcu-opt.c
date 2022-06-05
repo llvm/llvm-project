@@ -1,13 +1,13 @@
 // REQUIRES: x86-registered-target
 //
-// RUN: %clang -miamcu -rtlib=platform -no-canonical-prefixes %s -### -o %t.o 2>&1 | FileCheck %s
-// RUN: %clang -miamcu -rtlib=platform -no-canonical-prefixes -m32 %s -### -o %t.o 2>&1 | FileCheck %s
-// RUN: %clang -miamcu -rtlib=platform -no-canonical-prefixes -target x86_64-unknown-linux-gnu %s -### -o %t.o 2>&1 | FileCheck %s
-// RUN: %clang -mno-iamcu -miamcu -rtlib=platform -no-canonical-prefixes %s -### -o %t.o 2>&1 | FileCheck %s
-// RUN: %clang -miamcu -rtlib=platform -no-canonical-prefixes -m64 %s -### -o %t.o 2>&1 | FileCheck %s -check-prefix=M64
-// RUN: %clang -miamcu -rtlib=platform -no-canonical-prefixes -dynamic %s -### -o %t.o 2>&1 | FileCheck %s -check-prefix=DYNAMIC
-// RUN: %clang -miamcu -rtlib=platform -no-canonical-prefixes  -target armv8-eabi %s -### -o %t.o 2>&1 | FileCheck %s -check-prefix=NOT-X86
-// RUN: %clang -miamcu -mno-iamcu -no-canonical-prefixes -target x86_64-unknown-linux-gnu %s -### -o %t.o 2>&1 | FileCheck %s -check-prefix=MNOIAMCU
+// RUN: %clang -miamcu -rtlib=platform -### %s 2>&1 | FileCheck %s
+// RUN: %clang -miamcu -rtlib=platform -m32 -### %s 2>&1 | FileCheck %s
+// RUN: %clang -miamcu -rtlib=platform --target=x86_64-unknown-linux-gnu -### %s 2>&1 | FileCheck %s
+// RUN: %clang -mno-iamcu -miamcu -rtlib=platform -### %s 2>&1 | FileCheck %s
+// RUN: %clang -miamcu -rtlib=platform -m64 -### %s 2>&1 | FileCheck %s -check-prefix=M64
+// RUN: %clang -miamcu -rtlib=platform -dynamic -### %s 2>&1 | FileCheck %s -check-prefix=DYNAMIC
+// RUN: %clang -miamcu -rtlib=platform  --target=armv8-eabi -### %s 2>&1 | FileCheck %s -check-prefix=NOT-X86
+// RUN: %clang -miamcu -mno-iamcu --target=x86_64-unknown-linux-gnu -### %s 2>&1 | FileCheck %s -check-prefix=MNOIAMCU
 
 // M64: error: invalid argument '-miamcu' not allowed with '-m64'
 
@@ -17,7 +17,7 @@
 
 // MNOIAMCU-NOT: "-triple" "i586-intel-elfiamcu"
 
-// CHECK: "{{.*}}clang{{.*}}" "-cc1"
+// CHECK: "-cc1"
 // CHECK: "-triple" "i586-intel-elfiamcu"
 // CHECK: "-static-define"
 // CHECK: "-mfloat-abi" "soft"
