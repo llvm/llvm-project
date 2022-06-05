@@ -65,7 +65,7 @@ endfunction(get_object_files_for_test)
 #      COMPILE_OPTIONS <list of special compile options for this target>
 #      LINK_LIBRARIES <list of linking libraries for this target>
 #    )
-function(add_libc_unittest target_name)
+function(create_libc_unittest fq_target_name)
   if(NOT LLVM_INCLUDE_TESTS)
     return()
   endif()
@@ -74,7 +74,7 @@ function(add_libc_unittest target_name)
     "LIBC_UNITTEST"
     "NO_RUN_POSTBUILD;NO_LIBC_UNITTEST_TEST_MAIN" # Optional arguments
     "SUITE;CXX_STANDARD" # Single value arguments
-    "SRCS;HDRS;DEPENDS;COMPILE_OPTIONS;LINK_LIBRARIES" # Multi-value arguments
+    "SRCS;HDRS;DEPENDS;COMPILE_OPTIONS;LINK_LIBRARIES;FLAGS" # Multi-value arguments
     ${ARGN}
   )
   if(NOT LIBC_UNITTEST_SRCS)
@@ -86,7 +86,6 @@ function(add_libc_unittest target_name)
                         "'add_entrypoint_object' targets.")
   endif()
 
-  get_fq_target_name(${target_name} fq_target_name)
   get_fq_deps_list(fq_deps_list ${LIBC_UNITTEST_DEPENDS})
   get_object_files_for_test(
       link_object_files skipped_entrypoints_list ${fq_deps_list})
@@ -115,6 +114,15 @@ function(add_libc_unittest target_name)
     return()
   endif()
 
+  if(SHOW_INTERMEDIATE_OBJECTS)
+    message(STATUS "Adding unit test ${fq_target_name}")
+    if(${SHOW_INTERMEDIATE_OBJECTS} STREQUAL "DEPS")
+      foreach(dep IN LISTS ADD_OBJECT_DEPENDS)
+        message(STATUS "  ${fq_target_name} depends on ${dep}")
+      endforeach()
+    endif()
+  endif()
+
   add_executable(
     ${fq_target_name}
     EXCLUDE_FROM_ALL
@@ -138,13 +146,14 @@ function(add_libc_unittest target_name)
       PRIVATE ${LIBC_UNITTEST_COMPILE_OPTIONS}
     )
   endif()
-  if(LIBC_UNITTEST_CXX_STANDARD)
-    set_target_properties(
-      ${fq_target_name}
-      PROPERTIES
-        CXX_STANDARD ${LIBC_UNITTEST_CXX_STANDARD}
-    )
+  if(NOT LIBC_UNITTEST_CXX_STANDARD)
+    set(LIBC_UNITTEST_CXX_STANDARD ${CMAKE_CXX_STANDARD})
   endif()
+  set_target_properties(
+    ${fq_target_name}
+    PROPERTIES
+      CXX_STANDARD ${LIBC_UNITTEST_CXX_STANDARD}
+  )
 
   # Test object files will depend on LINK_LIBRARIES passed down from `add_fp_unittest`
   set(link_libraries ${link_object_files} ${LIBC_UNITTEST_LINK_LIBRARIES})
@@ -180,6 +189,100 @@ function(add_libc_unittest target_name)
       ${fq_target_name}
     )
   endif()
+endfunction(create_libc_unittest)
+
+# Internal function, used by `add_libc_unittest`.
+function(expand_flags_for_libc_unittest target_name flags)
+  cmake_parse_arguments(
+    "EXPAND_FLAGS"
+    "IGNORE_MARKER" # No Optional arguments
+    "" # No Single-value arguments
+    "DEPENDS;FLAGS" # Multi-value arguments
+    ${ARGN}
+  )
+
+  list(LENGTH flags nflags)
+  if(NOT ${nflags})
+    create_libc_unittest(
+      ${target_name}
+      DEPENDS "${EXPAND_FLAGS_DEPENDS}"
+      FLAGS "${EXPAND_FLAGS_FLAGS}"
+      "${EXPAND_FLAGS_UNPARSED_ARGUMENTS}"
+    )
+    return()
+  endif()
+
+  list(POP_FRONT flags flag)
+  extract_flag_modifier(${flag} real_flag modifier)
+
+  if(NOT "${modifier}" STREQUAL "NO")
+    expand_flags_for_libc_unittest(
+      ${target_name}
+      "${flags}"
+      DEPENDS "${EXPAND_FLAGS_DEPENDS}" IGNORE_MARKER
+      FLAGS "${EXPAND_FLAGS_FLAGS}" IGNORE_MARKER
+      "${EXPAND_FLAGS_UNPARSED_ARGUMENTS}"
+    )
+  endif()
+
+  if("${real_flag}" STREQUAL "" OR "${modifier}" STREQUAL "ONLY")
+    return()
+  endif()
+
+  set(NEW_FLAGS ${EXPAND_FLAGS_FLAGS})
+  list(REMOVE_ITEM NEW_FLAGS ${flag})
+  get_fq_dep_list_without_flag(NEW_DEPS ${real_flag} ${EXPAND_FLAGS_DEPENDS})
+
+  # Only target with `flag` has `.__NO_flag` target, `flag__NO` and
+  # `flag__ONLY` do not.
+  if(NOT "${modifier}")
+    set(TARGET_NAME "${target_name}.__NO_${flag}")
+  else()
+    set(TARGET_NAME "${target_name}")
+  endif()
+
+  expand_flags_for_libc_unittest(
+    ${TARGET_NAME}
+    "${flags}"
+    DEPENDS "${NEW_DEPS}" IGNORE_MARKER
+    FLAGS "${NEW_FLAGS}" IGNORE_MARKER
+    "${EXPAND_FLAGS_UNPARSED_ARGUMENTS}"
+  )
+endfunction(expand_flags_for_libc_unittest)
+
+function(add_libc_unittest target_name)
+  cmake_parse_arguments(
+    "ADD_TO_EXPAND"
+    "" # Optional arguments
+    "" # Single value arguments
+    "DEPENDS;FLAGS" # Multi-value arguments
+    ${ARGN}
+  )
+
+  get_fq_target_name(${target_name} fq_target_name)
+
+  if(ADD_TO_EXPAND_DEPENDS AND ("${SHOW_INTERMEDIATE_OBJECTS}" STREQUAL "DEPS"))
+    message(STATUS "Gathering FLAGS from dependencies for ${fq_target_name}")
+  endif()
+
+  get_fq_deps_list(fq_deps_list ${ADD_TO_EXPAND_DEPENDS})
+  get_flags_from_dep_list(deps_flag_list ${fq_deps_list})
+  
+  list(APPEND ADD_TO_EXPAND_FLAGS ${deps_flag_list})
+  remove_duplicated_flags("${ADD_TO_EXPAND_FLAGS}" flags)
+  list(SORT flags)
+
+  if(SHOW_INTERMEDIATE_OBJECTS AND flags)
+    message(STATUS "Unit test ${fq_target_name} has FLAGS: ${flags}")
+  endif()
+
+  expand_flags_for_libc_unittest(
+    ${fq_target_name}
+    "${flags}"
+    DEPENDS ${fq_deps_list} IGNORE_MARKER
+    FLAGS ${flags} IGNORE_MARKER
+    ${ADD_TO_EXPAND_UNPARSED_ARGUMENTS}
+  )
 endfunction(add_libc_unittest)
 
 function(add_libc_testsuite suite_name)

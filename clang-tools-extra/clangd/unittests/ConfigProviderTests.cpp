@@ -178,44 +178,6 @@ TEST(ProviderTest, FromAncestorRelativeYAMLFiles) {
   EXPECT_THAT(getAddedArgs(Cfg), ElementsAre("bar", "baz"));
 }
 
-// FIXME: delete this test, it's covered by FileCacheTests.
-TEST(ProviderTest, Staleness) {
-  MockFS FS;
-
-  auto StartTime = std::chrono::steady_clock::now();
-  Params StaleOK;
-  StaleOK.FreshTime = StartTime;
-  Params MustBeFresh;
-  MustBeFresh.FreshTime = StartTime + std::chrono::hours(1);
-  CapturedDiags Diags;
-  auto P = Provider::fromYAMLFile(testPath("foo.yaml"), /*Directory=*/"", FS);
-
-  // Initial query always reads, regardless of policy.
-  FS.Files["foo.yaml"] = AddFooWithErr;
-  auto Cfg = P->getConfig(StaleOK, Diags.callback());
-  EXPECT_THAT(Diags.Diagnostics,
-              ElementsAre(diagMessage("Unknown CompileFlags key 'Unknown'")));
-  EXPECT_THAT(getAddedArgs(Cfg), ElementsAre("foo"));
-  Diags.clear();
-
-  // Stale value reused by policy.
-  FS.Files["foo.yaml"] = AddBarBaz;
-  Cfg = P->getConfig(StaleOK, Diags.callback());
-  EXPECT_THAT(Diags.Diagnostics, IsEmpty()) << "Cached, not re-parsed";
-  EXPECT_THAT(getAddedArgs(Cfg), ElementsAre("foo"));
-
-  // Cache revalidated by policy.
-  Cfg = P->getConfig(MustBeFresh, Diags.callback());
-  EXPECT_THAT(Diags.Diagnostics, IsEmpty()) << "New config, no errors";
-  EXPECT_THAT(getAddedArgs(Cfg), ElementsAre("bar", "baz"));
-
-  // Cache revalidated by (default) policy.
-  FS.Files.erase("foo.yaml");
-  Cfg = P->getConfig(Params(), Diags.callback());
-  EXPECT_THAT(Diags.Diagnostics, IsEmpty());
-  EXPECT_THAT(getAddedArgs(Cfg), IsEmpty());
-}
-
 TEST(ProviderTest, SourceInfo) {
   MockFS FS;
 

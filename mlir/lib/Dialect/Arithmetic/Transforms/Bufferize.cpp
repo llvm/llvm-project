@@ -32,9 +32,9 @@ struct ArithmeticBufferizePass
   void runOnOperation() override {
     BufferizationOptions options = getPartialBufferizationOptions();
     if (constantOpOnly) {
-      options.allowOperationInFilter<arith::ConstantOp>();
+      options.opFilter.allowOperation<arith::ConstantOp>();
     } else {
-      options.allowDialectInFilter<arith::ArithmeticDialect>();
+      options.opFilter.allowDialect<arith::ArithmeticDialect>();
     }
     options.bufferAlignment = alignment;
 

@@ -8,7 +8,7 @@
 
 // REQUIRES: host-has-gdb-with-python
 // REQUIRES: locale.en_US.UTF-8
-// UNSUPPORTED: libcpp-has-no-localization
+// UNSUPPORTED: no-localization
 // UNSUPPORTED: c++03
 
 // TODO: Investigate this failure, which happens only with the Bootstrapping build.

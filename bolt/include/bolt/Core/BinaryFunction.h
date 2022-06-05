@@ -833,6 +833,15 @@ public:
     return make_range(JumpTables.begin(), JumpTables.end());
   }
 
+  /// Return relocation associated with a given \p Offset in the function,
+  /// or nullptr if no such relocation exists.
+  const Relocation *getRelocationAt(uint64_t Offset) const {
+    assert(CurrentState == State::Empty &&
+           "Relocations unavailable in the current function state.");
+    auto RI = Relocations.find(Offset);
+    return (RI == Relocations.end()) ? nullptr : &RI->second;
+  }
+
   /// Returns the raw binary encoding of this function.
   ErrorOr<ArrayRef<uint8_t>> getData() const;
 
@@ -1947,11 +1956,6 @@ public:
 
     return ColdLSDASymbol;
   }
-
-  /// True if the symbol is a mapping symbol used in AArch64 to delimit
-  /// data inside code section.
-  bool isDataMarker(const SymbolRef &Symbol, uint64_t SymbolSize) const;
-  bool isCodeMarker(const SymbolRef &Symbol, uint64_t SymbolSize) const;
 
   void setOutputDataAddress(uint64_t Address) { OutputDataOffset = Address; }
 

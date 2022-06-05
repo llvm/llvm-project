@@ -9,9 +9,9 @@
 #include "LSPServer.h"
 
 #include "../lsp-server-support/Logging.h"
-#include "../lsp-server-support/Protocol.h"
 #include "../lsp-server-support/Transport.h"
 #include "PDLLServer.h"
+#include "Protocol.h"
 #include "llvm/ADT/FunctionExtras.h"
 #include "llvm/ADT/StringMap.h"
 
@@ -81,6 +81,12 @@ struct LSPServer {
 
   void onSignatureHelp(const TextDocumentPositionParams &params,
                        Callback<SignatureHelp> reply);
+
+  //===--------------------------------------------------------------------===//
+  // PDLL View Output
+
+  void onPDLLViewOutput(const PDLLViewOutputParams &params,
+                        Callback<Optional<PDLLViewOutputResult>> reply);
 
   //===--------------------------------------------------------------------===//
   // Fields
@@ -249,6 +255,15 @@ void LSPServer::onSignatureHelp(const TextDocumentPositionParams &params,
 }
 
 //===----------------------------------------------------------------------===//
+// PDLL ViewOutput
+
+void LSPServer::onPDLLViewOutput(
+    const PDLLViewOutputParams &params,
+    Callback<Optional<PDLLViewOutputResult>> reply) {
+  reply(server.getPDLLViewOutput(params.uri, params.kind));
+}
+
+//===----------------------------------------------------------------------===//
 // Entry Point
 //===----------------------------------------------------------------------===//
 
@@ -295,6 +310,10 @@ LogicalResult mlir::lsp::runPdllLSPServer(PDLLServer &server,
   // Signature Help
   messageHandler.method("textDocument/signatureHelp", &lspServer,
                         &LSPServer::onSignatureHelp);
+
+  // PDLL ViewOutput
+  messageHandler.method("pdll/viewOutput", &lspServer,
+                        &LSPServer::onPDLLViewOutput);
 
   // Diagnostics
   lspServer.publishDiagnostics =

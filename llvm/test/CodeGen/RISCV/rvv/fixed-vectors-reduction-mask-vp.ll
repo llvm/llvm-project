@@ -890,3 +890,121 @@ define signext i1 @vpreduce_umin_nxv64i1(i1 signext %s, <64 x i1> %v, <64 x i1> 
   %r = call i1 @llvm.vp.reduce.umin.nxv64i1(i1 %s, <64 x i1> %v, <64 x i1> %m, i32 %evl)
   ret i1 %r
 }
+
+declare i1 @llvm.vp.reduce.mul.v1i1(i1, <1 x i1>, <1 x i1>, i32)
+
+define i1 @vpreduce_mul_v1i1(i1 %s, <1 x i1> %v, <1 x i1> %m, i32 zeroext %evl) {
+; CHECK-LABEL: vpreduce_mul_v1i1:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli zero, a1, e8, mf8, ta, mu
+; CHECK-NEXT:    vmnot.m v9, v0
+; CHECK-NEXT:    vmv1r.v v0, v8
+; CHECK-NEXT:    vcpop.m a1, v9, v0.t
+; CHECK-NEXT:    seqz a1, a1
+; CHECK-NEXT:    and a0, a1, a0
+; CHECK-NEXT:    ret
+  %r = call i1 @llvm.vp.reduce.mul.v1i1(i1 %s, <1 x i1> %v, <1 x i1> %m, i32 %evl)
+  ret i1 %r
+}
+
+declare i1 @llvm.vp.reduce.mul.v2i1(i1, <2 x i1>, <2 x i1>, i32)
+
+define signext i1 @vpreduce_mul_v2i1(i1 signext %s, <2 x i1> %v, <2 x i1> %m, i32 zeroext %evl) {
+; CHECK-LABEL: vpreduce_mul_v2i1:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli zero, a1, e8, mf8, ta, mu
+; CHECK-NEXT:    vmnot.m v9, v0
+; CHECK-NEXT:    vmv1r.v v0, v8
+; CHECK-NEXT:    vcpop.m a1, v9, v0.t
+; CHECK-NEXT:    seqz a1, a1
+; CHECK-NEXT:    and a0, a1, a0
+; CHECK-NEXT:    neg a0, a0
+; CHECK-NEXT:    ret
+  %r = call i1 @llvm.vp.reduce.mul.v2i1(i1 %s, <2 x i1> %v, <2 x i1> %m, i32 %evl)
+  ret i1 %r
+}
+
+declare i1 @llvm.vp.reduce.mul.v4i1(i1, <4 x i1>, <4 x i1>, i32)
+
+define signext i1 @vpreduce_mul_v4i1(i1 signext %s, <4 x i1> %v, <4 x i1> %m, i32 zeroext %evl) {
+; CHECK-LABEL: vpreduce_mul_v4i1:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli zero, a1, e8, mf4, ta, mu
+; CHECK-NEXT:    vmnot.m v9, v0
+; CHECK-NEXT:    vmv1r.v v0, v8
+; CHECK-NEXT:    vcpop.m a1, v9, v0.t
+; CHECK-NEXT:    seqz a1, a1
+; CHECK-NEXT:    and a0, a1, a0
+; CHECK-NEXT:    neg a0, a0
+; CHECK-NEXT:    ret
+  %r = call i1 @llvm.vp.reduce.mul.v4i1(i1 %s, <4 x i1> %v, <4 x i1> %m, i32 %evl)
+  ret i1 %r
+}
+
+declare i1 @llvm.vp.reduce.mul.v8i1(i1, <8 x i1>, <8 x i1>, i32)
+
+define signext i1 @vpreduce_mul_v8i1(i1 signext %s, <8 x i1> %v, <8 x i1> %m, i32 zeroext %evl) {
+; CHECK-LABEL: vpreduce_mul_v8i1:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli zero, a1, e8, mf2, ta, mu
+; CHECK-NEXT:    vmnot.m v9, v0
+; CHECK-NEXT:    vmv1r.v v0, v8
+; CHECK-NEXT:    vcpop.m a1, v9, v0.t
+; CHECK-NEXT:    seqz a1, a1
+; CHECK-NEXT:    and a0, a1, a0
+; CHECK-NEXT:    neg a0, a0
+; CHECK-NEXT:    ret
+  %r = call i1 @llvm.vp.reduce.mul.v8i1(i1 %s, <8 x i1> %v, <8 x i1> %m, i32 %evl)
+  ret i1 %r
+}
+
+declare i1 @llvm.vp.reduce.mul.v16i1(i1, <16 x i1>, <16 x i1>, i32)
+
+define signext i1 @vpreduce_mul_v16i1(i1 signext %s, <16 x i1> %v, <16 x i1> %m, i32 zeroext %evl) {
+; CHECK-LABEL: vpreduce_mul_v16i1:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli zero, a1, e8, m1, ta, mu
+; CHECK-NEXT:    vmnot.m v9, v0
+; CHECK-NEXT:    vmv1r.v v0, v8
+; CHECK-NEXT:    vcpop.m a1, v9, v0.t
+; CHECK-NEXT:    seqz a1, a1
+; CHECK-NEXT:    and a0, a1, a0
+; CHECK-NEXT:    neg a0, a0
+; CHECK-NEXT:    ret
+  %r = call i1 @llvm.vp.reduce.mul.v16i1(i1 %s, <16 x i1> %v, <16 x i1> %m, i32 %evl)
+  ret i1 %r
+}
+
+declare i1 @llvm.vp.reduce.mul.v32i1(i1, <32 x i1>, <32 x i1>, i32)
+
+define signext i1 @vpreduce_mul_v32i1(i1 signext %s, <32 x i1> %v, <32 x i1> %m, i32 zeroext %evl) {
+; CHECK-LABEL: vpreduce_mul_v32i1:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli zero, a1, e8, m2, ta, mu
+; CHECK-NEXT:    vmnot.m v9, v0
+; CHECK-NEXT:    vmv1r.v v0, v8
+; CHECK-NEXT:    vcpop.m a1, v9, v0.t
+; CHECK-NEXT:    seqz a1, a1
+; CHECK-NEXT:    and a0, a1, a0
+; CHECK-NEXT:    neg a0, a0
+; CHECK-NEXT:    ret
+  %r = call i1 @llvm.vp.reduce.mul.v32i1(i1 %s, <32 x i1> %v, <32 x i1> %m, i32 %evl)
+  ret i1 %r
+}
+
+declare i1 @llvm.vp.reduce.mul.v64i1(i1, <64 x i1>, <64 x i1>, i32)
+
+define signext i1 @vpreduce_mul_v64i1(i1 signext %s, <64 x i1> %v, <64 x i1> %m, i32 zeroext %evl) {
+; CHECK-LABEL: vpreduce_mul_v64i1:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli zero, a1, e8, m4, ta, mu
+; CHECK-NEXT:    vmnot.m v9, v0
+; CHECK-NEXT:    vmv1r.v v0, v8
+; CHECK-NEXT:    vcpop.m a1, v9, v0.t
+; CHECK-NEXT:    seqz a1, a1
+; CHECK-NEXT:    and a0, a1, a0
+; CHECK-NEXT:    neg a0, a0
+; CHECK-NEXT:    ret
+  %r = call i1 @llvm.vp.reduce.mul.v64i1(i1 %s, <64 x i1> %v, <64 x i1> %m, i32 %evl)
+  ret i1 %r
+}

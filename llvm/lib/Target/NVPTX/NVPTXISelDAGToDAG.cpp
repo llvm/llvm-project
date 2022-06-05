@@ -42,7 +42,7 @@ NVPTXDAGToDAGISel::NVPTXDAGToDAGISel(NVPTXTargetMachine &tm,
 }
 
 bool NVPTXDAGToDAGISel::runOnMachineFunction(MachineFunction &MF) {
-  Subtarget = &static_cast<const NVPTXSubtarget &>(MF.getSubtarget());
+  Subtarget = &MF.getSubtarget<NVPTXSubtarget>();
   return SelectionDAGISel::runOnMachineFunction(MF);
 }
 

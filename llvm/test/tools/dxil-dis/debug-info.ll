@@ -2,17 +2,17 @@
 target triple = "dxil-unknown-unknown"
 target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
 
-; CHECK: define float @fma(float, float, float) unnamed_addr #0 !dbg !6
+; CHECK: define float @fma(float, float, float) unnamed_addr #0 !dbg !7
 ; Function Attrs: norecurse nounwind readnone willreturn
 define dso_local float @fma(float %0, float %1, float %2) local_unnamed_addr #0 !dbg !6 {
-; CHECK-NEXT: call void @llvm.dbg.value(metadata float %0, metadata !11, metadata !14), !dbg !15
-; CHECK-NEXT: call void @llvm.dbg.value(metadata float %1, metadata !12, metadata !14), !dbg !15
-; CHECK-NEXT: call void @llvm.dbg.value(metadata float %2, metadata !13, metadata !14), !dbg !15
+; CHECK-NEXT: call void @llvm.dbg.value(metadata float %0, metadata !12, metadata !15), !dbg !16
+; CHECK-NEXT: call void @llvm.dbg.value(metadata float %1, metadata !13, metadata !15), !dbg !16
+; CHECK-NEXT: call void @llvm.dbg.value(metadata float %2, metadata !14, metadata !15), !dbg !16
   call void @llvm.dbg.value(metadata float %0, metadata !11, metadata !DIExpression()), !dbg !14
   call void @llvm.dbg.value(metadata float %1, metadata !12, metadata !DIExpression()), !dbg !14
   call void @llvm.dbg.value(metadata float %2, metadata !13, metadata !DIExpression()), !dbg !14
-; CHECK-NEXT: %4 = fmul float %0, %1, !dbg !16
-; CHECK-NEXT: %5 = fadd float %4, %2, !dbg !17
+; CHECK-NEXT: %4 = fmul float %0, %1, !dbg !17
+; CHECK-NEXT: %5 = fadd float %4, %2, !dbg !18
   %4 = fmul float %0, %1, !dbg !15
   %5 = fadd float %4, %2, !dbg !16
   ret float %5, !dbg !17
@@ -36,15 +36,15 @@ attributes #1 = { nofree nosync nounwind readnone speculatable willreturn }
 
 ; CHECK:      !0 = distinct !DICompileUnit
 ; CHECK-NEXT: !1 = !DIFile(filename:
-; CHECK:      !6 = distinct !DISubprogram(name: "fma", 
-; CHECK:      !11 = !DILocalVariable(tag:
-; CHECK-NEXT: !12 = !DILocalVariable(tag:
+; CHECK:      !7 = distinct !DISubprogram(name: "fma",
+; CHECK:      !12 = !DILocalVariable(tag:
 ; CHECK-NEXT: !13 = !DILocalVariable(tag:
-; CHECK-NEXT: !14 = !DIExpression()
-; CHECK-NEXT: !15 = !DILocation(line:
+; CHECK-NEXT: !14 = !DILocalVariable(tag:
+; CHECK-NEXT: !15 = !DIExpression()
 ; CHECK-NEXT: !16 = !DILocation(line:
 ; CHECK-NEXT: !17 = !DILocation(line:
 ; CHECK-NEXT: !18 = !DILocation(line:
+; CHECK-NEXT: !19 = !DILocation(line:
 
 !0 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1, isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, enums: !2, splitDebugInlining: false, nameTableKind: None)
 !1 = !DIFile(filename: "in.c", directory: "dir")

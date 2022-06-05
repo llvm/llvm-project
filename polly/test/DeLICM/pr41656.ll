@@ -82,7 +82,7 @@ attributes #2 = { nounwind }
 
 
 ; CHECK:      Invalid Context:
-; CHECK-NEXT: [call24] -> {  : call24 <= 2 }
+; CHECK-NEXT: [call24] -> {  : false }
 ; CHECK:      Defined Behavior Context:
 ; CHECK-NEXT: [call24] -> {  : 3 <= call24 <= 2147483647 }
 

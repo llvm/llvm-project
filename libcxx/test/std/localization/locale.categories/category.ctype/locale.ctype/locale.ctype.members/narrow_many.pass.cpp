@@ -12,7 +12,7 @@
 
 // const charT* narrow(const charT* low, const charT*, char dfault, char* to) const;
 
-// XFAIL: libcpp-has-no-wide-characters
+// XFAIL: no-wide-characters
 
 #include <locale>
 #include <string>

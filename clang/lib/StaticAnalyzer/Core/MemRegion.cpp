@@ -162,7 +162,9 @@ const StackFrameContext *VarRegion::getStackFrame() const {
 }
 
 ObjCIvarRegion::ObjCIvarRegion(const ObjCIvarDecl *ivd, const SubRegion *sReg)
-    : DeclRegion(sReg, ObjCIvarRegionKind), IVD(ivd) {}
+    : DeclRegion(sReg, ObjCIvarRegionKind), IVD(ivd) {
+  assert(IVD);
+}
 
 const ObjCIvarDecl *ObjCIvarRegion::getDecl() const { return IVD; }
 

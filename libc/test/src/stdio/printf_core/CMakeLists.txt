@@ -4,12 +4,12 @@ add_libc_unittest(
     libc_stdio_unittests
   SRCS
     parser_test.cpp
+  LINK_LIBRARIES
+    LibcPrintfHelpers
   DEPENDS
     libc.src.stdio.printf_core.parser
     libc.src.stdio.printf_core.core_structs
     libc.src.__support.arg_list
-  LINK_LIBRARIES
-    LibcPrintfHelpers
 )
 
 add_libc_unittest(

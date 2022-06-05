@@ -106,7 +106,9 @@
           "text.html.markdown"
         ],
         "embeddedLanguages": {
-          "meta.embedded.block.mlir": "mlir"
+          "meta.embedded.block.mlir": "mlir",
+          "meta.embedded.block.pdll": "pdll",
+          "meta.embedded.block.tablegen": "tablegen"
         }
       },
       {
@@ -154,6 +156,11 @@
           "type": "string",
           "description": "The file path of the tblgen-lsp-server executable."
         },
+        "mlir.tablegen_compilation_databases": {
+          "scope": "resource",
+          "type": "array",
+          "description": "A list of `tablegen_compile_commands.yml` database files containing information about .td files processed by the server."
+        },
         "mlir.onSettingsChanged": {
           "type": "string",
           "default": "prompt",
@@ -175,7 +182,20 @@
       {
         "command": "mlir.restart",
         "title": "mlir: Restart language server"
+      },
+      {
+        "command": "mlir.viewPDLLOutput",
+        "title": "mlir-pdll: View PDLL output"
       }
-    ]
+    ],
+    "menus": {
+      "editor/context": [
+        {
+          "command": "mlir.viewPDLLOutput",
+          "group": "z_commands",
+          "when": "editorLangId == pdll"
+        }
+      ]
+    }
   }
 }

@@ -843,7 +843,7 @@ BUILTIN(__builtin_dcbf, "vvC*", "")
 
 // Provided builtins with _mma_ prefix for compatibility.
 CUSTOM_BUILTIN(mma_lxvp, vsx_lxvp, "W256SLiW256C*", false)
-CUSTOM_BUILTIN(mma_stxvp, vsx_stxvp, "vW256SLiW256C*", false)
+CUSTOM_BUILTIN(mma_stxvp, vsx_stxvp, "vW256SLiW256*", false)
 CUSTOM_BUILTIN(mma_assemble_pair, vsx_assemble_pair, "vW256*VV", false)
 CUSTOM_BUILTIN(mma_disassemble_pair, vsx_disassemble_pair, "vv*W256*", false)
 CUSTOM_BUILTIN(vsx_build_pair, vsx_assemble_pair,  "vW256*VV", false)
@@ -855,7 +855,7 @@ CUSTOM_BUILTIN(mma_build_acc, mma_assemble_acc, "vW512*VVVV", false)
 // This avoids repeating the ID and INTR in the macro expression.
 
 UNALIASED_CUSTOM_BUILTIN(vsx_lxvp, "W256SLiW256C*", false)
-UNALIASED_CUSTOM_BUILTIN(vsx_stxvp, "vW256SLiW256C*", false)
+UNALIASED_CUSTOM_BUILTIN(vsx_stxvp, "vW256SLiW256*", false)
 UNALIASED_CUSTOM_BUILTIN(vsx_assemble_pair, "vW256*VV", false)
 UNALIASED_CUSTOM_BUILTIN(vsx_disassemble_pair, "vv*W256*", false)
 

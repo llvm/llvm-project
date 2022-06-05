@@ -64,6 +64,10 @@ def FeatureLSE : SubtargetFeature<"lse", "HasLSE", "true",
 def FeatureLSE2 : SubtargetFeature<"lse2", "HasLSE2", "true",
   "Enable ARMv8.4 Large System Extension 2 (LSE2) atomicity rules">;
 
+def FeatureLDAPR : SubtargetFeature<"ldapr", "HasLDAPR", "true",
+  "Use LDAPR to lower atomic loads; experimental until we "
+  "have more testing/a formal correctness proof">;
+
 def FeatureOutlineAtomics : SubtargetFeature<"outline-atomics", "OutlineAtomics", "true",
   "Enable out of line atomics to support LSE instructions">;
 
@@ -446,11 +450,8 @@ def FeatureEnhancedCounterVirtualization :
 def FeatureRME : SubtargetFeature<"rme", "HasRME",
     "true", "Enable Realm Management Extension">;
 
-def FeatureStreamingSVE : SubtargetFeature<"streaming-sve", "HasStreamingSVE", "true",
-  "Enable instructions that are valid in Streaming SVE execution mode">;
-
 def FeatureSME : SubtargetFeature<"sme", "HasSME", "true",
-  "Enable Scalable Matrix Extension (SME)", [FeatureStreamingSVE, FeatureBF16]>;
+  "Enable Scalable Matrix Extension (SME)", [FeatureBF16, FeatureUseScalarIncVL]>;
 
 def FeatureSMEF64 : SubtargetFeature<"sme-f64", "HasSMEF64", "true",
   "Enable Scalable Matrix Extension (SME) F64F64 instructions", [FeatureSME]>;
@@ -612,7 +613,7 @@ class AArch64Unsupported { list<Predicate> F; }
 
 def SVEUnsupported : AArch64Unsupported {
   let F = [HasSVE, HasSVE2, HasSVE2AES, HasSVE2SM4, HasSVE2SHA3,
-           HasSVE2BitPerm, HasSVEorStreamingSVE, HasSVE2orStreamingSVE];
+           HasSVE2BitPerm, HasSVEorSME, HasSVE2orSME];
 }
 
 def PAUnsupported : AArch64Unsupported {

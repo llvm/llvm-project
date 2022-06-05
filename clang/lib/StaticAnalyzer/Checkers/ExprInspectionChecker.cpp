@@ -474,6 +474,14 @@ public:
     return None;
   }
 
+  Optional<std::string> VisitUnarySymExpr(const UnarySymExpr *S) {
+    if (Optional<std::string> Str = lookup(S))
+      return Str;
+    if (Optional<std::string> Str = Visit(S->getOperand()))
+      return (UnaryOperator::getOpcodeStr(S->getOpcode()) + *Str).str();
+    return None;
+  }
+
   Optional<std::string> VisitSymbolCast(const SymbolCast *S) {
     if (Optional<std::string> Str = lookup(S))
       return Str;

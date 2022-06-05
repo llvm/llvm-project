@@ -2308,7 +2308,7 @@ bool AArch64LoadStoreOpt::runOnMachineFunction(MachineFunction &Fn) {
   if (skipFunction(Fn.getFunction()))
     return false;
 
-  Subtarget = &static_cast<const AArch64Subtarget &>(Fn.getSubtarget());
+  Subtarget = &Fn.getSubtarget<AArch64Subtarget>();
   TII = static_cast<const AArch64InstrInfo *>(Subtarget->getInstrInfo());
   TRI = Subtarget->getRegisterInfo();
   AA = &getAnalysis<AAResultsWrapperPass>().getAAResults();

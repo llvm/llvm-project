@@ -191,6 +191,9 @@ class ReleaseWorkflow:
         self.issue_remove_cherry_pick_failed_label()
         return True
 
+    def check_if_pull_request_exists(self, repo:github.Repository.Repository, head:str) -> bool:
+        pulls = repo.get_pulls(head=head)
+        return pulls != None
 
     def create_pull_request(self, owner:str, branch:str) -> bool:
         """
@@ -208,11 +211,15 @@ class ReleaseWorkflow:
         release_branch_for_issue = self.release_branch_for_issue
         if release_branch_for_issue is None:
             return False
+        head = f"{owner}:{branch}"
+        if self.check_if_pull_request_exists(repo, head):
+            print("PR already exists...")
+            return True
         try:
-            pull = repo.create_pull(title='PR for {}'.format(issue_ref),
+            pull = repo.create_pull(title=f"PR for {issue_ref}",
                                     body='resolves {}'.format(issue_ref),
                                     base=release_branch_for_issue,
-                                    head='{}:{}'.format(owner, branch),
+                                    head=head,
                                     maintainer_can_modify=False)
         except Exception as e:
             self.issue_notify_pull_request_failure(branch)

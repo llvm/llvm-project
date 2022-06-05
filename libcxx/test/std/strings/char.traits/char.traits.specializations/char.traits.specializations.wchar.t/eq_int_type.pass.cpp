@@ -12,7 +12,7 @@
 
 // static constexpr bool eq_int_type(int_type c1, int_type c2);
 
-// UNSUPPORTED: libcpp-has-no-wide-characters
+// UNSUPPORTED: no-wide-characters
 
 #include <string>
 #include <cassert>

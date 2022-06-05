@@ -826,6 +826,74 @@ filegroup(
 )
 
 ##---------------------------------------------------------------------------##
+# Transform dialect and extensions.
+##---------------------------------------------------------------------------##
+
+td_library(
+    name = "TransformOpsPyTdFiles",
+    srcs = [
+        "//mlir:include/mlir/Bindings/Python/Attributes.td",
+    ],
+    deps = [
+        "//mlir:OpBaseTdFiles",
+        "//mlir:TransformDialectTdFiles",
+    ],
+)
+
+gentbl_filegroup(
+    name = "TransformOpsPyGen",
+    tbl_outs = [
+        (
+            [
+                "-gen-python-op-bindings",
+                "-bind-dialect=transform",
+            ],
+            "mlir/dialects/_transform_ops_gen.py",
+        ),
+    ],
+    tblgen = "//mlir:mlir-tblgen",
+    td_file = "mlir/dialects/TransformOps.td",
+    deps = [
+        ":TransformOpsPyTdFiles",
+    ],
+)
+
+gentbl_filegroup(
+    name = "StructuredTransformOpsPyGen",
+    tbl_outs = [
+        (
+            [
+                "-gen-python-op-bindings",
+                "-bind-dialect=transform",
+                "-dialect-extension=structured_transform",
+            ],
+            "mlir/dialects/_structured_transform_ops_gen.py",
+        ),
+    ],
+    tblgen = "//mlir:mlir-tblgen",
+    td_file = "mlir/dialects/LinalgStructuredTransformOps.td",
+    deps = [
+        ":TransformOpsPyTdFiles",
+        "//mlir:LinalgTransformOpsTdFiles",
+    ],
+)
+
+filegroup(
+    name = "TransformOpsPyFiles",
+    srcs = [
+        "mlir/dialects/_structured_transform_ops_ext.py",
+        "mlir/dialects/_transform_ops_ext.py",
+        ":StructuredTransformOpsPyGen",
+        ":TransformOpsPyGen",
+    ],
+)
+
+filegroup(
+    name = "TransformOpsPackagePyFiles",
+    srcs = glob(["mlir/dialects/transform/*.py"]),
+)
+
+##---------------------------------------------------------------------------##
 # Vector dialect.
 ##---------------------------------------------------------------------------##
 

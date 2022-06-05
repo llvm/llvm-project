@@ -46,7 +46,7 @@
 #include "InstrProfiling.h"
 #include "InstrProfilingUtil.h"
 
-COMPILER_RT_WEAK unsigned lprofDirMode = 0755;
+COMPILER_RT_VISIBILITY unsigned lprofDirMode = 0755;
 
 COMPILER_RT_VISIBILITY
 void __llvm_profile_recursive_mkdir(char *path) {

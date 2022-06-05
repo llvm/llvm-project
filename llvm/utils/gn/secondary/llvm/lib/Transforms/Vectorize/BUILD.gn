@@ -13,7 +13,6 @@ static_library("Vectorize") {
     "SLPVectorizer.cpp",
     "VPlan.cpp",
     "VPlanHCFGBuilder.cpp",
-    "VPlanPredicator.cpp",
     "VPlanSLP.cpp",
     "VPlanTransforms.cpp",
     "VPlanVerifier.cpp",

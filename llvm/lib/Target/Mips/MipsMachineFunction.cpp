@@ -29,7 +29,7 @@ bool MipsFunctionInfo::globalBaseRegSet() const {
 }
 
 static const TargetRegisterClass &getGlobalBaseRegClass(MachineFunction &MF) {
-  auto &STI = static_cast<const MipsSubtarget &>(MF.getSubtarget());
+  auto &STI = MF.getSubtarget<MipsSubtarget>();
   auto &TM = static_cast<const MipsTargetMachine &>(MF.getTarget());
 
   if (STI.inMips16Mode())

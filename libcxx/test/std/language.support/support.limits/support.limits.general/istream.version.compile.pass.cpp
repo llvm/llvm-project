@@ -11,7 +11,7 @@
 //
 // clang-format off
 
-// UNSUPPORTED: libcpp-has-no-localization
+// UNSUPPORTED: no-localization
 
 // <istream>
 

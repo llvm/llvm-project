@@ -135,6 +135,11 @@ public:
            " (" + Visit(S->getRHS()) + ")";
   }
 
+  std::string VisitUnarySymExpr(const UnarySymExpr *S) {
+    return std::string(UnaryOperator::getOpcodeStr(S->getOpcode())) + " (" +
+           Visit(S->getOperand()) + ")";
+  }
+
   // TODO: SymbolCast doesn't appear in practice.
   // Add the relevant code once it does.
 

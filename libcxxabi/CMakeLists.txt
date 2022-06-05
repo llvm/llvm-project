@@ -143,7 +143,24 @@ endif()
 option(LIBCXXABI_HERMETIC_STATIC_LIBRARY
   "Do not export any symbols from the static library." ${LIBCXXABI_HERMETIC_STATIC_LIBRARY_DEFAULT})
 
-set(LIBCXXABI_TEST_CONFIG "${CMAKE_CURRENT_SOURCE_DIR}/test/lit.site.cfg.in" CACHE STRING
+if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+  set(LIBCXXABI_DEFAULT_TEST_CONFIG "llvm-libc++abi-shared-gcc.cfg.in")
+elseif(MINGW)
+  set(LIBCXXABI_DEFAULT_TEST_CONFIG "llvm-libc++abi-mingw.cfg.in")
+elseif(WIN32) # clang-cl
+  if (LIBCXXABI_ENABLE_SHARED)
+    set(LIBCXXABI_DEFAULT_TEST_CONFIG "llvm-libc++abi-shared-clangcl.cfg.in")
+  else()
+    set(LIBCXXABI_DEFAULT_TEST_CONFIG "llvm-libc++abi-static-clangcl.cfg.in")
+  endif()
+else()
+  if (LIBCXXABI_ENABLE_SHARED)
+    set(LIBCXXABI_DEFAULT_TEST_CONFIG "llvm-libc++abi-shared.cfg.in")
+  else()
+    set(LIBCXXABI_DEFAULT_TEST_CONFIG "llvm-libc++abi-static.cfg.in")
+  endif()
+endif()
+set(LIBCXXABI_TEST_CONFIG "${LIBCXXABI_DEFAULT_TEST_CONFIG}" CACHE STRING
   "The path to the Lit testing configuration to use when running the tests.
    If a relative path is provided, it is assumed to be relative to '<monorepo>/libcxxabi/test/configs'.")
 if (NOT IS_ABSOLUTE "${LIBCXXABI_TEST_CONFIG}")

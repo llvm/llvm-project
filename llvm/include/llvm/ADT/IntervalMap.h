@@ -1042,6 +1042,17 @@ public:
     new(&rootLeaf()) RootLeaf();
   }
 
+  // The default copy/move constructors and assignment operators would perform
+  // a shallow copy, leading to an incorrect internal state. To prevent
+  // accidental use, explicitly delete these operators.
+  // If necessary, implement them to perform a deep copy.
+  IntervalMap(const IntervalMap &Other) = delete;
+  IntervalMap(IntervalMap &&Other) = delete;
+  // Note: these are already implicitly deleted, because RootLeaf (union
+  // member) has a non-trivial assignment operator (because of std::pair).
+  IntervalMap &operator=(const IntervalMap &Other) = delete;
+  IntervalMap &operator=(IntervalMap &&Other) = delete;
+
   ~IntervalMap() {
     clear();
     rootLeaf().~RootLeaf();
