@@ -12,7 +12,10 @@
 #define FORTRAN_RUNTIME_REDUCTION_H_
 
 #include "flang/Common/uint128.h"
+#include "flang/Runtime/cpp-type.h"
 #include "flang/Runtime/entry-names.h"
+#include "flang/Runtime/float128.h"
+#include <cfloat>
 #include <cinttypes>
 #include <complex>
 #include <cstdint>
@@ -65,10 +68,14 @@ float RTNAME(SumReal4)(const Descriptor &, const char *source, int line,
     int dim = 0, const Descriptor *mask = nullptr);
 double RTNAME(SumReal8)(const Descriptor &, const char *source, int line,
     int dim = 0, const Descriptor *mask = nullptr);
+#if LDBL_MANT_DIG == 64
 long double RTNAME(SumReal10)(const Descriptor &, const char *source, int line,
     int dim = 0, const Descriptor *mask = nullptr);
-long double RTNAME(SumReal16)(const Descriptor &, const char *source, int line,
-    int dim = 0, const Descriptor *mask = nullptr);
+#endif
+#if LDBL_MANT_DIG == 113 || HAS_FLOAT128
+CppFloat128Type RTNAME(SumReal16)(const Descriptor &, const char *source,
+    int line, int dim = 0, const Descriptor *mask = nullptr);
+#endif
 
 void RTNAME(CppSumComplex2)(std::complex<float> &, const Descriptor &,
     const char *source, int line, int dim = 0,
@@ -117,10 +124,14 @@ float RTNAME(ProductReal4)(const Descriptor &, const char *source, int line,
     int dim = 0, const Descriptor *mask = nullptr);
 double RTNAME(ProductReal8)(const Descriptor &, const char *source, int line,
     int dim = 0, const Descriptor *mask = nullptr);
+#if LDBL_MANT_DIG == 64
 long double RTNAME(ProductReal10)(const Descriptor &, const char *source,
     int line, int dim = 0, const Descriptor *mask = nullptr);
-long double RTNAME(ProductReal16)(const Descriptor &, const char *source,
+#endif
+#if LDBL_MANT_DIG == 113 || HAS_FLOAT128
+CppFloat128Type RTNAME(ProductReal16)(const Descriptor &, const char *source,
     int line, int dim = 0, const Descriptor *mask = nullptr);
+#endif
 
 void RTNAME(CppProductComplex2)(std::complex<float> &, const Descriptor &,
     const char *source, int line, int dim = 0,
@@ -234,10 +245,14 @@ float RTNAME(MaxvalReal4)(const Descriptor &, const char *source, int line,
     int dim = 0, const Descriptor *mask = nullptr);
 double RTNAME(MaxvalReal8)(const Descriptor &, const char *source, int line,
     int dim = 0, const Descriptor *mask = nullptr);
+#if LDBL_MANT_DIG == 64
 long double RTNAME(MaxvalReal10)(const Descriptor &, const char *source,
     int line, int dim = 0, const Descriptor *mask = nullptr);
-long double RTNAME(MaxvalReal16)(const Descriptor &, const char *source,
+#endif
+#if LDBL_MANT_DIG == 113 || HAS_FLOAT128
+CppFloat128Type RTNAME(MaxvalReal16)(const Descriptor &, const char *source,
     int line, int dim = 0, const Descriptor *mask = nullptr);
+#endif
 void RTNAME(MaxvalCharacter)(Descriptor &, const Descriptor &,
     const char *source, int line, const Descriptor *mask = nullptr);
 
@@ -261,10 +276,14 @@ float RTNAME(MinvalReal4)(const Descriptor &, const char *source, int line,
     int dim = 0, const Descriptor *mask = nullptr);
 double RTNAME(MinvalReal8)(const Descriptor &, const char *source, int line,
     int dim = 0, const Descriptor *mask = nullptr);
+#if LDBL_MANT_DIG == 64
 long double RTNAME(MinvalReal10)(const Descriptor &, const char *source,
     int line, int dim = 0, const Descriptor *mask = nullptr);
-long double RTNAME(MinvalReal16)(const Descriptor &, const char *source,
+#endif
+#if LDBL_MANT_DIG == 113 || HAS_FLOAT128
+CppFloat128Type RTNAME(MinvalReal16)(const Descriptor &, const char *source,
     int line, int dim = 0, const Descriptor *mask = nullptr);
+#endif
 void RTNAME(MinvalCharacter)(Descriptor &, const Descriptor &,
     const char *source, int line, const Descriptor *mask = nullptr);
 
@@ -282,10 +301,13 @@ float RTNAME(Norm2_4)(const Descriptor &, const char *source, int line,
     int dim = 0, const Descriptor *mask = nullptr);
 double RTNAME(Norm2_8)(const Descriptor &, const char *source, int line,
     int dim = 0, const Descriptor *mask = nullptr);
+#if LDBL_MANT_DIG == 64
 long double RTNAME(Norm2_10)(const Descriptor &, const char *source, int line,
     int dim = 0, const Descriptor *mask = nullptr);
+#elif LDBL_MANT_DIG == 113
 long double RTNAME(Norm2_16)(const Descriptor &, const char *source, int line,
     int dim = 0, const Descriptor *mask = nullptr);
+#endif
 void RTNAME(Norm2Dim)(Descriptor &, const Descriptor &, int dim,
     const char *source, int line, const Descriptor *mask = nullptr);
 
@@ -326,10 +348,14 @@ float RTNAME(DotProductReal4)(const Descriptor &, const Descriptor &,
     const char *source = nullptr, int line = 0);
 double RTNAME(DotProductReal8)(const Descriptor &, const Descriptor &,
     const char *source = nullptr, int line = 0);
+#if LDBL_MANT_DIG == 64
 long double RTNAME(DotProductReal10)(const Descriptor &, const Descriptor &,
     const char *source = nullptr, int line = 0);
-long double RTNAME(DotProductReal16)(const Descriptor &, const Descriptor &,
+#endif
+#if LDBL_MANT_DIG == 113 || HAS_FLOAT128
+CppFloat128Type RTNAME(DotProductReal16)(const Descriptor &, const Descriptor &,
     const char *source = nullptr, int line = 0);
+#endif
 void RTNAME(CppDotProductComplex2)(std::complex<float> &, const Descriptor &,
     const Descriptor &, const char *source = nullptr, int line = 0);
 void RTNAME(CppDotProductComplex3)(std::complex<float> &, const Descriptor &,
@@ -338,12 +364,16 @@ void RTNAME(CppDotProductComplex4)(std::complex<float> &, const Descriptor &,
     const Descriptor &, const char *source = nullptr, int line = 0);
 void RTNAME(CppDotProductComplex8)(std::complex<double> &, const Descriptor &,
     const Descriptor &, const char *source = nullptr, int line = 0);
+#if LDBL_MANT_DIG == 64
 void RTNAME(CppDotProductComplex10)(std::complex<long double> &,
     const Descriptor &, const Descriptor &, const char *source = nullptr,
     int line = 0);
-void RTNAME(CppDotProductComplex16)(std::complex<long double> &,
+#endif
+#if LDBL_MANT_DIG == 113 || HAS_FLOAT128
+void RTNAME(CppDotProductComplex16)(std::complex<CppFloat128Type> &,
     const Descriptor &, const Descriptor &, const char *source = nullptr,
     int line = 0);
+#endif
 bool RTNAME(DotProductLogical)(const Descriptor &, const Descriptor &,
     const char *source = nullptr, int line = 0);
 

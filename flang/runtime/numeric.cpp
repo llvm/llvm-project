@@ -6,9 +6,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "terminator.h"
 #include "flang/Runtime/numeric.h"
-#include "flang/Common/long-double.h"
+#include "terminator.h"
+#include "flang/Runtime/float128.h"
+#include <cfloat>
 #include <climits>
 #include <cmath>
 #include <limits>
@@ -175,7 +176,7 @@ CppTypeFor<TypeCategory::Real, 8> RTNAME(Aint8_8)(
     CppTypeFor<TypeCategory::Real, 8> x) {
   return Aint<CppTypeFor<TypeCategory::Real, 8>>(x);
 }
-#if LONG_DOUBLE == 80
+#if LDBL_MANT_DIG == 64
 CppTypeFor<TypeCategory::Real, 10> RTNAME(Aint4_10)(
     CppTypeFor<TypeCategory::Real, 4> x) {
   return Aint<CppTypeFor<TypeCategory::Real, 10>>(x);
@@ -196,7 +197,7 @@ CppTypeFor<TypeCategory::Real, 10> RTNAME(Aint10_10)(
     CppTypeFor<TypeCategory::Real, 10> x) {
   return Aint<CppTypeFor<TypeCategory::Real, 10>>(x);
 }
-#elif LONG_DOUBLE == 128
+#elif LDBL_MANT_DIG == 113
 CppTypeFor<TypeCategory::Real, 16> RTNAME(Aint4_16)(
     CppTypeFor<TypeCategory::Real, 4> x) {
   return Aint<CppTypeFor<TypeCategory::Real, 16>>(x);
@@ -235,7 +236,7 @@ CppTypeFor<TypeCategory::Real, 8> RTNAME(Anint8_8)(
     CppTypeFor<TypeCategory::Real, 8> x) {
   return Anint<CppTypeFor<TypeCategory::Real, 8>>(x);
 }
-#if LONG_DOUBLE == 80
+#if LDBL_MANT_DIG == 64
 CppTypeFor<TypeCategory::Real, 10> RTNAME(Anint4_10)(
     CppTypeFor<TypeCategory::Real, 4> x) {
   return Anint<CppTypeFor<TypeCategory::Real, 10>>(x);
@@ -256,7 +257,7 @@ CppTypeFor<TypeCategory::Real, 10> RTNAME(Anint10_10)(
     CppTypeFor<TypeCategory::Real, 10> x) {
   return Anint<CppTypeFor<TypeCategory::Real, 10>>(x);
 }
-#elif LONG_DOUBLE == 128
+#elif LDBL_MANT_DIG == 113
 CppTypeFor<TypeCategory::Real, 16> RTNAME(Anint4_16)(
     CppTypeFor<TypeCategory::Real, 4> x) {
   return Anint<CppTypeFor<TypeCategory::Real, 16>>(x);
@@ -323,7 +324,7 @@ CppTypeFor<TypeCategory::Integer, 16> RTNAME(Ceiling8_16)(
   return Ceiling<CppTypeFor<TypeCategory::Integer, 16>>(x);
 }
 #endif
-#if LONG_DOUBLE == 80
+#if LDBL_MANT_DIG == 64
 CppTypeFor<TypeCategory::Integer, 1> RTNAME(Ceiling10_1)(
     CppTypeFor<TypeCategory::Real, 10> x) {
   return Ceiling<CppTypeFor<TypeCategory::Integer, 1>>(x);
@@ -346,7 +347,7 @@ CppTypeFor<TypeCategory::Integer, 16> RTNAME(Ceiling10_16)(
   return Ceiling<CppTypeFor<TypeCategory::Integer, 16>>(x);
 }
 #endif
-#else
+#elif LDBL_MANT_DIG == 113
 CppTypeFor<TypeCategory::Integer, 1> RTNAME(Ceiling16_1)(
     CppTypeFor<TypeCategory::Real, 16> x) {
   return Ceiling<CppTypeFor<TypeCategory::Integer, 1>>(x);
@@ -387,7 +388,7 @@ CppTypeFor<TypeCategory::Integer, 8> RTNAME(Exponent8_8)(
     CppTypeFor<TypeCategory::Real, 8> x) {
   return Exponent<CppTypeFor<TypeCategory::Integer, 8>>(x);
 }
-#if LONG_DOUBLE == 80
+#if LDBL_MANT_DIG == 64
 CppTypeFor<TypeCategory::Integer, 4> RTNAME(Exponent10_4)(
     CppTypeFor<TypeCategory::Real, 10> x) {
   return Exponent<CppTypeFor<TypeCategory::Integer, 4>>(x);
@@ -396,7 +397,7 @@ CppTypeFor<TypeCategory::Integer, 8> RTNAME(Exponent10_8)(
     CppTypeFor<TypeCategory::Real, 10> x) {
   return Exponent<CppTypeFor<TypeCategory::Integer, 8>>(x);
 }
-#elif LONG_DOUBLE == 128
+#elif LDBL_MANT_DIG == 113
 CppTypeFor<TypeCategory::Integer, 4> RTNAME(Exponent16_4)(
     CppTypeFor<TypeCategory::Real, 16> x) {
   return Exponent<CppTypeFor<TypeCategory::Integer, 4>>(x);
@@ -451,7 +452,7 @@ CppTypeFor<TypeCategory::Integer, 16> RTNAME(Floor8_16)(
   return Floor<CppTypeFor<TypeCategory::Integer, 16>>(x);
 }
 #endif
-#if LONG_DOUBLE == 80
+#if LDBL_MANT_DIG == 64
 CppTypeFor<TypeCategory::Integer, 1> RTNAME(Floor10_1)(
     CppTypeFor<TypeCategory::Real, 10> x) {
   return Floor<CppTypeFor<TypeCategory::Integer, 1>>(x);
@@ -474,7 +475,7 @@ CppTypeFor<TypeCategory::Integer, 16> RTNAME(Floor10_16)(
   return Floor<CppTypeFor<TypeCategory::Integer, 16>>(x);
 }
 #endif
-#else
+#elif LDBL_MANT_DIG == 113
 CppTypeFor<TypeCategory::Integer, 1> RTNAME(Floor16_1)(
     CppTypeFor<TypeCategory::Real, 16> x) {
   return Floor<CppTypeFor<TypeCategory::Integer, 1>>(x);
@@ -507,12 +508,12 @@ CppTypeFor<TypeCategory::Real, 8> RTNAME(Fraction8)(
     CppTypeFor<TypeCategory::Real, 8> x) {
   return Fraction(x);
 }
-#if LONG_DOUBLE == 80
+#if LDBL_MANT_DIG == 64
 CppTypeFor<TypeCategory::Real, 10> RTNAME(Fraction10)(
     CppTypeFor<TypeCategory::Real, 10> x) {
   return Fraction(x);
 }
-#elif LONG_DOUBLE == 128
+#elif LDBL_MANT_DIG == 113
 CppTypeFor<TypeCategory::Real, 16> RTNAME(Fraction16)(
     CppTypeFor<TypeCategory::Real, 16> x) {
   return Fraction(x);
@@ -525,11 +526,11 @@ bool RTNAME(IsFinite4)(CppTypeFor<TypeCategory::Real, 4> x) {
 bool RTNAME(IsFinite8)(CppTypeFor<TypeCategory::Real, 8> x) {
   return std::isfinite(x);
 }
-#if LONG_DOUBLE == 80
+#if LDBL_MANT_DIG == 64
 bool RTNAME(IsFinite10)(CppTypeFor<TypeCategory::Real, 10> x) {
   return std::isfinite(x);
 }
-#elif LONG_DOUBLE == 128
+#elif LDBL_MANT_DIG == 113
 bool RTNAME(IsFinite16)(CppTypeFor<TypeCategory::Real, 16> x) {
   return std::isfinite(x);
 }
@@ -541,11 +542,11 @@ bool RTNAME(IsNaN4)(CppTypeFor<TypeCategory::Real, 4> x) {
 bool RTNAME(IsNaN8)(CppTypeFor<TypeCategory::Real, 8> x) {
   return std::isnan(x);
 }
-#if LONG_DOUBLE == 80
+#if LDBL_MANT_DIG == 64
 bool RTNAME(IsNaN10)(CppTypeFor<TypeCategory::Real, 10> x) {
   return std::isnan(x);
 }
-#elif LONG_DOUBLE == 128
+#elif LDBL_MANT_DIG == 113
 bool RTNAME(IsNaN16)(CppTypeFor<TypeCategory::Real, 16> x) {
   return std::isnan(x);
 }
@@ -593,13 +594,13 @@ CppTypeFor<TypeCategory::Real, 8> RTNAME(ModReal8)(
     const char *sourceFile, int sourceLine) {
   return RealMod<false>(x, p, sourceFile, sourceLine);
 }
-#if LONG_DOUBLE == 80
+#if LDBL_MANT_DIG == 64
 CppTypeFor<TypeCategory::Real, 10> RTNAME(ModReal10)(
     CppTypeFor<TypeCategory::Real, 10> x, CppTypeFor<TypeCategory::Real, 10> p,
     const char *sourceFile, int sourceLine) {
   return RealMod<false>(x, p, sourceFile, sourceLine);
 }
-#elif LONG_DOUBLE == 128
+#elif LDBL_MANT_DIG == 113
 CppTypeFor<TypeCategory::Real, 16> RTNAME(ModReal16)(
     CppTypeFor<TypeCategory::Real, 16> x, CppTypeFor<TypeCategory::Real, 16> p,
     const char *sourceFile, int sourceLine) {
@@ -649,13 +650,13 @@ CppTypeFor<TypeCategory::Real, 8> RTNAME(ModuloReal8)(
     const char *sourceFile, int sourceLine) {
   return RealMod<true>(x, p, sourceFile, sourceLine);
 }
-#if LONG_DOUBLE == 80
+#if LDBL_MANT_DIG == 64
 CppTypeFor<TypeCategory::Real, 10> RTNAME(ModuloReal10)(
     CppTypeFor<TypeCategory::Real, 10> x, CppTypeFor<TypeCategory::Real, 10> p,
     const char *sourceFile, int sourceLine) {
   return RealMod<true>(x, p, sourceFile, sourceLine);
 }
-#elif LONG_DOUBLE == 128
+#elif LDBL_MANT_DIG == 113
 CppTypeFor<TypeCategory::Real, 16> RTNAME(ModuloReal16)(
     CppTypeFor<TypeCategory::Real, 16> x, CppTypeFor<TypeCategory::Real, 16> p,
     const char *sourceFile, int sourceLine) {
@@ -671,12 +672,12 @@ CppTypeFor<TypeCategory::Real, 8> RTNAME(Nearest8)(
     CppTypeFor<TypeCategory::Real, 8> x, bool positive) {
   return Nearest<53>(x, positive);
 }
-#if LONG_DOUBLE == 80
+#if LDBL_MANT_DIG == 64
 CppTypeFor<TypeCategory::Real, 10> RTNAME(Nearest10)(
     CppTypeFor<TypeCategory::Real, 10> x, bool positive) {
   return Nearest<64>(x, positive);
 }
-#elif LONG_DOUBLE == 128
+#elif LDBL_MANT_DIG == 113
 CppTypeFor<TypeCategory::Real, 16> RTNAME(Nearest16)(
     CppTypeFor<TypeCategory::Real, 16> x, bool positive) {
   return Nearest<113>(x, positive);
@@ -727,7 +728,7 @@ CppTypeFor<TypeCategory::Integer, 16> RTNAME(Nint8_16)(
   return Anint<CppTypeFor<TypeCategory::Integer, 16>>(x);
 }
 #endif
-#if LONG_DOUBLE == 80
+#if LDBL_MANT_DIG == 64
 CppTypeFor<TypeCategory::Integer, 1> RTNAME(Nint10_1)(
     CppTypeFor<TypeCategory::Real, 10> x) {
   return Anint<CppTypeFor<TypeCategory::Integer, 1>>(x);
@@ -750,7 +751,7 @@ CppTypeFor<TypeCategory::Integer, 16> RTNAME(Nint10_16)(
   return Anint<CppTypeFor<TypeCategory::Integer, 16>>(x);
 }
 #endif
-#else
+#elif LDBL_MANT_DIG == 113
 CppTypeFor<TypeCategory::Integer, 1> RTNAME(Nint16_1)(
     CppTypeFor<TypeCategory::Real, 16> x) {
   return Anint<CppTypeFor<TypeCategory::Integer, 1>>(x);
@@ -783,12 +784,12 @@ CppTypeFor<TypeCategory::Real, 8> RTNAME(RRSpacing8)(
     CppTypeFor<TypeCategory::Real, 8> x) {
   return RRSpacing<53>(x);
 }
-#if LONG_DOUBLE == 80
+#if LDBL_MANT_DIG == 64
 CppTypeFor<TypeCategory::Real, 10> RTNAME(RRSpacing10)(
     CppTypeFor<TypeCategory::Real, 10> x) {
   return RRSpacing<64>(x);
 }
-#elif LONG_DOUBLE == 128
+#elif LDBL_MANT_DIG == 113
 CppTypeFor<TypeCategory::Real, 16> RTNAME(RRSpacing16)(
     CppTypeFor<TypeCategory::Real, 16> x) {
   return RRSpacing<113>(x);
@@ -803,12 +804,12 @@ CppTypeFor<TypeCategory::Real, 8> RTNAME(SetExponent8)(
     CppTypeFor<TypeCategory::Real, 8> x, std::int64_t p) {
   return SetExponent(x, p);
 }
-#if LONG_DOUBLE == 80
+#if LDBL_MANT_DIG == 64
 CppTypeFor<TypeCategory::Real, 10> RTNAME(SetExponent10)(
     CppTypeFor<TypeCategory::Real, 10> x, std::int64_t p) {
   return SetExponent(x, p);
 }
-#elif LONG_DOUBLE == 128
+#elif LDBL_MANT_DIG == 113
 CppTypeFor<TypeCategory::Real, 16> RTNAME(SetExponent16)(
     CppTypeFor<TypeCategory::Real, 16> x, std::int64_t p) {
   return SetExponent(x, p);
@@ -823,12 +824,12 @@ CppTypeFor<TypeCategory::Real, 8> RTNAME(Scale8)(
     CppTypeFor<TypeCategory::Real, 8> x, std::int64_t p) {
   return Scale(x, p);
 }
-#if LONG_DOUBLE == 80
+#if LDBL_MANT_DIG == 64
 CppTypeFor<TypeCategory::Real, 10> RTNAME(Scale10)(
     CppTypeFor<TypeCategory::Real, 10> x, std::int64_t p) {
   return Scale(x, p);
 }
-#elif LONG_DOUBLE == 128
+#elif LDBL_MANT_DIG == 113
 CppTypeFor<TypeCategory::Real, 16> RTNAME(Scale16)(
     CppTypeFor<TypeCategory::Real, 16> x, std::int64_t p) {
   return Scale(x, p);
@@ -843,12 +844,12 @@ CppTypeFor<TypeCategory::Real, 8> RTNAME(Spacing8)(
     CppTypeFor<TypeCategory::Real, 8> x) {
   return Spacing<53>(x);
 }
-#if LONG_DOUBLE == 80
+#if LDBL_MANT_DIG == 64
 CppTypeFor<TypeCategory::Real, 10> RTNAME(Spacing10)(
     CppTypeFor<TypeCategory::Real, 10> x) {
   return Spacing<64>(x);
 }
-#elif LONG_DOUBLE == 128
+#elif LDBL_MANT_DIG == 113
 CppTypeFor<TypeCategory::Real, 16> RTNAME(Spacing16)(
     CppTypeFor<TypeCategory::Real, 16> x) {
   return Spacing<113>(x);
