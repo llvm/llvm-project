@@ -64,6 +64,8 @@ private:
                     MachineRegisterInfo &MRI) const;
   bool selectLoadStore(MachineInstr &I, MachineBasicBlock &MBB,
                        MachineRegisterInfo &MRI) const;
+  bool selectMergeUnmerge(MachineInstr &I, MachineBasicBlock &MBB,
+                          MachineRegisterInfo &MRI) const;
 
   const M88kTargetMachine &TM;
   const M88kInstrInfo &TII;
@@ -493,6 +495,59 @@ bool M88kInstructionSelector::selectLoadStore(MachineInstr &I,
   return constrainSelectedInstRegOperands(*MI, TII, TRI, RBI);
 }
 
+bool M88kInstructionSelector::selectMergeUnmerge(
+    MachineInstr &I, MachineBasicBlock &MBB, MachineRegisterInfo &MRI) const {
+  assert(I.getOpcode() == TargetOpcode::G_MERGE_VALUES ||
+         I.getOpcode() == TargetOpcode::G_UNMERGE_VALUES &&
+             "Unexpected G code");
+
+  MachineInstr *MI = nullptr;
+  if (I.getOpcode() == TargetOpcode::G_MERGE_VALUES) {
+    Register ImpDefReg = MRI.createVirtualRegister(&M88k::GPR64RCRegClass);
+    MI = BuildMI(MBB, I, I.getDebugLoc(), TII.get(TargetOpcode::IMPLICIT_DEF),
+                 ImpDefReg);
+    constrainSelectedInstRegOperands(*MI, TII, TRI, RBI);
+
+    Register HiReg = MRI.createVirtualRegister(&M88k::GPR64RCRegClass);
+    MI = BuildMI(MBB, I, I.getDebugLoc(), TII.get(TargetOpcode::INSERT_SUBREG),
+                 HiReg)
+             .addUse(ImpDefReg)
+             .addUse(I.getOperand(1).getReg())
+             .addImm(M88k::sub_hi);
+    constrainSelectedInstRegOperands(*MI, TII, TRI, RBI);
+
+    Register HiLoReg = MRI.createVirtualRegister(&M88k::GPR64RCRegClass);
+    MI = BuildMI(MBB, I, I.getDebugLoc(), TII.get(TargetOpcode::INSERT_SUBREG),
+                 HiLoReg)
+             .addUse(HiReg)
+             .addUse(I.getOperand(2).getReg())
+             .addImm(M88k::sub_lo);
+    constrainSelectedInstRegOperands(*MI, TII, TRI, RBI);
+
+    MI = BuildMI(MBB, I, I.getDebugLoc(), TII.get(TargetOpcode::COPY),
+                 I.getOperand(0).getReg())
+             .addUse(HiLoReg);
+  } else {
+    Register SrcReg = I.getOperand(2).getReg();
+
+    // Copy to dst.
+    MI = BuildMI(MBB, I, I.getDebugLoc(), TII.get(TargetOpcode::COPY),
+                 I.getOperand(0).getReg())
+             .addReg(SrcReg, 0, M88k::sub_hi);
+    RBI.constrainGenericRegister(I.getOperand(0).getReg(), M88k::GPRRCRegClass,
+                                 MRI);
+    constrainSelectedInstRegOperands(*MI, TII, TRI, RBI);
+
+    MI = BuildMI(MBB, I, I.getDebugLoc(), TII.get(TargetOpcode::COPY),
+                 I.getOperand(1).getReg())
+             .addReg(SrcReg, 0, M88k::sub_lo);
+    RBI.constrainGenericRegister(I.getOperand(1).getReg(), M88k::GPRRCRegClass,
+                                 MRI);
+  }
+  I.eraseFromParent();
+  return constrainSelectedInstRegOperands(*MI, TII, TRI, RBI);
+}
+
 bool M88kInstructionSelector::earlySelect(MachineInstr &I) {
   assert(I.getParent() && "Instruction should be in a basic block!");
   assert(I.getParent()->getParent() && "Instruction should be in a function!");
@@ -585,6 +640,9 @@ bool M88kInstructionSelector::select(MachineInstr &I) {
   case TargetOpcode::G_LOAD:
   case TargetOpcode::G_STORE:
     return selectLoadStore(I, MBB, MRI);
+  case TargetOpcode::G_MERGE_VALUES:
+  case TargetOpcode::G_UNMERGE_VALUES:
+    return selectMergeUnmerge(I, MBB, MRI);
   default:
     return false;
   }

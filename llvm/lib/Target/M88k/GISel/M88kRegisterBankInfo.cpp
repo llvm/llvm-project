@@ -92,23 +92,19 @@ M88kRegisterBankInfo::getSameKindOfOperandsMapping(
   bool IsFPR = Ty.isVector() || isPreISelGenericFloatingPointOpcode(Opc);
 
   PartialMappingIdx RBIdx = PMI_None;
-  if (IsFPR) {
+  if (IsFPR && Size == 80) {
+    RBIdx = PMI_XR80;
+  } else {
     switch (Size) {
     case 32:
-      RBIdx = PMI_XR32;
+      RBIdx = PMI_GR32;
       break;
     case 64:
-      RBIdx = PMI_XR64;
-      break;
-    case 80:
-      RBIdx = PMI_XR80;
+      RBIdx = PMI_GR64;
       break;
     default:
-      llvm_unreachable("Unsupport floating point size");
+      llvm_unreachable("Unsupport register size");
     }
-  } else {
-    assert(Size == 32 && "Only 32 bit integer registers");
-    RBIdx = PMI_GR32;
   }
 
   return getInstructionMapping(DefaultMappingID, 1, getValueMapping(RBIdx),
@@ -192,8 +188,8 @@ M88kRegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
                                           getValueMapping(PMI_GR32)});
     break;
   case TargetOpcode::G_MERGE_VALUES: {
-    // We only support G_MERGE_VALUES for creating a double precision floating
-    // point value out of two GPRs.
+    // We only support G_MERGE_VALUES for creating a 64 bit value out of two
+    // GPRs.
     LLT Ty = MRI.getType(MI.getOperand(0).getReg());
     LLT Ty1 = MRI.getType(MI.getOperand(1).getReg());
     LLT Ty2 = MRI.getType(MI.getOperand(2).getReg());
@@ -206,8 +202,8 @@ M88kRegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
     break;
   }
   case TargetOpcode::G_UNMERGE_VALUES: {
-    // We only support G_UNMERGE_VALUES for splitting a double precision
-    // floating point value into two GPRs.
+    // We only support G_UNMERGE_VALUES for splitting a 64 bit value into two
+    // GPRs.
     LLT Ty = MRI.getType(MI.getOperand(0).getReg());
     LLT Ty1 = MRI.getType(MI.getOperand(1).getReg());
     LLT Ty2 = MRI.getType(MI.getOperand(2).getReg());
