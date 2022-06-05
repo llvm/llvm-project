@@ -55,6 +55,8 @@ class SparcOperand;
 class SparcAsmParser : public MCTargetAsmParser {
   MCAsmParser &Parser;
 
+  enum class TailRelocKind { Load_GOT, Add_TLS, Load_TLS, Call_TLS };
+
   /// @name Auto-generated Match Functions
   /// {
 
@@ -82,6 +84,9 @@ class SparcAsmParser : public MCTargetAsmParser {
   OperandMatchResultTy parseMEMOperand(OperandVector &Operands);
 
   OperandMatchResultTy parseMembarTag(OperandVector &Operands);
+
+  template <TailRelocKind Kind>
+  OperandMatchResultTy parseTailRelocSym(OperandVector &Operands);
 
   template <unsigned N>
   OperandMatchResultTy parseShiftAmtImm(OperandVector &Operands);
@@ -112,6 +117,8 @@ class SparcAsmParser : public MCTargetAsmParser {
 
   bool expandSET(MCInst &Inst, SMLoc IDLoc,
                  SmallVectorImpl<MCInst> &Instructions);
+
+  SMLoc getLoc() const { return getParser().getTok().getLoc(); }
 
 public:
   SparcAsmParser(const MCSubtargetInfo &sti, MCAsmParser &parser,
@@ -267,6 +274,7 @@ public:
   bool isMEMrr() const { return Kind == k_MemoryReg; }
   bool isMEMri() const { return Kind == k_MemoryImm; }
   bool isMembarTag() const { return Kind == k_Immediate; }
+  bool isTailRelocSym() const { return Kind == k_Immediate; }
 
   bool isCallTarget() const {
     if (!isImm())
@@ -423,6 +431,11 @@ public:
   }
 
   void addCallTargetOperands(MCInst &Inst, unsigned N) const {
+    assert(N == 1 && "Invalid number of operands!");
+    addExpr(Inst, getImm());
+  }
+
+  void addTailRelocSymOperands(MCInst &Inst, unsigned N) const {
     assert(N == 1 && "Invalid number of operands!");
     addExpr(Inst, getImm());
   }
@@ -847,6 +860,98 @@ OperandMatchResultTy SparcAsmParser::parseShiftAmtImm(OperandVector &Operands) {
   }
 
   Operands.push_back(SparcOperand::CreateImm(Expr, S, E));
+  return MatchOperand_Success;
+}
+
+template <SparcAsmParser::TailRelocKind Kind>
+OperandMatchResultTy
+SparcAsmParser::parseTailRelocSym(OperandVector &Operands) {
+  SMLoc S = getLoc();
+  SMLoc E = SMLoc::getFromPointer(S.getPointer() - 1);
+
+  auto MatchesKind = [](SparcMCExpr::VariantKind VK) -> bool {
+    switch (Kind) {
+    case TailRelocKind::Load_GOT:
+      // Non-TLS relocations on ld (or ldx).
+      // ld [%rr + %rr], %rr, %rel(sym)
+      return VK == SparcMCExpr::VK_Sparc_GOTDATA_OP;
+    case TailRelocKind::Add_TLS:
+      // TLS relocations on add.
+      // add %rr, %rr, %rr, %rel(sym)
+      switch (VK) {
+      case SparcMCExpr::VK_Sparc_TLS_GD_ADD:
+      case SparcMCExpr::VK_Sparc_TLS_IE_ADD:
+      case SparcMCExpr::VK_Sparc_TLS_LDM_ADD:
+      case SparcMCExpr::VK_Sparc_TLS_LDO_ADD:
+        return true;
+      default:
+        return false;
+      }
+    case TailRelocKind::Load_TLS:
+      // TLS relocations on ld (or ldx).
+      // ld[x] %addr, %rr, %rel(sym)
+      switch (VK) {
+      case SparcMCExpr::VK_Sparc_TLS_IE_LD:
+      case SparcMCExpr::VK_Sparc_TLS_IE_LDX:
+        return true;
+      default:
+        return false;
+      }
+    case TailRelocKind::Call_TLS:
+      // TLS relocations on call.
+      // call sym, %rel(sym)
+      switch (VK) {
+      case SparcMCExpr::VK_Sparc_TLS_GD_CALL:
+      case SparcMCExpr::VK_Sparc_TLS_LDM_CALL:
+        return true;
+      default:
+        return false;
+      }
+    default:
+      llvm_unreachable("Unexpected kind parameter");
+    }
+  };
+
+  if (getLexer().getKind() != AsmToken::Percent) {
+    Error(getLoc(), "expected '%' for operand modifier");
+    return MatchOperand_ParseFail;
+  }
+
+  const AsmToken Tok = Parser.getTok();
+  getParser().Lex(); // Eat '%'
+
+  if (getLexer().getKind() != AsmToken::Identifier) {
+    Error(getLoc(), "expected valid identifier for operand modifier");
+    return MatchOperand_ParseFail;
+  }
+
+  StringRef Name = getParser().getTok().getIdentifier();
+  SparcMCExpr::VariantKind VK = SparcMCExpr::parseVariantKind(Name);
+  if (VK == SparcMCExpr::VK_Sparc_None) {
+    Error(getLoc(), "invalid operand modifier");
+    return MatchOperand_ParseFail;
+  }
+
+  if (!MatchesKind(VK)) {
+    // Did not match the specified set of relocation types, put '%' back.
+    getLexer().UnLex(Tok);
+    return MatchOperand_NoMatch;
+  }
+
+  Parser.Lex(); // Eat the identifier.
+  if (getLexer().getKind() != AsmToken::LParen) {
+    Error(getLoc(), "expected '('");
+    return MatchOperand_ParseFail;
+  }
+
+  getParser().Lex(); // Eat '('
+  const MCExpr *SubExpr;
+  if (getParser().parseParenExpression(SubExpr, E)) {
+    return MatchOperand_ParseFail;
+  }
+
+  const MCExpr *Val = adjustPICRelocation(VK, SubExpr);
+  Operands.push_back(SparcOperand::CreateImm(Val, S, E));
   return MatchOperand_Success;
 }
 
@@ -1409,9 +1514,26 @@ bool SparcAsmParser::matchSparcAsmModifiers(const MCExpr *&EVal,
   StringRef name = Tok.getString();
 
   SparcMCExpr::VariantKind VK = SparcMCExpr::parseVariantKind(name);
-
-  if (VK == SparcMCExpr::VK_Sparc_None)
+  switch (VK) {
+  case SparcMCExpr::VK_Sparc_None:
+    Error(getLoc(), "invalid operand modifier");
     return false;
+
+  case SparcMCExpr::VK_Sparc_GOTDATA_OP:
+  case SparcMCExpr::VK_Sparc_TLS_GD_ADD:
+  case SparcMCExpr::VK_Sparc_TLS_GD_CALL:
+  case SparcMCExpr::VK_Sparc_TLS_IE_ADD:
+  case SparcMCExpr::VK_Sparc_TLS_IE_LD:
+  case SparcMCExpr::VK_Sparc_TLS_IE_LDX:
+  case SparcMCExpr::VK_Sparc_TLS_LDM_ADD:
+  case SparcMCExpr::VK_Sparc_TLS_LDM_CALL:
+  case SparcMCExpr::VK_Sparc_TLS_LDO_ADD:
+    // These are special-cased at tablegen level.
+    return false;
+
+  default:
+    break;
+  }
 
   Parser.Lex(); // Eat the identifier.
   if (Parser.getTok().getKind() != AsmToken::LParen)

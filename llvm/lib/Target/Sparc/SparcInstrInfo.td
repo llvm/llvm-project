@@ -147,7 +147,29 @@ def MEMri : Operand<iPTR> {
   let ParserMatchClass = SparcMEMriAsmOperand;
 }
 
-def TLSSym : Operand<iPTR>;
+// Represents a tail relocation operand for instructions such as add, ld, call.
+class SparcTailRelocSymAsmOperand<string Kind> : AsmOperandClass {
+  let Name = "TailRelocSym" # Kind;
+  let RenderMethod = "addTailRelocSymOperands";
+  let PredicateMethod = "isTailRelocSym";
+  let ParserMethod = "parseTailRelocSym<TailRelocKind::" # Kind # ">";
+}
+
+def TailRelocSymGOTLoad : Operand<iPTR> {
+  let ParserMatchClass = SparcTailRelocSymAsmOperand<"Load_GOT">;
+}
+
+def TailRelocSymTLSAdd : Operand<iPTR> {
+  let ParserMatchClass = SparcTailRelocSymAsmOperand<"Add_TLS">;
+}
+
+def TailRelocSymTLSLoad : Operand<iPTR> {
+  let ParserMatchClass = SparcTailRelocSymAsmOperand<"Load_TLS">;
+}
+
+def TailRelocSymTLSCall : Operand<iPTR> {
+  let ParserMatchClass = SparcTailRelocSymAsmOperand<"Call_TLS">;
+}
 
 def SparcMembarTagAsmOperand : AsmOperandClass {
   let Name = "MembarTag";
@@ -214,6 +236,9 @@ SDTypeProfile<1, 3, [SDTCisInt<0>, SDTCisSameAs<0, 1>, SDTCisPtrTy<2>]>;
 def SDTSPtlsld :
 SDTypeProfile<1, 2, [SDTCisPtrTy<0>, SDTCisPtrTy<1>]>;
 
+def SDTSPloadgdop :
+SDTypeProfile<1, 2, [SDTCisPtrTy<0>, SDTCisPtrTy<1>]>;
+
 def SPcmpicc : SDNode<"SPISD::CMPICC", SDTSPcmpicc, [SDNPOutGlue]>;
 def SPcmpfcc : SDNode<"SPISD::CMPFCC", SDTSPcmpfcc, [SDNPOutGlue]>;
 def SPbricc : SDNode<"SPISD::BRICC", SDTSPbrcc, [SDNPHasChain, SDNPInGlue]>;
@@ -264,6 +289,8 @@ def tlsld         : SDNode<"SPISD::TLS_LD",  SDTSPtlsld>;
 def tlscall       : SDNode<"SPISD::TLS_CALL", SDT_SPCall,
                             [SDNPHasChain, SDNPOptInGlue, SDNPOutGlue,
                              SDNPVariadic]>;
+
+def load_gdop : SDNode<"SPISD::LOAD_GDOP",  SDTSPloadgdop>;
 
 def getPCX        : Operand<iPTR> {
   let PrintMethod = "printGetPCX";
@@ -586,6 +613,15 @@ let DecoderMethod = "DecodeLoadFP" in
                      "ldx [$addr], %fsr", []>, Requires<[HasV9]>;
     }
   }
+
+let mayLoad = 1, isAsmParserOnly = 1 in {
+  def GDOP_LDrr : F3_1<3, 0b000000,
+                      (outs IntRegs:$dst),
+                      (ins MEMrr:$addr, TailRelocSymGOTLoad:$sym),
+                      "ld [$addr], $dst, $sym",
+                      [(set i32:$dst,
+                          (load_gdop ADDRrr:$addr, tglobaladdr:$sym))]>;
+}
 
 // Section B.4 - Store Integer Instructions, p. 95
 let DecoderMethod = "DecodeStoreInt" in {
@@ -1369,21 +1405,24 @@ let Defs = [FCC0], rd = 0, isCodeGenOnly = 1 in {
 let isAsmParserOnly = 1 in {
 def TLS_ADDrr : F3_1<2, 0b000000,
                     (outs IntRegs:$rd),
-                    (ins IntRegs:$rs1, IntRegs:$rs2, TLSSym:$sym),
+                    (ins IntRegs:$rs1, IntRegs:$rs2, TailRelocSymTLSAdd:$sym),
                     "add $rs1, $rs2, $rd, $sym",
                     [(set i32:$rd,
                         (tlsadd i32:$rs1, i32:$rs2, tglobaltlsaddr:$sym))]>;
 
-let mayLoad = 1 in
+let mayLoad = 1 in {
   def TLS_LDrr : F3_1<3, 0b000000,
-                      (outs IntRegs:$dst), (ins MEMrr:$addr, TLSSym:$sym),
+                      (outs IntRegs:$dst),
+                      (ins MEMrr:$addr, TailRelocSymTLSLoad:$sym),
                       "ld [$addr], $dst, $sym",
                       [(set i32:$dst,
                           (tlsld ADDRrr:$addr, tglobaltlsaddr:$sym))]>;
+}
 
 let Uses = [O6], isCall = 1, hasDelaySlot = 1 in
   def TLS_CALL : InstSP<(outs),
-                        (ins calltarget:$disp, TLSSym:$sym, variable_ops),
+                        (ins calltarget:$disp, TailRelocSymTLSCall:$sym,
+                         variable_ops),
                         "call $disp, $sym",
                         [(tlscall texternalsym:$disp, tglobaltlsaddr:$sym)],
                         IIC_jmp_or_call> {

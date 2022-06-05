@@ -47,6 +47,9 @@ static unsigned adjustFixupValue(unsigned Kind, uint64_t Value) {
   case Sparc::fixup_sparc_br16_14:
     return (Value >> 2) & 0x3fff;
 
+  case Sparc::fixup_sparc_hix22:
+    return (~Value >> 10) & 0x3fffff;
+
   case Sparc::fixup_sparc_pc22:
   case Sparc::fixup_sparc_got22:
   case Sparc::fixup_sparc_tls_gd_hi22:
@@ -59,6 +62,9 @@ static unsigned adjustFixupValue(unsigned Kind, uint64_t Value) {
   case Sparc::fixup_sparc_got13:
   case Sparc::fixup_sparc_13:
     return Value & 0x1fff;
+
+  case Sparc::fixup_sparc_lox10:
+    return (Value & 0x3ff) | 0x1c00;
 
   case Sparc::fixup_sparc_pc10:
   case Sparc::fixup_sparc_got10:
@@ -98,6 +104,9 @@ static unsigned adjustFixupValue(unsigned Kind, uint64_t Value) {
   case Sparc::fixup_sparc_tls_ie_ld:
   case Sparc::fixup_sparc_tls_ie_ldx:
   case Sparc::fixup_sparc_tls_ie_add:
+  case Sparc::fixup_sparc_gotdata_lox10:
+  case Sparc::fixup_sparc_gotdata_hix22:
+  case Sparc::fixup_sparc_gotdata_op:
     return 0;
   }
 }
@@ -189,7 +198,12 @@ namespace {
         { "fixup_sparc_tls_ie_ldx",     0,  0,  0 },
         { "fixup_sparc_tls_ie_add",     0,  0,  0 },
         { "fixup_sparc_tls_le_hix22",   0,  0,  0 },
-        { "fixup_sparc_tls_le_lox10",   0,  0,  0 }
+        { "fixup_sparc_tls_le_lox10",   0,  0,  0 },
+        { "fixup_sparc_hix22",         10, 22,  0 },
+        { "fixup_sparc_lox10",         19, 13,  0 },
+        { "fixup_sparc_gotdata_hix22",  0,  0,  0 },
+        { "fixup_sparc_gotdata_lox10",  0,  0,  0 },
+        { "fixup_sparc_gotdata_op",     0,  0,  0 },
       };
 
       const static MCFixupKindInfo InfosLE[Sparc::NumTargetFixupKinds] = {
@@ -231,7 +245,12 @@ namespace {
         { "fixup_sparc_tls_ie_ldx",     0,  0,  0 },
         { "fixup_sparc_tls_ie_add",     0,  0,  0 },
         { "fixup_sparc_tls_le_hix22",   0,  0,  0 },
-        { "fixup_sparc_tls_le_lox10",   0,  0,  0 }
+        { "fixup_sparc_tls_le_lox10",   0,  0,  0 },
+        { "fixup_sparc_hix22",          0, 22,  0 },
+        { "fixup_sparc_lox10",          0, 13,  0 },
+        { "fixup_sparc_gotdata_hix22",  0,  0,  0 },
+        { "fixup_sparc_gotdata_lox10",  0,  0,  0 },
+        { "fixup_sparc_gotdata_op",     0,  0,  0 },
       };
 
       // Fixup kinds from .reloc directive are like R_SPARC_NONE. They do

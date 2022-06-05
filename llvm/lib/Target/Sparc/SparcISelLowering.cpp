@@ -1900,6 +1900,7 @@ const char *SparcTargetLowering::getTargetNodeName(unsigned Opcode) const {
   case SPISD::TLS_LD:          return "SPISD::TLS_LD";
   case SPISD::TLS_CALL:        return "SPISD::TLS_CALL";
   case SPISD::TAIL_CALL:       return "SPISD::TAIL_CALL";
+  case SPISD::LOAD_GDOP:       return "SPISD::LOAD_GDOP";
   }
   return nullptr;
 }
