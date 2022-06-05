@@ -18,7 +18,7 @@ bar:
 // CHECK-ERROR:           ^
 
         lisa .req x1, 23
-// CHECK-ERROR: error: unexpected input in .req directive
+// CHECK-ERROR: error: expected newline
 // CHECK-ERROR: lisa .req x1, 23
 // CHECK-ERROR:             ^
 
