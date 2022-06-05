@@ -907,8 +907,6 @@ SparcAsmParser::parseTailRelocSym(OperandVector &Operands) {
       default:
         return false;
       }
-    default:
-      llvm_unreachable("Unexpected kind parameter");
     }
   };
 
