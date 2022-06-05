@@ -67,7 +67,8 @@ bool M88kAsmPrinter::PrintAsmOperand(const MachineInstr *MI, unsigned OpNo,
   if (ExtraCode)
     return AsmPrinter::PrintAsmOperand(MI, OpNo, ExtraCode, OS);
   M88kMCInstLower Lower(MF->getContext(), *this);
-  MCOperand MO(Lower.lowerOperand(MI->getOperand(OpNo)));
+  MCOperand MO(Lower.lowerOperand(MI->getOperand(OpNo),
+                                  MF->getSubtarget().getRegisterInfo()));
   M88kInstPrinter::printOperand(MO, MAI, OS);
   return false;
 }

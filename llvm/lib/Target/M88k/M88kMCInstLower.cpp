@@ -7,11 +7,14 @@
 //===----------------------------------------------------------------------===//
 
 #include "M88kMCInstLower.h"
+#include "M88kRegisterInfo.h"
 #include "MCTargetDesc/M88kBaseInfo.h"
 #include "MCTargetDesc/M88kMCExpr.h"
+#include "MCTargetDesc/M88kMCTargetDesc.h"
 #include "llvm/CodeGen/AsmPrinter.h"
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineOperand.h"
+#include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/IR/Mangler.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCInst.h"
@@ -83,10 +86,17 @@ MCOperand M88kMCInstLower::lowerSymbolOperand(const MachineOperand &MO) const {
   return MCOperand::createExpr(Expr);
 }
 
-MCOperand M88kMCInstLower::lowerOperand(const MachineOperand &MO) const {
+MCOperand M88kMCInstLower::lowerOperand(const MachineOperand &MO, const TargetRegisterInfo *TRI) const {
   switch (MO.getType()) {
-  case MachineOperand::MO_Register:
-    return MCOperand::createReg(MO.getReg());
+  case MachineOperand::MO_Register: {
+    // HACK: If a register pair is used then replace register with the hi part.
+    Register Reg = MO.getReg();
+    assert(Register::isPhysicalRegister(Reg));
+    assert(!MO.getSubReg() && "Subregs should be eliminated!");
+    if(M88k::GPR64RCRegClass.contains(Reg))
+      Reg = TRI->getSubReg(Reg, M88k::sub_hi);
+    return MCOperand::createReg(Reg);
+  }
 
   case MachineOperand::MO_Immediate:
     return MCOperand::createImm(MO.getImm());
@@ -105,11 +115,13 @@ MCOperand M88kMCInstLower::lowerOperand(const MachineOperand &MO) const {
 }
 
 void M88kMCInstLower::lower(const MachineInstr *MI, MCInst &OutMI) const {
+  const MachineFunction &MF = *MI->getParent()->getParent();
+  const TargetRegisterInfo *TRI = MF.getSubtarget().getRegisterInfo();
   OutMI.setOpcode(MI->getOpcode());
   for (unsigned I = 0, E = MI->getNumOperands(); I != E; ++I) {
     const MachineOperand &MO = MI->getOperand(I);
     // Ignore all implicit register operands, and register masks.
     if ((!MO.isReg() || !MO.isImplicit()) && !MO.isRegMask())
-      OutMI.addOperand(lowerOperand(MO));
+      OutMI.addOperand(lowerOperand(MO, TRI));
   }
 }

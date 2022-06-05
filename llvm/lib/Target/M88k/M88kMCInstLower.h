@@ -19,7 +19,7 @@ class MCInst;
 class MCOperand;
 class MachineInstr;
 class MachineOperand;
-class Mangler;
+class TargetRegisterInfo;
 
 class LLVM_LIBRARY_VISIBILITY M88kMCInstLower {
   MCContext &Ctx;
@@ -32,7 +32,8 @@ public:
   void lower(const MachineInstr *MI, MCInst &OutMI) const;
 
   // Return an MCOperand for MO.
-  MCOperand lowerOperand(const MachineOperand &MO) const;
+  MCOperand lowerOperand(const MachineOperand &MO,
+                         const TargetRegisterInfo *TRI) const;
 
 private:
   // Return an MCOperand for symbolic operand MO.

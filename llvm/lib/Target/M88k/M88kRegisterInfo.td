@@ -25,10 +25,11 @@ class M88kRegWithSubregs<string n, list<Register> subregs>
 
 // Multiclass to define RegisterClass and RegisterOperand together.
 multiclass M88kRegisterClass<list<ValueType> types, int size, int alignment,
-                             dag regList, bit allocatable = 1> {
+                             dag regList, bit allocatable = 1, int copycost = 1> {
   let isAllocatable = allocatable in
     def RC : RegisterClass<"M88k", types, alignment, regList> {
       let Size = size;
+      let CopyCost = copycost;
     }
   def "" : RegisterOperand<!cast<RegisterClass>(NAME#"RC")> {
     let DecoderMethod = "decode"#NAME#"RegisterClass";
@@ -64,7 +65,7 @@ def GRPair : RegisterTuples<[sub_hi, sub_lo],
                             [(add (sequence "R%u", 0, 30, 2)),
                              (add (sequence "R%u", 1, 31, 2))]>;
 
-defm GPR64 : M88kRegisterClass<[i64, f64], 64, 32, (add GRPair)>;
+defm GPR64 : M88kRegisterClass<[i64, f64], 64, 32, (add GRPair), 1, 2>;
 
 //defm GPR64 : M88kRegisterClass<[i64, f64], 64, 32,
 //                               (add R0_R1, R2_R3, R4_R5, R6_R7, R8_R9,
