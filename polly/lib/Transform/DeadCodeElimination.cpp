@@ -49,7 +49,7 @@ cl::opt<int> DCEPreciseSteps(
     cl::desc("The number of precise steps between two approximating "
              "iterations. (A value of -1 schedules another approximation stage "
              "before the actual dead code elimination."),
-    cl::ZeroOrMore, cl::init(-1), cl::cat(PollyCategory));
+    cl::init(-1), cl::cat(PollyCategory));
 
 class DeadCodeElimWrapperPass final : public ScopPass {
 public:

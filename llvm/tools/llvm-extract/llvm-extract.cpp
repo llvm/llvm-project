@@ -88,8 +88,7 @@ static cl::list<std::string> ExtractBlocks(
         "  --bb=f:bb1;bb2 will extract one function with both bb1 and bb2;\n"
         "  --bb=f:bb1 --bb=f:bb2 will extract two functions, one with bb1, one "
         "with bb2."),
-    cl::ZeroOrMore, cl::value_desc("function:bb1[;bb2...]"),
-    cl::cat(ExtractCat));
+    cl::value_desc("function:bb1[;bb2...]"), cl::cat(ExtractCat));
 
 // ExtractAlias - The alias to extract from the module.
 static cl::list<std::string>

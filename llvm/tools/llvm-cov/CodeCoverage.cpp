@@ -671,7 +671,7 @@ int CodeCoverageTool::run(Command Cmd, int argc, const char **argv) {
       "name-allowlist", cl::Optional,
       cl::desc("Show code coverage only for functions listed in the given "
                "file"),
-      cl::ZeroOrMore, cl::cat(FilteringCategory));
+      cl::cat(FilteringCategory));
 
   // Allow for accepting previous option name.
   cl::list<std::string> NameFilterFilesDeprecated(
@@ -684,7 +684,7 @@ int CodeCoverageTool::run(Command Cmd, int argc, const char **argv) {
       "name-regex", cl::Optional,
       cl::desc("Show code coverage only for functions that match the given "
                "regular expression"),
-      cl::ZeroOrMore, cl::cat(FilteringCategory));
+      cl::cat(FilteringCategory));
 
   cl::list<std::string> IgnoreFilenameRegexFilters(
       "ignore-filename-regex", cl::Optional,

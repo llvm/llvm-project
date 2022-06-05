@@ -146,8 +146,8 @@ static cl::opt<int> SwpLoopLimit("pipeliner-max", cl::Hidden, cl::init(-1));
 #endif
 
 static cl::opt<bool> SwpIgnoreRecMII("pipeliner-ignore-recmii",
-                                     cl::ReallyHidden, cl::init(false),
-                                     cl::ZeroOrMore, cl::desc("Ignore RecMII"));
+                                     cl::ReallyHidden,
+                                     cl::desc("Ignore RecMII"));
 
 static cl::opt<bool> SwpShowResMask("pipeliner-show-mask", cl::Hidden,
                                     cl::init(false));

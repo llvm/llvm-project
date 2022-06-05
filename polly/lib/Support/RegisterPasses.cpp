@@ -88,8 +88,7 @@ static cl::opt<PassPositionChoice> PassPosition(
                    "After the loop optimizer (but within the inline cycle)"),
         clEnumValN(POSITION_BEFORE_VECTORIZER, "before-vectorizer",
                    "Right before the vectorizer")),
-    cl::Hidden, cl::init(POSITION_BEFORE_VECTORIZER), cl::ZeroOrMore,
-    cl::cat(PollyCategory));
+    cl::Hidden, cl::init(POSITION_BEFORE_VECTORIZER), cl::cat(PollyCategory));
 
 static cl::opt<OptimizerChoice>
     Optimizer("polly-optimizer", cl::desc("Select the scheduling optimizer"),
@@ -104,7 +103,7 @@ static cl::opt<CodeGenChoice> CodeGeneration(
     cl::values(clEnumValN(CODEGEN_FULL, "full", "AST and IR generation"),
                clEnumValN(CODEGEN_AST, "ast", "Only AST generation"),
                clEnumValN(CODEGEN_NONE, "none", "No code generation")),
-    cl::Hidden, cl::init(CODEGEN_FULL), cl::ZeroOrMore, cl::cat(PollyCategory));
+    cl::Hidden, cl::init(CODEGEN_FULL), cl::cat(PollyCategory));
 
 enum TargetChoice { TARGET_CPU, TARGET_GPU, TARGET_HYBRID };
 static cl::opt<TargetChoice>
@@ -117,7 +116,7 @@ static cl::opt<TargetChoice>
                                  "generate GPU code (preferably) or CPU code")
 #endif
                           ),
-           cl::init(TARGET_CPU), cl::ZeroOrMore, cl::cat(PollyCategory));
+           cl::init(TARGET_CPU), cl::cat(PollyCategory));
 
 VectorizerChoice PollyVectorizerChoice;
 
@@ -130,7 +129,7 @@ static cl::opt<VectorizerChoice, true> Vectorizer(
             VECTORIZER_STRIPMINE, "stripmine",
             "Strip-mine outer loops for the loop-vectorizer to trigger")),
     cl::location(PollyVectorizerChoice), cl::init(VECTORIZER_NONE),
-    cl::ZeroOrMore, cl::cat(PollyCategory));
+    cl::cat(PollyCategory));
 
 static cl::opt<bool> ImportJScop(
     "polly-import",
@@ -155,7 +154,7 @@ static cl::opt<bool> PollyViewer(
     "polly-show",
     cl::desc("Highlight the code regions that will be optimized in a "
              "(CFG BBs and LLVM-IR instructions)"),
-    cl::init(false), cl::ZeroOrMore, cl::cat(PollyCategory));
+    cl::cat(PollyCategory));
 
 static cl::opt<bool> PollyOnlyViewer(
     "polly-show-only",

@@ -109,7 +109,7 @@ static cl::list<std::string>
               cl::cat(ClangLinkerWrapperCategory));
 
 static cl::list<std::string>
-    LinkerArgs("device-linker", cl::ZeroOrMore,
+    LinkerArgs("device-linker",
                cl::desc("Arguments to pass to the device linker invocation"),
                cl::value_desc("<value> or <triple>=<value>"),
                cl::cat(ClangLinkerWrapperCategory));

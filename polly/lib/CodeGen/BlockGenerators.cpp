@@ -39,8 +39,7 @@ bool PollyDebugPrinting;
 static cl::opt<bool, true> DebugPrintingX(
     "polly-codegen-add-debug-printing",
     cl::desc("Add printf calls that show the values loaded/stored."),
-    cl::location(PollyDebugPrinting), cl::Hidden, cl::init(false),
-    cl::ZeroOrMore, cl::cat(PollyCategory));
+    cl::location(PollyDebugPrinting), cl::Hidden, cl::cat(PollyCategory));
 
 static cl::opt<bool> TraceStmts(
     "polly-codegen-trace-stmts",

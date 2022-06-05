@@ -144,8 +144,7 @@ namespace {
                          "-extra-module arguments."));
 
   cl::list<std::string>
-    Dylibs("dlopen", cl::desc("Dynamic libraries to load before linking"),
-           cl::ZeroOrMore);
+      Dylibs("dlopen", cl::desc("Dynamic libraries to load before linking"));
 
   // The MCJIT supports building for a target address space separate from
   // the JIT compilation process. Use a forked process and a copying

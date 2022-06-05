@@ -1157,7 +1157,7 @@ TEST(CommandLineTest, PositionalEatArgsError) {
       cl::PositionalEatsArgs);
   StackOption<std::string, cl::list<std::string>> PosEatArgs2(
       "positional-eat-args2", cl::Positional, cl::desc("Some strings"),
-      cl::ZeroOrMore, cl::PositionalEatsArgs);
+      cl::PositionalEatsArgs);
 
   const char *args[] = {"prog", "-positional-eat-args=XXXX"};
   const char *args2[] = {"prog", "-positional-eat-args=XXXX", "-foo"};
