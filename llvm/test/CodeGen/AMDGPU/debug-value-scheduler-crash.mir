@@ -70,7 +70,7 @@ body:             |
   ; CHECK-NEXT:   $vgpr0 = COPY %16
   ; CHECK-NEXT:   $vgpr1 = COPY %17
   ; CHECK-NEXT:   $vgpr2 = COPY %18
-  ; CHECK-NEXT:   dead $sgpr30_sgpr31 = SI_CALL [[DEF13]], @foo, csr_amdgpu_highregs, implicit undef $sgpr0_sgpr1_sgpr2_sgpr3, implicit killed $sgpr4, implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit-def $vgpr0
+  ; CHECK-NEXT:   dead $sgpr30_sgpr31 = SI_CALL [[DEF13]], @foo, csr_amdgpu, implicit undef $sgpr0_sgpr1_sgpr2_sgpr3, implicit killed $sgpr4, implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit-def $vgpr0
   ; CHECK-NEXT:   %25:vgpr_32 = nofpexcept V_ADD_F32_e32 %9, [[DEF7]], implicit $mode, implicit $exec
   ; CHECK-NEXT:   %25:vgpr_32 = nofpexcept V_MAC_F32_e32 [[DEF11]], [[DEF8]], %25, implicit $mode, implicit $exec
   ; CHECK-NEXT:   dead %26:vgpr_32 = nofpexcept V_MAD_F32_e64 0, %25, 0, [[DEF3]], 0, [[DEF]], 0, 0, implicit $mode, implicit $exec
@@ -129,7 +129,7 @@ body:             |
     $vgpr1 = COPY %17
     $vgpr2 = COPY %18
     $sgpr4 = IMPLICIT_DEF
-    dead $sgpr30_sgpr31 = SI_CALL %24, @foo, csr_amdgpu_highregs, implicit undef $sgpr0_sgpr1_sgpr2_sgpr3, implicit killed $sgpr4, implicit killed $vgpr0, implicit killed $vgpr1, implicit killed $vgpr2, implicit-def $vgpr0
+    dead $sgpr30_sgpr31 = SI_CALL %24, @foo, csr_amdgpu, implicit undef $sgpr0_sgpr1_sgpr2_sgpr3, implicit killed $sgpr4, implicit killed $vgpr0, implicit killed $vgpr1, implicit killed $vgpr2, implicit-def $vgpr0
     %25:vgpr_32 = nofpexcept V_ADD_F32_e32 %9, %8, implicit $mode, implicit $exec
     %25:vgpr_32 = nofpexcept V_MAC_F32_e32 %15, %10, %25, implicit $mode, implicit $exec
     %26:vgpr_32 = nofpexcept V_MAD_F32_e64 0, %25, 0, %4, 0, %1, 0, 0, implicit $mode, implicit $exec

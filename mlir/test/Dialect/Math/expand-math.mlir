@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s -test-expand-tanh | FileCheck %s
+// RUN: mlir-opt %s --split-input-file -test-expand-math | FileCheck %s
 
 // CHECK-LABEL: func @tanh
 func.func @tanh(%arg: f32) -> f32 {
@@ -21,3 +21,22 @@ func.func @tanh(%arg: f32) -> f32 {
 // CHECK: %[[COND:.+]] = arith.cmpf oge, %arg0, %[[ZERO]] : f32
 // CHECK: %[[RESULT:.+]] = arith.select %[[COND]], %[[RES1]], %[[RES2]] : f32
 // CHECK: return %[[RESULT]]
+
+// ----
+
+// CHECK-LABEL: func @ctlz
+func.func @ctlz(%arg: i32) -> i32 {
+  // CHECK: %[[C0:.+]] = arith.constant 0 : i32
+  // CHECK: %[[C32:.+]] = arith.constant 32 : i32
+  // CHECK: %[[C1:.+]] = arith.constant 1 : i32
+  // CHECK: %[[WHILE:.+]]:3 = scf.while (%[[A1:.+]] = %arg0, %[[A2:.+]] = %[[C32]], %[[A3:.+]] = %[[C0]])
+  // CHECK:   %[[CMP:.+]] = arith.cmpi ne, %[[A1]], %[[A3]]
+  // CHECK:   scf.condition(%[[CMP]]) %[[A1]], %[[A2]], %[[A3]]
+  // CHECK:   %[[SHR:.+]] = arith.shrui %[[A1]], %[[C1]]
+  // CHECK:   %[[SUB:.+]] = arith.subi %[[A2]], %[[C1]]
+  // CHECK:   scf.yield %[[SHR]], %[[SUB]], %[[A3]]
+  %res = math.ctlz %arg : i32
+
+  // CHECK: return %[[WHILE]]#1
+  return %res : i32
+}
