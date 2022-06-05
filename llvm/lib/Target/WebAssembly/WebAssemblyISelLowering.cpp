@@ -2131,8 +2131,7 @@ SDValue WebAssemblyTargetLowering::LowerBUILD_VECTOR(SDValue Op,
 
   auto GetMostCommon = [](auto &Counts) {
     auto CommonIt =
-        std::max_element(Counts.begin(), Counts.end(),
-                         [](auto A, auto B) { return A.second < B.second; });
+        std::max_element(Counts.begin(), Counts.end(), llvm::less_second());
     assert(CommonIt != Counts.end() && "Unexpected all-undef build_vector");
     return *CommonIt;
   };
