@@ -2393,7 +2393,7 @@ bool PPCFrameLowering::spillCalleeSavedRegisters(
 
   // Map each VSR to GPRs to be spilled with into it. Single VSR can contain one
   // or two GPRs, so we need table to record information for later save/restore.
-  llvm::for_each(CSI, [&](const CalleeSavedInfo &Info) {
+  for (const CalleeSavedInfo &Info : CSI) {
     if (Info.isSpilledToReg()) {
       auto &SpilledVSR =
           VSRContainingGPRs.FindAndConstruct(Info.getDstReg()).second;
@@ -2404,7 +2404,7 @@ bool PPCFrameLowering::spillCalleeSavedRegisters(
       else
         SpilledVSR.second = Info.getReg();
     }
-  });
+  }
 
   for (const CalleeSavedInfo &I : CSI) {
     Register Reg = I.getReg();
