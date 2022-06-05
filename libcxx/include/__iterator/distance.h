@@ -102,6 +102,16 @@ inline namespace __cpo {
 
 #endif // _LIBCPP_STD_VER > 17 && !defined(_LIBCPP_HAS_NO_INCOMPLETE_RANGES)
 
+template <class _Iter, class _Sent>
+_LIBCPP_CONSTEXPR_AFTER_CXX11
+typename iterator_traits<_Iter>::difference_type __ranges_distance(_Iter __first, _Sent __second) {
+#if _LIBCPP_STD_VER > 17 && !defined(_LIBCPP_HAS_NO_INCOMPLETE_RANGES)
+  return ranges::distance(__first, __second);
+#else
+  return std::distance(__first, __second);
+#endif
+}
+
 _LIBCPP_END_NAMESPACE_STD
 
 #endif // _LIBCPP___ITERATOR_DISTANCE_H

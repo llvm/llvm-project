@@ -160,6 +160,7 @@ endfunction()
 # Register Benchmark tests
 #==============================================================================
 set(BENCHMARK_TESTS
+    algorithms/lower_bound.bench.cpp
     algorithms/make_heap.bench.cpp
     algorithms/make_heap_then_sort_heap.bench.cpp
     algorithms/min_max_element.bench.cpp
