@@ -29,18 +29,16 @@ struct DwarfStringPoolEntry {
 
 /// String pool entry reference.
 class DwarfStringPoolEntryRef {
-  PointerIntPair<const StringMapEntry<DwarfStringPoolEntry> *, 1, bool>
-      MapEntryAndIndexed;
+  const StringMapEntry<DwarfStringPoolEntry> *MapEntry = nullptr;
 
   const StringMapEntry<DwarfStringPoolEntry> *getMapEntry() const {
-    return MapEntryAndIndexed.getPointer();
+    return MapEntry;
   }
 
 public:
   DwarfStringPoolEntryRef() = default;
-  DwarfStringPoolEntryRef(const StringMapEntry<DwarfStringPoolEntry> &Entry,
-                          bool Indexed)
-      : MapEntryAndIndexed(&Entry, Indexed) {}
+  DwarfStringPoolEntryRef(const StringMapEntry<DwarfStringPoolEntry> &Entry)
+      : MapEntry(&Entry) {}
 
   explicit operator bool() const { return getMapEntry(); }
   MCSymbol *getSymbol() const {
@@ -48,9 +46,7 @@ public:
     return getMapEntry()->second.Symbol;
   }
   uint64_t getOffset() const { return getMapEntry()->second.Offset; }
-  bool isIndexed() const { return MapEntryAndIndexed.getInt(); }
   unsigned getIndex() const {
-    assert(isIndexed());
     assert(getMapEntry()->getValue().isIndexed());
     return getMapEntry()->second.Index;
   }

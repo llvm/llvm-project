@@ -41,8 +41,8 @@ private:
 public:
   DIEString getString(StringRef S) {
     DwarfStringPoolEntry Entry = {nullptr, 1, 1};
-    return DIEString(DwarfStringPoolEntryRef(
-        *Pool.insert(std::make_pair(S, Entry)).first, Entry.isIndexed()));
+    return DIEString(
+        DwarfStringPoolEntryRef(*Pool.insert(std::make_pair(S, Entry)).first));
   }
 
   AsmPrinter *getAsmPrinter() {
