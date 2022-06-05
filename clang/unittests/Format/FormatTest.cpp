@@ -23846,6 +23846,22 @@ TEST_F(FormatTest, LikelyUnlikely) {
                "  return 29;\n",
                Style);
 
+  verifyFormat("while (limit > 0) [[unlikely]] {\n"
+               "  --limit;\n"
+               "}",
+               Style);
+  verifyFormat("for (auto &limit : limits) [[likely]] {\n"
+               "  --limit;\n"
+               "}",
+               Style);
+
+  verifyFormat("for (auto &limit : limits) [[unlikely]]\n"
+               "  --limit;",
+               Style);
+  verifyFormat("while (limit > 0) [[likely]]\n"
+               "  --limit;",
+               Style);
+
   Style.AttributeMacros.push_back("UNLIKELY");
   Style.AttributeMacros.push_back("LIKELY");
   verifyFormat("if (argc > 5) UNLIKELY\n"
@@ -23873,6 +23889,22 @@ TEST_F(FormatTest, LikelyUnlikely) {
                "} else LIKELY {\n"
                "  return 42;\n"
                "}\n",
+               Style);
+
+  verifyFormat("for (auto &limit : limits) UNLIKELY {\n"
+               "  --limit;\n"
+               "}",
+               Style);
+  verifyFormat("while (limit > 0) LIKELY {\n"
+               "  --limit;\n"
+               "}",
+               Style);
+
+  verifyFormat("while (limit > 0) UNLIKELY\n"
+               "  --limit;",
+               Style);
+  verifyFormat("for (auto &limit : limits) LIKELY\n"
+               "  --limit;",
                Style);
 }
 
