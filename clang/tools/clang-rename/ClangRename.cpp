@@ -68,7 +68,7 @@ static cl::OptionCategory ClangRenameOptions("clang-rename common options");
 static cl::list<unsigned> SymbolOffsets(
     "offset",
     cl::desc("Locates the symbol by offset as opposed to <line>:<column>."),
-    cl::ZeroOrMore, cl::cat(ClangRenameOptions));
+    cl::cat(ClangRenameOptions));
 static cl::opt<bool> Inplace("i", cl::desc("Overwrite edited <file>s."),
                              cl::cat(ClangRenameOptions));
 static cl::list<std::string>
@@ -78,7 +78,7 @@ static cl::list<std::string>
 
 static cl::list<std::string>
     NewNames("new-name", cl::desc("The new name to change the symbol to."),
-             cl::ZeroOrMore, cl::cat(ClangRenameOptions));
+             cl::cat(ClangRenameOptions));
 static cl::opt<bool> PrintName(
     "pn",
     cl::desc("Print the found symbol's name prior to renaming to stderr."),

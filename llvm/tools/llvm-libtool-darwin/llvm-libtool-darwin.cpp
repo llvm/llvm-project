@@ -43,7 +43,6 @@ static cl::opt<std::string> OutputFile("o", cl::desc("Specify output filename"),
 
 static cl::list<std::string> InputFiles(cl::Positional,
                                         cl::desc("<input files>"),
-                                        cl::ZeroOrMore,
                                         cl::cat(LibtoolCategory));
 
 static cl::opt<std::string>
@@ -86,7 +85,7 @@ static cl::list<std::string> LibrarySearchDirs(
     cl::desc(
         "L<dir> adds <dir> to the list of directories in which to search for"
         " libraries"),
-    cl::ZeroOrMore, cl::Prefix, cl::cat(LibtoolCategory));
+    cl::Prefix, cl::cat(LibtoolCategory));
 
 static cl::opt<bool>
     VersionOption("V", cl::desc("Print the version number and exit"),

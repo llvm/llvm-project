@@ -315,9 +315,10 @@ cl::opt<cl::boolOrDefault>
     ColorOutput("color-output",
                 cl::desc("Override use of color (default = isatty)"),
                 cl::cat(OtherOptions), cl::sub(PrettySubcommand));
-cl::list<std::string> ExcludeTypes(
-    "exclude-types", cl::desc("Exclude types by regular expression"),
-    cl::ZeroOrMore, cl::cat(FilterCategory), cl::sub(PrettySubcommand));
+cl::list<std::string>
+    ExcludeTypes("exclude-types",
+                 cl::desc("Exclude types by regular expression"),
+                 cl::cat(FilterCategory), cl::sub(PrettySubcommand));
 cl::list<std::string> ExcludeSymbols(
     "exclude-symbols", cl::desc("Exclude symbols by regular expression"),
     cl::ZeroOrMore, cl::cat(FilterCategory), cl::sub(PrettySubcommand));
@@ -328,7 +329,7 @@ cl::list<std::string> ExcludeCompilands(
 cl::list<std::string> IncludeTypes(
     "include-types",
     cl::desc("Include only types which match a regular expression"),
-    cl::ZeroOrMore, cl::cat(FilterCategory), cl::sub(PrettySubcommand));
+    cl::cat(FilterCategory), cl::sub(PrettySubcommand));
 cl::list<std::string> IncludeSymbols(
     "include-symbols",
     cl::desc("Include only symbols which match a regular expression"),
@@ -336,7 +337,7 @@ cl::list<std::string> IncludeSymbols(
 cl::list<std::string> IncludeCompilands(
     "include-compilands",
     cl::desc("Include only compilands those which match a regular expression"),
-    cl::ZeroOrMore, cl::cat(FilterCategory), cl::sub(PrettySubcommand));
+    cl::cat(FilterCategory), cl::sub(PrettySubcommand));
 cl::opt<uint32_t> SizeThreshold(
     "min-type-size", cl::desc("Displays only those types which are greater "
                               "than or equal to the specified size."),
@@ -412,11 +413,9 @@ cl::opt<bool> TypeServerMap("type-server", cl::desc("Dump type server map"),
 cl::opt<bool> ECData("ec", cl::desc("Dump edit and continue map"),
                      cl::sub(BytesSubcommand), cl::cat(DbiBytes));
 
-cl::list<uint32_t>
-    TypeIndex("type",
-              cl::desc("Dump the type record with the given type index"),
-              cl::ZeroOrMore, cl::CommaSeparated, cl::sub(BytesSubcommand),
-              cl::cat(TypeCategory));
+cl::list<uint32_t> TypeIndex(
+    "type", cl::desc("Dump the type record with the given type index"),
+    cl::CommaSeparated, cl::sub(BytesSubcommand), cl::cat(TypeCategory));
 cl::list<uint32_t>
     IdIndex("id", cl::desc("Dump the id record with the given type index"),
             cl::ZeroOrMore, cl::CommaSeparated, cl::sub(BytesSubcommand),

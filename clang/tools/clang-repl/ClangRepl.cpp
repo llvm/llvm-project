@@ -23,13 +23,12 @@
 #include "llvm/Support/TargetSelect.h" // llvm::Initialize*
 
 static llvm::cl::list<std::string>
-    ClangArgs("Xcc", llvm::cl::ZeroOrMore,
+    ClangArgs("Xcc",
               llvm::cl::desc("Argument to pass to the CompilerInvocation"),
               llvm::cl::CommaSeparated);
 static llvm::cl::opt<bool> OptHostSupportsJit("host-supports-jit",
                                               llvm::cl::Hidden);
 static llvm::cl::list<std::string> OptInputs(llvm::cl::Positional,
-                                             llvm::cl::ZeroOrMore,
                                              llvm::cl::desc("[code to run]"));
 
 static void LLVMErrorHandler(void *UserData, const char *Message,

@@ -36,7 +36,7 @@ namespace opts {
 cl::OptionCategory CXXDumpCategory("CXX Dump Options");
 cl::list<std::string> InputFilenames(cl::Positional,
                                      cl::desc("<input object files>"),
-                                     cl::ZeroOrMore, cl::cat(CXXDumpCategory));
+                                     cl::cat(CXXDumpCategory));
 } // namespace opts
 
 namespace llvm {

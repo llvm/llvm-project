@@ -41,7 +41,7 @@ static cl::alias PDA("pd", cl::desc("Alias for --perfdata"),
 
 static cl::opt<std::string> UnsymbolizedProfFilename(
     "unsymbolized-profile", cl::value_desc("unsymbolized profile"),
-    cl::ZeroOrMore, llvm::cl::MiscFlags::CommaSeparated,
+    llvm::cl::MiscFlags::CommaSeparated,
     cl::desc("Path of the unsymbolized profile created by "
              "`llvm-profgen` with `--skip-symbolization`"),
     cl::cat(ProfGenCategory));

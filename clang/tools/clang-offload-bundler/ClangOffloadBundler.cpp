@@ -73,7 +73,7 @@ static cl::list<std::string>
                                 cl::desc("[<input file>,...] (deprecated)"),
                                 cl::cat(ClangOffloadBundlerCategory));
 static cl::list<std::string>
-    OutputFileNames("output", cl::ZeroOrMore,
+    OutputFileNames("output",
                     cl::desc("Output file."
                              " Can be specified multiple times "
                              "for multiple output files."),

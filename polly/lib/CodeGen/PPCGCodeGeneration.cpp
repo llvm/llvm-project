@@ -94,13 +94,12 @@ static cl::opt<bool>
                               cl::desc("Fail and generate a backtrace if"
                                        " verifyModule fails on the GPU "
                                        " kernel module."),
-                              cl::Hidden, cl::init(false), cl::ZeroOrMore,
-                              cl::cat(PollyCategory));
+                              cl::Hidden, cl::cat(PollyCategory));
 
 static cl::opt<std::string> CUDALibDevice(
     "polly-acc-libdevice", cl::desc("Path to CUDA libdevice"), cl::Hidden,
     cl::init("/usr/local/cuda/nvvm/libdevice/libdevice.compute_20.10.ll"),
-    cl::ZeroOrMore, cl::cat(PollyCategory));
+    cl::cat(PollyCategory));
 
 static cl::opt<std::string>
     CudaVersion("polly-acc-cuda-version",

@@ -124,27 +124,27 @@ cl::opt<unsigned> MaxNumOfPromotionsPerLoop(
 
 // A debug option
 cl::opt<int>
-    MaxNumOfPromotions(cl::ZeroOrMore, "max-counter-promotions", cl::init(-1),
+    MaxNumOfPromotions("max-counter-promotions", cl::init(-1),
                        cl::desc("Max number of allowed counter promotions"));
 
 cl::opt<unsigned> SpeculativeCounterPromotionMaxExiting(
-    cl::ZeroOrMore, "speculative-counter-promotion-max-exiting", cl::init(3),
+    "speculative-counter-promotion-max-exiting", cl::init(3),
     cl::desc("The max number of exiting blocks of a loop to allow "
              " speculative counter promotion"));
 
 cl::opt<bool> SpeculativeCounterPromotionToLoop(
-    cl::ZeroOrMore, "speculative-counter-promotion-to-loop", cl::init(false),
+    "speculative-counter-promotion-to-loop",
     cl::desc("When the option is false, if the target block is in a loop, "
              "the promotion will be disallowed unless the promoted counter "
              " update can be further/iteratively promoted into an acyclic "
              " region."));
 
 cl::opt<bool> IterativeCounterPromotion(
-    cl::ZeroOrMore, "iterative-counter-promotion", cl::init(true),
+    "iterative-counter-promotion", cl::init(true),
     cl::desc("Allow counter promotion across the whole loop nest."));
 
 cl::opt<bool> SkipRetExitBlock(
-    cl::ZeroOrMore, "skip-ret-exit-block", cl::init(true),
+    "skip-ret-exit-block", cl::init(true),
     cl::desc("Suppress counter promotion if exit blocks contain ret."));
 
 class InstrProfilingLegacyPass : public ModulePass {

@@ -39,7 +39,7 @@ static cl::list<std::string> InputFiles(cl::Positional, cl::OneOrMore,
 
 static cl::list<std::string> InputArgv("args", cl::Positional,
                                        cl::desc("<program arguments>..."),
-                                       cl::ZeroOrMore, cl::PositionalEatsArgs);
+                                       cl::PositionalEatsArgs);
 
 int main(int argc, char *argv[]) {
   // Initialize LLVM.

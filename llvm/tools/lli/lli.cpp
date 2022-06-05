@@ -166,13 +166,10 @@ namespace {
                 cl::value_desc("filename"), cl::init(""));
 
   // Determine optimization level.
-  cl::opt<char>
-  OptLevel("O",
-           cl::desc("Optimization level. [-O0, -O1, -O2, or -O3] "
-                    "(default = '-O2')"),
-           cl::Prefix,
-           cl::ZeroOrMore,
-           cl::init(' '));
+  cl::opt<char> OptLevel("O",
+                         cl::desc("Optimization level. [-O0, -O1, -O2, or -O3] "
+                                  "(default = '-O2')"),
+                         cl::Prefix, cl::init(' '));
 
   cl::opt<std::string>
   TargetTriple("mtriple", cl::desc("Override target triple for module"));

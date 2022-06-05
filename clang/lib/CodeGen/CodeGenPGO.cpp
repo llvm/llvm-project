@@ -23,7 +23,7 @@
 #include "llvm/Support/MD5.h"
 
 static llvm::cl::opt<bool>
-    EnableValueProfiling("enable-value-profiling", llvm::cl::ZeroOrMore,
+    EnableValueProfiling("enable-value-profiling",
                          llvm::cl::desc("Enable value profiling"),
                          llvm::cl::Hidden, llvm::cl::init(false));
 

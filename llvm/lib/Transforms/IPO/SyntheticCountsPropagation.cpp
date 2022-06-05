@@ -42,7 +42,6 @@ using ProfileCount = Function::ProfileCount;
 namespace llvm {
 cl::opt<int>
     InitialSyntheticCount("initial-synthetic-count", cl::Hidden, cl::init(10),
-                          cl::ZeroOrMore,
                           cl::desc("Initial value of synthetic entry count"));
 } // namespace llvm
 

@@ -210,7 +210,7 @@ static cl::opt<std::string> OutputFilename("o", cl::init(""),
 static cl::list<std::string> ExportedSymbols(
     "exported-symbol",
     cl::desc("List of symbols to export from the resulting object file"),
-    cl::ZeroOrMore, cl::cat(LTOCategory));
+    cl::cat(LTOCategory));
 
 static cl::list<std::string>
     DSOSymbols("dso-symbol",

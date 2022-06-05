@@ -1154,7 +1154,7 @@ TEST(CommandLineTest, PositionalEatArgsError) {
 
   StackOption<std::string, cl::list<std::string>> PosEatArgs(
       "positional-eat-args", cl::Positional, cl::desc("<arguments>..."),
-      cl::ZeroOrMore, cl::PositionalEatsArgs);
+      cl::PositionalEatsArgs);
   StackOption<std::string, cl::list<std::string>> PosEatArgs2(
       "positional-eat-args2", cl::Positional, cl::desc("Some strings"),
       cl::ZeroOrMore, cl::PositionalEatsArgs);

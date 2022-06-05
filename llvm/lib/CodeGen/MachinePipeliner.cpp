@@ -109,7 +109,6 @@ STATISTIC(NumFailLargeMaxStage, "Pipeliner abort due to too many stages");
 
 /// A command line option to turn software pipelining on or off.
 static cl::opt<bool> EnableSWP("enable-pipeliner", cl::Hidden, cl::init(true),
-                               cl::ZeroOrMore,
                                cl::desc("Enable Software Pipelining"));
 
 /// A command line option to enable SWP at -Os.

@@ -117,7 +117,7 @@ cl::opt<bool> SilencePasses(
 
 static cl::list<std::string> OptArgs("opt-args", cl::Positional,
                                      cl::desc("<opt arguments>..."),
-                                     cl::ZeroOrMore, cl::PositionalEatsArgs);
+                                     cl::PositionalEatsArgs);
 
 /// runPasses - Run the specified passes on Program, outputting a bitcode file
 /// and writing the filename into OutputFile if successful.  If the

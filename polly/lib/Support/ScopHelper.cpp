@@ -32,7 +32,7 @@ static cl::list<std::string> DebugFunctions(
     cl::desc("Allow calls to the specified functions in SCoPs even if their "
              "side-effects are unknown. This can be used to do debug output in "
              "Polly-transformed code."),
-    cl::Hidden, cl::ZeroOrMore, cl::CommaSeparated, cl::cat(PollyCategory));
+    cl::Hidden, cl::CommaSeparated, cl::cat(PollyCategory));
 
 // Ensures that there is just one predecessor to the entry node from outside the
 // region.

@@ -55,17 +55,17 @@ using namespace llvm;
 
 #define DEBUG_TYPE "packets"
 
-static cl::opt<bool> DisablePacketizer("disable-packetizer", cl::Hidden,
-  cl::ZeroOrMore, cl::init(false),
-  cl::desc("Disable Hexagon packetizer pass"));
+static cl::opt<bool>
+    DisablePacketizer("disable-packetizer", cl::Hidden,
+                      cl::desc("Disable Hexagon packetizer pass"));
 
 static cl::opt<bool> Slot1Store("slot1-store-slot0-load", cl::Hidden,
-                                cl::ZeroOrMore, cl::init(true),
+                                cl::init(true),
                                 cl::desc("Allow slot1 store and slot0 load"));
 
-static cl::opt<bool> PacketizeVolatiles("hexagon-packetize-volatiles",
-  cl::ZeroOrMore, cl::Hidden, cl::init(true),
-  cl::desc("Allow non-solo packetization of volatile memory references"));
+static cl::opt<bool> PacketizeVolatiles(
+    "hexagon-packetize-volatiles", cl::Hidden, cl::init(true),
+    cl::desc("Allow non-solo packetization of volatile memory references"));
 
 static cl::opt<bool>
     EnableGenAllInsnClass("enable-gen-insn", cl::Hidden,

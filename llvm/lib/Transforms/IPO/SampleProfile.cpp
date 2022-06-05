@@ -284,7 +284,6 @@ static cl::opt<CallSiteFormat::Format> ProfileInlineReplayFormat(
 
 static cl::opt<unsigned>
     MaxNumPromotions("sample-profile-icp-max-prom", cl::init(3), cl::Hidden,
-                     cl::ZeroOrMore,
                      cl::desc("Max number of promotions for a single indirect "
                               "call callsite in sample profile loader"));
 

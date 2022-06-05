@@ -83,7 +83,6 @@ static cl::opt<bool> EnableNonTrivialUnswitch(
 
 static cl::opt<int>
     UnswitchThreshold("unswitch-threshold", cl::init(50), cl::Hidden,
-                      cl::ZeroOrMore,
                       cl::desc("The cost threshold for unswitching a loop."));
 
 static cl::opt<bool> EnableUnswitchCostMultiplier(
