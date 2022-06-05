@@ -51,6 +51,9 @@ def Alignment : IntAttr<"align", [ParamAttr, RetAttr]>;
 /// aligned_alloc and aligned ::operator::new.
 def AllocAlign: EnumAttr<"allocalign", [ParamAttr]>;
 
+/// Describes behavior of an allocator function in terms of known properties.
+def AllocKind: IntAttr<"allockind", [FnAttr]>;
+
 /// Parameter is the pointer to be manipulated by the allocator function.
 def AllocatedPointer : EnumAttr<"allocptr", [ParamAttr]>;
 

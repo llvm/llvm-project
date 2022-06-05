@@ -4046,6 +4046,10 @@ gentbl_cc_library(
             ["-gen-llvmir-conversions"],
             "include/mlir/Dialect/LLVMIR/LLVMIntrinsicConversions.inc",
         ),
+        (
+            ["-gen-llvmintrinsic-to-llvmirop-pairs"],
+            "include/mlir/Dialect/LLVMIR/LLVMIntrinsicToLLVMIROpPairs.inc",
+        ),
     ],
     tblgen = ":mlir-tblgen",
     td_file = "include/mlir/Dialect/LLVMIR/LLVMIntrinsicOps.td",
@@ -6065,6 +6069,7 @@ cc_library(
         ":IR",
         ":LLVMConversionIncGen",
         ":LLVMDialect",
+        ":LLVMIntrinsicConversionIncGen",
         ":Support",
         ":Translation",
         "//llvm:Core",

@@ -904,8 +904,7 @@ static void emitDefaultOpBuilder(const Operator &op, raw_ostream &os) {
       return (nattr->attr.isOptional() || nattr->attr.hasDefaultValue());
     if (auto *ntype = a.dyn_cast<NamedTypeConstraint *>())
       return ntype->isOptional();
-    else
-      return false;
+    return false;
   };
 
   // StringRefs in functionArgs refer to strings allocated by builderArgs.

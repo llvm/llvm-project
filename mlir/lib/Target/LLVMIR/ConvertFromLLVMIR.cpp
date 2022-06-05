@@ -30,6 +30,7 @@
 #include "llvm/IR/Function.h"
 #include "llvm/IR/InlineAsm.h"
 #include "llvm/IR/Instructions.h"
+#include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IRReader/IRReader.h"
 #include "llvm/Support/Error.h"
@@ -654,6 +655,15 @@ static StringRef lookupOperationNameFromOpcode(unsigned opcode) {
   return opcMap.lookup(opcode);
 }
 
+/// Return the MLIR OperationName for the given LLVM intrinsic ID.
+static StringRef lookupOperationNameFromIntrinsicID(unsigned id) {
+  // Maps from LLVM intrinsic ID to MLIR OperationName.
+  static const DenseMap<unsigned, StringRef> intrMap = {
+#include "mlir/Dialect/LLVMIR/LLVMIntrinsicToLLVMIROpPairs.inc"
+  };
+  return intrMap.lookup(id);
+}
+
 static ICmpPredicate getICmpPredicate(llvm::CmpInst::Predicate p) {
   switch (p) {
   default:
@@ -952,6 +962,20 @@ LogicalResult Importer::processInstruction(llvm::Instruction *inst) {
     }
     Operation *op;
     if (llvm::Function *callee = ci->getCalledFunction()) {
+      // For all intrinsics, try to generate to the corresponding op.
+      if (callee->isIntrinsic()) {
+        auto id = callee->getIntrinsicID();
+        StringRef opName = lookupOperationNameFromIntrinsicID(id);
+        if (!opName.empty()) {
+          OperationState state(loc, opName);
+          state.addOperands(ops);
+          state.addTypes(tys);
+          Operation *op = b.create(state);
+          if (!inst->getType()->isVoidTy())
+            instMap[inst] = op->getResult(0);
+          return success();
+        }
+      }
       op = b.create<CallOp>(
           loc, tys, SymbolRefAttr::get(b.getContext(), callee->getName()), ops);
     } else {
@@ -1138,6 +1162,13 @@ LogicalResult Importer::processFunction(llvm::Function *f) {
       processType(f->getFunctionType()).dyn_cast<LLVMFunctionType>();
   if (!functionType)
     return failure();
+
+  if (f->isIntrinsic()) {
+    StringRef opName = lookupOperationNameFromIntrinsicID(f->getIntrinsicID());
+    // Skip the intrinsic decleration if we could found a corresponding op.
+    if (!opName.empty())
+      return success();
+  }
 
   bool dsoLocal = f->hasLocalLinkage();
   CConv cconv = convertCConvFromLLVM(f->getCallingConv());

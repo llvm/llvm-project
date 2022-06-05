@@ -21934,27 +21934,25 @@ SDValue X86TargetLowering::LowerTRUNCATE(SDValue Op, SelectionDAG &DAG) const {
   assert(VT.is128BitVector() && InVT.is256BitVector() && "Unexpected types!");
 
   if ((VT == MVT::v4i32) && (InVT == MVT::v4i64)) {
-    In = DAG.getBitcast(MVT::v8i32, In);
-
     // On AVX2, v4i64 -> v4i32 becomes VPERMD.
     if (Subtarget.hasInt256()) {
       static const int ShufMask[] = {0, 2, 4, 6, -1, -1, -1, -1};
+      In = DAG.getBitcast(MVT::v8i32, In);
       In = DAG.getVectorShuffle(MVT::v8i32, DL, In, In, ShufMask);
       return DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, VT, In,
                          DAG.getIntPtrConstant(0, DL));
     }
 
-    SDValue OpLo = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, MVT::v4i32, In,
+    SDValue OpLo = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, MVT::v2i64, In,
                                DAG.getIntPtrConstant(0, DL));
-    SDValue OpHi = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, MVT::v4i32, In,
-                               DAG.getIntPtrConstant(4, DL));
+    SDValue OpHi = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, MVT::v2i64, In,
+                               DAG.getIntPtrConstant(2, DL));
     static const int ShufMask[] = {0, 2, 4, 6};
-    return DAG.getVectorShuffle(VT, DL, OpLo, OpHi, ShufMask);
+    return DAG.getVectorShuffle(VT, DL, DAG.getBitcast(MVT::v4i32, OpLo),
+                                DAG.getBitcast(MVT::v4i32, OpHi), ShufMask);
   }
 
   if ((VT == MVT::v8i16) && (InVT == MVT::v8i32)) {
-    In = DAG.getBitcast(MVT::v32i8, In);
-
     // On AVX2, v8i32 -> v8i16 becomes PSHUFB.
     if (Subtarget.hasInt256()) {
       // The PSHUFB mask:
@@ -21962,27 +21960,30 @@ SDValue X86TargetLowering::LowerTRUNCATE(SDValue Op, SelectionDAG &DAG) const {
                                       -1, -1, -1, -1, -1, -1, -1, -1,
                                       16, 17, 20, 21, 24, 25, 28, 29,
                                       -1, -1, -1, -1, -1, -1, -1, -1 };
+      In = DAG.getBitcast(MVT::v32i8, In);
       In = DAG.getVectorShuffle(MVT::v32i8, DL, In, In, ShufMask1);
       In = DAG.getBitcast(MVT::v4i64, In);
 
       static const int ShufMask2[] = {0, 2, -1, -1};
       In = DAG.getVectorShuffle(MVT::v4i64, DL, In, In, ShufMask2);
-      return DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, MVT::v8i16,
-                         DAG.getBitcast(MVT::v16i16, In),
-                         DAG.getIntPtrConstant(0, DL));
+      In = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, MVT::v2i64, In,
+                       DAG.getIntPtrConstant(0, DL));
+      return DAG.getBitcast(MVT::v8i16, In);
     }
 
-    SDValue OpLo = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, MVT::v16i8, In,
+    SDValue OpLo = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, MVT::v8i32, In,
                                DAG.getIntPtrConstant(0, DL));
-    SDValue OpHi = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, MVT::v16i8, In,
-                               DAG.getIntPtrConstant(16, DL));
+    SDValue OpHi = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, MVT::v8i32, In,
+                               DAG.getIntPtrConstant(4, DL));
 
     // The PSHUFB mask:
-    static const int ShufMask1[] = {0,  1,  4,  5,  8,  9, 12, 13,
-                                   -1, -1, -1, -1, -1, -1, -1, -1};
+    static const int ShufMask1[] = {0, 2, 4, 6, -1, -1, -1, -1};
 
-    OpLo = DAG.getVectorShuffle(MVT::v16i8, DL, OpLo, OpLo, ShufMask1);
-    OpHi = DAG.getVectorShuffle(MVT::v16i8, DL, OpHi, OpHi, ShufMask1);
+    OpLo = DAG.getBitcast(MVT::v8i16, OpLo);
+    OpHi = DAG.getBitcast(MVT::v8i16, OpHi);
+
+    OpLo = DAG.getVectorShuffle(MVT::v8i16, DL, OpLo, OpLo, ShufMask1);
+    OpHi = DAG.getVectorShuffle(MVT::v8i16, DL, OpHi, OpHi, ShufMask1);
 
     OpLo = DAG.getBitcast(MVT::v4i32, OpLo);
     OpHi = DAG.getBitcast(MVT::v4i32, OpHi);
@@ -28606,11 +28607,12 @@ static SDValue LowerAVG(SDValue Op, const X86Subtarget &Subtarget,
   return SDValue();
 }
 
-static SDValue LowerMINMAX(SDValue Op, SelectionDAG &DAG) {
+static SDValue LowerMINMAX(SDValue Op, const X86Subtarget &Subtarget,
+                           SelectionDAG &DAG) {
   MVT VT = Op.getSimpleValueType();
 
-  // For AVX1 cases, split to use legal ops (everything but v4i64).
-  if (VT.getScalarType() != MVT::i64 && VT.is256BitVector())
+  // For AVX1 cases, split to use legal ops.
+  if (VT.is256BitVector() && !Subtarget.hasInt256())
     return splitVectorIntBinary(Op, DAG);
 
   if (VT == MVT::v32i16 || VT == MVT::v64i8)
@@ -31958,7 +31960,7 @@ SDValue X86TargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
   case ISD::SMAX:
   case ISD::SMIN:
   case ISD::UMAX:
-  case ISD::UMIN:               return LowerMINMAX(Op, DAG);
+  case ISD::UMIN:               return LowerMINMAX(Op, Subtarget, DAG);
   case ISD::ABS:                return LowerABS(Op, Subtarget, DAG);
   case ISD::AVGCEILU:           return LowerAVG(Op, Subtarget, DAG);
   case ISD::FSINCOS:            return LowerFSINCOS(Op, Subtarget, DAG);
@@ -53521,6 +53523,8 @@ static SDValue combineConcatVectorOps(const SDLoc &DL, MVT VT,
                            ConcatSubOperand(VT, Ops, 1), Op0.getOperand(2));
       }
       break;
+      // TODO: ISD::VSELECT and X86ISD::BLENDV handling if some of the args can
+      // be concatenated for free.
     }
   }
 
@@ -53721,7 +53725,7 @@ static SDValue combineINSERT_SUBVECTOR(SDNode *N, SelectionDAG &DAG,
 /// This function should only be called with legal types (otherwise, the calls
 /// to get simple value types will assert).
 static SDValue narrowExtractedVectorSelect(SDNode *Ext, SelectionDAG &DAG) {
-  SDValue Sel = peekThroughBitcasts(Ext->getOperand(0));
+  SDValue Sel = Ext->getOperand(0);
   SmallVector<SDValue, 4> CatOps;
   if (Sel.getOpcode() != ISD::VSELECT ||
       !collectConcatOps(Sel.getOperand(0).getNode(), CatOps, DAG))
@@ -53795,6 +53799,7 @@ static SDValue combineEXTRACT_SUBVECTOR(SDNode *N, SelectionDAG &DAG,
   EVT InVecVT = InVec.getValueType();
   unsigned SizeInBits = VT.getSizeInBits();
   unsigned InSizeInBits = InVecVT.getSizeInBits();
+  unsigned NumSubElts = VT.getVectorNumElements();
   const TargetLowering &TLI = DAG.getTargetLoweringInfo();
 
   if (Subtarget.hasAVX() && !Subtarget.hasAVX2() &&
@@ -53832,9 +53837,8 @@ static SDValue combineEXTRACT_SUBVECTOR(SDNode *N, SelectionDAG &DAG,
   }
 
   if (InVec.getOpcode() == ISD::BUILD_VECTOR)
-    return DAG.getBuildVector(
-        VT, SDLoc(N),
-        InVec.getNode()->ops().slice(IdxVal, VT.getVectorNumElements()));
+    return DAG.getBuildVector(VT, SDLoc(N),
+                              InVec->ops().slice(IdxVal, NumSubElts));
 
   // If we are extracting from an insert into a larger vector, replace with a
   // smaller insert if we don't access less than the original subvector. Don't
@@ -53867,8 +53871,7 @@ static SDValue combineEXTRACT_SUBVECTOR(SDNode *N, SelectionDAG &DAG,
     return extractSubVector(InVec, 0, DAG, SDLoc(N), SizeInBits);
 
   // Attempt to extract from the source of a shuffle vector.
-  if ((InSizeInBits % SizeInBits) == 0 &&
-      (IdxVal % VT.getVectorNumElements()) == 0) {
+  if ((InSizeInBits % SizeInBits) == 0 && (IdxVal % NumSubElts) == 0) {
     SmallVector<int, 32> ShuffleMask;
     SmallVector<int, 32> ScaledMask;
     SmallVector<SDValue, 2> ShuffleInputs;
@@ -53876,7 +53879,7 @@ static SDValue combineEXTRACT_SUBVECTOR(SDNode *N, SelectionDAG &DAG,
     // Decode the shuffle mask and scale it so its shuffling subvectors.
     if (getTargetShuffleInputs(InVecBC, ShuffleInputs, ShuffleMask, DAG) &&
         scaleShuffleElements(ShuffleMask, NumSubVecs, ScaledMask)) {
-      unsigned SubVecIdx = IdxVal / VT.getVectorNumElements();
+      unsigned SubVecIdx = IdxVal / NumSubElts;
       if (ScaledMask[SubVecIdx] == SM_SentinelUndef)
         return DAG.getUNDEF(VT);
       if (ScaledMask[SubVecIdx] == SM_SentinelZero)
@@ -53884,7 +53887,7 @@ static SDValue combineEXTRACT_SUBVECTOR(SDNode *N, SelectionDAG &DAG,
       SDValue Src = ShuffleInputs[ScaledMask[SubVecIdx] / NumSubVecs];
       if (Src.getValueSizeInBits() == InSizeInBits) {
         unsigned SrcSubVecIdx = ScaledMask[SubVecIdx] % NumSubVecs;
-        unsigned SrcEltIdx = SrcSubVecIdx * VT.getVectorNumElements();
+        unsigned SrcEltIdx = SrcSubVecIdx * NumSubElts;
         return extractSubVector(DAG.getBitcast(InVecVT, Src), SrcEltIdx, DAG,
                                 SDLoc(N), SizeInBits);
       }

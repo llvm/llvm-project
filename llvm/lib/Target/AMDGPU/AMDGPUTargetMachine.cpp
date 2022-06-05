@@ -16,7 +16,7 @@
 #include "AMDGPU.h"
 #include "AMDGPUAliasAnalysis.h"
 #include "AMDGPUExportClustering.h"
-#include "AMDGPUMFMAClustering.h"
+#include "AMDGPUMFMAIGroupLP.h"
 #include "AMDGPUMacroFusion.h"
 #include "AMDGPUTargetObjectFile.h"
 #include "AMDGPUTargetTransformInfo.h"
@@ -427,7 +427,7 @@ createGCNMaxOccupancyMachineScheduler(MachineSchedContext *C) {
   DAG->addMutation(createLoadClusterDAGMutation(DAG->TII, DAG->TRI));
   if (ST.shouldClusterStores())
     DAG->addMutation(createStoreClusterDAGMutation(DAG->TII, DAG->TRI));
-  DAG->addMutation(createMFMAClusterDAGMutation());
+  DAG->addMutation(createMFMAIGroupLPDAGMutation());
   DAG->addMutation(createAMDGPUMacroFusionDAGMutation());
   DAG->addMutation(createAMDGPUExportClusteringDAGMutation());
   return DAG;
@@ -919,7 +919,7 @@ public:
     const GCNSubtarget &ST = C->MF->getSubtarget<GCNSubtarget>();
     DAG->addMutation(createLoadClusterDAGMutation(DAG->TII, DAG->TRI));
     DAG->addMutation(ST.createFillMFMAShadowMutation(DAG->TII));
-    DAG->addMutation(createMFMAClusterDAGMutation());
+    DAG->addMutation(createMFMAIGroupLPDAGMutation());
     if (EnableVOPD)
       DAG->addMutation(createVOPDPairingMutation());
     return DAG;

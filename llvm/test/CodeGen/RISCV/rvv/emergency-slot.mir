@@ -153,9 +153,8 @@ body:             |
   ; CHECK-NEXT:   PseudoBR %bb.2
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.2:
-  ; CHECK-NEXT:   $x10 = frame-destroy LUI 1
-  ; CHECK-NEXT:   $x10 = frame-destroy ADDIW killed $x10, -1792
-  ; CHECK-NEXT:   $x2 = frame-destroy SUB $x8, killed $x10
+  ; CHECK-NEXT:   $x2 = frame-destroy ADDI $x8, -2048
+  ; CHECK-NEXT:   $x2 = frame-destroy ADDI killed $x2, -256
   ; CHECK-NEXT:   $x2 = frame-destroy ADDI $x2, 272
   ; CHECK-NEXT:   $x1 = LD $x2, 2024 :: (load (s64) from %stack.3)
   ; CHECK-NEXT:   $x8 = LD $x2, 2016 :: (load (s64) from %stack.4)
