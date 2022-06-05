@@ -114,7 +114,7 @@ cl::opt<std::string>
 
 namespace {
 cl::list<std::string> ToolArgv("tool-args", cl::Positional,
-                               cl::desc("<tool arguments>..."), cl::ZeroOrMore,
+                               cl::desc("<tool arguments>..."),
                                cl::PositionalEatsArgs);
 
 cl::list<std::string> SafeToolArgv("safe-tool-args", cl::Positional,

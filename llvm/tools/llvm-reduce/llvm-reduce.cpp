@@ -60,7 +60,7 @@ static cl::opt<std::string>
                  cl::cat(LLVMReduceOptions));
 
 static cl::list<std::string>
-    TestArguments("test-arg", cl::ZeroOrMore,
+    TestArguments("test-arg",
                   cl::desc("Arguments passed onto the interesting-ness test"),
                   cl::cat(LLVMReduceOptions));
 

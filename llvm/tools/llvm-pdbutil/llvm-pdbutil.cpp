@@ -216,7 +216,7 @@ cl::opt<bool> ShowInjectedSourceContent(
 cl::list<std::string> WithName(
     "with-name",
     cl::desc("Display any symbol or type with the specified exact name"),
-    cl::cat(TypeCategory), cl::ZeroOrMore, cl::sub(PrettySubcommand));
+    cl::cat(TypeCategory), cl::sub(PrettySubcommand));
 
 cl::opt<bool> Compilands("compilands", cl::desc("Display compilands"),
                          cl::cat(TypeCategory), cl::sub(PrettySubcommand));
@@ -229,7 +229,7 @@ cl::opt<bool> Externals("externals", cl::desc("Dump external symbols"),
                         cl::cat(TypeCategory), cl::sub(PrettySubcommand));
 cl::list<SymLevel> SymTypes(
     "sym-types", cl::desc("Type of symbols to dump (default all)"),
-    cl::cat(TypeCategory), cl::sub(PrettySubcommand), cl::ZeroOrMore,
+    cl::cat(TypeCategory), cl::sub(PrettySubcommand),
     cl::values(
         clEnumValN(SymLevel::Thunks, "thunks", "Display thunk symbols"),
         clEnumValN(SymLevel::Data, "data", "Display data symbols"),
@@ -389,7 +389,7 @@ cl::opt<std::string>
                      cl::sub(BytesSubcommand), cl::cat(MsfBytes));
 
 cl::list<std::string>
-    DumpStreamData("stream-data", cl::CommaSeparated, cl::ZeroOrMore,
+    DumpStreamData("stream-data", cl::CommaSeparated,
                    cl::desc("Dump binary data from specified streams.  Format "
                             "is SN[:Start][@Size]"),
                    cl::sub(BytesSubcommand), cl::cat(MsfBytes));
@@ -505,7 +505,7 @@ cl::opt<bool> DontResolveForwardRefs(
     cl::cat(TypeOptions), cl::sub(DumpSubcommand));
 
 cl::list<uint32_t> DumpTypeIndex(
-    "type-index", cl::ZeroOrMore, cl::CommaSeparated,
+    "type-index", cl::CommaSeparated,
     cl::desc("only dump types with the specified hexadecimal type index"),
     cl::cat(TypeOptions), cl::sub(DumpSubcommand));
 
@@ -541,7 +541,7 @@ cl::list<std::string> DumpGlobalNames(
     "global-name",
     cl::desc(
         "With -globals, only dump globals whose name matches the given value"),
-    cl::cat(SymbolOptions), cl::sub(DumpSubcommand), cl::ZeroOrMore);
+    cl::cat(SymbolOptions), cl::sub(DumpSubcommand));
 cl::opt<bool> DumpPublics("publics", cl::desc("dump Publics stream data"),
                           cl::cat(SymbolOptions), cl::sub(DumpSubcommand));
 cl::opt<bool> DumpPublicExtras("public-extras",
@@ -706,7 +706,7 @@ cl::opt<bool> DumpModuleFiles("module-files", cl::desc("dump file information"),
                               cl::cat(FileOptions),
                               cl::sub(PdbToYamlSubcommand));
 cl::list<ModuleSubsection> DumpModuleSubsections(
-    "subsections", cl::ZeroOrMore, cl::CommaSeparated,
+    "subsections", cl::CommaSeparated,
     cl::desc("dump subsections from each module's debug stream"), ChunkValues,
     cl::cat(FileOptions), cl::sub(PdbToYamlSubcommand));
 cl::opt<bool> DumpModuleSyms("module-syms", cl::desc("dump module symbols"),

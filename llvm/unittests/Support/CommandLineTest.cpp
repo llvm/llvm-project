@@ -803,7 +803,7 @@ TEST(CommandLineTest, ResponseFileWindows) {
     GTEST_SKIP();
 
   StackOption<std::string, cl::list<std::string>> InputFilenames(
-      cl::Positional, cl::desc("<input files>"), cl::ZeroOrMore);
+      cl::Positional, cl::desc("<input files>"));
   StackOption<bool> TopLevelOpt("top-level", cl::init(false));
 
   // Create response file.

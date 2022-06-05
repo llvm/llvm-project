@@ -38,7 +38,7 @@ static cl::opt<std::string> OutputFile("o", cl::Required,
                                        cl::cat(ClangOffloadPackagerCategory));
 
 static cl::list<std::string>
-    DeviceImages("image", cl::ZeroOrMore,
+    DeviceImages("image",
                  cl::desc("List of key and value arguments. Required keywords "
                           "are 'file' and 'triple'."),
                  cl::value_desc("<key>=<value>,..."),
