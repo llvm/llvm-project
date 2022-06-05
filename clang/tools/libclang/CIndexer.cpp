@@ -176,7 +176,7 @@ LibclangInvocationReporter::LibclangInvocationReporter(
   if (llvm::sys::fs::createUniqueFile(TempPath, FD, TempPath,
                                       llvm::sys::fs::OF_Text))
     return;
-  File = std::string(TempPath.begin(), TempPath.end());
+  File = static_cast<std::string>(TempPath);
   llvm::raw_fd_ostream OS(FD, /*ShouldClose=*/true);
 
   // Write out the information about the invocation to it.
