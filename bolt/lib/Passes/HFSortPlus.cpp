@@ -37,45 +37,30 @@ namespace opts {
 
 extern cl::OptionCategory BoltOptCategory;
 
-cl::opt<unsigned>
-ITLBPageSize("itlb-page-size",
-  cl::desc("The size of i-tlb cache page"),
-  cl::init(4096),
-  cl::ReallyHidden,
-  cl::ZeroOrMore,
-  cl::cat(BoltOptCategory));
+cl::opt<unsigned> ITLBPageSize("itlb-page-size",
+                               cl::desc("The size of i-tlb cache page"),
+                               cl::init(4096), cl::ReallyHidden,
+                               cl::cat(BoltOptCategory));
 
-cl::opt<unsigned>
-ITLBEntries("itlb-entries",
-  cl::desc("The number of entries in i-tlb cache"),
-  cl::init(16),
-  cl::ReallyHidden,
-  cl::ZeroOrMore,
-  cl::cat(BoltOptCategory));
+cl::opt<unsigned> ITLBEntries("itlb-entries",
+                              cl::desc("The number of entries in i-tlb cache"),
+                              cl::init(16), cl::ReallyHidden,
+                              cl::cat(BoltOptCategory));
 
-static cl::opt<unsigned>
-ITLBDensity("itlb-density",
-  cl::desc("The density of i-tlb cache"),
-  cl::init(4096),
-  cl::ReallyHidden,
-  cl::ZeroOrMore,
-  cl::cat(BoltOptCategory));
+static cl::opt<unsigned> ITLBDensity("itlb-density",
+                                     cl::desc("The density of i-tlb cache"),
+                                     cl::init(4096), cl::ReallyHidden,
+                                     cl::cat(BoltOptCategory));
 
-static cl::opt<double>
-MergeProbability("merge-probability",
-  cl::desc("The minimum probability of a call for merging two clusters"),
-  cl::init(0.9),
-  cl::ReallyHidden,
-  cl::ZeroOrMore,
-  cl::cat(BoltOptCategory));
+static cl::opt<double> MergeProbability(
+    "merge-probability",
+    cl::desc("The minimum probability of a call for merging two clusters"),
+    cl::init(0.9), cl::ReallyHidden, cl::cat(BoltOptCategory));
 
-static cl::opt<double>
-ArcThreshold("arc-threshold",
-  cl::desc("The threshold for ignoring arcs with a small relative weight"),
-  cl::init(0.00000001),
-  cl::ReallyHidden,
-  cl::ZeroOrMore,
-  cl::cat(BoltOptCategory));
+static cl::opt<double> ArcThreshold(
+    "arc-threshold",
+    cl::desc("The threshold for ignoring arcs with a small relative weight"),
+    cl::init(0.00000001), cl::ReallyHidden, cl::cat(BoltOptCategory));
 
 } // namespace opts
 

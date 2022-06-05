@@ -55,12 +55,10 @@ ReorderFunctions("reorder-functions",
   cl::ZeroOrMore,
   cl::cat(BoltOptCategory));
 
-static cl::opt<bool>
-ReorderFunctionsUseHotSize("reorder-functions-use-hot-size",
-  cl::desc("use a function's hot size when doing clustering"),
-  cl::init(true),
-  cl::ZeroOrMore,
-  cl::cat(BoltOptCategory));
+static cl::opt<bool> ReorderFunctionsUseHotSize(
+    "reorder-functions-use-hot-size",
+    cl::desc("use a function's hot size when doing clustering"), cl::init(true),
+    cl::cat(BoltOptCategory));
 
 static cl::opt<std::string>
 FunctionOrderFile("function-order",
@@ -81,11 +79,9 @@ LinkSectionsFile("generate-link-sections",
   cl::cat(BoltOptCategory));
 
 static cl::opt<bool>
-UseEdgeCounts("use-edge-counts",
-  cl::desc("use edge count data when doing clustering"),
-  cl::init(true),
-  cl::ZeroOrMore,
-  cl::cat(BoltOptCategory));
+    UseEdgeCounts("use-edge-counts",
+                  cl::desc("use edge count data when doing clustering"),
+                  cl::init(true), cl::cat(BoltOptCategory));
 
 static cl::opt<bool>
 CgFromPerfData("cg-from-perf-data",
@@ -95,12 +91,10 @@ CgFromPerfData("cg-from-perf-data",
   cl::ZeroOrMore,
   cl::cat(BoltOptCategory));
 
-static cl::opt<bool>
-CgIgnoreRecursiveCalls("cg-ignore-recursive-calls",
-  cl::desc("ignore recursive calls when constructing the call graph"),
-  cl::init(true),
-  cl::ZeroOrMore,
-  cl::cat(BoltOptCategory));
+static cl::opt<bool> CgIgnoreRecursiveCalls(
+    "cg-ignore-recursive-calls",
+    cl::desc("ignore recursive calls when constructing the call graph"),
+    cl::init(true), cl::cat(BoltOptCategory));
 
 static cl::opt<bool>
 CgUseSplitHotSize("cg-use-split-hot-size",

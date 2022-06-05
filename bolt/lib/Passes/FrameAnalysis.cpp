@@ -35,12 +35,8 @@ static cl::opt<std::string> FrameOptFunctionNamesFile(
     "funcs-file-fop",
     cl::desc("file with list of functions to frame optimize"));
 
-static cl::opt<bool>
-TimeFA("time-fa",
-  cl::desc("time frame analysis steps"),
-  cl::ReallyHidden,
-  cl::ZeroOrMore,
-  cl::cat(BoltOptCategory));
+static cl::opt<bool> TimeFA("time-fa", cl::desc("time frame analysis steps"),
+                            cl::ReallyHidden, cl::cat(BoltOptCategory));
 
 bool shouldFrameOptimize(const llvm::bolt::BinaryFunction &Function) {
   if (Function.hasUnknownControlFlow())

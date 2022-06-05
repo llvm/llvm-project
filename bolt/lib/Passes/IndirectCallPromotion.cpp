@@ -44,7 +44,7 @@ static cl::opt<unsigned> ICPJTTotalPercentThreshold(
     cl::desc(
         "The percentage threshold against total count for the promotion for "
         "jump tables"),
-    cl::init(5), cl::ZeroOrMore, cl::Hidden, cl::cat(BoltOptCategory));
+    cl::init(5), cl::Hidden, cl::cat(BoltOptCategory));
 
 static cl::opt<unsigned> ICPCallsRemainingPercentThreshold(
     "icp-calls-remaining-percent-threshold",
@@ -57,7 +57,7 @@ static cl::opt<unsigned> ICPCallsTotalPercentThreshold(
     cl::desc(
         "The percentage threshold against total count for the promotion for "
         "calls"),
-    cl::init(30), cl::ZeroOrMore, cl::Hidden, cl::cat(BoltOptCategory));
+    cl::init(30), cl::Hidden, cl::cat(BoltOptCategory));
 
 static cl::opt<unsigned> ICPMispredictThreshold(
     "indirect-call-promotion-mispredict-threshold",
@@ -71,7 +71,7 @@ static cl::opt<bool> ICPUseMispredicts(
              "should be applied at a callsite.  The "
              "-indirect-call-promotion-mispredict-threshold value will be used "
              "by this heuristic"),
-    cl::ZeroOrMore, cl::cat(BoltOptCategory));
+    cl::cat(BoltOptCategory));
 
 static cl::opt<unsigned>
     ICPTopN("indirect-call-promotion-topn",

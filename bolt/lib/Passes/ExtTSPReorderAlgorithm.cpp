@@ -45,46 +45,32 @@ namespace opts {
 extern cl::OptionCategory BoltOptCategory;
 extern cl::opt<bool> NoThreads;
 
-cl::opt<unsigned>
-ChainSplitThreshold("chain-split-threshold",
-  cl::desc("The maximum size of a chain to apply splitting"),
-  cl::init(128),
-  cl::ReallyHidden,
-  cl::ZeroOrMore,
-  cl::cat(BoltOptCategory));
+cl::opt<unsigned> ChainSplitThreshold(
+    "chain-split-threshold",
+    cl::desc("The maximum size of a chain to apply splitting"), cl::init(128),
+    cl::ReallyHidden, cl::cat(BoltOptCategory));
 
 cl::opt<double>
-ForwardWeight("forward-weight",
-  cl::desc("The weight of forward jumps for ExtTSP value"),
-  cl::init(0.1),
-  cl::ReallyHidden,
-  cl::ZeroOrMore,
-  cl::cat(BoltOptCategory));
+    ForwardWeight("forward-weight",
+                  cl::desc("The weight of forward jumps for ExtTSP value"),
+                  cl::init(0.1), cl::ReallyHidden, cl::cat(BoltOptCategory));
 
 cl::opt<double>
-BackwardWeight("backward-weight",
-  cl::desc("The weight of backward jumps for ExtTSP value"),
-  cl::init(0.1),
-  cl::ReallyHidden,
-  cl::ZeroOrMore,
-  cl::cat(BoltOptCategory));
+    BackwardWeight("backward-weight",
+                   cl::desc("The weight of backward jumps for ExtTSP value"),
+                   cl::init(0.1), cl::ReallyHidden, cl::cat(BoltOptCategory));
 
-cl::opt<unsigned>
-ForwardDistance("forward-distance",
-  cl::desc("The maximum distance (in bytes) of forward jumps for ExtTSP value"),
-  cl::init(1024),
-  cl::ReallyHidden,
-  cl::ZeroOrMore,
-  cl::cat(BoltOptCategory));
+cl::opt<unsigned> ForwardDistance(
+    "forward-distance",
+    cl::desc(
+        "The maximum distance (in bytes) of forward jumps for ExtTSP value"),
+    cl::init(1024), cl::ReallyHidden, cl::cat(BoltOptCategory));
 
-cl::opt<unsigned>
-BackwardDistance("backward-distance",
-  cl::desc("The maximum distance (in bytes) of backward jumps for ExtTSP value"),
-  cl::init(640),
-  cl::ReallyHidden,
-  cl::ZeroOrMore,
-  cl::cat(BoltOptCategory));
-
+cl::opt<unsigned> BackwardDistance(
+    "backward-distance",
+    cl::desc(
+        "The maximum distance (in bytes) of backward jumps for ExtTSP value"),
+    cl::init(640), cl::ReallyHidden, cl::cat(BoltOptCategory));
 }
 
 namespace llvm {

@@ -28,76 +28,58 @@ extern cl::OptionCategory BoltDiffCategory;
 extern cl::opt<bool> NeverPrint;
 extern cl::opt<bool> ICF;
 
-static cl::opt<bool>
-IgnoreLTOSuffix("ignore-lto-suffix",
-  cl::desc("ignore lto_priv or const suffixes when matching functions"),
-  cl::init(true),
-  cl::ZeroOrMore,
-  cl::cat(BoltDiffCategory));
+static cl::opt<bool> IgnoreLTOSuffix(
+    "ignore-lto-suffix",
+    cl::desc("ignore lto_priv or const suffixes when matching functions"),
+    cl::init(true), cl::cat(BoltDiffCategory));
+
+static cl::opt<bool> PrintUnmapped(
+    "print-unmapped",
+    cl::desc("print functions of binary 2 that were not matched to any "
+             "function in binary 1"),
+    cl::cat(BoltDiffCategory));
+
+static cl::opt<bool> PrintProfiledUnmapped(
+    "print-profiled-unmapped",
+    cl::desc("print functions that have profile in binary 1 but do not "
+             "in binary 2"),
+    cl::cat(BoltDiffCategory));
+
+static cl::opt<bool> PrintDiffCFG(
+    "print-diff-cfg",
+    cl::desc("print the CFG of important functions that changed in "
+             "binary 2"),
+    cl::cat(BoltDiffCategory));
 
 static cl::opt<bool>
-PrintUnmapped("print-unmapped",
-  cl::desc("print functions of binary 2 that were not matched to any "
-           "function in binary 1"),
-  cl::init(false),
-  cl::ZeroOrMore,
-  cl::cat(BoltDiffCategory));
+    PrintDiffBBs("print-diff-bbs",
+                 cl::desc("print the basic blocks showed in top differences"),
+                 cl::cat(BoltDiffCategory));
 
-static cl::opt<bool>
-PrintProfiledUnmapped("print-profiled-unmapped",
-  cl::desc("print functions that have profile in binary 1 but do not "
-           "in binary 2"),
-  cl::init(false),
-  cl::ZeroOrMore,
-  cl::cat(BoltDiffCategory));
+static cl::opt<bool> MatchByHash(
+    "match-by-hash",
+    cl::desc("match functions in binary 2 to binary 1 if they have the same "
+             "hash of a function in binary 1"),
+    cl::cat(BoltDiffCategory));
 
-static cl::opt<bool>
-PrintDiffCFG("print-diff-cfg",
-  cl::desc("print the CFG of important functions that changed in "
-           "binary 2"),
-  cl::init(false),
-  cl::ZeroOrMore,
-  cl::cat(BoltDiffCategory));
+static cl::opt<bool> IgnoreUnchanged(
+    "ignore-unchanged",
+    cl::desc("do not diff functions whose contents have not been changed from "
+             "one binary to another"),
+    cl::cat(BoltDiffCategory));
 
-static cl::opt<bool>
-PrintDiffBBs("print-diff-bbs",
-  cl::desc("print the basic blocks showed in top differences"),
-  cl::init(false),
-  cl::ZeroOrMore,
-  cl::cat(BoltDiffCategory));
+static cl::opt<unsigned> DisplayCount(
+    "display-count",
+    cl::desc("number of functions to display when printing the top largest "
+             "differences in function activity"),
+    cl::init(10), cl::cat(BoltDiffCategory));
 
-static cl::opt<bool>
-MatchByHash("match-by-hash",
-  cl::desc("match functions in binary 2 to binary 1 if they have the same "
-           "hash of a function in binary 1"),
-  cl::init(false),
-  cl::ZeroOrMore,
-  cl::cat(BoltDiffCategory));
-
-static cl::opt<bool>
-IgnoreUnchanged("ignore-unchanged",
-  cl::desc("do not diff functions whose contents have not been changed from "
-           "one binary to another"),
-  cl::init(false),
-  cl::ZeroOrMore,
-  cl::cat(BoltDiffCategory));
-
-static cl::opt<unsigned>
-DisplayCount("display-count",
-  cl::desc("number of functions to display when printing the top largest "
-           "differences in function activity"),
-  cl::init(10),
-  cl::ZeroOrMore,
-  cl::cat(BoltDiffCategory));
-
-static cl::opt<bool>
-NormalizeByBin1("normalize-by-bin1",
-  cl::desc("show execution count of functions in binary 2 as a ratio of the "
-           "total samples in binary 1 - make sure both profiles have equal "
-           "collection time and sampling rate for this to make sense"),
-  cl::init(false),
-  cl::ZeroOrMore,
-  cl::cat(BoltDiffCategory));
+static cl::opt<bool> NormalizeByBin1(
+    "normalize-by-bin1",
+    cl::desc("show execution count of functions in binary 2 as a ratio of the "
+             "total samples in binary 1 - make sure both profiles have equal "
+             "collection time and sampling rate for this to make sense"),
+    cl::cat(BoltDiffCategory));
 
 } // end namespace opts
 

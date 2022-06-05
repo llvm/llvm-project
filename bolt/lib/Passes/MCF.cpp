@@ -30,31 +30,23 @@ extern cl::OptionCategory BoltOptCategory;
 
 extern cl::opt<bool> TimeOpts;
 
-static cl::opt<bool>
-IterativeGuess("iterative-guess",
-  cl::desc("in non-LBR mode, guess edge counts using iterative technique"),
-  cl::ZeroOrMore,
-  cl::init(false),
-  cl::Hidden,
-  cl::cat(BoltOptCategory));
+static cl::opt<bool> IterativeGuess(
+    "iterative-guess",
+    cl::desc("in non-LBR mode, guess edge counts using iterative technique"),
+
+    cl::Hidden, cl::cat(BoltOptCategory));
 
 static cl::opt<bool>
-EqualizeBBCounts("equalize-bb-counts",
-  cl::desc("in non-LBR mode, use same count for BBs "
-           "that should have equivalent count"),
-  cl::ZeroOrMore,
-  cl::init(false),
-  cl::Hidden,
-  cl::cat(BoltOptCategory));
+    EqualizeBBCounts("equalize-bb-counts",
+                     cl::desc("in non-LBR mode, use same count for BBs "
+                              "that should have equivalent count"),
+                     cl::Hidden, cl::cat(BoltOptCategory));
 
-static cl::opt<bool>
-UseRArcs("mcf-use-rarcs",
-  cl::desc("in MCF, consider the possibility of cancelling flow to balance "
-           "edges"),
-  cl::ZeroOrMore,
-  cl::init(false),
-  cl::Hidden,
-  cl::cat(BoltOptCategory));
+static cl::opt<bool> UseRArcs(
+    "mcf-use-rarcs",
+    cl::desc("in MCF, consider the possibility of cancelling flow to balance "
+             "edges"),
+    cl::Hidden, cl::cat(BoltOptCategory));
 
 } // namespace opts
 

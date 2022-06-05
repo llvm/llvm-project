@@ -34,12 +34,8 @@ namespace opts {
 extern cl::opt<JumpTableSupportLevel> JumpTables;
 extern cl::opt<bool> PreserveBlocksAlignment;
 
-cl::opt<bool>
-AlignBlocks("align-blocks",
-  cl::desc("align basic blocks"),
-  cl::init(false),
-  cl::ZeroOrMore,
-  cl::cat(BoltOptCategory));
+cl::opt<bool> AlignBlocks("align-blocks", cl::desc("align basic blocks"),
+                          cl::cat(BoltOptCategory));
 
 cl::opt<MacroFusionType>
 AlignMacroOpFusion("align-macro-fusion",
@@ -70,20 +66,15 @@ FunctionPadSpec("pad-funcs",
   cl::Hidden,
   cl::cat(BoltCategory));
 
-static cl::opt<bool>
-MarkFuncs("mark-funcs",
-  cl::desc("mark function boundaries with break instruction to make "
-           "sure we accidentally don't cross them"),
-  cl::ReallyHidden,
-  cl::ZeroOrMore,
-  cl::cat(BoltCategory));
+static cl::opt<bool> MarkFuncs(
+    "mark-funcs",
+    cl::desc("mark function boundaries with break instruction to make "
+             "sure we accidentally don't cross them"),
+    cl::ReallyHidden, cl::cat(BoltCategory));
 
-static cl::opt<bool>
-PrintJumpTables("print-jump-tables",
-  cl::desc("print jump tables"),
-  cl::ZeroOrMore,
-  cl::Hidden,
-  cl::cat(BoltCategory));
+static cl::opt<bool> PrintJumpTables("print-jump-tables",
+                                     cl::desc("print jump tables"), cl::Hidden,
+                                     cl::cat(BoltCategory));
 
 static cl::opt<bool>
 X86AlignBranchBoundaryHotOnly("x86-align-branch-boundary-hot-only",

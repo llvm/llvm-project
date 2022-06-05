@@ -38,20 +38,12 @@ static cl::opt<unsigned> ColdThreshold(
              "samples). Default: 0 "),
     cl::init(0), cl::ZeroOrMore, cl::Hidden, cl::cat(BoltOptCategory));
 
-static cl::opt<bool>
-PrintClusters("print-clusters",
-  cl::desc("print clusters"),
-  cl::ZeroOrMore,
-  cl::Hidden,
-  cl::cat(BoltOptCategory));
+static cl::opt<bool> PrintClusters("print-clusters", cl::desc("print clusters"),
+                                   cl::Hidden, cl::cat(BoltOptCategory));
 
-cl::opt<uint32_t>
-RandomSeed("bolt-seed",
-  cl::desc("seed for randomization"),
-  cl::init(42),
-  cl::ZeroOrMore,
-  cl::Hidden,
-  cl::cat(BoltOptCategory));
+cl::opt<uint32_t> RandomSeed("bolt-seed", cl::desc("seed for randomization"),
+                             cl::init(42), cl::Hidden,
+                             cl::cat(BoltOptCategory));
 
 } // namespace opts
 

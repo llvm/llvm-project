@@ -29,12 +29,9 @@ namespace opts {
 
 extern cl::OptionCategory BoltOptCategory;
 
-static cl::opt<bool>
-UseDFS("icf-dfs",
-  cl::desc("use DFS ordering when using -icf option"),
-  cl::ReallyHidden,
-  cl::ZeroOrMore,
-  cl::cat(BoltOptCategory));
+static cl::opt<bool> UseDFS("icf-dfs",
+                            cl::desc("use DFS ordering when using -icf option"),
+                            cl::ReallyHidden, cl::cat(BoltOptCategory));
 
 static cl::opt<bool>
 TimeICF("time-icf",

@@ -29,21 +29,18 @@ extern cl::OptionCategory BoltOptCategory;
 extern cl::opt<bool> SplitEH;
 extern cl::opt<unsigned> ExecutionCountThreshold;
 
-static cl::opt<bool>
-AggressiveSplitting("split-all-cold",
-  cl::desc("outline as many cold basic blocks as possible"),
-  cl::ZeroOrMore,
-  cl::cat(BoltOptCategory));
+static cl::opt<bool> AggressiveSplitting(
+    "split-all-cold", cl::desc("outline as many cold basic blocks as possible"),
+    cl::cat(BoltOptCategory));
 
-static cl::opt<unsigned>
-SplitAlignThreshold("split-align-threshold",
-  cl::desc("when deciding to split a function, apply this alignment "
-           "while doing the size comparison (see -split-threshold). "
-           "Default value: 2."),
-  cl::init(2),
-  cl::ZeroOrMore,
-  cl::Hidden,
-  cl::cat(BoltOptCategory));
+static cl::opt<unsigned> SplitAlignThreshold(
+    "split-align-threshold",
+    cl::desc("when deciding to split a function, apply this alignment "
+             "while doing the size comparison (see -split-threshold). "
+             "Default value: 2."),
+    cl::init(2),
+
+    cl::Hidden, cl::cat(BoltOptCategory));
 
 static cl::opt<SplitFunctions::SplittingType>
 SplitFunctions("split-functions",
@@ -61,16 +58,13 @@ SplitFunctions("split-functions",
   cl::ZeroOrMore,
   cl::cat(BoltOptCategory));
 
-static cl::opt<unsigned>
-SplitThreshold("split-threshold",
-  cl::desc("split function only if its main size is reduced by more than "
-           "given amount of bytes. Default value: 0, i.e. split iff the "
-           "size is reduced. Note that on some architectures the size can "
-           "increase after splitting."),
-  cl::init(0),
-  cl::ZeroOrMore,
-  cl::Hidden,
-  cl::cat(BoltOptCategory));
+static cl::opt<unsigned> SplitThreshold(
+    "split-threshold",
+    cl::desc("split function only if its main size is reduced by more than "
+             "given amount of bytes. Default value: 0, i.e. split iff the "
+             "size is reduced. Note that on some architectures the size can "
+             "increase after splitting."),
+    cl::init(0), cl::Hidden, cl::cat(BoltOptCategory));
 
 void syncOptions(BinaryContext &BC) {
   if (!BC.HasRelocations && opts::SplitFunctions == SplitFunctions::ST_LARGE)

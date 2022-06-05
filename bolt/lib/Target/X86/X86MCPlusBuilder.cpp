@@ -44,7 +44,7 @@ extern cl::OptionCategory BoltOptCategory;
 static cl::opt<bool> X86StripRedundantAddressSize(
     "x86-strip-redundant-address-size",
     cl::desc("Remove redundant Address-Size override prefix"), cl::init(true),
-    cl::ZeroOrMore, cl::cat(BoltOptCategory));
+    cl::cat(BoltOptCategory));
 
 } // namespace opts
 
