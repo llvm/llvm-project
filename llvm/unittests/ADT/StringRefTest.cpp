@@ -584,6 +584,15 @@ TEST(StringRefTest, EditDistance) {
                                        "people soiled our green "));
 }
 
+TEST(StringRefTest, EditDistanceInsensitive) {
+  StringRef Hello("HELLO");
+  EXPECT_EQ(2U, Hello.edit_distance_insensitive("hill"));
+  EXPECT_EQ(0U, Hello.edit_distance_insensitive("hello"));
+
+  StringRef Industry("InDuStRy");
+  EXPECT_EQ(6U, Industry.edit_distance_insensitive("iNtErEsT"));
+}
+
 TEST(StringRefTest, Misc) {
   std::string Storage;
   raw_string_ostream OS(Storage);

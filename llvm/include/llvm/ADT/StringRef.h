@@ -240,6 +240,10 @@ namespace llvm {
     unsigned edit_distance(StringRef Other, bool AllowReplacements = true,
                            unsigned MaxEditDistance = 0) const;
 
+    LLVM_NODISCARD unsigned
+    edit_distance_insensitive(StringRef Other, bool AllowReplacements = true,
+                              unsigned MaxEditDistance = 0) const;
+
     /// str - Get the contents as an std::string.
     LLVM_NODISCARD
     std::string str() const {
