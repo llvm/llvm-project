@@ -3367,6 +3367,15 @@ def : Pat<(f32 (vector_extract v4f32:$S, i32:$Idx)),
 
 def : Pat<(f64 (vector_extract v2f64:$S, i32:$Idx)),
           (f64 VectorExtractions.BE_32B_VARIABLE_DOUBLE)>;
+
+defm : ScalToVecWPermute<
+  v4i32, (i32 (load ForceXForm:$src)),
+  (XXSLDWIs (LIWZX ForceXForm:$src), 1),
+  (SUBREG_TO_REG (i64 1), (LIWZX ForceXForm:$src), sub_64)>;
+defm : ScalToVecWPermute<
+  v4f32, (f32 (load ForceXForm:$src)),
+  (XXSLDWIs (LIWZX ForceXForm:$src), 1),
+  (SUBREG_TO_REG (i64 1), (LIWZX ForceXForm:$src), sub_64)>;
 } // HasVSX, HasP8Vector, IsBigEndian
 
 // Big endian Power8 64Bit VSX subtarget.
@@ -3381,14 +3390,6 @@ def : Pat<(v2i64 (scalar_to_vector (i64 (sextloadi32 ForceXForm:$src)))),
           (v2i64 (SUBREG_TO_REG (i64 1), (LIWAX ForceXForm:$src), sub_64))>;
 def : Pat<(v2i64 (scalar_to_vector (i64 (zextloadi32 ForceXForm:$src)))),
           (v2i64 (SUBREG_TO_REG (i64 1), (LIWZX ForceXForm:$src), sub_64))>;
-defm : ScalToVecWPermute<
-  v4i32, (i32 (load ForceXForm:$src)),
-  (XXSLDWIs (LIWZX ForceXForm:$src), 1),
-  (SUBREG_TO_REG (i64 1), (LIWZX ForceXForm:$src), sub_64)>;
-defm : ScalToVecWPermute<
-  v4f32, (f32 (load ForceXForm:$src)),
-  (XXSLDWIs (LIWZX ForceXForm:$src), 1),
-  (SUBREG_TO_REG (i64 1), (LIWZX ForceXForm:$src), sub_64)>;
 
 def : Pat<DWToSPExtractConv.BVU,
           (v4f32 (VPKUDUM (XXSLDWI (XVCVUXDSP $S1), (XVCVUXDSP $S1), 3),

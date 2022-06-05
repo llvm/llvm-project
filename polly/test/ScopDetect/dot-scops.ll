@@ -3,6 +3,11 @@
 ; Check that the ScopPrinter does not crash.
 ; ScopPrinter needs the ScopDetection pass, which should depend on
 ; ScalarEvolution transitively.
+;
+; FIXME: -dot-scops always prints to the same hardcoded filename
+;        scops.<functionname>.dot. If there is another test with the same
+;        function name and printing a dot file there will be a race condition
+;        when running tests in parallel.
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 

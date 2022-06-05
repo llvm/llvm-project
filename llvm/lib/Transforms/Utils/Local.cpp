@@ -2366,7 +2366,7 @@ static bool markAliveBlocks(Function &F,
           Changed = true;
         }
         if (II->doesNotThrow() && canSimplifyInvokeNoUnwind(&F)) {
-          if (II->use_empty() && II->onlyReadsMemory()) {
+          if (II->use_empty() && !II->mayHaveSideEffects()) {
             // jump to the normal destination branch.
             BasicBlock *NormalDestBB = II->getNormalDest();
             BasicBlock *UnwindDestBB = II->getUnwindDest();

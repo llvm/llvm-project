@@ -113,7 +113,8 @@ bool unlikelyExecuted(BasicBlock &BB) {
   // mark sanitizer traps as cold.
   for (Instruction &I : BB)
     if (auto *CB = dyn_cast<CallBase>(&I))
-      if (CB->hasFnAttr(Attribute::Cold) && !CB->getMetadata("nosanitize"))
+      if (CB->hasFnAttr(Attribute::Cold) &&
+          !CB->getMetadata(LLVMContext::MD_nosanitize))
         return true;
 
   // The block is cold if it has an unreachable terminator, unless it's

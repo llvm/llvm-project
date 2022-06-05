@@ -16,9 +16,9 @@ define { <2 x float>, <2 x float> } @foo(%struct.sw* %v) {
 ; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <4 x float> [[TMP4]], float [[TMP1]], i32 1
 ; CHECK-NEXT:    [[SHUFFLE1:%.*]] = shufflevector <4 x float> [[TMP5]], <4 x float> poison, <4 x i32> <i32 0, i32 undef, i32 1, i32 undef>
 ; CHECK-NEXT:    [[TMP6:%.*]] = fmul <4 x float> [[SHUFFLE]], [[SHUFFLE1]]
-; CHECK-NEXT:    [[TMP7:%.*]] = fadd <4 x float> [[TMP6]], poison
-; CHECK-NEXT:    [[TMP8:%.*]] = fadd <4 x float> [[TMP7]], poison
-; CHECK-NEXT:    [[TMP9:%.*]] = fadd <4 x float> [[TMP8]], poison
+; CHECK-NEXT:    [[TMP7:%.*]] = fadd <4 x float> [[TMP6]], undef
+; CHECK-NEXT:    [[TMP8:%.*]] = fadd <4 x float> [[TMP7]], undef
+; CHECK-NEXT:    [[TMP9:%.*]] = fadd <4 x float> [[TMP8]], undef
 ; CHECK-NEXT:    [[TMP10:%.*]] = shufflevector <4 x float> [[TMP9]], <4 x float> poison, <2 x i32> <i32 0, i32 1>
 ; CHECK-NEXT:    [[TMP11:%.*]] = shufflevector <4 x float> [[TMP9]], <4 x float> poison, <2 x i32> <i32 2, i32 3>
 ; CHECK-NEXT:    [[INS1:%.*]] = insertvalue { <2 x float>, <2 x float> } undef, <2 x float> [[TMP10]], 0

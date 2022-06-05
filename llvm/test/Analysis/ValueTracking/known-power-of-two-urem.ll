@@ -19,7 +19,8 @@ define i64 @known_power_of_two_urem_phi(i64 %size, i1 %cmp, i1 %cmp1) {
 ; CHECK-NEXT:    br label [[COND_END]]
 ; CHECK:       cond.end:
 ; CHECK-NEXT:    [[PHI1:%.*]] = phi i64 [ 4096, [[ENTRY:%.*]] ], [ [[PHI]], [[COND_TRUE_END]] ]
-; CHECK-NEXT:    [[UREM:%.*]] = urem i64 [[SIZE:%.*]], [[PHI1]]
+; CHECK-NEXT:    [[TMP0:%.*]] = add nsw i64 [[PHI1]], -1
+; CHECK-NEXT:    [[UREM:%.*]] = and i64 [[TMP0]], [[SIZE:%.*]]
 ; CHECK-NEXT:    ret i64 [[UREM]]
 ;
 entry:
@@ -56,7 +57,8 @@ define i64 @known_power_of_two_urem_nested_expr(i64 %size, i1 %cmp, i1 %cmp1, i6
 ; CHECK-NEXT:    br label [[COND_END]]
 ; CHECK:       cond.end:
 ; CHECK-NEXT:    [[PHI:%.*]] = phi i64 [ [[SELECT]], [[COND_FALSE]] ], [ [[TMP1]], [[COND_TRUE]] ], [ [[PHI]], [[COND_END]] ]
-; CHECK-NEXT:    [[UREM:%.*]] = urem i64 [[SIZE:%.*]], [[PHI]]
+; CHECK-NEXT:    [[TMP2:%.*]] = add i64 [[PHI]], -1
+; CHECK-NEXT:    [[UREM:%.*]] = and i64 [[TMP2]], [[SIZE:%.*]]
 ; CHECK-NEXT:    [[CMP2:%.*]] = icmp ult i64 [[UREM]], 10
 ; CHECK-NEXT:    br i1 [[CMP2]], label [[COND_END]], label [[END:%.*]]
 ; CHECK:       end:

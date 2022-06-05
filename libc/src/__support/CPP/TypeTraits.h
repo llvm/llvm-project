@@ -15,7 +15,9 @@ namespace __llvm_libc {
 namespace cpp {
 
 template <bool B, typename T> struct EnableIf;
-template <typename T> struct EnableIf<true, T> { typedef T Type; };
+template <typename T> struct EnableIf<true, T> {
+  typedef T Type;
+};
 
 template <bool B, typename T>
 using EnableIfType = typename EnableIf<B, T>::Type;
@@ -28,7 +30,9 @@ struct FalseValue {
   static constexpr bool Value = false;
 };
 
-template <typename T> struct TypeIdentity { typedef T Type; };
+template <typename T> struct TypeIdentity {
+  typedef T Type;
+};
 
 template <typename T1, typename T2> struct IsSame : public FalseValue {};
 template <typename T> struct IsSame<T, T> : public TrueValue {};
@@ -59,6 +63,10 @@ template <typename Type> struct IsIntegral {
       ;
 };
 
+template <typename Type> struct IsEnum {
+  static constexpr bool Value = __is_enum(Type);
+};
+
 template <typename T> struct IsPointerTypeNoCV : public FalseValue {};
 template <typename T> struct IsPointerTypeNoCV<T *> : public TrueValue {};
 template <typename T> struct IsPointerType {
@@ -76,6 +84,16 @@ template <typename Type> struct IsArithmetic {
   static constexpr bool Value =
       IsIntegral<Type>::Value || IsFloatingPointType<Type>::Value;
 };
+
+// Compile time type selection.
+template <bool _, class TrueT, class FalseT> struct Conditional {
+  using type = TrueT;
+};
+template <class TrueT, class FalseT> struct Conditional<false, TrueT, FalseT> {
+  using type = FalseT;
+};
+template <bool Cond, typename TrueT, typename FalseT>
+using ConditionalType = typename Conditional<Cond, TrueT, FalseT>::type;
 
 } // namespace cpp
 } // namespace __llvm_libc

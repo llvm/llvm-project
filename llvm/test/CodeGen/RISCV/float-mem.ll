@@ -61,10 +61,10 @@ define dso_local float @flw_fsw_global(float %a, float %b) nounwind {
 ; RV32IF-NEXT:    fadd.s fa0, fa0, fa1
 ; RV32IF-NEXT:    lui a0, %hi(G)
 ; RV32IF-NEXT:    flw ft0, %lo(G)(a0)
+; RV32IF-NEXT:    addi a1, a0, %lo(G)
 ; RV32IF-NEXT:    fsw fa0, %lo(G)(a0)
-; RV32IF-NEXT:    addi a0, a0, %lo(G)
-; RV32IF-NEXT:    flw ft0, 36(a0)
-; RV32IF-NEXT:    fsw fa0, 36(a0)
+; RV32IF-NEXT:    flw ft0, 36(a1)
+; RV32IF-NEXT:    fsw fa0, 36(a1)
 ; RV32IF-NEXT:    ret
 ;
 ; RV64IF-LABEL: flw_fsw_global:
@@ -72,10 +72,10 @@ define dso_local float @flw_fsw_global(float %a, float %b) nounwind {
 ; RV64IF-NEXT:    fadd.s fa0, fa0, fa1
 ; RV64IF-NEXT:    lui a0, %hi(G)
 ; RV64IF-NEXT:    flw ft0, %lo(G)(a0)
+; RV64IF-NEXT:    addi a1, a0, %lo(G)
 ; RV64IF-NEXT:    fsw fa0, %lo(G)(a0)
-; RV64IF-NEXT:    addi a0, a0, %lo(G)
-; RV64IF-NEXT:    flw ft0, 36(a0)
-; RV64IF-NEXT:    fsw fa0, 36(a0)
+; RV64IF-NEXT:    flw ft0, 36(a1)
+; RV64IF-NEXT:    fsw fa0, 36(a1)
 ; RV64IF-NEXT:    ret
   %1 = fadd float %a, %b
   %2 = load volatile float, float* @G

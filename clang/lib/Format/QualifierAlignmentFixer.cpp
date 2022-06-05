@@ -216,6 +216,29 @@ const FormatToken *LeftRightQualifierAlignmentFixer::analyzeRight(
   if (LeftRightQualifierAlignmentFixer::isPossibleMacro(Tok->Next))
     return Tok;
 
+  auto AnalyzeTemplate =
+      [&](const FormatToken *Tok,
+          const FormatToken *StartTemplate) -> const FormatToken * {
+    // Read from the TemplateOpener to TemplateCloser.
+    FormatToken *EndTemplate = StartTemplate->MatchingParen;
+    if (EndTemplate) {
+      // Move to the end of any template class members e.g.
+      // `Foo<int>::iterator`.
+      if (EndTemplate->startsSequence(TT_TemplateCloser, tok::coloncolon,
+                                      tok::identifier)) {
+        EndTemplate = EndTemplate->Next->Next;
+      }
+    }
+    if (EndTemplate && EndTemplate->Next &&
+        !EndTemplate->Next->isOneOf(tok::equal, tok::l_paren)) {
+      insertQualifierAfter(SourceMgr, Fixes, EndTemplate, Qualifier);
+      // Remove the qualifier.
+      removeToken(SourceMgr, Fixes, Tok);
+      return Tok;
+    }
+    return nullptr;
+  };
+
   FormatToken *Qual = Tok->Next;
   FormatToken *LastQual = Qual;
   while (Qual && isQualifierOrType(Qual, ConfiguredQualifierTokens)) {
@@ -233,27 +256,24 @@ const FormatToken *LeftRightQualifierAlignmentFixer::analyzeRight(
     return Tok;
   } else if (Tok->startsSequence(QualifierType, tok::identifier,
                                  TT_TemplateOpener)) {
-    // Read from the TemplateOpener to
-    // TemplateCloser as in const ArrayRef<int> a; const ArrayRef<int> &a;
-    FormatToken *EndTemplate = Tok->Next->Next->MatchingParen;
-    if (EndTemplate) {
-      // Move to the end of any template class members e.g.
-      // `Foo<int>::iterator`.
-      if (EndTemplate->startsSequence(TT_TemplateCloser, tok::coloncolon,
-                                      tok::identifier)) {
-        EndTemplate = EndTemplate->Next->Next;
-      }
-    }
-    if (EndTemplate && EndTemplate->Next &&
-        !EndTemplate->Next->isOneOf(tok::equal, tok::l_paren)) {
-      insertQualifierAfter(SourceMgr, Fixes, EndTemplate, Qualifier);
-      // Remove the qualifier.
-      removeToken(SourceMgr, Fixes, Tok);
-      return Tok;
-    }
-  } else if (Tok->startsSequence(QualifierType, tok::identifier)) {
+    // `const ArrayRef<int> a;`
+    // `const ArrayRef<int> &a;`
+    const FormatToken *NewTok = AnalyzeTemplate(Tok, Tok->Next->Next);
+    if (NewTok)
+      return NewTok;
+  } else if (Tok->startsSequence(QualifierType, tok::coloncolon,
+                                 tok::identifier, TT_TemplateOpener)) {
+    // `const ::ArrayRef<int> a;`
+    // `const ::ArrayRef<int> &a;`
+    const FormatToken *NewTok = AnalyzeTemplate(Tok, Tok->Next->Next->Next);
+    if (NewTok)
+      return NewTok;
+  } else if (Tok->startsSequence(QualifierType, tok::identifier) ||
+             Tok->startsSequence(QualifierType, tok::coloncolon,
+                                 tok::identifier)) {
     FormatToken *Next = Tok->Next;
     // The case  `const Foo` -> `Foo const`
+    // The case  `const ::Foo` -> `::Foo const`
     // The case  `const Foo *` -> `Foo const *`
     // The case  `const Foo &` -> `Foo const &`
     // The case  `const Foo &&` -> `Foo const &&`
@@ -331,7 +351,9 @@ const FormatToken *LeftRightQualifierAlignmentFixer::analyzeLeft(
       Tok->Next->Next && Tok->Next->Next->is(QualifierType)) {
     rotateTokens(SourceMgr, Fixes, Tok->Next, Tok->Next->Next, /*Left=*/true);
   }
-  if (Tok->startsSequence(tok::identifier) && Tok->Next) {
+  if ((Tok->startsSequence(tok::coloncolon, tok::identifier) ||
+       Tok->is(tok::identifier)) &&
+      Tok->Next) {
     if (Tok->Previous &&
         Tok->Previous->isOneOf(tok::star, tok::ampamp, tok::amp)) {
       return Tok;

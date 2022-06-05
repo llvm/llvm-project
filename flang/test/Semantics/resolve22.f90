@@ -30,3 +30,18 @@ subroutine s3
   type(t) :: x
   x = t()
 end subroutine
+
+module m4
+  type t1
+    class(t2), pointer :: p => null()
+  end type
+  type t2
+  end type
+  interface t2
+    procedure ctor
+  end interface
+ contains
+  function ctor()
+    type(t2) ctor
+  end function
+end module

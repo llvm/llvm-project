@@ -1823,7 +1823,22 @@ Expr<T> FoldOperation(FoldingContext &context, Divide<T> &&x) {
       return Expr<T>{Constant<T>{quotAndRem.quotient}};
     } else {
       auto quotient{folded->first.Divide(folded->second, context.rounding())};
-      RealFlagWarnings(context, quotient.flags, "division");
+      // Don't warn about -1./0., 0./0., or 1./0. from a module file
+      // they are interpreted as canonical Fortran representations of -Inf,
+      // NaN, and Inf respectively.
+      bool isCanonicalNaNOrInf{false};
+      if constexpr (T::category == TypeCategory::Real) {
+        if (folded->second.IsZero() && context.inModuleFile()) {
+          using IntType = typename T::Scalar::Word;
+          auto intNumerator{folded->first.template ToInteger<IntType>()};
+          isCanonicalNaNOrInf = intNumerator.flags == RealFlags{} &&
+              intNumerator.value >= IntType{-1} &&
+              intNumerator.value <= IntType{1};
+        }
+      }
+      if (!isCanonicalNaNOrInf) {
+        RealFlagWarnings(context, quotient.flags, "division");
+      }
       if (context.flushSubnormalsToZero()) {
         quotient.value = quotient.value.FlushSubnormalToZero();
       }

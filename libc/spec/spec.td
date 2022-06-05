@@ -138,16 +138,23 @@ class FunctionSpec<string name, RetValSpec return, list<ArgSpec> args> {
   list<ArgSpec> Args = args;
 }
 
+class ObjectSpec<string name, string type> {
+  string Name = name;
+  string Type = type;
+}
+
 class HeaderSpec<string name,
                 list<Macro> macros = [],
                 list<Type> types = [],
                 list<EnumeratedNameValue> enumerations = [],
-                list<FunctionSpec> functions = []> {
+                list<FunctionSpec> functions = [],
+                list<ObjectSpec> objects = []> {
   string Name = name;
   list<FunctionSpec> Functions = functions;
   list<Type> Types = types;
   list<Macro> Macros = macros;
   list<EnumeratedNameValue> Enumerations = enumerations;
+  list<ObjectSpec> Objects = objects;
 }
 
 class StandardSpec<string name> {

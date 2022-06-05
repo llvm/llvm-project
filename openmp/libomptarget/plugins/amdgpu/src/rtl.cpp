@@ -336,6 +336,7 @@ struct EnvironmentVariables {
   int TeamLimit;
   int TeamThreadLimit;
   int MaxTeamsDefault;
+  int DynamicMemSize;
 };
 
 template <uint32_t wavesize>
@@ -692,9 +693,9 @@ public:
     return HostFineGrainedMemoryPool;
   }
 
-  static int readEnvElseMinusOne(const char *Env) {
+  static int readEnv(const char *Env, int Default = -1) {
     const char *envStr = getenv(Env);
-    int res = -1;
+    int res = Default;
     if (envStr) {
       res = std::stoi(envStr);
       DP("Parsed %s=%d\n", Env, res);
@@ -811,10 +812,11 @@ public:
     }
 
     // Get environment variables regarding teams
-    Env.TeamLimit = readEnvElseMinusOne("OMP_TEAM_LIMIT");
-    Env.NumTeams = readEnvElseMinusOne("OMP_NUM_TEAMS");
-    Env.MaxTeamsDefault = readEnvElseMinusOne("OMP_MAX_TEAMS_DEFAULT");
-    Env.TeamThreadLimit = readEnvElseMinusOne("OMP_TEAMS_THREAD_LIMIT");
+    Env.TeamLimit = readEnv("OMP_TEAM_LIMIT");
+    Env.NumTeams = readEnv("OMP_NUM_TEAMS");
+    Env.MaxTeamsDefault = readEnv("OMP_MAX_TEAMS_DEFAULT");
+    Env.TeamThreadLimit = readEnv("OMP_TEAMS_THREAD_LIMIT");
+    Env.DynamicMemSize = readEnv("LIBOMPTARGET_SHARED_MEMORY_SIZE", 0);
 
     // Default state.
     RequiresFlags = OMP_REQ_UNDEFINED;
@@ -1123,7 +1125,8 @@ int32_t runRegionLocked(int32_t device_id, void *tgt_entry_ptr, void **tgt_args,
 
   const atl_kernel_info_t KernelInfoEntry =
       KernelInfoTable[device_id][kernel_name];
-  const uint32_t group_segment_size = KernelInfoEntry.group_segment_size;
+  const uint32_t group_segment_size =
+      KernelInfoEntry.group_segment_size + DeviceInfo.Env.DynamicMemSize;
   const uint32_t sgpr_count = KernelInfoEntry.sgpr_count;
   const uint32_t vgpr_count = KernelInfoEntry.vgpr_count;
   const uint32_t sgpr_spill_count = KernelInfoEntry.sgpr_spill_count;
@@ -1182,7 +1185,7 @@ int32_t runRegionLocked(int32_t device_id, void *tgt_entry_ptr, void **tgt_args,
     packet->grid_size_y = 1;
     packet->grid_size_z = 1;
     packet->private_segment_size = KernelInfoEntry.private_segment_size;
-    packet->group_segment_size = KernelInfoEntry.group_segment_size;
+    packet->group_segment_size = group_segment_size;
     packet->kernel_object = KernelInfoEntry.kernel_object;
     packet->kernarg_address = 0;     // use the block allocator
     packet->reserved2 = 0;           // impl writes id_ here
@@ -1530,14 +1533,14 @@ struct device_environment {
   __tgt_device_image *image;
   const size_t img_size;
 
-  device_environment(int device_id, int number_devices,
+  device_environment(int device_id, int number_devices, int dynamic_mem_size,
                      __tgt_device_image *image, const size_t img_size)
       : image(image), img_size(img_size) {
 
     host_device_env.NumDevices = number_devices;
     host_device_env.DeviceNum = device_id;
     host_device_env.DebugKind = 0;
-    host_device_env.DynamicMemSize = 0;
+    host_device_env.DynamicMemSize = dynamic_mem_size;
     if (char *envStr = getenv("LIBOMPTARGET_DEVICE_RTL_DEBUG")) {
       host_device_env.DebugKind = std::stoi(envStr);
     }
@@ -1861,8 +1864,9 @@ __tgt_target_table *__tgt_rtl_load_binary_locked(int32_t device_id,
   }
 
   {
-    auto env = device_environment(device_id, DeviceInfo.NumberOfDevices, image,
-                                  img_size);
+    auto env =
+        device_environment(device_id, DeviceInfo.NumberOfDevices,
+                           DeviceInfo.Env.DynamicMemSize, image, img_size);
 
     auto &KernelInfo = DeviceInfo.KernelInfoTable[device_id];
     auto &SymbolInfo = DeviceInfo.SymbolInfoTable[device_id];

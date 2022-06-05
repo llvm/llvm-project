@@ -1,5 +1,5 @@
 ; RUN: llvm-as %s -o %t.o
-; RUN: wasm-ld %t.o -o %t.wasm -lto-O0
+; RUN: wasm-ld %t.o -o %t.wasm --lto-O0
 
 ; Atomic operations will not fail to compile if atomics are not
 ; enabled because LLVM atomics will be lowered to regular ops.

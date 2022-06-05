@@ -1052,8 +1052,7 @@ void SystemZAsmPrinter::emitPPA1(MCSymbol *FnEndSym) {
 }
 
 void SystemZAsmPrinter::emitFunctionEntryLabel() {
-  const SystemZSubtarget &Subtarget =
-      static_cast<const SystemZSubtarget &>(MF->getSubtarget());
+  const SystemZSubtarget &Subtarget = MF->getSubtarget<SystemZSubtarget>();
 
   if (Subtarget.getTargetTriple().isOSzOS()) {
     MCContext &OutContext = OutStreamer->getContext();

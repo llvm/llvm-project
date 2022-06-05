@@ -5,6 +5,9 @@ _start:
   .functype _start () -> ()
   end_function
 
+# RUN: not wasm-ld %t -o 2>&1 | FileCheck --check-prefix=NO_O_VAL %s
+# NO_O_VAL: error: -o: missing argument
+
 # RUN: not wasm-ld -o %t.exe 2>&1 | FileCheck -check-prefix=IN %s
 # IN: error: no input files
 

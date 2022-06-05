@@ -729,6 +729,7 @@ steps:
   - group: "ARM"
     steps:
     - label: "AArch64"
+      skip: "Linaro agents offline."
       command: "libcxx/utils/ci/run-buildbot aarch64"
       artifact_paths:
         - "**/test-results.xml"
@@ -743,6 +744,7 @@ steps:
       timeout_in_minutes: 120
 
     - label: "AArch64 -fno-exceptions"
+      skip: "Linaro agents offline."
       command: "libcxx/utils/ci/run-buildbot aarch64-noexceptions"
       artifact_paths:
         - "**/test-results.xml"
@@ -757,6 +759,7 @@ steps:
       timeout_in_minutes: 120
 
     - label: "Armv8"
+      skip: "Linaro agents offline."
       command: "libcxx/utils/ci/run-buildbot armv8"
       artifact_paths:
         - "**/test-results.xml"
@@ -771,6 +774,7 @@ steps:
       timeout_in_minutes: 120
 
     - label: "Armv8 -fno-exceptions"
+      skip: "Linaro agents offline."
       command: "libcxx/utils/ci/run-buildbot armv8-noexceptions"
       artifact_paths:
         - "**/test-results.xml"
@@ -785,6 +789,7 @@ steps:
       timeout_in_minutes: 120
 
     - label: "Armv7"
+      skip: "Linaro agents offline."
       command: "libcxx/utils/ci/run-buildbot armv7"
       artifact_paths:
         - "**/test-results.xml"
@@ -799,6 +804,7 @@ steps:
       timeout_in_minutes: 120
 
     - label: "Armv7 -fno-exceptions"
+      skip: "Linaro agents offline."
       command: "libcxx/utils/ci/run-buildbot armv7-noexceptions"
       artifact_paths:
         - "**/test-results.xml"

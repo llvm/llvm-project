@@ -86,6 +86,8 @@ public:
 
   bool applyMappingBFE(const OperandsMapper &OpdMapper, bool Signed) const;
 
+  bool applyMappingMAD_64_32(const OperandsMapper &OpdMapper) const;
+
   Register handleD16VData(MachineIRBuilder &B, MachineRegisterInfo &MRI,
                           Register Reg) const;
 

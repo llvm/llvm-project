@@ -13,6 +13,7 @@
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/OpImplementation.h"
 #include "mlir/IR/PatternMatch.h"
+#include "mlir/Interfaces/ControlFlowInterfaces.h"
 #include "mlir/Rewrite/FrozenRewritePatternSet.h"
 #include "mlir/Rewrite/PatternApplicator.h"
 #include "llvm/ADT/ScopeExit.h"
@@ -113,6 +114,39 @@ LogicalResult PatternApplicatorExtension::findAllMatches(
   return success();
 }
 } // namespace
+
+//===----------------------------------------------------------------------===//
+// GetClosestIsolatedParentOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult transform::GetClosestIsolatedParentOp::apply(
+    transform::TransformResults &results, transform::TransformState &state) {
+  SetVector<Operation *> parents;
+  for (Operation *target : state.getPayloadOps(getTarget())) {
+    Operation *parent =
+        target->getParentWithTrait<OpTrait::IsIsolatedFromAbove>();
+    if (!parent) {
+      InFlightDiagnostic diag =
+          emitError() << "could not find an isolated-from-above parent op";
+      diag.attachNote(target->getLoc()) << "target op";
+      return diag;
+    }
+    parents.insert(parent);
+  }
+  results.set(getResult().cast<OpResult>(), parents.getArrayRef());
+  return success();
+}
+
+void transform::GetClosestIsolatedParentOp::getEffects(
+    SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
+  effects.emplace_back(MemoryEffects::Read::get(), getTarget(),
+                       TransformMappingResource::get());
+  effects.emplace_back(MemoryEffects::Allocate::get(), getParent(),
+                       TransformMappingResource::get());
+  effects.emplace_back(MemoryEffects::Write::get(), getParent(),
+                       TransformMappingResource::get());
+  effects.emplace_back(MemoryEffects::Read::get(), PayloadIRResource::get());
+}
 
 //===----------------------------------------------------------------------===//
 // PDLMatchOp
@@ -287,6 +321,35 @@ void transform::SequenceOp::getEffects(
     for (const auto &effect : nestedEffects)
       effects.emplace_back(effect.getEffect(), getRoot(), effect.getResource());
   }
+}
+
+OperandRange transform::SequenceOp::getSuccessorEntryOperands(unsigned index) {
+  assert(index == 0 && "unexpected region index");
+  if (getOperation()->getNumOperands() == 1)
+    return getOperation()->getOperands();
+  return OperandRange(getOperation()->operand_end(),
+                      getOperation()->operand_end());
+}
+
+void transform::SequenceOp::getSuccessorRegions(
+    Optional<unsigned> index, ArrayRef<Attribute> operands,
+    SmallVectorImpl<RegionSuccessor> &regions) {
+  if (!index.hasValue()) {
+    Region *bodyRegion = &getBody();
+    regions.emplace_back(bodyRegion, !operands.empty()
+                                         ? bodyRegion->getArguments()
+                                         : Block::BlockArgListType());
+    return;
+  }
+
+  assert(*index == 0 && "unexpected region index");
+  regions.emplace_back(getOperation()->getResults());
+}
+
+void transform::SequenceOp::getRegionInvocationBounds(
+    ArrayRef<Attribute> operands, SmallVectorImpl<InvocationBounds> &bounds) {
+  (void)operands;
+  bounds.emplace_back(1, 1);
 }
 
 //===----------------------------------------------------------------------===//

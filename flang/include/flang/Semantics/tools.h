@@ -614,5 +614,10 @@ bool HasDefinedIo(
 const Symbol *FindUnsafeIoDirectComponent(
     GenericKind::DefinedIo, const DerivedTypeSpec &, const Scope * = nullptr);
 
+// Some intrinsic operators have more than one name (e.g. `operator(.eq.)` and
+// `operator(==)`). GetAllNames() returns them all, including symbolName.
+std::forward_list<std::string> GetAllNames(
+    const SemanticsContext &, const SourceName &);
+
 } // namespace Fortran::semantics
 #endif // FORTRAN_SEMANTICS_TOOLS_H_

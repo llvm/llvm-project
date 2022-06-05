@@ -275,13 +275,13 @@ function(add_libc_multi_impl_test name)
         ${fq_config_name}_test
         SUITE
           libc_string_unittests
-        DEPENDS
-          ${fq_config_name}
         COMPILE_OPTIONS
           ${LIBC_COMPILE_OPTIONS_NATIVE}
         LINK_LIBRARIES
           LibcMemoryHelpers
         ${ARGN}
+        DEPENDS
+          ${fq_config_name}
       )
       get_fq_target_name(${fq_config_name}_test fq_target_name)
     else()

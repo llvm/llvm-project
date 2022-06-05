@@ -1981,7 +1981,8 @@ void CHR::addToMergedCondition(bool IsTrueBiased, Value *Cond,
       !isGuaranteedNotToBeUndefOrPoison(Cond))
     Cond = IRB.CreateFreeze(Cond);
 
-  MergedCondition = IRB.CreateAnd(MergedCondition, Cond);
+  // Use logical and to avoid propagating poison from later conditions.
+  MergedCondition = IRB.CreateLogicalAnd(MergedCondition, Cond);
 }
 
 void CHR::transformScopes(SmallVectorImpl<CHRScope *> &CHRScopes) {

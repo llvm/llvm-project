@@ -87,7 +87,7 @@ void SanitizerMetadata::disableSanitizerForGlobal(llvm::GlobalVariable *GV) {
 }
 
 void SanitizerMetadata::disableSanitizerForInstruction(llvm::Instruction *I) {
-  I->setMetadata(CGM.getModule().getMDKindID("nosanitize"),
+  I->setMetadata(llvm::LLVMContext::MD_nosanitize,
                  llvm::MDNode::get(CGM.getLLVMContext(), None));
 }
 

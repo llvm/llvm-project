@@ -11,7 +11,7 @@
 //
 // clang-format off
 
-// UNSUPPORTED: libcpp-has-no-threads
+// UNSUPPORTED: no-threads
 
 // <mutex>
 

@@ -184,6 +184,21 @@ LogicalResult mlir::test::TestRemoveTestExtensionOp::apply(
   state.removeExtension<TestTransformStateExtension>();
   return success();
 }
+LogicalResult mlir::test::TestTransformOpWithRegions::apply(
+    transform::TransformResults &results, transform::TransformState &state) {
+  return success();
+}
+
+void mlir::test::TestTransformOpWithRegions::getEffects(
+    SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {}
+
+LogicalResult mlir::test::TestBranchingTransformOpTerminator::apply(
+    transform::TransformResults &results, transform::TransformState &state) {
+  return success();
+}
+
+void mlir::test::TestBranchingTransformOpTerminator::getEffects(
+    SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {}
 
 namespace {
 /// Test extension of the Transform dialect. Registers additional ops and

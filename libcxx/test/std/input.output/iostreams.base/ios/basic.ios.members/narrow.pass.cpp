@@ -12,7 +12,7 @@
 
 // char narrow(char_type c, char dfault) const;
 
-// XFAIL: libcpp-has-no-wide-characters
+// XFAIL: no-wide-characters
 
 #include <ios>
 #include <cassert>

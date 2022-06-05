@@ -68,18 +68,15 @@ define dso_local <2 x double> @test2(<2 x float>* nocapture readonly %a, <2 x fl
 ;
 ; AIX-32-LABEL: test2:
 ; AIX-32:       # %bb.0: # %entry
-; AIX-32-NEXT:    lfs f0, 4(r3)
-; AIX-32-NEXT:    lfs f1, 0(r3)
 ; AIX-32-NEXT:    lwz r5, L..C0(r2) # %const.0
-; AIX-32-NEXT:    lfs f2, 4(r4)
-; AIX-32-NEXT:    xscvdpspn v2, f0
-; AIX-32-NEXT:    lfs f0, 0(r4)
-; AIX-32-NEXT:    lxvw4x v0, 0, r5
-; AIX-32-NEXT:    xscvdpspn v3, f1
-; AIX-32-NEXT:    xscvdpspn v4, f2
-; AIX-32-NEXT:    xscvdpspn v5, f0
-; AIX-32-NEXT:    vperm v2, v3, v2, v0
-; AIX-32-NEXT:    vperm v3, v5, v4, v0
+; AIX-32-NEXT:    li r6, 4
+; AIX-32-NEXT:    lxsiwzx v3, 0, r3
+; AIX-32-NEXT:    lxsiwzx v0, 0, r4
+; AIX-32-NEXT:    lxsiwzx v2, r3, r6
+; AIX-32-NEXT:    lxsiwzx v5, r4, r6
+; AIX-32-NEXT:    lxvw4x v4, 0, r5
+; AIX-32-NEXT:    vperm v2, v3, v2, v4
+; AIX-32-NEXT:    vperm v3, v0, v5, v4
 ; AIX-32-NEXT:    xvsubsp vs0, v2, v3
 ; AIX-32-NEXT:    xxsldwi vs1, vs0, vs0, 1
 ; AIX-32-NEXT:    xscvspdpn f0, vs0
@@ -117,18 +114,15 @@ define dso_local <2 x double> @test3(<2 x float>* nocapture readonly %a, <2 x fl
 ;
 ; AIX-32-LABEL: test3:
 ; AIX-32:       # %bb.0: # %entry
-; AIX-32-NEXT:    lfs f0, 4(r3)
-; AIX-32-NEXT:    lfs f1, 0(r3)
 ; AIX-32-NEXT:    lwz r5, L..C1(r2) # %const.0
-; AIX-32-NEXT:    lfs f2, 4(r4)
-; AIX-32-NEXT:    xscvdpspn v2, f0
-; AIX-32-NEXT:    lfs f0, 0(r4)
-; AIX-32-NEXT:    lxvw4x v0, 0, r5
-; AIX-32-NEXT:    xscvdpspn v3, f1
-; AIX-32-NEXT:    xscvdpspn v4, f2
-; AIX-32-NEXT:    xscvdpspn v5, f0
-; AIX-32-NEXT:    vperm v2, v3, v2, v0
-; AIX-32-NEXT:    vperm v3, v5, v4, v0
+; AIX-32-NEXT:    li r6, 4
+; AIX-32-NEXT:    lxsiwzx v3, 0, r3
+; AIX-32-NEXT:    lxsiwzx v0, 0, r4
+; AIX-32-NEXT:    lxsiwzx v2, r3, r6
+; AIX-32-NEXT:    lxsiwzx v5, r4, r6
+; AIX-32-NEXT:    lxvw4x v4, 0, r5
+; AIX-32-NEXT:    vperm v2, v3, v2, v4
+; AIX-32-NEXT:    vperm v3, v0, v5, v4
 ; AIX-32-NEXT:    xvaddsp vs0, v2, v3
 ; AIX-32-NEXT:    xxsldwi vs1, vs0, vs0, 1
 ; AIX-32-NEXT:    xscvspdpn f0, vs0
@@ -166,18 +160,15 @@ define dso_local <2 x double> @test4(<2 x float>* nocapture readonly %a, <2 x fl
 ;
 ; AIX-32-LABEL: test4:
 ; AIX-32:       # %bb.0: # %entry
-; AIX-32-NEXT:    lfs f0, 4(r3)
-; AIX-32-NEXT:    lfs f1, 0(r3)
 ; AIX-32-NEXT:    lwz r5, L..C2(r2) # %const.0
-; AIX-32-NEXT:    lfs f2, 4(r4)
-; AIX-32-NEXT:    xscvdpspn v2, f0
-; AIX-32-NEXT:    lfs f0, 0(r4)
-; AIX-32-NEXT:    lxvw4x v0, 0, r5
-; AIX-32-NEXT:    xscvdpspn v3, f1
-; AIX-32-NEXT:    xscvdpspn v4, f2
-; AIX-32-NEXT:    xscvdpspn v5, f0
-; AIX-32-NEXT:    vperm v2, v3, v2, v0
-; AIX-32-NEXT:    vperm v3, v5, v4, v0
+; AIX-32-NEXT:    li r6, 4
+; AIX-32-NEXT:    lxsiwzx v3, 0, r3
+; AIX-32-NEXT:    lxsiwzx v0, 0, r4
+; AIX-32-NEXT:    lxsiwzx v2, r3, r6
+; AIX-32-NEXT:    lxsiwzx v5, r4, r6
+; AIX-32-NEXT:    lxvw4x v4, 0, r5
+; AIX-32-NEXT:    vperm v2, v3, v2, v4
+; AIX-32-NEXT:    vperm v3, v0, v5, v4
 ; AIX-32-NEXT:    xvmulsp vs0, v2, v3
 ; AIX-32-NEXT:    xxsldwi vs1, vs0, vs0, 1
 ; AIX-32-NEXT:    xscvspdpn f0, vs0
