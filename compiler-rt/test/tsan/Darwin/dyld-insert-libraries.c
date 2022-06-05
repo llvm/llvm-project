@@ -110,4 +110,3 @@ int main() {
 // CHECK: Hello from pthread
 // CHECK: THREAD_TERMINATE [[CHILD]], self: [[CHILD]], name: child thread
 // CHECK: THREAD_DESTROY   [[CHILD]]
-// CHECK: Done.

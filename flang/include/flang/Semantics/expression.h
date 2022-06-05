@@ -255,7 +255,7 @@ protected:
   int IntegerTypeSpecKind(const parser::IntegerTypeSpec &);
 
 private:
-  MaybeExpr Analyze(const parser::IntLiteralConstant &);
+  MaybeExpr Analyze(const parser::IntLiteralConstant &, bool negated = false);
   MaybeExpr Analyze(const parser::RealLiteralConstant &);
   MaybeExpr Analyze(const parser::ComplexPart &);
   MaybeExpr Analyze(const parser::ComplexLiteralConstant &);
@@ -308,7 +308,8 @@ private:
       const std::optional<parser::KindParam> &, int defaultKind);
   template <typename PARSED>
   MaybeExpr ExprOrVariable(const PARSED &, parser::CharBlock source);
-  template <typename PARSED> MaybeExpr IntLiteralConstant(const PARSED &);
+  template <typename PARSED>
+  MaybeExpr IntLiteralConstant(const PARSED &, bool negated = false);
   MaybeExpr AnalyzeString(std::string &&, int kind);
   std::optional<Expr<SubscriptInteger>> AsSubscript(MaybeExpr &&);
   std::optional<Expr<SubscriptInteger>> TripletPart(
@@ -335,7 +336,7 @@ private:
   };
 
   std::optional<CalleeAndArguments> AnalyzeProcedureComponentRef(
-      const parser::ProcComponentRef &, ActualArguments &&);
+      const parser::ProcComponentRef &, ActualArguments &&, bool isSubroutine);
   std::optional<characteristics::Procedure> CheckCall(
       parser::CharBlock, const ProcedureDesignator &, ActualArguments &);
   using AdjustActuals =
@@ -343,7 +344,7 @@ private:
   bool ResolveForward(const Symbol &);
   std::pair<const Symbol *, bool /* failure due to NULL() actuals */>
   ResolveGeneric(const Symbol &, const ActualArguments &, const AdjustActuals &,
-      bool mightBeStructureConstructor = false);
+      bool isSubroutine, bool mightBeStructureConstructor = false);
   void EmitGenericResolutionError(const Symbol &, bool dueToNullActuals);
   const Symbol &AccessSpecific(
       const Symbol &originalGeneric, const Symbol &specific);

@@ -107,17 +107,19 @@ define void @test3(i32* %begin, i32* %end) nounwind ssp {
 ; CHECK-LABEL: 'test3'
 ; CHECK-NEXT:  Classifying expressions for: @test3
 ; CHECK-NEXT:    %indvar.i.i = phi i64 [ %tmp, %for.body.i.i ], [ 0, %entry ]
-; CHECK-NEXT:    --> {0,+,1}<nuw><nsw><%for.body.i.i> U: [0,-9223372036854775808) S: [0,-9223372036854775808) Exits: <<Unknown>> LoopDispositions: { %for.body.i.i: Computable }
+; CHECK-NEXT:    --> {0,+,1}<nuw><nsw><%for.body.i.i> U: [0,4611686018427387904) S: [0,4611686018427387904) Exits: ((-4 + (-1 * (ptrtoint i32* %begin to i64)) + (ptrtoint i32* %end to i64)) /u 4) LoopDispositions: { %for.body.i.i: Computable }
 ; CHECK-NEXT:    %tmp = add nsw i64 %indvar.i.i, 1
-; CHECK-NEXT:    --> {1,+,1}<nuw><nsw><%for.body.i.i> U: [1,-9223372036854775808) S: [1,-9223372036854775808) Exits: <<Unknown>> LoopDispositions: { %for.body.i.i: Computable }
+; CHECK-NEXT:    --> {1,+,1}<nuw><nsw><%for.body.i.i> U: [1,4611686018427387905) S: [1,4611686018427387905) Exits: (1 + ((-4 + (-1 * (ptrtoint i32* %begin to i64)) + (ptrtoint i32* %end to i64)) /u 4))<nuw><nsw> LoopDispositions: { %for.body.i.i: Computable }
 ; CHECK-NEXT:    %ptrincdec.i.i = getelementptr inbounds i32, i32* %begin, i64 %tmp
-; CHECK-NEXT:    --> {(4 + %begin),+,4}<%for.body.i.i> U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %for.body.i.i: Computable }
+; CHECK-NEXT:    --> {(4 + %begin),+,4}<nuw><%for.body.i.i> U: full-set S: full-set Exits: (4 + (4 * ((-4 + (-1 * (ptrtoint i32* %begin to i64)) + (ptrtoint i32* %end to i64)) /u 4))<nuw> + %begin) LoopDispositions: { %for.body.i.i: Computable }
 ; CHECK-NEXT:    %__first.addr.08.i.i = getelementptr inbounds i32, i32* %begin, i64 %indvar.i.i
-; CHECK-NEXT:    --> {%begin,+,4}<nuw><%for.body.i.i> U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %for.body.i.i: Computable }
+; CHECK-NEXT:    --> {%begin,+,4}<nuw><%for.body.i.i> U: full-set S: full-set Exits: ((4 * ((-4 + (-1 * (ptrtoint i32* %begin to i64)) + (ptrtoint i32* %end to i64)) /u 4))<nuw> + %begin) LoopDispositions: { %for.body.i.i: Computable }
 ; CHECK-NEXT:  Determining loop execution counts for: @test3
-; CHECK-NEXT:  Loop %for.body.i.i: Unpredictable backedge-taken count.
-; CHECK-NEXT:  Loop %for.body.i.i: Unpredictable max backedge-taken count.
-; CHECK-NEXT:  Loop %for.body.i.i: Unpredictable predicated backedge-taken count.
+; CHECK-NEXT:  Loop %for.body.i.i: backedge-taken count is ((-4 + (-1 * (ptrtoint i32* %begin to i64)) + (ptrtoint i32* %end to i64)) /u 4)
+; CHECK-NEXT:  Loop %for.body.i.i: max backedge-taken count is 4611686018427387903
+; CHECK-NEXT:  Loop %for.body.i.i: Predicated backedge-taken count is ((-4 + (-1 * (ptrtoint i32* %begin to i64)) + (ptrtoint i32* %end to i64)) /u 4)
+; CHECK-NEXT:   Predicates:
+; CHECK:       Loop %for.body.i.i: Trip multiple is 1
 ;
 entry:
   %cmp7.i.i = icmp eq i32* %begin, %end
@@ -165,21 +167,21 @@ define i32 @PR12375(i32* readnone %arg) {
 ; CHECK-LABEL: 'PR12375'
 ; CHECK-NEXT:  Classifying expressions for: @PR12375
 ; CHECK-NEXT:    %tmp = getelementptr inbounds i32, i32* %arg, i64 2
-; CHECK-NEXT:    --> (8 + %arg) U: full-set S: full-set
+; CHECK-NEXT:    --> (8 + %arg)<nuw> U: [8,0) S: [8,0)
 ; CHECK-NEXT:    %tmp2 = phi i32* [ %arg, %bb ], [ %tmp5, %bb1 ]
-; CHECK-NEXT:    --> {%arg,+,4}<nuw><%bb1> U: full-set S: full-set Exits: ((4 * ((-1 + (-1 * (ptrtoint i32* %arg to i64)) + ((4 + (ptrtoint i32* %arg to i64)) umax (8 + (ptrtoint i32* %arg to i64)))) /u 4))<nuw> + %arg) LoopDispositions: { %bb1: Computable }
+; CHECK-NEXT:    --> {%arg,+,4}<nuw><%bb1> U: full-set S: full-set Exits: (4 + %arg)<nuw> LoopDispositions: { %bb1: Computable }
 ; CHECK-NEXT:    %tmp3 = phi i32 [ 0, %bb ], [ %tmp4, %bb1 ]
-; CHECK-NEXT:    --> {0,+,1}<nuw><nsw><%bb1> U: [0,-2147483648) S: [0,-2147483648) Exits: (trunc i64 ((-1 + (-1 * (ptrtoint i32* %arg to i64)) + ((4 + (ptrtoint i32* %arg to i64)) umax (8 + (ptrtoint i32* %arg to i64)))) /u 4) to i32) LoopDispositions: { %bb1: Computable }
+; CHECK-NEXT:    --> {0,+,1}<nuw><nsw><%bb1> U: [0,-2147483648) S: [0,-2147483648) Exits: 1 LoopDispositions: { %bb1: Computable }
 ; CHECK-NEXT:    %tmp4 = add nsw i32 %tmp3, 1
-; CHECK-NEXT:    --> {1,+,1}<nuw><%bb1> U: [1,0) S: [1,0) Exits: (1 + (trunc i64 ((-1 + (-1 * (ptrtoint i32* %arg to i64)) + ((4 + (ptrtoint i32* %arg to i64)) umax (8 + (ptrtoint i32* %arg to i64)))) /u 4) to i32)) LoopDispositions: { %bb1: Computable }
+; CHECK-NEXT:    --> {1,+,1}<nuw><%bb1> U: [1,0) S: [1,0) Exits: 2 LoopDispositions: { %bb1: Computable }
 ; CHECK-NEXT:    %tmp5 = getelementptr inbounds i32, i32* %tmp2, i64 1
-; CHECK-NEXT:    --> {(4 + %arg),+,4}<nuw><%bb1> U: full-set S: full-set Exits: (4 + (4 * ((-1 + (-1 * (ptrtoint i32* %arg to i64)) + ((4 + (ptrtoint i32* %arg to i64)) umax (8 + (ptrtoint i32* %arg to i64)))) /u 4))<nuw> + %arg) LoopDispositions: { %bb1: Computable }
+; CHECK-NEXT:    --> {(4 + %arg)<nuw>,+,4}<nuw><%bb1> U: [4,0) S: [4,0) Exits: (8 + %arg)<nuw> LoopDispositions: { %bb1: Computable }
 ; CHECK-NEXT:  Determining loop execution counts for: @PR12375
-; CHECK-NEXT:  Loop %bb1: backedge-taken count is ((-1 + (-1 * (ptrtoint i32* %arg to i64)) + ((4 + (ptrtoint i32* %arg to i64)) umax (8 + (ptrtoint i32* %arg to i64)))) /u 4)
-; CHECK-NEXT:  Loop %bb1: max backedge-taken count is 1, actual taken count either this or zero.
-; CHECK-NEXT:  Loop %bb1: Predicated backedge-taken count is ((-1 + (-1 * (ptrtoint i32* %arg to i64)) + ((4 + (ptrtoint i32* %arg to i64)) umax (8 + (ptrtoint i32* %arg to i64)))) /u 4)
+; CHECK-NEXT:  Loop %bb1: backedge-taken count is 1
+; CHECK-NEXT:  Loop %bb1: max backedge-taken count is 1
+; CHECK-NEXT:  Loop %bb1: Predicated backedge-taken count is 1
 ; CHECK-NEXT:   Predicates:
-; CHECK:       Loop %bb1: Trip multiple is 1
+; CHECK:       Loop %bb1: Trip multiple is 2
 ;
 bb:
   %tmp = getelementptr inbounds i32, i32* %arg, i64 2
@@ -201,13 +203,13 @@ define void @PR12376(i32* nocapture %arg, i32* nocapture %arg1)  {
 ; CHECK-LABEL: 'PR12376'
 ; CHECK-NEXT:  Classifying expressions for: @PR12376
 ; CHECK-NEXT:    %tmp = phi i32* [ %arg, %bb ], [ %tmp4, %bb2 ]
-; CHECK-NEXT:    --> {%arg,+,4}<nuw><%bb2> U: full-set S: full-set Exits: ((4 * ((-1 + (-1 * (ptrtoint i32* %arg to i64)) + ((4 + (ptrtoint i32* %arg to i64)) umax (ptrtoint i32* %arg1 to i64))) /u 4))<nuw> + %arg) LoopDispositions: { %bb2: Computable }
+; CHECK-NEXT:    --> {%arg,+,4}<nuw><%bb2> U: full-set S: full-set Exits: ((4 * ((-1 + (-1 * (ptrtoint i32* %arg to i64)) + ((4 + (ptrtoint i32* %arg to i64))<nuw> umax (ptrtoint i32* %arg1 to i64))) /u 4))<nuw> + %arg) LoopDispositions: { %bb2: Computable }
 ; CHECK-NEXT:    %tmp4 = getelementptr inbounds i32, i32* %tmp, i64 1
-; CHECK-NEXT:    --> {(4 + %arg),+,4}<nuw><%bb2> U: full-set S: full-set Exits: (4 + (4 * ((-1 + (-1 * (ptrtoint i32* %arg to i64)) + ((4 + (ptrtoint i32* %arg to i64)) umax (ptrtoint i32* %arg1 to i64))) /u 4))<nuw> + %arg) LoopDispositions: { %bb2: Computable }
+; CHECK-NEXT:    --> {(4 + %arg)<nuw>,+,4}<nuw><%bb2> U: [4,0) S: [4,0) Exits: (4 + (4 * ((-1 + (-1 * (ptrtoint i32* %arg to i64)) + ((4 + (ptrtoint i32* %arg to i64))<nuw> umax (ptrtoint i32* %arg1 to i64))) /u 4))<nuw> + %arg) LoopDispositions: { %bb2: Computable }
 ; CHECK-NEXT:  Determining loop execution counts for: @PR12376
-; CHECK-NEXT:  Loop %bb2: backedge-taken count is ((-1 + (-1 * (ptrtoint i32* %arg to i64)) + ((4 + (ptrtoint i32* %arg to i64)) umax (ptrtoint i32* %arg1 to i64))) /u 4)
-; CHECK-NEXT:  Loop %bb2: max backedge-taken count is 4611686018427387903
-; CHECK-NEXT:  Loop %bb2: Predicated backedge-taken count is ((-1 + (-1 * (ptrtoint i32* %arg to i64)) + ((4 + (ptrtoint i32* %arg to i64)) umax (ptrtoint i32* %arg1 to i64))) /u 4)
+; CHECK-NEXT:  Loop %bb2: backedge-taken count is ((-1 + (-1 * (ptrtoint i32* %arg to i64)) + ((4 + (ptrtoint i32* %arg to i64))<nuw> umax (ptrtoint i32* %arg1 to i64))) /u 4)
+; CHECK-NEXT:  Loop %bb2: max backedge-taken count is 4611686018427387902
+; CHECK-NEXT:  Loop %bb2: Predicated backedge-taken count is ((-1 + (-1 * (ptrtoint i32* %arg to i64)) + ((4 + (ptrtoint i32* %arg to i64))<nuw> umax (ptrtoint i32* %arg1 to i64))) /u 4)
 ; CHECK-NEXT:   Predicates:
 ; CHECK:       Loop %bb2: Trip multiple is 1
 ;
@@ -270,21 +272,21 @@ define void @test4(i32 %arg) {
 ; CHECK-NEXT:    %array = alloca [10 x i32], align 4
 ; CHECK-NEXT:    --> %array U: [0,-3) S: [-9223372036854775808,9223372036854775805)
 ; CHECK-NEXT:    %index = phi i32 [ %inc5, %for.body ], [ %arg, %entry ]
-; CHECK-NEXT:    --> {%arg,+,1}<nsw><%for.body> U: full-set S: full-set Exits: (-1 + (10 smax (1 + %arg)))<nsw> LoopDispositions: { %for.body: Computable }
+; CHECK-NEXT:    --> {%arg,+,1}<nsw><%for.body> U: full-set S: full-set Exits: (-1 + (10 smax (1 + %arg)<nsw>))<nsw> LoopDispositions: { %for.body: Computable }
 ; CHECK-NEXT:    %sub = add nsw i32 %index, -2
-; CHECK-NEXT:    --> {(-2 + %arg)<nsw>,+,1}<nsw><%for.body> U: full-set S: full-set Exits: (-3 + (10 smax (1 + %arg)))<nsw> LoopDispositions: { %for.body: Computable }
+; CHECK-NEXT:    --> {(-2 + %arg)<nsw>,+,1}<nsw><%for.body> U: full-set S: full-set Exits: (-3 + (10 smax (1 + %arg)<nsw>))<nsw> LoopDispositions: { %for.body: Computable }
 ; CHECK-NEXT:    %idxprom = sext i32 %sub to i64
-; CHECK-NEXT:    --> {(-2 + (sext i32 %arg to i64))<nsw>,+,1}<nsw><%for.body> U: [-2147483650,4294967304) S: [-2147483650,4294967304) Exits: (-2 + (zext i32 (-1 + (-1 * %arg) + (10 smax (1 + %arg))) to i64) + (sext i32 %arg to i64)) LoopDispositions: { %for.body: Computable }
+; CHECK-NEXT:    --> {(-2 + (sext i32 %arg to i64))<nsw>,+,1}<nsw><%for.body> U: [-2147483650,4294967304) S: [-2147483650,4294967304) Exits: (-2 + (zext i32 (-1 + (-1 * %arg) + (10 smax (1 + %arg)<nsw>)) to i64) + (sext i32 %arg to i64)) LoopDispositions: { %for.body: Computable }
 ; CHECK-NEXT:    %arrayidx = getelementptr inbounds [10 x i32], [10 x i32]* %array, i64 0, i64 %idxprom
-; CHECK-NEXT:    --> {(-8 + (4 * (sext i32 %arg to i64))<nsw> + %array),+,4}<nw><%for.body> U: [0,-3) S: [-9223372036854775808,9223372036854775805) Exits: (-8 + (4 * (zext i32 (-1 + (-1 * %arg) + (10 smax (1 + %arg))) to i64))<nuw><nsw> + (4 * (sext i32 %arg to i64))<nsw> + %array) LoopDispositions: { %for.body: Computable }
+; CHECK-NEXT:    --> {(-8 + (4 * (sext i32 %arg to i64))<nsw> + %array),+,4}<nw><%for.body> U: [0,-3) S: [-9223372036854775808,9223372036854775805) Exits: (-8 + (4 * (zext i32 (-1 + (-1 * %arg) + (10 smax (1 + %arg)<nsw>)) to i64))<nuw><nsw> + (4 * (sext i32 %arg to i64))<nsw> + %array) LoopDispositions: { %for.body: Computable }
 ; CHECK-NEXT:    %data = load i32, i32* %arrayidx, align 4
 ; CHECK-NEXT:    --> %data U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %for.body: Variant }
 ; CHECK-NEXT:    %inc5 = add nsw i32 %index, 1
-; CHECK-NEXT:    --> {(1 + %arg),+,1}<nsw><%for.body> U: full-set S: full-set Exits: (10 smax (1 + %arg)) LoopDispositions: { %for.body: Computable }
+; CHECK-NEXT:    --> {(1 + %arg)<nsw>,+,1}<nsw><%for.body> U: full-set S: full-set Exits: (10 smax (1 + %arg)<nsw>) LoopDispositions: { %for.body: Computable }
 ; CHECK-NEXT:  Determining loop execution counts for: @test4
-; CHECK-NEXT:  Loop %for.body: backedge-taken count is (-1 + (-1 * %arg) + (10 smax (1 + %arg)))
+; CHECK-NEXT:  Loop %for.body: backedge-taken count is (-1 + (-1 * %arg) + (10 smax (1 + %arg)<nsw>))
 ; CHECK-NEXT:  Loop %for.body: max backedge-taken count is -2147483638
-; CHECK-NEXT:  Loop %for.body: Predicated backedge-taken count is (-1 + (-1 * %arg) + (10 smax (1 + %arg)))
+; CHECK-NEXT:  Loop %for.body: Predicated backedge-taken count is (-1 + (-1 * %arg) + (10 smax (1 + %arg)<nsw>))
 ; CHECK-NEXT:   Predicates:
 ; CHECK:       Loop %for.body: Trip multiple is 1
 ;

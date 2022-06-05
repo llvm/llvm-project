@@ -43,17 +43,13 @@ float* nocapture readonly %d) {
 
 ; CHECK-BE-AIX-32-LABEL: vector_gatherf:
 ; CHECK-BE-AIX-32-LABEL: # %bb.0: # %entry
-; CHECK-BE-AIX-32-DAG: lfs f[[REG0:[0-9]+]]
-; CHECK-BE-AIX-32-DAG: lfs f[[REG1:[0-9]+]]
-; CHECK-BE-AIX-32-DAG: lfs f[[REG2:[0-9]+]]
-; CHECK-BE-AIX-32-DAG: lfs f[[REG3:[0-9]+]]
-; CHECK-BE-AIX-32-DAG: xscvdpspn v[[VREG0:[0-9]+]], f[[REG0]]
-; CHECK-BE-AIX-32-DAG: xscvdpspn v[[VREG1:[0-9]+]], f[[REG1]]
-; CHECK-BE-AIX-32-DAG: xscvdpspn v[[VREG2:[0-9]+]], f[[REG2]]
-; CHECK-BE-AIX-32-DAG: xscvdpspn v[[VREG0:[0-9]+]], f[[REG3]]
-; CHECK-BE-AIX-32-DAG: vmrgow v[[VREG1]], v[[VREG0]], v[[VREG1]]
-; CHECK-BE-AIX-32-DAG: vmrgow v[[VREG0]], v[[VREG2]], v[[VREG0]]
-; CHECK-BE-AIX-32-NEXT: xxmrghd v[[VREG1]], v[[VREG0]], v[[VREG1]]
+; CHECK-BE-AIX-32-DAG: lxsiwzx v[[REG0:[0-9]+]]
+; CHECK-BE-AIX-32-DAG: lxsiwzx v[[REG1:[0-9]+]]
+; CHECK-BE-AIX-32-DAG: lxsiwzx v[[REG2:[0-9]+]]
+; CHECK-BE-AIX-32-DAG: lxsiwzx v[[REG3:[0-9]+]]
+; CHECK-BE-AIX-32-DAG: vmrgow v[[REG0]], v[[REG1]], v[[REG0]]
+; CHECK-BE-AIX-32-DAG: vmrgow v[[REG3]], v[[REG2]], v[[REG3]]
+; CHECK-BE-AIX-32-NEXT: xxmrghd v[[REG0]], v[[REG3]], v[[REG0]]
 ; CHECK-BE-AIX-32-NEXT: blr
 entry:
   %0 = load float, float* %a, align 4

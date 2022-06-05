@@ -8864,6 +8864,11 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
     if (VT.isVector() && VT.getVectorElementType() == MVT::i1)
       Opcode = ISD::VP_AND;
     break;
+  case ISD::VP_REDUCE_MUL:
+    // If it is VP_REDUCE_MUL mask operation then turn it to VP_REDUCE_AND
+    if (VT == MVT::i1)
+      Opcode = ISD::VP_REDUCE_AND;
+    break;
   case ISD::VP_REDUCE_ADD:
     // If it is VP_REDUCE_ADD mask operation then turn it to VP_REDUCE_XOR
     if (VT == MVT::i1)

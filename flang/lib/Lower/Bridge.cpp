@@ -95,6 +95,7 @@ struct IncrementLoopInfo {
   fir::DoLoopOp doLoop = nullptr;
 
   // Data members for unstructured loops.
+  bool hasRealControl = false;
   mlir::Value tripVariable = nullptr;
   mlir::Block *headerBlock = nullptr; // loop entry and test block
   mlir::Block *bodyBlock = nullptr;   // first loop body block
@@ -981,14 +982,29 @@ private:
     mlir::Block *bodyBlock = doStmtEval.lexicalSuccessor->block;
     mlir::Block *exitBlock = doStmtEval.parentConstruct->constructExit->block;
     IncrementLoopNestInfo incrementLoopNestInfo;
-    if (const auto *bounds = std::get_if<Fortran::parser::LoopControl::Bounds>(
-            &loopControl->u)) {
+    const Fortran::parser::ScalarLogicalExpr *whileCondition = nullptr;
+    bool infiniteLoop = !loopControl.has_value();
+    if (infiniteLoop) {
+      assert(unstructuredContext && "infinite loop must be unstructured");
+      startBlock(headerBlock);
+    } else if ((whileCondition =
+                    std::get_if<Fortran::parser::ScalarLogicalExpr>(
+                        &loopControl->u))) {
+      assert(unstructuredContext && "while loop must be unstructured");
+      maybeStartBlock(preheaderBlock); // no block or empty block
+      startBlock(headerBlock);
+      genFIRConditionalBranch(*whileCondition, bodyBlock, exitBlock);
+    } else if (const auto *bounds =
+                   std::get_if<Fortran::parser::LoopControl::Bounds>(
+                       &loopControl->u)) {
       // Non-concurrent increment loop.
       IncrementLoopInfo &info = incrementLoopNestInfo.emplace_back(
           *bounds->name.thing.symbol, bounds->lower, bounds->upper,
           bounds->step);
       if (unstructuredContext) {
         maybeStartBlock(preheaderBlock);
+        info.hasRealControl = info.loopVariableSym.GetType()->IsNumeric(
+            Fortran::common::TypeCategory::Real);
         info.headerBlock = headerBlock;
         info.bodyBlock = bodyBlock;
         info.exitBlock = exitBlock;
@@ -997,17 +1013,20 @@ private:
       TODO(toLocation(), "infinite/unstructured loop/concurrent loop");
     }
 
-    // Increment loop begin code.  (TODO: Infinite/while code was already
-    // generated.)
-    genFIRIncrementLoopBegin(incrementLoopNestInfo);
+    // Increment loop begin code.  (Infinite/while code was already generated.)
+    if (!infiniteLoop && !whileCondition)
+      genFIRIncrementLoopBegin(incrementLoopNestInfo);
 
     // Loop body code - NonLabelDoStmt and EndDoStmt code is generated here.
     // Their genFIR calls are nops except for block management in some cases.
     for (Fortran::lower::pft::Evaluation &e : eval.getNestedEvaluations())
       genFIR(e, unstructuredContext);
 
-    // Loop end code. (TODO: infinite/while loop)
-    genFIRIncrementLoopEnd(incrementLoopNestInfo);
+    // Loop end code.
+    if (infiniteLoop || whileCondition)
+      genFIRBranch(headerBlock);
+    else
+      genFIRIncrementLoopEnd(incrementLoopNestInfo);
   }
 
   /// Generate FIR to begin a structured or unstructured increment loop nest.
@@ -1022,6 +1041,9 @@ private:
       if (expr)
         return builder->createConvert(loc, controlType,
                                       createFIRExpr(loc, expr, stmtCtx));
+
+      if (info.hasRealControl)
+        return builder->createRealConstant(loc, controlType, 1u);
       return builder->createIntegerConstant(loc, controlType, 1); // step
     };
     for (IncrementLoopInfo &info : incrementLoopNestInfo) {
@@ -1047,12 +1069,24 @@ private:
 
       // Unstructured loop preheader - initialize tripVariable and loopVariable.
       mlir::Value tripCount;
-      auto diff1 =
-          builder->create<mlir::arith::SubIOp>(loc, upperValue, lowerValue);
-      auto diff2 =
-          builder->create<mlir::arith::AddIOp>(loc, diff1, info.stepValue);
-      tripCount =
-          builder->create<mlir::arith::DivSIOp>(loc, diff2, info.stepValue);
+      if (info.hasRealControl) {
+        auto diff1 =
+            builder->create<mlir::arith::SubFOp>(loc, upperValue, lowerValue);
+        auto diff2 =
+            builder->create<mlir::arith::AddFOp>(loc, diff1, info.stepValue);
+        tripCount =
+            builder->create<mlir::arith::DivFOp>(loc, diff2, info.stepValue);
+        tripCount =
+            builder->createConvert(loc, builder->getIndexType(), tripCount);
+
+      } else {
+        auto diff1 =
+            builder->create<mlir::arith::SubIOp>(loc, upperValue, lowerValue);
+        auto diff2 =
+            builder->create<mlir::arith::AddIOp>(loc, diff1, info.stepValue);
+        tripCount =
+            builder->create<mlir::arith::DivSIOp>(loc, diff2, info.stepValue);
+      }
       info.tripVariable = builder->createTemporary(loc, tripCount.getType());
       builder->create<fir::StoreOp>(loc, tripCount, info.tripVariable);
       builder->create<fir::StoreOp>(loc, lowerValue, info.loopVariable);
@@ -1105,7 +1139,12 @@ private:
       tripCount = builder->create<mlir::arith::SubIOp>(loc, tripCount, one);
       builder->create<fir::StoreOp>(loc, tripCount, info.tripVariable);
       mlir::Value value = builder->create<fir::LoadOp>(loc, info.loopVariable);
-      value = builder->create<mlir::arith::AddIOp>(loc, value, info.stepValue);
+      if (info.hasRealControl)
+        value =
+            builder->create<mlir::arith::AddFOp>(loc, value, info.stepValue);
+      else
+        value =
+            builder->create<mlir::arith::AddIOp>(loc, value, info.stepValue);
       builder->create<fir::StoreOp>(loc, value, info.loopVariable);
 
       genFIRBranch(info.headerBlock);

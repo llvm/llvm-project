@@ -669,29 +669,6 @@ entry:
   ret i8 %i55
 }
 
-; PR9809
-define i32 @test40(i32 %a, i32 %b) nounwind {
-; CHECK-LABEL: @test40(
-; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[B:%.*]], 2
-; CHECK-NEXT:    [[DIV1:%.*]] = lshr i32 [[A:%.*]], [[TMP1]]
-; CHECK-NEXT:    ret i32 [[DIV1]]
-;
-  %shl1 = shl i32 1, %b
-  %shl2 = shl i32 %shl1, 2
-  %div = udiv i32 %a, %shl2
-  ret i32 %div
-}
-
-define i32 @test41(i32 %a, i32 %b) nounwind {
-; CHECK-LABEL: @test41(
-; CHECK-NEXT:    [[TMP1:%.*]] = shl i32 8, [[B:%.*]]
-; CHECK-NEXT:    ret i32 [[TMP1]]
-;
-  %1 = shl i32 1, %b
-  %2 = shl i32 %1, 3
-  ret i32 %2
-}
-
 define i32 @test42(i32 %a, i32 %b) nounwind {
 ; CHECK-LABEL: @test42(
 ; CHECK-NEXT:    [[DIV:%.*]] = lshr exact i32 4096, [[B:%.*]]

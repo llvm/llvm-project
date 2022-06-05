@@ -246,4 +246,20 @@ void x86::getX86TargetFeatures(const Driver &D, const llvm::Triple &Triple,
       Name = Name.substr(3);
     Features.push_back(Args.MakeArgString((IsNegative ? "-" : "+") + Name));
   }
+
+  // Enable/disable straight line speculation hardening.
+  if (Arg *A = Args.getLastArg(options::OPT_mharden_sls_EQ)) {
+    StringRef Scope = A->getValue();
+    if (Scope == "all") {
+      Features.push_back("+harden-sls-ijmp");
+      Features.push_back("+harden-sls-ret");
+    } else if (Scope == "return") {
+      Features.push_back("+harden-sls-ret");
+    } else if (Scope == "indirect-jmp") {
+      Features.push_back("+harden-sls-ijmp");
+    } else if (Scope != "none") {
+      D.Diag(diag::err_drv_unsupported_option_argument)
+          << A->getOption().getName() << Scope;
+    }
+  }
 }

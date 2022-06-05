@@ -14,7 +14,7 @@
 //            const internT* from, const internT* from_end, const internT*& from_next,
 //            externT* to, externT* to_end, externT*& to_next) const;
 
-// XFAIL: libcpp-has-no-wide-characters
+// XFAIL: no-wide-characters
 
 #include <locale>
 #include <string>

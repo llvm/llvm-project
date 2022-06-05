@@ -1,0 +1,55 @@
+// RUN: tblgen-lsp-server -lit-test < %s | FileCheck %s
+{"jsonrpc":"2.0","id":0,"method":"initialize","params":{"processId":123,"rootPath":"tablegen","capabilities":{},"trace":"off"}}
+// -----
+{"jsonrpc":"2.0","method":"textDocument/didOpen","params":{"textDocument":{
+  "uri":"test:///foo.td",
+  "languageId":"tablegen",
+  "version":1,
+  "text":"class Foo {\n  int field1 = ?;\n}\ndef FooDerived : Foo {\n  let field1 = 10;\n }\n"
+}}}
+// -----
+{"jsonrpc":"2.0","id":1,"method":"textDocument/definition","params":{
+  "textDocument":{"uri":"test:///foo.td"},
+  "position":{"line":3,"character":19}
+}}
+//      CHECK:  "id": 1
+// CHECK-NEXT:  "jsonrpc": "2.0",
+// CHECK-NEXT:  "result": [
+// CHECK-NEXT:    {
+// CHECK-NEXT:      "range": {
+// CHECK-NEXT:        "end": {
+// CHECK-NEXT:          "character": 9,
+// CHECK-NEXT:          "line": 0
+// CHECK-NEXT:        },
+// CHECK-NEXT:        "start": {
+// CHECK-NEXT:          "character": 6,
+// CHECK-NEXT:          "line": 0
+// CHECK-NEXT:        }
+// CHECK-NEXT:      },
+// CHECK-NEXT:      "uri": "{{.*}}/foo.td"
+// CHECK-NEXT:    }
+// -----
+{"jsonrpc":"2.0","id":2,"method":"textDocument/definition","params":{
+  "textDocument":{"uri":"test:///foo.td"},
+  "position":{"line":4,"character":9}
+}}
+//      CHECK:  "id": 2
+// CHECK-NEXT:  "jsonrpc": "2.0",
+// CHECK-NEXT:  "result": [
+// CHECK-NEXT:    {
+// CHECK-NEXT:      "range": {
+// CHECK-NEXT:        "end": {
+// CHECK-NEXT:          "character": 12,
+// CHECK-NEXT:          "line": 4
+// CHECK-NEXT:        },
+// CHECK-NEXT:        "start": {
+// CHECK-NEXT:          "character": 6,
+// CHECK-NEXT:          "line": 4
+// CHECK-NEXT:        }
+// CHECK-NEXT:      },
+// CHECK-NEXT:      "uri": "{{.*}}/foo.td"
+// CHECK-NEXT:    }
+// -----
+{"jsonrpc":"2.0","id":3,"method":"shutdown"}
+// -----
+{"jsonrpc":"2.0","method":"exit"}

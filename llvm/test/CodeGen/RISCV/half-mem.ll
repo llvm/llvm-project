@@ -61,10 +61,10 @@ define half @flh_fsh_global(half %a, half %b) nounwind {
 ; RV32IZFH-NEXT:    fadd.h fa0, fa0, fa1
 ; RV32IZFH-NEXT:    lui a0, %hi(G)
 ; RV32IZFH-NEXT:    flh ft0, %lo(G)(a0)
+; RV32IZFH-NEXT:    addi a1, a0, %lo(G)
 ; RV32IZFH-NEXT:    fsh fa0, %lo(G)(a0)
-; RV32IZFH-NEXT:    addi a0, a0, %lo(G)
-; RV32IZFH-NEXT:    flh ft0, 18(a0)
-; RV32IZFH-NEXT:    fsh fa0, 18(a0)
+; RV32IZFH-NEXT:    flh ft0, 18(a1)
+; RV32IZFH-NEXT:    fsh fa0, 18(a1)
 ; RV32IZFH-NEXT:    ret
 ;
 ; RV64IZFH-LABEL: flh_fsh_global:
@@ -72,10 +72,10 @@ define half @flh_fsh_global(half %a, half %b) nounwind {
 ; RV64IZFH-NEXT:    fadd.h fa0, fa0, fa1
 ; RV64IZFH-NEXT:    lui a0, %hi(G)
 ; RV64IZFH-NEXT:    flh ft0, %lo(G)(a0)
+; RV64IZFH-NEXT:    addi a1, a0, %lo(G)
 ; RV64IZFH-NEXT:    fsh fa0, %lo(G)(a0)
-; RV64IZFH-NEXT:    addi a0, a0, %lo(G)
-; RV64IZFH-NEXT:    flh ft0, 18(a0)
-; RV64IZFH-NEXT:    fsh fa0, 18(a0)
+; RV64IZFH-NEXT:    flh ft0, 18(a1)
+; RV64IZFH-NEXT:    fsh fa0, 18(a1)
 ; RV64IZFH-NEXT:    ret
   %1 = fadd half %a, %b
   %2 = load volatile half, half* @G

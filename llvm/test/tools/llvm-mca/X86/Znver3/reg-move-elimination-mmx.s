@@ -173,6 +173,7 @@ movq %mm7, %mm0
 # CHECK-NEXT: [9,2]     .    .    . D==============================================================eER .   movq	%mm2, %mm3
 # CHECK-NEXT: [9,3]     .    .    . D===============================================================eER.   movq	%mm3, %mm4
 # CHECK-NEXT: [9,4]     .    .    .  D===============================================================eER   movq	%mm4, %mm5
+# CHECK-NEXT: Truncated display due to cycle limit
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions

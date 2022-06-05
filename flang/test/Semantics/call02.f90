@@ -126,9 +126,8 @@ end
 
 subroutine p05
   integer :: a1(2), a2, a3
-
-  !ERROR: In an elemental procedure with at least one array arugment, actual argument a2 that corresponds to an INTENT(OUT) or INTENT(INOUT) dummay argument must be an array
-  !ERROR: In an elemental procedure with at least one array arugment, actual argument a3 that corresponds to an INTENT(OUT) or INTENT(INOUT) dummay argument must be an array
+  !ERROR: In an elemental procedure reference with at least one array argument, actual argument a2 that corresponds to an INTENT(OUT) or INTENT(INOUT) dummy argument must be an array
+  !ERROR: In an elemental procedure reference with at least one array argument, actual argument a3 that corresponds to an INTENT(OUT) or INTENT(INOUT) dummy argument must be an array
   call s1(a1, a2, a3)
 contains
   elemental subroutine s1(a, b, c)
@@ -139,4 +138,3 @@ contains
     c = a
   end
 end
-

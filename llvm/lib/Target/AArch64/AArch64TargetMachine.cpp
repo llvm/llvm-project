@@ -34,6 +34,7 @@
 #include "llvm/CodeGen/MIRParser/MIParser.h"
 #include "llvm/CodeGen/MachineScheduler.h"
 #include "llvm/CodeGen/Passes.h"
+#include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/Function.h"
@@ -61,6 +62,11 @@ static cl::opt<bool>
     EnableCondBrTuning("aarch64-enable-cond-br-tune",
                        cl::desc("Enable the conditional branch tuning pass"),
                        cl::init(true), cl::Hidden);
+
+static cl::opt<bool> EnableAArch64CopyPropagation(
+    "aarch64-enable-copy-propagation",
+    cl::desc("Enable the copy propagation with AArch64 copy instr"),
+    cl::init(true), cl::Hidden);
 
 static cl::opt<bool> EnableMCR("aarch64-enable-mcr",
                                cl::desc("Enable the machine combiner pass"),
@@ -771,6 +777,10 @@ void AArch64PassConfig::addPreEmitPass() {
   // Run the load/store optimizer once more.
   if (TM->getOptLevel() >= CodeGenOpt::Aggressive && EnableLoadStoreOpt)
     addPass(createAArch64LoadStoreOptimizationPass());
+
+  if (TM->getOptLevel() >= CodeGenOpt::Aggressive &&
+      EnableAArch64CopyPropagation)
+    addPass(createMachineCopyPropagationPass(true));
 
   addPass(createAArch64A53Fix835769());
 

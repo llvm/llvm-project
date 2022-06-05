@@ -28,6 +28,12 @@ bool TestGeneratorMain(llvm::raw_ostream &OS, llvm::RecordKeeper &records) {
   for (const auto &entrypoint : EntrypointNamesOption) {
     auto match = G.FunctionToHeaderMap.find(entrypoint);
     if (match == G.FunctionToHeaderMap.end()) {
+      auto objectMatch = G.ObjectToHeaderMap.find(entrypoint);
+      if (objectMatch != G.ObjectToHeaderMap.end()) {
+        headerFileSet.insert(objectMatch->second);
+        continue;
+      }
+
       llvm::errs() << "ERROR: entrypoint '" << entrypoint
                    << "' could not be found in spec in any public header\n";
       return true;
@@ -43,6 +49,17 @@ bool TestGeneratorMain(llvm::raw_ostream &OS, llvm::RecordKeeper &records) {
   for (const auto &entrypoint : EntrypointNamesOption) {
     auto match = G.FunctionSpecMap.find(entrypoint);
     if (match == G.FunctionSpecMap.end()) {
+      auto objectMatch = G.ObjectSpecMap.find(entrypoint);
+      if (objectMatch != G.ObjectSpecMap.end()) {
+        auto entrypointPtr = entrypoint + "_ptr";
+        llvm::Record *objectSpec = G.ObjectSpecMap[entrypoint];
+        auto objectType = objectSpec->getValueAsString("Type");
+        // We just make sure that the global object is present.
+        OS << "  " << objectType << " *" << entrypointPtr << " = &"
+           << entrypoint << ";\n";
+        OS << "  ++" << entrypointPtr << ";\n"; // To avoid unused var warning.
+        continue;
+      }
       llvm::errs() << "ERROR: entrypoint '" << entrypoint
                    << "' could not be found in spec in any public header\n";
       return true;
@@ -73,6 +90,11 @@ bool TestGeneratorMain(llvm::raw_ostream &OS, llvm::RecordKeeper &records) {
   OS << '\n';
   OS << "  return 0;\n";
   OS << "}\n\n";
+
+  // We provide dummy malloc and free implementations to support the case
+  // when LLVM libc does to include them.
+  OS << "void *malloc(size_t) { return nullptr; }\n";
+  OS << "void free(void *) {}\n";
 
   return false;
 }

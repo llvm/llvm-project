@@ -60,7 +60,7 @@
 
 ; Check that we reject CPUs that are not implemented.
 
-; RUN: not --crash llc < %s -o /dev/null -mtriple=mips64 -mcpu=mips5 2>&1 \
+; RUN: not llc < %s -o /dev/null -mtriple=mips64 -mcpu=mips5 2>&1 \
 ; RUN:   | FileCheck %s --check-prefix=ERROR
 
 ; ERROR: LLVM ERROR: Code generation for MIPS-{{.}} is not implemented

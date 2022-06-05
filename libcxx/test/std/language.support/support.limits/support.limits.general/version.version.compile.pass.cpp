@@ -111,13 +111,13 @@
     __cpp_lib_math_constants                       201907L [C++20]
     __cpp_lib_math_special_functions               201603L [C++17]
     __cpp_lib_memory_resource                      201603L [C++17]
-    __cpp_lib_monadic_optional                     202110L [C++2b]
     __cpp_lib_move_only_function                   202110L [C++2b]
     __cpp_lib_node_extract                         201606L [C++17]
     __cpp_lib_nonmember_container_access           201411L [C++17]
     __cpp_lib_not_fn                               201603L [C++17]
     __cpp_lib_null_iterators                       201304L [C++14]
     __cpp_lib_optional                             201606L [C++17]
+                                                   202110L [C++2b]
     __cpp_lib_out_ptr                              202106L [C++2b]
     __cpp_lib_parallel_algorithm                   201603L [C++17]
     __cpp_lib_polymorphic_allocator                201902L [C++20]
@@ -554,10 +554,6 @@
 
 # ifdef __cpp_lib_memory_resource
 #   error "__cpp_lib_memory_resource should not be defined before c++17"
-# endif
-
-# ifdef __cpp_lib_monadic_optional
-#   error "__cpp_lib_monadic_optional should not be defined before c++2b"
 # endif
 
 # ifdef __cpp_lib_move_only_function
@@ -1210,10 +1206,6 @@
 
 # ifdef __cpp_lib_memory_resource
 #   error "__cpp_lib_memory_resource should not be defined before c++17"
-# endif
-
-# ifdef __cpp_lib_monadic_optional
-#   error "__cpp_lib_monadic_optional should not be defined before c++2b"
 # endif
 
 # ifdef __cpp_lib_move_only_function
@@ -2028,10 +2020,6 @@
 #   ifdef __cpp_lib_memory_resource
 #     error "__cpp_lib_memory_resource should not be defined because it is unimplemented in libc++!"
 #   endif
-# endif
-
-# ifdef __cpp_lib_monadic_optional
-#   error "__cpp_lib_monadic_optional should not be defined before c++2b"
 # endif
 
 # ifdef __cpp_lib_move_only_function
@@ -3140,10 +3128,6 @@
 #   ifdef __cpp_lib_memory_resource
 #     error "__cpp_lib_memory_resource should not be defined because it is unimplemented in libc++!"
 #   endif
-# endif
-
-# ifdef __cpp_lib_monadic_optional
-#   error "__cpp_lib_monadic_optional should not be defined before c++2b"
 # endif
 
 # ifdef __cpp_lib_move_only_function
@@ -4401,13 +4385,6 @@
 #   endif
 # endif
 
-# ifndef __cpp_lib_monadic_optional
-#   error "__cpp_lib_monadic_optional should be defined in c++2b"
-# endif
-# if __cpp_lib_monadic_optional != 202110L
-#   error "__cpp_lib_monadic_optional should have the value 202110L in c++2b"
-# endif
-
 # if !defined(_LIBCPP_VERSION)
 #   ifndef __cpp_lib_move_only_function
 #     error "__cpp_lib_move_only_function should be defined in c++2b"
@@ -4452,8 +4429,8 @@
 # ifndef __cpp_lib_optional
 #   error "__cpp_lib_optional should be defined in c++2b"
 # endif
-# if __cpp_lib_optional != 201606L
-#   error "__cpp_lib_optional should have the value 201606L in c++2b"
+# if __cpp_lib_optional != 202110L
+#   error "__cpp_lib_optional should have the value 202110L in c++2b"
 # endif
 
 # if !defined(_LIBCPP_VERSION)

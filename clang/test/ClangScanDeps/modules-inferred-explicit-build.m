@@ -6,7 +6,7 @@
 // RUN:   %S/Inputs/modules_inferred_cdb.json > %t.cdb
 //
 // RUN: clang-scan-deps -compilation-database %t.cdb -j 1 -format experimental-full \
-// RUN:   -mode preprocess-minimized-sources -generate-modules-path-args > %t.db
+// RUN:   -mode preprocess-dependency-directives -generate-modules-path-args > %t.db
 // RUN: %deps-to-rsp %t.db --module-name=Inferred > %t.inferred.cc1.rsp
 // RUN: %deps-to-rsp %t.db --module-name=System > %t.system.cc1.rsp
 // RUN: %deps-to-rsp %t.db --tu-index=0 > %t.tu.rsp

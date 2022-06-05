@@ -7,8 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 // UNSUPPORTED: c++03
-// UNSUPPORTED: libcpp-has-no-localization
-// UNSUPPORTED: libcpp-has-no-threads
+// UNSUPPORTED: no-localization
+// UNSUPPORTED: no-threads
 
 // <filesystem>
 

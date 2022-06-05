@@ -2963,36 +2963,6 @@ Instruction *InstCombinerImpl::visitOr(BinaryOperator &I) {
   if (matchSimpleRecurrence(&I, PN, Start, Step) && DT.dominates(Step, PN))
     return replaceInstUsesWith(I, Builder.CreateOr(Start, Step));
 
-  // (A & B) | (C | D) or (C | D) | (A & B)
-  // Can be combined if C or D is of type (A/B & X)
-  if (match(&I, m_c_Or(m_OneUse(m_And(m_Value(A), m_Value(B))),
-                       m_OneUse(m_Or(m_Value(C), m_Value(D)))))) {
-    // (A & B) | (C | ?) -> C | (? | (A & B))
-    // (A & B) | (C | ?) -> C | (? | (A & B))
-    // (A & B) | (C | ?) -> C | (? | (A & B))
-    // (A & B) | (C | ?) -> C | (? | (A & B))
-    // (C | ?) | (A & B) -> C | (? | (A & B))
-    // (C | ?) | (A & B) -> C | (? | (A & B))
-    // (C | ?) | (A & B) -> C | (? | (A & B))
-    // (C | ?) | (A & B) -> C | (? | (A & B))
-    if (match(D, m_c_And(m_Specific(A), m_Value())) ||
-        match(D, m_c_And(m_Specific(B), m_Value())))
-      return BinaryOperator::CreateOr(
-          C, Builder.CreateOr(D, Builder.CreateAnd(A, B)));
-    // (A & B) | (? | D) -> (? | (A & B)) | D
-    // (A & B) | (? | D) -> (? | (A & B)) | D
-    // (A & B) | (? | D) -> (? | (A & B)) | D
-    // (A & B) | (? | D) -> (? | (A & B)) | D
-    // (? | D) | (A & B) -> (? | (A & B)) | D
-    // (? | D) | (A & B) -> (? | (A & B)) | D
-    // (? | D) | (A & B) -> (? | (A & B)) | D
-    // (? | D) | (A & B) -> (? | (A & B)) | D
-    if (match(C, m_c_And(m_Specific(A), m_Value())) ||
-        match(C, m_c_And(m_Specific(B), m_Value())))
-      return BinaryOperator::CreateOr(
-          Builder.CreateOr(C, Builder.CreateAnd(A, B)), D);
-  }
-
   return nullptr;
 }
 

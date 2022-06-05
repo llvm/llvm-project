@@ -6,7 +6,7 @@
 // RUN:   %/S/Inputs/modules_inferred_cdb.json > %t.cdb
 //
 // RUN: clang-scan-deps -compilation-database %t.cdb -j 1 -format experimental-full \
-// RUN:   -generate-modules-path-args -mode preprocess-minimized-sources > %t.result
+// RUN:   -generate-modules-path-args -mode preprocess-dependency-directives > %t.result
 // RUN: cat %t.result | sed 's:\\\\\?:/:g' | FileCheck %s -DPREFIX=%/t.dir -DSOURCEDIR=%/S --check-prefixes=CHECK
 
 #include <Inferred/Inferred.h>

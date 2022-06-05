@@ -106,7 +106,7 @@ define ptr @struct1(ptr %p) {
 ; result = &((struct.A*) p - 1).member1
 define ptr @struct2(ptr %p) {
 ; CHECK-LABEL: @struct2(
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds [[STRUCT_A:%.*]], ptr [[P:%.*]], i64 -1, i32 1
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr [[STRUCT_A:%.*]], ptr [[P:%.*]], i64 -1, i32 1
 ; CHECK-NEXT:    ret ptr [[TMP1]]
 ;
   %1 = getelementptr inbounds %struct.A, ptr %p, i64 0, i32 1

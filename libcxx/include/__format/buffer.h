@@ -101,11 +101,11 @@ template <__formatter::__char_type _CharT>
 class _LIBCPP_TEMPLATE_VIS __internal_storage {
 public:
   _LIBCPP_HIDE_FROM_ABI _CharT* begin() { return __buffer_; }
-  _LIBCPP_HIDE_FROM_ABI size_t capacity() { return __buffer_size_; }
+
+  static constexpr size_t __buffer_size = 256 / sizeof(_CharT);
 
 private:
-  static constexpr size_t __buffer_size_ = 256 / sizeof(_CharT);
-  _CharT __buffer_[__buffer_size_];
+  _CharT __buffer_[__buffer_size];
 };
 
 /// A storage writing directly to the storage.
@@ -223,10 +223,9 @@ requires(output_iterator<_OutIt, const _CharT&>) class _LIBCPP_TEMPLATE_VIS
                     __direct_storage<_CharT>, __internal_storage<_CharT>>;
 
 public:
-  _LIBCPP_HIDE_FROM_ABI explicit __format_buffer(_OutIt __out_it) requires(
-      same_as<_Storage, __internal_storage<_CharT>>)
-      : __output_(__storage_.begin(), __storage_.capacity(), this),
-        __writer_(_VSTD::move(__out_it)) {}
+  _LIBCPP_HIDE_FROM_ABI explicit __format_buffer(_OutIt __out_it)
+    requires(same_as<_Storage, __internal_storage<_CharT>>)
+  : __output_(__storage_.begin(), __storage_.__buffer_size, this), __writer_(_VSTD::move(__out_it)) {}
 
   _LIBCPP_HIDE_FROM_ABI explicit __format_buffer(_OutIt __out_it) requires(
       same_as<_Storage, __direct_storage<_CharT>>)
@@ -270,7 +269,7 @@ public:
 
 private:
   __internal_storage<_CharT> __storage_;
-  __output_buffer<_CharT> __output_{__storage_.begin(), __storage_.capacity(), this};
+  __output_buffer<_CharT> __output_{__storage_.begin(), __storage_.__buffer_size, this};
   size_t __size_{0};
 };
 
@@ -292,7 +291,7 @@ public:
 
 protected:
   __internal_storage<_CharT> __storage_;
-  __output_buffer<_CharT> __output_{__storage_.begin(), __storage_.capacity(), this};
+  __output_buffer<_CharT> __output_{__storage_.begin(), __storage_.__buffer_size, this};
   typename __writer_selector<_OutIt, _CharT>::type __writer_;
 
   _Size __n_;
@@ -314,7 +313,7 @@ public:
   _LIBCPP_HIDE_FROM_ABI explicit __format_to_n_buffer_base(_OutIt __out_it, _Size __n)
       : __output_(_VSTD::__unwrap_iter(__out_it), __n, this), __writer_(_VSTD::move(__out_it)) {
     if (__n <= 0) [[unlikely]]
-      __output_.reset(__storage_.begin(), __storage_.capacity());
+      __output_.reset(__storage_.begin(), __storage_.__buffer_size);
   }
 
   _LIBCPP_HIDE_FROM_ABI void flush(_CharT* __ptr, size_t __size) {
@@ -328,7 +327,7 @@ public:
     // When the __n <= 0 the constructor already switched the buffers.
     if (__size_ == 0 && __ptr != __storage_.begin()) {
       __writer_.flush(__ptr, __size);
-      __output_.reset(__storage_.begin(), __storage_.capacity());
+      __output_.reset(__storage_.begin(), __storage_.__buffer_size);
     }
 
     __size_ += __size;
