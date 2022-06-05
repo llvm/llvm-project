@@ -297,10 +297,7 @@ Error UdtRecordCompleter::visitKnownMember(CVMemberRecord &cvr,
 
 void UdtRecordCompleter::complete() {
   // Ensure the correct order for virtual bases.
-  std::stable_sort(m_bases.begin(), m_bases.end(),
-                   [](const IndexedBase &lhs, const IndexedBase &rhs) {
-                     return lhs.first < rhs.first;
-                   });
+  llvm::stable_sort(m_bases, llvm::less_first());
 
   std::vector<std::unique_ptr<clang::CXXBaseSpecifier>> bases;
   bases.reserve(m_bases.size());
