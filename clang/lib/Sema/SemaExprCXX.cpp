@@ -843,10 +843,10 @@ Sema::ActOnCXXThrow(Scope *S, SourceLocation OpLoc, Expr *Ex) {
               break;
             }
 
+            // FIXME: Many of the scope checks here seem incorrect.
             if (S->getFlags() &
                 (Scope::FnScope | Scope::ClassScope | Scope::BlockScope |
-                 Scope::FunctionPrototypeScope | Scope::ObjCMethodScope |
-                 Scope::TryScope))
+                 Scope::ObjCMethodScope | Scope::TryScope))
               break;
           }
         }
