@@ -895,7 +895,7 @@ void SIFrameLowering::emitCFISavedRegSpills(MachineFunction &MF,
     // two lanes in wave64 mode and one lane in wave32 mode, build
     // the corresponding CFI rule.
     if (EXECSaveIndex && !spilledToMemory(MF, *EXECSaveIndex)) {
-      ArrayRef<SIMachineFunctionInfo::SpilledReg> EXECSpill =
+      ArrayRef<SIRegisterInfo::SpilledReg> EXECSpill =
           FuncInfo->getSGPRToVGPRSpills(*EXECSaveIndex);
       assert(EXECSpill.size());
       BuildMI(MBB, MBBI, DL,
@@ -1063,7 +1063,7 @@ void SIFrameLowering::emitPrologue(MachineFunction &MF,
     assert(!MFI.isDeadObjectIndex(FramePtrFI));
 
     assert(MFI.getStackID(FramePtrFI) == TargetStackID::SGPRSpill);
-    ArrayRef<SIMachineFunctionInfo::SpilledReg> Spill =
+    ArrayRef<SIRegisterInfo::SpilledReg> Spill =
         FuncInfo->getSGPRToVGPRSpills(FramePtrFI);
     assert(Spill.size() == 1);
 
@@ -1084,7 +1084,7 @@ void SIFrameLowering::emitPrologue(MachineFunction &MF,
     assert(!MFI.isDeadObjectIndex(BasePtrFI));
 
     assert(MFI.getStackID(BasePtrFI) == TargetStackID::SGPRSpill);
-    ArrayRef<SIMachineFunctionInfo::SpilledReg> Spill =
+    ArrayRef<SIRegisterInfo::SpilledReg> Spill =
         FuncInfo->getSGPRToVGPRSpills(BasePtrFI);
     assert(Spill.size() == 1);
 
@@ -1288,7 +1288,7 @@ void SIFrameLowering::emitEpilogue(MachineFunction &MF,
     } else {
       // Reload from VGPR spill.
       assert(MFI.getStackID(FramePtrFI) == TargetStackID::SGPRSpill);
-      ArrayRef<SIMachineFunctionInfo::SpilledReg> Spill =
+      ArrayRef<SIRegisterInfo::SpilledReg> Spill =
           FuncInfo->getSGPRToVGPRSpills(FramePtrFI);
       assert(Spill.size() == 1);
       BuildMI(MBB, MBBI, DL, TII->get(AMDGPU::V_READLANE_B32), FramePtrReg)
@@ -1324,7 +1324,7 @@ void SIFrameLowering::emitEpilogue(MachineFunction &MF,
     } else {
       // Reload from VGPR spill.
       assert(MFI.getStackID(BasePtrFI) == TargetStackID::SGPRSpill);
-      ArrayRef<SIMachineFunctionInfo::SpilledReg> Spill =
+      ArrayRef<SIRegisterInfo::SpilledReg> Spill =
           FuncInfo->getSGPRToVGPRSpills(BasePtrFI);
       assert(Spill.size() == 1);
       BuildMI(MBB, MBBI, DL, TII->get(AMDGPU::V_READLANE_B32), BasePtrReg)
@@ -1948,7 +1948,7 @@ MachineInstr *SIFrameLowering::buildCFIForSGPRToVGPRSpill(
 MachineInstr *SIFrameLowering::buildCFIForSGPRToVGPRSpill(
     MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
     const DebugLoc &DL, Register SGPR,
-    ArrayRef<SIMachineFunctionInfo::SpilledReg> VGPRSpills) const {
+    ArrayRef<SIRegisterInfo::SpilledReg> VGPRSpills) const {
   MachineFunction &MF = *MBB.getParent();
   const MCRegisterInfo &MCRI = *MF.getMMI().getContext().getRegisterInfo();
   int DwarfSGPR = MCRI.getDwarfRegNum(SGPR, false);
@@ -1981,7 +1981,7 @@ MachineInstr *SIFrameLowering::buildCFIForSGPRToVGPRSpill(
 
   // TODO: Detect when we can merge multiple adjacent pieces, or even reduce
   // this to a register location description (when all pieces are adjacent).
-  for (SIMachineFunctionInfo::SpilledReg Spill : VGPRSpills) {
+  for (SIRegisterInfo::SpilledReg Spill : VGPRSpills) {
     encodeDwarfRegisterLocation(MCRI.getDwarfRegNum(Spill.VGPR, false),
                                 OSBlock);
     OSBlock << uint8_t(dwarf::DW_OP_bit_piece);

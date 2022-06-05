@@ -126,6 +126,22 @@ LogicalResult parseSourceString(llvm::StringRef sourceStr, Block *block,
                                 MLIRContext *context,
                                 LocationAttr *sourceFileLoc = nullptr);
 
+namespace detail {
+/// The internal implementation of the templated `parseSourceFile` methods
+/// below, that simply forwards to the non-templated version.
+template <typename ContainerOpT, typename... ParserArgs>
+inline OwningOpRef<ContainerOpT> parseSourceFile(MLIRContext *ctx,
+                                                 ParserArgs &&...args) {
+  LocationAttr sourceFileLoc;
+  Block block;
+  if (failed(parseSourceFile(std::forward<ParserArgs>(args)..., &block, ctx,
+                             &sourceFileLoc)))
+    return OwningOpRef<ContainerOpT>();
+  return detail::constructContainerOpForParserIfNecessary<ContainerOpT>(
+      &block, ctx, sourceFileLoc);
+}
+} // namespace detail
+
 /// This parses the file specified by the indicated SourceMgr. If the source IR
 /// contained a single instance of `ContainerOpT`, it is returned. Otherwise, a
 /// new instance of `ContainerOpT` is constructed containing all of the parsed
@@ -137,12 +153,7 @@ LogicalResult parseSourceString(llvm::StringRef sourceStr, Block *block,
 template <typename ContainerOpT>
 inline OwningOpRef<ContainerOpT>
 parseSourceFile(const llvm::SourceMgr &sourceMgr, MLIRContext *context) {
-  LocationAttr sourceFileLoc;
-  Block block;
-  if (failed(parseSourceFile(sourceMgr, &block, context, &sourceFileLoc)))
-    return OwningOpRef<ContainerOpT>();
-  return detail::constructContainerOpForParserIfNecessary<ContainerOpT>(
-      &block, context, sourceFileLoc);
+  return detail::parseSourceFile<ContainerOpT>(context, sourceMgr);
 }
 
 /// This parses the file specified by the indicated filename. If the source IR
@@ -154,14 +165,9 @@ parseSourceFile(const llvm::SourceMgr &sourceMgr, MLIRContext *context) {
 /// containing a single block, and must implement the
 /// `SingleBlockImplicitTerminator` trait.
 template <typename ContainerOpT>
-inline OwningOpRef<ContainerOpT> parseSourceFile(llvm::StringRef filename,
+inline OwningOpRef<ContainerOpT> parseSourceFile(StringRef filename,
                                                  MLIRContext *context) {
-  LocationAttr sourceFileLoc;
-  Block block;
-  if (failed(parseSourceFile(filename, &block, context, &sourceFileLoc)))
-    return OwningOpRef<ContainerOpT>();
-  return detail::constructContainerOpForParserIfNecessary<ContainerOpT>(
-      &block, context, sourceFileLoc);
+  return detail::parseSourceFile<ContainerOpT>(context, filename);
 }
 
 /// This parses the file specified by the indicated filename using the provided
@@ -176,13 +182,7 @@ template <typename ContainerOpT>
 inline OwningOpRef<ContainerOpT> parseSourceFile(llvm::StringRef filename,
                                                  llvm::SourceMgr &sourceMgr,
                                                  MLIRContext *context) {
-  LocationAttr sourceFileLoc;
-  Block block;
-  if (failed(parseSourceFile(filename, sourceMgr, &block, context,
-                             &sourceFileLoc)))
-    return OwningOpRef<ContainerOpT>();
-  return detail::constructContainerOpForParserIfNecessary<ContainerOpT>(
-      &block, context, sourceFileLoc);
+  return detail::parseSourceFile<ContainerOpT>(context, filename, sourceMgr);
 }
 
 /// This parses the provided string containing MLIR. If the source IR contained

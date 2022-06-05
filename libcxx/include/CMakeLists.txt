@@ -139,6 +139,8 @@ set(files
   __bsd_locale_fallbacks.h
   __charconv/chars_format.h
   __charconv/from_chars_result.h
+  __charconv/tables.h
+  __charconv/to_chars_base_10.h
   __charconv/to_chars_result.h
   __chrono/calendar.h
   __chrono/convert_to_timespec.h
@@ -447,7 +449,9 @@ set(files
   __type_traits/add_rvalue_reference.h
   __type_traits/add_volatile.h
   __type_traits/conditional.h
+  __type_traits/conjunction.h
   __type_traits/decay.h
+  __type_traits/disjunction.h
   __type_traits/enable_if.h
   __type_traits/extent.h
   __type_traits/integral_constant.h

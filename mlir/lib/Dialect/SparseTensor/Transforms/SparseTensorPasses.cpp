@@ -119,6 +119,7 @@ struct SparseTensorConversionPass
     target
         .addLegalDialect<bufferization::BufferizationDialect, LLVM::LLVMDialect,
                          memref::MemRefDialect, scf::SCFDialect>();
+    target.addIllegalOp<bufferization::AllocTensorOp>();
     // Translate strategy flags to strategy options.
     SparseTensorConversionOptions options(
         sparseToSparseConversionStrategy(sparseToSparse));

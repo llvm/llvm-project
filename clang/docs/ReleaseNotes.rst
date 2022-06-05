@@ -158,6 +158,11 @@ Bug Fixes
 - Implement `CWG 2394 <https://wg21.link/cwg2394>`_: Const class members
   may be initialized with a defaulted default constructor under the same
   conditions it would be allowed for a const object elsewhere.
+- ``__has_unique_object_representations`` no longer reports that ``_BitInt`` types
+  have unique object representations if they have padding bits.
+- Unscoped and scoped enumeration types can no longer be initialized from a
+  brace-init-list containing a single element of a different scoped enumeration
+  type.
 
 Improvements to Clang's diagnostics
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -241,6 +246,9 @@ Improvements to Clang's diagnostics
   suggest ``#else`` as an alternative. ``#elifdef`` and ``#elifndef`` are only
   suggested when in C2x or C++2b mode. Fixes
   `Issue 51598 <https://github.com/llvm/llvm-project/issues/51598>`_.
+- The ``-Wdeprecated`` diagnostic will now warn on out-of-line ``constexpr``
+  declarations downgraded to definitions in C++1z, in addition to the
+  existing warning on out-of-line ``const`` declarations.
 
 Non-comprehensive list of changes in this release
 -------------------------------------------------
@@ -328,6 +336,9 @@ Attribute Changes in Clang
   builtins (corresponding to the specific names listed in the attribute) in the
   body of the function the attribute is on.
 
+- When the ``weak`` attribute is applied to a const qualified variable clang no longer
+  tells the backend it is allowed to optimize based on initializer value.
+
 Windows Support
 ---------------
 
@@ -350,11 +361,6 @@ AIX Support
 
 C Language Changes in Clang
 ---------------------------
-- Finished implementing support for DR423. We already correctly handled
-  stripping qualifiers from cast expressions, but we did not strip qualifiers
-  on function return types. We now properly treat the function as though it
-  were declarated with an unqualified, non-atomic return type. Fixes
-  `Issue 39595 <https://github.com/llvm/llvm-project/issues/39595>`_.
 
 C2x Feature Support
 -------------------

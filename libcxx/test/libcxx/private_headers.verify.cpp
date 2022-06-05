@@ -173,6 +173,8 @@ END-SCRIPT
 #include <__bits> // expected-error@*:* {{use of private header from outside its module: '__bits'}}
 #include <__charconv/chars_format.h> // expected-error@*:* {{use of private header from outside its module: '__charconv/chars_format.h'}}
 #include <__charconv/from_chars_result.h> // expected-error@*:* {{use of private header from outside its module: '__charconv/from_chars_result.h'}}
+#include <__charconv/tables.h> // expected-error@*:* {{use of private header from outside its module: '__charconv/tables.h'}}
+#include <__charconv/to_chars_base_10.h> // expected-error@*:* {{use of private header from outside its module: '__charconv/to_chars_base_10.h'}}
 #include <__charconv/to_chars_result.h> // expected-error@*:* {{use of private header from outside its module: '__charconv/to_chars_result.h'}}
 #include <__chrono/calendar.h> // expected-error@*:* {{use of private header from outside its module: '__chrono/calendar.h'}}
 #include <__chrono/convert_to_timespec.h> // expected-error@*:* {{use of private header from outside its module: '__chrono/convert_to_timespec.h'}}
@@ -457,7 +459,9 @@ END-SCRIPT
 #include <__type_traits/add_rvalue_reference.h> // expected-error@*:* {{use of private header from outside its module: '__type_traits/add_rvalue_reference.h'}}
 #include <__type_traits/add_volatile.h> // expected-error@*:* {{use of private header from outside its module: '__type_traits/add_volatile.h'}}
 #include <__type_traits/conditional.h> // expected-error@*:* {{use of private header from outside its module: '__type_traits/conditional.h'}}
+#include <__type_traits/conjunction.h> // expected-error@*:* {{use of private header from outside its module: '__type_traits/conjunction.h'}}
 #include <__type_traits/decay.h> // expected-error@*:* {{use of private header from outside its module: '__type_traits/decay.h'}}
+#include <__type_traits/disjunction.h> // expected-error@*:* {{use of private header from outside its module: '__type_traits/disjunction.h'}}
 #include <__type_traits/enable_if.h> // expected-error@*:* {{use of private header from outside its module: '__type_traits/enable_if.h'}}
 #include <__type_traits/extent.h> // expected-error@*:* {{use of private header from outside its module: '__type_traits/extent.h'}}
 #include <__type_traits/integral_constant.h> // expected-error@*:* {{use of private header from outside its module: '__type_traits/integral_constant.h'}}

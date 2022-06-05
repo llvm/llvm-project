@@ -399,10 +399,10 @@ const MCPhysReg *SIRegisterInfo::getCalleeSavedRegs(
   case CallingConv::C:
   case CallingConv::Fast:
   case CallingConv::Cold:
-    return ST.hasGFX90AInsts() ? CSR_AMDGPU_HighRegs_With_AGPRs_SaveList
-                               : CSR_AMDGPU_HighRegs_SaveList;
+    return ST.hasGFX90AInsts() ? CSR_AMDGPU_GFX90AInsts_SaveList
+                               : CSR_AMDGPU_SaveList;
   case CallingConv::AMDGPU_Gfx:
-    return ST.hasGFX90AInsts() ? CSR_AMDGPU_SI_Gfx_With_AGPRs_SaveList
+    return ST.hasGFX90AInsts() ? CSR_AMDGPU_SI_Gfx_GFX90AInsts_SaveList
                                : CSR_AMDGPU_SI_Gfx_SaveList;
   default: {
     // Dummy to not crash RegisterClassInfo.
@@ -423,10 +423,10 @@ const uint32_t *SIRegisterInfo::getCallPreservedMask(const MachineFunction &MF,
   case CallingConv::C:
   case CallingConv::Fast:
   case CallingConv::Cold:
-    return ST.hasGFX90AInsts() ? CSR_AMDGPU_HighRegs_With_AGPRs_RegMask
-                               : CSR_AMDGPU_HighRegs_RegMask;
+    return ST.hasGFX90AInsts() ? CSR_AMDGPU_GFX90AInsts_RegMask
+                               : CSR_AMDGPU_RegMask;
   case CallingConv::AMDGPU_Gfx:
-    return ST.hasGFX90AInsts() ? CSR_AMDGPU_SI_Gfx_With_AGPRs_RegMask
+    return ST.hasGFX90AInsts() ? CSR_AMDGPU_SI_Gfx_GFX90AInsts_RegMask
                                : CSR_AMDGPU_SI_Gfx_RegMask;
   default:
     return nullptr;
@@ -516,19 +516,19 @@ bool SIRegisterInfo::hasBasePointer(const MachineFunction &MF) const {
 Register SIRegisterInfo::getBaseRegister() const { return AMDGPU::SGPR34; }
 
 const uint32_t *SIRegisterInfo::getAllVGPRRegMask() const {
-  return CSR_AMDGPU_AllVGPRs_RegMask;
+  return AMDGPU_AllVGPRs_RegMask;
 }
 
 const uint32_t *SIRegisterInfo::getAllAGPRRegMask() const {
-  return CSR_AMDGPU_AllAGPRs_RegMask;
+  return AMDGPU_AllAGPRs_RegMask;
 }
 
 const uint32_t *SIRegisterInfo::getAllVectorRegMask() const {
-  return CSR_AMDGPU_AllVectorRegs_RegMask;
+  return AMDGPU_AllVectorRegs_RegMask;
 }
 
 const uint32_t *SIRegisterInfo::getAllAllocatableSRegMask() const {
-  return CSR_AMDGPU_AllAllocatableSRegs_RegMask;
+  return AMDGPU_AllAllocatableSRegs_RegMask;
 }
 
 unsigned SIRegisterInfo::getSubRegFromChannel(unsigned Channel,
@@ -1727,8 +1727,7 @@ bool SIRegisterInfo::spillSGPR(MachineBasicBlock::iterator MI,
                                bool OnlyToVGPR, bool NeedsCFI) const {
   SGPRSpillBuilder SB(*this, *ST.getInstrInfo(), isWave32, MI, Index, RS);
 
-  ArrayRef<SIMachineFunctionInfo::SpilledReg> VGPRSpills =
-      SB.MFI.getSGPRToVGPRSpills(Index);
+  ArrayRef<SpilledReg> VGPRSpills = SB.MFI.getSGPRToVGPRSpills(Index);
   bool SpillToVGPR = !VGPRSpills.empty();
   if (OnlyToVGPR && !SpillToVGPR)
     return false;
@@ -1748,7 +1747,7 @@ bool SIRegisterInfo::spillSGPR(MachineBasicBlock::iterator MI,
           SB.NumSubRegs == 1
               ? SB.SuperReg
               : Register(getSubReg(SB.SuperReg, SB.SplitParts[i]));
-      SIMachineFunctionInfo::SpilledReg Spill = VGPRSpills[i];
+      SpilledReg Spill = VGPRSpills[i];
 
       bool UseKill = SB.IsKill && i == SB.NumSubRegs - 1;
 
@@ -1877,8 +1876,7 @@ bool SIRegisterInfo::restoreSGPR(MachineBasicBlock::iterator MI,
                                  bool OnlyToVGPR) const {
   SGPRSpillBuilder SB(*this, *ST.getInstrInfo(), isWave32, MI, Index, RS);
 
-  ArrayRef<SIMachineFunctionInfo::SpilledReg> VGPRSpills =
-      SB.MFI.getSGPRToVGPRSpills(Index);
+  ArrayRef<SpilledReg> VGPRSpills = SB.MFI.getSGPRToVGPRSpills(Index);
   bool SpillToVGPR = !VGPRSpills.empty();
   if (OnlyToVGPR && !SpillToVGPR)
     return false;
@@ -1890,7 +1888,7 @@ bool SIRegisterInfo::restoreSGPR(MachineBasicBlock::iterator MI,
               ? SB.SuperReg
               : Register(getSubReg(SB.SuperReg, SB.SplitParts[i]));
 
-      SIMachineFunctionInfo::SpilledReg Spill = VGPRSpills[i];
+      SpilledReg Spill = VGPRSpills[i];
       auto MIB = BuildMI(*SB.MBB, MI, SB.DL, SB.TII.get(AMDGPU::V_READLANE_B32),
                          SubReg)
                      .addReg(Spill.VGPR)

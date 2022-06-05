@@ -10,7 +10,7 @@
 #define LLVM_LIB_TARGET_AMDGPU_SIFRAMELOWERING_H
 
 #include "AMDGPUFrameLowering.h"
-#include "SIMachineFunctionInfo.h"
+#include "SIRegisterInfo.h"
 
 namespace llvm {
 
@@ -114,7 +114,7 @@ public:
   MachineInstr *buildCFIForSGPRToVGPRSpill(
       MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
       const DebugLoc &DL, Register SGPR,
-      ArrayRef<SIMachineFunctionInfo::SpilledReg> VGPRSpills) const;
+      ArrayRef<SIRegisterInfo::SpilledReg> VGPRSpills) const;
   /// Create a CFI index describing a spill of a SGPR to VMEM and
   /// build a MachineInstr around it.
   MachineInstr *buildCFIForSGPRToVMEMSpill(MachineBasicBlock &MBB,

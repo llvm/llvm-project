@@ -1,6 +1,7 @@
 // RUN: %clang_cc1 -fsyntax-only -verify -triple i386-unknown-freebsd %s
 // RUN: %clang_cc1 -fsyntax-only -verify -triple x86_64-unknown-freebsd %s
 // RUN: %clang_cc1 -fsyntax-only -verify -triple x86_64-scei-ps4 %s
+// RUN: %clang_cc1 -fsyntax-only -verify -triple x86_64-sie-ps5 %s
 
 // Test FreeBSD kernel printf extensions.
 int freebsd_kernel_printf(const char *, ...) __attribute__((__format__(__freebsd_kprintf__, 1, 2)));

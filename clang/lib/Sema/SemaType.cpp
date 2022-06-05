@@ -5182,11 +5182,15 @@ static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
       if ((T.getCVRQualifiers() || T->isAtomicType()) &&
           !(S.getLangOpts().CPlusPlus &&
             (T->isDependentType() || T->isRecordType()))) {
-        // WG14 DR 423 updated 6.7.6.3p4 to have the function declarator drop
-        // all qualifiers from the return type.
-        diagnoseRedundantReturnTypeQualifiers(S, T, D, chunkIndex);
-        if (!S.getLangOpts().CPlusPlus)
-          T = T.getAtomicUnqualifiedType();
+        if (T->isVoidType() && !S.getLangOpts().CPlusPlus &&
+            D.getFunctionDefinitionKind() ==
+                FunctionDefinitionKind::Definition) {
+          // [6.9.1/3] qualified void return is invalid on a C
+          // function definition.  Apparently ok on declarations and
+          // in C++ though (!)
+          S.Diag(DeclType.Loc, diag::err_func_returning_qualified_void) << T;
+        } else
+          diagnoseRedundantReturnTypeQualifiers(S, T, D, chunkIndex);
 
         // C++2a [dcl.fct]p12:
         //   A volatile-qualified return type is deprecated

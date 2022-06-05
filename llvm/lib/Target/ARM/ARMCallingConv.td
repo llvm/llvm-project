@@ -289,6 +289,10 @@ def CSR_AAPCS_SplitPush : CalleeSavedRegs<(add LR, R7, R6, R5, R4,
                                                R11, R10, R9, R8,
                                                (sequence "D%u", 15, 8))>;
 
+def CSR_Win_SplitFP : CalleeSavedRegs<(add R10, R9, R8, R7, R6, R5, R4,
+                                               (sequence "D%u", 15, 8),
+                                               LR, R11)>;
+
 // R8 is used to pass swifterror, remove it from CSR.
 def CSR_AAPCS_SplitPush_SwiftError : CalleeSavedRegs<(sub CSR_AAPCS_SplitPush,
                                                       R8)>;

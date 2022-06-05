@@ -124,6 +124,8 @@ std::string Linux::getMultiarchTriple(const Driver &D,
     return "powerpc64-linux-gnu";
   case llvm::Triple::ppc64le:
     return "powerpc64le-linux-gnu";
+  case llvm::Triple::riscv64:
+    return "riscv64-linux-gnu";
   case llvm::Triple::sparc:
     return "sparc-linux-gnu";
   case llvm::Triple::sparcv9:

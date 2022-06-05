@@ -27,7 +27,7 @@ class SparseTensor_Op<string mnemonic, list<Trait> traits = []>
 
 def SparseTensor_NewOp : SparseTensor_Op<"new", [NoSideEffect]>,
     Arguments<(ins AnyType:$source)>,
-    Results<(outs TensorOf<[AnyType]>:$result)> {
+    Results<(outs AnySparseTensor:$result)> {
   string summary = "Materializes a new sparse tensor from given source";
   string description = [{
     Materializes a sparse tensor with contents taken from an opaque pointer
@@ -46,30 +46,6 @@ def SparseTensor_NewOp : SparseTensor_Op<"new", [NoSideEffect]>,
     ```
   }];
   let assemblyFormat = "$source attr-dict `:` type($source) `to` type($result)";
-  let hasVerifier = 1;
-}
-
-def SparseTensor_InitOp : SparseTensor_Op<"init", [NoSideEffect]>,
-    Arguments<(ins Variadic<Index>:$sizes)>,
-    Results<(outs AnyTensor:$result)> {
-  string summary = "Materializes an unitialized sparse tensor";
-  string description = [{
-    Materializes an uninitialized sparse tensor with given shape (either static
-    or dynamic). The operation is provided as an anchor that materializes a
-    properly typed but uninitialized sparse tensor into the output clause of
-    a subsequent operation that yields a sparse tensor as the result.
-
-    Example:
-
-    ```mlir
-    %c = sparse_tensor.init_tensor [%d1, %d2] : tensor<?x?xf32, #SparseMatrix>
-    %0 = linalg.matmul
-      ins(%a, %b: tensor<?x?xf32>, tensor<?x?xf32>)
-      outs(%c: tensor<?x?xf32, #SparseMatrix>) -> tensor<?x?xf32, #SparseMatrix>
-    ```
-  }];
-  let assemblyFormat = "`[` $sizes `]` attr-dict `:` type($result)";
-  let hasVerifier = 1;
 }
 
 def SparseTensor_ConvertOp : SparseTensor_Op<"convert",
@@ -115,7 +91,7 @@ def SparseTensor_ConvertOp : SparseTensor_Op<"convert",
 }
 
 def SparseTensor_ToPointersOp : SparseTensor_Op<"pointers", [NoSideEffect]>,
-    Arguments<(ins AnyTensor:$tensor, Index:$dim)>,
+    Arguments<(ins AnySparseTensor:$tensor, Index:$dim)>,
     Results<(outs AnyStridedMemRefOfRank<1>:$result)> {
   let summary = "Extracts pointers array at given dimension from a tensor";
   let description = [{
@@ -140,7 +116,7 @@ def SparseTensor_ToPointersOp : SparseTensor_Op<"pointers", [NoSideEffect]>,
 }
 
 def SparseTensor_ToIndicesOp : SparseTensor_Op<"indices", [NoSideEffect]>,
-    Arguments<(ins AnyTensor:$tensor, Index:$dim)>,
+    Arguments<(ins AnySparseTensor:$tensor, Index:$dim)>,
     Results<(outs AnyStridedMemRefOfRank<1>:$result)> {
   let summary = "Extracts indices array at given dimension from a tensor";
   let description = [{
@@ -165,7 +141,7 @@ def SparseTensor_ToIndicesOp : SparseTensor_Op<"indices", [NoSideEffect]>,
 }
 
 def SparseTensor_ToValuesOp : SparseTensor_Op<"values", [NoSideEffect]>,
-    Arguments<(ins AnyTensor:$tensor)>,
+    Arguments<(ins AnySparseTensor:$tensor)>,
     Results<(outs AnyStridedMemRefOfRank<1>:$result)> {
   let summary = "Extracts numerical values array from a tensor";
   let description = [{
@@ -196,7 +172,7 @@ def SparseTensor_ToValuesOp : SparseTensor_Op<"values", [NoSideEffect]>,
 //===----------------------------------------------------------------------===//
 
 def SparseTensor_LexInsertOp : SparseTensor_Op<"lex_insert", []>,
-    Arguments<(ins AnyTensor:$tensor,
+    Arguments<(ins AnySparseTensor:$tensor,
                StridedMemRefRankOf<[Index], [1]>:$indices,
                AnyType:$value)> {
   string summary = "Inserts a value into given sparse tensor in lexicographical index order";
@@ -219,11 +195,10 @@ def SparseTensor_LexInsertOp : SparseTensor_Op<"lex_insert", []>,
   }];
   let assemblyFormat = "$tensor `,` $indices `,` $value attr-dict `:`"
                        " type($tensor) `,` type($indices) `,` type($value)";
-  let hasVerifier = 1;
 }
 
 def SparseTensor_ExpandOp : SparseTensor_Op<"expand", []>,
-    Arguments<(ins AnyTensor:$tensor)>,
+    Arguments<(ins AnySparseTensor:$tensor)>,
     Results<(outs AnyStridedMemRefOfRank<1>:$values,
                   StridedMemRefRankOf<[I1],[1]>:$filled,
                   StridedMemRefRankOf<[Index],[1]>:$added,
@@ -261,11 +236,10 @@ def SparseTensor_ExpandOp : SparseTensor_Op<"expand", []>,
   }];
   let assemblyFormat = "$tensor attr-dict `:` type($tensor) `to` type($values)"
                        " `,` type($filled) `,` type($added) `,` type($count)";
-  let hasVerifier = 1;
 }
 
 def SparseTensor_CompressOp : SparseTensor_Op<"compress", []>,
-    Arguments<(ins AnyTensor:$tensor,
+    Arguments<(ins AnySparseTensor:$tensor,
                    StridedMemRefRankOf<[Index],[1]>:$indices,
                    AnyStridedMemRefOfRank<1>:$values,
                    StridedMemRefRankOf<[I1],[1]>:$filled,
@@ -296,11 +270,10 @@ def SparseTensor_CompressOp : SparseTensor_Op<"compress", []>,
                         " $added `,` $count attr-dict `:` type($tensor) `,`"
 			" type($indices) `,` type($values) `,` type($filled) `,`"
 			" type($added) `,` type($count)";
-  let hasVerifier = 1;
 }
 
 def SparseTensor_LoadOp : SparseTensor_Op<"load", [SameOperandsAndResultType]>,
-    Arguments<(ins AnyTensor:$tensor, UnitAttr:$hasInserts)>,
+    Arguments<(ins AnySparseTensor:$tensor, UnitAttr:$hasInserts)>,
     Results<(outs AnyTensor:$result)> {
   let summary =
     "Rematerializes tensor from underlying sparse storage format";
@@ -329,11 +302,10 @@ def SparseTensor_LoadOp : SparseTensor_Op<"load", [SameOperandsAndResultType]>,
     ```
   }];
   let assemblyFormat = "$tensor (`hasInserts` $hasInserts^)? attr-dict `:` type($tensor)";
-  let hasVerifier = 1;
 }
 
 def SparseTensor_ReleaseOp : SparseTensor_Op<"release", []>,
-    Arguments<(ins AnyTensor:$tensor)> {
+    Arguments<(ins AnySparseTensor:$tensor)> {
   string summary = "Releases underlying sparse storage format of given tensor";
   string description = [{
     Releases the underlying sparse storage format for a tensor that
@@ -355,11 +327,10 @@ def SparseTensor_ReleaseOp : SparseTensor_Op<"release", []>,
     ```
   }];
   let assemblyFormat = "$tensor attr-dict `:` type($tensor)";
-  let hasVerifier = 1;
 }
 
 def SparseTensor_OutOp : SparseTensor_Op<"out", []>,
-    Arguments<(ins AnyType:$tensor, AnyType:$dest)> {
+    Arguments<(ins AnySparseTensor:$tensor, AnyType:$dest)> {
   string summary = "Outputs a sparse tensor to the given destination";
   string description = [{
     Outputs the contents of a sparse tensor to the destination defined by an
@@ -376,7 +347,6 @@ def SparseTensor_OutOp : SparseTensor_Op<"out", []>,
     ```
   }];
   let assemblyFormat = "$tensor `,` $dest attr-dict `:` type($tensor) `,` type($dest)";
-  let hasVerifier = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -417,7 +387,7 @@ def SparseTensor_BinaryOp : SparseTensor_Op<"binary", [NoSideEffect]>,
 
       Example of isEqual applied to intersecting elements only.
       ```mlir
-      %C = sparse_tensor.init...
+      %C = bufferization.alloc_tensor...
       %0 = linalg.generic #trait
         ins(%A: tensor<?xf64, #SparseVec>, %B: tensor<?xf64, #SparseVec>)
         outs(%C: tensor<?xi8, #SparseVec>) {
@@ -438,7 +408,7 @@ def SparseTensor_BinaryOp : SparseTensor_Op<"binary", [NoSideEffect]>,
       Example of A+B in upper triangle, A-B in lower triangle
       (not working yet, but construct will be available soon).
       ```mlir
-      %C = sparse_tensor.init...
+      %C = bufferization.alloc_tensor...
       %1 = linalg.generic #trait
         ins(%A: tensor<?x?xf64, #CSR>, %B: tensor<?x?xf64, #CSR>
         outs(%C: tensor<?x?xf64, #CSR> {
@@ -470,7 +440,7 @@ def SparseTensor_BinaryOp : SparseTensor_Op<"binary", [NoSideEffect]>,
       is *not* overlapped by B. The element type of B can be different than A
       because we never use its values, only its sparse structure.
       ```mlir
-      %C = sparse_tensor.init...
+      %C = bufferization.alloc_tensor...
       %2 = linalg.generic #trait
         ins(%A: tensor<?x?xf64, #CSR>, %B: tensor<?x?xi32, #CSR>
         outs(%C: tensor<?x?xf64, #CSR> {
@@ -517,7 +487,7 @@ def SparseTensor_UnaryOp : SparseTensor_Op<"unary", [NoSideEffect]>,
 
       Example of A+1, restricted to existing elements:
       ```mlir
-      %C = sparse_tensor.init...
+      %C = bufferization.alloc_tensor...
       %0 = linalg.generic #trait
         ins(%A: tensor<?xf64, #SparseVec>)
         outs(%C: tensor<?xf64, #SparseVec>) {

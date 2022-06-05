@@ -62,12 +62,12 @@ Opaque Pointers Mode
 ====================
 
 During the transition phase, LLVM can be used in two modes: In typed pointer
-mode (currently still the default) all pointer types have a pointee type and
-opaque pointers cannot be used. In opaque pointers mode, all pointers are
-opaque. The opaque pointer mode can be enabled using ``-opaque-pointers`` in
-LLVM tools like ``opt``, or ``-Xclang -opaque-pointers`` in clang. Additionally,
-opaque pointer mode is automatically enabled for IR and bitcode files that use
-the ``ptr`` type.
+mode all pointer types have a pointee type and opaque pointers cannot be used.
+In opaque pointers mode (the default), all pointers are opaque. The opaque
+pointer mode can be disabled using ``-opaque-pointers=0`` in
+LLVM tools like ``opt``, or ``-Xclang -no-opaque-pointers`` in clang.
+Additionally, opaque pointer mode is automatically disabled for IR and bitcode
+files that explicitly mention ``i8*`` style typed pointers.
 
 In opaque pointer mode, all typed pointers used in IR, bitcode, or created
 using ``PointerType::get()`` and similar APIs are automatically converted into
@@ -191,6 +191,10 @@ opaque pointer transition::
 Additionally, it will no longer be possible to call ``LLVMGetElementType()``
 on a pointer type.
 
+It is possible to control whether opaque pointers are used (if you want to
+override the default) using ``LLVMContext::setOpaquePointers`` or
+``LLVMContextSetOpaquePointers()``.
+
 Transition State
 ================
 
@@ -204,6 +208,9 @@ or by passing ``-Xclang -no-opaque-pointers`` to a single clang invocation.
 For users of the clang cc1 interface, ``-no-opaque-pointers`` can be passed.
 Note that the ``CLANG_ENABLE_OPAQUE_POINTERS`` cmake option has no effect on
 the cc1 interface.
+
+Usage for LTO can be disabled by passing ``-Wl,-plugin-opt=no-opaque-pointers``
+to the clang driver.
 
 The next steps for the opaque pointer migration are:
 

@@ -176,13 +176,21 @@ cl::opt<bolt::ReorderBasicBlocks::LayoutType> ReorderBlocks(
         clEnumValN(bolt::ReorderBasicBlocks::LT_OPTIMIZE_CACHE, "cache",
                    "perform optimal layout prioritizing I-cache "
                    "behavior"),
-        clEnumValN(bolt::ReorderBasicBlocks::LT_OPTIMIZE_EXT_TSP, "cache+",
+        clEnumValN(bolt::ReorderBasicBlocks::LT_OPTIMIZE_CACHE_PLUS, "cache+",
                    "perform layout optimizing I-cache behavior"),
         clEnumValN(bolt::ReorderBasicBlocks::LT_OPTIMIZE_EXT_TSP, "ext-tsp",
                    "perform layout optimizing I-cache behavior"),
         clEnumValN(bolt::ReorderBasicBlocks::LT_OPTIMIZE_SHUFFLE,
                    "cluster-shuffle", "perform random layout of clusters")),
-    cl::ZeroOrMore, cl::cat(BoltOptCategory));
+    cl::ZeroOrMore, cl::cat(BoltOptCategory),
+    cl::callback([](const bolt::ReorderBasicBlocks::LayoutType &option) {
+      if (option == bolt::ReorderBasicBlocks::LT_OPTIMIZE_CACHE_PLUS) {
+        WithColor::warning()
+            << "'-reorder-blocks=cache+' is deprecated, "
+            << "please use '-reorder-blocks=ext-tsp' instead\n";
+        ReorderBlocks = bolt::ReorderBasicBlocks::LT_OPTIMIZE_EXT_TSP;
+      }
+    }));
 
 static cl::opt<unsigned>
 ReportBadLayout("report-bad-layout",

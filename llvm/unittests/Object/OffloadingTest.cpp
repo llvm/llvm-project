@@ -4,6 +4,9 @@
 #include "gtest/gtest.h"
 #include <random>
 
+using namespace llvm;
+using namespace llvm::object;
+
 TEST(OffloadingTest, checkOffloadingBinary) {
   // Create random data to fill the image.
   std::mt19937 Rng(std::random_device{}());
@@ -27,23 +30,22 @@ TEST(OffloadingTest, checkOffloadingBinary) {
   }
 
   // Create the image.
-  llvm::StringMap<llvm::StringRef> StringData;
+  StringMap<StringRef> StringData;
   for (auto &KeyAndValue : Strings)
     StringData[KeyAndValue.first] = KeyAndValue.second;
-  std::unique_ptr<llvm::MemoryBuffer> ImageData =
-      llvm::MemoryBuffer::getMemBuffer(
-          {reinterpret_cast<char *>(Image.data()), Image.size()}, "", false);
+  std::unique_ptr<MemoryBuffer> ImageData = MemoryBuffer::getMemBuffer(
+      {reinterpret_cast<char *>(Image.data()), Image.size()}, "", false);
 
-  llvm::OffloadBinary::OffloadingImage Data;
-  Data.TheImageKind = static_cast<llvm::ImageKind>(KindDist(Rng));
-  Data.TheOffloadKind = static_cast<llvm::OffloadKind>(KindDist(Rng));
+  OffloadBinary::OffloadingImage Data;
+  Data.TheImageKind = static_cast<ImageKind>(KindDist(Rng));
+  Data.TheOffloadKind = static_cast<OffloadKind>(KindDist(Rng));
   Data.Flags = KindDist(Rng);
   Data.StringData = StringData;
   Data.Image = *ImageData;
 
-  auto BinaryBuffer = llvm::OffloadBinary::write(Data);
+  auto BinaryBuffer = OffloadBinary::write(Data);
 
-  auto BinaryOrErr = llvm::OffloadBinary::create(*BinaryBuffer);
+  auto BinaryOrErr = OffloadBinary::create(*BinaryBuffer);
   if (!BinaryOrErr)
     FAIL();
 
@@ -60,6 +62,6 @@ TEST(OffloadingTest, checkOffloadingBinary) {
   EXPECT_TRUE(Data.Image.getBuffer() == Binary.getImage());
 
   // Ensure the size and alignment of the data is correct.
-  EXPECT_TRUE(Binary.getSize() % llvm::OffloadBinary::getAlignment() == 0);
+  EXPECT_TRUE(Binary.getSize() % OffloadBinary::getAlignment() == 0);
   EXPECT_TRUE(Binary.getSize() == BinaryBuffer->getBuffer().size());
 }

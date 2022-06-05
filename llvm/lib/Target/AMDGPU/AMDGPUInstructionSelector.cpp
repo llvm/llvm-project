@@ -1723,10 +1723,12 @@ bool AMDGPUInstructionSelector::selectImageIntrinsic(
   if (IsGFX10Plus)
     MIB.addImm(IsA16 ? -1 : 0);
 
-  if (!Subtarget->hasGFX90AInsts())
+  if (!Subtarget->hasGFX90AInsts()) {
     MIB.addImm(TFE); // tfe
-  else if (TFE)
-    report_fatal_error("TFE is not supported on this GPU");
+  } else if (TFE) {
+    LLVM_DEBUG(dbgs() << "TFE is not supported on this GPU\n");
+    return false;
+  }
 
   MIB.addImm(LWE); // lwe
   if (!IsGFX10Plus)

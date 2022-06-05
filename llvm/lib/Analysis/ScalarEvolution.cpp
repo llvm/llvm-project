@@ -149,12 +149,11 @@ bool llvm::VerifySCEV = false;
 #endif
 
 static cl::opt<unsigned>
-MaxBruteForceIterations("scalar-evolution-max-iterations", cl::ReallyHidden,
-                        cl::ZeroOrMore,
-                        cl::desc("Maximum number of iterations SCEV will "
-                                 "symbolically execute a constant "
-                                 "derived loop"),
-                        cl::init(100));
+    MaxBruteForceIterations("scalar-evolution-max-iterations", cl::ReallyHidden,
+                            cl::desc("Maximum number of iterations SCEV will "
+                                     "symbolically execute a constant "
+                                     "derived loop"),
+                            cl::init(100));
 
 static cl::opt<bool, true> VerifySCEVOpt(
     "verify-scev", cl::Hidden, cl::location(VerifySCEV),

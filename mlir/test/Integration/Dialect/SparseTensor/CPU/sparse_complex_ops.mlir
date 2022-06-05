@@ -31,7 +31,7 @@ module {
                  -> tensor<?xcomplex<f64>, #SparseVector> {
     %c0 = arith.constant 0 : index
     %d = tensor.dim %arga, %c0 : tensor<?xcomplex<f64>, #SparseVector>
-    %xv = sparse_tensor.init [%d] : tensor<?xcomplex<f64>, #SparseVector>
+    %xv = bufferization.alloc_tensor(%d) : tensor<?xcomplex<f64>, #SparseVector>
     %0 = linalg.generic #trait_op2
        ins(%arga, %argb: tensor<?xcomplex<f64>, #SparseVector>,
                          tensor<?xcomplex<f64>, #SparseVector>)
@@ -48,7 +48,7 @@ module {
                  -> tensor<?xcomplex<f64>, #SparseVector> {
     %c0 = arith.constant 0 : index
     %d = tensor.dim %arga, %c0 : tensor<?xcomplex<f64>, #SparseVector>
-    %xv = sparse_tensor.init [%d] : tensor<?xcomplex<f64>, #SparseVector>
+    %xv = bufferization.alloc_tensor(%d) : tensor<?xcomplex<f64>, #SparseVector>
     %0 = linalg.generic #trait_op1
        ins(%arga: tensor<?xcomplex<f64>, #SparseVector>)
         outs(%xv: tensor<?xcomplex<f64>, #SparseVector>) {
@@ -63,7 +63,7 @@ module {
                  -> tensor<?xcomplex<f64>, #SparseVector> {
     %c0 = arith.constant 0 : index
     %d = tensor.dim %arga, %c0 : tensor<?xcomplex<f64>, #SparseVector>
-    %xv = sparse_tensor.init [%d] : tensor<?xcomplex<f64>, #SparseVector>
+    %xv = bufferization.alloc_tensor(%d) : tensor<?xcomplex<f64>, #SparseVector>
     %0 = linalg.generic #trait_op1
        ins(%arga: tensor<?xcomplex<f64>, #SparseVector>)
         outs(%xv: tensor<?xcomplex<f64>, #SparseVector>) {
@@ -78,7 +78,7 @@ module {
                  -> tensor<?xcomplex<f64>, #SparseVector> {
     %c0 = arith.constant 0 : index
     %d = tensor.dim %arga, %c0 : tensor<?xcomplex<f64>, #SparseVector>
-    %xv = sparse_tensor.init [%d] : tensor<?xcomplex<f64>, #SparseVector>
+    %xv = bufferization.alloc_tensor(%d) : tensor<?xcomplex<f64>, #SparseVector>
     %0 = linalg.generic #trait_op1
        ins(%arga: tensor<?xcomplex<f64>, #SparseVector>)
         outs(%xv: tensor<?xcomplex<f64>, #SparseVector>) {
@@ -93,16 +93,14 @@ module {
                  -> tensor<?xcomplex<f64>, #SparseVector> {
     %c0 = arith.constant 0 : index
     %d = tensor.dim %arga, %c0 : tensor<?xcomplex<f64>, #SparseVector>
-    %xv = sparse_tensor.init [%d] : tensor<?xcomplex<f64>, #SparseVector>
+    %xv = bufferization.alloc_tensor(%d) : tensor<?xcomplex<f64>, #SparseVector>
     %0 = linalg.generic #trait_op1
        ins(%arga: tensor<?xcomplex<f64>, #SparseVector>)
         outs(%xv: tensor<?xcomplex<f64>, #SparseVector>) {
         ^bb(%a: complex<f64>, %x: complex<f64>):
           %1 = complex.log1p %a : complex<f64>
-          // TODO(bixia): Enable this line after adding complex.expm1 to
-          // complex to standard lowering.
-          // %2 = complex.expm1 %1 : complex<f64>
-          linalg.yield %1 : complex<f64>
+          %2 = complex.expm1 %1 : complex<f64>
+          linalg.yield %2 : complex<f64>
     } -> tensor<?xcomplex<f64>, #SparseVector>
     return %0 : tensor<?xcomplex<f64>, #SparseVector>
   }
@@ -111,7 +109,7 @@ module {
                  -> tensor<?xcomplex<f64>, #SparseVector> {
     %c0 = arith.constant 0 : index
     %d = tensor.dim %arga, %c0 : tensor<?xcomplex<f64>, #SparseVector>
-    %xv = sparse_tensor.init [%d] : tensor<?xcomplex<f64>, #SparseVector>
+    %xv = bufferization.alloc_tensor(%d) : tensor<?xcomplex<f64>, #SparseVector>
     %c = complex.constant [2.0 : f64, 0.0 : f64] : complex<f64>
     %0 = linalg.generic #trait_op1
        ins(%arga: tensor<?xcomplex<f64>, #SparseVector>)
@@ -127,7 +125,7 @@ module {
                  -> tensor<?xf64, #SparseVector> {
     %c0 = arith.constant 0 : index
     %d = tensor.dim %arga, %c0 : tensor<?xcomplex<f64>, #SparseVector>
-    %xv = sparse_tensor.init [%d] : tensor<?xf64, #SparseVector>
+    %xv = bufferization.alloc_tensor(%d) : tensor<?xf64, #SparseVector>
     %0 = linalg.generic #trait_op1
        ins(%arga: tensor<?xcomplex<f64>, #SparseVector>)
         outs(%xv: tensor<?xf64, #SparseVector>) {
@@ -225,12 +223,12 @@ module {
     // CHECK-NEXT: 0.995055
     // CHECK-NEXT: 0
     call @dumpc(%3, %d3) : (tensor<?xcomplex<f64>, #SparseVector>, index) -> ()
-    // CHECK-NEXT: 1.52361
-    // CHECK-NEXT: 2.69061
-    // CHECK-NEXT: 1.73287
-    // CHECK-NEXT: 0.785398
-    // CHECK-NEXT: 2.13833
-    // CHECK-NEXT: 0.785398
+    // CHECK-NEXT: -5.13
+    // CHECK-NEXT: 2
+    // CHECK-NEXT: 3
+    // CHECK-NEXT: 4
+    // CHECK-NEXT: 5
+    // CHECK-NEXT: 6
     call @dumpc(%4, %d3) : (tensor<?xcomplex<f64>, #SparseVector>, index) -> ()
     // CHECK-NEXT: -2.565
     // CHECK-NEXT: 1

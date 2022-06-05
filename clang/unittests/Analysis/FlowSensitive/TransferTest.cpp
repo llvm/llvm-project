@@ -3369,4 +3369,192 @@ TEST_F(TransferTest, DoesNotCrashOnUnionThisExpr) {
       LangStandard::lang_cxx17, /*ApplyBuiltinTransfer=*/true, "operator=");
 }
 
+TEST_F(TransferTest, StructuredBindingAssignFromStructIntMembersToRefs) {
+  std::string Code = R"(
+    struct A {
+      int Foo;
+      int Bar;
+    };
+
+    void target() {
+      int Qux;
+      A Baz;
+      Baz.Foo = Qux;
+      auto &FooRef = Baz.Foo;
+      auto &BarRef = Baz.Bar;
+      auto &[BoundFooRef, BoundBarRef] = Baz;
+      // [[p]]
+    }
+  )";
+  runDataflow(
+      Code, [](llvm::ArrayRef<
+                   std::pair<std::string, DataflowAnalysisState<NoopLattice>>>
+                   Results,
+               ASTContext &ASTCtx) {
+        ASSERT_THAT(Results, ElementsAre(Pair("p", _)));
+        const Environment &Env = Results[0].second.Env;
+
+        const ValueDecl *FooRefDecl = findValueDecl(ASTCtx, "FooRef");
+        ASSERT_THAT(FooRefDecl, NotNull());
+
+        const ValueDecl *BarRefDecl = findValueDecl(ASTCtx, "BarRef");
+        ASSERT_THAT(BarRefDecl, NotNull());
+
+        const ValueDecl *QuxDecl = findValueDecl(ASTCtx, "Qux");
+        ASSERT_THAT(QuxDecl, NotNull());
+
+        const ValueDecl *BoundFooRefDecl = findValueDecl(ASTCtx, "BoundFooRef");
+        ASSERT_THAT(BoundFooRefDecl, NotNull());
+
+        const ValueDecl *BoundBarRefDecl = findValueDecl(ASTCtx, "BoundBarRef");
+        ASSERT_THAT(BoundBarRefDecl, NotNull());
+
+        const StorageLocation *FooRefLoc =
+            Env.getStorageLocation(*FooRefDecl, SkipPast::Reference);
+        ASSERT_THAT(FooRefLoc, NotNull());
+
+        const StorageLocation *BarRefLoc =
+            Env.getStorageLocation(*BarRefDecl, SkipPast::Reference);
+        ASSERT_THAT(BarRefLoc, NotNull());
+
+        const Value *QuxVal = Env.getValue(*QuxDecl, SkipPast::None);
+        ASSERT_THAT(QuxVal, NotNull());
+
+        const StorageLocation *BoundFooRefLoc =
+            Env.getStorageLocation(*BoundFooRefDecl, SkipPast::Reference);
+        EXPECT_EQ(BoundFooRefLoc, FooRefLoc);
+
+        const StorageLocation *BoundBarRefLoc =
+            Env.getStorageLocation(*BoundBarRefDecl, SkipPast::Reference);
+        EXPECT_EQ(BoundBarRefLoc, BarRefLoc);
+
+        EXPECT_EQ(Env.getValue(*BoundFooRefDecl, SkipPast::Reference), QuxVal);
+      });
+}
+
+TEST_F(TransferTest, StructuredBindingAssignFromStructRefMembersToRefs) {
+  std::string Code = R"(
+    struct A {
+      int &Foo;
+      int &Bar;
+    };
+
+    void target(A Baz) {
+      int Qux;
+      Baz.Foo = Qux;
+      auto &FooRef = Baz.Foo;
+      auto &BarRef = Baz.Bar;
+      auto &[BoundFooRef, BoundBarRef] = Baz;
+      // [[p]]
+    }
+  )";
+  runDataflow(
+      Code, [](llvm::ArrayRef<
+                   std::pair<std::string, DataflowAnalysisState<NoopLattice>>>
+                   Results,
+               ASTContext &ASTCtx) {
+        ASSERT_THAT(Results, ElementsAre(Pair("p", _)));
+        const Environment &Env = Results[0].second.Env;
+
+        const ValueDecl *FooRefDecl = findValueDecl(ASTCtx, "FooRef");
+        ASSERT_THAT(FooRefDecl, NotNull());
+
+        const ValueDecl *BarRefDecl = findValueDecl(ASTCtx, "BarRef");
+        ASSERT_THAT(BarRefDecl, NotNull());
+
+        const ValueDecl *QuxDecl = findValueDecl(ASTCtx, "Qux");
+        ASSERT_THAT(QuxDecl, NotNull());
+
+        const ValueDecl *BoundFooRefDecl = findValueDecl(ASTCtx, "BoundFooRef");
+        ASSERT_THAT(BoundFooRefDecl, NotNull());
+
+        const ValueDecl *BoundBarRefDecl = findValueDecl(ASTCtx, "BoundBarRef");
+        ASSERT_THAT(BoundBarRefDecl, NotNull());
+
+        const StorageLocation *FooRefLoc =
+            Env.getStorageLocation(*FooRefDecl, SkipPast::Reference);
+        ASSERT_THAT(FooRefLoc, NotNull());
+
+        const StorageLocation *BarRefLoc =
+            Env.getStorageLocation(*BarRefDecl, SkipPast::Reference);
+        ASSERT_THAT(BarRefLoc, NotNull());
+
+        const Value *QuxVal = Env.getValue(*QuxDecl, SkipPast::None);
+        ASSERT_THAT(QuxVal, NotNull());
+
+        const StorageLocation *BoundFooRefLoc =
+            Env.getStorageLocation(*BoundFooRefDecl, SkipPast::Reference);
+        EXPECT_EQ(BoundFooRefLoc, FooRefLoc);
+
+        const StorageLocation *BoundBarRefLoc =
+            Env.getStorageLocation(*BoundBarRefDecl, SkipPast::Reference);
+        EXPECT_EQ(BoundBarRefLoc, BarRefLoc);
+
+        EXPECT_EQ(Env.getValue(*BoundFooRefDecl, SkipPast::Reference), QuxVal);
+      });
+}
+
+TEST_F(TransferTest, StructuredBindingAssignFromStructIntMembersToInts) {
+  std::string Code = R"(
+    struct A {
+      int Foo;
+      int Bar;
+    };
+
+    void target() {
+      int Qux;
+      A Baz;
+      Baz.Foo = Qux;
+      auto &FooRef = Baz.Foo;
+      auto &BarRef = Baz.Bar;
+      auto [BoundFoo, BoundBar] = Baz;
+      // [[p]]
+    }
+  )";
+  runDataflow(
+      Code, [](llvm::ArrayRef<
+                   std::pair<std::string, DataflowAnalysisState<NoopLattice>>>
+                   Results,
+               ASTContext &ASTCtx) {
+        ASSERT_THAT(Results, ElementsAre(Pair("p", _)));
+        const Environment &Env = Results[0].second.Env;
+
+        const ValueDecl *FooRefDecl = findValueDecl(ASTCtx, "FooRef");
+        ASSERT_THAT(FooRefDecl, NotNull());
+
+        const ValueDecl *BarRefDecl = findValueDecl(ASTCtx, "BarRef");
+        ASSERT_THAT(BarRefDecl, NotNull());
+
+        const ValueDecl *BoundFooDecl = findValueDecl(ASTCtx, "BoundFoo");
+        ASSERT_THAT(BoundFooDecl, NotNull());
+
+        const ValueDecl *BoundBarDecl = findValueDecl(ASTCtx, "BoundBar");
+        ASSERT_THAT(BoundBarDecl, NotNull());
+
+        const ValueDecl *QuxDecl = findValueDecl(ASTCtx, "Qux");
+        ASSERT_THAT(QuxDecl, NotNull());
+
+        const StorageLocation *FooRefLoc =
+            Env.getStorageLocation(*FooRefDecl, SkipPast::Reference);
+        ASSERT_THAT(FooRefLoc, NotNull());
+
+        const StorageLocation *BarRefLoc =
+            Env.getStorageLocation(*BarRefDecl, SkipPast::Reference);
+        ASSERT_THAT(BarRefLoc, NotNull());
+
+        const Value *QuxVal = Env.getValue(*QuxDecl, SkipPast::None);
+        ASSERT_THAT(QuxVal, NotNull());
+
+        const StorageLocation *BoundFooLoc =
+            Env.getStorageLocation(*BoundFooDecl, SkipPast::Reference);
+        EXPECT_NE(BoundFooLoc, FooRefLoc);
+
+        const StorageLocation *BoundBarLoc =
+            Env.getStorageLocation(*BoundBarDecl, SkipPast::Reference);
+        EXPECT_NE(BoundBarLoc, BarRefLoc);
+
+        EXPECT_EQ(Env.getValue(*BoundFooDecl, SkipPast::Reference), QuxVal);
+      });
+}
+
 } // namespace

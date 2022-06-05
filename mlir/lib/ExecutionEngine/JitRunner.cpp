@@ -75,8 +75,7 @@ struct Options {
   llvm::cl::OptionCategory clOptionsCategory{"linking options"};
   llvm::cl::list<std::string> clSharedLibs{
       "shared-libs", llvm::cl::desc("Libraries to link dynamically"),
-      llvm::cl::ZeroOrMore, llvm::cl::MiscFlags::CommaSeparated,
-      llvm::cl::cat(clOptionsCategory)};
+      llvm::cl::MiscFlags::CommaSeparated, llvm::cl::cat(clOptionsCategory)};
 
   /// CLI variables for debugging.
   llvm::cl::opt<bool> dumpObjectFile{

@@ -6,6 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+// UNSUPPORTED: !stdlib=libc++ && (c++03 || c++11 || c++14)
+
 // <string_view>
 
 // template<class charT, class traits>
@@ -52,8 +54,7 @@ TEST_CONSTEXPR_CXX14 bool test()
             assert((ConvertibleTo<SV>(v[i]) == v[j]) == expected);
             assert((v[i] == ConvertibleTo<SV>(v[j])) == expected);
 
-            if (!TEST_IS_CONSTANT_EVALUATED) {
-                // TODO FIXME: once P0980 "Making std::string constexpr" is implemented
+            if (!TEST_IS_CONSTANT_EVALUATED || TEST_STD_VER >= 20) {
                 assert((std::basic_string<CharT, Traits>(v[i]) == v[j]) == expected);
                 assert((v[i] == std::basic_string<CharT, Traits>(v[j])) == expected);
             }
@@ -74,8 +75,7 @@ TEST_CONSTEXPR_CXX14 bool test()
     assert((abc.data() == abc0def) == false);
     assert((abc0def == abc.data()) == false);
 
-    if (!TEST_IS_CONSTANT_EVALUATED) {
-        // TODO FIXME: once P0980 "Making std::string constexpr" is implemented
+    if (!TEST_IS_CONSTANT_EVALUATED || TEST_STD_VER >= 20) {
         assert((std::basic_string<CharT, Traits>(abc) == abc0def) == false);
         assert((abc0def == std::basic_string<CharT, Traits>(abc)) == false);
     }

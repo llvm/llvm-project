@@ -21971,9 +21971,9 @@ SDValue X86TargetLowering::LowerTRUNCATE(SDValue Op, SelectionDAG &DAG) const {
       return DAG.getBitcast(MVT::v8i16, In);
     }
 
-    SDValue OpLo = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, MVT::v8i32, In,
+    SDValue OpLo = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, MVT::v4i32, In,
                                DAG.getIntPtrConstant(0, DL));
-    SDValue OpHi = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, MVT::v8i32, In,
+    SDValue OpHi = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, MVT::v4i32, In,
                                DAG.getIntPtrConstant(4, DL));
 
     // The PSHUFB mask:
@@ -24267,12 +24267,10 @@ static SDValue LowerVSETCC(SDValue Op, const X86Subtarget &Subtarget,
       // Since SSE has no unsigned integer comparisons, we need to flip the sign
       // bits of the inputs before performing those operations. The lower
       // compare is always unsigned.
-      SDValue SB;
-      if (FlipSigns) {
-        SB = DAG.getConstant(0x8000000080000000ULL, dl, MVT::v2i64);
-      } else {
-        SB = DAG.getConstant(0x0000000080000000ULL, dl, MVT::v2i64);
-      }
+      SDValue SB = DAG.getConstant(FlipSigns ? 0x8000000080000000ULL
+                                             : 0x0000000080000000ULL,
+                                   dl, MVT::v2i64);
+
       Op0 = DAG.getNode(ISD::XOR, dl, MVT::v2i64, Op0, SB);
       Op1 = DAG.getNode(ISD::XOR, dl, MVT::v2i64, Op1, SB);
 
@@ -50129,10 +50127,14 @@ static SDValue isFNEG(SelectionDAG &DAG, SDNode *N, unsigned Depth = 0) {
         if (!UndefElts[I] && !EltBits[I].isSignMask())
           return SDValue();
 
-      return peekThroughBitcasts(Op0);
+      // Only allow bitcast from correctly-sized constant.
+      Op0 = peekThroughBitcasts(Op0);
+      if (Op0.getScalarValueSizeInBits() == ScalarSize)
+        return Op0;
     }
-  }
-  }
+    break;
+  } // case
+  } // switch
 
   return SDValue();
 }
@@ -53340,12 +53342,6 @@ static SDValue combineConcatVectorOps(const SDLoc &DL, MVT VT,
         Subs.push_back(SubOp.getOperand(I));
       return DAG.getNode(ISD::CONCAT_VECTORS, DL, VT, Subs);
     };
-    auto IsConcatFree = [](MVT VT, ArrayRef<SDValue> SubOps, unsigned I) {
-      return all_of(SubOps, [VT, I](SDValue Sub) {
-        return Sub.getOperand(I).getOpcode() == ISD::EXTRACT_SUBVECTOR &&
-               Sub.getOperand(I).getOperand(0).getValueType() == VT;
-      });
-    };
 
     unsigned NumOps = Ops.size();
     switch (Op0.getOpcode()) {
@@ -53529,16 +53525,8 @@ static SDValue combineConcatVectorOps(const SDLoc &DL, MVT VT,
                            ConcatSubOperand(VT, Ops, 1), Op0.getOperand(2));
       }
       break;
-    case ISD::VSELECT:
-    case X86ISD::BLENDV:
-      if (!IsSplat && VT.is256BitVector() &&
-          (VT.getScalarSizeInBits() >= 32 || Subtarget.hasInt256()) &&
-          IsConcatFree(VT, Ops, 1) && IsConcatFree(VT, Ops, 2)) {
-        return DAG.getNode(
-            Op0.getOpcode(), DL, VT, ConcatSubOperand(VT, Ops, 0),
-            ConcatSubOperand(VT, Ops, 1), ConcatSubOperand(VT, Ops, 2));
-      }
-      break;
+      // TODO: ISD::VSELECT and X86ISD::BLENDV handling if some of the args can
+      // be concatenated for free.
     }
   }
 

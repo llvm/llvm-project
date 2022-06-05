@@ -1138,10 +1138,11 @@ void ForeachThreadOp::build(mlir::OpBuilder &builder,
   result.addOperands(numThreads);
 
   Region *bodyRegion = result.addRegion();
-  {
-    OpBuilder::InsertionGuard g(builder);
-    builder.createBlock(bodyRegion);
-  }
+  OpBuilder::InsertionGuard g(builder);
+  // createBlock sets the IP inside the block.
+  // Generally we would guard against that but the default ensureTerminator impl
+  // expects it ..
+  builder.createBlock(bodyRegion);
   Block &bodyBlock = bodyRegion->front();
   bodyBlock.addArguments(
       SmallVector<Type>(numThreads.size(), builder.getIndexType()),
@@ -1158,8 +1159,9 @@ void ForeachThreadOp::build(
     function_ref<void(OpBuilder &, Location, ValueRange)> bodyBuilder) {
   result.addOperands(numThreads);
 
+  OpBuilder::InsertionGuard g(builder);
   Region *bodyRegion = result.addRegion();
-  bodyRegion->push_back(new Block);
+  builder.createBlock(bodyRegion);
   Block &bodyBlock = bodyRegion->front();
   bodyBlock.addArguments(
       SmallVector<Type>(numThreads.size(), builder.getIndexType()),
@@ -1167,9 +1169,11 @@ void ForeachThreadOp::build(
 
   OpBuilder::InsertionGuard guard(builder);
   builder.setInsertionPointToStart(&bodyBlock);
-  bodyBuilder(builder, result.location, bodyBlock.getArgument(0));
+  bodyBuilder(builder, result.location, bodyBlock.getArguments());
   auto terminator =
-      llvm::cast<PerformConcurrentlyOp>(bodyBlock.getTerminator());
+      llvm::dyn_cast<PerformConcurrentlyOp>(bodyBlock.getTerminator());
+  assert(terminator &&
+         "expected bodyBuilder to create PerformConcurrentlyOp terminator");
   result.addTypes(terminator.yieldedTypes());
 }
 
@@ -1229,9 +1233,55 @@ void ParallelInsertSliceOp::build(OpBuilder &b, OperationState &result,
   build(b, result, source, dest, offsetValues, sizeValues, strideValues);
 }
 
+namespace {
+/// Pattern to rewrite a parallel_insert_slice op with constant arguments.
+class ParallelInsertSliceOpConstantArgumentFolder final
+    : public OpRewritePattern<ParallelInsertSliceOp> {
+public:
+  using OpRewritePattern<ParallelInsertSliceOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(ParallelInsertSliceOp insertSliceOp,
+                                PatternRewriter &rewriter) const override {
+    // No constant operand, just return.
+    if (llvm::none_of(insertSliceOp.getOperands(), [](Value operand) {
+          return matchPattern(operand, matchConstantIndex());
+        }))
+      return failure();
+
+    // At least one of offsets/sizes/strides is a new constant.
+    // Form the new list of operands and constant attributes from the
+    // existing.
+    SmallVector<OpFoldResult> mixedOffsets(insertSliceOp.getMixedOffsets());
+    SmallVector<OpFoldResult> mixedSizes(insertSliceOp.getMixedSizes());
+    SmallVector<OpFoldResult> mixedStrides(insertSliceOp.getMixedStrides());
+    canonicalizeSubViewPart(mixedOffsets, ShapedType::isDynamicStrideOrOffset);
+    canonicalizeSubViewPart(mixedSizes, ShapedType::isDynamic);
+    canonicalizeSubViewPart(mixedStrides, ShapedType::isDynamicStrideOrOffset);
+
+    // Create the new op in canonical form.
+    rewriter.replaceOpWithNewOp<ParallelInsertSliceOp>(
+        insertSliceOp, insertSliceOp.getSource(), insertSliceOp.getDest(),
+        mixedOffsets, mixedSizes, mixedStrides);
+    return success();
+  }
+};
+} // namespace
+
+void ParallelInsertSliceOp::getCanonicalizationPatterns(
+    RewritePatternSet &results, MLIRContext *context) {
+  results.add<ParallelInsertSliceOpConstantArgumentFolder>(context);
+}
+
 //===----------------------------------------------------------------------===//
 // PerformConcurrentlyOp
 //===----------------------------------------------------------------------===//
+
+// Build a PerformConcurrentlyOp with mixed static and dynamic entries.
+void PerformConcurrentlyOp::build(OpBuilder &b, OperationState &result) {
+  OpBuilder::InsertionGuard g(b);
+  Region *bodyRegion = result.addRegion();
+  b.createBlock(bodyRegion);
+}
 
 LogicalResult PerformConcurrentlyOp::verify() {
   // TODO: PerformConcurrentlyOpInterface.

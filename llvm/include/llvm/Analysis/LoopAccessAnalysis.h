@@ -336,12 +336,6 @@ struct RuntimeCheckingPtrGroup {
   /// pointer, with index \p Index in RtCheck.
   RuntimeCheckingPtrGroup(unsigned Index, RuntimePointerChecking &RtCheck);
 
-  RuntimeCheckingPtrGroup(unsigned Index, const SCEV *Start, const SCEV *End,
-                          unsigned AS)
-      : High(End), Low(Start), AddressSpace(AS) {
-    Members.push_back(Index);
-  }
-
   /// Tries to add the pointer recorded in RtCheck at index
   /// \p Index to this pointer checking group. We can only add a pointer
   /// to a checking group if we will still be able to get
@@ -426,8 +420,8 @@ public:
   /// according to the assumptions that we've made during the analysis.
   /// The method might also version the pointer stride according to \p Strides,
   /// and add new predicates to \p PSE.
-  void insert(Loop *Lp, Value *Ptr, const SCEV *PtrExpr, Type *AccessTy,
-              bool WritePtr, unsigned DepSetId, unsigned ASId,
+  void insert(Loop *Lp, Value *Ptr, Type *AccessTy, bool WritePtr,
+              unsigned DepSetId, unsigned ASId, const ValueToValueMap &Strides,
               PredicatedScalarEvolution &PSE);
 
   /// No run-time memory checking is necessary.

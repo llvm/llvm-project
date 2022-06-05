@@ -132,7 +132,7 @@ struct CreateDebugOnly {
         "debug-only",
         cl::desc("Enable a specific type of debug output (comma separated list "
                  "of types)"),
-        cl::Hidden, cl::ZeroOrMore, cl::value_desc("debug string"),
+        cl::Hidden, cl::value_desc("debug string"),
         cl::location(DebugOnlyOptLoc), cl::ValueRequired);
   }
 };

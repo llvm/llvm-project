@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "DeltaManager.h"
+#include "ReducerWorkItem.h"
 #include "TestRunner.h"
 #include "deltas/Delta.h"
 #include "deltas/ReduceAliases.h"
@@ -25,6 +26,7 @@
 #include "deltas/ReduceGlobalVarInitializers.h"
 #include "deltas/ReduceGlobalVars.h"
 #include "deltas/ReduceIRReferences.h"
+#include "deltas/ReduceInstructionFlagsMIR.h"
 #include "deltas/ReduceInstructions.h"
 #include "deltas/ReduceInstructionsMIR.h"
 #include "deltas/ReduceMetadata.h"
@@ -34,6 +36,7 @@
 #include "deltas/ReduceOperandsSkip.h"
 #include "deltas/ReduceOperandsToArgs.h"
 #include "deltas/ReduceSpecialGlobals.h"
+#include "deltas/ReduceVirtualRegisters.h"
 #include "llvm/Support/CommandLine.h"
 
 using namespace llvm;
@@ -72,7 +75,9 @@ static cl::opt<std::string>
   DELTA_PASS("ir-instruction-references",                                      \
              reduceIRInstructionReferencesDeltaPass)                           \
   DELTA_PASS("ir-block-references", reduceIRBlockReferencesDeltaPass)          \
-  DELTA_PASS("ir-function-references", reduceIRFunctionReferencesDeltaPass)
+  DELTA_PASS("ir-function-references", reduceIRFunctionReferencesDeltaPass)    \
+  DELTA_PASS("instruction-flags", reduceInstructionFlagsMIRDeltaPass)          \
+  DELTA_PASS("register-hints", reduceVirtualRegisterHintsDeltaPass)
 
 static void runAllDeltaPasses(TestRunner &Tester) {
 #define DELTA_PASS(NAME, FUNC) FUNC(Tester);

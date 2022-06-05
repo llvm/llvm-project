@@ -48,7 +48,7 @@ static cl::list<std::string> InputFilenames(cl::Positional, cl::OneOrMore,
                                             cl::cat(LinkCategory));
 
 static cl::list<std::string> OverridingInputs(
-    "override", cl::ZeroOrMore, cl::value_desc("filename"),
+    "override", cl::value_desc("filename"),
     cl::desc(
         "input bitcode file which can override previously defined symbol(s)"),
     cl::cat(LinkCategory));
@@ -56,7 +56,7 @@ static cl::list<std::string> OverridingInputs(
 // Option to simulate function importing for testing. This enables using
 // llvm-link to simulate ThinLTO backend processes.
 static cl::list<std::string> Imports(
-    "import", cl::ZeroOrMore, cl::value_desc("function:filename"),
+    "import", cl::value_desc("function:filename"),
     cl::desc("Pair of function name and filename, where function should be "
              "imported from bitcode in filename"),
     cl::cat(LinkCategory));

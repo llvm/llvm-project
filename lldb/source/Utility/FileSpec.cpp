@@ -357,7 +357,7 @@ size_t FileSpec::GetPath(char *path, size_t path_max_len,
 std::string FileSpec::GetPath(bool denormalize) const {
   llvm::SmallString<64> result;
   GetPath(result, denormalize);
-  return std::string(result.begin(), result.end());
+  return static_cast<std::string>(result);
 }
 
 const char *FileSpec::GetCString(bool denormalize) const {
