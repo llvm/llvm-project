@@ -96,7 +96,9 @@ void func();
 
 struct A1 {
   A1(const A1 &);
-  A1(A1 &&) = delete; // expected-note 2{{'A1' has been explicitly marked deleted here}}
+  A1(A1 &&) = delete;
+  // expected-note@-1 2{{'A1' has been explicitly marked deleted here}}
+  // cxx11_2b-note@-2  {{'A1' has been explicitly marked deleted here}}
 };
 void test1() {
   try {
@@ -125,6 +127,22 @@ void test3(A1 a) try {
 } catch (...) {
   throw a; // expected-error {{call to deleted constructor of 'test_throw_parameter::A1'}}
 }
+
+#if __cplusplus >= 201103L
+namespace PR54341 {
+void test4(A1 a) {
+  void f(decltype((throw a, 0)));
+  // expected-warning@-1 {{has no effect}}
+
+  void g(int = decltype(throw a, 0){});
+  // expected-warning@-1 {{has no effect}}
+}
+
+void test5(A1 a, int = decltype(throw a, 0){}) {}
+// expected-error@-1 {{call to deleted constructor of 'test_throw_parameter::A1'}}
+} // namespace PR54341
+#endif
+
 } // namespace test_throw_parameter
 
 // During the first overload resolution, the selected function no
