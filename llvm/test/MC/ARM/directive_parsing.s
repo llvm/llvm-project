@@ -37,7 +37,7 @@
 // CHECK-NOT: [[@LINE+1]]:{{[0-9]+}}: error:
 	.syntax unified @ EOL COMMENT
 	fred .req r5
-// CHECK: [[@LINE+1]]:14: error: unexpected input in '.unreq' directive
+// CHECK: :[[#@LINE+1]]:14: error: expected newline
 	.unreq fred $
 // CHECK-NOT: [[@LINE+1]]:{{[0-9]+}}: error:
 	.unreq fred @ EOL COMMENTS
