@@ -23,12 +23,10 @@
 using namespace llvm;
 using namespace sampleprof;
 
-cl::opt<bool> ShowDisassemblyOnly("show-disassembly-only", cl::init(false),
-                                  cl::ZeroOrMore,
+cl::opt<bool> ShowDisassemblyOnly("show-disassembly-only",
                                   cl::desc("Print disassembled code."));
 
-cl::opt<bool> ShowSourceLocations("show-source-locations", cl::init(false),
-                                  cl::ZeroOrMore,
+cl::opt<bool> ShowSourceLocations("show-source-locations",
                                   cl::desc("Print source locations."));
 
 static cl::opt<bool>

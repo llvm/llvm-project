@@ -13,14 +13,12 @@
 
 #define DEBUG_TYPE "perf-reader"
 
-cl::opt<bool> SkipSymbolization("skip-symbolization", cl::init(false),
-                                cl::ZeroOrMore,
+cl::opt<bool> SkipSymbolization("skip-symbolization",
                                 cl::desc("Dump the unsymbolized profile to the "
                                          "output file. It will show unwinder "
                                          "output for CS profile generation."));
 
-static cl::opt<bool> ShowMmapEvents("show-mmap-events", cl::init(false),
-                                    cl::ZeroOrMore,
+static cl::opt<bool> ShowMmapEvents("show-mmap-events",
                                     cl::desc("Print binary load events."));
 
 static cl::opt<bool>
@@ -39,8 +37,7 @@ static cl::opt<bool>
     IgnoreStackSamples("ignore-stack-samples",
                        cl::desc("Ignore call stack samples for hybrid samples "
                                 "and produce context-insensitive profile."));
-cl::opt<bool> ShowDetailedWarning("show-detailed-warning", cl::init(false),
-                                  cl::ZeroOrMore,
+cl::opt<bool> ShowDetailedWarning("show-detailed-warning",
                                   cl::desc("Show detailed warning message."));
 
 extern cl::opt<std::string> PerfTraceFilename;

@@ -98,7 +98,7 @@ static cl::opt<bool> NoExec("noexec", cl::desc("Do not execute loaded code"),
 
 static cl::list<std::string>
     CheckFiles("check", cl::desc("File containing verifier checks"),
-               cl::ZeroOrMore, cl::cat(JITLinkCategory));
+               cl::cat(JITLinkCategory));
 
 static cl::opt<std::string>
     CheckName("check-name", cl::desc("Name of checks to match against"),
@@ -118,7 +118,7 @@ static cl::list<std::string>
     Dylibs("preload",
            cl::desc("Pre-load dynamic libraries (e.g. language runtimes "
                     "required by the ORC runtime)"),
-           cl::ZeroOrMore, cl::cat(JITLinkCategory));
+           cl::cat(JITLinkCategory));
 
 static cl::list<std::string> InputArgv("args", cl::Positional,
                                        cl::desc("<program arguments>..."),
@@ -138,7 +138,7 @@ static cl::opt<bool>
 static cl::list<std::string> AbsoluteDefs(
     "abs",
     cl::desc("Inject absolute symbol definitions (syntax: <name>=<addr>)"),
-    cl::ZeroOrMore, cl::cat(JITLinkCategory));
+    cl::cat(JITLinkCategory));
 
 static cl::list<std::string>
     Aliases("alias", cl::desc("Inject symbol aliases (syntax: <name>=<addr>)"),
@@ -146,7 +146,6 @@ static cl::list<std::string>
 
 static cl::list<std::string> TestHarnesses("harness", cl::Positional,
                                            cl::desc("Test harness files"),
-                                           cl::ZeroOrMore,
                                            cl::PositionalEatsArgs,
                                            cl::cat(JITLinkCategory));
 

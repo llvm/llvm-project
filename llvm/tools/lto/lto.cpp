@@ -34,12 +34,10 @@ static codegen::RegisterCodeGenFlags CGF;
 
 // extra command-line flags needed for LTOCodeGenerator
 static cl::opt<char>
-OptLevel("O",
-         cl::desc("Optimization level. [-O0, -O1, -O2, or -O3] "
-                  "(default = '-O2')"),
-         cl::Prefix,
-         cl::ZeroOrMore,
-         cl::init('2'));
+    OptLevel("O",
+             cl::desc("Optimization level. [-O0, -O1, -O2, or -O3] "
+                      "(default = '-O2')"),
+             cl::Prefix, cl::init('2'));
 
 static cl::opt<bool> EnableFreestanding(
     "lto-freestanding", cl::init(false),

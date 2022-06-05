@@ -56,7 +56,7 @@ cl::opt<bool> WarnTrailing("warn-trailing", cl::Optional,
                            cl::desc("warn on trailing characters"), cl::Hidden,
                            cl::init(false), cl::cat(UndNameCategory));
 cl::list<std::string> Symbols(cl::Positional, cl::desc("<input symbols>"),
-                              cl::ZeroOrMore, cl::cat(UndNameCategory));
+                              cl::cat(UndNameCategory));
 
 static bool msDemangle(const std::string &S) {
   int Status;

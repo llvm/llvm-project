@@ -75,7 +75,6 @@ static cl::opt<unsigned>
 // Maximum number of versions for optimizing memory intrinsic call.
 static cl::opt<unsigned>
     MemOPMaxVersion("pgo-memop-max-version", cl::init(3), cl::Hidden,
-                    cl::ZeroOrMore,
                     cl::desc("The max version for the optimized memory "
                              " intrinsic calls"));
 

@@ -105,7 +105,7 @@ namespace llvm {
 // program being debugged.
 cl::list<std::string> InputArgv("args", cl::Positional,
                                 cl::desc("<program arguments>..."),
-                                cl::ZeroOrMore, cl::PositionalEatsArgs);
+                                cl::PositionalEatsArgs);
 
 cl::opt<std::string>
     OutputPrefix("output-prefix", cl::init("bugpoint"),
@@ -126,7 +126,7 @@ cl::opt<std::string> CCBinary("gcc", cl::init(""),
 
 cl::list<std::string> CCToolArgv("gcc-tool-args", cl::Positional,
                                  cl::desc("<gcc-tool arguments>..."),
-                                 cl::ZeroOrMore, cl::PositionalEatsArgs);
+                                 cl::PositionalEatsArgs);
 }
 
 //===----------------------------------------------------------------------===//

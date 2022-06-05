@@ -43,7 +43,7 @@ static llvm::cl::opt<std::string> Expression(
     llvm::cl::desc("Path to a file containing the expression to parse"));
 
 static llvm::cl::list<std::string>
-    Imports("import", llvm::cl::ZeroOrMore,
+    Imports("import",
             llvm::cl::desc("Path to a file containing declarations to import"));
 
 static llvm::cl::opt<bool>
@@ -56,7 +56,7 @@ static llvm::cl::opt<bool> UseOrigins(
         "Use DeclContext origin information for more accurate lookups"));
 
 static llvm::cl::list<std::string>
-    ClangArgs("Xcc", llvm::cl::ZeroOrMore,
+    ClangArgs("Xcc",
               llvm::cl::desc("Argument to pass to the CompilerInvocation"),
               llvm::cl::CommaSeparated);
 

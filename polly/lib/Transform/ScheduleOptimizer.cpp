@@ -99,7 +99,7 @@ static cl::opt<std::string>
 static cl::opt<bool>
     GreedyFusion("polly-loopfusion-greedy",
                  cl::desc("Aggressively try to fuse everything"), cl::Hidden,
-                 cl::ZeroOrMore, cl::cat(PollyCategory));
+                 cl::cat(PollyCategory));
 
 static cl::opt<std::string> OuterCoincidence(
     "polly-opt-outer-coincidence",

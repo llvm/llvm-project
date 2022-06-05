@@ -50,8 +50,9 @@ static cl::opt<bool>
     DisableHexagonCFGOpt("disable-hexagon-cfgopt", cl::Hidden,
                          cl::desc("Disable Hexagon CFG Optimization"));
 
-static cl::opt<bool> DisableHCP("disable-hcp", cl::init(false), cl::Hidden,
-  cl::ZeroOrMore, cl::desc("Disable Hexagon constant propagation"));
+static cl::opt<bool>
+    DisableHCP("disable-hcp", cl::Hidden,
+               cl::desc("Disable Hexagon constant propagation"));
 
 static cl::opt<bool> DisableStoreWidening("disable-store-widen",
   cl::Hidden, cl::init(false), cl::desc("Disable store widening"));
@@ -61,7 +62,7 @@ static cl::opt<bool> EnableExpandCondsets("hexagon-expand-condsets",
                                           cl::desc("Early expansion of MUX"));
 
 static cl::opt<bool> EnableEarlyIf("hexagon-eif", cl::init(true), cl::Hidden,
-  cl::ZeroOrMore, cl::desc("Enable early if-conversion"));
+                                   cl::desc("Enable early if-conversion"));
 
 static cl::opt<bool> EnableGenInsert("hexagon-insert", cl::init(true),
   cl::Hidden, cl::desc("Generate \"insert\" instructions"));
@@ -100,18 +101,20 @@ static cl::opt<bool>
     EnableVectorPrint("enable-hexagon-vector-print", cl::Hidden,
                       cl::desc("Enable Hexagon Vector print instr pass"));
 
-static cl::opt<bool> EnableVExtractOpt("hexagon-opt-vextract", cl::Hidden,
-  cl::ZeroOrMore, cl::init(true), cl::desc("Enable vextract optimization"));
+static cl::opt<bool>
+    EnableVExtractOpt("hexagon-opt-vextract", cl::Hidden, cl::init(true),
+                      cl::desc("Enable vextract optimization"));
 
-static cl::opt<bool> EnableVectorCombine("hexagon-vector-combine", cl::Hidden,
-  cl::ZeroOrMore, cl::init(true), cl::desc("Enable HVX vector combining"));
+static cl::opt<bool>
+    EnableVectorCombine("hexagon-vector-combine", cl::Hidden, cl::init(true),
+                        cl::desc("Enable HVX vector combining"));
 
 static cl::opt<bool> EnableInitialCFGCleanup(
     "hexagon-initial-cfg-cleanup", cl::Hidden, cl::init(true),
     cl::desc("Simplify the CFG after atomic expansion pass"));
 
 static cl::opt<bool> EnableInstSimplify("hexagon-instsimplify", cl::Hidden,
-                                        cl::ZeroOrMore, cl::init(true),
+                                        cl::init(true),
                                         cl::desc("Enable instsimplify"));
 
 /// HexagonTargetMachineModule - Note that this is used on hosts that

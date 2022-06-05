@@ -163,8 +163,7 @@ static cl::opt<bool>
 /// Provide a way to force disable whole program for debugging or workarounds,
 /// when enabled via the linker.
 static cl::opt<bool> DisableWholeProgramVisibility(
-    "disable-whole-program-visibility", cl::init(false), cl::Hidden,
-    cl::ZeroOrMore,
+    "disable-whole-program-visibility", cl::Hidden,
     cl::desc("Disable whole program visibility (overrides enabling options)"));
 
 /// Provide way to prevent certain function from being devirtualized
