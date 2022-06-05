@@ -3753,8 +3753,7 @@ bool AsmParser::parseDirectiveCVFile() {
         parseEscapedString(Checksum) ||
         parseIntToken(ChecksumKind,
                       "expected checksum kind in '.cv_file' directive") ||
-        parseToken(AsmToken::EndOfStatement,
-                   "unexpected token in '.cv_file' directive"))
+        parseEOL())
       return true;
   }
 
@@ -3800,9 +3799,7 @@ bool AsmParser::parseDirectiveCVFuncId() {
   SMLoc FunctionIdLoc = getTok().getLoc();
   int64_t FunctionId;
 
-  if (parseCVFunctionId(FunctionId, ".cv_func_id") ||
-      parseToken(AsmToken::EndOfStatement,
-                 "unexpected token in '.cv_func_id' directive"))
+  if (parseCVFunctionId(FunctionId, ".cv_func_id") || parseEOL())
     return true;
 
   if (!getStreamer().emitCVFuncIdDirective(FunctionId))
@@ -3861,8 +3858,7 @@ bool AsmParser::parseDirectiveCVInlineSiteId() {
     Lex();
   }
 
-  if (parseToken(AsmToken::EndOfStatement,
-                 "unexpected token in '.cv_inline_site_id' directive"))
+  if (parseEOL())
     return true;
 
   if (!getStreamer().emitCVInlineSiteIdDirective(FunctionId, IAFunc, IAFile,
@@ -3986,7 +3982,7 @@ bool AsmParser::parseDirectiveCVInlineLinetable() {
                                   "expected identifier in directive"))
     return true;
 
-  if (parseToken(AsmToken::EndOfStatement, "Expected End of Statement"))
+  if (parseEOL())
     return true;
 
   MCSymbol *FnStartSym = getContext().getOrCreateSymbol(FnStartName);
@@ -4147,7 +4143,7 @@ bool AsmParser::parseDirectiveCVFileChecksumOffset() {
   int64_t FileNo;
   if (parseIntToken(FileNo, "expected identifier in directive"))
     return true;
-  if (parseToken(AsmToken::EndOfStatement, "Expected End of Statement"))
+  if (parseEOL())
     return true;
   getStreamer().emitCVFileChecksumOffsetDirective(FileNo);
   return false;
