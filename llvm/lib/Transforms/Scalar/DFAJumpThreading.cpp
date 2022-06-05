@@ -1251,7 +1251,7 @@ private:
 
   /// Returns true if IncomingBB is a predecessor of BB.
   bool isPredecessor(BasicBlock *BB, BasicBlock *IncomingBB) {
-    return llvm::find(predecessors(BB), IncomingBB) != pred_end(BB);
+    return llvm::is_contained(predecessors(BB), IncomingBB);
   }
 
   AllSwitchPaths *SwitchPaths;
