@@ -750,8 +750,8 @@ Error SymbolTableSection::removeSectionReferences(
 }
 
 void SymbolTableSection::updateSymbols(function_ref<void(Symbol &)> Callable) {
-  std::for_each(std::begin(Symbols) + 1, std::end(Symbols),
-                [Callable](SymPtr &Sym) { Callable(*Sym); });
+  for (SymPtr &Sym : llvm::drop_begin(Symbols))
+    Callable(*Sym);
   std::stable_partition(
       std::begin(Symbols), std::end(Symbols),
       [](const SymPtr &Sym) { return Sym->Binding == STB_LOCAL; });

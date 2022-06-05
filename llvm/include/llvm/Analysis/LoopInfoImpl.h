@@ -314,12 +314,11 @@ void LoopBase<BlockT, LoopT>::verifyLoop() const {
            "Loop block has no in-loop predecessors!");
 
     SmallVector<BlockT *, 2> OutsideLoopPreds;
-    std::for_each(GraphTraits<Inverse<BlockT *>>::child_begin(BB),
-                  GraphTraits<Inverse<BlockT *>>::child_end(BB),
-                  [&](BlockT *B) {
-                    if (!contains(B))
-                      OutsideLoopPreds.push_back(B);
-                  });
+    for (BlockT *B :
+         llvm::make_range(GraphTraits<Inverse<BlockT *>>::child_begin(BB),
+                          GraphTraits<Inverse<BlockT *>>::child_end(BB)))
+      if (!contains(B))
+        OutsideLoopPreds.push_back(B);
 
     if (BB == getHeader()) {
       assert(!OutsideLoopPreds.empty() && "Loop is unreachable!");
