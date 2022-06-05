@@ -449,6 +449,9 @@ CUDA Support in Clang
 X86 Support in Clang
 --------------------
 
+- Support ``-mharden-sls=[none|all|return|indirect-jmp]`` for straight-line
+  speculation hardening.
+
 DWARF Support in Clang
 ----------------------
 

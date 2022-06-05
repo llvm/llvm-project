@@ -50,7 +50,7 @@ static void verifyBlocksInRegion(const VPRegionBlock *Region) {
     assert(VPB->getParent() == Region && "VPBlockBase has wrong parent");
 
     // Check block's condition bit.
-    if (VPB->getNumSuccessors() > 1)
+    if (VPB->getNumSuccessors() > 1 || Region->getExitingBasicBlock() == VPB)
       assert(VPB->getCondBit() && "Missing condition bit!");
     else
       assert(!VPB->getCondBit() && "Unexpected condition bit!");

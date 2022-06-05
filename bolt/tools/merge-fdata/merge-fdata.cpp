@@ -15,6 +15,7 @@
 #include "bolt/Profile/ProfileYAMLMapping.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/FileSystem.h"
 #include "llvm/Support/ManagedStatic.h"
 #include "llvm/Support/PrettyStackTrace.h"
 #include "llvm/Support/Signals.h"
@@ -235,7 +236,7 @@ bool isYAML(const StringRef Filename) {
   return false;
 }
 
-void mergeLegacyProfiles(const cl::list<std::string> &Filenames) {
+void mergeLegacyProfiles(const SmallVectorImpl<std::string> &Filenames) {
   errs() << "Using legacy profile format.\n";
   bool BoltedCollection = false;
   bool First = true;
@@ -305,8 +306,28 @@ int main(int argc, char **argv) {
 
   ToolName = argv[0];
 
-  if (!isYAML(opts::InputDataFilenames.front())) {
-    mergeLegacyProfiles(opts::InputDataFilenames);
+  // Recursively expand input directories into input file lists.
+  SmallVector<std::string> Inputs;
+  for (std::string &InputDataFilename : opts::InputDataFilenames) {
+    if (!llvm::sys::fs::exists(InputDataFilename))
+      report_error(InputDataFilename,
+                   std::make_error_code(std::errc::no_such_file_or_directory));
+    if (llvm::sys::fs::is_regular_file(InputDataFilename))
+      Inputs.emplace_back(InputDataFilename);
+    else if (llvm::sys::fs::is_directory(InputDataFilename)) {
+      std::error_code EC;
+      for (llvm::sys::fs::recursive_directory_iterator F(InputDataFilename, EC),
+           E;
+           F != E && !EC; F.increment(EC))
+        if (llvm::sys::fs::is_regular_file(F->path()))
+          Inputs.emplace_back(F->path());
+      if (EC)
+        report_error(InputDataFilename, EC);
+    }
+  }
+
+  if (!isYAML(Inputs.front())) {
+    mergeLegacyProfiles(Inputs);
     return 0;
   }
 
@@ -317,7 +338,7 @@ int main(int argc, char **argv) {
   // Merged information for all functions.
   StringMap<BinaryFunctionProfile> MergedBFs;
 
-  for (std::string &InputDataFilename : opts::InputDataFilenames) {
+  for (std::string &InputDataFilename : Inputs) {
     ErrorOr<std::unique_ptr<MemoryBuffer>> MB =
         MemoryBuffer::getFileOrSTDIN(InputDataFilename);
     if (std::error_code EC = MB.getError())

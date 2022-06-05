@@ -84,13 +84,12 @@ static cl::opt<unsigned> DomConditionsMaxUses("dom-conditions-max-uses",
 
 // According to the LangRef, branching on a poison condition is absolutely
 // immediate full UB.  However, historically we haven't implemented that
-// consistently as we have an important transformation (non-trivial unswitch)
-// which introduces instances of branch on poison/undef to otherwise well
-// defined programs.  This flag exists to let us test optimization benefit
-// of exploiting the specified behavior (in combination with enabling the
-// unswitch fix.)
+// consistently as we had an important transformation (non-trivial unswitch)
+// which introduced instances of branch on poison/undef to otherwise well
+// defined programs.  This issue has since been fixed, but the flag is
+// temporarily retained to easily diagnose potential regressions.
 static cl::opt<bool> BranchOnPoisonAsUB("branch-on-poison-as-ub",
-                                        cl::Hidden, cl::init(false));
+                                        cl::Hidden, cl::init(true));
 
 
 /// Returns the bitwidth of the given scalar or pointer type. For vector types,

@@ -21,6 +21,7 @@
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/MC/MCAsmBackend.h"
+#include "llvm/MC/MCDisassembler/MCSymbolizer.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCInst.h"
 #include "llvm/MC/MCInstrAnalysis.h"
@@ -44,6 +45,7 @@ class MCSymbol;
 class raw_ostream;
 
 namespace bolt {
+class BinaryFunction;
 
 /// Different types of indirect branches encountered during disassembly.
 enum class IndirectBranchType : char {
@@ -284,6 +286,12 @@ public:
     MaxAllocatorId++;
     // Build alias map
     initAliases();
+  }
+
+  /// Create and return target-specific MC symbolizer for the \p Function.
+  virtual std::unique_ptr<MCSymbolizer>
+  createTargetSymbolizer(BinaryFunction &Function) const {
+    return nullptr;
   }
 
   /// Initialize a new annotation allocator and return its id

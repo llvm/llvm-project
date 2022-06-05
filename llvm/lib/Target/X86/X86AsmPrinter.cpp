@@ -336,6 +336,37 @@ void X86AsmPrinter::PrintLeaMemReference(const MachineInstr *MI, unsigned OpNo,
   }
 }
 
+static bool isSimpleReturn(const MachineInstr &MI) {
+  // We exclude all tail calls here which set both isReturn and isCall.
+  return MI.getDesc().isReturn() && !MI.getDesc().isCall();
+}
+
+static bool isIndirectBranchOrTailCall(const MachineInstr &MI) {
+  unsigned Opc = MI.getOpcode();
+  return MI.getDesc().isIndirectBranch() /*Make below code in a good shape*/ ||
+         Opc == X86::TAILJMPr || Opc == X86::TAILJMPm ||
+         Opc == X86::TAILJMPr64 || Opc == X86::TAILJMPm64 ||
+         Opc == X86::TCRETURNri || Opc == X86::TCRETURNmi ||
+         Opc == X86::TCRETURNri64 || Opc == X86::TCRETURNmi64 ||
+         Opc == X86::TAILJMPr64_REX || Opc == X86::TAILJMPm64_REX;
+}
+
+void X86AsmPrinter::emitBasicBlockEnd(const MachineBasicBlock &MBB) {
+  if (Subtarget->hardenSlsRet() || Subtarget->hardenSlsIJmp()) {
+    auto I = MBB.getLastNonDebugInstr();
+    if (I != MBB.end()) {
+      if ((Subtarget->hardenSlsRet() && isSimpleReturn(*I)) ||
+          (Subtarget->hardenSlsIJmp() && isIndirectBranchOrTailCall(*I))) {
+        MCInst TmpInst;
+        TmpInst.setOpcode(X86::INT3);
+        EmitToStreamer(*OutStreamer, TmpInst);
+      }
+    }
+  }
+  AsmPrinter::emitBasicBlockEnd(MBB);
+  SMShadowTracker.emitShadowPadding(*OutStreamer, getSubtargetInfo());
+}
+
 void X86AsmPrinter::PrintMemReference(const MachineInstr *MI, unsigned OpNo,
                                       raw_ostream &O, const char *Modifier) {
   assert(isMem(*MI, OpNo) && "Invalid memory reference!");

@@ -175,13 +175,13 @@ add_fp_unittest(
     libc_math_exhaustive_tests
   SRCS
     hypotf_test.cpp
+  COMPILE_OPTIONS
+    -O3
   DEPENDS
     .exhaustive_test
     libc.include.math
     libc.src.math.hypotf
     libc.src.__support.FPUtil.fputil
-  COMPILE_OPTIONS
-    -O3
   LINK_LIBRARIES
     -lpthread
 )

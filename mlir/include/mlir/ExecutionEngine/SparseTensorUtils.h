@@ -274,6 +274,11 @@ FOREVERY_V(DECL_DELCOO)
 /// defined with the naming convention ${TENSOR0}, ${TENSOR1}, etc.
 MLIR_CRUNNERUTILS_EXPORT char *getTensorFilename(index_type id);
 
+/// Helper function to read the header of a file and return the
+/// shape/sizes, without parsing the elements of the file.
+MLIR_CRUNNERUTILS_EXPORT void readSparseTensorShape(char *filename,
+                                                    std::vector<uint64_t> *out);
+
 /// Initializes sparse tensor from a COO-flavored format expressed using
 /// C-style data structures.  The expected parameters are:
 ///

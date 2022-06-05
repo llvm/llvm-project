@@ -212,6 +212,8 @@ def err_drv_invalid_libcxx_deployment : Error<
   "invalid deployment target for -stdlib=libc++ (requires %0 or later)">;
 def err_drv_invalid_argument_to_option : Error<
   "invalid argument '%0' to -%1">;
+def err_drv_missing_sanitizer_ignorelist : Error<
+  "missing sanitizer ignorelist: '%0'">;
 def err_drv_malformed_sanitizer_ignorelist : Error<
   "malformed sanitizer ignorelist: '%0'">;
 def err_drv_malformed_sanitizer_coverage_allowlist : Error<
@@ -666,6 +668,8 @@ def err_drv_target_variant_invalid : Error<
 
 def err_drv_invalid_directx_shader_module : Error<
   "invalid profile : %0">;
+def err_drv_dxc_missing_target_profile : Error<
+  "target profile option (-T) is missing">;
 
 def err_drv_invalid_range_dxil_validator_version : Error<
   "invalid validator version : %0\n"

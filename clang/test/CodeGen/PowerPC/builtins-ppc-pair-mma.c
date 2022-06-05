@@ -1048,7 +1048,7 @@ void test65(unsigned char *vqp, unsigned char *vpp, vector unsigned char vc, uns
 // CHECK-NEXT:    tail call void @llvm.ppc.vsx.stxvp(<256 x i1> [[TMP1]], i8* [[TMP2]])
 // CHECK-NEXT:    ret void
 //
-void test66(const __vector_pair *vpp, const __vector_pair *vp2) {
+void test66(const __vector_pair *vpp, __vector_pair *vp2) {
   __vector_pair vp = __builtin_vsx_lxvp(0L, vpp);
   __builtin_vsx_stxvp(vp, 0L, vp2);
 }
@@ -1063,7 +1063,7 @@ void test66(const __vector_pair *vpp, const __vector_pair *vp2) {
 // CHECK-NEXT:    tail call void @llvm.ppc.vsx.stxvp(<256 x i1> [[TMP2]], i8* [[TMP4]])
 // CHECK-NEXT:    ret void
 //
-void test67(const __vector_pair *vpp, signed long offset, const __vector_pair *vp2) {
+void test67(const __vector_pair *vpp, signed long offset, __vector_pair *vp2) {
   __vector_pair vp = __builtin_vsx_lxvp(offset, vpp);
   __builtin_vsx_stxvp(vp, offset, vp2);
 }
@@ -1078,7 +1078,7 @@ void test67(const __vector_pair *vpp, signed long offset, const __vector_pair *v
 // CHECK-NEXT:    tail call void @llvm.ppc.vsx.stxvp(<256 x i1> [[TMP2]], i8* [[TMP4]])
 // CHECK-NEXT:    ret void
 //
-void test68(const __vector_pair *vpp, const __vector_pair *vp2) {
+void test68(const __vector_pair *vpp, __vector_pair *vp2) {
   __vector_pair vp = __builtin_vsx_lxvp(18L, vpp);
   __builtin_vsx_stxvp(vp, 18L, vp2);
 }
@@ -1093,7 +1093,7 @@ void test68(const __vector_pair *vpp, const __vector_pair *vp2) {
 // CHECK-NEXT:    tail call void @llvm.ppc.vsx.stxvp(<256 x i1> [[TMP2]], i8* [[TMP4]])
 // CHECK-NEXT:    ret void
 //
-void test69(const __vector_pair *vpp, const __vector_pair *vp2) {
+void test69(const __vector_pair *vpp, __vector_pair *vp2) {
   __vector_pair vp = __builtin_vsx_lxvp(1L, vpp);
   __builtin_vsx_stxvp(vp, 1L, vp2);
 }
@@ -1108,7 +1108,7 @@ void test69(const __vector_pair *vpp, const __vector_pair *vp2) {
 // CHECK-NEXT:    tail call void @llvm.ppc.vsx.stxvp(<256 x i1> [[TMP2]], i8* [[TMP4]])
 // CHECK-NEXT:    ret void
 //
-void test70(const __vector_pair *vpp, const __vector_pair *vp2) {
+void test70(const __vector_pair *vpp, __vector_pair *vp2) {
   __vector_pair vp = __builtin_vsx_lxvp(42L, vpp);
   __builtin_vsx_stxvp(vp, 42L, vp2);
 }
@@ -1123,7 +1123,7 @@ void test70(const __vector_pair *vpp, const __vector_pair *vp2) {
 // CHECK-NEXT:    tail call void @llvm.ppc.vsx.stxvp(<256 x i1> [[TMP2]], i8* [[TMP4]])
 // CHECK-NEXT:    ret void
 //
-void test71(const __vector_pair *vpp, const __vector_pair *vp2) {
+void test71(const __vector_pair *vpp, __vector_pair *vp2) {
   __vector_pair vp = __builtin_vsx_lxvp(32768L, vpp);
   __builtin_vsx_stxvp(vp, 32768L, vp2);
 }
@@ -1138,7 +1138,7 @@ void test71(const __vector_pair *vpp, const __vector_pair *vp2) {
 // CHECK-NEXT:    tail call void @llvm.ppc.vsx.stxvp(<256 x i1> [[TMP2]], i8* [[TMP4]])
 // CHECK-NEXT:    ret void
 //
-void test72(const __vector_pair *vpp, const __vector_pair *vp2) {
+void test72(const __vector_pair *vpp, __vector_pair *vp2) {
   __vector_pair vp = __builtin_vsx_lxvp(32799L, vpp);
   __builtin_vsx_stxvp(vp, 32799L, vp2);
 }
@@ -1240,7 +1240,7 @@ void test77(unsigned char *vqp, unsigned char *vpp, vector unsigned char vc, uns
 // CHECK-NEXT:    tail call void @llvm.ppc.vsx.stxvp(<256 x i1> [[TMP1]], i8* [[TMP2]])
 // CHECK-NEXT:    ret void
 //
-void test78(const __vector_pair *vpp, const __vector_pair *vp2) {
+void test78(const __vector_pair *vpp, __vector_pair *vp2) {
   __vector_pair vp = __builtin_mma_lxvp(0L, vpp);
   __builtin_mma_stxvp(vp, 0L, vp2);
 }
@@ -1255,7 +1255,7 @@ void test78(const __vector_pair *vpp, const __vector_pair *vp2) {
 // CHECK-NEXT:    tail call void @llvm.ppc.vsx.stxvp(<256 x i1> [[TMP2]], i8* [[TMP4]])
 // CHECK-NEXT:    ret void
 //
-void test79(const __vector_pair *vpp, signed long offset, const __vector_pair *vp2) {
+void test79(const __vector_pair *vpp, signed long offset, __vector_pair *vp2) {
   __vector_pair vp = __builtin_mma_lxvp(offset, vpp);
   __builtin_mma_stxvp(vp, offset, vp2);
 }
@@ -1270,7 +1270,7 @@ void test79(const __vector_pair *vpp, signed long offset, const __vector_pair *v
 // CHECK-NEXT:    tail call void @llvm.ppc.vsx.stxvp(<256 x i1> [[TMP2]], i8* [[TMP4]])
 // CHECK-NEXT:    ret void
 //
-void test80(const __vector_pair *vpp, const __vector_pair *vp2) {
+void test80(const __vector_pair *vpp, __vector_pair *vp2) {
   __vector_pair vp = __builtin_mma_lxvp(18L, vpp);
   __builtin_mma_stxvp(vp, 18L, vp2);
 }
@@ -1285,7 +1285,7 @@ void test80(const __vector_pair *vpp, const __vector_pair *vp2) {
 // CHECK-NEXT:    tail call void @llvm.ppc.vsx.stxvp(<256 x i1> [[TMP2]], i8* [[TMP4]])
 // CHECK-NEXT:    ret void
 //
-void test81(const __vector_pair *vpp, const __vector_pair *vp2) {
+void test81(const __vector_pair *vpp, __vector_pair *vp2) {
   __vector_pair vp = __builtin_mma_lxvp(1L, vpp);
   __builtin_mma_stxvp(vp, 1L, vp2);
 }
@@ -1300,7 +1300,7 @@ void test81(const __vector_pair *vpp, const __vector_pair *vp2) {
 // CHECK-NEXT:    tail call void @llvm.ppc.vsx.stxvp(<256 x i1> [[TMP2]], i8* [[TMP4]])
 // CHECK-NEXT:    ret void
 //
-void test82(const __vector_pair *vpp, const __vector_pair *vp2) {
+void test82(const __vector_pair *vpp, __vector_pair *vp2) {
   __vector_pair vp = __builtin_mma_lxvp(42L, vpp);
   __builtin_mma_stxvp(vp, 42L, vp2);
 }
@@ -1315,7 +1315,7 @@ void test82(const __vector_pair *vpp, const __vector_pair *vp2) {
 // CHECK-NEXT:    tail call void @llvm.ppc.vsx.stxvp(<256 x i1> [[TMP2]], i8* [[TMP4]])
 // CHECK-NEXT:    ret void
 //
-void test83(const __vector_pair *vpp, const __vector_pair *vp2) {
+void test83(const __vector_pair *vpp, __vector_pair *vp2) {
   __vector_pair vp = __builtin_mma_lxvp(32768L, vpp);
   __builtin_mma_stxvp(vp, 32768L, vp2);
 }
@@ -1330,7 +1330,7 @@ void test83(const __vector_pair *vpp, const __vector_pair *vp2) {
 // CHECK-NEXT:    tail call void @llvm.ppc.vsx.stxvp(<256 x i1> [[TMP2]], i8* [[TMP4]])
 // CHECK-NEXT:    ret void
 //
-void test84(const __vector_pair *vpp, const __vector_pair *vp2) {
+void test84(const __vector_pair *vpp, __vector_pair *vp2) {
   __vector_pair vp = __builtin_mma_lxvp(32799L, vpp);
   __builtin_mma_stxvp(vp, 32799L, vp2);
 }
