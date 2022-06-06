@@ -222,6 +222,7 @@ public:
     }
     llvm_unreachable("unknown register class");
   }
+
   unsigned getRegisterClassForType(bool Vector, Type *Ty = nullptr) const {
     if (Vector)
       return RISCVRegisterClass::VRRC;
@@ -236,7 +237,8 @@ public:
     }
 
     return RISCVRegisterClass::GPRRC;
-  };
+  }
+
   const char *getRegisterClassName(unsigned ClassID) const {
     switch (ClassID) {
     case RISCVRegisterClass::GPRRC:
