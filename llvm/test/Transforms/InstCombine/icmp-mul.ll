@@ -749,16 +749,11 @@ define i1 @not_mul_of_bool_commute(i32 %x, i32 %y) {
   ret i1 %r
 }
 
-; negative test - no leading zeros for 's'
-; TODO: If analysis was generalized for sign bits, we could reduce this to false.
+; no leading zeros for 's', but we reduce this with other transforms
 
 define i1 @mul_of_bool_no_lz_other_op(i32 %x, i8 %y) {
 ; CHECK-LABEL: @mul_of_bool_no_lz_other_op(
-; CHECK-NEXT:    [[B:%.*]] = and i32 [[X:%.*]], 1
-; CHECK-NEXT:    [[S:%.*]] = sext i8 [[Y:%.*]] to i32
-; CHECK-NEXT:    [[M:%.*]] = mul nuw nsw i32 [[B]], [[S]]
-; CHECK-NEXT:    [[R:%.*]] = icmp sgt i32 [[M]], 127
-; CHECK-NEXT:    ret i1 [[R]]
+; CHECK-NEXT:    ret i1 false
 ;
   %b = and i32 %x, 1
   %s = sext i8 %y to i32

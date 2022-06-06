@@ -1499,8 +1499,8 @@ define i32 @mul_no_common_bits_const_op(i32 %p) {
 
 define <2 x i12> @mul_no_common_bits_commute(<2 x i12> %p) {
 ; CHECK-LABEL: @mul_no_common_bits_commute(
-; CHECK-NEXT:    [[X:%.*]] = and <2 x i12> [[P:%.*]], <i12 1, i12 1>
-; CHECK-NEXT:    [[R:%.*]] = mul nuw nsw <2 x i12> [[X]], <i12 15, i12 17>
+; CHECK-NEXT:    [[TMP1:%.*]] = trunc <2 x i12> [[P:%.*]] to <2 x i1>
+; CHECK-NEXT:    [[R:%.*]] = select <2 x i1> [[TMP1]], <2 x i12> <i12 15, i12 17>, <2 x i12> zeroinitializer
 ; CHECK-NEXT:    ret <2 x i12> [[R]]
 ;
   %x = and <2 x i12> %p, <i12 1, i12 1>
