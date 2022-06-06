@@ -3167,6 +3167,20 @@ TEST(CompletionTest, ObjectiveCMethodDeclarationFromMiddle) {
   EXPECT_THAT(C, ElementsAre(signature("(id)object")));
 }
 
+TEST(CompletionTest, ObjectiveCProtocolFromIndex) {
+  Symbol FoodClass = objcClass("FoodClass");
+  Symbol SymFood = objcProtocol("Food");
+  Symbol SymFooey = objcProtocol("Fooey");
+  auto Results = completions(R"objc(
+      id<Foo^>
+    )objc",
+                             {SymFood, FoodClass, SymFooey},
+                             /*Opts=*/{}, "Foo.m");
+
+  auto C = Results.Completions;
+  EXPECT_THAT(C, UnorderedElementsAre(named("Food"), named("Fooey")));
+}
+
 TEST(CompletionTest, CursorInSnippets) {
   clangd::CodeCompleteOptions Options;
   Options.EnableSnippets = true;
