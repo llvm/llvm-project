@@ -198,9 +198,8 @@ struct OneShotBufferizePass
           [&](Operation *op) {
             // Filter may be specified via options.
             if (this->dialectFilter.hasValue())
-              return llvm::find(this->dialectFilter,
-                                op->getDialect()->getNamespace()) !=
-                     this->dialectFilter.end();
+              return llvm::is_contained(this->dialectFilter,
+                                        op->getDialect()->getNamespace());
             // No filter specified: All other ops are allowed.
             return true;
           };
