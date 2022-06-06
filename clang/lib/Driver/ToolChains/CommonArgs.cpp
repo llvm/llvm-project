@@ -838,6 +838,9 @@ void tools::linkSanitizerRuntimeDeps(const ToolChain &TC,
       TC.getTriple().isOSNetBSD() ||
       TC.getTriple().isOSOpenBSD())
     CmdArgs.push_back("-lexecinfo");
+  // There is no libresolv on Android.
+  if (!TC.getTriple().isAndroid())
+    CmdArgs.push_back("-lresolv");
 }
 
 static void
