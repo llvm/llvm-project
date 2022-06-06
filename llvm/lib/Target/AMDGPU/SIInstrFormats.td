@@ -270,11 +270,6 @@ class Enc64 {
   int Size = 8;
 }
 
-class Enc96 {
-  field bits<96> Inst;
-  int Size = 12;
-}
-
 def CPolBit {
   int GLC = 0;
   int SLC = 1;

@@ -40,7 +40,7 @@ class AMDGPUInst <dag outs, dag ins, string asm = "",
   // instructions to not match without killing the whole decode process. It is
   // mainly used for ARM, but Tablegen expects this field to exist or it fails
   // to build the decode table.
-  field bits<96> SoftFail = 0;
+  field bits<64> SoftFail = 0;
 
   let DecoderNamespace = Namespace;
 

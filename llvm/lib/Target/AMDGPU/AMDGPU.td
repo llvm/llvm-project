@@ -1296,10 +1296,8 @@ def AMDGPUAsmVariants {
   int SDWA9_ID = 3;
   string DPP = "DPP";
   int DPP_ID = 4;
-  string VOP3_DPP = "VOP3_DPP";
-  int VOP3_DPP_ID = 5;
   string Disable = "Disable";
-  int Disable_ID = 6;
+  int Disable_ID = 5;
 }
 
 def DefaultAMDGPUAsmParserVariant : AsmParserVariant {
@@ -1327,11 +1325,6 @@ def DPPAsmParserVariant : AsmParserVariant {
   let Name = AMDGPUAsmVariants.DPP;
 }
 
-def VOP3_DPPAsmParserVariant : AsmParserVariant {
-  let Variant = AMDGPUAsmVariants.VOP3_DPP_ID;
-  let Name = AMDGPUAsmVariants.VOP3_DPP;
-}
-
 def AMDGPU : Target {
   // Pull in Instruction Info:
   let InstructionSet = AMDGPUInstrInfo;
@@ -1340,8 +1333,7 @@ def AMDGPU : Target {
                                 VOP3AsmParserVariant,
                                 SDWAAsmParserVariant,
                                 SDWA9AsmParserVariant,
-                                DPPAsmParserVariant,
-                                VOP3_DPPAsmParserVariant];
+                                DPPAsmParserVariant];
   let AssemblyWriters = [AMDGPUAsmWriter];
   let AllowRegisterRenaming = 1;
 }
