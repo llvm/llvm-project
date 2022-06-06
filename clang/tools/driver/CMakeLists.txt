@@ -122,13 +122,7 @@ endif()
 set(features_file_src "${CMAKE_CURRENT_SOURCE_DIR}/features.json")
 set(features_file_dest "${CMAKE_BINARY_DIR}/share/clang/features.json")
 
-add_custom_command(OUTPUT ${features_file_dest}
-                   COMMAND ${CMAKE_COMMAND} -E make_directory
-                     ${CMAKE_BINARY_DIR}/share/clang
-                   COMMAND ${CMAKE_COMMAND} -E copy
-                     ${features_file_src}
-                     ${features_file_dest}
-                   DEPENDS ${features_file_src})
+configure_file(${features_file_src} ${features_file_dest} @ONLY)
 
 add_custom_target(clang-features-file DEPENDS ${features_file_dest})
 add_dependencies(clang clang-features-file)
