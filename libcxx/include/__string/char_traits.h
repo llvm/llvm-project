@@ -1,4 +1,3 @@
-// -*- C++ -*-
 //===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
@@ -7,26 +6,22 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___STRING
-#define _LIBCPP___STRING
+#ifndef _LIBCPP___STRING_CHAR_TRAITS_H
+#define _LIBCPP___STRING_CHAR_TRAITS_H
 
-#include <__algorithm/copy.h>
-#include <__algorithm/copy_backward.h>
 #include <__algorithm/copy_n.h>
 #include <__algorithm/fill_n.h>
 #include <__algorithm/find_end.h>
 #include <__algorithm/find_first_of.h>
 #include <__algorithm/min.h>
-#include <__assert>
 #include <__config>
-#include <__debug>
-#include <__functional/hash.h>     // for __murmur2_or_cityhash
+#include <__functional/hash.h>
 #include <__iterator/iterator_traits.h>
-#include <cstdint>     // for uint_least16_t
-#include <cstdio>      // for EOF
-#include <cstring>     // for memcpy
-#include <iosfwd>      // for streampos & friends
-#include <type_traits> // for __libcpp_is_constant_evaluated
+#include <cstdint>
+#include <cstdio>
+#include <cstring>
+#include <iosfwd>
+#include <type_traits>
 
 #ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
 #   include <cwchar> // for wmemcpy
@@ -39,124 +34,7 @@
 _LIBCPP_PUSH_MACROS
 #include <__undef_macros>
 
-
 _LIBCPP_BEGIN_NAMESPACE_STD
-
-// The extern template ABI lists are kept outside of <string> to improve the
-// readability of that header. We maintain 2 ABI lists:
-// - _LIBCPP_STRING_V1_EXTERN_TEMPLATE_LIST
-// - _LIBCPP_STRING_UNSTABLE_EXTERN_TEMPLATE_LIST
-// As the name implies, the ABI lists define the V1 (Stable) and unstable ABI.
-//
-// For unstable, we may explicitly remove function that are external in V1,
-// and add (new) external functions to better control inlining and compiler
-// optimization opportunities.
-//
-// For stable, the ABI list should rarely change, except for adding new
-// functions supporting new c++ version / API changes. Typically entries
-// must never be removed from the stable list.
-#define _LIBCPP_STRING_V1_EXTERN_TEMPLATE_LIST(_Func, _CharType) \
-  _Func(_LIBCPP_FUNC_VIS basic_string<_CharType>& basic_string<_CharType>::replace(size_type, size_type, value_type const*, size_type)) \
-  _Func(_LIBCPP_FUNC_VIS basic_string<_CharType>::size_type basic_string<_CharType>::rfind(value_type const*, size_type, size_type) const) \
-  _Func(_LIBCPP_FUNC_VIS void basic_string<_CharType>::__init(value_type const*, size_type, size_type)) \
-  _Func(_LIBCPP_FUNC_VIS basic_string<_CharType>::basic_string(basic_string const&)) \
-  _Func(_LIBCPP_FUNC_VIS basic_string<_CharType>& basic_string<_CharType>::replace(size_type, size_type, value_type const*)) \
-  _Func(_LIBCPP_FUNC_VIS basic_string<_CharType>::basic_string(basic_string const&, allocator<_CharType> const&)) \
-  _Func(_LIBCPP_FUNC_VIS basic_string<_CharType>::size_type basic_string<_CharType>::find_last_not_of(value_type const*, size_type, size_type) const) \
-  _Func(_LIBCPP_FUNC_VIS basic_string<_CharType>::~basic_string()) \
-  _Func(_LIBCPP_FUNC_VIS basic_string<_CharType>::size_type basic_string<_CharType>::find_first_not_of(value_type const*, size_type, size_type) const) \
-  _Func(_LIBCPP_FUNC_VIS basic_string<_CharType>& basic_string<_CharType>::insert(size_type, size_type, value_type)) \
-  _Func(_LIBCPP_FUNC_VIS basic_string<_CharType>& basic_string<_CharType>::operator=(value_type)) \
-  _Func(_LIBCPP_FUNC_VIS void basic_string<_CharType>::__init(value_type const*, size_type)) \
-  _Func(_LIBCPP_FUNC_VIS const _CharType& basic_string<_CharType>::at(size_type) const) \
-  _Func(_LIBCPP_FUNC_VIS basic_string<_CharType>& basic_string<_CharType>::insert(size_type, value_type const*, size_type)) \
-  _Func(_LIBCPP_FUNC_VIS basic_string<_CharType>::size_type basic_string<_CharType>::find_first_of(value_type const*, size_type, size_type) const) \
-  _Func(_LIBCPP_FUNC_VIS basic_string<_CharType>& basic_string<_CharType>::replace(size_type, size_type, size_type, value_type)) \
-  _Func(_LIBCPP_FUNC_VIS basic_string<_CharType>& basic_string<_CharType>::assign(value_type const*, size_type)) \
-  _Func(_LIBCPP_FUNC_VIS void basic_string<_CharType>::reserve(size_type)) \
-  _Func(_LIBCPP_FUNC_VIS basic_string<_CharType>& basic_string<_CharType>::append(value_type const*, size_type)) \
-  _Func(_LIBCPP_FUNC_VIS basic_string<_CharType>& basic_string<_CharType>::assign(basic_string const&, size_type, size_type)) \
-  _Func(_LIBCPP_FUNC_VIS basic_string<_CharType>::size_type basic_string<_CharType>::copy(value_type*, size_type, size_type) const) \
-  _Func(_LIBCPP_FUNC_VIS basic_string<_CharType>::basic_string(basic_string const&, size_type, size_type, allocator<_CharType> const&)) \
-  _Func(_LIBCPP_FUNC_VIS basic_string<_CharType>::size_type basic_string<_CharType>::find(value_type, size_type) const) \
-  _Func(_LIBCPP_FUNC_VIS void basic_string<_CharType>::__init(size_type, value_type)) \
-  _Func(_LIBCPP_FUNC_VIS basic_string<_CharType>& basic_string<_CharType>::insert(size_type, value_type const*)) \
-  _Func(_LIBCPP_FUNC_VIS basic_string<_CharType>::size_type basic_string<_CharType>::find_last_of(value_type const*, size_type, size_type) const) \
-  _Func(_LIBCPP_FUNC_VIS void basic_string<_CharType>::__grow_by(size_type, size_type, size_type, size_type, size_type, size_type)) \
-  _Func(_LIBCPP_FUNC_VIS void basic_string<_CharType>::__grow_by_and_replace(size_type, size_type, size_type, size_type, size_type, size_type, value_type const*)) \
-  _Func(_LIBCPP_FUNC_VIS void basic_string<_CharType>::push_back(value_type)) \
-  _Func(_LIBCPP_FUNC_VIS basic_string<_CharType>& basic_string<_CharType>::append(size_type, value_type)) \
-  _Func(_LIBCPP_FUNC_VIS basic_string<_CharType>::size_type basic_string<_CharType>::rfind(value_type, size_type) const) \
-  _Func(_LIBCPP_FUNC_VIS const basic_string<_CharType>::size_type basic_string<_CharType>::npos) \
-  _Func(_LIBCPP_FUNC_VIS basic_string<_CharType>& basic_string<_CharType>::assign(size_type, value_type)) \
-  _Func(_LIBCPP_FUNC_VIS basic_string<_CharType>& basic_string<_CharType>::erase(size_type, size_type)) \
-  _Func(_LIBCPP_FUNC_VIS basic_string<_CharType>& basic_string<_CharType>::append(basic_string const&, size_type, size_type)) \
-  _Func(_LIBCPP_FUNC_VIS int basic_string<_CharType>::compare(value_type const*) const) \
-  _Func(_LIBCPP_FUNC_VIS int basic_string<_CharType>::compare(size_type, size_type, value_type const*) const) \
-  _Func(_LIBCPP_FUNC_VIS _CharType& basic_string<_CharType>::at(size_type)) \
-  _Func(_LIBCPP_FUNC_VIS basic_string<_CharType>& basic_string<_CharType>::assign(value_type const*)) \
-  _Func(_LIBCPP_FUNC_VIS basic_string<_CharType>::size_type basic_string<_CharType>::find(value_type const*, size_type, size_type) const) \
-  _Func(_LIBCPP_FUNC_VIS int basic_string<_CharType>::compare(size_type, size_type, basic_string const&, size_type, size_type) const) \
-  _Func(_LIBCPP_FUNC_VIS int basic_string<_CharType>::compare(size_type, size_type, value_type const*, size_type) const) \
-  _Func(_LIBCPP_FUNC_VIS basic_string<_CharType>& basic_string<_CharType>::operator=(basic_string const&)) \
-  _Func(_LIBCPP_FUNC_VIS basic_string<_CharType>& basic_string<_CharType>::append(value_type const*)) \
-  _Func(_LIBCPP_FUNC_VIS basic_string<_CharType>& basic_string<_CharType>::replace(size_type, size_type, basic_string const&, size_type, size_type)) \
-  _Func(_LIBCPP_FUNC_VIS basic_string<_CharType>::iterator basic_string<_CharType>::insert(basic_string::const_iterator, value_type)) \
-  _Func(_LIBCPP_FUNC_VIS void basic_string<_CharType>::resize(size_type, value_type)) \
-  _Func(_LIBCPP_FUNC_VIS basic_string<_CharType>& basic_string<_CharType>::insert(size_type, basic_string const&, size_type, size_type))
-
-#define _LIBCPP_STRING_UNSTABLE_EXTERN_TEMPLATE_LIST(_Func, _CharType) \
-  _Func(_LIBCPP_FUNC_VIS basic_string<_CharType>& basic_string<_CharType>::replace(size_type, size_type, value_type const*, size_type)) \
-  _Func(_LIBCPP_FUNC_VIS basic_string<_CharType>::size_type basic_string<_CharType>::rfind(value_type const*, size_type, size_type) const) \
-  _Func(_LIBCPP_FUNC_VIS void basic_string<_CharType>::__init(value_type const*, size_type, size_type)) \
-  _Func(_LIBCPP_FUNC_VIS basic_string<_CharType>& basic_string<_CharType>::replace(size_type, size_type, value_type const*)) \
-  _Func(_LIBCPP_FUNC_VIS basic_string<_CharType>::size_type basic_string<_CharType>::find_last_not_of(value_type const*, size_type, size_type) const) \
-  _Func(_LIBCPP_FUNC_VIS basic_string<_CharType>::~basic_string()) \
-  _Func(_LIBCPP_FUNC_VIS basic_string<_CharType>::size_type basic_string<_CharType>::find_first_not_of(value_type const*, size_type, size_type) const) \
-  _Func(_LIBCPP_FUNC_VIS basic_string<_CharType>& basic_string<_CharType>::insert(size_type, size_type, value_type)) \
-  _Func(_LIBCPP_FUNC_VIS basic_string<_CharType>& basic_string<_CharType>::operator=(value_type)) \
-  _Func(_LIBCPP_FUNC_VIS void basic_string<_CharType>::__init(value_type const*, size_type)) \
-  _Func(_LIBCPP_FUNC_VIS void basic_string<_CharType>::__init_copy_ctor_external(value_type const*, size_type)) \
-  _Func(_LIBCPP_FUNC_VIS const _CharType& basic_string<_CharType>::at(size_type) const) \
-  _Func(_LIBCPP_FUNC_VIS basic_string<_CharType>& basic_string<_CharType>::insert(size_type, value_type const*, size_type)) \
-  _Func(_LIBCPP_FUNC_VIS basic_string<_CharType>::size_type basic_string<_CharType>::find_first_of(value_type const*, size_type, size_type) const) \
-  _Func(_LIBCPP_FUNC_VIS basic_string<_CharType>& basic_string<_CharType>::replace(size_type, size_type, size_type, value_type)) \
-  _Func(_LIBCPP_FUNC_VIS basic_string<_CharType>& basic_string<_CharType>::__assign_external(value_type const*, size_type)) \
-  _Func(_LIBCPP_FUNC_VIS basic_string<_CharType>& basic_string<_CharType>::__assign_external(value_type const*)) \
-  _Func(_LIBCPP_FUNC_VIS void basic_string<_CharType>::reserve(size_type)) \
-  _Func(_LIBCPP_FUNC_VIS basic_string<_CharType>& basic_string<_CharType>::append(value_type const*, size_type)) \
-  _Func(_LIBCPP_FUNC_VIS basic_string<_CharType>& basic_string<_CharType>::assign(basic_string const&, size_type, size_type)) \
-  _Func(_LIBCPP_FUNC_VIS basic_string<_CharType>::size_type basic_string<_CharType>::copy(value_type*, size_type, size_type) const) \
-  _Func(_LIBCPP_FUNC_VIS basic_string<_CharType>::basic_string(basic_string const&, size_type, size_type, allocator<_CharType> const&)) \
-  _Func(_LIBCPP_FUNC_VIS basic_string<_CharType>::size_type basic_string<_CharType>::find(value_type, size_type) const) \
-  _Func(_LIBCPP_FUNC_VIS void basic_string<_CharType>::__init(size_type, value_type)) \
-  _Func(_LIBCPP_FUNC_VIS basic_string<_CharType>& basic_string<_CharType>::insert(size_type, value_type const*)) \
-  _Func(_LIBCPP_FUNC_VIS basic_string<_CharType>::size_type basic_string<_CharType>::find_last_of(value_type const*, size_type, size_type) const) \
-  _Func(_LIBCPP_FUNC_VIS void basic_string<_CharType>::__grow_by(size_type, size_type, size_type, size_type, size_type, size_type)) \
-  _Func(_LIBCPP_FUNC_VIS void basic_string<_CharType>::__grow_by_and_replace(size_type, size_type, size_type, size_type, size_type, size_type, value_type const*)) \
-  _Func(_LIBCPP_FUNC_VIS basic_string<_CharType>& basic_string<_CharType>::__assign_no_alias<false>(value_type const*, size_type)) \
-  _Func(_LIBCPP_FUNC_VIS basic_string<_CharType>& basic_string<_CharType>::__assign_no_alias<true>(value_type const*, size_type)) \
-  _Func(_LIBCPP_FUNC_VIS void basic_string<_CharType>::push_back(value_type)) \
-  _Func(_LIBCPP_FUNC_VIS basic_string<_CharType>& basic_string<_CharType>::append(size_type, value_type)) \
-  _Func(_LIBCPP_FUNC_VIS basic_string<_CharType>::size_type basic_string<_CharType>::rfind(value_type, size_type) const) \
-  _Func(_LIBCPP_FUNC_VIS const basic_string<_CharType>::size_type basic_string<_CharType>::npos) \
-  _Func(_LIBCPP_FUNC_VIS basic_string<_CharType>& basic_string<_CharType>::assign(size_type, value_type)) \
-  _Func(_LIBCPP_FUNC_VIS void basic_string<_CharType>::__erase_external_with_move(size_type, size_type)) \
-  _Func(_LIBCPP_FUNC_VIS basic_string<_CharType>& basic_string<_CharType>::append(basic_string const&, size_type, size_type)) \
-  _Func(_LIBCPP_FUNC_VIS int basic_string<_CharType>::compare(value_type const*) const) \
-  _Func(_LIBCPP_FUNC_VIS int basic_string<_CharType>::compare(size_type, size_type, value_type const*) const) \
-  _Func(_LIBCPP_FUNC_VIS _CharType& basic_string<_CharType>::at(size_type)) \
-  _Func(_LIBCPP_FUNC_VIS basic_string<_CharType>::size_type basic_string<_CharType>::find(value_type const*, size_type, size_type) const) \
-  _Func(_LIBCPP_FUNC_VIS int basic_string<_CharType>::compare(size_type, size_type, basic_string const&, size_type, size_type) const) \
-  _Func(_LIBCPP_FUNC_VIS int basic_string<_CharType>::compare(size_type, size_type, value_type const*, size_type) const) \
-  _Func(_LIBCPP_FUNC_VIS basic_string<_CharType>& basic_string<_CharType>::append(value_type const*)) \
-  _Func(_LIBCPP_FUNC_VIS basic_string<_CharType>& basic_string<_CharType>::replace(size_type, size_type, basic_string const&, size_type, size_type)) \
-  _Func(_LIBCPP_FUNC_VIS basic_string<_CharType>::iterator basic_string<_CharType>::insert(basic_string::const_iterator, value_type)) \
-  _Func(_LIBCPP_FUNC_VIS void basic_string<_CharType>::resize(size_type, value_type)) \
-  _Func(_LIBCPP_FUNC_VIS basic_string<_CharType>& basic_string<_CharType>::insert(size_type, basic_string const&, size_type, size_type))
-
-
-// char_traits
 
 template <class _CharT>
 struct _LIBCPP_TEMPLATE_VIS char_traits
@@ -1148,4 +1026,4 @@ _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS
 
-#endif // _LIBCPP___STRING
+#endif // _LIBCPP___STRING_CHAR_TRAITS_H
