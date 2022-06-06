@@ -1,4 +1,4 @@
-// RUN: %clangxx_msan -O0 %s -o %t -lresolv && %run %t
+// RUN: %clangxx_msan -O0 %s -o %t && %run %t
 // RUN: not %run %t NTOP_READ 2>&1 | FileCheck %s --check-prefix=NTOP_READ
 // RUN: not %run %t PTON_READ 2>&1 | FileCheck %s --check-prefix=PTON_READ
 
