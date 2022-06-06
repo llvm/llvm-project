@@ -122,18 +122,19 @@ class SM_Store_Pseudo <string opName, RegisterClass baseClass,
   let ScalarStore = 1;
 }
 
-class SM_Discard_Pseudo <string opName, dag ins, bit isImm>
-  : SM_Pseudo<opName, (outs), ins,
-              " $sbase, " # !if(isImm, "$offset", "$soffset")> {
+class SM_Discard_Pseudo <string opName, string variant, dag offsets,
+                         string asmOffsets, bit hasOffset, bit hasSOffset>
+  : SM_Pseudo<opName, (outs), !con((ins SReg_64:$sbase), offsets),
+              " $sbase, " # asmOffsets> {
   let mayLoad = 0;
   let mayStore = 0;
   let has_glc = 0;
   let has_sdst = 0;
   let ScalarStore = 0;
   let hasSideEffects = 1;
-  let has_offset = isImm;
-  let has_soffset = !not(isImm);
-  let PseudoInstr = opName # !if(isImm, "_IMM", "_SGPR");
+  let has_offset = hasOffset;
+  let has_soffset = hasSOffset;
+  let PseudoInstr = opName # variant;
 }
 
 multiclass SM_Pseudo_Loads<string opName,
@@ -203,8 +204,12 @@ multiclass SM_Pseudo_Stores<string opName,
 }
 
 multiclass SM_Pseudo_Discards<string opName> {
-  def _IMM  : SM_Discard_Pseudo <opName, (ins SReg_64:$sbase, smem_offset:$offset), 1>;
-  def _SGPR : SM_Discard_Pseudo <opName, (ins SReg_64:$sbase, SReg_32:$soffset), 0>;
+  def _IMM  : SM_Discard_Pseudo <opName, "_IMM",
+    (ins smem_offset:$offset), "$offset", 1, 0>;
+  def _SGPR : SM_Discard_Pseudo <opName, "_SGPR",
+    (ins SReg_32:$soffset), "$soffset", 0, 1>;
+  def _SGPR_IMM : SM_Discard_Pseudo <opName, "_SGPR_IMM",
+    (ins SReg_32:$soffset, smem_offset_mod:$offset), "$soffset$offset", 1, 1>;
 }
 
 class SM_Time_Pseudo<string opName, SDPatternOperator node = null_frag> : SM_Pseudo<
@@ -529,8 +534,8 @@ class SMEM_Real_vi <bits<8> op, SM_Pseudo ps>
   : SM_Real<ps>
   , SIMCInstr<ps.PseudoInstr, SIEncodingFamily.VI>
   , Enc64 {
-  field bit IsGFX9Specific = false;
-  let AssemblerPredicate = !if(IsGFX9Specific, isGFX9Only, isGFX8GFX9);
+  field bit IsGFX9SpecificEncoding = false;
+  let AssemblerPredicate = !if(IsGFX9SpecificEncoding, isGFX9Only, isGFX8GFX9);
   let DecoderNamespace = "GFX8";
 
   let Inst{5-0}   = !if(ps.has_sbase, sbase{6-1}, ?);
@@ -540,7 +545,7 @@ class SMEM_Real_vi <bits<8> op, SM_Pseudo ps>
   // must be defined, whereas in GFX8 it's undefined in all cases,
   // meaning GFX9 is not perfectly backward-compatible with GFX8, despite
   // documentation suggesting otherwise.
-  field bit SOffsetEn = !if(IsGFX9Specific,
+  field bit SOffsetEn = !if(IsGFX9SpecificEncoding,
     !if(ps.has_offset, ps.has_soffset, !if(ps.has_soffset, 0, ?)),
     ?);
   let Inst{14} = SOffsetEn;
@@ -565,7 +570,8 @@ class SMEM_Real_vi <bits<8> op, SM_Pseudo ps>
   let Inst{52-32} = Offset;
 
   // soffset
-  let Inst{63-57} = !if(!and(IsGFX9Specific, ps.has_soffset), soffset{6-0}, ?);
+  let Inst{63-57} = !if(!and(IsGFX9SpecificEncoding, ps.has_soffset),
+                        soffset{6-0}, ?);
 }
 
 class SMEM_Real_Load_vi<bits<8> op, string ps, dag offsets>
@@ -574,20 +580,26 @@ class SMEM_Real_Load_vi<bits<8> op, string ps, dag offsets>
   let InOperandList = !con((ins BaseClass:$sbase), offsets, (ins CPol:$cpol));
 }
 
+// The alternative GFX9 SGPR encoding using soffset to encode the
+// offset register. Not available in assembler and goes to the GFX9
+// encoding family to avoid conflicts with the primary SGPR variant.
+class SMEM_Real_SGPR_alt_gfx9 {
+  bit IsGFX9SpecificEncoding = true;
+  bit SOffsetEn = 1;
+  bit Offset = ?;
+  int Subtarget = SIEncodingFamily.GFX9;
+  string AsmVariantName = "NonParsable";
+}
+
 multiclass SM_Real_Loads_vi<bits<8> op, string ps> {
   def _IMM_vi : SMEM_Real_Load_vi <op, ps#"_IMM", (ins smem_offset:$offset)>;
   def _SGPR_vi : SMEM_Real_Load_vi <op, ps#"_SGPR", (ins SReg_32:$soffset)>;
-  let IsGFX9Specific = true in {
-    // The alternative GFX9 SGPR encoding using soffset to encode the
-    // offset register. Not available in assembler and goes to the GFX9
-    // encoding family to avoid conflicts with the primary SGPR variant.
-    let SOffsetEn = 1, Offset = ?, Subtarget = SIEncodingFamily.GFX9,
-        AsmVariantName = "NonParsable" in
-    def _SGPR_alt_gfx9 : SMEM_Real_Load_vi <op, ps#"_SGPR",
-                                            (ins SReg_32:$soffset)>;
-    def _SGPR_IMM_gfx9 : SMEM_Real_Load_vi <
-      op, ps#"_SGPR_IMM", (ins SReg_32:$soffset, smem_offset_mod:$offset)>;
-  }
+  def _SGPR_alt_gfx9 : SMEM_Real_Load_vi <op, ps#"_SGPR",
+                                          (ins SReg_32:$soffset)>,
+                       SMEM_Real_SGPR_alt_gfx9;
+  let IsGFX9SpecificEncoding = true in
+  def _SGPR_IMM_gfx9 : SMEM_Real_Load_vi <
+    op, ps#"_SGPR_IMM", (ins SReg_32:$soffset, smem_offset_mod:$offset)>;
 }
 
 class SMEM_Real_Store_Base_vi <bits<8> op, SM_Pseudo ps> : SMEM_Real_vi <op, ps> {
@@ -609,17 +621,12 @@ class SMEM_Real_Store_vi <bits<8> op, string ps, dag offsets>
 multiclass SM_Real_Stores_vi<bits<8> op, string ps> {
   def _IMM_vi : SMEM_Real_Store_vi <op, ps#_IMM, (ins smem_offset:$offset)>;
   def _SGPR_vi : SMEM_Real_Store_vi <op, ps#_SGPR, (ins SReg_32:$soffset)>;
-  let IsGFX9Specific = true in {
-    // The alternative GFX9 SGPR encoding using soffset to encode the
-    // offset register. Not available in assembler and goes to the GFX9
-    // encoding family to avoid conflicts with the primary SGPR variant.
-    let SOffsetEn = 1, Offset = ?, Subtarget = SIEncodingFamily.GFX9,
-        AsmVariantName = "NonParsable" in
-    def _SGPR_alt_gfx9 : SMEM_Real_Store_vi <op, ps#"_SGPR",
-                                             (ins SReg_32:$soffset)>;
-    def _SGPR_IMM_gfx9 : SMEM_Real_Store_vi <
-      op, ps#"_SGPR_IMM", (ins SReg_32:$soffset, smem_offset_mod:$offset)>;
-  }
+  def _SGPR_alt_gfx9 : SMEM_Real_Store_vi <op, ps#"_SGPR",
+                                           (ins SReg_32:$soffset)>,
+                       SMEM_Real_SGPR_alt_gfx9;
+  let IsGFX9SpecificEncoding = true in
+  def _SGPR_IMM_gfx9 : SMEM_Real_Store_vi <
+    op, ps#"_SGPR_IMM", (ins SReg_32:$soffset, smem_offset_mod:$offset)>;
 }
 
 multiclass SM_Real_Probe_vi<bits<8> op, string ps> {
@@ -748,6 +755,10 @@ defm S_ATOMIC_DEC_X2              : SM_Real_Atomics_vi <0xac, "S_ATOMIC_DEC_X2">
 multiclass SM_Real_Discard_vi<bits<8> op, string ps> {
   def _IMM_vi  : SMEM_Real_vi <op, !cast<SM_Discard_Pseudo>(ps#_IMM)>;
   def _SGPR_vi : SMEM_Real_vi <op, !cast<SM_Discard_Pseudo>(ps#_SGPR)>;
+  def _SGPR_alt_gfx9 : SMEM_Real_vi <op, !cast<SM_Discard_Pseudo>(ps#_SGPR)>,
+                       SMEM_Real_SGPR_alt_gfx9;
+  let IsGFX9SpecificEncoding = true in
+  def _SGPR_IMM_gfx9 : SMEM_Real_vi <op, !cast<SM_Discard_Pseudo>(ps#_SGPR_IMM)>;
 }
 
 defm S_DCACHE_DISCARD    : SM_Real_Discard_vi <0x28, "S_DCACHE_DISCARD">;
@@ -1142,6 +1153,7 @@ defm S_ATOMIC_DEC_X2              : SM_Real_Atomics_gfx10 <0xac, "S_ATOMIC_DEC_X
 multiclass SM_Real_Discard_gfx10<bits<8> op, string ps> {
   def _IMM_gfx10  : SMEM_Real_gfx10 <op, !cast<SM_Pseudo>(ps#_IMM)>;
   def _SGPR_gfx10 : SMEM_Real_gfx10 <op, !cast<SM_Pseudo>(ps#_SGPR)>;
+  def _SGPR_IMM_gfx10 : SMEM_Real_gfx10 <op, !cast<SM_Pseudo>(ps#_SGPR_IMM)>;
 }
 
 defm S_DCACHE_DISCARD    : SM_Real_Discard_gfx10 <0x28, "S_DCACHE_DISCARD">;
