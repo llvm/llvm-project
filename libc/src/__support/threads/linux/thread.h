@@ -75,7 +75,7 @@ template <typename ReturnType> using ThreadRunner = ReturnType(void *);
 // 16-byte boundary to satisfy the x86_64 and aarch64 ABI requirements.
 // If different architecture in future requires higher alignment, then we
 // can add a platform specific alignment spec.
-template <typename ReturnType> struct alignas(16) StartArgs {
+template <typename ReturnType> struct alignas(STACK_ALIGNMENT) StartArgs {
   Thread<ReturnType> *thread;
   ThreadRunner<ReturnType> *func;
   void *arg;
@@ -133,6 +133,7 @@ public:
                                sizeof(StartArgs<ReturnType>) -
                                sizeof(ThreadAttributes<ReturnType>) -
                                sizeof(cpp::Atomic<FutexWordType>);
+    adjusted_stack &= ~(uintptr_t(STACK_ALIGNMENT) - 1);
 
     auto *start_args =
         reinterpret_cast<StartArgs<ReturnType> *>(adjusted_stack);
