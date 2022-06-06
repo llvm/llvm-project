@@ -1797,10 +1797,10 @@ void PeelingModuloScheduleExpander::peelPrologAndEpilogs() {
 
   // Iterate in reverse order over all instructions, remapping as we go.
   for (MachineBasicBlock *B : reverse(Blocks)) {
-    for (auto I = B->getFirstInstrTerminator()->getReverseIterator();
+    for (auto I = B->instr_rbegin();
          I != std::next(B->getFirstNonPHI()->getReverseIterator());) {
-      MachineInstr *MI = &*I++;
-      rewriteUsesOf(MI);
+      MachineBasicBlock::reverse_instr_iterator MI = I++;
+      rewriteUsesOf(&*MI);
     }
   }
   for (auto *MI : IllegalPhisToDelete) {
