@@ -252,7 +252,8 @@ enum : unsigned {
   WASM_SEC_CODE = 10,      // Function bodies (code)
   WASM_SEC_DATA = 11,      // Data segments
   WASM_SEC_DATACOUNT = 12, // Data segment count
-  WASM_SEC_TAG = 13        // Tag declarations
+  WASM_SEC_TAG = 13,       // Tag declarations
+  WASM_SEC_LAST_KNOWN = WASM_SEC_TAG,
 };
 
 // Type immediate encodings used in various contexts.

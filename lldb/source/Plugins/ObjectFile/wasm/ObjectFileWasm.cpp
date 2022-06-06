@@ -192,7 +192,7 @@ bool ObjectFileWasm::DecodeNextSection(lldb::offset_t *offset_ptr) {
     m_sect_infos.push_back(section_info{*offset_ptr + c.tell(), section_length,
                                         section_id, *sect_name});
     *offset_ptr += (c.tell() + section_length);
-  } else if (section_id <= llvm::wasm::WASM_SEC_TAG) {
+  } else if (section_id <= llvm::wasm::WASM_SEC_LAST_KNOWN) {
     m_sect_infos.push_back(section_info{*offset_ptr + c.tell(),
                                         static_cast<uint32_t>(payload_len),
                                         section_id, ConstString()});
