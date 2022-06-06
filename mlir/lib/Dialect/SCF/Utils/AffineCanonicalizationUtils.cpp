@@ -270,7 +270,7 @@ LogicalResult scf::canonicalizeMinMaxOpInLoop(RewriterBase &rewriter,
   // Find all iteration variables among `minOp`'s operands add constrain them.
   for (Value operand : operands) {
     // Skip duplicate ivs.
-    if (llvm::find(allIvs, operand) != allIvs.end())
+    if (llvm::is_contained(allIvs, operand))
       continue;
 
     // If `operand` is an iteration variable: Find corresponding loop

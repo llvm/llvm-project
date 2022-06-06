@@ -94,11 +94,10 @@ matchSelectReduction(Block &block, ArrayRef<Predicate> lessThanPredicates,
 
   // Detect whether the comparison is less-than or greater-than, otherwise bail.
   bool isLess;
-  if (llvm::find(lessThanPredicates, compare.getPredicate()) !=
-      lessThanPredicates.end()) {
+  if (llvm::is_contained(lessThanPredicates, compare.getPredicate())) {
     isLess = true;
-  } else if (llvm::find(greaterThanPredicates, compare.getPredicate()) !=
-             greaterThanPredicates.end()) {
+  } else if (llvm::is_contained(greaterThanPredicates,
+                                compare.getPredicate())) {
     isLess = false;
   } else {
     return false;

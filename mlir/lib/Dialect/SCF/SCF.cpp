@@ -2467,14 +2467,10 @@ struct MergeNestedParallelLoops : public OpRewritePattern<ParallelOp> {
     if (!innerOp)
       return failure();
 
-    auto hasVal = [](const auto &range, Value val) {
-      return llvm::find(range, val) != range.end();
-    };
-
     for (auto val : outerBody.getArguments())
-      if (hasVal(innerOp.getLowerBound(), val) ||
-          hasVal(innerOp.getUpperBound(), val) ||
-          hasVal(innerOp.getStep(), val))
+      if (llvm::is_contained(innerOp.getLowerBound(), val) ||
+          llvm::is_contained(innerOp.getUpperBound(), val) ||
+          llvm::is_contained(innerOp.getStep(), val))
         return failure();
 
     // Reductions are not supported yet.
