@@ -106,8 +106,6 @@ private:
   };
   SmallDenseMap<unsigned, MDRange, 1> FunctionMDInfo;
 
-  bool ShouldPreserveUseListOrder;
-
   using AttributeGroupMapType = DenseMap<IndexAndAttrSet, unsigned>;
   AttributeGroupMapType AttributeGroupMap;
   std::vector<IndexAndAttrSet> AttributeGroups;
@@ -141,7 +139,7 @@ private:
   unsigned FirstInstID;
 
 public:
-  ValueEnumerator(const Module &M, bool ShouldPreserveUseListOrder);
+  ValueEnumerator(const Module &M, Type *PrefixType);
   ValueEnumerator(const ValueEnumerator &) = delete;
   ValueEnumerator &operator=(const ValueEnumerator &) = delete;
 
@@ -163,8 +161,6 @@ public:
   }
 
   unsigned numMDs() const { return MDs.size(); }
-
-  bool shouldPreserveUseListOrder() const { return ShouldPreserveUseListOrder; }
 
   unsigned getTypeID(Type *T) const {
     TypeMapType::const_iterator I = TypeMap.find(T);
@@ -242,8 +238,9 @@ public:
   void purgeFunction();
   uint64_t computeBitsRequiredForTypeIndicies() const;
 
+  void EnumerateType(Type *T);
+
 private:
-  void OptimizeConstants(unsigned CstStart, unsigned CstEnd);
 
   /// Reorder the reachable metadata.
   ///
@@ -298,7 +295,6 @@ private:
   void EnumerateFunctionLocalListMetadata(unsigned F, const DIArgList *Arglist);
   void EnumerateNamedMDNode(const NamedMDNode *NMD);
   void EnumerateValue(const Value *V);
-  void EnumerateType(Type *T);
   void EnumerateOperandType(const Value *V);
   void EnumerateAttributes(AttributeList PAL);
 
