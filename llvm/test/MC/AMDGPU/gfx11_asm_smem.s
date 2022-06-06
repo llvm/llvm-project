@@ -812,6 +812,9 @@ s_dcache_discard s[2:3], s2
 s_dcache_discard s[2:3], 100
 // GFX11-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
 
+s_dcache_discard s[2:3], s7 offset:100
+// GFX11-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
 s_dcache_discard_x2 s[2:3], s2
 // GFX11-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
 
