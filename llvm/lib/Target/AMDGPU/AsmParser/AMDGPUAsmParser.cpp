@@ -1650,6 +1650,7 @@ private:
                              const SMLoc &IDLoc);
   bool validateFlatLdsDMA(const MCInst &Inst, const OperandVector &Operands,
                           const SMLoc &IDLoc);
+  bool validateExeczVcczOperands(const OperandVector &Operands);
   Optional<StringRef> validateLdsDirect(const MCInst &Inst);
   unsigned getConstantBusLimit(unsigned Opcode) const;
   bool usesConstantBus(const MCInst &Inst, unsigned OpIdx);
@@ -4506,6 +4507,22 @@ bool AMDGPUAsmParser::validateFlatLdsDMA(const MCInst &Inst,
   return true;
 }
 
+bool AMDGPUAsmParser::validateExeczVcczOperands(const OperandVector &Operands) {
+  if (!isGFX11Plus())
+    return true;
+  for (auto &Operand : Operands) {
+    if (!Operand->isReg())
+      continue;
+    unsigned Reg = Operand->getReg();
+    if (Reg == SRC_EXECZ || Reg == SRC_VCCZ) {
+      Error(getRegLoc(Reg, Operands),
+            "execz and vccz are not supported on this GPU");
+      return false;
+    }
+  }
+  return true;
+}
+
 bool AMDGPUAsmParser::validateInstruction(const MCInst &Inst,
                                           const SMLoc &IDLoc,
                                           const OperandVector &Operands) {
@@ -4618,6 +4635,9 @@ bool AMDGPUAsmParser::validateInstruction(const MCInst &Inst,
     return false;
   }
   if (!validateCoherencyBits(Inst, Operands, IDLoc)) {
+    return false;
+  }
+  if (!validateExeczVcczOperands(Operands)) {
     return false;
   }
 
