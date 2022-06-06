@@ -14,7 +14,7 @@
 # RUN: obj2yaml %t | FileCheck --implicit-check-not=Name --check-prefix=CHECK --check-prefix=KEEPTYPE %s
 
 # CHECK:      Sections:
-# KEEPTYPE:       Type: TYPE
+# KEEPTYPE:     - Type: TYPE
 # CHECK:        - Type: CUSTOM
 # CHECK-NEXT:     Name: .debug_info
 # CHECK:        - Type: CUSTOM
