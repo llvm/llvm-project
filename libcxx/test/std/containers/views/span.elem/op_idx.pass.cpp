@@ -10,7 +10,6 @@
 // <span>
 
 // constexpr reference operator[](size_type idx) const;
-// constexpr reference operator()(size_type idx) const;
 //
 
 
