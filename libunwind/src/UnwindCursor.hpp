@@ -863,7 +863,7 @@ void UnwindCursor<A, R>::setFloatReg(int regNum, unw_fpreg_t value) {
       uint32_t w;
       float f;
     } d;
-    d.f = value;
+    d.f = (float)value;
     _msContext.S[regNum - UNW_ARM_S0] = d.w;
   }
   if (regNum >= UNW_ARM_D0 && regNum <= UNW_ARM_D31) {
