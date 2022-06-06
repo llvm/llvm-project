@@ -264,10 +264,9 @@ namespace AMDGPUAsmVariants {
     VOP3 = 1,
     SDWA = 2,
     SDWA9 = 3,
-    DPP = 4,
-    VOP3_DPP = 5
+    DPP = 4
   };
-} // namespace AMDGPUAsmVariants
+}
 
 namespace AMDGPU {
 namespace EncValues { // Encoding values of enum9/8/7 operands
