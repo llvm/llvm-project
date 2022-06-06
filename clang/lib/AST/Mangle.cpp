@@ -70,9 +70,7 @@ static CCMangling getCallingConvMangling(const ASTContext &Context,
 
   // On wasm, the argc/argv form of "main" is renamed so that the startup code
   // can call it with the correct function signature.
-  // On Emscripten, users may be exporting "main" and expecting to call it
-  // themselves, so we can't mangle it.
-  if (Triple.isWasm() && !Triple.isOSEmscripten())
+  if (Triple.isWasm())
     if (const FunctionDecl *FD = dyn_cast<FunctionDecl>(ND))
       if (FD->isMain() && FD->hasPrototype() && FD->param_size() == 2)
         return CCM_WasmMainArgcArgv;
