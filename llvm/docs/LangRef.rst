@@ -1577,9 +1577,9 @@ example:
     Specify the desired alignment, which must be a power of two, in
     parentheses.
 ``"alloc-family"="FAMILY"``
-    This indicates which "family" an allocator function is part of. To avoid 
-    collisions, the family name should match the mangled name of the primary 
-    allocator function, that is "malloc" for malloc/calloc/realloc/free, 
+    This indicates which "family" an allocator function is part of. To avoid
+    collisions, the family name should match the mangled name of the primary
+    allocator function, that is "malloc" for malloc/calloc/realloc/free,
     "_Znwm" for ``::operator::new`` and ``::operator::delete``, and
     "_ZnwmSt11align_val_t" for aligned ``::operator::new`` and
     ``::operator::delete``. Matching malloc/realloc/free calls within a family
@@ -1595,13 +1595,13 @@ example:
       will match that of the ``allocptr`` argument and the ``allocptr``
       argument is invalidated, even if the function returns the same address.
     * "free": the function frees the block of memory specified by ``allocptr``.
-    * "uninitialized": Any newly-allocated memory (either a new block from 
+    * "uninitialized": Any newly-allocated memory (either a new block from
       a "alloc" function or the enlarged capacity from a "realloc" function)
       will be uninitialized.
     * "zeroed": Any newly-allocated memory (either a new block from a "alloc"
       function or the enlarged capacity from a "realloc" function) will be
       zeroed.
-    * "aligned": the function returns memory aligned according to the 
+    * "aligned": the function returns memory aligned according to the
       ``allocalign`` parameter.
 
     The first three options are mutually exclusive, and the remaining options
@@ -20491,7 +20491,7 @@ Semantics:
 The '``llvm.vp.fpext``' intrinsic extends the ``value`` from a smaller
 :ref:`floating-point <t_floating>` type to a larger :ref:`floating-point
 <t_floating>` type. The '``llvm.vp.fpext``' cannot be used to make a
-*no-op cast* because it always changes bits. Use ``bitcast`` to make a 
+*no-op cast* because it always changes bits. Use ``bitcast`` to make a
 *no-op cast* for a floating-point cast.
 The conversion is performed on lane positions below the explicit vector length
 and where the vector mask is true.  Masked-off lanes are undefined.
