@@ -1,4 +1,4 @@
-! Verify that reading from stdin works as expected
+! Verify that reading from stdin works as expected - Fortran input
 
 !--------------------------
 ! FLANG DRIVER (flang)
