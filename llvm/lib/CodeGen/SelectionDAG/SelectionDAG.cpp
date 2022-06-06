@@ -3697,6 +3697,14 @@ KnownBits SelectionDAG::computeKnownBits(SDValue Op, const APInt &DemandedElts,
         }
       }
     }
+
+    Known = computeKnownBits(Op.getOperand(0), DemandedElts, Depth + 1);
+    Known2 = computeKnownBits(Op.getOperand(1), DemandedElts, Depth + 1);
+    if (IsMax)
+      Known = KnownBits::smax(Known, Known2);
+    else
+      Known = KnownBits::smin(Known, Known2);
+
     // For SMAX, if CstLow is non-negative we know the result will be
     // non-negative and thus all sign bits are 0.
     // TODO: There's an equivalent of this for smin with negative constant for
@@ -3706,16 +3714,9 @@ KnownBits SelectionDAG::computeKnownBits(SDValue Op, const APInt &DemandedElts,
       if (ValueLow.isNonNegative()) {
         unsigned SignBits = ComputeNumSignBits(Op.getOperand(0), Depth + 1);
         Known.Zero.setHighBits(std::min(SignBits, ValueLow.getNumSignBits()));
-        break;
       }
     }
 
-    Known = computeKnownBits(Op.getOperand(0), DemandedElts, Depth + 1);
-    Known2 = computeKnownBits(Op.getOperand(1), DemandedElts, Depth + 1);
-    if (IsMax)
-      Known = KnownBits::smax(Known, Known2);
-    else
-      Known = KnownBits::smin(Known, Known2);
     break;
   }
   case ISD::FP_TO_UINT_SAT: {
