@@ -78,7 +78,7 @@ public:
   // dimensions based on `order`.
   SmallVector<int64_t> delinearize(int64_t index) const {
     // Traverse in for loop order (largest stride to smallest stride).
-    SmallVector<int64_t, 4> vectorOffsets(sliceStrides.size());
+    SmallVector<int64_t> vectorOffsets(sliceStrides.size());
     for (auto idx : loopOrder) {
       vectorOffsets[idx] = index / sliceStrides[idx];
       index %= sliceStrides[idx];
