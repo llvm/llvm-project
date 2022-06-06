@@ -1363,3 +1363,45 @@ func.func @invalid_res_struct_attr_value(%arg0 : !llvm.struct<(i32)>) -> (!llvm.
 func.func @invalid_res_struct_attr_size(%arg0 : !llvm.struct<(i32)>) -> (!llvm.struct<(i32)> {llvm.struct_attrs = []}) {
     return %arg0 : !llvm.struct<(i32)>
 }
+
+// -----
+
+func.func @insert_vector_invalid_source_vector_size(%arg0 : vector<16385xi8>, %arg1 : vector<[16]xi8>) {
+  // expected-error@+1 {{op failed to verify that vectors are not bigger than 2^17 bits.}}
+  %0 = llvm.intr.vector.insert %arg0, %arg1[0] : vector<16385xi8> into vector<[16]xi8>
+}
+
+// -----
+
+func.func @insert_vector_invalid_dest_vector_size(%arg0 : vector<16xi8>, %arg1 : vector<[16385]xi8>) {
+  // expected-error@+1 {{op failed to verify that vectors are not bigger than 2^17 bits.}}
+  %0 = llvm.intr.vector.insert %arg0, %arg1[0] : vector<16xi8> into vector<[16385]xi8>
+}
+
+// -----
+
+func.func @insert_scalable_into_fixed_length_vector(%arg0 : vector<[8]xf32>, %arg1 : vector<16xf32>) {
+  // expected-error@+1 {{op failed to verify that it is not inserting scalable into fixed-length vectors.}}
+  %0 = llvm.intr.vector.insert %arg0, %arg1[0] : vector<[8]xf32> into vector<16xf32>
+}
+
+// -----
+
+func.func @extract_vector_invalid_source_vector_size(%arg0 : vector<[16385]xi8>) {
+  // expected-error@+1 {{op failed to verify that vectors are not bigger than 2^17 bits.}}
+  %0 = llvm.intr.vector.extract %arg0[0] : vector<16xi8> from vector<[16385]xi8>
+}
+
+// -----
+
+func.func @extract_vector_invalid_result_vector_size(%arg0 : vector<[16]xi8>) {
+  // expected-error@+1 {{op failed to verify that vectors are not bigger than 2^17 bits.}}
+  %0 = llvm.intr.vector.extract %arg0[0] : vector<16385xi8> from vector<[16]xi8>
+}
+
+// -----
+
+func.func @extract_scalable_from_fixed_length_vector(%arg0 : vector<16xf32>) {
+  // expected-error@+1 {{op failed to verify that it is not extracting scalable from fixed-length vectors.}}
+  %0 = llvm.intr.vector.extract %arg0[0] : vector<[8]xf32> from vector<16xf32>
+}

@@ -162,6 +162,16 @@ def LLVM_AnyNonAggregate : Type<And<[LLVM_Type.predicate,
 def LLVM_AnyVector : Type<CPred<"::mlir::LLVM::isCompatibleVectorType($_self)">,
                          "LLVM dialect-compatible vector type">;
 
+// Type constraint accepting any LLVM fixed-length vector type.
+def LLVM_AnyFixedVector : Type<CPred<
+                                "!::mlir::LLVM::isScalableVectorType($_self)">,
+                                "LLVM dialect-compatible fixed-length vector type">;
+
+// Type constraint accepting any LLVM scalable vector type.
+def LLVM_AnyScalableVector : Type<CPred<
+                                "::mlir::LLVM::isScalableVectorType($_self)">,
+                                "LLVM dialect-compatible scalable vector type">;
+
 // Type constraint accepting an LLVM vector type with an additional constraint
 // on the vector element type.
 class LLVM_VectorOf<Type element> : Type<
