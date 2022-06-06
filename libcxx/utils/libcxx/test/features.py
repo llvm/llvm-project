@@ -222,7 +222,34 @@ for locale, alts in locales.items():
 DEFAULT_FEATURES += [
   Feature(name='darwin', when=lambda cfg: '__APPLE__' in compilerMacros(cfg)),
   Feature(name='windows', when=lambda cfg: '_WIN32' in compilerMacros(cfg)),
-  Feature(name='windows-dll', when=lambda cfg: '_WIN32' in compilerMacros(cfg) and not '_LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS' in compilerMacros(cfg)),
+  Feature(name='windows-dll', when=lambda cfg: '_WIN32' in compilerMacros(cfg) and programSucceeds(cfg, """
+            #include <iostream>
+            #include <windows.h>
+            #include <winnt.h>
+            int main(int, char**) {
+              // Get a pointer to a data member that gets linked from the C++
+              // library. This must be a data member (functions can get
+              // thunk inside the calling executable), and must not be
+              // something that is defined inline in headers.
+              void *ptr = &std::cout;
+              // Get a handle to the current main executable.
+              void *exe = GetModuleHandle(NULL);
+              // The handle points at the PE image header. Navigate through
+              // the header structure to find the size of the PE image (the
+              // executable).
+              PIMAGE_DOS_HEADER dosheader = (PIMAGE_DOS_HEADER)exe;
+              PIMAGE_NT_HEADERS ntheader = (PIMAGE_NT_HEADERS)((BYTE *)dosheader + dosheader->e_lfanew);
+              PIMAGE_OPTIONAL_HEADER peheader = &ntheader->OptionalHeader;
+              void *exeend = (BYTE*)exe + peheader->SizeOfImage;
+              // Check if the tested pointer - the data symbol from the
+              // C++ library - is located within the exe.
+              if (ptr >= exe && ptr <= exeend)
+                return 1;
+              // Return success if it was outside of the executable, i.e.
+              // loaded from a DLL.
+              return 0;
+            }
+          """), actions=[AddCompileFlag('-DTEST_WINDOWS_DLL')]),
   Feature(name='linux', when=lambda cfg: '__linux__' in compilerMacros(cfg)),
   Feature(name='netbsd', when=lambda cfg: '__NetBSD__' in compilerMacros(cfg)),
   Feature(name='freebsd', when=lambda cfg: '__FreeBSD__' in compilerMacros(cfg))
