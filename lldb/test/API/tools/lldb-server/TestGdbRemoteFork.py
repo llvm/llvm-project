@@ -74,7 +74,7 @@ class TestGdbRemoteFork(gdbremote_testcase.GdbRemoteTestCaseBase):
         # resume the parent
         self.test_sequence.add_log_lines([
             "read packet: $c#00",
-            {"direction": "send", "regex": r"[$]W00#.*"},
+            {"direction": "send", "regex": r"[$]W00;process:[0-9a-f]+#.*"},
         ], True)
         self.expect_gdbremote_sequence()
 
@@ -87,7 +87,7 @@ class TestGdbRemoteFork(gdbremote_testcase.GdbRemoteTestCaseBase):
             "read packet: $c#00",
             {"direction": "send", "regex": r"[$]T.*vforkdone.*"},
             "read packet: $c#00",
-            {"direction": "send", "regex": r"[$]W00#.*"},
+            {"direction": "send", "regex": r"[$]W00;process:[0-9a-f]+#.*"},
         ], True)
         self.expect_gdbremote_sequence()
 
@@ -135,7 +135,7 @@ class TestGdbRemoteFork(gdbremote_testcase.GdbRemoteTestCaseBase):
         # resume the child
         self.test_sequence.add_log_lines([
             "read packet: $c#00",
-            {"direction": "send", "regex": r"[$]W00#.*"},
+            {"direction": "send", "regex": r"[$]W00;process:[0-9a-f]+#.*"},
         ], True)
         self.expect_gdbremote_sequence()
 
