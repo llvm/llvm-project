@@ -87,18 +87,21 @@ class SM_Real <SM_Pseudo ps, string opName = ps.Mnemonic>
   bits<5> cpol;
 }
 
-class SM_Probe_Pseudo <string opName, dag ins, bit isImm>
-  : SM_Pseudo<opName, (outs), ins,
-              " $sdata, $sbase, " # !if(isImm, "$offset", "$soffset")> {
+class SM_Probe_Pseudo <string opName, string variant, RegisterClass baseClass,
+                       dag offsets, string asmOffsets,
+                       bit hasOffset, bit hasSOffset>
+  : SM_Pseudo<opName, (outs),
+              !con((ins i8imm:$sdata, baseClass:$sbase), offsets),
+              " $sdata, $sbase, " # asmOffsets> {
   let mayLoad = 0;
   let mayStore = 0;
   let has_glc = 0;
   let LGKM_CNT = 0;
   let ScalarStore = 0;
   let hasSideEffects = 1;
-  let has_offset = isImm;
-  let has_soffset = !not(isImm);
-  let PseudoInstr = opName # !if(isImm, "_IMM", "_SGPR");
+  let has_offset = hasOffset;
+  let has_soffset = hasSOffset;
+  let PseudoInstr = opName # variant;
 }
 
 class SM_Load_Pseudo <string opName, dag outs, dag ins, string asmOps, list<dag> pattern=[]>
@@ -232,8 +235,12 @@ class SM_Inval_Pseudo <string opName, SDPatternOperator node = null_frag> : SM_P
 }
 
 multiclass SM_Pseudo_Probe<string opName, RegisterClass baseClass> {
-  def _IMM  : SM_Probe_Pseudo <opName, (ins i8imm:$sdata, baseClass:$sbase, smem_offset:$offset), 1>;
-  def _SGPR : SM_Probe_Pseudo <opName, (ins i8imm:$sdata, baseClass:$sbase, SReg_32:$soffset), 0>;
+  def _IMM  : SM_Probe_Pseudo <opName, "_IMM", baseClass,
+    (ins smem_offset:$offset), "$offset", 1, 0>;
+  def _SGPR : SM_Probe_Pseudo <opName, "_SGPR", baseClass,
+    (ins SReg_32:$soffset), "$soffset", 0, 1>;
+  def _SGPR_IMM : SM_Probe_Pseudo <opName, "_SGPR_IMM", baseClass,
+    (ins SReg_32:$soffset, smem_offset_mod:$offset), "$soffset$offset", 1, 1>;
 }
 
 class SM_WaveId_Pseudo<string opName, SDPatternOperator node> : SM_Pseudo<
@@ -632,6 +639,12 @@ multiclass SM_Real_Stores_vi<bits<8> op, string ps> {
 multiclass SM_Real_Probe_vi<bits<8> op, string ps> {
   def _IMM_vi  : SMEM_Real_Store_Base_vi <op, !cast<SM_Probe_Pseudo>(ps#_IMM)>;
   def _SGPR_vi : SMEM_Real_Store_Base_vi <op, !cast<SM_Probe_Pseudo>(ps#_SGPR)>;
+  def _SGPR_alt_gfx9
+    : SMEM_Real_Store_Base_vi <op, !cast<SM_Probe_Pseudo>(ps#_SGPR)>,
+      SMEM_Real_SGPR_alt_gfx9;
+  let IsGFX9SpecificEncoding = true in
+  def _SGPR_IMM_gfx9
+    : SMEM_Real_Store_Base_vi <op, !cast<SM_Probe_Pseudo>(ps#_SGPR_IMM)>;
 }
 
 defm S_LOAD_DWORD           : SM_Real_Loads_vi <0x00, "S_LOAD_DWORD">;
@@ -1065,6 +1078,8 @@ def S_DCACHE_WB_gfx10                : SMEM_Real_gfx10<0x021, S_DCACHE_WB>;
 multiclass SM_Real_Probe_gfx10<bits<8> op, string ps> {
   def _IMM_gfx10  : SMEM_Real_Store_gfx10 <op, !cast<SM_Pseudo>(ps#_IMM)>;
   def _SGPR_gfx10 : SMEM_Real_Store_gfx10 <op, !cast<SM_Pseudo>(ps#_SGPR)>;
+  def _SGPR_IMM_gfx10
+    : SMEM_Real_Store_gfx10 <op, !cast<SM_Pseudo>(ps#_SGPR_IMM)>;
 }
 
 defm S_ATC_PROBE        : SM_Real_Probe_gfx10 <0x26, "S_ATC_PROBE">;
@@ -1224,6 +1239,8 @@ class SMEM_Real_Store_gfx11 <bits<8> op, SM_Pseudo ps> : SMEM_Real_gfx11<op, ps>
 multiclass SM_Real_Probe_gfx11<bits<8> op, string ps> {
   def _IMM_gfx11  : SMEM_Real_Store_gfx11 <op, !cast<SM_Probe_Pseudo>(ps#_IMM)>;
   def _SGPR_gfx11 : SMEM_Real_Store_gfx11 <op, !cast<SM_Probe_Pseudo>(ps#_SGPR)>;
+  def _SGPR_IMM_gfx11
+    : SMEM_Real_Store_gfx11 <op, !cast<SM_Probe_Pseudo>(ps#_SGPR_IMM)>;
 }
 
 defm S_ATC_PROBE        : SM_Real_Probe_gfx11 <0x22, "S_ATC_PROBE">;
