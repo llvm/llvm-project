@@ -1758,9 +1758,9 @@ void Parser::ParseClassSpecifier(tok::TokenKind TagTokKind,
     TUK = Sema::TUK_Reference;
   else if (Tok.is(tok::l_brace) ||
            (DSC != DeclSpecContext::DSC_association &&
-                (getLangOpts().CPlusPlus && Tok.is(tok::colon)) ||
-            (isClassCompatibleKeyword() &&
-             (NextToken().is(tok::l_brace) || NextToken().is(tok::colon))))) {
+            getLangOpts().CPlusPlus && Tok.is(tok::colon)) ||
+           (isClassCompatibleKeyword() &&
+            (NextToken().is(tok::l_brace) || NextToken().is(tok::colon)))) {
     if (DS.isFriendSpecified()) {
       // C++ [class.friend]p2:
       //   A class shall not be defined in a friend declaration.
