@@ -594,12 +594,12 @@ bool PPCTargetInfo::initFeatureMap(
   }
 
   if (!(ArchDefs & ArchDefinePwr10)) {
-    if (llvm::find(FeaturesVec, "+mma") != FeaturesVec.end()) {
+    if (llvm::is_contained(FeaturesVec, "+mma")) {
       // MMA operations are not available pre-Power10.
       Diags.Report(diag::err_opt_not_valid_with_opt) << "-mmma" << CPU;
       return false;
     }
-    if (llvm::find(FeaturesVec, "+pcrel") != FeaturesVec.end()) {
+    if (llvm::is_contained(FeaturesVec, "+pcrel")) {
       // PC-Relative instructions are not available pre-Power10,
       // and these instructions also require prefixed instructions support.
       Diags.Report(diag::err_opt_not_valid_without_opt)
@@ -607,13 +607,13 @@ bool PPCTargetInfo::initFeatureMap(
           << "-mcpu=pwr10 -mprefixed";
       return false;
     }
-    if (llvm::find(FeaturesVec, "+prefixed") != FeaturesVec.end()) {
+    if (llvm::is_contained(FeaturesVec, "+prefixed")) {
       // Prefixed instructions are not available pre-Power10.
       Diags.Report(diag::err_opt_not_valid_without_opt) << "-mprefixed"
                                                         << "-mcpu=pwr10";
       return false;
     }
-    if (llvm::find(FeaturesVec, "+paired-vector-memops") != FeaturesVec.end()) {
+    if (llvm::is_contained(FeaturesVec, "+paired-vector-memops")) {
       // Paired vector memops are not available pre-Power10.
       Diags.Report(diag::err_opt_not_valid_without_opt)
           << "-mpaired-vector-memops"

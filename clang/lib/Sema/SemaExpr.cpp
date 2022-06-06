@@ -19678,7 +19678,7 @@ public:
   }
 
   void Visit(Expr *E) {
-    if (std::find(StopAt.begin(), StopAt.end(), E) != StopAt.end())
+    if (llvm::is_contained(StopAt, E))
       return;
     Inherited::Visit(E);
   }
