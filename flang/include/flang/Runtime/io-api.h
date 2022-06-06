@@ -144,9 +144,11 @@ Cookie IONAME(BeginUnformattedInput)(ExternalUnit = DefaultUnit,
     const char *sourceFile = nullptr, int sourceLine = 0);
 
 // WAIT(ID=)
-Cookie IONAME(BeginWait)(ExternalUnit, AsynchronousId);
+Cookie IONAME(BeginWait)(ExternalUnit, AsynchronousId,
+    const char *sourceFile = nullptr, int sourceLine = 0);
 // WAIT(no ID=)
-Cookie IONAME(BeginWaitAll)(ExternalUnit);
+Cookie IONAME(BeginWaitAll)(
+    ExternalUnit, const char *sourceFile = nullptr, int sourceLine = 0);
 
 // Other I/O statements
 Cookie IONAME(BeginClose)(
@@ -194,7 +196,8 @@ Cookie IONAME(BeginInquireIoLength)(
 void IONAME(EnableHandlers)(Cookie, bool hasIoStat = false, bool hasErr = false,
     bool hasEnd = false, bool hasEor = false, bool hasIoMsg = false);
 
-// ASYNCHRONOUS='YES' or 'NO' with no ID= on READ/WRITE/OPEN
+// ASYNCHRONOUS='YES' or 'NO' on READ/WRITE/OPEN
+// Use GetAsynchronousId() to handle ID=.
 bool IONAME(SetAsynchronous)(Cookie, const char *, std::size_t);
 
 // Control list options.  These return false on a error that the
@@ -306,8 +309,8 @@ std::size_t IONAME(GetIoLength)(Cookie);
 // end-of-record/file condition is present.
 void IONAME(GetIoMsg)(Cookie, char *, std::size_t); // IOMSG=
 
-// TODO: for ID= on READ/WRITE(ASYNCHRONOUS='YES')
-// int IONAME(GetAsynchronousId)(Cookie);
+// Defines ID= on READ/WRITE(ASYNCHRONOUS='YES')
+int IONAME(GetAsynchronousId)(Cookie);
 
 // INQUIRE() specifiers are mostly identified by their NUL-terminated
 // case-insensitive names.

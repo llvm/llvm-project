@@ -337,18 +337,30 @@ Cookie IONAME(BeginOpenNewUnit)( // OPEN(NEWUNIT=j)
       unit, false /*was an existing file*/, sourceFile, sourceLine);
 }
 
-Cookie IONAME(BeginWait)(ExternalUnit unitNumber, AsynchronousId id) {
-  // TODO: add and use sourceFile & sourceLine here
-  Terminator oom;
-  // TODO: add and use sourceFile & sourceLine here
-  auto &io{
-      New<NoopStatementState>{oom}(nullptr, 0).release()->ioStatementState()};
-  if (id != 0 && !ExternalFileUnit::LookUp(unitNumber)) {
-    io.GetIoErrorHandler().SetPendingError(IostatBadWaitUnit);
+Cookie IONAME(BeginWait)(ExternalUnit unitNumber, AsynchronousId id,
+    const char *sourceFile, int sourceLine) {
+  Terminator terminator{sourceFile, sourceLine};
+  if (ExternalFileUnit * unit{ExternalFileUnit::LookUp(unitNumber)}) {
+    if (unit->Wait(id)) {
+      return &unit->BeginIoStatement<ExternalMiscIoStatementState>(
+          *unit, ExternalMiscIoStatementState::Wait, sourceFile, sourceLine);
+    } else {
+      return &unit->BeginIoStatement<ErroneousIoStatementState>(
+          IostatBadWaitId, unit, sourceFile, sourceLine);
+    }
+  } else {
+    auto &io{
+        New<NoopStatementState>{terminator}(sourceFile, sourceLine, unitNumber)
+            .release()
+            ->ioStatementState()};
+    if (id != 0) {
+      io.GetIoErrorHandler().SetPendingError(IostatBadWaitUnit);
+    }
+    return &io;
   }
-  return &io;
 }
-Cookie IONAME(BeginWaitAll)(ExternalUnit unitNumber) {
+Cookie IONAME(BeginWaitAll)(
+    ExternalUnit unitNumber, const char *sourceFile, int sourceLine) {
   return IONAME(BeginWait)(unitNumber, 0 /*no ID=*/);
 }
 
@@ -737,9 +749,13 @@ bool IONAME(SetAsynchronous)(
           "SetAsynchronous() called after GetNewUnit() for an OPEN statement");
     }
     open->unit().set_mayAsynchronous(isYes);
-  } else if (ExternalFileUnit * unit{io.GetExternalFileUnit()}) {
-    if (isYes && !unit->mayAsynchronous()) {
-      handler.SignalError(IostatBadAsynchronous);
+  } else if (auto *ext{io.get_if<ExternalIoStatementBase>()}) {
+    if (isYes) {
+      if (ext->unit().mayAsynchronous()) {
+        ext->SetAsynchronous();
+      } else {
+        handler.SignalError(IostatBadAsynchronous);
+      }
     }
   } else {
     handler.Crash("SetAsynchronous() called when not in an OPEN or external "

@@ -87,7 +87,7 @@ const char *IostatErrorString(int iostat) {
     return "READ/WRITE(ASYNCHRONOUS='YES') on unit without "
            "OPEN(ASYNCHRONOUS='YES')";
   case IostatBadWaitUnit:
-    return "WAIT(ID=nonzero) for a bad unit number";
+    return "WAIT(UNIT=) for a bad unit number";
   case IostatBOZInputOverflow:
     return "B/O/Z input value overflows variable";
   case IostatIntegerInputOverflow:
@@ -99,6 +99,10 @@ const char *IostatErrorString(int iostat) {
            "only be processed sequentially";
   case IostatOpenAlreadyConnected:
     return "OPEN of file already connected to another unit";
+  case IostatBadWaitId:
+    return "WAIT(ID=nonzero) for an ID value that is not a pending operation";
+  case IostatTooManyAsyncOps:
+    return "Too many asynchronous operations pending on unit";
   default:
     return nullptr;
   }
