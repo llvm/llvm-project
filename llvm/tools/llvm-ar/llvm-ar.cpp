@@ -1265,7 +1265,7 @@ static int ranlib_main(int argc, char **argv) {
   return performOperation(CreateSymTab, nullptr);
 }
 
-int main(int argc, char **argv) {
+int llvm_ar_main(int argc, char **argv) {
   InitLLVM X(argc, argv);
   ToolName = argv[0];
 
