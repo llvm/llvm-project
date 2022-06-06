@@ -25,6 +25,7 @@
 #include "mlir/Support/LLVM.h"
 #include "mlir/Transforms/FoldUtils.h"
 #include "llvm/ADT/MapVector.h"
+#include "llvm/ADT/SmallBitVector.h"
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
@@ -219,7 +220,11 @@ FailureOr<PromotionInfo> mlir::linalg::promoteSubviewAsNewBuffer(
   SmallVector<OpFoldResult> partialSizes;
   fullSizes.reserve(rank);
   partialSizes.reserve(rank);
+  llvm::SmallBitVector droppedDims = subView.getDroppedDims();
+  int64_t resultDimIdx = 0;
   for (const auto &en : llvm::enumerate(subView.getOrCreateRanges(b, loc))) {
+    if (droppedDims[en.index()])
+      continue;
     auto rangeValue = en.value();
     // Try to extract a tight constant.
     LLVM_DEBUG(llvm::dbgs() << "Extract tightest: " << rangeValue.size << "\n");
@@ -232,7 +237,7 @@ FailureOr<PromotionInfo> mlir::linalg::promoteSubviewAsNewBuffer(
     LLVM_DEBUG(llvm::dbgs() << "Extracted tightest: " << size << "\n");
     fullSizes.push_back(size);
     partialSizes.push_back(
-        b.createOrFold<memref::DimOp>(loc, subView, en.index()));
+        b.createOrFold<memref::DimOp>(loc, subView, resultDimIdx++));
   }
   SmallVector<int64_t, 4> dynSizes(fullSizes.size(), -1);
   // If a callback is not specified, then use the default implementation for
