@@ -52,11 +52,11 @@ template <class T> uint32_t inline leading_zeroes(T inputNumber) {
 }
 
 template <> uint32_t inline leading_zeroes<uint32_t>(uint32_t inputNumber) {
-  return inputNumber == 0 ? 32 : fputil::clz(inputNumber);
+  return fputil::safe_clz(inputNumber);
 }
 
 template <> uint32_t inline leading_zeroes<uint64_t>(uint64_t inputNumber) {
-  return inputNumber == 0 ? 64 : fputil::clz(inputNumber);
+  return fputil::safe_clz(inputNumber);
 }
 
 static inline uint64_t low64(const UInt128 &num) {

@@ -13,6 +13,8 @@
 
 #include "src/__support/CPP/Bit.h"
 #include "src/__support/CPP/TypeTraits.h"
+#include "src/__support/FPUtil/builtin_wrappers.h"
+#include "src/__support/common.h"
 
 #include "FloatProperties.h"
 #include <stdint.h>
@@ -159,6 +161,33 @@ template <typename T> struct FPBits {
     FPBits<T> bits = inf();
     bits.set_mantissa(v);
     return T(bits);
+  }
+
+  // The function convert integer number and unbiased exponent to proper float
+  // T type:
+  //   Result = number * 2^(ep+1 - exponent_bias)
+  // Be careful!
+  //   1) "ep" is raw exponent value.
+  //   2) The function add to +1 to ep for seamless normalized to denormalized
+  //      transition.
+  //   3) The function did not check exponent high limit.
+  //   4) "number" zero value is not processed correctly.
+  //   5) Number is unsigned, so the result can be only positive.
+  inline static constexpr FPBits<T> make_value(UIntType number, int ep) {
+    FPBits<T> result;
+    // offset: +1 for sign, but -1 for implicit first bit
+    int lz = fputil::unsafe_clz(number) - FloatProp::EXPONENT_WIDTH;
+    number <<= lz;
+    ep -= lz;
+
+    if (likely(ep >= 0)) {
+      // Implicit number bit will be removed by mask
+      result.set_mantissa(number);
+      result.set_unbiased_exponent(ep + 1);
+    } else {
+      result.set_mantissa(number >> -ep);
+    }
+    return result;
   }
 };
 
