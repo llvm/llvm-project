@@ -26,7 +26,10 @@ void populateTosaDecomposeTransposeConv(MLIRContext *ctx,
                                         RewritePatternSet &patterns);
 void populateTosaDecomposeDepthwise(MLIRContext *ctx,
                                     RewritePatternSet &patterns);
+void populateTosaFoldConstantTransposePatterns(MLIRContext *ctx,
+                                               RewritePatternSet &patterns);
 
+std::unique_ptr<Pass> createTosaLayerwiseConstantFoldPass();
 std::unique_ptr<Pass> createTosaInferShapesPass();
 std::unique_ptr<Pass> createTosaMakeBroadcastablePass();
 std::unique_ptr<Pass> createTosaTestQuantUtilAPIPass();

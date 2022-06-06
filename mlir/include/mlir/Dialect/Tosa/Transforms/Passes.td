@@ -15,6 +15,15 @@
 
 include "mlir/Pass/PassBase.td"
 
+def TosaLayerwiseConstantFoldPass : Pass<"tosa-layerwise-constant-fold", "func::FuncOp"> {
+  let summary = "Fold layerwise operations on constant tensors";
+  let description = [{
+    Pass that enables folding of full-layer operations on constant tensors.
+  }];
+
+  let constructor = "createTosaLayerwiseConstantFoldPass()";
+}
+
 def TosaInferShapes : Pass<"tosa-infer-shapes", "func::FuncOp"> {
   let summary = "Propagate shapes across TOSA operations";
   let description = [{

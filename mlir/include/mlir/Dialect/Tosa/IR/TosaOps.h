@@ -34,6 +34,17 @@ namespace tosa {
 } // namespace tosa
 } // namespace mlir
 
+//===----------------------------------------------------------------------===//
+// Utility Functions
+//===----------------------------------------------------------------------===//
+namespace mlir {
+namespace tosa {
+/// Appends the canonicalization patterns for all the TOSA ops to the `patterns`
+void populateTosaOpsCanonicalizationPatterns(MLIRContext *ctx,
+                                             RewritePatternSet &patterns);
+} // namespace tosa
+} // namespace mlir
+
 #define GET_OP_CLASSES
 #include "mlir/Dialect/Tosa/IR/TosaOps.h.inc"
 
