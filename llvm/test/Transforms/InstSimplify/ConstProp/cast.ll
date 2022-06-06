@@ -70,3 +70,49 @@ define bfloat @nan_bf16_trunc() {
   %f = fptrunc double 0x7FF0000000000001 to bfloat
   ret bfloat %f
 }
+
+define float @trunc_denorm_lost_fraction0() {
+; CHECK-LABEL: @trunc_denorm_lost_fraction0(
+; CHECK-NEXT:    ret float 0.000000e+00
+;
+  %b = fptrunc double 0x0000000010000000 to float
+  ret float %b
+}
+
+; FIXME: This should be 0.0.
+
+define float @trunc_denorm_lost_fraction1() {
+; CHECK-LABEL: @trunc_denorm_lost_fraction1(
+; CHECK-NEXT:    ret float 0x36A0000000000000
+;
+  %b = fptrunc double 0x0000000010000001 to float
+  ret float %b
+}
+
+; FIXME: This should be 0.0.
+
+define float @trunc_denorm_lost_fraction2() {
+; CHECK-LABEL: @trunc_denorm_lost_fraction2(
+; CHECK-NEXT:    ret float 0x36A0000000000000
+;
+  %b = fptrunc double 0x000000001fffffff to float
+  ret float %b
+}
+
+define float @trunc_denorm_lost_fraction3() {
+; CHECK-LABEL: @trunc_denorm_lost_fraction3(
+; CHECK-NEXT:    ret float 0.000000e+00
+;
+  %b = fptrunc double 0x0000000020000000 to float
+  ret float %b
+}
+
+; FIXME: This should be -0.0.
+
+define float @trunc_denorm_lost_fraction4() {
+; CHECK-LABEL: @trunc_denorm_lost_fraction4(
+; CHECK-NEXT:    ret float 0xB6A0000000000000
+;
+  %b = fptrunc double 0x8000000010000001 to float
+  ret float %b
+}
