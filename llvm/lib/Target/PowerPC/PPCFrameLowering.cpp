@@ -626,7 +626,7 @@ void PPCFrameLowering::emitPrologue(MachineFunction &MF,
   // Work out frame sizes.
   uint64_t FrameSize = determineFrameLayoutAndUpdate(MF);
   int64_t NegFrameSize = -FrameSize;
-  if (!isInt<32>(FrameSize) || !isInt<32>(NegFrameSize))
+  if (!isPPC64 && (!isInt<32>(FrameSize) || !isInt<32>(NegFrameSize)))
     llvm_unreachable("Unhandled stack size!");
 
   if (MFI.isFrameAddressTaken())
@@ -661,10 +661,6 @@ void PPCFrameLowering::emitPrologue(MachineFunction &MF,
                                                      : PPC::STWU );
   const MCInstrDesc& StoreUpdtIdxInst = TII.get(isPPC64 ? PPC::STDUX
                                                         : PPC::STWUX);
-  const MCInstrDesc& LoadImmShiftedInst = TII.get(isPPC64 ? PPC::LIS8
-                                                          : PPC::LIS );
-  const MCInstrDesc& OrImmInst = TII.get(isPPC64 ? PPC::ORI8
-                                                 : PPC::ORI );
   const MCInstrDesc& OrInst = TII.get(isPPC64 ? PPC::OR8
                                               : PPC::OR );
   const MCInstrDesc& SubtractCarryingInst = TII.get(isPPC64 ? PPC::SUBFC8
@@ -935,11 +931,7 @@ void PPCFrameLowering::emitPrologue(MachineFunction &MF,
             .addImm(NegFrameSize);
       } else {
         assert(!SingleScratchReg && "Only a single scratch reg available");
-        BuildMI(MBB, MBBI, dl, LoadImmShiftedInst, TempReg)
-            .addImm(NegFrameSize >> 16);
-        BuildMI(MBB, MBBI, dl, OrImmInst, TempReg)
-            .addReg(TempReg, RegState::Kill)
-            .addImm(NegFrameSize & 0xFFFF);
+        TII.materializeImmPostRA(MBB, MBBI, dl, TempReg, NegFrameSize);
         BuildMI(MBB, MBBI, dl, SubtractCarryingInst, ScratchReg)
             .addReg(ScratchReg, RegState::Kill)
             .addReg(TempReg, RegState::Kill);
@@ -958,11 +950,7 @@ void PPCFrameLowering::emitPrologue(MachineFunction &MF,
           .addReg(SPReg);
 
     } else {
-      BuildMI(MBB, MBBI, dl, LoadImmShiftedInst, ScratchReg)
-          .addImm(NegFrameSize >> 16);
-      BuildMI(MBB, MBBI, dl, OrImmInst, ScratchReg)
-          .addReg(ScratchReg, RegState::Kill)
-          .addImm(NegFrameSize & 0xFFFF);
+      TII.materializeImmPostRA(MBB, MBBI, dl, ScratchReg, NegFrameSize);
       BuildMI(MBB, MBBI, dl, StoreUpdtIdxInst, SPReg)
           .addReg(SPReg, RegState::Kill)
           .addReg(SPReg)
@@ -1669,7 +1657,7 @@ void PPCFrameLowering::emitEpilogue(MachineFunction &MF,
   // values from the stack, and set SPAdd to the value that needs to be added
   // to the SP at the end. The default values are as if red zone was present.
   unsigned RBReg = SPReg;
-  unsigned SPAdd = 0;
+  uint64_t SPAdd = 0;
 
   // Check if we can move the stack update instruction up the epilogue
   // past the callee saves. This will allow the move to LR instruction
@@ -1727,11 +1715,7 @@ void PPCFrameLowering::emitEpilogue(MachineFunction &MF,
         BuildMI(MBB, MBBI, dl, AddImmInst, RBReg)
           .addReg(FPReg).addImm(FrameSize);
       } else {
-        BuildMI(MBB, MBBI, dl, LoadImmShiftedInst, ScratchReg)
-          .addImm(FrameSize >> 16);
-        BuildMI(MBB, MBBI, dl, OrImmInst, ScratchReg)
-          .addReg(ScratchReg, RegState::Kill)
-          .addImm(FrameSize & 0xFFFF);
+        TII.materializeImmPostRA(MBB, MBBI, dl, ScratchReg, FrameSize);
         BuildMI(MBB, MBBI, dl, AddInst)
           .addReg(RBReg)
           .addReg(FPReg)
