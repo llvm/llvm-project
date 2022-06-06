@@ -1770,14 +1770,8 @@ unsigned SIInstrInfo::getNumWaitStates(const MachineInstr &MI) {
 
   case AMDGPU::S_NOP:
     return MI.getOperand(0).getImm() + 1;
-
-  // FIXME: Any other pseudo instruction?
   // SI_RETURN_TO_EPILOG is a fallthrough to code outside of the function. The
   // hazard, even if one exist, won't really be visible. Should we handle it?
-  case AMDGPU::SI_MASKED_UNREACHABLE:
-  case AMDGPU::WAVE_BARRIER:
-  case AMDGPU::SCHED_BARRIER:
-    return 0;
   }
 }
 
