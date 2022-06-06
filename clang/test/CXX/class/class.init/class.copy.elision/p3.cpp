@@ -98,7 +98,7 @@ struct A1 {
   A1(const A1 &);
   A1(A1 &&) = delete;
   // expected-note@-1 2{{'A1' has been explicitly marked deleted here}}
-  // cxx11_2b-note@-2  {{'A1' has been explicitly marked deleted here}}
+  // cxx11_2b-note@-2 3{{'A1' has been explicitly marked deleted here}}
 };
 void test1() {
   try {
@@ -132,10 +132,10 @@ void test3(A1 a) try {
 namespace PR54341 {
 void test4(A1 a) {
   void f(decltype((throw a, 0)));
-  // expected-warning@-1 {{has no effect}}
+  // expected-error@-1 {{call to deleted constructor of 'test_throw_parameter::A1'}}
 
   void g(int = decltype(throw a, 0){});
-  // expected-warning@-1 {{has no effect}}
+  // expected-error@-1 {{call to deleted constructor of 'test_throw_parameter::A1'}}
 }
 
 void test5(A1 a, int = decltype(throw a, 0){}) {}
