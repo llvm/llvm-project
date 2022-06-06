@@ -13,6 +13,14 @@
 # NONEXISTENT: section 'nonexistent' not found
 # DIROUT: error: {{.*}}/bar': [[MSG]]
 
+## Test dumping the type section (a known section).
+# RUN: llvm-objcopy --dump-section=TYPE=%t.sec %t
+# RUN: od -t x1 %t.sec | FileCheck %s --check-prefix=TYPESEC
+
+## Raw contents of the type section.
+# TYPESEC: 000000 01 60 01 7f 01 7d
+# TYPESEC: 000006
+
 ## Check that dumping and removing a section works in the same invocation
 # RUN: llvm-objcopy --dump-section=producers=%t.sec --remove-section=producers %t %t2
 # RUN: od -t x1 %t.sec | FileCheck %s

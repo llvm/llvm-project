@@ -24,6 +24,15 @@ Expected<std::unique_ptr<Object>> Reader::create() const {
     const WasmSection &WS = WasmObj.getWasmSection(Sec);
     Obj->Sections.push_back(
         {static_cast<uint8_t>(WS.Type), WS.Name, WS.Content});
+    // Give known sections standard names to allow them to be selected.
+    Section &ReaderSec = Obj->Sections.back();
+    if (ReaderSec.SectionType > WASM_SEC_CUSTOM &&
+        ReaderSec.SectionType <= WASM_SEC_TAG)
+      ReaderSec.Name = sectionTypeToString(ReaderSec.SectionType);
+    // If the section type is CUSTOM, it has a name already. If it's a new type
+    // of section that we don't explicitly handle here, it will have an empty
+    // name and objcopy won't be able to select it by name (e.g. for removal
+    // or dumping) but it will still be valid and able to be copied.
   }
   return std::move(Obj);
 }
