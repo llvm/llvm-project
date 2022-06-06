@@ -122,6 +122,10 @@ TYPE_PARSER(construct<OmpReductionOperator>(Parser<DefinedOperator>{}) ||
 TYPE_PARSER(construct<OmpReductionClause>(
     Parser<OmpReductionOperator>{} / ":", Parser<OmpObjectList>{}))
 
+// OMP 5.0 2.19.5.6 IN_REDUCTION (reduction-identifier: variable-name-list)
+TYPE_PARSER(construct<OmpInReductionClause>(
+    Parser<OmpReductionOperator>{} / ":", Parser<OmpObjectList>{}))
+
 // OMP 5.0 2.11.4  ALLOCATE ([allocator:] variable-name-list)
 TYPE_PARSER(construct<OmpAllocateClause>(
     maybe(construct<OmpAllocateClause::Allocator>(scalarIntExpr) / ":"),
@@ -242,6 +246,8 @@ TYPE_PARSER(
                        parenthesized(Parser<OmpProcBindClause>{}))) ||
     "REDUCTION" >> construct<OmpClause>(construct<OmpClause::Reduction>(
                        parenthesized(Parser<OmpReductionClause>{}))) ||
+    "IN_REDUCTION" >> construct<OmpClause>(construct<OmpClause::InReduction>(
+                          parenthesized(Parser<OmpInReductionClause>{}))) ||
     "TASK_REDUCTION" >>
         construct<OmpClause>(construct<OmpClause::TaskReduction>(
             parenthesized(Parser<OmpReductionClause>{}))) ||

@@ -2025,6 +2025,11 @@ public:
     Put(":");
     Walk(std::get<OmpObjectList>(x.t));
   }
+  void Unparse(const OmpInReductionClause &x) {
+    Walk(std::get<OmpReductionOperator>(x.t));
+    Put(":");
+    Walk(std::get<OmpObjectList>(x.t));
+  }
   void Unparse(const OmpAllocateClause &x) {
     Walk(std::get<std::optional<OmpAllocateClause::Allocator>>(x.t));
     Put(":");

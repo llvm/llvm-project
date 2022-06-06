@@ -283,6 +283,7 @@ def OMPC_TaskReduction : Clause<"task_reduction"> {
 }
 def OMPC_InReduction : Clause<"in_reduction"> {
   let clangClass = "OMPInReductionClause";
+  let flangClass = "OmpInReductionClause";
 }
 def OMPC_UnifiedAddress : Clause<"unified_address"> {
   let clangClass = "OMPUnifiedAddressClause";
