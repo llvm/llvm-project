@@ -122,6 +122,17 @@ ABI Changes
   token used when constructing a ``std::random_device`` will now be ignored instead of
   interpreted as a file to read entropy from.
 
+- ``std::valarray``'s unary operators ``!``, ``+``, ``~`` and ``-`` now return an expression
+  object instead of a ``valarray``. This was done to fix an issue where any expression involving
+  other ``valarray`` operators and one of these unary operators would end up with a dangling
+  reference. This is a potential ABI break for code that exposes ``std::valarray`` on an ABI
+  boundary, specifically if the return type of an ABI-boundary function is ``auto``-deduced
+  from an expression involving unary operators on ``valarray``. If you are concerned by this,
+  you can audit whether your executable or library exports any function that returns a
+  ``valarray``, and if so ensure that any such function uses ``std::valarray`` directly
+  as a return type instead of relying on the type of ``valarray``-expressions, which is
+  not guaranteed by the Standard anyway.
+
 Build System Changes
 --------------------
 
