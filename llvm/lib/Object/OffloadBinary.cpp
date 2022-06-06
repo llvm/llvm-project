@@ -58,7 +58,7 @@ OffloadBinary::write(const OffloadingImage &OffloadingData) {
   // header so this can be placed contiguously in a single section.
   Header TheHeader;
   TheHeader.Size = alignTo(
-      BinaryDataSize + OffloadingData.Image.getBufferSize(), getAlignment());
+      BinaryDataSize + OffloadingData.Image->getBufferSize(), getAlignment());
   TheHeader.EntryOffset = sizeof(Header);
   TheHeader.EntrySize = sizeof(Entry);
 
@@ -72,7 +72,7 @@ OffloadBinary::write(const OffloadingImage &OffloadingData) {
   TheEntry.NumStrings = OffloadingData.StringData.size();
 
   TheEntry.ImageOffset = BinaryDataSize;
-  TheEntry.ImageSize = OffloadingData.Image.getBufferSize();
+  TheEntry.ImageSize = OffloadingData.Image->getBufferSize();
 
   SmallVector<char, 1024> Data;
   raw_svector_ostream OS(Data);
@@ -87,7 +87,7 @@ OffloadBinary::write(const OffloadingImage &OffloadingData) {
   StrTab.write(OS);
   // Add padding to required image alignment.
   OS.write_zeros(TheEntry.ImageOffset - OS.tell());
-  OS << OffloadingData.Image.getBuffer();
+  OS << OffloadingData.Image->getBuffer();
 
   // Add final padding to required alignment.
   assert(TheHeader.Size >= OS.tell() && "Too much data written?");
