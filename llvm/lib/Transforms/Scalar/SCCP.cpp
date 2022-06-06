@@ -91,6 +91,18 @@ static bool isOverdefined(const ValueLatticeElement &LV) {
   return !LV.isUnknownOrUndef() && !isConstant(LV);
 }
 
+static bool canRemoveInstruction(Instruction *I) {
+  if (wouldInstructionBeTriviallyDead(I))
+    return true;
+
+  // Some instructions can be handled but are rejected above. Catch
+  // those cases by falling through to here.
+  // TODO: Mark globals as being constant earlier, so
+  // TODO: wouldInstructionBeTriviallyDead() knows that atomic loads
+  // TODO: are safe to remove.
+  return isa<LoadInst>(I);
+}
+
 static bool tryToReplaceWithConstant(SCCPSolver &Solver, Value *V) {
   Constant *Const = nullptr;
   if (V->getType()->isStructTy()) {
@@ -121,7 +133,8 @@ static bool tryToReplaceWithConstant(SCCPSolver &Solver, Value *V) {
   // Calls with "clang.arc.attachedcall" implicitly use the return value and
   // those uses cannot be updated with a constant.
   CallBase *CB = dyn_cast<CallBase>(V);
-  if (CB && ((CB->isMustTailCall() && !CB->isSafeToRemove()) ||
+  if (CB && ((CB->isMustTailCall() &&
+              !canRemoveInstruction(CB)) ||
              CB->getOperandBundle(LLVMContext::OB_clang_arc_attachedcall))) {
     Function *F = CB->getCalledFunction();
 
@@ -150,7 +163,7 @@ static bool simplifyInstsInBlock(SCCPSolver &Solver, BasicBlock &BB,
     if (Inst.getType()->isVoidTy())
       continue;
     if (tryToReplaceWithConstant(Solver, &Inst)) {
-      if (Inst.isSafeToRemove())
+      if (canRemoveInstruction(&Inst))
         Inst.eraseFromParent();
 
       MadeChanges = true;
