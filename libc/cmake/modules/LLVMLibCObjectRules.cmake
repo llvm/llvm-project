@@ -126,7 +126,8 @@ function(expand_flags_for_object_library target_name flags)
     return()
   endif()
 
-  list(POP_FRONT flags flag)
+  list(GET flags 0 flag)
+  list(REMOVE_AT flags 0)
   extract_flag_modifier(${flag} real_flag modifier)
 
   if(NOT "${modifier}" STREQUAL "NO")
@@ -441,7 +442,8 @@ function(expand_flags_for_entrypoint_object target_name flags)
     return()
   endif()
 
-  list(POP_FRONT flags flag)
+  list(GET flags 0 flag)
+  list(REMOVE_AT flags 0)
   extract_flag_modifier(${flag} real_flag modifier)
 
   if(NOT "${modifier}" STREQUAL "NO")
