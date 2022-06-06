@@ -5,11 +5,6 @@
 // On Darwin LSan reports a false positive
 // XFAIL: darwin && lsan
 
-// FIXME: https://github.com/llvm/llvm-project/issues/55460
-// On Linux its possible for symbolizer output to be truncated and to match the
-// check below. Remove when the underlying problem has been addressed.
-// UNSUPPORTED: linux
-
 #include <sanitizer/common_interface_defs.h>
 #include <vector>
 
@@ -31,6 +26,6 @@ __attribute__((noinline)) void A<0>::RecursiveTemplateFunction(const T &) {
 }
 
 int main() {
-  // CHECK: {{vector<.*vector<.*vector<.*vector<.*vector<}}
+  // CHECK: {{#[0-9]+.*A<0>.*vector<.*vector<.*vector<.*vector<.*vector<.*vector<.*vector<.*vector<.*vector<.*vector<.*vector<.*vector.*symbolize_stack.cpp:25}}
   A<10>().RecursiveTemplateFunction(0);
 }

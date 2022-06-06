@@ -225,24 +225,24 @@ class Addr2LineProcess final : public SymbolizerProcess {
 
   bool ReachedEndOfOutput(const char *buffer, uptr length) const override;
 
-  bool ReadFromSymbolizer(char *buffer, uptr max_length) override {
-    if (!SymbolizerProcess::ReadFromSymbolizer(buffer, max_length))
+  bool ReadFromSymbolizer() override {
+    if (!SymbolizerProcess::ReadFromSymbolizer())
       return false;
-    // The returned buffer is empty when output is valid, but exceeds
-    // max_length.
-    if (*buffer == '\0')
-      return true;
+    auto &buff = GetBuff();
     // We should cut out output_terminator_ at the end of given buffer,
     // appended by addr2line to mark the end of its meaningful output.
     // We cannot scan buffer from it's beginning, because it is legal for it
     // to start with output_terminator_ in case given offset is invalid. So,
     // scanning from second character.
-    char *garbage = internal_strstr(buffer + 1, output_terminator_);
+    char *garbage = internal_strstr(buff.data() + 1, output_terminator_);
     // This should never be NULL since buffer must end up with
     // output_terminator_.
     CHECK(garbage);
+
     // Trim the buffer.
-    garbage[0] = '\0';
+    uintptr_t new_size = garbage - buff.data();
+    GetBuff().resize(new_size);
+    GetBuff().push_back('\0');
     return true;
   }
 
