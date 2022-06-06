@@ -420,3 +420,83 @@ define i32 @shl_lshr_constants(i32 %x) {
   %r = lshr i32 %s, 3
   ret i32 %r
 }
+
+define i8 @shl_lshr_demand1(i8 %x) {
+; CHECK-LABEL: @shl_lshr_demand1(
+; CHECK-NEXT:    [[SHL:%.*]] = shl i8 40, [[X:%.*]]
+; CHECK-NEXT:    [[LSHR:%.*]] = lshr exact i8 [[SHL]], 3
+; CHECK-NEXT:    [[R:%.*]] = or i8 [[LSHR]], -32
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %shl = shl i8 40, %x ; 0b0010_1000
+  %lshr = lshr i8 %shl, 3
+  %r = or i8 %lshr, 224 ; 0b1110_0000
+  ret i8 %r
+}
+
+define i8 @shl_ashr_demand2(i8 %x) {
+; CHECK-LABEL: @shl_ashr_demand2(
+; CHECK-NEXT:    [[SHL:%.*]] = shl i8 40, [[X:%.*]]
+; CHECK-NEXT:    call void @use8(i8 [[SHL]])
+; CHECK-NEXT:    [[TMP1:%.*]] = lshr exact i8 [[SHL]], 3
+; CHECK-NEXT:    [[R:%.*]] = or i8 [[TMP1]], -32
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %shl = shl i8 40, %x ; 0b0010_1000
+  call void @use8(i8 %shl)
+  %lshr = ashr i8 %shl, 3
+  %r = or i8 %lshr, 224 ; 0b1110_0000
+  ret i8 %r
+}
+
+define i8 @shl_lshr_demand3(i8 %x) {
+; CHECK-LABEL: @shl_lshr_demand3(
+; CHECK-NEXT:    [[SHL:%.*]] = shl i8 40, [[X:%.*]]
+; CHECK-NEXT:    [[LSHR:%.*]] = lshr exact i8 [[SHL]], 3
+; CHECK-NEXT:    [[R:%.*]] = or i8 [[LSHR]], -64
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %shl = shl i8 40, %x ; 0b0010_1000
+  %lshr = lshr i8 %shl, 3
+  %r = or i8 %lshr, 192 ; 0b1100_0000
+  ret i8 %r
+}
+
+define i8 @shl_lshr_demand4(i8 %x) {
+; CHECK-LABEL: @shl_lshr_demand4(
+; CHECK-NEXT:    [[SHL:%.*]] = shl i8 44, [[X:%.*]]
+; CHECK-NEXT:    [[LSHR:%.*]] = lshr i8 [[SHL]], 3
+; CHECK-NEXT:    [[R:%.*]] = or i8 [[LSHR]], -32
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %shl = shl i8 44, %x ; 0b0010_1100
+  %lshr = lshr i8 %shl, 3
+  %r = or i8 %lshr, 224 ; 0b1110_0000
+  ret i8 %r
+}
+
+define <2 x i6> @shl_lshr_demand5(<2 x i8> %x) {
+; CHECK-LABEL: @shl_lshr_demand5(
+; CHECK-NEXT:    [[SHL:%.*]] = shl <2 x i8> <i8 -108, i8 -108>, [[X:%.*]]
+; CHECK-NEXT:    [[LSHR:%.*]] = lshr exact <2 x i8> [[SHL]], <i8 2, i8 2>
+; CHECK-NEXT:    [[R:%.*]] = trunc <2 x i8> [[LSHR]] to <2 x i6>
+; CHECK-NEXT:    ret <2 x i6> [[R]]
+;
+  %shl = shl <2 x i8> <i8 148, i8 148>, %x ; 0b1001_0100
+  %lshr = lshr <2 x i8> %shl, <i8 2, i8 2>
+  %r = trunc <2 x i8> %lshr to <2 x i6>
+  ret <2 x i6> %r
+}
+
+define i16 @shl_lshr_demand6(i16 %x) {
+; CHECK-LABEL: @shl_lshr_demand6(
+; CHECK-NEXT:    [[SHL:%.*]] = shl i16 -32624, [[X:%.*]]
+; CHECK-NEXT:    [[LSHR:%.*]] = lshr exact i16 [[SHL]], 4
+; CHECK-NEXT:    [[R:%.*]] = and i16 [[LSHR]], 4094
+; CHECK-NEXT:    ret i16 [[R]]
+;
+  %shl = shl i16 32912, %x ; 0b1000_0000_1001_0000
+  %lshr = lshr i16 %shl, 4
+  %r = and i16 %lshr, 4094 ; 0b0000_1111_1111_1110
+  ret i16 %r
+}
