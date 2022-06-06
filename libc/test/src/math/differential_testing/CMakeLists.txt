@@ -428,12 +428,34 @@ add_diff_binary(
 )
 
 add_diff_binary(
+  hypotf_diff
+  SRCS
+    hypotf_diff.cpp
+  DEPENDS
+    .binary_op_single_output_diff
+    libc.src.math.hypotf
+  COMPILE_OPTIONS
+    -fno-builtin
+)
+
+add_diff_binary(
   hypotf_perf
   SRCS
     hypotf_perf.cpp
   DEPENDS
     .binary_op_single_output_diff
     libc.src.math.hypotf
+  COMPILE_OPTIONS
+    -fno-builtin
+)
+
+add_diff_binary(
+  hypot_diff
+  SRCS
+    hypot_diff.cpp
+  DEPENDS
+    .binary_op_single_output_diff
+    libc.src.math.hypot
   COMPILE_OPTIONS
     -fno-builtin
 )
