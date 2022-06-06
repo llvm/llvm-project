@@ -35,10 +35,10 @@ entry:
   %2 = tail call i32 asm sideeffect "$0 = $1 ll", "=r,i"(i64 333333333333) #2
 ; CHECK: r1 = 333333333333 ll
   %3 = call i32 asm sideeffect "$0 = *(u16 *) $1", "=r,*m"(i32* elementtype(i32) nonnull %a) #2
-; CHECK: r1 = *(u16 *) (r10 - 4)
+; CHECK: r1 = *(u16 *)(r10 - 4)
   %4 = call i32 asm sideeffect "$0 = *(u32 *) $1", "=r,*m"(i32* elementtype(i32) getelementptr inbounds ([2 x i32], [2 x i32]* @g, i64 0, i64 1)) #2
 ; CHECK: r1 = g ll
-; CHECK: r0 = *(u32 *) (r1 + 4)
+; CHECK: r0 = *(u32 *)(r1 + 4)
   call void @llvm.lifetime.end.p0i8(i64 4, i8* nonnull %0) #2
   ret i32 %4
 }
