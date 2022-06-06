@@ -807,6 +807,19 @@ sizeof...($TemplateParameter[[Elements]]);
             $Function_deprecated[[Foo]]($Parameter[[x]]); 
             $Function_deprecated[[Foo]]($Parameter[[x]]); 
         }
+      )cpp",
+      // Explicit template specialization
+      R"cpp(
+        struct $Class_decl[[Base]]{};
+        template <typename $TemplateParameter_decl[[T]]>
+        struct $Class_decl[[S]] : public $Class[[Base]] {};
+        template <> 
+        struct $Class_decl[[S]]<void> : public $Class[[Base]] {};
+
+        template <typename $TemplateParameter_decl[[T]]>
+        $TemplateParameter[[T]] $Variable_decl[[x]] = {};
+        template <>
+        int $Variable_decl[[x]]<int> = (int)sizeof($Class[[Base]]);
       )cpp"};
   for (const auto &TestCase : TestCases)
     // Mask off scope modifiers to keep the tests manageable.
