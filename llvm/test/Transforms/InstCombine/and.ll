@@ -1637,6 +1637,19 @@ define i16 @shl_lshr_pow2_const_case1(i16 %x) {
 
 define i16 @shl_lshr_pow2_const_case2(i16 %x) {
 ; CHECK-LABEL: @shl_lshr_pow2_const_case2(
+; CHECK-NEXT:    [[SHL:%.*]] = shl i16 4, [[X:%.*]]
+; CHECK-NEXT:    [[LSHR:%.*]] = lshr i16 [[SHL]], 6
+; CHECK-NEXT:    [[R:%.*]] = or i16 [[LSHR]], -9
+; CHECK-NEXT:    ret i16 [[R]]
+;
+  %shl = shl i16 4, %x
+  %lshr = lshr i16 %shl, 6
+  %r = or i16 %lshr, 65527 ; ~8
+  ret i16 %r
+}
+
+define i16 @shl_lshr_pow2_const_case3(i16 %x) {
+; CHECK-LABEL: @shl_lshr_pow2_const_case3(
 ; CHECK-NEXT:    [[SHL:%.*]] = shl i16 16, [[X:%.*]]
 ; CHECK-NEXT:    [[LSHR:%.*]] = lshr exact i16 [[SHL]], 3
 ; CHECK-NEXT:    [[R:%.*]] = or i16 [[LSHR]], -9
@@ -1648,8 +1661,8 @@ define i16 @shl_lshr_pow2_const_case2(i16 %x) {
   ret i16 %r
 }
 
-define i13 @shl_lshr_pow2_const_case3(i16 %x) {
-; CHECK-LABEL: @shl_lshr_pow2_const_case3(
+define i13 @shl_lshr_pow2_const_case4(i16 %x) {
+; CHECK-LABEL: @shl_lshr_pow2_const_case4(
 ; CHECK-NEXT:    [[SHL:%.*]] = shl i16 16, [[X:%.*]]
 ; CHECK-NEXT:    [[LSHR:%.*]] = lshr exact i16 [[SHL]], 3
 ; CHECK-NEXT:    [[R:%.*]] = trunc i16 [[LSHR]] to i13
