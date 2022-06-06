@@ -874,7 +874,14 @@ define <vscale x 4 x half> @bitcast_nxv2i32_to_nxv4f16(<vscale x 2 x i32> %v) #0
   ret <vscale x 4 x half> %bc
 }
 
-; @bitcast_nxv1i64_to_nxv4f16 is missing
+define <vscale x 4 x half> @bitcast_nxv1i64_to_nxv4f16(<vscale x 1 x i64> %v) #0 {
+; CHECK-LABEL: bitcast_nxv1i64_to_nxv4f16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    uunpklo z0.s, z0.h
+; CHECK-NEXT:    ret
+  %bc = bitcast <vscale x 1 x i64> %v to <vscale x 4 x half>
+  ret <vscale x 4 x half> %bc
+}
 
 define <vscale x 4 x half> @bitcast_nxv2f32_to_nxv4f16(<vscale x 2 x float> %v) #0 {
 ; CHECK-LABEL: bitcast_nxv2f32_to_nxv4f16:
@@ -892,7 +899,14 @@ define <vscale x 4 x half> @bitcast_nxv2f32_to_nxv4f16(<vscale x 2 x float> %v) 
   ret <vscale x 4 x half> %bc
 }
 
-; @bitcast_nxv1f64_to_nxv4f16 is missing
+define <vscale x 4 x half> @bitcast_nxv1f64_to_nxv4f16(<vscale x 1 x double> %v) #0 {
+; CHECK-LABEL: bitcast_nxv1f64_to_nxv4f16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    uunpklo z0.s, z0.h
+; CHECK-NEXT:    ret
+  %bc = bitcast <vscale x 1 x double> %v to <vscale x 4 x half>
+  ret <vscale x 4 x half> %bc
+}
 
 define <vscale x 4 x half> @bitcast_nxv4bf16_to_nxv4f16(<vscale x 4 x bfloat> %v) #0 {
 ; CHECK-LABEL: bitcast_nxv4bf16_to_nxv4f16:
@@ -946,7 +960,14 @@ define <vscale x 2 x float> @bitcast_nxv2i32_to_nxv2f32(<vscale x 2 x i32> %v) #
   ret <vscale x 2 x float> %bc
 }
 
-; @bitcast_nxv1i64_to_nxv2f32 is missing
+define <vscale x 2 x float> @bitcast_nxv1i64_to_nxv2f32(<vscale x 1 x i64> %v) #0 {
+; CHECK-LABEL: bitcast_nxv1i64_to_nxv2f32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    uunpklo z0.d, z0.s
+; CHECK-NEXT:    ret
+  %bc = bitcast <vscale x 1 x i64> %v to <vscale x 2 x float>
+  ret <vscale x 2 x float> %bc
+}
 
 define <vscale x 2 x float> @bitcast_nxv4f16_to_nxv2f32(<vscale x 4 x half> %v) #0 {
 ; CHECK-LABEL: bitcast_nxv4f16_to_nxv2f32:
@@ -964,7 +985,14 @@ define <vscale x 2 x float> @bitcast_nxv4f16_to_nxv2f32(<vscale x 4 x half> %v) 
   ret <vscale x 2 x float> %bc
 }
 
-; @bitcast_nxv1f64_to_nxv2f32 is missing
+define <vscale x 2 x float> @bitcast_nxv1f64_to_nxv2f32(<vscale x 1 x double> %v) #0 {
+; CHECK-LABEL: bitcast_nxv1f64_to_nxv2f32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    uunpklo z0.d, z0.s
+; CHECK-NEXT:    ret
+  %bc = bitcast <vscale x 1 x double> %v to <vscale x 2 x float>
+  ret <vscale x 2 x float> %bc
+}
 
 define <vscale x 2 x float> @bitcast_nxv4bf16_to_nxv2f32(<vscale x 4 x bfloat> %v) #0 {
 ; CHECK-LABEL: bitcast_nxv4bf16_to_nxv2f32:
@@ -986,13 +1014,67 @@ define <vscale x 2 x float> @bitcast_nxv4bf16_to_nxv2f32(<vscale x 4 x bfloat> %
 ; bitcast to nxv1f64
 ;
 
-; @bitcast_nxv8i8_to_nxv1f64 is missing
-; @bitcast_nxv4i16_to_nxv1f64 is missing
-; @bitcast_nxv2i32_to_nxv1f64 is missing
-; @bitcast_nxv1i64_to_nxv1f64 is missing
-; @bitcast_nxv4f16_to_nxv1f64 is missing
-; @bitcast_nxv2f32_to_nxv1f64 is missing
-; @bitcast_nxv4bf16_to_nxv1f64 is missing
+define <vscale x 1 x double> @bitcast_nxv8i8_to_nxv1f64(<vscale x 8 x i8> %v) #0 {
+; CHECK-LABEL: bitcast_nxv8i8_to_nxv1f64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    uzp1 z0.b, z0.b, z0.b
+; CHECK-NEXT:    ret
+  %bc = bitcast <vscale x 8 x i8> %v to <vscale x 1 x double>
+  ret <vscale x 1 x double> %bc
+}
+
+define <vscale x 1 x double> @bitcast_nxv4i16_to_nxv1f64(<vscale x 4 x i16> %v) #0 {
+; CHECK-LABEL: bitcast_nxv4i16_to_nxv1f64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    uzp1 z0.h, z0.h, z0.h
+; CHECK-NEXT:    ret
+  %bc = bitcast <vscale x 4 x i16> %v to <vscale x 1 x double>
+  ret <vscale x 1 x double> %bc
+}
+
+define <vscale x 1 x double> @bitcast_nxv2i32_to_nxv1f64(<vscale x 2 x i32> %v) #0 {
+; CHECK-LABEL: bitcast_nxv2i32_to_nxv1f64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    uzp1 z0.s, z0.s, z0.s
+; CHECK-NEXT:    ret
+  %bc = bitcast <vscale x 2 x i32> %v to <vscale x 1 x double>
+  ret <vscale x 1 x double> %bc
+}
+
+define <vscale x 1 x double> @bitcast_nxv1i64_to_nxv1f64(<vscale x 1 x i64> %v) #0 {
+; CHECK-LABEL: bitcast_nxv1i64_to_nxv1f64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ret
+  %bc = bitcast <vscale x 1 x i64> %v to <vscale x 1 x double>
+  ret <vscale x 1 x double> %bc
+}
+
+define <vscale x 1 x double> @bitcast_nxv4f16_to_nxv1f64(<vscale x 4 x half> %v) #0 {
+; CHECK-LABEL: bitcast_nxv4f16_to_nxv1f64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    uzp1 z0.h, z0.h, z0.h
+; CHECK-NEXT:    ret
+  %bc = bitcast <vscale x 4 x half> %v to <vscale x 1 x double>
+  ret <vscale x 1 x double> %bc
+}
+
+define <vscale x 1 x double> @bitcast_nxv2f32_to_nxv1f64(<vscale x 2 x float> %v) #0 {
+; CHECK-LABEL: bitcast_nxv2f32_to_nxv1f64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    uzp1 z0.s, z0.s, z0.s
+; CHECK-NEXT:    ret
+  %bc = bitcast <vscale x 2 x float> %v to <vscale x 1 x double>
+  ret <vscale x 1 x double> %bc
+}
+
+define <vscale x 1 x double> @bitcast_nxv4bf16_to_nxv1f64(<vscale x 4 x bfloat> %v) #0 {
+; CHECK-LABEL: bitcast_nxv4bf16_to_nxv1f64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    uzp1 z0.h, z0.h, z0.h
+; CHECK-NEXT:    ret
+  %bc = bitcast <vscale x 4 x bfloat> %v to <vscale x 1 x double>
+  ret <vscale x 1 x double> %bc
+}
 
 ;
 ; bitcast to nxv4bf16
@@ -1038,7 +1120,14 @@ define <vscale x 4 x bfloat> @bitcast_nxv2i32_to_nxv4bf16(<vscale x 2 x i32> %v)
   ret <vscale x 4 x bfloat> %bc
 }
 
-; @bitcast_nxv1i64_to_nxv4bf16 is missing
+define <vscale x 4 x bfloat> @bitcast_nxv1i64_to_nxv4bf16(<vscale x 1 x i64> %v) #0 {
+; CHECK-LABEL: bitcast_nxv1i64_to_nxv4bf16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    uunpklo z0.s, z0.h
+; CHECK-NEXT:    ret
+  %bc = bitcast <vscale x 1 x i64> %v to <vscale x 4 x bfloat>
+  ret <vscale x 4 x bfloat> %bc
+}
 
 define <vscale x 4 x bfloat> @bitcast_nxv4f16_to_nxv4bf16(<vscale x 4 x half> %v) #0 {
 ; CHECK-LABEL: bitcast_nxv4f16_to_nxv4bf16:
@@ -1064,7 +1153,14 @@ define <vscale x 4 x bfloat> @bitcast_nxv2f32_to_nxv4bf16(<vscale x 2 x float> %
   ret <vscale x 4 x bfloat> %bc
 }
 
-; @bitcast_nxv1f64_to_nxv4bf16 is missing
+define <vscale x 4 x bfloat> @bitcast_nxv1f64_to_nxv4bf16(<vscale x 1 x double> %v) #0 {
+; CHECK-LABEL: bitcast_nxv1f64_to_nxv4bf16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    uunpklo z0.s, z0.h
+; CHECK-NEXT:    ret
+  %bc = bitcast <vscale x 1 x double> %v to <vscale x 4 x bfloat>
+  ret <vscale x 4 x bfloat> %bc
+}
 
 ;
 ; bitcast to nxv4i8
@@ -1276,6 +1372,16 @@ define <vscale x 2 x half> @bitcast_nxv2bf16_to_nxv2f16(<vscale x 2 x bfloat> %v
 }
 
 ;
+; bitcast to nxv1f32
+;
+
+; @bitcast_nxv4i8_to_nxv1f32 is missing
+; @bitcast_nxv2i16_to_nxv1f32 is missing
+; @bitcast_nxv1i32_to_nxv1f32 is missing
+; @bitcast_nxv2f16_to_nxv1f32 is missing
+; @bitcast_nxv2bf16_to_nxv1f32 is missing
+
+;
 ; bitcast to nxv2bf16
 ;
 
@@ -1350,6 +1456,22 @@ define <vscale x 1 x i16> @bitcast_nxv2i8_to_nxv1i16(<vscale x 2 x i8> %v) #0 {
 
 ; @bitcast_nxv1f16_to_nxv1i16 is missing
 ; @bitcast_nxv1bf16_to_nxv1i16 is missing
+
+;
+; bitcast to nxv1f16
+;
+
+; @bitcast_nxv2i8_to_nxv1f16 is missing
+; @bitcast_nxv1i16_to_nxv1f16 is missing
+; @bitcast_nxv1bf16_to_nxv1f16 is missing
+
+;
+; bitcast to nxv1bf16
+;
+
+; @bitcast_nxv2i8_to_nxv1bf16 is missing
+; @bitcast_nxv1i16_to_nxv1bf16 is missing
+; @bitcast_nxv1f16_to_nxv1bf16 is missing
 
 ;
 ; Other
