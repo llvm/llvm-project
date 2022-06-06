@@ -39,25 +39,38 @@ void ConstantPool::emitEntries(MCStreamer &Streamer) {
 const MCExpr *ConstantPool::addEntry(const MCExpr *Value, MCContext &Context,
                                      unsigned Size, SMLoc Loc) {
   const MCConstantExpr *C = dyn_cast<MCConstantExpr>(Value);
+  const MCSymbolRefExpr *S = dyn_cast<MCSymbolRefExpr>(Value);
 
   // Check if there is existing entry for the same constant. If so, reuse it.
-  auto Itr = C ? CachedEntries.find(C->getValue()) : CachedEntries.end();
-  if (Itr != CachedEntries.end())
-    return Itr->second;
+  if (C) {
+    auto CItr = CachedConstantEntries.find(C->getValue());
+    if (CItr != CachedConstantEntries.end())
+      return CItr->second;
+  }
+
+  // Check if there is existing entry for the same symbol. If so, reuse it.
+  if (S) {
+    auto SItr = CachedSymbolEntries.find(&(S->getSymbol()));
+    if (SItr != CachedSymbolEntries.end())
+      return SItr->second;
+  }
 
   MCSymbol *CPEntryLabel = Context.createTempSymbol();
 
   Entries.push_back(ConstantPoolEntry(CPEntryLabel, Value, Size, Loc));
   const auto SymRef = MCSymbolRefExpr::create(CPEntryLabel, Context);
   if (C)
-    CachedEntries[C->getValue()] = SymRef;
+    CachedConstantEntries[C->getValue()] = SymRef;
+  if (S)
+    CachedSymbolEntries[&(S->getSymbol())] = SymRef;
   return SymRef;
 }
 
 bool ConstantPool::empty() { return Entries.empty(); }
 
 void ConstantPool::clearCache() {
-  CachedEntries.clear();
+  CachedConstantEntries.clear();
+  CachedSymbolEntries.clear();
 }
 
 //
