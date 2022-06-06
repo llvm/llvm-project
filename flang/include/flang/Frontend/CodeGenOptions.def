@@ -1,0 +1,22 @@
+//===--- CodeGenOptions.def - Code generation option database ----- C++ -*-===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+//
+// This file defines the code generation options. Users of this file
+// must define the CODEGENOPT macro to make use of this information.
+//
+//===----------------------------------------------------------------------===//
+#ifndef CODEGENOPT
+#  error Define the CODEGENOPT macro to handle language options
+#endif
+
+CODEGENOPT(OptimizationLevel, 2, 0) ///< The -O[0-3] option specified.
+
+CODEGENOPT(DebugPassManager, 1, 0) ///< Prints debug information for the new
+                                   ///< pass manager.
+
+#undef CODEGENOPT
