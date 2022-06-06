@@ -10578,10 +10578,13 @@ QualType Sema::CheckSizelessVectorOperands(ExprResult &LHS, ExprResult &RHS,
   QualType LHSType = LHS.get()->getType().getUnqualifiedType();
   QualType RHSType = RHS.get()->getType().getUnqualifiedType();
 
+  const BuiltinType *LHSBuiltinTy = LHSType->getAs<BuiltinType>();
+  const BuiltinType *RHSBuiltinTy = RHSType->getAs<BuiltinType>();
+
   unsigned DiagID = diag::err_typecheck_invalid_operands;
   if ((OperationKind == ACK_Arithmetic) &&
-      (LHSType->castAs<BuiltinType>()->isSVEBool() ||
-       RHSType->castAs<BuiltinType>()->isSVEBool())) {
+      ((LHSBuiltinTy && LHSBuiltinTy->isSVEBool()) ||
+       (RHSBuiltinTy && RHSBuiltinTy->isSVEBool()))) {
     Diag(Loc, DiagID) << LHSType << RHSType << LHS.get()->getSourceRange()
                       << RHS.get()->getSourceRange();
     return QualType();
@@ -10610,12 +10613,33 @@ QualType Sema::CheckSizelessVectorOperands(ExprResult &LHS, ExprResult &RHS,
     return DestType;
   }
 
-  if (RHSType->isVLSTBuiltinType() && !LHSType->isVLSTBuiltinType()) {
-    auto DestType = tryScalableVectorConvert((IsCompAssign ? nullptr : &LHS),
-                                             LHSType, RHSType);
-    if (DestType == QualType())
-      return InvalidOperands(Loc, LHS, RHS);
-    return DestType;
+  if ((!LHSType->isVLSTBuiltinType() && !LHSType->isRealType()) ||
+      (!RHSType->isVLSTBuiltinType() && !RHSType->isRealType())) {
+    Diag(Loc, diag::err_typecheck_vector_not_convertable_non_scalar)
+        << LHSType << RHSType << LHS.get()->getSourceRange()
+        << RHS.get()->getSourceRange();
+    return QualType();
+  }
+
+  if (LHSType->isVLSTBuiltinType() && RHSType->isVLSTBuiltinType() &&
+      Context.getBuiltinVectorTypeInfo(LHSBuiltinTy).EC !=
+          Context.getBuiltinVectorTypeInfo(RHSBuiltinTy).EC) {
+    Diag(Loc, diag::err_typecheck_vector_lengths_not_equal)
+        << LHSType << RHSType << LHS.get()->getSourceRange()
+        << RHS.get()->getSourceRange();
+    return QualType();
+  }
+
+  if (LHSType->isVLSTBuiltinType() || RHSType->isVLSTBuiltinType()) {
+    QualType Scalar = LHSType->isVLSTBuiltinType() ? RHSType : LHSType;
+    QualType Vector = LHSType->isVLSTBuiltinType() ? LHSType : RHSType;
+    bool ScalarOrVector =
+        LHSType->isVLSTBuiltinType() && RHSType->isVLSTBuiltinType();
+
+    Diag(Loc, diag::err_typecheck_vector_not_convertable_implict_truncation)
+        << ScalarOrVector << Scalar << Vector;
+
+    return QualType();
   }
 
   Diag(Loc, DiagID) << LHSType << RHSType << LHS.get()->getSourceRange()
