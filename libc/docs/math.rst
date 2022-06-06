@@ -76,7 +76,7 @@ fdim           |check|          |check|         |check|
 floor          |check|          |check|         |check|  
 fmax           |check|          |check|         |check|  
 fmin           |check|          |check|         |check|  
-fmod
+fmod           |check|          |check|
 fpclassify
 frexp          |check|          |check|         |check|  
 ilogb          |check|          |check|         |check|  

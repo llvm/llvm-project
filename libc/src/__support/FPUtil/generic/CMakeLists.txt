@@ -14,3 +14,9 @@ add_header_library(
   DEPENDS
     libc.src.__support.CPP.uint128
 )
+
+add_header_library(
+  fmod
+  HDRS
+    FMod.h
+)

@@ -184,3 +184,16 @@ add_fp_unittest(
   LINK_LIBRARIES
     -lpthread
 )
+
+add_fp_unittest(
+  fmod_generic_impl_test
+  NO_RUN_POSTBUILD
+  NEED_MPFR
+  SUITE
+    libc_math_exhaustive_tests
+  SRCS
+    fmod_generic_impl_test.cpp
+  DEPENDS
+    libc.src.__support.FPUtil.fputil
+    libc.src.__support.FPUtil.generic.fmod
+)

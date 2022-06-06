@@ -17,6 +17,15 @@ namespace fputil {
 // __builtin_clz/ctz* rather than using the exactly-sized aliases from stdint.h.
 // This way, we can avoid making any assumptions about integer sizes and let the
 // compiler match for us.
+namespace __internal {
+
+template <typename T> static inline int correct_zero(T val, int bits) {
+  if (val == T(0))
+    return sizeof(T(0)) * 8;
+  else
+    return bits;
+}
+
 template <typename T> static inline int clz(T val);
 template <> inline int clz<unsigned int>(unsigned int val) {
   return __builtin_clz(val);
@@ -37,6 +46,23 @@ template <> inline int ctz<unsigned long int>(unsigned long int val) {
 }
 template <> inline int ctz<unsigned long long int>(unsigned long long int val) {
   return __builtin_ctzll(val);
+}
+} // namespace __internal
+
+template <typename T> static inline int safe_ctz(T val) {
+  return __internal::correct_zero(val, __internal::ctz(val));
+}
+
+template <typename T> static inline int unsafe_ctz(T val) {
+  return __internal::ctz(val);
+}
+
+template <typename T> static inline int safe_clz(T val) {
+  return __internal::correct_zero(val, __internal::clz(val));
+}
+
+template <typename T> static inline int unsafe_clz(T val) {
+  return __internal::clz(val);
 }
 
 template <typename T> static inline bool isnan(T val) {
