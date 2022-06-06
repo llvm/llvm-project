@@ -189,7 +189,7 @@ namespace {
     }
 
     /// getSmallIPtrImm - Return a target constant of pointer type.
-    inline SDValue getSmallIPtrImm(unsigned Imm, const SDLoc &dl) {
+    inline SDValue getSmallIPtrImm(uint64_t Imm, const SDLoc &dl) {
       return CurDAG->getTargetConstant(
           Imm, dl, PPCLowering->getPointerTy(CurDAG->getDataLayout()));
     }
@@ -203,7 +203,7 @@ namespace {
     /// base register.  Return the virtual register that holds this value.
     SDNode *getGlobalBaseReg();
 
-    void selectFrameIndex(SDNode *SN, SDNode *N, unsigned Offset = 0);
+    void selectFrameIndex(SDNode *SN, SDNode *N, uint64_t Offset = 0);
 
     // Select - Convert the specified operand from a target-independent to a
     // target-specific node if it hasn't already been changed.
@@ -640,7 +640,7 @@ static bool isOpcWithIntImmediate(SDNode *N, unsigned Opc, unsigned& Imm) {
          && isInt32Immediate(N->getOperand(1).getNode(), Imm);
 }
 
-void PPCDAGToDAGISel::selectFrameIndex(SDNode *SN, SDNode *N, unsigned Offset) {
+void PPCDAGToDAGISel::selectFrameIndex(SDNode *SN, SDNode *N, uint64_t Offset) {
   SDLoc dl(SN);
   int FI = cast<FrameIndexSDNode>(N)->getIndex();
   SDValue TFI = CurDAG->getTargetFrameIndex(FI, N->getValueType(0));
@@ -5379,7 +5379,7 @@ void PPCDAGToDAGISel::Select(SDNode *N) {
       // If this is equivalent to an add, then we can fold it with the
       // FrameIndex calculation.
       if ((LHSKnown.Zero.getZExtValue()|~(uint64_t)Imm) == ~0ULL) {
-        selectFrameIndex(N, N->getOperand(0).getNode(), (int)Imm);
+        selectFrameIndex(N, N->getOperand(0).getNode(), (int64_t)Imm);
         return;
       }
     }
@@ -5437,7 +5437,7 @@ void PPCDAGToDAGISel::Select(SDNode *N) {
     int16_t Imm;
     if (N->getOperand(0)->getOpcode() == ISD::FrameIndex &&
         isIntS16Immediate(N->getOperand(1), Imm)) {
-      selectFrameIndex(N, N->getOperand(0).getNode(), (int)Imm);
+      selectFrameIndex(N, N->getOperand(0).getNode(), (int64_t)Imm);
       return;
     }
 
