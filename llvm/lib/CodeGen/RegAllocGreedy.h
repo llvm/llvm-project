@@ -370,21 +370,11 @@ private:
   bool addSplitConstraints(InterferenceCache::Cursor, BlockFrequency &);
   bool addThroughConstraints(InterferenceCache::Cursor, ArrayRef<unsigned>);
   bool growRegion(GlobalSplitCandidate &Cand);
-  bool splitCanCauseEvictionChain(Register Evictee, GlobalSplitCandidate &Cand,
-                                  unsigned BBNumber,
-                                  const AllocationOrder &Order);
   BlockFrequency calcGlobalSplitCost(GlobalSplitCandidate &,
                                      const AllocationOrder &Order);
   bool calcCompactRegion(GlobalSplitCandidate &);
   void splitAroundRegion(LiveRangeEdit &, ArrayRef<unsigned>);
   void calcGapWeights(MCRegister, SmallVectorImpl<float> &);
-  bool canEvictInterferenceInRange(const LiveInterval &VirtReg,
-                                   MCRegister PhysReg, SlotIndex Start,
-                                   SlotIndex End, EvictionCost &MaxCost) const;
-  MCRegister getCheapestEvicteeWeight(const AllocationOrder &Order,
-                                      const LiveInterval &VirtReg,
-                                      SlotIndex Start, SlotIndex End,
-                                      float *BestEvictWeight) const;
   void evictInterference(const LiveInterval &, MCRegister,
                          SmallVectorImpl<Register> &);
   bool mayRecolorAllInterferences(MCRegister PhysReg,
