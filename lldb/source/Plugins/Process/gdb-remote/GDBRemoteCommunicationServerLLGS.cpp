@@ -474,6 +474,8 @@ GDBRemoteCommunicationServerLLGS::SendWResponse(
 
   StreamGDBRemote response;
   response.Format("{0:g}", *wait_status);
+  if (bool(m_extensions_supported & NativeProcessProtocol::Extension::multiprocess))
+    response.Format(";process:{0:x-}", process->GetID());
   return SendPacketNoLock(response.GetString());
 }
 
