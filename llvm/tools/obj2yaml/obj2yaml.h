@@ -34,6 +34,8 @@ llvm::Error xcoff2yaml(llvm::raw_ostream &Out,
 std::error_code wasm2yaml(llvm::raw_ostream &Out,
                           const llvm::object::WasmObjectFile &Obj);
 llvm::Error archive2yaml(llvm::raw_ostream &Out, llvm::MemoryBufferRef Source);
+llvm::Error dxcontainer2yaml(llvm::raw_ostream &Out,
+                             llvm::MemoryBufferRef Source);
 
 // Forward decls for dwarf2yaml
 namespace llvm {

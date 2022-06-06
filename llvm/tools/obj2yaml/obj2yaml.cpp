@@ -50,8 +50,14 @@ static Error dumpInput(StringRef File) {
     return errorCodeToError(EC);
   std::unique_ptr<MemoryBuffer> &Buffer = FileOrErr.get();
   MemoryBufferRef MemBuf = Buffer->getMemBufferRef();
-  if (file_magic::archive == identify_magic(MemBuf.getBuffer()))
+  switch (identify_magic(MemBuf.getBuffer())) {
+  case file_magic::archive:
     return archive2yaml(outs(), MemBuf);
+  case file_magic::dxcontainer_object:
+    return dxcontainer2yaml(outs(), MemBuf);
+  default:
+    break;
+  }
 
   Expected<std::unique_ptr<Binary>> BinOrErr =
       createBinary(MemBuf, /*Context=*/nullptr);

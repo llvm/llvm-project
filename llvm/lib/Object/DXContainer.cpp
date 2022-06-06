@@ -89,4 +89,5 @@ void DXContainer::PartIterator::updateIteratorImpl(const uint32_t Offset) {
   cantFail(readStruct(Buffer, Current, IteratorState.Part));
   IteratorState.Data =
       StringRef(Current + sizeof(dxbc::PartHeader), IteratorState.Part.Size);
+  IteratorState.Offset = Offset;
 }

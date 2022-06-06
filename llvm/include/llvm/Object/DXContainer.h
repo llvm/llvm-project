@@ -44,6 +44,7 @@ public:
     SmallVectorImpl<uint32_t>::const_iterator OffsetIt;
     struct PartData {
       dxbc::PartHeader Part;
+      uint32_t Offset;
       StringRef Data;
     } IteratorState;
 
