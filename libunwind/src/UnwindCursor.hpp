@@ -1965,10 +1965,6 @@ bool UnwindCursor<A, R>::getInfoFromSEH(pint_t pc) {
       _info.handler = 0;
     }
   }
-#elif defined(_LIBUNWIND_TARGET_ARM)
-  _info.end_ip = _info.start_ip + unwindEntry->FunctionLength;
-  _info.lsda = 0; // FIXME
-  _info.handler = 0; // FIXME
 #endif
   setLastPC(pc);
   return true;
