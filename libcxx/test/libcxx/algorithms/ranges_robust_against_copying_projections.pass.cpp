@@ -98,8 +98,8 @@ constexpr bool all_the_algorithms()
     (void)std::ranges::find(a, value, Proj(&copies)); assert(copies == 0);
     //(void)std::ranges::find_end(first, last, first2, mid2, Equal(), Proj(&copies), Proj(&copies)); assert(copies == 0);
     //(void)std::ranges::find_end(a, b, Equal(), Proj(&copies), Proj(&copies)); assert(copies == 0);
-    //(void)std::ranges::find_first_of(first, last, first2, last2, Equal(), Proj(&copies), Proj(&copies)); assert(copies == 0);
-    //(void)std::ranges::find_first_of(a, b, Equal(), Proj(&copies), Proj(&copies)); assert(copies == 0);
+    (void)std::ranges::find_first_of(first, last, first2, last2, Equal(), Proj(&copies), Proj(&copies)); assert(copies == 0);
+    (void)std::ranges::find_first_of(a, b, Equal(), Proj(&copies), Proj(&copies)); assert(copies == 0);
     (void)std::ranges::find_if(first, last, UnaryTrue(), Proj(&copies)); assert(copies == 0);
     (void)std::ranges::find_if(a, UnaryTrue(), Proj(&copies)); assert(copies == 0);
     (void)std::ranges::find_if_not(first, last, UnaryTrue(), Proj(&copies)); assert(copies == 0);

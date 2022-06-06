@@ -112,8 +112,8 @@ constexpr bool all_the_algorithms()
     //(void)std::ranges::equal_range(a, value, Less(&copies)); assert(copies == 0);
     //(void)std::ranges::find_end(first, last, first2, mid2, Equal(&copies)); assert(copies == 0);
     //(void)std::ranges::find_end(a, b, Equal(&copies)); assert(copies == 0);
-    //(void)std::ranges::find_first_of(first, last, first2, last2, Equal(&copies)); assert(copies == 0);
-    //(void)std::ranges::find_first_of(a, b, Equal(&copies)); assert(copies == 0);
+    (void)std::ranges::find_first_of(first, last, first2, last2, Equal(&copies)); assert(copies == 0);
+    (void)std::ranges::find_first_of(a, b, Equal(&copies)); assert(copies == 0);
     (void)std::ranges::find_if(first, last, UnaryTrue(&copies)); assert(copies == 0);
     (void)std::ranges::find_if(a, UnaryTrue(&copies)); assert(copies == 0);
     (void)std::ranges::find_if_not(first, last, UnaryTrue(&copies)); assert(copies == 0);
