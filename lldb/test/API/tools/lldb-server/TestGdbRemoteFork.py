@@ -101,15 +101,12 @@ class TestGdbRemoteFork(gdbremote_testcase.GdbRemoteTestCaseBase):
         self.reset_test_sequence()
 
         # continue and expect fork
-        procinfo_regex = "[$]pid:([0-9a-f]+);.*"
-        fork_regex = "[$]T.*;{}:p([0-9a-f]+)[.]([0-9a-f]+).*".format(variant)
+        fork_regex = ("[$]T[0-9a-f]{{2}}thread:p([0-9a-f]+)[.][0-9a-f]+;.*"
+                      "{}:p([0-9a-f]+)[.]([0-9a-f]+).*".format(variant))
         self.test_sequence.add_log_lines([
-            "read packet: $qProcessInfo#00",
-            {"direction": "send", "regex": procinfo_regex,
-             "capture": {1: "parent_pid"}},
             "read packet: $c#00",
             {"direction": "send", "regex": fork_regex,
-             "capture": {1: "pid", 2: "tid"}},
+             "capture": {1: "parent_pid", 2: "pid", 3: "tid"}},
         ], True)
         ret = self.expect_gdbremote_sequence()
         parent_pid, pid, tid = (int(ret[x], 16) for x
