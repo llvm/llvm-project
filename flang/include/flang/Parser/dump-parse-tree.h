@@ -514,6 +514,7 @@ public:
   NODE(parser, OmpProcBindClause)
   NODE_ENUM(OmpProcBindClause, Type)
   NODE(parser, OmpReductionClause)
+  NODE(parser, OmpInReductionClause)
   NODE(parser, OmpReductionCombiner)
   NODE(OmpReductionCombiner, FunctionCombiner)
   NODE(parser, OmpReductionInitializerClause)

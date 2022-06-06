@@ -2889,6 +2889,7 @@ void UnwrappedLineParser::parseForOrWhileLoop() {
   if (FormatTok->is(tok::l_paren))
     parseParens();
 
+  handleAttributes();
   parseLoopBody(KeepBraces, /*WrapRightBrace=*/true);
 }
 

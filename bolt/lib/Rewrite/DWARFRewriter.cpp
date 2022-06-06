@@ -102,12 +102,11 @@ extern cl::OptionCategory BoltCategory;
 extern cl::opt<unsigned> Verbosity;
 extern cl::opt<std::string> OutputFilename;
 
-static cl::opt<bool>
-KeepARanges("keep-aranges",
-  cl::desc("keep or generate .debug_aranges section if .gdb_index is written"),
-  cl::ZeroOrMore,
-  cl::Hidden,
-  cl::cat(BoltCategory));
+static cl::opt<bool> KeepARanges(
+    "keep-aranges",
+    cl::desc(
+        "keep or generate .debug_aranges section if .gdb_index is written"),
+    cl::Hidden, cl::cat(BoltCategory));
 
 static cl::opt<bool>
 DeterministicDebugInfo("deterministic-debuginfo",

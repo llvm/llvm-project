@@ -164,8 +164,7 @@ def BufferizableOpInterface : OpInterface<"BufferizableOpInterface"> {
               continue;
             SmallVector<OpResult> aliasingOpResults =
                 bufferizableOp.getAliasingOpResult(opOperand, state);
-            if (llvm::find(aliasingOpResults, opResult)
-                != aliasingOpResults.end())
+            if (llvm::is_contained(aliasingOpResults, opResult))
               result.push_back(&opOperand);
           }
           return result;
