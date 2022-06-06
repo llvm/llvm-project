@@ -17,7 +17,9 @@
 #include <__format/format_fwd.h>
 #include <__iterator/back_insert_iterator.h>
 #include <__iterator/concepts.h>
+#include <__utility/move.h>
 #include <concepts>
+#include <cstddef>
 
 #ifndef _LIBCPP_HAS_NO_LOCALIZATION
 #include <locale>

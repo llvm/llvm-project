@@ -19,6 +19,7 @@
 #include <__algorithm/transform.h>
 #include <__assert>
 #include <__concepts/arithmetic.h>
+#include <__concepts/same_as.h>
 #include <__config>
 #include <__format/format_error.h>
 #include <__format/format_fwd.h>
@@ -26,6 +27,7 @@
 #include <__format/formatter.h>
 #include <__format/formatter_integral.h>
 #include <__format/parser_std_format_spec.h>
+#include <__memory/allocator.h>
 #include <__utility/move.h>
 #include <__utility/unreachable.h>
 #include <charconv>
