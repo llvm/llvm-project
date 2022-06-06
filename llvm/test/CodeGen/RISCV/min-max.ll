@@ -638,3 +638,26 @@ define signext i32 @smax_i32_pos_constant(i32 signext %a) {
   %c = call i32 @llvm.smax.i32(i32 %a, i32 10)
   ret i32 %c
 }
+
+define signext i32 @smax_i32_pos_constant_trailing_zeros(i32 signext %a) {
+; NOZBB-LABEL: smax_i32_pos_constant_trailing_zeros:
+; NOZBB:       # %bb.0:
+; NOZBB-NEXT:    andi a0, a0, -8
+; NOZBB-NEXT:    li a1, 16
+; NOZBB-NEXT:    blt a1, a0, .LBB25_2
+; NOZBB-NEXT:  # %bb.1:
+; NOZBB-NEXT:    li a0, 16
+; NOZBB-NEXT:  .LBB25_2:
+; NOZBB-NEXT:    ret
+;
+; ZBB-LABEL: smax_i32_pos_constant_trailing_zeros:
+; ZBB:       # %bb.0:
+; ZBB-NEXT:    andi a0, a0, -8
+; ZBB-NEXT:    li a1, 16
+; ZBB-NEXT:    max a0, a0, a1
+; ZBB-NEXT:    ret
+  %b = and i32 %a, -8
+  %c = call i32 @llvm.smax.i32(i32 %b, i32 16)
+  %d = and i32 %c, -4
+  ret i32 %d
+}
