@@ -15,3 +15,12 @@ if(CMAKE_SYSTEM_NAME MATCHES "Linux")
 else()
  libomptarget_say("Not building x86_64 offloading plugin: machine not found in the system.")
 endif()
+
+# Don't override an externally defined RPATH
+if(NOT DEFINED CMAKE_INSTALL_RPATH)
+  set_property(TARGET omptarget.rtl.x86_64 PROPERTY INSTALL_RPATH "$ORIGIN:$ORIGIN/../lib:$ORIGIN/../../lib")
+else()
+  set_target_properties(omptarget.rtl.x86_64 PROPERTIES
+    INSTALL_RPATH ${CMAKE_INSTALL_RPATH}
+    BUILD_RPATH ${CMAKE_INSTALL_RPATH})
+endif()
