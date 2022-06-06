@@ -36,7 +36,7 @@ entry:
 ; CHECK:             r{{[0-9]+}} = -2147483648 ll
 ; CHECK:             exit
 
-; CHECK:             .long   16                              # BTF_KIND_ENUM(id = 4)
+; CHECK:             .long   16                              # BTF_KIND_ENUM64(id = 4)
 ; CHECK:             .long   57                              # BTF_KIND_TYPEDEF(id = 5)
 
 ; CHECK:             .ascii  ".text"                         # string offset=10
