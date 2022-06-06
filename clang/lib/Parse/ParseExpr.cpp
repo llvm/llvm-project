@@ -3276,7 +3276,7 @@ ExprResult Parser::ParseGenericSelectionExpression() {
       Ty = nullptr;
     } else {
       ColonProtectionRAIIObject X(*this);
-      TypeResult TR = ParseTypeName();
+      TypeResult TR = ParseTypeName(nullptr, DeclaratorContext::Association);
       if (TR.isInvalid()) {
         SkipUntil(tok::r_paren, StopAtSemi);
         return ExprError();

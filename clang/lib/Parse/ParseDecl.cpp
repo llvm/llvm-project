@@ -2870,6 +2870,8 @@ Parser::getDeclSpecContextFromDeclaratorContext(DeclaratorContext Context) {
   if (Context == DeclaratorContext::AliasDecl ||
       Context == DeclaratorContext::AliasTemplate)
     return DeclSpecContext::DSC_alias_declaration;
+  if (Context == DeclaratorContext::Association)
+    return DeclSpecContext::DSC_association;
   return DeclSpecContext::DSC_normal;
 }
 
@@ -4573,7 +4575,7 @@ void Parser::ParseEnumSpecifier(SourceLocation StartLoc, DeclSpec &DS,
 
   // Determine whether this declaration is permitted to have an enum-base.
   AllowDefiningTypeSpec AllowEnumSpecifier =
-      isDefiningTypeSpecifierContext(DSC);
+      isDefiningTypeSpecifierContext(DSC, getLangOpts().CPlusPlus);
   bool CanBeOpaqueEnumDeclaration =
       DS.isEmpty() && isOpaqueEnumDeclarationContext(DSC);
   bool CanHaveEnumBase = (getLangOpts().CPlusPlus11 || getLangOpts().ObjC ||

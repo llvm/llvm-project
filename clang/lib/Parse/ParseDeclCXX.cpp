@@ -1752,13 +1752,15 @@ void Parser::ParseClassSpecifier(tok::TokenKind TagTokKind,
 
   const PrintingPolicy &Policy = Actions.getASTContext().getPrintingPolicy();
   Sema::TagUseKind TUK;
-  if (isDefiningTypeSpecifierContext(DSC) == AllowDefiningTypeSpec::No ||
+  if (isDefiningTypeSpecifierContext(DSC, getLangOpts().CPlusPlus) ==
+          AllowDefiningTypeSpec::No ||
       (getLangOpts().OpenMP && OpenMPDirectiveParsing))
     TUK = Sema::TUK_Reference;
   else if (Tok.is(tok::l_brace) ||
-           (getLangOpts().CPlusPlus && Tok.is(tok::colon)) ||
-           (isClassCompatibleKeyword() &&
-            (NextToken().is(tok::l_brace) || NextToken().is(tok::colon)))) {
+           (DSC != DeclSpecContext::DSC_association &&
+                (getLangOpts().CPlusPlus && Tok.is(tok::colon)) ||
+            (isClassCompatibleKeyword() &&
+             (NextToken().is(tok::l_brace) || NextToken().is(tok::colon))))) {
     if (DS.isFriendSpecified()) {
       // C++ [class.friend]p2:
       //   A class shall not be defined in a friend declaration.
