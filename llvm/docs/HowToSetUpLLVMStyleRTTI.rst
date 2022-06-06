@@ -511,11 +511,10 @@ we can use some provided cast traits like so:
 
 .. code-block:: c++
 
-  template<typename T>
+  template <typename T>
   struct CastInfo<T, SomeValue>
-    : public CastIsPossible<T, SomeValue>,
-      public NullableValueCastFailed<T>,
-      public DefaultDoCastIfPossible<T, SomeValue, CastInfo<T, SomeValue>> {
+    : CastIsPossible<T, SomeValue>, NullableValueCastFailed<T>,
+      DefaultDoCastIfPossible<T, SomeValue, CastInfo<T, SomeValue>> {
     static T doCast(SomeValue v) {
       return T(v.getPointer());
     }
@@ -528,11 +527,10 @@ that type from a char pointer type. So what we would do in that case is:
 
 .. code-block:: c++
 
-  template<typename T>
+  template <typename T>
   struct CastInfo<SomeValue, T *>
-    : public NullableValueCastFailed<SomeValue>,
-      public DefaultDoCastIfPossible<SomeValue, T *,
-                                     CastInfo<SomeValue, T *>> {
+    : NullableValueCastFailed<SomeValue>,
+      DefaultDoCastIfPossible<SomeValue, T *, CastInfo<SomeValue, T *>> {
     static bool isPossible(const T *t) {
       return std::is_same<T, char>::value;
     }
@@ -551,9 +549,8 @@ In those cases, you probably want something like this:
 
 .. code-block:: c++
 
-  template<typename T>
-  struct CastInfo<T, SomeValue>
-    : public OptionalValueCast<T, SomeValue> {};
+  template <typename T>
+  struct CastInfo<T, SomeValue> : OptionalValueCast<T, SomeValue> {};
 
 That cast trait requires that ``T`` is constructible from ``const SomeValue &``
 but it enables casting like so:
@@ -563,7 +560,7 @@ but it enables casting like so:
   SomeValue someVal = ...;
   Optional<AnotherValue> valOr = dyn_cast<AnotherValue>(someVal);
 
-With the ``_is_present`` variants, you can even do optional chaining like this:
+With the ``_if_present`` variants, you can even do optional chaining like this:
 
 .. code-block:: c++
 
