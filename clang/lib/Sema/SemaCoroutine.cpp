@@ -1324,7 +1324,7 @@ bool CoroutineStmtBuilder::makeNewAndDeleteExpr() {
   bool PassAlignment = false;
   SmallVector<Expr *, 1> PlacementArgs;
 
-  bool PromiseContainNew = [this, &PromiseType]() -> bool {
+  bool PromiseContainsNew = [this, &PromiseType]() -> bool {
     DeclarationName NewName =
         S.getASTContext().DeclarationNames.getCXXOperatorName(OO_New);
     LookupResult R(S, NewName, Loc, Sema::LookupOrdinaryName);
@@ -1343,7 +1343,7 @@ bool CoroutineStmtBuilder::makeNewAndDeleteExpr() {
     // - If no declarations are found in the scope of the promise type, a search
     // is performed in the global scope.
     Sema::AllocationFunctionScope NewScope =
-        PromiseContainNew ? Sema::AFS_Class : Sema::AFS_Global;
+        PromiseContainsNew ? Sema::AFS_Class : Sema::AFS_Global;
     S.FindAllocationFunctions(Loc, SourceRange(),
                               NewScope,
                               /*DeleteScope*/ Sema::AFS_Both, PromiseType,
@@ -1354,7 +1354,7 @@ bool CoroutineStmtBuilder::makeNewAndDeleteExpr() {
   // We don't expect to call to global operator new with (size, p0, …, pn).
   // So if we choose to lookup the allocation function in global scope, we
   // shouldn't lookup placement arguments.
-  if (PromiseContainNew && !collectPlacementArgs(S, FD, Loc, PlacementArgs))
+  if (PromiseContainsNew && !collectPlacementArgs(S, FD, Loc, PlacementArgs))
     return false;
 
   LookupAllocationFunction();
@@ -1363,7 +1363,7 @@ bool CoroutineStmtBuilder::makeNewAndDeleteExpr() {
   //   If no viable function is found ([over.match.viable]), overload resolution
   // is performed again on a function call created by passing just the amount of
   // space required as an argument of type std::size_t.
-  if (!OperatorNew && !PlacementArgs.empty() && PromiseContainNew) {
+  if (!OperatorNew && !PlacementArgs.empty() && PromiseContainsNew) {
     PlacementArgs.clear();
     LookupAllocationFunction();
   }
@@ -1386,7 +1386,7 @@ bool CoroutineStmtBuilder::makeNewAndDeleteExpr() {
   }
 
   if (!OperatorNew) {
-    if (PromiseContainNew)
+    if (PromiseContainsNew)
       S.Diag(Loc, diag::err_coroutine_unusable_new) << PromiseType << &FD;
 
     return false;

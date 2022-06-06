@@ -19,7 +19,7 @@ struct resumable {
   };
 };
 
-resumable f1() { // expected-error {{'operator new' provided by 'std::coroutine_traits<resumable>::promise_type' (aka 'resumable::promise_type') is not usable}}
+resumable f1() { // expected-error {{'operator new' provided by 'std::coroutine_traits<resumable>::promise_type' (aka 'resumable::promise_type') is not usable with the function signature of 'f1'}}
   co_return;
 }
 
@@ -37,7 +37,7 @@ resumable f1() { // expected-error {{'operator new' provided by 'std::coroutine_
 //   The first argument is the amount of space requested, and has type std::size_­t.
 //   The lvalues p1…pn are the succeeding arguments.
 //
-// So the acctual type passed to resumable::promise_type::operator new is lvalue
+// So the actual type passed to resumable::promise_type::operator new is lvalue
 // Allocator. It is allowed  to convert a lvalue to a lvalue reference. So the 
 // following one is valid.
 resumable f2(Allocator &&) {
@@ -57,5 +57,27 @@ resumable f5(const Allocator) { // expected-error {{operator new' provided by 's
 }
 
 resumable f6(const Allocator &) { // expected-error {{operator new' provided by 'std::coroutine_traits<resumable, const Allocator &>::promise_type' (aka 'resumable::promise_type') is not usable}}
+  co_return;
+}
+
+struct promise_base1 {
+  void *operator new(std::size_t sz); // expected-note {{member found by ambiguous name lookup}}
+};
+
+struct promise_base2 {
+  void *operator new(std::size_t sz); // expected-note {{member found by ambiguous name lookup}}
+};
+
+struct resumable2 {
+  struct promise_type : public promise_base1, public promise_base2 {
+    resumable2 get_return_object() { return {}; }
+    auto initial_suspend() { return std::suspend_always(); }
+    auto final_suspend() noexcept { return std::suspend_always(); }
+    void unhandled_exception() {}
+    void return_void(){};
+  };
+};
+
+resumable2 f7() { // expected-error {{member 'operator new' found in multiple base classes of different types}}
   co_return;
 }
