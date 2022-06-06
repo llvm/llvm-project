@@ -1202,9 +1202,18 @@ Error readNativeFileToEOF(file_t FileHandle, SmallVectorImpl<char> &Buffer,
 #include "Windows/Path.inc"
 #endif
 
+bool IsLLVMDriver = false;
+
 namespace llvm {
 namespace sys {
 namespace fs {
+
+std::string getMainExecutable(const char *Argv0, void *MainAddr) {
+  if (IsLLVMDriver)
+    return sys::path::stem(Argv0).str();
+  return getMainExecutableImpl(Argv0, MainAddr);
+}
+
 TempFile::TempFile(StringRef Name, int FD)
     : TmpName(std::string(Name)), FD(FD) {}
 TempFile::TempFile(TempFile &&Other) { *this = std::move(Other); }

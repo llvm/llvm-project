@@ -30,6 +30,7 @@ add_llvm_tool(llvm-objcopy
   ObjcopyOptsTableGen
   InstallNameToolOptsTableGen
   StripOptsTableGen
+  GENERATE_DRIVER
   )
 
 add_llvm_tool_symlink(llvm-install-name-tool llvm-objcopy)
