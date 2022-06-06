@@ -18,6 +18,9 @@ class PassRegistry;
 /// Initializer for dxil writer pass
 void initializeWriteDXILPassPass(PassRegistry &);
 
+/// Initializer for dxil embedder pass
+void initializeEmbedDXILPassPass(PassRegistry &);
+
 /// Initializer for DXIL-prepare
 void initializeDXILPrepareModulePass(PassRegistry &);
 
