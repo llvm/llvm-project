@@ -554,10 +554,8 @@ void CodeGenModule::Release() {
     CodeGenFunction(*this).EmitCfiCheckStub();
   }
   emitAtAvailableLinkGuard();
-  if (Context.getTargetInfo().getTriple().isWasm() &&
-      !Context.getTargetInfo().getTriple().isOSEmscripten()) {
+  if (Context.getTargetInfo().getTriple().isWasm())
     EmitMainVoidAlias();
-  }
 
   if (getTriple().isAMDGPU()) {
     // Emit reference of __amdgpu_device_library_preserve_asan_functions to
@@ -6352,8 +6350,10 @@ void CodeGenModule::EmitMainVoidAlias() {
   // new-style no-argument main is in used.
   if (llvm::Function *F = getModule().getFunction("main")) {
     if (!F->isDeclaration() && F->arg_size() == 0 && !F->isVarArg() &&
-        F->getReturnType()->isIntegerTy(Context.getTargetInfo().getIntWidth()))
-      addUsedGlobal(llvm::GlobalAlias::create("__main_void", F));
+        F->getReturnType()->isIntegerTy(Context.getTargetInfo().getIntWidth())) {
+      auto *GA = llvm::GlobalAlias::create("__main_void", F);
+      GA->setVisibility(llvm::GlobalValue::HiddenVisibility);
+    }
   }
 }
 
