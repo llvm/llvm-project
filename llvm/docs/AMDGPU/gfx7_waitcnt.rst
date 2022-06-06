@@ -19,7 +19,7 @@ The bits of this operand have the following meaning:
    ===== ================================================ ============
    3:0   VM_CNT: vector memory operations count.          0..15
    6:4   EXP_CNT: export count.                           0..7
-   12:8  LGKM_CNT: LDS, GDS, Constant and Message count.  0..31
+   11:8  LGKM_CNT: LDS, GDS, Constant and Message count.  0..15
    ===== ================================================ ============
 
 This operand may be specified as one of the following:
