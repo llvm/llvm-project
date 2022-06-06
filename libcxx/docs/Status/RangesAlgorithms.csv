@@ -11,10 +11,10 @@ Search,mismatch,Nikolas Klauser,`D117817 <https://llvm.org/D117817>`_,✅
 Search,equal,Nikolas Klauser,`D123681 <https://reviews.llvm.org/D123681>`_,✅
 Search,lexicographical_compare,Not assigned,n/a,Not started
 Search,partition_point,Christopher Di Bella,`D105794 <https://llvm.org/D105794>`_,Under review
-Search,lower_bound,Nikolas Klauser,`D121964 <https://llvm.org/D121964>`_,Under review
-Search,upper_bound,Nikolas Klauser,`D121964 <https://llvm.org/D121964>`_,Under review
+Search,lower_bound,Nikolas Klauser,`D121964 <https://llvm.org/D121964>`_,✅
+Search,upper_bound,Nikolas Klauser,`D121964 <https://llvm.org/D121964>`_,✅
 Search,equal_range,Christopher Di Bella,n/a,Not started
-Search,binary_search,Nikolas Klauser,`D121964 <https://llvm.org/D121964>`_,Under review
+Search,binary_search,Nikolas Klauser,`D121964 <https://llvm.org/D121964>`_,✅
 Search,min,Nikolas Klauser,`D119589 <https://llvm.org/D119589>`_,✅
 Search,max,Nikolas Klauser,`D122002 <https://llvm.org/D122002>`_,✅
 Search,minmax,Nikolas Klauser,`D120637 <https://llvm.org/D120637>`_,✅

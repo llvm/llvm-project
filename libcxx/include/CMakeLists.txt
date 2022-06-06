@@ -68,6 +68,7 @@ set(files
   __algorithm/push_heap.h
   __algorithm/ranges_all_of.h
   __algorithm/ranges_any_of.h
+  __algorithm/ranges_binary_search.h
   __algorithm/ranges_copy.h
   __algorithm/ranges_copy_backward.h
   __algorithm/ranges_copy_if.h
@@ -85,6 +86,7 @@ set(files
   __algorithm/ranges_is_partitioned.h
   __algorithm/ranges_is_sorted.h
   __algorithm/ranges_is_sorted_until.h
+  __algorithm/ranges_lower_bound.h
   __algorithm/ranges_max.h
   __algorithm/ranges_max_element.h
   __algorithm/ranges_min.h
@@ -96,6 +98,7 @@ set(files
   __algorithm/ranges_reverse.h
   __algorithm/ranges_swap_ranges.h
   __algorithm/ranges_transform.h
+  __algorithm/ranges_upper_bound.h
   __algorithm/remove.h
   __algorithm/remove_copy.h
   __algorithm/remove_copy_if.h
