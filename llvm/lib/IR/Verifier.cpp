@@ -469,6 +469,9 @@ private:
   void visitRangeMetadata(Instruction &I, MDNode *Range, Type *Ty);
   void visitDereferenceableMetadata(Instruction &I, MDNode *MD);
   void visitProfMetadata(Instruction &I, MDNode *MD);
+  void visitCallStackMetadata(MDNode *MD);
+  void visitMemProfMetadata(Instruction &I, MDNode *MD);
+  void visitCallsiteMetadata(Instruction &I, MDNode *MD);
   void visitAnnotationMetadata(MDNode *Annotation);
   void visitAliasScopeMetadata(const MDNode *MD);
   void visitAliasScopeListMetadata(const MDNode *MD);
@@ -4487,6 +4490,55 @@ void Verifier::visitProfMetadata(Instruction &I, MDNode *MD) {
   }
 }
 
+void Verifier::visitCallStackMetadata(MDNode *MD) {
+  // Call stack metadata should consist of a list of at least 1 constant int
+  // (representing a hash of the location).
+  Check(MD->getNumOperands() >= 1,
+        "call stack metadata should have at least 1 operand", MD);
+
+  for (const auto &Op : MD->operands())
+    Check(mdconst::dyn_extract_or_null<ConstantInt>(Op),
+          "call stack metadata operand should be constant integer", Op);
+}
+
+void Verifier::visitMemProfMetadata(Instruction &I, MDNode *MD) {
+  Check(isa<CallBase>(I), "!memprof metadata should only exist on calls", &I);
+  Check(MD->getNumOperands() >= 1,
+        "!memprof annotations should have at least 1 metadata operand "
+        "(MemInfoBlock)",
+        MD);
+
+  // Check each MIB
+  for (auto &MIBOp : MD->operands()) {
+    MDNode *MIB = dyn_cast<MDNode>(MIBOp);
+    // The first operand of an MIB should be the call stack metadata.
+    // There rest of the operands should be MDString tags, and there should be
+    // at least one.
+    Check(MIB->getNumOperands() >= 2,
+          "Each !memprof MemInfoBlock should have at least 2 operands", MIB);
+
+    // Check call stack metadata (first operand).
+    Check(MIB->getOperand(0) != nullptr,
+          "!memprof MemInfoBlock first operand should not be null", MIB);
+    Check(isa<MDNode>(MIB->getOperand(0)),
+          "!memprof MemInfoBlock first operand should be an MDNode", MIB);
+    MDNode *StackMD = dyn_cast<MDNode>(MIB->getOperand(0));
+    visitCallStackMetadata(StackMD);
+
+    // Check that remaining operands are MDString.
+    Check(std::all_of(MIB->op_begin() + 1, MIB->op_end(),
+                      [](const MDOperand &Op) { return isa<MDString>(Op); }),
+          "Not all !memprof MemInfoBlock operands 1 to N are MDString", MIB);
+  }
+}
+
+void Verifier::visitCallsiteMetadata(Instruction &I, MDNode *MD) {
+  Check(isa<CallBase>(I), "!callsite metadata should only exist on calls", &I);
+  // Verify the partial callstack annotated from memprof profiles. This callsite
+  // is a part of a profiled allocation callstack.
+  visitCallStackMetadata(MD);
+}
+
 void Verifier::visitAnnotationMetadata(MDNode *Annotation) {
   Check(isa<MDTuple>(Annotation), "annotation must be a tuple");
   Check(Annotation->getNumOperands() >= 1,
@@ -4732,6 +4784,12 @@ void Verifier::visitInstruction(Instruction &I) {
 
   if (MDNode *MD = I.getMetadata(LLVMContext::MD_prof))
     visitProfMetadata(I, MD);
+
+  if (MDNode *MD = I.getMetadata(LLVMContext::MD_memprof))
+    visitMemProfMetadata(I, MD);
+
+  if (MDNode *MD = I.getMetadata(LLVMContext::MD_callsite))
+    visitCallsiteMetadata(I, MD);
 
   if (MDNode *Annotation = I.getMetadata(LLVMContext::MD_annotation))
     visitAnnotationMetadata(Annotation);
