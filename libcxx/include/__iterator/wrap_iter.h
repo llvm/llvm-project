@@ -135,17 +135,15 @@ public:
     _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_AFTER_CXX11 iterator_type base() const _NOEXCEPT {return __i;}
 
 private:
-#if _LIBCPP_DEBUG_LEVEL == 2
     _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_AFTER_CXX11
-    explicit __wrap_iter(const void* __p, iterator_type __x) : __i(__x)
+    explicit __wrap_iter(const void* __p, iterator_type __x) _NOEXCEPT : __i(__x)
     {
+        (void)__p;
+#if _LIBCPP_DEBUG_LEVEL == 2
       if (!__libcpp_is_constant_evaluated())
         __get_db()->__insert_ic(this, __p);
-    }
-#else
-    _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_AFTER_CXX11
-    explicit __wrap_iter(iterator_type __x) _NOEXCEPT : __i(__x) {}
 #endif
+    }
 
     template <class _Up> friend class __wrap_iter;
     template <class _CharT, class _Traits, class _Alloc> friend class basic_string;

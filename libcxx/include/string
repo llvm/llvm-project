@@ -900,7 +900,6 @@ public:
 #endif
     _LIBCPP_CONSTEXPR_AFTER_CXX17 basic_string& operator=(value_type __c);
 
-#if _LIBCPP_DEBUG_LEVEL == 2
     _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_AFTER_CXX17
     iterator begin() _NOEXCEPT
         {return iterator(this, __get_pointer());}
@@ -913,20 +912,7 @@ public:
     _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_AFTER_CXX17
     const_iterator end() const _NOEXCEPT
         {return const_iterator(this, __get_pointer() + size());}
-#else
-    _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_AFTER_CXX17
-    iterator begin() _NOEXCEPT
-        {return iterator(__get_pointer());}
-    _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_AFTER_CXX17
-    const_iterator begin() const _NOEXCEPT
-        {return const_iterator(__get_pointer());}
-    _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_AFTER_CXX17
-    iterator end() _NOEXCEPT
-        {return iterator(__get_pointer() + size());}
-    _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_AFTER_CXX17
-    const_iterator end() const _NOEXCEPT
-        {return const_iterator(__get_pointer() + size());}
-#endif // _LIBCPP_DEBUG_LEVEL == 2
+
     _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_AFTER_CXX17
     reverse_iterator rbegin() _NOEXCEPT
         {return reverse_iterator(end());}

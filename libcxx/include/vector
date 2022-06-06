@@ -1364,33 +1364,9 @@ vector<_Tp, _Allocator>::assign(size_type __n, const_reference __u)
 template <class _Tp, class _Allocator>
 inline _LIBCPP_INLINE_VISIBILITY
 typename vector<_Tp, _Allocator>::iterator
-vector<_Tp, _Allocator>::__make_iter(pointer __p) _NOEXCEPT
-{
-#if _LIBCPP_DEBUG_LEVEL == 2
-    return iterator(this, __p);
-#else
-    return iterator(__p);
-#endif
-}
-
-template <class _Tp, class _Allocator>
-inline _LIBCPP_INLINE_VISIBILITY
-typename vector<_Tp, _Allocator>::const_iterator
-vector<_Tp, _Allocator>::__make_iter(const_pointer __p) const _NOEXCEPT
-{
-#if _LIBCPP_DEBUG_LEVEL == 2
-    return const_iterator(this, __p);
-#else
-    return const_iterator(__p);
-#endif
-}
-
-template <class _Tp, class _Allocator>
-inline _LIBCPP_INLINE_VISIBILITY
-typename vector<_Tp, _Allocator>::iterator
 vector<_Tp, _Allocator>::begin() _NOEXCEPT
 {
-    return __make_iter(this->__begin_);
+    return iterator(this, this->__begin_);
 }
 
 template <class _Tp, class _Allocator>
@@ -1398,7 +1374,7 @@ inline _LIBCPP_INLINE_VISIBILITY
 typename vector<_Tp, _Allocator>::const_iterator
 vector<_Tp, _Allocator>::begin() const _NOEXCEPT
 {
-    return __make_iter(this->__begin_);
+    return const_iterator(this, this->__begin_);
 }
 
 template <class _Tp, class _Allocator>
@@ -1406,7 +1382,7 @@ inline _LIBCPP_INLINE_VISIBILITY
 typename vector<_Tp, _Allocator>::iterator
 vector<_Tp, _Allocator>::end() _NOEXCEPT
 {
-    return __make_iter(this->__end_);
+    return iterator(this, this->__end_);
 }
 
 template <class _Tp, class _Allocator>
@@ -1414,7 +1390,7 @@ inline _LIBCPP_INLINE_VISIBILITY
 typename vector<_Tp, _Allocator>::const_iterator
 vector<_Tp, _Allocator>::end() const _NOEXCEPT
 {
-    return __make_iter(this->__end_);
+    return const_iterator(this, this->__end_);
 }
 
 template <class _Tp, class _Allocator>
@@ -1584,7 +1560,7 @@ vector<_Tp, _Allocator>::erase(const_iterator __position)
     pointer __p = this->__begin_ + __ps;
     this->__destruct_at_end(_VSTD::move(__p + 1, this->__end_, __p));
     this->__invalidate_iterators_past(__p-1);
-    iterator __r = __make_iter(__p);
+    iterator __r = iterator(this, __p);
     return __r;
 }
 
@@ -1603,7 +1579,7 @@ vector<_Tp, _Allocator>::erase(const_iterator __first, const_iterator __last)
         this->__destruct_at_end(_VSTD::move(__p + (__last - __first), this->__end_, __p));
         this->__invalidate_iterators_past(__p - 1);
     }
-    iterator __r = __make_iter(__p);
+    iterator __r = iterator(this, __p);
     return __r;
 }
 
@@ -1655,7 +1631,7 @@ vector<_Tp, _Allocator>::insert(const_iterator __position, const_reference __x)
         __v.push_back(__x);
         __p = __swap_out_circular_buffer(__v, __p);
     }
-    return __make_iter(__p);
+    return iterator(this, __p);
 }
 
 template <class _Tp, class _Allocator>
@@ -1684,7 +1660,7 @@ vector<_Tp, _Allocator>::insert(const_iterator __position, value_type&& __x)
         __v.push_back(_VSTD::move(__x));
         __p = __swap_out_circular_buffer(__v, __p);
     }
-    return __make_iter(__p);
+    return iterator(this, __p);
 }
 
 template <class _Tp, class _Allocator>
@@ -1715,7 +1691,7 @@ vector<_Tp, _Allocator>::emplace(const_iterator __position, _Args&&... __args)
         __v.emplace_back(_VSTD::forward<_Args>(__args)...);
         __p = __swap_out_circular_buffer(__v, __p);
     }
-    return __make_iter(__p);
+    return iterator(this, __p);
 }
 
 template <class _Tp, class _Allocator>
@@ -1754,7 +1730,7 @@ vector<_Tp, _Allocator>::insert(const_iterator __position, size_type __n, const_
             __p = __swap_out_circular_buffer(__v, __p);
         }
     }
-    return __make_iter(__p);
+    return iterator(this, __p);
 }
 
 template <class _Tp, class _Allocator>
@@ -1797,14 +1773,14 @@ vector<_Tp, _Allocator>::insert(const_iterator __position, _InputIterator __firs
         }
         catch (...)
         {
-            erase(__make_iter(__old_last), end());
+            erase(iterator(this, __old_last), end());
             throw;
         }
 #endif // _LIBCPP_NO_EXCEPTIONS
     }
     __p = _VSTD::rotate(__p, __old_last, this->__end_);
-    insert(__make_iter(__p), _VSTD::make_move_iterator(__v.begin()),
-                             _VSTD::make_move_iterator(__v.end()));
+    insert(iterator(this, __p), _VSTD::make_move_iterator(__v.begin()),
+                                _VSTD::make_move_iterator(__v.end()));
     return begin() + __off;
 }
 
@@ -1854,7 +1830,7 @@ vector<_Tp, _Allocator>::insert(const_iterator __position, _ForwardIterator __fi
             __p = __swap_out_circular_buffer(__v, __p);
         }
     }
-    return __make_iter(__p);
+    return iterator(this, __p);
 }
 
 template <class _Tp, class _Allocator>
