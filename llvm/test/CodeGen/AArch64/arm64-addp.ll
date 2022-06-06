@@ -52,10 +52,9 @@ entry:
 define <4 x i64> @addp_v4i64(<4 x i64> %a) {
 ; CHECK-LABEL: addp_v4i64:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    ext.16b v2, v1, v1, #8
-; CHECK-NEXT:    ext.16b v3, v0, v0, #8
-; CHECK-NEXT:    add.2d v0, v3, v0
-; CHECK-NEXT:    add.2d v1, v2, v1
+; CHECK-NEXT:    addp.2d v1, v0, v1
+; CHECK-NEXT:    dup.2d v0, v1[0]
+; CHECK-NEXT:    dup.2d v1, v1[1]
 ; CHECK-NEXT:    ret
 entry:
   %s = shufflevector <4 x i64> %a, <4 x i64> poison, <4 x i32> <i32 1, i32 0, i32 3, i32 2>
@@ -78,10 +77,9 @@ entry:
 define <8 x i32> @addp_v8i32(<8 x i32> %a) {
 ; CHECK-LABEL: addp_v8i32:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    rev64.4s v2, v1
-; CHECK-NEXT:    rev64.4s v3, v0
-; CHECK-NEXT:    add.4s v0, v3, v0
-; CHECK-NEXT:    add.4s v1, v2, v1
+; CHECK-NEXT:    addp.4s v1, v0, v1
+; CHECK-NEXT:    zip1.4s v0, v1, v1
+; CHECK-NEXT:    zip2.4s v1, v1, v1
 ; CHECK-NEXT:    ret
 entry:
   %s = shufflevector <8 x i32> %a, <8 x i32> poison, <8 x i32> <i32 1, i32 0, i32 3, i32 2, i32 5, i32 4, i32 7, i32 6>
@@ -92,14 +90,12 @@ entry:
 define <16 x i32> @addp_v16i32(<16 x i32> %a) {
 ; CHECK-LABEL: addp_v16i32:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    rev64.4s v4, v3
-; CHECK-NEXT:    rev64.4s v5, v2
-; CHECK-NEXT:    rev64.4s v6, v1
-; CHECK-NEXT:    rev64.4s v7, v0
-; CHECK-NEXT:    add.4s v0, v7, v0
-; CHECK-NEXT:    add.4s v1, v6, v1
-; CHECK-NEXT:    add.4s v2, v5, v2
-; CHECK-NEXT:    add.4s v3, v4, v3
+; CHECK-NEXT:    addp.4s v1, v0, v1
+; CHECK-NEXT:    zip1.4s v0, v1, v1
+; CHECK-NEXT:    zip2.4s v1, v1, v1
+; CHECK-NEXT:    addp.4s v3, v2, v3
+; CHECK-NEXT:    zip1.4s v2, v3, v3
+; CHECK-NEXT:    zip2.4s v3, v3, v3
 ; CHECK-NEXT:    ret
 entry:
   %s = shufflevector <16 x i32> %a, <16 x i32> poison, <16 x i32> <i32 1, i32 0, i32 3, i32 2, i32 5, i32 4, i32 7, i32 6, i32 9, i32 8, i32 11, i32 10, i32 13, i32 12, i32 15, i32 14>
@@ -122,10 +118,9 @@ entry:
 define <16 x i16> @addp_v16i16(<16 x i16> %a) {
 ; CHECK-LABEL: addp_v16i16:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    rev32.8h v2, v1
-; CHECK-NEXT:    rev32.8h v3, v0
-; CHECK-NEXT:    add.8h v0, v3, v0
-; CHECK-NEXT:    add.8h v1, v2, v1
+; CHECK-NEXT:    addp.8h v1, v0, v1
+; CHECK-NEXT:    zip1.8h v0, v1, v1
+; CHECK-NEXT:    zip2.8h v1, v1, v1
 ; CHECK-NEXT:    ret
 entry:
   %s = shufflevector <16 x i16> %a, <16 x i16> poison, <16 x i32> <i32 1, i32 0, i32 3, i32 2, i32 5, i32 4, i32 7, i32 6, i32 9, i32 8, i32 11, i32 10, i32 13, i32 12, i32 15, i32 14>
@@ -148,10 +143,9 @@ entry:
 define <32 x i8> @addp_v32i8(<32 x i8> %a) {
 ; CHECK-LABEL: addp_v32i8:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    rev16.16b v2, v1
-; CHECK-NEXT:    rev16.16b v3, v0
-; CHECK-NEXT:    add.16b v0, v3, v0
-; CHECK-NEXT:    add.16b v1, v2, v1
+; CHECK-NEXT:    addp.16b v1, v0, v1
+; CHECK-NEXT:    zip1.16b v0, v1, v1
+; CHECK-NEXT:    zip2.16b v1, v1, v1
 ; CHECK-NEXT:    ret
 entry:
   %s = shufflevector <32 x i8> %a, <32 x i8> poison, <32 x i32> <i32 1, i32 0, i32 3, i32 2, i32 5, i32 4, i32 7, i32 6, i32 9, i32 8, i32 11, i32 10, i32 13, i32 12, i32 15, i32 14, i32 17, i32 16, i32 19, i32 18, i32 21, i32 20, i32 23, i32 22, i32 25, i32 24, i32 27, i32 26, i32 29, i32 28, i32 31, i32 30>
