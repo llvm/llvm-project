@@ -12,6 +12,7 @@
 
 #include "flang/Frontend/CompilerInvocation.h"
 #include "flang/Common/Fortran-features.h"
+#include "flang/Frontend/CodeGenOptions.h"
 #include "flang/Frontend/PreprocessorOptions.h"
 #include "flang/Frontend/TargetOptions.h"
 #include "flang/Semantics/semantics.h"
@@ -20,6 +21,7 @@
 #include "clang/Basic/DiagnosticDriver.h"
 #include "clang/Basic/DiagnosticOptions.h"
 #include "clang/Driver/DriverDiagnostic.h"
+#include "clang/Driver/OptionUtils.h"
 #include "clang/Driver/Options.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSwitch.h"
@@ -93,6 +95,18 @@ bool Fortran::frontend::parseDiagnosticArgs(clang::DiagnosticOptions &opts,
   opts.ShowColors = parseShowColorsArgs(args);
 
   return true;
+}
+
+static void parseCodeGenArgs(Fortran::frontend::CodeGenOptions &opts,
+                             llvm::opt::ArgList &args,
+                             clang::DiagnosticsEngine &diags) {
+  unsigned defaultOpt = llvm::CodeGenOpt::None;
+  opts.OptimizationLevel = clang::getLastArgIntValue(
+      args, clang::driver::options::OPT_O, defaultOpt, diags);
+
+  if (args.hasFlag(clang::driver::options::OPT_fdebug_pass_manager,
+                   clang::driver::options::OPT_fno_debug_pass_manager, false))
+    opts.DebugPassManager = 1;
 }
 
 /// Parses all target input arguments and populates the target
@@ -616,6 +630,7 @@ bool CompilerInvocation::createFromArgs(
   success &= parseFrontendArgs(res.getFrontendOpts(), args, diags);
   parseTargetArgs(res.getTargetOpts(), args);
   parsePreprocessorArgs(res.getPreprocessorOpts(), args);
+  parseCodeGenArgs(res.getCodeGenOpts(), args, diags);
   success &= parseSemaArgs(res, args, diags);
   success &= parseDialectArgs(res, args, diags);
   success &= parseDiagArgs(res, args, diags);

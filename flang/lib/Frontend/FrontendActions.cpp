@@ -46,6 +46,7 @@
 #include "llvm/IRReader/IRReader.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Passes/PassBuilder.h"
+#include "llvm/Passes/StandardInstrumentations.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Target/TargetMachine.h"
@@ -538,7 +539,6 @@ void CodeGenAction::setUpTargetMachine() {
                                           /*Features=*/"",
                                           llvm::TargetOptions(), llvm::None));
   assert(tm && "Failed to create TargetMachine");
-  llvmModule->setDataLayout(tm->createDataLayout());
 }
 
 static std::unique_ptr<llvm::raw_pwrite_stream>
@@ -610,23 +610,59 @@ static void generateMachineCodeOrAssemblyImpl(clang::DiagnosticsEngine &diags,
   codeGenPasses.run(llvmModule);
 }
 
-/// Generate LLVM byte code file from the input LLVM module.
-///
-/// \param [in] tm Target machine to aid the code-gen pipeline set-up
-/// \param [in] llvmModule LLVM module to lower to assembly/machine-code
-/// \param [out] os Output stream to emit the generated code to
-static void generateLLVMBCImpl(llvm::TargetMachine &tm,
-                               llvm::Module &llvmModule,
-                               llvm::raw_pwrite_stream &os) {
-  // Set-up the pass manager
-  llvm::ModulePassManager mpm;
-  llvm::ModuleAnalysisManager mam;
-  llvm::PassBuilder pb(&tm);
-  pb.registerModuleAnalyses(mam);
-  mpm.addPass(llvm::BitcodeWriterPass(os));
+static llvm::OptimizationLevel
+mapToLevel(const Fortran::frontend::CodeGenOptions &opts) {
+  switch (opts.OptimizationLevel) {
+  default:
+    llvm_unreachable("Invalid optimization level!");
+  case 0:
+    return llvm::OptimizationLevel::O0;
+  case 1:
+    return llvm::OptimizationLevel::O1;
+  case 2:
+    return llvm::OptimizationLevel::O2;
+  case 3:
+    return llvm::OptimizationLevel::O3;
+  }
+}
 
-  // run the passes
-  mpm.run(llvmModule, mam);
+void CodeGenAction::runOptimizationPipeline(llvm::raw_pwrite_stream &os) {
+  auto opts = getInstance().getInvocation().getCodeGenOpts();
+  llvm::OptimizationLevel level = mapToLevel(opts);
+
+  // Create the analysis managers.
+  llvm::LoopAnalysisManager lam;
+  llvm::FunctionAnalysisManager fam;
+  llvm::CGSCCAnalysisManager cgam;
+  llvm::ModuleAnalysisManager mam;
+
+  // Create the pass manager builder.
+  llvm::PassInstrumentationCallbacks pic;
+  llvm::PipelineTuningOptions pto;
+  llvm::Optional<llvm::PGOOptions> pgoOpt;
+  llvm::StandardInstrumentations si(opts.DebugPassManager);
+  si.registerCallbacks(pic, &fam);
+  llvm::PassBuilder pb(tm.get(), pto, pgoOpt, &pic);
+
+  // Register all the basic analyses with the managers.
+  pb.registerModuleAnalyses(mam);
+  pb.registerCGSCCAnalyses(cgam);
+  pb.registerFunctionAnalyses(fam);
+  pb.registerLoopAnalyses(lam);
+  pb.crossRegisterProxies(lam, fam, cgam, mam);
+
+  // Create the pass manager.
+  llvm::ModulePassManager mpm;
+  if (opts.OptimizationLevel == 0)
+    mpm = pb.buildO0DefaultPipeline(level, false);
+  else
+    mpm = pb.buildPerModuleDefaultPipeline(level);
+
+  if (action == BackendActionTy::Backend_EmitBC)
+    mpm.addPass(llvm::BitcodeWriterPass(os));
+
+  // Run the passes.
+  mpm.run(*llvmModule, mam);
 }
 
 void CodeGenAction::executeAction() {
@@ -661,10 +697,13 @@ void CodeGenAction::executeAction() {
     return;
   }
 
-  // generate an LLVM module if it's not already present (it will already be
+  // Generate an LLVM module if it's not already present (it will already be
   // present if the input file is an LLVM IR/BC file).
   if (!llvmModule)
     generateLLVMIR();
+
+  // Run LLVM's middle-end (i.e. the optimizer).
+  runOptimizationPipeline(*os);
 
   if (action == BackendActionTy::Backend_EmitLL) {
     llvmModule->print(ci.isOutputStreamNull() ? *os : ci.getOutputStream(),
@@ -673,11 +712,14 @@ void CodeGenAction::executeAction() {
   }
 
   setUpTargetMachine();
+  llvmModule->setDataLayout(tm->createDataLayout());
+
   if (action == BackendActionTy::Backend_EmitBC) {
-    generateLLVMBCImpl(*tm, *llvmModule, *os);
+    // This action has effectively been completed in runOptimizationPipeline.
     return;
   }
 
+  // Run LLVM's backend and generate either assembly or machine code
   if (action == BackendActionTy::Backend_EmitAssembly ||
       action == BackendActionTy::Backend_EmitObj) {
     generateMachineCodeOrAssemblyImpl(
