@@ -1622,8 +1622,8 @@ define i8 @not_lshr_bitwidth_mask(i8 %x, i8 %y) {
   ret i8 %r
 }
 
-define i16 @shl_lshr_pow2_const(i16 %x) {
-; CHECK-LABEL: @shl_lshr_pow2_const(
+define i16 @shl_lshr_pow2_const_case1(i16 %x) {
+; CHECK-LABEL: @shl_lshr_pow2_const_case1(
 ; CHECK-NEXT:    [[SHL:%.*]] = shl i16 4, [[X:%.*]]
 ; CHECK-NEXT:    [[LSHR:%.*]] = lshr i16 [[SHL]], 6
 ; CHECK-NEXT:    [[R:%.*]] = and i16 [[LSHR]], 8
@@ -1633,6 +1633,32 @@ define i16 @shl_lshr_pow2_const(i16 %x) {
   %lshr = lshr i16 %shl, 6
   %r = and i16 %lshr, 8
   ret i16 %r
+}
+
+define i16 @shl_lshr_pow2_const_case2(i16 %x) {
+; CHECK-LABEL: @shl_lshr_pow2_const_case2(
+; CHECK-NEXT:    [[SHL:%.*]] = shl i16 4, [[X:%.*]]
+; CHECK-NEXT:    [[LSHR:%.*]] = lshr i16 [[SHL]], 6
+; CHECK-NEXT:    [[R:%.*]] = or i16 [[LSHR]], -9
+; CHECK-NEXT:    ret i16 [[R]]
+;
+  %shl = shl i16 4, %x
+  %lshr = lshr i16 %shl, 6
+  %r = or i16 %lshr, 65527 ; ~8
+  ret i16 %r
+}
+
+define i13 @shl_lshr_pow2_const_case3(i16 %x) {
+; CHECK-LABEL: @shl_lshr_pow2_const_case3(
+; CHECK-NEXT:    [[SHL:%.*]] = shl i16 4, [[X:%.*]]
+; CHECK-NEXT:    [[LSHR:%.*]] = lshr i16 [[SHL]], 6
+; CHECK-NEXT:    [[R:%.*]] = trunc i16 [[LSHR]] to i13
+; CHECK-NEXT:    ret i13 [[R]]
+;
+  %shl = shl i16 4, %x
+  %lshr = lshr i16 %shl, 6
+  %r = trunc i16 %lshr to i13
+  ret i13 %r
 }
 
 define i16 @shl_lshr_pow2_const_negative_oneuse(i16 %x) {
