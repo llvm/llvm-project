@@ -42,6 +42,9 @@ def imm32SExt12  : IntImmLeaf<i32, [{ return isInt<12>(Imm.getSExtValue()); }]>;
 def immZExt12Plus1 : PatLeaf<(imm), [{
   return isUInt<13>(N->getZExtValue()) && isUInt<12>(N->getZExtValue() + 1);
 }]>;
+def immZExt7Plus1 : PatLeaf<(imm), [{
+  return isUInt<7>(N->getZExtValue()) && isUInt<12>(N->getZExtValue() + 1);
+}]>;
 // Immediate range covering both signed 12-bit and unsigned 16-bit immediates.
 def imm32SExt12OrZExt16 : IntImmLeaf<i32, [{ return isInt<12>(Imm.getSExtValue())
                                            || isUInt<16>(Imm.getZExtValue()); }]>;
@@ -617,6 +620,12 @@ def : NMPat<(brcond (i32 (setule GPR32NM:$lhs, GPR32NM:$rhs)), bb:$dst),
             (BGEUC_NM GPR32NM:$rhs, GPR32NM:$lhs, bb:$dst)>;
 def : NMPat<(brcond (i32 (setle GPR32NM:$lhs, GPR32NM:$rhs)), bb:$dst),
             (BGEC_NM GPR32NM:$rhs, GPR32NM:$lhs, bb:$dst)>;
+
+// Immediate comparison branches with offset
+def : NMPat<(brcond (i32 (setgt GPR32NM:$lhs, immZExt7Plus1:$imm)), bb:$dst),
+            (BGEIC_NM GPR32NM:$lhs, (Plus1 $imm), bb:$dst)>;
+def : NMPat<(brcond (i32 (setugt GPR32NM:$lhs, immZExt7Plus1:$imm)), bb:$dst),
+            (BGEIUC_NM GPR32NM:$lhs, (Plus1 $imm), bb:$dst)>;
 
 // Branch on integer value
 def : NMPat<(brcond (i32 GPR32NM:$lhs), bb:$dst),
