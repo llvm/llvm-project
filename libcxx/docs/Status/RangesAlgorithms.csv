@@ -5,7 +5,7 @@ Search,none_of,Nikolas Klauser,`D123016 <https://llvm.org/D123016>`_,✅
 Search,find,Nikolas Klauser,`D121248 <https://reviews.llvm.org/D121248>`_,✅
 Search,find_if,Nikolas Klauser,`D121248 <https://reviews.llvm.org/D121248>`_,✅
 Search,find_if_not,Nikolas Klauser,`D121248 <https://reviews.llvm.org/D121248>`_,✅
-Search,find_first_of,Nikolas Klauser,`D126529 <https://reviews.llvm.org/D126529>`_,Under review
+Search,find_first_of,Nikolas Klauser,`D126529 <https://reviews.llvm.org/D126529>`_,✅
 Search,adjacent_find,Nikolas Klauser,`D126610 <https://reviews.llvm.org/D126610>`_,Under review
 Search,mismatch,Nikolas Klauser,`D117817 <https://llvm.org/D117817>`_,✅
 Search,equal,Nikolas Klauser,`D123681 <https://reviews.llvm.org/D123681>`_,✅

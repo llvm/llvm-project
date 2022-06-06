@@ -311,6 +311,7 @@ module std [system] {
       module ranges_fill              { private header "__algorithm/ranges_fill.h" }
       module ranges_fill_n            { private header "__algorithm/ranges_fill_n.h" }
       module ranges_find              { private header "__algorithm/ranges_find.h" }
+      module ranges_find_first_of     { private header "__algorithm/ranges_find_first_of.h" }
       module ranges_find_if           { private header "__algorithm/ranges_find_if.h" }
       module ranges_find_if_not       { private header "__algorithm/ranges_find_if_not.h" }
       module ranges_for_each          { private header "__algorithm/ranges_for_each.h" }
