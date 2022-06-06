@@ -694,8 +694,12 @@ def AArch64sabd     : PatFrags<(ops node:$lhs, node:$rhs),
                                [(abds node:$lhs, node:$rhs),
                                 (int_aarch64_neon_sabd node:$lhs, node:$rhs)]>;
 
+def AArch64addp_n   : SDNode<"AArch64ISD::ADDP", SDT_AArch64Zip>;
 def AArch64uaddlp_n : SDNode<"AArch64ISD::UADDLP", SDT_AArch64uaddlp>;
 def AArch64saddlp_n : SDNode<"AArch64ISD::SADDLP", SDT_AArch64uaddlp>;
+def AArch64addp     : PatFrags<(ops node:$Rn, node:$Rm),
+                               [(AArch64addp_n node:$Rn, node:$Rm),
+                                (int_aarch64_neon_addp node:$Rn, node:$Rm)]>;
 def AArch64uaddlp   : PatFrags<(ops node:$src),
                                [(AArch64uaddlp_n node:$src),
                                 (int_aarch64_neon_uaddlp node:$src)]>;
@@ -4506,7 +4510,7 @@ def : Pat<(v8i16 (concat_vectors
 //===----------------------------------------------------------------------===//
 
 defm ADD     : SIMDThreeSameVector<0, 0b10000, "add", add>;
-defm ADDP    : SIMDThreeSameVector<0, 0b10111, "addp", int_aarch64_neon_addp>;
+defm ADDP    : SIMDThreeSameVector<0, 0b10111, "addp", AArch64addp>;
 defm CMEQ    : SIMDThreeSameVector<1, 0b10001, "cmeq", AArch64cmeq>;
 defm CMGE    : SIMDThreeSameVector<0, 0b00111, "cmge", AArch64cmge>;
 defm CMGT    : SIMDThreeSameVector<0, 0b00110, "cmgt", AArch64cmgt>;
