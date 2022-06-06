@@ -130,7 +130,7 @@ void Writer::calculateCustomSections() {
       // Exclude COMDAT sections that are not selected for inclusion
       if (section->discarded)
         continue;
-      StringRef name = section->getName();
+      StringRef name = section->name;
       // These custom sections are known the linker and synthesized rather than
       // blindly copied.
       if (name == "linking" || name == "name" || name == "producers" ||
@@ -859,18 +859,17 @@ static StringRef getOutputDataSegmentName(const InputChunk &seg) {
   // symbols are be relative to single __tls_base.
   if (seg.isTLS())
     return ".tdata";
-  StringRef name = seg.getName();
   if (!config->mergeDataSegments)
-    return name;
-  if (name.startswith(".text."))
+    return seg.name;
+  if (seg.name.startswith(".text."))
     return ".text";
-  if (name.startswith(".data."))
+  if (seg.name.startswith(".data."))
     return ".data";
-  if (name.startswith(".bss."))
+  if (seg.name.startswith(".bss."))
     return ".bss";
-  if (name.startswith(".rodata."))
+  if (seg.name.startswith(".rodata."))
     return ".rodata";
-  return name;
+  return seg.name;
 }
 
 OutputSegment *Writer::createOutputSegment(StringRef name) {
@@ -952,7 +951,7 @@ void Writer::combineOutputSegments() {
       combined->addInputSegment(inSeg);
 #ifndef NDEBUG
       uint64_t newVA = inSeg->getVA();
-      LLVM_DEBUG(dbgs() << "added input segment. name=" << inSeg->getName()
+      LLVM_DEBUG(dbgs() << "added input segment. name=" << inSeg->name
                         << " oldVA=" << oldVA << " newVA=" << newVA << "\n");
       assert(oldVA == newVA);
 #endif

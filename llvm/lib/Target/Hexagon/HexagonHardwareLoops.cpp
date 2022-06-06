@@ -81,9 +81,9 @@ static cl::opt<bool> HWCreatePreheader("hexagon-hwloop-preheader",
 // Turn it off by default. If a preheader block is not created here, the
 // software pipeliner may be unable to find a block suitable to serve as
 // a preheader. In that case SWP will not run.
-static cl::opt<bool> SpecPreheader("hwloop-spec-preheader", cl::init(false),
-  cl::Hidden, cl::ZeroOrMore, cl::desc("Allow speculation of preheader "
-  "instructions"));
+static cl::opt<bool> SpecPreheader("hwloop-spec-preheader", cl::Hidden,
+                                   cl::desc("Allow speculation of preheader "
+                                            "instructions"));
 
 STATISTIC(NumHWLoops, "Number of loops converted to hardware loops");
 

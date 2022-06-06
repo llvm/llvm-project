@@ -7,11 +7,11 @@ target triple = "x86_64-unknown-linux-gnu"
 
 define i8 @add(i8 %a, i8 %b) {
   ; CHECK: @add.dfsan
-  ; CHECK-DAG: %[[#ALABEL:]] = load i[[#SBITS]], i[[#SBITS]]* bitcast ([[ARGTLSTYPE:\[100 x i64\]]]* @__dfsan_arg_tls to i[[#SBITS]]*), align [[ALIGN:2]]
-  ; CHECK-DAG: %[[#BLABEL:]] = load i[[#SBITS]], i[[#SBITS]]* inttoptr (i64 add (i64 ptrtoint ([[ARGTLSTYPE]]* @__dfsan_arg_tls to i64), i64 2) to i[[#SBITS]]*), align [[ALIGN]]
+  ; CHECK-DAG: %[[#ALABEL:]] = load i[[#SBITS]], ptr @__dfsan_arg_tls, align [[ALIGN:2]]
+  ; CHECK-DAG: %[[#BLABEL:]] = load i[[#SBITS]], ptr inttoptr (i64 add (i64 ptrtoint (ptr @__dfsan_arg_tls to i64), i64 2) to ptr), align [[ALIGN]]
   ; CHECK: %[[#UNION:]] = or i[[#SBITS]] %[[#ALABEL]], %[[#BLABEL]]
   ; CHECK: %c = add i8 %a, %b
-  ; CHECK: store i[[#SBITS]] %[[#UNION]], i[[#SBITS]]* bitcast ([100 x i64]* @__dfsan_retval_tls to i[[#SBITS]]*), align [[ALIGN]]
+  ; CHECK: store i[[#SBITS]] %[[#UNION]], ptr @__dfsan_retval_tls, align [[ALIGN]]
   ; CHECK: ret i8 %c
   %c = add i8 %a, %b
   ret i8 %c

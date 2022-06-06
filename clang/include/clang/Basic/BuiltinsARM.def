@@ -197,6 +197,9 @@ BUILTIN(__builtin_arm_wsr, "vcC*Ui", "nc")
 BUILTIN(__builtin_arm_wsr64, "vcC*LLUi", "nc")
 BUILTIN(__builtin_arm_wsrp, "vcC*vC*", "nc")
 
+// Misc
+BUILTIN(__builtin_sponentry, "v*", "c")
+
 // Builtins for implementing ACLE MVE intrinsics. (Unlike NEON, these
 // don't need to live in a separate BuiltinsMVE.def, because they
 // aren't included from both here and BuiltinsAArch64.def.)

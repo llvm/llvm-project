@@ -6018,34 +6018,44 @@ InstructionCost BoUpSLP::getEntryCost(const TreeEntry *E,
       unsigned NumOfParts = TTI->getNumberOfParts(SrcVecTy);
 
       unsigned OffsetBeg = *getInsertIndex(VL.front());
-      unsigned OffsetEnd = *getInsertIndex(VL.back());
-      unsigned VecSz = NumElts;
-      unsigned VecScalarsSz = NumScalars;
-      if (NumOfParts > 0) {
-        VecScalarsSz = NumElts / NumOfParts;
-        VecSz = PowerOf2Ceil(
-            (1 + OffsetEnd / VecScalarsSz - OffsetBeg / VecScalarsSz) *
-            VecScalarsSz);
+      unsigned OffsetEnd = OffsetBeg;
+      for (Value *V : VL.drop_front()) {
+        unsigned Idx = *getInsertIndex(V);
+        if (OffsetBeg > Idx)
+          OffsetBeg = Idx;
+        else if (OffsetEnd < Idx)
+          OffsetEnd = Idx;
       }
+      unsigned VecScalarsSz = PowerOf2Ceil(NumElts);
+      if (NumOfParts > 0)
+        VecScalarsSz = PowerOf2Ceil((NumElts + NumOfParts - 1) / NumOfParts);
+      unsigned VecSz =
+          (1 + OffsetEnd / VecScalarsSz - OffsetBeg / VecScalarsSz) *
+          VecScalarsSz;
+      unsigned Offset = VecScalarsSz * (OffsetBeg / VecScalarsSz);
+      unsigned InsertVecSz = std::min<unsigned>(
+          PowerOf2Ceil(OffsetEnd - OffsetBeg + 1),
+          ((OffsetEnd - OffsetBeg + VecScalarsSz) / VecScalarsSz) *
+              VecScalarsSz);
 
       APInt DemandedElts = APInt::getZero(NumElts);
       // TODO: Add support for Instruction::InsertValue.
       SmallVector<int> Mask;
       if (!E->ReorderIndices.empty()) {
         inversePermutation(E->ReorderIndices, Mask);
+        Mask.append(InsertVecSz - Mask.size(), UndefMaskElem);
       } else {
-        Mask.assign(NumScalars, UndefMaskElem);
-        std::iota(Mask.begin(), std::next(Mask.begin(), NumScalars), 0);
+        Mask.assign(VecSz, UndefMaskElem);
+        std::iota(Mask.begin(), std::next(Mask.begin(), InsertVecSz), 0);
       }
       bool IsIdentity = true;
-      SmallVector<int> PrevMask(VecSz, UndefMaskElem);
+      SmallVector<int> PrevMask(InsertVecSz, UndefMaskElem);
       Mask.swap(PrevMask);
-      unsigned Offset = VecScalarsSz * (OffsetBeg / VecScalarsSz);
       for (unsigned I = 0; I < NumScalars; ++I) {
         unsigned InsertIdx = *getInsertIndex(VL[PrevMask[I]]);
         DemandedElts.setBit(InsertIdx);
-        IsIdentity &= InsertIdx - Offset == I;
-        Mask[InsertIdx - Offset] = I;
+        IsIdentity &= InsertIdx - OffsetBeg == I;
+        Mask[InsertIdx - OffsetBeg] = I;
       }
       assert(Offset < NumElts && "Failed to find vector index offset");
 
@@ -6057,11 +6067,11 @@ InstructionCost BoUpSLP::getEntryCost(const TreeEntry *E,
       // need to shift the vector.
       // Do not calculate the cost if the actual size is the register size and
       // we can merge this shuffle with the following SK_Select.
-      auto *ActualVecTy =
-          FixedVectorType::get(SrcVecTy->getElementType(), VecSz);
-      if ((!IsIdentity || Offset != OffsetBeg) && VecScalarsSz != VecSz)
+      auto *InsertVecTy =
+          FixedVectorType::get(SrcVecTy->getElementType(), InsertVecSz);
+      if (!IsIdentity)
         Cost += TTI->getShuffleCost(TargetTransformInfo::SK_PermuteSingleSrc,
-                                    ActualVecTy, Mask);
+                                    InsertVecTy, Mask);
       auto *FirstInsert = cast<Instruction>(*find_if(E->Scalars, [E](Value *V) {
         return !is_contained(E->Scalars, cast<Instruction>(V)->getOperand(0));
       }));
@@ -6069,13 +6079,24 @@ InstructionCost BoUpSLP::getEntryCost(const TreeEntry *E,
       // initial vector or inserting a subvector.
       // TODO: Implement the analysis of the FirstInsert->getOperand(0)
       // subvector of ActualVecTy.
-      if (!isUndefVector(FirstInsert->getOperand(0)) && Offset != OffsetBeg) {
-        Cost += TTI->getShuffleCost(
-            TTI::SK_InsertSubvector,
-            (OffsetEnd - OffsetBeg < VecScalarsSz && NumOfParts > 0)
-                ? FixedVectorType::get(SrcVecTy->getElementType(), VecScalarsSz)
-                : ActualVecTy,
-            None, OffsetBeg - Offset, VecTy);
+      if (!isUndefVector(FirstInsert->getOperand(0)) && NumScalars != NumElts &&
+          (Offset != OffsetBeg || (OffsetEnd + 1) % VecScalarsSz != 0)) {
+        if (InsertVecSz != VecSz) {
+          auto *ActualVecTy =
+              FixedVectorType::get(SrcVecTy->getElementType(), VecSz);
+          Cost += TTI->getShuffleCost(TTI::SK_InsertSubvector, ActualVecTy,
+                                      None, OffsetBeg - Offset, InsertVecTy);
+        } else {
+          for (unsigned I = 0, End = OffsetBeg - Offset; I < End; ++I)
+            Mask[I] = I;
+          for (unsigned I = OffsetBeg - Offset, End = OffsetEnd - Offset;
+               I <= End; ++I)
+            if (Mask[I] != UndefMaskElem)
+              Mask[I] = I + VecSz;
+          for (unsigned I = OffsetEnd + 1 - Offset; I < VecSz; ++I)
+            Mask[I] = I;
+          Cost += TTI->getShuffleCost(TTI::SK_PermuteTwoSrc, InsertVecTy, Mask);
+        }
       }
       return Cost;
     }

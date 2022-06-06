@@ -50,7 +50,7 @@ public:
       int unit, const Terminator &, bool &wasExtant);
   static ExternalFileUnit &LookUpOrCreateAnonymous(int unit, Direction,
       std::optional<bool> isUnformatted, const Terminator &);
-  static ExternalFileUnit *LookUp(const char *path);
+  static ExternalFileUnit *LookUp(const char *path, std::size_t pathLen);
   static ExternalFileUnit &CreateNew(int unit, const Terminator &);
   static ExternalFileUnit *LookUpForClose(int unit);
   static ExternalFileUnit &NewUnit(const Terminator &, bool forChildIo);

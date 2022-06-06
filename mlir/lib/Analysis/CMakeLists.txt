@@ -4,6 +4,7 @@ set(LLVM_OPTIONAL_SOURCES
   CallGraph.cpp
   DataFlowAnalysis.cpp
   DataLayoutAnalysis.cpp
+  IntRangeAnalysis.cpp
   Liveness.cpp
   SliceAnalysis.cpp
 
@@ -16,6 +17,7 @@ add_mlir_library(MLIRAnalysis
   CallGraph.cpp
   DataFlowAnalysis.cpp
   DataLayoutAnalysis.cpp
+  IntRangeAnalysis.cpp
   Liveness.cpp
   SliceAnalysis.cpp
 
@@ -31,7 +33,9 @@ add_mlir_library(MLIRAnalysis
   MLIRCallInterfaces
   MLIRControlFlowInterfaces
   MLIRDataLayoutInterfaces
+  MLIRInferIntRangeInterface
   MLIRInferTypeOpInterface
+  MLIRLoopLikeInterface
   MLIRSideEffectInterfaces
   MLIRViewLikeInterface
   )

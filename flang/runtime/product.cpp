@@ -9,8 +9,9 @@
 // Implements PRODUCT for all required operand types and shapes.
 
 #include "reduction-templates.h"
-#include "flang/Common/long-double.h"
+#include "flang/Runtime/float128.h"
 #include "flang/Runtime/reduction.h"
+#include <cfloat>
 #include <cinttypes>
 #include <complex>
 
@@ -105,14 +106,14 @@ CppTypeFor<TypeCategory::Real, 8> RTNAME(ProductReal8)(const Descriptor &x,
       NonComplexProductAccumulator<CppTypeFor<TypeCategory::Real, 8>>{x},
       "PRODUCT");
 }
-#if LONG_DOUBLE == 80
+#if LDBL_MANT_DIG == 64
 CppTypeFor<TypeCategory::Real, 10> RTNAME(ProductReal10)(const Descriptor &x,
     const char *source, int line, int dim, const Descriptor *mask) {
   return GetTotalReduction<TypeCategory::Real, 10>(x, source, line, dim, mask,
       NonComplexProductAccumulator<CppTypeFor<TypeCategory::Real, 10>>{x},
       "PRODUCT");
 }
-#elif LONG_DOUBLE == 128
+#elif LDBL_MANT_DIG == 113
 CppTypeFor<TypeCategory::Real, 16> RTNAME(ProductReal16)(const Descriptor &x,
     const char *source, int line, int dim, const Descriptor *mask) {
   return GetTotalReduction<TypeCategory::Real, 16>(x, source, line, dim, mask,
@@ -135,7 +136,7 @@ void RTNAME(CppProductComplex8)(CppTypeFor<TypeCategory::Complex, 8> &result,
       mask, ComplexProductAccumulator<CppTypeFor<TypeCategory::Real, 8>>{x},
       "PRODUCT");
 }
-#if LONG_DOUBLE == 80
+#if LDBL_MANT_DIG == 64
 void RTNAME(CppProductComplex10)(CppTypeFor<TypeCategory::Complex, 10> &result,
     const Descriptor &x, const char *source, int line, int dim,
     const Descriptor *mask) {
@@ -143,7 +144,7 @@ void RTNAME(CppProductComplex10)(CppTypeFor<TypeCategory::Complex, 10> &result,
       mask, ComplexProductAccumulator<CppTypeFor<TypeCategory::Real, 10>>{x},
       "PRODUCT");
 }
-#elif LONG_DOUBLE == 128
+#elif LDBL_MANT_DIG == 113
 void RTNAME(CppProductComplex16)(CppTypeFor<TypeCategory::Complex, 16> &result,
     const Descriptor &x, const char *source, int line, int dim,
     const Descriptor *mask) {

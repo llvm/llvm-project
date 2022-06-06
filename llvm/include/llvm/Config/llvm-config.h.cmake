@@ -16,13 +16,14 @@
 
 /* Indicate that this is LLVM compiled from the amd-gfx branch. */
 #define LLVM_HAVE_BRANCH_AMD_GFX
-#define LLVM_MAIN_REVISION 425363
+#define LLVM_MAIN_REVISION 425725
 
 /* Define if LLVM_ENABLE_DUMP is enabled */
 #cmakedefine LLVM_ENABLE_DUMP
 
 /* Target triple LLVM will generate code for by default */
-#cmakedefine LLVM_DEFAULT_TARGET_TRIPLE "${LLVM_DEFAULT_TARGET_TRIPLE}"
+/* Doesn't use `cmakedefine` because it is allowed to be empty. */
+#define LLVM_DEFAULT_TARGET_TRIPLE "${LLVM_DEFAULT_TARGET_TRIPLE}"
 
 /* Define if threads enabled */
 #cmakedefine01 LLVM_ENABLE_THREADS

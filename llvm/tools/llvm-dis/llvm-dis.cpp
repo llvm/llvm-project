@@ -38,7 +38,7 @@ using namespace llvm;
 
 static cl::OptionCategory DisCategory("Disassembler Options");
 
-static cl::list<std::string> InputFilenames(cl::Positional, cl::ZeroOrMore,
+static cl::list<std::string> InputFilenames(cl::Positional,
                                             cl::desc("[input bitcode]..."),
                                             cl::cat(DisCategory));
 

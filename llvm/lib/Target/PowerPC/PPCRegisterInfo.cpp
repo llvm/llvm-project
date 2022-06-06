@@ -1477,7 +1477,7 @@ PPCRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
                    OpC != TargetOpcode::PATCHPOINT && !ImmToIdxMap.count(OpC);
 
   // Now add the frame object offset to the offset from r1.
-  int Offset = MFI.getObjectOffset(FrameIndex);
+  int64_t Offset = MFI.getObjectOffset(FrameIndex);
   Offset += MI.getOperand(OffsetOperandNo).getImm();
 
   // If we're not using a Frame Pointer that has been set to the value of the
@@ -1537,13 +1537,16 @@ PPCRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
   // Insert a set of rA with the full offset value before the ld, st, or add
   if (isInt<16>(Offset))
     BuildMI(MBB, II, dl, TII.get(is64Bit ? PPC::LI8 : PPC::LI), SReg)
-      .addImm(Offset);
-  else {
+        .addImm(Offset);
+  else if (isInt<32>(Offset)) {
     BuildMI(MBB, II, dl, TII.get(is64Bit ? PPC::LIS8 : PPC::LIS), SRegHi)
-      .addImm(Offset >> 16);
+        .addImm(Offset >> 16);
     BuildMI(MBB, II, dl, TII.get(is64Bit ? PPC::ORI8 : PPC::ORI), SReg)
-      .addReg(SRegHi, RegState::Kill)
-      .addImm(Offset);
+        .addReg(SRegHi, RegState::Kill)
+        .addImm(Offset);
+  } else {
+    assert(is64Bit && "Huge stack is only supported on PPC64");
+    TII.materializeImmPostRA(MBB, II, dl, SReg, Offset);
   }
 
   // Convert into indexed form of the instruction:

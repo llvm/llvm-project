@@ -153,6 +153,40 @@ void RISCVDAGToDAGISel::PostprocessISelDAG() {
     CurDAG->RemoveDeadNodes();
 }
 
+// Returns true if N is a MachineSDNode that has a reg and simm12 memory
+// operand. The indices of the base pointer and offset are returned in BaseOpIdx
+// and OffsetOpIdx.
+static bool hasMemOffset(SDNode *N, unsigned &BaseOpIdx,
+                         unsigned &OffsetOpIdx) {
+  switch (N->getMachineOpcode()) {
+  case RISCV::LB:
+  case RISCV::LH:
+  case RISCV::LW:
+  case RISCV::LBU:
+  case RISCV::LHU:
+  case RISCV::LWU:
+  case RISCV::LD:
+  case RISCV::FLH:
+  case RISCV::FLW:
+  case RISCV::FLD:
+    BaseOpIdx = 0;
+    OffsetOpIdx = 1;
+    return true;
+  case RISCV::SB:
+  case RISCV::SH:
+  case RISCV::SW:
+  case RISCV::SD:
+  case RISCV::FSH:
+  case RISCV::FSW:
+  case RISCV::FSD:
+    BaseOpIdx = 1;
+    OffsetOpIdx = 2;
+    return true;
+  }
+
+  return false;
+}
+
 static SDNode *selectImmWithConstantPool(SelectionDAG *CurDAG, const SDLoc &DL,
                                          const MVT VT, int64_t Imm,
                                          const RISCVSubtarget &Subtarget) {
@@ -657,11 +691,68 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
     ReplaceNode(Node, selectImm(CurDAG, DL, VT, Imm, *Subtarget));
     return;
   }
-  case ISD::FrameIndex: {
-    SDValue Imm = CurDAG->getTargetConstant(0, DL, XLenVT);
-    int FI = cast<FrameIndexSDNode>(Node)->getIndex();
-    SDValue TFI = CurDAG->getTargetFrameIndex(FI, VT);
-    ReplaceNode(Node, CurDAG->getMachineNode(RISCV::ADDI, DL, VT, TFI, Imm));
+  case ISD::ADD: {
+    // Try to select ADD + immediate used as memory addresses to
+    // (ADDI (ADD X, Imm-Lo12), Lo12) if it will allow the ADDI to be removed by
+    // doPeepholeLoadStoreADDI.
+
+    // LHS should be an immediate.
+    auto *N1C = dyn_cast<ConstantSDNode>(Node->getOperand(1));
+    if (!N1C)
+      break;
+
+    int64_t Offset = N1C->getSExtValue();
+    int64_t Lo12 = SignExtend64<12>(Offset);
+
+    // Don't do this if the lower 12 bits are 0 or we could use ADDI directly.
+    if (Lo12 == 0 || isInt<12>(Offset))
+      break;
+
+    // Don't do this if we can use a pair of ADDIs.
+    if (isInt<12>(Offset / 2) && isInt<12>(Offset - Offset / 2))
+      break;
+
+    bool AllPointerUses = true;
+    for (auto UI = Node->use_begin(), UE = Node->use_end(); UI != UE; ++UI) {
+      SDNode *User = *UI;
+
+      // Is this user a memory instruction that uses a register and immediate
+      // that has this ADD as its pointer.
+      unsigned BaseOpIdx, OffsetOpIdx;
+      if (!User->isMachineOpcode() ||
+          !hasMemOffset(User, BaseOpIdx, OffsetOpIdx) ||
+          UI.getOperandNo() != BaseOpIdx) {
+        AllPointerUses = false;
+        break;
+      }
+
+      // If the memory instruction already has an offset, make sure the combined
+      // offset is foldable.
+      int64_t MemOffs =
+          cast<ConstantSDNode>(User->getOperand(OffsetOpIdx))->getSExtValue();
+      MemOffs += Lo12;
+      if (!isInt<12>(MemOffs)) {
+        AllPointerUses = false;
+        break;
+      }
+    }
+
+    if (!AllPointerUses)
+      break;
+
+    Offset -= Lo12;
+    // Restore sign bits for RV32.
+    if (!Subtarget->is64Bit())
+      Offset = SignExtend64<32>(Offset);
+
+    // Emit (ADDI (ADD X, Hi), Lo)
+    SDNode *Imm = selectImm(CurDAG, DL, VT, Offset, *Subtarget);
+    SDNode *ADD = CurDAG->getMachineNode(RISCV::ADD, DL, VT,
+                                         Node->getOperand(0), SDValue(Imm, 0));
+    SDNode *ADDI =
+        CurDAG->getMachineNode(RISCV::ADDI, DL, VT, SDValue(ADD, 0),
+                               CurDAG->getTargetConstant(Lo12, DL, VT));
+    ReplaceNode(Node, ADDI);
     return;
   }
   case ISD::SRL: {
@@ -1763,11 +1854,29 @@ bool RISCVDAGToDAGISel::SelectInlineAsmMemoryOperand(
   return true;
 }
 
-bool RISCVDAGToDAGISel::SelectAddrFI(SDValue Addr, SDValue &Base) {
+// Select a frame index and an optional immediate offset from an ADD or OR.
+bool RISCVDAGToDAGISel::SelectFrameAddrRegImm(SDValue Addr, SDValue &Base,
+                                              SDValue &Offset) {
   if (auto *FIN = dyn_cast<FrameIndexSDNode>(Addr)) {
     Base = CurDAG->getTargetFrameIndex(FIN->getIndex(), Subtarget->getXLenVT());
+    Offset = CurDAG->getTargetConstant(0, SDLoc(Addr), Subtarget->getXLenVT());
     return true;
   }
+
+  if (!CurDAG->isBaseWithConstantOffset(Addr))
+    return false;
+
+  if (auto *FIN = dyn_cast<FrameIndexSDNode>(Addr.getOperand(0))) {
+    auto *CN = cast<ConstantSDNode>(Addr.getOperand(1));
+    if (isInt<12>(CN->getSExtValue())) {
+      Base = CurDAG->getTargetFrameIndex(FIN->getIndex(),
+                                         Subtarget->getXLenVT());
+      Offset = CurDAG->getTargetConstant(CN->getSExtValue(), SDLoc(Addr),
+                                         Subtarget->getXLenVT());
+      return true;
+    }
+  }
+
   return false;
 }
 
@@ -1779,6 +1888,21 @@ bool RISCVDAGToDAGISel::SelectBaseAddr(SDValue Addr, SDValue &Base) {
   else
     Base = Addr;
   return true;
+}
+
+bool RISCVDAGToDAGISel::SelectAddrRegImm(SDValue Addr, SDValue &Base,
+                                         SDValue &Offset) {
+  if (CurDAG->isBaseWithConstantOffset(Addr)) {
+    auto *CN = cast<ConstantSDNode>(Addr.getOperand(1));
+    if (isInt<12>(CN->getSExtValue())) {
+      Offset = CurDAG->getTargetConstant(CN->getSExtValue(), SDLoc(Addr),
+                                         Subtarget->getXLenVT());
+      return SelectBaseAddr(Addr.getOperand(0), Base);
+    }
+  }
+
+  Offset = CurDAG->getTargetConstant(0, SDLoc(Addr), Subtarget->getXLenVT());
+  return SelectBaseAddr(Addr, Base);
 }
 
 bool RISCVDAGToDAGISel::selectShiftMask(SDValue N, unsigned ShiftWidth,
@@ -2097,37 +2221,9 @@ bool RISCVDAGToDAGISel::selectRVVSimm5(SDValue N, unsigned Width,
 //    -> (store val, (add base, src), off1+off2)
 // This is possible when off1+off2 fits a 12-bit immediate.
 bool RISCVDAGToDAGISel::doPeepholeLoadStoreADDI(SDNode *N) {
-  int OffsetOpIdx;
-  int BaseOpIdx;
-
-  // Only attempt this optimisation for I-type loads and S-type stores.
-  switch (N->getMachineOpcode()) {
-  default:
+  unsigned OffsetOpIdx, BaseOpIdx;
+  if (!hasMemOffset(N, BaseOpIdx, OffsetOpIdx))
     return false;
-  case RISCV::LB:
-  case RISCV::LH:
-  case RISCV::LW:
-  case RISCV::LBU:
-  case RISCV::LHU:
-  case RISCV::LWU:
-  case RISCV::LD:
-  case RISCV::FLH:
-  case RISCV::FLW:
-  case RISCV::FLD:
-    BaseOpIdx = 0;
-    OffsetOpIdx = 1;
-    break;
-  case RISCV::SB:
-  case RISCV::SH:
-  case RISCV::SW:
-  case RISCV::SD:
-  case RISCV::FSH:
-  case RISCV::FSW:
-  case RISCV::FSD:
-    BaseOpIdx = 1;
-    OffsetOpIdx = 2;
-    break;
-  }
 
   if (!isa<ConstantSDNode>(N->getOperand(OffsetOpIdx)))
     return false;
@@ -2137,55 +2233,23 @@ bool RISCVDAGToDAGISel::doPeepholeLoadStoreADDI(SDNode *N) {
   if (!Base.isMachineOpcode())
     return false;
 
-  // There is a ADD between ADDI and load/store. We can only fold ADDI that
-  // do not have a FrameIndex operand.
-  SDValue Add;
-  unsigned AddBaseIdx;
-  if (Base.getMachineOpcode() == RISCV::ADD && Base.hasOneUse()) {
-    Add = Base;
-    SDValue Op0 = Base.getOperand(0);
-    SDValue Op1 = Base.getOperand(1);
-    if (Op0.isMachineOpcode() && Op0.getMachineOpcode() == RISCV::ADDI &&
-        !isa<FrameIndexSDNode>(Op0.getOperand(0)) &&
-        isa<ConstantSDNode>(Op0.getOperand(1))) {
-      AddBaseIdx = 1;
-      Base = Op0;
-    } else if (Op1.isMachineOpcode() && Op1.getMachineOpcode() == RISCV::ADDI &&
-               !isa<FrameIndexSDNode>(Op1.getOperand(0)) &&
-               isa<ConstantSDNode>(Op1.getOperand(1))) {
-      AddBaseIdx = 0;
-      Base = Op1;
-    } else if (Op1.isMachineOpcode() &&
-               Op1.getMachineOpcode() == RISCV::ADDIW &&
-               isa<ConstantSDNode>(Op1.getOperand(1)) &&
-               Op1.getOperand(0).isMachineOpcode() &&
-               Op1.getOperand(0).getMachineOpcode() == RISCV::LUI) {
-      // We found an LUI+ADDIW constant materialization. We might be able to
-      // fold the ADDIW offset if it could be treated as ADDI.
-      // Emulate the constant materialization to see if the result would be
-      // a simm32 if ADDI was used instead of ADDIW.
-
-      // First the LUI.
-      uint64_t Imm = Op1.getOperand(0).getConstantOperandVal(0);
-      Imm <<= 12;
-      Imm = SignExtend64<32>(Imm);
-
-      // Then the ADDI.
-      uint64_t LoImm = cast<ConstantSDNode>(Op1.getOperand(1))->getSExtValue();
-      Imm += LoImm;
-
-      // If the result isn't a simm32, we can't do the optimization.
-      if (!isInt<32>(Imm))
-        return false;
-
-      AddBaseIdx = 0;
-      Base = Op1;
-    } else
-      return false;
-  } else if (Base.getMachineOpcode() == RISCV::ADDI) {
+  if (Base.getMachineOpcode() == RISCV::ADDI) {
     // If the base is an ADDI, we can merge it in to the load/store.
+  } else if (Base.getMachineOpcode() == RISCV::ADDIW &&
+             isa<ConstantSDNode>(Base.getOperand(1)) &&
+             Base.getOperand(0).isMachineOpcode() &&
+             Base.getOperand(0).getMachineOpcode() == RISCV::LUI &&
+             isa<ConstantSDNode>(Base.getOperand(0).getOperand(0))) {
+    // ADDIW can be merged if it's part of LUI+ADDIW constant materialization
+    // and LUI+ADDI would have produced the same result. This is true for all
+    // simm32 values except 0x7ffff800-0x7fffffff.
+    int64_t Offset =
+      SignExtend64<32>(Base.getOperand(0).getConstantOperandVal(0) << 12);
+    Offset += cast<ConstantSDNode>(Base.getOperand(1))->getSExtValue();
+    if (!isInt<32>(Offset))
+      return false;
   } else
-    return false;
+   return false;
 
   SDValue ImmOperand = Base.getOperand(1);
   uint64_t Offset2 = N->getConstantOperandVal(OffsetOpIdx);
@@ -2231,26 +2295,13 @@ bool RISCVDAGToDAGISel::doPeepholeLoadStoreADDI(SDNode *N) {
   LLVM_DEBUG(N->dump(CurDAG));
   LLVM_DEBUG(dbgs() << "\n");
 
-  if (Add)
-    Add = SDValue(CurDAG->UpdateNodeOperands(Add.getNode(),
-                                             Add.getOperand(AddBaseIdx),
-                                             Base.getOperand(0)),
-                  0);
-
   // Modify the offset operand of the load/store.
   if (BaseOpIdx == 0) { // Load
-    if (Add)
-      N = CurDAG->UpdateNodeOperands(N, Add, ImmOperand, N->getOperand(2));
-    else
-      N = CurDAG->UpdateNodeOperands(N, Base.getOperand(0), ImmOperand,
-                                     N->getOperand(2));
+    N = CurDAG->UpdateNodeOperands(N, Base.getOperand(0), ImmOperand,
+                                   N->getOperand(2));
   } else { // Store
-    if (Add)
-      N = CurDAG->UpdateNodeOperands(N, N->getOperand(0), Add, ImmOperand,
-                                     N->getOperand(3));
-    else
-      N = CurDAG->UpdateNodeOperands(N, N->getOperand(0), Base.getOperand(0),
-                                     ImmOperand, N->getOperand(3));
+    N = CurDAG->UpdateNodeOperands(N, N->getOperand(0), Base.getOperand(0),
+                                   ImmOperand, N->getOperand(3));
   }
 
   return true;

@@ -462,6 +462,63 @@ define <2 x i32> @signbit_mul_vec_commute(<2 x i32> %a, <2 x i32> %b) {
   ret <2 x i32> %e
 }
 
+; (A & 1) * B --> (lowbit A) ? B : 0
+
+define i32 @lowbit_mul(i32 %a, i32 %b) {
+; CHECK-LABEL: @lowbit_mul(
+; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[A:%.*]], 1
+; CHECK-NEXT:    [[DOTNOT:%.*]] = icmp eq i32 [[TMP1]], 0
+; CHECK-NEXT:    [[E:%.*]] = select i1 [[DOTNOT]], i32 0, i32 [[B:%.*]]
+; CHECK-NEXT:    ret i32 [[E]]
+;
+  %d = and i32 %a, 1
+  %e = mul i32 %d, %b
+  ret i32 %e
+}
+
+; (A & 1) * B --> (lowbit A) ? B : 0
+
+define <2 x i17> @lowbit_mul_commute(<2 x i17> %a, <2 x i17> %p) {
+; CHECK-LABEL: @lowbit_mul_commute(
+; CHECK-NEXT:    [[B:%.*]] = xor <2 x i17> [[P:%.*]], <i17 42, i17 43>
+; CHECK-NEXT:    [[TMP1:%.*]] = trunc <2 x i17> [[A:%.*]] to <2 x i1>
+; CHECK-NEXT:    [[E:%.*]] = select <2 x i1> [[TMP1]], <2 x i17> [[B]], <2 x i17> zeroinitializer
+; CHECK-NEXT:    ret <2 x i17> [[E]]
+;
+  %b = xor <2 x i17> %p, <i17 42, i17 43> ; thwart complexity-based canonicalization
+  %d = and <2 x i17> %a, <i17 1, i17 1>
+  %e = mul <2 x i17> %b, %d
+  ret <2 x i17> %e
+}
+
+; negative test - extra use
+
+define i32 @lowbit_mul_use(i32 %a, i32 %b) {
+; CHECK-LABEL: @lowbit_mul_use(
+; CHECK-NEXT:    [[D:%.*]] = and i32 [[A:%.*]], 1
+; CHECK-NEXT:    call void @use32(i32 [[D]])
+; CHECK-NEXT:    [[E:%.*]] = mul nuw i32 [[D]], [[B:%.*]]
+; CHECK-NEXT:    ret i32 [[E]]
+;
+  %d = and i32 %a, 1
+  call void @use32(i32 %d)
+  %e = mul i32 %d, %b
+  ret i32 %e
+}
+
+; negative test - wrong mask
+
+define i32 @not_lowbit_mul(i32 %a, i32 %b) {
+; CHECK-LABEL: @not_lowbit_mul(
+; CHECK-NEXT:    [[D:%.*]] = and i32 [[A:%.*]], 2
+; CHECK-NEXT:    [[E:%.*]] = mul i32 [[D]], [[B:%.*]]
+; CHECK-NEXT:    ret i32 [[E]]
+;
+  %d = and i32 %a, 2
+  %e = mul i32 %d, %b
+  ret i32 %e
+}
+
 define i32 @signsplat_mul(i32 %x) {
 ; CHECK-LABEL: @signsplat_mul(
 ; CHECK-NEXT:    [[ISNEG:%.*]] = icmp slt i32 [[X:%.*]], 0

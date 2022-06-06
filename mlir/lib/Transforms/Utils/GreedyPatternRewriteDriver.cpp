@@ -539,10 +539,25 @@ private:
     }
   }
 
+  void notifyOperationInserted(Operation *op) override {
+    GreedyPatternRewriteDriver::notifyOperationInserted(op);
+    if (strictMode)
+      strictModeFilteredOps.insert(op);
+  }
+
   void notifyOperationRemoved(Operation *op) override {
     GreedyPatternRewriteDriver::notifyOperationRemoved(op);
     if (strictMode)
       strictModeFilteredOps.erase(op);
+  }
+
+  void notifyRootReplaced(Operation *op) override {
+    for (auto result : op->getResults()) {
+      for (auto *user : result.getUsers()) {
+        if (!strictMode || strictModeFilteredOps.contains(user))
+          addToWorklist(user);
+      }
+    }
   }
 
   /// If `strictMode` is true, any pre-existing ops outside of
@@ -597,6 +612,9 @@ bool MultiOpPatternRewriteDriver::simplifyLocally(ArrayRef<Operation *> ops) {
     // them.
     if (op == nullptr)
       continue;
+
+    assert((!strictMode || strictModeFilteredOps.contains(op)) &&
+           "unexpected op was inserted under strict mode");
 
     // If the operation is trivially dead - remove it.
     if (isOpTriviallyDead(op)) {

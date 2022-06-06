@@ -14,9 +14,9 @@ declare void @baz() "deopt-lowering"="live-through"
 define void @test1() gc "statepoint-example" {
 ; CHECK-LABEL: @test1(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[STATEPOINT_TOKEN:%.*]] = call token (i64, i32, void ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidf(i64 2882400000, i32 0, void ()* elementtype(void ()) @foo, i32 0, i32 0, i32 0, i32 0) [ "deopt"(i32 57) ]
-; CHECK-NEXT:    [[STATEPOINT_TOKEN1:%.*]] = call token (i64, i32, void ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidf(i64 2882400000, i32 0, void ()* elementtype(void ()) @bar, i32 0, i32 2, i32 0, i32 0) [ "deopt"(i32 42) ]
-; CHECK-NEXT:    [[STATEPOINT_TOKEN2:%.*]] = call token (i64, i32, void ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidf(i64 2882400000, i32 0, void ()* elementtype(void ()) @baz, i32 0, i32 0, i32 0, i32 0) [ "deopt"(i32 13) ]
+; CHECK-NEXT:    [[STATEPOINT_TOKEN:%.*]] = call token (i64, i32, ptr, i32, i32, ...) @llvm.experimental.gc.statepoint.p0(i64 2882400000, i32 0, ptr elementtype(void ()) @foo, i32 0, i32 0, i32 0, i32 0) [ "deopt"(i32 57) ]
+; CHECK-NEXT:    [[STATEPOINT_TOKEN1:%.*]] = call token (i64, i32, ptr, i32, i32, ...) @llvm.experimental.gc.statepoint.p0(i64 2882400000, i32 0, ptr elementtype(void ()) @bar, i32 0, i32 2, i32 0, i32 0) [ "deopt"(i32 42) ]
+; CHECK-NEXT:    [[STATEPOINT_TOKEN2:%.*]] = call token (i64, i32, ptr, i32, i32, ...) @llvm.experimental.gc.statepoint.p0(i64 2882400000, i32 0, ptr elementtype(void ()) @baz, i32 0, i32 0, i32 0, i32 0) [ "deopt"(i32 13) ]
 ; CHECK-NEXT:    ret void
 ;
 
@@ -31,7 +31,7 @@ entry:
 define void @test2() gc "statepoint-example" {
 ; CHECK-LABEL: @test2(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[STATEPOINT_TOKEN:%.*]] = call token (i64, i32, void ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidf(i64 2882400000, i32 0, void ()* elementtype(void ()) @foo, i32 0, i32 2, i32 0, i32 0) #[[ATTR0:[0-9]+]] [ "deopt"(i32 57) ]
+; CHECK-NEXT:    [[STATEPOINT_TOKEN:%.*]] = call token (i64, i32, ptr, i32, i32, ...) @llvm.experimental.gc.statepoint.p0(i64 2882400000, i32 0, ptr elementtype(void ()) @foo, i32 0, i32 2, i32 0, i32 0) #[[ATTR0:[0-9]+]] [ "deopt"(i32 57) ]
 ; CHECK-NEXT:    ret void
 ;
 

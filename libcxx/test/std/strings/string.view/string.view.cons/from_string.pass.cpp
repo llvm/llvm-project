@@ -6,11 +6,12 @@
 //
 //===----------------------------------------------------------------------===//
 
+// UNSUPPORTED: !stdlib=libc++ && (c++03 || c++11 || c++14)
+
 // <string_view>
 
 // template<class Allocator>
 // basic_string_view(const basic_string<_CharT, _Traits, Allocator>& _str) noexcept
-
 
 #include <string_view>
 #include <string>

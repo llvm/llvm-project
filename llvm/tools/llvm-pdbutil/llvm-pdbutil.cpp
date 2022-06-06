@@ -216,7 +216,7 @@ cl::opt<bool> ShowInjectedSourceContent(
 cl::list<std::string> WithName(
     "with-name",
     cl::desc("Display any symbol or type with the specified exact name"),
-    cl::cat(TypeCategory), cl::ZeroOrMore, cl::sub(PrettySubcommand));
+    cl::cat(TypeCategory), cl::sub(PrettySubcommand));
 
 cl::opt<bool> Compilands("compilands", cl::desc("Display compilands"),
                          cl::cat(TypeCategory), cl::sub(PrettySubcommand));
@@ -229,7 +229,7 @@ cl::opt<bool> Externals("externals", cl::desc("Dump external symbols"),
                         cl::cat(TypeCategory), cl::sub(PrettySubcommand));
 cl::list<SymLevel> SymTypes(
     "sym-types", cl::desc("Type of symbols to dump (default all)"),
-    cl::cat(TypeCategory), cl::sub(PrettySubcommand), cl::ZeroOrMore,
+    cl::cat(TypeCategory), cl::sub(PrettySubcommand),
     cl::values(
         clEnumValN(SymLevel::Thunks, "thunks", "Display thunk symbols"),
         clEnumValN(SymLevel::Data, "data", "Display data symbols"),
@@ -315,28 +315,31 @@ cl::opt<cl::boolOrDefault>
     ColorOutput("color-output",
                 cl::desc("Override use of color (default = isatty)"),
                 cl::cat(OtherOptions), cl::sub(PrettySubcommand));
-cl::list<std::string> ExcludeTypes(
-    "exclude-types", cl::desc("Exclude types by regular expression"),
-    cl::ZeroOrMore, cl::cat(FilterCategory), cl::sub(PrettySubcommand));
-cl::list<std::string> ExcludeSymbols(
-    "exclude-symbols", cl::desc("Exclude symbols by regular expression"),
-    cl::ZeroOrMore, cl::cat(FilterCategory), cl::sub(PrettySubcommand));
-cl::list<std::string> ExcludeCompilands(
-    "exclude-compilands", cl::desc("Exclude compilands by regular expression"),
-    cl::ZeroOrMore, cl::cat(FilterCategory), cl::sub(PrettySubcommand));
+cl::list<std::string>
+    ExcludeTypes("exclude-types",
+                 cl::desc("Exclude types by regular expression"),
+                 cl::cat(FilterCategory), cl::sub(PrettySubcommand));
+cl::list<std::string>
+    ExcludeSymbols("exclude-symbols",
+                   cl::desc("Exclude symbols by regular expression"),
+                   cl::cat(FilterCategory), cl::sub(PrettySubcommand));
+cl::list<std::string>
+    ExcludeCompilands("exclude-compilands",
+                      cl::desc("Exclude compilands by regular expression"),
+                      cl::cat(FilterCategory), cl::sub(PrettySubcommand));
 
 cl::list<std::string> IncludeTypes(
     "include-types",
     cl::desc("Include only types which match a regular expression"),
-    cl::ZeroOrMore, cl::cat(FilterCategory), cl::sub(PrettySubcommand));
+    cl::cat(FilterCategory), cl::sub(PrettySubcommand));
 cl::list<std::string> IncludeSymbols(
     "include-symbols",
     cl::desc("Include only symbols which match a regular expression"),
-    cl::ZeroOrMore, cl::cat(FilterCategory), cl::sub(PrettySubcommand));
+    cl::cat(FilterCategory), cl::sub(PrettySubcommand));
 cl::list<std::string> IncludeCompilands(
     "include-compilands",
     cl::desc("Include only compilands those which match a regular expression"),
-    cl::ZeroOrMore, cl::cat(FilterCategory), cl::sub(PrettySubcommand));
+    cl::cat(FilterCategory), cl::sub(PrettySubcommand));
 cl::opt<uint32_t> SizeThreshold(
     "min-type-size", cl::desc("Displays only those types which are greater "
                               "than or equal to the specified size."),
@@ -389,7 +392,7 @@ cl::opt<std::string>
                      cl::sub(BytesSubcommand), cl::cat(MsfBytes));
 
 cl::list<std::string>
-    DumpStreamData("stream-data", cl::CommaSeparated, cl::ZeroOrMore,
+    DumpStreamData("stream-data", cl::CommaSeparated,
                    cl::desc("Dump binary data from specified streams.  Format "
                             "is SN[:Start][@Size]"),
                    cl::sub(BytesSubcommand), cl::cat(MsfBytes));
@@ -412,14 +415,12 @@ cl::opt<bool> TypeServerMap("type-server", cl::desc("Dump type server map"),
 cl::opt<bool> ECData("ec", cl::desc("Dump edit and continue map"),
                      cl::sub(BytesSubcommand), cl::cat(DbiBytes));
 
-cl::list<uint32_t>
-    TypeIndex("type",
-              cl::desc("Dump the type record with the given type index"),
-              cl::ZeroOrMore, cl::CommaSeparated, cl::sub(BytesSubcommand),
-              cl::cat(TypeCategory));
+cl::list<uint32_t> TypeIndex(
+    "type", cl::desc("Dump the type record with the given type index"),
+    cl::CommaSeparated, cl::sub(BytesSubcommand), cl::cat(TypeCategory));
 cl::list<uint32_t>
     IdIndex("id", cl::desc("Dump the id record with the given type index"),
-            cl::ZeroOrMore, cl::CommaSeparated, cl::sub(BytesSubcommand),
+            cl::CommaSeparated, cl::sub(BytesSubcommand),
             cl::cat(TypeCategory));
 
 cl::opt<uint32_t> ModuleIndex(
@@ -505,7 +506,7 @@ cl::opt<bool> DontResolveForwardRefs(
     cl::cat(TypeOptions), cl::sub(DumpSubcommand));
 
 cl::list<uint32_t> DumpTypeIndex(
-    "type-index", cl::ZeroOrMore, cl::CommaSeparated,
+    "type-index", cl::CommaSeparated,
     cl::desc("only dump types with the specified hexadecimal type index"),
     cl::cat(TypeOptions), cl::sub(DumpSubcommand));
 
@@ -521,7 +522,7 @@ cl::opt<bool> DumpIdExtras("id-extras",
                            cl::desc("dump id hashes and index offsets"),
                            cl::cat(TypeOptions), cl::sub(DumpSubcommand));
 cl::list<uint32_t> DumpIdIndex(
-    "id-index", cl::ZeroOrMore, cl::CommaSeparated,
+    "id-index", cl::CommaSeparated,
     cl::desc("only dump ids with the specified hexadecimal type index"),
     cl::cat(TypeOptions), cl::sub(DumpSubcommand));
 
@@ -541,7 +542,7 @@ cl::list<std::string> DumpGlobalNames(
     "global-name",
     cl::desc(
         "With -globals, only dump globals whose name matches the given value"),
-    cl::cat(SymbolOptions), cl::sub(DumpSubcommand), cl::ZeroOrMore);
+    cl::cat(SymbolOptions), cl::sub(DumpSubcommand));
 cl::opt<bool> DumpPublics("publics", cl::desc("dump Publics stream data"),
                           cl::cat(SymbolOptions), cl::sub(DumpSubcommand));
 cl::opt<bool> DumpPublicExtras("public-extras",
@@ -706,7 +707,7 @@ cl::opt<bool> DumpModuleFiles("module-files", cl::desc("dump file information"),
                               cl::cat(FileOptions),
                               cl::sub(PdbToYamlSubcommand));
 cl::list<ModuleSubsection> DumpModuleSubsections(
-    "subsections", cl::ZeroOrMore, cl::CommaSeparated,
+    "subsections", cl::CommaSeparated,
     cl::desc("dump subsections from each module's debug stream"), ChunkValues,
     cl::cat(FileOptions), cl::sub(PdbToYamlSubcommand));
 cl::opt<bool> DumpModuleSyms("module-syms", cl::desc("dump module symbols"),

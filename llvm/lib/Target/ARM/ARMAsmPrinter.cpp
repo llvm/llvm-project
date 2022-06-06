@@ -2274,6 +2274,47 @@ void ARMAsmPrinter::emitInstruction(const MachineInstr *MI) {
     EmitToStreamer(*OutStreamer, TmpInstSB);
     return;
   }
+
+  case ARM::SEH_StackAlloc:
+    ATS.emitARMWinCFIAllocStack(MI->getOperand(0).getImm(),
+                                MI->getOperand(1).getImm());
+    return;
+
+  case ARM::SEH_SaveRegs:
+  case ARM::SEH_SaveRegs_Ret:
+    ATS.emitARMWinCFISaveRegMask(MI->getOperand(0).getImm(),
+                                 MI->getOperand(1).getImm());
+    return;
+
+  case ARM::SEH_SaveSP:
+    ATS.emitARMWinCFISaveSP(MI->getOperand(0).getImm());
+    return;
+
+  case ARM::SEH_SaveFRegs:
+    ATS.emitARMWinCFISaveFRegs(MI->getOperand(0).getImm(),
+                               MI->getOperand(1).getImm());
+    return;
+
+  case ARM::SEH_SaveLR:
+    ATS.emitARMWinCFISaveLR(MI->getOperand(0).getImm());
+    return;
+
+  case ARM::SEH_Nop:
+  case ARM::SEH_Nop_Ret:
+    ATS.emitARMWinCFINop(MI->getOperand(0).getImm());
+    return;
+
+  case ARM::SEH_PrologEnd:
+    ATS.emitARMWinCFIPrologEnd(/*Fragment=*/false);
+    return;
+
+  case ARM::SEH_EpilogStart:
+    ATS.emitARMWinCFIEpilogStart(ARMCC::AL);
+    return;
+
+  case ARM::SEH_EpilogEnd:
+    ATS.emitARMWinCFIEpilogEnd();
+    return;
   }
 
   MCInst TmpInst;

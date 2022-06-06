@@ -416,6 +416,13 @@ void lambdas() {
     auto lambda = [&]() { a.foo(); };
     std::move(a);
   }
+  {
+    A a;
+    auto lambda = [a = std::move(a)] { a.foo(); };
+    a.foo();
+    // CHECK-NOTES: [[@LINE-1]]:5: warning: 'a' used after it was moved
+    // CHECK-NOTES: [[@LINE-3]]:24: note: move occurred here
+  }
 }
 
 // Use-after-moves are detected in uninstantiated templates if the moved type

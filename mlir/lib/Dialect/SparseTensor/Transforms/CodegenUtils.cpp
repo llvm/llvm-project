@@ -78,14 +78,14 @@ Type mlir::sparse_tensor::getIndexOverheadType(
   return getOverheadType(builder, indexOverheadTypeEncoding(enc));
 }
 
-// TODO: Adjust the naming convention for the constructors of `OverheadType`
-// and the function-suffix for `kIndex` so we can use the `FOREVERY_O`
-// x-macro here instead of `FOREVERY_FIXED_O`; to further reduce the
-// possibility of typo bugs or things getting out of sync.
+// TODO: Adjust the naming convention for the constructors of
+// `OverheadType` so we can use the `FOREVERY_O` x-macro here instead
+// of `FOREVERY_FIXED_O`; to further reduce the possibility of typo bugs
+// or things getting out of sync.
 StringRef mlir::sparse_tensor::overheadTypeFunctionSuffix(OverheadType ot) {
   switch (ot) {
   case OverheadType::kIndex:
-    return "";
+    return "0";
 #define CASE(ONAME, O)                                                         \
   case OverheadType::kU##ONAME:                                                \
     return #ONAME;

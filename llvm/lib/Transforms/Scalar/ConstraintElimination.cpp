@@ -90,14 +90,6 @@ struct ConstraintTy {
   /// Returns true if all preconditions for this list of constraints are
   /// satisfied given \p CS and the corresponding \p Value2Index mapping.
   bool isValid(const ConstraintInfo &Info) const;
-
-  /// Returns true if there is exactly one constraint in the list and isValid is
-  /// also true.
-  bool isValidSingle(const ConstraintInfo &Info) const {
-    if (size() != 1)
-      return false;
-    return isValid(Info);
-  }
 };
 
 /// Wrapper encapsulating separate constraint systems and corresponding value

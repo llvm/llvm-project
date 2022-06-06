@@ -486,3 +486,127 @@ func.func @scf_while_iter_arg_result_mismatch(%arg0: tensor<5xi1>,
   }
   return
 }
+
+// -----
+
+// CHECK-LABEL: func.func @parallel_insert_slice_no_conflict(
+//  CHECK-SAME:     %[[idx:.*]]: index, %[[idx2:.*]]: index,
+//  CHECK-SAME:     %[[arg1:.*]]: memref<?xf32, #{{.*}}>,
+//  CHECK-SAME:     %[[arg2:.*]]: memref<?xf32, #{{.*}}>
+func.func @parallel_insert_slice_no_conflict(
+    %idx: index,
+    %idx2: index,
+    %arg1: tensor<?xf32> {bufferization.writable = true},
+    %arg2: tensor<?xf32> {bufferization.writable = true}) -> (tensor<?xf32>, f32) {
+  %cst = arith.constant 4.200000e+01 : f32
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+
+  // CHECK: scf.foreach_thread (%[[tidx:.*]]) in (%[[idx2]])  -> ()
+  %2 = scf.foreach_thread (%arg3) in (%idx2)  -> (tensor<?xf32>) {
+      // CHECK: %[[subview:.*]] = memref.subview %[[arg2]][5] [%[[idx]]] [1]
+      %6 = tensor.extract_slice %arg2[5] [%idx] [%c1] : tensor<?xf32> to tensor<?xf32>
+      // CHECK: linalg.fill ins(%{{.*}}) outs(%[[subview]] : memref<?xf32
+      %8 = linalg.fill ins(%cst : f32) outs(%6 : tensor<?xf32>) -> tensor<?xf32>
+      // Self-copy will DCE away later.
+      // CHECK: memref.copy %[[subview]], %[[subview]]
+
+      // Empty terminator is elided from pretty-printing.
+      // CHECK-NOT: scf.foreach_thread.perform_concurrently
+      // CHECK-NOT: parallel_insert_slice
+      scf.foreach_thread.perform_concurrently {
+        scf.foreach_thread.parallel_insert_slice %8 into %arg2[5] [%idx] [%c1] : 
+          tensor<?xf32> into tensor<?xf32>
+      }
+  }
+
+  // CHECK: %[[load:.*]] = memref.load %[[arg2]]
+  %f = tensor.extract %2[%c0] : tensor<?xf32>
+
+  // CHECK: return %[[load]] : f32
+  return %2, %f : tensor<?xf32>, f32
+}
+
+// -----
+
+// CHECK-LABEL: func.func @parallel_insert_slice_with_conflict(
+//  CHECK-SAME:     %[[idx:.*]]: index, %[[idx2:.*]]: index,
+//  CHECK-SAME:     %[[arg1:.*]]: memref<?xf32, #{{.*}}>,
+//  CHECK-SAME:     %[[arg2:.*]]: memref<?xf32, #{{.*}}>
+func.func @parallel_insert_slice_with_conflict(
+    %idx: index, 
+    %idx2: index, 
+    %arg1: tensor<?xf32> {bufferization.writable = true},
+    %arg2: tensor<?xf32> {bufferization.writable = true}) -> (f32, f32)
+{
+  %cst = arith.constant 4.200000e+01 : f32
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+
+  // The parallel_insert_slice_op bufferizes out-of-place due to a RAW conflict
+  // on %arg2, so we need an allocation.
+  // CHECK: %[[alloc1:.*]] = memref.alloc
+  // CHECK: memref.copy %[[arg2]], %[[alloc1]]
+
+  // CHECK: scf.foreach_thread (%[[tidx:.*]]) in (%[[idx2]])  -> ()
+  %2 = scf.foreach_thread (%arg3) in (%idx2)  -> (tensor<?xf32>) {
+      // Another alloc for the extract_slice op.
+      // CHECK: %[[alloc2:.*]] = memref.alloc
+      %6 = tensor.extract_slice %arg2[5] [%idx] [%c1] : tensor<?xf32> to tensor<?xf32>
+
+      // CHECK: linalg.fill ins(%{{.*}}) outs(%[[alloc2]] : memref<?xf32
+      %8 = linalg.fill ins(%cst : f32) outs(%6 : tensor<?xf32>) -> tensor<?xf32>
+
+      // Now the copy of the actual insert_slice.
+      // CHECK: %[[subview1:.*]] = memref.subview %[[alloc1]][5] [%[[idx]]] [1]
+      //
+      // CHECK: memref.copy %[[alloc2]], %[[subview1]]
+      // CHECK: memref.dealloc %[[alloc2]]
+
+      // Empty terminator is elided from pretty-printing.
+      // CHECK-NOT: scf.foreach_thread.perform_concurrently
+      // CHECK-NOT: parallel_insert_slice
+      scf.foreach_thread.perform_concurrently {
+        scf.foreach_thread.parallel_insert_slice %8 into %arg2[5] [%idx] [%c1] :
+          tensor<?xf32> into tensor<?xf32>
+      }
+  }
+
+  // CHECK: %[[load:.*]] = memref.load %[[arg2]]
+  // CHECK: %[[load2:.*]] = memref.load %[[alloc1]]
+  // CHECK: memref.dealloc %[[alloc1]]
+  %f = tensor.extract %arg2[%c0] : tensor<?xf32>
+  %f2 = tensor.extract %2[%c0] : tensor<?xf32>
+
+  // CHECK: return %[[load2]], %[[load]] : f32, f32
+  return %f2, %f : f32, f32
+}
+
+// -----
+
+#map0 = affine_map<(d0) -> (d0 * 4)>
+#map1 = affine_map<(d0) -> (d0 * 2)>
+
+// CHECK: #[[$DYN_LAYOUT_MAP:.*]] = affine_map<(d0, d1)[s0, s1, s2] -> (d0 * s1 + s0 + d1 * s2)>
+
+// CHECK-LABEL: func.func @matmul
+func.func @matmul(%arg0: tensor<8x8xf32>, %arg1: tensor<8x8xf32>, %arg2: tensor<8x8xf32> {bufferization.writable = true}) -> tensor<8x8xf32> {
+  %c2 = arith.constant 2 : index
+  %c4 = arith.constant 4 : index
+
+  // CHECK: scf.foreach_thread {{.*}}  -> ()
+  %0 = scf.foreach_thread (%arg3, %arg4) in (%c2, %c4) -> (tensor<8x8xf32>) {
+    %1 = affine.apply #map0(%arg3)
+    %3 = tensor.extract_slice %arg0[%1, 0] [4, 8] [1, 1] : tensor<8x8xf32> to tensor<4x8xf32>
+    %4 = affine.apply #map1(%arg4)
+    %6 = tensor.extract_slice %arg1[0, %4] [8, 4] [1, 1] : tensor<8x8xf32> to tensor<8x4xf32>
+    %7 = tensor.extract_slice %arg2[%1, %4] [4, 4] [1, 1] : tensor<8x8xf32> to tensor<4x4xf32>
+ 
+    //      CHECK: linalg.matmul ins({{.*}}memref<4x8xf32, #[[$DYN_LAYOUT_MAP]]>, memref<8x4xf32, #[[$DYN_LAYOUT_MAP]]>) outs({{.*}} : memref<4x4xf32, #[[$DYN_LAYOUT_MAP]]>)
+    %8 = linalg.matmul ins(%3, %6 : tensor<4x8xf32>, tensor<8x4xf32>) outs(%7 : tensor<4x4xf32>) -> tensor<4x4xf32>
+    scf.foreach_thread.perform_concurrently {
+      scf.foreach_thread.parallel_insert_slice %8 into %arg2[%1, %4] [4, 4] [1, 1] : tensor<4x4xf32> into tensor<8x8xf32>
+    }
+  }
+  return %0 : tensor<8x8xf32>
+}

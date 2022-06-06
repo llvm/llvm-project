@@ -1559,10 +1559,8 @@ findMostPopularDest(BasicBlock *BB,
       DestPopularity[PredToDest.second]++;
 
   // Find the most popular dest.
-  using VT = decltype(DestPopularity)::value_type;
   auto MostPopular = std::max_element(
-      DestPopularity.begin(), DestPopularity.end(),
-      [](const VT &L, const VT &R) { return L.second < R.second; });
+      DestPopularity.begin(), DestPopularity.end(), llvm::less_second());
 
   // Okay, we have finally picked the most popular destination.
   return MostPopular->first;

@@ -17,6 +17,28 @@ def run(f):
 
 
 @run
+def testDecompose():
+  sequence = transform.SequenceOp()
+  with InsertionPoint(sequence.body):
+    structured.DecomposeOp(sequence.bodyTarget)
+    transform.YieldOp()
+  # CHECK-LABEL: TEST: testDecompose
+  # CHECK: transform.sequence
+  # CHECK: transform.structured.decompose
+
+
+@run
+def testGeneralize():
+  sequence = transform.SequenceOp()
+  with InsertionPoint(sequence.body):
+    structured.GeneralizeOp(sequence.bodyTarget)
+    transform.YieldOp()
+  # CHECK-LABEL: TEST: testGeneralize
+  # CHECK: transform.sequence
+  # CHECK: transform.structured.generalize
+
+
+@run
 def testInterchange():
   sequence = transform.SequenceOp()
   with InsertionPoint(sequence.body):

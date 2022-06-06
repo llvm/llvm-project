@@ -18,6 +18,7 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/DebugInfo/DWARF/DWARFContext.h"
 #include "llvm/DebugInfo/Symbolize/SymbolizableModule.h"
 #include "llvm/DebugInfo/Symbolize/SymbolizableObjectFile.h"
@@ -36,32 +37,10 @@
 namespace llvm {
 namespace memprof {
 namespace {
-
-struct Summary {
-  uint64_t Version;
-  uint64_t TotalSizeBytes;
-  uint64_t NumSegments;
-  uint64_t NumMIBInfo;
-  uint64_t NumStackOffsets;
-};
-
 template <class T = uint64_t> inline T alignedRead(const char *Ptr) {
   static_assert(std::is_pod<T>::value, "Not a pod type.");
   assert(reinterpret_cast<size_t>(Ptr) % sizeof(T) == 0 && "Unaligned Read");
   return *reinterpret_cast<const T *>(Ptr);
-}
-
-Summary computeSummary(const char *Start) {
-  auto *H = reinterpret_cast<const Header *>(Start);
-
-  // Check alignment while reading the number of items in each section.
-  return Summary{
-      H->Version,
-      H->TotalSize,
-      alignedRead(Start + H->SegmentOffset),
-      alignedRead(Start + H->MIBOffset),
-      alignedRead(Start + H->StackOffset),
-  };
 }
 
 Error checkBuffer(const MemoryBuffer &Buffer) {
@@ -172,6 +151,21 @@ bool isRuntimePath(const StringRef Path) {
   return StringRef(llvm::sys::path::convert_to_slash(Path))
       .contains("memprof/memprof_");
 }
+
+std::string getBuildIdString(const SegmentEntry &Entry) {
+  constexpr size_t Size = sizeof(Entry.BuildId) / sizeof(uint8_t);
+  constexpr uint8_t Zeros[Size] = {0};
+  // If the build id is unset print a helpful string instead of all zeros.
+  if (memcmp(Entry.BuildId, Zeros, Size) == 0)
+    return "<None>";
+
+  std::string Str;
+  raw_string_ostream OS(Str);
+  for (size_t I = 0; I < Size; I++) {
+    OS << format_hex_no_prefix(Entry.BuildId[I], 2);
+  }
+  return OS.str();
+}
 } // namespace
 
 Expected<std::unique_ptr<RawMemProfReader>>
@@ -196,9 +190,9 @@ RawMemProfReader::create(const Twine &Path, const StringRef ProfiledBinary,
   }
 
   // Use new here since constructor is private.
-  std::unique_ptr<RawMemProfReader> Reader(new RawMemProfReader(
-      std::move(Buffer), std::move(BinaryOr.get()), KeepName));
-  if (Error E = Reader->initialize()) {
+  std::unique_ptr<RawMemProfReader> Reader(
+      new RawMemProfReader(std::move(BinaryOr.get()), KeepName));
+  if (Error E = Reader->initialize(std::move(Buffer))) {
     return std::move(E);
   }
   return std::move(Reader);
@@ -223,11 +217,31 @@ bool RawMemProfReader::hasFormat(const MemoryBuffer &Buffer) {
 }
 
 void RawMemProfReader::printYAML(raw_ostream &OS) {
+  uint64_t NumAllocFunctions = 0, NumMibInfo = 0;
+  for (const auto &KV : FunctionProfileData) {
+    const size_t NumAllocSites = KV.second.AllocSites.size();
+    if (NumAllocSites > 0) {
+      NumAllocFunctions++;
+      NumMibInfo += NumAllocSites;
+    }
+  }
+
   OS << "MemprofProfile:\n";
-  // TODO: Update printSummaries to print out the data after the profile has
-  // been symbolized and pruned. We can parse some raw profile characteristics
-  // from the data buffer for additional information.
-  printSummaries(OS);
+  OS << "  Summary:\n";
+  OS << "    Version: " << MEMPROF_RAW_VERSION << "\n";
+  OS << "    NumSegments: " << SegmentInfo.size() << "\n";
+  OS << "    NumMibInfo: " << NumMibInfo << "\n";
+  OS << "    NumAllocFunctions: " << NumAllocFunctions << "\n";
+  OS << "    NumStackOffsets: " << StackMap.size() << "\n";
+  // Print out the segment information.
+  OS << "  Segments:\n";
+  for (const auto &Entry : SegmentInfo) {
+    OS << "  -\n";
+    OS << "    BuildId: " << getBuildIdString(Entry) << "\n";
+    OS << "    Start: 0x" << llvm::utohexstr(Entry.Start) << "\n";
+    OS << "    End: 0x" << llvm::utohexstr(Entry.End) << "\n";
+    OS << "    Offset: 0x" << llvm::utohexstr(Entry.Offset) << "\n";
+  }
   // Print out the merged contents of the profiles.
   OS << "  Records:\n";
   for (const auto &Entry : *this) {
@@ -237,26 +251,7 @@ void RawMemProfReader::printYAML(raw_ostream &OS) {
   }
 }
 
-void RawMemProfReader::printSummaries(raw_ostream &OS) const {
-  const char *Next = DataBuffer->getBufferStart();
-  while (Next < DataBuffer->getBufferEnd()) {
-    auto Summary = computeSummary(Next);
-    OS << "  -\n";
-    OS << "  Header:\n";
-    OS << "    Version: " << Summary.Version << "\n";
-    OS << "    TotalSizeBytes: " << Summary.TotalSizeBytes << "\n";
-    OS << "    NumSegments: " << Summary.NumSegments << "\n";
-    OS << "    NumMibInfo: " << Summary.NumMIBInfo << "\n";
-    OS << "    NumStackOffsets: " << Summary.NumStackOffsets << "\n";
-    // TODO: Print the build ids once we can record them using the
-    // sanitizer_procmaps library for linux.
-
-    auto *H = reinterpret_cast<const Header *>(Next);
-    Next += H->TotalSize;
-  }
-}
-
-Error RawMemProfReader::initialize() {
+Error RawMemProfReader::initialize(std::unique_ptr<MemoryBuffer> DataBuffer) {
   const StringRef FileName = Binary.getBinary()->getFileName();
 
   auto *ElfObject = dyn_cast<object::ELFObjectFileBase>(Binary.getBinary());
@@ -283,7 +278,7 @@ Error RawMemProfReader::initialize() {
     return report(SOFOr.takeError(), FileName);
   Symbolizer = std::move(SOFOr.get());
 
-  if (Error E = readRawProfile())
+  if (Error E = readRawProfile(std::move(DataBuffer)))
     return E;
 
   if (Error E = symbolizeAndFilterStackFrames())
@@ -452,7 +447,8 @@ Error RawMemProfReader::symbolizeAndFilterStackFrames() {
   return Error::success();
 }
 
-Error RawMemProfReader::readRawProfile() {
+Error RawMemProfReader::readRawProfile(
+    std::unique_ptr<MemoryBuffer> DataBuffer) {
   const char *Next = DataBuffer->getBufferStart();
 
   while (Next < DataBuffer->getBufferEnd()) {

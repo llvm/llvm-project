@@ -92,6 +92,13 @@ const char *IostatErrorString(int iostat) {
     return "B/O/Z input value overflows variable";
   case IostatIntegerInputOverflow:
     return "Integer input value overflows variable";
+  case IostatRealInputOverflow:
+    return "Real or complex input value overflows type";
+  case IostatCannotReposition:
+    return "Attempt to reposition a unit which is connected to a file that can "
+           "only be processed sequentially";
+  case IostatOpenAlreadyConnected:
+    return "OPEN of file already connected to another unit";
   default:
     return nullptr;
   }
