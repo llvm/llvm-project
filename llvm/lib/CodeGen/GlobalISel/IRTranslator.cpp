@@ -2950,15 +2950,6 @@ void IRTranslator::finishPendingPhis() {
   }
 }
 
-bool IRTranslator::valueIsSplit(const Value &V,
-                                SmallVectorImpl<uint64_t> *Offsets) {
-  SmallVector<LLT, 4> SplitTys;
-  if (Offsets && !Offsets->empty())
-    Offsets->clear();
-  computeValueLLTs(*DL, *V.getType(), SplitTys, Offsets);
-  return SplitTys.size() > 1;
-}
-
 bool IRTranslator::translate(const Instruction &Inst) {
   CurBuilder->setDebugLoc(Inst.getDebugLoc());
 
