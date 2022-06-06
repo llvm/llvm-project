@@ -32,6 +32,8 @@ add_llvm_tool(dsymutil
   DEPENDS
   intrinsics_gen
   ${tablegen_deps}
+  DsymutilTableGen
+  GENERATE_DRIVER
   )
 
 if(APPLE)

@@ -5,6 +5,7 @@
 load("//llvm:tblgen.bzl", "gentbl")
 load("//llvm:binary_alias.bzl", "binary_alias")
 load("//llvm:cc_plugin_library.bzl", "cc_plugin_library")
+load("//llvm:template_rule.bzl", "template_rule")
 
 package(
     default_visibility = ["//visibility:public"],
@@ -1925,12 +1926,21 @@ cc_binary(
     ],
 )
 
+template_rule(
+    name = "clang_main",
+    src = "//llvm:cmake/driver-template.cpp.in",
+    out = "clang_main.cpp",
+    substitutions = {
+        "@TOOL_NAME@": "clang"
+    },
+)
+
 cc_library(
     name = "clang-driver",
     srcs = glob([
         "tools/driver/*.cpp",
         "tools/driver/*.h",
-    ]),
+    ]) + ["clang_main.cpp"],
     copts = [
         # Disable stack frame size checks in the driver because
         # clang::ensureStackAddressSpace allocates a large array on the stack.

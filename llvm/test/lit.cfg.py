@@ -139,6 +139,7 @@ config.substitutions.append(
 config.llvm_locstats_used = os.path.exists(llvm_locstats_tool)
 
 tools = [
+    ToolSubst('%llvm', FindTool('llvm')),
     ToolSubst('%lli', FindTool('lli'), post='.', extra_args=lli_args),
     ToolSubst('%llc_dwarf', FindTool('llc'), extra_args=llc_args),
     ToolSubst('%go', config.go_executable, unresolved='ignore'),
@@ -352,6 +353,9 @@ if config.target_triple:
 
 if lit.util.isMacOSTriple(config.target_triple):
    config.available_features.add('darwin')
+
+if config.have_llvm_driver:
+  config.available_features.add('llvm-driver')
 
 import subprocess
 

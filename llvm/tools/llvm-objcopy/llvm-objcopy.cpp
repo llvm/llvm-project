@@ -223,7 +223,7 @@ static Error executeObjcopy(ConfigManager &ConfigMgr) {
   return Error::success();
 }
 
-int main(int argc, char **argv) {
+int llvm_objcopy_main(int argc, char **argv) {
   InitLLVM X(argc, argv);
   ToolName = argv[0];
 
