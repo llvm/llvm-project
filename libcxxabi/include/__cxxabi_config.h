@@ -10,7 +10,7 @@
 #define ____CXXABI_CONFIG_H
 
 #if defined(__arm__) && !defined(__USING_SJLJ_EXCEPTIONS__) &&                 \
-    !defined(__ARM_DWARF_EH__)
+    !defined(__ARM_DWARF_EH__) && !defined(__SEH__)
 #define _LIBCXXABI_ARM_EHABI
 #endif
 
