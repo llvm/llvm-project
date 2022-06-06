@@ -1212,26 +1212,28 @@ let SubRegIndices = [zasubb] in {
 
 // SME Register Classes
 
-// Accumulator array
-def MPR : RegisterClass<"AArch64", [untyped], 2048, (add ZA)> {
-  let Size = 2048;
-}
+let isAllocatable = 0 in {
+  // Accumulator array
+  def MPR : RegisterClass<"AArch64", [untyped], 2048, (add ZA)> {
+    let Size = 2048;
+  }
 
-// Accumulator array as single tiles
-def MPR8    : RegisterClass<"AArch64", [untyped], 2048, (add (sequence "ZAB%u", 0, 0))> {
-  let Size = 2048;
-}
-def MPR16   : RegisterClass<"AArch64", [untyped], 1024, (add (sequence "ZAH%u", 0, 1))> {
-  let Size = 1024;
-}
-def MPR32   : RegisterClass<"AArch64", [untyped],  512, (add (sequence "ZAS%u", 0, 3))> {
-  let Size = 512;
-}
-def MPR64   : RegisterClass<"AArch64", [untyped],  256, (add (sequence "ZAD%u", 0, 7))> {
-  let Size = 256;
-}
-def MPR128  : RegisterClass<"AArch64", [untyped],  128, (add (sequence "ZAQ%u", 0, 15))> {
-  let Size = 128;
+  // Accumulator array as single tiles
+  def MPR8    : RegisterClass<"AArch64", [untyped], 2048, (add (sequence "ZAB%u", 0, 0))> {
+    let Size = 2048;
+  }
+  def MPR16   : RegisterClass<"AArch64", [untyped], 1024, (add (sequence "ZAH%u", 0, 1))> {
+    let Size = 1024;
+  }
+  def MPR32   : RegisterClass<"AArch64", [untyped],  512, (add (sequence "ZAS%u", 0, 3))> {
+    let Size = 512;
+  }
+  def MPR64   : RegisterClass<"AArch64", [untyped],  256, (add (sequence "ZAD%u", 0, 7))> {
+    let Size = 256;
+  }
+  def MPR128  : RegisterClass<"AArch64", [untyped],  128, (add (sequence "ZAQ%u", 0, 15))> {
+    let Size = 128;
+  }
 }
 
 // SME Register Operands
