@@ -35,12 +35,3 @@ v_interp_p2_f32 v0, -v1, v2, v3 wait_exp
 
 global_atomic_cmpswap_x2 v[1:4], v3, v[5:8], off offset:2047 glc
 // GFX11: [[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
-
-v_cubesc_f32_e64_dpp v5, v1, v2, 12345678 row_shr:4 row_mask:0xf bank_mask:0xf
-// GFX11: [[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
-
-v_add3_u32_e64_dpp v5, v1, v2, 49812340 dpp8:[7,6,5,4,3,2,1,0]
-// GFX11: [[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
-
-v_add3_u32_e64_dpp v5, v1, s1, v0 dpp8:[7,6,5,4,3,2,1,0]
-// GFX11: [[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction

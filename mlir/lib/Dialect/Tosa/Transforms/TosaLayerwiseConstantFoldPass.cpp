@@ -1,4 +1,4 @@
-//===- TosaOptionalDecompositions.cpp -------------------------------------===//
+//===- TosaLayerwiseConstantFoldPass.cpp ----------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,9 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// Pass to apply the Tosa operations decompositions
-// exposed as populate functions in
-// include/mlir/Dialect/Tosa/Transforms/Passes.h
+// This file implements constant folding transformations on TOSA operations
 //
 //===----------------------------------------------------------------------===//
 
@@ -19,19 +17,19 @@
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 
 using namespace mlir;
+using namespace mlir::tosa;
 
 namespace {
 
-struct TosaOptionalDecompositions
-    : public TosaOptionalDecompositionsBase<TosaOptionalDecompositions> {
+struct TosaLayerwiseConstantFoldPass
+    : public TosaLayerwiseConstantFoldPassBase<TosaLayerwiseConstantFoldPass> {
   void runOnOperation() override {
     auto *ctx = &getContext();
     RewritePatternSet patterns(ctx);
     auto func = getOperation();
 
-    mlir::tosa::populateTosaDecomposeConv2D(ctx, patterns);
-    mlir::tosa::populateTosaDecomposeTransposeConv(ctx, patterns);
-    mlir::tosa::populateTosaDecomposeDepthwise(ctx, patterns);
+    mlir::tosa::populateTosaFoldConstantTransposePatterns(ctx, patterns);
+    mlir::tosa::populateTosaOpsCanonicalizationPatterns(ctx, patterns);
 
     if (applyPatternsAndFoldGreedily(func, std::move(patterns)).failed())
       signalPassFailure();
@@ -40,6 +38,6 @@ struct TosaOptionalDecompositions
 
 } // namespace
 
-std::unique_ptr<Pass> mlir::tosa::createTosaOptionalDecompositions() {
-  return std::make_unique<TosaOptionalDecompositions>();
+std::unique_ptr<Pass> mlir::tosa::createTosaLayerwiseConstantFoldPass() {
+  return std::make_unique<TosaLayerwiseConstantFoldPass>();
 }
