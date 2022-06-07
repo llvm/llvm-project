@@ -144,14 +144,15 @@ void DXContainerWriter::writeParts(raw_ostream &OS) {
         Header.Size = P.Program->Size.getValue();
       else
         Header.Size = sizeof(dxbc::ProgramHeader) + Header.Bitcode.Size;
+
+      uint32_t BitcodeOffset = Header.Bitcode.Offset;
       if (sys::IsBigEndianHost)
         Header.swapBytes();
       OS.write(reinterpret_cast<const char *>(&Header),
                sizeof(dxbc::ProgramHeader));
       if (P.Program->DXIL) {
-        if (Header.Bitcode.Offset > sizeof(dxbc::BitcodeHeader)) {
-          uint32_t PadBytes =
-              Header.Bitcode.Offset - sizeof(dxbc::BitcodeHeader);
+        if (BitcodeOffset > sizeof(dxbc::BitcodeHeader)) {
+          uint32_t PadBytes = BitcodeOffset - sizeof(dxbc::BitcodeHeader);
           OS.write_zeros(PadBytes);
         }
         OS.write(reinterpret_cast<char *>(P.Program->DXIL->data()),
