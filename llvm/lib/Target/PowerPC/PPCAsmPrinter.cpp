@@ -882,7 +882,7 @@ void PPCAsmPrinter::emitInstruction(const MachineInstr *MI) {
 
       // Print MO for better readability
       if (isVerbose())
-        OutStreamer->GetCommentOS() << MO << '\n';
+        OutStreamer->getCommentOS() << MO << '\n';
       EmitToStreamer(*OutStreamer, TmpInst);
       return;
     }
@@ -953,7 +953,7 @@ void PPCAsmPrinter::emitInstruction(const MachineInstr *MI) {
 
     // Print MO for better readability
     if (isVerbose() && IsAIX)
-      OutStreamer->GetCommentOS() << MO << '\n';
+      OutStreamer->getCommentOS() << MO << '\n';
     EmitToStreamer(*OutStreamer, TmpInst);
     return;
   }
@@ -2390,9 +2390,9 @@ void PPCAIXAsmPrinter::emitGlobalVariableHelper(const GlobalVariable *GV) {
   // Print GV in verbose mode
   if (isVerbose()) {
     if (GV->hasInitializer()) {
-      GV->printAsOperand(OutStreamer->GetCommentOS(),
+      GV->printAsOperand(OutStreamer->getCommentOS(),
                          /*PrintType=*/false, GV->getParent());
-      OutStreamer->GetCommentOS() << '\n';
+      OutStreamer->getCommentOS() << '\n';
     }
   }
 

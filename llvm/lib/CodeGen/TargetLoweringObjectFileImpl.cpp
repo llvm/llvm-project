@@ -369,7 +369,7 @@ void TargetLoweringObjectFileELF::emitModuleMetadata(MCStreamer &Streamer,
     Streamer.emitLabel(C.getOrCreateSymbol(StringRef("OBJC_IMAGE_INFO")));
     Streamer.emitInt32(Version);
     Streamer.emitInt32(Flags);
-    Streamer.AddBlankLine();
+    Streamer.addBlankLine();
   }
 
   emitCGProfileMetadata(Streamer, M);
@@ -1231,7 +1231,7 @@ void TargetLoweringObjectFileMachO::emitModuleMetadata(MCStreamer &Streamer,
                      getOrCreateSymbol(StringRef("L_OBJC_IMAGE_INFO")));
   Streamer.emitInt32(VersionVal);
   Streamer.emitInt32(ImageInfoFlags);
-  Streamer.AddBlankLine();
+  Streamer.addBlankLine();
 }
 
 static void checkMachOComdat(const GlobalValue *GV) {
@@ -1781,7 +1781,7 @@ void TargetLoweringObjectFileCOFF::emitModuleMetadata(MCStreamer &Streamer,
     Streamer.emitLabel(C.getOrCreateSymbol(StringRef("OBJC_IMAGE_INFO")));
     Streamer.emitInt32(Version);
     Streamer.emitInt32(Flags);
-    Streamer.AddBlankLine();
+    Streamer.addBlankLine();
   }
 
   emitCGProfileMetadata(Streamer, M);

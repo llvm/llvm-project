@@ -145,7 +145,7 @@ void WinException::endFunction(const MachineFunction *MF) {
     return;
 
   if (shouldEmitPersonality || shouldEmitLSDA) {
-    Asm->OutStreamer->PushSection();
+    Asm->OutStreamer->pushSection();
 
     // Just switch sections to the right xdata section.
     MCSection *XData = Asm->OutStreamer->getAssociatedXDataSection(
@@ -165,7 +165,7 @@ void WinException::endFunction(const MachineFunction *MF) {
     else
       emitExceptionTable();
 
-    Asm->OutStreamer->PopSection();
+    Asm->OutStreamer->popSection();
   }
 
   if (!MF->getCatchretTargets().empty()) {
@@ -205,11 +205,11 @@ void WinException::beginFunclet(const MachineBasicBlock &MBB,
     Sym = getMCSymbolForMBB(Asm, &MBB);
 
     // Describe our funclet symbol as a function with internal linkage.
-    Asm->OutStreamer->BeginCOFFSymbolDef(Sym);
+    Asm->OutStreamer->beginCOFFSymbolDef(Sym);
     Asm->OutStreamer->emitCOFFSymbolStorageClass(COFF::IMAGE_SYM_CLASS_STATIC);
     Asm->OutStreamer->emitCOFFSymbolType(COFF::IMAGE_SYM_DTYPE_FUNCTION
                                          << COFF::SCT_COMPLEX_TYPE_SHIFT);
-    Asm->OutStreamer->EndCOFFSymbolDef();
+    Asm->OutStreamer->endCOFFSymbolDef();
 
     // We want our funclet's entry point to be aligned such that no nops will be
     // present after the label.

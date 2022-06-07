@@ -196,7 +196,7 @@ int main(int argc, char **argv) {
     return 1;
   }
 
-  MS->Finish();
+  MS->finish();
   OutFile.keep();
   return 0;
 }

@@ -143,10 +143,10 @@ public:
       int Type =
         COFF::IMAGE_SYM_DTYPE_FUNCTION << COFF::SCT_COMPLEX_TYPE_SHIFT;
 
-      OutStreamer->BeginCOFFSymbolDef(CurrentFnSym);
+      OutStreamer->beginCOFFSymbolDef(CurrentFnSym);
       OutStreamer->emitCOFFSymbolStorageClass(Scl);
       OutStreamer->emitCOFFSymbolType(Type);
-      OutStreamer->EndCOFFSymbolDef();
+      OutStreamer->endCOFFSymbolDef();
     }
 
     // Emit the rest of the function body.
@@ -204,10 +204,10 @@ void AArch64AsmPrinter::emitStartOfAsmFile(Module &M) {
     // Emit an absolute @feat.00 symbol.  This appears to be some kind of
     // compiler features bitfield read by link.exe.
     MCSymbol *S = MMI->getContext().getOrCreateSymbol(StringRef("@feat.00"));
-    OutStreamer->BeginCOFFSymbolDef(S);
+    OutStreamer->beginCOFFSymbolDef(S);
     OutStreamer->emitCOFFSymbolStorageClass(COFF::IMAGE_SYM_CLASS_STATIC);
     OutStreamer->emitCOFFSymbolType(COFF::IMAGE_SYM_DTYPE_NULL);
-    OutStreamer->EndCOFFSymbolDef();
+    OutStreamer->endCOFFSymbolDef();
     int64_t Feat00Flags = 0;
 
     if (M.getModuleFlag("cfguard")) {
@@ -251,7 +251,7 @@ void AArch64AsmPrinter::emitFunctionHeaderComment() {
   const AArch64FunctionInfo *FI = MF->getInfo<AArch64FunctionInfo>();
   Optional<std::string> OutlinerString = FI->getOutliningStyle();
   if (OutlinerString != None)
-    OutStreamer->GetCommentOS() << ' ' << OutlinerString;
+    OutStreamer->getCommentOS() << ' ' << OutlinerString;
 }
 
 void AArch64AsmPrinter::LowerPATCHABLE_FUNCTION_ENTER(const MachineInstr &MI)

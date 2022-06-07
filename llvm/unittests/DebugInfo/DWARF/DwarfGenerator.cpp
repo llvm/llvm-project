@@ -544,7 +544,7 @@ StringRef dwarfgen::Generator::generate() {
   for (auto &LT : LineTables)
     LT->generate(*MC, *Asm);
 
-  MS->Finish();
+  MS->finish();
   if (FileBytes.empty())
     return StringRef();
   return StringRef(FileBytes.data(), FileBytes.size());

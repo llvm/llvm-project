@@ -1538,7 +1538,7 @@ void DWARFRewriter::writeDWP(
   writeIndex(*Streamer.get(), MCOFI.getDwarfCUIndexSection(),
              ContributionOffsets, IndexEntries, IndexVersion);
 
-  Streamer->Finish();
+  Streamer->finish();
   Out->keep();
 }
 
@@ -1637,7 +1637,7 @@ void DWARFRewriter::writeDWOFiles(
               RangeListssWriter))
         Streamer->emitBytes(*OutData);
     }
-    Streamer->Finish();
+    Streamer->finish();
     TempOut->keep();
   }
 }

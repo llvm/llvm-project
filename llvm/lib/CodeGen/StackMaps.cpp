@@ -732,7 +732,7 @@ void StackMaps::serializeToStackMapSection() {
   emitFunctionFrameRecords(OS);
   emitConstantPoolEntries(OS);
   emitCallsiteEntries(OS);
-  OS.AddBlankLine();
+  OS.addBlankLine();
 
   // Clean up.
   CSInfos.clear();

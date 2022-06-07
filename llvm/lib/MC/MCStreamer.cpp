@@ -108,7 +108,7 @@ void MCStreamer::reset() {
   SectionStack.push_back(std::pair<MCSectionSubPair, MCSectionSubPair>());
 }
 
-raw_ostream &MCStreamer::GetCommentOS() {
+raw_ostream &MCStreamer::getCommentOS() {
   // By default, discard comments.
   return nulls();
 }
@@ -404,7 +404,7 @@ void MCStreamer::initSections(bool NoExecStack, const MCSubtargetInfo &STI) {
   SwitchSection(getContext().getObjectFileInfo()->getTextSection());
 }
 
-void MCStreamer::AssignFragment(MCSymbol *Symbol, MCFragment *Fragment) {
+void MCStreamer::assignFragment(MCSymbol *Symbol, MCFragment *Fragment) {
   assert(Fragment);
   Symbol->setFragment(Fragment);
 
@@ -992,7 +992,7 @@ void MCStreamer::emitWindowsUnwindTables() {}
 
 void MCStreamer::emitWindowsUnwindTables(WinEH::FrameInfo *Frame) {}
 
-void MCStreamer::Finish(SMLoc EndLoc) {
+void MCStreamer::finish(SMLoc EndLoc) {
   if ((!DwarfFrameInfos.empty() && !DwarfFrameInfos.back().End) ||
       (!WinFrameInfos.empty() && !WinFrameInfos.back()->End)) {
     getContext().reportError(EndLoc, "Unfinished frame!");
@@ -1144,10 +1144,10 @@ void MCStreamer::emitAbsoluteSymbolDiffAsULEB128(const MCSymbol *Hi,
 void MCStreamer::emitAssemblerFlag(MCAssemblerFlag Flag) {}
 void MCStreamer::emitThumbFunc(MCSymbol *Func) {}
 void MCStreamer::emitSymbolDesc(MCSymbol *Symbol, unsigned DescValue) {}
-void MCStreamer::BeginCOFFSymbolDef(const MCSymbol *Symbol) {
+void MCStreamer::beginCOFFSymbolDef(const MCSymbol *Symbol) {
   llvm_unreachable("this directive only supported on COFF targets");
 }
-void MCStreamer::EndCOFFSymbolDef() {
+void MCStreamer::endCOFFSymbolDef() {
   llvm_unreachable("this directive only supported on COFF targets");
 }
 void MCStreamer::emitFileDirective(StringRef Filename) {}

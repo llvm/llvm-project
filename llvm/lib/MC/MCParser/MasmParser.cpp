@@ -1429,7 +1429,7 @@ bool MasmParser::Run(bool NoInitialTextSection, bool NoFinalize) {
   // Finalize the output stream if there are no errors and if the client wants
   // us to.
   if (!HadError && !NoFinalize)
-    Out.Finish(Lexer.getLoc());
+    Out.finish(Lexer.getLoc());
 
   return HadError || getContext().hadError();
 }
@@ -2092,7 +2092,7 @@ bool MasmParser::parseStatement(ParseStatementInfo &Info,
     // If this is a line comment we can drop it safely.
     if (getTok().getString().empty() || getTok().getString().front() == '\r' ||
         getTok().getString().front() == '\n')
-      Out.AddBlankLine();
+      Out.addBlankLine();
     Lex();
     return false;
   }
@@ -2281,7 +2281,7 @@ bool MasmParser::parseStatement(ParseStatementInfo &Info,
     }
 
     // Consume any end of statement token, if present, to avoid spurious
-    // AddBlankLine calls().
+    // addBlankLine calls().
     if (getTok().is(AsmToken::EndOfStatement)) {
       Lex();
     }

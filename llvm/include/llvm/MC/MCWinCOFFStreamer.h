@@ -45,10 +45,10 @@ public:
   void emitThumbFunc(MCSymbol *Func) override;
   bool emitSymbolAttribute(MCSymbol *Symbol, MCSymbolAttr Attribute) override;
   void emitSymbolDesc(MCSymbol *Symbol, unsigned DescValue) override;
-  void BeginCOFFSymbolDef(MCSymbol const *Symbol) override;
+  void beginCOFFSymbolDef(MCSymbol const *Symbol) override;
   void emitCOFFSymbolStorageClass(int StorageClass) override;
   void emitCOFFSymbolType(int Type) override;
-  void EndCOFFSymbolDef() override;
+  void endCOFFSymbolDef() override;
   void emitCOFFSafeSEH(MCSymbol const *Symbol) override;
   void emitCOFFSymbolIndex(MCSymbol const *Symbol) override;
   void emitCOFFSectionIndex(MCSymbol const *Symbol) override;
