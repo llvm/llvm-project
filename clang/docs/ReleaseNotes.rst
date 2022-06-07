@@ -166,6 +166,8 @@ Bug Fixes
 - Allow use of an elaborated type specifier as a ``_Generic`` selection
   association in C++ mode. This fixes
   `Issue 55562 <https://github.com/llvm/llvm-project/issues/55562>`_.
+- Clang will allow calling a ``consteval`` function in a default argument. This
+  fixes `Issue 48230 <https://github.com/llvm/llvm-project/issues/48230>`_.
 
 Improvements to Clang's diagnostics
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
