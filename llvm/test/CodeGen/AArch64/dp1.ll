@@ -246,7 +246,6 @@ define void @ctpop_i64() {
 ; CHECK-GISEL-NEXT:    cnt v0.8b, v0.8b
 ; CHECK-GISEL-NEXT:    uaddlv h0, v0.8b
 ; CHECK-GISEL-NEXT:    fmov w9, s0
-; CHECK-GISEL-NEXT:    mov w9, w9
 ; CHECK-GISEL-NEXT:    str x9, [x8]
 ; CHECK-GISEL-NEXT:    ret
   %val0_tmp = load i64, i64* @var64

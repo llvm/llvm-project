@@ -328,7 +328,8 @@ entry:
 define i64 @sign_extend_inreg_isdef32(i64) {
 ; CHECK-LABEL: sign_extend_inreg_isdef32:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    sbfx x0, x0, #32, #16
+; CHECK-NEXT:    sbfx x8, x0, #32, #16
+; CHECK-NEXT:    mov w0, w8
 ; CHECK-NEXT:    ret
   %2 = lshr i64 %0, 32
   %3 = shl i64 %2, 16
