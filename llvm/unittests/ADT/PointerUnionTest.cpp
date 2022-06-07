@@ -283,7 +283,8 @@ TEST_F(PointerUnionTest, NewCastInfra) {
                 "type mismatch for cast with PointerUnion");
 
   PointerUnion<int *, const double *> constd2(&d);
-  auto *result2 = cast<const double *>(d);
+  auto *result2 = cast<const double *>(constd2);
+  EXPECT_EQ(result2, &d);
   static_assert(std::is_same<const double *, decltype(result2)>::value,
                 "type mismatch for cast with PointerUnion");
 }
