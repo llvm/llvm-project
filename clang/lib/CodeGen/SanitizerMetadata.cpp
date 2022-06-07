@@ -67,14 +67,18 @@ void SanitizerMetadata::reportGlobal(llvm::GlobalVariable *GV, const VarDecl &D,
   llvm::raw_string_ostream OS(QualName);
   D.printQualifiedName(OS);
 
-  bool IsExcluded = false;
-  for (auto Attr : D.specific_attrs<NoSanitizeAttr>())
-    if (Attr->getMask() & SanitizerKind::Address)
-      IsExcluded = true;
-  if (D.hasAttr<DisableSanitizerInstrumentationAttr>())
-    IsExcluded = true;
+  auto getNoSanitizeMask = [](const VarDecl &D) {
+    if (D.hasAttr<DisableSanitizerInstrumentationAttr>())
+      return SanitizerKind::All;
+
+    SanitizerMask NoSanitizeMask;
+    for (auto *Attr : D.specific_attrs<NoSanitizeAttr>())
+      NoSanitizeMask |= Attr->getMask();
+
+    return NoSanitizeMask;
+  };
   reportGlobal(GV, D.getLocation(), OS.str(), D.getType(), IsDynInit,
-               IsExcluded);
+               SanitizerSet{getNoSanitizeMask(D)}.has(SanitizerKind::Address));
 }
 
 void SanitizerMetadata::reportGlobal(llvm::GlobalVariable *GV,
