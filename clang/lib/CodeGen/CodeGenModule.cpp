@@ -4795,7 +4795,7 @@ void CodeGenModule::EmitGlobalVarDefinition(const VarDecl *D,
   if (NeedsGlobalCtor || NeedsGlobalDtor)
     EmitCXXGlobalVarDeclInitFunc(D, GV, NeedsGlobalCtor);
 
-  SanitizerMD->reportGlobalToASan(GV, *D, NeedsGlobalCtor);
+  SanitizerMD->reportGlobal(GV, *D, NeedsGlobalCtor);
 
   // Emit global variable debug information.
   if (CGDebugInfo *DI = getModuleDebugInfo())
@@ -5677,8 +5677,8 @@ CodeGenModule::GetAddrOfConstantStringFromLiteral(const StringLiteral *S,
   if (Entry)
     *Entry = GV;
 
-  SanitizerMD->reportGlobalToASan(GV, S->getStrTokenLoc(0), "<string literal>",
-                                  QualType());
+  SanitizerMD->reportGlobal(GV, S->getStrTokenLoc(0), "<string literal>",
+                            QualType());
 
   return ConstantAddress(castStringLiteralToDefaultAddressSpace(*this, GV),
                          GV->getValueType(), Alignment);
