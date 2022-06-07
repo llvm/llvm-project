@@ -215,6 +215,9 @@ static void addVisualCDefines(const LangOptions &Opts, MacroBuilder &Builder) {
     }
   }
 
+  if (Opts.Kernel)
+    Builder.defineMacro("_KERNEL_MODE");
+
   Builder.defineMacro("_INTEGRAL_MAX_BITS", "64");
   Builder.defineMacro("__STDC_NO_THREADS__");
 
