@@ -47,7 +47,7 @@ template <typename AssumeFunction>
 ConstraintManager::ProgramStatePair
 ConstraintManager::assumeDualImpl(ProgramStateRef &State,
                                   AssumeFunction &Assume) {
-  if (State->isPosteriorlyOverconstrained())
+  if (LLVM_UNLIKELY(State->isPosteriorlyOverconstrained()))
     return {State, State};
 
   // Assume functions might recurse (see `reAssume` or `tryRearrange`). During
