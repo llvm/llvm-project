@@ -133,6 +133,28 @@ define float @select_fsub_swapped_fast_math(i1 %cond, float %A, float %B) {
   ret float %D
 }
 
+define <4 x float> @select_nsz_fsub_v4f32(<4 x i1> %cond, <4 x float> %A, <4 x float> %B) {
+; CHECK-LABEL: @select_nsz_fsub_v4f32(
+; CHECK-NEXT:    [[C:%.*]] = select <4 x i1> [[COND:%.*]], <4 x float> [[B:%.*]], <4 x float> zeroinitializer
+; CHECK-NEXT:    [[D:%.*]] = fsub <4 x float> [[A:%.*]], [[C]]
+; CHECK-NEXT:    ret <4 x float> [[D]]
+;
+  %C = fsub <4 x float> %A, %B
+  %D = select nsz <4 x i1> %cond, <4 x float> %C, <4 x float> %A
+  ret <4 x float> %D
+}
+
+define <vscale x 4 x float> @select_nsz_fsub_nxv4f32(<vscale x 4 x i1> %cond, <vscale x 4 x float> %A, <vscale x 4 x float> %B) {
+; CHECK-LABEL: @select_nsz_fsub_nxv4f32(
+; CHECK-NEXT:    [[C:%.*]] = select <vscale x 4 x i1> [[COND:%.*]], <vscale x 4 x float> [[B:%.*]], <vscale x 4 x float> zeroinitializer
+; CHECK-NEXT:    [[D:%.*]] = fsub <vscale x 4 x float> [[A:%.*]], [[C]]
+; CHECK-NEXT:    ret <vscale x 4 x float> [[D]]
+;
+  %C = fsub <vscale x 4 x float> %A, %B
+  %D = select nsz <vscale x 4 x i1> %cond, <vscale x 4 x float> %C, <vscale x 4 x float> %A
+  ret <vscale x 4 x float> %D
+}
+
 ; 'fsub' can only fold on the amount subtracted.
 define float @select_fsub_invalid(i1 %cond, float %A, float %B) {
 ; CHECK-LABEL: @select_fsub_invalid(
