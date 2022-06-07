@@ -49,6 +49,18 @@ spv.module Logical GLSL450 attributes {
   }
 }
 
+// Test Physical Storage Buffers are deduced correctly.
+
+// CHECK: spv.module PhysicalStorageBuffer64 GLSL450 requires #spv.vce<v1.0, [PhysicalStorageBufferAddresses, Shader], [SPV_EXT_physical_storage_buffer]>
+spv.module PhysicalStorageBuffer64 GLSL450 attributes {
+  spv.target_env = #spv.target_env<
+    #spv.vce<v1.0, [Shader, PhysicalStorageBufferAddresses], [SPV_EXT_physical_storage_buffer]>, {}>
+} {
+  spv.func @physical_ptr(%val : !spv.ptr<f32, PhysicalStorageBuffer>) "None" {
+    spv.Return
+  }
+}
+
 // Test deducing implied capability.
 // AtomicStorage implies Shader.
 
