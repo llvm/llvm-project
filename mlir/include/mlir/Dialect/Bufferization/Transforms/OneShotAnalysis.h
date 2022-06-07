@@ -167,6 +167,9 @@ public:
   /// not be called for values inside not yet analyzed functions.
   bool isValueWritten(Value value) const;
 
+  /// Return true if the buffer of the given tensor value is writable.
+  bool isWritable(Value value) const;
+
 private:
   /// `aliasInfo` keeps track of aliasing and equivalent values. Only internal
   /// functions and `runOneShotBufferize` may access this object.
