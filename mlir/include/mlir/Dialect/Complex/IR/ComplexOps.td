@@ -564,4 +564,24 @@ def TanOp : ComplexUnaryOp<"tan", [SameOperandsAndResultType]> {
   let results = (outs Complex<AnyFloat>:$result);
 }
 
+//===----------------------------------------------------------------------===//
+// Conj
+//===----------------------------------------------------------------------===//
+
+def ConjOp : ComplexUnaryOp<"conj", [SameOperandsAndResultType]> {
+  let summary = "Calculate the complex conjugate";
+  let description = [{
+    The `conj` op takes a single complex number and computes the
+    complex conjugate.
+
+    Example:
+
+    ```mlir
+    %a = complex.conj %b: complex<f32>
+    ```
+  }];
+
+  let results = (outs Complex<AnyFloat>:$result);
+}
+
 #endif // COMPLEX_OPS
