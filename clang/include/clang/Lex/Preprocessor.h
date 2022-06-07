@@ -2243,10 +2243,7 @@ private:
   ///
   /// \param Tok - Token that represents the directive
   /// \param Directive - String reference for the directive name
-  /// \param EndLoc - End location for fixit
-  void SuggestTypoedDirective(const Token &Tok,
-                              StringRef Directive,
-                              const SourceLocation &EndLoc) const;
+  void SuggestTypoedDirective(const Token &Tok, StringRef Directive) const;
 
   /// We just read a \#if or related directive and decided that the
   /// subsequent tokens are in the \#if'd out portion of the
