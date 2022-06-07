@@ -22,7 +22,7 @@ using namespace CodeGen;
 
 SanitizerMetadata::SanitizerMetadata(CodeGenModule &CGM) : CGM(CGM) {}
 
-static bool isAsanHwasanOrMemTag(const SanitizerSet& SS) {
+static bool isAsanHwasanOrMemTag(const SanitizerSet &SS) {
   return SS.hasOneOf(SanitizerKind::Address | SanitizerKind::KernelAddress |
                      SanitizerKind::HWAddress | SanitizerKind::KernelHWAddress |
                      SanitizerKind::MemTag);
