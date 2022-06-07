@@ -38,8 +38,24 @@ dumpDXContainer(MemoryBufferRef Source) {
   Obj->Header.PartOffsets = std::vector<uint32_t>();
   for (const auto P : Container) {
     Obj->Header.PartOffsets->push_back(P.Offset);
-    Obj->Parts.push_back(
-        DXContainerYAML::Part{P.Part.getName().str(), P.Part.Size});
+    if (P.Part.getName() == "DXIL") {
+      Optional<DXContainer::DXILData> DXIL = Container.getDXIL();
+      assert(DXIL.hasValue() && "Since we are iterating and found a DXIL part, "
+                                "this should never not have a value");
+      Obj->Parts.push_back(DXContainerYAML::Part{
+          P.Part.getName().str(), P.Part.Size,
+          DXContainerYAML::DXILProgram{
+              DXIL->first.MajorVersion, DXIL->first.MinorVersion,
+              DXIL->first.ShaderKind, DXIL->first.Size,
+              DXIL->first.Bitcode.MajorVersion,
+              DXIL->first.Bitcode.MinorVersion, DXIL->first.Bitcode.Offset,
+              DXIL->first.Bitcode.Size,
+              std::vector<llvm::yaml::Hex8>(
+                  DXIL->second, DXIL->second + DXIL->first.Bitcode.Size)}});
+    } else {
+      Obj->Parts.push_back(
+          DXContainerYAML::Part{P.Part.getName().str(), P.Part.Size, None});
+    }
   }
 
   return Obj.release();

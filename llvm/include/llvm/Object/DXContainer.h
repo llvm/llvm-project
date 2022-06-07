@@ -15,6 +15,7 @@
 #ifndef LLVM_OBJECT_DXCONTAINER_H
 #define LLVM_OBJECT_DXCONTAINER_H
 
+#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/BinaryFormat/DXContainer.h"
@@ -24,15 +25,20 @@
 namespace llvm {
 namespace object {
 class DXContainer {
+public:
+  using DXILData = std::pair<dxbc::ProgramHeader, const char *>;
+
 private:
   DXContainer(MemoryBufferRef O);
 
   MemoryBufferRef Data;
   dxbc::Header Header;
   SmallVector<uint32_t, 4> PartOffsets;
+  Optional<DXILData> DXIL;
 
   Error parseHeader();
   Error parsePartOffsets();
+  Error parseDXILHeader(uint32_t Offset);
   friend class PartIterator;
 
 public:
@@ -108,6 +114,8 @@ public:
   static Expected<DXContainer> create(MemoryBufferRef Object);
 
   const dxbc::Header &getHeader() const { return Header; }
+
+  Optional<DXILData> getDXIL() const { return DXIL; }
 };
 
 } // namespace object

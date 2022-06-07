@@ -31,10 +31,23 @@ void MappingTraits<DXContainerYAML::FileHeader>::mapping(
   IO.mapOptional("PartOffsets", Header.PartOffsets);
 }
 
+void MappingTraits<DXContainerYAML::DXILProgram>::mapping(
+    IO &IO, DXContainerYAML::DXILProgram &Program) {
+  IO.mapRequired("MajorVersion", Program.MajorVersion);
+  IO.mapRequired("MinorVersion", Program.MinorVersion);
+  IO.mapRequired("ShaderKind", Program.ShaderKind);
+  IO.mapOptional("Size", Program.Size);
+  IO.mapRequired("DXIMMajorVersion", Program.DXILMajorVersion);
+  IO.mapRequired("DXILMinorVersion", Program.DXILMinorVersion);
+  IO.mapOptional("DXILSize", Program.DXILSize);
+  IO.mapOptional("DXIL", Program.DXIL);
+}
+
 void MappingTraits<DXContainerYAML::Part>::mapping(IO &IO,
                                                    DXContainerYAML::Part &P) {
   IO.mapRequired("Name", P.Name);
   IO.mapRequired("Size", P.Size);
+  IO.mapOptional("Program", P.Program);
 }
 
 void MappingTraits<DXContainerYAML::Object>::mapping(

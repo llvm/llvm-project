@@ -104,14 +104,14 @@ void DXContainerWriter::writeHeader(raw_ostream &OS) {
   OS.write(reinterpret_cast<char *>(Offsets.data()),
            Offsets.size() * sizeof(uint32_t));
 }
+
 void DXContainerWriter::writeParts(raw_ostream &OS) {
   uint32_t RollingOffset =
       sizeof(dxbc::Header) + (ObjectFile.Header.PartCount * sizeof(uint32_t));
   for (auto I : llvm::zip(ObjectFile.Parts, *ObjectFile.Header.PartOffsets)) {
     if (RollingOffset < std::get<1>(I)) {
       uint32_t PadBytes = std::get<1>(I) - RollingOffset;
-      std::vector<uint8_t> FillData(PadBytes, 0);
-      OS.write(reinterpret_cast<char *>(FillData.data()), PadBytes);
+      OS.write_zeros(PadBytes);
     }
     DXContainerYAML::Part P = std::get<0>(I);
     OS.write(P.Name.c_str(), 4);
@@ -120,7 +120,44 @@ void DXContainerWriter::writeParts(raw_ostream &OS) {
     OS.write(reinterpret_cast<const char *>(&P.Size), sizeof(uint32_t));
     RollingOffset = std::get<1>(I) + sizeof(dxbc::PartHeader);
 
-    // TODO: Write Part data
+    if (P.Name == "DXIL" && P.Program) {
+      dxbc::ProgramHeader Header;
+      Header.MajorVersion = P.Program->MajorVersion;
+      Header.MinorVersion = P.Program->MinorVersion;
+      Header.ShaderKind = P.Program->ShaderKind;
+      memcpy(Header.Bitcode.Magic, "DXIL", 4);
+      Header.Bitcode.MajorVersion = P.Program->DXILMajorVersion;
+      Header.Bitcode.MinorVersion = P.Program->DXILMinorVersion;
+
+      // Compute the optional fields if needed...
+      if (P.Program->DXILOffset)
+        Header.Bitcode.Offset = P.Program->DXILOffset.getValue();
+      else
+        Header.Bitcode.Offset = sizeof(dxbc::BitcodeHeader);
+
+      if (P.Program->DXILSize)
+        Header.Bitcode.Size = P.Program->DXILSize.getValue();
+      else
+        Header.Bitcode.Size = P.Program->DXIL ? P.Program->DXIL->size() : 0;
+
+      if (P.Program->Size)
+        Header.Size = P.Program->Size.getValue();
+      else
+        Header.Size = sizeof(dxbc::ProgramHeader) + Header.Bitcode.Size;
+      if (sys::IsBigEndianHost)
+        Header.swapBytes();
+      OS.write(reinterpret_cast<const char *>(&Header),
+               sizeof(dxbc::ProgramHeader));
+      if (P.Program->DXIL) {
+        if (Header.Bitcode.Offset > sizeof(dxbc::BitcodeHeader)) {
+          uint32_t PadBytes =
+              Header.Bitcode.Offset - sizeof(dxbc::BitcodeHeader);
+          OS.write_zeros(PadBytes);
+        }
+        OS.write(reinterpret_cast<char *>(P.Program->DXIL->data()),
+                 P.Program->DXIL->size());
+      }
+    }
   }
 }
 
