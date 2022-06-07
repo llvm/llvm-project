@@ -1809,3 +1809,12 @@ void Fortran::lower::pft::visitAllSymbols(
     parser::Walk(functionParserNode, visitor);
   });
 }
+
+void Fortran::lower::pft::visitAllSymbols(
+    const Fortran::lower::pft::Evaluation &eval,
+    const std::function<void(const Fortran::semantics::Symbol &)> callBack) {
+  SymbolVisitor visitor{callBack};
+  eval.visit([&](const auto &functionParserNode) {
+    parser::Walk(functionParserNode, visitor);
+  });
+}
