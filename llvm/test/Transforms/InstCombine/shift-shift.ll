@@ -584,11 +584,12 @@ define i16 @shl_lshr_demand6(i16 %x) {
   ret i16 %r
 }
 
+; Pre-shift a constant to eliminate shl.
+
 define i8 @lshr_shl_demand1(i8 %x) {
 ; CHECK-LABEL: @lshr_shl_demand1(
-; CHECK-NEXT:    [[SHR:%.*]] = lshr i8 28, [[X:%.*]]
-; CHECK-NEXT:    [[SHL:%.*]] = shl nuw i8 [[SHR]], 3
-; CHECK-NEXT:    [[R:%.*]] = or i8 [[SHL]], 7
+; CHECK-NEXT:    [[TMP1:%.*]] = lshr i8 -32, [[X:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = or i8 [[TMP1]], 7
 ; CHECK-NEXT:    ret i8 [[R]]
 ;
   %shr = lshr i8 28, %x ; 0b0001_1100
@@ -597,12 +598,14 @@ define i8 @lshr_shl_demand1(i8 %x) {
   ret i8 %r
 }
 
+; Extra use on lshr is ok and 'and' is another demand limiter.
+
 define i8 @lshr_shl_demand2(i8 %x) {
 ; CHECK-LABEL: @lshr_shl_demand2(
 ; CHECK-NEXT:    [[SHR:%.*]] = lshr i8 28, [[X:%.*]]
 ; CHECK-NEXT:    call void @use8(i8 [[SHR]])
-; CHECK-NEXT:    [[SHL:%.*]] = shl nuw i8 [[SHR]], 3
-; CHECK-NEXT:    [[R:%.*]] = and i8 [[SHL]], -16
+; CHECK-NEXT:    [[TMP1:%.*]] = lshr i8 -32, [[X]]
+; CHECK-NEXT:    [[R:%.*]] = and i8 [[TMP1]], -16
 ; CHECK-NEXT:    ret i8 [[R]]
 ;
   %shr = lshr i8 28, %x ; 0b0001_1100
@@ -611,6 +614,8 @@ define i8 @lshr_shl_demand2(i8 %x) {
   %r = and i8 %shl, -16 ; 0b1111_0000
   ret i8 %r
 }
+
+; It is not safe to pre-shift because we demand an extra low bit.
 
 define i8 @lshr_shl_demand3(i8 %x) {
 ; CHECK-LABEL: @lshr_shl_demand3(
@@ -625,6 +630,8 @@ define i8 @lshr_shl_demand3(i8 %x) {
   ret i8 %r
 }
 
+; It is not valid to pre-shift because we lose the high bit of 60.
+
 define i8 @lshr_shl_demand4(i8 %x) {
 ; CHECK-LABEL: @lshr_shl_demand4(
 ; CHECK-NEXT:    [[SHR:%.*]] = lshr i8 60, [[X:%.*]]
@@ -638,11 +645,12 @@ define i8 @lshr_shl_demand4(i8 %x) {
   ret i8 %r
 }
 
+; Splat vectors work too.
+
 define <2 x i8> @lshr_shl_demand5(<2 x i8> %x) {
 ; CHECK-LABEL: @lshr_shl_demand5(
-; CHECK-NEXT:    [[SHR:%.*]] = lshr <2 x i8> <i8 45, i8 45>, [[X:%.*]]
-; CHECK-NEXT:    [[SHL:%.*]] = shl nuw <2 x i8> [[SHR]], <i8 2, i8 2>
-; CHECK-NEXT:    [[R:%.*]] = and <2 x i8> [[SHL]], <i8 108, i8 108>
+; CHECK-NEXT:    [[TMP1:%.*]] = lshr <2 x i8> <i8 -76, i8 -76>, [[X:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = and <2 x i8> [[TMP1]], <i8 108, i8 108>
 ; CHECK-NEXT:    ret <2 x i8> [[R]]
 ;
   %shr = lshr <2 x i8> <i8 45, i8 45>, %x ; 0b0010_1101
@@ -650,6 +658,8 @@ define <2 x i8> @lshr_shl_demand5(<2 x i8> %x) {
   %r = and <2 x i8> %shl, <i8 108, i8 108> ; 0b0110_1100
   ret <2 x i8> %r
 }
+
+; TODO: allow undef/poison elements for this transform.
 
 define <2 x i8> @lshr_shl_demand5_undef_left(<2 x i8> %x) {
 ; CHECK-LABEL: @lshr_shl_demand5_undef_left(
@@ -664,6 +674,8 @@ define <2 x i8> @lshr_shl_demand5_undef_left(<2 x i8> %x) {
   ret <2 x i8> %r
 }
 
+; TODO: allow undef/poison elements for this transform.
+
 define <2 x i8> @lshr_shl_demand5_undef_right(<2 x i8> %x) {
 ; CHECK-LABEL: @lshr_shl_demand5_undef_right(
 ; CHECK-NEXT:    [[SHR:%.*]] = lshr <2 x i8> <i8 undef, i8 45>, [[X:%.*]]
@@ -676,6 +688,8 @@ define <2 x i8> @lshr_shl_demand5_undef_right(<2 x i8> %x) {
   %r = and <2 x i8> %shl, <i8 108, i8 108> ; 0b0110_1100
   ret <2 x i8> %r
 }
+
+; TODO: allow non-splat vector constants.
 
 define <2 x i8> @lshr_shl_demand5_nonuniform_vec_left(<2 x i8> %x) {
 ; CHECK-LABEL: @lshr_shl_demand5_nonuniform_vec_left(
@@ -690,11 +704,12 @@ define <2 x i8> @lshr_shl_demand5_nonuniform_vec_left(<2 x i8> %x) {
   ret <2 x i8> %r
 }
 
+; non-splat lshr constant is ok.
+
 define <2 x i8> @lshr_shl_demand5_nonuniform_vec_right(<2 x i8> %x) {
 ; CHECK-LABEL: @lshr_shl_demand5_nonuniform_vec_right(
-; CHECK-NEXT:    [[SHR:%.*]] = lshr <2 x i8> <i8 45, i8 13>, [[X:%.*]]
-; CHECK-NEXT:    [[SHL:%.*]] = shl <2 x i8> [[SHR]], <i8 2, i8 2>
-; CHECK-NEXT:    [[R:%.*]] = and <2 x i8> [[SHL]], <i8 108, i8 108>
+; CHECK-NEXT:    [[TMP1:%.*]] = lshr <2 x i8> <i8 -76, i8 52>, [[X:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = and <2 x i8> [[TMP1]], <i8 108, i8 108>
 ; CHECK-NEXT:    ret <2 x i8> [[R]]
 ;
   %shr = lshr <2 x i8> <i8 45, i8 13>, %x ; 0b0010_1101. 0b0000_1101
@@ -702,6 +717,8 @@ define <2 x i8> @lshr_shl_demand5_nonuniform_vec_right(<2 x i8> %x) {
   %r = and <2 x i8> %shl, <i8 108, i8 108> ; 0b0110_1100
   ret <2 x i8> %r
 }
+
+; This is possible, but may require significant changes to the demanded bits framework.
 
 define <2 x i8> @lshr_shl_demand5_nonuniform_vec_both(<2 x i8> %x) {
 ; CHECK-LABEL: @lshr_shl_demand5_nonuniform_vec_both(
