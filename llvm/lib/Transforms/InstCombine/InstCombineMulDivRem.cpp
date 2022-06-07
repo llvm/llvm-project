@@ -384,18 +384,24 @@ Instruction *InstCombinerImpl::visitMul(BinaryOperator &I) {
   // TODO: We are not checking one-use because the elimination of the multiply
   //       is better for analysis?
   const APInt *C;
-  if (match(&I, m_c_Mul(m_LShr(m_Value(X), m_APInt(C)), m_Value(Y))) &&
+  if (match(&I, m_c_BinOp(m_LShr(m_Value(X), m_APInt(C)), m_Value(Y))) &&
       *C == C->getBitWidth() - 1) {
     Value *IsNeg = Builder.CreateIsNeg(X, "isneg");
     return SelectInst::Create(IsNeg, Y, ConstantInt::getNullValue(Ty));
   }
 
+  // (and X, 1) * Y --> (trunc X) ? Y : 0
+  if (match(&I, m_c_BinOp(m_OneUse(m_And(m_Value(X), m_One())), m_Value(Y)))) {
+    Value *Tr = Builder.CreateTrunc(X, CmpInst::makeCmpResultType(Ty));
+    return SelectInst::Create(Tr, Y, ConstantInt::getNullValue(Ty));
+  }
+
   // ((ashr X, 31) | 1) * X --> abs(X)
   // X * ((ashr X, 31) | 1) --> abs(X)
   if (match(&I, m_c_BinOp(m_Or(m_AShr(m_Value(X),
-                                    m_SpecificIntAllowUndef(BitWidth - 1)),
-                             m_One()),
-                        m_Deferred(X)))) {
+                                      m_SpecificIntAllowUndef(BitWidth - 1)),
+                               m_One()),
+                          m_Deferred(X)))) {
     Value *Abs = Builder.CreateBinaryIntrinsic(
         Intrinsic::abs, X,
         ConstantInt::getBool(I.getContext(), I.hasNoSignedWrap()));

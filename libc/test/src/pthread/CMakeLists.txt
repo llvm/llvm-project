@@ -41,7 +41,7 @@ add_libc_unittest(
 )
 
 add_libc_unittest(
-  phtread_mutex_test
+  pthread_mutex_test
   SUITE
     libc_pthread_unittests
   SRCS
@@ -53,6 +53,18 @@ add_libc_unittest(
     libc.src.pthread.pthread_mutex_init
     libc.src.pthread.pthread_mutex_lock
     libc.src.pthread.pthread_mutex_unlock
-    libc.src.threads.thrd_create
-    libc.src.threads.thrd_join
+    libc.src.pthread.pthread_create
+    libc.src.pthread.pthread_join
+)
+
+add_libc_unittest(
+  pthread_test
+  SUITE
+    libc_pthread_unittests
+  SRCS
+    pthread_test.cpp
+  DEPENDS
+    libc.include.pthread
+    libc.src.pthread.pthread_create
+    libc.src.pthread.pthread_join
 )

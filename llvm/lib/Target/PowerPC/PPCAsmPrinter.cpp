@@ -882,7 +882,7 @@ void PPCAsmPrinter::emitInstruction(const MachineInstr *MI) {
 
       // Print MO for better readability
       if (isVerbose())
-        OutStreamer->GetCommentOS() << MO << '\n';
+        OutStreamer->getCommentOS() << MO << '\n';
       EmitToStreamer(*OutStreamer, TmpInst);
       return;
     }
@@ -953,7 +953,7 @@ void PPCAsmPrinter::emitInstruction(const MachineInstr *MI) {
 
     // Print MO for better readability
     if (isVerbose() && IsAIX)
-      OutStreamer->GetCommentOS() << MO << '\n';
+      OutStreamer->getCommentOS() << MO << '\n';
     EmitToStreamer(*OutStreamer, TmpInst);
     return;
   }
@@ -2390,9 +2390,9 @@ void PPCAIXAsmPrinter::emitGlobalVariableHelper(const GlobalVariable *GV) {
   // Print GV in verbose mode
   if (isVerbose()) {
     if (GV->hasInitializer()) {
-      GV->printAsOperand(OutStreamer->GetCommentOS(),
+      GV->printAsOperand(OutStreamer->getCommentOS(),
                          /*PrintType=*/false, GV->getParent());
-      OutStreamer->GetCommentOS() << '\n';
+      OutStreamer->getCommentOS() << '\n';
     }
   }
 
@@ -2432,9 +2432,8 @@ void PPCAIXAsmPrinter::emitGlobalVariableHelper(const GlobalVariable *GV) {
   }
 
   // Emit aliasing label for global variable.
-  llvm::for_each(GOAliasMap[GV], [this](const GlobalAlias *Alias) {
+  for (const GlobalAlias *Alias : GOAliasMap[GV])
     OutStreamer->emitLabel(getSymbol(Alias));
-  });
 
   emitGlobalConstant(GV->getParent()->getDataLayout(), GV->getInitializer());
 }
@@ -2449,10 +2448,8 @@ void PPCAIXAsmPrinter::emitFunctionDescriptor() {
       cast<MCSymbolXCOFF>(CurrentFnDescSym)->getRepresentedCsect());
 
   // Emit aliasing label for function descriptor csect.
-  llvm::for_each(GOAliasMap[&MF->getFunction()],
-                 [this](const GlobalAlias *Alias) {
-                   OutStreamer->emitLabel(getSymbol(Alias));
-                 });
+  for (const GlobalAlias *Alias : GOAliasMap[&MF->getFunction()])
+    OutStreamer->emitLabel(getSymbol(Alias));
 
   // Emit function entry point address.
   OutStreamer->emitValue(MCSymbolRefExpr::create(CurrentFnSym, OutContext),
@@ -2476,11 +2473,9 @@ void PPCAIXAsmPrinter::emitFunctionEntryLabel() {
     PPCAsmPrinter::emitFunctionEntryLabel();
 
   // Emit aliasing label for function entry point label.
-  llvm::for_each(
-      GOAliasMap[&MF->getFunction()], [this](const GlobalAlias *Alias) {
-        OutStreamer->emitLabel(
-            getObjFileLowering().getFunctionEntryPointSymbol(Alias, TM));
-      });
+  for (const GlobalAlias *Alias : GOAliasMap[&MF->getFunction()])
+    OutStreamer->emitLabel(
+        getObjFileLowering().getFunctionEntryPointSymbol(Alias, TM));
 }
 
 void PPCAIXAsmPrinter::emitPGORefs() {

@@ -443,6 +443,58 @@ def non_temporal_store :
          cast<MaskedStoreSDNode>(N)->isNonTemporal();
 }]>;
 
+multiclass masked_gather_scatter<PatFrags GatherScatterOp> {
+  // offsets = (signed)Index << sizeof(elt)
+  def NAME#_signed_scaled :
+    PatFrag<(ops node:$val, node:$pred, node:$ptr, node:$idx),
+            (GatherScatterOp node:$val, node:$pred, node:$ptr, node:$idx),[{
+    auto MGS = cast<MaskedGatherScatterSDNode>(N);
+    bool Signed = MGS->isIndexSigned() ||
+        MGS->getIndex().getValueType().getVectorElementType() == MVT::i64;
+    return Signed && MGS->isIndexScaled();
+  }]>;
+  // offsets = (signed)Index
+  def NAME#_signed_unscaled :
+    PatFrag<(ops node:$val, node:$pred, node:$ptr, node:$idx),
+            (GatherScatterOp node:$val, node:$pred, node:$ptr, node:$idx),[{
+    auto MGS = cast<MaskedGatherScatterSDNode>(N);
+    bool Signed = MGS->isIndexSigned() ||
+        MGS->getIndex().getValueType().getVectorElementType() == MVT::i64;
+    return Signed && !MGS->isIndexScaled();
+  }]>;
+  // offsets = (unsigned)Index << sizeof(elt)
+  def NAME#_unsigned_scaled :
+    PatFrag<(ops node:$val, node:$pred, node:$ptr, node:$idx),
+            (GatherScatterOp node:$val, node:$pred, node:$ptr, node:$idx),[{
+    auto MGS = cast<MaskedGatherScatterSDNode>(N);
+    bool Signed = MGS->isIndexSigned() ||
+        MGS->getIndex().getValueType().getVectorElementType() == MVT::i64;
+    return !Signed && MGS->isIndexScaled();
+  }]>;
+  // offsets = (unsigned)Index
+  def NAME#_unsigned_unscaled :
+    PatFrag<(ops node:$val, node:$pred, node:$ptr, node:$idx),
+            (GatherScatterOp node:$val, node:$pred, node:$ptr, node:$idx),[{
+    auto MGS = cast<MaskedGatherScatterSDNode>(N);
+    bool Signed = MGS->isIndexSigned() ||
+        MGS->getIndex().getValueType().getVectorElementType() == MVT::i64;
+    return !Signed && !MGS->isIndexScaled();
+  }]>;
+}
+
+defm nonext_masked_gather    : masked_gather_scatter<nonext_masked_gather>;
+defm azext_masked_gather_i8  : masked_gather_scatter<azext_masked_gather_i8>;
+defm azext_masked_gather_i16 : masked_gather_scatter<azext_masked_gather_i16>;
+defm azext_masked_gather_i32 : masked_gather_scatter<azext_masked_gather_i32>;
+defm sext_masked_gather_i8   : masked_gather_scatter<sext_masked_gather_i8>;
+defm sext_masked_gather_i16  : masked_gather_scatter<sext_masked_gather_i16>;
+defm sext_masked_gather_i32  : masked_gather_scatter<sext_masked_gather_i32>;
+
+defm nontrunc_masked_scatter  : masked_gather_scatter<nontrunc_masked_scatter>;
+defm trunc_masked_scatter_i8  : masked_gather_scatter<trunc_masked_scatter_i8>;
+defm trunc_masked_scatter_i16 : masked_gather_scatter<trunc_masked_scatter_i16>;
+defm trunc_masked_scatter_i32 : masked_gather_scatter<trunc_masked_scatter_i32>;
+
 // top16Zero - answer true if the upper 16 bits of $src are 0, false otherwise
 def top16Zero: PatLeaf<(i32 GPR32:$src), [{
   return SDValue(N,0)->getValueType(0) == MVT::i32 &&
@@ -642,8 +694,12 @@ def AArch64sabd     : PatFrags<(ops node:$lhs, node:$rhs),
                                [(abds node:$lhs, node:$rhs),
                                 (int_aarch64_neon_sabd node:$lhs, node:$rhs)]>;
 
+def AArch64addp_n   : SDNode<"AArch64ISD::ADDP", SDT_AArch64Zip>;
 def AArch64uaddlp_n : SDNode<"AArch64ISD::UADDLP", SDT_AArch64uaddlp>;
 def AArch64saddlp_n : SDNode<"AArch64ISD::SADDLP", SDT_AArch64uaddlp>;
+def AArch64addp     : PatFrags<(ops node:$Rn, node:$Rm),
+                               [(AArch64addp_n node:$Rn, node:$Rm),
+                                (int_aarch64_neon_addp node:$Rn, node:$Rm)]>;
 def AArch64uaddlp   : PatFrags<(ops node:$src),
                                [(AArch64uaddlp_n node:$src),
                                 (int_aarch64_neon_uaddlp node:$src)]>;
@@ -4454,7 +4510,7 @@ def : Pat<(v8i16 (concat_vectors
 //===----------------------------------------------------------------------===//
 
 defm ADD     : SIMDThreeSameVector<0, 0b10000, "add", add>;
-defm ADDP    : SIMDThreeSameVector<0, 0b10111, "addp", int_aarch64_neon_addp>;
+defm ADDP    : SIMDThreeSameVector<0, 0b10111, "addp", AArch64addp>;
 defm CMEQ    : SIMDThreeSameVector<1, 0b10001, "cmeq", AArch64cmeq>;
 defm CMGE    : SIMDThreeSameVector<0, 0b00111, "cmge", AArch64cmge>;
 defm CMGT    : SIMDThreeSameVector<0, 0b00110, "cmgt", AArch64cmgt>;

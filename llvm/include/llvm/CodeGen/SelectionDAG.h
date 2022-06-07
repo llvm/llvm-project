@@ -58,7 +58,7 @@ class Pass;
 class Type;
 template <class GraphType> struct GraphTraits;
 template <typename T, unsigned int N> class SmallSetVector;
-template <typename T> struct FoldingSetTrait;
+template <typename T, typename Enable> struct FoldingSetTrait;
 class AAResults;
 class BlockAddress;
 class BlockFrequencyInfo;
@@ -2136,11 +2136,6 @@ public:
 
   /// Compute the default alignment value for the given type.
   Align getEVTAlign(EVT MemoryVT) const;
-  /// Compute the default alignment value for the given type.
-  /// FIXME: Remove once transition to Align is over.
-  inline unsigned getEVTAlignment(EVT MemoryVT) const {
-    return getEVTAlign(MemoryVT).value();
-  }
 
   /// Test whether the given value is a constant int or similar node.
   SDNode *isConstantIntBuildVectorOrConstantInt(SDValue N) const;

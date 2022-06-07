@@ -52,7 +52,7 @@ cl::opt<bool> EnableExtTspBlockPlacement(
 cl::opt<bool> ApplyExtTspWithoutProfile(
     "ext-tsp-apply-without-profile",
     cl::desc("Whether to apply ext-tsp placement for instances w/o profile"),
-    cl::init(true), cl::Hidden, cl::ZeroOrMore);
+    cl::init(true), cl::Hidden);
 
 // Algorithm-specific constants. The values are tuned for the best performance
 // of large-scale front-end bound binaries.

@@ -580,4 +580,58 @@ int SelectedRealKind(
     }
   }
 }
+
+std::optional<DynamicType> ComparisonType(
+    const DynamicType &t1, const DynamicType &t2) {
+  switch (t1.category()) {
+  case TypeCategory::Integer:
+    switch (t2.category()) {
+    case TypeCategory::Integer:
+      return DynamicType{TypeCategory::Integer, std::max(t1.kind(), t2.kind())};
+    case TypeCategory::Real:
+    case TypeCategory::Complex:
+      return t2;
+    default:
+      return std::nullopt;
+    }
+  case TypeCategory::Real:
+    switch (t2.category()) {
+    case TypeCategory::Integer:
+      return t1;
+    case TypeCategory::Real:
+    case TypeCategory::Complex:
+      return DynamicType{t2.category(), std::max(t1.kind(), t2.kind())};
+    default:
+      return std::nullopt;
+    }
+  case TypeCategory::Complex:
+    switch (t2.category()) {
+    case TypeCategory::Integer:
+      return t1;
+    case TypeCategory::Real:
+    case TypeCategory::Complex:
+      return DynamicType{TypeCategory::Complex, std::max(t1.kind(), t2.kind())};
+    default:
+      return std::nullopt;
+    }
+  case TypeCategory::Character:
+    switch (t2.category()) {
+    case TypeCategory::Character:
+      return DynamicType{
+          TypeCategory::Character, std::max(t1.kind(), t2.kind())};
+    default:
+      return std::nullopt;
+    }
+  case TypeCategory::Logical:
+    switch (t2.category()) {
+    case TypeCategory::Logical:
+      return DynamicType{TypeCategory::Logical, LogicalResult::kind};
+    default:
+      return std::nullopt;
+    }
+  default:
+    return std::nullopt;
+  }
+}
+
 } // namespace Fortran::evaluate

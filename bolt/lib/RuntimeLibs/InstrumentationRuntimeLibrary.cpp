@@ -27,7 +27,7 @@ namespace opts {
 cl::opt<std::string> RuntimeInstrumentationLib(
     "runtime-instrumentation-lib",
     cl::desc("specify file name of the runtime instrumentation library"),
-    cl::ZeroOrMore, cl::init("libbolt_rt_instr.a"), cl::cat(BoltOptCategory));
+    cl::init("libbolt_rt_instr.a"), cl::cat(BoltOptCategory));
 
 extern cl::opt<bool> InstrumentationFileAppendPID;
 extern cl::opt<bool> ConservativeInstrumentation;

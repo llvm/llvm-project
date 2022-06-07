@@ -10845,8 +10845,10 @@ static void diagnoseSubtractionOnNullPointer(Sema &S, SourceLocation Loc,
   if (S.Diags.getSuppressSystemWarnings() && S.SourceMgr.isInSystemMacro(Loc))
     return;
 
-  S.Diag(Loc, diag::warn_pointer_sub_null_ptr)
-      << S.getLangOpts().CPlusPlus << Pointer->getSourceRange();
+  S.DiagRuntimeBehavior(Loc, Pointer,
+                        S.PDiag(diag::warn_pointer_sub_null_ptr)
+                            << S.getLangOpts().CPlusPlus
+                            << Pointer->getSourceRange());
 }
 
 /// Diagnose invalid arithmetic on two function pointers.
@@ -19604,9 +19606,15 @@ public:
   }
 
   void Visit(Expr *E) {
-    if (std::find(StopAt.begin(), StopAt.end(), E) != StopAt.end())
+    if (llvm::is_contained(StopAt, E))
       return;
     Inherited::Visit(E);
+  }
+
+  void VisitConstantExpr(ConstantExpr *E) {
+    // Don't mark declarations within a ConstantExpression, as this expression
+    // will be evaluated and folded to a value.
+    return;
   }
 
   void VisitDeclRefExpr(DeclRefExpr *E) {

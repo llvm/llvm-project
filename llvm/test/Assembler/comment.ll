@@ -8,7 +8,7 @@
 ; BARE: }
 
 @B = external global i32
-; ANNOT: @B = external global i32   ; [#uses=0 type=i32*]
+; ANNOT: @B = external global i32   ; [#uses=0 type=ptr]
 
 define <4 x i1> @foo(<4 x float> %a, <4 x float> %b) nounwind {
 entry:

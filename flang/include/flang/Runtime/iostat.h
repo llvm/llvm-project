@@ -74,6 +74,9 @@ enum Iostat {
   IostatBadWaitUnit,
   IostatBOZInputOverflow,
   IostatIntegerInputOverflow,
+  IostatRealInputOverflow,
+  IostatOpenAlreadyConnected,
+  IostatCannotReposition,
 };
 
 const char *IostatErrorString(int);

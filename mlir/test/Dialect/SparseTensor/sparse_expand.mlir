@@ -49,7 +49,7 @@
 func.func @kernel(%arga: tensor<?x?xf64, #DCSC>) -> tensor<?xf64, #SV> {
   %c0 = arith.constant 0 : index
   %n = tensor.dim %arga, %c0 : tensor<?x?xf64, #DCSC>
-  %v = sparse_tensor.init [%n] : tensor<?xf64, #SV>
+  %v = bufferization.alloc_tensor(%n) : tensor<?xf64, #SV>
   %0 = linalg.generic #rowsum
     ins(%arga: tensor<?x?xf64, #DCSC>)
     outs(%v: tensor<?xf64, #SV>) {

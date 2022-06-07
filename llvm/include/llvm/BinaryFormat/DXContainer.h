@@ -13,6 +13,7 @@
 #ifndef LLVM_BINARYFORMAT_DXCONTAINER_H
 #define LLVM_BINARYFORMAT_DXCONTAINER_H
 
+#include "llvm/ADT/StringRef.h"
 #include "llvm/Support/SwapByteOrder.h"
 
 #include <stdint.h>
@@ -49,14 +50,14 @@ struct ShaderHash {
   uint32_t Flags; // DxilShaderHashFlags
   uint8_t Digest[16];
 
-  void byteSwap() { sys::swapByteOrder(Flags); }
+  void swapBytes() { sys::swapByteOrder(Flags); }
 };
 
 struct ContainerVersion {
   uint16_t Major;
   uint16_t Minor;
 
-  void byteSwap() {
+  void swapBytes() {
     sys::swapByteOrder(Major);
     sys::swapByteOrder(Minor);
   }
@@ -69,8 +70,8 @@ struct Header {
   uint32_t FileSize;
   uint32_t PartCount;
 
-  void byteSwap() {
-    Version.byteSwap();
+  void swapBytes() {
+    Version.swapBytes();
     sys::swapByteOrder(FileSize);
     sys::swapByteOrder(PartCount);
   }
@@ -82,8 +83,47 @@ struct Header {
 struct PartHeader {
   uint8_t Name[4];
   uint32_t Size;
+
+  void swapBytes() { sys::swapByteOrder(Size); }
+  StringRef getName() const {
+    return StringRef(reinterpret_cast<const char *>(&Name[0]), 4);
+  }
   // Structure is followed directly by part data: uint8_t PartData[PartSize].
 };
+
+struct BitcodeHeader {
+  uint8_t Magic[4];     // ACSII "DXIL".
+  uint8_t MajorVersion; // DXIL version.
+  uint8_t MinorVersion; // DXIL version.
+  uint16_t Unused;
+  uint32_t Offset; // Offset to LLVM bitcode (from start of header).
+  uint32_t Size;   // Size of LLVM bitcode (in bytes).
+  // Followed by uint8_t[BitcodeHeader.Size] at &BitcodeHeader + Header.Offset
+
+  void swapBytes() {
+    sys::swapByteOrder(MinorVersion);
+    sys::swapByteOrder(MajorVersion);
+    sys::swapByteOrder(Offset);
+    sys::swapByteOrder(Size);
+  }
+};
+
+struct ProgramHeader {
+  uint8_t MinorVersion : 4;
+  uint8_t MajorVersion : 4;
+  uint8_t Unused;
+  uint16_t ShaderKind;
+  uint32_t Size; // Size in uint32_t words including this header.
+  BitcodeHeader Bitcode;
+
+  void swapBytes() {
+    sys::swapByteOrder(ShaderKind);
+    sys::swapByteOrder(Size);
+    Bitcode.swapBytes();
+  }
+};
+
+static_assert(sizeof(ProgramHeader) == 24, "ProgramHeader Size incorrect!");
 
 } // namespace dxbc
 } // namespace llvm

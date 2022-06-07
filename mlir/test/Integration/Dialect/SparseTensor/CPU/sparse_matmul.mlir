@@ -31,8 +31,7 @@ module {
   //
   func.func @matmul2(%A: tensor<4x8xf64, #CSR>,
                 %B: tensor<8x4xf64, #CSR>) -> tensor<4x4xf64, #CSR> {
-    %c4 = arith.constant 4 : index
-    %C = sparse_tensor.init [%c4, %c4] : tensor<4x4xf64, #CSR>
+    %C = bufferization.alloc_tensor() : tensor<4x4xf64, #CSR>
     %D = linalg.matmul
       ins(%A, %B: tensor<4x8xf64, #CSR>, tensor<8x4xf64, #CSR>)
          outs(%C: tensor<4x4xf64, #CSR>) -> tensor<4x4xf64, #CSR>
@@ -44,8 +43,7 @@ module {
   //
   func.func @matmul3(%A: tensor<4x8xf64, #DCSR>,
                 %B: tensor<8x4xf64, #DCSR>) -> tensor<4x4xf64, #DCSR> {
-    %c4 = arith.constant 4 : index
-    %C = sparse_tensor.init [%c4, %c4] : tensor<4x4xf64, #DCSR>
+    %C = bufferization.alloc_tensor() : tensor<4x4xf64, #DCSR>
     %D = linalg.matmul
       ins(%A, %B: tensor<4x8xf64, #DCSR>, tensor<8x4xf64, #DCSR>)
          outs(%C: tensor<4x4xf64, #DCSR>) -> tensor<4x4xf64, #DCSR>

@@ -11,21 +11,21 @@ target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
 
 ; COMMON-LABEL: @llvm.compiler.used = appending global
-; SVML-SAME:        [6 x i8*] [
-; SVML-SAME:          i8* bitcast (<2 x double> (<2 x double>)* @__svml_sin2 to i8*),
-; SVML-SAME:          i8* bitcast (<4 x double> (<4 x double>)* @__svml_sin4 to i8*),
-; SVML-SAME:          i8* bitcast (<8 x double> (<8 x double>)* @__svml_sin8 to i8*),
-; SVML-SAME:          i8* bitcast (<4 x float> (<4 x float>)* @__svml_log10f4 to i8*),
-; SVML-SAME:          i8* bitcast (<8 x float> (<8 x float>)* @__svml_log10f8 to i8*),
-; SVML-SAME:          i8* bitcast (<16 x float> (<16 x float>)* @__svml_log10f16 to i8*)
-; MASSV-SAME:       [2 x i8*] [
-; MASSV-SAME:         i8* bitcast (<2 x double> (<2 x double>)* @__sind2 to i8*),
-; MASSV-SAME:         i8* bitcast (<4 x float> (<4 x float>)* @__log10f4 to i8*)
-; ACCELERATE-SAME:  [1 x i8*] [
-; ACCELERATE-SAME:    i8* bitcast (<4 x float> (<4 x float>)* @vlog10f to i8*)
-; LIBMVEC-X86-SAME: [2 x i8*] [
-; LIBMVEC-X86-SAME:   i8* bitcast (<2 x double> (<2 x double>)* @_ZGVbN2v_sin to i8*),
-; LIBMVEC-X86-SAME:   i8* bitcast (<4 x double> (<4 x double>)* @_ZGVdN4v_sin to i8*)
+; SVML-SAME:        [6 x ptr] [
+; SVML-SAME:          ptr @__svml_sin2,
+; SVML-SAME:          ptr @__svml_sin4,
+; SVML-SAME:          ptr @__svml_sin8,
+; SVML-SAME:          ptr @__svml_log10f4,
+; SVML-SAME:          ptr @__svml_log10f8,
+; SVML-SAME:          ptr @__svml_log10f16
+; MASSV-SAME:       [2 x ptr] [
+; MASSV-SAME:         ptr @__sind2,
+; MASSV-SAME:         ptr @__log10f4
+; ACCELERATE-SAME:  [1 x ptr] [
+; ACCELERATE-SAME:    ptr @vlog10f
+; LIBMVEC-X86-SAME: [2 x ptr] [
+; LIBMVEC-X86-SAME:   ptr @_ZGVbN2v_sin,
+; LIBMVEC-X86-SAME:   ptr @_ZGVdN4v_sin
 ; COMMON-SAME:      ], section "llvm.metadata"
 
 define double @sin_f64(double %in) {

@@ -47,12 +47,9 @@ using namespace llvm;
 
 namespace opts {
 
-cl::opt<bool>
-NoHugePages("no-huge-pages",
-  cl::desc("use regular size pages for code alignment"),
-  cl::ZeroOrMore,
-  cl::Hidden,
-  cl::cat(BoltCategory));
+cl::opt<bool> NoHugePages("no-huge-pages",
+                          cl::desc("use regular size pages for code alignment"),
+                          cl::Hidden, cl::cat(BoltCategory));
 
 static cl::opt<bool>
 PrintDebugInfo("print-debug-info",
@@ -61,12 +58,10 @@ PrintDebugInfo("print-debug-info",
   cl::ZeroOrMore,
   cl::cat(BoltCategory));
 
-cl::opt<bool>
-PrintRelocations("print-relocations",
-  cl::desc("print relocations when printing functions/objects"),
-  cl::Hidden,
-  cl::ZeroOrMore,
-  cl::cat(BoltCategory));
+cl::opt<bool> PrintRelocations(
+    "print-relocations",
+    cl::desc("print relocations when printing functions/objects"), cl::Hidden,
+    cl::cat(BoltCategory));
 
 static cl::opt<bool>
 PrintMemData("print-mem-data",

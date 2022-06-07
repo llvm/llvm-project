@@ -152,6 +152,13 @@ void simple() {
   // CHECK-NOTES: [[@LINE-3]]:15: note: move occurred here
 }
 
+// Don't flag a move-to-self.
+void selfMove() {
+  A a;
+  a = std::move(a);
+  a.foo();
+}
+
 // A warning should only be emitted for one use-after-move.
 void onlyFlagOneUseAfterMove() {
   A a;
@@ -415,6 +422,13 @@ void lambdas() {
     A a;
     auto lambda = [&]() { a.foo(); };
     std::move(a);
+  }
+  {
+    A a;
+    auto lambda = [a = std::move(a)] { a.foo(); };
+    a.foo();
+    // CHECK-NOTES: [[@LINE-1]]:5: warning: 'a' used after it was moved
+    // CHECK-NOTES: [[@LINE-3]]:24: note: move occurred here
   }
 }
 

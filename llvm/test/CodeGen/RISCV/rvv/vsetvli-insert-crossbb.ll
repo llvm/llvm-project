@@ -505,8 +505,8 @@ define <vscale x 2 x i32> @test_vsetvli_x0_x0(<vscale x 2 x i32>* %x, <vscale x 
 ; CHECK-NEXT:    andi a0, a3, 1
 ; CHECK-NEXT:    beqz a0, .LBB9_2
 ; CHECK-NEXT:  # %bb.1: # %if
-; CHECK-NEXT:    vsetvli zero, zero, e16, mf2, ta, mu
 ; CHECK-NEXT:    vle16.v v10, (a1)
+; CHECK-NEXT:    vsetvli zero, zero, e16, mf2, ta, mu
 ; CHECK-NEXT:    vwcvt.x.x.v v8, v10
 ; CHECK-NEXT:  .LBB9_2: # %if.end
 ; CHECK-NEXT:    vsetvli zero, zero, e32, m1, ta, mu
@@ -544,8 +544,8 @@ define <vscale x 2 x i32> @test_vsetvli_x0_x0_2(<vscale x 2 x i32>* %x, <vscale 
 ; CHECK-NEXT:    andi a0, a4, 1
 ; CHECK-NEXT:    beqz a0, .LBB10_2
 ; CHECK-NEXT:  # %bb.1: # %if
-; CHECK-NEXT:    vsetvli zero, zero, e16, mf2, ta, mu
 ; CHECK-NEXT:    vle16.v v10, (a1)
+; CHECK-NEXT:    vsetvli zero, zero, e16, mf2, ta, mu
 ; CHECK-NEXT:    vwadd.wv v9, v9, v10
 ; CHECK-NEXT:  .LBB10_2: # %if.end
 ; CHECK-NEXT:    andi a0, a5, 1
@@ -860,6 +860,31 @@ if:
 if.end:
   %b = call <vscale x 2 x i32> @llvm.riscv.vadd.nxv2i32(<vscale x 2 x i32> undef, <vscale x 2 x i32> %a, <vscale x 2 x i32> %y, i64 %vl)
   ret <vscale x 2 x i32> %b
+}
+
+define <vscale x 1 x double> @compat_store_consistency(i1 %cond, <vscale x 1 x double> %a, <vscale x 1 x double> %b, <vscale x 1 x double>* %p1, <vscale x 1 x float> %c, <vscale x 1 x float>* %p2) {
+; CHECK-LABEL: compat_store_consistency:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    andi a0, a0, 1
+; CHECK-NEXT:    vsetvli a3, zero, e64, m1, ta, mu
+; CHECK-NEXT:    vfadd.vv v8, v8, v9
+; CHECK-NEXT:    vs1r.v v8, (a1)
+; CHECK-NEXT:    beqz a0, .LBB19_2
+; CHECK-NEXT:  # %bb.1: # %if.then
+; CHECK-NEXT:    vse32.v v10, (a2)
+; CHECK-NEXT:  .LBB19_2: # %if.end
+; CHECK-NEXT:    ret
+entry:
+  %res = fadd <vscale x 1 x double> %a, %b
+  store <vscale x 1 x double> %res, <vscale x 1 x double>* %p1
+  br i1 %cond, label %if.then, label %if.end
+
+if.then:                                          ; preds = %entry
+  store <vscale x 1 x float> %c, <vscale x 1 x float>* %p2
+  br label %if.end
+
+if.end:                                           ; preds = %if.else, %if.then
+  ret <vscale x 1 x double> %res
 }
 
 declare i64 @llvm.riscv.vsetvlimax.i64(i64, i64)

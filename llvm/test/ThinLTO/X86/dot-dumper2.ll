@@ -38,6 +38,6 @@ target triple = "x86_64-unknown-linux-gnu"
 
 ; Function Attrs: nounwind uwtable
 define i32 @main() local_unnamed_addr {
-  store i32 42, i32* @A, align 4
+  store i32 42, ptr @A, align 4
   ret i32 0
 }

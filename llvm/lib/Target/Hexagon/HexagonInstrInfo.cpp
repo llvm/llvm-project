@@ -77,9 +77,9 @@ cl::opt<bool> ScheduleInlineAsm("hexagon-sched-inline-asm", cl::Hidden,
 static cl::opt<bool> EnableBranchPrediction("hexagon-enable-branch-prediction",
   cl::Hidden, cl::init(true), cl::desc("Enable branch prediction"));
 
-static cl::opt<bool> DisableNVSchedule("disable-hexagon-nv-schedule",
-  cl::Hidden, cl::ZeroOrMore, cl::init(false),
-  cl::desc("Disable schedule adjustment for new value stores."));
+static cl::opt<bool> DisableNVSchedule(
+    "disable-hexagon-nv-schedule", cl::Hidden,
+    cl::desc("Disable schedule adjustment for new value stores."));
 
 static cl::opt<bool> EnableTimingClassLatency(
   "enable-timing-class-latency", cl::Hidden, cl::init(false),
@@ -94,11 +94,12 @@ static cl::opt<bool> EnableACCForwarding(
   cl::desc("Enable vec acc forwarding"));
 
 static cl::opt<bool> BranchRelaxAsmLarge("branch-relax-asm-large",
-  cl::init(true), cl::Hidden, cl::ZeroOrMore, cl::desc("branch relax asm"));
+                                         cl::init(true), cl::Hidden,
+                                         cl::desc("branch relax asm"));
 
-static cl::opt<bool> UseDFAHazardRec("dfa-hazard-rec",
-  cl::init(true), cl::Hidden, cl::ZeroOrMore,
-  cl::desc("Use the DFA based hazard recognizer."));
+static cl::opt<bool>
+    UseDFAHazardRec("dfa-hazard-rec", cl::init(true), cl::Hidden,
+                    cl::desc("Use the DFA based hazard recognizer."));
 
 /// Constants for Hexagon instructions.
 const int Hexagon_MEMW_OFFSET_MAX = 4095;

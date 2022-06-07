@@ -760,11 +760,15 @@ bool remove_dots(SmallVectorImpl<char> &the_path, bool remove_dot_dot,
     }
   }
 
+  SmallString<256> buffer = root;
+  // "root" could be "/", which may need to be translated into "\".
+  make_preferred(buffer, style);
+  needs_change |= root != buffer;
+
   // Avoid rewriting the path unless we have to.
   if (!needs_change)
     return false;
 
-  SmallString<256> buffer = root;
   if (!components.empty()) {
     buffer += components[0];
     for (StringRef C : makeArrayRef(components).drop_front()) {
@@ -1198,9 +1202,18 @@ Error readNativeFileToEOF(file_t FileHandle, SmallVectorImpl<char> &Buffer,
 #include "Windows/Path.inc"
 #endif
 
+bool IsLLVMDriver = false;
+
 namespace llvm {
 namespace sys {
 namespace fs {
+
+std::string getMainExecutable(const char *Argv0, void *MainAddr) {
+  if (IsLLVMDriver)
+    return sys::path::stem(Argv0).str();
+  return getMainExecutableImpl(Argv0, MainAddr);
+}
+
 TempFile::TempFile(StringRef Name, int FD)
     : TmpName(std::string(Name)), FD(FD) {}
 TempFile::TempFile(TempFile &&Other) { *this = std::move(Other); }

@@ -43,7 +43,13 @@ DeclarationMatcher optionalClass() {
       hasTemplateArgument(0, refersToType(type().bind("T"))));
 }
 
-auto hasOptionalType() { return hasType(optionalClass()); }
+auto optionalOrAliasType() {
+  return hasUnqualifiedDesugaredType(
+      recordType(hasDeclaration(optionalClass())));
+}
+
+/// Matches any of the spellings of the optional types and sugar, aliases, etc.
+auto hasOptionalType() { return hasType(optionalOrAliasType()); }
 
 auto isOptionalMemberCallWithName(
     llvm::StringRef MemberName,
@@ -156,6 +162,11 @@ auto isValueOrNotEqX() {
                          anyOf(ComparesToSame(cxxNullPtrLiteralExpr()),
                                ComparesToSame(stringLiteral(hasSize(0))),
                                ComparesToSame(integerLiteral(equals(0)))));
+}
+
+auto isCallReturningOptional() {
+  return callExpr(callee(functionDecl(returns(anyOf(
+      optionalOrAliasType(), referenceType(pointee(optionalOrAliasType())))))));
 }
 
 /// Creates a symbolic value for an `optional` value using `HasValueVal` as the
@@ -322,6 +333,18 @@ void transferValueOrNotEqX(const Expr *ComparisonExpr,
                       });
 }
 
+void transferCallReturningOptional(const CallExpr *E,
+                                   const MatchFinder::MatchResult &Result,
+                                   LatticeTransferState &State) {
+  if (State.Env.getStorageLocation(*E, SkipPast::None) != nullptr)
+    return;
+
+  auto &Loc = State.Env.createStorageLocation(*E);
+  State.Env.setStorageLocation(*E, Loc);
+  State.Env.setValue(
+      Loc, createOptionalValue(State.Env, State.Env.makeAtomicBoolValue()));
+}
+
 void assignOptionalValue(const Expr &E, LatticeTransferState &State,
                          BoolValue &HasValueVal) {
   if (auto *OptionalLoc =
@@ -462,8 +485,9 @@ auto buildTransferMatchSwitch(
   return MatchSwitchBuilder<LatticeTransferState>()
       // Attach a symbolic "has_value" state to optional values that we see for
       // the first time.
-      .CaseOf<Expr>(expr(anyOf(declRefExpr(), memberExpr()), hasOptionalType()),
-                    initializeOptionalReference)
+      .CaseOf<Expr>(
+          expr(anyOf(declRefExpr(), memberExpr()), hasOptionalType()),
+          initializeOptionalReference)
 
       // make_optional
       .CaseOf<CallExpr>(isMakeOptionalCall(), transferMakeOptionalCall)
@@ -546,6 +570,10 @@ auto buildTransferMatchSwitch(
 
       // opt.value_or(X) != X
       .CaseOf<Expr>(isValueOrNotEqX(), transferValueOrNotEqX)
+
+      // returns optional
+      .CaseOf<CallExpr>(isCallReturningOptional(),
+                        transferCallReturningOptional)
 
       .Build();
 }

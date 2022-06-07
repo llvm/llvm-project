@@ -23,6 +23,7 @@
 #include "llvm/CodeGen/LivePhysRegs.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
+#include "llvm/MC/MCAsmInfo.h"
 #include "llvm/Support/Debug.h"
 
 using namespace llvm;
@@ -2107,6 +2108,10 @@ bool ARMExpandPseudo::ExpandMI(MachineBasicBlock &MBB,
     case ARM::TCRETURNdi:
     case ARM::TCRETURNri: {
       MachineBasicBlock::iterator MBBI = MBB.getLastNonDebugInstr();
+      if (MBBI->getOpcode() == ARM::SEH_EpilogEnd)
+        MBBI--;
+      if (MBBI->getOpcode() == ARM::SEH_Nop_Ret)
+        MBBI--;
       assert(MBBI->isReturn() &&
              "Can only insert epilog into returning blocks");
       unsigned RetOpcode = MBBI->getOpcode();
@@ -2116,13 +2121,21 @@ bool ARMExpandPseudo::ExpandMI(MachineBasicBlock &MBB,
 
       // Tail call return: adjust the stack pointer and jump to callee.
       MBBI = MBB.getLastNonDebugInstr();
+      if (MBBI->getOpcode() == ARM::SEH_EpilogEnd)
+        MBBI--;
+      if (MBBI->getOpcode() == ARM::SEH_Nop_Ret)
+        MBBI--;
       MachineOperand &JumpTarget = MBBI->getOperand(0);
 
       // Jump to label or value in register.
       if (RetOpcode == ARM::TCRETURNdi) {
+        MachineFunction *MF = MBB.getParent();
+        bool NeedsWinCFI = MF->getTarget().getMCAsmInfo()->usesWindowsCFI() &&
+                           MF->getFunction().needsUnwindTableEntry();
         unsigned TCOpcode =
             STI->isThumb()
-                ? (STI->isTargetMachO() ? ARM::tTAILJMPd : ARM::tTAILJMPdND)
+                ? ((STI->isTargetMachO() || NeedsWinCFI) ? ARM::tTAILJMPd
+                                                         : ARM::tTAILJMPdND)
                 : ARM::TAILJMPd;
         MachineInstrBuilder MIB = BuildMI(MBB, MBBI, dl, TII.get(TCOpcode));
         if (JumpTarget.isGlobal())

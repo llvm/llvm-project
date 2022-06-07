@@ -64,23 +64,18 @@ extern cl::opt<unsigned> Verbosity;
 
 extern bool processAllFunctions();
 
-cl::opt<bool>
-CheckEncoding("check-encoding",
-  cl::desc("perform verification of LLVM instruction encoding/decoding. "
-           "Every instruction in the input is decoded and re-encoded. "
-           "If the resulting bytes do not match the input, a warning message "
-           "is printed."),
-  cl::init(false),
-  cl::ZeroOrMore,
-  cl::Hidden,
-  cl::cat(BoltCategory));
+cl::opt<bool> CheckEncoding(
+    "check-encoding",
+    cl::desc("perform verification of LLVM instruction encoding/decoding. "
+             "Every instruction in the input is decoded and re-encoded. "
+             "If the resulting bytes do not match the input, a warning message "
+             "is printed."),
+    cl::Hidden, cl::cat(BoltCategory));
 
-static cl::opt<bool>
-DotToolTipCode("dot-tooltip-code",
-  cl::desc("add basic block instructions as tool tips on nodes"),
-  cl::ZeroOrMore,
-  cl::Hidden,
-  cl::cat(BoltCategory));
+static cl::opt<bool> DotToolTipCode(
+    "dot-tooltip-code",
+    cl::desc("add basic block instructions as tool tips on nodes"), cl::Hidden,
+    cl::cat(BoltCategory));
 
 cl::opt<JumpTableSupportLevel>
 JumpTables("jump-tables",
@@ -102,21 +97,17 @@ JumpTables("jump-tables",
   cl::ZeroOrMore,
   cl::cat(BoltOptCategory));
 
-static cl::opt<bool>
-NoScan("no-scan",
-  cl::desc("do not scan cold functions for external references (may result in "
-           "slower binary)"),
-  cl::init(false),
-  cl::ZeroOrMore,
-  cl::Hidden,
-  cl::cat(BoltOptCategory));
+static cl::opt<bool> NoScan(
+    "no-scan",
+    cl::desc(
+        "do not scan cold functions for external references (may result in "
+        "slower binary)"),
+    cl::Hidden, cl::cat(BoltOptCategory));
 
 cl::opt<bool>
-PreserveBlocksAlignment("preserve-blocks-alignment",
-  cl::desc("try to preserve basic block alignment"),
-  cl::init(false),
-  cl::ZeroOrMore,
-  cl::cat(BoltOptCategory));
+    PreserveBlocksAlignment("preserve-blocks-alignment",
+                            cl::desc("try to preserve basic block alignment"),
+                            cl::cat(BoltOptCategory));
 
 cl::opt<bool>
 PrintDynoStats("dyno-stats",
@@ -139,11 +130,9 @@ PrintOnly("print-only",
   cl::cat(BoltCategory));
 
 cl::opt<bool>
-TimeBuild("time-build",
-  cl::desc("print time spent constructing binary functions"),
-  cl::ZeroOrMore,
-  cl::Hidden,
-  cl::cat(BoltCategory));
+    TimeBuild("time-build",
+              cl::desc("print time spent constructing binary functions"),
+              cl::Hidden, cl::cat(BoltCategory));
 
 cl::opt<bool>
 TrapOnAVX512("trap-avx512",
@@ -1354,10 +1343,6 @@ bool BinaryFunction::disassemble() {
                 ItrE = Relocations.lower_bound(Offset + Size);
            Itr != ItrE; ++Itr) {
         const Relocation &Relocation = Itr->second;
-        uint64_t SymbolValue = Relocation.Value - Relocation.Addend;
-        if (Relocation.isPCRelative())
-          SymbolValue += getAddress() + Relocation.Offset;
-
         int64_t Value = Relocation.Value;
         const bool Result = BC.MIB->replaceImmWithSymbolRef(
             Instruction, Relocation.Symbol, Relocation.Addend, Ctx.get(), Value,
@@ -3011,28 +2996,49 @@ std::string formatEscapes(const std::string &Str) {
 } // namespace
 
 void BinaryFunction::dumpGraph(raw_ostream &OS) const {
-  OS << "strict digraph \"" << getPrintName() << "\" {\n";
+  OS << "digraph \"" << getPrintName() << "\" {\n"
+     << "node [fontname=courier, shape=box, style=filled, colorscheme=brbg9]\n";
   uint64_t Offset = Address;
   for (BinaryBasicBlock *BB : BasicBlocks) {
     auto LayoutPos =
         std::find(BasicBlocksLayout.begin(), BasicBlocksLayout.end(), BB);
     unsigned Layout = LayoutPos - BasicBlocksLayout.begin();
     const char *ColdStr = BB->isCold() ? " (cold)" : "";
-    OS << format("\"%s\" [label=\"%s%s\\n(C:%lu,O:%lu,I:%u,L:%u:CFI:%u)\"]\n",
+    std::vector<std::string> Attrs;
+    // Bold box for entry points
+    if (isEntryPoint(*BB))
+      Attrs.push_back("penwidth=2");
+    if (BLI && BLI->getLoopFor(BB)) {
+      // Distinguish innermost loops
+      const BinaryLoop *Loop = BLI->getLoopFor(BB);
+      if (Loop->isInnermost())
+        Attrs.push_back("fillcolor=6");
+      else // some outer loop
+        Attrs.push_back("fillcolor=4");
+    } else { // non-loopy code
+      Attrs.push_back("fillcolor=5");
+    }
+    ListSeparator LS;
+    OS << "\"" << BB->getName() << "\" [";
+    for (StringRef Attr : Attrs)
+      OS << LS << Attr;
+    OS << "]\n";
+    OS << format("\"%s\" [label=\"%s%s\\n(C:%lu,O:%lu,I:%u,L:%u,CFI:%u)\\n",
                  BB->getName().data(), BB->getName().data(), ColdStr,
-                 (BB->ExecutionCount != BinaryBasicBlock::COUNT_NO_PROFILE
-                      ? BB->ExecutionCount
-                      : 0),
-                 BB->getOffset(), getIndex(BB), Layout, BB->getCFIState());
-    OS << format("\"%s\" [shape=box]\n", BB->getName().data());
+                 BB->getKnownExecutionCount(), BB->getOffset(), getIndex(BB),
+                 Layout, BB->getCFIState());
+
     if (opts::DotToolTipCode) {
       std::string Str;
       raw_string_ostream CS(Str);
-      Offset = BC.printInstructions(CS, BB->begin(), BB->end(), Offset, this);
-      const std::string Code = formatEscapes(CS.str());
-      OS << format("\"%s\" [tooltip=\"%s\"]\n", BB->getName().data(),
-                   Code.c_str());
+      Offset = BC.printInstructions(CS, BB->begin(), BB->end(), Offset, this,
+                                    /* PrintMCInst = */ false,
+                                    /* PrintMemData = */ false,
+                                    /* PrintRelocations = */ false,
+                                    /* Endl = */ R"(\\l)");
+      OS << formatEscapes(CS.str()) << '\n';
     }
+    OS << "\"]\n";
 
     // analyzeBranch is just used to get the names of the branch
     // opcodes.

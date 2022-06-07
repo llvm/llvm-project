@@ -1483,8 +1483,10 @@ bool InquireUnconnectedFileState::Inquire(
   case HashInquiryKeyword("NUMBER"):
   case HashInquiryKeyword("POS"):
   case HashInquiryKeyword("RECL"):
-  case HashInquiryKeyword("SIZE"):
     result = -1;
+    return true;
+  case HashInquiryKeyword("SIZE"):
+    result = SizeInBytes(path_.get());
     return true;
   default:
     BadInquiryKeywordHashCrash(inquiry);
@@ -1518,6 +1520,9 @@ bool InquireIOLengthState::Emit(const char32_t *p, std::size_t n) {
 
 int ErroneousIoStatementState::EndIoStatement() {
   SignalPendingError();
+  if (unit_) {
+    unit_->EndIoStatement();
+  }
   return IoStatementBase::EndIoStatement();
 }
 
