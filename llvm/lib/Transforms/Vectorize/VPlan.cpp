@@ -1739,7 +1739,10 @@ void VPInterleavedAccessInfo::visitBlock(VPBlockBase *Block, Old2NewTy &Old2New,
         continue;
       assert(isa<VPInstruction>(&VPI) && "Can only handle VPInstructions");
       auto *VPInst = cast<VPInstruction>(&VPI);
-      auto *Inst = cast<Instruction>(VPInst->getUnderlyingValue());
+
+      auto *Inst = dyn_cast_or_null<Instruction>(VPInst->getUnderlyingValue());
+      if (!Inst)
+        continue;
       auto *IG = IAI.getInterleaveGroup(Inst);
       if (!IG)
         continue;
