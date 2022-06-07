@@ -755,6 +755,83 @@ i.loopdone:
   ret i32 0
 }
 
+; Same as @foo, but M is sext from i16. This used to assert because we thought
+; this sext was from widening and try to look through it.
+define void @foo_M_sext(i32* %A, i32 %N, i16 %M) {
+; CHECK-LABEL: @foo_M_sext(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[M2:%.*]] = sext i16 [[M:%.*]] to i32
+; CHECK-NEXT:    [[CMP17:%.*]] = icmp sgt i32 [[N:%.*]], 0
+; CHECK-NEXT:    br i1 [[CMP17]], label [[FOR_COND1_PREHEADER_LR_PH:%.*]], label [[FOR_COND_CLEANUP:%.*]]
+; CHECK:       for.cond1.preheader.lr.ph:
+; CHECK-NEXT:    [[CMP215:%.*]] = icmp sgt i32 [[M2]], 0
+; CHECK-NEXT:    br i1 [[CMP215]], label [[FOR_COND1_PREHEADER_US_PREHEADER:%.*]], label [[FOR_COND_CLEANUP]]
+; CHECK:       for.cond1.preheader.us.preheader:
+; CHECK-NEXT:    [[TMP0:%.*]] = sext i32 [[M2]] to i64
+; CHECK-NEXT:    [[TMP1:%.*]] = sext i32 [[N]] to i64
+; CHECK-NEXT:    [[FLATTEN_TRIPCOUNT:%.*]] = mul i64 [[TMP0]], [[TMP1]]
+; CHECK-NEXT:    br label [[FOR_COND1_PREHEADER_US:%.*]]
+; CHECK:       for.cond1.preheader.us:
+; CHECK-NEXT:    [[INDVAR1:%.*]] = phi i64 [ [[INDVAR_NEXT2:%.*]], [[FOR_COND1_FOR_COND_CLEANUP3_CRIT_EDGE_US:%.*]] ], [ 0, [[FOR_COND1_PREHEADER_US_PREHEADER]] ]
+; CHECK-NEXT:    [[TMP2:%.*]] = trunc i64 [[INDVAR1]] to i32
+; CHECK-NEXT:    [[MUL_US:%.*]] = mul nsw i32 [[TMP2]], [[M2]]
+; CHECK-NEXT:    [[FLATTEN_TRUNCIV:%.*]] = trunc i64 [[INDVAR1]] to i32
+; CHECK-NEXT:    br label [[FOR_BODY4_US:%.*]]
+; CHECK:       for.body4.us:
+; CHECK-NEXT:    [[INDVAR:%.*]] = phi i64 [ 0, [[FOR_COND1_PREHEADER_US]] ]
+; CHECK-NEXT:    [[TMP3:%.*]] = trunc i64 [[INDVAR]] to i32
+; CHECK-NEXT:    [[ADD_US:%.*]] = add nsw i32 [[TMP3]], [[MUL_US]]
+; CHECK-NEXT:    [[IDXPROM_US:%.*]] = sext i32 [[FLATTEN_TRUNCIV]] to i64
+; CHECK-NEXT:    [[ARRAYIDX_US:%.*]] = getelementptr inbounds i32, i32* [[A:%.*]], i64 [[IDXPROM_US]]
+; CHECK-NEXT:    tail call void @f(i32* [[ARRAYIDX_US]])
+; CHECK-NEXT:    [[INDVAR_NEXT:%.*]] = add i64 [[INDVAR]], 1
+; CHECK-NEXT:    [[CMP2_US:%.*]] = icmp slt i64 [[INDVAR_NEXT]], [[TMP0]]
+; CHECK-NEXT:    br label [[FOR_COND1_FOR_COND_CLEANUP3_CRIT_EDGE_US]]
+; CHECK:       for.cond1.for.cond.cleanup3_crit_edge.us:
+; CHECK-NEXT:    [[INDVAR_NEXT2]] = add i64 [[INDVAR1]], 1
+; CHECK-NEXT:    [[CMP_US:%.*]] = icmp slt i64 [[INDVAR_NEXT2]], [[FLATTEN_TRIPCOUNT]]
+; CHECK-NEXT:    br i1 [[CMP_US]], label [[FOR_COND1_PREHEADER_US]], label [[FOR_COND_CLEANUP_LOOPEXIT:%.*]]
+; CHECK:       for.cond.cleanup.loopexit:
+; CHECK-NEXT:    br label [[FOR_COND_CLEANUP]]
+; CHECK:       for.cond.cleanup:
+; CHECK-NEXT:    ret void
+;
+entry:
+  %M2 = sext i16 %M to i32
+  %cmp17 = icmp sgt i32 %N, 0
+  br i1 %cmp17, label %for.cond1.preheader.lr.ph, label %for.cond.cleanup
+
+for.cond1.preheader.lr.ph:
+  %cmp215 = icmp sgt i32 %M2, 0
+  br i1 %cmp215, label %for.cond1.preheader.us.preheader, label %for.cond.cleanup
+
+for.cond1.preheader.us.preheader:
+  br label %for.cond1.preheader.us
+
+for.cond1.preheader.us:
+  %i.018.us = phi i32 [ %inc6.us, %for.cond1.for.cond.cleanup3_crit_edge.us ], [ 0, %for.cond1.preheader.us.preheader ]
+  %mul.us = mul nsw i32 %i.018.us, %M2
+  br label %for.body4.us
+
+for.body4.us:
+  %j.016.us = phi i32 [ 0, %for.cond1.preheader.us ], [ %inc.us, %for.body4.us ]
+  %add.us = add nsw i32 %j.016.us, %mul.us
+  %idxprom.us = sext i32 %add.us to i64
+  %arrayidx.us = getelementptr inbounds i32, i32* %A, i64 %idxprom.us
+  tail call void @f(i32* %arrayidx.us) #2
+  %inc.us = add nuw nsw i32 %j.016.us, 1
+  %cmp2.us = icmp slt i32 %inc.us, %M2
+  br i1 %cmp2.us, label %for.body4.us, label %for.cond1.for.cond.cleanup3_crit_edge.us
+
+for.cond1.for.cond.cleanup3_crit_edge.us:
+  %inc6.us = add nuw nsw i32 %i.018.us, 1
+  %cmp.us = icmp slt i32 %inc6.us, %N
+  br i1 %cmp.us, label %for.cond1.preheader.us, label %for.cond.cleanup
+
+for.cond.cleanup:
+  ret void
+}
+
 declare void @payload()
 declare dso_local i32 @use_32(i32)
 declare dso_local i32 @use_16(i16)
