@@ -19611,6 +19611,12 @@ public:
     Inherited::Visit(E);
   }
 
+  void VisitConstantExpr(ConstantExpr *E) {
+    // Don't mark declarations within a ConstantExpression, as this expression
+    // will be evaluated and folded to a value.
+    return;
+  }
+
   void VisitDeclRefExpr(DeclRefExpr *E) {
     // If we were asked not to visit local variables, don't.
     if (SkipLocalVariables) {
