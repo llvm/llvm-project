@@ -23,12 +23,9 @@ extern cl::opt<unsigned> AlignFunctions;
 extern cl::opt<bool> UseOldText;
 extern cl::opt<bool> HotFunctionsAtEnd;
 
-static cl::opt<bool>
-GroupStubs("group-stubs",
-  cl::desc("share stubs across functions"),
-  cl::init(true),
-  cl::ZeroOrMore,
-  cl::cat(BoltOptCategory));
+static cl::opt<bool> GroupStubs("group-stubs",
+                                cl::desc("share stubs across functions"),
+                                cl::init(true), cl::cat(BoltOptCategory));
 }
 
 namespace llvm {

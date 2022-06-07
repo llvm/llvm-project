@@ -691,13 +691,6 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
     ReplaceNode(Node, selectImm(CurDAG, DL, VT, Imm, *Subtarget));
     return;
   }
-  case ISD::FrameIndex: {
-    SDValue Imm = CurDAG->getTargetConstant(0, DL, XLenVT);
-    int FI = cast<FrameIndexSDNode>(Node)->getIndex();
-    SDValue TFI = CurDAG->getTargetFrameIndex(FI, VT);
-    ReplaceNode(Node, CurDAG->getMachineNode(RISCV::ADDI, DL, VT, TFI, Imm));
-    return;
-  }
   case ISD::ADD: {
     // Try to select ADD + immediate used as memory addresses to
     // (ADDI (ADD X, Imm-Lo12), Lo12) if it will allow the ADDI to be removed by
@@ -1861,11 +1854,29 @@ bool RISCVDAGToDAGISel::SelectInlineAsmMemoryOperand(
   return true;
 }
 
-bool RISCVDAGToDAGISel::SelectAddrFI(SDValue Addr, SDValue &Base) {
+// Select a frame index and an optional immediate offset from an ADD or OR.
+bool RISCVDAGToDAGISel::SelectFrameAddrRegImm(SDValue Addr, SDValue &Base,
+                                              SDValue &Offset) {
   if (auto *FIN = dyn_cast<FrameIndexSDNode>(Addr)) {
     Base = CurDAG->getTargetFrameIndex(FIN->getIndex(), Subtarget->getXLenVT());
+    Offset = CurDAG->getTargetConstant(0, SDLoc(Addr), Subtarget->getXLenVT());
     return true;
   }
+
+  if (!CurDAG->isBaseWithConstantOffset(Addr))
+    return false;
+
+  if (auto *FIN = dyn_cast<FrameIndexSDNode>(Addr.getOperand(0))) {
+    auto *CN = cast<ConstantSDNode>(Addr.getOperand(1));
+    if (isInt<12>(CN->getSExtValue())) {
+      Base = CurDAG->getTargetFrameIndex(FIN->getIndex(),
+                                         Subtarget->getXLenVT());
+      Offset = CurDAG->getTargetConstant(CN->getSExtValue(), SDLoc(Addr),
+                                         Subtarget->getXLenVT());
+      return true;
+    }
+  }
+
   return false;
 }
 
@@ -1877,6 +1888,21 @@ bool RISCVDAGToDAGISel::SelectBaseAddr(SDValue Addr, SDValue &Base) {
   else
     Base = Addr;
   return true;
+}
+
+bool RISCVDAGToDAGISel::SelectAddrRegImm(SDValue Addr, SDValue &Base,
+                                         SDValue &Offset) {
+  if (CurDAG->isBaseWithConstantOffset(Addr)) {
+    auto *CN = cast<ConstantSDNode>(Addr.getOperand(1));
+    if (isInt<12>(CN->getSExtValue())) {
+      Offset = CurDAG->getTargetConstant(CN->getSExtValue(), SDLoc(Addr),
+                                         Subtarget->getXLenVT());
+      return SelectBaseAddr(Addr.getOperand(0), Base);
+    }
+  }
+
+  Offset = CurDAG->getTargetConstant(0, SDLoc(Addr), Subtarget->getXLenVT());
+  return SelectBaseAddr(Addr, Base);
 }
 
 bool RISCVDAGToDAGISel::selectShiftMask(SDValue N, unsigned ShiftWidth,
@@ -2207,9 +2233,23 @@ bool RISCVDAGToDAGISel::doPeepholeLoadStoreADDI(SDNode *N) {
   if (!Base.isMachineOpcode())
     return false;
 
-  // If the base is an ADDI, we can merge it in to the load/store.
-  if (Base.getMachineOpcode() != RISCV::ADDI)
-    return false;
+  if (Base.getMachineOpcode() == RISCV::ADDI) {
+    // If the base is an ADDI, we can merge it in to the load/store.
+  } else if (Base.getMachineOpcode() == RISCV::ADDIW &&
+             isa<ConstantSDNode>(Base.getOperand(1)) &&
+             Base.getOperand(0).isMachineOpcode() &&
+             Base.getOperand(0).getMachineOpcode() == RISCV::LUI &&
+             isa<ConstantSDNode>(Base.getOperand(0).getOperand(0))) {
+    // ADDIW can be merged if it's part of LUI+ADDIW constant materialization
+    // and LUI+ADDI would have produced the same result. This is true for all
+    // simm32 values except 0x7ffff800-0x7fffffff.
+    int64_t Offset =
+      SignExtend64<32>(Base.getOperand(0).getConstantOperandVal(0) << 12);
+    Offset += cast<ConstantSDNode>(Base.getOperand(1))->getSExtValue();
+    if (!isInt<32>(Offset))
+      return false;
+  } else
+   return false;
 
   SDValue ImmOperand = Base.getOperand(1);
   uint64_t Offset2 = N->getConstantOperandVal(OffsetOpIdx);

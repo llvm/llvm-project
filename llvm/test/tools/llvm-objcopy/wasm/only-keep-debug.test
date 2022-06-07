@@ -8,7 +8,13 @@
 # RUN: llvm-strip --only-keep-debug --keep-section=foo %t
 # RUN: obj2yaml %t | FileCheck --implicit-check-not=Name --check-prefix=CHECK --check-prefix=KEEP %s
 
+## Test that keep-section overrides only-keep-debug, even for known sections.
+# RUN: yaml2obj %s -o %t
+# RUN: llvm-strip --only-keep-debug --keep-section=TYPE %t
+# RUN: obj2yaml %t | FileCheck --implicit-check-not=Name --check-prefix=CHECK --check-prefix=KEEPTYPE %s
+
 # CHECK:      Sections:
+# KEEPTYPE:       Type: TYPE
 # CHECK:        - Type: CUSTOM
 # CHECK-NEXT:     Name: .debug_info
 # CHECK:        - Type: CUSTOM

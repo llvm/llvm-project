@@ -301,7 +301,6 @@ static MachineBasicBlock::iterator insertSEH(MachineBasicBlock::iterator MBBI,
   case ARM::t2ADDri:   // add.w r11, sp, #xx
   case ARM::t2ADDri12: // add.w r11, sp, #xx
   case ARM::t2MOVTi16: // movt  r4, #xx
-  case ARM::t2MOVi16:  // movw  r4, #xx
   case ARM::tBL:       // bl __chkstk
     // These are harmless if used for just setting up a frame pointer,
     // but that frame pointer can't be relied upon for unwinding, unless
@@ -310,6 +309,23 @@ static MachineBasicBlock::iterator insertSEH(MachineBasicBlock::iterator MBBI,
               .addImm(/*Wide=*/1)
               .setMIFlags(Flags);
     break;
+
+  case ARM::t2MOVi16: { // mov(w) r4, #xx
+    bool Wide = MBBI->getOperand(1).getImm() >= 256;
+    if (!Wide) {
+      MachineInstrBuilder NewInstr =
+          BuildMI(MF, DL, TII.get(ARM::tMOVi8)).setMIFlags(MBBI->getFlags());
+      NewInstr.add(MBBI->getOperand(0));
+      NewInstr.add(t1CondCodeOp(/*isDead=*/true));
+      for (unsigned i = 1, NumOps = MBBI->getNumOperands(); i != NumOps; ++i)
+        NewInstr.add(MBBI->getOperand(i));
+      MachineBasicBlock::iterator NewMBBI = MBB->insertAfter(MBBI, NewInstr);
+      MBB->erase(MBBI);
+      MBBI = NewMBBI;
+    }
+    MIB = BuildMI(MF, DL, TII.get(ARM::SEH_Nop)).addImm(Wide).setMIFlags(Flags);
+    break;
+  }
 
   case ARM::tBLXr: // blx r12 (__chkstk)
     MIB = BuildMI(MF, DL, TII.get(ARM::SEH_Nop))
@@ -338,6 +354,7 @@ static MachineBasicBlock::iterator insertSEH(MachineBasicBlock::iterator MBBI,
   case ARM::t2LDMIA_UPD:
   case ARM::t2STMDB_UPD: {
     unsigned Mask = 0;
+    bool Wide = false;
     for (unsigned i = 4, NumOps = MBBI->getNumOperands(); i != NumOps; ++i) {
       const MachineOperand &MO = MBBI->getOperand(i);
       if (!MO.isReg() || MO.isImplicit())
@@ -345,13 +362,40 @@ static MachineBasicBlock::iterator insertSEH(MachineBasicBlock::iterator MBBI,
       unsigned Reg = RegInfo->getSEHRegNum(MO.getReg());
       if (Reg == 15)
         Reg = 14;
+      if (Reg >= 8 && Reg <= 13)
+        Wide = true;
+      else if (Opc == ARM::t2LDMIA_UPD && Reg == 14)
+        Wide = true;
       Mask |= 1 << Reg;
+    }
+    if (!Wide) {
+      unsigned NewOpc;
+      switch (Opc) {
+      case ARM::t2LDMIA_RET:
+        NewOpc = ARM::tPOP_RET;
+        break;
+      case ARM::t2LDMIA_UPD:
+        NewOpc = ARM::tPOP;
+        break;
+      case ARM::t2STMDB_UPD:
+        NewOpc = ARM::tPUSH;
+        break;
+      default:
+        llvm_unreachable("");
+      }
+      MachineInstrBuilder NewInstr =
+          BuildMI(MF, DL, TII.get(NewOpc)).setMIFlags(MBBI->getFlags());
+      for (unsigned i = 2, NumOps = MBBI->getNumOperands(); i != NumOps; ++i)
+        NewInstr.add(MBBI->getOperand(i));
+      MachineBasicBlock::iterator NewMBBI = MBB->insertAfter(MBBI, NewInstr);
+      MBB->erase(MBBI);
+      MBBI = NewMBBI;
     }
     unsigned SEHOpc =
         (Opc == ARM::t2LDMIA_RET) ? ARM::SEH_SaveRegs_Ret : ARM::SEH_SaveRegs;
     MIB = BuildMI(MF, DL, TII.get(SEHOpc))
               .addImm(Mask)
-              .addImm(/*Wide=*/1)
+              .addImm(Wide ? 1 : 0)
               .setMIFlags(Flags);
     break;
   }
@@ -1302,6 +1346,9 @@ void ARMFrameLowering::emitEpilogue(MachineFunction &MF,
                    MachineInstr::FrameDestroy);
 
     // Increment past our save areas.
+    if (AFI->getGPRCalleeSavedArea2Size() && STI.splitFramePointerPush(MF))
+      MBBI++;
+
     if (MBBI != MBB.end() && AFI->getDPRCalleeSavedAreaSize()) {
       MBBI++;
       // Since vpop register list cannot have gaps, there may be multiple vpop
@@ -1316,7 +1363,8 @@ void ARMFrameLowering::emitEpilogue(MachineFunction &MF,
                    MachineInstr::FrameDestroy);
     }
 
-    if (AFI->getGPRCalleeSavedArea2Size()) MBBI++;
+    if (AFI->getGPRCalleeSavedArea2Size() && !STI.splitFramePointerPush(MF))
+      MBBI++;
     if (AFI->getGPRCalleeSavedArea1Size()) MBBI++;
 
     if (ReservedArgStack || IncomingArgStackToRestore) {

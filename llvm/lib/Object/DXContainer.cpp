@@ -60,7 +60,12 @@ Error DXContainer::parsePartOffsets() {
     if (Error Err = readInteger(Data.getBuffer(), Current, PartOffset))
       return Err;
     Current += sizeof(uint32_t);
-    if (PartOffset + sizeof(dxbc::PartHeader) > Data.getBufferSize())
+    // We need to ensure that each part offset leaves enough space for a part
+    // header. To prevent overflow, we subtract the part header size from the
+    // buffer size, rather than adding to the offset. Since the file header is
+    // larger than the part header we can't reach this code unless the buffer
+    // is larger than the part header, so this can't underflow.
+    if (PartOffset > Data.getBufferSize() - sizeof(dxbc::PartHeader))
       return parseFailed("Part offset points beyond boundary of the file");
     PartOffsets.push_back(PartOffset);
   }
@@ -84,4 +89,5 @@ void DXContainer::PartIterator::updateIteratorImpl(const uint32_t Offset) {
   cantFail(readStruct(Buffer, Current, IteratorState.Part));
   IteratorState.Data =
       StringRef(Current + sizeof(dxbc::PartHeader), IteratorState.Part.Size);
+  IteratorState.Offset = Offset;
 }

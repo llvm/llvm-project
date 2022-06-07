@@ -184,5 +184,8 @@ function(clang_target_link_libraries target type)
   else()
     target_link_libraries(${target} ${type} ${ARGN})
   endif()
+  if (TARGET obj.${target})
+    target_link_libraries(obj.${target} ${ARGN})
+  endif()
 
 endfunction()

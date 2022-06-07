@@ -160,6 +160,12 @@ Bug Fixes
   conditions it would be allowed for a const object elsewhere.
 - ``__has_unique_object_representations`` no longer reports that ``_BitInt`` types
   have unique object representations if they have padding bits.
+- Unscoped and scoped enumeration types can no longer be initialized from a
+  brace-init-list containing a single element of a different scoped enumeration
+  type.
+- Allow use of an elaborated type specifier as a ``_Generic`` selection
+  association in C++ mode. This fixes
+  `Issue 55562 <https://github.com/llvm/llvm-project/issues/55562>`_.
 
 Improvements to Clang's diagnostics
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -332,6 +338,9 @@ Attribute Changes in Clang
 - Attribute ``no_builtin`` should now affect the generated code. It now disables
   builtins (corresponding to the specific names listed in the attribute) in the
   body of the function the attribute is on.
+
+- When the ``weak`` attribute is applied to a const qualified variable clang no longer
+  tells the backend it is allowed to optimize based on initializer value.
 
 Windows Support
 ---------------

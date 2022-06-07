@@ -188,28 +188,6 @@ VPBlockBase *VPBlockBase::getEnclosingBlockWithPredecessors() {
   return Parent->getEnclosingBlockWithPredecessors();
 }
 
-VPValue *VPBlockBase::getCondBit() {
-  return CondBitUser.getSingleOperandOrNull();
-}
-
-const VPValue *VPBlockBase::getCondBit() const {
-  return CondBitUser.getSingleOperandOrNull();
-}
-
-void VPBlockBase::setCondBit(VPValue *CV) { CondBitUser.resetSingleOpUser(CV); }
-
-VPValue *VPBlockBase::getPredicate() {
-  return PredicateUser.getSingleOperandOrNull();
-}
-
-const VPValue *VPBlockBase::getPredicate() const {
-  return PredicateUser.getSingleOperandOrNull();
-}
-
-void VPBlockBase::setPredicate(VPValue *CV) {
-  PredicateUser.resetSingleOpUser(CV);
-}
-
 void VPBlockBase::deleteCFG(VPBlockBase *Entry) {
   SmallVector<VPBlockBase *, 8> Blocks(depth_first(Entry));
 
@@ -262,7 +240,7 @@ VPBasicBlock::createEmptyBasicBlock(VPTransformState::CFGState &CFG) {
   // Hook up the new basic block to its predecessors.
   for (VPBlockBase *PredVPBlock : getHierarchicalPredecessors()) {
     VPBasicBlock *PredVPBB = PredVPBlock->getExitingBasicBlock();
-    auto &PredVPSuccessors = PredVPBB->getSuccessors();
+    auto &PredVPSuccessors = PredVPBB->getHierarchicalSuccessors();
     BasicBlock *PredBB = CFG.VPBB2IRBB[PredVPBB];
 
     assert(PredBB && "Predecessor basic-block not found building successor.");
@@ -279,25 +257,13 @@ VPBasicBlock::createEmptyBasicBlock(VPTransformState::CFGState &CFG) {
       Br->setDebugLoc(DL);
     } else if (TermBr && !TermBr->isConditional()) {
       TermBr->setSuccessor(0, NewBB);
-    } else if (PredVPSuccessors.size() == 2) {
-      unsigned idx = PredVPSuccessors.front() == this ? 0 : 1;
-      assert(!PredBBTerminator->getSuccessor(idx) &&
-             "Trying to reset an existing successor block.");
-      PredBBTerminator->setSuccessor(idx, NewBB);
     } else {
-      // PredVPBB is the exiting block of a loop region. Connect its successor
-      // outside the region.
-      auto *LoopRegion = cast<VPRegionBlock>(PredVPBB->getParent());
-      assert(!LoopRegion->isReplicator() &&
-             "predecessor must be in a loop region");
-      assert(PredVPSuccessors.empty() &&
-             LoopRegion->getExitingBasicBlock() == PredVPBB &&
-             "PredVPBB must be the exiting block of its parent region");
-      assert(this == LoopRegion->getSingleSuccessor() &&
-             "the current block must be the single successor of the region");
-      PredBBTerminator->setSuccessor(0, NewBB);
-      PredBBTerminator->setSuccessor(
-          1, CFG.VPBB2IRBB[LoopRegion->getEntryBasicBlock()]);
+      // Set each forward successor here when it is created, excluding
+      // backedges. A backward successor is set when the branch is created.
+      unsigned idx = PredVPSuccessors.front() == this ? 0 : 1;
+      assert(!TermBr->getSuccessor(idx) &&
+             "Trying to reset an existing successor block.");
+      TermBr->setSuccessor(idx, NewBB);
     }
   }
   return NewBB;
@@ -319,6 +285,16 @@ void VPBasicBlock::execute(VPTransformState *State) {
     // ExitBB can be re-used for the exit block of the Plan.
     NewBB = State->CFG.ExitBB;
     State->CFG.PrevBB = NewBB;
+
+    // Update the branch instruction in the predecessor to branch to ExitBB.
+    VPBlockBase *PredVPB = getSingleHierarchicalPredecessor();
+    VPBasicBlock *ExitingVPBB = PredVPB->getExitingBasicBlock();
+    assert(PredVPB->getSingleSuccessor() == this &&
+           "predecessor must have the current block as only successor");
+    BasicBlock *ExitingBB = State->CFG.VPBB2IRBB[ExitingVPBB];
+    // The Exit block of a loop is always set to be successor 0 of the Exiting
+    // block.
+    cast<BranchInst>(ExitingBB->getTerminator())->setSuccessor(0, NewBB);
   } else if (PrevVPBB && /* A */
              !((SingleHPred = getSingleHierarchicalPredecessor()) &&
                SingleHPred->getExitingBasicBlock() == PrevVPBB &&
@@ -356,29 +332,6 @@ void VPBasicBlock::execute(VPTransformState *State) {
 
   for (VPRecipeBase &Recipe : Recipes)
     Recipe.execute(*State);
-
-  VPValue *CBV;
-  if (EnableVPlanNativePath && (CBV = getCondBit())) {
-    assert(CBV->getUnderlyingValue() &&
-           "Unexpected null underlying value for condition bit");
-
-    // Condition bit value in a VPBasicBlock is used as the branch selector. In
-    // the VPlan-native path case, since all branches are uniform we generate a
-    // branch instruction using the condition value from vector lane 0 and dummy
-    // successors. The successors are fixed later when the successor blocks are
-    // visited.
-    Value *NewCond = State->get(CBV, {0, 0});
-
-    // Replace the temporary unreachable terminator with the new conditional
-    // branch.
-    auto *CurrentTerminator = NewBB->getTerminator();
-    assert(isa<UnreachableInst>(CurrentTerminator) &&
-           "Expected to replace unreachable terminator with conditional "
-           "branch.");
-    auto *CondBr = BranchInst::Create(NewBB, nullptr, NewCond);
-    CondBr->setSuccessor(0, nullptr);
-    ReplaceInstWithInst(CurrentTerminator, CondBr);
-  }
 
   LLVM_DEBUG(dbgs() << "LV: filled BB:" << *NewBB);
 }
@@ -428,6 +381,51 @@ VPRegionBlock *VPBasicBlock::getEnclosingLoopRegion() {
   return P;
 }
 
+static bool hasConditionalTerminator(const VPBasicBlock *VPBB) {
+  if (VPBB->empty()) {
+    assert(
+        VPBB->getNumSuccessors() < 2 &&
+        "block with multiple successors doesn't have a recipe as terminator");
+    return false;
+  }
+
+  const VPRecipeBase *R = &VPBB->back();
+  auto *VPI = dyn_cast<VPInstruction>(R);
+  bool IsCondBranch =
+      isa<VPBranchOnMaskRecipe>(R) ||
+      (VPI && (VPI->getOpcode() == VPInstruction::BranchOnCond ||
+               VPI->getOpcode() == VPInstruction::BranchOnCount));
+  (void)IsCondBranch;
+
+  if (VPBB->getNumSuccessors() >= 2 || VPBB->isExiting()) {
+    assert(IsCondBranch && "block with multiple successors not terminated by "
+                           "conditional branch recipe");
+
+    return true;
+  }
+
+  assert(
+      !IsCondBranch &&
+      "block with 0 or 1 successors terminated by conditional branch recipe");
+  return false;
+}
+
+VPRecipeBase *VPBasicBlock::getTerminator() {
+  if (hasConditionalTerminator(this))
+    return &back();
+  return nullptr;
+}
+
+const VPRecipeBase *VPBasicBlock::getTerminator() const {
+  if (hasConditionalTerminator(this))
+    return &back();
+  return nullptr;
+}
+
+bool VPBasicBlock::isExiting() const {
+  return getParent()->getExitingBasicBlock() == this;
+}
+
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 void VPBlockBase::printSuccessors(raw_ostream &O, const Twine &Indent) const {
   if (getSuccessors().empty()) {
@@ -444,13 +442,6 @@ void VPBlockBase::printSuccessors(raw_ostream &O, const Twine &Indent) const {
 void VPBasicBlock::print(raw_ostream &O, const Twine &Indent,
                          VPSlotTracker &SlotTracker) const {
   O << Indent << getName() << ":\n";
-  if (const VPValue *Pred = getPredicate()) {
-    O << Indent << "BlockPredicate:";
-    Pred->printAsOperand(O, SlotTracker);
-    if (const auto *PredInst = dyn_cast<VPInstruction>(Pred))
-      O << " (" << PredInst->getParent()->getName() << ")";
-    O << '\n';
-  }
 
   auto RecipeIndent = Indent + "  ";
   for (const VPRecipeBase &Recipe : *this) {
@@ -459,14 +450,6 @@ void VPBasicBlock::print(raw_ostream &O, const Twine &Indent,
   }
 
   printSuccessors(O, Indent);
-
-  if (const VPValue *CBV = getCondBit()) {
-    O << Indent << "CondBit: ";
-    CBV->printAsOperand(O, SlotTracker);
-    if (const auto *CBI = dyn_cast<VPInstruction>(CBV))
-      O << " (" << CBI->getParent()->getName() << ")";
-    O << '\n';
-  }
 }
 #endif
 
@@ -781,6 +764,27 @@ void VPInstruction::generateInstruction(VPTransformState &State,
     State.set(this, Next, Part);
     break;
   }
+  case VPInstruction::BranchOnCond: {
+    if (Part != 0)
+      break;
+
+    Value *Cond = State.get(getOperand(0), VPIteration(Part, 0));
+    VPRegionBlock *ParentRegion = getParent()->getParent();
+    VPBasicBlock *Header = ParentRegion->getEntryBasicBlock();
+
+    // Replace the temporary unreachable terminator with a new conditional
+    // branch, hooking it up to backward destination for exiting blocks now and
+    // to forward destination(s) later when they are created.
+    BranchInst *CondBr =
+        Builder.CreateCondBr(Cond, Builder.GetInsertBlock(), nullptr);
+
+    if (getParent()->isExiting())
+      CondBr->setSuccessor(1, State.CFG.VPBB2IRBB[Header]);
+
+    CondBr->setSuccessor(0, nullptr);
+    Builder.GetInsertBlock()->getTerminator()->eraseFromParent();
+    break;
+  }
   case VPInstruction::BranchOnCount: {
     if (Part != 0)
       break;
@@ -793,11 +797,15 @@ void VPInstruction::generateInstruction(VPTransformState &State,
     auto *Plan = getParent()->getPlan();
     VPRegionBlock *TopRegion = Plan->getVectorLoopRegion();
     VPBasicBlock *Header = TopRegion->getEntry()->getEntryBasicBlock();
-    // TODO: Once the exit block is modeled in VPlan, use it instead of going
-    // through State.CFG.ExitBB.
-    BasicBlock *Exit = State.CFG.ExitBB;
 
-    Builder.CreateCondBr(Cond, Exit, State.CFG.VPBB2IRBB[Header]);
+    // Replace the temporary unreachable terminator with a new conditional
+    // branch, hooking it up to backward destination (the header) now and to the
+    // forward destination (the exit/middle block) later when it is created.
+    // Note that CreateCondBr expects a valid BB as first argument, so we need
+    // to set it to nullptr later.
+    BranchInst *CondBr = Builder.CreateCondBr(Cond, Builder.GetInsertBlock(),
+                                              State.CFG.VPBB2IRBB[Header]);
+    CondBr->setSuccessor(0, nullptr);
     Builder.GetInsertBlock()->getTerminator()->eraseFromParent();
     break;
   }
@@ -854,6 +862,9 @@ void VPInstruction::print(raw_ostream &O, const Twine &Indent,
   case VPInstruction::CanonicalIVIncrementNUW:
     O << "VF * UF +(nuw) ";
     break;
+  case VPInstruction::BranchOnCond:
+    O << "branch-on-cond";
+    break;
   case VPInstruction::BranchOnCount:
     O << "branch-on-count ";
     break;
@@ -888,6 +899,28 @@ void VPInstruction::setFastMathFlags(FastMathFlags FMFNew) {
 void VPlan::prepareToExecute(Value *TripCountV, Value *VectorTripCountV,
                              Value *CanonicalIVStartValue,
                              VPTransformState &State) {
+
+  VPBasicBlock *ExitingVPBB = getVectorLoopRegion()->getExitingBasicBlock();
+  auto *Term = dyn_cast<VPInstruction>(&ExitingVPBB->back());
+  // Try to simplify BranchOnCount to 'BranchOnCond true' if TC <= VF * UF when
+  // preparing to execute the plan for the main vector loop.
+  if (!CanonicalIVStartValue && Term &&
+      Term->getOpcode() == VPInstruction::BranchOnCount &&
+      isa<ConstantInt>(TripCountV)) {
+    ConstantInt *C = cast<ConstantInt>(TripCountV);
+    uint64_t TCVal = C->getZExtValue();
+    if (TCVal && TCVal <= State.VF.getKnownMinValue() * State.UF) {
+      auto *BOC =
+          new VPInstruction(VPInstruction::BranchOnCond,
+                            {getOrAddExternalDef(State.Builder.getTrue())});
+      Term->eraseFromParent();
+      ExitingVPBB->appendRecipe(BOC);
+      // TODO: Further simplifications are possible
+      //      1. Replace inductions with constants.
+      //      2. Replace vector loop region with VPBasicBlock.
+    }
+  }
+
   // Check if the trip count is needed, and if so build it.
   if (TripCount && TripCount->getNumUsers()) {
     for (unsigned Part = 0, UF = State.UF; Part < UF; ++Part)

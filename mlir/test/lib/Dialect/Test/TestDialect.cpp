@@ -1419,7 +1419,8 @@ ParseResult TestWithBoundsRegionOp::parse(OpAsmParser &parser,
   // Parse the input argument
   OpAsmParser::Argument argInfo;
   argInfo.type = parser.getBuilder().getIndexType();
-  parser.parseArgument(argInfo);
+  if (failed(parser.parseArgument(argInfo)))
+    return failure();
 
   // Parse the body region, and reuse the operand info as the argument info.
   Region *body = result.addRegion();

@@ -65,12 +65,12 @@ using namespace llvm;
 #define DEBUG_TYPE "aarch64-stack-tagging"
 
 static cl::opt<bool> ClMergeInit(
-    "stack-tagging-merge-init", cl::Hidden, cl::init(true), cl::ZeroOrMore,
+    "stack-tagging-merge-init", cl::Hidden, cl::init(true),
     cl::desc("merge stack variable initializers with tagging when possible"));
 
 static cl::opt<bool>
     ClUseStackSafety("stack-tagging-use-stack-safety", cl::Hidden,
-                     cl::init(true), cl::ZeroOrMore,
+                     cl::init(true),
                      cl::desc("Use Stack Safety analysis results"));
 
 static cl::opt<unsigned> ClScanLimit("stack-tagging-merge-init-scan-limit",

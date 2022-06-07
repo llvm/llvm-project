@@ -27,8 +27,12 @@ void VPlanTransforms::VPInstructionsToVPRecipes(
   ReversePostOrderTraversal<VPBlockRecursiveTraversalWrapper<VPBlockBase *>>
       RPOT(Plan->getEntry());
   for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(RPOT)) {
+    VPRecipeBase *Term = VPBB->getTerminator();
+    auto EndIter = Term ? Term->getIterator() : VPBB->end();
     // Introduce each ingredient into VPlan.
-    for (VPRecipeBase &Ingredient : llvm::make_early_inc_range(*VPBB)) {
+    for (VPRecipeBase &Ingredient :
+         make_early_inc_range(make_range(VPBB->begin(), EndIter))) {
+
       VPValue *VPV = Ingredient.getVPSingleValue();
       Instruction *Inst = cast<Instruction>(VPV->getUnderlyingValue());
       if (DeadInstructions.count(Inst)) {

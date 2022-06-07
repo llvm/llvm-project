@@ -1138,10 +1138,11 @@ void ForeachThreadOp::build(mlir::OpBuilder &builder,
   result.addOperands(numThreads);
 
   Region *bodyRegion = result.addRegion();
-  {
-    OpBuilder::InsertionGuard g(builder);
-    builder.createBlock(bodyRegion);
-  }
+  OpBuilder::InsertionGuard g(builder);
+  // createBlock sets the IP inside the block.
+  // Generally we would guard against that but the default ensureTerminator impl
+  // expects it ..
+  builder.createBlock(bodyRegion);
   Block &bodyBlock = bodyRegion->front();
   bodyBlock.addArguments(
       SmallVector<Type>(numThreads.size(), builder.getIndexType()),
@@ -1158,8 +1159,9 @@ void ForeachThreadOp::build(
     function_ref<void(OpBuilder &, Location, ValueRange)> bodyBuilder) {
   result.addOperands(numThreads);
 
+  OpBuilder::InsertionGuard g(builder);
   Region *bodyRegion = result.addRegion();
-  bodyRegion->push_back(new Block);
+  builder.createBlock(bodyRegion);
   Block &bodyBlock = bodyRegion->front();
   bodyBlock.addArguments(
       SmallVector<Type>(numThreads.size(), builder.getIndexType()),
@@ -1167,9 +1169,11 @@ void ForeachThreadOp::build(
 
   OpBuilder::InsertionGuard guard(builder);
   builder.setInsertionPointToStart(&bodyBlock);
-  bodyBuilder(builder, result.location, bodyBlock.getArgument(0));
+  bodyBuilder(builder, result.location, bodyBlock.getArguments());
   auto terminator =
-      llvm::cast<PerformConcurrentlyOp>(bodyBlock.getTerminator());
+      llvm::dyn_cast<PerformConcurrentlyOp>(bodyBlock.getTerminator());
+  assert(terminator &&
+         "expected bodyBuilder to create PerformConcurrentlyOp terminator");
   result.addTypes(terminator.yieldedTypes());
 }
 
@@ -1271,6 +1275,13 @@ void ParallelInsertSliceOp::getCanonicalizationPatterns(
 //===----------------------------------------------------------------------===//
 // PerformConcurrentlyOp
 //===----------------------------------------------------------------------===//
+
+// Build a PerformConcurrentlyOp with mixed static and dynamic entries.
+void PerformConcurrentlyOp::build(OpBuilder &b, OperationState &result) {
+  OpBuilder::InsertionGuard g(b);
+  Region *bodyRegion = result.addRegion();
+  b.createBlock(bodyRegion);
+}
 
 LogicalResult PerformConcurrentlyOp::verify() {
   // TODO: PerformConcurrentlyOpInterface.
@@ -2456,14 +2467,10 @@ struct MergeNestedParallelLoops : public OpRewritePattern<ParallelOp> {
     if (!innerOp)
       return failure();
 
-    auto hasVal = [](const auto &range, Value val) {
-      return llvm::find(range, val) != range.end();
-    };
-
     for (auto val : outerBody.getArguments())
-      if (hasVal(innerOp.getLowerBound(), val) ||
-          hasVal(innerOp.getUpperBound(), val) ||
-          hasVal(innerOp.getStep(), val))
+      if (llvm::is_contained(innerOp.getLowerBound(), val) ||
+          llvm::is_contained(innerOp.getUpperBound(), val) ||
+          llvm::is_contained(innerOp.getStep(), val))
         return failure();
 
     // Reductions are not supported yet.

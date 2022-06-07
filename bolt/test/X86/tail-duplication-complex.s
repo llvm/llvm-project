@@ -6,14 +6,14 @@
 # RUN: %clang %cflags %t.o -o %t.exe -Wl,-q
 
 # RUN: llvm-bolt %t.exe -data %t.fdata -print-finalized \
-# RUN:    -tail-duplication -tail-duplication-minimum-offset 1 -o %t.out | FileCheck %s
+# RUN:    -tail-duplication=moderate -tail-duplication-minimum-offset 1 -o %t.out | FileCheck %s
 
 # FDATA: 1 main f 1 main 19 0 10
 # FDATA: 1 main f 1 main 11 0 13
 # FDATA: 1 main 17 1 main 3c 0 10
 # FDATA: 1 main 39 1 main 3c 0 10
 
-# CHECK: tail duplication possible duplications: 1
+# CHECK: tail duplication modified 1 ({{.*}}%) functions; duplicated 1 blocks ({{.*}} bytes) responsible for {{.*}} dynamic executions ({{.*}} of all block executions)
 # CHECK: BB Layout   : .LBB00, .Ltmp0, .Ltail-dup0, .Ltmp1, .Ltmp2
 
 # This is the C++ code fed to Clang

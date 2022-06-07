@@ -30,7 +30,7 @@ extern cl::opt<unsigned> Verbosity;
 cl::opt<std::string> AsmDump("asm-dump",
                              cl::desc("dump function into assembly"),
                              cl::value_desc("dump folder"), cl::ValueOptional,
-                             cl::ZeroOrMore, cl::Hidden, cl::cat(BoltCategory));
+                             cl::Hidden, cl::cat(BoltCategory));
 } // end namespace opts
 
 namespace llvm {

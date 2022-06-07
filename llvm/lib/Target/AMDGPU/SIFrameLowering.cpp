@@ -828,7 +828,7 @@ void SIFrameLowering::emitPrologue(MachineFunction &MF,
     assert(!MFI.isDeadObjectIndex(FI));
 
     assert(MFI.getStackID(FI) == TargetStackID::SGPRSpill);
-    ArrayRef<SIMachineFunctionInfo::SpilledReg> Spill =
+    ArrayRef<SIRegisterInfo::SpilledReg> Spill =
         FuncInfo->getSGPRToVGPRSpills(FI);
     assert(Spill.size() == 1);
 
@@ -1017,7 +1017,7 @@ void SIFrameLowering::emitEpilogue(MachineFunction &MF,
 
   auto RestoreSGPRFromVGPRLane = [&](Register Reg, const int FI) {
     assert(MFI.getStackID(FI) == TargetStackID::SGPRSpill);
-    ArrayRef<SIMachineFunctionInfo::SpilledReg> Spill =
+    ArrayRef<SIRegisterInfo::SpilledReg> Spill =
         FuncInfo->getSGPRToVGPRSpills(FI);
     assert(Spill.size() == 1);
     BuildMI(MBB, MBBI, DL, TII->get(AMDGPU::V_READLANE_B32), Reg)

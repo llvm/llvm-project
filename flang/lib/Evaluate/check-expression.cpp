@@ -418,7 +418,10 @@ std::optional<Expr<SomeType>> NonPointerInitializationExpr(const Symbol &symbol,
         int symRank{GetRank(symTS->shape())};
         if (IsImpliedShape(symbol)) {
           if (folded.Rank() == symRank) {
-            return {std::move(folded)};
+            return ArrayConstantBoundChanger{
+                std::move(*AsConstantExtents(
+                    context, GetRawLowerBounds(context, NamedEntity{symbol})))}
+                .ChangeLbounds(std::move(folded));
           } else {
             context.messages().Say(
                 "Implied-shape parameter '%s' has rank %d but its initializer has rank %d"_err_en_US,

@@ -28,6 +28,9 @@ namespace llvm {
 ///
 /// \param ToArray the second sequence to compare.
 ///
+/// \param Map A Functor to apply to each item of the sequences before
+/// comparison.
+///
 /// \param AllowReplacements whether to allow element replacements (change one
 /// element into another) as a single operation, rather than as two operations
 /// (an insertion and a removal).
@@ -39,10 +42,10 @@ namespace llvm {
 /// \returns the minimum number of element insertions, removals, or (if
 /// \p AllowReplacements is \c true) replacements needed to transform one of
 /// the given sequences into the other. If zero, the sequences are identical.
-template<typename T>
-unsigned ComputeEditDistance(ArrayRef<T> FromArray, ArrayRef<T> ToArray,
-                             bool AllowReplacements = true,
-                             unsigned MaxEditDistance = 0) {
+template <typename T, typename Functor>
+unsigned ComputeMappedEditDistance(ArrayRef<T> FromArray, ArrayRef<T> ToArray,
+                                   Functor Map, bool AllowReplacements = true,
+                                   unsigned MaxEditDistance = 0) {
   // The algorithm implemented below is the "classic"
   // dynamic-programming algorithm for computing the Levenshtein
   // distance, which is described here:
@@ -75,15 +78,16 @@ unsigned ComputeEditDistance(ArrayRef<T> FromArray, ArrayRef<T> ToArray,
     unsigned BestThisRow = Row[0];
 
     unsigned Previous = y - 1;
+    const auto &CurItem = Map(FromArray[y - 1]);
     for (typename ArrayRef<T>::size_type x = 1; x <= n; ++x) {
       int OldRow = Row[x];
       if (AllowReplacements) {
-        Row[x] = std::min(
-            Previous + (FromArray[y-1] == ToArray[x-1] ? 0u : 1u),
-            std::min(Row[x-1], Row[x])+1);
+        Row[x] = std::min(Previous + (CurItem == Map(ToArray[x - 1]) ? 0u : 1u),
+                          std::min(Row[x - 1], Row[x]) + 1);
       }
       else {
-        if (FromArray[y-1] == ToArray[x-1]) Row[x] = Previous;
+        if (CurItem == Map(ToArray[x - 1]))
+          Row[x] = Previous;
         else Row[x] = std::min(Row[x-1], Row[x]) + 1;
       }
       Previous = OldRow;
@@ -96,6 +100,15 @@ unsigned ComputeEditDistance(ArrayRef<T> FromArray, ArrayRef<T> ToArray,
 
   unsigned Result = Row[n];
   return Result;
+}
+
+template <typename T>
+unsigned ComputeEditDistance(ArrayRef<T> FromArray, ArrayRef<T> ToArray,
+                             bool AllowReplacements = true,
+                             unsigned MaxEditDistance = 0) {
+  return ComputeMappedEditDistance(
+      FromArray, ToArray, [](const T &X) -> const T & { return X; },
+      AllowReplacements, MaxEditDistance);
 }
 
 } // End llvm namespace

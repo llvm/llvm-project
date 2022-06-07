@@ -2518,12 +2518,30 @@ INTERCEPTOR(int, __b64_pton, char const *src, char *target, SIZE_T targsize) {
     COMMON_INTERCEPTOR_WRITE_RANGE(ctx, target, res);
   return res;
 }
-#  define INIT___B64_TO                    \
+#define INIT___B64_TO                      \
     COMMON_INTERCEPT_FUNCTION(__b64_ntop); \
     COMMON_INTERCEPT_FUNCTION(__b64_pton);
 #else  // SANITIZER_INTERCEPT___B64_TO
 #define INIT___B64_TO
 #endif  // SANITIZER_INTERCEPT___B64_TO
+
+#if SANITIZER_INTERCEPT___DN_EXPAND
+  INTERCEPTOR(int, __dn_expand, unsigned char const *base,
+              unsigned char const *end, unsigned char const *src, char *dest,
+              int space) {
+  void *ctx;
+  COMMON_INTERCEPTOR_ENTER(ctx, __dn_expand, base, end, src, dest, space);
+  // TODO: add read check if __dn_comp intercept added
+  int res = REAL(__dn_expand)(base, end, src, dest, space);
+  if (res >= 0)
+    COMMON_INTERCEPTOR_WRITE_RANGE(ctx, dest, res + 1);
+  return res;
+}
+#define INIT___DN_EXPAND                    \
+    COMMON_INTERCEPT_FUNCTION(__dn_expand);
+#else  // SANITIZER_INTERCEPT___DN_EXPAND
+#define INIT___DN_EXPAND
+#endif  // SANITIZER_INTERCEPT___DN_EXPAND
 
 
 #if SANITIZER_INTERCEPT_POSIX_SPAWN
@@ -10427,6 +10445,7 @@ static void InitializeCommonInterceptors() {
   INIT_GLOB;
   INIT_GLOB64;
   INIT___B64_TO;
+  INIT___DN_EXPAND;
   INIT_POSIX_SPAWN;
   INIT_WAIT;
   INIT_WAIT4;

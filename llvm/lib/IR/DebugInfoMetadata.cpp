@@ -27,7 +27,7 @@ using namespace llvm;
 namespace llvm {
 // Use FS-AFDO discriminator.
 cl::opt<bool> EnableFSDiscriminator(
-    "enable-fs-discriminator", cl::Hidden, cl::init(false), cl::ZeroOrMore,
+    "enable-fs-discriminator", cl::Hidden,
     cl::desc("Enable adding flow sensitive discriminators"));
 } // namespace llvm
 

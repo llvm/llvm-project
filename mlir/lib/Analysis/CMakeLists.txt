@@ -35,6 +35,7 @@ add_mlir_library(MLIRAnalysis
   MLIRDataLayoutInterfaces
   MLIRInferIntRangeInterface
   MLIRInferTypeOpInterface
+  MLIRLoopLikeInterface
   MLIRSideEffectInterfaces
   MLIRViewLikeInterface
   )

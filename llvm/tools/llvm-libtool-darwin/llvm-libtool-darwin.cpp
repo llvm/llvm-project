@@ -43,12 +43,12 @@ static cl::opt<std::string> OutputFile("o", cl::desc("Specify output filename"),
 
 static cl::list<std::string> InputFiles(cl::Positional,
                                         cl::desc("<input files>"),
-                                        cl::ZeroOrMore,
                                         cl::cat(LibtoolCategory));
 
-static cl::opt<std::string> ArchType(
-    "arch_only", cl::desc("Specify architecture type for output library"),
-    cl::value_desc("arch_type"), cl::ZeroOrMore, cl::cat(LibtoolCategory));
+static cl::opt<std::string>
+    ArchType("arch_only",
+             cl::desc("Specify architecture type for output library"),
+             cl::value_desc("arch_type"), cl::cat(LibtoolCategory));
 
 enum class Operation { None, Static };
 
@@ -78,14 +78,14 @@ static cl::list<std::string> Libraries(
         "l<x> searches for the library libx.a in the library search path. If"
         " the string 'x' ends with '.o', then the library 'x' is searched for"
         " without prepending 'lib' or appending '.a'"),
-    cl::ZeroOrMore, cl::Prefix, cl::cat(LibtoolCategory));
+    cl::Prefix, cl::cat(LibtoolCategory));
 
 static cl::list<std::string> LibrarySearchDirs(
     "L",
     cl::desc(
         "L<dir> adds <dir> to the list of directories in which to search for"
         " libraries"),
-    cl::ZeroOrMore, cl::Prefix, cl::cat(LibtoolCategory));
+    cl::Prefix, cl::cat(LibtoolCategory));
 
 static cl::opt<bool>
     VersionOption("V", cl::desc("Print the version number and exit"),

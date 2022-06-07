@@ -39,6 +39,7 @@ cc_test(
         "//mlir:DataLayoutInterfaces",
         "//mlir:FuncDialect",
         "//mlir:IR",
+        "//mlir:InferIntRangeInterface",
         "//mlir:InferTypeOpInterface",
         "//mlir:Parser",
     ],

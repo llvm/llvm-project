@@ -36,14 +36,33 @@ entry:
 ; CHECK:             r{{[0-9]+}} = -2147483648 ll
 ; CHECK:             exit
 
-; CHECK:             .long   16                              # BTF_KIND_ENUM(id = 4)
-; CHECK:             .long   57                              # BTF_KIND_TYPEDEF(id = 5)
+; CHECK:             .long   16                              # BTF_KIND_ENUM64(id = 4)
+; CHECK-NEXT:        .long   2466250754                      # 0x93000002
+; CHECK-NEXT:        .long   8
+; CHECK-NEXT:        .long   19
+; CHECK-NEXT:        .long   4294967196                      # 0xffffff9c
+; CHECK-NEXT:        .long   4294967295                      # 0xffffffff
+; CHECK-NEXT:        .long   24
+; CHECK-NEXT:        .long   4294934528                      # 0xffff8000
+; CHECK-NEXT:        .long   0                               # 0x0
+; CHECK-NEXT:        .long   57                              # BTF_KIND_TYPEDEF(id = 5)
+; CHECK-NEXT:        .long   134217728                       # 0x8000000
+; CHECK-NEXT:        .long   6
+; CHECK-NEXT:        .long   0                               # BTF_KIND_ENUM64(id = 6)
+; CHECK-NEXT:        .long   318767105                       # 0x13000001
+; CHECK-NEXT:        .long   8
+; CHECK-NEXT:        .long   62
+; CHECK-NEXT:        .long   2147483648                      # 0x80000000
+; CHECK-NEXT:        .long   4294967295                      # 0xffffffff
 
 ; CHECK:             .ascii  ".text"                         # string offset=10
 ; CHECK:             .ascii  "AA"                            # string offset=16
+; CHECK:             .ascii  "VAL1"                          # string offset=19
+; CHECK:             .ascii  "VAL2"                          # string offset=24
 ; CHECK:             .byte   48                              # string offset=29
 ; CHECK:             .byte   49                              # string offset=55
 ; CHECK:             .ascii  "__BB"                          # string offset=57
+; CHECK:             .ascii  "VAL10"                         # string offset=62
 
 ; CHECK:             .long   16                              # FieldReloc
 ; CHECK-NEXT:        .long   10                              # Field reloc section string offset=10

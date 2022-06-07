@@ -624,7 +624,8 @@ convertTransferReadToLoads(vector::TransferReadOp op,
   // at least 8 rows to read and  the width to read for the transpose is 128
   // bits.
   if (!op.getPermutationMap().isMinorIdentity() &&
-      (vecTy.getDimSize(1) < 8 || vecTy.getDimSize(0) * bitWidth < 128))
+      (bitWidth != 16 || vecTy.getDimSize(1) < 8 ||
+       vecTy.getDimSize(0) * bitWidth < 128))
     isLdMatrixCompatible = false;
 
   if (!isLdMatrixCompatible)

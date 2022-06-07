@@ -6159,8 +6159,10 @@ static void emitOMPAtomicCaptureExpr(CodeGenFunction &CGF,
 
 static void emitOMPAtomicCompareExpr(CodeGenFunction &CGF,
                                      llvm::AtomicOrdering AO, const Expr *X,
+                                     const Expr *V, const Expr *R,
                                      const Expr *E, const Expr *D,
                                      const Expr *CE, bool IsXBinopExpr,
+                                     bool IsPostfixUpdate, bool IsFailOnly,
                                      SourceLocation Loc) {
   llvm::OpenMPIRBuilder &OMPBuilder =
       CGF.CGM.getOpenMPRuntime().getOMPBuilder();
@@ -6183,26 +6185,60 @@ static void emitOMPAtomicCompareExpr(CodeGenFunction &CGF,
 
   LValue XLVal = CGF.EmitLValue(X);
   Address XAddr = XLVal.getAddress(CGF);
-  llvm::Value *EVal = CGF.EmitScalarExpr(E);
-  llvm::Value *DVal = D ? CGF.EmitScalarExpr(D) : nullptr;
+
+  auto EmitRValueWithCastIfNeeded = [&CGF, Loc](const Expr *X, const Expr *E) {
+    if (X->getType() == E->getType())
+      return CGF.EmitScalarExpr(E);
+    const Expr *NewE = E->IgnoreImplicitAsWritten();
+    llvm::Value *V = CGF.EmitScalarExpr(NewE);
+    if (NewE->getType() == X->getType())
+      return V;
+    return CGF.EmitScalarConversion(V, NewE->getType(), X->getType(), Loc);
+  };
+
+  llvm::Value *EVal = EmitRValueWithCastIfNeeded(X, E);
+  llvm::Value *DVal = D ? EmitRValueWithCastIfNeeded(X, D) : nullptr;
+  if (auto *CI = dyn_cast<llvm::ConstantInt>(EVal))
+    EVal = CGF.Builder.CreateIntCast(
+        CI, XLVal.getAddress(CGF).getElementType(),
+        E->getType()->hasSignedIntegerRepresentation());
+  if (DVal)
+    if (auto *CI = dyn_cast<llvm::ConstantInt>(DVal))
+      DVal = CGF.Builder.CreateIntCast(
+          CI, XLVal.getAddress(CGF).getElementType(),
+          D->getType()->hasSignedIntegerRepresentation());
 
   llvm::OpenMPIRBuilder::AtomicOpValue XOpVal{
       XAddr.getPointer(), XAddr.getElementType(),
       X->getType()->hasSignedIntegerRepresentation(),
       X->getType().isVolatileQualified()};
   llvm::OpenMPIRBuilder::AtomicOpValue VOpVal, ROpVal;
+  if (V) {
+    LValue LV = CGF.EmitLValue(V);
+    Address Addr = LV.getAddress(CGF);
+    VOpVal = {Addr.getPointer(), Addr.getElementType(),
+              V->getType()->hasSignedIntegerRepresentation(),
+              V->getType().isVolatileQualified()};
+  }
+  if (R) {
+    LValue LV = CGF.EmitLValue(R);
+    Address Addr = LV.getAddress(CGF);
+    ROpVal = {Addr.getPointer(), Addr.getElementType(),
+              R->getType()->hasSignedIntegerRepresentation(),
+              R->getType().isVolatileQualified()};
+  }
 
   CGF.Builder.restoreIP(OMPBuilder.createAtomicCompare(
       CGF.Builder, XOpVal, VOpVal, ROpVal, EVal, DVal, AO, Op, IsXBinopExpr,
-      /* IsPostfixUpdate */ false, /* IsFailOnly */ false));
+      IsPostfixUpdate, IsFailOnly));
 }
 
 static void emitOMPAtomicExpr(CodeGenFunction &CGF, OpenMPClauseKind Kind,
                               llvm::AtomicOrdering AO, bool IsPostfixUpdate,
-                              const Expr *X, const Expr *V, const Expr *E,
-                              const Expr *UE, const Expr *D, const Expr *CE,
-                              bool IsXLHSInRHSPart, bool IsCompareCapture,
-                              SourceLocation Loc) {
+                              const Expr *X, const Expr *V, const Expr *R,
+                              const Expr *E, const Expr *UE, const Expr *D,
+                              const Expr *CE, bool IsXLHSInRHSPart,
+                              bool IsFailOnly, SourceLocation Loc) {
   switch (Kind) {
   case OMPC_read:
     emitOMPAtomicReadExpr(CGF, AO, X, V, Loc);
@@ -6219,15 +6255,8 @@ static void emitOMPAtomicExpr(CodeGenFunction &CGF, OpenMPClauseKind Kind,
                              IsXLHSInRHSPart, Loc);
     break;
   case OMPC_compare: {
-    if (IsCompareCapture) {
-      // Emit an error here.
-      unsigned DiagID = CGF.CGM.getDiags().getCustomDiagID(
-          DiagnosticsEngine::Error,
-          "'atomic compare capture' is not supported for now");
-      CGF.CGM.getDiags().Report(DiagID);
-    } else {
-      emitOMPAtomicCompareExpr(CGF, AO, X, E, D, CE, IsXLHSInRHSPart, Loc);
-    }
+    emitOMPAtomicCompareExpr(CGF, AO, X, V, R, E, D, CE, IsXLHSInRHSPart,
+                             IsPostfixUpdate, IsFailOnly, Loc);
     break;
   }
   case OMPC_if:
@@ -6354,12 +6383,12 @@ void CodeGenFunction::EmitOMPAtomicDirective(const OMPAtomicDirective &S) {
     Kind = K;
     KindsEncountered.insert(K);
   }
-  bool IsCompareCapture = false;
+  // We just need to correct Kind here. No need to set a bool saying it is
+  // actually compare capture because we can tell from whether V and R are
+  // nullptr.
   if (KindsEncountered.contains(OMPC_compare) &&
-      KindsEncountered.contains(OMPC_capture)) {
-    IsCompareCapture = true;
+      KindsEncountered.contains(OMPC_capture))
     Kind = OMPC_compare;
-  }
   if (!MemOrderingSpecified) {
     llvm::AtomicOrdering DefaultOrder =
         CGM.getOpenMPRuntime().getDefaultMemoryOrdering();
@@ -6381,8 +6410,9 @@ void CodeGenFunction::EmitOMPAtomicDirective(const OMPAtomicDirective &S) {
   LexicalScope Scope(*this, S.getSourceRange());
   EmitStopPoint(S.getAssociatedStmt());
   emitOMPAtomicExpr(*this, Kind, AO, S.isPostfixUpdate(), S.getX(), S.getV(),
-                    S.getExpr(), S.getUpdateExpr(), S.getD(), S.getCondExpr(),
-                    S.isXLHSInRHSPart(), IsCompareCapture, S.getBeginLoc());
+                    S.getR(), S.getExpr(), S.getUpdateExpr(), S.getD(),
+                    S.getCondExpr(), S.isXLHSInRHSPart(), S.isFailOnly(),
+                    S.getBeginLoc());
 }
 
 static void emitCommonOMPTargetDirective(CodeGenFunction &CGF,
