@@ -495,9 +495,8 @@ void GuardWideningImpl::makeAvailableAt(Value *V, Instruction *Loc) const {
     makeAvailableAt(Op, Loc);
 
   Inst->moveBefore(Loc);
-  // If we moved instruction before guard we must clean nuw, nsw flags.
-  Inst->setHasNoUnsignedWrap(false);
-  Inst->setHasNoSignedWrap(false);
+  // If we moved instruction before guard we must clean poison generating flags.
+  Inst->dropPoisonGeneratingFlags();
 }
 
 bool GuardWideningImpl::widenCondCommon(Value *Cond0, Value *Cond1,
