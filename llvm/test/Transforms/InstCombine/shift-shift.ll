@@ -583,3 +583,135 @@ define i16 @shl_lshr_demand6(i16 %x) {
   %r = and i16 %lshr, 4094 ; 0b0000_1111_1111_1110
   ret i16 %r
 }
+
+define i8 @lshr_shl_demand1(i8 %x) {
+; CHECK-LABEL: @lshr_shl_demand1(
+; CHECK-NEXT:    [[SHR:%.*]] = lshr i8 28, [[X:%.*]]
+; CHECK-NEXT:    [[SHL:%.*]] = shl nuw i8 [[SHR]], 3
+; CHECK-NEXT:    [[R:%.*]] = or i8 [[SHL]], 7
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %shr = lshr i8 28, %x ; 0b0001_1100
+  %shl = shl i8 %shr, 3
+  %r = or i8 %shl, 7    ; 0b0000_0111
+  ret i8 %r
+}
+
+define i8 @lshr_shl_demand2(i8 %x) {
+; CHECK-LABEL: @lshr_shl_demand2(
+; CHECK-NEXT:    [[SHR:%.*]] = lshr i8 28, [[X:%.*]]
+; CHECK-NEXT:    call void @use8(i8 [[SHR]])
+; CHECK-NEXT:    [[SHL:%.*]] = shl nuw i8 [[SHR]], 3
+; CHECK-NEXT:    [[R:%.*]] = and i8 [[SHL]], -16
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %shr = lshr i8 28, %x ; 0b0001_1100
+  call void @use8(i8 %shr)
+  %shl = shl i8 %shr, 3
+  %r = and i8 %shl, -16 ; 0b1111_0000
+  ret i8 %r
+}
+
+define i8 @lshr_shl_demand3(i8 %x) {
+; CHECK-LABEL: @lshr_shl_demand3(
+; CHECK-NEXT:    [[SHR:%.*]] = lshr i8 28, [[X:%.*]]
+; CHECK-NEXT:    [[SHL:%.*]] = shl nuw i8 [[SHR]], 3
+; CHECK-NEXT:    [[R:%.*]] = or i8 [[SHL]], 3
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %shr = lshr i8 28, %x ; 0b0001_1100
+  %shl = shl i8 %shr, 3
+  %r = or i8 %shl, 3    ; 0b0000_0011
+  ret i8 %r
+}
+
+define i8 @lshr_shl_demand4(i8 %x) {
+; CHECK-LABEL: @lshr_shl_demand4(
+; CHECK-NEXT:    [[SHR:%.*]] = lshr i8 60, [[X:%.*]]
+; CHECK-NEXT:    [[SHL:%.*]] = shl i8 [[SHR]], 3
+; CHECK-NEXT:    [[R:%.*]] = or i8 [[SHL]], 7
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %shr = lshr i8 60, %x ; 0b0011_1100
+  %shl = shl i8 %shr, 3
+  %r = or i8 %shl, 7    ; 0b0000_0111
+  ret i8 %r
+}
+
+define <2 x i8> @lshr_shl_demand5(<2 x i8> %x) {
+; CHECK-LABEL: @lshr_shl_demand5(
+; CHECK-NEXT:    [[SHR:%.*]] = lshr <2 x i8> <i8 45, i8 45>, [[X:%.*]]
+; CHECK-NEXT:    [[SHL:%.*]] = shl nuw <2 x i8> [[SHR]], <i8 2, i8 2>
+; CHECK-NEXT:    [[R:%.*]] = and <2 x i8> [[SHL]], <i8 108, i8 108>
+; CHECK-NEXT:    ret <2 x i8> [[R]]
+;
+  %shr = lshr <2 x i8> <i8 45, i8 45>, %x ; 0b0010_1101
+  %shl = shl <2 x i8> %shr, <i8 2, i8 2>
+  %r = and <2 x i8> %shl, <i8 108, i8 108> ; 0b0110_1100
+  ret <2 x i8> %r
+}
+
+define <2 x i8> @lshr_shl_demand5_undef_left(<2 x i8> %x) {
+; CHECK-LABEL: @lshr_shl_demand5_undef_left(
+; CHECK-NEXT:    [[SHR:%.*]] = lshr <2 x i8> <i8 45, i8 45>, [[X:%.*]]
+; CHECK-NEXT:    [[SHL:%.*]] = shl <2 x i8> [[SHR]], <i8 undef, i8 2>
+; CHECK-NEXT:    [[R:%.*]] = and <2 x i8> [[SHL]], <i8 108, i8 108>
+; CHECK-NEXT:    ret <2 x i8> [[R]]
+;
+  %shr = lshr <2 x i8> <i8 45, i8 45>, %x ; 0b0010_1101
+  %shl = shl <2 x i8> %shr, <i8 undef, i8 2>
+  %r = and <2 x i8> %shl, <i8 108, i8 108> ; 0b0110_1100
+  ret <2 x i8> %r
+}
+
+define <2 x i8> @lshr_shl_demand5_undef_right(<2 x i8> %x) {
+; CHECK-LABEL: @lshr_shl_demand5_undef_right(
+; CHECK-NEXT:    [[SHR:%.*]] = lshr <2 x i8> <i8 undef, i8 45>, [[X:%.*]]
+; CHECK-NEXT:    [[SHL:%.*]] = shl <2 x i8> [[SHR]], <i8 2, i8 2>
+; CHECK-NEXT:    [[R:%.*]] = and <2 x i8> [[SHL]], <i8 108, i8 108>
+; CHECK-NEXT:    ret <2 x i8> [[R]]
+;
+  %shr = lshr <2 x i8> <i8 undef, i8 45>, %x ; 0b0010_1101
+  %shl = shl <2 x i8> %shr, <i8 2, i8 2>
+  %r = and <2 x i8> %shl, <i8 108, i8 108> ; 0b0110_1100
+  ret <2 x i8> %r
+}
+
+define <2 x i8> @lshr_shl_demand5_nonuniform_vec_left(<2 x i8> %x) {
+; CHECK-LABEL: @lshr_shl_demand5_nonuniform_vec_left(
+; CHECK-NEXT:    [[SHR:%.*]] = lshr <2 x i8> <i8 45, i8 45>, [[X:%.*]]
+; CHECK-NEXT:    [[SHL:%.*]] = shl <2 x i8> [[SHR]], <i8 1, i8 2>
+; CHECK-NEXT:    [[R:%.*]] = and <2 x i8> [[SHL]], <i8 108, i8 108>
+; CHECK-NEXT:    ret <2 x i8> [[R]]
+;
+  %shr = lshr <2 x i8> <i8 45, i8 45>, %x ; 0b0010_1101
+  %shl = shl <2 x i8> %shr, <i8 1, i8 2>
+  %r = and <2 x i8> %shl, <i8 108, i8 108> ; 0b0110_1100
+  ret <2 x i8> %r
+}
+
+define <2 x i8> @lshr_shl_demand5_nonuniform_vec_right(<2 x i8> %x) {
+; CHECK-LABEL: @lshr_shl_demand5_nonuniform_vec_right(
+; CHECK-NEXT:    [[SHR:%.*]] = lshr <2 x i8> <i8 45, i8 13>, [[X:%.*]]
+; CHECK-NEXT:    [[SHL:%.*]] = shl <2 x i8> [[SHR]], <i8 2, i8 2>
+; CHECK-NEXT:    [[R:%.*]] = and <2 x i8> [[SHL]], <i8 108, i8 108>
+; CHECK-NEXT:    ret <2 x i8> [[R]]
+;
+  %shr = lshr <2 x i8> <i8 45, i8 13>, %x ; 0b0010_1101. 0b0000_1101
+  %shl = shl <2 x i8> %shr, <i8 2, i8 2>
+  %r = and <2 x i8> %shl, <i8 108, i8 108> ; 0b0110_1100
+  ret <2 x i8> %r
+}
+
+define <2 x i8> @lshr_shl_demand5_nonuniform_vec_both(<2 x i8> %x) {
+; CHECK-LABEL: @lshr_shl_demand5_nonuniform_vec_both(
+; CHECK-NEXT:    [[SHR:%.*]] = lshr <2 x i8> <i8 45, i8 13>, [[X:%.*]]
+; CHECK-NEXT:    [[SHL:%.*]] = shl <2 x i8> [[SHR]], <i8 2, i8 4>
+; CHECK-NEXT:    [[R:%.*]] = and <2 x i8> [[SHL]], <i8 -4, i8 -16>
+; CHECK-NEXT:    ret <2 x i8> [[R]]
+;
+  %shr = lshr <2 x i8> <i8 45, i8 13>, %x ; 0b0010_1101. 0b0000_1101
+  %shl = shl <2 x i8> %shr, <i8 2, i8 4>
+  %r = and <2 x i8> %shl, <i8 -4, i8 -16>
+  ret <2 x i8> %r
+}
