@@ -177,6 +177,10 @@ class AArch64FunctionInfo final : public MachineFunctionInfo {
 
   bool IsMTETagged = false;
 
+  /// The function has Scalable Vector or Scalable Predicate register argument
+  /// or return type
+  bool IsSVECC = false;
+
   /// True if the function need unwind information.
   mutable Optional<bool> NeedsDwarfUnwindInfo;
 
@@ -190,6 +194,9 @@ public:
   clone(BumpPtrAllocator &Allocator, MachineFunction &DestMF,
         const DenseMap<MachineBasicBlock *, MachineBasicBlock *> &Src2DstMBB)
       const override;
+
+  bool isSVECC() const { return IsSVECC; };
+  void setIsSVECC(bool s) { IsSVECC = s; };
 
   void initializeBaseYamlFields(const yaml::AArch64FunctionInfo &YamlMFI);
 

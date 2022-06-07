@@ -42,8 +42,6 @@ public:
   void UpdateCustomCallPreservedMask(MachineFunction &MF,
                                      const uint32_t **Mask) const;
 
-  static bool hasSVEArgsOrReturn(const MachineFunction *MF);
-
   /// Code Generation virtual methods...
   const MCPhysReg *getCalleeSavedRegs(const MachineFunction *MF) const override;
   const MCPhysReg *getDarwinCalleeSavedRegs(const MachineFunction *MF) const;
