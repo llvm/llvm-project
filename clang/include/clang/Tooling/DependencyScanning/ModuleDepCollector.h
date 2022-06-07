@@ -149,9 +149,9 @@ private:
   /// The parent dependency collector.
   ModuleDepCollector &MDC;
   /// Working set of direct modular dependencies.
-  llvm::DenseSet<const Module *> DirectModularDeps;
+  llvm::SetVector<const Module *> DirectModularDeps;
   /// Working set of direct modular dependencies that have already been built.
-  llvm::DenseSet<const Module *> DirectPrebuiltModularDeps;
+  llvm::SetVector<const Module *> DirectPrebuiltModularDeps;
 
   void handleImport(const Module *Imported);
 
@@ -199,7 +199,7 @@ private:
   /// textually included header files.
   std::vector<std::string> FileDeps;
   /// Direct and transitive modular dependencies of the main source file.
-  std::unordered_map<const Module *, ModuleDeps> ModularDeps;
+  llvm::MapVector<const Module *, std::unique_ptr<ModuleDeps>> ModularDeps;
   /// Options that control the dependency output generation.
   std::unique_ptr<DependencyOutputOptions> Opts;
   /// The original Clang invocation passed to dependency scanner.
