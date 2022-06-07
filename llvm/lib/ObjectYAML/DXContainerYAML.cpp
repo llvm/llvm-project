@@ -37,7 +37,7 @@ void MappingTraits<DXContainerYAML::DXILProgram>::mapping(
   IO.mapRequired("MinorVersion", Program.MinorVersion);
   IO.mapRequired("ShaderKind", Program.ShaderKind);
   IO.mapOptional("Size", Program.Size);
-  IO.mapRequired("DXIMMajorVersion", Program.DXILMajorVersion);
+  IO.mapRequired("DXILMajorVersion", Program.DXILMajorVersion);
   IO.mapRequired("DXILMinorVersion", Program.DXILMinorVersion);
   IO.mapOptional("DXILSize", Program.DXILSize);
   IO.mapOptional("DXIL", Program.DXIL);
