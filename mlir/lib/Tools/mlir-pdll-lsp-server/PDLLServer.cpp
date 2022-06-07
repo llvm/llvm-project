@@ -62,6 +62,14 @@ static lsp::Location getLocationFromLoc(llvm::SourceMgr &mgr, SMRange range,
   return lsp::Location(getURIFromLoc(mgr, range, uri), lsp::Range(mgr, range));
 }
 
+/// Returns true if the given range contains the given source location. Note
+/// that this has different behavior than SMRange because it is inclusive of the
+/// end location.
+static bool contains(SMRange range, SMLoc loc) {
+  return range.Start.getPointer() <= loc.getPointer() &&
+         loc.getPointer() <= range.End.getPointer();
+}
+
 /// Convert the given MLIR diagnostic to the LSP form.
 static Optional<lsp::Diagnostic>
 getLspDiagnoticFromDiag(llvm::SourceMgr &sourceMgr, const ast::Diagnostic &diag,
@@ -357,6 +365,25 @@ struct PDLDocument {
 
   lsp::SignatureHelp getSignatureHelp(const lsp::URIForFile &uri,
                                       const lsp::Position &helpPos);
+
+  //===--------------------------------------------------------------------===//
+  // Inlay Hints
+  //===--------------------------------------------------------------------===//
+
+  void getInlayHints(const lsp::URIForFile &uri, const lsp::Range &range,
+                     std::vector<lsp::InlayHint> &inlayHints);
+  void getInlayHintsFor(const ast::VariableDecl *decl,
+                        const lsp::URIForFile &uri,
+                        std::vector<lsp::InlayHint> &inlayHints);
+  void getInlayHintsFor(const ast::CallExpr *expr, const lsp::URIForFile &uri,
+                        std::vector<lsp::InlayHint> &inlayHints);
+  void getInlayHintsFor(const ast::OperationExpr *expr,
+                        const lsp::URIForFile &uri,
+                        std::vector<lsp::InlayHint> &inlayHints);
+
+  /// Add a parameter hint for the given expression using `label`.
+  void addParameterHintFor(std::vector<lsp::InlayHint> &inlayHints,
+                           const ast::Expr *expr, StringRef label);
 
   //===--------------------------------------------------------------------===//
   // PDLL ViewOutput
@@ -1170,6 +1197,153 @@ lsp::SignatureHelp PDLDocument::getSignatureHelp(const lsp::URIForFile &uri,
 }
 
 //===----------------------------------------------------------------------===//
+// PDLDocument: Inlay Hints
+//===----------------------------------------------------------------------===//
+
+/// Returns true if the given name should be added as a hint for `expr`.
+static bool shouldAddHintFor(const ast::Expr *expr, StringRef name) {
+  if (name.empty())
+    return false;
+
+  // If the argument is a reference of the same name, don't add it as a hint.
+  if (auto *ref = dyn_cast<ast::DeclRefExpr>(expr)) {
+    const ast::Name *declName = ref->getDecl()->getName();
+    if (declName && declName->getName() == name)
+      return false;
+  }
+
+  return true;
+}
+
+void PDLDocument::getInlayHints(const lsp::URIForFile &uri,
+                                const lsp::Range &range,
+                                std::vector<lsp::InlayHint> &inlayHints) {
+  if (failed(astModule))
+    return;
+  SMRange rangeLoc = range.getAsSMRange(sourceMgr);
+  if (!rangeLoc.isValid())
+    return;
+  (*astModule)->walk([&](const ast::Node *node) {
+    SMRange loc = node->getLoc();
+
+    // Check that the location of this node is within the input range.
+    if (!contains(rangeLoc, loc.Start) && !contains(rangeLoc, loc.End))
+      return;
+
+    // Handle hints for various types of nodes.
+    llvm::TypeSwitch<const ast::Node *>(node)
+        .Case<ast::VariableDecl, ast::CallExpr, ast::OperationExpr>(
+            [&](const auto *node) {
+              this->getInlayHintsFor(node, uri, inlayHints);
+            });
+  });
+}
+
+void PDLDocument::getInlayHintsFor(const ast::VariableDecl *decl,
+                                   const lsp::URIForFile &uri,
+                                   std::vector<lsp::InlayHint> &inlayHints) {
+  // Check to see if the variable has a constraint list, if it does we don't
+  // provide initializer hints.
+  if (!decl->getConstraints().empty())
+    return;
+
+  // Check to see if the variable has an initializer.
+  if (const ast::Expr *expr = decl->getInitExpr()) {
+    // Don't add hints for operation expression initialized variables given that
+    // the type of the variable is easily inferred by the expression operation
+    // name.
+    if (isa<ast::OperationExpr>(expr))
+      return;
+  }
+
+  lsp::InlayHint hint(lsp::InlayHintKind::Type,
+                      lsp::Position(sourceMgr, decl->getLoc().End));
+  {
+    llvm::raw_string_ostream labelOS(hint.label);
+    labelOS << ": " << decl->getType();
+  }
+
+  inlayHints.emplace_back(std::move(hint));
+}
+
+void PDLDocument::getInlayHintsFor(const ast::CallExpr *expr,
+                                   const lsp::URIForFile &uri,
+                                   std::vector<lsp::InlayHint> &inlayHints) {
+  // Try to extract the callable of this call.
+  const auto *callableRef = dyn_cast<ast::DeclRefExpr>(expr->getCallableExpr());
+  const auto *callable =
+      callableRef ? dyn_cast<ast::CallableDecl>(callableRef->getDecl())
+                  : nullptr;
+  if (!callable)
+    return;
+
+  // Add hints for the arguments to the call.
+  for (const auto &it : llvm::zip(expr->getArguments(), callable->getInputs()))
+    addParameterHintFor(inlayHints, std::get<0>(it),
+                        std::get<1>(it)->getName().getName());
+}
+
+void PDLDocument::getInlayHintsFor(const ast::OperationExpr *expr,
+                                   const lsp::URIForFile &uri,
+                                   std::vector<lsp::InlayHint> &inlayHints) {
+  // Check for ODS information.
+  ast::OperationType opType = expr->getType().dyn_cast<ast::OperationType>();
+  const auto *odsOp = opType ? opType.getODSOperation() : nullptr;
+
+  auto addOpHint = [&](const ast::Expr *valueExpr, StringRef label) {
+    // If the value expression used the same location as the operation, don't
+    // add a hint. This expression was materialized during parsing.
+    if (expr->getLoc().Start == valueExpr->getLoc().Start)
+      return;
+    addParameterHintFor(inlayHints, valueExpr, label);
+  };
+
+  // Functor used to process hints for the operands and results of the
+  // operation. They effectively have the same format, and thus can be processed
+  // using the same logic.
+  auto addOperandOrResultHints = [&](ArrayRef<ast::Expr *> values,
+                                     ArrayRef<ods::OperandOrResult> odsValues,
+                                     StringRef allValuesName) {
+    if (values.empty())
+      return;
+
+    // The values should either map to a single range, or be equivalent to the
+    // ODS values.
+    if (values.size() != odsValues.size()) {
+      // Handle the case of a single element that covers the full range.
+      if (values.size() == 1)
+        return addOpHint(values.front(), allValuesName);
+      return;
+    }
+
+    for (const auto &it : llvm::zip(values, odsValues))
+      addOpHint(std::get<0>(it), std::get<1>(it).getName());
+  };
+
+  // Add hints for the operands and results of the operation.
+  addOperandOrResultHints(expr->getOperands(),
+                          odsOp ? odsOp->getOperands()
+                                : ArrayRef<ods::OperandOrResult>(),
+                          "operands");
+  addOperandOrResultHints(expr->getResultTypes(),
+                          odsOp ? odsOp->getResults()
+                                : ArrayRef<ods::OperandOrResult>(),
+                          "results");
+}
+
+void PDLDocument::addParameterHintFor(std::vector<lsp::InlayHint> &inlayHints,
+                                      const ast::Expr *expr, StringRef label) {
+  if (!shouldAddHintFor(expr, label))
+    return;
+
+  lsp::InlayHint hint(lsp::InlayHintKind::Parameter,
+                      lsp::Position(sourceMgr, expr->getLoc().Start));
+  hint.label = (label + ":").str();
+  hint.paddingRight = true;
+  inlayHints.emplace_back(std::move(hint));
+}
+
+//===----------------------------------------------------------------------===//
 // PDLL ViewOutput
 //===----------------------------------------------------------------------===//
 
@@ -1271,9 +1445,14 @@ public:
                                         lsp::Position completePos);
   lsp::SignatureHelp getSignatureHelp(const lsp::URIForFile &uri,
                                       lsp::Position helpPos);
+  void getInlayHints(const lsp::URIForFile &uri, lsp::Range range,
+                     std::vector<lsp::InlayHint> &inlayHints);
   lsp::PDLLViewOutputResult getPDLLViewOutput(lsp::PDLLViewOutputKind kind);
 
 private:
+  using ChunkIterator = llvm::pointee_iterator<
+      std::vector<std::unique_ptr<PDLTextFileChunk>>::iterator>;
+
   /// Initialize the text file from the given file contents.
   void initialize(const lsp::URIForFile &uri, int64_t newVersion,
                   std::vector<lsp::Diagnostic> &diagnostics);
@@ -1281,7 +1460,10 @@ private:
   /// Find the PDL document that contains the given position, and update the
   /// position to be anchored at the start of the found chunk instead of the
   /// beginning of the file.
-  PDLTextFileChunk &getChunkFor(lsp::Position &pos);
+  ChunkIterator getChunkItFor(lsp::Position &pos);
+  PDLTextFileChunk &getChunkFor(lsp::Position &pos) {
+    return *getChunkItFor(pos);
+  }
 
   /// The full string contents of the file.
   std::string contents;
@@ -1436,6 +1618,45 @@ lsp::SignatureHelp PDLTextFile::getSignatureHelp(const lsp::URIForFile &uri,
   return getChunkFor(helpPos).document.getSignatureHelp(uri, helpPos);
 }
 
+void PDLTextFile::getInlayHints(const lsp::URIForFile &uri, lsp::Range range,
+                                std::vector<lsp::InlayHint> &inlayHints) {
+  auto startIt = getChunkItFor(range.start);
+  auto endIt = getChunkItFor(range.end);
+
+  // Functor used to get the chunks for a given file, and fixup any locations
+  auto getHintsForChunk = [&](ChunkIterator chunkIt, lsp::Range range) {
+    size_t currentNumHints = inlayHints.size();
+    chunkIt->document.getInlayHints(uri, range, inlayHints);
+
+    // If this isn't the first chunk, update any positions to account for line
+    // number differences.
+    if (&*chunkIt != &*chunks.front()) {
+      for (auto &hint : llvm::drop_begin(inlayHints, currentNumHints))
+        chunkIt->adjustLocForChunkOffset(hint.position);
+    }
+  };
+  // Returns the number of lines held by a given chunk.
+  auto getNumLines = [](ChunkIterator chunkIt) {
+    return (chunkIt + 1)->lineOffset - chunkIt->lineOffset;
+  };
+
+  // Check if the range is fully within a single chunk.
+  if (startIt == endIt)
+    return getHintsForChunk(startIt, range);
+
+  // Otherwise, the range is split between multiple chunks. The first chunk
+  // has the correct range start, but covers the total document.
+  getHintsForChunk(startIt, lsp::Range(range.start, getNumLines(startIt)));
+
+  // Every chunk in between uses the full document.
+  for (++startIt; startIt != endIt; ++startIt)
+    getHintsForChunk(startIt, lsp::Range(0, getNumLines(startIt)));
+
+  // The range for the last chunk starts at the beginning of the document, up
+  // through the end of the input range.
+  getHintsForChunk(startIt, lsp::Range(0, range.end));
+}
+
 lsp::PDLLViewOutputResult
 PDLTextFile::getPDLLViewOutput(lsp::PDLLViewOutputKind kind) {
   lsp::PDLLViewOutputResult result;
@@ -1490,9 +1711,9 @@ void PDLTextFile::initialize(const lsp::URIForFile &uri, int64_t newVersion,
   totalNumLines = lineOffset;
 }
 
-PDLTextFileChunk &PDLTextFile::getChunkFor(lsp::Position &pos) {
+PDLTextFile::ChunkIterator PDLTextFile::getChunkItFor(lsp::Position &pos) {
   if (chunks.size() == 1)
-    return *chunks.front();
+    return chunks.begin();
 
   // Search for the first chunk with a greater line offset, the previous chunk
   // is the one that contains `pos`.
@@ -1500,9 +1721,9 @@ PDLTextFileChunk &PDLTextFile::getChunkFor(lsp::Position &pos) {
       chunks, pos, [](const lsp::Position &pos, const auto &chunk) {
         return static_cast<uint64_t>(pos.line) < chunk->lineOffset;
       });
-  PDLTextFileChunk &chunk = it == chunks.end() ? *chunks.back() : **(--it);
-  pos.line -= chunk.lineOffset;
-  return chunk;
+  ChunkIterator chunkIt(it == chunks.end() ? (chunks.end() - 1) : --it);
+  pos.line -= chunkIt->lineOffset;
+  return chunkIt;
 }
 
 //===----------------------------------------------------------------------===//
@@ -1621,6 +1842,19 @@ lsp::SignatureHelp lsp::PDLLServer::getSignatureHelp(const URIForFile &uri,
   if (fileIt != impl->files.end())
     return fileIt->second->getSignatureHelp(uri, helpPos);
   return SignatureHelp();
+}
+
+void lsp::PDLLServer::getInlayHints(const URIForFile &uri, const Range &range,
+                                    std::vector<InlayHint> &inlayHints) {
+  auto fileIt = impl->files.find(uri.file());
+  if (fileIt == impl->files.end())
+    return;
+  fileIt->second->getInlayHints(uri, range, inlayHints);
+
+  // Drop any duplicated hints that may have cropped up.
+  llvm::sort(inlayHints);
+  inlayHints.erase(std::unique(inlayHints.begin(), inlayHints.end()),
+                   inlayHints.end());
 }
 
 Optional<lsp::PDLLViewOutputResult>

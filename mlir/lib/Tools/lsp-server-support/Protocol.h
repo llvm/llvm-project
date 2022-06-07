@@ -1000,6 +1000,86 @@ struct DocumentLink {
 /// Add support for JSON serialization.
 llvm::json::Value toJSON(const DocumentLink &value);
 
+//===----------------------------------------------------------------------===//
+// InlayHintsParams
+//===----------------------------------------------------------------------===//
+
+/// A parameter literal used in inlay hint requests.
+struct InlayHintsParams {
+  /// The text document.
+  TextDocumentIdentifier textDocument;
+
+  /// The visible document range for which inlay hints should be computed.
+  Range range;
+};
+
+/// Add support for JSON serialization.
+bool fromJSON(const llvm::json::Value &value, InlayHintsParams &result,
+              llvm::json::Path path);
+
+//===----------------------------------------------------------------------===//
+// InlayHintKind
+//===----------------------------------------------------------------------===//
+
+/// Inlay hint kinds.
+enum class InlayHintKind {
+  /// An inlay hint that for a type annotation.
+  ///
+  /// An example of a type hint is a hint in this position:
+  ///    auto var ^ = expr;
+  /// which shows the deduced type of the variable.
+  Type = 1,
+
+  /// An inlay hint that is for a parameter.
+  ///
+  /// An example of a parameter hint is a hint in this position:
+  ///    func(^arg);
+  /// which shows the name of the corresponding parameter.
+  Parameter = 2,
+};
+
+//===----------------------------------------------------------------------===//
+// InlayHint
+//===----------------------------------------------------------------------===//
+
+/// Inlay hint information.
+struct InlayHint {
+  InlayHint(InlayHintKind kind, Position pos) : position(pos), kind(kind) {}
+
+  /// The position of this hint.
+  Position position;
+
+  /// The label of this hint. A human readable string or an array of
+  /// InlayHintLabelPart label parts.
+  ///
+  /// *Note* that neither the string nor the label part can be empty.
+  std::string label;
+
+  /// The kind of this hint. Can be omitted in which case the client should fall
+  /// back to a reasonable default.
+  InlayHintKind kind;
+
+  /// Render padding before the hint.
+  ///
+  /// Note: Padding should use the editor's background color, not the
+  /// background color of the hint itself. That means padding can be used
+  /// to visually align/separate an inlay hint.
+  bool paddingLeft = false;
+
+  /// Render padding after the hint.
+  ///
+  /// Note: Padding should use the editor's background color, not the
+  /// background color of the hint itself. That means padding can be used
+  /// to visually align/separate an inlay hint.
+  bool paddingRight = false;
+};
+
+/// Add support for JSON serialization.
+llvm::json::Value toJSON(const InlayHint &);
+bool operator==(const InlayHint &lhs, const InlayHint &rhs);
+bool operator<(const InlayHint &lhs, const InlayHint &rhs);
+llvm::raw_ostream &operator<<(llvm::raw_ostream &os, InlayHintKind value);
+
 } // namespace lsp
 } // namespace mlir
 

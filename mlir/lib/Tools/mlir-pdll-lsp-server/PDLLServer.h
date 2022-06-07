@@ -24,8 +24,10 @@ struct CompletionList;
 struct DocumentLink;
 struct DocumentSymbol;
 struct Hover;
+struct InlayHint;
 struct Location;
 struct Position;
+struct Range;
 struct SignatureHelp;
 struct TextDocumentContentChangeEvent;
 class URIForFile;
@@ -94,6 +96,10 @@ public:
   /// Get the signature help for the position within the given file.
   SignatureHelp getSignatureHelp(const URIForFile &uri,
                                  const Position &helpPos);
+
+  /// Get the inlay hints for the range within the given file.
+  void getInlayHints(const URIForFile &uri, const Range &range,
+                     std::vector<InlayHint> &inlayHints);
 
   /// Get the output of the given PDLL file, or None if there is no valid
   /// output.

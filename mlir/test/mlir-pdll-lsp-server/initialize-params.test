@@ -18,6 +18,7 @@
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "documentSymbolProvider": true,
 // CHECK-NEXT:      "hoverProvider": true,
+// CHECK-NEXT:      "inlayHintProvider": true,
 // CHECK-NEXT:      "referencesProvider": true,
 // CHECK-NEXT:      "signatureHelpProvider": {
 // CHECK-NEXT:        "triggerCharacters": [
