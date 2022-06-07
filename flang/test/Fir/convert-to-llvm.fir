@@ -2054,6 +2054,90 @@ func.func @ext_array_coor4(%arg0: !fir.ref<!fir.array<100xi32>>) {
 // CHECK:         %[[BITCAST:.*]] = llvm.bitcast %[[ARG0]] : !llvm.ptr<array<100 x i32>> to !llvm.ptr<i32>
 // CHECK:         %{{.*}} = llvm.getelementptr %[[BITCAST]][%[[OFFSET]]] : (!llvm.ptr<i32>, i64) -> !llvm.ptr<i32>
 
+// Conversion with index type shape and slice
+
+func.func @ext_array_coor5(%arg0: !fir.ref<!fir.array<?xi32>>, %idx1 : index, %idx2 : index, %idx3 : index, %idx4 : index, %idx5 : index) {
+  %1 = fircg.ext_array_coor %arg0(%idx1)[%idx2, %idx3, %idx4]<%idx5> : (!fir.ref<!fir.array<?xi32>>, index, index, index, index, index) -> !fir.ref<i32>
+  return
+}
+
+// CHECK-LABEL:   llvm.func @ext_array_coor5(
+// CHECK-SAME:        %[[VAL_0:.*]]: !llvm.ptr<i32>, %[[VAL_1:.*]]: i64, %[[VAL_2:.*]]: i64, %[[VAL_3:.*]]: i64, %[[VAL_4:.*]]: i64, %[[VAL_5:.*]]: i64) {
+// CHECK:           %[[VAL_6:.*]] = llvm.mlir.constant(1 : i64) : i64
+// CHECK:           %[[VAL_7:.*]] = llvm.mlir.constant(0 : i64) : i64
+// CHECK:           %[[VAL_8:.*]] = llvm.sub %[[VAL_5]], %[[VAL_6]]  : i64
+// CHECK:           %[[VAL_9:.*]] = llvm.mul %[[VAL_8]], %[[VAL_4]]  : i64
+// CHECK:           %[[VAL_10:.*]] = llvm.sub %[[VAL_2]], %[[VAL_6]]  : i64
+// CHECK:           %[[VAL_11:.*]] = llvm.add %[[VAL_9]], %[[VAL_10]]  : i64
+// CHECK:           %[[VAL_12:.*]] = llvm.mul %[[VAL_11]], %[[VAL_6]]  : i64
+// CHECK:           %[[VAL_13:.*]] = llvm.add %[[VAL_12]], %[[VAL_7]]  : i64
+// CHECK:           %[[VAL_14:.*]] = llvm.mul %[[VAL_6]], %[[VAL_1]]  : i64
+// CHECK:           %[[VAL_15:.*]] = llvm.bitcast %[[VAL_0]] : !llvm.ptr<i32> to !llvm.ptr<i32>
+// CHECK:           %[[VAL_16:.*]] = llvm.getelementptr %[[VAL_15]][%[[VAL_13]]] : (!llvm.ptr<i32>, i64) -> !llvm.ptr<i32>
+// CHECK:         }
+
+// Conversion for 3-d array
+
+func.func @ext_array_coor6(%arg0: !fir.ref<!fir.array<?x?x?xi32>>, %idx1 : index, %idx2 : index, %idx3 : index, %idx4 : index, %idx5 : index) {
+  %1 = fircg.ext_array_coor %arg0(%idx1, %idx1, %idx1)[%idx2, %idx3, %idx4, %idx2, %idx3, %idx4, %idx2, %idx3, %idx4]<%idx5, %idx5, %idx5> : (!fir.ref<!fir.array<?x?x?xi32>>, index, index, index, index, index, index, index, index, index, index, index, index, index, index, index) -> !fir.ref<i32>
+  return
+}
+
+// CHECK-LABEL:   llvm.func @ext_array_coor6(
+// CHECK-SAME:        %[[VAL_0:.*]]: !llvm.ptr<i32>, %[[VAL_1:.*]]: i64, %[[VAL_2:.*]]: i64, %[[VAL_3:.*]]: i64, %[[VAL_4:.*]]: i64, %[[VAL_5:.*]]: i64) {
+// CHECK:           %[[VAL_6:.*]] = llvm.mlir.constant(1 : i64) : i64
+// CHECK:           %[[VAL_7:.*]] = llvm.mlir.constant(0 : i64) : i64
+// CHECK:           %[[VAL_8:.*]] = llvm.sub %[[VAL_5]], %[[VAL_6]]  : i64
+// CHECK:           %[[VAL_9:.*]] = llvm.mul %[[VAL_8]], %[[VAL_4]]  : i64
+// CHECK:           %[[VAL_10:.*]] = llvm.sub %[[VAL_2]], %[[VAL_6]]  : i64
+// CHECK:           %[[VAL_11:.*]] = llvm.add %[[VAL_9]], %[[VAL_10]]  : i64
+// CHECK:           %[[VAL_12:.*]] = llvm.mul %[[VAL_11]], %[[VAL_6]]  : i64
+// CHECK:           %[[VAL_13:.*]] = llvm.add %[[VAL_12]], %[[VAL_7]]  : i64
+// CHECK:           %[[VAL_14:.*]] = llvm.mul %[[VAL_6]], %[[VAL_1]]  : i64
+// CHECK:           %[[VAL_15:.*]] = llvm.sub %[[VAL_5]], %[[VAL_6]]  : i64
+// CHECK:           %[[VAL_16:.*]] = llvm.mul %[[VAL_15]], %[[VAL_2]]  : i64
+// CHECK:           %[[VAL_17:.*]] = llvm.sub %[[VAL_3]], %[[VAL_6]]  : i64
+// CHECK:           %[[VAL_18:.*]] = llvm.add %[[VAL_16]], %[[VAL_17]]  : i64
+// CHECK:           %[[VAL_19:.*]] = llvm.mul %[[VAL_18]], %[[VAL_14]]  : i64
+// CHECK:           %[[VAL_20:.*]] = llvm.add %[[VAL_19]], %[[VAL_13]]  : i64
+// CHECK:           %[[VAL_21:.*]] = llvm.mul %[[VAL_14]], %[[VAL_1]]  : i64
+// CHECK:           %[[VAL_22:.*]] = llvm.sub %[[VAL_5]], %[[VAL_6]]  : i64
+// CHECK:           %[[VAL_23:.*]] = llvm.mul %[[VAL_22]], %[[VAL_3]]  : i64
+// CHECK:           %[[VAL_24:.*]] = llvm.sub %[[VAL_4]], %[[VAL_6]]  : i64
+// CHECK:           %[[VAL_25:.*]] = llvm.add %[[VAL_23]], %[[VAL_24]]  : i64
+// CHECK:           %[[VAL_26:.*]] = llvm.mul %[[VAL_25]], %[[VAL_21]]  : i64
+// CHECK:           %[[VAL_27:.*]] = llvm.add %[[VAL_26]], %[[VAL_20]]  : i64
+// CHECK:           %[[VAL_28:.*]] = llvm.mul %[[VAL_21]], %[[VAL_1]]  : i64
+// CHECK:           %[[VAL_29:.*]] = llvm.bitcast %[[VAL_0]] : !llvm.ptr<i32> to !llvm.ptr<i32>
+// CHECK:           %[[VAL_30:.*]] = llvm.getelementptr %[[VAL_29]][%[[VAL_27]]] : (!llvm.ptr<i32>, i64) -> !llvm.ptr<i32>
+// CHECK:           llvm.return
+// CHECK:         }
+
+// Conversion for derived type with type param
+
+func.func @ext_array_coor_dt_slice(%arg0: !fir.ref<!fir.array<20x!fir.type<_QFtest_dt_sliceTt{i:i32,j:i32}>>>, %idx1 : index, %idx2 : index, %idx3 : index, %idx4 : index, %idx5 : index) {
+  %1 = fir.field_index i, !fir.type<_QFtest_dt_sliceTt{i:i32,j:i32}>
+  %2 = fircg.ext_array_coor %arg0(%idx1)[%idx2, %idx3, %idx4] path %1 <%idx5>: (!fir.ref<!fir.array<20x!fir.type<_QFtest_dt_sliceTt{i:i32,j:i32}>>>, index, index, index, index, !fir.field, index) -> !fir.ref<!fir.type<_QFtest_dt_sliceTt{i:i32,j:i32}>>
+  return
+}
+
+// CHECK-LABEL:   llvm.func @ext_array_coor_dt_slice(
+// CHECK-SAME:        %[[VAL_0:.*]]: !llvm.ptr<array<20 x struct<"_QFtest_dt_sliceTt", (i32, i32)>>>, %[[VAL_1:.*]]: i64, %[[VAL_2:.*]]: i64, %[[VAL_3:.*]]: i64, %[[VAL_4:.*]]: i64, %[[VAL_5:.*]]: i64) {
+// CHECK:           %[[VAL_6:.*]] = llvm.mlir.constant(0 : i32) : i32
+// CHECK:           %[[VAL_7:.*]] = llvm.mlir.constant(1 : i64) : i64
+// CHECK:           %[[VAL_8:.*]] = llvm.mlir.constant(0 : i64) : i64
+// CHECK:           %[[VAL_9:.*]] = llvm.sub %[[VAL_5]], %[[VAL_7]]  : i64
+// CHECK:           %[[VAL_10:.*]] = llvm.mul %[[VAL_9]], %[[VAL_4]]  : i64
+// CHECK:           %[[VAL_11:.*]] = llvm.sub %[[VAL_2]], %[[VAL_7]]  : i64
+// CHECK:           %[[VAL_12:.*]] = llvm.add %[[VAL_10]], %[[VAL_11]]  : i64
+// CHECK:           %[[VAL_13:.*]] = llvm.mul %[[VAL_12]], %[[VAL_7]]  : i64
+// CHECK:           %[[VAL_14:.*]] = llvm.add %[[VAL_13]], %[[VAL_8]]  : i64
+// CHECK:           %[[VAL_15:.*]] = llvm.mul %[[VAL_7]], %[[VAL_1]]  : i64
+// CHECK:           %[[VAL_16:.*]] = llvm.bitcast %[[VAL_0]] : !llvm.ptr<array<20 x struct<"_QFtest_dt_sliceTt", (i32, i32)>>> to !llvm.ptr<struct<"_QFtest_dt_sliceTt", (i32, i32)>>
+// CHECK:           %[[VAL_17:.*]] = llvm.getelementptr %[[VAL_16]][%[[VAL_14]], 0] : (!llvm.ptr<struct<"_QFtest_dt_sliceTt", (i32, i32)>>, i64) -> !llvm.ptr<struct<"_QFtest_dt_sliceTt", (i32, i32)>>
+// CHECK:           llvm.return
+// CHECK:         }
+
 // -----
 
 // Check `fircg.ext_rebox` conversion to LLVM IR dialect
