@@ -4178,6 +4178,9 @@ def err_attribute_not_supported_on_arch
 def warn_gcc_ignores_type_attr : Warning<
   "GCC does not allow the %0 attribute to be written on a type">,
   InGroup<GccCompat>;
+def warn_gcc_requires_variadic_function : Warning<
+  "GCC requires a function with the %0 attribute to be variadic">,
+  InGroup<GccCompat>;
 
 // Clang-Specific Attributes
 def warn_attribute_iboutlet : Warning<
