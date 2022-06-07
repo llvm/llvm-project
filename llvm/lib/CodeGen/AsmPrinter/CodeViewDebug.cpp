@@ -978,11 +978,11 @@ void CodeViewDebug::emitInlineeLinesSubsection() {
     assert(TypeIndices.count({SP, nullptr}));
     TypeIndex InlineeIdx = TypeIndices[{SP, nullptr}];
 
-    OS.AddBlankLine();
+    OS.addBlankLine();
     unsigned FileId = maybeRecordFile(SP->getFile());
     OS.AddComment("Inlined function " + SP->getName() + " starts at " +
                   SP->getFilename() + Twine(':') + Twine(SP->getLine()));
-    OS.AddBlankLine();
+    OS.addBlankLine();
     OS.AddComment("Type index of inlined function");
     OS.emitInt32(InlineeIdx.getIndex());
     OS.AddComment("Offset into filechecksum table");

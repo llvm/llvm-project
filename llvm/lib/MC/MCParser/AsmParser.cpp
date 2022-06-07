@@ -1073,7 +1073,7 @@ bool AsmParser::Run(bool NoInitialTextSection, bool NoFinalize) {
     if (auto *TS = Out.getTargetStreamer())
       TS->emitConstantPools();
 
-    Out.Finish(Lexer.getLoc());
+    Out.finish(Lexer.getLoc());
   }
 
   return HadError || getContext().hadError();
@@ -1786,7 +1786,7 @@ bool AsmParser::parseStatement(ParseStatementInfo &Info,
     // if this is a line comment we can drop it safely
     if (getTok().getString().empty() || getTok().getString().front() == '\r' ||
         getTok().getString().front() == '\n')
-      Out.AddBlankLine();
+      Out.addBlankLine();
     Lex();
     return false;
   }
@@ -1943,7 +1943,7 @@ bool AsmParser::parseStatement(ParseStatementInfo &Info,
     }
 
     // Consume any end of statement token, if present, to avoid spurious
-    // AddBlankLine calls().
+    // addBlankLine calls().
     if (getTok().is(AsmToken::EndOfStatement)) {
       Lex();
     }
@@ -6310,7 +6310,7 @@ bool HLASMAsmParser::parseStatement(ParseStatementInfo &Info,
     // if this is a line comment we can drop it safely
     if (getTok().getString().empty() || getTok().getString().front() == '\r' ||
         getTok().getString().front() == '\n')
-      Out.AddBlankLine();
+      Out.addBlankLine();
     Lex();
     return false;
   }
@@ -6326,7 +6326,7 @@ bool HLASMAsmParser::parseStatement(ParseStatementInfo &Info,
   if (Lexer.is(AsmToken::EndOfStatement)) {
     if (getTok().getString().front() == '\n' ||
         getTok().getString().front() == '\r') {
-      Out.AddBlankLine();
+      Out.addBlankLine();
       Lex();
       return false;
     }

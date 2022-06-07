@@ -161,10 +161,10 @@ bool ARMAsmPrinter::runOnMachineFunction(MachineFunction &MF) {
                                             : COFF::IMAGE_SYM_CLASS_EXTERNAL;
     int Type = COFF::IMAGE_SYM_DTYPE_FUNCTION << COFF::SCT_COMPLEX_TYPE_SHIFT;
 
-    OutStreamer->BeginCOFFSymbolDef(CurrentFnSym);
+    OutStreamer->beginCOFFSymbolDef(CurrentFnSym);
     OutStreamer->emitCOFFSymbolStorageClass(Scl);
     OutStreamer->emitCOFFSymbolType(Type);
-    OutStreamer->EndCOFFSymbolDef();
+    OutStreamer->endCOFFSymbolDef();
   }
 
   // Emit the rest of the function body.
@@ -542,7 +542,7 @@ void ARMAsmPrinter::emitEndOfAsmFile(Module &M) {
         emitNonLazySymbolPointer(*OutStreamer, Stub.first, Stub.second);
 
       Stubs.clear();
-      OutStreamer->AddBlankLine();
+      OutStreamer->addBlankLine();
     }
 
     Stubs = MMIMacho.GetThreadLocalGVStubList();
@@ -555,7 +555,7 @@ void ARMAsmPrinter::emitEndOfAsmFile(Module &M) {
         emitNonLazySymbolPointer(*OutStreamer, Stub.first, Stub.second);
 
       Stubs.clear();
-      OutStreamer->AddBlankLine();
+      OutStreamer->addBlankLine();
     }
 
     // Funny Darwin hack: This flag tells the linker that no global symbols

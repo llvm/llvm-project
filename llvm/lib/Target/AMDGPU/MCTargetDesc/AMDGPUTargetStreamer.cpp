@@ -533,7 +533,7 @@ void AMDGPUTargetELFStreamer::EmitNote(
   if (STI.getTargetTriple().getOS() == Triple::AMDHSA)
     NoteFlags = ELF::SHF_ALLOC;
 
-  S.PushSection();
+  S.pushSection();
   S.SwitchSection(
       Context.getELFSection(ElfNote::SectionName, ELF::SHT_NOTE, NoteFlags));
   S.emitInt32(NameSZ);                                        // namesz
@@ -543,7 +543,7 @@ void AMDGPUTargetELFStreamer::EmitNote(
   S.emitValueToAlignment(4, 0, 1, 0);                         // padding 0
   EmitDesc(S);                                                // desc
   S.emitValueToAlignment(4, 0, 1, 0);                         // padding 0
-  S.PopSection();
+  S.popSection();
 }
 
 unsigned AMDGPUTargetELFStreamer::getEFlags() {
@@ -717,9 +717,9 @@ void
 AMDGPUTargetELFStreamer::EmitAMDKernelCodeT(const amd_kernel_code_t &Header) {
 
   MCStreamer &OS = getStreamer();
-  OS.PushSection();
+  OS.pushSection();
   OS.emitBytes(StringRef((const char*)&Header, sizeof(Header)));
-  OS.PopSection();
+  OS.popSection();
 }
 
 void AMDGPUTargetELFStreamer::EmitAMDGPUSymbolType(StringRef SymbolName,
@@ -836,11 +836,11 @@ bool AMDGPUTargetELFStreamer::EmitCodeEnd(const MCSubtargetInfo &STI) {
   }
 
   MCStreamer &OS = getStreamer();
-  OS.PushSection();
+  OS.pushSection();
   OS.emitValueToAlignment(CacheLineSize, Encoded_pad, 4);
   for (unsigned I = 0; I < FillSize; I += 4)
     OS.emitInt32(Encoded_pad);
-  OS.PopSection();
+  OS.popSection();
   return true;
 }
 

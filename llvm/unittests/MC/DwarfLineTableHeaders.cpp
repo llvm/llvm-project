@@ -208,7 +208,7 @@ TEST_F(DwarfLineTableHeaders, TestDWARF4HeaderEmission) {
   constexpr uint8_t DwarfVersion = 4;
   C.Ctx->setDwarfVersion(DwarfVersion);
   emitDebugLineSection(C);
-  C.Streamer->Finish();
+  C.Streamer->finish();
   readAndCheckDebugContents(
       EmittedBinContents.str(),
       {/*    Total length=*/0x30, 0, 0, 0,
@@ -232,7 +232,7 @@ TEST_F(DwarfLineTableHeaders, TestDWARF5HeaderEmission) {
   constexpr uint8_t DwarfVersion = 5;
   C.Ctx->setDwarfVersion(DwarfVersion);
   emitDebugLineSection(C);
-  C.Streamer->Finish();
+  C.Streamer->finish();
   readAndCheckDebugContents(
       EmittedBinContents.str(),
       {/*    Total length=*/0x43, 0, 0, 0,

@@ -247,7 +247,7 @@ void AMDGPUAsmPrinter::emitFunctionBodyEnd() {
   auto &ObjectFileInfo = *Context.getObjectFileInfo();
   auto &ReadOnlySection = *ObjectFileInfo.getReadOnlySection();
 
-  Streamer.PushSection();
+  Streamer.pushSection();
   Streamer.SwitchSection(&ReadOnlySection);
 
   // CP microcode requires the kernel descriptor to be allocated on 64 byte
@@ -269,7 +269,7 @@ void AMDGPUAsmPrinter::emitFunctionBodyEnd() {
                                     CurrentProgramInfo.FlatUsed),
       CurrentProgramInfo.VCCUsed, CurrentProgramInfo.FlatUsed);
 
-  Streamer.PopSection();
+  Streamer.popSection();
 }
 
 void AMDGPUAsmPrinter::emitFunctionEntryLabel() {

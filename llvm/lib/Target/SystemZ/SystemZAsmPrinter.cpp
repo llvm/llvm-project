@@ -641,11 +641,11 @@ void SystemZAsmPrinter::LowerFENTRY_CALL(const MachineInstr &MI,
   MCContext &Ctx = MF->getContext();
   if (MF->getFunction().hasFnAttribute("mrecord-mcount")) {
     MCSymbol *DotSym = OutContext.createTempSymbol();
-    OutStreamer->PushSection();
+    OutStreamer->pushSection();
     OutStreamer->SwitchSection(
         Ctx.getELFSection("__mcount_loc", ELF::SHT_PROGBITS, ELF::SHF_ALLOC));
     OutStreamer->emitSymbolValue(DotSym, 8);
-    OutStreamer->PopSection();
+    OutStreamer->popSection();
     OutStreamer->emitLabel(DotSym);
   }
 
@@ -826,10 +826,10 @@ void SystemZAsmPrinter::emitFunctionBodyEnd() {
     MCSymbol *FnEndSym = createTempSymbol("func_end");
     OutStreamer->emitLabel(FnEndSym);
 
-    OutStreamer->PushSection();
+    OutStreamer->pushSection();
     OutStreamer->SwitchSection(getObjFileLowering().getPPA1Section());
     emitPPA1(FnEndSym);
-    OutStreamer->PopSection();
+    OutStreamer->popSection();
 
     CurrentFnPPA1Sym = nullptr;
     CurrentFnEPMarkerSym = nullptr;

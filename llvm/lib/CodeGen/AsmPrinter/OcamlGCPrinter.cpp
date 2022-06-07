@@ -147,7 +147,7 @@ void OcamlGCMetadataPrinter::finishAssembly(Module &M, GCModuleInfo &Info,
 
     AP.OutStreamer->AddComment("live roots for " +
                                Twine(FI->getFunction().getName()));
-    AP.OutStreamer->AddBlankLine();
+    AP.OutStreamer->addBlankLine();
 
     for (GCFunctionInfo::iterator J = FI->begin(), JE = FI->end(); J != JE;
          ++J) {

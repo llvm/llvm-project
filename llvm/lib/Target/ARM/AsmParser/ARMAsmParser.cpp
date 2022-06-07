@@ -11947,7 +11947,7 @@ bool ARMAsmParser::parseDirectiveTLSDescSeq(SMLoc L) {
   if (parseEOL())
     return true;
 
-  getTargetStreamer().AnnotateTLSDescriptorSequence(SRE);
+  getTargetStreamer().annotateTLSDescriptorSequence(SRE);
   return false;
 }
 

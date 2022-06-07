@@ -98,7 +98,7 @@ class ARMTargetAsmStreamer : public ARMTargetStreamer {
   void emitInst(uint32_t Inst, char Suffix = '\0') override;
   void finishAttributeSection() override;
 
-  void AnnotateTLSDescriptorSequence(const MCSymbolRefExpr *SRE) override;
+  void annotateTLSDescriptorSequence(const MCSymbolRefExpr *SRE) override;
   void emitThumbSet(MCSymbol *Symbol, const MCExpr *Value) override;
 
   void emitARMWinCFIAllocStack(unsigned Size, bool Wide) override;
@@ -250,8 +250,8 @@ void ARMTargetAsmStreamer::emitFPU(unsigned FPU) {
 
 void ARMTargetAsmStreamer::finishAttributeSection() {}
 
-void
-ARMTargetAsmStreamer::AnnotateTLSDescriptorSequence(const MCSymbolRefExpr *S) {
+void ARMTargetAsmStreamer::annotateTLSDescriptorSequence(
+    const MCSymbolRefExpr *S) {
   OS << "\t.tlsdescseq\t" << S->getSymbol().getName() << "\n";
 }
 
@@ -415,7 +415,7 @@ private:
   void finishAttributeSection() override;
   void emitLabel(MCSymbol *Symbol) override;
 
-  void AnnotateTLSDescriptorSequence(const MCSymbolRefExpr *SRE) override;
+  void annotateTLSDescriptorSequence(const MCSymbolRefExpr *SRE) override;
   void emitThumbSet(MCSymbol *Symbol, const MCExpr *Value) override;
 
   // Reset state between object emissions
@@ -1090,8 +1090,8 @@ void ARMTargetELFStreamer::emitLabel(MCSymbol *Symbol) {
     Streamer.emitThumbFunc(Symbol);
 }
 
-void
-ARMTargetELFStreamer::AnnotateTLSDescriptorSequence(const MCSymbolRefExpr *S) {
+void ARMTargetELFStreamer::annotateTLSDescriptorSequence(
+    const MCSymbolRefExpr *S) {
   getStreamer().EmitFixup(S, FK_Data_4);
 }
 

@@ -3116,7 +3116,7 @@ void RewriteInstance::emitAndLink() {
 
   emitBinaryContext(*Streamer, *BC, getOrgSecPrefix());
 
-  Streamer->Finish();
+  Streamer->finish();
   if (Streamer->getContext().hadError()) {
     errs() << "BOLT-ERROR: Emission failed.\n";
     exit(1);

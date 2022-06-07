@@ -1026,7 +1026,7 @@ void MipsTargetELFStreamer::emitDirectiveEnd(StringRef Name) {
   MCA.registerSection(*Sec);
   Sec->setAlignment(Align(4));
 
-  OS.PushSection();
+  OS.pushSection();
 
   OS.SwitchSection(Sec);
 
@@ -1046,7 +1046,7 @@ void MipsTargetELFStreamer::emitDirectiveEnd(StringRef Name) {
   // the information gathered up until this point.
   GPRInfoSet = FPRInfoSet = FrameInfoSet = false;
 
-  OS.PopSection();
+  OS.popSection();
 
   // .end also implicitly sets the size.
   MCSymbol *CurPCSym = Context.createTempSymbol();

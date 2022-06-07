@@ -379,10 +379,10 @@ unsigned ELFAsmParser::parseSunStyleSectionFlags() {
 
 
 bool ELFAsmParser::ParseDirectivePushSection(StringRef s, SMLoc loc) {
-  getStreamer().PushSection();
+  getStreamer().pushSection();
 
   if (ParseSectionArguments(/*IsPush=*/true, loc)) {
-    getStreamer().PopSection();
+    getStreamer().popSection();
     return true;
   }
 
@@ -390,7 +390,7 @@ bool ELFAsmParser::ParseDirectivePushSection(StringRef s, SMLoc loc) {
 }
 
 bool ELFAsmParser::ParseDirectivePopSection(StringRef, SMLoc) {
-  if (!getStreamer().PopSection())
+  if (!getStreamer().popSection())
     return TokError(".popsection without corresponding .pushsection");
   return false;
 }
@@ -860,7 +860,7 @@ bool ELFAsmParser::ParseDirectiveVersion(StringRef, SMLoc) {
 
   MCSection *Note = getContext().getELFSection(".note", ELF::SHT_NOTE, 0);
 
-  getStreamer().PushSection();
+  getStreamer().pushSection();
   getStreamer().SwitchSection(Note);
   getStreamer().emitInt32(Data.size() + 1); // namesz
   getStreamer().emitInt32(0);               // descsz = 0 (no description).
@@ -868,7 +868,7 @@ bool ELFAsmParser::ParseDirectiveVersion(StringRef, SMLoc) {
   getStreamer().emitBytes(Data);            // name
   getStreamer().emitInt8(0);                // NUL
   getStreamer().emitValueToAlignment(4);
-  getStreamer().PopSection();
+  getStreamer().popSection();
   return false;
 }
 
@@ -910,7 +910,7 @@ bool ELFAsmParser::ParseDirectiveSubsection(StringRef, SMLoc) {
 
   Lex();
 
-  getStreamer().SubSection(Subsection);
+  getStreamer().subSection(Subsection);
   return false;
 }
 

@@ -133,7 +133,7 @@ void MCWinCOFFStreamer::emitSymbolDesc(MCSymbol *Symbol, unsigned DescValue) {
   llvm_unreachable("not implemented");
 }
 
-void MCWinCOFFStreamer::BeginCOFFSymbolDef(MCSymbol const *S) {
+void MCWinCOFFStreamer::beginCOFFSymbolDef(MCSymbol const *S) {
   auto *Symbol = cast<MCSymbolCOFF>(S);
   if (CurSymbol)
     Error("starting a new symbol definition without completing the "
@@ -172,7 +172,7 @@ void MCWinCOFFStreamer::emitCOFFSymbolType(int Type) {
   cast<MCSymbolCOFF>(CurSymbol)->setType((uint16_t)Type);
 }
 
-void MCWinCOFFStreamer::EndCOFFSymbolDef() {
+void MCWinCOFFStreamer::endCOFFSymbolDef() {
   if (!CurSymbol)
     Error("ending symbol definition without starting one");
   CurSymbol = nullptr;
@@ -286,10 +286,10 @@ void MCWinCOFFStreamer::emitCommonSymbol(MCSymbol *S, uint64_t Size,
     OS << " -aligncomm:\"" << Symbol->getName() << "\","
        << Log2_32_Ceil(ByteAlignment);
 
-    PushSection();
+    pushSection();
     SwitchSection(MFI->getDrectveSection());
     emitBytes(Directive);
-    PopSection();
+    popSection();
   }
 }
 
@@ -298,13 +298,13 @@ void MCWinCOFFStreamer::emitLocalCommonSymbol(MCSymbol *S, uint64_t Size,
   auto *Symbol = cast<MCSymbolCOFF>(S);
 
   MCSection *Section = getContext().getObjectFileInfo()->getBSSSection();
-  PushSection();
+  pushSection();
   SwitchSection(Section);
   emitValueToAlignment(ByteAlignment, 0, 1, 0);
   emitLabel(Symbol);
   Symbol->setExternal(false);
   emitZeros(Size);
-  PopSection();
+  popSection();
 }
 
 void MCWinCOFFStreamer::emitWeakReference(MCSymbol *AliasS,

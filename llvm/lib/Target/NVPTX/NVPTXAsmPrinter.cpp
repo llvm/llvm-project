@@ -512,7 +512,7 @@ void NVPTXAsmPrinter::emitImplicitDef(const MachineInstr *MI) const {
     OutStreamer->AddComment(Twine("implicit-def: ") +
                             STI.getRegisterInfo()->getName(RegNo));
   }
-  OutStreamer->AddBlankLine();
+  OutStreamer->addBlankLine();
 }
 
 void NVPTXAsmPrinter::emitKernelFunctionDirectives(const Function &F,

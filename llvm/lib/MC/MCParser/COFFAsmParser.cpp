@@ -416,7 +416,7 @@ bool COFFAsmParser::ParseDirectiveDef(StringRef, SMLoc) {
 
   MCSymbol *Sym = getContext().getOrCreateSymbol(SymbolName);
 
-  getStreamer().BeginCOFFSymbolDef(Sym);
+  getStreamer().beginCOFFSymbolDef(Sym);
 
   Lex();
   return false;
@@ -450,7 +450,7 @@ bool COFFAsmParser::ParseDirectiveType(StringRef, SMLoc) {
 
 bool COFFAsmParser::ParseDirectiveEndef(StringRef, SMLoc) {
   Lex();
-  getStreamer().EndCOFFSymbolDef();
+  getStreamer().endCOFFSymbolDef();
   return false;
 }
 

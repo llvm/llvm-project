@@ -728,10 +728,10 @@ bool DarwinAsmParser::parseDirectiveSection(StringRef, SMLoc) {
 /// ParseDirectivePushSection:
 ///   ::= .pushsection identifier (',' identifier)*
 bool DarwinAsmParser::parseDirectivePushSection(StringRef S, SMLoc Loc) {
-  getStreamer().PushSection();
+  getStreamer().pushSection();
 
   if (parseDirectiveSection(S, Loc)) {
-    getStreamer().PopSection();
+    getStreamer().popSection();
     return true;
   }
 
@@ -741,7 +741,7 @@ bool DarwinAsmParser::parseDirectivePushSection(StringRef S, SMLoc Loc) {
 /// ParseDirectivePopSection:
 ///   ::= .popsection
 bool DarwinAsmParser::parseDirectivePopSection(StringRef, SMLoc) {
-  if (!getStreamer().PopSection())
+  if (!getStreamer().popSection())
     return TokError(".popsection without corresponding .pushsection");
   return false;
 }
