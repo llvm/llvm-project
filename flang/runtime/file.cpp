@@ -97,12 +97,18 @@ void OpenFile::Open(OpenStatus status, std::optional<Action> action,
       flags |= O_TRUNC;
     }
     if (!action) {
-      // Try to open read/write, back off to read-only on failure
+      // Try to open read/write, back off to read-only or even write-only
+      // on failure
       fd_ = ::open(path_.get(), flags | O_RDWR, 0600);
       if (fd_ >= 0) {
         action = Action::ReadWrite;
       } else {
-        action = Action::Read;
+        fd_ = ::open(path_.get(), flags | O_RDONLY, 0600);
+        if (fd_ >= 0) {
+          action = Action::Read;
+        } else {
+          action = Action::Write;
+        }
       }
     }
     if (fd_ < 0) {
@@ -126,7 +132,7 @@ void OpenFile::Open(OpenStatus status, std::optional<Action> action,
   RUNTIME_CHECK(handler, action.has_value());
   pending_.reset();
   if (position == Position::Append && !RawSeekToEnd()) {
-    handler.SignalErrno();
+    handler.SignalError(IostatOpenBadAppend);
   }
   isTerminal_ = ::isatty(fd_) == 1;
   mayRead_ = *action != Action::Write;
@@ -371,7 +377,7 @@ bool OpenFile::Seek(FileOffset at, IoErrorHandler &handler) {
     SetPosition(at);
     return true;
   } else {
-    handler.SignalErrno();
+    handler.SignalError(IostatCannotReposition);
     return false;
   }
 }
@@ -434,4 +440,17 @@ bool MayWrite(const char *path) { return ::access(path, W_OK) == 0; }
 bool MayReadAndWrite(const char *path) {
   return ::access(path, R_OK | W_OK) == 0;
 }
+
+std::int64_t SizeInBytes(const char *path) {
+#ifndef _WIN32
+  struct stat buf;
+  if (::stat(path, &buf) == 0) {
+    return buf.st_size;
+  }
+#else // TODO: _WIN32
+#endif
+  // No Fortran compiler signals an error
+  return -1;
+}
+
 } // namespace Fortran::runtime::io

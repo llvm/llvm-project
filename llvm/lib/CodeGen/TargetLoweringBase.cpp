@@ -741,9 +741,8 @@ void TargetLoweringBase::initActions() {
 
   // We're somewhat special casing MVT::i2 and MVT::i4. Ideally we want to
   // remove this and targets should individually set these types if not legal.
-  for (ISD::NodeType NT :
-       enum_seq_inclusive(ISD::DELETED_NODE, ISD::BUILTIN_OP_END,
-                          force_iteration_on_noniterable_enum)) {
+  for (ISD::NodeType NT : enum_seq(ISD::DELETED_NODE, ISD::BUILTIN_OP_END,
+                                   force_iteration_on_noniterable_enum)) {
     for (MVT VT : {MVT::i2, MVT::i4})
       OpActions[(unsigned)VT.SimpleTy][NT] = Expand;
   }

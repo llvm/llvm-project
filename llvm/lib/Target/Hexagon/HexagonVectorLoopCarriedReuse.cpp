@@ -53,10 +53,10 @@ using namespace llvm;
 STATISTIC(HexagonNumVectorLoopCarriedReuse,
           "Number of values that were reused from a previous iteration.");
 
-static cl::opt<int> HexagonVLCRIterationLim("hexagon-vlcr-iteration-lim",
-    cl::Hidden,
+static cl::opt<int> HexagonVLCRIterationLim(
+    "hexagon-vlcr-iteration-lim", cl::Hidden,
     cl::desc("Maximum distance of loop carried dependences that are handled"),
-    cl::init(2), cl::ZeroOrMore);
+    cl::init(2));
 
 namespace llvm {
 

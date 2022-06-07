@@ -1622,8 +1622,8 @@ define i8 @not_lshr_bitwidth_mask(i8 %x, i8 %y) {
   ret i8 %r
 }
 
-define i16 @shl_lshr_pow2_const(i16 %x) {
-; CHECK-LABEL: @shl_lshr_pow2_const(
+define i16 @shl_lshr_pow2_const_case1(i16 %x) {
+; CHECK-LABEL: @shl_lshr_pow2_const_case1(
 ; CHECK-NEXT:    [[SHL:%.*]] = shl i16 4, [[X:%.*]]
 ; CHECK-NEXT:    [[LSHR:%.*]] = lshr i16 [[SHL]], 6
 ; CHECK-NEXT:    [[R:%.*]] = and i16 [[LSHR]], 8

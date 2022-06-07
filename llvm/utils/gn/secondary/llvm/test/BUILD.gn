@@ -67,6 +67,7 @@ write_lit_config("lit_site_cfg") {
     "LLVM_LINK_LLVM_DYLIB=0",
     "LLVM_LIT_TOOLS_DIR=",  # Intentionally empty, matches cmake build.
     "LLVM_NATIVE_ARCH=$native_target",
+    "LLVM_TOOL_LLVM_DRIVER_BUILD=0",  # FIXME: Add actual support for this.
     "LLVM_USE_INTEL_JITEVENTS=0",
     "LLVM_USE_SANITIZER=",
     "LLVM_VERSION_MAJOR=$llvm_version_major",

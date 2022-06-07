@@ -1385,7 +1385,6 @@ SDValue DAGCombiner::PromoteIntShiftOp(SDValue Op) {
 
     bool Replace = false;
     SDValue N0 = Op.getOperand(0);
-    SDValue N1 = Op.getOperand(1);
     if (Opc == ISD::SRA)
       N0 = SExtPromoteOperand(N0, PVT);
     else if (Opc == ISD::SRL)
@@ -1397,6 +1396,7 @@ SDValue DAGCombiner::PromoteIntShiftOp(SDValue Op) {
       return SDValue();
 
     SDLoc DL(Op);
+    SDValue N1 = Op.getOperand(1);
     SDValue RV =
         DAG.getNode(ISD::TRUNCATE, DL, VT, DAG.getNode(Opc, DL, PVT, N0, N1));
 
@@ -12508,13 +12508,9 @@ SDValue DAGCombiner::visitAssertExt(SDNode *N) {
     // This eliminates the later assert:
     // assert (trunc (assert X, i8) to iN), i1 --> trunc (assert X, i1) to iN
     // assert (trunc (assert X, i1) to iN), i8 --> trunc (assert X, i1) to iN
+    SDLoc DL(N);
     SDValue BigA = N0.getOperand(0);
     EVT BigA_AssertVT = cast<VTSDNode>(BigA.getOperand(1))->getVT();
-    assert(BigA_AssertVT.bitsLE(N0.getValueType()) &&
-           "Asserting zero/sign-extended bits to a type larger than the "
-           "truncated destination does not provide information");
-
-    SDLoc DL(N);
     EVT MinAssertVT = AssertVT.bitsLT(BigA_AssertVT) ? AssertVT : BigA_AssertVT;
     SDValue MinAssertVTVal = DAG.getValueType(MinAssertVT);
     SDValue NewAssert = DAG.getNode(Opcode, DL, BigA.getValueType(),
@@ -12530,10 +12526,6 @@ SDValue DAGCombiner::visitAssertExt(SDNode *N) {
       Opcode == ISD::AssertZext) {
     SDValue BigA = N0.getOperand(0);
     EVT BigA_AssertVT = cast<VTSDNode>(BigA.getOperand(1))->getVT();
-    assert(BigA_AssertVT.bitsLE(N0.getValueType()) &&
-           "Asserting zero/sign-extended bits to a type larger than the "
-           "truncated destination does not provide information");
-
     if (AssertVT.bitsLT(BigA_AssertVT)) {
       SDLoc DL(N);
       SDValue NewAssert = DAG.getNode(Opcode, DL, BigA.getValueType(),
@@ -18159,7 +18151,7 @@ bool DAGCombiner::tryStoreMergeOfConstants(
   while (NumConsecutiveStores >= 2) {
     LSBaseSDNode *FirstInChain = StoreNodes[0].MemNode;
     unsigned FirstStoreAS = FirstInChain->getAddressSpace();
-    unsigned FirstStoreAlign = FirstInChain->getAlignment();
+    Align FirstStoreAlign = FirstInChain->getAlign();
     unsigned LastLegalType = 1;
     unsigned LastLegalVectorType = 1;
     bool LastIntegerTrunc = false;
@@ -18247,7 +18239,7 @@ bool DAGCombiner::tryStoreMergeOfConstants(
       unsigned NumSkip = 1;
       while ((NumSkip < NumConsecutiveStores) &&
              (NumSkip < FirstZeroAfterNonZero) &&
-             (StoreNodes[NumSkip].MemNode->getAlignment() <= FirstStoreAlign))
+             (StoreNodes[NumSkip].MemNode->getAlign() <= FirstStoreAlign))
         NumSkip++;
 
       StoreNodes.erase(StoreNodes.begin(), StoreNodes.begin() + NumSkip);
@@ -18286,7 +18278,7 @@ bool DAGCombiner::tryStoreMergeOfExtracts(
   while (NumConsecutiveStores >= 2) {
     LSBaseSDNode *FirstInChain = StoreNodes[0].MemNode;
     unsigned FirstStoreAS = FirstInChain->getAddressSpace();
-    unsigned FirstStoreAlign = FirstInChain->getAlignment();
+    Align FirstStoreAlign = FirstInChain->getAlign();
     unsigned NumStoresToMerge = 1;
     for (unsigned i = 0; i < NumConsecutiveStores; ++i) {
       // Find a legal type for the vector store.
@@ -18317,7 +18309,7 @@ bool DAGCombiner::tryStoreMergeOfExtracts(
       // improved. Drop as many candidates as we can here.
       unsigned NumSkip = 1;
       while ((NumSkip < NumConsecutiveStores) &&
-             (StoreNodes[NumSkip].MemNode->getAlignment() <= FirstStoreAlign))
+             (StoreNodes[NumSkip].MemNode->getAlign() <= FirstStoreAlign))
         NumSkip++;
 
       StoreNodes.erase(StoreNodes.begin(), StoreNodes.begin() + NumSkip);
@@ -18764,6 +18756,7 @@ SDValue DAGCombiner::replaceStoreOfFPConstant(StoreSDNode *ST) {
   default:
     llvm_unreachable("Unknown FP type");
   case MVT::f16:    // We don't do this for these yet.
+  case MVT::bf16:
   case MVT::f80:
   case MVT::f128:
   case MVT::ppcf128:
@@ -18771,7 +18764,6 @@ SDValue DAGCombiner::replaceStoreOfFPConstant(StoreSDNode *ST) {
   case MVT::f32:
     if ((isTypeLegal(MVT::i32) && !LegalOperations && ST->isSimple()) ||
         TLI.isOperationLegalOrCustom(ISD::STORE, MVT::i32)) {
-      ;
       Tmp = DAG.getConstant((uint32_t)CFP->getValueAPF().
                             bitcastToAPInt().getZExtValue(), SDLoc(CFP),
                             MVT::i32);
@@ -18783,7 +18775,6 @@ SDValue DAGCombiner::replaceStoreOfFPConstant(StoreSDNode *ST) {
     if ((TLI.isTypeLegal(MVT::i64) && !LegalOperations &&
          ST->isSimple()) ||
         TLI.isOperationLegalOrCustom(ISD::STORE, MVT::i64)) {
-      ;
       Tmp = DAG.getConstant(CFP->getValueAPF().bitcastToAPInt().
                             getZExtValue(), SDLoc(CFP), MVT::i64);
       return DAG.getStore(Chain, DL, Tmp,

@@ -15,6 +15,7 @@
 #include <__iterator/iterator.h>
 #include <__iterator/iterator_traits.h>
 #include <__memory/addressof.h>
+#include <cstddef>
 #include <iosfwd> // for forward declarations of char_traits and basic_istream
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)

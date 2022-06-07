@@ -303,10 +303,6 @@
 /* Linker version detected at compile time. */
 /* #undef HOST_LINK_VERSION */
 
-/* Target triple LLVM will generate code for by default */
-/* Doesn't use `cmakedefine` because it is allowed to be empty. */
-/* LLVM_DEFAULT_TARGET_TRIPLE defined in Bazel */
-
 /* Define if zlib compression is available */
 /* LLVM_ENABLE_ZLIB defined in Bazel */
 

@@ -21,7 +21,11 @@ static bool EditBOZOutput(IoStatementState &io, const DataEdit &edit,
     const unsigned char *data0, std::size_t bytes) {
   int digits{static_cast<int>((bytes * 8) / LOG2_BASE)};
   int get{static_cast<int>(bytes * 8) - digits * LOG2_BASE};
-  get = get ? get : LOG2_BASE;
+  if (get > 0) {
+    ++digits;
+  } else {
+    get = LOG2_BASE;
+  }
   int shift{7};
   int increment{isHostLittleEndian ? -1 : 1};
   const unsigned char *data{data0 + (isHostLittleEndian ? bytes - 1 : 0)};
@@ -256,7 +260,11 @@ bool RealOutputEditing<binaryPrecision>::EditEorDOutput(const DataEdit &edit) {
   }
   if (editWidth == 0) { // "the processor selects the field width"
     if (edit.digits.has_value()) { // E0.d
-      editWidth = editDigits + 6; // -.666E+ee
+      if (editDigits == 0) { // E0.0
+        editWidth = 7; // -.0E+ee
+      } else {
+        editWidth = editDigits + 6; // -.666E+ee
+      }
     } else { // E0
       flags |= decimal::Minimize;
       significantDigits =
@@ -265,9 +273,15 @@ bool RealOutputEditing<binaryPrecision>::EditEorDOutput(const DataEdit &edit) {
   }
   bool isEN{edit.variation == 'N'};
   bool isES{edit.variation == 'S'};
-  int scale{isEN || isES ? 1 : edit.modes.scale}; // 'kP' value
+  int scale{edit.modes.scale}; // 'kP' value
   int zeroesAfterPoint{0};
-  if (scale < 0) {
+  if (isEN) {
+    scale = IsZero() ? 1 : 3;
+    significantDigits += scale;
+  } else if (isES) {
+    scale = 1;
+    ++significantDigits;
+  } else if (scale < 0) {
     if (scale <= -editDigits) {
       io_.GetIoErrorHandler().SignalError(IostatBadScaleFactor,
           "Scale factor (kP) %d cannot be less than -d (%d)", scale,
@@ -286,7 +300,7 @@ bool RealOutputEditing<binaryPrecision>::EditEorDOutput(const DataEdit &edit) {
     ++significantDigits;
     scale = std::min(scale, significantDigits + 1);
   }
-  // In EN editing, multiple attempts may be necessary, so it's in a loop.
+  // In EN editing, multiple attempts may be necessary, so this is a loop.
   while (true) {
     decimal::ConversionToDecimalResult converted{
         Convert(significantDigits, edit.modes.round, flags)};
@@ -297,12 +311,29 @@ bool RealOutputEditing<binaryPrecision>::EditEorDOutput(const DataEdit &edit) {
     if (!IsZero()) {
       converted.decimalExponent -= scale;
     }
-    if (isEN && scale < 3 && (converted.decimalExponent % 3) != 0) {
-      // EN mode: boost the scale and significant digits, try again; need
-      // an effective exponent field that's a multiple of three.
-      ++scale;
-      ++significantDigits;
-      continue;
+    if (isEN) {
+      // EN mode: we need an effective exponent field that is
+      // a multiple of three.
+      if (int modulus{converted.decimalExponent % 3}; modulus != 0) {
+        if (significantDigits > 1) {
+          --significantDigits;
+          --scale;
+          continue;
+        }
+        // Rounded nines up to a 1.
+        scale += modulus;
+        converted.decimalExponent -= modulus;
+      }
+      if (scale > 3) {
+        int adjust{3 * (scale / 3)};
+        scale -= adjust;
+        converted.decimalExponent += adjust;
+      } else if (scale < 1) {
+        int adjust{3 - 3 * (scale / 3)};
+        scale += adjust;
+        converted.decimalExponent -= adjust;
+      }
+      significantDigits = editDigits + scale;
     }
     // Format the exponent (see table 13.1 for all the cases)
     int expoLength{0};

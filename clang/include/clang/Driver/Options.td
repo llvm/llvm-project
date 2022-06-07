@@ -2178,6 +2178,8 @@ def fms_memptr_rep_EQ : Joined<["-"], "fms-memptr-rep=">, Group<f_Group>, Flags<
   NormalizedValues<["PPTMK_FullGeneralitySingleInheritance", "PPTMK_FullGeneralityMultipleInheritance",
                     "PPTMK_FullGeneralityVirtualInheritance"]>,
   MarshallingInfoEnum<LangOpts<"MSPointerToMemberRepresentationMethod">, "PPTMK_BestCase">;
+def fms_kernel : Flag<["-"], "fms-kernel">, Group<f_Group>, Flags<[CC1Option, NoDriverOption]>,
+  MarshallingInfoFlag<LangOpts<"Kernel">>;
 // __declspec is enabled by default for the PS4 by the driver, and also
 // enabled for Microsoft Extensions or Borland Extensions, here.
 //

@@ -18,13 +18,31 @@ class C64(ctypes.Structure):
   _fields_ = [("real", ctypes.c_float), ("imag", ctypes.c_float)]
 
 
+class F16(ctypes.Structure):
+  """A ctype representation for MLIR's Float16."""
+  _fields_ = [("f16", ctypes.c_int16)]
+
+
 def as_ctype(dtp):
   """Converts dtype to ctype."""
   if dtp is np.dtype(np.complex128):
     return C128
   if dtp is np.dtype(np.complex64):
     return C64
+  if dtp is np.dtype(np.float16):
+    return F16
   return np.ctypeslib.as_ctypes_type(dtp)
+
+
+def to_numpy(array):
+  """Converts ctypes array back to numpy dtype array."""
+  if array.dtype == C128:
+    return array.view("complex128")
+  if array.dtype == C64:
+    return array.view("complex64")
+  if array.dtype == F16:
+    return array.view("float16")
+  return array
 
 
 def make_nd_memref_descriptor(rank, dtype):
@@ -105,11 +123,7 @@ def unranked_memref_to_numpy(unranked_memref, np_dtype):
       np.ctypeslib.as_array(val[0].shape),
       np.ctypeslib.as_array(val[0].strides) * np_arr.itemsize,
   )
-  if strided_arr.dtype == C128:
-    return strided_arr.view("complex128")
-  if strided_arr.dtype == C64:
-    return strided_arr.view("complex64")
-  return strided_arr
+  return to_numpy(strided_arr)
 
 
 def ranked_memref_to_numpy(ranked_memref):
@@ -121,8 +135,4 @@ def ranked_memref_to_numpy(ranked_memref):
       np.ctypeslib.as_array(ranked_memref[0].shape),
       np.ctypeslib.as_array(ranked_memref[0].strides) * np_arr.itemsize,
   )
-  if strided_arr.dtype == C128:
-    return strided_arr.view("complex128")
-  if strided_arr.dtype == C64:
-    return strided_arr.view("complex64")
-  return strided_arr
+  return to_numpy(strided_arr)

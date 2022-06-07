@@ -5594,8 +5594,7 @@ bool AMDGPUAsmParser::ParseDirectiveAMDGPULDS() {
       return Error(AlignLoc, "alignment is too large");
   }
 
-  if (parseToken(AsmToken::EndOfStatement,
-                 "unexpected token in '.amdgpu_lds' directive"))
+  if (parseEOL())
     return true;
 
   Symbol->redefineIfPossible();

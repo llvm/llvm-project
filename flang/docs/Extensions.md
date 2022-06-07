@@ -282,6 +282,8 @@ end
 * USE association of a procedure interface within that same procedure's definition
 * NULL() as a structure constructor expression for an ALLOCATABLE component (PGI).
 * Conversion of LOGICAL to INTEGER in expressions.
+* Use of INTEGER data with the intrinsic logical operators `.NOT.`, `.AND.`, `.OR.`,
+  and `.XOR.`.
 * IF (integer expression) THEN ... END IF  (PGI/Intel)
 * Comparsion of LOGICAL with ==/.EQ. rather than .EQV. (also .NEQV.) (PGI/Intel)
 * Procedure pointers in COMMON blocks (PGI/Intel)

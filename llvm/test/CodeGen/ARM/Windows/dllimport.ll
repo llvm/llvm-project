@@ -57,5 +57,5 @@ define arm_aapcs_vfpcc i32 @call_internal() {
 }
 
 ; CHECK-LABEL: call_internal
-; CHECK: b internal
+; CHECK: b.w internal
 

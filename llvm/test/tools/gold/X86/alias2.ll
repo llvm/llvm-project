@@ -4,7 +4,7 @@
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 
-@bar = alias void (), void ()* @zed
+@bar = alias void (), ptr @zed
 define void @foo() {
   call void @bar()
   ret void
@@ -13,7 +13,7 @@ define void @zed() {
   ret void
 }
 
-; CHECK: @bar = alias void (), void ()* @zed
+; CHECK: @bar = alias void (), ptr @zed
 
 ; CHECK:      define void @foo() {
 ; CHECK-NEXT:   call void @bar()

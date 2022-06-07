@@ -129,6 +129,9 @@ struct TiledLinalgOp {
 FailureOr<TiledLinalgOp> tileLinalgOp(RewriterBase &b, LinalgOp op,
                                       const LinalgTilingOptions &options);
 
+/// Peel and canonicalize 'loops'.
+void peelLoops(RewriterBase &rewriter, ArrayRef<scf::ForOp> loops);
+
 /// Peel the loops of a TiledLinalgOp.
 void peelTiledLinalgOp(RewriterBase &rewriter, TiledLinalgOp &res,
                        ArrayRef<int64_t> peeledLoops,
@@ -708,6 +711,56 @@ private:
   LinalgPaddingOptions options;
 };
 
+/// Rewrites 2-D convolution ops with size-1 window dimensions into 1-D
+/// convolution ops.
+struct DownscaleSizeOneWindowed2DConvolution final
+    : public OpRewritePattern<Conv2DNhwcHwcfOp> {
+  DownscaleSizeOneWindowed2DConvolution(
+      MLIRContext *context,
+      LinalgTransformationFilter f = LinalgTransformationFilter(),
+      PatternBenefit benefit = 1)
+      : OpRewritePattern<Conv2DNhwcHwcfOp>(context, benefit),
+        filter(std::move(f)) {}
+
+  FailureOr<Conv1DNwcWcfOp>
+  returningMatchAndRewrite(linalg::Conv2DNhwcHwcfOp convOp,
+                           PatternRewriter &rewriter) const;
+
+  LogicalResult matchAndRewrite(linalg::Conv2DNhwcHwcfOp convOp,
+                                PatternRewriter &rewriter) const override {
+    return returningMatchAndRewrite(convOp, rewriter);
+  }
+
+private:
+  /// LinalgTransformMarker handles special attribute manipulations.
+  LinalgTransformationFilter filter;
+};
+
+/// Rewrites 2-D depthwise convolution ops with size-1 (w, kw) or (h, kh)
+/// dimensions into 1-D depthwise convolution ops.
+struct DownscaleDepthwiseConv2DNhwcHwcOp final
+    : public OpRewritePattern<DepthwiseConv2DNhwcHwcOp> {
+  DownscaleDepthwiseConv2DNhwcHwcOp(
+      MLIRContext *context,
+      LinalgTransformationFilter f = LinalgTransformationFilter(),
+      PatternBenefit benefit = 1)
+      : OpRewritePattern<DepthwiseConv2DNhwcHwcOp>(context, benefit),
+        filter(std::move(f)) {}
+
+  FailureOr<DepthwiseConv1DNwcWcOp>
+  returningMatchAndRewrite(DepthwiseConv2DNhwcHwcOp convOp,
+                           PatternRewriter &rewriter) const;
+
+  LogicalResult matchAndRewrite(DepthwiseConv2DNhwcHwcOp convOp,
+                                PatternRewriter &rewriter) const override {
+    return returningMatchAndRewrite(convOp, rewriter);
+  }
+
+private:
+  /// LinalgTransformMarker handles special attribute manipulations.
+  LinalgTransformationFilter filter;
+};
+
 struct LinalgFusionOptions {
   /// List of operands indices to use for fusion.
   llvm::SmallSet<unsigned, 1> indicesToFuse = {};
@@ -913,6 +966,49 @@ struct LinalgPromotionPattern : public LinalgBasePromotionPattern {
       LinalgTransformationFilter f = LinalgTransformationFilter(),
       PatternBenefit benefit = 1)
       : LinalgBasePromotionPattern(opName, context, options, f, benefit) {}
+};
+
+///
+/// Linalg peeling patterns.
+///
+
+/// Compute the loops to peel and return them in a SmallVector. Loops will be
+/// peeled in order of appearance in the SmallVector. This order will impact the
+/// output IR. If an inner-to-outer order is provided, the peeled iterations of
+/// the outer loops will also contain the peeled inner loops. If an
+/// outer-to-inner order is provided, the peeled iterations of the outer loops
+/// will not contain any peeled inner loops.
+using LoopsToPeelComputationFunction = std::function<void(
+    OpBuilder &, Operation *, SmallVectorImpl<scf::ForOp> &)>;
+
+struct LinalgPeelOptions {
+  LoopsToPeelComputationFunction loopsToPeelComputationFunction = nullptr;
+};
+
+/// `filter` controls LinalgTransformMarker matching and update when specified.
+struct LinalgPeelingPattern : public OpInterfaceRewritePattern<LinalgOp> {
+  /// Construct a generic pattern applied to all LinalgOp that verify `filter`.
+  LinalgPeelingPattern(
+      MLIRContext *context,
+      LinalgTransformationFilter f = LinalgTransformationFilter(),
+      LinalgPeelOptions options = LinalgPeelOptions(),
+      PatternBenefit benefit = 1);
+
+  /// Construct a pattern specifically applied to `opName`.
+  LinalgPeelingPattern(
+      StringRef opName, MLIRContext *context,
+      LinalgPeelOptions options = LinalgPeelOptions(),
+      LinalgTransformationFilter f = LinalgTransformationFilter(),
+      PatternBenefit benefit = 1);
+
+  LogicalResult matchAndRewrite(LinalgOp linalgOp,
+                                PatternRewriter &rewriter) const override;
+
+private:
+  /// LinalgTransformMarker handles special attribute manipulations.
+  const LinalgTransformationFilter filter;
+  /// Peeling options.
+  const LinalgPeelOptions options;
 };
 
 ///

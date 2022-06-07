@@ -2265,19 +2265,6 @@ Sema::CheckBuiltinFunctionCall(FunctionDecl *FDecl, unsigned BuiltinID,
   case Builtin::BI__builtin_nontemporal_store:
     return SemaBuiltinNontemporalOverloaded(TheCallResult);
   case Builtin::BI__builtin_memcpy_inline: {
-    if (checkArgCount(*this, TheCall, 3))
-      return ExprError();
-    auto ArgArrayConversionFailed = [&](unsigned Arg) {
-      ExprResult ArgExpr =
-          DefaultFunctionArrayLvalueConversion(TheCall->getArg(Arg));
-      if (ArgExpr.isInvalid())
-        return true;
-      TheCall->setArg(Arg, ArgExpr.get());
-      return false;
-    };
-
-    if (ArgArrayConversionFailed(0) || ArgArrayConversionFailed(1))
-      return true;
     clang::Expr *SizeOp = TheCall->getArg(2);
     // We warn about copying to or from `nullptr` pointers when `size` is
     // greater than 0. When `size` is value dependent we cannot evaluate its

@@ -7,8 +7,8 @@
 
 ; CHECK: [[G:@[0-9]+]] = private constant { i32 } { i32 42 }
 
-; CHECK: @__typeid_typeid1_global_addr = hidden alias i8, bitcast ({ i32 }* [[G]] to i8*)
-; CHECK: @foo = alias i32, getelementptr inbounds ({ i32 }, { i32 }* [[G]], i32 0, i32 0)
+; CHECK: @__typeid_typeid1_global_addr = hidden alias i8, ptr [[G]]
+; CHECK: @foo = alias i32, ptr [[G]]
 
 ; SUMMARY:      TypeIdMap:
 ; SUMMARY-NEXT:   typeid1:

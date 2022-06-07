@@ -84,7 +84,7 @@ EnableNoAliasConversion("enable-noalias-to-md-conversion", cl::init(true),
 
 static cl::opt<bool>
     UseNoAliasIntrinsic("use-noalias-intrinsic-during-inlining", cl::Hidden,
-                        cl::ZeroOrMore, cl::init(true),
+                        cl::init(true),
                         cl::desc("Use the llvm.experimental.noalias.scope.decl "
                                  "intrinsic during inlining."));
 

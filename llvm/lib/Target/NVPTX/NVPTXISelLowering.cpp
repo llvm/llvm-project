@@ -71,14 +71,14 @@ static cl::opt<bool> sched4reg(
     "nvptx-sched4reg",
     cl::desc("NVPTX Specific: schedule for register pressue"), cl::init(false));
 
-static cl::opt<unsigned>
-FMAContractLevelOpt("nvptx-fma-level", cl::ZeroOrMore, cl::Hidden,
-                    cl::desc("NVPTX Specific: FMA contraction (0: don't do it"
-                             " 1: do it  2: do it aggressively"),
-                    cl::init(2));
+static cl::opt<unsigned> FMAContractLevelOpt(
+    "nvptx-fma-level", cl::Hidden,
+    cl::desc("NVPTX Specific: FMA contraction (0: don't do it"
+             " 1: do it  2: do it aggressively"),
+    cl::init(2));
 
 static cl::opt<int> UsePrecDivF32(
-    "nvptx-prec-divf32", cl::ZeroOrMore, cl::Hidden,
+    "nvptx-prec-divf32", cl::Hidden,
     cl::desc("NVPTX Specifies: 0 use div.approx, 1 use div.full, 2 use"
              " IEEE Compliant F32 div.rnd if available."),
     cl::init(2));
@@ -2244,7 +2244,7 @@ SDValue NVPTXTargetLowering::LowerLOADi1(SDValue Op, SelectionDAG &DAG) const {
   assert(Node->getValueType(0) == MVT::i1 &&
          "Custom lowering for i1 load only");
   SDValue newLD = DAG.getLoad(MVT::i16, dl, LD->getChain(), LD->getBasePtr(),
-                              LD->getPointerInfo(), LD->getAlignment(),
+                              LD->getPointerInfo(), LD->getAlign(),
                               LD->getMemOperand()->getFlags());
   SDValue result = DAG.getNode(ISD::TRUNCATE, dl, MVT::i1, newLD);
   // The legalizer (the caller) is expecting two values from the legalized
@@ -2409,7 +2409,7 @@ SDValue NVPTXTargetLowering::LowerSTOREi1(SDValue Op, SelectionDAG &DAG) const {
   Tmp3 = DAG.getNode(ISD::ZERO_EXTEND, dl, MVT::i16, Tmp3);
   SDValue Result =
       DAG.getTruncStore(Tmp1, dl, Tmp3, Tmp2, ST->getPointerInfo(), MVT::i8,
-                        ST->getAlignment(), ST->getMemOperand()->getFlags());
+                        ST->getAlign(), ST->getMemOperand()->getFlags());
   return Result;
 }
 

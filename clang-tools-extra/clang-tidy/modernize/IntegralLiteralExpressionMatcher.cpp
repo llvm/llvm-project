@@ -8,6 +8,7 @@
 
 #include "IntegralLiteralExpressionMatcher.h"
 
+#include <algorithm>
 #include <cctype>
 #include <stdexcept>
 
@@ -81,6 +82,50 @@ bool IntegralLiteralExpressionMatcher::unaryOperator() {
   return true;
 }
 
+static LiteralSize literalTokenSize(const Token &Tok) {
+  unsigned int Length = Tok.getLength();
+  if (Length <= 1)
+    return LiteralSize::Int;
+
+  bool SeenUnsigned = false;
+  bool SeenLong = false;
+  bool SeenLongLong = false;
+  const char *Text = Tok.getLiteralData();
+  for (unsigned int End = Length - 1; End > 0; --End) {
+    if (std::isdigit(Text[End]))
+      break;
+
+    if (std::toupper(Text[End]) == 'U')
+      SeenUnsigned = true;
+    else if (std::toupper(Text[End]) == 'L') {
+      if (SeenLong)
+        SeenLongLong = true;
+      SeenLong = true;
+    }
+  }
+
+  if (SeenLongLong) {
+    if (SeenUnsigned)
+      return LiteralSize::UnsignedLongLong;
+
+    return LiteralSize::LongLong;
+  }
+  if (SeenLong) {
+    if (SeenUnsigned)
+      return LiteralSize::UnsignedLong;
+
+    return LiteralSize::Long;
+  }
+  if (SeenUnsigned)
+    return LiteralSize::UnsignedInt;
+
+  return LiteralSize::Int;
+}
+
+static bool operator<(LiteralSize LHS, LiteralSize RHS) {
+  return static_cast<int>(LHS) < static_cast<int>(RHS);
+}
+
 bool IntegralLiteralExpressionMatcher::unaryExpr() {
   if (!unaryOperator())
     return false;
@@ -102,7 +147,10 @@ bool IntegralLiteralExpressionMatcher::unaryExpr() {
       !isIntegralConstant(*Current)) {
     return false;
   }
+
+  LargestSize = std::max(LargestSize, literalTokenSize(*Current));
   ++Current;
+
   return true;
 }
 
@@ -217,14 +265,24 @@ bool IntegralLiteralExpressionMatcher::conditionalExpr() {
 }
 
 bool IntegralLiteralExpressionMatcher::commaExpr() {
-  return nonTerminalChainedExpr<tok::TokenKind::comma>(
-      &IntegralLiteralExpressionMatcher::conditionalExpr);
+  auto Pred = CommaAllowed
+                  ? std::function<bool(Token)>(
+                        [](Token Tok) { return Tok.is(tok::TokenKind::comma); })
+                  : std::function<bool(Token)>([](Token) { return false; });
+  return nonTerminalChainedExpr(
+      &IntegralLiteralExpressionMatcher::conditionalExpr, Pred);
 }
 
 bool IntegralLiteralExpressionMatcher::expr() { return commaExpr(); }
 
 bool IntegralLiteralExpressionMatcher::match() {
-  return expr() && Current == End;
+  // Top-level allowed expression is conditionalExpr(), not expr(), because
+  // comma operators are only valid initializers when used inside parentheses.
+  return conditionalExpr() && Current == End;
+}
+
+LiteralSize IntegralLiteralExpressionMatcher::largestLiteralSize() const {
+  return LargestSize;
 }
 
 } // namespace modernize

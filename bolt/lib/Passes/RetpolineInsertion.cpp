@@ -32,12 +32,9 @@ namespace opts {
 
 extern cl::OptionCategory BoltCategory;
 
-llvm::cl::opt<bool>
-InsertRetpolines("insert-retpolines",
-  cl::desc("run retpoline insertion pass"),
-  cl::init(false),
-  cl::ZeroOrMore,
-  cl::cat(BoltCategory));
+llvm::cl::opt<bool> InsertRetpolines("insert-retpolines",
+                                     cl::desc("run retpoline insertion pass"),
+                                     cl::cat(BoltCategory));
 
 llvm::cl::opt<bool>
 RetpolineLfence("retpoline-lfence",

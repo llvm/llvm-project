@@ -1,5 +1,6 @@
 // RUN: mlir-opt %s -test-scf-pipelining -split-input-file | FileCheck %s
 // RUN: mlir-opt %s -test-scf-pipelining=annotate -split-input-file | FileCheck %s --check-prefix ANNOTATE
+// RUN: mlir-opt %s -test-scf-pipelining=no-epilogue-peeling -split-input-file | FileCheck %s --check-prefix NOEPILOGUE
 
 // CHECK-LABEL: simple_pipeline(
 //  CHECK-SAME:   %[[A:.*]]: memref<?xf32>, %[[R:.*]]: memref<?xf32>) {
@@ -113,6 +114,44 @@ func.func @simple_pipeline_step(%A: memref<?xf32>, %result: memref<?xf32>) {
 //  ANNOTATE:   memref.store {{.*}} {__test_pipelining_iteration = 0 : i32, __test_pipelining_part = "epilogue"}
 //  ANNOTATE:   arith.addf {{.*}} {__test_pipelining_iteration = 0 : i32, __test_pipelining_part = "epilogue"}
 //  ANNOTATE:   memref.store {{.*}} {__test_pipelining_iteration = 1 : i32, __test_pipelining_part = "epilogue"}
+
+// NOEPILOGUE-LABEL: three_stage(
+//  NOEPILOGUE-SAME:   %[[A:.*]]: memref<?xf32>, %[[R:.*]]: memref<?xf32>) {
+//   NOEPILOGUE-DAG:   %[[C0:.*]] = arith.constant 0 : index
+//   NOEPILOGUE-DAG:   %[[C1:.*]] = arith.constant 1 : index
+//   NOEPILOGUE-DAG:   %[[C2:.*]] = arith.constant 2 : index
+//   NOEPILOGUE-DAG:   %[[C3:.*]] = arith.constant 3 : index
+//   NOEPILOGUE-DAG:   %[[C4:.*]] = arith.constant 4 : index
+//   NOEPILOGUE-DAG:   %[[CF:.*]] = arith.constant 0.000000e+00 : f32
+// Prologue:
+//       NOEPILOGUE:   %[[L0:.*]] = memref.load %[[A]][%[[C0]]] : memref<?xf32>
+//  NOEPILOGUE-NEXT:   %[[ADD0:.*]] = arith.addf %[[L0]], %{{.*}} : f32
+//  NOEPILOGUE-NEXT:   %[[L1:.*]] = memref.load %[[A]][%[[C1]]] : memref<?xf32>
+// Kernel:
+//  NOEPILOGUE-NEXT:   %[[LR:.*]]:2 = scf.for %[[IV:.*]] = %[[C0]] to %[[C4]]
+//  NOEPILOGUE-SAME:     step %[[C1]] iter_args(%[[ADDARG:.*]] = %[[ADD0]],
+//  NOEPILOGUE-SAME:     %[[LARG:.*]] = %[[L1]]) -> (f32, f32) {
+//   NOEPILOGUE-DAG:     %[[S0:.*]] = arith.cmpi slt, %[[IV]], %[[C2]] : index
+//   NOEPILOGUE-DAG:     %[[S1:.*]] = arith.cmpi slt, %[[IV]], %[[C3]] : index
+//  NOEPILOGUE-NEXT:     memref.store %[[ADDARG]], %[[R]][%[[IV]]] : memref<?xf32>
+//  NOEPILOGUE-NEXT:     %[[ADD1:.*]] = scf.if %[[S1]] -> (f32) {
+//  NOEPILOGUE-NEXT:       %[[PADD:.*]] = arith.addf %[[LARG]], %{{.*}} : f32
+//  NOEPILOGUE-NEXT:       scf.yield %[[PADD]] : f32
+//  NOEPILOGUE-NEXT:     } else {
+//  NOEPILOGUE-NEXT:       scf.yield %[[CF]] : f32
+//  NOEPILOGUE-NEXT:     }
+//  NOEPILOGUE-NEXT:     %[[IV2:.*]] = arith.addi %[[IV]], %[[C2]] : index
+//  NOEPILOGUE-NEXT:     %[[L3:.*]] = scf.if %[[S0]] -> (f32) {
+//  NOEPILOGUE-NEXT:       %[[PL:.*]] = memref.load %[[A]][%[[IV2]]] : memref<?xf32>
+//  NOEPILOGUE-NEXT:       scf.yield %[[PL]] : f32
+//  NOEPILOGUE-NEXT:     } else {
+//  NOEPILOGUE-NEXT:       scf.yield %[[CF]] : f32
+//  NOEPILOGUE-NEXT:     }
+//  NOEPILOGUE-NEXT:     scf.yield %[[ADD1]], %[[L3]] : f32, f32
+//  NOEPILOGUE-NEXT:   }
+// No epilogue should be generated.
+//   NOEPILOGUE-NOT:   memref.store
+//       NOEPILOGUE:   return
 
 func.func @three_stage(%A: memref<?xf32>, %result: memref<?xf32>) {
   %c0 = arith.constant 0 : index

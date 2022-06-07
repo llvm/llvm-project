@@ -1686,8 +1686,7 @@ bool CSKYAsmParser::parseDirectiveAttribute() {
     Parser.Lex();
   }
 
-  if (Parser.parseToken(AsmToken::EndOfStatement,
-                        "unexpected token in '.csky_attribute' directive"))
+  if (Parser.parseEOL())
     return true;
 
   if (IsIntegerValue)

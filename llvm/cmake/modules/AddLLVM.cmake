@@ -859,7 +859,7 @@ endmacro(add_llvm_library name)
 
 macro(add_llvm_executable name)
   cmake_parse_arguments(ARG
-    "DISABLE_LLVM_LINK_LLVM_DYLIB;IGNORE_EXTERNALIZE_DEBUGINFO;NO_INSTALL_RPATH;SUPPORT_PLUGINS"
+    "DISABLE_LLVM_LINK_LLVM_DYLIB;IGNORE_EXTERNALIZE_DEBUGINFO;NO_INSTALL_RPATH;SUPPORT_PLUGINS;GENERATE_DRIVER"
     "ENTITLEMENTS;BUNDLE_PATH"
     "DEPENDS"
     ${ARGN})
@@ -869,7 +869,7 @@ macro(add_llvm_executable name)
   list(APPEND LLVM_COMMON_DEPENDS ${ARG_DEPENDS})
 
   # Generate objlib
-  if(LLVM_ENABLE_OBJLIB)
+  if(LLVM_ENABLE_OBJLIB OR ARG_GENERATE_DRIVER)
     # Generate an obj library for both targets.
     set(obj_name "obj.${name}")
     add_library(${obj_name} OBJECT EXCLUDE_FROM_ALL
@@ -882,6 +882,23 @@ macro(add_llvm_executable name)
     endif()
 
     set_target_properties(${obj_name} PROPERTIES FOLDER "Object Libraries")
+  endif()
+
+  if (ARG_GENERATE_DRIVER)
+    string(REPLACE "-" "_" TOOL_NAME ${name})
+    configure_file(
+      ${LLVM_MAIN_SRC_DIR}/cmake/driver-template.cpp.in
+      ${CMAKE_CURRENT_BINARY_DIR}/${name}-driver.cpp)
+
+    list(APPEND ALL_FILES ${CMAKE_CURRENT_BINARY_DIR}/${name}-driver.cpp)
+
+    set_property(GLOBAL APPEND PROPERTY LLVM_DRIVER_COMPONENTS ${LLVM_LINK_COMPONENTS})
+    set_property(GLOBAL APPEND PROPERTY LLVM_DRIVER_DEPS ${ARG_DEPENDS} ${LLVM_COMMON_DEPENDS})
+    set_property(GLOBAL APPEND PROPERTY LLVM_DRIVER_OBJLIBS "${obj_name}")
+    
+    set_property(GLOBAL APPEND PROPERTY LLVM_DRIVER_TOOLS ${name})
+    target_link_libraries(${obj_name} ${LLVM_PTHREAD_LIB})
+    llvm_config(${obj_name} ${USE_SHARED} ${LLVM_LINK_COMPONENTS} )
   endif()
 
   add_windows_version_resource_file(ALL_FILES ${ALL_FILES})
@@ -1449,6 +1466,12 @@ function(llvm_add_implicit_projects project)
   foreach(dir ${sub-dirs})
     if(IS_DIRECTORY "${dir}" AND EXISTS "${dir}/CMakeLists.txt")
       canonicalize_tool_name(${dir} name)
+      # I don't like special casing things by order, but the llvm-driver ends up
+      # linking the object libraries from all the tools that opt-in, so adding
+      # it separately at the end is probably the simplest case.
+      if("${name}" STREQUAL "LLVM_DRIVER")
+        continue()
+      endif()
       if (${project}_TOOL_${name}_BUILD)
         get_filename_component(fn "${dir}" NAME)
         list(APPEND list_of_implicit_subdirs "${fn}")
@@ -1998,6 +2021,16 @@ endfunction()
 
 function(add_llvm_tool_symlink link_name target)
   cmake_parse_arguments(ARG "ALWAYS_GENERATE" "OUTPUT_DIR" "" ${ARGN})
+
+  get_property(LLVM_DRIVER_TOOLS GLOBAL PROPERTY LLVM_DRIVER_TOOLS)
+
+  if (${target} IN_LIST LLVM_DRIVER_TOOLS)
+    string(REPLACE "-" "_" tool_entry ${target})
+    string(REPLACE "-" "_" key ${link_name})
+    string(REPLACE "llvm-" "" tool_name ${link_name})
+    set_property(GLOBAL APPEND_STRING PROPERTY
+                 LLVM_EXTRA_DRIVER_ENTRIES "LLVM_DRIVER_TOOL(\"${tool_name}\", ${tool_entry})\n")
+  endif()
   set(dest_binary "$<TARGET_FILE:${target}>")
 
   # This got a bit gross... For multi-configuration generators the target
