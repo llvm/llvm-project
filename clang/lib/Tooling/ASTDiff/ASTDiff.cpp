@@ -16,7 +16,6 @@
 #include "clang/Basic/SourceManager.h"
 #include "clang/Lex/Lexer.h"
 #include "llvm/ADT/PriorityQueue.h"
-#include "llvm/Support/ConvertUTF.h"
 
 #include <limits>
 #include <memory>
@@ -464,29 +463,8 @@ std::string SyntaxTree::Impl::getStmtValue(const Stmt *S) const {
   }
   if (auto *D = dyn_cast<DeclRefExpr>(S))
     return getRelativeName(D->getDecl(), getEnclosingDeclContext(AST, S));
-  if (auto *String = dyn_cast<StringLiteral>(S)) {
-    if (String->isWide() || String->isUTF16() || String->isUTF32()) {
-      std::string UTF8Str;
-      unsigned int NumChars = String->getLength();
-      const char *Bytes = String->getBytes().data();
-      if (String->isWide()) {
-        const auto *Chars = reinterpret_cast<const wchar_t *>(Bytes);
-        if (!convertWideToUTF8({Chars, NumChars}, UTF8Str))
-          return "";
-      } else if (String->isUTF16()) {
-        const auto *Chars = reinterpret_cast<const UTF16 *>(Bytes);
-        if (!convertUTF16ToUTF8String({Chars, NumChars}, UTF8Str))
-          return "";
-      } else {
-        assert(String->isUTF32() && "Unsupported string encoding.");
-        const auto *Chars = reinterpret_cast<const UTF32 *>(Bytes);
-        if (!convertUTF32ToUTF8String({Chars, NumChars}, UTF8Str))
-          return "";
-      }
-      return UTF8Str;
-    }
+  if (auto *String = dyn_cast<StringLiteral>(S))
     return std::string(String->getString());
-  }
   if (auto *B = dyn_cast<CXXBoolLiteralExpr>(S))
     return B->getValue() ? "true" : "false";
   return "";
