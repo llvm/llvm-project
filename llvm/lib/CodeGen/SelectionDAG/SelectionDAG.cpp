@@ -2718,9 +2718,7 @@ bool SelectionDAG::isSplatValue(SDValue V, const APInt &DemandedElts,
         SubDemandedElts &= ScaledDemandedElts;
         if (!isSplatValue(Src, SubDemandedElts, SubUndefElts, Depth + 1))
           return false;
-        // TODO: Add support for merging sub undef elements.
-        if (SubDemandedElts.isSubsetOf(SubUndefElts))
-          return false;
+        UndefElts |= APIntOps::ScaleBitMask(SubUndefElts, NumElts);
       }
       return true;
     }
