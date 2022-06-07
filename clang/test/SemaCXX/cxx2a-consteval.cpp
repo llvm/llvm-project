@@ -651,6 +651,27 @@ static_assert(baz<int>() == sizeof(int));
 
 } // namespace value_dependent
 
+namespace default_argument {
+
+// Previously calls of consteval functions in default arguments were rejected.
+// Now we show that we don't reject such calls.
+consteval int foo() { return 1; }
+consteval int bar(int i = foo()) { return i * i; }
+
+struct Test1 {
+  Test1(int i = bar(13)) {}
+  void v(int i = bar(13) * 2 + bar(15)) {}
+};
+Test1 t1;
+
+struct Test2 {
+  constexpr Test2(int i = bar()) {}
+  constexpr void v(int i = bar(bar(bar(foo())))) {}
+};
+Test2 t2;
+
+} // namespace default_argument
+
 namespace PR50779 {
 struct derp {
   int b = 0;
