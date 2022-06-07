@@ -613,7 +613,7 @@ void AArch64AsmPrinter::emitEndOfAsmFile(Module &M) {
       for (auto &Stub : Stubs)
         emitAuthenticatedPointer(*OutStreamer, Stub.first, Stub.second);
 
-      OutStreamer->AddBlankLine();
+      OutStreamer->addBlankLine();
     }
 
     // Funny Darwin hack: This flag tells the linker that no global symbols
