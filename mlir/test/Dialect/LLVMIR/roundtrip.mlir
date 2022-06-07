@@ -155,6 +155,9 @@ func.func @ops(%arg0: i32, %arg1: f32,
 // CHECK: "llvm.intr.ctpop"(%{{.*}}) : (i32) -> i32
   %33 = "llvm.intr.ctpop"(%arg0) : (i32) -> i32
 
+// CHECK: "llvm.intr.round"(%[[FLOAT]]) : (f32) -> f32
+  %34 = "llvm.intr.round"(%arg1) : (f32) -> f32
+
 // CHECK: "llvm.intr.memcpy"(%{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}) : (!llvm.ptr<i8>, !llvm.ptr<i8>, i32, i1) -> ()
   "llvm.intr.memcpy"(%arg2, %arg3, %arg0, %arg4) : (!llvm.ptr<i8>, !llvm.ptr<i8>, i32, i1) -> ()
 

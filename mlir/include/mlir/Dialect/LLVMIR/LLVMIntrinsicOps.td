@@ -57,6 +57,7 @@ def LLVM_Prefetch : LLVM_ZeroResultIntrOp<"prefetch", [0]> {
                    LLVM_Type:$cache);
 }
 def LLVM_SinOp : LLVM_UnaryIntrinsicOp<"sin">;
+def LLVM_RoundOp : LLVM_UnaryIntrinsicOp<"round">;
 def LLVM_SqrtOp : LLVM_UnaryIntrinsicOp<"sqrt">;
 def LLVM_PowOp : LLVM_BinarySameArgsIntrinsicOp<"pow">;
 def LLVM_PowIOp : LLVM_BinaryIntrinsicOp<"powi">;
