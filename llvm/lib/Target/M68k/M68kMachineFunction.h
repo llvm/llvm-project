@@ -21,8 +21,6 @@
 namespace llvm {
 
 class M68kMachineFunctionInfo : public MachineFunctionInfo {
-  MachineFunction &MF;
-
   /// Non-zero if the function has base pointer and makes call to
   /// llvm.eh.sjlj.setjmp. When non-zero, the value is a displacement from the
   /// frame pointer to a slot where the base pointer is stashed.
@@ -68,7 +66,12 @@ class M68kMachineFunctionInfo : public MachineFunctionInfo {
   unsigned ArgumentStackSize = 0;
 
 public:
-  explicit M68kMachineFunctionInfo(MachineFunction &MF) : MF(MF) {}
+  explicit M68kMachineFunctionInfo() = default;
+
+  MachineFunctionInfo *
+  clone(BumpPtrAllocator &Allocator, MachineFunction &DestMF,
+        const DenseMap<MachineBasicBlock *, MachineBasicBlock *> &Src2DstMBB)
+      const override;
 
   bool getRestoreBasePointer() const { return RestoreBasePointerOffset != 0; }
   void setRestoreBasePointer(const MachineFunction *MF);
