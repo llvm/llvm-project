@@ -32,9 +32,9 @@ public:
 } // namespace nvgpu
 } // namespace mlir
 
-#include "mlir/Dialect/NVGPU/NVGPUDialect.h.inc"
+#include "mlir/Dialect/NVGPU/IR/NVGPUDialect.h.inc"
 
 #define GET_OP_CLASSES
-#include "mlir/Dialect/NVGPU/NVGPU.h.inc"
+#include "mlir/Dialect/NVGPU/IR/NVGPU.h.inc"
 
 #endif // MLIR_DIALECT_NVGPU_NVGPUDIALECT_H_

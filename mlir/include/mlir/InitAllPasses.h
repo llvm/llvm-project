@@ -24,6 +24,7 @@
 #include "mlir/Dialect/LLVMIR/Transforms/Passes.h"
 #include "mlir/Dialect/Linalg/Passes.h"
 #include "mlir/Dialect/MemRef/Transforms/Passes.h"
+#include "mlir/Dialect/NVGPU/Passes.h"
 #include "mlir/Dialect/Quant/Passes.h"
 #include "mlir/Dialect/SCF/Passes.h"
 #include "mlir/Dialect/SPIRV/Transforms/Passes.h"
@@ -64,6 +65,7 @@ inline void registerAllPasses() {
   registerGpuSerializeToCubinPass();
   registerGpuSerializeToHsacoPass();
   registerLinalgPasses();
+  registerNVGPUPasses();
   registerSparseTensorPasses();
   LLVM::registerLLVMPasses();
   memref::registerMemRefPasses();

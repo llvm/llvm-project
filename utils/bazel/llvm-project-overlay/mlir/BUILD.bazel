@@ -2143,7 +2143,7 @@ cc_library(
 
 td_library(
     name = "NVGPUTdFiles",
-    srcs = ["include/mlir/Dialect/NVGPU/NVGPU.td"],
+    srcs = ["include/mlir/Dialect/NVGPU/IR/NVGPU.td"],
     includes = ["include"],
     deps = [
         ":SideEffectInterfacesTdFiles",
@@ -2159,22 +2159,22 @@ gentbl_cc_library(
                 "-gen-dialect-decls",
                 "-dialect=nvgpu",
             ],
-            "include/mlir/Dialect/NVGPU/NVGPUDialect.h.inc",
+            "include/mlir/Dialect/NVGPU/IR/NVGPUDialect.h.inc",
         ),
         (
             [
                 "-gen-dialect-defs",
                 "-dialect=nvgpu",
             ],
-            "include/mlir/Dialect/NVGPU/NVGPUDialect.cpp.inc",
+            "include/mlir/Dialect/NVGPU/IR/NVGPUDialect.cpp.inc",
         ),
         (
             ["-gen-op-decls"],
-            "include/mlir/Dialect/NVGPU/NVGPU.h.inc",
+            "include/mlir/Dialect/NVGPU/IR/NVGPU.h.inc",
         ),
         (
             ["-gen-op-defs"],
-            "include/mlir/Dialect/NVGPU/NVGPU.cpp.inc",
+            "include/mlir/Dialect/NVGPU/IR/NVGPU.cpp.inc",
         ),
         (
             ["-gen-op-doc"],
@@ -2182,20 +2182,66 @@ gentbl_cc_library(
         ),
     ],
     tblgen = ":mlir-tblgen",
-    td_file = "include/mlir/Dialect/NVGPU/NVGPU.td",
+    td_file = "include/mlir/Dialect/NVGPU/IR/NVGPU.td",
     deps = [":NVGPUTdFiles"],
+)
+
+gentbl_cc_library(
+    name = "NVGPUPassIncGen",
+    strip_include_prefix = "include",
+    tbl_outs = [
+        (
+            [
+                "-gen-pass-decls",
+                "-name=NVGPU",
+            ],
+            "include/mlir/Dialect/NVGPU/Passes.h.inc",
+        ),
+    ],
+    tblgen = ":mlir-tblgen",
+    td_file = "include/mlir/Dialect/NVGPU/Passes.td",
+    deps = [":PassBaseTdFiles"],
 )
 
 cc_library(
     name = "NVGPUDialect",
     srcs = ["lib/Dialect/NVGPU/IR/NVGPUDialect.cpp"],
-    hdrs = ["include/mlir/Dialect/NVGPU/NVGPUDialect.h"],
+    hdrs = ["include/mlir/Dialect/NVGPU/IR/NVGPUDialect.h"],
     includes = ["include"],
     deps = [
         ":GPUDialect",
         ":IR",
         ":NVGPUIncGen",
+        ":NVGPUPassIncGen",
         ":SideEffectInterfaces",
+        "//llvm:Core",
+        "//llvm:Support",
+    ],
+)
+
+cc_library(
+    name = "NVGPUTransforms",
+    srcs = [
+        "lib/Dialect/NVGPU/Transforms/OptimizeSharedMemory.cpp",
+        "lib/Dialect/NVGPU/Transforms/PassDetail.h",
+    ],
+    hdrs = [
+        "include/mlir/Dialect/NVGPU/Transforms/Transforms.h",
+        "include/mlir/Dialect/NVGPU/Passes.h",
+    ],
+    includes = ["include"],
+    deps = [
+        ":FuncDialect",
+        ":AffineDialect",
+        ":ArithmeticDialect",
+        ":GPUDialect",
+        ":MemRefDialect",
+        ":NVGPUDialect",
+        ":Pass",
+        ":SideEffectInterfaces",
+        ":Support",
+        ":Transforms",
+        ":VectorDialect",
         "//llvm:Core",
         "//llvm:Support",
     ],
@@ -6215,6 +6261,8 @@ cc_library(
         ":MemRefToSPIRV",
         ":MemRefTransforms",
         ":NVGPUDialect",
+        ":NVGPUPassIncGen",
+        ":NVGPUTransforms",
         ":NVGPUToNVVM",
         ":NVVMDialect",
         ":OpenACCDialect",

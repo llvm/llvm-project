@@ -12,7 +12,7 @@
 #include "mlir/Conversion/LLVMCommon/Pattern.h"
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
 #include "mlir/Dialect/LLVMIR/NVVMDialect.h"
-#include "mlir/Dialect/NVGPU/NVGPUDialect.h"
+#include "mlir/Dialect/NVGPU/IR/NVGPUDialect.h"
 
 using namespace mlir;
 
