@@ -65,12 +65,12 @@ namespace polly {
 static cl::opt<bool>
     PollyEnabled("polly",
                  cl::desc("Enable the polly optimizer (with -O1, -O2 or -O3)"),
-                 cl::init(false), cl::ZeroOrMore, cl::cat(PollyCategory));
+                 cl::cat(PollyCategory));
 
 static cl::opt<bool> PollyDetectOnly(
     "polly-only-scop-detection",
     cl::desc("Only run scop detection, but no other optimizations"),
-    cl::init(false), cl::ZeroOrMore, cl::cat(PollyCategory));
+    cl::cat(PollyCategory));
 
 enum PassPositionChoice {
   POSITION_EARLY,
@@ -88,16 +88,14 @@ static cl::opt<PassPositionChoice> PassPosition(
                    "After the loop optimizer (but within the inline cycle)"),
         clEnumValN(POSITION_BEFORE_VECTORIZER, "before-vectorizer",
                    "Right before the vectorizer")),
-    cl::Hidden, cl::init(POSITION_BEFORE_VECTORIZER), cl::ZeroOrMore,
-    cl::cat(PollyCategory));
+    cl::Hidden, cl::init(POSITION_BEFORE_VECTORIZER), cl::cat(PollyCategory));
 
 static cl::opt<OptimizerChoice>
     Optimizer("polly-optimizer", cl::desc("Select the scheduling optimizer"),
               cl::values(clEnumValN(OPTIMIZER_NONE, "none", "No optimizer"),
                          clEnumValN(OPTIMIZER_ISL, "isl",
                                     "The isl scheduling optimizer")),
-              cl::Hidden, cl::init(OPTIMIZER_ISL), cl::ZeroOrMore,
-              cl::cat(PollyCategory));
+              cl::Hidden, cl::init(OPTIMIZER_ISL), cl::cat(PollyCategory));
 
 enum CodeGenChoice { CODEGEN_FULL, CODEGEN_AST, CODEGEN_NONE };
 static cl::opt<CodeGenChoice> CodeGeneration(
@@ -105,7 +103,7 @@ static cl::opt<CodeGenChoice> CodeGeneration(
     cl::values(clEnumValN(CODEGEN_FULL, "full", "AST and IR generation"),
                clEnumValN(CODEGEN_AST, "ast", "Only AST generation"),
                clEnumValN(CODEGEN_NONE, "none", "No code generation")),
-    cl::Hidden, cl::init(CODEGEN_FULL), cl::ZeroOrMore, cl::cat(PollyCategory));
+    cl::Hidden, cl::init(CODEGEN_FULL), cl::cat(PollyCategory));
 
 enum TargetChoice { TARGET_CPU, TARGET_GPU, TARGET_HYBRID };
 static cl::opt<TargetChoice>
@@ -118,7 +116,7 @@ static cl::opt<TargetChoice>
                                  "generate GPU code (preferably) or CPU code")
 #endif
                           ),
-           cl::init(TARGET_CPU), cl::ZeroOrMore, cl::cat(PollyCategory));
+           cl::init(TARGET_CPU), cl::cat(PollyCategory));
 
 VectorizerChoice PollyVectorizerChoice;
 
@@ -131,33 +129,32 @@ static cl::opt<VectorizerChoice, true> Vectorizer(
             VECTORIZER_STRIPMINE, "stripmine",
             "Strip-mine outer loops for the loop-vectorizer to trigger")),
     cl::location(PollyVectorizerChoice), cl::init(VECTORIZER_NONE),
-    cl::ZeroOrMore, cl::cat(PollyCategory));
+    cl::cat(PollyCategory));
 
 static cl::opt<bool> ImportJScop(
     "polly-import",
     cl::desc("Import the polyhedral description of the detected Scops"),
-    cl::Hidden, cl::init(false), cl::ZeroOrMore, cl::cat(PollyCategory));
+    cl::Hidden, cl::cat(PollyCategory));
 
 static cl::opt<bool> FullyIndexedStaticExpansion(
     "polly-enable-mse",
     cl::desc("Fully expand the memory accesses of the detected Scops"),
-    cl::Hidden, cl::init(false), cl::ZeroOrMore, cl::cat(PollyCategory));
+    cl::Hidden, cl::cat(PollyCategory));
 
 static cl::opt<bool> ExportJScop(
     "polly-export",
     cl::desc("Export the polyhedral description of the detected Scops"),
-    cl::Hidden, cl::init(false), cl::ZeroOrMore, cl::cat(PollyCategory));
+    cl::Hidden, cl::cat(PollyCategory));
 
 static cl::opt<bool> DeadCodeElim("polly-run-dce",
                                   cl::desc("Run the dead code elimination"),
-                                  cl::Hidden, cl::init(false), cl::ZeroOrMore,
-                                  cl::cat(PollyCategory));
+                                  cl::Hidden, cl::cat(PollyCategory));
 
 static cl::opt<bool> PollyViewer(
     "polly-show",
     cl::desc("Highlight the code regions that will be optimized in a "
              "(CFG BBs and LLVM-IR instructions)"),
-    cl::init(false), cl::ZeroOrMore, cl::cat(PollyCategory));
+    cl::cat(PollyCategory));
 
 static cl::opt<bool> PollyOnlyViewer(
     "polly-show-only",
@@ -211,7 +208,7 @@ static cl::opt<bool>
 static cl::list<std::string> DumpAfterFile(
     "polly-dump-after-file",
     cl::desc("Dump module after Polly transformations to the given file"),
-    cl::ZeroOrMore, cl::cat(PollyCategory));
+    cl::cat(PollyCategory));
 
 static cl::opt<bool>
     EnableDeLICM("polly-enable-delicm",

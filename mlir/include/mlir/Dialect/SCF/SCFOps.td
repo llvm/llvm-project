@@ -357,7 +357,8 @@ def ForeachThreadOp : SCF_Op<"foreach_thread", [
     writes to memory is unspecified across threads.
 
     Example:
-    ```
+
+    ```mlir
     //
     // Sequential context.
     //
@@ -392,8 +393,7 @@ def ForeachThreadOp : SCF_Op<"foreach_thread", [
     // Implicit synchronization point.
     // Sequential context.
     //
-```
-
+    ```
   }];
   let arguments = (ins Variadic<Index>:$num_threads);
 
@@ -447,6 +447,12 @@ def PerformConcurrentlyOp : SCF_Op<"foreach_thread.perform_concurrently", [
 
   let hasCustomAssemblyFormat = 1;
   let hasVerifier = 1;
+
+  // The default builder does not add a region with an empty body, add our own.
+  let skipDefaultBuilders = 1;
+  let builders = [
+    OpBuilder<(ins)>,
+  ];
 
   // TODO: Add a `PerformConcurrentlyOpInterface` interface for ops that can
   // appear inside perform_concurrently.
@@ -544,6 +550,8 @@ def ParallelInsertSliceOp : SCF_Op<"foreach_thread.parallel_insert_slice", [
       "ValueRange":$offsets, "ValueRange":$sizes, "ValueRange":$strides,
       CArg<"ArrayRef<NamedAttribute>", "{}">:$attrs)>
   ];
+  
+  let hasCanonicalizer = 1;
 }
 
 //===----------------------------------------------------------------------===//

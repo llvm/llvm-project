@@ -462,7 +462,7 @@ void MCMachOStreamer::emitZerofill(MCSection *Section, MCSymbol *Symbol,
             // section.
   }
 
-  PushSection();
+  pushSection();
   SwitchSection(Section);
 
   // The symbol may not be present, which only creates the section.
@@ -471,7 +471,7 @@ void MCMachOStreamer::emitZerofill(MCSection *Section, MCSymbol *Symbol,
     emitLabel(Symbol);
     emitZeros(Size);
   }
-  PopSection();
+  popSection();
 }
 
 // This should always be called with the thread local bss section.  Like the

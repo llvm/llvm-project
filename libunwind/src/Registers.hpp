@@ -70,7 +70,9 @@ public:
   void        setVectorRegister(int num, v128 value);
   static const char *getRegisterName(int num);
   void        jumpto() { __libunwind_Registers_x86_jumpto(this); }
-  static int  lastDwarfRegNum() { return _LIBUNWIND_HIGHEST_DWARF_REGISTER_X86; }
+  static constexpr int lastDwarfRegNum() {
+    return _LIBUNWIND_HIGHEST_DWARF_REGISTER_X86;
+  }
   static int  getArch() { return REGISTERS_X86; }
 
   uint32_t  getSP() const          { return _registers.__esp; }
@@ -286,7 +288,9 @@ public:
   void        setVectorRegister(int num, v128 value);
   static const char *getRegisterName(int num);
   void        jumpto() { __libunwind_Registers_x86_64_jumpto(this); }
-  static int  lastDwarfRegNum() { return _LIBUNWIND_HIGHEST_DWARF_REGISTER_X86_64; }
+  static constexpr int lastDwarfRegNum() {
+    return _LIBUNWIND_HIGHEST_DWARF_REGISTER_X86_64;
+  }
   static int  getArch() { return REGISTERS_X86_64; }
 
   uint64_t  getSP() const          { return _registers.__rsp; }
@@ -603,7 +607,9 @@ public:
   void        setVectorRegister(int num, v128 value);
   static const char *getRegisterName(int num);
   void        jumpto();
-  static int  lastDwarfRegNum() { return _LIBUNWIND_HIGHEST_DWARF_REGISTER_PPC; }
+  static constexpr int lastDwarfRegNum() {
+    return _LIBUNWIND_HIGHEST_DWARF_REGISTER_PPC;
+  }
   static int  getArch() { return REGISTERS_PPC; }
 
   uint64_t  getSP() const         { return _registers.__r1; }
@@ -1171,7 +1177,9 @@ public:
   void        setVectorRegister(int num, v128 value);
   static const char *getRegisterName(int num);
   void        jumpto();
-  static int  lastDwarfRegNum() { return _LIBUNWIND_HIGHEST_DWARF_REGISTER_PPC64; }
+  static constexpr int lastDwarfRegNum() {
+    return _LIBUNWIND_HIGHEST_DWARF_REGISTER_PPC64;
+  }
   static int  getArch() { return REGISTERS_PPC64; }
 
   uint64_t  getSP() const         { return _registers.__r1; }
@@ -1818,7 +1826,9 @@ public:
   void        setVectorRegister(int num, v128 value);
   static const char *getRegisterName(int num);
   void        jumpto() { __libunwind_Registers_arm64_jumpto(this); }
-  static int  lastDwarfRegNum() { return _LIBUNWIND_HIGHEST_DWARF_REGISTER_ARM64; }
+  static constexpr int lastDwarfRegNum() {
+    return _LIBUNWIND_HIGHEST_DWARF_REGISTER_ARM64;
+  }
   static int  getArch() { return REGISTERS_ARM64; }
 
   uint64_t  getSP() const         { return _registers.__sp; }
@@ -2108,7 +2118,9 @@ public:
     restoreSavedFloatRegisters();
     restoreCoreAndJumpTo();
   }
-  static int  lastDwarfRegNum() { return _LIBUNWIND_HIGHEST_DWARF_REGISTER_ARM; }
+  static constexpr int lastDwarfRegNum() {
+    return _LIBUNWIND_HIGHEST_DWARF_REGISTER_ARM;
+  }
   static int  getArch() { return REGISTERS_ARM; }
 
   uint32_t  getSP() const         { return _registers.__sp; }
@@ -2608,7 +2620,9 @@ public:
   void        setVectorRegister(int num, v128 value);
   static const char *getRegisterName(int num);
   void        jumpto();
-  static int  lastDwarfRegNum() { return _LIBUNWIND_HIGHEST_DWARF_REGISTER_OR1K; }
+  static constexpr int lastDwarfRegNum() {
+    return _LIBUNWIND_HIGHEST_DWARF_REGISTER_OR1K;
+  }
   static int  getArch() { return REGISTERS_OR1K; }
 
   uint64_t  getSP() const         { return _registers.__r[1]; }
@@ -2805,7 +2819,9 @@ public:
   void        setVectorRegister(int num, v128 value);
   static const char *getRegisterName(int num);
   void        jumpto();
-  static int  lastDwarfRegNum() { return _LIBUNWIND_HIGHEST_DWARF_REGISTER_MIPS; }
+  static constexpr int lastDwarfRegNum() {
+    return _LIBUNWIND_HIGHEST_DWARF_REGISTER_MIPS;
+  }
   static int  getArch() { return REGISTERS_MIPS_O32; }
 
   uint32_t  getSP() const         { return _registers.__r[29]; }
@@ -3132,7 +3148,9 @@ public:
   void        setVectorRegister(int num, v128 value);
   static const char *getRegisterName(int num);
   void        jumpto();
-  static int  lastDwarfRegNum() { return _LIBUNWIND_HIGHEST_DWARF_REGISTER_MIPS; }
+  static constexpr int lastDwarfRegNum() {
+    return _LIBUNWIND_HIGHEST_DWARF_REGISTER_MIPS;
+  }
   static int  getArch() { return REGISTERS_MIPS_NEWABI; }
 
   uint64_t  getSP() const         { return _registers.__r[29]; }
@@ -3427,7 +3445,9 @@ public:
   void        setVectorRegister(int num, v128 value);
   static const char *getRegisterName(int num);
   void        jumpto();
-  static int  lastDwarfRegNum() { return _LIBUNWIND_HIGHEST_DWARF_REGISTER_SPARC; }
+  static constexpr int lastDwarfRegNum() {
+    return _LIBUNWIND_HIGHEST_DWARF_REGISTER_SPARC;
+  }
   static int  getArch() { return REGISTERS_SPARC; }
 
   uint64_t  getSP() const         { return _registers.__regs[UNW_SPARC_O6]; }
@@ -3611,7 +3631,7 @@ public:
   void setVectorRegister(int num, v128 value);
   const char *getRegisterName(int num);
   void jumpto();
-  static int lastDwarfRegNum() {
+  static constexpr int lastDwarfRegNum() {
     return _LIBUNWIND_HIGHEST_DWARF_REGISTER_SPARC64;
   }
   static int getArch() { return REGISTERS_SPARC64; }
@@ -3796,7 +3816,9 @@ public:
   void        setVectorRegister(int num, v128 value);
   const char *getRegisterName(int num);
   void        jumpto();
-  static int  lastDwarfRegNum() { return _LIBUNWIND_HIGHEST_DWARF_REGISTER_HEXAGON; }
+  static constexpr int lastDwarfRegNum() {
+    return _LIBUNWIND_HIGHEST_DWARF_REGISTER_HEXAGON;
+  }
   static int  getArch() { return REGISTERS_HEXAGON; }
 
   uint32_t  getSP() const         { return _registers.__r[UNW_HEXAGON_R29]; }
@@ -4009,7 +4031,9 @@ public:
   void        setVectorRegister(int num, v128 value);
   static const char *getRegisterName(int num);
   void        jumpto();
-  static int  lastDwarfRegNum() { return _LIBUNWIND_HIGHEST_DWARF_REGISTER_RISCV; }
+  static constexpr int lastDwarfRegNum() {
+    return _LIBUNWIND_HIGHEST_DWARF_REGISTER_RISCV;
+  }
   static int  getArch() { return REGISTERS_RISCV; }
 
   reg_t       getSP() const { return _registers[2]; }
@@ -4295,7 +4319,9 @@ public:
   void        setVectorRegister(int num, v128 value);
   static const char *getRegisterName(int num);
   void        jumpto();
-  static int  lastDwarfRegNum() { return _LIBUNWIND_HIGHEST_DWARF_REGISTER_VE; }
+  static constexpr int lastDwarfRegNum() {
+    return _LIBUNWIND_HIGHEST_DWARF_REGISTER_VE;
+  }
   static int  getArch() { return REGISTERS_VE; }
 
   uint64_t  getSP() const         { return _registers.__s[11]; }
@@ -4736,7 +4762,9 @@ public:
   void        setVectorRegister(int num, v128 value);
   static const char *getRegisterName(int num);
   void        jumpto();
-  static int  lastDwarfRegNum() { return _LIBUNWIND_HIGHEST_DWARF_REGISTER_S390X; }
+  static constexpr int lastDwarfRegNum() {
+    return _LIBUNWIND_HIGHEST_DWARF_REGISTER_S390X;
+  }
   static int  getArch() { return REGISTERS_S390X; }
 
   uint64_t  getSP() const         { return _registers.__gpr[15]; }

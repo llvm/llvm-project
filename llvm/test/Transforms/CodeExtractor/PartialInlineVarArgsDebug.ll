@@ -20,7 +20,7 @@ if.end:                                           ; preds = %if.then, %entry
 ; CHECK-LABEL: @caller
 ; CHECK: codeRepl.i:
 ; CHECK-NOT: br label
-; CHECK: call void (i32, i32*, ...) @callee.1.if.then(i32 %v, i32* %mul.loc.i, i32 99), !dbg ![[DBG2:[0-9]+]]
+; CHECK: call void (i32, ptr, ...) @callee.1.if.then(i32 %v, ptr %mul.loc.i, i32 99), !dbg ![[DBG2:[0-9]+]]
 define i32 @caller(i32 %v) !dbg !8 {
 entry:
   %call = call i32 (i32, ...) @callee(i32 %v, i32 99), !dbg !14

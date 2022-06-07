@@ -766,28 +766,25 @@ public:
     // If we have a TT matmul, lift the transpose.  We may be able to fold into
     // consuming multiply.
     for (BasicBlock &BB : Func) {
-      for (BasicBlock::iterator II = BB.begin(); II != BB.end();) {
-        Instruction *I = &*II;
-        // We may remove I.
-        ++II;
+      for (Instruction &I : llvm::make_early_inc_range(BB)) {
         Value *A, *B, *AT, *BT;
         ConstantInt *R, *K, *C;
         // A^t * B ^t -> (B * A)^t
-        if (match(&*I, m_Intrinsic<Intrinsic::matrix_multiply>(
-                           m_Value(A), m_Value(B), m_ConstantInt(R),
-                           m_ConstantInt(K), m_ConstantInt(C))) &&
+        if (match(&I, m_Intrinsic<Intrinsic::matrix_multiply>(
+                          m_Value(A), m_Value(B), m_ConstantInt(R),
+                          m_ConstantInt(K), m_ConstantInt(C))) &&
             match(A, m_Intrinsic<Intrinsic::matrix_transpose>(m_Value(AT))) &&
             match(B, m_Intrinsic<Intrinsic::matrix_transpose>(m_Value((BT))))) {
-          IRBuilder<> IB(&*I);
+          IRBuilder<> IB(&I);
           MatrixBuilder Builder(IB);
           Value *M = Builder.CreateMatrixMultiply(
               BT, AT, C->getZExtValue(), K->getZExtValue(), R->getZExtValue());
           setShapeInfo(M, {C, R});
           Instruction *NewInst = Builder.CreateMatrixTranspose(
               M, C->getZExtValue(), R->getZExtValue());
-          ReplaceAllUsesWith(*I, NewInst);
-          if (I->use_empty())
-            I->eraseFromParent();
+          ReplaceAllUsesWith(I, NewInst);
+          if (I.use_empty())
+            I.eraseFromParent();
           if (A->use_empty())
             cast<Instruction>(A)->eraseFromParent();
           if (A != B && B->use_empty())

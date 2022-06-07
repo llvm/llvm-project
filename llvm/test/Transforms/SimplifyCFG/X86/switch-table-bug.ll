@@ -11,8 +11,8 @@ define i64 @_TFO6reduce1E5toRawfS0_FT_Si(i2) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[SWITCH_TABLEIDX:%.*]] = sub i2 [[TMP0:%.*]], -2
 ; CHECK-NEXT:    [[SWITCH_TABLEIDX_ZEXT:%.*]] = zext i2 [[SWITCH_TABLEIDX]] to i3
-; CHECK-NEXT:    [[SWITCH_GEP:%.*]] = getelementptr inbounds [4 x i64], [4 x i64]* @switch.table._TFO6reduce1E5toRawfS0_FT_Si, i32 0, i3 [[SWITCH_TABLEIDX_ZEXT]]
-; CHECK-NEXT:    [[SWITCH_LOAD:%.*]] = load i64, i64* [[SWITCH_GEP]]
+; CHECK-NEXT:    [[SWITCH_GEP:%.*]] = getelementptr inbounds [4 x i64], ptr @switch.table._TFO6reduce1E5toRawfS0_FT_Si, i32 0, i3 [[SWITCH_TABLEIDX_ZEXT]]
+; CHECK-NEXT:    [[SWITCH_LOAD:%.*]] = load i64, ptr [[SWITCH_GEP]], align 8
 ; CHECK-NEXT:    ret i64 [[SWITCH_LOAD]]
 ;
 entry:

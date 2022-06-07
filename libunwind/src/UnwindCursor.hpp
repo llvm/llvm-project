@@ -518,6 +518,14 @@ private:
   pint_t getLastPC() const { return _dispContext.ControlPc; }
   void setLastPC(pint_t pc) { _dispContext.ControlPc = pc; }
   RUNTIME_FUNCTION *lookUpSEHUnwindInfo(pint_t pc, pint_t *base) {
+#ifdef __arm__
+    // Remove the thumb bit; FunctionEntry ranges don't include the thumb bit.
+    pc &= ~1U;
+#endif
+    // If pc points exactly at the end of the range, we might resolve the
+    // next function instead. Decrement pc by 1 to fit inside the current
+    // function.
+    pc -= 1;
     _dispContext.FunctionEntry = RtlLookupFunctionEntry(pc,
                                                         &_dispContext.ImageBase,
                                                         _dispContext.HistoryTable);
@@ -863,7 +871,7 @@ void UnwindCursor<A, R>::setFloatReg(int regNum, unw_fpreg_t value) {
       uint32_t w;
       float f;
     } d;
-    d.f = value;
+    d.f = (float)value;
     _msContext.S[regNum - UNW_ARM_S0] = d.w;
   }
   if (regNum >= UNW_ARM_D0 && regNum <= UNW_ARM_D31) {
@@ -1965,10 +1973,6 @@ bool UnwindCursor<A, R>::getInfoFromSEH(pint_t pc) {
       _info.handler = 0;
     }
   }
-#elif defined(_LIBUNWIND_TARGET_ARM)
-  _info.end_ip = _info.start_ip + unwindEntry->FunctionLength;
-  _info.lsda = 0; // FIXME
-  _info.handler = 0; // FIXME
 #endif
   setLastPC(pc);
   return true;

@@ -47,8 +47,7 @@ static cl::opt<PassRemarksOpt, true, cl::parser<std::string>> PassRemarks(
     "pass-remarks", cl::value_desc("pattern"),
     cl::desc("Enable optimization remarks from passes whose name match "
              "the given regular expression"),
-    cl::Hidden, cl::location(PassRemarksPassedOptLoc), cl::ValueRequired,
-    cl::ZeroOrMore);
+    cl::Hidden, cl::location(PassRemarksPassedOptLoc), cl::ValueRequired);
 
 // -pass-remarks-missed
 //    Command line flag to enable emitOptimizationRemarkMissed()
@@ -56,8 +55,7 @@ static cl::opt<PassRemarksOpt, true, cl::parser<std::string>> PassRemarksMissed(
     "pass-remarks-missed", cl::value_desc("pattern"),
     cl::desc("Enable missed optimization remarks from passes whose name match "
              "the given regular expression"),
-    cl::Hidden, cl::location(PassRemarksMissedOptLoc), cl::ValueRequired,
-    cl::ZeroOrMore);
+    cl::Hidden, cl::location(PassRemarksMissedOptLoc), cl::ValueRequired);
 
 // -pass-remarks-analysis
 //    Command line flag to enable emitOptimizationRemarkAnalysis()
@@ -67,8 +65,7 @@ static cl::opt<PassRemarksOpt, true, cl::parser<std::string>>
         cl::desc(
             "Enable optimization analysis remarks from passes whose name match "
             "the given regular expression"),
-        cl::Hidden, cl::location(PassRemarksAnalysisOptLoc), cl::ValueRequired,
-        cl::ZeroOrMore);
+        cl::Hidden, cl::location(PassRemarksAnalysisOptLoc), cl::ValueRequired);
 }
 
 bool DiagnosticHandler::isAnalysisRemarkEnabled(StringRef PassName) const {

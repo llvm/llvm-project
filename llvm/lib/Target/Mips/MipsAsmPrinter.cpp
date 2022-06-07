@@ -841,12 +841,12 @@ void MipsAsmPrinter::emitInlineAsmStart() const {
   TS.emitDirectiveSetAt();
   TS.emitDirectiveSetMacro();
   TS.emitDirectiveSetReorder();
-  OutStreamer->AddBlankLine();
+  OutStreamer->addBlankLine();
 }
 
 void MipsAsmPrinter::emitInlineAsmEnd(const MCSubtargetInfo &StartInfo,
                                       const MCSubtargetInfo *EndInfo) const {
-  OutStreamer->AddBlankLine();
+  OutStreamer->addBlankLine();
   getTargetStreamer().emitDirectiveSetPop();
 }
 
@@ -1038,7 +1038,7 @@ void MipsAsmPrinter::EmitFPCallStub(
   //
   // probably not necessary but we save and restore the current section state
   //
-  OutStreamer->PushSection();
+  OutStreamer->pushSection();
   //
   // .section mips16.call.fpxxxx,"ax",@progbits
   //
@@ -1114,7 +1114,7 @@ void MipsAsmPrinter::EmitFPCallStub(
   const MCExpr *T_min_E = MCBinaryExpr::createSub(T, E, OutContext);
   OutStreamer->emitELFSize(Stub, T_min_E);
   TS.emitDirectiveEnd(x);
-  OutStreamer->PopSection();
+  OutStreamer->popSection();
 }
 
 void MipsAsmPrinter::emitEndOfAsmFile(Module &M) {

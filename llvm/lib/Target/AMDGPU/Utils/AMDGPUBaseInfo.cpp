@@ -28,10 +28,10 @@
 #define GET_INSTRMAP_INFO
 #include "AMDGPUGenInstrInfo.inc"
 
-static llvm::cl::opt<unsigned> AmdhsaCodeObjectVersion(
-  "amdhsa-code-object-version", llvm::cl::Hidden,
-  llvm::cl::desc("AMDHSA Code Object Version"), llvm::cl::init(4),
-  llvm::cl::ZeroOrMore);
+static llvm::cl::opt<unsigned>
+    AmdhsaCodeObjectVersion("amdhsa-code-object-version", llvm::cl::Hidden,
+                            llvm::cl::desc("AMDHSA Code Object Version"),
+                            llvm::cl::init(4));
 
 // TODO-GFX11: Remove this when full 16-bit codegen is implemented.
 static llvm::cl::opt<bool> LimitTo128VGPRs(

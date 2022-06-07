@@ -3538,6 +3538,7 @@ static QualType GetDeclSpecTypeForDeclarator(TypeProcessingState &state,
         break; // auto(x)
       LLVM_FALLTHROUGH;
     case DeclaratorContext::TypeName:
+    case DeclaratorContext::Association:
       Error = 15; // Generic
       break;
     case DeclaratorContext::File:
@@ -3648,6 +3649,7 @@ static QualType GetDeclSpecTypeForDeclarator(TypeProcessingState &state,
     case DeclaratorContext::ObjCCatch:
     case DeclaratorContext::TemplateArg:
     case DeclaratorContext::TemplateTypeArg:
+    case DeclaratorContext::Association:
       DiagID = diag::err_type_defined_in_type_specifier;
       break;
     case DeclaratorContext::Prototype:
@@ -4735,6 +4737,7 @@ static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
     case DeclaratorContext::TypeName:
     case DeclaratorContext::FunctionalCast:
     case DeclaratorContext::RequiresExpr:
+    case DeclaratorContext::Association:
       // Don't infer in these contexts.
       break;
     }
@@ -5182,11 +5185,15 @@ static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
       if ((T.getCVRQualifiers() || T->isAtomicType()) &&
           !(S.getLangOpts().CPlusPlus &&
             (T->isDependentType() || T->isRecordType()))) {
-        // WG14 DR 423 updated 6.7.6.3p4 to have the function declarator drop
-        // all qualifiers from the return type.
-        diagnoseRedundantReturnTypeQualifiers(S, T, D, chunkIndex);
-        if (!S.getLangOpts().CPlusPlus)
-          T = T.getAtomicUnqualifiedType();
+        if (T->isVoidType() && !S.getLangOpts().CPlusPlus &&
+            D.getFunctionDefinitionKind() ==
+                FunctionDefinitionKind::Definition) {
+          // [6.9.1/3] qualified void return is invalid on a C
+          // function definition.  Apparently ok on declarations and
+          // in C++ though (!)
+          S.Diag(DeclType.Loc, diag::err_func_returning_qualified_void) << T;
+        } else
+          diagnoseRedundantReturnTypeQualifiers(S, T, D, chunkIndex);
 
         // C++2a [dcl.fct]p12:
         //   A volatile-qualified return type is deprecated
@@ -5773,6 +5780,7 @@ static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
     case DeclaratorContext::TrailingReturnVar:
     case DeclaratorContext::TemplateArg:
     case DeclaratorContext::TemplateTypeArg:
+    case DeclaratorContext::Association:
       // FIXME: We may want to allow parameter packs in block-literal contexts
       // in the future.
       S.Diag(D.getEllipsisLoc(),

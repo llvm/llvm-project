@@ -2071,6 +2071,9 @@ bool ARMBaseInstrInfo::isSchedulingBoundary(const MachineInstr &MI,
   if (MI.getOpcode() == TargetOpcode::INLINEASM_BR)
     return true;
 
+  if (isSEHInstruction(MI))
+    return true;
+
   // Treat the start of the IT block as a scheduling boundary, but schedule
   // t2IT along with all instructions following it.
   // FIXME: This is a big hammer. But the alternative is to add all potential
@@ -5858,9 +5861,8 @@ outliner::OutlinedFunction ARMBaseInstrInfo::getOutliningCandidateInfo(
 
   // Compute liveness information for each candidate, and set FlagsSetInAll.
   const TargetRegisterInfo &TRI = getRegisterInfo();
-  std::for_each(
-      RepeatedSequenceLocs.begin(), RepeatedSequenceLocs.end(),
-      [&FlagsSetInAll](outliner::Candidate &C) { FlagsSetInAll &= C.Flags; });
+  for (outliner::Candidate &C : RepeatedSequenceLocs)
+    FlagsSetInAll &= C.Flags;
 
   // According to the ARM Procedure Call Standard, the following are
   // undefined on entry/exit from a function call:
@@ -6211,8 +6213,8 @@ bool ARMBaseInstrInfo::isMBBSafeToOutlineFrom(MachineBasicBlock &MBB,
 
   LiveRegUnits LRU(getRegisterInfo());
 
-  std::for_each(MBB.rbegin(), MBB.rend(),
-                [&LRU](MachineInstr &MI) { LRU.accumulate(MI); });
+  for (MachineInstr &MI : llvm::reverse(MBB))
+    LRU.accumulate(MI);
 
   // Check if each of the unsafe registers are available...
   bool R12AvailableInBlock = LRU.available(ARM::R12);

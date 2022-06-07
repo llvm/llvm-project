@@ -29,6 +29,7 @@ class AbstractConverter;
 
 namespace pft {
 struct Evaluation;
+struct Variable;
 } // namespace pft
 
 void genOpenMPConstruct(AbstractConverter &, pft::Evaluation &,
@@ -36,6 +37,7 @@ void genOpenMPConstruct(AbstractConverter &, pft::Evaluation &,
 void genOpenMPDeclarativeConstruct(AbstractConverter &, pft::Evaluation &,
                                    const parser::OpenMPDeclarativeConstruct &);
 int64_t getCollapseValue(const Fortran::parser::OmpClauseList &clauseList);
+void genThreadprivateOp(AbstractConverter &, const pft::Variable &);
 
 } // namespace lower
 } // namespace Fortran

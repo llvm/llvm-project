@@ -203,7 +203,7 @@ void WebAssemblyAsmPrinter::emitGlobalVariable(const GlobalVariable *GV) {
     OutStreamer->emitLabel(Sym);
     // TODO: Actually emit the initializer value.  Otherwise the global has the
     // default value for its type (0, ref.null, etc).
-    OutStreamer->AddBlankLine();
+    OutStreamer->addBlankLine();
   }
 }
 
@@ -426,13 +426,13 @@ void WebAssemblyAsmPrinter::emitEndOfAsmFile(Module &M) {
       if (!Name || !Contents)
         continue;
 
-      OutStreamer->PushSection();
+      OutStreamer->pushSection();
       std::string SectionName = (".custom_section." + Name->getString()).str();
       MCSectionWasm *MySection =
           OutContext.getWasmSection(SectionName, SectionKind::getMetadata());
       OutStreamer->SwitchSection(MySection);
       OutStreamer->emitBytes(Contents->getString());
-      OutStreamer->PopSection();
+      OutStreamer->popSection();
     }
   }
 
@@ -470,7 +470,7 @@ void WebAssemblyAsmPrinter::EmitProducerInfo(Module &M) {
   if (FieldCount != 0) {
     MCSectionWasm *Producers = OutContext.getWasmSection(
         ".custom_section.producers", SectionKind::getMetadata());
-    OutStreamer->PushSection();
+    OutStreamer->pushSection();
     OutStreamer->SwitchSection(Producers);
     OutStreamer->emitULEB128IntValue(FieldCount);
     for (auto &Producers : {std::make_pair("language", &Languages),
@@ -487,7 +487,7 @@ void WebAssemblyAsmPrinter::EmitProducerInfo(Module &M) {
         OutStreamer->emitBytes(Producer.second);
       }
     }
-    OutStreamer->PopSection();
+    OutStreamer->popSection();
   }
 }
 
@@ -543,7 +543,7 @@ void WebAssemblyAsmPrinter::EmitTargetFeatures(Module &M) {
   // Emit features and linkage policies into the "target_features" section
   MCSectionWasm *FeaturesSection = OutContext.getWasmSection(
       ".custom_section.target_features", SectionKind::getMetadata());
-  OutStreamer->PushSection();
+  OutStreamer->pushSection();
   OutStreamer->SwitchSection(FeaturesSection);
 
   OutStreamer->emitULEB128IntValue(EmittedFeatures.size());
@@ -553,7 +553,7 @@ void WebAssemblyAsmPrinter::EmitTargetFeatures(Module &M) {
     OutStreamer->emitBytes(F.Name);
   }
 
-  OutStreamer->PopSection();
+  OutStreamer->popSection();
 }
 
 void WebAssemblyAsmPrinter::emitConstantPool() {
@@ -627,7 +627,7 @@ void WebAssemblyAsmPrinter::emitInstruction(const MachineInstr *MI) {
     // function body.
     if (isVerbose()) {
       OutStreamer->AddComment("fallthrough-return");
-      OutStreamer->AddBlankLine();
+      OutStreamer->addBlankLine();
     }
     break;
   }

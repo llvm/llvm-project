@@ -207,7 +207,16 @@ Changes in existing checks
 
 - Fixed a crash in :doc:`performance-unnecessary-value-param
   <clang-tidy/checks/readability-suspicious-call-argument>` when the specialization
-  template has an unnecessary value paramter. Removed the fix for a template.
+  template has an unnecessary value parameter. Removed the fix for a template.
+
+- Fixed bugs in :doc:`bugprone-use-after-move
+  <clang-tidy/checks/bugprone-use-after-move>`:
+
+  - Treat a move in a lambda capture as happening in the function that defines
+    the lambda, not within the body of the lambda (as we were previously doing
+    erroneously).
+
+  - Don't emit an erroneous warning on self-moves.
 
 Removed checks
 ^^^^^^^^^^^^^^
@@ -230,7 +239,7 @@ The improvements are...
 Improvements to pp-trace
 ------------------------
 
-The improvements are...
+- Added `HashLoc` information to `InclusionDirective` callback output.
 
 Clang-tidy Visual Studio plugin
 -------------------------------

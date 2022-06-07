@@ -1380,7 +1380,7 @@ bool IsSaved(const Symbol &original) {
   } else if (const auto *object{symbol.detailsIf<ObjectEntityDetails>()};
              object && object->init()) {
     return true;
-  } else if (IsProcedurePointer(symbol) &&
+  } else if (IsProcedurePointer(symbol) && symbol.has<ProcEntityDetails>() &&
       symbol.get<ProcEntityDetails>().init()) {
     return true;
   } else if (scope.hasSAVE()) {

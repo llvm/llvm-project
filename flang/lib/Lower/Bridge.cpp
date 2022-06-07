@@ -313,6 +313,13 @@ public:
     return lookupSymbol(sym).getAddr();
   }
 
+  fir::ExtendedValue
+  getSymbolExtendedValue(const Fortran::semantics::Symbol &sym) override final {
+    Fortran::lower::SymbolBox sb = localSymbols.lookupSymbol(sym);
+    assert(sb && "symbol box not found");
+    return sb.toExtendedValue();
+  }
+
   mlir::Value impliedDoBinding(llvm::StringRef name) override final {
     mlir::Value val = localSymbols.lookupImpliedDo(name);
     if (!val)
@@ -499,6 +506,18 @@ public:
   //===--------------------------------------------------------------------===//
   // Utility methods
   //===--------------------------------------------------------------------===//
+
+  void collectSymbolSet(
+      Fortran::lower::pft::Evaluation &eval,
+      llvm::SetVector<const Fortran::semantics::Symbol *> &symbolSet,
+      Fortran::semantics::Symbol::Flag flag) override final {
+    auto addToList = [&](const Fortran::semantics::Symbol &sym) {
+      const Fortran::semantics::Symbol &ultimate = sym.GetUltimate();
+      if (ultimate.test(flag))
+        symbolSet.insert(&ultimate);
+    };
+    Fortran::lower::pft::visitAllSymbols(eval, addToList);
+  }
 
   mlir::Location getCurrentLocation() override final { return toLocation(); }
 
@@ -1086,6 +1105,14 @@ private:
             builder->create<mlir::arith::AddIOp>(loc, diff1, info.stepValue);
         tripCount =
             builder->create<mlir::arith::DivSIOp>(loc, diff2, info.stepValue);
+      }
+      if (forceLoopToExecuteOnce) { // minimum tripCount is 1
+        mlir::Value one =
+            builder->createIntegerConstant(loc, tripCount.getType(), 1);
+        auto cond = builder->create<mlir::arith::CmpIOp>(
+            loc, mlir::arith::CmpIPredicate::slt, tripCount, one);
+        tripCount =
+            builder->create<mlir::arith::SelectOp>(loc, cond, one, tripCount);
       }
       info.tripVariable = builder->createTemporary(loc, tripCount.getType());
       builder->create<fir::StoreOp>(loc, tripCount, info.tripVariable);
@@ -2447,6 +2474,10 @@ private:
   void instantiateVar(const Fortran::lower::pft::Variable &var,
                       Fortran::lower::AggregateStoreMap &storeMap) {
     Fortran::lower::instantiateVariable(*this, var, localSymbols, storeMap);
+    if (var.hasSymbol() &&
+        var.getSymbol().test(
+            Fortran::semantics::Symbol::Flag::OmpThreadprivate))
+      Fortran::lower::genThreadprivateOp(*this, var);
   }
 
   /// Prepare to translate a new function

@@ -8,6 +8,7 @@
 
 #include "mlir/Tools/PDLL/Parser/Parser.h"
 #include "Lexer.h"
+#include "mlir/Support/IndentedOstream.h"
 #include "mlir/Support/LogicalResult.h"
 #include "mlir/TableGen/Argument.h"
 #include "mlir/TableGen/Attribute.h"
@@ -43,9 +44,10 @@ namespace {
 class Parser {
 public:
   Parser(ast::Context &ctx, llvm::SourceMgr &sourceMgr,
-         CodeCompleteContext *codeCompleteContext)
+         bool enableDocumentation, CodeCompleteContext *codeCompleteContext)
       : ctx(ctx), lexer(sourceMgr, ctx.getDiagEngine(), codeCompleteContext),
-        curToken(lexer.lexToken()), valueTy(ast::ValueType::get(ctx)),
+        curToken(lexer.lexToken()), enableDocumentation(enableDocumentation),
+        valueTy(ast::ValueType::get(ctx)),
         valueRangeTy(ast::ValueRangeType::get(ctx)),
         typeTy(ast::TypeType::get(ctx)),
         typeRangeTy(ast::TypeRangeType::get(ctx)),
@@ -125,6 +127,27 @@ private:
     return opName ? ctx.getODSContext().lookupOperation(*opName) : nullptr;
   }
 
+  /// Process the given documentation string, or return an empty string if
+  /// documentation isn't enabled.
+  StringRef processDoc(StringRef doc) {
+    return enableDocumentation ? doc : StringRef();
+  }
+
+  /// Process the given documentation string and format it, or return an empty
+  /// string if documentation isn't enabled.
+  std::string processAndFormatDoc(const Twine &doc) {
+    if (!enableDocumentation)
+      return "";
+    std::string docStr;
+    {
+      llvm::raw_string_ostream docOS(docStr);
+      std::string tmpDocStr = doc.str();
+      raw_indented_ostream(docOS).printReindented(
+          StringRef(tmpDocStr).rtrim(" \t"));
+    }
+    return docStr;
+  }
+
   //===--------------------------------------------------------------------===//
   // Directives
 
@@ -140,10 +163,10 @@ private:
   /// Create a user defined native constraint for a constraint imported from
   /// ODS.
   template <typename ConstraintT>
-  ast::Decl *createODSNativePDLLConstraintDecl(StringRef name,
-                                               StringRef codeBlock, SMRange loc,
-                                               ast::Type type,
-                                               StringRef nativeType);
+  ast::Decl *
+  createODSNativePDLLConstraintDecl(StringRef name, StringRef codeBlock,
+                                    SMRange loc, ast::Type type,
+                                    StringRef nativeType, StringRef docString);
   template <typename ConstraintT>
   ast::Decl *
   createODSNativePDLLConstraintDecl(const tblgen::Constraint &constraint,
@@ -520,6 +543,10 @@ private:
   /// The current token within the lexer.
   Token curToken;
 
+  /// A flag indicating if the parser should add documentation to AST nodes when
+  /// viable.
+  bool enableDocumentation;
+
   /// The most recently defined decl scope.
   ast::DeclScope *curDeclScope = nullptr;
   llvm::SpecificBumpPtrAllocator<ast::DeclScope> scopeAllocator;
@@ -801,9 +828,10 @@ void Parser::processTdIncludeRecords(llvm::RecordKeeper &tdRecords,
   ods::Context &odsContext = ctx.getODSContext();
   auto addTypeConstraint = [&](const tblgen::NamedTypeConstraint &cst)
       -> const ods::TypeConstraint & {
-    return odsContext.insertTypeConstraint(cst.constraint.getUniqueDefName(),
-                                           cst.constraint.getSummary(),
-                                           cst.constraint.getCPPClassName());
+    return odsContext.insertTypeConstraint(
+        cst.constraint.getUniqueDefName(),
+        processDoc(cst.constraint.getSummary()),
+        cst.constraint.getCPPClassName());
   };
   auto convertLocToRange = [&](llvm::SMLoc loc) -> llvm::SMRange {
     return {loc, llvm::SMLoc::getFromPointer(loc.getPointer() + 1)};
@@ -821,20 +849,20 @@ void Parser::processTdIncludeRecords(llvm::RecordKeeper &tdRecords,
     bool inserted = false;
     ods::Operation *odsOp = nullptr;
     std::tie(odsOp, inserted) = odsContext.insertOperation(
-        op.getOperationName(), op.getSummary(), op.getDescription(),
-        op.getQualCppClassName(), supportsResultTypeInferrence,
-        op.getLoc().front());
+        op.getOperationName(), processDoc(op.getSummary()),
+        processAndFormatDoc(op.getDescription()), op.getQualCppClassName(),
+        supportsResultTypeInferrence, op.getLoc().front());
 
     // Ignore operations that have already been added.
     if (!inserted)
       continue;
 
     for (const tblgen::NamedAttribute &attr : op.getAttributes()) {
-      odsOp->appendAttribute(
-          attr.name, attr.attr.isOptional(),
-          odsContext.insertAttributeConstraint(attr.attr.getUniqueDefName(),
-                                               attr.attr.getSummary(),
-                                               attr.attr.getStorageType()));
+      odsOp->appendAttribute(attr.name, attr.attr.isOptional(),
+                             odsContext.insertAttributeConstraint(
+                                 attr.attr.getUniqueDefName(),
+                                 processDoc(attr.attr.getSummary()),
+                                 attr.attr.getStorageType()));
     }
     for (const tblgen::NamedTypeConstraint &operand : op.getOperands()) {
       odsOp->appendOperand(operand.name, getLengthKind(operand),
@@ -883,26 +911,27 @@ void Parser::processTdIncludeRecords(llvm::RecordKeeper &tdRecords,
                       cppClassName)
             .str();
 
+    std::string desc =
+        processAndFormatDoc(def->getValueAsString("description"));
     if (def->isSubClassOf("OpInterface")) {
       decls.push_back(createODSNativePDLLConstraintDecl<ast::OpConstraintDecl>(
-          name, codeBlock, loc, opTy, cppClassName));
+          name, codeBlock, loc, opTy, cppClassName, desc));
     } else if (def->isSubClassOf("AttrInterface")) {
       decls.push_back(
           createODSNativePDLLConstraintDecl<ast::AttrConstraintDecl>(
-              name, codeBlock, loc, attrTy, cppClassName));
+              name, codeBlock, loc, attrTy, cppClassName, desc));
     } else if (def->isSubClassOf("TypeInterface")) {
       decls.push_back(
           createODSNativePDLLConstraintDecl<ast::TypeConstraintDecl>(
-              name, codeBlock, loc, typeTy, cppClassName));
+              name, codeBlock, loc, typeTy, cppClassName, desc));
     }
   }
 }
 
 template <typename ConstraintT>
-ast::Decl *
-Parser::createODSNativePDLLConstraintDecl(StringRef name, StringRef codeBlock,
-                                          SMRange loc, ast::Type type,
-                                          StringRef nativeType) {
+ast::Decl *Parser::createODSNativePDLLConstraintDecl(
+    StringRef name, StringRef codeBlock, SMRange loc, ast::Type type,
+    StringRef nativeType, StringRef docString) {
   // Build the single input parameter.
   ast::DeclScope *argScope = pushDeclScope();
   auto *paramVar = ast::VariableDecl::create(
@@ -915,6 +944,7 @@ Parser::createODSNativePDLLConstraintDecl(StringRef name, StringRef codeBlock,
   auto *constraintDecl = ast::UserConstraintDecl::createNative(
       ctx, ast::Name::create(ctx, name, loc), paramVar,
       /*results=*/llvm::None, codeBlock, ast::TupleType::get(ctx), nativeType);
+  constraintDecl->setDocComment(ctx, docString);
   curDeclScope->add(constraintDecl);
   return constraintDecl;
 }
@@ -931,8 +961,20 @@ Parser::createODSNativePDLLConstraintDecl(const tblgen::Constraint &constraint,
       "return ::mlir::success(" + constraint.getConditionTemplate() + ");",
       &fmtContext);
 
+  // If documentation was enabled, build the doc string for the generated
+  // constraint. It would be nice to do this lazily, but TableGen information is
+  // destroyed after we finish parsing the file.
+  std::string docString;
+  if (enableDocumentation) {
+    StringRef desc = constraint.getDescription();
+    docString = processAndFormatDoc(
+        constraint.getSummary() +
+        (desc.empty() ? "" : ("\n\n" + constraint.getDescription())));
+  }
+
   return createODSNativePDLLConstraintDecl<ConstraintT>(
-      constraint.getUniqueDefName(), codeBlock, loc, type, nativeType);
+      constraint.getUniqueDefName(), codeBlock, loc, type, nativeType,
+      docString);
 }
 
 //===----------------------------------------------------------------------===//
@@ -3080,8 +3122,9 @@ void Parser::codeCompleteOperationResultsSignature(Optional<StringRef> opName,
 //===----------------------------------------------------------------------===//
 
 FailureOr<ast::Module *>
-mlir::pdll::parsePDLAST(ast::Context &ctx, llvm::SourceMgr &sourceMgr,
-                        CodeCompleteContext *codeCompleteContext) {
-  Parser parser(ctx, sourceMgr, codeCompleteContext);
+mlir::pdll::parsePDLLAST(ast::Context &ctx, llvm::SourceMgr &sourceMgr,
+                         bool enableDocumentation,
+                         CodeCompleteContext *codeCompleteContext) {
+  Parser parser(ctx, sourceMgr, enableDocumentation, codeCompleteContext);
   return parser.parseModule();
 }

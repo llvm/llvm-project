@@ -430,21 +430,12 @@ static void printTLSDirectory(const COFFObjectFile *Obj) {
   if (!PE32Header && !PE32PlusHeader)
     return;
 
-  const data_directory *DataDir = Obj->getDataDirectory(COFF::TLS_TABLE);
-  if (!DataDir || DataDir->RelativeVirtualAddress == 0)
-    return;
-
-  uintptr_t IntPtr = 0;
-  if (Error E =
-          Obj->getRvaPtr(DataDir->RelativeVirtualAddress, IntPtr))
-    reportError(std::move(E), Obj->getFileName());
-
   if (PE32Header) {
-    auto *TLSDir = reinterpret_cast<const coff_tls_directory32 *>(IntPtr);
-    printTLSDirectoryT(TLSDir);
+    if (auto *TLSDir = Obj->getTLSDirectory32())
+      printTLSDirectoryT(TLSDir);
   } else {
-    auto *TLSDir = reinterpret_cast<const coff_tls_directory64 *>(IntPtr);
-    printTLSDirectoryT(TLSDir);
+    if (auto *TLSDir = Obj->getTLSDirectory64())
+      printTLSDirectoryT(TLSDir);
   }
 
   outs() << "\n";
@@ -459,19 +450,10 @@ static void printLoadConfiguration(const COFFObjectFile *Obj) {
   if (Obj->getMachine() != COFF::IMAGE_FILE_MACHINE_I386)
     return;
 
-  const data_directory *DataDir = Obj->getDataDirectory(COFF::LOAD_CONFIG_TABLE);
-  if (!DataDir)
-    reportError("no load config data dir", Obj->getFileName());
-
-  uintptr_t IntPtr = 0;
-  if (DataDir->RelativeVirtualAddress == 0)
+  auto *LoadConf = Obj->getLoadConfig32();
+  if (!LoadConf)
     return;
 
-  if (Error E =
-          Obj->getRvaPtr(DataDir->RelativeVirtualAddress, IntPtr))
-    reportError(std::move(E), Obj->getFileName());
-
-  auto *LoadConf = reinterpret_cast<const coff_load_configuration32 *>(IntPtr);
   outs() << "Load configuration:"
          << "\n  Timestamp: " << LoadConf->TimeDateStamp
          << "\n  Major Version: " << LoadConf->MajorVersion
@@ -544,11 +526,11 @@ static void printImportTables(const COFFObjectFile *Obj) {
 // Prints export tables. The export table is a table containing the list of
 // exported symbol from the DLL.
 static void printExportTable(const COFFObjectFile *Obj) {
-  outs() << "Export Table:\n";
   export_directory_iterator I = Obj->export_directory_begin();
   export_directory_iterator E = Obj->export_directory_end();
   if (I == E)
     return;
+  outs() << "Export Table:\n";
   StringRef DllName;
   uint32_t OrdinalBase;
   if (I->getDllName(DllName))
