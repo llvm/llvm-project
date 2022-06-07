@@ -1,17 +1,21 @@
 ; ASan shouldn't instrument code added by UBSan.
 
 ; RUN: opt < %s -passes='asan-pipeline' -S | FileCheck %s
+; RUN: opt < %s -passes='asan-pipeline' -asan-detect-invalid-pointer-cmp -S \
+; RUN:     | FileCheck %s --check-prefixes=NOCMP
 
 target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f32:32:32-f64:64:64-v64:64:64-v128:128:128-a0:0:64-s0:64:64-f80:128:128-n8:16:32:64"
 target triple = "x86_64-unknown-linux-gnu"
 
 %struct.A = type { i32 (...)** }
 declare void @__ubsan_handle_dynamic_type_cache_miss(i8*, i64, i64) uwtable
+declare void @__ubsan_handle_pointer_overflow(i8*, i64, i64) uwtable
 @__ubsan_vptr_type_cache = external global [128 x i64]
 @.src = private unnamed_addr constant [19 x i8] c"tmp/ubsan/vptr.cpp\00", align 1
 @0 = private unnamed_addr constant { i16, i16, [4 x i8] } { i16 -1, i16 0, [4 x i8] c"'A'\00" }
 @_ZTI1A = external constant i8*
 @1 = private unnamed_addr global { { [19 x i8]*, i32, i32 }, { i16, i16, [4 x i8] }*, i8*, i8 } { { [19 x i8]*, i32, i32 } { [19 x i8]* @.src, i32 2, i32 18 }, { i16, i16, [4 x i8] }* @0, i8* bitcast (i8** @_ZTI1A to i8*), i8 4 }
+@2 = private unnamed_addr global { { [19 x i8]*, i32, i32 } } { { [19 x i8]*, i32, i32 } { [19 x i8]* @.src, i32 24, i32 25 } }
 
 define void @_Z3BarP1A(%struct.A* %a) uwtable sanitize_address {
 ; CHECK-LABEL: define void @_Z3BarP1A
@@ -46,6 +50,27 @@ handler.dynamic_type_cache_miss:                  ; preds = %entry
 cont:                                             ; preds = %handler.dynamic_type_cache_miss, %entry
   tail call void %1(%struct.A* %a)
 ; CHECK: ret void
+  ret void
+}
+
+define void @_Z3foov() uwtable sanitize_address {
+; NOCMP-LABEL: define void @_Z3foov
+entry:
+  %bar = alloca [10 x i8], align 1
+  %arrayidx = getelementptr inbounds [10 x i8], [10 x i8]* %bar, i64 0, i64 4
+  %0 = ptrtoint [10 x i8]* %bar to i64, !nosanitize !0
+; NOCMP-NOT: call void @__sanitizer_ptr_cmp
+  %1 = icmp ult [10 x i8]* %bar, inttoptr (i64 -4 to [10 x i8]*), !nosanitize !0
+  br i1 %1, label %cont, label %handler.pointer_overflow, !nosanitize !0
+
+handler.pointer_overflow:                         ; preds = %entry
+  %2 = add i64 %0, 4, !nosanitize !0
+  call void @__ubsan_handle_pointer_overflow(i8* bitcast ({ { [19 x i8]*, i32, i32 } }* @2 to i8*), i64 %0, i64 %2), !nosanitize !0
+  br label %cont, !nosanitize !0
+
+cont:                                             ; preds = %handler.pointer_overflow, %entry
+  store i8 0, i8* %arrayidx, align 1
+; NOCMP: ret void
   ret void
 }
 
