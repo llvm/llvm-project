@@ -9,9 +9,6 @@
 |*                                                                            *|
 |* This file defines the C API for the ORC runtime                            *|
 |*                                                                            *|
-|* NOTE: The OrtRTWrapperFunctionResult type must be kept in sync with the    *|
-|* definition in llvm/include/llvm-c/OrcShared.h.                             *|
-|*                                                                            *|
 \*===----------------------------------------------------------------------===*/
 
 #ifndef ORC_RT_C_API_H
