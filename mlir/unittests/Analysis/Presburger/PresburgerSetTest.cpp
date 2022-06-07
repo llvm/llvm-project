@@ -746,3 +746,21 @@ TEST(SetTest, computeVolume) {
                                         /*trueVolume=*/{},
                                         /*resultBound=*/{});
 }
+
+TEST(SetTest, subtractOutputSizeRegression) {
+  PresburgerSet set1 =
+      parsePresburgerSetFromPolyStrings(1, {"(i) : (i >= 0, 10 - i >= 0)"});
+  PresburgerSet set2 =
+      parsePresburgerSetFromPolyStrings(1, {"(i) : (i - 5 >= 0)"});
+
+  PresburgerSet set3 =
+      parsePresburgerSetFromPolyStrings(1, {"(i) : (i >= 0, 4 - i >= 0)"});
+
+  PresburgerSet result = set1.subtract(set2);
+
+  EXPECT_TRUE(result.isEqual(set3));
+
+  // Previously, the subtraction result was producing an extra empty set, which
+  // is correct, but bad for output size.
+  EXPECT_EQ(result.getNumDisjuncts(), 1u);
+}

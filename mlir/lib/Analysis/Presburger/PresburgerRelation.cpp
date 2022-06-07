@@ -300,7 +300,8 @@ static PresburgerRelation getSetDifference(IntegerRelation b,
         canIgnoreIneq[j] = simplex.isMarkedRedundant(offset + j);
       simplex.rollback(snapshotBeforeIntersect);
 
-      SmallVector<unsigned, 8> ineqsToProcess(totalNewSimplexInequalities);
+      SmallVector<unsigned, 8> ineqsToProcess;
+      ineqsToProcess.reserve(totalNewSimplexInequalities);
       for (unsigned i = 0; i < totalNewSimplexInequalities; ++i)
         if (!canIgnoreIneq[i])
           ineqsToProcess.push_back(i);
