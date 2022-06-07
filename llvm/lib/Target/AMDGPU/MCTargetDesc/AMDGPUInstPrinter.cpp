@@ -363,23 +363,22 @@ void AMDGPUInstPrinter::printRegOperand(unsigned RegNo, raw_ostream &O,
 }
 
 void AMDGPUInstPrinter::printVOPDst(const MCInst *MI, unsigned OpNo,
-                                    const MCSubtargetInfo &STI,
-                                    raw_ostream &O) {
+                                    const MCSubtargetInfo &STI, raw_ostream &O) {
   auto Opcode = MI->getOpcode();
   auto Flags = MII.get(Opcode).TSFlags;
-
   if (OpNo == 0) {
-    if (Flags & SIInstrFlags::VOP3) {
+    if (Flags & SIInstrFlags::VOP3 && Flags & SIInstrFlags::DPP)
+      O << "_e64_dpp";
+    else if (Flags & SIInstrFlags::VOP3) {
       if (!getVOP3IsSingle(Opcode))
         O << "_e64";
-    } else if (Flags & SIInstrFlags::DPP) {
+    } else if (Flags & SIInstrFlags::DPP)
       O << "_dpp";
-    } else if (Flags & SIInstrFlags::SDWA) {
+    else if (Flags & SIInstrFlags::SDWA)
       O << "_sdwa";
-    } else if (((Flags & SIInstrFlags::VOP1) && !getVOP1IsSingle(Opcode)) ||
-               ((Flags & SIInstrFlags::VOP2) && !getVOP2IsSingle(Opcode))) {
+    else if (((Flags & SIInstrFlags::VOP1) && !getVOP1IsSingle(Opcode)) ||
+             ((Flags & SIInstrFlags::VOP2) && !getVOP2IsSingle(Opcode)))
       O << "_e32";
-    }
     O << " ";
   }
 
