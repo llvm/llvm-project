@@ -4,93 +4,22 @@
 define void @test(i32* noalias %p, i32* noalias %addr, i32* noalias %s) {
 ; CHECK-LABEL: @test(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[IDX1:%.*]] = load i32, i32* [[ADDR:%.*]], align 8
-; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, i32* [[P:%.*]], i32 [[IDX1]]
-; CHECK-NEXT:    [[I:%.*]] = load i32, i32* [[ARRAYIDX]], align 4
-; CHECK-NEXT:    [[GEP2:%.*]] = getelementptr inbounds i32, i32* [[ADDR]], i32 1
-; CHECK-NEXT:    [[IDX2:%.*]] = load i32, i32* [[GEP2]], align 8
-; CHECK-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr inbounds i32, i32* [[P]], i32 [[IDX2]]
-; CHECK-NEXT:    [[I1:%.*]] = load i32, i32* [[ARRAYIDX1]], align 4
-; CHECK-NEXT:    [[ADD:%.*]] = add nsw i32 [[I1]], [[I]]
+; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <8 x i32*> poison, i32* [[ADDR:%.*]], i32 0
+; CHECK-NEXT:    [[SHUFFLE1:%.*]] = shufflevector <8 x i32*> [[TMP0]], <8 x i32*> poison, <8 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr i32, <8 x i32*> [[SHUFFLE1]], <8 x i32> <i32 1, i32 3, i32 5, i32 7, i32 9, i32 11, i32 13, i32 15>
 ; CHECK-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds i32, i32* [[S:%.*]], i32 0
-; CHECK-NEXT:    store i32 [[ADD]], i32* [[ARRAYIDX2]], align 4
-; CHECK-NEXT:    [[GEP3:%.*]] = getelementptr inbounds i32, i32* [[ADDR]], i32 2
-; CHECK-NEXT:    [[IDX3:%.*]] = load i32, i32* [[GEP3]], align 8
-; CHECK-NEXT:    [[ARRAYIDX4:%.*]] = getelementptr inbounds i32, i32* [[P]], i32 [[IDX3]]
-; CHECK-NEXT:    [[I2:%.*]] = load i32, i32* [[ARRAYIDX4]], align 4
-; CHECK-NEXT:    [[GEP4:%.*]] = getelementptr inbounds i32, i32* [[ADDR]], i32 3
-; CHECK-NEXT:    [[IDX4:%.*]] = load i32, i32* [[GEP4]], align 8
-; CHECK-NEXT:    [[ARRAYIDX6:%.*]] = getelementptr inbounds i32, i32* [[P]], i32 [[IDX4]]
-; CHECK-NEXT:    [[I3:%.*]] = load i32, i32* [[ARRAYIDX6]], align 4
-; CHECK-NEXT:    [[ADD7:%.*]] = add nsw i32 [[I3]], [[I2]]
-; CHECK-NEXT:    [[ARRAYIDX9:%.*]] = getelementptr inbounds i32, i32* [[S]], i32 1
-; CHECK-NEXT:    store i32 [[ADD7]], i32* [[ARRAYIDX9]], align 4
-; CHECK-NEXT:    [[GEP5:%.*]] = getelementptr inbounds i32, i32* [[ADDR]], i32 4
-; CHECK-NEXT:    [[IDX5:%.*]] = load i32, i32* [[GEP5]], align 8
-; CHECK-NEXT:    [[ARRAYIDX11:%.*]] = getelementptr inbounds i32, i32* [[P]], i32 [[IDX5]]
-; CHECK-NEXT:    [[I4:%.*]] = load i32, i32* [[ARRAYIDX11]], align 4
-; CHECK-NEXT:    [[GEP6:%.*]] = getelementptr inbounds i32, i32* [[ADDR]], i32 5
-; CHECK-NEXT:    [[IDX6:%.*]] = load i32, i32* [[GEP6]], align 8
-; CHECK-NEXT:    [[ARRAYIDX13:%.*]] = getelementptr inbounds i32, i32* [[P]], i32 [[IDX6]]
-; CHECK-NEXT:    [[I5:%.*]] = load i32, i32* [[ARRAYIDX13]], align 4
-; CHECK-NEXT:    [[ADD14:%.*]] = add nsw i32 [[I5]], [[I4]]
-; CHECK-NEXT:    [[ARRAYIDX16:%.*]] = getelementptr inbounds i32, i32* [[S]], i32 2
-; CHECK-NEXT:    store i32 [[ADD14]], i32* [[ARRAYIDX16]], align 4
-; CHECK-NEXT:    [[GEP7:%.*]] = getelementptr inbounds i32, i32* [[ADDR]], i32 6
-; CHECK-NEXT:    [[IDX7:%.*]] = load i32, i32* [[GEP7]], align 8
-; CHECK-NEXT:    [[ARRAYIDX18:%.*]] = getelementptr inbounds i32, i32* [[P]], i32 [[IDX7]]
-; CHECK-NEXT:    [[I6:%.*]] = load i32, i32* [[ARRAYIDX18]], align 4
-; CHECK-NEXT:    [[GEP8:%.*]] = getelementptr inbounds i32, i32* [[ADDR]], i32 7
-; CHECK-NEXT:    [[IDX8:%.*]] = load i32, i32* [[GEP8]], align 8
-; CHECK-NEXT:    [[ARRAYIDX20:%.*]] = getelementptr inbounds i32, i32* [[P]], i32 [[IDX8]]
-; CHECK-NEXT:    [[I7:%.*]] = load i32, i32* [[ARRAYIDX20]], align 4
-; CHECK-NEXT:    [[ADD21:%.*]] = add nsw i32 [[I7]], [[I6]]
-; CHECK-NEXT:    [[ARRAYIDX23:%.*]] = getelementptr inbounds i32, i32* [[S]], i32 3
-; CHECK-NEXT:    store i32 [[ADD21]], i32* [[ARRAYIDX23]], align 4
-; CHECK-NEXT:    [[GEP9:%.*]] = getelementptr inbounds i32, i32* [[ADDR]], i32 8
-; CHECK-NEXT:    [[IDX9:%.*]] = load i32, i32* [[GEP9]], align 8
-; CHECK-NEXT:    [[ARRAYIDX25:%.*]] = getelementptr inbounds i32, i32* [[P]], i32 [[IDX9]]
-; CHECK-NEXT:    [[I8:%.*]] = load i32, i32* [[ARRAYIDX25]], align 4
-; CHECK-NEXT:    [[GEP10:%.*]] = getelementptr inbounds i32, i32* [[ADDR]], i32 9
-; CHECK-NEXT:    [[IDX10:%.*]] = load i32, i32* [[GEP10]], align 8
-; CHECK-NEXT:    [[ARRAYIDX27:%.*]] = getelementptr inbounds i32, i32* [[P]], i32 [[IDX10]]
-; CHECK-NEXT:    [[I9:%.*]] = load i32, i32* [[ARRAYIDX27]], align 4
-; CHECK-NEXT:    [[ADD28:%.*]] = add nsw i32 [[I9]], [[I8]]
-; CHECK-NEXT:    [[ARRAYIDX30:%.*]] = getelementptr inbounds i32, i32* [[S]], i32 4
-; CHECK-NEXT:    store i32 [[ADD28]], i32* [[ARRAYIDX30]], align 4
-; CHECK-NEXT:    [[GEP11:%.*]] = getelementptr inbounds i32, i32* [[ADDR]], i32 10
-; CHECK-NEXT:    [[IDX11:%.*]] = load i32, i32* [[GEP11]], align 8
-; CHECK-NEXT:    [[ARRAYIDX32:%.*]] = getelementptr inbounds i32, i32* [[P]], i32 [[IDX11]]
-; CHECK-NEXT:    [[I10:%.*]] = load i32, i32* [[ARRAYIDX32]], align 4
-; CHECK-NEXT:    [[GEP12:%.*]] = getelementptr inbounds i32, i32* [[ADDR]], i32 11
-; CHECK-NEXT:    [[IDX12:%.*]] = load i32, i32* [[GEP12]], align 8
-; CHECK-NEXT:    [[ARRAYIDX34:%.*]] = getelementptr inbounds i32, i32* [[P]], i32 [[IDX12]]
-; CHECK-NEXT:    [[I11:%.*]] = load i32, i32* [[ARRAYIDX34]], align 4
-; CHECK-NEXT:    [[ADD35:%.*]] = add nsw i32 [[I11]], [[I10]]
-; CHECK-NEXT:    [[ARRAYIDX37:%.*]] = getelementptr inbounds i32, i32* [[S]], i32 5
-; CHECK-NEXT:    store i32 [[ADD35]], i32* [[ARRAYIDX37]], align 4
-; CHECK-NEXT:    [[GEP13:%.*]] = getelementptr inbounds i32, i32* [[ADDR]], i32 12
-; CHECK-NEXT:    [[IDX13:%.*]] = load i32, i32* [[GEP13]], align 8
-; CHECK-NEXT:    [[ARRAYIDX39:%.*]] = getelementptr inbounds i32, i32* [[P]], i32 [[IDX13]]
-; CHECK-NEXT:    [[I12:%.*]] = load i32, i32* [[ARRAYIDX39]], align 4
-; CHECK-NEXT:    [[GEP14:%.*]] = getelementptr inbounds i32, i32* [[ADDR]], i32 13
-; CHECK-NEXT:    [[IDX14:%.*]] = load i32, i32* [[GEP14]], align 8
-; CHECK-NEXT:    [[ARRAYIDX41:%.*]] = getelementptr inbounds i32, i32* [[P]], i32 [[IDX14]]
-; CHECK-NEXT:    [[I13:%.*]] = load i32, i32* [[ARRAYIDX41]], align 4
-; CHECK-NEXT:    [[ADD42:%.*]] = add nsw i32 [[I13]], [[I12]]
-; CHECK-NEXT:    [[ARRAYIDX44:%.*]] = getelementptr inbounds i32, i32* [[S]], i32 6
-; CHECK-NEXT:    store i32 [[ADD42]], i32* [[ARRAYIDX44]], align 4
-; CHECK-NEXT:    [[GEP15:%.*]] = getelementptr inbounds i32, i32* [[ADDR]], i32 14
-; CHECK-NEXT:    [[IDX15:%.*]] = load i32, i32* [[GEP15]], align 8
-; CHECK-NEXT:    [[ARRAYIDX46:%.*]] = getelementptr inbounds i32, i32* [[P]], i32 [[IDX15]]
-; CHECK-NEXT:    [[I14:%.*]] = load i32, i32* [[ARRAYIDX46]], align 4
-; CHECK-NEXT:    [[GEP16:%.*]] = getelementptr inbounds i32, i32* [[ADDR]], i32 15
-; CHECK-NEXT:    [[IDX16:%.*]] = load i32, i32* [[GEP16]], align 8
-; CHECK-NEXT:    [[ARRAYIDX48:%.*]] = getelementptr inbounds i32, i32* [[P]], i32 [[IDX16]]
-; CHECK-NEXT:    [[I15:%.*]] = load i32, i32* [[ARRAYIDX48]], align 4
-; CHECK-NEXT:    [[ADD49:%.*]] = add nsw i32 [[I15]], [[I14]]
-; CHECK-NEXT:    [[ARRAYIDX51:%.*]] = getelementptr inbounds i32, i32* [[S]], i32 7
-; CHECK-NEXT:    store i32 [[ADD49]], i32* [[ARRAYIDX51]], align 4
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i32, <8 x i32*> [[SHUFFLE1]], <8 x i32> <i32 0, i32 2, i32 4, i32 6, i32 8, i32 10, i32 12, i32 14>
+; CHECK-NEXT:    [[TMP3:%.*]] = call <8 x i32> @llvm.masked.gather.v8i32.v8p0i32(<8 x i32*> [[TMP2]], i32 8, <8 x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>, <8 x i32> undef)
+; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <8 x i32*> poison, i32* [[P:%.*]], i32 0
+; CHECK-NEXT:    [[SHUFFLE2:%.*]] = shufflevector <8 x i32*> [[TMP4]], <8 x i32*> poison, <8 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr i32, <8 x i32*> [[SHUFFLE2]], <8 x i32> [[TMP3]]
+; CHECK-NEXT:    [[TMP6:%.*]] = call <8 x i32> @llvm.masked.gather.v8i32.v8p0i32(<8 x i32*> [[TMP5]], i32 4, <8 x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>, <8 x i32> undef)
+; CHECK-NEXT:    [[TMP7:%.*]] = call <8 x i32> @llvm.masked.gather.v8i32.v8p0i32(<8 x i32*> [[TMP1]], i32 8, <8 x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>, <8 x i32> undef)
+; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr i32, <8 x i32*> [[SHUFFLE2]], <8 x i32> [[TMP7]]
+; CHECK-NEXT:    [[TMP9:%.*]] = call <8 x i32> @llvm.masked.gather.v8i32.v8p0i32(<8 x i32*> [[TMP8]], i32 4, <8 x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>, <8 x i32> undef)
+; CHECK-NEXT:    [[TMP10:%.*]] = add nsw <8 x i32> [[TMP9]], [[TMP6]]
+; CHECK-NEXT:    [[TMP11:%.*]] = bitcast i32* [[ARRAYIDX2]] to <8 x i32>*
+; CHECK-NEXT:    store <8 x i32> [[TMP10]], <8 x i32>* [[TMP11]], align 4
 ; CHECK-NEXT:    ret void
 ;
 entry:
