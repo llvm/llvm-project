@@ -47,12 +47,6 @@ class X : Base {
     if (i == 0)
       // CHECK: StringLiteral: foo(
       return "foo";
-    // CHECK: StringLiteral: wide(
-    (void)L"wide";
-    // CHECK: StringLiteral: utf-16(
-    (void)u"utf-16";
-    // CHECK: StringLiteral: utf-32(
-    (void)U"utf-32";
     // CHECK-NOT: ImplicitCastExpr
     return 0;
   }
