@@ -112,6 +112,8 @@ define void @reverse() {
 ; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %v8f32 = shufflevector <8 x float> undef, <8 x float> undef, <8 x i32> <i32 7, i32 6, i32 5, i32 4, i32 3, i32 2, i32 1, i32 0>
 ; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %v2f64 = shufflevector <2 x double> undef, <2 x double> undef, <2 x i32> <i32 1, i32 0>
 ; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %v4f64 = shufflevector <4 x double> undef, <4 x double> undef, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
+; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 48 for instruction: %v3i24 = shufflevector <3 x i24> undef, <3 x i24> undef, <3 x i32> <i32 2, i32 1, i32 0>
+; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 192 for instruction: %v3i124 = shufflevector <3 x i124> undef, <3 x i124> undef, <3 x i32> <i32 2, i32 1, i32 0>
 ; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
 ; CHECK-NEON-LABEL: 'reverse'
@@ -137,6 +139,8 @@ define void @reverse() {
 ; CHECK-NEON-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %v8f32 = shufflevector <8 x float> undef, <8 x float> undef, <8 x i32> <i32 7, i32 6, i32 5, i32 4, i32 3, i32 2, i32 1, i32 0>
 ; CHECK-NEON-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v2f64 = shufflevector <2 x double> undef, <2 x double> undef, <2 x i32> <i32 1, i32 0>
 ; CHECK-NEON-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v4f64 = shufflevector <4 x double> undef, <4 x double> undef, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
+; CHECK-NEON-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v3i24 = shufflevector <3 x i24> undef, <3 x i24> undef, <3 x i32> <i32 2, i32 1, i32 0>
+; CHECK-NEON-NEXT:  Cost Model: Found an estimated cost of 18 for instruction: %v3i124 = shufflevector <3 x i124> undef, <3 x i124> undef, <3 x i32> <i32 2, i32 1, i32 0>
 ; CHECK-NEON-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
   %v2i8 = shufflevector <2 x i8> undef, <2 x i8> undef, <2 x i32> <i32 1, i32 0>
@@ -168,6 +172,8 @@ define void @reverse() {
   %v2f64 = shufflevector <2 x double> undef, <2 x double> undef, <2 x i32> <i32 1, i32 0>
   %v4f64 = shufflevector <4 x double> undef, <4 x double> undef, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
 
+  %v3i24 = shufflevector <3 x i24> undef, <3 x i24> undef, <3 x i32> <i32 2, i32 1, i32 0>
+  %v3i124 = shufflevector <3 x i124> undef, <3 x i124> undef, <3 x i32> <i32 2, i32 1, i32 0>
   ret void
 }
 
