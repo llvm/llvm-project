@@ -1223,7 +1223,7 @@ ItaniumRecordLayoutBuilder::LayoutBase(const BaseSubobjectInfo *Base) {
     // Per GCC's documentation, it only applies to non-static data members.
     return (Packed && ((Context.getLangOpts().getClangABICompat() <=
                         LangOptions::ClangABI::Ver6) ||
-                       Context.getTargetInfo().getTriple().isPS4() ||
+                       Context.getTargetInfo().getTriple().isPS() ||
                        Context.getTargetInfo().getTriple().isOSAIX()))
                ? CharUnits::One()
                : UnpackedAlign;
@@ -1891,7 +1891,7 @@ void ItaniumRecordLayoutBuilder::LayoutField(const FieldDecl *D,
   bool FieldPacked = (Packed && (!FieldClass || FieldClass->isPOD() ||
                                  Context.getLangOpts().getClangABICompat() <=
                                      LangOptions::ClangABI::Ver14 ||
-                                 Target.isPS4() || Target.isOSDarwin())) ||
+                                 Target.isPS() || Target.isOSDarwin())) ||
                      D->hasAttr<PackedAttr>();
 
   AlignRequirementKind AlignRequirement = AlignRequirementKind::None;
