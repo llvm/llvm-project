@@ -1106,6 +1106,14 @@ private:
         tripCount =
             builder->create<mlir::arith::DivSIOp>(loc, diff2, info.stepValue);
       }
+      if (forceLoopToExecuteOnce) { // minimum tripCount is 1
+        mlir::Value one =
+            builder->createIntegerConstant(loc, tripCount.getType(), 1);
+        auto cond = builder->create<mlir::arith::CmpIOp>(
+            loc, mlir::arith::CmpIPredicate::slt, tripCount, one);
+        tripCount =
+            builder->create<mlir::arith::SelectOp>(loc, cond, one, tripCount);
+      }
       info.tripVariable = builder->createTemporary(loc, tripCount.getType());
       builder->create<fir::StoreOp>(loc, tripCount, info.tripVariable);
       builder->create<fir::StoreOp>(loc, lowerValue, info.loopVariable);
