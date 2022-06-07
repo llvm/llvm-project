@@ -175,7 +175,7 @@ class ReturnValueTestCase(TestBase):
             "3.6"],
         archs=["i386"])
     @expectedFailureAll(compiler=["gcc"], archs=["x86_64", "i386"])
-    @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr24778")
+    @expectedFailureAll(oslist=["windows"], archs=["i[3-6]86", "x86_64"], bugnumber="llvm.org/pr24778")
     def test_vector_values(self):
         self.build()
         exe = self.getBuildArtifact("a.out")
