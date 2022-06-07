@@ -2073,13 +2073,8 @@ struct XArrayCoorOpConversion
     const bool isSliced = !coor.slice().empty();
     const bool baseIsBoxed = coor.memref().getType().isa<fir::BoxType>();
 
-    auto indexOps = coor.indices().begin();
-    auto shapeOps = coor.shape().begin();
-    auto shiftOps = coor.shift().begin();
-    auto sliceOps = coor.slice().begin();
     // For each dimension of the array, generate the offset calculation.
-    for (unsigned i = 0; i < rank;
-         ++i, ++indexOps, ++shapeOps, ++shiftOps, sliceOps += 3) {
+    for (unsigned i = 0; i < rank; ++i) {
       mlir::Value index =
           integerCast(loc, rewriter, idxTy, operands[coor.indicesOffset() + i]);
       mlir::Value lb = isShifted ? integerCast(loc, rewriter, idxTy,
@@ -2090,10 +2085,11 @@ struct XArrayCoorOpConversion
       // Compute zero based index in dimension i of the element, applying
       // potential triplets and lower bounds.
       if (isSliced) {
-        mlir::Value ub = *(sliceOps + 1);
+        mlir::Value ub = operands[coor.sliceOffset() + i + 1];
         normalSlice = !mlir::isa_and_nonnull<fir::UndefOp>(ub.getDefiningOp());
         if (normalSlice)
-          step = integerCast(loc, rewriter, idxTy, *(sliceOps + 2));
+          step = integerCast(loc, rewriter, idxTy,
+                             operands[coor.sliceOffset() + i + 2]);
       }
       auto idx = rewriter.create<mlir::LLVM::SubOp>(loc, idxTy, index, lb);
       mlir::Value diff =
