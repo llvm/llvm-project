@@ -104,6 +104,10 @@ PrimaryType mlir::sparse_tensor::primaryTypeEncoding(Type elemTp) {
     return PrimaryType::kF64;
   if (elemTp.isF32())
     return PrimaryType::kF32;
+  if (elemTp.isF16())
+    return PrimaryType::kF16;
+  if (elemTp.isBF16())
+    return PrimaryType::kBF16;
   if (elemTp.isInteger(64))
     return PrimaryType::kI64;
   if (elemTp.isInteger(32))
