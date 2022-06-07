@@ -214,7 +214,7 @@ endif
 
 DEBUG_INFO_FLAG ?= -g
 
-CFLAGS ?= $(DEBUG_INFO_FLAG) -O0 -fno-builtin
+CFLAGS ?= $(DEBUG_INFO_FLAG) -O0
 
 ifeq "$(OS)" "Darwin"
 	ifneq "$(SDKROOT)" ""
