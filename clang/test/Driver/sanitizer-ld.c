@@ -15,6 +15,7 @@
 // CHECK-ASAN-LINUX: "-lpthread"
 // CHECK-ASAN-LINUX: "-lrt"
 // CHECK-ASAN-LINUX: "-ldl"
+// CHECK-ASAN-LINUX: "-lresolv"
 
 // RUN: %clang -fsanitize=address -fno-sanitize-link-runtime -### %s 2>&1 \
 // RUN:     --target=x86_64-unknown-linux -fuse-ld=ld \
@@ -69,6 +70,7 @@
 // CHECK-SHARED-ASAN-LINUX-NOT: "-lpthread"
 // CHECK-SHARED-ASAN-LINUX-NOT: "-lrt"
 // CHECK-SHARED-ASAN-LINUX-NOT: "-ldl"
+// CHECK-SHARED-ASAN-LINUX-NOT: "-lresolv"
 // CHECK-SHARED-ASAN-LINUX-NOT: "--export-dynamic"
 // CHECK-SHARED-ASAN-LINUX-NOT: "--dynamic-list"
 
@@ -86,6 +88,7 @@
 // CHECK-DSO-SHARED-ASAN-LINUX-NOT: "-lpthread"
 // CHECK-DSO-SHARED-ASAN-LINUX-NOT: "-lrt"
 // CHECK-DSO-SHARED-ASAN-LINUX-NOT: "-ldl"
+// CHECK-DSO-SHARED-ASAN-LINUX-NOT: "-lresolv"
 // CHECK-DSO-SHARED-ASAN-LINUX-NOT: "--export-dynamic"
 // CHECK-DSO-SHARED-ASAN-LINUX-NOT: "--dynamic-list"
 
@@ -104,6 +107,7 @@
 // CHECK-ASAN-FREEBSD: "--export-dynamic"
 // CHECK-ASAN-FREEBSD: "-lpthread"
 // CHECK-ASAN-FREEBSD: "-lrt"
+// CHECK-ASAN-FREEBSD: "-lresolv"
 
 // RUN: %clang -### %s 2>&1 \
 // RUN:     --target=i386-unknown-freebsd -fuse-ld=ld -fsanitize=address \
@@ -130,6 +134,7 @@
 // CHECK-ASAN-LINUX-CXX: "-lpthread"
 // CHECK-ASAN-LINUX-CXX: "-lrt"
 // CHECK-ASAN-LINUX-CXX: "-ldl"
+// CHECK-ASAN-LINUX-CXX: "-lresolv"
 
 // RUN: %clang -### %s -o /dev/null -fsanitize=address \
 // RUN:     --target=i386-unknown-linux -fuse-ld=ld -stdlib=platform \
@@ -169,8 +174,10 @@
 // CHECK-ASAN-ANDROID: "-pie"
 // CHECK-ASAN-ANDROID-NOT: "-lc"
 // CHECK-ASAN-ANDROID-NOT: "-lpthread"
+// CHECK-ASAN-ANDROID-NOT: "-lresolv"
 // CHECK-ASAN-ANDROID: libclang_rt.asan-arm-android.so"
 // CHECK-ASAN-ANDROID-NOT: "-lpthread"
+// CHECK-ASAN-ANDROID-NOT: "-lresolv"
 
 // RUN: %clang -### %s 2>&1 \
 // RUN:     --target=arm-linux-androideabi -fuse-ld=ld -fsanitize=address \
@@ -182,6 +189,7 @@
 // CHECK-ASAN-ANDROID-STATICLIBASAN: libclang_rt.asan-arm-android.a"
 // CHECK-ASAN-ANDROID-STATICLIBASAN-NOT: "-lpthread"
 // CHECK-ASAN-ANDROID-STATICLIBASAN-NOT: "-lrt"
+// CHECK-ASAN-ANDROID-STATICLIBASAN-NOT: "-lresolv"
 
 // RUN: %clang -### %s 2>&1 \
 // RUN:     --target=arm-linux-androideabi -fuse-ld=ld -fsanitize=undefined \
@@ -192,8 +200,10 @@
 // CHECK-UBSAN-ANDROID: "-pie"
 // CHECK-UBSAN-ANDROID-NOT: "-lc"
 // CHECK-UBSAN-ANDROID-NOT: "-lpthread"
+// CHECK-UBSAN-ANDROID-NOT: "-lresolv"
 // CHECK-UBSAN-ANDROID: libclang_rt.ubsan_standalone-arm-android.so"
 // CHECK-UBSAN-ANDROID-NOT: "-lpthread"
+// CHECK-UBSAN-ANDROID-NOT: "-lresolv"
 
 // RUN: %clang -### %s 2>&1 \
 // RUN:     --target=arm-linux-androideabi -fuse-ld=ld -fsanitize=undefined \
@@ -205,6 +215,7 @@
 // CHECK-UBSAN-ANDROID-STATICLIBASAN: libclang_rt.ubsan_standalone-arm-android.a"
 // CHECK-UBSAN-ANDROID-STATICLIBASAN-NOT: "-lpthread"
 // CHECK-UBSAN-ANDROID-STATICLIBASAN-NOT: "-lrt"
+// CHECK-UBSAN-ANDROID-STATICLIBASAN-NOT: "-lresolv"
 
 //
 // RUN: %clang -### %s 2>&1 \
@@ -216,8 +227,10 @@
 // CHECK-ASAN-ANDROID-X86: "-pie"
 // CHECK-ASAN-ANDROID-X86-NOT: "-lc"
 // CHECK-ASAN-ANDROID-X86-NOT: "-lpthread"
+// CHECK-ASAN-ANDROID-X86-NOT: "-lresolv"
 // CHECK-ASAN-ANDROID-X86: libclang_rt.asan-i686-android.so"
 // CHECK-ASAN-ANDROID-X86-NOT: "-lpthread"
+// CHECK-ASAN-ANDROID-X86-NOT: "-lresolv"
 //
 // RUN: %clang -### %s 2>&1 \
 // RUN:     --target=arm-linux-androideabi -fsanitize=address \
@@ -237,6 +250,7 @@
 // CHECK-ASAN-ANDROID-SHARED-NOT: "-lc"
 // CHECK-ASAN-ANDROID-SHARED: libclang_rt.asan-arm-android.so"
 // CHECK-ASAN-ANDROID-SHARED-NOT: "-lpthread"
+// CHECK-ASAN-ANDROID-SHARED-NOT: "-lresolv"
 
 // RUN: %clang -### %s 2>&1 \
 // RUN:     --target=sparcel-myriad-rtems-elf -fuse-ld=ld -fsanitize=address \
@@ -265,6 +279,7 @@
 // CHECK-TSAN-LINUX-CXX: "-lpthread"
 // CHECK-TSAN-LINUX-CXX: "-lrt"
 // CHECK-TSAN-LINUX-CXX: "-ldl"
+// CHECK-TSAN-LINUX-CXX: "-lresolv"
 
 // RUN: %clang -fsanitize=thread -fno-sanitize-link-runtime -### %s 2>&1 \
 // RUN:     --target=x86_64-unknown-linux -fuse-ld=ld \
@@ -292,6 +307,7 @@
 // CHECK-MSAN-LINUX-CXX: "-lpthread"
 // CHECK-MSAN-LINUX-CXX: "-lrt"
 // CHECK-MSAN-LINUX-CXX: "-ldl"
+// CHECK-MSAN-LINUX-CXX: "-lresolv"
 
 // RUN: %clang -fsanitize=memory -fno-sanitize-link-runtime -### %s 2>&1 \
 // RUN:     --target=x86_64-unknown-linux -fuse-ld=ld \
@@ -328,6 +344,7 @@
 // CHECK-UBSAN-LINUX-NOT: libclang_rt.ubsan_standalone_cxx
 // CHECK-UBSAN-LINUX-NOT: "-lstdc++"
 // CHECK-UBSAN-LINUX: "-lpthread"
+// CHECK-UBSAN-LINUX: "-lresolv"
 
 // RUN: %clang -fsanitize=undefined -fno-sanitize-link-runtime -### %s 2>&1 \
 // RUN:     --target=x86_64-unknown-linux -fuse-ld=ld \
@@ -384,6 +401,7 @@
 // CHECK-UBSAN-LINUX-CXX: "-lstdc++"
 // CHECK-UBSAN-LINUX-CXX-NOT: libclang_rt.asan
 // CHECK-UBSAN-LINUX-CXX: "-lpthread"
+// CHECK-UBSAN-LINUX-CXX: "-lresolv"
 
 // RUN: %clang -fsanitize=undefined -fsanitize-minimal-runtime -### %s 2>&1 \
 // RUN:     --target=i386-unknown-linux -fuse-ld=ld \
@@ -393,6 +411,7 @@
 // CHECK-UBSAN-MINIMAL-LINUX: "{{.*}}ld{{(.exe)?}}"
 // CHECK-UBSAN-MINIMAL-LINUX: "--whole-archive" "{{.*}}libclang_rt.ubsan_minimal-i386.a" "--no-whole-archive"
 // CHECK-UBSAN-MINIMAL-LINUX: "-lpthread"
+// CHECK-UBSAN-MINIMAL-LINUX: "-lresolv"
 
 // RUN: %clang -fsanitize=undefined -fsanitize-minimal-runtime -### %s 2>&1 \
 // RUN:     --target=x86_64-apple-darwin -fuse-ld=ld \
@@ -418,6 +437,7 @@
 // CHECK-ASAN-UBSAN-LINUX-NOT: libclang_rt.ubsan
 // CHECK-ASAN-UBSAN-LINUX-NOT: "-lstdc++"
 // CHECK-ASAN-UBSAN-LINUX: "-lpthread"
+// CHECK-ASAN-UBSAN-LINUX: "-lresolv"
 
 // RUN: %clangxx -fsanitize=address,undefined -### %s 2>&1 \
 // RUN:     --target=i386-unknown-linux -fuse-ld=ld -stdlib=platform \
@@ -430,6 +450,7 @@
 // CHECK-ASAN-UBSAN-LINUX-CXX-NOT: libclang_rt.ubsan
 // CHECK-ASAN-UBSAN-LINUX-CXX: "-lstdc++"
 // CHECK-ASAN-UBSAN-LINUX-CXX: "-lpthread"
+// CHECK-ASAN-UBSAN-LINUX-CXX: "-lresolv"
 
 // RUN: %clangxx -fsanitize=memory,undefined -### %s 2>&1 \
 // RUN:     --target=x86_64-unknown-linux -fuse-ld=ld \
@@ -472,6 +493,7 @@
 // CHECK-LSAN-LINUX: libclang_rt.lsan-x86_64.a"
 // CHECK-LSAN-LINUX: "-lpthread"
 // CHECK-LSAN-LINUX: "-ldl"
+// CHECK-LSAN-LINUX: "-lresolv"
 
 // RUN: %clang -fsanitize=leak -fno-sanitize-link-runtime -### %s 2>&1 \
 // RUN:     --target=x86_64-unknown-linux -fuse-ld=ld \
@@ -494,6 +516,7 @@
 // CHECK-LSAN-COV-LINUX-NOT: libclang_rt.ubsan
 // CHECK-LSAN-COV-LINUX: "-lpthread"
 // CHECK-LSAN-COV-LINUX: "-ldl"
+// CHECK-LSAN-COV-LINUX: "-lresolv"
 
 // RUN: %clang -fsanitize=leak,address -### %s 2>&1 \
 // RUN:     --target=x86_64-unknown-linux -fuse-ld=ld \
@@ -515,6 +538,7 @@
 // CHECK-ASAN-COV-LINUX-NOT: libclang_rt.ubsan
 // CHECK-ASAN-COV-LINUX-NOT: "-lstdc++"
 // CHECK-ASAN-COV-LINUX: "-lpthread"
+// CHECK-ASAN-COV-LINUX: "-lresolv"
 
 // RUN: %clang -fsanitize=memory -fsanitize-coverage=func -### %s 2>&1 \
 // RUN:     --target=x86_64-unknown-linux -fuse-ld=ld \
@@ -526,6 +550,7 @@
 // CHECK-MSAN-COV-LINUX-NOT: libclang_rt.ubsan
 // CHECK-MSAN-COV-LINUX-NOT: "-lstdc++"
 // CHECK-MSAN-COV-LINUX: "-lpthread"
+// CHECK-MSAN-COV-LINUX: "-lresolv"
 
 // RUN: %clang -fsanitize=dataflow -fsanitize-coverage=func -### %s 2>&1 \
 // RUN:     --target=x86_64-unknown-linux -fuse-ld=ld \
@@ -537,6 +562,7 @@
 // CHECK-DFSAN-COV-LINUX-NOT: libclang_rt.ubsan
 // CHECK-DFSAN-COV-LINUX-NOT: "-lstdc++"
 // CHECK-DFSAN-COV-LINUX: "-lpthread"
+// CHECK-DFSAN-COV-LINUX: "-lresolv"
 
 // RUN: %clang -fsanitize=undefined -fsanitize-coverage=func -### %s 2>&1 \
 // RUN:     --target=x86_64-unknown-linux -fuse-ld=ld \
@@ -547,6 +573,7 @@
 // CHECK-UBSAN-COV-LINUX: "--whole-archive" "{{.*}}libclang_rt.ubsan_standalone-x86_64.a" "--no-whole-archive"
 // CHECK-UBSAN-COV-LINUX-NOT: "-lstdc++"
 // CHECK-UBSAN-COV-LINUX: "-lpthread"
+// CHECK-UBSAN-COV-LINUX: "-lresolv"
 
 // RUN: %clang -fsanitize-coverage=func -### %s 2>&1 \
 // RUN:     --target=x86_64-unknown-linux -fuse-ld=ld \
@@ -557,6 +584,7 @@
 // CHECK-COV-LINUX: "--whole-archive" "{{.*}}libclang_rt.ubsan_standalone-x86_64.a" "--no-whole-archive"
 // CHECK-COV-LINUX-NOT: "-lstdc++"
 // CHECK-COV-LINUX: "-lpthread"
+// CHECK-COV-LINUX: "-lresolv"
 
 // CFI by itself does not link runtime libraries.
 // RUN: %clang -fsanitize=cfi -### %s 2>&1 \
@@ -651,6 +679,7 @@
 // CHECK-SAFESTACK-LINUX: "-u" "__safestack_init"
 // CHECK-SAFESTACK-LINUX: "-lpthread"
 // CHECK-SAFESTACK-LINUX: "-ldl"
+// CHECK-SAFESTACK-LINUX: "-lresolv"
 
 // RUN: %clang -fsanitize=shadow-call-stack -### %s 2>&1 \
 // RUN:     --target=x86_64-unknown-linux -fuse-ld=ld \
@@ -828,6 +857,7 @@
 // CHECK-SCUDO-LINUX-NOT: "-lstdc++"
 // CHECK-SCUDO-LINUX: "-lpthread"
 // CHECK-SCUDO-LINUX: "-ldl"
+// CHECK-SCUDO-LINUX: "-lresolv"
 
 // RUN: %clang -fsanitize=scudo -fsanitize-minimal-runtime -### %s 2>&1 \
 // RUN:     --target=i386-unknown-linux -fuse-ld=ld \
@@ -838,6 +868,7 @@
 // CHECK-SCUDO-MINIMAL-LINUX: "-pie"
 // CHECK-SCUDO-MINIMAL-LINUX: "--whole-archive" "{{.*}}libclang_rt.scudo_minimal-i386.a" "--no-whole-archive"
 // CHECK-SCUDO-MINIMAL-LINUX: "-lpthread"
+// CHECK-SCUDO-MINIMAL-LINUX: "-lresolv"
 
 // RUN: %clang -### %s -o %t.so -shared 2>&1 \
 // RUN:     --target=i386-unknown-linux -fuse-ld=ld -fsanitize=scudo -shared-libsan \
@@ -852,6 +883,7 @@
 // CHECK-SCUDO-SHARED-LINUX-NOT: "-lpthread"
 // CHECK-SCUDO-SHARED-LINUX-NOT: "-lrt"
 // CHECK-SCUDO-SHARED-LINUX-NOT: "-ldl"
+// CHECK-SCUDO-SHARED-LINUX-NOT: "-lresolv"
 // CHECK-SCUDO-SHARED-LINUX-NOT: "--export-dynamic"
 // CHECK-SCUDO-SHARED-LINUX-NOT: "--dynamic-list"
 
@@ -864,8 +896,10 @@
 // CHECK-SCUDO-ANDROID-NOT: "-lc"
 // CHECK-SCUDO-ANDROID: "-pie"
 // CHECK-SCUDO-ANDROID-NOT: "-lpthread"
+// CHECK-SCUDO-ANDROID-NOT: "-lresolv"
 // CHECK-SCUDO-ANDROID: libclang_rt.scudo-arm-android.so"
 // CHECK-SCUDO-ANDROID-NOT: "-lpthread"
+// CHECK-SCUDO-ANDROID-NOT: "-lresolv"
 
 // RUN: %clang -### %s 2>&1 \
 // RUN:     --target=arm-linux-androideabi -fuse-ld=ld -fsanitize=scudo \
@@ -878,6 +912,7 @@
 // CHECK-SCUDO-ANDROID-STATIC-NOT: "-lstdc++"
 // CHECK-SCUDO-ANDROID-STATIC-NOT: "-lpthread"
 // CHECK-SCUDO-ANDROID-STATIC-NOT: "-lrt"
+// CHECK-SCUDO-ANDROID-STATIC-NOT: "-lresolv"
 
 // RUN: %clang -### %s 2>&1 \
 // RUN:     --target=x86_64-unknown-linux -fuse-ld=ld -fsanitize=hwaddress \
@@ -895,6 +930,7 @@
 // CHECK-HWASAN-X86-64-LINUX: "-lpthread"
 // CHECK-HWASAN-X86-64-LINUX: "-lrt"
 // CHECK-HWASAN-X86-64-LINUX: "-ldl"
+// CHECK-HWASAN-X86-64-LINUX: "-lresolv"
 
 // RUN: %clang -### %s 2>&1 \
 // RUN:     --target=x86_64-unknown-linux -fuse-ld=ld -fsanitize=hwaddress \
@@ -909,6 +945,7 @@
 // CHECK-SHARED-HWASAN-X86-64-LINUX-NOT: "-lpthread"
 // CHECK-SHARED-HWASAN-X86-64-LINUX-NOT: "-lrt"
 // CHECK-SHARED-HWASAN-X86-64-LINUX-NOT: "-ldl"
+// CHECK-SHARED-HWASAN-X86-64-LINUX-NOT: "-lresolv"
 // CHECK-SHARED-HWASAN-X86-64-LINUX-NOT: "--export-dynamic"
 // CHECK-SHARED-HWASAN-X86-64-LINUX-NOT: "--dynamic-list"
 
@@ -925,6 +962,7 @@
 // CHECK-DSO-SHARED-HWASAN-X86-64-LINUX-NOT: "-lpthread"
 // CHECK-DSO-SHARED-HWASAN-X86-64-LINUX-NOT: "-lrt"
 // CHECK-DSO-SHARED-HWASAN-X86-64-LINUX-NOT: "-ldl"
+// CHECK-DSO-SHARED-HWASAN-X86-64-LINUX-NOT: "-lresolv"
 // CHECK-DSO-SHARED-HWASAN-X86-64-LINUX-NOT: "--export-dynamic"
 // CHECK-DSO-SHARED-HWASAN-X86-64-LINUX-NOT: "--dynamic-list"
 
@@ -944,6 +982,7 @@
 // CHECK-HWASAN-AARCH64-LINUX: "-lpthread"
 // CHECK-HWASAN-AARCH64-LINUX: "-lrt"
 // CHECK-HWASAN-AARCH64-LINUX: "-ldl"
+// CHECK-HWASAN-AARCH64-LINUX: "-lresolv"
 
 // RUN: %clang -### %s 2>&1 \
 // RUN:     --target=aarch64-unknown-linux -fuse-ld=ld -fsanitize=hwaddress \
@@ -959,6 +998,7 @@
 // CHECK-SHARED-HWASAN-AARCH64-LINUX-NOT: "-lpthread"
 // CHECK-SHARED-HWASAN-AARCH64-LINUX-NOT: "-lrt"
 // CHECK-SHARED-HWASAN-AARCH64-LINUX-NOT: "-ldl"
+// CHECK-SHARED-HWASAN-AARCH64-LINUX-NOT: "-lresolv"
 // CHECK-SHARED-HWASAN-AARCH64-LINUX-NOT: "--export-dynamic"
 // CHECK-SHARED-HWASAN-AARCH64-LINUX-NOT: "--dynamic-list"
 
@@ -975,5 +1015,6 @@
 // CHECK-DSO-SHARED-HWASAN-AARCH64-LINUX-NOT: "-lpthread"
 // CHECK-DSO-SHARED-HWASAN-AARCH64-LINUX-NOT: "-lrt"
 // CHECK-DSO-SHARED-HWASAN-AARCH64-LINUX-NOT: "-ldl"
+// CHECK-DSO-SHARED-HWASAN-AARCH64-LINUX-NOT: "-lresolv"
 // CHECK-DSO-SHARED-HWASAN-AARCH64-LINUX-NOT: "--export-dynamic"
 // CHECK-DSO-SHARED-HWASAN-AARCH64-LINUX-NOT: "--dynamic-list"
