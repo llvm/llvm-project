@@ -187,7 +187,7 @@ set(LIBCXX_LIBRARY_VERSION "${LIBCXX_ABI_VERSION}.0" CACHE STRING
    this also controls the linker's 'current_version' property.")
 set(LIBCXX_ABI_NAMESPACE "__${LIBCXX_ABI_VERSION}" CACHE STRING "The inline ABI namespace used by libc++. It defaults to __n where `n` is the current ABI version.")
 if (NOT LIBCXX_ABI_NAMESPACE MATCHES "__.*")
-  message(FATAL_ERROR "LIBCXX_ABI_NAMESPACE must be a reserved identifier.")
+  message(FATAL_ERROR "LIBCXX_ABI_NAMESPACE must be a reserved identifier, is '${LIBCXX_ABI_NAMESPACE}'.")
 endif()
 option(LIBCXX_ABI_FORCE_ITANIUM "Ignore auto-detection and force use of the Itanium ABI.")
 option(LIBCXX_ABI_FORCE_MICROSOFT "Ignore auto-detection and force use of the Microsoft ABI.")
