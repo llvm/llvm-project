@@ -1,0 +1,42 @@
+# REQUIRES: riscv-registered-target
+# RUN: llvm-reduce -simplify-mir -mtriple=riscv64-- --test FileCheck --test-arg --check-prefix=CHECK-INTERESTINGNESS --test-arg %s --test-arg --input-file %s -o %t 2> %t.log
+# RUN: FileCheck --check-prefix=RESULT %s < %t
+
+# CHECK-INTERESTINGNESS: ADDW
+
+# RESULT: name: func
+# RESULT: stack:
+# RESULT-NEXT: - { id: 0, offset: 16, size: 16, alignment: 8 }
+
+# RESULT: machineFunctionInfo:
+# RESULT-NEXT: varArgsFrameIndex: 4
+# RESULT-NEXT: varArgsSaveSize: 12
+
+# RESULT: $x10 = ADDW %stack.0, renamable $x10
+--- |
+  define i32 @func(i32 %arg) {
+    ret i32 undef
+  }
+
+...
+
+# Note the frame index value changes during printing/parsing, not the
+# clone.
+---
+name: func
+tracksRegLiveness: true
+machineFunctionInfo:
+  varArgsFrameIndex: 4
+  varArgsSaveSize: 12
+stack:
+  - { id: 4, offset: 16, size: 16, alignment: 8 }
+
+body:             |
+  bb.0:
+    liveins: $x10
+
+    renamable $x10 = ADDW %stack.4, renamable $x10
+    renamable $x10 = ADDIW killed renamable $x10, -4
+    PseudoRET implicit $x10
+
+...
