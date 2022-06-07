@@ -30,7 +30,7 @@ Parts:
       MinorVersion:    5
       ShaderKind:      5
       Size:            8
-      DXIMMajorVersion: 1
+      DXILMajorVersion: 1
       DXILMinorVersion: 5
       DXILSize:        4
       DXIL:            [ 0x42, 0x43, 0xC0, 0xDE, ]
@@ -46,7 +46,7 @@ Parts:
 #CHECK-NEXT:       MinorVersion:    5
 #CHECK-NEXT:       ShaderKind:      5
 #CHECK-NEXT:       Size:            8
-#CHECK-NEXT:       DXIMMajorVersion: 1
+#CHECK-NEXT:       DXILMajorVersion: 1
 #CHECK-NEXT:       DXILMinorVersion: 5
 #CHECK-NEXT:       DXILSize:        4
 #CHECK-NEXT:       DXIL:            [ 0x42, 0x43, 0xC0, 0xDE
