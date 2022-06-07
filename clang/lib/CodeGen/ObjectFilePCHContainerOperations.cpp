@@ -96,10 +96,6 @@ class PCHContainerGenerator : public ASTConsumer {
     }
 
     bool VisitFunctionDecl(FunctionDecl *D) {
-      // Skip deduction guides.
-      if (isa<CXXDeductionGuideDecl>(D))
-        return true;
-
       if (isa<CXXMethodDecl>(D))
         // This is not yet supported. Constructing the `this' argument
         // mandates a CodeGenFunction.
