@@ -322,7 +322,7 @@ private:
       DataRef &&, const Symbol &, const semantics::Scope &);
   MaybeExpr CompleteSubscripts(ArrayRef &&);
   MaybeExpr ApplySubscripts(DataRef &&, std::vector<Subscript> &&);
-  MaybeExpr TopLevelChecks(DataRef &&);
+  bool CheckRanks(const DataRef &); // Return false if error exists.
   std::optional<Expr<SubscriptInteger>> GetSubstringBound(
       const std::optional<parser::ScalarIntExpr> &);
   MaybeExpr AnalyzeDefinedOp(const parser::Name &, ActualArguments &&);

@@ -249,20 +249,6 @@ MaybeExpr ExpressionAnalyzer::CompleteSubscripts(ArrayRef &&ref) {
           symbolRank, symbol.name(), subscripts);
     }
     return std::nullopt;
-  } else if (Component * component{ref.base().UnwrapComponent()}) {
-    int baseRank{component->base().Rank()};
-    if (baseRank > 0) {
-      int subscriptRank{0};
-      for (const auto &expr : ref.subscript()) {
-        subscriptRank += expr.Rank();
-      }
-      if (subscriptRank > 0) { // C919a
-        Say("Subscripts of component '%s' of rank-%d derived type "
-            "array have rank %d but must all be scalar"_err_en_US,
-            symbol.name(), baseRank, subscriptRank);
-        return std::nullopt;
-      }
-    }
   } else if (const auto *object{
                  symbol.detailsIf<semantics::ObjectEntityDetails>()}) {
     // C928 & C1002
@@ -306,21 +292,47 @@ MaybeExpr ExpressionAnalyzer::ApplySubscripts(
       std::move(dataRef.u));
 }
 
-// Top-level checks for data references.
-MaybeExpr ExpressionAnalyzer::TopLevelChecks(DataRef &&dataRef) {
-  if (Component * component{std::get_if<Component>(&dataRef.u)}) {
-    const Symbol &symbol{component->GetLastSymbol()};
-    int componentRank{symbol.Rank()};
-    if (componentRank > 0) {
-      int baseRank{component->base().Rank()};
-      if (baseRank > 0) { // C919a
-        Say("Reference to whole rank-%d component '%%%s' of "
-            "rank-%d array of derived type is not allowed"_err_en_US,
-            componentRank, symbol.name(), baseRank);
-      }
-    }
-  }
-  return Designate(std::move(dataRef));
+// C919a - only one part-ref of a data-ref may have rank > 0
+bool ExpressionAnalyzer::CheckRanks(const DataRef &dataRef) {
+  return common::visit(
+      common::visitors{
+          [this](const Component &component) {
+            const Symbol &symbol{component.GetLastSymbol()};
+            if (int componentRank{symbol.Rank()}; componentRank > 0) {
+              if (int baseRank{component.base().Rank()}; baseRank > 0) {
+                Say("Reference to whole rank-%d component '%s' of rank-%d array of derived type is not allowed"_err_en_US,
+                    componentRank, symbol.name(), baseRank);
+                return false;
+              }
+            } else {
+              return CheckRanks(component.base());
+            }
+            return true;
+          },
+          [this](const ArrayRef &arrayRef) {
+            if (const auto *component{arrayRef.base().UnwrapComponent()}) {
+              int subscriptRank{0};
+              for (const Subscript &subscript : arrayRef.subscript()) {
+                subscriptRank += subscript.Rank();
+              }
+              if (subscriptRank > 0) {
+                if (int componentBaseRank{component->base().Rank()};
+                    componentBaseRank > 0) {
+                  Say("Subscripts of component '%s' of rank-%d derived type array have rank %d but must all be scalar"_err_en_US,
+                      component->GetLastSymbol().name(), componentBaseRank,
+                      subscriptRank);
+                  return false;
+                }
+              } else {
+                return CheckRanks(component->base());
+              }
+            }
+            return true;
+          },
+          [](const SymbolRef &) { return true; },
+          [](const CoarrayRef &) { return true; },
+      },
+      dataRef.u);
 }
 
 // Parse tree correction after a substring S(j:k) was misparsed as an
@@ -369,11 +381,22 @@ MaybeExpr ExpressionAnalyzer::Analyze(const parser::Designator &d) {
   FixMisparsedSubstring(d);
   // These checks have to be deferred to these "top level" data-refs where
   // we can be sure that there are no following subscripts (yet).
-  // Substrings have already been run through TopLevelChecks() and
-  // won't be returned by ExtractDataRef().
   if (MaybeExpr result{Analyze(d.u)}) {
     if (std::optional<DataRef> dataRef{ExtractDataRef(std::move(result))}) {
-      return TopLevelChecks(std::move(*dataRef));
+      if (!CheckRanks(std::move(*dataRef))) {
+        return std::nullopt;
+      }
+      return Designate(std::move(*dataRef));
+    } else if (std::optional<DataRef> dataRef{
+                   ExtractDataRef(std::move(result), /*intoSubstring=*/true)}) {
+      if (!CheckRanks(std::move(*dataRef))) {
+        return std::nullopt;
+      }
+    } else if (std::optional<DataRef> dataRef{ExtractDataRef(std::move(result),
+                   /*intoSubstring=*/false, /*intoComplexPart=*/true)}) {
+      if (!CheckRanks(std::move(*dataRef))) {
+        return std::nullopt;
+      }
     }
     return result;
   }
@@ -826,7 +849,7 @@ std::optional<Expr<SubscriptInteger>> ExpressionAnalyzer::GetSubstringBound(
 MaybeExpr ExpressionAnalyzer::Analyze(const parser::Substring &ss) {
   if (MaybeExpr baseExpr{Analyze(std::get<parser::DataRef>(ss.t))}) {
     if (std::optional<DataRef> dataRef{ExtractDataRef(std::move(*baseExpr))}) {
-      if (MaybeExpr newBaseExpr{TopLevelChecks(std::move(*dataRef))}) {
+      if (MaybeExpr newBaseExpr{Designate(std::move(*dataRef))}) {
         if (std::optional<DataRef> checked{
                 ExtractDataRef(std::move(*newBaseExpr))}) {
           const parser::SubstringRange &range{

@@ -260,17 +260,17 @@ template <typename A> const Symbol *ExtractBareLenParameter(const A &expr) {
 }
 
 // If an expression simply wraps a DataRef, extract and return it.
-// The Boolean argument controls the handling of Substring
+// The Boolean argument controls the handling of Substring and ComplexPart
 // references: when true (not default), it extracts the base DataRef
-// of a substring, if it has one.
+// of a substring or complex part, if it has one.
 template <typename A>
 common::IfNoLvalue<std::optional<DataRef>, A> ExtractDataRef(
-    const A &, bool intoSubstring) {
+    const A &, bool intoSubstring, bool intoComplexPart) {
   return std::nullopt; // default base case
 }
 template <typename T>
-std::optional<DataRef> ExtractDataRef(
-    const Designator<T> &d, bool intoSubstring = false) {
+std::optional<DataRef> ExtractDataRef(const Designator<T> &d,
+    bool intoSubstring = false, bool intoComplexPart = false) {
   return common::visit(
       [=](const auto &x) -> std::optional<DataRef> {
         if constexpr (common::HasMember<decltype(x), decltype(DataRef::u)>) {
@@ -281,29 +281,38 @@ std::optional<DataRef> ExtractDataRef(
             return ExtractSubstringBase(x);
           }
         }
+        if constexpr (std::is_same_v<std::decay_t<decltype(x)>, ComplexPart>) {
+          if (intoComplexPart) {
+            return x.complex();
+          }
+        }
         return std::nullopt; // w/o "else" to dodge bogus g++ 8.1 warning
       },
       d.u);
 }
 template <typename T>
-std::optional<DataRef> ExtractDataRef(
-    const Expr<T> &expr, bool intoSubstring = false) {
+std::optional<DataRef> ExtractDataRef(const Expr<T> &expr,
+    bool intoSubstring = false, bool intoComplexPart = false) {
   return common::visit(
-      [=](const auto &x) { return ExtractDataRef(x, intoSubstring); }, expr.u);
+      [=](const auto &x) {
+        return ExtractDataRef(x, intoSubstring, intoComplexPart);
+      },
+      expr.u);
 }
 template <typename A>
-std::optional<DataRef> ExtractDataRef(
-    const std::optional<A> &x, bool intoSubstring = false) {
+std::optional<DataRef> ExtractDataRef(const std::optional<A> &x,
+    bool intoSubstring = false, bool intoComplexPart = false) {
   if (x) {
-    return ExtractDataRef(*x, intoSubstring);
+    return ExtractDataRef(*x, intoSubstring, intoComplexPart);
   } else {
     return std::nullopt;
   }
 }
 template <typename A>
-std::optional<DataRef> ExtractDataRef(const A *p, bool intoSubstring = false) {
+std::optional<DataRef> ExtractDataRef(
+    const A *p, bool intoSubstring = false, bool intoComplexPart = false) {
   if (p) {
-    return ExtractDataRef(*p, intoSubstring);
+    return ExtractDataRef(*p, intoSubstring, intoComplexPart);
   } else {
     return std::nullopt;
   }
