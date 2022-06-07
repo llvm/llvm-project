@@ -1,5 +1,5 @@
 # REQUIRES: amdgpu-registered-target
-# RUN: llvm-reduce -mtriple=amdgcn-amd-amdhsa --test FileCheck --test-arg --check-prefix=CHECK-INTERESTINGNESS --test-arg %s --test-arg --input-file %s -o %t 2> %t.log
+# RUN: llvm-reduce --delta-passes=instructions -mtriple=amdgcn-amd-amdhsa --test FileCheck --test-arg --check-prefix=CHECK-INTERESTINGNESS --test-arg %s --test-arg --input-file %s -o %t 2> %t.log
 # RUN: FileCheck --match-full-lines --check-prefix=RESULT %s < %t
 
 # CHECK-INTERESTINGNESS: %{{[0-9]+}}.sub0:vreg_64 = V_ADD_U32_e32 %{{[0-9]+}}.sub1, %{{[0-9]+}}.sub0, implicit $exec
