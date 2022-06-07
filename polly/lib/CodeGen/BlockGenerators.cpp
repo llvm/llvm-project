@@ -1588,7 +1588,7 @@ void RegionGenerator::copyStmt(ScopStmt &Stmt, LoopToScevMapT &LTS,
     LoopPHI->insertBefore(&BBCopy->front());
     LoopPHIInc->insertBefore(BBCopy->getTerminator());
 
-    for (auto *PredBB : make_range(pred_begin(BB), pred_end(BB))) {
+    for (auto *PredBB : predecessors(BB)) {
       if (!R->contains(PredBB))
         continue;
       if (L->contains(PredBB))
@@ -1597,7 +1597,7 @@ void RegionGenerator::copyStmt(ScopStmt &Stmt, LoopToScevMapT &LTS,
         LoopPHI->addIncoming(NullVal, EndBlockMap[PredBB]);
     }
 
-    for (auto *PredBBCopy : make_range(pred_begin(BBCopy), pred_end(BBCopy)))
+    for (auto *PredBBCopy : predecessors(BBCopy))
       if (LoopPHI->getBasicBlockIndex(PredBBCopy) < 0)
         LoopPHI->addIncoming(NullVal, PredBBCopy);
 
