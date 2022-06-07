@@ -309,9 +309,6 @@
 /* Define if overriding target triple is enabled */
 /* #undef LLVM_TARGET_TRIPLE_ENV */
 
-/* LLVM version information */
-/* #undef LLVM_VERSION_INFO */
-
 /* Whether tools show host and target info when invoked with --version */
 #define LLVM_VERSION_PRINTER_SHOW_HOST_TARGET_INFO 1
 
