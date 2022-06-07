@@ -19,17 +19,33 @@ namespace llvm {
 namespace jitlink {
 namespace aarch64 {
 
-/// Represets aarch64 fixups
 enum EdgeKind_aarch64 : Edge::Kind {
-
-  /// Set a CALL immediate field to bits [27:2] of X = Target - Fixup + Addend
-  R_AARCH64_CALL26 = Edge::FirstRelocation,
-
+  Branch26 = Edge::FirstRelocation,
+  Pointer32,
+  Pointer64,
+  Pointer64Anon,
+  Page21,
+  PageOffset12,
+  GOTPage21,
+  GOTPageOffset12,
+  TLVPage21,
+  TLVPageOffset12,
+  PointerToGOT,
+  PairedAddend,
+  LDRLiteral19,
+  Delta32,
+  Delta64,
+  NegDelta32,
+  NegDelta64,
 };
 
 /// Returns a string name for the given aarch64 edge. For debugging purposes
 /// only
 const char *getEdgeKindName(Edge::Kind K);
+
+unsigned getPageOffset12Shift(uint32_t Instr);
+
+Error applyFixup(LinkGraph &G, Block &B, const Edge &E);
 
 } // namespace aarch64
 } // namespace jitlink
