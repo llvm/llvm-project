@@ -105,7 +105,7 @@ void SPIRVAsmPrinter::emitFunctionHeader() {
   const Function &F = MF->getFunction();
 
   if (isVerbose()) {
-    OutStreamer->GetCommentOS()
+    OutStreamer->getCommentOS()
         << "-- Begin function "
         << GlobalValue::dropLLVMManglingEscape(F.getName()) << '\n';
   }
