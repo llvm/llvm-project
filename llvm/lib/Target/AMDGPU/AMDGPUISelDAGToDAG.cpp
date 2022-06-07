@@ -2847,26 +2847,15 @@ bool AMDGPUDAGToDAGISel::isVGPRImm(const SDNode * N) const {
 bool AMDGPUDAGToDAGISel::isUniformLoad(const SDNode * N) const {
   auto Ld = cast<LoadSDNode>(N);
 
-  return Ld->getAlignment() >= 4 &&
-        (
-          (
-            (
-              Ld->getAddressSpace() == AMDGPUAS::CONSTANT_ADDRESS       ||
-              Ld->getAddressSpace() == AMDGPUAS::CONSTANT_ADDRESS_32BIT
-            )
-            &&
-            !N->isDivergent()
-          )
-          ||
-          (
-            Subtarget->getScalarizeGlobalBehavior() &&
-            Ld->getAddressSpace() == AMDGPUAS::GLOBAL_ADDRESS &&
-            Ld->isSimple() &&
-            !N->isDivergent() &&
-            static_cast<const SITargetLowering *>(
-              getTargetLowering())->isMemOpHasNoClobberedMemOperand(N)
-          )
-        );
+  return Ld->getAlign() >= Align(4) &&
+         (((Ld->getAddressSpace() == AMDGPUAS::CONSTANT_ADDRESS ||
+            Ld->getAddressSpace() == AMDGPUAS::CONSTANT_ADDRESS_32BIT) &&
+           !N->isDivergent()) ||
+          (Subtarget->getScalarizeGlobalBehavior() &&
+           Ld->getAddressSpace() == AMDGPUAS::GLOBAL_ADDRESS &&
+           Ld->isSimple() && !N->isDivergent() &&
+           static_cast<const SITargetLowering *>(getTargetLowering())
+               ->isMemOpHasNoClobberedMemOperand(N)));
 }
 
 void AMDGPUDAGToDAGISel::PostprocessISelDAG() {
