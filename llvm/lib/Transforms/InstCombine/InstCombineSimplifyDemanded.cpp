@@ -563,7 +563,23 @@ Value *InstCombinerImpl::SimplifyDemandedUseBits(Value *V, APInt DemandedMask,
       // TODO: If we only want bits that already match the signbit then we don't
       // need to shift.
 
+      // If we can pre-shift a right-shifted constant to the left without
+      // losing any high bits amd we don't demand the low bits, then eliminate
+      // the left-shift:
+      // (C >> X) << LeftShiftAmtC --> (C << RightShiftAmtC) >> X
       uint64_t ShiftAmt = SA->getLimitedValue(BitWidth-1);
+      Value *X;
+      Constant *C;
+      if (DemandedMask.countTrailingZeros() >= ShiftAmt &&
+          match(I->getOperand(0), m_LShr(m_ImmConstant(C), m_Value(X)))) {
+        Constant *LeftShiftAmtC = ConstantInt::get(VTy, ShiftAmt);
+        Constant *NewC = ConstantExpr::getShl(C, LeftShiftAmtC);
+        if (ConstantExpr::getLShr(NewC, LeftShiftAmtC) == C) {
+          Instruction *Lshr = BinaryOperator::CreateLShr(NewC, X);
+          return InsertNewInstWith(Lshr, *I);
+        }
+      }
+
       APInt DemandedMaskIn(DemandedMask.lshr(ShiftAmt));
 
       // If the shift is NUW/NSW, then it does demand the high bits.
