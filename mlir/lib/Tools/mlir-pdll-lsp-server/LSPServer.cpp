@@ -83,6 +83,12 @@ struct LSPServer {
                        Callback<SignatureHelp> reply);
 
   //===--------------------------------------------------------------------===//
+  // Inlay Hints
+
+  void onInlayHint(const InlayHintsParams &params,
+                   Callback<std::vector<InlayHint>> reply);
+
+  //===--------------------------------------------------------------------===//
   // PDLL View Output
 
   void onPDLLViewOutput(const PDLLViewOutputParams &params,
@@ -140,6 +146,7 @@ void LSPServer::onInitialize(const InitializeParams &params,
        }},
       {"hoverProvider", true},
       {"documentSymbolProvider", true},
+      {"inlayHintProvider", true},
   };
 
   llvm::json::Object result{
@@ -249,6 +256,16 @@ void LSPServer::onSignatureHelp(const TextDocumentPositionParams &params,
 }
 
 //===----------------------------------------------------------------------===//
+// Inlay Hints
+
+void LSPServer::onInlayHint(const InlayHintsParams &params,
+                            Callback<std::vector<InlayHint>> reply) {
+  std::vector<InlayHint> hints;
+  server.getInlayHints(params.textDocument.uri, params.range, hints);
+  reply(std::move(hints));
+}
+
+//===----------------------------------------------------------------------===//
 // PDLL ViewOutput
 
 void LSPServer::onPDLLViewOutput(
@@ -304,6 +321,10 @@ LogicalResult mlir::lsp::runPdllLSPServer(PDLLServer &server,
   // Signature Help
   messageHandler.method("textDocument/signatureHelp", &lspServer,
                         &LSPServer::onSignatureHelp);
+
+  // Inlay Hints
+  messageHandler.method("textDocument/inlayHint", &lspServer,
+                        &LSPServer::onInlayHint);
 
   // PDLL ViewOutput
   messageHandler.method("pdll/viewOutput", &lspServer,
