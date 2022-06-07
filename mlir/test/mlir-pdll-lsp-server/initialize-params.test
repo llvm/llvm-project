@@ -26,7 +26,7 @@
 // CHECK-NEXT:        ]
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "textDocumentSync": {
-// CHECK-NEXT:        "change": 1,
+// CHECK-NEXT:        "change": 2,
 // CHECK-NEXT:        "openClose": true,
 // CHECK-NEXT:        "save": true
 // CHECK-NEXT:      }

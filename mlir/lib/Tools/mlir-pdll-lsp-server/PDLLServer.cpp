@@ -1248,6 +1248,12 @@ public:
   /// Return the current version of this text file.
   int64_t getVersion() const { return version; }
 
+  /// Update the file to the new version using the provided set of content
+  /// changes. Returns failure if the update was unsuccessful.
+  LogicalResult update(const lsp::URIForFile &uri, int64_t newVersion,
+                       ArrayRef<lsp::TextDocumentContentChangeEvent> changes,
+                       std::vector<lsp::Diagnostic> &diagnostics);
+
   //===--------------------------------------------------------------------===//
   // LSP Queries
   //===--------------------------------------------------------------------===//
@@ -1268,6 +1274,10 @@ public:
   lsp::PDLLViewOutputResult getPDLLViewOutput(lsp::PDLLViewOutputKind kind);
 
 private:
+  /// Initialize the text file from the given file contents.
+  void initialize(const lsp::URIForFile &uri, int64_t newVersion,
+                  std::vector<lsp::Diagnostic> &diagnostics);
+
   /// Find the PDL document that contains the given position, and update the
   /// position to be anchored at the start of the found chunk instead of the
   /// beginning of the file.
@@ -1277,7 +1287,7 @@ private:
   std::string contents;
 
   /// The version of this file.
-  int64_t version;
+  int64_t version = 0;
 
   /// The number of lines in the file.
   int64_t totalNumLines = 0;
@@ -1285,6 +1295,9 @@ private:
   /// The chunks of this file. The order of these chunks is the order in which
   /// they appear in the text file.
   std::vector<std::unique_ptr<PDLTextFileChunk>> chunks;
+
+  /// The extra set of include directories for this file.
+  std::vector<std::string> extraIncludeDirs;
 };
 } // namespace
 
@@ -1292,38 +1305,22 @@ PDLTextFile::PDLTextFile(const lsp::URIForFile &uri, StringRef fileContents,
                          int64_t version,
                          const std::vector<std::string> &extraDirs,
                          std::vector<lsp::Diagnostic> &diagnostics)
-    : contents(fileContents.str()), version(version) {
-  // Split the file into separate PDL documents.
-  // TODO: Find a way to share the split file marker with other tools. We don't
-  // want to use `splitAndProcessBuffer` here, but we do want to make sure this
-  // marker doesn't go out of sync.
-  SmallVector<StringRef, 8> subContents;
-  StringRef(contents).split(subContents, "// -----");
-  chunks.emplace_back(std::make_unique<PDLTextFileChunk>(
-      /*lineOffset=*/0, uri, subContents.front(), extraDirs, diagnostics));
+    : contents(fileContents.str()), extraIncludeDirs(extraDirs) {
+  initialize(uri, version, diagnostics);
+}
 
-  uint64_t lineOffset = subContents.front().count('\n');
-  for (StringRef docContents : llvm::drop_begin(subContents)) {
-    unsigned currentNumDiags = diagnostics.size();
-    auto chunk = std::make_unique<PDLTextFileChunk>(
-        lineOffset, uri, docContents, extraDirs, diagnostics);
-    lineOffset += docContents.count('\n');
-
-    // Adjust locations used in diagnostics to account for the offset from the
-    // beginning of the file.
-    for (lsp::Diagnostic &diag :
-         llvm::drop_begin(diagnostics, currentNumDiags)) {
-      chunk->adjustLocForChunkOffset(diag.range);
-
-      if (!diag.relatedInformation)
-        continue;
-      for (auto &it : *diag.relatedInformation)
-        if (it.location.uri == uri)
-          chunk->adjustLocForChunkOffset(it.location.range);
-    }
-    chunks.emplace_back(std::move(chunk));
+LogicalResult
+PDLTextFile::update(const lsp::URIForFile &uri, int64_t newVersion,
+                    ArrayRef<lsp::TextDocumentContentChangeEvent> changes,
+                    std::vector<lsp::Diagnostic> &diagnostics) {
+  if (failed(lsp::TextDocumentContentChangeEvent::applyTo(changes, contents))) {
+    lsp::Logger::error("Failed to update contents of {0}", uri.file());
+    return failure();
   }
-  totalNumLines = lineOffset;
+
+  // If the file contents were properly changed, reinitialize the text file.
+  initialize(uri, newVersion, diagnostics);
+  return success();
 }
 
 void PDLTextFile::getLocationsOf(const lsp::URIForFile &uri,
@@ -1454,6 +1451,45 @@ PDLTextFile::getPDLLViewOutput(lsp::PDLLViewOutputKind kind) {
   return result;
 }
 
+void PDLTextFile::initialize(const lsp::URIForFile &uri, int64_t newVersion,
+                             std::vector<lsp::Diagnostic> &diagnostics) {
+  version = newVersion;
+  chunks.clear();
+
+  // Split the file into separate PDL documents.
+  // TODO: Find a way to share the split file marker with other tools. We don't
+  // want to use `splitAndProcessBuffer` here, but we do want to make sure this
+  // marker doesn't go out of sync.
+  SmallVector<StringRef, 8> subContents;
+  StringRef(contents).split(subContents, "// -----");
+  chunks.emplace_back(std::make_unique<PDLTextFileChunk>(
+      /*lineOffset=*/0, uri, subContents.front(), extraIncludeDirs,
+      diagnostics));
+
+  uint64_t lineOffset = subContents.front().count('\n');
+  for (StringRef docContents : llvm::drop_begin(subContents)) {
+    unsigned currentNumDiags = diagnostics.size();
+    auto chunk = std::make_unique<PDLTextFileChunk>(
+        lineOffset, uri, docContents, extraIncludeDirs, diagnostics);
+    lineOffset += docContents.count('\n');
+
+    // Adjust locations used in diagnostics to account for the offset from the
+    // beginning of the file.
+    for (lsp::Diagnostic &diag :
+         llvm::drop_begin(diagnostics, currentNumDiags)) {
+      chunk->adjustLocForChunkOffset(diag.range);
+
+      if (!diag.relatedInformation)
+        continue;
+      for (auto &it : *diag.relatedInformation)
+        if (it.location.uri == uri)
+          chunk->adjustLocForChunkOffset(it.location.range);
+    }
+    chunks.emplace_back(std::move(chunk));
+  }
+  totalNumLines = lineOffset;
+}
+
 PDLTextFileChunk &PDLTextFile::getChunkFor(lsp::Position &pos) {
   if (chunks.size() == 1)
     return *chunks.front();
@@ -1496,9 +1532,9 @@ lsp::PDLLServer::PDLLServer(const Options &options)
     : impl(std::make_unique<Impl>(options)) {}
 lsp::PDLLServer::~PDLLServer() = default;
 
-void lsp::PDLLServer::addOrUpdateDocument(
-    const URIForFile &uri, StringRef contents, int64_t version,
-    std::vector<Diagnostic> &diagnostics) {
+void lsp::PDLLServer::addDocument(const URIForFile &uri, StringRef contents,
+                                  int64_t version,
+                                  std::vector<Diagnostic> &diagnostics) {
   // Build the set of additional include directories.
   std::vector<std::string> additionalIncludeDirs = impl->options.extraDirs;
   const auto &fileInfo = impl->compilationDatabase.getFileInfo(uri.file());
@@ -1506,6 +1542,20 @@ void lsp::PDLLServer::addOrUpdateDocument(
 
   impl->files[uri.file()] = std::make_unique<PDLTextFile>(
       uri, contents, version, additionalIncludeDirs, diagnostics);
+}
+
+void lsp::PDLLServer::updateDocument(
+    const URIForFile &uri, ArrayRef<TextDocumentContentChangeEvent> changes,
+    int64_t version, std::vector<Diagnostic> &diagnostics) {
+  // Check that we actually have a document for this uri.
+  auto it = impl->files.find(uri.file());
+  if (it == impl->files.end())
+    return;
+
+  // Try to update the document. If we fail, erase the file from the server. A
+  // failed updated generally means we've fallen out of sync somewhere.
+  if (failed(it->second->update(uri, version, changes, diagnostics)))
+    impl->files.erase(it);
 }
 
 Optional<int64_t> lsp::PDLLServer::removeDocument(const URIForFile &uri) {

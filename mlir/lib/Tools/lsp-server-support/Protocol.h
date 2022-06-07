@@ -35,6 +35,8 @@
 #include <vector>
 
 namespace mlir {
+struct LogicalResult;
+
 namespace lsp {
 
 enum class ErrorCode {
@@ -322,6 +324,18 @@ struct Range {
   bool contains(Range range) const {
     return start <= range.start && range.end <= end;
   }
+
+  /// Convert this range into a source range in the main file of the given
+  /// source manager.
+  SMRange getAsSMRange(llvm::SourceMgr &mgr) const {
+    SMLoc startLoc = start.getAsSMLoc(mgr);
+    SMLoc endLoc = end.getAsSMLoc(mgr);
+    // Check that the start and end locations are valid.
+    if (!startLoc.isValid() || !endLoc.isValid() ||
+        startLoc.getPointer() > endLoc.getPointer())
+      return SMRange();
+    return SMRange(startLoc, endLoc);
+  }
 };
 
 /// Add support for JSON serialization.
@@ -431,6 +445,12 @@ bool fromJSON(const llvm::json::Value &value,
 //===----------------------------------------------------------------------===//
 
 struct TextDocumentContentChangeEvent {
+  /// Try to apply this change to the given contents string.
+  LogicalResult applyTo(std::string &contents) const;
+  /// Try to apply a set of changes to the given contents string.
+  static LogicalResult applyTo(ArrayRef<TextDocumentContentChangeEvent> changes,
+                               std::string &contents);
+
   /// The range of the document that changed.
   Optional<Range> range;
 

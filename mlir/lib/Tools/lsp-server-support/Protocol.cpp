@@ -11,6 +11,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "Protocol.h"
+#include "Logging.h"
+#include "mlir/Support/LogicalResult.h"
 #include "llvm/ADT/Hashing.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringSwitch.h"
@@ -18,6 +20,7 @@
 #include "llvm/Support/Format.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/JSON.h"
+#include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/raw_ostream.h"
 
@@ -461,6 +464,36 @@ bool mlir::lsp::fromJSON(const llvm::json::Value &value,
 //===----------------------------------------------------------------------===//
 // DidChangeTextDocumentParams
 //===----------------------------------------------------------------------===//
+
+LogicalResult
+TextDocumentContentChangeEvent::applyTo(std::string &contents) const {
+  // If there is no range, the full document changed.
+  if (!range) {
+    contents = text;
+    return success();
+  }
+
+  // Try to map the replacement range to the content.
+  llvm::SourceMgr tmpScrMgr;
+  tmpScrMgr.AddNewSourceBuffer(llvm::MemoryBuffer::getMemBuffer(contents),
+                               SMLoc());
+  SMRange rangeLoc = range->getAsSMRange(tmpScrMgr);
+  if (!rangeLoc.isValid())
+    return failure();
+
+  contents.replace(rangeLoc.Start.getPointer() - contents.data(),
+                   rangeLoc.End.getPointer() - rangeLoc.Start.getPointer(),
+                   text);
+  return success();
+}
+
+LogicalResult TextDocumentContentChangeEvent::applyTo(
+    ArrayRef<TextDocumentContentChangeEvent> changes, std::string &contents) {
+  for (const auto &change : changes)
+    if (failed(change.applyTo(contents)))
+      return failure();
+  return success();
+}
 
 bool mlir::lsp::fromJSON(const llvm::json::Value &value,
                          TextDocumentContentChangeEvent &result,
