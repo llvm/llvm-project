@@ -634,14 +634,14 @@ public:
 
     bool __invariants() const;
 
-#if _LIBCPP_DEBUG_LEVEL == 2
+#ifdef _LIBCPP_ENABLE_DEBUG_MODE
 
     bool __dereferenceable(const const_iterator* __i) const;
     bool __decrementable(const const_iterator* __i) const;
     bool __addable(const const_iterator* __i, ptrdiff_t __n) const;
     bool __subscriptable(const const_iterator* __i, ptrdiff_t __n) const;
 
-#endif // _LIBCPP_DEBUG_LEVEL == 2
+#endif // _LIBCPP_ENABLE_DEBUG_MODE
 
 private:
     pointer __begin_ = nullptr;
@@ -1898,7 +1898,7 @@ vector<_Tp, _Allocator>::__invariants() const
     return true;
 }
 
-#if _LIBCPP_DEBUG_LEVEL == 2
+#ifdef _LIBCPP_ENABLE_DEBUG_MODE
 
 template <class _Tp, class _Allocator>
 bool
@@ -1930,13 +1930,13 @@ vector<_Tp, _Allocator>::__subscriptable(const const_iterator* __i, ptrdiff_t __
     return this->__begin_ <= __p && __p < this->__end_;
 }
 
-#endif // _LIBCPP_DEBUG_LEVEL == 2
+#endif // _LIBCPP_ENABLE_DEBUG_MODE
 
 template <class _Tp, class _Allocator>
 inline _LIBCPP_INLINE_VISIBILITY
 void
 vector<_Tp, _Allocator>::__invalidate_iterators_past(pointer __new_last) {
-#if _LIBCPP_DEBUG_LEVEL == 2
+#ifdef _LIBCPP_ENABLE_DEBUG_MODE
   __c_node* __c = __get_db()->__find_c_and_lock(this);
   for (__i_node** __p = __c->end_; __p != __c->beg_; ) {
     --__p;

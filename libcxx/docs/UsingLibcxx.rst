@@ -214,9 +214,6 @@ Libc++ provides a number of configuration macros which can be used to enable
 or disable extended libc++ behavior, including enabling "debug mode" or
 thread safety annotations.
 
-**_LIBCPP_DEBUG**:
-  See :ref:`using-debug-mode` for more information.
-
 **_LIBCPP_ENABLE_THREAD_SAFETY_ANNOTATIONS**:
   This macro is used to enable -Wthread-safety annotations on libc++'s
   ``std::mutex`` and ``std::lock_guard``. By default, these annotations are
