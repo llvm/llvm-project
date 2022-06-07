@@ -150,9 +150,6 @@ AArch64, x86\_64 and ppc64le servers
 with CentOS7, Ubuntu18.04, Rhel, MacOs, Mojave, XCode and
 Apple Clang version 10.0.1.
 
-The code does not compile with Windows and a compiler that does not have
-support for C++17.
-
 ### Building flang with GCC
 
 By default,
