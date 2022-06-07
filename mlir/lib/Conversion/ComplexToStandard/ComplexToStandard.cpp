@@ -885,6 +885,27 @@ struct TanhOpConversion : public OpConversionPattern<complex::TanhOp> {
   }
 };
 
+struct ConjOpConversion : public OpConversionPattern<complex::ConjOp> {
+  using OpConversionPattern<complex::ConjOp>::OpConversionPattern;
+
+  LogicalResult
+  matchAndRewrite(complex::ConjOp op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    auto loc = op.getLoc();
+    auto type = adaptor.getComplex().getType().cast<ComplexType>();
+    auto elementType = type.getElementType().cast<FloatType>();
+    Value real =
+        rewriter.create<complex::ReOp>(loc, elementType, adaptor.getComplex());
+    Value imag =
+        rewriter.create<complex::ImOp>(loc, elementType, adaptor.getComplex());
+    Value negImag = rewriter.create<arith::NegFOp>(loc, elementType, imag);
+
+    rewriter.replaceOpWithNewOp<complex::CreateOp>(op, type, real, negImag);
+
+    return success();
+  }
+};
+
 } // namespace
 
 void mlir::populateComplexToStandardConversionPatterns(
@@ -893,23 +914,25 @@ void mlir::populateComplexToStandardConversionPatterns(
   patterns.add<
       AbsOpConversion,
       Atan2OpConversion,
-      ComparisonOpConversion<complex::EqualOp, arith::CmpFPredicate::OEQ>,
-      ComparisonOpConversion<complex::NotEqualOp, arith::CmpFPredicate::UNE>,
       BinaryComplexOpConversion<complex::AddOp, arith::AddFOp>,
       BinaryComplexOpConversion<complex::SubOp, arith::SubFOp>,
+      ComparisonOpConversion<complex::EqualOp, arith::CmpFPredicate::OEQ>,
+      ComparisonOpConversion<complex::NotEqualOp, arith::CmpFPredicate::UNE>,
+      ConjOpConversion,
       CosOpConversion,
       DivOpConversion,
       ExpOpConversion,
       Expm1OpConversion,
-      LogOpConversion,
       Log1pOpConversion,
+      LogOpConversion,
       MulOpConversion,
       NegOpConversion,
       SignOpConversion,
       SinOpConversion,
       SqrtOpConversion,
       TanOpConversion,
-      TanhOpConversion>(patterns.getContext());
+      TanhOpConversion
+  >(patterns.getContext());
   // clang-format on
 }
 

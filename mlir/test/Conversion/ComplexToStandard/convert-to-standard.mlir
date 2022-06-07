@@ -663,3 +663,17 @@ func.func @complex_sqrt(%arg: complex<f32>) -> complex<f32> {
   %sqrt = complex.sqrt %arg : complex<f32>
   return %sqrt : complex<f32>
 }
+
+// -----
+
+// CHECK-LABEL: func @complex_conj
+// CHECK-SAME: %[[ARG:.*]]: complex<f32>
+func.func @complex_conj(%arg: complex<f32>) -> complex<f32> {
+  %conj = complex.conj %arg: complex<f32>
+  return %conj : complex<f32>
+}
+// CHECK: %[[REAL:.*]] = complex.re %[[ARG]] : complex<f32>
+// CHECK: %[[IMAG:.*]] = complex.im %[[ARG]] : complex<f32>
+// CHECK: %[[NEG_IMAG:.*]] = arith.negf %[[IMAG]] : f32
+// CHECK: %[[RESULT:.*]] = complex.create %[[REAL]], %[[NEG_IMAG]] : complex<f32>
+// CHECK: return %[[RESULT]] : complex<f32>
