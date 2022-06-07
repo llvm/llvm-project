@@ -28,10 +28,10 @@ static bool isAsanHwasanOrMemTag(const SanitizerSet& SS) {
                      SanitizerKind::MemTag);
 }
 
-void SanitizerMetadata::reportGlobalToASan(llvm::GlobalVariable *GV,
-                                           SourceLocation Loc, StringRef Name,
-                                           QualType Ty, bool IsDynInit,
-                                           bool IsExcluded) {
+void SanitizerMetadata::reportGlobal(llvm::GlobalVariable *GV,
+                                     SourceLocation Loc, StringRef Name,
+                                     QualType Ty, bool IsDynInit,
+                                     bool IsExcluded) {
   if (!isAsanHwasanOrMemTag(CGM.getLangOpts().Sanitize))
     return;
   IsDynInit &= !CGM.isInNoSanitizeList(GV, Loc, Ty, "init");
@@ -61,8 +61,8 @@ void SanitizerMetadata::reportGlobalToASan(llvm::GlobalVariable *GV,
   AsanGlobals->addOperand(ThisGlobal);
 }
 
-void SanitizerMetadata::reportGlobalToASan(llvm::GlobalVariable *GV,
-                                           const VarDecl &D, bool IsDynInit) {
+void SanitizerMetadata::reportGlobal(llvm::GlobalVariable *GV, const VarDecl &D,
+                                     bool IsDynInit) {
   if (!isAsanHwasanOrMemTag(CGM.getLangOpts().Sanitize))
     return;
   std::string QualName;
@@ -75,15 +75,15 @@ void SanitizerMetadata::reportGlobalToASan(llvm::GlobalVariable *GV,
       IsExcluded = true;
   if (D.hasAttr<DisableSanitizerInstrumentationAttr>())
     IsExcluded = true;
-  reportGlobalToASan(GV, D.getLocation(), OS.str(), D.getType(), IsDynInit,
-                     IsExcluded);
+  reportGlobal(GV, D.getLocation(), OS.str(), D.getType(), IsDynInit,
+               IsExcluded);
 }
 
 void SanitizerMetadata::disableSanitizerForGlobal(llvm::GlobalVariable *GV) {
   // For now, just make sure the global is not modified by the ASan
   // instrumentation.
   if (isAsanHwasanOrMemTag(CGM.getLangOpts().Sanitize))
-    reportGlobalToASan(GV, SourceLocation(), "", QualType(), false, true);
+    reportGlobal(GV, SourceLocation(), "", QualType(), false, true);
 }
 
 void SanitizerMetadata::disableSanitizerForInstruction(llvm::Instruction *I) {
