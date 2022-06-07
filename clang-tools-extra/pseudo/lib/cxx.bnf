@@ -645,7 +645,7 @@ constraint-logical-and-expression := primary-expression
 constraint-logical-and-expression := constraint-logical-and-expression && primary-expression
 template-parameter := type-parameter
 template-parameter := parameter-declaration
-type-parameter := type-parameter-key ..._opt IDENTIFIER
+type-parameter := type-parameter-key ..._opt IDENTIFIER_opt
 type-parameter := type-parameter-key IDENTIFIER_opt = type-id
 type-parameter := type-constraint ..._opt IDENTIFIER_opt
 type-parameter := type-constraint IDENTIFIER_opt = type-id
