@@ -4917,7 +4917,8 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
   case Intrinsic::memcpy:
   case Intrinsic::memcpy_inline:
   case Intrinsic::memmove:
-  case Intrinsic::memset: {
+  case Intrinsic::memset:
+  case Intrinsic::memset_inline: {
     const auto *MI = cast<MemIntrinsic>(&Call);
     auto IsValidAlignment = [&](unsigned Alignment) -> bool {
       return Alignment == 0 || isPowerOf2_32(Alignment);

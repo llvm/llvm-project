@@ -973,6 +973,7 @@ public:
     case Intrinsic::memcpy:
     case Intrinsic::memmove:
     case Intrinsic::memset:
+    case Intrinsic::memset_inline:
     case Intrinsic::memcpy_inline:
       return true;
     default:
@@ -984,12 +985,33 @@ public:
   }
 };
 
-/// This class wraps the llvm.memset intrinsic.
+/// This class wraps the llvm.memset and llvm.memset.inline intrinsics.
 class MemSetInst : public MemSetBase<MemIntrinsic> {
 public:
   // Methods for support type inquiry through isa, cast, and dyn_cast:
   static bool classof(const IntrinsicInst *I) {
-    return I->getIntrinsicID() == Intrinsic::memset;
+    switch (I->getIntrinsicID()) {
+    case Intrinsic::memset:
+    case Intrinsic::memset_inline:
+      return true;
+    default:
+      return false;
+    }
+  }
+  static bool classof(const Value *V) {
+    return isa<IntrinsicInst>(V) && classof(cast<IntrinsicInst>(V));
+  }
+};
+
+/// This class wraps the llvm.memset.inline intrinsic.
+class MemSetInlineInst : public MemSetInst {
+public:
+  ConstantInt *getLength() const {
+    return cast<ConstantInt>(MemSetInst::getLength());
+  }
+  // Methods for support type inquiry through isa, cast, and dyn_cast:
+  static bool classof(const IntrinsicInst *I) {
+    return I->getIntrinsicID() == Intrinsic::memset_inline;
   }
   static bool classof(const Value *V) {
     return isa<IntrinsicInst>(V) && classof(cast<IntrinsicInst>(V));
@@ -1074,6 +1096,7 @@ public:
     case Intrinsic::memcpy_inline:
     case Intrinsic::memmove:
     case Intrinsic::memset:
+    case Intrinsic::memset_inline:
     case Intrinsic::memcpy_element_unordered_atomic:
     case Intrinsic::memmove_element_unordered_atomic:
     case Intrinsic::memset_element_unordered_atomic:
@@ -1095,6 +1118,7 @@ public:
   static bool classof(const IntrinsicInst *I) {
     switch (I->getIntrinsicID()) {
     case Intrinsic::memset:
+    case Intrinsic::memset_inline:
     case Intrinsic::memset_element_unordered_atomic:
       return true;
     default:

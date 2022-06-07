@@ -164,6 +164,35 @@ CallInst *IRBuilderBase::CreateMemSet(Value *Ptr, Value *Val, Value *Size,
   return CI;
 }
 
+CallInst *IRBuilderBase::CreateMemSetInline(Value *Dst, MaybeAlign DstAlign,
+                                            Value *Val, Value *Size,
+                                            bool IsVolatile, MDNode *TBAATag,
+                                            MDNode *ScopeTag,
+                                            MDNode *NoAliasTag) {
+  Dst = getCastedInt8PtrValue(Dst);
+  Value *Ops[] = {Dst, Val, Size, getInt1(IsVolatile)};
+  Type *Tys[] = {Dst->getType(), Size->getType()};
+  Module *M = BB->getParent()->getParent();
+  Function *TheFn = Intrinsic::getDeclaration(M, Intrinsic::memset_inline, Tys);
+
+  CallInst *CI = createCallHelper(TheFn, Ops, this);
+
+  if (DstAlign)
+    cast<MemSetInlineInst>(CI)->setDestAlignment(*DstAlign);
+
+  // Set the TBAA info if present.
+  if (TBAATag)
+    CI->setMetadata(LLVMContext::MD_tbaa, TBAATag);
+
+  if (ScopeTag)
+    CI->setMetadata(LLVMContext::MD_alias_scope, ScopeTag);
+
+  if (NoAliasTag)
+    CI->setMetadata(LLVMContext::MD_noalias, NoAliasTag);
+
+  return CI;
+}
+
 CallInst *IRBuilderBase::CreateElementUnorderedAtomicMemSet(
     Value *Ptr, Value *Val, Value *Size, Align Alignment, uint32_t ElementSize,
     MDNode *TBAATag, MDNode *ScopeTag, MDNode *NoAliasTag) {
