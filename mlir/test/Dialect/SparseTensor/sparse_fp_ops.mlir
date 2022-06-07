@@ -355,8 +355,7 @@ func.func @divbyc(%arga: tensor<32xf64, #SV>,
 // CHECK-SAME:    %[[VAL_0:.*]]: tensor<32xf64, #sparse_tensor.encoding<{{{.*}}}>> {
 // CHECK-DAG:     %[[VAL_1:.*]] = arith.constant 0 : index
 // CHECK-DAG:     %[[VAL_2:.*]] = arith.constant 1 : index
-// CHECK-DAG:     %[[VAL_3:.*]] = arith.constant 32 : index
-// CHECK:         %[[VAL_4:.*]] = sparse_tensor.init{{\[}}%[[VAL_3]]] : tensor<32xf64, #sparse_tensor.encoding<{{{.*}}}>>
+// CHECK:         %[[VAL_4:.*]] = bufferization.alloc_tensor() : tensor<32xf64, #sparse_tensor.encoding<{{{.*}}}>>
 // CHECK:         %[[VAL_5:.*]] = sparse_tensor.pointers %[[VAL_0]], %[[VAL_1]] : tensor<32xf64, #sparse_tensor.encoding<{{{.*}}}>> to memref<?xindex>
 // CHECK:         %[[VAL_6:.*]] = sparse_tensor.indices %[[VAL_0]], %[[VAL_1]] : tensor<32xf64, #sparse_tensor.encoding<{{{.*}}}>> to memref<?xindex>
 // CHECK:         %[[VAL_7:.*]] = sparse_tensor.values %[[VAL_0]] : tensor<32xf64, #sparse_tensor.encoding<{{{.*}}}>> to memref<?xf64>
@@ -382,7 +381,7 @@ func.func @divbyc(%arga: tensor<32xf64, #SV>,
 // CHECK:       }
 func.func @zero_preserving_math(%arga: tensor<32xf64, #SV>) -> tensor<32xf64, #SV> {
   %c32 = arith.constant 32 : index
-  %xinp = sparse_tensor.init [%c32] : tensor<32xf64, #SV>
+  %xinp = bufferization.alloc_tensor() : tensor<32xf64, #SV>
   %0 = linalg.generic #trait1
      ins(%arga: tensor<32xf64, #SV>)
     outs(%xinp: tensor<32xf64, #SV>) {

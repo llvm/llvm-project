@@ -101,12 +101,11 @@ AllowStripped("allow-stripped",
   cl::Hidden,
   cl::cat(BoltCategory));
 
-cl::opt<bool>
-DumpDotAll("dump-dot-all",
-  cl::desc("dump function CFGs to graphviz format after each stage"),
-  cl::ZeroOrMore,
-  cl::Hidden,
-  cl::cat(BoltCategory));
+cl::opt<bool> DumpDotAll(
+    "dump-dot-all",
+    cl::desc("dump function CFGs to graphviz format after each stage;"
+             "enable '-print-loops' for color-coded blocks"),
+    cl::ZeroOrMore, cl::Hidden, cl::cat(BoltCategory));
 
 static cl::list<std::string>
 ForceFunctionNames("funcs",

@@ -757,6 +757,26 @@ static inline bool isValidCoprocessorNumber(unsigned Num,
   return true;
 }
 
+static inline bool isSEHInstruction(const MachineInstr &MI) {
+  unsigned Opc = MI.getOpcode();
+  switch (Opc) {
+  case ARM::SEH_StackAlloc:
+  case ARM::SEH_SaveRegs:
+  case ARM::SEH_SaveRegs_Ret:
+  case ARM::SEH_SaveSP:
+  case ARM::SEH_SaveFRegs:
+  case ARM::SEH_SaveLR:
+  case ARM::SEH_Nop:
+  case ARM::SEH_Nop_Ret:
+  case ARM::SEH_PrologEnd:
+  case ARM::SEH_EpilogStart:
+  case ARM::SEH_EpilogEnd:
+    return true;
+  default:
+    return false;
+  }
+}
+
 /// getInstrPredicate - If instruction is predicated, returns its predicate
 /// condition, otherwise returns AL. It also returns the condition code
 /// register by reference.

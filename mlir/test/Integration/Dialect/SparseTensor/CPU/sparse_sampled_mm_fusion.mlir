@@ -101,8 +101,7 @@ module {
   func.func @sparse_sampled_dd(%args: tensor<8x8xf64, #SM>,
                           %arga: tensor<8x8xf64>,
                           %argb: tensor<8x8xf64>) -> tensor<8x8xf64, #SM> {
-    %c8 = arith.constant 8 : index
-    %1 = sparse_tensor.init [%c8, %c8] : tensor<8x8xf64, #SM>
+    %1 = bufferization.alloc_tensor() : tensor<8x8xf64, #SM>
     %2 = linalg.generic #trait_sampled_dense_dense
       ins(%args, %arga, %argb: tensor<8x8xf64, #SM>,
                                tensor<8x8xf64>, tensor<8x8xf64>)
@@ -135,8 +134,7 @@ module {
           linalg.yield %q : f64
     } -> tensor<8x8xf64>
     // Sample the result with elements-wise multiplication with sparse matrix.
-    %c8 = arith.constant 8 : index
-    %3 = sparse_tensor.init [%c8, %c8] : tensor<8x8xf64, #SM>
+    %3 = bufferization.alloc_tensor() : tensor<8x8xf64, #SM>
     %4 = linalg.generic #trait_scale
       ins(%2, %args : tensor<8x8xf64>, tensor<8x8xf64, #SM>)
       outs(%3 : tensor<8x8xf64, #SM>) {

@@ -13,6 +13,7 @@
 #ifndef LLVM_BINARYFORMAT_DXCONTAINER_H
 #define LLVM_BINARYFORMAT_DXCONTAINER_H
 
+#include "llvm/ADT/StringRef.h"
 #include "llvm/Support/SwapByteOrder.h"
 
 #include <stdint.h>
@@ -49,14 +50,14 @@ struct ShaderHash {
   uint32_t Flags; // DxilShaderHashFlags
   uint8_t Digest[16];
 
-  void byteSwap() { sys::swapByteOrder(Flags); }
+  void swapBytes() { sys::swapByteOrder(Flags); }
 };
 
 struct ContainerVersion {
   uint16_t Major;
   uint16_t Minor;
 
-  void byteSwap() {
+  void swapBytes() {
     sys::swapByteOrder(Major);
     sys::swapByteOrder(Minor);
   }
@@ -69,8 +70,8 @@ struct Header {
   uint32_t FileSize;
   uint32_t PartCount;
 
-  void byteSwap() {
-    Version.byteSwap();
+  void swapBytes() {
+    Version.swapBytes();
     sys::swapByteOrder(FileSize);
     sys::swapByteOrder(PartCount);
   }
@@ -82,6 +83,11 @@ struct Header {
 struct PartHeader {
   uint8_t Name[4];
   uint32_t Size;
+
+  void swapBytes() { sys::swapByteOrder(Size); }
+  StringRef getName() const {
+    return StringRef(reinterpret_cast<const char *>(&Name[0]), 4);
+  }
   // Structure is followed directly by part data: uint8_t PartData[PartSize].
 };
 

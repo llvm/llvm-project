@@ -9,7 +9,7 @@ target triple = "x86_64-apple-macosx10.14.0"
 ; CHECK-LABEL: define {{.*}}@foo.cold.1(
 ; CHECK: call {{.*}}@sink
 ; CHECK: %p.ce = phi i32 [ 1, %coldbb ], [ 3, %coldbb2 ]
-; CHECK-NEXT: store i32 %p.ce, i32* %p.ce.out 
+; CHECK-NEXT: store i32 %p.ce, ptr %p.ce.out 
 
 define void @foo(i32 %cond) {
 entry:

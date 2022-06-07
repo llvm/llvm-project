@@ -12685,7 +12685,7 @@ the entry of the current function calling this intrinsic.
 Semantics:
 """"""""""
 
-Note this intrinsic is only verified on AArch64.
+Note this intrinsic is only verified on AArch64 and ARM.
 
 '``llvm.frameaddress``' Intrinsic
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -13864,8 +13864,8 @@ the argument.
 If ``<len>`` is 0, it is no-op modulo the behavior of attributes attached to
 the arguments.
 If ``<len>`` is not a well-defined value, the behavior is undefined.
-If ``<len>`` is not zero, both ``<dest>`` and ``<src>`` should be well-defined,
-otherwise the behavior is undefined.
+If ``<len>`` is not zero, ``<dest>`` should be well-defined, otherwise the
+behavior is undefined.
 
 '``llvm.sqrt.*``' Intrinsic
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^

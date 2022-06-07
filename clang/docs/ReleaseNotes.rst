@@ -355,11 +355,6 @@ AIX Support
 
 C Language Changes in Clang
 ---------------------------
-- Finished implementing support for DR423. We already correctly handled
-  stripping qualifiers from cast expressions, but we did not strip qualifiers
-  on function return types. We now properly treat the function as though it
-  were declarated with an unqualified, non-atomic return type. Fixes
-  `Issue 39595 <https://github.com/llvm/llvm-project/issues/39595>`_.
 
 C2x Feature Support
 -------------------

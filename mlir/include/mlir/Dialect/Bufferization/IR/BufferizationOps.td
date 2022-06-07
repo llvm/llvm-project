@@ -29,13 +29,30 @@ def Bufferization_AllocTensorOp : Bufferization_Op<"alloc_tensor",
   let summary = "buffer allocation in tensor land";
 
   let description = [{
-    `bufferization.alloc_tensor` is an operation that bufferizes to a buffer
-    allocation of a given shape. The shape could be dynamic or static.
-    Reading from the result of an `alloc_tensor` op yields an undefined value.
+    `bufferization.alloc_tensor` materializes an uninitialized tensor with a
+    given shape (dynamic or static). It always bufferizes to a new buffer
+    allocation of the given shape. Reading from the result of an `alloc_tensor`
+    op yields an undefined value.
 
-    `alloc_tensor` is a helper op for bufferization. It marks the beginning of
-    a new tensor SSA use-def chain and is used to control in-place bufferization
-    decisions during One-Shot Bufferize.
+    `alloc_tensor` is a helper op for bufferization. The operation is provided
+    as an anchor that marks the beginning of a new tensor SSA use-def chain. It
+    can be used to control in-place bufferization decisions during One-Shot
+    Bufferize: The bufferized result of a `bufferization.alloc_tensor` does not
+    alias with any other buffer, so it can be used to resolve read-after-write
+    conflicts that would have been introduced by the in-place bufferization of
+    another op.
+
+    Both dense and sparse tensor types are supported. The result of a
+    `bufferization.alloc_tensor` is a tensor value that can be used like any
+    other tensor value. In practice, it is often used as the "out" operand of
+    another op. E.g.:
+
+    ```mlir
+    %c = sparse_tensor.init_tensor [%d1, %d2] : tensor<?x?xf32, #SparseMatrix>
+    %0 = linalg.matmul
+      ins(%a, %b: tensor<?x?xf32>, tensor<?x?xf32>)
+      outs(%c: tensor<?x?xf32, #SparseMatrix>) -> tensor<?x?xf32, #SparseMatrix>
+    ```
   }];
 
   let arguments = (ins Variadic<Index>:$dynamicSizes);

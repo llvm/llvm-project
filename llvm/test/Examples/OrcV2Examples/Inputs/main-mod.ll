@@ -1,4 +1,4 @@
-define i32 @main(i32 %argc, i8** %argv) {
+define i32 @main(i32 %argc, ptr %argv) {
 entry:
   %and = and i32 %argc, 1
   %tobool = icmp eq i32 %and, 0

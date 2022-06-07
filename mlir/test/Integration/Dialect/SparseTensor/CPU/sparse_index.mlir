@@ -40,8 +40,7 @@ module {
   //
   func.func @sparse_index_1d_conj(%arga: tensor<8xi64, #SparseVector>)
                                  -> tensor<8xi64, #SparseVector> {
-    %d0 = arith.constant 8 : index
-    %init = sparse_tensor.init [%d0] : tensor<8xi64, #SparseVector>
+    %init = bufferization.alloc_tensor() : tensor<8xi64, #SparseVector>
     %r = linalg.generic #trait_1d
         ins(%arga: tensor<8xi64, #SparseVector>)
        outs(%init: tensor<8xi64, #SparseVector>) {
@@ -59,8 +58,7 @@ module {
   //
   func.func @sparse_index_1d_disj(%arga: tensor<8xi64, #SparseVector>)
                                  -> tensor<8xi64, #SparseVector> {
-    %d0 = arith.constant 8 : index
-    %init = sparse_tensor.init [%d0] : tensor<8xi64, #SparseVector>
+    %init = bufferization.alloc_tensor() : tensor<8xi64, #SparseVector>
     %r = linalg.generic #trait_1d
         ins(%arga: tensor<8xi64, #SparseVector>)
        outs(%init: tensor<8xi64, #SparseVector>) {
@@ -78,9 +76,7 @@ module {
   //
   func.func @sparse_index_2d_conj(%arga: tensor<3x4xi64, #SparseMatrix>)
                                  -> tensor<3x4xi64, #SparseMatrix> {
-    %d0 = arith.constant 3 : index
-    %d1 = arith.constant 4 : index
-    %init = sparse_tensor.init [%d0, %d1] : tensor<3x4xi64, #SparseMatrix>
+    %init = bufferization.alloc_tensor() : tensor<3x4xi64, #SparseMatrix>
     %r = linalg.generic #trait_2d
         ins(%arga: tensor<3x4xi64, #SparseMatrix>)
        outs(%init: tensor<3x4xi64, #SparseMatrix>) {
@@ -101,9 +97,7 @@ module {
   //
   func.func @sparse_index_2d_disj(%arga: tensor<3x4xi64, #SparseMatrix>)
                                  -> tensor<3x4xi64, #SparseMatrix> {
-    %d0 = arith.constant 3 : index
-    %d1 = arith.constant 4 : index
-    %init = sparse_tensor.init [%d0, %d1] : tensor<3x4xi64, #SparseMatrix>
+    %init = bufferization.alloc_tensor() : tensor<3x4xi64, #SparseMatrix>
     %r = linalg.generic #trait_2d
         ins(%arga: tensor<3x4xi64, #SparseMatrix>)
        outs(%init: tensor<3x4xi64, #SparseMatrix>) {
@@ -121,9 +115,7 @@ module {
 
   func.func @add_outer_2d(%arg0: tensor<2x3xf32, #SparseMatrix>)
                          -> tensor<2x3xf32, #SparseMatrix> {
-    %c2 = arith.constant 2 : index
-    %c3 = arith.constant 3 : index
-    %0 = sparse_tensor.init[%c2, %c3] : tensor<2x3xf32, #SparseMatrix>
+    %0 = bufferization.alloc_tensor() : tensor<2x3xf32, #SparseMatrix>
     %1 = linalg.generic #trait_2d
       ins(%arg0 : tensor<2x3xf32, #SparseMatrix>)
       outs(%0 : tensor<2x3xf32, #SparseMatrix>) {

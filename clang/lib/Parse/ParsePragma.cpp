@@ -3027,14 +3027,6 @@ void PragmaCommentHandler::HandlePragma(Preprocessor &PP,
     return;
   }
 
-  // On PS4, issue a warning about any pragma comments other than
-  // #pragma comment lib.
-  if (PP.getTargetInfo().getTriple().isPS4() && Kind != PCK_Lib) {
-    PP.Diag(Tok.getLocation(), diag::warn_pragma_comment_ignored)
-      << II->getName();
-    return;
-  }
-
   // Read the optional string if present.
   PP.Lex(Tok);
   std::string ArgumentString;

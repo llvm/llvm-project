@@ -10,10 +10,10 @@
 ; This checks that the stored value is indeed from the generated code.
 ;
 ; CHECK-LABEL: polly.stmt.do.body.entry:
-; CHECK:        a.phiops.reload = load i32, i32* %a.phiops
+; CHECK:        a.phiops.reload = load i32, ptr %a.phiops
 ;
 ; CHECK-LABEL: polly.stmt.polly.merge_new_and_old.exit:
-; CHECK:         store i32 %polly.a, i32* %a.s2a
+; CHECK:         store i32 %polly.a, ptr %a.s2a
 
 define void @func() {
 entry:
