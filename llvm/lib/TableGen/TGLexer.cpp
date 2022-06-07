@@ -55,10 +55,8 @@ TGLexer::TGLexer(SourceMgr &SM, ArrayRef<std::string> Macros) : SrcMgr(SM) {
       std::make_unique<std::vector<PreprocessorControlDesc>>());
 
   // Put all macros defined in the command line into the DefinedMacros set.
-  std::for_each(Macros.begin(), Macros.end(),
-                [this](const std::string &MacroName) {
-                  DefinedMacros.insert(MacroName);
-                });
+  for (const std::string &MacroName : Macros)
+    DefinedMacros.insert(MacroName);
 }
 
 SMLoc TGLexer::getLoc() const {

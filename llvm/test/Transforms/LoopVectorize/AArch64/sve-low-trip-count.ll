@@ -47,8 +47,7 @@ define void @trip5_i8(i8* noalias nocapture noundef %dst, i8* noalias nocapture 
 ; CHECK:         [[VSCALE:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-NEXT:    [[VF:%.*]] = mul i64 [[VSCALE]], 16
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], [[VF]]
-; CHECK-NEXT:    [[COND:%.*]] = icmp eq i64 [[INDEX_NEXT]], {{%.*}}
-; CHECK-NEXT:    br i1 [[COND]], label %middle.block, label %vector.body
+; CHECK-NEXT:    br i1 true, label %middle.block, label %vector.body
 ;
 entry:
   br label %for.body

@@ -96,8 +96,8 @@ constexpr bool all_the_algorithms()
     (void)std::ranges::all_of(a, UnaryTrue(&copies)); assert(copies == 0);
     (void)std::ranges::any_of(first, last, UnaryTrue(&copies)); assert(copies == 0);
     (void)std::ranges::any_of(a, UnaryTrue(&copies)); assert(copies == 0);
-    //(void)std::ranges::binary_search(first, last, value, Less(&copies)); assert(copies == 0);
-    //(void)std::ranges::binary_search(a, value, Less(&copies)); assert(copies == 0);
+    (void)std::ranges::binary_search(first, last, value, Less(&copies)); assert(copies == 0);
+    (void)std::ranges::binary_search(a, value, Less(&copies)); assert(copies == 0);
     //(void)std::ranges::clamp(value, value, value, Less(&copies)); assert(copies == 0);
     (void)std::ranges::count_if(first, last, UnaryTrue(&copies)); assert(copies == 0);
     (void)std::ranges::count_if(a, UnaryTrue(&copies)); assert(copies == 0);
@@ -142,8 +142,8 @@ constexpr bool all_the_algorithms()
     //if (!std::is_constant_evaluated()) { (void)std::ranges::inplace_merge(a, mid, Less(&copies)); assert(copies == 0); }
     //(void)std::ranges::lexicographical_compare(first, last, first2, last2, Less(&copies)); assert(copies == 0);
     //(void)std::ranges::lexicographical_compare(a, b, Less(&copies)); assert(copies == 0);
-    //(void)std::ranges::lower_bound(first, last, value, Less(&copies)); assert(copies == 0);
-    //(void)std::ranges::lower_bound(a, value, Less(&copies)); assert(copies == 0);
+    (void)std::ranges::lower_bound(first, last, value, Less(&copies)); assert(copies == 0);
+    (void)std::ranges::lower_bound(a, value, Less(&copies)); assert(copies == 0);
     //(void)std::ranges::make_heap(first, last, Less(&copies)); assert(copies == 0);
     //(void)std::ranges::make_heap(a, Less(&copies)); assert(copies == 0);
     (void)std::ranges::max(value, value, Less(&copies)); assert(copies == 0);
@@ -226,8 +226,8 @@ constexpr bool all_the_algorithms()
     //(void)std::ranges::unique(a, Equal(&copies)); assert(copies == 0);
     //(void)std::ranges::unique_copy(first, last, first2, Equal(&copies)); assert(copies == 0);
     //(void)std::ranges::unique_copy(a, first2, Equal(&copies)); assert(copies == 0);
-    //(void)std::ranges::upper_bound(first, last, value, Less(&copies)); assert(copies == 0);
-    //(void)std::ranges::upper_bound(a, value, Less(&copies)); assert(copies == 0);
+    (void)std::ranges::upper_bound(first, last, value, Less(&copies)); assert(copies == 0);
+    (void)std::ranges::upper_bound(a, value, Less(&copies)); assert(copies == 0);
 
     return true;
 }

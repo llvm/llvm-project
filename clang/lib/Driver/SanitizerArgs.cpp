@@ -175,7 +175,7 @@ static void addDefaultIgnorelists(const Driver &D, SanitizerMask Kinds,
       DiagnoseErrors);
 }
 
-/// Parse -f(no-)?sanitize-(coverage-)?(white|ignore)list argument's values,
+/// Parse -f(no-)?sanitize-(coverage-)?(allow|ignore)list argument's values,
 /// diagnosing any invalid file paths and validating special case list format.
 static void parseSpecialCaseListArg(const Driver &D,
                                     const llvm::opt::ArgList &Args,
@@ -185,7 +185,7 @@ static void parseSpecialCaseListArg(const Driver &D,
                                     unsigned MalformedSCLErrorDiagID,
                                     bool DiagnoseErrors) {
   for (const auto *Arg : Args) {
-    // Match -fsanitize-(coverage-)?(white|ignore)list.
+    // Match -fsanitize-(coverage-)?(allow|ignore)list.
     if (Arg->getOption().matches(SCLOptionID)) {
       Arg->claim();
       std::string SCLPath = Arg->getValue();
@@ -788,7 +788,7 @@ SanitizerArgs::SanitizerArgs(const ToolChain &TC,
       CoverageFeatures |= CoverageFunc;
   }
 
-  // Parse -fsanitize-coverage-(ignore|white)list options if coverage enabled.
+  // Parse -fsanitize-coverage-(allow|ignore)list options if coverage enabled.
   // This also validates special case lists format.
   // Here, OptSpecifier() acts as a never-matching command-line argument.
   // So, there is no way to clear coverage lists but you can append to them.

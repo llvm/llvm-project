@@ -78,3 +78,11 @@ void unreachable_associations(const int i, const struct Test t) {
       default : 3
     ) == 1, "we had better pick struct Test, not const struct Test!"); // C-specific result
 }
+
+void GH55562(void) {
+  // Ensure that you can still define a type within a generic selection
+  // association (despite it not being particularly useful).
+  (void)_Generic(1, struct S { int a; } : 0, default : 0); // ext-warning {{'_Generic' is a C11 extension}}
+  struct S s = { 0 };
+  int i = s.a;
+}
