@@ -70,12 +70,12 @@ bool X86AsmPrinter::runOnMachineFunction(MachineFunction &MF) {
 
   if (Subtarget->isTargetCOFF()) {
     bool Local = MF.getFunction().hasLocalLinkage();
-    OutStreamer->BeginCOFFSymbolDef(CurrentFnSym);
+    OutStreamer->beginCOFFSymbolDef(CurrentFnSym);
     OutStreamer->emitCOFFSymbolStorageClass(
         Local ? COFF::IMAGE_SYM_CLASS_STATIC : COFF::IMAGE_SYM_CLASS_EXTERNAL);
     OutStreamer->emitCOFFSymbolType(COFF::IMAGE_SYM_DTYPE_FUNCTION
                                     << COFF::SCT_COMPLEX_TYPE_SHIFT);
-    OutStreamer->EndCOFFSymbolDef();
+    OutStreamer->endCOFFSymbolDef();
   }
 
   // Emit the rest of the function body.
@@ -709,10 +709,10 @@ void X86AsmPrinter::emitStartOfAsmFile(Module &M) {
     // Emit an absolute @feat.00 symbol.  This appears to be some kind of
     // compiler features bitfield read by link.exe.
     MCSymbol *S = MMI->getContext().getOrCreateSymbol(StringRef("@feat.00"));
-    OutStreamer->BeginCOFFSymbolDef(S);
+    OutStreamer->beginCOFFSymbolDef(S);
     OutStreamer->emitCOFFSymbolStorageClass(COFF::IMAGE_SYM_CLASS_STATIC);
     OutStreamer->emitCOFFSymbolType(COFF::IMAGE_SYM_DTYPE_NULL);
-    OutStreamer->EndCOFFSymbolDef();
+    OutStreamer->endCOFFSymbolDef();
     int64_t Feat00Flags = 0;
 
     if (TT.getArch() == Triple::x86) {
@@ -787,7 +787,7 @@ static void emitNonLazyStubs(MachineModuleInfo *MMI, MCStreamer &OutStreamer) {
       emitNonLazySymbolPointer(OutStreamer, Stub.first, Stub.second);
 
     Stubs.clear();
-    OutStreamer.AddBlankLine();
+    OutStreamer.addBlankLine();
   }
 }
 

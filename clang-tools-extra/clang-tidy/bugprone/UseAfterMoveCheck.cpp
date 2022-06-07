@@ -158,9 +158,12 @@ bool UseAfterMoveFinder::findInternal(const CFGBlock *Block,
 
   // Ignore all reinitializations where the move potentially comes after the
   // reinit.
+  // If `Reinit` is identical to `MovingCall`, we're looking at a move-to-self
+  // (e.g. `a = std::move(a)`). Count these as reinitializations.
   llvm::SmallVector<const Stmt *, 1> ReinitsToDelete;
   for (const Stmt *Reinit : Reinits) {
-    if (MovingCall && Sequence->potentiallyAfter(MovingCall, Reinit))
+    if (MovingCall && Reinit != MovingCall &&
+        Sequence->potentiallyAfter(MovingCall, Reinit))
       ReinitsToDelete.push_back(Reinit);
   }
   for (const Stmt *Reinit : ReinitsToDelete) {
