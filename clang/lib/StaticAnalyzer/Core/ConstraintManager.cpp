@@ -16,6 +16,7 @@
 #include "clang/StaticAnalyzer/Core/PathSensitive/ProgramState.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/ProgramState_Fwd.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/SVals.h"
+#include "llvm/ADT/ScopeExit.h"
 
 using namespace clang;
 using namespace ento;
@@ -48,6 +49,18 @@ ConstraintManager::assumeDualImpl(ProgramStateRef &State,
                                   AssumeFunction &Assume) {
   if (State->isPosteriorlyOverconstrained())
     return {State, State};
+
+  // Assume functions might recurse (see `reAssume` or `tryRearrange`). During
+  // the recursion the State might not change anymore, that means we reached a
+  // fixpoint.
+  // We avoid infinite recursion of assume calls by checking already visited
+  // States on the stack of assume function calls.
+  const ProgramState *RawSt = State.get();
+  if (LLVM_UNLIKELY(AssumeStack.contains(RawSt)))
+    return {State, State};
+  AssumeStack.push(RawSt);
+  auto AssumeStackBuilder =
+      llvm::make_scope_exit([this]() { AssumeStack.pop(); });
 
   ProgramStateRef StTrue = Assume(true);
 

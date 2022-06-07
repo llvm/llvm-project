@@ -144,6 +144,20 @@ protected:
   /// but not thread-safe.
   bool NotifyAssumeClients = true;
 
+  /// A helper class to simulate the call stack of nested assume calls.
+  class AssumeStackTy {
+  public:
+    void push(const ProgramState *S) { Aux.push_back(S); }
+    void pop() { Aux.pop_back(); }
+    bool contains(const ProgramState *S) const {
+      return llvm::is_contained(Aux, S);
+    }
+
+  private:
+    llvm::SmallVector<const ProgramState *, 4> Aux;
+  };
+  AssumeStackTy AssumeStack;
+
   virtual ProgramStateRef assumeInternal(ProgramStateRef state,
                                          DefinedSVal Cond, bool Assumption) = 0;
 
