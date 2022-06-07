@@ -24,7 +24,7 @@ void MipsRegInfoRecord::EmitMipsOptionRecord() {
   MipsTargetStreamer *MTS =
       static_cast<MipsTargetStreamer *>(Streamer->getTargetStreamer());
 
-  Streamer->PushSection();
+  Streamer->pushSection();
 
   // We need to distinguish between N64 and the rest because at the moment
   // we don't emit .Mips.options for other ELFs other than N64.
@@ -67,7 +67,7 @@ void MipsRegInfoRecord::EmitMipsOptionRecord() {
     Streamer->emitInt32(ri_gp_value);
   }
 
-  Streamer->PopSection();
+  Streamer->popSection();
 }
 
 void MipsRegInfoRecord::SetPhysRegUsed(unsigned Reg,
