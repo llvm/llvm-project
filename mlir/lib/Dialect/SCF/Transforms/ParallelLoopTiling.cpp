@@ -1,4 +1,4 @@
-//===- ParallelLoopTiling.cpp - Tiles scf.parallel ---------------===//
+//===- ParallelLoopTiling.cpp - Tiles scf.parallel ------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -47,7 +47,7 @@ using namespace mlir::scf;
 ///
 /// where the uses of %i0 and %i1 in the loop body are replaced by
 /// %i0 + j0 and %i1 + %j1.
-//
+///
 /// The old loop is replaced with the new one.
 std::pair<ParallelOp, ParallelOp>
 mlir::scf::tileParallelLoop(ParallelOp op, ArrayRef<int64_t> tileSizes,
