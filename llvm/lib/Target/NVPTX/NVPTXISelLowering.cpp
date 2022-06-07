@@ -2244,7 +2244,7 @@ SDValue NVPTXTargetLowering::LowerLOADi1(SDValue Op, SelectionDAG &DAG) const {
   assert(Node->getValueType(0) == MVT::i1 &&
          "Custom lowering for i1 load only");
   SDValue newLD = DAG.getLoad(MVT::i16, dl, LD->getChain(), LD->getBasePtr(),
-                              LD->getPointerInfo(), LD->getAlignment(),
+                              LD->getPointerInfo(), LD->getAlign(),
                               LD->getMemOperand()->getFlags());
   SDValue result = DAG.getNode(ISD::TRUNCATE, dl, MVT::i1, newLD);
   // The legalizer (the caller) is expecting two values from the legalized
@@ -2409,7 +2409,7 @@ SDValue NVPTXTargetLowering::LowerSTOREi1(SDValue Op, SelectionDAG &DAG) const {
   Tmp3 = DAG.getNode(ISD::ZERO_EXTEND, dl, MVT::i16, Tmp3);
   SDValue Result =
       DAG.getTruncStore(Tmp1, dl, Tmp3, Tmp2, ST->getPointerInfo(), MVT::i8,
-                        ST->getAlignment(), ST->getMemOperand()->getFlags());
+                        ST->getAlign(), ST->getMemOperand()->getFlags());
   return Result;
 }
 
