@@ -113,7 +113,7 @@ bool DwarfStreamer::init(Triple TheTriple,
   return true;
 }
 
-void DwarfStreamer::finish() { MS->Finish(); }
+void DwarfStreamer::finish() { MS->finish(); }
 
 void DwarfStreamer::switchToDebugInfoSection(unsigned DwarfVersion) {
   MS->SwitchSection(MOFI->getDwarfInfoSection());

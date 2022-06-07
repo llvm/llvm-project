@@ -18,6 +18,7 @@
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "documentSymbolProvider": true,
 // CHECK-NEXT:      "hoverProvider": true,
+// CHECK-NEXT:      "inlayHintProvider": true,
 // CHECK-NEXT:      "referencesProvider": true,
 // CHECK-NEXT:      "signatureHelpProvider": {
 // CHECK-NEXT:        "triggerCharacters": [
@@ -26,7 +27,7 @@
 // CHECK-NEXT:        ]
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "textDocumentSync": {
-// CHECK-NEXT:        "change": 1,
+// CHECK-NEXT:        "change": 2,
 // CHECK-NEXT:        "openClose": true,
 // CHECK-NEXT:        "save": true
 // CHECK-NEXT:      }

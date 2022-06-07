@@ -494,7 +494,7 @@ void MachORewriteInstance::emitAndLink() {
   auto Streamer = BC->createStreamer(*OS);
 
   emitBinaryContext(*Streamer, *BC, getOrgSecPrefix());
-  Streamer->Finish();
+  Streamer->finish();
 
   std::unique_ptr<MemoryBuffer> ObjectMemBuffer =
       MemoryBuffer::getMemBuffer(BOS->str(), "in-memory object file", false);

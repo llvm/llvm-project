@@ -20,7 +20,7 @@ namespace llvm {
 class GlobalVariable;
 class Instruction;
 class MDNode;
-}
+} // namespace llvm
 
 namespace clang {
 class VarDecl;
@@ -34,19 +34,23 @@ class SanitizerMetadata {
   void operator=(const SanitizerMetadata &) = delete;
 
   CodeGenModule &CGM;
+
 public:
   SanitizerMetadata(CodeGenModule &CGM);
-  void reportGlobalToASan(llvm::GlobalVariable *GV, const VarDecl &D,
-                          bool IsDynInit = false);
-  void reportGlobalToASan(llvm::GlobalVariable *GV, SourceLocation Loc,
-                          StringRef Name, QualType Ty, bool IsDynInit = false,
-                          bool IsExcluded = false);
+  void reportGlobal(llvm::GlobalVariable *GV, const VarDecl &D,
+                    bool IsDynInit = false);
+  void reportGlobal(llvm::GlobalVariable *GV, SourceLocation Loc,
+                    StringRef Name, QualType Ty = {}, bool IsDynInit = false);
   void disableSanitizerForGlobal(llvm::GlobalVariable *GV);
   void disableSanitizerForInstruction(llvm::Instruction *I);
+
 private:
+  void reportGlobal(llvm::GlobalVariable *GV, SourceLocation Loc,
+                    StringRef Name, QualType Ty, bool IsDynInit,
+                    bool IsExcluded);
   llvm::MDNode *getLocationMetadata(SourceLocation Loc);
 };
-}  // end namespace CodeGen
-}  // end namespace clang
+} // end namespace CodeGen
+} // end namespace clang
 
 #endif
