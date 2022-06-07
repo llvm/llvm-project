@@ -128,6 +128,8 @@ uptr GetMaxUserVirtualAddress() {
 
 uptr GetMaxVirtualAddress() { return GetMaxUserVirtualAddress(); }
 
+bool ErrorIsOOM(error_t err) { return err == ZX_ERR_NO_MEMORY; }
+
 static void *DoAnonymousMmapOrDie(uptr size, const char *mem_type,
                                   bool raw_report, bool die_for_nomem) {
   size = RoundUpTo(size, GetPageSize());
