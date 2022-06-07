@@ -1006,11 +1006,12 @@ Value *LibCallSimplifier::optimizeMemChr(CallInst *CI, IRBuilderBase &B) {
   Value *CharVal = CI->getArgOperand(1);
   ConstantInt *CharC = dyn_cast<ConstantInt>(CharVal);
   ConstantInt *LenC = dyn_cast<ConstantInt>(Size);
+  Value *NullPtr = Constant::getNullValue(CI->getType());
 
   // memchr(x, y, 0) -> null
   if (LenC) {
     if (LenC->isZero())
-      return Constant::getNullValue(CI->getType());
+      return NullPtr;
 
     if (LenC->isOne()) {
       // Fold memchr(x, y, 1) --> *x == y ? x : null for any x and y,
@@ -1019,7 +1020,6 @@ Value *LibCallSimplifier::optimizeMemChr(CallInst *CI, IRBuilderBase &B) {
       // Slice off the character's high end bits.
       CharVal = B.CreateTrunc(CharVal, B.getInt8Ty());
       Value *Cmp = B.CreateICmpEQ(Val, CharVal, "memchr.char0cmp");
-      Value *NullPtr = Constant::getNullValue(CI->getType());
       return B.CreateSelect(Cmp, SrcStr, NullPtr, "memchr.sel");
     }
   }
@@ -1033,26 +1033,61 @@ Value *LibCallSimplifier::optimizeMemChr(CallInst *CI, IRBuilderBase &B) {
     if (Pos == StringRef::npos)
       // When the character is not in the source array fold the result
       // to null regardless of Size.
-      return Constant::getNullValue(CI->getType());
+      return NullPtr;
 
     // Fold memchr(s, c, n) -> n <= Pos ? null : s + Pos
     // When the constant Size is less than or equal to the character
     // position also fold the result to null.
     Value *Cmp = B.CreateICmpULE(Size, ConstantInt::get(Size->getType(), Pos),
                                  "memchr.cmp");
-    Value *NullPtr = Constant::getNullValue(CI->getType());
     Value *SrcPlus =
         B.CreateGEP(B.getInt8Ty(), SrcStr, B.getInt64(Pos), "memchr.ptr");
     return B.CreateSelect(Cmp, NullPtr, SrcPlus);
   }
 
+  if (LenC)
+    Str = substr(Str, LenC->getZExtValue());
+
+  size_t Pos = Str.find_first_not_of(Str[0]);
+  if (Pos == StringRef::npos
+      || Str.find_first_not_of(Str[Pos], Pos) == StringRef::npos) {
+    // If the source array consists of at most two consecutive sequences
+    // of the same characters, then for any C and N (whether in bounds or
+    // not), fold memchr(S, C, N) to
+    //   N != 0 && *S == C ? S : null
+    // or for the two sequences to:
+    //   N != 0 && *S == C ? S : (N > Pos && S[Pos] == C ? S + Pos : null)
+    //   ^Sel2                   ^Sel1 are denoted above.
+    // The latter makes it also possible to fold strchr() calls with strings
+    // of the same characters.
+    Type *SizeTy = Size->getType();
+    Type *Int8Ty = B.getInt8Ty();
+
+    // Slice off the sought character's high end bits.
+    CharVal = B.CreateTrunc(CharVal, Int8Ty);
+
+    Value *Sel1 = NullPtr;
+    if (Pos != StringRef::npos) {
+      // Handle two consecutive sequences of the same characters.
+      Value *PosVal = ConstantInt::get(SizeTy, Pos);
+      Value *StrPos = ConstantInt::get(Int8Ty, Str[Pos]);
+      Value *CEqSPos = B.CreateICmpEQ(CharVal, StrPos);
+      Value *NGtPos = B.CreateICmp(ICmpInst::ICMP_UGT, Size, PosVal);
+      Value *And = B.CreateAnd(CEqSPos, NGtPos);
+      Value *SrcPlus = B.CreateInBoundsGEP(B.getInt8Ty(), SrcStr, PosVal);
+      Sel1 = B.CreateSelect(And, SrcPlus, NullPtr, "memchr.sel1");
+    }
+
+    Value *Str0 = ConstantInt::get(Int8Ty, Str[0]);
+    Value *CEqS0 = B.CreateICmpEQ(Str0, CharVal);
+    Value *NNeZ = B.CreateICmpNE(Size, ConstantInt::get(SizeTy, 0));
+    Value *And = B.CreateAnd(NNeZ, CEqS0);
+    return B.CreateSelect(And, SrcStr, Sel1, "memchr.sel2");
+  }
+
   if (!LenC)
     // From now on we need a constant length and constant array.
     return nullptr;
-
-  // Truncate the string to LenC without slicing when targeting LP64
-  // on an ILP32 host.
-  Str = substr(Str, LenC->getZExtValue());
 
   // If the char is variable but the input str and length are not we can turn
   // this memchr call into a simple bit field test. Of course this only works
