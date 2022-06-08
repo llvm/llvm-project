@@ -1038,7 +1038,8 @@ define <4 x float> @test32(<4 x float>* %a) {
 ;
 ; CHECK-LE-LABEL: test32:
 ; CHECK-LE:       # %bb.0:
-; CHECK-LE-NEXT:    lvx v2, 0, r3
+; CHECK-LE-NEXT:    lxvd2x vs0, 0, r3
+; CHECK-LE-NEXT:    xxswapd v2, vs0
 ; CHECK-LE-NEXT:    blr
   %v = load <4 x float>, <4 x float>* %a, align 16
   ret <4 x float> %v
@@ -1065,7 +1066,8 @@ define void @test33(<4 x float>* %a, <4 x float> %b) {
 ;
 ; CHECK-LE-LABEL: test33:
 ; CHECK-LE:       # %bb.0:
-; CHECK-LE-NEXT:    stvx v2, 0, r3
+; CHECK-LE-NEXT:    xxswapd vs0, v2
+; CHECK-LE-NEXT:    stxvd2x vs0, 0, r3
 ; CHECK-LE-NEXT:    blr
   store <4 x float> %b, <4 x float>* %a, align 16
   ret void
@@ -1159,7 +1161,8 @@ define <4 x i32> @test34(<4 x i32>* %a) {
 ;
 ; CHECK-LE-LABEL: test34:
 ; CHECK-LE:       # %bb.0:
-; CHECK-LE-NEXT:    lvx v2, 0, r3
+; CHECK-LE-NEXT:    lxvd2x vs0, 0, r3
+; CHECK-LE-NEXT:    xxswapd v2, vs0
 ; CHECK-LE-NEXT:    blr
   %v = load <4 x i32>, <4 x i32>* %a, align 16
   ret <4 x i32> %v
@@ -1186,7 +1189,8 @@ define void @test35(<4 x i32>* %a, <4 x i32> %b) {
 ;
 ; CHECK-LE-LABEL: test35:
 ; CHECK-LE:       # %bb.0:
-; CHECK-LE-NEXT:    stvx v2, 0, r3
+; CHECK-LE-NEXT:    xxswapd vs0, v2
+; CHECK-LE-NEXT:    stxvd2x vs0, 0, r3
 ; CHECK-LE-NEXT:    blr
   store <4 x i32> %b, <4 x i32>* %a, align 16
   ret void
@@ -2282,9 +2286,10 @@ define <2 x double> @test69(<2 x i16> %a) {
 ; CHECK-LE:       # %bb.0:
 ; CHECK-LE-NEXT:    addis r3, r2, .LCPI63_0@toc@ha
 ; CHECK-LE-NEXT:    addi r3, r3, .LCPI63_0@toc@l
-; CHECK-LE-NEXT:    lvx v3, 0, r3
+; CHECK-LE-NEXT:    lxvd2x vs0, 0, r3
 ; CHECK-LE-NEXT:    addis r3, r2, .LCPI63_1@toc@ha
 ; CHECK-LE-NEXT:    addi r3, r3, .LCPI63_1@toc@l
+; CHECK-LE-NEXT:    xxswapd v3, vs0
 ; CHECK-LE-NEXT:    lxvd2x vs0, 0, r3
 ; CHECK-LE-NEXT:    vperm v2, v2, v2, v3
 ; CHECK-LE-NEXT:    xxswapd v3, vs0
@@ -2362,9 +2367,10 @@ define <2 x double> @test70(<2 x i8> %a) {
 ; CHECK-LE:       # %bb.0:
 ; CHECK-LE-NEXT:    addis r3, r2, .LCPI64_0@toc@ha
 ; CHECK-LE-NEXT:    addi r3, r3, .LCPI64_0@toc@l
-; CHECK-LE-NEXT:    lvx v3, 0, r3
+; CHECK-LE-NEXT:    lxvd2x vs0, 0, r3
 ; CHECK-LE-NEXT:    addis r3, r2, .LCPI64_1@toc@ha
 ; CHECK-LE-NEXT:    addi r3, r3, .LCPI64_1@toc@l
+; CHECK-LE-NEXT:    xxswapd v3, vs0
 ; CHECK-LE-NEXT:    lxvd2x vs0, 0, r3
 ; CHECK-LE-NEXT:    vperm v2, v2, v2, v3
 ; CHECK-LE-NEXT:    xxswapd v3, vs0
@@ -2419,11 +2425,12 @@ define <2 x i32> @test80(i32 %v) {
 ;
 ; CHECK-LE-LABEL: test80:
 ; CHECK-LE:       # %bb.0:
-; CHECK-LE-NEXT:    mtfprwz f0, r3
 ; CHECK-LE-NEXT:    addis r4, r2, .LCPI65_0@toc@ha
-; CHECK-LE-NEXT:    addi r3, r4, .LCPI65_0@toc@l
-; CHECK-LE-NEXT:    xxspltw v2, vs0, 1
-; CHECK-LE-NEXT:    lvx v3, 0, r3
+; CHECK-LE-NEXT:    mtfprwz f1, r3
+; CHECK-LE-NEXT:    addi r4, r4, .LCPI65_0@toc@l
+; CHECK-LE-NEXT:    lxvd2x vs0, 0, r4
+; CHECK-LE-NEXT:    xxspltw v2, vs1, 1
+; CHECK-LE-NEXT:    xxswapd v3, vs0
 ; CHECK-LE-NEXT:    vadduwm v2, v2, v3
 ; CHECK-LE-NEXT:    blr
   %b1 = insertelement <2 x i32> undef, i32 %v, i32 0

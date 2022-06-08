@@ -879,7 +879,8 @@ define <4 x i32> @fromDiffConstsi() {
 ; P8LE:       # %bb.0: # %entry
 ; P8LE-NEXT:    addis r3, r2, .LCPI5_0@toc@ha
 ; P8LE-NEXT:    addi r3, r3, .LCPI5_0@toc@l
-; P8LE-NEXT:    lvx v2, 0, r3
+; P8LE-NEXT:    lxvd2x vs0, 0, r3
+; P8LE-NEXT:    xxswapd v2, vs0
 ; P8LE-NEXT:    blr
 entry:
   ret <4 x i32> <i32 242, i32 -113, i32 889, i32 19>
@@ -947,12 +948,13 @@ define <4 x i32> @fromDiffMemConsDi(i32* nocapture readonly %arr) {
 ;
 ; P8LE-LABEL: fromDiffMemConsDi:
 ; P8LE:       # %bb.0: # %entry
-; P8LE-NEXT:    lxvd2x vs0, 0, r3
 ; P8LE-NEXT:    addis r4, r2, .LCPI7_0@toc@ha
-; P8LE-NEXT:    addi r3, r4, .LCPI7_0@toc@l
-; P8LE-NEXT:    lvx v2, 0, r3
-; P8LE-NEXT:    xxswapd v3, vs0
-; P8LE-NEXT:    vperm v2, v3, v3, v2
+; P8LE-NEXT:    lxvd2x vs0, 0, r3
+; P8LE-NEXT:    addi r4, r4, .LCPI7_0@toc@l
+; P8LE-NEXT:    lxvd2x vs1, 0, r4
+; P8LE-NEXT:    xxswapd v2, vs0
+; P8LE-NEXT:    xxswapd v3, vs1
+; P8LE-NEXT:    vperm v2, v2, v2, v3
 ; P8LE-NEXT:    blr
 entry:
   %arrayidx = getelementptr inbounds i32, i32* %arr, i64 3
@@ -1059,10 +1061,11 @@ define <4 x i32> @fromDiffMemVarDi(i32* nocapture readonly %arr, i32 signext %el
 ; P8LE-NEXT:    sldi r4, r4, 2
 ; P8LE-NEXT:    addis r5, r2, .LCPI9_0@toc@ha
 ; P8LE-NEXT:    add r3, r3, r4
+; P8LE-NEXT:    addi r4, r5, .LCPI9_0@toc@l
 ; P8LE-NEXT:    addi r3, r3, -12
+; P8LE-NEXT:    lxvd2x vs1, 0, r4
 ; P8LE-NEXT:    lxvd2x vs0, 0, r3
-; P8LE-NEXT:    addi r3, r5, .LCPI9_0@toc@l
-; P8LE-NEXT:    lvx v3, 0, r3
+; P8LE-NEXT:    xxswapd v3, vs1
 ; P8LE-NEXT:    xxswapd v2, vs0
 ; P8LE-NEXT:    vperm v2, v2, v2, v3
 ; P8LE-NEXT:    blr
@@ -1404,7 +1407,8 @@ define <4 x i32> @fromDiffConstsConvftoi() {
 ; P8LE:       # %bb.0: # %entry
 ; P8LE-NEXT:    addis r3, r2, .LCPI16_0@toc@ha
 ; P8LE-NEXT:    addi r3, r3, .LCPI16_0@toc@l
-; P8LE-NEXT:    lvx v2, 0, r3
+; P8LE-NEXT:    lxvd2x vs0, 0, r3
+; P8LE-NEXT:    xxswapd v2, vs0
 ; P8LE-NEXT:    blr
 entry:
   ret <4 x i32> <i32 24, i32 234, i32 988, i32 422>
@@ -1475,12 +1479,13 @@ define <4 x i32> @fromDiffMemConsDConvftoi(float* nocapture readonly %ptr) {
 ;
 ; P8LE-LABEL: fromDiffMemConsDConvftoi:
 ; P8LE:       # %bb.0: # %entry
-; P8LE-NEXT:    lxvd2x vs0, 0, r3
 ; P8LE-NEXT:    addis r4, r2, .LCPI18_0@toc@ha
-; P8LE-NEXT:    addi r3, r4, .LCPI18_0@toc@l
-; P8LE-NEXT:    lvx v2, 0, r3
-; P8LE-NEXT:    xxswapd v3, vs0
-; P8LE-NEXT:    vperm v2, v3, v3, v2
+; P8LE-NEXT:    lxvd2x vs0, 0, r3
+; P8LE-NEXT:    addi r4, r4, .LCPI18_0@toc@l
+; P8LE-NEXT:    lxvd2x vs1, 0, r4
+; P8LE-NEXT:    xxswapd v2, vs0
+; P8LE-NEXT:    xxswapd v3, vs1
+; P8LE-NEXT:    vperm v2, v2, v2, v3
 ; P8LE-NEXT:    xvcvspsxws v2, v2
 ; P8LE-NEXT:    blr
 entry:
@@ -1858,7 +1863,8 @@ define <4 x i32> @fromDiffConstsConvdtoi() {
 ; P8LE:       # %bb.0: # %entry
 ; P8LE-NEXT:    addis r3, r2, .LCPI25_0@toc@ha
 ; P8LE-NEXT:    addi r3, r3, .LCPI25_0@toc@l
-; P8LE-NEXT:    lvx v2, 0, r3
+; P8LE-NEXT:    lxvd2x vs0, 0, r3
+; P8LE-NEXT:    xxswapd v2, vs0
 ; P8LE-NEXT:    blr
 entry:
   ret <4 x i32> <i32 24, i32 234, i32 988, i32 422>
@@ -2398,7 +2404,8 @@ define <4 x i32> @fromDiffConstsui() {
 ; P8LE:       # %bb.0: # %entry
 ; P8LE-NEXT:    addis r3, r2, .LCPI37_0@toc@ha
 ; P8LE-NEXT:    addi r3, r3, .LCPI37_0@toc@l
-; P8LE-NEXT:    lvx v2, 0, r3
+; P8LE-NEXT:    lxvd2x vs0, 0, r3
+; P8LE-NEXT:    xxswapd v2, vs0
 ; P8LE-NEXT:    blr
 entry:
   ret <4 x i32> <i32 242, i32 -113, i32 889, i32 19>
@@ -2466,12 +2473,13 @@ define <4 x i32> @fromDiffMemConsDui(i32* nocapture readonly %arr) {
 ;
 ; P8LE-LABEL: fromDiffMemConsDui:
 ; P8LE:       # %bb.0: # %entry
-; P8LE-NEXT:    lxvd2x vs0, 0, r3
 ; P8LE-NEXT:    addis r4, r2, .LCPI39_0@toc@ha
-; P8LE-NEXT:    addi r3, r4, .LCPI39_0@toc@l
-; P8LE-NEXT:    lvx v2, 0, r3
-; P8LE-NEXT:    xxswapd v3, vs0
-; P8LE-NEXT:    vperm v2, v3, v3, v2
+; P8LE-NEXT:    lxvd2x vs0, 0, r3
+; P8LE-NEXT:    addi r4, r4, .LCPI39_0@toc@l
+; P8LE-NEXT:    lxvd2x vs1, 0, r4
+; P8LE-NEXT:    xxswapd v2, vs0
+; P8LE-NEXT:    xxswapd v3, vs1
+; P8LE-NEXT:    vperm v2, v2, v2, v3
 ; P8LE-NEXT:    blr
 entry:
   %arrayidx = getelementptr inbounds i32, i32* %arr, i64 3
@@ -2578,10 +2586,11 @@ define <4 x i32> @fromDiffMemVarDui(i32* nocapture readonly %arr, i32 signext %e
 ; P8LE-NEXT:    sldi r4, r4, 2
 ; P8LE-NEXT:    addis r5, r2, .LCPI41_0@toc@ha
 ; P8LE-NEXT:    add r3, r3, r4
+; P8LE-NEXT:    addi r4, r5, .LCPI41_0@toc@l
 ; P8LE-NEXT:    addi r3, r3, -12
+; P8LE-NEXT:    lxvd2x vs1, 0, r4
 ; P8LE-NEXT:    lxvd2x vs0, 0, r3
-; P8LE-NEXT:    addi r3, r5, .LCPI41_0@toc@l
-; P8LE-NEXT:    lvx v3, 0, r3
+; P8LE-NEXT:    xxswapd v3, vs1
 ; P8LE-NEXT:    xxswapd v2, vs0
 ; P8LE-NEXT:    vperm v2, v2, v2, v3
 ; P8LE-NEXT:    blr
@@ -2923,7 +2932,8 @@ define <4 x i32> @fromDiffConstsConvftoui() {
 ; P8LE:       # %bb.0: # %entry
 ; P8LE-NEXT:    addis r3, r2, .LCPI48_0@toc@ha
 ; P8LE-NEXT:    addi r3, r3, .LCPI48_0@toc@l
-; P8LE-NEXT:    lvx v2, 0, r3
+; P8LE-NEXT:    lxvd2x vs0, 0, r3
+; P8LE-NEXT:    xxswapd v2, vs0
 ; P8LE-NEXT:    blr
 entry:
   ret <4 x i32> <i32 24, i32 234, i32 988, i32 422>
@@ -2994,12 +3004,13 @@ define <4 x i32> @fromDiffMemConsDConvftoui(float* nocapture readonly %ptr) {
 ;
 ; P8LE-LABEL: fromDiffMemConsDConvftoui:
 ; P8LE:       # %bb.0: # %entry
-; P8LE-NEXT:    lxvd2x vs0, 0, r3
 ; P8LE-NEXT:    addis r4, r2, .LCPI50_0@toc@ha
-; P8LE-NEXT:    addi r3, r4, .LCPI50_0@toc@l
-; P8LE-NEXT:    lvx v2, 0, r3
-; P8LE-NEXT:    xxswapd v3, vs0
-; P8LE-NEXT:    vperm v2, v3, v3, v2
+; P8LE-NEXT:    lxvd2x vs0, 0, r3
+; P8LE-NEXT:    addi r4, r4, .LCPI50_0@toc@l
+; P8LE-NEXT:    lxvd2x vs1, 0, r4
+; P8LE-NEXT:    xxswapd v2, vs0
+; P8LE-NEXT:    xxswapd v3, vs1
+; P8LE-NEXT:    vperm v2, v2, v2, v3
 ; P8LE-NEXT:    xvcvspuxws v2, v2
 ; P8LE-NEXT:    blr
 entry:
@@ -3378,7 +3389,8 @@ define <4 x i32> @fromDiffConstsConvdtoui() {
 ; P8LE:       # %bb.0: # %entry
 ; P8LE-NEXT:    addis r3, r2, .LCPI57_0@toc@ha
 ; P8LE-NEXT:    addi r3, r3, .LCPI57_0@toc@l
-; P8LE-NEXT:    lvx v2, 0, r3
+; P8LE-NEXT:    lxvd2x vs0, 0, r3
+; P8LE-NEXT:    xxswapd v2, vs0
 ; P8LE-NEXT:    blr
 entry:
   ret <4 x i32> <i32 24, i32 234, i32 988, i32 422>

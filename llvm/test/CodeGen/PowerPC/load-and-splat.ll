@@ -83,8 +83,9 @@ define dso_local void @test2(<4 x float>* nocapture %c, float* nocapture readonl
 ; P8:       # %bb.0: # %entry
 ; P8-NEXT:    addi r4, r4, 12
 ; P8-NEXT:    lfiwzx f0, 0, r4
-; P8-NEXT:    xxspltw v2, vs0, 1
-; P8-NEXT:    stvx v2, 0, r3
+; P8-NEXT:    xxspltw vs0, vs0, 1
+; P8-NEXT:    xxswapd vs0, vs0
+; P8-NEXT:    stxvd2x vs0, 0, r3
 ; P8-NEXT:    blr
 ;
 ; P7-LABEL: test2:
@@ -139,8 +140,9 @@ define dso_local void @test3(<4 x i32>* nocapture %c, i32* nocapture readonly %a
 ; P8:       # %bb.0: # %entry
 ; P8-NEXT:    addi r4, r4, 12
 ; P8-NEXT:    lfiwzx f0, 0, r4
-; P8-NEXT:    xxspltw v2, vs0, 1
-; P8-NEXT:    stvx v2, 0, r3
+; P8-NEXT:    xxspltw vs0, vs0, 1
+; P8-NEXT:    xxswapd vs0, vs0
+; P8-NEXT:    stxvd2x vs0, 0, r3
 ; P8-NEXT:    blr
 ;
 ; P7-LABEL: test3:
@@ -428,7 +430,8 @@ define void @test7(<8 x i16>* %a, i16* %in) {
 ; P8-NEXT:    lhzx r4, 0, r4
 ; P8-NEXT:    mtvsrwz v2, r4
 ; P8-NEXT:    vsplth v2, v2, 3
-; P8-NEXT:    stvx v2, 0, r3
+; P8-NEXT:    xxswapd vs0, v2
+; P8-NEXT:    stxvd2x vs0, 0, r3
 ; P8-NEXT:    blr
 ;
 ; P7-LABEL: test7:
@@ -489,7 +492,8 @@ define void @test8(<16 x i8>* %a, i8* %in) {
 ; P8-NEXT:    lbzx r4, 0, r4
 ; P8-NEXT:    mtvsrwz v2, r4
 ; P8-NEXT:    vspltb v2, v2, 7
-; P8-NEXT:    stvx v2, 0, r3
+; P8-NEXT:    xxswapd vs0, v2
+; P8-NEXT:    stxvd2x vs0, 0, r3
 ; P8-NEXT:    blr
 ;
 ; P7-LABEL: test8:
@@ -629,7 +633,8 @@ define <16 x i8> @unadjusted_lxvwsx_v16i8(<16 x i8> *%s, <16 x i8> %t) {
 ;
 ; P8-LABEL: unadjusted_lxvwsx_v16i8:
 ; P8:       # %bb.0: # %entry
-; P8-NEXT:    lvx v2, 0, r3
+; P8-NEXT:    lxvd2x vs0, 0, r3
+; P8-NEXT:    xxswapd v2, vs0
 ; P8-NEXT:    xxspltw v2, v2, 3
 ; P8-NEXT:    blr
 ;
@@ -670,7 +675,8 @@ define <16 x i8> @adjusted_lxvwsx_v16i8(<16 x i8> *%s, <16 x i8> %t) {
 ;
 ; P8-LABEL: adjusted_lxvwsx_v16i8:
 ; P8:       # %bb.0: # %entry
-; P8-NEXT:    lvx v2, 0, r3
+; P8-NEXT:    lxvd2x vs0, 0, r3
+; P8-NEXT:    xxswapd v2, vs0
 ; P8-NEXT:    xxspltw v2, v2, 2
 ; P8-NEXT:    blr
 ;
@@ -712,7 +718,8 @@ define <16 x i8> @adjusted_lxvwsx_v16i8_2(<16 x i8> *%s, <16 x i8> %t) {
 ;
 ; P8-LABEL: adjusted_lxvwsx_v16i8_2:
 ; P8:       # %bb.0: # %entry
-; P8-NEXT:    lvx v2, 0, r3
+; P8-NEXT:    lxvd2x vs0, 0, r3
+; P8-NEXT:    xxswapd v2, vs0
 ; P8-NEXT:    xxspltw v2, v2, 1
 ; P8-NEXT:    blr
 ;
@@ -754,7 +761,8 @@ define <16 x i8> @adjusted_lxvwsx_v16i8_3(<16 x i8> *%s, <16 x i8> %t) {
 ;
 ; P8-LABEL: adjusted_lxvwsx_v16i8_3:
 ; P8:       # %bb.0: # %entry
-; P8-NEXT:    lvx v2, 0, r3
+; P8-NEXT:    lxvd2x vs0, 0, r3
+; P8-NEXT:    xxswapd v2, vs0
 ; P8-NEXT:    xxspltw v2, v2, 0
 ; P8-NEXT:    blr
 ;

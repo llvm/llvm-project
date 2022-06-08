@@ -8,7 +8,8 @@ define <8 x i16> @pr25080(<8 x i32> %a) {
 ; LE-NEXT:    addis 3, 2, .LCPI0_0@toc@ha
 ; LE-NEXT:    xxlxor 37, 37, 37
 ; LE-NEXT:    addi 3, 3, .LCPI0_0@toc@l
-; LE-NEXT:    lvx 4, 0, 3
+; LE-NEXT:    lxvd2x 0, 0, 3
+; LE-NEXT:    xxswapd 36, 0
 ; LE-NEXT:    xxland 34, 34, 36
 ; LE-NEXT:    xxland 35, 35, 36
 ; LE-NEXT:    vcmpequw 2, 2, 5
@@ -40,11 +41,12 @@ define <8 x i16> @pr25080(<8 x i32> %a) {
 ; LE-NEXT:    vmrghh 4, 1, 4
 ; LE-NEXT:    addi 3, 3, .LCPI0_1@toc@l
 ; LE-NEXT:    vmrghh 3, 3, 6
+; LE-NEXT:    lxvd2x 2, 0, 3
 ; LE-NEXT:    vmrghh 5, 0, 5
 ; LE-NEXT:    xxmrglw 0, 36, 34
 ; LE-NEXT:    vspltish 4, 15
 ; LE-NEXT:    xxmrglw 1, 37, 35
-; LE-NEXT:    lvx 3, 0, 3
+; LE-NEXT:    xxswapd 35, 2
 ; LE-NEXT:    xxmrgld 34, 1, 0
 ; LE-NEXT:    xxlor 34, 34, 35
 ; LE-NEXT:    vslh 2, 2, 4

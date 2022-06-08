@@ -163,36 +163,42 @@ define <3 x i1> @test_urem_vec(<3 x i11> %X) nounwind {
 ; PPC64LE:       # %bb.0:
 ; PPC64LE-NEXT:    addis 6, 2, .LCPI4_0@toc@ha
 ; PPC64LE-NEXT:    mtfprwz 0, 3
-; PPC64LE-NEXT:    mtfprwz 1, 4
-; PPC64LE-NEXT:    addi 3, 6, .LCPI4_0@toc@l
-; PPC64LE-NEXT:    addis 4, 2, .LCPI4_2@toc@ha
-; PPC64LE-NEXT:    lvx 2, 0, 3
-; PPC64LE-NEXT:    mtvsrwz 36, 5
 ; PPC64LE-NEXT:    addis 3, 2, .LCPI4_1@toc@ha
-; PPC64LE-NEXT:    xxmrghw 35, 1, 0
+; PPC64LE-NEXT:    addi 6, 6, .LCPI4_0@toc@l
+; PPC64LE-NEXT:    mtfprwz 2, 4
 ; PPC64LE-NEXT:    addi 3, 3, .LCPI4_1@toc@l
-; PPC64LE-NEXT:    vperm 2, 4, 3, 2
-; PPC64LE-NEXT:    vspltisw 3, -11
-; PPC64LE-NEXT:    lvx 4, 0, 3
+; PPC64LE-NEXT:    addis 4, 2, .LCPI4_2@toc@ha
+; PPC64LE-NEXT:    lxvd2x 1, 0, 6
+; PPC64LE-NEXT:    mtvsrwz 36, 5
+; PPC64LE-NEXT:    xxmrghw 34, 2, 0
+; PPC64LE-NEXT:    lxvd2x 0, 0, 3
 ; PPC64LE-NEXT:    addi 3, 4, .LCPI4_2@toc@l
 ; PPC64LE-NEXT:    addis 4, 2, .LCPI4_4@toc@ha
-; PPC64LE-NEXT:    lvx 5, 0, 3
-; PPC64LE-NEXT:    addis 3, 2, .LCPI4_3@toc@ha
 ; PPC64LE-NEXT:    addi 4, 4, .LCPI4_4@toc@l
+; PPC64LE-NEXT:    xxswapd 35, 1
+; PPC64LE-NEXT:    lxvd2x 1, 0, 3
+; PPC64LE-NEXT:    addis 3, 2, .LCPI4_3@toc@ha
 ; PPC64LE-NEXT:    addi 3, 3, .LCPI4_3@toc@l
-; PPC64LE-NEXT:    vsrw 3, 3, 3
-; PPC64LE-NEXT:    vsubuwm 2, 2, 4
-; PPC64LE-NEXT:    lvx 4, 0, 3
+; PPC64LE-NEXT:    vperm 2, 4, 2, 3
+; PPC64LE-NEXT:    vspltisw 3, -11
+; PPC64LE-NEXT:    xxswapd 36, 0
+; PPC64LE-NEXT:    xxswapd 37, 1
+; PPC64LE-NEXT:    lxvd2x 0, 0, 3
+; PPC64LE-NEXT:    lxvd2x 1, 0, 4
 ; PPC64LE-NEXT:    addis 3, 2, .LCPI4_5@toc@ha
 ; PPC64LE-NEXT:    addi 3, 3, .LCPI4_5@toc@l
+; PPC64LE-NEXT:    vsrw 3, 3, 3
+; PPC64LE-NEXT:    vsubuwm 2, 2, 4
+; PPC64LE-NEXT:    xxswapd 36, 0
+; PPC64LE-NEXT:    lxvd2x 0, 0, 3
 ; PPC64LE-NEXT:    vmuluwm 2, 2, 5
-; PPC64LE-NEXT:    lvx 5, 0, 4
+; PPC64LE-NEXT:    xxswapd 37, 1
 ; PPC64LE-NEXT:    xxland 32, 34, 35
 ; PPC64LE-NEXT:    vslw 2, 2, 4
 ; PPC64LE-NEXT:    vsrw 4, 0, 5
-; PPC64LE-NEXT:    xxlor 0, 36, 34
-; PPC64LE-NEXT:    lvx 2, 0, 3
-; PPC64LE-NEXT:    xxland 35, 0, 35
+; PPC64LE-NEXT:    xxlor 1, 36, 34
+; PPC64LE-NEXT:    xxswapd 34, 0
+; PPC64LE-NEXT:    xxland 35, 1, 35
 ; PPC64LE-NEXT:    vcmpgtuw 2, 3, 2
 ; PPC64LE-NEXT:    xxswapd 0, 34
 ; PPC64LE-NEXT:    xxsldwi 1, 34, 34, 1
