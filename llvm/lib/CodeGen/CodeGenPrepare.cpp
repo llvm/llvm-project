@@ -4806,7 +4806,6 @@ bool AddressingModeMatcher::matchAddr(Value *Addr, unsigned Depth) {
       }
 
       // It isn't profitable to do this, roll back.
-      //cerr << "NOT FOLDING: " << *I;
       AddrMode = BackupAddrMode;
       AddrModeInsts.resize(OldSize);
       TPT.rollback(LastKnownGood);
