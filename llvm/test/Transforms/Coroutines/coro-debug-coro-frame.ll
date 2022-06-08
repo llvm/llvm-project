@@ -10,7 +10,8 @@
 ;
 ; CHECK:       define internal fastcc void @f.resume(
 ; CHECK:       entry.resume:
-; CHECK:            call void @llvm.dbg.declare(metadata %f.Frame** %[[FramePtr_RESUME:.*]], metadata ![[CORO_FRAME_IN_RESUME:[0-9]+]], metadata !DIExpression()
+; CHECK:            %[[FramePtr_RESUME:.*]] = alloca %f.Frame*
+; CHECK:            call void @llvm.dbg.declare(metadata %f.Frame** %[[FramePtr_RESUME]], metadata ![[CORO_FRAME_IN_RESUME:[0-9]+]], metadata !DIExpression(DW_OP_deref)
 ;
 ; CHECK-DAG: ![[FILE:[0-9]+]] = !DIFile(filename: "coro-debug.cpp"
 ; CHECK-DAG: ![[RAMP:[0-9]+]] = distinct !DISubprogram(name: "foo", linkageName: "_Z3foov",
