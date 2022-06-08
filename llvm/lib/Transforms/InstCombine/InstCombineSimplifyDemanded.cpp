@@ -320,13 +320,11 @@ Value *InstCombinerImpl::SimplifyDemandedUseBits(Value *V, APInt DemandedMask,
           (LHSKnown.One & RHSKnown.One & DemandedMask) != 0) {
         APInt NewMask = ~(LHSKnown.One & RHSKnown.One & DemandedMask);
 
-        Constant *AndC =
-            ConstantInt::get(I->getType(), NewMask & AndRHS->getValue());
+        Constant *AndC = ConstantInt::get(VTy, NewMask & AndRHS->getValue());
         Instruction *NewAnd = BinaryOperator::CreateAnd(I->getOperand(0), AndC);
         InsertNewInstWith(NewAnd, *I);
 
-        Constant *XorC =
-            ConstantInt::get(I->getType(), NewMask & XorRHS->getValue());
+        Constant *XorC = ConstantInt::get(VTy, NewMask & XorRHS->getValue());
         Instruction *NewXor = BinaryOperator::CreateXor(NewAnd, XorC);
         return InsertNewInstWith(NewXor, *I);
       }
@@ -389,12 +387,12 @@ Value *InstCombinerImpl::SimplifyDemandedUseBits(Value *V, APInt DemandedMask,
     if (match(I->getOperand(0), m_OneUse(m_LShr(m_Value(X), m_APInt(C))))) {
       // The shift amount must be valid (not poison) in the narrow type, and
       // it must not be greater than the high bits demanded of the result.
-      if (C->ult(I->getType()->getScalarSizeInBits()) &&
+      if (C->ult(VTy->getScalarSizeInBits()) &&
           C->ule(DemandedMask.countLeadingZeros())) {
         // trunc (lshr X, C) --> lshr (trunc X), C
         IRBuilderBase::InsertPointGuard Guard(Builder);
         Builder.SetInsertPoint(I);
-        Value *Trunc = Builder.CreateTrunc(X, I->getType());
+        Value *Trunc = Builder.CreateTrunc(X, VTy);
         return Builder.CreateLShr(Trunc, C->getZExtValue());
       }
     }
@@ -416,9 +414,8 @@ Value *InstCombinerImpl::SimplifyDemandedUseBits(Value *V, APInt DemandedMask,
     if (!I->getOperand(0)->getType()->isIntOrIntVectorTy())
       return nullptr;  // vector->int or fp->int?
 
-    if (VectorType *DstVTy = dyn_cast<VectorType>(I->getType())) {
-      if (VectorType *SrcVTy =
-            dyn_cast<VectorType>(I->getOperand(0)->getType())) {
+    if (auto *DstVTy = dyn_cast<VectorType>(VTy)) {
+      if (auto *SrcVTy = dyn_cast<VectorType>(I->getOperand(0)->getType())) {
         if (cast<FixedVectorType>(DstVTy)->getNumElements() !=
             cast<FixedVectorType>(SrcVTy)->getNumElements())
           // Don't touch a bitcast between vectors of different element counts.
@@ -536,7 +533,7 @@ Value *InstCombinerImpl::SimplifyDemandedUseBits(Value *V, APInt DemandedMask,
       const APInt *C;
       if (match(I->getOperand(1), m_APInt(C)) &&
           C->countTrailingZeros() == CTZ) {
-        Constant *ShiftC = ConstantInt::get(I->getType(), CTZ);
+        Constant *ShiftC = ConstantInt::get(VTy, CTZ);
         Instruction *Shl = BinaryOperator::CreateShl(I->getOperand(0), ShiftC);
         return InsertNewInstWith(Shl, *I);
       }
@@ -596,7 +593,7 @@ Value *InstCombinerImpl::SimplifyDemandedUseBits(Value *V, APInt DemandedMask,
         else if (SignBitOne)
           Known.One.setSignBit();
         if (Known.hasConflict())
-          return UndefValue::get(I->getType());
+          return UndefValue::get(VTy);
       }
     } else {
       // This is a variable shift, so we can't shift the demand mask by a known
@@ -827,7 +824,7 @@ Value *InstCombinerImpl::SimplifyDemandedUseBits(Value *V, APInt DemandedMask,
         if (DemandedMask == 1 && VTy->getScalarSizeInBits() % 2 == 0 &&
             match(II->getArgOperand(0), m_Not(m_Value(X)))) {
           Function *Ctpop = Intrinsic::getDeclaration(
-              II->getModule(), Intrinsic::ctpop, II->getType());
+              II->getModule(), Intrinsic::ctpop, VTy);
           return InsertNewInstWith(CallInst::Create(Ctpop, {X}), *I);
         }
         break;
@@ -850,12 +847,10 @@ Value *InstCombinerImpl::SimplifyDemandedUseBits(Value *V, APInt DemandedMask,
           Instruction *NewVal;
           if (NLZ > NTZ)
             NewVal = BinaryOperator::CreateLShr(
-                II->getArgOperand(0),
-                ConstantInt::get(I->getType(), NLZ - NTZ));
+                II->getArgOperand(0), ConstantInt::get(VTy, NLZ - NTZ));
           else
             NewVal = BinaryOperator::CreateShl(
-                II->getArgOperand(0),
-                ConstantInt::get(I->getType(), NTZ - NLZ));
+                II->getArgOperand(0), ConstantInt::get(VTy, NTZ - NLZ));
           NewVal->takeName(I);
           return InsertNewInstWith(NewVal, *I);
         }
