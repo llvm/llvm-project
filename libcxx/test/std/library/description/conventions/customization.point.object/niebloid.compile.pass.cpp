@@ -60,7 +60,7 @@ auto triple = [](int x) { return 3*x; };
 
 // [algorithm.syn]
 
-//static_assert(test(std::ranges::adjacent_find, a));
+static_assert(test(std::ranges::adjacent_find, a));
 static_assert(test(std::ranges::all_of, a, odd));
 static_assert(test(std::ranges::any_of, a, odd));
 static_assert(test(std::ranges::binary_search, a, 42));

@@ -217,6 +217,28 @@ if (NOT LLVM_INSTALL_TOOLCHAIN_ONLY)
   endif()
 endif()
 
+# Custom target to install all mlir libraries
+add_custom_target(mlir-libraries)
+set_target_properties(mlir-libraries PROPERTIES FOLDER "Misc")
+
+if (NOT LLVM_ENABLE_IDE)
+  add_llvm_install_targets(install-mlir-libraries
+                           DEPENDS mlir-libraries
+                           COMPONENT mlir-libraries)
+endif()
+
+get_property(MLIR_LIBS GLOBAL PROPERTY MLIR_ALL_LIBS)
+if(MLIR_LIBS)
+  list(REMOVE_DUPLICATES MLIR_LIBS)
+  foreach(lib ${MLIR_LIBS})
+    add_dependencies(mlir-libraries ${lib})
+    if(NOT LLVM_ENABLE_IDE)
+      add_dependencies(install-mlir-libraries install-${lib})
+      add_dependencies(install-mlir-libraries-stripped install-${lib}-stripped)
+    endif()
+  endforeach()
+endif()
+
 add_subdirectory(cmake/modules)
 
 if (MLIR_ENABLE_PYTHON_BENCHMARKS)

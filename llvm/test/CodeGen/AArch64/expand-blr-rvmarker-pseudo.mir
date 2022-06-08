@@ -31,6 +31,8 @@
 
 # CHECK-LABEL: : test_1_callsite_info
 # CHECK:       bb.0:
+# CHECK-NEXT: liveins:
+# CHECK-NEXT: {{  $}}
 # CHECK-NEXT:    BUNDLE implicit-def $lr, implicit-def $w30, implicit-def $sp, implicit-def $wsp, implicit-def dead $x0, implicit-def $fp, implicit-def $w29, implicit $x0, implicit $sp, implicit $xzr, implicit $fp {
 # CHECK-NEXT:      BLR $x0, csr_aarch64_aapcs, implicit-def $lr, implicit $sp, implicit-def dead $lr, implicit $sp, implicit-def $sp, implicit-def dead $x0
 # CHECK-NEXT:      ORRXrs $xzr, $fp, 0
@@ -52,6 +54,8 @@ body:             |
 
 # CHECK-LABEL: : test_bl_pass_x0_arg
 # CHECK:       bb.0:
+# CHECK-NEXT: liveins:
+# CHECK-NEXT: {{  $}}
 # CHECK-NEXT:     BUNDLE implicit-def $lr, implicit-def $w30, implicit-def $sp, implicit-def $wsp, implicit-def dead $x0, implicit-def $fp, implicit-def $w29, implicit $sp, implicit $x0, implicit $xzr, implicit $fp {
 # CHECK-NEXT:      BL @foo, csr_aarch64_aapcs, implicit-def $lr, implicit $sp, implicit $x0, implicit-def dead $lr, implicit $sp, implicit-def $sp, implicit-def dead $x0
 # CHECK-NEXT:      $fp = ORRXrs $xzr, $fp, 0
@@ -70,6 +74,8 @@ body:             |
 
 # CHECK-LABEL: : test_bl_pass_x0_x1_x2_args
 # CHECK:       bb.0:
+# CHECK-NEXT: liveins:
+# CHECK-NEXT: {{  $}}
 # CHECK-NEXT:     BUNDLE implicit-def $lr, implicit-def $w30, implicit-def $sp, implicit-def $wsp, implicit-def $x0, implicit-def $w0, implicit-def $fp, implicit-def $w29, implicit $sp, implicit $x0, implicit $x1, implicit $x2, implicit $xzr, implicit $fp {
 # CHECK-NEXT:      BL @foo, csr_aarch64_aapcs, implicit-def $lr, implicit $sp, implicit $x0, implicit $x1, implicit $x2, implicit-def dead $lr, implicit $sp, implicit-def $sp, implicit-def $x0
 # CHECK-NEXT:      $fp = ORRXrs $xzr, $fp, 0
@@ -88,6 +94,8 @@ body:             |
 
 # CHECK-LABEL: : test_bl_pass_w0_w1_args
 # CHECK:       bb.0:
+# CHECK-NEXT: liveins:
+# CHECK-NEXT: {{  $}}
 # CHECK-NEXT:     BUNDLE implicit-def $lr, implicit-def $w30, implicit-def $sp, implicit-def $wsp, implicit-def dead $x0, implicit-def $fp, implicit-def $w29, implicit $sp, implicit $w0, implicit $w1, implicit $xzr, implicit $fp {
 # CHECK-NEXT:      BL @foo, csr_aarch64_aapcs, implicit-def $lr, implicit $sp, implicit $w0, implicit $w1, implicit-def dead $lr, implicit $sp, implicit-def $sp, implicit-def dead $x0
 # CHECK-NEXT:      $fp = ORRXrs $xzr, $fp, 0
@@ -107,6 +115,8 @@ body:             |
 
 # CHECK-LABEL: : test_blr_pass_w0_w1_args
 # CHECK:       bb.0:
+# CHECK-NEXT: liveins:
+# CHECK-NEXT: {{  $}}
 # CHECK-NEXT:     BUNDLE implicit-def $lr, implicit-def $w30, implicit-def $sp, implicit-def $wsp, implicit-def dead $x0, implicit-def $fp, implicit-def $w29, implicit $x8, implicit $sp, implicit $w0, implicit $w1, implicit $xzr, implicit $fp {
 # CHECK-NEXT:      BLR $x8, csr_aarch64_aapcs, implicit-def $lr, implicit $sp, implicit $w0, implicit $w1, implicit-def dead $lr, implicit $sp, implicit-def $sp, implicit-def dead $x0
 # CHECK-NEXT:      $fp = ORRXrs $xzr, $fp, 0

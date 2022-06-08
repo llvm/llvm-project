@@ -172,3 +172,12 @@ func.func @powf(%arg0 : f64) {
   func.return
 }
 
+// -----
+
+// CHECK-LABEL: func @round(
+// CHECK-SAME: f32
+func.func @round(%arg0 : f32) {
+  // CHECK: "llvm.intr.round"(%arg0) : (f32) -> f32
+  %0 = math.round %arg0 : f32
+  func.return
+}

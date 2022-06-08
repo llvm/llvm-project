@@ -31,3 +31,34 @@ func.func @buffer_not_deallocated(%t : tensor<?xf32>, %c : i1) -> tensor<?xf32> 
   // CHECK: return %[[r_tensor]]
   return %r : tensor<?xf32>
 }
+
+// -----
+
+// CHECK-LABEL: func @write_to_alloc_tensor_or_readonly_tensor(
+//  CHECK-SAME:     %[[arg0:.*]]: tensor<i32>
+func.func @write_to_alloc_tensor_or_readonly_tensor(%arg0: tensor<i32>,
+                                                    %cond: i1, %val: i32)
+  -> tensor<i32>
+{
+  // CHECK: %[[r:.*]] = scf.if {{.*}} {
+  // CHECK:   %[[arg0_m:.*]] = bufferization.to_memref %[[arg0]]
+  // CHECK:   %[[clone:.*]] = bufferization.clone %[[arg0_m]]
+  // CHECK:   scf.yield %[[clone]]
+  // CHECK: } else {
+  // CHECK:   %[[alloc:.*]] = memref.alloc
+  // CHECK:   memref.store %{{.*}}, %[[alloc]]
+  // CHECK:   %[[casted:.*]] = memref.cast %[[alloc]]
+  // CHECK:   scf.yield %[[casted]]
+  // CHECK: }
+  // CHECK: %[[r_t:.*]] = bufferization.to_tensor %[[r]]
+  // CHECK: memref.dealloc %[[r]]
+  // CHECK: return %[[r_t]]
+  %3 = scf.if %cond -> (tensor<i32>) {
+    scf.yield %arg0 : tensor<i32>
+  } else {
+    %7 = bufferization.alloc_tensor() : tensor<i32>
+    %8 = tensor.insert %val into %7[] : tensor<i32>
+    scf.yield %8 : tensor<i32>
+  }
+  return %3 : tensor<i32>
+}
