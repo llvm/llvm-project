@@ -1003,7 +1003,7 @@ MachineInstr *ModuloScheduleExpander::cloneAndChangeInstr(
 }
 
 /// Update the machine instruction with new virtual registers.  This
-/// function may change the defintions and/or uses.
+/// function may change the definitions and/or uses.
 void ModuloScheduleExpander::updateInstruction(MachineInstr *NewMI,
                                                bool LastDef,
                                                unsigned CurStageNum,
