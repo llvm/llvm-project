@@ -26,6 +26,6 @@ __attribute__((noinline)) void A<0>::RecursiveTemplateFunction(const T &) {
 }
 
 int main() {
-  // CHECK: {{#[0-9]+.*A<0>.*vector<.*vector<.*vector<.*vector<.*vector<.*vector<.*vector<.*vector<.*vector<.*vector<.*vector<.*vector.*symbolize_stack.cpp:25}}
+  // CHECK: {{vector<.*vector<.*vector<.*vector<.*vector<}}
   A<10>().RecursiveTemplateFunction(0);
 }
