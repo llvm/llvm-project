@@ -296,10 +296,9 @@ public:
                                    OnBinaryDataReadCallback callback);
 
   /// Similar to \a OnCoreBinaryDataRead but this is able to fetch the same data
-  /// from multiple cores at once.
-  llvm::Error OnCoresBinaryDataRead(const std::set<lldb::core_id_t> core_ids,
-                                    llvm::StringRef kind,
-                                    OnCoresBinaryDataReadCallback callback);
+  /// from all cores at once.
+  llvm::Error OnAllCoresBinaryDataRead(llvm::StringRef kind,
+                                       OnCoresBinaryDataReadCallback callback);
 
   /// \return
   ///     All the currently traced processes.
@@ -309,6 +308,11 @@ public:
   ///     The list of cores being traced. Might be empty depending on the
   ///     plugin.
   llvm::ArrayRef<lldb::core_id_t> GetTracedCores();
+
+  /// Helper method for reading a data file and passing its data to the given
+  /// callback.
+  static llvm::Error OnDataFileRead(FileSpec file,
+                                    OnBinaryDataReadCallback callback);
 
 protected:
   /// Get the currently traced live process.
@@ -341,10 +345,6 @@ protected:
   llvm::Error OnPostMortemCoreBinaryDataRead(lldb::core_id_t core_id,
                                              llvm::StringRef kind,
                                              OnBinaryDataReadCallback callback);
-
-  /// Helper method for reading a data file and passing its data to the given
-  /// callback.
-  llvm::Error OnDataFileRead(FileSpec file, OnBinaryDataReadCallback callback);
 
   /// Get the file path containing data of a postmortem thread given a data
   /// identifier.
@@ -498,7 +498,7 @@ protected:
 
   /// Return the list of processes traced by this instance. None of the returned
   /// pointers are invalid.
-  std::vector<Process *> GetTracedProcesses() const;
+  std::vector<Process *> GetTracedProcesses();
 
   /// Method to be invoked by the plug-in to refresh the live process state. It
   /// will invoked DoRefreshLiveProcessState at some point, which should be
@@ -513,52 +513,63 @@ protected:
 
 private:
   uint32_t m_stop_id = LLDB_INVALID_STOP_ID;
+
   /// Process traced by this object if doing live tracing. Otherwise it's null.
   Process *m_live_process = nullptr;
 
-  /// Portmortem processes traced by this object if doing non-live tracing.
-  /// Otherwise it's empty.
-  std::vector<Process *> m_postmortem_processes;
+  /// We package all the data that can change upon process stops to make sure
+  /// this contract is very visible.
+  /// This variable should only be accessed directly by constructores or live
+  /// process data refreshers.
+  struct Storage {
+    /// Portmortem processes traced by this object if doing non-live tracing.
+    /// Otherwise it's empty.
+    std::vector<Process *> postmortem_processes;
 
-  /// These data kinds are returned by lldb-server when fetching the state of
-  /// the tracing session. The size in bytes can be used later for fetching the
-  /// data in batches.
-  /// \{
+    /// These data kinds are returned by lldb-server when fetching the state of
+    /// the tracing session. The size in bytes can be used later for fetching
+    /// the data in batches.
+    /// \{
 
-  /// tid -> data kind -> size
-  llvm::DenseMap<lldb::tid_t, std::unordered_map<std::string, uint64_t>>
-      m_live_thread_data;
+    /// tid -> data kind -> size
+    llvm::DenseMap<lldb::tid_t, std::unordered_map<std::string, uint64_t>>
+        live_thread_data;
 
-  /// core id -> data kind -> size
-  llvm::DenseMap<lldb::core_id_t, std::unordered_map<std::string, uint64_t>>
-      m_live_core_data_sizes;
-  /// core id -> data kind -> bytes
-  llvm::DenseMap<lldb::core_id_t,
-                 std::unordered_map<std::string, std::vector<uint8_t>>>
-      m_live_core_data;
+    /// core id -> data kind -> size
+    llvm::DenseMap<lldb::core_id_t, std::unordered_map<std::string, uint64_t>>
+        live_core_data_sizes;
+    /// core id -> data kind -> bytes
+    llvm::DenseMap<lldb::core_id_t,
+                   std::unordered_map<std::string, std::vector<uint8_t>>>
+        live_core_data;
 
-  /// data kind -> size
-  std::unordered_map<std::string, uint64_t> m_live_process_data;
-  /// \}
+    /// data kind -> size
+    std::unordered_map<std::string, uint64_t> live_process_data;
+    /// \}
 
-  /// The list of cores being traced. Might be \b None depending on the plug-in.
-  llvm::Optional<std::vector<lldb::core_id_t>> m_cores;
+    /// The list of cores being traced. Might be \b None depending on the
+    /// plug-in.
+    llvm::Optional<std::vector<lldb::core_id_t>> cores;
 
-  /// Postmortem traces can specific additional data files, which are
-  /// represented in this variable using a data kind identifier for each file.
-  /// \{
+    /// Postmortem traces can specific additional data files, which are
+    /// represented in this variable using a data kind identifier for each file.
+    /// \{
 
-  /// tid -> data kind -> file
-  llvm::DenseMap<lldb::tid_t, std::unordered_map<std::string, FileSpec>>
-      m_postmortem_thread_data;
+    /// tid -> data kind -> file
+    llvm::DenseMap<lldb::tid_t, std::unordered_map<std::string, FileSpec>>
+        postmortem_thread_data;
 
-  /// core id -> data kind -> file
-  llvm::DenseMap<lldb::core_id_t, std::unordered_map<std::string, FileSpec>>
-      m_postmortem_core_data;
+    /// core id -> data kind -> file
+    llvm::DenseMap<lldb::core_id_t, std::unordered_map<std::string, FileSpec>>
+        postmortem_core_data;
 
-  /// \}
+    /// \}
 
-  llvm::Optional<std::string> m_live_refresh_error;
+    llvm::Optional<std::string> live_refresh_error;
+  } m_storage;
+
+  /// Get the storage after refreshing the data in the case of a live process.
+  Storage &GetUpdatedStorage();
 };
 
 } // namespace lldb_private

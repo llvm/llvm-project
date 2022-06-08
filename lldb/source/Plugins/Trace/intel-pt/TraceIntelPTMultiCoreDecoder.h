@@ -24,20 +24,14 @@ namespace trace_intel_pt {
 /// to contention or race conditions. Finally, it assumes that a tid is not
 /// repeated twice for two different threads because of the shortness of the
 /// intel pt trace.
+///
+/// This object should be recreated after every stop in the case of live
+/// processes.
 class TraceIntelPTMultiCoreDecoder {
 public:
-  /// \param[in] core_ids
-  ///   The list of cores where the traced programs were running on.
-  ///
-  /// \param[in] tids
-  ///   The full list of tids that were traced.
-  ///
-  /// \param[in] tsc_conversion
-  ///   The conversion values for converting between nanoseconds and TSCs.
-  TraceIntelPTMultiCoreDecoder(
-      TraceIntelPT &trace, llvm::ArrayRef<lldb::core_id_t> core_ids,
-      llvm::ArrayRef<lldb::tid_t> tids,
-      const LinuxPerfZeroTscConversion &tsc_conversion);
+  /// \param[in] TraceIntelPT
+  ///   The trace object to be decoded
+  TraceIntelPTMultiCoreDecoder(TraceIntelPT &trace);
 
   /// \return
   ///   A \a DecodedThread for the \p thread by decoding its instructions on all
@@ -68,16 +62,14 @@ private:
       llvm::DenseMap<lldb::tid_t, std::vector<IntelPTThreadContinousExecution>>>
   CorrelateContextSwitchesAndIntelPtTraces();
 
-  TraceIntelPT &m_trace;
-  std::set<lldb::core_id_t> m_cores;
+  TraceIntelPT *m_trace;
   std::set<lldb::tid_t> m_tids;
   llvm::Optional<
       llvm::DenseMap<lldb::tid_t, std::vector<IntelPTThreadContinousExecution>>>
       m_continuous_executions_per_thread;
   llvm::DenseMap<lldb::tid_t, DecodedThreadSP> m_decoded_threads;
-  LinuxPerfZeroTscConversion m_tsc_conversion;
   /// This variable will be non-None if a severe error happened during the setup
-  /// of the decoder.
+  /// of the decoder and we don't want decoding to be reattempted.
   llvm::Optional<std::string> m_setup_error;
   uint64_t m_unattributed_intelpt_subtraces;
 };

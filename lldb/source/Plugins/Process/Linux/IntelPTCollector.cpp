@@ -37,16 +37,13 @@ IntelPTCollector::IntelPTCollector(NativeProcessProtocol &process)
 
 llvm::Expected<LinuxPerfZeroTscConversion &>
 IntelPTCollector::FetchPerfTscConversionParameters() {
-  if (!m_cached_tsc_conversion) {
-    if (Expected<LinuxPerfZeroTscConversion> tsc_conversion =
-            LoadPerfTscConversionParameters())
-      m_cached_tsc_conversion = std::move(*tsc_conversion);
-    else
-      return createStringError(inconvertibleErrorCode(),
-                               "Unable to load TSC to wall time conversion: %s",
-                               toString(tsc_conversion.takeError()).c_str());
-  }
-  return *m_cached_tsc_conversion;
+  if (Expected<LinuxPerfZeroTscConversion> tsc_conversion =
+          LoadPerfTscConversionParameters())
+    return *tsc_conversion;
+  else
+    return createStringError(inconvertibleErrorCode(),
+                             "Unable to load TSC to wall time conversion: %s",
+                             toString(tsc_conversion.takeError()).c_str());
 }
 
 Error IntelPTCollector::TraceStop(lldb::tid_t tid) {
