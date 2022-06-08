@@ -2561,7 +2561,6 @@ class VOPProfile <list<ValueType> _ArgVT, bit _EnableF32SrcMods = 0,
   field dag InsVOPDY = (ins Src0RC32:$src0Y, Src1RC32:$vsrc1Y);
   field dag InsVOPDYDeferred = (ins !if(!eq(Src1VT.Size, 32), VSrc_f32_Deferred, VSrc_f16_Deferred):$src0Y, VGPR_32:$vsrc1Y);
 
-
   field string Asm32 = getAsm32<HasDst, NumSrcArgs, DstVT>.ret;
   field string Asm64 = getAsm64<HasDst, NumSrcArgs, HasIntClamp, HasModifiers, HasOMod, DstVT>.ret;
   field string AsmVOP3P = getAsmVOP3P<NumSrcArgs, HasModifiers, HasClamp, HasOpSel>.ret;

@@ -40,27 +40,27 @@ public:
   DecoderUInt128() = default;
   DecoderUInt128(uint64_t Lo, uint64_t Hi = 0) : Lo(Lo), Hi(Hi) {}
   operator bool() const { return Lo || Hi; }
-  void insertBits(uint64_t SubBits, unsigned bitPosition, unsigned numBits) {
-    assert(numBits && numBits <= 64);
-    assert(SubBits >> 1 >> (numBits - 1) == 0);
-    assert(bitPosition < 128);
-    if (bitPosition < 64) {
-      Lo |= SubBits << bitPosition;
-      Hi |= SubBits >> 1 >> (63 - bitPosition);
+  void insertBits(uint64_t SubBits, unsigned BitPosition, unsigned NumBits) {
+    assert(NumBits && NumBits <= 64);
+    assert(SubBits >> 1 >> (NumBits - 1) == 0);
+    assert(BitPosition < 128);
+    if (BitPosition < 64) {
+      Lo |= SubBits << BitPosition;
+      Hi |= SubBits >> 1 >> (63 - BitPosition);
     } else {
-      Hi |= SubBits << (bitPosition - 64);
+      Hi |= SubBits << (BitPosition - 64);
     }
   }
-  uint64_t extractBitsAsZExtValue(unsigned numBits,
-                                  unsigned bitPosition) const {
-    assert(numBits && numBits <= 64);
-    assert(bitPosition < 128);
+  uint64_t extractBitsAsZExtValue(unsigned NumBits,
+                                  unsigned BitPosition) const {
+    assert(NumBits && NumBits <= 64);
+    assert(BitPosition < 128);
     uint64_t Val;
-    if (bitPosition < 64)
-      Val = Lo >> bitPosition | Hi << 1 << (63 - bitPosition);
+    if (BitPosition < 64)
+      Val = Lo >> BitPosition | Hi << 1 << (63 - BitPosition);
     else
-      Val = Hi >> (bitPosition - 64);
-    return Val & ((uint64_t(2) << (numBits - 1)) - 1);
+      Val = Hi >> (BitPosition - 64);
+    return Val & ((uint64_t(2) << (NumBits - 1)) - 1);
   }
   DecoderUInt128 operator&(const DecoderUInt128 &RHS) const {
     return DecoderUInt128(Lo & RHS.Lo, Hi & RHS.Hi);

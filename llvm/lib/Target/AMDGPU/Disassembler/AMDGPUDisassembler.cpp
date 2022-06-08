@@ -471,7 +471,8 @@ DecodeStatus AMDGPUDisassembler::getInstruction(MCInst &MI, uint64_t &Size,
         break;
       }
       Res = tryDecodeInst(DecoderTableGFX1196, MI, DecW, Address);
-      if (Res) break;
+      if (Res)
+        break;
     }
     // Reinitialize Bytes
     Bytes = Bytes_.slice(0, MaxInstBytesNum);
