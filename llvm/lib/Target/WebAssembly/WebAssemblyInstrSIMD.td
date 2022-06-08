@@ -1403,7 +1403,6 @@ defm "" : SIMDLANESELECT<I16x8, 0x10a>;
 defm "" : SIMDLANESELECT<I32x4, 0x10b>;
 defm "" : SIMDLANESELECT<I64x2, 0x10c>;
 
-
 //===----------------------------------------------------------------------===//
 // Relaxed floating-point min and max.
 //===----------------------------------------------------------------------===//
@@ -1426,3 +1425,30 @@ defm SIMD_RELAXED_FMIN :
    RelaxedBinary<F64x2, int_wasm_relaxed_min, "relaxed_min", 0x10f>;
 defm SIMD_RELAXED_FMAX :
    RelaxedBinary<F64x2, int_wasm_relaxed_max, "relaxed_max", 0x110>;
+
+//===----------------------------------------------------------------------===//
+// Relaxed rounding q15 multiplication
+//===----------------------------------------------------------------------===//
+
+defm RELAXED_Q15MULR_S :
+  RelaxedBinary<I16x8, int_wasm_relaxed_q15mulr_signed, "relaxed_q15mulr_s",
+                0x111>;
+
+//===----------------------------------------------------------------------===//
+// Relaxed integer dot product
+//===----------------------------------------------------------------------===//
+
+defm RELAXED_DOT :
+  RELAXED_I<(outs V128:$dst), (ins V128:$lhs, V128:$rhs), (outs), (ins),
+            [(set (v8i16 V128:$dst), (int_wasm_dot_i8x16_i7x16_signed
+               (v16i8 V128:$lhs), (v16i8 V128:$rhs)))],
+            "i16x8.dot_i8x16_i7x16_s\t$dst, $lhs, $rhs",
+            "i16x8.dot_i8x16_i7x16_s", 0x112>;
+
+defm RELAXED_DOT_ADD :
+  RELAXED_I<(outs V128:$dst), (ins V128:$lhs, V128:$rhs, V128:$acc),
+            (outs), (ins),
+            [(set (v4i32 V128:$dst), (int_wasm_dot_i8x16_i7x16_add_signed
+               (v16i8 V128:$lhs), (v16i8 V128:$rhs), (v4i32 V128:$acc)))],
+            "i32x4.dot_i8x16_i7x16_add_s\t$dst, $lhs, $rhs, $acc",
+            "i32x4.dot_i8x16_i7x16_add_s", 0x113>;
