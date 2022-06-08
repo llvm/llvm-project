@@ -38,7 +38,7 @@ class TestWithGmodulesDebugInfo(TestBase):
         self.assertTrue(process.IsValid(), PROCESS_IS_VALID)
 
         # Get the thread of the process
-        self.assertEquals(process.GetState(), lldb.eStateStopped)
+        self.assertState(process.GetState(), lldb.eStateStopped)
         thread = lldbutil.get_stopped_thread(
             process, lldb.eStopReasonBreakpoint)
         self.assertTrue(
