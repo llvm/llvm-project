@@ -252,6 +252,13 @@ void MCStreamer::emitCFIBKeyFrame() {
   CurFrame->IsBKeyFrame = true;
 }
 
+void MCStreamer::emitCFIMTETaggedFrame() {
+  MCDwarfFrameInfo *CurFrame = getCurrentDwarfFrameInfo();
+  if (!CurFrame)
+    return;
+  CurFrame->IsMTETaggedFrame = true;
+}
+
 void MCStreamer::emitDwarfLocDirective(unsigned FileNo, unsigned Line,
                                        unsigned Column, unsigned Flags,
                                        unsigned Isa, unsigned Discriminator,
