@@ -19,6 +19,8 @@
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/MathExtras.h"
 
+#include "PerGraphGOTAndPLTStubsBuilder.h"
+
 #define DEBUG_TYPE "jitlink"
 
 using namespace llvm;
@@ -55,6 +57,8 @@ private:
     ELFLdSt64Abs12,
     ELFLdSt128Abs12,
     ELFAbs64,
+    ELFAdrGOTPage21,
+    ELFLd64GOTLo12,
   };
 
   static Expected<ELFAArch64RelocationKind>
@@ -79,6 +83,10 @@ private:
       return ELFLdSt128Abs12;
     case ELF::R_AARCH64_ABS64:
       return ELFAbs64;
+    case ELF::R_AARCH64_ADR_GOT_PAGE:
+      return ELFAdrGOTPage21;
+    case ELF::R_AARCH64_LD64_GOT_LO12_NC:
+      return ELFLd64GOTLo12;
     }
 
     return make_error<JITLinkError>("Unsupported aarch64 relocation:" +
@@ -206,6 +214,14 @@ private:
       Kind = aarch64::Pointer64;
       break;
     }
+    case ELFAdrGOTPage21: {
+      Kind = aarch64::GOTPage21;
+      break;
+    }
+    case ELFLd64GOTLo12: {
+      Kind = aarch64::GOTPageOffset12;
+      break;
+    }
     };
 
     Edge GE(Kind, Offset, *GraphSymbol, Addend);
@@ -240,6 +256,10 @@ private:
       return "ELFLdSt128Abs12";
     case ELFAbs64:
       return "ELFAbs64";
+    case ELFAdrGOTPage21:
+      return "ELFAdrGOTPage21";
+    case ELFLd64GOTLo12:
+      return "ELFLd64GOTLo12";
     default:
       return getGenericEdgeKindName(static_cast<Edge::Kind>(R));
     }
@@ -251,6 +271,64 @@ public:
       : ELFLinkGraphBuilder<ELFT>(Obj, std::move(T), FileName,
                                   aarch64::getEdgeKindName) {}
 };
+
+class PerGraphGOTAndPLTStubsBuilder_ELF_arm64
+    : public PerGraphGOTAndPLTStubsBuilder<
+          PerGraphGOTAndPLTStubsBuilder_ELF_arm64> {
+public:
+  using PerGraphGOTAndPLTStubsBuilder<
+      PerGraphGOTAndPLTStubsBuilder_ELF_arm64>::PerGraphGOTAndPLTStubsBuilder;
+
+  bool isGOTEdgeToFix(Edge &E) const {
+    return E.getKind() == aarch64::GOTPage21 ||
+           E.getKind() == aarch64::GOTPageOffset12;
+  }
+
+  Symbol &createGOTEntry(Symbol &Target) {
+    auto &GOTEntryBlock = G.createContentBlock(
+        getGOTSection(), getGOTEntryBlockContent(), orc::ExecutorAddr(), 8, 0);
+    GOTEntryBlock.addEdge(aarch64::Pointer64, 0, Target, 0);
+    return G.addAnonymousSymbol(GOTEntryBlock, 0, 8, false, false);
+  }
+
+  void fixGOTEdge(Edge &E, Symbol &GOTEntry) {
+    if (E.getKind() == aarch64::GOTPage21) {
+      E.setKind(aarch64::Page21);
+      E.setTarget(GOTEntry);
+    } else if (E.getKind() == aarch64::GOTPageOffset12) {
+      E.setKind(aarch64::PageOffset12);
+      E.setTarget(GOTEntry);
+    } else
+      llvm_unreachable("Not a GOT edge?");
+  }
+
+  bool isExternalBranchEdge(Edge &E) { return false; }
+
+  Symbol &createPLTStub(Symbol &Target) {
+    assert(false && "unimplemetned");
+    return Target;
+  }
+
+  void fixPLTEdge(Edge &E, Symbol &Stub) { assert(false && "unimplemetned"); }
+
+private:
+  Section &getGOTSection() {
+    if (!GOTSection)
+      GOTSection = &G.createSection("$__GOT", MemProt::Read | MemProt::Exec);
+    return *GOTSection;
+  }
+
+  ArrayRef<char> getGOTEntryBlockContent() {
+    return {reinterpret_cast<const char *>(NullGOTEntryContent),
+            sizeof(NullGOTEntryContent)};
+  }
+
+  static const uint8_t NullGOTEntryContent[8];
+  Section *GOTSection = nullptr;
+};
+
+const uint8_t PerGraphGOTAndPLTStubsBuilder_ELF_arm64::NullGOTEntryContent[8] =
+    {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
 
 Expected<std::unique_ptr<LinkGraph>>
 createLinkGraphFromELFObject_aarch64(MemoryBufferRef ObjectBuffer) {
@@ -283,6 +361,10 @@ void link_ELF_aarch64(std::unique_ptr<LinkGraph> G,
     else
       Config.PrePrunePasses.push_back(markAllSymbolsLive);
   }
+
+  Config.PostPrunePasses.push_back(
+      PerGraphGOTAndPLTStubsBuilder_ELF_arm64::asPass);
+
   if (auto Err = Ctx->modifyPassConfig(*G, Config))
     return Ctx->notifyFailed(std::move(Err));
 
