@@ -47787,8 +47787,8 @@ static SDValue combineOrCmpEqZeroToCtlzSrl(SDNode *N, SelectionDAG &DAG,
 }
 
 static SDValue foldMaskedMergeImpl(SDValue And0_L, SDValue And0_R,
-                                   SDValue And1_L, SDValue And1_R, SDLoc DL,
-                                   SelectionDAG &DAG) {
+                                   SDValue And1_L, SDValue And1_R,
+                                   const SDLoc &DL, SelectionDAG &DAG) {
   if (!isBitwiseNot(And0_L, true) || !And0_L->hasOneUse())
     return SDValue();
   SDValue NotOp = And0_L->getOperand(0);
