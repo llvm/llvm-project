@@ -14,6 +14,7 @@
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Module.h"
+#include "llvm/Object/OffloadBinary.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Transforms/Utils/ModuleUtils.h"
 
@@ -184,6 +185,8 @@ GlobalVariable *createBinDesc(Module &M, ArrayRef<ArrayRef<char>> Bufs) {
                                      GlobalVariable::InternalLinkage, Data,
                                      ".omp_offloading.device_image");
     Image->setUnnamedAddr(GlobalValue::UnnamedAddr::Global);
+    Image->setSection(".llvm.offloading");
+    Image->setAlignment(Align(object::OffloadBinary::getAlignment()));
 
     auto *Size = ConstantInt::get(getSizeTTy(M), Buf.size());
     Constant *ZeroSize[] = {Zero, Size};
