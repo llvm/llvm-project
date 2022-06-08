@@ -734,8 +734,6 @@ MemoryDependenceResults::getNonLocalCallDependency(CallBase *QueryCall) {
     llvm::sort(Cache);
 
     ++NumCacheDirtyNonLocal;
-    // cerr << "CACHED CASE: " << DirtyBlocks.size() << " dirty: "
-    //     << Cache.size() << " cached: " << *QueryInst;
   } else {
     // Seed DirtyBlocks with each of the preds of QueryInst's block.
     BasicBlock *QueryBB = QueryCall->getParent();
