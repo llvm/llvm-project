@@ -357,7 +357,8 @@ def ForeachThreadOp : SCF_Op<"foreach_thread", [
     writes to memory is unspecified across threads.
 
     Example:
-    ```
+
+    ```mlir
     //
     // Sequential context.
     //
@@ -392,8 +393,7 @@ def ForeachThreadOp : SCF_Op<"foreach_thread", [
     // Implicit synchronization point.
     // Sequential context.
     //
-```
-
+    ```
   }];
   let arguments = (ins Variadic<Index>:$num_threads);
 
