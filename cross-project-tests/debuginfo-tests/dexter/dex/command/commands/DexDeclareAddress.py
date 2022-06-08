@@ -8,6 +8,7 @@
 """
 
 import os
+from pathlib import PurePath
 
 from dex.command.CommandBase import CommandBase, StepExpectInfo
 
@@ -37,13 +38,12 @@ class DexDeclareAddress(CommandBase):
         return self.addr_name
 
     def eval(self, step_collection):
-        assert os.path.exists(self.path)
         self.address_resolutions[self.get_address_name()] = None
         for step in step_collection.steps:
             loc = step.current_location
 
-            if (loc.path and os.path.exists(loc.path) and
-                os.path.samefile(loc.path, self.path) and
+            if (loc.path and self.path and
+                PurePath(loc.path) == PurePath(self.path) and
                 loc.lineno == self.on_line):
                 if self.hit_count > 0:
                     self.hit_count -= 1
