@@ -5,6 +5,12 @@ from lldbsuite.test import lldbutil
 
 class TestGdbRemoteFork(gdbremote_testcase.GdbRemoteTestCaseBase):
 
+    fork_regex = ("[$]T05thread:p([0-9a-f]+)[.]([0-9a-f]+);.*"
+                  "{}:p([0-9a-f]+)[.]([0-9a-f]+).*")
+    fork_capture = {1: "parent_pid", 2: "parent_tid",
+                    3: "child_pid", 4: "child_tid"}
+    procinfo_regex = "[$]pid:([0-9a-f]+);.*"
+
     @add_test_categories(["fork"])
     def test_fork_multithreaded(self):
         self.build()
@@ -15,26 +21,19 @@ class TestGdbRemoteFork(gdbremote_testcase.GdbRemoteTestCaseBase):
         self.reset_test_sequence()
 
         # continue and expect fork
-        fork_regex = "[$]T05.*;fork:p([0-9a-f]+)[.]([0-9a-f]+).*"
         self.test_sequence.add_log_lines([
             "read packet: $c#00",
-            {"direction": "send", "regex": fork_regex,
-             "capture": {1: "pid", 2: "tid"}},
+            {"direction": "send", "regex": self.fork_regex.format("fork"),
+             "capture": self.fork_capture},
         ], True)
         ret = self.expect_gdbremote_sequence()
-        pid = int(ret["pid"], 16)
+        child_pid = ret["child_pid"]
         self.reset_test_sequence()
 
         # detach the forked child
         self.test_sequence.add_log_lines([
-            "read packet: $D;{:x}#00".format(pid),
-            {"direction": "send", "regex": r"[$]OK#.*"},
-        ], True)
-        ret = self.expect_gdbremote_sequence()
-        self.reset_test_sequence()
-
-        # resume the parent
-        self.test_sequence.add_log_lines([
+            "read packet: $D;{}#00".format(child_pid),
+            "send packet: $OK#00",
             "read packet: $k#00",
         ], True)
         self.expect_gdbremote_sequence()
@@ -49,45 +48,59 @@ class TestGdbRemoteFork(gdbremote_testcase.GdbRemoteTestCaseBase):
         self.reset_test_sequence()
 
         # continue and expect fork
-        fork_regex = "[$]T05.*;{}:p([0-9a-f]+)[.]([0-9a-f]+).*".format(variant)
         self.test_sequence.add_log_lines([
             "read packet: $c#00",
-            {"direction": "send", "regex": fork_regex,
-             "capture": {1: "pid", 2: "tid"}},
+            {"direction": "send", "regex": self.fork_regex.format(variant),
+             "capture": self.fork_capture},
         ], True)
         ret = self.expect_gdbremote_sequence()
-        pid = int(ret["pid"], 16)
+        parent_pid = ret["parent_pid"]
+        parent_tid = ret["parent_tid"]
+        child_pid = ret["child_pid"]
+        child_tid = ret["child_tid"]
         self.reset_test_sequence()
 
         # detach the forked child
         self.test_sequence.add_log_lines([
-            "read packet: $D;{:x}#00".format(pid),
-            {"direction": "send", "regex": r"[$]OK#.*"},
+            "read packet: $D;{}#00".format(child_pid),
+            "send packet: $OK#00",
+            # verify that the current process is correct
+            "read packet: $qC#00",
+            "send packet: $QC{}#00".format(parent_tid),
+            # verify that the correct processes are detached/available
+            "read packet: $Hgp{}.{}#00".format(child_pid, child_tid),
+            "send packet: $Eff#00",
+            "read packet: $Hgp{}.{}#00".format(parent_pid, parent_tid),
+            "send packet: $OK#00",
         ], True)
-        ret = self.expect_gdbremote_sequence()
+        self.expect_gdbremote_sequence()
         self.reset_test_sequence()
+        return parent_pid, parent_tid
 
     @add_test_categories(["fork"])
     def test_fork(self):
-        self.fork_and_detach_test("fork")
+        parent_pid, _ = self.fork_and_detach_test("fork")
 
         # resume the parent
         self.test_sequence.add_log_lines([
             "read packet: $c#00",
-            {"direction": "send", "regex": r"[$]W00;process:[0-9a-f]+#.*"},
+            "send packet: $W00;process:{}#00".format(parent_pid),
         ], True)
         self.expect_gdbremote_sequence()
 
     @add_test_categories(["fork"])
     def test_vfork(self):
-        self.fork_and_detach_test("vfork")
+        parent_pid, parent_tid = self.fork_and_detach_test("vfork")
 
         # resume the parent
         self.test_sequence.add_log_lines([
             "read packet: $c#00",
-            {"direction": "send", "regex": r"[$]T05.*vforkdone.*"},
+            {"direction": "send",
+             "regex": r"[$]T05thread:p{}[.]{}.*vforkdone.*".format(parent_pid,
+                                                                   parent_tid),
+             },
             "read packet: $c#00",
-            {"direction": "send", "regex": r"[$]W00;process:[0-9a-f]+#.*"},
+            "send packet: $W00;process:{}#00".format(parent_pid),
         ], True)
         self.expect_gdbremote_sequence()
 
@@ -101,38 +114,35 @@ class TestGdbRemoteFork(gdbremote_testcase.GdbRemoteTestCaseBase):
         self.reset_test_sequence()
 
         # continue and expect fork
-        fork_regex = ("[$]T[0-9a-f]{{2}}thread:p([0-9a-f]+)[.][0-9a-f]+;.*"
-                      "{}:p([0-9a-f]+)[.]([0-9a-f]+).*".format(variant))
         self.test_sequence.add_log_lines([
             "read packet: $c#00",
-            {"direction": "send", "regex": fork_regex,
-             "capture": {1: "parent_pid", 2: "pid", 3: "tid"}},
+            {"direction": "send", "regex": self.fork_regex.format(variant),
+             "capture": self.fork_capture},
         ], True)
         ret = self.expect_gdbremote_sequence()
-        parent_pid, pid, tid = (int(ret[x], 16) for x
-                                in ("parent_pid", "pid", "tid"))
+        parent_pid = ret["parent_pid"]
+        parent_tid = ret["parent_tid"]
+        child_pid = ret["child_pid"]
+        child_tid = ret["child_tid"]
         self.reset_test_sequence()
 
         # switch to the forked child
         self.test_sequence.add_log_lines([
-            "read packet: $Hgp{:x}.{:x}#00".format(pid, tid),
-            {"direction": "send", "regex": r"[$]OK#.*"},
-            "read packet: $Hcp{:x}.{:x}#00".format(pid, tid),
-            {"direction": "send", "regex": r"[$]OK#.*"},
-        ], True)
-
-        # detach the parent
-        self.test_sequence.add_log_lines([
-            "read packet: $D;{:x}#00".format(parent_pid),
-            {"direction": "send", "regex": r"[$]OK#.*"},
-        ], True)
-        ret = self.expect_gdbremote_sequence()
-        self.reset_test_sequence()
-
-        # resume the child
-        self.test_sequence.add_log_lines([
+            "read packet: $Hgp{}.{}#00".format(child_pid, child_tid),
+            "send packet: $OK#00",
+            "read packet: $Hcp{}.{}#00".format(child_pid, child_tid),
+            "send packet: $OK#00",
+            # detach the parent
+            "read packet: $D;{}#00".format(parent_pid),
+            "send packet: $OK#00",
+            # verify that the correct processes are detached/available
+            "read packet: $Hgp{}.{}#00".format(parent_pid, parent_tid),
+            "send packet: $Eff#00",
+            "read packet: $Hgp{}.{}#00".format(child_pid, child_tid),
+            "send packet: $OK#00",
+            # then resume the child
             "read packet: $c#00",
-            {"direction": "send", "regex": r"[$]W00;process:[0-9a-f]+#.*"},
+            "send packet: $W00;process:{}#00".format(child_pid),
         ], True)
         self.expect_gdbremote_sequence()
 
@@ -154,10 +164,9 @@ class TestGdbRemoteFork(gdbremote_testcase.GdbRemoteTestCaseBase):
         self.reset_test_sequence()
 
         # get process pid
-        procinfo_regex = "[$]pid:([0-9a-f]+);.*"
         self.test_sequence.add_log_lines([
             "read packet: $qProcessInfo#00",
-            {"direction": "send", "regex": procinfo_regex,
+            {"direction": "send", "regex": self.procinfo_regex,
              "capture": {1: "pid"}},
             "read packet: $qC#00",
             {"direction": "send", "regex": "[$]QC([0-9a-f]+)#.*",
@@ -167,32 +176,24 @@ class TestGdbRemoteFork(gdbremote_testcase.GdbRemoteTestCaseBase):
         pid, tid = (int(ret[x], 16) for x in ("pid", "tid"))
         self.reset_test_sequence()
 
-        # try switching to correct pid
         self.test_sequence.add_log_lines([
+            # try switching to correct pid
             "read packet: $Hgp{:x}.{:x}#00".format(pid, tid),
-            {"direction": "send", "regex": r"[$]OK#.*"},
+            "send packet: $OK#00",
             "read packet: $Hcp{:x}.{:x}#00".format(pid, tid),
-            {"direction": "send", "regex": r"[$]OK#.*"},
-        ], True)
-        ret = self.expect_gdbremote_sequence()
-
-        # try switching to invalid tid
-        self.test_sequence.add_log_lines([
+            "send packet: $OK#00",
+            # try switching to invalid tid
             "read packet: $Hgp{:x}.{:x}#00".format(pid, tid+1),
-            {"direction": "send", "regex": r"[$]E15#.*"},
+            "send packet: $E15#00",
             "read packet: $Hcp{:x}.{:x}#00".format(pid, tid+1),
-            {"direction": "send", "regex": r"[$]E15#.*"},
-        ], True)
-        ret = self.expect_gdbremote_sequence()
-
-        # try switching to invalid pid
-        self.test_sequence.add_log_lines([
+            "send packet: $E15#00",
+            # try switching to invalid pid
             "read packet: $Hgp{:x}.{:x}#00".format(pid+1, tid),
-            {"direction": "send", "regex": r"[$]Eff#.*"},
+            "send packet: $Eff#00",
             "read packet: $Hcp{:x}.{:x}#00".format(pid+1, tid),
-            {"direction": "send", "regex": r"[$]Eff#.*"},
+            "send packet: $Eff#00",
         ], True)
-        ret = self.expect_gdbremote_sequence()
+        self.expect_gdbremote_sequence()
 
     @add_test_categories(["fork"])
     def test_detach_current(self):
@@ -204,21 +205,20 @@ class TestGdbRemoteFork(gdbremote_testcase.GdbRemoteTestCaseBase):
         self.reset_test_sequence()
 
         # get process pid
-        procinfo_regex = "[$]pid:([0-9a-f]+);.*"
         self.test_sequence.add_log_lines([
             "read packet: $qProcessInfo#00",
-            {"direction": "send", "regex": procinfo_regex,
+            {"direction": "send", "regex": self.procinfo_regex,
              "capture": {1: "pid"}},
         ], True)
         ret = self.expect_gdbremote_sequence()
-        pid = int(ret["pid"], 16)
+        pid = ret["pid"]
         self.reset_test_sequence()
 
         # detach the process
         self.test_sequence.add_log_lines([
-            "read packet: $D;{:x}#00".format(pid),
-            {"direction": "send", "regex": r"[$]OK#.*"},
+            "read packet: $D;{}#00".format(pid),
+            "send packet: $OK#00",
             "read packet: $qC#00",
-            {"direction": "send", "regex": r"[$]E44#.*"},
+            "send packet: $E44#00",
         ], True)
-        ret = self.expect_gdbremote_sequence()
+        self.expect_gdbremote_sequence()
