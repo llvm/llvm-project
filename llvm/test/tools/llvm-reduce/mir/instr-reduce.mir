@@ -1,4 +1,4 @@
-# RUN: llvm-reduce --delta-passes=instructions -mtriple=riscv32 --test %python --test-arg %p/instr-reduce.py %s -o %t
+# RUN: llvm-reduce -abort-on-invalid-reduction --delta-passes=instructions -mtriple=riscv32 --test %python --test-arg %p/instr-reduce.py %s -o %t
 # RUN: cat %t | FileCheck --match-full-lines %s
 
 # REQUIRES: riscv-registered-target

@@ -1,5 +1,5 @@
 # REQUIRES: amdgpu-registered-target
-# RUN: llvm-reduce -simplify-mir -mtriple=amdgcn-amd-amdhsa -mcpu=gfx908 --test FileCheck --test-arg --check-prefix=CHECK-INTERESTINGNESS --test-arg %s --test-arg --input-file %s -o %t 2> %t.log
+# RUN: llvm-reduce -abort-on-invalid-reduction -simplify-mir -mtriple=amdgcn-amd-amdhsa -mcpu=gfx908 --test FileCheck --test-arg --check-prefix=CHECK-INTERESTINGNESS --test-arg %s --test-arg --input-file %s -o %t 2> %t.log
 # RUN: FileCheck --check-prefix=RESULT %s < %t
 
 # CHECK-INTERESTINGNESS-COUNT-6: S_NOP
