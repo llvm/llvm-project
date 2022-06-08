@@ -1042,6 +1042,10 @@ def gpu_instrument_lib_EQ : Joined<["--"], "gpu-instrument-lib=">,
 def fgpu_sanitize : Flag<["-"], "fgpu-sanitize">, Group<f_Group>,
   HelpText<"Enable sanitizer for AMDGPU target">;
 def fno_gpu_sanitize : Flag<["-"], "fno-gpu-sanitize">, Group<f_Group>;
+def fenable_host_devmem : Flag<["-"], "fenable-host-devmem">, Group<f_Group>,
+  HelpText<"Enable host-assisted dynamic device memory management">;
+def fdisable_host_devmem : Flag<["-"], "fdisable-host-devmem">, Group<f_Group>,
+  HelpText<"Disable host-assisted dynamic device memory management (Default)">;
 def gpu_bundle_output : Flag<["--"], "gpu-bundle-output">,
   Group<f_Group>, HelpText<"Bundle output files of HIP device compilation">;
 def no_gpu_bundle_output : Flag<["--"], "no-gpu-bundle-output">,

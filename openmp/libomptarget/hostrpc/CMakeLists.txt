@@ -112,3 +112,4 @@ endforeach()
 #set(triple "nvptx-nvidia-cuda")
 # Since libomptarget includes hostrpc, we only need to install hostrpc headers
 install(FILES "${CMAKE_CURRENT_SOURCE_DIR}/src/hostrpc.h" DESTINATION ${DEVEL_PACKAGE}include)
+install(FILES "${CMAKE_CURRENT_SOURCE_DIR}/src/disable_dynamic_devmem.ll" DESTINATION ${DEVEL_PACKAGE}lib)

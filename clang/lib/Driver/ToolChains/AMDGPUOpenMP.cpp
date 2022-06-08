@@ -139,6 +139,19 @@ const char *AMDGCN::OpenMPLinker::constructLLVMLinkCommand(
     if (II.isFilename())
       input_count++;
 
+  StringRef disable_fn = Args.MakeArgString(
+      C.getDriver().Dir + "/../lib/disable_dynamic_devmem.ll");
+  // OpenMP default is to disable host assisted device memory management
+  // to avoid host service thread for potential performance concerns.
+  if (llvm::sys::fs::exists(disable_fn) &&
+      Args.hasFlag(options::OPT_fdisable_host_devmem,
+                   options::OPT_fenable_host_devmem, true) &&
+      Args.hasFlag(options::OPT_fopenmp_target_new_runtime,
+                   options::OPT_fno_openmp_target_new_runtime, false)) {
+    input_count++;
+    CmdArgs.push_back(Args.MakeArgString(disable_fn));
+  }
+
   // If more than 1 input or need to link any SDLs, we need a pre-link step.
   if ((input_count > 1) || !CmdArgs.empty()) {
     // ArgStringList CmdArgs;
