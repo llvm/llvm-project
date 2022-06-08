@@ -22,6 +22,13 @@ using namespace ento;
 namespace {
 class SimpleSValBuilder : public SValBuilder {
 
+  // Query the constraint manager whether the SVal has only one possible
+  // (integer) value. If that is the case, the value is returned. Otherwise,
+  // returns NULL.
+  // This is an implementation detail. Checkers should use `getKnownValue()`
+  // instead.
+  const llvm::APSInt *getConstValue(ProgramStateRef state, SVal V);
+
   // With one `simplifySValOnce` call, a compound symbols might collapse to
   // simpler symbol tree that is still possible to further simplify. Thus, we
   // do the simplification on a new symbol tree until we reach the simplest
@@ -45,7 +52,7 @@ class SimpleSValBuilder : public SValBuilder {
   SVal simplifyUntilFixpoint(ProgramStateRef State, SVal Val);
 
   // Recursively descends into symbolic expressions and replaces symbols
-  // with their known values (in the sense of the getKnownValue() method).
+  // with their known values (in the sense of the getConstValue() method).
   // We traverse the symbol tree and query the constraint values for the
   // sub-trees and if a value is a constant we do the constant folding.
   SVal simplifySValOnce(ProgramStateRef State, SVal V);
@@ -65,8 +72,9 @@ public:
   SVal evalBinOpLN(ProgramStateRef state, BinaryOperator::Opcode op,
                    Loc lhs, NonLoc rhs, QualType resultTy) override;
 
-  /// getKnownValue - evaluates a given SVal. If the SVal has only one possible
-  ///  (integer) value, that value is returned. Otherwise, returns NULL.
+  /// Evaluates a given SVal by recursively evaluating and
+  /// simplifying the children SVals. If the SVal has only one possible
+  /// (integer) value, that value is returned. Otherwise, returns NULL.
   const llvm::APSInt *getKnownValue(ProgramStateRef state, SVal V) override;
 
   SVal simplifySVal(ProgramStateRef State, SVal V) override;
@@ -532,7 +540,7 @@ SVal SimpleSValBuilder::evalBinOpNN(ProgramStateRef state,
       llvm::APSInt LHSValue = lhs.castAs<nonloc::ConcreteInt>().getValue();
 
       // If we're dealing with two known constants, just perform the operation.
-      if (const llvm::APSInt *KnownRHSValue = getKnownValue(state, rhs)) {
+      if (const llvm::APSInt *KnownRHSValue = getConstValue(state, rhs)) {
         llvm::APSInt RHSValue = *KnownRHSValue;
         if (BinaryOperator::isComparisonOp(op)) {
           // We're looking for a type big enough to compare the two values.
@@ -652,7 +660,7 @@ SVal SimpleSValBuilder::evalBinOpNN(ProgramStateRef state,
         }
 
         // For now, only handle expressions whose RHS is a constant.
-        if (const llvm::APSInt *RHSValue = getKnownValue(state, rhs)) {
+        if (const llvm::APSInt *RHSValue = getConstValue(state, rhs)) {
           // If both the LHS and the current expression are additive,
           // fold their constants and try again.
           if (BinaryOperator::isAdditiveOp(op)) {
@@ -699,7 +707,7 @@ SVal SimpleSValBuilder::evalBinOpNN(ProgramStateRef state,
       }
 
       // Is the RHS a constant?
-      if (const llvm::APSInt *RHSValue = getKnownValue(state, rhs))
+      if (const llvm::APSInt *RHSValue = getConstValue(state, rhs))
         return MakeSymIntVal(Sym, op, *RHSValue, resultTy);
 
       if (Optional<NonLoc> V = tryRearrange(state, op, lhs, rhs, resultTy))
@@ -1187,8 +1195,8 @@ SVal SimpleSValBuilder::evalBinOpLN(ProgramStateRef state,
   return UnknownVal();
 }
 
-const llvm::APSInt *SimpleSValBuilder::getKnownValue(ProgramStateRef state,
-                                                   SVal V) {
+const llvm::APSInt *SimpleSValBuilder::getConstValue(ProgramStateRef state,
+                                                     SVal V) {
   if (V.isUnknownOrUndef())
     return nullptr;
 
@@ -1202,6 +1210,11 @@ const llvm::APSInt *SimpleSValBuilder::getKnownValue(ProgramStateRef state,
     return state->getConstraintManager().getSymVal(state, Sym);
 
   return nullptr;
+}
+
+const llvm::APSInt *SimpleSValBuilder::getKnownValue(ProgramStateRef state,
+                                                     SVal V) {
+  return getConstValue(state, simplifySVal(state, V));
 }
 
 SVal SimpleSValBuilder::simplifyUntilFixpoint(ProgramStateRef State, SVal Val) {
@@ -1270,7 +1283,7 @@ SVal SimpleSValBuilder::simplifySValOnce(ProgramStateRef State, SVal V) {
     SVal VisitSymbolData(const SymbolData *S) {
       // No cache here.
       if (const llvm::APSInt *I =
-              SVB.getKnownValue(State, SVB.makeSymbolVal(S)))
+              State->getConstraintManager().getSymVal(State, S))
         return Loc::isLocType(S->getType()) ? (SVal)SVB.makeIntLocVal(*I)
                                             : (SVal)SVB.makeIntVal(*I);
       return SVB.makeSymbolVal(S);
