@@ -45,7 +45,9 @@ template <typename ELFT>
 class ELFLinkGraphBuilder_aarch64 : public ELFLinkGraphBuilder<ELFT> {
 private:
   enum ELFAArch64RelocationKind : Edge::Kind {
-    ELFBranch26 = Edge::FirstRelocation,
+    ELFCall26 = Edge::FirstRelocation,
+    ELFAdrPage21,
+    ELFAddAbs12,
   };
 
   static Expected<ELFAArch64RelocationKind>
@@ -53,7 +55,11 @@ private:
     using namespace aarch64;
     switch (Type) {
     case ELF::R_AARCH64_CALL26:
-      return ELFBranch26;
+      return ELFCall26;
+    case ELF::R_AARCH64_ADR_PREL_PG_HI21:
+      return ELFAdrPage21;
+    case ELF::R_AARCH64_ADD_ABS_LO12_NC:
+      return ELFAddAbs12;
     }
 
     return make_error<JITLinkError>("Unsupported aarch64 relocation:" +
@@ -105,8 +111,16 @@ private:
     Edge::Kind Kind = Edge::Invalid;
 
     switch (*RelocKind) {
-    case ELFBranch26: {
+    case ELFCall26: {
       Kind = aarch64::Branch26;
+      break;
+    }
+    case ELFAdrPage21: {
+      Kind = aarch64::Page21;
+      break;
+    }
+    case ELFAddAbs12: {
+      Kind = aarch64::PageOffset12;
       break;
     }
     };
@@ -125,8 +139,12 @@ private:
   /// Return the string name of the given ELF aarch64 edge kind.
   const char *getELFAArch64RelocationKindName(Edge::Kind R) {
     switch (R) {
-    case ELFBranch26:
-      return "ELFBranch26";
+    case ELFCall26:
+      return "ELFCall26";
+    case ELFAdrPage21:
+      return "ELFAdrPage21";
+    case ELFAddAbs12:
+      return "ELFAddAbs12";
     default:
       return getGenericEdgeKindName(static_cast<Edge::Kind>(R));
     }
