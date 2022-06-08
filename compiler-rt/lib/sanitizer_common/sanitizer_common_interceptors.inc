@@ -4963,6 +4963,27 @@ INTERCEPTOR(int, pthread_attr_getaffinity_np, void *attr, SIZE_T cpusetsize,
 #define INIT_PTHREAD_ATTR_GETAFFINITY_NP
 #endif
 
+#if SANITIZER_INTERCEPT_PTHREAD_GETAFFINITY_NP
+INTERCEPTOR(int, pthread_getaffinity_np, void *attr, SIZE_T cpusetsize,
+            void *cpuset) {
+  void *ctx;
+  COMMON_INTERCEPTOR_ENTER(ctx, pthread_getaffinity_np, attr, cpusetsize,
+                           cpuset);
+  // FIXME: under ASan the call below may write to freed memory and corrupt
+  // its metadata. See
+  // https://github.com/google/sanitizers/issues/321.
+  int res = REAL(pthread_getaffinity_np)(attr, cpusetsize, cpuset);
+  if (!res && cpusetsize && cpuset)
+    COMMON_INTERCEPTOR_WRITE_RANGE(ctx, cpuset, cpusetsize);
+  return res;
+}
+
+#define INIT_PTHREAD_GETAFFINITY_NP \
+  COMMON_INTERCEPT_FUNCTION(pthread_getaffinity_np);
+#else
+#define INIT_PTHREAD_GETAFFINITY_NP
+#endif
+
 #if SANITIZER_INTERCEPT_PTHREAD_MUTEXATTR_GETPSHARED
 INTERCEPTOR_PTHREAD_MUTEXATTR_GET(pshared, sizeof(int))
 #define INIT_PTHREAD_MUTEXATTR_GETPSHARED \
@@ -10535,6 +10556,7 @@ static void InitializeCommonInterceptors() {
   INIT_PTHREAD_ATTR_GET_SCHED;
   INIT_PTHREAD_ATTR_GETINHERITSCHED;
   INIT_PTHREAD_ATTR_GETAFFINITY_NP;
+  INIT_PTHREAD_GETAFFINITY_NP;
   INIT_PTHREAD_MUTEXATTR_GETPSHARED;
   INIT_PTHREAD_MUTEXATTR_GETTYPE;
   INIT_PTHREAD_MUTEXATTR_GETPROTOCOL;
