@@ -216,7 +216,7 @@ body:             |
     ; CHECK-NEXT:   rewr %bb.0	464B:0	early-clobber %28.sub_vrm2_0:vrn4m2nov0 = PseudoVSEXT_VF2_M2_MASK %28.sub_vrm2_0:vrn4m2nov0(tied-def 0), %5:vr, $v0, 2, 4, 0, implicit $vl, implicit $vtype
     ; CHECK-NEXT:   rewr %bb.0	512B:0	PseudoVSSEG4E16_V_M2 %28:vrn4m2nov0, %27:gpr, 2, 4, implicit $vl, implicit $vtype
     ; CHECK-NEXT:   rewr %bb.0	216B:1	undef %28.sub_vrm1_0_sub_vrm1_1_sub_vrm1_2_sub_vrm1_3_sub_vrm1_4_sub_vrm1_5:vrn4m2nov0 = COPY %29.sub_vrm1_0_sub_vrm1_1_sub_vrm1_2_sub_vrm1_3_sub_vrm1_4_sub_vrm1_5:vrn4m2nov0
-    ; CHECK-NEXT: queuing new interval: %28 [216r,288r:0)[288r,464e:1)[464e,512r:2) 0@216r 1@288r 2@464e L000000000000000C [216r,464e:0)[464e,512r:1) 0@216r 1@464e L0000000000000300 [288r,512r:0) 0@288r L00000000000000C0 [216r,512r:0) 0@216r L0000000000000030 [216r,512r:0) 0@216r weight:8.706897e-03
+    ; CHECK-NEXT: queuing new interval: %28 [216r,288r:0)[288r,464e:1)[464e,512r:2) 0@216r 1@288r 2@464e  L000000000000000C [216r,216d:0)[464e,512r:1) 0@216r 1@464e  L0000000000000300 [288r,512r:0) 0@288r  L00000000000000C0 [216r,512r:0) 0@216r  L0000000000000030 [216r,512r:0) 0@216r  weight:8.706897e-03
     %26:gpr = LUI target-flags(riscv-hi) @var_47
     %27:gpr = ADDI %26, target-flags(riscv-lo) @var_47
     PseudoVSSEG4E16_V_M2 %25, %27, 2, 4 /* e16 */, implicit $vl, implicit $vtype
