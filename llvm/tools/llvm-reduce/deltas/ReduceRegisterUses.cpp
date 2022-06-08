@@ -22,6 +22,10 @@ static void removeUsesFromFunction(Oracle &O, MachineFunction &MF) {
 
   for (MachineBasicBlock &MBB : MF) {
     for (MachineInstr &MI : MBB) {
+      // Generic instructions are not supposed to have undef operands.
+      if (isPreISelGenericOpcode(MI.getOpcode()))
+        continue;
+
       int NumOperands = MI.getNumOperands();
       int NumRequiredOps = MI.getNumExplicitOperands() +
                            MI.getDesc().getNumImplicitDefs() +
