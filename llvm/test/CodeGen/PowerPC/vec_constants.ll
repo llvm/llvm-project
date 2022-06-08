@@ -21,17 +21,23 @@ define void @test1(<4 x i32>* %P1, <4 x i32>* %P2, <4 x float>* %P3) nounwind {
 ;
 ; LE-LABEL: test1:
 ; LE:       # %bb.0:
-; LE-NEXT:    lvx 2, 0, 3
+; LE-NEXT:    lxvd2x 0, 0, 3
+; LE-NEXT:    xxswapd 34, 0
 ; LE-NEXT:    vspltisb 3, -1
 ; LE-NEXT:    vslw 3, 3, 3
-; LE-NEXT:    xxland 34, 34, 35
-; LE-NEXT:    stvx 2, 0, 3
-; LE-NEXT:    lvx 2, 0, 4
-; LE-NEXT:    xxlandc 34, 34, 35
-; LE-NEXT:    stvx 2, 0, 4
-; LE-NEXT:    lvx 2, 0, 5
-; LE-NEXT:    xvabssp 34, 34
-; LE-NEXT:    stvx 2, 0, 5
+; LE-NEXT:    xxland 0, 34, 35
+; LE-NEXT:    xxswapd 0, 0
+; LE-NEXT:    stxvd2x 0, 0, 3
+; LE-NEXT:    lxvd2x 0, 0, 4
+; LE-NEXT:    xxswapd 34, 0
+; LE-NEXT:    xxlandc 0, 34, 35
+; LE-NEXT:    xxswapd 0, 0
+; LE-NEXT:    stxvd2x 0, 0, 4
+; LE-NEXT:    lxvd2x 0, 0, 5
+; LE-NEXT:    xxswapd 34, 0
+; LE-NEXT:    xvabssp 0, 34
+; LE-NEXT:    xxswapd 0, 0
+; LE-NEXT:    stxvd2x 0, 0, 5
 ; LE-NEXT:    blr
 	%tmp = load <4 x i32>, <4 x i32>* %P1		; <<4 x i32>> [#uses=1]
 	%tmp4 = and <4 x i32> %tmp, < i32 -2147483648, i32 -2147483648, i32 -2147483648, i32 -2147483648 >		; <<4 x i32>> [#uses=1]
