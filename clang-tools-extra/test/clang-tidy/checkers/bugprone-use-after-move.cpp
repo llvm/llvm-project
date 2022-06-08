@@ -152,6 +152,13 @@ void simple() {
   // CHECK-NOTES: [[@LINE-3]]:15: note: move occurred here
 }
 
+// Don't flag a move-to-self.
+void selfMove() {
+  A a;
+  a = std::move(a);
+  a.foo();
+}
+
 // A warning should only be emitted for one use-after-move.
 void onlyFlagOneUseAfterMove() {
   A a;
