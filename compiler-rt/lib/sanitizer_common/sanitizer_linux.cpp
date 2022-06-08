@@ -901,6 +901,10 @@ bool internal_sigismember(__sanitizer_sigset_t *set, int signum) {
   return k_set->sig[idx] & ((uptr)1 << bit);
 }
 #elif SANITIZER_FREEBSD
+uptr internal_procctl(int type, int id, int cmd, void *data) {
+  return internal_syscall(SYSCALL(procctl), type, id, cmd, data);
+}
+
 void internal_sigdelset(__sanitizer_sigset_t *set, int signum) {
   sigset_t *rset = reinterpret_cast<sigset_t *>(set);
   sigdelset(rset, signum);
@@ -2186,7 +2190,8 @@ void CheckASLR() {
   }
 #elif SANITIZER_FREEBSD
   int aslr_status;
-  if (UNLIKELY(procctl(P_PID, 0, PROC_ASLR_STATUS, &aslr_status) == -1)) {
+  int r = internal_procctl(P_PID, 0, PROC_ASLR_STATUS, &aslr_status);
+  if (UNLIKELY(r == -1)) {
     // We're making things less 'dramatic' here since
     // the cmd is not necessarily guaranteed to be here
     // just yet regarding FreeBSD release
