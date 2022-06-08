@@ -240,8 +240,6 @@ static std::unique_ptr<MachineFunction> cloneMF(MachineFunction *SrcMF,
   // Remap the debug info frame index references.
   DstMF->VariableDbgInfos = SrcMF->VariableDbgInfos;
 
-  // FIXME: Need to clone MachineFunctionInfo, which may also depend on frame
-  // index and block mapping.
   // Clone virtual registers
   for (unsigned I = 0, E = SrcMRI->getNumVirtRegs(); I != E; ++I) {
     Register Reg = Register::index2VirtReg(I);
@@ -276,7 +274,8 @@ static std::unique_ptr<MachineFunction> cloneMF(MachineFunction *SrcMF,
       auto *DstSuccMBB = Src2DstMBB[SrcSuccMBB];
       DstMBB->addSuccessor(DstSuccMBB, SrcMBB.getSuccProbability(It));
     }
-    for (auto &LI : SrcMBB.liveins())
+
+    for (auto &LI : SrcMBB.liveins_dbg())
       DstMBB->addLiveIn(LI);
 
     // Make sure MRI knows about registers clobbered by unwinder.
@@ -343,6 +342,11 @@ static std::unique_ptr<MachineFunction> cloneMF(MachineFunction *SrcMF,
     report_fatal_error("cloning not implemented for machine function property");
 
   DstMF->setDebugInstrNumberingCount(SrcMF->DebugInstrNumberingCount);
+
+  if (!DstMF->cloneInfoFrom(*SrcMF, Src2DstMBB))
+    report_fatal_error("target does not implement MachineFunctionInfo cloning");
+
+  DstMRI->freezeReservedRegs(*DstMF);
 
   DstMF->verify(nullptr, "", /*AbortOnError=*/true);
   return DstMF;
