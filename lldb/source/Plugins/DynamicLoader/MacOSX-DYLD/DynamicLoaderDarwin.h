@@ -71,6 +71,8 @@ protected:
 
   lldb::ModuleSP GetDYLDModule();
 
+  void ClearDYLDModule();
+
   class Segment {
   public:
     Segment() : name() {}

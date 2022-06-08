@@ -14,6 +14,7 @@
 #include "lldb/Symbol/ObjectFile.h"
 #include "lldb/Symbol/SymbolVendor.h"
 #include "lldb/Target/ABI.h"
+#include "lldb/Target/SectionLoadList.h"
 #include "lldb/Target/StackFrame.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Target/Thread.h"
@@ -76,13 +77,16 @@ DynamicLoader *DynamicLoaderMacOS::CreateInstance(Process *process,
 // Constructor
 DynamicLoaderMacOS::DynamicLoaderMacOS(Process *process)
     : DynamicLoaderDarwin(process), m_image_infos_stop_id(UINT32_MAX),
-      m_break_id(LLDB_INVALID_BREAK_ID), m_mutex(),
+      m_break_id(LLDB_INVALID_BREAK_ID),
+      m_dyld_handover_break_id(LLDB_INVALID_BREAK_ID), m_mutex(),
       m_maybe_image_infos_address(LLDB_INVALID_ADDRESS) {}
 
 // Destructor
 DynamicLoaderMacOS::~DynamicLoaderMacOS() {
   if (LLDB_BREAK_ID_IS_VALID(m_break_id))
     m_process->GetTarget().RemoveBreakpointByID(m_break_id);
+  if (LLDB_BREAK_ID_IS_VALID(m_dyld_handover_break_id))
+    m_process->GetTarget().RemoveBreakpointByID(m_dyld_handover_break_id);
 }
 
 bool DynamicLoaderMacOS::ProcessDidExec() {
@@ -135,8 +139,11 @@ void DynamicLoaderMacOS::DoClear() {
 
   if (LLDB_BREAK_ID_IS_VALID(m_break_id))
     m_process->GetTarget().RemoveBreakpointByID(m_break_id);
+  if (LLDB_BREAK_ID_IS_VALID(m_dyld_handover_break_id))
+    m_process->GetTarget().RemoveBreakpointByID(m_dyld_handover_break_id);
 
   m_break_id = LLDB_INVALID_BREAK_ID;
+  m_dyld_handover_break_id = LLDB_INVALID_BREAK_ID;
 }
 
 // Check if we have found DYLD yet
@@ -286,13 +293,50 @@ bool DynamicLoaderMacOS::NotifyBreakpointHit(void *baton,
             }
             if (dyld_mode == 0) {
               // dyld_notify_adding
-              dyld_instance->AddBinaries(image_load_addresses);
+              if (process->GetTarget().GetImages().GetSize() == 0) {
+                // When all images have been removed, we're doing the
+                // dyld handover from a launch-dyld to a shared-cache-dyld,
+                // and we've just hit our one-shot address breakpoint in
+                // the sc-dyld.  Note that the image addresses passed to
+                // this function are inferior sizeof(void*) not uint64_t's
+                // like our normal notification, so don't even look at
+                // image_load_addresses.
+
+                dyld_instance->ClearDYLDHandoverBreakpoint();
+
+                dyld_instance->DoInitialImageFetch();
+                dyld_instance->SetNotificationBreakpoint();
+              } else {
+                dyld_instance->AddBinaries(image_load_addresses);
+              }
             } else if (dyld_mode == 1) {
               // dyld_notify_removing
               dyld_instance->UnloadImages(image_load_addresses);
             } else if (dyld_mode == 2) {
               // dyld_notify_remove_all
               dyld_instance->UnloadAllImages();
+            } else if (dyld_mode == 3 && image_infos_count == 1) {
+              // dyld_image_dyld_moved
+
+              dyld_instance->ClearNotificationBreakpoint();
+              dyld_instance->UnloadAllImages();
+              dyld_instance->ClearDYLDModule();
+              process->GetTarget().GetImages().Clear();
+              process->GetTarget().GetSectionLoadList().Clear();
+
+              addr_t all_image_infos = process->GetImageInfoAddress();
+              int addr_size =
+                  process->GetTarget().GetArchitecture().GetAddressByteSize();
+              addr_t notification_location = all_image_infos + 4 + // version
+                                             4 +        // infoArrayCount
+                                             addr_size; // infoArray
+              Status error;
+              addr_t notification_addr =
+                  process->ReadPointerFromMemory(notification_location, error);
+              if (ABISP abi_sp = process->GetABI())
+                notification_addr = abi_sp->FixCodeAddress(notification_addr);
+
+              dyld_instance->SetDYLDHandoverBreakpoint(notification_addr);
             }
           }
         }
@@ -369,6 +413,26 @@ bool DynamicLoaderMacOS::SetNotificationBreakpoint() {
     }
   }
   return m_break_id != LLDB_INVALID_BREAK_ID;
+}
+
+bool DynamicLoaderMacOS::SetDYLDHandoverBreakpoint(
+    addr_t notification_address) {
+  if (m_dyld_handover_break_id == LLDB_INVALID_BREAK_ID) {
+    BreakpointSP dyld_handover_bp = m_process->GetTarget().CreateBreakpoint(
+        notification_address, true, false);
+    dyld_handover_bp->SetCallback(DynamicLoaderMacOS::NotifyBreakpointHit, this,
+                                  true);
+    dyld_handover_bp->SetOneShot(true);
+    m_dyld_handover_break_id = dyld_handover_bp->GetID();
+    return true;
+  }
+  return false;
+}
+
+void DynamicLoaderMacOS::ClearDYLDHandoverBreakpoint() {
+  if (LLDB_BREAK_ID_IS_VALID(m_dyld_handover_break_id))
+    m_process->GetTarget().RemoveBreakpointByID(m_dyld_handover_break_id);
+  m_dyld_handover_break_id = LLDB_INVALID_BREAK_ID;
 }
 
 addr_t
