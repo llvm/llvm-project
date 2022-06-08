@@ -1172,8 +1172,7 @@ Expected<SmallVector<std::unique_ptr<MemoryBuffer>>>
 bundleOpenMP(ArrayRef<OffloadingImage> Images) {
   SmallVector<std::unique_ptr<MemoryBuffer>> Buffers;
   for (const OffloadingImage &Image : Images)
-    Buffers.emplace_back(
-        MemoryBuffer::getMemBufferCopy(Image.Image->getBuffer()));
+    Buffers.emplace_back(OffloadBinary::write(Image));
 
   return std::move(Buffers);
 }
