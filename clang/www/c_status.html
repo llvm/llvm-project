@@ -866,7 +866,7 @@ conformance.</p>
     <tr>
       <td>Adding a Fundamental Type for N-bit integers</td>
       <td><a href="https://www.open-std.org/jtc1/sc22/wg14/www/docs/n2763.pdf">N2763</a></td>
-      <td class="full" align="center">Clang 14</td>
+      <td class="unreleased" align="center">Clang 15</td>
     </tr>
     <!-- Sep 2021 Papers -->
     <tr>
@@ -955,10 +955,127 @@ conformance.</p>
       <td><a href="https://www.open-std.org/jtc1/sc22/wg14/www/docs/n2872.htm">N2872</a></td>
       <td class="full" align="center">Yes</td>
     </tr>
+    <!-- Feb 2022 (Parts 1 & 2) Papers -->
+    <tr>
+      <td>@, $, and ‘ in the source/execution character set</td>
+      <td><a href="https://www.open-std.org/jtc1/sc22/wg14/www/docs/n2701.htm">N2701</a></td>
+      <td class="full" align="center">Yes</td>
+    </tr>
+    <tr>
+      <td>The noreturn attribute</td>
+      <td><a href="https://www.open-std.org/jtc1/sc22/wg14/www/docs/n2764.pdf">N2764</a></td>
+      <td class="unreleased" align="center">Clang 15</td>
+    </tr>
+    <tr>
+      <td>Literal suffixes for bit-precise integers</td>
+      <td><a href="https://www.open-std.org/jtc1/sc22/wg14/www/docs/n2775.pdf">N2775</a></td>
+      <td class="unreleased" align="center">Clang 15</td>
+    </tr>
+    <tr>
+      <td>*_HAS_SUBNORM==0 implies what?</td>
+      <td><a href="https://www.open-std.org/jtc1/sc22/wg14/www/docs/n2797.htm">N2797</a></td>
+      <td class="full" align="center">Yes</td>
+    </tr>
+    <tr>
+      <td>Disambiguate the storage class of some compound literals</td>
+      <td><a href="https://www.open-std.org/jtc1/sc22/wg14/www/docs/n2819.pdf">N2819</a></td>
+      <td class="unknown" align="center">Unknown</td>
+    </tr>
+    <tr>
+      <td>Add annotations for unreachable control flow v2</td>
+      <td><a href="https://www.open-std.org/jtc1/sc22/wg14/www/docs/n2826.pdf">N2826</a></td>
+      <td class="none" align="center">No</td>
+    </tr>
+    <tr>
+      <td>Unicode Sequences More Than 21 Bits are a Constraint Violation r0</td>
+      <td><a href="https://www.open-std.org/jtc1/sc22/wg14/www/docs/n2828.htm">N2828</a></td>
+      <td class="full" align="center">Clang 3.6</td>
+    </tr>
+    <tr>
+      <td>Make assert() macro user friendly for C and C++ v2</td>
+      <td><a href="https://www.open-std.org/jtc1/sc22/wg14/www/docs/n2829.htm">N2829</a></td>
+      <td class="none" align="center">No</td>
+    </tr>
+    <tr>
+      <td>Identifier Syntax using Unicode Standard Annex 31</td>
+      <td><a href="https://www.open-std.org/jtc1/sc22/wg14/www/docs/n2836.pdf">N2836</a></td>
+      <td class="none" align="center">No</td>
+    </tr>
+    <tr>
+      <td>No function declarators without prototypes</td>
+      <td><a href="https://www.open-std.org/jtc1/sc22/wg14/www/docs/n2841.htm">N2841</a></td>
+      <td class="unreleased" align="center">Clang 15</td>
+    </tr>
+    <tr>
+      <td>Remove default argument promotions for _FloatN types</td>
+      <td><a href="https://www.open-std.org/jtc1/sc22/wg14/www/docs/n2844.pdf">N2844</a></td>
+      <td class="unknown" align="center">Unknown</td>
+    </tr>
+    <tr>
+      <td>5.2.4.2.2 Cleanup, Again Again (N2806 update)</td>
+      <td><a href="https://www.open-std.org/jtc1/sc22/wg14/www/docs/n2879.pdf">N2879</a></td>
+      <td class="full" align="center">Yes</td>
+    </tr>
+    <tr>
+      <td>Clarification for max exponent macros-update</td>
+      <td><a href="https://www.open-std.org/jtc1/sc22/wg14/www/docs/n2882.pdf">N2882</a></td>
+      <td class="unknown" align="center">Unknown</td>
+    </tr>
+    <tr>
+      <td>Consistent, Warningless, and Intuitive Initialization with {}, revision 2</td>
+      <td><a href="https://www.open-std.org/jtc1/sc22/wg14/www/docs/n2900.htm">N2900</a></td>
+      <td class="unknown" align="center">Unknown</td>
+    </tr>
+    <tr>
+      <td>Not-so-magic: typeof, r5</td>
+      <td><a href="https://www.open-std.org/jtc1/sc22/wg14/www/docs/n2927.htm">N2927</a></td>
+      <td class="partial" align="center">
+        <details><summary>Partial</summary>
+          Clang supports <code>typeof</code> in GNU standards mode, but its
+          compatibility with this proposal is unknown. Also, Clang does not yet
+          support remove_quals.
+        </details>
+      </td>
+    </tr>
+    <tr>
+      <td>Revise spelling of keywords v7</td>
+      <td><a href="https://www.open-std.org/jtc1/sc22/wg14/www/docs/n2934.pdf">N2934</a></td>
+      <td class="none" align="center">No</td>
+    </tr>
+    <tr>
+      <td>Make false and true first-class language features v8</td>
+      <td><a href="https://www.open-std.org/jtc1/sc22/wg14/www/docs/n2935.pdf">N2935</a></td>
+      <td class="unreleased" align="center">Clang 15</td>
+    </tr>
+    <tr>
+      <td>Properly define blocks as part of the grammar v3</td>
+      <td><a href="https://www.open-std.org/jtc1/sc22/wg14/www/docs/n2937.pdf">N2937</a></td>
+      <td class="full" align="center">Yes</td>
+    </tr>
+    <!-- May 2022 Papers -->
+    <tr>
+      <td>Indeterminate Values and Trap Representations</td>
+      <td><a href="https://www.open-std.org/jtc1/sc22/wg14/www/docs/n2861.pdf">N2861</a></td>
+      <td class="full" align="center">Yes</td>
+    </tr>
+    <tr>
+      <td>Remove ATOMIC_VAR_INIT v2</td>
+      <td><a href="https://www.open-std.org/jtc1/sc22/wg14/www/docs/n2886.htm">N2886</a></td>
+      <td class="none" align="center">No</td>
+    </tr>
+    <tr>
+      <td>Require exact-width integer type interfaces v2</td>
+      <td><a href="https://www.open-std.org/jtc1/sc22/wg14/www/docs/n2888.htm">N2888</a></td>
+      <td class="full" align="center">Yes</td>
+    </tr>
+    <tr>
+      <td>Wording Change for Variably-Modified Types</td>
+      <td><a href="https://www.open-std.org/jtc1/sc22/wg14/www/docs/n2992.pdf">N2992</a></td>
+      <td class="full" align="center">Yes</td>
+    </tr>
 </table>
 </details>
 
 </div>
 </body>
 </html>
-
