@@ -1729,7 +1729,7 @@ Expected<StringRef> WasmObjectFile::getSectionName(DataRefImpl Sec) const {
   const WasmSection &S = Sections[Sec.d.a];
   if (S.Type == wasm::WASM_SEC_CUSTOM)
     return S.Name;
-  if (S.Type > wasm::WASM_SEC_TAG)
+  if (S.Type > wasm::WASM_SEC_LAST_KNOWN)
     return createStringError(object_error::invalid_section_index, "");
   return wasm::sectionTypeToString(S.Type);
 }
