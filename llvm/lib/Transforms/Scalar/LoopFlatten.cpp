@@ -411,7 +411,7 @@ static bool findLoopComponents(
   // pre-header and one from the latch. The incoming latch value is the
   // increment variable.
   Increment =
-      dyn_cast<BinaryOperator>(InductionPHI->getIncomingValueForBlock(Latch));
+      cast<BinaryOperator>(InductionPHI->getIncomingValueForBlock(Latch));
   if (Increment->hasNUsesOrMore(3)) {
     LLVM_DEBUG(dbgs() << "Could not find valid increment\n");
     return false;
