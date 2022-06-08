@@ -10,3 +10,6 @@ Classes:
 Enumerators:
 - Name: SomeClassRed
   SwiftName: red
+Tags:
+- Name: NSSomeEnumOptions
+  SwiftName: SomeEnum.Options

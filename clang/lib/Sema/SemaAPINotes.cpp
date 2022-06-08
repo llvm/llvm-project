@@ -15,6 +15,7 @@
 #include "clang/Sema/SemaInternal.h"
 #include "clang/AST/DeclObjC.h"
 #include "clang/APINotes/APINotesReader.h"
+#include "clang/Lex/Lexer.h"
 using namespace clang;
 
 namespace {
@@ -867,8 +868,32 @@ void Sema::ProcessAPINotes(Decl *D) {
 
     // Tags
     if (auto Tag = dyn_cast<TagDecl>(D)) {
+      std::string LookupName = Tag->getName().str();
+
+      // Use the source location to discern if this Tag is an OPTIONS macro.
+      // For now we would like to limit this trick of looking up the APINote tag
+      // using the EnumDecl's QualType in the case where the enum is anonymous.
+      // This is only being used to support APINotes lookup for C++ NS/CF_OPTIONS
+      // when C++-Interop is enabled.
+      std::string MacroName =
+          LookupName.empty() && Tag->getOuterLocStart().isMacroID()
+              ? clang::Lexer::getImmediateMacroName(
+                    Tag->getOuterLocStart(),
+                    Tag->getASTContext().getSourceManager(), LangOpts)
+                    .str()
+              : "";
+
+      if (LookupName.empty() && isa<clang::EnumDecl>(Tag) &&
+          (MacroName == "CF_OPTIONS" || MacroName == "NS_OPTIONS" ||
+           MacroName == "OBJC_OPTIONS" || MacroName == "SWIFT_OPTIONS")) {
+
+        clang::QualType T = llvm::cast<clang::EnumDecl>(Tag)->getIntegerType();
+        LookupName = clang::QualType::getAsString(
+            T.split(), getASTContext().getPrintingPolicy());
+      }
+
       for (auto Reader : APINotes.findAPINotes(D->getLocation())) {
-        auto Info = Reader->lookupTag(Tag->getName());
+        auto Info = Reader->lookupTag(LookupName);
         ProcessVersionedAPINotes(*this, Tag, Info);
       }
 
