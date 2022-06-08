@@ -1705,14 +1705,15 @@ the traits class is informed when an element is inserted or removed from the
 list, and ``ilist``\ s are guaranteed to support a constant-time splice
 operation.
 
+An ``ilist`` and an ``iplist`` are ``using`` aliases to one another and the
+latter only currently exists for historical purposes.
+
 These properties are exactly what we want for things like ``Instruction``\ s and
 basic blocks, which is why these are implemented with ``ilist``\ s.
 
 Related classes of interest are explained in the following subsections:
 
 * :ref:`ilist_traits <dss_ilist_traits>`
-
-* :ref:`iplist <dss_iplist>`
 
 * :ref:`llvm/ADT/ilist_node.h <dss_ilist_node>`
 
@@ -1754,19 +1755,8 @@ For example:
 ilist_traits
 ^^^^^^^^^^^^
 
-``ilist_traits<T>`` is ``ilist<T>``'s customization mechanism. ``iplist<T>``
-(and consequently ``ilist<T>``) publicly derive from this traits class.
-
-.. _dss_iplist:
-
-iplist
-^^^^^^
-
-``iplist<T>`` is ``ilist<T>``'s base and as such supports a slightly narrower
-interface.  Notably, inserters from ``T&`` are absent.
-
-``ilist_traits<T>`` is a public base of this class and can be used for a wide
-variety of customizations.
+``ilist_traits<T>`` is ``ilist<T>``'s customization mechanism. ``ilist<T>``
+publicly derives from this traits class.
 
 .. _dss_ilist_node:
 
