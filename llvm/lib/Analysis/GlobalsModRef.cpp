@@ -597,12 +597,7 @@ void GlobalsAAResult::AnalyzeCallGraph(CallGraph &CG, Module &M) {
         // We handle calls specially because the graph-relevant aspects are
         // handled above.
         if (auto *Call = dyn_cast<CallBase>(&I)) {
-          auto &TLI = GetTLI(*Node->getFunction());
-          if (isAllocationFn(Call, &TLI) || isFreeCall(Call, &TLI)) {
-            // FIXME: It is completely unclear why this is necessary and not
-            // handled by the above graph code.
-            FI.addModRefInfo(ModRefInfo::ModRef);
-          } else if (Function *Callee = Call->getCalledFunction()) {
+          if (Function *Callee = Call->getCalledFunction()) {
             // The callgraph doesn't include intrinsic calls.
             if (Callee->isIntrinsic()) {
               if (isa<DbgInfoIntrinsic>(Call))
