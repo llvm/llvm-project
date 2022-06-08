@@ -389,9 +389,9 @@ class SIMachineFunctionInfo final : public AMDGPUMachineFunction {
   // unit. Minimum - first, maximum - second.
   std::pair<unsigned, unsigned> WavesPerEU = {0, 0};
 
-  std::unique_ptr<const AMDGPUBufferPseudoSourceValue> BufferPSV;
-  std::unique_ptr<const AMDGPUImagePseudoSourceValue> ImagePSV;
-  std::unique_ptr<const AMDGPUGWSResourcePseudoSourceValue> GWSResourcePSV;
+  const AMDGPUBufferPseudoSourceValue BufferPSV;
+  const AMDGPUImagePseudoSourceValue ImagePSV;
+  const AMDGPUGWSResourcePseudoSourceValue GWSResourcePSV;
 
 private:
   unsigned NumUserSGPRs = 0;
@@ -923,27 +923,17 @@ public:
 
   const AMDGPUBufferPseudoSourceValue *
   getBufferPSV(const AMDGPUTargetMachine &TM) {
-    if (!BufferPSV)
-      BufferPSV = std::make_unique<AMDGPUBufferPseudoSourceValue>(TM);
-
-    return BufferPSV.get();
+    return &BufferPSV;
   }
 
   const AMDGPUImagePseudoSourceValue *
   getImagePSV(const AMDGPUTargetMachine &TM) {
-    if (!ImagePSV)
-      ImagePSV = std::make_unique<AMDGPUImagePseudoSourceValue>(TM);
-
-    return ImagePSV.get();
+    return &ImagePSV;
   }
 
   const AMDGPUGWSResourcePseudoSourceValue *
   getGWSPSV(const AMDGPUTargetMachine &TM) {
-    if (!GWSResourcePSV) {
-      GWSResourcePSV = std::make_unique<AMDGPUGWSResourcePseudoSourceValue>(TM);
-    }
-
-    return GWSResourcePSV.get();
+    return &GWSResourcePSV;
   }
 
   unsigned getOccupancy() const {
