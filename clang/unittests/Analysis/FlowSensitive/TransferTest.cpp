@@ -122,24 +122,24 @@ TEST_F(TransferTest, IntVarDecl) {
       // [[p]]
     }
   )";
-  runDataflow(
-      Code, [](llvm::ArrayRef<
-                   std::pair<std::string, DataflowAnalysisState<NoopLattice>>>
-                   Results,
-               ASTContext &ASTCtx) {
-        ASSERT_THAT(Results, ElementsAre(Pair("p", _)));
-        const Environment &Env = Results[0].second.Env;
+  runDataflow(Code,
+              [](llvm::ArrayRef<
+                     std::pair<std::string, DataflowAnalysisState<NoopLattice>>>
+                     Results,
+                 ASTContext &ASTCtx) {
+                ASSERT_THAT(Results, ElementsAre(Pair("p", _)));
+                const Environment &Env = Results[0].second.Env;
 
-        const ValueDecl *FooDecl = findValueDecl(ASTCtx, "Foo");
-        ASSERT_THAT(FooDecl, NotNull());
+                const ValueDecl *FooDecl = findValueDecl(ASTCtx, "Foo");
+                ASSERT_THAT(FooDecl, NotNull());
 
-        const StorageLocation *FooLoc =
-            Env.getStorageLocation(*FooDecl, SkipPast::None);
-        ASSERT_TRUE(isa_and_nonnull<ScalarStorageLocation>(FooLoc));
+                const StorageLocation *FooLoc =
+                    Env.getStorageLocation(*FooDecl, SkipPast::None);
+                ASSERT_TRUE(isa_and_nonnull<ScalarStorageLocation>(FooLoc));
 
-        const Value *FooVal = Env.getValue(*FooLoc);
-        EXPECT_TRUE(isa_and_nonnull<IntegerValue>(FooVal));
-      });
+                const Value *FooVal = Env.getValue(*FooLoc);
+                EXPECT_TRUE(isa_and_nonnull<IntegerValue>(FooVal));
+              });
 }
 
 TEST_F(TransferTest, StructVarDecl) {
@@ -293,29 +293,29 @@ TEST_F(TransferTest, ReferenceVarDecl) {
       // [[p]]
     }
   )";
-  runDataflow(
-      Code, [](llvm::ArrayRef<
-                   std::pair<std::string, DataflowAnalysisState<NoopLattice>>>
-                   Results,
-               ASTContext &ASTCtx) {
-        ASSERT_THAT(Results, ElementsAre(Pair("p", _)));
-        const Environment &Env = Results[0].second.Env;
+  runDataflow(Code,
+              [](llvm::ArrayRef<
+                     std::pair<std::string, DataflowAnalysisState<NoopLattice>>>
+                     Results,
+                 ASTContext &ASTCtx) {
+                ASSERT_THAT(Results, ElementsAre(Pair("p", _)));
+                const Environment &Env = Results[0].second.Env;
 
-        const ValueDecl *FooDecl = findValueDecl(ASTCtx, "Foo");
-        ASSERT_THAT(FooDecl, NotNull());
+                const ValueDecl *FooDecl = findValueDecl(ASTCtx, "Foo");
+                ASSERT_THAT(FooDecl, NotNull());
 
-        const StorageLocation *FooLoc =
-            Env.getStorageLocation(*FooDecl, SkipPast::None);
-        ASSERT_TRUE(isa_and_nonnull<ScalarStorageLocation>(FooLoc));
+                const StorageLocation *FooLoc =
+                    Env.getStorageLocation(*FooDecl, SkipPast::None);
+                ASSERT_TRUE(isa_and_nonnull<ScalarStorageLocation>(FooLoc));
 
-        const ReferenceValue *FooVal =
-            cast<ReferenceValue>(Env.getValue(*FooLoc));
-        const StorageLocation &FooPointeeLoc = FooVal->getPointeeLoc();
-        EXPECT_TRUE(isa<AggregateStorageLocation>(&FooPointeeLoc));
+                const ReferenceValue *FooVal =
+                    cast<ReferenceValue>(Env.getValue(*FooLoc));
+                const StorageLocation &FooPointeeLoc = FooVal->getPointeeLoc();
+                EXPECT_TRUE(isa<AggregateStorageLocation>(&FooPointeeLoc));
 
-        const Value *FooPointeeVal = Env.getValue(FooPointeeLoc);
-        EXPECT_TRUE(isa_and_nonnull<StructValue>(FooPointeeVal));
-      });
+                const Value *FooPointeeVal = Env.getValue(FooPointeeLoc);
+                EXPECT_TRUE(isa_and_nonnull<StructValue>(FooPointeeVal));
+              });
 }
 
 TEST_F(TransferTest, SelfReferentialReferenceVarDecl) {
@@ -3327,23 +3327,23 @@ TEST_F(TransferTest, LoopWithStructReferenceAssignmentConverges) {
         ASSERT_THAT(LDecl, NotNull());
 
         // Inner.
-        auto *LVal = dyn_cast<IndirectionValue>(
-            InnerEnv.getValue(*LDecl, SkipPast::None));
+        auto *LVal =
+            dyn_cast<PointerValue>(InnerEnv.getValue(*LDecl, SkipPast::None));
         ASSERT_THAT(LVal, NotNull());
 
         EXPECT_EQ(&LVal->getPointeeLoc(),
                   InnerEnv.getStorageLocation(*ValDecl, SkipPast::Reference));
 
         // Outer.
-        LVal = dyn_cast<IndirectionValue>(
-            OuterEnv.getValue(*LDecl, SkipPast::None));
+        LVal =
+            dyn_cast<PointerValue>(OuterEnv.getValue(*LDecl, SkipPast::None));
         ASSERT_THAT(LVal, NotNull());
 
         // The loop body may not have been executed, so we should not conclude
         // that `l` points to `val`.
         EXPECT_NE(&LVal->getPointeeLoc(),
                   OuterEnv.getStorageLocation(*ValDecl, SkipPast::Reference));
-});
+      });
 }
 
 TEST_F(TransferTest, DoesNotCrashOnUnionThisExpr) {
