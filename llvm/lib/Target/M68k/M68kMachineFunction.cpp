@@ -18,3 +18,10 @@
 using namespace llvm;
 
 void M68kMachineFunctionInfo::anchor() {}
+
+MachineFunctionInfo *M68kMachineFunctionInfo::clone(
+    BumpPtrAllocator &Allocator, MachineFunction &DestMF,
+    const DenseMap<MachineBasicBlock *, MachineBasicBlock *> &Src2DstMBB)
+    const {
+  return DestMF.cloneInfo<M68kMachineFunctionInfo>(*this);
+}

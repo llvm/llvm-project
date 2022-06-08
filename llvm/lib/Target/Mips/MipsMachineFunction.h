@@ -26,6 +26,11 @@ class MipsFunctionInfo : public MachineFunctionInfo {
 public:
   MipsFunctionInfo(MachineFunction &MF) {}
 
+  MachineFunctionInfo *
+  clone(BumpPtrAllocator &Allocator, MachineFunction &DestMF,
+        const DenseMap<MachineBasicBlock *, MachineBasicBlock *> &Src2DstMBB)
+      const override;
+
   ~MipsFunctionInfo() override;
 
   unsigned getSRetReturnReg() const { return SRetReturnReg; }

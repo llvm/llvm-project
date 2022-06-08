@@ -533,6 +533,12 @@ public: // FIXME
 
 public:
   SIMachineFunctionInfo(const MachineFunction &MF);
+  SIMachineFunctionInfo(const SIMachineFunctionInfo &MFI) = default;
+
+  MachineFunctionInfo *
+  clone(BumpPtrAllocator &Allocator, MachineFunction &DestMF,
+        const DenseMap<MachineBasicBlock *, MachineBasicBlock *> &Src2DstMBB)
+      const override;
 
   bool initializeBaseYamlFields(const yaml::SIMachineFunctionInfo &YamlMFI,
                                 const MachineFunction &MF,

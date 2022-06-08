@@ -19,6 +19,13 @@ yaml::RISCVMachineFunctionInfo::RISCVMachineFunctionInfo(
     : VarArgsFrameIndex(MFI.getVarArgsFrameIndex()),
       VarArgsSaveSize(MFI.getVarArgsSaveSize()) {}
 
+MachineFunctionInfo *RISCVMachineFunctionInfo::clone(
+    BumpPtrAllocator &Allocator, MachineFunction &DestMF,
+    const DenseMap<MachineBasicBlock *, MachineBasicBlock *> &Src2DstMBB)
+    const {
+  return DestMF.cloneInfo<RISCVMachineFunctionInfo>(*this);
+}
+
 void yaml::RISCVMachineFunctionInfo::mappingImpl(yaml::IO &YamlIO) {
   MappingTraits<RISCVMachineFunctionInfo>::mapping(YamlIO, *this);
 }

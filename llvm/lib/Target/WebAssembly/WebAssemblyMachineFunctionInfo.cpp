@@ -24,6 +24,16 @@ using namespace llvm;
 
 WebAssemblyFunctionInfo::~WebAssemblyFunctionInfo() = default; // anchor.
 
+MachineFunctionInfo *WebAssemblyFunctionInfo::clone(
+    BumpPtrAllocator &Allocator, MachineFunction &DestMF,
+    const DenseMap<MachineBasicBlock *, MachineBasicBlock *> &Src2DstMBB)
+    const {
+  WebAssemblyFunctionInfo *Clone =
+      DestMF.cloneInfo<WebAssemblyFunctionInfo>(*this);
+  Clone->MF = &DestMF;
+  return Clone;
+}
+
 void WebAssemblyFunctionInfo::initWARegs(MachineRegisterInfo &MRI) {
   assert(WARegs.empty());
   unsigned Reg = UnusedReg;
@@ -153,7 +163,7 @@ void WebAssemblyFunctionInfo::initializeBaseYamlFields(
     addResult(WebAssembly::parseMVT(VT.Value));
   if (WasmEHInfo) {
     for (auto KV : YamlMFI.SrcToUnwindDest)
-      WasmEHInfo->setUnwindDest(MF.getBlockNumbered(KV.first),
-                                MF.getBlockNumbered(KV.second));
+      WasmEHInfo->setUnwindDest(MF->getBlockNumbered(KV.first),
+                                MF->getBlockNumbered(KV.second));
   }
 }

@@ -40,6 +40,10 @@ class LanaiMachineFunctionInfo : public MachineFunctionInfo {
 public:
   explicit LanaiMachineFunctionInfo(MachineFunction &MF)
       : VarArgsFrameIndex(0) {}
+  MachineFunctionInfo *
+  clone(BumpPtrAllocator &Allocator, MachineFunction &DestMF,
+        const DenseMap<MachineBasicBlock *, MachineBasicBlock *> &Src2DstMBB)
+      const override;
 
   Register getSRetReturnReg() const { return SRetReturnReg; }
   void setSRetReturnReg(Register Reg) { SRetReturnReg = Reg; }

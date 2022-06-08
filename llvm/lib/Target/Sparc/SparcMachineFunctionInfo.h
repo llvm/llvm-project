@@ -38,6 +38,11 @@ namespace llvm {
       : GlobalBaseReg(0), VarArgsFrameOffset(0), SRetReturnReg(0),
         IsLeafProc(false) {}
 
+    MachineFunctionInfo *
+    clone(BumpPtrAllocator &Allocator, MachineFunction &DestMF,
+          const DenseMap<MachineBasicBlock *, MachineBasicBlock *> &Src2DstMBB)
+        const override;
+
     Register getGlobalBaseReg() const { return GlobalBaseReg; }
     void setGlobalBaseReg(Register Reg) { GlobalBaseReg = Reg; }
 

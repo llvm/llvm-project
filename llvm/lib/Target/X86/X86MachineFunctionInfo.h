@@ -134,6 +134,12 @@ public:
   X86MachineFunctionInfo() = default;
 
   explicit X86MachineFunctionInfo(MachineFunction &MF) {}
+  explicit X86MachineFunctionInfo(const X86MachineFunctionInfo &) = default;
+
+  MachineFunctionInfo *
+  clone(BumpPtrAllocator &Allocator, MachineFunction &DestMF,
+        const DenseMap<MachineBasicBlock *, MachineBasicBlock *> &Src2DstMBB)
+      const override;
 
   bool getForceFramePointer() const { return ForceFramePointer;}
   void setForceFramePointer(bool forceFP) { ForceFramePointer = forceFP; }
