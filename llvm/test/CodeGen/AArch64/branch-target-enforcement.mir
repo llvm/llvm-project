@@ -272,6 +272,8 @@ body:             |
 
   bb.1.return (address-taken):
     ; CHECK: bb.1.return (address-taken):
+    ; CHECK-NEXT: liveins:
+    ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: HINT 36
     liveins: $x8
 
@@ -283,6 +285,8 @@ body:             |
 
   bb.2.lab2 (address-taken):
     ; CHECK: bb.2.lab2 (address-taken):
+    ; CHECK-NEXT: liveins:
+    ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: HINT 36
     liveins: $x8
 
@@ -315,6 +319,8 @@ body:             |
 
   bb.1.return (address-taken):
     ; CHECK: bb.1.return (address-taken):
+    ; CHECK-NEXT: liveins:
+    ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: HINT 36
     liveins: $x8
     frame-setup PACIASP implicit-def $lr, implicit killed $lr, implicit $sp

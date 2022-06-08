@@ -40,6 +40,7 @@ body: |
   ; CHECK-LABEL: name: sink_addi_fi
   ; CHECK: bb.0:
   ; CHECK-NEXT:   successors: %bb.2(0x40000000), %bb.1(0x40000000)
+  ; CHECK-NEXT:   liveins: $x10
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:gpr = COPY $x10
   ; CHECK-NEXT:   BEQ killed [[COPY]], $x0, %bb.2

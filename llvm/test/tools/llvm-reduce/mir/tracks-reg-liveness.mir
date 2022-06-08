@@ -1,0 +1,29 @@
+# REQUIRES: amdgpu-registered-target
+# RUN: llvm-reduce -simplify-mir --delta-passes=instructions -mtriple=amdgcn-amd-amdhsa --test FileCheck --test-arg --check-prefix=CHECK-INTERESTINGNESS --test-arg %s --test-arg --input-file %s -o %t 2> %t.log
+# RUN: FileCheck --check-prefix=RESULT %s < %t
+
+# CHECK-INTERESTINGNESS: V_MOV_B32_e32 $vgpr0
+# CHECK-INTERESTINGNESS: S_NOP 0
+
+# The block liveins list needs to be carried through even though this
+# tracksRegLiveness is false
+
+# RESULT: bb.0:
+# RESULT-NEXT: liveins: $vgpr0, $vgpr1_vgpr2
+# RESULT: %0:vgpr_32 = V_MOV_B32_e32 $vgpr0, implicit $exec
+# RESULT-NEXT: S_NOP 0
+# RESULT-NEXT: S_ENDPGM 0, implicit %0, implicit %0
+
+---
+name: func
+tracksRegLiveness: false
+body:             |
+  bb.0:
+    liveins: $vgpr0, $vgpr1_vgpr2
+    S_WAITCNT 0
+    %0:vgpr_32 = V_MOV_B32_e32 $vgpr0, implicit $exec
+    %1:vgpr_32 = V_MOV_B32_e32 $vgpr1, implicit $exec
+    S_NOP 0
+    S_ENDPGM 0, implicit %0, implicit %1
+...
+

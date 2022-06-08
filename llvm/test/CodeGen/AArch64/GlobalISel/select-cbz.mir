@@ -10,6 +10,7 @@ body:             |
   ; CHECK-LABEL: name: cbz_s32
   ; CHECK: bb.0:
   ; CHECK-NEXT:   successors: %bb.0(0x40000000), %bb.1(0x40000000)
+  ; CHECK-NEXT:   liveins: $w0
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:gpr32 = COPY $w0
   ; CHECK-NEXT:   CBZW [[COPY]], %bb.1
@@ -39,6 +40,7 @@ body:             |
   ; CHECK-LABEL: name: cbz_s64
   ; CHECK: bb.0:
   ; CHECK-NEXT:   successors: %bb.0(0x40000000), %bb.1(0x40000000)
+  ; CHECK-NEXT:   liveins: $x0
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:gpr64 = COPY $x0
   ; CHECK-NEXT:   CBZX [[COPY]], %bb.1
@@ -68,6 +70,7 @@ body:             |
   ; CHECK-LABEL: name: cbnz_s32
   ; CHECK: bb.0:
   ; CHECK-NEXT:   successors: %bb.0(0x40000000), %bb.1(0x40000000)
+  ; CHECK-NEXT:   liveins: $w0
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:gpr32 = COPY $w0
   ; CHECK-NEXT:   CBNZW [[COPY]], %bb.1
@@ -97,6 +100,7 @@ body:             |
   ; CHECK-LABEL: name: cbnz_s64
   ; CHECK: bb.0:
   ; CHECK-NEXT:   successors: %bb.0(0x40000000), %bb.1(0x40000000)
+  ; CHECK-NEXT:   liveins: $x0
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:gpr64 = COPY $x0
   ; CHECK-NEXT:   CBNZX [[COPY]], %bb.1

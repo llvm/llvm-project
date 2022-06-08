@@ -276,7 +276,8 @@ static std::unique_ptr<MachineFunction> cloneMF(MachineFunction *SrcMF,
       auto *DstSuccMBB = Src2DstMBB[SrcSuccMBB];
       DstMBB->addSuccessor(DstSuccMBB, SrcMBB.getSuccProbability(It));
     }
-    for (auto &LI : SrcMBB.liveins())
+
+    for (auto &LI : SrcMBB.liveins_dbg())
       DstMBB->addLiveIn(LI);
 
     // Make sure MRI knows about registers clobbered by unwinder.

@@ -12,6 +12,7 @@ body:             |
   ; CHECK-LABEL: name: fold_shl
   ; CHECK: bb.0:
   ; CHECK-NEXT:   successors: %bb.0(0x40000000), %bb.1(0x40000000)
+  ; CHECK-NEXT:   liveins: $x0
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   %copy:gpr64all = COPY $x0
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:gpr32all = COPY %copy.sub_32
@@ -49,6 +50,7 @@ body:             |
   ; CHECK-LABEL: name: dont_fold_shl_1
   ; CHECK: bb.0:
   ; CHECK-NEXT:   successors: %bb.0(0x40000000), %bb.1(0x40000000)
+  ; CHECK-NEXT:   liveins: $x0
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   %copy:gpr64 = COPY $x0
   ; CHECK-NEXT:   %fold_me:gpr64 = UBFMXri %copy, 59, 58
@@ -87,6 +89,7 @@ body:             |
   ; CHECK-LABEL: name: dont_fold_shl_2
   ; CHECK: bb.0:
   ; CHECK-NEXT:   successors: %bb.0(0x40000000), %bb.1(0x40000000)
+  ; CHECK-NEXT:   liveins: $x0
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   %copy:gpr64 = COPY $x0
   ; CHECK-NEXT:   %fold_cst:gpr64 = MOVi64imm -5
@@ -127,6 +130,7 @@ body:             |
   ; CHECK-LABEL: name: dont_fold_shl_3
   ; CHECK: bb.0:
   ; CHECK-NEXT:   successors: %bb.0(0x40000000), %bb.1(0x40000000)
+  ; CHECK-NEXT:   liveins: $x0
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   %copy:gpr64 = COPY $x0
   ; CHECK-NEXT:   %shl:gpr64 = UBFMXri %copy, 62, 61
@@ -170,6 +174,7 @@ body:             |
   ; CHECK-LABEL: name: fold_ashr_in_range
   ; CHECK: bb.0:
   ; CHECK-NEXT:   successors: %bb.0(0x40000000), %bb.1(0x40000000)
+  ; CHECK-NEXT:   liveins: $x0
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   %copy:gpr64all = COPY $x0
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:gpr32all = COPY %copy.sub_32
@@ -209,6 +214,7 @@ body:             |
   ; CHECK-LABEL: name: fold_ashr_msb_1
   ; CHECK: bb.0:
   ; CHECK-NEXT:   successors: %bb.0(0x40000000), %bb.1(0x40000000)
+  ; CHECK-NEXT:   liveins: $x0
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   %copy:gpr32 = COPY $w0
   ; CHECK-NEXT:   TBNZW %copy, 31, %bb.1
@@ -245,6 +251,7 @@ body:             |
   ; CHECK-LABEL: name: fold_ashr_msb_2
   ; CHECK: bb.0:
   ; CHECK-NEXT:   successors: %bb.0(0x40000000), %bb.1(0x40000000)
+  ; CHECK-NEXT:   liveins: $x0
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   %copy:gpr64 = COPY $x0
   ; CHECK-NEXT:   TBNZX %copy, 63, %bb.1
@@ -281,6 +288,7 @@ body:             |
   ; CHECK-LABEL: name: fold_lshr
   ; CHECK: bb.0:
   ; CHECK-NEXT:   successors: %bb.0(0x40000000), %bb.1(0x40000000)
+  ; CHECK-NEXT:   liveins: $x0
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   %copy:gpr32 = COPY $w0
   ; CHECK-NEXT:   TBNZW %copy, 4, %bb.1
@@ -317,6 +325,7 @@ body:             |
   ; CHECK-LABEL: name: fold_lshr_2
   ; CHECK: bb.0:
   ; CHECK-NEXT:   successors: %bb.0(0x40000000), %bb.1(0x40000000)
+  ; CHECK-NEXT:   liveins: $x0
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   %copy:gpr64 = COPY $x0
   ; CHECK-NEXT:   TBNZX %copy, 32, %bb.1
@@ -354,6 +363,7 @@ body:             |
   ; CHECK-LABEL: name: dont_fold_lshr
   ; CHECK: bb.0:
   ; CHECK-NEXT:   successors: %bb.0(0x40000000), %bb.1(0x40000000)
+  ; CHECK-NEXT:   liveins: $x0
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   %copy:gpr32 = COPY $w0
   ; CHECK-NEXT:   %fold_cst:gpr32 = MOVi32imm 29
@@ -393,6 +403,7 @@ body:             |
   ; CHECK-LABEL: name: lshr_negative
   ; CHECK: bb.0:
   ; CHECK-NEXT:   successors: %bb.0(0x40000000), %bb.1(0x40000000)
+  ; CHECK-NEXT:   liveins: $x0
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   %copy:gpr32 = COPY $w0
   ; CHECK-NEXT:   TBNZW %copy, 2, %bb.1

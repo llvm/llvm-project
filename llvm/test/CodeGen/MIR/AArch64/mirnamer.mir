@@ -6,6 +6,8 @@ body:             |
   bb.0:
 
     ;CHECK-LABEL: bb.0
+    ;CHECK-NEXT: liveins
+    ;CHECK-NEXT: {{  $}}
     ;CHECK-NEXT: %bb0_{{[0-9]+}}__1:_(p0) = COPY $d0
     ;CHECK-NEXT: %bb0_{{[0-9]+}}__1:_(<4 x s32>) = COPY $q0
     ;CHECK-NEXT: G_STORE %bb0_{{[0-9]+}}__1(<4 x s32>), %bb0_{{[0-9]+}}__1(p0) :: (store (<4 x s32>))
@@ -74,6 +76,8 @@ body:             |
     liveins: $x0, $x1, $d0, $d1
 
     ;CHECK-LABEL: bb.0:
+    ;CHECK-NEXT: liveins
+    ;CHECK-NEXT: {{  $}}
     ;CHECK-NEXT: %bb0_{{[0-9]+}}__1:gpr32 = LDRWui %stack.0, 0
     ;CHECK-NEXT: %bb0_{{[0-9]+}}__1:gpr32 = COPY %bb0_{{[0-9]+}}__1
     ;CHECK-NEXT: %bb0_{{[0-9]+}}__1:gpr32 = COPY %bb0_{{[0-9]+}}__1

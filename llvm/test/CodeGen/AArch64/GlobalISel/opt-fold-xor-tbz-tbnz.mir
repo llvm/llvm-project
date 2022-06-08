@@ -10,6 +10,7 @@ body:             |
   ; CHECK-LABEL: name: flip_eq
   ; CHECK: bb.0:
   ; CHECK-NEXT:   successors: %bb.0(0x40000000), %bb.1(0x40000000)
+  ; CHECK-NEXT:   liveins: $x0
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   %copy:gpr64all = COPY $x0
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:gpr32all = COPY %copy.sub_32
@@ -52,6 +53,7 @@ body:             |
   ; CHECK-LABEL: name: flip_ne
   ; CHECK: bb.0:
   ; CHECK-NEXT:   successors: %bb.0(0x40000000), %bb.1(0x40000000)
+  ; CHECK-NEXT:   liveins: $x0
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   %copy:gpr64all = COPY $x0
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:gpr32all = COPY %copy.sub_32
@@ -89,6 +91,7 @@ body:             |
   ; CHECK-LABEL: name: dont_flip_eq
   ; CHECK: bb.0:
   ; CHECK-NEXT:   successors: %bb.0(0x40000000), %bb.1(0x40000000)
+  ; CHECK-NEXT:   liveins: $x0
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   %copy:gpr64all = COPY $x0
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:gpr32all = COPY %copy.sub_32
@@ -165,6 +168,7 @@ body:             |
   ; CHECK-LABEL: name: dont_flip_ne
   ; CHECK: bb.0:
   ; CHECK-NEXT:   successors: %bb.0(0x40000000), %bb.1(0x40000000)
+  ; CHECK-NEXT:   liveins: $x0
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   %copy:gpr64all = COPY $x0
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:gpr32all = COPY %copy.sub_32
@@ -202,6 +206,7 @@ body:             |
   ; CHECK-LABEL: name: xor_chain
   ; CHECK: bb.0:
   ; CHECK-NEXT:   successors: %bb.0(0x40000000), %bb.1(0x40000000)
+  ; CHECK-NEXT:   liveins: $x0
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   %copy:gpr64all = COPY $x0
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:gpr32all = COPY %copy.sub_32

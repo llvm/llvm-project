@@ -16,6 +16,7 @@ body:             |
   ; CHECK-LABEL: name: tbzx_sgt
   ; CHECK: bb.0:
   ; CHECK-NEXT:   successors: %bb.0(0x40000000), %bb.1(0x40000000)
+  ; CHECK-NEXT:   liveins: $x0
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   %copy:gpr64 = COPY $x0
   ; CHECK-NEXT:   TBZX %copy, 63, %bb.1
@@ -45,6 +46,7 @@ body:             |
   ; CHECK-LABEL: name: tbzw_sgt
   ; CHECK: bb.0:
   ; CHECK-NEXT:   successors: %bb.0(0x40000000), %bb.1(0x40000000)
+  ; CHECK-NEXT:   liveins: $x0
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   %copy:gpr32 = COPY $w0
   ; CHECK-NEXT:   TBZW %copy, 31, %bb.1
@@ -74,6 +76,7 @@ body:             |
   ; CHECK-LABEL: name: no_tbz_not_negative_one
   ; CHECK: bb.0:
   ; CHECK-NEXT:   successors: %bb.0(0x40000000), %bb.1(0x40000000)
+  ; CHECK-NEXT:   liveins: $x0
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   %copy:gpr32sp = COPY $w0
   ; CHECK-NEXT:   [[SUBSWri:%[0-9]+]]:gpr32 = SUBSWri %copy, 1, 0, implicit-def $nzcv
@@ -104,6 +107,7 @@ body:             |
   ; CHECK-LABEL: name: dont_fold_and
   ; CHECK: bb.0:
   ; CHECK-NEXT:   successors: %bb.0(0x40000000), %bb.1(0x40000000)
+  ; CHECK-NEXT:   liveins: $x0
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   %copy:gpr64 = COPY $x0
   ; CHECK-NEXT:   %and:gpr64sp = ANDXri %copy, 8000
@@ -138,6 +142,7 @@ body:             |
   ; CHECK-LABEL: name: dont_commute
   ; CHECK: bb.0:
   ; CHECK-NEXT:   successors: %bb.0(0x40000000), %bb.1(0x40000000)
+  ; CHECK-NEXT:   liveins: $x0
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   %copy:gpr64 = COPY $x0
   ; CHECK-NEXT:   %negative_one:gpr64 = MOVi64imm -1

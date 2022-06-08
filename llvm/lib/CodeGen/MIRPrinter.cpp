@@ -691,11 +691,11 @@ void MIPrinter::print(const MachineBasicBlock &MBB) {
 
   // Print the live in registers.
   const MachineRegisterInfo &MRI = MBB.getParent()->getRegInfo();
-  if (MRI.tracksLiveness() && !MBB.livein_empty()) {
+  if (!MBB.livein_empty()) {
     const TargetRegisterInfo &TRI = *MRI.getTargetRegisterInfo();
     OS.indent(2) << "liveins: ";
     bool First = true;
-    for (const auto &LI : MBB.liveins()) {
+    for (const auto &LI : MBB.liveins_dbg()) {
       if (!First)
         OS << ", ";
       First = false;

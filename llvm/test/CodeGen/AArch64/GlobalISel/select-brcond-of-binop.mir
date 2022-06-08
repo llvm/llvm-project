@@ -10,6 +10,7 @@ body:             |
   ; CHECK-LABEL: name: condbr_of_not
   ; CHECK: bb.0:
   ; CHECK-NEXT:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
+  ; CHECK-NEXT:   liveins: $x0
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:gpr64sp = COPY $x0
   ; CHECK-NEXT:   [[LDRBBui:%[0-9]+]]:gpr32 = LDRBBui [[COPY]], 0 :: (load (s8))
@@ -49,6 +50,7 @@ body:             |
   ; CHECK-LABEL: name: condbr_of_not_64
   ; CHECK: bb.0:
   ; CHECK-NEXT:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
+  ; CHECK-NEXT:   liveins: $x0
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:gpr64sp = COPY $x0
   ; CHECK-NEXT:   [[LDRBBui:%[0-9]+]]:gpr32 = LDRBBui [[COPY]], 0 :: (load (s8))
@@ -89,6 +91,7 @@ body:             |
   ; CHECK-LABEL: name: condbr_of_and
   ; CHECK: bb.0:
   ; CHECK-NEXT:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
+  ; CHECK-NEXT:   liveins: $w0
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   %lhs:gpr32 = COPY $w0
   ; CHECK-NEXT:   TBNZW %lhs, 0, %bb.2
@@ -122,6 +125,7 @@ body:             |
   ; CHECK-LABEL: name: condbr_of_and_no_cst
   ; CHECK: bb.0:
   ; CHECK-NEXT:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
+  ; CHECK-NEXT:   liveins: $w0, $w1
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   %lhs:gpr32 = COPY $w0
   ; CHECK-NEXT:   %rhs:gpr32 = COPY $w1
@@ -157,6 +161,7 @@ body:             |
   ; CHECK-LABEL: name: condbr_of_shl
   ; CHECK: bb.0:
   ; CHECK-NEXT:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
+  ; CHECK-NEXT:   liveins: $w0
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   %lhs:gpr32 = COPY $w0
   ; CHECK-NEXT:   %op:gpr32 = UBFMWri %lhs, 31, 30
@@ -195,6 +200,7 @@ body:             |
   ; CHECK-LABEL: name: condbr_of_ashr
   ; CHECK: bb.0:
   ; CHECK-NEXT:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
+  ; CHECK-NEXT:   liveins: $w0
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   %lhs:gpr32 = COPY $w0
   ; CHECK-NEXT:   TBNZW %lhs, 1, %bb.2
@@ -232,6 +238,7 @@ body:             |
   ; CHECK-LABEL: name: tbnzx
   ; CHECK: bb.0:
   ; CHECK-NEXT:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
+  ; CHECK-NEXT:   liveins: $x0
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   %lhs:gpr64 = COPY $x0
   ; CHECK-NEXT:   TBNZX %lhs, 63, %bb.2
