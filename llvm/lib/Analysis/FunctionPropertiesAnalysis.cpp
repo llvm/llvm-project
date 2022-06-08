@@ -134,6 +134,14 @@ FunctionPropertiesUpdater::FunctionPropertiesUpdater(
   // We track successors separately, too, because they form a boundary, together
   // with the CB BB ('Entry') between which the inlined callee will be pasted.
   Successors.insert(succ_begin(&CallSiteBB), succ_end(&CallSiteBB));
+
+  // Exclude the CallSiteBB, if it happens to be its own successor (1-BB loop).
+  // We are only interested in BBs the graph moves past the callsite BB to
+  // define the frontier past which we don't want to re-process BBs. Including
+  // the callsite BB in this case would prematurely stop the traversal in
+  // finish().
+  Successors.erase(&CallSiteBB);
+
   for (const auto *BB : Successors)
     LikelyToChangeBBs.insert(BB);
 
