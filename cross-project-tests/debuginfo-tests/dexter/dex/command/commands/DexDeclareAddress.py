@@ -51,8 +51,10 @@ class DexDeclareAddress(CommandBase):
                 try:
                     watch = step.program_state.frames[0].watches[self.expression]
                 except KeyError:
-                    pass
-                else:
+                    continue
+                try:
                     hex_val = int(watch.value, 16)
-                    self.address_resolutions[self.get_address_name()] = hex_val
-                    break
+                except ValueError:
+                    hex_val = None
+                self.address_resolutions[self.get_address_name()] = hex_val
+                break
