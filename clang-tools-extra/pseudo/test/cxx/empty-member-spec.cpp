@@ -2,7 +2,7 @@
 class Foo {
 public:
 };
-// CHECK:      decl-specifier-seq~class-specifier := class-head { member-specification }
+// CHECK:      decl-specifier-seq~class-specifier := class-head { member-specification [recover=1] }
 // CHECK-NEXT: ├─class-head := class-key class-head-name
 // CHECK-NEXT: │ ├─class-key~CLASS := tok[0]
 // CHECK-NEXT: │ └─class-head-name~IDENTIFIER := tok[1]

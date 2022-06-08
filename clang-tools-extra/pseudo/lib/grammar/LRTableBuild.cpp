@@ -11,6 +11,7 @@
 #include "clang-pseudo/grammar/LRTable.h"
 #include "clang/Basic/TokenKinds.h"
 #include "llvm/ADT/SmallSet.h"
+#include "llvm/Support/raw_ostream.h"
 #include <cstdint>
 
 namespace llvm {
@@ -44,6 +45,7 @@ struct LRTable::Builder {
   llvm::DenseSet<Entry> Entries;
   llvm::DenseMap<StateID, llvm::SmallSet<RuleID, 4>> Reduces;
   std::vector<llvm::DenseSet<SymbolID>> FollowSets;
+  std::vector<LRGraph::Recovery> Recoveries;
 
   LRTable build(unsigned NumStates) && {
     // E.g. given the following parsing table with 3 states and 3 terminals:
@@ -88,6 +90,26 @@ struct LRTable::Builder {
     }
     Table.StartStates = std::move(StartStates);
 
+    // Error recovery entries: sort (no dups already), and build offset lookup.
+    llvm::sort(Recoveries,
+               [&](const LRGraph::Recovery &L, const LRGraph::Recovery &R) {
+                 return std::tie(L.Src, L.Result, L.Strategy) <
+                        std::tie(R.Src, R.Result, R.Strategy);
+               });
+    Table.Recoveries.reserve(Recoveries.size());
+    for (const auto &R : Recoveries)
+      Table.Recoveries.push_back({R.Strategy, R.Result});
+    Table.RecoveryOffset = std::vector<uint32_t>(NumStates + 1, 0);
+    SortedIndex = 0;
+    for (StateID State = 0; State < NumStates; ++State) {
+      Table.RecoveryOffset[State] = SortedIndex;
+      while (SortedIndex < Recoveries.size() &&
+             Recoveries[SortedIndex].Src == State)
+        SortedIndex++;
+    }
+    Table.RecoveryOffset[NumStates] = SortedIndex;
+    assert(SortedIndex == Recoveries.size());
+
     // Compile the follow sets into a bitmap.
     Table.FollowSets.resize(tok::NUM_TOKENS * FollowSets.size());
     for (SymbolID NT = 0; NT < FollowSets.size(); ++NT)
@@ -114,7 +136,8 @@ struct LRTable::Builder {
 };
 
 LRTable LRTable::buildForTests(const Grammar &G, llvm::ArrayRef<Entry> Entries,
-                               llvm::ArrayRef<ReduceEntry> Reduces) {
+                               llvm::ArrayRef<ReduceEntry> Reduces,
+                               llvm::ArrayRef<RecoveryEntry> Recoveries) {
   StateID MaxState = 0;
   for (const auto &Entry : Entries) {
     MaxState = std::max(MaxState, Entry.State);
@@ -128,6 +151,8 @@ LRTable LRTable::buildForTests(const Grammar &G, llvm::ArrayRef<Entry> Entries,
   for (const ReduceEntry &E : Reduces)
     Build.Reduces[E.State].insert(E.Rule);
   Build.FollowSets = followSets(G);
+  for (const auto &R : Recoveries)
+    Build.Recoveries.push_back({R.State, R.Strategy, R.Result});
   return std::move(Build).build(/*NumStates=*/MaxState + 1);
 }
 
@@ -135,6 +160,7 @@ LRTable LRTable::buildSLR(const Grammar &G) {
   auto Graph = LRGraph::buildLR0(G);
   Builder Build;
   Build.StartStates = Graph.startStates();
+  Build.Recoveries = Graph.recoveries();
   for (const auto &T : Graph.edges()) {
     Action Act = isToken(T.Label) ? Action::shift(T.Dst) : Action::goTo(T.Dst);
     Build.Entries.insert({T.Src, T.Label, Act});
