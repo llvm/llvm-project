@@ -293,9 +293,6 @@
 /* Define if overriding target triple is enabled */
 #cmakedefine LLVM_TARGET_TRIPLE_ENV "${LLVM_TARGET_TRIPLE_ENV}"
 
-/* LLVM version information */
-#cmakedefine LLVM_VERSION_INFO "${LLVM_VERSION_INFO}"
-
 /* Whether tools show host and target info when invoked with --version */
 #cmakedefine01 LLVM_VERSION_PRINTER_SHOW_HOST_TARGET_INFO
 
