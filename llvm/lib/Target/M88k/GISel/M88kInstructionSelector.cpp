@@ -20,6 +20,10 @@
 #include "llvm/CodeGen/GlobalISel/InstructionSelector.h"
 #include "llvm/CodeGen/GlobalISel/InstructionSelectorImpl.h"
 #include "llvm/CodeGen/GlobalISel/MIPatternMatch.h"
+#include "llvm/CodeGen/GlobalISel/Utils.h"
+#include "llvm/CodeGen/MachineFrameInfo.h"
+#include "llvm/CodeGen/MachineFunction.h"
+#include "llvm/CodeGen/Register.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/MathExtras.h"
 
@@ -41,6 +45,9 @@ public:
                           const M88kRegisterBankInfo &RBI);
 
   bool select(MachineInstr &I) override;
+  void setupMF(MachineFunction &MF, GISelKnownBits *KB,
+               CodeGenCoverage &CoverageInfo, ProfileSummaryInfo *PSI,
+               BlockFrequencyInfo *BFI) override;
   static const char *getName() { return DEBUG_TYPE; }
 
 private:
@@ -66,11 +73,18 @@ private:
                        MachineRegisterInfo &MRI) const;
   bool selectMergeUnmerge(MachineInstr &I, MachineBasicBlock &MBB,
                           MachineRegisterInfo &MRI) const;
+  bool selectIntrinsic(MachineInstr &I, MachineBasicBlock &MBB,
+                       MachineRegisterInfo &MRI);
 
   const M88kTargetMachine &TM;
   const M88kInstrInfo &TII;
   const M88kRegisterInfo &TRI;
   const M88kRegisterBankInfo &RBI;
+
+  // Some cached values used during selection.
+  // We use R1 as a live-in register, and we keep track of it here as it can be
+  // clobbered by calls.
+  Register MFReturnAddr;
 
 #define GET_GLOBALISEL_PREDICATES_DECL
 #include "M88kGenGlobalISel.inc"
@@ -548,6 +562,70 @@ bool M88kInstructionSelector::selectMergeUnmerge(
   return constrainSelectedInstRegOperands(*MI, TII, TRI, RBI);
 }
 
+bool M88kInstructionSelector::selectIntrinsic(MachineInstr &I,
+                                              MachineBasicBlock &MBB,
+                                              MachineRegisterInfo &MRI) {
+  unsigned IntrinID = I.getIntrinsicID();
+  MachineInstr *MI = nullptr;
+
+  switch (IntrinID) {
+  default:
+    break;
+  case Intrinsic::frameaddress:
+  case Intrinsic::returnaddress: {
+    MachineFunction &MF = *I.getParent()->getParent();
+    MachineFrameInfo &MFI = MF.getFrameInfo();
+
+    unsigned Depth = I.getOperand(2).getImm();
+    Register DstReg = I.getOperand(0).getReg();
+    RBI.constrainGenericRegister(DstReg, M88k::GPRRCRegClass, MRI);
+
+    if (Depth == 0 && IntrinID == Intrinsic::returnaddress) {
+      if (!MFReturnAddr) {
+        // Insert the copy from R1 into the entry block, before it can be
+        // clobbered by anything.
+        MFI.setReturnAddressIsTaken(true);
+        MFReturnAddr = getFunctionLiveInPhysReg(
+            MF, TII, M88k::R1, M88k::GPRRCRegClass, I.getDebugLoc());
+      }
+
+      MI = BuildMI(MBB, I, I.getDebugLoc(), TII.get(TargetOpcode::COPY), DstReg)
+               .addReg(MFReturnAddr);
+
+      I.eraseFromParent();
+      return constrainSelectedInstRegOperands(*MI, TII, TRI, RBI);
+    }
+
+    MFI.setFrameAddressIsTaken(true);
+    Register FrameAddr(M88k::R30);
+    while (Depth--) {
+      Register NextFrame = MRI.createVirtualRegister(&M88k::GPRRCRegClass);
+      MI = BuildMI(MBB, I, I.getDebugLoc(), TII.get(M88k::LDriw), NextFrame)
+               .addUse(FrameAddr)
+               .addImm(0);
+
+      constrainSelectedInstRegOperands(*MI, TII, TRI, RBI);
+      FrameAddr = NextFrame;
+    }
+
+    if (IntrinID == Intrinsic::frameaddress)
+      MI = BuildMI(MBB, I, I.getDebugLoc(), TII.get(TargetOpcode::COPY), DstReg)
+               .addReg(FrameAddr);
+    else {
+      MFI.setReturnAddressIsTaken(true);
+
+      MI = BuildMI(MBB, I, I.getDebugLoc(), TII.get(M88k::LDriw), DstReg)
+               .addUse(FrameAddr)
+               .addImm(4);
+    }
+
+    I.eraseFromParent();
+    return constrainSelectedInstRegOperands(*MI, TII, TRI, RBI);
+  }
+  }
+  return false;
+}
+
 bool M88kInstructionSelector::earlySelect(MachineInstr &I) {
   assert(I.getParent() && "Instruction should be in a basic block!");
   assert(I.getParent()->getParent() && "Instruction should be in a function!");
@@ -605,6 +683,14 @@ bool M88kInstructionSelector::earlySelect(MachineInstr &I) {
   }
 }
 
+void M88kInstructionSelector::setupMF(MachineFunction &MF, GISelKnownBits *KB,
+                                      CodeGenCoverage &CoverageInfo,
+                                      ProfileSummaryInfo *PSI,
+                                      BlockFrequencyInfo *BFI) {
+  InstructionSelector::setupMF(MF, KB, CoverageInfo, PSI, BFI);
+  MFReturnAddr = Register();
+}
+
 bool M88kInstructionSelector::select(MachineInstr &I) {
   assert(I.getParent() && "Instruction should be in a basic block!");
   assert(I.getParent()->getParent() && "Instruction should be in a function!");
@@ -628,6 +714,8 @@ bool M88kInstructionSelector::select(MachineInstr &I) {
     return true;
 
   switch (I.getOpcode()) {
+  case TargetOpcode::G_INTRINSIC:
+    return selectIntrinsic(I, MBB, MRI);
   case TargetOpcode::G_GLOBAL_VALUE:
     return selectGlobalValue(I, MBB, MRI);
   case TargetOpcode::G_UBFX:
