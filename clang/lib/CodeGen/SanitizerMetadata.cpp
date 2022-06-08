@@ -32,8 +32,6 @@ void SanitizerMetadata::reportGlobal(llvm::GlobalVariable *GV,
                                      SourceLocation Loc, StringRef Name,
                                      QualType Ty, bool IsDynInit,
                                      bool IsExcluded) {
-  if (!isAsanHwasanOrMemTag(CGM.getLangOpts().Sanitize))
-    return;
   IsDynInit &= !CGM.isInNoSanitizeList(GV, Loc, Ty, "init");
   IsExcluded |= CGM.isInNoSanitizeList(GV, Loc, Ty);
 
@@ -77,6 +75,14 @@ void SanitizerMetadata::reportGlobal(llvm::GlobalVariable *GV, const VarDecl &D,
     IsExcluded = true;
   reportGlobal(GV, D.getLocation(), OS.str(), D.getType(), IsDynInit,
                IsExcluded);
+}
+
+void SanitizerMetadata::reportGlobal(llvm::GlobalVariable *GV,
+                                     SourceLocation Loc, StringRef Name,
+                                     QualType Ty, bool IsDynInit) {
+  if (!isAsanHwasanOrMemTag(CGM.getLangOpts().Sanitize))
+    return;
+  reportGlobal(GV, Loc, Name, Ty, IsDynInit, false);
 }
 
 void SanitizerMetadata::disableSanitizerForGlobal(llvm::GlobalVariable *GV) {
