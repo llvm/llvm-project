@@ -102,6 +102,8 @@ Changes to the ARM Backend
   versions.
 * Added a pass to workaround Cortex-A57 Erratum 1742098 and Cortex-A72
   Erratum 1655431. This is enabled by default when targeting either CPU.
+* Implemented generation of Windows SEH unwind information.
+* Switched the MinGW target to use SEH instead of DWARF for unwind information.
 
 Changes to the AVR Backend
 --------------------------
