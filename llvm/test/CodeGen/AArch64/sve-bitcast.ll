@@ -610,11 +610,17 @@ define <vscale x 4 x i16> @bitcast_nxv4f16_to_nxv4i16(<vscale x 4 x half> %v) #0
   ret <vscale x 4 x i16> %bc
 }
 
-; TODO: Invalid code generation because the bitcast must change the in-register
-; layout when casting between unpacked scalable vector types.
 define <vscale x 4 x i16> @bitcast_nxv2f32_to_nxv4i16(<vscale x 2 x float> %v) #0 {
 ; CHECK-LABEL: bitcast_nxv2f32_to_nxv4i16:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
+; CHECK-NEXT:    addvl sp, sp, #-1
+; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    st1w { z0.d }, p0, [sp, #1, mul vl]
+; CHECK-NEXT:    ptrue p0.s
+; CHECK-NEXT:    ld1h { z0.s }, p0/z, [sp, #1, mul vl]
+; CHECK-NEXT:    addvl sp, sp, #1
+; CHECK-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
 ; CHECK-NEXT:    ret
   %bc = bitcast <vscale x 2 x float> %v to <vscale x 4 x i16>
   ret <vscale x 4 x i16> %bc
@@ -664,11 +670,17 @@ define <vscale x 2 x i32> @bitcast_nxv4i16_to_nxv2i32(<vscale x 4 x i16> %v) #0 
   ret <vscale x 2 x i32> %bc
 }
 
-; TODO: Invalid code generation because the bitcast must change the in-register
-; layout when casting between unpacked scalable vector types.
 define <vscale x 2 x i32> @bitcast_nxv4f16_to_nxv2i32(<vscale x 4 x half> %v) #0 {
 ; CHECK-LABEL: bitcast_nxv4f16_to_nxv2i32:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
+; CHECK-NEXT:    addvl sp, sp, #-1
+; CHECK-NEXT:    ptrue p0.s
+; CHECK-NEXT:    st1h { z0.s }, p0, [sp, #1, mul vl]
+; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    ld1w { z0.d }, p0/z, [sp, #1, mul vl]
+; CHECK-NEXT:    addvl sp, sp, #1
+; CHECK-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
 ; CHECK-NEXT:    ret
   %bc = bitcast <vscale x 4 x half> %v to <vscale x 2 x i32>
   ret <vscale x 2 x i32> %bc
@@ -682,11 +694,17 @@ define <vscale x 2 x i32> @bitcast_nxv2f32_to_nxv2i32(<vscale x 2 x float> %v) #
   ret <vscale x 2 x i32> %bc
 }
 
-; TODO: Invalid code generation because the bitcast must change the in-register
-; layout when casting between unpacked scalable vector types.
 define <vscale x 2 x i32> @bitcast_nxv4bf16_to_nxv2i32(<vscale x 4 x bfloat> %v) #0 {
 ; CHECK-LABEL: bitcast_nxv4bf16_to_nxv2i32:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
+; CHECK-NEXT:    addvl sp, sp, #-1
+; CHECK-NEXT:    ptrue p0.s
+; CHECK-NEXT:    st1h { z0.s }, p0, [sp, #1, mul vl]
+; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    ld1w { z0.d }, p0/z, [sp, #1, mul vl]
+; CHECK-NEXT:    addvl sp, sp, #1
+; CHECK-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
 ; CHECK-NEXT:    ret
   %bc = bitcast <vscale x 4 x bfloat> %v to <vscale x 2 x i32>
   ret <vscale x 2 x i32> %bc
@@ -720,21 +738,33 @@ define <vscale x 4 x half> @bitcast_nxv4i16_to_nxv4f16(<vscale x 4 x i16> %v) #0
   ret <vscale x 4 x half> %bc
 }
 
-; TODO: Invalid code generation because the bitcast must change the in-register
-; layout when casting between unpacked scalable vector types.
 define <vscale x 4 x half> @bitcast_nxv2i32_to_nxv4f16(<vscale x 2 x i32> %v) #0 {
 ; CHECK-LABEL: bitcast_nxv2i32_to_nxv4f16:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
+; CHECK-NEXT:    addvl sp, sp, #-1
+; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    st1w { z0.d }, p0, [sp, #1, mul vl]
+; CHECK-NEXT:    ptrue p0.s
+; CHECK-NEXT:    ld1h { z0.s }, p0/z, [sp, #1, mul vl]
+; CHECK-NEXT:    addvl sp, sp, #1
+; CHECK-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
 ; CHECK-NEXT:    ret
   %bc = bitcast <vscale x 2 x i32> %v to <vscale x 4 x half>
   ret <vscale x 4 x half> %bc
 }
 
-; TODO: Invalid code generation because the bitcast must change the in-register
-; layout when casting between unpacked scalable vector types.
 define <vscale x 4 x half> @bitcast_nxv2f32_to_nxv4f16(<vscale x 2 x float> %v) #0 {
 ; CHECK-LABEL: bitcast_nxv2f32_to_nxv4f16:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
+; CHECK-NEXT:    addvl sp, sp, #-1
+; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    st1w { z0.d }, p0, [sp, #1, mul vl]
+; CHECK-NEXT:    ptrue p0.s
+; CHECK-NEXT:    ld1h { z0.s }, p0/z, [sp, #1, mul vl]
+; CHECK-NEXT:    addvl sp, sp, #1
+; CHECK-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
 ; CHECK-NEXT:    ret
   %bc = bitcast <vscale x 2 x float> %v to <vscale x 4 x half>
   ret <vscale x 4 x half> %bc
@@ -768,11 +798,17 @@ define <vscale x 2 x float> @bitcast_nxv8i8_to_nxv2f32(<vscale x 8 x i8> %v) #0 
   ret <vscale x 2 x float> %bc
 }
 
-; TODO: Invalid code generation because the bitcast must change the in-register
-; layout when casting between unpacked scalable vector types.
 define <vscale x 2 x float> @bitcast_nxv4i16_to_nxv2f32(<vscale x 4 x i16> %v) #0 {
 ; CHECK-LABEL: bitcast_nxv4i16_to_nxv2f32:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
+; CHECK-NEXT:    addvl sp, sp, #-1
+; CHECK-NEXT:    ptrue p0.s
+; CHECK-NEXT:    st1h { z0.s }, p0, [sp, #1, mul vl]
+; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    ld1w { z0.d }, p0/z, [sp, #1, mul vl]
+; CHECK-NEXT:    addvl sp, sp, #1
+; CHECK-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
 ; CHECK-NEXT:    ret
   %bc = bitcast <vscale x 4 x i16> %v to <vscale x 2 x float>
   ret <vscale x 2 x float> %bc
@@ -786,21 +822,33 @@ define <vscale x 2 x float> @bitcast_nxv2i32_to_nxv2f32(<vscale x 2 x i32> %v) #
   ret <vscale x 2 x float> %bc
 }
 
-; TODO: Invalid code generation because the bitcast must change the in-register
-; layout when casting between unpacked scalable vector types.
 define <vscale x 2 x float> @bitcast_nxv4f16_to_nxv2f32(<vscale x 4 x half> %v) #0 {
 ; CHECK-LABEL: bitcast_nxv4f16_to_nxv2f32:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
+; CHECK-NEXT:    addvl sp, sp, #-1
+; CHECK-NEXT:    ptrue p0.s
+; CHECK-NEXT:    st1h { z0.s }, p0, [sp, #1, mul vl]
+; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    ld1w { z0.d }, p0/z, [sp, #1, mul vl]
+; CHECK-NEXT:    addvl sp, sp, #1
+; CHECK-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
 ; CHECK-NEXT:    ret
   %bc = bitcast <vscale x 4 x half> %v to <vscale x 2 x float>
   ret <vscale x 2 x float> %bc
 }
 
-; TODO: Invalid code generation because the bitcast must change the in-register
-; layout when casting between unpacked scalable vector types.
 define <vscale x 2 x float> @bitcast_nxv4bf16_to_nxv2f32(<vscale x 4 x bfloat> %v) #0 {
 ; CHECK-LABEL: bitcast_nxv4bf16_to_nxv2f32:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
+; CHECK-NEXT:    addvl sp, sp, #-1
+; CHECK-NEXT:    ptrue p0.s
+; CHECK-NEXT:    st1h { z0.s }, p0, [sp, #1, mul vl]
+; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    ld1w { z0.d }, p0/z, [sp, #1, mul vl]
+; CHECK-NEXT:    addvl sp, sp, #1
+; CHECK-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
 ; CHECK-NEXT:    ret
   %bc = bitcast <vscale x 4 x bfloat> %v to <vscale x 2 x float>
   ret <vscale x 2 x float> %bc
@@ -834,11 +882,17 @@ define <vscale x 4 x bfloat> @bitcast_nxv4i16_to_nxv4bf16(<vscale x 4 x i16> %v)
   ret <vscale x 4 x bfloat> %bc
 }
 
-; TODO: Invalid code generation because the bitcast must change the in-register
-; layout when casting between unpacked scalable vector types.
 define <vscale x 4 x bfloat> @bitcast_nxv2i32_to_nxv4bf16(<vscale x 2 x i32> %v) #0 {
 ; CHECK-LABEL: bitcast_nxv2i32_to_nxv4bf16:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
+; CHECK-NEXT:    addvl sp, sp, #-1
+; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    st1w { z0.d }, p0, [sp, #1, mul vl]
+; CHECK-NEXT:    ptrue p0.s
+; CHECK-NEXT:    ld1h { z0.s }, p0/z, [sp, #1, mul vl]
+; CHECK-NEXT:    addvl sp, sp, #1
+; CHECK-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
 ; CHECK-NEXT:    ret
   %bc = bitcast <vscale x 2 x i32> %v to <vscale x 4 x bfloat>
   ret <vscale x 4 x bfloat> %bc
@@ -852,11 +906,17 @@ define <vscale x 4 x bfloat> @bitcast_nxv4f16_to_nxv4bf16(<vscale x 4 x half> %v
   ret <vscale x 4 x bfloat> %bc
 }
 
-; TODO: Invalid code generation because the bitcast must change the in-register
-; layout when casting between unpacked scalable vector types.
 define <vscale x 4 x bfloat> @bitcast_nxv2f32_to_nxv4bf16(<vscale x 2 x float> %v) #0 {
 ; CHECK-LABEL: bitcast_nxv2f32_to_nxv4bf16:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
+; CHECK-NEXT:    addvl sp, sp, #-1
+; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    st1w { z0.d }, p0, [sp, #1, mul vl]
+; CHECK-NEXT:    ptrue p0.s
+; CHECK-NEXT:    ld1h { z0.s }, p0/z, [sp, #1, mul vl]
+; CHECK-NEXT:    addvl sp, sp, #1
+; CHECK-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
 ; CHECK-NEXT:    ret
   %bc = bitcast <vscale x 2 x float> %v to <vscale x 4 x bfloat>
   ret <vscale x 4 x bfloat> %bc
@@ -1049,13 +1109,18 @@ define <vscale x 2 x double> @bitcast_short_i32_to_float(<vscale x 2 x i64> %v) 
   ret <vscale x 2 x double> %extended
 }
 
-; TODO: Invalid code generation because the bitcast must change the in-register
-; layout when casting between unpacked scalable vector types.
 define <vscale x 2 x float> @bitcast_short_half_to_float(<vscale x 4 x half> %v) #0 {
 ; CHECK-LABEL: bitcast_short_half_to_float:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
+; CHECK-NEXT:    addvl sp, sp, #-1
 ; CHECK-NEXT:    ptrue p0.s
 ; CHECK-NEXT:    fadd z0.h, p0/m, z0.h, z0.h
+; CHECK-NEXT:    st1h { z0.s }, p0, [sp, #1, mul vl]
+; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    ld1w { z0.d }, p0/z, [sp, #1, mul vl]
+; CHECK-NEXT:    addvl sp, sp, #1
+; CHECK-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
 ; CHECK-NEXT:    ret
   %add = fadd <vscale x 4 x half> %v, %v
   %bitcast = bitcast <vscale x 4 x half> %add to <vscale x 2 x float>
