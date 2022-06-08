@@ -3,7 +3,7 @@
 ; RUN: llc < %s -mtriple=x86_64-pc-linux -mattr=+avx2 | FileCheck %s --check-prefixes=AVX,AVX1OR2,AVX2OR512,AVX2
 ; RUN: llc < %s -mtriple=x86_64-pc-linux -mattr=+avx512f -mattr=+avx512bw | FileCheck %s --check-prefixes=AVX,AVX2OR512,AVX512
 
-define <4 x double> @load_factorf64_4(<16 x double>* %ptr) {
+define <4 x double> @load_factorf64_4(<16 x double>* %ptr) nounwind {
 ; AVX1-LABEL: load_factorf64_4:
 ; AVX1:       # %bb.0:
 ; AVX1-NEXT:    vmovupd (%rdi), %ymm0
@@ -46,7 +46,7 @@ define <4 x double> @load_factorf64_4(<16 x double>* %ptr) {
   ret <4 x double> %add3
 }
 
-define <4 x double> @load_factorf64_2(<16 x double>* %ptr) {
+define <4 x double> @load_factorf64_2(<16 x double>* %ptr) nounwind {
 ; AVX1-LABEL: load_factorf64_2:
 ; AVX1:       # %bb.0:
 ; AVX1-NEXT:    vmovupd (%rdi), %ymm0
@@ -81,7 +81,7 @@ define <4 x double> @load_factorf64_2(<16 x double>* %ptr) {
   ret <4 x double> %mul
 }
 
-define <4 x double> @load_factorf64_1(<16 x double>* %ptr) {
+define <4 x double> @load_factorf64_1(<16 x double>* %ptr) nounwind {
 ; AVX1-LABEL: load_factorf64_1:
 ; AVX1:       # %bb.0:
 ; AVX1-NEXT:    vmovups (%rdi), %ymm0
@@ -108,7 +108,7 @@ define <4 x double> @load_factorf64_1(<16 x double>* %ptr) {
   ret <4 x double> %mul
 }
 
-define <4 x i64> @load_factori64_4(<16 x i64>* %ptr) {
+define <4 x i64> @load_factori64_4(<16 x i64>* %ptr) nounwind {
 ; AVX1-LABEL: load_factori64_4:
 ; AVX1:       # %bb.0:
 ; AVX1-NEXT:    vmovups (%rdi), %ymm0
@@ -163,7 +163,7 @@ define <4 x i64> @load_factori64_4(<16 x i64>* %ptr) {
   ret <4 x i64> %add3
 }
 
-define void @store_factorf64_4(<16 x double>* %ptr, <4 x double> %v0, <4 x double> %v1, <4 x double> %v2, <4 x double> %v3) {
+define void @store_factorf64_4(<16 x double>* %ptr, <4 x double> %v0, <4 x double> %v1, <4 x double> %v2, <4 x double> %v3) nounwind {
 ; AVX1OR2-LABEL: store_factorf64_4:
 ; AVX1OR2:       # %bb.0:
 ; AVX1OR2-NEXT:    vinsertf128 $1, %xmm2, %ymm0, %ymm4
@@ -204,7 +204,7 @@ define void @store_factorf64_4(<16 x double>* %ptr, <4 x double> %v0, <4 x doubl
   ret void
 }
 
-define void @store_factori64_4(<16 x i64>* %ptr, <4 x i64> %v0, <4 x i64> %v1, <4 x i64> %v2, <4 x i64> %v3) {
+define void @store_factori64_4(<16 x i64>* %ptr, <4 x i64> %v0, <4 x i64> %v1, <4 x i64> %v2, <4 x i64> %v3) nounwind {
 ; AVX1OR2-LABEL: store_factori64_4:
 ; AVX1OR2:       # %bb.0:
 ; AVX1OR2-NEXT:    vinsertf128 $1, %xmm2, %ymm0, %ymm4
@@ -246,7 +246,7 @@ define void @store_factori64_4(<16 x i64>* %ptr, <4 x i64> %v0, <4 x i64> %v1, <
 }
 
 
-define void @interleaved_store_vf32_i8_stride4(<32 x i8> %x1, <32 x i8> %x2, <32 x i8> %x3, <32 x i8> %x4, <128 x i8>* %p) {
+define void @interleaved_store_vf32_i8_stride4(<32 x i8> %x1, <32 x i8> %x2, <32 x i8> %x3, <32 x i8> %x4, <128 x i8>* %p) nounwind {
 ; AVX1-LABEL: interleaved_store_vf32_i8_stride4:
 ; AVX1:       # %bb.0:
 ; AVX1-NEXT:    vpunpcklbw {{.*#+}} xmm9 = xmm0[0],xmm1[0],xmm0[1],xmm1[1],xmm0[2],xmm1[2],xmm0[3],xmm1[3],xmm0[4],xmm1[4],xmm0[5],xmm1[5],xmm0[6],xmm1[6],xmm0[7],xmm1[7]
@@ -328,7 +328,7 @@ define void @interleaved_store_vf32_i8_stride4(<32 x i8> %x1, <32 x i8> %x2, <32
 ret void
 }
 
-define void @interleaved_store_vf16_i8_stride4(<16 x i8> %x1, <16 x i8> %x2, <16 x i8> %x3, <16 x i8> %x4, <64 x i8>* %p) {
+define void @interleaved_store_vf16_i8_stride4(<16 x i8> %x1, <16 x i8> %x2, <16 x i8> %x3, <16 x i8> %x4, <64 x i8>* %p) nounwind {
 ; AVX1OR2-LABEL: interleaved_store_vf16_i8_stride4:
 ; AVX1OR2:       # %bb.0:
 ; AVX1OR2-NEXT:    vpunpcklbw {{.*#+}} xmm4 = xmm0[0],xmm1[0],xmm0[1],xmm1[1],xmm0[2],xmm1[2],xmm0[3],xmm1[3],xmm0[4],xmm1[4],xmm0[5],xmm1[5],xmm0[6],xmm1[6],xmm0[7],xmm1[7]
@@ -368,7 +368,7 @@ store <64 x i8> %interleaved.vec, <64 x i8>* %p
 ret void
 }
 
-define <8 x i8> @interleaved_load_vf8_i8_stride4(<32 x i8>* %ptr) {
+define <8 x i8> @interleaved_load_vf8_i8_stride4(<32 x i8>* %ptr) nounwind {
 ; AVX1OR2-LABEL: interleaved_load_vf8_i8_stride4:
 ; AVX1OR2:       # %bb.0:
 ; AVX1OR2-NEXT:    vmovdqa (%rdi), %xmm0
@@ -429,7 +429,7 @@ define <8 x i8> @interleaved_load_vf8_i8_stride4(<32 x i8>* %ptr) {
   ret <8 x i8> %add3
 }
 
-define <16 x i1> @interleaved_load_vf16_i8_stride4(<64 x i8>* %ptr) {
+define <16 x i1> @interleaved_load_vf16_i8_stride4(<64 x i8>* %ptr) nounwind {
 ; AVX1-LABEL: interleaved_load_vf16_i8_stride4:
 ; AVX1:       # %bb.0:
 ; AVX1-NEXT:    vmovdqa {{.*#+}} xmm2 = <u,u,u,u,0,4,8,12,u,u,u,u,u,u,u,u>
@@ -581,7 +581,7 @@ define <16 x i1> @interleaved_load_vf16_i8_stride4(<64 x i8>* %ptr) {
   ret <16 x i1> %res
 }
 
-define <32 x i1> @interleaved_load_vf32_i8_stride4(<128 x i8>* %ptr) {
+define <32 x i1> @interleaved_load_vf32_i8_stride4(<128 x i8>* %ptr) nounwind {
 ; AVX1-LABEL: interleaved_load_vf32_i8_stride4:
 ; AVX1:       # %bb.0:
 ; AVX1-NEXT:    vmovdqa {{.*#+}} xmm6 = <u,u,u,u,0,4,8,12,u,u,u,u,u,u,u,u>
@@ -790,7 +790,7 @@ define <32 x i1> @interleaved_load_vf32_i8_stride4(<128 x i8>* %ptr) {
   ret <32 x i1> %res
 }
 
-define void @interleaved_store_vf8_i8_stride4(<8 x i8> %x1, <8 x i8> %x2, <8 x i8> %x3, <8 x i8> %x4, <32 x i8>* %p) {
+define void @interleaved_store_vf8_i8_stride4(<8 x i8> %x1, <8 x i8> %x2, <8 x i8> %x3, <8 x i8> %x4, <32 x i8>* %p) nounwind {
 ; AVX-LABEL: interleaved_store_vf8_i8_stride4:
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vpunpcklbw {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1],xmm0[2],xmm1[2],xmm0[3],xmm1[3],xmm0[4],xmm1[4],xmm0[5],xmm1[5],xmm0[6],xmm1[6],xmm0[7],xmm1[7]
@@ -938,7 +938,7 @@ define <8 x i8> @interleaved_load_vf8_i8_stride3(<24 x i8>* %ptr){
 	ret <8 x i8> %add2
 }
 
-define void @interleaved_store_vf8_i8_stride3(<8 x i8> %a, <8 x i8> %b, <8 x i8> %c, <24 x i8>* %p) {
+define void @interleaved_store_vf8_i8_stride3(<8 x i8> %a, <8 x i8> %b, <8 x i8> %c, <24 x i8>* %p) nounwind {
 ; AVX-LABEL: interleaved_store_vf8_i8_stride3:
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm1[0]
@@ -958,7 +958,7 @@ store <24 x i8> %interleaved.vec, <24 x i8>* %p, align 1
 ret void
 }
 
-define void @interleaved_store_vf16_i8_stride3(<16 x i8> %a, <16 x i8> %b, <16 x i8> %c, <48 x i8>* %p) {
+define void @interleaved_store_vf16_i8_stride3(<16 x i8> %a, <16 x i8> %b, <16 x i8> %c, <48 x i8>* %p) nounwind {
 ; AVX1OR2-LABEL: interleaved_store_vf16_i8_stride3:
 ; AVX1OR2:       # %bb.0:
 ; AVX1OR2-NEXT:    vpalignr {{.*#+}} xmm0 = xmm0[6,7,8,9,10,11,12,13,14,15,0,1,2,3,4,5]
@@ -1007,7 +1007,7 @@ store <48 x i8> %interleaved.vec, <48 x i8>* %p, align 1
 ret void
 }
 
-define void @interleaved_store_vf32_i8_stride3(<32 x i8> %a, <32 x i8> %b, <32 x i8> %c, <96 x i8>* %p) {
+define void @interleaved_store_vf32_i8_stride3(<32 x i8> %a, <32 x i8> %b, <32 x i8> %c, <96 x i8>* %p) nounwind {
 ; AVX1-LABEL: interleaved_store_vf32_i8_stride3:
 ; AVX1:       # %bb.0:
 ; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm3
@@ -1097,11 +1097,10 @@ store <96 x i8> %interleaved.vec, <96 x i8>* %p, align 1
 ret void
 }
 
-define void @interleaved_store_vf64_i8_stride3(<64 x i8> %a, <64 x i8> %b, <64 x i8> %c, <192 x i8>* %p) {
+define void @interleaved_store_vf64_i8_stride3(<64 x i8> %a, <64 x i8> %b, <64 x i8> %c, <192 x i8>* %p) nounwind {
 ; AVX1-LABEL: interleaved_store_vf64_i8_stride3:
 ; AVX1:       # %bb.0:
 ; AVX1-NEXT:    subq $88, %rsp
-; AVX1-NEXT:    .cfi_def_cfa_offset 96
 ; AVX1-NEXT:    vmovups %ymm5, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
 ; AVX1-NEXT:    vmovups %ymm4, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
 ; AVX1-NEXT:    vmovdqa %ymm3, %ymm11
@@ -1213,7 +1212,6 @@ define void @interleaved_store_vf64_i8_stride3(<64 x i8> %a, <64 x i8> %b, <64 x
 ; AVX1-NEXT:    vmovdqu %xmm9, 144(%rdi)
 ; AVX1-NEXT:    vmovdqu %xmm8, 128(%rdi)
 ; AVX1-NEXT:    addq $88, %rsp
-; AVX1-NEXT:    .cfi_def_cfa_offset 8
 ; AVX1-NEXT:    vzeroupper
 ; AVX1-NEXT:    retq
 ;
@@ -1530,7 +1528,7 @@ define <64 x i8> @interleaved_load_vf64_i8_stride3(<192 x i8>* %ptr){
 ret <64 x i8> %add2
 }
 
-define void @interleaved_store_vf64_i8_stride4(<64 x i8> %a, <64 x i8> %b, <64 x i8> %c,<64 x i8> %d, <256 x i8>* %p) {
+define void @interleaved_store_vf64_i8_stride4(<64 x i8> %a, <64 x i8> %b, <64 x i8> %c,<64 x i8> %d, <256 x i8>* %p) nounwind {
 ; AVX1-LABEL: interleaved_store_vf64_i8_stride4:
 ; AVX1:       # %bb.0:
 ; AVX1-NEXT:    vpunpcklbw {{.*#+}} xmm8 = xmm0[0],xmm2[0],xmm0[1],xmm2[1],xmm0[2],xmm2[2],xmm0[3],xmm2[3],xmm0[4],xmm2[4],xmm0[5],xmm2[5],xmm0[6],xmm2[6],xmm0[7],xmm2[7]
@@ -1672,7 +1670,7 @@ store <256 x i8> %interleaved, <256 x i8>* %p
 ret void
 }
 
-define void @splat2_v4f64_load_store(<4 x double>* %s, <8 x double>* %d) {
+define void @splat2_v4f64_load_store(<4 x double>* %s, <8 x double>* %d) nounwind {
 ; AVX1-LABEL: splat2_v4f64_load_store:
 ; AVX1:       # %bb.0:
 ; AVX1-NEXT:    vperm2f128 $51, (%rdi), %ymm0, %ymm0 # ymm0 = mem[2,3,2,3]
@@ -1709,7 +1707,7 @@ define void @splat2_v4f64_load_store(<4 x double>* %s, <8 x double>* %d) {
   ret void
 }
 
-define void @splat2_v4i64_load_store(<4 x i64>* %s, <8 x i64>* %d) {
+define void @splat2_v4i64_load_store(<4 x i64>* %s, <8 x i64>* %d) nounwind {
 ; AVX1-LABEL: splat2_v4i64_load_store:
 ; AVX1:       # %bb.0:
 ; AVX1-NEXT:    vperm2f128 $51, (%rdi), %ymm0, %ymm0 # ymm0 = mem[2,3,2,3]
@@ -1746,7 +1744,7 @@ define void @splat2_v4i64_load_store(<4 x i64>* %s, <8 x i64>* %d) {
   ret void
 }
 
-define void @splat4_v8f32_load_store(<8 x float>* %s, <32 x float>* %d) {
+define void @splat4_v8f32_load_store(<8 x float>* %s, <32 x float>* %d) nounwind {
 ; AVX1-LABEL: splat4_v8f32_load_store:
 ; AVX1:       # %bb.0:
 ; AVX1-NEXT:    vbroadcastss 16(%rdi), %xmm0
@@ -1805,7 +1803,7 @@ define void @splat4_v8f32_load_store(<8 x float>* %s, <32 x float>* %d) {
   ret void
 }
 
-define void @splat4_v8i32_load_store(<8 x i32>* %s, <32 x i32>* %d) {
+define void @splat4_v8i32_load_store(<8 x i32>* %s, <32 x i32>* %d) nounwind {
 ; AVX1-LABEL: splat4_v8i32_load_store:
 ; AVX1:       # %bb.0:
 ; AVX1-NEXT:    vbroadcastss (%rdi), %xmm0
@@ -1865,7 +1863,7 @@ define void @splat4_v8i32_load_store(<8 x i32>* %s, <32 x i32>* %d) {
   ret void
 }
 
-define void @splat4_v4f64_load_store(<4 x double>* %s, <16 x double>* %d) {
+define void @splat4_v4f64_load_store(<4 x double>* %s, <16 x double>* %d) nounwind {
 ; AVX1OR2-LABEL: splat4_v4f64_load_store:
 ; AVX1OR2:       # %bb.0:
 ; AVX1OR2-NEXT:    vbroadcastsd (%rdi), %ymm0
@@ -1899,7 +1897,7 @@ define void @splat4_v4f64_load_store(<4 x double>* %s, <16 x double>* %d) {
   ret void
 }
 
-define void @splat4_v4i64_load_store(<4 x i64>* %s, <16 x i64>* %d) {
+define void @splat4_v4i64_load_store(<4 x i64>* %s, <16 x i64>* %d) nounwind {
 ; AVX1OR2-LABEL: splat4_v4i64_load_store:
 ; AVX1OR2:       # %bb.0:
 ; AVX1OR2-NEXT:    vbroadcastsd (%rdi), %ymm0
@@ -1933,7 +1931,7 @@ define void @splat4_v4i64_load_store(<4 x i64>* %s, <16 x i64>* %d) {
   ret void
 }
 
-define <2 x i64> @PR37616(<16 x i64>* %a0) {
+define <2 x i64> @PR37616(<16 x i64>* %a0) nounwind {
 ; AVX1-LABEL: PR37616:
 ; AVX1:       # %bb.0:
 ; AVX1-NEXT:    vmovaps 16(%rdi), %xmm0
