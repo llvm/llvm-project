@@ -68,7 +68,7 @@ call_weak:
 # CHECK-NEXT:       - Name:            call_weak
 # CHECK-NEXT:         Kind:            FUNCTION
 # CHECK-NEXT:         Index:           5
-# CHECK-NEXT:   - Type:            START
+# CHECK-NEXT:   - Type:            CODE
 
 #      CHECK:   - Type:            CUSTOM
 # CHECK-NEXT:     Name:            name
