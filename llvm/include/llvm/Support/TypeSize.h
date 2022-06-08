@@ -373,6 +373,20 @@ public:
         isScalable()));
   }
 
+  /// Returns true if there exists a value X where RHS.multiplyCoefficientBy(X)
+  /// will result in a value whose size matches our own.
+  bool hasKnownScalarFactor(const LinearPolySize &RHS) const {
+    return isScalable() == RHS.isScalable() &&
+           getKnownMinValue() % RHS.getKnownMinValue() == 0;
+  }
+
+  /// Returns a value X where RHS.multiplyCoefficientBy(X) will result in a
+  /// value whose size matches our own.
+  ScalarTy getKnownScalarFactor(const LinearPolySize &RHS) const {
+    assert(hasKnownScalarFactor(RHS) && "Expected RHS to be a known factor!");
+    return getKnownMinValue() / RHS.getKnownMinValue();
+  }
+
   /// Printing function.
   void print(raw_ostream &OS) const {
     if (isScalable())
