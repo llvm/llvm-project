@@ -1632,7 +1632,8 @@ void SystemZInstrInfo::getLoadStoreOpcodes(const TargetRegisterClass *RC,
 }
 
 unsigned SystemZInstrInfo::getOpcodeForOffset(unsigned Opcode,
-                                              int64_t Offset) const {
+                                              int64_t Offset,
+                                              const MachineInstr *MI) const {
   const MCInstrDesc &MCID = get(Opcode);
   int64_t Offset2 = (MCID.TSFlags & SystemZII::Is128Bit ? Offset + 8 : Offset);
   if (isUInt<12>(Offset) && isUInt<12>(Offset2)) {
@@ -1654,6 +1655,24 @@ unsigned SystemZInstrInfo::getOpcodeForOffset(unsigned Opcode,
     // Check whether Opcode allows signed 20-bit displacements.
     if (MCID.TSFlags & SystemZII::Has20BitOffset)
       return Opcode;
+
+    // If a VR32/VR64 reg ended up in an FP register, use the FP opcode.
+    if (MI && MI->getOperand(0).isReg()) {
+      Register Reg = MI->getOperand(0).getReg();
+      if (Reg.isPhysical() && SystemZMC::getFirstReg(Reg) < 16) {
+        switch (Opcode) {
+        case SystemZ::VL32:
+          return SystemZ::LEY;
+        case SystemZ::VST32:
+          return SystemZ::STEY;
+        case SystemZ::VL64:
+          return SystemZ::LDY;
+        case SystemZ::VST64:
+          return SystemZ::STDY;
+        default: break;
+        }
+      }
+    }
   }
   return 0;
 }
