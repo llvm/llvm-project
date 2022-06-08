@@ -18,16 +18,16 @@ llvm.func @test_stand_alone_directives() {
   llvm.return
 }
 
-// CHECK-LABEL: define void @test_flush_construct(i32 %0)
-llvm.func @test_flush_construct(%arg0: i32) {
+// CHECK-LABEL: define void @test_flush_construct(ptr %{{[0-9]+}})
+llvm.func @test_flush_construct(%arg0: !llvm.ptr<i32>) {
   // CHECK: call void @__kmpc_flush(ptr @{{[0-9]+}}
   omp.flush
 
   // CHECK: call void @__kmpc_flush(ptr @{{[0-9]+}}
-  omp.flush (%arg0 : i32)
+  omp.flush (%arg0 : !llvm.ptr<i32>)
 
   // CHECK: call void @__kmpc_flush(ptr @{{[0-9]+}}
-  omp.flush (%arg0, %arg0 : i32, i32)
+  omp.flush (%arg0, %arg0 : !llvm.ptr<i32>, !llvm.ptr<i32>)
 
   %0 = llvm.mlir.constant(1 : i64) : i64
   //  CHECK: alloca {{.*}} align 4
