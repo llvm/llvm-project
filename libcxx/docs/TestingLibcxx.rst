@@ -158,13 +158,6 @@ default.
   still be used to specify the path of the library to link to and run against,
   respectively.
 
-.. option:: debug_level=<level>
-
-  **Values**: 0, 1
-
-  Enable the use of debug mode. Level 0 enables assertions and level 1 enables
-  assertions and debugging of iterator misuse.
-
 .. option:: use_sanitizer=<sanitizer name>
 
   **Values**: Memory, MemoryWithOrigins, Address, Undefined

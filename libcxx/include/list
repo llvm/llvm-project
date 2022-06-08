@@ -304,7 +304,7 @@ class _LIBCPP_TEMPLATE_VIS __list_iterator
         : __ptr_(__p)
     {
         (void)__c;
-#if _LIBCPP_DEBUG_LEVEL == 2
+#ifdef _LIBCPP_ENABLE_DEBUG_MODE
         __get_db()->__insert_ic(this, __c);
 #endif
     }
@@ -325,7 +325,7 @@ public:
         _VSTD::__debug_db_insert_i(this);
     }
 
-#if _LIBCPP_DEBUG_LEVEL == 2
+#ifdef _LIBCPP_ENABLE_DEBUG_MODE
 
     _LIBCPP_INLINE_VISIBILITY
     __list_iterator(const __list_iterator& __p)
@@ -351,7 +351,7 @@ public:
         return *this;
     }
 
-#endif // _LIBCPP_DEBUG_LEVEL == 2
+#endif // _LIBCPP_ENABLE_DEBUG_MODE
 
     _LIBCPP_INLINE_VISIBILITY
     reference operator*() const
@@ -413,7 +413,7 @@ class _LIBCPP_TEMPLATE_VIS __list_const_iterator
         : __ptr_(__p)
     {
         (void)__c;
-#if _LIBCPP_DEBUG_LEVEL == 2
+#ifdef _LIBCPP_ENABLE_DEBUG_MODE
         __get_db()->__insert_ic(this, __c);
 #endif
     }
@@ -436,12 +436,12 @@ public:
     __list_const_iterator(const __list_iterator<_Tp, _VoidPtr>& __p) _NOEXCEPT
         : __ptr_(__p.__ptr_)
     {
-#if _LIBCPP_DEBUG_LEVEL == 2
+#ifdef _LIBCPP_ENABLE_DEBUG_MODE
         __get_db()->__iterator_copy(this, _VSTD::addressof(__p));
 #endif
     }
 
-#if _LIBCPP_DEBUG_LEVEL == 2
+#ifdef _LIBCPP_ENABLE_DEBUG_MODE
 
     _LIBCPP_INLINE_VISIBILITY
     __list_const_iterator(const __list_const_iterator& __p)
@@ -467,7 +467,7 @@ public:
         return *this;
     }
 
-#endif // _LIBCPP_DEBUG_LEVEL == 2
+#endif // _LIBCPP_ENABLE_DEBUG_MODE
     _LIBCPP_INLINE_VISIBILITY
     reference operator*() const
     {
@@ -750,7 +750,7 @@ __list_imp<_Tp, _Alloc>::swap(__list_imp& __c)
     else
         __c.__end_.__prev_->__next_ = __c.__end_.__next_->__prev_ = __c.__end_as_link();
 
-#if _LIBCPP_DEBUG_LEVEL == 2
+#ifdef _LIBCPP_ENABLE_DEBUG_MODE
     __libcpp_db* __db = __get_db();
     __c_node* __cn1 = __db->__find_c_and_lock(this);
     __c_node* __cn2 = __db->__find_c(_VSTD::addressof(__c));
@@ -1075,14 +1075,14 @@ public:
       return __hold_pointer(__p, __node_destructor(__na, 1));
     }
 
-#if _LIBCPP_DEBUG_LEVEL == 2
+#ifdef _LIBCPP_ENABLE_DEBUG_MODE
 
     bool __dereferenceable(const const_iterator* __i) const;
     bool __decrementable(const const_iterator* __i) const;
     bool __addable(const const_iterator* __i, ptrdiff_t __n) const;
     bool __subscriptable(const const_iterator* __i, ptrdiff_t __n) const;
 
-#endif // _LIBCPP_DEBUG_LEVEL == 2
+#endif // _LIBCPP_ENABLE_DEBUG_MODE
 
 private:
     _LIBCPP_INLINE_VISIBILITY
@@ -1624,7 +1624,7 @@ list<_Tp, _Alloc>::pop_front()
     __link_pointer __n = base::__end_.__next_;
     base::__unlink_nodes(__n, __n);
     --base::__sz();
-#if _LIBCPP_DEBUG_LEVEL == 2
+#ifdef _LIBCPP_ENABLE_DEBUG_MODE
     __c_node* __c = __get_db()->__find_c_and_lock(this);
     for (__i_node** __p = __c->end_; __p != __c->beg_; )
     {
@@ -1653,7 +1653,7 @@ list<_Tp, _Alloc>::pop_back()
     __link_pointer __n = base::__end_.__prev_;
     base::__unlink_nodes(__n, __n);
     --base::__sz();
-#if _LIBCPP_DEBUG_LEVEL == 2
+#ifdef _LIBCPP_ENABLE_DEBUG_MODE
     __c_node* __c = __get_db()->__find_c_and_lock(this);
     for (__i_node** __p = __c->end_; __p != __c->beg_; )
     {
@@ -1686,7 +1686,7 @@ list<_Tp, _Alloc>::erase(const_iterator __p)
     __link_pointer __r = __n->__next_;
     base::__unlink_nodes(__n, __n);
     --base::__sz();
-#if _LIBCPP_DEBUG_LEVEL == 2
+#ifdef _LIBCPP_ENABLE_DEBUG_MODE
     __c_node* __c = __get_db()->__find_c_and_lock(this);
     for (__i_node** __ip = __c->end_; __ip != __c->beg_; )
     {
@@ -1724,7 +1724,7 @@ list<_Tp, _Alloc>::erase(const_iterator __f, const_iterator __l)
             __link_pointer __n = __f.__ptr_;
             ++__f;
             --base::__sz();
-#if _LIBCPP_DEBUG_LEVEL == 2
+#ifdef _LIBCPP_ENABLE_DEBUG_MODE
             __c_node* __c = __get_db()->__find_c_and_lock(this);
             for (__i_node** __p = __c->end_; __p != __c->beg_; )
             {
@@ -1862,7 +1862,7 @@ list<_Tp, _Alloc>::splice(const_iterator __p, list& __c)
         __link_nodes(__p.__ptr_, __f, __l);
         base::__sz() += __c.__sz();
         __c.__sz() = 0;
-#if _LIBCPP_DEBUG_LEVEL == 2
+#ifdef _LIBCPP_ENABLE_DEBUG_MODE
         if (_VSTD::addressof(__c) != this) {
             __libcpp_db* __db = __get_db();
             __c_node* __cn1 = __db->__find_c_and_lock(this);
@@ -1903,7 +1903,7 @@ list<_Tp, _Alloc>::splice(const_iterator __p, list& __c, const_iterator __i)
         __link_nodes(__p.__ptr_, __f, __f);
         --__c.__sz();
         ++base::__sz();
-#if _LIBCPP_DEBUG_LEVEL == 2
+#ifdef _LIBCPP_ENABLE_DEBUG_MODE
         if (_VSTD::addressof(__c) != this) {
             __libcpp_db* __db = __get_db();
             __c_node* __cn1 = __db->__find_c_and_lock(this);
@@ -1964,7 +1964,7 @@ list<_Tp, _Alloc>::splice(const_iterator __p, list& __c, const_iterator __f, con
         }
         base::__unlink_nodes(__first, __last);
         __link_nodes(__p.__ptr_, __first, __last);
-#if _LIBCPP_DEBUG_LEVEL == 2
+#ifdef _LIBCPP_ENABLE_DEBUG_MODE
         if (_VSTD::addressof(__c) != this) {
             __libcpp_db* __db = __get_db();
             __c_node* __cn1 = __db->__find_c_and_lock(this);
@@ -2101,7 +2101,7 @@ list<_Tp, _Alloc>::merge(list& __c, _Comp __comp)
                 ++__f1;
         }
         splice(__e1, __c);
-#if _LIBCPP_DEBUG_LEVEL == 2
+#ifdef _LIBCPP_ENABLE_DEBUG_MODE
         __libcpp_db* __db = __get_db();
         __c_node* __cn1 = __db->__find_c_and_lock(this);
         __c_node* __cn2 = __db->__find_c(_VSTD::addressof(__c));
@@ -2225,7 +2225,7 @@ list<_Tp, _Alloc>::__invariants() const
     return size() == _VSTD::distance(begin(), end());
 }
 
-#if _LIBCPP_DEBUG_LEVEL == 2
+#ifdef _LIBCPP_ENABLE_DEBUG_MODE
 
 template <class _Tp, class _Alloc>
 bool
@@ -2255,7 +2255,7 @@ list<_Tp, _Alloc>::__subscriptable(const const_iterator*, ptrdiff_t) const
     return false;
 }
 
-#endif // _LIBCPP_DEBUG_LEVEL == 2
+#endif // _LIBCPP_ENABLE_DEBUG_MODE
 
 template <class _Tp, class _Alloc>
 inline _LIBCPP_INLINE_VISIBILITY

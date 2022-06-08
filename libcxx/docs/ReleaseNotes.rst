@@ -113,6 +113,13 @@ API Changes
 - ``vector<bool>::const_reference``, ``vector<bool>::const_iterator::reference``
   and ``bitset::const_reference`` are now aliases for `bool` in the unstable ABI.
 
+- The ``_LIBCPP_DEBUG`` macro is not supported anymore. It will be honoured until
+  LLVM 16, and then it will be an error to define that macro. To enable basic
+  assertions (previously ``_LIBCPP_DEBUG=0``), please use ``_LIBCPP_ENABLE_ASSERTIONS=1``.
+  To enable the debug mode (previously ``_LIBCPP_DEBUG=1|2``), please ensure that
+  the library has been built with support for the debug mode, and it will be
+  enabled automatically (no need to define ``_LIBCPP_DEBUG``).
+
 ABI Changes
 -----------
 
@@ -168,3 +175,7 @@ Build System Changes
   configuration and isn't supported by one of the configurations in ``libcxx/test/configs``,
   ``libcxxabi/test/configs`` or ``libunwind/test/configs``, please move to one of those
   configurations or define your own.
+
+- The ``LIBCXX_ENABLE_DEBUG_MODE_SUPPORT`` CMake configuration is not supported anymore. If you
+  were disabling support for the debug mode with that flag, please use ``LIBCXX_ENABLE_BACKWARDS_COMPATIBILITY_DEBUG_MODE_SYMBOLS=OFF``
+  instead.

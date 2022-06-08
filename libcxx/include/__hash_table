@@ -294,7 +294,7 @@ public:
         _VSTD::__debug_db_insert_i(this);
     }
 
-#if _LIBCPP_DEBUG_LEVEL == 2
+#ifdef _LIBCPP_ENABLE_DEBUG_MODE
     _LIBCPP_INLINE_VISIBILITY
     __hash_iterator(const __hash_iterator& __i)
         : __node_(__i.__node_)
@@ -318,7 +318,7 @@ public:
         }
         return *this;
     }
-#endif // _LIBCPP_DEBUG_LEVEL == 2
+#endif // _LIBCPP_ENABLE_DEBUG_MODE
 
     _LIBCPP_INLINE_VISIBILITY
     reference operator*() const {
@@ -365,7 +365,7 @@ private:
         : __node_(__node)
         {
             (void)__c;
-#if _LIBCPP_DEBUG_LEVEL == 2
+#ifdef _LIBCPP_ENABLE_DEBUG_MODE
             __get_db()->__insert_ic(this, __c);
 #endif
         }
@@ -404,12 +404,12 @@ public:
     __hash_const_iterator(const __non_const_iterator& __x) _NOEXCEPT
         : __node_(__x.__node_)
     {
-#if _LIBCPP_DEBUG_LEVEL == 2
+#ifdef _LIBCPP_ENABLE_DEBUG_MODE
         __get_db()->__iterator_copy(this, _VSTD::addressof(__x));
 #endif
     }
 
-#if _LIBCPP_DEBUG_LEVEL == 2
+#ifdef _LIBCPP_ENABLE_DEBUG_MODE
     _LIBCPP_INLINE_VISIBILITY
     __hash_const_iterator(const __hash_const_iterator& __i)
         : __node_(__i.__node_)
@@ -433,7 +433,7 @@ public:
         }
         return *this;
     }
-#endif // _LIBCPP_DEBUG_LEVEL == 2
+#endif // _LIBCPP_ENABLE_DEBUG_MODE
 
     _LIBCPP_INLINE_VISIBILITY
     reference operator*() const {
@@ -479,7 +479,7 @@ private:
         : __node_(__node)
         {
             (void)__c;
-#if _LIBCPP_DEBUG_LEVEL == 2
+#ifdef _LIBCPP_ENABLE_DEBUG_MODE
             __get_db()->__insert_ic(this, __c);
 #endif
         }
@@ -511,7 +511,7 @@ public:
         _VSTD::__debug_db_insert_i(this);
     }
 
-#if _LIBCPP_DEBUG_LEVEL == 2
+#ifdef _LIBCPP_ENABLE_DEBUG_MODE
     _LIBCPP_INLINE_VISIBILITY
     __hash_local_iterator(const __hash_local_iterator& __i)
         : __node_(__i.__node_),
@@ -539,7 +539,7 @@ public:
         }
         return *this;
     }
-#endif // _LIBCPP_DEBUG_LEVEL == 2
+#endif // _LIBCPP_ENABLE_DEBUG_MODE
 
     _LIBCPP_INLINE_VISIBILITY
     reference operator*() const {
@@ -591,7 +591,7 @@ private:
           __bucket_count_(__bucket_count)
         {
             (void)__c;
-#if _LIBCPP_DEBUG_LEVEL == 2
+#ifdef _LIBCPP_ENABLE_DEBUG_MODE
             __get_db()->__insert_ic(this, __c);
 #endif
             if (__node_ != nullptr)
@@ -639,12 +639,12 @@ public:
           __bucket_(__x.__bucket_),
           __bucket_count_(__x.__bucket_count_)
     {
-#if _LIBCPP_DEBUG_LEVEL == 2
+#ifdef _LIBCPP_ENABLE_DEBUG_MODE
         __get_db()->__iterator_copy(this, _VSTD::addressof(__x));
 #endif
     }
 
-#if _LIBCPP_DEBUG_LEVEL == 2
+#ifdef _LIBCPP_ENABLE_DEBUG_MODE
     _LIBCPP_INLINE_VISIBILITY
     __hash_const_local_iterator(const __hash_const_local_iterator& __i)
         : __node_(__i.__node_),
@@ -672,7 +672,7 @@ public:
         }
         return *this;
     }
-#endif // _LIBCPP_DEBUG_LEVEL == 2
+#endif // _LIBCPP_ENABLE_DEBUG_MODE
 
     _LIBCPP_INLINE_VISIBILITY
     reference operator*() const {
@@ -724,7 +724,7 @@ private:
           __bucket_count_(__bucket_count)
         {
             (void)__c;
-#if _LIBCPP_DEBUG_LEVEL == 2
+#ifdef _LIBCPP_ENABLE_DEBUG_MODE
             __get_db()->__insert_ic(this, __c);
 #endif
             if (__node_ != nullptr)
@@ -1281,14 +1281,14 @@ public:
         return const_local_iterator(nullptr, __n, bucket_count(), this);
     }
 
-#if _LIBCPP_DEBUG_LEVEL == 2
+#ifdef _LIBCPP_ENABLE_DEBUG_MODE
 
     bool __dereferenceable(const const_iterator* __i) const;
     bool __decrementable(const const_iterator* __i) const;
     bool __addable(const const_iterator* __i, ptrdiff_t __n) const;
     bool __subscriptable(const const_iterator* __i, ptrdiff_t __n) const;
 
-#endif // _LIBCPP_DEBUG_LEVEL == 2
+#endif // _LIBCPP_ENABLE_DEBUG_MODE
 
 private:
     void __rehash(size_type __n);
@@ -1510,7 +1510,7 @@ __hash_table<_Tp, _Hash, _Equal, _Alloc>::__deallocate_node(__next_pointer __np)
     while (__np != nullptr)
     {
         __next_pointer __next = __np->__next_;
-#if _LIBCPP_DEBUG_LEVEL == 2
+#ifdef _LIBCPP_ENABLE_DEBUG_MODE
         __c_node* __c = __get_db()->__find_c_and_lock(this);
         for (__i_node** __p = __c->end_; __p != __c->beg_; )
         {
@@ -2480,7 +2480,7 @@ __hash_table<_Tp, _Hash, _Equal, _Alloc>::remove(const_iterator __p) _NOEXCEPT
     __pn->__next_ = __cn->__next_;
     __cn->__next_ = nullptr;
     --size();
-#if _LIBCPP_DEBUG_LEVEL == 2
+#ifdef _LIBCPP_ENABLE_DEBUG_MODE
     __c_node* __c = __get_db()->__find_c_and_lock(this);
     for (__i_node** __dp = __c->end_; __dp != __c->beg_; )
     {
@@ -2663,7 +2663,7 @@ swap(__hash_table<_Tp, _Hash, _Equal, _Alloc>& __x,
     __x.swap(__y);
 }
 
-#if _LIBCPP_DEBUG_LEVEL == 2
+#ifdef _LIBCPP_ENABLE_DEBUG_MODE
 
 template <class _Tp, class _Hash, class _Equal, class _Alloc>
 bool
@@ -2693,7 +2693,7 @@ __hash_table<_Tp, _Hash, _Equal, _Alloc>::__subscriptable(const const_iterator*,
     return false;
 }
 
-#endif // _LIBCPP_DEBUG_LEVEL == 2
+#endif // _LIBCPP_ENABLE_DEBUG_MODE
 
 _LIBCPP_END_NAMESPACE_STD
 

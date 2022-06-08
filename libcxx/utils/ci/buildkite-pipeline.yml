@@ -379,8 +379,8 @@ steps:
           limit: 2
     timeout_in_minutes: 120
 
-  - label: "Debug iterators"
-    command: "libcxx/utils/ci/run-buildbot generic-debug-iterators"
+  - label: "Debug mode"
+    command: "libcxx/utils/ci/run-buildbot generic-debug-mode"
     artifact_paths:
       - "**/test-results.xml"
       - "**/*.abilist"
@@ -411,20 +411,6 @@ steps:
     steps:
     - label: "No threads"
       command: "libcxx/utils/ci/run-buildbot generic-no-threads"
-      artifact_paths:
-        - "**/test-results.xml"
-        - "**/*.abilist"
-      agents:
-        queue: "libcxx-builders"
-        os: "linux"
-      retry:
-        automatic:
-          - exit_status: -1  # Agent was lost
-            limit: 2
-      timeout_in_minutes: 120
-
-    - label: "No debug mode"
-      command: "libcxx/utils/ci/run-buildbot generic-no-debug"
       artifact_paths:
         - "**/test-results.xml"
         - "**/*.abilist"

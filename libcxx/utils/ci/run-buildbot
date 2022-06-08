@@ -233,9 +233,9 @@ generic-assertions)
     check-runtimes
     check-abi-list
 ;;
-generic-debug-iterators)
+generic-debug-mode)
     clean
-    generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Generic-debug-iterators.cmake"
+    generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Generic-debug-mode.cmake"
     check-runtimes
     check-abi-list
 ;;
@@ -328,12 +328,6 @@ generic-no-threads)
     clean
     generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Generic-no-threads.cmake"
     check-runtimes
-;;
-generic-no-debug)
-    clean
-    generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Generic-no-debug.cmake"
-    check-runtimes
-    check-abi-list
 ;;
 generic-no-filesystem)
     clean

@@ -1450,14 +1450,14 @@ public:
 
     _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_AFTER_CXX17 void __clear_and_shrink() _NOEXCEPT;
 
-#if _LIBCPP_DEBUG_LEVEL == 2
+#ifdef _LIBCPP_ENABLE_DEBUG_MODE
 
     bool __dereferenceable(const const_iterator* __i) const;
     bool __decrementable(const const_iterator* __i) const;
     bool __addable(const const_iterator* __i, ptrdiff_t __n) const;
     bool __subscriptable(const const_iterator* __i, ptrdiff_t __n) const;
 
-#endif // _LIBCPP_DEBUG_LEVEL == 2
+#endif // _LIBCPP_ENABLE_DEBUG_MODE
 
 private:
     template<class _Alloc>
@@ -1840,7 +1840,7 @@ inline _LIBCPP_CONSTEXPR_AFTER_CXX17
 void
 basic_string<_CharT, _Traits, _Allocator>::__invalidate_iterators_past(size_type __pos)
 {
-#if _LIBCPP_DEBUG_LEVEL == 2
+#ifdef _LIBCPP_ENABLE_DEBUG_MODE
     if (!__libcpp_is_constant_evaluated()) {
         __c_node* __c = __get_db()->__find_c_and_lock(this);
         if (__c)
@@ -1862,7 +1862,7 @@ basic_string<_CharT, _Traits, _Allocator>::__invalidate_iterators_past(size_type
     }
 #else
     (void)__pos;
-#endif // _LIBCPP_DEBUG_LEVEL == 2
+#endif // _LIBCPP_ENABLE_DEBUG_MODE
 }
 
 template <class _CharT, class _Traits, class _Allocator>
@@ -4595,7 +4595,7 @@ inline _LIBCPP_HIDE_FROM_ABI
 }
 #endif
 
-#if _LIBCPP_DEBUG_LEVEL == 2
+#ifdef _LIBCPP_ENABLE_DEBUG_MODE
 
 template<class _CharT, class _Traits, class _Allocator>
 bool
@@ -4629,7 +4629,7 @@ basic_string<_CharT, _Traits, _Allocator>::__subscriptable(const const_iterator*
     return data() <= __p && __p < data() + size();
 }
 
-#endif // _LIBCPP_DEBUG_LEVEL == 2
+#endif // _LIBCPP_ENABLE_DEBUG_MODE
 
 #if _LIBCPP_STD_VER > 11
 // Literal suffixes for basic_string [basic.string.literals]

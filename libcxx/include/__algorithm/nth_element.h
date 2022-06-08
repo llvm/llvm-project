@@ -13,6 +13,7 @@
 #include <__algorithm/comp_ref_type.h>
 #include <__algorithm/sort.h>
 #include <__config>
+#include <__debug>
 #include <__iterator/iterator_traits.h>
 #include <__utility/swap.h>
 

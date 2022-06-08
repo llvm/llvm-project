@@ -1461,7 +1461,7 @@ num_put<_CharT, _OutputIterator>::do_put(iter_type __s, ios_base& __iob,
         return do_put(__s, __iob, __fl, (unsigned long)__v);
     const numpunct<char_type>& __np = use_facet<numpunct<char_type> >(__iob.getloc());
     typedef typename numpunct<char_type>::string_type string_type;
-#if _LIBCPP_DEBUG_LEVEL == 2
+#ifdef _LIBCPP_ENABLE_DEBUG_MODE
     string_type __tmp(__v ? __np.truename() : __np.falsename());
     string_type __nm = _VSTD::move(__tmp);
 #else

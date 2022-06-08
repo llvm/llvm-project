@@ -65,7 +65,7 @@ int main(int, char**)
   std::sort_heap(v.begin(), v.end());
   assert(stats.copied == 0);
   assert(stats.moved == 1'764'997);
-#ifndef _LIBCPP_DEBUG
+#ifndef _LIBCPP_ENABLE_DEBUG_MODE
   assert(stats.compared == 1'534'701);
 #endif
 

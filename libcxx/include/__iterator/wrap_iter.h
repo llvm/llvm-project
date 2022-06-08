@@ -50,12 +50,12 @@ public:
             typename enable_if<is_convertible<_Up, iterator_type>::value>::type* = nullptr) _NOEXCEPT
             : __i(__u.base())
     {
-#if _LIBCPP_DEBUG_LEVEL == 2
+#ifdef _LIBCPP_ENABLE_DEBUG_MODE
       if (!__libcpp_is_constant_evaluated())
         __get_db()->__iterator_copy(this, _VSTD::addressof(__u));
 #endif
     }
-#if _LIBCPP_DEBUG_LEVEL == 2
+#ifdef _LIBCPP_ENABLE_DEBUG_MODE
     _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_AFTER_CXX11
     __wrap_iter(const __wrap_iter& __x)
         : __i(__x.base())
@@ -139,7 +139,7 @@ private:
     explicit __wrap_iter(const void* __p, iterator_type __x) _NOEXCEPT : __i(__x)
     {
         (void)__p;
-#if _LIBCPP_DEBUG_LEVEL == 2
+#ifdef _LIBCPP_ENABLE_DEBUG_MODE
       if (!__libcpp_is_constant_evaluated())
         __get_db()->__insert_ic(this, __p);
 #endif

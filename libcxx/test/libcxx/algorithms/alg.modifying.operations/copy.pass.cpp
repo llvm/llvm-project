@@ -7,7 +7,10 @@
 //===----------------------------------------------------------------------===//
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17
-// UNSUPPORTED: debug_level=1
+
+// When the debug mode is enabled, we don't unwrap iterators in std::copy
+// so we don't get this optimization.
+// UNSUPPORTED: libcpp-has-debug-mode
 
 // <algorithm>
 
@@ -59,7 +62,9 @@ struct NotIncrementableIt {
     return *this;
   }
 
-  friend constexpr NotIncrementableIt operator+(const NotIncrementableIt& it, ptrdiff_t size) { return it.i + size; }
+  friend constexpr NotIncrementableIt operator+(const NotIncrementableIt& it, difference_type size) { return it.i + size; }
+  friend constexpr difference_type operator-(const NotIncrementableIt& x, const NotIncrementableIt& y) { return x.i - y.i; }
+  friend constexpr NotIncrementableIt operator-(const NotIncrementableIt& x, difference_type size) { return NotIncrementableIt(x.i - size); }
 };
 
 static_assert(std::__is_cpp17_contiguous_iterator<NotIncrementableIt<S>>::value);

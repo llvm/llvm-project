@@ -126,15 +126,6 @@ DEFAULT_PARAMETERS = [
               [AddCompileFlag('-D_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER')]
             ),
 
-  Parameter(name='debug_level', choices=['', '0', '1'], type=str, default='',
-            help="The debugging level to enable in the test suite.",
-            actions=lambda debugLevel: [] if debugLevel == '' else filter(None, [
-              AddFeature('debug_level={}'.format(debugLevel)),
-              AddCompileFlag('-Wno-macro-redefined'),
-              AddCompileFlag('-D_LIBCPP_DEBUG={}'.format(debugLevel)),
-              AddFeature('LIBCXX-DEBUG-FIXME') if debugLevel == '1' else None
-            ])),
-
   Parameter(name='use_sanitizer', choices=['', 'Address', 'Undefined', 'Memory', 'MemoryWithOrigins', 'Thread', 'DataFlow', 'Leaks'], type=str, default='',
             help="An optional sanitizer to enable when building and running the test suite.",
             actions=lambda sanitizer: filter(None, [
@@ -175,12 +166,6 @@ DEFAULT_PARAMETERS = [
             help="Whether to enable tests that take longer to run. This can be useful when running on a very slow device.",
             actions=lambda enabled: [] if not enabled else [
               AddFeature('long_tests')
-            ]),
-
-  Parameter(name='enable_debug_tests', choices=[True, False], type=bool, default=True,
-            help="Whether to enable tests that exercise the libc++ debugging mode.",
-            actions=lambda enabled: [] if enabled else [
-              AddFeature('libcxx-no-debug-mode')
             ]),
 
   Parameter(name='enable_assertions', choices=[True, False], type=bool, default=False,

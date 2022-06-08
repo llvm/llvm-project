@@ -119,7 +119,7 @@ class _LIBCPP_TEMPLATE_VIS __direct_storage {};
 template <class _OutIt, class _CharT>
 concept __enable_direct_output = __formatter::__char_type<_CharT> &&
     (same_as<_OutIt, _CharT*>
-#if _LIBCPP_DEBUG_LEVEL < 2
+#ifndef _LIBCPP_ENABLE_DEBUG_MODE
      || same_as<_OutIt, __wrap_iter<_CharT*>>
 #endif
     );

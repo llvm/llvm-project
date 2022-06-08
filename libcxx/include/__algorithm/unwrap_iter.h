@@ -43,7 +43,7 @@ struct __unwrap_iter_impl {
     }
 };
 
-#if _LIBCPP_DEBUG_LEVEL < 2
+#ifndef _LIBCPP_ENABLE_DEBUG_MODE
 
 template <class _Iter>
 struct __unwrap_iter_impl<_Iter, true> {
@@ -53,7 +53,7 @@ struct __unwrap_iter_impl<_Iter, true> {
     }
 };
 
-#endif // _LIBCPP_DEBUG_LEVEL < 2
+#endif // !_LIBCPP_ENABLE_DEBUG_MODE
 
 template<class _Iter, class _Impl = __unwrap_iter_impl<_Iter> >
 inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR

@@ -792,55 +792,14 @@ typedef unsigned int   char32_t;
 #  define _LIBCPP_DECLARE_STRONG_ENUM_EPILOG(x)
 #endif // _LIBCPP_CXX03_LANG
 
-// _LIBCPP_DEBUG potential values:
-//  - undefined: No assertions. This is the default.
-//  - 0:         Basic assertions
-//  - 1:         Basic assertions + iterator validity checks + unspecified behavior randomization.
-#  if !defined(_LIBCPP_DEBUG)
-#    define _LIBCPP_DEBUG_LEVEL 0
-#  elif _LIBCPP_DEBUG == 0
-#    define _LIBCPP_DEBUG_LEVEL 1
-#  elif _LIBCPP_DEBUG == 1
-#    define _LIBCPP_DEBUG_LEVEL 2
-#  else
-#    error Supported values for _LIBCPP_DEBUG are 0 and 1
-#  endif
-
-#  if _LIBCPP_DEBUG_LEVEL >= 2 && !defined(_LIBCPP_CXX03_LANG)
-#    define _LIBCPP_DEBUG_RANDOMIZE_UNSPECIFIED_STABILITY
-#  endif
-
-#  if defined(_LIBCPP_DEBUG_RANDOMIZE_UNSPECIFIED_STABILITY)
-#    if defined(_LIBCPP_CXX03_LANG)
-#      error Support for unspecified stability is only for C++11 and higher
-#    endif
-#    define _LIBCPP_DEBUG_RANDOMIZE_RANGE(__first, __last)                                                             \
-      do {                                                                                                             \
-        if (!__builtin_is_constant_evaluated())                                                                        \
-          _VSTD::shuffle(__first, __last, __libcpp_debug_randomizer());                                                \
-      } while (false)
-#  else
-#    define _LIBCPP_DEBUG_RANDOMIZE_RANGE(__first, __last)                                                             \
-      do {                                                                                                             \
-      } while (false)
-#  endif
-
 // Libc++ allows disabling extern template instantiation declarations by
 // means of users defining _LIBCPP_DISABLE_EXTERN_TEMPLATE.
 //
-// Furthermore, when the Debug mode is enabled, we disable extern declarations
-// when building user code because we don't want to use the functions compiled
-// in the library, which might not have had the debug mode enabled when built.
-// However, some extern declarations need to be used, because code correctness
-// depends on it (several instances in <locale>). Those special declarations
-// are declared with _LIBCPP_EXTERN_TEMPLATE_EVEN_IN_DEBUG_MODE, which is enabled
-// even when the debug mode is enabled.
+// TODO: Remove _LIBCPP_EXTERN_TEMPLATE_EVEN_IN_DEBUG_MODE, which is not needed
+//       since the Debug mode is a configuration-time property.
 #if defined(_LIBCPP_DISABLE_EXTERN_TEMPLATE)
 #   define _LIBCPP_EXTERN_TEMPLATE(...) /* nothing */
 #   define _LIBCPP_EXTERN_TEMPLATE_EVEN_IN_DEBUG_MODE(...) /* nothing */
-#elif _LIBCPP_DEBUG_LEVEL >= 1 && !defined(_LIBCPP_BUILDING_LIBRARY)
-#   define _LIBCPP_EXTERN_TEMPLATE(...) /* nothing */
-#   define _LIBCPP_EXTERN_TEMPLATE_EVEN_IN_DEBUG_MODE(...) extern template __VA_ARGS__;
 #else
 #   define _LIBCPP_EXTERN_TEMPLATE(...) extern template __VA_ARGS__;
 #   define _LIBCPP_EXTERN_TEMPLATE_EVEN_IN_DEBUG_MODE(...) extern template __VA_ARGS__;
