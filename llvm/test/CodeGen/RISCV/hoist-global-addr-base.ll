@@ -221,3 +221,21 @@ define i8* @neg_offset_not_simm32() {
 ; RV64-NEXT:    ret
     ret i8* getelementptr inbounds ([0 x i8], [0 x i8]* @bar, i32 0, i64 -2147485013)
 }
+
+define i8* @offset_addi_addi() {
+; CHECK-LABEL: offset_addi_addi:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    lui a0, %hi(bar+3211)
+; CHECK-NEXT:    addi a0, a0, %lo(bar+3211)
+; CHECK-NEXT:    ret
+    ret i8* getelementptr inbounds ([0 x i8], [0 x i8]* @bar, i32 0, i64 3211)
+}
+
+define i8* @offset_addi_addi_neg() {
+; CHECK-LABEL: offset_addi_addi_neg:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    lui a0, %hi(bar-4000)
+; CHECK-NEXT:    addi a0, a0, %lo(bar-4000)
+; CHECK-NEXT:    ret
+    ret i8* getelementptr inbounds ([0 x i8], [0 x i8]* @bar, i32 0, i64 -4000)
+}
