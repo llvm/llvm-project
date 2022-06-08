@@ -8,9 +8,12 @@
 
 #include "CommandObjectProcess.h"
 #include "CommandObjectTrace.h"
+#include "CommandObjectBreakpoint.h"
 #include "CommandOptionsProcessLaunch.h"
 #include "lldb/Breakpoint/Breakpoint.h"
+#include "lldb/Breakpoint/BreakpointIDList.h"
 #include "lldb/Breakpoint/BreakpointLocation.h"
+#include "lldb/Breakpoint/BreakpointName.h"
 #include "lldb/Breakpoint/BreakpointSite.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/PluginManager.h"
@@ -28,6 +31,8 @@
 #include "lldb/Target/UnixSignals.h"
 #include "lldb/Utility/Args.h"
 #include "lldb/Utility/State.h"
+
+#include "llvm/ADT/ScopeExit.h"
 
 #include <bitset>
 
@@ -516,7 +521,7 @@ protected:
     ~CommandOptions() override = default;
 
     Status SetOptionValue(uint32_t option_idx, llvm::StringRef option_arg,
-                          ExecutionContext *execution_context) override {
+                          ExecutionContext *exe_ctx) override {
       Status error;
       const int short_option = m_getopt_table[option_idx].val;
       switch (short_option) {
@@ -526,7 +531,10 @@ protected:
               "invalid value for ignore option: \"%s\", should be a number.",
               option_arg.str().c_str());
         break;
-
+      case 'b':
+        m_run_to_bkpt_args.AppendArgument(option_arg);
+        m_any_bkpts_specified = true;
+      break;
       default:
         llvm_unreachable("Unimplemented option");
       }
@@ -535,14 +543,19 @@ protected:
 
     void OptionParsingStarting(ExecutionContext *execution_context) override {
       m_ignore = 0;
+      m_run_to_bkpt_args.Clear();
+      m_any_bkpts_specified = false;
     }
 
     llvm::ArrayRef<OptionDefinition> GetDefinitions() override {
       return llvm::makeArrayRef(g_process_continue_options);
     }
 
-    uint32_t m_ignore;
+    uint32_t m_ignore = 0;
+    Args m_run_to_bkpt_args;
+    bool m_any_bkpts_specified = false;
   };
+
 
   bool DoExecute(Args &command, CommandReturnObject &result) override {
     Process *process = m_exe_ctx.GetProcessPtr();
@@ -579,6 +592,127 @@ protected:
           }
         }
       }
+      
+      Target *target = m_exe_ctx.GetTargetPtr();
+      BreakpointIDList run_to_bkpt_ids;
+      CommandObjectMultiwordBreakpoint::VerifyBreakpointOrLocationIDs(
+          m_options.m_run_to_bkpt_args, target, result, &run_to_bkpt_ids, 
+          BreakpointName::Permissions::disablePerm);
+      if (!result.Succeeded()) {
+        return false;
+      }
+      result.Clear();
+      if (m_options.m_any_bkpts_specified && run_to_bkpt_ids.GetSize() == 0) {
+        result.AppendError("continue-to breakpoints did not specify any actual "
+                           "breakpoints or locations");
+        return false;
+      }
+
+      // First figure out which breakpoints & locations were specified by the
+      // user:
+      size_t num_run_to_bkpt_ids = run_to_bkpt_ids.GetSize();
+      std::vector<break_id_t> bkpts_disabled;
+      std::vector<BreakpointID> locs_disabled;
+      if (num_run_to_bkpt_ids != 0) {
+        // Go through the ID's specified, and separate the breakpoints from are 
+        // the breakpoint.location specifications since the latter require
+        // special handling.  We also figure out whether there's at least one
+        // specifier in the set that is enabled.
+        BreakpointList &bkpt_list = target->GetBreakpointList();
+        std::unordered_set<break_id_t> bkpts_seen;
+        std::unordered_set<break_id_t> bkpts_with_locs_seen;
+        BreakpointIDList with_locs;
+        bool any_enabled = false;
+  
+        for (size_t idx = 0; idx < num_run_to_bkpt_ids; idx++) {
+          BreakpointID bkpt_id = run_to_bkpt_ids.GetBreakpointIDAtIndex(idx);
+          break_id_t bp_id = bkpt_id.GetBreakpointID();
+          break_id_t loc_id = bkpt_id.GetLocationID();
+          BreakpointSP bp_sp 
+              = bkpt_list.FindBreakpointByID(bp_id);
+          // Note, VerifyBreakpointOrLocationIDs checks for existence, so we 
+          // don't need to do it again here.
+          if (bp_sp->IsEnabled()) {
+            if (loc_id == LLDB_INVALID_BREAK_ID) {
+              // A breakpoint (without location) was specified.  Make sure that 
+              // at least one of the locations is enabled.
+              size_t num_locations = bp_sp->GetNumLocations();
+              for (size_t loc_idx = 0; loc_idx < num_locations; loc_idx++) {
+                BreakpointLocationSP loc_sp 
+                    = bp_sp->GetLocationAtIndex(loc_idx);
+                if (loc_sp->IsEnabled()) {
+                  any_enabled = true;
+                  break;
+                }
+              }
+            } else {
+              // A location was specified, check if it was enabled:
+              BreakpointLocationSP loc_sp = bp_sp->FindLocationByID(loc_id);
+              if (loc_sp->IsEnabled())
+                any_enabled = true;
+            }
+          
+            // Then sort the bp & bp.loc entries for later use:
+            if (bkpt_id.GetLocationID() == LLDB_INVALID_BREAK_ID)
+              bkpts_seen.insert(bkpt_id.GetBreakpointID());
+            else {
+              bkpts_with_locs_seen.insert(bkpt_id.GetBreakpointID());
+              with_locs.AddBreakpointID(bkpt_id);
+            }
+          }
+        }
+        // Do all the error checking here so once we start disabling we don't
+        // have to back out half-way through.
+        
+        // Make sure at least one of the specified breakpoints is enabled.
+        if (!any_enabled) {
+          result.AppendError("at least one of the continue-to breakpoints must "
+                             "be enabled.");
+          return false;
+        }
+        
+        // Also, if you specify BOTH a breakpoint and one of it's locations,
+        // we flag that as an error, since it won't do what you expect, the
+        // breakpoint directive will mean "run to all locations", which is not
+        // what the location directive means...
+        for (break_id_t bp_id : bkpts_with_locs_seen) {
+          if (bkpts_seen.count(bp_id)) {
+            result.AppendErrorWithFormatv("can't specify both a breakpoint and "
+                               "one of its locations: {0}", bp_id);
+          }
+        }
+        
+        // Now go through the breakpoints in the target, disabling all the ones
+        // that the user didn't mention:
+        for (BreakpointSP bp_sp : bkpt_list.Breakpoints()) {
+          break_id_t bp_id = bp_sp->GetID();
+          // Handle the case where no locations were specified.  Note we don't
+          // have to worry about the case where a breakpoint and one of its
+          // locations are both in the lists, we've already disallowed that.
+          if (!bkpts_with_locs_seen.count(bp_id)) {
+            if (!bkpts_seen.count(bp_id) && bp_sp->IsEnabled()) {
+              bkpts_disabled.push_back(bp_id);
+              bp_sp->SetEnabled(false);
+            }
+            continue;
+          }
+          // Next, handle the case where a location was specified:
+          // Run through all the locations of this breakpoint and disable
+          // the ones that aren't on our "with locations" BreakpointID list:
+          size_t num_locations = bp_sp->GetNumLocations();
+          BreakpointID tmp_id(bp_id, LLDB_INVALID_BREAK_ID);
+          for (size_t loc_idx = 0; loc_idx < num_locations; loc_idx++) {
+            BreakpointLocationSP loc_sp = bp_sp->GetLocationAtIndex(loc_idx);
+            tmp_id.SetBreakpointLocationID(loc_idx);
+            size_t position = 0;
+            if (!with_locs.FindBreakpointID(tmp_id, &position) 
+                && loc_sp->IsEnabled()) {
+              locs_disabled.push_back(tmp_id);
+              loc_sp->SetEnabled(false);
+            }
+          }
+        }
+      }
 
       { // Scope for thread list mutex:
         std::lock_guard<std::recursive_mutex> guard(
@@ -597,10 +731,39 @@ protected:
 
       StreamString stream;
       Status error;
+      // For now we can only do -b with synchronous:
+      bool old_sync = GetDebugger().GetAsyncExecution();
+      
+      if (run_to_bkpt_ids.GetSize() != 0) {
+        GetDebugger().SetAsyncExecution(false);
+        synchronous_execution = true;
+      } 
       if (synchronous_execution)
         error = process->ResumeSynchronous(&stream);
       else
         error = process->Resume();
+      
+      if (run_to_bkpt_ids.GetSize() != 0) {
+        GetDebugger().SetAsyncExecution(old_sync);
+      } 
+       
+      // Now re-enable the breakpoints we disabled:
+      BreakpointList &bkpt_list = target->GetBreakpointList();
+      for (break_id_t bp_id : bkpts_disabled) {
+        BreakpointSP bp_sp = bkpt_list.FindBreakpointByID(bp_id);
+        if (bp_sp)
+          bp_sp->SetEnabled(true);
+      }
+      for (const BreakpointID &bkpt_id : locs_disabled) {
+        BreakpointSP bp_sp 
+            = bkpt_list.FindBreakpointByID(bkpt_id.GetBreakpointID());
+        if (bp_sp) {
+          BreakpointLocationSP loc_sp 
+              = bp_sp->FindLocationByID(bkpt_id.GetLocationID());
+          if (loc_sp)
+            loc_sp->SetEnabled(true);
+        }
+      }
 
       if (error.Success()) {
         // There is a race condition where this thread will return up the call
