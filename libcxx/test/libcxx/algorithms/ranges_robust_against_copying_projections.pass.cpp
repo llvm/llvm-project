@@ -72,8 +72,8 @@ constexpr bool all_the_algorithms()
     int count = 1;
 
     int copies = 0;
-    //(void)std::ranges::adjacent_find(first, last, Equal(), Proj(&copies)); assert(copies == 0);
-    //(void)std::ranges::adjacent_find(a, Equal(), Proj(&copies)); assert(copies == 0);
+    (void)std::ranges::adjacent_find(first, last, Equal(), Proj(&copies)); assert(copies == 0);
+    (void)std::ranges::adjacent_find(a, Equal(), Proj(&copies)); assert(copies == 0);
     (void)std::ranges::all_of(first, last, UnaryTrue(), Proj(&copies)); assert(copies == 0);
     (void)std::ranges::all_of(a, UnaryTrue(), Proj(&copies)); assert(copies == 0);
     (void)std::ranges::any_of(first, last, UnaryTrue(), Proj(&copies)); assert(copies == 0);
