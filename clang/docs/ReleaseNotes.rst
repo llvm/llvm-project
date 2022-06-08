@@ -291,6 +291,11 @@ New Compiler Flags
   ``-mfix-cortex-a72-aes-1655431``. The pass is enabled when using either of
   these cpus with ``-mcpu=`` and can be disabled using
   ``-mno-fix-cortex-a57-aes-1742098`` or ``-mno-fix-cortex-a72-aes-1655431``.
+- Added the ``-fexperimental-max-bitint-width=`` option to increase the maximum
+  allowed bit width of ``_BitInt`` types beyond the default of 128 bits. Some
+  operations, such as division or float-to-integer conversion, on ``_BitInt``
+  types with more than 128 bits currently crash clang. This option will be
+  removed in the future once clang supports all such operations.
 
 Deprecated Compiler Flags
 -------------------------
