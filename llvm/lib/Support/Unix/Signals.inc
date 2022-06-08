@@ -79,8 +79,8 @@
 
 using namespace llvm;
 
-static RETSIGTYPE SignalHandler(int Sig);  // defined below.
-static RETSIGTYPE InfoSignalHandler(int Sig);  // defined below.
+static void SignalHandler(int Sig);  // defined below.
+static void InfoSignalHandler(int Sig);  // defined below.
 
 using SignalHandlerFunctionType = void (*)();
 /// The function to call if ctrl-c is pressed.
@@ -362,7 +362,7 @@ void sys::CleanupOnSignal(uintptr_t Context) {
 }
 
 // The signal handler that runs.
-static RETSIGTYPE SignalHandler(int Sig) {
+static void SignalHandler(int Sig) {
   // Restore the signal behavior to default, so that the program actually
   // crashes when we return and the signal reissues.  This also ensures that if
   // we crash in our signal handler that the program will terminate immediately
@@ -406,7 +406,7 @@ static RETSIGTYPE SignalHandler(int Sig) {
 #endif
 }
 
-static RETSIGTYPE InfoSignalHandler(int Sig) {
+static void InfoSignalHandler(int Sig) {
   SaveAndRestore<int> SaveErrnoDuringASignalHandler(errno);
   if (SignalHandlerFunctionType CurrentInfoFunction = InfoSignalFunction)
     CurrentInfoFunction();

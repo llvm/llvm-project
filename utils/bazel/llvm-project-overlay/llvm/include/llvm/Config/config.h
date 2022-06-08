@@ -336,9 +336,6 @@
 /* Define to the vendor of this package. */
 /* #undef PACKAGE_VENDOR */
 
-/* Define as the return type of signal handlers (`int' or `void'). */
-#define RETSIGTYPE void
-
 /* Define if std::is_trivially_copyable is supported */
 #define HAVE_STD_IS_TRIVIALLY_COPYABLE 1
 
