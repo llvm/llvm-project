@@ -1383,6 +1383,9 @@ add_instruction:
   // Reset symbolizer for the disassembler.
   BC.SymbolicDisAsm->setSymbolizer(nullptr);
 
+  if (uint64_t Offset = getFirstInstructionOffset())
+    Labels[Offset] = BC.Ctx->createNamedTempSymbol();
+
   clearList(Relocations);
 
   if (!IsSimple) {
@@ -1895,7 +1898,7 @@ bool BinaryFunction::buildCFG(MCPlusBuilder::AllocatorIdTy AllocatorId) {
     return false;
 
   assert(BasicBlocks.empty() && "basic block list should be empty");
-  assert((Labels.find(0) != Labels.end()) &&
+  assert((Labels.find(getFirstInstructionOffset()) != Labels.end()) &&
          "first instruction should always have a label");
 
   // Create basic blocks in the original layout order:
@@ -1999,9 +2002,9 @@ bool BinaryFunction::buildCFG(MCPlusBuilder::AllocatorIdTy AllocatorId) {
         updateOffset(LastInstrOffset);
       }
     }
-    if (Offset == 0) {
-      // Add associated CFI pseudos in the first offset (0)
-      addCFIPlaceholders(0, InsertBB);
+    if (Offset == getFirstInstructionOffset()) {
+      // Add associated CFI pseudos in the first offset
+      addCFIPlaceholders(Offset, InsertBB);
     }
 
     const bool IsBlockEnd = MIB->isTerminator(Instr);

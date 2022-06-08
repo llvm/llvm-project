@@ -493,7 +493,7 @@ bool CFIReaderWriter::fillCFIInfoFor(BinaryFunction &Function) const {
   Optional<uint64_t> LSDA = CurFDE.getLSDAAddress();
   Function.setLSDAAddress(LSDA ? *LSDA : 0);
 
-  uint64_t Offset = 0;
+  uint64_t Offset = Function.getFirstInstructionOffset();
   uint64_t CodeAlignment = CurFDE.getLinkedCIE()->getCodeAlignmentFactor();
   uint64_t DataAlignment = CurFDE.getLinkedCIE()->getDataAlignmentFactor();
   if (CurFDE.getLinkedCIE()->getPersonalityAddress()) {
