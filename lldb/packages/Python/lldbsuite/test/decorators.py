@@ -284,7 +284,7 @@ def expectedFailureAll(bugnumber=None,
                          archs=archs, triple=triple,
                          debug_info=debug_info,
                          swig_version=swig_version, py_version=py_version,
-                         macos_version=None,
+                         macos_version=macos_version,
                          remote=remote,dwarf_version=dwarf_version,
                          setting=setting)
 
