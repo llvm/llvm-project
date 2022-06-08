@@ -90,9 +90,10 @@ class SymbolizerProcess {
 
   // Customizable by subclasses.
   virtual bool StartSymbolizerSubprocess();
-  virtual bool ReadFromSymbolizer(char *buffer, uptr max_length);
+  virtual bool ReadFromSymbolizer();
   // Return the environment to run the symbolizer in.
   virtual char **GetEnvP() { return GetEnviron(); }
+  InternalMmapVector<char> &GetBuff() { return buffer_; }
 
  private:
   virtual bool ReachedEndOfOutput(const char *buffer, uptr length) const {
@@ -113,8 +114,7 @@ class SymbolizerProcess {
   fd_t input_fd_;
   fd_t output_fd_;
 
-  static const uptr kBufferSize = 16 * 1024;
-  char buffer_[kBufferSize];
+  InternalMmapVector<char> buffer_;
 
   static const uptr kMaxTimesRestarted = 5;
   static const int kSymbolizerStartupTimeMillis = 10;
