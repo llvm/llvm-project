@@ -3375,6 +3375,7 @@ GDBRemoteCommunicationServerLLGS::Handle_vRun(
 
 GDBRemoteCommunication::PacketResult
 GDBRemoteCommunicationServerLLGS::Handle_D(StringExtractorGDBRemote &packet) {
+  Log *log = GetLog(LLDBLog::Process);
   StopSTDIOForwarding();
 
   lldb::pid_t pid = LLDB_INVALID_PROCESS_ID;
@@ -3398,6 +3399,9 @@ GDBRemoteCommunicationServerLLGS::Handle_D(StringExtractorGDBRemote &packet) {
   for (auto it = m_debugged_processes.begin();
        it != m_debugged_processes.end();) {
     if (pid == LLDB_INVALID_PROCESS_ID || pid == it->first) {
+      LLDB_LOGF(log,
+                "GDBRemoteCommunicationServerLLGS::%s detaching %" PRId64,
+                __FUNCTION__, it->first);
       if (llvm::Error e = it->second->Detach().ToError())
         detach_error = llvm::joinErrors(std::move(detach_error), std::move(e));
       else {
