@@ -1,7 +1,17 @@
 # Check that llvm-lib can list the members of an archive which contains the
 # special member /<ECSYMBOLS>/.
 
-# RUN: yaml2obj %S/Inputs/ecsymbols.yaml -o %t.lib
+# RUN: yaml2obj %s -o %t.lib
 # RUN: llvm-lib /list %t.lib | FileCheck %s
 
 # CHECK: /<ECSYMBOLS>/
+
+--- !Arch
+Members:
+  - Name:            '/'
+    Size:            '0'
+  - Name:            '/'
+    Size:            '0'
+  - Name:            '/<ECSYMBOLS>/'
+    Size:            '0'
+...
