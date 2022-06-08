@@ -482,14 +482,12 @@ void CodeEmitterGen::run(raw_ostream &o) {
     // Emit initial function code
     if (UseAPInt) {
       int NumWords = APInt::getNumWords(BitWidth);
-      int NumBytes = (BitWidth + 7) / 8;
       o << "  const unsigned opcode = MI.getOpcode();\n"
-        << "  if (Inst.getBitWidth() != " << BitWidth << ")\n"
-        << "    Inst = Inst.zext(" << BitWidth << ");\n"
         << "  if (Scratch.getBitWidth() != " << BitWidth << ")\n"
         << "    Scratch = Scratch.zext(" << BitWidth << ");\n"
-        << "  LoadIntFromMemory(Inst, (const uint8_t *)&InstBits[opcode * "
-        << NumWords << "], " << NumBytes << ");\n"
+        << "  Inst = APInt(" << BitWidth
+        << ", makeArrayRef(InstBits + opcode * " << NumWords << ", " << NumWords
+        << "));\n"
         << "  APInt &Value = Inst;\n"
         << "  APInt &op = Scratch;\n"
         << "  switch (opcode) {\n";
