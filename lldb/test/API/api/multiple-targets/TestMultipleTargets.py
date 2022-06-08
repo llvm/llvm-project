@@ -20,7 +20,7 @@ class TestMultipleTargets(TestBase):
     @skipIfNoSBHeaders
     @skipIfHostIncompatibleWithRemote
     @expectedFailureAll(
-        oslist=["windows"],
+        oslist=["windows"], archs=["i[3-6]86", "x86_64"],
         bugnumber="llvm.org/pr20282")
     @expectedFlakeyNetBSD
     def test_multiple_targets(self):
