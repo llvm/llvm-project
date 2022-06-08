@@ -21952,6 +21952,13 @@ static SDValue combineShuffleOfSplatVal(ShuffleVectorSDNode *Shuf,
                                         SelectionDAG &DAG) {
   if (!Shuf->getOperand(1).isUndef())
     return SDValue();
+
+  // If the inner operand is a known splat with no undefs, just return that directly.
+  // TODO: Create DemandedElts mask from Shuf's mask.
+  // TODO: Allow undef elements and merge with the shuffle code below.
+  if (DAG.isSplatValue(Shuf->getOperand(0), /*AllowUndefs*/ false))
+    return Shuf->getOperand(0);
+
   auto *Splat = dyn_cast<ShuffleVectorSDNode>(Shuf->getOperand(0));
   if (!Splat || !Splat->isSplat())
     return SDValue();
