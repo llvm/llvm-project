@@ -669,34 +669,29 @@ def AnyScalableVector : ScalableVectorOf<[AnyType]>;
 def AnyShaped: ShapedContainerType<[AnyType], IsShapedTypePred, "shaped",
                                    "::mlir::ShapedType">;
 
+//===----------------------------------------------------------------------===//
 // Tensor types.
 
-// Any tensor type whose element type is from the given `allowedTypes` list
-class TensorOf<list<Type> allowedTypes> :
-  ShapedContainerType<allowedTypes, IsTensorTypePred, "tensor",
-                      "::mlir::TensorType">;
+// Unranked tensor type whose element type is from the given
+// `allowedTypes` list.
+class UnrankedTensorOf<list<Type> allowedTypes>
+  : ShapedContainerType<allowedTypes, IsUnrankedTensorTypePred,
+      "unranked.tensor", "::mlir::UnrankedTensorType">;
 
-class RankedTensorOf<list<Type> allowedTypes> :
-  ShapedContainerType<allowedTypes, And<[IsTensorTypePred, HasRankPred]>,
-  "ranked tensor", "::mlir::TensorType">;
+// Any tensor type whose element type is from the given `allowedTypes`
+// list, and which additionally satisfies an optional list of predicates.
+//
+// TODO: use `Constraint` instead of `Pred`, so we can generate a better
+// default summary (a la `Confined`).
+class TensorOf<
+    list<Type> allowedTypes,
+    list<Pred> preds = [],
+    string summary = "tensor">
+  : ShapedContainerType<allowedTypes,
+      And<!listconcat([IsTensorTypePred], preds)>,
+      summary, "::mlir::TensorType">;
 
-def AnyTensor : TensorOf<[AnyType]>;
-
-// Unranked Memref type
-class UnrankedTensorOf<list<Type> allowedTypes> :
-    ShapedContainerType<allowedTypes,
-                        IsUnrankedTensorTypePred,
-                        "unranked.tensor", "::mlir::UnrankedTensorType">;
-
-def AnyRankedTensor : RankedTensorOf<[AnyType]>;
-
-// TODO: Have an easy way to add another constraint to a type.
-class StaticShapeTensorOf<list<Type> allowedTypes>
-    : Type<And<[TensorOf<allowedTypes>.predicate, HasStaticShapePred]>,
-           "statically shaped " # TensorOf<allowedTypes>.summary,
-           "::mlir::TensorType">;
-
-def AnyStaticShapeTensor : StaticShapeTensorOf<[AnyType]>;
+def AnyTensor  : TensorOf<[AnyType]>;
 
 def I1Tensor   : TensorOf<[I1]>;
 def I8Tensor   : TensorOf<[I8]>;
@@ -710,17 +705,33 @@ def F16Tensor  : TensorOf<[F16]>;
 def F32Tensor  : TensorOf<[F32]>;
 def F64Tensor  : TensorOf<[F64]>;
 
+class RankedTensorOf<
+    list<Type> allowedTypes,
+    list<Pred> preds = [],
+    string summary = "ranked tensor">
+  : TensorOf<allowedTypes, !listconcat([HasRankPred], preds), summary>;
+
+def AnyRankedTensor : RankedTensorOf<[AnyType]>;
+
 // Ranked tensor type with one of the specified types and ranks.
-class TensorRankOf<list<Type> allowedTypes, list<int> ranks> :
-    Type<And<[TensorOf<allowedTypes>.predicate, HasAnyRankOfPred<ranks>]>,
-         !interleave(!foreach(rank, ranks, rank # "D"), "/") # " " #
-         TensorOf<allowedTypes>.summary, "::mlir::TensorType">;
+class TensorRankOf<list<Type> allowedTypes, list<int> ranks>
+  : TensorOf<allowedTypes,
+      [HasAnyRankOfPred<ranks>],
+      !interleave(!foreach(rank, ranks, rank # "D"), "/") # " tensor">;
 
 class 0DTensorOf<list<Type> allowedTypes> : TensorRankOf<allowedTypes, [0]>;
 class 1DTensorOf<list<Type> allowedTypes> : TensorRankOf<allowedTypes, [1]>;
 class 2DTensorOf<list<Type> allowedTypes> : TensorRankOf<allowedTypes, [2]>;
 class 3DTensorOf<list<Type> allowedTypes> : TensorRankOf<allowedTypes, [3]>;
 class 4DTensorOf<list<Type> allowedTypes> : TensorRankOf<allowedTypes, [4]>;
+
+class StaticShapeTensorOf<list<Type> allowedTypes>
+  : TensorOf<allowedTypes, [HasStaticShapePred], "statically shaped tensor">;
+
+def AnyStaticShapeTensor : StaticShapeTensorOf<[AnyType]>;
+
+//===----------------------------------------------------------------------===//
+// Memref type.
 
 // Unranked Memref type
 class UnrankedMemRefOf<list<Type> allowedTypes> :
@@ -729,8 +740,6 @@ class UnrankedMemRefOf<list<Type> allowedTypes> :
                         "::mlir::UnrankedMemRefType">;
 
 def AnyUnrankedMemRef : UnrankedMemRefOf<[AnyType]>;
-
-// Memref type.
 
 // Memrefs are blocks of data with fixed type and rank.
 class MemRefOf<list<Type> allowedTypes> :
