@@ -390,11 +390,11 @@ let SubtargetPredicate = isGFX11Plus in {
     // is not an SGPR number.
     def S_SENDMSG_RTN_B32 : SOP1_Pseudo<
       "s_sendmsg_rtn_b32", (outs SReg_32:$sdst), (ins SendMsgImm:$src0),
-      "$sdst, $src0"
+      "$sdst, $src0", [(set i32:$sdst, (int_amdgcn_s_sendmsg_rtn timm:$src0))]
     >;
     def S_SENDMSG_RTN_B64 : SOP1_Pseudo<
       "s_sendmsg_rtn_b64", (outs SReg_64:$sdst), (ins SendMsgImm:$src0),
-      "$sdst, $src0"
+      "$sdst, $src0", [(set i64:$sdst, (int_amdgcn_s_sendmsg_rtn timm:$src0))]
     >;
   }
 } // End SubtargetPredicate = isGFX11Plus
