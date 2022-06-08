@@ -69,6 +69,10 @@ New Features
   should include assertions or not by default. For details, see
   :ref:`the documentation <assertions-mode>` about this new feature.
 
+- The implementation of the function ``std::to_chars`` for integral types has
+  moved from the dylib to the header. This means the function no longer has a
+  minimum deployment target.
+
 API Changes
 -----------
 
