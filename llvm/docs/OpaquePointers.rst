@@ -222,3 +222,12 @@ The next steps for the opaque pointer migration are:
 
 * Migrate Clang/LLVM tests to use opaque pointers.
 * Remove support for typed pointers after the LLVM 15 branch has been created.
+
+Version Support
+===============
+
+**LLVM 14:** Supports all necessary APIs for migrating to opaque pointers and deprecates/removes incompatible APIs. However, using opaque pointers in the optimization pipeline is **not** fully supported. This release can be used to make out-of-tree code compatible with opaque pointers, but opaque pointers should **not** be enabled in production.
+
+**LLVM 15:** Opaque pointers are enabled by default. Typed pointers are still available, but only supported on a best-effort basis and may be untested.
+
+**LLVM 16:** Only opaque pointers will be supported. Typed pointers will not be supported.
