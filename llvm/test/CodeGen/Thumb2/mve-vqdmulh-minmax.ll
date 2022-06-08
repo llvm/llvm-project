@@ -486,10 +486,10 @@ define i32 @scalar(i16 %a) {
 ; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    smulbb r1, r0, r0
 ; CHECK-NEXT:    movs r0, #127
-; CHECK-NEXT:    asrs r2, r1, #7
+; CHECK-NEXT:    lsrs r2, r1, #7
 ; CHECK-NEXT:    cmp r2, #127
 ; CHECK-NEXT:    it lt
-; CHECK-NEXT:    asrlt r0, r1, #7
+; CHECK-NEXT:    lsrlt r0, r1, #7
 ; CHECK-NEXT:    bx lr
   %e = sext i16 %a to i32
   %d = mul nsw i32 %e, %e

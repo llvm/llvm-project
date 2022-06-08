@@ -3173,6 +3173,14 @@ KnownBits SelectionDAG::computeKnownBits(SDValue Op, const APInt &DemandedElts,
       SelfMultiply &= isGuaranteedNotToBeUndefOrPoison(
           Op.getOperand(0), DemandedElts, false, Depth + 1);
     Known = KnownBits::mul(Known, Known2, SelfMultiply);
+
+    // If the multiplication is known not to overflow, the product of a number
+    // with itself is non-negative. Only do this if we didn't already computed
+    // the opposite value for the sign bit.
+    if (Op->getFlags().hasNoSignedWrap() &&
+        Op.getOperand(0) == Op.getOperand(1) &&
+        !Known.isNegative())
+      Known.makeNonNegative();
     break;
   }
   case ISD::MULHU: {

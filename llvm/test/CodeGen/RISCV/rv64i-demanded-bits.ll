@@ -24,3 +24,16 @@ define i32 @foo(i32 %x, i32 %y, i32 %z) {
   %g = shl i32 %f, %y
   ret i32 %g
 }
+
+; The sign bit of an nsw self multiply is 0. Make sure we can use this to
+; convert the AND constant to -8.
+define i64 @mul_self_nsw_sign(i64 %x) {
+; CHECK-LABEL: mul_self_nsw_sign:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    mul a0, a0, a0
+; CHECK-NEXT:    andi a0, a0, -8
+; CHECK-NEXT:    ret
+  %a = mul nsw i64 %x, %x
+  %b = and i64 %a, 9223372036854775800
+  ret i64 %b
+}
