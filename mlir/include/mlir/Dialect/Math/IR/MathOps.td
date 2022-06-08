@@ -652,4 +652,30 @@ def Math_TanhOp : Math_FloatUnaryOp<"tanh"> {
   }];
 }
 
+//===----------------------------------------------------------------------===//
+// RoundOp
+//===----------------------------------------------------------------------===//
+
+def Math_RoundOp : Math_FloatUnaryOp<"round"> {
+  let summary = "round of the specified value";
+  let description = [{
+    Syntax:
+
+    ```
+    operation ::= ssa-id `=` `math.round` ssa-use `:` type
+    ```
+
+    The `round` operation returns the operand rounded to the nearest integer
+    value in floating-point format. It takes one operand of floating point type
+    (i.e., scalar, tensor or vector) and produces one result of the same type.
+
+    Example:
+
+    ```mlir
+    // Scalar round operation.
+    %a = math.round %b : f64
+    ```
+  }];
+}
+
 #endif // MATH_OPS
