@@ -1734,9 +1734,10 @@ computeExpandedLayoutMap(MemRefType srcType, ArrayRef<int64_t> resultShape,
                                   .asStride();
     }
   }
-  return makeStridedLinearLayoutMap(
-      llvm::to_vector<8>(llvm::reverse(reverseResultStrides)), srcOffset,
-      srcType.getContext());
+  auto resultStrides = llvm::to_vector<8>(llvm::reverse(reverseResultStrides));
+  resultStrides.resize(resultShape.size(), 1);
+  return makeStridedLinearLayoutMap(resultStrides, srcOffset,
+                                    srcType.getContext());
 }
 
 static FailureOr<MemRefType>
