@@ -133,6 +133,8 @@ unsigned MLInlineAdvisor::getInitialFunctionLevel(const Function &F) const {
 }
 
 void MLInlineAdvisor::onPassEntry() {
+  if (ForceStop)
+    return;
   FPICache.clear();
   // Function passes executed between InlinerPass runs may have changed the
   // module-wide features.
@@ -174,7 +176,7 @@ void MLInlineAdvisor::onPassEntry() {
 void MLInlineAdvisor::onPassExit(LazyCallGraph::SCC *LastSCC) {
   // No need to keep this around - function passes will invalidate it.
   FPICache.clear();
-  if (!LastSCC)
+  if (!LastSCC || ForceStop)
     return;
   // Keep track of the nodes and edges we last saw. Then, in onPassEntry,
   // we update the node count and edge count from the subset of these nodes that
