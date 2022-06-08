@@ -124,10 +124,12 @@ void DXContainerWriter::writeParts(raw_ostream &OS) {
       dxbc::ProgramHeader Header;
       Header.MajorVersion = P.Program->MajorVersion;
       Header.MinorVersion = P.Program->MinorVersion;
+      Header.Unused = 0;
       Header.ShaderKind = P.Program->ShaderKind;
       memcpy(Header.Bitcode.Magic, "DXIL", 4);
       Header.Bitcode.MajorVersion = P.Program->DXILMajorVersion;
       Header.Bitcode.MinorVersion = P.Program->DXILMinorVersion;
+      Header.Bitcode.Unused = 0;
 
       // Compute the optional fields if needed...
       if (P.Program->DXILOffset)
