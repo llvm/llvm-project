@@ -31,7 +31,7 @@ class UnsupportedSeparate<string name> : Separate<["/", "-"], name>,
 def bitness : LLVMJoined<"m">, Values<"32,64">,
               HelpText<"Target platform (x86 or x86-64)">;
 def as_lex : LLVMFlag<"as-lex">,
-             HelpText<"Lex tokens from an .asm or .S file without assembling">;
+             HelpText<"Lex tokens from a file without assembling">;
 def debug : LLVMFlag<"debug">, Flags<[HelpHidden]>,
             HelpText<"Enable debug output">;
 def debug_only : LLVMCommaJoined<"debug-only=">, Flags<[HelpHidden]>,
@@ -81,8 +81,8 @@ def safeseh : MLFlag<"safeseh">,
                        "that are all declared with .SAFESEH. Only available in "
                        "32-bit.">;
 def assembly_file : MLJoinedOrSeparate<"Ta">,
-                    HelpText<"Assemble source file with name not ending with "
-                             "the .asm or the .S extension">;
+                    HelpText<"Assemble source file with the given name. Used "
+                             "if the filename begins with a forward slash.">;
 def error_on_warning : MLFlag<"WX">, Alias<fatal_warnings>;
 def parse_only : MLFlag<"Zs">, HelpText<"Run a syntax-check only">,
                  Alias<filetype>, AliasArgs<["null"]>;

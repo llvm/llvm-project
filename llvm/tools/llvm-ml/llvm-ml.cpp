@@ -208,9 +208,10 @@ int main(int Argc, char **Argv) {
   std::string InputFilename;
   for (auto *Arg : InputArgs.filtered(OPT_INPUT)) {
     std::string ArgString = Arg->getAsString(InputArgs);
-    StringRef ArgStringRef(ArgString);
-    if (ArgString == "-" || ArgStringRef.endswith(".asm") ||
-        ArgStringRef.endswith(".S")) {
+    bool IsFile = false;
+    std::error_code IsFileEC =
+        llvm::sys::fs::is_regular_file(ArgString, IsFile);
+    if (ArgString == "-" || IsFile) {
       if (!InputFilename.empty()) {
         WithColor::warning(errs(), ProgName)
             << "does not support multiple assembly files in one command; "
@@ -220,7 +221,7 @@ int main(int Argc, char **Argv) {
     } else {
       std::string Diag;
       raw_string_ostream OS(Diag);
-      OS << "invalid option '" << ArgString << "'";
+      OS << ArgString << ": " << IsFileEC.message();
 
       std::string Nearest;
       if (T.findNearest(ArgString, Nearest) < 2)
