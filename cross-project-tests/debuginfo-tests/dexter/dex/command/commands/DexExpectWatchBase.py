@@ -14,6 +14,7 @@ import difflib
 import os
 import math
 from collections import namedtuple
+from pathlib import PurePath
 
 from dex.command.CommandBase import CommandBase, StepExpectInfo
 from dex.command.StepValueInfo import StepValueInfo
@@ -208,12 +209,11 @@ class DexExpectWatchBase(CommandBase):
         return differences
 
     def eval(self, step_collection):
-        assert os.path.exists(self.path)
         for step in step_collection.steps:
             loc = step.current_location
 
-            if (loc.path and os.path.exists(loc.path) and
-                os.path.samefile(loc.path, self.path) and
+            if (loc.path and self.path and
+                PurePath(loc.path) == PurePath(self.path) and
                 loc.lineno in self.line_range):
                 try:
                     watch = step.program_state.frames[0].watches[self.expression]
