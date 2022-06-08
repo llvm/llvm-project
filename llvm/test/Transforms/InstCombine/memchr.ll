@@ -128,19 +128,19 @@ define void @test10() {
   ret void
 }
 
-; Check transformation memchr("\r\n", C, 2) != nullptr -> (C & 9216) != 0
+; Check transformation memchr("\r\n", C, 3) != nullptr -> (C & 9217) != 0
 define i1 @test11(i32 %C) {
 ; CHECK-LABEL: @test11(
 ; CHECK-NEXT:    [[TMP1:%.*]] = trunc i32 [[C:%.*]] to i16
 ; CHECK-NEXT:    [[TMP2:%.*]] = and i16 [[TMP1]], 255
 ; CHECK-NEXT:    [[MEMCHR_BOUNDS:%.*]] = icmp ult i16 [[TMP2]], 16
 ; CHECK-NEXT:    [[TMP3:%.*]] = shl i16 1, [[TMP2]]
-; CHECK-NEXT:    [[TMP4:%.*]] = and i16 [[TMP3]], 9216
+; CHECK-NEXT:    [[TMP4:%.*]] = and i16 [[TMP3]], 9217
 ; CHECK-NEXT:    [[MEMCHR_BITS:%.*]] = icmp ne i16 [[TMP4]], 0
 ; CHECK-NEXT:    [[MEMCHR:%.*]] = select i1 [[MEMCHR_BOUNDS]], i1 [[MEMCHR_BITS]], i1 false
 ; CHECK-NEXT:    ret i1 [[MEMCHR]]
 ;
-  %dst = call i8* @memchr(i8* getelementptr inbounds ([3 x i8], [3 x i8]* @newlines, i64 0, i64 0), i32 %C, i32 2)
+  %dst = call i8* @memchr(i8* getelementptr inbounds ([3 x i8], [3 x i8]* @newlines, i64 0, i64 0), i32 %C, i32 3)
   %cmp = icmp ne i8* %dst, null
   ret i1 %cmp
 }
@@ -159,13 +159,11 @@ define i1 @test12(i32 %C) {
 
 define i1 @test13(i32 %C) {
 ; CHECK-LABEL: @test13(
-; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[C:%.*]], 255
-; CHECK-NEXT:    [[MEMCHR_BOUNDS:%.*]] = icmp ult i32 [[TMP1]], 32
-; CHECK-NEXT:    [[TMP2:%.*]] = shl i32 1, [[TMP1]]
-; CHECK-NEXT:    [[TMP3:%.*]] = and i32 [[TMP2]], -2147483647
-; CHECK-NEXT:    [[MEMCHR_BITS:%.*]] = icmp ne i32 [[TMP3]], 0
-; CHECK-NEXT:    [[MEMCHR:%.*]] = select i1 [[MEMCHR_BOUNDS]], i1 [[MEMCHR_BITS]], i1 false
-; CHECK-NEXT:    ret i1 [[MEMCHR]]
+; CHECK-NEXT:    [[TMP1:%.*]] = trunc i32 [[C:%.*]] to i8
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i8 [[TMP1]], 0
+; CHECK-NEXT:    [[TMP3:%.*]] = icmp eq i8 [[TMP1]], 31
+; CHECK-NEXT:    [[CMP:%.*]] = or i1 [[TMP3]], [[TMP2]]
+; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %dst = call i8* @memchr(i8* getelementptr inbounds ([2 x i8], [2 x i8]* @single, i64 0, i64 0), i32 %C, i32 2)
   %cmp = icmp ne i8* %dst, null
