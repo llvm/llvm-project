@@ -37,8 +37,8 @@ int getOpcodeWithoutDelaySlot(uint16_t Opcode);
 } // namespace M88k
 
 class M88kInstrInfo : public M88kGenInstrInfo {
+  //M88kSubtarget &STI;
   const M88kRegisterInfo RI;
-  M88kSubtarget &STI;
 
   virtual void anchor();
 

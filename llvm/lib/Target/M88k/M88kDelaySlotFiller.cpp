@@ -89,7 +89,7 @@ bool M88kDelaySlotFiller::runOnMachineBasicBlock(MachineBasicBlock &MBB) {
   bool Changed = false;
   LastFiller = MBB.instr_end();
 
-  unsigned Opc;
+  int Opc;
   for (MachineBasicBlock::instr_iterator I = MBB.instr_begin();
        I != MBB.instr_end(); ++I) {
     if ((I->getDesc().isBranch() || I->getDesc().isCall() ||

@@ -172,7 +172,7 @@ bool M88kFrameLowering::spillCalleeSavedRegisters(
   MachineFunction *MF = MBB.getParent();
   const TargetSubtargetInfo &STI = MF->getSubtarget();
   const TargetInstrInfo *TII = STI.getInstrInfo();
-  const Register RAReg = STI.getRegisterInfo()->getRARegister();
+  //const Register RAReg = STI.getRegisterInfo()->getRARegister();
 
   for (auto &CS : CSI) {
     // Add the callee-saved register as live-in.

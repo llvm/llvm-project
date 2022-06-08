@@ -53,8 +53,7 @@ using namespace llvm;
 void M88kInstrInfo::anchor() {}
 
 M88kInstrInfo::M88kInstrInfo(M88kSubtarget &STI)
-    : M88kGenInstrInfo(M88k::ADJCALLSTACKDOWN, M88k::ADJCALLSTACKUP), RI(),
-      STI(STI) {}
+    : M88kGenInstrInfo(M88k::ADJCALLSTACKDOWN, M88k::ADJCALLSTACKUP), RI() {}
 
 std::pair<unsigned, unsigned>
 M88kInstrInfo::decomposeMachineOperandsTargetFlags(unsigned TF) const {

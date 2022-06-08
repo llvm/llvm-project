@@ -140,8 +140,8 @@ bool M88kMCAsmBackend::fixupNeedsRelaxation(const MCFixup &Fixup,
 bool M88kMCAsmBackend::shouldForceRelocation(const MCAssembler &Asm,
                                              const MCFixup &Fixup,
                                              const MCValue &Target) {
-  return Fixup.getKind() == M88k::FK_88K_DISP16 ||
-         Fixup.getKind() == M88k::FK_88K_DISP26;
+  unsigned Kind = Fixup.getKind();
+  return Kind == M88k::FK_88K_DISP16 || Kind == M88k::FK_88K_DISP26;
 }
 
 bool M88kMCAsmBackend::writeNopData(raw_ostream &OS, uint64_t Count,
