@@ -46,7 +46,10 @@ using namespace clang;
 ///           'using' 'namespace' '::'[opt] nested-name-specifier[opt]
 ///                 namespace-name ';'
 ///
-bool Parser::isCXXDeclarationStatement() {
+bool Parser::isCXXDeclarationStatement(
+    bool DisambiguatingWithExpression /*=false*/) {
+  assert(getLangOpts().CPlusPlus && "Must be called for C++ only.");
+
   switch (Tok.getKind()) {
     // asm-definition
   case tok::kw_asm:
@@ -59,6 +62,42 @@ bool Parser::isCXXDeclarationStatement() {
   case tok::kw_static_assert:
   case tok::kw__Static_assert:
     return true;
+  case tok::identifier: {
+    if (DisambiguatingWithExpression) {
+      RevertingTentativeParsingAction TPA(*this);
+      // Parse the C++ scope specifier.
+      CXXScopeSpec SS;
+      ParseOptionalCXXScopeSpecifier(SS, /*ObjectType=*/nullptr,
+                                     /*ObjectHasErrors=*/false,
+                                     /*EnteringContext=*/true);
+
+      switch (Tok.getKind()) {
+      case tok::identifier: {
+        IdentifierInfo *II = Tok.getIdentifierInfo();
+        bool isDeductionGuide =
+            Actions.isDeductionGuideName(getCurScope(), *II, Tok.getLocation(),
+                                         /*Template=*/nullptr);
+        if (Actions.isCurrentClassName(*II, getCurScope(), &SS) ||
+            isDeductionGuide) {
+          if (isConstructorDeclarator(/*Unqualified=*/SS.isEmpty(),
+                                      isDeductionGuide,
+                                      DeclSpec::FriendSpecified::No))
+            return true;
+        }
+        break;
+      }
+      case tok::kw_operator:
+        return true;
+      case tok::annot_cxxscope: // Check if this is a dtor.
+        if (NextToken().is(tok::tilde))
+          return true;
+        break;
+      default:
+        break;
+      }
+    }
+  }
+    [[fallthrough]];
     // simple-declaration
   default:
     return isCXXSimpleDeclaration(/*AllowForRangeDecl=*/false);

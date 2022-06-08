@@ -412,6 +412,7 @@ bool serialization::isRedeclarableDeclKind(unsigned Kind) {
   case Decl::PragmaComment:
   case Decl::PragmaDetectMismatch:
   case Decl::FileScopeAsm:
+  case Decl::TopLevelStmt:
   case Decl::AccessSpec:
   case Decl::Friend:
   case Decl::FriendTemplate:
