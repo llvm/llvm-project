@@ -1897,6 +1897,13 @@ void CheckHelper::CheckBindC(const Symbol &symbol) {
       }
     }
   }
+  if (const auto *proc{symbol.detailsIf<ProcEntityDetails>()}) {
+    if (!proc->interface().symbol() ||
+        !proc->interface().symbol()->attrs().test(Attr::BIND_C)) {
+      messages_.Say(symbol.name(),
+          "An interface name with BIND attribute must be specified if the BIND attribute is specified in a procedure declaration statement"_err_en_US);
+    }
+  }
 }
 
 bool CheckHelper::CheckDioDummyIsData(
