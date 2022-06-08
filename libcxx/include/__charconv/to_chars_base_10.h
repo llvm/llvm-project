@@ -33,7 +33,7 @@ _LIBCPP_HIDE_FROM_ABI char* __append1(char* __buffer, _Tp __value) noexcept {
 
 template <class _Tp>
 _LIBCPP_HIDE_FROM_ABI char* __append2(char* __buffer, _Tp __value) noexcept {
-  std::memcpy(__buffer, &__digits_base_10<>::__value[(__value)*2], 2);
+  std::memcpy(__buffer, &__table<>::__digits_base_10[(__value)*2], 2);
   return __buffer + 2;
 }
 
