@@ -1291,7 +1291,8 @@ InstructionCost ARMTTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
 
     if (!Mask.empty()) {
       std::pair<InstructionCost, MVT> LT = TLI->getTypeLegalizationCost(DL, Tp);
-      if (Mask.size() <= LT.second.getVectorNumElements() &&
+      if (LT.second.isVector() &&
+          Mask.size() <= LT.second.getVectorNumElements() &&
           (isVREVMask(Mask, LT.second, 16) || isVREVMask(Mask, LT.second, 32) ||
            isVREVMask(Mask, LT.second, 64)))
         return ST->getMVEVectorCostFactor(TTI::TCK_RecipThroughput) * LT.first;
