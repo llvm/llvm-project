@@ -449,7 +449,7 @@ static SectionKind getELFKindForNamedSection(StringRef Name, SectionKind K) {
       Name == ".llvmbc" || Name == ".llvmcmd")
     return SectionKind::getMetadata();
 
-  if (Name.startswith(".llvm.offloading"))
+  if (Name == ".llvm.offloading")
     return SectionKind::getExclude();
 
   if (Name.empty() || Name[0] != '.') return K;
