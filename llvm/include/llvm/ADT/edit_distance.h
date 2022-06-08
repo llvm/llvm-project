@@ -61,6 +61,15 @@ unsigned ComputeMappedEditDistance(ArrayRef<T> FromArray, ArrayRef<T> ToArray,
   typename ArrayRef<T>::size_type m = FromArray.size();
   typename ArrayRef<T>::size_type n = ToArray.size();
 
+  if (MaxEditDistance) {
+    // If the difference in size between the 2 arrays is larger than the max
+    // distance allowed, we can bail out as we will always need at least
+    // MaxEditDistance insertions or removals.
+    typename ArrayRef<T>::size_type AbsDiff = m > n ? m - n : n - m;
+    if (AbsDiff > MaxEditDistance)
+      return MaxEditDistance + 1;
+  }
+
   const unsigned SmallBufferSize = 64;
   unsigned SmallBuffer[SmallBufferSize];
   std::unique_ptr<unsigned[]> Allocated;
