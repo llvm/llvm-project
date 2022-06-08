@@ -696,7 +696,9 @@ public:
                   bool UseDebugInfo = false, bool OnlyLocalDecls = false,
                   CaptureDiagsKind CaptureDiagnostics = CaptureDiagsKind::None,
                   bool AllowASTWithCompilerErrors = false,
-                  bool UserFilesAreVolatile = false);
+                  bool UserFilesAreVolatile = false,
+                  IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS =
+                      llvm::vfs::getRealFileSystem());
 
 private:
   /// Helper function for \c LoadFromCompilerInvocation() and
