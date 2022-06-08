@@ -59,20 +59,11 @@ if.end:                                           ; preds = %if.then, %entry
 ; addi a0, a0, -160
 ; add  a0, a0, a1  ---> base + offset.
 define i8* @big_offset_neg_addi() nounwind {
-; RV32-LABEL: big_offset_neg_addi:
-; RV32:       # %bb.0:
-; RV32-NEXT:    lui a0, %hi(g+73568)
-; RV32-NEXT:    addi a0, a0, %lo(g+73568)
-; RV32-NEXT:    ret
-;
-; RV64-LABEL: big_offset_neg_addi:
-; RV64:       # %bb.0:
-; RV64-NEXT:    lui a0, %hi(g)
-; RV64-NEXT:    addi a0, a0, %lo(g)
-; RV64-NEXT:    lui a1, 18
-; RV64-NEXT:    addiw a1, a1, -160
-; RV64-NEXT:    add a0, a0, a1
-; RV64-NEXT:    ret
+; CHECK-LABEL: big_offset_neg_addi:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    lui a0, %hi(g+73568)
+; CHECK-NEXT:    addi a0, a0, %lo(g+73568)
+; CHECK-NEXT:    ret
   ret i8* getelementptr inbounds ([1048576 x i8], [1048576 x i8]* @g, i32 0, i32 73568)
 }
 
@@ -101,20 +92,11 @@ define i8* @big_offset_neg_lui_tail() {
 }
 
 define dso_local i32* @big_offset_one_use() local_unnamed_addr nounwind {
-; RV32-LABEL: big_offset_one_use:
-; RV32:       # %bb.0: # %entry
-; RV32-NEXT:    lui a0, %hi(s+16572)
-; RV32-NEXT:    addi a0, a0, %lo(s+16572)
-; RV32-NEXT:    ret
-;
-; RV64-LABEL: big_offset_one_use:
-; RV64:       # %bb.0: # %entry
-; RV64-NEXT:    lui a0, %hi(s)
-; RV64-NEXT:    addi a0, a0, %lo(s)
-; RV64-NEXT:    lui a1, 4
-; RV64-NEXT:    addiw a1, a1, 188
-; RV64-NEXT:    add a0, a0, a1
-; RV64-NEXT:    ret
+; CHECK-LABEL: big_offset_one_use:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    lui a0, %hi(s+16572)
+; CHECK-NEXT:    addi a0, a0, %lo(s+16572)
+; CHECK-NEXT:    ret
 entry:
   ret i32* getelementptr inbounds (%struct.S, %struct.S* @s, i32 0, i32 5)
 }
@@ -212,20 +194,11 @@ entry:
 }
 
 define i8* @neg_offset() {
-; RV32-LABEL: neg_offset:
-; RV32:       # %bb.0:
-; RV32-NEXT:    lui a0, %hi(bar-8191)
-; RV32-NEXT:    addi a0, a0, %lo(bar-8191)
-; RV32-NEXT:    ret
-;
-; RV64-LABEL: neg_offset:
-; RV64:       # %bb.0:
-; RV64-NEXT:    lui a0, %hi(bar)
-; RV64-NEXT:    addi a0, a0, %lo(bar)
-; RV64-NEXT:    lui a1, 1048574
-; RV64-NEXT:    addiw a1, a1, 1
-; RV64-NEXT:    add a0, a0, a1
-; RV64-NEXT:    ret
+; CHECK-LABEL: neg_offset:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    lui a0, %hi(bar-8191)
+; CHECK-NEXT:    addi a0, a0, %lo(bar-8191)
+; CHECK-NEXT:    ret
     ret i8* getelementptr inbounds ([0 x i8], [0 x i8]* @bar, i32 0, i32 -8191)
 }
 
