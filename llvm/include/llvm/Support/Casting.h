@@ -192,12 +192,6 @@ template <class To, class From> struct cast_retty {
       To, From, typename simplify_type<From>::SimpleType>::ret_type;
 };
 
-template <class T> struct cast_retty<T, T> {
-  // Casting T to itself, but have to use a ref if so we don't get a copy if
-  // it's not a pointer.
-  using ret_type = std::conditional_t<std::is_pointer<T>::value, T, T &>;
-};
-
 //===----------------------------------------------------------------------===//
 // cast_convert_val
 //===----------------------------------------------------------------------===//
@@ -282,8 +276,7 @@ struct CastIsPossible<To, Optional<From>> {
 /// always be possible.
 template <typename To, typename From>
 struct CastIsPossible<To, From,
-                      std::enable_if_t<std::is_same<To, From>::value ||
-                                       std::is_base_of<To, From>::value>> {
+                      std::enable_if_t<std::is_base_of<To, From>::value>> {
   static inline bool isPossible(const From &f) { return true; }
 };
 
