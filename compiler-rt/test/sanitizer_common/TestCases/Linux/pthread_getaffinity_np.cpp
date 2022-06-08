@@ -1,5 +1,8 @@
 // RUN: %clangxx -O0 %s -o %t && %run %t
 
+// Android does not implement pthread_getaffinity_np.
+// (Note: libresolv is integrated with libc, but apparently only
+// sched_getaffinity).
 // UNSUPPORTED: android
 
 #include <assert.h>
