@@ -66,7 +66,7 @@ class M68kMachineFunctionInfo : public MachineFunctionInfo {
   unsigned ArgumentStackSize = 0;
 
 public:
-  explicit M68kMachineFunctionInfo() = default;
+  explicit M68kMachineFunctionInfo(const MachineFunction &MF) {}
 
   MachineFunctionInfo *
   clone(BumpPtrAllocator &Allocator, MachineFunction &DestMF,
