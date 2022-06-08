@@ -33,6 +33,10 @@
       ompt_callback_##CallbackName##_fn(__VA_ARGS__);                          \
   } while (0)
 
+/// Function type def used for maintaining unique target region, target
+/// operations ids
+typedef uint64_t (*IdInterfaceTy)();
+
 namespace llvm {
 namespace omp {
 namespace target {
