@@ -211,9 +211,11 @@ Changes in existing checks
 
 - Fixed bugs in :doc:`bugprone-use-after-move
   <clang-tidy/checks/bugprone-use-after-move>`:
+
   - Treat a move in a lambda capture as happening in the function that defines
     the lambda, not within the body of the lambda (as we were previously doing
     erroneously).
+
   - Don't emit an erroneous warning on self-moves.
 
 Removed checks
