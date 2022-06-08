@@ -1,7 +1,9 @@
 # RUN: rm -rf %t && mkdir -p %t
 # RUN: llvm-mc -triple=aarch64-unknown-linux-gnu -relax-relocations=false \
 # RUN:   -position-independent -filetype=obj -o %t/elf_reloc.o %s
-# RUN: llvm-jitlink -noexec -check %s %t/elf_reloc.o
+# RUN: llvm-jitlink -noexec \
+# RUN:              -abs external_data=0xdeadbeef \
+# RUN:              -check %s %t/elf_reloc.o
 
         .text
 
@@ -122,6 +124,34 @@ test_str_64bit:
 local_func_addr_quad:
         .xword	named_func
         .size	local_func_addr_quad, 8
+
+# Check R_AARCH64_ADR_GOT_PAGE / R_AARCH64_LD64_GOT_LO12_NC handling with a
+# reference to an external symbol. Validate both the reference to the GOT entry,
+# and also the content of the GOT entry.
+#
+# For the ADRP :got: instruction we have the 21-bit delta to the 4k page
+# containing the GOT entry for external_data.
+#
+# For the LDR :got_lo12: instruction we have the 12-bit offset of the entry
+# within the page.
+#
+# jitlink-check: *{8}(got_addr(elf_reloc.o, external_data)) = external_data
+# jitlink-check: decode_operand(test_adr_gotpage_external, 1) = \
+# jitlink-check:     (got_addr(elf_reloc.o, external_data)[32:12] - \
+# jitlink-check:        test_adr_gotpage_external[32:12])
+# jitlink-check: decode_operand(test_ld64_gotlo12_external, 2) = \
+# jitlink-check:     got_addr(elf_reloc.o, external_data)[11:3]
+        .globl  test_adr_gotpage_external
+        .p2align  2
+test_adr_gotpage_external:
+        adrp  x0, :got:external_data
+        .size test_adr_gotpage_external, .-test_adr_gotpage_external
+
+        .globl  test_ld64_gotlo12_external
+        .p2align  2
+test_ld64_gotlo12_external:
+        ldr   x0, [x0, :got_lo12:external_data]
+        .size test_ld64_gotlo12_external, .-test_ld64_gotlo12_external
 
         .globl  named_data
         .p2align  4
