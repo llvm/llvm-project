@@ -2595,7 +2595,7 @@ FormatToken *UnwrappedLineParser::parseIfThenElse(IfStmtKind *IfKind,
       FormatTok->setFinalizedType(TT_ElseLBrace);
       ElseLeftBrace = FormatTok;
       CompoundStatementIndenter Indenter(this, Style, Line->Level);
-      IfStmtKind ElseBlockKind;
+      IfStmtKind ElseBlockKind = IfStmtKind::NotIf;
       parseBlock(/*MustBeDeclaration=*/false, /*AddLevels=*/1u,
                  /*MunchSemi=*/true, KeepElseBraces, &ElseBlockKind);
       if ((ElseBlockKind == IfStmtKind::IfOnly ||
