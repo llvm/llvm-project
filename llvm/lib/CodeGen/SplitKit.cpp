@@ -1352,34 +1352,13 @@ void SplitEditor::rewriteAssigned(bool ExtendRanges) {
         continue;
       // We may want to extend a live range for a partial redef, or for a use
       // tied to an early clobber.
-      if (!Edit->getParent().liveAt(Idx.getPrevSlot()))
+      Idx = Idx.getPrevSlot();
+      if (!Edit->getParent().liveAt(Idx))
         continue;
-    } else {
-      assert(MO.isUse());
-      bool IsEarlyClobber = false;
-      if (MO.isTied()) {
-        // We want to extend a live range into `e` slot rather than `r` slot if
-        // tied-def is early clobber, because the `e` slot already contained
-        // in the live range of early-clobber tied-def operand, give an example
-        // here:
-        //  0  %0 = ...
-        // 16  early-clobber %0 = Op %0 (tied-def 0), ...
-        // 32  ... = Op %0
-        // Before extend:
-        //   %0 = [0r, 0d) [16e, 32d)
-        // The point we want to extend is 0d to 16e not 16r in this case, but if
-        // we use 16r here we will extend nothing because that already contained
-        // in [16e, 32d).
-        unsigned OpIdx = MI->getOperandNo(&MO);
-        unsigned DefOpIdx = MI->findTiedOperandIdx(OpIdx);
-        const MachineOperand &DefOp = MI->getOperand(DefOpIdx);
-        IsEarlyClobber = DefOp.isEarlyClobber();
-      }
+    } else
+      Idx = Idx.getRegSlot(true);
 
-      Idx = Idx.getRegSlot(IsEarlyClobber);
-    }
-
-    SlotIndex Next = Idx;
+    SlotIndex Next = Idx.getNextSlot();
     if (LI.hasSubRanges()) {
       // We have to delay extending subranges until we have seen all operands
       // defining the register. This is because a <def,read-undef> operand
