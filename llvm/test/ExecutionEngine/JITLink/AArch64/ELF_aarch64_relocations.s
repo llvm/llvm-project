@@ -48,6 +48,71 @@ test_add_abs_lo12:
         add	x0, x0, :lo12:named_data
         .size test_add_abs_lo12, .-test_add_abs_lo12
 
+# Check R_AARCH64_LDST*_ABS_LO12_NC relocation of a local symbol
+#
+# The immediate value should be the symbol address right shifted according to its instruction bitwidth.
+#
+# jitlink-check: decode_operand(test_ldrb, 2) = named_data[11:0]
+# jitlink-check: decode_operand(test_ldrsb, 2) = (named_data + 0)[11:0]
+# jitlink-check: decode_operand(test_ldrh, 2) = (named_data + 0)[11:1]
+# jitlink-check: decode_operand(test_ldrsh, 2) = (named_data + 0)[11:1]
+# jitlink-check: decode_operand(test_ldr_32bit, 2) = (named_data + 0)[11:2]
+# jitlink-check: decode_operand(test_ldr_64bit, 2) = (named_data + 0)[11:3]
+# jitlink-check: decode_operand(test_strb, 2) = named_data[11:0]
+# jitlink-check: decode_operand(test_strh, 2) = (named_data + 0)[11:1]
+# jitlink-check: decode_operand(test_str_32bit, 2) = (named_data + 0)[11:2]
+# jitlink-check: decode_operand(test_str_64bit, 2) = (named_data + 0)[11:3]
+
+        .globl  test_ldrb
+test_ldrb:
+        ldrb	w0, [x1, :lo12:named_data]
+        .size test_ldrb, .-test_ldrb
+
+        .globl  test_ldrsb
+test_ldrsb:
+        ldrsb	w0, [x1, :lo12:named_data]
+        .size test_ldrsb, .-test_ldrsb
+
+        .globl  test_ldrh
+test_ldrh:
+        ldrh	w0, [x1, :lo12:named_data]
+        .size test_ldrh, .-test_ldrh
+
+        .globl  test_ldrsh
+test_ldrsh:
+        ldrsh	w0, [x1, :lo12:named_data]
+        .size test_ldrsh, .-test_ldrsh
+
+        .globl  test_ldr_32bit
+test_ldr_32bit:
+        ldr	w0, [x1, :lo12:named_data]
+        .size test_ldr_32bit, .-test_ldr_32bit
+
+        .globl  test_ldr_64bit
+test_ldr_64bit:
+        ldr	x0, [x1, :lo12:named_data]
+        .size test_ldr_64bit, .-test_ldr_64bit
+
+        .globl  test_strb
+test_strb:
+        strb	w0, [x1, :lo12:named_data]
+        .size test_strb, .-test_strb
+
+        .globl  test_strh
+test_strh:
+        strh	w0, [x1, :lo12:named_data]
+        .size test_strh, .-test_strh
+
+        .globl  test_str_32bit
+test_str_32bit:
+        str	w0, [x1, :lo12:named_data]
+        .size test_str_32bit, .-test_str_32bit
+
+        .globl  test_str_64bit
+test_str_64bit:
+        str	x0, [x1, :lo12:named_data]
+        .size test_str_64bit, .-test_str_64bit
+
         .globl  named_data
         .p2align  4
         .type   named_data,@object
