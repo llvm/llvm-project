@@ -13,8 +13,10 @@
 
 #include "llvm/Analysis/FunctionPropertiesAnalysis.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SetVector.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/IR/CFG.h"
+#include "llvm/IR/Dominators.h"
 #include "llvm/IR/Instructions.h"
 #include <deque>
 
@@ -37,11 +39,8 @@ int64_t getUses(const Function &F) {
 }
 } // namespace
 
-void FunctionPropertiesInfo::reIncludeBB(const BasicBlock &BB,
-                                         const LoopInfo &LI) {
+void FunctionPropertiesInfo::reIncludeBB(const BasicBlock &BB) {
   updateForBB(BB, +1);
-  MaxLoopDepth =
-      std::max(MaxLoopDepth, static_cast<int64_t>(LI.getLoopDepth(&BB)));
 }
 
 void FunctionPropertiesInfo::updateForBB(const BasicBlock &BB,
@@ -70,16 +69,29 @@ void FunctionPropertiesInfo::updateAggregateStats(const Function &F,
 
   Uses = getUses(F);
   TopLevelLoopCount = llvm::size(LI);
+  MaxLoopDepth = 0;
+  std::deque<const Loop *> Worklist;
+  llvm::append_range(Worklist, LI);
+  while (!Worklist.empty()) {
+    const auto *L = Worklist.front();
+    MaxLoopDepth =
+        std::max(MaxLoopDepth, static_cast<int64_t>(L->getLoopDepth()));
+    Worklist.pop_front();
+    llvm::append_range(Worklist, L->getSubLoops());
+  }
 }
 
-FunctionPropertiesInfo
-FunctionPropertiesInfo::getFunctionPropertiesInfo(const Function &F,
-                                                  const LoopInfo &LI) {
+FunctionPropertiesInfo FunctionPropertiesInfo::getFunctionPropertiesInfo(
+    const Function &F, FunctionAnalysisManager &FAM) {
 
   FunctionPropertiesInfo FPI;
+  // The const casts are due to the getResult API - there's no mutation of F.
+  const auto &LI = FAM.getResult<LoopAnalysis>(const_cast<Function &>(F));
+  const auto &DT =
+      FAM.getResult<DominatorTreeAnalysis>(const_cast<Function &>(F));
   for (const auto &BB : F)
-    if (!pred_empty(&BB) || BB.isEntryBlock())
-      FPI.reIncludeBB(BB, LI);
+    if (DT.isReachableFromEntry(&BB))
+      FPI.reIncludeBB(BB);
   FPI.updateAggregateStats(F, LI);
   return FPI;
 }
@@ -102,8 +114,7 @@ AnalysisKey FunctionPropertiesAnalysis::Key;
 
 FunctionPropertiesInfo
 FunctionPropertiesAnalysis::run(Function &F, FunctionAnalysisManager &FAM) {
-  return FunctionPropertiesInfo::getFunctionPropertiesInfo(
-      F, FAM.getResult<LoopAnalysis>(F));
+  return FunctionPropertiesInfo::getFunctionPropertiesInfo(F, FAM);
 }
 
 PreservedAnalyses
@@ -153,29 +164,50 @@ FunctionPropertiesUpdater::FunctionPropertiesUpdater(
     FPI.updateForBB(*BB, -1);
 }
 
-void FunctionPropertiesUpdater::finish(const LoopInfo &LI) const {
-  DenseSet<const BasicBlock *> ReIncluded;
-  std::deque<const BasicBlock *> Worklist;
+void FunctionPropertiesUpdater::finish(FunctionAnalysisManager &FAM) const {
+  SetVector<const BasicBlock *> Worklist;
 
   if (&CallSiteBB != &*Caller.begin()) {
-    FPI.reIncludeBB(*Caller.begin(), LI);
-    ReIncluded.insert(&*Caller.begin());
+    FPI.reIncludeBB(*Caller.begin());
+    Worklist.insert(&*Caller.begin());
   }
 
   // Update feature values from the BBs that were copied from the callee, or
   // might have been modified because of inlining. The latter have been
   // subtracted in the FunctionPropertiesUpdater ctor.
-  Worklist.push_back(&CallSiteBB);
-  while (!Worklist.empty()) {
-    const auto *BB = Worklist.front();
-    Worklist.pop_front();
-    if (!ReIncluded.insert(BB).second)
-      continue;
-    FPI.reIncludeBB(*BB, LI);
-    if (!Successors.contains(BB))
-      for (const auto *Succ : successors(BB))
-        Worklist.push_back(Succ);
+  // There could be successors that were reached before but now are only
+  // reachable from elsewhere in the CFG.
+  // Suppose the following diamond CFG (lines are arrows pointing down):
+  //    A
+  //  /   \
+  // B     C
+  //  \   /
+  //    D
+  // There's a call site in C that is inlined. Upon doing that, it turns out
+  // it expands to
+  //   call void @llvm.trap()
+  //   unreachable
+  // D isn't reachable from C anymore, but we did discount it when we set up
+  // FunctionPropertiesUpdater, so we need to re-include it here.
+
+  const auto &DT =
+      FAM.getResult<DominatorTreeAnalysis>(const_cast<Function &>(Caller));
+  for (const auto *Succ : Successors)
+    if (DT.isReachableFromEntry(Succ) && Worklist.insert(Succ))
+      FPI.reIncludeBB(*Succ);
+
+  auto I = Worklist.size();
+  bool CSInsertion = Worklist.insert(&CallSiteBB);
+  (void)CSInsertion;
+  assert(CSInsertion);
+  for (; I < Worklist.size(); ++I) {
+    const auto *BB = Worklist[I];
+    FPI.reIncludeBB(*BB);
+    for (const auto *Succ : successors(BB))
+      Worklist.insert(Succ);
   }
+
+  const auto &LI = FAM.getResult<LoopAnalysis>(const_cast<Function &>(Caller));
   FPI.updateAggregateStats(Caller, LI);
-  assert(FPI == FunctionPropertiesInfo::getFunctionPropertiesInfo(Caller, LI));
+  assert(FPI == FunctionPropertiesInfo::getFunctionPropertiesInfo(Caller, FAM));
 }

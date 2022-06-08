@@ -103,7 +103,7 @@ public:
   const int64_t CallerIRSize;
   const int64_t CalleeIRSize;
   const int64_t CallerAndCalleeEdges;
-  void updateCachedCallerFPI(const LoopInfo &LI) const;
+  void updateCachedCallerFPI(FunctionAnalysisManager &FAM) const;
 
 private:
   void reportContextForRemark(DiagnosticInfoOptimizationBase &OR);

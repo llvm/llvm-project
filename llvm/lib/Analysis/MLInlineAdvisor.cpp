@@ -23,6 +23,7 @@
 #include "llvm/Analysis/MLModelRunner.h"
 #include "llvm/Analysis/OptimizationRemarkEmitter.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
+#include "llvm/IR/Dominators.h"
 #include "llvm/IR/InstIterator.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/Support/CommandLine.h"
@@ -218,7 +219,7 @@ void MLInlineAdvisor::onSuccessfulInlining(const MLInlineAdvice &Advice,
     PreservedAnalyses PA = PreservedAnalyses::none();
     FAM.invalidate(*Caller, PA);
   }
-  Advice.updateCachedCallerFPI(FAM.getResult<LoopAnalysis>(*Caller));
+  Advice.updateCachedCallerFPI(FAM);
   int64_t IRSizeAfter =
       getIRSize(*Caller) + (CalleeWasDeleted ? 0 : Advice.CalleeIRSize);
   CurrentIRSize += IRSizeAfter - (Advice.CallerIRSize + Advice.CalleeIRSize);
@@ -414,8 +415,8 @@ void MLInlineAdvice::reportContextForRemark(
   OR << NV("ShouldInline", isInliningRecommended());
 }
 
-void MLInlineAdvice::updateCachedCallerFPI(const LoopInfo &LI) const {
-  FPU->finish(LI);
+void MLInlineAdvice::updateCachedCallerFPI(FunctionAnalysisManager &FAM) const {
+  FPU->finish(FAM);
 }
 
 void MLInlineAdvice::recordInliningImpl() {
