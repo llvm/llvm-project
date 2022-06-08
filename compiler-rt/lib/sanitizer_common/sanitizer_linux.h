@@ -82,6 +82,7 @@ uptr internal_clone(int (*fn)(void *), void *child_stack, int flags, void *arg,
 #endif
 int internal_uname(struct utsname *buf);
 #elif SANITIZER_FREEBSD
+uptr internal_procctl(int type, int id, int cmd, void *data);
 void internal_sigdelset(__sanitizer_sigset_t *set, int signum);
 #elif SANITIZER_NETBSD
 void internal_sigdelset(__sanitizer_sigset_t *set, int signum);
