@@ -50,7 +50,10 @@ public:
   bool writeNopData(raw_ostream &OS, uint64_t Count,
                     const MCSubtargetInfo *STI) const override;
 
+  Optional<MCFixupKind> getFixupKind(StringRef Name) const override;
   const MCFixupKindInfo &getFixupKindInfo(MCFixupKind Kind) const override;
+  bool shouldForceRelocation(const MCAssembler &Asm, const MCFixup &Fixup,
+                             const MCValue &Target) override;
 };
 
 } //End anonymous namespace
@@ -137,6 +140,9 @@ void AMDGPUAsmBackend::applyFixup(const MCAssembler &Asm, const MCFixup &Fixup,
                                   MutableArrayRef<char> Data, uint64_t Value,
                                   bool IsResolved,
                                   const MCSubtargetInfo *STI) const {
+  if (Fixup.getKind() >= FirstLiteralRelocationKind)
+    return;
+
   Value = adjustFixupValue(Fixup, Value, &Asm.getContext());
   if (!Value)
     return; // Doesn't change encoding.
@@ -156,6 +162,15 @@ void AMDGPUAsmBackend::applyFixup(const MCAssembler &Asm, const MCFixup &Fixup,
     Data[Offset + i] |= static_cast<uint8_t>((Value >> (i * 8)) & 0xff);
 }
 
+Optional<MCFixupKind> AMDGPUAsmBackend::getFixupKind(StringRef Name) const {
+  return StringSwitch<Optional<MCFixupKind>>(Name)
+#define ELF_RELOC(Name, Value)                                                 \
+  .Case(#Name, MCFixupKind(FirstLiteralRelocationKind + Value))
+#include "llvm/BinaryFormat/ELFRelocs/AMDGPU.def"
+#undef ELF_RELOC
+      .Default(None);
+}
+
 const MCFixupKindInfo &AMDGPUAsmBackend::getFixupKindInfo(
                                                        MCFixupKind Kind) const {
   const static MCFixupKindInfo Infos[AMDGPU::NumTargetFixupKinds] = {
@@ -163,10 +178,19 @@ const MCFixupKindInfo &AMDGPUAsmBackend::getFixupKindInfo(
     { "fixup_si_sopp_br",     0,     16,   MCFixupKindInfo::FKF_IsPCRel },
   };
 
+  if (Kind >= FirstLiteralRelocationKind)
+    return MCAsmBackend::getFixupKindInfo(FK_NONE);
+
   if (Kind < FirstTargetFixupKind)
     return MCAsmBackend::getFixupKindInfo(Kind);
 
   return Infos[Kind - FirstTargetFixupKind];
+}
+
+bool AMDGPUAsmBackend::shouldForceRelocation(const MCAssembler &,
+                                             const MCFixup &Fixup,
+                                             const MCValue &) {
+  return Fixup.getKind() >= FirstLiteralRelocationKind;
 }
 
 unsigned AMDGPUAsmBackend::getMinimumNopSize() const {
