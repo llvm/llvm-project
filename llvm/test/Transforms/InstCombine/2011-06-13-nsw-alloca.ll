@@ -15,9 +15,9 @@ define void @fu1(i32 %parm) nounwind ssp {
 
 ; <label>:4                                       ; preds = %0
   %5 = load i32, i32* %1, align 4
-  %6 = shl nsw i32 %5, 3
-; With "nsw", the alloca and its bitcast can be fused:
-  %7 = add nsw i32 %6, 2048
+  %6 = shl nuw i32 %5, 3
+; With "nuw", the alloca and its bitcast can be fused:
+  %7 = add nuw i32 %6, 2048
 ;  CHECK: alloca double
   %8 = alloca i8, i32 %7
   %9 = bitcast i8* %8 to double*
@@ -45,8 +45,8 @@ define void @fu2(i32 %parm) nounwind ssp {
 
 ; <label>:4                                       ; preds = %0
   %5 = load i32, i32* %1, align 4
-  %6 = mul nsw i32 %5, 8
-; Without "nsw", the alloca and its bitcast cannot be fused:
+  %6 = mul nuw i32 %5, 8
+; Without "nuw", the alloca and its bitcast cannot be fused:
   %7 = add  i32 %6, 2048
 ; CHECK: alloca i8
   %8 = alloca i8, i32 %7
