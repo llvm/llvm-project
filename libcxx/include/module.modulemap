@@ -298,6 +298,7 @@ module std [system] {
       module pop_heap                 { private header "__algorithm/pop_heap.h" }
       module prev_permutation         { private header "__algorithm/prev_permutation.h" }
       module push_heap                { private header "__algorithm/push_heap.h" }
+      module ranges_adjacent_find     { private header "__algorithm/ranges_adjacent_find.h" }
       module ranges_all_of            { private header "__algorithm/ranges_all_of.h" }
       module ranges_any_of            { private header "__algorithm/ranges_any_of.h" }
       module ranges_binary_search     { private header "__algorithm/ranges_binary_search.h" }
