@@ -630,6 +630,21 @@ Value *InstCombinerImpl::SimplifyDemandedUseBits(Value *V, APInt DemandedMask,
             ComputeNumSignBits(I->getOperand(0), Depth + 1, CxtI);
         if (SignBits >= NumHiDemandedBits)
           return I->getOperand(0);
+
+        // If we can pre-shift a left-shifted constant to the right without
+        // losing any low bits (we already know we don't demand the high bits),
+        // then eliminate the right-shift:
+        // (C << X) >> RightShiftAmtC --> (C >> RightShiftAmtC) << X
+        Value *X;
+        Constant *C;
+        if (match(I->getOperand(0), m_Shl(m_ImmConstant(C), m_Value(X)))) {
+          Constant *RightShiftAmtC = ConstantInt::get(VTy, ShiftAmt);
+          Constant *NewC = ConstantExpr::getLShr(C, RightShiftAmtC);
+          if (ConstantExpr::getShl(NewC, RightShiftAmtC) == C) {
+            Instruction *Shl = BinaryOperator::CreateShl(NewC, X);
+            return InsertNewInstWith(Shl, *I);
+          }
+        }
       }
 
       // Unsigned shift right.
