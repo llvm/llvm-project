@@ -718,9 +718,13 @@ let Command = "process attach" in {
 }
 
 let Command = "process continue" in {
-  def process_continue_ignore_count : Option<"ignore-count", "i">,
+  def process_continue_ignore_count : Option<"ignore-count", "i">, Group<1>,
     Arg<"UnsignedInteger">, Desc<"Ignore <N> crossings of the breakpoint (if it"
     " exists) for the currently selected thread.">;
+  def process_continue_run_to_bkpt : Option<"continue-to-bkpt", "b">, Group<2>,
+    Arg<"BreakpointIDRange">, Desc<"Specify a breakpoint to continue to, temporarily "
+    "ignoring other breakpoints.  Can be specified more than once.  "
+    "The continue action will be done synchronously if this option is specified.">;
 }
 
 let Command = "process detach" in {
