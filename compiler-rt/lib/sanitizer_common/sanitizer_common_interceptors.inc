@@ -10349,6 +10349,42 @@ INTERCEPTOR(int, sigaltstack, void *ss, void *oss) {
 #define INIT_SIGALTSTACK
 #endif
 
+#if SANITIZER_INTERCEPT_PROCCTL
+INTERCEPTOR(int, procctl, int idtype, u64 id, int cmd, uptr data) {
+   void *ctx;
+   COMMON_INTERCEPTOR_ENTER(ctx, procctl, idtype, id, cmd, data);
+   static const int PROC_REAP_ACQUIRE = 2;
+   static const int PROC_REAP_RELEASE = 3;
+   static const int PROC_REAP_STATUS = 4;
+   static const int PROC_REAP_GETPIDS = 5;
+   static const int PROC_REAP_KILL = 6;
+   if (cmd < PROC_REAP_ACQUIRE || cmd > PROC_REAP_KILL) {
+     COMMON_INTERCEPTOR_READ_RANGE(ctx, (void *)data, sizeof(int));
+   } else {
+     // reap_acquire/reap_release bears no arguments.
+     if (cmd > PROC_REAP_RELEASE) {
+       unsigned int reapsz;
+       switch (cmd) {
+       case PROC_REAP_STATUS:
+         reapsz = struct_procctl_reaper_status_sz;
+         break;
+       case PROC_REAP_GETPIDS:
+         reapsz = struct_procctl_reaper_pids_sz;
+         break;
+       case PROC_REAP_KILL:
+         reapsz = struct_procctl_reaper_kill_sz;
+         break;
+       }
+       COMMON_INTERCEPTOR_READ_RANGE(ctx, (void *)data, reapsz);
+     }
+   }
+   return REAL(procctl)(idtype, id, cmd, data);
+}
+#define INIT_PROCCTL COMMON_INTERCEPT_FUNCTION(procctl)
+#else
+#define INIT_PROCCTL
+#endif
+
 #if SANITIZER_INTERCEPT_UNAME
 INTERCEPTOR(int, uname, struct utsname *utsname) {
 #if SANITIZER_LINUX
@@ -10708,6 +10744,7 @@ static void InitializeCommonInterceptors() {
   INIT_QSORT_R;
   INIT_BSEARCH;
   INIT_SIGALTSTACK;
+  INIT_PROCCTL
   INIT_UNAME;
   INIT___XUNAME;
 
