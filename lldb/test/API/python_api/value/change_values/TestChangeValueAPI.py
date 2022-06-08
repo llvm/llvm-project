@@ -59,7 +59,7 @@ class ChangeValueAPITestCase(TestBase):
         self.assertTrue(process, PROCESS_IS_VALID)
 
         # Get Frame #0.
-        self.assertEquals(process.GetState(), lldb.eStateStopped)
+        self.assertState(process.GetState(), lldb.eStateStopped)
         thread = lldbutil.get_stopped_thread(
             process, lldb.eStopReasonBreakpoint)
         self.assertTrue(
@@ -136,7 +136,7 @@ class ChangeValueAPITestCase(TestBase):
         # Now continue.
         process.Continue()
 
-        self.assertEquals(process.GetState(), lldb.eStateStopped)
+        self.assertState(process.GetState(), lldb.eStateStopped)
         thread = lldbutil.get_stopped_thread(
             process, lldb.eStopReasonBreakpoint)
         self.assertTrue(
@@ -169,7 +169,7 @@ class ChangeValueAPITestCase(TestBase):
 
         process.Continue()
 
-        self.assertEquals(process.GetState(), lldb.eStateStopped)
+        self.assertState(process.GetState(), lldb.eStateStopped)
         thread = lldbutil.get_stopped_thread(
             process, lldb.eStopReasonBreakpoint)
         self.assertTrue(
