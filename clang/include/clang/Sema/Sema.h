@@ -3106,6 +3106,8 @@ public:
                               SourceLocation AsmLoc,
                               SourceLocation RParenLoc);
 
+  Decl *ActOnTopLevelStmtDecl(Stmt *Statement);
+
   /// Handle a C++11 empty-declaration and attribute-declaration.
   Decl *ActOnEmptyDeclaration(Scope *S, const ParsedAttributesView &AttrList,
                               SourceLocation SemiLoc);

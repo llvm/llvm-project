@@ -101,7 +101,6 @@ public:
       CompletionConsumer = &CI.getCodeCompletionConsumer();
 
     Preprocessor &PP = CI.getPreprocessor();
-    PP.enableIncrementalProcessing();
     PP.EnterMainSourceFile();
 
     if (!CI.hasSema())
@@ -174,9 +173,6 @@ IncrementalParser::ParseOrWrapTopLevelDecl() {
   Sema::ModuleImportState ImportState;
   for (bool AtEOF = P->ParseFirstTopLevelDecl(ADecl, ImportState); !AtEOF;
        AtEOF = P->ParseTopLevelDecl(ADecl, ImportState)) {
-    // If we got a null return and something *was* parsed, ignore it.  This
-    // is due to a top-level semicolon, an action override, or a parse error
-    // skipping something.
     if (ADecl && !Consumer->HandleTopLevelDecl(ADecl.get()))
       return llvm::make_error<llvm::StringError>("Parsing failed. "
                                                  "The consumer rejected a decl",

@@ -5236,6 +5236,29 @@ FileScopeAsmDecl *FileScopeAsmDecl::CreateDeserialized(ASTContext &C,
                                       SourceLocation());
 }
 
+void TopLevelStmtDecl::anchor() {}
+
+TopLevelStmtDecl *TopLevelStmtDecl::Create(ASTContext &C, Stmt *Statement) {
+  assert(Statement);
+  assert(C.getLangOpts().IncrementalExtensions &&
+         "Must be used only in incremental mode");
+
+  SourceLocation BeginLoc = Statement->getBeginLoc();
+  DeclContext *DC = C.getTranslationUnitDecl();
+
+  return new (C, DC) TopLevelStmtDecl(DC, BeginLoc, Statement);
+}
+
+TopLevelStmtDecl *TopLevelStmtDecl::CreateDeserialized(ASTContext &C,
+                                                       unsigned ID) {
+  return new (C, ID)
+      TopLevelStmtDecl(/*DC=*/nullptr, SourceLocation(), /*S=*/nullptr);
+}
+
+SourceRange TopLevelStmtDecl::getSourceRange() const {
+  return SourceRange(getLocation(), Statement->getEndLoc());
+}
+
 void EmptyDecl::anchor() {}
 
 EmptyDecl *EmptyDecl::Create(ASTContext &C, DeclContext *DC, SourceLocation L) {
