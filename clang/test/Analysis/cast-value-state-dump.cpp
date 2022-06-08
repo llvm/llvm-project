@@ -18,12 +18,12 @@ using namespace clang;
 
 void evalNonNullParamNonNullReturn(const Shape *S) {
   const auto *C = dyn_cast_or_null<Circle>(S);
-  // expected-note@-1 {{Assuming 'S' is a 'Circle'}}
+  // expected-note@-1 {{Assuming 'S' is a 'const class clang::Circle *'}}
   // expected-note@-2 {{'C' initialized here}}
 
   // FIXME: We assumed that 'S' is a 'Circle' therefore it is not a 'Square'.
   if (dyn_cast_or_null<Square>(S)) {
-    // expected-note@-1 {{Assuming 'S' is not a 'Square'}}
+    // expected-note@-1 {{Assuming 'S' is not a 'const class clang::Square *'}}
     // expected-note@-2 {{Taking false branch}}
     return;
   }
