@@ -1,9 +1,7 @@
 from __future__ import absolute_import
 import os
-import tempfile
-import subprocess
-import sys
-import platform
+import re
+import operator
 
 import lit.Test
 import lit.TestRunner
@@ -88,20 +86,36 @@ class LLDBTest(TestFormat):
         if timeoutInfo:
             return lit.Test.TIMEOUT, output
 
-        if exitCode:
-            if 'XPASS:' in out or 'XPASS:' in err:
-                return lit.Test.XPASS, output
+        # Parse the dotest output from stderr.
+        result_regex = r"\((\d+) passes, (\d+) failures, (\d+) errors, (\d+) skipped, (\d+) expected failures, (\d+) unexpected successes\)"
+        results = re.search(result_regex, err)
 
-            # Otherwise this is just a failure.
-            return lit.Test.FAIL, output
-
-        has_unsupported_tests = 'UNSUPPORTED:' in out or 'UNSUPPORTED:' in err
-        has_passing_tests = 'PASS:' in out or 'PASS:' in err
-        if has_unsupported_tests and not has_passing_tests:
-            return lit.Test.UNSUPPORTED, output
-
-        passing_test_line = 'RESULT: PASSED'
-        if passing_test_line not in out and passing_test_line not in err:
+        # If parsing fails mark this test as unresolved.
+        if not results:
             return lit.Test.UNRESOLVED, output
 
-        return lit.Test.PASS, output
+        passes = int(results.group(1))
+        failures = int(results.group(2))
+        errors = int(results.group(3))
+        skipped = int(results.group(4))
+        expected_failures = int(results.group(5))
+        unexpected_successes = int(results.group(6))
+
+        if exitCode:
+            # Mark this test as FAIL if at least one test failed.
+            if failures > 0:
+                return lit.Test.FAIL, output
+            lit_results = [(failures, lit.Test.FAIL),
+                           (errors, lit.Test.UNRESOLVED),
+                           (unexpected_successes, lit.Test.XPASS)]
+        else:
+            # Mark this test as PASS if at least one test passed.
+            if passes > 0:
+                return lit.Test.PASS, output
+            lit_results = [(passes, lit.Test.PASS),
+                           (skipped, lit.Test.UNSUPPORTED),
+                           (expected_failures, lit.Test.XFAIL)]
+
+        # Return the lit result code with the maximum occurrence. Only look at
+        # the first element and rely on the original order to break ties.
+        return max(lit_results, key=operator.itemgetter(0))[1], output

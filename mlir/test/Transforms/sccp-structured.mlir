@@ -179,3 +179,43 @@ func.func @affine_loop_zero_iter(%arg0 : index, %arg1 : index, %arg2 : index) ->
   // CHECK: return %[[C0]] : i32
   return %s0 : i32
 }
+
+// CHECK-LABEL: func @while_loop_different_arg_count
+func.func @while_loop_different_arg_count() -> index {
+  // CHECK-DAG: %[[TRUE:.*]] = arith.constant true
+  // CHECK-DAG: %[[C0:.*]] = arith.constant 0
+  // CHECK-DAG: %[[C1:.*]] = arith.constant 1
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  // CHECK: %[[WHILE:.*]] = scf.while
+  %0 = scf.while (%arg3 = %c0, %arg4 = %c1) : (index, index) -> index {
+    %1 = arith.cmpi slt, %arg3, %c1 : index
+    // CHECK: scf.condition(%[[TRUE]]) %[[C1]]
+    scf.condition(%1) %arg4 : index
+  } do {
+  ^bb0(%arg3: index):
+    %1 = arith.muli %arg3, %c1 : index
+    // CHECK: scf.yield %[[C0]], %[[C1]]
+    scf.yield %c0, %1 : index, index
+  }
+  // CHECK: return %[[WHILE]]
+  return %0 : index
+}
+
+// CHECK-LABEL: func @while_loop_false_condition
+func.func @while_loop_false_condition(%arg0 : index) -> index {
+  // CHECK: %[[C0:.*]] = arith.constant 0
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %0 = arith.muli %arg0, %c0 : index
+  %1 = scf.while (%arg1 = %0) : (index) -> index {
+    %2 = arith.cmpi slt, %arg1, %c0 : index
+    scf.condition(%2) %arg1 : index
+  } do {
+  ^bb0(%arg2 : index):
+    %3 = arith.addi %arg2, %c1 : index
+    scf.yield %3 : index
+  }
+  // CHECK: return %[[C0]]
+  func.return %1 : index
+}
