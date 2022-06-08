@@ -21,6 +21,6 @@ void test_memcpy_inline_4(void *dst, const void *src) {
 
 // CHECK-LABEL: define{{.*}} void @test_memcpy_inline_aligned_buffers(i64* noundef %dst, i64* noundef %src)
 void test_memcpy_inline_aligned_buffers(unsigned long long *dst, const unsigned long long *src) {
-  // CHECK:   call void @llvm.memcpy.inline.p0i8.p0i8.i64(i8* align 8 %2, i8* align 8 %3, i64 4, i1 false)
+  // CHECK:   call void @llvm.memcpy.inline.p0i8.p0i8.i64(i8* align 8 %1, i8* align 8 %3, i64 4, i1 false) 
   __builtin_memcpy_inline(dst, src, 4);
 }
