@@ -221,7 +221,30 @@ bool AArch64MIPeepholeOpt::visitORR(
   // zero-extend, we do not need the zero-extend. Let's check the MI's opcode is
   // real AArch64 instruction and if it is not, do not process the opcode
   // conservatively.
-  if (SrcMI->getOpcode() <= TargetOpcode::GENERIC_OP_END)
+  if (SrcMI->getOpcode() == TargetOpcode::COPY &&
+      SrcMI->getOperand(1).getReg().isVirtual()) {
+    const TargetRegisterClass *RC =
+        MRI->getRegClass(SrcMI->getOperand(1).getReg());
+
+    // A COPY from an FPR will become a FMOVSWr, so do so now so that we know
+    // that the upper bits are zero.
+    if (RC != &AArch64::FPR32RegClass &&
+        ((RC != &AArch64::FPR64RegClass && RC != &AArch64::FPR128RegClass) ||
+         SrcMI->getOperand(1).getSubReg() != AArch64::ssub))
+      return false;
+    Register CpySrc = SrcMI->getOperand(1).getReg();
+    if (SrcMI->getOperand(1).getSubReg() == AArch64::ssub) {
+      CpySrc = MRI->createVirtualRegister(&AArch64::FPR32RegClass);
+      BuildMI(*SrcMI->getParent(), SrcMI, SrcMI->getDebugLoc(),
+              TII->get(TargetOpcode::COPY), CpySrc)
+          .add(SrcMI->getOperand(1));
+    }
+    BuildMI(*SrcMI->getParent(), SrcMI, SrcMI->getDebugLoc(),
+            TII->get(AArch64::FMOVSWr), SrcMI->getOperand(0).getReg())
+        .addReg(CpySrc);
+    ToBeRemoved.insert(SrcMI);
+  }
+  else if (SrcMI->getOpcode() <= TargetOpcode::GENERIC_OP_END)
     return false;
 
   Register DefReg = MI.getOperand(0).getReg();
