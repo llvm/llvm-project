@@ -112,7 +112,7 @@ private:
                                       Optional<uint64_t> RangesBase = None);
 
   std::unique_ptr<DebugBufferVector>
-  makeFinalLocListsSection(SimpleBinaryPatcher &DebugInfoPatcher,
+  makeFinalLocListsSection(DebugInfoBinaryPatcher &DebugInfoPatcher,
                            DWARFVersion Version);
 
   /// Finalize debug sections in the main binary.
