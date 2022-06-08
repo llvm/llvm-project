@@ -117,11 +117,11 @@ LRTable LRTable::buildSLR(const Grammar &G) {
   auto FollowSets = followSets(G);
   for (StateID SID = 0; SID < Graph.states().size(); ++SID) {
     for (const Item &I : Graph.states()[SID].Items) {
-      // If we've just parsed the start symbol, we can accept the input.
-      if (G.lookupRule(I.rule()).Target == G.underscore() && !I.hasNext()) {
-        Build.insert({SID, tokenSymbol(tok::eof), Action::accept(I.rule())});
+      // If we've just parsed the start symbol, this means we successfully parse
+      // the input. We don't add the reduce action of `_ := start_symbol` in the
+      // LRTable (the GLR parser handles it specifically).
+      if (G.lookupRule(I.rule()).Target == G.underscore() && !I.hasNext())
         continue;
-      }
       if (!I.hasNext()) {
         // If we've reached the end of a rule A := ..., then we can reduce if
         // the next token is in the follow set of A.
