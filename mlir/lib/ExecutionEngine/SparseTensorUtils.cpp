@@ -1567,6 +1567,16 @@ _mlir_ciface_newSparseTensor(StridedMemRefType<DimLevelType, 1> *aref, // NOLINT
   CASE(OverheadType::kU8, OverheadType::kU8, PrimaryType::kF32, uint8_t,
        uint8_t, float);
 
+  // Two-byte floats with both overheads of the same type.
+  CASE_SECSAME(OverheadType::kU64, PrimaryType::kF16, uint64_t, f16);
+  CASE_SECSAME(OverheadType::kU64, PrimaryType::kBF16, uint64_t, bf16);
+  CASE_SECSAME(OverheadType::kU32, PrimaryType::kF16, uint32_t, f16);
+  CASE_SECSAME(OverheadType::kU32, PrimaryType::kBF16, uint32_t, bf16);
+  CASE_SECSAME(OverheadType::kU16, PrimaryType::kF16, uint16_t, f16);
+  CASE_SECSAME(OverheadType::kU16, PrimaryType::kBF16, uint16_t, bf16);
+  CASE_SECSAME(OverheadType::kU8, PrimaryType::kF16, uint8_t, f16);
+  CASE_SECSAME(OverheadType::kU8, PrimaryType::kBF16, uint8_t, bf16);
+
   // Integral matrices with both overheads of the same type.
   CASE_SECSAME(OverheadType::kU64, PrimaryType::kI64, uint64_t, int64_t);
   CASE_SECSAME(OverheadType::kU64, PrimaryType::kI32, uint64_t, int32_t);
