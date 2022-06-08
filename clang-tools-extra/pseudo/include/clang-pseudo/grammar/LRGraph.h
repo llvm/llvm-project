@@ -137,8 +137,20 @@ public:
     SymbolID Label;
   };
 
+  // A possible error recovery: choose to match some tokens against a symbol.
+  //
+  // e.g. a state that contains
+  //   stmt := { . stmt-seq [recover=braces] }
+  // has a Recovery { Src = S, Strategy=braces, Result=stmt-seq }.
+  struct Recovery {
+    StateID Src; // The state we are in when encountering the error.
+    RecoveryStrategy Strategy; // Heuristic choosing the tokens to match.
+    SymbolID Result;           // The symbol that is produced.
+  };
+
   llvm::ArrayRef<State> states() const { return States; }
   llvm::ArrayRef<Edge> edges() const { return Edges; }
+  llvm::ArrayRef<Recovery> recoveries() const { return Recoveries; }
   llvm::ArrayRef<std::pair<SymbolID, StateID>> startStates() const {
     return StartStates;
   }
@@ -147,12 +159,15 @@ public:
 
 private:
   LRGraph(std::vector<State> States, std::vector<Edge> Edges,
+          std::vector<Recovery> Recoveries,
           std::vector<std::pair<SymbolID, StateID>> StartStates)
       : States(std::move(States)), Edges(std::move(Edges)),
-        StartStates(std::move(StartStates)) {}
+        Recoveries(std::move(Recoveries)), StartStates(std::move(StartStates)) {
+  }
 
   std::vector<State> States;
   std::vector<Edge> Edges;
+  std::vector<Recovery> Recoveries;
   std::vector<std::pair<SymbolID, StateID>> StartStates;
 };
 

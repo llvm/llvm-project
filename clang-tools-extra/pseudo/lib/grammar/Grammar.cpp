@@ -59,8 +59,11 @@ std::string Grammar::dumpRule(RuleID RID) const {
   llvm::raw_string_ostream OS(Result);
   const Rule &R = T->Rules[RID];
   OS << symbolName(R.Target) << " :=";
-  for (SymbolID SID : R.seq())
-    OS << " " << symbolName(SID);
+  for (unsigned I = 0; I < R.Size; ++I) {
+    OS << " " << symbolName(R.Sequence[I]);
+    if (R.RecoveryIndex == I)
+      OS << " [recover=" << static_cast<unsigned>(R.Recovery) << "]";
+  }
   if (R.Guard)
     OS << " [guard=" << T->AttributeValues[R.Guard] << "]";
   return Result;
