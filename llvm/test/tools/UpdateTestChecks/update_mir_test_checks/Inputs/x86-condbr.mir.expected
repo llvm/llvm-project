@@ -30,6 +30,7 @@ body:             |
   ; CHECK-LABEL: name: test
   ; CHECK: bb.0.entry:
   ; CHECK-NEXT:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
+  ; CHECK-NEXT:   liveins: $edi
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:gr32 = COPY $edi
   ; CHECK-NEXT:   [[MOV32r0_:%[0-9]+]]:gr32 = MOV32r0 implicit-def $eflags

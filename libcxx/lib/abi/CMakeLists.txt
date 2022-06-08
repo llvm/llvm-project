@@ -55,6 +55,11 @@ if (CMAKE_CXX_COMPILER_TARGET)
 else()
   set(triple "${LLVM_DEFAULT_TARGET_TRIPLE}")
 endif()
+if (LIBCXX_ENABLE_DEBUG_MODE OR LIBCXX_ENABLE_BACKWARDS_COMPATIBILITY_DEBUG_MODE_SYMBOLS)
+  set(has_debug_symbols ON)
+else()
+  set(has_debug_symbols OFF)
+endif()
 cxx_abi_list_identifier(abi_list_identifier
   "${triple}"
   "${LIBCXX_CXX_ABI}"
@@ -62,7 +67,7 @@ cxx_abi_list_identifier(abi_list_identifier
   "${LIBCXX_ABI_UNSTABLE}"
   "${LIBCXX_ENABLE_EXCEPTIONS}"
   "${LIBCXX_ENABLE_NEW_DELETE_DEFINITIONS}"
-  "${LIBCXX_ENABLE_DEBUG_MODE_SUPPORT}"
+  "${has_debug_symbols}"
   "${LIBCXX_ENABLE_INCOMPLETE_FEATURES}"
 )
 

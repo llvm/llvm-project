@@ -22,18 +22,16 @@ using namespace CodeGen;
 
 SanitizerMetadata::SanitizerMetadata(CodeGenModule &CGM) : CGM(CGM) {}
 
-static bool isAsanHwasanOrMemTag(const SanitizerSet& SS) {
+static bool isAsanHwasanOrMemTag(const SanitizerSet &SS) {
   return SS.hasOneOf(SanitizerKind::Address | SanitizerKind::KernelAddress |
                      SanitizerKind::HWAddress | SanitizerKind::KernelHWAddress |
                      SanitizerKind::MemTag);
 }
 
-void SanitizerMetadata::reportGlobalToASan(llvm::GlobalVariable *GV,
-                                           SourceLocation Loc, StringRef Name,
-                                           QualType Ty, bool IsDynInit,
-                                           bool IsExcluded) {
-  if (!isAsanHwasanOrMemTag(CGM.getLangOpts().Sanitize))
-    return;
+void SanitizerMetadata::reportGlobal(llvm::GlobalVariable *GV,
+                                     SourceLocation Loc, StringRef Name,
+                                     QualType Ty, bool IsDynInit,
+                                     bool IsExcluded) {
   IsDynInit &= !CGM.isInNoSanitizeList(GV, Loc, Ty, "init");
   IsExcluded |= CGM.isInNoSanitizeList(GV, Loc, Ty);
 
@@ -61,29 +59,41 @@ void SanitizerMetadata::reportGlobalToASan(llvm::GlobalVariable *GV,
   AsanGlobals->addOperand(ThisGlobal);
 }
 
-void SanitizerMetadata::reportGlobalToASan(llvm::GlobalVariable *GV,
-                                           const VarDecl &D, bool IsDynInit) {
+void SanitizerMetadata::reportGlobal(llvm::GlobalVariable *GV, const VarDecl &D,
+                                     bool IsDynInit) {
   if (!isAsanHwasanOrMemTag(CGM.getLangOpts().Sanitize))
     return;
   std::string QualName;
   llvm::raw_string_ostream OS(QualName);
   D.printQualifiedName(OS);
 
-  bool IsExcluded = false;
-  for (auto Attr : D.specific_attrs<NoSanitizeAttr>())
-    if (Attr->getMask() & SanitizerKind::Address)
-      IsExcluded = true;
-  if (D.hasAttr<DisableSanitizerInstrumentationAttr>())
-    IsExcluded = true;
-  reportGlobalToASan(GV, D.getLocation(), OS.str(), D.getType(), IsDynInit,
-                     IsExcluded);
+  auto getNoSanitizeMask = [](const VarDecl &D) {
+    if (D.hasAttr<DisableSanitizerInstrumentationAttr>())
+      return SanitizerKind::All;
+
+    SanitizerMask NoSanitizeMask;
+    for (auto *Attr : D.specific_attrs<NoSanitizeAttr>())
+      NoSanitizeMask |= Attr->getMask();
+
+    return NoSanitizeMask;
+  };
+  reportGlobal(GV, D.getLocation(), OS.str(), D.getType(), IsDynInit,
+               SanitizerSet{getNoSanitizeMask(D)}.has(SanitizerKind::Address));
+}
+
+void SanitizerMetadata::reportGlobal(llvm::GlobalVariable *GV,
+                                     SourceLocation Loc, StringRef Name,
+                                     QualType Ty, bool IsDynInit) {
+  if (!isAsanHwasanOrMemTag(CGM.getLangOpts().Sanitize))
+    return;
+  reportGlobal(GV, Loc, Name, Ty, IsDynInit, false);
 }
 
 void SanitizerMetadata::disableSanitizerForGlobal(llvm::GlobalVariable *GV) {
   // For now, just make sure the global is not modified by the ASan
   // instrumentation.
   if (isAsanHwasanOrMemTag(CGM.getLangOpts().Sanitize))
-    reportGlobalToASan(GV, SourceLocation(), "", QualType(), false, true);
+    reportGlobal(GV, SourceLocation(), "", QualType(), false, true);
 }
 
 void SanitizerMetadata::disableSanitizerForInstruction(llvm::Instruction *I) {

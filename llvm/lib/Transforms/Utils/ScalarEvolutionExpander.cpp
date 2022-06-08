@@ -1632,7 +1632,6 @@ Value *SCEVExpander::visitAddRecExpr(const SCEVAddRecExpr *S) {
     NewS = Ext;
 
   const SCEV *V = cast<SCEVAddRecExpr>(NewS)->evaluateAtIteration(IH, SE);
-  //cerr << "Evaluated: " << *this << "\n     to: " << *V << "\n";
 
   // Truncate the result down to the original type, if needed.
   const SCEV *T = SE.getTruncateOrNoop(V, Ty);

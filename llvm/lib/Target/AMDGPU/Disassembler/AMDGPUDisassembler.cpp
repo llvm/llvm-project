@@ -471,7 +471,8 @@ DecodeStatus AMDGPUDisassembler::getInstruction(MCInst &MI, uint64_t &Size,
         break;
       }
       Res = tryDecodeInst(DecoderTableGFX1196, MI, DecW, Address);
-      if (Res) break;
+      if (Res)
+        break;
     }
     // Reinitialize Bytes
     Bytes = Bytes_.slice(0, MaxInstBytesNum);
@@ -563,9 +564,6 @@ DecodeStatus AMDGPUDisassembler::getInstruction(MCInst &MI, uint64_t &Size,
     }
 
     Res = tryDecodeInst(DecoderTableGFX1032, MI, DW, Address);
-    if (Res) break;
-
-    Res = tryDecodeInst(DecoderTableGFX1132, MI, DW, Address);
     if (Res) break;
 
     Res = tryDecodeInst(DecoderTableGFX1132, MI, DW, Address);

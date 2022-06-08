@@ -402,8 +402,8 @@ MemDepResult MemoryDependenceResults::getSimplePointerDependencyFrom(
   // forwarding, but any mayalias write can be assumed to be noalias.
   // Arguably, this logic should be pushed inside AliasAnalysis itself.
   if (isLoad && QueryInst) {
-    LoadInst *LI = cast<LoadInst>(QueryInst);
-    if (LI->hasMetadata(LLVMContext::MD_invariant_load))
+    LoadInst *LI = dyn_cast<LoadInst>(QueryInst);
+    if (LI && LI->hasMetadata(LLVMContext::MD_invariant_load))
       isInvariantLoad = true;
   }
 
@@ -734,8 +734,6 @@ MemoryDependenceResults::getNonLocalCallDependency(CallBase *QueryCall) {
     llvm::sort(Cache);
 
     ++NumCacheDirtyNonLocal;
-    // cerr << "CACHED CASE: " << DirtyBlocks.size() << " dirty: "
-    //     << Cache.size() << " cached: " << *QueryInst;
   } else {
     // Seed DirtyBlocks with each of the preds of QueryInst's block.
     BasicBlock *QueryBB = QueryCall->getParent();

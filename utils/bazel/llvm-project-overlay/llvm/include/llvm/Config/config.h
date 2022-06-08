@@ -309,9 +309,6 @@
 /* Define if overriding target triple is enabled */
 /* #undef LLVM_TARGET_TRIPLE_ENV */
 
-/* LLVM version information */
-/* #undef LLVM_VERSION_INFO */
-
 /* Whether tools show host and target info when invoked with --version */
 #define LLVM_VERSION_PRINTER_SHOW_HOST_TARGET_INFO 1
 
@@ -335,9 +332,6 @@
 
 /* Define to the vendor of this package. */
 /* #undef PACKAGE_VENDOR */
-
-/* Define as the return type of signal handlers (`int' or `void'). */
-#define RETSIGTYPE void
 
 /* Define if std::is_trivially_copyable is supported */
 #define HAVE_STD_IS_TRIVIALLY_COPYABLE 1
