@@ -38,7 +38,7 @@ public:
   /// \return
   ///   An \a IntelPTMultiCoreTrace instance if tracing was successful, or
   ///   an \a llvm::Error otherwise.
-  static llvm::Expected<IntelPTProcessTraceUP>
+  static llvm::Expected<std::unique_ptr<IntelPTMultiCoreTrace>>
   StartOnAllCores(const TraceIntelPTStartRequest &request,
                   NativeProcessProtocol &process);
 
@@ -65,7 +65,7 @@ public:
   ///   The perf event collecting context switches for the given core.
   void ForEachCore(std::function<void(lldb::core_id_t core_id,
                                       IntelPTSingleBufferTrace &intelpt_trace,
-                                      PerfEvent &context_switch_trace)>
+                                      ContextSwitchTrace &context_switch_trace)>
                        callback);
 
   void ProcessDidStop() override;

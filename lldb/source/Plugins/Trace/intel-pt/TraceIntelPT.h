@@ -163,15 +163,6 @@ public:
 private:
   friend class TraceIntelPTSessionFileParser;
 
-  /// Create post-mortem threads associated with the processes traced by this
-  /// instance using the context switch traces.
-  ///
-  /// This does nothing if the threads already exist.
-  ///
-  /// \return
-  ///   An \a llvm::Error in case of failures.
-  llvm::Error CreateThreadsFromContextSwitches();
-
   llvm::Expected<pt_cpu> GetCPUInfoForLiveProcess();
 
   /// Postmortem trace constructor
@@ -185,13 +176,12 @@ private:
   /// \param[in] trace_threads
   ///     The threads traced in the live session. They must belong to the
   ///     processes mentioned above.
-  TraceIntelPT(JSONTraceSession &session, const FileSpec &session_file_dir,
+  TraceIntelPT(JSONTraceSession &session,
                llvm::ArrayRef<lldb::ProcessSP> traced_processes,
                llvm::ArrayRef<lldb::ThreadPostMortemTraceSP> traced_threads);
 
   /// Constructor for live processes
-  TraceIntelPT(Process &live_process)
-      : Trace(live_process), m_thread_decoders(){};
+  TraceIntelPT(Process &live_process) : Trace(live_process){};
 
   /// Decode the trace of the given thread that, i.e. recontruct the traced
   /// instructions.
@@ -205,20 +195,29 @@ private:
   ///     errors are embedded in the instruction list.
   DecodedThreadSP Decode(Thread &thread);
 
-  /// It is provided by either a session file or a live process' "cpuInfo"
-  /// binary data.
-  llvm::Optional<pt_cpu> m_cpu_info;
-  llvm::Optional<TraceIntelPTMultiCoreDecoder> m_multicore_decoder;
-  /// These decoders are used for the non-per-core case
-  std::map<lldb::tid_t, std::unique_ptr<ThreadDecoder>> m_thread_decoders;
-  /// Helper variable used to track long running operations for telemetry.
-  TaskTimer m_task_timer;
-  /// It is provided by either a session file or a live process to convert TSC
-  /// counters to and from nanos. It might not be available on all hosts.
-  llvm::Optional<LinuxPerfZeroTscConversion> m_tsc_conversion;
-};
+  /// We package all the data that can change upon process stops to make sure
+  /// this contract is very visible.
+  /// This variable should only be accessed directly by constructores or live
+  /// process data refreshers.
+  struct Storage {
+    llvm::Optional<TraceIntelPTMultiCoreDecoder> multicore_decoder;
+    /// These decoders are used for the non-per-core case
+    std::map<lldb::tid_t, std::unique_ptr<ThreadDecoder>> thread_decoders;
+    /// Helper variable used to track long running operations for telemetry.
+    TaskTimer task_timer;
+    /// It is provided by either a session file or a live process to convert TSC
+    /// counters to and from nanos. It might not be available on all hosts.
+    llvm::Optional<LinuxPerfZeroTscConversion> tsc_conversion;
+  } m_storage;
 
-using TraceIntelPTSP = std::shared_ptr<TraceIntelPT>;
+  /// It is provided by either a session file or a live process' "cpuInfo"
+  /// binary data. We don't put it in the Storage because this variable doesn't
+  /// change.
+  llvm::Optional<pt_cpu> m_cpu_info;
+
+  /// Get the storage after refreshing the data in the case of a live process.
+  Storage &GetUpdatedStorage();
+};
 
 } // namespace trace_intel_pt
 } // namespace lldb_private

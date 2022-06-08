@@ -262,7 +262,7 @@ BuildProcessSection(Process &process, const FileSpec &directory) {
     return json_modules.takeError();
 
   return JSONProcess{
-      static_cast<int64_t>(process.GetID()),
+      process.GetID(),
       process.GetTarget().GetArchitecture().GetTriple().getTriple(),
       json_threads.get(), json_modules.get()};
 }

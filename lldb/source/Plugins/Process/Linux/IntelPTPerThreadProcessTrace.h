@@ -32,7 +32,7 @@ public:
   /// \return
   ///   An \a IntelPTMultiCoreTrace instance if tracing was successful, or
   ///   an \a llvm::Error otherwise.
-  static llvm::Expected<IntelPTProcessTraceUP>
+  static llvm::Expected<std::unique_ptr<IntelPTPerThreadProcessTrace>>
   Start(const TraceIntelPTStartRequest &request,
         llvm::ArrayRef<lldb::tid_t> current_tids);
 

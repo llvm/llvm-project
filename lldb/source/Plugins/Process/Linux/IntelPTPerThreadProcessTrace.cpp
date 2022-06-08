@@ -52,10 +52,11 @@ IntelPTPerThreadProcessTrace::TryGetBinaryData(
   return m_thread_traces.TryGetBinaryData(request);
 }
 
-Expected<IntelPTProcessTraceUP>
+Expected<std::unique_ptr<IntelPTPerThreadProcessTrace>>
 IntelPTPerThreadProcessTrace::Start(const TraceIntelPTStartRequest &request,
                                     ArrayRef<lldb::tid_t> current_tids) {
-  IntelPTProcessTraceUP trace(new IntelPTPerThreadProcessTrace(request));
+  std::unique_ptr<IntelPTPerThreadProcessTrace> trace(
+      new IntelPTPerThreadProcessTrace(request));
 
   Error error = Error::success();
   for (lldb::tid_t tid : current_tids)

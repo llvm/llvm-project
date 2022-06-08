@@ -74,8 +74,7 @@ private:
                          const TraceIntelPTStartRequest &request);
 
   /// \return
-  ///   The conversion object between TSC and wall time. It caches the result
-  ///   upon success.
+  ///   The conversion object between TSC and wall time.
   llvm::Expected<LinuxPerfZeroTscConversion &>
   FetchPerfTscConversionParameters();
 
@@ -87,9 +86,6 @@ private:
   /// Only one instance of "process trace" can be active at a given time.
   /// It might be \b nullptr.
   IntelPTProcessTraceUP m_process_trace_up;
-
-  /// Cached TSC to and from wall time conversion.
-  llvm::Optional<LinuxPerfZeroTscConversion> m_cached_tsc_conversion;
 };
 
 } // namespace process_linux

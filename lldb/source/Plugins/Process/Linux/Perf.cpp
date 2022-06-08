@@ -74,7 +74,7 @@ void resource_handle::FileDescriptorDeleter::operator()(long *ptr) {
 llvm::Expected<PerfEvent> PerfEvent::Init(perf_event_attr &attr,
                                           Optional<lldb::pid_t> pid,
                                           Optional<lldb::core_id_t> cpu,
-                                          Optional<int> group_fd,
+                                          Optional<long> group_fd,
                                           unsigned long flags) {
   errno = 0;
   long fd = syscall(SYS_perf_event_open, &attr, pid.getValueOr(-1),
@@ -84,8 +84,7 @@ llvm::Expected<PerfEvent> PerfEvent::Init(perf_event_attr &attr,
         llvm::formatv("perf event syscall failed: {0}", std::strerror(errno));
     return llvm::createStringError(llvm::inconvertibleErrorCode(), err_msg);
   }
-  return PerfEvent(fd, attr.disabled ? CollectionState::Disabled
-                                     : CollectionState::Enabled);
+  return PerfEvent(fd, !attr.disabled);
 }
 
 llvm::Expected<PerfEvent> PerfEvent::Init(perf_event_attr &attr,
@@ -181,7 +180,12 @@ ArrayRef<uint8_t> PerfEvent::GetAuxBuffer() const {
 
 Expected<std::vector<uint8_t>>
 PerfEvent::ReadFlushedOutDataCyclicBuffer(size_t offset, size_t size) {
-  CollectionState previous_state = m_collection_state;
+  // The following code assumes that the protection level of the DATA page
+  // is PROT_READ. If PROT_WRITE is used, then reading would require that
+  // this piece of code updates some pointers. See more about data_tail
+  // in https://man7.org/linux/man-pages/man2/perf_event_open.2.html.
+
+  bool was_enabled = m_enabled;
   if (Error err = DisableWithIoctl())
     return std::move(err);
 
@@ -220,7 +224,7 @@ PerfEvent::ReadFlushedOutDataCyclicBuffer(size_t offset, size_t size) {
       output.push_back(data[i]);
   }
 
-  if (previous_state == CollectionState::Enabled) {
+  if (was_enabled) {
     if (Error err = EnableWithIoctl())
       return std::move(err);
   }
@@ -236,7 +240,12 @@ PerfEvent::ReadFlushedOutDataCyclicBuffer(size_t offset, size_t size) {
 
 Expected<std::vector<uint8_t>>
 PerfEvent::ReadFlushedOutAuxCyclicBuffer(size_t offset, size_t size) {
-  CollectionState previous_state = m_collection_state;
+  // The following code assumes that the protection level of the AUX page
+  // is PROT_READ. If PROT_WRITE is used, then reading would require that
+  // this piece of code updates some pointers. See more about aux_tail
+  // in https://man7.org/linux/man-pages/man2/perf_event_open.2.html.
+
+  bool was_enabled = m_enabled;
   if (Error err = DisableWithIoctl())
     return std::move(err);
 
@@ -271,7 +280,7 @@ PerfEvent::ReadFlushedOutAuxCyclicBuffer(size_t offset, size_t size) {
   for (uint64_t i = left_part_start; i < aux_head && output.size() < size; i++)
     output.push_back(data[i]);
 
-  if (previous_state == CollectionState::Enabled) {
+  if (was_enabled) {
     if (Error err = EnableWithIoctl())
       return std::move(err);
   }
@@ -286,7 +295,7 @@ PerfEvent::ReadFlushedOutAuxCyclicBuffer(size_t offset, size_t size) {
 }
 
 Error PerfEvent::DisableWithIoctl() {
-  if (m_collection_state == CollectionState::Disabled)
+  if (!m_enabled)
     return Error::success();
 
   if (ioctl(*m_fd, PERF_EVENT_IOC_DISABLE, PERF_IOC_FLAG_GROUP) < 0)
@@ -294,12 +303,14 @@ Error PerfEvent::DisableWithIoctl() {
                              "Can't disable perf event. %s",
                              std::strerror(errno));
 
-  m_collection_state = CollectionState::Disabled;
+  m_enabled = false;
   return Error::success();
 }
 
+bool PerfEvent::IsEnabled() const { return m_enabled; }
+
 Error PerfEvent::EnableWithIoctl() {
-  if (m_collection_state == CollectionState::Enabled)
+  if (m_enabled)
     return Error::success();
 
   if (ioctl(*m_fd, PERF_EVENT_IOC_ENABLE, PERF_IOC_FLAG_GROUP) < 0)
@@ -307,7 +318,7 @@ Error PerfEvent::EnableWithIoctl() {
                              "Can't enable perf event. %s",
                              std::strerror(errno));
 
-  m_collection_state = CollectionState::Enabled;
+  m_enabled = true;
   return Error::success();
 }
 
@@ -317,4 +328,54 @@ size_t PerfEvent::GetEffectiveDataBufferSize() const {
     return mmap_metadata.data_head;
   else
     return mmap_metadata.data_size; // The buffer has wrapped.
+}
+
+Expected<PerfEvent>
+lldb_private::process_linux::CreateContextSwitchTracePerfEvent(
+    lldb::core_id_t core_id, const PerfEvent *parent_perf_event) {
+  Log *log = GetLog(POSIXLog::Trace);
+#ifndef PERF_ATTR_SIZE_VER5
+  return createStringError(inconvertibleErrorCode(),
+                           "Intel PT Linux perf event not supported");
+#else
+  perf_event_attr attr;
+  memset(&attr, 0, sizeof(attr));
+  attr.size = sizeof(attr);
+  attr.sample_type = PERF_SAMPLE_TID | PERF_SAMPLE_TIME;
+  attr.type = PERF_TYPE_SOFTWARE;
+  attr.context_switch = 1;
+  attr.exclude_kernel = 1;
+  attr.sample_id_all = 1;
+  attr.exclude_hv = 1;
+  attr.disabled = parent_perf_event ? !parent_perf_event->IsEnabled() : false;
+
+  // The given perf configuration will produce context switch records of 32
+  // bytes each. Assuming that every context switch will be emitted twice (one
+  // for context switch ins and another one for context switch outs), and that a
+  // context switch will happen at least every half a millisecond per core, we
+  // need 500 * 32 bytes (~16 KB) for a trace of one second, which is much more
+  // than what a regular intel pt trace can get. Pessimistically we pick as
+  // 32KiB for the size of our context switch trace.
+
+  uint64_t data_buffer_size = 32768;
+  uint64_t data_buffer_numpages = data_buffer_size / getpagesize();
+
+  LLDB_LOG(log, "Will create context switch trace buffer of size {0}",
+           data_buffer_size);
+
+  Optional<long> group_fd;
+  if (parent_perf_event)
+    group_fd = parent_perf_event->GetFd();
+
+  if (Expected<PerfEvent> perf_event =
+          PerfEvent::Init(attr, /*pid=*/None, core_id, group_fd, /*flags=*/0)) {
+    if (Error mmap_err = perf_event->MmapMetadataAndBuffers(
+            data_buffer_numpages, 0, /*data_buffer_write=*/false)) {
+      return std::move(mmap_err);
+    }
+    return perf_event;
+  } else {
+    return perf_event.takeError();
+  }
+#endif
 }

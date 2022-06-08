@@ -40,7 +40,9 @@ public:
   ///     The CPU core id where to trace. If \b None, then this traces all CPUs.
   ///
   /// \param[in] disabled
-  ///     Whether to start the tracing paused.
+  ///     If \b true, then no data is collected until \a Resume is invoked.
+  ///     Similarly, if \b false, data is collected right away until \a Pause is
+  ///     invoked.
   ///
   /// \return
   ///   A \a IntelPTSingleBufferTrace instance if tracing was successful, or
