@@ -1,5 +1,6 @@
 # RUN: rm -rf %t && mkdir -p %t
-# RUN: llvm-mc -triple=aarch64-unknown-linux-gnu -relax-relocations=false -position-independent -filetype=obj -o %t/elf_reloc.o %s
+# RUN: llvm-mc -triple=aarch64-unknown-linux-gnu -relax-relocations=false \
+# RUN:   -position-independent -filetype=obj -o %t/elf_reloc.o %s
 # RUN: llvm-jitlink -noexec -check %s %t/elf_reloc.o
 
         .text
@@ -113,6 +114,15 @@ test_str_64bit:
         str	x0, [x1, :lo12:named_data]
         .size test_str_64bit, .-test_str_64bit
 
+# Check R_AARCH64_ABS64 relocation of a function pointer to local symbol
+#
+# jitlink-check: *{8}local_func_addr_quad = named_func
+        .globl  local_func_addr_quad
+        .p2align  3
+local_func_addr_quad:
+        .xword	named_func
+        .size	local_func_addr_quad, 8
+
         .globl  named_data
         .p2align  4
         .type   named_data,@object
@@ -120,3 +130,10 @@ named_data:
         .quad   0x2222222222222222
         .quad   0x3333333333333333
         .size   named_data, .-named_data
+
+        .globl  named_func
+        .p2align  2
+        .type	named_func,@function
+named_func:
+        ret
+        .size   named_func, .-named_func
