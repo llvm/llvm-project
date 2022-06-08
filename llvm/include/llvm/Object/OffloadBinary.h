@@ -65,7 +65,7 @@ public:
     OffloadKind TheOffloadKind;
     uint32_t Flags;
     StringMap<StringRef> StringData;
-    MemoryBufferRef Image;
+    std::unique_ptr<MemoryBuffer> Image;
   };
 
   /// Attempt to parse the offloading binary stored in \p Data.
