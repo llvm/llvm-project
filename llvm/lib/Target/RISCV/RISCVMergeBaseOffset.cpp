@@ -154,7 +154,8 @@ bool RISCVMergeBaseOffsetOpt::matchLargeOffset(MachineInstr &TailAdd,
     return false;
   // This can point to an ADDI or a LUI:
   MachineInstr &OffsetTail = *MRI->getVRegDef(Reg);
-  if (OffsetTail.getOpcode() == RISCV::ADDI) {
+  if (OffsetTail.getOpcode() == RISCV::ADDI ||
+      OffsetTail.getOpcode() == RISCV::ADDIW) {
     // The offset value has non zero bits in both %hi and %lo parts.
     // Detect an ADDI that feeds from a LUI instruction.
     MachineOperand &AddiImmOp = OffsetTail.getOperand(2);
@@ -170,8 +171,8 @@ bool RISCVMergeBaseOffsetOpt::matchLargeOffset(MachineInstr &TailAdd,
       return false;
     Offset = SignExtend64<32>(LuiImmOp.getImm() << 12);
     Offset += OffLo;
-    // RV32 ignores the upper 32 bits.
-    if (!ST->is64Bit())
+    // RV32 ignores the upper 32 bits. ADDIW sign extends the result.
+    if (!ST->is64Bit() || OffsetTail.getOpcode() == RISCV::ADDIW)
        Offset = SignExtend64<32>(Offset);
     // We can only fold simm32 offsets.
     if (!isInt<32>(Offset))
