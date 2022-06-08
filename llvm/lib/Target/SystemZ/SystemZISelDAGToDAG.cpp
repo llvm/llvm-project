@@ -1472,7 +1472,7 @@ bool SystemZDAGToDAGISel::storeLoadIsAligned(SDNode *N) const {
   assert(MMO && "Expected a memory operand.");
 
   // The memory access must have a proper alignment and no index register.
-  if (MemAccess->getAlignment() < StoreSize ||
+  if (MemAccess->getAlign().value() < StoreSize ||
       !MemAccess->getOffset().isUndef())
     return false;
 

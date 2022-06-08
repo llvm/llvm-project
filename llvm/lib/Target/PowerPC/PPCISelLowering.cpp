@@ -2984,15 +2984,15 @@ bool PPCTargetLowering::getPreIndexedAddressParts(SDNode *N, SDValue &Base,
   bool isLoad = true;
   SDValue Ptr;
   EVT VT;
-  unsigned Alignment;
+  Align Alignment;
   if (LoadSDNode *LD = dyn_cast<LoadSDNode>(N)) {
     Ptr = LD->getBasePtr();
     VT = LD->getMemoryVT();
-    Alignment = LD->getAlignment();
+    Alignment = LD->getAlign();
   } else if (StoreSDNode *ST = dyn_cast<StoreSDNode>(N)) {
     Ptr = ST->getBasePtr();
     VT  = ST->getMemoryVT();
-    Alignment = ST->getAlignment();
+    Alignment = ST->getAlign();
     isLoad = false;
   } else
     return false;
@@ -3036,7 +3036,7 @@ bool PPCTargetLowering::getPreIndexedAddressParts(SDNode *N, SDValue &Base,
       return false;
   } else {
     // LDU/STU need an address with at least 4-byte alignment.
-    if (Alignment < 4)
+    if (Alignment < Align(4))
       return false;
 
     if (!SelectAddressRegImm(Ptr, Offset, Base, DAG, Align(4)))
@@ -14158,13 +14158,13 @@ static SDValue combineBVOfConsecutiveLoads(SDNode *N, SelectionDAG &DAG) {
     assert(LD1 && "Input needs to be a LoadSDNode.");
     return DAG.getLoad(N->getValueType(0), dl, LD1->getChain(),
                        LD1->getBasePtr(), LD1->getPointerInfo(),
-                       LD1->getAlignment());
+                       LD1->getAlign());
   }
   if (InputsAreReverseConsecutive) {
     assert(LDL && "Input needs to be a LoadSDNode.");
-    SDValue Load = DAG.getLoad(N->getValueType(0), dl, LDL->getChain(),
-                               LDL->getBasePtr(), LDL->getPointerInfo(),
-                               LDL->getAlignment());
+    SDValue Load =
+        DAG.getLoad(N->getValueType(0), dl, LDL->getChain(), LDL->getBasePtr(),
+                    LDL->getPointerInfo(), LDL->getAlign());
     SmallVector<int, 16> Ops;
     for (int i = N->getNumOperands() - 1; i >= 0; i--)
       Ops.push_back(i);
@@ -15306,7 +15306,7 @@ SDValue PPCTargetLowering::PerformDAGCombine(SDNode *N,
       auto MMOFlags =
           LD->getMemOperand()->getFlags() & ~MachineMemOperand::MOVolatile;
       SDValue FloatLoad = DAG.getLoad(MVT::f32, dl, LD->getChain(), BasePtr,
-                                      LD->getPointerInfo(), LD->getAlignment(),
+                                      LD->getPointerInfo(), LD->getAlign(),
                                       MMOFlags, LD->getAAInfo());
       SDValue AddPtr =
         DAG.getNode(ISD::ADD, dl, BasePtr.getValueType(),
@@ -15314,7 +15314,7 @@ SDValue PPCTargetLowering::PerformDAGCombine(SDNode *N,
       SDValue FloatLoad2 = DAG.getLoad(
           MVT::f32, dl, SDValue(FloatLoad.getNode(), 1), AddPtr,
           LD->getPointerInfo().getWithOffset(4),
-          MinAlign(LD->getAlignment(), 4), MMOFlags, LD->getAAInfo());
+          commonAlignment(LD->getAlign(), 4), MMOFlags, LD->getAAInfo());
 
       if (LD->isIndexed()) {
         // Note that DAGCombine should re-form any pre-increment load(s) from
@@ -15627,7 +15627,7 @@ SDValue PPCTargetLowering::PerformDAGCombine(SDNode *N,
       return SDValue();
     SDValue BasePtr = LD->getBasePtr();
     SDValue Lo = DAG.getLoad(MVT::i32, dl, LD->getChain(), BasePtr,
-                             LD->getPointerInfo(), LD->getAlignment());
+                             LD->getPointerInfo(), LD->getAlign());
     Lo = DAG.getNode(ISD::BSWAP, dl, MVT::i32, Lo);
     BasePtr = DAG.getNode(ISD::ADD, dl, BasePtr.getValueType(), BasePtr,
                           DAG.getIntPtrConstant(4, dl));

@@ -759,11 +759,6 @@ public:
     setArgOperand(ARG_DEST, Ptr);
   }
 
-  /// FIXME: Remove this function once transition to Align is over.
-  /// Use the version that takes MaybeAlign instead of this one.
-  void setDestAlignment(unsigned Alignment) {
-    setDestAlignment(MaybeAlign(Alignment));
-  }
   void setDestAlignment(MaybeAlign Alignment) {
     removeParamAttr(ARG_DEST, Attribute::Alignment);
     if (Alignment)

@@ -1058,15 +1058,15 @@ bool ARMDAGToDAGISel::SelectAddrMode6(SDNode *Parent, SDValue N, SDValue &Addr,
        MemN->getConstantOperandVal(MemN->getNumOperands() - 1) == 1)) {
     // This case occurs only for VLD1-lane/dup and VST1-lane instructions.
     // The maximum alignment is equal to the memory size being referenced.
-    unsigned MMOAlign = MemN->getAlignment();
+    llvm::Align MMOAlign = MemN->getAlign();
     unsigned MemSize = MemN->getMemoryVT().getSizeInBits() / 8;
-    if (MMOAlign >= MemSize && MemSize > 1)
+    if (MMOAlign.value() >= MemSize && MemSize > 1)
       Alignment = MemSize;
   } else {
     // All other uses of addrmode6 are for intrinsics.  For now just record
     // the raw alignment value; it will be refined later based on the legal
     // alignment operands for the intrinsic.
-    Alignment = MemN->getAlignment();
+    Alignment = MemN->getAlign().value();
   }
 
   Align = CurDAG->getTargetConstant(Alignment, SDLoc(N), MVT::i32);

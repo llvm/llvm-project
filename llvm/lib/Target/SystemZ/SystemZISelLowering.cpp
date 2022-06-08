@@ -2311,7 +2311,7 @@ static void adjustSubwordCmp(SelectionDAG &DAG, const SDLoc &DL,
       Load->getExtensionType() != ExtType) {
     C.Op0 = DAG.getExtLoad(ExtType, SDLoc(Load), MVT::i32, Load->getChain(),
                            Load->getBasePtr(), Load->getPointerInfo(),
-                           Load->getMemoryVT(), Load->getAlignment(),
+                           Load->getMemoryVT(), Load->getAlign(),
                            Load->getMemOperand()->getFlags());
     // Update the chain uses.
     DAG.ReplaceAllUsesOfValueWith(SDValue(Load, 1), C.Op0.getValue(1));

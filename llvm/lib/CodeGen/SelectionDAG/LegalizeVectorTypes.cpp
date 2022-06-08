@@ -6315,7 +6315,7 @@ SDValue DAGTypeLegalizer::GenWidenVectorLoads(SmallVectorImpl<SDValue> &LdChain,
   // Allow wider loads if they are sufficiently aligned to avoid memory faults
   // and if the original load is simple.
   unsigned LdAlign =
-      (!LD->isSimple() || LdVT.isScalableVector()) ? 0 : LD->getAlignment();
+      (!LD->isSimple() || LdVT.isScalableVector()) ? 0 : LD->getAlign().value();
 
   // Find the vector type that can load from.
   Optional<EVT> FirstVT =

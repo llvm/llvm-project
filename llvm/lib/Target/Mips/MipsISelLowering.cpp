@@ -2678,7 +2678,7 @@ SDValue MipsTargetLowering::lowerLOAD(SDValue Op, SelectionDAG &DAG) const {
     return Op;
 
   // Return if load is aligned or if MemVT is neither i32 nor i64.
-  if ((LD->getAlignment() >= MemVT.getSizeInBits() / 8) ||
+  if ((LD->getAlign().value() >= (MemVT.getSizeInBits() / 8)) ||
       ((MemVT != MVT::i32) && (MemVT != MVT::i64)))
     return SDValue();
 
@@ -2792,7 +2792,7 @@ static SDValue lowerFP_TO_SINT_STORE(StoreSDNode *SD, SelectionDAG &DAG,
   SDValue Tr = DAG.getNode(MipsISD::TruncIntFP, SDLoc(Val), FPTy,
                            Val.getOperand(0));
   return DAG.getStore(SD->getChain(), SDLoc(SD), Tr, SD->getBasePtr(),
-                      SD->getPointerInfo(), SD->getAlignment(),
+                      SD->getPointerInfo(), SD->getAlign(),
                       SD->getMemOperand()->getFlags());
 }
 
@@ -2802,7 +2802,7 @@ SDValue MipsTargetLowering::lowerSTORE(SDValue Op, SelectionDAG &DAG) const {
 
   // Lower unaligned integer stores.
   if (!Subtarget.systemSupportsUnalignedAccess() &&
-      (SD->getAlignment() < MemVT.getSizeInBits() / 8) &&
+      (SD->getAlign().value() < (MemVT.getSizeInBits() / 8)) &&
       ((MemVT == MVT::i32) || (MemVT == MVT::i64)))
     return lowerUnalignedIntStore(SD, DAG, Subtarget.isLittle());
 
