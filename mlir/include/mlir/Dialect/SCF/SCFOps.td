@@ -964,7 +964,7 @@ def WhileOp : SCF_Op<"while",
 
   let hasCanonicalizer = 1;
   let hasCustomAssemblyFormat = 1;
-  let hasRegionVerifier = 1;
+  let hasVerifier = 1;
 }
 
 //===----------------------------------------------------------------------===//

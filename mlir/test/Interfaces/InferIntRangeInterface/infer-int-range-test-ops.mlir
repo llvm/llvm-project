@@ -100,3 +100,22 @@ func.func @func_args_unbound(%arg0 : index) -> index {
   %0 = test.reflect_bounds %arg0
   func.return %0 : index
 }
+
+// CHECK-LABEL: func @propagate_across_while_loop()
+func.func @propagate_across_while_loop() -> index {
+  // CHECK-DAG: %[[C0:.*]] = "test.constant"() {value = 0
+  // CHECK-DAG: %[[C1:.*]] = "test.constant"() {value = 1
+  %0 = test.with_bounds { umin = 0 : index, umax = 0 : index,
+                          smin = 0 : index, smax = 0 : index }
+  %1 = scf.while : () -> index {
+    %true = arith.constant true
+    // CHECK: scf.condition(%{{.*}}) %[[C0]]
+    scf.condition(%true) %0 : index
+  } do {
+  ^bb0(%i1: index):
+    scf.yield
+  }
+  // CHECK: return %[[C1]]
+  %2 = test.increment %1
+  return %2 : index
+}

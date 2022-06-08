@@ -9,7 +9,6 @@
 #include <utility>
 
 #include "mlir/Interfaces/ControlFlowInterfaces.h"
-#include "mlir/IR/BuiltinTypes.h"
 #include "llvm/ADT/SmallPtrSet.h"
 
 using namespace mlir;
@@ -97,15 +96,7 @@ verifyTypesAlongAllEdges(Operation *op, Optional<unsigned> sourceNo,
   auto regionInterface = cast<RegionBranchOpInterface>(op);
 
   SmallVector<RegionSuccessor, 2> successors;
-  unsigned numInputs;
-  if (sourceNo) {
-    Region &srcRegion = op->getRegion(sourceNo.getValue());
-    numInputs = srcRegion.getNumArguments();
-  } else {
-    numInputs = op->getNumOperands();
-  }
-  SmallVector<Attribute, 2> operands(numInputs, nullptr);
-  regionInterface.getSuccessorRegions(sourceNo, operands, successors);
+  regionInterface.getSuccessorRegions(sourceNo, successors);
 
   for (RegionSuccessor &succ : successors) {
     Optional<unsigned> succRegionNo;
@@ -325,6 +316,27 @@ bool mlir::insideMutuallyExclusiveRegions(Operation *a, Operation *b) {
 bool RegionBranchOpInterface::isRepetitiveRegion(unsigned index) {
   Region *region = &getOperation()->getRegion(index);
   return isRegionReachable(region, region);
+}
+
+void RegionBranchOpInterface::getSuccessorRegions(
+    Optional<unsigned> index, SmallVectorImpl<RegionSuccessor> &regions) {
+  unsigned numInputs = 0;
+  if (index) {
+    // If the predecessor is a region, get the number of operands from an
+    // exiting terminator in the region.
+    for (Block &block : getOperation()->getRegion(*index)) {
+      Operation *terminator = block.getTerminator();
+      if (getRegionBranchSuccessorOperands(terminator, *index)) {
+        numInputs = terminator->getNumOperands();
+        break;
+      }
+    }
+  } else {
+    // Otherwise, use the number of parent operation operands.
+    numInputs = getOperation()->getNumOperands();
+  }
+  SmallVector<Attribute, 2> operands(numInputs, nullptr);
+  getSuccessorRegions(index, operands, regions);
 }
 
 Region *mlir::getEnclosingRepetitiveRegion(Operation *op) {
