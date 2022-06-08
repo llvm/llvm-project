@@ -1442,42 +1442,42 @@ let AssemblerPredicate = isGFX11Only,
   }
 } // End AssemblerPredicate = isGFX11Only, DecoderNamespace = "GFX11"
 
-  // VOP1 and VOP2 depend on these triple defs
-  multiclass VOP3_Realtriple_gfx11<bits<10> op,
-                                   bit isSingle = 0, string opName = NAME> :
-    VOP3_Real_Base_gfx11<op, opName, isSingle>,
-    VOP3_Real_dpp_Base_gfx11<op, opName>,
-    VOP3_Real_dpp8_Base_gfx11<op, opName>;
+// VOP1 and VOP2 depend on these triple defs
+multiclass VOP3_Realtriple_gfx11<bits<10> op,
+                                 bit isSingle = 0, string opName = NAME> :
+  VOP3_Real_Base_gfx11<op, opName, isSingle>,
+  VOP3_Real_dpp_Base_gfx11<op, opName>,
+  VOP3_Real_dpp8_Base_gfx11<op, opName>;
 
-  multiclass VOP3_Realtriple_T16_gfx11<bits<10> op, string asmName, string opName = NAME,
-                                   bit isSingle = 0> :
-    VOP3_Real_Base_T16_gfx11<op, asmName, opName, isSingle>,
-    // TODO-GFX11_16BIT Using non true16 DPP
-    VOP3_Real_dpp_Base_gfx11<op, opName>,
-    VOP3_Real_dpp8_Base_gfx11<op, opName>;
+multiclass VOP3_Realtriple_T16_gfx11<bits<10> op, string asmName, string opName = NAME,
+                                     bit isSingle = 0> :
+  VOP3_Real_Base_T16_gfx11<op, asmName, opName, isSingle>,
+  // TODO-GFX11_16BIT Using non true16 DPP
+  VOP3_Real_dpp_Base_gfx11<op, opName>,
+  VOP3_Real_dpp8_Base_gfx11<op, opName>;
 
-  multiclass VOP3Only_Realtriple_gfx11<bits<10> op> :
-    VOP3_Realtriple_gfx11<op, 1>;
+multiclass VOP3Only_Realtriple_gfx11<bits<10> op> :
+  VOP3_Realtriple_gfx11<op, 1>;
 
-  multiclass VOP3_Realtriple_with_name_gfx11<bits<10> op, string opName,
-                                             string asmName, bit isSingle = 0> :
-    VOP3_Real_with_name_gfx11<op, opName, asmName, isSingle>,
-    VOP3_Real_dpp_with_name_gfx11<op, opName, asmName>,
-    VOP3_Real_dpp8_with_name_gfx11<op, opName, asmName>;
+multiclass VOP3_Realtriple_with_name_gfx11<bits<10> op, string opName,
+                                           string asmName, bit isSingle = 0> :
+  VOP3_Real_with_name_gfx11<op, opName, asmName, isSingle>,
+  VOP3_Real_dpp_with_name_gfx11<op, opName, asmName>,
+  VOP3_Real_dpp8_with_name_gfx11<op, opName, asmName>;
 
-  multiclass VOP3Only_Realtriple_with_name_gfx11<bits<10> op, string opName,
-                                             string asmName> :
-    VOP3_Realtriple_with_name_gfx11<op, opName, asmName, 1>;
+multiclass VOP3Only_Realtriple_with_name_gfx11<bits<10> op, string opName,
+                                               string asmName> :
+  VOP3_Realtriple_with_name_gfx11<op, opName, asmName, 1>;
 
-  multiclass VOP3be_Realtriple_gfx11<
-      bits<10> op, bit isSingle = 0, string opName = NAME,
-      string asmName = !cast<VOP_Pseudo>(opName#"_e64").Mnemonic> :
-    VOP3be_Real_gfx11<op, opName, asmName, isSingle>,
-    VOP3be_Real_dpp_gfx11<op, opName, asmName>,
-    VOP3be_Real_dpp8_gfx11<op, opName, asmName>;
+multiclass VOP3be_Realtriple_gfx11<
+    bits<10> op, bit isSingle = 0, string opName = NAME,
+    string asmName = !cast<VOP_Pseudo>(opName#"_e64").Mnemonic> :
+  VOP3be_Real_gfx11<op, opName, asmName, isSingle>,
+  VOP3be_Real_dpp_gfx11<op, opName, asmName>,
+  VOP3be_Real_dpp8_gfx11<op, opName, asmName>;
 
-  multiclass VOP3beOnly_Realtriple_gfx11<bits<10> op> :
-    VOP3be_Realtriple_gfx11<op, 1>;
+multiclass VOP3beOnly_Realtriple_gfx11<bits<10> op> :
+  VOP3be_Realtriple_gfx11<op, 1>;
 
 include "VOPCInstructions.td"
 include "VOP1Instructions.td"

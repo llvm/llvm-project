@@ -15,6 +15,7 @@
 
 # CHECK:      Sections:
 # KEEPTYPE:     - Type: TYPE
+# CHECK-NOT:    - Type: TYPE
 # CHECK:        - Type: CUSTOM
 # CHECK-NEXT:     Name: .debug_info
 # CHECK:        - Type: CUSTOM

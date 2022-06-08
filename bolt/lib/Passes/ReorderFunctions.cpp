@@ -128,6 +128,13 @@ void ReorderFunctions::reorder(std::vector<Cluster> &&Clusters,
     }
   }
 
+  // Assign valid index for functions with valid profile.
+  for (auto &It : BFs) {
+    BinaryFunction &BF = It.second;
+    if (!BF.hasValidIndex() && BF.hasValidProfile())
+      BF.setIndex(Index++);
+  }
+
   if (opts::ReorderFunctions == RT_NONE)
     return;
 

@@ -279,9 +279,7 @@ void ErrorRssLimitExceeded::Print() {
 void ErrorOutOfMemory::Print() {
   Decorator d;
   Printf("%s", d.Error());
-  Report(
-      "ERROR: AddressSanitizer: allocator is out of memory trying to allocate "
-      "0x%zx bytes\n", requested_size);
+  ERROR_OOM("allocator is trying to allocate 0x%zx bytes\n", requested_size);
   Printf("%s", d.Default());
   stack->Print();
   PrintHintAllocatorCannotReturnNull();

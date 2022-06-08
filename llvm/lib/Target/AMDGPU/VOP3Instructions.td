@@ -818,6 +818,7 @@ defm V_MAXMIN_U32          : VOP3_Realtriple_gfx11<0x262>;
 defm V_MINMAX_U32          : VOP3_Realtriple_gfx11<0x263>;
 defm V_MAXMIN_I32          : VOP3_Realtriple_gfx11<0x264>;
 defm V_MINMAX_I32          : VOP3_Realtriple_gfx11<0x265>;
+// FIXME VOP3 DPP Dot instructions need disassembler fix
 defm V_DOT2_F16_F16        : VOP3_Realtriple_gfx11<0x266>;
 defm V_DOT2_BF16_BF16      : VOP3_Realtriple_gfx11<0x267>;
 defm V_DIV_SCALE_F32       : VOP3be_Real_gfx11<0x2fc, "V_DIV_SCALE_F32", "v_div_scale_f32">;
