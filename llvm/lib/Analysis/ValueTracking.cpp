@@ -2036,6 +2036,63 @@ void computeKnownBits(const Value *V, const APInt &DemandedElts,
   assert((Known.Zero & Known.One) == 0 && "Bits known to be one AND zero?");
 }
 
+/// Try to detect a recurrence that the value of the induction variable is
+/// always a power of two (or zero).
+static bool isPowerOfTwoRecurrence(const PHINode *PN, bool OrZero,
+                                   unsigned Depth, Query &Q) {
+  BinaryOperator *BO = nullptr;
+  Value *Start = nullptr, *Step = nullptr;
+  if (!matchSimpleRecurrence(PN, BO, Start, Step))
+    return false;
+
+  // Initial value must be a power of two.
+  for (const Use &U : PN->operands()) {
+    if (U.get() == Start) {
+      // Initial value comes from a different BB, need to adjust context
+      // instruction for analysis.
+      Q.CxtI = PN->getIncomingBlock(U)->getTerminator();
+      if (!isKnownToBeAPowerOfTwo(Start, OrZero, Depth, Q))
+        return false;
+    }
+  }
+
+  // Except for Mul, the induction variable must be on the left side of the
+  // increment expression, otherwise its value can be arbitrary.
+  if (BO->getOpcode() != Instruction::Mul && BO->getOperand(1) != Step)
+    return false;
+
+  Q.CxtI = BO->getParent()->getTerminator();
+  switch (BO->getOpcode()) {
+  case Instruction::Mul:
+    // Power of two is closed under multiplication.
+    return (OrZero || Q.IIQ.hasNoUnsignedWrap(BO) ||
+            Q.IIQ.hasNoSignedWrap(BO)) &&
+           isKnownToBeAPowerOfTwo(Step, OrZero, Depth, Q);
+  case Instruction::SDiv:
+    // Start value must not be signmask for signed division, so simply being a
+    // power of two is not sufficient, and it has to be a constant.
+    if (!match(Start, m_Power2()) || match(Start, m_SignMask()))
+      return false;
+    LLVM_FALLTHROUGH;
+  case Instruction::UDiv:
+    // Divisor must be a power of two.
+    // If OrZero is false, cannot guarantee induction variable is non-zero after
+    // division, same for Shr, unless it is exact division.
+    return (OrZero || Q.IIQ.isExact(BO)) &&
+           isKnownToBeAPowerOfTwo(Step, false, Depth, Q);
+  case Instruction::Shl:
+    return OrZero || Q.IIQ.hasNoUnsignedWrap(BO) || Q.IIQ.hasNoSignedWrap(BO);
+  case Instruction::AShr:
+    if (!match(Start, m_Power2()) || match(Start, m_SignMask()))
+      return false;
+    LLVM_FALLTHROUGH;
+  case Instruction::LShr:
+    return OrZero || Q.IIQ.isExact(BO);
+  default:
+    return false;
+  }
+}
+
 /// Return true if the given value is known to have exactly one
 /// bit set when defined. For vectors return true if every element is known to
 /// be a power of two when defined. Supports values with integer or pointer
@@ -2127,9 +2184,14 @@ bool isKnownToBeAPowerOfTwo(const Value *V, bool OrZero, unsigned Depth,
     }
   }
 
-  // A PHI node is power of two if all incoming values are power of two.
+  // A PHI node is power of two if all incoming values are power of two, or if
+  // it is an induction variable where in each step its value is a power of two.
   if (const PHINode *PN = dyn_cast<PHINode>(V)) {
     Query RecQ = Q;
+
+    // Check if it is an induction variable and always power of two.
+    if (isPowerOfTwoRecurrence(PN, OrZero, Depth, RecQ))
+      return true;
 
     // Recursively check all incoming values. Limit recursion to 2 levels, so
     // that search complexity is limited to number of operands^2.
