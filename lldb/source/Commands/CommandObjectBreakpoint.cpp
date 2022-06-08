@@ -2018,8 +2018,99 @@ class CommandObjectBreakpointName : public CommandObjectMultiword {
 public:
   CommandObjectBreakpointName(CommandInterpreter &interpreter)
       : CommandObjectMultiword(
-            interpreter, "name", "Commands to manage name tags for breakpoints",
-            "breakpoint name <subcommand> [<command-options>]") {
+            interpreter, "name", "Commands to manage breakpoint names") {
+  
+            
+    SetHelpLong(
+            R"(
+Breakpoint names provide a general tagging mechanism for breakpoints.  Each 
+breakpoint name can be added to any number of breakpoints, and each breakpoint 
+can have any number of breakpoint names attached to it. For instance:
+
+    (lldb) break name add -N MyName 1-10
+
+adds the name MyName to breakpoints 1-10, and:
+
+    (lldb) break set -n myFunc -N Name1 -N Name2
+
+adds two names to the breakpoint set at myFunc.
+
+They have a number of interrelated uses:
+
+1) They provide a stable way to refer to a breakpoint (e.g. in another 
+breakpoint's action). Using the breakpoint ID for this purpose is fragile, since
+it depends on the order of breakpoint creation.  Giving a name to the breakpoint
+you want to act on, and then referring to it by name, is more robust:
+
+    (lldb) break set -n myFunc -N BKPT1
+    (lldb) break set -n myOtherFunc -C "break disable BKPT1"
+
+2) This is actually just a specific use of a more general feature of breakpoint
+names.  The <breakpt-id-list> argument type used to specify one or more 
+breakpoints in most of the commands that deal with breakpoints also accepts 
+breakpoint names.  That allows you to refer to one breakpoint in a stable 
+manner, but also makes them a convenient grouping mechanism, allowing you to 
+easily act on a group of breakpoints by using their name, for instance disabling
+them all in one action:
+
+    (lldb) break set -n myFunc -N Group1
+    (lldb) break set -n myOtherFunc -N Group1
+    (lldb) break disable Group1
+    
+3) But breakpoint names are also entities in their own right, and can be 
+configured with all the modifiable attributes of a breakpoint.  Then when you 
+add a breakpoint name to a breakpoint, the breakpoint will be configured to 
+match the state of the breakpoint name.  The link between the name and the 
+breakpoints sharing it remains live, so if you change the configuration on the 
+name, it will also change the configurations on the breakpoints:
+
+    (lldb) break name configure -i 10 IgnoreSome
+    (lldb) break set -n myFunc -N IgnoreSome
+    (lldb) break list IgnoreSome
+    2: name = 'myFunc', locations = 0 (pending) Options: ignore: 10 enabled 
+      Names:
+        IgnoreSome
+    (lldb) break name configure -i 5 IgnoreSome
+    (lldb) break list IgnoreSome
+    2: name = 'myFunc', locations = 0 (pending) Options: ignore: 5 enabled 
+      Names:
+        IgnoreSome
+
+Options that are not configured on a breakpoint name don't affect the value of 
+those options on the breakpoints they are added to.  So for instance, if Name1
+has the -i option configured and Name2 the -c option, adding both names to a 
+breakpoint will set the -i option from Name1 and the -c option from Name2, and
+the other options will be unaltered.
+
+If you add multiple names to a breakpoint which have configured values for
+the same option, the last name added's value wins.
+
+The "liveness" of these settings is one way, from name to breakpoint.  
+If you use "break modify" to change an option that is also configured on a name 
+which that breakpoint has, the "break modify" command will override the setting 
+for that breakpoint, but won't change the value configured in the name or on the
+other breakpoints sharing that name.
+
+4) Breakpoint names are also a convenient way to copy option sets from one 
+breakpoint to another.  Using the -B option to "breakpoint name configure" makes
+a name configured with all the options of the original breakpoint.  Then 
+adding that name to another breakpoint copies over all the values from the 
+original breakpoint to the new one.
+
+5) You can also use breakpoint names to hide breakpoints from the breakpoint
+operations that act on all breakpoints: "break delete", "break disable" and 
+"break list".  You do that by specifying a "false" value for the 
+--allow-{list,delete,disable} options to "breakpoint name configure" and then 
+adding that name to a breakpoint.
+
+This won't keep the breakpoint from being deleted or disabled if you refer to it 
+specifically by ID. The point of the feature is to make sure users don't 
+inadvertently delete or disable useful breakpoints (e.g. ones an IDE is using
+for its own purposes) as part of a "delete all" or "disable all" operation.  The
+list hiding is because it's confusing for people to see breakpoints they 
+didn't set.
+
+)");
     CommandObjectSP add_command_object(
         new CommandObjectBreakpointNameAdd(interpreter));
     CommandObjectSP delete_command_object(
