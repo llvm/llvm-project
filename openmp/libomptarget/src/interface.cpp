@@ -14,6 +14,7 @@
 #include <omptarget.h>
 
 #include "OmptCallback.h"
+#include "OmptInterface.h"
 #include "device.h"
 #include "omptarget.h"
 #include "private.h"
@@ -29,8 +30,6 @@
 #include <type_traits>
 
 #ifdef OMPT_SUPPORT
-#include "ompt_callback.h"
-
 #define OMPT_IF_ENABLED(stmts)                                                 \
   do {                                                                         \
     if (llvm::omp::target::ompt::Initialized) {                                \
@@ -41,6 +40,8 @@
 #define OMPT_IF_ENABLED(stmts)
 #endif
 
+#ifdef OMPT_SUPPORT
+using namespace llvm::omp::target::ompt;
 /// Holds information to delay OMPT call after device initialization
 class OMPTInvokeWrapper {
 public:
@@ -58,9 +59,9 @@ public:
     if (IsNullOpt)
       return;
 
-    ompt_interface.ompt_state_set(ReturnFramePtr, CodePtr);
-    ompt_interface.target_data_enter_begin(DeviceId, CodePtr);
-    ompt_interface.target_trace_record_gen(DeviceId, Kind, ScopeKind, CodePtr);
+    OmptInterface.ompt_state_set(ReturnFramePtr, CodePtr);
+    OmptInterface.beginTargetDataEnter(DeviceId, CodePtr);
+    OmptInterface.target_trace_record_gen(DeviceId, Kind, ScopeKind, CodePtr);
   }
 
 private:
@@ -71,6 +72,7 @@ private:
   ompt_target_t Kind;
   ompt_scope_endpoint_t ScopeKind;
 };
+#endif
 
 ////////////////////////////////////////////////////////////////////////////////
 /// adds requires flags
@@ -369,10 +371,10 @@ static inline int targetKernel(ident_t *Loc, int64_t DeviceId, int32_t NumTeams,
   void *CodePtr = nullptr;
   OMPT_IF_ENABLED(
       CodePtr = OMPT_GET_RETURN_ADDRESS(0);
-      ompt_interface.ompt_state_set(OMPT_GET_FRAME_ADDRESS(0), CodePtr);
-      ompt_interface.target_begin(DeviceId, CodePtr);
-      ompt_interface.target_trace_record_gen(DeviceId, ompt_target,
-                                             ompt_scope_begin, CodePtr););
+      OmptInterface.ompt_state_set(OMPT_GET_FRAME_ADDRESS(0), CodePtr);
+      OmptInterface.beginTarget(DeviceId, CodePtr);
+      OmptInterface.target_trace_record_gen(DeviceId, ompt_target,
+                                            ompt_scope_begin, CodePtr););
 
   int Rc = OFFLOAD_SUCCESS;
   Rc = target(Loc, Device, HostPtr, *KernelArgs, AsyncInfo);
@@ -383,10 +385,10 @@ static inline int targetKernel(ident_t *Loc, int64_t DeviceId, int32_t NumTeams,
   handleTargetOutcome(Rc == OFFLOAD_SUCCESS, Loc);
   assert(Rc == OFFLOAD_SUCCESS && "offload failed");
 
-  OMPT_IF_ENABLED(ompt_interface.target_trace_record_gen(
+  OMPT_IF_ENABLED(OmptInterface.target_trace_record_gen(
       DeviceId, ompt_target, ompt_scope_end, CodePtr);
-                  ompt_interface.target_end(DeviceId, CodePtr);
-                  ompt_interface.ompt_state_clear(););
+                  OmptInterface.endTarget(DeviceId, CodePtr);
+                  OmptInterface.ompt_state_clear(););
 
   assert(Rc == OFFLOAD_SUCCESS && "__tgt_target_kernel unexpected failure!");
 

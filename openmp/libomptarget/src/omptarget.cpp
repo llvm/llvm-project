@@ -13,6 +13,7 @@
 
 #include "omptarget.h"
 #include "OmptCallback.h"
+#include "OmptInterface.h"
 #include "device.h"
 #include "private.h"
 #include "rtl.h"
@@ -27,7 +28,6 @@
 using llvm::SmallVector;
 
 #ifdef OMPT_SUPPORT
-#include "ompt_callback.h"
 #define OMPT_IF_ENABLED(stmts)                                                 \
   do {                                                                         \
     if (llvm::omp::target::ompt::Initialized) {                                \
@@ -1702,9 +1702,10 @@ int target(ident_t *Loc, DeviceTy &Device, void *HostPtr,
   DP("Launching target execution %s with pointer " DPxMOD " (index=%d).\n",
      TargetTable->EntriesBegin[TM->Index].name, DPxPTR(TgtEntryPtr), TM->Index);
 
-  OMPT_IF_ENABLED(ompt_interface.ompt_state_set(OMPT_GET_FRAME_ADDRESS(0),
-                                                OMPT_GET_RETURN_ADDRESS(0));
-                  ompt_interface.target_submit_begin(KernelArgs.NumTeams[0]););
+  OMPT_IF_ENABLED(llvm::omp::target::ompt::OmptInterface.ompt_state_set(
+      OMPT_GET_FRAME_ADDRESS(0), OMPT_GET_RETURN_ADDRESS(0));
+                  llvm::omp::target::ompt::OmptInterface.beginTargetSubmit(
+                      KernelArgs.NumTeams[0]););
 
   {
     assert(KernelArgs.NumArgs == TgtArgs.size() && "Argument count mismatch!");
@@ -1714,9 +1715,11 @@ int target(ident_t *Loc, DeviceTy &Device, void *HostPtr,
   }
 
   OMPT_IF_ENABLED(
-      ompt_interface.target_submit_trace_record_gen(KernelArgs.NumTeams[0]);
-      ompt_interface.target_submit_end(KernelArgs.NumTeams[0]);
-      ompt_interface.ompt_state_clear(););
+      llvm::omp::target::ompt::OmptInterface.target_submit_trace_record_gen(
+          KernelArgs.NumTeams[0]);
+      llvm::omp::target::ompt::OmptInterface.endTargetSubmit(
+          KernelArgs.NumTeams[0]);
+      llvm::omp::target::ompt::OmptInterface.ompt_state_clear(););
 
   if (Ret != OFFLOAD_SUCCESS) {
     REPORT("Executing target region abort target.\n");

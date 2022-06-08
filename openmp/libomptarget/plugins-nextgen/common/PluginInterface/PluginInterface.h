@@ -30,6 +30,7 @@
 
 #ifdef OMPT_SUPPORT
 #include "OmptCallback.h"
+#include "OmptTracing.h"
 #include "omp-tools.h"
 #endif
 
@@ -949,8 +950,7 @@ private:
 #undef defineOmptCallback
 
   /// OMPT device tracing functions
-#define defineOmptTracingFunction(FunctionName)                                \
-  ompt_interface_fn_t FunctionName##_fn = nullptr;
+#define defineOmptTracingFunction(Name) ompt_interface_fn_t Name##_fn = nullptr;
   FOREACH_OMPT_DEVICE_TRACING_FN(defineOmptTracingFunction);
 #undef defineOmptTracingFunction
 

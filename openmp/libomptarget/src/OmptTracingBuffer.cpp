@@ -1,4 +1,4 @@
-//=== ompt_buffer_mgr.cpp - Target independent OpenMP target RTL -- C++ -*-===//
+//=== OmptTracingBuffer.cpp - Target independent OpenMP target RTL -- C++ -===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -16,11 +16,10 @@
 #include <limits>
 
 #include "Debug.h"
-#include "ompt_buffer_mgr.h"
-#include "ompt_device_callbacks.h"
+#include "OmptCallback.h"
+#include "OmptTracing.h"
+#include "OmptTracingBuffer.h"
 #include "private.h"
-
-extern OmptDeviceCallbacksTy OmptDeviceCallbacks;
 
 // When set to true, helper threads terminate their work
 static bool done_tracing{false};
@@ -71,8 +70,8 @@ void *OmptTracingBufferMgr::assignCursor(ompt_callbacks_t type) {
   void *buffer = nullptr;
   size_t total_bytes;
   // TODO Move the buffer allocation to a helper thread
-  OmptDeviceCallbacks.ompt_callback_buffer_request(0 /* device_num */, &buffer,
-                                                   &total_bytes);
+  llvm::omp::target::ompt::ompt_callback_buffer_request(0 /* device_num */,
+                                                        &buffer, &total_bytes);
 
   // TODO Instead of asserting, turn OFF tracing
   assert(total_bytes >= rec_size && "Buffer is too small");
@@ -165,7 +164,7 @@ void OmptTracingBufferMgr::driveCompletion() {
     FlushCv.wait(flush_lock, [this] {
       return done_tracing ||
              (!Id2FlushMdMap.empty() &&
-              OmptDeviceCallbacks.is_tracing_enabled()) ||
+              llvm::omp::target::ompt::TracingInitialized) ||
              isThisThreadFlushWaitedUpon();
     });
     if (isThisThreadFlushWaitedUpon()) {
@@ -334,10 +333,10 @@ void OmptTracingBufferMgr::dispatchCallback(void *buffer, void *first_cursor,
   // There is a small window when the buffer-completion callback may
   // be invoked even after tracing has been disabled.
   // Note that we don't want to hold a lock when dispatching the callback.
-  if (OmptDeviceCallbacks.is_tracing_enabled()) {
+  if (llvm::omp::target::ompt::TracingInitialized) {
     DP("Dispatch callback w/ range (inclusive) to be flushed: %p -> %p\n",
        first_cursor, last_cursor);
-    OmptDeviceCallbacks.ompt_callback_buffer_complete(
+    llvm::omp::target::ompt::ompt_callback_buffer_complete(
         0 /* TODO device num */, buffer,
         /* bytes returned in this callback */
         (char *)getNextTR(last_cursor) - (char *)first_cursor,
@@ -355,9 +354,9 @@ void OmptTracingBufferMgr::dispatchBufferOwnedCallback(
   // There is a small window when the buffer-completion callback may
   // be invoked even after tracing has been disabled.
   // Note that we don't want to hold a lock when dispatching the callback.
-  if (OmptDeviceCallbacks.is_tracing_enabled()) {
+  if (llvm::omp::target::ompt::TracingInitialized) {
     DP("Dispatch callback with buffer %p owned\n", flush_info.FlushBuf->Start);
-    OmptDeviceCallbacks.ompt_callback_buffer_complete(
+    llvm::omp::target::ompt::ompt_callback_buffer_complete(
         0, flush_info.FlushBuf->Start, 0, (ompt_buffer_cursor_t)0,
         true /* buffer owned */);
   }
@@ -485,13 +484,13 @@ void OmptTracingBufferMgr::destroyFlushedBuf(const FlushInfo &flush_info) {
   std::unique_lock<std::mutex> buf_lock(BufferMgrMutex);
   // Mapping info for all cursors in this buffer must be erased. This
   // can be done since only fully populated buffers are destroyed.
-  char *curr_cursor = (char*)flush_info.FlushBuf->Start;
+  char *curr_cursor = (char *)flush_info.FlushBuf->Start;
   size_t total_valid_bytes = (buf->TotalBytes / getTRSize()) * getTRSize();
   char *end_cursor = curr_cursor + total_valid_bytes;
   while (curr_cursor != end_cursor) {
     auto buf_itr = Cursor2BufMdMap.find(curr_cursor);
     assert(buf_itr != Cursor2BufMdMap.end() &&
-	   "Cursor not found in buffer metadata map");
+           "Cursor not found in buffer metadata map");
     assert(buf_itr->second->BufAddr == buf);
     Cursor2BufMdMap.erase(buf_itr);
     curr_cursor += getTRSize();

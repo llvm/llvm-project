@@ -13,7 +13,8 @@
 # NOTE: Don't try to build `OMPT` using `add_llvm_library` because we
 # don't want to export `OMPT` while `add_llvm_library` requires that.
 add_library(OMPT OBJECT
-  OmptCallback.cpp)
+  OmptCallback.cpp
+  OmptTracing.cpp)
 
 # This is required when using LLVM libraries.
 llvm_update_compile_flags(OMPT)

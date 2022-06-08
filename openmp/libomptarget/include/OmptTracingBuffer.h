@@ -1,4 +1,4 @@
-//===-- ompt_buffer_mgr.h - Target independent OpenMP target RTL -- C++ -*-===//
+//===- OmptTracingBuffer.h - Target independent OpenMP target RTL -- C++ *-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -10,8 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _OMPT_BUFFER_MGR_H_
-#define _OMPT_BUFFER_MGR_H_
+#ifndef OPENMP_LIBOMPTARGET_OMPTTRACINGBUFFER_H
+#define OPENMP_LIBOMPTARGET_OMPTTRACINGBUFFER_H
 
 #include <condition_variable>
 #include <cstdint>
@@ -97,8 +97,8 @@ private:
                            // otherwise false
     Buffer(uint64_t id, void *st, void *cr, size_t bytes, size_t rem,
            bool is_full)
-        : Id{id}, Start{st}, Cursor{cr}, TotalBytes{bytes},
-          RemainingBytes{rem}, isFull{is_full} {}
+        : Id(id), Start(st), Cursor(cr), TotalBytes(bytes), RemainingBytes(rem),
+          isFull(is_full) {}
     Buffer() = delete;
     Buffer(const Buffer &) = delete;
     Buffer &operator=(const Buffer &) = delete;
@@ -257,7 +257,7 @@ private:
   // Get the size of a trace record
   // We support only ompt records today
   size_t getTRSize() { return sizeof(ompt_record_ompt_t); }
-  
+
   // Given a buffer, return the latest cursor
   void *getBufferCursor(BufPtr);
 
@@ -373,4 +373,4 @@ public:
   int flushAllBuffers(ompt_device_t *);
 };
 
-#endif // _OMPT_BUFFER_MGR_H_
+#endif // OPENMP_LIBOMPTARGET_OMPTTRACINGBUFFER_H

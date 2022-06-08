@@ -62,7 +62,7 @@
 #endif
 
 #ifdef OMPT_SUPPORT
-#include <ompt_device_callbacks.h>
+#include "OmptCallback.h"
 #define OMPT_IF_ENABLED(stmts)                                                 \
   do {                                                                         \
     if (llvm::omp::target::ompt::Initialized) {                                \
@@ -71,7 +71,7 @@
   } while (0)
 #define OMPT_IF_TRACING_ENABLED(stmts)                                         \
   do {                                                                         \
-    if (OmptDeviceCallbacks.is_tracing_enabled()) {                            \
+    if (llvm::omp::target::ompt::TracingInitialized) {                         \
       stmts                                                                    \
     }                                                                          \
   } while (0)

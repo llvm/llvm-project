@@ -27,7 +27,7 @@
 /// target_task_data representing the target task region.
 typedef ompt_data_t *(*ompt_get_task_data_t)();
 typedef ompt_data_t *(*ompt_get_target_task_data_t)();
-typedef int (*ompt_set_frame_enter_t)(void *addr, int flags, int state);
+typedef int (*ompt_set_frame_enter_t)(void *Address, int Flags, int State);
 
 namespace llvm {
 namespace omp {
@@ -119,6 +119,23 @@ public:
   void *getTargetDataPtr() { return TargetData.ptr; }
   ompt_id_t getHostOpId() { return HostOpId; }
 
+  // ToDo: mhalk Docstrings, code style, ...
+  ompt_record_ompt_t *target_trace_record_gen(int64_t device_id,
+                                              ompt_target_t kind,
+                                              ompt_scope_endpoint_t endpoint,
+                                              void *code);
+
+  ompt_record_ompt_t *
+  target_submit_trace_record_gen(unsigned int num_teams = 1);
+
+  ompt_record_ompt_t *target_data_submit_trace_record_gen(
+      ompt_target_data_op_t data_op, void *src_addr, int64_t src_device_num,
+      void *dest_addr, int64_t dest_device_num, size_t bytes);
+
+  void ompt_state_set(void *enter_frame, void *codeptr_ra);
+
+  void ompt_state_clear();
+
 private:
   /// Target operations id
   ompt_id_t HostOpId = 0;
@@ -135,6 +152,18 @@ private:
   /// Correlation id that is incremented with target operations
   uint64_t TargetRegionOpId = 1;
 
+  /// ToDo: mhalk ...
+  void *_enter_frame;
+
+  /// Return-Address pointer reported in a trace record
+  void *_codeptr_ra;
+
+  /// ToDo: mhalk ...
+  int _state;
+
+  /// Used for marking begin of a data operation
+  void announceTargetRegion(const char *RegionName);
+
   /// Used for marking begin of a data operation
   void beginTargetDataOperation();
 
@@ -146,11 +175,29 @@ private:
 
   /// Used for marking end of a target region
   void endTargetRegion();
+
+  // ToDo: mhalk
+  void ompt_state_set_helper(void *enter_frame, void *codeptr_ra, int flags,
+                             int state);
+
+  // Called by all trace generation routines
+  void set_trace_record_common(ompt_record_ompt_t *data_ptr,
+                               ompt_callbacks_t cbt);
+  // Type specific helpers
+  void set_trace_record_target_data_op(ompt_record_target_data_op_t *rec,
+                                       ompt_target_data_op_t data_op,
+                                       void *src_addr, int64_t src_device_num,
+                                       void *dest_ptr, int64_t dest_device_num,
+                                       size_t bytes);
+  void set_trace_record_target_kernel(ompt_record_target_kernel_t *rec,
+                                      unsigned int num_teams);
+  void set_trace_record_target(ompt_record_target_t *rec, int64_t device_id,
+                               ompt_target_t kind,
+                               ompt_scope_endpoint_t endpoint, void *code);
 };
 
 /// Thread local state for target region and associated metadata
-// ToDo: mhalk Uncomment next patch; for now: avoid ambiguous decl
-// extern thread_local llvm::omp::target::ompt::Interface OmptInterface;
+extern thread_local llvm::omp::target::ompt::Interface OmptInterface;
 
 } // namespace ompt
 } // namespace target

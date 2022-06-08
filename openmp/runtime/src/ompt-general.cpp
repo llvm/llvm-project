@@ -498,8 +498,8 @@ void ompt_post_init() {
     }
     ompt_data_t *task_data = nullptr;
     ompt_data_t *parallel_data = nullptr;
-    __ompt_get_task_info_internal(0, NULL, &task_data, NULL,
-                                  &parallel_data, NULL);
+    __ompt_get_task_info_internal(0, NULL, &task_data, NULL, &parallel_data,
+                                  NULL);
     if (ompt_enabled.ompt_callback_implicit_task) {
       ompt_callbacks.ompt_callback(ompt_callback_implicit_task)(
           ompt_scope_begin, parallel_data, task_data, 1, 1, ompt_task_initial);

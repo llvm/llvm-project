@@ -20,6 +20,7 @@
 
 #ifdef OMPT_SUPPORT
 #include "OmptCallback.h"
+#include "OmptTracing.h"
 #include "omp-tools.h"
 #endif
 
@@ -39,7 +40,6 @@ using namespace plugin;
 #ifdef OMPT_SUPPORT
 extern void setOmptTimestamp(uint64_t Start, uint64_t End);
 extern void setOmptGrantedNumTeams(uint64_t NumTeams);
-#include <ompt_device_callbacks.h>
 #define OMPT_IF_ENABLED(stmts)                                                 \
   do {                                                                         \
     if (llvm::omp::target::ompt::Initialized) {                                \
@@ -48,7 +48,7 @@ extern void setOmptGrantedNumTeams(uint64_t NumTeams);
   } while (0)
 #define OMPT_IF_TRACING_ENABLED(stmts)                                         \
   do {                                                                         \
-    if (OmptDeviceCallbacks.is_tracing_enabled()) {                            \
+    if (llvm::omp::target::ompt::TracingInitialized) {                         \
       stmts                                                                    \
     }                                                                          \
   } while (0)
@@ -519,10 +519,6 @@ Error GenericDeviceTy::init(GenericPluginTy &Plugin) {
   if (auto Err = initImpl(Plugin))
     return Err;
 
-  OMPT_IF_ENABLED(OmptDeviceCallbacks.prepare_devices(Plugin.getNumDevices());
-                  OmptDeviceCallbacks.compute_parent_dyn_lib("libomptarget.so");
-                  OmptDeviceCallbacks.ompt_callback_device_initialize(
-                      DeviceId, getComputeUnitKind().c_str()););
 #ifdef OMPT_SUPPORT
   if (ompt::Initialized) {
     bool ExpectedStatus = false;
@@ -583,8 +579,6 @@ Error GenericDeviceTy::deinit() {
   if (RecordReplay.isRecordingOrReplaying())
     RecordReplay.deinit();
 
-  OMPT_IF_ENABLED(OmptDeviceCallbacks.ompt_callback_device_finalize(DeviceId););
-
   if (RPCHandle)
     if (auto Err = RPCHandle->deinitDevice())
       return Err;
@@ -635,15 +629,6 @@ GenericDeviceTy::loadBinary(GenericPluginTy &Plugin,
   // Register all offload entries of the image.
   if (auto Err = registerOffloadEntries(*Image))
     return std::move(Err);
-
-  OMPT_IF_ENABLED(
-      size_t Bytes =
-          getPtrDiff(InputTgtImage->ImageEnd, InputTgtImage->ImageStart);
-      OmptDeviceCallbacks.ompt_callback_device_load(
-          DeviceId, /*FileName=*/nullptr, /*File Offset=*/0,
-          /*VmaInFile=*/nullptr, /*ImgSize=*/Bytes,
-          /*HostAddr=*/InputTgtImage->ImageStart, /*DeviceAddr=*/nullptr,
-          /* FIXME: ModuleId=*/0););
 
   if (auto Err = setupRPCServer(Plugin, *Image))
     return std::move(Err);

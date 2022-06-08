@@ -18,10 +18,11 @@ add_llvm_library(omptarget
   api.cpp
   device.cpp
   interface.cpp
-  ompt_buffer_mgr.cpp
   interop.cpp
   omptarget.cpp
   OmptCallback.cpp
+  OmptTracing.cpp
+  OmptTracingBuffer.cpp
   rtl.cpp
   LegacyAPI.cpp
 
