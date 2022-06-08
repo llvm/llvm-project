@@ -2,6 +2,7 @@
 // REQUIRES: libomptarget-debug
 
 #include <stdlib.h>
+#include <stdio.h>
 
 int *allocate(size_t n) {
   int *ptr = malloc(sizeof(int) * n);
