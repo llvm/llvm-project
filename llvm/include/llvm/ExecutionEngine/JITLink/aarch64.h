@@ -43,6 +43,8 @@ enum EdgeKind_aarch64 : Edge::Kind {
 /// only
 const char *getEdgeKindName(Edge::Kind K);
 
+bool isLoadStoreImm12(uint32_t Instr);
+
 unsigned getPageOffset12Shift(uint32_t Instr);
 
 Error applyFixup(LinkGraph &G, Block &B, const Edge &E);

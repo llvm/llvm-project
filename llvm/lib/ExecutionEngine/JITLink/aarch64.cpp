@@ -18,11 +18,15 @@ namespace llvm {
 namespace jitlink {
 namespace aarch64 {
 
-unsigned getPageOffset12Shift(uint32_t Instr) {
+bool isLoadStoreImm12(uint32_t Instr) {
   constexpr uint32_t LoadStoreImm12Mask = 0x3b000000;
+  return (Instr & LoadStoreImm12Mask) == 0x39000000;
+}
+
+unsigned getPageOffset12Shift(uint32_t Instr) {
   constexpr uint32_t Vec128Mask = 0x04800000;
 
-  if ((Instr & LoadStoreImm12Mask) == 0x39000000) {
+  if (isLoadStoreImm12(Instr)) {
     uint32_t ImplicitShift = Instr >> 30;
     if (ImplicitShift == 0)
       if ((Instr & Vec128Mask) == Vec128Mask)
