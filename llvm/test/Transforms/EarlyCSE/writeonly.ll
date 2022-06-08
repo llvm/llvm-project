@@ -7,11 +7,11 @@ declare void @foo() nounwind
 define void @test() {
 ; CHECK-LABEL: @test(
 ; CHECK-NEXT:    call void @foo() #[[ATTR1:[0-9]+]]
-; CHECK-NEXT:    store i32 2, i32* @var, align 4
+; CHECK-NEXT:    store i32 2, ptr @var, align 4
 ; CHECK-NEXT:    ret void
 ;
-  store i32 1, i32* @var
+  store i32 1, ptr @var
   call void @foo() writeonly
-  store i32 2, i32* @var
+  store i32 2, ptr @var
   ret void
 }

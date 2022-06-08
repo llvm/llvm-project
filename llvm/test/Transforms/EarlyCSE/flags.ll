@@ -18,32 +18,32 @@ define void @test1(float %x, float %y) {
   ret void
 }
 
-declare void @use.i8(i8*)
+declare void @use.i8(ptr)
 
-define void @test_inbounds_program_ub_if_first_gep_poison(i8* %ptr, i64 %n) {
+define void @test_inbounds_program_ub_if_first_gep_poison(ptr %ptr, i64 %n) {
 ; CHECK-LABEL: @test_inbounds_program_ub_if_first_gep_poison(
-; CHECK-NEXT:    [[ADD_PTR_1:%.*]] = getelementptr inbounds i8, i8* [[PTR:%.*]], i64 [[N:%.*]]
-; CHECK-NEXT:    call void @use.i8(i8* noundef [[ADD_PTR_1]])
-; CHECK-NEXT:    call void @use.i8(i8* [[ADD_PTR_1]])
+; CHECK-NEXT:    [[ADD_PTR_1:%.*]] = getelementptr inbounds i8, ptr [[PTR:%.*]], i64 [[N:%.*]]
+; CHECK-NEXT:    call void @use.i8(ptr noundef [[ADD_PTR_1]])
+; CHECK-NEXT:    call void @use.i8(ptr [[ADD_PTR_1]])
 ; CHECK-NEXT:    ret void
 ;
-  %add.ptr.1 = getelementptr inbounds i8, i8* %ptr, i64 %n
-  call void @use.i8(i8* noundef %add.ptr.1)
-  %add.ptr.2 = getelementptr i8, i8* %ptr, i64 %n
-  call void @use.i8(i8* %add.ptr.2)
+  %add.ptr.1 = getelementptr inbounds i8, ptr %ptr, i64 %n
+  call void @use.i8(ptr noundef %add.ptr.1)
+  %add.ptr.2 = getelementptr i8, ptr %ptr, i64 %n
+  call void @use.i8(ptr %add.ptr.2)
   ret void
 }
 
-define void @test_inbounds_program_not_ub_if_first_gep_poison(i8* %ptr, i64 %n) {
+define void @test_inbounds_program_not_ub_if_first_gep_poison(ptr %ptr, i64 %n) {
 ; CHECK-LABEL: @test_inbounds_program_not_ub_if_first_gep_poison(
-; CHECK-NEXT:    [[ADD_PTR_1:%.*]] = getelementptr i8, i8* [[PTR:%.*]], i64 [[N:%.*]]
-; CHECK-NEXT:    call void @use.i8(i8* [[ADD_PTR_1]])
-; CHECK-NEXT:    call void @use.i8(i8* [[ADD_PTR_1]])
+; CHECK-NEXT:    [[ADD_PTR_1:%.*]] = getelementptr i8, ptr [[PTR:%.*]], i64 [[N:%.*]]
+; CHECK-NEXT:    call void @use.i8(ptr [[ADD_PTR_1]])
+; CHECK-NEXT:    call void @use.i8(ptr [[ADD_PTR_1]])
 ; CHECK-NEXT:    ret void
 ;
-  %add.ptr.1 = getelementptr inbounds i8, i8* %ptr, i64 %n
-  call void @use.i8(i8* %add.ptr.1)
-  %add.ptr.2 = getelementptr i8, i8* %ptr, i64 %n
-  call void @use.i8(i8* %add.ptr.2)
+  %add.ptr.1 = getelementptr inbounds i8, ptr %ptr, i64 %n
+  call void @use.i8(ptr %add.ptr.1)
+  %add.ptr.2 = getelementptr i8, ptr %ptr, i64 %n
+  call void @use.i8(ptr %add.ptr.2)
   ret void
 }

@@ -7,44 +7,44 @@ declare void @llvm.experimental.guard(i1,...)
 
 declare void @llvm.assume(i1)
 
-define i32 @test0(i32* %ptr, i1 %cond) {
+define i32 @test0(ptr %ptr, i1 %cond) {
 ; We can do store to load forwarding over a guard, since it does not
 ; clobber memory
 ; NO_ASSUME-LABEL: @test0(
-; NO_ASSUME-NEXT:    store i32 40, i32* [[PTR:%.*]], align 4
+; NO_ASSUME-NEXT:    store i32 40, ptr [[PTR:%.*]], align 4
 ; NO_ASSUME-NEXT:    call void (i1, ...) @llvm.experimental.guard(i1 [[COND:%.*]]) [ "deopt"() ]
 ; NO_ASSUME-NEXT:    ret i32 40
 ;
 ; USE_ASSUME-LABEL: @test0(
-; USE_ASSUME-NEXT:    store i32 40, i32* [[PTR:%.*]], align 4
+; USE_ASSUME-NEXT:    store i32 40, ptr [[PTR:%.*]], align 4
 ; USE_ASSUME-NEXT:    call void (i1, ...) @llvm.experimental.guard(i1 [[COND:%.*]]) [ "deopt"() ]
-; USE_ASSUME-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(i32* [[PTR]], i64 4), "nonnull"(i32* [[PTR]]), "align"(i32* [[PTR]], i64 4) ]
+; USE_ASSUME-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(ptr [[PTR]], i64 4), "nonnull"(ptr [[PTR]]), "align"(ptr [[PTR]], i64 4) ]
 ; USE_ASSUME-NEXT:    ret i32 40
 ;
 
-  store i32 40, i32* %ptr
+  store i32 40, ptr %ptr
   call void(i1,...) @llvm.experimental.guard(i1 %cond) [ "deopt"() ]
-  %rval = load i32, i32* %ptr
+  %rval = load i32, ptr %ptr
   ret i32 %rval
 }
 
-define i32 @test1(i32* %val, i1 %cond) {
+define i32 @test1(ptr %val, i1 %cond) {
 ; We can CSE loads over a guard, since it does not clobber memory
 ; NO_ASSUME-LABEL: @test1(
-; NO_ASSUME-NEXT:    [[VAL0:%.*]] = load i32, i32* [[VAL:%.*]], align 4
+; NO_ASSUME-NEXT:    [[VAL0:%.*]] = load i32, ptr [[VAL:%.*]], align 4
 ; NO_ASSUME-NEXT:    call void (i1, ...) @llvm.experimental.guard(i1 [[COND:%.*]]) [ "deopt"() ]
 ; NO_ASSUME-NEXT:    ret i32 0
 ;
 ; USE_ASSUME-LABEL: @test1(
-; USE_ASSUME-NEXT:    [[VAL0:%.*]] = load i32, i32* [[VAL:%.*]], align 4
+; USE_ASSUME-NEXT:    [[VAL0:%.*]] = load i32, ptr [[VAL:%.*]], align 4
 ; USE_ASSUME-NEXT:    call void (i1, ...) @llvm.experimental.guard(i1 [[COND:%.*]]) [ "deopt"() ]
-; USE_ASSUME-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(i32* [[VAL]], i64 4), "nonnull"(i32* [[VAL]]), "align"(i32* [[VAL]], i64 4) ]
+; USE_ASSUME-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(ptr [[VAL]], i64 4), "nonnull"(ptr [[VAL]]), "align"(ptr [[VAL]], i64 4) ]
 ; USE_ASSUME-NEXT:    ret i32 0
 ;
 
-  %val0 = load i32, i32* %val
+  %val0 = load i32, ptr %val
   call void(i1,...) @llvm.experimental.guard(i1 %cond) [ "deopt"() ]
-  %val1 = load i32, i32* %val
+  %val1 = load i32, ptr %val
   %rval = sub i32 %val0, %val1
   ret i32 %rval
 }
@@ -180,21 +180,21 @@ right:
   br label %left
 }
 
-define void @test6(i1 %c, i32* %ptr) {
+define void @test6(i1 %c, ptr %ptr) {
 ; Check that we do not DSE over calls to @llvm.experimental.guard.
 ; Guard intrinsics do _read_ memory, so th call to guard below needs
 ; to see the store of 500 to %ptr
 ; CHECK-LABEL: @test6(
-; CHECK-NEXT:    store i32 500, i32* [[PTR:%.*]], align 4
+; CHECK-NEXT:    store i32 500, ptr [[PTR:%.*]], align 4
 ; CHECK-NEXT:    call void (i1, ...) @llvm.experimental.guard(i1 [[C:%.*]]) [ "deopt"() ]
-; CHECK-NEXT:    store i32 600, i32* [[PTR]], align 4
+; CHECK-NEXT:    store i32 600, ptr [[PTR]], align 4
 ; CHECK-NEXT:    ret void
 ;
 
 
-  store i32 500, i32* %ptr
+  store i32 500, ptr %ptr
   call void(i1,...) @llvm.experimental.guard(i1 %c) [ "deopt"() ]
-  store i32 600, i32* %ptr
+  store i32 600, ptr %ptr
   ret void
 }
 
@@ -214,52 +214,52 @@ define void @test07(i32 %a, i32 %b) {
   ret void
 }
 
-define void @test08(i32 %a, i32 %b, i32* %ptr) {
+define void @test08(i32 %a, i32 %b, ptr %ptr) {
 ; Check that we deal correctly with stores when removing guards in the same
 ; block in case when the condition is not recalculated.
 ; NO_ASSUME-LABEL: @test08(
 ; NO_ASSUME-NEXT:    [[CMP:%.*]] = icmp eq i32 [[A:%.*]], [[B:%.*]]
-; NO_ASSUME-NEXT:    store i32 100, i32* [[PTR:%.*]], align 4
+; NO_ASSUME-NEXT:    store i32 100, ptr [[PTR:%.*]], align 4
 ; NO_ASSUME-NEXT:    call void (i1, ...) @llvm.experimental.guard(i1 [[CMP]]) [ "deopt"() ]
-; NO_ASSUME-NEXT:    store i32 400, i32* [[PTR]], align 4
+; NO_ASSUME-NEXT:    store i32 400, ptr [[PTR]], align 4
 ; NO_ASSUME-NEXT:    ret void
 ;
 ; USE_ASSUME-LABEL: @test08(
 ; USE_ASSUME-NEXT:    [[CMP:%.*]] = icmp eq i32 [[A:%.*]], [[B:%.*]]
-; USE_ASSUME-NEXT:    store i32 100, i32* [[PTR:%.*]], align 4
+; USE_ASSUME-NEXT:    store i32 100, ptr [[PTR:%.*]], align 4
 ; USE_ASSUME-NEXT:    call void (i1, ...) @llvm.experimental.guard(i1 [[CMP]]) [ "deopt"() ]
-; USE_ASSUME-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(i32* [[PTR]], i64 4), "nonnull"(i32* [[PTR]]), "align"(i32* [[PTR]], i64 4) ]
-; USE_ASSUME-NEXT:    store i32 400, i32* [[PTR]], align 4
+; USE_ASSUME-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(ptr [[PTR]], i64 4), "nonnull"(ptr [[PTR]]), "align"(ptr [[PTR]], i64 4) ]
+; USE_ASSUME-NEXT:    store i32 400, ptr [[PTR]], align 4
 ; USE_ASSUME-NEXT:    ret void
 ;
 
   %cmp = icmp eq i32 %a, %b
-  store i32 100, i32* %ptr
+  store i32 100, ptr %ptr
   call void (i1, ...) @llvm.experimental.guard(i1 %cmp) [ "deopt"() ]
-  store i32 200, i32* %ptr
+  store i32 200, ptr %ptr
   call void (i1, ...) @llvm.experimental.guard(i1 %cmp) [ "deopt"() ]
-  store i32 300, i32* %ptr
+  store i32 300, ptr %ptr
   call void (i1, ...) @llvm.experimental.guard(i1 %cmp) [ "deopt"() ]
-  store i32 400, i32* %ptr
+  store i32 400, ptr %ptr
   ret void
 }
 
-define void @test09(i32 %a, i32 %b, i1 %c, i32* %ptr) {
+define void @test09(i32 %a, i32 %b, i1 %c, ptr %ptr) {
 ; Similar to test08, but with more control flow.
 ; TODO: Can we get rid of the store in the end of entry given that it is
 ; post-dominated by other stores?
 ; NO_ASSUME-LABEL: @test09(
 ; NO_ASSUME-NEXT:  entry:
 ; NO_ASSUME-NEXT:    [[CMP:%.*]] = icmp eq i32 [[A:%.*]], [[B:%.*]]
-; NO_ASSUME-NEXT:    store i32 100, i32* [[PTR:%.*]], align 4
+; NO_ASSUME-NEXT:    store i32 100, ptr [[PTR:%.*]], align 4
 ; NO_ASSUME-NEXT:    call void (i1, ...) @llvm.experimental.guard(i1 [[CMP]]) [ "deopt"() ]
-; NO_ASSUME-NEXT:    store i32 400, i32* [[PTR]], align 4
+; NO_ASSUME-NEXT:    store i32 400, ptr [[PTR]], align 4
 ; NO_ASSUME-NEXT:    br i1 [[C:%.*]], label [[IF_TRUE:%.*]], label [[IF_FALSE:%.*]]
 ; NO_ASSUME:       if.true:
-; NO_ASSUME-NEXT:    store i32 500, i32* [[PTR]], align 4
+; NO_ASSUME-NEXT:    store i32 500, ptr [[PTR]], align 4
 ; NO_ASSUME-NEXT:    br label [[MERGE:%.*]]
 ; NO_ASSUME:       if.false:
-; NO_ASSUME-NEXT:    store i32 600, i32* [[PTR]], align 4
+; NO_ASSUME-NEXT:    store i32 600, ptr [[PTR]], align 4
 ; NO_ASSUME-NEXT:    br label [[MERGE]]
 ; NO_ASSUME:       merge:
 ; NO_ASSUME-NEXT:    ret void
@@ -267,16 +267,16 @@ define void @test09(i32 %a, i32 %b, i1 %c, i32* %ptr) {
 ; USE_ASSUME-LABEL: @test09(
 ; USE_ASSUME-NEXT:  entry:
 ; USE_ASSUME-NEXT:    [[CMP:%.*]] = icmp eq i32 [[A:%.*]], [[B:%.*]]
-; USE_ASSUME-NEXT:    store i32 100, i32* [[PTR:%.*]], align 4
+; USE_ASSUME-NEXT:    store i32 100, ptr [[PTR:%.*]], align 4
 ; USE_ASSUME-NEXT:    call void (i1, ...) @llvm.experimental.guard(i1 [[CMP]]) [ "deopt"() ]
-; USE_ASSUME-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(i32* [[PTR]], i64 4), "nonnull"(i32* [[PTR]]), "align"(i32* [[PTR]], i64 4) ]
-; USE_ASSUME-NEXT:    store i32 400, i32* [[PTR]], align 4
+; USE_ASSUME-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(ptr [[PTR]], i64 4), "nonnull"(ptr [[PTR]]), "align"(ptr [[PTR]], i64 4) ]
+; USE_ASSUME-NEXT:    store i32 400, ptr [[PTR]], align 4
 ; USE_ASSUME-NEXT:    br i1 [[C:%.*]], label [[IF_TRUE:%.*]], label [[IF_FALSE:%.*]]
 ; USE_ASSUME:       if.true:
-; USE_ASSUME-NEXT:    store i32 500, i32* [[PTR]], align 4
+; USE_ASSUME-NEXT:    store i32 500, ptr [[PTR]], align 4
 ; USE_ASSUME-NEXT:    br label [[MERGE:%.*]]
 ; USE_ASSUME:       if.false:
-; USE_ASSUME-NEXT:    store i32 600, i32* [[PTR]], align 4
+; USE_ASSUME-NEXT:    store i32 600, ptr [[PTR]], align 4
 ; USE_ASSUME-NEXT:    br label [[MERGE]]
 ; USE_ASSUME:       merge:
 ; USE_ASSUME-NEXT:    ret void
@@ -284,30 +284,30 @@ define void @test09(i32 %a, i32 %b, i1 %c, i32* %ptr) {
 
 entry:
   %cmp = icmp eq i32 %a, %b
-  store i32 100, i32* %ptr
+  store i32 100, ptr %ptr
   call void (i1, ...) @llvm.experimental.guard(i1 %cmp) [ "deopt"() ]
-  store i32 200, i32* %ptr
+  store i32 200, ptr %ptr
   call void (i1, ...) @llvm.experimental.guard(i1 %cmp) [ "deopt"() ]
-  store i32 300, i32* %ptr
+  store i32 300, ptr %ptr
   call void (i1, ...) @llvm.experimental.guard(i1 %cmp) [ "deopt"() ]
-  store i32 400, i32* %ptr
+  store i32 400, ptr %ptr
   br i1 %c, label %if.true, label %if.false
 
 if.true:
   call void (i1, ...) @llvm.experimental.guard(i1 %cmp) [ "deopt"() ]
-  store i32 500, i32* %ptr
+  store i32 500, ptr %ptr
   br label %merge
 
 if.false:
   call void (i1, ...) @llvm.experimental.guard(i1 %cmp) [ "deopt"() ]
-  store i32 600, i32* %ptr
+  store i32 600, ptr %ptr
   br label %merge
 
 merge:
   ret void
 }
 
-define void @test10(i32 %a, i32 %b, i1 %c, i32* %ptr) {
+define void @test10(i32 %a, i32 %b, i1 %c, ptr %ptr) {
 ; Make sure that non-dominating guards do not cause other guards removal.
 ; CHECK-LABEL: @test10(
 ; CHECK-NEXT:  entry:
@@ -315,15 +315,15 @@ define void @test10(i32 %a, i32 %b, i1 %c, i32* %ptr) {
 ; CHECK-NEXT:    br i1 [[C:%.*]], label [[IF_TRUE:%.*]], label [[IF_FALSE:%.*]]
 ; CHECK:       if.true:
 ; CHECK-NEXT:    call void (i1, ...) @llvm.experimental.guard(i1 [[CMP]]) [ "deopt"() ]
-; CHECK-NEXT:    store i32 100, i32* [[PTR:%.*]], align 4
+; CHECK-NEXT:    store i32 100, ptr [[PTR:%.*]], align 4
 ; CHECK-NEXT:    br label [[MERGE:%.*]]
 ; CHECK:       if.false:
-; CHECK-NEXT:    store i32 200, i32* [[PTR]], align 4
+; CHECK-NEXT:    store i32 200, ptr [[PTR]], align 4
 ; CHECK-NEXT:    br label [[MERGE]]
 ; CHECK:       merge:
-; CHECK-NEXT:    store i32 300, i32* [[PTR]], align 4
+; CHECK-NEXT:    store i32 300, ptr [[PTR]], align 4
 ; CHECK-NEXT:    call void (i1, ...) @llvm.experimental.guard(i1 [[CMP]]) [ "deopt"() ]
-; CHECK-NEXT:    store i32 400, i32* [[PTR]], align 4
+; CHECK-NEXT:    store i32 400, ptr [[PTR]], align 4
 ; CHECK-NEXT:    ret void
 ;
 
@@ -333,22 +333,22 @@ entry:
 
 if.true:
   call void (i1, ...) @llvm.experimental.guard(i1 %cmp) [ "deopt"() ]
-  store i32 100, i32* %ptr
+  store i32 100, ptr %ptr
   call void (i1, ...) @llvm.experimental.guard(i1 %cmp) [ "deopt"() ]
   br label %merge
 
 if.false:
-  store i32 200, i32* %ptr
+  store i32 200, ptr %ptr
   br label %merge
 
 merge:
-  store i32 300, i32* %ptr
+  store i32 300, ptr %ptr
   call void (i1, ...) @llvm.experimental.guard(i1 %cmp) [ "deopt"() ]
-  store i32 400, i32* %ptr
+  store i32 400, ptr %ptr
   ret void
 }
 
-define void @test11(i32 %a, i32 %b, i32* %ptr) {
+define void @test11(i32 %a, i32 %b, ptr %ptr) {
 ; Make sure that branching condition is applied to guards.
 ; CHECK-LABEL: @test11(
 ; CHECK-NEXT:  entry:
@@ -396,35 +396,35 @@ define void @test12(i32 %a, i32 %b) {
   ret void
 }
 
-define void @test13(i32 %a, i32 %b, i32* %ptr) {
+define void @test13(i32 %a, i32 %b, ptr %ptr) {
 ; Check that we deal correctly with stores when removing guards due to assume.
 ; NO_ASSUME-LABEL: @test13(
 ; NO_ASSUME-NEXT:    [[CMP:%.*]] = icmp eq i32 [[A:%.*]], [[B:%.*]]
 ; NO_ASSUME-NEXT:    call void @llvm.assume(i1 [[CMP]])
-; NO_ASSUME-NEXT:    store i32 400, i32* [[PTR:%.*]], align 4
+; NO_ASSUME-NEXT:    store i32 400, ptr [[PTR:%.*]], align 4
 ; NO_ASSUME-NEXT:    ret void
 ;
 ; USE_ASSUME-LABEL: @test13(
 ; USE_ASSUME-NEXT:    [[CMP:%.*]] = icmp eq i32 [[A:%.*]], [[B:%.*]]
 ; USE_ASSUME-NEXT:    call void @llvm.assume(i1 [[CMP]])
-; USE_ASSUME-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(i32* [[PTR:%.*]], i64 4), "nonnull"(i32* [[PTR]]), "align"(i32* [[PTR]], i64 4) ]
-; USE_ASSUME-NEXT:    store i32 400, i32* [[PTR]], align 4
+; USE_ASSUME-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(ptr [[PTR:%.*]], i64 4), "nonnull"(ptr [[PTR]]), "align"(ptr [[PTR]], i64 4) ]
+; USE_ASSUME-NEXT:    store i32 400, ptr [[PTR]], align 4
 ; USE_ASSUME-NEXT:    ret void
 ;
 
   %cmp = icmp eq i32 %a, %b
   call void @llvm.assume(i1 %cmp)
-  store i32 100, i32* %ptr
+  store i32 100, ptr %ptr
   call void (i1, ...) @llvm.experimental.guard(i1 %cmp) [ "deopt"() ]
-  store i32 200, i32* %ptr
+  store i32 200, ptr %ptr
   call void (i1, ...) @llvm.experimental.guard(i1 %cmp) [ "deopt"() ]
-  store i32 300, i32* %ptr
+  store i32 300, ptr %ptr
   call void (i1, ...) @llvm.experimental.guard(i1 %cmp) [ "deopt"() ]
-  store i32 400, i32* %ptr
+  store i32 400, ptr %ptr
   ret void
 }
 
-define void @test14(i32 %a, i32 %b, i1 %c, i32* %ptr) {
+define void @test14(i32 %a, i32 %b, i1 %c, ptr %ptr) {
 ; Similar to test13, but with more control flow.
 ; TODO: Can we get rid of the store in the end of entry given that it is
 ; post-dominated by other stores?
@@ -432,13 +432,13 @@ define void @test14(i32 %a, i32 %b, i1 %c, i32* %ptr) {
 ; NO_ASSUME-NEXT:  entry:
 ; NO_ASSUME-NEXT:    [[CMP:%.*]] = icmp eq i32 [[A:%.*]], [[B:%.*]]
 ; NO_ASSUME-NEXT:    call void @llvm.assume(i1 [[CMP]])
-; NO_ASSUME-NEXT:    store i32 400, i32* [[PTR:%.*]], align 4
+; NO_ASSUME-NEXT:    store i32 400, ptr [[PTR:%.*]], align 4
 ; NO_ASSUME-NEXT:    br i1 [[C:%.*]], label [[IF_TRUE:%.*]], label [[IF_FALSE:%.*]]
 ; NO_ASSUME:       if.true:
-; NO_ASSUME-NEXT:    store i32 500, i32* [[PTR]], align 4
+; NO_ASSUME-NEXT:    store i32 500, ptr [[PTR]], align 4
 ; NO_ASSUME-NEXT:    br label [[MERGE:%.*]]
 ; NO_ASSUME:       if.false:
-; NO_ASSUME-NEXT:    store i32 600, i32* [[PTR]], align 4
+; NO_ASSUME-NEXT:    store i32 600, ptr [[PTR]], align 4
 ; NO_ASSUME-NEXT:    br label [[MERGE]]
 ; NO_ASSUME:       merge:
 ; NO_ASSUME-NEXT:    ret void
@@ -447,14 +447,14 @@ define void @test14(i32 %a, i32 %b, i1 %c, i32* %ptr) {
 ; USE_ASSUME-NEXT:  entry:
 ; USE_ASSUME-NEXT:    [[CMP:%.*]] = icmp eq i32 [[A:%.*]], [[B:%.*]]
 ; USE_ASSUME-NEXT:    call void @llvm.assume(i1 [[CMP]])
-; USE_ASSUME-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(i32* [[PTR:%.*]], i64 4), "nonnull"(i32* [[PTR]]), "align"(i32* [[PTR]], i64 4) ]
-; USE_ASSUME-NEXT:    store i32 400, i32* [[PTR]], align 4
+; USE_ASSUME-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(ptr [[PTR:%.*]], i64 4), "nonnull"(ptr [[PTR]]), "align"(ptr [[PTR]], i64 4) ]
+; USE_ASSUME-NEXT:    store i32 400, ptr [[PTR]], align 4
 ; USE_ASSUME-NEXT:    br i1 [[C:%.*]], label [[IF_TRUE:%.*]], label [[IF_FALSE:%.*]]
 ; USE_ASSUME:       if.true:
-; USE_ASSUME-NEXT:    store i32 500, i32* [[PTR]], align 4
+; USE_ASSUME-NEXT:    store i32 500, ptr [[PTR]], align 4
 ; USE_ASSUME-NEXT:    br label [[MERGE:%.*]]
 ; USE_ASSUME:       if.false:
-; USE_ASSUME-NEXT:    store i32 600, i32* [[PTR]], align 4
+; USE_ASSUME-NEXT:    store i32 600, ptr [[PTR]], align 4
 ; USE_ASSUME-NEXT:    br label [[MERGE]]
 ; USE_ASSUME:       merge:
 ; USE_ASSUME-NEXT:    ret void
@@ -463,30 +463,30 @@ define void @test14(i32 %a, i32 %b, i1 %c, i32* %ptr) {
 entry:
   %cmp = icmp eq i32 %a, %b
   call void @llvm.assume(i1 %cmp)
-  store i32 100, i32* %ptr
+  store i32 100, ptr %ptr
   call void (i1, ...) @llvm.experimental.guard(i1 %cmp) [ "deopt"() ]
-  store i32 200, i32* %ptr
+  store i32 200, ptr %ptr
   call void (i1, ...) @llvm.experimental.guard(i1 %cmp) [ "deopt"() ]
-  store i32 300, i32* %ptr
+  store i32 300, ptr %ptr
   call void (i1, ...) @llvm.experimental.guard(i1 %cmp) [ "deopt"() ]
-  store i32 400, i32* %ptr
+  store i32 400, ptr %ptr
   br i1 %c, label %if.true, label %if.false
 
 if.true:
   call void (i1, ...) @llvm.experimental.guard(i1 %cmp) [ "deopt"() ]
-  store i32 500, i32* %ptr
+  store i32 500, ptr %ptr
   br label %merge
 
 if.false:
   call void (i1, ...) @llvm.experimental.guard(i1 %cmp) [ "deopt"() ]
-  store i32 600, i32* %ptr
+  store i32 600, ptr %ptr
   br label %merge
 
 merge:
   ret void
 }
 
-define void @test15(i32 %a, i32 %b, i1 %c, i32* %ptr) {
+define void @test15(i32 %a, i32 %b, i1 %c, ptr %ptr) {
 ; Make sure that non-dominating assumes do not cause guards removal.
 ; CHECK-LABEL: @test15(
 ; CHECK-NEXT:  entry:
@@ -494,15 +494,15 @@ define void @test15(i32 %a, i32 %b, i1 %c, i32* %ptr) {
 ; CHECK-NEXT:    br i1 [[C:%.*]], label [[IF_TRUE:%.*]], label [[IF_FALSE:%.*]]
 ; CHECK:       if.true:
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP]])
-; CHECK-NEXT:    store i32 100, i32* [[PTR:%.*]], align 4
+; CHECK-NEXT:    store i32 100, ptr [[PTR:%.*]], align 4
 ; CHECK-NEXT:    br label [[MERGE:%.*]]
 ; CHECK:       if.false:
-; CHECK-NEXT:    store i32 200, i32* [[PTR]], align 4
+; CHECK-NEXT:    store i32 200, ptr [[PTR]], align 4
 ; CHECK-NEXT:    br label [[MERGE]]
 ; CHECK:       merge:
-; CHECK-NEXT:    store i32 300, i32* [[PTR]], align 4
+; CHECK-NEXT:    store i32 300, ptr [[PTR]], align 4
 ; CHECK-NEXT:    call void (i1, ...) @llvm.experimental.guard(i1 [[CMP]]) [ "deopt"() ]
-; CHECK-NEXT:    store i32 400, i32* [[PTR]], align 4
+; CHECK-NEXT:    store i32 400, ptr [[PTR]], align 4
 ; CHECK-NEXT:    ret void
 ;
 
@@ -512,18 +512,18 @@ entry:
 
 if.true:
   call void @llvm.assume(i1 %cmp)
-  store i32 100, i32* %ptr
+  store i32 100, ptr %ptr
   call void (i1, ...) @llvm.experimental.guard(i1 %cmp) [ "deopt"() ]
   br label %merge
 
 if.false:
-  store i32 200, i32* %ptr
+  store i32 200, ptr %ptr
   br label %merge
 
 merge:
-  store i32 300, i32* %ptr
+  store i32 300, ptr %ptr
   call void (i1, ...) @llvm.experimental.guard(i1 %cmp) [ "deopt"() ]
-  store i32 400, i32* %ptr
+  store i32 400, ptr %ptr
   ret void
 }
 
@@ -543,7 +543,7 @@ define void @test16(i32 %a, i32 %b) {
   ret void
 }
 
-define void @test17(i32 %a, i32 %b, i1 %c, i32* %ptr) {
+define void @test17(i32 %a, i32 %b, i1 %c, ptr %ptr) {
 ; Check that we don't bother to do anything with assumes even if we know the
 ; condition being true or false (includes come control flow).
 ; CHECK-LABEL: @test17(
