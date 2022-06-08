@@ -41,6 +41,8 @@ uptr GetMmapGranularity() {
   return GetPageSize();
 }
 
+bool ErrorIsOOM(error_t err) { return err == ENOMEM; }
+
 void *MmapOrDie(uptr size, const char *mem_type, bool raw_report) {
   size = RoundUpTo(size, GetPageSizeCached());
   uptr res = MmapNamed(nullptr, size, PROT_READ | PROT_WRITE,

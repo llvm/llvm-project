@@ -8,7 +8,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-// CHECK: {{Leak|Address}}Sanitizer failed to allocate 0x100001 bytes
+// CHECK: {{Leak|Address}}Sanitizer: out of memory: failed to allocate 0x100001 bytes
 
 // CHECK: {{Leak|Address}}Sanitizer: detected memory leaks
 // CHECK: {{Leak|Address}}Sanitizer: 9 byte(s) leaked in 1 allocation(s).

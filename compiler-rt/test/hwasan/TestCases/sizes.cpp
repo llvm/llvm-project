@@ -84,6 +84,6 @@ int main(int argc, char **argv) {
 }
 
 // CHECK-max: {{ERROR: HWAddressSanitizer: requested allocation size .* exceeds maximum supported size}}
-// CHECK-oom: ERROR: HWAddressSanitizer: allocator is out of memory
+// CHECK-oom: ERROR: HWAddressSanitizer: out of memory: allocator is trying to allocate
 // CHECK-calloc: ERROR: HWAddressSanitizer: calloc parameters overflow
 // CHECK-reallocarray: ERROR: HWAddressSanitizer: reallocarray parameters overflow

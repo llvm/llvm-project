@@ -311,6 +311,18 @@ void NORETURN ReportMmapFailureAndDie(uptr size, const char *mem_type,
                                       const char *mmap_type, error_t err,
                                       bool raw_report = false);
 
+// Returns true if the platform-specific error reported is an OOM error.
+bool ErrorIsOOM(error_t err);
+
+// This reports an error in the form:
+//
+//   `ERROR: {{SanitizerToolName}}: out of memory: {{err_msg}}`
+//
+// Downstream tools that read sanitizer output will know that errors starting
+// in this format are specifically OOM errors.
+#define ERROR_OOM(err_msg, ...) \
+  Report("ERROR: %s: out of memory: " err_msg, SanitizerToolName, __VA_ARGS__)
+
 // Specific tools may override behavior of "Die" function to do tool-specific
 // job.
 typedef void (*DieCallbackType)(void);
