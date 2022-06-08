@@ -1,4 +1,4 @@
-# RUN: not --crash llc -o - %s -run-pass fixup-statepoint-caller-saved -verify-machineinstrs 2>&1 | FileCheck %s
+# RUN: llc -o - %s -run-pass fixup-statepoint-caller-saved -verify-machineinstrs | FileCheck %s
 
 --- |
   target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
@@ -21,22 +21,11 @@ body:             |
   bb.0:
     liveins: $rax, $rdi, $rbp
 
-
-    ; CHECK: # After Fixup Statepoint Caller Saved
-    ; CHECK: # Machine code for function test_cp:
-    ; CHECK:   bb.0:
-    ; CHECK:     liveins: $rax, $rdi, $rbp
-    ; CHECK:   renamable $rdi = COPY killed renamable $rax
+    ; CHECK:   renamable $rdi = COPY renamable $rax
     ; CHECK:   MOV64mr %stack.1, 1, $noreg, 0, $noreg, killed $rax :: (store (s64) into %stack.1)
     ; CHECK:   renamable $rax = MOV64rm renamable $rdi, 1, $noreg, 16, $noreg
     ; CHECK:   MOV64mr %stack.0, 1, $noreg, 0, $noreg, killed $rax :: (store (s64) into %stack.0)
-    ; CHECK:   STATEPOINT 0, 0, 0, @foo, 2, 0, 2, 0, 2, 1, 1, 8, %stack.0, 0, 2, 1, 1, 8, %stack.1, 0, 2, 0, 2, 1, 0, 0, <regmask $bh $bl $bp $bph $bpl $bx $ebp $ebx $hbp $hbx $rbp $rbx $r12 $r13 $r14 $r15 $r12b $r13b $r14b $r15b $r12bh $r13bh $r14bh $r15bh $r12d $r13d $r14d $r15d $r12w $r13w $r14w $r15w $r12wh and 3 more...>, implicit-def $rsp, implicit-def $ssp
-    ; CHECK: *** Bad machine code: Using an undefined physical register ***
-    ; CHECK: - function:    test_cp
-    ; CHECK: - basic block: %bb.0
-    ; CHECK: - instruction: MOV64mr %stack.1, 1, $noreg, 0, $noreg, killed $rax :: (store (s64) into %stack.1)
-    ; CHECK: - operand 5:   killed $rax
-    ; CHECK: LLVM ERROR: Found 1 machine code errors.
+    ; CHECK:   STATEPOINT 0, 0, 0, @foo, 2, 0, 2, 0, 2, 1, 1, 8, %stack.0, 0, 2, 1, 1, 8, %stack.1, 0, 2, 0, 2, 1, 0, 0, csr_64, implicit-def $rsp, implicit-def $ssp :: (load (s64) from %stack.0), (load store (s64) on %stack.1)
     renamable $rdi = COPY killed renamable $rax
     renamable $rax = MOV64rm renamable $rdi, 1, $noreg, 16, $noreg
     renamable $rdi = STATEPOINT 0, 0, 0, @foo, 2, 0, 2, 0, 2, 1, renamable $rax, 2, 1, killed renamable $rdi(tied-def 0), 2, 0, 2, 1, 0, 0, csr_64, implicit-def $rsp, implicit-def $ssp
