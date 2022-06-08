@@ -207,6 +207,19 @@ bool RISCVMergeBaseOffsetOpt::detectAndFoldOffset(MachineInstr &HiLUI,
   case RISCV::ADDI: {
     // Offset is simply an immediate operand.
     int64_t Offset = Tail.getOperand(2).getImm();
+
+    // We might have two ADDIs in a row.
+    Register TailDestReg = Tail.getOperand(0).getReg();
+    if (MRI->hasOneUse(TailDestReg)) {
+      MachineInstr &TailTail = *MRI->use_instr_begin(TailDestReg);
+      if (TailTail.getOpcode() == RISCV::ADDI) {
+        Offset += TailTail.getOperand(2).getImm();
+        DeadInstrs.insert(&Tail);
+        foldOffset(HiLUI, LoADDI, TailTail, Offset);
+        return true;
+      }
+    }
+
     LLVM_DEBUG(dbgs() << "  Offset Instr: " << Tail);
     foldOffset(HiLUI, LoADDI, Tail, Offset);
     return true;
