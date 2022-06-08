@@ -205,6 +205,11 @@ spirv::getAddressingModel(spirv::TargetEnvAttr targetAttr) {
     // from TargetEnvAttr to selected between Physical32 and Physical64.
     if (cap == Capability::Kernel)
       return spirv::AddressingModel::Physical64;
+    // TODO PhysicalStorageBuffer64 is hard-coded here, but some information
+    // should come from TargetEnvAttr to select between PhysicalStorageBuffer64
+    // and PhysicalStorageBuffer64EXT
+    if (cap == Capability::PhysicalStorageBufferAddresses)
+      return spirv::AddressingModel::PhysicalStorageBuffer64;
   }
   // Logical addressing doesn't need any capabilities so return it as default.
   return spirv::AddressingModel::Logical;
