@@ -232,10 +232,6 @@ inline mlir::NamedAttribute getAdaptToByRefAttr(fir::FirOpBuilder &builder) {
           builder.getUnitAttr()};
 }
 
-/// Generate max(\p value, 0) where \p value is a scalar integer.
-mlir::Value genMaxWithZero(fir::FirOpBuilder &builder, mlir::Location loc,
-                           mlir::Value value);
-
 } // namespace Fortran::lower
 
 #endif // FORTRAN_LOWER_CONVERTEXPR_H
