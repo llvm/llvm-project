@@ -10854,22 +10854,24 @@ SDValue DAGCombiner::visitVSELECT(SDNode *N) {
         Other = N1;
       }
 
+      // zext(x) >= y ? trunc(zext(x) - y) : 0
+      // --> usubsat(trunc(zext(x)),trunc(umin(y,SatLimit)))
+      // zext(x) >  y ? trunc(zext(x) - y) : 0
+      // --> usubsat(trunc(zext(x)),trunc(umin(y,SatLimit)))
+      if (Other && Other.getOpcode() == ISD::TRUNCATE &&
+          Other.getOperand(0).getOpcode() == ISD::SUB &&
+          (SatCC == ISD::SETUGE || SatCC == ISD::SETUGT)) {
+        SDValue OpLHS = Other.getOperand(0).getOperand(0);
+        SDValue OpRHS = Other.getOperand(0).getOperand(1);
+        if (LHS == OpLHS && RHS == OpRHS && LHS.getOpcode() == ISD::ZERO_EXTEND)
+          if (SDValue R = getTruncatedUSUBSAT(VT, LHS.getValueType(), LHS, RHS,
+                                              DAG, DL))
+            return R;
+      }
+
       if (Other && Other.getNumOperands() == 2) {
         SDValue CondRHS = RHS;
         SDValue OpLHS = Other.getOperand(0), OpRHS = Other.getOperand(1);
-
-        if (Other.getOpcode() == ISD::SUB &&
-            LHS.getOpcode() == ISD::ZERO_EXTEND && LHS.getOperand(0) == OpLHS &&
-            OpRHS.getOpcode() == ISD::TRUNCATE && OpRHS.getOperand(0) == RHS) {
-          // Look for a general sub with unsigned saturation first.
-          // zext(x) >= y ? x - trunc(y) : 0
-          // --> usubsat(x,trunc(umin(y,SatLimit)))
-          // zext(x) >  y ? x - trunc(y) : 0
-          // --> usubsat(x,trunc(umin(y,SatLimit)))
-          if (SatCC == ISD::SETUGE || SatCC == ISD::SETUGT)
-            return getTruncatedUSUBSAT(VT, LHS.getValueType(), LHS, RHS, DAG,
-                                       DL);
-        }
 
         if (OpLHS == LHS) {
           // Look for a general sub with unsigned saturation first.
@@ -10901,8 +10903,8 @@ SDValue DAGCombiner::visitVSELECT(SDNode *N) {
 
               // Another special case: If C was a sign bit, the sub has been
               // canonicalized into a xor.
-              // FIXME: Would it be better to use computeKnownBits to determine
-              //        whether it's safe to decanonicalize the xor?
+              // FIXME: Would it be better to use computeKnownBits to
+              // determine whether it's safe to decanonicalize the xor?
               // x s< 0 ? x^C : 0 --> usubsat x, C
               APInt SplatValue;
               if (SatCC == ISD::SETLT && Other.getOpcode() == ISD::XOR &&
