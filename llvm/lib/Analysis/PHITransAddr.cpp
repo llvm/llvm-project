@@ -34,9 +34,6 @@ static bool CanPHITrans(Instruction *Inst) {
       isa<ConstantInt>(Inst->getOperand(1)))
     return true;
 
-  //   cerr << "MEMDEP: Could not PHI translate: " << *Pointer;
-  //   if (isa<BitCastInst>(PtrInst) || isa<GetElementPtrInst>(PtrInst))
-  //     cerr << "OP:\t\t\t\t" << *PtrInst->getOperand(0);
   return false;
 }
 

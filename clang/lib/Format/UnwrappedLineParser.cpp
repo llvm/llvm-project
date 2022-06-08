@@ -842,6 +842,10 @@ void UnwrappedLineParser::parseBlock(bool MustBeDeclaration, unsigned AddLevels,
   unsigned InitialLevel = Line->Level;
   nextToken(/*LevelDifference=*/AddLevels);
 
+  // Bail out if there are too many levels. Otherwise, the stack might overflow.
+  if (Line->Level > 300)
+    return;
+
   if (MacroBlock && FormatTok->is(tok::l_paren))
     parseParens();
 
