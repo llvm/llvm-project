@@ -266,7 +266,6 @@ multiclass VOPC_Pseudos <string opName,
     let SchedRW = P.Schedule;
     let isCompare = 1;
     let isCommutable = 1;
-    let VOPC = 1;
   }
 
   foreach _ = BoolToList<P.HasExtSDWA>.ret in
@@ -292,7 +291,6 @@ multiclass VOPC_Pseudos <string opName,
         let Defs = !if(DefExec, [EXEC], []);
         let SchedRW = P.Schedule;
         let isCompare = 1;
-        let VOPC = 1;
         let Constraints = !if(P.NumSrcArgs, P.TieRegDPP # " = $sdst", "");
     }
   } // end SubtargetPredicate = isGFX11Plus
@@ -329,7 +327,6 @@ multiclass VOPCX_Pseudos <string opName,
     let isCommutable = 1;
     let SubtargetPredicate = HasNoSdstCMPX;
     let IsVCMPX = 1;
-    let VOPC = 1;
   }
 
   foreach _ = BoolToList<P_NoSDst.HasExtSDWA>.ret in
@@ -356,7 +353,6 @@ multiclass VOPCX_Pseudos <string opName,
         let Defs = [EXEC];
         let SchedRW = P_NoSDst.Schedule;
         let isCompare = 1;
-        let VOPC = 1;
         let Constraints = "";
     }
   } // end SubtargetPredicate = isGFX11Plus
@@ -795,7 +791,6 @@ multiclass VOPC_Class_Pseudos <string opName, VOPC_Profile p, bit DefExec,
       def _e64_dpp : VOP3_DPP_Pseudo<opName, p> {
         let Defs = !if(DefExec, [EXEC], []);
         let SchedRW = p.Schedule;
-        let VOPC = 1;
         let Constraints = !if(p.NumSrcArgs, p.TieRegDPP # " = $sdst", "");
     }
   } // end SubtargetPredicate = isGFX11Plus
@@ -843,7 +838,6 @@ multiclass VOPCX_Class_Pseudos <string opName,
       def _nosdst_e64_dpp : VOP3_DPP_Pseudo<opName#"_nosdst", P_NoSDst> {
         let Defs = [EXEC];
         let SchedRW = P_NoSDst.Schedule;
-        let VOPC = 1;
         let Constraints = "";
     }
   } // end SubtargetPredicate = isGFX11Plus
@@ -1110,8 +1104,6 @@ class VOPC64_DPP_Base<bits<10> op, string OpName, VOPProfile P>
   // Inst{87-84} ignored by hw
   let Inst{91-88} = bank_mask;
   let Inst{95-92} = row_mask;
-
-  let VOPC = 1;
 }
 
 class VOPC64_DPP16<bits<10> op, VOP_DPP_Pseudo ps, string opName = ps.OpName>
@@ -1149,8 +1141,6 @@ class VOPC64_DPP8_Base<bits<10> op, string OpName, VOPProfile P>
   let Inst{40-32} = fi;
   let Inst{71-64} = !if(P.HasSrc0, src0{7-0}, 0);
   let Inst{95-72} = dpp8{23-0};
-
-  let VOPC = 1;
 }
 
 class VOPC64_DPP8<bits<10> op, VOP_Pseudo ps, string opName = ps.OpName>
