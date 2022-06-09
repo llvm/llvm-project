@@ -8,8 +8,6 @@
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17
 // UNSUPPORTED: libcpp-has-no-incomplete-ranges
-// On AIX the test takes a long time, leading to frequent CI timeouts.
-// UNSUPPORTED: LIBCXX-AIX-FIXME
 
 // <algorithm>
 
