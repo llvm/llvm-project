@@ -18,6 +18,10 @@
 #include "mlir/IR/Value.h"
 #include "llvm/Support/Debug.h"
 
+//===----------------------------------------------------------------------===//
+// BufferizableOpInterface
+//===----------------------------------------------------------------------===//
+
 namespace mlir {
 namespace bufferization {
 
@@ -37,6 +41,31 @@ using namespace bufferization;
 /// in-place during linalg comprehensive bufferization.
 constexpr const ::llvm::StringLiteral
     bufferization::BufferizableOpInterface::kInplaceableAttrName;
+
+LogicalResult BufferizableOpInterface::resolveTensorOpOperandConflicts(
+    RewriterBase &rewriter, const AnalysisState &state) {
+  Operation *op = getOperation();
+  for (OpOperand &opOperand : op->getOpOperands()) {
+    Type operandType = opOperand.get().getType();
+    if (!operandType.isa<TensorType>())
+      continue;
+    if (state.isInPlace(opOperand))
+      continue;
+    if (operandType.isa<UnrankedTensorType>())
+      return op->emitError("copies of unranked tensors are not supported");
+    auto tensorType = operandType.dyn_cast<RankedTensorType>();
+    if (!tensorType)
+      continue;
+    SmallVector<OpResult> aliasingOpResults =
+        state.getAliasingOpResult(opOperand);
+    bool escape = llvm::any_of(
+        aliasingOpResults, [&](Value v) { return state.isTensorYielded(v); });
+    Value copy = rewriter.create<AllocTensorOp>(
+        op->getLoc(), tensorType, ValueRange(), opOperand.get(), escape);
+    rewriter.updateRootInPlace(op, [&]() { opOperand.set(copy); });
+  }
+  return success();
+}
 
 //===----------------------------------------------------------------------===//
 // OpFilter
