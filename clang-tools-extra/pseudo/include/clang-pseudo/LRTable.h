@@ -145,9 +145,8 @@ public:
 
   size_t bytes() const {
     return sizeof(*this) + Actions.capacity() * sizeof(Action) +
-           States.capacity() * sizeof(StateID) +
-           NontermOffset.capacity() * sizeof(uint32_t) +
-           TerminalOffset.capacity() * sizeof(uint32_t);
+           Symbols.capacity() * sizeof(SymbolID) +
+           StateOffset.capacity() * sizeof(uint32_t);
   }
 
   std::string dumpStatistics() const;
@@ -170,17 +169,15 @@ private:
   // Conceptually the LR table is a multimap from (State, SymbolID) => Action.
   // Our physical representation is quite different for compactness.
 
-  // Index is nonterminal SymbolID, value is the offset into States/Actions
-  // where the entries for this nonterminal begin.
-  // Give a nonterminal id, the corresponding half-open range of StateIdx is
-  // [NontermIdx[id], NontermIdx[id+1]).
-  std::vector<uint32_t> NontermOffset;
-  // Similar to NontermOffset, but for terminals, index is tok::TokenKind.
-  std::vector<uint32_t> TerminalOffset;
-  // Parallel to Actions, the value is State (rows of the matrix).
-  // Grouped by the SymbolID, and only subranges are sorted.
-  std::vector<StateID> States;
-  // A flat list of available actions, sorted by (SymbolID, State).
+  // Index is StateID, value is the offset into Symbols/Actions
+  // where the entries for this state begin.
+  // Give a state id, the corresponding half-open range of Symbols/Actions is
+  // [StateOffset[id], StateOffset[id+1]).
+  std::vector<uint32_t> StateOffset;
+  // Parallel to Actions, the value is SymbolID (columns of the matrix).
+  // Grouped by the StateID, and only subranges are sorted.
+  std::vector<SymbolID> Symbols;
+  // A flat list of available actions, sorted by (State, SymbolID).
   std::vector<Action> Actions;
   // A sorted table, storing the start state for each target parsing symbol.
   std::vector<std::pair<SymbolID, StateID>> StartStates;

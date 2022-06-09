@@ -178,9 +178,9 @@ StructValue &createOptionalValue(Environment &Env, BoolValue &HasValueVal) {
 }
 
 /// Returns the symbolic value that represents the "has_value" property of the
-/// optional value `Val`. Returns null if `Val` is null.
-BoolValue *getHasValue(Value *Val) {
-  if (auto *OptionalVal = cast_or_null<StructValue>(Val)) {
+/// optional value `OptionalVal`. Returns null if `OptionalVal` is null.
+BoolValue *getHasValue(Value *OptionalVal) {
+  if (OptionalVal) {
     return cast<BoolValue>(OptionalVal->getProperty("has_value"));
   }
   return nullptr;
@@ -221,8 +221,8 @@ int countOptionalWrappers(const ASTContext &ASTCtx, QualType Type) {
 void initializeOptionalReference(const Expr *OptionalExpr,
                                  const MatchFinder::MatchResult &,
                                  LatticeTransferState &State) {
-  if (auto *OptionalVal = cast_or_null<StructValue>(
-          State.Env.getValue(*OptionalExpr, SkipPast::Reference))) {
+  if (auto *OptionalVal =
+          State.Env.getValue(*OptionalExpr, SkipPast::Reference)) {
     if (OptionalVal->getProperty("has_value") == nullptr) {
       OptionalVal->setProperty("has_value", State.Env.makeAtomicBoolValue());
     }
@@ -231,8 +231,8 @@ void initializeOptionalReference(const Expr *OptionalExpr,
 
 void transferUnwrapCall(const Expr *UnwrapExpr, const Expr *ObjectExpr,
                         LatticeTransferState &State) {
-  if (auto *OptionalVal = cast_or_null<StructValue>(
-          State.Env.getValue(*ObjectExpr, SkipPast::ReferenceThenPointer))) {
+  if (auto *OptionalVal =
+          State.Env.getValue(*ObjectExpr, SkipPast::ReferenceThenPointer)) {
     auto *HasValueVal = getHasValue(OptionalVal);
     assert(HasValueVal != nullptr);
 

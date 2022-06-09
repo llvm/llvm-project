@@ -26,6 +26,9 @@ namespace clang {
 namespace dataflow {
 
 /// Base class for all values computed by abstract interpretation.
+///
+/// Don't use `Value` instances by value. All `Value` instances are allocated
+/// and owned by `DataflowAnalysisContext`.
 class Value {
 public:
   enum class Kind {
@@ -48,8 +51,22 @@ public:
 
   Kind getKind() const { return ValKind; }
 
+  /// Returns the value of the synthetic property with the given `Name` or null
+  /// if the property isn't assigned a value.
+  Value *getProperty(llvm::StringRef Name) const {
+    auto It = Properties.find(Name);
+    return It == Properties.end() ? nullptr : It->second;
+  }
+
+  /// Assigns `Val` as the value of the synthetic property with the given
+  /// `Name`.
+  void setProperty(llvm::StringRef Name, Value &Val) {
+    Properties.insert_or_assign(Name, &Val);
+  }
+
 private:
   Kind ValKind;
+  llvm::StringMap<Value *> Properties;
 };
 
 /// Models a boolean.
@@ -149,15 +166,15 @@ public:
   }
 };
 
-/// Base class for values that refer to storage locations.
-class IndirectionValue : public Value {
+/// Models a dereferenced pointer. For example, a reference in C++ or an lvalue
+/// in C.
+class ReferenceValue final : public Value {
 public:
-  /// Constructs a value that refers to `PointeeLoc`.
-  explicit IndirectionValue(Kind ValueKind, StorageLocation &PointeeLoc)
-      : Value(ValueKind), PointeeLoc(PointeeLoc) {}
+  explicit ReferenceValue(StorageLocation &PointeeLoc)
+      : Value(Kind::Reference), PointeeLoc(PointeeLoc) {}
 
   static bool classof(const Value *Val) {
-    return Val->getKind() == Kind::Reference || Val->getKind() == Kind::Pointer;
+    return Val->getKind() == Kind::Reference;
   }
 
   StorageLocation &getPointeeLoc() const { return PointeeLoc; }
@@ -166,27 +183,20 @@ private:
   StorageLocation &PointeeLoc;
 };
 
-/// Models a dereferenced pointer. For example, a reference in C++ or an lvalue
-/// in C.
-class ReferenceValue final : public IndirectionValue {
-public:
-  explicit ReferenceValue(StorageLocation &PointeeLoc)
-      : IndirectionValue(Kind::Reference, PointeeLoc) {}
-
-  static bool classof(const Value *Val) {
-    return Val->getKind() == Kind::Reference;
-  }
-};
-
 /// Models a symbolic pointer. Specifically, any value of type `T*`.
-class PointerValue final : public IndirectionValue {
+class PointerValue final : public Value {
 public:
   explicit PointerValue(StorageLocation &PointeeLoc)
-      : IndirectionValue(Kind::Pointer, PointeeLoc) {}
+      : Value(Kind::Pointer), PointeeLoc(PointeeLoc) {}
 
   static bool classof(const Value *Val) {
     return Val->getKind() == Kind::Pointer;
   }
+
+  StorageLocation &getPointeeLoc() const { return PointeeLoc; }
+
+private:
+  StorageLocation &PointeeLoc;
 };
 
 /// Models a value of `struct` or `class` type, with a flat map of fields to
@@ -215,22 +225,8 @@ public:
   /// Assigns `Val` as the child value for `D`.
   void setChild(const ValueDecl &D, Value &Val) { Children[&D] = &Val; }
 
-  /// Returns the value of the synthetic property with the given `Name` or null
-  /// if the property isn't assigned a value.
-  Value *getProperty(llvm::StringRef Name) const {
-    auto It = Properties.find(Name);
-    return It == Properties.end() ? nullptr : It->second;
-  }
-
-  /// Assigns `Val` as the value of the synthetic property with the given
-  /// `Name`.
-  void setProperty(llvm::StringRef Name, Value &Val) {
-    Properties.insert_or_assign(Name, &Val);
-  }
-
 private:
   llvm::DenseMap<const ValueDecl *, Value *> Children;
-  llvm::StringMap<Value *> Properties;
 };
 
 } // namespace dataflow

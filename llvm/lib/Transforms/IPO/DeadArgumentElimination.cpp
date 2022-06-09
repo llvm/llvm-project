@@ -520,20 +520,10 @@ void DeadArgumentEliminationPass::SurveyFunction(const Function &F) {
   RetUses MaybeLiveRetUses(RetCount);
 
   bool HasMustTailCalls = false;
-
-  for (Function::const_iterator BB = F.begin(), E = F.end(); BB != E; ++BB) {
-    if (const ReturnInst *RI = dyn_cast<ReturnInst>(BB->getTerminator())) {
-      if (RI->getNumOperands() != 0 && RI->getOperand(0)->getType()
-          != F.getFunctionType()->getReturnType()) {
-        // We don't support old style multiple return values.
-        MarkLive(F);
-        return;
-      }
-    }
-
+  for (const BasicBlock &BB : F) {
     // If we have any returns of `musttail` results - the signature can't
     // change
-    if (BB->getTerminatingMustTailCall() != nullptr)
+    if (BB.getTerminatingMustTailCall() != nullptr)
       HasMustTailCalls = true;
   }
 

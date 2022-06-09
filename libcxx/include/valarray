@@ -1104,7 +1104,7 @@ template<class _Tp, size_t _Size>
 valarray(const _Tp(&)[_Size], size_t) -> valarray<_Tp>;
 #endif
 
-_LIBCPP_EXTERN_TEMPLATE(_LIBCPP_FUNC_VIS void valarray<size_t>::resize(size_t, size_t))
+extern template _LIBCPP_FUNC_VIS void valarray<size_t>::resize(size_t, size_t);
 
 template <class _Op, class _Tp>
 struct _UnaryOp<_Op, valarray<_Tp> >
