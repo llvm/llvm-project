@@ -226,10 +226,6 @@ def OneShotBufferize : Pass<"one-shot-bufferize", "ModuleOp"> {
       argument is modified in-place.
     * Returning non-equivalent tensors is forbidden by default and must be
       explicitly activated with `allow-return-allocs`.
-    * Non-equivalent returned tensors of fully static size can be promoted to
-      function arguments with `promote-buffer-results-to-out-params`. In that
-      case, buffers for such tensors are allocated at each call site. Instead of
-      returning a buffer, the buffer contents are copied into these allocations.
     * External functions (without bodies) that return a tensor are not
       supported.
     * Function with multiple blocks or multiple ReturnOps are not supported.
@@ -294,9 +290,6 @@ def OneShotBufferize : Pass<"one-shot-bufferize", "ModuleOp"> {
             /*default=*/"false",
            "Test only: Annotate IR with RaW conflicts. Requires "
            "test-analysis-only.">,
-    Option<"promoteBufferResultsToOutParams",
-           "promote-buffer-results-to-out-params", "bool", /*default=*/"false",
-           "Replace returned buffers (that were not dropped) with out params.">,
     Option<"unknownTypeConversion", "unknown-type-conversion", "std::string",
            /*default=*/"\"fully-dynamic-layout-map\"",
            "Controls layout maps for non-inferrable memref types.">,
