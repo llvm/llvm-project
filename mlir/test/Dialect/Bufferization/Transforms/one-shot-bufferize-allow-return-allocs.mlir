@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s -one-shot-bufferize="allow-return-allocs allow-unknown-ops" -split-input-file | FileCheck %s
+// RUN: mlir-opt %s -one-shot-bufferize="allow-return-allocs allow-unknown-ops" -buffer-deallocation -canonicalize -split-input-file | FileCheck %s
 
 // Run fuzzer with different seeds.
 // RUN: mlir-opt %s -one-shot-bufferize="allow-return-allocs test-analysis-only analysis-fuzzer-seed=23" -split-input-file -o /dev/null

@@ -6,6 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
+#ifndef LLVM_LIBC_SRC_STDIO_PRINTF_CORE_STRING_CONVERTER_H
+#define LLVM_LIBC_SRC_STDIO_PRINTF_CORE_STRING_CONVERTER_H
+
 #include "src/stdio/printf_core/core_structs.h"
 #include "src/stdio/printf_core/writer.h"
 
@@ -14,7 +17,7 @@
 namespace __llvm_libc {
 namespace printf_core {
 
-void convert_string(Writer *writer, const FormatSection &to_conv) {
+void inline convert_string(Writer *writer, const FormatSection &to_conv) {
   int string_len = 0;
 
   for (char *cur_str = reinterpret_cast<char *>(to_conv.conv_val_ptr);
@@ -44,3 +47,5 @@ void convert_string(Writer *writer, const FormatSection &to_conv) {
 
 } // namespace printf_core
 } // namespace __llvm_libc
+
+#endif // LLVM_LIBC_SRC_STDIO_PRINTF_CORE_STRING_CONVERTER_H

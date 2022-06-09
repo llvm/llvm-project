@@ -243,9 +243,7 @@ struct BufferizationOptions {
   ///   additional buffer allocs and copies because layout maps cannot be casted
   ///   away.
   ///
-  /// If `bufferizeFunctionBoundaries` is not set, this flag has no effect. If
-  /// `promoteBufferResultsToOutParams` is set, `kInferMostPreciseLayoutMap` is
-  /// is an invalid option.
+  /// If `bufferizeFunctionBoundaries` is not set, this flag has no effect.
   ///
   /// Note: Inferred layout maps may not be desireable when interacting with
   /// external functions, because the generated function signatures will be less
@@ -284,10 +282,6 @@ struct BufferizationOptions {
   /// If set to `true`, the IR is annotated with details about RaW conflicts.
   /// For debugging only. Should be used together with `testAnalysisOnly`.
   bool printConflicts = false;
-
-  /// If set to `true`, buffers that are returned from functions are replaced
-  /// with buffer "out" parameters. At the call site, new buffers are allocated.
-  bool promoteBufferResultsToOutParams = false;
 
   /// If set to `true`, an `getAliasingOpResult` will return the corresponding
   /// "out"/"dest" OpOperand for every op that has the notion of an "out"/"dest"
@@ -581,15 +575,6 @@ BaseMemRefType getMemRefTypeWithFullyDynamicLayout(TensorType tensorType,
 BaseMemRefType
 getMemRefTypeWithStaticIdentityLayout(TensorType tensorType,
                                       Attribute memorySpace = {});
-
-/// Create alloc/dealloc ops as specified in the bufferization options. If
-/// `onlyLeakingAlloc`, only those buffer allocations are processed for which no
-/// buffer deallocation can be created. `changed` is set to `true` if the IR was
-/// modified.
-LogicalResult createAllocDeallocOps(Operation *op,
-                                    const BufferizationOptions &options,
-                                    bool onlyLeakingAllocs = false,
-                                    bool *changed = nullptr);
 
 } // namespace bufferization
 } // namespace mlir
