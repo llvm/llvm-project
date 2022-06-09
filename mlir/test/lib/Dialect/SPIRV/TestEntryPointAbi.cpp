@@ -31,6 +31,9 @@ struct TestSpirvEntryPointABIPass
            "within the "
            "module, intended for testing only";
   }
+  void getDependentDialects(DialectRegistry &registry) const override {
+    registry.insert<spirv::SPIRVDialect>();
+  }
   TestSpirvEntryPointABIPass() = default;
   TestSpirvEntryPointABIPass(const TestSpirvEntryPointABIPass &) {}
   void runOnOperation() override;

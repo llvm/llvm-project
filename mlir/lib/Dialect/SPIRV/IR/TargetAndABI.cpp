@@ -121,14 +121,13 @@ StringRef spirv::getEntryPointABIAttrName() { return "spv.entry_point_abi"; }
 spirv::EntryPointABIAttr
 spirv::getEntryPointABIAttr(ArrayRef<int32_t> localSize, MLIRContext *context) {
   if (localSize.empty())
-    return spirv::EntryPointABIAttr::get(nullptr, context);
+    return spirv::EntryPointABIAttr::get(context, nullptr);
 
   assert(localSize.size() == 3);
   return spirv::EntryPointABIAttr::get(
-      DenseElementsAttr::get<int32_t>(
-          VectorType::get(3, IntegerType::get(context, 32)), localSize)
-          .cast<DenseIntElementsAttr>(),
-      context);
+      context, DenseElementsAttr::get<int32_t>(
+                   VectorType::get(3, IntegerType::get(context, 32)), localSize)
+                   .cast<DenseIntElementsAttr>());
 }
 
 spirv::EntryPointABIAttr spirv::lookupEntryPointABI(Operation *op) {
@@ -146,7 +145,7 @@ spirv::EntryPointABIAttr spirv::lookupEntryPointABI(Operation *op) {
 
 DenseIntElementsAttr spirv::lookupLocalWorkGroupSize(Operation *op) {
   if (auto entryPoint = spirv::lookupEntryPointABI(op))
-    return entryPoint.local_size();
+    return entryPoint.getLocal_size();
 
   return {};
 }
@@ -155,12 +154,14 @@ spirv::ResourceLimitsAttr
 spirv::getDefaultResourceLimits(MLIRContext *context) {
   // All the fields have default values. Here we just provide a nicer way to
   // construct a default resource limit attribute.
-  return spirv::ResourceLimitsAttr ::get(
-      /*max_compute_shared_memory_size=*/nullptr,
-      /*max_compute_workgroup_invocations=*/nullptr,
-      /*max_compute_workgroup_size=*/nullptr,
-      /*subgroup_size=*/nullptr,
-      /*cooperative_matrix_properties_nv=*/nullptr, context);
+  Builder b(context);
+  return spirv::ResourceLimitsAttr::get(
+      context,
+      /*max_compute_shared_memory_size=*/16384,
+      /*max_compute_workgroup_invocations=*/128,
+      /*max_compute_workgroup_size=*/b.getI32ArrayAttr({128, 128, 64}),
+      /*subgroup_size=*/32,
+      /*cooperative_matrix_properties_nv=*/ArrayAttr());
 }
 
 StringRef spirv::getTargetEnvAttrName() { return "spv.target_env"; }

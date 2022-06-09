@@ -1,6 +1,6 @@
 // RUN: mlir-opt -split-input-file -convert-memref-to-spirv -canonicalize -verify-diagnostics %s -o - | FileCheck %s
 
-module attributes {spv.target_env = #spv.target_env<#spv.vce<v1.3, [Shader], []>, {}>} {
+module attributes {spv.target_env = #spv.target_env<#spv.vce<v1.3, [Shader], []>, #spv.resource_limits<>>} {
   func.func @alloc_function_variable(%arg0 : index, %arg1 : index) {
     %0 = memref.alloca() : memref<4x5xf32, 6>
     %1 = memref.load %0[%arg0, %arg1] : memref<4x5xf32, 6>
@@ -19,7 +19,7 @@ module attributes {spv.target_env = #spv.target_env<#spv.vce<v1.3, [Shader], []>
 
 // -----
 
-module attributes {spv.target_env = #spv.target_env<#spv.vce<v1.3, [Shader], []>, {}>} {
+module attributes {spv.target_env = #spv.target_env<#spv.vce<v1.3, [Shader], []>, #spv.resource_limits<>>} {
   func.func @two_allocs() {
     %0 = memref.alloca() : memref<4x5xf32, 6>
     %1 = memref.alloca() : memref<2x3xi32, 6>
@@ -33,7 +33,7 @@ module attributes {spv.target_env = #spv.target_env<#spv.vce<v1.3, [Shader], []>
 
 // -----
 
-module attributes {spv.target_env = #spv.target_env<#spv.vce<v1.3, [Shader], []>, {}>} {
+module attributes {spv.target_env = #spv.target_env<#spv.vce<v1.3, [Shader], []>, #spv.resource_limits<>>} {
   func.func @two_allocs_vector() {
     %0 = memref.alloca() : memref<4xvector<4xf32>, 6>
     %1 = memref.alloca() : memref<2xvector<2xi32>, 6>
@@ -48,7 +48,7 @@ module attributes {spv.target_env = #spv.target_env<#spv.vce<v1.3, [Shader], []>
 
 // -----
 
-module attributes {spv.target_env = #spv.target_env<#spv.vce<v1.3, [Shader], []>, {}>} {
+module attributes {spv.target_env = #spv.target_env<#spv.vce<v1.3, [Shader], []>, #spv.resource_limits<>>} {
   // CHECK-LABEL: func @alloc_dynamic_size
   func.func @alloc_dynamic_size(%arg0 : index) -> f32 {
     // CHECK: memref.alloca
@@ -60,7 +60,7 @@ module attributes {spv.target_env = #spv.target_env<#spv.vce<v1.3, [Shader], []>
 
 // -----
 
-module attributes {spv.target_env = #spv.target_env<#spv.vce<v1.3, [Shader], []>, {}>} {
+module attributes {spv.target_env = #spv.target_env<#spv.vce<v1.3, [Shader], []>, #spv.resource_limits<>>} {
   // CHECK-LABEL: func @alloc_unsupported_memory_space
   func.func @alloc_unsupported_memory_space(%arg0: index) -> f32 {
     // CHECK: memref.alloca
