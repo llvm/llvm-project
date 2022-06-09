@@ -116,6 +116,7 @@
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/IR/AbstractCallSite.h"
 #include "llvm/IR/ConstantRange.h"
+#include "llvm/IR/Constants.h"
 #include "llvm/IR/InstIterator.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/Support/Allocator.h"
@@ -4279,13 +4280,14 @@ struct AAValueConstantRange
 
   /// Return an assumed constant for the associated value a program point \p
   /// CtxI.
-  Optional<ConstantInt *>
-  getAssumedConstantInt(Attributor &A,
-                        const Instruction *CtxI = nullptr) const {
+  Optional<Constant *>
+  getAssumedConstant(Attributor &A, const Instruction *CtxI = nullptr) const {
     ConstantRange RangeV = getAssumedConstantRange(A, CtxI);
-    if (auto *C = RangeV.getSingleElement())
-      return cast<ConstantInt>(
-          ConstantInt::get(getAssociatedValue().getType(), *C));
+    if (auto *C = RangeV.getSingleElement()) {
+      Type *Ty = getAssociatedValue().getType();
+      return cast_or_null<Constant>(
+          AA::getWithType(*ConstantInt::get(Ty->getContext(), *C), *Ty));
+    }
     if (RangeV.isEmptySet())
       return llvm::None;
     return nullptr;
@@ -4522,18 +4524,19 @@ struct AAPotentialConstantValues
                                                       Attributor &A);
 
   /// Return assumed constant for the associated value
-  Optional<ConstantInt *>
-  getAssumedConstantInt(Attributor &A,
-                        const Instruction *CtxI = nullptr) const {
+  Optional<Constant *>
+  getAssumedConstant(Attributor &A, const Instruction *CtxI = nullptr) const {
     if (!isValidState())
       return nullptr;
-    if (getAssumedSet().size() == 1)
-      return cast<ConstantInt>(ConstantInt::get(getAssociatedValue().getType(),
-                                                *(getAssumedSet().begin())));
+    if (getAssumedSet().size() == 1) {
+      Type *Ty = getAssociatedValue().getType();
+      return cast_or_null<Constant>(AA::getWithType(
+          *ConstantInt::get(Ty->getContext(), *(getAssumedSet().begin())),
+          *Ty));
+    }
     if (getAssumedSet().size() == 0) {
       if (undefIsContained())
-        return cast<ConstantInt>(
-            ConstantInt::get(getAssociatedValue().getType(), 0));
+        return UndefValue::get(getAssociatedValue().getType());
       return llvm::None;
     }
 
