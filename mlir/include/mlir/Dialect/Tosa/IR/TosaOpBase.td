@@ -10,13 +10,16 @@
 //
 //===----------------------------------------------------------------------===//
 
-
 #ifndef TOSA_OP_BASE
 #define TOSA_OP_BASE
+
+include "mlir/IR/AttrTypeBase.td"
+include "mlir/IR/OpBase.td"
 
 //===----------------------------------------------------------------------===//
 // The TOSA Dialect.
 //===----------------------------------------------------------------------===//
+
 def Tosa_Dialect : Dialect {
   let name = "tosa";
 
@@ -41,6 +44,16 @@ def Tosa_Dialect : Dialect {
 
   let cppNamespace = "mlir::tosa";
   let hasConstantMaterializer = 1;
+  let useDefaultAttributePrinterParser = 1;
+}
+
+//===----------------------------------------------------------------------===//
+// TOSA Attributes.
+//===----------------------------------------------------------------------===//
+
+class Tosa_Attr<string attrName, string attrMnemonic, list<Trait> traits = []>
+    : AttrDef<Tosa_Dialect, attrName, traits> {
+  let mnemonic = attrMnemonic;
 }
 
 //===----------------------------------------------------------------------===//
@@ -51,7 +64,7 @@ def Tosa_Dialect : Dialect {
 // feed numerical precision parameters to the functional implementation of TOSA
 // operators.
 // The functional behavior is defined in the TOSA specification maintained at
-// https://developer.mlplatform.org/w/tosa/ . TOSA leverages MLIR's built in
+// https://developer.mlplatform.org/w/tosa/. TOSA leverages MLIR's built in
 // quantization support: https://mlir.llvm.org/docs/Quantization/, and supports
 // uniform quantization. Depending on datatype, asymmetric and symmetric
 // quantization are supported. The types themselves are described in
@@ -60,12 +73,11 @@ def Tosa_Dialect : Dialect {
 // This quantization attribute expresses numerical behavior of operators where
 // the operator has a numerical relationship between a single input and output.
 // For example: tosa.negate.
-def Tosa_UnaryOpQuantizationAttr : StructAttr<"UnaryOpQuantizationAttr",
-  Tosa_Dialect, [
-    StructFieldAttr<"input_zp",         I32Attr>,
-    StructFieldAttr<"output_zp",        I32Attr>
-    ]> {
+def Tosa_UnaryOpQuantizationAttr 
+    : Tosa_Attr<"UnaryOpQuantization", "unary_quant"> {
   let summary = "Attribute for UnaryOp quantization information.";
+  let parameters = (ins "int64_t":$input_zp, "int64_t":$output_zp);
+  let assemblyFormat = "`<` struct(params) `>`";
 }
 
 // There is no explicit BinaryOpQuantizationAttr for 2-input/1-output ops. In
@@ -79,31 +91,28 @@ def Tosa_UnaryOpQuantizationAttr : StructAttr<"UnaryOpQuantizationAttr",
 // the inputs.
 // The scaling of their accumulator output is done using an explicit
 // tosa.rescale operator that scales the accumulator result to output scale.
-def Tosa_ConvOpQuantizationAttr : StructAttr<"ConvOpQuantizationAttr",
-  Tosa_Dialect, [
-    StructFieldAttr<"input_zp",         I32Attr>,
-    StructFieldAttr<"weight_zp",        I32Attr>
-    ]> {
+def Tosa_ConvOpQuantizationAttr 
+    : Tosa_Attr<"ConvOpQuantization", "conv_quant"> { 
   let summary = "Attribute for Conv type op quantization information.";
+  let parameters = (ins "int64_t":$input_zp, "int64_t":$weight_zp);
+  let assemblyFormat = "`<` struct(params) `>`";
 }
 
-def Tosa_MatMulOpQuantizationAttr : StructAttr<"MatMulOpQuantizationAttr",
-  Tosa_Dialect, [
-    StructFieldAttr<"a_zp",             I32Attr>,
-    StructFieldAttr<"b_zp",             I32Attr>
-    ]> {
+def Tosa_MatMulOpQuantizationAttr 
+    : Tosa_Attr< "MatMulOpQuantization", "matmul_quant"> {
   let summary = "Attribute for MatMulOp quantization information.";
+  let parameters = (ins "int64_t":$a_zp, "int64_t":$b_zp);
+  let assemblyFormat = "`<` struct(params) `>`";
 }
 
 // This attribute holds input zero point correction applied to the padding
 // zeros to ensure numerical accuracy in the subsequent TOSA operations.
 // Its functional application is described in the tosa.pad() operator
 // description in the specification.
-def Tosa_PadOpQuantizationAttr : StructAttr<"PadOpQuantizationAttr",
-  Tosa_Dialect, [
-    StructFieldAttr<"input_zp",         I32Attr>
-    ]> {
+def Tosa_PadOpQuantizationAttr : Tosa_Attr<"PadOpQuantization", "pad_quant"> {
   let summary = "Attribute for PadOp quantization information.";
+  let parameters = (ins "int64_t":$input_zp);
+  let assemblyFormat = "`<` struct(params) `>`";
 }
 
 //===----------------------------------------------------------------------===//

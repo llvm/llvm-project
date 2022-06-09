@@ -7,8 +7,8 @@ add_mlir_dialect_library(MLIRTosa
   ${MLIR_MAIN_INCLUDE_DIR}/mlir/Dialect/Tosa
 
   DEPENDS
+  MLIRTosaAttributesIncGen
   MLIRTosaOpsIncGen
-  MLIRTosaStructsIncGen
   MLIRTosaInterfacesIncGen
 
   LINK_LIBS PUBLIC

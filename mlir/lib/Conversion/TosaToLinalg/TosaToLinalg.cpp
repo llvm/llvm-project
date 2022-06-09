@@ -147,10 +147,8 @@ createLinalgBodyCalculationForElementwiseOp(Operation *op, ValueRange args,
       cast<tosa::NegateOp>(op).quantization_info()) {
     auto quantizationInfo = cast<tosa::NegateOp>(op).quantization_info();
     int32_t inputBitWidth = elementTy.getIntOrFloatBitWidth();
-    int64_t inZp =
-        quantizationInfo.getValue().input_zp().getValue().getSExtValue();
-    int64_t outZp =
-        quantizationInfo.getValue().output_zp().getValue().getSExtValue();
+    int64_t inZp = quantizationInfo.getValue().getInput_zp();
+    int64_t outZp = quantizationInfo.getValue().getOutput_zp();
 
     // Compute the maximum value that can occur in the intermediate buffer.
     int64_t zpAdd = inZp + outZp;
@@ -1844,13 +1842,13 @@ public:
           loc, padOp.pad_const(), ValueRange({}));
     } else {
       Attribute constantAttr;
-      if (elementTy.isa<FloatType>())
+      if (elementTy.isa<FloatType>()) {
         constantAttr = rewriter.getFloatAttr(elementTy, 0.0);
-      else if (elementTy.isa<IntegerType>() && !padOp.quantization_info())
+      } else if (elementTy.isa<IntegerType>() && !padOp.quantization_info()) {
         constantAttr = rewriter.getIntegerAttr(elementTy, 0);
-      else if (elementTy.isa<IntegerType>() && padOp.quantization_info()) {
-        auto value = padOp.quantization_info().getValue().input_zp().getValue();
-        constantAttr = rewriter.getIntegerAttr(elementTy, value.getZExtValue());
+      } else if (elementTy.isa<IntegerType>() && padOp.quantization_info()) {
+        int64_t value = padOp.quantization_info().getValue().getInput_zp();
+        constantAttr = rewriter.getIntegerAttr(elementTy, value);
       }
       if (constantAttr)
         padConstant = rewriter.create<arith::ConstantOp>(loc, constantAttr);
