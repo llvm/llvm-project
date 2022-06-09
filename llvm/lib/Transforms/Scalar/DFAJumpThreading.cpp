@@ -828,6 +828,16 @@ private:
         });
         return false;
       }
+
+      if (!Metrics.NumInsts.isValid()) {
+        LLVM_DEBUG(dbgs() << "DFA Jump Threading: Not jump threading, contains "
+                          << "instructions with invalid cost.\n");
+        ORE->emit([&]() {
+          return OptimizationRemarkMissed(DEBUG_TYPE, "ConvergentInst", Switch)
+                 << "Contains instructions with invalid cost.";
+        });
+        return false;
+      }
     }
 
     unsigned DuplicationCost = 0;
@@ -841,7 +851,7 @@ private:
       // using binary search, hence the LogBase2().
       unsigned CondBranches =
           APInt(32, Switch->getNumSuccessors()).ceilLogBase2();
-      DuplicationCost = Metrics.NumInsts / CondBranches;
+      DuplicationCost = *Metrics.NumInsts.getValue() / CondBranches;
     } else {
       // Compared with jump tables, the DFA optimizer removes an indirect branch
       // on each loop iteration, thus making branch prediction more precise. The
@@ -849,7 +859,7 @@ private:
       // predictor to make a mistake, and the more benefit there is in the DFA
       // optimizer. Thus, the more branch targets there are, the lower is the
       // cost of the DFA opt.
-      DuplicationCost = Metrics.NumInsts / JumpTableSize;
+      DuplicationCost = *Metrics.NumInsts.getValue() / JumpTableSize;
     }
 
     LLVM_DEBUG(dbgs() << "\nDFA Jump Threading: Cost to jump thread block "
