@@ -285,6 +285,16 @@ entry:
   ret <vscale x 6 x i16> %retval
 }
 
+define <vscale x 4 x float> @insert_nxv1f32_nxv4f32_undef(<vscale x 1 x float> %subvec) nounwind {
+; CHECK-LABEL: insert_nxv1f32_nxv4f32_undef:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    uzp1 z0.s, z0.s, z0.s
+; CHECK-NEXT:    ret
+entry:
+  %retval = call <vscale x 4 x float> @llvm.experimental.vector.insert.nxv4f32.nxv1f32(<vscale x 4 x float> undef, <vscale x 1 x float> %subvec, i64 0)
+  ret <vscale x 4 x float> %retval
+}
+
 ; This tests promotion of the input operand to INSERT_SUBVECTOR.
 define <vscale x 8 x i16> @insert_nxv8i16_nxv2i16(<vscale x 8 x i16> %vec, <vscale x 2 x i16> %in) nounwind {
 ; CHECK-LABEL: insert_nxv8i16_nxv2i16:
@@ -731,6 +741,7 @@ declare <vscale x 8 x half> @llvm.experimental.vector.insert.nxv8f16.nxv2f16(<vs
 declare <vscale x 8 x half> @llvm.experimental.vector.insert.nxv8f16.nxv4f16(<vscale x 8 x half>, <vscale x 4 x half>, i64)
 
 declare <vscale x 3 x float> @llvm.experimental.vector.insert.nxv3f32.nxv2f32(<vscale x 3 x float>, <vscale x 2 x float>, i64)
+declare <vscale x 4 x float> @llvm.experimental.vector.insert.nxv4f32.nxv1f32(<vscale x 4 x float>, <vscale x 1 x float>, i64)
 declare <vscale x 4 x float> @llvm.experimental.vector.insert.nxv4f32.nxv2f32(<vscale x 4 x float>, <vscale x 2 x float>, i64)
 
 declare <vscale x 2 x i1> @llvm.experimental.vector.insert.nxv2i1.v8i1(<vscale x 2 x i1>, <8 x i1>, i64)
