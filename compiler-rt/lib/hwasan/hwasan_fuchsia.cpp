@@ -15,6 +15,9 @@
 #include "sanitizer_common/sanitizer_fuchsia.h"
 #if SANITIZER_FUCHSIA
 
+#include <zircon/features.h>
+#include <zircon/syscalls.h>
+
 #include "hwasan.h"
 #include "hwasan_interface_internal.h"
 #include "hwasan_report.h"
@@ -182,9 +185,20 @@ void InstallAtExitHandler() {}
 
 void HwasanInstallAtForkHandler() {}
 
-// TODO(fxbug.dev/81499): Once we finalize the tagged pointer ABI in zircon, we should come back
-// here and implement the appropriate check that TBI is enabled.
-void InitializeOsSupport() {}
+void InitializeOsSupport() {
+#ifdef __aarch64__
+  uint32_t features = 0;
+  CHECK_EQ(zx_system_get_features(ZX_FEATURE_KIND_ADDRESS_TAGGING, &features),
+           ZX_OK);
+  if (features != ZX_ARM64_FEATURE_ADDRESS_TAGGING_TBI &&
+      flags()->fail_without_syscall_abi) {
+    Printf(
+        "FATAL: HWAddressSanitizer requires a kernel with tagged address "
+        "ABI.\n");
+    Die();
+  }
+#endif
+}
 
 }  // namespace __hwasan
 
