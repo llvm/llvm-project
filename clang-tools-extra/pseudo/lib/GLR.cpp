@@ -39,13 +39,14 @@ llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, const GSS::Node &N) {
 
 const ForestNode &glrParse(const TokenStream &Tokens, const ParseParams &Params,
                            SymbolID StartSymbol) {
+  assert(isNonterminal(StartSymbol) && "Start symbol must be a nonterminal");
   llvm::ArrayRef<ForestNode> Terminals = Params.Forest.createTerminals(Tokens);
   auto &G = Params.G;
   (void)G;
   auto &GSS = Params.GSStack;
 
-  // Lists of active shift, reduce, accept actions.
-  std::vector<ParseStep> PendingShift, PendingReduce, PendingAccept;
+  // Lists of active shift, reduce actions.
+  std::vector<ParseStep> PendingShift, PendingReduce;
   auto AddSteps = [&](const GSS::Node *Head, SymbolID NextTok) {
     for (const auto &Action : Params.Table.getActions(Head->State, NextTok)) {
       switch (Action.kind()) {
@@ -55,20 +56,18 @@ const ForestNode &glrParse(const TokenStream &Tokens, const ParseParams &Params,
       case LRTable::Action::Reduce:
         PendingReduce.push_back({Head, Action});
         break;
-      case LRTable::Action::Accept:
-        PendingAccept.push_back({Head, Action});
-        break;
       default:
         llvm_unreachable("unexpected action kind!");
       }
     }
   };
+  StateID StartState = Params.Table.getStartState(StartSymbol);
   std::vector<const GSS::Node *> NewHeads = {
-      GSS.addNode(/*State=*/Params.Table.getStartState(StartSymbol),
+      GSS.addNode(/*State=*/StartState,
                   /*ForestNode=*/nullptr, {})};
   auto MaybeGC = [&, Roots(std::vector<const GSS::Node *>{}), I(0u)]() mutable {
     assert(PendingShift.empty() && PendingReduce.empty() &&
-           PendingAccept.empty() && "Running GC at the wrong time!");
+           "Running GC at the wrong time!");
 
     if (++I != 20) // Run periodically to balance CPU and memory usage.
       return;
@@ -98,24 +97,31 @@ const ForestNode &glrParse(const TokenStream &Tokens, const ParseParams &Params,
   LLVM_DEBUG(llvm::dbgs() << llvm::formatv("Next is eof\n"));
   for (const auto *Heads : NewHeads)
     AddSteps(Heads, tokenSymbol(tok::eof));
-  glrReduce(PendingReduce, Params,
-            [&](const GSS::Node * NewHead) {
-              // A reduce will enable more steps.
-              AddSteps(NewHead, tokenSymbol(tok::eof));
-            });
 
-  if (!PendingAccept.empty()) {
-    LLVM_DEBUG({
-      llvm::dbgs() << llvm::formatv("Accept: {0} accepted result:\n",
-                                             PendingAccept.size());
-      for (const auto &Accept : PendingAccept)
-        llvm::dbgs() << "  - " << G.symbolName(Accept.Head->Payload->symbol())
-                     << "\n";
-    });
-    assert(PendingAccept.size() == 1);
-    return *PendingAccept.front().Head->Payload;
+  StateID AcceptState = Params.Table.getGoToState(StartState, StartSymbol);
+  // Collect new heads created from the final reduce.
+  std::vector<const GSS::Node*> Heads;
+  glrReduce(PendingReduce, Params, [&](const GSS::Node *NewHead) {
+    Heads.push_back(NewHead);
+    // A reduce will enable more steps.
+    AddSteps(NewHead, tokenSymbol(tok::eof));
+  });
+
+  const ForestNode *Result = nullptr;
+  for (const auto *Head : Heads) {
+    if (Head->State == AcceptState) {
+      assert(Head->Payload->symbol() == StartSymbol);
+      assert(Result == nullptr && "multiple results!");
+      Result = Head->Payload;
+    }
   }
+  if (Result)
+    return *Result;
   // We failed to parse the input, returning an opaque forest node for recovery.
+  //
+  // FIXME: We will need to invoke our generic error-recovery handlers when we
+  // reach EOF without reaching accept state, and involving the eof
+  // token in the above main for-loopmay be the best way to reuse the code).
   return Params.Forest.createOpaque(StartSymbol, /*Token::Index=*/0);
 }
 
