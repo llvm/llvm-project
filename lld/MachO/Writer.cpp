@@ -20,6 +20,7 @@
 #include "SyntheticSections.h"
 #include "Target.h"
 #include "UnwindInfoSection.h"
+#include "llvm/Support/Parallel.h"
 
 #include "lld/Common/Arrays.h"
 #include "lld/Common/CommonLinkerContext.h"
@@ -949,8 +950,14 @@ template <class LP> void Writer::createOutputSections() {
     StringRef segname = it.first.first;
     ConcatOutputSection *osec = it.second;
     assert(segname != segment_names::ld);
-    if (osec->isNeeded())
+    if (osec->isNeeded()) {
+      // See comment in ObjFile::splitEhFrames()
+      if (osec->name == section_names::ehFrame &&
+          segname == segment_names::text)
+        osec->align = target->wordSize;
+
       getOrCreateOutputSegment(segname)->addOutputSection(osec);
+    }
   }
 
   for (SyntheticSection *ssec : syntheticSections) {
@@ -1081,9 +1088,13 @@ void Writer::openFile() {
 
 void Writer::writeSections() {
   uint8_t *buf = buffer->getBufferStart();
+  std::vector<const OutputSection *> osecs;
   for (const OutputSegment *seg : outputSegments)
-    for (const OutputSection *osec : seg->getSections())
-      osec->writeTo(buf + osec->fileOff);
+    append_range(osecs, seg->getSections());
+
+  parallelForEach(osecs.begin(), osecs.end(), [&](const OutputSection *osec) {
+    osec->writeTo(buf + osec->fileOff);
+  });
 }
 
 // In order to utilize multiple cores, we first split the buffer into chunks,

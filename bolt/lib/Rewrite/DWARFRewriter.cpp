@@ -60,25 +60,6 @@ namespace bolt {
 /// Finds attributes FormValue and Offset.
 ///
 /// \param DIE die to look up in.
-/// \param Attr the attribute to extract.
-/// \return an optional AttrInfo with DWARFFormValue and Offset.
-static Optional<AttrInfo> findAttributeInfo(const DWARFDie DIE,
-                                            dwarf::Attribute Attr) {
-  if (!DIE.isValid())
-    return None;
-  const DWARFAbbreviationDeclaration *AbbrevDecl =
-      DIE.getAbbreviationDeclarationPtr();
-  if (!AbbrevDecl)
-    return None;
-  Optional<uint32_t> Index = AbbrevDecl->findAttributeIndex(Attr);
-  if (!Index)
-    return None;
-  return findAttributeInfo(DIE, AbbrevDecl, *Index);
-}
-
-/// Finds attributes FormValue and Offset.
-///
-/// \param DIE die to look up in.
 /// \param Attrs finds the first attribute that matches and extracts it.
 /// \return an optional AttrInfo with DWARFFormValue and Offset.
 Optional<AttrInfo> findAttributeInfo(const DWARFDie DIE,
@@ -192,10 +173,12 @@ void DWARFRewriter::updateDebugInfo() {
 
   AbbrevWriter = std::make_unique<DebugAbbrevWriter>(*BC.DwCtx);
 
-  if (BC.isDWARF5Used()) {
-    // Disabling none deterministic mode for dwarf5, to keep implementation
-    // simpler.
+  if (!opts::DeterministicDebugInfo) {
     opts::DeterministicDebugInfo = true;
+    errs() << "BOLT-WARNING: --deterministic-debuginfo is being deprecated\n";
+  }
+
+  if (BC.isDWARF5Used()) {
     AddrWriter = std::make_unique<DebugAddrWriterDwarf5>(&BC);
     RangesSectionWriter = std::make_unique<DebugRangeListsSectionWriter>();
     DebugRangeListsSectionWriter::setAddressWriter(AddrWriter.get());
@@ -210,14 +193,9 @@ void DWARFRewriter::updateDebugInfo() {
   for (std::unique_ptr<DWARFUnit> &CU : BC.DwCtx->compile_units()) {
     const uint16_t DwarfVersion = CU->getVersion();
     if (DwarfVersion >= 5) {
-      uint32_t AttrInfoOffset =
-          DebugLoclistWriter::InvalidLocListsBaseAttrOffset;
-      if (Optional<AttrInfo> AttrInfoVal =
-              findAttributeInfo(CU->getUnitDIE(), dwarf::DW_AT_loclists_base)) {
-        AttrInfoOffset = AttrInfoVal->Offset;
-        LocListWritersByCU[CUIndex] = std::make_unique<DebugLoclistWriter>(
-            &BC, *CU.get(), AttrInfoOffset, DwarfVersion, false);
-      }
+      LocListWritersByCU[CUIndex] =
+          std::make_unique<DebugLoclistWriter>(*CU.get(), DwarfVersion, false);
+
       if (Optional<uint64_t> DWOId = CU->getDWOId()) {
         assert(LocListWritersByCU.count(*DWOId) == 0 &&
                "RangeLists writer for DWO unit already exists.");
@@ -228,7 +206,7 @@ void DWARFRewriter::updateDebugInfo() {
       }
 
     } else {
-      LocListWritersByCU[CUIndex] = std::make_unique<DebugLocWriter>(&BC);
+      LocListWritersByCU[CUIndex] = std::make_unique<DebugLocWriter>();
     }
 
     if (Optional<uint64_t> DWOId = CU->getDWOId()) {
@@ -236,10 +214,8 @@ void DWARFRewriter::updateDebugInfo() {
              "LocList writer for DWO unit already exists.");
       // Work around some bug in llvm-15. If I pass in directly lld reports
       // undefined symbol.
-      auto constexpr WorkAround =
-          DebugLoclistWriter::InvalidLocListsBaseAttrOffset;
-      LocListWritersByCU[*DWOId] = std::make_unique<DebugLoclistWriter>(
-          &BC, *CU.get(), WorkAround, DwarfVersion, true);
+      LocListWritersByCU[*DWOId] =
+          std::make_unique<DebugLoclistWriter>(*CU.get(), DwarfVersion, true);
     }
     ++CUIndex;
   }
@@ -319,6 +295,7 @@ void DWARFRewriter::updateDebugInfo() {
           createBinaryDWOAbbrevWriter((*SplitCU)->getContext(), *DWOId);
       updateUnitDebugInfo(*(*SplitCU), *DwoDebugInfoPatcher, *DWOAbbrevWriter,
                           *DebugLocWriter, *TempRangesSectionWriter);
+      DebugLocWriter->finalize(*DwoDebugInfoPatcher, *DWOAbbrevWriter);
       DwoDebugInfoPatcher->clearDestinationLabels();
       if (!DwoDebugInfoPatcher->getWasRangBasedUsed())
         RangesBase = None;
@@ -342,6 +319,7 @@ void DWARFRewriter::updateDebugInfo() {
     DebugInfoPatcher->addUnitBaseOffsetLabel(Unit->getOffset());
     updateUnitDebugInfo(*Unit, *DebugInfoPatcher, *AbbrevWriter,
                         *DebugLocWriter, *RangesSectionWriter, RangesBase);
+    DebugLocWriter->finalize(*DebugInfoPatcher, *AbbrevWriter);
     if (Unit->getVersion() >= 5)
       RangesSectionWriter.get()->finalizeSection();
   };
@@ -522,7 +500,8 @@ void DWARFRewriter::updateUnitDebugInfo(
           if (SectionAddress)
             BaseAddress = SectionAddress->Address;
 
-          if (Unit.getVersion() >= 5) {
+          if (Unit.getVersion() >= 5 &&
+              AttrVal->V.getForm() == dwarf::DW_FORM_loclistx) {
             Optional<uint64_t> LocOffset = Unit.getLoclistOffset(Offset);
             assert(LocOffset && "Location Offset is invalid.");
             Offset = *LocOffset;
@@ -550,7 +529,7 @@ void DWARFRewriter::updateUnitDebugInfo(
                       BaseAddress + Entry.Value0, BaseAddress + Entry.Value1,
                       Entry.Loc});
                   break;
-                case dwarf::DW_RLE_start_length:
+                case dwarf::DW_LLE_start_length:
                   InputLL.emplace_back(DebugLocationEntry{
                       Entry.Value0, Entry.Value0 + Entry.Value1, Entry.Loc});
                   break;
@@ -609,24 +588,8 @@ void DWARFRewriter::updateUnitDebugInfo(
               // information.
               OutputLL = InputLL;
             }
-            uint32_t LocListIndex = 0;
-            dwarf::Form Form = Value.getForm();
-            if (Form == dwarf::DW_FORM_sec_offset ||
-                Form == dwarf::DW_FORM_data4) {
-              // For DWARF5 we can access location list entry either using
-              // index, or offset. If it's offset, then it's from begnning of
-              // the file. This implementation was before we could add entries
-              // to the DIE. For DWARF4 this is no-op.
-              // TODO: For DWARF5 convert all the offset based entries to index
-              // based, and insert loclist_base if necessary.
-              LocListIndex = DebugLoclistWriter::InvalidIndex;
-            } else if (Form == dwarf::DW_FORM_loclistx) {
-              LocListIndex = Value.getRawUValue();
-            } else {
-              llvm_unreachable("Unsupported LocList access Form.");
-            }
-            DebugLocWriter.addList(AttrOffset, LocListIndex,
-                                   std::move(OutputLL));
+            DebugLocWriter.addList(*AttrVal, OutputLL, DebugInfoPatcher,
+                                   AbbrevWriter);
           }
         } else {
           assert((Value.isFormClass(DWARFFormValue::FC_Exprloc) ||
@@ -990,17 +953,19 @@ DWARFRewriter::finalizeDebugSections(DebugInfoBinaryPatcher &DebugInfoPatcher) {
   if (BC.isDWARF5Used()) {
     std::unique_ptr<DebugBufferVector> LocationListSectionContents =
         makeFinalLocListsSection(DebugInfoPatcher, DWARFVersion::DWARF5);
-    BC.registerOrUpdateNoteSection(".debug_loclists",
-                                   copyByteArray(*LocationListSectionContents),
-                                   LocationListSectionContents->size());
+    if (!LocationListSectionContents->empty())
+      BC.registerOrUpdateNoteSection(
+          ".debug_loclists", copyByteArray(*LocationListSectionContents),
+          LocationListSectionContents->size());
   }
 
   if (BC.isDWARFLegacyUsed()) {
     std::unique_ptr<DebugBufferVector> LocationListSectionContents =
         makeFinalLocListsSection(DebugInfoPatcher, DWARFVersion::DWARFLegacy);
-    BC.registerOrUpdateNoteSection(".debug_loc",
-                                   copyByteArray(*LocationListSectionContents),
-                                   LocationListSectionContents->size());
+    if (!LocationListSectionContents->empty())
+      BC.registerOrUpdateNoteSection(
+          ".debug_loc", copyByteArray(*LocationListSectionContents),
+          LocationListSectionContents->size());
   }
 
   // AddrWriter should be finalized after debug_loc since more addresses can be
@@ -1763,49 +1728,37 @@ void DWARFRewriter::updateGdbIndexSection(CUOffsetMap &CUMap) {
                                  NewGdbIndexSize);
 }
 
-std::unique_ptr<DebugBufferVector>
-DWARFRewriter::makeFinalLocListsSection(SimpleBinaryPatcher &DebugInfoPatcher,
-                                        DWARFVersion Version) {
+std::unique_ptr<DebugBufferVector> DWARFRewriter::makeFinalLocListsSection(
+    DebugInfoBinaryPatcher &DebugInfoPatcher, DWARFVersion Version) {
   auto LocBuffer = std::make_unique<DebugBufferVector>();
   auto LocStream = std::make_unique<raw_svector_ostream>(*LocBuffer);
   auto Writer =
       std::unique_ptr<MCObjectWriter>(BC.createObjectWriter(*LocStream));
-
-  uint64_t SectionOffset = 0;
-  // Add an empty list as the first entry;
-  if (LocListWritersByCU.empty() ||
-      LocListWritersByCU.begin()->second.get()->getDwarfVersion() < 5) {
-    // Should be fine for both DWARF4 and DWARF5?
-    const char Zeroes[16] = {0};
-    *LocStream << StringRef(Zeroes, 16);
-    SectionOffset += 2 * 8;
-  }
 
   for (std::pair<const uint64_t, std::unique_ptr<DebugLocWriter>> &Loc :
        LocListWritersByCU) {
     DebugLocWriter *LocWriter = Loc.second.get();
     auto *LocListWriter = llvm::dyn_cast<DebugLoclistWriter>(LocWriter);
 
+    // Filter out DWARF4, writing out DWARF5
     if (Version == DWARFVersion::DWARF5 &&
         (!LocListWriter || LocListWriter->getDwarfVersion() <= 4))
       continue;
 
+    // Filter out DWARF5, writing out DWARF4
     if (Version == DWARFVersion::DWARFLegacy &&
         (LocListWriter && LocListWriter->getDwarfVersion() >= 5))
       continue;
+
+    // Skipping DWARF4/5 split dwarf.
     if (LocListWriter && (LocListWriter->getDwarfVersion() <= 4 ||
                           (LocListWriter->getDwarfVersion() >= 5 &&
                            LocListWriter->isSplitDwarf()))) {
-      SimpleBinaryPatcher *Patcher =
-          getBinaryDWODebugInfoPatcher(LocListWriter->getCUID());
-      LocListWriter->finalize(0, *Patcher);
       continue;
     }
-    LocWriter->finalize(SectionOffset, DebugInfoPatcher);
     std::unique_ptr<DebugBufferVector> CurrCULocationLists =
         LocWriter->getBuffer();
     *LocStream << *CurrCULocationLists;
-    SectionOffset += CurrCULocationLists->size();
   }
 
   return LocBuffer;

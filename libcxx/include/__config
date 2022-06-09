@@ -792,19 +792,6 @@ typedef unsigned int   char32_t;
 #  define _LIBCPP_DECLARE_STRONG_ENUM_EPILOG(x)
 #endif // _LIBCPP_CXX03_LANG
 
-// Libc++ allows disabling extern template instantiation declarations by
-// means of users defining _LIBCPP_DISABLE_EXTERN_TEMPLATE.
-//
-// TODO: Remove _LIBCPP_EXTERN_TEMPLATE_EVEN_IN_DEBUG_MODE, which is not needed
-//       since the Debug mode is a configuration-time property.
-#if defined(_LIBCPP_DISABLE_EXTERN_TEMPLATE)
-#   define _LIBCPP_EXTERN_TEMPLATE(...) /* nothing */
-#   define _LIBCPP_EXTERN_TEMPLATE_EVEN_IN_DEBUG_MODE(...) /* nothing */
-#else
-#   define _LIBCPP_EXTERN_TEMPLATE(...) extern template __VA_ARGS__;
-#   define _LIBCPP_EXTERN_TEMPLATE_EVEN_IN_DEBUG_MODE(...) extern template __VA_ARGS__;
-#endif
-
 #if defined(__APPLE__) || defined(__FreeBSD__) || defined(_LIBCPP_MSVCRT_LIKE) || \
     defined(__sun__) || defined(__NetBSD__)
 #define _LIBCPP_LOCALE__L_EXTENSIONS 1
