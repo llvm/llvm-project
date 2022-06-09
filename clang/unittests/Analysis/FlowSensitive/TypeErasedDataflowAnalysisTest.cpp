@@ -312,7 +312,7 @@ public:
     if (const auto *E = selectFirst<CXXConstructExpr>(
             "call", match(cxxConstructExpr(HasSpecialBoolType).bind("call"), *S,
                           getASTContext()))) {
-      auto &ConstructorVal = *cast<StructValue>(Env.createValue(E->getType()));
+      auto &ConstructorVal = *Env.createValue(E->getType());
       ConstructorVal.setProperty("is_set", Env.getBoolLiteralValue(false));
       Env.setValue(*Env.getStorageLocation(*E, SkipPast::None), ConstructorVal);
     } else if (const auto *E = selectFirst<CXXMemberCallExpr>(
@@ -327,8 +327,7 @@ public:
           Env.getStorageLocation(*Object, SkipPast::ReferenceThenPointer);
       assert(ObjectLoc != nullptr);
 
-      auto &ConstructorVal =
-          *cast<StructValue>(Env.createValue(Object->getType()));
+      auto &ConstructorVal = *Env.createValue(Object->getType());
       ConstructorVal.setProperty("is_set", Env.getBoolLiteralValue(true));
       Env.setValue(*ObjectLoc, ConstructorVal);
     }
@@ -342,13 +341,11 @@ public:
         Decl->getName() != "SpecialBool")
       return false;
 
-    auto *IsSet1 = cast_or_null<BoolValue>(
-        cast<StructValue>(&Val1)->getProperty("is_set"));
+    auto *IsSet1 = cast_or_null<BoolValue>(Val1.getProperty("is_set"));
     if (IsSet1 == nullptr)
       return true;
 
-    auto *IsSet2 = cast_or_null<BoolValue>(
-        cast<StructValue>(&Val2)->getProperty("is_set"));
+    auto *IsSet2 = cast_or_null<BoolValue>(Val2.getProperty("is_set"));
     if (IsSet2 == nullptr)
       return false;
 
@@ -365,18 +362,16 @@ public:
         Decl->getName() != "SpecialBool")
       return true;
 
-    auto *IsSet1 = cast_or_null<BoolValue>(
-        cast<StructValue>(&Val1)->getProperty("is_set"));
+    auto *IsSet1 = cast_or_null<BoolValue>(Val1.getProperty("is_set"));
     if (IsSet1 == nullptr)
       return true;
 
-    auto *IsSet2 = cast_or_null<BoolValue>(
-        cast<StructValue>(&Val2)->getProperty("is_set"));
+    auto *IsSet2 = cast_or_null<BoolValue>(Val2.getProperty("is_set"));
     if (IsSet2 == nullptr)
       return true;
 
     auto &IsSet = MergedEnv.makeAtomicBoolValue();
-    cast<StructValue>(&MergedVal)->setProperty("is_set", IsSet);
+    MergedVal.setProperty("is_set", IsSet);
     if (Env1.flowConditionImplies(*IsSet1) &&
         Env2.flowConditionImplies(*IsSet2))
       MergedEnv.addToFlowCondition(IsSet);
@@ -426,32 +421,31 @@ TEST_F(JoinFlowConditionsTest, JoinDistinctButProvablyEquivalentValues) {
       /*[[p4]]*/
     }
   )";
-  runDataflow(Code,
-              [](llvm::ArrayRef<
-                     std::pair<std::string, DataflowAnalysisState<NoopLattice>>>
-                     Results,
-                 ASTContext &ASTCtx) {
-                ASSERT_THAT(Results, ElementsAre(Pair("p4", _), Pair("p3", _),
-                                                 Pair("p2", _), Pair("p1", _)));
-                const Environment &Env1 = Results[3].second.Env;
-                const Environment &Env2 = Results[2].second.Env;
-                const Environment &Env3 = Results[1].second.Env;
-                const Environment &Env4 = Results[0].second.Env;
+  runDataflow(
+      Code, [](llvm::ArrayRef<
+                   std::pair<std::string, DataflowAnalysisState<NoopLattice>>>
+                   Results,
+               ASTContext &ASTCtx) {
+        ASSERT_THAT(Results, ElementsAre(Pair("p4", _), Pair("p3", _),
+                                         Pair("p2", _), Pair("p1", _)));
+        const Environment &Env1 = Results[3].second.Env;
+        const Environment &Env2 = Results[2].second.Env;
+        const Environment &Env3 = Results[1].second.Env;
+        const Environment &Env4 = Results[0].second.Env;
 
-                const ValueDecl *FooDecl = findValueDecl(ASTCtx, "Foo");
-                ASSERT_THAT(FooDecl, NotNull());
+        const ValueDecl *FooDecl = findValueDecl(ASTCtx, "Foo");
+        ASSERT_THAT(FooDecl, NotNull());
 
-                auto GetFooValue = [FooDecl](const Environment &Env) {
-                  return cast<BoolValue>(
-                      cast<StructValue>(Env.getValue(*FooDecl, SkipPast::None))
-                          ->getProperty("is_set"));
-                };
+        auto GetFooValue = [FooDecl](const Environment &Env) {
+          return cast<BoolValue>(
+              Env.getValue(*FooDecl, SkipPast::None)->getProperty("is_set"));
+        };
 
-                EXPECT_FALSE(Env1.flowConditionImplies(*GetFooValue(Env1)));
-                EXPECT_TRUE(Env2.flowConditionImplies(*GetFooValue(Env2)));
-                EXPECT_TRUE(Env3.flowConditionImplies(*GetFooValue(Env3)));
-                EXPECT_TRUE(Env4.flowConditionImplies(*GetFooValue(Env3)));
-              });
+        EXPECT_FALSE(Env1.flowConditionImplies(*GetFooValue(Env1)));
+        EXPECT_TRUE(Env2.flowConditionImplies(*GetFooValue(Env2)));
+        EXPECT_TRUE(Env3.flowConditionImplies(*GetFooValue(Env3)));
+        EXPECT_TRUE(Env4.flowConditionImplies(*GetFooValue(Env3)));
+      });
 }
 
 class OptionalIntAnalysis
@@ -470,7 +464,7 @@ public:
     if (const auto *E = selectFirst<CXXConstructExpr>(
             "call", match(cxxConstructExpr(HasOptionalIntType).bind("call"), *S,
                           getASTContext()))) {
-      auto &ConstructorVal = *cast<StructValue>(Env.createValue(E->getType()));
+      auto &ConstructorVal = *Env.createValue(E->getType());
       ConstructorVal.setProperty("has_value", Env.getBoolLiteralValue(false));
       Env.setValue(*Env.getStorageLocation(*E, SkipPast::None), ConstructorVal);
     } else if (const auto *E = selectFirst<CXXOperatorCallExpr>(
@@ -487,8 +481,7 @@ public:
           Env.getStorageLocation(*Object, SkipPast::ReferenceThenPointer);
       assert(ObjectLoc != nullptr);
 
-      auto &ConstructorVal =
-          *cast<StructValue>(Env.createValue(Object->getType()));
+      auto &ConstructorVal = *Env.createValue(Object->getType());
       ConstructorVal.setProperty("has_value", Env.getBoolLiteralValue(true));
       Env.setValue(*ObjectLoc, ConstructorVal);
     }
@@ -502,8 +495,7 @@ public:
         Type->getAsCXXRecordDecl()->getQualifiedNameAsString() != "OptionalInt")
       return false;
 
-    return cast<StructValue>(&Val1)->getProperty("has_value") ==
-           cast<StructValue>(&Val2)->getProperty("has_value");
+    return Val1.getProperty("has_value") == Val2.getProperty("has_value");
   }
 
   bool merge(QualType Type, const Value &Val1, const Environment &Env1,
@@ -514,20 +506,18 @@ public:
         Type->getAsCXXRecordDecl()->getQualifiedNameAsString() != "OptionalInt")
       return false;
 
-    auto *HasValue1 = cast_or_null<BoolValue>(
-        cast<StructValue>(&Val1)->getProperty("has_value"));
+    auto *HasValue1 = cast_or_null<BoolValue>(Val1.getProperty("has_value"));
     if (HasValue1 == nullptr)
       return false;
 
-    auto *HasValue2 = cast_or_null<BoolValue>(
-        cast<StructValue>(&Val2)->getProperty("has_value"));
+    auto *HasValue2 = cast_or_null<BoolValue>(Val2.getProperty("has_value"));
     if (HasValue2 == nullptr)
       return false;
 
     if (HasValue1 == HasValue2)
-      cast<StructValue>(&MergedVal)->setProperty("has_value", *HasValue1);
+      MergedVal.setProperty("has_value", *HasValue1);
     else
-      cast<StructValue>(&MergedVal)->setProperty("has_value", HasValueTop);
+      MergedVal.setProperty("has_value", HasValueTop);
     return true;
   }
 
@@ -598,7 +588,7 @@ TEST_F(WideningTest, JoinDistinctValuesWithDistinctProperties) {
         ASSERT_THAT(FooDecl, NotNull());
 
         auto GetFooValue = [FooDecl](const Environment &Env) {
-          return cast<StructValue>(Env.getValue(*FooDecl, SkipPast::None));
+          return Env.getValue(*FooDecl, SkipPast::None);
         };
 
         EXPECT_EQ(GetFooValue(Env1)->getProperty("has_value"),
@@ -627,34 +617,34 @@ TEST_F(WideningTest, JoinDistinctValuesWithSameProperties) {
       /*[[p4]]*/
     }
   )";
-  runDataflow(
-      Code, [](llvm::ArrayRef<
-                   std::pair<std::string, DataflowAnalysisState<NoopLattice>>>
-                   Results,
-               ASTContext &ASTCtx) {
-        ASSERT_THAT(Results, ElementsAre(Pair("p4", _), Pair("p3", _),
-                                         Pair("p2", _), Pair("p1", _)));
-        const Environment &Env1 = Results[3].second.Env;
-        const Environment &Env2 = Results[2].second.Env;
-        const Environment &Env3 = Results[1].second.Env;
-        const Environment &Env4 = Results[0].second.Env;
+  runDataflow(Code,
+              [](llvm::ArrayRef<
+                     std::pair<std::string, DataflowAnalysisState<NoopLattice>>>
+                     Results,
+                 ASTContext &ASTCtx) {
+                ASSERT_THAT(Results, ElementsAre(Pair("p4", _), Pair("p3", _),
+                                                 Pair("p2", _), Pair("p1", _)));
+                const Environment &Env1 = Results[3].second.Env;
+                const Environment &Env2 = Results[2].second.Env;
+                const Environment &Env3 = Results[1].second.Env;
+                const Environment &Env4 = Results[0].second.Env;
 
-        const ValueDecl *FooDecl = findValueDecl(ASTCtx, "Foo");
-        ASSERT_THAT(FooDecl, NotNull());
+                const ValueDecl *FooDecl = findValueDecl(ASTCtx, "Foo");
+                ASSERT_THAT(FooDecl, NotNull());
 
-        auto GetFooValue = [FooDecl](const Environment &Env) {
-          return cast<StructValue>(Env.getValue(*FooDecl, SkipPast::None));
-        };
+                auto GetFooValue = [FooDecl](const Environment &Env) {
+                  return Env.getValue(*FooDecl, SkipPast::None);
+                };
 
-        EXPECT_EQ(GetFooValue(Env1)->getProperty("has_value"),
-                  &Env1.getBoolLiteralValue(false));
-        EXPECT_EQ(GetFooValue(Env2)->getProperty("has_value"),
-                  &Env2.getBoolLiteralValue(true));
-        EXPECT_EQ(GetFooValue(Env3)->getProperty("has_value"),
-                  &Env3.getBoolLiteralValue(true));
-        EXPECT_EQ(GetFooValue(Env4)->getProperty("has_value"),
-                  &Env4.getBoolLiteralValue(true));
-      });
+                EXPECT_EQ(GetFooValue(Env1)->getProperty("has_value"),
+                          &Env1.getBoolLiteralValue(false));
+                EXPECT_EQ(GetFooValue(Env2)->getProperty("has_value"),
+                          &Env2.getBoolLiteralValue(true));
+                EXPECT_EQ(GetFooValue(Env3)->getProperty("has_value"),
+                          &Env3.getBoolLiteralValue(true));
+                EXPECT_EQ(GetFooValue(Env4)->getProperty("has_value"),
+                          &Env4.getBoolLiteralValue(true));
+              });
 }
 
 TEST_F(WideningTest, DistinctPointersToTheSameLocationAreEquivalent) {
@@ -715,8 +705,7 @@ TEST_F(WideningTest, DistinctValuesWithSamePropertiesAreEquivalent) {
                 const ValueDecl *FooDecl = findValueDecl(ASTCtx, "Foo");
                 ASSERT_THAT(FooDecl, NotNull());
 
-                const auto *FooVal =
-                    cast<StructValue>(Env.getValue(*FooDecl, SkipPast::None));
+                const auto *FooVal = Env.getValue(*FooDecl, SkipPast::None);
                 EXPECT_EQ(FooVal->getProperty("has_value"),
                           &Env.getBoolLiteralValue(true));
               });

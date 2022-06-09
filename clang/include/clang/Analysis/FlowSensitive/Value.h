@@ -26,6 +26,9 @@ namespace clang {
 namespace dataflow {
 
 /// Base class for all values computed by abstract interpretation.
+///
+/// Don't use `Value` instances by value. All `Value` instances are allocated
+/// and owned by `DataflowAnalysisContext`.
 class Value {
 public:
   enum class Kind {
@@ -48,8 +51,22 @@ public:
 
   Kind getKind() const { return ValKind; }
 
+  /// Returns the value of the synthetic property with the given `Name` or null
+  /// if the property isn't assigned a value.
+  Value *getProperty(llvm::StringRef Name) const {
+    auto It = Properties.find(Name);
+    return It == Properties.end() ? nullptr : It->second;
+  }
+
+  /// Assigns `Val` as the value of the synthetic property with the given
+  /// `Name`.
+  void setProperty(llvm::StringRef Name, Value &Val) {
+    Properties.insert_or_assign(Name, &Val);
+  }
+
 private:
   Kind ValKind;
+  llvm::StringMap<Value *> Properties;
 };
 
 /// Models a boolean.
@@ -215,22 +232,8 @@ public:
   /// Assigns `Val` as the child value for `D`.
   void setChild(const ValueDecl &D, Value &Val) { Children[&D] = &Val; }
 
-  /// Returns the value of the synthetic property with the given `Name` or null
-  /// if the property isn't assigned a value.
-  Value *getProperty(llvm::StringRef Name) const {
-    auto It = Properties.find(Name);
-    return It == Properties.end() ? nullptr : It->second;
-  }
-
-  /// Assigns `Val` as the value of the synthetic property with the given
-  /// `Name`.
-  void setProperty(llvm::StringRef Name, Value &Val) {
-    Properties.insert_or_assign(Name, &Val);
-  }
-
 private:
   llvm::DenseMap<const ValueDecl *, Value *> Children;
-  llvm::StringMap<Value *> Properties;
 };
 
 } // namespace dataflow
