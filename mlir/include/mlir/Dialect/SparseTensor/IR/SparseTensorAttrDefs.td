@@ -100,20 +100,12 @@ def IsSparseTensorPred
 // `RankedTensorOf`, `AnyRankedTensor`.
 
 class SparseTensorOf<list<Type> allowedTypes>
-  : ShapedContainerType<
-      allowedTypes,
-      And<[IsTensorTypePred, IsSparseTensorPred]>,
-      "sparse tensor",
-      "::mlir::TensorType">;
+  : TensorOf<allowedTypes, [IsSparseTensorPred], "sparse tensor">;
 
 def AnySparseTensor : SparseTensorOf<[AnyType]>;
 
 class RankedSparseTensorOf<list<Type> allowedTypes>
-  : ShapedContainerType<
-      allowedTypes,
-      And<[IsTensorTypePred, HasRankPred, IsSparseTensorPred]>,
-      "ranked sparse tensor",
-      "::mlir::TensorType">;
+  : RankedTensorOf<allowedTypes, [IsSparseTensorPred], "ranked sparse tensor">;
 
 def AnyRankedSparseTensor : RankedSparseTensorOf<[AnyType]>;
 

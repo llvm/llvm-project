@@ -60,7 +60,8 @@ struct Subsection {
 using Subsections = std::vector<Subsection>;
 class InputFile;
 
-struct Section {
+class Section {
+public:
   InputFile *file;
   StringRef segname;
   StringRef name;
@@ -76,6 +77,13 @@ struct Section {
   Section &operator=(const Section &) = delete;
   Section(Section &&) = delete;
   Section &operator=(Section &&) = delete;
+
+private:
+  // Whether we have already split this section into individual subsections.
+  // For sections that cannot be split (e.g. literal sections), this is always
+  // false.
+  bool doneSplitting = false;
+  friend class ObjFile;
 };
 
 // Represents a call graph profile edge.
@@ -135,6 +143,12 @@ private:
   static int idCount;
 };
 
+struct FDE {
+  uint32_t funcLength;
+  Symbol *personality;
+  InputSection *lsda;
+};
+
 // .o file
 class ObjFile final : public InputFile {
 public:
@@ -146,10 +160,11 @@ public:
   static bool classof(const InputFile *f) { return f->kind() == ObjKind; }
 
   llvm::DWARFUnit *compileUnit = nullptr;
+  Section *addrSigSection = nullptr;
   const uint32_t modTime;
   std::vector<ConcatInputSection *> debugSections;
   std::vector<CallGraphEntry> callGraph;
-  Section *addrSigSection = nullptr;
+  llvm::DenseMap<ConcatInputSection *, FDE> fdes;
 
 private:
   template <class LP> void parseLazy();
@@ -164,7 +179,9 @@ private:
   void parseRelocations(ArrayRef<SectionHeader> sectionHeaders,
                         const SectionHeader &, Section &);
   void parseDebugInfo();
+  void splitEhFrames(ArrayRef<uint8_t> dataArr, Section &ehFrameSection);
   void registerCompactUnwind(Section &compactUnwindSection);
+  void registerEhFrames(Section &ehFrameSection);
 };
 
 // command-line -sectcreate file

@@ -85,7 +85,7 @@ struct MCPseudoProbeFuncDesc {
 
 class MCDecodedPseudoProbe;
 
-// An inline frame has the form <Guid, ProbeID>
+// An inline frame has the form <CalleeGuid, ProbeID>
 using InlineSite = std::tuple<uint64_t, uint32_t>;
 using MCPseudoProbeInlineStack = SmallVector<InlineSite, 8>;
 // GUID to PseudoProbeFuncDesc map
@@ -271,7 +271,7 @@ public:
   MCDecodedPseudoProbeInlineTree(const InlineSite &Site) : ISite(Site){};
 
   // Return false if it's a dummy inline site
-  bool hasInlineSite() const { return std::get<0>(ISite) != 0; }
+  bool hasInlineSite() const { return !isRoot() && !Parent->isRoot(); }
 };
 
 /// Instances of this class represent the pseudo probes inserted into a compile

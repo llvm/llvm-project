@@ -61,9 +61,6 @@ class FLAT_Pseudo<string opName, dag outs, dag ins,
   bits<1> lds = 0;
   bits<1> sve = 0;
 
-  bits<1> has_sve  = 0; // Scratch VGPR Enable
-  bits<1> sve = 0;
-
   let SubtargetPredicate = !if(is_flat_global, HasFlatGlobalInsts,
     !if(is_flat_scratch, HasFlatScratchInsts, HasFlatAddressSpace));
 
