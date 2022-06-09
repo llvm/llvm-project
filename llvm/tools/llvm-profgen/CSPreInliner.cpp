@@ -69,6 +69,8 @@ CSPreInliner::CSPreInliner(SampleProfileMap &Profiles, ProfiledBinary &Binary,
     SampleHotCallSiteThreshold = 1500;
   if (!SampleColdCallSiteThreshold.getNumOccurrences())
     SampleColdCallSiteThreshold = 0;
+  if (!ProfileInlineLimitMax.getNumOccurrences())
+    ProfileInlineLimitMax = 3000;
 }
 
 std::vector<StringRef> CSPreInliner::buildTopDownOrder() {
