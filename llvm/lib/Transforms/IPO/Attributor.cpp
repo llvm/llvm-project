@@ -1025,8 +1025,6 @@ Optional<Constant *>
 Attributor::getAssumedConstant(const IRPosition &IRP,
                                const AbstractAttribute &AA,
                                bool &UsedAssumedInformation) {
-  if (auto *C = dyn_cast<Constant>(&IRP.getAssociatedValue()))
-    return C;
   // First check all callbacks provided by outside AAs. If any of them returns
   // a non-null value that is different from the associated value, or None, we
   // assume it's simplified.
@@ -1038,6 +1036,8 @@ Attributor::getAssumedConstant(const IRPosition &IRP,
       return cast<Constant>(*SimplifiedV);
     return nullptr;
   }
+  if (auto *C = dyn_cast<Constant>(&IRP.getAssociatedValue()))
+    return C;
   const auto &ValueSimplifyAA =
       getAAFor<AAValueSimplify>(AA, IRP, DepClassTy::NONE);
   Optional<Value *> SimplifiedV =
