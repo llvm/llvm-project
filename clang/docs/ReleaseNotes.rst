@@ -168,6 +168,8 @@ Bug Fixes
   `Issue 55562 <https://github.com/llvm/llvm-project/issues/55562>`_.
 - Clang will allow calling a ``consteval`` function in a default argument. This
   fixes `Issue 48230 <https://github.com/llvm/llvm-project/issues/48230>`_.
+- Fixed memory leak due to ``VarTemplateSpecializationDecl`` using
+  ``TemplateArgumentListInfo`` instead of ``ASTTemplateArgumentListInfo``.
 
 Improvements to Clang's diagnostics
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
