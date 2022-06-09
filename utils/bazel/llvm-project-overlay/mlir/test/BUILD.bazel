@@ -597,6 +597,7 @@ cc_library(
         "//mlir:MemRefDialect",
         "//mlir:Pass",
         "//mlir:SCFDialect",
+        "//mlir:Support",
         "//mlir:TransformUtils",
         "//mlir:VectorOps",
         "//mlir:VectorToSCF",
