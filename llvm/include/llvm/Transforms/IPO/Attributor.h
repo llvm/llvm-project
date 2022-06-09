@@ -1589,11 +1589,17 @@ struct Attributor {
     return true;
   }
 
-  /// Helper function to replace all uses of \p V with \p NV. Return true if
-  /// there is any change. The flag \p ChangeDroppable indicates if dropppable
-  /// uses should be changed too.
-  bool changeValueAfterManifest(Value &V, Value &NV,
-                                bool ChangeDroppable = true) {
+  /// Helper function to replace all uses associated with \p IRP with \p NV.
+  /// Return true if there is any change. The flag \p ChangeDroppable indicates
+  /// if dropppable uses should be changed too.
+  bool changeAfterManifest(const IRPosition IRP, Value &NV,
+                           bool ChangeDroppable = true) {
+    if (IRP.getPositionKind() == IRPosition::IRP_CALL_SITE_ARGUMENT) {
+      auto *CB = cast<CallBase>(IRP.getCtxI());
+      return changeUseAfterManifest(
+          CB->getArgOperandUse(IRP.getCallSiteArgNo()), NV);
+    }
+    Value &V = IRP.getAssociatedValue();
     auto &Entry = ToBeChangedValues[&V];
     Value *&CurNV = Entry.first;
     if (CurNV && (CurNV->stripPointerCasts() == NV.stripPointerCasts() ||
