@@ -163,6 +163,7 @@ public:
   DecodeStatus convertDPP8Inst(MCInst &MI) const;
   DecodeStatus convertMIMGInst(MCInst &MI) const;
   DecodeStatus convertVOP3PDPPInst(MCInst &MI) const;
+  DecodeStatus convertVOPCDPPInst(MCInst &MI) const;
 
   MCOperand decodeOperand_VGPR_32(unsigned Val) const;
   MCOperand decodeOperand_VRegOrLds_32(unsigned Val) const;
