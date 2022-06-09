@@ -180,7 +180,6 @@ struct OneShotBufferizePass
     if (!options) {
       // Make new bufferization options if none were provided when creating the
       // pass.
-      opt.dropEquivalentFuncResults = dropEquivalentFuncResults;
       opt.allowReturnAllocs = allowReturnAllocs;
       opt.allowUnknownOps = allowUnknownOps;
       opt.alwaysAliasingWithDest = alwaysAliasingWithDest;
@@ -191,7 +190,6 @@ struct OneShotBufferizePass
       opt.printConflicts = printConflicts;
       opt.testAnalysisOnly = testAnalysisOnly;
       opt.bufferizeFunctionBoundaries = bufferizeFunctionBoundaries;
-      opt.promoteBufferResultsToOutParams = promoteBufferResultsToOutParams;
       opt.unknownTypeConversion = parseLayoutMapOption(unknownTypeConversion);
 
       OpFilter::Entry::FilterFn filterFn =
@@ -291,37 +289,6 @@ static bool hasTensorSemantics(Operation *op) {
   return hasTensorResult || hasTensorOperand;
 }
 
-LogicalResult
-bufferization::finalizeBuffers(Operation *op,
-                               const BufferizationOptions &options) {
-  // Create allocation ops for "leaking buffers", i.e., buffer allocations that
-  // escape block boundaries. If there are no leaking allocs, `hasLeakingAllocs`
-  // is set to `false`.
-  bool hasLeakingAllocs = false;
-  if (failed(createAllocDeallocOps(op, options, /*onlyLeakingAllocs=*/true,
-                                   &hasLeakingAllocs)))
-    return failure();
-
-  // Promote returned buffers to "out" parameters.
-  // TODO: Pass options to support custom dealloc ops.
-  if (options.promoteBufferResultsToOutParams && isa<ModuleOp>(op) &&
-      failed(promoteBufferResultsToOutParams(cast<ModuleOp>(op))))
-    return failure();
-
-  // Create deallocation ops for all "leaking buffers" and all buffer
-  // allocations that were added during the above promotion process.
-  // TODO: Pass options to support custom dealloc ops.
-  if (hasLeakingAllocs && options.createDeallocs &&
-      failed(deallocateBuffers(op)))
-    return failure();
-
-  // Deallocate all remaining buffers at the end of their parent blocks.
-  if (failed(createAllocDeallocOps(op, options)))
-    return failure();
-
-  return success();
-}
-
 LogicalResult bufferization::bufferizeOp(Operation *op,
                                          const AnalysisState &analysisState) {
   // Catch incorrect API usage.
@@ -332,8 +299,6 @@ LogicalResult bufferization::bufferizeOp(Operation *op,
 
   BufferizationState bufferizationState(analysisState);
   if (failed(bufferizeOp(op, bufferizationState)))
-    return failure();
-  if (failed(finalizeBuffers(op, analysisState.getOptions())))
     return failure();
   return success();
 }

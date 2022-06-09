@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "clang-pseudo/Grammar.h"
+#include "clang-pseudo/grammar/Grammar.h"
 #include "clang/Basic/TokenKinds.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/STLExtras.h"
@@ -232,7 +232,7 @@ private:
         continue;
       }
 
-      Out.Sequence.push_back({Chunk});
+      Out.Sequence.push_back({Chunk, /*Attributes=*/{}});
     }
     return true;
   }

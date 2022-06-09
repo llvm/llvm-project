@@ -1012,7 +1012,7 @@ Optional<ValueLatticeElement> LazyValueInfoImpl::solveBlockValueExtractValue(
 
   // Handle extractvalue of insertvalue to allow further simplification
   // based on replaced with.overflow intrinsics.
-  if (Value *V = SimplifyExtractValueInst(
+  if (Value *V = simplifyExtractValueInst(
           EVI->getAggregateOperand(), EVI->getIndices(),
           EVI->getModule()->getDataLayout()))
     return getBlockValue(V, BB, EVI);
@@ -1270,7 +1270,7 @@ static ValueLatticeElement constantFoldUser(User *Usr, Value *Op,
   if (auto *CI = dyn_cast<CastInst>(Usr)) {
     assert(CI->getOperand(0) == Op && "Operand 0 isn't Op");
     if (auto *C = dyn_cast_or_null<ConstantInt>(
-            SimplifyCastInst(CI->getOpcode(), OpConst,
+            simplifyCastInst(CI->getOpcode(), OpConst,
                              CI->getDestTy(), DL))) {
       return ValueLatticeElement::getRange(ConstantRange(C->getValue()));
     }
@@ -1282,7 +1282,7 @@ static ValueLatticeElement constantFoldUser(User *Usr, Value *Op,
     Value *LHS = Op0Match ? OpConst : BO->getOperand(0);
     Value *RHS = Op1Match ? OpConst : BO->getOperand(1);
     if (auto *C = dyn_cast_or_null<ConstantInt>(
-            SimplifyBinOp(BO->getOpcode(), LHS, RHS, DL))) {
+            simplifyBinOp(BO->getOpcode(), LHS, RHS, DL))) {
       return ValueLatticeElement::getRange(ConstantRange(C->getValue()));
     }
   } else if (isa<FreezeInst>(Usr)) {

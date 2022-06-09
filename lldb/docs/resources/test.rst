@@ -320,9 +320,20 @@ A better way to write the test above would be using LLDB's testing function
     several expressive asserts such as `self.assertIn` that automatically
     generate an explanation how the received values differ from the expected
     ones. Check the documentation of Python's `unittest` module to see what
-    asserts are available. If you can't find a specific assert that fits your
-    needs and you fall back to a generic assert, make sure you put useful
-    information into the assert's `msg` argument that helps explain the failure.
+    asserts are available. LLDB also has a few custom asserts that are tailored
+    to our own data types.
+
++-----------------------------------------------+---------------------------------------------------------------+
+| **Assert**                                    | **Description**                                               |
++-----------------------------------------------+---------------------------------------------------------------+
+| ``assertSuccess``                             | Assert that an ``lldb.SBError`` is in the "success" state.    |
++-----------------------------------------------+---------------------------------------------------------------+
+| ``assertState``                               | Assert that two states (``lldb.eState*``) are equal.          |
++-----------------------------------------------+---------------------------------------------------------------+
+
+    If you can't find a specific assert that fits your needs and you fall back
+    to a generic assert, make sure you put useful information into the assert's
+    `msg` argument that helps explain the failure.
 
 ::
 

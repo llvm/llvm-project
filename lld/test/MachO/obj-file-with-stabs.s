@@ -1,33 +1,27 @@
 # REQUIRES: x86
-## FIXME: This yaml is from an object file produced with 'ld -r':
-##
-##   echo "int main() {return 1;}" > test.c
-##   clang -c -g -o test.o test.c
-##   ld -r -o test2.o test.o -no_data_in_code_info
-##
-## Replace this with "normal" .s test format once lld supports `-r`
+## FIXME: This yaml is from an object file produced with 'ld -r'
+##        Replace this with "normal" .s test format once lld supports `-r`
 
 # RUN: yaml2obj %s -o %t.o
-# RUN: %lld -lSystem -arch x86_64 %t.o -o %t
-
+# RUN: %lld -lSystem -platform_version macos 11.3 11.0 -arch x86_64 %t.o -o %t
 --- !mach-o
 FileHeader:
   magic:           0xFEEDFACF
-  cputype:         0x1000007
-  cpusubtype:      0x3
-  filetype:        0x1
-  ncmds:           3
-  sizeofcmds:      288
-  flags:           0x2000
-  reserved:        0x0
+  cputype:         0x01000007
+  cpusubtype:      0x00000003
+  filetype:        0x00000001
+  ncmds:           2
+  sizeofcmds:      384
+  flags:           0x00002000
+  reserved:        0x00000000
 LoadCommands:
   - cmd:             LC_SEGMENT_64
-    cmdsize:         232
+    cmdsize:         312
     segname:         ''
     vmaddr:          0
-    vmsize:          56
-    fileoff:         352
-    filesize:        56
+    vmsize:          120
+    fileoff:         448
+    filesize:        120
     maxprot:         7
     initprot:        7
     nsects:          2
@@ -35,33 +29,57 @@ LoadCommands:
     Sections:
       - sectname:        __text
         segname:         __TEXT
-        addr:            0x0
+        addr:            0x0000000000000000
         size:            18
-        offset:          0x160
+        offset:          0x000001C0
         align:           4
-        reloff:          0x0
+        reloff:          0x00000000
         nreloc:          0
         flags:           0x80000400
-        reserved1:       0x0
-        reserved2:       0x0
-        reserved3:       0x0
+        reserved1:       0x00000000
+        reserved2:       0x00000000
+        reserved3:       0x00000000
         content:         554889E5C745FC00000000B8010000005DC3
-      - sectname:        __compact_unwind
-        segname:         __LD
-        addr:            0x18
-        size:            32
-        offset:          0x178
+      - sectname:        __eh_frame
+        segname:         __TEXT
+        addr:            0x0000000000000018
+        size:            64
+        offset:          0x000001D8
         align:           3
-        reloff:          0x198
-        nreloc:          1
-        flags:           0x2000000
-        reserved1:       0x0
-        reserved2:       0x0
-        reserved3:       0x0
-        content:         '0000000000000000120000000000000100000000000000000000000000000000'
+        reloff:          0x00000238
+        nreloc:          4
+        flags:           0x00000000
+        reserved1:       0x00000000
+        reserved2:       0x00000000
+        reserved3:       0x00000000
+        content:         1400000000000000017A520001781001100C0708900100002400000004000000F8FFFFFFFFFFFFFF120000000000000000410E108602430D0600000000000000
         relocations:
-          - address:         0x0
-            symbolnum:       8
+          - address:         0x0000001C
+            symbolnum:       0
+            pcrel:           false
+            length:          2
+            extern:          true
+            type:            5
+            scattered:       false
+            value:           0
+          - address:         0x0000001C
+            symbolnum:       1
+            pcrel:           false
+            length:          2
+            extern:          true
+            type:            0
+            scattered:       false
+            value:           0
+          - address:         0x00000020
+            symbolnum:       1
+            pcrel:           false
+            length:          3
+            extern:          true
+            type:            5
+            scattered:       false
+            value:           0
+          - address:         0x00000020
+            symbolnum:       10
             pcrel:           false
             length:          3
             extern:          true
@@ -70,72 +88,39 @@ LoadCommands:
             value:           0
   - cmd:             LC_SYMTAB
     cmdsize:         24
-    symoff:          416
-    nsyms:           9
-    stroff:          560
-    strsize:         48
-  - cmd:             LC_BUILD_VERSION
-    cmdsize:         32
-    platform:        1
-    minos:           659200
-    sdk:             0
-    ntools:          1
-    Tools:
-      - tool:            3
-        version:         46596096
+    symoff:          608
+    nsyms:           11
+    stroff:          784
+    strsize:         72
 LinkEditData:
   NameList:
-    - n_strx:          8
-      n_type:          0x64 ## N_SO STAB
-      n_sect:          0
+    - n_strx:          8      ## N_STAB sym (in got)
+      n_type:          0x0E
+      n_sect:          2
       n_desc:          0
-      n_value:         0
-    - n_strx:          14
-      n_type:          0x64 ## N_SO STAB
-      n_sect:          0
+      n_value:         24
+    - n_strx:          18
+      n_type:          0x0E
+      n_sect:          2
       n_desc:          0
-      n_value:         0
-    - n_strx:          21
-      n_type:          0x66 ## N_OSO STAB
-      n_sect:          3
-      n_desc:          1
-      n_value:         1651001352
+      n_value:         48
     - n_strx:          1
-      n_type:          0x2E ## N_BNSYM STAB
-      n_sect:          1
-      n_desc:          0
-      n_value:         0
-    - n_strx:          41
-      n_type:          0x24 ## N_FUN STAB
-      n_sect:          1
-      n_desc:          0
-      n_value:         0
-    - n_strx:          1
-      n_type:          0x24 ## N_FUN STAB
-      n_sect:          0
-      n_desc:          0
-      n_value:         18
-    - n_strx:          1
-      n_type:          0x4E ## N_ENSYM STAB
+      n_type:          0x4E
       n_sect:          1
       n_desc:          0
       n_value:         18
-    - n_strx:          1
-      n_type:          0x64 ## N_SO STAB
-      n_sect:          1
-      n_desc:          0
-      n_value:         0
-    - n_strx:          2
-      n_type:          0xF
+    - n_strx:          2          ## _main
+      n_type:          0x0F
       n_sect:          1
       n_desc:          0
       n_value:         0
   StringTable:
     - ' '
     - _main
-    - '/tmp/'
-    - test.c
-    - '/private/tmp/test.o'
+    - EH_Frame1
+    - func.eh
+    - '/Users/vyng/'
+    - test.cc
+    - '/Users/vyng/test.o'
     - _main
-    - ''
 ...

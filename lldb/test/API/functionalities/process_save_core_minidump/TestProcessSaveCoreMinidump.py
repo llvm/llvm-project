@@ -21,6 +21,7 @@ class ProcessSaveCoreMinidumpTestCase(TestBase):
         self.build()
         exe = self.getBuildArtifact("a.out")
         core = self.getBuildArtifact("core.dmp")
+        core_sb = self.getBuildArtifact("core_sb.dmp")
         try:
             target = self.dbg.CreateTarget(exe)
             process = target.LaunchSimple(
@@ -43,6 +44,17 @@ class ProcessSaveCoreMinidumpTestCase(TestBase):
             # save core and, kill process and verify corefile existence
             self.runCmd("process save-core --plugin-name=minidump --style=stack " + core)
             self.assertTrue(os.path.isfile(core))
+
+            # validate savinig via SBProcess
+            error = process.SaveCore(core_sb, "minidump", lldb.eSaveCoreStackOnly)
+            self.assertTrue(error.Success())
+            self.assertTrue(os.path.isfile(core_sb))
+
+            error = process.SaveCore(core_sb, "minidump", lldb.eSaveCoreFull)
+            self.assertTrue(error.Fail())
+            error = process.SaveCore(core_sb, "minidump", lldb.eSaveCoreDirtyOnly)
+            self.assertTrue(error.Fail())
+
             self.assertSuccess(process.Kill())
 
             # To verify, we'll launch with the mini dump
@@ -77,3 +89,5 @@ class ProcessSaveCoreMinidumpTestCase(TestBase):
             self.assertTrue(self.dbg.DeleteTarget(target))
             if (os.path.isfile(core)):
                 os.unlink(core)
+            if (os.path.isfile(core_sb)):
+                os.unlink(core_sb)

@@ -106,6 +106,12 @@ class kmp_stats_list;
 #include <xmmintrin.h>
 #endif
 
+// The below has to be defined before including "kmp_barrier.h".
+#define KMP_INTERNAL_MALLOC(sz) malloc(sz)
+#define KMP_INTERNAL_FREE(p) free(p)
+#define KMP_INTERNAL_REALLOC(p, sz) realloc((p), (sz))
+#define KMP_INTERNAL_CALLOC(n, sz) calloc((n), (sz))
+
 #include "kmp_debug.h"
 #include "kmp_lock.h"
 #include "kmp_version.h"
@@ -3461,11 +3467,6 @@ extern void ___kmp_thread_free(kmp_info_t *th, void *ptr KMP_SRC_LOC_DECL);
   ___kmp_thread_realloc((th), (ptr), (size)KMP_SRC_LOC_CURR)
 #define __kmp_thread_free(th, ptr)                                             \
   ___kmp_thread_free((th), (ptr)KMP_SRC_LOC_CURR)
-
-#define KMP_INTERNAL_MALLOC(sz) malloc(sz)
-#define KMP_INTERNAL_FREE(p) free(p)
-#define KMP_INTERNAL_REALLOC(p, sz) realloc((p), (sz))
-#define KMP_INTERNAL_CALLOC(n, sz) calloc((n), (sz))
 
 extern void __kmp_push_num_threads(ident_t *loc, int gtid, int num_threads);
 
