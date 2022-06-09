@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang-pseudo/cxx/CXX.h"
-#include "clang-pseudo/LRTable.h"
+#include "clang-pseudo/grammar/LRTable.h"
 
 namespace clang {
 namespace pseudo {

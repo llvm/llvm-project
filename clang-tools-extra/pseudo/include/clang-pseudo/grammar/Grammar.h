@@ -49,8 +49,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef CLANG_PSEUDO_GRAMMAR_H
-#define CLANG_PSEUDO_GRAMMAR_H
+#ifndef CLANG_PSEUDO_GRAMMAR_GRAMMAR_H
+#define CLANG_PSEUDO_GRAMMAR_GRAMMAR_H
 
 #include "clang/Basic/TokenKinds.h"
 #include "llvm/ADT/ArrayRef.h"
@@ -221,4 +221,4 @@ struct GrammarTable {
 } // namespace pseudo
 } // namespace clang
 
-#endif // CLANG_PSEUDO_GRAMMAR_H
+#endif // CLANG_PSEUDO_GRAMMAR_GRAMMAR_H
