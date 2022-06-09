@@ -192,13 +192,13 @@ getValueOnFirstIteration(Value *V, DenseMap<Value *, Value *> &FirstIterValue,
         getValueOnFirstIteration(BO->getOperand(0), FirstIterValue, SQ);
     Value *RHS =
         getValueOnFirstIteration(BO->getOperand(1), FirstIterValue, SQ);
-    FirstIterV = SimplifyBinOp(BO->getOpcode(), LHS, RHS, SQ);
+    FirstIterV = simplifyBinOp(BO->getOpcode(), LHS, RHS, SQ);
   } else if (auto *Cmp = dyn_cast<ICmpInst>(V)) {
     Value *LHS =
         getValueOnFirstIteration(Cmp->getOperand(0), FirstIterValue, SQ);
     Value *RHS =
         getValueOnFirstIteration(Cmp->getOperand(1), FirstIterValue, SQ);
-    FirstIterV = SimplifyICmpInst(Cmp->getPredicate(), LHS, RHS, SQ);
+    FirstIterV = simplifyICmpInst(Cmp->getPredicate(), LHS, RHS, SQ);
   } else if (auto *Select = dyn_cast<SelectInst>(V)) {
     Value *Cond =
         getValueOnFirstIteration(Select->getCondition(), FirstIterValue, SQ);
