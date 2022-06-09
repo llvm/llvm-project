@@ -270,6 +270,20 @@ def int_wasm_relaxed_trunc_unsigned_zero:
             [llvm_v2f64_ty],
             [IntrNoMem, IntrSpeculatable]>;
 
+def int_wasm_relaxed_q15mulr_signed:
+  Intrinsic<[llvm_v8i16_ty],
+            [llvm_v8i16_ty, llvm_v8i16_ty],
+            [IntrNoMem, IntrSpeculatable]>;
+
+def int_wasm_dot_i8x16_i7x16_signed:
+  Intrinsic<[llvm_v8i16_ty],
+            [llvm_v16i8_ty, llvm_v16i8_ty],
+            [IntrNoMem, IntrSpeculatable]>;
+
+def int_wasm_dot_i8x16_i7x16_add_signed:
+  Intrinsic<[llvm_v4i32_ty],
+            [llvm_v16i8_ty, llvm_v16i8_ty, llvm_v4i32_ty],
+            [IntrNoMem, IntrSpeculatable]>;
 
 //===----------------------------------------------------------------------===//
 // Thread-local storage intrinsics

@@ -830,8 +830,13 @@ main:
     # CHECK: f64x2.relaxed_max # encoding: [0xfd,0x90,0x02]
     f64x2.relaxed_max
 
-    # TODO: i16x8.relaxed_q15mulr_s # encoding: [0xfd,0x91,0x02]
-    # TODO: i16x8.dot_i8x16_i7x16_s # encoding: [0xfd,0x92,0x02]
-    # TODO: i32x4.dot_i8x16_i7x16_add_s # encoding: [0xfd,0x93,0x02]
+    # CHECK: i16x8.relaxed_q15mulr_s # encoding: [0xfd,0x91,0x02]
+    i16x8.relaxed_q15mulr_s
+
+    # CHECK: i16x8.dot_i8x16_i7x16_s # encoding: [0xfd,0x92,0x02]
+    i16x8.dot_i8x16_i7x16_s
+
+    # CHECK: i32x4.dot_i8x16_i7x16_add_s # encoding: [0xfd,0x93,0x02]
+    i32x4.dot_i8x16_i7x16_add_s
 
     end_function

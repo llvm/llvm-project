@@ -777,3 +777,24 @@ u32x4 relaxed_trunc_u_zero_i32x4_f64x2(f64x2 x) {
   // WEBASSEMBLY: call <4 x i32> @llvm.wasm.relaxed.trunc.unsigned.zero(<2 x double> %x)
   // WEBASSEMBLY-NEXT: ret
 }
+
+i16x8 relaxed_q15mulr_s_i16x8(i16x8 a, i16x8 b) {
+  return __builtin_wasm_relaxed_q15mulr_s_i16x8(a, b);
+  // WEBASSEMBLY: call <8 x i16> @llvm.wasm.relaxed.q15mulr.signed(
+  // WEBASSEMBLY-SAME: <8 x i16> %a, <8 x i16> %b)
+  // WEBASSEMBLY-NEXT: ret
+}
+
+i16x8 dot_i8x16_i7x16_s_i16x8(i8x16 a, i8x16 b) {
+  return __builtin_wasm_dot_i8x16_i7x16_s_i16x8(a, b);
+  // WEBASSEMBLY: call <8 x i16> @llvm.wasm.dot.i8x16.i7x16.signed(
+  // WEBASSEMBLY-SAME: <16 x i8> %a, <16 x i8> %b)
+  // WEBASSEMBLY-NEXT: ret
+}
+
+i32x4 dot_i8x16_i7x16_add_s_i32x4(i8x16 a, i8x16 b, i32x4 c) {
+  return __builtin_wasm_dot_i8x16_i7x16_add_s_i32x4(a, b, c);
+  // WEBASSEMBLY: call <4 x i32> @llvm.wasm.dot.i8x16.i7x16.add.signed(
+  // WEBASSEMBLY-SAME: <16 x i8> %a, <16 x i8> %b, <4 x i32> %c)
+  // WEBASSEMBLY-NEXT: ret
+}
