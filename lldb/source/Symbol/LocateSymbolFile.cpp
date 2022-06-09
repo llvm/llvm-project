@@ -362,17 +362,33 @@ Symbols::LocateExecutableSymbolFile(const ModuleSpec &module_spec,
         lldb_private::ModuleSpecList specs;
         const size_t num_specs =
             ObjectFile::GetModuleSpecifications(file_spec, 0, 0, specs);
-        assert(num_specs <= 1 &&
-               "Symbol Vendor supports only a single architecture");
-        if (num_specs == 1) {
-          ModuleSpec mspec;
-          if (specs.GetModuleSpecAtIndex(0, mspec)) {
-            // Skip the uuids check if module_uuid is invalid. For example,
-            // this happens for *.dwp files since at the moment llvm-dwp
-            // doesn't output build ids, nor does binutils dwp.
-            if (!module_uuid.IsValid() || module_uuid == mspec.GetUUID())
-              return file_spec;
+        ModuleSpec mspec;
+        bool valid_mspec = false;
+        if (num_specs == 2) {
+          // Special case to handle both i386 and i686 from ObjectFilePECOFF
+          ModuleSpec mspec2;
+          if (specs.GetModuleSpecAtIndex(0, mspec) &&
+              specs.GetModuleSpecAtIndex(1, mspec2) &&
+              mspec.GetArchitecture().GetTriple().isCompatibleWith(
+                  mspec2.GetArchitecture().GetTriple())) {
+            valid_mspec = true;
           }
+        }
+        if (!valid_mspec) {
+          assert(num_specs <= 1 &&
+                 "Symbol Vendor supports only a single architecture");
+          if (num_specs == 1) {
+            if (specs.GetModuleSpecAtIndex(0, mspec)) {
+              valid_mspec = true;
+            }
+          }
+        }
+        if (valid_mspec) {
+          // Skip the uuids check if module_uuid is invalid. For example,
+          // this happens for *.dwp files since at the moment llvm-dwp
+          // doesn't output build ids, nor does binutils dwp.
+          if (!module_uuid.IsValid() || module_uuid == mspec.GetUUID())
+            return file_spec;
         }
       }
     }
