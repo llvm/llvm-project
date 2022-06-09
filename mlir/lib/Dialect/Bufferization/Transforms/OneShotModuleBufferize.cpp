@@ -258,7 +258,8 @@ static func::FuncOp getCalledFunction(CallOpInterface callOp) {
 // TODO: This does not handle cyclic function call graphs etc.
 static void equivalenceAnalysis(func::FuncOp funcOp,
                                 BufferizationAliasInfo &aliasInfo,
-                                FuncAnalysisState &funcState) {
+                                OneShotAnalysisState &state) {
+  FuncAnalysisState &funcState = getFuncAnalysisState(state);
   funcOp->walk([&](func::CallOp callOp) {
     func::FuncOp calledFunction = getCalledFunction(callOp);
     assert(calledFunction && "could not retrieved called func::FuncOp");
@@ -270,6 +271,8 @@ static void equivalenceAnalysis(func::FuncOp funcOp,
     for (auto it : funcState.equivalentFuncArgs[calledFunction]) {
       int64_t returnIdx = it.first;
       int64_t bbargIdx = it.second;
+      if (!state.isInPlace(callOp->getOpOperand(bbargIdx)))
+        continue;
       Value returnVal = callOp.getResult(returnIdx);
       Value argVal = callOp->getOperand(bbargIdx);
       aliasInfo.unionEquivalenceClasses(returnVal, argVal);
@@ -409,7 +412,7 @@ mlir::bufferization::analyzeModuleOp(ModuleOp moduleOp,
     funcState.startFunctionAnalysis(funcOp);
 
     // Gather equivalence info for CallOps.
-    equivalenceAnalysis(funcOp, aliasInfo, funcState);
+    equivalenceAnalysis(funcOp, aliasInfo, state);
 
     // Analyze funcOp.
     if (failed(analyzeOp(funcOp, state)))
