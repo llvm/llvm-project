@@ -254,7 +254,8 @@ public:
            MaskAgnostic == Other.MaskAgnostic;
   }
 
-  bool hasCompatibleVTYPE(const MachineInstr &MI, const VSETVLIInfo &Require) const {
+  bool hasCompatibleVTYPE(const MachineInstr &MI,
+                          const VSETVLIInfo &Require) const {
     // Simple case, see if full VTYPE matches.
     if (hasSameVTYPE(Require))
       return true;
@@ -903,7 +904,8 @@ bool canSkipVSETVLIForLoadStore(const MachineInstr &MI,
 /// before MI.  Require corresponds to the result of computeInfoForInstr(MI...)
 /// *before* we clear VLOp in phase3.  We can't recompute and assert it here due
 /// to that muation.
-bool RISCVInsertVSETVLI::needVSETVLI(const MachineInstr &MI, const VSETVLIInfo &Require,
+bool RISCVInsertVSETVLI::needVSETVLI(const MachineInstr &MI,
+                                     const VSETVLIInfo &Require,
                                      const VSETVLIInfo &CurInfo) const {
   if (CurInfo.isCompatible(MI, Require))
     return false;
@@ -1147,7 +1149,8 @@ void RISCVInsertVSETVLI::emitVSETVLIs(MachineBasicBlock &MBB) {
       // Note there's an implicit assumption here that terminators never use
       // or modify VL or VTYPE.  Also, fallthrough will return end().
       auto InsertPt = MBB.getFirstInstrTerminator();
-      insertVSETVLI(MBB, InsertPt, MBB.findDebugLoc(InsertPt), ExitInfo, CurInfo);
+      insertVSETVLI(MBB, InsertPt, MBB.findDebugLoc(InsertPt), ExitInfo,
+                    CurInfo);
       CurInfo = ExitInfo;
     }
   }
