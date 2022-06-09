@@ -330,14 +330,23 @@ tryToUnrollAndJamLoop(Loop *L, DominatorTree &DT, LoopInfo *LI,
   SmallPtrSet<const Value *, 32> EphValues;
   CodeMetrics::collectEphemeralValues(L, &AC, EphValues);
   Loop *SubLoop = L->getSubLoops()[0];
-  unsigned InnerLoopSize =
+  InstructionCost InnerLoopSizeIC =
       ApproximateLoopSize(SubLoop, NumInlineCandidates, NotDuplicatable,
                           Convergent, TTI, EphValues, UP.BEInsns);
-  unsigned OuterLoopSize =
+  InstructionCost OuterLoopSizeIC =
       ApproximateLoopSize(L, NumInlineCandidates, NotDuplicatable, Convergent,
                           TTI, EphValues, UP.BEInsns);
-  LLVM_DEBUG(dbgs() << "  Outer Loop Size: " << OuterLoopSize << "\n");
-  LLVM_DEBUG(dbgs() << "  Inner Loop Size: " << InnerLoopSize << "\n");
+  LLVM_DEBUG(dbgs() << "  Outer Loop Size: " << OuterLoopSizeIC << "\n");
+  LLVM_DEBUG(dbgs() << "  Inner Loop Size: " << InnerLoopSizeIC << "\n");
+
+  if (!InnerLoopSizeIC.isValid() || !OuterLoopSizeIC.isValid()) {
+    LLVM_DEBUG(dbgs() << "  Not unrolling loop which contains instructions"
+                      << " with invalid cost.\n");
+    return LoopUnrollResult::Unmodified;
+  }
+  unsigned InnerLoopSize = *InnerLoopSizeIC.getValue();
+  unsigned OuterLoopSize = *OuterLoopSizeIC.getValue();
+
   if (NotDuplicatable) {
     LLVM_DEBUG(dbgs() << "  Not unrolling loop which contains non-duplicatable "
                          "instructions.\n");
