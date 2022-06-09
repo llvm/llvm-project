@@ -20,18 +20,6 @@
 # RUN: llvm-nm -m %t/eh-frame-x86_64-r | FileCheck %s --check-prefix NO-EH-SYMS
 # RUN: llvm-readobj --section-headers %t/eh-frame-x86_64-r | FileCheck %s --check-prefix=ALIGN -D#ALIGN=3
 
-# RUN: llvm-mc -filetype=obj -triple=arm64-apple-macos11.0 %s -o %t/eh-frame-arm64.o
-# RUN: %lld -arch arm64 -lSystem -lc++ %t/eh-frame-arm64.o -o %t/eh-frame-arm64
-# RUN: llvm-objdump --macho --syms --indirect-symbols --unwind-info \
-# RUN:   --dwarf=frames %t/eh-frame-arm64 | FileCheck %s -D#BASE=0x100000000 -D#DWARF_ENC=3
-# RUN: llvm-nm -m %t/eh-frame-arm64 | FileCheck %s --check-prefix NO-EH-SYMS
-
-# COM: ld -r %t/eh-frame-arm64.o -o %S/Inputs/eh-frame-arm64-r.o
-# RUN: %lld -arch arm64 -lSystem -lc++ %S/Inputs/eh-frame-arm64-r.o -o %t/eh-frame-arm64-r
-# RUN: llvm-objdump --macho --syms --indirect-symbols --unwind-info \
-# RUN:   --dwarf=frames %t/eh-frame-arm64-r | FileCheck %s -D#BASE=0x100000000 -D#DWARF_ENC=3
-# RUN: llvm-nm -m %t/eh-frame-arm64-r | FileCheck %s --check-prefix NO-EH-SYMS
-
 # ALIGN:      Name: __eh_frame
 # ALIGN-NEXT: Segment: __TEXT
 # ALIGN-NEXT: Address:
