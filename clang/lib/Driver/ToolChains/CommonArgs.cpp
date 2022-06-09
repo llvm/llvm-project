@@ -818,6 +818,9 @@ bool tools::addOpenMPRuntime(ArgStringList &CmdArgs, const ToolChain &TC,
   case Driver::OMPRT_IOMP5:
     CmdArgs.push_back("-liomp5");
     break;
+  case Driver::OMPRT_BOLT:
+    CmdArgs.push_back("-lbolt");
+    break;
   case Driver::OMPRT_Unknown:
     break;
   }
@@ -825,11 +828,11 @@ bool tools::addOpenMPRuntime(ArgStringList &CmdArgs, const ToolChain &TC,
   if (ForceStaticHostRuntime)
     CmdArgs.push_back("-Bdynamic");
 
-  if (RTKind == Driver::OMPRT_OMP)
-    addOpenMPRuntimeSpecificRPath(TC, Args, CmdArgs);
-
   if (RTKind == Driver::OMPRT_GOMP && GompNeedsRT)
       CmdArgs.push_back("-lrt");
+
+  if (RTKind == Driver::OMPRT_BOLT)
+    CmdArgs.push_back("-lbolt");
 
   if (IsOffloadingHost) {
     if (requiresCOMGrLinking(TC, Args)) {
@@ -843,7 +846,7 @@ bool tools::addOpenMPRuntime(ArgStringList &CmdArgs, const ToolChain &TC,
 
   addArchSpecificRPath(TC, Args, CmdArgs);
 
-  if (RTKind == Driver::OMPRT_OMP)
+  if (RTKind == Driver::OMPRT_OMP || RTKind == Driver::OMPRT_BOLT)
     addOpenMPRuntimeSpecificRPath(TC, Args, CmdArgs);
   addOpenMPRuntimeLibraryPath(TC, Args, CmdArgs);
 

@@ -1359,6 +1359,10 @@ void Clang::AddPreprocessingOptions(Compilation &C, const JobAction &JA,
   // Add include for either -fopenmp= or -fopenmp
   if (Args.hasFlag(options::OPT_fopenmp, options::OPT_fopenmp_EQ,
                    options::OPT_fno_openmp, false)){
+    if (D.getOpenMPRuntime(Args) == Driver::OMPRT_BOLT) {
+      CmdArgs.push_back("-I");
+      CmdArgs.push_back(Args.MakeArgString(D.Dir + "/../include/bolt"));
+    }
     CmdArgs.push_back("-I");
     CmdArgs.push_back(Args.MakeArgString(D.Dir + "/../include"));
   }
@@ -6074,6 +6078,7 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
     switch (D.getOpenMPRuntime(Args)) {
     case Driver::OMPRT_OMP:
     case Driver::OMPRT_IOMP5:
+    case Driver::OMPRT_BOLT:
       // Clang can generate useful OpenMP code for these two runtime libraries.
       CmdArgs.push_back("-fopenmp");
 

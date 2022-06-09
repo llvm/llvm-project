@@ -719,6 +719,7 @@ Driver::OpenMPRuntimeKind Driver::getOpenMPRuntime(const ArgList &Args) const {
                 .Case("libomp", OMPRT_OMP)
                 .Case("libgomp", OMPRT_GOMP)
                 .Case("libiomp5", OMPRT_IOMP5)
+                .Case("libbolt", OMPRT_BOLT)
                 .Default(OMPRT_Unknown);
 
   if (RT == OMPRT_Unknown) {
@@ -922,8 +923,9 @@ void Driver::CreateOffloadingDeviceToolChains(Compilation &C,
                                  options::OPT_fno_openmp, false);
     if (HasValidOpenMPRuntime) {
       OpenMPRuntimeKind OpenMPKind = getOpenMPRuntime(C.getInputArgs());
-      HasValidOpenMPRuntime =
-          OpenMPKind == OMPRT_OMP || OpenMPKind == OMPRT_IOMP5;
+      HasValidOpenMPRuntime = OpenMPKind == OMPRT_OMP ||
+                              OpenMPKind == OMPRT_IOMP5 ||
+                              OpenMPKind == OMPRT_BOLT;
     }
 
     bool HasOpenMPTargets =

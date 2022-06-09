@@ -127,7 +127,10 @@ public:
     /// The legacy name for the LLVM OpenMP runtime from when it was the Intel
     /// OpenMP runtime. We support this mode for users with existing
     /// dependencies on this runtime library name.
-    OMPRT_IOMP5
+    OMPRT_IOMP5,
+
+    /// The LLVM BOLT OpenMP runtime. See https://github.com/pmodels/bolt
+    OMPRT_BOLT
   };
 
   // Diag - Forwarding function for diagnostics.

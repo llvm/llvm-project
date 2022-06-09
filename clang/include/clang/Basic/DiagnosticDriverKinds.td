@@ -329,7 +329,7 @@ def err_drv_omp_host_target_not_supported : Error<
   "target '%0' is not a supported OpenMP host target">;
 def Err_drv_expecting_fopenmp_with_fopenmp_targets : Error<
   "'-fopenmp-targets' must be used in conjunction with a '-fopenmp' option "
-  "compatible with offloading; e.g., '-fopenmp=libomp' or '-fopenmp=libiomp5'">;
+  "compatible with offloading; e.g., '-fopenmp=libomp' or '-fopenmp=libiomp5' or '-fopenmp=libbolt'">;
 def err_drv_failed_to_deduce_target_from_arch : Error<
   "failed to deduce triple for target architecture '%0'; specify the triple "
   "using '-fopenmp-targets' and '-Xopenmp-target' instead.">;
