@@ -9847,14 +9847,21 @@ public:
   /// eagerly.
   SmallVector<PendingImplicitInstantiation, 1> LateParsedInstantiations;
 
+  SmallVector<SmallVector<VTableUse, 16>, 8> SavedVTableUses;
+  SmallVector<std::deque<PendingImplicitInstantiation>, 8>
+      SavedPendingInstantiations;
+
   class GlobalEagerInstantiationScope {
   public:
     GlobalEagerInstantiationScope(Sema &S, bool Enabled)
         : S(S), Enabled(Enabled) {
       if (!Enabled) return;
 
-      SavedPendingInstantiations.swap(S.PendingInstantiations);
-      SavedVTableUses.swap(S.VTableUses);
+      S.SavedPendingInstantiations.emplace_back();
+      S.SavedPendingInstantiations.back().swap(S.PendingInstantiations);
+
+      S.SavedVTableUses.emplace_back();
+      S.SavedVTableUses.back().swap(S.VTableUses);
     }
 
     void perform() {
@@ -9870,26 +9877,28 @@ public:
       // Restore the set of pending vtables.
       assert(S.VTableUses.empty() &&
              "VTableUses should be empty before it is discarded.");
-      S.VTableUses.swap(SavedVTableUses);
+      S.VTableUses.swap(S.SavedVTableUses.back());
+      S.SavedVTableUses.pop_back();
 
       // Restore the set of pending implicit instantiations.
       if (S.TUKind != TU_Prefix || !S.LangOpts.PCHInstantiateTemplates) {
         assert(S.PendingInstantiations.empty() &&
                "PendingInstantiations should be empty before it is discarded.");
-        S.PendingInstantiations.swap(SavedPendingInstantiations);
+        S.PendingInstantiations.swap(S.SavedPendingInstantiations.back());
+        S.SavedPendingInstantiations.pop_back();
       } else {
         // Template instantiations in the PCH may be delayed until the TU.
-        S.PendingInstantiations.swap(SavedPendingInstantiations);
-        S.PendingInstantiations.insert(S.PendingInstantiations.end(),
-                                       SavedPendingInstantiations.begin(),
-                                       SavedPendingInstantiations.end());
+        S.PendingInstantiations.swap(S.SavedPendingInstantiations.back());
+        S.PendingInstantiations.insert(
+            S.PendingInstantiations.end(),
+            S.SavedPendingInstantiations.back().begin(),
+            S.SavedPendingInstantiations.back().end());
+        S.SavedPendingInstantiations.pop_back();
       }
     }
 
   private:
     Sema &S;
-    SmallVector<VTableUse, 16> SavedVTableUses;
-    std::deque<PendingImplicitInstantiation> SavedPendingInstantiations;
     bool Enabled;
   };
 
