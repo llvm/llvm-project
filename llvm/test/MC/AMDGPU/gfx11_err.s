@@ -44,3 +44,20 @@ v_add3_u32_e64_dpp v5, v1, v2, 49812340 dpp8:[7,6,5,4,3,2,1,0]
 
 v_add3_u32_e64_dpp v5, v1, s1, v0 dpp8:[7,6,5,4,3,2,1,0]
 // GFX11: [[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+
+// On GFX11, v_dot8_i32_i4 is a valid SP3 alias for v_dot8_i32_iu4.
+// However, we intentionally leave it unimplemented because on other
+// processors v_dot8_i32_i4 denotes an instruction of a different
+// behaviour, which is considered potentially dangerous.
+v_dot8_i32_i4 v0, v1, v2, v3
+// GFX11: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+// On GFX11, v_dot4_i32_i8 is a valid SP3 alias for v_dot4_i32_iu8.
+// However, we intentionally leave it unimplemented because on other
+// processors v_dot4_i32_i8 denotes an instruction of a different
+// behaviour, which is considered potentially dangerous.
+v_dot4_i32_i8 v0, v1, v2, v3
+// GFX11: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+v_dot4c_i32_i8 v0, v1, v2
+// GFX11: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
