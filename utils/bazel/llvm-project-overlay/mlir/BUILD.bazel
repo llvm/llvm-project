@@ -6295,6 +6295,7 @@ cc_library(
         ":AsyncToLLVM",
         ":AsyncTransforms",
         ":BufferizationDialect",
+        ":BufferizationTransformOps",
         ":BufferizationTransforms",
         ":ComplexDialect",
         ":ComplexToLLVM",
@@ -8897,6 +8898,61 @@ gentbl_cc_library(
     tblgen = ":mlir-tblgen",
     td_file = "include/mlir/Dialect/Bufferization/IR/BufferizationBase.td",
     deps = [":BufferizationOpsTdFiles"],
+)
+
+td_library(
+    name = "BufferizationTransformOpsTdFiles",
+    srcs = [
+        "include/mlir/Dialect/Bufferization/TransformOps/BufferizationTransformOps.td",
+    ],
+    includes = ["include"],
+    deps = [
+        ":PDLDialectTdFiles",
+        ":TransformDialectTdFiles",
+    ],
+)
+
+gentbl_cc_library(
+    name = "BufferizationTransformOpsIncGen",
+    strip_include_prefix = "include",
+    tbl_outs = [
+        (
+            ["-gen-op-decls"],
+            "include/mlir/Dialect/Bufferization/TransformOps/BufferizationTransformOps.h.inc",
+        ),
+        (
+            ["-gen-op-defs"],
+            "include/mlir/Dialect/Bufferization/TransformOps/BufferizationTransformOps.cpp.inc",
+        ),
+    ],
+    tblgen = ":mlir-tblgen",
+    td_file = "include/mlir/Dialect/Bufferization/TransformOps/BufferizationTransformOps.td",
+    deps = [
+        ":BufferizationTransformOpsTdFiles",
+    ],
+)
+
+cc_library(
+    name = "BufferizationTransformOps",
+    srcs = [
+        "lib/Dialect/Bufferization/TransformOps/BufferizationTransformOps.cpp",
+    ],
+    hdrs = [
+        "include/mlir/Dialect/Bufferization/TransformOps/BufferizationTransformOps.h",
+    ],
+    includes = ["include"],
+    deps = [
+        ":BufferizationDialect",
+        ":BufferizationTransformOpsIncGen",
+        ":BufferizationTransforms",
+        ":IR",
+        ":MemRefDialect",
+        ":PDLDialect",
+        ":Parser",
+        ":SideEffectInterfaces",
+        ":TransformDialect",
+        "//llvm:Support",
+    ],
 )
 
 gentbl_cc_library(
