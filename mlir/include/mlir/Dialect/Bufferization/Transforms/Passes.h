@@ -39,6 +39,13 @@ std::unique_ptr<Pass> createBufferResultsToOutParamsPass();
 /// Also update all call sites.
 LogicalResult promoteBufferResultsToOutParams(ModuleOp module);
 
+/// Creates a pass that drops memref function results that are equivalent to a
+/// function argument.
+std::unique_ptr<Pass> createDropEquivalentBufferResultsPass();
+
+/// Drop all memref function results that are equivalent to a function argument.
+LogicalResult dropEquivalentBufferResults(ModuleOp module);
+
 /// Creates a pass that finalizes a partial bufferization by removing remaining
 /// bufferization.to_tensor and bufferization.to_memref operations.
 std::unique_ptr<OperationPass<func::FuncOp>> createFinalizingBufferizePass();

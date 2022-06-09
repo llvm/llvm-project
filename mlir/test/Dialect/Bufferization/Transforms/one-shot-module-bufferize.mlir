@@ -1,5 +1,5 @@
 // Note: Default is function-boundary-type-conversion=infer-layout-map
-// RUN: mlir-opt %s -one-shot-bufferize="bufferize-function-boundaries=1 allow-return-allocs" -split-input-file | FileCheck %s
+// RUN: mlir-opt %s -one-shot-bufferize="bufferize-function-boundaries=1 allow-return-allocs" -drop-equivalent-buffer-results -split-input-file | FileCheck %s
 
 // Run fuzzer with different seeds.
 // RUN: mlir-opt %s -one-shot-bufferize="bufferize-function-boundaries=1 allow-return-allocs test-analysis-only analysis-fuzzer-seed=23" -split-input-file -o /dev/null
@@ -198,7 +198,7 @@ func.func @call_func_with_non_tensor_return(
 
   // Note: The tensor return value cannot fold away because the CallOp
   // bufferized out-of-place.
-  // CHECK: return %[[call]], %[[alloc]] : f32, memref<?xf32>
+  // CHECK: return %[[call]], %[[casted]] : f32, memref<?xf32
   return %1, %0 : f32, tensor<?xf32>
 }
 
@@ -261,7 +261,7 @@ func.func @does_not_read(%t: tensor<?xf32>) -> tensor<?xf32> {
 //       CHECK: %[[casted:.*]] = memref.cast %[[alloc]]
 //   CHECK-NOT:   copy
 //       CHECK:   call @does_not_read(%[[casted]])
-//       CHECK:   %[[r:.*]] = memref.load %[[alloc]]
+//       CHECK:   %[[r:.*]] = memref.load %[[casted]]
 //       CHECK:   memref.dealloc %[[alloc]]
 func.func @main(%t: tensor<?xf32> {bufferization.writable = false}) -> f32 {
   %0 = call @does_not_read(%t) : (tensor<?xf32>) -> (tensor<?xf32>)
@@ -472,7 +472,7 @@ func.func @main() {
   %res = call @init_and_dot(%AA, %BB, %CC) :
     (tensor<64xf32>, tensor<64xf32>, tensor<f32>) -> tensor<f32>
 
-  // CHECK-NEXT:   %[[dC:.*]] = memref.cast %[[C]] : memref<f32> to memref<*xf32>
+  // CHECK-NEXT:   %[[dC:.*]] = memref.cast %[[cC]] : memref<f32, {{.*}}> to memref<*xf32>
   %res2 = tensor.cast %res: tensor<f32> to tensor<*xf32>
 
   // CHECK-NEXT:   call @printMemrefF32(%[[dC]]) : (memref<*xf32>) -> ()
@@ -562,9 +562,11 @@ func.func @equivalent_func_arg(%t0: tensor<?xf32> {bufferization.writable = true
                                %c0: index, %c10: index, %c1: index) -> tensor<?xf32> {
   // CHECK-NOT: alloc
   // CHECK-NOT: copy
+  // CHECK: scf.for {{.*}} iter_args(%[[t1:.*]] = %[[arg0]])
   %1 = scf.for %iv = %c0 to %c10 step %c1 iter_args(%t1 = %t0) -> (tensor<?xf32>) {
-    // CHECK: call @inner_func(%[[arg0]])
+    // CHECK: call @inner_func(%[[t1]])
     %3 = func.call @inner_func(%t1) : (tensor<?xf32>) -> tensor<?xf32>
+    // CHECK: scf.yield %[[t1]]
     scf.yield %3 : tensor<?xf32>
   }
   return %1: tensor<?xf32>

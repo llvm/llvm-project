@@ -24,19 +24,6 @@
 // * `funcOpBbArgReadWriteAnalysis` determines whether or not a tensor bbArg is
 //   read/written.
 //
-// Only tensors that are equivalent to some FuncOp bbArg may be returned.
-// Bufferization currently fails if other tensors (in particular tensors that
-// bufferize out-of-place and result in a new buffer allocation) are returned.
-// In the future, such allocations could be hoisted to the caller.
-//
-// Example: `foo` fails bufferization because %0 is not equivalent to any bbArg.
-// ```
-// func @foo() -> tensor<?xf32> {
-//   %0 = bufferization.alloc_tensor(...) : tensor<?xf32>
-//   return %0 : tensor<?xf32>
-// }
-// ```
-//
 // Module Bufferization implements the following calling convention.
 //
 // * In the absence of conflicts within a FuncOp, the FuncOp's bbArgs may always
@@ -462,17 +449,6 @@ LogicalResult mlir::bufferization::bufferizeModuleOp(
     if (options.functionBoundaryTypeConversion ==
         BufferizationOptions::LayoutMapOption::InferLayoutMap)
       foldMemRefCasts(funcOp);
-  }
-
-  // Check result.
-  for (func::FuncOp funcOp : orderedFuncOps) {
-    if (!options.allowReturnAllocs &&
-        llvm::any_of(funcOp.getFunctionType().getResults(), [](Type t) {
-          return t.isa<MemRefType, UnrankedMemRefType>();
-        })) {
-      funcOp->emitError("memref return type is unsupported");
-      return failure();
-    }
   }
 
   // Post-pass cleanup of function argument attributes.
