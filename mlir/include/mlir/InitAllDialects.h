@@ -47,6 +47,7 @@
 #include "mlir/Dialect/Quant/QuantOps.h"
 #include "mlir/Dialect/SCF/BufferizableOpInterfaceImpl.h"
 #include "mlir/Dialect/SCF/SCF.h"
+#include "mlir/Dialect/SCF/TransformOps/SCFTransformOps.h"
 #include "mlir/Dialect/SPIRV/IR/SPIRVDialect.h"
 #include "mlir/Dialect/Shape/IR/Shape.h"
 #include "mlir/Dialect/Shape/Transforms/BufferizableOpInterfaceImpl.h"
@@ -107,6 +108,7 @@ inline void registerAllDialects(DialectRegistry &registry) {
 
   // Register all dialect extensions.
   linalg::registerTransformDialectExtension(registry);
+  scf::registerTransformDialectExtension(registry);
 
   // Register all external models.
   arith::registerBufferizableOpInterfaceExternalModels(registry);

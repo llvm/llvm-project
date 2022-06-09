@@ -451,7 +451,7 @@ struct PayloadIRResource
   StringRef getName() override { return "transform.payload_ir"; }
 };
 
-/// Trait implementing the MemoryEffectOpInterface for single-operand
+/// Trait implementing the MemoryEffectOpInterface for single-operand zero- or
 /// single-result operations that "consume" their operand and produce a new
 /// result.
 template <typename OpTy>
@@ -468,12 +468,14 @@ public:
     effects.emplace_back(MemoryEffects::Free::get(),
                          this->getOperation()->getOperand(0),
                          TransformMappingResource::get());
-    effects.emplace_back(MemoryEffects::Allocate::get(),
-                         this->getOperation()->getResult(0),
-                         TransformMappingResource::get());
-    effects.emplace_back(MemoryEffects::Write::get(),
-                         this->getOperation()->getResult(0),
-                         TransformMappingResource::get());
+    if (this->getOperation()->getNumResults() == 1) {
+      effects.emplace_back(MemoryEffects::Allocate::get(),
+                           this->getOperation()->getResult(0),
+                           TransformMappingResource::get());
+      effects.emplace_back(MemoryEffects::Write::get(),
+                           this->getOperation()->getResult(0),
+                           TransformMappingResource::get());
+    }
     effects.emplace_back(MemoryEffects::Read::get(), PayloadIRResource::get());
     effects.emplace_back(MemoryEffects::Write::get(), PayloadIRResource::get());
   }
@@ -482,12 +484,49 @@ public:
   static LogicalResult verifyTrait(Operation *op) {
     static_assert(OpTy::template hasTrait<OpTrait::OneOperand>(),
                   "expected single-operand op");
-    static_assert(OpTy::template hasTrait<OpTrait::OneResult>(),
-                  "expected single-result op");
+    static_assert(OpTy::template hasTrait<OpTrait::ZeroResults>() ||
+                      OpTy::template hasTrait<OpTrait::OneResult>(),
+                  "expected zero- or single-result op");
     if (!op->getName().getInterface<MemoryEffectOpInterface>()) {
       op->emitError()
           << "FunctionalStyleTransformOpTrait should only be attached to ops "
              "that implement MemoryEffectOpInterface";
+    }
+    return success();
+  }
+};
+
+/// Trait implementing the MemoryEffectOpInterface for single-operand
+/// single-result operations that use their operand without consuming and
+/// without modifying the Payload IR to produce a new handle.
+template <typename OpTy>
+class NavigationTransformOpTrait
+    : public OpTrait::TraitBase<OpTy, NavigationTransformOpTrait> {
+public:
+  /// This op produces handles to the Payload IR without consuming the original
+  /// handles and without modifying the IR itself.
+  void getEffects(SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
+    effects.emplace_back(MemoryEffects::Read::get(),
+                         this->getOperation()->getOperand(0),
+                         TransformMappingResource::get());
+    effects.emplace_back(MemoryEffects::Allocate::get(),
+                         this->getOperation()->getResult(0),
+                         TransformMappingResource::get());
+    effects.emplace_back(MemoryEffects::Write::get(),
+                         this->getOperation()->getResult(0),
+                         TransformMappingResource::get());
+    effects.emplace_back(MemoryEffects::Read::get(), PayloadIRResource::get());
+  }
+
+  /// Checks that the op matches the expectation of this trait.
+  static LogicalResult verifyTrait(Operation *op) {
+    static_assert(OpTy::template hasTrait<OpTrait::OneOperand>(),
+                  "expected single-operand op");
+    static_assert(OpTy::template hasTrait<OpTrait::OneResult>(),
+                  "expected single-result op");
+    if (!op->getName().getInterface<MemoryEffectOpInterface>()) {
+      op->emitError() << "NavigationTransformOpTrait should only be attached "
+                         "to ops that implement MemoryEffectOpInterface";
     }
     return success();
   }

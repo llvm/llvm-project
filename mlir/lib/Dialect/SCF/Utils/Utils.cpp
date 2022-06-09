@@ -105,13 +105,16 @@ mlir::replaceLoopWithNewYields(OpBuilder &builder, scf::ForOp loop,
 /// Assumes the FuncOp result types is the type of the yielded operands of the
 /// single block. This constraint makes it easy to determine the result.
 /// This method also clones the `arith::ConstantIndexOp` at the start of
-/// `outlinedFuncBody` to alloc simple canonicalizations.
+/// `outlinedFuncBody` to alloc simple canonicalizations. If `callOp` is
+/// provided, it will be set to point to the operation that calls the outlined
+/// function.
 // TODO: support more than single-block regions.
 // TODO: more flexible constant handling.
 FailureOr<func::FuncOp> mlir::outlineSingleBlockRegion(RewriterBase &rewriter,
                                                        Location loc,
                                                        Region &region,
-                                                       StringRef funcName) {
+                                                       StringRef funcName,
+                                                       func::CallOp *callOp) {
   assert(!funcName.empty() && "funcName cannot be empty");
   if (!region.hasOneBlock())
     return failure();
@@ -176,8 +179,9 @@ FailureOr<func::FuncOp> mlir::outlineSingleBlockRegion(RewriterBase &rewriter,
     SmallVector<Value> callValues;
     llvm::append_range(callValues, newBlock->getArguments());
     llvm::append_range(callValues, outlinedValues);
-    Operation *call =
-        rewriter.create<func::CallOp>(loc, outlinedFunc, callValues);
+    auto call = rewriter.create<func::CallOp>(loc, outlinedFunc, callValues);
+    if (callOp)
+      *callOp = call;
 
     // `originalTerminator` was moved to `outlinedFuncBody` and is still valid.
     // Clone `originalTerminator` to take the callOp results then erase it from
