@@ -19,6 +19,22 @@
 //  production rules. A rule is of BNF form (AAA := BBB CCC). A symbol is either
 //  nonterminal or terminal, identified by a SymbolID.
 //
+//  Annotations are supported in a syntax form of [key=value]. They specify
+//  attributes which are associated with either a grammar symbol (on the
+//  right-hand side of the symbol) or a grammar rule (at the end of the rule
+//  body).
+//  Attributes provide a way to inject custom code into the GLR parser. Each
+//  unique attribute value creates an extension point (identified by ExtensionID
+//  ), and an extension point corresponds to a piece of native code. For
+//  example, C++ grammar has a rule:
+//
+//    contextual-override := IDENTIFIER [guard=Override]
+//
+//  GLR parser only conducts the reduction of the rule if the IDENTIFIER
+//  content is `override`. This Override guard is implemented in CXX.cpp by
+//  binding the ExtensionID for the `Override` value to a specific C++ function
+//  that performs the check.
+//
 //  Notions about the BNF grammar:
 //  - "_" is the start symbol of the augmented grammar;
 //  - single-line comment is supported, starting with a #
@@ -69,6 +85,11 @@ inline SymbolID tokenSymbol(tok::TokenKind TK) {
   return TokenFlag | static_cast<SymbolID>(TK);
 }
 
+// An extension is a piece of native code specific to a grammar that modifies
+// the behavior of annotated rules. One ExtensionID is assigned for each unique
+// attribute value (all attributes share a namespace).
+using ExtensionID = uint16_t;
+
 // A RuleID uniquely identifies a production rule in a grammar.
 // It is an index into a table of rules.
 using RuleID = uint16_t;
@@ -96,11 +117,17 @@ struct Rule {
   uint8_t Size : SizeBits; // Size of the Sequence
   SymbolID Sequence[MaxElements];
 
+  // A guard extension controls whether a reduction of a rule will be conducted
+  // by the GLR parser.
+  // 0 is sentinel unset extension ID, indicating there is no guard extension
+  // being set for this rule.
+  ExtensionID Guard = 0;
+
   llvm::ArrayRef<SymbolID> seq() const {
     return llvm::ArrayRef<SymbolID>(Sequence, Size);
   }
   friend bool operator==(const Rule &L, const Rule &R) {
-    return L.Target == R.Target && L.seq() == R.seq();
+    return L.Target == R.Target && L.seq() == R.seq() && L.Guard == R.Guard;
   }
 };
 
@@ -186,6 +213,9 @@ struct GrammarTable {
   // A table of nonterminals, sorted by name.
   // SymbolID is the index of the table.
   std::vector<Nonterminal> Nonterminals;
+  // A table of attribute values, sorted by name.
+  // ExtensionID is the index of the table.
+  std::vector<std::string> AttributeValues;
 };
 
 } // namespace pseudo
