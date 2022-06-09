@@ -37,6 +37,25 @@ def DecomposeOp : Op<Transform_Dialect, "structured.decompose",
   }];
 }
 
+def FuseOp : Op<Transform_Dialect, "structured.fuse",
+    [FunctionalStyleTransformOpTrait, MemoryEffectsOpInterface,
+     DeclareOpInterfaceMethods<TransformOpInterface>]> {
+  let description = [{
+    Tiles the operations pointed to by the target handle and fuses their
+    producers greedily using the options provided as attributes.
+  }];
+
+  let arguments =
+    (ins PDL_Operation:$target,
+         DefaultValuedAttr<I64ArrayAttr, "{}">:$tile_sizes,
+         DefaultValuedAttr<I64ArrayAttr, "{}">:$tile_interchange);
+  let results = (outs PDL_Operation:$transformed,
+                      Variadic<PDL_Operation>:$loops);
+
+  let hasCustomAssemblyFormat = 1;
+  let hasVerifier = 1;
+}
+
 def GeneralizeOp : Op<Transform_Dialect, "structured.generalize",
     [FunctionalStyleTransformOpTrait, MemoryEffectsOpInterface,
      TransformOpInterface, TransformEachOpTrait]> {
@@ -136,7 +155,7 @@ def ScalarizeOp : Op<Transform_Dialect, "structured.scalarize",
 
 def TileOp : Op<Transform_Dialect, "structured.tile",
        [DeclareOpInterfaceMethods<TransformOpInterface>,
-        DeclareOpInterfaceMethods<MemoryEffectsOpInterface>]> {
+        FunctionalStyleTransformOpTrait, MemoryEffectsOpInterface]> {
   let description = [{
     Indicates that the given `target` op should be tiled with the options
     provided as attributes. This transform generates a loop nest with a smaller
