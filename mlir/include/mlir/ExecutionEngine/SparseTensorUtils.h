@@ -15,6 +15,7 @@
 #define MLIR_EXECUTIONENGINE_SPARSETENSORUTILS_H_
 
 #include "mlir/ExecutionEngine/CRunnerUtils.h"
+#include "mlir/ExecutionEngine/Float16bits.h"
 
 #include <cinttypes>
 #include <complex>
@@ -77,12 +78,14 @@ using complex32 = std::complex<float>;
 enum class PrimaryType : uint32_t {
   kF64 = 1,
   kF32 = 2,
-  kI64 = 3,
-  kI32 = 4,
-  kI16 = 5,
-  kI8 = 6,
-  kC64 = 7,
-  kC32 = 8
+  kF16 = 3,
+  kBF16 = 4,
+  kI64 = 5,
+  kI32 = 6,
+  kI16 = 7,
+  kI8 = 8,
+  kC64 = 9,
+  kC32 = 10
 };
 
 // This x-macro only specifies the non-complex `V` types, because the ABI
@@ -97,6 +100,8 @@ enum class PrimaryType : uint32_t {
 #define FOREVERY_SIMPLEX_V(DO)                                                 \
   DO(F64, double)                                                              \
   DO(F32, float)                                                               \
+  DO(F16, f16)                                                                 \
+  DO(BF16, bf16)                                                               \
   DO(I64, int64_t)                                                             \
   DO(I32, int32_t)                                                             \
   DO(I16, int16_t)                                                             \
