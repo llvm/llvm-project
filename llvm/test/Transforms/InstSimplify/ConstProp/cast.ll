@@ -79,21 +79,17 @@ define float @trunc_denorm_lost_fraction0() {
   ret float %b
 }
 
-; FIXME: This should be 0.0.
-
 define float @trunc_denorm_lost_fraction1() {
 ; CHECK-LABEL: @trunc_denorm_lost_fraction1(
-; CHECK-NEXT:    ret float 0x36A0000000000000
+; CHECK-NEXT:    ret float 0.000000e+00
 ;
   %b = fptrunc double 0x0000000010000001 to float
   ret float %b
 }
 
-; FIXME: This should be 0.0.
-
 define float @trunc_denorm_lost_fraction2() {
 ; CHECK-LABEL: @trunc_denorm_lost_fraction2(
-; CHECK-NEXT:    ret float 0x36A0000000000000
+; CHECK-NEXT:    ret float 0.000000e+00
 ;
   %b = fptrunc double 0x000000001fffffff to float
   ret float %b
@@ -107,11 +103,9 @@ define float @trunc_denorm_lost_fraction3() {
   ret float %b
 }
 
-; FIXME: This should be -0.0.
-
 define float @trunc_denorm_lost_fraction4() {
 ; CHECK-LABEL: @trunc_denorm_lost_fraction4(
-; CHECK-NEXT:    ret float 0xB6A0000000000000
+; CHECK-NEXT:    ret float -0.000000e+00
 ;
   %b = fptrunc double 0x8000000010000001 to float
   ret float %b

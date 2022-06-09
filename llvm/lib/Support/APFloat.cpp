@@ -2213,13 +2213,20 @@ IEEEFloat::opStatus IEEEFloat::convert(const fltSemantics &toSemantics,
   // when truncating from PowerPC double-double to double format), the
   // right shift could lose result mantissa bits.  Adjust exponent instead
   // of performing excessive shift.
+  // Also do a similar trick in case shifting denormal would produce zero
+  // significand as this case isn't handled correctly by normalize.
   if (shift < 0 && isFiniteNonZero()) {
-    int exponentChange = significandMSB() + 1 - fromSemantics.precision;
+    int omsb = significandMSB() + 1;
+    int exponentChange = omsb - fromSemantics.precision;
     if (exponent + exponentChange < toSemantics.minExponent)
       exponentChange = toSemantics.minExponent - exponent;
     if (exponentChange < shift)
       exponentChange = shift;
     if (exponentChange < 0) {
+      shift -= exponentChange;
+      exponent += exponentChange;
+    } else if (omsb <= -shift) {
+      exponentChange = omsb + shift - 1; // leave at least one bit set
       shift -= exponentChange;
       exponent += exponentChange;
     }
