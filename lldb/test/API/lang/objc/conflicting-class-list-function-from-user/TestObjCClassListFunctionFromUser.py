@@ -10,7 +10,7 @@ class TestCase(TestBase):
     @skipUnlessDarwin
     # LLDB ends up calling the user-defined function (but at least doesn't
     # crash).
-    @expectedFailureDarwin
+    @skipIf(macos_version=["<", "13.0"])
     def test(self):
         """
         Tests LLDB's behaviour if the user defines their own conflicting
