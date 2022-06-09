@@ -26,7 +26,7 @@ class MultipleHitsTestCase(TestBase):
 
         process = target.LaunchSimple(None, None,
                 self.get_process_working_directory())
-        self.assertEqual(process.GetState(), lldb.eStateStopped)
+        self.assertState(process.GetState(), lldb.eStateStopped)
 
         thread = lldbutil.get_stopped_thread(process, lldb.eStopReasonBreakpoint)
         self.assertIsNotNone(thread)
@@ -46,6 +46,6 @@ class MultipleHitsTestCase(TestBase):
             self.assertSuccess(error)
 
         process.Continue();
-        self.assertEqual(process.GetState(), lldb.eStateStopped)
+        self.assertState(process.GetState(), lldb.eStateStopped)
         self.assertEqual(thread.GetStopReason(), lldb.eStopReasonWatchpoint)
 
