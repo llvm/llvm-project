@@ -10,12 +10,20 @@
 ; CHECK: @[[G:[a-zA-Z0-9_$"\\.-]+]] = internal global i32 undef, align 4, !dbg [[DBG0:![0-9]+]]
 ;.
 define void @dest() !dbg !15 {
-; CHECK-LABEL: define {{[^@]+}}@dest
-; CHECK-SAME: () !dbg [[DBG15:![0-9]+]] {
-; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr @G, align 4, !dbg [[DBG19:![0-9]+]]
-; CHECK-NEXT:    call void @use(i32 noundef [[TMP0]]), !dbg [[DBG20:![0-9]+]]
-; CHECK-NEXT:    ret void, !dbg [[DBG21:![0-9]+]]
+; IS__TUNIT____-LABEL: define {{[^@]+}}@dest
+; IS__TUNIT____-SAME: () !dbg [[DBG15:![0-9]+]] {
+; IS__TUNIT____-NEXT:  entry:
+; IS__TUNIT____-NEXT:    [[TMP0:%.*]] = call i32 @speculatable()
+; IS__TUNIT____-NEXT:    [[TMP1:%.*]] = add i32 [[TMP0]], 1
+; IS__TUNIT____-NEXT:    call void @use(i32 noundef [[TMP1]]), !dbg [[DBG19:![0-9]+]]
+; IS__TUNIT____-NEXT:    ret void, !dbg [[DBG20:![0-9]+]]
+;
+; IS__CGSCC____-LABEL: define {{[^@]+}}@dest
+; IS__CGSCC____-SAME: () !dbg [[DBG15:![0-9]+]] {
+; IS__CGSCC____-NEXT:  entry:
+; IS__CGSCC____-NEXT:    [[TMP0:%.*]] = load i32, ptr @G, align 4, !dbg [[DBG19:![0-9]+]]
+; IS__CGSCC____-NEXT:    call void @use(i32 noundef [[TMP0]]), !dbg [[DBG20:![0-9]+]]
+; IS__CGSCC____-NEXT:    ret void, !dbg [[DBG21:![0-9]+]]
 ;
 entry:
   %0 = load i32, ptr @G, align 4, !dbg !19
@@ -26,14 +34,23 @@ entry:
 declare void @use(i32 noundef)
 
 define void @src() norecurse !dbg !22 {
-; CHECK: Function Attrs: norecurse nosync writeonly
-; CHECK-LABEL: define {{[^@]+}}@src
-; CHECK-SAME: () #[[ATTR0:[0-9]+]] !dbg [[DBG22:![0-9]+]] {
-; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[CALL:%.*]] = call i32 @speculatable(), !dbg [[DBG23:![0-9]+]]
-; CHECK-NEXT:    [[PLUS1:%.*]] = add i32 [[CALL]], 1
-; CHECK-NEXT:    store i32 [[PLUS1]], ptr @G, align 4, !dbg [[DBG24:![0-9]+]]
-; CHECK-NEXT:    ret void, !dbg [[DBG25:![0-9]+]]
+; IS__TUNIT____: Function Attrs: norecurse nosync writeonly
+; IS__TUNIT____-LABEL: define {{[^@]+}}@src
+; IS__TUNIT____-SAME: () #[[ATTR0:[0-9]+]] !dbg [[DBG21:![0-9]+]] {
+; IS__TUNIT____-NEXT:  entry:
+; IS__TUNIT____-NEXT:    [[CALL:%.*]] = call i32 @speculatable(), !dbg [[DBG22:![0-9]+]]
+; IS__TUNIT____-NEXT:    [[PLUS1:%.*]] = add i32 [[CALL]], 1
+; IS__TUNIT____-NEXT:    store i32 [[PLUS1]], ptr @G, align 4, !dbg [[DBG23:![0-9]+]]
+; IS__TUNIT____-NEXT:    ret void, !dbg [[DBG24:![0-9]+]]
+;
+; IS__CGSCC____: Function Attrs: norecurse nosync writeonly
+; IS__CGSCC____-LABEL: define {{[^@]+}}@src
+; IS__CGSCC____-SAME: () #[[ATTR0:[0-9]+]] !dbg [[DBG22:![0-9]+]] {
+; IS__CGSCC____-NEXT:  entry:
+; IS__CGSCC____-NEXT:    [[CALL:%.*]] = call i32 @speculatable(), !dbg [[DBG23:![0-9]+]]
+; IS__CGSCC____-NEXT:    [[PLUS1:%.*]] = add i32 [[CALL]], 1
+; IS__CGSCC____-NEXT:    store i32 [[PLUS1]], ptr @G, align 4, !dbg [[DBG24:![0-9]+]]
+; IS__CGSCC____-NEXT:    ret void, !dbg [[DBG25:![0-9]+]]
 ;
 entry:
   %call = call i32 @speculatable(), !dbg !23
@@ -75,33 +92,59 @@ declare i32 @speculatable() speculatable readnone
 !24 = !DILocation(line: 10, column: 7, scope: !22)
 !25 = !DILocation(line: 11, column: 1, scope: !22)
 ;.
-; CHECK: attributes #[[ATTR0]] = { norecurse nosync writeonly }
+; CHECK: attributes #[[ATTR0:[0-9]+]] = { norecurse nosync writeonly }
 ; CHECK: attributes #[[ATTR1:[0-9]+]] = { readnone speculatable }
 ;.
-; CHECK: [[DBG0]] = !DIGlobalVariableExpression(var: !1, expr: !DIExpression())
-; CHECK: [[META1:![0-9]+]] = distinct !DIGlobalVariable(name: "G", scope: !2, file: !5, line: 1, type: !6, isLocal: true, isDefinition: true)
-; CHECK: [[META2:![0-9]+]] = distinct !DICompileUnit(language: DW_LANG_C99, file: !3, producer: "clang version 15.0.0 (https://github.com/llvm/llvm-project.git ef94609d6ebe981767788e6877b0b3b731d425af)", isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug, globals: !4, splitDebugInlining: false, nameTableKind: None)
-; CHECK: [[META3:![0-9]+]] = !DIFile(filename: "/app/example.c", directory: "/app", checksumkind: CSK_MD5, checksum: "b456b90cec5c3705a028b274d88ee970")
-; CHECK: [[META4:![0-9]+]] = !{!0}
-; CHECK: [[META5:![0-9]+]] = !DIFile(filename: "example.c", directory: "/app", checksumkind: CSK_MD5, checksum: "b456b90cec5c3705a028b274d88ee970")
-; CHECK: [[META6:![0-9]+]] = !DIBasicType(name: "int", size: 32, encoding: DW_ATE_signed)
-; CHECK: [[META7:![0-9]+]] = !{i32 7, !"Dwarf Version", i32 5}
-; CHECK: [[META8:![0-9]+]] = !{i32 2, !"Debug Info Version", i32 3}
-; CHECK: [[META9:![0-9]+]] = !{i32 1, !"wchar_size", i32 4}
-; CHECK: [[META10:![0-9]+]] = !{i32 7, !"PIC Level", i32 2}
-; CHECK: [[META11:![0-9]+]] = !{i32 7, !"PIE Level", i32 2}
-; CHECK: [[META12:![0-9]+]] = !{i32 7, !"uwtable", i32 2}
-; CHECK: [[META13:![0-9]+]] = !{i32 7, !"frame-pointer", i32 2}
-; CHECK: [[META14:![0-9]+]] = !{!"clang version 15.0.0 (https://github.com/llvm/llvm-project.git ef94609d6ebe981767788e6877b0b3b731d425af)"}
-; CHECK: [[DBG15]] = distinct !DISubprogram(name: "dest", scope: !5, file: !5, line: 4, type: !16, scopeLine: 4, spFlags: DISPFlagDefinition, unit: !2, retainedNodes: !18)
-; CHECK: [[META16:![0-9]+]] = !DISubroutineType(types: !17)
-; CHECK: [[META17:![0-9]+]] = !{null}
-; CHECK: [[META18:![0-9]+]] = !{}
-; CHECK: [[DBG19]] = !DILocation(line: 5, column: 9, scope: !15)
-; CHECK: [[DBG20]] = !DILocation(line: 5, column: 5, scope: !15)
-; CHECK: [[DBG21]] = !DILocation(line: 6, column: 1, scope: !15)
-; CHECK: [[DBG22]] = distinct !DISubprogram(name: "src", scope: !5, file: !5, line: 9, type: !16, scopeLine: 9, spFlags: DISPFlagDefinition, unit: !2, retainedNodes: !18)
-; CHECK: [[DBG23]] = !DILocation(line: 10, column: 9, scope: !22)
-; CHECK: [[DBG24]] = !DILocation(line: 10, column: 7, scope: !22)
-; CHECK: [[DBG25]] = !DILocation(line: 11, column: 1, scope: !22)
+; IS__TUNIT____: [[DBG0]] = !DIGlobalVariableExpression(var: !1, expr: !DIExpression())
+; IS__TUNIT____: [[META1:![0-9]+]] = distinct !DIGlobalVariable(name: "G", scope: !2, file: !5, line: 1, type: !6, isLocal: true, isDefinition: true)
+; IS__TUNIT____: [[META2:![0-9]+]] = distinct !DICompileUnit(language: DW_LANG_C99, file: !3, producer: "clang version 15.0.0 (https://github.com/llvm/llvm-project.git ef94609d6ebe981767788e6877b0b3b731d425af)", isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug, globals: !4, splitDebugInlining: false, nameTableKind: None)
+; IS__TUNIT____: [[META3:![0-9]+]] = !DIFile(filename: "/app/example.c", directory: "/app", checksumkind: CSK_MD5, checksum: "b456b90cec5c3705a028b274d88ee970")
+; IS__TUNIT____: [[META4:![0-9]+]] = !{!0}
+; IS__TUNIT____: [[META5:![0-9]+]] = !DIFile(filename: "example.c", directory: "/app", checksumkind: CSK_MD5, checksum: "b456b90cec5c3705a028b274d88ee970")
+; IS__TUNIT____: [[META6:![0-9]+]] = !DIBasicType(name: "int", size: 32, encoding: DW_ATE_signed)
+; IS__TUNIT____: [[META7:![0-9]+]] = !{i32 7, !"Dwarf Version", i32 5}
+; IS__TUNIT____: [[META8:![0-9]+]] = !{i32 2, !"Debug Info Version", i32 3}
+; IS__TUNIT____: [[META9:![0-9]+]] = !{i32 1, !"wchar_size", i32 4}
+; IS__TUNIT____: [[META10:![0-9]+]] = !{i32 7, !"PIC Level", i32 2}
+; IS__TUNIT____: [[META11:![0-9]+]] = !{i32 7, !"PIE Level", i32 2}
+; IS__TUNIT____: [[META12:![0-9]+]] = !{i32 7, !"uwtable", i32 2}
+; IS__TUNIT____: [[META13:![0-9]+]] = !{i32 7, !"frame-pointer", i32 2}
+; IS__TUNIT____: [[META14:![0-9]+]] = !{!"clang version 15.0.0 (https://github.com/llvm/llvm-project.git ef94609d6ebe981767788e6877b0b3b731d425af)"}
+; IS__TUNIT____: [[DBG15]] = distinct !DISubprogram(name: "dest", scope: !5, file: !5, line: 4, type: !16, scopeLine: 4, spFlags: DISPFlagDefinition, unit: !2, retainedNodes: !18)
+; IS__TUNIT____: [[META16:![0-9]+]] = !DISubroutineType(types: !17)
+; IS__TUNIT____: [[META17:![0-9]+]] = !{null}
+; IS__TUNIT____: [[META18:![0-9]+]] = !{}
+; IS__TUNIT____: [[DBG19]] = !DILocation(line: 5, column: 5, scope: !15)
+; IS__TUNIT____: [[DBG20]] = !DILocation(line: 6, column: 1, scope: !15)
+; IS__TUNIT____: [[DBG21]] = distinct !DISubprogram(name: "src", scope: !5, file: !5, line: 9, type: !16, scopeLine: 9, spFlags: DISPFlagDefinition, unit: !2, retainedNodes: !18)
+; IS__TUNIT____: [[DBG22]] = !DILocation(line: 10, column: 9, scope: !21)
+; IS__TUNIT____: [[DBG23]] = !DILocation(line: 10, column: 7, scope: !21)
+; IS__TUNIT____: [[DBG24]] = !DILocation(line: 11, column: 1, scope: !21)
+;.
+; IS__CGSCC____: [[DBG0]] = !DIGlobalVariableExpression(var: !1, expr: !DIExpression())
+; IS__CGSCC____: [[META1:![0-9]+]] = distinct !DIGlobalVariable(name: "G", scope: !2, file: !5, line: 1, type: !6, isLocal: true, isDefinition: true)
+; IS__CGSCC____: [[META2:![0-9]+]] = distinct !DICompileUnit(language: DW_LANG_C99, file: !3, producer: "clang version 15.0.0 (https://github.com/llvm/llvm-project.git ef94609d6ebe981767788e6877b0b3b731d425af)", isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug, globals: !4, splitDebugInlining: false, nameTableKind: None)
+; IS__CGSCC____: [[META3:![0-9]+]] = !DIFile(filename: "/app/example.c", directory: "/app", checksumkind: CSK_MD5, checksum: "b456b90cec5c3705a028b274d88ee970")
+; IS__CGSCC____: [[META4:![0-9]+]] = !{!0}
+; IS__CGSCC____: [[META5:![0-9]+]] = !DIFile(filename: "example.c", directory: "/app", checksumkind: CSK_MD5, checksum: "b456b90cec5c3705a028b274d88ee970")
+; IS__CGSCC____: [[META6:![0-9]+]] = !DIBasicType(name: "int", size: 32, encoding: DW_ATE_signed)
+; IS__CGSCC____: [[META7:![0-9]+]] = !{i32 7, !"Dwarf Version", i32 5}
+; IS__CGSCC____: [[META8:![0-9]+]] = !{i32 2, !"Debug Info Version", i32 3}
+; IS__CGSCC____: [[META9:![0-9]+]] = !{i32 1, !"wchar_size", i32 4}
+; IS__CGSCC____: [[META10:![0-9]+]] = !{i32 7, !"PIC Level", i32 2}
+; IS__CGSCC____: [[META11:![0-9]+]] = !{i32 7, !"PIE Level", i32 2}
+; IS__CGSCC____: [[META12:![0-9]+]] = !{i32 7, !"uwtable", i32 2}
+; IS__CGSCC____: [[META13:![0-9]+]] = !{i32 7, !"frame-pointer", i32 2}
+; IS__CGSCC____: [[META14:![0-9]+]] = !{!"clang version 15.0.0 (https://github.com/llvm/llvm-project.git ef94609d6ebe981767788e6877b0b3b731d425af)"}
+; IS__CGSCC____: [[DBG15]] = distinct !DISubprogram(name: "dest", scope: !5, file: !5, line: 4, type: !16, scopeLine: 4, spFlags: DISPFlagDefinition, unit: !2, retainedNodes: !18)
+; IS__CGSCC____: [[META16:![0-9]+]] = !DISubroutineType(types: !17)
+; IS__CGSCC____: [[META17:![0-9]+]] = !{null}
+; IS__CGSCC____: [[META18:![0-9]+]] = !{}
+; IS__CGSCC____: [[DBG19]] = !DILocation(line: 5, column: 9, scope: !15)
+; IS__CGSCC____: [[DBG20]] = !DILocation(line: 5, column: 5, scope: !15)
+; IS__CGSCC____: [[DBG21]] = !DILocation(line: 6, column: 1, scope: !15)
+; IS__CGSCC____: [[DBG22]] = distinct !DISubprogram(name: "src", scope: !5, file: !5, line: 9, type: !16, scopeLine: 9, spFlags: DISPFlagDefinition, unit: !2, retainedNodes: !18)
+; IS__CGSCC____: [[DBG23]] = !DILocation(line: 10, column: 9, scope: !22)
+; IS__CGSCC____: [[DBG24]] = !DILocation(line: 10, column: 7, scope: !22)
+; IS__CGSCC____: [[DBG25]] = !DILocation(line: 11, column: 1, scope: !22)
 ;.
