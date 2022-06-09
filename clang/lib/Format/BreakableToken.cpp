@@ -705,11 +705,9 @@ void BreakableBlockComment::adaptStartOfLine(
       // contain a trailing whitespace.
       Prefix = Prefix.substr(0, 1);
     }
-  } else {
-    if (ContentColumn[LineIndex] == 1) {
-      // This line starts immediately after the decorating *.
-      Prefix = Prefix.substr(0, 1);
-    }
+  } else if (ContentColumn[LineIndex] == 1) {
+    // This line starts immediately after the decorating *.
+    Prefix = Prefix.substr(0, 1);
   }
   // This is the offset of the end of the last line relative to the start of the
   // token text in the token.
