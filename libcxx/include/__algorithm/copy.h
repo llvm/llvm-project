@@ -56,16 +56,11 @@ pair<_InValueT*, _OutValueT*> __copy_impl(_InValueT* __first, _InValueT* __last,
   return std::make_pair(__first + __n, __result + __n);
 }
 
-template <class _Iter>
-using __is_trivially_copy_assignable_unwrapped =
-    _And<__is_cpp17_contiguous_iterator<_Iter>, is_trivially_copy_assignable<__iter_value_type<_Iter> > >;
-
-template <class _InIter,
-          class _OutIter,
-          class = __enable_if_t<is_same<typename remove_const<typename iterator_traits<_InIter>::value_type>::type,
-                                        typename iterator_traits<_OutIter>::value_type>::value
-                             && __is_trivially_copy_assignable_unwrapped<_InIter>::value
-                             && __is_trivially_copy_assignable_unwrapped<_OutIter>::value> >
+template <class _InIter, class _OutIter,
+          __enable_if_t<is_same<typename remove_const<__iter_value_type<_InIter> >::type, __iter_value_type<_OutIter> >::value
+                      && __is_cpp17_contiguous_iterator<_InIter>::value
+                      && __is_cpp17_contiguous_iterator<_OutIter>::value
+                      && is_trivially_copy_assignable<__iter_value_type<_OutIter> >::value, int> = 0>
 inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_AFTER_CXX11
 pair<reverse_iterator<_InIter>, reverse_iterator<_OutIter> >
 __copy_impl(reverse_iterator<_InIter> __first,
