@@ -89,9 +89,7 @@ FailureOr<LinalgOp> transform::DecomposeOp::applyToOne(LinalgOp target) {
   if (succeeded(depthwise))
     return depthwise;
 
-  InFlightDiagnostic diag = emitError() << "failed to apply";
-  diag.attachNote(target.getLoc()) << "attempted to apply to this op";
-  return diag;
+  return reportUnknownTransformError(target);
 }
 
 //===----------------------------------------------------------------------===//
@@ -107,9 +105,7 @@ FailureOr<LinalgOp> transform::GeneralizeOp::applyToOne(LinalgOp target) {
   if (succeeded(generic))
     return generic;
 
-  InFlightDiagnostic diag = emitError() << "failed to apply";
-  diag.attachNote(target.getLoc()) << "attempted to apply to this op";
-  return diag;
+  return reportUnknownTransformError(target);
 }
 
 //===----------------------------------------------------------------------===//
@@ -416,11 +412,8 @@ FailureOr<Operation *> VectorizeOp::applyToOne(Operation *target) {
   if (getVectorizePadding())
     linalg::populatePadOpVectorizationPatterns(patterns);
 
-  if (failed(applyPatternsAndFoldGreedily(target, std::move(patterns)))) {
-    InFlightDiagnostic diag = emitError() << "failed to apply";
-    diag.attachNote(target->getLoc()) << "target op";
-    return diag;
-  }
+  if (failed(applyPatternsAndFoldGreedily(target, std::move(patterns))))
+    return reportUnknownTransformError(target);
   return target;
 }
 

@@ -622,8 +622,7 @@ bool GCNDPPCombine::combineDPPMov(MachineInstr &MovMI) const {
       LLVM_DEBUG(dbgs() << "  failed: not VOP1/2/3/3P/C\n");
       break;
     }
-    if (TII->isVOPC(OrigOp) &&
-        OrigMI.modifiesRegister(AMDGPU::EXEC, ST->getRegisterInfo())) {
+    if (OrigMI.modifiesRegister(AMDGPU::EXEC, ST->getRegisterInfo())) {
       LLVM_DEBUG(dbgs() << "  failed: can't combine v_cmpx\n");
       break;
     }

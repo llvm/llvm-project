@@ -1,5 +1,6 @@
 ! Test lowering of derived type descriptors builtin data
 ! RUN: bbc -emit-fir %s -o - | FileCheck %s
+! RUN: %flang_fc1 -emit-fir %s -o - | FileCheck %s
 
 subroutine foo()
   real, save, target :: init_values(10, 10)

@@ -28,6 +28,7 @@ class ValueRange;
 class Value;
 
 namespace func {
+class CallOp;
 class FuncOp;
 } // namespace func
 
@@ -63,12 +64,13 @@ scf::ForOp replaceLoopWithNewYields(OpBuilder &builder, scf::ForOp loop,
 /// `outlinedFuncBody` to alloc simple canonicalizations.
 /// Creates a new FuncOp and thus cannot be used in a FuncOp pass.
 /// The client is responsible for providing a unique `funcName` that will not
-/// collide with another FuncOp name.
+/// collide with another FuncOp name.  If `callOp` is provided, it will be set
+/// to point to the operation that calls the outlined function.
 // TODO: support more than single-block regions.
 // TODO: more flexible constant handling.
-FailureOr<func::FuncOp> outlineSingleBlockRegion(RewriterBase &rewriter,
-                                                 Location loc, Region &region,
-                                                 StringRef funcName);
+FailureOr<func::FuncOp>
+outlineSingleBlockRegion(RewriterBase &rewriter, Location loc, Region &region,
+                         StringRef funcName, func::CallOp *callOp = nullptr);
 
 /// Outline the then and/or else regions of `ifOp` as follows:
 ///  - if `thenFn` is not null, `thenFnName` must be specified and the `then`

@@ -551,10 +551,9 @@ static void clampReturnedValueStates(
     LLVM_DEBUG(dbgs() << "[Attributor] RV: " << RV << " AA: " << AA.getAsStr()
                       << " @ " << RVPos << "\n");
     const StateType &AAS = AA.getState();
-    if (T.hasValue())
-      *T &= AAS;
-    else
-      T = AAS;
+    if (!T.hasValue())
+      T = StateType::getBestState(AAS);
+    *T &= AAS;
     LLVM_DEBUG(dbgs() << "[Attributor] AA State: " << AAS << " RV State: " << T
                       << "\n");
     return T->isValidState();
@@ -618,10 +617,9 @@ static void clampCallSiteArgumentStates(Attributor &A, const AAType &QueryingAA,
     LLVM_DEBUG(dbgs() << "[Attributor] ACS: " << *ACS.getInstruction()
                       << " AA: " << AA.getAsStr() << " @" << ACSArgPos << "\n");
     const StateType &AAS = AA.getState();
-    if (T.hasValue())
-      *T &= AAS;
-    else
-      T = AAS;
+    if (!T.hasValue())
+      T = StateType::getBestState(AAS);
+    *T &= AAS;
     LLVM_DEBUG(dbgs() << "[Attributor] AA State: " << AAS << " CSA State: " << T
                       << "\n");
     return T->isValidState();
@@ -2367,7 +2365,7 @@ struct AANonNullImpl : AANonNull {
 
   /// See AbstractAttribute::initialize(...).
   void initialize(Attributor &A) override {
-    Value &V = getAssociatedValue();
+    Value &V = *getAssociatedValue().stripPointerCasts();
     if (!NullIsDefined &&
         hasAttr({Attribute::NonNull, Attribute::Dereferenceable},
                 /* IgnoreSubsumingPositions */ false, &A)) {
@@ -2391,7 +2389,7 @@ struct AANonNullImpl : AANonNull {
       }
     }
 
-    if (isa<GlobalValue>(&getAssociatedValue())) {
+    if (isa<GlobalValue>(V)) {
       indicatePessimisticFixpoint();
       return;
     }
@@ -4219,6 +4217,7 @@ struct AADereferenceableImpl : AADereferenceable {
 
   /// See AbstractAttribute::initialize(...).
   void initialize(Attributor &A) override {
+    Value &V = *getAssociatedValue().stripPointerCasts();
     SmallVector<Attribute, 4> Attrs;
     getAttrs({Attribute::Dereferenceable, Attribute::DereferenceableOrNull},
              Attrs, /* IgnoreSubsumingPositions */ false, &A);
@@ -4229,9 +4228,8 @@ struct AADereferenceableImpl : AADereferenceable {
     NonNullAA = &A.getAAFor<AANonNull>(*this, IRP, DepClassTy::NONE);
 
     bool CanBeNull, CanBeFreed;
-    takeKnownDerefBytesMaximum(
-        IRP.getAssociatedValue().getPointerDereferenceableBytes(
-            A.getDataLayout(), CanBeNull, CanBeFreed));
+    takeKnownDerefBytesMaximum(V.getPointerDereferenceableBytes(
+        A.getDataLayout(), CanBeNull, CanBeFreed));
 
     bool IsFnInterface = IRP.isFnInterfaceKind();
     Function *FnScope = IRP.getAnchorScope();
@@ -4522,7 +4520,7 @@ struct AAAlignImpl : AAAlign {
     for (const Attribute &Attr : Attrs)
       takeKnownMaximum(Attr.getValueAsInt());
 
-    Value &V = getAssociatedValue();
+    Value &V = *getAssociatedValue().stripPointerCasts();
     takeKnownMaximum(V.getPointerAlignment(A.getDataLayout()).value());
 
     if (getIRPosition().isFnInterfaceKind() &&
@@ -4897,8 +4895,13 @@ struct AAInstanceInfoImpl : public AAInstanceInfo {
         const auto &ArgInstanceInfoAA = A.getAAFor<AAInstanceInfo>(
             *this, IRPosition::callsite_argument(*CB, CB->getArgOperandNo(&U)),
             DepClassTy::OPTIONAL);
-        if (ArgInstanceInfoAA.isAssumedUniqueForAnalysis())
-          return true;
+        if (!ArgInstanceInfoAA.isAssumedUniqueForAnalysis())
+          return false;
+        // If this call base might reach the scope again we might forward the
+        // argument back here. This is very conservative.
+        if (AA::isPotentiallyReachable(A, *CB, *Scope, *this, nullptr))
+          return false;
+        return true;
       }
       return false;
     };
@@ -5203,6 +5206,8 @@ ChangeStatus AANoCaptureImpl::updateImpl(Attributor &A) {
   //       AAReturnedValues, e.g., track all values that escape through returns
   //       directly somehow.
   auto CheckReturnedArgs = [&](const AAReturnedValues &RVAA) {
+    if (!RVAA.getState().isValidState())
+      return false;
     bool SeenConstant = false;
     for (auto &It : RVAA.returned_values()) {
       if (isa<Constant>(It.first)) {
@@ -5395,9 +5400,9 @@ struct AAValueSimplifyImpl : AAValueSimplify {
   /// See AbstractAttribute::getAsStr().
   const std::string getAsStr() const override {
     LLVM_DEBUG({
-      errs() << "SAV: " << (bool)SimplifiedAssociatedValue << " ";
+      dbgs() << "SAV: " << (bool)SimplifiedAssociatedValue << " ";
       if (SimplifiedAssociatedValue && *SimplifiedAssociatedValue)
-        errs() << "SAV: " << **SimplifiedAssociatedValue << " ";
+        dbgs() << "SAV: " << **SimplifiedAssociatedValue << " ";
     });
     return isValidState() ? (isAtFixpoint() ? "simplified" : "maybe-simple")
                           : "not-simple";
@@ -5452,6 +5457,8 @@ struct AAValueSimplifyImpl : AAValueSimplify {
       return &I;
 
     Instruction *CloneI = I.clone();
+    // TODO: Try to salvage debug information here.
+    CloneI->setDebugLoc(DebugLoc());
     VMap[&I] = CloneI;
     CloneI->insertBefore(CtxI);
     RemapInstruction(CloneI, VMap);
@@ -5479,7 +5486,8 @@ struct AAValueSimplifyImpl : AAValueSimplify {
     if (auto *C = dyn_cast<Constant>(EffectiveV))
       if (!C->canTrap())
         return C;
-    if (CtxI && AA::isValidAtPosition(*EffectiveV, *CtxI, A.getInfoCache()))
+    if (CtxI && AA::isValidAtPosition(AA::ValueAndContext(*EffectiveV, *CtxI),
+                                      A.getInfoCache()))
       return ensureType(A, *EffectiveV, Ty, CtxI, Check);
     if (auto *I = dyn_cast<Instruction>(EffectiveV))
       if (Value *NewV = reproduceInst(A, QueryingAA, *I, Ty, CtxI, Check, VMap))
@@ -5526,7 +5534,7 @@ struct AAValueSimplifyImpl : AAValueSimplify {
     const auto &AA =
         A.getAAFor<AAType>(*this, getIRPosition(), DepClassTy::NONE);
 
-    Optional<ConstantInt *> COpt = AA.getAssumedConstantInt(A);
+    Optional<Constant *> COpt = AA.getAssumedConstant(A);
 
     if (!COpt.hasValue()) {
       SimplifiedAssociatedValue = llvm::None;
@@ -6018,6 +6026,11 @@ struct AAValueSimplifyCallSiteArgument : AAValueSimplifyFloating {
   /// See AbstractAttribute::manifest(...).
   ChangeStatus manifest(Attributor &A) override {
     ChangeStatus Changed = ChangeStatus::UNCHANGED;
+    // TODO: We should avoid simplification duplication to begin with.
+    auto *FloatAA = A.lookupAAFor<AAValueSimplify>(
+        IRPosition::value(getAssociatedValue()), this, DepClassTy::NONE);
+    if (FloatAA && FloatAA->getState().isValidState())
+      return Changed;
 
     if (auto *NewV = manifestReplacementValue(A, getCtxI())) {
       Use &U = cast<CallBase>(&getAnchorValue())
@@ -6253,7 +6266,7 @@ struct AAHeapToStackFunction final : public AAHeapToStack {
       assert(InitVal &&
              "Must be able to materialize initial memory state of allocation");
 
-      A.changeValueAfterManifest(*AI.CB, *Alloca);
+      A.changeAfterManifest(IRPosition::inst(*AI.CB), *Alloca);
 
       if (auto *II = dyn_cast<InvokeInst>(AI.CB)) {
         auto *NBB = II->getNormalDest();
@@ -6427,6 +6440,8 @@ ChangeStatus AAHeapToStackFunction::updateImpl(Attributor &A) {
           dbgs() << "[H2S] unique free call might free unknown allocations\n");
       return false;
     }
+    if (DI->PotentialAllocationCalls.empty())
+      return true;
     if (DI->PotentialAllocationCalls.size() > 1) {
       LLVM_DEBUG(dbgs() << "[H2S] unique free call might free "
                         << DI->PotentialAllocationCalls.size()
