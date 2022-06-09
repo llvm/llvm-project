@@ -179,9 +179,11 @@ def OneShotBufferize : Pass<"one-shot-bufferize", "ModuleOp"> {
     allocated buffers from a block can lead to bad performance because
     additional buffer copies are often needed to make sure that every buffer
     allocation is also deallocated again. By default, such IR is rejected by
-    One-Shot Bufferize. Such IR can be allowed with `allow-return-allocs`.
-    Note that new buffer allocations that are returned from a function can
-    currently not be deallocated and leak.
+    One-Shot Bufferize. Such IR can be allowed with `allow-return-allocs`. In
+    that case, the `-buffer-deallocation` pass should be run after One-Shot
+    Bufferize. Note that new buffer allocations that are returned from a
+    function can currently not be deallocated by `-buffer-deallocation` and
+    leak.
 
     One-Shot Bufferize will by default reject IR that contains non-bufferizable
     op, i.e., ops that do not implemement BufferizableOpInterface. Such IR can
@@ -223,10 +225,7 @@ def OneShotBufferize : Pass<"one-shot-bufferize", "ModuleOp"> {
       argument, the return value disappears. Instead, the buffer of the tensor
       argument is modified in-place.
     * Returning non-equivalent tensors is forbidden by default and must be
-      explicitly activated with `allow-return-allocs`. If such a tensor happens
-      to bufferize to a new memory allocation, this buffer will never be
-      deallocated and leak. Such IR needs special handling, e.g., allocation
-      hoisting or reference counting.
+      explicitly activated with `allow-return-allocs`.
     * Non-equivalent returned tensors of fully static size can be promoted to
       function arguments with `promote-buffer-results-to-out-params`. In that
       case, buffers for such tensors are allocated at each call site. Instead of
