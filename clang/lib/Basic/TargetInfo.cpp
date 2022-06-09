@@ -150,6 +150,9 @@ TargetInfo::TargetInfo(const llvm::Triple &T) : Triple(T) {
   PlatformMinVersion = VersionTuple();
 
   MaxOpenCLWorkGroupSize = 1024;
+
+  MaxBitIntWidth.reset();
+
   ProgramAddrSpace = 0;
 }
 
@@ -478,6 +481,9 @@ void TargetInfo::adjust(DiagnosticsEngine &Diags, LangOptions &Opts) {
     Diags.Report(diag::err_opt_not_valid_on_target) << "-fprotect-parens";
     Opts.ProtectParens = false;
   }
+
+  if (Opts.MaxBitIntWidth)
+    MaxBitIntWidth = Opts.MaxBitIntWidth;
 }
 
 bool TargetInfo::initFeatureMap(

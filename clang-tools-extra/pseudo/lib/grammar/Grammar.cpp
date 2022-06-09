@@ -61,6 +61,8 @@ std::string Grammar::dumpRule(RuleID RID) const {
   OS << symbolName(R.Target) << " :=";
   for (SymbolID SID : R.seq())
     OS << " " << symbolName(SID);
+  if (R.Guard)
+    OS << " [guard=" << T->AttributeValues[R.Guard] << "]";
   return Result;
 }
 

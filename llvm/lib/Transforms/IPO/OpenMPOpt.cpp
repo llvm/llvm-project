@@ -2473,7 +2473,8 @@ struct AAICVTrackerFunction : public AAICVTracker {
 
     if (ICVTrackingAA.isAssumedTracked()) {
       Optional<Value *> URV = ICVTrackingAA.getUniqueReplacementValue(ICV);
-      if (!URV || (*URV && AA::isValidAtPosition(**URV, I, OMPInfoCache)))
+      if (!URV || (*URV && AA::isValidAtPosition(AA::ValueAndContext(**URV, I),
+                                                 OMPInfoCache)))
         return URV;
     }
 
@@ -2656,7 +2657,7 @@ struct AAICVTrackerCallSite : AAICVTracker {
     if (!ReplVal.hasValue() || !ReplVal.getValue())
       return ChangeStatus::UNCHANGED;
 
-    A.changeValueAfterManifest(*getCtxI(), **ReplVal);
+    A.changeAfterManifest(IRPosition::inst(*getCtxI()), **ReplVal);
     A.deleteAfterManifest(*getCtxI());
 
     return ChangeStatus::CHANGED;
@@ -3053,7 +3054,7 @@ struct AAHeapToSharedFunction : public AAHeapToShared {
              "HeapToShared on allocation without alignment attribute");
       SharedMem->setAlignment(MaybeAlign(Alignment));
 
-      A.changeValueAfterManifest(*CB, *NewBuffer);
+      A.changeAfterManifest(IRPosition::callsite_returned(*CB), *NewBuffer);
       A.deleteAfterManifest(*CB);
       A.deleteAfterManifest(*FreeCalls.front());
 
@@ -4495,7 +4496,7 @@ struct AAFoldRuntimeCallCallSiteReturned : AAFoldRuntimeCall {
 
     if (SimplifiedValue.hasValue() && SimplifiedValue.getValue()) {
       Instruction &I = *getCtxI();
-      A.changeValueAfterManifest(I, **SimplifiedValue);
+      A.changeAfterManifest(IRPosition::inst(I), **SimplifiedValue);
       A.deleteAfterManifest(I);
 
       CallBase *CB = dyn_cast<CallBase>(&I);

@@ -47,6 +47,9 @@ public:
     // Assemble the name->ID and ID->nonterminal name maps.
     llvm::DenseSet<llvm::StringRef> UniqueNonterminals;
     llvm::DenseMap<llvm::StringRef, SymbolID> SymbolIds;
+
+    llvm::DenseSet<llvm::StringRef> UniqueAttributeValues;
+
     for (uint16_t I = 0; I < NumTerminals; ++I)
       SymbolIds.try_emplace(T->Terminals[I], tokenSymbol(tok::TokenKind(I)));
     auto Consider = [&](llvm::StringRef Name) {
@@ -55,8 +58,11 @@ public:
     };
     for (const auto &Spec : Specs) {
       Consider(Spec.Target);
-      for (const RuleSpec::Element &Elt : Spec.Sequence)
+      for (const RuleSpec::Element &Elt : Spec.Sequence) {
         Consider(Elt.Symbol);
+        for (const auto& KV : Elt.Attributes)
+           UniqueAttributeValues.insert(KV.second);
+      }
     }
     llvm::for_each(UniqueNonterminals, [&T](llvm::StringRef Name) {
       T->Nonterminals.emplace_back();
@@ -68,6 +74,15 @@ public:
                                    const GrammarTable::Nonterminal &R) {
       return L.Name < R.Name;
     });
+    // Add an empty string for the corresponding sentinel unset attribute.
+    T->AttributeValues.push_back("");
+    llvm::for_each(UniqueAttributeValues, [&T](llvm::StringRef Name) {
+      T->AttributeValues.emplace_back();
+      T->AttributeValues.back() = Name.str();
+    });
+    llvm::sort(T->AttributeValues);
+    assert(T->AttributeValues.front() == "");
+
     // Build name -> ID maps for nonterminals.
     for (SymbolID SID = 0; SID < T->Nonterminals.size(); ++SID)
       SymbolIds.try_emplace(T->Nonterminals[SID].Name, SID);
@@ -86,7 +101,9 @@ public:
       for (const RuleSpec::Element &Elt : Spec.Sequence)
         Symbols.push_back(Lookup(Elt.Symbol));
       T->Rules.push_back(Rule(Lookup(Spec.Target), Symbols));
+      applyAttributes(Spec, *T, T->Rules.back());
     }
+
     assert(T->Rules.size() < (1 << RuleBits) &&
            "Too many rules to fit in RuleID bits!");
     const auto &SymbolOrder = getTopologicalOrder(T.get());
@@ -164,6 +181,9 @@ private:
     llvm::StringRef Target;
     struct Element {
       llvm::StringRef Symbol; // Name of the symbol
+      // Attributes that are associated to the sequence symbol or rule.
+      std::vector<std::pair<llvm::StringRef/*Key*/, llvm::StringRef/*Value*/>>
+          Attributes;
     };
     std::vector<Element> Sequence;
 
@@ -204,11 +224,46 @@ private:
       Chunk = Chunk.trim();
       if (Chunk.empty())
         continue; // skip empty
+      if (Chunk.startswith("[") && Chunk.endswith("]")) {
+        if (Out.Sequence.empty())
+          continue;
+
+        parseAttributes(Chunk, Out.Sequence.back().Attributes);
+        continue;
+      }
 
       Out.Sequence.push_back({Chunk});
     }
     return true;
-  };
+  }
+
+  bool parseAttributes(
+      llvm::StringRef Content,
+      std::vector<std::pair<llvm::StringRef, llvm::StringRef>> &Out) {
+    assert(Content.startswith("[") && Content.endswith("]"));
+    auto KV = Content.drop_front().drop_back().split('=');
+    Out.push_back({KV.first, KV.second.trim()});
+
+    return true;
+  }
+  // Apply the parsed extensions (stored in RuleSpec) to the grammar Rule.
+  void applyAttributes(const RuleSpec& Spec, const GrammarTable& T, Rule& R) {
+    auto LookupExtensionID = [&T](llvm::StringRef Name) {
+      const auto It = llvm::partition_point(
+          T.AttributeValues, [&](llvm::StringRef X) { return X < Name; });
+      assert(It != T.AttributeValues.end() && *It == Name &&
+             "Didn't find the attribute in AttrValues!");
+      return It - T.AttributeValues.begin();
+    };
+    for (const auto &KV : Spec.Sequence.back().Attributes) {
+      if (KV.first == "guard") {
+        R.Guard = LookupExtensionID(KV.second);
+        continue;
+      }
+      Diagnostics.push_back(
+          llvm::formatv("Unknown attribute '{0}'", KV.first).str());
+    }
+  }
 
   // Inlines all _opt symbols.
   // For example, a rule E := id +_opt id, after elimination, we have two
