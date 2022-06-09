@@ -1869,6 +1869,7 @@ Instruction *InstCombinerImpl::visitAnd(BinaryOperator &I) {
     };
     BinaryOperator *BO;
     if (match(Op0, m_OneUse(m_BinOp(BO))) && isSuitableBinOpcode(BO)) {
+      Instruction::BinaryOps BOpcode = BO->getOpcode();
       Value *X;
       const APInt *C1;
       // TODO: The one-use restrictions could be relaxed a little if the AND
@@ -1878,11 +1879,29 @@ Instruction *InstCombinerImpl::visitAnd(BinaryOperator &I) {
         unsigned XWidth = X->getType()->getScalarSizeInBits();
         Constant *TruncC1 = ConstantInt::get(X->getType(), C1->trunc(XWidth));
         Value *BinOp = isa<ZExtInst>(BO->getOperand(0))
-                           ? Builder.CreateBinOp(BO->getOpcode(), X, TruncC1)
-                           : Builder.CreateBinOp(BO->getOpcode(), TruncC1, X);
+                           ? Builder.CreateBinOp(BOpcode, X, TruncC1)
+                           : Builder.CreateBinOp(BOpcode, TruncC1, X);
         Constant *TruncC = ConstantInt::get(X->getType(), C->trunc(XWidth));
         Value *And = Builder.CreateAnd(BinOp, TruncC);
         return new ZExtInst(And, Ty);
+      }
+
+      if (match(BO->getOperand(0), m_OneUse(m_ZExt(m_Value(X)))) &&
+          C->isMask(X->getType()->getScalarSizeInBits())) {
+        Y = BO->getOperand(1);
+        Value *TrY = Builder.CreateTrunc(Y, X->getType(), Y->getName() + ".tr");
+        Value *NewBO =
+            Builder.CreateBinOp(BOpcode, X, TrY, BO->getName() + ".narrow");
+        return new ZExtInst(NewBO, Ty);
+      }
+
+      if (match(BO->getOperand(1), m_OneUse(m_ZExt(m_Value(X)))) &&
+          C->isMask(X->getType()->getScalarSizeInBits())) {
+        Y = BO->getOperand(0);
+        Value *TrY = Builder.CreateTrunc(Y, X->getType(), Y->getName() + ".tr");
+        Value *NewBO =
+            Builder.CreateBinOp(BOpcode, TrY, X, BO->getName() + ".narrow");
+        return new ZExtInst(NewBO, Ty);
       }
     }
   }
