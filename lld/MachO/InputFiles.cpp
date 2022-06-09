@@ -1978,6 +1978,14 @@ DylibFile::DylibFile(const InterfaceFile &interface, DylibFile *umbrella,
   }
 }
 
+DylibFile::DylibFile(DylibFile *umbrella)
+    : InputFile(DylibKind, MemoryBufferRef{}), refState(RefState::Unreferenced),
+      explicitlyLinked(false), isBundleLoader(false) {
+  if (umbrella == nullptr)
+    umbrella = this;
+  this->umbrella = umbrella;
+}
+
 void DylibFile::parseReexports(const InterfaceFile &interface) {
   const InterfaceFile *topLevel =
       interface.getParent() == nullptr ? &interface : interface.getParent();
@@ -1987,6 +1995,39 @@ void DylibFile::parseReexports(const InterfaceFile &interface) {
         isTargetPlatformArchCompatible(targets, config->platformInfo.target))
       loadReexport(intfRef.getInstallName(), exportingFile, topLevel);
   }
+}
+
+bool DylibFile::isExplicitlyLinked() const {
+  if (!explicitlyLinked)
+    return false;
+
+  // If this dylib was explicitly linked, but at least one of the symbols
+  // of the synthetic dylibs it created via $ld$previous symbols is
+  // referenced, then that synthetic dylib fulfils the explicit linkedness
+  // and we can deadstrip this dylib if it's unreferenced.
+  for (const auto *dylib : extraDylibs)
+    if (dylib->isReferenced())
+      return false;
+
+  return true;
+}
+
+DylibFile *DylibFile::getSyntheticDylib(StringRef installName,
+                                        uint32_t currentVersion,
+                                        uint32_t compatVersion) {
+  for (DylibFile *dylib : extraDylibs)
+    if (dylib->installName == installName) {
+      // FIXME: Check what to do if different $ld$previous symbols
+      // request the same dylib, but with different versions.
+      return dylib;
+    }
+
+  auto *dylib = make<DylibFile>(umbrella == this ? nullptr : umbrella);
+  dylib->installName = saver().save(installName);
+  dylib->currentVersion = currentVersion;
+  dylib->compatibilityVersion = compatVersion;
+  extraDylibs.push_back(dylib);
+  return dylib;
 }
 
 // $ld$ symbols modify the properties/behavior of the library (e.g. its install
@@ -2024,10 +2065,9 @@ void DylibFile::handleLDPreviousSymbol(StringRef name, StringRef originalName) {
   std::tie(platformStr, name) = name.split('$');
   std::tie(startVersion, name) = name.split('$');
   std::tie(endVersion, name) = name.split('$');
-  std::tie(symbolName, rest) = name.split('$');
-  // TODO: ld64 contains some logic for non-empty symbolName as well.
-  if (!symbolName.empty())
-    return;
+  std::tie(symbolName, rest) = name.rsplit('$');
+
+  // FIXME: Does this do the right thing for zippered files?
   unsigned platform;
   if (platformStr.getAsInteger(10, platform) ||
       platform != static_cast<unsigned>(config->platform()))
@@ -2048,8 +2088,9 @@ void DylibFile::handleLDPreviousSymbol(StringRef name, StringRef originalName) {
       config->platformInfo.minimum >= end)
     return;
 
-  this->installName = saver().save(installName);
-
+  // Initialized to compatibilityVersion for the symbolName branch below.
+  uint32_t newCompatibilityVersion = compatibilityVersion;
+  uint32_t newCurrentVersionForSymbol = currentVersion;
   if (!compatVersion.empty()) {
     VersionTuple cVersion;
     if (cVersion.tryParse(compatVersion)) {
@@ -2057,8 +2098,27 @@ void DylibFile::handleLDPreviousSymbol(StringRef name, StringRef originalName) {
            "' ignored");
       return;
     }
-    compatibilityVersion = encodeVersion(cVersion);
+    newCompatibilityVersion = encodeVersion(cVersion);
+    newCurrentVersionForSymbol = newCompatibilityVersion;
   }
+
+  if (!symbolName.empty()) {
+    // A $ld$previous$ symbol with symbol name adds a symbol with that name to
+    // a dylib with given name and version.
+    auto *dylib = getSyntheticDylib(installName, newCurrentVersionForSymbol,
+                                    newCompatibilityVersion);
+
+    // Just adding the symbol to the symtab works because dylibs contain their
+    // symbols in alphabetical order, guaranteeing $ld$ symbols to precede
+    // normal symbols.
+    dylib->symbols.push_back(symtab->addDylib(
+        saver().save(symbolName), dylib, /*isWeakDef=*/false, /*isTlv=*/false));
+    return;
+  }
+
+  // A $ld$previous$ symbol without symbol name modifies the dylib it's in.
+  this->installName = saver().save(installName);
+  this->compatibilityVersion = newCompatibilityVersion;
 }
 
 void DylibFile::handleLDInstallNameSymbol(StringRef name,
