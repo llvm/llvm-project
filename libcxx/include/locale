@@ -187,6 +187,7 @@ template <class charT> class messages_byname;
 
 */
 
+#include <__algorithm/copy.h>
 #include <__algorithm/equal.h>
 #include <__algorithm/find.h>
 #include <__algorithm/max.h>
