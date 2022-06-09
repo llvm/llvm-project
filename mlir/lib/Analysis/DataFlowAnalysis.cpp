@@ -576,45 +576,12 @@ void ForwardDataFlowSolver::visitTerminatorOperation(
     if (!regionInterface || !isBlockExecutable(parentOp->getBlock()))
       return;
 
-    // If the branch is a RegionBranchTerminatorOpInterface,
-    // construct the set of operand lattices as the set of non control-flow
-    // arguments of the parent and the values this op returns. This allows
-    // for the correct lattices to be passed to getSuccessorsForOperands()
-    // in cases such as scf.while.
-    ArrayRef<AbstractLatticeElement *> branchOpLattices = operandLattices;
-    SmallVector<AbstractLatticeElement *, 0> parentLattices;
-    if (auto regionTerminator =
-            dyn_cast<RegionBranchTerminatorOpInterface>(op)) {
-      parentLattices.reserve(regionInterface->getNumOperands());
-      for (Value parentOperand : regionInterface->getOperands()) {
-        AbstractLatticeElement *operandLattice =
-            analysis.lookupLatticeElement(parentOperand);
-        if (!operandLattice || operandLattice->isUninitialized())
-          return;
-        parentLattices.push_back(operandLattice);
-      }
-      unsigned regionNumber = parentRegion->getRegionNumber();
-      OperandRange iterArgs =
-          regionInterface.getSuccessorEntryOperands(regionNumber);
-      OperandRange terminatorArgs =
-          regionTerminator.getSuccessorOperands(regionNumber);
-      assert(iterArgs.size() == terminatorArgs.size() &&
-             "Number of iteration arguments for region should equal number of "
-             "those arguments defined by terminator");
-      if (!iterArgs.empty()) {
-        unsigned iterStart = iterArgs.getBeginOperandIndex();
-        unsigned terminatorStart = terminatorArgs.getBeginOperandIndex();
-        for (unsigned i = 0, e = iterArgs.size(); i < e; ++i)
-          parentLattices[iterStart + i] = operandLattices[terminatorStart + i];
-      }
-      branchOpLattices = parentLattices;
-    }
     // Query the set of successors of the current region using the current
     // optimistic lattice state.
     SmallVector<RegionSuccessor, 1> regionSuccessors;
     analysis.getSuccessorsForOperands(regionInterface,
                                       parentRegion->getRegionNumber(),
-                                      branchOpLattices, regionSuccessors);
+                                      operandLattices, regionSuccessors);
     if (regionSuccessors.empty())
       return;
 
@@ -622,11 +589,11 @@ void ForwardDataFlowSolver::visitTerminatorOperation(
     // propagate the operand states to the successors.
     if (isRegionReturnLike(op)) {
       auto getOperands = [&](Optional<unsigned> regionIndex) {
-        // Determine the individual region  successor operands for the given
+        // Determine the individual region successor operands for the given
         // region index (if any).
         return *getRegionBranchSuccessorOperands(op, regionIndex);
       };
-      return visitRegionSuccessors(parentOp, regionSuccessors, branchOpLattices,
+      return visitRegionSuccessors(parentOp, regionSuccessors, operandLattices,
                                    getOperands);
     }
 

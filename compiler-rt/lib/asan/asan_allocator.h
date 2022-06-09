@@ -17,7 +17,6 @@
 #include "asan_flags.h"
 #include "asan_interceptors.h"
 #include "asan_internal.h"
-#include "lsan/lsan_allocator.h"
 #include "sanitizer_common/sanitizer_allocator.h"
 #include "sanitizer_common/sanitizer_list.h"
 #include "sanitizer_common/sanitizer_platform.h"
@@ -119,9 +118,12 @@ struct AsanMapUnmapCallback {
 };
 
 #if SANITIZER_CAN_USE_ALLOCATOR64
-# if defined(__powerpc64__)
+# if SANITIZER_FUCHSIA
 const uptr kAllocatorSpace = ~(uptr)0;
-// NOTE: This differs slightly from the LSan allocator size which is 4T.
+const uptr kAllocatorSize  =  0x40000000000ULL;  // 4T.
+typedef DefaultSizeClassMap SizeClassMap;
+# elif defined(__powerpc64__)
+const uptr kAllocatorSpace = ~(uptr)0;
 const uptr kAllocatorSize  =  0x20000000000ULL;  // 2T.
 typedef DefaultSizeClassMap SizeClassMap;
 # elif defined(__aarch64__) && SANITIZER_ANDROID
@@ -148,9 +150,8 @@ const uptr kAllocatorSpace = ~(uptr)0;
 const uptr kAllocatorSize  =  0x8000000000ULL;  // 500G
 typedef DefaultSizeClassMap SizeClassMap;
 # else
-// Use LSan's allocator configs.
-const uptr kAllocatorSpace = __lsan::kAllocatorSpace;
-const uptr kAllocatorSize  = __lsan::kAllocatorSize;
+const uptr kAllocatorSpace = 0x600000000000ULL;
+const uptr kAllocatorSize  =  0x40000000000ULL;  // 4T.
 typedef DefaultSizeClassMap SizeClassMap;
 # endif
 template <typename AddressSpaceViewTy>

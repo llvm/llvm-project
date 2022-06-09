@@ -423,6 +423,25 @@ cc_library(
     ],
 )
 
+cc_library(
+    name = "common_constants",
+    srcs = ["src/math/generic/common_constants.cpp"],
+    hdrs = ["src/math/generic/common_constants.h"],
+    deps = [
+        ":libc_root",
+    ],
+)
+
+libc_math_function(
+    name = "expm1f",
+    additional_deps = [
+        ":__support_fputil_fma",
+        ":__support_fputil_multiply_add",
+        ":__support_fputil_polyeval",
+        ":common_constants",
+    ],
+)
+
 libc_math_function(name = "fabs")
 
 libc_math_function(name = "fabsf")

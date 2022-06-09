@@ -2466,7 +2466,7 @@ public:
 #ifdef PACKAGE_VENDOR
     OS << PACKAGE_VENDOR << " ";
 #else
-    OS << "LLVM (http://llvm.org/):\n  ";
+    OS << "AOMP-15.0-61 (http://github.com/ROCm-Developer-Tools/aomp):\n Source ID:15.0-61-595b0d8133fafef5742f7d39f8e6a07b31afff56\n  ";
 #endif
     OS << PACKAGE_NAME << " version " << PACKAGE_VERSION << "\n  ";
 #if LLVM_IS_DEBUG_BUILD

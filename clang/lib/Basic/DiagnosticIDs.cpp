@@ -653,7 +653,7 @@ StringRef DiagnosticIDs::getWarningOptionForDiag(unsigned DiagID) {
 }
 
 std::vector<std::string> DiagnosticIDs::getDiagnosticFlags() {
-  std::vector<std::string> Res;
+  std::vector<std::string> Res{"-W", "-Wno-"};
   for (size_t I = 1; DiagGroupNames[I] != '\0';) {
     std::string Diag(DiagGroupNames + I + 1, DiagGroupNames[I]);
     I += DiagGroupNames[I] + 1;

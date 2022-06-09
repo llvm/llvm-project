@@ -1605,6 +1605,8 @@ const MCSymbol &FrameEmitterImpl::EmitCIE(const MCDwarfFrameInfo &Frame) {
       Augmentation += "S";
     if (Frame.IsBKeyFrame)
       Augmentation += "B";
+    if (Frame.IsMTETaggedFrame)
+      Augmentation += "G";
   }
   if (MAI->supportsHeterogeneousDebuggingExtensions())
     Augmentation += "[llvm:v0.0]";

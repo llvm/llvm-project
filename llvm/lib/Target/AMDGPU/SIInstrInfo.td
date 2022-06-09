@@ -1496,6 +1496,7 @@ def VOP3OMods : ComplexPattern<untyped, 3, "SelectVOP3OMods">;
 def VOP3PMods  : ComplexPattern<untyped, 2, "SelectVOP3PMods">;
 
 def VOP3PModsDOT  : ComplexPattern<untyped, 2, "SelectVOP3PModsDOT">;
+def DotIUVOP3PMods  : ComplexPattern<untyped, 1, "SelectDotIUVOP3PMods">;
 
 def VOP3OpSel  : ComplexPattern<untyped, 2, "SelectVOP3OpSel">;
 
@@ -2551,10 +2552,10 @@ class VOPProfile <list<ValueType> _ArgVT, bit _EnableF32SrcMods = 0,
 class VOP_PAT_GEN <VOPProfile p, int mode=PatGenMode.NoPattern> : VOPProfile <p.ArgVT> {
   let NeedPatGen = mode;
 }
-
 def VOP_F16_F16 : VOPProfile <[f16, f16, untyped, untyped]>;
 def VOP_F16_I16 : VOPProfile <[f16, i16, untyped, untyped]>;
 def VOP_I16_F16 : VOPProfile <[i16, f16, untyped, untyped]>;
+def VOP_I16_I16 : VOPProfile <[i16, i16, untyped, untyped]>;
 
 def VOP_F16_F16_F16 : VOPProfile <[f16, f16, f16, untyped]>;
 def VOP_F16_F16_I16 : VOPProfile <[f16, f16, i16, untyped]>;
@@ -2566,6 +2567,7 @@ def VOP_I16_I16_I16_I16 : VOPProfile <[i16, i16, i16, i16, untyped]>;
 def VOP_F16_F16_F16_F16 : VOPProfile <[f16, f16, f16, f16, untyped]>;
 
 def VOP_I32_I16_I16_I32 : VOPProfile <[i32, i16, i16, i32, untyped]>;
+def VOP_I32_I16 : VOPProfile <[i32, i16, untyped, untyped]>;
 
 def VOP_V2F16_V2F16_V2F16 : VOPProfile <[v2f16, v2f16, v2f16, untyped]>;
 def VOP_V2I16_V2I16_V2I16 : VOPProfile <[v2i16, v2i16, v2i16, untyped]>;

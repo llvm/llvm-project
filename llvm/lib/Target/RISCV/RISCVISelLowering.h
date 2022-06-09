@@ -665,6 +665,8 @@ private:
   SDValue lowerGET_ROUNDING(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerSET_ROUNDING(SDValue Op, SelectionDAG &DAG) const;
 
+  SDValue lowerEH_DWARF_CFA(SDValue Op, SelectionDAG &DAG) const;
+
   SDValue expandUnalignedRVVLoad(SDValue Op, SelectionDAG &DAG) const;
   SDValue expandUnalignedRVVStore(SDValue Op, SelectionDAG &DAG) const;
 

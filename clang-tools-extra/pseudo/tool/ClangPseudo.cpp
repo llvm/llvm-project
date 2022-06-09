@@ -111,6 +111,8 @@ int main(int argc, char *argv[]) {
     auto LRTable = clang::pseudo::LRTable::buildSLR(*G);
     if (PrintTable)
       llvm::outs() << LRTable.dumpForTests(*G);
+    if (PrintStatistics)
+      llvm::outs() << LRTable.dumpStatistics();
 
     if (ParseableStream) {
       clang::pseudo::ForestArena Arena;
@@ -132,7 +134,7 @@ int main(int argc, char *argv[]) {
         llvm::outs() << "Forest bytes: " << Arena.bytes()
                      << " nodes: " << Arena.nodeCount() << "\n";
         llvm::outs() << "GSS bytes: " << GSS.bytes()
-                     << " nodes: " << GSS.nodeCount() << "\n";
+                     << " nodes: " << GSS.nodesCreated() << "\n";
       }
     }
   }

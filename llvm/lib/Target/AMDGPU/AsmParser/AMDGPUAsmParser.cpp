@@ -8173,9 +8173,12 @@ void AMDGPUAsmParser::cvtVOP3(MCInst &Inst, const OperandVector &Operands,
       Opc == AMDGPU::V_MAC_F16_e64_vi ||
       Opc == AMDGPU::V_FMAC_F64_e64_gfx90a ||
       Opc == AMDGPU::V_FMAC_F32_e64_gfx10 ||
+      Opc == AMDGPU::V_FMAC_F32_e64_gfx11 ||
       Opc == AMDGPU::V_FMAC_F32_e64_vi ||
       Opc == AMDGPU::V_FMAC_LEGACY_F32_e64_gfx10 ||
-      Opc == AMDGPU::V_FMAC_F16_e64_gfx10) {
+      Opc == AMDGPU::V_FMAC_DX9_ZERO_F32_e64_gfx11 ||
+      Opc == AMDGPU::V_FMAC_F16_e64_gfx10 ||
+      Opc == AMDGPU::V_FMAC_F16_e64_gfx11) {
     auto it = Inst.begin();
     std::advance(it, AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::src2_modifiers));
     it = Inst.insert(it, MCOperand::createImm(0)); // no modifiers for src2
@@ -8252,6 +8255,11 @@ void AMDGPUAsmParser::cvtVOP3P(MCInst &Inst, const OperandVector &Operands,
     if (OpIdx == -1)
       break;
 
+    int ModIdx = AMDGPU::getNamedOperandIdx(Opc, ModOps[J]);
+
+    if (ModIdx == -1)
+      continue;
+
     uint32_t ModVal = 0;
 
     if ((OpSel & (1 << J)) != 0)
@@ -8265,8 +8273,6 @@ void AMDGPUAsmParser::cvtVOP3P(MCInst &Inst, const OperandVector &Operands,
 
     if ((NegHi & (1 << J)) != 0)
       ModVal |= SISrcMods::NEG_HI;
-
-    int ModIdx = AMDGPU::getNamedOperandIdx(Opc, ModOps[J]);
 
     Inst.getOperand(ModIdx).setImm(Inst.getOperand(ModIdx).getImm() | ModVal);
   }
@@ -8633,7 +8639,9 @@ void AMDGPUAsmParser::cvtVOP3DPP(MCInst &Inst, const OperandVector &Operands, bo
   if (AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::omod) != -1) {
     addOptionalImmOperand(Inst, Operands, OptionalIdx, AMDGPUOperand::ImmTyOModSI);
   }
-  if (AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::op_sel) != -1) {
+  if (Desc.TSFlags & SIInstrFlags::VOP3P)
+    cvtVOP3P(Inst, Operands, OptionalIdx);
+  else if (AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::op_sel) != -1) {
     addOptionalImmOperand(Inst, Operands, OptionalIdx, AMDGPUOperand::ImmTyOpSel);
   }
 

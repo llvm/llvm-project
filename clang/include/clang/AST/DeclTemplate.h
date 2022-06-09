@@ -2718,7 +2718,7 @@ class VarTemplateSpecializationDecl : public VarDecl,
 
   /// The template arguments used to describe this specialization.
   const TemplateArgumentList *TemplateArgs;
-  TemplateArgumentListInfo TemplateArgsInfo;
+  const ASTTemplateArgumentListInfo *TemplateArgsInfo = nullptr;
 
   /// The point where this template was instantiated (if any).
   SourceLocation PointOfInstantiation;
@@ -2773,8 +2773,9 @@ public:
 
   // TODO: Always set this when creating the new specialization?
   void setTemplateArgsInfo(const TemplateArgumentListInfo &ArgsInfo);
+  void setTemplateArgsInfo(const ASTTemplateArgumentListInfo *ArgsInfo);
 
-  const TemplateArgumentListInfo &getTemplateArgsInfo() const {
+  const ASTTemplateArgumentListInfo *getTemplateArgsInfo() const {
     return TemplateArgsInfo;
   }
 
