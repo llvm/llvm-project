@@ -519,9 +519,9 @@ class Base(unittest2.TestCase):
         # /abs/path/to/packages/group/subdir/mytest.py -> group/subdir
         lldb_test_src = configuration.test_src_root
         if not test_file.startswith(lldb_test_src):
-          raise Exception(
-              "Test file '%s' must reside within lldb_test_src "
-              "(which is '%s')." % (test_file, lldb_test_src))
+            raise Exception(
+                "Test file '%s' must reside within lldb_test_src "
+                "(which is '%s')." % (test_file, lldb_test_src))
         return os.path.dirname(os.path.relpath(test_file, start=lldb_test_src))
 
     def TraceOn(self):
@@ -2473,6 +2473,14 @@ FileCheck output:
             error = obj.GetCString()
             self.fail(self._formatMessage(msg,
                 "'{}' is not success".format(error)))
+
+    """Assert two states are equal"""
+    def assertState(self, first, second, msg=None):
+        if first != second:
+            error = "{} ({}) != {} ({})".format(
+                lldbutil.state_type_to_str(first), first,
+                lldbutil.state_type_to_str(second), second)
+            self.fail(self._formatMessage(msg, error))
 
     def createTestTarget(self, file_path=None, msg=None,
                          load_dependent_modules=True):
