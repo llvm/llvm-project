@@ -49,9 +49,8 @@ body: |
     ; CHECK-NEXT: $x10 = ADD $x8, killed $x10
     ; CHECK-NEXT: $x10 = SUB killed $x10, killed $x11
     ; CHECK-NEXT: VS1R_V killed renamable $v8, killed renamable $x10
-    ; CHECK-NEXT: $x10 = frame-destroy PseudoReadVLENB
-    ; CHECK-NEXT: $x10 = frame-destroy SLLI killed $x10, 1
-    ; CHECK-NEXT: $x2 = frame-destroy ADD $x2, killed $x10
+    ; CHECK-NEXT: $x2 = frame-destroy ADDI $x8, -2048
+    ; CHECK-NEXT: $x2 = frame-destroy ADDI killed $x2, -224
     ; CHECK-NEXT: $x2 = frame-destroy ADDI $x2, 240
     ; CHECK-NEXT: $x1 = LD $x2, 2024 :: (load (s64) from %stack.3)
     ; CHECK-NEXT: $x8 = LD $x2, 2016 :: (load (s64) from %stack.4)

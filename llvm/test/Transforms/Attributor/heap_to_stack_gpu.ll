@@ -498,7 +498,6 @@ define i32 @malloc_in_loop(i32 %0) {
 ; CHECK:       8:
 ; CHECK-NEXT:    [[TMP9:%.*]] = call noalias i8* @malloc(i64 noundef 4)
 ; CHECK-NEXT:    [[TMP10:%.*]] = bitcast i8* [[TMP9]] to i32*
-; CHECK-NEXT:    store i32 1, i32* [[TMP10]], align 8
 ; CHECK-NEXT:    br label [[TMP4]]
 ; CHECK:       11:
 ; CHECK-NEXT:    ret i32 5
