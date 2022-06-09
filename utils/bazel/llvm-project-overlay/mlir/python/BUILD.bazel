@@ -878,11 +878,33 @@ gentbl_filegroup(
     ],
 )
 
+gentbl_filegroup(
+    name = "LoopTransformOpsPyGen",
+    tbl_outs = [
+        (
+            [
+                "-gen-python-op-bindings",
+                "-bind-dialect=transform",
+                "-dialect-extension=loop_transform",
+            ],
+            "mlir/dialects/_loop_transform_ops_gen.py",
+        ),
+    ],
+    tblgen = "//mlir:mlir-tblgen",
+    td_file = "mlir/dialects/SCFLoopTransformOps.td",
+    deps = [
+        ":TransformOpsPyTdFiles",
+        "//mlir:SCFTransformOpsTdFiles",
+    ],
+)
+
 filegroup(
     name = "TransformOpsPyFiles",
     srcs = [
+        "mlir/dialects/_loop_transform_ops_ext.py",
         "mlir/dialects/_structured_transform_ops_ext.py",
         "mlir/dialects/_transform_ops_ext.py",
+        ":LoopTransformOpsPyGen",
         ":StructuredTransformOpsPyGen",
         ":TransformOpsPyGen",
     ],
