@@ -116,7 +116,8 @@ protected:
   PacketResult SendStopReplyPacketForThread(NativeProcessProtocol &process,
                                             lldb::tid_t tid);
 
-  PacketResult SendStopReasonForState(lldb::StateType process_state);
+  PacketResult SendStopReasonForState(NativeProcessProtocol &process,
+                                      lldb::StateType process_state);
 
   PacketResult Handle_k(StringExtractorGDBRemote &packet);
 
