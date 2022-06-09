@@ -196,8 +196,9 @@ func.func @call_func_with_non_tensor_return(
   // CHECK: %[[call:.*]] = call @inner_func(%[[casted]])
   %0, %1 = call @inner_func(%t0) : (tensor<?xf32>) -> (tensor<?xf32>, f32)
 
-  // Note: The tensor return value has folded away.
-  // CHECK: return %[[call]] : f32
+  // Note: The tensor return value cannot fold away because the CallOp
+  // bufferized out-of-place.
+  // CHECK: return %[[call]], %[[alloc]] : f32, memref<?xf32>
   return %1, %0 : f32, tensor<?xf32>
 }
 
