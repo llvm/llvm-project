@@ -705,7 +705,28 @@ public:
   /// the set of solutions does not change if these constraints are removed.
   /// Marks these constraints as redundant. Whether a specific constraint has
   /// been marked redundant can be queried using isMarkedRedundant.
-  void detectRedundant();
+  ///
+  /// The first overload only tries to find redundant constraints with indices
+  /// in the range [offset, offset + count), by scanning constraints from left
+  /// to right in this range. If `count` is not provided, all constraints
+  /// starting at `offset` are scanned, and if neither are provided, all
+  /// constraints are scanned, starting from 0 and going to the last constraint.
+  ///
+  /// As an example, in the set (x) : (x >= 0, x >= 0, x >= 0), calling
+  /// `detectRedundant` with no parameters will result in the first two
+  /// constraints being marked redundant. All copies cannot be marked redundant
+  /// because removing all the constraints changes the set. The first two are
+  /// the ones marked redundant because we scan from left to right. Thus, when
+  /// there is some preference among the constraints as to which should be
+  /// marked redundant with priority when there are multiple possibilities, this
+  /// could be accomplished by succesive calls to detectRedundant(offset,
+  /// count).
+  void detectRedundant(unsigned offset, unsigned count);
+  void detectRedundant(unsigned offset) {
+    assert(offset <= con.size() && "invalid offset!");
+    detectRedundant(offset, con.size() - offset);
+  }
+  void detectRedundant() { detectRedundant(0, con.size()); }
 
   /// Returns a (min, max) pair denoting the minimum and maximum integer values
   /// of the given expression. If no integer value exists, both results will be

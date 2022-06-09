@@ -763,4 +763,10 @@ TEST(SetTest, subtractOutputSizeRegression) {
   // Previously, the subtraction result was producing an extra empty set, which
   // is correct, but bad for output size.
   EXPECT_EQ(result.getNumDisjuncts(), 1u);
+
+  PresburgerSet subtractSelf = set1.subtract(set1);
+  EXPECT_TRUE(subtractSelf.isIntegerEmpty());
+  // Previously, the subtraction result was producing several unnecessary empty
+  // sets, which is correct, but bad for output size.
+  EXPECT_EQ(subtractSelf.getNumDisjuncts(), 0u);
 }
