@@ -5452,6 +5452,8 @@ struct AAValueSimplifyImpl : AAValueSimplify {
       return &I;
 
     Instruction *CloneI = I.clone();
+    // TODO: Try to salvage debug information here.
+    CloneI->setDebugLoc(DebugLoc());
     VMap[&I] = CloneI;
     CloneI->insertBefore(CtxI);
     RemapInstruction(CloneI, VMap);
@@ -6018,6 +6020,11 @@ struct AAValueSimplifyCallSiteArgument : AAValueSimplifyFloating {
   /// See AbstractAttribute::manifest(...).
   ChangeStatus manifest(Attributor &A) override {
     ChangeStatus Changed = ChangeStatus::UNCHANGED;
+    // TODO: We should avoid simplification duplication to begin with.
+    auto *FloatAA = A.lookupAAFor<AAValueSimplify>(
+        IRPosition::value(getAssociatedValue()), this, DepClassTy::NONE);
+    if (FloatAA && FloatAA->getState().isValidState())
+      return Changed;
 
     if (auto *NewV = manifestReplacementValue(A, getCtxI())) {
       Use &U = cast<CallBase>(&getAnchorValue())
