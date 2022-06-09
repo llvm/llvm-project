@@ -13,13 +13,20 @@
 
 #include "utils/UnitTest/Test.h"
 
-TEST(LlvmLibcPrintfConverterTest, SimpleRawConversion) {
-  char str[10];
-  __llvm_libc::printf_core::StringWriter str_writer(str);
-  __llvm_libc::printf_core::Writer writer(
+class LlvmLibcPrintfConverterTest : public __llvm_libc::testing::Test {
+protected:
+  // void SetUp() override {}
+  // void TearDown() override {}
+
+  char str[60];
+  __llvm_libc::printf_core::StringWriter str_writer =
+      __llvm_libc::printf_core::StringWriter(str);
+  __llvm_libc::printf_core::Writer writer = __llvm_libc::printf_core::Writer(
       reinterpret_cast<void *>(&str_writer),
       __llvm_libc::printf_core::write_to_string);
+};
 
+TEST_F(LlvmLibcPrintfConverterTest, SimpleRawConversion) {
   __llvm_libc::printf_core::FormatSection raw_section;
   raw_section.has_conv = false;
   raw_section.raw_string = "abc";
@@ -33,17 +40,10 @@ TEST(LlvmLibcPrintfConverterTest, SimpleRawConversion) {
   ASSERT_EQ(writer.get_chars_written(), 3ull);
 }
 
-TEST(LlvmLibcPrintfConverterTest, PercentConversion) {
-  char str[20];
-  __llvm_libc::printf_core::StringWriter str_writer(str);
-  __llvm_libc::printf_core::Writer writer(
-      reinterpret_cast<void *>(&str_writer),
-      __llvm_libc::printf_core::write_to_string);
-
+TEST_F(LlvmLibcPrintfConverterTest, PercentConversion) {
   __llvm_libc::printf_core::FormatSection simple_conv;
   simple_conv.has_conv = true;
-  simple_conv.raw_string = "abc123";
-  simple_conv.raw_len = 6;
+  simple_conv.raw_string = "%%";
   simple_conv.conv_name = '%';
 
   __llvm_libc::printf_core::convert(&writer, simple_conv);
@@ -54,45 +54,43 @@ TEST(LlvmLibcPrintfConverterTest, PercentConversion) {
   ASSERT_EQ(writer.get_chars_written(), 1ull);
 }
 
-TEST(LlvmLibcPrintfConverterTest, CharConversion) {
-  char str[20];
-  __llvm_libc::printf_core::StringWriter str_writer(str);
-  __llvm_libc::printf_core::Writer writer(
-      reinterpret_cast<void *>(&str_writer),
-      __llvm_libc::printf_core::write_to_string);
-
+TEST_F(LlvmLibcPrintfConverterTest, CharConversionSimple) {
   __llvm_libc::printf_core::FormatSection simple_conv;
   simple_conv.has_conv = true;
-  simple_conv.raw_string = "abc123";
-  simple_conv.raw_len = 6;
+  // If has_conv is true, the raw string is ignored. They are not being parsed
+  // and match the actual conversion taking place so that you can compare these
+  // tests with other implmentations. The raw strings are completely optional.
+  simple_conv.raw_string = "%c";
   simple_conv.conv_name = 'c';
   simple_conv.conv_val_raw = 'D';
 
   __llvm_libc::printf_core::convert(&writer, simple_conv);
 
-  str[1] = '\0';
+  str_writer.terminate();
 
   ASSERT_STREQ(str, "D");
   ASSERT_EQ(writer.get_chars_written(), 1ull);
+}
 
+TEST_F(LlvmLibcPrintfConverterTest, CharConversionRightJustified) {
   __llvm_libc::printf_core::FormatSection right_justified_conv;
   right_justified_conv.has_conv = true;
-  right_justified_conv.raw_string = "abc123";
-  right_justified_conv.raw_len = 6;
+  right_justified_conv.raw_string = "%4c";
   right_justified_conv.conv_name = 'c';
   right_justified_conv.min_width = 4;
   right_justified_conv.conv_val_raw = 'E';
   __llvm_libc::printf_core::convert(&writer, right_justified_conv);
 
-  str[5] = '\0';
+  str_writer.terminate();
 
-  ASSERT_STREQ(str, "D   E");
-  ASSERT_EQ(writer.get_chars_written(), 5ull);
+  ASSERT_STREQ(str, "   E");
+  ASSERT_EQ(writer.get_chars_written(), 4ull);
+}
 
+TEST_F(LlvmLibcPrintfConverterTest, CharConversionLeftJustified) {
   __llvm_libc::printf_core::FormatSection left_justified_conv;
   left_justified_conv.has_conv = true;
-  left_justified_conv.raw_string = "abc123";
-  left_justified_conv.raw_len = 6;
+  left_justified_conv.raw_string = "%-4c";
   left_justified_conv.conv_name = 'c';
   left_justified_conv.flags =
       __llvm_libc::printf_core::FormatFlags::LEFT_JUSTIFIED;
@@ -100,81 +98,77 @@ TEST(LlvmLibcPrintfConverterTest, CharConversion) {
   left_justified_conv.conv_val_raw = 'F';
   __llvm_libc::printf_core::convert(&writer, left_justified_conv);
 
-  str[9] = '\0';
+  str_writer.terminate();
 
-  ASSERT_STREQ(str, "D   EF   ");
-  ASSERT_EQ(writer.get_chars_written(), 9ull);
+  ASSERT_STREQ(str, "F   ");
+  ASSERT_EQ(writer.get_chars_written(), 4ull);
 }
 
-TEST(LlvmLibcPrintfConverterTest, StringConversion) {
-  char str[20];
-  __llvm_libc::printf_core::StringWriter str_writer(str);
-  __llvm_libc::printf_core::Writer writer(
-      reinterpret_cast<void *>(&str_writer),
-      __llvm_libc::printf_core::write_to_string);
+TEST_F(LlvmLibcPrintfConverterTest, StringConversionSimple) {
 
   __llvm_libc::printf_core::FormatSection simple_conv;
   simple_conv.has_conv = true;
-  simple_conv.raw_string = "abc123";
-  simple_conv.raw_len = 6;
+  simple_conv.raw_string = "%s";
   simple_conv.conv_name = 's';
   simple_conv.conv_val_ptr = const_cast<char *>("DEF");
 
   __llvm_libc::printf_core::convert(&writer, simple_conv);
 
-  str[3] = '\0'; // this null terminator is just for checking after every step.
+  str_writer.terminate();
 
   ASSERT_STREQ(str, "DEF");
   ASSERT_EQ(writer.get_chars_written(), 3ull);
+}
 
-  // continuing to write to this str_writer will overwrite that null terminator.
-
+TEST_F(LlvmLibcPrintfConverterTest, StringConversionPrecisionHigh) {
   __llvm_libc::printf_core::FormatSection high_precision_conv;
   high_precision_conv.has_conv = true;
-  high_precision_conv.raw_string = "abc123";
-  high_precision_conv.raw_len = 6;
+  high_precision_conv.raw_string = "%4s";
   high_precision_conv.conv_name = 's';
   high_precision_conv.precision = 4;
   high_precision_conv.conv_val_ptr = const_cast<char *>("456");
   __llvm_libc::printf_core::convert(&writer, high_precision_conv);
 
-  str[6] = '\0';
+  str_writer.terminate();
 
-  ASSERT_STREQ(str, "DEF456");
-  ASSERT_EQ(writer.get_chars_written(), 6ull);
+  ASSERT_STREQ(str, "456");
+  ASSERT_EQ(writer.get_chars_written(), 3ull);
+}
 
+TEST_F(LlvmLibcPrintfConverterTest, StringConversionPrecisionLow) {
   __llvm_libc::printf_core::FormatSection low_precision_conv;
   low_precision_conv.has_conv = true;
-  low_precision_conv.raw_string = "abc123";
-  low_precision_conv.raw_len = 6;
+  low_precision_conv.raw_string = "%.2s";
   low_precision_conv.conv_name = 's';
   low_precision_conv.precision = 2;
   low_precision_conv.conv_val_ptr = const_cast<char *>("xyz");
   __llvm_libc::printf_core::convert(&writer, low_precision_conv);
 
-  str[8] = '\0';
+  str_writer.terminate();
 
-  ASSERT_STREQ(str, "DEF456xy");
-  ASSERT_EQ(writer.get_chars_written(), 8ull);
+  ASSERT_STREQ(str, "xy");
+  ASSERT_EQ(writer.get_chars_written(), 2ull);
+}
 
+TEST_F(LlvmLibcPrintfConverterTest, StringConversionRightJustified) {
   __llvm_libc::printf_core::FormatSection right_justified_conv;
   right_justified_conv.has_conv = true;
-  right_justified_conv.raw_string = "abc123";
-  right_justified_conv.raw_len = 6;
+  right_justified_conv.raw_string = "%4s";
   right_justified_conv.conv_name = 's';
   right_justified_conv.min_width = 4;
   right_justified_conv.conv_val_ptr = const_cast<char *>("789");
   __llvm_libc::printf_core::convert(&writer, right_justified_conv);
 
-  str[12] = '\0';
+  str_writer.terminate();
 
-  ASSERT_STREQ(str, "DEF456xy 789");
-  ASSERT_EQ(writer.get_chars_written(), 12ull);
+  ASSERT_STREQ(str, " 789");
+  ASSERT_EQ(writer.get_chars_written(), 4ull);
+}
 
+TEST_F(LlvmLibcPrintfConverterTest, StringConversionLeftJustified) {
   __llvm_libc::printf_core::FormatSection left_justified_conv;
   left_justified_conv.has_conv = true;
-  left_justified_conv.raw_string = "abc123";
-  left_justified_conv.raw_len = 6;
+  left_justified_conv.raw_string = "%-4s";
   left_justified_conv.conv_name = 's';
   left_justified_conv.flags =
       __llvm_libc::printf_core::FormatFlags::LEFT_JUSTIFIED;
@@ -182,8 +176,8 @@ TEST(LlvmLibcPrintfConverterTest, StringConversion) {
   left_justified_conv.conv_val_ptr = const_cast<char *>("ghi");
   __llvm_libc::printf_core::convert(&writer, left_justified_conv);
 
-  str[16] = '\0';
+  str_writer.terminate();
 
-  ASSERT_STREQ(str, "DEF456xy 789ghi ");
-  ASSERT_EQ(writer.get_chars_written(), 16ull);
+  ASSERT_STREQ(str, "ghi ");
+  ASSERT_EQ(writer.get_chars_written(), 4ull);
 }
