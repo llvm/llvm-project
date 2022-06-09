@@ -2365,7 +2365,7 @@ struct AANonNullImpl : AANonNull {
 
   /// See AbstractAttribute::initialize(...).
   void initialize(Attributor &A) override {
-    Value &V = getAssociatedValue();
+    Value &V = *getAssociatedValue().stripPointerCasts();
     if (!NullIsDefined &&
         hasAttr({Attribute::NonNull, Attribute::Dereferenceable},
                 /* IgnoreSubsumingPositions */ false, &A)) {
@@ -2389,7 +2389,7 @@ struct AANonNullImpl : AANonNull {
       }
     }
 
-    if (isa<GlobalValue>(&getAssociatedValue())) {
+    if (isa<GlobalValue>(V)) {
       indicatePessimisticFixpoint();
       return;
     }
@@ -4217,6 +4217,7 @@ struct AADereferenceableImpl : AADereferenceable {
 
   /// See AbstractAttribute::initialize(...).
   void initialize(Attributor &A) override {
+    Value &V = *getAssociatedValue().stripPointerCasts();
     SmallVector<Attribute, 4> Attrs;
     getAttrs({Attribute::Dereferenceable, Attribute::DereferenceableOrNull},
              Attrs, /* IgnoreSubsumingPositions */ false, &A);
@@ -4227,9 +4228,8 @@ struct AADereferenceableImpl : AADereferenceable {
     NonNullAA = &A.getAAFor<AANonNull>(*this, IRP, DepClassTy::NONE);
 
     bool CanBeNull, CanBeFreed;
-    takeKnownDerefBytesMaximum(
-        IRP.getAssociatedValue().getPointerDereferenceableBytes(
-            A.getDataLayout(), CanBeNull, CanBeFreed));
+    takeKnownDerefBytesMaximum(V.getPointerDereferenceableBytes(
+        A.getDataLayout(), CanBeNull, CanBeFreed));
 
     bool IsFnInterface = IRP.isFnInterfaceKind();
     Function *FnScope = IRP.getAnchorScope();
@@ -4520,7 +4520,7 @@ struct AAAlignImpl : AAAlign {
     for (const Attribute &Attr : Attrs)
       takeKnownMaximum(Attr.getValueAsInt());
 
-    Value &V = getAssociatedValue();
+    Value &V = *getAssociatedValue().stripPointerCasts();
     takeKnownMaximum(V.getPointerAlignment(A.getDataLayout()).value());
 
     if (getIRPosition().isFnInterfaceKind() &&
@@ -4895,8 +4895,13 @@ struct AAInstanceInfoImpl : public AAInstanceInfo {
         const auto &ArgInstanceInfoAA = A.getAAFor<AAInstanceInfo>(
             *this, IRPosition::callsite_argument(*CB, CB->getArgOperandNo(&U)),
             DepClassTy::OPTIONAL);
-        if (ArgInstanceInfoAA.isAssumedUniqueForAnalysis())
-          return true;
+        if (!ArgInstanceInfoAA.isAssumedUniqueForAnalysis())
+          return false;
+        // If this call base might reach the scope again we might forward the
+        // argument back here. This is very conservative.
+        if (AA::isPotentiallyReachable(A, *CB, *Scope, *this, nullptr))
+          return false;
+        return true;
       }
       return false;
     };
@@ -5201,6 +5206,8 @@ ChangeStatus AANoCaptureImpl::updateImpl(Attributor &A) {
   //       AAReturnedValues, e.g., track all values that escape through returns
   //       directly somehow.
   auto CheckReturnedArgs = [&](const AAReturnedValues &RVAA) {
+    if (!RVAA.getState().isValidState())
+      return false;
     bool SeenConstant = false;
     for (auto &It : RVAA.returned_values()) {
       if (isa<Constant>(It.first)) {
@@ -5393,9 +5400,9 @@ struct AAValueSimplifyImpl : AAValueSimplify {
   /// See AbstractAttribute::getAsStr().
   const std::string getAsStr() const override {
     LLVM_DEBUG({
-      errs() << "SAV: " << (bool)SimplifiedAssociatedValue << " ";
+      dbgs() << "SAV: " << (bool)SimplifiedAssociatedValue << " ";
       if (SimplifiedAssociatedValue && *SimplifiedAssociatedValue)
-        errs() << "SAV: " << **SimplifiedAssociatedValue << " ";
+        dbgs() << "SAV: " << **SimplifiedAssociatedValue << " ";
     });
     return isValidState() ? (isAtFixpoint() ? "simplified" : "maybe-simple")
                           : "not-simple";
@@ -6433,6 +6440,8 @@ ChangeStatus AAHeapToStackFunction::updateImpl(Attributor &A) {
           dbgs() << "[H2S] unique free call might free unknown allocations\n");
       return false;
     }
+    if (DI->PotentialAllocationCalls.empty())
+      return true;
     if (DI->PotentialAllocationCalls.size() > 1) {
       LLVM_DEBUG(dbgs() << "[H2S] unique free call might free "
                         << DI->PotentialAllocationCalls.size()

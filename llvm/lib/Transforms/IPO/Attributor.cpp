@@ -225,7 +225,9 @@ Constant *AA::getInitialValueForObj(Value &Obj, Type &Ty,
   if (isAllocationFn(&Obj, TLI))
     return getInitialValueOfAllocation(&cast<CallBase>(Obj), TLI, &Ty);
   auto *GV = dyn_cast<GlobalVariable>(&Obj);
-  if (!GV || !GV->hasLocalLinkage())
+  if (!GV)
+    return nullptr;
+  if (!GV->hasLocalLinkage() && !(GV->isConstant() && GV->hasInitializer()))
     return nullptr;
   if (!GV->hasInitializer())
     return UndefValue::get(&Ty);
@@ -365,7 +367,8 @@ static bool getPotentialCopiesOfMemoryValue(
       return false;
     }
     if (auto *GV = dyn_cast<GlobalVariable>(Obj))
-      if (!GV->hasLocalLinkage()) {
+      if (!GV->hasLocalLinkage() &&
+          !(GV->isConstant() && GV->hasInitializer())) {
         LLVM_DEBUG(dbgs() << "Underlying object is global with external "
                              "linkage, not supported yet: "
                           << *Obj << "\n";);
@@ -1022,9 +1025,11 @@ Optional<Constant *>
 Attributor::getAssumedConstant(const IRPosition &IRP,
                                const AbstractAttribute &AA,
                                bool &UsedAssumedInformation) {
+  if (auto *C = dyn_cast<Constant>(&IRP.getAssociatedValue()))
+    return C;
   // First check all callbacks provided by outside AAs. If any of them returns
   // a non-null value that is different from the associated value, or None, we
-  // assume it's simpliied.
+  // assume it's simplified.
   for (auto &CB : SimplificationCallbacks.lookup(IRP)) {
     Optional<Value *> SimplifiedV = CB(IRP, &AA, UsedAssumedInformation);
     if (!SimplifiedV.hasValue())
@@ -1062,7 +1067,7 @@ Attributor::getAssumedSimplified(const IRPosition &IRP,
                                  bool &UsedAssumedInformation) {
   // First check all callbacks provided by outside AAs. If any of them returns
   // a non-null value that is different from the associated value, or None, we
-  // assume it's simpliied.
+  // assume it's simplified.
   for (auto &CB : SimplificationCallbacks.lookup(IRP))
     return CB(IRP, AA, UsedAssumedInformation);
 
@@ -1912,7 +1917,8 @@ ChangeStatus Attributor::cleanupIR() {
                     << ToBeDeletedBlocks.size() << " blocks and "
                     << ToBeDeletedInsts.size() << " instructions and "
                     << ToBeChangedValues.size() << " values and "
-                    << ToBeChangedUses.size() << " uses. "
+                    << ToBeChangedUses.size() << " uses. To insert "
+                    << ToBeChangedToUnreachableInsts.size() << " unreachables."
                     << "Preserve manifest added " << ManifestAddedBlocks.size()
                     << " blocks\n");
 
@@ -1932,7 +1938,7 @@ ChangeStatus Attributor::cleanupIR() {
 
     Instruction *I = dyn_cast<Instruction>(U->getUser());
     assert((!I || isRunOn(*I->getFunction())) &&
-           "Cannot replace an invoke outside the current SCC!");
+           "Cannot replace an instruction outside the current SCC!");
 
     // Do not replace uses in returns if the value is a must-tail call we will
     // not delete.
@@ -1997,8 +2003,12 @@ ChangeStatus Attributor::cleanupIR() {
     for (auto &U : OldV->uses())
       if (Entry.second || !U.getUser()->isDroppable())
         Uses.push_back(&U);
-    for (Use *U : Uses)
+    for (Use *U : Uses) {
+      if (auto *I = dyn_cast<Instruction>(U->getUser()))
+        if (!isRunOn(*I->getFunction()))
+          continue;
       ReplaceUse(U, NewV);
+    }
   }
 
   for (auto &V : InvokeWithDeadSuccessor)
@@ -3099,8 +3109,8 @@ raw_ostream &llvm::operator<<(raw_ostream &OS,
   if (!S.isValidState())
     OS << "full-set";
   else {
-    for (auto &it : S.getAssumedSet())
-      OS << it << ", ";
+    for (auto &It : S.getAssumedSet())
+      OS << It << ", ";
     if (S.undefIsContained())
       OS << "undef ";
   }
