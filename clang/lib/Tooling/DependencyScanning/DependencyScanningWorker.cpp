@@ -137,11 +137,11 @@ public:
   DependencyScanningAction(
       StringRef WorkingDirectory, DependencyConsumer &Consumer,
       llvm::IntrusiveRefCntPtr<DependencyScanningWorkerFilesystem> DepFS,
-      ScanningOutputFormat Format, bool OptimizeArgs,
+      ScanningOutputFormat Format, bool OptimizeArgs, bool DisableFree,
       llvm::Optional<StringRef> ModuleName = None)
       : WorkingDirectory(WorkingDirectory), Consumer(Consumer),
         DepFS(std::move(DepFS)), Format(Format), OptimizeArgs(OptimizeArgs),
-        ModuleName(ModuleName) {}
+        DisableFree(DisableFree), ModuleName(ModuleName) {}
 
   bool runInvocation(std::shared_ptr<CompilerInvocation> Invocation,
                      FileManager *FileMgr,
@@ -149,6 +149,8 @@ public:
                      DiagnosticConsumer *DiagConsumer) override {
     // Make a deep copy of the original Clang invocation.
     CompilerInvocation OriginalInvocation(*Invocation);
+    // Restore the value of DisableFree, which may be modified by Tooling.
+    OriginalInvocation.getFrontendOpts().DisableFree = DisableFree;
 
     // Create a compiler instance to handle the actual work.
     CompilerInstance ScanInstance(std::move(PCHContainerOps));
@@ -255,6 +257,7 @@ private:
   llvm::IntrusiveRefCntPtr<DependencyScanningWorkerFilesystem> DepFS;
   ScanningOutputFormat Format;
   bool OptimizeArgs;
+  bool DisableFree;
   llvm::Optional<StringRef> ModuleName;
 };
 
@@ -329,9 +332,13 @@ llvm::Error DependencyScanningWorker::computeDependencies(
 
   return runWithDiags(CreateAndPopulateDiagOpts(FinalCCommandLine).release(),
                       [&](DiagnosticConsumer &DC, DiagnosticOptions &DiagOpts) {
+                        // DisableFree is modified by Tooling for running
+                        // in-process; preserve the original value, which is
+                        // always true for a driver invocation.
+                        bool DisableFree = true;
                         DependencyScanningAction Action(
                             WorkingDirectory, Consumer, DepFS, Format,
-                            OptimizeArgs, ModuleName);
+                            OptimizeArgs, DisableFree, ModuleName);
                         // Create an invocation that uses the underlying file
                         // system to ensure that any file system requests that
                         // are made by the driver do not go through the
