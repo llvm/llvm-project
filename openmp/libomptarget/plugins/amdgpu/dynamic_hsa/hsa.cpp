@@ -23,11 +23,8 @@ DLWRAP_INTERNAL(hsa_init, 0);
 
 DLWRAP(hsa_status_string, 2);
 DLWRAP(hsa_shut_down, 0);
-DLWRAP(hsa_system_get_info, 2);
 DLWRAP(hsa_agent_get_info, 3);
-DLWRAP(hsa_isa_get_info_alt, 3);
 DLWRAP(hsa_iterate_agents, 2);
-DLWRAP(hsa_agent_iterate_isas, 3);
 DLWRAP(hsa_signal_create, 4);
 DLWRAP(hsa_signal_destroy, 1);
 DLWRAP(hsa_signal_store_relaxed, 2);
