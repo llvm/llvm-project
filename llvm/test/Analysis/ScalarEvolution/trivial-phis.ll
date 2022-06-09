@@ -2,7 +2,7 @@
 
 ; CHECK-LABEL: @test1
 ; CHECK:       %add.lcssa.wide = phi i64 [ %indvars.iv.next, %do.body ]
-; CHECK-NEXT:  -->  %add.lcssa.wide U: [1,2147483648) S: [1,2147483648)
+; CHECK-NEXT:  -->  {1,+,1}<nuw><nsw><%do.body> U: [1,2147483648) S: [1,2147483648)
 
 define i64 @test1(i32 signext %n, float* %A) {
 entry:
