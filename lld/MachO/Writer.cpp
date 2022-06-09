@@ -780,70 +780,80 @@ template <class LP> void Writer::createLoadCommands() {
   if (config->outputType == MH_EXECUTE)
     in.header->addLoadCommand(make<LCMain>());
 
+  // See ld64's OutputFile::buildDylibOrdinalMapping for the corresponding
+  // library ordinal computation code in ld64.
   int64_t dylibOrdinal = 1;
   DenseMap<StringRef, int64_t> ordinalForInstallName;
+
+  std::vector<DylibFile *> dylibFiles;
   for (InputFile *file : inputFiles) {
-    if (auto *dylibFile = dyn_cast<DylibFile>(file)) {
-      if (dylibFile->isBundleLoader) {
-        dylibFile->ordinal = BIND_SPECIAL_DYLIB_MAIN_EXECUTABLE;
-        // Shortcut since bundle-loader does not re-export the symbols.
+    if (auto *dylibFile = dyn_cast<DylibFile>(file))
+      dylibFiles.push_back(dylibFile);
+  }
+  for (size_t i = 0; i < dylibFiles.size(); ++i)
+    dylibFiles.insert(dylibFiles.end(), dylibFiles[i]->extraDylibs.begin(),
+                      dylibFiles[i]->extraDylibs.end());
 
-        dylibFile->reexport = false;
-        continue;
-      }
+  for (DylibFile *dylibFile : dylibFiles) {
+    if (dylibFile->isBundleLoader) {
+      dylibFile->ordinal = BIND_SPECIAL_DYLIB_MAIN_EXECUTABLE;
+      // Shortcut since bundle-loader does not re-export the symbols.
 
-      // Don't emit load commands for a dylib that is not referenced if:
-      // - it was added implicitly (via a reexport, an LC_LOAD_DYLINKER --
-      //   if it's on the linker command line, it's explicit)
-      // - or it's marked MH_DEAD_STRIPPABLE_DYLIB
-      // - or the flag -dead_strip_dylibs is used
-      // FIXME: `isReferenced()` is currently computed before dead code
-      // stripping, so references from dead code keep a dylib alive. This
-      // matches ld64, but it's something we should do better.
-      if (!dylibFile->isReferenced() && !dylibFile->forceNeeded &&
-          (!dylibFile->explicitlyLinked || dylibFile->deadStrippable ||
-           config->deadStripDylibs))
-        continue;
-
-      // Several DylibFiles can have the same installName. Only emit a single
-      // load command for that installName and give all these DylibFiles the
-      // same ordinal.
-      // This can happen in several cases:
-      // - a new framework could change its installName to an older
-      //   framework name via an $ld$ symbol depending on platform_version
-      // - symlinks (for example, libpthread.tbd is a symlink to libSystem.tbd;
-      //   Foo.framework/Foo.tbd is usually a symlink to
-      //   Foo.framework/Versions/Current/Foo.tbd, where
-      //   Foo.framework/Versions/Current is usually a symlink to
-      //   Foo.framework/Versions/A)
-      // - a framework can be linked both explicitly on the linker
-      //   command line and implicitly as a reexport from a different
-      //   framework. The re-export will usually point to the tbd file
-      //   in Foo.framework/Versions/A/Foo.tbd, while the explicit link will
-      //   usually find Foo.framework/Foo.tbd. These are usually symlinks,
-      //   but in a --reproduce archive they will be identical but distinct
-      //   files.
-      // In the first case, *semantically distinct* DylibFiles will have the
-      // same installName.
-      int64_t &ordinal = ordinalForInstallName[dylibFile->installName];
-      if (ordinal) {
-        dylibFile->ordinal = ordinal;
-        continue;
-      }
-
-      ordinal = dylibFile->ordinal = dylibOrdinal++;
-      LoadCommandType lcType =
-          dylibFile->forceWeakImport || dylibFile->refState == RefState::Weak
-              ? LC_LOAD_WEAK_DYLIB
-              : LC_LOAD_DYLIB;
-      in.header->addLoadCommand(make<LCDylib>(lcType, dylibFile->installName,
-                                              dylibFile->compatibilityVersion,
-                                              dylibFile->currentVersion));
-
-      if (dylibFile->reexport)
-        in.header->addLoadCommand(
-            make<LCDylib>(LC_REEXPORT_DYLIB, dylibFile->installName));
+      dylibFile->reexport = false;
+      continue;
     }
+
+    // Don't emit load commands for a dylib that is not referenced if:
+    // - it was added implicitly (via a reexport, an LC_LOAD_DYLINKER --
+    //   if it's on the linker command line, it's explicit)
+    // - or it's marked MH_DEAD_STRIPPABLE_DYLIB
+    // - or the flag -dead_strip_dylibs is used
+    // FIXME: `isReferenced()` is currently computed before dead code
+    // stripping, so references from dead code keep a dylib alive. This
+    // matches ld64, but it's something we should do better.
+    if (!dylibFile->isReferenced() && !dylibFile->forceNeeded &&
+        (!dylibFile->isExplicitlyLinked() || dylibFile->deadStrippable ||
+         config->deadStripDylibs))
+      continue;
+
+    // Several DylibFiles can have the same installName. Only emit a single
+    // load command for that installName and give all these DylibFiles the
+    // same ordinal.
+    // This can happen in several cases:
+    // - a new framework could change its installName to an older
+    //   framework name via an $ld$ symbol depending on platform_version
+    // - symlinks (for example, libpthread.tbd is a symlink to libSystem.tbd;
+    //   Foo.framework/Foo.tbd is usually a symlink to
+    //   Foo.framework/Versions/Current/Foo.tbd, where
+    //   Foo.framework/Versions/Current is usually a symlink to
+    //   Foo.framework/Versions/A)
+    // - a framework can be linked both explicitly on the linker
+    //   command line and implicitly as a reexport from a different
+    //   framework. The re-export will usually point to the tbd file
+    //   in Foo.framework/Versions/A/Foo.tbd, while the explicit link will
+    //   usually find Foo.framework/Foo.tbd. These are usually symlinks,
+    //   but in a --reproduce archive they will be identical but distinct
+    //   files.
+    // In the first case, *semantically distinct* DylibFiles will have the
+    // same installName.
+    int64_t &ordinal = ordinalForInstallName[dylibFile->installName];
+    if (ordinal) {
+      dylibFile->ordinal = ordinal;
+      continue;
+    }
+
+    ordinal = dylibFile->ordinal = dylibOrdinal++;
+    LoadCommandType lcType =
+        dylibFile->forceWeakImport || dylibFile->refState == RefState::Weak
+            ? LC_LOAD_WEAK_DYLIB
+            : LC_LOAD_DYLIB;
+    in.header->addLoadCommand(make<LCDylib>(lcType, dylibFile->installName,
+                                            dylibFile->compatibilityVersion,
+                                            dylibFile->currentVersion));
+
+    if (dylibFile->reexport)
+      in.header->addLoadCommand(
+          make<LCDylib>(LC_REEXPORT_DYLIB, dylibFile->installName));
   }
 
   if (functionStartsSection)

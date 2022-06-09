@@ -211,7 +211,7 @@ DylibFile *macho::loadDylib(MemoryBufferRef mbref, DylibFile *umbrella,
   DylibFile *&file = loadedDylibs[path];
   if (file) {
     if (explicitlyLinked)
-      file->explicitlyLinked = explicitlyLinked;
+      file->setExplicitlyLinked();
     return file;
   }
 
