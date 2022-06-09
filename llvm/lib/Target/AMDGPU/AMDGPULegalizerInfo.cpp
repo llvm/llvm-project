@@ -2982,7 +2982,6 @@ void AMDGPULegalizerInfo::buildMultiply(
         assert((DstIndex + 1 < Accum.size() && LocalAccum.size() == 2) ||
                (DstIndex + 1 >= Accum.size() && LocalAccum.size() == 1));
 
-        Register Tmp;
         Carry CarryOut;
         unsigned j0 = 0;
 
