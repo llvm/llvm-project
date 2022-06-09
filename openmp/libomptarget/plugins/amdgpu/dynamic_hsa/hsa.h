@@ -56,56 +56,21 @@ typedef enum {
 } hsa_device_type_t;
 
 typedef enum {
-  HSA_ISA_INFO_NAME = 1,
-} hsa_isa_info_t;
-
-typedef enum {
   HSA_AGENT_INFO_NAME = 0,
-  HSA_AGENT_INFO_VENDOR_NAME = 1,
   HSA_AGENT_INFO_PROFILE = 4,
   HSA_AGENT_INFO_WAVEFRONT_SIZE = 6,
   HSA_AGENT_INFO_WORKGROUP_MAX_DIM = 7,
-  HSA_AGENT_INFO_WORKGROUP_MAX_SIZE = 8,
   HSA_AGENT_INFO_GRID_MAX_DIM = 9,
-  HSA_AGENT_INFO_GRID_MAX_SIZE = 10,
-  HSA_AGENT_INFO_FBARRIER_MAX_SIZE = 11,
-  HSA_AGENT_INFO_QUEUES_MAX = 12,
-  HSA_AGENT_INFO_QUEUE_MIN_SIZE = 13,
   HSA_AGENT_INFO_QUEUE_MAX_SIZE = 14,
   HSA_AGENT_INFO_DEVICE = 17,
-  HSA_AGENT_INFO_CACHE_SIZE = 18,
-  HSA_AGENT_INFO_FAST_F16_OPERATION = 24,
 } hsa_agent_info_t;
-
-typedef enum {
-  HSA_SYSTEM_INFO_VERSION_MAJOR = 0,
-  HSA_SYSTEM_INFO_VERSION_MINOR = 1,
-} hsa_system_info_t;
-
-typedef struct hsa_region_s {
-  uint64_t handle;
-} hsa_region_t;
-
-typedef struct hsa_isa_s {
-  uint64_t handle;
-} hsa_isa_t;
-
-hsa_status_t hsa_system_get_info(hsa_system_info_t attribute, void *value);
 
 hsa_status_t hsa_agent_get_info(hsa_agent_t agent, hsa_agent_info_t attribute,
                                 void *value);
 
-hsa_status_t hsa_isa_get_info_alt(hsa_isa_t isa, hsa_isa_info_t attribute,
-                                  void *value);
-
 hsa_status_t hsa_iterate_agents(hsa_status_t (*callback)(hsa_agent_t agent,
                                                          void *data),
                                 void *data);
-
-hsa_status_t hsa_agent_iterate_isas(hsa_agent_t agent,
-                                    hsa_status_t (*callback)(hsa_isa_t isa,
-                                                             void *data),
-                                    void *data);
 
 typedef struct hsa_signal_s {
   uint64_t handle;
