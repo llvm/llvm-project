@@ -79,6 +79,7 @@ enum Iostat {
   IostatCannotReposition,
   IostatBadWaitId,
   IostatTooManyAsyncOps,
+  IostatBadBackspaceUnit,
 };
 
 const char *IostatErrorString(int);

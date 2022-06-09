@@ -395,10 +395,17 @@ Cookie IONAME(BeginFlush)(
 Cookie IONAME(BeginBackspace)(
     ExternalUnit unitNumber, const char *sourceFile, int sourceLine) {
   Terminator terminator{sourceFile, sourceLine};
-  ExternalFileUnit &unit{
-      ExternalFileUnit::LookUpOrCrash(unitNumber, terminator)};
-  return &unit.BeginIoStatement<ExternalMiscIoStatementState>(
-      unit, ExternalMiscIoStatementState::Backspace, sourceFile, sourceLine);
+  if (ExternalFileUnit * unit{ExternalFileUnit::LookUp(unitNumber)}) {
+    return &unit->BeginIoStatement<ExternalMiscIoStatementState>(
+        *unit, ExternalMiscIoStatementState::Backspace, sourceFile, sourceLine);
+  } else {
+    auto &io{
+        New<NoopStatementState>{terminator}(sourceFile, sourceLine, unitNumber)
+            .release()
+            ->ioStatementState()};
+    io.GetIoErrorHandler().SetPendingError(IostatBadBackspaceUnit);
+    return &io;
+  }
 }
 
 Cookie IONAME(BeginEndfile)(
