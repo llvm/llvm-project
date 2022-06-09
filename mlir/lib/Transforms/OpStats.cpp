@@ -19,7 +19,7 @@ using namespace mlir;
 
 namespace {
 struct PrintOpStatsPass : public PrintOpStatsBase<PrintOpStatsPass> {
-  explicit PrintOpStatsPass(raw_ostream &os = llvm::errs()) : os(os) {}
+  explicit PrintOpStatsPass(raw_ostream &os) : os(os) {}
 
   // Prints the resultant operation statistics post iterating over the module.
   void runOnOperation() override;
@@ -80,6 +80,6 @@ void PrintOpStatsPass::printSummary() {
   }
 }
 
-std::unique_ptr<Pass> mlir::createPrintOpStatsPass() {
-  return std::make_unique<PrintOpStatsPass>();
+std::unique_ptr<Pass> mlir::createPrintOpStatsPass(raw_ostream &os) {
+  return std::make_unique<PrintOpStatsPass>(os);
 }
