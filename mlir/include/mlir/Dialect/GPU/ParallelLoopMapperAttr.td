@@ -17,15 +17,15 @@
 include "mlir/Dialect/GPU/GPUBase.td"
 include "mlir/IR/EnumAttr.td"
 
-def BlockX : I64EnumAttrCase<"BlockX", 0>;
-def BlockY : I64EnumAttrCase<"BlockY", 1>;
-def BlockZ : I64EnumAttrCase<"BlockZ", 2>;
-def ThreadX : I64EnumAttrCase<"ThreadX", 3>;
-def ThreadY : I64EnumAttrCase<"ThreadY", 4>;
-def ThreadZ : I64EnumAttrCase<"ThreadZ", 5>;
-def Sequential : I64EnumAttrCase<"Sequential", 6>;
+def BlockX : I64EnumAttrCase<"BlockX", 0, "block_x">;
+def BlockY : I64EnumAttrCase<"BlockY", 1, "block_y">;
+def BlockZ : I64EnumAttrCase<"BlockZ", 2, "block_z">;
+def ThreadX : I64EnumAttrCase<"ThreadX", 3, "thread_x">;
+def ThreadY : I64EnumAttrCase<"ThreadY", 4, "thread_y">;
+def ThreadZ : I64EnumAttrCase<"ThreadZ", 5, "thread_z">;
+def Sequential : I64EnumAttrCase<"Sequential", 6, "sequential">;
 
-def ProcessorAttr : I64EnumAttr<"Processor", "processor for loop mapping", [
+def ProcessorEnum : I64EnumAttr<"Processor", "processor for loop mapping", [
     BlockX, BlockY, BlockZ, ThreadX, ThreadY, ThreadZ, Sequential]> {
   let cppNamespace = "::mlir::gpu";
 }
@@ -37,12 +37,15 @@ def ProcessorAttr : I64EnumAttr<"Processor", "processor for loop mapping", [
 //       substitution.
 // bound : An affine map that is used to compute the bound of the hardware
 //         id based on an upper bound of the number of iterations.
-def ParallelLoopDimMappingAttr :
-    StructAttr<"ParallelLoopDimMapping", GPU_Dialect,
-               [StructFieldAttr<"processor", ProcessorAttr>,
-                StructFieldAttr<"map", AffineMapAttr>,
-                StructFieldAttr<"bound", AffineMapAttr>]>;
-
+def ParallelLoopDimMappingAttr 
+    : GPU_Attr<"ParallelLoopDimMapping", "loop_dim_map"> {
+  let parameters = (ins
+    EnumParameter<ProcessorEnum>:$processor,
+    "AffineMap":$map,
+    "AffineMap":$bound
+  );
+  let assemblyFormat = "`<` struct(params) `>`";
+}
 
 def ParallelLoopMappingAttr :
     TypedArrayAttrBase<ParallelLoopDimMappingAttr,
