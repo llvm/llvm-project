@@ -337,9 +337,9 @@ collate<_CharT>::do_hash(const char_type* __lo, const char_type* __hi) const
     return static_cast<long>(__h);
 }
 
-_LIBCPP_EXTERN_TEMPLATE_EVEN_IN_DEBUG_MODE(class _LIBCPP_EXTERN_TEMPLATE_TYPE_VIS collate<char>)
+extern template class _LIBCPP_EXTERN_TEMPLATE_TYPE_VIS collate<char>;
 #ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
-_LIBCPP_EXTERN_TEMPLATE_EVEN_IN_DEBUG_MODE(class _LIBCPP_EXTERN_TEMPLATE_TYPE_VIS collate<wchar_t>)
+extern template class _LIBCPP_EXTERN_TEMPLATE_TYPE_VIS collate<wchar_t>;
 #endif
 
 // template <class CharT> class collate_byname;
@@ -1497,15 +1497,15 @@ codecvt_byname<_InternT, _ExternT, _StateT>::~codecvt_byname()
 }
 _LIBCPP_SUPPRESS_DEPRECATED_POP
 
-_LIBCPP_EXTERN_TEMPLATE_EVEN_IN_DEBUG_MODE(class _LIBCPP_EXTERN_TEMPLATE_TYPE_VIS codecvt_byname<char, char, mbstate_t>)
+extern template class _LIBCPP_EXTERN_TEMPLATE_TYPE_VIS codecvt_byname<char, char, mbstate_t>;
 #ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
-_LIBCPP_EXTERN_TEMPLATE_EVEN_IN_DEBUG_MODE(class _LIBCPP_EXTERN_TEMPLATE_TYPE_VIS codecvt_byname<wchar_t, char, mbstate_t>)
+extern template class _LIBCPP_EXTERN_TEMPLATE_TYPE_VIS codecvt_byname<wchar_t, char, mbstate_t>;
 #endif
-_LIBCPP_EXTERN_TEMPLATE_EVEN_IN_DEBUG_MODE(class _LIBCPP_DEPRECATED_IN_CXX20 _LIBCPP_EXTERN_TEMPLATE_TYPE_VIS codecvt_byname<char16_t, char, mbstate_t>) // deprecated in C++20
-_LIBCPP_EXTERN_TEMPLATE_EVEN_IN_DEBUG_MODE(class _LIBCPP_DEPRECATED_IN_CXX20 _LIBCPP_EXTERN_TEMPLATE_TYPE_VIS codecvt_byname<char32_t, char, mbstate_t>) // deprecated in C++20
+extern template class _LIBCPP_DEPRECATED_IN_CXX20 _LIBCPP_EXTERN_TEMPLATE_TYPE_VIS codecvt_byname<char16_t, char, mbstate_t>; // deprecated in C++20
+extern template class _LIBCPP_DEPRECATED_IN_CXX20 _LIBCPP_EXTERN_TEMPLATE_TYPE_VIS codecvt_byname<char32_t, char, mbstate_t>; // deprecated in C++20
 #ifndef _LIBCPP_HAS_NO_CHAR8_T
-_LIBCPP_EXTERN_TEMPLATE_EVEN_IN_DEBUG_MODE(class _LIBCPP_EXTERN_TEMPLATE_TYPE_VIS codecvt_byname<char16_t, char8_t, mbstate_t>) // C++20
-_LIBCPP_EXTERN_TEMPLATE_EVEN_IN_DEBUG_MODE(class _LIBCPP_EXTERN_TEMPLATE_TYPE_VIS codecvt_byname<char32_t, char8_t, mbstate_t>) // C++20
+extern template class _LIBCPP_EXTERN_TEMPLATE_TYPE_VIS codecvt_byname<char16_t, char8_t, mbstate_t>; // C++20
+extern template class _LIBCPP_EXTERN_TEMPLATE_TYPE_VIS codecvt_byname<char32_t, char8_t, mbstate_t>; // C++20
 #endif
 
 template <size_t _Np>

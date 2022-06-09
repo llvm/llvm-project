@@ -427,9 +427,6 @@ if (LIBCXXABI_BUILD_EXTERNAL_THREAD_LIBRARY)
   add_definitions(-D_LIBCPP_HAS_THREAD_LIBRARY_EXTERNAL)
 endif()
 
-# Prevent libc++abi from having library dependencies on libc++
-add_definitions(-D_LIBCPP_DISABLE_EXTERN_TEMPLATE)
-
 if (MSVC)
   add_definitions(-D_CRT_SECURE_NO_WARNINGS)
 endif()
