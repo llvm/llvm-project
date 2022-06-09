@@ -225,7 +225,9 @@ Constant *AA::getInitialValueForObj(Value &Obj, Type &Ty,
   if (isAllocationFn(&Obj, TLI))
     return getInitialValueOfAllocation(&cast<CallBase>(Obj), TLI, &Ty);
   auto *GV = dyn_cast<GlobalVariable>(&Obj);
-  if (!GV || !GV->hasLocalLinkage())
+  if (!GV)
+    return nullptr;
+  if (!GV->hasLocalLinkage() && !(GV->isConstant() && GV->hasInitializer()))
     return nullptr;
   if (!GV->hasInitializer())
     return UndefValue::get(&Ty);
@@ -242,24 +244,27 @@ bool AA::isValidInScope(const Value &V, const Function *Scope) {
   return false;
 }
 
-bool AA::isValidAtPosition(const Value &V, const Instruction &CtxI,
+bool AA::isValidAtPosition(const AA::ValueAndContext &VAC,
                            InformationCache &InfoCache) {
-  if (isa<Constant>(V) || &V == &CtxI)
+  if (isa<Constant>(VAC.getValue()) || VAC.getValue() == VAC.getCtxI())
     return true;
-  const Function *Scope = CtxI.getFunction();
-  if (auto *A = dyn_cast<Argument>(&V))
+  const Function *Scope = nullptr;
+  const Instruction *CtxI = VAC.getCtxI();
+  if (CtxI)
+    Scope = CtxI->getFunction();
+  if (auto *A = dyn_cast<Argument>(VAC.getValue()))
     return A->getParent() == Scope;
-  if (auto *I = dyn_cast<Instruction>(&V)) {
+  if (auto *I = dyn_cast<Instruction>(VAC.getValue())) {
     if (I->getFunction() == Scope) {
       if (const DominatorTree *DT =
               InfoCache.getAnalysisResultForFunction<DominatorTreeAnalysis>(
                   *Scope))
-        return DT->dominates(I, &CtxI);
+        return DT->dominates(I, CtxI);
       // Local dominance check mostly for the old PM passes.
-      if (I->getParent() == CtxI.getParent())
+      if (CtxI && I->getParent() == CtxI->getParent())
         return llvm::any_of(
             make_range(I->getIterator(), I->getParent()->end()),
-            [&](const Instruction &AfterI) { return &AfterI == &CtxI; });
+            [&](const Instruction &AfterI) { return &AfterI == CtxI; });
     }
   }
   return false;
@@ -362,7 +367,8 @@ static bool getPotentialCopiesOfMemoryValue(
       return false;
     }
     if (auto *GV = dyn_cast<GlobalVariable>(Obj))
-      if (!GV->hasLocalLinkage()) {
+      if (!GV->hasLocalLinkage() &&
+          !(GV->isConstant() && GV->hasInitializer())) {
         LLVM_DEBUG(dbgs() << "Underlying object is global with external "
                              "linkage, not supported yet: "
                           << *Obj << "\n";);
@@ -1019,9 +1025,11 @@ Optional<Constant *>
 Attributor::getAssumedConstant(const IRPosition &IRP,
                                const AbstractAttribute &AA,
                                bool &UsedAssumedInformation) {
+  if (auto *C = dyn_cast<Constant>(&IRP.getAssociatedValue()))
+    return C;
   // First check all callbacks provided by outside AAs. If any of them returns
   // a non-null value that is different from the associated value, or None, we
-  // assume it's simpliied.
+  // assume it's simplified.
   for (auto &CB : SimplificationCallbacks.lookup(IRP)) {
     Optional<Value *> SimplifiedV = CB(IRP, &AA, UsedAssumedInformation);
     if (!SimplifiedV.hasValue())
@@ -1059,7 +1067,7 @@ Attributor::getAssumedSimplified(const IRPosition &IRP,
                                  bool &UsedAssumedInformation) {
   // First check all callbacks provided by outside AAs. If any of them returns
   // a non-null value that is different from the associated value, or None, we
-  // assume it's simpliied.
+  // assume it's simplified.
   for (auto &CB : SimplificationCallbacks.lookup(IRP))
     return CB(IRP, AA, UsedAssumedInformation);
 
@@ -1909,7 +1917,8 @@ ChangeStatus Attributor::cleanupIR() {
                     << ToBeDeletedBlocks.size() << " blocks and "
                     << ToBeDeletedInsts.size() << " instructions and "
                     << ToBeChangedValues.size() << " values and "
-                    << ToBeChangedUses.size() << " uses. "
+                    << ToBeChangedUses.size() << " uses. To insert "
+                    << ToBeChangedToUnreachableInsts.size() << " unreachables."
                     << "Preserve manifest added " << ManifestAddedBlocks.size()
                     << " blocks\n");
 
@@ -1929,7 +1938,7 @@ ChangeStatus Attributor::cleanupIR() {
 
     Instruction *I = dyn_cast<Instruction>(U->getUser());
     assert((!I || isRunOn(*I->getFunction())) &&
-           "Cannot replace an invoke outside the current SCC!");
+           "Cannot replace an instruction outside the current SCC!");
 
     // Do not replace uses in returns if the value is a must-tail call we will
     // not delete.
@@ -1994,8 +2003,12 @@ ChangeStatus Attributor::cleanupIR() {
     for (auto &U : OldV->uses())
       if (Entry.second || !U.getUser()->isDroppable())
         Uses.push_back(&U);
-    for (Use *U : Uses)
+    for (Use *U : Uses) {
+      if (auto *I = dyn_cast<Instruction>(U->getUser()))
+        if (!isRunOn(*I->getFunction()))
+          continue;
       ReplaceUse(U, NewV);
+    }
   }
 
   for (auto &V : InvokeWithDeadSuccessor)
@@ -3096,8 +3109,8 @@ raw_ostream &llvm::operator<<(raw_ostream &OS,
   if (!S.isValidState())
     OS << "full-set";
   else {
-    for (auto &it : S.getAssumedSet())
-      OS << it << ", ";
+    for (auto &It : S.getAssumedSet())
+      OS << It << ", ";
     if (S.undefIsContained())
       OS << "undef ";
   }

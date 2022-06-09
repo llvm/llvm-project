@@ -60,26 +60,27 @@ CoverageMappingModuleGen::setUpCoverageCallbacks(Preprocessor &PP) {
   return CoverageInfo;
 }
 
-void CoverageSourceInfo::AddSkippedRange(SourceRange Range) {
+void CoverageSourceInfo::AddSkippedRange(SourceRange Range,
+                                         SkippedRange::Kind RangeKind) {
   if (EmptyLineCommentCoverage && !SkippedRanges.empty() &&
       PrevTokLoc == SkippedRanges.back().PrevTokLoc &&
       SourceMgr.isWrittenInSameFile(SkippedRanges.back().Range.getEnd(),
                                     Range.getBegin()))
     SkippedRanges.back().Range.setEnd(Range.getEnd());
   else
-    SkippedRanges.push_back({Range, PrevTokLoc});
+    SkippedRanges.push_back({Range, RangeKind, PrevTokLoc});
 }
 
 void CoverageSourceInfo::SourceRangeSkipped(SourceRange Range, SourceLocation) {
-  AddSkippedRange(Range);
+  AddSkippedRange(Range, SkippedRange::PPIfElse);
 }
 
 void CoverageSourceInfo::HandleEmptyline(SourceRange Range) {
-  AddSkippedRange(Range);
+  AddSkippedRange(Range, SkippedRange::EmptyLine);
 }
 
 bool CoverageSourceInfo::HandleComment(Preprocessor &PP, SourceRange Range) {
-  AddSkippedRange(Range);
+  AddSkippedRange(Range, SkippedRange::Comment);
   return false;
 }
 
@@ -335,6 +336,8 @@ public:
   /// This shrinks the skipped range if it spans a line that contains a
   /// non-comment token. If shrinking the skipped range would make it empty,
   /// this returns None.
+  /// Note this function can potentially be expensive because
+  /// getSpellingLineNumber uses getLineNumber, which is expensive.
   Optional<SpellingRegion> adjustSkippedRange(SourceManager &SM,
                                               SourceLocation LocStart,
                                               SourceLocation LocEnd,
@@ -382,8 +385,13 @@ public:
       auto CovFileID = getCoverageFileID(LocStart);
       if (!CovFileID)
         continue;
-      Optional<SpellingRegion> SR =
-          adjustSkippedRange(SM, LocStart, LocEnd, I.PrevTokLoc, I.NextTokLoc);
+      Optional<SpellingRegion> SR;
+      if (I.isComment())
+        SR = adjustSkippedRange(SM, LocStart, LocEnd, I.PrevTokLoc,
+                                I.NextTokLoc);
+      else if (I.isPPIfElse() || I.isEmptyLine())
+        SR = {SM, LocStart, LocEnd};
+
       if (!SR.hasValue())
         continue;
       auto Region = CounterMappingRegion::makeSkipped(
