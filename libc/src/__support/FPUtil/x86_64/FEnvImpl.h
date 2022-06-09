@@ -73,7 +73,7 @@ static inline uint16_t get_status_value_for_except(int excepts) {
   // bit flags in the control registers.
   return (excepts & FE_INVALID ? ExceptionFlags::INVALID : 0) |
 #ifdef __FE_DENORM
-         (excepts & __FE_DENORM ? ExceptionFlags::Denormal : 0) |
+         (excepts & __FE_DENORM ? ExceptionFlags::DENORMAL : 0) |
 #endif // __FE_DENORM
          (excepts & FE_DIVBYZERO ? ExceptionFlags::DIV_BY_ZERO : 0) |
          (excepts & FE_OVERFLOW ? ExceptionFlags::OVERFLOW : 0) |
@@ -84,7 +84,7 @@ static inline uint16_t get_status_value_for_except(int excepts) {
 static inline int exception_status_to_macro(uint16_t status) {
   return (status & ExceptionFlags::INVALID ? FE_INVALID : 0) |
 #ifdef __FE_DENORM
-         (status & ExceptionFlags::Denormal ? __FE_DENORM : 0) |
+         (status & ExceptionFlags::DENORMAL ? __FE_DENORM : 0) |
 #endif // __FE_DENORM
          (status & ExceptionFlags::DIV_BY_ZERO ? FE_DIVBYZERO : 0) |
          (status & ExceptionFlags::OVERFLOW ? FE_OVERFLOW : 0) |
@@ -195,7 +195,7 @@ static inline int disable_except(int excepts) {
 }
 
 static inline int get_except() {
-  uint16_t mxcsr = internal::get_mxcsr();
+  uint16_t mxcsr = static_cast<uint16_t>(internal::get_mxcsr());
   uint16_t enabled_excepts = ~(mxcsr >> 7) & 0x3F;
   return internal::exception_status_to_macro(enabled_excepts);
 }
@@ -273,8 +273,8 @@ static inline int raise_except(int excepts) {
   if (status_value & internal::ExceptionFlags::INEXACT)
     raise_helper(internal::ExceptionFlags::INEXACT);
 #ifdef __FE_DENORM
-  if (statusValue & internal::ExceptionFlags::Denormal) {
-    raiseHelper(internal::ExceptionFlags::Denormal);
+  if (status_value & internal::ExceptionFlags::DENORMAL) {
+    raise_helper(internal::ExceptionFlags::DENORMAL);
   }
 #endif // __FE_DENORM
 
