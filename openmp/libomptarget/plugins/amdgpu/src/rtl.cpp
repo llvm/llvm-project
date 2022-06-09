@@ -282,6 +282,16 @@ static void callbackQueue(hsa_status_t status, hsa_queue_t *source,
 
 namespace core {
 namespace {
+
+bool checkResult(hsa_status_t Err, const char *ErrMsg) {
+  if (Err == HSA_STATUS_SUCCESS)
+    return true;
+
+  REPORT("%s", ErrMsg);
+  REPORT("%s", get_error_string(Err));
+  return false;
+}
+
 void packet_store_release(uint32_t *packet, uint16_t header, uint16_t rest) {
   __atomic_store_n(packet, header | (rest << 16), __ATOMIC_RELEASE);
 }
@@ -540,6 +550,256 @@ public:
   hsa_status_t freesignalpool_memcpy_h2d(void *dest, void *src, size_t size,
                                          int32_t deviceId) {
     return freesignalpool_memcpy(dest, src, size, impl_memcpy_h2d, deviceId);
+  }
+
+  static void printDeviceInfo(int32_t device_id, hsa_agent_t agent) {
+    char TmpChar[1000];
+    uint16_t major, minor;
+    uint32_t TmpUInt;
+    uint32_t TmpUInt2;
+    uint32_t CacheSize[4];
+    bool TmpBool;
+    uint16_t workgroupMaxDim[3];
+    hsa_dim3_t gridMaxDim;
+
+    // Getting basic information about HSA and Device
+    core::checkResult(
+        hsa_system_get_info(HSA_SYSTEM_INFO_VERSION_MAJOR, &major),
+        "Error from hsa_system_get_info when obtaining "
+        "HSA_SYSTEM_INFO_VERSION_MAJOR\n");
+    core::checkResult(
+        hsa_system_get_info(HSA_SYSTEM_INFO_VERSION_MINOR, &minor),
+        "Error from hsa_system_get_info when obtaining "
+        "HSA_SYSTEM_INFO_VERSION_MINOR\n");
+    printf("    HSA Runtime Version: \t\t%u.%u \n", major, minor);
+    printf("    HSA OpenMP Device Number: \t\t%d \n", device_id);
+    core::checkResult(
+        hsa_agent_get_info(
+            agent, (hsa_agent_info_t)HSA_AMD_AGENT_INFO_PRODUCT_NAME, TmpChar),
+        "Error returned from hsa_agent_get_info when obtaining "
+        "HSA_AMD_AGENT_INFO_PRODUCT_NAME\n");
+    printf("    Product Name: \t\t\t%s \n", TmpChar);
+    core::checkResult(hsa_agent_get_info(agent, HSA_AGENT_INFO_NAME, TmpChar),
+                      "Error returned from hsa_agent_get_info when obtaining "
+                      "HSA_AGENT_INFO_NAME\n");
+    printf("    Device Name: \t\t\t%s \n", TmpChar);
+    core::checkResult(
+        hsa_agent_get_info(agent, HSA_AGENT_INFO_VENDOR_NAME, TmpChar),
+        "Error returned from hsa_agent_get_info when obtaining "
+        "HSA_AGENT_INFO_NAME\n");
+    printf("    Vendor Name: \t\t\t%s \n", TmpChar);
+    hsa_device_type_t devType;
+    core::checkResult(
+        hsa_agent_get_info(agent, HSA_AGENT_INFO_DEVICE, &devType),
+        "Error returned from hsa_agent_get_info when obtaining "
+        "HSA_AGENT_INFO_DEVICE\n");
+    printf("    Device Type: \t\t\t%s \n",
+           devType == HSA_DEVICE_TYPE_CPU
+               ? "CPU"
+               : (devType == HSA_DEVICE_TYPE_GPU
+                      ? "GPU"
+                      : (devType == HSA_DEVICE_TYPE_DSP ? "DSP" : "UNKNOWN")));
+    core::checkResult(
+        hsa_agent_get_info(agent, HSA_AGENT_INFO_QUEUES_MAX, &TmpUInt),
+        "Error returned from hsa_agent_get_info when obtaining "
+        "HSA_AGENT_INFO_QUEUES_MAX\n");
+    printf("    Max Queues: \t\t\t%u \n", TmpUInt);
+    core::checkResult(
+        hsa_agent_get_info(agent, HSA_AGENT_INFO_QUEUE_MIN_SIZE, &TmpUInt),
+        "Error returned from hsa_agent_get_info when obtaining "
+        "HSA_AGENT_INFO_QUEUE_MIN_SIZE\n");
+    printf("    Queue Min Size: \t\t\t%u \n", TmpUInt);
+    core::checkResult(
+        hsa_agent_get_info(agent, HSA_AGENT_INFO_QUEUE_MAX_SIZE, &TmpUInt),
+        "Error returned from hsa_agent_get_info when obtaining "
+        "HSA_AGENT_INFO_QUEUE_MAX_SIZE\n");
+    printf("    Queue Max Size: \t\t\t%u \n", TmpUInt);
+
+    // Getting cache information
+    printf("    Cache:\n");
+
+    // FIXME: This is deprecated according to HSA documentation. But using
+    // hsa_agent_iterate_caches and hsa_cache_get_info breaks execution during
+    // runtime.
+    core::checkResult(
+        hsa_agent_get_info(agent, HSA_AGENT_INFO_CACHE_SIZE, CacheSize),
+        "Error returned from hsa_agent_get_info when obtaining "
+        "HSA_AGENT_INFO_CACHE_SIZE\n");
+
+    for (int i = 0; i < 4; i++) {
+      if (CacheSize[i]) {
+        printf("      L%u: \t\t\t\t%u bytes\n", i, CacheSize[i]);
+      }
+    }
+
+    core::checkResult(
+        hsa_agent_get_info(agent,
+                           (hsa_agent_info_t)HSA_AMD_AGENT_INFO_CACHELINE_SIZE,
+                           &TmpUInt),
+        "Error returned from hsa_agent_get_info when obtaining "
+        "HSA_AMD_AGENT_INFO_CACHELINE_SIZE\n");
+    printf("    Cacheline Size: \t\t\t%u \n", TmpUInt);
+    core::checkResult(
+        hsa_agent_get_info(
+            agent, (hsa_agent_info_t)HSA_AMD_AGENT_INFO_MAX_CLOCK_FREQUENCY,
+            &TmpUInt),
+        "Error returned from hsa_agent_get_info when obtaining "
+        "HSA_AMD_AGENT_INFO_MAX_CLOCK_FREQUENCY\n");
+    printf("    Max Clock Freq(MHz): \t\t%u \n", TmpUInt);
+    core::checkResult(
+        hsa_agent_get_info(
+            agent, (hsa_agent_info_t)HSA_AMD_AGENT_INFO_COMPUTE_UNIT_COUNT,
+            &TmpUInt),
+        "Error returned from hsa_agent_get_info when obtaining "
+        "HSA_AMD_AGENT_INFO_COMPUTE_UNIT_COUNT\n");
+    printf("    Compute Units: \t\t\t%u \n", TmpUInt);
+    core::checkResult(hsa_agent_get_info(
+                          agent,
+                          (hsa_agent_info_t)HSA_AMD_AGENT_INFO_NUM_SIMDS_PER_CU,
+                          &TmpUInt),
+                      "Error returned from hsa_agent_get_info when obtaining "
+                      "HSA_AMD_AGENT_INFO_NUM_SIMDS_PER_CU\n");
+    printf("    SIMD per CU: \t\t\t%u \n", TmpUInt);
+    core::checkResult(
+        hsa_agent_get_info(agent, HSA_AGENT_INFO_FAST_F16_OPERATION, &TmpBool),
+        "Error returned from hsa_agent_get_info when obtaining "
+        "HSA_AMD_AGENT_INFO_NUM_SIMDS_PER_CU\n");
+    printf("    Fast F16 Operation: \t\t%s \n", (TmpBool ? "TRUE" : "FALSE"));
+    core::checkResult(
+        hsa_agent_get_info(agent, HSA_AGENT_INFO_WAVEFRONT_SIZE, &TmpUInt2),
+        "Error returned from hsa_agent_get_info when obtaining "
+        "HSA_AGENT_INFO_WAVEFRONT_SIZE\n");
+    printf("    Wavefront Size: \t\t\t%u \n", TmpUInt2);
+    core::checkResult(
+        hsa_agent_get_info(agent, HSA_AGENT_INFO_WORKGROUP_MAX_SIZE, &TmpUInt),
+        "Error returned from hsa_agent_get_info when obtaining "
+        "HSA_AGENT_INFO_WORKGROUP_MAX_SIZE\n");
+    printf("    Workgroup Max Size: \t\t%u \n", TmpUInt);
+    core::checkResult(hsa_agent_get_info(agent,
+                                         HSA_AGENT_INFO_WORKGROUP_MAX_DIM,
+                                         workgroupMaxDim),
+                      "Error returned from hsa_agent_get_info when obtaining "
+                      "HSA_AGENT_INFO_WORKGROUP_MAX_DIM\n");
+    printf("    Workgroup Max Size per Dimension:\n");
+    printf("      x: \t\t\t\t%u\n", workgroupMaxDim[0]);
+    printf("      y: \t\t\t\t%u\n", workgroupMaxDim[1]);
+    printf("      z: \t\t\t\t%u\n", workgroupMaxDim[2]);
+    core::checkResult(hsa_agent_get_info(
+                          agent,
+                          (hsa_agent_info_t)HSA_AMD_AGENT_INFO_MAX_WAVES_PER_CU,
+                          &TmpUInt),
+                      "Error returned from hsa_agent_get_info when obtaining "
+                      "HSA_AMD_AGENT_INFO_MAX_WAVES_PER_CU\n");
+    printf("    Max Waves Per CU: \t\t\t%u \n", TmpUInt);
+    printf("    Max Work-item Per CU: \t\t%u \n", TmpUInt * TmpUInt2);
+    core::checkResult(
+        hsa_agent_get_info(agent, HSA_AGENT_INFO_GRID_MAX_SIZE, &TmpUInt),
+        "Error returned from hsa_agent_get_info when obtaining "
+        "HSA_AGENT_INFO_GRID_MAX_SIZE\n");
+    printf("    Grid Max Size: \t\t\t%u \n", TmpUInt);
+    core::checkResult(
+        hsa_agent_get_info(agent, HSA_AGENT_INFO_GRID_MAX_DIM, &gridMaxDim),
+        "Error returned from hsa_agent_get_info when obtaining "
+        "HSA_AGENT_INFO_GRID_MAX_DIM\n");
+    printf("    Grid Max Size per Dimension: \t\t\n");
+    printf("      x: \t\t\t\t%u\n", gridMaxDim.x);
+    printf("      y: \t\t\t\t%u\n", gridMaxDim.y);
+    printf("      z: \t\t\t\t%u\n", gridMaxDim.z);
+    core::checkResult(
+        hsa_agent_get_info(agent, HSA_AGENT_INFO_FBARRIER_MAX_SIZE, &TmpUInt),
+        "Error returned from hsa_agent_get_info when obtaining "
+        "HSA_AGENT_INFO_FBARRIER_MAX_SIZE\n");
+    printf("    Max fbarriers/Workgrp: \t\t%u\n", TmpUInt);
+
+    printf("    Memory Pools:\n");
+    auto CB_mem = [](hsa_amd_memory_pool_t region, void *data) -> hsa_status_t {
+      std::string TmpStr;
+      size_t size;
+      bool alloc, access;
+      hsa_amd_segment_t segment;
+      hsa_amd_memory_pool_global_flag_t globalFlags;
+      core::checkResult(
+          hsa_amd_memory_pool_get_info(
+              region, HSA_AMD_MEMORY_POOL_INFO_GLOBAL_FLAGS, &globalFlags),
+          "Error returned from hsa_amd_memory_pool_get_info when obtaining "
+          "HSA_AMD_MEMORY_POOL_INFO_GLOBAL_FLAGS\n");
+      core::checkResult(hsa_amd_memory_pool_get_info(
+                            region, HSA_AMD_MEMORY_POOL_INFO_SEGMENT, &segment),
+                        "Error returned from hsa_amd_memory_pool_get_info when "
+                        "obtaining HSA_AMD_MEMORY_POOL_INFO_SEGMENT\n");
+
+      switch (segment) {
+      case HSA_AMD_SEGMENT_GLOBAL:
+        TmpStr = "GLOBAL; FLAGS: ";
+        if (HSA_AMD_MEMORY_POOL_GLOBAL_FLAG_KERNARG_INIT & globalFlags)
+          TmpStr += "KERNARG, ";
+        if (HSA_AMD_MEMORY_POOL_GLOBAL_FLAG_FINE_GRAINED & globalFlags)
+          TmpStr += "FINE GRAINED, ";
+        if (HSA_AMD_MEMORY_POOL_GLOBAL_FLAG_COARSE_GRAINED & globalFlags)
+          TmpStr += "COARSE GRAINED, ";
+        break;
+      case HSA_AMD_SEGMENT_READONLY:
+        TmpStr = "READONLY";
+        break;
+      case HSA_AMD_SEGMENT_PRIVATE:
+        TmpStr = "PRIVATE";
+        break;
+      case HSA_AMD_SEGMENT_GROUP:
+        TmpStr = "GROUP";
+        break;
+      }
+      printf("      Pool %s: \n", TmpStr.c_str());
+
+      core::checkResult(hsa_amd_memory_pool_get_info(
+                            region, HSA_AMD_MEMORY_POOL_INFO_SIZE, &size),
+                        "Error returned from hsa_amd_memory_pool_get_info when "
+                        "obtaining HSA_AMD_MEMORY_POOL_INFO_SIZE\n");
+      printf("        Size: \t\t\t\t %zu bytes\n", size);
+      core::checkResult(
+          hsa_amd_memory_pool_get_info(
+              region, HSA_AMD_MEMORY_POOL_INFO_RUNTIME_ALLOC_ALLOWED, &alloc),
+          "Error returned from hsa_amd_memory_pool_get_info when obtaining "
+          "HSA_AMD_MEMORY_POOL_INFO_RUNTIME_ALLOC_ALLOWED\n");
+      printf("        Allocatable: \t\t\t %s\n", (alloc ? "TRUE" : "FALSE"));
+      core::checkResult(
+          hsa_amd_memory_pool_get_info(
+              region, HSA_AMD_MEMORY_POOL_INFO_RUNTIME_ALLOC_GRANULE, &size),
+          "Error returned from hsa_amd_memory_pool_get_info when obtaining "
+          "HSA_AMD_MEMORY_POOL_INFO_RUNTIME_ALLOC_GRANULE\n");
+      printf("        Runtime Alloc Granule: \t\t %zu bytes\n", size);
+      core::checkResult(
+          hsa_amd_memory_pool_get_info(
+              region, HSA_AMD_MEMORY_POOL_INFO_RUNTIME_ALLOC_ALIGNMENT, &size),
+          "Error returned from hsa_amd_memory_pool_get_info when obtaining "
+          "HSA_AMD_MEMORY_POOL_INFO_RUNTIME_ALLOC_ALIGNMENT\n");
+      printf("        Runtime Alloc alignment: \t %zu bytes\n", size);
+      core::checkResult(
+          hsa_amd_memory_pool_get_info(
+              region, HSA_AMD_MEMORY_POOL_INFO_ACCESSIBLE_BY_ALL, &access),
+          "Error returned from hsa_amd_memory_pool_get_info when obtaining "
+          "HSA_AMD_MEMORY_POOL_INFO_ACCESSIBLE_BY_ALL\n");
+      printf("        Accessable by all: \t\t %s\n",
+             (access ? "TRUE" : "FALSE"));
+
+      return HSA_STATUS_SUCCESS;
+    };
+    // Iterate over all the memory regions for this agent. Get the memory region
+    // type and size
+    hsa_amd_agent_iterate_memory_pools(agent, CB_mem, nullptr);
+
+    printf("    ISAs:\n");
+    auto CB_isas = [](hsa_isa_t isa, void *data) -> hsa_status_t {
+      char TmpChar[1000];
+      core::checkResult(hsa_isa_get_info_alt(isa, HSA_ISA_INFO_NAME, TmpChar),
+                        "Error returned from hsa_isa_get_info_alt when "
+                        "obtaining HSA_ISA_INFO_NAME\n");
+      printf("        Name: \t\t\t\t %s\n", TmpChar);
+
+      return HSA_STATUS_SUCCESS;
+    };
+    // Iterate over all the memory regions for this agent. Get the memory region
+    // type and size
+    hsa_agent_iterate_isas(agent, CB_isas, nullptr);
   }
 
   // Record entry point associated with device
@@ -2338,4 +2598,12 @@ int32_t __tgt_rtl_synchronize(int32_t device_id, __tgt_async_info *AsyncInfo) {
   }
   return OFFLOAD_SUCCESS;
 }
+
+void __tgt_rtl_print_device_info(int32_t device_id) {
+  // TODO: Assertion to see if device_id is correct
+  // NOTE: We don't need to set context for print device info.
+
+  DeviceInfo.printDeviceInfo(device_id, DeviceInfo.HSAAgents[device_id]);
+}
+
 } // extern "C"
