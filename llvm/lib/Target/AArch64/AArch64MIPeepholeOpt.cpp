@@ -84,24 +84,19 @@ struct AArch64MIPeepholeOpt : public MachineFunctionPass {
   ///     %dst = <Instr>ri %tmp (encode half IMM) [...]
   template <typename T>
   bool splitTwoPartImm(MachineInstr &MI,
-                       SmallSetVector<MachineInstr *, 8> &ToBeRemoved,
                        SplitAndOpcFunc<T> SplitAndOpc, BuildMIFunc BuildInstr);
 
   bool checkMovImmInstr(MachineInstr &MI, MachineInstr *&MovMI,
                         MachineInstr *&SubregToRegMI);
 
   template <typename T>
-  bool visitADDSUB(unsigned PosOpc, unsigned NegOpc, MachineInstr &MI,
-                   SmallSetVector<MachineInstr *, 8> &ToBeRemoved);
+  bool visitADDSUB(unsigned PosOpc, unsigned NegOpc, MachineInstr &MI);
   template <typename T>
-  bool visitADDSSUBS(OpcodePair PosOpcs, OpcodePair NegOpcs, MachineInstr &MI,
-                     SmallSetVector<MachineInstr *, 8> &ToBeRemoved);
+  bool visitADDSSUBS(OpcodePair PosOpcs, OpcodePair NegOpcs, MachineInstr &MI);
 
   template <typename T>
-  bool visitAND(unsigned Opc, MachineInstr &MI,
-                SmallSetVector<MachineInstr *, 8> &ToBeRemoved);
-  bool visitORR(MachineInstr &MI,
-                SmallSetVector<MachineInstr *, 8> &ToBeRemoved);
+  bool visitAND(unsigned Opc, MachineInstr &MI);
+  bool visitORR(MachineInstr &MI);
   bool runOnMachineFunction(MachineFunction &MF) override;
 
   StringRef getPassName() const override {
@@ -162,8 +157,7 @@ static bool splitBitmaskImm(T Imm, unsigned RegSize, T &Imm1Enc, T &Imm2Enc) {
 
 template <typename T>
 bool AArch64MIPeepholeOpt::visitAND(
-    unsigned Opc, MachineInstr &MI,
-    SmallSetVector<MachineInstr *, 8> &ToBeRemoved) {
+    unsigned Opc, MachineInstr &MI) {
   // Try below transformation.
   //
   // MOVi32imm + ANDWrr ==> ANDWri + ANDWri
@@ -175,7 +169,7 @@ bool AArch64MIPeepholeOpt::visitAND(
   // mov + and instructions.
 
   return splitTwoPartImm<T>(
-      MI, ToBeRemoved,
+      MI,
       [Opc](T Imm, unsigned RegSize, T &Imm0, T &Imm1) -> Optional<OpcodePair> {
         if (splitBitmaskImm(Imm, RegSize, Imm0, Imm1))
           return std::make_pair(Opc, Opc);
@@ -195,8 +189,7 @@ bool AArch64MIPeepholeOpt::visitAND(
       });
 }
 
-bool AArch64MIPeepholeOpt::visitORR(
-    MachineInstr &MI, SmallSetVector<MachineInstr *, 8> &ToBeRemoved) {
+bool AArch64MIPeepholeOpt::visitORR(MachineInstr &MI) {
   // Check this ORR comes from below zero-extend pattern.
   //
   // def : Pat<(i64 (zext GPR32:$src)),
@@ -242,7 +235,7 @@ bool AArch64MIPeepholeOpt::visitORR(
     BuildMI(*SrcMI->getParent(), SrcMI, SrcMI->getDebugLoc(),
             TII->get(AArch64::FMOVSWr), SrcMI->getOperand(0).getReg())
         .addReg(CpySrc);
-    ToBeRemoved.insert(SrcMI);
+    SrcMI->eraseFromParent();
   }
   else if (SrcMI->getOpcode() <= TargetOpcode::GENERIC_OP_END)
     return false;
@@ -251,12 +244,8 @@ bool AArch64MIPeepholeOpt::visitORR(
   Register SrcReg = MI.getOperand(2).getReg();
   MRI->replaceRegWith(DefReg, SrcReg);
   MRI->clearKillFlags(SrcReg);
-  // replaceRegWith changes MI's definition register. Keep it for SSA form until
-  // deleting MI.
-  MI.getOperand(0).setReg(DefReg);
-  ToBeRemoved.insert(&MI);
-
   LLVM_DEBUG(dbgs() << "Removed: " << MI << "\n");
+  MI.eraseFromParent();
 
   return true;
 }
@@ -283,8 +272,7 @@ static bool splitAddSubImm(T Imm, unsigned RegSize, T &Imm0, T &Imm1) {
 
 template <typename T>
 bool AArch64MIPeepholeOpt::visitADDSUB(
-    unsigned PosOpc, unsigned NegOpc, MachineInstr &MI,
-    SmallSetVector<MachineInstr *, 8> &ToBeRemoved) {
+    unsigned PosOpc, unsigned NegOpc, MachineInstr &MI) {
   // Try below transformation.
   //
   // MOVi32imm + ADDWrr ==> ADDWri + ADDWri
@@ -299,7 +287,7 @@ bool AArch64MIPeepholeOpt::visitADDSUB(
   // multiple `mov` + `and/sub` instructions.
 
   return splitTwoPartImm<T>(
-      MI, ToBeRemoved,
+      MI,
       [PosOpc, NegOpc](T Imm, unsigned RegSize, T &Imm0,
                        T &Imm1) -> Optional<OpcodePair> {
         if (splitAddSubImm(Imm, RegSize, Imm0, Imm1))
@@ -326,12 +314,11 @@ bool AArch64MIPeepholeOpt::visitADDSUB(
 
 template <typename T>
 bool AArch64MIPeepholeOpt::visitADDSSUBS(
-    OpcodePair PosOpcs, OpcodePair NegOpcs, MachineInstr &MI,
-    SmallSetVector<MachineInstr *, 8> &ToBeRemoved) {
+    OpcodePair PosOpcs, OpcodePair NegOpcs, MachineInstr &MI) {
   // Try the same transformation as ADDSUB but with additional requirement
   // that the condition code usages are only for Equal and Not Equal
   return splitTwoPartImm<T>(
-      MI, ToBeRemoved,
+      MI,
       [PosOpcs, NegOpcs, &MI, &TRI = TRI, &MRI = MRI](
           T Imm, unsigned RegSize, T &Imm0, T &Imm1) -> Optional<OpcodePair> {
         OpcodePair OP;
@@ -407,7 +394,7 @@ bool AArch64MIPeepholeOpt::checkMovImmInstr(MachineInstr &MI,
 
 template <typename T>
 bool AArch64MIPeepholeOpt::splitTwoPartImm(
-    MachineInstr &MI, SmallSetVector<MachineInstr *, 8> &ToBeRemoved,
+    MachineInstr &MI,
     SplitAndOpcFunc<T> SplitAndOpc, BuildMIFunc BuildInstr) {
   unsigned RegSize = sizeof(T) * 8;
   assert((RegSize == 32 || RegSize == 64) &&
@@ -479,10 +466,10 @@ bool AArch64MIPeepholeOpt::splitTwoPartImm(
   }
 
   // Record the MIs need to be removed.
-  ToBeRemoved.insert(&MI);
+  MI.eraseFromParent();
   if (SubregToRegMI)
-    ToBeRemoved.insert(SubregToRegMI);
-  ToBeRemoved.insert(MovMI);
+    SubregToRegMI->eraseFromParent();
+  MovMI->eraseFromParent();
 
   return true;
 }
@@ -500,64 +487,56 @@ bool AArch64MIPeepholeOpt::runOnMachineFunction(MachineFunction &MF) {
   assert(MRI->isSSA() && "Expected to be run on SSA form!");
 
   bool Changed = false;
-  SmallSetVector<MachineInstr *, 8> ToBeRemoved;
 
   for (MachineBasicBlock &MBB : MF) {
-    for (MachineInstr &MI : MBB) {
+    for (MachineInstr &MI : make_early_inc_range(MBB)) {
       switch (MI.getOpcode()) {
       default:
         break;
       case AArch64::ANDWrr:
-        Changed = visitAND<uint32_t>(AArch64::ANDWri, MI, ToBeRemoved);
+        Changed = visitAND<uint32_t>(AArch64::ANDWri, MI);
         break;
       case AArch64::ANDXrr:
-        Changed = visitAND<uint64_t>(AArch64::ANDXri, MI, ToBeRemoved);
+        Changed = visitAND<uint64_t>(AArch64::ANDXri, MI);
         break;
       case AArch64::ORRWrs:
-        Changed = visitORR(MI, ToBeRemoved);
+        Changed = visitORR(MI);
         break;
       case AArch64::ADDWrr:
-        Changed = visitADDSUB<uint32_t>(AArch64::ADDWri, AArch64::SUBWri, MI,
-                                        ToBeRemoved);
+        Changed = visitADDSUB<uint32_t>(AArch64::ADDWri, AArch64::SUBWri, MI);
         break;
       case AArch64::SUBWrr:
-        Changed = visitADDSUB<uint32_t>(AArch64::SUBWri, AArch64::ADDWri, MI,
-                                        ToBeRemoved);
+        Changed = visitADDSUB<uint32_t>(AArch64::SUBWri, AArch64::ADDWri, MI);
         break;
       case AArch64::ADDXrr:
-        Changed = visitADDSUB<uint64_t>(AArch64::ADDXri, AArch64::SUBXri, MI,
-                                        ToBeRemoved);
+        Changed = visitADDSUB<uint64_t>(AArch64::ADDXri, AArch64::SUBXri, MI);
         break;
       case AArch64::SUBXrr:
-        Changed = visitADDSUB<uint64_t>(AArch64::SUBXri, AArch64::ADDXri, MI,
-                                        ToBeRemoved);
+        Changed = visitADDSUB<uint64_t>(AArch64::SUBXri, AArch64::ADDXri, MI);
         break;
       case AArch64::ADDSWrr:
         Changed = visitADDSSUBS<uint32_t>({AArch64::ADDWri, AArch64::ADDSWri},
                                           {AArch64::SUBWri, AArch64::SUBSWri},
-                                          MI, ToBeRemoved);
+                                          MI);
         break;
       case AArch64::SUBSWrr:
         Changed = visitADDSSUBS<uint32_t>({AArch64::SUBWri, AArch64::SUBSWri},
                                           {AArch64::ADDWri, AArch64::ADDSWri},
-                                          MI, ToBeRemoved);
+                                          MI);
         break;
       case AArch64::ADDSXrr:
         Changed = visitADDSSUBS<uint64_t>({AArch64::ADDXri, AArch64::ADDSXri},
                                           {AArch64::SUBXri, AArch64::SUBSXri},
-                                          MI, ToBeRemoved);
+                                          MI);
         break;
       case AArch64::SUBSXrr:
         Changed = visitADDSSUBS<uint64_t>({AArch64::SUBXri, AArch64::SUBSXri},
                                           {AArch64::ADDXri, AArch64::ADDSXri},
-                                          MI, ToBeRemoved);
+                                          MI);
         break;
       }
     }
   }
-
-  for (MachineInstr *MI : ToBeRemoved)
-    MI->eraseFromParent();
 
   return Changed;
 }
