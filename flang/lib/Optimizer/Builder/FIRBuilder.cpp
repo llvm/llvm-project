@@ -1216,3 +1216,17 @@ llvm::Optional<std::int64_t> fir::factory::getIntIfConstant(mlir::Value value) {
         return intAttr.getInt();
   return {};
 }
+
+mlir::Value fir::factory::genMaxWithZero(fir::FirOpBuilder &builder,
+                                         mlir::Location loc,
+                                         mlir::Value value) {
+  mlir::Value zero = builder.createIntegerConstant(loc, value.getType(), 0);
+  if (mlir::Operation *definingOp = value.getDefiningOp())
+    if (auto cst = mlir::dyn_cast<mlir::arith::ConstantOp>(definingOp))
+      if (auto intAttr = cst.getValue().dyn_cast<mlir::IntegerAttr>())
+        return intAttr.getInt() > 0 ? value : zero;
+  mlir::Value valueIsGreater = builder.create<mlir::arith::CmpIOp>(
+      loc, mlir::arith::CmpIPredicate::sgt, value, zero);
+  return builder.create<mlir::arith::SelectOp>(loc, valueIsGreater, value,
+                                               zero);
+}

@@ -1090,7 +1090,7 @@ static mlir::Value computeExtent(fir::FirOpBuilder &builder, mlir::Location loc,
   auto diff = builder.create<mlir::arith::SubIOp>(loc, idxTy, ub, lb);
   mlir::Value one = builder.createIntegerConstant(loc, idxTy, 1);
   auto rawExtent = builder.create<mlir::arith::AddIOp>(loc, idxTy, diff, one);
-  return Fortran::lower::genMaxWithZero(builder, loc, rawExtent);
+  return fir::factory::genMaxWithZero(builder, loc, rawExtent);
 }
 
 /// Lower explicit lower bounds into \p result. Does nothing if this is not an
@@ -1145,7 +1145,7 @@ lowerExplicitExtents(Fortran::lower::AbstractConverter &converter,
       mlir::Value ub = builder.createConvert(
           loc, idxTy, genScalarValue(converter, loc, expr, symMap, stmtCtx));
       if (lowerBounds.empty())
-        result.emplace_back(Fortran::lower::genMaxWithZero(builder, loc, ub));
+        result.emplace_back(fir::factory::genMaxWithZero(builder, loc, ub));
       else
         result.emplace_back(
             computeExtent(builder, loc, lowerBounds[spec.index()], ub));
@@ -1173,7 +1173,7 @@ lowerExplicitCharLen(Fortran::lower::AbstractConverter &converter,
   if (llvm::Optional<Fortran::lower::SomeExpr> lenExpr = box.getCharLenExpr())
     // If the length expression is negative, the length is zero. See F2018
     // 7.4.4.2 point 5.
-    return Fortran::lower::genMaxWithZero(
+    return fir::factory::genMaxWithZero(
         builder, loc,
         genScalarValue(converter, loc, *lenExpr, symMap, stmtCtx));
   return mlir::Value{};
@@ -1338,7 +1338,7 @@ void Fortran::lower::mapSymbolAttributes(
         Fortran::lower::SomeExpr highEx{*high};
         mlir::Value ub = genValue(highEx);
         ub = builder.createConvert(loc, idxTy, ub);
-        shapes.emplace_back(genMaxWithZero(builder, loc, ub));
+        shapes.emplace_back(fir::factory::genMaxWithZero(builder, loc, ub));
       } else if (spec->ubound().isColon()) {
         assert(box && "assumed bounds require a descriptor");
         mlir::Value dim =
@@ -1409,7 +1409,7 @@ void Fortran::lower::mapSymbolAttributes(
     mlir::Value rawLen = genValue(*charLen);
     // If the length expression is negative, the length is zero. See
     // F2018 7.4.4.2 point 5.
-    return genMaxWithZero(builder, loc, rawLen);
+    return fir::factory::genMaxWithZero(builder, loc, rawLen);
   };
 
   ba.match(
