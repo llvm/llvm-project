@@ -48,6 +48,7 @@ define signext i32 @foo() #1 personality ptr @__gxx_personality_v0 {
 ; CHECK-NEXT:    lw s1, 0(a0)
 ; CHECK-NEXT:    call __cxa_end_catch@plt
 ; CHECK-NEXT:    mv a0, s1
+; CHECK-NEXT:    addi sp, s0, -32
 ; CHECK-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
 ; CHECK-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
 ; CHECK-NEXT:    ld s1, 8(sp) # 8-byte Folded Reload
