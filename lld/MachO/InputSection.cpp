@@ -268,11 +268,6 @@ bool macho::isClassRefsSection(const InputSection *isec) {
          isec->getSegName() == segment_names::data;
 }
 
-bool macho::isEhFrameSection(const InputSection *isec) {
-  return isec->getName() == section_names::ehFrame &&
-         isec->getSegName() == segment_names::text;
-}
-
 std::string lld::toString(const InputSection *isec) {
   return (toString(isec->getFile()) + ":(" + isec->getName() + ")").str();
 }

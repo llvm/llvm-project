@@ -950,14 +950,8 @@ template <class LP> void Writer::createOutputSections() {
     StringRef segname = it.first.first;
     ConcatOutputSection *osec = it.second;
     assert(segname != segment_names::ld);
-    if (osec->isNeeded()) {
-      // See comment in ObjFile::splitEhFrames()
-      if (osec->name == section_names::ehFrame &&
-          segname == segment_names::text)
-        osec->align = target->wordSize;
-
+    if (osec->isNeeded())
       getOrCreateOutputSegment(segname)->addOutputSection(osec);
-    }
   }
 
   for (SyntheticSection *ssec : syntheticSections) {
