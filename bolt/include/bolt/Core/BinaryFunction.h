@@ -982,6 +982,15 @@ public:
     return const_cast<BinaryFunction *>(this)->getInstructionAtOffset(Offset);
   }
 
+  /// Return offset for the first instruction. If there is data at the
+  /// beginning of a function then offset of the first instruction could
+  /// be different from 0
+  uint64_t getFirstInstructionOffset() const {
+    if (Instructions.empty())
+      return 0;
+    return Instructions.begin()->first;
+  }
+
   /// Return jump table that covers a given \p Address in memory.
   JumpTable *getJumpTableContainingAddress(uint64_t Address) {
     auto JTI = JumpTables.upper_bound(Address);
