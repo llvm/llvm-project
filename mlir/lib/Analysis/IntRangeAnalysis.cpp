@@ -214,12 +214,24 @@ void detail::IntRangeAnalysisImpl::getSuccessorsForOperands(
     RegionBranchOpInterface branch, Optional<unsigned> sourceIndex,
     ArrayRef<LatticeElement<IntRangeLattice> *> operands,
     SmallVectorImpl<RegionSuccessor> &successors) {
-  auto toConstantAttr = [&branch](auto enumPair) -> Attribute {
-    Optional<APInt> maybeConstValue =
-        enumPair.value()->getValue().value.getConstantValue();
+  // Get a type with which to construct a constant.
+  auto getOperandType = [branch, sourceIndex](unsigned index) {
+    // The types of all return-like operations are the same.
+    if (!sourceIndex)
+      return branch->getOperand(index).getType();
 
-    if (maybeConstValue) {
-      return IntegerAttr::get(branch->getOperand(enumPair.index()).getType(),
+    for (Block &block : branch->getRegion(*sourceIndex)) {
+      Operation *terminator = block.getTerminator();
+      if (getRegionBranchSuccessorOperands(terminator, *sourceIndex))
+        return terminator->getOperand(index).getType();
+    }
+    return Type();
+  };
+
+  auto toConstantAttr = [&getOperandType](auto enumPair) -> Attribute {
+    if (Optional<APInt> maybeConstValue =
+            enumPair.value()->getValue().value.getConstantValue()) {
+      return IntegerAttr::get(getOperandType(enumPair.index()),
                               *maybeConstValue);
     }
     return {};
