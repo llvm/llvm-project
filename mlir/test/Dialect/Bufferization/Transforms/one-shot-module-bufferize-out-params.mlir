@@ -1,6 +1,6 @@
-// RUN: mlir-opt %s -one-shot-bufferize="bufferize-function-boundaries allow-return-allocs promote-buffer-results-to-out-params function-boundary-type-conversion=fully-dynamic-layout-map" -split-input-file | FileCheck %s
-// RUN: mlir-opt %s -one-shot-bufferize="bufferize-function-boundaries allow-return-allocs promote-buffer-results-to-out-params function-boundary-type-conversion=identity-layout-map" -split-input-file | FileCheck %s --check-prefix=CHECK-NO-LAYOUT
-// RUN: mlir-opt %s -one-shot-bufferize="bufferize-function-boundaries allow-return-allocs function-boundary-type-conversion=infer-layout-map" -split-input-file | FileCheck %s --check-prefix=CHECK-BASELINE
+// RUN: mlir-opt %s -one-shot-bufferize="bufferize-function-boundaries allow-return-allocs promote-buffer-results-to-out-params function-boundary-type-conversion=fully-dynamic-layout-map" -buffer-deallocation -split-input-file | FileCheck %s
+// RUN: mlir-opt %s -one-shot-bufferize="bufferize-function-boundaries allow-return-allocs promote-buffer-results-to-out-params function-boundary-type-conversion=identity-layout-map" -buffer-deallocation -split-input-file | FileCheck %s --check-prefix=CHECK-NO-LAYOUT
+// RUN: mlir-opt %s -one-shot-bufferize="bufferize-function-boundaries allow-return-allocs function-boundary-type-conversion=infer-layout-map" -buffer-deallocation -split-input-file | FileCheck %s --check-prefix=CHECK-BASELINE
 
 // Note: function-boundary-type-conversion=infer-layout-map with
 // promote-buffer-results-to-out-params is an unsupported combination.
