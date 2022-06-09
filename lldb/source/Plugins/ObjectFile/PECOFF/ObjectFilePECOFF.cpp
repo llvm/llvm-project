@@ -31,6 +31,7 @@
 #include "llvm/BinaryFormat/COFF.h"
 
 #include "llvm/Object/COFFImportFile.h"
+#include "llvm/Support/CRC.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/MemoryBuffer.h"
 
@@ -44,10 +45,42 @@ using namespace lldb_private;
 
 LLDB_PLUGIN_DEFINE(ObjectFilePECOFF)
 
+static bool GetDebugLinkContents(const llvm::object::COFFObjectFile &coff_obj,
+                                 std::string &gnu_debuglink_file,
+                                 uint32_t &gnu_debuglink_crc) {
+  static ConstString g_sect_name_gnu_debuglink(".gnu_debuglink");
+  for (const auto &section : coff_obj.sections()) {
+    auto name = section.getName();
+    if (!name) {
+      llvm::consumeError(name.takeError());
+      continue;
+    }
+    if (*name == g_sect_name_gnu_debuglink.GetStringRef()) {
+      auto content = section.getContents();
+      if (!content) {
+        llvm::consumeError(content.takeError());
+        return false;
+      }
+      DataExtractor data(
+          content->data(), content->size(),
+          coff_obj.isLittleEndian() ? eByteOrderLittle : eByteOrderBig, 4);
+      lldb::offset_t gnu_debuglink_offset = 0;
+      gnu_debuglink_file = data.GetCStr(&gnu_debuglink_offset);
+      // Align to the next 4-byte offset
+      gnu_debuglink_offset = llvm::alignTo(gnu_debuglink_offset, 4);
+      data.GetU32(&gnu_debuglink_offset, &gnu_debuglink_crc, 1);
+      return true;
+    }
+  }
+  return false;
+}
+
 static UUID GetCoffUUID(llvm::object::COFFObjectFile &coff_obj) {
   const llvm::codeview::DebugInfo *pdb_info = nullptr;
   llvm::StringRef pdb_file;
 
+  // First, prefer to use the PDB build id. LLD generates this even for mingw
+  // targets without PDB output, and it does not get stripped either.
   if (!coff_obj.getDebugPDBInfo(pdb_info, pdb_file) && pdb_info) {
     if (pdb_info->PDB70.CVSignature == llvm::OMF::Signature::PDB70) {
       UUID::CvRecordPdb70 info;
@@ -57,7 +90,26 @@ static UUID GetCoffUUID(llvm::object::COFFObjectFile &coff_obj) {
     }
   }
 
-  return UUID();
+  std::string gnu_debuglink_file;
+  uint32_t gnu_debuglink_crc;
+
+  // The GNU linker normally does not write a PDB build id (unless requested
+  // with the --build-id option), so we should fall back to using the crc
+  // from .gnu_debuglink if it exists, just like how ObjectFileELF does it.
+  if (!GetDebugLinkContents(coff_obj, gnu_debuglink_file, gnu_debuglink_crc)) {
+    // If there is no .gnu_debuglink section, then this may be an object
+    // containing DWARF debug info for .gnu_debuglink, so calculate the crc of
+    // the object itself.
+    auto raw_data = coff_obj.getData();
+    LLDB_SCOPED_TIMERF(
+        "Calculating module crc32 %s with size %" PRIu64 " KiB",
+        FileSpec(coff_obj.getFileName()).GetLastPathComponent().AsCString(),
+        static_cast<lldb::offset_t>(raw_data.size()) / 1024);
+    gnu_debuglink_crc = llvm::crc32(0, llvm::arrayRefFromStringRef(raw_data));
+  }
+  // Use 4 bytes of crc from the .gnu_debuglink section.
+  llvm::support::ulittle32_t data(gnu_debuglink_crc);
+  return UUID::fromData(&data, sizeof(data));
 }
 
 char ObjectFilePECOFF::ID;
@@ -868,6 +920,14 @@ UUID ObjectFilePECOFF::GetUUID() {
 
   m_uuid = GetCoffUUID(*m_binary);
   return m_uuid;
+}
+
+llvm::Optional<FileSpec> ObjectFilePECOFF::GetDebugLink() {
+  std::string gnu_debuglink_file;
+  uint32_t gnu_debuglink_crc;
+  if (GetDebugLinkContents(*m_binary, gnu_debuglink_file, gnu_debuglink_crc))
+    return FileSpec(gnu_debuglink_file);
+  return llvm::None;
 }
 
 uint32_t ObjectFilePECOFF::ParseDependentModules() {

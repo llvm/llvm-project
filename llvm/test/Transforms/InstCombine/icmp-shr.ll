@@ -594,13 +594,9 @@ define i1 @ashr_ugt_2(i4 %x) {
   ret i1 %r
 }
 
-; negative test
-; TODO: This is a sign-bit test, but we don't recognize the pattern.
-
 define i1 @ashr_ugt_3(i4 %x) {
 ; CHECK-LABEL: @ashr_ugt_3(
-; CHECK-NEXT:    [[S:%.*]] = ashr i4 [[X:%.*]], 1
-; CHECK-NEXT:    [[R:%.*]] = icmp ugt i4 [[S]], 3
+; CHECK-NEXT:    [[R:%.*]] = icmp slt i4 [[X:%.*]], 0
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %s = ashr i4 %x, 1
@@ -859,7 +855,6 @@ define i1 @ashr_ult_11(i4 %x) {
 }
 
 ; negative test
-; TODO: This is a sign-bit test, but we don't recognize the pattern.
 
 define i1 @ashr_ult_12(i4 %x) {
 ; CHECK-LABEL: @ashr_ult_12(

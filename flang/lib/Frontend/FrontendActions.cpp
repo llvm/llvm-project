@@ -90,7 +90,8 @@ bool CodeGenAction::beginSourceFileAction() {
   // Otherwise, generate an MLIR module from the input Fortran source
   assert(getCurrentInput().getKind().getLanguage() == Language::Fortran &&
          "Invalid input type - expecting a Fortran file");
-  bool res = runPrescan() && runParse() && runSemanticChecks();
+  bool res = runPrescan() && runParse() && runSemanticChecks() &&
+             generateRtTypeTables();
   if (!res)
     return res;
 

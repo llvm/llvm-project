@@ -628,6 +628,70 @@ genOMP(Fortran::lower::AbstractConverter &converter,
   }
 }
 
+static mlir::omp::ScheduleModifier
+translateModifier(const Fortran::parser::OmpScheduleModifierType &m) {
+  switch (m.v) {
+  case Fortran::parser::OmpScheduleModifierType::ModType::Monotonic:
+    return mlir::omp::ScheduleModifier::monotonic;
+  case Fortran::parser::OmpScheduleModifierType::ModType::Nonmonotonic:
+    return mlir::omp::ScheduleModifier::nonmonotonic;
+  case Fortran::parser::OmpScheduleModifierType::ModType::Simd:
+    return mlir::omp::ScheduleModifier::simd;
+  }
+  return mlir::omp::ScheduleModifier::none;
+}
+
+static mlir::omp::ScheduleModifier
+getScheduleModifier(const Fortran::parser::OmpScheduleClause &x) {
+  const auto &modifier =
+      std::get<std::optional<Fortran::parser::OmpScheduleModifier>>(x.t);
+  // The input may have the modifier any order, so we look for one that isn't
+  // SIMD. If modifier is not set at all, fall down to the bottom and return
+  // "none".
+  if (modifier) {
+    const auto &modType1 =
+        std::get<Fortran::parser::OmpScheduleModifier::Modifier1>(modifier->t);
+    if (modType1.v.v ==
+        Fortran::parser::OmpScheduleModifierType::ModType::Simd) {
+      const auto &modType2 = std::get<
+          std::optional<Fortran::parser::OmpScheduleModifier::Modifier2>>(
+          modifier->t);
+      if (modType2 &&
+          modType2->v.v !=
+              Fortran::parser::OmpScheduleModifierType::ModType::Simd)
+        return translateModifier(modType2->v);
+
+      return mlir::omp::ScheduleModifier::none;
+    }
+
+    return translateModifier(modType1.v);
+  }
+  return mlir::omp::ScheduleModifier::none;
+}
+
+static mlir::omp::ScheduleModifier
+getSIMDModifier(const Fortran::parser::OmpScheduleClause &x) {
+  const auto &modifier =
+      std::get<std::optional<Fortran::parser::OmpScheduleModifier>>(x.t);
+  // Either of the two possible modifiers in the input can be the SIMD modifier,
+  // so look in either one, and return simd if we find one. Not found = return
+  // "none".
+  if (modifier) {
+    const auto &modType1 =
+        std::get<Fortran::parser::OmpScheduleModifier::Modifier1>(modifier->t);
+    if (modType1.v.v == Fortran::parser::OmpScheduleModifierType::ModType::Simd)
+      return mlir::omp::ScheduleModifier::simd;
+
+    const auto &modType2 = std::get<
+        std::optional<Fortran::parser::OmpScheduleModifier::Modifier2>>(
+        modifier->t);
+    if (modType2 && modType2->v.v ==
+                        Fortran::parser::OmpScheduleModifierType::ModType::Simd)
+      return mlir::omp::ScheduleModifier::simd;
+  }
+  return mlir::omp::ScheduleModifier::none;
+}
+
 static void genOMP(Fortran::lower::AbstractConverter &converter,
                    Fortran::lower::pft::Evaluation &eval,
                    const Fortran::parser::OpenMPLoopConstruct &loopConstruct) {
@@ -783,6 +847,14 @@ static void genOMP(Fortran::lower::AbstractConverter &converter,
             context, omp::ClauseScheduleKind::Runtime));
         break;
       }
+      mlir::omp::ScheduleModifier scheduleModifier =
+          getScheduleModifier(scheduleClause->v);
+      if (scheduleModifier != mlir::omp::ScheduleModifier::none)
+        wsLoopOp.schedule_modifierAttr(
+            omp::ScheduleModifierAttr::get(context, scheduleModifier));
+      if (getSIMDModifier(scheduleClause->v) !=
+          mlir::omp::ScheduleModifier::none)
+        wsLoopOp.simd_modifierAttr(firOpBuilder.getUnitAttr());
     }
   }
   // In FORTRAN `nowait` clause occur at the end of `omp do` directive.
