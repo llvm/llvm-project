@@ -136,7 +136,7 @@ public:
   std::optional<char32_t> PrepareInput(
       const DataEdit &edit, std::optional<int> &remaining) {
     remaining.reset();
-    if (edit.descriptor == DataEdit::ListDirected) {
+    if (edit.IsListDirected()) {
       std::size_t byteCount{0};
       GetNextNonBlank(byteCount);
     } else {
