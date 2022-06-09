@@ -2751,6 +2751,8 @@ defm strict_vtable_pointers : BoolFOption<"strict-vtable-pointers",
             " overwriting polymorphic C++ objects">,
   NegFlag<SetFalse>>;
 def fstrict_overflow : Flag<["-"], "fstrict-overflow">, Group<f_Group>;
+def fdriver_only : Flag<["-"], "fdriver-only">, Flags<[NoXarchOption, CoreOption]>,
+  Group<Action_Group>, HelpText<"Only run the driver.">;
 def fsyntax_only : Flag<["-"], "fsyntax-only">,
   Flags<[NoXarchOption,CoreOption,CC1Option,FC1Option]>, Group<Action_Group>;
 def ftabstop_EQ : Joined<["-"], "ftabstop=">, Group<f_Group>;
