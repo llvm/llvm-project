@@ -18,6 +18,7 @@ Confirm that your CPU supports Intel PT
 and that your operating system is Linux.
 
 Check for the existence of this particular file on your Linux system
+
 ::
 
   $ cat /sys/bus/event_source/devices/intel_pt/type
@@ -42,6 +43,7 @@ This will generate a few files in the `<libipt-build>/lib`
 and `<libipt-build>/libipt/include` directories.
 
 Configure and build LLDB with Intel PT support
+
 ::
 
   $ cmake \
@@ -64,7 +66,9 @@ After turning it on, you can continue debugging, and at any breakpoint,
 you can inspect the instruction list.
 
 For example:
+
 ::
+
   lldb <target>
   > b main
   > run
@@ -98,7 +102,9 @@ which keeps the latest information.
 By default, LLDB uses a buffer of 4KB per thread,
 but you can change it by running.
 The size must be a power of 2 and at least 4KB.
+
 ::
+
   thread trace start all -s <size_in_bytes>
 
 For reference, a 1MB trace buffer can easily store around 5M instructions.
@@ -107,7 +113,9 @@ Printing more instructions
 --------------------------
 
 If you want to dump more instructions at a time, you can run
+
 ::
+
   thread trace dump instructions -c <count>
 
 Printing the instructions of another thread
@@ -115,7 +123,9 @@ Printing the instructions of another thread
 
 By default the current thread will be picked when dumping instructions,
 but you can do
+
 ::
+
   thread trace dump instructions <#thread index>
   #e.g.
   thread trace dump instructions 8
@@ -127,12 +137,16 @@ Crash Analysis
 
 What if you are debugging + tracing a process that crashes?
 Then you can just do
+
 ::
+
   thread trace dump instructions
 
 To inspect how it crashed! There's nothing special that you need to do.
 For example
+
 ::
+
     * thread #1, name = 'a.out', stop reason = signal SIGFPE: integer divide by zero
         frame #0: 0x00000000004009f1 a.out`main at main.cpp:8:14
       6       int x;
@@ -164,7 +178,9 @@ For that, the command trace load is useful.
 In order to use trace load, you need to first create a JSON file with
 the definition of the trace session.
 For example
+
 ::
+
   {
     "trace": {
       "type": "intel-pt",
@@ -206,7 +222,9 @@ For example
   }
 
 You can see the full schema by typing
+
 ::
+
   trace schema intel-pt
 
 The JSON file mainly contains all the shared libraries that
@@ -217,7 +235,9 @@ If the analysis is done on a different machines, these files need to be
 copied over and the “file” field should point to the
 location of the file relative to the JSON file.
 Once you have the JSON file and the module files in place, you can simple run
+
 ::
+
   lldb
   > trace load /path/to/json
   > thread trace dump instructions <optional thread index>
