@@ -2002,8 +2002,12 @@ ChangeStatus Attributor::cleanupIR() {
     for (auto &U : OldV->uses())
       if (Entry.second || !U.getUser()->isDroppable())
         Uses.push_back(&U);
-    for (Use *U : Uses)
+    for (Use *U : Uses) {
+      if (auto *I = dyn_cast<Instruction>(U->getUser()))
+        if (!isRunOn(*I->getFunction()))
+          continue;
       ReplaceUse(U, NewV);
+    }
   }
 
   for (auto &V : InvokeWithDeadSuccessor)
