@@ -44,23 +44,27 @@ getDesignatorNameIfDataRef(const Fortran::parser::Designator &designator) {
   return dataRef ? std::get_if<Fortran::parser::Name>(&dataRef->u) : nullptr;
 }
 
+static Fortran::semantics::Symbol *
+getOmpObjectSymbol(const Fortran::parser::OmpObject &ompObject) {
+  Fortran::semantics::Symbol *sym = nullptr;
+  std::visit(Fortran::common::visitors{
+                 [&](const Fortran::parser::Designator &designator) {
+                   if (const Fortran::parser::Name *name =
+                           getDesignatorNameIfDataRef(designator)) {
+                     sym = name->symbol;
+                   }
+                 },
+                 [&](const Fortran::parser::Name &name) { sym = name.symbol; }},
+             ompObject.u);
+  return sym;
+}
+
 template <typename T>
 static void createPrivateVarSyms(Fortran::lower::AbstractConverter &converter,
                                  const T *clause) {
-  Fortran::semantics::Symbol *sym = nullptr;
   const Fortran::parser::OmpObjectList &ompObjectList = clause->v;
   for (const Fortran::parser::OmpObject &ompObject : ompObjectList.v) {
-    std::visit(
-        Fortran::common::visitors{
-            [&](const Fortran::parser::Designator &designator) {
-              if (const Fortran::parser::Name *name =
-                      getDesignatorNameIfDataRef(designator)) {
-                sym = name->symbol;
-              }
-            },
-            [&](const Fortran::parser::Name &name) { sym = name.symbol; }},
-        ompObject.u);
-
+    Fortran::semantics::Symbol *sym = getOmpObjectSymbol(ompObject);
     // Privatization for symbols which are pre-determined (like loop index
     // variables) happen separately, for everything else privatize here
     if constexpr (std::is_same_v<T, Fortran::parser::OmpClause::Firstprivate>) {
@@ -204,17 +208,8 @@ static void genObjectList(const Fortran::parser::OmpObjectList &objectList,
     }
   };
   for (const Fortran::parser::OmpObject &ompObject : objectList.v) {
-    std::visit(Fortran::common::visitors{
-                   [&](const Fortran::parser::Designator &designator) {
-                     if (const Fortran::parser::Name *name =
-                             getDesignatorNameIfDataRef(designator)) {
-                       addOperands(*name->symbol);
-                     }
-                   },
-                   [&](const Fortran::parser::Name &name) {
-                     addOperands(*name.symbol);
-                   }},
-               ompObject.u);
+    Fortran::semantics::Symbol *sym = getOmpObjectSymbol(ompObject);
+    addOperands(*sym);
   }
 }
 
