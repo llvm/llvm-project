@@ -89,6 +89,8 @@ AArch64FunctionInfo::AArch64FunctionInfo(MachineFunction &MF_) : MF(&MF_) {
   const Function &F = MF->getFunction();
   std::tie(SignReturnAddress, SignReturnAddressAll) = GetSignReturnAddress(F);
   SignWithBKey = ShouldSignWithBKey(F);
+  // TODO: skip functions that have no instrumented allocas for optimization
+  IsMTETagged = F.hasFnAttribute(Attribute::SanitizeMemTag);
 
   if (!F.hasFnAttribute("branch-target-enforcement")) {
     if (const auto *BTE = mdconst::extract_or_null<ConstantInt>(

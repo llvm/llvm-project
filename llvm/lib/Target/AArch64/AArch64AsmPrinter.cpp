@@ -1536,6 +1536,15 @@ void AArch64AsmPrinter::emitInstruction(const MachineInstr *MI) {
         .addReg(AArch64::X17)
         .addImm(0));
     return;
+  case AArch64::EMITMTETAGGED: {
+    ExceptionHandling ExceptionHandlingType = MAI->getExceptionHandlingType();
+    if (ExceptionHandlingType != ExceptionHandling::DwarfCFI &&
+        ExceptionHandlingType != ExceptionHandling::ARM)
+      return;
+
+    if (getFunctionCFISectionType(*MF) != CFISection::None)
+      OutStreamer->emitCFIMTETaggedFrame();
+    return;
   }
 
   // Tail calls use pseudo instructions so they have the proper code-gen

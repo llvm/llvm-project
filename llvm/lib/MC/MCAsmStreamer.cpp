@@ -319,6 +319,7 @@ public:
 
   void emitIdent(StringRef IdentString) override;
   void emitCFIBKeyFrame() override;
+  void emitCFIMTETaggedFrame() override;
   void emitCFISections(bool EH, bool Debug) override;
   void emitCFIDefCfa(int64_t Register, int64_t Offset) override;
   void emitCFIDefCfaOffset(int64_t Offset) override;
@@ -2022,6 +2023,12 @@ void MCAsmStreamer::emitCFIReturnColumn(int64_t Register) {
 void MCAsmStreamer::emitCFIBKeyFrame() {
   MCStreamer::emitCFIBKeyFrame();
   OS << "\t.cfi_b_key_frame";
+  EmitEOL();
+}
+
+void MCAsmStreamer::emitCFIMTETaggedFrame() {
+  MCStreamer::emitCFIMTETaggedFrame();
+  OS << "\t.cfi_mte_tagged_frame";
   EmitEOL();
 }
 

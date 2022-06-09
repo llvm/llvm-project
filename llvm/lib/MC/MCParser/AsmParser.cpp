@@ -540,6 +540,7 @@ private:
     DK_PSEUDO_PROBE,
     DK_LTO_DISCARD,
     DK_LTO_SET_CONDITIONAL,
+    DK_CFI_MTE_TAGGED_FRAME,
     DK_END
   };
 
@@ -5556,6 +5557,7 @@ void AsmParser::initializeDirectiveKindMap() {
   DirectiveKindMap[".cfi_register"] = DK_CFI_REGISTER;
   DirectiveKindMap[".cfi_window_save"] = DK_CFI_WINDOW_SAVE;
   DirectiveKindMap[".cfi_b_key_frame"] = DK_CFI_B_KEY_FRAME;
+  DirectiveKindMap[".cfi_mte_tagged_frame"] = DK_CFI_MTE_TAGGED_FRAME;
   DirectiveKindMap[".macros_on"] = DK_MACROS_ON;
   DirectiveKindMap[".macros_off"] = DK_MACROS_OFF;
   DirectiveKindMap[".macro"] = DK_MACRO;

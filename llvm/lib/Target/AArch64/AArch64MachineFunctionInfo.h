@@ -175,6 +175,8 @@ class AArch64FunctionInfo final : public MachineFunctionInfo {
   /// The stack slot where the Swift asynchronous context is stored.
   int SwiftAsyncContextFrameIdx = std::numeric_limits<int>::max();
 
+  bool IsMTETagged = false;
+
   /// True if the function need unwind information.
   mutable Optional<bool> NeedsDwarfUnwindInfo;
 
@@ -408,6 +410,7 @@ public:
   bool shouldSignReturnAddress(bool SpillsLR) const;
 
   bool shouldSignWithBKey() const { return SignWithBKey; }
+  bool isMTETagged() const { return IsMTETagged; }
 
   bool branchTargetEnforcement() const { return BranchTargetEnforcement; }
 

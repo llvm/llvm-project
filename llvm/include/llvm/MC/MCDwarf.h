@@ -688,6 +688,7 @@ struct MCDwarfFrameInfo {
   bool IsSimple = false;
   unsigned RAReg = static_cast<unsigned>(INT_MAX);
   bool IsBKeyFrame = false;
+  bool IsMTETaggedFrame = false;
 };
 
 class MCDwarfFrameEmitter {

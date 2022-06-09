@@ -192,6 +192,7 @@
 #include "AArch64Subtarget.h"
 #include "AArch64TargetMachine.h"
 #include "MCTargetDesc/AArch64AddressingModes.h"
+#include "MCTargetDesc/AArch64MCTargetDesc.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
@@ -1436,6 +1437,10 @@ void AArch64FrameLowering::emitPrologue(MachineFunction &MF,
           .addCFIIndex(CFIIndex)
           .setMIFlags(MachineInstr::FrameSetup);
     }
+  }
+  if (EmitCFI && MFnI.isMTETagged()) {
+    BuildMI(MBB, MBBI, DL, TII->get(AArch64::EMITMTETAGGED))
+        .setMIFlag(MachineInstr::FrameSetup);
   }
 
   // If we're saving LR, sign it first.
