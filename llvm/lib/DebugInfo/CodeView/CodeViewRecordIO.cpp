@@ -281,17 +281,24 @@ void CodeViewRecordIO::emitEncodedSignedInteger(const int64_t &Value,
   // FIXME: There are no test cases covering this function.
   // This may be because we always consider enumerators to be unsigned.
   // See FIXME at CodeViewDebug.cpp : CodeViewDebug::lowerTypeEnum.
-  if (Value >= std::numeric_limits<int8_t>::min()) {
+  if (Value < LF_NUMERIC && Value >= 0) {
+    emitComment(Comment);
+    Streamer->emitIntValue(Value, 2);
+    incrStreamedLen(2);
+  } else if (Value >= std::numeric_limits<int8_t>::min() &&
+             Value <= std::numeric_limits<int8_t>::max()) {
     Streamer->emitIntValue(LF_CHAR, 2);
     emitComment(Comment);
     Streamer->emitIntValue(Value, 1);
     incrStreamedLen(3);
-  } else if (Value >= std::numeric_limits<int16_t>::min()) {
+  } else if (Value >= std::numeric_limits<int16_t>::min() &&
+             Value <= std::numeric_limits<int16_t>::max()) {
     Streamer->emitIntValue(LF_SHORT, 2);
     emitComment(Comment);
     Streamer->emitIntValue(Value, 2);
     incrStreamedLen(4);
-  } else if (Value >= std::numeric_limits<int32_t>::min()) {
+  } else if (Value >= std::numeric_limits<int32_t>::min() &&
+             Value <= std::numeric_limits<int32_t>::max()) {
     Streamer->emitIntValue(LF_LONG, 2);
     emitComment(Comment);
     Streamer->emitIntValue(Value, 4);
@@ -330,17 +337,23 @@ void CodeViewRecordIO::emitEncodedUnsignedInteger(const uint64_t &Value,
 }
 
 Error CodeViewRecordIO::writeEncodedSignedInteger(const int64_t &Value) {
-  if (Value >= std::numeric_limits<int8_t>::min()) {
+  if (Value < LF_NUMERIC && Value >= 0) {
+    if (auto EC = Writer->writeInteger<int16_t>(Value))
+      return EC;
+  } else if (Value >= std::numeric_limits<int8_t>::min() &&
+             Value <= std::numeric_limits<int8_t>::max()) {
     if (auto EC = Writer->writeInteger<uint16_t>(LF_CHAR))
       return EC;
     if (auto EC = Writer->writeInteger<int8_t>(Value))
       return EC;
-  } else if (Value >= std::numeric_limits<int16_t>::min()) {
+  } else if (Value >= std::numeric_limits<int16_t>::min() &&
+             Value <= std::numeric_limits<int16_t>::max()) {
     if (auto EC = Writer->writeInteger<uint16_t>(LF_SHORT))
       return EC;
     if (auto EC = Writer->writeInteger<int16_t>(Value))
       return EC;
-  } else if (Value >= std::numeric_limits<int32_t>::min()) {
+  } else if (Value >= std::numeric_limits<int32_t>::min() &&
+             Value <= std::numeric_limits<int32_t>::max()) {
     if (auto EC = Writer->writeInteger<uint16_t>(LF_LONG))
       return EC;
     if (auto EC = Writer->writeInteger<int32_t>(Value))
