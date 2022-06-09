@@ -12,13 +12,13 @@
 #include "mlir/Dialect/Async/IR/Async.h"
 #include "mlir/Dialect/DLTI/DLTI.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
-#include "mlir/Dialect/GPU/GPUDialect.h"
+#include "mlir/Dialect/GPU/IR/GPUDialect.h"
 #include "mlir/Pass/Pass.h"
 
 namespace mlir {
 
 #define GEN_PASS_CLASSES
-#include "mlir/Dialect/GPU/Passes.h.inc"
+#include "mlir/Dialect/GPU/Transforms/Passes.h.inc"
 
 } // namespace mlir
 

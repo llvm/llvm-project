@@ -11,11 +11,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir/Dialect/GPU/ParallelLoopMapper.h"
+#include "mlir/Dialect/GPU/Transforms/ParallelLoopMapper.h"
 
 #include "PassDetail.h"
-#include "mlir/Dialect/GPU/GPUDialect.h"
-#include "mlir/Dialect/GPU/Passes.h"
+#include "mlir/Dialect/GPU/IR/GPUDialect.h"
+#include "mlir/Dialect/GPU/Transforms/Passes.h"
 #include "mlir/Dialect/SCF/SCF.h"
 #include "mlir/IR/AffineMap.h"
 
