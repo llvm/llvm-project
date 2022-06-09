@@ -385,13 +385,20 @@ define <32 x i8> @splat_v32i8_pgso(<32 x i8> %x) !prof !14 {
 @A = common dso_local global <3 x i64> zeroinitializer, align 32
 
 define <8 x i64> @pr23259() #1 {
-; CHECK-LABEL: pr23259:
-; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vmovaps A+16(%rip), %xmm0
-; CHECK-NEXT:    vblendps {{.*#+}} xmm0 = xmm0[0,1],mem[2,3]
-; CHECK-NEXT:    vblendps {{.*#+}} ymm0 = ymm0[0,1,2,3],mem[4,5,6,7]
-; CHECK-NEXT:    vbroadcastsd {{.*#+}} ymm1 = [1,1,1,1]
-; CHECK-NEXT:    retq
+; AVX-LABEL: pr23259:
+; AVX:       # %bb.0: # %entry
+; AVX-NEXT:    vmovaps A+16(%rip), %xmm0
+; AVX-NEXT:    vblendps {{.*#+}} xmm0 = xmm0[0,1],mem[2,3]
+; AVX-NEXT:    vblendps {{.*#+}} ymm0 = ymm0[0,1,2,3],mem[4,5,6,7]
+; AVX-NEXT:    vbroadcastsd {{.*#+}} ymm1 = [1,1,1,1]
+; AVX-NEXT:    retq
+;
+; AVX2-LABEL: pr23259:
+; AVX2:       # %bb.0: # %entry
+; AVX2-NEXT:    vmovaps A+16(%rip), %xmm0
+; AVX2-NEXT:    vblendps {{.*#+}} ymm0 = ymm0[0,1],mem[2,3,4,5,6,7]
+; AVX2-NEXT:    vbroadcastsd {{.*#+}} ymm1 = [1,1,1,1]
+; AVX2-NEXT:    retq
 entry:
   %0 = load <4 x i64>, <4 x i64>* bitcast (<3 x i64>* @A to <4 x i64>*), align 32
   %1 = shufflevector <4 x i64> %0, <4 x i64> undef, <3 x i32> <i32 undef, i32 undef, i32 2>
