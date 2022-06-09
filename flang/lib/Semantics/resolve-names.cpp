@@ -5341,6 +5341,9 @@ void DeclarationVisitor::CheckCommonBlocks() {
     } else if (attrs.test(Attr::BIND_C)) {
       Say(name,
           "Variable '%s' with BIND attribute may not appear in a COMMON block"_err_en_US);
+    } else if (IsNamedConstant(*symbol)) {
+      Say(name,
+          "A named constant '%s' may not appear in a COMMON block"_err_en_US);
     } else if (IsDummy(*symbol)) {
       Say(name,
           "Dummy argument '%s' may not appear in a COMMON block"_err_en_US);
