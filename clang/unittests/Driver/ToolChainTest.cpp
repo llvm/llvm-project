@@ -595,7 +595,7 @@ TEST(ToolChainTest, Toolsets) {
     Driver TheDriver("/bin/clang", "x86_64-redhat-linux", Diags,
                      "clang LLVM compiler", InMemoryFileSystem);
     std::unique_ptr<Compilation> C(
-        TheDriver.BuildCompilation({"--gcc-toolchain="}));
+        TheDriver.BuildCompilation({"clang", "--gcc-toolchain="}));
     ASSERT_TRUE(C);
     std::string S;
     {
@@ -635,7 +635,7 @@ TEST(ToolChainTest, Toolsets) {
     Driver TheDriver("/bin/clang", "x86_64-redhat-linux", Diags,
                      "clang LLVM compiler", InMemoryFileSystem);
     std::unique_ptr<Compilation> C(
-        TheDriver.BuildCompilation({"--gcc-toolchain="}));
+        TheDriver.BuildCompilation({"clang", "--gcc-toolchain="}));
     ASSERT_TRUE(C);
     std::string S;
     {
