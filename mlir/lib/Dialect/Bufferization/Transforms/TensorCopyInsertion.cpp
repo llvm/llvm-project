@@ -43,7 +43,7 @@ LogicalResult mlir::bufferization::insertTensorCopies(
 LogicalResult
 mlir::bufferization::insertTensorCopies(Operation *op,
                                         const AnalysisState &state) {
-  OpBuilder builder(op->getContext());
+  IRRewriter rewriter(op->getContext());
   WalkResult result = op->walk([&](Operation *op) {
     auto bufferizableOp = state.getOptions().dynCastBufferizableOp(op);
     if (!bufferizableOp)
@@ -55,31 +55,15 @@ mlir::bufferization::insertTensorCopies(Operation *op,
       if (allocTensorOp.escape())
         return WalkResult::advance();
       bool escape = state.isTensorYielded(allocTensorOp.result());
-      allocTensorOp.escapeAttr(builder.getBoolAttr(escape));
+      allocTensorOp.escapeAttr(rewriter.getBoolAttr(escape));
       return WalkResult::advance();
     }
 
-    // Find out-of-place tensor OpOperands and resolve them with an explicit
-    // tensor copy in the form of an AllocTensorOp.
-    builder.setInsertionPoint(op);
-    for (OpOperand &opOperand : op->getOpOperands()) {
-      if (opOperand.get().getType().isa<UnrankedTensorType>()) {
-        op->emitError("copies of unranked tensors are not supported");
-        return WalkResult::interrupt();
-      }
-      auto tensorType = opOperand.get().getType().dyn_cast<RankedTensorType>();
-      if (!tensorType)
-        continue;
-      if (state.isInPlace(opOperand))
-        continue;
-      SmallVector<OpResult> aliasingOpResults =
-          state.getAliasingOpResult(opOperand);
-      bool escape = llvm::any_of(
-          aliasingOpResults, [&](Value v) { return state.isTensorYielded(v); });
-      Value copy = builder.create<AllocTensorOp>(
-          op->getLoc(), tensorType, ValueRange(), opOperand.get(), escape);
-      opOperand.set(copy);
-    }
+    // Find inplacability conflicts and resolve them. (Typically with explicit
+    // tensor copies in the form of AllocTensorOps.)
+    rewriter.setInsertionPoint(op);
+    if (failed(bufferizableOp.resolveConflicts(rewriter, state)))
+      return WalkResult::interrupt();
 
     return WalkResult::advance();
   });
