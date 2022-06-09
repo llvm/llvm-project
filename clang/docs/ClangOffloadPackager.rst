@@ -95,7 +95,7 @@ the following values for the :ref:`offload kind<table-offload_kind>` and the
     +---------------+-------+---------------------------------------+
     | IMG_Fatbinary | 0x04  | The image is a CUDA fatbinary file    |
     +---------------+-------+---------------------------------------+
-    | IMG_PTX       | 0x05  | The iamge is a CUDA PTX file          |
+    | IMG_PTX       | 0x05  | The image is a CUDA PTX file          |
     +---------------+-------+---------------------------------------+
 
 .. table:: Offload Kind
