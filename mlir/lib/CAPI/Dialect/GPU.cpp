@@ -8,6 +8,6 @@
 
 #include "mlir-c/Dialect/GPU.h"
 #include "mlir/CAPI/Registration.h"
-#include "mlir/Dialect/GPU/GPUDialect.h"
+#include "mlir/Dialect/GPU/IR/GPUDialect.h"
 
 MLIR_DEFINE_CAPI_DIALECT_REGISTRATION(GPU, gpu, mlir::gpu::GPUDialect)

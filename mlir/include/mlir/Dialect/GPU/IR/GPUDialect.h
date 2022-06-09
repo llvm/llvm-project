@@ -11,8 +11,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef MLIR_DIALECT_GPU_GPUDIALECT_H
-#define MLIR_DIALECT_GPU_GPUDIALECT_H
+#ifndef MLIR_DIALECT_GPU_IR_GPUDIALECT_H
+#define MLIR_DIALECT_GPU_IR_GPUDIALECT_H
 
 #include "mlir/Dialect/DLTI/Traits.h"
 #include "mlir/IR/Builders.h"
@@ -164,16 +164,16 @@ void addAsyncDependency(Operation *op, Value token);
 } // namespace gpu
 } // namespace mlir
 
-#include "mlir/Dialect/GPU/GPUOpsEnums.h.inc"
+#include "mlir/Dialect/GPU/IR/GPUOpsEnums.h.inc"
 
-#include "mlir/Dialect/GPU/GPUOpsDialect.h.inc"
+#include "mlir/Dialect/GPU/IR/GPUOpsDialect.h.inc"
 
-#include "mlir/Dialect/GPU/GPUOpInterfaces.h.inc"
+#include "mlir/Dialect/GPU/IR/GPUOpInterfaces.h.inc"
 
 #define GET_ATTRDEF_CLASSES
-#include "mlir/Dialect/GPU/GPUOpsAttributes.h.inc"
+#include "mlir/Dialect/GPU/IR/GPUOpsAttributes.h.inc"
 
 #define GET_OP_CLASSES
-#include "mlir/Dialect/GPU/GPUOps.h.inc"
+#include "mlir/Dialect/GPU/IR/GPUOps.h.inc"
 
-#endif // MLIR_DIALECT_GPU_GPUDIALECT_H
+#endif // MLIR_DIALECT_GPU_IR_GPUDIALECT_H

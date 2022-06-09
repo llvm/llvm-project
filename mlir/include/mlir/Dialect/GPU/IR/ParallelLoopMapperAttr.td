@@ -14,7 +14,7 @@
 #ifndef PARALLEL_LOOP_MAPPER_ATTR
 #define PARALLEL_LOOP_MAPPER_ATTR
 
-include "mlir/Dialect/GPU/GPUBase.td"
+include "mlir/Dialect/GPU/IR/GPUBase.td"
 include "mlir/IR/EnumAttr.td"
 
 def BlockX : I64EnumAttrCase<"BlockX", 0, "block_x">;
