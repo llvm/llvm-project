@@ -30,9 +30,9 @@ target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 define internal i32 @callee(i32* %thread_local_ptr, i32* %shared_ptr) {
 ; CHECK: Function Attrs: nofree norecurse nosync nounwind readonly willreturn
 ; CHECK-LABEL: define {{[^@]+}}@callee
-; CHECK-SAME: (i32* nocapture nofree noundef nonnull readonly align 4 dereferenceable(4) [[THREAD_LOCAL_PTR:%.*]], i32* nocapture nofree nonnull readonly align 4 dereferenceable(4) [[SHARED_PTR:%.*]]) #[[ATTR0:[0-9]+]] {
+; CHECK-SAME: (i32* nocapture nofree nonnull readonly align 4 dereferenceable(4) [[THREAD_LOCAL_PTR:%.*]], i32* nocapture nofree nonnull readonly align 4 dereferenceable(4) [[SHARED_PTR:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP:%.*]] = load i32, i32* [[THREAD_LOCAL_PTR]], align 4
+; CHECK-NEXT:    [[TMP:%.*]] = load i32, i32* @gtl, align 4
 ; CHECK-NEXT:    [[TMP1:%.*]] = load i32, i32* @gsh, align 4
 ; CHECK-NEXT:    [[ADD:%.*]] = add nsw i32 [[TMP]], [[TMP1]]
 ; CHECK-NEXT:    ret i32 [[ADD]]
@@ -47,7 +47,7 @@ entry:
 define dso_local void @caller() {
 ; IS__TUNIT____-LABEL: define {{[^@]+}}@caller() {
 ; IS__TUNIT____-NEXT:  entry:
-; IS__TUNIT____-NEXT:    call void @broker(i32* nocapture nofree noundef nonnull readonly align 4 dereferenceable(4) @gtl, i32 (i32*, i32*)* noundef nonnull @callee, i32* nocapture nofree nonnull readonly align 4 dereferenceable(4) undef)
+; IS__TUNIT____-NEXT:    call void @broker(i32* nocapture nofree nonnull readonly align 4 dereferenceable(4) undef, i32 (i32*, i32*)* noundef nonnull @callee, i32* nocapture nofree nonnull readonly align 4 dereferenceable(4) undef)
 ; IS__TUNIT____-NEXT:    ret void
 ;
 ; IS__CGSCC____-LABEL: define {{[^@]+}}@caller() {

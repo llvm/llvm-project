@@ -66,81 +66,43 @@ define internal { i32, i32 } @foo(i32 %A, i32 %B) {
 }
 
 define void @caller(i1 %C) personality i32 (...)* @__gxx_personality_v0 {
-; IS__TUNIT_OPM: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
-; IS__TUNIT_OPM-LABEL: define {{[^@]+}}@caller
-; IS__TUNIT_OPM-SAME: (i1 [[C:%.*]]) #[[ATTR1]] personality i32 (...)* @__gxx_personality_v0 {
-; IS__TUNIT_OPM-NEXT:    [[Q:%.*]] = alloca i32, align 4
-; IS__TUNIT_OPM-NEXT:    [[W:%.*]] = call align 4 i32* @incdec(i1 [[C]], i32* noalias nofree noundef nonnull align 4 dereferenceable(4) "no-capture-maybe-returned" [[Q]]) #[[ATTR2:[0-9]+]]
-; IS__TUNIT_OPM-NEXT:    [[S1:%.*]] = call { i32, i32 } @foo(i32 noundef 1, i32 noundef 2) #[[ATTR3:[0-9]+]]
-; IS__TUNIT_OPM-NEXT:    [[X1:%.*]] = extractvalue { i32, i32 } [[S1]], 0
-; IS__TUNIT_OPM-NEXT:    [[S2:%.*]] = call { i32, i32 } @foo(i32 noundef 3, i32 noundef 4) #[[ATTR3]]
-; IS__TUNIT_OPM-NEXT:    br label [[OK:%.*]]
-; IS__TUNIT_OPM:       OK:
-; IS__TUNIT_OPM-NEXT:    [[X2:%.*]] = extractvalue { i32, i32 } [[S2]], 0
-; IS__TUNIT_OPM-NEXT:    [[Z:%.*]] = add i32 [[X1]], [[X2]]
-; IS__TUNIT_OPM-NEXT:    store i32 [[Z]], i32* [[W]], align 4
-; IS__TUNIT_OPM-NEXT:    br label [[RET:%.*]]
-; IS__TUNIT_OPM:       LPAD:
-; IS__TUNIT_OPM-NEXT:    unreachable
-; IS__TUNIT_OPM:       RET:
-; IS__TUNIT_OPM-NEXT:    ret void
+; IS__TUNIT____: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
+; IS__TUNIT____-LABEL: define {{[^@]+}}@caller
+; IS__TUNIT____-SAME: (i1 [[C:%.*]]) #[[ATTR1]] personality i32 (...)* @__gxx_personality_v0 {
+; IS__TUNIT____-NEXT:    [[Q:%.*]] = alloca i32, align 4
+; IS__TUNIT____-NEXT:    [[W:%.*]] = call align 4 i32* @incdec(i1 [[C]], i32* noalias nofree noundef nonnull align 4 dereferenceable(4) "no-capture-maybe-returned" [[Q]]) #[[ATTR2:[0-9]+]]
+; IS__TUNIT____-NEXT:    [[S1:%.*]] = call { i32, i32 } @foo(i32 noundef 1, i32 noundef 2) #[[ATTR3:[0-9]+]]
+; IS__TUNIT____-NEXT:    [[X1:%.*]] = extractvalue { i32, i32 } [[S1]], 0
+; IS__TUNIT____-NEXT:    [[S2:%.*]] = call { i32, i32 } @foo(i32 noundef 3, i32 noundef 4) #[[ATTR3]]
+; IS__TUNIT____-NEXT:    br label [[OK:%.*]]
+; IS__TUNIT____:       OK:
+; IS__TUNIT____-NEXT:    [[X2:%.*]] = extractvalue { i32, i32 } [[S2]], 0
+; IS__TUNIT____-NEXT:    [[Z:%.*]] = add i32 [[X1]], [[X2]]
+; IS__TUNIT____-NEXT:    store i32 [[Z]], i32* [[Q]], align 4
+; IS__TUNIT____-NEXT:    br label [[RET:%.*]]
+; IS__TUNIT____:       LPAD:
+; IS__TUNIT____-NEXT:    unreachable
+; IS__TUNIT____:       RET:
+; IS__TUNIT____-NEXT:    ret void
 ;
-; IS__TUNIT_NPM: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
-; IS__TUNIT_NPM-LABEL: define {{[^@]+}}@caller
-; IS__TUNIT_NPM-SAME: (i1 [[C:%.*]]) #[[ATTR1]] personality i32 (...)* @__gxx_personality_v0 {
-; IS__TUNIT_NPM-NEXT:    [[Q:%.*]] = alloca i32, align 4
-; IS__TUNIT_NPM-NEXT:    [[W:%.*]] = call align 4 i32* @incdec(i1 [[C]], i32* noalias nofree noundef nonnull align 4 dereferenceable(4) "no-capture-maybe-returned" [[Q]]) #[[ATTR2:[0-9]+]]
-; IS__TUNIT_NPM-NEXT:    [[S1:%.*]] = call { i32, i32 } @foo(i32 noundef 1, i32 noundef 2) #[[ATTR3:[0-9]+]]
-; IS__TUNIT_NPM-NEXT:    [[X1:%.*]] = extractvalue { i32, i32 } [[S1]], 0
-; IS__TUNIT_NPM-NEXT:    [[S2:%.*]] = call { i32, i32 } @foo(i32 noundef 3, i32 noundef 4) #[[ATTR3]]
-; IS__TUNIT_NPM-NEXT:    br label [[OK:%.*]]
-; IS__TUNIT_NPM:       OK:
-; IS__TUNIT_NPM-NEXT:    [[X2:%.*]] = extractvalue { i32, i32 } [[S2]], 0
-; IS__TUNIT_NPM-NEXT:    [[Z:%.*]] = add i32 [[X1]], [[X2]]
-; IS__TUNIT_NPM-NEXT:    store i32 [[Z]], i32* [[Q]], align 4
-; IS__TUNIT_NPM-NEXT:    br label [[RET:%.*]]
-; IS__TUNIT_NPM:       LPAD:
-; IS__TUNIT_NPM-NEXT:    unreachable
-; IS__TUNIT_NPM:       RET:
-; IS__TUNIT_NPM-NEXT:    ret void
-;
-; IS__CGSCC_OPM: Function Attrs: nofree nosync nounwind readnone willreturn
-; IS__CGSCC_OPM-LABEL: define {{[^@]+}}@caller
-; IS__CGSCC_OPM-SAME: (i1 [[C:%.*]]) #[[ATTR2:[0-9]+]] personality i32 (...)* @__gxx_personality_v0 {
-; IS__CGSCC_OPM-NEXT:    [[Q:%.*]] = alloca i32, align 4
-; IS__CGSCC_OPM-NEXT:    [[W:%.*]] = call align 4 i32* @incdec(i1 [[C]], i32* noalias nofree noundef nonnull align 4 dereferenceable(4) [[Q]]) #[[ATTR3:[0-9]+]]
-; IS__CGSCC_OPM-NEXT:    [[S1:%.*]] = call { i32, i32 } @foo(i32 noundef 1, i32 noundef 2) #[[ATTR4:[0-9]+]]
-; IS__CGSCC_OPM-NEXT:    [[X1:%.*]] = extractvalue { i32, i32 } [[S1]], 0
-; IS__CGSCC_OPM-NEXT:    [[S2:%.*]] = call { i32, i32 } @foo(i32 noundef 3, i32 noundef 4) #[[ATTR5:[0-9]+]]
-; IS__CGSCC_OPM-NEXT:    br label [[OK:%.*]]
-; IS__CGSCC_OPM:       OK:
-; IS__CGSCC_OPM-NEXT:    [[X2:%.*]] = extractvalue { i32, i32 } [[S2]], 0
-; IS__CGSCC_OPM-NEXT:    [[Z:%.*]] = add i32 [[X1]], [[X2]]
-; IS__CGSCC_OPM-NEXT:    store i32 [[Z]], i32* [[W]], align 4
-; IS__CGSCC_OPM-NEXT:    br label [[RET:%.*]]
-; IS__CGSCC_OPM:       LPAD:
-; IS__CGSCC_OPM-NEXT:    unreachable
-; IS__CGSCC_OPM:       RET:
-; IS__CGSCC_OPM-NEXT:    ret void
-;
-; IS__CGSCC_NPM: Function Attrs: nofree nosync nounwind readnone willreturn
-; IS__CGSCC_NPM-LABEL: define {{[^@]+}}@caller
-; IS__CGSCC_NPM-SAME: (i1 [[C:%.*]]) #[[ATTR2:[0-9]+]] personality i32 (...)* @__gxx_personality_v0 {
-; IS__CGSCC_NPM-NEXT:    [[Q:%.*]] = alloca i32, align 4
-; IS__CGSCC_NPM-NEXT:    [[W:%.*]] = call align 4 i32* @incdec(i1 [[C]], i32* noalias nofree noundef nonnull align 4 dereferenceable(4) [[Q]]) #[[ATTR3:[0-9]+]]
-; IS__CGSCC_NPM-NEXT:    [[S1:%.*]] = call { i32, i32 } @foo(i32 noundef 1, i32 noundef 2) #[[ATTR4:[0-9]+]]
-; IS__CGSCC_NPM-NEXT:    [[X1:%.*]] = extractvalue { i32, i32 } [[S1]], 0
-; IS__CGSCC_NPM-NEXT:    [[S2:%.*]] = call { i32, i32 } @foo(i32 noundef 3, i32 noundef 4) #[[ATTR5:[0-9]+]]
-; IS__CGSCC_NPM-NEXT:    br label [[OK:%.*]]
-; IS__CGSCC_NPM:       OK:
-; IS__CGSCC_NPM-NEXT:    [[X2:%.*]] = extractvalue { i32, i32 } [[S2]], 0
-; IS__CGSCC_NPM-NEXT:    [[Z:%.*]] = add i32 [[X1]], [[X2]]
-; IS__CGSCC_NPM-NEXT:    store i32 [[Z]], i32* [[Q]], align 4
-; IS__CGSCC_NPM-NEXT:    br label [[RET:%.*]]
-; IS__CGSCC_NPM:       LPAD:
-; IS__CGSCC_NPM-NEXT:    unreachable
-; IS__CGSCC_NPM:       RET:
-; IS__CGSCC_NPM-NEXT:    ret void
+; IS__CGSCC____: Function Attrs: nofree nosync nounwind willreturn
+; IS__CGSCC____-LABEL: define {{[^@]+}}@caller
+; IS__CGSCC____-SAME: (i1 [[C:%.*]]) #[[ATTR2:[0-9]+]] personality i32 (...)* @__gxx_personality_v0 {
+; IS__CGSCC____-NEXT:    [[Q:%.*]] = alloca i32, align 4
+; IS__CGSCC____-NEXT:    [[W:%.*]] = call align 4 i32* @incdec(i1 [[C]], i32* nofree noundef nonnull align 4 dereferenceable(4) [[Q]]) #[[ATTR3:[0-9]+]]
+; IS__CGSCC____-NEXT:    [[S1:%.*]] = call { i32, i32 } @foo(i32 noundef 1, i32 noundef 2) #[[ATTR4:[0-9]+]]
+; IS__CGSCC____-NEXT:    [[X1:%.*]] = extractvalue { i32, i32 } [[S1]], 0
+; IS__CGSCC____-NEXT:    [[S2:%.*]] = call { i32, i32 } @foo(i32 noundef 3, i32 noundef 4) #[[ATTR5:[0-9]+]]
+; IS__CGSCC____-NEXT:    br label [[OK:%.*]]
+; IS__CGSCC____:       OK:
+; IS__CGSCC____-NEXT:    [[X2:%.*]] = extractvalue { i32, i32 } [[S2]], 0
+; IS__CGSCC____-NEXT:    [[Z:%.*]] = add i32 [[X1]], [[X2]]
+; IS__CGSCC____-NEXT:    store i32 [[Z]], i32* [[W]], align 4
+; IS__CGSCC____-NEXT:    br label [[RET:%.*]]
+; IS__CGSCC____:       LPAD:
+; IS__CGSCC____-NEXT:    unreachable
+; IS__CGSCC____:       RET:
+; IS__CGSCC____-NEXT:    ret void
 ;
   %Q = alloca i32
   ;; Call incdec to see if %W is properly replaced by %Q
@@ -172,13 +134,13 @@ declare i32 @__gxx_personality_v0(...)
 ;.
 ; IS__TUNIT____: attributes #[[ATTR0]] = { argmemonly nofree norecurse nosync nounwind willreturn }
 ; IS__TUNIT____: attributes #[[ATTR1]] = { nofree norecurse nosync nounwind readnone willreturn }
-; IS__TUNIT____: attributes #[[ATTR2:[0-9]+]] = { nofree nosync nounwind willreturn }
-; IS__TUNIT____: attributes #[[ATTR3:[0-9]+]] = { nofree nosync nounwind readnone willreturn }
+; IS__TUNIT____: attributes #[[ATTR2]] = { nofree nosync nounwind willreturn }
+; IS__TUNIT____: attributes #[[ATTR3]] = { nofree nosync nounwind readnone willreturn }
 ;.
 ; IS__CGSCC____: attributes #[[ATTR0]] = { argmemonly nofree norecurse nosync nounwind willreturn }
 ; IS__CGSCC____: attributes #[[ATTR1]] = { nofree norecurse nosync nounwind readnone willreturn }
-; IS__CGSCC____: attributes #[[ATTR2:[0-9]+]] = { nofree nosync nounwind readnone willreturn }
-; IS__CGSCC____: attributes #[[ATTR3:[0-9]+]] = { nounwind willreturn }
-; IS__CGSCC____: attributes #[[ATTR4:[0-9]+]] = { readnone willreturn }
-; IS__CGSCC____: attributes #[[ATTR5:[0-9]+]] = { nounwind readnone willreturn }
+; IS__CGSCC____: attributes #[[ATTR2]] = { nofree nosync nounwind willreturn }
+; IS__CGSCC____: attributes #[[ATTR3]] = { nounwind willreturn }
+; IS__CGSCC____: attributes #[[ATTR4]] = { readnone willreturn }
+; IS__CGSCC____: attributes #[[ATTR5]] = { nounwind readnone willreturn }
 ;.
