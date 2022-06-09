@@ -473,3 +473,17 @@ def testFunctionType():
     print("INPUTS:", func.inputs)
     # CHECK: RESULTS: [Type(index)]
     print("RESULTS:", func.results)
+
+
+# CHECK-LABEL: TEST: testOpaqueType
+@run
+def testOpaqueType():
+  with Context() as ctx:
+    ctx.allow_unregistered_dialects = True
+    opaque = OpaqueType.get("dialect", "type")
+    # CHECK: opaque type: !dialect.type
+    print("opaque type:", opaque)
+    # CHECK: dialect namespace: dialect
+    print("dialect namespace:", opaque.dialect_namespace)
+    # CHECK: data: type
+    print("data:", opaque.data)
