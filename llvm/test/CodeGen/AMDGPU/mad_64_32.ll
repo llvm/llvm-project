@@ -296,10 +296,12 @@ define i64 @mad_i64_i32_extops_i32_i64(i32 %arg0, i32 %arg1, i64 %arg2) #0 {
 ; GFX9-LABEL: mad_i64_i32_extops_i32_i64:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-NEXT:    v_ashrrev_i32_e32 v4, 31, v0
-; GFX9-NEXT:    v_mul_lo_u32 v4, v4, v1
-; GFX9-NEXT:    v_mad_u64_u32 v[0:1], s[4:5], v0, v1, v[2:3]
-; GFX9-NEXT:    v_add_u32_e32 v1, v4, v1
+; GFX9-NEXT:    v_mov_b32_e32 v4, v1
+; GFX9-NEXT:    v_ashrrev_i32_e32 v5, 31, v0
+; GFX9-NEXT:    v_mad_u64_u32 v[0:1], s[4:5], v0, v4, v[2:3]
+; GFX9-NEXT:    v_mov_b32_e32 v2, v1
+; GFX9-NEXT:    v_mad_u64_u32 v[2:3], s[4:5], v5, v4, v[2:3]
+; GFX9-NEXT:    v_mov_b32_e32 v1, v2
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
   %ext0 = sext i32 %arg0 to i64
   %ext1 = zext i32 %arg1 to i64
@@ -363,8 +365,9 @@ define i64 @mad_u64_u32_bitops_lhs_mask_small(i64 %arg0, i64 %arg1, i64 %arg2) #
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX9-NEXT:    v_and_b32_e32 v3, 1, v1
 ; GFX9-NEXT:    v_mad_u64_u32 v[0:1], s[4:5], v0, v2, v[4:5]
-; GFX9-NEXT:    v_mul_lo_u32 v2, v3, v2
-; GFX9-NEXT:    v_add_u32_e32 v1, v2, v1
+; GFX9-NEXT:    v_mov_b32_e32 v4, v1
+; GFX9-NEXT:    v_mad_u64_u32 v[2:3], s[4:5], v3, v2, v[4:5]
+; GFX9-NEXT:    v_mov_b32_e32 v1, v2
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
   %trunc.lhs = and i64 %arg0, 8589934591
   %trunc.rhs = and i64 %arg1, 4294967295
@@ -400,10 +403,11 @@ define i64 @mad_u64_u32_bitops_rhs_mask_small(i64 %arg0, i64 %arg1, i64 %arg2) #
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX9-NEXT:    v_mov_b32_e32 v6, v0
-; GFX9-NEXT:    v_and_b32_e32 v3, 1, v3
 ; GFX9-NEXT:    v_mad_u64_u32 v[0:1], s[4:5], v6, v2, v[4:5]
-; GFX9-NEXT:    v_mul_lo_u32 v2, v6, v3
-; GFX9-NEXT:    v_add_u32_e32 v1, v2, v1
+; GFX9-NEXT:    v_and_b32_e32 v3, 1, v3
+; GFX9-NEXT:    v_mov_b32_e32 v2, v1
+; GFX9-NEXT:    v_mad_u64_u32 v[2:3], s[4:5], v6, v3, v[2:3]
+; GFX9-NEXT:    v_mov_b32_e32 v1, v2
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
   %trunc.lhs = and i64 %arg0, 4294967295
   %trunc.rhs = and i64 %arg1, 8589934591
