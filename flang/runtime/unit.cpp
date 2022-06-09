@@ -43,15 +43,6 @@ ExternalFileUnit *ExternalFileUnit::LookUp(int unit) {
   return GetUnitMap().LookUp(unit);
 }
 
-ExternalFileUnit &ExternalFileUnit::LookUpOrCrash(
-    int unit, const Terminator &terminator) {
-  ExternalFileUnit *file{LookUp(unit)};
-  if (!file) {
-    terminator.Crash("%d is not an open I/O unit number", unit);
-  }
-  return *file;
-}
-
 ExternalFileUnit &ExternalFileUnit::LookUpOrCreate(
     int unit, const Terminator &terminator, bool &wasExtant) {
   return GetUnitMap().LookUpOrCreate(unit, terminator, wasExtant);
