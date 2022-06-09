@@ -983,7 +983,8 @@ void GDBRemoteCommunicationServerLLGS::HandleInferiorState_Exited(
   Log *log = GetLog(LLDBLog::Process);
   LLDB_LOGF(log, "GDBRemoteCommunicationServerLLGS::%s called", __FUNCTION__);
 
-  PacketResult result = SendStopReasonForState(StateType::eStateExited);
+  PacketResult result =
+      SendStopReasonForState(*process, StateType::eStateExited);
   if (result != PacketResult::Success) {
     LLDB_LOGF(log,
               "GDBRemoteCommunicationServerLLGS::%s failed to send stop "
@@ -1015,7 +1016,8 @@ void GDBRemoteCommunicationServerLLGS::HandleInferiorState_Stopped(
     break;
   default:
     // In all other cases, send the stop reason.
-    PacketResult result = SendStopReasonForState(StateType::eStateStopped);
+    PacketResult result =
+        SendStopReasonForState(*process, StateType::eStateStopped);
     if (result != PacketResult::Success) {
       LLDB_LOGF(log,
                 "GDBRemoteCommunicationServerLLGS::%s failed to send stop "
@@ -1686,12 +1688,13 @@ GDBRemoteCommunicationServerLLGS::Handle_stop_reason(
   if (!m_current_process)
     return SendErrorResponse(02);
 
-  return SendStopReasonForState(m_current_process->GetState());
+  return SendStopReasonForState(*m_current_process,
+                                m_current_process->GetState());
 }
 
 GDBRemoteCommunication::PacketResult
 GDBRemoteCommunicationServerLLGS::SendStopReasonForState(
-    lldb::StateType process_state) {
+    NativeProcessProtocol &process, lldb::StateType process_state) {
   Log *log = GetLog(LLDBLog::Process);
 
   switch (process_state) {
@@ -1707,22 +1710,21 @@ GDBRemoteCommunicationServerLLGS::SendStopReasonForState(
   case eStateSuspended:
   case eStateStopped:
   case eStateCrashed: {
-    assert(m_current_process != nullptr);
-    lldb::tid_t tid = m_current_process->GetCurrentThreadID();
+    lldb::tid_t tid = process.GetCurrentThreadID();
     // Make sure we set the current thread so g and p packets return the data
     // the gdb will expect.
     SetCurrentThreadID(tid);
-    return SendStopReplyPacketForThread(*m_current_process, tid);
+    return SendStopReplyPacketForThread(process, tid);
   }
 
   case eStateInvalid:
   case eStateUnloaded:
   case eStateExited:
-    return SendWResponse(m_current_process);
+    return SendWResponse(&process);
 
   default:
     LLDB_LOG(log, "pid {0}, current state reporting not handled: {1}",
-             m_current_process->GetID(), process_state);
+             process.GetID(), process_state);
     break;
   }
 
@@ -3172,7 +3174,9 @@ GDBRemoteCommunicationServerLLGS::Handle_vAttach(
   }
 
   // Notify we attached by sending a stop packet.
-  return SendStopReasonForState(m_current_process->GetState());
+  assert(m_current_process);
+  return SendStopReasonForState(*m_current_process,
+                                m_current_process->GetState());
 }
 
 GDBRemoteCommunication::PacketResult
@@ -3202,7 +3206,9 @@ GDBRemoteCommunicationServerLLGS::Handle_vAttachWait(
   }
 
   // Notify we attached by sending a stop packet.
-  return SendStopReasonForState(m_current_process->GetState());
+  assert(m_current_process);
+  return SendStopReasonForState(*m_current_process,
+                                m_current_process->GetState());
 }
 
 GDBRemoteCommunication::PacketResult
@@ -3238,7 +3244,9 @@ GDBRemoteCommunicationServerLLGS::Handle_vAttachOrWait(
   }
 
   // Notify we attached by sending a stop packet.
-  return SendStopReasonForState(m_current_process->GetState());
+  assert(m_current_process);
+  return SendStopReasonForState(*m_current_process,
+                                m_current_process->GetState());
 }
 
 GDBRemoteCommunication::PacketResult
@@ -3266,8 +3274,11 @@ GDBRemoteCommunicationServerLLGS::Handle_vRun(
     m_process_launch_info.GetExecutableFile().SetFile(
         m_process_launch_info.GetArguments()[0].ref(), FileSpec::Style::native);
     m_process_launch_error = LaunchProcess();
-    if (m_process_launch_error.Success())
-      return SendStopReasonForState(m_current_process->GetState());
+    if (m_process_launch_error.Success()) {
+      assert(m_current_process);
+      return SendStopReasonForState(*m_current_process,
+                                    m_current_process->GetState());
+    }
     LLDB_LOG(log, "failed to launch exe: {0}", m_process_launch_error);
   }
   return SendErrorResponse(8);
