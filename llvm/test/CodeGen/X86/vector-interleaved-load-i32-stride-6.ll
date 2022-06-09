@@ -298,15 +298,13 @@ define void @load_i32_stride6_vf4(<24 x i32>* %in.vec, <4 x i32>* %out.vec0, <4 
 ; AVX512-NEXT:    vmovdqa 64(%rdi), %xmm5
 ; AVX512-NEXT:    vpextrd $2, %xmm5, %eax
 ; AVX512-NEXT:    vpinsrd $3, %eax, %xmm4, %xmm8
-; AVX512-NEXT:    vpextrd $3, %xmm0, %eax
-; AVX512-NEXT:    vpshufd {{.*#+}} xmm6 = xmm2[1,1,1,1]
-; AVX512-NEXT:    vpinsrd $1, %eax, %xmm6, %xmm6
 ; AVX512-NEXT:    vpextrd $1, %xmm3, %eax
+; AVX512-NEXT:    vpblendd {{.*#+}} xmm6 = xmm2[0,1],xmm0[2,3]
+; AVX512-NEXT:    vpshufd {{.*#+}} xmm6 = xmm6[1,3,2,3]
 ; AVX512-NEXT:    vpinsrd $2, %eax, %xmm6, %xmm6
 ; AVX512-NEXT:    vpblendd {{.*#+}} xmm6 = xmm6[0,1,2],xmm5[3]
-; AVX512-NEXT:    vpbroadcastd 8(%rdi), %xmm7
-; AVX512-NEXT:    vmovd %xmm1, %eax
-; AVX512-NEXT:    vpinsrd $1, %eax, %xmm7, %xmm7
+; AVX512-NEXT:    vpblendd {{.*#+}} xmm7 = xmm1[0,1],xmm2[2,3]
+; AVX512-NEXT:    vpshufd {{.*#+}} xmm7 = xmm7[2,0,2,3]
 ; AVX512-NEXT:    vpblendd {{.*#+}} xmm7 = xmm7[0,1],xmm3[2],xmm7[3]
 ; AVX512-NEXT:    vmovdqa 80(%rdi), %xmm4
 ; AVX512-NEXT:    vmovd %xmm4, %eax
@@ -323,10 +321,9 @@ define void @load_i32_stride6_vf4(<24 x i32>* %in.vec, <4 x i32>* %out.vec0, <4 
 ; AVX512-NEXT:    vpinsrd $2, %eax, %xmm3, %xmm3
 ; AVX512-NEXT:    vpextrd $2, %xmm4, %eax
 ; AVX512-NEXT:    vpinsrd $3, %eax, %xmm3, %xmm3
-; AVX512-NEXT:    vpextrd $3, %xmm1, %eax
-; AVX512-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[1,1,1,1]
-; AVX512-NEXT:    vpinsrd $1, %eax, %xmm0, %xmm0
 ; AVX512-NEXT:    vpextrd $1, %xmm5, %eax
+; AVX512-NEXT:    vpblendd {{.*#+}} xmm0 = xmm0[0,1],xmm1[2,3]
+; AVX512-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[1,3,2,3]
 ; AVX512-NEXT:    vpinsrd $2, %eax, %xmm0, %xmm0
 ; AVX512-NEXT:    vpblendd {{.*#+}} xmm0 = xmm0[0,1,2],xmm4[3]
 ; AVX512-NEXT:    vmovdqa %xmm8, (%rsi)
