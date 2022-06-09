@@ -258,7 +258,7 @@ create an executable device image. This is done using a Clang tool, see
 :doc:`ClangLinkerWrapper` for more information. This tool works as a wrapper
 over the host linking job. It scans the input object files for the offloading
 section ``.llvm.offloading``. The device files stored in this section are then
-extracted and passed tot he appropriate linking job. The linked device image is
+extracted and passed to the appropriate linking job. The linked device image is
 then :ref:`wrapped <Device Binary Wrapping>` to create the symbols used to load
 the device image and link it with the host.
 
