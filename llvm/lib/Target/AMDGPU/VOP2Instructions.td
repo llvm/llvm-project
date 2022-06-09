@@ -334,7 +334,6 @@ multiclass VOP2eInst_VOPD <string opName,
   }
 }
 
-
 class VOP2eInstAlias <VOP2_Pseudo ps, Instruction inst, string opnd = ""> :
   InstAlias <ps.OpName#" "#ps.Pfl.Asm32#", "#opnd,
              (inst ps.Pfl.DstRC:$vdst, ps.Pfl.Src0RC32:$src0,

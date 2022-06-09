@@ -11,6 +11,7 @@
 #include "mlir-c/IR.h"
 #include "mlir/CAPI/AffineMap.h"
 #include "mlir/CAPI/IR.h"
+#include "mlir/CAPI/Support.h"
 #include "mlir/IR/AffineMap.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/Types.h"
@@ -356,4 +357,25 @@ MlirType mlirFunctionTypeGetResult(MlirType type, intptr_t pos) {
   assert(pos >= 0 && "pos in array must be positive");
   return wrap(
       unwrap(type).cast<FunctionType>().getResult(static_cast<unsigned>(pos)));
+}
+
+//===----------------------------------------------------------------------===//
+// Opaque type.
+//===----------------------------------------------------------------------===//
+
+bool mlirTypeIsAOpaque(MlirType type) { return unwrap(type).isa<OpaqueType>(); }
+
+MlirType mlirOpaqueTypeGet(MlirContext ctx, MlirStringRef dialectNamespace,
+                           MlirStringRef typeData) {
+  return wrap(
+      OpaqueType::get(StringAttr::get(unwrap(ctx), unwrap(dialectNamespace)),
+                      unwrap(typeData)));
+}
+
+MlirStringRef mlirOpaqueTypeGetDialectNamespace(MlirType type) {
+  return wrap(unwrap(type).cast<OpaqueType>().getDialectNamespace().strref());
+}
+
+MlirStringRef mlirOpaqueTypeGetData(MlirType type) {
+  return wrap(unwrap(type).cast<OpaqueType>().getTypeData());
 }

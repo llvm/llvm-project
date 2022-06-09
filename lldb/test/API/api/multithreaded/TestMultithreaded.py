@@ -108,12 +108,15 @@ class SBBreakpointCallbackCase(TestBase):
         env = {self.dylibPath: self.getLLDBLibraryEnvVal()}
         if 'LLDB_DEBUGSERVER_PATH' in os.environ:
             env['LLDB_DEBUGSERVER_PATH'] = os.environ['LLDB_DEBUGSERVER_PATH']
-        if self.TraceOn():
-            print("Running test %s" % " ".join(exe))
-            check_call(exe, env=env)
-        else:
-            with open(os.devnull, 'w') as fnull:
-                check_call(exe, env=env, stdout=fnull, stderr=fnull)
+        try:
+            if self.TraceOn():
+                print("Running test %s" % " ".join(exe))
+                check_call(exe, env=env)
+            else:
+                with open(os.devnull, 'w') as fnull:
+                    check_call(exe, env=env, stdout=fnull, stderr=fnull)
+        except subprocess.CalledProcessError as e:
+            self.fail(e)
 
     def build_program(self, sources, program):
         return self.buildDriver(sources, program)
