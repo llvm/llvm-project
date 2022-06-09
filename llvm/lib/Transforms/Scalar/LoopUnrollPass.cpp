@@ -674,7 +674,9 @@ unsigned llvm::ApproximateLoopSize(
   NotDuplicatable = Metrics.notDuplicatable;
   Convergent = Metrics.convergent;
 
-  unsigned LoopSize = Metrics.NumInsts;
+  // FIXME: This will crash for invalid InstructionCost, we should update the
+  // callers to gracefully bailout in this case.
+  unsigned LoopSize = *Metrics.NumInsts.getValue();
 
   // Don't allow an estimate of size zero.  This would allows unrolling of loops
   // with huge iteration counts, which is a compile time problem even if it's
