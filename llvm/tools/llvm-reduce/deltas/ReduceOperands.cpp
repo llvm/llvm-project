@@ -23,9 +23,10 @@ extractOperandsFromModule(Oracle &O, Module &Program,
   for (auto &F : Program.functions()) {
     for (auto &I : instructions(&F)) {
       for (auto &Op : I.operands()) {
-        Value *Reduced = ReduceValue(Op);
-        if (Reduced && !O.shouldKeep())
-          Op.set(Reduced);
+        if (!O.shouldKeep()) {
+          if (Value *Reduced = ReduceValue(Op))
+            Op.set(Reduced);
+        }
       }
     }
   }
