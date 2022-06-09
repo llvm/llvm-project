@@ -57,6 +57,8 @@ private:
     ELFLdSt64Abs12,
     ELFLdSt128Abs12,
     ELFAbs64,
+    ELFPrel32,
+    ELFPrel64,
     ELFAdrGOTPage21,
     ELFLd64GOTLo12,
   };
@@ -83,6 +85,10 @@ private:
       return ELFLdSt128Abs12;
     case ELF::R_AARCH64_ABS64:
       return ELFAbs64;
+    case ELF::R_AARCH64_PREL32:
+      return ELFPrel32;
+    case ELF::R_AARCH64_PREL64:
+      return ELFPrel64;
     case ELF::R_AARCH64_ADR_GOT_PAGE:
       return ELFAdrGOTPage21;
     case ELF::R_AARCH64_LD64_GOT_LO12_NC:
@@ -214,6 +220,14 @@ private:
       Kind = aarch64::Pointer64;
       break;
     }
+    case ELFPrel32: {
+      Kind = aarch64::Delta32;
+      break;
+    }
+    case ELFPrel64: {
+      Kind = aarch64::Delta64;
+      break;
+    }
     case ELFAdrGOTPage21: {
       Kind = aarch64::GOTPage21;
       break;
@@ -256,6 +270,10 @@ private:
       return "ELFLdSt128Abs12";
     case ELFAbs64:
       return "ELFAbs64";
+    case ELFPrel32:
+      return "ELFPrel32";
+    case ELFPrel64:
+      return "ELFPrel64";
     case ELFAdrGOTPage21:
       return "ELFAdrGOTPage21";
     case ELFLd64GOTLo12:
