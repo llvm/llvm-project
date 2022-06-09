@@ -100,7 +100,7 @@ class StepScriptedTestCase(TestBase):
             self.assertSuccess(err)
 
         # We should not have exited:
-        self.assertEqual(process.GetState(), lldb.eStateStopped, "We are stopped")
+        self.assertState(process.GetState(), lldb.eStateStopped, "We are stopped")
 
         # We should still be in foo:
         self.assertEqual("foo", frame.GetFunctionName())

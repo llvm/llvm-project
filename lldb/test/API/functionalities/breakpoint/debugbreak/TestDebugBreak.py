@@ -26,7 +26,7 @@ class DebugBreakTestCase(TestBase):
             None, None, self.get_process_working_directory())
 
         # We've hit the first stop, so grab the frame.
-        self.assertEqual(process.GetState(), lldb.eStateStopped)
+        self.assertState(process.GetState(), lldb.eStateStopped)
         stop_reason = lldb.eStopReasonException if (lldbplatformutil.getPlatform(
         ) == "windows" or lldbplatformutil.getPlatform() == "macosx") else lldb.eStopReasonSignal
         thread = lldbutil.get_stopped_thread(process, stop_reason)

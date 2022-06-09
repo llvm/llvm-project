@@ -27,4 +27,4 @@ class StepOverDoesntDeadlockTestCase(TestBase):
         
         thread.StepOver()
         state = process.GetState()
-        self.assertEqual(state, lldb.eStateStopped)
+        self.assertState(state, lldb.eStateStopped)
