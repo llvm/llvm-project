@@ -14918,6 +14918,8 @@ terminated by an ``.end_amdhsa_kernel`` directive.
                                                                                                :ref:`amdgpu-amdhsa-compute_pgm_rsrc1-gfx6-gfx11-table`.
      ``.amdhsa_forward_progress``                             0                   GFX10-GFX11  Controls FWD_PROGRESS in
                                                                                                :ref:`amdgpu-amdhsa-compute_pgm_rsrc1-gfx6-gfx11-table`.
+     ``.amdhsa_shared_vgpr_count``                            0                   GFX10-GFX11  Controls SHARED_VGPR_COUNT in
+                                                                                               :ref:`amdgpu-amdhsa-compute_pgm_rsrc3-gfx10-gfx11-table`.
      ``.amdhsa_exception_fp_ieee_invalid_op``                 0                   GFX6-GFX11   Controls ENABLE_EXCEPTION_IEEE_754_FP_INVALID_OPERATION in
                                                                                                :ref:`amdgpu-amdhsa-compute_pgm_rsrc2-gfx6-gfx11-table`.
      ``.amdhsa_exception_fp_denorm_src``                      0                   GFX6-GFX11   Controls ENABLE_EXCEPTION_FP_DENORMAL_SOURCE in
