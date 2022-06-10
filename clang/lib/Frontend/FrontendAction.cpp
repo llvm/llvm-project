@@ -1075,7 +1075,7 @@ void FrontendAction::EndSourceFile() {
   }
 
   if (CI.getFrontendOpts().ShowStats) {
-    llvm::errs() << "\nSTATISTICS FOR '" << getCurrentFile() << "':\n";
+    llvm::errs() << "\nSTATISTICS FOR '" << getCurrentFileOrBufferName() << "':\n";
     CI.getPreprocessor().PrintStats();
     CI.getPreprocessor().getIdentifierTable().PrintStats();
     CI.getPreprocessor().getHeaderSearchInfo().PrintStats();
