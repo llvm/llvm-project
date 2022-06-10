@@ -433,13 +433,7 @@ void printVType(unsigned VType, raw_ostream &OS);
 
 } // namespace RISCVVType
 
-namespace RISCVVInstInfo {
-inline static bool isFaultFirstLoad(const MachineInstr &MI) {
-  return MI.getNumExplicitDefs() == 2 && MI.modifiesRegister(RISCV::VL) &&
-         !MI.isInlineAsm();
-}
-} // namespace RISCVVInstInfo
-
+bool isFaultFirstLoad(const MachineInstr &MI);
 } // namespace llvm
 
 #endif

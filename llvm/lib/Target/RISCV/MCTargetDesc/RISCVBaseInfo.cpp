@@ -182,4 +182,9 @@ void RISCVVType::printVType(unsigned VType, raw_ostream &OS) {
     OS << ", mu";
 }
 
+bool isFaultFirstLoad(const MachineInstr &MI) {
+  return MI.getNumExplicitDefs() == 2 && MI.modifiesRegister(RISCV::VL) &&
+         !MI.isInlineAsm();
+}
+
 } // namespace llvm
