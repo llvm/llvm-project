@@ -30,6 +30,8 @@ public:
 
   bool IsIntegratedAssemblerDefault() const override { return true; }
 
+  unsigned GetDefaultDwarfVersion() const override { return 4; }
+
   void addClangTargetOptions(
       const llvm::opt::ArgList &DriverArgs, llvm::opt::ArgStringList &CC1Args,
       Action::OffloadKind DeviceOffloadingKind) const override;
