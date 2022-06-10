@@ -207,6 +207,10 @@ class RISCVELFStreamer : public MCELFStreamer {
 
   static bool requiresFixups(MCContext &C, const MCExpr *Value,
                              const MCExpr *&LHS, const MCExpr *&RHS) {
+    auto IsMetadataOrEHFrameSection = [](const MCSection &S) -> bool {
+      return S.getKind().isMetadata() || S.getName() == ".eh_frame";
+    };
+
     const auto *MBE = dyn_cast<MCBinaryExpr>(Value);
     if (MBE == nullptr)
       return false;
@@ -225,10 +229,15 @@ class RISCVELFStreamer : public MCELFStreamer {
                              MCConstantExpr::create(E.getConstant(), C), C);
     RHS = E.getSymB();
 
-    return (A.isInSection() ? A.getSection().hasInstructions()
-                            : !A.getName().empty()) ||
-           (B.isInSection() ? B.getSection().hasInstructions()
-                            : !B.getName().empty());
+    // TODO: when available, R_RISCV_n_PCREL should be preferred.
+
+    // Avoid pairwise relocations for symbolic difference in debug and .eh_frame
+    if (A.isInSection())
+      return !IsMetadataOrEHFrameSection(A.getSection());
+    if (B.isInSection())
+      return !IsMetadataOrEHFrameSection(B.getSection());
+    // as well as for absolute symbols.
+    return !A.getName().empty() || !B.getName().empty();
   }
 
   void reset() override {
