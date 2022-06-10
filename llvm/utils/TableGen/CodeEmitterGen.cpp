@@ -22,6 +22,7 @@
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/TableGen/Error.h"
 #include "llvm/TableGen/Record.h"
 #include "llvm/TableGen/TableGenBackend.h"
 #include <cassert>
@@ -118,16 +119,16 @@ AddCodeToMergeInOperand(Record *R, BitsInit *BI, const std::string &VarName,
               (!NamedOpIndices.empty() && NamedOpIndices.count(
                 CGI.Operands.getSubOperandNumber(NumberedOp).first)))) {
       ++NumberedOp;
+    }
 
-      if (NumberedOp >= CGI.Operands.back().MIOperandNo +
-                        CGI.Operands.back().MINumOperands) {
-        errs() << "Too few operands in record " << R->getName() <<
-                  " (no match for variable " << VarName << "):\n";
-        errs() << *R;
-        errs() << '\n';
-
-        return;
-      }
+    if (NumberedOp >=
+        CGI.Operands.back().MIOperandNo + CGI.Operands.back().MINumOperands) {
+      std::string E;
+      raw_string_ostream S(E);
+      S << "Too few operands in record " << R->getName()
+        << " (no match for variable " << VarName << "):\n";
+      S << *R;
+      PrintFatalError(R, E);
     }
 
     OpIdx = NumberedOp++;
