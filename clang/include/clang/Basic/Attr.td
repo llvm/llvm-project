@@ -1438,7 +1438,7 @@ def Final : InheritableAttr {
 def MinSize : InheritableAttr {
   let Spellings = [Clang<"minsize">];
   let Subjects = SubjectList<[Function, ObjCMethod], ErrorDiag>;
-  let Documentation = [Undocumented];
+  let Documentation = [MinSizeDocs];
 }
 
 def FlagEnum : InheritableAttr {
