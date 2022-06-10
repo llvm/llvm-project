@@ -527,6 +527,9 @@ basic_string<char32_t> operator "" s( const char32_t *str, size_t len );        
 #include <__functional/hash.h>
 #include <__functional/unary_function.h>
 #include <__ios/fpos.h>
+#include <__iterator/distance.h>
+#include <__iterator/iterator_traits.h>
+#include <__iterator/reverse_iterator.h>
 #include <__iterator/wrap_iter.h>
 #include <__memory/allocate_at_least.h>
 #include <__string/char_traits.h>
@@ -542,7 +545,7 @@ basic_string<char32_t> operator "" s( const char32_t *str, size_t len );        
 #include <cstring>
 #include <initializer_list>
 #include <iosfwd>
-#include <iterator>
+#include <iterator> // TODO: Remove this include
 #include <limits>
 #include <memory>
 #include <stdexcept>

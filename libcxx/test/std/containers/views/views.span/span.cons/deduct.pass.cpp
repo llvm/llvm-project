@@ -28,6 +28,7 @@
 #include <span>
 #include <array>
 #include <cassert>
+#include <iterator>
 #include <memory>
 #include <string>
 
