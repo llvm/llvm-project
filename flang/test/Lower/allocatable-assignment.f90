@@ -249,7 +249,8 @@ subroutine test_derived_scalar(x, s)
 ! CHECK:  }
 ! CHECK:  %[[VAL_14:.*]] = fir.field_index i, !fir.type<_QMalloc_assignTt{i:i32}>
 ! CHECK:  %[[VAL_15:.*]] = fir.coordinate_of %[[VAL_1]], %[[VAL_14]] : (!fir.ref<!fir.type<_QMalloc_assignTt{i:i32}>>, !fir.field) -> !fir.ref<i32>
-! CHECK:  %[[VAL_16:.*]] = fir.coordinate_of %[[VAL_7]]#1, %[[VAL_14]] : (!fir.heap<!fir.type<_QMalloc_assignTt{i:i32}>>, !fir.field) -> !fir.ref<i32>
+! CHECK:  %[[VAL_14b:.*]] = fir.field_index i, !fir.type<_QMalloc_assignTt{i:i32}>
+! CHECK:  %[[VAL_16:.*]] = fir.coordinate_of %[[VAL_7]]#1, %[[VAL_14b]] : (!fir.heap<!fir.type<_QMalloc_assignTt{i:i32}>>, !fir.field) -> !fir.ref<i32>
 ! CHECK:  %[[VAL_17:.*]] = fir.load %[[VAL_15]] : !fir.ref<i32>
 ! CHECK:  fir.store %[[VAL_17]] to %[[VAL_16]] : !fir.ref<i32
 ! CHECK:  fir.if %[[VAL_7]]#0 {
