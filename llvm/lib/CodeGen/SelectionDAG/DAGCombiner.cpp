@@ -19233,6 +19233,14 @@ SDValue DAGCombiner::combineInsertEltToShuffle(SDNode *N, unsigned InsIndex) {
       }
     }
 
+    // If we failed to find a match, see if we can replace an UNDEF shuffle
+    // operand.
+    if (ElementOffset == -1 && Y.isUndef() &&
+        InsertVal0.getValueType() == Y.getValueType()) {
+      ElementOffset = Mask.size();
+      Y = InsertVal0;
+    }
+
     if (ElementOffset != -1) {
       SmallVector<int, 16> NewMask(Mask.begin(), Mask.end());
 
