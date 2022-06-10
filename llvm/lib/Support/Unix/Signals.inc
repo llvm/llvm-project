@@ -432,6 +432,10 @@ void llvm::sys::SetOneShotPipeSignalFunction(void (*Handler)()) {
 }
 
 void llvm::sys::DefaultOneShotPipeSignalHandler() {
+  // UNIX03 conformance requires a non-zero exit code and an error message
+  // to stderr when writing to a closed stdout fails.
+  errs() << "error: write on a pipe with no reader\n";
+
   // Send a special return code that drivers can check for, from sysexits.h.
   exit(EX_IOERR);
 }
