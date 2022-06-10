@@ -43,6 +43,11 @@ func.func @rsqrt(%arg: complex<f32>) -> complex<f32> {
   func.return %sqrt : complex<f32>
 }
 
+func.func @conj(%arg: complex<f32>) -> complex<f32> {
+  %conj = complex.conj %arg : complex<f32>
+  func.return %conj : complex<f32>
+}
+
 // %input contains pairs of lhs, rhs, i.e. [lhs_0, rhs_0, lhs_1, rhs_1,...]
 func.func @test_binary(%input: tensor<?xcomplex<f32>>,
                        %func: (complex<f32>, complex<f32>) -> complex<f32>) {
@@ -216,5 +221,36 @@ func.func @entry() {
   call @test_unary(%rsqrt_test_cast, %rsqrt_func)
     : (tensor<?xcomplex<f32>>, (complex<f32>) -> complex<f32>) -> ()
 
+  // complex.conj test
+  %conj_test = arith.constant dense<[
+    (-1.0, -1.0),
+    // CHECK:      -1.0
+    // CHECK-NEXT: 1.0
+    (-1.0, 1.0),
+    // CHECK-NEXT:  -1.0
+    // CHECK-NEXT:  -1.0
+    (0.0, 0.0),
+    // CHECK-NEXT:  0
+    // CHECK-NEXT:  0
+    (0.0, 1.0),
+    // CHECK-NEXT:  0
+    // CHECK-NEXT:  -1.0
+    (1.0, -1.0),
+    // CHECK-NEXT:  1.0
+    // CHECK-NEXT:  -1.0
+    (1.0, 0.0),
+    // CHECK-NEXT:  1.0
+    // CHECK-NEXT:  0
+    (1.0, 1.0)
+    // CHECK-NEXT:  1.0
+    // CHECK-NEXT:  -1.0
+  ]> : tensor<7xcomplex<f32>>
+  %conj_test_cast = tensor.cast %conj_test
+    :  tensor<7xcomplex<f32>> to tensor<?xcomplex<f32>>
+
+  %conj_func = func.constant @conj : (complex<f32>) -> complex<f32>
+  call @test_unary(%conj_test_cast, %conj_func)
+    : (tensor<?xcomplex<f32>>, (complex<f32>) -> complex<f32>) -> ()
+    
   func.return
 }
