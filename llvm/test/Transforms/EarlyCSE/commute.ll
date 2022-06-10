@@ -2,89 +2,89 @@
 ; RUN: opt < %s -S -early-cse -earlycse-debug-hash | FileCheck %s
 ; RUN: opt < %s -S -basic-aa -early-cse-memssa | FileCheck %s
 
-define void @test1(float %A, float %B, float* %PA, float* %PB) {
+define void @test1(float %A, float %B, ptr %PA, ptr %PB) {
 ; CHECK-LABEL: @test1(
 ; CHECK-NEXT:    [[C:%.*]] = fadd float [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    store float [[C]], float* [[PA:%.*]], align 4
-; CHECK-NEXT:    store float [[C]], float* [[PB:%.*]], align 4
+; CHECK-NEXT:    store float [[C]], ptr [[PA:%.*]], align 4
+; CHECK-NEXT:    store float [[C]], ptr [[PB:%.*]], align 4
 ; CHECK-NEXT:    ret void
 ;
   %C = fadd float %A, %B
-  store float %C, float* %PA
+  store float %C, ptr %PA
   %D = fadd float %B, %A
-  store float %D, float* %PB
+  store float %D, ptr %PB
   ret void
 }
 
-define void @test2(float %A, float %B, i1* %PA, i1* %PB) {
+define void @test2(float %A, float %B, ptr %PA, ptr %PB) {
 ; CHECK-LABEL: @test2(
 ; CHECK-NEXT:    [[C:%.*]] = fcmp oeq float [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    store i1 [[C]], i1* [[PA:%.*]], align 1
-; CHECK-NEXT:    store i1 [[C]], i1* [[PB:%.*]], align 1
+; CHECK-NEXT:    store i1 [[C]], ptr [[PA:%.*]], align 1
+; CHECK-NEXT:    store i1 [[C]], ptr [[PB:%.*]], align 1
 ; CHECK-NEXT:    ret void
 ;
   %C = fcmp oeq float %A, %B
-  store i1 %C, i1* %PA
+  store i1 %C, ptr %PA
   %D = fcmp oeq float %B, %A
-  store i1 %D, i1* %PB
+  store i1 %D, ptr %PB
   ret void
 }
 
-define void @test3(float %A, float %B, i1* %PA, i1* %PB) {
+define void @test3(float %A, float %B, ptr %PA, ptr %PB) {
 ; CHECK-LABEL: @test3(
 ; CHECK-NEXT:    [[C:%.*]] = fcmp uge float [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    store i1 [[C]], i1* [[PA:%.*]], align 1
-; CHECK-NEXT:    store i1 [[C]], i1* [[PB:%.*]], align 1
+; CHECK-NEXT:    store i1 [[C]], ptr [[PA:%.*]], align 1
+; CHECK-NEXT:    store i1 [[C]], ptr [[PB:%.*]], align 1
 ; CHECK-NEXT:    ret void
 ;
   %C = fcmp uge float %A, %B
-  store i1 %C, i1* %PA
+  store i1 %C, ptr %PA
   %D = fcmp ule float %B, %A
-  store i1 %D, i1* %PB
+  store i1 %D, ptr %PB
   ret void
 }
 
-define void @test4(i32 %A, i32 %B, i1* %PA, i1* %PB) {
+define void @test4(i32 %A, i32 %B, ptr %PA, ptr %PB) {
 ; CHECK-LABEL: @test4(
 ; CHECK-NEXT:    [[C:%.*]] = icmp eq i32 [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    store i1 [[C]], i1* [[PA:%.*]], align 1
-; CHECK-NEXT:    store i1 [[C]], i1* [[PB:%.*]], align 1
+; CHECK-NEXT:    store i1 [[C]], ptr [[PA:%.*]], align 1
+; CHECK-NEXT:    store i1 [[C]], ptr [[PB:%.*]], align 1
 ; CHECK-NEXT:    ret void
 ;
   %C = icmp eq i32 %A, %B
-  store i1 %C, i1* %PA
+  store i1 %C, ptr %PA
   %D = icmp eq i32 %B, %A
-  store i1 %D, i1* %PB
+  store i1 %D, ptr %PB
   ret void
 }
 
-define void @test5(i32 %A, i32 %B, i1* %PA, i1* %PB) {
+define void @test5(i32 %A, i32 %B, ptr %PA, ptr %PB) {
 ; CHECK-LABEL: @test5(
 ; CHECK-NEXT:    [[C:%.*]] = icmp sgt i32 [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    store i1 [[C]], i1* [[PA:%.*]], align 1
-; CHECK-NEXT:    store i1 [[C]], i1* [[PB:%.*]], align 1
+; CHECK-NEXT:    store i1 [[C]], ptr [[PA:%.*]], align 1
+; CHECK-NEXT:    store i1 [[C]], ptr [[PB:%.*]], align 1
 ; CHECK-NEXT:    ret void
 ;
   %C = icmp sgt i32 %A, %B
-  store i1 %C, i1* %PA
+  store i1 %C, ptr %PA
   %D = icmp slt i32 %B, %A
-  store i1 %D, i1* %PB
+  store i1 %D, ptr %PB
   ret void
 }
 
 ; Test degenerate case of commuted compare of identical comparands.
 
-define void @test6(float %f, i1* %p1, i1* %p2) {
+define void @test6(float %f, ptr %p1, ptr %p2) {
 ; CHECK-LABEL: @test6(
 ; CHECK-NEXT:    [[C1:%.*]] = fcmp ult float [[F:%.*]], [[F]]
-; CHECK-NEXT:    store i1 [[C1]], i1* [[P1:%.*]], align 1
-; CHECK-NEXT:    store i1 [[C1]], i1* [[P2:%.*]], align 1
+; CHECK-NEXT:    store i1 [[C1]], ptr [[P1:%.*]], align 1
+; CHECK-NEXT:    store i1 [[C1]], ptr [[P2:%.*]], align 1
 ; CHECK-NEXT:    ret void
 ;
   %c1 = fcmp ult float %f, %f
   %c2 = fcmp ugt float %f, %f
-  store i1 %c1, i1* %p1
-  store i1 %c2, i1* %p2
+  store i1 %c1, ptr %p1
+  store i1 %c2, ptr %p2
   ret void
 }
 
@@ -746,29 +746,29 @@ define i32 @inverted_max(i32 %i) {
 ; values, and we run this test with -earlycse-debug-hash which would catch
 ; the disagreement and fail if it regressed.  This test also includes a
 ; negation of each negation to check for the same issue one level deeper.
-define void @not_not_min(i32* %px, i32* %py, i32* %pout) {
+define void @not_not_min(ptr %px, ptr %py, ptr %pout) {
 ; CHECK-LABEL: @not_not_min(
-; CHECK-NEXT:    [[X:%.*]] = load volatile i32, i32* [[PX:%.*]], align 4
-; CHECK-NEXT:    [[Y:%.*]] = load volatile i32, i32* [[PY:%.*]], align 4
+; CHECK-NEXT:    [[X:%.*]] = load volatile i32, ptr [[PX:%.*]], align 4
+; CHECK-NEXT:    [[Y:%.*]] = load volatile i32, ptr [[PY:%.*]], align 4
 ; CHECK-NEXT:    [[CMPA:%.*]] = icmp slt i32 [[X]], [[Y]]
 ; CHECK-NEXT:    [[CMPB:%.*]] = xor i1 [[CMPA]], true
 ; CHECK-NEXT:    [[RA:%.*]] = select i1 [[CMPA]], i32 [[X]], i32 [[Y]]
-; CHECK-NEXT:    store volatile i32 [[RA]], i32* [[POUT:%.*]], align 4
-; CHECK-NEXT:    store volatile i32 [[RA]], i32* [[POUT]], align 4
-; CHECK-NEXT:    store volatile i32 [[RA]], i32* [[POUT]], align 4
+; CHECK-NEXT:    store volatile i32 [[RA]], ptr [[POUT:%.*]], align 4
+; CHECK-NEXT:    store volatile i32 [[RA]], ptr [[POUT]], align 4
+; CHECK-NEXT:    store volatile i32 [[RA]], ptr [[POUT]], align 4
 ; CHECK-NEXT:    ret void
 ;
-  %x = load volatile i32, i32* %px
-  %y = load volatile i32, i32* %py
+  %x = load volatile i32, ptr %px
+  %y = load volatile i32, ptr %py
   %cmpa = icmp slt i32 %x, %y
   %cmpb = xor i1 %cmpa, -1
   %cmpc = xor i1 %cmpb, -1
   %ra = select i1 %cmpa, i32 %x, i32 %y
   %rb = select i1 %cmpb, i32 %y, i32 %x
   %rc = select i1 %cmpc, i32 %x, i32 %y
-  store volatile i32 %ra, i32* %pout
-  store volatile i32 %rb, i32* %pout
-  store volatile i32 %rc, i32* %pout
+  store volatile i32 %ra, ptr %pout
+  store volatile i32 %rb, ptr %pout
+  store volatile i32 %rc, ptr %pout
 
   ret void
 }

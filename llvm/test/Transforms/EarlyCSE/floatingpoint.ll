@@ -21,16 +21,16 @@ define <4 x float> @fW( <4 x float> %a) {
 }
 
 ; CSE unary fnegs.
-define void @fX(<4 x float> *%p, <4 x float> %a) {
+define void @fX(ptr%p, <4 x float> %a) {
 ; CHECK-LABEL: @fX(
 ; CHECK-NEXT:    [[X:%.*]] = fneg <4 x float> [[A:%.*]]
-; CHECK-NEXT:    store volatile <4 x float> [[X]], <4 x float>* [[P:%.*]], align 16
-; CHECK-NEXT:    store volatile <4 x float> [[X]], <4 x float>* [[P]], align 16
+; CHECK-NEXT:    store volatile <4 x float> [[X]], ptr [[P:%.*]], align 16
+; CHECK-NEXT:    store volatile <4 x float> [[X]], ptr [[P]], align 16
 ; CHECK-NEXT:    ret void
 ;
   %x = fneg <4 x float> %a
   %y = fneg <4 x float> %a
-  store volatile <4 x float> %x, <4 x float>* %p
-  store volatile <4 x float> %y, <4 x float>* %p
+  store volatile <4 x float> %x, ptr %p
+  store volatile <4 x float> %y, ptr %p
   ret void
 }
