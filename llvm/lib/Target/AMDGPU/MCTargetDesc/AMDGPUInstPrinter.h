@@ -15,6 +15,7 @@
 #include "llvm/MC/MCInstPrinter.h"
 
 namespace llvm {
+class MCInstrDesc;
 
 class AMDGPUInstPrinter : public MCInstPrinter {
 public:
@@ -117,6 +118,8 @@ private:
                         raw_ostream &O);
   void printOperand(const MCInst *MI, unsigned OpNo, const MCSubtargetInfo &STI,
                     raw_ostream &O);
+  void printRegularOperand(const MCInst *MI, unsigned OpNo,
+                           const MCSubtargetInfo &STI, raw_ostream &O);
   void printOperand(const MCInst *MI, uint64_t /*Address*/, unsigned OpNum,
                     const MCSubtargetInfo &STI, raw_ostream &O) {
     printOperand(MI, OpNum, STI, O);
@@ -173,6 +176,7 @@ private:
                  raw_ostream &O);
   void printABID(const MCInst *MI, unsigned OpNo, const MCSubtargetInfo &STI,
                  raw_ostream &O);
+  bool needsImpliedVcc(const MCInstrDesc &Desc, unsigned OpNo) const;
   void printDefaultVccOperand(bool FirstOperand, const MCSubtargetInfo &STI,
                               raw_ostream &O);
   void printWaitVDST(const MCInst *MI, unsigned OpNo, const MCSubtargetInfo &STI,

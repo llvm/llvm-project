@@ -1762,9 +1762,24 @@ public:
   AMDGPUOperand::Ptr defaultBoundCtrl() const;
   AMDGPUOperand::Ptr defaultFI() const;
   void cvtDPP(MCInst &Inst, const OperandVector &Operands, bool IsDPP8 = false);
-  void cvtDPP8(MCInst &Inst, const OperandVector &Operands) { cvtDPP(Inst, Operands, true); }
-  void cvtVOP3DPP(MCInst &Inst, const OperandVector &Operands, bool IsDPP8 = false);
-  void cvtVOP3DPP8(MCInst &Inst, const OperandVector &Operands) { cvtVOP3DPP(Inst, Operands, true); }
+  void cvtDPP8(MCInst &Inst, const OperandVector &Operands) {
+    cvtDPP(Inst, Operands, true);
+  }
+  void cvtVOPCNoDstDPP(MCInst &Inst, const OperandVector &Operands,
+                       bool IsDPP8 = false);
+  void cvtVOPCNoDstDPP8(MCInst &Inst, const OperandVector &Operands) {
+    cvtVOPCNoDstDPP(Inst, Operands, true);
+  }
+  void cvtVOP3DPP(MCInst &Inst, const OperandVector &Operands,
+                  bool IsDPP8 = false);
+  void cvtVOP3DPP8(MCInst &Inst, const OperandVector &Operands) {
+    cvtVOP3DPP(Inst, Operands, true);
+  }
+  void cvtVOPC64NoDstDPP(MCInst &Inst, const OperandVector &Operands,
+                         bool IsDPP8 = false);
+  void cvtVOPC64NoDstDPP8(MCInst &Inst, const OperandVector &Operands) {
+    cvtVOPC64NoDstDPP(Inst, Operands, true);
+  }
 
   OperandMatchResultTy parseSDWASel(OperandVector &Operands, StringRef Prefix,
                                     AMDGPUOperand::ImmTy Type);
@@ -8594,6 +8609,14 @@ AMDGPUOperand::Ptr AMDGPUAsmParser::defaultFI() const {
   return AMDGPUOperand::CreateImm(this, 0, SMLoc(), AMDGPUOperand::ImmTyDppFi);
 }
 
+// Add dummy $old operand
+void AMDGPUAsmParser::cvtVOPC64NoDstDPP(MCInst &Inst,
+                                        const OperandVector &Operands,
+                                        bool IsDPP8) {
+  Inst.addOperand(MCOperand::createReg(0));
+  cvtVOP3DPP(Inst, Operands, IsDPP8);
+}
+
 void AMDGPUAsmParser::cvtVOP3DPP(MCInst &Inst, const OperandVector &Operands, bool IsDPP8) {
   OptionalImmIndexMap OptionalIdx;
   unsigned Opc = Inst.getOpcode();
@@ -8658,6 +8681,14 @@ void AMDGPUAsmParser::cvtVOP3DPP(MCInst &Inst, const OperandVector &Operands, bo
       addOptionalImmOperand(Inst, Operands, OptionalIdx, AMDGPUOperand::ImmTyDppFi);
     }
   }
+}
+
+// Add dummy $old operand
+void AMDGPUAsmParser::cvtVOPCNoDstDPP(MCInst &Inst,
+                                      const OperandVector &Operands,
+                                      bool IsDPP8) {
+  Inst.addOperand(MCOperand::createReg(0));
+  cvtDPP(Inst, Operands, IsDPP8);
 }
 
 void AMDGPUAsmParser::cvtDPP(MCInst &Inst, const OperandVector &Operands, bool IsDPP8) {
