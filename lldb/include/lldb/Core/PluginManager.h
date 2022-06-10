@@ -174,7 +174,8 @@ public:
                  ObjectFileCreateInstance create_callback,
                  ObjectFileCreateMemoryInstance create_memory_callback,
                  ObjectFileGetModuleSpecifications get_module_specifications,
-                 ObjectFileSaveCore save_core = nullptr);
+                 ObjectFileSaveCore save_core = nullptr,
+                 DebuggerInitializeCallback debugger_init_callback = nullptr);
 
   static bool UnregisterPlugin(ObjectFileCreateInstance create_callback);
 
@@ -479,6 +480,13 @@ public:
   GetSettingForProcessPlugin(Debugger &debugger, ConstString setting_name);
 
   static bool CreateSettingForProcessPlugin(
+      Debugger &debugger, const lldb::OptionValuePropertiesSP &properties_sp,
+      ConstString description, bool is_global_property);
+
+  static lldb::OptionValuePropertiesSP
+  GetSettingForObjectFilePlugin(Debugger &debugger, ConstString setting_name);
+
+  static bool CreateSettingForObjectFilePlugin(
       Debugger &debugger, const lldb::OptionValuePropertiesSP &properties_sp,
       ConstString description, bool is_global_property);
 
