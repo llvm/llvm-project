@@ -28,7 +28,7 @@ is_final : public integral_constant<bool, __is_final(_Tp)> {};
 
 #if _LIBCPP_STD_VER > 14
 template <class _Tp>
-inline constexpr bool is_final_v = is_final<_Tp>::value;
+inline constexpr bool is_final_v = __is_final(_Tp);
 #endif
 
 _LIBCPP_END_NAMESPACE_STD

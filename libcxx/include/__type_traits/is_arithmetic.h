@@ -20,9 +20,18 @@
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
+#if __has_keyword(__is_arithmetic)
+
+template <class _Tp>
+struct _LIBCPP_TEMPLATE_VIS is_arithmetic : integral_constant<bool, __is_arithmetic(_Tp)> {};
+
+#else
+
 template <class _Tp> struct _LIBCPP_TEMPLATE_VIS is_arithmetic
     : public integral_constant<bool, is_integral<_Tp>::value      ||
                                      is_floating_point<_Tp>::value> {};
+
+#endif // __has_keyword(__is_arithmetic)
 
 #if _LIBCPP_STD_VER > 14
 template <class _Tp>
