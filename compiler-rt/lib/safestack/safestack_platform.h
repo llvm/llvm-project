@@ -94,7 +94,7 @@ inline void *Mmap(void *addr, size_t length, int prot, int flags, int fd,
                   off_t offset) {
 #if SANITIZER_NETBSD
   return __mmap(addr, length, prot, flags, fd, 0, offset);
-#elif defined(__x86_64__) && (SANITIZER_FREEBSD)
+#elif SANITIZER_FREEBSD && (defined(__aarch64__) || defined(__x86_64__))
   return (void *)__syscall(SYS_mmap, addr, length, prot, flags, fd, offset);
 #else
   return (void *)syscall(SYS_mmap, addr, length, prot, flags, fd, offset);
