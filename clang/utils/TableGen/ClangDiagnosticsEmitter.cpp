@@ -1534,13 +1534,21 @@ static void emitDiagTable(std::map<std::string, GroupInfo> &DiagsInGroup,
     const bool hasSubGroups =
         !SubGroups.empty() || (IsPedantic && !GroupsInPedantic.empty());
     if (hasSubGroups) {
-      OS << "/* DiagSubGroup" << I.second.IDNo << " */ " << SubGroupIndex;
+      OS << "/* DiagSubGroup" << I.second.IDNo << " */ " << SubGroupIndex
+         << ", ";
       if (IsPedantic)
         SubGroupIndex += GroupsInPedantic.size();
       SubGroupIndex += SubGroups.size() + 1;
     } else {
-      OS << "0";
+      OS << "0, ";
     }
+
+    std::string Documentation = I.second.Defs.back()
+                                    ->getValue("Documentation")
+                                    ->getValue()
+                                    ->getAsUnquotedString();
+
+    OS << "R\"(" << StringRef(Documentation).trim() << ")\"";
 
     OS << ")\n";
   }

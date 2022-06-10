@@ -231,6 +231,9 @@ public:
   /// "deprecated-declarations".
   static StringRef getWarningOptionForGroup(diag::Group);
 
+  /// Given a diagnostic group ID, return its documentation.
+  static StringRef getWarningOptionDocumentation(diag::Group GroupID);
+
   /// Given a group ID, returns the flag that toggles the group.
   /// For example, for "deprecated-declarations", returns
   /// Group::DeprecatedDeclarations.
