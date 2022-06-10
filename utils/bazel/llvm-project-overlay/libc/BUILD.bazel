@@ -158,6 +158,7 @@ fputil_common_hdrs = [
     "src/__support/FPUtil/NearestIntegerOperations.h",
     "src/__support/FPUtil/NormalFloat.h",
     "src/__support/FPUtil/PlatformDefs.h",
+    "src/__support/FPUtil/builtin_wrappers.h",
 ]
 
 fputil_hdrs = selects.with_or({
@@ -814,7 +815,7 @@ cc_library(
         ":__support_common",
         ":__support_cpp_bitset",
         ":libc_root",
-        ":string_memory_utils"
+        ":string_memory_utils",
     ],
 )
 
