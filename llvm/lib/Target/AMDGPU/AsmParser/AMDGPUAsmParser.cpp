@@ -1794,13 +1794,24 @@ public:
   AMDGPUOperand::Ptr defaultBoundCtrl() const;
   AMDGPUOperand::Ptr defaultFI() const;
   void cvtDPP(MCInst &Inst, const OperandVector &Operands, bool IsDPP8 = false);
-  void cvtDPP8(MCInst &Inst, const OperandVector &Operands) { cvtDPP(Inst, Operands, true); }
-  void cvtVOPCNoDstDPP(MCInst &Inst, const OperandVector &Operands, bool IsDPP8 = false);
-  void cvtVOPCNoDstDPP8(MCInst &Inst, const OperandVector &Operands) { cvtVOPCNoDstDPP(Inst, Operands, true); }
-  void cvtVOP3DPP(MCInst &Inst, const OperandVector &Operands, bool IsDPP8 = false);
-  void cvtVOP3DPP8(MCInst &Inst, const OperandVector &Operands) { cvtVOP3DPP(Inst, Operands, true); }
-  void cvtVOPC64NoDstDPP(MCInst &Inst, const OperandVector &Operands, bool IsDPP8 = false);
-  void cvtVOPC64NoDstDPP8(MCInst &Inst, const OperandVector &Operands) { cvtVOPC64NoDstDPP(Inst, Operands, true); }
+  void cvtDPP8(MCInst &Inst, const OperandVector &Operands) {
+    cvtDPP(Inst, Operands, true);
+  }
+  void cvtVOPCNoDstDPP(MCInst &Inst, const OperandVector &Operands,
+                       bool IsDPP8 = false);
+  void cvtVOPCNoDstDPP8(MCInst &Inst, const OperandVector &Operands) {
+    cvtVOPCNoDstDPP(Inst, Operands, true);
+  }
+  void cvtVOP3DPP(MCInst &Inst, const OperandVector &Operands,
+                  bool IsDPP8 = false);
+  void cvtVOP3DPP8(MCInst &Inst, const OperandVector &Operands) {
+    cvtVOP3DPP(Inst, Operands, true);
+  }
+  void cvtVOPC64NoDstDPP(MCInst &Inst, const OperandVector &Operands,
+                         bool IsDPP8 = false);
+  void cvtVOPC64NoDstDPP8(MCInst &Inst, const OperandVector &Operands) {
+    cvtVOPC64NoDstDPP(Inst, Operands, true);
+  }
 
   OperandMatchResultTy parseSDWASel(OperandVector &Operands, StringRef Prefix,
                                     AMDGPUOperand::ImmTy Type);

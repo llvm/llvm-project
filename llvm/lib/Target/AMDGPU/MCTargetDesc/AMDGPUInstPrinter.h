@@ -177,7 +177,7 @@ private:
                  raw_ostream &O);
   void printABID(const MCInst *MI, unsigned OpNo, const MCSubtargetInfo &STI,
                  raw_ostream &O);
-  bool needsVccMods(const MCInstrDesc &Desc, unsigned OpNo) const;
+  bool needsImpliedVcc(const MCInstrDesc &Desc, unsigned OpNo) const;
   void printDefaultVccOperand(bool FirstOperand, const MCSubtargetInfo &STI,
                               raw_ostream &O);
   void printWaitVDST(const MCInst *MI, unsigned OpNo, const MCSubtargetInfo &STI,
