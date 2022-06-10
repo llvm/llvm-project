@@ -22,8 +22,8 @@ define i1 @test_constant_speculation() {
 ; CHECK:       select:
 ; CHECK-NEXT:    br label [[END]]
 ; CHECK:       end:
-; CHECK-NEXT:    [[TMP:%.*]] = phi i32* [ null, [[ENTRY:%.*]] ], [ getelementptr inbounds ([[MYSTRUCT:%.*]], %mystruct* @var, i64 0, i32 0), [[SELECT]] ]
-; CHECK-NEXT:    [[RES:%.*]] = icmp eq i32* [[TMP]], null
+; CHECK-NEXT:    [[TMP:%.*]] = phi ptr [ null, [[ENTRY:%.*]] ], [ @var, [[SELECT]] ]
+; CHECK-NEXT:    [[RES:%.*]] = icmp eq ptr [[TMP]], null
 ; CHECK-NEXT:    ret i1 [[RES]]
 ;
 entry:
@@ -32,12 +32,11 @@ entry:
 select:
 
   %tst = icmp eq i32 1, 0
-  %elt = getelementptr %mystruct, %mystruct* @var, i64 0, i32 0
-  %sel = select i1 %tst, i32* null, i32* %elt
+  %sel = select i1 %tst, ptr null, ptr @var
   br label %end
 
 end:
-  %tmp = phi i32* [null, %entry], [%sel, %select]
-  %res = icmp eq i32* %tmp, null
+  %tmp = phi ptr [null, %entry], [%sel, %select]
+  %res = icmp eq ptr %tmp, null
   ret i1 %res
 }

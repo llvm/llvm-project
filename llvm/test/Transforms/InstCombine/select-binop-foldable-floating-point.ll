@@ -45,6 +45,39 @@ define float @select_fadd_swapped_fast_math(i1 %cond, float %A, float %B) {
   ret float %D
 }
 
+define <4 x float> @select_nsz_fadd_v4f32(<4 x i1> %cond, <4 x float> %A, <4 x float> %B) {
+; CHECK-LABEL: @select_nsz_fadd_v4f32(
+; CHECK-NEXT:    [[C:%.*]] = select nnan nsz <4 x i1> [[COND:%.*]], <4 x float> [[B:%.*]], <4 x float> zeroinitializer
+; CHECK-NEXT:    [[D:%.*]] = fadd nnan nsz <4 x float> [[C]], [[A:%.*]]
+; CHECK-NEXT:    ret <4 x float> [[D]]
+;
+  %C = fadd nsz nnan <4 x float> %A, %B
+  %D = select nsz nnan <4 x i1> %cond, <4 x float> %C, <4 x float> %A
+  ret <4 x float> %D
+}
+
+define <vscale x 4 x float> @select_nsz_fadd_nxv4f32(<vscale x 4 x i1> %cond, <vscale x 4 x float> %A, <vscale x 4 x float> %B) {
+; CHECK-LABEL: @select_nsz_fadd_nxv4f32(
+; CHECK-NEXT:    [[C:%.*]] = select nnan nsz <vscale x 4 x i1> [[COND:%.*]], <vscale x 4 x float> [[B:%.*]], <vscale x 4 x float> zeroinitializer
+; CHECK-NEXT:    [[D:%.*]] = fadd nnan nsz <vscale x 4 x float> [[C]], [[A:%.*]]
+; CHECK-NEXT:    ret <vscale x 4 x float> [[D]]
+;
+  %C = fadd nsz nnan <vscale x 4 x float> %A, %B
+  %D = select nsz nnan <vscale x 4 x i1> %cond, <vscale x 4 x float> %C, <vscale x 4 x float> %A
+  ret <vscale x 4 x float> %D
+}
+
+define <vscale x 4 x float> @select_nsz_fadd_nxv4f32_swapops(<vscale x 4 x i1> %cond, <vscale x 4 x float> %A, <vscale x 4 x float> %B) {
+; CHECK-LABEL: @select_nsz_fadd_nxv4f32_swapops(
+; CHECK-NEXT:    [[C:%.*]] = select fast <vscale x 4 x i1> [[COND:%.*]], <vscale x 4 x float> zeroinitializer, <vscale x 4 x float> [[B:%.*]]
+; CHECK-NEXT:    [[D:%.*]] = fadd fast <vscale x 4 x float> [[C]], [[A:%.*]]
+; CHECK-NEXT:    ret <vscale x 4 x float> [[D]]
+;
+  %C = fadd fast <vscale x 4 x float> %A, %B
+  %D = select fast <vscale x 4 x i1> %cond, <vscale x 4 x float> %A, <vscale x 4 x float> %C
+  ret <vscale x 4 x float> %D
+}
+
 define float @select_fmul(i1 %cond, float %A, float %B) {
 ; CHECK-LABEL: @select_fmul(
 ; CHECK-NEXT:    [[C:%.*]] = select i1 [[COND:%.*]], float [[B:%.*]], float 1.000000e+00
@@ -135,7 +168,7 @@ define float @select_fsub_swapped_fast_math(i1 %cond, float %A, float %B) {
 
 define <4 x float> @select_nsz_fsub_v4f32(<4 x i1> %cond, <4 x float> %A, <4 x float> %B) {
 ; CHECK-LABEL: @select_nsz_fsub_v4f32(
-; CHECK-NEXT:    [[C:%.*]] = select <4 x i1> [[COND:%.*]], <4 x float> [[B:%.*]], <4 x float> zeroinitializer
+; CHECK-NEXT:    [[C:%.*]] = select nsz <4 x i1> [[COND:%.*]], <4 x float> [[B:%.*]], <4 x float> zeroinitializer
 ; CHECK-NEXT:    [[D:%.*]] = fsub <4 x float> [[A:%.*]], [[C]]
 ; CHECK-NEXT:    ret <4 x float> [[D]]
 ;
@@ -146,7 +179,7 @@ define <4 x float> @select_nsz_fsub_v4f32(<4 x i1> %cond, <4 x float> %A, <4 x f
 
 define <vscale x 4 x float> @select_nsz_fsub_nxv4f32(<vscale x 4 x i1> %cond, <vscale x 4 x float> %A, <vscale x 4 x float> %B) {
 ; CHECK-LABEL: @select_nsz_fsub_nxv4f32(
-; CHECK-NEXT:    [[C:%.*]] = select <vscale x 4 x i1> [[COND:%.*]], <vscale x 4 x float> [[B:%.*]], <vscale x 4 x float> zeroinitializer
+; CHECK-NEXT:    [[C:%.*]] = select nsz <vscale x 4 x i1> [[COND:%.*]], <vscale x 4 x float> [[B:%.*]], <vscale x 4 x float> zeroinitializer
 ; CHECK-NEXT:    [[D:%.*]] = fsub <vscale x 4 x float> [[A:%.*]], [[C]]
 ; CHECK-NEXT:    ret <vscale x 4 x float> [[D]]
 ;

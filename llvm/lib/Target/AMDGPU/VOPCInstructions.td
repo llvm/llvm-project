@@ -49,7 +49,7 @@ class VOPC_SDWA9e <bits<8> op, VOPProfile P> : VOP_SDWA9Be <P> {
 // an explicit $dst.
 class VOPC_Profile<list<SchedReadWrite> sched, ValueType vt0, ValueType vt1 = vt0> :
   VOPProfile <[i1, vt0, vt1, untyped]> {
-  // We want to exclude 64bit operand insts.
+  // We want to exclude instructions with 64bit operands
   let HasExtDPP = getHasVOP3DPP<DstVT, Src0VT, Src1VT, Src2VT>.ret;
   let Asm32 = "$src0, $src1";
 
@@ -59,13 +59,15 @@ class VOPC_Profile<list<SchedReadWrite> sched, ValueType vt0, ValueType vt1 = vt
                     "$src0, $src1 $dpp_ctrl$row_mask$bank_mask$bound_ctrl");
   let AsmDPP8 = "$src0, $src1 $dpp8$fi";
   let AsmDPP16 = AsmDPP#"$fi";
-  let InsDPP = getInsDPP<VOPDstOperand<Src0DPP>, Src0DPP, Src1DPP, Src2DPP, NumSrcArgs,
-                                   HasModifiers, Src0ModDPP, Src1ModDPP, Src2ModDPP>.ret;
-  let InsDPP16 = getInsDPP16<VOPDstOperand<Src0DPP>, Src0DPP, Src1DPP, Src2DPP, NumSrcArgs,
-                                   HasModifiers, Src0ModDPP, Src1ModDPP, Src2ModDPP>.ret;
+  let InsDPP = getInsDPP<VOPDstOperand<Src0DPP>, Src0DPP, Src1DPP, Src2DPP,
+                         NumSrcArgs, HasModifiers, Src0ModDPP, Src1ModDPP,
+                         Src2ModDPP>.ret;
+  let InsDPP16 = getInsDPP16<VOPDstOperand<Src0DPP>, Src0DPP, Src1DPP, Src2DPP,
+                             NumSrcArgs, HasModifiers, Src0ModDPP, Src1ModDPP,
+                             Src2ModDPP>.ret;
   let InsDPP8 = getInsDPP8<VOPDstOperand<Src0DPP>, Src0DPP, Src1DPP, Src2DPP,
-                                 NumSrcArgs, HasModifiers,
-                                 Src0ModDPP, Src1ModDPP, Src2ModDPP>.ret;
+                           NumSrcArgs, HasModifiers, Src0ModDPP, Src1ModDPP,
+                           Src2ModDPP>.ret;
 
   // The destination for 32-bit encoding is implicit.
   let HasDst32 = 0;
@@ -1023,18 +1025,18 @@ class VOPC_DPP_Base<bits<8> op, string OpName, VOPProfile P>
   bits<4> row_mask;
   bit fi;
 
-  let Inst{8 - 0} = 0xfa;
+  let Inst{8-0} = 0xfa;
 
-  let Inst{39 - 32} = !if (P.HasSrc0, src0{7 - 0}, 0);
-  let Inst{48 - 40} = dpp_ctrl;
+  let Inst{39-32} = !if (P.HasSrc0, src0{7-0}, 0);
+  let Inst{48-40} = dpp_ctrl;
   let Inst{50} = fi;
   let Inst{51} = bound_ctrl;
   let Inst{52} = !if (P.HasSrc0Mods, src0_modifiers{0}, 0); // src0_neg
   let Inst{53} = !if (P.HasSrc0Mods, src0_modifiers{1}, 0); // src0_abs
   let Inst{54} = !if (P.HasSrc1Mods, src1_modifiers{0}, 0); // src1_neg
   let Inst{55} = !if (P.HasSrc1Mods, src1_modifiers{1}, 0); // src1_abs
-  let Inst{59 - 56} = bank_mask;
-  let Inst{63 - 60} = row_mask;
+  let Inst{59-56} = bank_mask;
+  let Inst{63-60} = row_mask;
 
   let AsmMatchConverter = "cvtDPP";
   let VOPC = 1;
@@ -1047,10 +1049,10 @@ class VOPC_DPP8_Base<bits<8> op, string OpName, VOPProfile P>
   bits<24> dpp8;
   bits<9> fi;
 
-  let Inst{8 - 0} = fi;
+  let Inst{8-0} = fi;
 
-  let Inst{39 - 32} = !if (P.HasSrc0, src0{7 - 0}, 0);
-  let Inst{63 - 40} = dpp8{23 - 0};
+  let Inst{39-32} = !if (P.HasSrc0, src0{7-0}, 0);
+  let Inst{63-40} = dpp8{23-0};
 
   let AsmMatchConverter = "cvtDPP8";
   let VOPC = 1;
@@ -1065,7 +1067,7 @@ class VOPC_DPP16<bits<8> op, VOP_DPP_Pseudo ps, string opName = ps.OpName>
   let SchedRW = ps.SchedRW;
   let Uses = ps.Uses;
   let OtherPredicates = ps.OtherPredicates;
-  let Constraints          = ps.Constraints;
+  let Constraints = ps.Constraints;
   let AsmMatchConverter = "cvtVOPCNoDstDPP";
 }
 
@@ -1119,16 +1121,16 @@ class VOPC64_DPP16<bits<10> op, VOP_DPP_Pseudo ps, string opName = ps.OpName>
 }
 
 class VOPC64_DPP16_Dst<bits<10> op, VOP_DPP_Pseudo ps,
-                         string opName = ps.OpName>
+                       string opName = ps.OpName>
     : VOPC64_DPP16<op, ps, opName> {
   bits<8> sdst;
-  let Inst{7 - 0} = sdst;
+  let Inst{7-0} = sdst;
 }
 
 class VOPC64_DPP16_NoDst<bits<10> op, VOP_DPP_Pseudo ps,
-                           string opName = ps.OpName>
+                         string opName = ps.OpName>
     : VOPC64_DPP16<op, ps, opName> {
-  let Inst{7 - 0} = ? ;
+  let Inst{7-0} = ? ;
   let AsmMatchConverter = "cvtVOPC64NoDstDPP";
 }
 
@@ -1156,13 +1158,13 @@ class VOPC64_DPP8<bits<10> op, VOP_Pseudo ps, string opName = ps.OpName>
 class VOPC64_DPP8_Dst<bits<10> op, VOP_Pseudo ps, string opName = ps.OpName>
     : VOPC64_DPP8<op, ps, opName> {
   bits<8> sdst;
-  let Inst{7 - 0} = sdst;
+  let Inst{7-0} = sdst;
   let Constraints = "$old = $sdst";
 }
 
 class VOPC64_DPP8_NoDst<bits<10> op, VOP_Pseudo ps, string opName = ps.OpName>
     : VOPC64_DPP8<op, ps, opName> {
-  let Inst{7 - 0} = ? ;
+  let Inst{7-0} = ? ;
   let AsmMatchConverter = "cvtVOPC64NoDstDPP8";
   let Constraints = "";
 }
@@ -1183,12 +1185,10 @@ let AssemblerPredicate = isGFX11Only in {
     defvar ps32 = !cast<VOPC_Pseudo>(NAME#"_e32");
     defvar ps64 = !cast<VOP3_Pseudo>(NAME#"_e64");
     let DecoderNamespace = "GFX11" in {
-      def _e32_gfx11 :
-        VOPC_Real<ps32, SIEncodingFamily.GFX11>,
-        VOPCe<op{7-0}>;
-      def _e64_gfx11 :
-        VOP3_Real<ps64, SIEncodingFamily.GFX11>,
-        VOP3a_gfx11<{0, op}, ps64.Pfl> {
+      def _e32_gfx11 : VOPC_Real<ps32, SIEncodingFamily.GFX11>,
+                       VOPCe<op{7-0}>;
+      def _e64_gfx11 : VOP3_Real<ps64, SIEncodingFamily.GFX11>,
+                       VOP3a_gfx11<{0, op}, ps64.Pfl> {
         // Encoding used for VOPC instructions encoded as VOP3 differs from
         // VOP3e by destination name (sdst) as VOPC doesn't have vector dst.
         bits<8> sdst;
@@ -1202,17 +1202,14 @@ let AssemblerPredicate = isGFX11Only in {
       defvar psDPP = !cast<VOP_DPP_Pseudo>(NAME #"_e32" #"_dpp");
       defvar AsmDPP = ps32.Pfl.AsmDPP16;
       let DecoderNamespace = "DPPGFX11" in {
-        def _e32_dpp_gfx11
-            : VOPC_DPP16_SIMC<op{7-0}, psDPP,
-                         SIEncodingFamily.GFX11>;
-        def _e32_dpp_w32_gfx11
-            : VOPC_DPP16<op{7-0}, psDPP> {
+        def _e32_dpp_gfx11 : VOPC_DPP16_SIMC<op{7-0}, psDPP,
+                                             SIEncodingFamily.GFX11>;
+        def _e32_dpp_w32_gfx11 : VOPC_DPP16<op{7-0}, psDPP> {
           let AsmString = psDPP.OpName # " vcc_lo, " # AsmDPP;
           let isAsmParserOnly = 1;
           let WaveSizePredicate = isWave32;
         }
-        def _e32_dpp_w64_gfx11
-            : VOPC_DPP16<op{7-0}, psDPP> {
+        def _e32_dpp_w64_gfx11 : VOPC_DPP16<op{7-0}, psDPP> {
           let AsmString = psDPP.OpName # " vcc, " # AsmDPP;
           let isAsmParserOnly = 1;
           let WaveSizePredicate = isWave64;
@@ -1221,14 +1218,12 @@ let AssemblerPredicate = isGFX11Only in {
       defvar AsmDPP8 = ps32.Pfl.AsmDPP8;
       let DecoderNamespace = "DPP8GFX11" in {
         def _e32_dpp8_gfx11 : VOPC_DPP8<op{7-0}, ps32>;
-        def _e32_dpp8_w32_gfx11
-            : VOPC_DPP8<op{7-0}, ps32> {
+        def _e32_dpp8_w32_gfx11 : VOPC_DPP8<op{7-0}, ps32> {
           let AsmString = ps32.OpName # " vcc_lo, " # AsmDPP8;
           let isAsmParserOnly = 1;
           let WaveSizePredicate = isWave32;
         }
-        def _e32_dpp8_w64_gfx11
-            : VOPC_DPP8<op{7-0}, ps32> {
+        def _e32_dpp8_w64_gfx11 : VOPC_DPP8<op{7-0}, ps32> {
           let AsmString = ps32.OpName # " vcc, " # AsmDPP8;
           let isAsmParserOnly = 1;
           let WaveSizePredicate = isWave64;
@@ -1241,14 +1236,12 @@ let AssemblerPredicate = isGFX11Only in {
       let DecoderNamespace = "DPPGFX11" in {
         def _e64_dpp_gfx11 : VOPC64_DPP16_Dst<{0, op}, psDPP>,
                              SIMCInstr<psDPP.PseudoInstr, SIEncodingFamily.GFX11>;
-        def _e64_dpp_w32_gfx11
-            : VOPC64_DPP16_Dst<{0, op}, psDPP> {
+        def _e64_dpp_w32_gfx11 : VOPC64_DPP16_Dst<{0, op}, psDPP> {
           let AsmString = psDPP.OpName # " vcc_lo, " # AsmDPP;
           let isAsmParserOnly = 1;
           let WaveSizePredicate = isWave32;
         }
-        def _e64_dpp_w64_gfx11
-            : VOPC64_DPP16_Dst<{0, op}, psDPP> {
+        def _e64_dpp_w64_gfx11 : VOPC64_DPP16_Dst<{0, op}, psDPP> {
           let AsmString = psDPP.OpName # " vcc, " # AsmDPP;
           let isAsmParserOnly = 1;
           let WaveSizePredicate = isWave64;
@@ -1257,14 +1250,12 @@ let AssemblerPredicate = isGFX11Only in {
       defvar AsmDPP8 = ps64.Pfl.AsmVOP3DPP8;
       let DecoderNamespace = "DPP8GFX11" in {
         def _e64_dpp8_gfx11 : VOPC64_DPP8_Dst<{0, op}, ps64>;
-        def _e64_dpp8_w32_gfx11
-            : VOPC64_DPP8_Dst<{0, op}, ps64> {
+        def _e64_dpp8_w32_gfx11 : VOPC64_DPP8_Dst<{0, op}, ps64> {
           let AsmString = ps32.OpName # " vcc_lo, " # AsmDPP8;
           let isAsmParserOnly = 1;
           let WaveSizePredicate = isWave32;
         }
-        def _e64_dpp8_w64_gfx11
-            : VOPC64_DPP8_Dst<{0, op}, ps64> {
+        def _e64_dpp8_w64_gfx11 : VOPC64_DPP8_Dst<{0, op}, ps64> {
           let AsmString = ps32.OpName # " vcc, " # AsmDPP8;
           let isAsmParserOnly = 1;
           let WaveSizePredicate = isWave64;
@@ -1288,9 +1279,9 @@ let AssemblerPredicate = isGFX11Only in {
         VOPCe<op{7-0}>,
         MnemonicAlias<ps32.Mnemonic, asm_name>, Requires<[isGFX11Plus]>;
       def _e64_gfx11 :
-        VOP3_Real<ps64, SIEncodingFamily.GFX11, asm_name>,
-        VOP3a_gfx11<{0, op}, ps64.Pfl>,
-        MnemonicAlias<ps64.Mnemonic, asm_name>, Requires<[isGFX11Plus]> {
+            VOP3_Real<ps64, SIEncodingFamily.GFX11, asm_name>,
+            VOP3a_gfx11<{0, op}, ps64.Pfl>,
+            MnemonicAlias<ps64.Mnemonic, asm_name>, Requires<[isGFX11Plus]> {
         // Encoding used for VOPC instructions encoded as VOP3 differs from
         // VOP3e by destination name (sdst) as VOPC doesn't have vector dst.
         bits<8> sdst;
@@ -1304,7 +1295,7 @@ let AssemblerPredicate = isGFX11Only in {
       defvar psDPP = !cast<VOP_DPP_Pseudo>(OpName #"_e32" #"_dpp");
       defvar AsmDPP = ps32.Pfl.AsmDPP16;
       let DecoderNamespace = "DPPGFX11" in {
-        def _e32_dpp_gfx11 : VOPC_DPP16_SIMC<op{7 - 0}, psDPP,
+        def _e32_dpp_gfx11 : VOPC_DPP16_SIMC<op{7-0}, psDPP,
                                              SIEncodingFamily.GFX11, asm_name>;
         def _e32_dpp_w32_gfx11
             : VOPC_DPP16<op{7-0}, psDPP, asm_name> {
@@ -1402,9 +1393,7 @@ let AssemblerPredicate = isGFX11Only in {
       defvar AsmDPP = ps32.Pfl.AsmDPP16;
       let DecoderNamespace = "DPPGFX11" in {
         def _e32_dpp_gfx11
-            : VOPC_DPP16_SIMC<op{7-0},
-                         psDPP,
-                         SIEncodingFamily.GFX11> {
+            : VOPC_DPP16_SIMC<op{7-0}, psDPP, SIEncodingFamily.GFX11> {
           let AsmString = !subst("_nosdst", "", psDPP.OpName) # " " # AsmDPP;
         }
       }
@@ -1446,7 +1435,7 @@ let AssemblerPredicate = isGFX11Only in {
           : VOPC_Real<ps32, SIEncodingFamily.GFX11, asm_name>,
             MnemonicAlias<!subst("_nosdst", "", ps32.Mnemonic), asm_name>,
             Requires<[isGFX11Plus]>,
-            VOPCe<op{7 - 0}> {
+            VOPCe<op{7-0}> {
         let AsmString = asm_name # "{_e32} " # ps32.AsmOperands;
       }
       def _e64_gfx11
@@ -1454,7 +1443,7 @@ let AssemblerPredicate = isGFX11Only in {
             MnemonicAlias<!subst("_nosdst", "", ps64.Mnemonic), asm_name>,
             Requires<[isGFX11Plus]>,
             VOP3a_gfx11<{0, op}, ps64.Pfl> {
-        let Inst{7 - 0} = ? ; // sdst
+        let Inst{7-0} = ? ; // sdst
         let AsmString = asm_name # "{_e64} " # ps64.AsmOperands;
       }
     } // End DecoderNamespace = "GFX11"
@@ -1464,7 +1453,7 @@ let AssemblerPredicate = isGFX11Only in {
     foreach _ = BoolToList<ps32.Pfl.HasExtDPP>.ret in {
       defvar psDPP = !cast<VOP_DPP_Pseudo>(OpName#"_nosdst_e32"#"_dpp");
       let DecoderNamespace = "DPPGFX11" in {
-        def _e32_dpp_gfx11 : VOPC_DPP16_SIMC<op{7 - 0}, psDPP,
+        def _e32_dpp_gfx11 : VOPC_DPP16_SIMC<op{7-0}, psDPP,
                                              SIEncodingFamily.GFX11, asm_name>;
       }
       let DecoderNamespace = "DPP8GFX11" in {
@@ -1488,7 +1477,6 @@ let AssemblerPredicate = isGFX11Only in {
         }
       }
     }
-
 
   }
 } // End AssemblerPredicate = isGFX11Only
@@ -1674,7 +1662,6 @@ defm V_CMPX_T_U64     : VOPCX_Real_gfx11<0x0df>;
 defm V_CMPX_CLASS_F16 : VOPCX_Real_gfx11<0x0fd>;
 defm V_CMPX_CLASS_F32 : VOPCX_Real_gfx11<0x0fe>;
 defm V_CMPX_CLASS_F64 : VOPCX_Real_gfx11<0x0ff>;
-
 
 //===----------------------------------------------------------------------===//
 // GFX10.

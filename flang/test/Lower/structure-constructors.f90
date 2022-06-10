@@ -177,12 +177,14 @@ contains
   ! CHECK:         %[[VAL_7:.*]] = fir.coordinate_of %[[VAL_2]], %[[VAL_6]] : (!fir.ref<!fir.type<_QMm_struct_ctorTt_nested{x:f32,dt:!fir.type<_QMm_struct_ctorTt_array{x:f32,i:!fir.array<5xi32>}>}>>, !fir.field) -> !fir.ref<!fir.type<_QMm_struct_ctorTt_array{x:f32,i:!fir.array<5xi32>}>>
   ! CHECK:         %[[VAL_8:.*]] = fir.field_index x, !fir.type<_QMm_struct_ctorTt_array{x:f32,i:!fir.array<5xi32>}>
   ! CHECK:         %[[VAL_9:.*]] = fir.coordinate_of %[[VAL_1]], %[[VAL_8]] : (!fir.ref<!fir.type<_QMm_struct_ctorTt_array{x:f32,i:!fir.array<5xi32>}>>, !fir.field) -> !fir.ref<f32>
-  ! CHECK:         %[[VAL_10:.*]] = fir.coordinate_of %[[VAL_7]], %[[VAL_8]] : (!fir.ref<!fir.type<_QMm_struct_ctorTt_array{x:f32,i:!fir.array<5xi32>}>>, !fir.field) -> !fir.ref<f32>
+  ! CHECK:         %[[VAL_8b:.*]] = fir.field_index x, !fir.type<_QMm_struct_ctorTt_array{x:f32,i:!fir.array<5xi32>}>
+  ! CHECK:         %[[VAL_10:.*]] = fir.coordinate_of %[[VAL_7]], %[[VAL_8b]] : (!fir.ref<!fir.type<_QMm_struct_ctorTt_array{x:f32,i:!fir.array<5xi32>}>>, !fir.field) -> !fir.ref<f32>
   ! CHECK:         %[[VAL_11:.*]] = fir.load %[[VAL_9]] : !fir.ref<f32>
   ! CHECK:         fir.store %[[VAL_11]] to %[[VAL_10]] : !fir.ref<f32>
   ! CHECK:         %[[VAL_12:.*]] = fir.field_index i, !fir.type<_QMm_struct_ctorTt_array{x:f32,i:!fir.array<5xi32>}>
   ! CHECK:         %[[VAL_13:.*]] = fir.coordinate_of %[[VAL_1]], %[[VAL_12]] : (!fir.ref<!fir.type<_QMm_struct_ctorTt_array{x:f32,i:!fir.array<5xi32>}>>, !fir.field) -> !fir.ref<!fir.array<5xi32>>
-  ! CHECK:         %[[VAL_14:.*]] = fir.coordinate_of %[[VAL_7]], %[[VAL_12]] : (!fir.ref<!fir.type<_QMm_struct_ctorTt_array{x:f32,i:!fir.array<5xi32>}>>, !fir.field) -> !fir.ref<!fir.array<5xi32>>
+  ! CHECK:         %[[VAL_12b:.*]] = fir.field_index i, !fir.type<_QMm_struct_ctorTt_array{x:f32,i:!fir.array<5xi32>}>
+  ! CHECK:         %[[VAL_14:.*]] = fir.coordinate_of %[[VAL_7]], %[[VAL_12b]] : (!fir.ref<!fir.type<_QMm_struct_ctorTt_array{x:f32,i:!fir.array<5xi32>}>>, !fir.field) -> !fir.ref<!fir.array<5xi32>>
   ! CHECK:         %[[VAL_15:.*]] = arith.constant 0 : index
   ! CHECK:         %[[VAL_16:.*]] = arith.constant 1 : index
   ! CHECK:         %[[VAL_17:.*]] = arith.constant 4 : index

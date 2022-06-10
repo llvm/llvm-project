@@ -402,8 +402,7 @@ void RISCVDAGToDAGISel::selectVLSEGFF(SDNode *Node, bool IsMasked) {
   unsigned NF = Node->getNumValues() - 2; // Do not count VL and Chain.
   MVT VT = Node->getSimpleValueType(0);
   MVT XLenVT = Subtarget->getXLenVT();
-  unsigned SEW = VT.getScalarSizeInBits();
-  unsigned Log2SEW = Log2_32(SEW);
+  unsigned Log2SEW = Log2_32(VT.getScalarSizeInBits());
   RISCVII::VLMUL LMUL = RISCVTargetLowering::getLMUL(VT);
 
   unsigned CurOp = 2;
@@ -426,19 +425,7 @@ void RISCVDAGToDAGISel::selectVLSEGFF(SDNode *Node, bool IsMasked) {
       RISCV::getVLSEGPseudo(NF, IsMasked, IsTU, /*Strided*/ false, /*FF*/ true,
                             Log2SEW, static_cast<unsigned>(LMUL));
   MachineSDNode *Load = CurDAG->getMachineNode(P->Pseudo, DL, MVT::Untyped,
-                                               MVT::Other, MVT::Glue, Operands);
-  bool TailAgnostic = true;
-  bool MaskAgnostic = false;
-  if (IsMasked) {
-    uint64_t Policy = Node->getConstantOperandVal(Node->getNumOperands() - 1);
-    TailAgnostic = Policy & RISCVII::TAIL_AGNOSTIC;
-    MaskAgnostic = Policy & RISCVII::MASK_AGNOSTIC;
-  }
-  unsigned VType =
-      RISCVVType::encodeVTYPE(LMUL, SEW, TailAgnostic, MaskAgnostic);
-  SDValue VTypeOp = CurDAG->getTargetConstant(VType, DL, XLenVT);
-  SDNode *ReadVL = CurDAG->getMachineNode(RISCV::PseudoReadVL, DL, XLenVT,
-                                          VTypeOp, /*Glue*/ SDValue(Load, 2));
+                                               XLenVT, MVT::Other, Operands);
 
   if (auto *MemOp = dyn_cast<MemSDNode>(Node))
     CurDAG->setNodeMemRefs(Load, {MemOp->getMemOperand()});
@@ -450,8 +437,8 @@ void RISCVDAGToDAGISel::selectVLSEGFF(SDNode *Node, bool IsMasked) {
                 CurDAG->getTargetExtractSubreg(SubRegIdx, DL, VT, SuperReg));
   }
 
-  ReplaceUses(SDValue(Node, NF), SDValue(ReadVL, 0));   // VL
-  ReplaceUses(SDValue(Node, NF + 1), SDValue(Load, 1)); // Chain
+  ReplaceUses(SDValue(Node, NF), SDValue(Load, 1));     // VL
+  ReplaceUses(SDValue(Node, NF + 1), SDValue(Load, 2)); // Chain
   CurDAG->RemoveDeadNode(Node);
 }
 
@@ -1459,8 +1446,7 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
       bool IsMasked = IntNo == Intrinsic::riscv_vleff_mask;
 
       MVT VT = Node->getSimpleValueType(0);
-      unsigned SEW = VT.getScalarSizeInBits();
-      unsigned Log2SEW = Log2_32(SEW);
+      unsigned Log2SEW = Log2_32(VT.getScalarSizeInBits());
 
       unsigned CurOp = 2;
       // Masked intrinsic only have TU version pseduo instructions.
@@ -1480,31 +1466,12 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
       const RISCV::VLEPseudo *P =
           RISCV::getVLEPseudo(IsMasked, IsTU, /*Strided*/ false, /*FF*/ true,
                               Log2SEW, static_cast<unsigned>(LMUL));
-      MachineSDNode *Load =
-          CurDAG->getMachineNode(P->Pseudo, DL, Node->getValueType(0),
-                                 MVT::Other, MVT::Glue, Operands);
-      bool TailAgnostic = !IsTU;
-      bool MaskAgnostic = false;
-      if (IsMasked) {
-        uint64_t Policy =
-            Node->getConstantOperandVal(Node->getNumOperands() - 1);
-        TailAgnostic = Policy & RISCVII::TAIL_AGNOSTIC;
-        MaskAgnostic = Policy & RISCVII::MASK_AGNOSTIC;
-      }
-      unsigned VType =
-          RISCVVType::encodeVTYPE(LMUL, SEW, TailAgnostic, MaskAgnostic);
-      SDValue VTypeOp = CurDAG->getTargetConstant(VType, DL, XLenVT);
-      SDNode *ReadVL =
-          CurDAG->getMachineNode(RISCV::PseudoReadVL, DL, XLenVT, VTypeOp,
-                                 /*Glue*/ SDValue(Load, 2));
-
+      MachineSDNode *Load = CurDAG->getMachineNode(
+          P->Pseudo, DL, Node->getValueType(0), XLenVT, MVT::Other, Operands);
       if (auto *MemOp = dyn_cast<MemSDNode>(Node))
         CurDAG->setNodeMemRefs(Load, {MemOp->getMemOperand()});
 
-      ReplaceUses(SDValue(Node, 0), SDValue(Load, 0));
-      ReplaceUses(SDValue(Node, 1), SDValue(ReadVL, 0)); // VL
-      ReplaceUses(SDValue(Node, 2), SDValue(Load, 1));   // Chain
-      CurDAG->RemoveDeadNode(Node);
+      ReplaceNode(Node, Load);
       return;
     }
     }
@@ -2416,10 +2383,8 @@ bool RISCVDAGToDAGISel::doPeepholeMaskedRVV(SDNode *N) {
 
   // Retrieve the tail policy operand index, if any.
   Optional<unsigned> TailPolicyOpIdx;
-  const RISCVInstrInfo *TII = static_cast<const RISCVInstrInfo *>(
-      CurDAG->getSubtarget().getInstrInfo());
-
-  const MCInstrDesc &MaskedMCID = TII->get(N->getMachineOpcode());
+  const RISCVInstrInfo &TII = *Subtarget->getInstrInfo();
+  const MCInstrDesc &MaskedMCID = TII.get(N->getMachineOpcode());
 
   bool IsTA = true;
   if (RISCVII::hasVecPolicyOp(MaskedMCID.TSFlags)) {
@@ -2444,7 +2409,7 @@ bool RISCVDAGToDAGISel::doPeepholeMaskedRVV(SDNode *N) {
   }
 
   if (IsTA) {
-    uint64_t TSFlags = TII->get(I->UnmaskedPseudo).TSFlags;
+    uint64_t TSFlags = TII.get(I->UnmaskedPseudo).TSFlags;
 
     // Check that we're dropping the merge operand, the mask operand, and any
     // policy operand when we transform to this unmasked pseudo.
@@ -2453,7 +2418,7 @@ bool RISCVDAGToDAGISel::doPeepholeMaskedRVV(SDNode *N) {
            "Unexpected pseudo to transform to");
     (void)TSFlags;
   } else {
-    uint64_t TSFlags = TII->get(I->UnmaskedTUPseudo).TSFlags;
+    uint64_t TSFlags = TII.get(I->UnmaskedTUPseudo).TSFlags;
 
     // Check that we're dropping the mask operand, and any policy operand
     // when we transform to this unmasked tu pseudo.

@@ -10,6 +10,7 @@
 
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/ExecutionEngine/JITLink/ELF_x86_64.h"
+#include "llvm/ExecutionEngine/JITLink/aarch64.h"
 #include "llvm/ExecutionEngine/JITLink/x86_64.h"
 #include "llvm/ExecutionEngine/Orc/DebugUtils.h"
 #include "llvm/ExecutionEngine/Orc/ExecutionUtils.h"
@@ -46,6 +47,11 @@ public:
       PointerSize = 8;
       Endianness = support::endianness::little;
       EdgeKind = jitlink::x86_64::Pointer64;
+      break;
+    case Triple::aarch64:
+      PointerSize = 8;
+      Endianness = support::endianness::little;
+      EdgeKind = jitlink::aarch64::Pointer64;
       break;
     default:
       llvm_unreachable("Unrecognized architecture");
@@ -94,8 +100,6 @@ StringRef InitArrayFuncSectionName = ".init_array";
 
 StringRef ThreadBSSSectionName = ".tbss";
 StringRef ThreadDataSectionName = ".tdata";
-
-StringRef InitSectionNames[] = {InitArrayFuncSectionName};
 
 } // end anonymous namespace
 
@@ -257,6 +261,10 @@ ELFNixPlatform::standardRuntimeUtilityAliases() {
   static const std::pair<const char *, const char *>
       StandardRuntimeUtilityAliases[] = {
           {"__orc_rt_run_program", "__orc_rt_elfnix_run_program"},
+          {"__orc_rt_jit_dlerror", "__orc_rt_elfnix_jit_dlerror"},
+          {"__orc_rt_jit_dlopen", "__orc_rt_elfnix_jit_dlopen"},
+          {"__orc_rt_jit_dlclose", "__orc_rt_elfnix_jit_dlclose"},
+          {"__orc_rt_jit_dlsym", "__orc_rt_elfnix_jit_dlsym"},
           {"__orc_rt_log_error", "__orc_rt_log_error_to_stderr"}};
 
   return ArrayRef<std::pair<const char *, const char *>>(
@@ -264,16 +272,16 @@ ELFNixPlatform::standardRuntimeUtilityAliases() {
 }
 
 bool ELFNixPlatform::isInitializerSection(StringRef SecName) {
-  for (auto &Name : InitSectionNames) {
-    if (Name.equals(SecName))
-      return true;
-  }
+  if (SecName.consume_front(InitArrayFuncSectionName) &&
+      (SecName.empty() || SecName[0] == '.'))
+    return true;
   return false;
 }
 
 bool ELFNixPlatform::supportedTarget(const Triple &TT) {
   switch (TT.getArch()) {
   case Triple::x86_64:
+  case Triple::aarch64:
     return true;
   default:
     return false;
@@ -770,16 +778,15 @@ Error ELFNixPlatform::ELFNixPlatformPlugin::preserveInitSections(
     jitlink::LinkGraph &G, MaterializationResponsibility &MR) {
 
   JITLinkSymbolSet InitSectionSymbols;
-  for (auto &InitSectionName : InitSectionNames) {
+  for (auto &InitSection : G.sections()) {
     // Skip non-init sections.
-    auto *InitSection = G.findSectionByName(InitSectionName);
-    if (!InitSection)
+    if (!isInitializerSection(InitSection.getName()))
       continue;
 
     // Make a pass over live symbols in the section: those blocks are already
     // preserved.
     DenseSet<jitlink::Block *> AlreadyLiveBlocks;
-    for (auto &Sym : InitSection->symbols()) {
+    for (auto &Sym : InitSection.symbols()) {
       auto &B = Sym->getBlock();
       if (Sym->isLive() && Sym->getOffset() == 0 &&
           Sym->getSize() == B.getSize() && !AlreadyLiveBlocks.count(&B)) {
@@ -789,7 +796,7 @@ Error ELFNixPlatform::ELFNixPlatformPlugin::preserveInitSections(
     }
 
     // Add anonymous symbols to preserve any not-already-preserved blocks.
-    for (auto *B : InitSection->blocks())
+    for (auto *B : InitSection.blocks())
       if (!AlreadyLiveBlocks.count(B))
         InitSectionSymbols.insert(
             &G.addAnonymousSymbol(*B, 0, B->getSize(), false, true));
@@ -810,9 +817,9 @@ Error ELFNixPlatform::ELFNixPlatformPlugin::registerInitSections(
 
   LLVM_DEBUG({ dbgs() << "ELFNixPlatform::registerInitSections\n"; });
 
-  for (auto InitSectionName : InitSectionNames) {
-    if (auto *Sec = G.findSectionByName(InitSectionName)) {
-      InitSections.push_back(Sec);
+  for (auto &Sec : G.sections()) {
+    if (isInitializerSection(Sec.getName())) {
+      InitSections.push_back(&Sec);
     }
   }
 

@@ -39,8 +39,8 @@ class FrameUtilsTestCase(TestBase):
 
         if not process:
             self.fail("SBTarget.LaunchProcess() failed")
-        self.assertEqual(process.GetState(), lldb.eStateStopped,
-                        PROCESS_STOPPED)
+        self.assertState(process.GetState(), lldb.eStateStopped,
+                         PROCESS_STOPPED)
 
         import lldbsuite.test.lldbutil as lldbutil
         thread = lldbutil.get_stopped_thread(

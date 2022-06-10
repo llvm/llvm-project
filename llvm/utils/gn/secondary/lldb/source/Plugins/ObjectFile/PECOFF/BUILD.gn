@@ -1,7 +1,20 @@
+import("//lldb/utils/TableGen/lldb_tablegen.gni")
+
+lldb_tablegen("ObjectFilePECOFFProperties") {
+  args = [ "-gen-lldb-property-defs" ]
+}
+
+lldb_tablegen("ObjectFilePECOFFPropertiesEnum") {
+  args = [ "-gen-lldb-property-enum-defs" ]
+  td_file = "ObjectFilePECOFFProperties.td"
+}
+
 static_library("PECOFF") {
   output_name = "lldbPluginObjectFilePECOFF"
   configs += [ "//llvm/utils/gn/build:lldb_code" ]
   deps = [
+    ":ObjectFilePECOFFProperties",
+    ":ObjectFilePECOFFPropertiesEnum",
     "//lldb/source/Core",
     "//lldb/source/Host",
     "//lldb/source/Symbol",
