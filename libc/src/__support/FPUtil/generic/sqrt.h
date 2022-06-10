@@ -32,8 +32,6 @@ template <> struct SpecialLongDouble<long double> {
 };
 #endif // SPECIAL_X86_LONG_DOUBLE
 
-using fputil::ctz;
-
 template <typename T>
 static inline void normalize(int &exponent,
                              typename FPBits<T>::UIntType &mantissa) {
