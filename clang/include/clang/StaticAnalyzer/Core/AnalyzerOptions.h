@@ -236,7 +236,6 @@ public:
   unsigned ShouldEmitErrorsOnInvalidConfigValue : 1;
   unsigned AnalyzeAll : 1;
   unsigned AnalyzerDisplayProgress : 1;
-  unsigned AnalyzeNestedBlocks : 1;
 
   unsigned eagerlyAssumeBinOpBifurcation : 1;
 
@@ -298,10 +297,10 @@ public:
         ShowCheckerOptionList(false), ShowCheckerOptionAlphaList(false),
         ShowCheckerOptionDeveloperList(false), ShowEnabledCheckerList(false),
         ShowConfigOptionsList(false), AnalyzeAll(false),
-        AnalyzerDisplayProgress(false), AnalyzeNestedBlocks(false),
-        eagerlyAssumeBinOpBifurcation(false), TrimGraph(false),
-        visualizeExplodedGraphWithGraphViz(false), UnoptimizedCFG(false),
-        PrintStats(false), NoRetryExhausted(false), AnalyzerWerror(false) {
+        AnalyzerDisplayProgress(false), eagerlyAssumeBinOpBifurcation(false),
+        TrimGraph(false), visualizeExplodedGraphWithGraphViz(false),
+        UnoptimizedCFG(false), PrintStats(false), NoRetryExhausted(false),
+        AnalyzerWerror(false) {
     llvm::sort(AnalyzerConfigCmdFlags);
   }
 
