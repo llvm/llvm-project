@@ -299,7 +299,11 @@ bool LoopDataPrefetch::runOnLoop(Loop *L) {
     }
     Metrics.analyzeBasicBlock(BB, *TTI, EphValues);
   }
-  unsigned LoopSize = Metrics.NumInsts;
+
+  if (!Metrics.NumInsts.isValid())
+    return MadeChange;
+
+  unsigned LoopSize = *Metrics.NumInsts.getValue();
   if (!LoopSize)
     LoopSize = 1;
 

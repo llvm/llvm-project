@@ -76,3 +76,46 @@ for.end:                                          ; preds = %for.cond
   ret void
 }
 
+; This demonstrates a case where a) loop rotate needs a cost estimate to
+; know if rotation is profitable, and b) there is no cost estimate available
+; due to invalid costs in the loop.  We can't rotate this loop.
+define void @invalid_dup_required(<vscale x 1 x i8>* %p) nounwind ssp {
+; CHECK-LABEL: @invalid_dup_required(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[FOR_COND:%.*]]
+; CHECK:       for.cond:
+; CHECK-NEXT:    [[I_0:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[INC:%.*]], [[FOR_BODY:%.*]] ]
+; CHECK-NEXT:    [[A:%.*]] = load <vscale x 1 x i8>, <vscale x 1 x i8>* [[P:%.*]], align 1
+; CHECK-NEXT:    [[B:%.*]] = add <vscale x 1 x i8> [[A]], [[A]]
+; CHECK-NEXT:    store <vscale x 1 x i8> [[B]], <vscale x 1 x i8>* [[P]], align 1
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[I_0]], 100
+; CHECK-NEXT:    br i1 [[CMP]], label [[FOR_BODY]], label [[FOR_END:%.*]]
+; CHECK:       for.body:
+; CHECK-NEXT:    call void @f()
+; CHECK-NEXT:    [[INC]] = add nsw i32 [[I_0]], 1
+; CHECK-NEXT:    br label [[FOR_COND]]
+; CHECK:       for.end:
+; CHECK-NEXT:    ret void
+;
+entry:
+  br label %for.cond
+
+for.cond:                                         ; preds = %for.body, %entry
+  %i.0 = phi i32 [ 0, %entry ], [ %inc, %for.body ]
+  %a = load <vscale x 1 x i8>, <vscale x 1 x i8>* %p
+  %b = add <vscale x 1 x i8> %a, %a
+  store <vscale x 1 x i8> %b, <vscale x 1 x i8>* %p
+  %cmp = icmp slt i32 %i.0, 100
+  br i1 %cmp, label %for.body, label %for.end
+
+
+for.body:                                         ; preds = %for.cond
+  call void @f()
+  %inc = add nsw i32 %i.0, 1
+  br label %for.cond
+
+for.end:                                          ; preds = %for.cond
+  ret void
+}
+
+declare void @f()

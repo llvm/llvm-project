@@ -550,9 +550,9 @@ private:
     // shouldn't specialize it. Set the specialization cost to Invalid.
     // Or if the lines of codes implies that this function is easy to get
     // inlined so that we shouldn't specialize it.
-    if (Metrics.notDuplicatable ||
+    if (Metrics.notDuplicatable || !Metrics.NumInsts.isValid() ||
         (!ForceFunctionSpecialization &&
-         Metrics.NumInsts < SmallFunctionThreshold)) {
+         *Metrics.NumInsts.getValue() < SmallFunctionThreshold)) {
       InstructionCost C{};
       C.setInvalid();
       return C;
