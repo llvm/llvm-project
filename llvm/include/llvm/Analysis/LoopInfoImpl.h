@@ -453,8 +453,7 @@ static void discoverAndMapSubloop(LoopT *L, ArrayRef<BlockT *> Backedges,
                                 InvBlockTraits::child_end(PredBB));
     } else {
       // This is a discovered block. Find its outermost discovered loop.
-      while (LoopT *Parent = Subloop->getParentLoop())
-        Subloop = Parent;
+      Subloop = Subloop->getOutermostLoop();
 
       // If it is already discovered to be a subloop of this loop, continue.
       if (Subloop == L)

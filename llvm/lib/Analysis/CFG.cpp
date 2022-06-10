@@ -127,11 +127,7 @@ bool llvm::isCriticalEdge(const Instruction *TI, const BasicBlock *Dest,
 // the outermost loop in the loop nest that contains BB.
 static const Loop *getOutermostLoop(const LoopInfo *LI, const BasicBlock *BB) {
   const Loop *L = LI->getLoopFor(BB);
-  if (L) {
-    while (const Loop *Parent = L->getParentLoop())
-      L = Parent;
-  }
-  return L;
+  return L ? L->getOutermostLoop() : nullptr;
 }
 
 bool llvm::isPotentiallyReachableFromMany(
