@@ -1,6 +1,5 @@
 set(LLVM_LINK_COMPONENTS
   Support
-  TestingSupport
   )
 
 add_custom_target(ClangPseudoUnitTests)
@@ -24,4 +23,5 @@ target_link_libraries(ClangPseudoTests
   PRIVATE
   clangPseudo
   clangPseudoGrammar
+  LLVMTestingSupport
   )
