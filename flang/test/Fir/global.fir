@@ -1,4 +1,5 @@
 // RUN: tco %s | FileCheck %s
+// RUN: %flang_fc1 -emit-llvm  %s -o - | FileCheck %s
 
 // CHECK: @g_i0 = global i32 0
 fir.global @g_i0 : i32 {
