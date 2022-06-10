@@ -357,9 +357,9 @@ define i32 @zext_in_loop_and_exit_block(i8 %step, i32 %end) {
 ; CHECK-NEXT:    [[CMP_NOT:%.*]] = icmp eq i32 [[IV]], [[END:%.*]]
 ; CHECK-NEXT:    br i1 [[CMP_NOT]], label [[EXIT:%.*]], label [[LOOP_LATCH]]
 ; CHECK:       loop.latch:
-; CHECK-NEXT:    [[STEP_EXT:%.*]] = zext i8 [[STEP:%.*]] to i32
-; CHECK-NEXT:    [[IV_NEXT:%.*]] = add nuw nsw i32 [[IV]], [[STEP_EXT]]
-; CHECK-NEXT:    [[PHI_CAST]] = and i32 [[IV_NEXT]], 255
+; CHECK-NEXT:    [[IV_TR:%.*]] = trunc i32 [[IV]] to i8
+; CHECK-NEXT:    [[IV_NEXT_NARROW:%.*]] = add i8 [[IV_TR]], [[STEP:%.*]]
+; CHECK-NEXT:    [[PHI_CAST]] = zext i8 [[IV_NEXT_NARROW]] to i32
 ; CHECK-NEXT:    br label [[LOOP]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret i32 [[IV]]
