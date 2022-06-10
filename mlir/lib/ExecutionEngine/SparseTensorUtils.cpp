@@ -1172,7 +1172,7 @@ public:
 
   ValueKind getValueKind() const { return valueKind_; }
 
-  bool isValid() const { return valueKind_ != ValueKind::kUndefined; }
+  bool isValid() const { return valueKind_ != ValueKind::kInvalid; }
 
   /// Gets the MME "pattern" property setting.  Is only valid after
   /// parsing the header.
