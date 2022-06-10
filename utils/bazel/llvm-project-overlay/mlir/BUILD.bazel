@@ -7771,6 +7771,14 @@ gentbl_cc_library(
             "include/mlir/Dialect/Tosa/IR/TosaOpsDialect.cpp.inc",
         ),
         (
+            ["-gen-attrdef-decls"],
+            "include/mlir/Dialect/Tosa/IR/TosaAttributes.h.inc",
+        ),
+        (
+            ["-gen-attrdef-defs"],
+            "include/mlir/Dialect/Tosa/IR/TosaAttributes.cpp.inc",
+        ),
+        (
             ["-gen-op-doc"],
             "g3doc/Dialects/Tosa/TosaOps.md",
         ),

@@ -202,7 +202,7 @@ public:
     if (isQuantized) {
       auto quantizationInfo =
           op->getAttr("quantization_info").cast<tosa::ConvOpQuantizationAttr>();
-      auto iZp = quantizationInfo.input_zp().getValue().getSExtValue();
+      int64_t iZp = quantizationInfo.getInput_zp();
 
       int64_t intMin =
           APInt::getSignedMinValue(inputETy.getIntOrFloatBitWidth())
@@ -274,10 +274,8 @@ public:
     if (isQuantized) {
       auto quantizationInfo =
           op->getAttr("quantization_info").cast<tosa::ConvOpQuantizationAttr>();
-      auto iZp = rewriter.getI32IntegerAttr(
-          quantizationInfo.input_zp().getValue().getSExtValue());
-      auto kZp = rewriter.getI32IntegerAttr(
-          quantizationInfo.weight_zp().getValue().getSExtValue());
+      auto iZp = rewriter.getI32IntegerAttr(quantizationInfo.getInput_zp());
+      auto kZp = rewriter.getI32IntegerAttr(quantizationInfo.getWeight_zp());
 
       auto iZpVal = rewriter.create<arith::ConstantOp>(loc, iZp);
       auto kZpVal = rewriter.create<arith::ConstantOp>(loc, kZp);
@@ -368,10 +366,8 @@ public:
     if (isQuantized) {
       auto quantizationInfo =
           op->getAttr("quantization_info").cast<tosa::ConvOpQuantizationAttr>();
-      iZp = rewriter.getI32IntegerAttr(
-          quantizationInfo.input_zp().getValue().getSExtValue());
-      kZp = rewriter.getI32IntegerAttr(
-          quantizationInfo.weight_zp().getValue().getSExtValue());
+      iZp = rewriter.getI32IntegerAttr(quantizationInfo.getInput_zp());
+      kZp = rewriter.getI32IntegerAttr(quantizationInfo.getWeight_zp());
     }
 
     auto weightShape = weightTy.getShape();
@@ -382,7 +378,7 @@ public:
     if (isQuantized) {
       auto quantizationInfo =
           op->getAttr("quantization_info").cast<tosa::ConvOpQuantizationAttr>();
-      auto iZp = quantizationInfo.input_zp().getValue().getSExtValue();
+      int64_t iZp = quantizationInfo.getInput_zp();
 
       int64_t intMin =
           APInt::getSignedMinValue(inputETy.getIntOrFloatBitWidth())
@@ -546,11 +542,9 @@ public:
 
     auto quantizationInfo = op.quantization_info().getValue();
     auto aZp = rewriter.create<arith::ConstantOp>(
-        loc, rewriter.getI32IntegerAttr(
-                 quantizationInfo.a_zp().getValue().getSExtValue()));
+        loc, rewriter.getI32IntegerAttr(quantizationInfo.getA_zp()));
     auto bZp = rewriter.create<arith::ConstantOp>(
-        loc, rewriter.getI32IntegerAttr(
-                 quantizationInfo.b_zp().getValue().getSExtValue()));
+        loc, rewriter.getI32IntegerAttr(quantizationInfo.getB_zp()));
     rewriter.replaceOpWithNewOp<linalg::QuantizedBatchMatmulOp>(
         op, TypeRange{op.getType()},
         ValueRange{adaptor.a(), adaptor.b(), aZp, bZp}, zeroTensor);
@@ -658,11 +652,9 @@ public:
 
     auto quantizationInfo = op.quantization_info().getValue();
     auto inputZp = rewriter.create<arith::ConstantOp>(
-        loc, rewriter.getI32IntegerAttr(
-                 quantizationInfo.input_zp().getValue().getSExtValue()));
+        loc, rewriter.getI32IntegerAttr(quantizationInfo.getInput_zp()));
     auto outputZp = rewriter.create<arith::ConstantOp>(
-        loc, rewriter.getI32IntegerAttr(
-                 quantizationInfo.weight_zp().getValue().getSExtValue()));
+        loc, rewriter.getI32IntegerAttr(quantizationInfo.getWeight_zp()));
     Value matmul =
         rewriter
             .create<linalg::QuantizedMatmulOp>(
@@ -900,7 +892,8 @@ public:
             if (op.quantization_info()) {
               auto quantizationInfo = op.quantization_info().getValue();
               auto inputZp = rewriter.create<arith::ConstantOp>(
-                  loc, quantizationInfo.input_zp());
+                  loc,
+                  b.getIntegerAttr(accETy, quantizationInfo.getInput_zp()));
               Value offset =
                   rewriter.create<arith::MulIOp>(loc, accETy, countI, inputZp);
               poolVal =
@@ -936,7 +929,8 @@ public:
             if (op.quantization_info()) {
               auto quantizationInfo = op.quantization_info().getValue();
               auto outputZp = rewriter.create<arith::ConstantOp>(
-                  loc, quantizationInfo.output_zp());
+                  loc, b.getIntegerAttr(scaled.getType(),
+                                        quantizationInfo.getOutput_zp()));
               scaled = rewriter.create<arith::AddIOp>(loc, scaled, outputZp)
                            .getResult();
             }

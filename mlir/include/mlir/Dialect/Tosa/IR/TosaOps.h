@@ -21,8 +21,8 @@
 //===----------------------------------------------------------------------===//
 // TOSA dialect and structs includes.
 //===----------------------------------------------------------------------===//
+
 #include "mlir/Dialect/Tosa/IR/TosaOpsDialect.h.inc"
-#include "mlir/Dialect/Tosa/IR/TosaStructs.h.inc"
 
 namespace mlir {
 class PatternRewriter;
@@ -44,6 +44,9 @@ void populateTosaOpsCanonicalizationPatterns(MLIRContext *ctx,
                                              RewritePatternSet &patterns);
 } // namespace tosa
 } // namespace mlir
+
+#define GET_ATTRDEF_CLASSES
+#include "mlir/Dialect/Tosa/IR/TosaAttributes.h.inc"
 
 #define GET_OP_CLASSES
 #include "mlir/Dialect/Tosa/IR/TosaOps.h.inc"

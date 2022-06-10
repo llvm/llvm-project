@@ -18,12 +18,14 @@
 #include "mlir/Dialect/Tosa/Utils/QuantUtils.h"
 #include "mlir/Dialect/Tosa/Utils/ShapeUtils.h"
 #include "mlir/IR/BuiltinTypes.h"
+#include "mlir/IR/DialectImplementation.h"
 #include "mlir/IR/Matchers.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Transforms/FoldUtils.h"
 #include "mlir/Transforms/InliningUtils.h"
 #include "mlir/Transforms/RegionUtils.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/TypeSwitch.h"
 
 using namespace mlir;
 using namespace mlir::tosa;
@@ -33,8 +35,8 @@ using namespace mlir::tosa;
 //===----------------------------------------------------------------------===//
 // Tosa dialect structs and interface includes.
 //===----------------------------------------------------------------------===//
+
 #include "mlir/Dialect/Tosa/IR/TosaInterfaces.cpp.inc"
-#include "mlir/Dialect/Tosa/IR/TosaStructs.cpp.inc"
 
 namespace {
 //===----------------------------------------------------------------------===//
@@ -77,6 +79,10 @@ void TosaDialect::initialize() {
   addOperations<
 #define GET_OP_LIST
 #include "mlir/Dialect/Tosa/IR/TosaOps.cpp.inc"
+      >();
+  addAttributes<
+#define GET_ATTRDEF_LIST
+#include "mlir/Dialect/Tosa/IR/TosaAttributes.cpp.inc"
       >();
   addInterfaces<TosaInlinerInterface>();
 }
@@ -336,13 +342,13 @@ struct MaterializePadValue : public OpRewritePattern<tosa::PadOp> {
     Type elementTy = inputTy.getElementType();
 
     Attribute constantAttr;
-    if (elementTy.isa<FloatType>())
+    if (elementTy.isa<FloatType>()) {
       constantAttr = rewriter.getFloatAttr(elementTy, 0.0);
-    else if (elementTy.isa<IntegerType>() && !op.quantization_info())
+    } else if (elementTy.isa<IntegerType>() && !op.quantization_info()) {
       constantAttr = rewriter.getIntegerAttr(elementTy, 0);
-    else if (elementTy.isa<IntegerType>() && op.quantization_info()) {
-      auto value = op.quantization_info().getValue().input_zp().getValue();
-      constantAttr = rewriter.getIntegerAttr(elementTy, value.getZExtValue());
+    } else if (elementTy.isa<IntegerType>() && op.quantization_info()) {
+      auto value = op.quantization_info().getValue().getInput_zp();
+      constantAttr = rewriter.getIntegerAttr(elementTy, value);
     }
 
     if (!constantAttr) {
@@ -1924,6 +1930,13 @@ LogicalResult WhileOp::inferReturnTypeComponents(
 
   return success();
 }
+
+//===----------------------------------------------------------------------===//
+// TOSA Attribute Definitions.
+//===----------------------------------------------------------------------===//
+
+#define GET_ATTRDEF_CLASSES
+#include "mlir/Dialect/Tosa/IR/TosaAttributes.cpp.inc"
 
 //===----------------------------------------------------------------------===//
 // TOSA Operator Definitions.

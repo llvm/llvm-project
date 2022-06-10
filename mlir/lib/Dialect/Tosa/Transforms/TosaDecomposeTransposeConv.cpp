@@ -214,8 +214,7 @@ public:
       weight = createOpAndInfer<tosa::PadOp>(
           rewriter, loc, UnrankedTensorType::get(weightETy), weight,
           weightPaddingVal, nullptr,
-          PadOpQuantizationAttr::get(quantInfo.weight_zp(),
-                                     rewriter.getContext()));
+          rewriter.getAttr<PadOpQuantizationAttr>(quantInfo.getWeight_zp()));
 
     } else {
       weight = createOpAndInfer<tosa::PadOp>(rewriter, loc,
@@ -279,8 +278,7 @@ public:
       input = createOpAndInfer<tosa::PadOp>(
           rewriter, loc, UnrankedTensorType::get(inputETy), input,
           inputPaddingVal, nullptr,
-          PadOpQuantizationAttr::get(quantInfo.input_zp(),
-                                     rewriter.getContext()));
+          rewriter.getAttr<PadOpQuantizationAttr>(quantInfo.getInput_zp()));
     } else {
       input = createOpAndInfer<tosa::PadOp>(rewriter, loc,
                                             UnrankedTensorType::get(inputETy),
