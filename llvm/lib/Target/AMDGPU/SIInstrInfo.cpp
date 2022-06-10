@@ -7911,6 +7911,7 @@ enum SIEncodingFamily {
   GFX90A = 8,
   GFX940 = 9,
   GFX11 = 10,
+  GFX12 = 11,
 };
 
 static SIEncodingFamily subtargetEncodingFamily(const GCNSubtarget &ST) {
@@ -7928,8 +7929,7 @@ static SIEncodingFamily subtargetEncodingFamily(const GCNSubtarget &ST) {
   case AMDGPUSubtarget::GFX11:
     return SIEncodingFamily::GFX11;
   case AMDGPUSubtarget::GFX12:
-    // TODO-GFX12: Implement SIEncodingFamily::GFX12.
-    return SIEncodingFamily::GFX11;
+    return SIEncodingFamily::GFX12;
   }
   llvm_unreachable("Unknown subtarget generation!");
 }
