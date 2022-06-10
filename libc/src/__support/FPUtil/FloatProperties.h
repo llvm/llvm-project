@@ -89,6 +89,11 @@ template <> struct FloatProperties<long double> {
   static constexpr uint32_t EXPONENT_BIAS =
       FloatProperties<double>::EXPONENT_BIAS;
 
+  static constexpr BitsType EXP_MANT_MASK =
+      FloatProperties<double>::EXP_MANT_MASK;
+  static_assert(EXP_MANT_MASK == ~SIGN_MASK,
+                "Exponent and mantissa masks are not as expected.");
+
   // If a number x is a NAN, then it is a quiet NAN if:
   //   QuietNaNMask & bits(x) != 0
   // Else, it is a signalling NAN.
@@ -137,6 +142,10 @@ template <> struct FloatProperties<long double> {
                                         << (EXPONENT_WIDTH + MANTISSA_WIDTH);
   static constexpr BitsType EXPONENT_MASK = ~(SIGN_MASK | MANTISSA_MASK);
   static constexpr uint32_t EXPONENT_BIAS = 16383;
+
+  static constexpr BitsType EXP_MANT_MASK = MANTISSA_MASK + EXPONENT_MASK;
+  static_assert(EXP_MANT_MASK == ~SIGN_MASK,
+                "Exponent and mantissa masks are not as expected.");
 
   // If a number x is a NAN, then it is a quiet NAN if:
   //   QuietNaNMask & bits(x) != 0
