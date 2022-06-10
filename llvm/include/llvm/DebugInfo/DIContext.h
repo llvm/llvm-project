@@ -34,7 +34,9 @@ struct DILineInfo {
   // Use "??" instead of "<invalid>" to make our output closer to addr2line.
   static constexpr const char *const Addr2LineBadString = "??";
   std::string FileName;
-  std::string FunctionName;
+  std::string ShortFunctionName;
+  std::string LinkageFunctionName;
+  std::string SymbolTableFunctionName;
   std::string StartFileName;
   Optional<StringRef> Source;
   uint32_t Line = 0;
@@ -46,12 +48,15 @@ struct DILineInfo {
   uint32_t Discriminator = 0;
 
   DILineInfo()
-      : FileName(BadString), FunctionName(BadString), StartFileName(BadString) {
+      : FileName(BadString), ShortFunctionName("<invalid>"),
+    LinkageFunctionName("<invalid>"), SymbolTableFunctionName(BadString), StartFileName(BadString) {
   }
 
   bool operator==(const DILineInfo &RHS) const {
     return Line == RHS.Line && Column == RHS.Column &&
-           FileName == RHS.FileName && FunctionName == RHS.FunctionName &&
+           FileName == RHS.FileName && ShortFunctionName == RHS.ShortFunctionName &&
+           LinkageFunctionName == RHS.LinkageFunctionName &&
+           SymbolTableFunctionName == RHS.SymbolTableFunctionName &&
            StartFileName == RHS.StartFileName && StartLine == RHS.StartLine &&
            Discriminator == RHS.Discriminator;
   }
@@ -59,9 +64,11 @@ struct DILineInfo {
   bool operator!=(const DILineInfo &RHS) const { return !(*this == RHS); }
 
   bool operator<(const DILineInfo &RHS) const {
-    return std::tie(FileName, FunctionName, StartFileName, Line, Column,
+    return std::tie(FileName, ShortFunctionName, LinkageFunctionName,
+                    SymbolTableFunctionName, StartFileName, Line, Column,
                     StartLine, Discriminator) <
-           std::tie(RHS.FileName, RHS.FunctionName, RHS.StartFileName, RHS.Line,
+           std::tie(RHS.FileName, RHS.ShortFunctionName, RHS.LinkageFunctionName,
+                    RHS.SymbolTableFunctionName, RHS.StartFileName, RHS.Line,
                     RHS.Column, RHS.StartLine, RHS.Discriminator);
   }
 
@@ -71,8 +78,8 @@ struct DILineInfo {
     OS << "Line info: ";
     if (FileName != BadString)
       OS << "file '" << FileName << "', ";
-    if (FunctionName != BadString)
-      OS << "function '" << FunctionName << "', ";
+    if (SymbolTableFunctionName != BadString)
+      OS << "function '" << SymbolTableFunctionName << "', ";
     OS << "line " << Line << ", ";
     OS << "column " << Column << ", ";
     if (StartFileName != BadString)

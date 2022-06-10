@@ -1110,7 +1110,8 @@ DWARFContext::DIEsForAddress DWARFContext::getDIEsForAddress(uint64_t Address) {
 static bool getFunctionNameAndStartLineForAddress(
     DWARFCompileUnit *CU, uint64_t Address, FunctionNameKind Kind,
     DILineInfoSpecifier::FileLineInfoKind FileNameKind,
-    std::string &FunctionName, std::string &StartFile, uint32_t &StartLine,
+    std::string &ShortFunctionName,
+    std::string &LinkageFunctionName, std::string &StartFile, uint32_t &StartLine,
     Optional<uint64_t> &StartAddress) {
   // The address may correspond to instruction in some inlined function,
   // so we have to build the chain of inlined functions and take the
@@ -1123,9 +1124,16 @@ static bool getFunctionNameAndStartLineForAddress(
   const DWARFDie &DIE = InlinedChain[0];
   bool FoundResult = false;
   const char *Name = nullptr;
-  if (Kind != FunctionNameKind::None && (Name = DIE.getSubroutineName(Kind))) {
-    FunctionName = Name;
-    FoundResult = true;
+
+  if (Kind != FunctionNameKind::None) {
+    if (Name = DIE.getSubroutineName(FunctionNameKind::ShortName)) {
+      ShortFunctionName = Name;
+      FoundResult = true;
+    }
+    if (Name = DIE.getSubroutineName(FunctionNameKind::LinkageName)) {
+      LinkageFunctionName = Name;
+      FoundResult = true;
+    }
   }
   std::string DeclFile = DIE.getDeclFile(FileNameKind);
   if (!DeclFile.empty()) {
@@ -1247,7 +1255,9 @@ DILineInfo DWARFContext::getLineInfoForAddress(object::SectionedAddress Address,
     return Result;
 
   getFunctionNameAndStartLineForAddress(
-      CU, Address.Address, Spec.FNKind, Spec.FLIKind, Result.FunctionName,
+      CU, Address.Address,
+                                        Spec.FNKind, Spec.FLIKind, Result.ShortFunctionName,
+                                        Result.LinkageFunctionName,
       Result.StartFileName, Result.StartLine, Result.StartAddress);
   if (Spec.FLIKind != FileLineInfoKind::None) {
     if (const DWARFLineTable *LineTable = getLineTableForUnit(CU)) {
@@ -1284,17 +1294,19 @@ DILineInfoTable DWARFContext::getLineInfoForAddressRange(
 
   uint32_t StartLine = 0;
   std::string StartFileName;
-  std::string FunctionName(DILineInfo::BadString);
+  std::string ShortFunctionName = DILineInfo::BadString;
+  std::string LinkageFunctionName = DILineInfo::BadString;
   Optional<uint64_t> StartAddress;
-  getFunctionNameAndStartLineForAddress(CU, Address.Address, Spec.FNKind,
-                                        Spec.FLIKind, FunctionName,
+  getFunctionNameAndStartLineForAddress(CU, Address.Address, Spec.FNKind, Spec.FLIKind,
+                                        ShortFunctionName, LinkageFunctionName,
                                         StartFileName, StartLine, StartAddress);
 
   // If the Specifier says we don't need FileLineInfo, just
   // return the top-most function at the starting address.
   if (Spec.FLIKind == FileLineInfoKind::None) {
     DILineInfo Result;
-    Result.FunctionName = FunctionName;
+    Result.ShortFunctionName = ShortFunctionName;
+    Result.LinkageFunctionName = LinkageFunctionName;
     Result.StartFileName = StartFileName;
     Result.StartLine = StartLine;
     Result.StartAddress = StartAddress;
@@ -1317,7 +1329,8 @@ DILineInfoTable DWARFContext::getLineInfoForAddressRange(
     DILineInfo Result;
     LineTable->getFileNameByIndex(Row.File, CU->getCompilationDir(),
                                   Spec.FLIKind, Result.FileName);
-    Result.FunctionName = FunctionName;
+    Result.ShortFunctionName = ShortFunctionName;
+    Result.LinkageFunctionName = LinkageFunctionName;
     Result.Line = Row.Line;
     Result.Column = Row.Column;
     Result.StartFileName = StartFileName;
@@ -1360,8 +1373,15 @@ DWARFContext::getInliningInfoForAddress(object::SectionedAddress Address,
     DWARFDie &FunctionDIE = InlinedChain[i];
     DILineInfo Frame;
     // Get function name if necessary.
-    if (const char *Name = FunctionDIE.getSubroutineName(Spec.FNKind))
-      Frame.FunctionName = Name;
+    const char *Name = nullptr;
+    if (Spec.FNKind != FunctionNameKind::None) {
+      if (Name = FunctionDIE.getSubroutineName(FunctionNameKind::ShortName)) {
+        Frame.ShortFunctionName = Name;
+      }
+      if (Name = FunctionDIE.getSubroutineName(FunctionNameKind::LinkageName)) {
+        Frame.LinkageFunctionName = Name;
+      }
+    }
     if (auto DeclLineResult = FunctionDIE.getDeclLine())
       Frame.StartLine = DeclLineResult;
     Frame.StartFileName = FunctionDIE.getDeclFile(Spec.FLIKind);

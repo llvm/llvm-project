@@ -73,8 +73,11 @@ LLVMSymbolizer::symbolizeCodeCommon(const T &ModuleSpecifier,
   DILineInfo LineInfo = Info->symbolizeCode(
       ModuleOffset, DILineInfoSpecifier(Opts.PathStyle, Opts.PrintFunctions),
       Opts.UseSymbolTable);
-  if (Opts.Demangle)
-    LineInfo.FunctionName = DemangleName(LineInfo.FunctionName, Info);
+  if (Opts.Demangle) {
+    LineInfo.ShortFunctionName = DemangleName(LineInfo.ShortFunctionName, Info);
+    LineInfo.LinkageFunctionName = DemangleName(LineInfo.LinkageFunctionName, Info);
+    LineInfo.SymbolTableFunctionName = DemangleName(LineInfo.SymbolTableFunctionName, Info);
+  }
   return LineInfo;
 }
 
@@ -121,7 +124,9 @@ Expected<DIInliningInfo> LLVMSymbolizer::symbolizeInlinedCodeCommon(
   if (Opts.Demangle) {
     for (int i = 0, n = InlinedContext.getNumberOfFrames(); i < n; i++) {
       auto *Frame = InlinedContext.getMutableFrame(i);
-      Frame->FunctionName = DemangleName(Frame->FunctionName, Info);
+      Frame->ShortFunctionName = DemangleName(Frame->ShortFunctionName, Info);
+      Frame->LinkageFunctionName = DemangleName(Frame->LinkageFunctionName, Info);
+      Frame->SymbolTableFunctionName = DemangleName(Frame->SymbolTableFunctionName, Info);
     }
   }
   return InlinedContext;

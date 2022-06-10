@@ -35,7 +35,7 @@ void PDBContext::dump(raw_ostream &OS, DIDumpOptions DumpOpts){}
 DILineInfo PDBContext::getLineInfoForAddress(object::SectionedAddress Address,
                                              DILineInfoSpecifier Specifier) {
   DILineInfo Result;
-  Result.FunctionName = getFunctionName(Address.Address, Specifier.FNKind);
+  getFunctionName(Address.Address, Specifier.FNKind, Result.ShortFunctionName, Result.LinkageFunctionName);
 
   uint32_t Length = 1;
   std::unique_ptr<PDBSymbol> Symbol =
@@ -121,7 +121,7 @@ PDBContext::getInliningInfoForAddress(object::SectionedAddress Address,
     assert(Line);
 
     DILineInfo LineInfo;
-    LineInfo.FunctionName = Frame->getName();
+    LineInfo.SymbolTableFunctionName = Frame->getName();
     auto SourceFile = Session->getSourceFileById(Line->getSourceFileId());
     if (SourceFile &&
         Specifier.FLIKind != DILineInfoSpecifier::FileLineInfoKind::None)
@@ -140,29 +140,30 @@ PDBContext::getLocalsForAddress(object::SectionedAddress Address) {
   return std::vector<DILocal>();
 }
 
-std::string PDBContext::getFunctionName(uint64_t Address,
-                                        DINameKind NameKind) const {
+void PDBContext::getFunctionName(uint64_t Address,
+                                 DINameKind NameKind,
+                                 std::string &ShortFunctionName,
+                                 std::string &LinkageFunctionName) const {
   if (NameKind == DINameKind::None)
-    return std::string();
+    return;
 
   std::unique_ptr<PDBSymbol> FuncSymbol =
       Session->findSymbolByAddress(Address, PDB_SymType::Function);
   auto *Func = dyn_cast_or_null<PDBSymbolFunc>(FuncSymbol.get());
-
-  if (NameKind == DINameKind::LinkageName) {
-    // It is not possible to get the mangled linkage name through a
-    // PDBSymbolFunc.  For that we have to specifically request a
-    // PDBSymbolPublicSymbol.
-    auto PublicSym =
-        Session->findSymbolByAddress(Address, PDB_SymType::PublicSymbol);
-    if (auto *PS = dyn_cast_or_null<PDBSymbolPublicSymbol>(PublicSym.get())) {
-      // If we also have a function symbol, prefer the use of public symbol name
-      // only if it refers to the same address. The public symbol uses the
-      // linkage name while the function does not.
-      if (!Func || Func->getVirtualAddress() == PS->getVirtualAddress())
-        return PS->getName();
-    }
+  if (Func) {
+    ShortFunctionName = Func->getName();
   }
 
-  return Func ? Func->getName() : std::string();
+  // It is not possible to get the mangled linkage name through a
+  // PDBSymbolFunc.  For that we have to specifically request a
+  // PDBSymbolPublicSymbol.
+  auto PublicSym =
+      Session->findSymbolByAddress(Address, PDB_SymType::PublicSymbol);
+  if (auto *PS = dyn_cast_or_null<PDBSymbolPublicSymbol>(PublicSym.get())) {
+    // If we also have a function symbol, prefer the use of public symbol name
+    // only if it refers to the same address. The public symbol uses the
+    // linkage name while the function does not.
+    if (!Func || Func->getVirtualAddress() == PS->getVirtualAddress())
+      LinkageFunctionName = PS->getName();
+  }
 }
