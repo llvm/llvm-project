@@ -253,13 +253,13 @@ define i64 @zext_from_legal_to_legal_type(i32 %x) {
 ; CHECK-NEXT:    br i1 [[CMP]], label [[T:%.*]], label [[F:%.*]]
 ; CHECK:       t:
 ; CHECK-NEXT:    [[Y:%.*]] = call i32 @get_i32()
-; CHECK-NEXT:    [[PHITMP:%.*]] = zext i32 [[Y]] to i64
+; CHECK-NEXT:    [[PHI_CAST:%.*]] = zext i32 [[Y]] to i64
 ; CHECK-NEXT:    br label [[EXIT:%.*]]
 ; CHECK:       f:
 ; CHECK-NEXT:    call void @bar()
 ; CHECK-NEXT:    br label [[EXIT]]
 ; CHECK:       exit:
-; CHECK-NEXT:    [[P:%.*]] = phi i64 [ [[PHITMP]], [[T]] ], [ 3, [[F]] ]
+; CHECK-NEXT:    [[P:%.*]] = phi i64 [ [[PHI_CAST]], [[T]] ], [ 3, [[F]] ]
 ; CHECK-NEXT:    ret i64 [[P]]
 ;
 entry:
@@ -287,13 +287,13 @@ define i64 @zext_from_illegal_to_legal_type(i32 %x) {
 ; CHECK-NEXT:    br i1 [[CMP]], label [[T:%.*]], label [[F:%.*]]
 ; CHECK:       t:
 ; CHECK-NEXT:    [[Y:%.*]] = call i3 @get_i3()
-; CHECK-NEXT:    [[PHITMP:%.*]] = zext i3 [[Y]] to i64
+; CHECK-NEXT:    [[PHI_CAST:%.*]] = zext i3 [[Y]] to i64
 ; CHECK-NEXT:    br label [[EXIT:%.*]]
 ; CHECK:       f:
 ; CHECK-NEXT:    call void @bar()
 ; CHECK-NEXT:    br label [[EXIT]]
 ; CHECK:       exit:
-; CHECK-NEXT:    [[P:%.*]] = phi i64 [ [[PHITMP]], [[T]] ], [ 3, [[F]] ]
+; CHECK-NEXT:    [[P:%.*]] = phi i64 [ [[PHI_CAST]], [[T]] ], [ 3, [[F]] ]
 ; CHECK-NEXT:    ret i64 [[P]]
 ;
 entry:
@@ -312,4 +312,74 @@ exit:
   %p = phi i3 [ %y, %t ], [ 3, %f ]
   %r = zext i3 %p to i64
   ret i64 %r
+}
+
+define i8 @trunc_in_loop_exit_block() {
+; CHECK-LABEL: @trunc_in_loop_exit_block(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[LOOP_LATCH:%.*]] ]
+; CHECK-NEXT:    [[PHI:%.*]] = phi i8 [ 1, [[ENTRY]] ], [ [[PHI_CAST:%.*]], [[LOOP_LATCH]] ]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i32 [[IV]], 100
+; CHECK-NEXT:    br i1 [[CMP]], label [[LOOP_LATCH]], label [[EXIT:%.*]]
+; CHECK:       loop.latch:
+; CHECK-NEXT:    [[IV_NEXT]] = add i32 [[IV]], 1
+; CHECK-NEXT:    [[PHI_CAST]] = trunc i32 [[IV_NEXT]] to i8
+; CHECK-NEXT:    br label [[LOOP]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret i8 [[PHI]]
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i32 [ 0, %entry ], [ %iv.next, %loop.latch ]
+  %phi = phi i32 [ 1, %entry ], [ %iv.next, %loop.latch ]
+  %cmp = icmp ult i32 %iv, 100
+  br i1 %cmp, label %loop.latch, label %exit
+
+loop.latch:
+  %iv.next = add i32 %iv, 1
+  br label %loop
+
+exit:
+  %trunc = trunc i32 %phi to i8
+  ret i8 %trunc
+}
+
+define i32 @zext_in_loop_and_exit_block(i8 %step, i32 %end) {
+; CHECK-LABEL: @zext_in_loop_and_exit_block(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[PHI_CAST:%.*]], [[LOOP_LATCH:%.*]] ]
+; CHECK-NEXT:    [[CMP_NOT:%.*]] = icmp eq i32 [[IV]], [[END:%.*]]
+; CHECK-NEXT:    br i1 [[CMP_NOT]], label [[EXIT:%.*]], label [[LOOP_LATCH]]
+; CHECK:       loop.latch:
+; CHECK-NEXT:    [[STEP_EXT:%.*]] = zext i8 [[STEP:%.*]] to i32
+; CHECK-NEXT:    [[IV_NEXT:%.*]] = add nuw nsw i32 [[IV]], [[STEP_EXT]]
+; CHECK-NEXT:    [[PHI_CAST]] = and i32 [[IV_NEXT]], 255
+; CHECK-NEXT:    br label [[LOOP]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret i32 [[IV]]
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i8 [ 0, %entry ], [ %iv.next.trunc, %loop.latch ]
+  %iv.ext = zext i8 %iv to i32
+  %cmp = icmp ne i32 %iv.ext, %end
+  br i1 %cmp, label %loop.latch, label %exit
+
+loop.latch:
+  %step.ext = zext i8 %step to i32
+  %iv.next = add i32 %iv.ext, %step.ext
+  %iv.next.trunc = trunc i32 %iv.next to i8
+  br label %loop
+
+exit:
+  %ext = zext i8 %iv to i32
+  ret i32 %ext
 }
