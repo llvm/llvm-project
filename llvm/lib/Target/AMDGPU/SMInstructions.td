@@ -87,6 +87,21 @@ class SM_Real <SM_Pseudo ps, string opName = ps.Mnemonic>
   bits<5> cpol;
 }
 
+class OffsetMode<bit hasOffset, bit hasSOffset, string variant,
+                 dag ins, string asm> {
+  bit HasOffset = hasOffset;
+  bit HasSOffset = hasSOffset;
+  string Variant = variant;
+  dag Ins = ins;
+  string Asm = asm;
+}
+
+def IMM_Offset : OffsetMode<1, 0, "_IMM", (ins smem_offset:$offset), "$offset">;
+def SGPR_Offset : OffsetMode<0, 1, "_SGPR", (ins SReg_32:$soffset), "$soffset">;
+def SGPR_IMM_Offset : OffsetMode<1, 1, "_SGPR_IMM",
+                                 (ins SReg_32:$soffset, smem_offset_mod:$offset),
+                                 "$soffset$offset">;
+
 class SM_Probe_Pseudo <string opName, string variant, RegisterClass baseClass,
                        dag offsets, string asmOffsets,
                        bit hasOffset, bit hasSOffset>
@@ -282,23 +297,21 @@ class SM_Atomic_Pseudo <string opName,
 class SM_Pseudo_Atomic<string opName,
                        RegisterClass baseClass,
                        RegisterClass dataClass,
-                       bit isImm,
+                       OffsetMode offsets,
                        bit isRet,
-                       string opNameWithSuffix = opName # !if(isImm,
-                                 !if(isRet, "_IMM_RTN", "_IMM"),
-                                 !if(isRet, "_SGPR_RTN", "_SGPR")),
+                       string opNameWithSuffix =
+                         opName # offsets.Variant # !if(isRet, "_RTN", ""),
                        Operand CPolTy = !if(isRet, CPol_GLC1, CPol)> :
   SM_Atomic_Pseudo<opName,
                    !if(isRet, (outs dataClass:$sdst), (outs)),
-                   !if(isImm,
-                       (ins dataClass:$sdata, baseClass:$sbase, smem_offset:$offset, CPolTy:$cpol),
-                       (ins dataClass:$sdata, baseClass:$sbase, SReg_32:$soffset, CPolTy:$cpol)),
-                   !if(isRet, " $sdst", " $sdata") # ", $sbase, " #
-                     !if(isImm, "$offset", "$soffset") # "$cpol",
+                   !con((ins dataClass:$sdata, baseClass:$sbase), offsets.Ins,
+                        (ins CPolTy:$cpol)),
+                   !if(isRet, " $sdst", " $sdata") #
+                     ", $sbase, " # offsets.Asm # "$cpol",
                    isRet>,
   AtomicNoRet <opNameWithSuffix, isRet> {
-  let has_offset = isImm;
-  let has_soffset = !not(isImm);
+  let has_offset = offsets.HasOffset;
+  let has_soffset = offsets.HasSOffset;
   let PseudoInstr = opNameWithSuffix;
 
   let Constraints = !if(isRet, "$sdst = $sdata", "");
@@ -308,10 +321,12 @@ class SM_Pseudo_Atomic<string opName,
 multiclass SM_Pseudo_Atomics<string opName,
                              RegisterClass baseClass,
                              RegisterClass dataClass> {
-  def _IMM      : SM_Pseudo_Atomic <opName, baseClass, dataClass, 1, 0>;
-  def _SGPR     : SM_Pseudo_Atomic <opName, baseClass, dataClass, 0, 0>;
-  def _IMM_RTN  : SM_Pseudo_Atomic <opName, baseClass, dataClass, 1, 1>;
-  def _SGPR_RTN : SM_Pseudo_Atomic <opName, baseClass, dataClass, 0, 1>;
+  def _IMM      : SM_Pseudo_Atomic <opName, baseClass, dataClass, IMM_Offset, 0>;
+  def _SGPR     : SM_Pseudo_Atomic <opName, baseClass, dataClass, SGPR_Offset, 0>;
+  def _SGPR_IMM : SM_Pseudo_Atomic <opName, baseClass, dataClass, SGPR_IMM_Offset, 0>;
+  def _IMM_RTN  : SM_Pseudo_Atomic <opName, baseClass, dataClass, IMM_Offset, 1>;
+  def _SGPR_RTN : SM_Pseudo_Atomic <opName, baseClass, dataClass, SGPR_Offset, 1>;
+  def _SGPR_IMM_RTN : SM_Pseudo_Atomic <opName, baseClass, dataClass, SGPR_IMM_Offset, 1>;
 }
 
 //===----------------------------------------------------------------------===//
@@ -705,8 +720,20 @@ class SMEM_Atomic_Real_vi <bits<8> op, SM_Atomic_Pseudo ps>
 multiclass SM_Real_Atomics_vi<bits<8> op, string ps> {
   def _IMM_vi       : SMEM_Atomic_Real_vi <op, !cast<SM_Atomic_Pseudo>(ps#_IMM)>;
   def _SGPR_vi      : SMEM_Atomic_Real_vi <op, !cast<SM_Atomic_Pseudo>(ps#_SGPR)>;
+  def _SGPR_alt_gfx9
+    : SMEM_Atomic_Real_vi <op, !cast<SM_Atomic_Pseudo>(ps#_SGPR)>,
+      SMEM_Real_SGPR_alt_gfx9;
+  let IsGFX9SpecificEncoding = true in
+  def _SGPR_IMM_gfx9
+    : SMEM_Atomic_Real_vi <op, !cast<SM_Atomic_Pseudo>(ps#_SGPR_IMM)>;
   def _IMM_RTN_vi   : SMEM_Atomic_Real_vi <op, !cast<SM_Atomic_Pseudo>(ps#_IMM_RTN)>;
   def _SGPR_RTN_vi  : SMEM_Atomic_Real_vi <op, !cast<SM_Atomic_Pseudo>(ps#_SGPR_RTN)>;
+  def _SGPR_RTN_alt_gfx9
+    : SMEM_Atomic_Real_vi <op, !cast<SM_Atomic_Pseudo>(ps#_SGPR_RTN)>,
+      SMEM_Real_SGPR_alt_gfx9;
+  let IsGFX9SpecificEncoding = true in
+  def _SGPR_IMM_RTN_gfx9
+    : SMEM_Atomic_Real_vi <op, !cast<SM_Atomic_Pseudo>(ps#_SGPR_IMM_RTN)>;
 }
 
 defm S_BUFFER_ATOMIC_SWAP         : SM_Real_Atomics_vi <0x40, "S_BUFFER_ATOMIC_SWAP">;
@@ -1103,8 +1130,10 @@ class SMEM_Atomic_Real_gfx10 <bits<8> op, SM_Atomic_Pseudo ps>
 multiclass SM_Real_Atomics_gfx10<bits<8> op, string ps> {
   def _IMM_gfx10       : SMEM_Atomic_Real_gfx10 <op, !cast<SM_Atomic_Pseudo>(ps#_IMM)>;
   def _SGPR_gfx10      : SMEM_Atomic_Real_gfx10 <op, !cast<SM_Atomic_Pseudo>(ps#_SGPR)>;
+  def _SGPR_IMM_gfx10  : SMEM_Atomic_Real_gfx10 <op, !cast<SM_Atomic_Pseudo>(ps#_SGPR_IMM)>;
   def _IMM_RTN_gfx10   : SMEM_Atomic_Real_gfx10 <op, !cast<SM_Atomic_Pseudo>(ps#_IMM_RTN)>;
   def _SGPR_RTN_gfx10  : SMEM_Atomic_Real_gfx10 <op, !cast<SM_Atomic_Pseudo>(ps#_SGPR_RTN)>;
+  def _SGPR_IMM_RTN_gfx10 : SMEM_Atomic_Real_gfx10 <op, !cast<SM_Atomic_Pseudo>(ps#_SGPR_IMM_RTN)>;
 }
 
 let SubtargetPredicate = HasScalarAtomics in {
