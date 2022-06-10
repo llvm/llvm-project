@@ -12,11 +12,11 @@
 ; CHECK-NEXT:   %v3 = mul i16 %v2, %v2
 ; CHECK-NEXT:   -->  {1,+,3,+,2}<%b1> U: full-set S: full-set         Exits: 0               LoopDispositions: { %b1: Computable }
 ; CHECK-NEXT:   %v5 = phi i16 [ %v2, %b1 ]
-; CHECK-NEXT:   -->  %v5 U: [-256,0) S: [-256,0)
+; CHECK-NEXT:   -->  {-1,+,-1}<%b1> U: [-256,0) S: [-256,0)  -->  -256 U: [-256,-255) S: [-256,-255)
 ; CHECK-NEXT:   %v6 = phi i16 [ %v3, %b1 ]
-; CHECK-NEXT:   -->  %v6 U: full-set S: full-set
+; CHECK-NEXT:   -->  {1,+,3,+,2}<%b1> U: full-set S: full-set  -->  0 U: [0,1) S: [0,1)
 ; CHECK-NEXT:   %v7 = sext i16 %v5 to i32
-; CHECK-NEXT:   -->  (sext i16 %v5 to i32) U: [-256,0) S: [-256,0)
+; CHECK-NEXT:   -->  {-1,+,-1}<nsw><%b1> U: [-256,0) S: [-256,0)  -->  -256 U: [-256,-255) S: [-256,-255)
 ; CHECK-NEXT: Determining loop execution counts for: @f0
 ; CHECK-NEXT: Loop %b1: backedge-taken count is 255
 ; CHECK-NEXT: Loop %b1: max backedge-taken count is 255
