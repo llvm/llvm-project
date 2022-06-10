@@ -44,7 +44,12 @@ constexpr const ::llvm::StringLiteral
 
 LogicalResult BufferizableOpInterface::resolveTensorOpOperandConflicts(
     RewriterBase &rewriter, const AnalysisState &state) {
+  OpBuilder::InsertionGuard g(rewriter);
   Operation *op = getOperation();
+  SmallVector<OpOperand *> outOfPlaceOpOperands;
+  SmallVector<OpResult> outOfPlaceOpResults;
+
+  // Find all out-of-place OpOperands.
   for (OpOperand &opOperand : op->getOpOperands()) {
     Type operandType = opOperand.get().getType();
     if (!operandType.isa<TensorType>())
@@ -53,17 +58,52 @@ LogicalResult BufferizableOpInterface::resolveTensorOpOperandConflicts(
       continue;
     if (operandType.isa<UnrankedTensorType>())
       return op->emitError("copies of unranked tensors are not supported");
-    auto tensorType = operandType.dyn_cast<RankedTensorType>();
-    if (!tensorType)
-      continue;
+
     SmallVector<OpResult> aliasingOpResults =
         state.getAliasingOpResult(opOperand);
+    if (aliasingOpResults.size() == 1 &&
+        !state.bufferizesToMemoryWrite(opOperand) &&
+        state.getAliasingOpOperand(aliasingOpResults.front()).size() == 1) {
+      // The op itself does not write but may create exactly one alias. Instead
+      // of copying the OpOperand, copy the OpResult. The OpResult can sometimes
+      // be smaller than the OpOperand (e.g., in the case of an extract_slice,
+      // where the result is usually a smaller part of the source).
+      outOfPlaceOpResults.push_back(aliasingOpResults.front());
+    } else {
+      // In all other cases, make a copy of the OpOperand.
+      outOfPlaceOpOperands.push_back(&opOperand);
+    }
+  }
+
+  // Insert copies of OpOperands.
+  rewriter.setInsertionPoint(op);
+  for (OpOperand *opOperand : outOfPlaceOpOperands) {
+    auto tensorType = opOperand->get().getType().cast<RankedTensorType>();
+    SmallVector<OpResult> aliasingOpResults =
+        state.getAliasingOpResult(*opOperand);
     bool escape = llvm::any_of(
         aliasingOpResults, [&](Value v) { return state.isTensorYielded(v); });
     Value copy = rewriter.create<AllocTensorOp>(
-        op->getLoc(), tensorType, ValueRange(), opOperand.get(), escape);
-    rewriter.updateRootInPlace(op, [&]() { opOperand.set(copy); });
+        op->getLoc(), tensorType, ValueRange(), opOperand->get(), escape);
+    rewriter.updateRootInPlace(op, [&]() { opOperand->set(copy); });
   }
+
+  // Insert copies of OpResults.
+  rewriter.setInsertionPointAfter(op);
+  for (OpResult opResult : outOfPlaceOpResults) {
+    auto tensorType = opResult.getType().cast<RankedTensorType>();
+    bool escape = state.isTensorYielded(opResult);
+    Value copy = rewriter.create<AllocTensorOp>(op->getLoc(), tensorType,
+                                                ValueRange(), opResult, escape);
+    SmallVector<OpOperand *> uses = llvm::to_vector(llvm::map_range(
+        opResult.getUses(), [](OpOperand &use) { return &use; }));
+    for (OpOperand *use : uses) {
+      // Do not update the alloc_tensor op that we just created.
+      if (use->getOwner() != copy.getDefiningOp())
+        rewriter.updateRootInPlace(use->getOwner(), [&]() { use->set(copy); });
+    }
+  }
+
   return success();
 }
 
