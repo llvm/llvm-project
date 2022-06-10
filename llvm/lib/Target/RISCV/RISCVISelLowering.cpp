@@ -648,6 +648,25 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
                           ISD::VECREDUCE_FMIN, ISD::VECREDUCE_FMAX},
                          VT, Custom);
 
+      // Expand FP operations that need libcalls.
+      setOperationAction(ISD::FREM, VT, Expand);
+      setOperationAction(ISD::FPOW, VT, Expand);
+      setOperationAction(ISD::FCOS, VT, Expand);
+      setOperationAction(ISD::FSIN, VT, Expand);
+      setOperationAction(ISD::FSINCOS, VT, Expand);
+      setOperationAction(ISD::FEXP, VT, Expand);
+      setOperationAction(ISD::FEXP2, VT, Expand);
+      setOperationAction(ISD::FLOG, VT, Expand);
+      setOperationAction(ISD::FLOG2, VT, Expand);
+      setOperationAction(ISD::FLOG10, VT, Expand);
+      setOperationAction(ISD::FRINT, VT, Expand);
+      setOperationAction(ISD::FNEARBYINT, VT, Expand);
+
+      setOperationAction(ISD::VECREDUCE_FADD, VT, Custom);
+      setOperationAction(ISD::VECREDUCE_SEQ_FADD, VT, Custom);
+      setOperationAction(ISD::VECREDUCE_FMIN, VT, Custom);
+      setOperationAction(ISD::VECREDUCE_FMAX, VT, Custom);
+
       setOperationAction(ISD::FCOPYSIGN, VT, Legal);
 
       setOperationAction({ISD::LOAD, ISD::STORE}, VT, Custom);
