@@ -105,3 +105,39 @@ v_mov_b32 v0, lds_direct
 v_mov_b32 v0, src_lds_direct
 // GFX10: encoding: [0xfe,0x02,0x00,0x7e]
 // GFX11-ERR: error: lds_direct is not supported on this GPU
+
+//---------------------------------------------------------------------------//
+// POPS_EXITING_WAVE_ID
+//---------------------------------------------------------------------------//
+
+s_add_i32 s0, src_pops_exiting_wave_id, s1
+// GFX10: encoding: [0xef,0x01,0x00,0x81]
+// GFX11-ERR: error: register not available on this GPU
+
+s_add_i32 s0, s1, src_pops_exiting_wave_id
+// GFX10: encoding: [0x01,0xef,0x00,0x81]
+// GFX11-ERR: error: register not available on this GPU
+
+s_add_i32 s0, pops_exiting_wave_id, s1
+// GFX10: encoding: [0xef,0x01,0x00,0x81]
+// GFX11-ERR: error: register not available on this GPU
+
+s_add_i32 s0, s1, pops_exiting_wave_id
+// GFX10: encoding: [0x01,0xef,0x00,0x81]
+// GFX11-ERR: error: register not available on this GPU
+
+v_add_co_u32 v0, s0, pops_exiting_wave_id, v1
+// GFX10: encoding: [0x00,0x00,0x0f,0xd7,0xef,0x02,0x02,0x00]
+// GFX11-ERR: error: register not available on this GPU
+
+v_add_co_u32 v0, s0, src_pops_exiting_wave_id, v1
+// GFX10: encoding: [0x00,0x00,0x0f,0xd7,0xef,0x02,0x02,0x00]
+// GFX11-ERR: error: register not available on this GPU
+
+v_add_co_u32 v0, s0, v1, pops_exiting_wave_id
+// GFX10: encoding: [0x00,0x00,0x0f,0xd7,0x01,0xdf,0x01,0x00]
+// GFX11-ERR: error: register not available on this GPU
+
+v_add_co_u32 v0, s0, v1, src_pops_exiting_wave_id
+// GFX10: encoding: [0x00,0x00,0x0f,0xd7,0x01,0xdf,0x01,0x00]
+// GFX11-ERR: error: register not available on this GPU
