@@ -1,4 +1,4 @@
-// RUN: %clang_analyze_cc1 -verify %s \
+// RUN: %clang_analyze_cc1 -analyzer-store=region -verify %s \
 // RUN:   -analyzer-checker=core \
 // RUN:   -analyzer-checker=unix \
 // RUN:   -analyzer-checker=core.uninitialized \

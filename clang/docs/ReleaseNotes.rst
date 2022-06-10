@@ -544,12 +544,6 @@ Static Analyzer
   `strcmp``, ``strncmp``, ``strcpy``, ``strlen``, ``strsep`` and many more. Although 
   this checker currently is in list of alpha checkers due to a false positive.
 
-- Deprecate the ``-analyzer-store region`` and
-  ``-analyzer-opt-analyze-nested-blocks`` analyzer flags.
-  These flags are still accepted, but a warning will be displayed.
-  These flags will be rejected, thus turned into a hard error starting with
-  ``clang-16``.
-
 .. _release-notes-ubsan:
 
 Undefined Behavior Sanitizer (UBSan)

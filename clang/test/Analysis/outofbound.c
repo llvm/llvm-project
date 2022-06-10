@@ -1,4 +1,4 @@
-// RUN: %clang_analyze_cc1 -Wno-array-bounds -verify %s \
+// RUN: %clang_analyze_cc1 -Wno-array-bounds -analyzer-store=region -verify %s \
 // RUN:   -analyzer-checker=core \
 // RUN:   -analyzer-checker=unix \
 // RUN:   -analyzer-checker=alpha.security.ArrayBound \

@@ -1,4 +1,4 @@
-// RUN: %clang_analyze_cc1 -analyzer-checker=core,alpha.core -verify -fblocks %s
+// RUN: %clang_analyze_cc1 -analyzer-checker=core,alpha.core -analyzer-store=region -verify -fblocks %s
 // expected-no-diagnostics
 
 // Delta-reduced header stuff (needed for test cases).
@@ -125,8 +125,8 @@ void rdar7342806(void) {
 
 //===---------------------------------------------------------------------===//
 // PR 5627 - http://llvm.org/bugs/show_bug.cgi?id=5627
-//  This test case depends on using -analyzer-config eagerly-assume=true.
-//  The 'eagerly-assume=true' causes the path
+//  This test case depends on using -analyzer-config eagerly-assume=true and
+//  -analyzer-store=region.  The 'eagerly-assume=true' causes the path
 //  to bifurcate when evaluating the function call argument, and a state
 //  caching bug in ExprEngine::CheckerVisit (and friends) caused the store
 //  to 'p' to not be evaluated along one path, but then an autotransition caused
