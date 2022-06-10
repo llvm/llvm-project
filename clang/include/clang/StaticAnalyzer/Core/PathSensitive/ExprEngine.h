@@ -228,6 +228,11 @@ public:
 
   const Stmt *getStmt() const;
 
+  const LocationContext *getRootLocationContext() const {
+    assert(G.roots_begin() != G.roots_end());
+    return (*G.roots_begin())->getLocation().getLocationContext();
+  }
+
   void GenerateAutoTransition(ExplodedNode *N);
   void enqueueEndOfPath(ExplodedNodeSet &S);
   void GenerateCallExitNode(ExplodedNode *N);
