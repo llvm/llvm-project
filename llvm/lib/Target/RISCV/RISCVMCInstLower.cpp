@@ -158,12 +158,16 @@ static bool lowerRISCVVMachineInstrToMCInst(const MachineInstr *MI,
   if (RISCVII::hasSEWOp(TSFlags))
     --NumOps;
 
+  bool hasVLOutput = isFaultFirstLoad(*MI);
   for (unsigned OpNo = 0; OpNo != NumOps; ++OpNo) {
     const MachineOperand &MO = MI->getOperand(OpNo);
+    // Skip vl ouput. It should be the second output.
+    if (hasVLOutput && OpNo == 1)
+      continue;
 
     // Skip merge op. It should be the first operand after the result.
-    if (RISCVII::hasMergeOp(TSFlags) && OpNo == 1) {
-      assert(MI->getNumExplicitDefs() == 1);
+    if (RISCVII::hasMergeOp(TSFlags) && OpNo == 1U + hasVLOutput) {
+      assert(MI->getNumExplicitDefs() == 1U + hasVLOutput);
       continue;
     }
 
@@ -210,16 +214,6 @@ bool llvm::lowerRISCVMachineInstrToMCInst(const MachineInstr *MI, MCInst &OutMI,
   if (lowerRISCVVMachineInstrToMCInst(MI, OutMI))
     return false;
 
-  // Only need the output operand when lower PseudoReadVL from MI to MCInst.
-  if (MI->getOpcode() == RISCV::PseudoReadVL) {
-    OutMI.setOpcode(RISCV::CSRRS);
-    OutMI.addOperand(MCOperand::createReg(MI->getOperand(0).getReg()));
-    OutMI.addOperand(
-        MCOperand::createImm(RISCVSysReg::lookupSysRegByName("VL")->Encoding));
-    OutMI.addOperand(MCOperand::createReg(RISCV::X0));
-    return false;
-  }
-
   OutMI.setOpcode(MI->getOpcode());
 
   for (const MachineOperand &MO : MI->operands()) {
@@ -246,6 +240,12 @@ bool llvm::lowerRISCVMachineInstrToMCInst(const MachineInstr *MI, MCInst &OutMI,
     OutMI.setOpcode(RISCV::CSRRS);
     OutMI.addOperand(MCOperand::createImm(
         RISCVSysReg::lookupSysRegByName("VLENB")->Encoding));
+    OutMI.addOperand(MCOperand::createReg(RISCV::X0));
+    break;
+  case RISCV::PseudoReadVL:
+    OutMI.setOpcode(RISCV::CSRRS);
+    OutMI.addOperand(
+        MCOperand::createImm(RISCVSysReg::lookupSysRegByName("VL")->Encoding));
     OutMI.addOperand(MCOperand::createReg(RISCV::X0));
     break;
   }

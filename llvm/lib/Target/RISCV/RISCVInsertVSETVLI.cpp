@@ -7,7 +7,8 @@
 //===----------------------------------------------------------------------===//
 //
 // This file implements a function pass that inserts VSETVLI instructions where
-// needed.
+// needed and expands the vl outputs of VLEFF/VLSEGFF to PseudoReadVL
+// instructions.
 //
 // This pass consists of 3 phases:
 //
@@ -497,6 +498,7 @@ private:
   void doLocalPrepass(MachineBasicBlock &MBB);
   void doLocalPostpass(MachineBasicBlock &MBB);
   void doPRE(MachineBasicBlock &MBB);
+  void insertReadVL(MachineBasicBlock &MBB);
 };
 
 } // end anonymous namespace
@@ -1409,6 +1411,20 @@ void RISCVInsertVSETVLI::doLocalPostpass(MachineBasicBlock &MBB) {
     MI->eraseFromParent();
 }
 
+void RISCVInsertVSETVLI::insertReadVL(MachineBasicBlock &MBB) {
+  for (auto I = MBB.begin(), E = MBB.end(); I != E;) {
+    MachineInstr &MI = *I++;
+    if (isFaultFirstLoad(MI)) {
+      Register VLOutput = MI.getOperand(1).getReg();
+      if (!MRI->use_nodbg_empty(VLOutput))
+        BuildMI(MBB, I, MI.getDebugLoc(), TII->get(RISCV::PseudoReadVL),
+                VLOutput);
+      // We don't use the vl output of the VLEFF/VLSEGFF anymore.
+      MI.getOperand(1).setReg(RISCV::X0);
+    }
+  }
+}
+
 bool RISCVInsertVSETVLI::runOnMachineFunction(MachineFunction &MF) {
   // Skip if the vector extension is not enabled.
   const RISCVSubtarget &ST = MF.getSubtarget<RISCVSubtarget>();
@@ -1498,6 +1514,11 @@ bool RISCVInsertVSETVLI::runOnMachineFunction(MachineFunction &MF) {
       }
     }
   }
+
+  // Insert PseudoReadVL after VLEFF/VLSEGFF and replace it with the vl output
+  // of VLEFF/VLSEGFF.
+  for (MachineBasicBlock &MBB : MF)
+    insertReadVL(MBB);
 
   BlockInfo.clear();
   return HaveVectorOp;

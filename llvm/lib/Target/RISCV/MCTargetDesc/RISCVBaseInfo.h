@@ -16,6 +16,7 @@
 #include "MCTargetDesc/RISCVMCTargetDesc.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSwitch.h"
+#include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/MC/MCInstrDesc.h"
 #include "llvm/MC/SubtargetFeature.h"
 #include "llvm/Support/RISCVISAInfo.h"
@@ -432,6 +433,7 @@ void printVType(unsigned VType, raw_ostream &OS);
 
 } // namespace RISCVVType
 
+bool isFaultFirstLoad(const MachineInstr &MI);
 } // namespace llvm
 
 #endif
