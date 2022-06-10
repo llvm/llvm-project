@@ -201,9 +201,6 @@ private:
   SIFrameLowering FrameLowering;
 
 public:
-  // See COMPUTE_TMPRING_SIZE.WAVESIZE, 13-bit field in units of 256-dword.
-  static const unsigned MaxWaveScratchSize = (256 * 4) * ((1 << 13) - 1);
-
   GCNSubtarget(const Triple &TT, StringRef GPU, StringRef FS,
                const GCNTargetMachine &TM);
   ~GCNSubtarget() override;
@@ -266,9 +263,19 @@ public:
     return (Generation)Gen;
   }
 
+  unsigned getMaxWaveScratchSize() const {
+    // See COMPUTE_TMPRING_SIZE.WAVESIZE.
+    if (getGeneration() < GFX11) {
+      // 13-bit field in units of 256-dword.
+      return (256 * 4) * ((1 << 13) - 1);
+    }
+    // 15-bit field in units of 64-dword.
+    return (64 * 4) * ((1 << 15) - 1);
+  }
+
   /// Return the number of high bits known to be zero for a frame index.
   unsigned getKnownHighZeroBitsForFrameIndex() const {
-    return countLeadingZeros(MaxWaveScratchSize) + getWavefrontSizeLog2();
+    return countLeadingZeros(getMaxWaveScratchSize()) + getWavefrontSizeLog2();
   }
 
   int getLDSBankCount() const {
