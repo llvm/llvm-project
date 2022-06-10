@@ -7172,10 +7172,9 @@ SDValue SelectionDAG::getMemcpy(SDValue Chain, const SDLoc &dl, SDValue Dst,
 }
 
 SDValue SelectionDAG::getAtomicMemcpy(SDValue Chain, const SDLoc &dl,
-                                      SDValue Dst, unsigned DstAlign,
-                                      SDValue Src, unsigned SrcAlign,
-                                      SDValue Size, Type *SizeTy,
-                                      unsigned ElemSz, bool isTailCall,
+                                      SDValue Dst, SDValue Src, SDValue Size,
+                                      Type *SizeTy, unsigned ElemSz,
+                                      bool isTailCall,
                                       MachinePointerInfo DstPtrInfo,
                                       MachinePointerInfo SrcPtrInfo) {
   // Emit a library call.
@@ -7275,10 +7274,9 @@ SDValue SelectionDAG::getMemmove(SDValue Chain, const SDLoc &dl, SDValue Dst,
 }
 
 SDValue SelectionDAG::getAtomicMemmove(SDValue Chain, const SDLoc &dl,
-                                       SDValue Dst, unsigned DstAlign,
-                                       SDValue Src, unsigned SrcAlign,
-                                       SDValue Size, Type *SizeTy,
-                                       unsigned ElemSz, bool isTailCall,
+                                       SDValue Dst, SDValue Src, SDValue Size,
+                                       Type *SizeTy, unsigned ElemSz,
+                                       bool isTailCall,
                                        MachinePointerInfo DstPtrInfo,
                                        MachinePointerInfo SrcPtrInfo) {
   // Emit a library call.
@@ -7406,9 +7404,9 @@ SDValue SelectionDAG::getMemset(SDValue Chain, const SDLoc &dl, SDValue Dst,
 }
 
 SDValue SelectionDAG::getAtomicMemset(SDValue Chain, const SDLoc &dl,
-                                      SDValue Dst, unsigned DstAlign,
-                                      SDValue Value, SDValue Size, Type *SizeTy,
-                                      unsigned ElemSz, bool isTailCall,
+                                      SDValue Dst, SDValue Value, SDValue Size,
+                                      Type *SizeTy, unsigned ElemSz,
+                                      bool isTailCall,
                                       MachinePointerInfo DstPtrInfo) {
   // Emit a library call.
   TargetLowering::ArgListTy Args;

@@ -1058,20 +1058,20 @@ public:
                     const AAMDNodes &AAInfo = AAMDNodes());
 
   SDValue getAtomicMemcpy(SDValue Chain, const SDLoc &dl, SDValue Dst,
-                          unsigned DstAlign, SDValue Src, unsigned SrcAlign,
-                          SDValue Size, Type *SizeTy, unsigned ElemSz,
-                          bool isTailCall, MachinePointerInfo DstPtrInfo,
+                          SDValue Src, SDValue Size, Type *SizeTy,
+                          unsigned ElemSz, bool isTailCall,
+                          MachinePointerInfo DstPtrInfo,
                           MachinePointerInfo SrcPtrInfo);
 
   SDValue getAtomicMemmove(SDValue Chain, const SDLoc &dl, SDValue Dst,
-                           unsigned DstAlign, SDValue Src, unsigned SrcAlign,
-                           SDValue Size, Type *SizeTy, unsigned ElemSz,
-                           bool isTailCall, MachinePointerInfo DstPtrInfo,
+                           SDValue Src, SDValue Size, Type *SizeTy,
+                           unsigned ElemSz, bool isTailCall,
+                           MachinePointerInfo DstPtrInfo,
                            MachinePointerInfo SrcPtrInfo);
 
   SDValue getAtomicMemset(SDValue Chain, const SDLoc &dl, SDValue Dst,
-                          unsigned DstAlign, SDValue Value, SDValue Size,
-                          Type *SizeTy, unsigned ElemSz, bool isTailCall,
+                          SDValue Value, SDValue Size, Type *SizeTy,
+                          unsigned ElemSz, bool isTailCall,
                           MachinePointerInfo DstPtrInfo);
 
   /// Helper function to make it easier to build SetCC's if you just have an
