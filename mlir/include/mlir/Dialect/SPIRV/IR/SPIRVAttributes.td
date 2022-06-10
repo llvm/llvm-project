@@ -23,12 +23,18 @@
 
 include "mlir/Dialect/SPIRV/IR/SPIRVBase.td"
 
+class SPV_Attr<string attrName, string attrMnemonic, list<Trait> traits = []>
+    : AttrDef<SPIRV_Dialect, attrName> {
+  let mnemonic = attrMnemonic;
+}
+
 // For entry functions, this attribute specifies information related to entry
 // points in the generated SPIR-V module:
 // 1) WorkGroup Size.
-def SPV_EntryPointABIAttr : StructAttr<"EntryPointABIAttr", SPIRV_Dialect, [
-    StructFieldAttr<"local_size", OptionalAttr<I32ElementsAttr>>
-]>;
+def SPV_EntryPointABIAttr : SPV_Attr<"EntryPointABI", "entry_point_abi"> {
+  let parameters = (ins OptionalParameter<"DenseIntElementsAttr">:$local_size);
+  let assemblyFormat = "`<` struct(params) `>`";
+}
 
 def SPV_ExtensionArrayAttr : TypedArrayAttrBase<
     SPV_ExtensionAttr, "SPIR-V extension array attribute">;
@@ -40,16 +46,19 @@ def SPV_CapabilityArrayAttr : TypedArrayAttrBase<
 // target. Represents `VkCooperativeMatrixPropertiesNV`. See
 // https://www.khronos.org/registry/vulkan/specs/1.2-extensions/man/html/VkCooperativeMatrixPropertiesNV.html
 def SPV_CooperativeMatrixPropertiesNVAttr :
-    StructAttr<"CooperativeMatrixPropertiesNVAttr", SPIRV_Dialect, [
-    StructFieldAttr<"m_size", I32Attr>,
-    StructFieldAttr<"n_size", I32Attr>,
-    StructFieldAttr<"k_size", I32Attr>,
-    StructFieldAttr<"a_type", TypeAttr>,
-    StructFieldAttr<"b_type", TypeAttr>,
-    StructFieldAttr<"c_type", TypeAttr>,
-    StructFieldAttr<"result_type", TypeAttr>,
-    StructFieldAttr<"scope", SPV_ScopeAttr>
-]>;
+    SPV_Attr<"CooperativeMatrixPropertiesNV", "coop_matrix_props"> {
+  let parameters = (ins
+    "int":$m_size, 
+    "int":$n_size, 
+    "int":$k_size, 
+    "mlir::Type":$a_type, 
+    "mlir::Type":$b_type, 
+    "mlir::Type":$c_type, 
+    "mlir::Type":$result_type, 
+    "mlir::spirv::ScopeAttr":$scope 
+  );
+  let assemblyFormat = "`<` struct(params) `>`";
+}
 
 def SPV_CooperativeMatrixPropertiesNVArrayAttr :
     TypedArrayAttrBase<SPV_CooperativeMatrixPropertiesNVAttr,
@@ -63,28 +72,32 @@ def SPV_CooperativeMatrixPropertiesNVArrayAttr :
 // The following ones are those affecting SPIR-V CodeGen. Their default value
 // are the from Vulkan limit requirements:
 // https://www.khronos.org/registry/vulkan/specs/1.2-extensions/html/vkspec.html#limits-minmax
-def SPV_ResourceLimitsAttr : StructAttr<"ResourceLimitsAttr", SPIRV_Dialect, [
+def SPV_ResourceLimitsAttr : SPV_Attr<"ResourceLimits", "resource_limits"> {
+  let parameters = (ins
     // The maximum total storage size, in bytes, available for variables
     // declared with the Workgroup storage class.
-    StructFieldAttr<"max_compute_shared_memory_size",
-                    DefaultValuedAttr<I32Attr, "16384">>,
+    DefaultValuedParameter<"int", "16384">:$max_compute_shared_memory_size,
 
     // The maximum total number of compute shader invocations in a single local
     // workgroup.
-    StructFieldAttr<"max_compute_workgroup_invocations",
-                    DefaultValuedAttr<I32Attr, "128">>,
+    DefaultValuedParameter<"int", "128">:$max_compute_workgroup_invocations,
     // The maximum size of a local compute workgroup, per dimension.
-    StructFieldAttr<"max_compute_workgroup_size",
-                    DefaultValuedAttr<I32ElementsAttr, "{128, 128, 64}">>,
+    DefaultValuedParameter<
+      "ArrayAttr",
+      "$_builder.getI32ArrayAttr({128, 128, 64})"
+    >:$max_compute_workgroup_size,
 
     // The default number of invocations in each subgroup.
-    StructFieldAttr<"subgroup_size", DefaultValuedAttr<I32Attr, "32">>,
+    DefaultValuedParameter<"int", "32">:$subgroup_size,
 
     // The configurations of cooperative matrix operations
     // supported. Default is an empty list.
-    StructFieldAttr<
-        "cooperative_matrix_properties_nv",
-        DefaultValuedAttr<SPV_CooperativeMatrixPropertiesNVArrayAttr, "{}">>
-]>;
+    DefaultValuedParameter<
+      "ArrayAttr", 
+      "nullptr"
+    >:$cooperative_matrix_properties_nv
+  );
+  let assemblyFormat = "`<` struct(params) `>`";
+}
 
 #endif // MLIR_DIALECT_SPIRV_IR_TARGET_AND_ABI

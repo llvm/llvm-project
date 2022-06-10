@@ -16,13 +16,13 @@ add_mlir_dialect_library(MLIRSPIRV
   ${MLIR_MAIN_INCLUDE_DIR}/mlir/Dialect/SPIRV
 
   DEPENDS
+  MLIRSPIRVAttributeIncGen
   MLIRSPIRVAttrUtilsGen
   MLIRSPIRVAvailabilityIncGen
   MLIRSPIRVCanonicalizationIncGen
   MLIRSPIRVEnumAvailabilityIncGen
   MLIRSPIRVEnumsIncGen
   MLIRSPIRVOpsIncGen
-  MLIRSPIRVTargetAndABIIncGen
 
   LINK_LIBS PUBLIC
   MLIRControlFlowInterfaces

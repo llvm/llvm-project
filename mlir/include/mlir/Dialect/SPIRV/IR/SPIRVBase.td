@@ -48,7 +48,6 @@ def SPIRV_Dialect : Dialect {
 
   let cppNamespace = "::mlir::spirv";
   let useDefaultTypePrinterParser = 1;
-  let useDefaultAttributePrinterParser = 1;
   let hasConstantMaterializer = 1;
   let hasOperationAttrVerify = 1;
   let hasRegionArgAttrVerify = 1;
@@ -65,6 +64,13 @@ def SPIRV_Dialect : Dialect {
     /// Returns the attribute name to use when specifying decorations on results
     /// of operations.
     static std::string getAttributeName(Decoration decoration);
+
+    /// Dialect attribute parsing hook.
+    Attribute parseAttribute(
+        DialectAsmParser &parser, Type type) const override;
+    /// Dialect attribute printing hook.
+    void printAttribute(
+        Attribute attr, DialectAsmPrinter &printer) const override;
   }];
 }
 

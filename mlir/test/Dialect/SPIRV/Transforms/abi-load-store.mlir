@@ -2,7 +2,7 @@
 
 module attributes {
   spv.target_env = #spv.target_env<
-    #spv.vce<v1.0, [Shader], [SPV_KHR_storage_buffer_storage_class]>, {}>
+    #spv.vce<v1.0, [Shader], [SPV_KHR_storage_buffer_storage_class]>, #spv.resource_limits<>>
 } {
 
 // CHECK-LABEL: spv.module
@@ -38,7 +38,7 @@ spv.module Logical GLSL450 {
     {spv.interface_var_abi = #spv.interface_var_abi<(0, 5), StorageBuffer>},
     %arg6: i32
     {spv.interface_var_abi = #spv.interface_var_abi<(0, 6), StorageBuffer>}) "None"
-  attributes  {spv.entry_point_abi = {local_size = dense<[32, 1, 1]> : vector<3xi32>}} {
+  attributes  {spv.entry_point_abi = #spv.entry_point_abi<local_size = dense<[32, 1, 1]> : vector<3xi32>>} {
     // CHECK: [[ADDRESSARG6:%.*]] = spv.mlir.addressof [[VAR6]]
     // CHECK: [[CONST6:%.*]] = spv.Constant 0 : i32
     // CHECK: [[ARG6PTR:%.*]] = spv.AccessChain [[ADDRESSARG6]]{{\[}}[[CONST6]]

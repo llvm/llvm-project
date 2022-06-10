@@ -2,7 +2,7 @@
 
 module attributes {
   gpu.container_module,
-  spv.target_env = #spv.target_env<#spv.vce<v1.0, [Kernel, Addresses], []>, {}>
+  spv.target_env = #spv.target_env<#spv.vce<v1.0, [Kernel, Addresses], []>, #spv.resource_limits<>>
 } {
   gpu.module @kernels {
     // CHECK-LABEL: spv.module @{{.*}} Physical64 OpenCL
@@ -11,9 +11,9 @@ module attributes {
     //   CHECK-NOT:     spv.interface_var_abi
     //  CHECK-SAME:     {{%.*}}: !spv.ptr<!spv.struct<(!spv.array<12 x f32>)>, CrossWorkgroup>
     //   CHECK-NOT:     spv.interface_var_abi
-    //  CHECK-SAME:     spv.entry_point_abi = {local_size = dense<[32, 4, 1]> : vector<3xi32>}
+    //  CHECK-SAME:     spv.entry_point_abi = #spv.entry_point_abi<local_size = dense<[32, 4, 1]> : vector<3xi32>>
     gpu.func @basic_module_structure(%arg0 : f32, %arg1 : memref<12xf32, 11>) kernel
-        attributes {spv.entry_point_abi = {local_size = dense<[32, 4, 1]>: vector<3xi32>}} {
+        attributes {spv.entry_point_abi = #spv.entry_point_abi<local_size = dense<[32, 4, 1]>: vector<3xi32>>} {
       gpu.return
     }
   }

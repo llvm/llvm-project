@@ -5,7 +5,7 @@
 //===----------------------------------------------------------------------===//
 
 module attributes {
-  spv.target_env = #spv.target_env<#spv.vce<v1.0, [], []>, {}>
+  spv.target_env = #spv.target_env<#spv.vce<v1.0, [], []>, #spv.resource_limits<>>
 } {
 
 // CHECK-LABEL: spv.func @return_none_val

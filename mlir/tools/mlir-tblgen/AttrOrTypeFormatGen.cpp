@@ -250,9 +250,11 @@ void DefFormat::genParser(MethodBody &os) {
   FmtContext ctx;
   ctx.addSubst("_parser", "odsParser");
   ctx.addSubst("_ctx", "odsParser.getContext()");
+  ctx.withBuilder("odsBuilder");
   if (isa<AttrDef>(def))
     ctx.addSubst("_type", "odsType");
   os.indent();
+  os << "::mlir::Builder odsBuilder(odsParser.getContext());\n";
 
   // Declare variables to store all of the parameters. Allocated parameters
   // such as `ArrayRef` and `StringRef` must provide a `storageType`. Store
@@ -668,7 +670,9 @@ void DefFormat::genPrinter(MethodBody &os) {
   FmtContext ctx;
   ctx.addSubst("_printer", "odsPrinter");
   ctx.addSubst("_ctx", "getContext()");
+  ctx.withBuilder("odsBuilder");
   os.indent();
+  os << "::mlir::Builder odsBuilder(getContext());\n";
 
   // Generate printers.
   shouldEmitSpace = true;

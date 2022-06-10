@@ -6,7 +6,7 @@
 
 module attributes {
   spv.target_env = #spv.target_env<
-    #spv.vce<v1.0, [Int8, Int16, Int64, Float16, Float64, Shader], []>, {}>
+    #spv.vce<v1.0, [Int8, Int16, Int64, Float16, Float64, Shader], []>, #spv.resource_limits<>>
 } {
 
 // Check integer operation conversions.
@@ -154,7 +154,7 @@ func.func @unsupported_2x2elem_vector(%arg0: vector<2x2xi32>) {
 
 // Check that types are converted to 32-bit when no special capabilities.
 module attributes {
-  spv.target_env = #spv.target_env<#spv.vce<v1.0, [], []>, {}>
+  spv.target_env = #spv.target_env<#spv.vce<v1.0, [], []>, #spv.resource_limits<>>
 } {
 
 // CHECK-LABEL: @int_vector23
@@ -182,7 +182,7 @@ func.func @float_scalar(%arg0: f16, %arg1: f64) {
 // Check that types are converted to 32-bit when no special capabilities that
 // are not supported.
 module attributes {
-  spv.target_env = #spv.target_env<#spv.vce<v1.0, [], []>, {}>
+  spv.target_env = #spv.target_env<#spv.vce<v1.0, [], []>, #spv.resource_limits<>>
 } {
 
 // expected-error @+1 {{failed to materialize conversion for block argument #0 that remained live after conversion, type was 'vector<4xi64>', with target type 'vector<4xi32>'}}
@@ -202,7 +202,7 @@ func.func @int_vector4_invalid(%arg0: vector<4xi64>) {
 //===----------------------------------------------------------------------===//
 
 module attributes {
-  spv.target_env = #spv.target_env<#spv.vce<v1.0, [], []>, {}>
+  spv.target_env = #spv.target_env<#spv.vce<v1.0, [], []>, #spv.resource_limits<>>
 } {
 
 // CHECK-LABEL: @bitwise_scalar
@@ -280,7 +280,7 @@ func.func @shift_vector(%arg0 : vector<4xi32>, %arg1 : vector<4xi32>) {
 //===----------------------------------------------------------------------===//
 
 module attributes {
-  spv.target_env = #spv.target_env<#spv.vce<v1.0, [], []>, {}>
+  spv.target_env = #spv.target_env<#spv.vce<v1.0, [], []>, #spv.resource_limits<>>
 } {
 
 // CHECK-LABEL: @cmpf
@@ -318,7 +318,7 @@ func.func @cmpf(%arg0 : f32, %arg1 : f32) {
 
 // With Kernel capability, we can convert NaN check to spv.Ordered/spv.Unordered.
 module attributes {
-  spv.target_env = #spv.target_env<#spv.vce<v1.0, [Kernel], []>, {}>
+  spv.target_env = #spv.target_env<#spv.vce<v1.0, [Kernel], []>, #spv.resource_limits<>>
 } {
 
 // CHECK-LABEL: @cmpf
@@ -336,7 +336,7 @@ func.func @cmpf(%arg0 : f32, %arg1 : f32) {
 
 // Without Kernel capability, we need to convert NaN check to spv.IsNan.
 module attributes {
-  spv.target_env = #spv.target_env<#spv.vce<v1.0, [], []>, {}>
+  spv.target_env = #spv.target_env<#spv.vce<v1.0, [], []>, #spv.resource_limits<>>
 } {
 
 // CHECK-LABEL: @cmpf
@@ -364,7 +364,7 @@ func.func @cmpf(%arg0 : f32, %arg1 : f32) {
 //===----------------------------------------------------------------------===//
 
 module attributes {
-  spv.target_env = #spv.target_env<#spv.vce<v1.0, [], []>, {}>
+  spv.target_env = #spv.target_env<#spv.vce<v1.0, [], []>, #spv.resource_limits<>>
 } {
 
 // CHECK-LABEL: @cmpi
@@ -420,7 +420,7 @@ func.func @vecboolcmpi(%arg0 : vector<4xi1>, %arg1 : vector<4xi1>) {
 
 module attributes {
   spv.target_env = #spv.target_env<
-    #spv.vce<v1.0, [Int8, Int16, Int64, Float16, Float64], []>, {}>
+    #spv.vce<v1.0, [Int8, Int16, Int64, Float16, Float64], []>, #spv.resource_limits<>>
 } {
 
 // CHECK-LABEL: @constant
@@ -493,7 +493,7 @@ func.func @constant_size1() {
 
 // Check that constants are converted to 32-bit when no special capability.
 module attributes {
-  spv.target_env = #spv.target_env<#spv.vce<v1.0, [], []>, {}>
+  spv.target_env = #spv.target_env<#spv.vce<v1.0, [], []>, #spv.resource_limits<>>
 } {
 
 // CHECK-LABEL: @constant_16bit
@@ -585,7 +585,7 @@ func.func @unsupported_cases() {
 
 module attributes {
   spv.target_env = #spv.target_env<
-    #spv.vce<v1.0, [Int8, Int16, Int64, Float16, Float64], []>, {}>
+    #spv.vce<v1.0, [Int8, Int16, Int64, Float16, Float64], []>, #spv.resource_limits<>>
 } {
 
 // CHECK-LABEL: index_cast1
@@ -833,7 +833,7 @@ func.func @fptosi2(%arg0 : f16) -> i16 {
 // Checks that cast types will be adjusted when missing special capabilities for
 // certain non-32-bit scalar types.
 module attributes {
-  spv.target_env = #spv.target_env<#spv.vce<v1.0, [Float64], []>, {}>
+  spv.target_env = #spv.target_env<#spv.vce<v1.0, [Float64], []>, #spv.resource_limits<>>
 } {
 
 // CHECK-LABEL: @fpext1
@@ -859,7 +859,7 @@ func.func @fpext2(%arg0 : f32) -> f64 {
 // Checks that cast types will be adjusted when missing special capabilities for
 // certain non-32-bit scalar types.
 module attributes {
-  spv.target_env = #spv.target_env<#spv.vce<v1.0, [Float16], []>, {}>
+  spv.target_env = #spv.target_env<#spv.vce<v1.0, [Float16], []>, #spv.resource_limits<>>
 } {
 
 // CHECK-LABEL: @fptrunc1
@@ -892,7 +892,7 @@ func.func @sitofp(%arg0 : i64) -> f64 {
 // Check OpenCL lowering of arith.remsi
 module attributes {
   spv.target_env = #spv.target_env<
-    #spv.vce<v1.0, [Int16, Kernel], []>, {}>
+    #spv.vce<v1.0, [Int16, Kernel], []>, #spv.resource_limits<>>
 } {
 
 // CHECK-LABEL: @scalar_srem
@@ -928,7 +928,7 @@ func.func @vector_srem(%arg0: vector<3xi16>, %arg1: vector<3xi16>) {
 module attributes {
   spv.target_env = #spv.target_env<
     #spv.vce<v1.0, [Shader, Int8, Int16, Int64, Float16, Float64],
-             [SPV_KHR_storage_buffer_storage_class]>, {}>
+             [SPV_KHR_storage_buffer_storage_class]>, #spv.resource_limits<>>
 } {
 
 // CHECK-LABEL: @select
@@ -949,7 +949,7 @@ func.func @select(%arg0 : i32, %arg1 : i32) {
 
 module attributes {
   spv.target_env = #spv.target_env<
-    #spv.vce<v1.0, [Int8, Int16, Int64, Float16, Float64, Shader], []>, {}>
+    #spv.vce<v1.0, [Int8, Int16, Int64, Float16, Float64, Shader], []>, #spv.resource_limits<>>
 } {
 
 // Check integer operation conversions.
@@ -1079,7 +1079,7 @@ func.func @unsupported_2x2elem_vector(%arg0: vector<2x2xi32>) {
 
 // Check that types are converted to 32-bit when no special capabilities.
 module attributes {
-  spv.target_env = #spv.target_env<#spv.vce<v1.0, [], []>, {}>
+  spv.target_env = #spv.target_env<#spv.vce<v1.0, [], []>, #spv.resource_limits<>>
 } {
 
 // CHECK-LABEL: @int_vector23
@@ -1107,7 +1107,7 @@ func.func @float_scalar(%arg0: f16, %arg1: f64) {
 // Check that types are converted to 32-bit when no special capabilities that
 // are not supported.
 module attributes {
-  spv.target_env = #spv.target_env<#spv.vce<v1.0, [], []>, {}>
+  spv.target_env = #spv.target_env<#spv.vce<v1.0, [], []>, #spv.resource_limits<>>
 } {
 
 // expected-error@below {{failed to materialize conversion for block argument #0 that remained live after conversion}}
@@ -1127,7 +1127,7 @@ func.func @int_vector4_invalid(%arg0: vector<4xi64>) {
 //===----------------------------------------------------------------------===//
 
 module attributes {
-  spv.target_env = #spv.target_env<#spv.vce<v1.0, [], []>, {}>
+  spv.target_env = #spv.target_env<#spv.vce<v1.0, [], []>, #spv.resource_limits<>>
 } {
 
 // CHECK-LABEL: @bitwise_scalar
@@ -1205,7 +1205,7 @@ func.func @shift_vector(%arg0 : vector<4xi32>, %arg1 : vector<4xi32>) {
 //===----------------------------------------------------------------------===//
 
 module attributes {
-  spv.target_env = #spv.target_env<#spv.vce<v1.0, [], []>, {}>
+  spv.target_env = #spv.target_env<#spv.vce<v1.0, [], []>, #spv.resource_limits<>>
 } {
 
 // CHECK-LABEL: @cmpf
@@ -1243,7 +1243,7 @@ func.func @cmpf(%arg0 : f32, %arg1 : f32) {
 
 // With Kernel capability, we can convert NaN check to spv.Ordered/spv.Unordered.
 module attributes {
-  spv.target_env = #spv.target_env<#spv.vce<v1.0, [Kernel], []>, {}>
+  spv.target_env = #spv.target_env<#spv.vce<v1.0, [Kernel], []>, #spv.resource_limits<>>
 } {
 
 // CHECK-LABEL: @cmpf
@@ -1261,7 +1261,7 @@ func.func @cmpf(%arg0 : f32, %arg1 : f32) {
 
 // Without Kernel capability, we need to convert NaN check to spv.IsNan.
 module attributes {
-  spv.target_env = #spv.target_env<#spv.vce<v1.0, [], []>, {}>
+  spv.target_env = #spv.target_env<#spv.vce<v1.0, [], []>, #spv.resource_limits<>>
 } {
 
 // CHECK-LABEL: @cmpf
@@ -1289,7 +1289,7 @@ func.func @cmpf(%arg0 : f32, %arg1 : f32) {
 //===----------------------------------------------------------------------===//
 
 module attributes {
-  spv.target_env = #spv.target_env<#spv.vce<v1.0, [], []>, {}>
+  spv.target_env = #spv.target_env<#spv.vce<v1.0, [], []>, #spv.resource_limits<>>
 } {
 
 // CHECK-LABEL: @cmpi
@@ -1345,7 +1345,7 @@ func.func @vecboolcmpi(%arg0 : vector<4xi1>, %arg1 : vector<4xi1>) {
 
 module attributes {
   spv.target_env = #spv.target_env<
-    #spv.vce<v1.0, [Int8, Int16, Int64, Float16, Float64], []>, {}>
+    #spv.vce<v1.0, [Int8, Int16, Int64, Float16, Float64], []>, #spv.resource_limits<>>
 } {
 
 // CHECK-LABEL: @constant
@@ -1407,7 +1407,7 @@ func.func @constant_64bit() {
 
 // Check that constants are converted to 32-bit when no special capability.
 module attributes {
-  spv.target_env = #spv.target_env<#spv.vce<v1.0, [], []>, {}>
+  spv.target_env = #spv.target_env<#spv.vce<v1.0, [], []>, #spv.resource_limits<>>
 } {
 
 // CHECK-LABEL: @constant_16bit
@@ -1490,7 +1490,7 @@ func.func @unsupported_cases() {
 
 module attributes {
   spv.target_env = #spv.target_env<
-    #spv.vce<v1.0, [Int8, Int16, Int64, Float16, Float64], []>, {}>
+    #spv.vce<v1.0, [Int8, Int16, Int64, Float16, Float64], []>, #spv.resource_limits<>>
 } {
 
 // CHECK-LABEL: index_cast1
@@ -1729,7 +1729,7 @@ func.func @fptosi2(%arg0 : f16) -> i16 {
 // Checks that cast types will be adjusted when missing special capabilities for
 // certain non-32-bit scalar types.
 module attributes {
-  spv.target_env = #spv.target_env<#spv.vce<v1.0, [Float64], []>, {}>
+  spv.target_env = #spv.target_env<#spv.vce<v1.0, [Float64], []>, #spv.resource_limits<>>
 } {
 
 // CHECK-LABEL: @fpext1
@@ -1755,7 +1755,7 @@ func.func @fpext2(%arg0 : f32) -> f64 {
 // Checks that cast types will be adjusted when missing special capabilities for
 // certain non-32-bit scalar types.
 module attributes {
-  spv.target_env = #spv.target_env<#spv.vce<v1.0, [Float16], []>, {}>
+  spv.target_env = #spv.target_env<#spv.vce<v1.0, [Float16], []>, #spv.resource_limits<>>
 } {
 
 // CHECK-LABEL: @fptrunc1

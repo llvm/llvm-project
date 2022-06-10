@@ -135,7 +135,7 @@ static LogicalResult lowerEntryPointABIAttr(spirv::FuncOp funcOp,
       funcOp.getLoc(), executionModel.getValue(), funcOp, interfaceVars);
 
   // Specifies the spv.ExecutionModeOp.
-  auto localSizeAttr = entryPointAttr.local_size();
+  auto localSizeAttr = entryPointAttr.getLocal_size();
   if (localSizeAttr) {
     auto values = localSizeAttr.getValues<int32_t>();
     SmallVector<int32_t, 3> localSize(values);
