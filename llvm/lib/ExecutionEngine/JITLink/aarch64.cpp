@@ -92,7 +92,7 @@ Error applyFixup(LinkGraph &G, Block &B, const Edge &E) {
         FixupAddress.getValue() & ~static_cast<uint64_t>(4096 - 1);
 
     int64_t PageDelta = TargetPage - PCPage;
-    if (PageDelta < -(1 << 30) || PageDelta > ((1 << 30) - 1))
+    if (!isInt<33>(PageDelta))
       return makeTargetOutOfRangeError(G, B, E);
 
     uint32_t RawInstr = *(ulittle32_t *)FixupPtr;
