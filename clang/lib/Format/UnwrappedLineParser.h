@@ -95,15 +95,16 @@ private:
   bool parseLevel(const FormatToken *OpeningBrace = nullptr,
                   bool CanContainBracedList = true,
                   TokenType NextLBracesType = TT_Unknown,
-                  IfStmtKind *IfKind = nullptr);
+                  IfStmtKind *IfKind = nullptr,
+                  FormatToken **IfLeftBrace = nullptr);
   bool mightFitOnOneLine(UnwrappedLine &Line,
                          const FormatToken *OpeningBrace = nullptr) const;
-  void parseBlock(bool MustBeDeclaration = false, unsigned AddLevels = 1u,
-                  bool MunchSemi = true, bool KeepBraces = true,
-                  IfStmtKind *IfKind = nullptr,
-                  bool UnindentWhitesmithsBraces = false,
-                  bool CanContainBracedList = true,
-                  TokenType NextLBracesType = TT_Unknown);
+  FormatToken *parseBlock(bool MustBeDeclaration = false,
+                          unsigned AddLevels = 1u, bool MunchSemi = true,
+                          bool KeepBraces = true, IfStmtKind *IfKind = nullptr,
+                          bool UnindentWhitesmithsBraces = false,
+                          bool CanContainBracedList = true,
+                          TokenType NextLBracesType = TT_Unknown);
   void parseChildBlock(bool CanContainBracedList = true,
                        TokenType NextLBracesType = TT_Unknown);
   void parsePPDirective();
@@ -117,6 +118,7 @@ private:
   void parseStructuralElement(bool IsTopLevel = false,
                               TokenType NextLBracesType = TT_Unknown,
                               IfStmtKind *IfKind = nullptr,
+                              FormatToken **IfLeftBrace = nullptr,
                               bool *HasDoWhile = nullptr,
                               bool *HasLabel = nullptr);
   bool tryToParseBracedList();
