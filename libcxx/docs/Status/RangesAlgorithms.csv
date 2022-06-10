@@ -49,8 +49,8 @@ Write,generate,Not assigned,n/a,Not started
 Write,generate_n,Not assigned,n/a,Not started
 Write,remove_copy,Not assigned,n/a,Not started
 Write,remove_copy_if,Not assigned,n/a,Not started
-Write,replace,Nikolas Klauser,`D126283 <https://llvm.org/D126283>`_,Under review
-Write,replace_if,Nikolas Klauser,`D126283 <https://llvm.org/D126283>`_,Under review
+Write,replace,Nikolas Klauser,`D126283 <https://llvm.org/D126283>`_,✅
+Write,replace_if,Nikolas Klauser,`D126283 <https://llvm.org/D126283>`_,✅
 Write,replace_copy,Not assigned,n/a,Not started
 Write,replace_copy_if,Not assigned,n/a,Not started
 Write,swap_ranges,Nikolas Klauser,`D116303 <https://llvm.org/D116303>`_,✅

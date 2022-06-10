@@ -336,6 +336,8 @@ module std [system] {
       module ranges_minmax_element    { private header "__algorithm/ranges_minmax_element.h" }
       module ranges_mismatch          { private header "__algorithm/ranges_mismatch.h" }
       module ranges_none_of           { private header "__algorithm/ranges_none_of.h" }
+      module ranges_replace           { private header "__algorithm/ranges_replace.h" }
+      module ranges_replace_if        { private header "__algorithm/ranges_replace_if.h" }
       module ranges_reverse           { private header "__algorithm/ranges_reverse.h" }
       module ranges_swap_ranges       { private header "__algorithm/ranges_swap_ranges.h" }
       module ranges_transform         { private header "__algorithm/ranges_transform.h" }

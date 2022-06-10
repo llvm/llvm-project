@@ -9,6 +9,7 @@
 #ifndef ALMOST_SATISFIES_TYPES_H
 #define ALMOST_SATISFIES_TYPES_H
 
+#include <functional>
 #include <iterator>
 #include <ranges>
 
@@ -300,5 +301,20 @@ static_assert(std::input_or_output_iterator<OutputIteratorNotIndirectlyWritable>
 static_assert(!std::indirectly_writable<OutputIteratorNotIndirectlyWritable, int>);
 static_assert(!std::output_iterator<OutputIteratorNotIndirectlyWritable, int>);
 static_assert(!std::ranges::output_range<OutputIteratorNotIndirectlyWritable, int>);
+
+class IndirectBinaryPredicateNotIndirectlyReadable {
+public:
+  using difference_type = long;
+  using iterator_category = std::input_iterator_tag;
+
+  int& operator++();
+  void operator++(int);
+  const int& operator*() const;
+};
+
+using InputRangeIndirectBinaryPredicateNotIndirectlyReadable
+     = UncheckedRange<cpp20_input_iterator<int*>, IndirectBinaryPredicateNotIndirectlyReadable>;
+
+static_assert(!std::indirect_binary_predicate<std::ranges::equal_to, IndirectBinaryPredicateNotIndirectlyReadable, int*>);
 
 #endif // ALMOST_SATISFIES_TYPES_H
