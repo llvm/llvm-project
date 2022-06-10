@@ -11,15 +11,13 @@ define <23 x float> @load23(<23 x float>* %p) {
 ; CHECK-LABEL: load23:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movq %rdi, %rax
-; CHECK-NEXT:    vmovups 64(%rsi), %ymm0
-; CHECK-NEXT:    vmovups (%rsi), %zmm1
-; CHECK-NEXT:    vmovaps 64(%rsi), %xmm2
-; CHECK-NEXT:    vmovss {{.*#+}} xmm3 = mem[0],zero,zero,zero
-; CHECK-NEXT:    vmovss %xmm3, 88(%rdi)
-; CHECK-NEXT:    vmovaps %xmm2, 64(%rdi)
-; CHECK-NEXT:    vmovaps %zmm1, (%rdi)
-; CHECK-NEXT:    vextractf128 $1, %ymm0, %xmm0
-; CHECK-NEXT:    vmovlps %xmm0, 80(%rdi)
+; CHECK-NEXT:    vmovups (%rsi), %zmm0
+; CHECK-NEXT:    vmovaps 64(%rsi), %xmm1
+; CHECK-NEXT:    vmovdqa 80(%rsi), %xmm2
+; CHECK-NEXT:    vextractps $2, %xmm2, 88(%rdi)
+; CHECK-NEXT:    vmovq %xmm2, 80(%rdi)
+; CHECK-NEXT:    vmovaps %xmm1, 64(%rdi)
+; CHECK-NEXT:    vmovaps %zmm0, (%rdi)
 ; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    retq
   %t0 = load <23 x float>, <23 x float>* %p, align 16

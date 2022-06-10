@@ -97,14 +97,12 @@ define amdgpu_kernel void @scalar_to_vector_v8f16(<2 x float> %in, <8 x half>* %
 ; GFX900-NEXT:    s_load_dwordx2 s[2:3], s[4:5], 0x8
 ; GFX900-NEXT:    v_lshlrev_b32_e32 v0, 4, v0
 ; GFX900-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX900-NEXT:    s_lshr_b32 s4, s0, 16
-; GFX900-NEXT:    v_mov_b32_e32 v3, s0
-; GFX900-NEXT:    s_pack_ll_b32_b16 s0, s0, s4
+; GFX900-NEXT:    v_mov_b32_e32 v1, s0
 ; GFX900-NEXT:    v_mov_b32_e32 v6, s3
 ; GFX900-NEXT:    v_add_co_u32_e32 v5, vcc, s2, v0
 ; GFX900-NEXT:    v_mov_b32_e32 v2, s1
-; GFX900-NEXT:    v_mov_b32_e32 v1, s0
 ; GFX900-NEXT:    v_mov_b32_e32 v4, s0
+; GFX900-NEXT:    v_mov_b32_e32 v3, s0
 ; GFX900-NEXT:    v_addc_co_u32_e32 v6, vcc, 0, v6, vcc
 ; GFX900-NEXT:    flat_store_dwordx4 v[5:6], v[1:4]
 ; GFX900-NEXT:    s_endpgm
@@ -115,14 +113,12 @@ define amdgpu_kernel void @scalar_to_vector_v8f16(<2 x float> %in, <8 x half>* %
 ; GFX906-NEXT:    s_load_dwordx2 s[2:3], s[4:5], 0x8
 ; GFX906-NEXT:    v_lshlrev_b32_e32 v0, 4, v0
 ; GFX906-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX906-NEXT:    s_lshr_b32 s4, s0, 16
-; GFX906-NEXT:    v_mov_b32_e32 v3, s0
-; GFX906-NEXT:    s_pack_ll_b32_b16 s0, s0, s4
+; GFX906-NEXT:    v_mov_b32_e32 v1, s0
 ; GFX906-NEXT:    v_mov_b32_e32 v6, s3
 ; GFX906-NEXT:    v_add_co_u32_e32 v5, vcc, s2, v0
 ; GFX906-NEXT:    v_mov_b32_e32 v2, s1
-; GFX906-NEXT:    v_mov_b32_e32 v1, s0
 ; GFX906-NEXT:    v_mov_b32_e32 v4, s0
+; GFX906-NEXT:    v_mov_b32_e32 v3, s0
 ; GFX906-NEXT:    v_addc_co_u32_e32 v6, vcc, 0, v6, vcc
 ; GFX906-NEXT:    flat_store_dwordx4 v[5:6], v[1:4]
 ; GFX906-NEXT:    s_endpgm
@@ -133,14 +129,12 @@ define amdgpu_kernel void @scalar_to_vector_v8f16(<2 x float> %in, <8 x half>* %
 ; GFX908-NEXT:    s_load_dwordx2 s[2:3], s[4:5], 0x8
 ; GFX908-NEXT:    v_lshlrev_b32_e32 v0, 4, v0
 ; GFX908-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX908-NEXT:    s_lshr_b32 s4, s0, 16
-; GFX908-NEXT:    v_mov_b32_e32 v3, s0
-; GFX908-NEXT:    s_pack_ll_b32_b16 s0, s0, s4
+; GFX908-NEXT:    v_mov_b32_e32 v1, s0
 ; GFX908-NEXT:    v_mov_b32_e32 v6, s3
 ; GFX908-NEXT:    v_add_co_u32_e32 v5, vcc, s2, v0
 ; GFX908-NEXT:    v_mov_b32_e32 v2, s1
-; GFX908-NEXT:    v_mov_b32_e32 v1, s0
 ; GFX908-NEXT:    v_mov_b32_e32 v4, s0
+; GFX908-NEXT:    v_mov_b32_e32 v3, s0
 ; GFX908-NEXT:    v_addc_co_u32_e32 v6, vcc, 0, v6, vcc
 ; GFX908-NEXT:    flat_store_dwordx4 v[5:6], v[1:4]
 ; GFX908-NEXT:    s_endpgm
@@ -151,14 +145,12 @@ define amdgpu_kernel void @scalar_to_vector_v8f16(<2 x float> %in, <8 x half>* %
 ; GFX90A-NEXT:    s_load_dwordx2 s[2:3], s[4:5], 0x8
 ; GFX90A-NEXT:    v_lshlrev_b32_e32 v0, 4, v0
 ; GFX90A-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX90A-NEXT:    s_lshr_b32 s4, s0, 16
-; GFX90A-NEXT:    v_mov_b32_e32 v4, s0
-; GFX90A-NEXT:    s_pack_ll_b32_b16 s0, s0, s4
+; GFX90A-NEXT:    v_mov_b32_e32 v2, s0
 ; GFX90A-NEXT:    v_mov_b32_e32 v1, s3
 ; GFX90A-NEXT:    v_add_co_u32_e32 v0, vcc, s2, v0
 ; GFX90A-NEXT:    v_mov_b32_e32 v3, s1
-; GFX90A-NEXT:    v_mov_b32_e32 v2, s0
 ; GFX90A-NEXT:    v_mov_b32_e32 v5, s0
+; GFX90A-NEXT:    v_mov_b32_e32 v4, s0
 ; GFX90A-NEXT:    v_addc_co_u32_e32 v1, vcc, 0, v1, vcc
 ; GFX90A-NEXT:    flat_store_dwordx4 v[0:1], v[2:5]
 ; GFX90A-NEXT:    s_endpgm
