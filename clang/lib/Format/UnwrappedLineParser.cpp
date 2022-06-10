@@ -2610,6 +2610,7 @@ FormatToken *UnwrappedLineParser::parseIfThenElse(IfStmtKind *IfKind,
     nextToken();
     handleAttributes();
     if (FormatTok->is(tok::l_brace)) {
+      const bool FollowedByIf = Tokens->peekNextToken()->is(tok::kw_if);
       FormatTok->setFinalizedType(TT_ElseLBrace);
       ElseLeftBrace = FormatTok;
       CompoundStatementIndenter Indenter(this, Style, Line->Level);
@@ -2621,7 +2622,7 @@ FormatToken *UnwrappedLineParser::parseIfThenElse(IfStmtKind *IfKind,
         KeepElseBraces = KeepElseBraces ||
                          ElseBlockKind == IfStmtKind::IfOnly ||
                          ElseBlockKind == IfStmtKind::IfElseIf;
-      } else if (IfLBrace && !IfLBrace->Optional) {
+      } else if (FollowedByIf && IfLBrace && !IfLBrace->Optional) {
         KeepElseBraces = true;
         assert(ElseLeftBrace->MatchingParen);
         markOptionalBraces(ElseLeftBrace);
