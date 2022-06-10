@@ -2,6 +2,40 @@
 ; RUN: opt < %s -mtriple=riscv32 -mattr=+v -riscv-v-vector-bits-min=256 -passes='print<cost-model>' -cost-kind=throughput 2>&1 -disable-output | FileCheck %s --check-prefix=RISCV32
 ; RUN: opt < %s -mtriple=riscv64 -mattr=+v -riscv-v-vector-bits-min=256 -passes='print<cost-model>' -cost-kind=throughput 2>&1 -disable-output | FileCheck %s --check-prefix=RISCV64
 
+define i32 @reduce_umin_i1(i32 %arg) {
+; RISCV32-LABEL: 'reduce_umin_i1'
+; RISCV32-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V1 = call i1 @llvm.vector.reduce.umax.v1i1(<1 x i1> undef)
+; RISCV32-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V2 = call i1 @llvm.vector.reduce.umax.v2i1(<2 x i1> undef)
+; RISCV32-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V4 = call i1 @llvm.vector.reduce.umax.v4i1(<4 x i1> undef)
+; RISCV32-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %V8 = call i1 @llvm.vector.reduce.umax.v8i1(<8 x i1> undef)
+; RISCV32-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %V16 = call i1 @llvm.vector.reduce.umax.v16i1(<16 x i1> undef)
+; RISCV32-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %V32 = call i1 @llvm.vector.reduce.umax.v32i1(<32 x i1> undef)
+; RISCV32-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V64 = call i1 @llvm.vector.reduce.umax.v64i1(<64 x i1> undef)
+; RISCV32-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: %V128 = call i1 @llvm.vector.reduce.umax.v128i1(<128 x i1> undef)
+; RISCV32-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret i32 undef
+;
+; RISCV64-LABEL: 'reduce_umin_i1'
+; RISCV64-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V1 = call i1 @llvm.vector.reduce.umax.v1i1(<1 x i1> undef)
+; RISCV64-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V2 = call i1 @llvm.vector.reduce.umax.v2i1(<2 x i1> undef)
+; RISCV64-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V4 = call i1 @llvm.vector.reduce.umax.v4i1(<4 x i1> undef)
+; RISCV64-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %V8 = call i1 @llvm.vector.reduce.umax.v8i1(<8 x i1> undef)
+; RISCV64-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %V16 = call i1 @llvm.vector.reduce.umax.v16i1(<16 x i1> undef)
+; RISCV64-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %V32 = call i1 @llvm.vector.reduce.umax.v32i1(<32 x i1> undef)
+; RISCV64-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V64 = call i1 @llvm.vector.reduce.umax.v64i1(<64 x i1> undef)
+; RISCV64-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: %V128 = call i1 @llvm.vector.reduce.umax.v128i1(<128 x i1> undef)
+; RISCV64-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret i32 undef
+;
+  %V1   = call i1 @llvm.vector.reduce.umax.v1i1(<1 x i1> undef)
+  %V2   = call i1 @llvm.vector.reduce.umax.v2i1(<2 x i1> undef)
+  %V4   = call i1 @llvm.vector.reduce.umax.v4i1(<4 x i1> undef)
+  %V8   = call i1 @llvm.vector.reduce.umax.v8i1(<8 x i1> undef)
+  %V16  = call i1 @llvm.vector.reduce.umax.v16i1(<16 x i1> undef)
+  %V32  = call i1 @llvm.vector.reduce.umax.v32i1(<32 x i1> undef)
+  %V64  = call i1 @llvm.vector.reduce.umax.v64i1(<64 x i1> undef)
+  %V128 = call i1 @llvm.vector.reduce.umax.v128i1(<128 x i1> undef)
+  ret i32 undef
+}
+
 define i32 @reduce_umax_i8(i32 %arg) {
 ; RISCV32-LABEL: 'reduce_umax_i8'
 ; RISCV32-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V1 = call i8 @llvm.vector.reduce.umax.v1i8(<1 x i8> undef)
@@ -135,6 +169,40 @@ define i32 @reduce_umax_i64(i32 %arg) {
   %V32  = call i64 @llvm.vector.reduce.umax.v32i64(<32 x i64> undef)
   %V64  = call i64 @llvm.vector.reduce.umax.v64i64(<64 x i64> undef)
   %V128 = call i64 @llvm.vector.reduce.umax.v128i64(<128 x i64> undef)
+  ret i32 undef
+}
+
+define i32 @reduce_smin_i1(i32 %arg) {
+; RISCV32-LABEL: 'reduce_smin_i1'
+; RISCV32-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V1 = call i1 @llvm.vector.reduce.smax.v1i1(<1 x i1> undef)
+; RISCV32-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V2 = call i1 @llvm.vector.reduce.smax.v2i1(<2 x i1> undef)
+; RISCV32-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V4 = call i1 @llvm.vector.reduce.smax.v4i1(<4 x i1> undef)
+; RISCV32-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %V8 = call i1 @llvm.vector.reduce.smax.v8i1(<8 x i1> undef)
+; RISCV32-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %V16 = call i1 @llvm.vector.reduce.smax.v16i1(<16 x i1> undef)
+; RISCV32-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %V32 = call i1 @llvm.vector.reduce.smax.v32i1(<32 x i1> undef)
+; RISCV32-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V64 = call i1 @llvm.vector.reduce.smax.v64i1(<64 x i1> undef)
+; RISCV32-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: %V128 = call i1 @llvm.vector.reduce.smax.v128i1(<128 x i1> undef)
+; RISCV32-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret i32 undef
+;
+; RISCV64-LABEL: 'reduce_smin_i1'
+; RISCV64-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V1 = call i1 @llvm.vector.reduce.smax.v1i1(<1 x i1> undef)
+; RISCV64-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V2 = call i1 @llvm.vector.reduce.smax.v2i1(<2 x i1> undef)
+; RISCV64-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V4 = call i1 @llvm.vector.reduce.smax.v4i1(<4 x i1> undef)
+; RISCV64-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %V8 = call i1 @llvm.vector.reduce.smax.v8i1(<8 x i1> undef)
+; RISCV64-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %V16 = call i1 @llvm.vector.reduce.smax.v16i1(<16 x i1> undef)
+; RISCV64-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %V32 = call i1 @llvm.vector.reduce.smax.v32i1(<32 x i1> undef)
+; RISCV64-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V64 = call i1 @llvm.vector.reduce.smax.v64i1(<64 x i1> undef)
+; RISCV64-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: %V128 = call i1 @llvm.vector.reduce.smax.v128i1(<128 x i1> undef)
+; RISCV64-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret i32 undef
+;
+  %V1   = call i1 @llvm.vector.reduce.smax.v1i1(<1 x i1> undef)
+  %V2   = call i1 @llvm.vector.reduce.smax.v2i1(<2 x i1> undef)
+  %V4   = call i1 @llvm.vector.reduce.smax.v4i1(<4 x i1> undef)
+  %V8   = call i1 @llvm.vector.reduce.smax.v8i1(<8 x i1> undef)
+  %V16  = call i1 @llvm.vector.reduce.smax.v16i1(<16 x i1> undef)
+  %V32  = call i1 @llvm.vector.reduce.smax.v32i1(<32 x i1> undef)
+  %V64  = call i1 @llvm.vector.reduce.smax.v64i1(<64 x i1> undef)
+  %V128 = call i1 @llvm.vector.reduce.smax.v128i1(<128 x i1> undef)
   ret i32 undef
 }
 
@@ -274,6 +342,15 @@ define i32 @reduce_smax_i64(i32 %arg) {
   ret i32 undef
 }
 
+
+declare i1 @llvm.vector.reduce.umax.v1i1(<1 x i1>)
+declare i1 @llvm.vector.reduce.umax.v2i1(<2 x i1>)
+declare i1 @llvm.vector.reduce.umax.v4i1(<4 x i1>)
+declare i1 @llvm.vector.reduce.umax.v8i1(<8 x i1>)
+declare i1 @llvm.vector.reduce.umax.v16i1(<16 x i1>)
+declare i1 @llvm.vector.reduce.umax.v32i1(<32 x i1>)
+declare i1 @llvm.vector.reduce.umax.v64i1(<64 x i1>)
+declare i1 @llvm.vector.reduce.umax.v128i1(<128 x i1>)
 declare i8 @llvm.vector.reduce.umax.v1i8(<1 x i8>)
 declare i8 @llvm.vector.reduce.umax.v2i8(<2 x i8>)
 declare i8 @llvm.vector.reduce.umax.v4i8(<4 x i8>)
@@ -306,6 +383,14 @@ declare i64 @llvm.vector.reduce.umax.v16i64(<16 x i64>)
 declare i64 @llvm.vector.reduce.umax.v32i64(<32 x i64>)
 declare i64 @llvm.vector.reduce.umax.v64i64(<64 x i64>)
 declare i64 @llvm.vector.reduce.umax.v128i64(<128 x i64>)
+declare i1 @llvm.vector.reduce.smax.v1i1(<1 x i1>)
+declare i1 @llvm.vector.reduce.smax.v2i1(<2 x i1>)
+declare i1 @llvm.vector.reduce.smax.v4i1(<4 x i1>)
+declare i1 @llvm.vector.reduce.smax.v8i1(<8 x i1>)
+declare i1 @llvm.vector.reduce.smax.v16i1(<16 x i1>)
+declare i1 @llvm.vector.reduce.smax.v32i1(<32 x i1>)
+declare i1 @llvm.vector.reduce.smax.v64i1(<64 x i1>)
+declare i1 @llvm.vector.reduce.smax.v128i1(<128 x i1>)
 declare i8 @llvm.vector.reduce.smax.v1i8(<1 x i8>)
 declare i8 @llvm.vector.reduce.smax.v2i8(<2 x i8>)
 declare i8 @llvm.vector.reduce.smax.v4i8(<4 x i8>)
