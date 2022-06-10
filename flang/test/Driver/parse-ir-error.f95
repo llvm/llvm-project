@@ -6,7 +6,7 @@
 ! RUN LINES
 !----------
 ! Input type is implicit (correctly assumed to be Fortran)
-! RUN: %flang_fc1 -S %s
+! RUN: %flang_fc1 -S -o /dev/null %s
 ! Input type is explicitly set as LLVM IR
 ! RUN: not %flang -S -x ir %s 2>&1 | FileCheck %s
 
