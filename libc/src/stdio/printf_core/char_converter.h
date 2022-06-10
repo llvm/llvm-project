@@ -6,13 +6,16 @@
 //
 //===----------------------------------------------------------------------===//
 
+#ifndef LLVM_LIBC_SRC_STDIO_PRINTF_CORE_CHAR_CONVERTER_H
+#define LLVM_LIBC_SRC_STDIO_PRINTF_CORE_CHAR_CONVERTER_H
+
 #include "src/stdio/printf_core/core_structs.h"
 #include "src/stdio/printf_core/writer.h"
 
 namespace __llvm_libc {
 namespace printf_core {
 
-void convert_char(Writer *writer, const FormatSection &to_conv) {
+void inline convert_char(Writer *writer, const FormatSection &to_conv) {
   char c = to_conv.conv_val_raw;
 
   if (to_conv.min_width > 1) {
@@ -31,3 +34,5 @@ void convert_char(Writer *writer, const FormatSection &to_conv) {
 
 } // namespace printf_core
 } // namespace __llvm_libc
+
+#endif // LLVM_LIBC_SRC_STDIO_PRINTF_CORE_CHAR_CONVERTER_H

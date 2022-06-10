@@ -52,6 +52,26 @@ public:
   static constexpr unsigned long long max() { return ULLONG_MAX; }
   static constexpr unsigned long long min() { return 0; }
 };
+template <> class NumericLimits<short> {
+public:
+  static constexpr short max() { return SHRT_MAX; }
+  static constexpr short min() { return SHRT_MIN; }
+};
+template <> class NumericLimits<unsigned short> {
+public:
+  static constexpr unsigned short max() { return USHRT_MAX; }
+  static constexpr unsigned short min() { return 0; }
+};
+template <> class NumericLimits<char> {
+public:
+  static constexpr char max() { return CHAR_MAX; }
+  static constexpr char min() { return CHAR_MIN; }
+};
+template <> class NumericLimits<unsigned char> {
+public:
+  static constexpr unsigned char max() { return UCHAR_MAX; }
+  static constexpr unsigned char min() { return 0; }
+};
 #ifdef __SIZEOF_INT128__
 template <> class NumericLimits<__uint128_t> {
 public:

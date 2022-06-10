@@ -20,6 +20,8 @@
 #include "src/stdio/printf_core/char_converter.h"
 
 // defines convert_int
+#include "src/stdio/printf_core/int_converter.h"
+
 // defines convert_oct
 // defines convert_hex
 
