@@ -21,8 +21,8 @@ define internal void @vfu1(%struct.MYstr* byval(%struct.MYstr) align 4 %u) nounw
 ; IS________OPM-NEXT:    [[TMP0:%.*]] = getelementptr [[STRUCT_MYSTR]], %struct.MYstr* [[U]], i32 0, i32 1
 ; IS________OPM-NEXT:    store i32 99, i32* [[TMP0]], align 4
 ; IS________OPM-NEXT:    [[TMP1:%.*]] = getelementptr [[STRUCT_MYSTR]], %struct.MYstr* [[U]], i32 0, i32 0
-; IS________OPM-NEXT:    store i8 97, i8* [[TMP1]], align 8
-; IS________OPM-NEXT:    [[L:%.*]] = load i8, i8* [[TMP1]], align 8
+; IS________OPM-NEXT:    store i8 97, i8* [[TMP1]], align 4
+; IS________OPM-NEXT:    [[L:%.*]] = load i8, i8* [[TMP1]], align 4
 ; IS________OPM-NEXT:    call void @use(i8 [[L]])
 ; IS________OPM-NEXT:    br label [[RETURN:%.*]]
 ; IS________OPM:       return:
@@ -40,8 +40,8 @@ define internal void @vfu1(%struct.MYstr* byval(%struct.MYstr) align 4 %u) nounw
 ; IS________NPM-NEXT:    [[TMP2:%.*]] = getelementptr [[STRUCT_MYSTR]], %struct.MYstr* [[U_PRIV]], i32 0, i32 1
 ; IS________NPM-NEXT:    store i32 99, i32* [[TMP2]], align 4
 ; IS________NPM-NEXT:    [[TMP3:%.*]] = getelementptr [[STRUCT_MYSTR]], %struct.MYstr* [[U_PRIV]], i32 0, i32 0
-; IS________NPM-NEXT:    store i8 97, i8* [[TMP3]], align 8
-; IS________NPM-NEXT:    [[L:%.*]] = load i8, i8* [[TMP3]], align 8
+; IS________NPM-NEXT:    store i8 97, i8* [[TMP3]], align 4
+; IS________NPM-NEXT:    [[L:%.*]] = load i8, i8* [[TMP3]], align 4
 ; IS________NPM-NEXT:    call void @use(i8 [[L]])
 ; IS________NPM-NEXT:    br label [[RETURN:%.*]]
 ; IS________NPM:       return:
@@ -68,7 +68,7 @@ define internal i32 @vfu2(%struct.MYstr* byval(%struct.MYstr) align 4 %u) nounwi
 ; IS________OPM-NEXT:    [[TMP0:%.*]] = getelementptr [[STRUCT_MYSTR]], %struct.MYstr* [[U]], i32 0, i32 1
 ; IS________OPM-NEXT:    [[TMP1:%.*]] = load i32, i32* [[TMP0]], align 4
 ; IS________OPM-NEXT:    [[TMP2:%.*]] = getelementptr [[STRUCT_MYSTR]], %struct.MYstr* [[U]], i32 0, i32 0
-; IS________OPM-NEXT:    [[TMP3:%.*]] = load i8, i8* [[TMP2]], align 8
+; IS________OPM-NEXT:    [[TMP3:%.*]] = load i8, i8* [[TMP2]], align 4
 ; IS________OPM-NEXT:    [[TMP4:%.*]] = zext i8 [[TMP3]] to i32
 ; IS________OPM-NEXT:    [[TMP5:%.*]] = add i32 [[TMP4]], [[TMP1]]
 ; IS________OPM-NEXT:    ret i32 [[TMP5]]
@@ -85,7 +85,7 @@ define internal i32 @vfu2(%struct.MYstr* byval(%struct.MYstr) align 4 %u) nounwi
 ; IS________NPM-NEXT:    [[TMP2:%.*]] = getelementptr [[STRUCT_MYSTR]], %struct.MYstr* [[U_PRIV]], i32 0, i32 1
 ; IS________NPM-NEXT:    [[TMP3:%.*]] = load i32, i32* [[TMP2]], align 4
 ; IS________NPM-NEXT:    [[TMP4:%.*]] = getelementptr [[STRUCT_MYSTR]], %struct.MYstr* [[U_PRIV]], i32 0, i32 0
-; IS________NPM-NEXT:    [[TMP5:%.*]] = load i8, i8* [[TMP4]], align 8
+; IS________NPM-NEXT:    [[TMP5:%.*]] = load i8, i8* [[TMP4]], align 4
 ; IS________NPM-NEXT:    [[TMP6:%.*]] = zext i8 [[TMP5]] to i32
 ; IS________NPM-NEXT:    [[TMP7:%.*]] = add i32 [[TMP6]], [[TMP3]]
 ; IS________NPM-NEXT:    ret i32 [[TMP7]]
@@ -163,7 +163,7 @@ define internal i32 @vfu2_v2(%struct.MYstr* byval(%struct.MYstr) align 4 %u) nou
 ; IS________OPM-NEXT:    [[TMP0:%.*]] = getelementptr [[STRUCT_MYSTR]], %struct.MYstr* [[U]], i32 0, i32 1
 ; IS________OPM-NEXT:    [[TMP1:%.*]] = load i32, i32* [[TMP0]], align 4
 ; IS________OPM-NEXT:    [[TMP2:%.*]] = getelementptr [[STRUCT_MYSTR]], %struct.MYstr* [[U]], i32 0, i32 0
-; IS________OPM-NEXT:    [[TMP3:%.*]] = load i8, i8* [[TMP2]], align 8
+; IS________OPM-NEXT:    [[TMP3:%.*]] = load i8, i8* [[TMP2]], align 4
 ; IS________OPM-NEXT:    [[TMP4:%.*]] = zext i8 [[TMP3]] to i32
 ; IS________OPM-NEXT:    [[TMP5:%.*]] = add i32 [[TMP4]], [[TMP1]]
 ; IS________OPM-NEXT:    ret i32 [[TMP5]]
@@ -182,7 +182,7 @@ define internal i32 @vfu2_v2(%struct.MYstr* byval(%struct.MYstr) align 4 %u) nou
 ; IS________NPM-NEXT:    [[TMP2:%.*]] = getelementptr [[STRUCT_MYSTR]], %struct.MYstr* [[U_PRIV]], i32 0, i32 1
 ; IS________NPM-NEXT:    [[TMP3:%.*]] = load i32, i32* [[TMP2]], align 4
 ; IS________NPM-NEXT:    [[TMP4:%.*]] = getelementptr [[STRUCT_MYSTR]], %struct.MYstr* [[U_PRIV]], i32 0, i32 0
-; IS________NPM-NEXT:    [[TMP5:%.*]] = load i8, i8* [[TMP4]], align 8
+; IS________NPM-NEXT:    [[TMP5:%.*]] = load i8, i8* [[TMP4]], align 4
 ; IS________NPM-NEXT:    [[TMP6:%.*]] = zext i8 [[TMP5]] to i32
 ; IS________NPM-NEXT:    [[TMP7:%.*]] = add i32 [[TMP6]], [[TMP3]]
 ; IS________NPM-NEXT:    ret i32 [[TMP7]]
@@ -212,15 +212,15 @@ define i32 @unions_v2() nounwind {
 ; IS__TUNIT_NPM-LABEL: define {{[^@]+}}@unions_v2
 ; IS__TUNIT_NPM-SAME: () #[[ATTR0]] {
 ; IS__TUNIT_NPM-NEXT:  entry:
-; IS__TUNIT_NPM-NEXT:    [[MYSTR_CAST:%.*]] = bitcast %struct.MYstr* @mystr to i8*
-; IS__TUNIT_NPM-NEXT:    [[TMP0:%.*]] = load i8, i8* [[MYSTR_CAST]], align 8
-; IS__TUNIT_NPM-NEXT:    [[MYSTR_0_1:%.*]] = getelementptr [[STRUCT_MYSTR:%.*]], %struct.MYstr* @mystr, i64 0, i32 1
-; IS__TUNIT_NPM-NEXT:    [[TMP1:%.*]] = load i32, i32* [[MYSTR_0_1]], align 8
-; IS__TUNIT_NPM-NEXT:    call void @vfu1(i8 [[TMP0]], i32 [[TMP1]]) #[[ATTR0]]
 ; IS__TUNIT_NPM-NEXT:    [[MYSTR_CAST1:%.*]] = bitcast %struct.MYstr* @mystr to i8*
-; IS__TUNIT_NPM-NEXT:    [[TMP2:%.*]] = load i8, i8* [[MYSTR_CAST1]], align 8
-; IS__TUNIT_NPM-NEXT:    [[MYSTR_0_12:%.*]] = getelementptr [[STRUCT_MYSTR]], %struct.MYstr* @mystr, i64 0, i32 1
-; IS__TUNIT_NPM-NEXT:    [[TMP3:%.*]] = load i32, i32* [[MYSTR_0_12]], align 8
+; IS__TUNIT_NPM-NEXT:    [[TMP0:%.*]] = load i8, i8* [[MYSTR_CAST1]], align 8
+; IS__TUNIT_NPM-NEXT:    [[MYSTR_0_12:%.*]] = getelementptr [[STRUCT_MYSTR:%.*]], %struct.MYstr* @mystr, i64 0, i32 1
+; IS__TUNIT_NPM-NEXT:    [[TMP1:%.*]] = load i32, i32* [[MYSTR_0_12]], align 8
+; IS__TUNIT_NPM-NEXT:    call void @vfu1(i8 [[TMP0]], i32 [[TMP1]]) #[[ATTR0]]
+; IS__TUNIT_NPM-NEXT:    [[MYSTR_CAST:%.*]] = bitcast %struct.MYstr* @mystr to i8*
+; IS__TUNIT_NPM-NEXT:    [[TMP2:%.*]] = load i8, i8* [[MYSTR_CAST]], align 8
+; IS__TUNIT_NPM-NEXT:    [[MYSTR_0_1:%.*]] = getelementptr [[STRUCT_MYSTR]], %struct.MYstr* @mystr, i64 0, i32 1
+; IS__TUNIT_NPM-NEXT:    [[TMP3:%.*]] = load i32, i32* [[MYSTR_0_1]], align 8
 ; IS__TUNIT_NPM-NEXT:    [[RESULT:%.*]] = call i32 @vfu2_v2(i8 [[TMP2]], i32 [[TMP3]]) #[[ATTR2]]
 ; IS__TUNIT_NPM-NEXT:    ret i32 [[RESULT]]
 ;

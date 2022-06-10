@@ -12,9 +12,9 @@ define internal void @f(%struct.ss* byval(%struct.ss)  %b, i32* byval(i32) %X) n
 ; IS________OPM-SAME: (%struct.ss* noalias nocapture nofree noundef nonnull byval([[STRUCT_SS:%.*]]) align 8 dereferenceable(12) [[B:%.*]], i32* noalias nocapture nofree noundef nonnull writeonly byval(i32) align 4 dereferenceable(4) [[X:%.*]]) #[[ATTR0:[0-9]+]] {
 ; IS________OPM-NEXT:  entry:
 ; IS________OPM-NEXT:    [[TMP:%.*]] = getelementptr [[STRUCT_SS]], %struct.ss* [[B]], i32 0, i32 0
-; IS________OPM-NEXT:    [[TMP1:%.*]] = load i32, i32* [[TMP]], align 8
+; IS________OPM-NEXT:    [[TMP1:%.*]] = load i32, i32* [[TMP]], align 4
 ; IS________OPM-NEXT:    [[TMP2:%.*]] = add i32 [[TMP1]], 1
-; IS________OPM-NEXT:    store i32 [[TMP2]], i32* [[TMP]], align 8
+; IS________OPM-NEXT:    store i32 [[TMP2]], i32* [[TMP]], align 4
 ; IS________OPM-NEXT:    store i32 0, i32* [[X]], align 4
 ; IS________OPM-NEXT:    ret void
 ;
@@ -30,9 +30,9 @@ define internal void @f(%struct.ss* byval(%struct.ss)  %b, i32* byval(i32) %X) n
 ; IS________NPM-NEXT:    [[B_PRIV_0_1:%.*]] = getelementptr [[STRUCT_SS]], %struct.ss* [[B_PRIV]], i64 0, i32 1
 ; IS________NPM-NEXT:    store i64 [[TMP1]], i64* [[B_PRIV_0_1]], align 4
 ; IS________NPM-NEXT:    [[TMP:%.*]] = getelementptr [[STRUCT_SS]], %struct.ss* [[B_PRIV]], i32 0, i32 0
-; IS________NPM-NEXT:    [[TMP1:%.*]] = load i32, i32* [[TMP]], align 8
+; IS________NPM-NEXT:    [[TMP1:%.*]] = load i32, i32* [[TMP]], align 4
 ; IS________NPM-NEXT:    [[TMP2:%.*]] = add i32 [[TMP1]], 1
-; IS________NPM-NEXT:    store i32 [[TMP2]], i32* [[TMP]], align 8
+; IS________NPM-NEXT:    store i32 [[TMP2]], i32* [[TMP]], align 4
 ; IS________NPM-NEXT:    store i32 0, i32* [[X_PRIV]], align 4
 ; IS________NPM-NEXT:    ret void
 ;
@@ -95,7 +95,7 @@ define i32 @test(i32* %X) {
 ; IS__CGSCC_NPM-NEXT:    [[TMP1:%.*]] = getelementptr [[STRUCT_SS]], %struct.ss* [[S]], i32 0, i32 0
 ; IS__CGSCC_NPM-NEXT:    [[TMP4:%.*]] = getelementptr [[STRUCT_SS]], %struct.ss* [[S]], i32 0, i32 1
 ; IS__CGSCC_NPM-NEXT:    [[TMP0:%.*]] = load i32, i32* [[X]], align 4
-; IS__CGSCC_NPM-NEXT:    call void @f(i32 noundef 1, i64 noundef 2, i32 [[TMP0]]) #[[ATTR2:[0-9]+]]
+; IS__CGSCC_NPM-NEXT:    call void @f(i32 1, i64 2, i32 [[TMP0]]) #[[ATTR2:[0-9]+]]
 ; IS__CGSCC_NPM-NEXT:    ret i32 0
 ;
 entry:

@@ -21,7 +21,7 @@ define internal x86_thiscallcc void @internalfun(%struct.a* %this, <{ %struct.a 
 ; CHECK-NEXT:    [[A:%.*]] = getelementptr inbounds <{ [[STRUCT_A]] }>, <{ [[STRUCT_A]] }>* [[TMP0]], i32 0, i32 0
 ; CHECK-NEXT:    [[ARGMEM:%.*]] = alloca inalloca <{ [[STRUCT_A]] }>, align 4
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds <{ [[STRUCT_A]] }>, <{ [[STRUCT_A]] }>* [[ARGMEM]], i32 0, i32 0
-; CHECK-NEXT:    [[CALL:%.*]] = call x86_thiscallcc %struct.a* @copy_ctor(%struct.a* noundef nonnull align 4 dereferenceable(1) [[TMP1]], %struct.a* noundef nonnull align 4 dereferenceable(1) [[A]])
+; CHECK-NEXT:    [[CALL:%.*]] = call x86_thiscallcc %struct.a* @copy_ctor(%struct.a* noundef nonnull align 4 dereferenceable(1) [[TMP1]], %struct.a* noundef nonnull dereferenceable(1) [[A]])
 ; CHECK-NEXT:    call void @ext(<{ [[STRUCT_A]] }>* noundef nonnull inalloca(<{ [[STRUCT_A]] }>) align 4 dereferenceable(1) [[ARGMEM]])
 ; CHECK-NEXT:    ret void
 ;
