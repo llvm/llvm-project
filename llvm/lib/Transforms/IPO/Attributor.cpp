@@ -1029,7 +1029,7 @@ Attributor::getAssumedConstant(const IRPosition &IRP,
     return C;
   // First check all callbacks provided by outside AAs. If any of them returns
   // a non-null value that is different from the associated value, or None, we
-  // assume it's simpliied.
+  // assume it's simplified.
   for (auto &CB : SimplificationCallbacks.lookup(IRP)) {
     Optional<Value *> SimplifiedV = CB(IRP, &AA, UsedAssumedInformation);
     if (!SimplifiedV.hasValue())
@@ -1067,7 +1067,7 @@ Attributor::getAssumedSimplified(const IRPosition &IRP,
                                  bool &UsedAssumedInformation) {
   // First check all callbacks provided by outside AAs. If any of them returns
   // a non-null value that is different from the associated value, or None, we
-  // assume it's simpliied.
+  // assume it's simplified.
   for (auto &CB : SimplificationCallbacks.lookup(IRP))
     return CB(IRP, AA, UsedAssumedInformation);
 
@@ -1917,7 +1917,8 @@ ChangeStatus Attributor::cleanupIR() {
                     << ToBeDeletedBlocks.size() << " blocks and "
                     << ToBeDeletedInsts.size() << " instructions and "
                     << ToBeChangedValues.size() << " values and "
-                    << ToBeChangedUses.size() << " uses. "
+                    << ToBeChangedUses.size() << " uses. To insert "
+                    << ToBeChangedToUnreachableInsts.size() << " unreachables."
                     << "Preserve manifest added " << ManifestAddedBlocks.size()
                     << " blocks\n");
 
@@ -1937,7 +1938,7 @@ ChangeStatus Attributor::cleanupIR() {
 
     Instruction *I = dyn_cast<Instruction>(U->getUser());
     assert((!I || isRunOn(*I->getFunction())) &&
-           "Cannot replace an invoke outside the current SCC!");
+           "Cannot replace an instruction outside the current SCC!");
 
     // Do not replace uses in returns if the value is a must-tail call we will
     // not delete.
@@ -3108,8 +3109,8 @@ raw_ostream &llvm::operator<<(raw_ostream &OS,
   if (!S.isValidState())
     OS << "full-set";
   else {
-    for (auto &it : S.getAssumedSet())
-      OS << it << ", ";
+    for (auto &It : S.getAssumedSet())
+      OS << It << ", ";
     if (S.undefIsContained())
       OS << "undef ";
   }

@@ -5400,9 +5400,9 @@ struct AAValueSimplifyImpl : AAValueSimplify {
   /// See AbstractAttribute::getAsStr().
   const std::string getAsStr() const override {
     LLVM_DEBUG({
-      errs() << "SAV: " << (bool)SimplifiedAssociatedValue << " ";
+      dbgs() << "SAV: " << (bool)SimplifiedAssociatedValue << " ";
       if (SimplifiedAssociatedValue && *SimplifiedAssociatedValue)
-        errs() << "SAV: " << **SimplifiedAssociatedValue << " ";
+        dbgs() << "SAV: " << **SimplifiedAssociatedValue << " ";
     });
     return isValidState() ? (isAtFixpoint() ? "simplified" : "maybe-simple")
                           : "not-simple";
