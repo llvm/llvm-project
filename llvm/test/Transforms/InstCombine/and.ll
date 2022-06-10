@@ -744,9 +744,9 @@ define i64 @test39(i32 %X) {
 
 define i32 @lowmask_add_zext(i8 %x, i32 %y) {
 ; CHECK-LABEL: @lowmask_add_zext(
-; CHECK-NEXT:    [[ZX:%.*]] = zext i8 [[X:%.*]] to i32
-; CHECK-NEXT:    [[BO:%.*]] = add i32 [[ZX]], [[Y:%.*]]
-; CHECK-NEXT:    [[R:%.*]] = and i32 [[BO]], 255
+; CHECK-NEXT:    [[Y_TR:%.*]] = trunc i32 [[Y:%.*]] to i8
+; CHECK-NEXT:    [[BO_NARROW:%.*]] = add i8 [[Y_TR]], [[X:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = zext i8 [[BO_NARROW]] to i32
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %zx = zext i8 %x to i32
@@ -758,9 +758,9 @@ define i32 @lowmask_add_zext(i8 %x, i32 %y) {
 define i32 @lowmask_add_zext_commute(i16 %x, i32 %p) {
 ; CHECK-LABEL: @lowmask_add_zext_commute(
 ; CHECK-NEXT:    [[Y:%.*]] = mul i32 [[P:%.*]], [[P]]
-; CHECK-NEXT:    [[ZX:%.*]] = zext i16 [[X:%.*]] to i32
-; CHECK-NEXT:    [[BO:%.*]] = add i32 [[Y]], [[ZX]]
-; CHECK-NEXT:    [[R:%.*]] = and i32 [[BO]], 65535
+; CHECK-NEXT:    [[Y_TR:%.*]] = trunc i32 [[Y]] to i16
+; CHECK-NEXT:    [[BO_NARROW:%.*]] = add i16 [[Y_TR]], [[X:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = zext i16 [[BO_NARROW]] to i32
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %y = mul i32 %p, %p ; thwart complexity-based canonicalization
@@ -769,6 +769,8 @@ define i32 @lowmask_add_zext_commute(i16 %x, i32 %p) {
   %r = and i32 %bo, 65535
   ret i32 %r
 }
+
+; negative test - the mask constant must match the zext source type
 
 define i32 @lowmask_add_zext_wrong_mask(i8 %x, i32 %y) {
 ; CHECK-LABEL: @lowmask_add_zext_wrong_mask(
@@ -782,6 +784,8 @@ define i32 @lowmask_add_zext_wrong_mask(i8 %x, i32 %y) {
   %r = and i32 %bo, 511
   ret i32 %r
 }
+
+; negative test - extra use
 
 define i32 @lowmask_add_zext_use1(i8 %x, i32 %y) {
 ; CHECK-LABEL: @lowmask_add_zext_use1(
@@ -798,6 +802,8 @@ define i32 @lowmask_add_zext_use1(i8 %x, i32 %y) {
   ret i32 %r
 }
 
+; negative test - extra use
+
 define i32 @lowmask_add_zext_use2(i8 %x, i32 %y) {
 ; CHECK-LABEL: @lowmask_add_zext_use2(
 ; CHECK-NEXT:    [[ZX:%.*]] = zext i8 [[X:%.*]] to i32
@@ -813,11 +819,13 @@ define i32 @lowmask_add_zext_use2(i8 %x, i32 %y) {
   ret i32 %r
 }
 
+; vector splats work too
+
 define <2 x i32> @lowmask_sub_zext(<2 x i4> %x, <2 x i32> %y) {
 ; CHECK-LABEL: @lowmask_sub_zext(
-; CHECK-NEXT:    [[ZX:%.*]] = zext <2 x i4> [[X:%.*]] to <2 x i32>
-; CHECK-NEXT:    [[BO:%.*]] = sub <2 x i32> [[ZX]], [[Y:%.*]]
-; CHECK-NEXT:    [[R:%.*]] = and <2 x i32> [[BO]], <i32 15, i32 15>
+; CHECK-NEXT:    [[Y_TR:%.*]] = trunc <2 x i32> [[Y:%.*]] to <2 x i4>
+; CHECK-NEXT:    [[BO_NARROW:%.*]] = sub <2 x i4> [[X:%.*]], [[Y_TR]]
+; CHECK-NEXT:    [[R:%.*]] = zext <2 x i4> [[BO_NARROW]] to <2 x i32>
 ; CHECK-NEXT:    ret <2 x i32> [[R]]
 ;
   %zx = zext <2 x i4> %x to <2 x i32>
@@ -826,11 +834,13 @@ define <2 x i32> @lowmask_sub_zext(<2 x i4> %x, <2 x i32> %y) {
   ret <2 x i32> %r
 }
 
+; weird types are allowed
+
 define i17 @lowmask_sub_zext_commute(i5 %x, i17 %y) {
 ; CHECK-LABEL: @lowmask_sub_zext_commute(
-; CHECK-NEXT:    [[ZX:%.*]] = zext i5 [[X:%.*]] to i17
-; CHECK-NEXT:    [[BO:%.*]] = sub i17 [[Y:%.*]], [[ZX]]
-; CHECK-NEXT:    [[R:%.*]] = and i17 [[BO]], 31
+; CHECK-NEXT:    [[Y_TR:%.*]] = trunc i17 [[Y:%.*]] to i5
+; CHECK-NEXT:    [[BO_NARROW:%.*]] = sub i5 [[Y_TR]], [[X:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = zext i5 [[BO_NARROW]] to i17
 ; CHECK-NEXT:    ret i17 [[R]]
 ;
   %zx = zext i5 %x to i17
@@ -841,9 +851,9 @@ define i17 @lowmask_sub_zext_commute(i5 %x, i17 %y) {
 
 define i32 @lowmask_mul_zext(i8 %x, i32 %y) {
 ; CHECK-LABEL: @lowmask_mul_zext(
-; CHECK-NEXT:    [[ZX:%.*]] = zext i8 [[X:%.*]] to i32
-; CHECK-NEXT:    [[BO:%.*]] = mul i32 [[ZX]], [[Y:%.*]]
-; CHECK-NEXT:    [[R:%.*]] = and i32 [[BO]], 255
+; CHECK-NEXT:    [[Y_TR:%.*]] = trunc i32 [[Y:%.*]] to i8
+; CHECK-NEXT:    [[BO_NARROW:%.*]] = mul i8 [[Y_TR]], [[X:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = zext i8 [[BO_NARROW]] to i32
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %zx = zext i8 %x to i32
@@ -851,6 +861,8 @@ define i32 @lowmask_mul_zext(i8 %x, i32 %y) {
   %r = and i32 %bo, 255
   ret i32 %r
 }
+
+; TODO: we could have narrowed the xor
 
 define i32 @lowmask_xor_zext_commute(i8 %x, i32 %p) {
 ; CHECK-LABEL: @lowmask_xor_zext_commute(
@@ -866,6 +878,8 @@ define i32 @lowmask_xor_zext_commute(i8 %x, i32 %p) {
   %r = and i32 %bo, 255
   ret i32 %r
 }
+
+; TODO: we could have narrowed the or
 
 define i24 @lowmask_or_zext_commute(i16 %x, i24 %y) {
 ; CHECK-LABEL: @lowmask_or_zext_commute(
