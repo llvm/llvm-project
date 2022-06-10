@@ -150,6 +150,9 @@ def StdIOAPI : PublicAPI<"stdio.h"> {
   let Macros = [
     SimpleMacroDef<"stderr", "stderr">,
     SimpleMacroDef<"stdout", "stdout">,
+    SimpleMacroDef<"_IOFBF", "0">,
+    SimpleMacroDef<"_IOLBF", "1">,
+    SimpleMacroDef<"_IONBF", "2">,
   ];
   let Types = ["size_t", "FILE", "cookie_io_functions_t"];
 }

@@ -116,7 +116,8 @@ TEST(LlvmLibcFileTest, WriteOnly) {
   const char data[] = "hello, file";
   constexpr size_t FILE_BUFFER_SIZE = sizeof(data) * 3 / 2;
   char file_buffer[FILE_BUFFER_SIZE];
-  StringFile *f = new_string_file(file_buffer, FILE_BUFFER_SIZE, 0, false, "w");
+  StringFile *f =
+      new_string_file(file_buffer, FILE_BUFFER_SIZE, _IOFBF, false, "w");
 
   ASSERT_EQ(sizeof(data), f->write(data, sizeof(data)));
   EXPECT_EQ(f->get_pos(), size_t(0)); // Data is buffered in the file stream
@@ -133,6 +134,9 @@ TEST(LlvmLibcFileTest, WriteOnly) {
   EXPECT_GE(f->get_pos(), size_t(0));
   ASSERT_EQ(f->flush(), 0);
   EXPECT_EQ(f->get_pos(), 2 * sizeof(data));
+  MemoryView src1("hello, file\0hello, file", sizeof(data) * 2),
+      dst1(f->get_str(), sizeof(data) * 2);
+  EXPECT_MEM_EQ(src1, dst1);
 
   char read_data[sizeof(data)];
   // This is not a readable file.
@@ -144,11 +148,87 @@ TEST(LlvmLibcFileTest, WriteOnly) {
   ASSERT_EQ(f->close(), 0);
 }
 
+TEST(LlvmLibcFileTest, WriteLineBuffered) {
+  const char data[] = "hello\n file";
+  constexpr size_t FILE_BUFFER_SIZE = sizeof(data) * 3 / 2;
+
+  char file_buffer_line[FILE_BUFFER_SIZE];
+  char file_buffer_full[FILE_BUFFER_SIZE];
+
+  StringFile *f_line =
+      new_string_file(file_buffer_line, FILE_BUFFER_SIZE, _IOLBF, false, "w");
+  // We also initialize a fully buffered file we'll do the same writes to for
+  // comparison.
+  StringFile *f_full =
+      new_string_file(file_buffer_full, FILE_BUFFER_SIZE, _IOFBF, false, "w");
+
+  ASSERT_EQ(sizeof(data), f_line->write(data, sizeof(data)));
+  ASSERT_EQ(sizeof(data), f_full->write(data, sizeof(data)));
+
+  EXPECT_EQ(f_line->get_pos(), size_t(6)); // buffer after the newline
+  EXPECT_EQ(f_full->get_pos(), size_t(0)); // buffer all of data
+
+  MemoryView src1("hello\n", 6), dst1(f_line->get_str(), 6);
+  EXPECT_MEM_EQ(src1, dst1);
+
+  // We can't check the data in f_full, since no data has been written.
+
+  const char data2[] = "longer for an \n overflow";
+
+  ASSERT_EQ(sizeof(data2), f_line->write(data2, sizeof(data2)));
+  // The line buffer's initial contents should be " file\0"
+  // Writing data2 should write up until the newline, even though that doesn't
+  // all fit in the buffer.
+
+  ASSERT_EQ(sizeof(data2), f_full->write(data2, sizeof(data2)));
+  // The full buffer's initial contents should be "hello\n file\0"
+  // Writing data2 should cause a flush of the buffer, as well as the remainder
+  // to be written directly since it doesn't fit in the buffer.
+
+  EXPECT_EQ(f_line->get_pos(), size_t(27));
+  EXPECT_EQ(f_full->get_pos(), sizeof(data) + sizeof(data2));
+
+  MemoryView src2("hello\n file\0longer for an \n", 27),
+      dst2(f_line->get_str(), 27);
+  EXPECT_MEM_EQ(src2, dst2);
+
+  MemoryView src3("hello\n file\0longer for an \n overflow", 37),
+      dst_full_final(f_full->get_str(), 37);
+  EXPECT_MEM_EQ(src3, dst_full_final);
+
+  ASSERT_EQ(f_line->flush(), 0);
+  ASSERT_EQ(f_full->flush(), 0);
+
+  EXPECT_EQ(f_line->get_pos(), sizeof(data) + sizeof(data2));
+  MemoryView dst_line_final(f_line->get_str(), 37);
+  EXPECT_MEM_EQ(src3, dst_line_final);
+  EXPECT_MEM_EQ(src3, dst_full_final);
+
+  ASSERT_EQ(f_line->close(), 0);
+  ASSERT_EQ(f_full->close(), 0);
+}
+
+TEST(LlvmLibcFileTest, WriteUnbuffered) {
+  const char data[] = "written immediately";
+  constexpr size_t FILE_BUFFER_SIZE = sizeof(data) + 1;
+  char file_buffer[FILE_BUFFER_SIZE];
+  StringFile *f =
+      new_string_file(file_buffer, FILE_BUFFER_SIZE, _IONBF, false, "w");
+
+  ASSERT_EQ(sizeof(data), f->write(data, sizeof(data)));
+  EXPECT_EQ(f->get_pos(),
+            sizeof(data)); // no buffering means this is written immediately.
+  EXPECT_STREQ(f->get_str(), data);
+
+  ASSERT_EQ(f->close(), 0);
+}
+
 TEST(LlvmLibcFileTest, ReadOnly) {
   const char initial_content[] = "1234567890987654321";
   constexpr size_t FILE_BUFFER_SIZE = sizeof(initial_content);
   char file_buffer[FILE_BUFFER_SIZE];
-  StringFile *f = new_string_file(file_buffer, FILE_BUFFER_SIZE, 0, false, "r");
+  StringFile *f =
+      new_string_file(file_buffer, FILE_BUFFER_SIZE, _IOFBF, false, "r");
   f->reset_and_fill(initial_content, sizeof(initial_content));
 
   constexpr size_t READ_SIZE = sizeof(initial_content) / 2;
@@ -198,7 +278,8 @@ TEST(LlvmLibcFileTest, ReadSeekCurAndRead) {
   const char initial_content[] = "1234567890987654321";
   constexpr size_t FILE_BUFFER_SIZE = sizeof(initial_content);
   char file_buffer[FILE_BUFFER_SIZE];
-  StringFile *f = new_string_file(file_buffer, FILE_BUFFER_SIZE, 0, false, "r");
+  StringFile *f =
+      new_string_file(file_buffer, FILE_BUFFER_SIZE, _IOFBF, false, "r");
   f->reset_and_fill(initial_content, sizeof(initial_content));
 
   constexpr size_t READ_SIZE = 5;
@@ -220,7 +301,8 @@ TEST(LlvmLibcFileTest, AppendOnly) {
   const char write_data[] = "append";
   constexpr size_t FILE_BUFFER_SIZE = sizeof(write_data) * 3 / 2;
   char file_buffer[FILE_BUFFER_SIZE];
-  StringFile *f = new_string_file(file_buffer, FILE_BUFFER_SIZE, 0, false, "a");
+  StringFile *f =
+      new_string_file(file_buffer, FILE_BUFFER_SIZE, _IOFBF, false, "a");
   f->reset_and_fill(initial_content, sizeof(initial_content));
 
   constexpr size_t READ_SIZE = 5;
@@ -246,7 +328,7 @@ TEST(LlvmLibcFileTest, WriteUpdate) {
   constexpr size_t FILE_BUFFER_SIZE = sizeof(data) * 3 / 2;
   char file_buffer[FILE_BUFFER_SIZE];
   StringFile *f =
-      new_string_file(file_buffer, FILE_BUFFER_SIZE, 0, false, "w+");
+      new_string_file(file_buffer, FILE_BUFFER_SIZE, _IOFBF, false, "w+");
 
   ASSERT_EQ(sizeof(data), f->write(data, sizeof(data)));
   EXPECT_EQ(f->get_pos(), size_t(0)); // Data is buffered in the file stream
@@ -266,7 +348,7 @@ TEST(LlvmLibcFileTest, ReadUpdate) {
   constexpr size_t FILE_BUFFER_SIZE = sizeof(initial_content);
   char file_buffer[FILE_BUFFER_SIZE];
   StringFile *f =
-      new_string_file(file_buffer, FILE_BUFFER_SIZE, 0, false, "r+");
+      new_string_file(file_buffer, FILE_BUFFER_SIZE, _IOFBF, false, "r+");
   f->reset_and_fill(initial_content, sizeof(initial_content));
 
   constexpr size_t READ_SIZE = sizeof(initial_content) / 2;
@@ -300,7 +382,7 @@ TEST(LlvmLibcFileTest, AppendUpdate) {
   constexpr size_t FILE_BUFFER_SIZE = sizeof(data) * 3 / 2;
   char file_buffer[FILE_BUFFER_SIZE];
   StringFile *f =
-      new_string_file(file_buffer, FILE_BUFFER_SIZE, 0, false, "a+");
+      new_string_file(file_buffer, FILE_BUFFER_SIZE, _IOFBF, false, "a+");
   f->reset_and_fill(initial_content, sizeof(initial_content));
 
   ASSERT_EQ(sizeof(data), f->write(data, sizeof(data)));
@@ -334,4 +416,45 @@ TEST(LlvmLibcFileTest, AppendUpdate) {
   EXPECT_MEM_EQ(src4, dst4);
 
   ASSERT_EQ(f->close(), 0);
+}
+
+TEST(LlvmLibcFileTest, SmallBuffer) {
+  const char WRITE_DATA[] = "small buffer";
+  constexpr size_t WRITE_SIZE = sizeof(WRITE_DATA);
+  constexpr size_t FILE_BUFFER_SIZE = sizeof(WRITE_DATA) / 2 - 1;
+  char file_buffer[FILE_BUFFER_SIZE];
+  StringFile *f =
+      new_string_file(file_buffer, FILE_BUFFER_SIZE, _IOFBF, false, "w");
+
+  ASSERT_EQ(WRITE_SIZE, f->write(WRITE_DATA, WRITE_SIZE));
+  // Since data much larger than the buffer is being written, all of it should
+  // be available in the file without a flush operation.
+  EXPECT_EQ(f->get_pos(), sizeof(WRITE_DATA));
+  ASSERT_STREQ(f->get_str(), WRITE_DATA);
+
+  ASSERT_EQ(f->close(), 0);
+}
+
+TEST(LlvmLibcFileTest, ZeroLengthBuffer) {
+  const char WRITE_DATA[] = "small buffer";
+  constexpr size_t WRITE_SIZE = sizeof(WRITE_DATA);
+  StringFile *f_fbf = new_string_file(nullptr, 0, _IOFBF, true, "w");
+  StringFile *f_lbf = new_string_file(nullptr, 0, _IOLBF, true, "w");
+  StringFile *f_nbf = new_string_file(nullptr, 0, _IONBF, true, "w");
+
+  ASSERT_EQ(WRITE_SIZE, f_fbf->write(WRITE_DATA, WRITE_SIZE));
+  ASSERT_EQ(WRITE_SIZE, f_lbf->write(WRITE_DATA, WRITE_SIZE));
+  ASSERT_EQ(WRITE_SIZE, f_nbf->write(WRITE_DATA, WRITE_SIZE));
+  // Since there is no buffer space, all of the written data should
+  // be available in the file without a flush operation.
+  EXPECT_EQ(f_fbf->get_pos(), sizeof(WRITE_DATA));
+  EXPECT_EQ(f_lbf->get_pos(), sizeof(WRITE_DATA));
+  EXPECT_EQ(f_nbf->get_pos(), sizeof(WRITE_DATA));
+  ASSERT_STREQ(f_fbf->get_str(), WRITE_DATA);
+  ASSERT_STREQ(f_lbf->get_str(), WRITE_DATA);
+  ASSERT_STREQ(f_nbf->get_str(), WRITE_DATA);
+
+  ASSERT_EQ(f_fbf->close(), 0);
+  ASSERT_EQ(f_lbf->close(), 0);
+  ASSERT_EQ(f_nbf->close(), 0);
 }

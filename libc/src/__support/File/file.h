@@ -180,7 +180,12 @@ public:
 
   // If buffer has data written to it, flush it out. Does nothing if the
   // buffer is currently being used as a read buffer.
-  int flush();
+  int flush() {
+    FileLock lock(this);
+    return flush_unlocked();
+  }
+
+  int flush_unlocked();
 
   // Sets the internal buffer to |buffer| with buffering mode |mode|.
   // |size| is the size of |buffer|. This new |buffer| is owned by the
@@ -217,6 +222,11 @@ public:
   // Returns an bit map of flags corresponding to enumerations of
   // OpenMode, ContentType and CreateType.
   static ModeFlags mode_flags(const char *mode);
+
+private:
+  size_t write_unlocked_lbf(const void *data, size_t len);
+  size_t write_unlocked_fbf(const void *data, size_t len);
+  size_t write_unlocked_nbf(const void *data, size_t len);
 };
 
 // The implementaiton of this function is provided by the platfrom_file
