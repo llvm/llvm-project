@@ -1138,10 +1138,6 @@ Error DWARFDebugFrame::parse(DWARFDataExtractor Data) {
             // B-Key is used for signing functions associated with this
             // augmentation string
             break;
-            // This stack frame contains MTE tagged data, so needs to be
-            // untagged on unwind.
-          case 'G':
-            break;
           }
         }
 
