@@ -115,12 +115,17 @@ bool isToBePreprocessed(llvm::StringRef suffix);
 enum class Language : uint8_t {
   Unknown,
 
+  /// MLIR: we accept this so that we can run the optimizer on it, and compile
+  /// it to LLVM IR, assembly or object code.
+  MLIR,
+
   /// LLVM IR: we accept this so that we can run the optimizer on it,
   /// and compile it to assembly or object code.
   LLVM_IR,
 
   /// @{ Languages that the frontend can parse and compile.
   Fortran,
+  /// @}
 };
 
 // Source file layout

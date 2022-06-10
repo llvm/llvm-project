@@ -3227,23 +3227,32 @@ static bool isAncestorDeclContextOf(const DeclContext *DC, const Decl *D) {
   return false;
 }
 
+static bool hasTypeDeclaredInsideFunction(QualType T, const FunctionDecl *FD) {
+  if (T.isNull())
+    return false;
+  if (const auto *RecordT = T->getAs<RecordType>()) {
+    const RecordDecl *RD = RecordT->getDecl();
+    assert(RD);
+    if (isAncestorDeclContextOf(FD, RD)) {
+      assert(RD->getLexicalDeclContext() == RD->getDeclContext());
+      return true;
+    }
+    if (const auto *RDTempl = dyn_cast<ClassTemplateSpecializationDecl>(RD))
+      return llvm::count_if(RDTempl->getTemplateArgs().asArray(),
+                            [FD](const TemplateArgument &Arg) {
+                              return hasTypeDeclaredInsideFunction(
+                                  Arg.getAsType(), FD);
+                            });
+  }
+  return false;
+}
+
 bool ASTNodeImporter::hasAutoReturnTypeDeclaredInside(FunctionDecl *D) {
   QualType FromTy = D->getType();
   const auto *FromFPT = FromTy->getAs<FunctionProtoType>();
   assert(FromFPT && "Must be called on FunctionProtoType");
-  if (const AutoType *AutoT =
-          FromFPT->getReturnType()->getContainedAutoType()) {
-    QualType DeducedT = AutoT->getDeducedType();
-    if (const auto *RecordT =
-            !DeducedT.isNull() ? DeducedT->getAs<RecordType>() : nullptr) {
-      const RecordDecl *RD = RecordT->getDecl();
-      assert(RD);
-      if (isAncestorDeclContextOf(D, RD)) {
-        assert(RD->getLexicalDeclContext() == RD->getDeclContext());
-        return true;
-      }
-    }
-  }
+  if (const AutoType *AutoT = FromFPT->getReturnType()->getContainedAutoType())
+    return hasTypeDeclaredInsideFunction(AutoT->getDeducedType(), D);
   if (const auto *TypedefT = FromFPT->getReturnType()->getAs<TypedefType>()) {
     const TypedefNameDecl *TD = TypedefT->getDecl();
     assert(TD);

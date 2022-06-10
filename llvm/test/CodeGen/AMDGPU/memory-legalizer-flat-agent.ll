@@ -258,7 +258,7 @@ define amdgpu_kernel void @flat_agent_monotonic_load(
 ; GFX11-WGP-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-WGP-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX11-WGP-NEXT:    v_mov_b32_e32 v1, s1
-; GFX11-WGP-NEXT:    flat_load_b32 v2, v[0:1] glc dlc
+; GFX11-WGP-NEXT:    flat_load_b32 v2, v[0:1] glc
 ; GFX11-WGP-NEXT:    v_mov_b32_e32 v0, s2
 ; GFX11-WGP-NEXT:    v_mov_b32_e32 v1, s3
 ; GFX11-WGP-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
@@ -271,7 +271,7 @@ define amdgpu_kernel void @flat_agent_monotonic_load(
 ; GFX11-CU-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-CU-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX11-CU-NEXT:    v_mov_b32_e32 v1, s1
-; GFX11-CU-NEXT:    flat_load_b32 v2, v[0:1] glc dlc
+; GFX11-CU-NEXT:    flat_load_b32 v2, v[0:1] glc
 ; GFX11-CU-NEXT:    v_mov_b32_e32 v0, s2
 ; GFX11-CU-NEXT:    v_mov_b32_e32 v1, s3
 ; GFX11-CU-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
@@ -404,7 +404,7 @@ define amdgpu_kernel void @flat_agent_acquire_load(
 ; GFX11-WGP-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-WGP-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX11-WGP-NEXT:    v_mov_b32_e32 v1, s1
-; GFX11-WGP-NEXT:    flat_load_b32 v2, v[0:1] glc dlc
+; GFX11-WGP-NEXT:    flat_load_b32 v2, v[0:1] glc
 ; GFX11-WGP-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX11-WGP-NEXT:    buffer_gl0_inv
 ; GFX11-WGP-NEXT:    buffer_gl1_inv
@@ -419,7 +419,7 @@ define amdgpu_kernel void @flat_agent_acquire_load(
 ; GFX11-CU-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-CU-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX11-CU-NEXT:    v_mov_b32_e32 v1, s1
-; GFX11-CU-NEXT:    flat_load_b32 v2, v[0:1] glc dlc
+; GFX11-CU-NEXT:    flat_load_b32 v2, v[0:1] glc
 ; GFX11-CU-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX11-CU-NEXT:    buffer_gl0_inv
 ; GFX11-CU-NEXT:    buffer_gl1_inv
@@ -566,7 +566,7 @@ define amdgpu_kernel void @flat_agent_seq_cst_load(
 ; GFX11-WGP-NEXT:    v_mov_b32_e32 v1, s1
 ; GFX11-WGP-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX11-WGP-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX11-WGP-NEXT:    flat_load_b32 v2, v[0:1] glc dlc
+; GFX11-WGP-NEXT:    flat_load_b32 v2, v[0:1] glc
 ; GFX11-WGP-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX11-WGP-NEXT:    buffer_gl0_inv
 ; GFX11-WGP-NEXT:    buffer_gl1_inv
@@ -583,7 +583,7 @@ define amdgpu_kernel void @flat_agent_seq_cst_load(
 ; GFX11-CU-NEXT:    v_mov_b32_e32 v1, s1
 ; GFX11-CU-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX11-CU-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX11-CU-NEXT:    flat_load_b32 v2, v[0:1] glc dlc
+; GFX11-CU-NEXT:    flat_load_b32 v2, v[0:1] glc
 ; GFX11-CU-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX11-CU-NEXT:    buffer_gl0_inv
 ; GFX11-CU-NEXT:    buffer_gl1_inv
@@ -7785,7 +7785,7 @@ define amdgpu_kernel void @flat_agent_one_as_monotonic_load(
 ; GFX11-WGP-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-WGP-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX11-WGP-NEXT:    v_mov_b32_e32 v1, s1
-; GFX11-WGP-NEXT:    flat_load_b32 v2, v[0:1] glc dlc
+; GFX11-WGP-NEXT:    flat_load_b32 v2, v[0:1] glc
 ; GFX11-WGP-NEXT:    v_mov_b32_e32 v0, s2
 ; GFX11-WGP-NEXT:    v_mov_b32_e32 v1, s3
 ; GFX11-WGP-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
@@ -7798,7 +7798,7 @@ define amdgpu_kernel void @flat_agent_one_as_monotonic_load(
 ; GFX11-CU-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-CU-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX11-CU-NEXT:    v_mov_b32_e32 v1, s1
-; GFX11-CU-NEXT:    flat_load_b32 v2, v[0:1] glc dlc
+; GFX11-CU-NEXT:    flat_load_b32 v2, v[0:1] glc
 ; GFX11-CU-NEXT:    v_mov_b32_e32 v0, s2
 ; GFX11-CU-NEXT:    v_mov_b32_e32 v1, s3
 ; GFX11-CU-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
@@ -7937,7 +7937,7 @@ define amdgpu_kernel void @flat_agent_one_as_acquire_load(
 ; GFX11-WGP-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-WGP-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX11-WGP-NEXT:    v_mov_b32_e32 v1, s1
-; GFX11-WGP-NEXT:    flat_load_b32 v2, v[0:1] glc dlc
+; GFX11-WGP-NEXT:    flat_load_b32 v2, v[0:1] glc
 ; GFX11-WGP-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-WGP-NEXT:    buffer_gl0_inv
 ; GFX11-WGP-NEXT:    buffer_gl1_inv
@@ -7953,7 +7953,7 @@ define amdgpu_kernel void @flat_agent_one_as_acquire_load(
 ; GFX11-CU-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-CU-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX11-CU-NEXT:    v_mov_b32_e32 v1, s1
-; GFX11-CU-NEXT:    flat_load_b32 v2, v[0:1] glc dlc
+; GFX11-CU-NEXT:    flat_load_b32 v2, v[0:1] glc
 ; GFX11-CU-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-CU-NEXT:    buffer_gl0_inv
 ; GFX11-CU-NEXT:    buffer_gl1_inv
@@ -8107,7 +8107,7 @@ define amdgpu_kernel void @flat_agent_one_as_seq_cst_load(
 ; GFX11-WGP-NEXT:    v_mov_b32_e32 v1, s1
 ; GFX11-WGP-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-WGP-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX11-WGP-NEXT:    flat_load_b32 v2, v[0:1] glc dlc
+; GFX11-WGP-NEXT:    flat_load_b32 v2, v[0:1] glc
 ; GFX11-WGP-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-WGP-NEXT:    buffer_gl0_inv
 ; GFX11-WGP-NEXT:    buffer_gl1_inv
@@ -8125,7 +8125,7 @@ define amdgpu_kernel void @flat_agent_one_as_seq_cst_load(
 ; GFX11-CU-NEXT:    v_mov_b32_e32 v1, s1
 ; GFX11-CU-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-CU-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX11-CU-NEXT:    flat_load_b32 v2, v[0:1] glc dlc
+; GFX11-CU-NEXT:    flat_load_b32 v2, v[0:1] glc
 ; GFX11-CU-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-CU-NEXT:    buffer_gl0_inv
 ; GFX11-CU-NEXT:    buffer_gl1_inv

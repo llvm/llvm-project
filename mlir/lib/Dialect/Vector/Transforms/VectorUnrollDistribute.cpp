@@ -15,8 +15,10 @@
 #include "mlir/Dialect/Vector/Transforms/VectorTransforms.h"
 #include "mlir/IR/ImplicitLocOpBuilder.h"
 #include "mlir/Interfaces/VectorInterfaces.h"
+#include "mlir/Support/MathExtras.h"
 #include "llvm/ADT/MapVector.h"
-#include "llvm/Support/Debug.h"
+#include "llvm/ADT/STLExtras.h"
+#include <numeric>
 
 #define DEBUG_TYPE "vector-unrolling"
 
@@ -36,20 +38,81 @@ static SmallVector<int64_t, 4> getVectorOffset(ArrayRef<int64_t> originalShape,
   return elementOffsets;
 }
 
+/// A functor that accomplishes the same thing as `getVectorOffset` but allows
+/// for reordering the traversal of the dimensions. The order of traversal is
+/// given in "for loop order" (outer to inner).
+namespace {
+class DecomposeShapeIterator {
+private:
+  SmallVector<int64_t, 4> vectorShape;
+  SmallVector<int64_t> loopOrder;
+  SmallVector<int64_t> sliceStrides;
+  int64_t maxIndexVal{1};
+
+public:
+  DecomposeShapeIterator(ArrayRef<int64_t> originalShape,
+                         ArrayRef<int64_t> targetShape,
+                         ArrayRef<int64_t> loopOrder)
+      : vectorShape(targetShape.begin(), targetShape.end()),
+        loopOrder(loopOrder.begin(), loopOrder.end()),
+        sliceStrides(originalShape.size()) {
+    assert(originalShape.size() == targetShape.size());
+    assert(loopOrder.size() == targetShape.size());
+
+    // Compute the count for each dimension.
+    SmallVector<int64_t> sliceDimCounts(originalShape.size());
+    for (unsigned r = 0; r < originalShape.size(); ++r) {
+      sliceDimCounts[r] = ceilDiv(originalShape[r], targetShape[r]);
+      maxIndexVal *= sliceDimCounts[r];
+    }
+
+    // Reversing "loop order" gives dimensions from fastest varying to slowest
+    // varying (smallest stride to largest stride).
+    int64_t accum = 1;
+    for (auto idx : llvm::reverse(loopOrder)) {
+      sliceStrides[idx] = accum;
+      accum *= sliceDimCounts[idx];
+    }
+  }
+
+  // Turn the linear index into a d-tuple based on units of vectors of size
+  // `vectorShape`. The linear index is assumed to represent traversal of the
+  // dimensions based on `order`.
+  SmallVector<int64_t> delinearize(int64_t index) const {
+    // Traverse in for loop order (largest stride to smallest stride).
+    SmallVector<int64_t> vectorOffsets(sliceStrides.size());
+    for (auto idx : loopOrder) {
+      vectorOffsets[idx] = index / sliceStrides[idx];
+      index %= sliceStrides[idx];
+    }
+    return vectorOffsets;
+  }
+
+  int64_t maxIndex() const { return maxIndexVal; }
+
+  /// Return the offset within d-tuple based on the ordering given by
+  /// `loopOrder`.
+  SmallVector<int64_t> getVectorOffset(int64_t index) const {
+    SmallVector<int64_t> vectorOffsets = delinearize(index);
+    SmallVector<int64_t> elementOffsets =
+        computeElementOffsetsFromVectorSliceOffsets(vectorShape, vectorOffsets);
+    return elementOffsets;
+  }
+};
+} // namespace
+
 /// Compute the indices of the slice `index` for a tranfer op.
-static SmallVector<Value>
-sliceTransferIndices(int64_t index, ArrayRef<int64_t> originalShape,
-                     ArrayRef<int64_t> targetShape, ArrayRef<Value> indices,
-                     AffineMap permutationMap, Location loc,
-                     OpBuilder &builder) {
+static SmallVector<Value> sliceTransferIndices(ArrayRef<int64_t> elementOffsets,
+                                               ArrayRef<Value> indices,
+                                               AffineMap permutationMap,
+                                               Location loc,
+                                               OpBuilder &builder) {
   MLIRContext *ctx = builder.getContext();
   auto isBroadcast = [](AffineExpr expr) {
     if (auto constExpr = expr.dyn_cast<AffineConstantExpr>())
       return constExpr.getValue() == 0;
     return false;
   };
-  SmallVector<int64_t, 4> elementOffsets =
-      getVectorOffset(originalShape, targetShape, index);
   // Compute 'sliceIndices' by adding 'sliceOffsets[i]' to 'indices[i]'.
   SmallVector<Value> slicedIndices(indices.begin(), indices.end());
   for (const auto &dim : llvm::enumerate(permutationMap.getResults())) {
@@ -99,6 +162,20 @@ getTargetShape(const vector::UnrollVectorOptions &options, Operation *op) {
   return targetShape;
 }
 
+static SmallVector<int64_t>
+getUnrollOrder(unsigned numLoops, Operation *op,
+               const vector::UnrollVectorOptions &options) {
+  SmallVector<int64_t> loopOrder =
+      llvm::to_vector(llvm::seq<int64_t>(0, static_cast<int64_t>(numLoops)));
+  if (options.traversalOrderCallback != nullptr) {
+    Optional<SmallVector<int64_t>> order = options.traversalOrderCallback(op);
+    if (order.hasValue()) {
+      loopOrder = std::move(*order);
+    }
+  }
+  return loopOrder;
+}
+
 namespace {
 
 struct UnrollTransferReadPattern
@@ -121,9 +198,7 @@ struct UnrollTransferReadPattern
     SmallVector<int64_t, 4> strides(targetShape->size(), 1);
     Location loc = readOp.getLoc();
     ArrayRef<int64_t> originalSize = readOp.getVectorType().getShape();
-    SmallVector<int64_t, 4> ratio = *shapeRatio(originalSize, *targetShape);
-    // Compute shape ratio of 'shape' and 'sizes'.
-    int64_t sliceCount = computeMaxLinearIndex(ratio);
+
     // Prepare the result vector;
     Value result = rewriter.create<arith::ConstantOp>(
         loc, sourceVectorType, rewriter.getZeroAttr(sourceVectorType));
@@ -131,17 +206,22 @@ struct UnrollTransferReadPattern
         VectorType::get(*targetShape, sourceVectorType.getElementType());
     SmallVector<Value, 4> originalIndices(readOp.getIndices().begin(),
                                           readOp.getIndices().end());
-    for (int64_t i = 0; i < sliceCount; i++) {
+
+    SmallVector<int64_t> loopOrder =
+        getUnrollOrder(originalSize.size(), readOp, options);
+    DecomposeShapeIterator indexToOffsets(originalSize, *targetShape,
+                                          loopOrder);
+    for (int64_t i = 0; i < indexToOffsets.maxIndex(); i++) {
+      SmallVector<int64_t, 4> elementOffsets =
+          indexToOffsets.getVectorOffset(i);
       SmallVector<Value, 4> indices =
-          sliceTransferIndices(i, originalSize, *targetShape, originalIndices,
+          sliceTransferIndices(elementOffsets, originalIndices,
                                readOp.getPermutationMap(), loc, rewriter);
       auto slicedRead = rewriter.create<vector::TransferReadOp>(
           loc, targetType, readOp.getSource(), indices,
           readOp.getPermutationMapAttr(), readOp.getPadding(), readOp.getMask(),
           readOp.getInBoundsAttr());
 
-      SmallVector<int64_t, 4> elementOffsets =
-          getVectorOffset(originalSize, *targetShape, i);
       result = rewriter.create<vector::InsertStridedSliceOp>(
           loc, slicedRead, result, elementOffsets, strides);
     }
@@ -174,20 +254,21 @@ struct UnrollTransferWritePattern
     SmallVector<int64_t, 4> strides(targetShape->size(), 1);
     Location loc = writeOp.getLoc();
     ArrayRef<int64_t> originalSize = sourceVectorType.getShape();
-    SmallVector<int64_t, 4> ratio = *shapeRatio(originalSize, *targetShape);
-    // Compute shape ratio of 'shape' and 'sizes'.
-    int64_t sliceCount = computeMaxLinearIndex(ratio);
     SmallVector<Value, 4> originalIndices(writeOp.getIndices().begin(),
                                           writeOp.getIndices().end());
+
+    SmallVector<int64_t> loopOrder =
+        getUnrollOrder(originalSize.size(), writeOp, options);
+    DecomposeShapeIterator indexToOffsets(originalSize, *targetShape,
+                                          loopOrder);
     Value resultTensor;
-    for (int64_t i = 0; i < sliceCount; i++) {
+    for (int64_t i = 0; i < indexToOffsets.maxIndex(); i++) {
       SmallVector<int64_t, 4> elementOffsets =
-          getVectorOffset(originalSize, *targetShape, i);
+          indexToOffsets.getVectorOffset(i);
       Value slicedVector = rewriter.create<vector::ExtractStridedSliceOp>(
           loc, writeOp.getVector(), elementOffsets, *targetShape, strides);
-
       SmallVector<Value, 4> indices =
-          sliceTransferIndices(i, originalSize, *targetShape, originalIndices,
+          sliceTransferIndices(elementOffsets, originalIndices,
                                writeOp.getPermutationMap(), loc, rewriter);
       Operation *slicedWrite = rewriter.create<vector::TransferWriteOp>(
           loc, slicedVector, resultTensor ? resultTensor : writeOp.getSource(),
@@ -236,10 +317,7 @@ struct UnrollContractionPattern
       return failure();
     auto dstVecType = contractOp.getResultType().cast<VectorType>();
     SmallVector<int64_t, 4> originalSize = *contractOp.getShapeForUnroll();
-    SmallVector<int64_t, 4> ratio = *shapeRatio(originalSize, *targetShape);
 
-    // Compute shape ratio of 'shape' and 'sizes'.
-    int64_t sliceCount = computeMaxLinearIndex(ratio);
     Location loc = contractOp.getLoc();
     unsigned accIndex = vector::ContractionOp::getAccOperandIndex();
     AffineMap dstAffineMap = contractOp.getIndexingMaps()[accIndex];
@@ -247,9 +325,14 @@ struct UnrollContractionPattern
         SmallVector<int64_t>, Value,
         llvm::DenseMap<SmallVector<int64_t>, unsigned, OffsetMapInfo>>
         accCache;
+
+    SmallVector<int64_t> loopOrder = getUnrollOrder(
+        contractOp.getIteratorTypes().size(), contractOp, options);
+    DecomposeShapeIterator indexToOffsets(originalSize, *targetShape,
+                                          loopOrder);
+    const int64_t sliceCount = indexToOffsets.maxIndex();
     for (int64_t i = 0; i < sliceCount; i++) {
-      SmallVector<int64_t, 4> offsets =
-          getVectorOffset(originalSize, *targetShape, i);
+      SmallVector<int64_t, 4> offsets = indexToOffsets.getVectorOffset(i);
       SmallVector<Value, 4> slicesOperands(contractOp.getNumOperands());
 
       // Helper to coompute the new shape of each operand and extract the slice.

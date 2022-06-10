@@ -3,6 +3,7 @@
 // having to care with providing an ABI compliant derived type descriptor object.
 // Missing derived type descriptor pointers are replaced by null pointers.
 // RUN: tco --ignore-missing-type-desc -o - %s | FileCheck %s
+// RUN: %flang_fc1 -emit-llvm  -mmlir --ignore-missing-type-desc -o - %s | FileCheck %s
 
 !some_freestyle_type = !fir.type<some_not_mangled_type{j:i32}>
 
