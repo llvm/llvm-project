@@ -458,6 +458,10 @@ ABI Changes in Clang
   such packing. Clang now matches the gcc behavior (except on Darwin and PS4).
   You can switch back to the old ABI behavior with the flag:
   ``-fclang-abi-compat=14.0``.
+- When compiling C for ARM or AArch64, a zero-length bitfield in a ``struct``
+  (e.g. ``int : 0``) no longer prevents the structure from being considered a
+  homogeneous floating-point or vector aggregate. The new behavior agrees with
+  the AAPCS specification, and matches the similar bug fix in GCC 12.1.
 
 OpenMP Support in Clang
 -----------------------
