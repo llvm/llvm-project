@@ -195,6 +195,10 @@ private:
                                               bool VariableMask,
                                               bool IsGatherScatter,
                                               TTI::TargetCostKind CostKind) {
+    // We cannot scalarize scalable vectors, so return Invalid.
+    if (isa<ScalableVectorType>(DataTy))
+      return InstructionCost::getInvalid();
+
     auto *VT = cast<FixedVectorType>(DataTy);
     // Assume the target does not have support for gather/scatter operations
     // and provide a rough estimate.
@@ -1240,6 +1244,11 @@ public:
       unsigned Opcode, Type *VecTy, unsigned Factor, ArrayRef<unsigned> Indices,
       Align Alignment, unsigned AddressSpace, TTI::TargetCostKind CostKind,
       bool UseMaskForCond = false, bool UseMaskForGaps = false) {
+
+    // We cannot scalarize scalable vectors, so return Invalid.
+    if (isa<ScalableVectorType>(VecTy))
+      return InstructionCost::getInvalid();
+
     auto *VT = cast<FixedVectorType>(VecTy);
 
     unsigned NumElts = VT->getNumElements();
