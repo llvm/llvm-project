@@ -2255,8 +2255,11 @@ Instruction *InstCombinerImpl::foldICmpShrConstant(ICmpInst &Cmp,
     }
     if (Pred == CmpInst::ICMP_UGT) {
       // icmp ugt (ashr X, ShAmtC), C --> icmp ugt X, ((C + 1) << ShAmtC) - 1
+      // 'C + 1 << ShAmtC' can overflow as a signed number, so the 2nd
+      // clause accounts for that pattern.
       APInt ShiftedC = (C + 1).shl(ShAmtVal) - 1;
-      if ((ShiftedC + 1).ashr(ShAmtVal) == (C + 1))
+      if ((ShiftedC + 1).ashr(ShAmtVal) == (C + 1) ||
+          (C + 1).shl(ShAmtVal).isMinSignedValue())
         return new ICmpInst(Pred, X, ConstantInt::get(ShrTy, ShiftedC));
     }
 
