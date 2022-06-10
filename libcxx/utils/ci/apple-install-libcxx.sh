@@ -122,7 +122,7 @@ for arch in ${architectures}; do
                 -DLIBCXXABI_LIBRARY_VERSION="${version}"
 
     if [ "$headers_only" = true ]; then
-        xcrun cmake --build "${build_dir}/${arch}" --target install-cxx-headers -- -v
+        xcrun cmake --build "${build_dir}/${arch}" --target install-cxx-headers install-cxxabi-headers -- -v
     else
         xcrun cmake --build "${build_dir}/${arch}" --target install-cxx install-cxxabi -- -v
     fi
