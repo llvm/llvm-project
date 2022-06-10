@@ -173,9 +173,9 @@ macro(add_clang_tool name)
 endmacro()
 
 macro(add_clang_symlink name dest)
-  add_llvm_tool_symlink(${name} ${dest} ALWAYS_GENERATE)
+  llvm_add_tool_symlink(CLANG ${name} ${dest} ALWAYS_GENERATE)
   # Always generate install targets
-  llvm_install_symlink(${name} ${dest} ALWAYS_GENERATE)
+  llvm_install_symlink(CLANG name} ${dest} ALWAYS_GENERATE)
 endmacro()
 
 function(clang_target_link_libraries target type)
