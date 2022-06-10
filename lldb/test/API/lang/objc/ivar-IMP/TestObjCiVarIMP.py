@@ -34,8 +34,8 @@ class ObjCiVarIMPTestCase(TestBase):
         process = target.LaunchSimple(
             None, None, self.get_process_working_directory())
 
-        self.assertEquals(process.GetState(), lldb.eStateStopped,
-                        PROCESS_STOPPED)
+        self.assertState(process.GetState(), lldb.eStateStopped,
+                         PROCESS_STOPPED)
 
         self.expect(
             'frame variable --ptr-depth=1 --show-types -d run -- object',
