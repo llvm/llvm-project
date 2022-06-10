@@ -742,6 +742,144 @@ define i64 @test39(i32 %X) {
   ret i64 %res
 }
 
+define i32 @lowmask_add_zext(i8 %x, i32 %y) {
+; CHECK-LABEL: @lowmask_add_zext(
+; CHECK-NEXT:    [[ZX:%.*]] = zext i8 [[X:%.*]] to i32
+; CHECK-NEXT:    [[BO:%.*]] = add i32 [[ZX]], [[Y:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = and i32 [[BO]], 255
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %zx = zext i8 %x to i32
+  %bo = add i32 %zx, %y
+  %r = and i32 %bo, 255
+  ret i32 %r
+}
+
+define i32 @lowmask_add_zext_commute(i16 %x, i32 %p) {
+; CHECK-LABEL: @lowmask_add_zext_commute(
+; CHECK-NEXT:    [[Y:%.*]] = mul i32 [[P:%.*]], [[P]]
+; CHECK-NEXT:    [[ZX:%.*]] = zext i16 [[X:%.*]] to i32
+; CHECK-NEXT:    [[BO:%.*]] = add i32 [[Y]], [[ZX]]
+; CHECK-NEXT:    [[R:%.*]] = and i32 [[BO]], 65535
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %y = mul i32 %p, %p ; thwart complexity-based canonicalization
+  %zx = zext i16 %x to i32
+  %bo = add i32 %y, %zx
+  %r = and i32 %bo, 65535
+  ret i32 %r
+}
+
+define i32 @lowmask_add_zext_wrong_mask(i8 %x, i32 %y) {
+; CHECK-LABEL: @lowmask_add_zext_wrong_mask(
+; CHECK-NEXT:    [[ZX:%.*]] = zext i8 [[X:%.*]] to i32
+; CHECK-NEXT:    [[BO:%.*]] = add i32 [[ZX]], [[Y:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = and i32 [[BO]], 511
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %zx = zext i8 %x to i32
+  %bo = add i32 %zx, %y
+  %r = and i32 %bo, 511
+  ret i32 %r
+}
+
+define i32 @lowmask_add_zext_use1(i8 %x, i32 %y) {
+; CHECK-LABEL: @lowmask_add_zext_use1(
+; CHECK-NEXT:    [[ZX:%.*]] = zext i8 [[X:%.*]] to i32
+; CHECK-NEXT:    call void @use32(i32 [[ZX]])
+; CHECK-NEXT:    [[BO:%.*]] = add i32 [[ZX]], [[Y:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = and i32 [[BO]], 255
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %zx = zext i8 %x to i32
+  call void @use32(i32 %zx)
+  %bo = add i32 %zx, %y
+  %r = and i32 %bo, 255
+  ret i32 %r
+}
+
+define i32 @lowmask_add_zext_use2(i8 %x, i32 %y) {
+; CHECK-LABEL: @lowmask_add_zext_use2(
+; CHECK-NEXT:    [[ZX:%.*]] = zext i8 [[X:%.*]] to i32
+; CHECK-NEXT:    [[BO:%.*]] = add i32 [[ZX]], [[Y:%.*]]
+; CHECK-NEXT:    call void @use32(i32 [[BO]])
+; CHECK-NEXT:    [[R:%.*]] = and i32 [[BO]], 255
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %zx = zext i8 %x to i32
+  %bo = add i32 %zx, %y
+  call void @use32(i32 %bo)
+  %r = and i32 %bo, 255
+  ret i32 %r
+}
+
+define <2 x i32> @lowmask_sub_zext(<2 x i4> %x, <2 x i32> %y) {
+; CHECK-LABEL: @lowmask_sub_zext(
+; CHECK-NEXT:    [[ZX:%.*]] = zext <2 x i4> [[X:%.*]] to <2 x i32>
+; CHECK-NEXT:    [[BO:%.*]] = sub <2 x i32> [[ZX]], [[Y:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = and <2 x i32> [[BO]], <i32 15, i32 15>
+; CHECK-NEXT:    ret <2 x i32> [[R]]
+;
+  %zx = zext <2 x i4> %x to <2 x i32>
+  %bo = sub <2 x i32> %zx, %y
+  %r = and <2 x i32> %bo, <i32 15, i32 15>
+  ret <2 x i32> %r
+}
+
+define i17 @lowmask_sub_zext_commute(i5 %x, i17 %y) {
+; CHECK-LABEL: @lowmask_sub_zext_commute(
+; CHECK-NEXT:    [[ZX:%.*]] = zext i5 [[X:%.*]] to i17
+; CHECK-NEXT:    [[BO:%.*]] = sub i17 [[Y:%.*]], [[ZX]]
+; CHECK-NEXT:    [[R:%.*]] = and i17 [[BO]], 31
+; CHECK-NEXT:    ret i17 [[R]]
+;
+  %zx = zext i5 %x to i17
+  %bo = sub i17 %y, %zx
+  %r = and i17 %bo, 31
+  ret i17 %r
+}
+
+define i32 @lowmask_mul_zext(i8 %x, i32 %y) {
+; CHECK-LABEL: @lowmask_mul_zext(
+; CHECK-NEXT:    [[ZX:%.*]] = zext i8 [[X:%.*]] to i32
+; CHECK-NEXT:    [[BO:%.*]] = mul i32 [[ZX]], [[Y:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = and i32 [[BO]], 255
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %zx = zext i8 %x to i32
+  %bo = mul i32 %zx, %y
+  %r = and i32 %bo, 255
+  ret i32 %r
+}
+
+define i32 @lowmask_xor_zext_commute(i8 %x, i32 %p) {
+; CHECK-LABEL: @lowmask_xor_zext_commute(
+; CHECK-NEXT:    [[Y:%.*]] = mul i32 [[P:%.*]], [[P]]
+; CHECK-NEXT:    [[ZX:%.*]] = zext i8 [[X:%.*]] to i32
+; CHECK-NEXT:    [[Y_MASKED:%.*]] = and i32 [[Y]], 255
+; CHECK-NEXT:    [[R:%.*]] = xor i32 [[Y_MASKED]], [[ZX]]
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %y = mul i32 %p, %p ; thwart complexity-based canonicalization
+  %zx = zext i8 %x to i32
+  %bo = xor i32 %y, %zx
+  %r = and i32 %bo, 255
+  ret i32 %r
+}
+
+define i24 @lowmask_or_zext_commute(i16 %x, i24 %y) {
+; CHECK-LABEL: @lowmask_or_zext_commute(
+; CHECK-NEXT:    [[ZX:%.*]] = zext i16 [[X:%.*]] to i24
+; CHECK-NEXT:    [[Y_MASKED:%.*]] = and i24 [[Y:%.*]], 65535
+; CHECK-NEXT:    [[R:%.*]] = or i24 [[Y_MASKED]], [[ZX]]
+; CHECK-NEXT:    ret i24 [[R]]
+;
+  %zx = zext i16 %x to i24
+  %bo = or i24 %y, %zx
+  %r = and i24 %bo, 65535
+  ret i24 %r
+}
+
 define i32 @test40(i1 %C) {
 ; CHECK-LABEL: @test40(
 ; CHECK-NEXT:    [[A:%.*]] = select i1 [[C:%.*]], i32 104, i32 10
