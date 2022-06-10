@@ -360,93 +360,93 @@ define float @test_idempotence(float %a) {
   ret float %r5
 }
 
-define i8* @operator_new() {
+define ptr @operator_new() {
 ; CHECK-LABEL: @operator_new(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[CALL:%.*]] = tail call noalias i8* @_Znwm(i64 8)
+; CHECK-NEXT:    [[CALL:%.*]] = tail call noalias ptr @_Znwm(i64 8)
 ; CHECK-NEXT:    br i1 false, label [[CAST_END:%.*]], label [[CAST_NOTNULL:%.*]]
 ; CHECK:       cast.notnull:
-; CHECK-NEXT:    [[ADD_PTR:%.*]] = getelementptr inbounds i8, i8* [[CALL]], i64 4
+; CHECK-NEXT:    [[ADD_PTR:%.*]] = getelementptr inbounds i8, ptr [[CALL]], i64 4
 ; CHECK-NEXT:    br label [[CAST_END]]
 ; CHECK:       cast.end:
-; CHECK-NEXT:    [[CAST_RESULT:%.*]] = phi i8* [ [[ADD_PTR]], [[CAST_NOTNULL]] ], [ null, [[ENTRY:%.*]] ]
-; CHECK-NEXT:    ret i8* [[CAST_RESULT]]
+; CHECK-NEXT:    [[CAST_RESULT:%.*]] = phi ptr [ [[ADD_PTR]], [[CAST_NOTNULL]] ], [ null, [[ENTRY:%.*]] ]
+; CHECK-NEXT:    ret ptr [[CAST_RESULT]]
 ;
 entry:
-  %call = tail call noalias i8* @_Znwm(i64 8)
-  %cmp = icmp eq i8* %call, null
+  %call = tail call noalias ptr @_Znwm(i64 8)
+  %cmp = icmp eq ptr %call, null
   br i1 %cmp, label %cast.end, label %cast.notnull
 
 cast.notnull:                                     ; preds = %entry
-  %add.ptr = getelementptr inbounds i8, i8* %call, i64 4
+  %add.ptr = getelementptr inbounds i8, ptr %call, i64 4
   br label %cast.end
 
 cast.end:                                         ; preds = %cast.notnull, %entry
-  %cast.result = phi i8* [ %add.ptr, %cast.notnull ], [ null, %entry ]
-  ret i8* %cast.result
+  %cast.result = phi ptr [ %add.ptr, %cast.notnull ], [ null, %entry ]
+  ret ptr %cast.result
 
 }
 
-declare nonnull noalias i8* @_Znwm(i64)
+declare nonnull noalias ptr @_Znwm(i64)
 
 %"struct.std::nothrow_t" = type { i8 }
 @_ZSt7nothrow = external global %"struct.std::nothrow_t"
 
-define i8* @operator_new_nothrow_t() {
+define ptr @operator_new_nothrow_t() {
 ; CHECK-LABEL: @operator_new_nothrow_t(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[CALL:%.*]] = tail call noalias i8* @_ZnamRKSt9nothrow_t(i64 8, %"struct.std::nothrow_t"* @_ZSt7nothrow)
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8* [[CALL]], null
+; CHECK-NEXT:    [[CALL:%.*]] = tail call noalias ptr @_ZnamRKSt9nothrow_t(i64 8, ptr @_ZSt7nothrow)
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq ptr [[CALL]], null
 ; CHECK-NEXT:    br i1 [[CMP]], label [[CAST_END:%.*]], label [[CAST_NOTNULL:%.*]]
 ; CHECK:       cast.notnull:
-; CHECK-NEXT:    [[ADD_PTR:%.*]] = getelementptr inbounds i8, i8* [[CALL]], i64 4
+; CHECK-NEXT:    [[ADD_PTR:%.*]] = getelementptr inbounds i8, ptr [[CALL]], i64 4
 ; CHECK-NEXT:    br label [[CAST_END]]
 ; CHECK:       cast.end:
-; CHECK-NEXT:    [[CAST_RESULT:%.*]] = phi i8* [ [[ADD_PTR]], [[CAST_NOTNULL]] ], [ null, [[ENTRY:%.*]] ]
-; CHECK-NEXT:    ret i8* [[CAST_RESULT]]
+; CHECK-NEXT:    [[CAST_RESULT:%.*]] = phi ptr [ [[ADD_PTR]], [[CAST_NOTNULL]] ], [ null, [[ENTRY:%.*]] ]
+; CHECK-NEXT:    ret ptr [[CAST_RESULT]]
 ;
 entry:
-  %call = tail call noalias i8* @_ZnamRKSt9nothrow_t(i64 8, %"struct.std::nothrow_t"* @_ZSt7nothrow)
-  %cmp = icmp eq i8* %call, null
+  %call = tail call noalias ptr @_ZnamRKSt9nothrow_t(i64 8, ptr @_ZSt7nothrow)
+  %cmp = icmp eq ptr %call, null
   br i1 %cmp, label %cast.end, label %cast.notnull
 
 cast.notnull:                                     ; preds = %entry
-  %add.ptr = getelementptr inbounds i8, i8* %call, i64 4
+  %add.ptr = getelementptr inbounds i8, ptr %call, i64 4
   br label %cast.end
 
 cast.end:                                         ; preds = %cast.notnull, %entry
-  %cast.result = phi i8* [ %add.ptr, %cast.notnull ], [ null, %entry ]
-  ret i8* %cast.result
+  %cast.result = phi ptr [ %add.ptr, %cast.notnull ], [ null, %entry ]
+  ret ptr %cast.result
 
 }
 
-declare i8* @_ZnamRKSt9nothrow_t(i64, %"struct.std::nothrow_t"*) nounwind
+declare ptr @_ZnamRKSt9nothrow_t(i64, ptr) nounwind
 
-define i8* @malloc_can_return_null() {
+define ptr @malloc_can_return_null() {
 ; CHECK-LABEL: @malloc_can_return_null(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[CALL:%.*]] = tail call noalias i8* @malloc(i64 8)
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8* [[CALL]], null
+; CHECK-NEXT:    [[CALL:%.*]] = tail call noalias ptr @malloc(i64 8)
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq ptr [[CALL]], null
 ; CHECK-NEXT:    br i1 [[CMP]], label [[CAST_END:%.*]], label [[CAST_NOTNULL:%.*]]
 ; CHECK:       cast.notnull:
-; CHECK-NEXT:    [[ADD_PTR:%.*]] = getelementptr inbounds i8, i8* [[CALL]], i64 4
+; CHECK-NEXT:    [[ADD_PTR:%.*]] = getelementptr inbounds i8, ptr [[CALL]], i64 4
 ; CHECK-NEXT:    br label [[CAST_END]]
 ; CHECK:       cast.end:
-; CHECK-NEXT:    [[CAST_RESULT:%.*]] = phi i8* [ [[ADD_PTR]], [[CAST_NOTNULL]] ], [ null, [[ENTRY:%.*]] ]
-; CHECK-NEXT:    ret i8* [[CAST_RESULT]]
+; CHECK-NEXT:    [[CAST_RESULT:%.*]] = phi ptr [ [[ADD_PTR]], [[CAST_NOTNULL]] ], [ null, [[ENTRY:%.*]] ]
+; CHECK-NEXT:    ret ptr [[CAST_RESULT]]
 ;
 entry:
-  %call = tail call noalias i8* @malloc(i64 8)
-  %cmp = icmp eq i8* %call, null
+  %call = tail call noalias ptr @malloc(i64 8)
+  %cmp = icmp eq ptr %call, null
   br i1 %cmp, label %cast.end, label %cast.notnull
 
 cast.notnull:                                     ; preds = %entry
-  %add.ptr = getelementptr inbounds i8, i8* %call, i64 4
+  %add.ptr = getelementptr inbounds i8, ptr %call, i64 4
   br label %cast.end
 
 cast.end:                                         ; preds = %cast.notnull, %entry
-  %cast.result = phi i8* [ %add.ptr, %cast.notnull ], [ null, %entry ]
-  ret i8* %cast.result
+  %cast.result = phi ptr [ %add.ptr, %cast.notnull ], [ null, %entry ]
+  ret ptr %cast.result
 
 }
 
@@ -478,21 +478,21 @@ define <8 x i32> @partial_masked_load() {
 ; CHECK-LABEL: @partial_masked_load(
 ; CHECK-NEXT:    ret <8 x i32> <i32 undef, i32 undef, i32 42, i32 43, i32 44, i32 45, i32 46, i32 47>
 ;
-  %masked.load = call <8 x i32> @llvm.masked.load.v8i32.p0v8i32(<8 x i32>* bitcast (i32* getelementptr ([8 x i32], [8 x i32]* @GV, i64 0, i64 -2) to <8 x i32>*), i32 4, <8 x i1> <i1 false, i1 false, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>, <8 x i32> undef)
+  %masked.load = call <8 x i32> @llvm.masked.load.v8i32.p0(ptr getelementptr ([8 x i32], ptr @GV, i64 0, i64 -2), i32 4, <8 x i1> <i1 false, i1 false, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>, <8 x i32> undef)
   ret <8 x i32> %masked.load
 }
 
-define <8 x i32> @masked_load_undef_mask(<8 x i32>* %V) {
+define <8 x i32> @masked_load_undef_mask(ptr %V) {
 ; CHECK-LABEL: @masked_load_undef_mask(
 ; CHECK-NEXT:    ret <8 x i32> <i32 1, i32 0, i32 1, i32 0, i32 1, i32 0, i32 1, i32 0>
 ;
-  %masked.load = call <8 x i32> @llvm.masked.load.v8i32.p0v8i32(<8 x i32>* %V, i32 4, <8 x i1> undef, <8 x i32> <i32 1, i32 0, i32 1, i32 0, i32 1, i32 0, i32 1, i32 0>)
+  %masked.load = call <8 x i32> @llvm.masked.load.v8i32.p0(ptr %V, i32 4, <8 x i1> undef, <8 x i32> <i32 1, i32 0, i32 1, i32 0, i32 1, i32 0, i32 1, i32 0>)
   ret <8 x i32> %masked.load
 }
 
-declare noalias i8* @malloc(i64)
+declare noalias ptr @malloc(i64)
 
-declare <8 x i32> @llvm.masked.load.v8i32.p0v8i32(<8 x i32>*, i32, <8 x i1>, <8 x i32>)
+declare <8 x i32> @llvm.masked.load.v8i32.p0(ptr, i32, <8 x i1>, <8 x i32>)
 
 declare double @llvm.powi.f64.i16(double, i16)
 declare <2 x double> @llvm.powi.v2f64.i16(<2 x double>, i16)
@@ -1311,7 +1311,7 @@ define <2 x double> @negated_mag_arg_vec(<2 x double> %x) {
 ; for call graph passes.
 
 declare i32 @passthru_i32(i32 returned)
-declare i8* @passthru_p8(i8* returned)
+declare ptr @passthru_p8(ptr returned)
 
 define i32 @returned_const_int_arg() {
 ; CHECK-LABEL: @returned_const_int_arg(
@@ -1322,13 +1322,13 @@ define i32 @returned_const_int_arg() {
   ret i32 %x
 }
 
-define i8* @returned_const_ptr_arg() {
+define ptr @returned_const_ptr_arg() {
 ; CHECK-LABEL: @returned_const_ptr_arg(
-; CHECK-NEXT:    [[X:%.*]] = call i8* @passthru_p8(i8* null)
-; CHECK-NEXT:    ret i8* [[X]]
+; CHECK-NEXT:    [[X:%.*]] = call ptr @passthru_p8(ptr null)
+; CHECK-NEXT:    ret ptr [[X]]
 ;
-  %x = call i8* @passthru_p8(i8* null)
-  ret i8* %x
+  %x = call ptr @passthru_p8(ptr null)
+  ret ptr %x
 }
 
 define i32 @returned_var_arg(i32 %arg) {
@@ -1546,18 +1546,18 @@ define <3 x i33> @ctlz_ashr_sign_bit_vec(<3 x i33> %x) {
   ret <3 x i33> %r
 }
 
-declare i8* @llvm.ptrmask.p0i8.i64(i8* , i64)
+declare ptr @llvm.ptrmask.p0.i64(ptr , i64)
 
 define i1 @capture_vs_recurse(i64 %mask) {
 ; CHECK-LABEL: @capture_vs_recurse(
-; CHECK-NEXT:    [[A:%.*]] = call noalias i8* @malloc(i64 8)
-; CHECK-NEXT:    [[B:%.*]] = call nonnull i8* @llvm.ptrmask.p0i8.i64(i8* [[A]], i64 [[MASK:%.*]])
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8* [[A]], [[B]]
+; CHECK-NEXT:    [[A:%.*]] = call noalias ptr @malloc(i64 8)
+; CHECK-NEXT:    [[B:%.*]] = call nonnull ptr @llvm.ptrmask.p0.i64(ptr [[A]], i64 [[MASK:%.*]])
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq ptr [[A]], [[B]]
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
-  %a = call noalias i8* @malloc(i64 8)
-  %b = call nonnull i8* @llvm.ptrmask.p0i8.i64(i8* %a, i64 %mask)
-  %cmp = icmp eq i8* %a, %b
+  %a = call noalias ptr @malloc(i64 8)
+  %b = call nonnull ptr @llvm.ptrmask.p0.i64(ptr %a, i64 %mask)
+  %cmp = icmp eq ptr %a, %b
   ret i1 %cmp
 }
 
