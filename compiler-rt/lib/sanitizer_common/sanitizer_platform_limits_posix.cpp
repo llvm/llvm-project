@@ -181,9 +181,9 @@ typedef struct user_fpregs elf_fpregset_t;
 namespace __sanitizer {
   unsigned struct_utsname_sz = sizeof(struct utsname);
   unsigned struct_stat_sz = sizeof(struct stat);
-#if !SANITIZER_IOS && !(SANITIZER_APPLE && TARGET_CPU_ARM64)
+#if SANITIZER_HAS_STAT64
   unsigned struct_stat64_sz = sizeof(struct stat64);
-#endif // !SANITIZER_IOS && !(SANITIZER_APPLE && TARGET_CPU_ARM64)
+#endif // SANITIZER_HAS_STAT64
   unsigned struct_rusage_sz = sizeof(struct rusage);
   unsigned struct_tm_sz = sizeof(struct tm);
   unsigned struct_passwd_sz = sizeof(struct passwd);
@@ -208,9 +208,9 @@ namespace __sanitizer {
   unsigned struct_regex_sz = sizeof(regex_t);
   unsigned struct_regmatch_sz = sizeof(regmatch_t);
 
-#if (SANITIZER_APPLE && !TARGET_CPU_ARM64) && !SANITIZER_IOS
+#if SANITIZER_HAS_STATFS64
   unsigned struct_statfs64_sz = sizeof(struct statfs64);
-#endif // (SANITIZER_APPLE && !TARGET_CPU_ARM64) && !SANITIZER_IOS
+#endif // SANITIZER_HAS_STATFS64
 
 #if SANITIZER_GLIBC || SANITIZER_FREEBSD || SANITIZER_NETBSD || SANITIZER_APPLE
   unsigned struct_fstab_sz = sizeof(struct fstab);
