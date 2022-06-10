@@ -4,13 +4,13 @@
 // Non-PIE:
 RUN: %clang %cflags -no-pie %p/../Inputs/plt.c -fuse-ld=lld \
 RUN:    -o %t.lld.exe -Wl,-q
-RUN: llvm-bolt %t.lld.exe -o %t.lld.bolt.exe -use-old-text=0 -lite=0
+RUN: llvm-bolt %t.lld.exe -o %t.lld.bolt.exe --use-old-text=0 --lite=0
 RUN: %t.lld.bolt.exe | FileCheck %s
 
 // PIE:
 RUN: %clang %cflags -fPIC -pie %p/../Inputs/plt.c -fuse-ld=lld \
 RUN:    -o %t.lld.pie.exe -Wl,-q
-RUN: llvm-bolt %t.lld.pie.exe -o %t.lld.bolt.pie.exe -use-old-text=0 -lite=0
+RUN: llvm-bolt %t.lld.pie.exe -o %t.lld.bolt.pie.exe --use-old-text=0 --lite=0
 RUN: %t.lld.bolt.pie.exe | FileCheck %s
 
 CHECK: Test completed

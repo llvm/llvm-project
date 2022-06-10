@@ -5,9 +5,9 @@
 # RUN: link_fdata %s %t.o %t.fdata
 # RUN: llvm-strip --strip-unneeded %t.o
 # RUN: ld.lld %t.o -o %t.exe -q -nostdlib
-# RUN: llvm-bolt %t.exe -o %t.out -data %t.fdata -relocs \
-# RUN:   -tail-duplication=aggressive \
-# RUN:   -tail-duplication-const-copy-propagation=1
+# RUN: llvm-bolt %t.exe -o %t.out --data %t.fdata --relocs \
+# RUN:   --tail-duplication=aggressive \
+# RUN:   --tail-duplication-const-copy-propagation=1
 
   .text
   .type a, %function

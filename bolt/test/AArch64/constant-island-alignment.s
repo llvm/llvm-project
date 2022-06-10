@@ -6,7 +6,7 @@
 # RUN:   %s -o %t.o
 # RUN: %clang %cflags -fPIC -pie %t.o -o %t.exe -Wl,-q \
 # RUN:    -nostartfiles -nodefaultlibs -Wl,-z,notext
-# RUN: llvm-bolt %t.exe -o %t.bolt -use-old-text=0 -lite=0 -trap-old-code
+# RUN: llvm-bolt %t.exe -o %t.bolt --use-old-text=0 --lite=0 --trap-old-code
 # RUN: llvm-objdump -d --disassemble-symbols='$d' %t.bolt | FileCheck %s
 
 .text

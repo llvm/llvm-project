@@ -6,7 +6,7 @@
 
 // RUN: %clang %cflags %p/../Inputs/plt.c -fuse-ld=bfd \
 // RUN:    -o %t.bfd.exe -Wl,-q
-// RUN: llvm-bolt %t.bfd.exe -o %t.bfd.bolt.exe -use-old-text=0 -lite=0
+// RUN: llvm-bolt %t.bfd.exe -o %t.bfd.bolt.exe --use-old-text=0 --lite=0
 // RUN: %t.bfd.bolt.exe | FileCheck %s
 
 // CHECK: Test completed

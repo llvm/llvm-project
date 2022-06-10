@@ -12,8 +12,8 @@
 # RUN: llvm-strip --strip-unneeded %t.o
 # RUN: %clang %cflags -no-pie %t.o -o %t.exe -Wl,-q
 
-# RUN: llvm-bolt %t.exe -relocs=1 -frame-opt=all -print-finalized \
-# RUN:    -print-only=main -data %t.fdata -o %t.out | FileCheck %s
+# RUN: llvm-bolt %t.exe --relocs=1 --frame-opt=all --print-finalized \
+# RUN:    --print-only=main --data %t.fdata -o %t.out | FileCheck %s
 
 # RUN: %t.out
 

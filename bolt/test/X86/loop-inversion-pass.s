@@ -6,12 +6,15 @@
 # RUN: link_fdata %s %t.o %t.fdata2 "FDATA2"
 # RUN: link_fdata %s %t.o %t.fdata3 "FDATA3"
 # RUN: %clang %cflags %t.o -o %t.exe -Wl,-q
-# RUN: llvm-bolt %t.exe -data %t.fdata -reorder-blocks=ext-tsp -print-finalized \
-# RUN:    -loop-inversion-opt -o %t.out | FileCheck %s
-# RUN: llvm-bolt %t.exe -data %t.fdata2 -reorder-blocks=ext-tsp -print-finalized \
-# RUN:    -loop-inversion-opt -o %t.out2 | FileCheck --check-prefix="CHECK2" %s
-# RUN: llvm-bolt %t.exe -data %t.fdata3 -reorder-blocks=none -print-finalized \
-# RUN:    -loop-inversion-opt -o %t.out3 | FileCheck --check-prefix="CHECK3" %s
+# RUN: llvm-bolt %t.exe --data %t.fdata --reorder-blocks=ext-tsp \
+# RUN:    --print-finalized --loop-inversion-opt -o %t.out \
+# RUN:    | FileCheck %s
+# RUN: llvm-bolt %t.exe --data %t.fdata2 --reorder-blocks=ext-tsp \
+# RUN:    --print-finalized --loop-inversion-opt -o %t.out2 \
+# RUN:    | FileCheck --check-prefix="CHECK2" %s
+# RUN: llvm-bolt %t.exe --data %t.fdata3 --reorder-blocks=none \
+# RUN:    --print-finalized --loop-inversion-opt -o %t.out3 \
+# RUN:    | FileCheck --check-prefix="CHECK3" %s
 
 # The case where the loop is used:
 # FDATA: 1 main 2 1 main #.J1# 0 420

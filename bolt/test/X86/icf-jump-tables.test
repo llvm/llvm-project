@@ -4,7 +4,7 @@
 # REQUIRES: system-linux
 
 # RUN: %clang %cflags -O1 -g %p/../Inputs/icf-jump-tables.c -o %t.exe -Wl,-q
-# RUN: llvm-bolt %t.exe -icf -o %t.bolt |& FileCheck %s
+# RUN: llvm-bolt %t.exe --icf -o %t.bolt |& FileCheck %s
 
 ## Check that BOLT successfully folded a function with jump table:
 # CHECK: ICF folded {{.*}}. {{[^0]}} functions had jump tables.
