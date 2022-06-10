@@ -872,3 +872,55 @@ define void @strided_load_startval_add_with_splat(i8* noalias nocapture %0, i8* 
   %47 = icmp eq i32 %46, 1024
   br i1 %47, label %36, label %37
 }
+
+declare <16 x i8> @llvm.masked.gather.v16i8.v16p0i8(<16 x i8*>, i32 immarg, <16 x i1>, <16 x i8>)
+declare void @llvm.masked.scatter.v16i8.v16p0i8(<16 x i8>, <16 x i8*>, i32 immarg, <16 x i1>)
+
+define void @gather_no_scalar_remainder(i8* noalias nocapture noundef %arg, i8* noalias nocapture noundef readonly %arg1, i64 noundef %arg2) {
+; CHECK-LABEL: gather_no_scalar_remainder:
+; CHECK:       # %bb.0: # %bb
+; CHECK-NEXT:    slli a2, a2, 4
+; CHECK-NEXT:    beqz a2, .LBB13_3
+; CHECK-NEXT:  # %bb.1: # %bb2
+; CHECK-NEXT:    li a3, 5
+; CHECK-NEXT:    vsetivli zero, 16, e8, mf2, ta, mu
+; CHECK-NEXT:  .LBB13_2: # %bb4
+; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
+; CHECK-NEXT:    vlse8.v v8, (a1), a3
+; CHECK-NEXT:    vle8.v v9, (a0)
+; CHECK-NEXT:    vadd.vv v8, v9, v8
+; CHECK-NEXT:    vse8.v v8, (a0)
+; CHECK-NEXT:    addi a2, a2, -16
+; CHECK-NEXT:    addi a0, a0, 16
+; CHECK-NEXT:    addi a1, a1, 80
+; CHECK-NEXT:    bnez a2, .LBB13_2
+; CHECK-NEXT:  .LBB13_3: # %bb16
+; CHECK-NEXT:    ret
+bb:
+  %i = shl i64 %arg2, 4
+  %i3 = icmp eq i64 %i, 0
+  br i1 %i3, label %bb16, label %bb2
+
+bb2:
+  br label %bb4
+
+bb4:                                              ; preds = %bb4, %bb
+  %i5 = phi i64 [ %i13, %bb4 ], [ 0, %bb2 ]
+  %i6 = phi <16 x i64> [ %i14, %bb4 ], [ <i64 0, i64 1, i64 2, i64 3, i64 4, i64 5, i64 6, i64 7, i64 8, i64 9, i64 10, i64 11, i64 12, i64 13, i64 14, i64 15>, %bb2 ]
+  %i7 = mul <16 x i64> %i6, <i64 5, i64 5, i64 5, i64 5, i64 5, i64 5, i64 5, i64 5, i64 5, i64 5, i64 5, i64 5, i64 5, i64 5, i64 5, i64 5>
+  %i8 = getelementptr inbounds i8, i8* %arg1, <16 x i64> %i7
+  %i9 = call <16 x i8> @llvm.masked.gather.v16i8.v16p0i8(<16 x i8*> %i8, i32 1, <16 x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>, <16 x i8> undef)
+  %i10 = getelementptr inbounds i8, i8* %arg, i64 %i5
+  %cast = bitcast i8* %i10 to <16 x i8>*
+  %i11 = load <16 x i8>, <16 x i8>* %cast, align 1
+  %i12 = add <16 x i8> %i11, %i9
+  %cast2 = bitcast i8* %i10 to <16 x i8>*
+  store <16 x i8> %i12, <16 x i8>* %cast2, align 1
+  %i13 = add nuw i64 %i5, 16
+  %i14 = add <16 x i64> %i6, <i64 16, i64 16, i64 16, i64 16, i64 16, i64 16, i64 16, i64 16, i64 16, i64 16, i64 16, i64 16, i64 16, i64 16, i64 16, i64 16>
+  %i15 = icmp eq i64 %i13, %i
+  br i1 %i15, label %bb16, label %bb4
+
+bb16:                                             ; preds = %bb4, %bb
+  ret void
+}

@@ -18,6 +18,27 @@ namespace transform {
 
 class TransformOpInterface;
 
+/// Options controlling the application of transform operations by the
+/// TransformState.
+class TransformOptions {
+public:
+  TransformOptions() {}
+
+  /// Requests computationally expensive checks of the transform and payload IR
+  /// well-formedness to be performed before each transformation. In particular,
+  /// these ensure that the handles still point to valid operations when used.
+  TransformOptions &enableExpensiveChecks(bool enable = true) {
+    expensiveChecksEnabled = enable;
+    return *this;
+  }
+
+  /// Returns true if the expensive checks are requested.
+  bool getExpensiveChecksEnabled() const { return expensiveChecksEnabled; }
+
+private:
+  bool expensiveChecksEnabled = true;
+};
+
 /// The state maintained across applications of various ops implementing the
 /// TransformOpInterface. The operations implementing this interface and the
 /// surrounding structure are referred to as transform IR. The operations to
@@ -63,8 +84,10 @@ public:
   /// Creates a state for transform ops living in the given region. The parent
   /// operation of the region. The second argument points to the root operation
   /// in the payload IR beind transformed, which may or may not contain the
-  /// region with transform ops.
-  TransformState(Region &region, Operation *root);
+  /// region with transform ops. Additional options can be provided through the
+  /// trailing configuration object.
+  TransformState(Region &region, Operation *root,
+                 const TransformOptions &options = TransformOptions());
 
   /// Returns the op at which the transformation state is rooted. This is
   /// typically helpful for transformations that apply globally.
@@ -296,6 +319,21 @@ private:
   static LogicalResult tryEmplaceReverseMapping(Mappings &map, Operation *op,
                                                 Value handle);
 
+  /// If the operand is a handle consumed by the operation, i.e. has the "free"
+  /// memory effect associated with it, identifies other handles that are
+  /// pointing to payload IR operations nested in the operations pointed to by
+  /// the consumed handle. Marks all such handles as invalidated so trigger
+  /// errors if they are used.
+  void recordHandleInvalidation(OpOperand &handle);
+
+  /// Checks that the operation does not use invalidated handles as operands.
+  /// Reports errors and returns failure if it does. Otherwise, invalidates the
+  /// handles consumed by the operation as well as any handles pointing to
+  /// payload IR operations nested in the operations associated with the
+  /// consumed handles.
+  LogicalResult
+  checkAndRecordHandleInvalidation(TransformOpInterface transform);
+
   /// The mappings between transform IR values and payload IR ops, aggregated by
   /// the region in which the transform IR values are defined.
   llvm::SmallDenseMap<Region *, Mappings> mappings;
@@ -306,6 +344,14 @@ private:
 
   /// The top-level operation that contains all payload IR, typically a module.
   Operation *topLevel;
+
+  /// Additional options controlling the transformation state behavior.
+  TransformOptions options;
+
+  /// The mapping from invalidated handles to the error-reporting functions that
+  /// describe when the handles were invalidated. Calling such a function emits
+  /// a user-visible diagnostic.
+  DenseMap<Value, std::function<void()>> invalidatedHandles;
 
 #if LLVM_ENABLE_ABI_BREAKING_CHECKS
   /// A stack of nested regions that are being processed in the transform IR.
@@ -451,21 +497,56 @@ struct PayloadIRResource
   StringRef getName() override { return "transform.payload_ir"; }
 };
 
-/// Trait implementing the MemoryEffectOpInterface for single-operand
-/// single-result operations that "consume" their operand and produce a new
-/// result.
+/// Trait implementing the MemoryEffectOpInterface for single-operand operations
+/// that "consume" their operand and produce a new result.
 template <typename OpTy>
 class FunctionalStyleTransformOpTrait
     : public OpTrait::TraitBase<OpTy, FunctionalStyleTransformOpTrait> {
 public:
   /// This op "consumes" the operand by reading and freeing it, "produces" the
-  /// result by allocating and writing it and reads/writes the payload IR in the
-  /// process.
+  /// results by allocating and writing it and reads/writes the payload IR in
+  /// the process.
   void getEffects(SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
     effects.emplace_back(MemoryEffects::Read::get(),
                          this->getOperation()->getOperand(0),
                          TransformMappingResource::get());
     effects.emplace_back(MemoryEffects::Free::get(),
+                         this->getOperation()->getOperand(0),
+                         TransformMappingResource::get());
+    for (Value result : this->getOperation()->getResults()) {
+      effects.emplace_back(MemoryEffects::Allocate::get(), result,
+                           TransformMappingResource::get());
+      effects.emplace_back(MemoryEffects::Write::get(), result,
+                           TransformMappingResource::get());
+    }
+    effects.emplace_back(MemoryEffects::Read::get(), PayloadIRResource::get());
+    effects.emplace_back(MemoryEffects::Write::get(), PayloadIRResource::get());
+  }
+
+  /// Checks that the op matches the expectations of this trait.
+  static LogicalResult verifyTrait(Operation *op) {
+    static_assert(OpTy::template hasTrait<OpTrait::OneOperand>(),
+                  "expected single-operand op");
+    if (!op->getName().getInterface<MemoryEffectOpInterface>()) {
+      op->emitError()
+          << "FunctionalStyleTransformOpTrait should only be attached to ops "
+             "that implement MemoryEffectOpInterface";
+    }
+    return success();
+  }
+};
+
+/// Trait implementing the MemoryEffectOpInterface for single-operand
+/// single-result operations that use their operand without consuming and
+/// without modifying the Payload IR to produce a new handle.
+template <typename OpTy>
+class NavigationTransformOpTrait
+    : public OpTrait::TraitBase<OpTy, NavigationTransformOpTrait> {
+public:
+  /// This op produces handles to the Payload IR without consuming the original
+  /// handles and without modifying the IR itself.
+  void getEffects(SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
+    effects.emplace_back(MemoryEffects::Read::get(),
                          this->getOperation()->getOperand(0),
                          TransformMappingResource::get());
     effects.emplace_back(MemoryEffects::Allocate::get(),
@@ -475,19 +556,17 @@ public:
                          this->getOperation()->getResult(0),
                          TransformMappingResource::get());
     effects.emplace_back(MemoryEffects::Read::get(), PayloadIRResource::get());
-    effects.emplace_back(MemoryEffects::Write::get(), PayloadIRResource::get());
   }
 
-  /// Checks that the op matches the expectations of this trait.
+  /// Checks that the op matches the expectation of this trait.
   static LogicalResult verifyTrait(Operation *op) {
     static_assert(OpTy::template hasTrait<OpTrait::OneOperand>(),
                   "expected single-operand op");
     static_assert(OpTy::template hasTrait<OpTrait::OneResult>(),
                   "expected single-result op");
     if (!op->getName().getInterface<MemoryEffectOpInterface>()) {
-      op->emitError()
-          << "FunctionalStyleTransformOpTrait should only be attached to ops "
-             "that implement MemoryEffectOpInterface";
+      op->emitError() << "NavigationTransformOpTrait should only be attached "
+                         "to ops that implement MemoryEffectOpInterface";
     }
     return success();
   }

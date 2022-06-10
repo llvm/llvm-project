@@ -10,6 +10,7 @@
 #ifndef _LIBCPP___FORMAT_FORMATTER_BOOL_H
 #define _LIBCPP___FORMAT_FORMATTER_BOOL_H
 
+#include <__algorithm/copy.h>
 #include <__availability>
 #include <__config>
 #include <__format/format_error.h>

@@ -1122,7 +1122,7 @@ static Value *foldAndOrOfICmpsWithConstEq(ICmpInst *Cmp0, ICmpInst *Cmp1,
   // (X != C) || (Y Pred1 X) --> (X != C) || (Y Pred1 C)
   // Can think of the 'or' substitution with the 'and' bool equivalent:
   // A || B --> A || (!A && B)
-  Value *SubstituteCmp = SimplifyICmpInst(Pred1, Y, C, Q);
+  Value *SubstituteCmp = simplifyICmpInst(Pred1, Y, C, Q);
   if (!SubstituteCmp) {
     // If we need to create a new instruction, require that the old compare can
     // be removed.
@@ -1728,7 +1728,7 @@ static Instruction *foldComplexAndOrPatterns(BinaryOperator &I,
 Instruction *InstCombinerImpl::visitAnd(BinaryOperator &I) {
   Type *Ty = I.getType();
 
-  if (Value *V = SimplifyAndInst(I.getOperand(0), I.getOperand(1),
+  if (Value *V = simplifyAndInst(I.getOperand(0), I.getOperand(1),
                                  SQ.getWithInstruction(&I)))
     return replaceInstUsesWith(I, V);
 
@@ -1855,7 +1855,7 @@ Instruction *InstCombinerImpl::visitAnd(BinaryOperator &I) {
 
     // ((C1 OP zext(X)) & C2) -> zext((C1 OP X) & C2) if C2 fits in the
     // bitwidth of X and OP behaves well when given trunc(C1) and X.
-    auto isSuitableBinOpcode = [](BinaryOperator *B) {
+    auto isNarrowableBinOpcode = [](BinaryOperator *B) {
       switch (B->getOpcode()) {
       case Instruction::Xor:
       case Instruction::Or:
@@ -1868,22 +1868,72 @@ Instruction *InstCombinerImpl::visitAnd(BinaryOperator &I) {
       }
     };
     BinaryOperator *BO;
-    if (match(Op0, m_OneUse(m_BinOp(BO))) && isSuitableBinOpcode(BO)) {
+    if (match(Op0, m_OneUse(m_BinOp(BO))) && isNarrowableBinOpcode(BO)) {
+      Instruction::BinaryOps BOpcode = BO->getOpcode();
       Value *X;
       const APInt *C1;
       // TODO: The one-use restrictions could be relaxed a little if the AND
       // is going to be removed.
+      // Try to narrow the 'and' and a binop with constant operand:
+      // and (bo (zext X), C1), C --> zext (and (bo X, TruncC1), TruncC)
       if (match(BO, m_c_BinOp(m_OneUse(m_ZExt(m_Value(X))), m_APInt(C1))) &&
           C->isIntN(X->getType()->getScalarSizeInBits())) {
         unsigned XWidth = X->getType()->getScalarSizeInBits();
         Constant *TruncC1 = ConstantInt::get(X->getType(), C1->trunc(XWidth));
         Value *BinOp = isa<ZExtInst>(BO->getOperand(0))
-                           ? Builder.CreateBinOp(BO->getOpcode(), X, TruncC1)
-                           : Builder.CreateBinOp(BO->getOpcode(), TruncC1, X);
+                           ? Builder.CreateBinOp(BOpcode, X, TruncC1)
+                           : Builder.CreateBinOp(BOpcode, TruncC1, X);
         Constant *TruncC = ConstantInt::get(X->getType(), C->trunc(XWidth));
         Value *And = Builder.CreateAnd(BinOp, TruncC);
         return new ZExtInst(And, Ty);
       }
+
+      // Similar to above: if the mask matches the zext input width, then the
+      // 'and' can be eliminated, so we can truncate the other variable op:
+      // and (bo (zext X), Y), C --> zext (bo X, (trunc Y))
+      if (isa<Instruction>(BO->getOperand(0)) &&
+          match(BO->getOperand(0), m_OneUse(m_ZExt(m_Value(X)))) &&
+          C->isMask(X->getType()->getScalarSizeInBits())) {
+        Y = BO->getOperand(1);
+        Value *TrY = Builder.CreateTrunc(Y, X->getType(), Y->getName() + ".tr");
+        Value *NewBO =
+            Builder.CreateBinOp(BOpcode, X, TrY, BO->getName() + ".narrow");
+        return new ZExtInst(NewBO, Ty);
+      }
+      // and (bo Y, (zext X)), C --> zext (bo (trunc Y), X)
+      if (isa<Instruction>(BO->getOperand(1)) &&
+          match(BO->getOperand(1), m_OneUse(m_ZExt(m_Value(X)))) &&
+          C->isMask(X->getType()->getScalarSizeInBits())) {
+        Y = BO->getOperand(0);
+        Value *TrY = Builder.CreateTrunc(Y, X->getType(), Y->getName() + ".tr");
+        Value *NewBO =
+            Builder.CreateBinOp(BOpcode, TrY, X, BO->getName() + ".narrow");
+        return new ZExtInst(NewBO, Ty);
+      }
+    }
+
+    Constant *C1, *C2;
+    const APInt *C3 = C;
+    Value *X;
+    if (C3->isPowerOf2() &&
+        match(Op0, m_OneUse(m_LShr(m_Shl(m_ImmConstant(C1), m_Value(X)),
+                                   m_ImmConstant(C2)))) &&
+        match(C1, m_Power2())) {
+      Constant *Log2C1 = ConstantExpr::getExactLogBase2(C1);
+      Constant *Log2C3 = ConstantInt::get(Ty, C3->countTrailingZeros());
+      Constant *LshrC = ConstantExpr::getAdd(C2, Log2C3);
+      KnownBits KnownLShrc = computeKnownBits(LshrC, 0, nullptr);
+      if (KnownLShrc.getMaxValue().ult(Width)) {
+        // iff C1,C3 is pow2 and C2 + cttz(C3) < BitWidth:
+        // ((C1 << X) >> C2) & C3 -> X == (cttz(C3)+C2-cttz(C1)) ? C3 : 0
+        Constant *CmpC = ConstantExpr::getSub(LshrC, Log2C1);
+        Value *Cmp = Builder.CreateICmpEQ(X, CmpC);
+        return SelectInst::Create(Cmp, ConstantInt::get(Ty, *C3),
+                                  ConstantInt::getNullValue(Ty));
+      }
+      // TODO: Symmetrical case
+      // iff C1,C3 is pow2 and Log2(C3) >= C2:
+      // ((C1 >> X) << C2) & C3 -> X == (cttz(C1)+C2-cttz(C3)) ? C3 : 0
     }
   }
 
@@ -2570,7 +2620,7 @@ Value *InstCombinerImpl::foldAndOrOfICmps(ICmpInst *LHS, ICmpInst *RHS,
 // here. We should standardize that construct where it is needed or choose some
 // other way to ensure that commutated variants of patterns are not missed.
 Instruction *InstCombinerImpl::visitOr(BinaryOperator &I) {
-  if (Value *V = SimplifyOrInst(I.getOperand(0), I.getOperand(1),
+  if (Value *V = simplifyOrInst(I.getOperand(0), I.getOperand(1),
                                 SQ.getWithInstruction(&I)))
     return replaceInstUsesWith(I, V);
 
@@ -2963,6 +3013,36 @@ Instruction *InstCombinerImpl::visitOr(BinaryOperator &I) {
   if (matchSimpleRecurrence(&I, PN, Start, Step) && DT.dominates(Step, PN))
     return replaceInstUsesWith(I, Builder.CreateOr(Start, Step));
 
+  // (A & B) | (C | D) or (C | D) | (A & B)
+  // Can be combined if C or D is of type (A/B & X)
+  if (match(&I, m_c_Or(m_OneUse(m_And(m_Value(A), m_Value(B))),
+                       m_OneUse(m_Or(m_Value(C), m_Value(D)))))) {
+    // (A & B) | (C | ?) -> C | (? | (A & B))
+    // (A & B) | (C | ?) -> C | (? | (A & B))
+    // (A & B) | (C | ?) -> C | (? | (A & B))
+    // (A & B) | (C | ?) -> C | (? | (A & B))
+    // (C | ?) | (A & B) -> C | (? | (A & B))
+    // (C | ?) | (A & B) -> C | (? | (A & B))
+    // (C | ?) | (A & B) -> C | (? | (A & B))
+    // (C | ?) | (A & B) -> C | (? | (A & B))
+    if (match(D, m_OneUse(m_c_And(m_Specific(A), m_Value()))) ||
+        match(D, m_OneUse(m_c_And(m_Specific(B), m_Value()))))
+      return BinaryOperator::CreateOr(
+          C, Builder.CreateOr(D, Builder.CreateAnd(A, B)));
+    // (A & B) | (? | D) -> (? | (A & B)) | D
+    // (A & B) | (? | D) -> (? | (A & B)) | D
+    // (A & B) | (? | D) -> (? | (A & B)) | D
+    // (A & B) | (? | D) -> (? | (A & B)) | D
+    // (? | D) | (A & B) -> (? | (A & B)) | D
+    // (? | D) | (A & B) -> (? | (A & B)) | D
+    // (? | D) | (A & B) -> (? | (A & B)) | D
+    // (? | D) | (A & B) -> (? | (A & B)) | D
+    if (match(C, m_OneUse(m_c_And(m_Specific(A), m_Value()))) ||
+        match(C, m_OneUse(m_c_And(m_Specific(B), m_Value()))))
+      return BinaryOperator::CreateOr(
+          Builder.CreateOr(C, Builder.CreateAnd(A, B)), D);
+  }
+
   return nullptr;
 }
 
@@ -3071,10 +3151,10 @@ Value *InstCombinerImpl::foldXorOfICmps(ICmpInst *LHS, ICmpInst *RHS,
   //
   // This is based on a truth table definition of xor:
   // X ^ Y --> (X | Y) & !(X & Y)
-  if (Value *OrICmp = SimplifyBinOp(Instruction::Or, LHS, RHS, SQ)) {
+  if (Value *OrICmp = simplifyBinOp(Instruction::Or, LHS, RHS, SQ)) {
     // TODO: If OrICmp is true, then the definition of xor simplifies to !(X&Y).
     // TODO: If OrICmp is false, the whole thing is false (InstSimplify?).
-    if (Value *AndICmp = SimplifyBinOp(Instruction::And, LHS, RHS, SQ)) {
+    if (Value *AndICmp = simplifyBinOp(Instruction::And, LHS, RHS, SQ)) {
       // TODO: Independently handle cases where the 'and' side is a constant.
       ICmpInst *X = nullptr, *Y = nullptr;
       if (OrICmp == LHS && AndICmp == RHS) {
@@ -3441,7 +3521,7 @@ Instruction *InstCombinerImpl::foldNot(BinaryOperator &I) {
 // here. We should standardize that construct where it is needed or choose some
 // other way to ensure that commutated variants of patterns are not missed.
 Instruction *InstCombinerImpl::visitXor(BinaryOperator &I) {
-  if (Value *V = SimplifyXorInst(I.getOperand(0), I.getOperand(1),
+  if (Value *V = simplifyXorInst(I.getOperand(0), I.getOperand(1),
                                  SQ.getWithInstruction(&I)))
     return replaceInstUsesWith(I, V);
 

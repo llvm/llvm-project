@@ -42,7 +42,7 @@ void convert(Writer *writer, const FormatSection &to_conv) {
   case 'd':
   case 'i':
   case 'u':
-    // convert_int(writer, to_conv);
+    convert_int(writer, to_conv);
     return;
   case 'o':
     // convert_oct(writer, to_conv);

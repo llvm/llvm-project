@@ -4204,7 +4204,8 @@ def why_load : Flag<["-"], "why_load">;
 def whyload : Flag<["-"], "whyload">, Alias<why_load>;
 def w : Flag<["-"], "w">, HelpText<"Suppress all warnings">, Flags<[CC1Option]>,
   MarshallingInfoFlag<DiagnosticOpts<"IgnoreWarnings">>;
-def x : JoinedOrSeparate<["-"], "x">, Flags<[NoXarchOption,CC1Option]>,
+def x : JoinedOrSeparate<["-"], "x">,
+Flags<[NoXarchOption,CC1Option,FlangOption,FC1Option]>,
   HelpText<"Treat subsequent input files as having type <language>">,
   MetaVarName<"<language>">;
 def y : Joined<["-"], "y">;
@@ -6267,6 +6268,12 @@ def fobjc_gc_only : Flag<["-"], "fobjc-gc-only">, Group<f_Group>,
   HelpText<"Use GC exclusively for Objective-C related memory management">;
 def fobjc_gc : Flag<["-"], "fobjc-gc">, Group<f_Group>,
   HelpText<"Enable Objective-C garbage collection">;
+
+def fexperimental_max_bitint_width_EQ:
+  Joined<["-"], "fexperimental-max-bitint-width=">, Group<f_Group>,
+  MetaVarName<"<N>">,
+  HelpText<"Set the maximum bitwidth for _BitInt (this option is expected to be removed in the future)">,
+  MarshallingInfoInt<LangOpts<"MaxBitIntWidth">>;
 
 } // let Flags = [CC1Option, NoDriverOption]
 

@@ -3466,6 +3466,7 @@ void Target::PrintDummySignals(Stream &strm, Args &signal_args) {
       case eLazyBoolYes: return "true   ";
       case eLazyBoolNo: return "false  ";
     }
+    llvm_unreachable("Fully covered switch above!");
   };
   size_t num_args = signal_args.GetArgumentCount();
   for (const auto &elem : m_dummy_signals) {

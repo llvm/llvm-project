@@ -43,11 +43,39 @@ using namespace llvm;
 
 namespace {
 
+// A clause length of 64 instructions could be encoded in the s_clause
+// instruction, but the hardware documentation (at least for GFX11) says that
+// 63 is the maximum allowed.
+constexpr unsigned MaxInstructionsInClause = 63;
+
 enum HardClauseType {
+  // For GFX10:
+
   // Texture, buffer, global or scratch memory instructions.
   HARDCLAUSE_VMEM,
   // Flat (not global or scratch) memory instructions.
   HARDCLAUSE_FLAT,
+
+  // For GFX11:
+
+  // Texture memory instructions.
+  HARDCLAUSE_MIMG_LOAD,
+  HARDCLAUSE_MIMG_STORE,
+  HARDCLAUSE_MIMG_ATOMIC,
+  HARDCLAUSE_MIMG_SAMPLE,
+  // Buffer, global or scratch memory instructions.
+  HARDCLAUSE_VMEM_LOAD,
+  HARDCLAUSE_VMEM_STORE,
+  HARDCLAUSE_VMEM_ATOMIC,
+  // Flat (not global or scratch) memory instructions.
+  HARDCLAUSE_FLAT_LOAD,
+  HARDCLAUSE_FLAT_STORE,
+  HARDCLAUSE_FLAT_ATOMIC,
+  // BVH instructions.
+  HARDCLAUSE_BVH,
+
+  // Common:
+
   // Instructions that access LDS.
   HARDCLAUSE_LDS,
   // Scalar memory instructions.
@@ -79,19 +107,43 @@ public:
   }
 
   HardClauseType getHardClauseType(const MachineInstr &MI) {
-
-    // On current architectures we only get a benefit from clausing loads.
-    if (MI.mayLoad()) {
-      if (SIInstrInfo::isVMEM(MI) || SIInstrInfo::isSegmentSpecificFLAT(MI)) {
-        if (ST->hasNSAClauseBug()) {
-          const AMDGPU::MIMGInfo *Info = AMDGPU::getMIMGInfo(MI.getOpcode());
-          if (Info && Info->MIMGEncoding == AMDGPU::MIMGEncGfx10NSA)
-            return HARDCLAUSE_ILLEGAL;
+    if (MI.mayLoad() || (MI.mayStore() && ST->shouldClusterStores())) {
+      if (ST->getGeneration() == AMDGPUSubtarget::GFX10) {
+        if (SIInstrInfo::isVMEM(MI) || SIInstrInfo::isSegmentSpecificFLAT(MI)) {
+          if (ST->hasNSAClauseBug()) {
+            const AMDGPU::MIMGInfo *Info = AMDGPU::getMIMGInfo(MI.getOpcode());
+            if (Info && Info->MIMGEncoding == AMDGPU::MIMGEncGfx10NSA)
+              return HARDCLAUSE_ILLEGAL;
+          }
+          return HARDCLAUSE_VMEM;
         }
-        return HARDCLAUSE_VMEM;
+        if (SIInstrInfo::isFLAT(MI))
+          return HARDCLAUSE_FLAT;
+      } else {
+        assert(ST->getGeneration() >= AMDGPUSubtarget::GFX11);
+        if (SIInstrInfo::isMIMG(MI)) {
+          const AMDGPU::MIMGInfo *Info = AMDGPU::getMIMGInfo(MI.getOpcode());
+          const AMDGPU::MIMGBaseOpcodeInfo *BaseInfo =
+              AMDGPU::getMIMGBaseOpcodeInfo(Info->BaseOpcode);
+          if (BaseInfo->BVH)
+            return HARDCLAUSE_BVH;
+          if (BaseInfo->Sampler)
+            return HARDCLAUSE_MIMG_SAMPLE;
+          return MI.mayLoad() ? MI.mayStore() ? HARDCLAUSE_MIMG_ATOMIC
+                                              : HARDCLAUSE_MIMG_LOAD
+                              : HARDCLAUSE_MIMG_STORE;
+        }
+        if (SIInstrInfo::isVMEM(MI) || SIInstrInfo::isSegmentSpecificFLAT(MI)) {
+          return MI.mayLoad() ? MI.mayStore() ? HARDCLAUSE_VMEM_ATOMIC
+                                              : HARDCLAUSE_VMEM_LOAD
+                              : HARDCLAUSE_VMEM_STORE;
+        }
+        if (SIInstrInfo::isFLAT(MI)) {
+          return MI.mayLoad() ? MI.mayStore() ? HARDCLAUSE_FLAT_ATOMIC
+                                              : HARDCLAUSE_FLAT_LOAD
+                              : HARDCLAUSE_FLAT_STORE;
+        }
       }
-      if (SIInstrInfo::isFLAT(MI))
-        return HARDCLAUSE_FLAT;
       // TODO: LDS
       if (SIInstrInfo::isSMRD(MI))
         return HARDCLAUSE_SMEM;
@@ -130,7 +182,7 @@ public:
   bool emitClause(const ClauseInfo &CI, const SIInstrInfo *SII) {
     if (CI.First == CI.Last)
       return false;
-    assert(CI.Length <= 64 && "Hard clause is too long!");
+    assert(CI.Length <= MaxInstructionsInClause && "Hard clause is too long!");
 
     auto &MBB = *CI.First->getParent();
     auto ClauseMI =
@@ -171,7 +223,7 @@ public:
           }
         }
 
-        if (CI.Length == 64 ||
+        if (CI.Length == MaxInstructionsInClause ||
             (CI.Length && Type != HARDCLAUSE_INTERNAL &&
              Type != HARDCLAUSE_IGNORE &&
              (Type != CI.Type ||

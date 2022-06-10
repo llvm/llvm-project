@@ -3218,6 +3218,26 @@ Note that the `size` argument must be a compile time constant.
 
 Note that this intrinsic cannot yet be called in a ``constexpr`` context.
 
+Guaranteed inlined memset
+^^^^^^^^^^^^^^^^^^^^^^^^^
+
+. code-block:: c
+
+  void __builtin_memset_inline(void *dst, int value, size_t size);
+
+
+``__builtin_memset_inline`` has been designed as a building block for efficient
+``memset`` implementations. It is identical to ``__builtin_memset`` but also
+guarantees not to call any external functions. See LLVM IR `llvm.memset.inline
+<https://llvm.org/docs/LangRef.html#llvm-memset-inline-intrinsic>`_ intrinsic
+for more information.
+
+This is useful to implement a custom version of ``memset``, implement a
+``libc`` memset or work around the absence of a ``libc``.
+
+Note that the `size` argument must be a compile time constant.
+
+Note that this intrinsic cannot yet be called in a ``constexpr`` context.
 
 Atomic Min/Max builtins with memory ordering
 --------------------------------------------

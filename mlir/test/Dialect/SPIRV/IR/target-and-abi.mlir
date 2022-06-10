@@ -26,23 +26,24 @@ func.func @unknown_attr_on_region() -> (i32 {spv.something}) {
 // spv.entry_point_abi
 //===----------------------------------------------------------------------===//
 
-// expected-error @+1 {{'spv.entry_point_abi' attribute must be a dictionary attribute containing one 32-bit integer elements attribute: 'local_size'}}
+// expected-error @+1 {{'spv.entry_point_abi' attribute must be an entry point ABI attribute}}
 func.func @spv_entry_point() attributes {
   spv.entry_point_abi = 64
 } { return }
 
 // -----
 
-// expected-error @+1 {{'spv.entry_point_abi' attribute must be a dictionary attribute containing one 32-bit integer elements attribute: 'local_size'}}
 func.func @spv_entry_point() attributes {
-  spv.entry_point_abi = {local_size = 64}
+  // expected-error @+2 {{failed to parse SPV_EntryPointABIAttr parameter 'local_size' which is to be a `DenseIntElementsAttr`}}
+  // expected-error @+1 {{invalid kind of attribute specified}}
+  spv.entry_point_abi = #spv.entry_point_abi<local_size = 64>
 } { return }
 
 // -----
 
 func.func @spv_entry_point() attributes {
-  // CHECK: {spv.entry_point_abi = {local_size = dense<[64, 1, 1]> : vector<3xi32>}}
-  spv.entry_point_abi = {local_size = dense<[64, 1, 1]>: vector<3xi32>}
+  // CHECK: {spv.entry_point_abi = #spv.entry_point_abi<local_size = dense<[64, 1, 1]> : vector<3xi32>>}
+  spv.entry_point_abi = #spv.entry_point_abi<local_size = dense<[64, 1, 1]>: vector<3xi32>>
 } { return }
 
 // -----
@@ -104,25 +105,15 @@ func.func @interface_var(
 // spv.target_env
 //===----------------------------------------------------------------------===//
 
-func.func @target_env_wrong_limits() attributes {
-  spv.target_env = #spv.target_env<
-    #spv.vce<v1.0, [Shader], [SPV_KHR_storage_buffer_storage_class]>,
-    // expected-error @+1 {{limits must be a dictionary attribute containing two 32-bit integer attributes 'max_compute_workgroup_invocations' and 'max_compute_workgroup_size'}}
-    {max_compute_workgroup_invocations = 128 : i64, max_compute_workgroup_size = dense<[128, 64, 64]> : vector<3xi32>}>
-} { return }
-
-// -----
-
 func.func @target_env() attributes {
   // CHECK:      spv.target_env = #spv.target_env<
   // CHECK-SAME:   #spv.vce<v1.0, [Shader], [SPV_KHR_storage_buffer_storage_class]>,
-  // CHECK-SAME:   {max_compute_workgroup_invocations = 128 : i32, max_compute_workgroup_size = dense<[128, 64, 64]> : vector<3xi32>}>
+  // CHECK-SAME:   #spv.resource_limits<max_compute_workgroup_size = [128, 64, 64]>>
   spv.target_env = #spv.target_env<
     #spv.vce<v1.0, [Shader], [SPV_KHR_storage_buffer_storage_class]>,
-    {
-      max_compute_workgroup_invocations = 128 : i32,
-      max_compute_workgroup_size = dense<[128, 64, 64]> : vector<3xi32>
-    }>
+    #spv.resource_limits<
+      max_compute_workgroup_size = [128, 64, 64]
+    >>
 } { return }
 
 // -----
@@ -131,8 +122,8 @@ func.func @target_env_vendor_id() attributes {
   // CHECK:      spv.target_env = #spv.target_env<
   // CHECK-SAME:   #spv.vce<v1.0, [], []>,
   // CHECK-SAME:   NVIDIA,
-  // CHECK-SAME:   {}>
-  spv.target_env = #spv.target_env<#spv.vce<v1.0, [], []>, NVIDIA, {}>
+  // CHECK-SAME:   #spv.resource_limits<>>
+  spv.target_env = #spv.target_env<#spv.vce<v1.0, [], []>, NVIDIA, #spv.resource_limits<>>
 } { return }
 
 // -----
@@ -141,8 +132,8 @@ func.func @target_env_vendor_id_device_type() attributes {
   // CHECK:      spv.target_env = #spv.target_env<
   // CHECK-SAME:   #spv.vce<v1.0, [], []>,
   // CHECK-SAME:   AMD:DiscreteGPU,
-  // CHECK-SAME:   {}>
-  spv.target_env = #spv.target_env<#spv.vce<v1.0, [], []>, AMD:DiscreteGPU, {}>
+  // CHECK-SAME:   #spv.resource_limits<>>
+  spv.target_env = #spv.target_env<#spv.vce<v1.0, [], []>, AMD:DiscreteGPU, #spv.resource_limits<>>
 } { return }
 
 // -----
@@ -151,20 +142,17 @@ func.func @target_env_vendor_id_device_type_device_id() attributes {
   // CHECK:      spv.target_env = #spv.target_env<
   // CHECK-SAME:   #spv.vce<v1.0, [], []>,
   // CHECK-SAME:   Qualcomm:IntegratedGPU:100925441,
-  // CHECK-SAME:   {}>
-  spv.target_env = #spv.target_env<#spv.vce<v1.0, [], []>, Qualcomm:IntegratedGPU:0x6040001, {}>
+  // CHECK-SAME:   #spv.resource_limits<>>
+  spv.target_env = #spv.target_env<#spv.vce<v1.0, [], []>, Qualcomm:IntegratedGPU:0x6040001, #spv.resource_limits<>>
 } { return }
 
 // -----
 
 func.func @target_env_extra_fields() attributes {
-  // expected-error @+6 {{expected '>'}}
+  // expected-error @+3 {{expected '>'}}
   spv.target_env = #spv.target_env<
     #spv.vce<v1.0, [Shader], [SPV_KHR_storage_buffer_storage_class]>,
-    {
-      max_compute_workgroup_invocations = 128 : i32,
-      max_compute_workgroup_size = dense<[128, 64, 64]> : vector<3xi32>
-    },
+    #spv.resource_limits<>,
     more_stuff
   >
 } { return }
@@ -174,37 +162,38 @@ func.func @target_env_extra_fields() attributes {
 func.func @target_env_cooperative_matrix() attributes{
   // CHECK:      spv.target_env = #spv.target_env<
   // CHECK-SAME:   SPV_NV_cooperative_matrix
-  // CHECK-SAME:   cooperative_matrix_properties_nv = [
-  // CHECK-SAME:     {a_type = i8, b_type = i8, c_type = i32,
-  // CHECK-SAME:      k_size = 32 : i32, m_size = 8 : i32, n_size = 8 : i32
-  // CHECK-SAME:      result_type = i32, scope = 3 : i32}
-  // CHECK-SAME:     {a_type = f16, b_type = f16, c_type = f16,
-  // CHECK-SAME:      k_size = 16 : i32, m_size = 8 : i32, n_size = 8 : i32
-  // CHECK-SAME:      result_type = f16, scope = 3 : i32}
+  // CHECK-SAME: #spv.coop_matrix_props<
+  // CHECK-SAME:   m_size = 8, n_size = 8, k_size = 32,
+  // CHECK-SAME:   a_type = i8, b_type = i8, c_type = i32,
+  // CHECK-SAME:   result_type = i32, scope = 3 : i32>
+  // CHECK-SAME: #spv.coop_matrix_props<
+  // CHECK-SAME:   m_size = 8, n_size = 8, k_size = 16,
+  // CHECK-SAME:   a_type = f16, b_type = f16, c_type = f16,
+  // CHECK-SAME:   result_type = f16, scope = 3 : i32>
   spv.target_env = #spv.target_env<
   #spv.vce<v1.0, [Shader], [SPV_KHR_storage_buffer_storage_class,
                             SPV_NV_cooperative_matrix]>,
-  {
-    cooperative_matrix_properties_nv = [{
-      m_size = 8: i32,
-      n_size = 8: i32,
-      k_size = 32: i32,
+  #spv.resource_limits<
+    cooperative_matrix_properties_nv = [#spv.coop_matrix_props<
+      m_size = 8,
+      n_size = 8,
+      k_size = 32,
       a_type = i8,
       b_type = i8,
       c_type = i32,
       result_type = i32,
-      scope = 3: i32
-    }, {
-      m_size = 8: i32,
-      n_size = 8: i32,
-      k_size = 16: i32,
+      scope = 3 : i32
+    >, #spv.coop_matrix_props<
+      m_size = 8,
+      n_size = 8,
+      k_size = 16,
       a_type = f16,
       b_type = f16,
       c_type = f16,
       result_type = f16,
-      scope = 3: i32
-    }]
-  }>
+      scope = 3 : i32
+    >]
+  >>
 } { return }
 
 // -----

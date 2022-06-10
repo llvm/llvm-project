@@ -27,12 +27,12 @@
 #include "flang/Lower/Runtime.h"
 #include "flang/Lower/StatementContext.h"
 #include "flang/Lower/Support/Utils.h"
-#include "flang/Lower/Todo.h"
 #include "flang/Optimizer/Builder/BoxValue.h"
 #include "flang/Optimizer/Builder/Character.h"
 #include "flang/Optimizer/Builder/FIRBuilder.h"
 #include "flang/Optimizer/Builder/Runtime/Character.h"
 #include "flang/Optimizer/Builder/Runtime/Ragged.h"
+#include "flang/Optimizer/Builder/Todo.h"
 #include "flang/Optimizer/Dialect/FIRAttr.h"
 #include "flang/Optimizer/Dialect/FIRDialect.h"
 #include "flang/Optimizer/Dialect/FIROps.h"
@@ -1445,7 +1445,7 @@ private:
   }
 
   void genFIR(const Fortran::parser::CompilerDirective &) {
-    TODO(toLocation(), "CompilerDirective lowering");
+    mlir::emitWarning(toLocation(), "ignoring all compiler directives");
   }
 
   void genFIR(const Fortran::parser::OpenACCConstruct &acc) {

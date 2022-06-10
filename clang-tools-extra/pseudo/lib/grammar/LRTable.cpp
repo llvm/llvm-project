@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "clang-pseudo/LRTable.h"
-#include "clang-pseudo/Grammar.h"
+#include "clang-pseudo/grammar/LRTable.h"
+#include "clang-pseudo/grammar/Grammar.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -25,8 +25,6 @@ llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, const LRTable::Action &A) {
     return OS << llvm::formatv("reduce by rule {0}", A.getReduceRule());
   case LRTable::Action::GoTo:
     return OS << llvm::formatv("go to state {0}", A.getGoToState());
-  case LRTable::Action::Accept:
-    return OS << "acc";
   case LRTable::Action::Sentinel:
     llvm_unreachable("unexpected Sentinel action kind!");
   }
@@ -60,8 +58,6 @@ std::string LRTable::dumpForTests(const Grammar &G) const {
           OS.indent(4) << llvm::formatv("'{0}': reduce by rule {1} '{2}'\n",
                                         G.symbolName(TokID), A.getReduceRule(),
                                         G.dumpRule(A.getReduceRule()));
-        else if (A.kind() == LRTable::Action::Accept)
-          OS.indent(4) << llvm::formatv("'{0}': accept\n", G.symbolName(TokID));
       }
     }
     for (SymbolID NontermID = 0; NontermID < G.table().Nonterminals.size();
@@ -91,7 +87,7 @@ LRTable::StateID LRTable::getGoToState(StateID State,
 }
 
 llvm::ArrayRef<LRTable::Action> LRTable::find(StateID Src, SymbolID ID) const {
-  assert(Src + 1 < StateOffset.size());
+  assert(Src + 1u < StateOffset.size());
   std::pair<size_t, size_t> Range =
       std::make_pair(StateOffset[Src], StateOffset[Src + 1]);
   auto SymbolRange = llvm::makeArrayRef(Symbols.data() + Range.first,

@@ -14,6 +14,8 @@
 #  pragma GCC system_header
 #endif
 
+#include <__concepts/arithmetic.h>
+#include <__concepts/same_as.h>
 #include <__config>
 #include <__format/concepts.h>
 #include <__format/format_arg.h>

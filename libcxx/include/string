@@ -524,10 +524,16 @@ basic_string<char32_t> operator "" s( const char32_t *str, size_t len );        
 #include <__config>
 #include <__debug>
 #include <__format/enable_insertable.h>
+#include <__functional/hash.h>
 #include <__functional/unary_function.h>
 #include <__ios/fpos.h>
+#include <__iterator/distance.h>
+#include <__iterator/iterator_traits.h>
+#include <__iterator/reverse_iterator.h>
 #include <__iterator/wrap_iter.h>
 #include <__memory/allocate_at_least.h>
+#include <__string/char_traits.h>
+#include <__string/extern_template_lists.h>
 #include <__utility/auto_cast.h>
 #include <__utility/move.h>
 #include <__utility/swap.h>
@@ -539,7 +545,7 @@ basic_string<char32_t> operator "" s( const char32_t *str, size_t len );        
 #include <cstring>
 #include <initializer_list>
 #include <iosfwd>
-#include <iterator>
+#include <iterator> // TODO: Remove this include
 #include <limits>
 #include <memory>
 #include <stdexcept>
@@ -597,7 +603,7 @@ _LIBCPP_CONSTEXPR_AFTER_CXX17
 basic_string<_CharT, _Traits, _Allocator>
 operator+(const basic_string<_CharT, _Traits, _Allocator>& __x, _CharT __y);
 
-_LIBCPP_EXTERN_TEMPLATE(_LIBCPP_FUNC_VIS string operator+<char, char_traits<char>, allocator<char> >(char const*, string const&))
+extern template _LIBCPP_FUNC_VIS string operator+<char, char_traits<char>, allocator<char> >(char const*, string const&);
 
 template <class _Iter>
 struct __string_is_trivial_iterator : public false_type {};
@@ -1794,17 +1800,19 @@ private:
 
 // These declarations must appear before any functions are implicitly used
 // so that they have the correct visibility specifier.
+#define _LIBCPP_DECLARE(...) extern template __VA_ARGS__;
 #ifdef _LIBCPP_ABI_STRING_OPTIMIZED_EXTERNAL_INSTANTIATION
-    _LIBCPP_STRING_UNSTABLE_EXTERN_TEMPLATE_LIST(_LIBCPP_EXTERN_TEMPLATE, char)
+    _LIBCPP_STRING_UNSTABLE_EXTERN_TEMPLATE_LIST(_LIBCPP_DECLARE, char)
 #   ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
-        _LIBCPP_STRING_UNSTABLE_EXTERN_TEMPLATE_LIST(_LIBCPP_EXTERN_TEMPLATE, wchar_t)
+        _LIBCPP_STRING_UNSTABLE_EXTERN_TEMPLATE_LIST(_LIBCPP_DECLARE, wchar_t)
 #   endif
 #else
-    _LIBCPP_STRING_V1_EXTERN_TEMPLATE_LIST(_LIBCPP_EXTERN_TEMPLATE, char)
+    _LIBCPP_STRING_V1_EXTERN_TEMPLATE_LIST(_LIBCPP_DECLARE, char)
 #   ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
-        _LIBCPP_STRING_V1_EXTERN_TEMPLATE_LIST(_LIBCPP_EXTERN_TEMPLATE, wchar_t)
+        _LIBCPP_STRING_V1_EXTERN_TEMPLATE_LIST(_LIBCPP_DECLARE, wchar_t)
 #   endif
 #endif
+#undef _LIBCPP_DECLARE
 
 
 #if _LIBCPP_STD_VER >= 17

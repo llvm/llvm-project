@@ -39,6 +39,13 @@ std::unique_ptr<Pass> createBufferResultsToOutParamsPass();
 /// Also update all call sites.
 LogicalResult promoteBufferResultsToOutParams(ModuleOp module);
 
+/// Creates a pass that drops memref function results that are equivalent to a
+/// function argument.
+std::unique_ptr<Pass> createDropEquivalentBufferResultsPass();
+
+/// Drop all memref function results that are equivalent to a function argument.
+LogicalResult dropEquivalentBufferResults(ModuleOp module);
+
 /// Creates a pass that finalizes a partial bufferization by removing remaining
 /// bufferization.to_tensor and bufferization.to_memref operations.
 std::unique_ptr<OperationPass<func::FuncOp>> createFinalizingBufferizePass();
@@ -70,6 +77,11 @@ std::unique_ptr<Pass> createAllocTensorEliminationPass();
 
 /// Create a pass that bufferizes ops from the bufferization dialect.
 std::unique_ptr<Pass> createBufferizationBufferizePass();
+
+/// Create a pass that resolves out-of-place tensor OpOperands with copies.
+std::unique_ptr<Pass> createTensorCopyInsertionPass();
+std::unique_ptr<Pass>
+createTensorCopyInsertionPass(const OneShotBufferizationOptions &options);
 
 //===----------------------------------------------------------------------===//
 // Registration

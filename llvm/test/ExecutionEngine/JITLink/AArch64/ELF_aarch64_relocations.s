@@ -3,6 +3,7 @@
 # RUN:   -position-independent -filetype=obj -o %t/elf_reloc.o %s
 # RUN: llvm-jitlink -noexec \
 # RUN:              -abs external_data=0xdeadbeef \
+# RUN:              -abs external_func=0xcafef00d \
 # RUN:              -check %s %t/elf_reloc.o
 
         .text
@@ -15,9 +16,10 @@ main:
 
         .size   main, .-main
 
-# Check R_AARCH64_CALL26 relocation of a local function call
+# Check R_AARCH64_CALL26 / R_AARCH64_JUMP26 relocation of a local function call
 #
 # jitlink-check: decode_operand(local_func_call26, 0)[25:0] = (local_func - local_func_call26)[27:2]
+# jitlink-check: decode_operand(local_func_jump26, 0)[25:0] = (local_func - local_func_jump26)[27:2]
         .globl  local_func
         .p2align  2
         .type	local_func,@function
@@ -31,6 +33,11 @@ local_func_call26:
         bl	local_func
         .size   local_func_call26, .-local_func_call26
 
+        .globl  local_func_jump26
+        .p2align  2
+local_func_jump26:
+        b	local_func
+        .size   local_func_jump26, .-local_func_jump26
 
 # Check R_AARCH64_ADR_PREL_PG_HI21 / R_AARCH64_ADD_ABS_LO12_NC relocation of a local symbol
 #
@@ -50,6 +57,24 @@ test_adr_prel:
 test_add_abs_lo12:
         add	x0, x0, :lo12:named_data
         .size test_add_abs_lo12, .-test_add_abs_lo12
+
+# Check that calls/jumps to external functions trigger the generation of stubs and GOT
+# entries.
+#
+# jitlink-check: decode_operand(test_external_call, 0) = (stub_addr(elf_reloc.o, external_func) - test_external_call)[27:2]
+# jitlink-check: decode_operand(test_external_jump, 0) = (stub_addr(elf_reloc.o, external_func) - test_external_jump)[27:2]
+# jitlink-check: *{8}(got_addr(elf_reloc.o, external_func)) = external_func
+        .globl  test_external_call
+        .p2align  2
+test_external_call:
+        bl   external_func
+        .size test_external_call, .-test_external_call
+
+       .globl  test_external_jump
+        .p2align  2
+test_external_jump:
+        b   external_func
+        .size test_external_jump, .-test_external_jump
 
 # Check R_AARCH64_LDST*_ABS_LO12_NC relocation of a local symbol
 #
@@ -124,6 +149,15 @@ test_str_64bit:
 local_func_addr_quad:
         .xword	named_func
         .size	local_func_addr_quad, 8
+
+# Check R_AARCH64_ABS64 relocation of a function pointer to external symbol
+#
+# jitlink-check: *{8}external_func_addr_quad = external_func
+        .globl  external_func_addr_quad
+        .p2align  3
+external_func_addr_quad:
+        .xword	external_func
+        .size	external_func_addr_quad, 8
 
 # Check R_AARCH64_ADR_GOT_PAGE / R_AARCH64_LD64_GOT_LO12_NC handling with a
 # reference to an external symbol. Validate both the reference to the GOT entry,

@@ -67,7 +67,7 @@ private:
 
   Value *simplify(Instruction *I, const TargetLibraryInfo *TLI,
                   const DominatorTree *DT) {
-    return SimplifyInstruction(I, {*TD, TLI, DT});
+    return simplifyInstruction(I, {*TD, TLI, DT});
   }
 
   const DataLayout *TD;

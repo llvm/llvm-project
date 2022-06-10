@@ -746,6 +746,8 @@ Syntax::
                          <global | constant> <Type> [<InitializerConstant>]
                          [, section "name"] [, partition "name"]
                          [, comdat [($name)]] [, align <Alignment>]
+                         [, no_sanitize] [, no_sanitize_address]
+                         [, no_sanitize_hwaddress] [, sanitize_address_dyninit]
                          (, !name !N)*
 
 For example, the following defines a global in a numbered address space
@@ -2320,6 +2322,25 @@ Global Attributes
 Attributes may be set to communicate additional information about a global variable.
 Unlike :ref:`function attributes <fnattrs>`, attributes on a global variable
 are grouped into a single :ref:`attribute group <attrgrp>`.
+
+``no_sanitize``
+    This attribute indicates that the global variable should not have any
+    sanitizers applied to it, either because it was in the sanitizer ignore
+    list, or it was annotated with
+    `__attribute__((disable_sanitizer_instrumentation))`.
+``no_sanitize_address``
+    This attribute indicates that the global variable should not have
+    AddressSanitizer instrumentation applied to it, because it was annotated
+    with `__attribute__((no_sanitize("address")))`.
+``no_sanitize_hwaddress``
+    This attribute indicates that the global variable should not have
+    HWAddressSanitizer instrumentation applied to it, because it was annotated
+    with `__attribute__((no_sanitize("hwaddress")))`.
+``sanitize_address_dyninit``
+    This attribute indicates that the global variable, when instrumented with
+    AddressSanitizer, should be checked for ODR violations. This attribute is
+    applied to global variables that are dynamically initialized according to
+    C++ rules.
 
 .. _opbundles:
 
@@ -13870,6 +13891,71 @@ the arguments.
 If ``<len>`` is not a well-defined value, the behavior is undefined.
 If ``<len>`` is not zero, ``<dest>`` should be well-defined, otherwise the
 behavior is undefined.
+
+.. _int_memset_inline:
+
+'``llvm.memset.inline``' Intrinsic
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+This is an overloaded intrinsic. You can use ``llvm.memset.inline`` on any
+integer bit width and for different address spaces. Not all targets
+support all bit widths however.
+
+::
+
+      declare void @llvm.memset.inline.p0i8.p0i8.i32(i8* <dest>, i8 <val>,
+                                                     i32 <len>,
+                                                     i1 <isvolatile>)
+      declare void @llvm.memset.inline.p0i8.p0i8.i64(i8* <dest>, i8 <val>,
+                                                     i64 <len>,
+                                                     i1 <isvolatile>)
+
+Overview:
+"""""""""
+
+The '``llvm.memset.inline.*``' intrinsics fill a block of memory with a
+particular byte value and guarantees that no external functions are called.
+
+Note that, unlike the standard libc function, the ``llvm.memset.inline.*``
+intrinsics do not return a value, take an extra isvolatile argument and the
+pointer can be in specified address spaces.
+
+Arguments:
+""""""""""
+
+The first argument is a pointer to the destination to fill, the second
+is the byte value with which to fill it, the third argument is a constant
+integer argument specifying the number of bytes to fill, and the fourth
+is a boolean indicating a volatile access.
+
+The :ref:`align <attr_align>` parameter attribute can be provided
+for the first argument.
+
+If the ``isvolatile`` parameter is ``true``, the ``llvm.memset.inline`` call is
+a :ref:`volatile operation <volatile>`. The detailed access behavior is not
+very cleanly specified and it is unwise to depend on it.
+
+Semantics:
+""""""""""
+
+The '``llvm.memset.inline.*``' intrinsics fill "len" bytes of memory starting
+at the destination location. If the argument is known to be
+aligned to some boundary, this can be specified as an attribute on
+the argument.
+
+``len`` must be a constant expression.
+If ``<len>`` is 0, it is no-op modulo the behavior of attributes attached to
+the arguments.
+If ``<len>`` is not a well-defined value, the behavior is undefined.
+If ``<len>`` is not zero, ``<dest>`` should be well-defined, otherwise the
+behavior is undefined.
+
+The behavior of '``llvm.memset.inline.*``' is equivalent to the behavior of
+'``llvm.memset.*``', but the generated code is guaranteed not to call any
+external functions.
 
 '``llvm.sqrt.*``' Intrinsic
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^

@@ -55,6 +55,8 @@ public:
   // Static Functions
   static void Initialize();
 
+  static void DebuggerInitialize(lldb_private::Debugger &debugger);
+
   static void Terminate();
 
   static llvm::StringRef GetPluginNameStatic() { return "pe-coff"; }
@@ -118,6 +120,10 @@ public:
   lldb_private::ArchSpec GetArchitecture() override;
 
   lldb_private::UUID GetUUID() override;
+
+  /// Return the contents of the .gnu_debuglink section, if the object file
+  /// contains it.
+  llvm::Optional<lldb_private::FileSpec> GetDebugLink();
 
   uint32_t GetDependentModules(lldb_private::FileSpecList &files) override;
 

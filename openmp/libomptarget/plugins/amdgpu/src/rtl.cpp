@@ -803,9 +803,6 @@ public:
       case HSA_AMD_SEGMENT_GROUP:
         TmpStr = "GROUP";
         break;
-      default:
-        TmpStr = "unknown";
-        break;
       }
       printf("      Pool %s: \n", TmpStr.c_str());
 

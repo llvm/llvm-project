@@ -7,7 +7,8 @@
 //===----------------------------------------------------------------------===//
 //
 // This file implements a function pass that inserts VSETVLI instructions where
-// needed.
+// needed and expands the vl outputs of VLEFF/VLSEGFF to PseudoReadVL
+// instructions.
 //
 // This pass consists of 3 phases:
 //
@@ -254,7 +255,8 @@ public:
            MaskAgnostic == Other.MaskAgnostic;
   }
 
-  bool hasCompatibleVTYPE(const MachineInstr &MI, const VSETVLIInfo &Require) const {
+  bool hasCompatibleVTYPE(const MachineInstr &MI,
+                          const VSETVLIInfo &Require) const {
     // Simple case, see if full VTYPE matches.
     if (hasSameVTYPE(Require))
       return true;
@@ -496,6 +498,7 @@ private:
   void doLocalPrepass(MachineBasicBlock &MBB);
   void doLocalPostpass(MachineBasicBlock &MBB);
   void doPRE(MachineBasicBlock &MBB);
+  void insertReadVL(MachineBasicBlock &MBB);
 };
 
 } // end anonymous namespace
@@ -903,7 +906,8 @@ bool canSkipVSETVLIForLoadStore(const MachineInstr &MI,
 /// before MI.  Require corresponds to the result of computeInfoForInstr(MI...)
 /// *before* we clear VLOp in phase3.  We can't recompute and assert it here due
 /// to that muation.
-bool RISCVInsertVSETVLI::needVSETVLI(const MachineInstr &MI, const VSETVLIInfo &Require,
+bool RISCVInsertVSETVLI::needVSETVLI(const MachineInstr &MI,
+                                     const VSETVLIInfo &Require,
                                      const VSETVLIInfo &CurInfo) const {
   if (CurInfo.isCompatible(MI, Require))
     return false;
@@ -1147,7 +1151,8 @@ void RISCVInsertVSETVLI::emitVSETVLIs(MachineBasicBlock &MBB) {
       // Note there's an implicit assumption here that terminators never use
       // or modify VL or VTYPE.  Also, fallthrough will return end().
       auto InsertPt = MBB.getFirstInstrTerminator();
-      insertVSETVLI(MBB, InsertPt, MBB.findDebugLoc(InsertPt), ExitInfo, CurInfo);
+      insertVSETVLI(MBB, InsertPt, MBB.findDebugLoc(InsertPt), ExitInfo,
+                    CurInfo);
       CurInfo = ExitInfo;
     }
   }
@@ -1406,6 +1411,23 @@ void RISCVInsertVSETVLI::doLocalPostpass(MachineBasicBlock &MBB) {
     MI->eraseFromParent();
 }
 
+void RISCVInsertVSETVLI::insertReadVL(MachineBasicBlock &MBB) {
+  const MachineFunction *MF = MBB.getParent();
+  const RISCVInstrInfo *TII = MF->getSubtarget<RISCVSubtarget>().getInstrInfo();
+
+  for (auto I = MBB.begin(), E = MBB.end(); I != E;) {
+    MachineInstr &MI = *I++;
+    if (TII->isFaultFirstLoad(MI)) {
+      Register VLOutput = MI.getOperand(1).getReg();
+      if (!MRI->use_nodbg_empty(VLOutput))
+        BuildMI(MBB, I, MI.getDebugLoc(), TII->get(RISCV::PseudoReadVL),
+                VLOutput);
+      // We don't use the vl output of the VLEFF/VLSEGFF anymore.
+      MI.getOperand(1).setReg(RISCV::X0);
+    }
+  }
+}
+
 bool RISCVInsertVSETVLI::runOnMachineFunction(MachineFunction &MF) {
   // Skip if the vector extension is not enabled.
   const RISCVSubtarget &ST = MF.getSubtarget<RISCVSubtarget>();
@@ -1495,6 +1517,11 @@ bool RISCVInsertVSETVLI::runOnMachineFunction(MachineFunction &MF) {
       }
     }
   }
+
+  // Insert PseudoReadVL after VLEFF/VLSEGFF and replace it with the vl output
+  // of VLEFF/VLSEGFF.
+  for (MachineBasicBlock &MBB : MF)
+    insertReadVL(MBB);
 
   BlockInfo.clear();
   return HaveVectorOp;

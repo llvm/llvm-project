@@ -120,6 +120,11 @@ API Changes
   the library has been built with support for the debug mode, and it will be
   enabled automatically (no need to define ``_LIBCPP_DEBUG``).
 
+- The ``_LIBCPP_DISABLE_EXTERN_TEMPLATE`` macro is not honored anymore when defined by
+  users of libc++. Instead, users not wishing to take a dependency on libc++ should link
+  against the static version of libc++, which will result in no dependency being
+  taken against the shared library.
+
 ABI Changes
 -----------
 
@@ -179,3 +184,8 @@ Build System Changes
 - The ``LIBCXX_ENABLE_DEBUG_MODE_SUPPORT`` CMake configuration is not supported anymore. If you
   were disabling support for the debug mode with that flag, please use ``LIBCXX_ENABLE_BACKWARDS_COMPATIBILITY_DEBUG_MODE_SYMBOLS=OFF``
   instead.
+
+- MinGW DLL builds of libc++ no longer use dllimport in their headers, which
+  means that the same set of installed headers works for both DLL and static
+  linkage. This means that distributors finally can build both library
+  versions with a single CMake invocation.

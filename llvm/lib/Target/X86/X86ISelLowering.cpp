@@ -19773,7 +19773,7 @@ SDValue X86TargetLowering::LowerINSERT_VECTOR_ELT(SDValue Op,
       // and incur a domain crossing penalty if that's what we'll end up
       // doing anyway after extracting to a 128-bit vector.
       if ((Subtarget.hasAVX() && (EltVT == MVT::f64 || EltVT == MVT::f32)) ||
-          (Subtarget.hasAVX2() && EltVT == MVT::i32)) {
+          (Subtarget.hasAVX2() && (EltVT == MVT::i32 || EltVT == MVT::i64))) {
         SDValue N1Vec = DAG.getNode(ISD::SCALAR_TO_VECTOR, dl, VT, N1);
         return DAG.getNode(X86ISD::BLENDI, dl, VT, N0, N1Vec,
                            DAG.getTargetConstant(1, dl, MVT::i8));
@@ -19787,7 +19787,7 @@ SDValue X86TargetLowering::LowerINSERT_VECTOR_ELT(SDValue Op,
     // If we are not inserting into the low 128-bit vector chunk,
     // then prefer the broadcast+blend sequence.
     // FIXME: relax the profitability check iff all N1 uses are insertions.
-    if (!VT.is128BitVector() && IdxVal >= NumEltsIn128 &&
+    if (IdxVal >= NumEltsIn128 &&
         ((Subtarget.hasAVX2() && EltSizeInBits != 8) ||
          (Subtarget.hasAVX() && (EltSizeInBits >= 32) &&
           X86::mayFoldLoad(N1, Subtarget)))) {
@@ -39186,6 +39186,7 @@ static SDValue canonicalizeShuffleWithBinOps(SDValue N, SelectionDAG &DAG,
   auto IsSafeToMoveShuffle = [ShuffleVT](SDValue Op, unsigned BinOp) {
     // Ensure we only shuffle whole vector src elements, unless its a logical
     // binops where we can more aggressively move shuffles from dst to src.
+    // TODO: Add X86ISD::ANDNP handling with test coverage.
     return BinOp == ISD::AND || BinOp == ISD::OR || BinOp == ISD::XOR ||
            (Op.getScalarValueSizeInBits() <= ShuffleVT.getScalarSizeInBits());
   };
@@ -45708,8 +45709,6 @@ static SDValue combineMulToPMADDWD(SDNode *N, SelectionDAG &DAG,
   if (NumElts == 1 || !isPowerOf2_32(NumElts))
     return SDValue();
 
-  EVT WVT = EVT::getVectorVT(*DAG.getContext(), MVT::i16, 2 * NumElts);
-
   // With AVX512 but without BWI, we would need to split v32i16.
   if (32 <= (2 * NumElts) && Subtarget.hasAVX512() && !Subtarget.hasBWI())
     return SDValue();
@@ -45792,11 +45791,13 @@ static SDValue combineMulToPMADDWD(SDNode *N, SelectionDAG &DAG,
   // Use SplitOpsAndApply to handle AVX splitting.
   auto PMADDWDBuilder = [](SelectionDAG &DAG, const SDLoc &DL,
                            ArrayRef<SDValue> Ops) {
-    MVT OpVT = MVT::getVectorVT(MVT::i32, Ops[0].getValueSizeInBits() / 32);
-    return DAG.getNode(X86ISD::VPMADDWD, DL, OpVT, Ops);
+    MVT ResVT = MVT::getVectorVT(MVT::i32, Ops[0].getValueSizeInBits() / 32);
+    MVT OpVT = MVT::getVectorVT(MVT::i16, Ops[0].getValueSizeInBits() / 16);
+    return DAG.getNode(X86ISD::VPMADDWD, DL, ResVT,
+                       DAG.getBitcast(OpVT, Ops[0]),
+                       DAG.getBitcast(OpVT, Ops[1]));
   };
-  return SplitOpsAndApply(DAG, Subtarget, SDLoc(N), VT,
-                          { DAG.getBitcast(WVT, N0), DAG.getBitcast(WVT, N1) },
+  return SplitOpsAndApply(DAG, Subtarget, SDLoc(N), VT, {N0, N1},
                           PMADDWDBuilder);
 }
 

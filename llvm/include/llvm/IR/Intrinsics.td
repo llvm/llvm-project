@@ -651,6 +651,17 @@ def int_memset  : Intrinsic<[],
                              NoCapture<ArgIndex<0>>, WriteOnly<ArgIndex<0>>,
                              ImmArg<ArgIndex<3>>]>;
 
+// Memset version that is guaranteed to be inlined.
+// In particular this means that the generated code is not allowed to call any
+// external function.
+// The third argument (specifying the size) must be a constant.
+def int_memset_inline
+    : Intrinsic<[],
+      [llvm_anyptr_ty, llvm_i8_ty, llvm_anyint_ty, llvm_i1_ty],
+      [IntrWriteMem, IntrArgMemOnly, IntrWillReturn, IntrNoFree,
+       NoCapture<ArgIndex<0>>, WriteOnly<ArgIndex<0>>, 
+       ImmArg<ArgIndex<2>>, ImmArg<ArgIndex<3>>]>;
+
 // FIXME: Add version of these floating point intrinsics which allow non-default
 // rounding modes and FP exception handling.
 

@@ -113,6 +113,28 @@ fir.global internal @_QEmultiarray : !fir.array<32xi32> {
 
 // -----
 
+// Test global with box
+
+fir.global internal @_QFEx : !fir.box<!fir.ptr<i32>> {
+  %0 = fir.zero_bits !fir.ptr<i32>
+  %1 = fir.embox %0 : (!fir.ptr<i32>) -> !fir.box<!fir.ptr<i32>>
+  fir.has_value %1 : !fir.box<!fir.ptr<i32>>
+}
+
+// CHECK-LABEL: llvm.mlir.global internal @_QFEx()
+// CHECK-SAME:  !llvm.struct<([[DES_FIELDS:.*]])>
+// CHECK:         %[[T0:.*]] = llvm.mlir.undef : !llvm.struct<([[DES_FIELDS]])>
+// CHECK:         %[[T1:.*]] = llvm.insertvalue %{{.*}}, %[[T0]][1 : i32] : !llvm.struct<([[DES_FIELDS]])>
+// CHECK:         %[[T2:.*]] = llvm.insertvalue %{{.*}}, %[[T1]][2 : i32] : !llvm.struct<([[DES_FIELDS]])>
+// CHECK:         %[[T3:.*]] = llvm.insertvalue %{{.*}}, %[[T2]][3 : i32] : !llvm.struct<([[DES_FIELDS]])>
+// CHECK:         %[[T4:.*]] = llvm.insertvalue %{{.*}}, %[[T3]][4 : i32] : !llvm.struct<([[DES_FIELDS]])>
+// CHECK:         %[[T5:.*]] = llvm.insertvalue %{{.*}}, %[[T4]][5 : i32] : !llvm.struct<([[DES_FIELDS]])>
+// CHECK:         %[[T6:.*]] = llvm.insertvalue %{{.*}}, %[[T5]][6 : i32] : !llvm.struct<([[DES_FIELDS]])>
+// CHECK:         %[[GDES:.*]] = llvm.insertvalue %{{.*}}, %[[T6]][0 : i32] : !llvm.struct<([[DES_FIELDS]])>
+// CHECK:         llvm.return %[[GDES]] : !llvm.struct<([[DES_FIELDS]])>
+
+// -----
+
 // Test fir.zero_bits operation with LLVM ptr type
 
 func.func @zero_test_ptr() {

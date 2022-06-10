@@ -1089,7 +1089,7 @@ const Expression *NewGVN::createBinaryExpression(unsigned Opcode, Type *T,
   E->op_push_back(lookupOperandLeader(Arg1));
   E->op_push_back(lookupOperandLeader(Arg2));
 
-  Value *V = SimplifyBinOp(Opcode, E->getOperand(0), E->getOperand(1), SQ);
+  Value *V = simplifyBinOp(Opcode, E->getOperand(0), E->getOperand(1), SQ);
   if (auto Simplified = checkExprResults(E, I, V)) {
     addAdditionalUsers(Simplified, I);
     return Simplified.Expr;
@@ -1167,13 +1167,13 @@ NewGVN::ExprResult NewGVN::createExpression(Instruction *I) const {
       Predicate = CmpInst::getSwappedPredicate(Predicate);
     }
     E->setOpcode((CI->getOpcode() << 8) | Predicate);
-    // TODO: 25% of our time is spent in SimplifyCmpInst with pointer operands
+    // TODO: 25% of our time is spent in simplifyCmpInst with pointer operands
     assert(I->getOperand(0)->getType() == I->getOperand(1)->getType() &&
            "Wrong types on cmp instruction");
     assert((E->getOperand(0)->getType() == I->getOperand(0)->getType() &&
             E->getOperand(1)->getType() == I->getOperand(1)->getType()));
     Value *V =
-        SimplifyCmpInst(Predicate, E->getOperand(0), E->getOperand(1), SQ);
+        simplifyCmpInst(Predicate, E->getOperand(0), E->getOperand(1), SQ);
     if (auto Simplified = checkExprResults(E, I, V))
       return Simplified;
   } else if (isa<SelectInst>(I)) {
@@ -1181,24 +1181,24 @@ NewGVN::ExprResult NewGVN::createExpression(Instruction *I) const {
         E->getOperand(1) == E->getOperand(2)) {
       assert(E->getOperand(1)->getType() == I->getOperand(1)->getType() &&
              E->getOperand(2)->getType() == I->getOperand(2)->getType());
-      Value *V = SimplifySelectInst(E->getOperand(0), E->getOperand(1),
+      Value *V = simplifySelectInst(E->getOperand(0), E->getOperand(1),
                                     E->getOperand(2), SQ);
       if (auto Simplified = checkExprResults(E, I, V))
         return Simplified;
     }
   } else if (I->isBinaryOp()) {
     Value *V =
-        SimplifyBinOp(E->getOpcode(), E->getOperand(0), E->getOperand(1), SQ);
+        simplifyBinOp(E->getOpcode(), E->getOperand(0), E->getOperand(1), SQ);
     if (auto Simplified = checkExprResults(E, I, V))
       return Simplified;
   } else if (auto *CI = dyn_cast<CastInst>(I)) {
     Value *V =
-        SimplifyCastInst(CI->getOpcode(), E->getOperand(0), CI->getType(), SQ);
+        simplifyCastInst(CI->getOpcode(), E->getOperand(0), CI->getType(), SQ);
     if (auto Simplified = checkExprResults(E, I, V))
       return Simplified;
   } else if (auto *GEPI = dyn_cast<GetElementPtrInst>(I)) {
     Value *V =
-        SimplifyGEPInst(GEPI->getSourceElementType(), *E->op_begin(),
+        simplifyGEPInst(GEPI->getSourceElementType(), *E->op_begin(),
                         makeArrayRef(std::next(E->op_begin()), E->op_end()),
                         GEPI->isInBounds(), SQ);
     if (auto Simplified = checkExprResults(E, I, V))

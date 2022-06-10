@@ -1581,6 +1581,15 @@ bool SITargetLowering::shouldConvertConstantLoadToIntImm(const APInt &Imm,
   return true;
 }
 
+bool SITargetLowering::isExtractSubvectorCheap(EVT ResVT, EVT SrcVT,
+                                               unsigned Index) const {
+  if (!isOperationLegalOrCustom(ISD::EXTRACT_SUBVECTOR, ResVT))
+    return false;
+
+  // TODO: Add more cases that are cheap.
+  return Index == 0;
+}
+
 bool SITargetLowering::isTypeDesirableForOp(unsigned Op, EVT VT) const {
   if (Subtarget->has16BitInsts() && VT == MVT::i16) {
     switch (Op) {

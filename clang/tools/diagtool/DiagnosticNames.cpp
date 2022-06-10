@@ -66,7 +66,7 @@ const DiagnosticRecord &diagtool::getDiagnosticForID(short DiagID) {
 
 // Second the table of options, sorted by name for fast binary lookup.
 static const GroupRecord OptionTable[] = {
-#define DIAG_ENTRY(GroupName, FlagNameOffset, Members, SubGroups)              \
+#define DIAG_ENTRY(GroupName, FlagNameOffset, Members, SubGroups, Docs)        \
   {FlagNameOffset, Members, SubGroups},
 #include "clang/Basic/DiagnosticGroups.inc"
 #undef DIAG_ENTRY

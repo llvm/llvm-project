@@ -11,19 +11,18 @@ define void @multiple_iv_uses_in_same_instruction([100 x [100 x i32]]* %ptr) {
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <2 x i32> [ <i32 0, i32 1>, [[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], [[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[INDEX]], 0
-; CHECK-NEXT:    [[TMP1:%.*]] = add i64 [[INDEX]], 1
-; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds [100 x [100 x i32]], [100 x [100 x i32]]* [[PTR:%.*]], i64 0, i64 [[TMP0]], i64 [[TMP0]]
-; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds [100 x [100 x i32]], [100 x [100 x i32]]* [[PTR]], i64 0, i64 [[TMP1]], i64 [[TMP1]]
-; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <2 x i32> [[VEC_IND]], i32 0
-; CHECK-NEXT:    store i32 [[TMP4]], i32* [[TMP2]], align 4
-; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <2 x i32> [[VEC_IND]], i32 1
-; CHECK-NEXT:    store i32 [[TMP5]], i32* [[TMP3]], align 4
+; CHECK-NEXT:    [[TMP0:%.*]] = trunc i64 [[INDEX]] to i32
+; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[TMP0]], 0
+; CHECK-NEXT:    [[TMP2:%.*]] = add i32 [[TMP0]], 1
+; CHECK-NEXT:    [[TMP3:%.*]] = add i64 [[INDEX]], 0
+; CHECK-NEXT:    [[TMP4:%.*]] = add i64 [[INDEX]], 1
+; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds [100 x [100 x i32]], [100 x [100 x i32]]* [[PTR:%.*]], i64 0, i64 [[TMP3]], i64 [[TMP3]]
+; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds [100 x [100 x i32]], [100 x [100 x i32]]* [[PTR]], i64 0, i64 [[TMP4]], i64 [[TMP4]]
+; CHECK-NEXT:    store i32 [[TMP1]], i32* [[TMP5]], align 4
+; CHECK-NEXT:    store i32 [[TMP2]], i32* [[TMP6]], align 4
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
-; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <2 x i32> [[VEC_IND]], <i32 2, i32 2>
-; CHECK-NEXT:    [[TMP6:%.*]] = icmp eq i64 [[INDEX_NEXT]], 100
-; CHECK-NEXT:    br i1 [[TMP6]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
+; CHECK-NEXT:    [[TMP7:%.*]] = icmp eq i64 [[INDEX_NEXT]], 100
+; CHECK-NEXT:    br i1 [[TMP7]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 100, 100
 ; CHECK-NEXT:    br i1 [[CMP_N]], label [[EXIT:%.*]], label [[SCALAR_PH]]

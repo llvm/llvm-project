@@ -11,10 +11,14 @@
 #define _LIBCPP___TREE
 
 #include <__algorithm/min.h>
+#include <__assert>
 #include <__config>
+#include <__debug>
+#include <__iterator/distance.h>
+#include <__iterator/iterator_traits.h>
+#include <__iterator/next.h>
 #include <__utility/forward.h>
 #include <__utility/swap.h>
-#include <iterator>
 #include <limits>
 #include <memory>
 #include <stdexcept>
