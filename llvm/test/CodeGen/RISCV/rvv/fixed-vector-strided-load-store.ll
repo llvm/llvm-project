@@ -867,10 +867,9 @@ define void @gather_no_scalar_remainder(i8* noalias nocapture noundef %arg, i8* 
 ; CHECK-NEXT:    br label [[BB4:%.*]]
 ; CHECK:       bb4:
 ; CHECK-NEXT:    [[I5:%.*]] = phi i64 [ [[I13:%.*]], [[BB4]] ], [ 0, [[BB2]] ]
-; CHECK-NEXT:    [[I6:%.*]] = phi <16 x i64> [ [[I14:%.*]], [[BB4]] ], [ <i64 0, i64 1, i64 2, i64 3, i64 4, i64 5, i64 6, i64 7, i64 8, i64 9, i64 10, i64 11, i64 12, i64 13, i64 14, i64 15>, [[BB2]] ]
-; CHECK-NEXT:    [[I7:%.*]] = mul <16 x i64> [[I6]], <i64 5, i64 5, i64 5, i64 5, i64 5, i64 5, i64 5, i64 5, i64 5, i64 5, i64 5, i64 5, i64 5, i64 5, i64 5, i64 5>
-; CHECK-NEXT:    [[I8:%.*]] = getelementptr inbounds i8, i8* [[ARG1:%.*]], <16 x i64> [[I7]]
-; CHECK-NEXT:    [[I9:%.*]] = call <16 x i8> @llvm.masked.gather.v16i8.v16p0i8(<16 x i8*> [[I8]], i32 1, <16 x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>, <16 x i8> undef)
+; CHECK-NEXT:    [[I6_SCALAR:%.*]] = phi i64 [ 0, [[BB2]] ], [ [[I14_SCALAR:%.*]], [[BB4]] ]
+; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr i8, i8* [[ARG1:%.*]], i64 [[I6_SCALAR]]
+; CHECK-NEXT:    [[I9:%.*]] = call <16 x i8> @llvm.riscv.masked.strided.load.v16i8.p0i8.i64(<16 x i8> undef, i8* [[TMP0]], i64 5, <16 x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>)
 ; CHECK-NEXT:    [[I10:%.*]] = getelementptr inbounds i8, i8* [[ARG:%.*]], i64 [[I5]]
 ; CHECK-NEXT:    [[CAST:%.*]] = bitcast i8* [[I10]] to <16 x i8>*
 ; CHECK-NEXT:    [[I11:%.*]] = load <16 x i8>, <16 x i8>* [[CAST]], align 1
@@ -878,7 +877,7 @@ define void @gather_no_scalar_remainder(i8* noalias nocapture noundef %arg, i8* 
 ; CHECK-NEXT:    [[CAST2:%.*]] = bitcast i8* [[I10]] to <16 x i8>*
 ; CHECK-NEXT:    store <16 x i8> [[I12]], <16 x i8>* [[CAST2]], align 1
 ; CHECK-NEXT:    [[I13]] = add nuw i64 [[I5]], 16
-; CHECK-NEXT:    [[I14]] = add <16 x i64> [[I6]], <i64 16, i64 16, i64 16, i64 16, i64 16, i64 16, i64 16, i64 16, i64 16, i64 16, i64 16, i64 16, i64 16, i64 16, i64 16, i64 16>
+; CHECK-NEXT:    [[I14_SCALAR]] = add i64 [[I6_SCALAR]], 80
 ; CHECK-NEXT:    [[I15:%.*]] = icmp eq i64 [[I13]], [[I]]
 ; CHECK-NEXT:    br i1 [[I15]], label [[BB16]], label [[BB4]]
 ; CHECK:       bb16:

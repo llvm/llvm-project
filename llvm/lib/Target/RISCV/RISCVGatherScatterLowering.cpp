@@ -338,9 +338,9 @@ RISCVGatherScatterLowering::determineBaseAndStride(GetElementPtrInst *GEP,
   if (Ops[0]->getType()->isVectorTy())
     return std::make_pair(nullptr, nullptr);
 
-  // Make sure we're in a loop and it is in loop simplify form.
+  // Make sure we're in a loop and that has a pre-header and a single latch.
   Loop *L = LI->getLoopFor(GEP->getParent());
-  if (!L || !L->isLoopSimplifyForm())
+  if (!L || !L->getLoopPreheader() || !L->getLoopLatch())
     return std::make_pair(nullptr, nullptr);
 
   Optional<unsigned> VecOperand;
