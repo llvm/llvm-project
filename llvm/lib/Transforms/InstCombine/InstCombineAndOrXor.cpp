@@ -1796,25 +1796,6 @@ Instruction *InstCombinerImpl::visitAnd(BinaryOperator &I) {
       return BinaryOperator::CreateOr(And, ConstantInt::get(Ty, Together));
     }
 
-    // If the mask is only needed on one incoming arm, push the 'and' op up.
-    if (match(Op0, m_OneUse(m_Xor(m_Value(X), m_Value(Y)))) ||
-        match(Op0, m_OneUse(m_Or(m_Value(X), m_Value(Y))))) {
-      APInt NotAndMask(~(*C));
-      BinaryOperator::BinaryOps BinOp = cast<BinaryOperator>(Op0)->getOpcode();
-      if (MaskedValueIsZero(X, NotAndMask, 0, &I)) {
-        // Not masking anything out for the LHS, move mask to RHS.
-        // and ({x}or X, Y), C --> {x}or X, (and Y, C)
-        Value *NewRHS = Builder.CreateAnd(Y, Op1, Y->getName() + ".masked");
-        return BinaryOperator::Create(BinOp, X, NewRHS);
-      }
-      if (!isa<Constant>(Y) && MaskedValueIsZero(Y, NotAndMask, 0, &I)) {
-        // Not masking anything out for the RHS, move mask to LHS.
-        // and ({x}or X, Y), C --> {x}or (and X, C), Y
-        Value *NewLHS = Builder.CreateAnd(X, Op1, X->getName() + ".masked");
-        return BinaryOperator::Create(BinOp, NewLHS, Y);
-      }
-    }
-
     unsigned Width = Ty->getScalarSizeInBits();
     const APInt *ShiftC;
     if (match(Op0, m_OneUse(m_SExt(m_AShr(m_Value(X), m_APInt(ShiftC)))))) {
@@ -1909,6 +1890,27 @@ Instruction *InstCombinerImpl::visitAnd(BinaryOperator &I) {
         Value *NewBO =
             Builder.CreateBinOp(BOpcode, TrY, X, BO->getName() + ".narrow");
         return new ZExtInst(NewBO, Ty);
+      }
+    }
+
+    // This is intentionally placed after the narrowing transforms for
+    // efficiency (transform directly to the narrow logic op if possible).
+    // If the mask is only needed on one incoming arm, push the 'and' op up.
+    if (match(Op0, m_OneUse(m_Xor(m_Value(X), m_Value(Y)))) ||
+        match(Op0, m_OneUse(m_Or(m_Value(X), m_Value(Y))))) {
+      APInt NotAndMask(~(*C));
+      BinaryOperator::BinaryOps BinOp = cast<BinaryOperator>(Op0)->getOpcode();
+      if (MaskedValueIsZero(X, NotAndMask, 0, &I)) {
+        // Not masking anything out for the LHS, move mask to RHS.
+        // and ({x}or X, Y), C --> {x}or X, (and Y, C)
+        Value *NewRHS = Builder.CreateAnd(Y, Op1, Y->getName() + ".masked");
+        return BinaryOperator::Create(BinOp, X, NewRHS);
+      }
+      if (!isa<Constant>(Y) && MaskedValueIsZero(Y, NotAndMask, 0, &I)) {
+        // Not masking anything out for the RHS, move mask to LHS.
+        // and ({x}or X, Y), C --> {x}or (and X, C), Y
+        Value *NewLHS = Builder.CreateAnd(X, Op1, X->getName() + ".masked");
+        return BinaryOperator::Create(BinOp, NewLHS, Y);
       }
     }
 
