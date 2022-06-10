@@ -8,10 +8,10 @@
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
 
-@a = internal global [3 x i8*] zeroinitializer
-@b = linkonce_odr alias [3 x i8*], [3 x i8*]* @a
+@a = internal global [3 x ptr] zeroinitializer
+@b = linkonce_odr alias [3 x ptr], ptr @a
 
-define i8** @f() {
-  ; CHECK: ret i8** getelementptr ([3 x i8*], [3 x i8*]* @b, i64 0, i64 1)
-  ret i8** getelementptr ([3 x i8*], [3 x i8*]* @b, i64 0, i64 1)
+define ptr @f() {
+  ; CHECK: ret ptr getelementptr ([3 x ptr], ptr @b, i64 0, i64 1)
+  ret ptr getelementptr ([3 x ptr], ptr @b, i64 0, i64 1)
 }

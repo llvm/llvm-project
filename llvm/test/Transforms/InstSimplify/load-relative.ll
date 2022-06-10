@@ -6,70 +6,70 @@ target triple = "x86_64-unknown-linux-gnu"
 @a = external global i8
 @b = external global i8
 
-@c1 = constant i32 trunc (i64 sub (i64 ptrtoint (i8* @a to i64), i64 ptrtoint (i32* @c1 to i64)) to i32)
+@c1 = constant i32 trunc (i64 sub (i64 ptrtoint (ptr @a to i64), i64 ptrtoint (ptr @c1 to i64)) to i32)
 @c2 = constant [7 x i32] [i32 0, i32 0,
-i32 trunc (i64 sub (i64 ptrtoint (i8* @a to i64), i64 ptrtoint (i32* getelementptr ([7 x i32], [7 x i32]* @c2, i32 0, i32 2) to i64)) to i32),
-i32 trunc (i64 sub (i64 ptrtoint (i8* @b to i64), i64 ptrtoint (i32* getelementptr ([7 x i32], [7 x i32]* @c2, i32 0, i32 2) to i64)) to i32),
-i32 trunc (i64 add (i64 ptrtoint (i8* @b to i64), i64 ptrtoint (i32* getelementptr ([7 x i32], [7 x i32]* @c2, i32 0, i32 2) to i64)) to i32),
-i32 trunc (i64 sub (i64 ptrtoint (i8* @b to i64), i64 1) to i32),
-i32 trunc (i64 sub (i64 0, i64 ptrtoint (i32* getelementptr ([7 x i32], [7 x i32]* @c2, i32 0, i32 2) to i64)) to i32)
+i32 trunc (i64 sub (i64 ptrtoint (ptr @a to i64), i64 ptrtoint (ptr getelementptr ([7 x i32], ptr @c2, i32 0, i32 2) to i64)) to i32),
+i32 trunc (i64 sub (i64 ptrtoint (ptr @b to i64), i64 ptrtoint (ptr getelementptr ([7 x i32], ptr @c2, i32 0, i32 2) to i64)) to i32),
+i32 trunc (i64 add (i64 ptrtoint (ptr @b to i64), i64 ptrtoint (ptr getelementptr ([7 x i32], ptr @c2, i32 0, i32 2) to i64)) to i32),
+i32 trunc (i64 sub (i64 ptrtoint (ptr @b to i64), i64 1) to i32),
+i32 trunc (i64 sub (i64 0, i64 ptrtoint (ptr getelementptr ([7 x i32], ptr @c2, i32 0, i32 2) to i64)) to i32)
 ]
 
 ; CHECK: @f1
-define i8* @f1() {
-  ; CHECK: ret i8* @a
-  %l = call i8* @llvm.load.relative.i32(i8* bitcast (i32* @c1 to i8*), i32 0)
-  ret i8* %l
+define ptr @f1() {
+  ; CHECK: ret ptr @a
+  %l = call ptr @llvm.load.relative.i32(ptr @c1, i32 0)
+  ret ptr %l
 }
 
 ; CHECK: @f2
-define i8* @f2() {
-  ; CHECK: ret i8* @a
-  %l = call i8* @llvm.load.relative.i32(i8* bitcast (i32* getelementptr ([7 x i32], [7 x i32]* @c2, i64 0, i64 2) to i8*), i32 0)
-  ret i8* %l
+define ptr @f2() {
+  ; CHECK: ret ptr @a
+  %l = call ptr @llvm.load.relative.i32(ptr getelementptr ([7 x i32], ptr @c2, i64 0, i64 2), i32 0)
+  ret ptr %l
 }
 
 ; CHECK: @f3
-define i8* @f3() {
-  ; CHECK: ret i8* @b
-  %l = call i8* @llvm.load.relative.i64(i8* bitcast (i32* getelementptr ([7 x i32], [7 x i32]* @c2, i64 0, i64 2) to i8*), i64 4)
-  ret i8* %l
+define ptr @f3() {
+  ; CHECK: ret ptr @b
+  %l = call ptr @llvm.load.relative.i64(ptr getelementptr ([7 x i32], ptr @c2, i64 0, i64 2), i64 4)
+  ret ptr %l
 }
 
 ; CHECK: @f4
-define i8* @f4() {
-  ; CHECK: ret i8* %
-  %l = call i8* @llvm.load.relative.i32(i8* bitcast (i32* getelementptr ([7 x i32], [7 x i32]* @c2, i64 0, i64 2) to i8*), i32 1)
-  ret i8* %l
+define ptr @f4() {
+  ; CHECK: ret ptr %
+  %l = call ptr @llvm.load.relative.i32(ptr getelementptr ([7 x i32], ptr @c2, i64 0, i64 2), i32 1)
+  ret ptr %l
 }
 
 ; CHECK: @f5
-define i8* @f5() {
-  ; CHECK: ret i8* %
-  %l = call i8* @llvm.load.relative.i32(i8* zeroinitializer, i32 0)
-  ret i8* %l
+define ptr @f5() {
+  ; CHECK: ret ptr %
+  %l = call ptr @llvm.load.relative.i32(ptr zeroinitializer, i32 0)
+  ret ptr %l
 }
 
 ; CHECK: @f6
-define i8* @f6() {
-  ; CHECK: ret i8* %
-  %l = call i8* @llvm.load.relative.i32(i8* bitcast (i32* getelementptr ([7 x i32], [7 x i32]* @c2, i64 0, i64 2) to i8*), i32 8)
-  ret i8* %l
+define ptr @f6() {
+  ; CHECK: ret ptr %
+  %l = call ptr @llvm.load.relative.i32(ptr getelementptr ([7 x i32], ptr @c2, i64 0, i64 2), i32 8)
+  ret ptr %l
 }
 
 ; CHECK: @f7
-define i8* @f7() {
-  ; CHECK: ret i8* %
-  %l = call i8* @llvm.load.relative.i32(i8* bitcast (i32* getelementptr ([7 x i32], [7 x i32]* @c2, i64 0, i64 2) to i8*), i32 12)
-  ret i8* %l
+define ptr @f7() {
+  ; CHECK: ret ptr %
+  %l = call ptr @llvm.load.relative.i32(ptr getelementptr ([7 x i32], ptr @c2, i64 0, i64 2), i32 12)
+  ret ptr %l
 }
 
 ; CHECK: @f8
-define i8* @f8() {
-  ; CHECK: ret i8* %
-  %l = call i8* @llvm.load.relative.i32(i8* bitcast (i32* getelementptr ([7 x i32], [7 x i32]* @c2, i64 0, i64 2) to i8*), i32 16)
-  ret i8* %l
+define ptr @f8() {
+  ; CHECK: ret ptr %
+  %l = call ptr @llvm.load.relative.i32(ptr getelementptr ([7 x i32], ptr @c2, i64 0, i64 2), i32 16)
+  ret ptr %l
 }
 
-declare i8* @llvm.load.relative.i32(i8*, i32)
-declare i8* @llvm.load.relative.i64(i8*, i64)
+declare ptr @llvm.load.relative.i32(ptr, i32)
+declare ptr @llvm.load.relative.i64(ptr, i64)

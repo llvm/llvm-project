@@ -63,118 +63,118 @@ define double @T() {
   %slotf = alloca float
 ; FNOBUILTIN: call
   %1 = call double @acos(double 1.000000e+00)
-  store double %1, double* %slot
+  store double %1, ptr %slot
 ; FNOBUILTIN: call
   %2 = call double @asin(double 1.000000e+00)
-  store double %2, double* %slot
+  store double %2, ptr %slot
 ; FNOBUILTIN: call
   %3 = call double @atan(double 3.000000e+00)
-  store double %3, double* %slot
+  store double %3, ptr %slot
 ; FNOBUILTIN: call
   %4 = call double @atan2(double 3.000000e+00, double 4.000000e+00)
-  store double %4, double* %slot
+  store double %4, ptr %slot
 ; FNOBUILTIN: call
   %5 = call double @ceil(double 3.000000e+00)
-  store double %5, double* %slot
+  store double %5, ptr %slot
 ; FNOBUILTIN: call
   %6 = call double @cosh(double 3.000000e+00)
-  store double %6, double* %slot
+  store double %6, ptr %slot
 ; FNOBUILTIN: call
   %7 = call double @exp(double 3.000000e+00)
-  store double %7, double* %slot
+  store double %7, ptr %slot
 ; FNOBUILTIN: call
   %8 = call double @exp2(double 3.000000e+00)
-  store double %8, double* %slot
+  store double %8, ptr %slot
 ; FNOBUILTIN: call
   %9 = call double @fabs(double 3.000000e+00)
-  store double %9, double* %slot
+  store double %9, ptr %slot
 ; FNOBUILTIN: call
   %10 = call double @floor(double 3.000000e+00)
-  store double %10, double* %slot
+  store double %10, ptr %slot
 ; FNOBUILTIN: call
   %11 = call double @fmod(double 3.000000e+00, double 4.000000e+00)
-  store double %11, double* %slot
+  store double %11, ptr %slot
 ; FNOBUILTIN: call
   %12 = call double @log(double 3.000000e+00)
-  store double %12, double* %slot
+  store double %12, ptr %slot
 ; FNOBUILTIN: call
   %13 = call double @log10(double 3.000000e+00)
-  store double %13, double* %slot
+  store double %13, ptr %slot
 ; FNOBUILTIN: call
   %14 = call double @pow(double 3.000000e+00, double 4.000000e+00)
-  store double %14, double* %slot
+  store double %14, ptr %slot
 ; FNOBUILTIN: call
   %round_val = call double @round(double 3.000000e+00)
-  store double %round_val, double* %slot
+  store double %round_val, ptr %slot
 ; FNOBUILTIN: call
   %15 = call double @sinh(double 3.000000e+00)
-  store double %15, double* %slot
+  store double %15, ptr %slot
 ; FNOBUILTIN: call
   %16 = call double @tanh(double 3.000000e+00)
-  store double %16, double* %slot
+  store double %16, ptr %slot
 ; FNOBUILTIN: call
   %17 = call float @acosf(float 1.000000e+00)
-  store float %17, float* %slotf
+  store float %17, ptr %slotf
 ; FNOBUILTIN: call
   %18 = call float @asinf(float 1.000000e+00)
-  store float %18, float* %slotf
+  store float %18, ptr %slotf
 ; FNOBUILTIN: call
   %19 = call float @atanf(float 3.000000e+00)
-  store float %19, float* %slotf
+  store float %19, ptr %slotf
 ; FNOBUILTIN: call
   %20 = call float @atan2f(float 3.000000e+00, float 4.000000e+00)
-  store float %20, float* %slotf
+  store float %20, ptr %slotf
 ; FNOBUILTIN: call
   %21 = call float @ceilf(float 3.000000e+00)
-  store float %21, float* %slotf
+  store float %21, ptr %slotf
 ; FNOBUILTIN: call
   %22 = call float @cosf(float 3.000000e+00)
-  store float %22, float* %slotf
+  store float %22, ptr %slotf
 ; FNOBUILTIN: call
   %23 = call float @coshf(float 3.000000e+00)
-  store float %23, float* %slotf
+  store float %23, ptr %slotf
 ; FNOBUILTIN: call
   %24 = call float @expf(float 3.000000e+00)
-  store float %24, float* %slotf
+  store float %24, ptr %slotf
 ; FNOBUILTIN: call
   %25 = call float @exp2f(float 3.000000e+00)
-  store float %25, float* %slotf
+  store float %25, ptr %slotf
 ; FNOBUILTIN: call
   %26 = call float @fabsf(float 3.000000e+00)
-  store float %26, float* %slotf
+  store float %26, ptr %slotf
 ; FNOBUILTIN: call
   %27 = call float @floorf(float 3.000000e+00)
-  store float %27, float* %slotf
+  store float %27, ptr %slotf
 ; FNOBUILTIN: call
   %28 = call float @fmodf(float 3.000000e+00, float 4.000000e+00)
-  store float %28, float* %slotf
+  store float %28, ptr %slotf
 ; FNOBUILTIN: call
   %29 = call float @logf(float 3.000000e+00)
-  store float %29, float* %slotf
+  store float %29, ptr %slotf
 ; FNOBUILTIN: call
   %30 = call float @log10f(float 3.000000e+00)
-  store float %30, float* %slotf
+  store float %30, ptr %slotf
 ; FNOBUILTIN: call
   %31 = call float @powf(float 3.000000e+00, float 4.000000e+00)
-  store float %31, float* %slotf
+  store float %31, ptr %slotf
 ; FNOBUILTIN: call
   %roundf_val = call float @roundf(float 3.000000e+00)
-  store float %roundf_val, float* %slotf
+  store float %roundf_val, ptr %slotf
 ; FNOBUILTIN: call
   %32 = call float @sinf(float 3.000000e+00)
-  store float %32, float* %slotf
+  store float %32, ptr %slotf
 ; FNOBUILTIN: call
   %33 = call float @sinhf(float 3.000000e+00)
-  store float %33, float* %slotf
+  store float %33, ptr %slotf
 ; FNOBUILTIN: call
   %34 = call float @sqrtf(float 3.000000e+00)
-  store float %34, float* %slotf
+  store float %34, ptr %slotf
 ; FNOBUILTIN: call
   %35 = call float @tanf(float 3.000000e+00)
-  store float %35, float* %slotf
+  store float %35, ptr %slotf
 ; FNOBUILTIN: call
   %36 = call float @tanhf(float 3.000000e+00)
-  store float %36, float* %slotf
+  store float %36, ptr %slotf
 
 ; FNOBUILTIN: ret
 

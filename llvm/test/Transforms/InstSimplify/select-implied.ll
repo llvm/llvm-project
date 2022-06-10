@@ -76,20 +76,20 @@ end:
   ret void
 }
 
-define i8 @PR23333(i8 addrspace(1)* %ptr) {
+define i8 @PR23333(ptr addrspace(1) %ptr) {
 ; CHECK-LABEL: @PR23333(
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 addrspace(1)* [[PTR:%.*]], null
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq ptr addrspace(1) [[PTR:%.*]], null
 ; CHECK-NEXT:    br i1 [[CMP]], label [[TAKEN:%.*]], label [[END:%.*]]
 ; CHECK:       taken:
 ; CHECK-NEXT:    ret i8 1
 ; CHECK:       end:
 ; CHECK-NEXT:    ret i8 0
 ;
-  %cmp = icmp eq i8 addrspace(1)* %ptr, null
+  %cmp = icmp eq ptr addrspace(1) %ptr, null
   br i1 %cmp, label %taken, label %end
 
 taken:
-  %cmp2 = icmp ne i8 addrspace(1)* %ptr, null
+  %cmp2 = icmp ne ptr addrspace(1) %ptr, null
   %res = select i1 %cmp2, i8 2, i8 1
   ret i8 %res
 

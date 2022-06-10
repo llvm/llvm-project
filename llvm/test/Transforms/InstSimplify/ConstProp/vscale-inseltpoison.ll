@@ -208,10 +208,10 @@ define <vscale x 4 x i32> @shufflevector() {
 
 define <vscale x 2 x double> @load() {
 ; CHECK-LABEL: @load(
-; CHECK-NEXT:    [[R:%.*]] = load <vscale x 2 x double>, <vscale x 2 x double>* getelementptr (<vscale x 2 x double>, <vscale x 2 x double>* null, i64 1), align 16
+; CHECK-NEXT:    [[R:%.*]] = load <vscale x 2 x double>, ptr getelementptr (<vscale x 2 x double>, ptr null, i64 1), align 16
 ; CHECK-NEXT:    ret <vscale x 2 x double> [[R]]
 ;
-  %r = load <vscale x 2 x double>, <vscale x 2 x double>* getelementptr (<vscale x 2 x double>, <vscale x 2 x double>* null, i64 1)
+  %r = load <vscale x 2 x double>, ptr getelementptr (<vscale x 2 x double>, ptr null, i64 1)
   ret <vscale x 2 x double> %r
 }
 

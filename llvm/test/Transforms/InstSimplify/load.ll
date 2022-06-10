@@ -8,7 +8,7 @@ define i32 @crash_on_zeroinit() {
 ; CHECK-LABEL: @crash_on_zeroinit(
 ; CHECK-NEXT:    ret i32 undef
 ;
-  %load = load i32, i32* bitcast ({}* @zeroinit to i32*)
+  %load = load i32, ptr @zeroinit
   ret i32 %load
 }
 
@@ -16,7 +16,7 @@ define i32 @crash_on_undef() {
 ; CHECK-LABEL: @crash_on_undef(
 ; CHECK-NEXT:    ret i32 undef
 ;
-  %load = load i32, i32* bitcast ({}* @undef to i32*)
+  %load = load i32, ptr @undef
   ret i32 %load
 }
 
@@ -26,7 +26,7 @@ define <8 x i32> @partial_load() {
 ; CHECK-LABEL: @partial_load(
 ; CHECK-NEXT:    ret <8 x i32> <i32 0, i32 42, i32 43, i32 44, i32 45, i32 46, i32 47, i32 48>
 ;
-  %load = load <8 x i32>, <8 x i32>* bitcast (i32* getelementptr ([8 x i32], [8 x i32]* @GV, i64 0, i64 -1) to <8 x i32>*)
+  %load = load <8 x i32>, ptr getelementptr ([8 x i32], ptr @GV, i64 0, i64 -1)
   ret <8 x i32> %load
 }
 
@@ -37,6 +37,6 @@ define <3 x float> @load_vec3() {
 ; CHECK-LABEL: @load_vec3(
 ; CHECK-NEXT:    ret <3 x float> undef
 ;
-  %1 = load <3 x float>, <3 x float>* getelementptr inbounds (<3 x float>, <3 x float>* @constvec, i64 1)
+  %1 = load <3 x float>, ptr getelementptr inbounds (<3 x float>, ptr @constvec, i64 1)
   ret <3 x float> %1
 }

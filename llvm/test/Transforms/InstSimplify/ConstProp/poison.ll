@@ -14,7 +14,7 @@ define void @casts() {
   %i4 = fptoui float poison to i8
   %i5 = fptosi float poison to i8
   %i6 = bitcast float poison to i32
-  %i7 = ptrtoint i8* poison to i8
+  %i7 = ptrtoint ptr poison to i8
   %f1 = fptrunc double poison to float
   %f2 = fpext half poison to float
   %f3 = uitofp i8 poison to float
@@ -25,12 +25,12 @@ define void @casts() {
 
 define void @casts2() {
 ; CHECK-LABEL: @casts2(
-; CHECK-NEXT:    call void (...) @use(i8* poison, i8* poison)
+; CHECK-NEXT:    call void (...) @use(ptr poison, ptr poison)
 ; CHECK-NEXT:    ret void
 ;
-  %p1 = inttoptr i8 poison to i8*
-  %p2 = addrspacecast i8 addrspace(1)* poison to i8*
-  call void (...) @use(i8* %p1, i8* %p2)
+  %p1 = inttoptr i8 poison to ptr
+  %p2 = addrspacecast ptr addrspace(1) poison to ptr
+  call void (...) @use(ptr %p1, ptr %p2)
   ret void
 }
 
@@ -104,14 +104,14 @@ define void @vec_aggr_ops() {
 
 define void @other_ops(i8 %x) {
 ; CHECK-LABEL: @other_ops(
-; CHECK-NEXT:    call void (...) @use(i1 poison, i1 poison, i8 poison, i8 poison, i8* poison, i8* poison)
+; CHECK-NEXT:    call void (...) @use(i1 poison, i1 poison, i8 poison, i8 poison, ptr poison, ptr poison)
 ; CHECK-NEXT:    ret void
 ;
   %i1 = icmp eq i8 poison, 1
   %i2 = fcmp oeq float poison, 1.0
   %i3 = select i1 poison, i8 1, i8 2
   %i4 = select i1 true, i8 poison, i8 %x
-  call void (...) @use(i1 %i1, i1 %i2, i8 %i3, i8 %i4, i8* getelementptr (i8, i8* poison, i64 1), i8* getelementptr inbounds (i8, i8* undef, i64 1))
+  call void (...) @use(i1 %i1, i1 %i2, i8 %i3, i8 %i4, ptr getelementptr (i8, ptr poison, i64 1), ptr getelementptr inbounds (i8, ptr undef, i64 1))
   ret void
 }
 

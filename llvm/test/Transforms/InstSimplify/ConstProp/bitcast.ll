@@ -17,9 +17,9 @@ define <1 x i64> @test1() {
 
 define i1 @bad_icmp_constexpr_bitcast() {
 ; CHECK-LABEL: @bad_icmp_constexpr_bitcast(
-; CHECK-NEXT:    ret i1 icmp eq (i32 ptrtoint (i16* @a to i32), i32 bitcast (float fadd (float bitcast (i32 ptrtoint (i16* @b to i32) to float), float 2.000000e+00) to i32))
+; CHECK-NEXT:    ret i1 icmp eq (i32 ptrtoint (ptr @a to i32), i32 bitcast (float fadd (float bitcast (i32 ptrtoint (ptr @b to i32) to float), float 2.000000e+00) to i32))
 ;
-  %cmp = icmp eq i32 ptrtoint (i16* @a to i32), bitcast (float fadd (float bitcast (i32 ptrtoint (i16* @b to i32) to float), float 2.0) to i32)
+  %cmp = icmp eq i32 ptrtoint (ptr @a to i32), bitcast (float fadd (float bitcast (i32 ptrtoint (ptr @b to i32) to float), float 2.0) to i32)
   ret i1 %cmp
 }
 
@@ -30,9 +30,9 @@ define i1 @bad_icmp_constexpr_bitcast() {
 
 define i1 @bad_fcmp_constexpr_bitcast() {
 ; CHECK-LABEL: @bad_fcmp_constexpr_bitcast(
-; CHECK-NEXT:    ret i1 fcmp oeq (float bitcast (i32 ptrtoint (i16* @c to i32) to float), float bitcast (i32 add (i32 ptrtoint (i16* @d to i32), i32 2) to float))
+; CHECK-NEXT:    ret i1 fcmp oeq (float bitcast (i32 ptrtoint (ptr @c to i32) to float), float bitcast (i32 add (i32 ptrtoint (ptr @d to i32), i32 2) to float))
 ;
-  %cmp = fcmp oeq float bitcast (i32 ptrtoint (i16* @c to i32) to float), bitcast (i32 add (i32 ptrtoint (i16* @d to i32), i32 2) to float)
+  %cmp = fcmp oeq float bitcast (i32 ptrtoint (ptr @c to i32) to float), bitcast (i32 add (i32 ptrtoint (ptr @d to i32), i32 2) to float)
   ret i1 %cmp
 }
 
@@ -40,9 +40,9 @@ define i1 @bad_fcmp_constexpr_bitcast() {
 
 define i1 @fcmp_constexpr_oeq(float %conv) {
 ; CHECK-LABEL: @fcmp_constexpr_oeq(
-; CHECK-NEXT:    ret i1 fcmp oeq (float bitcast (i32 ptrtoint (i16* @a to i32) to float), float bitcast (i32 ptrtoint (i16* @a to i32) to float))
+; CHECK-NEXT:    ret i1 fcmp oeq (float bitcast (i32 ptrtoint (ptr @a to i32) to float), float bitcast (i32 ptrtoint (ptr @a to i32) to float))
 ;
-  %cmp = fcmp oeq float bitcast (i32 ptrtoint (i16* @a to i32) to float), bitcast (i32 ptrtoint (i16* @a to i32) to float)
+  %cmp = fcmp oeq float bitcast (i32 ptrtoint (ptr @a to i32) to float), bitcast (i32 ptrtoint (ptr @a to i32) to float)
   ret i1 %cmp
 }
 
@@ -50,9 +50,9 @@ define i1 @fcmp_constexpr_oeq(float %conv) {
 
 define i1 @fcmp_constexpr_une(float %conv) {
 ; CHECK-LABEL: @fcmp_constexpr_une(
-; CHECK-NEXT:    ret i1 fcmp une (float bitcast (i32 ptrtoint (i16* @a to i32) to float), float bitcast (i32 ptrtoint (i16* @a to i32) to float))
+; CHECK-NEXT:    ret i1 fcmp une (float bitcast (i32 ptrtoint (ptr @a to i32) to float), float bitcast (i32 ptrtoint (ptr @a to i32) to float))
 ;
-  %cmp = fcmp une float bitcast (i32 ptrtoint (i16* @a to i32) to float), bitcast (i32 ptrtoint (i16* @a to i32) to float)
+  %cmp = fcmp une float bitcast (i32 ptrtoint (ptr @a to i32) to float), bitcast (i32 ptrtoint (ptr @a to i32) to float)
   ret i1 %cmp
 }
 
@@ -60,7 +60,7 @@ define i1 @fcmp_constexpr_ueq(float %conv) {
 ; CHECK-LABEL: @fcmp_constexpr_ueq(
 ; CHECK-NEXT:    ret i1 true
 ;
-  %cmp = fcmp ueq float bitcast (i32 ptrtoint (i16* @a to i32) to float), bitcast (i32 ptrtoint (i16* @a to i32) to float)
+  %cmp = fcmp ueq float bitcast (i32 ptrtoint (ptr @a to i32) to float), bitcast (i32 ptrtoint (ptr @a to i32) to float)
   ret i1 %cmp
 }
 
@@ -68,25 +68,24 @@ define i1 @fcmp_constexpr_one(float %conv) {
 ; CHECK-LABEL: @fcmp_constexpr_one(
 ; CHECK-NEXT:    ret i1 false
 ;
-  %cmp = fcmp one float bitcast (i32 ptrtoint (i16* @a to i32) to float), bitcast (i32 ptrtoint (i16* @a to i32) to float)
+  %cmp = fcmp one float bitcast (i32 ptrtoint (ptr @a to i32) to float), bitcast (i32 ptrtoint (ptr @a to i32) to float)
   ret i1 %cmp
 }
 
 %T = type { i8 }
 @G = external global %T
 
-define i8* @bitcast_to_gep() {
+define ptr @bitcast_to_gep() {
 ; CHECK-LABEL: @bitcast_to_gep(
-; CHECK-NEXT:    ret i8* getelementptr inbounds (%T, %T* @G, i32 0, i32 0)
+; CHECK-NEXT:    ret ptr @G
 ;
-  %p = bitcast %T* @G to i8*
-  ret i8* %p
+  ret ptr @G
 }
 
-define i8 addrspace(1)* @addrspacecast_to_gep() {
+define ptr addrspace(1) @addrspacecast_to_gep() {
 ; CHECK-LABEL: @addrspacecast_to_gep(
-; CHECK-NEXT:    ret i8 addrspace(1)* addrspacecast (i8* getelementptr inbounds (%T, %T* @G, i32 0, i32 0) to i8 addrspace(1)*)
+; CHECK-NEXT:    ret ptr addrspace(1) addrspacecast (ptr @G to ptr addrspace(1))
 ;
-  %p = addrspacecast %T* @G to i8 addrspace(1)*
-  ret i8 addrspace(1)* %p
+  %p = addrspacecast ptr @G to ptr addrspace(1)
+  ret ptr addrspace(1) %p
 }

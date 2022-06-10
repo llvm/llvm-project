@@ -24,9 +24,9 @@ BB3:
 
 
 ; PR6197
-define i1 @test2(i8* %f) nounwind {
+define i1 @test2(ptr %f) nounwind {
 entry:
-  %V = icmp ne i8* blockaddress(@test2, %bb), null
+  %V = icmp ne ptr blockaddress(@test2, %bb), null
   br label %bb
 bb:
   ret i1 %V

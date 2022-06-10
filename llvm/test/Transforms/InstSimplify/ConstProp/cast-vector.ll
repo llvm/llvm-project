@@ -8,11 +8,11 @@
 define <2 x i16> @test1() {
 ; CHECK-LABEL: @test1(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    ret <2 x i16> ptrtoint (<2 x i32*> getelementptr ([10 x i32], [10 x i32]* null, <2 x i64> zeroinitializer, <2 x i64> <i64 5, i64 7>) to <2 x i16>)
+; CHECK-NEXT:    ret <2 x i16> ptrtoint (<2 x ptr> getelementptr ([10 x i32], ptr null, <2 x i64> zeroinitializer, <2 x i64> <i64 5, i64 7>) to <2 x i16>)
 ;
 entry:
-  %gep = getelementptr inbounds [10 x i32], [10 x i32]* null, i16 0, <2 x i16> <i16 5, i16 7>
-  %vec = ptrtoint <2 x i32*> %gep to <2 x i16>
+  %gep = getelementptr inbounds [10 x i32], ptr null, i16 0, <2 x i16> <i16 5, i16 7>
+  %vec = ptrtoint <2 x ptr> %gep to <2 x i16>
   ret <2 x i16> %vec
 }
 
@@ -23,10 +23,10 @@ entry:
 define <2 x i16> @test2() {
 ; CHECK-LABEL: @test2(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    ret <2 x i16> ptrtoint (<2 x i32*> getelementptr (i32, i32* null, <2 x i64> <i64 5, i64 7>) to <2 x i16>)
+; CHECK-NEXT:    ret <2 x i16> ptrtoint (<2 x ptr> getelementptr (i32, ptr null, <2 x i64> <i64 5, i64 7>) to <2 x i16>)
 ;
 entry:
-  %gep = getelementptr i32, i32* null, <2 x i16> <i16 5, i16 7>
-  %vec = ptrtoint <2 x i32*> %gep to <2 x i16>
+  %gep = getelementptr i32, ptr null, <2 x i16> <i16 5, i16 7>
+  %vec = ptrtoint <2 x ptr> %gep to <2 x i16>
   ret <2 x i16> %vec
 }

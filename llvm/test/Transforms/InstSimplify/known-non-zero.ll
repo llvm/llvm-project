@@ -103,7 +103,7 @@ exit:
 ; The code below exposed a bug similar to the one exposed by D60846, see the commit 6ea477590085.
 ; In a nutshell, we should not replace %result.0 with 0 here.
 
-define zeroext i8 @update_phi_query_loc_in_recursive_call(i8* nocapture readonly %p){
+define zeroext i8 @update_phi_query_loc_in_recursive_call(ptr nocapture readonly %p){
 ; CHECK-LABEL: @update_phi_query_loc_in_recursive_call(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[FOR_COND:%.*]]
@@ -115,7 +115,7 @@ define zeroext i8 @update_phi_query_loc_in_recursive_call(i8* nocapture readonly
 ; CHECK:       for.cond.cleanup:
 ; CHECK-NEXT:    ret i8 [[RESULT_0]]
 ; CHECK:       for.body:
-; CHECK-NEXT:    [[TMP0:%.*]] = load i8, i8* [[P:%.*]], align 1
+; CHECK-NEXT:    [[TMP0:%.*]] = load i8, ptr [[P:%.*]], align 1
 ; CHECK-NEXT:    [[CONV:%.*]] = zext i8 [[TMP0]] to i32
 ; CHECK-NEXT:    [[MUL:%.*]] = shl nuw nsw i32 [[SHIFT_0]], 3
 ; CHECK-NEXT:    [[SHL:%.*]] = shl nuw nsw i32 [[CONV]], [[MUL]]
@@ -136,7 +136,7 @@ for.cond.cleanup:                                 ; preds = %for.cond
   ret i8 %result.0
 
 for.body:                                         ; preds = %for.cond
-  %0 = load i8, i8* %p, align 1
+  %0 = load i8, ptr %p, align 1
   %conv = zext i8 %0 to i32
   %mul = shl nuw nsw i32 %shift.0, 3
   %shl = shl nuw nsw i32 %conv, %mul

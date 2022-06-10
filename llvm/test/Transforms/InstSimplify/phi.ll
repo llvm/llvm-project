@@ -162,7 +162,7 @@ define i64 @pr49839_with_poison(i1 %c) {
 ; CHECK:       if:
 ; CHECK-NEXT:    br label [[JOIN]]
 ; CHECK:       join:
-; CHECK-NEXT:    [[PHI:%.*]] = phi i64 [ poison, [[IF]] ], [ srem (i64 1, i64 ptrtoint (i32* @g to i64)), [[ENTRY:%.*]] ]
+; CHECK-NEXT:    [[PHI:%.*]] = phi i64 [ poison, [[IF]] ], [ srem (i64 1, i64 ptrtoint (ptr @g to i64)), [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    ret i64 [[PHI]]
 ;
 entry:
@@ -172,7 +172,7 @@ if:
   br label %join
 
 join:
-  %phi = phi i64 [ poison, %if ], [ srem (i64 1, i64 ptrtoint (i32* @g to i64)) , %entry ]
+  %phi = phi i64 [ poison, %if ], [ srem (i64 1, i64 ptrtoint (ptr @g to i64)) , %entry ]
   ret i64 %phi
 }
 
@@ -183,7 +183,7 @@ define i64 @pr49839_without_poison(i1 %c) {
 ; CHECK:       if:
 ; CHECK-NEXT:    br label [[JOIN]]
 ; CHECK:       join:
-; CHECK-NEXT:    ret i64 srem (i64 1, i64 ptrtoint (i32* @g to i64))
+; CHECK-NEXT:    ret i64 srem (i64 1, i64 ptrtoint (ptr @g to i64))
 ;
 entry:
   br i1 %c, label %if, label %join
@@ -192,6 +192,6 @@ if:
   br label %join
 
 join:
-  %phi = phi i64 [ srem (i64 1, i64 ptrtoint (i32* @g to i64)), %if ], [ srem (i64 1, i64 ptrtoint (i32* @g to i64)) , %entry ]
+  %phi = phi i64 [ srem (i64 1, i64 ptrtoint (ptr @g to i64)), %if ], [ srem (i64 1, i64 ptrtoint (ptr @g to i64)) , %entry ]
   ret i64 %phi
 }

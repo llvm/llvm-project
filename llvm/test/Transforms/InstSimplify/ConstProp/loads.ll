@@ -13,7 +13,7 @@ define i32 @test1() {
 ; CHECK-LABEL: @test1(
 ; CHECK-NEXT:    ret i32 -559038737
 ;
-  %r = load i32, i32* getelementptr ({{i32,i8},i32}, {{i32,i8},i32}* @g1, i32 0, i32 0, i32 0)
+  %r = load i32, ptr getelementptr ({{i32,i8},i32}, ptr @g1, i32 0, i32 0, i32 0)
   ret i32 %r
 }
 
@@ -26,7 +26,7 @@ define i16 @test2() {
 ; BE-LABEL: @test2(
 ; BE-NEXT:    ret i16 -8531
 ;
-  %r = load i16, i16* bitcast(i32* getelementptr ({{i32,i8},i32}, {{i32,i8},i32}* @g1, i32 0, i32 0, i32 0) to i16*)
+  %r = load i16, ptr getelementptr ({{i32,i8},i32}, ptr @g1, i32 0, i32 0, i32 0)
   ret i16 %r
 }
 
@@ -37,7 +37,7 @@ define i16 @test2_addrspacecast() {
 ; BE-LABEL: @test2_addrspacecast(
 ; BE-NEXT:    ret i16 -8531
 ;
-  %r = load i16, i16 addrspace(1)* addrspacecast(i32* getelementptr ({{i32,i8},i32}, {{i32,i8},i32}* @g1, i32 0, i32 0, i32 0) to i16 addrspace(1)*)
+  %r = load i16, ptr addrspace(1) addrspacecast(ptr getelementptr ({{i32,i8},i32}, ptr @g1, i32 0, i32 0, i32 0) to ptr addrspace(1))
   ret i16 %r
 }
 
@@ -49,7 +49,7 @@ define i16 @test3() {
 ; BE-LABEL: @test3(
 ; BE-NEXT:    ret i16 -16657
 ;
-  %r = load i16, i16* getelementptr(i16, i16* bitcast(i32* getelementptr ({{i32,i8},i32}, {{i32,i8},i32}* @g1, i32 0, i32 0, i32 0) to i16*), i32 1)
+  %r = load i16, ptr getelementptr(i16, ptr getelementptr ({{i32,i8},i32}, ptr @g1, i32 0, i32 0, i32 0), i32 1)
   ret i16 %r
 }
 
@@ -61,7 +61,7 @@ define i16 @test4() {
 ; BE-LABEL: @test4(
 ; BE-NEXT:    ret i16 -17920
 ;
-  %r = load i16, i16* getelementptr(i16, i16* bitcast(i32* getelementptr ({{i32,i8},i32}, {{i32,i8},i32}* @g1, i32 0, i32 0, i32 0) to i16*), i32 2)
+  %r = load i16, ptr getelementptr(i16, ptr getelementptr ({{i32,i8},i32}, ptr @g1, i32 0, i32 0, i32 0), i32 2)
   ret i16 %r
 }
 
@@ -70,7 +70,7 @@ define i64 @test6() {
 ; CHECK-LABEL: @test6(
 ; CHECK-NEXT:    ret i64 4607182418800017408
 ;
-  %r = load i64, i64* bitcast(double* @g2 to i64*)
+  %r = load i64, ptr @g2
   ret i64 %r
 }
 
@@ -82,7 +82,7 @@ define i16 @test7() {
 ; BE-LABEL: @test7(
 ; BE-NEXT:    ret i16 16368
 ;
-  %r = load i16, i16* bitcast(double* @g2 to i16*)
+  %r = load i16, ptr @g2
   ret i16 %r
 }
 
@@ -94,7 +94,7 @@ define double @test8() {
 ; BE-LABEL: @test8(
 ; BE-NEXT:    ret double 0xDEADBEEFBA000000
 ;
-  %r = load double, double* bitcast({{i32,i8},i32}* @g1 to double*)
+  %r = load double, ptr @g1
   ret double %r
 }
 
@@ -107,7 +107,7 @@ define i128 @test_i128() {
 ; BE-LABEL: @test_i128(
 ; BE-NEXT:    ret i128 2268949521066387161080
 ;
-  %r = load i128, i128* bitcast({i64, i64}* @g3 to i128*)
+  %r = load i128, ptr @g3
   ret i128 %r
 }
 
@@ -118,7 +118,7 @@ define fp128 @test_fp128() {
 ; BE-LABEL: @test_fp128(
 ; BE-NEXT:    ret fp128 0xL0000000006B1BFF8000000000000007B
 ;
-  %r = load fp128, fp128* bitcast({i64, i64}* @g3 to fp128*)
+  %r = load fp128, ptr @g3
   ret fp128 %r
 }
 
@@ -129,7 +129,7 @@ define ppc_fp128 @test_ppc_fp128() {
 ; BE-LABEL: @test_ppc_fp128(
 ; BE-NEXT:    ret ppc_fp128 bitcast (i128 2268949521066387161080 to ppc_fp128)
 ;
-  %r = load ppc_fp128, ppc_fp128* bitcast({i64, i64}* @g3 to ppc_fp128*)
+  %r = load ppc_fp128, ptr @g3
   ret ppc_fp128 %r
 }
 
@@ -140,7 +140,7 @@ define x86_fp80 @test_x86_fp80() {
 ; BE-LABEL: @test_x86_fp80(
 ; BE-NEXT:    ret x86_fp80 0xK000000000000007B0000
 ;
-  %r = load x86_fp80, x86_fp80* bitcast({i64, i64}* @g3 to x86_fp80*)
+  %r = load x86_fp80, ptr @g3
   ret x86_fp80 %r
 }
 
@@ -151,7 +151,7 @@ define bfloat @test_bfloat() {
 ; BE-LABEL: @test_bfloat(
 ; BE-NEXT:    ret bfloat 0xR0000
 ;
-  %r = load bfloat, bfloat* bitcast({i64, i64}* @g3 to bfloat*)
+  %r = load bfloat, ptr @g3
   ret bfloat %r
 }
 
@@ -160,7 +160,7 @@ define <2 x i64> @test10() {
 ; CHECK-LABEL: @test10(
 ; CHECK-NEXT:    ret <2 x i64> <i64 123, i64 112312312>
 ;
-  %r = load <2 x i64>, <2 x i64>* bitcast({i64, i64}* @g3 to <2 x i64>*)
+  %r = load <2 x i64>, ptr @g3
   ret <2 x i64> %r
 }
 
@@ -179,7 +179,7 @@ define i16 @test11() nounwind {
 ; BE-NEXT:    ret i16 -24312
 ;
 entry:
-  %a = load i16, i16* bitcast ({ i8, i8 }* @g4 to i16*)
+  %a = load i16, ptr @g4
   ret i16 %a
 }
 
@@ -194,7 +194,7 @@ define i16 @test12() {
 ; BE-LABEL: @test12(
 ; BE-NEXT:    ret i16 25088
 ;
-  %a = load i16, i16* getelementptr inbounds ([3 x i16], [3 x i16]* bitcast ([6 x i8]* @test12g to [3 x i16]*), i32 0, i64 1)
+  %a = load i16, ptr getelementptr inbounds ([3 x i16], ptr @test12g, i32 0, i64 1)
   ret i16 %a
 }
 
@@ -205,30 +205,30 @@ define i1 @test13() {
 ; CHECK-LABEL: @test13(
 ; CHECK-NEXT:    ret i1 false
 ;
-  %A = load i1, i1* bitcast (i8* @g5 to i1*)
+  %A = load i1, ptr @g5
   ret i1 %A
 }
 
-@g6 = constant [2 x i8*] [i8* inttoptr (i64 1 to i8*), i8* inttoptr (i64 2 to i8*)]
+@g6 = constant [2 x ptr] [ptr inttoptr (i64 1 to ptr), ptr inttoptr (i64 2 to ptr)]
 define i64 @test14() nounwind {
 ; CHECK-LABEL: @test14(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    ret i64 1
 ;
 entry:
-  %tmp = load i64, i64* bitcast ([2 x i8*]* @g6 to i64*)
+  %tmp = load i64, ptr @g6
   ret i64 %tmp
 }
 
 ; Check with address space pointers
-@g6_as1 = constant [2 x i8 addrspace(1)*] [i8 addrspace(1)* inttoptr (i16 1 to i8 addrspace(1)*), i8 addrspace(1)* inttoptr (i16 2 to i8 addrspace(1)*)]
+@g6_as1 = constant [2 x ptr addrspace(1)] [ptr addrspace(1) inttoptr (i16 1 to ptr addrspace(1)), ptr addrspace(1) inttoptr (i16 2 to ptr addrspace(1))]
 define i16 @test14_as1() nounwind {
 ; CHECK-LABEL: @test14_as1(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    ret i16 1
 ;
 entry:
-  %tmp = load i16, i16* bitcast ([2 x i8 addrspace(1)*]* @g6_as1 to i16*)
+  %tmp = load i16, ptr @g6_as1
   ret i16 %tmp
 }
 
@@ -238,16 +238,16 @@ define i64 @test15() nounwind {
 ; CHECK-NEXT:    ret i64 2
 ;
 entry:
-  %tmp = load i64, i64* bitcast (i8** getelementptr inbounds ([2 x i8*], [2 x i8*]* @g6, i32 0, i64 1) to i64*)
+  %tmp = load i64, ptr getelementptr inbounds ([2 x ptr], ptr @g6, i32 0, i64 1)
   ret i64 %tmp
 }
 
-@gv7 = constant [4 x i8*] [i8* null, i8* inttoptr (i64 -14 to i8*), i8* null, i8* null]
+@gv7 = constant [4 x ptr] [ptr null, ptr inttoptr (i64 -14 to ptr), ptr null, ptr null]
 define i64 @test16.1() {
 ; CHECK-LABEL: @test16.1(
 ; CHECK-NEXT:    ret i64 0
 ;
-  %v = load i64, i64* bitcast ([4 x i8*]* @gv7 to i64*), align 8
+  %v = load i64, ptr @gv7, align 8
   ret i64 %v
 }
 
@@ -255,7 +255,7 @@ define i64 @test16.2() {
 ; CHECK-LABEL: @test16.2(
 ; CHECK-NEXT:    ret i64 -14
 ;
-  %v = load i64, i64* bitcast (i8** getelementptr inbounds ([4 x i8*], [4 x i8*]* @gv7, i64 0, i64 1) to i64*), align 8
+  %v = load i64, ptr getelementptr inbounds ([4 x ptr], ptr @gv7, i64 0, i64 1), align 8
   ret i64 %v
 }
 
@@ -263,18 +263,18 @@ define i64 @test16.3() {
 ; CHECK-LABEL: @test16.3(
 ; CHECK-NEXT:    ret i64 0
 ;
-  %v = load i64, i64* bitcast (i8** getelementptr inbounds ([4 x i8*], [4 x i8*]* @gv7, i64 0, i64 2) to i64*), align 8
+  %v = load i64, ptr getelementptr inbounds ([4 x ptr], ptr @gv7, i64 0, i64 2), align 8
   ret i64 %v
 }
 
-@g7 = constant {[0 x i32], [0 x i8], {}*} { [0 x i32] undef, [0 x i8] undef, {}* null }
+@g7 = constant {[0 x i32], [0 x i8], ptr} { [0 x i32] undef, [0 x i8] undef, ptr null }
 
-define i64* @test_leading_zero_size_elems() {
+define ptr @test_leading_zero_size_elems() {
 ; CHECK-LABEL: @test_leading_zero_size_elems(
-; CHECK-NEXT:    ret i64* null
+; CHECK-NEXT:    ret ptr null
 ;
-  %v = load i64*, i64** bitcast ({[0 x i32], [0 x i8], {}*}* @g7 to i64**)
-  ret i64* %v
+  %v = load ptr, ptr @g7
+  ret ptr %v
 }
 
 @g8 = constant {[4294967295 x [0 x i32]], i64} { [4294967295 x [0 x i32]] undef, i64 123 }
@@ -283,7 +283,7 @@ define i64 @test_leading_zero_size_elems_big() {
 ; CHECK-LABEL: @test_leading_zero_size_elems_big(
 ; CHECK-NEXT:    ret i64 123
 ;
-  %v = load i64, i64* bitcast ({[4294967295 x [0 x i32]], i64}* @g8 to i64*)
+  %v = load i64, ptr @g8
   ret i64 %v
 }
 
@@ -293,45 +293,45 @@ define i64 @test_array_of_zero_size_array() {
 ; CHECK-LABEL: @test_array_of_zero_size_array(
 ; CHECK-NEXT:    ret i64 undef
 ;
-  %v = load i64, i64* bitcast ([4294967295 x [0 x i32]]* @g9 to i64*)
+  %v = load i64, ptr @g9
   ret i64 %v
 }
 
 @g_undef = constant { i128 } undef
 
-define i32* @test_undef_aggregate() {
+define ptr @test_undef_aggregate() {
 ; CHECK-LABEL: @test_undef_aggregate(
-; CHECK-NEXT:    ret i32* undef
+; CHECK-NEXT:    ret ptr undef
 ;
-  %v = load i32*, i32** bitcast ({i128}* @g_undef to i32**)
-  ret i32* %v
+  %v = load ptr, ptr @g_undef
+  ret ptr %v
 }
 
 @g_poison = constant { i128 } poison
 
-define i32* @test_poison_aggregate() {
+define ptr @test_poison_aggregate() {
 ; CHECK-LABEL: @test_poison_aggregate(
-; CHECK-NEXT:    ret i32* poison
+; CHECK-NEXT:    ret ptr poison
 ;
-  %v = load i32*, i32** bitcast ({i128}* @g_poison to i32**)
-  ret i32* %v
+  %v = load ptr, ptr @g_poison
+  ret ptr %v
 }
 
 @g11 = constant <{ [8 x i8], [8 x i8] }> <{ [8 x i8] undef, [8 x i8] zeroinitializer }>, align 4
 
-define {}* @test_trailing_zero_gep_index() {
+define ptr @test_trailing_zero_gep_index() {
 ; CHECK-LABEL: @test_trailing_zero_gep_index(
-; CHECK-NEXT:    ret {}* null
+; CHECK-NEXT:    ret ptr null
 ;
-  %v = load {}*, {}** bitcast (i8* getelementptr inbounds (<{ [8 x i8], [8 x i8] }>, <{ [8 x i8], [8 x i8] }>* @g11, i32 0, i32 1, i32 0) to {}**), align 4
-  ret {}* %v
+  %v = load ptr, ptr getelementptr inbounds (<{ [8 x i8], [8 x i8] }>, ptr @g11, i32 0, i32 1, i32 0), align 4
+  ret ptr %v
 }
 
 define { i64, i64 } @test_load_struct() {
 ; CHECK-LABEL: @test_load_struct(
 ; CHECK-NEXT:    ret { i64, i64 } { i64 123, i64 112312312 }
 ;
-  %v = load { i64, i64 }, { i64, i64 }* @g3
+  %v = load { i64, i64 }, ptr @g3
   ret { i64, i64 } %v
 }
 
@@ -341,10 +341,10 @@ define { i64, i64 } @test_load_struct() {
 ; This should not try to create an x86_mmx null value.
 define x86_mmx @load_mmx() {
 ; CHECK-LABEL: @load_mmx(
-; CHECK-NEXT:    [[TEMP:%.*]] = load x86_mmx, x86_mmx* bitcast (i64* getelementptr ([2 x i64], [2 x i64]* @m64, i64 0, i64 ptrtoint (i32* @idx to i64)) to x86_mmx*), align 8
+; CHECK-NEXT:    [[TEMP:%.*]] = load x86_mmx, ptr getelementptr ([2 x i64], ptr @m64, i64 0, i64 ptrtoint (ptr @idx to i64)), align 8
 ; CHECK-NEXT:    ret x86_mmx [[TEMP]]
 ;
-  %temp = load x86_mmx, x86_mmx* bitcast (i64* getelementptr ([2 x i64], [2 x i64]* @m64, i64 0, i64 ptrtoint (i32* @idx to i64)) to x86_mmx*)
+  %temp = load x86_mmx, ptr getelementptr ([2 x i64], ptr @m64, i64 0, i64 ptrtoint (ptr @idx to i64))
   ret x86_mmx %temp
 }
 
@@ -356,7 +356,7 @@ define i8 @load_neg_one_at_unknown_offset() {
 ; CHECK-LABEL: @load_neg_one_at_unknown_offset(
 ; CHECK-NEXT:    ret i8 -1
 ;
-  %v = load i8, i8* getelementptr (<4 x i8>, <4 x i8>* @g_neg_one_vec, i64 0, i64 ptrtoint (i64* @g_offset to i64))
+  %v = load i8, ptr getelementptr (<4 x i8>, ptr @g_neg_one_vec, i64 0, i64 ptrtoint (ptr @g_offset to i64))
   ret i8 %v
 }
 
@@ -366,7 +366,7 @@ define i32 @load_padding() {
 ; CHECK-LABEL: @load_padding(
 ; CHECK-NEXT:    ret i32 undef
 ;
-  %v = load i32, i32* getelementptr (i32, i32* bitcast ({ i32, [4 x i8] }* @g_with_padding to i32*), i64 1)
+  %v = load i32, ptr getelementptr (i32, ptr @g_with_padding, i64 1)
   ret i32 %v
 }
 
@@ -377,30 +377,30 @@ define i32 @load_all_undef() {
 ; CHECK-LABEL: @load_all_undef(
 ; CHECK-NEXT:    ret i32 undef
 ;
-  %v = load i32, i32* getelementptr (i32, i32* bitcast ({ i32, [4 x i8] }* @g_all_undef to i32*), i64 1)
+  %v = load i32, ptr getelementptr (i32, ptr @g_all_undef, i64 1)
   ret i32 %v
 }
 
 @g_i8_data = constant [16 x i8] c"\01\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00"
 
-define i64* @load_ptr_from_i8_data() {
+define ptr @load_ptr_from_i8_data() {
 ; LE-LABEL: @load_ptr_from_i8_data(
-; LE-NEXT:    ret i64* inttoptr (i64 1 to i64*)
+; LE-NEXT:    ret ptr inttoptr (i64 1 to ptr)
 ;
 ; BE-LABEL: @load_ptr_from_i8_data(
-; BE-NEXT:    ret i64* inttoptr (i64 72057594037927936 to i64*)
+; BE-NEXT:    ret ptr inttoptr (i64 72057594037927936 to ptr)
 ;
-  %v = load i64*, i64** bitcast ([16 x i8]* @g_i8_data to i64**)
-  ret i64* %v
+  %v = load ptr, ptr @g_i8_data
+  ret ptr %v
 }
 
-define i64 addrspace(2)* @load_non_integral_ptr_from_i8_data() {
+define ptr addrspace(2) @load_non_integral_ptr_from_i8_data() {
 ; CHECK-LABEL: @load_non_integral_ptr_from_i8_data(
-; CHECK-NEXT:    [[V:%.*]] = load i64 addrspace(2)*, i64 addrspace(2)** bitcast ([16 x i8]* @g_i8_data to i64 addrspace(2)**), align 8
-; CHECK-NEXT:    ret i64 addrspace(2)* [[V]]
+; CHECK-NEXT:    [[V:%.*]] = load ptr addrspace(2), ptr @g_i8_data, align 8
+; CHECK-NEXT:    ret ptr addrspace(2) [[V]]
 ;
-  %v = load i64 addrspace(2)*, i64 addrspace(2)** bitcast ([16 x i8]* @g_i8_data to i64 addrspace(2)**)
-  ret i64 addrspace(2)* %v
+  %v = load ptr addrspace(2), ptr @g_i8_data
+  ret ptr addrspace(2) %v
 }
 
 @g_i1 = constant i1 true
@@ -409,6 +409,6 @@ define i8 @load_i8_from_i1() {
 ; CHECK-LABEL: @load_i8_from_i1(
 ; CHECK-NEXT:    ret i8 -1
 ;
-  %v = load i8, i8* bitcast (i1* @g_i1 to i8*)
+  %v = load i8, ptr @g_i1
   ret i8 %v
 }

@@ -13,674 +13,674 @@ declare i64 @llvm.wasm.trunc.unsigned.i64.f32(float)
 declare i64 @llvm.wasm.trunc.signed.i64.f64(double)
 declare i64 @llvm.wasm.trunc.unsigned.i64.f64(double)
 
-define void @test_i32_trunc_f32_s(i32* %p) {
+define void @test_i32_trunc_f32_s(ptr %p) {
 ; CHECK-LABEL: @test_i32_trunc_f32_s(
-; CHECK-NEXT:    store volatile i32 0, i32* [[P:%.*]], align 4
-; CHECK-NEXT:    store volatile i32 0, i32* [[P]], align 4
-; CHECK-NEXT:    store volatile i32 0, i32* [[P]], align 4
-; CHECK-NEXT:    store volatile i32 0, i32* [[P]], align 4
-; CHECK-NEXT:    store volatile i32 1, i32* [[P]], align 4
-; CHECK-NEXT:    store volatile i32 1, i32* [[P]], align 4
-; CHECK-NEXT:    store volatile i32 1, i32* [[P]], align 4
-; CHECK-NEXT:    store volatile i32 -1, i32* [[P]], align 4
-; CHECK-NEXT:    store volatile i32 -1, i32* [[P]], align 4
-; CHECK-NEXT:    store volatile i32 -1, i32* [[P]], align 4
-; CHECK-NEXT:    store volatile i32 -1, i32* [[P]], align 4
-; CHECK-NEXT:    store volatile i32 -2, i32* [[P]], align 4
-; CHECK-NEXT:    store volatile i32 2147483520, i32* [[P]], align 4
-; CHECK-NEXT:    store volatile i32 -2147483648, i32* [[P]], align 4
+; CHECK-NEXT:    store volatile i32 0, ptr [[P:%.*]], align 4
+; CHECK-NEXT:    store volatile i32 0, ptr [[P]], align 4
+; CHECK-NEXT:    store volatile i32 0, ptr [[P]], align 4
+; CHECK-NEXT:    store volatile i32 0, ptr [[P]], align 4
+; CHECK-NEXT:    store volatile i32 1, ptr [[P]], align 4
+; CHECK-NEXT:    store volatile i32 1, ptr [[P]], align 4
+; CHECK-NEXT:    store volatile i32 1, ptr [[P]], align 4
+; CHECK-NEXT:    store volatile i32 -1, ptr [[P]], align 4
+; CHECK-NEXT:    store volatile i32 -1, ptr [[P]], align 4
+; CHECK-NEXT:    store volatile i32 -1, ptr [[P]], align 4
+; CHECK-NEXT:    store volatile i32 -1, ptr [[P]], align 4
+; CHECK-NEXT:    store volatile i32 -2, ptr [[P]], align 4
+; CHECK-NEXT:    store volatile i32 2147483520, ptr [[P]], align 4
+; CHECK-NEXT:    store volatile i32 -2147483648, ptr [[P]], align 4
 ; CHECK-NEXT:    [[T14:%.*]] = call i32 @llvm.wasm.trunc.signed.i32.f32(float 0x41E0000000000000)
-; CHECK-NEXT:    store volatile i32 [[T14]], i32* [[P]], align 4
+; CHECK-NEXT:    store volatile i32 [[T14]], ptr [[P]], align 4
 ; CHECK-NEXT:    [[T15:%.*]] = call i32 @llvm.wasm.trunc.signed.i32.f32(float 0xC1E0000020000000)
-; CHECK-NEXT:    store volatile i32 [[T15]], i32* [[P]], align 4
+; CHECK-NEXT:    store volatile i32 [[T15]], ptr [[P]], align 4
 ; CHECK-NEXT:    [[T16:%.*]] = call i32 @llvm.wasm.trunc.signed.i32.f32(float 0x7FF0000000000000)
-; CHECK-NEXT:    store volatile i32 [[T16]], i32* [[P]], align 4
+; CHECK-NEXT:    store volatile i32 [[T16]], ptr [[P]], align 4
 ; CHECK-NEXT:    [[T17:%.*]] = call i32 @llvm.wasm.trunc.signed.i32.f32(float 0xFFF0000000000000)
-; CHECK-NEXT:    store volatile i32 [[T17]], i32* [[P]], align 4
+; CHECK-NEXT:    store volatile i32 [[T17]], ptr [[P]], align 4
 ; CHECK-NEXT:    [[T18:%.*]] = call i32 @llvm.wasm.trunc.signed.i32.f32(float 0x7FF8000000000000)
-; CHECK-NEXT:    store volatile i32 [[T18]], i32* [[P]], align 4
+; CHECK-NEXT:    store volatile i32 [[T18]], ptr [[P]], align 4
 ; CHECK-NEXT:    [[T19:%.*]] = call i32 @llvm.wasm.trunc.signed.i32.f32(float 0x7FFA000000000000)
-; CHECK-NEXT:    store volatile i32 [[T19]], i32* [[P]], align 4
+; CHECK-NEXT:    store volatile i32 [[T19]], ptr [[P]], align 4
 ; CHECK-NEXT:    [[T20:%.*]] = call i32 @llvm.wasm.trunc.signed.i32.f32(float 0xFFF8000000000000)
-; CHECK-NEXT:    store volatile i32 [[T20]], i32* [[P]], align 4
+; CHECK-NEXT:    store volatile i32 [[T20]], ptr [[P]], align 4
 ; CHECK-NEXT:    [[T21:%.*]] = call i32 @llvm.wasm.trunc.signed.i32.f32(float 0xFFFA000000000000)
-; CHECK-NEXT:    store volatile i32 [[T21]], i32* [[P]], align 4
+; CHECK-NEXT:    store volatile i32 [[T21]], ptr [[P]], align 4
 ; CHECK-NEXT:    ret void
 ;
   %t0 = call i32 @llvm.wasm.trunc.signed.i32.f32(float +0.0)
-  store volatile i32 %t0, i32* %p
+  store volatile i32 %t0, ptr %p
   %t1 = call i32 @llvm.wasm.trunc.signed.i32.f32(float -0.0)
-  store volatile i32 %t1, i32* %p
+  store volatile i32 %t1, ptr %p
   %t2 = call i32 @llvm.wasm.trunc.signed.i32.f32(float 0x36a0000000000000); 0x1p-149
-  store volatile i32 %t2, i32* %p
+  store volatile i32 %t2, ptr %p
   %t3 = call i32 @llvm.wasm.trunc.signed.i32.f32(float 0xb6a0000000000000); -0x1p-149
-  store volatile i32 %t3, i32* %p
+  store volatile i32 %t3, ptr %p
   %t4 = call i32 @llvm.wasm.trunc.signed.i32.f32(float 1.0)
-  store volatile i32 %t4, i32* %p
+  store volatile i32 %t4, ptr %p
   %t5 = call i32 @llvm.wasm.trunc.signed.i32.f32(float 0x3ff19999a0000000); 0x1.19999ap+0
-  store volatile i32 %t5, i32* %p
+  store volatile i32 %t5, ptr %p
   %t6 = call i32 @llvm.wasm.trunc.signed.i32.f32(float 1.5)
-  store volatile i32 %t6, i32* %p
+  store volatile i32 %t6, ptr %p
   %t7 = call i32 @llvm.wasm.trunc.signed.i32.f32(float -1.0)
-  store volatile i32 %t7, i32* %p
+  store volatile i32 %t7, ptr %p
   %t8 = call i32 @llvm.wasm.trunc.signed.i32.f32(float 0xbff19999a0000000); -0x1.19999ap+0
-  store volatile i32 %t8, i32* %p
+  store volatile i32 %t8, ptr %p
   %t9 = call i32 @llvm.wasm.trunc.signed.i32.f32(float -1.5)
-  store volatile i32 %t9, i32* %p
+  store volatile i32 %t9, ptr %p
   %t10 = call i32 @llvm.wasm.trunc.signed.i32.f32(float 0xbffe666660000000); -1.9
-  store volatile i32 %t10, i32* %p
+  store volatile i32 %t10, ptr %p
   %t11 = call i32 @llvm.wasm.trunc.signed.i32.f32(float -2.0)
-  store volatile i32 %t11, i32* %p
+  store volatile i32 %t11, ptr %p
   %t12 = call i32 @llvm.wasm.trunc.signed.i32.f32(float 2147483520.0)
-  store volatile i32 %t12, i32* %p
+  store volatile i32 %t12, ptr %p
   %t13 = call i32 @llvm.wasm.trunc.signed.i32.f32(float -2147483648.0)
-  store volatile i32 %t13, i32* %p
+  store volatile i32 %t13, ptr %p
   %t14 = call i32 @llvm.wasm.trunc.signed.i32.f32(float 2147483648.0)
-  store volatile i32 %t14, i32* %p
+  store volatile i32 %t14, ptr %p
   %t15 = call i32 @llvm.wasm.trunc.signed.i32.f32(float -2147483904.0)
-  store volatile i32 %t15, i32* %p
+  store volatile i32 %t15, ptr %p
   %t16 = call i32 @llvm.wasm.trunc.signed.i32.f32(float 0x7ff0000000000000); inf
-  store volatile i32 %t16, i32* %p
+  store volatile i32 %t16, ptr %p
   %t17 = call i32 @llvm.wasm.trunc.signed.i32.f32(float 0xfff0000000000000); -inf
-  store volatile i32 %t17, i32* %p
+  store volatile i32 %t17, ptr %p
   %t18 = call i32 @llvm.wasm.trunc.signed.i32.f32(float 0x7ff8000000000000); nan
-  store volatile i32 %t18, i32* %p
+  store volatile i32 %t18, ptr %p
   %t19 = call i32 @llvm.wasm.trunc.signed.i32.f32(float 0x7ffa000000000000); nan:0x200000
-  store volatile i32 %t19, i32* %p
+  store volatile i32 %t19, ptr %p
   %t20 = call i32 @llvm.wasm.trunc.signed.i32.f32(float 0xfff8000000000000); -nan
-  store volatile i32 %t20, i32* %p
+  store volatile i32 %t20, ptr %p
   %t21 = call i32 @llvm.wasm.trunc.signed.i32.f32(float 0xfffa000000000000); -nan:0x200000
-  store volatile i32 %t21, i32* %p
+  store volatile i32 %t21, ptr %p
   ret void
 }
 
-define void @test_i32_trunc_f32_u(i32* %p) {
+define void @test_i32_trunc_f32_u(ptr %p) {
 ; CHECK-LABEL: @test_i32_trunc_f32_u(
-; CHECK-NEXT:    store volatile i32 0, i32* [[P:%.*]], align 4
-; CHECK-NEXT:    store volatile i32 0, i32* [[P]], align 4
-; CHECK-NEXT:    store volatile i32 0, i32* [[P]], align 4
-; CHECK-NEXT:    store volatile i32 0, i32* [[P]], align 4
-; CHECK-NEXT:    store volatile i32 1, i32* [[P]], align 4
-; CHECK-NEXT:    store volatile i32 1, i32* [[P]], align 4
-; CHECK-NEXT:    store volatile i32 1, i32* [[P]], align 4
-; CHECK-NEXT:    store volatile i32 1, i32* [[P]], align 4
-; CHECK-NEXT:    store volatile i32 2, i32* [[P]], align 4
-; CHECK-NEXT:    store volatile i32 -2147483648, i32* [[P]], align 4
-; CHECK-NEXT:    store volatile i32 -256, i32* [[P]], align 4
-; CHECK-NEXT:    store volatile i32 0, i32* [[P]], align 4
-; CHECK-NEXT:    store volatile i32 0, i32* [[P]], align 4
+; CHECK-NEXT:    store volatile i32 0, ptr [[P:%.*]], align 4
+; CHECK-NEXT:    store volatile i32 0, ptr [[P]], align 4
+; CHECK-NEXT:    store volatile i32 0, ptr [[P]], align 4
+; CHECK-NEXT:    store volatile i32 0, ptr [[P]], align 4
+; CHECK-NEXT:    store volatile i32 1, ptr [[P]], align 4
+; CHECK-NEXT:    store volatile i32 1, ptr [[P]], align 4
+; CHECK-NEXT:    store volatile i32 1, ptr [[P]], align 4
+; CHECK-NEXT:    store volatile i32 1, ptr [[P]], align 4
+; CHECK-NEXT:    store volatile i32 2, ptr [[P]], align 4
+; CHECK-NEXT:    store volatile i32 -2147483648, ptr [[P]], align 4
+; CHECK-NEXT:    store volatile i32 -256, ptr [[P]], align 4
+; CHECK-NEXT:    store volatile i32 0, ptr [[P]], align 4
+; CHECK-NEXT:    store volatile i32 0, ptr [[P]], align 4
 ; CHECK-NEXT:    [[T13:%.*]] = call i32 @llvm.wasm.trunc.unsigned.i32.f32(float 0x41F0000000000000)
-; CHECK-NEXT:    store volatile i32 [[T13]], i32* [[P]], align 4
+; CHECK-NEXT:    store volatile i32 [[T13]], ptr [[P]], align 4
 ; CHECK-NEXT:    [[T14:%.*]] = call i32 @llvm.wasm.trunc.unsigned.i32.f32(float -1.000000e+00)
-; CHECK-NEXT:    store volatile i32 [[T14]], i32* [[P]], align 4
+; CHECK-NEXT:    store volatile i32 [[T14]], ptr [[P]], align 4
 ; CHECK-NEXT:    [[T15:%.*]] = call i32 @llvm.wasm.trunc.unsigned.i32.f32(float 0x7FF0000000000000)
-; CHECK-NEXT:    store volatile i32 [[T15]], i32* [[P]], align 4
+; CHECK-NEXT:    store volatile i32 [[T15]], ptr [[P]], align 4
 ; CHECK-NEXT:    [[T16:%.*]] = call i32 @llvm.wasm.trunc.unsigned.i32.f32(float 0xFFF0000000000000)
-; CHECK-NEXT:    store volatile i32 [[T16]], i32* [[P]], align 4
+; CHECK-NEXT:    store volatile i32 [[T16]], ptr [[P]], align 4
 ; CHECK-NEXT:    [[T17:%.*]] = call i32 @llvm.wasm.trunc.unsigned.i32.f32(float 0x7FF8000000000000)
-; CHECK-NEXT:    store volatile i32 [[T17]], i32* [[P]], align 4
+; CHECK-NEXT:    store volatile i32 [[T17]], ptr [[P]], align 4
 ; CHECK-NEXT:    [[T18:%.*]] = call i32 @llvm.wasm.trunc.unsigned.i32.f32(float 0x7FFA000000000000)
-; CHECK-NEXT:    store volatile i32 [[T18]], i32* [[P]], align 4
+; CHECK-NEXT:    store volatile i32 [[T18]], ptr [[P]], align 4
 ; CHECK-NEXT:    [[T19:%.*]] = call i32 @llvm.wasm.trunc.unsigned.i32.f32(float 0xFFF8000000000000)
-; CHECK-NEXT:    store volatile i32 [[T19]], i32* [[P]], align 4
+; CHECK-NEXT:    store volatile i32 [[T19]], ptr [[P]], align 4
 ; CHECK-NEXT:    [[T20:%.*]] = call i32 @llvm.wasm.trunc.unsigned.i32.f32(float 0xFFFA000000000000)
-; CHECK-NEXT:    store volatile i32 [[T20]], i32* [[P]], align 4
+; CHECK-NEXT:    store volatile i32 [[T20]], ptr [[P]], align 4
 ; CHECK-NEXT:    ret void
 ;
   %t0 = call i32 @llvm.wasm.trunc.unsigned.i32.f32(float +0.0)
-  store volatile i32 %t0, i32* %p
+  store volatile i32 %t0, ptr %p
   %t1 = call i32 @llvm.wasm.trunc.unsigned.i32.f32(float -0.0)
-  store volatile i32 %t1, i32* %p
+  store volatile i32 %t1, ptr %p
   %t2 = call i32 @llvm.wasm.trunc.unsigned.i32.f32(float 0x36a0000000000000); 0x1p-149
-  store volatile i32 %t2, i32* %p
+  store volatile i32 %t2, ptr %p
   %t3 = call i32 @llvm.wasm.trunc.unsigned.i32.f32(float 0xb6a0000000000000); -0x1p-149
-  store volatile i32 %t3, i32* %p
+  store volatile i32 %t3, ptr %p
   %t4 = call i32 @llvm.wasm.trunc.unsigned.i32.f32(float 1.0)
-  store volatile i32 %t4, i32* %p
+  store volatile i32 %t4, ptr %p
   %t5 = call i32 @llvm.wasm.trunc.unsigned.i32.f32(float 0x3ff19999a0000000); 0x1.19999ap+0
-  store volatile i32 %t5, i32* %p
+  store volatile i32 %t5, ptr %p
   %t6 = call i32 @llvm.wasm.trunc.unsigned.i32.f32(float 1.5)
-  store volatile i32 %t6, i32* %p
+  store volatile i32 %t6, ptr %p
   %t7 = call i32 @llvm.wasm.trunc.unsigned.i32.f32(float 0x3ffe666660000000); 1.9
-  store volatile i32 %t7, i32* %p
+  store volatile i32 %t7, ptr %p
   %t8 = call i32 @llvm.wasm.trunc.unsigned.i32.f32(float 2.0)
-  store volatile i32 %t8, i32* %p
+  store volatile i32 %t8, ptr %p
   %t9 = call i32 @llvm.wasm.trunc.unsigned.i32.f32(float 2147483648.0)
-  store volatile i32 %t9, i32* %p
+  store volatile i32 %t9, ptr %p
   %t10 = call i32 @llvm.wasm.trunc.unsigned.i32.f32(float 4294967040.0)
-  store volatile i32 %t10, i32* %p
+  store volatile i32 %t10, ptr %p
   %t11 = call i32 @llvm.wasm.trunc.unsigned.i32.f32(float 0xbfecccccc0000000); -0x1.ccccccp-1
-  store volatile i32 %t11, i32* %p
+  store volatile i32 %t11, ptr %p
   %t12 = call i32 @llvm.wasm.trunc.unsigned.i32.f32(float 0xbfefffffe0000000); -0x1.fffffep-1
-  store volatile i32 %t12, i32* %p
+  store volatile i32 %t12, ptr %p
   %t13 = call i32 @llvm.wasm.trunc.unsigned.i32.f32(float 4294967296.0)
-  store volatile i32 %t13, i32* %p
+  store volatile i32 %t13, ptr %p
   %t14 = call i32 @llvm.wasm.trunc.unsigned.i32.f32(float -1.0)
-  store volatile i32 %t14, i32* %p
+  store volatile i32 %t14, ptr %p
   %t15 = call i32 @llvm.wasm.trunc.unsigned.i32.f32(float 0x7ff0000000000000); inf
-  store volatile i32 %t15, i32* %p
+  store volatile i32 %t15, ptr %p
   %t16 = call i32 @llvm.wasm.trunc.unsigned.i32.f32(float 0xfff0000000000000); -inf
-  store volatile i32 %t16, i32* %p
+  store volatile i32 %t16, ptr %p
   %t17 = call i32 @llvm.wasm.trunc.unsigned.i32.f32(float 0x7ff8000000000000); nan
-  store volatile i32 %t17, i32* %p
+  store volatile i32 %t17, ptr %p
   %t18 = call i32 @llvm.wasm.trunc.unsigned.i32.f32(float 0x7ffa000000000000); nan:0x200000
-  store volatile i32 %t18, i32* %p
+  store volatile i32 %t18, ptr %p
   %t19 = call i32 @llvm.wasm.trunc.unsigned.i32.f32(float 0xfff8000000000000); -nan
-  store volatile i32 %t19, i32* %p
+  store volatile i32 %t19, ptr %p
   %t20 = call i32 @llvm.wasm.trunc.unsigned.i32.f32(float 0xfffa000000000000); -nan:0x200000
-  store volatile i32 %t20, i32* %p
+  store volatile i32 %t20, ptr %p
   ret void
 }
 
-define void @test_i32_trunc_f64_s(i32* %p) {
+define void @test_i32_trunc_f64_s(ptr %p) {
 ; CHECK-LABEL: @test_i32_trunc_f64_s(
-; CHECK-NEXT:    store volatile i32 0, i32* [[P:%.*]], align 4
-; CHECK-NEXT:    store volatile i32 0, i32* [[P]], align 4
-; CHECK-NEXT:    store volatile i32 0, i32* [[P]], align 4
-; CHECK-NEXT:    store volatile i32 0, i32* [[P]], align 4
-; CHECK-NEXT:    store volatile i32 1, i32* [[P]], align 4
-; CHECK-NEXT:    store volatile i32 1, i32* [[P]], align 4
-; CHECK-NEXT:    store volatile i32 1, i32* [[P]], align 4
-; CHECK-NEXT:    store volatile i32 -1, i32* [[P]], align 4
-; CHECK-NEXT:    store volatile i32 -1, i32* [[P]], align 4
-; CHECK-NEXT:    store volatile i32 -1, i32* [[P]], align 4
-; CHECK-NEXT:    store volatile i32 -1, i32* [[P]], align 4
-; CHECK-NEXT:    store volatile i32 -2, i32* [[P]], align 4
-; CHECK-NEXT:    store volatile i32 2147483647, i32* [[P]], align 4
-; CHECK-NEXT:    store volatile i32 -2147483648, i32* [[P]], align 4
-; CHECK-NEXT:    store volatile i32 -2147483648, i32* [[P]], align 4
-; CHECK-NEXT:    store volatile i32 2147483647, i32* [[P]], align 4
+; CHECK-NEXT:    store volatile i32 0, ptr [[P:%.*]], align 4
+; CHECK-NEXT:    store volatile i32 0, ptr [[P]], align 4
+; CHECK-NEXT:    store volatile i32 0, ptr [[P]], align 4
+; CHECK-NEXT:    store volatile i32 0, ptr [[P]], align 4
+; CHECK-NEXT:    store volatile i32 1, ptr [[P]], align 4
+; CHECK-NEXT:    store volatile i32 1, ptr [[P]], align 4
+; CHECK-NEXT:    store volatile i32 1, ptr [[P]], align 4
+; CHECK-NEXT:    store volatile i32 -1, ptr [[P]], align 4
+; CHECK-NEXT:    store volatile i32 -1, ptr [[P]], align 4
+; CHECK-NEXT:    store volatile i32 -1, ptr [[P]], align 4
+; CHECK-NEXT:    store volatile i32 -1, ptr [[P]], align 4
+; CHECK-NEXT:    store volatile i32 -2, ptr [[P]], align 4
+; CHECK-NEXT:    store volatile i32 2147483647, ptr [[P]], align 4
+; CHECK-NEXT:    store volatile i32 -2147483648, ptr [[P]], align 4
+; CHECK-NEXT:    store volatile i32 -2147483648, ptr [[P]], align 4
+; CHECK-NEXT:    store volatile i32 2147483647, ptr [[P]], align 4
 ; CHECK-NEXT:    [[T16:%.*]] = call i32 @llvm.wasm.trunc.signed.i32.f64(double 0x41E0000000000000)
-; CHECK-NEXT:    store volatile i32 [[T16]], i32* [[P]], align 4
+; CHECK-NEXT:    store volatile i32 [[T16]], ptr [[P]], align 4
 ; CHECK-NEXT:    [[T17:%.*]] = call i32 @llvm.wasm.trunc.signed.i32.f64(double 0xC1E0000000200000)
-; CHECK-NEXT:    store volatile i32 [[T17]], i32* [[P]], align 4
+; CHECK-NEXT:    store volatile i32 [[T17]], ptr [[P]], align 4
 ; CHECK-NEXT:    [[T18:%.*]] = call i32 @llvm.wasm.trunc.signed.i32.f64(double 0x7FF0000000000000)
-; CHECK-NEXT:    store volatile i32 [[T18]], i32* [[P]], align 4
+; CHECK-NEXT:    store volatile i32 [[T18]], ptr [[P]], align 4
 ; CHECK-NEXT:    [[T19:%.*]] = call i32 @llvm.wasm.trunc.signed.i32.f64(double 0xFFF0000000000000)
-; CHECK-NEXT:    store volatile i32 [[T19]], i32* [[P]], align 4
+; CHECK-NEXT:    store volatile i32 [[T19]], ptr [[P]], align 4
 ; CHECK-NEXT:    [[T20:%.*]] = call i32 @llvm.wasm.trunc.signed.i32.f64(double 0x7FF8000000000000)
-; CHECK-NEXT:    store volatile i32 [[T20]], i32* [[P]], align 4
+; CHECK-NEXT:    store volatile i32 [[T20]], ptr [[P]], align 4
 ; CHECK-NEXT:    [[T21:%.*]] = call i32 @llvm.wasm.trunc.signed.i32.f64(double 0x7FF4000000000000)
-; CHECK-NEXT:    store volatile i32 [[T21]], i32* [[P]], align 4
+; CHECK-NEXT:    store volatile i32 [[T21]], ptr [[P]], align 4
 ; CHECK-NEXT:    [[T22:%.*]] = call i32 @llvm.wasm.trunc.signed.i32.f64(double 0xFFF8000000000000)
-; CHECK-NEXT:    store volatile i32 [[T22]], i32* [[P]], align 4
+; CHECK-NEXT:    store volatile i32 [[T22]], ptr [[P]], align 4
 ; CHECK-NEXT:    [[T23:%.*]] = call i32 @llvm.wasm.trunc.signed.i32.f64(double 0x7FF4000000000000)
-; CHECK-NEXT:    store volatile i32 [[T23]], i32* [[P]], align 4
+; CHECK-NEXT:    store volatile i32 [[T23]], ptr [[P]], align 4
 ; CHECK-NEXT:    ret void
 ;
   %t0 = call i32 @llvm.wasm.trunc.signed.i32.f64(double +0.0)
-  store volatile i32 %t0, i32* %p
+  store volatile i32 %t0, ptr %p
   %t1 = call i32 @llvm.wasm.trunc.signed.i32.f64(double -0.0)
-  store volatile i32 %t1, i32* %p
+  store volatile i32 %t1, ptr %p
   %t2 = call i32 @llvm.wasm.trunc.signed.i32.f64(double 0x0010000000000001); 0x0.0000000000001p-1022
-  store volatile i32 %t2, i32* %p
+  store volatile i32 %t2, ptr %p
   %t3 = call i32 @llvm.wasm.trunc.signed.i32.f64(double 0x8010000000000001); -0x1.0000000000001p-1022
-  store volatile i32 %t3, i32* %p
+  store volatile i32 %t3, ptr %p
   %t4 = call i32 @llvm.wasm.trunc.signed.i32.f64(double 1.0)
-  store volatile i32 %t4, i32* %p
+  store volatile i32 %t4, ptr %p
   %t5 = call i32 @llvm.wasm.trunc.signed.i32.f64(double 0x3ff199999999999a); 0x1.199999999999ap+0
-  store volatile i32 %t5, i32* %p
+  store volatile i32 %t5, ptr %p
   %t6 = call i32 @llvm.wasm.trunc.signed.i32.f64(double 1.5)
-  store volatile i32 %t6, i32* %p
+  store volatile i32 %t6, ptr %p
   %t7 = call i32 @llvm.wasm.trunc.signed.i32.f64(double -1.0)
-  store volatile i32 %t7, i32* %p
+  store volatile i32 %t7, ptr %p
   %t8 = call i32 @llvm.wasm.trunc.signed.i32.f64(double 0xbff199999999999a); -0x1.199999999999ap+0
-  store volatile i32 %t8, i32* %p
+  store volatile i32 %t8, ptr %p
   %t9 = call i32 @llvm.wasm.trunc.signed.i32.f64(double -1.5)
-  store volatile i32 %t9, i32* %p
+  store volatile i32 %t9, ptr %p
   %t10 = call i32 @llvm.wasm.trunc.signed.i32.f64(double 0xbffe666666666666); -1.9
-  store volatile i32 %t10, i32* %p
+  store volatile i32 %t10, ptr %p
   %t11 = call i32 @llvm.wasm.trunc.signed.i32.f64(double -2.0)
-  store volatile i32 %t11, i32* %p
+  store volatile i32 %t11, ptr %p
   %t12 = call i32 @llvm.wasm.trunc.signed.i32.f64(double 2147483647.0)
-  store volatile i32 %t12, i32* %p
+  store volatile i32 %t12, ptr %p
   %t13 = call i32 @llvm.wasm.trunc.signed.i32.f64(double -2147483648.0)
-  store volatile i32 %t13, i32* %p
+  store volatile i32 %t13, ptr %p
   %t14 = call i32 @llvm.wasm.trunc.signed.i32.f64(double -2147483648.9)
-  store volatile i32 %t14, i32* %p
+  store volatile i32 %t14, ptr %p
   %t15 = call i32 @llvm.wasm.trunc.signed.i32.f64(double 2147483647.9)
-  store volatile i32 %t15, i32* %p
+  store volatile i32 %t15, ptr %p
   %t16 = call i32 @llvm.wasm.trunc.signed.i32.f64(double 2147483648.0)
-  store volatile i32 %t16, i32* %p
+  store volatile i32 %t16, ptr %p
   %t17 = call i32 @llvm.wasm.trunc.signed.i32.f64(double -2147483649.0)
-  store volatile i32 %t17, i32* %p
+  store volatile i32 %t17, ptr %p
   %t18 = call i32 @llvm.wasm.trunc.signed.i32.f64(double 0x7ff0000000000000); inf
-  store volatile i32 %t18, i32* %p
+  store volatile i32 %t18, ptr %p
   %t19 = call i32 @llvm.wasm.trunc.signed.i32.f64(double 0xfff0000000000000); -inf
-  store volatile i32 %t19, i32* %p
+  store volatile i32 %t19, ptr %p
   %t20 = call i32 @llvm.wasm.trunc.signed.i32.f64(double 0x7ff8000000000000); nan
-  store volatile i32 %t20, i32* %p
+  store volatile i32 %t20, ptr %p
   %t21 = call i32 @llvm.wasm.trunc.signed.i32.f64(double 0x7ff4000000000000); nan:0x4000000000000
-  store volatile i32 %t21, i32* %p
+  store volatile i32 %t21, ptr %p
   %t22 = call i32 @llvm.wasm.trunc.signed.i32.f64(double 0xfff8000000000000); -nan
-  store volatile i32 %t22, i32* %p
+  store volatile i32 %t22, ptr %p
   %t23 = call i32 @llvm.wasm.trunc.signed.i32.f64(double 0x7ff4000000000000); -nan:0x4000000000000
-  store volatile i32 %t23, i32* %p
+  store volatile i32 %t23, ptr %p
   ret void
 }
 
-define void @test_i32_trunc_f64_u(i32* %p) {
+define void @test_i32_trunc_f64_u(ptr %p) {
 ; CHECK-LABEL: @test_i32_trunc_f64_u(
-; CHECK-NEXT:    store volatile i32 0, i32* [[P:%.*]], align 4
-; CHECK-NEXT:    store volatile i32 0, i32* [[P]], align 4
-; CHECK-NEXT:    store volatile i32 0, i32* [[P]], align 4
-; CHECK-NEXT:    store volatile i32 0, i32* [[P]], align 4
-; CHECK-NEXT:    store volatile i32 1, i32* [[P]], align 4
-; CHECK-NEXT:    store volatile i32 1, i32* [[P]], align 4
-; CHECK-NEXT:    store volatile i32 1, i32* [[P]], align 4
-; CHECK-NEXT:    store volatile i32 1, i32* [[P]], align 4
-; CHECK-NEXT:    store volatile i32 2, i32* [[P]], align 4
-; CHECK-NEXT:    store volatile i32 -2147483648, i32* [[P]], align 4
-; CHECK-NEXT:    store volatile i32 -1, i32* [[P]], align 4
-; CHECK-NEXT:    store volatile i32 0, i32* [[P]], align 4
-; CHECK-NEXT:    store volatile i32 0, i32* [[P]], align 4
-; CHECK-NEXT:    store volatile i32 100000000, i32* [[P]], align 4
-; CHECK-NEXT:    store volatile i32 -1, i32* [[P]], align 4
+; CHECK-NEXT:    store volatile i32 0, ptr [[P:%.*]], align 4
+; CHECK-NEXT:    store volatile i32 0, ptr [[P]], align 4
+; CHECK-NEXT:    store volatile i32 0, ptr [[P]], align 4
+; CHECK-NEXT:    store volatile i32 0, ptr [[P]], align 4
+; CHECK-NEXT:    store volatile i32 1, ptr [[P]], align 4
+; CHECK-NEXT:    store volatile i32 1, ptr [[P]], align 4
+; CHECK-NEXT:    store volatile i32 1, ptr [[P]], align 4
+; CHECK-NEXT:    store volatile i32 1, ptr [[P]], align 4
+; CHECK-NEXT:    store volatile i32 2, ptr [[P]], align 4
+; CHECK-NEXT:    store volatile i32 -2147483648, ptr [[P]], align 4
+; CHECK-NEXT:    store volatile i32 -1, ptr [[P]], align 4
+; CHECK-NEXT:    store volatile i32 0, ptr [[P]], align 4
+; CHECK-NEXT:    store volatile i32 0, ptr [[P]], align 4
+; CHECK-NEXT:    store volatile i32 100000000, ptr [[P]], align 4
+; CHECK-NEXT:    store volatile i32 -1, ptr [[P]], align 4
 ; CHECK-NEXT:    [[T15:%.*]] = call i32 @llvm.wasm.trunc.unsigned.i32.f64(double 0x41F0000000000000)
-; CHECK-NEXT:    store volatile i32 [[T15]], i32* [[P]], align 4
+; CHECK-NEXT:    store volatile i32 [[T15]], ptr [[P]], align 4
 ; CHECK-NEXT:    [[T16:%.*]] = call i32 @llvm.wasm.trunc.unsigned.i32.f64(double -1.000000e+00)
-; CHECK-NEXT:    store volatile i32 [[T16]], i32* [[P]], align 4
+; CHECK-NEXT:    store volatile i32 [[T16]], ptr [[P]], align 4
 ; CHECK-NEXT:    [[T17:%.*]] = call i32 @llvm.wasm.trunc.unsigned.i32.f64(double 1.000000e+16)
-; CHECK-NEXT:    store volatile i32 [[T17]], i32* [[P]], align 4
+; CHECK-NEXT:    store volatile i32 [[T17]], ptr [[P]], align 4
 ; CHECK-NEXT:    [[T18:%.*]] = call i32 @llvm.wasm.trunc.unsigned.i32.f64(double 1.000000e+30)
-; CHECK-NEXT:    store volatile i32 [[T18]], i32* [[P]], align 4
+; CHECK-NEXT:    store volatile i32 [[T18]], ptr [[P]], align 4
 ; CHECK-NEXT:    [[T19:%.*]] = call i32 @llvm.wasm.trunc.unsigned.i32.f64(double 0x43E0000000000000)
-; CHECK-NEXT:    store volatile i32 [[T19]], i32* [[P]], align 4
+; CHECK-NEXT:    store volatile i32 [[T19]], ptr [[P]], align 4
 ; CHECK-NEXT:    [[T20:%.*]] = call i32 @llvm.wasm.trunc.unsigned.i32.f64(double 0x7FF0000000000000)
-; CHECK-NEXT:    store volatile i32 [[T20]], i32* [[P]], align 4
+; CHECK-NEXT:    store volatile i32 [[T20]], ptr [[P]], align 4
 ; CHECK-NEXT:    [[T21:%.*]] = call i32 @llvm.wasm.trunc.unsigned.i32.f64(double 0xFFF0000000000000)
-; CHECK-NEXT:    store volatile i32 [[T21]], i32* [[P]], align 4
+; CHECK-NEXT:    store volatile i32 [[T21]], ptr [[P]], align 4
 ; CHECK-NEXT:    [[T22:%.*]] = call i32 @llvm.wasm.trunc.unsigned.i32.f64(double 0x7FF8000000000000)
-; CHECK-NEXT:    store volatile i32 [[T22]], i32* [[P]], align 4
+; CHECK-NEXT:    store volatile i32 [[T22]], ptr [[P]], align 4
 ; CHECK-NEXT:    [[T23:%.*]] = call i32 @llvm.wasm.trunc.unsigned.i32.f64(double 0x7FF4000000000000)
-; CHECK-NEXT:    store volatile i32 [[T23]], i32* [[P]], align 4
+; CHECK-NEXT:    store volatile i32 [[T23]], ptr [[P]], align 4
 ; CHECK-NEXT:    [[T24:%.*]] = call i32 @llvm.wasm.trunc.unsigned.i32.f64(double 0xFFF8000000000000)
-; CHECK-NEXT:    store volatile i32 [[T24]], i32* [[P]], align 4
+; CHECK-NEXT:    store volatile i32 [[T24]], ptr [[P]], align 4
 ; CHECK-NEXT:    [[T25:%.*]] = call i32 @llvm.wasm.trunc.unsigned.i32.f64(double 0xFFF4000000000000)
-; CHECK-NEXT:    store volatile i32 [[T25]], i32* [[P]], align 4
+; CHECK-NEXT:    store volatile i32 [[T25]], ptr [[P]], align 4
 ; CHECK-NEXT:    ret void
 ;
   %t0 = call i32 @llvm.wasm.trunc.unsigned.i32.f64(double +0.0)
-  store volatile i32 %t0, i32* %p
+  store volatile i32 %t0, ptr %p
   %t1 = call i32 @llvm.wasm.trunc.unsigned.i32.f64(double -0.0)
-  store volatile i32 %t1, i32* %p
+  store volatile i32 %t1, ptr %p
   %t2 = call i32 @llvm.wasm.trunc.unsigned.i32.f64(double 0x0010000000000001); 0x0.0000000000001p-1022
-  store volatile i32 %t2, i32* %p
+  store volatile i32 %t2, ptr %p
   %t3 = call i32 @llvm.wasm.trunc.unsigned.i32.f64(double 0x8010000000000001); -0x0.0000000000001p-1022
-  store volatile i32 %t3, i32* %p
+  store volatile i32 %t3, ptr %p
   %t4 = call i32 @llvm.wasm.trunc.unsigned.i32.f64(double 1.0)
-  store volatile i32 %t4, i32* %p
+  store volatile i32 %t4, ptr %p
   %t5 = call i32 @llvm.wasm.trunc.unsigned.i32.f64(double 0x3ff199999999999a); 0x1.199999999999ap+0
-  store volatile i32 %t5, i32* %p
+  store volatile i32 %t5, ptr %p
   %t6 = call i32 @llvm.wasm.trunc.unsigned.i32.f64(double 1.5)
-  store volatile i32 %t6, i32* %p
+  store volatile i32 %t6, ptr %p
   %t7 = call i32 @llvm.wasm.trunc.unsigned.i32.f64(double 0x3ffe666666666666); 1.9
-  store volatile i32 %t7, i32* %p
+  store volatile i32 %t7, ptr %p
   %t8 = call i32 @llvm.wasm.trunc.unsigned.i32.f64(double 2.0)
-  store volatile i32 %t8, i32* %p
+  store volatile i32 %t8, ptr %p
   %t9 = call i32 @llvm.wasm.trunc.unsigned.i32.f64(double 2147483648.0)
-  store volatile i32 %t9, i32* %p
+  store volatile i32 %t9, ptr %p
   %t10 = call i32 @llvm.wasm.trunc.unsigned.i32.f64(double 4294967295.0)
-  store volatile i32 %t10, i32* %p
+  store volatile i32 %t10, ptr %p
   %t11 = call i32 @llvm.wasm.trunc.unsigned.i32.f64(double 0xbfeccccccccccccd); -0x1.ccccccccccccdp-1
-  store volatile i32 %t11, i32* %p
+  store volatile i32 %t11, ptr %p
   %t12 = call i32 @llvm.wasm.trunc.unsigned.i32.f64(double 0xbfefffffffffffff); -0x1.fffffffffffffp-1
-  store volatile i32 %t12, i32* %p
+  store volatile i32 %t12, ptr %p
   %t13 = call i32 @llvm.wasm.trunc.unsigned.i32.f64(double 100000000.0)
-  store volatile i32 %t13, i32* %p
+  store volatile i32 %t13, ptr %p
   %t14 = call i32 @llvm.wasm.trunc.unsigned.i32.f64(double 4294967295.9)
-  store volatile i32 %t14, i32* %p
+  store volatile i32 %t14, ptr %p
   %t15 = call i32 @llvm.wasm.trunc.unsigned.i32.f64(double 4294967296.0)
-  store volatile i32 %t15, i32* %p
+  store volatile i32 %t15, ptr %p
   %t16 = call i32 @llvm.wasm.trunc.unsigned.i32.f64(double -1.0)
-  store volatile i32 %t16, i32* %p
+  store volatile i32 %t16, ptr %p
   %t17 = call i32 @llvm.wasm.trunc.unsigned.i32.f64(double 10000000000000000.0); 1e16
-  store volatile i32 %t17, i32* %p
+  store volatile i32 %t17, ptr %p
   %t18 = call i32 @llvm.wasm.trunc.unsigned.i32.f64(double 1000000000000000000000000000000.0); 1e30
-  store volatile i32 %t18, i32* %p
+  store volatile i32 %t18, ptr %p
   %t19 = call i32 @llvm.wasm.trunc.unsigned.i32.f64(double 9223372036854775808.0)
-  store volatile i32 %t19, i32* %p
+  store volatile i32 %t19, ptr %p
   %t20 = call i32 @llvm.wasm.trunc.unsigned.i32.f64(double 0x7ff0000000000000); inf
-  store volatile i32 %t20, i32* %p
+  store volatile i32 %t20, ptr %p
   %t21 = call i32 @llvm.wasm.trunc.unsigned.i32.f64(double 0xfff0000000000000); -inf
-  store volatile i32 %t21, i32* %p
+  store volatile i32 %t21, ptr %p
   %t22 = call i32 @llvm.wasm.trunc.unsigned.i32.f64(double 0x7ff8000000000000); nan
-  store volatile i32 %t22, i32* %p
+  store volatile i32 %t22, ptr %p
   %t23 = call i32 @llvm.wasm.trunc.unsigned.i32.f64(double 0x7ff4000000000000); nan:0x4000000000000
-  store volatile i32 %t23, i32* %p
+  store volatile i32 %t23, ptr %p
   %t24 = call i32 @llvm.wasm.trunc.unsigned.i32.f64(double 0xfff8000000000000); -nan
-  store volatile i32 %t24, i32* %p
+  store volatile i32 %t24, ptr %p
   %t25 = call i32 @llvm.wasm.trunc.unsigned.i32.f64(double 0xfff4000000000000); -nan:0x4000000000000
-  store volatile i32 %t25, i32* %p
+  store volatile i32 %t25, ptr %p
   ret void
 }
 
-define void @test_i64_trunc_f32_s(i64* %p) {
+define void @test_i64_trunc_f32_s(ptr %p) {
 ; CHECK-LABEL: @test_i64_trunc_f32_s(
-; CHECK-NEXT:    store volatile i64 0, i64* [[P:%.*]], align 8
-; CHECK-NEXT:    store volatile i64 0, i64* [[P]], align 8
-; CHECK-NEXT:    store volatile i64 0, i64* [[P]], align 8
-; CHECK-NEXT:    store volatile i64 0, i64* [[P]], align 8
-; CHECK-NEXT:    store volatile i64 1, i64* [[P]], align 8
-; CHECK-NEXT:    store volatile i64 1, i64* [[P]], align 8
-; CHECK-NEXT:    store volatile i64 1, i64* [[P]], align 8
-; CHECK-NEXT:    store volatile i64 -1, i64* [[P]], align 8
-; CHECK-NEXT:    store volatile i64 -1, i64* [[P]], align 8
-; CHECK-NEXT:    store volatile i64 -1, i64* [[P]], align 8
-; CHECK-NEXT:    store volatile i64 -1, i64* [[P]], align 8
-; CHECK-NEXT:    store volatile i64 -2, i64* [[P]], align 8
-; CHECK-NEXT:    store volatile i64 4294967296, i64* [[P]], align 8
-; CHECK-NEXT:    store volatile i64 -4294967296, i64* [[P]], align 8
-; CHECK-NEXT:    store volatile i64 9223371487098961920, i64* [[P]], align 8
-; CHECK-NEXT:    store volatile i64 -9223372036854775808, i64* [[P]], align 8
+; CHECK-NEXT:    store volatile i64 0, ptr [[P:%.*]], align 8
+; CHECK-NEXT:    store volatile i64 0, ptr [[P]], align 8
+; CHECK-NEXT:    store volatile i64 0, ptr [[P]], align 8
+; CHECK-NEXT:    store volatile i64 0, ptr [[P]], align 8
+; CHECK-NEXT:    store volatile i64 1, ptr [[P]], align 8
+; CHECK-NEXT:    store volatile i64 1, ptr [[P]], align 8
+; CHECK-NEXT:    store volatile i64 1, ptr [[P]], align 8
+; CHECK-NEXT:    store volatile i64 -1, ptr [[P]], align 8
+; CHECK-NEXT:    store volatile i64 -1, ptr [[P]], align 8
+; CHECK-NEXT:    store volatile i64 -1, ptr [[P]], align 8
+; CHECK-NEXT:    store volatile i64 -1, ptr [[P]], align 8
+; CHECK-NEXT:    store volatile i64 -2, ptr [[P]], align 8
+; CHECK-NEXT:    store volatile i64 4294967296, ptr [[P]], align 8
+; CHECK-NEXT:    store volatile i64 -4294967296, ptr [[P]], align 8
+; CHECK-NEXT:    store volatile i64 9223371487098961920, ptr [[P]], align 8
+; CHECK-NEXT:    store volatile i64 -9223372036854775808, ptr [[P]], align 8
 ; CHECK-NEXT:    [[T16:%.*]] = call i64 @llvm.wasm.trunc.signed.i64.f32(float 0x43E0000000000000)
-; CHECK-NEXT:    store volatile i64 [[T16]], i64* [[P]], align 8
+; CHECK-NEXT:    store volatile i64 [[T16]], ptr [[P]], align 8
 ; CHECK-NEXT:    [[T17:%.*]] = call i64 @llvm.wasm.trunc.signed.i64.f32(float 0xC3E0000020000000)
-; CHECK-NEXT:    store volatile i64 [[T17]], i64* [[P]], align 8
+; CHECK-NEXT:    store volatile i64 [[T17]], ptr [[P]], align 8
 ; CHECK-NEXT:    [[T18:%.*]] = call i64 @llvm.wasm.trunc.signed.i64.f32(float 0x7FF0000000000000)
-; CHECK-NEXT:    store volatile i64 [[T18]], i64* [[P]], align 8
+; CHECK-NEXT:    store volatile i64 [[T18]], ptr [[P]], align 8
 ; CHECK-NEXT:    [[T19:%.*]] = call i64 @llvm.wasm.trunc.signed.i64.f32(float 0xFFF0000000000000)
-; CHECK-NEXT:    store volatile i64 [[T19]], i64* [[P]], align 8
+; CHECK-NEXT:    store volatile i64 [[T19]], ptr [[P]], align 8
 ; CHECK-NEXT:    [[T20:%.*]] = call i64 @llvm.wasm.trunc.signed.i64.f32(float 0x7FF8000000000000)
-; CHECK-NEXT:    store volatile i64 [[T20]], i64* [[P]], align 8
+; CHECK-NEXT:    store volatile i64 [[T20]], ptr [[P]], align 8
 ; CHECK-NEXT:    [[T21:%.*]] = call i64 @llvm.wasm.trunc.signed.i64.f32(float 0x7FFA000000000000)
-; CHECK-NEXT:    store volatile i64 [[T21]], i64* [[P]], align 8
+; CHECK-NEXT:    store volatile i64 [[T21]], ptr [[P]], align 8
 ; CHECK-NEXT:    [[T22:%.*]] = call i64 @llvm.wasm.trunc.signed.i64.f32(float 0xFFF8000000000000)
-; CHECK-NEXT:    store volatile i64 [[T22]], i64* [[P]], align 8
+; CHECK-NEXT:    store volatile i64 [[T22]], ptr [[P]], align 8
 ; CHECK-NEXT:    [[T23:%.*]] = call i64 @llvm.wasm.trunc.signed.i64.f32(float 0xFFFA000000000000)
-; CHECK-NEXT:    store volatile i64 [[T23]], i64* [[P]], align 8
+; CHECK-NEXT:    store volatile i64 [[T23]], ptr [[P]], align 8
 ; CHECK-NEXT:    ret void
 ;
   %t0 = call i64 @llvm.wasm.trunc.signed.i64.f32(float +0.0)
-  store volatile i64 %t0, i64* %p
+  store volatile i64 %t0, ptr %p
   %t1 = call i64 @llvm.wasm.trunc.signed.i64.f32(float -0.0)
-  store volatile i64 %t1, i64* %p
+  store volatile i64 %t1, ptr %p
   %t2 = call i64 @llvm.wasm.trunc.signed.i64.f32(float 0x36a0000000000000); 0x1p-149
-  store volatile i64 %t2, i64* %p
+  store volatile i64 %t2, ptr %p
   %t3 = call i64 @llvm.wasm.trunc.signed.i64.f32(float 0xb6a0000000000000); -0x1p-149
-  store volatile i64 %t3, i64* %p
+  store volatile i64 %t3, ptr %p
   %t4 = call i64 @llvm.wasm.trunc.signed.i64.f32(float 1.0)
-  store volatile i64 %t4, i64* %p
+  store volatile i64 %t4, ptr %p
   %t5 = call i64 @llvm.wasm.trunc.signed.i64.f32(float 0x3ff19999a0000000); 0x1.19999ap+0
-  store volatile i64 %t5, i64* %p
+  store volatile i64 %t5, ptr %p
   %t6 = call i64 @llvm.wasm.trunc.signed.i64.f32(float 1.5)
-  store volatile i64 %t6, i64* %p
+  store volatile i64 %t6, ptr %p
   %t7 = call i64 @llvm.wasm.trunc.signed.i64.f32(float -1.0)
-  store volatile i64 %t7, i64* %p
+  store volatile i64 %t7, ptr %p
   %t8 = call i64 @llvm.wasm.trunc.signed.i64.f32(float 0xbff19999a0000000); -0x1.19999ap+0
-  store volatile i64 %t8, i64* %p
+  store volatile i64 %t8, ptr %p
   %t9 = call i64 @llvm.wasm.trunc.signed.i64.f32(float -1.5)
-  store volatile i64 %t9, i64* %p
+  store volatile i64 %t9, ptr %p
   %t10 = call i64 @llvm.wasm.trunc.signed.i64.f32(float 0xbffe666660000000); -1.9
-  store volatile i64 %t10, i64* %p
+  store volatile i64 %t10, ptr %p
   %t11 = call i64 @llvm.wasm.trunc.signed.i64.f32(float -2.0)
-  store volatile i64 %t11, i64* %p
+  store volatile i64 %t11, ptr %p
   %t12 = call i64 @llvm.wasm.trunc.signed.i64.f32(float 4294967296.0)
-  store volatile i64 %t12, i64* %p
+  store volatile i64 %t12, ptr %p
   %t13 = call i64 @llvm.wasm.trunc.signed.i64.f32(float -4294967296.0)
-  store volatile i64 %t13, i64* %p
+  store volatile i64 %t13, ptr %p
   %t14 = call i64 @llvm.wasm.trunc.signed.i64.f32(float 9223371487098961920.0)
-  store volatile i64 %t14, i64* %p
+  store volatile i64 %t14, ptr %p
   %t15 = call i64 @llvm.wasm.trunc.signed.i64.f32(float -9223372036854775808.0)
-  store volatile i64 %t15, i64* %p
+  store volatile i64 %t15, ptr %p
   %t16 = call i64 @llvm.wasm.trunc.signed.i64.f32(float 9223372036854775808.0)
-  store volatile i64 %t16, i64* %p
+  store volatile i64 %t16, ptr %p
   %t17 = call i64 @llvm.wasm.trunc.signed.i64.f32(float -9223373136366403584.0)
-  store volatile i64 %t17, i64* %p
+  store volatile i64 %t17, ptr %p
   %t18 = call i64 @llvm.wasm.trunc.signed.i64.f32(float 0x7ff0000000000000); inf
-  store volatile i64 %t18, i64* %p
+  store volatile i64 %t18, ptr %p
   %t19 = call i64 @llvm.wasm.trunc.signed.i64.f32(float 0xfff0000000000000); -inf
-  store volatile i64 %t19, i64* %p
+  store volatile i64 %t19, ptr %p
   %t20 = call i64 @llvm.wasm.trunc.signed.i64.f32(float 0x7ff8000000000000); nan
-  store volatile i64 %t20, i64* %p
+  store volatile i64 %t20, ptr %p
   %t21 = call i64 @llvm.wasm.trunc.signed.i64.f32(float 0x7ffa000000000000); nan:0x200000
-  store volatile i64 %t21, i64* %p
+  store volatile i64 %t21, ptr %p
   %t22 = call i64 @llvm.wasm.trunc.signed.i64.f32(float 0xfff8000000000000); -nan
-  store volatile i64 %t22, i64* %p
+  store volatile i64 %t22, ptr %p
   %t23 = call i64 @llvm.wasm.trunc.signed.i64.f32(float 0xfffa000000000000); -nan:0x200000
-  store volatile i64 %t23, i64* %p
+  store volatile i64 %t23, ptr %p
   ret void
 }
 
-define void @test_i64_trunc_f32_u(i64* %p) {
+define void @test_i64_trunc_f32_u(ptr %p) {
 ; CHECK-LABEL: @test_i64_trunc_f32_u(
-; CHECK-NEXT:    store volatile i64 0, i64* [[P:%.*]], align 8
-; CHECK-NEXT:    store volatile i64 0, i64* [[P]], align 8
-; CHECK-NEXT:    store volatile i64 0, i64* [[P]], align 8
-; CHECK-NEXT:    store volatile i64 0, i64* [[P]], align 8
-; CHECK-NEXT:    store volatile i64 1, i64* [[P]], align 8
-; CHECK-NEXT:    store volatile i64 1, i64* [[P]], align 8
-; CHECK-NEXT:    store volatile i64 1, i64* [[P]], align 8
-; CHECK-NEXT:    store volatile i64 4294967296, i64* [[P]], align 8
-; CHECK-NEXT:    store volatile i64 -1099511627776, i64* [[P]], align 8
-; CHECK-NEXT:    store volatile i64 0, i64* [[P]], align 8
-; CHECK-NEXT:    store volatile i64 0, i64* [[P]], align 8
+; CHECK-NEXT:    store volatile i64 0, ptr [[P:%.*]], align 8
+; CHECK-NEXT:    store volatile i64 0, ptr [[P]], align 8
+; CHECK-NEXT:    store volatile i64 0, ptr [[P]], align 8
+; CHECK-NEXT:    store volatile i64 0, ptr [[P]], align 8
+; CHECK-NEXT:    store volatile i64 1, ptr [[P]], align 8
+; CHECK-NEXT:    store volatile i64 1, ptr [[P]], align 8
+; CHECK-NEXT:    store volatile i64 1, ptr [[P]], align 8
+; CHECK-NEXT:    store volatile i64 4294967296, ptr [[P]], align 8
+; CHECK-NEXT:    store volatile i64 -1099511627776, ptr [[P]], align 8
+; CHECK-NEXT:    store volatile i64 0, ptr [[P]], align 8
+; CHECK-NEXT:    store volatile i64 0, ptr [[P]], align 8
 ; CHECK-NEXT:    [[T11:%.*]] = call i64 @llvm.wasm.trunc.unsigned.i64.f32(float 0x43F0000000000000)
-; CHECK-NEXT:    store volatile i64 [[T11]], i64* [[P]], align 8
+; CHECK-NEXT:    store volatile i64 [[T11]], ptr [[P]], align 8
 ; CHECK-NEXT:    [[T12:%.*]] = call i64 @llvm.wasm.trunc.unsigned.i64.f32(float -1.000000e+00)
-; CHECK-NEXT:    store volatile i64 [[T12]], i64* [[P]], align 8
+; CHECK-NEXT:    store volatile i64 [[T12]], ptr [[P]], align 8
 ; CHECK-NEXT:    [[T13:%.*]] = call i64 @llvm.wasm.trunc.unsigned.i64.f32(float 0x7FF0000000000000)
-; CHECK-NEXT:    store volatile i64 [[T13]], i64* [[P]], align 8
+; CHECK-NEXT:    store volatile i64 [[T13]], ptr [[P]], align 8
 ; CHECK-NEXT:    [[T14:%.*]] = call i64 @llvm.wasm.trunc.unsigned.i64.f32(float 0xFFF0000000000000)
-; CHECK-NEXT:    store volatile i64 [[T14]], i64* [[P]], align 8
+; CHECK-NEXT:    store volatile i64 [[T14]], ptr [[P]], align 8
 ; CHECK-NEXT:    [[T15:%.*]] = call i64 @llvm.wasm.trunc.unsigned.i64.f32(float 0x7FF8000000000000)
-; CHECK-NEXT:    store volatile i64 [[T15]], i64* [[P]], align 8
+; CHECK-NEXT:    store volatile i64 [[T15]], ptr [[P]], align 8
 ; CHECK-NEXT:    [[T16:%.*]] = call i64 @llvm.wasm.trunc.unsigned.i64.f32(float 0x7FFA000000000000)
-; CHECK-NEXT:    store volatile i64 [[T16]], i64* [[P]], align 8
+; CHECK-NEXT:    store volatile i64 [[T16]], ptr [[P]], align 8
 ; CHECK-NEXT:    [[T17:%.*]] = call i64 @llvm.wasm.trunc.unsigned.i64.f32(float 0xFFF8000000000000)
-; CHECK-NEXT:    store volatile i64 [[T17]], i64* [[P]], align 8
+; CHECK-NEXT:    store volatile i64 [[T17]], ptr [[P]], align 8
 ; CHECK-NEXT:    [[T18:%.*]] = call i64 @llvm.wasm.trunc.unsigned.i64.f32(float 0xFFFA000000000000)
-; CHECK-NEXT:    store volatile i64 [[T18]], i64* [[P]], align 8
+; CHECK-NEXT:    store volatile i64 [[T18]], ptr [[P]], align 8
 ; CHECK-NEXT:    ret void
 ;
   %t0 = call i64 @llvm.wasm.trunc.unsigned.i64.f32(float +0.0)
-  store volatile i64 %t0, i64* %p
+  store volatile i64 %t0, ptr %p
   %t1 = call i64 @llvm.wasm.trunc.unsigned.i64.f32(float -0.0)
-  store volatile i64 %t1, i64* %p
+  store volatile i64 %t1, ptr %p
   %t2 = call i64 @llvm.wasm.trunc.unsigned.i64.f32(float 0x36a0000000000000); 0x1p-149
-  store volatile i64 %t2, i64* %p
+  store volatile i64 %t2, ptr %p
   %t3 = call i64 @llvm.wasm.trunc.unsigned.i64.f32(float 0xb6a0000000000000); -0x1p-149
-  store volatile i64 %t3, i64* %p
+  store volatile i64 %t3, ptr %p
   %t4 = call i64 @llvm.wasm.trunc.unsigned.i64.f32(float 1.0)
-  store volatile i64 %t4, i64* %p
+  store volatile i64 %t4, ptr %p
   %t5 = call i64 @llvm.wasm.trunc.unsigned.i64.f32(float 0x3ff19999a0000000); 0x1.19999ap+0
-  store volatile i64 %t5, i64* %p
+  store volatile i64 %t5, ptr %p
   %t6 = call i64 @llvm.wasm.trunc.unsigned.i64.f32(float 1.5)
-  store volatile i64 %t6, i64* %p
+  store volatile i64 %t6, ptr %p
   %t7 = call i64 @llvm.wasm.trunc.unsigned.i64.f32(float 4294967296.0)
-  store volatile i64 %t7, i64* %p
+  store volatile i64 %t7, ptr %p
   %t8 = call i64 @llvm.wasm.trunc.unsigned.i64.f32(float 18446742974197923840.0)
-  store volatile i64 %t8, i64* %p
+  store volatile i64 %t8, ptr %p
   %t9 = call i64 @llvm.wasm.trunc.unsigned.i64.f32(float 0xbfecccccc0000000); -0x1.ccccccp-1
-  store volatile i64 %t9, i64* %p
+  store volatile i64 %t9, ptr %p
   %t10 = call i64 @llvm.wasm.trunc.unsigned.i64.f32(float 0xbfefffffe0000000); -0x1.fffffep-1
-  store volatile i64 %t10, i64* %p
+  store volatile i64 %t10, ptr %p
   %t11 = call i64 @llvm.wasm.trunc.unsigned.i64.f32(float 18446744073709551616.0)
-  store volatile i64 %t11, i64* %p
+  store volatile i64 %t11, ptr %p
   %t12 = call i64 @llvm.wasm.trunc.unsigned.i64.f32(float -1.0)
-  store volatile i64 %t12, i64* %p
+  store volatile i64 %t12, ptr %p
   %t13 = call i64 @llvm.wasm.trunc.unsigned.i64.f32(float 0x7ff0000000000000); inf
-  store volatile i64 %t13, i64* %p
+  store volatile i64 %t13, ptr %p
   %t14 = call i64 @llvm.wasm.trunc.unsigned.i64.f32(float 0xfff0000000000000); -inf
-  store volatile i64 %t14, i64* %p
+  store volatile i64 %t14, ptr %p
   %t15 = call i64 @llvm.wasm.trunc.unsigned.i64.f32(float 0x7ff8000000000000); nan
-  store volatile i64 %t15, i64* %p
+  store volatile i64 %t15, ptr %p
   %t16 = call i64 @llvm.wasm.trunc.unsigned.i64.f32(float 0x7ffa000000000000); nan:0x200000
-  store volatile i64 %t16, i64* %p
+  store volatile i64 %t16, ptr %p
   %t17 = call i64 @llvm.wasm.trunc.unsigned.i64.f32(float 0xfff8000000000000); -nan
-  store volatile i64 %t17, i64* %p
+  store volatile i64 %t17, ptr %p
   %t18 = call i64 @llvm.wasm.trunc.unsigned.i64.f32(float 0xfffa000000000000); -nan:0x200000
-  store volatile i64 %t18, i64* %p
+  store volatile i64 %t18, ptr %p
   ret void
 }
 
-define void @test_i64_trunc_f64_s(i64* %p) {
+define void @test_i64_trunc_f64_s(ptr %p) {
 ; CHECK-LABEL: @test_i64_trunc_f64_s(
-; CHECK-NEXT:    store volatile i64 0, i64* [[P:%.*]], align 8
-; CHECK-NEXT:    store volatile i64 0, i64* [[P]], align 8
-; CHECK-NEXT:    store volatile i64 0, i64* [[P]], align 8
-; CHECK-NEXT:    store volatile i64 0, i64* [[P]], align 8
-; CHECK-NEXT:    store volatile i64 1, i64* [[P]], align 8
-; CHECK-NEXT:    store volatile i64 1, i64* [[P]], align 8
-; CHECK-NEXT:    store volatile i64 1, i64* [[P]], align 8
-; CHECK-NEXT:    store volatile i64 -1, i64* [[P]], align 8
-; CHECK-NEXT:    store volatile i64 -1, i64* [[P]], align 8
-; CHECK-NEXT:    store volatile i64 -1, i64* [[P]], align 8
-; CHECK-NEXT:    store volatile i64 -1, i64* [[P]], align 8
-; CHECK-NEXT:    store volatile i64 -2, i64* [[P]], align 8
-; CHECK-NEXT:    store volatile i64 4294967296, i64* [[P]], align 8
-; CHECK-NEXT:    store volatile i64 -4294967296, i64* [[P]], align 8
-; CHECK-NEXT:    store volatile i64 9223372036854774784, i64* [[P]], align 8
-; CHECK-NEXT:    store volatile i64 -9223372036854775808, i64* [[P]], align 8
+; CHECK-NEXT:    store volatile i64 0, ptr [[P:%.*]], align 8
+; CHECK-NEXT:    store volatile i64 0, ptr [[P]], align 8
+; CHECK-NEXT:    store volatile i64 0, ptr [[P]], align 8
+; CHECK-NEXT:    store volatile i64 0, ptr [[P]], align 8
+; CHECK-NEXT:    store volatile i64 1, ptr [[P]], align 8
+; CHECK-NEXT:    store volatile i64 1, ptr [[P]], align 8
+; CHECK-NEXT:    store volatile i64 1, ptr [[P]], align 8
+; CHECK-NEXT:    store volatile i64 -1, ptr [[P]], align 8
+; CHECK-NEXT:    store volatile i64 -1, ptr [[P]], align 8
+; CHECK-NEXT:    store volatile i64 -1, ptr [[P]], align 8
+; CHECK-NEXT:    store volatile i64 -1, ptr [[P]], align 8
+; CHECK-NEXT:    store volatile i64 -2, ptr [[P]], align 8
+; CHECK-NEXT:    store volatile i64 4294967296, ptr [[P]], align 8
+; CHECK-NEXT:    store volatile i64 -4294967296, ptr [[P]], align 8
+; CHECK-NEXT:    store volatile i64 9223372036854774784, ptr [[P]], align 8
+; CHECK-NEXT:    store volatile i64 -9223372036854775808, ptr [[P]], align 8
 ; CHECK-NEXT:    [[T16:%.*]] = call i64 @llvm.wasm.trunc.signed.i64.f64(double 0x43E0000000000000)
-; CHECK-NEXT:    store volatile i64 [[T16]], i64* [[P]], align 8
+; CHECK-NEXT:    store volatile i64 [[T16]], ptr [[P]], align 8
 ; CHECK-NEXT:    [[T17:%.*]] = call i64 @llvm.wasm.trunc.signed.i64.f64(double 0xC3E0000000000001)
-; CHECK-NEXT:    store volatile i64 [[T17]], i64* [[P]], align 8
+; CHECK-NEXT:    store volatile i64 [[T17]], ptr [[P]], align 8
 ; CHECK-NEXT:    [[T18:%.*]] = call i64 @llvm.wasm.trunc.signed.i64.f64(double 0x7FF0000000000000)
-; CHECK-NEXT:    store volatile i64 [[T18]], i64* [[P]], align 8
+; CHECK-NEXT:    store volatile i64 [[T18]], ptr [[P]], align 8
 ; CHECK-NEXT:    [[T19:%.*]] = call i64 @llvm.wasm.trunc.signed.i64.f64(double 0xFFF0000000000000)
-; CHECK-NEXT:    store volatile i64 [[T19]], i64* [[P]], align 8
+; CHECK-NEXT:    store volatile i64 [[T19]], ptr [[P]], align 8
 ; CHECK-NEXT:    [[T20:%.*]] = call i64 @llvm.wasm.trunc.signed.i64.f64(double 0x7FF8000000000000)
-; CHECK-NEXT:    store volatile i64 [[T20]], i64* [[P]], align 8
+; CHECK-NEXT:    store volatile i64 [[T20]], ptr [[P]], align 8
 ; CHECK-NEXT:    [[T21:%.*]] = call i64 @llvm.wasm.trunc.signed.i64.f64(double 0x7FF4000000000000)
-; CHECK-NEXT:    store volatile i64 [[T21]], i64* [[P]], align 8
+; CHECK-NEXT:    store volatile i64 [[T21]], ptr [[P]], align 8
 ; CHECK-NEXT:    [[T22:%.*]] = call i64 @llvm.wasm.trunc.signed.i64.f64(double 0xFFF8000000000000)
-; CHECK-NEXT:    store volatile i64 [[T22]], i64* [[P]], align 8
+; CHECK-NEXT:    store volatile i64 [[T22]], ptr [[P]], align 8
 ; CHECK-NEXT:    [[T23:%.*]] = call i64 @llvm.wasm.trunc.signed.i64.f64(double 0x7FF4000000000000)
-; CHECK-NEXT:    store volatile i64 [[T23]], i64* [[P]], align 8
+; CHECK-NEXT:    store volatile i64 [[T23]], ptr [[P]], align 8
 ; CHECK-NEXT:    ret void
 ;
   %t0 = call i64 @llvm.wasm.trunc.signed.i64.f64(double +0.0)
-  store volatile i64 %t0, i64* %p
+  store volatile i64 %t0, ptr %p
   %t1 = call i64 @llvm.wasm.trunc.signed.i64.f64(double -0.0)
-  store volatile i64 %t1, i64* %p
+  store volatile i64 %t1, ptr %p
   %t2 = call i64 @llvm.wasm.trunc.signed.i64.f64(double 0x0010000000000001); 0x0.0000000000001p-1022
-  store volatile i64 %t2, i64* %p
+  store volatile i64 %t2, ptr %p
   %t3 = call i64 @llvm.wasm.trunc.signed.i64.f64(double 0x8010000000000001); -0x1.0000000000001p-1022
-  store volatile i64 %t3, i64* %p
+  store volatile i64 %t3, ptr %p
   %t4 = call i64 @llvm.wasm.trunc.signed.i64.f64(double 1.0)
-  store volatile i64 %t4, i64* %p
+  store volatile i64 %t4, ptr %p
   %t5 = call i64 @llvm.wasm.trunc.signed.i64.f64(double 0x3ff199999999999a); 0x1.199999999999ap+0
-  store volatile i64 %t5, i64* %p
+  store volatile i64 %t5, ptr %p
   %t6 = call i64 @llvm.wasm.trunc.signed.i64.f64(double 1.5)
-  store volatile i64 %t6, i64* %p
+  store volatile i64 %t6, ptr %p
   %t7 = call i64 @llvm.wasm.trunc.signed.i64.f64(double -1.0)
-  store volatile i64 %t7, i64* %p
+  store volatile i64 %t7, ptr %p
   %t8 = call i64 @llvm.wasm.trunc.signed.i64.f64(double 0xbff199999999999a); -0x1.199999999999ap+0
-  store volatile i64 %t8, i64* %p
+  store volatile i64 %t8, ptr %p
   %t9 = call i64 @llvm.wasm.trunc.signed.i64.f64(double -1.5)
-  store volatile i64 %t9, i64* %p
+  store volatile i64 %t9, ptr %p
   %t10 = call i64 @llvm.wasm.trunc.signed.i64.f64(double 0xbffe666666666666); -1.9
-  store volatile i64 %t10, i64* %p
+  store volatile i64 %t10, ptr %p
   %t11 = call i64 @llvm.wasm.trunc.signed.i64.f64(double -2.0)
-  store volatile i64 %t11, i64* %p
+  store volatile i64 %t11, ptr %p
   %t12 = call i64 @llvm.wasm.trunc.signed.i64.f64(double 4294967296.0)
-  store volatile i64 %t12, i64* %p
+  store volatile i64 %t12, ptr %p
   %t13 = call i64 @llvm.wasm.trunc.signed.i64.f64(double -4294967296.0)
-  store volatile i64 %t13, i64* %p
+  store volatile i64 %t13, ptr %p
   %t14 = call i64 @llvm.wasm.trunc.signed.i64.f64(double 9223372036854774784.0)
-  store volatile i64 %t14, i64* %p
+  store volatile i64 %t14, ptr %p
   %t15 = call i64 @llvm.wasm.trunc.signed.i64.f64(double -9223372036854775808.0)
-  store volatile i64 %t15, i64* %p
+  store volatile i64 %t15, ptr %p
   %t16 = call i64 @llvm.wasm.trunc.signed.i64.f64(double 9223372036854775808.0)
-  store volatile i64 %t16, i64* %p
+  store volatile i64 %t16, ptr %p
   %t17 = call i64 @llvm.wasm.trunc.signed.i64.f64(double -9223372036854777856.0)
-  store volatile i64 %t17, i64* %p
+  store volatile i64 %t17, ptr %p
   %t18 = call i64 @llvm.wasm.trunc.signed.i64.f64(double 0x7ff0000000000000); inf
-  store volatile i64 %t18, i64* %p
+  store volatile i64 %t18, ptr %p
   %t19 = call i64 @llvm.wasm.trunc.signed.i64.f64(double 0xfff0000000000000); -inf
-  store volatile i64 %t19, i64* %p
+  store volatile i64 %t19, ptr %p
   %t20 = call i64 @llvm.wasm.trunc.signed.i64.f64(double 0x7ff8000000000000); nan
-  store volatile i64 %t20, i64* %p
+  store volatile i64 %t20, ptr %p
   %t21 = call i64 @llvm.wasm.trunc.signed.i64.f64(double 0x7ff4000000000000); nan:0x4000000000000
-  store volatile i64 %t21, i64* %p
+  store volatile i64 %t21, ptr %p
   %t22 = call i64 @llvm.wasm.trunc.signed.i64.f64(double 0xfff8000000000000); -nan
-  store volatile i64 %t22, i64* %p
+  store volatile i64 %t22, ptr %p
   %t23 = call i64 @llvm.wasm.trunc.signed.i64.f64(double 0x7ff4000000000000); -nan:0x4000000000000
-  store volatile i64 %t23, i64* %p
+  store volatile i64 %t23, ptr %p
   ret void
 }
 
-define void @test_i64_trunc_f64_u(i64* %p) {
+define void @test_i64_trunc_f64_u(ptr %p) {
 ; CHECK-LABEL: @test_i64_trunc_f64_u(
-; CHECK-NEXT:    store volatile i64 0, i64* [[P:%.*]], align 8
-; CHECK-NEXT:    store volatile i64 0, i64* [[P]], align 8
-; CHECK-NEXT:    store volatile i64 0, i64* [[P]], align 8
-; CHECK-NEXT:    store volatile i64 0, i64* [[P]], align 8
-; CHECK-NEXT:    store volatile i64 1, i64* [[P]], align 8
-; CHECK-NEXT:    store volatile i64 1, i64* [[P]], align 8
-; CHECK-NEXT:    store volatile i64 1, i64* [[P]], align 8
-; CHECK-NEXT:    store volatile i64 4294967295, i64* [[P]], align 8
-; CHECK-NEXT:    store volatile i64 4294967296, i64* [[P]], align 8
-; CHECK-NEXT:    store volatile i64 -2048, i64* [[P]], align 8
-; CHECK-NEXT:    store volatile i64 0, i64* [[P]], align 8
-; CHECK-NEXT:    store volatile i64 0, i64* [[P]], align 8
-; CHECK-NEXT:    store volatile i64 100000000, i64* [[P]], align 8
-; CHECK-NEXT:    store volatile i64 10000000000000000, i64* [[P]], align 8
-; CHECK-NEXT:    store volatile i64 -9223372036854775808, i64* [[P]], align 8
+; CHECK-NEXT:    store volatile i64 0, ptr [[P:%.*]], align 8
+; CHECK-NEXT:    store volatile i64 0, ptr [[P]], align 8
+; CHECK-NEXT:    store volatile i64 0, ptr [[P]], align 8
+; CHECK-NEXT:    store volatile i64 0, ptr [[P]], align 8
+; CHECK-NEXT:    store volatile i64 1, ptr [[P]], align 8
+; CHECK-NEXT:    store volatile i64 1, ptr [[P]], align 8
+; CHECK-NEXT:    store volatile i64 1, ptr [[P]], align 8
+; CHECK-NEXT:    store volatile i64 4294967295, ptr [[P]], align 8
+; CHECK-NEXT:    store volatile i64 4294967296, ptr [[P]], align 8
+; CHECK-NEXT:    store volatile i64 -2048, ptr [[P]], align 8
+; CHECK-NEXT:    store volatile i64 0, ptr [[P]], align 8
+; CHECK-NEXT:    store volatile i64 0, ptr [[P]], align 8
+; CHECK-NEXT:    store volatile i64 100000000, ptr [[P]], align 8
+; CHECK-NEXT:    store volatile i64 10000000000000000, ptr [[P]], align 8
+; CHECK-NEXT:    store volatile i64 -9223372036854775808, ptr [[P]], align 8
 ; CHECK-NEXT:    [[T15:%.*]] = call i64 @llvm.wasm.trunc.unsigned.i64.f64(double 0x43F0000000000000)
-; CHECK-NEXT:    store volatile i64 [[T15]], i64* [[P]], align 8
+; CHECK-NEXT:    store volatile i64 [[T15]], ptr [[P]], align 8
 ; CHECK-NEXT:    [[T16:%.*]] = call i64 @llvm.wasm.trunc.unsigned.i64.f64(double -1.000000e+00)
-; CHECK-NEXT:    store volatile i64 [[T16]], i64* [[P]], align 8
+; CHECK-NEXT:    store volatile i64 [[T16]], ptr [[P]], align 8
 ; CHECK-NEXT:    [[T17:%.*]] = call i64 @llvm.wasm.trunc.unsigned.i64.f64(double 0x7FF0000000000000)
-; CHECK-NEXT:    store volatile i64 [[T17]], i64* [[P]], align 8
+; CHECK-NEXT:    store volatile i64 [[T17]], ptr [[P]], align 8
 ; CHECK-NEXT:    [[T18:%.*]] = call i64 @llvm.wasm.trunc.unsigned.i64.f64(double 0xFFF0000000000000)
-; CHECK-NEXT:    store volatile i64 [[T18]], i64* [[P]], align 8
+; CHECK-NEXT:    store volatile i64 [[T18]], ptr [[P]], align 8
 ; CHECK-NEXT:    [[T19:%.*]] = call i64 @llvm.wasm.trunc.unsigned.i64.f64(double 0x7FF8000000000000)
-; CHECK-NEXT:    store volatile i64 [[T19]], i64* [[P]], align 8
+; CHECK-NEXT:    store volatile i64 [[T19]], ptr [[P]], align 8
 ; CHECK-NEXT:    [[T20:%.*]] = call i64 @llvm.wasm.trunc.unsigned.i64.f64(double 0x7FF4000000000000)
-; CHECK-NEXT:    store volatile i64 [[T20]], i64* [[P]], align 8
+; CHECK-NEXT:    store volatile i64 [[T20]], ptr [[P]], align 8
 ; CHECK-NEXT:    [[T21:%.*]] = call i64 @llvm.wasm.trunc.unsigned.i64.f64(double 0xFFF8000000000000)
-; CHECK-NEXT:    store volatile i64 [[T21]], i64* [[P]], align 8
+; CHECK-NEXT:    store volatile i64 [[T21]], ptr [[P]], align 8
 ; CHECK-NEXT:    [[T22:%.*]] = call i64 @llvm.wasm.trunc.unsigned.i64.f64(double 0xFFF4000000000000)
-; CHECK-NEXT:    store volatile i64 [[T22]], i64* [[P]], align 8
+; CHECK-NEXT:    store volatile i64 [[T22]], ptr [[P]], align 8
 ; CHECK-NEXT:    ret void
 ;
   %t0 = call i64 @llvm.wasm.trunc.unsigned.i64.f64(double +0.0)
-  store volatile i64 %t0, i64* %p
+  store volatile i64 %t0, ptr %p
   %t1 = call i64 @llvm.wasm.trunc.unsigned.i64.f64(double -0.0)
-  store volatile i64 %t1, i64* %p
+  store volatile i64 %t1, ptr %p
   %t2 = call i64 @llvm.wasm.trunc.unsigned.i64.f64(double 0x0010000000000001); 0x0.0000000000001p-1022
-  store volatile i64 %t2, i64* %p
+  store volatile i64 %t2, ptr %p
   %t3 = call i64 @llvm.wasm.trunc.unsigned.i64.f64(double 0x8010000000000001); -0x0.0000000000001p-1022
-  store volatile i64 %t3, i64* %p
+  store volatile i64 %t3, ptr %p
   %t4 = call i64 @llvm.wasm.trunc.unsigned.i64.f64(double 1.0)
-  store volatile i64 %t4, i64* %p
+  store volatile i64 %t4, ptr %p
   %t5 = call i64 @llvm.wasm.trunc.unsigned.i64.f64(double 0x3ff199999999999a); 0x1.199999999999ap+0
-  store volatile i64 %t5, i64* %p
+  store volatile i64 %t5, ptr %p
   %t6 = call i64 @llvm.wasm.trunc.unsigned.i64.f64(double 1.5)
-  store volatile i64 %t6, i64* %p
+  store volatile i64 %t6, ptr %p
   %t7 = call i64 @llvm.wasm.trunc.unsigned.i64.f64(double 4294967295.0)
-  store volatile i64 %t7, i64* %p
+  store volatile i64 %t7, ptr %p
   %t8 = call i64 @llvm.wasm.trunc.unsigned.i64.f64(double 4294967296.0)
-  store volatile i64 %t8, i64* %p
+  store volatile i64 %t8, ptr %p
   %t9 = call i64 @llvm.wasm.trunc.unsigned.i64.f64(double 18446744073709549568.0)
-  store volatile i64 %t9, i64* %p
+  store volatile i64 %t9, ptr %p
   %t10 = call i64 @llvm.wasm.trunc.unsigned.i64.f64(double 0xbfeccccccccccccd); -0x1.ccccccccccccdp-1
-  store volatile i64 %t10, i64* %p
+  store volatile i64 %t10, ptr %p
   %t11 = call i64 @llvm.wasm.trunc.unsigned.i64.f64(double 0xbfefffffffffffff); -0x1.fffffffffffffp-1
-  store volatile i64 %t11, i64* %p
+  store volatile i64 %t11, ptr %p
   %t12 = call i64 @llvm.wasm.trunc.unsigned.i64.f64(double 100000000.0); 1e8
-  store volatile i64 %t12, i64* %p
+  store volatile i64 %t12, ptr %p
   %t13 = call i64 @llvm.wasm.trunc.unsigned.i64.f64(double 10000000000000000.0); 1e16
-  store volatile i64 %t13, i64* %p
+  store volatile i64 %t13, ptr %p
   %t14 = call i64 @llvm.wasm.trunc.unsigned.i64.f64(double 9223372036854775808.0);
-  store volatile i64 %t14, i64* %p
+  store volatile i64 %t14, ptr %p
   %t15 = call i64 @llvm.wasm.trunc.unsigned.i64.f64(double 18446744073709551616.0)
-  store volatile i64 %t15, i64* %p
+  store volatile i64 %t15, ptr %p
   %t16 = call i64 @llvm.wasm.trunc.unsigned.i64.f64(double -1.0)
-  store volatile i64 %t16, i64* %p
+  store volatile i64 %t16, ptr %p
   %t17 = call i64 @llvm.wasm.trunc.unsigned.i64.f64(double 0x7ff0000000000000); inf
-  store volatile i64 %t17, i64* %p
+  store volatile i64 %t17, ptr %p
   %t18 = call i64 @llvm.wasm.trunc.unsigned.i64.f64(double 0xfff0000000000000); -inf
-  store volatile i64 %t18, i64* %p
+  store volatile i64 %t18, ptr %p
   %t19 = call i64 @llvm.wasm.trunc.unsigned.i64.f64(double 0x7ff8000000000000); nan
-  store volatile i64 %t19, i64* %p
+  store volatile i64 %t19, ptr %p
   %t20 = call i64 @llvm.wasm.trunc.unsigned.i64.f64(double 0x7ff4000000000000); nan:0x4000000000000
-  store volatile i64 %t20, i64* %p
+  store volatile i64 %t20, ptr %p
   %t21 = call i64 @llvm.wasm.trunc.unsigned.i64.f64(double 0xfff8000000000000); -nan
-  store volatile i64 %t21, i64* %p
+  store volatile i64 %t21, ptr %p
   %t22 = call i64 @llvm.wasm.trunc.unsigned.i64.f64(double 0xfff4000000000000); -nan:0x4000000000000
-  store volatile i64 %t22, i64* %p
+  store volatile i64 %t22, ptr %p
   ret void
 }

@@ -581,15 +581,15 @@ define i64 @select_icmp_x_and_8_ne_0_y64_and_not_8(i32 %x, i64 %y) {
 
 ; Don't crash on a pointer or aggregate type.
 
-define i32* @select_icmp_pointers(i32* %x, i32* %y) {
+define ptr @select_icmp_pointers(ptr %x, ptr %y) {
 ; CHECK-LABEL: @select_icmp_pointers(
-; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32* [[X:%.*]], null
-; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[CMP]], i32* [[X]], i32* [[Y:%.*]]
-; CHECK-NEXT:    ret i32* [[SEL]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt ptr [[X:%.*]], null
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[CMP]], ptr [[X]], ptr [[Y:%.*]]
+; CHECK-NEXT:    ret ptr [[SEL]]
 ;
-  %cmp = icmp slt i32* %x, null
-  %sel = select i1 %cmp, i32* %x, i32* %y
-  ret i32* %sel
+  %cmp = icmp slt ptr %x, null
+  %sel = select i1 %cmp, ptr %x, ptr %y
+  ret ptr %sel
 }
 
 ; If the condition is known, we don't need to select, but we're not
@@ -621,26 +621,26 @@ define i8 @do_not_assume_sel_cond(i1 %cond, i8 %x, i8 %y) {
   ret i8 %sel
 }
 
-define i32* @select_icmp_eq_0_gep_operand(i32* %base, i64 %n) {
+define ptr @select_icmp_eq_0_gep_operand(ptr %base, i64 %n) {
 ; CHECK-LABEL: @select_icmp_eq_0_gep_operand(
-; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i32, i32* [[BASE:%.*]], i64 [[N:%.*]]
-; CHECK-NEXT:    ret i32* [[GEP]]
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i32, ptr [[BASE:%.*]], i64 [[N:%.*]]
+; CHECK-NEXT:    ret ptr [[GEP]]
 ;
   %cond = icmp eq i64 %n, 0
-  %gep = getelementptr i32, i32* %base, i64 %n
-  %r = select i1 %cond, i32* %base, i32* %gep
-  ret i32* %r
+  %gep = getelementptr i32, ptr %base, i64 %n
+  %r = select i1 %cond, ptr %base, ptr %gep
+  ret ptr %r
 }
 
-define i32* @select_icmp_ne_0_gep_operand(i32* %base, i64 %n) {
+define ptr @select_icmp_ne_0_gep_operand(ptr %base, i64 %n) {
 ; CHECK-LABEL: @select_icmp_ne_0_gep_operand(
-; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i32, i32* [[BASE:%.*]], i64 [[N:%.*]]
-; CHECK-NEXT:    ret i32* [[GEP]]
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i32, ptr [[BASE:%.*]], i64 [[N:%.*]]
+; CHECK-NEXT:    ret ptr [[GEP]]
 ;
   %cond = icmp ne i64 %n, 0
-  %gep = getelementptr i32, i32* %base, i64 %n
-  %r = select i1 %cond, i32* %gep, i32* %base
-  ret i32* %r
+  %gep = getelementptr i32, ptr %base, i64 %n
+  %r = select i1 %cond, ptr %gep, ptr %base
+  ret ptr %r
 }
 
 define i1 @and_cmps(i32 %x) {
@@ -845,9 +845,9 @@ define i32 @false_undef_false_freeze(i1 %cond, i32 %x) {
 
 define <2 x i32> @false_undef_true_constextpr_vec(i1 %cond) {
 ; CHECK-LABEL: @false_undef_true_constextpr_vec(
-; CHECK-NEXT:    ret <2 x i32> <i32 ptrtoint (i32* @g to i32), i32 ptrtoint (i32* @g to i32)>
+; CHECK-NEXT:    ret <2 x i32> <i32 ptrtoint (ptr @g to i32), i32 ptrtoint (ptr @g to i32)>
 ;
-  %s = select i1 %cond, <2 x i32> <i32 undef, i32 ptrtoint (i32* @g to i32)>, <2 x i32> <i32 ptrtoint (i32* @g to i32), i32 undef>
+  %s = select i1 %cond, <2 x i32> <i32 undef, i32 ptrtoint (ptr @g to i32)>, <2 x i32> <i32 ptrtoint (ptr @g to i32), i32 undef>
   ret <2 x i32> %s
 }
 
@@ -855,7 +855,7 @@ define i32 @all_constant_true_undef() {
 ; CHECK-LABEL: @all_constant_true_undef(
 ; CHECK-NEXT:    ret i32 1
 ;
-  %s = select i1 ptrtoint (i32 ()* @all_constant_true_undef to i1), i32 undef, i32 1
+  %s = select i1 ptrtoint (ptr @all_constant_true_undef to i1), i32 undef, i32 1
   ret i32 %s
 }
 
@@ -863,7 +863,7 @@ define float @all_constant_false_undef() {
 ; CHECK-LABEL: @all_constant_false_undef(
 ; CHECK-NEXT:    ret float 1.000000e+00
 ;
-  %s = select i1 ptrtoint (float ()* @all_constant_false_undef to i1), float undef, float 1.0
+  %s = select i1 ptrtoint (ptr @all_constant_false_undef to i1), float undef, float 1.0
   ret float %s
 }
 
@@ -871,7 +871,7 @@ define <2 x i32> @all_constant_true_undef_vec() {
 ; CHECK-LABEL: @all_constant_true_undef_vec(
 ; CHECK-NEXT:    ret <2 x i32> <i32 1, i32 -1>
 ;
-  %s = select i1 ptrtoint (<2 x i32> ()* @all_constant_true_undef_vec to i1), <2 x i32> undef, <2 x i32> <i32 1, i32 -1>
+  %s = select i1 ptrtoint (ptr @all_constant_true_undef_vec to i1), <2 x i32> undef, <2 x i32> <i32 1, i32 -1>
   ret <2 x i32> %s
 }
 
@@ -879,45 +879,45 @@ define <2 x float> @all_constant_false_undef_vec() {
 ; CHECK-LABEL: @all_constant_false_undef_vec(
 ; CHECK-NEXT:    ret <2 x float> <float 1.000000e+00, float -1.000000e+00>
 ;
-  %s = select i1 ptrtoint (<2 x float> ()* @all_constant_false_undef_vec to i1), <2 x float> undef, <2 x float> <float 1.0, float -1.0>
+  %s = select i1 ptrtoint (ptr @all_constant_false_undef_vec to i1), <2 x float> undef, <2 x float> <float 1.0, float -1.0>
   ret <2 x float> %s
 }
 
 ; Negative tests. Don't fold if the non-undef operand is a constexpr.
 define i32 @all_constant_false_undef_true_constexpr() {
 ; CHECK-LABEL: @all_constant_false_undef_true_constexpr(
-; CHECK-NEXT:    [[S:%.*]] = select i1 ptrtoint (i32 ()* @all_constant_false_undef_true_constexpr to i1), i32 ptrtoint (i32 ()* @all_constant_false_undef_true_constexpr to i32), i32 undef
+; CHECK-NEXT:    [[S:%.*]] = select i1 ptrtoint (ptr @all_constant_false_undef_true_constexpr to i1), i32 ptrtoint (ptr @all_constant_false_undef_true_constexpr to i32), i32 undef
 ; CHECK-NEXT:    ret i32 [[S]]
 ;
-  %s = select i1 ptrtoint (i32 ()* @all_constant_false_undef_true_constexpr to i1), i32 ptrtoint (i32 ()* @all_constant_false_undef_true_constexpr to i32), i32 undef
+  %s = select i1 ptrtoint (ptr @all_constant_false_undef_true_constexpr to i1), i32 ptrtoint (ptr @all_constant_false_undef_true_constexpr to i32), i32 undef
   ret i32 %s
 }
 
 define i32 @all_constant_true_undef_false_constexpr() {
 ; CHECK-LABEL: @all_constant_true_undef_false_constexpr(
-; CHECK-NEXT:    [[S:%.*]] = select i1 ptrtoint (i32 ()* @all_constant_true_undef_false_constexpr to i1), i32 undef, i32 ptrtoint (i32 ()* @all_constant_true_undef_false_constexpr to i32)
+; CHECK-NEXT:    [[S:%.*]] = select i1 ptrtoint (ptr @all_constant_true_undef_false_constexpr to i1), i32 undef, i32 ptrtoint (ptr @all_constant_true_undef_false_constexpr to i32)
 ; CHECK-NEXT:    ret i32 [[S]]
 ;
-  %s = select i1 ptrtoint (i32 ()* @all_constant_true_undef_false_constexpr to i1), i32 undef, i32 ptrtoint (i32 ()* @all_constant_true_undef_false_constexpr to i32)
+  %s = select i1 ptrtoint (ptr @all_constant_true_undef_false_constexpr to i1), i32 undef, i32 ptrtoint (ptr @all_constant_true_undef_false_constexpr to i32)
   ret i32 %s
 }
 
 ; Negative tests. Don't fold if the non-undef operand is a vector containing a constexpr.
 define <2 x i32> @all_constant_false_undef_true_constexpr_vec() {
 ; CHECK-LABEL: @all_constant_false_undef_true_constexpr_vec(
-; CHECK-NEXT:    [[S:%.*]] = select i1 ptrtoint (<2 x i32> ()* @all_constant_false_undef_true_constexpr_vec to i1), <2 x i32> <i32 ptrtoint (<2 x i32> ()* @all_constant_false_undef_true_constexpr_vec to i32), i32 -1>, <2 x i32> undef
+; CHECK-NEXT:    [[S:%.*]] = select i1 ptrtoint (ptr @all_constant_false_undef_true_constexpr_vec to i1), <2 x i32> <i32 ptrtoint (ptr @all_constant_false_undef_true_constexpr_vec to i32), i32 -1>, <2 x i32> undef
 ; CHECK-NEXT:    ret <2 x i32> [[S]]
 ;
-  %s = select i1 ptrtoint (<2 x i32> ()* @all_constant_false_undef_true_constexpr_vec to i1), <2 x i32> <i32 ptrtoint (<2 x i32> ()* @all_constant_false_undef_true_constexpr_vec to i32), i32 -1>, <2 x i32> undef
+  %s = select i1 ptrtoint (ptr @all_constant_false_undef_true_constexpr_vec to i1), <2 x i32> <i32 ptrtoint (ptr @all_constant_false_undef_true_constexpr_vec to i32), i32 -1>, <2 x i32> undef
   ret <2 x i32> %s
 }
 
 define <2 x i32> @all_constant_true_undef_false_constexpr_vec() {
 ; CHECK-LABEL: @all_constant_true_undef_false_constexpr_vec(
-; CHECK-NEXT:    [[S:%.*]] = select i1 ptrtoint (<2 x i32> ()* @all_constant_true_undef_false_constexpr_vec to i1), <2 x i32> undef, <2 x i32> <i32 -1, i32 ptrtoint (<2 x i32> ()* @all_constant_true_undef_false_constexpr_vec to i32)>
+; CHECK-NEXT:    [[S:%.*]] = select i1 ptrtoint (ptr @all_constant_true_undef_false_constexpr_vec to i1), <2 x i32> undef, <2 x i32> <i32 -1, i32 ptrtoint (ptr @all_constant_true_undef_false_constexpr_vec to i32)>
 ; CHECK-NEXT:    ret <2 x i32> [[S]]
 ;
-  %s = select i1 ptrtoint (<2 x i32> ()* @all_constant_true_undef_false_constexpr_vec to i1), <2 x i32> undef, <2 x i32><i32 -1, i32 ptrtoint (<2 x i32> ()* @all_constant_true_undef_false_constexpr_vec to i32)>
+  %s = select i1 ptrtoint (ptr @all_constant_true_undef_false_constexpr_vec to i1), <2 x i32> undef, <2 x i32><i32 -1, i32 ptrtoint (ptr @all_constant_true_undef_false_constexpr_vec to i32)>
   ret <2 x i32> %s
 }
 

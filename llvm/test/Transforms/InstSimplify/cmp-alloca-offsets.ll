@@ -13,15 +13,14 @@ define i1 @adjacent_alloca() {
 ; CHECK-LABEL: @adjacent_alloca(
 ; CHECK-NEXT:    [[A:%.*]] = alloca i8, i32 4, align 1
 ; CHECK-NEXT:    [[B:%.*]] = alloca i8, i32 4, align 1
-; CHECK-NEXT:    [[B_OFF:%.*]] = getelementptr i8, i8* [[B]], i64 4
-; CHECK-NEXT:    [[RES:%.*]] = icmp ne i8* [[A]], [[B_OFF]]
+; CHECK-NEXT:    [[B_OFF:%.*]] = getelementptr i8, ptr [[B]], i64 4
+; CHECK-NEXT:    [[RES:%.*]] = icmp ne ptr [[A]], [[B_OFF]]
 ; CHECK-NEXT:    ret i1 [[RES]]
 ;
   %a = alloca i8, i32 4
   %b = alloca i8, i32 4
-  %a.off = getelementptr i8, i8* %a, i64 0
-  %b.off = getelementptr i8, i8* %b, i64 4
-  %res = icmp ne i8* %a.off, %b.off
+  %b.off = getelementptr i8, ptr %b, i64 4
+  %res = icmp ne ptr %a, %b.off
   ret i1 %res
 }
 
@@ -30,15 +29,14 @@ define i1 @adjacent_alloca2() {
 ; CHECK-LABEL: @adjacent_alloca2(
 ; CHECK-NEXT:    [[A:%.*]] = alloca i8, i32 4, align 1
 ; CHECK-NEXT:    [[B:%.*]] = alloca i8, i32 4, align 1
-; CHECK-NEXT:    [[A_OFF:%.*]] = getelementptr i8, i8* [[A]], i64 4
-; CHECK-NEXT:    [[RES:%.*]] = icmp ne i8* [[A_OFF]], [[B]]
+; CHECK-NEXT:    [[A_OFF:%.*]] = getelementptr i8, ptr [[A]], i64 4
+; CHECK-NEXT:    [[RES:%.*]] = icmp ne ptr [[A_OFF]], [[B]]
 ; CHECK-NEXT:    ret i1 [[RES]]
 ;
   %a = alloca i8, i32 4
   %b = alloca i8, i32 4
-  %a.off = getelementptr i8, i8* %a, i64 4
-  %b.off = getelementptr i8, i8* %b, i64 0
-  %res = icmp ne i8* %a.off, %b.off
+  %a.off = getelementptr i8, ptr %a, i64 4
+  %res = icmp ne ptr %a.off, %b
   ret i1 %res
 }
 
@@ -47,16 +45,16 @@ define i1 @positive_non_equal_end() {
 ; CHECK-LABEL: @positive_non_equal_end(
 ; CHECK-NEXT:    [[A:%.*]] = alloca i8, i32 4, align 1
 ; CHECK-NEXT:    [[B:%.*]] = alloca i8, i32 4, align 1
-; CHECK-NEXT:    [[A_OFF:%.*]] = getelementptr i8, i8* [[A]], i64 4
-; CHECK-NEXT:    [[B_OFF:%.*]] = getelementptr i8, i8* [[B]], i64 4
-; CHECK-NEXT:    [[RES:%.*]] = icmp ne i8* [[A_OFF]], [[B_OFF]]
+; CHECK-NEXT:    [[A_OFF:%.*]] = getelementptr i8, ptr [[A]], i64 4
+; CHECK-NEXT:    [[B_OFF:%.*]] = getelementptr i8, ptr [[B]], i64 4
+; CHECK-NEXT:    [[RES:%.*]] = icmp ne ptr [[A_OFF]], [[B_OFF]]
 ; CHECK-NEXT:    ret i1 [[RES]]
 ;
   %a = alloca i8, i32 4
   %b = alloca i8, i32 4
-  %a.off = getelementptr i8, i8* %a, i64 4
-  %b.off = getelementptr i8, i8* %b, i64 4
-  %res = icmp ne i8* %a.off, %b.off
+  %a.off = getelementptr i8, ptr %a, i64 4
+  %b.off = getelementptr i8, ptr %b, i64 4
+  %res = icmp ne ptr %a.off, %b.off
   ret i1 %res
 }
 
@@ -65,16 +63,16 @@ define i1 @positive_equal_past_end() {
 ; CHECK-LABEL: @positive_equal_past_end(
 ; CHECK-NEXT:    [[A:%.*]] = alloca i8, i32 4, align 1
 ; CHECK-NEXT:    [[B:%.*]] = alloca i8, i32 4, align 1
-; CHECK-NEXT:    [[A_OFF:%.*]] = getelementptr i8, i8* [[A]], i64 8
-; CHECK-NEXT:    [[B_OFF:%.*]] = getelementptr i8, i8* [[B]], i64 12
-; CHECK-NEXT:    [[RES:%.*]] = icmp ne i8* [[A_OFF]], [[B_OFF]]
+; CHECK-NEXT:    [[A_OFF:%.*]] = getelementptr i8, ptr [[A]], i64 8
+; CHECK-NEXT:    [[B_OFF:%.*]] = getelementptr i8, ptr [[B]], i64 12
+; CHECK-NEXT:    [[RES:%.*]] = icmp ne ptr [[A_OFF]], [[B_OFF]]
 ; CHECK-NEXT:    ret i1 [[RES]]
 ;
   %a = alloca i8, i32 4
   %b = alloca i8, i32 4
-  %a.off = getelementptr i8, i8* %a, i64 8
-  %b.off = getelementptr i8, i8* %b, i64 12
-  %res = icmp ne i8* %a.off, %b.off
+  %a.off = getelementptr i8, ptr %a, i64 8
+  %b.off = getelementptr i8, ptr %b, i64 12
+  %res = icmp ne ptr %a.off, %b.off
   ret i1 %res
 }
 
@@ -84,9 +82,9 @@ define i1 @positive_non_equal() {
 ;
   %a = alloca i8, i32 4
   %b = alloca i8, i32 4
-  %a.off = getelementptr i8, i8* %a, i64 3
-  %b.off = getelementptr i8, i8* %b, i64 3
-  %res = icmp ne i8* %a.off, %b.off
+  %a.off = getelementptr i8, ptr %a, i64 3
+  %b.off = getelementptr i8, ptr %b, i64 3
+  %res = icmp ne ptr %a.off, %b.off
   ret i1 %res
 }
 
@@ -95,16 +93,16 @@ define i1 @one_neg_equal1() {
 ; CHECK-LABEL: @one_neg_equal1(
 ; CHECK-NEXT:    [[A:%.*]] = alloca i8, i32 4, align 1
 ; CHECK-NEXT:    [[B:%.*]] = alloca i8, i32 4, align 1
-; CHECK-NEXT:    [[A_OFF:%.*]] = getelementptr i8, i8* [[A]], i64 -1
-; CHECK-NEXT:    [[B_OFF:%.*]] = getelementptr i8, i8* [[B]], i64 3
-; CHECK-NEXT:    [[RES:%.*]] = icmp ne i8* [[A_OFF]], [[B_OFF]]
+; CHECK-NEXT:    [[A_OFF:%.*]] = getelementptr i8, ptr [[A]], i64 -1
+; CHECK-NEXT:    [[B_OFF:%.*]] = getelementptr i8, ptr [[B]], i64 3
+; CHECK-NEXT:    [[RES:%.*]] = icmp ne ptr [[A_OFF]], [[B_OFF]]
 ; CHECK-NEXT:    ret i1 [[RES]]
 ;
   %a = alloca i8, i32 4
   %b = alloca i8, i32 4
-  %a.off = getelementptr i8, i8* %a, i64 -1
-  %b.off = getelementptr i8, i8* %b, i64 3
-  %res = icmp ne i8* %a.off, %b.off
+  %a.off = getelementptr i8, ptr %a, i64 -1
+  %b.off = getelementptr i8, ptr %b, i64 3
+  %res = icmp ne ptr %a.off, %b.off
   ret i1 %res
 }
 
@@ -113,16 +111,16 @@ define i1 @one_neg_equal2() {
 ; CHECK-LABEL: @one_neg_equal2(
 ; CHECK-NEXT:    [[A:%.*]] = alloca i8, i32 4, align 1
 ; CHECK-NEXT:    [[B:%.*]] = alloca i8, i32 4, align 1
-; CHECK-NEXT:    [[A_OFF:%.*]] = getelementptr i8, i8* [[A]], i64 3
-; CHECK-NEXT:    [[B_OFF:%.*]] = getelementptr i8, i8* [[B]], i64 -1
-; CHECK-NEXT:    [[RES:%.*]] = icmp ne i8* [[A_OFF]], [[B_OFF]]
+; CHECK-NEXT:    [[A_OFF:%.*]] = getelementptr i8, ptr [[A]], i64 3
+; CHECK-NEXT:    [[B_OFF:%.*]] = getelementptr i8, ptr [[B]], i64 -1
+; CHECK-NEXT:    [[RES:%.*]] = icmp ne ptr [[A_OFF]], [[B_OFF]]
 ; CHECK-NEXT:    ret i1 [[RES]]
 ;
   %a = alloca i8, i32 4
   %b = alloca i8, i32 4
-  %a.off = getelementptr i8, i8* %a, i64 3
-  %b.off = getelementptr i8, i8* %b, i64 -1
-  %res = icmp ne i8* %a.off, %b.off
+  %a.off = getelementptr i8, ptr %a, i64 3
+  %b.off = getelementptr i8, ptr %b, i64 -1
+  %res = icmp ne ptr %a.off, %b.off
   ret i1 %res
 }
 
@@ -131,16 +129,16 @@ define i1 @both_neg_equal() {
 ; CHECK-LABEL: @both_neg_equal(
 ; CHECK-NEXT:    [[A:%.*]] = alloca i8, i32 4, align 1
 ; CHECK-NEXT:    [[B:%.*]] = alloca i8, i32 4, align 1
-; CHECK-NEXT:    [[A_OFF:%.*]] = getelementptr i8, i8* [[A]], i64 -4
-; CHECK-NEXT:    [[B_OFF:%.*]] = getelementptr i8, i8* [[B]], i64 -8
-; CHECK-NEXT:    [[RES:%.*]] = icmp ne i8* [[A_OFF]], [[B_OFF]]
+; CHECK-NEXT:    [[A_OFF:%.*]] = getelementptr i8, ptr [[A]], i64 -4
+; CHECK-NEXT:    [[B_OFF:%.*]] = getelementptr i8, ptr [[B]], i64 -8
+; CHECK-NEXT:    [[RES:%.*]] = icmp ne ptr [[A_OFF]], [[B_OFF]]
 ; CHECK-NEXT:    ret i1 [[RES]]
 ;
   %a = alloca i8, i32 4
   %b = alloca i8, i32 4
-  %a.off = getelementptr i8, i8* %a, i64 -4
-  %b.off = getelementptr i8, i8* %b, i64 -8
-  %res = icmp ne i8* %a.off, %b.off
+  %a.off = getelementptr i8, ptr %a, i64 -4
+  %b.off = getelementptr i8, ptr %b, i64 -8
+  %res = icmp ne ptr %a.off, %b.off
   ret i1 %res
 }
 
@@ -149,16 +147,16 @@ define i1 @mixed_offsets1() {
 ; CHECK-LABEL: @mixed_offsets1(
 ; CHECK-NEXT:    [[A:%.*]] = alloca i8, i32 4, align 1
 ; CHECK-NEXT:    [[B:%.*]] = alloca i8, i32 4, align 1
-; CHECK-NEXT:    [[A_OFF:%.*]] = getelementptr i8, i8* [[A]], i64 -1
-; CHECK-NEXT:    [[B_OFF:%.*]] = getelementptr i8, i8* [[B]], i64 2
-; CHECK-NEXT:    [[RES:%.*]] = icmp ne i8* [[A_OFF]], [[B_OFF]]
+; CHECK-NEXT:    [[A_OFF:%.*]] = getelementptr i8, ptr [[A]], i64 -1
+; CHECK-NEXT:    [[B_OFF:%.*]] = getelementptr i8, ptr [[B]], i64 2
+; CHECK-NEXT:    [[RES:%.*]] = icmp ne ptr [[A_OFF]], [[B_OFF]]
 ; CHECK-NEXT:    ret i1 [[RES]]
 ;
   %a = alloca i8, i32 4
   %b = alloca i8, i32 4
-  %a.off = getelementptr i8, i8* %a, i64 -1
-  %b.off = getelementptr i8, i8* %b, i64 2
-  %res = icmp ne i8* %a.off, %b.off
+  %a.off = getelementptr i8, ptr %a, i64 -1
+  %b.off = getelementptr i8, ptr %b, i64 2
+  %res = icmp ne ptr %a.off, %b.off
   ret i1 %res
 }
 
@@ -167,16 +165,16 @@ define i1 @mixed_offsets2() {
 ; CHECK-LABEL: @mixed_offsets2(
 ; CHECK-NEXT:    [[A:%.*]] = alloca i8, i32 4, align 1
 ; CHECK-NEXT:    [[B:%.*]] = alloca i8, i32 4, align 1
-; CHECK-NEXT:    [[A_OFF:%.*]] = getelementptr i8, i8* [[A]], i64 1
-; CHECK-NEXT:    [[B_OFF:%.*]] = getelementptr i8, i8* [[B]], i64 -2
-; CHECK-NEXT:    [[RES:%.*]] = icmp ne i8* [[A_OFF]], [[B_OFF]]
+; CHECK-NEXT:    [[A_OFF:%.*]] = getelementptr i8, ptr [[A]], i64 1
+; CHECK-NEXT:    [[B_OFF:%.*]] = getelementptr i8, ptr [[B]], i64 -2
+; CHECK-NEXT:    [[RES:%.*]] = icmp ne ptr [[A_OFF]], [[B_OFF]]
 ; CHECK-NEXT:    ret i1 [[RES]]
 ;
   %a = alloca i8, i32 4
   %b = alloca i8, i32 4
-  %a.off = getelementptr i8, i8* %a, i64 1
-  %b.off = getelementptr i8, i8* %b, i64 -2
-  %res = icmp ne i8* %a.off, %b.off
+  %a.off = getelementptr i8, ptr %a, i64 1
+  %b.off = getelementptr i8, ptr %b, i64 -2
+  %res = icmp ne ptr %a.off, %b.off
   ret i1 %res
 }
 
@@ -185,16 +183,16 @@ define i1 @negative_in_other() {
 ; CHECK-LABEL: @negative_in_other(
 ; CHECK-NEXT:    [[A:%.*]] = alloca i8, i32 4, align 1
 ; CHECK-NEXT:    [[B:%.*]] = alloca i8, i32 4, align 1
-; CHECK-NEXT:    [[A_OFF:%.*]] = getelementptr i8, i8* [[A]], i64 -3
-; CHECK-NEXT:    [[B_OFF:%.*]] = getelementptr i8, i8* [[B]], i64 -2
-; CHECK-NEXT:    [[RES:%.*]] = icmp ne i8* [[A_OFF]], [[B_OFF]]
+; CHECK-NEXT:    [[A_OFF:%.*]] = getelementptr i8, ptr [[A]], i64 -3
+; CHECK-NEXT:    [[B_OFF:%.*]] = getelementptr i8, ptr [[B]], i64 -2
+; CHECK-NEXT:    [[RES:%.*]] = icmp ne ptr [[A_OFF]], [[B_OFF]]
 ; CHECK-NEXT:    ret i1 [[RES]]
 ;
   %a = alloca i8, i32 4
   %b = alloca i8, i32 4
-  %a.off = getelementptr i8, i8* %a, i64 -3
-  %b.off = getelementptr i8, i8* %b, i64 -2
-  %res = icmp ne i8* %a.off, %b.off
+  %a.off = getelementptr i8, ptr %a, i64 -3
+  %b.off = getelementptr i8, ptr %b, i64 -2
+  %res = icmp ne ptr %a.off, %b.off
   ret i1 %res
 }
 

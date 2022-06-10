@@ -3,42 +3,42 @@
 
 declare float @llvm.amdgcn.fma.legacy(float, float, float)
 
-define void @test(float* %p) {
+define void @test(ptr %p) {
 ; CHECK-LABEL: @test(
-; CHECK-NEXT:    store volatile float 1.000000e+01, float* [[P:%.*]], align 4
-; CHECK-NEXT:    store volatile float 4.000000e+00, float* [[P]], align 4
-; CHECK-NEXT:    store volatile float 4.000000e+00, float* [[P]], align 4
-; CHECK-NEXT:    store volatile float 0.000000e+00, float* [[P]], align 4
-; CHECK-NEXT:    store volatile float 0.000000e+00, float* [[P]], align 4
-; CHECK-NEXT:    store volatile float 0.000000e+00, float* [[P]], align 4
-; CHECK-NEXT:    store volatile float 0.000000e+00, float* [[P]], align 4
-; CHECK-NEXT:    store volatile float 4.000000e+00, float* [[P]], align 4
-; CHECK-NEXT:    store volatile float 4.000000e+00, float* [[P]], align 4
-; CHECK-NEXT:    store volatile float 4.000000e+00, float* [[P]], align 4
-; CHECK-NEXT:    store volatile float 4.000000e+00, float* [[P]], align 4
+; CHECK-NEXT:    store volatile float 1.000000e+01, ptr [[P:%.*]], align 4
+; CHECK-NEXT:    store volatile float 4.000000e+00, ptr [[P]], align 4
+; CHECK-NEXT:    store volatile float 4.000000e+00, ptr [[P]], align 4
+; CHECK-NEXT:    store volatile float 0.000000e+00, ptr [[P]], align 4
+; CHECK-NEXT:    store volatile float 0.000000e+00, ptr [[P]], align 4
+; CHECK-NEXT:    store volatile float 0.000000e+00, ptr [[P]], align 4
+; CHECK-NEXT:    store volatile float 0.000000e+00, ptr [[P]], align 4
+; CHECK-NEXT:    store volatile float 4.000000e+00, ptr [[P]], align 4
+; CHECK-NEXT:    store volatile float 4.000000e+00, ptr [[P]], align 4
+; CHECK-NEXT:    store volatile float 4.000000e+00, ptr [[P]], align 4
+; CHECK-NEXT:    store volatile float 4.000000e+00, ptr [[P]], align 4
 ; CHECK-NEXT:    ret void
 ;
   %a = call float @llvm.amdgcn.fma.legacy(float +2.0, float +3.0, float +4.0)
-  store volatile float %a, float* %p
+  store volatile float %a, ptr %p
   %b = call float @llvm.amdgcn.fma.legacy(float +2.0, float +0.0, float +4.0)
-  store volatile float %b, float* %p
+  store volatile float %b, ptr %p
   %c = call float @llvm.amdgcn.fma.legacy(float +2.0, float -0.0, float +4.0)
-  store volatile float %c, float* %p
+  store volatile float %c, ptr %p
   %d = call float @llvm.amdgcn.fma.legacy(float +0.0, float +0.0, float -0.0)
-  store volatile float %d, float* %p
+  store volatile float %d, ptr %p
   %e = call float @llvm.amdgcn.fma.legacy(float +0.0, float -0.0, float -0.0)
-  store volatile float %e, float* %p
+  store volatile float %e, ptr %p
   %f = call float @llvm.amdgcn.fma.legacy(float -0.0, float +0.0, float -0.0)
-  store volatile float %f, float* %p
+  store volatile float %f, ptr %p
   %g = call float @llvm.amdgcn.fma.legacy(float -0.0, float -0.0, float -0.0)
-  store volatile float %g, float* %p
+  store volatile float %g, ptr %p
   %h = call float @llvm.amdgcn.fma.legacy(float +0.0, float 0x7ff0000000000000, float +4.0) ; +inf
-  store volatile float %h, float* %p
+  store volatile float %h, ptr %p
   %i = call float @llvm.amdgcn.fma.legacy(float 0xfff0000000000000, float +0.0, float +4.0) ; -inf
-  store volatile float %i, float* %p
+  store volatile float %i, ptr %p
   %j = call float @llvm.amdgcn.fma.legacy(float 0x7ff0001000000000, float -0.0, float +4.0) ; +nan
-  store volatile float %j, float* %p
+  store volatile float %j, ptr %p
   %k = call float @llvm.amdgcn.fma.legacy(float -0.0, float 0xfff0000100000000, float +4.0) ; -nan
-  store volatile float %k, float* %p
+  store volatile float %k, ptr %p
   ret void
 }
