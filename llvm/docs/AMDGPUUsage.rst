@@ -11247,7 +11247,7 @@ For GFX10-GFX11:
   requirements of acquire, release and sequential consistency.
 * The L2 cache can be kept coherent with other agents on some targets, or ranges
   of virtual addresses can be set up to bypass it to ensure system coherence.
-* On GFX10.3 a memory attached last level (MALL) cache exists for GPU memory.
+* On GFX10.3 and GFX11 a memory attached last level (MALL) cache exists for GPU memory.
   The MALL cache is fully coherent with GPU memory and has no impact on system
   coherence. All agents (GPU and CPU) access GPU memory through the MALL cache.
 
@@ -11325,12 +11325,15 @@ table :ref:`amdgpu-amdhsa-memory-model-code-sequences-gfx10-gfx11-table`.
                                                          - !volatile & nontemporal
 
                                                            1. buffer/global/flat_load
-                                                              slc=1
+                                                              slc=1 dlc=1
+
+                                                            - If GFX10, omit dlc=1.
 
                                                          - volatile
 
                                                            1. buffer/global/flat_load
                                                               glc=1 dlc=1
+
                                                            2. s_waitcnt vmcnt(0)
 
                                                             - Must happen before
@@ -11353,11 +11356,17 @@ table :ref:`amdgpu-amdhsa-memory-model-code-sequences-gfx10-gfx11-table`.
                                                          - !volatile & nontemporal
 
                                                            1. buffer/global/flat_store
-                                                              glc=1 slc=1
+                                                              glc=1 slc=1 dlc=1
+
+                                                            - If GFX10, omit dlc=1.
 
                                                          - volatile
 
                                                            1. buffer/global/flat_store
+                                                              dlc=1
+
+                                                            - If GFX10, omit dlc=1.
+
                                                            2. s_waitcnt vscnt(0)
 
                                                             - Must happen before
@@ -11393,6 +11402,9 @@ table :ref:`amdgpu-amdhsa-memory-model-code-sequences-gfx10-gfx11-table`.
                                - workgroup
      load atomic  monotonic    - agent        - global   1. buffer/global/flat_load
                                - system       - generic     glc=1 dlc=1
+
+                                                           - If GFX11, omit dlc=1.
+
      store atomic monotonic    - singlethread - global   1. buffer/global/flat_store
                                - wavefront    - generic
                                - workgroup
@@ -11504,6 +11516,9 @@ table :ref:`amdgpu-amdhsa-memory-model-code-sequences-gfx10-gfx11-table`.
 
      load atomic  acquire      - agent        - global   1. buffer/global_load
                                - system                     glc=1 dlc=1
+
+                                                           - If GFX11, omit dlc=1.
+
                                                          2. s_waitcnt vmcnt(0)
 
                                                            - Must happen before
@@ -11528,7 +11543,10 @@ table :ref:`amdgpu-amdhsa-memory-model-code-sequences-gfx10-gfx11-table`.
                                                              stale global data.
 
      load atomic  acquire      - agent        - generic  1. flat_load glc=1 dlc=1
-                               - system                  2. s_waitcnt vmcnt(0) &
+                               - system
+                                                           - If GFX11, omit dlc=1.
+
+                                                         2. s_waitcnt vmcnt(0) &
                                                             lgkmcnt(0)
 
                                                            - If OpenCL omit
