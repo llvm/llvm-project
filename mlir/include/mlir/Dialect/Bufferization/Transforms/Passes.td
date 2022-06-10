@@ -154,6 +154,20 @@ def BufferizationBufferize : Pass<"bufferization-bufferize", "func::FuncOp"> {
   let constructor = "mlir::bufferization::createBufferizationBufferizePass()";
 }
 
+def DropEquivalentBufferResults : Pass<"drop-equivalent-buffer-results", "ModuleOp">  {
+  let summary = "Remove MemRef return values that are equivalent to a bbArg";
+  let description = [{
+    This pass removes MemRef return values from functions if they are equivalent
+    to a function bbArg. In that case, the return value is redundant and the
+    respective CallOp operand can be used at the call site.
+
+    Note: If a bbArg buffer is not returned directly but casted to beforehand,
+    the buffer is still considered equivalent.
+  }];
+  let constructor = "mlir::bufferization::createDropEquivalentBufferResultsPass()";
+  let dependentDialects = ["memref::MemRefDialect"];
+}
+
 def OneShotBufferize : Pass<"one-shot-bufferize", "ModuleOp"> {
   let summary = "One-Shot Bufferize";
   let description = [{
@@ -221,11 +235,6 @@ def OneShotBufferize : Pass<"one-shot-bufferize", "ModuleOp"> {
     and supports only simple cases at the moment. In particular:
 
     * Recursive or circular function call graphs are not supported.
-    * When a returned tensor can be proven to be equivalent to a tensor function
-      argument, the return value disappears. Instead, the buffer of the tensor
-      argument is modified in-place.
-    * Returning non-equivalent tensors is forbidden by default and must be
-      explicitly activated with `allow-return-allocs`.
     * External functions (without bodies) that return a tensor are not
       supported.
     * Function with multiple blocks or multiple ReturnOps are not supported.
@@ -255,9 +264,6 @@ def OneShotBufferize : Pass<"one-shot-bufferize", "ModuleOp"> {
     `test-analysis-only`.
   }];
   let options = [
-    Option<"dropEquivalentFuncResults", "drop-equivalent-func-results", "bool",
-           /*default=*/"true",
-           "Drop buffer return values that are equivalent to a FuncOp arg.">,
     Option<"allowReturnAllocs", "allow-return-allocs", "bool",
             /*default=*/"false",
            "Allows returning/yielding new allocations from a block.">,

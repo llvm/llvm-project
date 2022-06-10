@@ -180,7 +180,6 @@ struct OneShotBufferizePass
     if (!options) {
       // Make new bufferization options if none were provided when creating the
       // pass.
-      opt.dropEquivalentFuncResults = dropEquivalentFuncResults;
       opt.allowReturnAllocs = allowReturnAllocs;
       opt.allowUnknownOps = allowUnknownOps;
       opt.alwaysAliasingWithDest = alwaysAliasingWithDest;
