@@ -145,8 +145,7 @@ define internal void @is_generic_helper1() {
 
 define internal void @is_generic_helper2() {
 ; CHECK-LABEL: define {{[^@]+}}@is_generic_helper2() {
-; CHECK-NEXT:    [[C:%.*]] = icmp eq i8 0, 0
-; CHECK-NEXT:    br i1 [[C]], label [[T:%.*]], label [[F:%.*]]
+; CHECK-NEXT:    br label [[T:%.*]]
 ; CHECK:       t:
 ; CHECK-NEXT:    call void @foo()
 ; CHECK-NEXT:    ret void

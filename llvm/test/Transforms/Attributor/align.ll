@@ -1040,10 +1040,10 @@ define i32* @checkAndAdvance(i32* align(16) %p) {
 ; IS__TUNIT____-NEXT:    br i1 [[CMP]], label [[IF_THEN:%.*]], label [[RETURN:%.*]]
 ; IS__TUNIT____:       if.then:
 ; IS__TUNIT____-NEXT:    [[ADD_PTR:%.*]] = getelementptr inbounds i32, i32* [[P]], i64 4
-; IS__TUNIT____-NEXT:    [[CALL:%.*]] = call i32* @checkAndAdvance(i32* nonnull readonly align 16 "no-capture-maybe-returned" [[ADD_PTR]]) #[[ATTR2]]
+; IS__TUNIT____-NEXT:    [[CALL:%.*]] = call nonnull align 16 i32* @checkAndAdvance(i32* nonnull readonly align 16 "no-capture-maybe-returned" [[ADD_PTR]]) #[[ATTR2]]
 ; IS__TUNIT____-NEXT:    br label [[RETURN]]
 ; IS__TUNIT____:       return:
-; IS__TUNIT____-NEXT:    [[RETVAL_0:%.*]] = phi i32* [ [[ADD_PTR]], [[IF_THEN]] ], [ [[P]], [[ENTRY:%.*]] ]
+; IS__TUNIT____-NEXT:    [[RETVAL_0:%.*]] = phi i32* [ [[CALL]], [[IF_THEN]] ], [ [[P]], [[ENTRY:%.*]] ]
 ; IS__TUNIT____-NEXT:    call void @user_i32_ptr(i32* noalias nocapture nonnull readnone align 16 [[RETVAL_0]]) #[[ATTR2]]
 ; IS__TUNIT____-NEXT:    ret i32* [[RETVAL_0]]
 ;
@@ -1056,10 +1056,10 @@ define i32* @checkAndAdvance(i32* align(16) %p) {
 ; IS__CGSCC____-NEXT:    br i1 [[CMP]], label [[IF_THEN:%.*]], label [[RETURN:%.*]]
 ; IS__CGSCC____:       if.then:
 ; IS__CGSCC____-NEXT:    [[ADD_PTR:%.*]] = getelementptr inbounds i32, i32* [[P]], i64 4
-; IS__CGSCC____-NEXT:    [[CALL:%.*]] = call i32* @checkAndAdvance(i32* nonnull readonly align 16 "no-capture-maybe-returned" [[ADD_PTR]]) #[[ATTR3]]
+; IS__CGSCC____-NEXT:    [[CALL:%.*]] = call nonnull align 16 i32* @checkAndAdvance(i32* nonnull readonly align 16 "no-capture-maybe-returned" [[ADD_PTR]]) #[[ATTR3]]
 ; IS__CGSCC____-NEXT:    br label [[RETURN]]
 ; IS__CGSCC____:       return:
-; IS__CGSCC____-NEXT:    [[RETVAL_0:%.*]] = phi i32* [ [[ADD_PTR]], [[IF_THEN]] ], [ [[P]], [[ENTRY:%.*]] ]
+; IS__CGSCC____-NEXT:    [[RETVAL_0:%.*]] = phi i32* [ [[CALL]], [[IF_THEN]] ], [ [[P]], [[ENTRY:%.*]] ]
 ; IS__CGSCC____-NEXT:    call void @user_i32_ptr(i32* noalias nocapture nonnull readnone align 16 [[RETVAL_0]]) #[[ATTR3]]
 ; IS__CGSCC____-NEXT:    ret i32* [[RETVAL_0]]
 ;

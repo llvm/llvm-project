@@ -8,21 +8,19 @@ target datalayout = "E-p:64:64:64-a0:0:8-f32:32:32-f64:64:64-i1:8:8-i8:8:8-i16:1
 ; Checks if !prof metadata is corret in deadargelim.
 
 define void @caller() #0 {
-; IS________OPM-LABEL: define {{[^@]+}}@caller() {
-; IS________OPM-NEXT:    [[X:%.*]] = alloca i32, align 4
-; IS________OPM-NEXT:    store i32 42, i32* [[X]], align 4
-; IS________OPM-NEXT:    call void @promote_i32_ptr(i32* noalias nocapture nofree noundef nonnull readonly align 4 dereferenceable(4) [[X]]), !prof [[PROF0:![0-9]+]]
-; IS________OPM-NEXT:    ret void
+; IS__TUNIT____-LABEL: define {{[^@]+}}@caller() {
+; IS__TUNIT____-NEXT:    [[X:%.*]] = alloca i32, align 4
+; IS__TUNIT____-NEXT:    call void @promote_i32_ptr(), !prof [[PROF0:![0-9]+]]
+; IS__TUNIT____-NEXT:    ret void
 ;
-; IS__TUNIT_NPM-LABEL: define {{[^@]+}}@caller() {
-; IS__TUNIT_NPM-NEXT:    [[X:%.*]] = alloca i32, align 4
-; IS__TUNIT_NPM-NEXT:    store i32 42, i32* [[X]], align 4
-; IS__TUNIT_NPM-NEXT:    [[TMP1:%.*]] = load i32, i32* [[X]], align 4
-; IS__TUNIT_NPM-NEXT:    call void @promote_i32_ptr(i32 [[TMP1]]), !prof [[PROF0:![0-9]+]]
-; IS__TUNIT_NPM-NEXT:    ret void
+; IS__CGSCC_OPM-LABEL: define {{[^@]+}}@caller() {
+; IS__CGSCC_OPM-NEXT:    [[X:%.*]] = alloca i32, align 4
+; IS__CGSCC_OPM-NEXT:    store i32 42, i32* [[X]], align 4
+; IS__CGSCC_OPM-NEXT:    call void @promote_i32_ptr(i32* noalias nocapture nofree noundef nonnull readonly align 4 dereferenceable(4) [[X]]), !prof [[PROF0:![0-9]+]]
+; IS__CGSCC_OPM-NEXT:    ret void
 ;
 ; IS__CGSCC_NPM-LABEL: define {{[^@]+}}@caller() {
-; IS__CGSCC_NPM-NEXT:    call void @promote_i32_ptr(i32 42), !prof [[PROF0:![0-9]+]]
+; IS__CGSCC_NPM-NEXT:    call void @promote_i32_ptr(i32 noundef 42), !prof [[PROF0:![0-9]+]]
 ; IS__CGSCC_NPM-NEXT:    ret void
 ;
   %x = alloca i32
@@ -32,19 +30,23 @@ define void @caller() #0 {
 }
 
 define internal void @promote_i32_ptr(i32* %xp) {
-; IS________OPM-LABEL: define {{[^@]+}}@promote_i32_ptr
-; IS________OPM-SAME: (i32* noalias nocapture nofree noundef nonnull readonly align 4 dereferenceable(4) [[XP:%.*]]) {
-; IS________OPM-NEXT:    [[X:%.*]] = load i32, i32* [[XP]], align 4
-; IS________OPM-NEXT:    call void @use_i32(i32 [[X]])
-; IS________OPM-NEXT:    ret void
+; IS__TUNIT____-LABEL: define {{[^@]+}}@promote_i32_ptr() {
+; IS__TUNIT____-NEXT:    call void @use_i32(i32 noundef 42)
+; IS__TUNIT____-NEXT:    ret void
 ;
-; IS________NPM-LABEL: define {{[^@]+}}@promote_i32_ptr
-; IS________NPM-SAME: (i32 [[TMP0:%.*]]) {
-; IS________NPM-NEXT:    [[XP_PRIV:%.*]] = alloca i32, align 4
-; IS________NPM-NEXT:    store i32 [[TMP0]], i32* [[XP_PRIV]], align 4
-; IS________NPM-NEXT:    [[X:%.*]] = load i32, i32* [[XP_PRIV]], align 4
-; IS________NPM-NEXT:    call void @use_i32(i32 [[X]])
-; IS________NPM-NEXT:    ret void
+; IS__CGSCC_OPM-LABEL: define {{[^@]+}}@promote_i32_ptr
+; IS__CGSCC_OPM-SAME: (i32* noalias nocapture nofree noundef nonnull readonly align 4 dereferenceable(4) [[XP:%.*]]) {
+; IS__CGSCC_OPM-NEXT:    [[X:%.*]] = load i32, i32* [[XP]], align 4
+; IS__CGSCC_OPM-NEXT:    call void @use_i32(i32 [[X]])
+; IS__CGSCC_OPM-NEXT:    ret void
+;
+; IS__CGSCC_NPM-LABEL: define {{[^@]+}}@promote_i32_ptr
+; IS__CGSCC_NPM-SAME: (i32 [[TMP0:%.*]]) {
+; IS__CGSCC_NPM-NEXT:    [[XP_PRIV:%.*]] = alloca i32, align 4
+; IS__CGSCC_NPM-NEXT:    store i32 [[TMP0]], i32* [[XP_PRIV]], align 4
+; IS__CGSCC_NPM-NEXT:    [[X:%.*]] = load i32, i32* [[XP_PRIV]], align 4
+; IS__CGSCC_NPM-NEXT:    call void @use_i32(i32 [[X]])
+; IS__CGSCC_NPM-NEXT:    ret void
 ;
   %x = load i32, i32* %xp
   call void @use_i32(i32 %x)

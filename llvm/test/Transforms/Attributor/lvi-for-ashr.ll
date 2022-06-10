@@ -42,10 +42,9 @@ define i32 @test-ashr(i32 %c) {
 ; IS________NPM-NEXT:    [[CMP2:%.*]] = icmp sgt i32 [[ASHR_VAL]], 15
 ; IS________NPM-NEXT:    br i1 [[CMP2]], label [[BB_THEN:%.*]], label [[RETURN]]
 ; IS________NPM:       bb_then:
-; IS________NPM-NEXT:    [[DOT:%.*]] = select i1 true, i32 3, i32 2
 ; IS________NPM-NEXT:    br label [[RETURN]]
 ; IS________NPM:       return:
-; IS________NPM-NEXT:    [[RETVAL:%.*]] = phi i32 [ 0, [[CHK65:%.*]] ], [ 1, [[CHK0]] ], [ [[DOT]], [[BB_THEN]] ], [ 4, [[BB_IF]] ]
+; IS________NPM-NEXT:    [[RETVAL:%.*]] = phi i32 [ 0, [[CHK65:%.*]] ], [ 1, [[CHK0]] ], [ 3, [[BB_THEN]] ], [ 4, [[BB_IF]] ]
 ; IS________NPM-NEXT:    ret i32 [[RETVAL]]
 ;
 chk65:
