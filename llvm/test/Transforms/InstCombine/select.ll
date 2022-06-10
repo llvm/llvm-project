@@ -41,12 +41,12 @@ define <2 x i1> @trueval_is_true_vec(<2 x i1> %C, <2 x i1> %X) {
   ret <2 x i1> %R
 }
 
-define <2 x i1> @trueval_is_true_vec_undef_elt(<2 x i1> %C, <2 x i1> %X) {
-; CHECK-LABEL: @trueval_is_true_vec_undef_elt(
-; CHECK-NEXT:    [[R:%.*]] = select <2 x i1> [[C:%.*]], <2 x i1> <i1 undef, i1 true>, <2 x i1> [[X:%.*]]
+define <2 x i1> @trueval_is_true_vec_poison_elt(<2 x i1> %C, <2 x i1> %X) {
+; CHECK-LABEL: @trueval_is_true_vec_poison_elt(
+; CHECK-NEXT:    [[R:%.*]] = select <2 x i1> [[C:%.*]], <2 x i1> <i1 poison, i1 true>, <2 x i1> [[X:%.*]]
 ; CHECK-NEXT:    ret <2 x i1> [[R]]
 ;
-  %R = select <2 x i1> %C, <2 x i1> <i1 undef, i1 true>, <2 x i1> %X
+  %R = select <2 x i1> %C, <2 x i1> <i1 poison, i1 true>, <2 x i1> %X
   ret <2 x i1> %R
 }
 
@@ -958,10 +958,10 @@ define i32 @test61(i32* %ptr) {
 }
 
 ; PR14131
-define void @test64(i32 %p, i16 %b) noreturn {
+define void @test64(i32 %p, i16 %b, i1 %c1) noreturn {
 ; CHECK-LABEL: @test64(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    br i1 undef, label [[LOR_RHS:%.*]], label [[LOR_END:%.*]]
+; CHECK-NEXT:    br i1 [[C1:%.*]], label [[LOR_RHS:%.*]], label [[LOR_END:%.*]]
 ; CHECK:       lor.rhs:
 ; CHECK-NEXT:    br label [[LOR_END]]
 ; CHECK:       lor.end:
@@ -976,7 +976,7 @@ define void @test64(i32 %p, i16 %b) noreturn {
 entry:
   %p.addr.0.insert.mask = and i32 %p, -65536
   %conv2 = and i32 %p, 65535
-  br i1 undef, label %lor.rhs, label %lor.end
+  br i1 %c1, label %lor.rhs, label %lor.end
 
 lor.rhs:
   %p.addr.0.extract.trunc = trunc i32 %p.addr.0.insert.mask to i16

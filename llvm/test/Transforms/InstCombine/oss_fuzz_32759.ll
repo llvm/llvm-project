@@ -2,17 +2,17 @@
 ; RUN: opt < %s -passes=instcombine -S | FileCheck %s
 target datalayout = "n32"
 
-define i1 @oss_fuzz_32759(i1 %y) {
+define i1 @oss_fuzz_32759(i1 %y, i1 %c1) {
 ; CHECK-LABEL: @oss_fuzz_32759(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    br i1 undef, label [[COND_TRUE:%.*]], label [[END:%.*]]
+; CHECK-NEXT:    br i1 [[C1:%.*]], label [[COND_TRUE:%.*]], label [[END:%.*]]
 ; CHECK:       cond.true:
 ; CHECK-NEXT:    br label [[END]]
 ; CHECK:       end:
 ; CHECK-NEXT:    ret i1 false
 ;
 entry:
-  br i1 undef, label %cond.true, label %end
+  br i1 %c1, label %cond.true, label %end
 
 cond.true:                                        ; preds = %entry
   %zy = zext i1 %y to i32

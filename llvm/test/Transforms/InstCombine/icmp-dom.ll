@@ -34,13 +34,13 @@ lor.end:
   ret void
 }
 
-define void @idom_sign_bit_check_edge_not_dominates(i64 %a) {
+define void @idom_sign_bit_check_edge_not_dominates(i64 %a, i1 %c1) {
 ; CHECK-LABEL: @idom_sign_bit_check_edge_not_dominates(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i64 [[A:%.*]], 0
 ; CHECK-NEXT:    br i1 [[CMP]], label [[LAND_LHS_TRUE:%.*]], label [[LOR_RHS:%.*]]
 ; CHECK:       land.lhs.true:
-; CHECK-NEXT:    br i1 undef, label [[LOR_END:%.*]], label [[LOR_RHS]]
+; CHECK-NEXT:    br i1 [[C1:%.*]], label [[LOR_END:%.*]], label [[LOR_RHS]]
 ; CHECK:       lor.rhs:
 ; CHECK-NEXT:    [[CMP2:%.*]] = icmp sgt i64 [[A]], 0
 ; CHECK-NEXT:    br i1 [[CMP2]], label [[LAND_RHS:%.*]], label [[LOR_END]]
@@ -54,7 +54,7 @@ entry:
   br i1 %cmp, label %land.lhs.true, label %lor.rhs
 
 land.lhs.true:
-  br i1 undef, label %lor.end, label %lor.rhs
+  br i1 %c1, label %lor.end, label %lor.rhs
 
 lor.rhs:
   %cmp2 = icmp sgt i64 %a, 0

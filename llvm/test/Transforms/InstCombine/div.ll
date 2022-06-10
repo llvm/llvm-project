@@ -38,11 +38,11 @@ define <2 x i64> @sdiv_by_minus1_vec(<2 x i64> %x) {
   ret <2 x i64> %div
 }
 
-define <2 x i64> @sdiv_by_minus1_vec_undef_elt(<2 x i64> %x) {
-; CHECK-LABEL: @sdiv_by_minus1_vec_undef_elt(
+define <2 x i64> @sdiv_by_minus1_vec_poison_elt(<2 x i64> %x) {
+; CHECK-LABEL: @sdiv_by_minus1_vec_poison_elt(
 ; CHECK-NEXT:    ret <2 x i64> poison
 ;
-  %div = sdiv <2 x i64> %x, <i64 -1, i64 undef>
+  %div = sdiv <2 x i64> %x, <i64 -1, i64 poison>
   ret <2 x i64> %div
 }
 
@@ -514,12 +514,12 @@ define <2 x i8> @sdiv_negated_dividend_constant_divisor_vec_splat_smin(<2 x i8> 
   ret <2 x i8> %d
 }
 
-define <2 x i8> @sdiv_negated_dividend_constant_divisor_vec_undef(<2 x i8> %x) {
-; CHECK-LABEL: @sdiv_negated_dividend_constant_divisor_vec_undef(
+define <2 x i8> @sdiv_negated_dividend_constant_divisor_vec_poison(<2 x i8> %x) {
+; CHECK-LABEL: @sdiv_negated_dividend_constant_divisor_vec_poison(
 ; CHECK-NEXT:    ret <2 x i8> poison
 ;
   %neg = sub nsw <2 x i8> zeroinitializer, %x
-  %d = sdiv <2 x i8> %neg, <i8 -128, i8 undef>
+  %d = sdiv <2 x i8> %neg, <i8 -128, i8 poison>
   ret <2 x i8> %d
 }
 
@@ -602,11 +602,11 @@ define <2 x i32> @test36vec(<2 x i32> %A) {
   ret <2 x i32> %mul
 }
 
-define i32 @test37(i32* %b) {
+define i32 @test37(i32* %b, i1 %c1) {
 ; CHECK-LABEL: @test37(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    store i32 0, i32* [[B:%.*]], align 4
-; CHECK-NEXT:    br i1 undef, label [[LOR_RHS:%.*]], label [[LOR_END:%.*]]
+; CHECK-NEXT:    br i1 [[C1:%.*]], label [[LOR_RHS:%.*]], label [[LOR_END:%.*]]
 ; CHECK:       lor.rhs:
 ; CHECK-NEXT:    br label [[LOR_END]]
 ; CHECK:       lor.end:
@@ -615,10 +615,10 @@ define i32 @test37(i32* %b) {
 entry:
   store i32 0, i32* %b, align 4
   %0 = load i32, i32* %b, align 4
-  br i1 undef, label %lor.rhs, label %lor.end
+  br i1 %c1, label %lor.rhs, label %lor.end
 
 lor.rhs:                                          ; preds = %entry
-  %mul = mul nsw i32 undef, %0
+  %mul = mul nsw i32 1, %0
   br label %lor.end
 
 lor.end:                                          ; preds = %lor.rhs, %entry
@@ -883,13 +883,13 @@ define <2 x i8> @negate_sdiv_vec_splat(<2 x i8> %x) {
   ret <2 x i8> %neg
 }
 
-; Dividing by undef is UB.
+; Dividing by poison is UB.
 
-define <2 x i8> @negate_sdiv_vec_undef_elt(<2 x i8> %x) {
-; CHECK-LABEL: @negate_sdiv_vec_undef_elt(
+define <2 x i8> @negate_sdiv_vec_poison_elt(<2 x i8> %x) {
+; CHECK-LABEL: @negate_sdiv_vec_poison_elt(
 ; CHECK-NEXT:    ret <2 x i8> poison
 ;
-  %div = sdiv <2 x i8> %x, <i8 undef, i8 42>
+  %div = sdiv <2 x i8> %x, <i8 poison, i8 42>
   %neg = sub <2 x i8> zeroinitializer, %div
   ret <2 x i8> %neg
 }
@@ -1042,11 +1042,11 @@ define <2 x i8> @sdiv_by_int_min_vec_splat(<2 x i8> %x) {
   ret <2 x i8> %d
 }
 
-define <2 x i8> @sdiv_by_int_min_vec_splat_undef(<2 x i8> %x) {
-; CHECK-LABEL: @sdiv_by_int_min_vec_splat_undef(
+define <2 x i8> @sdiv_by_int_min_vec_splat_poison(<2 x i8> %x) {
+; CHECK-LABEL: @sdiv_by_int_min_vec_splat_poison(
 ; CHECK-NEXT:    ret <2 x i8> poison
 ;
-  %d = sdiv <2 x i8> %x, <i8 -128, i8 undef>
+  %d = sdiv <2 x i8> %x, <i8 -128, i8 poison>
   ret <2 x i8> %d
 }
 
@@ -1065,7 +1065,7 @@ define <vscale x 2 x i8> @sdiv_by_negconst_nxv2i8(<vscale x 2 x i8> %x) {
 ; CHECK-NEXT:    [[DIV_NEG:%.*]] = sdiv <vscale x 2 x i8> [[X:%.*]], shufflevector (<vscale x 2 x i8> insertelement (<vscale x 2 x i8> poison, i8 108, i32 0), <vscale x 2 x i8> poison, <vscale x 2 x i32> zeroinitializer)
 ; CHECK-NEXT:    ret <vscale x 2 x i8> [[DIV_NEG]]
 ;
-  %div = sdiv <vscale x 2 x i8> %x, shufflevector (<vscale x 2 x i8> insertelement (<vscale x 2 x i8> undef, i8 -108, i32 0), <vscale x 2 x i8> undef, <vscale x 2 x i32> zeroinitializer)
+  %div = sdiv <vscale x 2 x i8> %x, shufflevector (<vscale x 2 x i8> insertelement (<vscale x 2 x i8> poison, i8 -108, i32 0), <vscale x 2 x i8> poison, <vscale x 2 x i32> zeroinitializer)
   %sub = sub <vscale x 2 x i8> zeroinitializer, %div
   ret <vscale x 2 x i8> %sub
 }
@@ -1083,11 +1083,11 @@ define <2 x i8> @sdiv_by_minSigned_v2i8(<2 x i8> %x) {
 
 define <vscale x 2 x i8> @sdiv_by_minSigned_nxv2i8(<vscale x 2 x i8> %x) {
 ; CHECK-LABEL: @sdiv_by_minSigned_nxv2i8(
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq <vscale x 2 x i8> [[X:%.*]], shufflevector (<vscale x 2 x i8> insertelement (<vscale x 2 x i8> undef, i8 -128, i32 0), <vscale x 2 x i8> undef, <vscale x 2 x i32> zeroinitializer)
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq <vscale x 2 x i8> [[X:%.*]], shufflevector (<vscale x 2 x i8> insertelement (<vscale x 2 x i8> poison, i8 -128, i32 0), <vscale x 2 x i8> poison, <vscale x 2 x i32> zeroinitializer)
 ; CHECK-NEXT:    [[DIV_NEG:%.*]] = sext <vscale x 2 x i1> [[TMP1]] to <vscale x 2 x i8>
 ; CHECK-NEXT:    ret <vscale x 2 x i8> [[DIV_NEG]]
 ;
-  %div = sdiv <vscale x 2 x i8> %x, shufflevector (<vscale x 2 x i8> insertelement (<vscale x 2 x i8> undef, i8 -128, i32 0), <vscale x 2 x i8> undef, <vscale x 2 x i32> zeroinitializer)
+  %div = sdiv <vscale x 2 x i8> %x, shufflevector (<vscale x 2 x i8> insertelement (<vscale x 2 x i8> poison, i8 -128, i32 0), <vscale x 2 x i8> poison, <vscale x 2 x i32> zeroinitializer)
   %sub = sub <vscale x 2 x i8> zeroinitializer, %div
   ret <vscale x 2 x i8> %sub
 }

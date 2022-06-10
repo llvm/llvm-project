@@ -112,11 +112,11 @@ define { float, i32 } @type_pun_float_i32(<16 x i8> %in) {
 
 ; Type punning two i32 values, with control flow.
 ; Verify that the bitcast is shared and dominates usage.
-define i32 @type_pun_i32_ctrl(<16 x i8> %in) {
+define i32 @type_pun_i32_ctrl(<16 x i8> %in, i1 %c1) {
 ; CHECK-LABEL: @type_pun_i32_ctrl(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[SROA_BC:%.*]] = bitcast <16 x i8> [[IN:%.*]] to <4 x i32>
-; CHECK-NEXT:    br i1 undef, label [[LEFT:%.*]], label [[RIGHT:%.*]]
+; CHECK-NEXT:    br i1 [[C1:%.*]], label [[LEFT:%.*]], label [[RIGHT:%.*]]
 ; CHECK:       left:
 ; CHECK-NEXT:    [[SROA_EXTRACT1:%.*]] = extractelement <4 x i32> [[SROA_BC]], i64 0
 ; CHECK-NEXT:    br label [[TAIL:%.*]]
@@ -129,7 +129,7 @@ define i32 @type_pun_i32_ctrl(<16 x i8> %in) {
 ;
 entry:
   %sroa = shufflevector <16 x i8> %in, <16 x i8> undef, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-  br i1 undef, label %left, label %right
+  br i1 %c1, label %left, label %right
 left:
   %lhs = bitcast <4 x i8> %sroa to i32
   br label %tail

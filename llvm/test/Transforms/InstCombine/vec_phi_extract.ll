@@ -125,15 +125,15 @@ ret:
   ret void
 }
 
-define i1 @g(<3 x i32> %input_2) {
+define i1 @g(<3 x i32> %input_2, i1 %c1) {
 ; CHECK-LABEL: @g(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = extractelement <3 x i32> [[INPUT_2:%.*]], i64 0
 ; CHECK-NEXT:    br label [[FOR_COND:%.*]]
 ; CHECK:       for.cond:
 ; CHECK-NEXT:    [[TMP1:%.*]] = phi i32 [ [[TMP0]], [[ENTRY:%.*]] ], [ [[TMP4:%.*]], [[FOR_BODY:%.*]] ]
-; CHECK-NEXT:    [[TMP2:%.*]] = phi i32 [ undef, [[ENTRY]] ], [ [[TMP3:%.*]], [[FOR_BODY]] ]
-; CHECK-NEXT:    br i1 undef, label [[FOR_END:%.*]], label [[FOR_BODY]]
+; CHECK-NEXT:    [[TMP2:%.*]] = phi i32 [ poison, [[ENTRY]] ], [ [[TMP3:%.*]], [[FOR_BODY]] ]
+; CHECK-NEXT:    br i1 [[C1:%.*]], label [[FOR_END:%.*]], label [[FOR_BODY]]
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[TMP3]] = add i32 [[TMP2]], -1
 ; CHECK-NEXT:    [[SUB44_ELT:%.*]] = sub i32 0, [[TMP2]]
@@ -148,8 +148,8 @@ entry:
 
 for.cond:
   %input_2.addr.0 = phi <3 x i32> [ %input_2, %entry ], [ %div45, %for.body ]
-  %input_1.addr.1 = phi <3 x i32> [ undef, %entry ], [ %dec43, %for.body ]
-  br i1 undef, label %for.end, label %for.body
+  %input_1.addr.1 = phi <3 x i32> [ poison, %entry ], [ %dec43, %for.body ]
+  br i1 %c1, label %for.end, label %for.body
 
 for.body:
   %dec43 = add <3 x i32> %input_1.addr.1, <i32 -1, i32 -1, i32 -1>

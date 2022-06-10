@@ -12,7 +12,7 @@ $foo = comdat any
 declare i32 @__gxx_personality_v0(...)
 
 ; Function Attrs: inlinehint sanitize_memory uwtable
-define void @foo() local_unnamed_addr #0 comdat align 2 personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*) {
+define void @foo(i1 %c1) local_unnamed_addr #0 comdat align 2 personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*) {
 entry:
   %0 = load %C*, %C** getelementptr inbounds (%A, %A* @bar, i64 0, i32 0, i32 0), align 8
   %1 = ptrtoint %C* %0 to i64
@@ -63,7 +63,7 @@ lpad15:                                           ; preds = %invoke.cont5
 ehcleanup21:                                      ; preds = %lpad15, %ehcleanup
   %actual_other.sroa.0.0 = phi i64 [ %1, %ehcleanup ], [ %4, %lpad15 ]
   %8 = inttoptr i64 %actual_other.sroa.0.0 to %C*
-  br i1 undef, label %_ZN4CGAL6HandleD2Ev.exit, label %land.lhs.true.i
+  br i1 %c1, label %_ZN4CGAL6HandleD2Ev.exit, label %land.lhs.true.i
 
 land.lhs.true.i:                                  ; preds = %ehcleanup21
   %count.i = getelementptr inbounds %C, %C* %8, i64 0, i32 1

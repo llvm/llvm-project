@@ -217,13 +217,13 @@ define i8 @PR49475_infloop(i32 %t0, i16 %insert, i64 %e, i8 %i162) {
 ; This would infinite loop because knownbits changed between checking
 ; if a transform was profitable and actually doing the transform.
 
-define i1 @PR51762(i32 *%i, i32 %t0, i16 %t1, i64* %p, i32* %d, i32* %f, i32 %p2) {
+define i1 @PR51762(i32 *%i, i32 %t0, i16 %t1, i64* %p, i32* %d, i32* %f, i32 %p2, i1 %c1) {
 ; CHECK-LABEL: @PR51762(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[FOR_COND:%.*]]
 ; CHECK:       for.cond:
-; CHECK-NEXT:    [[I_SROA_8_0:%.*]] = phi i32 [ undef, [[ENTRY:%.*]] ], [ [[I_SROA_8_0_EXTRACT_TRUNC:%.*]], [[COND_TRUE:%.*]] ]
-; CHECK-NEXT:    br i1 undef, label [[COND_TRUE]], label [[FOR_END11:%.*]]
+; CHECK-NEXT:    [[I_SROA_8_0:%.*]] = phi i32 [ poison, [[ENTRY:%.*]] ], [ [[I_SROA_8_0_EXTRACT_TRUNC:%.*]], [[COND_TRUE:%.*]] ]
+; CHECK-NEXT:    br i1 [[C1:%.*]], label [[COND_TRUE]], label [[FOR_END11:%.*]]
 ; CHECK:       cond.true:
 ; CHECK-NEXT:    [[I_SROA_8_0_EXTRACT_TRUNC]] = ashr i32 [[T0:%.*]], 31
 ; CHECK-NEXT:    br label [[FOR_COND]]
@@ -257,8 +257,8 @@ entry:
   br label %for.cond
 
 for.cond:
-  %i.sroa.8.0 = phi i32 [ undef, %entry ], [ %i.sroa.8.0.extract.trunc, %cond.true ]
-  br i1 undef, label %cond.true, label %for.end11
+  %i.sroa.8.0 = phi i32 [ poison, %entry ], [ %i.sroa.8.0.extract.trunc, %cond.true ]
+  br i1 %c1, label %cond.true, label %for.end11
 
 cond.true:
   %i.sroa.8.0.extract.trunc = ashr i32 %t0, 31
