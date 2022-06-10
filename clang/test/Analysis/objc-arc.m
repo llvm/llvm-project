@@ -1,4 +1,4 @@
-// RUN: %clang_analyze_cc1 -triple x86_64-apple-darwin10 -analyzer-checker=core,osx.cocoa.RetainCount,deadcode -verify -fblocks -fobjc-arc -analyzer-output=plist-multi-file -analyzer-config deadcode.DeadStores:ShowFixIts=true -o %t.plist %s
+// RUN: %clang_analyze_cc1 -triple x86_64-apple-darwin10 -analyzer-checker=core,osx.cocoa.RetainCount,deadcode -verify -fblocks -analyzer-opt-analyze-nested-blocks -fobjc-arc -analyzer-output=plist-multi-file -analyzer-config deadcode.DeadStores:ShowFixIts=true -o %t.plist %s
 // RUN: %normalize_plist <%t.plist | diff -ub %S/Inputs/expected-plists/objc-arc.m.plist -
 
 typedef signed char BOOL;

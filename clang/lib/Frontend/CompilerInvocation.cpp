@@ -816,6 +816,18 @@ static void GenerateAnalyzerArgs(AnalyzerOptions &Opts,
 #include "clang/Driver/Options.inc"
 #undef ANALYZER_OPTION_WITH_MARSHALLING
 
+  if (Opts.AnalysisStoreOpt != RegionStoreModel) {
+    switch (Opts.AnalysisStoreOpt) {
+#define ANALYSIS_STORE(NAME, CMDFLAG, DESC, CREATFN)                           \
+  case NAME##Model:                                                            \
+    GenerateArg(Args, OPT_analyzer_store, CMDFLAG, SA);                        \
+    break;
+#include "clang/StaticAnalyzer/Core/Analyses.def"
+    default:
+      llvm_unreachable("Tried to generate unknown analysis store.");
+    }
+  }
+
   if (Opts.AnalysisConstraintsOpt != RangeConstraintsModel) {
     switch (Opts.AnalysisConstraintsOpt) {
 #define ANALYSIS_CONSTRAINTS(NAME, CMDFLAG, DESC, CREATFN)                     \
@@ -903,13 +915,20 @@ static bool ParseAnalyzerArgs(AnalyzerOptions &Opts, ArgList &Args,
 #include "clang/Driver/Options.inc"
 #undef ANALYZER_OPTION_WITH_MARSHALLING
 
-  if (Arg *A = Args.getLastArg(OPT_analyzer_store))
-    Diags.Report(diag::warn_analyzer_deprecated_option) << "-analyzer-store"
-                                                        << "clang-16";
-  if (Arg *A = Args.getLastArg(OPT_analyzer_opt_analyze_nested_blocks))
-    Diags.Report(diag::warn_analyzer_deprecated_option)
-        << "-analyzer-opt-analyze-nested-blocks"
-        << "clang-16";
+  if (Arg *A = Args.getLastArg(OPT_analyzer_store)) {
+    StringRef Name = A->getValue();
+    AnalysisStores Value = llvm::StringSwitch<AnalysisStores>(Name)
+#define ANALYSIS_STORE(NAME, CMDFLAG, DESC, CREATFN) \
+      .Case(CMDFLAG, NAME##Model)
+#include "clang/StaticAnalyzer/Core/Analyses.def"
+      .Default(NumStores);
+    if (Value == NumStores) {
+      Diags.Report(diag::err_drv_invalid_value)
+        << A->getAsString(Args) << Name;
+    } else {
+      Opts.AnalysisStoreOpt = Value;
+    }
+  }
 
   if (Arg *A = Args.getLastArg(OPT_analyzer_constraints)) {
     StringRef Name = A->getValue();

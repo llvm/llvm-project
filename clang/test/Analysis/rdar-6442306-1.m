@@ -1,4 +1,4 @@
-// RUN: %clang_analyze_cc1 -analyzer-checker=core,alpha.core -analyzer-disable-checker=alpha.core.PointerArithm %s -verify
+// RUN: %clang_analyze_cc1 -analyzer-checker=core,alpha.core -analyzer-disable-checker=alpha.core.PointerArithm %s -analyzer-store=region -verify
 // expected-no-diagnostics
 
 typedef int bar_return_t;

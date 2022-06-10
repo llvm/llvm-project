@@ -1,4 +1,4 @@
-// RUN: %clang_analyze_cc1 -triple i386-apple-darwin9 -analyzer-checker=core,alpha.core -verify -fblocks %s
+// RUN: %clang_analyze_cc1 -triple i386-apple-darwin9 -analyzer-checker=core,alpha.core -analyzer-store=region -verify -fblocks %s
 // expected-no-diagnostics
 
 // Here is a case where a pointer is treated as integer, invalidated as an

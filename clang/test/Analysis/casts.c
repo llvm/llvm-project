@@ -1,5 +1,5 @@
-// RUN: %clang_analyze_cc1 -triple x86_64-apple-darwin9 -fenable-matrix -analyzer-checker=core,alpha.core,debug.ExprInspection -Wno-pointer-to-int-cast -Wno-strict-prototypes -verify -analyzer-config eagerly-assume=false %s
-// RUN: %clang_analyze_cc1 -triple i386-apple-darwin9 -fenable-matrix -analyzer-checker=core,alpha.core,debug.ExprInspection -Wno-pointer-to-int-cast -Wno-strict-prototypes -verify -analyzer-config eagerly-assume=false %s
+// RUN: %clang_analyze_cc1 -triple x86_64-apple-darwin9 -fenable-matrix -analyzer-checker=core,alpha.core,debug.ExprInspection -analyzer-store=region -Wno-pointer-to-int-cast -Wno-strict-prototypes -verify -analyzer-config eagerly-assume=false %s
+// RUN: %clang_analyze_cc1 -triple i386-apple-darwin9 -fenable-matrix -analyzer-checker=core,alpha.core,debug.ExprInspection -analyzer-store=region -Wno-pointer-to-int-cast -Wno-strict-prototypes -verify -analyzer-config eagerly-assume=false %s
 // RUN: %clang_analyze_cc1 -triple x86_64-apple-darwin9 -fenable-matrix -analyzer-checker=core,alpha.core,debug.ExprInspection -Wno-pointer-to-int-cast -Wno-strict-prototypes -verify -DEAGERLY_ASSUME=1 -w %s
 // RUN: %clang_analyze_cc1 -triple i386-apple-darwin9 -fenable-matrix -analyzer-checker=core,alpha.core,debug.ExprInspection -Wno-pointer-to-int-cast -Wno-strict-prototypes -verify -DEAGERLY_ASSUME=1 -DBIT32=1 -w %s
 

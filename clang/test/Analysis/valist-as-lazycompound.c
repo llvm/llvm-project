@@ -1,4 +1,4 @@
-// RUN: %clang_analyze_cc1 -triple gcc-linaro-arm-linux-gnueabihf -analyzer-checker=core,valist.Uninitialized,valist.CopyToSelf -analyzer-output=text -verify %s
+// RUN: %clang_analyze_cc1 -triple gcc-linaro-arm-linux-gnueabihf -analyzer-checker=core,valist.Uninitialized,valist.CopyToSelf -analyzer-output=text -analyzer-store=region -verify %s
 // expected-no-diagnostics
 
 typedef unsigned int size_t;

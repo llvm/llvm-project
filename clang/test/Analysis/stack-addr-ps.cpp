@@ -1,4 +1,4 @@
-// RUN: %clang_analyze_cc1 -analyzer-checker=core -verify %s -Wno-undefined-bool-conversion
+// RUN: %clang_analyze_cc1 -analyzer-checker=core -analyzer-store=region -verify %s -Wno-undefined-bool-conversion
 
 typedef __INTPTR_TYPE__ intptr_t;
 

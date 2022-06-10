@@ -1,4 +1,4 @@
-// RUN: %clang_analyze_cc1 -analyzer-checker=core,alpha.core %s
+// RUN: %clang_analyze_cc1 -analyzer-checker=core,alpha.core -analyzer-store=region %s
 
 typedef struct added_obj_st {
   int type;

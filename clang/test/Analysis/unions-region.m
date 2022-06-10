@@ -1,4 +1,4 @@
-// RUN: %clang_analyze_cc1 -analyzer-checker=core %s -verify
+// RUN: %clang_analyze_cc1 -analyzer-checker=core -analyzer-store=region %s -verify
 // expected-no-diagnostics
 
 //===-- unions-region.m ---------------------------------------------------===//

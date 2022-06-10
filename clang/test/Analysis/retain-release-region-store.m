@@ -1,4 +1,4 @@
-// RUN: %clang_analyze_cc1 -triple %itanium_abi_triple -analyzer-checker=core,osx.cocoa.RetainCount -analyzer-max-loop 6 -verify %s
+// RUN: %clang_analyze_cc1 -triple %itanium_abi_triple -analyzer-checker=core,osx.cocoa.RetainCount -analyzer-store=region -analyzer-max-loop 6 -verify %s
 
 //===----------------------------------------------------------------------===//
 // The following code is reduced using delta-debugging from

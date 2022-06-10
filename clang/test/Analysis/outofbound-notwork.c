@@ -1,4 +1,4 @@
-// RUN: %clang_analyze_cc1 -Wno-array-bounds -analyzer-checker=core,alpha.security.ArrayBound -verify %s
+// RUN: %clang_analyze_cc1 -Wno-array-bounds -analyzer-checker=core,alpha.security.ArrayBound -analyzer-store=region -verify %s
 // XFAIL: *
 
 // Once we better handle modeling of sizes of VLAs, we can pull this back
