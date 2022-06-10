@@ -1188,14 +1188,16 @@ bool Attributor::isAssumedDead(const Instruction &I,
   if (ManifestAddedBlocks.contains(I.getParent()))
     return false;
 
-  if (!FnLivenessAA || FnLivenessAA->getAnchorScope() != I.getFunction())
-    FnLivenessAA = &getOrCreateAAFor<AAIsDead>(
-        IRPosition::function(*I.getFunction(), CBCtx), QueryingAA,
-        DepClassTy::NONE);
+  if (!FnLivenessAA)
+    FnLivenessAA =
+        lookupAAFor<AAIsDead>(IRPosition::function(*I.getFunction(), CBCtx),
+                              QueryingAA, DepClassTy::NONE);
 
   // If we have a context instruction and a liveness AA we use it.
-  if (CheckBBLivenessOnly ? FnLivenessAA->isAssumedDead(I.getParent())
-                          : FnLivenessAA->isAssumedDead(&I)) {
+  if (FnLivenessAA &&
+      FnLivenessAA->getIRPosition().getAnchorScope() == I.getFunction() &&
+      (CheckBBLivenessOnly ? FnLivenessAA->isAssumedDead(I.getParent())
+                           : FnLivenessAA->isAssumedDead(&I))) {
     if (QueryingAA)
       recordDependence(*FnLivenessAA, *QueryingAA, DepClass);
     if (!FnLivenessAA->isKnownDead(&I))
@@ -1266,9 +1268,9 @@ bool Attributor::isAssumedDead(const BasicBlock &BB,
                                const AbstractAttribute *QueryingAA,
                                const AAIsDead *FnLivenessAA,
                                DepClassTy DepClass) {
-  if (!FnLivenessAA || FnLivenessAA->getAnchorScope() != BB.getParent())
-    FnLivenessAA = &getOrCreateAAFor<AAIsDead>(
-        IRPosition::function(*BB.getParent()), QueryingAA, DepClassTy::NONE);
+  if (!FnLivenessAA)
+    FnLivenessAA = lookupAAFor<AAIsDead>(IRPosition::function(*BB.getParent()),
+                                         QueryingAA, DepClassTy::NONE);
   if (FnLivenessAA->isAssumedDead(&BB)) {
     if (QueryingAA)
       recordDependence(*FnLivenessAA, *QueryingAA, DepClass);
